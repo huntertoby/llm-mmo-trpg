@@ -10,7 +10,7 @@ import { resolveDoll, type DollSpec } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
@@ -142,10 +142,13 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
-  const k = T / 52; // 身高約 46px 在 52px 格子裡縮放 1.0
-  sprite.anchor.set(0.5, DOLL_FOOT_Y / DOLL_H);
-  sprite.width = DOLL_W * k;
-  sprite.height = DOLL_H * k;
+  // C 骨架（人形與紙娃娃）：52px 格縮放約 0.74，人約 40px 高；非人形召喚物沿用舊的 64×64 畫布與縮放 1.0
+  const humanoid = sl === null || sl.body === "humanoid";
+  const k = (T / 52) * (humanoid ? DOLL_SCALE : 1);
+  const [w, h, footY] = humanoid ? [DOLL_W, DOLL_H, DOLL_FOOT_Y] : [SUMMON_W, SUMMON_H, SUMMON_FOOT_Y];
+  sprite.anchor.set(0.5, footY / h);
+  sprite.width = w * k;
+  sprite.height = h * k;
   sprite.position.set(0, feet);
   sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
   if (look.grayscale) {

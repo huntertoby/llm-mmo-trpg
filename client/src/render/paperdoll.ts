@@ -1,18 +1,14 @@
-// 紙娃娃小人（Phase 3-16b；移植自美術 PM 樣張 docs/art/sample/paperdoll.js）。
-// 依裝備欄位分層繪製：披風（正面時在身後）→ 腳 → 身（含手臂）→ 手 → 披風（背面時在最上）→ 頭 → 頭髮 → 頭部裝備 → 主手 → 副手。
-// 座標：腳底中心為原點、往上為負，身高約 46。畫好後在離屏 canvas 描深色外框（史詩、傳說加外光），由 ArtTextures 快取成貼圖。
+// 紙娃娃小人（Phase 3-16b；Phase C-1a 起骨架與四方向改為 C 手繪墨線畫法，見 inkDoll.ts、inkStyle.ts）。
+// 這個檔案保留：外觀顏色解析（itemColors）、還沒換成 C 畫法的頭部裝備與手持物（C-1b、C-2 逐步換掉）、倒地姿勢、貼圖產生。
+// 座標：腳底中心為原點、往上為負；C 骨架身高約 52（尖帽到 -70）。
 import type { Facing } from "../api/types";
 import { roundRect as rr, TAU, type Ctx } from "./artDraw";
-import { elementTint, MATERIAL, RARITY_GLOW, type DollSpec, type GearItem, type Look } from "./appearance";
+import { elementTint, MATERIAL, RARITY_GLOW, type DollSpec, type GearItem } from "./appearance";
 import {
   drawCap,
-  drawCoat,
-  drawFeet,
   drawFist,
   drawGreathelm,
   drawHammer,
-  drawHandsGear,
-  drawMailPattern,
   drawOrb,
   drawPistol,
   drawScythe,
@@ -24,14 +20,20 @@ import {
   fill,
   mix,
 } from "./paperdollGear";
-import { drawFigureSide } from "./paperdollSide";
-import { dark } from "./paperdollSideGear";
+import { drawInkFigure, type InkHooks, type InkView } from "./inkDoll";
+import { dark, drawHeadgearSide, drawOffhandSide } from "./paperdollSideGear";
 import { sideWeaponPose } from "./paperdollSideWeapon";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
-export const DOLL_H = 64;
+export const DOLL_H = 88; // C 畫風頭頂最高約 -70（尖帽），要留夠
 export const DOLL_FOOT_Y = DOLL_H - 6;
+/** C 畫風的戰場縮放：52px 格約 0.74 倍，人約 40px 高（需求第 2 節）。 */
+export const DOLL_SCALE = 0.74;
+/** 非人形召喚物（summonArt.ts 自己的畫法）沿用的畫布大小與腳底位置：舊的 64×64，不隨 C 骨架改。 */
+export const SUMMON_W = 64;
+export const SUMMON_H = 64;
+export const SUMMON_FOOT_Y = SUMMON_H - 6;
 
 function darker(c: string, f = 0.68): string {
   return mix(c, "#000000", 1 - f);
@@ -50,156 +52,6 @@ export function itemColors(item: GearItem): [string, string] {
 }
 
 type View = "front" | "back";
-
-function drawCloak(ctx: Ctx, it: GearItem, view: View): void {
-  const [c, d] = itemColors(it);
-  ctx.fillStyle = view === "back" ? c : d;
-  ctx.beginPath();
-  ctx.moveTo(-8, -21);
-  ctx.lineTo(8, -21);
-  ctx.lineTo(12, -2);
-  ctx.quadraticCurveTo(0, 1, -12, -2);
-  ctx.closePath();
-  ctx.fill();
-  if (view === "back") {
-    ctx.strokeStyle = d;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(-3, -18);
-    ctx.lineTo(-5, -3);
-    ctx.moveTo(3, -18);
-    ctx.lineTo(5, -3);
-    ctx.stroke();
-  }
-}
-
-function drawLegs(ctx: Ctx, look: Look, feet: GearItem | undefined): void {
-  const pants = look.pants ?? "#4a4038";
-  fill(ctx, pants, () => rr(ctx, -5, -9, 4, 8, 1));
-  fill(ctx, pants, () => rr(ctx, 1, -9, 4, 8, 1));
-  const [b, bd] = feet !== undefined ? itemColors(feet) : ["#5a4030", "#3a281c"];
-  drawFeet(ctx, feet, b, bd);
-}
-
-function drawRibs(ctx: Ctx): void {
-  fill(ctx, "#d9d2bd", () => rr(ctx, -1.5, -21, 3, 13, 1));
-  ctx.strokeStyle = "#d9d2bd";
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 4; i++) {
-    ctx.beginPath();
-    ctx.moveTo(-6, -19 + i * 3);
-    ctx.quadraticCurveTo(0, -17 + i * 3, 6, -19 + i * 3);
-    ctx.stroke();
-  }
-  fill(ctx, "#d9d2bd", () => rr(ctx, -5, -9, 10, 2.5, 1));
-}
-
-function drawTorso(ctx: Ctx, it: GearItem | undefined, c: string, d: string, look: Look): void {
-  const kind = it?.kind ?? "shirt";
-  if (kind === "robe") {
-    const hem = it?.form === "short" ? -6 : -1.5; // 短袍的下襬較短
-    fill(ctx, c, () => {
-      ctx.beginPath();
-      ctx.moveTo(-7, -21);
-      ctx.lineTo(7, -21);
-      ctx.lineTo(10, hem);
-      ctx.lineTo(-10, hem);
-      ctx.closePath();
-    });
-    fill(ctx, look.trim ?? d, () => ctx.rect(-1.2, -20, 2.4, 18.5));
-    fill(ctx, look.trim ?? d, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
-    return;
-  }
-  if (kind === "coat") {
-    drawCoat(ctx, it, c, d);
-    return;
-  }
-  fill(ctx, c, () => rr(ctx, -7.5, -21, 15, 13.5, 3));
-  if (kind === "plate") {
-    fill(ctx, mix(c, "#ffffff", 0.35), () => rr(ctx, -5, -19.5, 4, 6, 1.5));
-    fill(ctx, d, () => ctx.rect(-7.5, -14, 15, 1.2));
-  } else if (kind === "mail") {
-    drawMailPattern(ctx, it?.form, d);
-  } else if (kind === "leather") {
-    ctx.strokeStyle = d;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(-5, -20);
-    ctx.lineTo(5, -11);
-    ctx.stroke();
-  }
-  fill(ctx, "#3a2a1c", () => ctx.rect(-7.5, -9.5, 15, 2)); // 腰帶
-  fill(ctx, "#d8b04a", () => ctx.rect(-1, -9.5, 2, 2));
-}
-
-function drawArms(ctx: Ctx, kind: string, c: string, half = false): void {
-  fill(ctx, c, () => rr(ctx, -10.5, -20, 4, 10, 2));
-  fill(ctx, c, () => rr(ctx, 6.5, -20, 4, 10, 2));
-  if (kind === "plate" && !half) {
-    for (const x of [-8.5, 8.5]) fill(ctx, mix(c, "#ffffff", 0.25), () => ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU));
-  }
-}
-
-function drawBody(ctx: Ctx, it: GearItem | undefined, look: Look): void {
-  const kind = it?.kind ?? "shirt";
-  if (kind === "ribs") {
-    drawRibs(ctx);
-    drawArms(ctx, kind, "#d9d2bd");
-    return;
-  }
-  const [c, d] = it !== undefined ? itemColors(it) : ["#d8cdb4", "#a89c80"];
-  drawTorso(ctx, it, c, d, look);
-  drawArms(ctx, kind, c, it?.form === "half"); // 半身板甲沒有肩甲
-}
-
-function drawHands(ctx: Ctx, look: Look, hands: GearItem | undefined): void {
-  drawHandsGear(ctx, look, hands, hands !== undefined ? itemColors(hands) : [look.skin, look.skin]);
-}
-
-function drawHead(ctx: Ctx, look: Look, view: View, side: number): void {
-  fill(ctx, look.skin, () => ctx.arc(0, -29, 8.5, 0, TAU));
-  if (view === "back") return;
-  const ex = side * 2.6; // 側面時眼睛往朝向那邊偏
-  ctx.fillStyle = look.eyes ?? "#1d1a22";
-  if (look.skull === true) {
-    ctx.beginPath();
-    ctx.arc(ex - 3, -29, 2.2, 0, TAU);
-    ctx.arc(ex + 3, -29, 2.2, 0, TAU);
-    ctx.fill();
-    ctx.fillRect(ex - 2.5, -24.5, 5, 1.2);
-    return;
-  }
-  if (side === 0 || side === 1) ctx.fillRect(ex + 2, -30, 1.8, 3);
-  if (side === 0 || side === -1) ctx.fillRect(ex - 3.8, -30, 1.8, 3);
-  ctx.fillStyle = "rgba(220,90,90,0.35)";
-  ctx.fillRect(ex - 5, -26.5, 2, 1.2);
-  ctx.fillRect(ex + 3, -26.5, 2, 1.2);
-}
-
-const HAIR_COVERED = ["helmet", "hood", "wizard_hat", "horned_helm", "greathelm", "cap"];
-
-function drawHair(ctx: Ctx, look: Look, view: View, head: GearItem | undefined): void {
-  if (look.hair === undefined || look.hair === "none" || look.skull === true) return;
-  const c = look.hairColor ?? "#5a3a22";
-  if (view === "back") {
-    fill(ctx, c, () => ctx.arc(0, -29, 8.8, 0, TAU));
-    if (look.hair === "long") fill(ctx, c, () => rr(ctx, -7, -29, 14, 10, 3));
-    return;
-  }
-  if (head === undefined || !HAIR_COVERED.includes(head.kind)) {
-    fill(ctx, c, () => {
-      ctx.beginPath();
-      ctx.arc(0, -29.5, 8.8, Math.PI * 1.02, Math.PI * 1.98);
-      ctx.quadraticCurveTo(4, -33, 0, -32.5);
-      ctx.quadraticCurveTo(-5, -32, -8.8, -29);
-      ctx.closePath();
-    });
-  }
-  if (look.hair === "long") {
-    fill(ctx, c, () => rr(ctx, -9.5, -31, 3, 11, 1.5));
-    fill(ctx, c, () => rr(ctx, 6.5, -31, 3, 11, 1.5));
-  }
-}
 
 function drawHood(ctx: Ctx, c: string, d: string, view: View): void {
   ctx.fillStyle = c;
@@ -667,9 +519,6 @@ function drawTotem(ctx: Ctx): void {
   fill(ctx, "rgba(255,255,255,0.8)", () => ctx.arc(-1.2, -45.2, 1.1, 0, TAU));
 }
 
-/** 副手的非武器手持物（盾、書、法球）：不鏡像。 */
-const SHIELD_LIKE: ReadonlySet<string> = new Set(["shield_round", "shield_kite", "tome", "orb"]);
-
 /** 手的位置：正面時慣用手在畫面左、背面相反、側面時武器在前方。 */
 export function handSides(facing: Facing): { main: number; off: number; side: number; view: View } {
   const view: View = facing === "north" ? "back" : "front";
@@ -678,56 +527,54 @@ export function handSides(facing: Facing): { main: number; off: number; side: nu
   return view === "back" ? { main: 8.5, off: -8.5, side, view } : { main: -8.5, off: 8.5, side, view };
 }
 
-/** 真側面（Phase 3S-1）：東邊朝右畫，西邊整張左右鏡像。 */
-function drawFigureSideView(ctx: Ctx, spec: DollSpec, facing: Facing): void {
-  ctx.save();
-  if (facing === "west") ctx.scale(-1, 1);
-  drawFigureSide(ctx, spec, {
+/** 現行畫法的部件掛進 C 骨架（C-1b、C-2 逐步換成 C 畫法後移除）。 */
+function legacyHooks(ctx: Ctx): InkHooks {
+  return {
     colors: itemColors,
-    weapon: (it, x, far = false) => drawWeapon(ctx, it, x, true, false, far, true),
-  });
-  ctx.restore();
+    weapon: (it, x, y, o) => {
+      ctx.save();
+      ctx.translate(x, y + 9.5 * o.scale); // drawWeapon 內部會再 translate(x, -9.5)
+      ctx.scale(o.scale, o.scale);
+      drawWeapon(ctx, it, 0, o.front, o.mirror, o.far, o.side);
+      ctx.restore();
+    },
+    headgear: (it, view) => {
+      ctx.save();
+      ctx.translate(0, -42); // 現行頭心 (0,-29) → C 頭心 (0,-42)
+      ctx.scale(HEAD_GEAR_SCALE, HEAD_GEAR_SCALE);
+      ctx.translate(0, 29);
+      if (view === "side") drawHeadgearSide(ctx, it, itemColors(it));
+      else drawHeadgear(ctx, it, view);
+      ctx.restore();
+    },
+    offhandSide: (it) => {
+      ctx.save();
+      ctx.scale(1.1, 1.4);
+      drawOffhandSide(ctx, it, itemColors(it));
+      ctx.restore();
+    },
+  };
 }
 
-/** 畫一個小人（腳底中心在 (0, 0)）。facing：south ＝ 正面、north ＝ 背面、east／west ＝ 真側面（第三套畫法，paperdollSide.ts）。 */
-export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
+/** 現行頭部裝備（頭半徑 8.5）套到 C 的頭（約 9）的縮放。 */
+const HEAD_GEAR_SCALE = 1.06;
+
+/** 畫一個小人（腳底中心在 (0, 0)）。facing：south ＝ 正面、north ＝ 背面、east／west ＝ 側面（西 ＝ 東的左右鏡像）。C 畫風（Phase C-1a）。 */
+export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = true): void {
   if (spec.totem === true) {
     drawTotem(ctx);
     return;
   }
-  if (facing === "east" || facing === "west") {
-    drawFigureSideView(ctx, spec, facing);
-    return;
-  }
-  const { look, gear } = spec;
-  const { main, off, side, view } = handSides(facing);
-  const offInFront = gear.off_hand?.kind.startsWith("shield") === true;
-  // 成對武器（主手副手同一種武器）與拳套（兩手都戴）：副手也畫手持物，並鏡像讓兩把向外張開
-  const offItem = gear.off_hand ?? (gear.main_hand?.kind === "fist" ? gear.main_hand : undefined);
-  const offMirror = offItem !== undefined && !SHIELD_LIKE.has(offItem.kind);
-  // 雙匕首：兩把往外多張開 2px，刃身才跳出身體輪廓
-  const spread = gear.main_hand?.kind === "dagger" && offItem?.kind === "dagger" ? 2 : 0;
-  const mainX = main + Math.sign(main) * spread;
-  const offX = off + Math.sign(off) * spread;
   ctx.save();
-  if (gear.cloak !== undefined && view !== "back") drawCloak(ctx, gear.cloak, view);
-  if (view === "back") {
-    drawWeapon(ctx, gear.main_hand, mainX, false); // 背面時武器畫在身體後面
-    drawWeapon(ctx, offItem, offX, false, offMirror);
-  }
-  drawLegs(ctx, look, gear.feet);
-  drawBody(ctx, gear.body, look);
-  drawHands(ctx, look, gear.hands);
-  if (gear.cloak !== undefined && view === "back") drawCloak(ctx, gear.cloak, view);
-  drawHead(ctx, look, view, side);
-  drawHair(ctx, look, view, gear.head);
-  drawHeadgear(ctx, gear.head, view);
-  if (view !== "back") {
-    drawWeapon(ctx, gear.main_hand, mainX, true);
-    drawWeapon(ctx, offItem, offX + (offInFront ? side * 2 : 0), true, offMirror);
-  }
+  if (facing === "west") ctx.scale(-1, 1);
+  const view: InkView = facing === "north" ? "back" : facing === "south" ? "front" : "side";
+  drawInkFigure(ctx, spec, view, legacyHooks(ctx), ground);
   ctx.restore();
 }
+
+/** 倒地時橫躺的位置（旋轉前的平移量）。 */
+const DOWNED_DX = 20;
+const DOWNED_DY = 11;
 
 /** 倒地姿勢：整個小人橫躺（頭朝右），腳底仍在原點附近。 */
 export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed: boolean): void {
@@ -736,15 +583,15 @@ export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed:
     return;
   }
   ctx.save();
-  ctx.translate(-20, -11);
+  ctx.translate(-DOWNED_DX, -DOWNED_DY);
   ctx.rotate(Math.PI / 2);
-  drawFigure(ctx, spec, facing);
+  drawFigure(ctx, spec, facing, false);
   ctx.restore();
 }
 
 /**
- * 產生一張帶深色外框的離屏 canvas（`dpr` 倍解析度；沒有 DOM 時回傳 `null`）。
- * 外框：把剪影往 8 個方向各偏 1.3 px 塗深色；史詩、傳說另外加外光。腳底在 (DOLL_W/2, DOLL_FOOT_Y)。
+ * 產生一張離屏 canvas（`dpr` 倍解析度；沒有 DOM 時回傳 `null`）。腳底在 (DOLL_W/2, DOLL_FOOT_Y)。
+ * C 畫風沒有黑色剪影外框（墨線取代它）；史詩、傳說（頭目）保留外光，是唯一的身體外光。
  */
 export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
@@ -760,33 +607,24 @@ export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boole
   o.scale(dpr, dpr);
   o.translate(DOLL_W / 2, DOLL_FOOT_Y);
   drawFigurePose(o, spec, facing, downed);
-  const tinted = (color: string): HTMLCanvasElement | null => {
-    const c = make();
-    const cx = c.getContext("2d");
-    if (cx === null) return null;
-    cx.drawImage(off, 0, 0);
-    cx.globalCompositeOperation = "source-in";
-    cx.fillStyle = color;
-    cx.fillRect(0, 0, c.width, c.height);
-    return c;
-  };
+  const glowColor = spec.rarity !== undefined ? RARITY_GLOW[spec.rarity] : undefined;
+  if (glowColor === undefined) return off;
+  const glow = make();
+  const g = glow.getContext("2d");
   const out = make();
   const ctx = out.getContext("2d");
-  const sil = tinted("#16121a");
-  if (ctx === null || sil === null) return null;
-  const glowColor = spec.rarity !== undefined ? RARITY_GLOW[spec.rarity] : undefined;
-  const glow = glowColor !== undefined ? tinted(glowColor) : null;
-  if (glow !== null) {
-    ctx.save();
-    ctx.globalAlpha = 0.5;
-    for (let a = 0; a < 12; a++) {
-      const ang = (a / 12) * TAU;
-      ctx.drawImage(glow, Math.cos(ang) * 2.6 * dpr, Math.sin(ang) * 2.6 * dpr);
-    }
-    ctx.restore();
+  if (g === null || ctx === null) return off;
+  g.drawImage(off, 0, 0);
+  g.globalCompositeOperation = "source-in";
+  g.fillStyle = glowColor;
+  g.fillRect(0, 0, glow.width, glow.height);
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  for (let a = 0; a < 12; a++) {
+    const ang = (a / 12) * TAU;
+    ctx.drawImage(glow, Math.cos(ang) * 2.6 * dpr, Math.sin(ang) * 2.6 * dpr);
   }
-  const k = 1.3 * dpr;
-  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]] as const) ctx.drawImage(sil, ox * k, oy * k);
+  ctx.restore();
   ctx.drawImage(off, 0, 0);
   return out;
 }

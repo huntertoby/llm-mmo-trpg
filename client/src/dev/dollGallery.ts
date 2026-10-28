@@ -4,7 +4,7 @@ import type { Facing } from "../api/types";
 import type { DollSpec, GearItem } from "../render/appearance";
 import { resolveDollT } from "../render/testDolls";
 import type { DollEquipment } from "../render/dollGear";
-import { drawFigurePose } from "../render/paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_W, drawFigurePose } from "../render/paperdoll";
 
 const SCALE = 3;
 
@@ -16,14 +16,14 @@ function figureOf(spec: DollSpec, facing: Facing, label: string, downed = false)
   const box = document.createElement("div");
   box.className = "cell";
   const c = document.createElement("canvas");
-  c.width = 64 * SCALE;
-  c.height = 64 * SCALE;
+  c.width = DOLL_W * SCALE;
+  c.height = DOLL_H * SCALE;
   const ctx = c.getContext("2d");
   if (ctx !== null) {
     ctx.fillStyle = "#2b2f38";
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.scale(SCALE, SCALE);
-    ctx.translate(32, 58);
+    ctx.translate(DOLL_W / 2, DOLL_FOOT_Y);
     drawFigurePose(ctx, spec, facing, downed);
   }
   box.appendChild(c);
