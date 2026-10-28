@@ -4,13 +4,26 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tests.engine.helpers import give_turn, make_map, make_state, no_reactions, spawn
-from tests.engine.skill_helpers import FLAT7, U1, U2, U3
-from trpg.engine import BattleState, ResolveResult, UseRaceSkill, resolve
+from tests.engine.helpers import give_turn, library, make_map, make_state, no_reactions, spawn
+from tests.engine.skill_helpers import FLAT7, U1, U2, U3, U4
+from trpg.content.races import RaceDef
+from trpg.engine import BattleState, EndTurn, ResolveResult, UseRaceSkill, resolve
 from trpg.engine.events import EventBase
 from trpg.shared.types import Pos, Team
 
-__all__ = ["FLAT7", "U1", "U2", "U3", "act", "of", "race_state", "use"]
+__all__ = [
+    "FLAT7",
+    "U1",
+    "U2",
+    "U3",
+    "U4",
+    "act",
+    "all_races",
+    "end_turn",
+    "of",
+    "race_state",
+    "use",
+]
 
 
 def race_state(
@@ -75,3 +88,15 @@ def act(state: BattleState, **fields: object) -> ResolveResult:
 
 def of[E: EventBase](result: ResolveResult, kind: type[E]) -> list[E]:
     return [e for e in result.events if isinstance(e, kind)]
+
+
+def all_races() -> tuple[RaceDef, ...]:
+    races = library().ruleset.races
+    assert races is not None
+    return races.races
+
+
+def end_turn(state: BattleState) -> ResolveResult:
+    """目前行動者結束回合。"""
+    assert state.active_unit is not None
+    return resolve(state, EndTurn(unit_id=state.active_unit))

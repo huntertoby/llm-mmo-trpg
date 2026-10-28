@@ -319,11 +319,11 @@ def race_skill_actions(state: BattleState, unit: UnitState) -> list[UseRaceSkill
 def _cone_targets(
     state: BattleState, unit: UnitState, skill: RaceSkill, direction: str
 ) -> list[UnitState]:
-    """錐形內的單位（不含施放者），由近到遠、同距離依 ID。"""
+    """錐形內的單位（不含施放者），由遠到近、同距離依 ID（遠的先推，近的才有位置可退）。"""
     size = skill.shape.size or 0
     cells = set(shapes.cone_tiles(state, unit.xy, direction, size))
     found = [u for u in state.living_units() if u.id != unit.id and u.xy in cells]
-    return sorted(found, key=lambda u: (manhattan(unit.xy, u.xy), u.id))
+    return sorted(found, key=lambda u: (-manhattan(unit.xy, u.xy), u.id))
 
 
 def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY) -> UnitState:
@@ -387,7 +387,7 @@ def _do_push(ctx: Ctx, unit: UnitState, effect: RaceEffect, action: UseRaceSkill
         )
         for target in _cone_targets(ctx.state, unit, skill, action.direction)
     ]
-    for push in batch:  # 由近到遠一個一個推（前面的人讓出位置，後面的才推得動）
+    for push in batch:  # 由遠到近一個一個推（遠的先讓出位置，近的才推得動）
         execute(ctx, [push])
 
 
