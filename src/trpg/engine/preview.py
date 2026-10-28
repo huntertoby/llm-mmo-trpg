@@ -107,6 +107,7 @@ from trpg.engine.rules.combat import (
     situational_modifier,
     weapon_profile,
 )
+from trpg.engine.rules.forms import natural_charge
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.movement import available_move_budget, is_deadly, path_map
 from trpg.engine.rules.statuses import effective_attribute, shield_amount, weapon_attribute
@@ -661,6 +662,8 @@ def _attack_numbers(
     max_events: list[EventBase],
 ) -> tuple[Fraction, Fraction, DamageRange | None]:
     core = state.ruleset.core
+    if natural_charge(state.ruleset, actor) is not None:  # 蓄力吐息（3J-2）：這回合沒有命中與傷害
+        return Fraction(1), Fraction(0), None
     if action.target_object_id is not None:
         hit, crit = Fraction(1), Fraction(0)
         crit_dist: Counter[int] = Counter()
@@ -1044,6 +1047,16 @@ def _run_range(after: BattleState, actor: UnitState) -> tuple[XY, ...]:
     pm = path_map(after, unit, budget)
     ends = (xy for xy in pm.cost if xy != unit.xy and pm.can_end_at(xy))
     return tuple(sorted(ends, key=lambda p: (p[1], p[0])))
+
+
+def _breath_tiles(action: Action, events: list[EventBase], tiles: tuple[XY, ...]) -> tuple[XY, ...]:
+    """蓄力吐息（3J-2）的普攻：預告格是釋放時的錐形（``followup_charged`` 的預計範圍）。"""
+    if not isinstance(action, Attack):
+        return tiles
+    charged = next((e for e in events if isinstance(e, FollowupCharged)), None)
+    if charged is None:
+        return tiles
+    return tuple(sorted(((p.x, p.y) for p in charged.tiles), key=lambda p: (p[1], p[0])))
 
 
 def _cost_and_reach(
@@ -1465,6 +1478,7 @@ def _build(
     infusion = _infusion_info(state, action) if isinstance(action, InfuseSkill) else None
     if infusion is not None:
         tiles, units = infusion.tiles, infusion.units
+    tiles = _breath_tiles(action, max_events, tiles)
     ap_cost, reach = _cost_and_reach(state, actor, action)
     ap_cost = _basic_ap_cost(state, action, ap_cost)
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None

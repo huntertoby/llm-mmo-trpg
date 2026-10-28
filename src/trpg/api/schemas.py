@@ -320,6 +320,8 @@ class ChargeOut(_ApiModel):
     """還要幾回合（1 ＝ 施放者下回合開始）。"""
     pos: Pos
     tiles: tuple[Pos, ...]
+    direction: str | None = None
+    """定向蓄力（龍的蓄力吐息，3J-2）的方向（北東南西）；延遲段為 ``None``。"""
     text: str
 
 

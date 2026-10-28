@@ -37,6 +37,7 @@ __all__ = [
     "FormEffects",
     "FormEntry",
     "FormTable",
+    "NaturalCharge",
     "NaturalTraits",
     "NaturalWeapon",
     "TakenMod",
@@ -70,6 +71,15 @@ class NaturalTraits(ContentModel):
     backstab_crit: int = Field(default=0, ge=0, le=3)
 
 
+class NaturalCharge(ContentModel):
+    """定向蓄力（3J-2，6.30 龍的蓄力吐息）：有它的天生武器，普攻＝選一個方向開始蓄力，**下一個自己
+    的回合開始時**朝該方向以錐形（大小 ``size``）釋放天生武器的傷害（骰、屬性 × 0.3、元素）。
+    蓄力中倒下、暈眩、冰凍、離開形態就取消；預告格同環境預告。"""
+
+    size: int = Field(default=3, ge=2, le=4)
+    """錐形的大小（``skill_shapes.yaml`` 的 ``cone`` 參數 ``size``）。"""
+
+
 class NaturalWeapon(ContentModel):
     """天生武器（6.30）。``element`` 與 ``element_choices`` 最多填一個（都不填＝物理）；
     ``element_choices`` 是「進入時選」的清單（第一個是省略時的預設）。``damage_permille``：天生武器
@@ -85,6 +95,8 @@ class NaturalWeapon(ContentModel):
     damage_permille: int = Field(default=0, ge=0, le=1000)
     traits: NaturalTraits = NaturalTraits()
     """天生武器特性（3J-1b）；沒有特性時全是預設值。"""
+    charge: NaturalCharge | None = None
+    """定向蓄力（3J-2）：填了就是蓄力武器（龍的吐息），只能是遠程；普攻改成開始蓄力。"""
 
     @model_validator(mode="after")
     def _check(self) -> NaturalWeapon:
@@ -98,6 +110,10 @@ class NaturalWeapon(ContentModel):
             raise ValueError(f"天生武器 {self.name_zh}：element_choices 不可含物理")
         if self.attack == "melee" and self.range > _MAX_MELEE_RANGE:
             raise ValueError(f"天生武器 {self.name_zh}：近戰的射程最多 {_MAX_MELEE_RANGE}")
+        if self.charge is not None and (
+            self.attack != "ranged" or self.traits != NaturalTraits() or self.damage_permille
+        ):
+            raise ValueError(f"天生武器 {self.name_zh}：蓄力武器必須是遠程，沒有特性與傷害加成")
         if self.traits.reach > self.range:
             raise ValueError(f"天生武器 {self.name_zh}：觸及（reach）不可超過射程")
         return self

@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/79"
-"""``/79``（Phase 3J-1b）：形態天生武器特性與其餘 5 種形態——形態資料多了 ``traits``（打幾下、推擊、
+LOG_FORMAT = "trpg-battle-log/80"
+"""``/80``（Phase 3J-2）：定向蓄力與龍的蓄力吐息——``attack`` 動作多了 ``direction``（蓄力武器的普攻
+選方向）、狀態實例多了 ``direction``、事件 ``followup_charged`` 多了 ``direction``，
+``followup_cancelled`` 多了原因 ``form_left``，傷害效果多了 ``attr_permille``，龍的天生武器改成蓄力
+吐息（``charge``），規則包的形態表因此不同；``/79`` 的紀錄無法重播。
+``/79``（Phase 3J-1b）：形態天生武器特性與其餘 5 種形態——形態資料多了 ``traits``（打幾下、推擊、
 觸及、流血、背刺暴擊）與進入獎勵 ``collision_permille``，形態狀態多了 ``entered_round``；
 「下一次攻擊」的進入獎勵改成整次攻擊（所有命中擲骰）用完才失效，心智形態的進入技能才算法術（沉默擋得住），規則包的
 技能與形態表因此不同；``/78`` 的紀錄無法重播。

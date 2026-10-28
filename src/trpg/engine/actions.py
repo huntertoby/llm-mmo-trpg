@@ -77,16 +77,23 @@ class Attack(_ActionBase):
     """以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。
 
     攻擊物件一律命中（不擲命中骰、不暴擊），物件必須帶 ``breakable``。
+
+    ``direction``（Phase 3J-2）：蓄力武器（龍的蓄力吐息）的普攻＝選一個方向開始蓄力，這時可以
+    只給方向（不給目標）；給了目標就朝目標的方向（較大的軸向）蓄力。非蓄力武器不能帶方向。
     """
 
     type: Literal["attack"] = "attack"
     target_id: UnitId | None = None
     target_object_id: ObjectId | None = None
+    direction: Direction | None = None
 
     @model_validator(mode="after")
     def _one_target(self) -> Attack:
-        if (self.target_id is None) == (self.target_object_id is None):
-            raise ValueError("Attack 必須恰好指定 target_id 或 target_object_id 其中之一")
+        given = sum(x is not None for x in (self.target_id, self.target_object_id, self.direction))
+        if given != 1:
+            raise ValueError(
+                "Attack 必須恰好指定 target_id、target_object_id 或 direction 其中之一"
+            )
         return self
 
 

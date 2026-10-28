@@ -1169,6 +1169,8 @@ def _preview_score(
     if isinstance(action, UseSkill):
         score -= skill_cost(state, actor, action, w, profile.status_values)
         score += _rewrite_gains(state, actor, action, p, profile)
+    elif isinstance(action, Attack):  # 蓄力吐息（3J-2）：開始蓄力的收益是預計範圍內的敵人
+        score += profile.weights.damage * _delayed_points(state, actor, p, profile.rewrite)
     return score
 
 

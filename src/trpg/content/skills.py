@@ -1088,6 +1088,10 @@ class EffectSpec(ContentModel):
     lifesteal_permille: int | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 A）：吸血——施放者回復「這個效果實際造成的傷害（扣掉護盾
     吸收）」的 n‰（無條件捨去，不超過最大 HP）。只有技能自己的傷害效果可以用。"""
+    attr_permille: int | None = Field(default=None, ge=0, le=_PERMILLE)
+    """``damage`` 專用的法術屬性倍率覆蓋（Phase 3J-2；‰）：省略＝法術的屬性倍率（核心規則）。
+    只給引擎由資料組出的技能用（形態的蓄力吐息要和普攻一樣屬性 × 0.3，見
+    :mod:`trpg.content.form_breath`）；原語定義沒有列它，玩家與 LLM 的技能不能使用。"""
     spread: int | None = Field(default=None, ge=1, le=2)
     """``damage`` 專用（Phase 3-54b，06 6.33）：風元素傷害的元素擴散格數（1 或 2；省略＝
     ``core.wind.spread_distance``，預設 1）。只有 ``element: wind`` 的技能自己的傷害效果可以填；

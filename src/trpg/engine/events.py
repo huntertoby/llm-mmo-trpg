@@ -983,18 +983,20 @@ class FollowupCharged(EventBase):
     release: str
     pos: Pos
     tiles: tuple[Pos, ...]
+    direction: str | None = None
+    """定向蓄力（Phase 3J-2，龍的蓄力吐息）的方向；複合技能的延遲段為 ``None``。"""
 
 
 class FollowupCancelled(EventBase):
     """延遲段（Phase 3F-4b）取消：``downed`` 施放者倒下、``controlled`` 被暈眩或冰凍
     （``skip_turn`` 的狀態）、``expired`` 被攻擊才釋放的延遲段到下回合開始都沒被攻擊、
-    ``replaced`` 施放了另一個延遲段。"""
+    ``replaced`` 施放了另一個延遲段、``form_left`` 蓄力吐息的形態解除了（Phase 3J-2）。"""
 
     type: Literal["followup_cancelled"] = "followup_cancelled"
     unit_id: UnitId
     skill_id: str
     name_zh: str
-    reason: Literal["downed", "controlled", "expired", "replaced"]
+    reason: Literal["downed", "controlled", "expired", "replaced", "form_left"]
 
 
 class SkillTriggered(EventBase):

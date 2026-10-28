@@ -294,6 +294,8 @@ class TelegraphCharge(BaseModel):
     remaining: int
     pos: Pos
     tiles: tuple[Pos, ...]
+    direction: str | None = None
+    """定向蓄力（龍的蓄力吐息，Phase 3J-2）的方向；複合技能的延遲段為 ``None``。"""
 
 
 class Telegraph(BaseModel):
