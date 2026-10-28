@@ -132,3 +132,57 @@ for (const f of FACINGS) {
     figureOf(withGear({ main_hand: W("axe"), off_hand: W("axe") }), f, "axe×2"),
   ]);
 }
+
+// ⑨ C-2a・其餘防具與副手：身體、頭、手、腳、副手各形制，四朝向
+const G = (kind: string, form?: string, extra: Partial<GearItem> = {}): GearItem => ({ kind, ...(form === undefined ? {} : { form }), ...extra });
+const C2_ROWS: Array<[string, Array<[string, DollSpec["gear"]]>]> = [
+  ["身體", [
+    ["mail chain", { body: G("mail", "chain", { material: "steel" }) }],
+    ["mail scale", { body: G("mail", "scale", { material: "iron" }) }],
+    ["coat travel", { body: G("coat", "travel", { material: "leather" }) }],
+    ["coat cape", { body: G("coat", "cape", { color: "#7a2f3a" }) }],
+  ]],
+  ["頭", [
+    ["wide_hat", { head: G("wide_hat", "wide", { color: "#6a4a2a" }) }],
+    ["cap leather", { head: G("cap", "leather", { material: "leather" }) }],
+    ["cap fur", { head: G("cap", "fur", { material: "leather" }) }],
+    ["bandana", { head: G("bandana", "bandana", { color: "#b03a3a" }) }],
+    ["crown", { head: G("crown", "crown", { material: "gold" }) }],
+    ["horned_helm", { head: G("horned_helm", "horned", { material: "steel" }) }],
+    ["greathelm", { head: G("greathelm", "greathelm", { material: "steel" }) }],
+  ]],
+  ["手", [
+    ["gloves plain", { hands: G("gloves", "plain", { color: "#c8c0a8" }), main_hand: undefined, off_hand: undefined }],
+    ["gloves fingerless", { hands: G("gloves", "fingerless", { material: "leather" }), main_hand: undefined, off_hand: undefined }],
+    ["gloves long", { hands: G("gloves", "long", { material: "leather" }), main_hand: undefined, off_hand: undefined }],
+    ["gauntlets plate", { hands: G("gauntlets", "plate", { material: "steel" }), main_hand: undefined, off_hand: undefined }],
+    ["gauntlets mail", { hands: G("gauntlets", "mail", { material: "iron" }), main_hand: undefined, off_hand: undefined }],
+    ["bracers leather", { hands: G("bracers", "leather", { material: "leather" }), main_hand: undefined, off_hand: undefined }],
+    ["bracers ring", { hands: G("bracers", "ring", { material: "copper" }), main_hand: undefined, off_hand: undefined }],
+  ]],
+  ["腳", [
+    ["shoes slipper", { feet: G("shoes", "slipper", { color: "#6a5a8a" }) }],
+    ["shoes wrapped", { feet: G("shoes", "wrapped", { material: "cloth" }) }],
+    ["iron_boots", { feet: G("iron_boots", "plain", { material: "iron" }) }],
+    ["sabaton", { feet: G("iron_boots", "sabaton", { material: "steel" }) }],
+  ]],
+  ["副手", [
+    ["kite", { off_hand: G("shield_kite", "kite", { material: "iron" }), main_hand: W("sword") }],
+    ["tower", { off_hand: G("shield_kite", "tower", { material: "wood" }), main_hand: W("sword") }],
+    ["tome book", { off_hand: G("tome", "book", { material: "leather" }), main_hand: W("staff") }],
+    ["tome scroll", { off_hand: G("tome", "scroll", { material: "cloth" }), main_hand: W("staff") }],
+    ["orb ball", { off_hand: G("orb", "ball", { material: "crystal", element: "ice" }), main_hand: W("staff") }],
+    ["orb floating", { off_hand: G("orb", "floating", { material: "crystal", element: "fire" }), main_hand: W("staff") }],
+  ]],
+];
+for (const f of FACINGS) {
+  for (const [row, items] of C2_ROWS) section(`⑨ C-2a・${row}（${f}）`, items.map(([n, g]) => figureOf(withGear(g), f, n)));
+}
+
+// ⑩ C-2a・整套代表（四方向）
+const C2_KITS: Array<[string, DollSpec["gear"]]> = [
+  ["重甲", { head: G("greathelm", "greathelm", { material: "steel" }), body: G("mail", "chain", { material: "steel" }), hands: G("gauntlets", "plate", { material: "steel" }), feet: G("iron_boots", "sabaton", { material: "steel" }), off_hand: G("shield_kite", "tower", { material: "iron" }), main_hand: W("axe") }],
+  ["旅人", { head: G("wide_hat", "wide", { color: "#6a4a2a" }), body: G("coat", "cape", { color: "#7a2f3a" }), hands: G("gloves", "long", { material: "leather" }), feet: G("shoes", "wrapped", { material: "cloth" }), off_hand: G("tome", "book", { material: "leather" }), main_hand: W("dagger") }],
+  ["術士", { head: G("crown", "crown", { material: "gold" }), body: G("robe", "long", { color: "#3a4a8a" }), hands: G("bracers", "ring", { material: "copper" }), feet: G("shoes", "slipper", { color: "#6a5a8a" }), off_hand: G("orb", "floating", { material: "crystal", element: "fire" }), main_hand: W("staff") }],
+];
+section("⑩ C-2a・整套代表（四方向）", C2_KITS.flatMap(([n, g]) => FACINGS.map((f) => figureOf(withGear(g), f, `${n}・${f}`))));

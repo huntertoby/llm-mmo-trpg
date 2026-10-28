@@ -187,9 +187,9 @@ describe("全組合畫得出來", () => {
       drawFigure(ctx, resolveDollT({ ...base, template: "unknown_ally", weaponId, equipment }), "south");
       return calls.filter((c) => c.startsWith(op)).length;
     };
-    // 匕首每把轉一次；成對匕首兩把
-    expect(count([eq("main_hand", "dagger")], "dagger", "rotate")).toBe(1);
-    expect(count([eq("main_hand", "dual_dagger")], "dagger", "rotate")).toBe(2);
+    // 匕首每把轉一次（外斜）；另外正面兩隻手的袖口各轉一次（C-2a）；成對匕首兩把
+    expect(count([eq("main_hand", "dagger")], "dagger", "rotate")).toBe(3);
+    expect(count([eq("main_hand", "dual_dagger")], "dagger", "rotate")).toBe(4);
     // 拳套每隻手一個圓角方塊：兩手各一個，比單把匕首（沒有圓角方塊）多 2 個
     expect(count([eq("main_hand", "fist")], "dagger", "roundRect") - count([eq("main_hand", "dagger")], "dagger", "roundRect")).toBe(2);
   });
@@ -209,6 +209,6 @@ describe("全組合畫得出來", () => {
     expect(count("helmet")).toBeLessThan(bare);
     expect(count("helmet", "greathelm")).toBeLessThan(bare);
     expect(count("cap")).toBeLessThan(bare);
-    expect(count("hat", "wide")).toBe(bare); // 寬簷帽沒蓋住髮頂
+    expect(count("hat", "wide")).toBeGreaterThanOrEqual(bare); // 寬簷帽沒蓋住髮頂（C-2a 帽子本身也用曲線，只多不少）
   });
 });

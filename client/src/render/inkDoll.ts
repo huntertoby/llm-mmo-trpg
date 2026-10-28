@@ -4,7 +4,9 @@
 // 規則不動：`look`、裝備欄位、主手副手左右、成對武器、倒地；不認得的值退回預設，不出錯。
 import type { Ctx } from "./artDraw";
 import type { DollSpec, GearItem, Look } from "./appearance";
+import { drawFootDetail, drawInkBodyArmor, drawInkHand, drawInkHeadgearMore, footTop } from "./inkArmor";
 import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon } from "./inkGear";
+import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
 
 export type InkView = "front" | "back" | "side";
@@ -52,18 +54,23 @@ function drawLegs(t: Ctxt, view: InkView): void {
   const heavy = gear.body?.kind === "plate";
   const pants = heavy ? MAT.iron : (look.pants ?? PANTS_FALLBACK);
   const boot = gear.feet !== undefined ? colorOf(hooks, gear.feet, BOOT_FALLBACK) : heavy ? MAT.steel : BOOT_FALLBACK;
-  const by = heavy ? -9 : -7;
+  const by = footTop(gear.feet) ?? (heavy ? -9 : -7);
+  const sabaton = gear.feet?.kind === "iron_boots" && gear.feet.form === "sabaton";
+  const toeF = sabaton ? 7 : 5.6;
+  const toeS = sabaton ? 9.8 : 7.4;
   if (view !== "side") {
     for (const sx of [-1, 1]) {
       ink(ctx, `leg-${sx}`, [[sx * 0.8, -15], [sx * 4.6, -15], [sx * 4.4, -6], [sx * 1, -6]], pants);
-      ink(ctx, `boot-${sx}`, [[sx * 0.6, by], [sx * 4.8, by], [sx * 5.6, -0.8], [sx * 0.4, -0.4]], boot);
+      ink(ctx, `boot-${sx}`, [[sx * 0.6, by], [sx * 4.8, by], [sx * toeF, -0.8], [sx * 0.4, -0.4]], boot);
     }
+    drawFootDetail(ctx, gear.feet, view, hooks.colors);
     return;
   }
   ink(ctx, "leg-far", [[-3, -15], [0.6, -15], [-0.6, -6], [-3.8, -6]], darken(pants, 0.25));
   ink(ctx, "boot-far", [[-4.2, by], [-0.4, by], [1, -0.6], [-4.4, -0.4]], darken(boot, 0.25));
   ink(ctx, "leg-near", [[-0.6, -15], [3.2, -15], [3.8, -6], [0.6, -6]], pants);
-  ink(ctx, "boot-near", [[0.4, by], [4, by], [7.4, -0.8], [0.4, -0.4]], boot);
+  ink(ctx, "boot-near", [[0.4, by], [4, by], [toeS, -0.8], [0.4, -0.4]], boot);
+  drawFootDetail(ctx, gear.feet, view, hooks.colors);
 }
 
 // ============================== 身體 ==============================
@@ -132,8 +139,12 @@ function drawBody(t: Ctxt, view: InkView): void {
     drawRobe(t, it, view, c);
     return;
   }
+  if (it !== undefined && drawInkBodyArmor(ctx, it, view, t.hooks.colors)) {
+    if (kind !== "coat") drawBelt(t, view);
+    return;
+  }
   const bone = kind === "ribs";
-  ink(ctx, `torso-${view}`, TORSO[view], kind === "plate" ? MAT.steel : kind === "mail" ? MAT.iron : bone ? "#d9d2bd" : c);
+  ink(ctx, `torso-${view}`, TORSO[view], kind === "plate" ? MAT.steel : bone ? "#d9d2bd" : c);
   const F = view !== "side";
   if (kind === "leather" && view !== "back") {
     stroke(ctx, `stitch-${view}`, F ? [[-3.6, -31], [-2.4, -24]] : [[0.6, -31], [1.6, -24]], 0.4);
@@ -167,14 +178,9 @@ function drawArmFront(t: Ctxt, sx: number): void {
   ink(t.ctx, `arm-${sx}`, pts, armColor(t));
 }
 
-function handColor(t: Ctxt): string {
-  const hands = t.spec.gear.hands;
-  const bare = hands === undefined || hands.kind === "bracers" || hands.form === "fingerless";
-  return bare ? t.skin : colorOf(t.hooks, hands, t.skin);
-}
-
-function drawHand(t: Ctxt, x: number, y: number, key: string): void {
-  ink(t.ctx, key, ellPts(x, y, 1.8, 1.8, 10), handColor(t), { shade: false, w: 0.6 });
+/** 手（含手套、臂甲的袖口）。`ang` ＝ 前臂傾角。 */
+function drawHand(t: Ctxt, x: number, y: number, key: string, ang: number): void {
+  drawInkHand(t.ctx, t.spec.gear.hands, key, x, y, ang, t.skin, t.hooks.colors);
 }
 
 // ============================== 頭 ==============================
@@ -267,20 +273,25 @@ function legacyHeld(
   inkOpt?: { key: string; mirror: boolean },
 ): void {
   if (!o.side && drawInkShieldFront(t.ctx, it, x, y, t.hooks.colors)) return;
+  if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors)) return;
   const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
-  if (drawInkWeapon(t.ctx, it, k.key, x, y, { mirror: k.mirror, side: o.side, far: o.far }, t.hooks.colors)) return;
+  if (drawInkWeapon(t.ctx, it, k.key, x, y, { mirror: k.mirror, side: o.side, far: o.far, back: !o.front }, t.hooks.colors)) return;
   const scale = heldNotMirrored(it) ? SHIELD_SCALE : WEAPON_SCALE;
   t.hooks.weapon(it, x, y, { ...o, scale });
 }
 
-function drawWoodShieldBack(t: Ctxt): void {
+function drawWoodShieldBack(t: Ctxt, off: GearItem): void {
+  if (off.kind === "shield_kite") {
+    drawInkKiteBack(t.ctx, off);
+    return;
+  }
   ink(t.ctx, "shield-b", ellPts(8.6, -21, 6.6, 7, 20), MAT.wood, { w: 1 });
   stroke(t.ctx, "shield-strap", [[5, -24], [12.2, -18]], 1.2, "#5a3a1e");
 }
 
 function drawHeadgear(t: Ctxt, view: InkView): void {
   const it = t.spec.gear.head;
-  if (it === undefined || drawInkHeadgear(t.ctx, it, view, t.hooks.colors)) return;
+  if (it === undefined || drawInkHeadgear(t.ctx, it, view, t.hooks.colors) || drawInkHeadgearMore(t.ctx, it, view, t.hooks.colors)) return;
   t.hooks.headgear(it, view);
 }
 
@@ -299,12 +310,12 @@ function drawFront(t: Ctxt): void {
     const mirror = !heldNotMirrored(off);
     legacyHeld(t, off, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: true, mirror, far: false, side: false });
   }
-  if (off === undefined || !isShield(off)) drawHand(t, 9, -23.2, "hand-r");
+  if (off === undefined || !isShield(off)) drawHand(t, 9, -23.2, "hand-r", -0.32);
   drawHead(t, "front");
   drawHeadgear(t, "front");
   drawArmFront(t, -1);
   if (gear.main_hand !== undefined) legacyHeld(t, gear.main_hand, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false });
-  drawHand(t, -9, -23.2, "hand-l");
+  drawHand(t, -9, -23.2, "hand-l", 0.32);
 }
 
 /** 背面（朝北）：左右對調（主手在畫面右）、看不到臉；披風、尾巴蓋在身上，武器在身體後面。 */
@@ -327,10 +338,10 @@ function drawBack(t: Ctxt): void {
   drawBody(t, "back");
   drawArmFront(t, -1);
   drawArmFront(t, 1);
-  drawHand(t, -9, -23.2, "hand-bl");
-  drawHand(t, 9, -23.2, "hand-br");
+  drawHand(t, -9, -23.2, "hand-bl", 0.32);
+  drawHand(t, 9, -23.2, "hand-br", -0.32);
   drawCloak(t, "back");
-  if (isShield(off)) drawWoodShieldBack(t);
+  if (off !== undefined && isShield(off)) drawWoodShieldBack(t, off);
   drawHead(t, "back");
   drawHeadgear(t, "back");
 }
@@ -348,17 +359,16 @@ function drawSide(t: Ctxt): void {
   }
   // 書、法球（非武器、非盾的副手物品）也畫在身體後面（美術 PM：照 storyDoll.js）；盾留在身體前面
   if (off !== undefined && !isShield(off) && heldNotMirrored(off)) {
-    if (off.kind === "orb") legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: false, side: true });
-    else t.hooks.offhandSide(off);
+    legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
   }
   drawLegs(t, "side");
   drawBody(t, "side");
-  if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) t.hooks.offhandSide(off);
+  if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors) && !drawInkKiteSide(ctx, off, t.hooks.colors)) t.hooks.offhandSide(off);
   drawHead(t, "side");
   drawHeadgear(t, "side");
   ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));
   if (gear.main_hand !== undefined) legacyHeld(t, gear.main_hand, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true });
-  drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s");
+  drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
 }
 
 /** 體型縮放：stout 整個人 ×(1.12, 0.88)、tall ×(0.96, 1.1)；不認得的值不縮放。 */
