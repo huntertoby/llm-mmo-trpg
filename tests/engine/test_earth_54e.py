@@ -159,3 +159,53 @@ def test_a_workshop_earth_skill_with_only_lowering_can_pass_the_budget() -> None
             ]:
                 passing += 1
     assert passing >= 2  # 單格 1 AP 與 3×3 2 AP 都能落在 70～100%
+
+
+# ---------------------------------------------------------------------------
+# 重播
+# ---------------------------------------------------------------------------
+
+
+def test_a_battle_with_earth_collapse_replays_identically() -> None:
+    from tests.engine.helpers import (  # noqa: PLC0415
+        caster_template,
+        make_map,
+        make_setup,
+        no_reactions,
+        spawn,
+    )
+    from trpg.engine.ai.utility import UtilityAI  # noqa: PLC0415
+    from trpg.engine.events import SkillUsed  # noqa: PLC0415
+    from trpg.engine.runner import replay, run_battle  # noqa: PLC0415
+    from trpg.engine.state import state_to_json  # noqa: PLC0415
+    from trpg.shared.types import Team  # noqa: PLC0415
+
+    kit = ["skill_earth_collapse", "skill_stoneskin_ward"]
+    heights = "\n".join(["2222222"] * 7)
+    foes = [(4, 3), (4, 4), (5, 2)]
+    m = make_map(heights, ally=[(1, 3)], enemy=foes)
+    spawns = [spawn(Team.ALLY, (1, 3), caster_template([LIB.skills[s] for s in kit]))]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions()) for xy in foes]
+    setup = make_setup(m, spawns, max_rounds=12)
+    run = run_battle(setup, 7, UtilityAI(LIB.ai_profiles))
+    again = replay(setup, 7, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
+    assert "skill_stoneskin_ward" in used  # 效用 AI 不會主動挖坑（純地形沒有評分），崩陷見下面
+
+    ai = UtilityAI(LIB.ai_profiles)
+    cast_once: list[bool] = []
+
+    def scripted(state: Any) -> Any:  # 我方第一次行動先用大地崩陷，之後交給效用 AI
+        if state.active.team is Team.ALLY and not cast_once:
+            cast_once.append(True)
+            return UseSkill(
+                unit_id=state.active.id, skill_id="skill_earth_collapse", target_pos=Pos(x=4, y=3)
+            )
+        return ai(state)
+
+    run = run_battle(setup, 7, scripted)
+    again = replay(setup, 7, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    assert any(isinstance(e, TerrainChanged) for e in run.events)
+    assert "skill_earth_collapse" in {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
