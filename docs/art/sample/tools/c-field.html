@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>C 畫風驗收：戰場大小</title>
+<style>
+  body { margin: 0; padding: 12px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; font-size: 13px; }
+  canvas { display: block; margin: 6px 0 14px; }
+</style>
+</head>
+<body>
+<!-- 美術 PM 驗收用：經 client-check-5183（vite.artpm-check.mjs）開 /@fs/<這個檔案的絕對路徑>，直接用主資料夾 client 的正式畫法。 -->
+<div>① 戰場實際大小（52px 格、1 倍）：每排一個朝向（南、東、北、西）</div>
+<canvas id="f1"></canvas>
+<div>② 同上放大 3 倍（看線條、排線、影子）</div>
+<canvas id="f3"></canvas>
+<script type="module">
+const P = await import("/src/render/paperdoll.ts");
+const TD = await import("/src/render/testDolls.ts");
+const ids = Object.keys(TD.UNIT_DOLLS);
+const T = 52, rows = ["south", "east", "north", "west"], cols = ids.length;
+function draw(id, scale) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1;
+  c.width = T * cols * scale * dpr; c.height = T * rows.length * scale * dpr;
+  c.style.width = `${T * cols * scale}px`; c.style.height = `${T * rows.length * scale}px`;
+  const x = c.getContext("2d"); x.scale(scale * dpr, scale * dpr);
+  rows.forEach((facing, r) => ids.forEach((uid, q) => {
+    x.fillStyle = (r + q) % 2 ? "#8a8a84" : "#7d8a7a"; x.fillRect(q * T, r * T, T, T);
+    const spec = TD.resolveDollT({ template: uid });
+    const fc = P.renderFigureCanvas(spec, facing, false, 3 * scale);
+    if (!fc) return;
+    const k = P.DOLL_SCALE;
+    x.drawImage(fc, q * T + T / 2 - (P.DOLL_W / 2) * k, r * T + T * 0.88 - P.DOLL_FOOT_Y * k, P.DOLL_W * k, P.DOLL_H * k);
+  }));
+}
+draw("f1", 1); draw("f3", 3);
+document.title += " ✓";
+</script>
+</body>
+</html>
