@@ -214,6 +214,12 @@ export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: GearV
         stroke(ctx, `wrap-${view}-${sx}-${y}`, [[a, y], [b, y + 0.9]], 0.6, d);
       }
     }
+  } else if (feet.kind === "greaves" && feet.form === "knee" && view !== "back") {
+    // 護膝（美術 PM C-2a 驗收）：膝蓋 y≈-9 的鋼色小橢圓 2.4×1.8；正面兩腿、側面近側腿，背面不畫
+    for (const sx of sides) {
+      const cx = view === "side" ? 1.6 : sx * 2.7;
+      ink(ctx, `knee-${view}-${sx}`, ellPts(cx, -9, 2.4, 1.8, 10), metalOf(feet, colors), { shade: false, w: 0.6 });
+    }
   } else if (feet.kind === "iron_boots") {
     for (const sx of sides) {
       if (view === "side") stroke(ctx, "ib-cap-s", [[2, -3.2], [6.4, -1.6]], 0.5);

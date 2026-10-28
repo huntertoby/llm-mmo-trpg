@@ -39,11 +39,11 @@ export function drawInkKiteSide(ctx: Ctx, it: GearItem, colors: ColorFn): boolea
   if (!isKiteShield(it)) return false;
   const c = bodyColor(it, colors);
   if (it.form === "tower") {
-    ink(ctx, "kite-s", [[5.2, -33], [8.8, -33], [9, -10], [5, -10]], c, { w: 0.8 });
-    stroke(ctx, "kite-s-ridge", [[8.2, -32], [8.2, -11]], 0.6, "#e8e0c8");
+    ink(ctx, "kite-s", [[7, -33], [10.6, -33], [10.8, -10], [6.8, -10]], c, { w: 0.8 });
+    stroke(ctx, "kite-s-ridge", [[10, -32], [10, -11]], 0.6, "#e8e0c8");
   } else {
-    ink(ctx, "kite-s", [[5.4, -29], [8.8, -29], [8.4, -17], [7, -9.6], [5.8, -17]], c, { w: 0.8 });
-    stroke(ctx, "kite-s-ridge", [[8, -28], [7.6, -16]], 0.5, "#e8e0c8");
+    ink(ctx, "kite-s", [[7.2, -29], [10.6, -29], [10.2, -17], [8.8, -9.6], [7.6, -17]], c, { w: 0.8 });
+    stroke(ctx, "kite-s-ridge", [[9.8, -28], [9.4, -16]], 0.5, "#e8e0c8");
   }
   return true;
 }
@@ -65,16 +65,16 @@ function drawTome(ctx: Ctx, it: GearItem, colors: ColorFn, side: boolean, shade:
   const d = darken(d0, shade);
   const trim = darken(it.trim ?? GOLD, shade);
   if (it.form === "scroll") {
-    const [x0, x1] = side ? [0.8, 4.4] : [-2.6, 2.6];
+    const [x0, x1] = side ? [1.4, 5] : [-2.6, 2.6];
     ink(ctx, "scroll", [[x0, -8.4], [x1, -8.4], [x1, 5], [x0, 5]], darken(PAGE, shade), { w: 0.8 });
     for (const y of [-7.4, 4.2]) ink(ctx, `scroll-cap${y}`, [[x0 - 0.6, y - 1], [x1 + 0.6, y - 1], [x1 + 0.6, y + 1], [x0 - 0.6, y + 1]], c, { shade: false, w: 0.6 });
     return;
   }
   if (side) {
     // 側看＝一條厚書脊，前緣露出頁邊
-    ink(ctx, "tome-s", [[0.4, -6.4], [4.2, -6.4], [4.2, 4.6], [0.4, 4.6]], c, { w: 0.8 });
-    ink(ctx, "tome-s-pages", [[4.2, -5.8], [5.2, -5.8], [5.2, 4], [4.2, 4]], darken(PAGE, shade), { shade: false, w: 0.5 });
-    stroke(ctx, "tome-s-band", [[0.4, -1.4], [4.2, -1.4]], 1, trim);
+    ink(ctx, "tome-s", [[1, -6.4], [4.8, -6.4], [4.8, 4.6], [1, 4.6]], c, { w: 0.8 });
+    ink(ctx, "tome-s-pages", [[4.8, -5.8], [5.8, -5.8], [5.8, 4], [4.8, 4]], darken(PAGE, shade), { shade: false, w: 0.5 });
+    stroke(ctx, "tome-s-band", [[1, -1.4], [4.8, -1.4]], 1, trim);
     return;
   }
   ink(ctx, "tome", [[-4.8, -6.4], [4.8, -6.4], [4.8, 3], [-4.8, 3]], c, { w: 0.9 });
@@ -88,7 +88,7 @@ function drawOrb(ctx: Ctx, it: GearItem, colors: ColorFn, side: boolean, shade: 
   const glow = elementTint(it.element) ?? colors(it)[0];
   const orb = darken(glow, shade);
   const floating = it.form === "floating";
-  const cx = side ? 3 : 0;
+  const cx = side ? 3.4 : 0;
   const cy = floating ? -9.4 : -5.6;
   if (floating) stroke(ctx, "orb-ring", [...ellPts(cx, cy + 7, 3.8, 1.2, 10), [cx + 3.8, cy + 7] as Pt], 0.4, "rgba(255,255,255,0.7)");
   ctx.save();

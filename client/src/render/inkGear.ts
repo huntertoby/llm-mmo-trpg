@@ -112,7 +112,10 @@ const SIDE_TILT = 0.75;
 function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string): void {
   const L = it.kind === "sword" ? 21 : 10;
   const half = it.kind === "sword" && it.form === "broad" ? 1.7 : 1;
-  ink(ctx, `${key}-blade`, [[-1.1 * half, -2], [-1 * half, -L + 1.6], [0, -L], [1 * half, -L + 1.6], [1.1 * half, -2]], metal, { shade: false, w: 0.7 });
+  // curved（彎刀）、kris（彎匕）：刀身往前彎約 3px（越靠尖端彎越多）；其他形制筆直
+  const bow = it.form === "curved" || it.form === "kris" ? 3 : 0;
+  const bx = (y: number): number => bow * (y / L) ** 2;
+  ink(ctx, `${key}-blade`, [[-1.1 * half, -2], [-1 * half + bx(L - 1.6), -L + 1.6], [bx(L), -L], [1 * half + bx(L - 1.6), -L + 1.6], [1.1 * half, -2]], metal, { shade: false, w: 0.7 });
   ink(ctx, `${key}-guard`, [[-3.4, -3.2], [3.4, -3.2], [3.4, -1.6], [-3.4, -1.6]], it.hilt ?? MAT.gold, { shade: false, w: 0.6 });
 }
 
@@ -205,6 +208,6 @@ export function drawInkShieldFront(ctx: Ctx, it: GearItem, x: number, y: number,
 export function drawInkShieldSide(ctx: Ctx, it: GearItem, colors: ColorFn): boolean {
   if (it.kind !== "shield_round") return false;
   const c = it.color ?? (it.material === undefined ? SHIELD_FALLBACK : colors(it)[0]);
-  ink(ctx, "shield-s", ellPts(7, -23, 2, 7, 14), c, { w: 0.8 });
+  ink(ctx, "shield-s", ellPts(8.5, -23, 2.6, 7, 14), c, { w: 0.8 });
   return true;
 }

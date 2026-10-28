@@ -186,3 +186,24 @@ const C2_KITS: Array<[string, DollSpec["gear"]]> = [
   ["術士", { head: G("crown", "crown", { material: "gold" }), body: G("robe", "long", { color: "#3a4a8a" }), hands: G("bracers", "ring", { material: "copper" }), feet: G("shoes", "slipper", { color: "#6a5a8a" }), off_hand: G("orb", "floating", { material: "crystal", element: "fire" }), main_hand: W("staff") }],
 ];
 section("⑩ C-2a・整套代表（四方向）", C2_KITS.flatMap(([n, g]) => FACINGS.map((f) => figureOf(withGear(g), f, `${n}・${f}`))));
+
+// ⑪ C-2b・其餘武器（四朝向）：巨劍、錘、矛、弩、火槍、霰彈槍、手槍、拳套、鐮刀、鞭、魔導劍、權杖、圖騰杖、成對武器、護膝
+const C2B_A: GearItem[] = [W("sword", "curved"), W("sword", "arcane"), W("sword", "arcane", { element: "fire" }), W("greatsword"), W("greatsword", "zhanma"), W("greatsword", "serrated"), W("hammer", "mace"), W("hammer", "flail"), W("hammer", "warhammer"), W("scythe"), W("fist", "knuckle"), W("fist", "katar"), W("fist", "claw")];
+const C2B_B: GearItem[] = [W("spear"), W("spear", "halberd"), W("spear", "trident"), W("staff", "scepter", { element: "ice" }), W("staff", "totem"), W("staff", "wand", { element: "fire" }), W("whip"), W("whip", "chain"), W("whip", "bladed"), W("crossbow", "light"), W("crossbow", "heavy"), W("crossbow", "repeater")];
+const C2B_C: GearItem[] = [W("longgun", "flintlock"), W("longgun", "hunting"), W("longgun", "sniper"), W("pistol", "flintlock"), W("pistol", "revolver"), W("pistol", "derringer"), W("shotgun", "blunderbuss"), W("shotgun", "double"), W("shotgun", "pump")];
+const C2B_PAIRS: GearItem[] = [W("dagger", "short"), W("dagger", "kris"), W("pistol", "revolver"), W("pistol", "flintlock"), W("hammer", "mace"), W("fist", "claw")];
+for (const f of FACINGS) {
+  section(`⑪ C-2b・近戰（${f}）`, C2B_A.map((w) => figureOf(withGear({ main_hand: w, off_hand: undefined }), f, wlabel(w))));
+  section(`⑪ C-2b・長柄、杖、鞭、弩（${f}）`, C2B_B.map((w) => figureOf(withGear({ main_hand: w, off_hand: undefined }), f, wlabel(w))));
+  section(`⑪ C-2b・槍（${f}）`, C2B_C.map((w) => figureOf(withGear({ main_hand: w, off_hand: undefined }), f, wlabel(w))));
+  section(`⑪ C-2b・成對武器（${f}）`, C2B_PAIRS.map((w) => figureOf(withGear({ main_hand: w, off_hand: w }), f, `${wlabel(w)}×2`)));
+  section(`⑪ C-2b・護膝與側面副手外移（${f}）`, [
+    figureOf(withGear({ feet: G("greaves", "knee", { material: "steel" }) }), f, "greaves knee"),
+    figureOf(withGear({ feet: G("greaves", "long", { material: "steel" }) }), f, "greaves"),
+    figureOf(withGear({ main_hand: W("sword"), off_hand: C_SHIELD }), f, "sword＋圓盾"),
+    figureOf(withGear({ main_hand: W("sword"), off_hand: G("shield_kite", "kite", { material: "iron" }) }), f, "sword＋鳶盾"),
+    figureOf(withGear({ main_hand: W("sword"), off_hand: G("shield_kite", "tower", { material: "wood" }) }), f, "sword＋塔盾"),
+    figureOf(withGear({ main_hand: W("staff"), off_hand: G("tome", "book", { material: "leather" }) }), f, "staff＋書"),
+    figureOf(withGear({ main_hand: W("staff"), off_hand: G("orb", "ball", { material: "crystal", element: "ice" }) }), f, "staff＋法球"),
+  ]);
+}
