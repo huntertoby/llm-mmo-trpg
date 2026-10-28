@@ -774,3 +774,21 @@ primitives:
     acts_on: tile
     params:
       surface: {llm_hint: "表面種類；省略＝煙霧與毒。", type: surface, description_zh: 要清除的表面種類；省略時清除煙霧與毒}
+
+  # --- Phase 3J-1a：進入形態（06 6.30，玩法決定 #48；點數為初值，未經模擬）---
+  - id: enter_form
+    name_zh: 進入形態
+    llm_hint: "化身為一種形態：普攻改用天生武器，持續到取消。"
+    description_zh: 進入 form（content/forms.yaml）的形態。形態是姿態的擴充——只能是姿態（kind 為 stance）唯一的效果、形狀 self；花 stance_ap_cost（1）AP，同時只能有一個姿態或形態（進入形態會取代姿態、施加姿態會解除形態），自己回合用 end_stance 取消（免費），倒下、撤離或戰鬥結束時解除；佔一個主動技能欄位。形態中普攻改用天生武器（屬性 × 0.3；手上武器的普攻特性與主手的普攻詞條不生效，武器技仍看手上武器），套用形態效果（防禦、移動、最大 HP、受傷修正、治療加成、高度差當平地），每次進入觸發進入獎勵。每回合開始付維持費（物理形態扣耐力、心智形態扣法力，forms.yaml），不夠付就自動解除。離開（取消、被迫解除、切換）後該形態冷卻 forms.yaml 的 cooldown 回合，其他形態不受影響；已在該形態中或該形態冷卻中不能使用。元素可選的形態用 use_skill 的 form_element 選（省略＝清單第一個）。預算：base_points 11（照姿態計，skill_budget.yaml 的 form_coefficient_permille）。
+    player_description: "化身為一種形態：普攻改用天生武器，獲得形態效果與進入獎勵；每回合要付維持費，持續到取消。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    acts_on: caster
+    allowed_shapes: [self]
+    sole_effect: true
+    max_per_skill: 1
+    budget_basis: fixed
+    base_points: 11
+    params:
+      form: {llm_hint: "要化身的形態。", type: form, required: true, description_zh: 形態 ID（content/forms.yaml）}

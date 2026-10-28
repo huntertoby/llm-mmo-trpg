@@ -22,6 +22,7 @@ from trpg.content.equipment import (
     ReactionAffix,
     affix_text,
 )
+from trpg.content.form_text import form_effect_lines, natural_weapon_text, upkeep_text
 from trpg.content.maps import Objective
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
@@ -31,6 +32,7 @@ from trpg.engine.delayed import charge_infos
 from trpg.engine.gear_state import GearAffix, GearState
 from trpg.engine.gear_view import GearTotalView, gear_totals
 from trpg.engine.infusion import infusion_options
+from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
@@ -163,6 +165,33 @@ class ActivationView(_ViewModel):
     activation: Literal["timed", "battle"]
     expires_round: int | None
     rule_name_zh: str | None
+
+
+class FormView(_ViewModel):
+    """單位目前的形態（Phase 3J-1a，6.30；HUD 只做文字顯示，外觀在 3J-5）。文字全部由
+    ``content/forms.yaml`` 產生。"""
+
+    form_id: str
+    name_zh: str
+    category: Literal["physical", "mental"]
+    look: str
+    """外觀 id（3J-5 畫圖用；前端不認得時退回原角色）。"""
+    element: str | None = None
+    """進入時選的元素（沒有選擇為 ``None``）。"""
+    natural_weapon_zh: str
+    """天生武器（普攻）的一句話，含「目前 +N」。"""
+    effects_zh: tuple[str, ...] = ()
+    """形態中的效果，每項一行。"""
+    upkeep_zh: str = ""
+    """維持費與冷卻的一句話。"""
+
+
+class FormCooldownView(_ViewModel):
+    """冷卻中的形態（Phase 3J-1a）：離開後該形態冷卻，自己的回合開始時 −1。"""
+
+    form_id: str
+    name_zh: str
+    remaining: int
 
 
 class GrantedSkillView(_ViewModel):
@@ -374,6 +403,11 @@ class UnitView(_ViewModel):
     """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
     charges: tuple[ChargeView, ...] = ()
     """裝備的充能詞條（Phase 3G-G3a，唯讀；依詞條 ID，沒有時為空）：層數與啟動需求。"""
+    form: FormView | None = None
+    """目前的形態（Phase 3J-1a）；不在形態中為 ``None``。形態中 ``weapon_*`` 欄位仍是手上的武器
+    （紙娃娃與武器技用），普攻改用的天生武器見 ``form.natural_weapon_zh``。"""
+    form_cooldowns: tuple[FormCooldownView, ...] = ()
+    """冷卻中的形態與剩餘回合（Phase 3J-1a；依形態 ID）。"""
 
 
 class TrapView(_ViewModel):
@@ -764,8 +798,39 @@ def _attack_element_name(state: BattleState, unit: UnitState) -> str | None:
     return None if element is Element.PHYSICAL else element.value
 
 
+def _form_view(state: BattleState, unit: UnitState) -> FormView | None:
+    """目前形態的顯示資料（Phase 3J-1a）；不在形態中為 ``None``。"""
+    current = unit.form
+    if current is None:
+        return None
+    rules = state.ruleset
+    form = rules.form_def(current.form_id)
+    chosen = current.element
+    lines = form_effect_lines(form, chosen=chosen)
+    if unit.next_attack_hit:  # 進入獎勵還沒用掉
+        lines.append(f"下一次攻擊命中 +{unit.next_attack_hit}")
+    if unit.next_attack_crit:
+        lines.append(f"下一次攻擊暴擊範圍 +{unit.next_attack_crit}")
+    return FormView(
+        form_id=form.id,
+        name_zh=form.name_zh,
+        category=form.category,
+        look=form.look,
+        element=None if chosen is None else chosen.value,
+        natural_weapon_zh=natural_weapon_text(
+            form,
+            rules.core,
+            chosen=chosen,
+            attr_get=lambda attr: effective_attribute(rules, unit, attr),
+        ),
+        effects_zh=tuple(lines),
+        upkeep_zh=upkeep_text(rules.forms, form),
+    )
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     infused = unit.infused_skill if unit.alive else None
+    hand = held_weapon(unit)  # 形態中仍顯示手上的武器（Phase 3J-1a）
     return UnitView(
         id=unit.id,
         template_id=unit.template_id,
@@ -783,12 +848,12 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         move_points=unit.move_points,
         speed=unit.speed,
         initiative=unit.initiative,
-        weapon_name_zh=unit.weapon.name_zh,
-        weapon_id=unit.weapon.id,
-        weapon_class=unit.weapon.weapon_class,
+        weapon_name_zh=hand.name_zh,
+        weapon_id=hand.id,
+        weapon_class=hand.weapon_class,
         weapon_traits_zh=(
-            *unit.weapon.trait_lines_zh(),
-            *unit.weapon.rule_lines_zh(
+            *hand.trait_lines_zh(),
+            *hand.rule_lines_zh(
                 state.ruleset.core,
                 lambda attr: effective_attribute(state.ruleset, unit, attr),
             ),
@@ -796,7 +861,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         offhand_name_zh="" if unit.gear.offhand is None else unit.gear.offhand.name_zh,
         offhand_traits_zh=_offhand_lines(state, unit),
         ammo=unit.ammo,
-        magazine=unit.weapon.magazine,
+        magazine=hand.magazine,
         tags=unit.tags,
         skills=unit.skills if unit.team is team else (),
         skill_levels=dict(sorted(unit.skill_levels.items())) if unit.team is team else {},
@@ -837,6 +902,13 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         equipment=_equipment_view(unit),
         gear_totals=_gear_totals(state, unit),
         charges=_charge_views(state, unit),
+        form=_form_view(state, unit),
+        form_cooldowns=tuple(
+            FormCooldownView(
+                form_id=form_id, name_zh=state.ruleset.form_def(form_id).name_zh, remaining=left
+            )
+            for form_id, left in sorted(unit.form_cooldowns.items())
+        ),
         gear_skills=_gear_skill_views(state, unit) if unit.team is team else (),
         granted_skills=(
             tuple(

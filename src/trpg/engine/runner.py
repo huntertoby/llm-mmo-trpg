@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/77"
-"""``/77``（Phase 3-54b）：大地補強與風小修——新原語 ``shockwave``（震波）、新狀態 ``stoneskin``
+LOG_FORMAT = "trpg-battle-log/78"
+"""``/78``（Phase 3J-1a）：形態——規則包多了 ``forms``（``content/forms.yaml``）、新原語
+``enter_form``、``use_skill`` 多了 ``form_element``、單位狀態多了 ``form``／``form_cooldowns``／
+``next_attack_hit``／``next_attack_crit``，新事件 ``form_entered``、``form_left``、
+``form_upkeep_paid``；回合開始付形態維持費、戰鬥結束解除形態，規則包的技能表與骨架因此不同，
+``/77`` 的紀錄無法重播。
+``/77``（Phase 3-54b）：大地補強與風小修——新原語 ``shockwave``（震波）、新狀態 ``stoneskin``
 （石膚；狀態多了 ``physical_taken_permille``、``move_delta`` 欄位）、傷害效果多了 ``spread``（擴散
 格數），``surface_blown`` 多了 ``lost``（吹進致命地形的表面消失），互動表／規則包的技能與狀態表因此
 不同；``/76`` 的紀錄無法重播（吹進深淵或岩漿的表面以前會停在邊緣）。

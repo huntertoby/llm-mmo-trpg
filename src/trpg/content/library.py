@@ -61,6 +61,7 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
+from trpg.content.forms import FormDef, FormTable
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.keyword_derive import (
     Facts,
@@ -181,6 +182,8 @@ class Ruleset(ContentModel):
     skills: SkillTable = SkillTable()
     summons: SummonTable = SummonTable()
     """召喚物範本（Phase 3D-4a，``content/units/summons/``）：嵌入規則包，重播不依賴資料檔。"""
+    forms: FormTable = FormTable()
+    """形態（Phase 3J-1a，``content/forms.yaml``）：嵌入規則包，重播不依賴資料檔。"""
     rule_changes: RuleChangeTable = RuleChangeTable()
     """規則改變（Phase 3D-6，``content/rule_changes.yaml``）：嵌入規則包，重播不依賴資料檔。"""
     equipment: EquipmentRules = EquipmentRules()
@@ -200,6 +203,7 @@ class Ruleset(ContentModel):
     _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
+    _form_index: dict[str, FormDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
     _shape_index: dict[str, ShapeDef] = PrivateAttr(default_factory=dict)
     _primitive_index: dict[str, PrimitiveDef] = PrivateAttr(default_factory=dict)
@@ -223,6 +227,7 @@ class Ruleset(ContentModel):
         self._trigger_index = self.skill_triggers.by_id()
         self._stack_index = self.stacks.by_id()
         self._summon_index = self.summons.by_id()
+        self._form_index = self.forms.by_id()
         self._rule_change_index = self.rule_changes.by_id()
         self._modifier_ids = frozenset(s.id for s in self.skills.skills if s.is_modifier)
 
@@ -415,6 +420,11 @@ class Ruleset(ContentModel):
         """召喚物範本；找不到時拋出 ``KeyError``。"""
         index: dict[str, SummonDef] = self.__pydantic_private__["_summon_index"]  # type: ignore[index]
         return index[summon_id]
+
+    def form_def(self, form_id: str) -> FormDef:
+        """形態定義（Phase 3J-1a）；不存在時拋出 ``KeyError``。"""
+        index: dict[str, FormDef] = self.__pydantic_private__["_form_index"]  # type: ignore[index]
+        return index[form_id]
 
     def rule_change_def(self, rule_id: str) -> RuleChangeDef:
         """規則改變（Phase 3D-6）；找不到時拋出 ``KeyError``。"""
@@ -613,6 +623,7 @@ def load_library(  # noqa: PLR0915
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
     rule_changes = load("rule_changes.yaml", RuleChangeTable)
+    forms = load("forms.yaml", FormTable)
     roguelite = load("roguelite.yaml", RunRules)
     workshop = load("workshop.yaml", WorkshopRules)
     workshop_text = load("workshop_text.yaml", WorkshopTextTable)
@@ -638,6 +649,7 @@ def load_library(  # noqa: PLR0915
             stacks=stacks,
             skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
             summons=summons,
+            forms=forms,
             rule_changes=rule_changes,
             equipment=equipment_rules,
             keywords=keywords,
@@ -886,6 +898,7 @@ def skill_reference_problems(
         scale_cap_max=ruleset.core.scale_cap_max_permille,
         summon_trait_ids=set(ruleset.core.summon_traits),
         infusion_ids=set(ruleset.core.summon_infusions),
+        form_ids=set(ruleset.forms.by_id()),
     )
     problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
     follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查

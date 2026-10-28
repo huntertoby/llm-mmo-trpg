@@ -18,6 +18,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitEscaped,
 )
+from trpg.engine.forms import leave_form
 from trpg.engine.gear import build_gear, geared_template
 from trpg.engine.gear_enhance import geared_weapon
 from trpg.engine.gear_reactions import gear_reaction_rules
@@ -142,14 +143,18 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
 
 
 def _drop_stances(ctx: Ctx, unit: UnitState) -> list[EventBase]:
-    """倒下或撤離：移除姿態狀態（2E-2）。"""
+    """倒下或撤離：移除姿態狀態（2E-2）與形態（Phase 3J-1a）。"""
+    left = leave_form(ctx, unit, "escaped" if unit.escaped else "downed")
     stances = stance_status_ids(ctx.rules, unit)
     if not stances:
-        return []
+        return left
     unit.statuses = [s for s in unit.statuses if s.status_id not in stances]
     return [
-        ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="downed")
-        for status_id in stances
+        *left,
+        *(
+            ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="downed")
+            for status_id in stances
+        ),
     ]
 
 

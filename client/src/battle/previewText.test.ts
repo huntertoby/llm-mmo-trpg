@@ -84,6 +84,11 @@ describe("previewText", () => {
       expect(text).not.toBe("");
     }
   });
+
+  it("describes entering a form (3J-1a)", () => {
+    const text = outcomeText({ kind: "form", unit_id: "unit_0001", object_id: null, pos: null, detail: "bear" }, names, view);
+    expect(text).toContain("進入形態");
+  });
 });
 
 describe("chain preview", () => {

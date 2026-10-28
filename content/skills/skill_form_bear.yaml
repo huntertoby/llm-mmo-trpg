@@ -1,0 +1,23 @@
+# 測試用的「化身為熊」（Phase 3J-1a，06 6.30；只為測試與靶場試玩，正式技能在 3J-4）。
+id: skill_form_bear
+schema_version: 1
+name_zh: 化身為熊
+tier: 1
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: enter_form, form: bear, affects: self}
+condition: null
+cost: {}
+tags: [stance]
+narrative:
+  concept: 放下人形，化作巨熊硬扛正面
+  cast_flavor: 你的身形膨脹，厚毛覆滿全身，低吼震動地面
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

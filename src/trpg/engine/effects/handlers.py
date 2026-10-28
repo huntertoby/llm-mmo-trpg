@@ -39,6 +39,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
+from trpg.engine.forms import leave_form
 from trpg.engine.ids import BOSS_TAG, CONCEALED, IMMOVABLE, SHIELDED
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
@@ -666,6 +667,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
                 events.append(
                     ctx.emit(StatusRemoved, target_id=unit.id, status_id=old, reason="replaced")
                 )
+        events += leave_form(ctx, unit, "stance")  # 姿態和形態互斥（Phase 3J-1a）
     if definition.attack_element is not None:  # 同時只能有一個附魔：後施放的覆蓋先施放的（3I-6）
         for other in unit.statuses:
             if (

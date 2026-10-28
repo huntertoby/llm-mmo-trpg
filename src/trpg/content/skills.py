@@ -76,6 +76,7 @@ __all__ = [
     "DISPEL",
     "EFFECT_NON_PARAM_FIELDS",
     "EFFECT_PARAM_FIELDS",
+    "ENTER_FORM",
     "EXTRA_REACTION",
     "FOLLOWUP_AUTO_WHENS",
     "FOLLOWUP_CHOICE_WHENS",
@@ -622,6 +623,7 @@ class PrimitiveParam(ContentModel):
         "landing",
         "scope",
         "weapon",
+        "form",
     ]
     required: bool = False
     show_when: dict[str, str] | None = None
@@ -1037,6 +1039,8 @@ class EffectSpec(ContentModel):
     目標相鄰的空格）；``behind`` 瞬步背刺類（形狀 ``single``，固定落在目標的背後格）。"""
     unit: str | None = Field(default=None, pattern=ID_PATTERN)
     """``summon`` 專用（Phase 3D-4a）：召喚物範本 ID（``content/units/summons/``）。"""
+    form: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``enter_form`` 專用（Phase 3J-1a）：形態 ID（``content/forms.yaml``）。"""
     count: int | Literal["all"] | None = Field(default=None)
     """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（1；數量型分歧進化 3-33f2 可為 2，此時必須
     填 ``power_permille``）。``dispel`` 專用（Phase 3D-8a）：驅散的增益個數（1）或
@@ -1543,6 +1547,8 @@ SHAPE_REQUIRED_PRIMITIVES: dict[str, tuple[str, ...]] = {
 LLM 提議模型的一般型態不開放這些形狀。"""
 CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
+ENTER_FORM = "enter_form"
+"""Phase 3J-1a 的進入形態原語 ID（6.30）：姿態（``kind: stance``）唯一的效果，參數 ``form``。"""
 SUMMON = "summon"
 MAX_SUMMON_COUNT = 2
 """一次召喚的數量上限（Phase 3-33f2，數量型分歧進化：2 隻各 ``power_permille``）。"""
@@ -3088,6 +3094,8 @@ class SkillDef(ContentModel):
             raise ValueError("反應技與姿態不能有 teleport（沒有可選的目標格）")
         if self.kind == "stance" and self.shape.type != "self":
             raise ValueError(f"姿態的形狀只能是 self，收到 {self.shape.type}")
+        if ENTER_FORM in types and (self.kind != "stance" or len(types) != 1):
+            raise ValueError("enter_form（進入形態）只能是姿態（kind: stance）唯一的效果")
         if self.kind == "reaction":
             assert self.reaction is not None
             if self.shape.type not in ("self", "single"):
@@ -3445,6 +3453,23 @@ class SkillDef(ContentModel):
         啟動（Phase 3D-6，裝在被動欄位、從技能列啟動）。"""
         return self.kind in ("active", "stance") or (self.is_modifier and self.is_activatable)
 
+    @property
+    def form_id(self) -> str | None:
+        """進入形態的技能（Phase 3J-1a，``enter_form``）的形態 ID；其他技能為 ``None``。"""
+        for effect in self.effects:
+            if effect.type == ENTER_FORM:
+                return effect.form
+        return None
+
+    @property
+    def slot_kind(self) -> str:
+        """佔用的技能欄位：修正型裝在被動欄位（3C-2）；形態技能雖然是姿態，佔主動欄位（6.30）。"""
+        if self.is_modifier:
+            return "passive"
+        if self.form_id is not None:
+            return "active"
+        return self.kind
+
 
 class SkillTable(ContentModel):
     """全部技能（``content/skills/`` 載入後嵌入 ``Ruleset``），依 ID 排序。"""
@@ -3535,6 +3560,7 @@ def _reference_problem(where: str, name: str, kind: str, value: object, refs: _R
         "summon_trait": (refs.summon_trait_ids, "召喚物小特性"),
         "infusion": (refs.infusion_ids, "灌注關鍵字"),
         "rule_change": (refs.rule_change_ids, "規則改變"),
+        "form": (refs.form_ids, "形態"),
     }
     entry = known.get(kind)
     if entry is None or entry[0] is None or value in entry[0]:
@@ -3562,6 +3588,8 @@ class _Refs:
     """``summon`` 的 ``trait`` 可用的小特性 ID（Phase 3-33f2）；``None`` 不檢查。"""
     infusion_ids: set[str] | None = None
     """``summon`` 的 ``infusion`` 可用的灌注關鍵字 ID（Phase 3-33f2）；``None`` 不檢查。"""
+    form_ids: set[str] | None = None
+    """``enter_form`` 的 ``form`` 可用的形態 ID（Phase 3J-1a）；``None`` 不檢查。"""
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -3915,6 +3943,7 @@ def skill_problems(
     scale_cap_max: int | None = None,
     summon_trait_ids: set[str] | None = None,
     infusion_ids: set[str] | None = None,
+    form_ids: set[str] | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
@@ -3958,6 +3987,7 @@ def skill_problems(
         scale_cap_max,
         summon_trait_ids,
         infusion_ids,
+        form_ids,
     )
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)
@@ -4104,7 +4134,7 @@ def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[s
     超過 1 個（Phase 3D-6）。"""
     skills = tuple(skills)
     # 修正技能（kind: modifier，3C-2）裝在被動欄位，與觸發型被動共用上限
-    counts: Counter[str] = Counter("passive" if s.is_modifier else s.kind for s in skills)
+    counts: Counter[str] = Counter(s.slot_kind for s in skills)
     limits = {
         "active": slots.active,
         "passive": slots.passive,

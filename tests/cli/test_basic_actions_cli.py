@@ -31,7 +31,7 @@ def test_open_plain_battle_uses_guard_swap_and_aim_and_replays(
     data, out = _log(
         "open_plain", 98, tmp_path, capsys
     )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98；3H-1 常駐數值後 → 222；3H-2 武器技花耐力後 → 98
-    assert data["format"] == "trpg-battle-log/77"
+    assert data["format"] == "trpg-battle-log/78"
     kinds = {a["type"] for a in data["actions"]}
     assert {"swap", "aim"} <= kinds
     assert any(a["type"] == "defend" and a.get("target_id") for a in data["actions"])

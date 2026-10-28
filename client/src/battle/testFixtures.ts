@@ -73,6 +73,8 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     gear_totals: [],
     charges: [],
     gear_skills: [],
+    form: null,
+    form_cooldowns: [],
     ...over,
   };
 }

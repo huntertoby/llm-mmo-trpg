@@ -15,6 +15,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import Dice, WeaponDef, weapon_attr_examples_zh
+from trpg.content.form_text import form_sentence, natural_weapon_text
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
@@ -852,6 +853,32 @@ def _terrain(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     return f"{verb}地形 {spec.amount or 1} 層"
 
 
+def _enter_form(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """進入形態（Phase 3J-1a）：天生武器、形態效果、進入獎勵、維持費與冷卻都由 ``forms.yaml``
+    產生。"""
+    try:
+        form = lib.ruleset.form_def(spec.form or "")
+    except KeyError:
+        return "進入形態"
+    return form_sentence(lib.ruleset.forms, form, lib.ruleset.core)
+
+
+def _form_formula(
+    library: ContentLibrary, skill: SkillDef, owner: CardOwner | None
+) -> tuple[str, ...]:
+    """形態技能的天生武器算法（Phase 3J-1a）：有持有者時附「目前 +N」（和普攻同一個算法）。"""
+    form_id = skill.form_id
+    if form_id is None:
+        return ()
+    try:
+        form = library.ruleset.form_def(form_id)
+    except KeyError:
+        return ()
+    attr_get = None if owner is None else owner.attr_get
+    text = natural_weapon_text(form, library.ruleset.core, attr_get=attr_get)
+    return (f"天生武器（普攻）：{text}",)
+
+
 def _name_only(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     """只寫原語的中文名（``skill_primitives.yaml`` 的 ``name_zh``）。"""
     return lib.ruleset.primitive_def(spec.type).name_zh
@@ -873,6 +900,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "shadowstep": _shadowstep,
     "charge_through": _charge_through,
     "summon": _summon,
+    "enter_form": _enter_form,
     "swap": _swap,
     "teleport_target": _teleport_target,
     "swap_any": _swap_any,
@@ -975,6 +1003,7 @@ _OWN_TARGET_TEXT: frozenset[str] = frozenset(
         "shadowstep",
         "charge_through",
         "copy_skill",
+        "enter_form",
     }
 )
 """句子本身已寫明對象（或對象就是施放者自己的位移）的原語：不再加「（敵方）」等後綴（清單 3.5）。"""
@@ -1587,11 +1616,14 @@ def _build_card(
         variants=tuple(_variant_card(library, skill, v) for v in skill.variants),
         summons=_summon_cards(library, skill, owner),
         skeleton_zh=skeleton_name(library, skill.skeleton),
-        formula_lines=skill.formula_lines_zh(
-            library.ruleset.core,
-            None if owner is None else owner.weapon,
-            None if owner is None else owner.attr_get,
-            weapon_examples=weapon_attr_examples_zh(library.weapons.values(), skill.weapon_req),
+        formula_lines=(
+            *skill.formula_lines_zh(
+                library.ruleset.core,
+                None if owner is None else owner.weapon,
+                None if owner is None else owner.attr_get,
+                weapon_examples=weapon_attr_examples_zh(library.weapons.values(), skill.weapon_req),
+            ),
+            *_form_formula(library, skill, owner),
         ),
         stacks=skill_stacks(library, skill),
     )

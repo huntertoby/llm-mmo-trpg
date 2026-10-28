@@ -22,6 +22,7 @@ from trpg.engine.effects.models import (
 from trpg.engine.events import (
     EffectFizzled,
 )
+from trpg.engine.forms import enter_form as enter_unit_form
 from trpg.engine.ids import CONCEALED, REVEALED
 from trpg.engine.resources import (
     dispelled_buffs,
@@ -291,8 +292,18 @@ def add_stack(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[Effe
     return []
 
 
+def enter_form(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """``enter_form``（Phase 3J-1a，6.30）：施放者進入 ``form``（元素取動作的 ``form_element``，
+    省略為清單第一個）；回傳進入獎勵中要結算的效果（見 :mod:`trpg.engine.forms`）。"""
+    assert spec.form is not None
+    action = cast.action
+    element = None if action is None else action.form_element
+    return enter_unit_form(cast.ctx, cast.caster, spec.form, element, cast.skill.id)
+
+
 HANDLERS: dict[str, Handler] = {
     "apply_status": apply_status,
+    "enter_form": enter_form,
     "consume_status": consume_status,
     "steal_buff": steal_buff,
     "dispel": dispel,

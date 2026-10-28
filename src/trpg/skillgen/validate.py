@@ -554,9 +554,13 @@ def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
                     skill.id, "stance.duration", f"{where}：姿態狀態不設 duration（到取消為止）"
                 )
             )
-    if skill.kind == "stance" and not any(
-        e.type == "apply_status" and e.status in statuses and statuses[e.status].stance
-        for e in skill.effects
+    if (
+        skill.kind == "stance"
+        and skill.form_id is None
+        and not any(
+            e.type == "apply_status" and e.status in statuses and statuses[e.status].stance
+            for e in skill.effects
+        )
     ):
         out.append(Violation(skill.id, "stance.status", "姿態技能必須施加一個 stance: true 的狀態"))
     return out

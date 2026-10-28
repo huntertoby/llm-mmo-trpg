@@ -47,7 +47,7 @@ type AutoStop = Callable[[RunState, ActiveBattle | None], bool]
 
 
 def _slot(skill: SkillDef) -> str:
-    return "passive" if skill.is_modifier else skill.kind
+    return skill.slot_kind
 
 
 def _fits(

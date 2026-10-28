@@ -647,6 +647,7 @@ def _attack_once(
         bonus += ctx.core.aim_hit_bonus
         attacker.aimed = False
     roll = roll_attack(state, ctx.rng, attacker, target, forced, bonus=bonus)
+    attacker.next_attack_hit = attacker.next_attack_crit = 0  # 形態的進入獎勵用掉（3J-1a）
     rolled_event = ctx.emit(
         AttackRolled,
         attacker_id=attacker.id,

@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from trpg.content.battle import SummonMode
-from trpg.shared.types import ObjectId, Pos, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, UnitId
 
 __all__ = [
     "ACTION_ADAPTER",
@@ -238,6 +238,9 @@ class UseSkill(_ActionBase):
     """召喚技能灌注的關鍵字（Phase 3-33b）：必須是施放者持有、且在 ``summon_infusions`` 對照表中的
     關鍵字；省略時玩家取第一個可選的、AI 依召喚物定位挑。其他技能不能帶。"""
     copy_cast: UseSkill | None = None
+    form_element: Element | None = None
+    """進入形態的技能（Phase 3J-1a，``enter_form``）選的元素：只有元素可選的形態（例：元素化身的
+    火、冰、雷）可以帶，而且要在清單內；省略時取清單第一個。其他技能不能帶。"""
     followup_target: FollowupTarget | None = None
     """複合技能第二段的選取：「位移 → 動作」（Phase 3F-3a）以位移段的落點為原點；「動作 → 位移」
     「擊殺 → 接下一段」（Phase 3F-4a）從施放者第一段結算後的位置選（玩家省略時結算到第二段暫停，由

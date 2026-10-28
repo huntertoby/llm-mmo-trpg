@@ -241,6 +241,7 @@ def test_composition_rules_cover_the_known_primitives() -> None:
     assert rules["gamble"].position == "last"
     assert {p for p, r in rules.items() if r.sole_effect} == {
         "copy_skill",
+        "enter_form",
         "rule_change",
         "swap_any",
         "teleport_target",

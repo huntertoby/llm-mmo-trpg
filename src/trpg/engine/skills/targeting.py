@@ -48,6 +48,7 @@ from trpg.engine.gear_summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
+from trpg.engine.rules.forms import form_element_problem, form_problem, held_weapon
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import is_deadly
@@ -190,7 +191,7 @@ def _base_reach(skill: SkillDef, caster: UnitState) -> int:
     reach = skill.shape.range
     if reach is None:
         return 0
-    base = caster.weapon.range if reach == "weapon" else reach
+    base = held_weapon(caster).range if reach == "weapon" else reach
     return base + mastery_reach_bonus(caster, skill)
 
 
@@ -202,7 +203,7 @@ def skill_is_height_limited(state: BattleState, caster: UnitState, skill: SkillD
     """
     limit = state.ruleset.core.melee_height_limit_max_range
     if skill.category == "weapon":
-        return caster.weapon.range <= limit
+        return held_weapon(caster).range <= limit
     # 近戰性質看沒有修正的射程：修正規則加長射程不會讓近戰法術變成遠程（3C-2）
     return skill.shape.type == "single" and _base_reach(skill, caster) <= limit
 
@@ -222,7 +223,7 @@ def fires_gun(caster: UnitState, skill: SkillDef) -> bool:
     return (
         skill.kind == "active"
         and skill.category == "weapon"
-        and caster.weapon.magazine > 0
+        and held_weapon(caster).magazine > 0
         and any(e.type == "damage" for e in skill.effects)
     )
 
@@ -240,21 +241,21 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
         # 魔劍士方案 A（3I-3）：武器技有心智第二屬性時，命中也用「武器的縮放值」與它的平均
         # （其餘同 attack_value：武器加值、狀態的攻擊加值）
         value = (
-            attack_value(caster, state.ruleset)
+            attack_value(caster, state.ruleset, held_weapon(caster))
             if skill.secondary_scaling_attr is None
             else skill_scaling_value(state.ruleset, caster, skill)
-            + caster.weapon.attack_bonus
+            + held_weapon(caster).attack_bonus
             + status_attack_bonus(state.ruleset, caster)
         )
         profile = AttackProfile(
             attack_value=value,
-            melee=caster.weapon.is_melee,
+            melee=held_weapon(caster).is_melee,
             height_limited=height_limited,
-            crit_range=caster.weapon.crit_range,
+            crit_range=held_weapon(caster).crit_range,
             pierce=pierce,
         )
         if fires_gun(caster, skill):  # 火器武器技套用武器的特性（3-24c）：站定、穿甲、無視掩護
-            weapon = caster.weapon
+            weapon = held_weapon(caster)
             profile = replace(
                 profile,
                 crit_range=max(2, weapon.crit_range - crit_range_cut(caster)),
@@ -263,7 +264,9 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
                 ignore_cover=weapon.ignore_cover,
             )
     else:
-        bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
+        bonus = (
+            held_weapon(caster).attack_bonus if held_weapon(caster).weapon_class == "focus" else 0
+        )
         profile = AttackProfile(
             attack_value=skill_scaling_value(state.ruleset, caster, skill) + bonus,
             melee=False,
@@ -339,11 +342,11 @@ def resource_problem(  # noqa: PLR0911
     state: BattleState, unit: UnitState, skill: SkillDef
 ) -> str | None:
     """武器相容、沉默、法力、耐力、冷卻、每場次數、HP 代價與源力（Phase 3C-4a）（不含 AP）。"""
-    problem = weapon_problem(skill, unit.weapon.weapon_class, unit_held(unit))
+    problem = weapon_problem(skill, held_weapon(unit).weapon_class, unit_held(unit))
     if problem is not None:
         return problem
     if fires_gun(unit, skill) and unit.ammo <= 0:  # 火器武器技要有子彈（3-24c）
-        return f"空膛：{unit.weapon.name_zh}需要先裝填才能施放：{skill.name_zh}"
+        return f"空膛：{held_weapon(unit).name_zh}需要先裝填才能施放：{skill.name_zh}"
     if skill.category == "spell" and blocks_spells(state.ruleset, unit):
         return f"沉默中：不能使用法術技：{skill.name_zh}"
     if unit.mana < skill.cost.mana:
@@ -395,6 +398,9 @@ def _already_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> st
         for e in skill.effects
     ):
         return f"已經在這個姿態中：{skill.name_zh}"
+    form_id = skill.form_id
+    if form_id is not None and (problem := form_problem(unit, form_id)) is not None:
+        return f"{problem}：{skill.name_zh}"  # 形態（Phase 3J-1a）
     return activation_problem(state, unit, skill)
 
 
@@ -509,7 +515,7 @@ def _reach_problem(  # noqa: PLR0917
         diff = abs(state.tile(*caster.xy).height - state.tile(*xy).height)
         if diff > core.melee_height_limit:
             return f"高度差過大，無法近戰：相差 {diff} 層（上限 {core.melee_height_limit} 層）"
-    lob = caster.weapon.lob if skill.category == "weapon" else 0  # 弓的拋射（3-24a1）
+    lob = held_weapon(caster).lob if skill.category == "weapon" else 0  # 弓的拋射（3-24a1）
     if not has_line_of_sight(state, caster.xy, xy, lob=lob):
         return f"視線被阻擋：{caster.name_zh} 看不到 {what}"
     return None
@@ -889,11 +895,24 @@ _AREA_TARGETING = frozenset({"direction", "tile", "none"})
 """``include_caster`` 會把施放者加進影響範圍的選取方式（範圍型形狀）。"""
 
 
+def _check_form_element(state: BattleState, skill: SkillDef, action: UseSkill) -> None:
+    """``form_element``（Phase 3J-1a）：只有進入形態、元素可選的技能可以帶，而且要在清單內。"""
+    if action.form_element is None:
+        return
+    form_id = skill.form_id
+    if form_id is None:
+        raise IllegalActionError(f"只有進入形態的技能可以指定 form_element：{skill.name_zh}")
+    problem = form_element_problem(state.ruleset.form_def(form_id), action.form_element)
+    if problem is not None:
+        raise IllegalActionError(problem)
+
+
 def compute_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""
     check_infusion(state, caster, skill, action.infusion)
+    _check_form_element(state, skill, action)
     if action.followup_target is not None and skill.followup is None:
         raise IllegalActionError(f"只有複合技能可以指定 followup_target：{skill.name_zh}")
     if action.followup_target is not None and _auto_followup(skill):
@@ -1332,8 +1351,8 @@ def damage_parameters(
         dice, flat, scaled = spec.dice, 0, attr * core.spell_attr_multiplier_permille
         multiplier = _PERMILLE
     else:
-        weapon = caster.weapon
-        sources = attack_element_sources(state.ruleset, caster)
+        weapon = held_weapon(caster)
+        sources = attack_element_sources(state.ruleset, caster, held=True)
         if modified:  # 修正技能的 add_element 排在武器本身元素之後、武器元素詞條之前（06 6.10）
             added = modifiers.damage_element(
                 state, caster, modifiers.skill_use(skill), Element.PHYSICAL

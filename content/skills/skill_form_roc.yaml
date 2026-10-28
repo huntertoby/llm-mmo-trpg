@@ -1,0 +1,23 @@
+# 測試用的「化身為巨鵰」（Phase 3J-1a，06 6.30；只為測試與靶場試玩，正式技能在 3J-4）。
+id: skill_form_roc
+schema_version: 1
+name_zh: 化身為巨鵰
+tier: 1
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: enter_form, form: roc, affects: self}
+condition: null
+cost: {}
+tags: [stance]
+narrative:
+  concept: 化作巨鵰，從高處俯視整片戰場
+  cast_flavor: 你展開雙翼，鳴聲劃破天際
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

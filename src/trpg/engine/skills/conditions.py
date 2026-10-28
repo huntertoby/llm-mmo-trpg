@@ -29,6 +29,7 @@ from trpg.content.skills import (
 )
 from trpg.engine.ids import CONCEALED
 from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rune_queries import has_own_rune
 from trpg.engine.state import BattleState, UnitState
@@ -71,7 +72,7 @@ def _has_living_ally_beside(state: BattleState, unit: UnitState) -> bool:
 def unit_held(unit: UnitState) -> dict[str, str]:
     """單位手上的主手武器與副手（ID → 中文名；Phase 3I-5）：``wielding_weapon`` 條件與技能的
     限定武器（``weapon_only``）都看這份。"""
-    return held_gear(unit.weapon, unit.gear.offhand)
+    return held_gear(held_weapon(unit), unit.gear.offhand)
 
 
 def _caster_condition_met(state: BattleState, caster: UnitState, condition: ConditionSpec) -> bool:

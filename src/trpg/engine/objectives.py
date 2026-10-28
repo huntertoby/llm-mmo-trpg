@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from trpg.engine.context import Ctx
 from trpg.engine.events import BattleEnded, EndReason
+from trpg.engine.forms import leave_all_forms
 from trpg.shared.types import Team
 
 __all__ = ["check_battle_end", "check_round_end", "end_battle"]
@@ -27,6 +28,7 @@ def end_battle(ctx: Ctx, winner: Team | None, reason: EndReason) -> None:
     state.winner = winner
     state.end_reason = reason
     state.active_unit = None
+    leave_all_forms(ctx, "battle_end")  # 戰鬥結束解除形態（Phase 3J-1a）
     ctx.emit(BattleEnded, winner=winner, reason=reason)
 
 

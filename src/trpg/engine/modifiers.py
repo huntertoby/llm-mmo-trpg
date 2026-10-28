@@ -42,6 +42,7 @@ from trpg.engine.gear_enhance import (
     gear_status_duration,
     spend_gear_rune_read,
 )
+from trpg.engine.rules.forms import form_heal_permille, held_weapon, natural_damage_permille
 from trpg.engine.skill_levels import grow_shape, leveled_skill
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
@@ -249,7 +250,7 @@ def empty_active_slots(state: BattleState, unit: UnitState) -> int:
     主動技能數（裝備授予的常駐技能、暫時獲得的技能不算；下限 0）。結算當下由技能欄推算，不存
     狀態。"""
     rules = state.ruleset
-    used = sum(1 for skill_id in unit.skills if rules.skill_def(skill_id).kind == "active")
+    used = sum(1 for skill_id in unit.skills if rules.skill_def(skill_id).slot_kind == "active")
     return max(0, rules.core.skill_slots.active - used)
 
 
@@ -299,7 +300,9 @@ def summon_damage_bonus(state: BattleState, unit: UnitState, use: Use, subject: 
 def reap_permille(unit: UnitState, use: Use, subject: Subject) -> int:
     """武器的收割（Phase 3I-1，08 8.11，鐮刀）：普攻或武器技、目標 **當下** HP ≤ 最大 HP 的
     ``hp_permille``‰ 時的傷害加成（‰）；其他情況 0。和其他正向加成一起套全身 +50% 上限。"""
-    reap = unit.weapon.reap
+    reap = (
+        unit.weapon if use.action == "attack" else held_weapon(unit)
+    ).reap  # 武器技看手上武器（3J-1a）
     target = subject.unit
     if reap is None or target is None or not target.alive or target.max_hp <= 0:
         return 0
@@ -334,8 +337,9 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     summon = summon_damage_bonus(state, unit, use, subject)  # 召喚物成長的加成（3-33b）
     reap = reap_permille(unit, use, subject)  # 鐮刀的收割（3I-1）
     book = offhand_spell_permille(unit, use)  # 法書的法術增幅（3I-2）
+    natural = natural_damage_permille(state.ruleset, unit) if use.action == "attack" else 0
     capped = cap_damage_bonus(
-        state.ruleset, gain + gear_gain + keyword + rune + summon + reap + book
+        state.ruleset, gain + gear_gain + keyword + rune + summon + reap + book + natural
     )
     total = max(0, _PERMILLE + capped + loss + gear_loss)
     # 數量型分歧進化（3-33f2）：每隻只有一般的 power_permille ‰ 傷害
@@ -366,7 +370,8 @@ def status_duration_bonus(state: BattleState, unit: UnitState, use: Use, status:
 def heal_permille(state: BattleState, unit: UnitState, use: Use) -> int:
     """你的治療量倍率（‰）：1000 ＋ ``heal_permille`` 加總，下限 0（Phase 3-24b1；技能的治療與聖光
     雙效的治療，不含狀態與表面的回合開始治療、吸血）。"""
-    return max(0, _PERMILLE + _sum_self(state, unit, use, "heal_permille"))
+    form = form_heal_permille(state.ruleset, unit)  # 形態的治療加成（Phase 3J-1a）
+    return max(0, _PERMILLE + _sum_self(state, unit, use, "heal_permille") + form)
 
 
 def summon_hp_permille(state: BattleState, unit: UnitState, use: Use) -> int:
@@ -574,7 +579,7 @@ def _convert(
     for name in conversion.keep:
         raw = getattr(shape, name)
         if raw == "weapon":
-            raw = unit.weapon.range
+            raw = held_weapon(unit).range
         if not isinstance(raw, int):
             return shape
         spec = params[name]

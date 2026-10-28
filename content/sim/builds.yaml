@@ -809,3 +809,21 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_summon_elite, skill_summon_spirit, skill_raise_skeleton, skill_frost_shackle, skill_fire_wall]
+
+  # Phase 3J-1a：形態核心規則的對照組（不列入矩陣與隨機抽選）；5 招測試用「化身為〇」，正式形態技能在 3J-4
+  - id: build_form_tester
+    name_zh: 形態測試
+    reference: true
+    theme_zh: 3J-1a 形態（06 6.30）的測試 build：熊、貓、巨鵰、元素化身、狼人五種形態輪替；普攻改用天生武器，維持費扣耐力或法力。
+    hero:
+      id: build_form_tester
+      name_zh: 形態測試
+      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 10}
+      max_hp: 44
+      speed: 5
+      armor_bonus: 1
+      weapon: one_handed_sword
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 30
+      skills: [skill_form_bear, skill_form_cat, skill_form_roc, skill_form_elemental, skill_form_werewolf]
