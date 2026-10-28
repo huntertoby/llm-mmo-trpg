@@ -2338,3 +2338,9 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. **大地崩陷**：照 06 6.33 #64 寫入。
 5. 行為一致測試：石膚術實際跑引擎（石膚＋護盾同一目標、物理 −30%、移動 −1、2 回合）；大地崩陷實際下陷、單位墜落；工坊「元素大地＋只有下陷」的技能在合理範圍內能過預算。
 6. 驗收：pytest（engine、content、skillgen、narrative、roguelite、api、`-m "slow or not slow" tests/cli --timeout=3000`）、vitest、ruff、format、mypy、一場含大地崩陷的重播。報告 `Phase3-54e報告.md`。
+
+### 68.1 3-54e 驗收（2026-10-29，開發 PM）
+- 報告 `Phase3-54e報告.md`。隆起、下陷 `base_points` 2 → 7（7 點就夠）；石膚術 `skill_stoneskin_ward`（石膚＋護盾 1d6，約 79%）；大地崩陷 `skill_earth_collapse`（3×3 純下陷、史詩，約 83%）；築高台、陷地術拿掉緩速、改 2 AP（玩法 PM 同意）。
+- 玩法 PM 回覆（#2 由玩法 PM 定）：高台圖騰持續改回 4 輪、`summon_trait_platform_permille` 1000 → 250（暫時的高台不比永久隆起貴）→ 開發 PM 已改（費用維持 6 法力、冷卻 2，70.8%）；修好合併後全量唯一失敗 `test_summon_report[dev_summon_plateau]`。
+- 待決：**單位墜落**（下陷一次 1 層、墜落門檻落差 2，大地崩陷不會讓單位墜落）→ 專案 PM 問使用者，結果出來前照現狀（被推進坑才墜落）；**AI 不施放純地形技能** → 另排一段。
+- 合併後全量（除 llm）：pytest 8108 通過（修正前 1 失敗，已修並重跑相關 3499＋564＋cli 148）、vitest 997、mypy、lint-imports、重播。

@@ -1,4 +1,4 @@
-# 主動（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格立起高台圖騰，持續 1 輪；由效用 AI 控制。
+# 主動（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格立起高台圖騰，持續 4 輪；由效用 AI 控制。
 id: skill_summon_plateau_totem
 schema_version: 1
 name_zh: 立起高台圖騰
@@ -13,7 +13,7 @@ ap_cost: 1
 scaling_attr: wil
 shape: {type: ground_tile, range: 3}
 effects:
-  - {type: summon, unit: summon_plateau_totem, duration: 1}
+  - {type: summon, unit: summon_plateau_totem, duration: 4}
 condition: null
 cost: {mana: 6, cooldown: 2}
 tags: [earth, spell, summon, terrain]
