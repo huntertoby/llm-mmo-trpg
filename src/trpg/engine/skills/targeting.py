@@ -49,6 +49,7 @@ from trpg.engine.ids import BOSS_TAG
 from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.forms import (
+    active_form,
     form_element_problem,
     form_problem,
     held_weapon,
@@ -101,6 +102,7 @@ __all__ = [
     "fires_gun",
     "followup_origin",
     "followup_selection",
+    "form_bonus_permille",
     "gather_pick",
     "gather_point",
     "has_selection",
@@ -1324,6 +1326,14 @@ def has_selection(state: BattleState, caster: UnitState, skill: SkillDef) -> boo
     return next(selections(state, caster, skill), None) is not None
 
 
+def form_bonus_permille(state: BattleState, caster: UnitState, spec: EffectSpec) -> int:
+    """效果的「在形態中」倍率（‰；Phase 3J-4b）：施放者在形態中且效果填了 ``form_bonus_permille``
+    時為 ``1000 ＋ n``，否則 1000。傷害（:func:`damage_parameters`）與治療共用。"""
+    if spec.form_bonus_permille is None or active_form(state.ruleset, caster) is None:
+        return _PERMILLE
+    return _PERMILLE + spec.form_bonus_permille
+
+
 class DamageParameters(NamedTuple):
     """技能一個傷害效果的結算參數（4.2）：骰子、固定值、屬性加成（‰）、倍率（‰）與元素。"""
 
@@ -1377,6 +1387,7 @@ def damage_parameters(
     if skill.damage_permille is not None:  # 高變異（3D-7b）：基礎傷害折扣
         multiplier = multiplier * skill.damage_permille // _PERMILLE
     multiplier = multiplier * level_multiplier(state.ruleset, caster, skill) // _PERMILLE  # 3-26a
+    multiplier = multiplier * form_bonus_permille(state, caster, spec) // _PERMILLE  # 3J-4b
     if modified and skill.category == "spell":
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)

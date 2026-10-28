@@ -28,6 +28,7 @@ from trpg.content.keyword_derive import (
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_keywords import KeywordDef, KeywordTable
 from trpg.content.skills import (
+    ENTER_FORM,
     ConditionSpec,
     EffectSpec,
     ModifierSpec,
@@ -41,6 +42,7 @@ __all__ = [
     "derive_draft_keywords",
     "derive_keywords",
     "draft_facts",
+    "is_form_maker",
     "is_starter_skill",
     "keyword_pools",
     "pool_skills",
@@ -110,8 +112,16 @@ def skills_without_keywords(skills: Iterable[SkillDef], table: KeywordTable) -> 
 
 
 def is_starter_skill(skill: SkillDef) -> bool:
-    """可當起始技能（創角與候選產生器的來源）：1 階、普通或稀有、主動技。"""
-    return skill.tier == 1 and skill.rarity in _STARTER_RARITIES and skill.kind == "active"
+    """可當起始技能（創角與候選產生器的來源）：1 階、普通或稀有、主動技。姿態只對 ``enter_form``
+    （化身為〇）開放（Phase 3J-4b，06 6.30）；其他姿態照舊不能當起始技能。"""
+    if skill.tier != 1 or skill.rarity not in _STARTER_RARITIES:
+        return False
+    return skill.kind == "active" or (skill.kind == "stance" and is_form_maker(skill))
+
+
+def is_form_maker(skill: SkillDef) -> bool:
+    """技能製造形態（有 ``enter_form`` 效果；化身為〇）。"""
+    return any(effect.type == ENTER_FORM for effect in skill.effects)
 
 
 def keyword_pools(

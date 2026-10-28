@@ -1103,6 +1103,10 @@ class EffectSpec(ContentModel):
     """``damage`` 專用的法術屬性倍率覆蓋（Phase 3J-2；‰）：省略＝法術的屬性倍率（核心規則）。
     只給引擎由資料組出的技能用（形態的蓄力吐息要和普攻一樣屬性 × 0.3，見
     :mod:`trpg.content.form_breath`）；原語定義沒有列它，玩家與 LLM 的技能不能使用。"""
+    form_bonus_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
+    """``damage``、``heal`` 專用（Phase 3J-4b，06 6.30）：施放者在形態中時，這個效果的傷害或治療
+    ×（1000 ＋ n）‰（整體乘上去：骰值、屬性加成和其他倍率一起，屬性加成只算一次；不在形態中
+    不變）。只有技能自己的效果可以用。"""
     spread: int | None = Field(default=None, ge=1, le=2)
     """``damage`` 專用（Phase 3-54b，06 6.33）：風元素傷害的元素擴散格數（1 或 2；省略＝
     ``core.wind.spread_distance``，預設 1）。只有 ``element: wind`` 的技能自己的傷害效果可以填；
@@ -3297,6 +3301,16 @@ class SkillDef(ContentModel):
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 
+    @staticmethod
+    def _check_form_bonus(where: str, effect: EffectSpec, *, top: bool) -> None:
+        """``form_bonus_permille``（在形態中的倍率）：只有技能自己的傷害、治療可以用。"""
+        if effect.form_bonus_permille is None:
+            return
+        if effect.type not in ("damage", "heal"):
+            raise ValueError(f"{where}：只有 damage、heal 使用 form_bonus_permille")
+        if not top:
+            raise ValueError(f"{where}：form_bonus_permille 只能用在技能自己的傷害或治療效果")
+
     def _check_split_heal(self, where: str, effect: EffectSpec) -> None:
         """``split_heal``（聖光雙效）：只能填 true、``affects: all``、法術技、``aura``／``area``
         骨架、主動技能，不可與吸血、爆骰、縮放並用（治療與傷害要用同一個骰值）。"""
@@ -3353,6 +3367,7 @@ class SkillDef(ContentModel):
             raise ValueError(
                 f"{where}：推擊與拉扯的距離必須是 1 到 {_MAX_DISPLACE} 格，收到 {effect.distance}"
             )
+        self._check_form_bonus(where, effect, top=top)
         if effect.type != "damage":
             return
         if self.category == "spell":

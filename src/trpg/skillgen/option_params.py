@@ -69,6 +69,7 @@ PARAM_TEXT: dict[str, str] = {
     "effects": "區域效果",
     "element": "元素",
     "explode": "爆骰",
+    "form_bonus_permille": "在形態中的加成（‰）",
     "hp_permille": "復活 HP（‰）",
     "infusion": "第二個灌注關鍵字",
     "knock_prone": "另外擊倒",

@@ -102,6 +102,7 @@ from trpg.engine.skills.targeting import (
     SkillArea,
     damage_parameters,
     fires_gun,
+    form_bonus_permille,
     resolve_effects,
     shape_reach,
     skill_profile,
@@ -833,16 +834,20 @@ class Cast:
         """技能等級的效果倍率（‰；Phase 3-26a，傷害由 ``damage_parameters`` 處理）。"""
         return level_multiplier(self.ctx.rules, self.caster, self.skill)
 
-    def heal_multiplier(self, *, self_heal: bool = False) -> int:
+    def heal_multiplier(self, *, self_heal: bool = False, spec: EffectSpec | None = None) -> int:
         """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率與消耗
-        層數的治療加成；加成只算治療自己時，``self_heal``（效果的對象是 ``self``）才加，3-52b）。"""
+        層數的治療加成；加成只算治療自己時，``self_heal``（效果的對象是 ``self``）才加，3-52b；
+        ``spec`` 有 ``form_bonus_permille`` 且施放者在形態中時再乘 ``1000 ＋ n``，3J-4b）。"""
         base = PERMILLE
         if self.modified:
             base = modifiers.heal_permille(self.ctx.state, self.caster, self.use)
         bonus = self.heal_bonus
         if self.heal_self_only and not self_heal:
             bonus = 0
-        return base * self.level_permille() // PERMILLE * (PERMILLE + bonus) // PERMILLE
+        total = base * self.level_permille() // PERMILLE * (PERMILLE + bonus) // PERMILLE
+        if spec is None:
+            return total
+        return total * form_bonus_permille(self.ctx.state, self.caster, spec) // PERMILLE
 
     def shield_multiplier(self) -> int:
         """護盾量倍率（‰）：技能等級的倍率，再乘消耗層數的加成（Phase 3-52）。"""

@@ -40,7 +40,12 @@ from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import BattleNode, BattlePlan, RunStart, RunState
 from trpg.shared.rng import MASK64, Rng
 from trpg.shared.types import Attribute, top_attribute
-from trpg.skillgen.keywords import derive_keywords, is_starter_skill, keyword_pools
+from trpg.skillgen.keywords import (
+    derive_keywords,
+    is_form_maker,
+    is_starter_skill,
+    keyword_pools,
+)
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 
 __all__ = [
@@ -316,8 +321,12 @@ def _composed_starter(
 
 
 def starter_pools(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
-    """開局用的技能池：只看專屬規則、只列可當起始技能的（1 階、普通或稀有、主動技）。"""
-    return keyword_pools(library, starter_only=True, exclusive_only=True)
+    """開局用的技能池：只看專屬規則、只列可當起始技能的（1 階、普通或稀有、主動技；姿態只開放
+    ``enter_form``）。「形態」池只給 1 階化身（熊、貓、巨鵰、狼人；Phase 3J-4b，06 6.30）——
+    只拿到利用者而沒辦法變身的開局不存在；利用者仍在關鍵字池裡，只是不當起始技能。"""
+    pools = keyword_pools(library, starter_only=True, exclusive_only=True)
+    pools["form"] = tuple(s for s in pools["form"] if is_form_maker(library.skills[s]))
+    return pools
 
 
 def starting_skill(

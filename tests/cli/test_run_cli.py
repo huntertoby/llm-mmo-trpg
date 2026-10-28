@@ -169,8 +169,8 @@ def test_run_auto_spends_skill_points_and_shows_levels(
 
 
 @pytest.mark.parametrize(
-    "seed", [4, 5]
-)  # 3-33e1／e2a／e2b：技能池多了召喚技，種子 1、4 的一輪不再進化；3I-1、3I-3 之後改用種子 4、5
+    "seed", [3, 5]
+)  # 3-33e1／e2a／e2b：種子 1、4 的一輪不再進化；3I-1、3I-3 改用 4、5；3J-4b 開局池改變，4 改為 3
 @pytest.mark.slow
 def test_run_auto_reaches_a_branching_evolution(
     seed: int, capsys: pytest.CaptureFixture[str]
