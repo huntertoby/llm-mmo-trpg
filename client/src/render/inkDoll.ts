@@ -346,12 +346,14 @@ function drawSide(t: Ctxt): void {
     legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
     dot(ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
   }
+  // 書、法球（非武器、非盾的副手物品）也畫在身體後面（美術 PM：照 storyDoll.js）；盾留在身體前面
+  if (off !== undefined && !isShield(off) && heldNotMirrored(off)) {
+    if (off.kind === "orb") legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: false, side: true });
+    else t.hooks.offhandSide(off);
+  }
   drawLegs(t, "side");
   drawBody(t, "side");
-  if (off !== undefined && heldNotMirrored(off)) {
-    if (off.kind === "orb") legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: false, side: true });
-    else if (!drawInkShieldSide(ctx, off, t.hooks.colors)) t.hooks.offhandSide(off);
-  }
+  if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) t.hooks.offhandSide(off);
   drawHead(t, "side");
   drawHeadgear(t, "side");
   ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));
