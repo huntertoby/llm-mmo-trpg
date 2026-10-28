@@ -2157,6 +2157,16 @@
               }
             ],
             "title": "Target Object Id"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -2165,7 +2175,7 @@
           "unit_id"
         ],
         "title": "Attack",
-        "description": "以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。\n\n攻擊物件一律命中（不擲命中骰、不暴擊），物件必須帶 ``breakable``。"
+        "description": "以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。\n\n攻擊物件一律命中（不擲命中骰、不暴擊），物件必須帶 ``breakable``。\n\n``direction``（Phase 3J-2）：蓄力武器（龍的蓄力吐息）的普攻＝選一個方向開始蓄力，這時可以\n只給方向（不給目標）；給了目標就朝目標的方向（較大的軸向）蓄力。非蓄力武器不能帶方向。"
       },
       "Attribute": {
         "type": "string",
@@ -3215,6 +3225,17 @@
             },
             "type": "array",
             "title": "Tiles"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
           },
           "text": {
             "type": "string",

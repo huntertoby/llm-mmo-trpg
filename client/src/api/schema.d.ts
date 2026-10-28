@@ -888,6 +888,9 @@ export interface components {
          * @description 以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。
          *
          *     攻擊物件一律命中（不擲命中骰、不暴擊），物件必須帶 ``breakable``。
+         *
+         *     ``direction``（Phase 3J-2）：蓄力武器（龍的蓄力吐息）的普攻＝選一個方向開始蓄力，這時可以
+         *     只給方向（不給目標）；給了目標就朝目標的方向（較大的軸向）蓄力。非蓄力武器不能帶方向。
          */
         Attack: {
             /** Unit Id */
@@ -901,6 +904,7 @@ export interface components {
             target_id?: string | null;
             /** Target Object Id */
             target_object_id?: string | null;
+            direction?: components["schemas"]["Direction"] | null;
         };
         /**
          * Attribute
@@ -1324,6 +1328,8 @@ export interface components {
             pos: components["schemas"]["Pos"];
             /** Tiles */
             tiles: components["schemas"]["Pos"][];
+            /** Direction */
+            direction?: string | null;
             /** Text */
             text: string;
         };
