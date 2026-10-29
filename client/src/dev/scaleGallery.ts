@@ -60,7 +60,7 @@ function mainScene(): BattleView {
     unit("unit_0091", "enemy", 2, 0, { template_id: "t", name_zh: "上排敵人", facing: "south" }),
     unit("unit_0092", "enemy", 5, 0, { template_id: "t", name_zh: "上排敵人", facing: "south" }),
   ];
-  const shifted = units.map((u) => ({ ...u, y: u.y + 1 }));
+  const shifted = units.map((u) => ({ ...u, pos: { x: u.pos.x, y: u.pos.y + 1 } }));
   return view(4, grid(4, [2]), shifted);
 }
 
