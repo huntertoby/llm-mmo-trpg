@@ -23,11 +23,11 @@ export function raceOriginBody(choice: RaceOriginChoice): { race?: string; origi
   return { ...(choice.race === "" ? {} : { race: choice.race }), ...(choice.origin === "" ? {} : { origin: choice.origin }) };
 }
 
-/** 種族卡浮動卡的各行：種族技（花費、次數、說明）與環境被動。 */
+/** 種族卡浮動卡的各行：種族技（說明已含每場次數）、花費與環境被動。 */
 export function raceCardLines(race: RaceOption): string[] {
   return [
     `種族技・${race.skill_name_zh}：${race.skill_description_zh}`,
-    `花費 ${race.skill_ap} AP・每場限用 ${race.skill_uses} 次・不佔技能欄`,
+    `花費 ${race.skill_ap} AP・不佔技能欄`,
     `環境被動・${race.passive_name_zh}：${race.passive_description_zh}`,
   ];
 }

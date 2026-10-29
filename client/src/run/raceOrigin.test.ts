@@ -41,7 +41,7 @@ describe("開局的種族與出身", () => {
   it("種族卡列出種族技、花費次數與環境被動；出身卡寫明不影響戰鬥", () => {
     const lines = raceCardLines(race);
     expect(lines[0]).toContain("林隱");
-    expect(lines[1]).toBe("花費 1 AP・每場限用 2 次・不佔技能欄");
+    expect(lines[1]).toBe("花費 1 AP・不佔技能欄");
     expect(lines[2]).toContain("林間視野");
     expect(raceSummary(race)).toBe("林隱／林間視野");
     const o = originCardLines(origin);
