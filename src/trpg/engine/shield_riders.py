@@ -7,7 +7,9 @@
   （``shield_absorbed`` 事件觸發）；
 - **結束回復**（``shield_end_heal``）：護盾被打破或到期時，持有者回復固定的生命；
 - **破盾造表面**（``shield_break_surface``）：護盾被打破時，在持有者自己的格子造出表面；
-- **破盾施加狀態**（``shield_break_status``）：護盾被打破時，對打破它的攻擊者施加狀態。
+- **破盾施加狀態**（``shield_break_status``）：護盾被打破時，對打破它的攻擊者施加狀態；
+- **破盾電擊**（``shield_break_lightning``，3W-2c）：護盾被打破時，對打破它的攻擊者造成固定的
+  雷電傷害（「帶電」是雷電傷害的關鍵字，不是狀態）。
 
 打破由 ``shield_ended``（``broken``）觸發；到期由回合結束的狀態倒數直接結算
 （:func:`expiry_effects`）。
@@ -71,6 +73,23 @@ def end_effects(
                 source_id=unit.id,
                 target_id=breaker.id,
                 status_id=definition.shield_break_status,
+            )
+        )
+    if (
+        broken
+        and definition.shield_break_lightning
+        and breaker is not None
+        and breaker.alive
+        and breaker.team is not unit.team
+    ):
+        effects.append(
+            DamageEffect(
+                depth=depth,
+                source_id=unit.id,
+                target_id=breaker.id,
+                cause="effect",
+                element=Element.LIGHTNING,
+                flat=definition.shield_break_lightning,
             )
         )
     return effects

@@ -27,7 +27,7 @@ from trpg.content.skills import SkillDef
 from trpg.engine import Attack, BattleState, EndTurn, UseSkill, resolve
 from trpg.engine.events import DamageDealt, Healed, ShieldAbsorbed, ShieldEnded, StatusApplied
 from trpg.shared.rng import Rng
-from trpg.shared.types import Surface, Team
+from trpg.shared.types import Element, Surface, Team
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
 from trpg.skillgen.flash import (
@@ -51,6 +51,7 @@ TEMPLATES = {
     "shield_mending": "deepen",
     "shield_wet": "bridge",
     "shield_marking": "bridge",
+    "shield_charged": "bridge",
 }
 
 
@@ -76,7 +77,13 @@ def test_the_five_templates_are_in_the_data() -> None:
         assert template is not None and template.only == "shield"
         assert template.category == category
     statuses = LIB.ruleset.statuses.by_id()
-    for template_id in ("shield_thorns", "shield_mending", "shield_wet", "shield_marking"):
+    for template_id in (
+        "shield_thorns",
+        "shield_mending",
+        "shield_wet",
+        "shield_marking",
+        "shield_charged",
+    ):
         template = LIB.flash.extra_template(template_id)
         assert template is not None and template.status is not None
         assert statuses[template.status].absorbs_damage
@@ -104,7 +111,11 @@ def test_every_template_makes_a_valid_stronger_or_equal_shield(template_id: str,
 
 def test_bridge_templates_carry_the_keyword_they_bridge_to() -> None:
     board = _shield_board(2)
-    for template_id, keyword in (("shield_wet", "wet"), ("shield_marking", "marked")):
+    for template_id, keyword in (
+        ("shield_wet", "wet"),
+        ("shield_marking", "marked"),
+        ("shield_charged", "charged"),
+    ):
         got = _apply(board, template_id)
         assert got is not None
         assert keyword in derive_keywords(got, LIB.keywords).all()
@@ -143,8 +154,18 @@ def test_held_keywords_order_the_bridge_options() -> None:
         for v in source.ranked(LIB, marked_first, "bridge", board)
         if v.template.startswith("shield_")
     ]
-    assert set(plain) == set(ranked) == {"shield_wet", "shield_marking"}
+    assert set(plain) == set(ranked) == {"shield_wet", "shield_marking"}  # 沒持有雷電就沒有帶電
     assert ranked[0] == "shield_marking"
+    charged_held = FlashRequest(
+        board, acquire(board.id), SkillUsage(), 7, held_keywords={"charged": 5}, tier=2
+    )
+    with_charged = [
+        v.template
+        for v in source.ranked(LIB, charged_held, "bridge", board)
+        if v.template.startswith("shield_")
+    ]
+    assert set(with_charged) == {"shield_wet", "shield_marking", "shield_charged"}
+    assert with_charged[0] == "shield_charged"
 
 
 def test_non_shield_skills_do_not_get_shield_templates() -> None:
@@ -275,3 +296,19 @@ def test_marking_shield_marks_the_attacker_that_broke_it(monkeypatch: pytest.Mon
     marked = [e for e in of(result, StatusApplied) if e.status_id == "marked"]
     assert [e.target_id for e in marked] == [U2]
     assert result.state.units[U2].has_status("marked")
+
+
+def test_charged_shield_shocks_the_attacker_that_broke_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """3W-2c：破盾時對攻擊者造成固定的小雷電傷害（卡片數字＝實戰）；沒打破就不電。"""
+    skill = _playable("shield_charged")
+    always(monkeypatch, die=99)
+    wanted = LIB.ruleset.status_def("shielded_charged").shield_break_lightning
+    assert wanted > 0
+    state = _shielded_duel(skill)
+    result = answered(resolve(_fragile(state), Attack(unit_id=U2, target_id=U1)))
+    assert of(result, ShieldEnded)
+    shocks = [d for d in of(result, DamageDealt) if d.target_id == U2 and d.source_id == U1]
+    assert len(shocks) == 1 and shocks[0].element is Element.LIGHTNING
+    assert shocks[0].amount >= 1
+    unbroken = answered(resolve(state, Attack(unit_id=U2, target_id=U1)))
+    assert not [d for d in of(unbroken, DamageDealt) if d.target_id == U2]

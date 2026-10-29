@@ -315,6 +315,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "shielded_mending": 2,
         "shielded_wet": 1,
         "shielded_marking": 2,
+        "shielded_charged": 2,
         # 3W-2b：元素姿態階梯（每個元素 5 級）
         **{
             f"stance_{e}_{n}": points

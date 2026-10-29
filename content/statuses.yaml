@@ -1182,6 +1182,18 @@ statuses:
     absorbs_damage: true
     shield_break_surface: water
     budget_points: 1
+  - id: shielded_charged
+    polarity: buff
+    min_rarity: rare
+    name_zh: 帶電護盾
+    description_zh: 帶有吸收量；護盾被打破時，對打破它的攻擊者造成小量雷電傷害。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_break_lightning: 3
+    budget_points: 2
   - id: shielded_marking
     polarity: buff
     min_rarity: rare

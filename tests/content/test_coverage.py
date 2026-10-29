@@ -38,6 +38,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "shielded_mending": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
         "shielded_wet": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
         "shielded_marking": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
+        "shielded_charged": "只由閃現的護盾類大變化施加（3W-2c），沒有手寫技能",
     },
     "stack": {},
 }

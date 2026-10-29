@@ -254,6 +254,8 @@ class ExtraMajorTemplate(ContentModel):
     """``only: shield`` 的加深／橋接：護盾改用的狀態（``statuses.yaml`` 的 ``shielded_*``）。"""
     keyword: str | None = Field(default=None, pattern=ID_PATTERN)
     """``only: shield`` 的橋接：這個模板橋接到的關鍵字（持有者持有越多越優先）。"""
+    needs_held: bool = False
+    """``only: shield`` 的橋接：true ＝ 持有者必須持有 ``keyword`` 才會出現（3W-2c，帶電）。"""
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
     llm_hint: str = ""

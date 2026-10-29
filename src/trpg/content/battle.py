@@ -838,6 +838,8 @@ class StatusDef(ContentModel):
     """護盾被打破時在持有者自己的格子造出這種表面（例：水＝潮濕）。"""
     shield_break_status: str | None = Field(default=None, pattern=ID_PATTERN)
     """護盾被打破時對打破它的攻擊者施加這個狀態（例：標記）。"""
+    shield_break_lightning: int = Field(default=0, ge=0, le=10)
+    """護盾被打破時對打破它的攻擊者造成這麼多點雷電傷害（Phase 3W-2c，橋接「帶電」）。"""
     status_duration_bonus: dict[str, int] = Field(default_factory=dict)
     """帶有者施加的狀態多持續幾回合（Phase 3W-2b，元素姿態的小特色：``{burning: 1}`` ＝ 你造成的
     燃燒多 1 回合）。只加在有倒數回合的狀態上。"""
@@ -864,6 +866,7 @@ class StatusDef(ContentModel):
             or self.shield_end_heal
             or self.shield_break_surface
             or self.shield_break_status
+            or self.shield_break_lightning
         )
         if riders and not self.absorbs_damage:
             raise ValueError(
@@ -885,6 +888,7 @@ class StatusDef(ContentModel):
             or self.shield_end_heal
             or self.shield_break_surface
             or self.shield_break_status
+            or self.shield_break_lightning
         )
 
     def _check_elemental_stance(self) -> None:
