@@ -122,3 +122,7 @@
 ### 4.7 3W-2c 驗收（2026-10-29，開發 PM）
 - 合併 3 點（雷霆架勢水上加成、指定類別只出該類並提供 `category_counts`、護盾破時雷電反擊 `shielded_charged`）。合併後 ruff、format、mypy、skillgen／content／engine pytest、vitest 通過；swamp 種子 7 重播通過；`LOG_FORMAT` 不變（/88）。
 - 待玩法 PM：水上加成 +5～15% 初值；帶電橋接只在持有 `charged` 時出現（標記／潮濕是一直出現、依持有排序）；指定類別時 #70 轉型保底選項仍附在後面。
+
+### 4.8 3W-9 驗收（2026-10-30，開發 PM）
+- 合併 3W-9（角色階級預算、`min_character_tier` 表、稀有度改結構標記、升階 `retier`、存檔 `trpg-run/11`）。全量：ruff、format、mypy（831 檔）、lint-imports、client build、vitest 1158、pytest 9510 通過（14 skipped、4 xfail、1 xpass）；swamp 種子 7 重播通過；`LOG_FORMAT` 仍 /88。
+- 報告第 4 節由玩法 PM 定（06 6.34「升階時重算」，`ac7abc6a`）：手寫、工坊、推導技能不擋（工坊開放玩家時改擋）；點數固定白板放大效果、升降地形先放大格數、重配維持升階前比例 → **3W-9b**。CLI `llm propose --mock` 依關鍵字選可行階級（開發 PM 定）併入 3W-9b。
