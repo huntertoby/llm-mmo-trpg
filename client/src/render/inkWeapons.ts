@@ -92,16 +92,26 @@ function drawSpear(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   }
   // 小圖示：矛頭、戟斧頭放大 1.5 倍（3T-4c），28px 下矛和戟才分得出來
   iconHead(ctx, 0, -36, () => {
-    ink(ctx, `${k}-head`, [[0, -50], [3.6, -43], [0, -36], [-3.6, -43]], c.metal, { w: 0.8 });
+    // 3T-4d：矛頭再放大 4/3（疊上 1.5 倍＝原尺寸 2 倍）；戟維持 1.5 倍
+    const sp = it.form === "halberd" || !inIconMode(ctx) ? 1 : 4 / 3;
+    const hp = (x: number, y: number): Pt => [x * sp, -36 + (y + 36) * sp];
+    ink(ctx, `${k}-head`, [hp(0, -50), hp(3.6, -43), hp(0, -36), hp(-3.6, -43)], c.metal, { w: 0.8 });
     if (it.form === "halberd") ink(ctx, `${k}-axe`, [[1.4, -45], [8.6, -46.4], [8.4, -38.4], [1.4, -39.6]], c.metal, { w: 0.8 });
   });
 }
 
-/** 小圖示的拳套（3T-4c）：正面指虎——鋼色圓角方塊、上緣 4 個指節凸起、下方一個握孔，沒有尖刺。 */
+/** 小圖示的拳套（3T-4d）：正面指虎——壓扁的鋼色方塊、上緣 4 個相連半圓指節（高約方塊 35%）、橫向長條握孔，直立。 */
 function drawFistIcon(ctx: Ctx, k: string, c: Cols): void {
-  for (const x of [-4.5, -1.5, 1.5, 4.5]) ink(ctx, `${k}-knuckle${x}`, ellPts(x, -3.6, 1.8, 1.8, 10), c.metal, { w: 0.7 });
-  ink(ctx, `${k}-block`, rect(-6.4, -3.6, 6.4, 4.4), c.metal, { w: 0.9, sharp: true });
-  ink(ctx, `${k}-hole`, ellPts(0, 1.2, 3, 1.7, 12), c.dark, { shade: false, w: 0.6 });
+  ink(ctx, `${k}-block`, rect(-5.6, -1.5, 5.6, 3.5), c.metal, { w: 0.9, sharp: true });
+  for (const x of [-4.2, -1.4, 1.4, 4.2]) {
+    const arc: Pt[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const t = (Math.PI * i) / 8;
+      arc.push([x + 1.4 * Math.cos(t), -1.5 - 1.75 * Math.sin(t)]);
+    }
+    ink(ctx, `${k}-knuckle${x}`, arc, c.metal, { w: 0.7 });
+  }
+  ink(ctx, `${k}-hole`, rect(-3.4, 0.5, 3.4, 2.1), c.dark, { shade: false, w: 0.6, sharp: true });
 }
 
 function drawFist(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
@@ -185,7 +195,7 @@ function drawShotgun(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   const icon = inIconMode(ctx);
   // 小圖示（3T-4c）：雙管上下並排、比長槍（22）短約 25％、槍托較寬
   const L = it.form === "blunderbuss" ? 15 : icon ? 16.5 : 20;
-  const stock: Pt[] = icon ? [[-9, -6.4], [0, -5.4], [0, 0.4], [-6.4, 3.6], [-9, 0.4]] : [[-9, -5], [0, -4.6], [0, 0], [-6.4, 1.8], [-9, -1]];
+  const stock: Pt[] = icon ? [[-5.4, -4.4], [0, -5.4], [0, 0], [-3.9, 2.2]] : [[-9, -5], [0, -4.6], [0, 0], [-6.4, 1.8], [-9, -1]];
   ink(ctx, `${k}-stock`, stock, STOCK, { shade: false, w: 0.7, sharp: icon });
   ink(ctx, `${k}-grip`, [[-1.6, -1], [1.2, -1], [0.8, 4.6], [-1.8, 4.6]], GRIP, { shade: false, w: 0.5 });
   if (icon && it.form !== "blunderbuss") {
