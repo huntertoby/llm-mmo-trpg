@@ -4,7 +4,7 @@
 import { TAU, type Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
-import { ellPts, iconHead, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
+import { ellPts, iconHead, inIconMode, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
 
 /** 取一件裝備的 [主色, 暗色]（paperdoll.ts 的 `itemColors`）。 */
 export type ColorFn = (it: GearItem) => readonly [string, string];
@@ -109,6 +109,12 @@ function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string, outward =
   const bow = it.form === "curved" ? 3 * outward : it.form === "kris" ? 3 : 0;
   const bx = (y: number): number => bow * (y / L) ** 2;
   ink(ctx, `${key}-blade`, [[-1.1 * half, -2], [-1 * half + bx(L - 1.6), -L + 1.6], [bx(L), -L], [1 * half + bx(L - 1.6), -L + 1.6], [1.1 * half, -2]], metal, { shade: false, w: 0.7 });
+  if (it.kind === "dagger" && inIconMode(ctx)) {
+    // 小圖示（3T-4c）：護手是細橫桿（寬約刀身 2 倍），刀身佔全長約 60%，後面接短握柄
+    ink(ctx, `${key}-grip`, [[-0.9, -2], [0.9, -2], [0.9, 4.6], [-0.9, 4.6]], "#3a2a1c", { shade: false, w: 0.5 });
+    ink(ctx, `${key}-guard`, [[-2.2, -2.9], [2.2, -2.9], [2.2, -2], [-2.2, -2]], it.hilt ?? MAT.gold, { shade: false, w: 0.5 });
+    return;
+  }
   ink(ctx, `${key}-guard`, [[-3.4, -3.2], [3.4, -3.2], [3.4, -1.6], [-3.4, -1.6]], it.hilt ?? MAT.gold, { shade: false, w: 0.6 });
 }
 

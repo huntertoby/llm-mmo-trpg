@@ -36,10 +36,10 @@ export function weaponIconItem(weaponId: string | null | undefined, weaponClass:
 }
 
 /** 小圖示一律 45° 斜放（3T-4b；刃朝右上）。 */
-export const isDiagonal = (_kind: string): boolean => true;
+export const isDiagonal = (kind: string): boolean => kind !== "pistol" && kind !== "fist";
 
-/** 斜放的角度（弧度）：槍弩 -45°（槍口朝右上），其餘 +45°（刃、柄朝右上）。 */
-export const iconAngle = (kind: string): number => (MUZZLE_RIGHT.has(kind) ? -Math.PI / 4 : Math.PI / 4);
+/** 斜放的角度（弧度）：手槍不斜放（側面 L 形）、拳套正面直立（指虎，3T-4c）；其餘槍弩 -45°（槍口朝右上），其餘 +45°（刃、柄朝右上）。 */
+export const iconAngle = (kind: string): number => (kind === "pistol" || kind === "fist" ? 0 : MUZZLE_RIGHT.has(kind) ? -Math.PI / 4 : Math.PI / 4);
 
 function drawIcon(ctx: Ctx, item: GearItem, mode: IconMode): void {
   ctx.rotate(iconAngle(item.kind));
