@@ -65,13 +65,14 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import skill_card
 from trpg.roguelite.auto import auto_play
+from trpg.roguelite.flashes import owned_skills, state_of
 from trpg.roguelite.start import (
     start_resources,
     start_weapons,
     starter_pools,
     starting_skill,
 )
-from trpg.roguelite.state import Choice
+from trpg.roguelite.state import Choice, RunState
 
 __all__ = ["router"]
 
@@ -319,7 +320,20 @@ def post_flash_preview(run_id: str, body: FlashPreviewRequest, request: Request)
 
 
 DEV_ROUTES_ENV = "TRPG_DEV_ROUTES"
-_DEV_TARGETS = ("gear_offer", "level_up", "complete_offer", "campfire", "ended")
+_DEV_TARGETS = ("gear_offer", "next_battle", "level_up", "complete_offer", "campfire", "ended")
+
+
+def _dev_reached(run: RunState, to: str) -> bool:
+    """``next_battle``＝打完至少一場後的「下一場前」節點（3W-6b：閃現區只在這裡與營火）。"""
+    if to == "next_battle":
+        return run.node.kind == "battle" and run.battles_done >= 1
+    return run.node.kind == to
+
+
+def _dev_mark_used(run: RunState) -> RunState:
+    """開發用：學會的技能都算「先上場用過」，閃現區才有按鈕可以掃（AI 代打會把可閃的都閃掉）。"""
+    flash = {s: state_of(run, s).model_copy(update={"used": True}) for s in owned_skills(run)}
+    return run.model_copy(update={"flash": {**run.flash, **flash}})
 
 
 @router.post("/{run_id}/dev-advance")
@@ -336,9 +350,11 @@ def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> Run
     with session.lock:
         if session.battle is not None:
             raise HTTPException(status_code=409, detail="戰鬥進行中")
-        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: r.node.kind == to)
+        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: _dev_reached(r, to))
         if insight > run.insight:
             run = run.model_copy(update={"insight": insight})
+        if to == "next_battle" and insight > 0:
+            run = _dev_mark_used(run)
         session.run = run
         return _respond(store, session)
 

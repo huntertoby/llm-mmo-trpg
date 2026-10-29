@@ -399,7 +399,8 @@ def inherit(library: ContentLibrary, run: RunState, choice: InheritChoice) -> Ru
         for i, nth in enumerate(choice.records, 1)
         if (rec := source.record(nth)) is not None
     )
-    state = target.model_copy(update={"records": carried})
+    # 「先上場用過」（used）照接受傳承的白板自己的狀態，不沿用舊技能的（3W-6b，06 6.34）
+    state = target.model_copy(update={"records": carried, "used": target.used})
     base = base_def(library, run, choice.skill)
     try:
         skill = derive_skill(library, base, state, run.seed, character_tier(library, run.level))

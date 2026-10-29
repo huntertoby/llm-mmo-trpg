@@ -27,8 +27,8 @@ export async function createDevRun(to: DevScreen): Promise<RunResponse> {
   const first = packs[0];
   if (first === undefined) throw new Error("沒有開發者起始包");
   const run = await api.createRun({ dev_pack: first.id, seed: DEV_SEED });
-  // 閃現畫面（3W-6）：戰後裝備三選一節點上補足靈感點；營火也補，才有點可以重閃、溶掉、傳承。
-  if (to === "flash") return api.devAdvance(run.run_id, "gear_offer", DEV_INSIGHT);
+  // 閃現畫面（3W-6b）：「下一場前」節點上補足靈感點（閃現區只在這裡與營火）；營火也補，才有點可以重閃、溶掉、傳承。
+  if (to === "flash") return api.devAdvance(run.run_id, "next_battle", DEV_INSIGHT);
   if (to === "campfire") return api.devAdvance(run.run_id, to, DEV_INSIGHT);
   return api.devAdvance(run.run_id, to);
 }

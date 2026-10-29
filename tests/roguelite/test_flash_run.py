@@ -13,6 +13,7 @@ from functools import cache
 import pytest
 
 from tests.roguelite.helpers import library
+from trpg.api.run_presenter import _flash_out
 from trpg.engine.state import state_to_json
 from trpg.roguelite import (
     ActiveBattle,
@@ -253,6 +254,43 @@ def test_inherit_carries_minor_variations_and_removes_the_old_skill() -> None:
             run.model_copy(update={"node": BattleNode(index=4)}),
             InheritChoice(skill=target, source=source, records=(minors[0],)),
         )
+
+
+def _inherit_with_target_used(*, used: bool) -> tuple[RunState, str]:
+    """營火傳承：白板自己的「先上場用過」設成 ``used``（舊技能一律用過）；回傳傳承後與新技能。"""
+    lib = library()
+    run, source = _flashed_at_campfire()
+    minors = [r.nth for r in state_of(run, source).records if r.variation.source == "minor"]
+    assert minors
+    used_source = state_of(run, source).model_copy(update={"used": True})
+    run = run.model_copy(update={"flash": {**run.flash, source: used_source}})
+    for target in (s for s in owned_skills(run) if s != source and not state_of(run, s).records):
+        target_state = state_of(run, target).model_copy(update={"used": used})
+        staged = run.model_copy(update={"flash": {**run.flash, target: target_state}})
+        try:
+            after = apply_choice(
+                lib, staged, InheritChoice(skill=target, source=source, records=(minors[0],))
+            )
+        except ChoiceError:
+            continue
+        return after, next(s for s in owned_skills(after) if s not in owned_skills(staged))
+    pytest.skip("沒有能接受傳承的技能")
+
+
+def test_inherit_unused_whiteboard_cannot_flash_even_if_the_old_skill_was_used() -> None:
+    lib = library()
+    after, new_id = _inherit_with_target_used(used=False)
+    assert state_of(after, new_id).used is False
+    assert "用過" in (problem_of(lib, after, new_id) or "")
+    assert _flash_out(lib, after, new_id).can_flash is False
+
+
+def test_inherit_used_whiteboard_can_flash() -> None:
+    lib = library()
+    after, new_id = _inherit_with_target_used(used=True)
+    assert state_of(after, new_id).used is True
+    assert problem_of(lib, after, new_id) is None
+    assert _flash_out(lib, after, new_id).can_flash is True
 
 
 # ---------------------------------------------------------------------------

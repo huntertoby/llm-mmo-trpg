@@ -218,7 +218,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                 onChoose={choose}
               />
             )}
-            {view.screen !== "campfire" && !(view.screen === "progress" && view.resume) && (
+            {view.screen === "progress" && !view.resume && (
               <FlashSection runId={run.run_id} hero={run.hero} busy={busy} onChoose={choose} />
             )}
               </>
