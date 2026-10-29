@@ -7,7 +7,7 @@ import json
 from trpg.api.glossary import build_glossary
 from trpg.content.library import ContentLibrary
 
-__all__ = ["glossary_fixture_text", "unit_dolls_fixture_text"]
+__all__ = ["glossary_fixture_text", "race_looks_fixture_text", "unit_dolls_fixture_text"]
 
 
 def glossary_fixture_text(library: ContentLibrary) -> str:
@@ -23,5 +23,15 @@ def unit_dolls_fixture_text(library: ContentLibrary) -> str:
         t.id: json.loads(t.doll.model_dump_json(exclude_none=True))
         for t in sorted(templates, key=lambda t: t.id)
         if t.doll is not None
+    }
+    return json.dumps(data, ensure_ascii=False, indent=1) + "\n"
+
+
+def race_looks_fixture_text(library: ContentLibrary) -> str:
+    """種族 ID → 預設外觀 ``look``（依 ID 排序；沒有種族資料時為空物件）。"""
+    races = [] if library.races is None else library.races.races
+    data = {
+        r.id: json.loads(r.look.model_dump_json(exclude_none=True))
+        for r in sorted(races, key=lambda r: r.id)
     }
     return json.dumps(data, ensure_ascii=False, indent=1) + "\n"

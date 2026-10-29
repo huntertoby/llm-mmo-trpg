@@ -178,7 +178,7 @@ function formAuraSprite(art: ArtTextures, u: UnitDraw, feet: number): Sprite | n
 
 function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
   const sl = summonLookOf(u);
-  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
+  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, raceLook: u.raceLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
   const form = formArtOfUnit(u, spec);
   const formSprite = form === null ? null : formDoll(art, u, look, feet, form);
   if (formSprite !== null) return formSprite;

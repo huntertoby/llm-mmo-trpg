@@ -3,6 +3,8 @@
 import type { Facing } from "../api/types";
 import type { DollSpec, GearItem } from "../render/appearance";
 import { resolveDollT } from "../render/testDolls";
+import { raceLookToLook } from "../render/inkRace";
+import raceLooks from "../render/fixtures/raceLooks.json";
 import type { DollEquipment } from "../render/dollGear";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W, drawFigurePose } from "../render/paperdoll";
 
@@ -207,3 +209,32 @@ for (const f of FACINGS) {
     figureOf(withGear({ main_hand: W("staff"), off_hand: G("orb", "ball", { material: "crystal", element: "ice" }) }), f, "staff＋法球"),
   ]);
 }
+
+// ⑫ 3R-3b・種族外觀（耳、角、尾、膚色）與頭部裝備衝突規則；種族外觀來自 fixtures/raceLooks.json（content/races.yaml 的 look）
+const RACE_LOOKS = raceLooks as Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+const RACE_ZH: Record<string, string> = { human: "人類", elf: "精靈", fox: "狐族", dragonkin: "龍裔", dwarf: "矮人", cyborg: "晶能義體人", orc: "獸人", fiend: "角魔", scalefolk: "鱗族", seafolk: "海民" };
+const RACE_ORDER = ["human", "elf", "fox", "dragonkin", "dwarf", "cyborg", "orc", "fiend", "scalefolk", "seafolk"];
+const raceSpec = (race: string, g: DollSpec["gear"] = {}): DollSpec => {
+  const d = withGear({ main_hand: W("sword"), off_hand: undefined, ...g });
+  return { ...d, look: { ...d.look, ...raceLookToLook(RACE_LOOKS[race]) } };
+};
+const raceCell = (race: string, g: DollSpec["gear"], f: Facing, label: string): HTMLElement => figureOf(raceSpec(race, g), f, `${RACE_ZH[race] ?? race}${label}`);
+for (const f of FACINGS) section(`⑫ 3R-3b・10 族（${f}）`, RACE_ORDER.map((r) => raceCell(r, {}, f, "")));
+const HAT = (kind: string, c = "#7a5a3a"): GearItem => ({ kind, material: "cloth", color: c });
+const HELM = (kind: string): GearItem => ({ kind, material: "steel" });
+const CROWN: GearItem = { kind: "crown", material: "gold" };
+const HOOD = HAT("hood", "#5a4a7a");
+const WIZ = HAT("wizard_hat", "#2c4f8a");
+const ROBE: GearItem = { kind: "robe", color: "#5a3a8a" };
+const RED_CAPE: GearItem = { kind: "cape", color: "#a83030" };
+const conflict = (title: string, cells: Array<[string, DollSpec["gear"]]>, race: string, facings: Facing[]): void => {
+  for (const f of facings) section(`⑫ 3R-3b・衝突・${title}（${f}）`, cells.map(([n, g]) => raceCell(race, g, f, `＋${n}`)));
+};
+conflict("角魔＋帽子", [["沒戴", {}], ["寬帽", { head: HAT("wide_hat") }], ["巫師帽", { head: WIZ }], ["皮帽", { head: HAT("cap") }], ["頭巾", { head: HAT("bandana", "#a83030") }], ["角盔", { head: HELM("horned_helm") }], ["頭盔", { head: HELM("helmet") }], ["兜帽", { head: HOOD }], ["皇冠", { head: CROWN }]], "fiend", ["south", "east", "north"]);
+conflict("狐族＋頭部裝備", [["沒戴", {}], ["兜帽", { head: HOOD }], ["頭盔", { head: HELM("helmet") }], ["皮帽", { head: HAT("cap") }], ["頭巾", { head: HAT("bandana", "#a83030") }], ["寬帽", { head: HAT("wide_hat") }], ["皇冠", { head: CROWN }]], "fox", ["south", "east", "north"]);
+conflict("狐族＋長袍與披風（尾巴從下襬露出）", [["長袍", { body: ROBE }], ["短袍", { body: { ...ROBE, form: "short" } }], ["披風", { cloak: RED_CAPE }]], "fox", ["south", "east", "north"]);
+conflict("角魔＋披風與長袍（背面尾巴在披風上）", [["披風", { cloak: RED_CAPE }], ["披風＋長袍", { cloak: RED_CAPE, body: ROBE }], ["沒披風", {}]], "fiend", ["north", "south", "east"]);
+conflict("精靈＋頭部裝備（尖耳伸出）", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }], ["兜帽", { head: HOOD }], ["寬帽", { head: HAT("wide_hat") }], ["皮帽", { head: HAT("cap") }]], "elf", ["south", "east", "north"]);
+conflict("鱗族＋頭部裝備（鰭耳）", [["沒戴", {}], ["兜帽", { head: HOOD }], ["頭盔", { head: HELM("helmet") }], ["巫師帽", { head: WIZ }]], "scalefolk", ["south", "east", "north"]);
+conflict("龍裔＋帽子、長袍（龍角、粗龍尾）", [["沒戴", {}], ["寬帽", { head: HAT("wide_hat") }], ["頭盔", { head: HELM("helmet") }], ["長袍", { body: ROBE }]], "dragonkin", ["south", "east", "north"]);
+conflict("矮人＋板甲＋大盾（體型與鬍子屬 3R-3c，這裡只有膚色）", [["板甲＋塔盾", { body: { kind: "plate", material: "steel" }, off_hand: G("shield_kite", "tower", { material: "wood" }) }]], "dwarf", ["south", "east", "north"]);

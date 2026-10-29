@@ -25,6 +25,7 @@ function race(over: Partial<RaceView> = {}): RaceView {
     passive_name_zh: "雨中海步",
     passive_description_zh: "下雨天氣時，移動 +1。",
     passive_active: false,
+    look: { skin: "#b07a52", tusks: false, beard: false, slit_eyes: false, ridge: false, spines: false },
     ...over,
   };
 }

@@ -1,0 +1,120 @@
+{
+ "cyborg": {
+  "skin": "#e6c4a4",
+  "hair": "short",
+  "hair_color": "#2a2a34",
+  "pattern": "circuit",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "dragonkin": {
+  "skin": "#d8a878",
+  "hair": "short",
+  "hair_color": "#3a2418",
+  "horns": "dragon",
+  "horn_color": "#e8d8b8",
+  "tail": "dragon",
+  "pattern": "dragonscale",
+  "beard": false,
+  "tusks": false,
+  "scale_color": "#c8402a",
+  "slit_eyes": true,
+  "ridge": true,
+  "spines": true
+ },
+ "dwarf": {
+  "skin": "#e8b890",
+  "hair": "short",
+  "hair_color": "#a8481e",
+  "build": "stout",
+  "beard": true,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "elf": {
+  "skin": "#f6e0cc",
+  "hair": "long",
+  "hair_color": "#e8e0c8",
+  "ears": "pointed",
+  "build": "tall",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "fiend": {
+  "skin": "#b07a7a",
+  "hair": "long",
+  "hair_color": "#1e1418",
+  "horns": "curved",
+  "horn_color": "#3a2a2a",
+  "tail": "demon",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "fox": {
+  "skin": "#f1d0b0",
+  "hair": "short",
+  "hair_color": "#d8762a",
+  "ears": "beast",
+  "tail": "fox",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "human": {
+  "skin": "#f1c9a5",
+  "hair": "short",
+  "hair_color": "#6a3d1e",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "orc": {
+  "skin": "#86a060",
+  "hair": "short",
+  "hair_color": "#1e1a14",
+  "build": "tall",
+  "beard": false,
+  "tusks": true,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "scalefolk": {
+  "skin": "#78b4aa",
+  "ears": "fin",
+  "pattern": "scales",
+  "eyes": "#103030",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ },
+ "seafolk": {
+  "skin": "#b07a52",
+  "hair": "long",
+  "hair_color": "#2a8a9a",
+  "pattern": "marks",
+  "mark_color": "#3aa8e0",
+  "beard": false,
+  "tusks": false,
+  "slit_eyes": false,
+  "ridge": false,
+  "spines": false
+ }
+}
