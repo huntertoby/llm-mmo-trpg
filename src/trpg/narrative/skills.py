@@ -874,6 +874,11 @@ def _enter_form(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     return form_sentence(lib.ruleset.forms, form, lib.ruleset.core)
 
 
+def _leave_form(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    """解除形態（Phase 3J-4c）：先離開目前的形態（照常冷卻）；只能在形態中施放。"""
+    return "只能在形態中施放：先解除你目前的形態（照常進入冷卻），再結算以下效果"
+
+
 def _form_formula(
     library: ContentLibrary, skill: SkillDef, owner: CardOwner | None
 ) -> tuple[str, ...]:
@@ -912,6 +917,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "charge_through": _charge_through,
     "summon": _summon,
     "enter_form": _enter_form,
+    "leave_form": _leave_form,
     "swap": _swap,
     "teleport_target": _teleport_target,
     "swap_any": _swap_any,
@@ -1015,6 +1021,7 @@ _OWN_TARGET_TEXT: frozenset[str] = frozenset(
         "charge_through",
         "copy_skill",
         "enter_form",
+        "leave_form",
     }
 )
 """句子本身已寫明對象（或對象就是施放者自己的位移）的原語：不再加「（敵方）」等後綴（清單 3.5）。"""

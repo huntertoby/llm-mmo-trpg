@@ -880,4 +880,4 @@ builds:
       resist: {physical: 50}
       tags: [hero, sim]
       max_mana: 30
-      skills: [skill_form_bear, skill_form_werewolf, skill_form_pounce, skill_wild_roar, skill_form_renewal]
+      skills: [skill_form_bear, skill_form_werewolf, skill_form_pounce, skill_wild_roar, skill_form_renewal, skill_form_release_burst]

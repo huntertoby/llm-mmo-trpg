@@ -38,8 +38,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/84"
-"""``/83``（Phase 3R-2）：種族技與環境被動——單位範本與單位狀態多了 ``race``，規則包多了 ``races``
+LOG_FORMAT = "trpg-battle-log/85"
+"""``/85``（Phase 3J-4c）：新原語 ``leave_form``（解除形態：技能的第一個效果，施放者先解除
+目前的形態；不在形態中不能施放）、``form_left`` 事件多了離開原因 ``released``、預算多了
+``allowance.leave_form_permille``，新技能解形爆發；規則包的技能與原語表因此不同，
+``/84`` 的紀錄無法重播。
+``/84``（Phase 3R-2b）：狐火誘餌改在擲命中之前轉向（``attack_intercepted`` 多了 ``decoy``，
+被攔下的攻擊不發 ``attack_rolled``）；``/83`` 的紀錄無法重播。
+``/83``（Phase 3R-2）：種族技與環境被動——單位範本與單位狀態多了 ``race``，規則包多了 ``races``
 （``content/races.yaml``），戰鬥狀態多了 ``map_tags``（地圖標籤 ``forest``），新動作
 ``use_race_skill``、新事件 ``race_skill_used``、``push_resisted`` 與 ``summon_expired`` 的新原因，
 推擊效果多了 ``pull``／``harmless``，新狀態 ``race_adapt``／``race_stonewall`` 與誘餌召喚物範本；

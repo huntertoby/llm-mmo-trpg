@@ -1747,11 +1747,11 @@ class FormEntered(EventBase):
 
 
 type FormLeaveReason = Literal[
-    "cancelled", "switched", "stance", "downed", "escaped", "upkeep", "battle_end"
+    "cancelled", "switched", "stance", "downed", "escaped", "upkeep", "battle_end", "released"
 ]
 """離開形態的原因：``cancelled`` 自己取消（``end_stance``）、``switched`` 切換到別的形態、
 ``stance`` 進入一般姿態、``downed`` 倒下、``escaped`` 撤離、``upkeep`` 維持費不夠自動解除、
-``battle_end`` 戰鬥結束。"""
+``battle_end`` 戰鬥結束、``released`` 技能的 ``leave_form`` 效果解除（Phase 3J-4c）。"""
 
 
 class FormLeft(EventBase):

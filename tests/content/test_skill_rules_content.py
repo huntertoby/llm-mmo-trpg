@@ -83,6 +83,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "blow_surface",  # 3-54a
         "shockwave",  # 3-54b
         "clear_surface",  # 3-54c
+        "leave_form",  # 3J-4c（解形爆發，手寫專用）
     }
     assert set(sk["control"].core.primitives) == {
         "apply_status",

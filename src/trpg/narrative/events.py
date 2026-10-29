@@ -635,6 +635,7 @@ _FORM_LEAVE_TEXT = {
     "escaped": "撤離而解除",
     "upkeep": "維持費不夠，自動解除",
     "battle_end": "戰鬥結束而解除",
+    "released": "解除了形態",
 }
 
 

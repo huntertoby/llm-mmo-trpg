@@ -148,6 +148,21 @@ primitives:
     base_points: 3
     acts_on: caster
     allowed_shapes: [single]
+  # --- Phase 3J-4c：解除形態（06 6.30 解形爆發）---
+  - id: leave_form
+    name_zh: 解除形態
+    llm_hint: "先解除自己目前的形態，再結算技能的其他效果。"
+    description_zh: 施放者先解除目前的形態（離開原因 released；照常換回手上的武器與裝備、最大 HP 減回、該形態冷卻 forms.yaml 的 cooldown 回合、取消龍的蓄力），其餘效果再照順序結算。必須是主動技能的第一個效果、一個技能最多一個、affects 一律為 self；施放者不在形態中不能施放（skill_problem）。不另計點數（base_points 0），但算代價：預算用 skill_budget.yaml 的 allowance.leave_form_permille 折抵（照 6.5 代價折抵，和其他代價加總後套整體上限）。
+    player_description: "施放時先解除自己目前的形態（照常進入冷卻），再造成技能的其餘效果；不在形態中不能使用。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    acts_on: caster
+    position: first
+    max_per_skill: 1
+    active_only: true
+    budget_basis: fixed
+    base_points: 0
   - id: charge_through
     name_zh: 直線衝撞
     llm_hint: "施放者向前衝過路徑，路上的敵人受到傷害與附帶效果。"

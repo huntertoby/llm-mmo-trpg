@@ -1600,6 +1600,16 @@
    "rules_zh": []
   },
   {
+   "id": "leave_form",
+   "name_zh": "解除形態",
+   "description_zh": "施放時先解除自己目前的形態（照常進入冷卻），再造成技能的其餘效果；不在形態中不能使用。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "charge_through",
    "name_zh": "直線衝撞",
    "description_zh": "沿一直線衝過去，撞開並傷害路上的敵人。",
