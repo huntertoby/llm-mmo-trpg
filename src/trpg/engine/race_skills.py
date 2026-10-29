@@ -82,13 +82,10 @@ _ALL_FIELDS = ("target_id", "target_object_id", "target_pos", "direction", "choi
 
 
 def race_skill_of(state: BattleState, unit: UnitState) -> RaceSkill | None:
-    """``unit`` 的種族技；沒有種族（或種族資料不存在）時為 ``None``。"""
+    """``unit`` 的種族技；沒有種族時為 ``None``（種族 ID 不存在時拋 ``KeyError``）。"""
     if unit.race is None:
         return None
-    try:
-        return state.ruleset.race_def(unit.race).skill
-    except KeyError:
-        return None
+    return state.ruleset.race_def(unit.race).skill
 
 
 def race_uses_left(unit: UnitState, skill: RaceSkill) -> int:

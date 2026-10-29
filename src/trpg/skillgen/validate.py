@@ -179,8 +179,6 @@ def _scaling_range_violations(skill: SkillDef, library: ContentLibrary) -> list[
         )
         return [Violation(skill.id, "scaling.range", message)]
     allowed = library.scaling_range(skill)
-    if not allowed:  # 沒有載入縮放規則（測試用的內容庫）
-        return []
     out: list[Violation] = []
     if skill.scaling_attr not in allowed:
         out.append(_range_violation(skill, library, skill.scaling_attr, "縮放屬性", allowed))

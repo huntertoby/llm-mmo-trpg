@@ -47,13 +47,11 @@ PERMILLE = 1000
 
 
 def passive_of(rules: Ruleset, unit: UnitState, rule: str) -> RacePassive | None:
-    """``unit`` 的環境被動，且規則為 ``rule``；沒有種族、種族不存在或規則不同時為 ``None``。"""
+    """``unit`` 的環境被動，且規則為 ``rule``；沒有種族或規則不同時為 ``None``。種族 ID 不存在時
+    拋 ``KeyError``（載入時已驗證）。"""
     if unit.race is None:
         return None
-    try:
-        passive = rules.race_def(unit.race).passive
-    except KeyError:
-        return None
+    passive = rules.race_def(unit.race).passive
     return passive if passive.rule == rule else None
 
 
@@ -125,10 +123,7 @@ def race_element_mods(rules: Ruleset, template: UnitTemplate) -> dict[Element, i
     mods = dict(template.element_mods)
     if template.race is None:
         return mods
-    try:
-        passive = rules.race_def(template.race).passive
-    except KeyError:
-        return mods
+    passive = rules.race_def(template.race).passive
     if passive.rule == "damage_taken_permille" and passive.element is not None:
         mods[passive.element] = mods.get(passive.element, 0) + (passive.permille or 0)
     return mods
