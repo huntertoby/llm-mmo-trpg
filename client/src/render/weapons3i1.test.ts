@@ -27,6 +27,6 @@ describe("第二批主武器的外觀（Phase 3I-1）", () => {
     expect(weaponIconItem("scythe", "melee")).toMatchObject({ kind: "scythe" });
     expect(isDiagonal("scythe")).toBe(true);
     expect(isDiagonal("whip")).toBe(true);
-    expect(isDiagonal("fist")).toBe(false);
+    expect(isDiagonal("fist")).toBe(true); // 3T-4b：小圖示一律 45° 斜放
   });
 });

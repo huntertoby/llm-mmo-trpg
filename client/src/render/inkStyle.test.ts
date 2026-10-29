@@ -1,6 +1,6 @@
 // Phase C-1a：C 手繪墨線畫法層 — 確定性（同 key 同點、不同 key 不同點、不用 Math.random）、ink／stroke 的畫法結構。
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dot, ellPts, ink, INK, lcg, seedOf, shadow, stroke, withShadeDir, wobble, type Pt } from "./inkStyle";
+import { dot, ellPts, iconHead, inIconMode, ink, INK, lcg, seedOf, shadow, stroke, withIconMode, withShadeDir, wobble, type Pt } from "./inkStyle";
 
 function recorder(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -147,5 +147,31 @@ describe("影子與小物件", () => {
     const { ctx, calls } = recorder();
     dot(ctx, 1, 2, 3, 4, "#abc");
     expect(calls.some((c) => c.startsWith("ellipse(1.0000,2.0000,3.0000,4.0000"))).toBe(true);
+  });
+});
+
+describe("小圖示模式（3T-4b）", () => {
+  const lineWidths = (calls: string[]): number[] => calls.filter((c) => c.startsWith("lineWidth=")).map((c) => Number(c.slice(10)));
+
+  it("lineScale 把墨線寬度整體縮放；結束後還原", () => {
+    const plain = recorder();
+    ink(plain.ctx, "x", SQUARE, "#fff");
+    const scaled = recorder();
+    withIconMode(scaled.ctx, { lineScale: 2, headScale: 1 }, () => ink(scaled.ctx, "x", SQUARE, "#fff"));
+    const a = lineWidths(plain.calls);
+    const b = lineWidths(scaled.calls);
+    expect(b).toHaveLength(a.length);
+    b.forEach((w, i) => expect(w).toBeCloseTo(a[i]! * 2, 6));
+    expect(inIconMode(scaled.ctx)).toBe(false);
+  });
+
+  it("iconHead：小圖示放大頭部、墨線寬度除回去；不是小圖示時原樣畫", () => {
+    const plain = recorder();
+    iconHead(plain.ctx, 0, -20, () => stroke(plain.ctx, "h", [[0, 0], [4, 4]], 1));
+    expect(plain.calls.some((c) => c.startsWith("scale("))).toBe(false);
+    const icon = recorder();
+    withIconMode(icon.ctx, { lineScale: 3, headScale: 1.5 }, () => iconHead(icon.ctx, 0, -20, () => stroke(icon.ctx, "h", [[0, 0], [4, 4]], 1)));
+    expect(icon.calls).toContain("scale(1.5000,1.5000)");
+    expect(lineWidths(icon.calls)[0]).toBeCloseTo(2, 6);
   });
 });
