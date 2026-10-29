@@ -23,7 +23,7 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
       <div className="section-title">
         換裝
         <span className="muted small">
-          {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}　卸下的技能等級會保留
+          {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}　卸下的技能閃現狀態會保留
         </span>
       </div>
       <ul className="loadout-list">

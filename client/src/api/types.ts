@@ -167,11 +167,13 @@ export type DevPack = Schemas["DevPackOut"];
 export type OfferTag = Schemas["OfferTagOut"];
 /** 一輪的 LLM 生成統計（Phase 4-L6b）。 */
 export type LlmStats = Schemas["LlmStatsOut"];
-// 靈感點與閃現（Phase 3W-5；畫面在 3W-6）
+// 靈感點與閃現（Phase 3W-5；畫面 3W-6）
 export type FlashRules = Schemas["FlashRulesOut"];
 export type SkillFlash = Schemas["SkillFlashOut"];
 export type PendingFlash = Schemas["PendingFlashOut"];
 export type FlashPreview = Schemas["FlashPreviewOut"];
+export type FlashOption = Schemas["FlashOptionOut"];
+export type FlashCategory = Schemas["FlashCategoryOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 // 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）

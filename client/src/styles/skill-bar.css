@@ -331,16 +331,6 @@
 
 /* Phase 3-26a：技能點、技能等級、營火換裝 */
 
-.skill-level-badge {
-  color: #f0c060;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.skill-card-growth {
-  color: #e6c777;
-}
-
 /* Phase 3-25b：戰場變奏（技能卡的型態列表、技能列按鈕發亮、預覽的型態） */
 
 .skill-button.variant-ready {

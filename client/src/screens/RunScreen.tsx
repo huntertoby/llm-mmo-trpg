@@ -4,6 +4,7 @@ import { api, ApiError } from "../api/client";
 import type { BattleResponse, RunChoice, RunResponse } from "../api/types";
 import { OBJECTIVE_ICONS, objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
+import { FlashSection } from "../run/FlashSection";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { AttributeRespecSection } from "../run/AttributeRespecSection";
 import { TestModeBadge } from "../ui/TestModeBadge";
@@ -14,6 +15,7 @@ import { BattleScreen } from "./BattleScreen";
 import { RunCampfire } from "./RunCampfire";
 import { RunCompleteOffer } from "./RunCompleteOffer";
 import { RunEnded } from "./RunEnded";
+import { RunFlashPending } from "./RunFlashPending";
 import { RunGearOffer } from "./RunGearOffer";
 import { RunLevelUp } from "./RunLevelUp";
 
@@ -170,6 +172,9 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
           <RunHeroPanel hero={run.hero} />
           <div className="run-main">
             <RunPlanList run={run} />
+            {run.pending_flash != null && <RunFlashPending key={`${run.pending_flash.skill_id}:${run.pending_flash.nth}:${run.pending_flash.slot}`} run={run} busy={busy} onChoose={choose} />}
+            {run.pending_flash == null && (
+              <>
             {view.screen === "progress" && (
               <div className="panel run-next">
                 <h2>
@@ -210,6 +215,11 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                 busy={busy}
                 onChoose={choose}
               />
+            )}
+            {view.screen !== "campfire" && !(view.screen === "progress" && view.resume) && (
+              <FlashSection runId={run.run_id} hero={run.hero} busy={busy} onChoose={choose} />
+            )}
+              </>
             )}
           </div>
         </div>

@@ -482,6 +482,7 @@ export async function runScreens(title: string): Promise<string> {
 /** 戰後畫面階段：畫面名、進去之後要等的元素、要滑過看浮動卡的選擇器（依序滑過第一個、中間、最後一個）。 */
 const POST_BATTLE: readonly { screen: DevScreen; label: string; waitFor: string; hover: string }[] = [
   { screen: "gear_offer", label: "戰後・裝備三選一", waitFor: '[data-testid="gear-offer"]', hover: ".run-offer-card .part-tip" },
+  { screen: "flash", label: "戰後・靈感閃現", waitFor: ".run-flash", hover: ".run-flash .part-tip" },
   { screen: "level_up", label: "戰後・升級選技", waitFor: ".run-levelup .run-offer-card", hover: ".run-levelup .run-offer-card .part-tip" },
   { screen: "complete_offer", label: "戰後・完整技能三選一", waitFor: ".run-complete-offer .run-offer-card", hover: ".run-complete-offer .run-offer-card .part-tip" },
   { screen: "campfire", label: "戰後・營火", waitFor: ".run-campfire", hover: ".run-campfire .part-tip" },
@@ -521,6 +522,61 @@ async function postBattleStages(doc: Document, win: Window): Promise<CheckResult
       await hoverFirst(doc, stage.hover, i);
       rows.push(...stageRows(`${stage.label}・滑過#${i}`, doc, win, true));
       await unhover(doc, stage.hover, i);
+    }
+    rows.push(...(await flashStages(stage.screen, stage.label, doc, win)));
+  }
+  return rows;
+}
+
+/** 點第一個符合的未停用按鈕；找不到回傳 `false`。 */
+function clickFirst(doc: Document, selector: string): boolean {
+  const el = [...doc.querySelectorAll<HTMLButtonElement>(selector)].find((b) => !b.disabled);
+  if (el === undefined) return false;
+  el.click();
+  return true;
+}
+
+/** 點了之後等某個元素出現，再量一次；沒出現就記一項失敗。 */
+async function stepStage(rows: CheckResult[], label: string, doc: Document, win: Window, click: string, waitSel: string): Promise<boolean> {
+  if (!clickFirst(doc, click)) {
+    rows.push(result(`${label}/click`, `${label}：找得到可按的 ${click}`, false, "找不到或已停用"));
+    return false;
+  }
+  if (!(await waitFor(doc, waitSel))) {
+    rows.push(result(`${label}/wait`, `${label}：出現 ${waitSel}`, false, "等不到"));
+    return false;
+  }
+  for (const d of doc.querySelectorAll("details")) d.open = true;
+  await sleep(400);
+  rows.push(...stageRows(label, doc, win, false));
+  return true;
+}
+
+/**
+ * 閃現相關的互動畫面（3W-6）：閃現的出題前畫面（不指定、指定類別）、閃現選項畫面；營火的重閃、溶掉確認、傳承。
+ * 只有「靈感閃現」與「營火」兩個戰後畫面會進來；會真的送出閃現（扣點），所以放在各畫面量測的最後。
+ */
+async function flashStages(screen: DevScreen, label: string, doc: Document, win: Window): Promise<CheckResult[]> {
+  const rows: CheckResult[] = [];
+  if (screen === "flash") {
+    if (!(await stepStage(rows, `${label}・出題前`, doc, win, 'button[data-testid^="flash-open-"]', ".flash-chooser .flash-categories"))) return rows;
+    if (await stepStage(rows, `${label}・指定類別`, doc, win, '.flash-categories button[data-testid^="flash-cat-"]', ".flash-chooser .flash-mode.selected, .flash-chooser .flash-cat.selected")) {
+      if (await stepStage(rows, `${label}・選項`, doc, win, '[data-testid="flash-confirm"]', ".run-flash-pending .flash-option")) {
+        const count = doc.querySelectorAll(".run-flash-pending .part-tip").length;
+        if (count > 0) {
+          await hoverFirst(doc, ".run-flash-pending .part-tip", 0);
+          rows.push(...stageRows(`${label}・選項・滑過`, doc, win, true));
+          await unhover(doc, ".run-flash-pending .part-tip", 0);
+        }
+      }
+    }
+  } else if (screen === "campfire") {
+    await stepStage(rows, `${label}・重閃`, doc, win, 'button[data-testid^="reflash-"]', ".flash-chooser");
+    clickFirst(doc, ".flash-chooser .run-actions button:not(.primary)"); // 先不要
+    await sleep(200);
+    if (await stepStage(rows, `${label}・選舊技能`, doc, win, 'button[data-testid^="old-pick-"]', '[data-testid="old-actions"]')) {
+      await stepStage(rows, `${label}・溶掉確認`, doc, win, '[data-testid="old-mode-dissolve"]', '[data-testid="dissolve-confirm"]');
+      await stepStage(rows, `${label}・傳承`, doc, win, '[data-testid="old-mode-inherit"]', '[data-testid="inherit-form"]');
     }
   }
   return rows;
