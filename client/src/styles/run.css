@@ -162,6 +162,7 @@
 }
 
 .run-alloc-name {
+  min-width: 0;
   white-space: nowrap;
 }
 
@@ -181,7 +182,10 @@
 }
 
 .run-alloc-star {
+  display: block;
   color: #f0c36a;
+  font-size: 0.8em;
+  line-height: 1.1;
 }
 
 .run-alloc-affects {
