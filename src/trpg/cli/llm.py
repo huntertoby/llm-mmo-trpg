@@ -25,7 +25,12 @@ from trpg.llm import (
 from trpg.llm.candidate_source import mock_client_for, mock_naming_client
 from trpg.llm.errors import LLM_START_HINT
 from trpg.llm.naming import apply_naming, name_skill, template_text
-from trpg.llm.propose import ProposalOutcome, ProposalStats, propose_skill
+from trpg.llm.propose import (
+    DEFAULT_MAX_ATTEMPTS,
+    ProposalOutcome,
+    ProposalStats,
+    propose_skill,
+)
 from trpg.shared.rng import Rng
 from trpg.skillgen.proposal import (
     CLOSED_SKELETONS,
@@ -85,7 +90,9 @@ class ProposeArgs:
 
     count: int = 1
     seed: int = 0
-    tier: int = 1
+    tier: int | None = None
+    """角色階級；``None`` ＝ 1 階，但 ``--mock`` 時每題自動選 Mock 答得出的最低階級（3W-9b：例如
+    召喚物 2 階，不再因為 1 階還不能用而退回手寫池）。"""
     rarity: SkillRarity | None = None
     skeleton: str | None = None
     keywords: tuple[str, ...] = ()
@@ -120,19 +127,82 @@ def _feasible(library: ContentLibrary, request: ProposalRequest, seed: int) -> b
 
 
 def _rotated_request(
-    library: ContentLibrary, args: ProposeArgs, keywords: Sequence[str], index: int, attempt: int
+    library: ContentLibrary,
+    args: ProposeArgs,
+    keywords: Sequence[str],
+    index: int,
+    attempt: int,
+    *,
+    tier: int,
 ) -> tuple[ProposalRequest, int]:
-    """第 ``index`` 題的第 ``attempt`` 組輪替（第 0 組與 4-L5 的輸出相同）。"""
+    """第 ``index`` 題的第 ``attempt`` 組輪替（第 0 組與 4-L5 的輸出相同），角色階級 ``tier``。"""
     label = f"llm.propose.{index}" if attempt == 0 else f"llm.propose.{index}.{attempt}"
     rng = Rng(args.seed).fork(label)
     rarity = args.rarity or PROPOSE_RARITIES[(args.seed + index + attempt) % len(PROPOSE_RARITIES)]
     skeleton = args.skeleton
     if skeleton is None and rng.chance_permille(500):
-        skeleton = rng.choice(_open_skeletons(library, rarity, args.tier))
+        skeleton = rng.choice(_open_skeletons(library, rarity, tier))
     picked = args.keywords
     if not picked and rng.chance_permille(500):
         picked = (rng.choice(keywords),)
-    return ProposalRequest(args.tier, rarity, skeleton=skeleton, keywords=picked), rng.next_u32()
+    return ProposalRequest(tier, rarity, skeleton=skeleton, keywords=picked), rng.next_u32()
+
+
+def _mock_answers(library: ContentLibrary, request: ProposalRequest, seed: int) -> bool:
+    """Mock 答得出這題：用 :func:`_mock_client` 跑一次提議，結果來自 LLM（沒有退回）。"""
+    client = _mock_client(library, request, seed, DEFAULT_MAX_ATTEMPTS)
+    try:
+        outcome = propose_skill(
+            client,
+            library,
+            request,
+            ProposalContext(request.tier, request.rarity),
+            seed=seed,
+            max_attempts=DEFAULT_MAX_ATTEMPTS,
+            clock=lambda: 0.0,
+        )
+    except (FallbackError, ValueError):
+        return False
+    return outcome.source == "llm"
+
+
+def _tiers(library: ContentLibrary, args: ProposeArgs) -> tuple[int, ...]:
+    """要試的角色階級：指定了就只用它；``--mock`` 沒指定時由低到高（到最低角色階級表的最高階）。"""
+    if args.tier is not None:
+        return (args.tier,)
+    if not args.mock:
+        return (1,)
+    return tuple(range(1, library.budget.min_character_tier.highest() + 1))
+
+
+def _pick(
+    library: ContentLibrary,
+    args: ProposeArgs,
+    keywords: Sequence[str],
+    index: int,
+    *,
+    explicit: bool,
+) -> tuple[ProposalRequest, int]:
+    """第 ``index`` 題：照最低的階級輪替出可行的題目（:func:`_feasible`；全部由參數指定時照跑）。
+    ``--mock`` 沒指定階級時，這組輪替（同樣的稀有度與關鍵字）Mock 答不出（:func:`_mock_answers`）就
+    往上一階再試，取答得出的最低階級（例如召喚物 → 2 階）；都答不出時用原本的題目。"""
+    tiers = _tiers(library, args)
+    chosen: tuple[int, tuple[ProposalRequest, int]] | None = None
+    for attempt in range(1 if explicit else ROTATION_TRIES):
+        candidate = _rotated_request(library, args, keywords, index, attempt, tier=tiers[0])
+        if explicit or _feasible(library, *candidate):
+            chosen = (attempt, candidate)
+            break
+    if chosen is None:
+        return _rotated_request(library, args, keywords, index, 0, tier=tiers[0])
+    attempt, base = chosen
+    if len(tiers) == 1 or _mock_answers(library, *base):
+        return base
+    for tier in tiers[1:]:
+        candidate = _rotated_request(library, args, keywords, index, attempt, tier=tier)
+        if (explicit or _feasible(library, *candidate)) and _mock_answers(library, *candidate):
+            return candidate
+    return base
 
 
 def propose_requests(
@@ -147,22 +217,7 @@ def propose_requests(
     if unknown:
         raise ValueError(f"未知的關鍵字：{'、'.join(unknown)}（可用：{'、'.join(keywords)}）")
     explicit = args.rarity is not None and args.skeleton is not None and bool(args.keywords)
-    out: list[tuple[ProposalRequest, int]] = []
-    for index in range(args.count):
-        first = _rotated_request(library, args, keywords, index, 0)
-        chosen = first
-        if not explicit:
-            for attempt in range(ROTATION_TRIES):
-                candidate = (
-                    first
-                    if attempt == 0
-                    else _rotated_request(library, args, keywords, index, attempt)
-                )
-                if _feasible(library, *candidate):
-                    chosen = candidate
-                    break
-        out.append(chosen)
-    return out
+    return [_pick(library, args, keywords, index, explicit=explicit) for index in range(args.count)]
 
 
 def _mock_client(
@@ -175,7 +230,7 @@ def _mock_client(
 
 def _describe(request: ProposalRequest) -> str:
     keywords = "、".join(request.keywords) or "無關鍵字"
-    return f"{request.rarity}／{request.skeleton or '不限骨架'}／{keywords}"
+    return f"{request.tier} 階／{request.rarity}／{request.skeleton or '不限骨架'}／{keywords}"
 
 
 def _attempt_codes(codes: tuple[str, ...]) -> str:
