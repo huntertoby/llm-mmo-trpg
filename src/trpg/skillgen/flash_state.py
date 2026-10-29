@@ -85,6 +85,9 @@ class FlashRecord(_Frozen):
     nth: int = Field(ge=0)
     variation: Variation
     reflashes: int = Field(default=0, ge=0)
+    floor_permille: int = Field(default=0, ge=0)
+    """強度下限（Phase 3W-2）：重閃時，被換掉的那一筆套用後的預算分數（‰，無條件進位）；重調後這一
+    筆的預算分數不可低於它（玩法 PM：重閃也不低於換掉之前）。閃現為 0（只比前一筆）。"""
 
 
 class SkillFlash(_Frozen):
@@ -201,12 +204,16 @@ def with_flash(state: SkillFlash, variation: Variation, *, cost: int = 0) -> Ski
     )
 
 
-def with_reflash(state: SkillFlash, nth: int, variation: Variation, *, cost: int = 0) -> SkillFlash:
+def with_reflash(
+    state: SkillFlash, nth: int, variation: Variation, *, cost: int = 0, floor_permille: int = 0
+) -> SkillFlash:
     """重閃第 ``nth`` 次：換掉那一筆的變化、該欄重閃次數 +1、花掉的點數 +``cost``；次數與「用過」
     不變。"""
     old = state.record(nth)
     reflashes = 0 if old is None else old.reflashes + 1
-    record = FlashRecord(nth=nth, variation=variation, reflashes=reflashes)
+    record = FlashRecord(
+        nth=nth, variation=variation, reflashes=reflashes, floor_permille=floor_permille
+    )
     spent = state.spent + cost
     if state.complete and nth == COMPLETE_SLOT:
         return state.model_copy(update={"adjustment": record, "spent": spent})

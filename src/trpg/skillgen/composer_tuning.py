@@ -132,6 +132,7 @@ def tune(
     knobs: list[Knob],
     *,
     extra: Sequence[dict[str, Any]] = (),
+    min_ratio: Fraction | None = None,
 ) -> bool:
     """調整旋鈕使比例落在 ``[low, high]``；成功時 ``effects`` 已是最終數值。
 
@@ -139,18 +140,26 @@ def tune(
     ``extra``（Phase 4-L8）：``base`` 裡其他要調的效果字典（例如複合技能第二段的效果，與
     ``base["followup"]["effects"]`` 是同一批物件）；旋鈕的 ``index`` 超過 ``effects`` 的長度時指向
     ``extra``。隨機組合器不傳，行為不變。
+
+    ``min_ratio``（Phase 3W-2，閃現的強度下限）：最終比例至少要有這麼多——目標比例與上限都跟著抬高
+    到它（上限最多再多一個 ``target_margin``，仍受驗證器的 0.70–1.00 窗約束）。
     """
     rules = library.composer.tuning
     low, high = tuning_bounds(library)
     ev = _Evaluator(library, base, effects, extra)
+    margin = Fraction(rules.target_margin_permille, 1000)
+    if min_ratio is not None:
+        high = ev.high = Fraction(1)  # 有下限時上限放到驗證器的上限（1.00）
     for knob in knobs:
         knob.pos = 0
         _apply(knob, ev.targets)
     ratio = ev.ratio()
     if ratio is None or ratio > high:
         return False
-    span = high - low - Fraction(rules.target_margin_permille, 1000)
+    span = high - low - margin
     target = low + span * Fraction(rng.randint(0, rules.target_steps), rules.target_steps)
+    if min_ratio is not None:
+        target = max(target, min_ratio)
     blocked: set[int] = set()
     while ratio < target:
         live = [k for k in knobs if k.can_up() and id(k) not in blocked]
@@ -160,4 +169,4 @@ def tune(
         ratio, accepted = _raise(knob, ev, ratio, target)
         if not accepted:
             blocked.add(id(knob))
-    return ratio >= low and ev.shares == 0
+    return ratio >= max(low, min_ratio or low) and ev.shares == 0
