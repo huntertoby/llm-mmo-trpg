@@ -141,6 +141,8 @@ SNAPSHOTS = {
     "skill-proposal/2": "bddf7bbb943b2a3e769a1a9bf384488dec4de4e23d97213ed66dbed018601546",
     # 3T-2：form（型態）改名 layout（版型），available.forms 改 available.layouts
     "skill-proposal/3": "fa56b01df86dd173ab777019d7892e29d9dde019261cdbb02635dc097c5a23df",
+    # 4-L8：available 多了 costs／followup／reactions，提議不再填技能名稱
+    "skill-proposal/4": "e50d5d59de8e5f4c0223c42c91ead65f8e69cdbb8f0424ebb86dba187dc5e4fb",
 }
 
 

@@ -53,7 +53,7 @@ def _same(a: SkillDef, b: SkillDef) -> bool:
     """除了 ID 與來源（呼叫端決定）以外完全相同；武器技的縮放屬性由引擎設為武器大類主屬性
     （看手上武器，3H-6），不比對。``skill_scaling.yaml`` 例外清單裡的內建技能（3H-7）：提議出來的
     技能沒有那個 ID，縮放屬性依效果推導的主題收進允許範圍，也不比對。"""
-    skip = {"id", "provenance"}
+    skip = {"id", "provenance", "name_zh"}  # 名稱由命名步驟產生（4-L8）
     excepted = {o.skill for o in _lib().skill_scaling.overrides}
     if b.category == "weapon" or b.id in excepted:
         skip |= {"scaling_attr", "secondary_scaling_attr"}
@@ -193,7 +193,6 @@ def test_primitive_subset_shrinks_schema() -> None:
 
 CLEAVE = {
     "layout": "standard",
-    "name_zh": "橫掃劈砍",
     "concept": "巨劍掃出一道弧，把前方的人一起削倒",
     "cast_flavor": "盜賊頭目雙手揮動巨劍，朝面前橫掃",
     "kind": "active",

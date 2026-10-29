@@ -27,6 +27,7 @@ from trpg.llm.prompts.naming import build_naming_messages, naming_schema
 from trpg.llm.response import clean_response
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.player_text import plain_name
+from trpg.skillgen.proposal import combined_skill_name
 
 __all__ = [
     "DEFAULT_NAMING_ATTEMPTS",
@@ -143,8 +144,7 @@ def fallback_naming(
 ) -> NamingText:
     """組合式名稱與模板敘事（和隨機組合器同樣的做法）：「元素・骨架」；撞名時加「（二）」之類。"""
     skeleton = plain_name(skill.skeleton, library)
-    elements = sorted(e.display_name for e in skill_elements(skill))
-    base = f"{elements[0]}・{skeleton}" if elements else skeleton
+    base = combined_skill_name(library, skill)
     name = base
     for index in range(2, 100):
         if name not in taken:

@@ -2,9 +2,11 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/9``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
-  （``trpg-run/5``、``/6``、``/7``、``/8``：之後的版本只新增有預設值的欄位與一種新節點，所以舊存檔照常讀入，
-  之後寫出為 ``/9``），否則拒絕。Phase 4-L7 起提議紀錄多了命名與敘事的來源 ``name_source``、
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/10``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
+  （``trpg-run/5``～``/9``：之後的版本只新增有預設值的欄位與一種新節點，所以舊存檔照常讀入，
+  之後寫出為 ``/10``），否則拒絕。Phase 4-L8 起提議紀錄多了提議與命名 prompt 的版本號
+  ``prompt_version``、``naming_prompt_version``（``/10``；舊紀錄沒有＝未記錄）。
+  Phase 4-L7 起提議紀錄多了命名與敘事的來源 ``name_source``、
   ``name_attempts``、``name_codes``（``/9``；舊紀錄沒有＝沒有命名步驟）。
   Phase 4-L6 起多了 LLM 生成開關 ``run.llm``、run 內配額 ``run.llm_uses``、
   提議紀錄 ``run.llm_log`` 與候選標示的 ``offer.tags[].llm``（``/8``；舊存檔沒有＝
@@ -64,8 +66,8 @@ __all__ = [
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/9"
-COMPATIBLE_FORMATS = ("trpg-run/5", "trpg-run/6", "trpg-run/7", "trpg-run/8")
+SAVE_FORMAT = "trpg-run/10"
+COMPATIBLE_FORMATS = ("trpg-run/5", "trpg-run/6", "trpg-run/7", "trpg-run/8", "trpg-run/9")
 """仍可讀入的舊格式（新增的欄位都有預設值，讀入後視為目前格式）。"""
 OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 """已知的舊存檔格式（讀檔時提示開新一輪）。"""

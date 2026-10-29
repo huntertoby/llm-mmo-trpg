@@ -55,7 +55,6 @@ def _evaluate(data: dict[str, Any], models: ProposalModels | None = None) -> Pro
 RUSH: dict[str, Any] = {"type": "charge_through", "on_hit": "knock_prone"}
 CHARGE: dict[str, Any] = {
     "layout": "charge_through",
-    "name_zh": "蠻牛衝撞",
     "kind": "active",
     "skeleton": "displace",
     "category": "weapon",
@@ -282,7 +281,6 @@ def test_rarity_blocked_status_is_rejected_at_proposal_stage() -> None:
     models = build_subset_models(_lib(), subset)
     proposal = {
         "layout": "standard",
-        "name_zh": "測試",
         "kind": "active",
         "skeleton": "strike",
         "category": "spell",
