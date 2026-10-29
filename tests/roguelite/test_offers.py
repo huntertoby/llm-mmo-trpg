@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.roguelite.helpers import library
+from tests.roguelite.helpers import full_library, library
 from trpg.content.skills import weapon_problem
 from trpg.roguelite import ChoiceError, RunState, new_run
 from trpg.roguelite.offers import equip_problems, make_offer, skill_defs, take_candidate
@@ -51,9 +51,21 @@ def test_offer_is_deterministic_and_depends_on_the_counter() -> None:
 
 
 @pytest.mark.slow
-def test_offer_tier_follows_the_level() -> None:
-    run = new_run(library(), "build_push", 5).model_copy(update={"level": 5})
-    assert {s.tier for s in _offer(run).candidates} == {library().roguelite.offer_tier(5)}
+def test_full_skill_offer_tier_follows_the_level() -> None:
+    """完整技能三選一（``candidates.whiteboard: false``）的階級依主角等級。"""
+    lib = full_library()
+    run = new_run(lib, "build_push", 5).model_copy(update={"level": 5})
+    offer = make_offer(lib, run, "level_up")
+    assert {s.tier for s in offer.candidates} == {lib.roguelite.offer_tier(5)}
+
+
+def test_whiteboard_offer_is_always_tier_one() -> None:
+    """白板三選一（預設；3W-4）固定 1 階，不隨主角等級變。"""
+    lib = library()
+    run = new_run(lib, "build_push", 5).model_copy(update={"level": 5})
+    offer = make_offer(lib, run, "level_up")
+    assert offer.tier == 1
+    assert {s.tier for s in offer.candidates} == {1}
 
 
 def test_skip_keeps_the_skills() -> None:

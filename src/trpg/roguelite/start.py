@@ -47,6 +47,7 @@ from trpg.skillgen.keywords import (
     keyword_pools,
 )
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
+from trpg.skillgen.whiteboard import compose_whiteboard, whiteboard_keywords
 
 __all__ = [
     "StartResources",
@@ -322,6 +323,37 @@ def _composed_starter(
     return None
 
 
+def _whiteboard_starter(
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    *,
+    weapon_class: str,
+    taken: set[str],
+    held: Mapping[str, str],
+) -> SkillDef | None:
+    """起始技能的主動白板（Phase 3W-4，06 6.34.1）：``keyword`` 有白板配方且
+    ``start.whiteboard`` 為真時，組合器的單一效果模式最多試 ``composer_tries`` 個種子；沒有配方
+    （形態、召喚物、倒地、撞擊、潮濕）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。"""
+    if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(library):
+        return None
+    for _ in range(library.roguelite.start.composer_tries):
+        try:
+            skill = compose_whiteboard(
+                rng.next_u32(),
+                kind="active",
+                keyword=keyword,
+                weapon_class=weapon_class,
+                library=library,
+                held=held,
+            )
+        except ComposeError:
+            continue
+        if is_starter_skill(skill) and skill.id not in taken:
+            return skill
+    return None
+
+
 def starter_pools(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
     """開局用的技能池：只看專屬規則、只列可當起始技能的（1 階、普通或稀有、主動技；姿態只開放
     ``enter_form``）。「形態」池只給 1 階化身（熊、貓、巨鵰、狼人；Phase 3J-4b，06 6.30）——
@@ -349,6 +381,11 @@ def starting_skill(
     pools = pools if pools is not None else starter_pools(library)
     used = set(taken)
     rng = Rng(seed).fork(f"start/skill/{keyword}")
+    board = _whiteboard_starter(
+        library, rng.fork("whiteboard"), keyword, weapon_class=weapon_class, taken=used, held=held
+    )
+    if board is not None:
+        return board
     options = [
         library.skills[s]
         for s in pools[keyword]

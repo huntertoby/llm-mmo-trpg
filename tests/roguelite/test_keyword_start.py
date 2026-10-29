@@ -28,7 +28,8 @@ from trpg.roguelite.start import (
 )
 from trpg.roguelite.state import LevelUpNode
 from trpg.shared.types import Attribute, Pos, UnitId
-from trpg.skillgen.keywords import is_starter_skill, pool_skills
+from trpg.skillgen.keywords import derive_keywords, is_starter_skill, pool_skills
+from trpg.skillgen.whiteboard import is_whiteboard
 
 
 def test_every_weapon_is_offered() -> None:
@@ -50,15 +51,20 @@ def test_starter_pools_use_exclusive_rules_and_have_three_each() -> None:
     assert "skill_cleave" not in pools["prone"]  # 近戰武器技只靠通用規則利用倒地
 
 
-def test_keyword_start_is_deterministic_and_gives_one_skill_per_pool() -> None:
+def test_keyword_start_is_deterministic_and_gives_one_whiteboard_per_keyword() -> None:
+    """3W-4：有白板配方的關鍵字，起始技能是主動白板（生成技能，存在 generated_skills）。"""
     lib = library()
-    pools = starter_pools(lib)
     run = new_keyword_run(lib, "fire_staff", ("ignite", "marked"), 7)
     assert run == new_keyword_run(lib, "fire_staff", ("ignite", "marked"), 7)
     assert run.start is not None and run.build_id is None
     assert run.start.weapon == "fire_staff" and run.start.keywords == ("ignite", "marked")
     first, second = run.hero.skills
-    assert first in pools["ignite"] and second in pools["marked"] and first != second
+    assert first != second
+    by_id = {s.id: s for s in run.generated_skills}
+    for skill_id, keyword in ((first, "ignite"), (second, "marked")):
+        skill = by_id[skill_id]
+        assert skill.kind == "active" and is_whiteboard(skill, lib)
+        assert derive_keywords(skill, lib.keywords, exclusive_only=True).all() == (keyword,)
     assert run.hero.weapon == "fire_staff" and run.level == 1
     assert run.hero.attributes[Attribute.INT] == 14  # 預設配點：武器的縮放屬性
     assert run.hp == run.max_hp_in(lib.ruleset.core) and run.mana == run.max_mana_in(

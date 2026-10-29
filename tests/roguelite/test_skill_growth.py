@@ -12,7 +12,7 @@ from functools import cache
 
 import pytest
 
-from tests.roguelite.helpers import library as full_library
+from tests.roguelite.helpers import full_library as _full_skill_library
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.engine.state import state_to_json
@@ -51,7 +51,7 @@ BUILD = "build_fire"
 @cache
 def library() -> ContentLibrary:
     """關掉分歧進化的內容庫（見模組說明）。"""
-    lib = full_library()
+    lib = _full_skill_library()
     growth = lib.ruleset.skill_growth.model_copy(update={"evolve_uses": 0})
     ruleset = lib.ruleset.model_copy(update={"skill_growth": growth})
     return dataclasses.replace(lib, ruleset=ruleset, evolution=EvolutionTable())

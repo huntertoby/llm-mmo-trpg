@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from tests.roguelite.helpers import library
+from tests.roguelite.helpers import full_library, library
 from trpg.content.skills import SkillDef
 from trpg.llm.candidate_source import mock_naming_client, name_attempt
 from trpg.roguelite import RunSave, auto_play, dumps_save, loads_save, new_run
@@ -16,7 +16,8 @@ from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.proposal_topic import LlmAttempt
 from trpg.skillgen.random_composer import compose_random_skill
 
-lib = library()
+# LLM 來源只在完整技能三選一（candidates.whiteboard: false）使用；白板模式下關閉（3W-4）
+lib = full_library()
 
 
 class _Counting:
@@ -58,6 +59,18 @@ def test_switch_on_without_proposer_does_not_call_anything() -> None:
     run = _run(True)
     offer = make_offer(lib, run, "level_up")
     assert offer == make_offer(lib, _run(False), "level_up")
+
+
+def test_whiteboard_mode_never_calls_the_llm() -> None:
+    """3W-4：預設的白板三選一不請 LLM（整招提議留給完整技能），開關打開也一樣。"""
+    run = new_run(library(), "build_fire", 2).model_copy(update={"llm": True})
+    counter = _Counting()
+    with use_proposer(counter):
+        offer = make_offer(library(), run, "level_up")
+    assert counter.calls == 0
+    assert len(offer.candidates) == 3
+    assert all(t.source != "llm" and t.llm is None for t in offer.tags)
+    assert all(s.tier == 1 for s in offer.candidates)
 
 
 def test_switch_on_uses_llm_and_records_it() -> None:
