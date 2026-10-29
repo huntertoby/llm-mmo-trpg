@@ -37,8 +37,19 @@ export interface Look {
   tail?: "fox" | "scaled" | "demon" | "dragon";
   hornColor?: string;
   tailColor?: string;
-  /** 鱗色（目前只用在粗尾巴的預設色；龍鱗紋路屬 3R-3c）。 */
+  /** 鱗色（龍裔：龍鱗紋路、鱗脊、背刺、粗尾巴的預設色）。 */
   scaleColor?: string;
+  /** 臉部紋路（Phase 3R-3c）：scales 鱗片、marks 刺青、circuit 晶路、dragonscale 龍鱗；`markColor` ＝ 刺青色。 */
+  pattern?: "scales" | "marks" | "circuit" | "dragonscale";
+  markColor?: string;
+  beard?: boolean;
+  tusks?: boolean;
+  /** 豎瞳。 */
+  slitEyes?: boolean;
+  /** 鱗脊（鼻樑到額頭一排小尖）。 */
+  ridge?: boolean;
+  /** 背刺（肩後骨刺）。 */
+  spines?: boolean;
 }
 
 export type GearSlot = "head" | "body" | "hands" | "feet" | "cloak" | "main_hand" | "off_hand";

@@ -219,7 +219,7 @@ const raceSpec = (race: string, g: DollSpec["gear"] = {}): DollSpec => {
   return { ...d, look: { ...d.look, ...raceLookToLook(RACE_LOOKS[race]) } };
 };
 const raceCell = (race: string, g: DollSpec["gear"], f: Facing, label: string): HTMLElement => figureOf(raceSpec(race, g), f, `${RACE_ZH[race] ?? race}${label}`);
-for (const f of FACINGS) section(`⑫ 3R-3b・10 族（${f}）`, RACE_ORDER.map((r) => raceCell(r, {}, f, "")));
+for (const f of FACINGS) section(`⑫ 3R-3b／3R-3c・10 族（${f}）`, RACE_ORDER.map((r) => raceCell(r, {}, f, "")));
 const HAT = (kind: string, c = "#7a5a3a"): GearItem => ({ kind, material: "cloth", color: c });
 const HELM = (kind: string): GearItem => ({ kind, material: "steel" });
 const CROWN: GearItem = { kind: "crown", material: "gold" };
@@ -237,4 +237,15 @@ conflict("角魔＋披風與長袍（背面尾巴在披風上）", [["披風", {
 conflict("精靈＋頭部裝備（尖耳伸出）", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }], ["兜帽", { head: HOOD }], ["寬帽", { head: HAT("wide_hat") }], ["皮帽", { head: HAT("cap") }]], "elf", ["south", "east", "north"]);
 conflict("鱗族＋頭部裝備（鰭耳）", [["沒戴", {}], ["兜帽", { head: HOOD }], ["頭盔", { head: HELM("helmet") }], ["巫師帽", { head: WIZ }]], "scalefolk", ["south", "east", "north"]);
 conflict("龍裔＋帽子、長袍（龍角、粗龍尾）", [["沒戴", {}], ["寬帽", { head: HAT("wide_hat") }], ["頭盔", { head: HELM("helmet") }], ["長袍", { body: ROBE }]], "dragonkin", ["south", "east", "north"]);
-conflict("矮人＋板甲＋大盾（體型與鬍子屬 3R-3c，這裡只有膚色）", [["板甲＋塔盾", { body: { kind: "plate", material: "steel" }, off_hand: G("shield_kite", "tower", { material: "wood" }) }]], "dwarf", ["south", "east", "north"]);
+conflict("矮人＋板甲＋大盾（矮壯體型、鬍子）", [["板甲＋塔盾", { body: { kind: "plate", material: "steel" }, off_hand: G("shield_kite", "tower", { material: "wood" }) }]], "dwarf", ["south", "east", "north"]);
+// 3R-3c：龍裔鱗色（紅／藍／金）四方向、鬍子與獠牙遇頭部裝備、臉部紋路
+const dragonSpec = (c: string): DollSpec => {
+  const d = raceSpec("dragonkin");
+  return { ...d, look: { ...d.look, scaleColor: c } };
+};
+for (const f of FACINGS) section(`⑫ 3R-3c・龍裔鱗色（${f}）`, [["紅", "#c8402a"], ["藍", "#3a78c8"], ["金", "#d8a830"]].map(([n, c]) => figureOf(dragonSpec(c!), f, `龍裔・${n}`)));
+conflict("矮人鬍子＋頭部裝備", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }], ["兜帽", { head: HOOD }], ["皮帽", { head: HAT("cap") }]], "dwarf", ["south", "east"]);
+conflict("獸人獠牙＋頭部裝備", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }], ["兜帽", { head: HOOD }], ["皇冠", { head: CROWN }]], "orc", ["south", "east"]);
+conflict("晶能義體人晶路", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }]], "cyborg", ["south", "east"]);
+conflict("海民刺青", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }]], "seafolk", ["south", "east"]);
+conflict("鱗族鱗片", [["沒戴", {}]], "scalefolk", ["south", "east"]);

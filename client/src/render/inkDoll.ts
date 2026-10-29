@@ -8,7 +8,7 @@ import { drawFootDetail, drawInkBodyArmor, drawInkHand, drawInkHeadgearMore, foo
 import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon } from "./inkGear";
 import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { drawInkWeaponMore } from "./inkWeapons";
-import { drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawInkHorns, drawInkTail, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
+import { drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawEye, drawInkHorns, drawInkTail, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
 import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
 
 export type InkView = "front" | "back" | "side";
@@ -201,21 +201,23 @@ function drawFace(t: Ctxt, view: InkView): void {
     stroke(ctx, `skull-teeth-${view}`, F ? [[-2.6, -37], [2.6, -37]] : [[3.4, -37], [7.2, -37]], 0.7);
     return;
   }
-  for (const x of F ? [-3.2, 3.2] : [4.4]) dot(ctx, x, -41, 0.9, 1.3, look.eyes ?? INK);
+  for (const x of F ? [-3.2, 3.2] : [4.4]) drawEye(ctx, look, x);
   ctx.fillStyle = "rgba(220,90,80,0.32)";
   for (const x of F ? [-5.4, 5.4] : [3.2]) {
     ctx.beginPath();
     ctx.ellipse(x, -38.6, 1.6, 0.9, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  stroke(ctx, `mouth-${view}`, F ? [[-1, -37.4], [0, -36.8], [1, -37.4]] : [[6.4, -37], [7.4, -36.6]], 0.5);
+  if (look.beard !== true) stroke(ctx, `mouth-${view}`, F ? [[-1, -37.4], [0, -36.8], [1, -37.4]] : [[6.4, -37], [7.4, -36.6]], 0.5);
+  drawRaceFace(ctx, look, F ? "front" : "side");
 }
 
 function drawHair(t: Ctxt, view: InkView): void {
   const { look, gear } = t.spec;
   if (look.hair === undefined || look.hair === "none" || look.skull === true) return;
   const c = look.hairColor ?? HAIR_FALLBACK;
-  const covered = gear.head !== undefined && HAIR_COVERED.includes(gear.head.kind);
+  // 有種族角、帽子被抬高時（巫師帽、寬帽），帽緣下面要看得到頭髮：照「沒有遮頭頂」畫
+  const covered = gear.head !== undefined && HAIR_COVERED.includes(gear.head.kind) && hatAdjust(look, gear.head).dy === 0;
   if (view === "back") {
     // 背面：帽子只蓋頭頂，後腦頭髮照畫
     const pts: Pt[] = look.hair === "long"
@@ -246,6 +248,7 @@ function drawHead(t: Ctxt, view: InkView): void {
   }
   if (view !== "back") drawFace(t, view);
   drawHair(t, view);
+  drawRidge(ctx, t.spec.look, view);
   drawSideEarBeforeHat(ctx, ears);
   drawBeastEarsBeforeHat(ctx, ears);
 }
@@ -326,6 +329,7 @@ function drawFront(t: Ctxt): void {
   drawInkTail(t.ctx, spec.look, "front");
   drawHairBack(t, "front");
   drawLegs(t, "front");
+  drawBackSpines(t.ctx, spec.look, "front"); // 只露出肩頭的尖端
   drawBody(t, "front");
   drawArmFront(t, 1);
   if (off !== undefined) {
@@ -358,6 +362,7 @@ function drawBack(t: Ctxt): void {
   if (off !== undefined && !isShield(off)) screen(() => legacyHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false }));
   drawLegs(t, "back");
   drawBody(t, "back");
+  drawBackSpines(ctx, spec.look, "back");
   drawArmFront(t, -1);
   drawArmFront(t, 1);
   drawHand(t, -9, -23.2, "hand-bl", 0.32);
@@ -386,6 +391,7 @@ function drawSide(t: Ctxt): void {
     legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
   }
   drawLegs(t, "side");
+  drawBackSpines(ctx, spec.look, "side");
   drawBody(t, "side");
   if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) drawInkKiteSide(ctx, off, t.hooks.colors);
   drawHead(t, "side");
@@ -395,11 +401,19 @@ function drawSide(t: Ctxt): void {
   drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
 }
 
+const DOLL_HEAD_TOP = 53; // 頭頂（不含角、帽）離腳底約 53
+
 /** 體型縮放：stout 整個人 ×(1.12, 0.88)、tall ×(0.96, 1.1)；不認得的值不縮放。 */
 export function buildScale(look: Look): readonly [number, number] {
   if (look.build === "stout") return [1.12, 0.88];
   if (look.build === "tall") return [0.96, 1.1];
   return [1, 1];
+}
+
+/** 頭頂狀態列要跟著體型升高的量（虛擬格 52px 單位）：高瘦會把頭頂推高 10%，矮壯不降（維持原位）。 */
+export function buildRowRise(look: Look): number {
+  const [, sy] = buildScale(look);
+  return sy > 1 ? Math.round(DOLL_HEAD_TOP * (sy - 1) * 10) / 10 : 0;
 }
 
 /** 畫一個 C 畫風小人（腳底中心在 (0,0)）。facing 的鏡像（西）由呼叫端處理；`ground` ＝ false 時不畫地面影子（倒地）。 */

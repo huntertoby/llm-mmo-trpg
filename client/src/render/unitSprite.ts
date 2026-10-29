@@ -7,6 +7,8 @@ import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
 import { resolveDoll, type DollSpec } from "./appearance";
+import { buildRowRise } from "./inkDoll";
+import { raceLookToLook } from "./inkRace";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
@@ -290,7 +292,9 @@ function statusRow(u: UnitDraw): Container | null {
   const items = statusRowLayout(ids, infused ? 2 : 3, ROW_ICON);
   if (items.length === 0) return null;
   const row = new Container();
-  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y - (u.form != null && !u.summon ? formRowRise(u.form.look, T, DOLL_SCALE) : 0));
+  // 高瘦體型（精靈）頭頂較高，狀態列跟著升高；召喚物不套用種族外觀
+  const tall = u.summon || u.raceLook == null ? 0 : buildRowRise({ skin: "", ...raceLookToLook(u.raceLook) }) * DOLL_SCALE * (T / 52);
+  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y - tall - (u.form != null && !u.summon ? formRowRise(u.form.look, T, DOLL_SCALE) : 0));
   for (const item of items) {
     if (item.kind === "icon") {
       const tex = rowIconTexture(item.id);
