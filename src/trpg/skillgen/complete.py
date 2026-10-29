@@ -17,13 +17,15 @@
 一步達標的，取超出最少的；否則取分數加最多的（同分取資料順序在前的）。都加不動、還沒達標時停在
 目前最強的版本（例如沒有代價的修正型被動），由呼叫者記錄。旋鈕的階梯與減代價的順序都在資料檔；
 這裡不認技能 ID，沒有亂數。
+
+旋鈕的蒐集與「往上一格」與升階重配共用 :mod:`~trpg.skillgen.knobs`（3W-R2）。逐格爬升沒有併進
+:func:`~trpg.skillgen.evolution.retune`：``retune`` 用亂數抽目標比例、可以往下調，改成它的一種模式
+會改變每一招的結果，所以保留這裡的確定性爬升。
 """
 
 from __future__ import annotations
 
-import re
-from collections.abc import Callable, Iterator, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator
 from fractions import Fraction
 from typing import Any
 
@@ -34,10 +36,9 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
-from trpg.skillgen.evolution import effect_strength_knobs
 from trpg.skillgen.flash import with_budget_bonus
-from trpg.skillgen.flash_ops import base_draft, tuning_extras
-from trpg.skillgen.skill_tier import param_knobs
+from trpg.skillgen.flash_ops import base_draft
+from trpg.skillgen.knobs import knob_targets, next_moves, param_knobs, strength_knobs
 from trpg.skillgen.validate import validate_skill
 
 __all__ = ["complete_gain_permille", "complete_power", "complete_strength"]
@@ -45,7 +46,6 @@ __all__ = ["complete_gain_permille", "complete_power", "complete_strength"]
 _PERMILLE = 1000
 _MAX_STEPS = 40
 """最多加幾步（每一步一格；防止資料寫錯時無窮迴圈）。"""
-_DICE = re.compile(r"^(\d+)d(\d+)$")
 
 type _Draft = tuple[dict[str, Any], list[dict[str, Any]]]
 type _Trial = tuple[SkillDef, Fraction]
@@ -106,15 +106,6 @@ def _climb(
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True, slots=True)
-class _Move:
-    """一個可以往上加的旋鈕：草稿裡第 ``index`` 個字典的 ``field``，下一格是 ``value``。"""
-
-    index: int
-    field: str
-    value: Any
-
-
 type _Group = Callable[[ContentLibrary, CompleteSkillRules, SkillDef, _Draft], list[Knob]]
 
 
@@ -160,46 +151,10 @@ def _raised(
     """這一組旋鈕各往上加一格的結果（不合法的為 ``None``）。"""
     draft = base_draft(skill)
     knobs = group(library, rules, skill, draft)
-    for move in _moves(knobs, _targets(skill, draft)):
+    for move in next_moves(knobs, knob_targets(skill, draft)):
         base, effects = base_draft(skill)
-        _targets(skill, (base, effects))[move.index][move.field] = move.value
+        knob_targets(skill, (base, effects))[move.index][move.field] = move.value
         yield _checked(library, {**base, "effects": effects})
-
-
-def _targets(skill: SkillDef, draft: _Draft) -> list[dict[str, Any]]:
-    """旋鈕的 ``index`` 指向的字典：效果，之後接修正規則的 change 或接續段的效果（同一批物件）。"""
-    base, effects = draft
-    if base.get("kind") == "modifier":
-        return [*effects, *(m["change"] for m in base["modifiers"])]
-    if skill.followup is not None and base.get("followup"):
-        return [*effects, *base["followup"]["effects"]]
-    return list(effects)
-
-
-def _moves(knobs: Sequence[Knob], targets: Sequence[dict[str, Any]]) -> Iterator[_Move]:
-    """每個旋鈕（同一欄位只算一次）從目前的值往上的下一格。"""
-    seen: set[tuple[int, str]] = set()
-    for knob in knobs:
-        if (knob.index, knob.field) in seen or knob.index >= len(targets):
-            continue
-        seen.add((knob.index, knob.field))
-        current = _order(targets[knob.index].get(knob.field))
-        if current is None:
-            continue
-        ups = [(o, v) for v in knob.values if (o := _order(v)) is not None and o > current]
-        if ups:
-            yield _Move(knob.index, knob.field, min(ups, key=lambda pair: pair[0])[1])
-
-
-def _order(value: Any) -> int | None:
-    """旋鈕值的大小：整數照原值、骰子 ``NdM`` 用 ``N × (M + 1)``（平均值 ×2）；其他無法比較。"""
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int):
-        return value
-    if isinstance(value, str) and (m := _DICE.match(value)) is not None:
-        return int(m.group(1)) * (int(m.group(2)) + 1)
-    return None
 
 
 _WEAK = "budget.weak"
@@ -226,11 +181,9 @@ def _checked(library: ContentLibrary, data: dict[str, Any]) -> _Trial | None:
 def _strength_knobs(
     library: ContentLibrary, rules: CompleteSkillRules, skill: SkillDef, draft: _Draft
 ) -> list[Knob]:
-    """預算器的強度旋鈕（傷害、治療、護盾、推拉、修正幅度、接續段），加上召喚與姿態的旋鈕。"""
-    base, effects = draft
-    knobs = list(effect_strength_knobs(skill.category, effects, library))
-    _, extra = tuning_extras("followup" if skill.followup else "", base, library)
-    knobs += [Knob(len(effects) + k.index, k.field, k.values) for k in extra]
+    """預算器的強度旋鈕（:func:`~trpg.skillgen.knobs.strength_knobs`），加上召喚與姿態的旋鈕。"""
+    effects = draft[1]
+    knobs = strength_knobs(skill, draft, library)
     statuses = library.ruleset.statuses.by_id()
     for index, effect in enumerate(effects):
         if effect["type"] == "summon" and (effect.get("count") or 1) == 1:
@@ -253,7 +206,7 @@ def _strength_knobs(
 def _param_knobs(
     library: ContentLibrary, _rules: CompleteSkillRules, skill: SkillDef, draft: _Draft
 ) -> list[Knob]:
-    """效果參數的旋鈕（狀態、表面的持續回合、累積層數……；同升階重配的 ``param_knobs``）。"""
+    """效果參數的旋鈕（:func:`~trpg.skillgen.knobs.param_knobs`，同升階重配）。"""
     return param_knobs(draft[1], skill.category, library)
 
 
