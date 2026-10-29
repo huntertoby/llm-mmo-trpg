@@ -286,3 +286,8 @@
 ### 4.10 4-L8 驗收（2026-10-29，開發 PM）
 - 報告 `Phase4-L8報告.md`。往返盤點 `skillgen/proposal_coverage.py`，覆蓋率 241／301 → **264／301**（測試下限 264）；開放代價欄位（每場一次、HP 代價、失手反噬；源力、每場次數、層數、HP 比例由補值器補）、`reaction`、`followup`（第二段骨架／形狀／位移範圍、旋鈕調第二段）；提議 schema 移除 `name_zh`；`LlmRecord` 加 `prompt_version`／`naming_prompt_version`；存檔 `trpg-run/10`（/5～/9 可讀）；`PROMPT_VERSION` `skill-proposal/4`。schema 最大 91,020 字元、prompt 最大 8,069 token。
 - 待決 → 決定：#1、#6、#8、#9、#10 → **4-L8b**；#2 HP 代價 200‰、#3 說明搬 YAML、#4 第二段全開、#5 `displace` 沒有 `ring`、#7 傳說源力 → 接受，4-L9 看真模型再調。
+
+### 4.11 4-L8b 驗收（2026-10-29，開發 PM）
+- 報告 `Phase4-L8b報告.md`。`skill_primitives.yaml` 新增頂層 `nested_only_effects`（`parents`），往返覆蓋率 264 → **266／301**；AP、冷卻、耐力成為補值器旋鈕（15 階、冷卻上限 5、只用於主動技能；手寫技能預算逐字相同；`leap_slam` 子集 0／10 → 10／10）；候選反應題 `candidates.llm_reaction_permille` 100‰；命名關閉時敘事換模板、`trpg llm propose --naming`。合併後 ruff、mypy、skillgen／llm／roguelite／content 4000 通過。
+- 待決 → 決定：#1～#5、#7 接受（初值，4-L9 看真模型再調）；#6 命名開關傳進 schema 組裝 → 4-L9 後的小修；**#8 驗收指令改成 `-m "(slow or not slow) and not llm"`**（`llm` 標記的測試會連 8001 埠），之後的派工 prompt 照此寫。
+- **4-L9 需要使用者啟動本機模型**，已請專案 PM 詢問時間（2026-10-29）。
