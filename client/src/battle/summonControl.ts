@@ -8,6 +8,19 @@ import type { Action, BattleView, CommandOption, CommandOptions, InfuseOptions, 
 import { samePos } from "./geometry";
 import { isAlive, type UnitNames } from "./units";
 
+/** 進行中的灌注：哪隻、伺服器給的技能選單。 */
+export interface InfuseSession {
+  summonId: string;
+  options: InfuseOptions;
+}
+
+/** 進行中的指揮：哪隻、伺服器給的選項、目前選的終點（`null` ＝ 還沒選）。 */
+export interface CommandSession {
+  summonId: string;
+  options: CommandOptions;
+  dest: Pos | null;
+}
+
 export type SummonMode = NonNullable<UnitView["summon_mode"]>;
 
 /** 模式的顯示順序。 */

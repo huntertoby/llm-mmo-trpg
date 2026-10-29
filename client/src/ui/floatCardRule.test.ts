@@ -3,10 +3,16 @@
 // 這裡用文字規則掃原始碼；有正當理由的例外一律列在白名單，並寫明原因。
 import { describe, expect, it } from "vitest";
 // @ts-expect-error 測試在 node 執行；專案沒裝 @types/node，只為了讀 CSS 檔
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
-// 注意：vitest 預設不處理 CSS，`styles.css?raw` 會變成空字串（舊的 CSS 規則因此形同虛設），所以直接讀檔。
-const styles: string = (readFileSync as (url: URL, enc: string) => string)(new URL("../styles.css", import.meta.url), "utf8");
+// 注意：vitest 預設不處理 CSS，`?raw` 會變成空字串（舊的 CSS 規則因此形同虛設），所以直接讀檔。
+// 樣式在 `src/styles/` 依畫面拆成多檔（3T-7）；這裡把全部串起來檢查（規則只看內容，不看層疊順序）。
+const stylesDir = new URL("../styles/", import.meta.url);
+const styles: string = (readdirSync as (url: URL) => string[])(stylesDir)
+  .filter((f) => f.endsWith(".css"))
+  .sort()
+  .map((f) => (readFileSync as (url: URL, enc: string) => string)(new URL(f, stylesDir), "utf8"))
+  .join("\n");
 
 const sources = import.meta.glob<string>(["/src/**/*.tsx", "/src/**/*.ts", "!/src/**/*.test.ts", "!/src/**/*.d.ts"], {
   query: "?raw",
@@ -48,7 +54,7 @@ function tagBefore(text: string, index: number): string | null {
 }
 
 describe("浮動卡規則（6.5.1）", () => {
-  it("讀得到 styles.css（CSS 規則不是對空字串空過）", () => {
+  it("讀得到 styles/*.css（CSS 規則不是對空字串空過）", () => {
     expect(styles.length).toBeGreaterThan(10000);
   });
 
@@ -117,7 +123,7 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(bad).toEqual([]);
   });
 
-  it("styles.css 裡 position: fixed 的規則只屬於共用浮動卡、對話框與遮罩", () => {
+  it("styles/*.css 裡 position: fixed 的規則只屬於共用浮動卡、對話框與遮罩", () => {
     const allowed = [".float-card", ".unit-float", ".decision-card"];
     const bad: string[] = [];
     for (const m of styles.matchAll(/([^{}]+)\{([^{}]*position:\s*fixed[^{}]*)\}/g)) {
@@ -127,7 +133,7 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(bad).toEqual([]);
   });
 
-  it("styles.css 裡 position: absolute 且 z-index ≥ 20 的規則只屬於共用彈出元件或版面分隔線", () => {
+  it("styles/*.css 裡 position: absolute 且 z-index ≥ 20 的規則只屬於共用彈出元件或版面分隔線", () => {
     // `.popup-menu`：點擊式選單；`.resize-handle`：拖曳分隔線（版面，不是彈出層）
     const allowed = [".float-card", ".unit-float", ".decision-card", ".popup-menu", ".resize-handle"];
     const bad: string[] = [];
@@ -142,7 +148,7 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(bad).toEqual([]);
   });
 
-  it("styles.css 沒有已移除的死碼（.modal-backdrop、.fallback-list）", () => {
+  it("styles/*.css 沒有已移除的死碼（.modal-backdrop、.fallback-list）", () => {
     expect(styles).not.toMatch(/\.modal-backdrop|\.fallback-list/);
   });
 });

@@ -1,0 +1,298 @@
+/* 浮動卡與說明框：共用浮動卡、一句話說明、部件說明框、格子資訊卡與單位資訊、點擊式選單。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+.unit-title {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.unit-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.unit-badge.ally {
+  background: var(--ally);
+}
+
+.unit-badge.enemy {
+  background: var(--enemy);
+}
+
+.unit-stats th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 400;
+  padding-right: 10px;
+}
+
+.unit-line {
+  margin-top: 4px;
+}
+
+/* 點擊式選單共用外觀（`usePopupMenu`）：Esc／點外面關閉、同時一張；超出高度時卡片內捲動 */
+
+.popup-menu {
+  position: absolute;
+  z-index: 30;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 中央戰場上的浮動元素 */
+
+.unit-float {
+  position: fixed;
+  z-index: 900;
+  width: 270px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* 3-30 (32.2)：可滑進、可釘住、超出高度時卡片內捲動（最大高度由 HoverFloat 量測設定） */
+  pointer-events: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  cursor: default;
+}
+
+.unit-float > * {
+  flex-shrink: 0;
+}
+
+.unit-float.pinned {
+  outline: 1px solid #ffe14d;
+}
+
+/* 卡片與格子之間 8px（CARD_GAP）的透明橋接區（外框 padding，位置往格子方向多挪 8px）：滑鼠從格子移向卡片不會斷 */
+
+.unit-float.bridge-left {
+  padding-left: 8px;
+}
+
+.unit-float.bridge-right {
+  padding-right: 8px;
+}
+
+.unit-float .unit-info,
+.unit-float .tile-card,
+.unit-float .telegraph-hover {
+  margin: 0;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
+  background: rgb(28 28 38 / 96%);
+}
+
+.unit-float .telegraph-hover {
+  padding: 6px 10px 6px 24px;
+}
+
+.tile-card {
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tile-section + .tile-section {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.tile-title {
+  font-weight: 700;
+}
+
+.tile-section.zone .tile-title,
+.tile-section.trap .tile-title {
+  color: var(--accent);
+}
+
+.tile-lines {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}
+
+/* 浮動卡（3-30，`useFloatCard`）：外框貼齊觸發元素，朝向觸發元素的一側有透明橋接區（滑過去不會斷）；內容在 .float-card-body */
+
+.float-card {
+  position: fixed;
+  z-index: 900;
+  outline: none;
+  pointer-events: auto;
+  /* 6.5.1 第 7 條：最高不超出視窗，超出時卡片內捲動（捲動不關閉） */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 8px);
+}
+
+.float-card > .float-card-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.float-card.side-above {
+  padding-bottom: 6px;
+}
+
+.float-card.side-below {
+  padding-top: 6px;
+}
+
+.float-card.skill-card-float {
+  width: 380px;
+  max-width: calc(100vw - 8px);
+}
+
+.float-card.skill-card-float .skill-card {
+  margin-top: 0;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+}
+
+.float-card:focus-visible .float-card-body {
+  outline: 2px solid #ffe14d;
+}
+
+.part-tip {
+  cursor: help;
+}
+
+.tip-glyph {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 8px;
+}
+
+.status-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+
+.float-card.part-tip-box {
+  z-index: 1000;
+  max-width: 240px;
+}
+
+/* 包在可點選的東西裡（工坊選項、裝備欄）的說明框只顯示、不攔截滑鼠（3-30 32.2：不再擋住下方一小塊） */
+
+.float-card.part-tip-box.no-bridge {
+  pointer-events: none;
+}
+
+/* 觸控釘住後要能捲動、點選卡片內容（3T-4） */
+
+.float-card.part-tip-box.no-bridge.pinned {
+  pointer-events: auto;
+}
+
+.part-tip-box .float-card-body {
+  padding: 6px 8px;
+  background: #1d1d2a;
+  border: 1px solid #ffffff55;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.part-tip-box.pinned .float-card-body {
+  border-color: #ffe14d;
+}
+
+.part-tip-cat {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.part-tip-name {
+  font-weight: 700;
+}
+
+.part-tip-text {
+  margin-top: 2px;
+  color: #d0d0dc;
+  white-space: pre-line;
+}
+
+/* 符文資訊卡（Phase 3-23）：標題用強調色，同陷阱與持續區域 */
+
+.tile-section.rune .tile-title {
+  color: var(--accent);
+}
+
+.tile-section.objective .tile-title {
+  color: #ffc83d;
+}
+
+/* Phase 3R-3a：開局第一步，種族卡與出身卡 */
+
+.float-card.race-pick-card {
+  max-width: 320px;
+}
+
+/* 重複詞條標灰（3-32b） */
+
+.part-tip-line.inactive {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(160, 160, 176, 0.6);
+}
+
+.part-tip-line.inactive .part-tip-note {
+  text-decoration: none;
+  display: inline-block;
+  color: #e0b060;
+}
+
+/* 一句話說明（3-32b，`Hint`）：3-47 起不產生外層元素；卡片是只有文字的小浮動卡 */
+
+.hint-tip-text {
+  white-space: pre-line;
+}
+
+/* 資訊卡釘住（3-40b，美術 PM）：沒釘住時卡片不接滑鼠；底部一行提示在卡片底色內；標題列右側圖釘，釘住時金色。 */
+
+.unit-float:not(.pinned) {
+  pointer-events: none;
+}
+
+.unit-float .tile-pin-bar {
+  margin-top: -4px; /* 接上上一塊（.unit-float 的 gap 4px），看起來是同一張卡 */
+  padding: 4px 10px;
+  border-top: 1px solid rgb(46 46 60 / 50%);
+  background: rgb(28 28 38 / 96%);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.tile-pin-glyph {
+  vertical-align: -2px;
+}
+
+.unit-float .tile-pin-icon {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.unit-float.bridge-right .tile-pin-icon {
+  right: 18px;
+}
+
+.unit-float.pinned .tile-pin-icon {
+  color: #ffd04a;
+  opacity: 1;
+}

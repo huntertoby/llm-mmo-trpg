@@ -5,10 +5,10 @@ import { FONT } from "./labels";
 const nodeFs = "node:fs";
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
 const fontCss = readFileSync("src/assets/fonts/noto-sans-tc/noto-sans-tc.css", "utf-8");
-const styles = readFileSync("src/styles.css", "utf-8");
+const styles = readFileSync("src/styles/base.css", "utf-8");
 
 describe("字型（Phase 3-35）", () => {
-  it("畫布字型清單以 Noto Sans TC 開頭，且與 styles.css 的 body 一致", () => {
+  it("畫布字型清單以 Noto Sans TC 開頭，且與 styles/base.css 的 body 一致", () => {
     expect(FONT.startsWith("'Noto Sans TC'")).toBe(true);
     expect(styles).toContain('font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;');
   });
