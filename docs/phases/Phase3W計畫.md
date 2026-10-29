@@ -138,3 +138,7 @@
 ### 4.11 3W-5b 驗收（2026-10-30，開發 PM）
 - 合併 3W-5b（完整技能 +120‰ 實際加上去、移除引擎技能等級、`LOG_FORMAT` /89、存檔 `trpg-run/13`）。全量：ruff、format、mypy、lint-imports、client build、vitest 1148、pytest 9603 通過；swamp 種子 7 重播通過。
 - 玩法 PM 定（06 6.34.6，`ec73486f`）：姿態只放大有利部分、減代價每項最少留 1、卡片不標「已達上限」；**上限 +150‰**（開發 PM 補：`complete.cap_permille: 150`，先只走不超過上限的步子，到不了 +120‰ 才接受超過；內建 55 招因此回到上限內，仍超過的約 50 招是骰子一階就超過、沒有更細旋鈕可補，例如火球 +166‰）。相關 pytest（skillgen、roguelite、content、cli、api、sim）通過。
+
+### 4.12 3W-6、3W-8 驗收（2026-10-30，開發 PM）
+- 合併 3W-6（閃現畫面、營火重閃／溶掉／傳承、完整技能三選一正式畫面、技能卡閃現資訊、排版掃描 `screen=flash`／`flashStages`，截圖 `docs/phases/img/3W-6-*.jpg`）與 3W-8（`trpg run auto --flash-policy none|all|mixed`、`trpg sim flash`，報告 `Phase3W-8報告.md`）。全量：ruff、format、mypy（834 檔）、lint-imports、build、vitest 1174、pytest 9613 通過；swamp 種子 7 重播通過。3W-6 回報的 800×600「一輪結束・滑過」3 項 FAIL：開發 PM 在 main（8074 埠）重跑 `runPostBattle()` 全 PASS，屬既有滑過時序現象。
+- 玩法 PM 定（06 6.34，`cd4bcbcc`）：溶掉／傳承是同一招二選一、一次營火不限招數；**閃現區只留「下一場前」與營火**、**傳承的「先上場用過」照接受者自己的狀態** → **3W-6b**。開發 PM 定：預覽數字用文字差異、稀有度提示不放戰鬥浮動卡。3W-8 觀察記入平衡待辦 B-3W-6。
