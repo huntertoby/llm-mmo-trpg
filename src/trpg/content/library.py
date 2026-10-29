@@ -62,6 +62,7 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
+from trpg.content.flash_templates import FlashTable
 from trpg.content.forms import FormDef, FormTable
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.keyword_derive import (
@@ -515,6 +516,8 @@ class ContentLibrary:
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
     evolution: EvolutionTable = field(default_factory=EvolutionTable)
     """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
+    flash: FlashTable = field(default_factory=FlashTable)
+    """閃現（靈光一閃）的規則與模板（``flash_templates.yaml``，Phase 3W-1）；不嵌入規則包。"""
     workshop_text: WorkshopTextTable = field(default_factory=WorkshopTextTable)
     """工坊說明的玩家語氣對照表（``workshop_text.yaml``，Phase 3-48f）；不屬於規則。"""
     regions: RegionTable | None = None
@@ -790,6 +793,7 @@ def load_library(  # noqa: PLR0915
     has_evolution = (root / "skill_evolution.yaml").exists()
     evolution = load("skill_evolution.yaml", EvolutionTable) if has_evolution else EvolutionTable()
     _check_evolution(root, evolution, keywords, skeletons)
+    flash = _load_flash(root, load, evolution, skill_triggers)
     skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
     _check_scaling(root, skill_scaling, skills, weapon_map)
 
@@ -820,6 +824,7 @@ def load_library(  # noqa: PLR0915
         item_gen=item_gen,
         dev_starters=dev_starters,
         evolution=evolution,
+        flash=flash,
         skill_scaling=skill_scaling,
         regions=regions,
         races=races,
@@ -914,6 +919,39 @@ def _check_evolution(
     ]
     if problems:
         raise ContentError(root / "skill_evolution.yaml", "；".join(problems))
+
+
+def _load_flash(
+    root: Path,
+    load: Callable[[str, type[Any]], Any],
+    evolution: EvolutionTable,
+    triggers: SkillTriggerTable,
+) -> FlashTable:
+    """閃現設定（Phase 3W-1；檔案可以不存在）與跨檔案檢查：大變化引用的進化模板存在且分支相符、
+    轉型的觸發時機存在。"""
+    if not (root / "flash_templates.yaml").exists():
+        return FlashTable()
+    table: FlashTable = load("flash_templates.yaml", FlashTable)
+    branches = {t.id: t.branch for t in evolution.templates}
+    problems: list[str] = []
+    for major in table.major:
+        branch = branches.get(major.evolution)
+        if branch is None:
+            problems.append(f"大變化 {major.id}：未知的進化模板 {major.evolution}")
+        elif branch != major.category:
+            problems.append(
+                f"大變化 {major.id}：進化模板 {major.evolution} 是 {branch}，"
+                f"類別卻是 {major.category}"
+            )
+    known = triggers.by_id()
+    problems += [
+        f"轉型 {t.id}：未知的觸發時機 {t.trigger.event}"
+        for t in table.transforms
+        if t.trigger is not None and t.trigger.event not in known
+    ]
+    if problems:
+        raise ContentError(root / "flash_templates.yaml", "；".join(problems))
+    return table
 
 
 def _dev_starter_problems(

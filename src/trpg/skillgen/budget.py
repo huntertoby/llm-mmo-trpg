@@ -162,6 +162,9 @@ class BudgetReport:
     range_coefficient: Fraction = Fraction(1)
     """射程係數（Phase 3-49，#53）：``1 ＋ (射程 − 4) × 5%``；已乘在作用於單位的各效果點數上。"""
     """各變奏型態自己的預算（依資料順序；型態本身照一般技能計算，不含加價）。"""
+    bonus_permille: int = 0
+    """閃現提高的預算上限（‰，Phase 3W-1，``SkillDef.budget_bonus_permille``）：可用預算再 ×
+    （1000 ＋ 它）÷ 1000；沒有閃現時為 0。"""
 
     @property
     def allowance_raw_permille(self) -> int:
@@ -184,6 +187,7 @@ class BudgetReport:
             self.tier_budget
             * self.ap_coefficient
             * Fraction(_PERMILLE + self.allowance_permille, _PERMILLE)
+            * Fraction(_PERMILLE + self.bonus_permille, _PERMILLE)
         )
 
     @property
@@ -1624,7 +1628,16 @@ def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
 
 
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
-    """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
+    """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。
+
+    閃現提高的預算上限（``budget_bonus_permille``，Phase 3W-1）乘在可用預算上（各段、各變奏型態
+    的明細也帶著它，因為它們由同一個技能衍生）。"""
+    report = _skill_budget(skill, library)
+    bonus = skill.budget_bonus_permille or 0
+    return report if report.bonus_permille == bonus else replace(report, bonus_permille=bonus)
+
+
+def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     if skill.variants:
         return _variant_budget(skill, library)
     if skill.followup is not None:

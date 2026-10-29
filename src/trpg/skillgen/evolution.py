@@ -50,7 +50,16 @@ from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import effect_count, rarity_requirements, validate_skill
 from trpg.skillgen.variant_gen import variant_specs, with_variant
 
-__all__ = ["Evolution", "EvolutionRequest", "evolution_options", "evolved_id"]
+__all__ = [
+    "Evolution",
+    "EvolutionRequest",
+    "evolution_options",
+    "evolved_id",
+    "finish_draft",
+    "retune",
+    "template_drafts",
+    "template_prefix",
+]
 
 type Branch = Literal["deepen", "bridge", "count"]
 _RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
@@ -546,3 +555,45 @@ def _evolution(
 ) -> Evolution:
     _name, summary = _label(skill, template, keyword, library)
     return Evolution(branch, template.id, keyword, skill, summary, fallback)
+
+
+# ---------------------------------------------------------------------------
+# 給閃現（Phase 3W-1，:mod:`trpg.skillgen.flash`）共用的入口
+# ---------------------------------------------------------------------------
+
+
+def template_drafts(
+    template: EvolutionTemplate,
+    skill: SkillDef,
+    keyword: str | None,
+    usage: SkillUsage,
+    library: ContentLibrary,
+) -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
+    """進化模板套在 ``skill`` 上的草稿（技能欄位、效果字典）；做不出來時為空。"""
+    return _drafts(template, skill, keyword, usage, library)
+
+
+def finish_draft(
+    draft: tuple[dict[str, Any], list[dict[str, Any]]],
+    skill: SkillDef,
+    template: EvolutionTemplate,
+    rng: Rng,
+    library: ContentLibrary,
+) -> SkillDef | None:
+    """同 3-26b 的進化：依「原骨架 → 模板骨架」×「原代價 → 冷卻折抵」調整強度並驗證。"""
+    return _finish(draft, skill, template, rng, library)
+
+
+def retune(
+    attempt: dict[str, Any], effects: list[dict[str, Any]], rng: Rng, library: ContentLibrary
+) -> SkillDef | None:
+    """只用 ``attempt`` 的骨架與代價調整強度並驗證（不折抵）；不合格時 ``None``。"""
+    return _tuned(attempt, effects, rng, library)
+
+
+def template_prefix(
+    template: EvolutionTemplate, keyword: str | None, library: ContentLibrary
+) -> str:
+    """組合式名稱的前綴（模板的 ``prefix_zh``，沒有時用關鍵字的前綴）。"""
+    graft = library.evolution.grafts.get(keyword or "")
+    return template.prefix_zh or (graft.prefix_zh if graft is not None else "進化")
