@@ -80,6 +80,7 @@ from trpg.skillgen.flash_state import (
     with_flash,
     with_reflash,
 )
+from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
@@ -95,6 +96,8 @@ __all__ = [
     "ProposingSource",
     "allowed_categories",
     "apply_variation",
+    "at_role_tier",
+    "at_tier",
     "category_counts",
     "choose",
     "derive_skill",
@@ -330,11 +333,19 @@ def _record_bonus(library: ContentLibrary, state: SkillFlash, record: FlashRecor
 
 
 def at_tier(skill: SkillDef, tier: int | None) -> SkillDef:
-    """技能改用角色階級 ``tier`` 的預算（#72，6.34.9；``None`` ＝ 沿用技能自己的階級）。「技能的預算
-    用角色階級」的完整改法另排 3W-9，這裡先用傳進來的階級重算。"""
+    """只把技能的階級換成 ``tier``（``None`` ＝ 沿用），**不重配數值**（測試與比較用）。推出閃現後的
+    技能一律用 :func:`at_role_tier`（照角色階級的預算重配數值，3W-9）。"""
     if tier is None or tier == skill.tier:
         return skill
     return skill.model_copy(update={"tier": tier})
+
+
+def at_role_tier(library: ContentLibrary, skill: SkillDef, tier: int | None) -> SkillDef:
+    """技能照角色階級 ``tier`` 的預算重配數值（#72，6.34.9；Phase 3W-9 :func:`retier`）；``None``
+    ＝ 沿用技能自己的階級。"""
+    if tier is None or tier == skill.tier:
+        return skill
+    return retier(library, skill, tier)
 
 
 def _substitute(
@@ -387,7 +398,9 @@ def derive_chain(
     """變化歷程每套完一筆之後的技能（ID、名稱還是原本的；依序，沒有變化時為空）。每一筆都受強度
     下限約束：不低於前一筆，重閃過的那一筆不低於當時被換掉的（``floor_permille``）。``tier`` 是角色
     階級（預算與模板的最低階級都看它）。任何一筆套用不了時拋出 :class:`FlashError`。"""
-    skill = with_budget_bonus(at_tier(base, tier), bonus_permille(library.flash.rules, state))
+    skill = with_budget_bonus(
+        at_role_tier(library, base, tier), bonus_permille(library.flash.rules, state)
+    )
     chain: list[SkillDef] = []
     records = _records(state)
     for index, record in enumerate(records):
@@ -395,7 +408,7 @@ def derive_chain(
         bonus = _record_bonus(library, state, record)
         replaced = Fraction(record.floor_permille, 1000) if record.floor_permille else None
         if record.variation.source == "transform":
-            origin = at_tier(base, tier)
+            origin = at_role_tier(library, base, tier)
             applied = _apply_transform(library, origin, records[:index], record, seed, bonus=bonus)
         else:
             applied = apply_variation(
@@ -421,7 +434,9 @@ def derive_skill(
     角色階級。任何一筆套用不了時拋出 :class:`FlashError`。"""
     chain = derive_chain(library, base, state, seed, tier)
     if not chain:
-        return with_budget_bonus(at_tier(base, tier), bonus_permille(library.flash.rules, state))
+        return with_budget_bonus(
+            at_role_tier(library, base, tier), bonus_permille(library.flash.rules, state)
+        )
     skill = chain[-1]
     new_id, name = flashed_identity(library, base, state)
     return skill.model_copy(
@@ -843,7 +858,8 @@ def _replaced_floor(library: ContentLibrary, request: FlashRequest) -> int:
     old = state.record(request.slot)
     if old is None:
         skill = with_budget_bonus(
-            at_tier(request.base, request.tier), bonus_permille(library.flash.rules, state)
+            at_role_tier(library, request.base, request.tier),
+            bonus_permille(library.flash.rules, state),
         )
     else:
         skill = chain[[r.nth for r in _records(state)].index(old.nth)]

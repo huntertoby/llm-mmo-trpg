@@ -360,6 +360,9 @@ class _Selector:
         self.request = request
         rules = library.ruleset
         self.rarity = request.rarity
+        self.tier = request.tier
+        """角色階級（3W-9）：最低角色階級表（``min_character_tier``）沒開放的原語、骨架、形狀不列。"""
+        self.tiers = library.budget.min_character_tier
         self.primitive_defs = rules.primitives.by_id()
         self.shape_defs = rules.shapes.by_id()
         self.condition_defs = rules.conditions.by_id()
@@ -413,8 +416,10 @@ class _Selector:
         return why is None
 
     def _unusable_reason(self, skeleton: SkeletonDef, kind: str) -> str | None:
+        tier_need = self.tiers.skeletons.get(skeleton.id, 1)
         checks = (
             (not _rarity_ok(skeleton.min_rarity, self.rarity), _need(skeleton.min_rarity)),
+            (tier_need > self.tier, f"要角色 {tier_need} 階"),
             (not self.core_primitives(skeleton), "沒有稀有度足夠的核心原語"),
             (
                 bool(skeleton.require_any_primitives)
@@ -440,6 +445,7 @@ class _Selector:
             for p in self.library.ruleset.primitives.primitives
             if p.id in wanted
             and _rarity_ok(p.min_rarity, self.rarity)
+            and self.tiers.primitives.get(p.id, 1) <= self.tier  # 最低角色階級（3W-9）
             and (self.kind == "active" or not p.active_only)
         ]
 
@@ -465,7 +471,9 @@ class _Selector:
         return [
             s.id
             for s in self.library.ruleset.shapes.shapes
-            if s.id in skeleton.shapes and _rarity_ok(s.min_rarity, self.rarity)
+            if s.id in skeleton.shapes
+            and _rarity_ok(s.min_rarity, self.rarity)
+            and self.tiers.shapes.get(s.id, 1) <= self.tier
         ]
 
     def legal_conditions(self) -> list[str]:
@@ -675,7 +683,9 @@ def _followup_scope(
         )
     )
     legal = [
-        s.id for s in sel.library.ruleset.shapes.shapes if _rarity_ok(s.min_rarity, sel.rarity)
+        s.id
+        for s in sel.library.ruleset.shapes.shapes
+        if _rarity_ok(s.min_rarity, sel.rarity) and sel.tiers.shapes.get(s.id, 1) <= sel.tier
     ]
     moves = tuple(sel.legal_primitives(COMPOSITE_MOVES))
     return skeletons, tuple(followup_shape_ids(sel.library, legal)), moves

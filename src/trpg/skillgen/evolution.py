@@ -48,7 +48,7 @@ from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.usage import SkillUsage
-from trpg.skillgen.validate import effect_count, rarity_requirements, validate_skill
+from trpg.skillgen.validate import structural_rarity, validate_skill
 from trpg.skillgen.variant_gen import variant_specs, with_variant
 
 __all__ = [
@@ -379,27 +379,13 @@ def _knobs(category: str, effects: list[dict[str, Any]], library: ContentLibrary
 
 
 def _rarity(draft: dict[str, Any], effects: list[dict[str, Any]], library: ContentLibrary) -> str:
-    """稀有度：原本與新內容需要的較高者——用到的原語、條件、形狀、骨架與效果個數（需要傳說時回傳
-    傳說，呼叫者視為不合格）。"""
+    """稀有度標記（Phase 3W-9：由結構自動算，:func:`~trpg.skillgen.validate.structural_rarity`；
+    傳說核心算出傳說，呼叫者視為不合格）。草稿不合法時沿用草稿的稀有度。"""
     try:
         skill = SkillDef.model_validate({**draft, "effects": effects})
     except ValidationError:
         return str(draft["rarity"])
-    need = max((rarity_rank(n.minimum) for n in rarity_requirements(skill, library)), default=0)
-    count = effect_count(skill)
-    need = max(
-        need,
-        next(
-            (i for i, r in enumerate(_RARITIES) if library.budget.rarity[r].max_effects >= count),
-            _LEGENDARY,
-        ),
-    )
-    caps = library.ruleset.core.variant_max_by_rarity
-    count = len(draft.get("variants") or ())
-    need = max(
-        need, next((i for i, r in enumerate(_RARITIES) if caps.get(r, 0) >= count), _LEGENDARY)
-    )
-    return _RARITIES[max(rarity_rank(str(draft["rarity"])), need)]
+    return structural_rarity(skill, library)
 
 
 def cost_attempts(skill: SkillDef) -> list[dict[str, Any]]:
@@ -452,6 +438,7 @@ def _tuned(
     floor: Fraction | None = None,
     extra: Sequence[dict[str, Any]] = (),
     extra_knobs: Sequence[Knob] = (),
+    effect_knobs: Sequence[Knob] = (),
 ) -> SkillDef | None:
     """調整強度後通過全部驗證的技能；不合格時 ``None``。
 
@@ -461,6 +448,7 @@ def _tuned(
     trial = [dict(e) for e in effects]
     knobs = _knobs(attempt["category"], trial, library)
     knobs += [Knob(len(trial) + k.index, k.field, k.values, k.weight) for k in extra_knobs]
+    knobs += [Knob(k.index, k.field, k.values, k.weight) for k in effect_knobs]
     targets = [*trial, *extra]
     for knob in knobs:
         targets[knob.index][knob.field] = knob.values[0]
@@ -653,10 +641,28 @@ def retune(
     floor: Fraction | None = None,
     extra: Sequence[dict[str, Any]] = (),
     extra_knobs: Sequence[Knob] = (),
+    effect_knobs: Sequence[Knob] = (),
 ) -> SkillDef | None:
     """只用 ``attempt`` 的骨架與代價調整強度並驗證（不折抵）；不合格時 ``None``。``floor``、
-    ``extra``、``extra_knobs`` 見 :func:`_tuned`。"""
-    return _tuned(attempt, effects, rng, library, floor=floor, extra=extra, extra_knobs=extra_knobs)
+    ``extra``、``extra_knobs`` 見 :func:`_tuned`；``effect_knobs`` 是效果本身另外的旋鈕（``index``
+    指向 ``effects``；Phase 3W-9 升階重算的狀態持續回合）。"""
+    return _tuned(
+        attempt,
+        effects,
+        rng,
+        library,
+        floor=floor,
+        extra=extra,
+        extra_knobs=extra_knobs,
+        effect_knobs=effect_knobs,
+    )
+
+
+def effect_strength_knobs(
+    category: str, effects: list[dict[str, Any]], library: ContentLibrary
+) -> list[Knob]:
+    """預算器重調時用的效果強度旋鈕（傷害、治療、護盾、延遲爆炸的骰子或倍率、推拉距離）。"""
+    return _knobs(category, effects, library)
 
 
 def multiplier_ladder(library: ContentLibrary) -> tuple[int, ...]:

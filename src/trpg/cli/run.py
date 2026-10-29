@@ -33,6 +33,7 @@ from trpg.roguelite import (
     new_keyword_run,
     new_run,
     restore_battle,
+    upgrade_save,
     write_save,
 )
 from trpg.roguelite.offers import skill_defs
@@ -334,7 +335,7 @@ def _run_auto(
 ) -> int:
     try:
         if from_path is not None:
-            save = load_save(from_path)
+            save = upgrade_save(library, load_save(from_path))  # 舊存檔照角色階級重配（3W-9）
             run, run_id = save.run, save.run_id
             battle = restore_battle(library, save)
             print(f"從存檔接續：{from_path}", file=out)

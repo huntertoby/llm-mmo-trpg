@@ -76,6 +76,9 @@ def whiteboard_problems(
     if len(keywords) > 1:
         problems.append(f"白板最多一個關鍵字，收到 {len(keywords)} 個（{'、'.join(keywords)}）")
     problems += _structure_problems(skill, rules, keywords)
+    dual = library.budget.min_character_tier.dual_scaling  # 最低角色階級表（3W-9，驗證器同源）
+    if skill.secondary_scaling_attr is not None and skill.tier < dual:
+        problems.append(f"雙屬性縮放白板要 {dual} 階起，收到 {skill.tier} 階")
     if skill.shape.type not in _SIMPLE_SHAPES:
         problems.append(f"白板的形狀必須簡單（單體或小範圍），收到 {skill.shape.type}")
     if skill.kind == "active":
@@ -130,9 +133,10 @@ def _structure_problems(
         ("專精", skill.mastery is not None),
     )
     problems += [f"白板不能有{label}" for label, present in extras if present]
-    if skill.secondary_scaling_attr is not None and skill.tier < rules.dual_min_tier:
-        problems.append(f"雙屬性縮放白板要 {rules.dual_min_tier} 階起，收到 {skill.tier} 階")
     return problems
+
+
+_TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
 
 
 def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
@@ -143,7 +147,11 @@ def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
     max_cooldown = rules.cooldown.max
     if first == _SUMMON:  # 召喚物的點數固定，AP 1、冷卻較長才落在預算內
         expected_ap, max_cooldown = rules.summon_ap_cost, rules.summon_cooldown_max
-    elif first in SELF_MOVES or (skill.shape.type == "self" and first == "apply_status"):
+    elif (
+        first in SELF_MOVES
+        or (skill.shape.type == "self" and first == "apply_status")
+        or (first in _TERRAIN and skill.shape.type == "ground_tile")  # 1 階的單格隆地（3W-9）
+    ):
         expected_ap = rules.self_ap_cost
     if skill.ap_cost != expected_ap:
         problems.append(f"主動白板的 AP 必須是 {expected_ap}，收到 {skill.ap_cost}")

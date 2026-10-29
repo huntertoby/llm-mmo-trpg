@@ -91,7 +91,7 @@ from trpg.skillgen.option_scaling import scaling_extra_fields
 from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
 from trpg.skillgen.player_text import change_text, plainify
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
-from trpg.skillgen.validate import rarity_requirements
+from trpg.skillgen.validate import minimum_tier, rarity_requirements, tier_requirements
 
 __all__ = ["RarityFloor", "draft_options", "minimum_rarity"]
 
@@ -472,8 +472,10 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
         _element_field(),
         FieldSpec(
             field="tier",
-            name_zh="階級",
-            description_zh="階級越高，可用預算越多",
+            name_zh="角色階級",
+            description_zh=(
+                "技能的預算用角色目前的階級：階級越高，可用預算越多，也開放召喚、3×3 等內容"
+            ),
             type="int",
             required=True,
             min=tiers[0],
@@ -1340,6 +1342,16 @@ def minimum_rarity(skill: SkillDef, library: ContentLibrary) -> RarityFloor:
     return RarityFloor(minimum, reasons if minimum != "common" else ())
 
 
+def _tier_notes(skill: SkillDef, library: ContentLibrary) -> list[str]:
+    """最低角色階級（3W-9，06 6.34.9；驗證器的 ``tier.*`` 同源）與原因。"""
+    needs = tier_requirements(skill, library)
+    minimum = minimum_tier(skill, library)
+    if minimum <= 1:
+        return ["最低角色階級：1 階"]
+    reasons = dict.fromkeys(n.what for n in needs if n.minimum == minimum)
+    return [f"最低角色階級：{minimum} 階（{'、'.join(reasons)}）"]
+
+
 def _rarity_max_effects(library: ContentLibrary, rarity: str) -> int:
     return {str(r): v.max_effects for r, v in library.budget.rarity.items()}[rarity]
 
@@ -1397,7 +1409,7 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     field = FieldSpec(
         field="rarity",
         name_zh="稀有度",
-        description_zh="稀有度不增加強度，只決定能用哪些機制",
+        description_zh="稀有度只是這招長得多複雜的標記，不增加強度；能用什麼看角色階級",
         type="choice",
         required=True,
         choices=tuple(choices),
@@ -1409,6 +1421,8 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     else:
         notes.append("技能定義還有錯誤，無法推導稀有度：")
         notes += _definition_errors(draft, candidates[0], library)
+    if floor_skill is not None:
+        notes += _tier_notes(floor_skill, library)
     if not paid:
         notes.append("傳說技能要在代價步驟填源力")
     dual = library.ruleset.core.dual_scaling_min_rarity

@@ -47,6 +47,7 @@ from trpg.skillgen.keywords import (
     keyword_pools,
 )
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
+from trpg.skillgen.skill_tier import character_tier
 from trpg.skillgen.whiteboard import compose_whiteboard, whiteboard_keywords
 
 __all__ = [
@@ -259,6 +260,7 @@ def new_run(
         hero=hero,
         level=1,
         xp=0,
+        skill_tier=character_tier(library, 1),
         hp=start.hp,
         mana=start.mana,
         source=core.source_min_at_start,
@@ -350,6 +352,7 @@ def _whiteboard_starter(
                 tier=tier,
                 library=library,
                 held=held,
+                starter=True,
             )
         except ComposeError:
             continue
@@ -520,6 +523,7 @@ def new_keyword_run(
         hero=hero,
         level=1,
         xp=0,
+        skill_tier=character_tier(library, 1),
         hp=start.hp,
         mana=start.mana,
         source=core.source_min_at_start,

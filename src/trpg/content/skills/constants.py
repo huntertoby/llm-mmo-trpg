@@ -120,7 +120,9 @@ type SkillCategory = Literal["weapon", "spell"]
 type WeaponReq = Literal["melee", "ranged", "focus", "any"]
 
 
-type Origin = Literal["builtin", "level_up", "drop", "crafted", "taught", "tome", "workshop"]
+type Origin = Literal[
+    "builtin", "level_up", "drop", "crafted", "taught", "tome", "workshop", "starter"
+]
 """技能的來源；``workshop``：技能工坊（Phase 3F-1，開發工具）做的技能。"""
 
 

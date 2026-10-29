@@ -64,6 +64,7 @@ from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.proposal_topic import LlmProposer, TopicRequest, make_topic
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
+from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
     "CANDIDATE_KINDS",
@@ -360,7 +361,7 @@ def _pool(library: ContentLibrary, tier: int) -> tuple[tuple[SkillDef, tuple[str
     found: list[tuple[SkillDef, tuple[str, ...]]] = []
     for skill_id in sorted(library.skills):
         skill = library.skills[skill_id]
-        if skill.tier != tier or skill.rarity == "legendary":
+        if skill.tier != tier or skill.rarity == "legendary" or minimum_tier(skill, library) > tier:
             continue
         keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
         if keywords:
@@ -456,7 +457,7 @@ def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
     found: list[SkillDef] = []
     for skill_id in sorted(library.skills):
         skill = library.skills[skill_id]
-        if skill.tier != tier or skill.rarity == "legendary":
+        if skill.tier != tier or skill.rarity == "legendary" or minimum_tier(skill, library) > tier:
             continue
         if skill.form_id is not None:  # 形態技能（3J-1a 只為測試）：身分與技能池在 3J-3
             continue

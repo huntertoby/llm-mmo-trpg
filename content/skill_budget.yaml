@@ -106,6 +106,33 @@ detonate_runes_permille: 700
 terrain_area_rarity:
   - {min_cells: 4, rarity: rare}
   - {min_cells: 7, rarity: epic}
+# 3W-9 最低角色階級（06 6.34.9 的表，#72；取代「最低稀有度」的門檻，稀有度改成只由結構自動算的標記）：
+# 技能用到這裡列出的內容時，角色（＝技能預算用的階級）至少要這一階；沒列出的都是 1 階（推拉、表面、吹送、震波、條件、
+# 觸發型被動、反應……）。驗證器、技能工坊、組合器、白板、閃現與 LLM 提議共用（validate.tier_requirements）。
+# 「只能主動」「只限大地」這類非稀有度的限制照舊；傳說核心仍只在完整技能。創角的起始技能不受限制（provenance.origin: starter）。
+min_character_tier:
+  kinds: {modifier: 3, stance: 2}                     # 修正型被動 3 階；姿態 2 階
+  skeletons: {summon: 2, trap: 2, stance: 2}
+  primitives:                                         # 召喚、陷阱、自身位移或互換 2 階（推、拉別人與傳送別人 1 階）
+    summon: 2
+    sacrifice_summon: 2
+    place_trap: 2
+    teleport: 2
+    dash: 2
+    charge_through: 2
+    shadowstep: 2
+    leap: 2
+    swap: 2
+    swap_any: 2
+  shapes: {square3: 2, chain: 3}                      # 3×3 2 階；連鎖跳躍 3 階
+  line_length: 6                                      # 整排直線（長 6）3 階
+  line_tier: 3
+  followup: 2                                         # 接續段
+  second_element: 2                                   # 第二元素（傷害帶兩種以上元素）
+  dual_scaling: 3                                     # 雙屬性縮放
+  terrain_area:                                       # 升降地形影響 4～6 格 2 階、7 格以上 3 階（#58）
+    - {min_cells: 4, tier: 2}
+    - {min_cells: 7, tier: 3}
 # 3-54b 風元素傷害的元素擴散格數（spread）：擴散 n 格時（n ＝ 1、2；省略 ＝ 1），傷害效果的點數 × 第 n 項（‰）。初值，未經模擬。
 wind_spread_permille: [1000, 1150]
 # 3-24c 獻祭召喚物（初值，未經模擬）：點數 ＝ 骰子平均 × sacrifice_summon_permille ÷ 1000（需要先有召喚物、且召喚物會消失的折扣）。

@@ -2,9 +2,12 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/10``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
-  （``trpg-run/5``～``/9``：之後的版本只新增有預設值的欄位與一種新節點，所以舊存檔照常讀入，
-  之後寫出為 ``/10``），否則拒絕。Phase 4-L8 起提議紀錄多了提議與命名 prompt 的版本號
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/11``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
+  （``trpg-run/5``～``/10``：之後的版本只新增有預設值的欄位與一種新節點，所以舊存檔照常讀入，
+  之後寫出為 ``/11``），否則拒絕。Phase 3W-9 起技能的預算用角色階級：``run.skill_tier`` 記主角技能
+  目前照哪一階配數值（``/11``；舊存檔沒有＝還沒照角色階級重配），:func:`upgrade_save` 在戰鬥之間
+  把舊存檔的每招技能照角色階級重配一次（戰鬥中的存檔等那場打完，下一個節點再重配）。
+  Phase 4-L8 起提議紀錄多了提議與命名 prompt 的版本號
   ``prompt_version``、``naming_prompt_version``（``/10``；舊紀錄沒有＝未記錄）。
   Phase 4-L7 起提議紀錄多了命名與敘事的來源 ``name_source``、
   ``name_attempts``、``name_codes``（``/9``；舊紀錄沒有＝沒有命名步驟）。
@@ -47,6 +50,7 @@ from trpg.content.library import ContentLibrary
 from trpg.engine.runner import LOG_FORMAT
 from trpg.roguelite.battle import ActiveBattle, SavedBattle
 from trpg.roguelite.errors import SaveFormatError
+from trpg.roguelite.retier import sync_skill_tier
 from trpg.roguelite.state import BattleNode, RunState
 
 __all__ = [
@@ -63,11 +67,19 @@ __all__ = [
     "restore_battle",
     "ruleset_hash",
     "save_path",
+    "upgrade_save",
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/10"
-COMPATIBLE_FORMATS = ("trpg-run/5", "trpg-run/6", "trpg-run/7", "trpg-run/8", "trpg-run/9")
+SAVE_FORMAT = "trpg-run/11"
+COMPATIBLE_FORMATS = (
+    "trpg-run/5",
+    "trpg-run/6",
+    "trpg-run/7",
+    "trpg-run/8",
+    "trpg-run/9",
+    "trpg-run/10",
+)
 """仍可讀入的舊格式（新增的欄位都有預設值，讀入後視為目前格式）。"""
 OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 """已知的舊存檔格式（讀檔時提示開新一輪）。"""
@@ -138,6 +150,16 @@ def loads_save(text: str) -> RunSave:
     if re.match(RUN_ID_PATTERN, save.run_id) is None:
         raise SaveFormatError(f"不合法的 run_id：{save.run_id!r}")
     return save
+
+
+def upgrade_save(library: ContentLibrary, save: RunSave) -> RunSave:
+    """舊存檔轉換（Phase 3W-9）：``run.skill_tier`` 為空（``/10`` 以前）而且不在戰鬥中時，主角的
+    每招技能照角色目前的階級重配（:func:`trpg.roguelite.retier.sync_skill_tier`；手寫技能變成
+    ``<原 ID>_t<階級>`` 的生成技能）。戰鬥中的存檔不動（重播要用存檔當時的技能），那場打完後的下一個
+    節點再重配。已經是新格式時原樣回傳。"""
+    if save.run.skill_tier is not None or save.battle is not None:
+        return save
+    return save.model_copy(update={"run": sync_skill_tier(library, save.run)})
 
 
 def save_path(save_dir: Path, run_id: str) -> Path:

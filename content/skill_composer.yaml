@@ -221,7 +221,6 @@ llm_cost:
 whiteboard:
   kind_permille: {active: 700, passive: 200, reaction: 100}   # 升級與任務三選一的種類比例（07 7.6）
   tier: 1                             # 沒指定階級時（創角）；升級與任務三選一用角色目前階級（roguelite.yaml 的 offer_tier_by_level，#72）
-  shape_min_tier: {square3: 2}        # 6.34.9：3×3 要角色 2 階；十字等其餘形狀 1 階就有
   ap_cost: 2
   cooldown: {min: 0, max: 2}
   passive_mana: {min: 0, max: 2}
@@ -240,7 +239,9 @@ whiteboard:
     - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
     - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
     - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
-    - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [cross, square3], categories: [spell], name_zh: 隆地, concept_zh: 讓一塊地面升高, flavor_zh: 地面隆隆震動，一塊平台緩緩頂了起來}
+    # 3W-9：升降地形影響 4～6 格要角色 2 階、7 格以上 3 階（6.34.9 #58），十字（5 格）的隆地 1 階不能出；改成只升一格（AP 1：單一效果的點數固定，
+    # AP 2 湊不到預算下限）。2、3 階由升階重算補「落石」傷害（數值照預算）。
+    - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [ground_tile], categories: [spell], skill: {ap_cost: 1}, name_zh: 隆地, concept_zh: 讓一格地面升高, flavor_zh: 地面隆隆震動，一塊小平台緩緩頂了起來}
     # --- 3W-4b｜潮濕、倒地、撞擊的例外（06 6.34.1）：利用者＝條件傷害（條件傷害本身算一個核心效果）；製造者＝弱傷害＋製造該關鍵字 ---
     - {id: soak_strike, keyword: wet, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_on_surface, surface: water}, name_zh: 順水重擊, concept_zh: 對站在水裡的目標打出更重的一擊, flavor_zh: 腳下的積水讓目標站不穩，這一擊落得格外沉}
     - {id: water_bolt, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [cross, square3], name_zh: 水彈, concept_zh: 一發水彈砸開，地上積起一灘水, flavor_zh: 水球炸開，濺濕了一片地面}

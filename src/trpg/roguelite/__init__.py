@@ -5,7 +5,8 @@
 - ``offers``：升級與重骰的技能候選（隨機組合器）、裝備上限檢查。
 - ``progress``：開戰設定、戰後結算、選擇、下一個節點（純函式）。
 - ``battle``：進行中的戰鬥（``setup ＋ seed ＋ 步驟 ＋ 指令``，可重播）。
-- ``save``：存檔格式 ``trpg-run/10``。
+- ``save``：存檔格式 ``trpg-run/11``（3W-9：``run.skill_tier``，舊存檔用 ``upgrade_save`` 轉換）。
+- ``retier``：角色升階時主角技能照新階級的預算重配（3W-9）。
 - ``auto``：AI 代打整輪。
 
 參數在 ``content/roguelite.yaml``。依賴：可匯入 ``engine``、``content``、``skillgen``、``shared``；
@@ -28,6 +29,7 @@ from trpg.roguelite.save import (
     restore_battle,
     ruleset_hash,
     save_path,
+    upgrade_save,
     write_save,
 )
 from trpg.roguelite.start import new_dev_run, new_keyword_run, new_run
@@ -58,5 +60,6 @@ __all__ = [
     "restore_battle",
     "ruleset_hash",
     "save_path",
+    "upgrade_save",
     "write_save",
 ]
