@@ -1,0 +1,646 @@
+/* 戰鬥畫面版面：頂端列、戰場與縮放、拖曳分隔線、右側窄欄、底部列、回合操作與播放列、窄螢幕與底部拉矮的排法、勝利條件列。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+/* 戰鬥畫面 */
+
+/* Phase 3-8 版面：頂端列／中央戰場＋右側窄欄／底部（主角狀態、技能列、回合操作）；整頁不捲動。 */
+
+.battle-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side-w, 300px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "top top"
+    "board side"
+    "bottom bottom";
+  gap: 6px;
+  padding: 6px 8px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.battle-screen.side-collapsed {
+  grid-template-columns: minmax(0, 1fr) 30px;
+}
+
+.turn-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px;
+  white-space: nowrap;
+}
+
+.turn-round {
+  font-weight: 700;
+}
+
+.turn-order {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.turn-chip {
+  min-width: 30px;
+  padding: 2px 3px 3px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.turn-chip-hp {
+  display: block;
+  width: 24px;
+  height: 4px;
+  background: #000;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.turn-chip-hp > span {
+  display: block;
+  height: 100%;
+  background: #4cd964;
+}
+
+.turn-chip.ally {
+  background: var(--ally);
+}
+
+.turn-chip.enemy {
+  background: var(--enemy);
+}
+
+.turn-chip.active {
+  outline: 3px solid var(--accent);
+}
+
+.turn-chip.gone {
+  opacity: 0.3;
+}
+
+/* 召喚物（Phase 3D-4b）：虛線青綠外框，右上角顯示剩餘輪數 */
+
+.turn-chip.summon {
+  position: relative;
+  border: 2px dashed #5eead4;
+  padding: 0 1px 1px;
+}
+
+.turn-chip-left {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 14px;
+  height: 14px;
+  line-height: 14px;
+  border-radius: 7px;
+  background: #000;
+  color: #5eead4;
+  font-size: 10px;
+  text-align: center;
+}
+
+.battle-board {
+  grid-area: board;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+.battle-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 38%;
+  text-align: center;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: var(--accent);
+  text-shadow: 0 2px 12px #000;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.7), transparent);
+  padding: 14px 0;
+  pointer-events: none;
+}
+
+.loading {
+  padding: 40px;
+  color: var(--muted);
+}
+
+.battle-canvas {
+  position: relative;
+  flex: none;
+  /* 在捲動區內置中；放大超過可用區域時從左上開始捲動（Phase 3-10） */
+  margin: auto;
+}
+
+/* 地圖捲動區（Phase 3-10）：右、下各留 8px 給分隔線；放大後可捲動或用滑鼠中鍵拖曳平移 */
+
+.board-scroll {
+  position: absolute;
+  inset: 0 8px 8px 0;
+  display: flex;
+  overflow: auto;
+}
+
+.board-scroll.panning {
+  cursor: grabbing;
+}
+
+.zoom-controls {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgb(28 28 38 / 88%);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 45%);
+}
+
+.zoom-controls button {
+  padding: 0 8px;
+  min-width: 26px;
+  font-size: 14px;
+}
+
+.zoom-controls .zoom-percent {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* 拖曳分隔線（Phase 3-10） */
+
+.resize-handle {
+  position: absolute;
+  z-index: 20;
+  background: transparent;
+  touch-action: none;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible,
+.resize-handle:active {
+  background: var(--accent);
+  opacity: 0.55;
+  outline: none;
+}
+
+.resize-handle.vertical {
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.resize-handle.horizontal {
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: row-resize;
+}
+
+/* 拖曳線貼齊戰場／主角面板的邊（3-47 起 `Hint` 不再外包一層，直接子選擇器可用；
+   排版煙霧檢查會量「拖曳線貼齊底緣／右緣」）。 */
+
+.battle-board > .resize-handle.vertical {
+  right: 0;
+}
+
+.battle-board > .resize-handle.horizontal {
+  bottom: 0;
+}
+
+.battle-hero > .resize-handle.vertical {
+  right: -7px;
+}
+
+.layout-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.layout-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.layout-value {
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.layout-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.layout-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.battle-canvas canvas {
+  display: block;
+}
+
+.battle-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.battle-log {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.notice-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: #1f2a38;
+  border: 1px solid #4b6a8f;
+  color: #cfe0f5;
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.battle-leave {
+  align-self: flex-start;
+}
+
+/* 戰場顏色圖例（Phase 3-5c-2） */
+
+.battle-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.battle-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- Phase 3-8：戰鬥畫面重新配置 ---------------------------------------------- */
+
+.battle-top {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  min-width: 0;
+}
+
+.battle-top-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.top-tool {
+  position: relative;
+}
+
+.top-tool-badge {
+  margin-left: 4px;
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.top-popup {
+  right: 0;
+  top: calc(100% + 6px);
+  width: 400px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 80px);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+}
+
+.top-popup > .panel {
+  border: none;
+}
+
+.top-popup > .battle-legend {
+  padding: 10px 12px;
+}
+
+.top-popup-empty {
+  padding: 10px 12px;
+}
+
+.save-note {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-toasts {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  max-width: 80%;
+}
+
+.board-toasts:empty {
+  display: none;
+}
+
+/* 右側窄欄 */
+
+.side-toggle {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.side-toggle-open {
+  align-self: flex-end;
+  padding: 1px 8px;
+}
+
+.battle-side.collapsed .side-toggle {
+  height: 100%;
+  width: 100%;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-toggle-label {
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+}
+
+.side-telegraph {
+  flex-shrink: 0;
+  max-height: 42%;
+  overflow-y: auto;
+}
+
+.battle-side .battle-log {
+  min-height: 0;
+}
+
+/* 底部：左主角狀態、中技能列、右回合操作 */
+
+.battle-bottom {
+  grid-area: bottom;
+  display: grid;
+  grid-template-columns: var(--hero-w, 300px) minmax(0, 1fr) 250px;
+  align-items: end;
+  gap: 6px;
+  min-width: 0;
+  /* 固定高度：技能數、狀態行數改變時戰場不會跟著縮放跳動 */
+  height: var(--bottom-h, 166px);
+}
+
+.battle-bottom > * {
+  max-height: 100%;
+  min-height: 0;
+}
+
+.battle-hero {
+  position: relative;
+  align-self: stretch;
+}
+
+.battle-hero .hud {
+  height: 100%;
+  overflow-y: auto;
+  padding: 6px 10px;
+}
+
+.battle-hero .hud-title {
+  margin-bottom: 2px;
+}
+
+.battle-hero .hud-row {
+  flex-wrap: wrap;
+  margin: 4px 0;
+}
+
+/* 腳下表面、層數、狀態等短行並排，減少狀態卡高度 */
+
+.battle-hero .hud-line {
+  display: inline-block;
+  margin: 1px 12px 0 0;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.battle-hero .hud-bar {
+  margin: 2px 0;
+}
+
+.battle-turn > .end-panel {
+  padding: 8px 10px;
+}
+
+.turn-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.turn-controls-row {
+  display: flex;
+  gap: 6px;
+}
+
+.turn-controls-row > button {
+  flex: 0 0 auto;
+}
+
+.turn-controls .fallback {
+  position: relative;
+  flex: 1;
+  margin-top: 0;
+}
+
+.turn-controls .fallback > button {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.turn-controls .speed-control {
+  /* 一行放得下「播放：慢 正常 快 略過 跳到結尾」（約 216px／欄寬 250），播放中也不會折成兩行被底部切掉 */
+  flex-wrap: nowrap;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.turn-controls .speed-control button {
+  white-space: nowrap; /* 窄螢幕（欄寬 220）時按鈕文字不折成兩行 */
+  padding: 2px 5px;
+}
+
+/* 窄螢幕右欄只有 220px：六顆播放按鈕再緊一點，才不會超出欄寬與視窗右緣（3-47 煙霧檢查發現） */
+
+.battle-screen.narrow .turn-controls .speed-control {
+  gap: 2px;
+}
+
+.battle-screen.narrow .turn-controls .speed-control button {
+  padding: 2px 3px;
+}
+
+/* 窄螢幕（< 1100px）：右側窄欄預設收合、主角狀態縮成一行（放在技能列上方） */
+
+.battle-screen.narrow .battle-bottom {
+  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-areas:
+    "hero hero"
+    "skills turn";
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: start;
+  height: 196px;
+}
+
+.battle-screen.narrow .battle-hero .hud {
+  height: auto;
+}
+
+.battle-screen.narrow .battle-hero {
+  grid-area: hero;
+  min-width: 0;
+}
+
+.battle-screen.narrow .skill-bar {
+  grid-area: skills;
+}
+
+.battle-screen.narrow .battle-turn {
+  grid-area: turn;
+}
+
+/* 跑步按鈕（Phase 3-20）：灰掉時旁邊顯示原因 */
+
+.turn-controls .run-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.turn-controls .run-reason {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* Phase 3-22：勝利條件輪替 */
+
+.turn-objective {
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #444);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.turn-objective.escape {
+  color: #5ee08a;
+  border-color: #5ee08a;
+}
+
+.turn-objective.defend {
+  color: #ffc83d;
+  border-color: #ffc83d;
+}
+
+.battle-banner-goal {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+}
+
+/* 底部列拉矮（低於預設高度）時右側回合操作改緊湊排法，播放速度永遠看得到（使用者：「黃拉桿拉到最下面快慢會不見」） */
+
+.battle-bottom.short .turn-controls {
+  gap: 4px;
+}
+
+.battle-bottom.short .resident-actions {
+  gap: 4px;
+}
+
+.battle-bottom.short .resident-actions > .resident-button {
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+.battle-bottom.short .resident-actions > .end-turn-button {
+  padding: 4px 12px;
+  font-size: 15px;
+}
+
+.battle-bottom.short .turn-controls .fallback > button {
+  padding: 2px 6px;
+}

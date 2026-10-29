@@ -1,0 +1,174 @@
+/* 主角狀態卡（HUD）：血條、源力、彈匣、裝備充能、層數名稱。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+.hud-summon-list {
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+
+.hud-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.hud-bar {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+}
+
+.hud-bar-track {
+  height: 10px;
+  background: #000;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.hud-bar-fill {
+  height: 100%;
+}
+
+.hud-bar-fill.hp {
+  background: #4cd964;
+}
+
+.hud-bar-fill.mana {
+  background: #4aa3ff;
+}
+
+.hud-bar-fill.stamina {
+  background: #f0b340;
+}
+
+.hud-bar-value {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hud-row {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.hud-chip {
+  background: #2a2a38;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.hud-chip.off {
+  opacity: 0.55;
+}
+
+.hud-line {
+  margin-top: 3px;
+}
+
+/* HUD 的源力：三格菱形圖示（亮的是目前的源力）。 */
+
+.source-pips {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.source-pip {
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  border: 1px solid #b98cff;
+  background: transparent;
+}
+
+.source-pip.filled {
+  background: #b98cff;
+}
+
+.hero-downed-notice {
+  align-self: flex-start;
+  padding: 4px 12px;
+  color: #fff;
+  background: #7a2a2a;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+}
+
+.hud-compact {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 10px;
+}
+
+/* Phase 3-24a2：彈匣（火槍）——HUD 的彈匣格與空膛提示 */
+
+.ammo-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.ammo-pip {
+  width: 8px;
+  height: 12px;
+  border-radius: 2px 2px 1px 1px;
+  border: 1px solid #8a8f99;
+  background: transparent;
+}
+
+.ammo-pip.loaded {
+  background: #e8bb48;
+  border-color: #9c7420;
+}
+
+.ammo-chip.empty {
+  border-color: #c0504d;
+}
+
+.ammo-empty {
+  margin-left: 6px;
+  color: #e5736f;
+}
+
+/* Phase 3G-G3a：裝備充能的層數（HUD 與單位資訊） */
+
+.charge-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.charge-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #6aa9e0;
+  background: transparent;
+}
+
+.charge-pip.filled {
+  background: #6ec8ff;
+  border-color: #3b86c4;
+}
+
+.charge-chip.ready {
+  border-color: #6ec8ff;
+}
+
+.charge-ready {
+  margin-left: 6px;
+  color: #8fd8ff;
+}
+
+.charge-line .charge-chip {
+  margin-right: 4px;
+}
+
+/* 層數名稱的說明框觸發處（Phase 3-41c）：虛底線提示可滑過 */
+
+.stack-tip {
+  border-bottom: 1px dotted var(--muted);
+  cursor: help;
+}

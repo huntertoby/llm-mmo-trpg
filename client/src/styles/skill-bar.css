@@ -1,0 +1,429 @@
+/* 底部技能列：技能按鈕、稀有度、種族技、常駐五鈕與「更多動作」、關鍵字行、戰場變奏。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+.skill-bar {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-width: 0;
+  /* 招數多時只讓按鈕那一排捲動（3-28）；浮動的技能卡是 skill-bar 的直接子元素，不會被裁掉 */
+  display: flex;
+  flex-direction: column;
+}
+
+.skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 基本動作＋主動技能一排；超出寬度換行（不捲動） */
+
+.skill-buttons {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.skill-slot {
+  flex: 0 0 auto;
+}
+
+/* 種族技（Phase 3R-2）：不佔技能欄，另列一組；用金色邊框和一般技能區分 */
+
+.race-group {
+  display: flex;
+  gap: 4px;
+  padding-left: 4px;
+  border-left: 2px solid #c9a24a;
+}
+
+.skill-button.race-button {
+  border-color: #c9a24a;
+}
+
+.skill-button {
+  min-width: 78px;
+  max-width: 190px;
+  height: 48px;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  padding: 2px 8px 2px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* 組裝式技能圖示（Phase 3-17）：技能列 40px 小圖 */
+
+.skill-button-icon {
+  flex: 0 0 auto;
+}
+
+.skill-button-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.skill-button .skill-name,
+.skill-button .skill-cost {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.basic-button {
+  height: 48px;
+  min-width: 52px;
+}
+
+/* 灰掉但可以點（點了在訊息列顯示原因，Phase 3-5c-2） */
+
+.skill-button.blocked,
+.basic-button.blocked {
+  opacity: 0.45;
+  cursor: help;
+}
+
+.skill-name {
+  font-weight: 700;
+}
+
+.skill-cost {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 暫時獲得的技能（Phase 3D-8c）：藍青色邊框與「暫時・剩 N 輪」標記 */
+
+.skill-button.granted {
+  border-color: #5fb7d6;
+  box-shadow: inset 0 0 0 1px #5fb7d6;
+}
+
+.skill-granted {
+  font-size: 12px;
+  color: #8fd8f0;
+}
+
+.skill-card {
+  margin-top: 8px;
+  padding: 8px;
+  background: #14141c;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+}
+
+.skill-card-title {
+  font-weight: 700;
+}
+
+/* 稀有度顏色（Phase 3C-6a）：傳說用金色邊框與標題，史詩紫、稀有藍。 */
+
+.skill-card.rarity-rare .skill-card-rarity {
+  color: #6fb4ff;
+}
+
+.skill-card.rarity-epic .skill-card-rarity {
+  color: #c58cff;
+}
+
+.skill-card.rarity-legendary {
+  border-color: #ffb938;
+  box-shadow: 0 0 6px rgba(255, 185, 56, 0.45);
+}
+
+.skill-card.rarity-legendary .skill-card-title,
+.skill-card.rarity-legendary .skill-card-rarity {
+  color: #ffb938;
+}
+
+.skill-card-source {
+  color: #ffb938;
+}
+
+.skill-card-effects {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.skill-hint {
+  margin-bottom: 4px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 被動、反應、姿態：同一列最右側的小圖示 */
+
+.skill-minor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 136px;
+  padding-left: 8px;
+  border-left: 1px solid var(--panel-border);
+}
+
+.skill-mini {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  color: #cfc8ff;
+}
+
+.skill-mini-wrap {
+  display: inline-flex;
+}
+
+/* ---- 組裝式技能圖示（Phase 3-17）---- */
+
+.skill-icon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.skill-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.skill-card-headtext {
+  min-width: 0;
+}
+
+.skill-card.compact {
+  padding: 5px 7px;
+}
+
+.skill-card.compact .skill-card-head {
+  gap: 7px;
+}
+
+.skill-card.compact .skill-card-effects {
+  margin: 3px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+}
+
+.skill-card.compact .formula {
+  margin: 3px 0;
+}
+
+/* 常駐 5 鈕與「更多動作」選單（Phase 3-21b） */
+
+.resident-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.resident-actions > .resident-button {
+  padding: 8px 6px;
+  font-size: 14px;
+}
+
+.resident-actions > .end-turn-button {
+  grid-column: 1 / -1;
+  font-size: 18px;
+  padding: 10px 12px;
+}
+
+.resident-button.selected {
+  outline: 2px solid var(--accent);
+}
+
+.more-actions {
+  position: relative;
+}
+
+.more-actions > button {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.more-list {
+  right: 0;
+  bottom: calc(100% + 4px);
+  width: 220px;
+  max-height: min(50vh, 360px);
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+}
+
+.more-list li + li {
+  margin-top: 4px;
+}
+
+.more-list button {
+  width: 100%;
+  text-align: left;
+}
+
+.more-list button.selected {
+  outline: 2px solid var(--accent);
+}
+
+/* 關鍵字一行（Phase 3-24b1）：製造｜利用 */
+
+.keyword-line {
+  margin: 4px 0;
+}
+
+.keyword-chip {
+  color: #8fd0ff;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+/* 只由通用規則歸類的關鍵字（Phase 3-41a）：標灰 */
+
+.keyword-chip.general {
+  color: var(--muted);
+}
+
+.keyword-sep {
+  margin: 0 6px;
+  color: var(--muted);
+}
+
+/* Phase 3G-G3b：裝備授予的技能與反應（來自裝備） */
+
+.skill-gear {
+  font-size: 12px;
+  color: #e8c46a;
+  /* 「來自裝備・副手：壁壘塔盾」太長時省略（完整文字在說明卡與 aria-label） */
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.skill-button.from-gear {
+  border-color: #b8923f;
+}
+
+/* Phase 3-26a：技能點、技能等級、營火換裝 */
+
+.skill-level-badge {
+  color: #f0c060;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.skill-lv {
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #3a2f12;
+  color: #f0c060;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.skill-card-growth {
+  color: #e6c777;
+}
+
+/* Phase 3-25b：戰場變奏（技能卡的型態列表、技能列按鈕發亮、預覽的型態） */
+
+.skill-button.variant-ready {
+  border-color: #6fd6a0;
+  box-shadow:
+    inset 0 0 0 1px #6fd6a0,
+    0 0 6px 1px rgba(111, 214, 160, 0.55);
+  animation: variant-ready-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes variant-ready-pulse {
+  50% {
+    box-shadow:
+      inset 0 0 0 1px #6fd6a0,
+      0 0 10px 3px rgba(111, 214, 160, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-button.variant-ready {
+    animation: none;
+  }
+}
+
+.skill-variant {
+  font-size: 12px;
+  color: #8fe6b8;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skill-variants {
+  margin: 6px 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.skill-variants-title {
+  color: #8fe6b8;
+  font-weight: 700;
+}
+
+.skill-variant-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-variant-item {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.skill-variant-item.active {
+  background: rgba(111, 214, 160, 0.12);
+  outline: 1px solid #6fd6a0;
+}
+
+.skill-variant-icon {
+  flex: 0 0 auto;
+}
+
+.skill-variant-now {
+  color: #8fe6b8;
+}
+
+.skill-card-formula {
+  color: var(--muted);
+}

@@ -1,0 +1,67 @@
+/* 開始畫面（種子欄、地圖與武器選擇）。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+/* 開始畫面 */
+
+.start-screen {
+  max-width: 480px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.start-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.start-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seed-row {
+  display: flex;
+  gap: 6px;
+}
+
+.seed-row input {
+  flex: 1;
+}
+
+/* 開始畫面的技能工坊入口、戰鬥中的離開按鈕 */
+
+.start-workshop {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* roguelite 一輪（Phase 3-5c-1） */
+
+.start-run {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.start-form .run-llm-toggle,
+.run-llm-toggle {
+  display: flex;
+  flex-direction: row; /* 蓋過 .start-form label 的直排 */
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.start-form .run-test-mode-toggle,
+.run-test-mode-toggle {
+  display: flex;
+  flex-direction: row; /* 蓋過 .start-form label 的直排 */
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}

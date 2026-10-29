@@ -1,0 +1,101 @@
+@import "../assets/fonts/noto-sans-tc/noto-sans-tc.css";
+/* 全站基礎：變數、重設、按鈕與表單元件預設、面板、錯誤訊息。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+:root {
+  --bg: #101016;
+  --panel: #1c1c26;
+  --panel-border: #2e2e3c;
+  --text: #e8e6e3;
+  --muted: #9a98a6;
+  --accent: #ffd23f;
+  --ally: #2f7de1;
+  --enemy: #d23c3c;
+  --danger: #ff5a5a;
+  color-scheme: dark;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+.button,
+select,
+input {
+  font: inherit;
+  color: var(--text);
+  background: #2a2a38;
+  border: 1px solid #44445a;
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+
+button,
+.button {
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:hover:not(:disabled),
+.button:hover {
+  background: #36364a;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.primary {
+  background: #3d5a99;
+  border-color: #5878c0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.section-title {
+  font-weight: 700;
+  margin: 6px 0;
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+button.selected {
+  background: #3d5a99;
+  border-color: var(--accent);
+}
+
+.error-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: #4a1c1c;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 6px 10px;
+}

@@ -1,0 +1,425 @@
+/* 戰鬥中的面板與對話框：反應詢問與設定、環境預告、隊友指令、圖例、動作面板、召喚物操控與灌注、召喚物資訊小卡。（Phase 3T-7 由 styles.css 依畫面拆出；選擇器與規則內容不變，層疊順序見 index.css） */
+
+.action-hint {
+  color: var(--muted);
+}
+
+.action-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.action-list button {
+  width: 100%;
+  text-align: left;
+}
+
+.mode-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.mode-help {
+  margin-top: 6px;
+}
+
+.dir-buttons {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.dir-buttons button {
+  width: 36px;
+  font-size: 18px;
+}
+
+.preview-box {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #14141c;
+  border-radius: 4px;
+}
+
+.preview-box ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.fallback {
+  margin-top: 8px;
+}
+
+.action-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.end-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.end-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 16px 20px;
+  min-width: 300px;
+}
+
+.modal-title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* 3-4b：反應詢問視窗（不遮住戰場）、反應設定、環境預告、隊友指令、連鎖預覽 */
+
+.decision-card {
+  position: fixed;
+  left: 50%;
+  top: 58px;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 70px); /* 800×600 這類小視窗：內容超出時卡片內捲動 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--panel);
+  border: 2px solid #ff4fd8;
+  border-radius: 6px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 24px rgb(0 0 0 / 60%);
+}
+
+.decision-card p {
+  margin: 6px 0;
+}
+
+.always-auto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.always-auto input {
+  padding: 0;
+}
+
+.reaction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--panel-border);
+}
+
+.reaction-name {
+  font-weight: 700;
+}
+
+.segmented {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.segmented button {
+  border-radius: 0;
+  padding: 3px 9px;
+}
+
+.segmented button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.segmented button.selected {
+  background: #3d5a99;
+  border-color: #5878c0;
+  opacity: 1;
+}
+
+.telegraph-list,
+.telegraph-hover,
+.order-list {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.telegraph-hover {
+  color: var(--accent);
+}
+
+/* Phase 3-41b：環境預告的項目可以滑過（在地圖上標出涉及的格子） */
+
+.telegraph-item {
+  cursor: default;
+}
+
+.telegraph-item:hover,
+.telegraph-item:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+.order-ignored {
+  color: var(--danger);
+}
+
+.chain-box {
+  margin-top: 6px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.chain-box ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.aside-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.mode-panel {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  z-index: 12;
+  width: 280px;
+  max-height: calc(100% - 8px);
+  overflow-y: auto;
+  background: rgb(28 28 38 / 95%);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 50%);
+}
+
+.mode-panel .mode-help {
+  margin-top: 0;
+}
+
+.mode-panel .preview-box {
+  pointer-events: none;
+}
+
+.mode-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.end-turn-button {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+/* 詢問視窗：水平置中、靠上；「移到下方」時靠下（在技能列上方） */
+
+.decision-card.low {
+  top: auto;
+  bottom: 12px;
+}
+
+.decision-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dialog-move {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 1px 6px;
+}
+
+.end-detail {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 召喚物資訊小卡（Phase 3-41a）：技能卡內可展開 */
+
+.summon-info {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: rgba(94, 234, 212, 0.06);
+}
+
+.summon-info > summary {
+  cursor: pointer;
+  color: #5eead4;
+}
+
+.summon-info dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  margin: 4px 0 0;
+}
+
+.summon-info dt {
+  color: var(--muted);
+}
+
+.summon-info dd {
+  margin: 0;
+}
+
+.summon-info ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.reaction-gear {
+  color: #e8c46a;
+}
+
+/* 召喚物操控面板（Phase 3-33c） */
+
+.summon-panel {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  z-index: 12;
+  width: 270px;
+  max-height: calc(100% - 8px);
+  overflow-y: auto;
+  background: rgb(28 28 38 / 95%);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 50%);
+}
+
+.summon-row {
+  padding: 6px 0;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+
+.summon-row.commanding {
+  background: rgb(60 90 160 / 18%);
+}
+
+.summon-mode-buttons,
+.summon-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.summon-mode.selected {
+  border-color: var(--accent, #6aa7ff);
+  background: rgb(80 130 220 / 35%);
+  font-weight: bold;
+}
+
+.summon-focus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.summon-command select {
+  width: 100%;
+  margin: 4px 0;
+}
+
+/* 灌注技能（Phase 3-33d） */
+
+.summon-pending {
+  color: #d9b3ff;
+}
+
+.summon-infuse {
+  margin: 4px 0;
+  padding: 4px;
+  background: rgb(150 90 220 / 14%);
+  border-radius: 4px;
+}
+
+.summon-infuse-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.summon-infuse-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.summon-infuse .infuse-skill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+  padding: 3px 6px;
+  text-align: left;
+}
+
+.summon-infuse .infuse-skill.blocked {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.summon-infuse .infuse-reason {
+  padding-left: 6px;
+}
+
+.summon-infuse-warn {
+  color: #ffb070;
+}
+
+.summon-infuse-preview {
+  color: #c8f0c0;
+}
