@@ -48,7 +48,7 @@ from trpg.content.flash_templates import FlashTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import FOLLOWUP_FORBIDDEN
-from trpg.engine.skill_levels import grow_shape
+from trpg.engine.shape_growth import grow_shape
 from trpg.shared.types import Element
 from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.evolution import evolution_template, multiplier_ladder, template_drafts

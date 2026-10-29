@@ -102,7 +102,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         skill = ctx.rules.skill_def(action.skill_id)
     except KeyError:
         raise IllegalActionError(f"找不到技能：{action.skill_id}") from None
-    # 戰場變奏（3-25a）：依目標點選型態，再套技能等級與修正規則的變形（3D-3）
+    # 戰場變奏（3-25a）：依目標點選型態，再套修正規則的變形（3D-3）
     skill, variant = varied_skill(ctx.state, caster, skill, target_point(ctx.state, action))
     skill = modifiers.shaped_skill(ctx.state, caster, skill)
     if skill.id not in caster.all_skills:

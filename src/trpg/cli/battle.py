@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import TextIO
@@ -34,7 +35,13 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.environment import telegraph
 from trpg.engine.events import EVENT_LIST_ADAPTER, EventBase, RoundStarted, UnitMoved
 from trpg.engine.results import ResolveResult
-from trpg.engine.runner import BattleLog, log_replay_problem, replay, run_battle
+from trpg.engine.runner import (
+    BattleLog,
+    log_format_problem,
+    log_replay_problem,
+    replay,
+    run_battle,
+)
 from trpg.engine.setup import BattleSetupError, assign_races, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
 from trpg.narrative.events import describe_event
@@ -250,12 +257,29 @@ def cmd_battle(
     return 0
 
 
+def _old_format(text: str) -> str | None:
+    """紀錄 JSON 的 ``format`` 不是目前版本時的說明；不是 JSON 物件時交給後面的解析報錯。"""
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(raw, dict) or "format" not in raw:
+        return None
+    return log_format_problem(raw["format"])
+
+
 def cmd_replay(path: Path, out: TextIO) -> int:
     try:
-        log = BattleLog.model_validate_json(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         print(f"錯誤：找不到檔案 {path}", file=sys.stderr)
         return 1
+    old = _old_format(text)
+    if old is not None:  # 舊版紀錄先說明版本（結構可能已經解析不了，3W-5b）
+        print(f"錯誤：{path}：{old}", file=sys.stderr)
+        return 1
+    try:
+        log = BattleLog.model_validate_json(text)
     except ValidationError as exc:
         print(f"錯誤：{path} 不是有效的戰鬥紀錄：\n{exc}", file=sys.stderr)
         return 1

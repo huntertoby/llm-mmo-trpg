@@ -66,7 +66,6 @@ from trpg.engine.rules.statuses import (
     status_attack_bonus,
 )
 from trpg.engine.rules.weapons import crit_range_cut
-from trpg.engine.skill_levels import level_multiplier
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem, unit_held
 from trpg.engine.skills.mobility import (
@@ -1389,7 +1388,6 @@ def damage_parameters(
         multiplier = spec.multiplier_permille or _PERMILLE
     if skill.damage_permille is not None:  # 高變異（3D-7b）：基礎傷害折扣
         multiplier = multiplier * skill.damage_permille // _PERMILLE
-    multiplier = multiplier * level_multiplier(state.ruleset, caster, skill) // _PERMILLE  # 3-26a
     multiplier = multiplier * form_bonus_permille(state, caster, spec) // _PERMILLE  # 3J-4b
     if modified and skill.category == "spell":
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)

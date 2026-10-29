@@ -85,7 +85,6 @@ from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
-from trpg.engine.skill_levels import level_multiplier
 from trpg.engine.skill_triggers import collect_move
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.mobility import dash_route, shadowstep_behind
@@ -151,7 +150,7 @@ class Cast:
     原語 handler（:mod:`trpg.engine.skills.primitives`）以這個物件為第一個參數，可以用的公開
     方法：對象（``targets``、``tiles``、``holds``、``tile_holds``、``is_hit``）、命中
     （``roll_one``、``update_cooldown_delta``）、數值（``attack_damage``、``physical_element``、
-    ``gamble_for``、``spell_scaled``、``level_permille``、``heal_multiplier``、``modifier``）、
+    ``gamble_for``、``spell_scaled``、``heal_multiplier``、``modifier``）、
     狀態與擊倒（``status_effects``、``status_duration``、``knock_down``）、衝鋒的每一步
     （``dash_continues``）、另起施放（``spawn``）與分支（``resolve_branch``）。
     """
@@ -856,12 +855,8 @@ class Cast:
         attr = skill_scaling_value(self.ctx.rules, self.caster, self.skill)
         return attr * self.ctx.core.spell_attr_multiplier_permille
 
-    def level_permille(self) -> int:
-        """技能等級的效果倍率（‰；Phase 3-26a，傷害由 ``damage_parameters`` 處理）。"""
-        return level_multiplier(self.ctx.rules, self.caster, self.skill)
-
     def heal_multiplier(self, *, self_heal: bool = False, spec: EffectSpec | None = None) -> int:
-        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率與消耗
+        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘消耗
         層數的治療加成；加成只算治療自己時，``self_heal``（效果的對象是 ``self``）才加，3-52b；
         ``spec`` 有 ``form_bonus_permille`` 且施放者在形態中時再乘 ``1000 ＋ n``，3J-4b）。"""
         base = PERMILLE
@@ -870,14 +865,14 @@ class Cast:
         bonus = self.heal_bonus
         if self.heal_self_only and not self_heal:
             bonus = 0
-        total = base * self.level_permille() // PERMILLE * (PERMILLE + bonus) // PERMILLE
+        total = base * (PERMILLE + bonus) // PERMILLE
         if spec is None:
             return total
         return total * form_bonus_permille(self.ctx.state, self.caster, spec) // PERMILLE
 
     def shield_multiplier(self) -> int:
-        """護盾量倍率（‰）：技能等級的倍率，再乘消耗層數的加成（Phase 3-52）。"""
-        return self.level_permille() * (PERMILLE + self.shield_bonus) // PERMILLE
+        """護盾量倍率（‰）：消耗層數的加成（Phase 3-52）。"""
+        return PERMILLE + self.shield_bonus
 
     def knock_down(self, unit: UnitState) -> list[EffectBase]:
         """對 ``unit`` 擲擊倒的對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。"""

@@ -35,13 +35,14 @@ __all__ = [
     "advance",
     "apply_step",
     "auto_step",
+    "log_format_problem",
     "log_replay_problem",
     "replay",
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/88"
-"""目前的戰鬥紀錄版本（``/87``，Phase 3R-4：鱗族回合開始站水／冰面移動 +1）。版號策略與完整
+LOG_FORMAT = "trpg-battle-log/89"
+"""目前的戰鬥紀錄版本（``/89``，Phase 3W-5b：移除技能等級）。版號策略與完整
 變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000
 
@@ -125,16 +126,25 @@ class BattleLog(BaseModel):
     """戰術指令紀錄（Phase 2C-2）。重播只重播動作，不重新呼叫指揮官；舊紀錄沒有這個欄位。"""
 
 
+def log_format_problem(found: object) -> str | None:
+    """紀錄的 ``format`` 不是目前版本時的說明；相同時 ``None``。讀入紀錄之前就先看（Phase 3W-5b）：
+    舊版紀錄的結構可能已經解析不了（例如 ``/88`` 的單位範本還有 ``skill_levels``）。"""
+    if found == LOG_FORMAT:
+        return None
+    return (
+        f"不支援的紀錄格式 {found!r}（目前的引擎是 {LOG_FORMAT!r}）：紀錄的結構或結算規則"
+        "在版本之間改變過，舊格式的紀錄無法重播，請用目前的版本重新跑一場"
+        "（變更歷程見 docs/phases/戰鬥紀錄格式變更.md）"
+    )
+
+
 def log_replay_problem(log: BattleLog) -> str | None:
     """``log`` 不能重播的原因（繁體中文）；可以重播時為 ``None``。依序檢查紀錄格式版本、
     ``ruleset_hash`` 是否存在、內嵌規則包的雜湊是否相符（策略見
     ``docs/phases/戰鬥紀錄格式變更.md``）。"""
-    if log.format != LOG_FORMAT:
-        return (
-            f"不支援的紀錄格式 {log.format!r}（目前的引擎是 {LOG_FORMAT!r}）：紀錄的結構或結算規則"
-            "在版本之間改變過，舊格式的紀錄無法重播，請用目前的版本重新跑一場"
-            "（變更歷程見 docs/phases/戰鬥紀錄格式變更.md）"
-        )
+    problem = log_format_problem(log.format)
+    if problem is not None:
+        return problem
     if log.ruleset_hash is None:
         return "紀錄缺少 ruleset_hash，無法確認內嵌的規則包沒有被改過"
     actual = hash_ruleset(log.setup.ruleset)

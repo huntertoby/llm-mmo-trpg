@@ -116,7 +116,7 @@ def test_damage_effects_get_an_effect_condition_with_the_wielding_weapon() -> No
     ]
 
 
-def test_the_skill_level_condition_menu_blocks_the_wielding_condition() -> None:
+def test_the_skill_wide_condition_menu_blocks_the_wielding_condition() -> None:
     field = _field(_step_fields(BASE, "condition"), "condition")
     wield = next(c for c in field.choices if c.value == "wielding_weapon")
     assert _reason(wield) == WIELDING_EFFECT_ONLY

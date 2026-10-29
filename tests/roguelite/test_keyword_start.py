@@ -249,8 +249,8 @@ def test_a_keyword_run_plays_and_records_behavior_and_offer_tags() -> None:
     offer = leveled.node.offer
     assert [t.kind for t in offer.tags] == ["deepen", "bridge", "new"]
     assert offer.tags[0].keywords[0] in ("prone", "collision")
-    # 存檔來回一致（trpg-run/12）
+    # 存檔來回一致（trpg-run/13）
     again = loads_save(dumps_save(RunSave(run_id="k", run=leveled))).run
     assert again == leveled
     raw = json.loads(dumps_save(RunSave(run_id="k", run=leveled)))
-    assert raw["format"] == "trpg-run/12" and raw["run"]["start"]["weapon"] == "one_handed_sword"
+    assert raw["format"] == "trpg-run/13" and raw["run"]["start"]["weapon"] == "one_handed_sword"

@@ -144,7 +144,7 @@ def test_old_saves_turn_skill_points_into_insight_by_wins() -> None:
     )
     save = loads_save(text)
     wins = sum(1 for r in run.history if r.won and not r.boss)
-    assert save.format == "trpg-run/12"
+    assert save.format == "trpg-run/13"
     assert save.run.insight == wins == 1  # 照新規則重算：每贏一場 1 點，技能點作廢
     assert save.run.flash == {} and save.run.hero.skills == run.hero.skills
     assert "skill_levels" not in json.loads(dumps_save(save))["run"]

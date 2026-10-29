@@ -2,8 +2,10 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/12``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
-  （``trpg-run/5``～``/11``），否則拒絕；舊格式讀入後寫出為 ``/12``。
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/13``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
+  （``trpg-run/5``～``/12``），否則拒絕；舊格式讀入後寫出為 ``/13``。
+  Phase 3W-5b 起引擎沒有技能等級：主角範本（``run.hero``）少了 ``skill_levels``（``/13``）；舊存檔
+  由 :func:`convert_raw_hero` 拿掉這個欄位（3W-5 起一輪已不再帶入等級，值一定是空的或作廢）。
   Phase 3W-5 起技能點、技能等級與分歧進化取消，改成靈感點與閃現（``/12``：``run.insight``、
   ``run.flash``、``run.flash_bases``、``run.pending_flash``、``run.complete_offers_done``、
   ``run.flash_llm_log``、節點 ``complete_offer``；營火沒有重骰）。舊存檔由 :func:`convert_raw_run`
@@ -67,6 +69,7 @@ __all__ = [
     "SAVE_DIR_ENV",
     "SAVE_FORMAT",
     "RunSave",
+    "convert_raw_hero",
     "convert_raw_run",
     "default_save_dir",
     "dumps_save",
@@ -79,7 +82,7 @@ __all__ = [
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/12"
+SAVE_FORMAT = "trpg-run/13"
 COMPATIBLE_FORMATS = (
     "trpg-run/5",
     "trpg-run/6",
@@ -88,9 +91,11 @@ COMPATIBLE_FORMATS = (
     "trpg-run/9",
     "trpg-run/10",
     "trpg-run/11",
+    "trpg-run/12",
 )
-"""仍可讀入的舊格式（讀入時由 :func:`convert_raw_run` 轉成目前的格式）。"""
-_GROWTH_FORMATS = frozenset(COMPATIBLE_FORMATS)
+"""仍可讀入的舊格式（讀入時由 :func:`convert_raw_run`、:func:`convert_raw_hero` 轉成目前的
+格式）。"""
+_GROWTH_FORMATS = frozenset(COMPATIBLE_FORMATS) - {"trpg-run/12"}
 """還有技能點、技能等級、分歧進化（Phase 3-26a／b）的格式：讀入時轉成靈感點（3W-5）。"""
 OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 """已知的舊存檔格式（讀檔時提示開新一輪）。"""
@@ -152,6 +157,15 @@ def convert_raw_run(raw: dict[str, Any]) -> dict[str, Any]:
     return run
 
 
+def convert_raw_hero(raw: dict[str, Any]) -> dict[str, Any]:
+    """``/12`` 以前的一輪（JSON 物件）的主角範本拿掉引擎已移除的技能等級欄位（Phase 3W-5b）。
+    不改原物件。"""
+    hero = raw.get("hero")
+    if not isinstance(hero, dict) or "skill_levels" not in hero:
+        return raw
+    return {**raw, "hero": {k: v for k, v in hero.items() if k != "skill_levels"}}
+
+
 def loads_save(text: str) -> RunSave:
     """解析存檔；格式不對、版本不符時拋出 :class:`SaveFormatError`。"""
     try:
@@ -164,6 +178,8 @@ def loads_save(text: str) -> RunSave:
         raise SaveFormatError(f"存檔格式必須是 {SAVE_FORMAT}，收到 {found!r}{hint}")
     if found in _GROWTH_FORMATS and isinstance(raw.get("run"), dict):
         raw = {**raw, "run": convert_raw_run(raw["run"])}
+    if found in COMPATIBLE_FORMATS and isinstance(raw.get("run"), dict):
+        raw = {**raw, "run": convert_raw_hero(raw["run"])}
     try:
         save = RunSave.model_validate({**raw, "format": SAVE_FORMAT})
     except ValidationError as exc:

@@ -195,25 +195,10 @@ _AREA_MOD = SkillDef.model_validate(
 )
 
 
-def test_skill_level_applies_after_the_variant() -> None:
-    """5 級小特性：基礎型態（單體，沒有可增加的範圍）是冷卻 −1；水中型態（直線 3）是範圍 +1。"""
-    plain = _state([TIDAL])
-    plain.units[U1].skill_levels = {TIDAL: 5}
-    base = acting_skill(plain, plain.units[U1], TIDAL, UseSkill(unit_id=U1, skill_id=TIDAL))
-    assert base.shape.type == "single" and base.cost.cooldown == 1
-    wet = _state([TIDAL], surfaces=[(3, 3, "water")])
-    wet.units[U1].skill_levels = {TIDAL: 5}
-    north = UseSkill(unit_id=U1, skill_id=TIDAL, direction="north")
-    form = acting_skill(wet, wet.units[U1], TIDAL, north)
-    assert form.shape.type == "line" and form.shape.size == 4 and form.cost.cooldown == 2
-
-
-def test_modifiers_apply_after_the_variant_and_the_level() -> None:
+def test_modifiers_apply_after_the_variant() -> None:
     wet = _state([TIDAL, _AREA_MOD.id], surfaces=[(3, 3, "water")], extra=[_AREA_MOD])
     north = UseSkill(unit_id=U1, skill_id=TIDAL, direction="north")
     assert acting_skill(wet, wet.units[U1], TIDAL, north).shape.size == 4  # 3 ＋ 修正 1
-    wet.units[U1].skill_levels = {TIDAL: 5}
-    assert acting_skill(wet, wet.units[U1], TIDAL, north).shape.size == 5  # ＋ 等級 1
     result = resolve(wet, north)
     (used,) = [e for e in result.events if isinstance(e, SkillUsed)]
     assert used.variant == "tide_pierce" and len(used.tiles) == 3  # 地圖只到 y = 0

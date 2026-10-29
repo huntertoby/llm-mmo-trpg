@@ -44,7 +44,6 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     magazine: 0,
     tags: [],
     skills: [],
-    skill_levels: {},
     statuses: [],
     stacks: {},
     cooldowns: {},

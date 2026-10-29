@@ -286,14 +286,12 @@ class InfusedSkill:
     - ``skill_id``／``owner_id``：被借出的技能與借出的施放者（法力與冷卻已在灌注時由施放者付）。
     - ``attributes``：灌注當下施放者的有效屬性快照（同陷阱的 ``attributes``；施放時以它代替
       召喚物自己的屬性，之後施放者的屬性變化不影響）。
-    - ``skill_level``：灌注當下施放者的技能等級（Phase 3-26a 的效果倍率與 5 級小特性）。
     - ``round``：灌注的輪數。
     """
 
     skill_id: str
     owner_id: UnitId
     attributes: tuple[tuple[Attribute, int], ...]
-    skill_level: int = 1
     round: int = 0
 
 
@@ -471,9 +469,6 @@ class UnitState:
     facing: Facing = "east"
     """朝向（Phase 3D-8d）：主動移動（步行、衝鋒、跳躍、直線衝撞、瞬步）後面向移動方向，攻擊或對
     單位施放技能後面向目標；強制位移、傳送、交換不改。只影響背刺（``from_behind``）的判斷。"""
-    skill_levels: dict[str, int] = field(default_factory=dict)
-    """技能等級（Phase 3-26a）：技能 ID → 等級（2～5，只列出不是 1 級的）；開戰時由範本帶入、戰鬥中
-    不變（可共用，不必複製）。見 :mod:`trpg.engine.skill_levels`。"""
     gear: GearState = field(default_factory=GearState)
     """裝備狀態（Phase 3G-G1）：開戰時由裝備快照算好、戰鬥中不變（數值類已併進上面的屬性、HP、
     抗性與速度；條件數值與代價型在戰鬥中查詢，見 :mod:`trpg.engine.gear.core`）。"""
@@ -602,7 +597,6 @@ class UnitState:
             activations=self.activations,
             revived=self.revived,
             granted_skills=self.granted_skills,
-            skill_levels=self.skill_levels,
             facing=self.facing,
             gear=self.gear,
             doll=self.doll,

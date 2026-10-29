@@ -150,7 +150,7 @@ def _then_effect(cast: Cast, spec: EffectSpec, target: UnitState) -> list[Effect
                 source_id=caster.id,
                 dice=spec.dice,
                 scaled_permille=cast.spell_scaled(),
-                multiplier_permille=cast.level_permille(),
+                multiplier_permille=PERMILLE,
             )
         ]
     if spec.type == "shield":
@@ -160,7 +160,7 @@ def _then_effect(cast: Cast, spec: EffectSpec, target: UnitState) -> list[Effect
                 source_id=caster.id,
                 dice=spec.dice,
                 scaled_permille=cast.spell_scaled(),
-                multiplier_permille=cast.level_permille(),
+                multiplier_permille=PERMILLE,
                 duration=spec.duration,
                 status_id=spec.status,
             )

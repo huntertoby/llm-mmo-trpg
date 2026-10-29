@@ -116,7 +116,7 @@ def test_old_saves_are_upgraded_between_battles() -> None:
     run = new_dev_run(LIB, next(iter(LIB.dev_starters.by_id())), 2)
     old = run.model_copy(update={"level": 5})
     loaded = loads_save(_old_text(old))
-    assert loaded.format == SAVE_FORMAT == "trpg-run/12"
+    assert loaded.format == SAVE_FORMAT == "trpg-run/13"
     assert loaded.run.skill_tier is None
     upgraded = upgrade_save(LIB, loaded)
     tier = character_tier(LIB, 5)

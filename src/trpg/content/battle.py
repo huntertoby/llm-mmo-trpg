@@ -69,9 +69,6 @@ ID_PATTERN = r"^[a-z][a-z0-9_]*$"
 _DICE_RE = re.compile(r"^\s*(\d+)\s*d\s*(\d+)\s*$")
 _MAX_DICE_COUNT = 100
 _MAX_DICE_SIDES = 1000
-_MIN_LISTED_LEVEL = 2
-_MAX_SKILL_LEVEL = 9
-"""技能等級的格式上限（實際上限是 ``skill_growth.yaml`` 的 ``max_level``，由引擎與一輪檢查）。"""
 
 
 def _unique_ids(ids: list[str], what: str) -> None:
@@ -1247,9 +1244,6 @@ class UnitTemplate(ContentModel):
     level: int = Field(default=1, ge=1, le=99)
     """角色等級（Phase 3-33b）：召喚物的 HP 與傷害依施放者的等級成長；一輪的主角帶入目前等級，
     其他單位為 1。"""
-    skill_levels: dict[str, int] = Field(default_factory=dict)
-    """技能等級（Phase 3-26a）：技能 ID → 等級（2～5；省略的技能是 1 級）。只列出裝備中的技能；
-    由一輪的存檔帶入，戰鬥設定因此包含等級，重播一致。"""
 
     @model_validator(mode="after")
     def _check_totem(self) -> UnitTemplate:
@@ -1282,24 +1276,6 @@ class UnitTemplate(ContentModel):
                 "innate／hit_rules／pulse／detonate／snare／platform／inert"
                 " 只有召喚物（summon: true）可以填"
             )
-        return self
-
-    @field_validator("skill_levels")
-    @classmethod
-    def _skill_levels_valid(cls, value: dict[str, int]) -> dict[str, int]:
-        bad = [k for k, v in value.items() if not _MIN_LISTED_LEVEL <= v <= _MAX_SKILL_LEVEL]
-        if bad:
-            raise ValueError(
-                f"技能等級必須是 {_MIN_LISTED_LEVEL}～{_MAX_SKILL_LEVEL}（1 級不必列出）："
-                f"{', '.join(bad)}"
-            )
-        return value
-
-    @model_validator(mode="after")
-    def _levels_are_equipped(self) -> UnitTemplate:
-        stray = sorted(set(self.skill_levels) - set(self.skills))
-        if stray:
-            raise ValueError(f"skill_levels 只能列出裝備中的技能：{', '.join(stray)}")
         return self
 
     @field_validator("equipment")

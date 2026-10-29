@@ -5,8 +5,8 @@
 
 - **代價**：法力、HP 代價、每場次數與冷卻在灌注時由 **施放者** 付（冷卻當下開始算）；自身狀態
   代價（``cost.self_status``）也在灌注時加在施放者身上。
-- **快照**（:class:`~trpg.engine.state.InfusedSkill`）：施放者當下的有效屬性與技能等級。召喚物施放
-  時暫時以快照的屬性、施放者的武器與技能等級代替自己的（:func:`borrowed`；施放完還原），所以傷害、
+- **快照**（:class:`~trpg.engine.state.InfusedSkill`）：施放者當下的有效屬性。召喚物施放
+  時暫時以快照的屬性與施放者的武器代替自己的（:func:`borrowed`；施放完還原），所以傷害、
   命中與「武器射程」都是施放者的數字；之後施放者的屬性變化不影響。召喚物自己的狀態照常生效。
 - **施放**（:func:`release_infusion`）：召喚物在 **下一個自己的回合開始時**（回合開始的效果與被動
   觸發之後、行動之前）施放，佔用牠 ``summon_infused_cast_ap_cost`` AP（取代一次普攻）。原點是牠
@@ -52,7 +52,6 @@ from trpg.engine.rules.statuses import (
     skip_turn_status,
 )
 from trpg.engine.self_costs import pay_self_costs
-from trpg.engine.skill_levels import skill_level
 from trpg.engine.skills.casting import run_infused
 from trpg.engine.skills.mobility import self_move_problem
 from trpg.engine.skills.targeting import (
@@ -247,17 +246,16 @@ def do_infuse_skill(ctx: Ctx, owner: UnitState, action: InfuseSkill) -> None:
 
 @contextmanager
 def borrowed(state: BattleState, summon: UnitState, infused: InfusedSkill) -> Iterator[SkillDef]:
-    """暫時讓召喚物用灌注快照 ``infused`` 的屬性、施放者的武器與技能等級（``with`` 結束時還原），
-    產生要施放的技能（套用技能等級的 5 級小特性；不套變奏與施放者的修正規則）。"""
+    """暫時讓召喚物用灌注快照 ``infused`` 的屬性與施放者的武器（``with`` 結束時還原），產生要施放的
+    技能（不套變奏與施放者的修正規則）。"""
     owner = state.units[infused.owner_id]
-    saved = (summon.attributes, summon.weapon, summon.skill_levels)
+    saved = (summon.attributes, summon.weapon)
     summon.attributes = dict(infused.attributes)
     summon.weapon = owner.weapon
-    summon.skill_levels = {infused.skill_id: infused.skill_level} if infused.skill_level > 1 else {}
     try:
         yield modifiers.shaped_skill(state, summon, state.ruleset.skill_def(infused.skill_id))
     finally:
-        summon.attributes, summon.weapon, summon.skill_levels = saved
+        summon.attributes, summon.weapon = saved
 
 
 def _cast_problem(state: BattleState, summon: UnitState, skill: SkillDef) -> str | None:
@@ -342,12 +340,11 @@ def _pick(
 
 
 def snapshot(state: BattleState, owner: UnitState, skill_id: str) -> InfusedSkill:
-    """``owner`` 現在灌注 ``skill_id`` 的快照（有效屬性、技能等級、輪數）。"""
+    """``owner`` 現在灌注 ``skill_id`` 的快照（有效屬性、輪數）。"""
     return InfusedSkill(
         skill_id=skill_id,
         owner_id=owner.id,
         attributes=tuple((a, effective_attribute(state.ruleset, owner, a)) for a in Attribute),
-        skill_level=skill_level(owner, skill_id),
         round=state.round,
     )
 

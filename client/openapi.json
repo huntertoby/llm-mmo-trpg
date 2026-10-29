@@ -12331,14 +12331,6 @@
             "type": "array",
             "title": "Skills"
           },
-          "skill_levels": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Skill Levels",
-            "default": {}
-          },
           "statuses": {
             "items": {
               "$ref": "#/components/schemas/StatusView"

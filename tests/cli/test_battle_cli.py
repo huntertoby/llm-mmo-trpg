@@ -70,7 +70,7 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     )
     assert code == 0 and log.is_file() and str(log) in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/88"
+    assert data["format"] == "trpg-battle-log/89"
     assert data["seed"] == 7 and data["actions"] and data["events"]
     assert data["events"][0]["type"] == "battle_started"
 
@@ -100,6 +100,13 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     tampered.write_text(json.dumps(data), encoding="utf-8")
     code, _, err = _run(["battle", "replay", str(tampered)], capsys)
     assert code == 1 and "舊格式的紀錄無法重播" in err and "戰鬥紀錄格式變更.md" in err
+
+    data = json.loads(log.read_text(encoding="utf-8"))
+    data["format"] = "trpg-battle-log/88"  # /88 的單位狀態還有技能等級（3W-5b 移除）
+    data["final_state"]["units"]["unit_0001"]["skill_levels"] = {}
+    tampered.write_text(json.dumps(data), encoding="utf-8")
+    code, _, err = _run(["battle", "replay", str(tampered)], capsys)
+    assert code == 1 and "舊格式的紀錄無法重播" in err and "不是有效的戰鬥紀錄" not in err
 
     data = json.loads(log.read_text(encoding="utf-8"))
     del data["ruleset_hash"]

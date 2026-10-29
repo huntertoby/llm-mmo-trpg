@@ -44,7 +44,7 @@ from trpg.engine.gear.enhance import (
     spend_gear_rune_read,
 )
 from trpg.engine.rules.forms import form_heal_permille, held_weapon, natural_damage_permille
-from trpg.engine.skill_levels import grow_shape, leveled_skill
+from trpg.engine.shape_growth import grow_shape
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.variants import target_point, varied_skill
@@ -529,7 +529,7 @@ def acting_skill(
     state: BattleState, unit: UnitState, skill_id: str, action: UseSkill | None = None
 ) -> SkillDef:
     """``unit`` 施放 ``skill_id`` 時實際使用的技能：基礎 → 戰場變奏（Phase 3-25a，依 ``action``
-    的目標點選型態；沒給 ``action`` 時是基礎型態）→ 技能等級 → 修正（:func:`shaped_skill`）。"""
+    的目標點選型態；沒給 ``action`` 時是基礎型態）→ 修正（:func:`shaped_skill`）。"""
     skill = state.ruleset.skill_def(skill_id)
     if action is not None and skill.variants:
         skill = varied_skill(state, unit, skill, target_point(state, action))[0]
@@ -546,7 +546,6 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
     順序：先依技能 ID、規則索引依序套用 ``shape_to``（每條至多轉一次，可以接續轉，例如
     單體 → 直線 → 錐形），再把每條 ``area_delta`` 的 +1 加上去，最後看 ``allow_self_target``。
     """
-    skill = leveled_skill(state.ruleset, unit, skill)  # 技能等級的 5 級小特性（Phase 3-26a）
     if skill.kind != "active" or not (state.ruleset.has_modifier(unit.skills) or unit.gear.affixes):
         return skill
     if skill.followup is not None:  # 複合技能（Phase 3F-3a）的兩段形狀不變形（保守做法）
