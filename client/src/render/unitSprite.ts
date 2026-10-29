@@ -7,18 +7,16 @@ import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
 import { resolveDoll, type DollSpec } from "./appearance";
-import { buildRowRise } from "./inkDoll";
-import { raceLookToLook } from "./inkRace";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_SCALE_OLD, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMON_SCALE, SUMMON_W } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMON_SCALE, SUMMON_W } from "./paperdoll";
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
-import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, ROW_ICON, statusIconCanvas, statusIconKey, statusRowLayout, type BodyEffects } from "./statusIcon";
+import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, statusRowLayout, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
-import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor, formRowRise } from "./inkForm";
+import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 
@@ -279,9 +277,9 @@ function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Spr
 const rowTextures = new Map<string, Texture>();
 
 function rowIconTexture(id: string): Texture | null {
-  const canvas = statusIconCanvas(id, ROW_ICON);
+  const canvas = statusIconCanvas(id, ROW_ICON_FEET);
   if (canvas === null) return null;
-  const key = `${statusIconKey(id, ROW_ICON)}|${fontEpoch()}`;
+  const key = `${statusIconKey(id, ROW_ICON_FEET)}|${fontEpoch()}`;
   const hit = rowTextures.get(key);
   if (hit !== undefined) return hit;
   const tex = Texture.from(canvas);
@@ -289,42 +287,45 @@ function rowIconTexture(id: string): Texture | null {
   return tex;
 }
 
-/** 頭頂狀態列的圖示中心（相對格子中心）：略低於格子頂端，圖示上緣不蓋住上一格單位的血條。 */
-const ROW_Y = -T / 2 + 5.5;
-/** 人（含人形召喚物）放大後頭頂多出的高度（3U-2，52px 格 ≈ 9.4px），狀態列跟著上移。 */
-const ROW_RISE_HUMAN = 52 * (DOLL_SCALE - DOLL_SCALE_OLD);
-/** 野獸、物件召喚物放大（1 → 1.15）後多出的高度（52px 格 ≈ 7.8px）。 */
-const ROW_RISE_BEAST = 52 * (SUMMON_SCALE - 1);
-/** 有「灌」徽章（左上）時，狀態列最多 2 格並右移，避免重疊。 */
-const ROW_INFUSED_SHIFT = 9;
+/** 腳邊狀態列的圖示邊長（3U-2b；舊 14，約 60～80%：48px 格 11、88px 格約 20px）。 */
+export const ROW_ICON_FEET = 11;
+/** 狀態列圖示與 HP 條（含護盾條）之間的空隙。 */
+const ROW_GAP_HP = 4;
+/** 字母標記圓（左下）的右緣 x；狀態列左緣至少離它 1px。 */
+const MARKER_RIGHT = -T * 0.37 + 8;
 
-/** 頭頂狀態列：最多 3 個圖示（超過時 2 個加「+N」），倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
+/** 腳邊狀態列的中心 y（相對格子中心）：HP 條正上方；不隨體型、形態、頭頂高度改變。 */
+export const ROW_Y_FEET = T * 0.36 - ROW_GAP_HP - ROW_ICON_FEET / 2;
+
+/** 狀態列整排往右讓字母標記所需的位移（px，>= 0）：`n` 為排內項目數，間距 `ROW_ICON_FEET + 1`。 */
+export function rowShiftForMarker(n: number): number {
+  const left = -((n - 1) * (ROW_ICON_FEET + 1)) / 2 - ROW_ICON_FEET / 2;
+  return Math.max(0, MARKER_RIGHT + 1 - left);
+}
+
+/** 腳邊狀態列（HP 條正上方、置中，畫在小人之上）：最多 3 個圖示（超過時 2 個加「+N」），倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
 function statusRow(u: UnitDraw): Container | null {
   if (u.downed) return null;
   const ids = (u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING);
   const infused = u.infused === true;
-  const items = statusRowLayout(ids, infused ? 2 : 3, ROW_ICON);
+  const items = statusRowLayout(ids, infused ? 2 : 3, ROW_ICON_FEET);
   if (items.length === 0) return null;
   const row = new Container();
-  // 高瘦體型（精靈）頭頂較高，狀態列跟著升高；召喚物不套用種族外觀
-  const tall = u.summon || u.raceLook == null ? 0 : buildRowRise({ skin: "", ...raceLookToLook(u.raceLook) }) * DOLL_SCALE * (T / 52);
-  const sl = u.summon ? summonLookOf(u) : null;
-  const grow = ((sl !== null && sl.body !== "humanoid" ? ROW_RISE_BEAST : ROW_RISE_HUMAN) * T) / 52;
-  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y - grow - tall - (u.form != null && !u.summon ? formRowRise(u.form.look, T, DOLL_SCALE) : 0));
+  row.position.set(rowShiftForMarker(items.length), ROW_Y_FEET);
   for (const item of items) {
     if (item.kind === "icon") {
       const tex = rowIconTexture(item.id);
       if (tex === null) continue;
       const icon = new Sprite(tex);
       icon.anchor.set(0.5);
-      icon.width = ROW_ICON;
-      icon.height = ROW_ICON;
+      icon.width = ROW_ICON_FEET;
+      icon.height = ROW_ICON_FEET;
       icon.position.set(item.x, 0);
       row.addChild(icon);
     } else {
-      const half = ROW_ICON / 2;
-      row.addChild(new Graphics().roundRect(item.x - half, -half, ROW_ICON, ROW_ICON, 4).fill({ color: 0x0c0c10, alpha: 0.88 }).stroke({ width: 1.5, color: 0x9aa0aa }));
-      const more = label(`+${item.extra}`, 9, 0xffffff, true);
+      const half = ROW_ICON_FEET / 2;
+      row.addChild(new Graphics().roundRect(item.x - half, -half, ROW_ICON_FEET, ROW_ICON_FEET, 3).fill({ color: 0x0c0c10, alpha: 0.88 }).stroke({ width: 1.5, color: 0x9aa0aa }));
+      const more = label(`+${item.extra}`, 8, 0xffffff, true);
       more.anchor.set(0.5);
       more.position.set(item.x, 0.5);
       row.addChild(more);
