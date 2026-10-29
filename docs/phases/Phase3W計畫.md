@@ -155,3 +155,8 @@
 ### 6.1 3W-R1 驗收（2026-10-30，開發 PM）
 - 合併 3W-R1（升階時閃過的技能用 `derive_skill` 重推、`retier` 只處理沒閃過的；`FlashStepError`／`FlashHistoryError` 與存檔定義退路、預覽 `history_note_zh`；`ContentLibrary.retier_cache`；舊引擎戰鬥中存檔捨棄該場回到節點開頭、`load_notice`）。存檔與紀錄結構不變。全量：ruff、format、mypy（835 檔）、lint-imports、build、vitest 1174、pytest 9627 通過；swamp 種子 7 重播通過。
 - 玩法 PM 定（06 6.34，`5448a4d1`）：選 A——閃過的技能升階後比例大致維持（分數不降、在窗內），沒閃過的仍嚴格維持；使用者的保證「強度不低於升階前」不變，不需問使用者。其餘待決（傳承擋下失效變化、壞歷程重閃、ID 不含階級）開發 PM 接受。
+
+### 6.2 3W-R2 驗收（2026-10-30，開發 PM）— Phase 3W 結束
+- 合併 3W-R2（`skillgen/knobs.py` 共用旋鈕；白板形狀／原語分類、地形／範圍原語、`support` 類型移到資料，比例窗讀 `library.budget`、`MAX_EFFECTS`／`MAX_AP_COST` 用常數；`offers.observe_complete`＋`auto_play(on_complete=…)` 取代執行期替換；後端下發 `reflash_slots`／`carryable`／`inherit_problem_zh`／`inherit_target`／`flash_rules.max_carry`，前端只讀；`summon_evolution_options(only=…)`；`flash.py` 拆成 `flash_derive.py`／`flash_offer.py`／`flash_category.py`）。行為不變：重構前快照 732 項全同、報表逐位元組相同。
+- 開發 PM 補：內容檔改過（`ruleset_hash` 不符或缺）的戰鬥中存檔，不再拒絕，比照 3W-R1 捨棄該場、回到節點開頭，提示「內容檔已更新，這場戰鬥從開頭重新開始。」（`CONTENT_CHANGED_NOTICE`）。
+- 全量：ruff、format、mypy（840 檔）、lint-imports、build、vitest 1175、pytest 10364 通過（14 skipped、3 xfail、1 xpass）；swamp 種子 7 重播通過。其餘待決（`_climb` 保留、ContextVar 觀察者、地形原語兩份清單、`flash.py` 不留再匯出）開發 PM 接受。
