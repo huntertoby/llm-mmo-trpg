@@ -10,7 +10,10 @@
 - ``GET /api/runs/{run_id}``：一輪的狀態（戰鬥已結束時先結算）。
 - ``POST /api/runs/{run_id}/battle``：開始或接續本場戰鬥（回傳一輪與戰鬥；之後用
   ``/api/battles/{battle_id}/…`` 操作）。
-- ``POST /api/runs/{run_id}/choice``：升級選擇、營火重骰／選擇／離開。
+- ``POST /api/runs/{run_id}/choice``：裝備、升級、完整技能三選一；閃現、重閃、溶掉、傳承（3W-5）；
+  營火換裝、配點、離開。
+- ``POST /api/runs/{run_id}/flash-preview``：閃現或重閃之前的預覽（能不能閃、每類合法變化數量，
+  3W-5）。
 - ``POST /api/runs/{run_id}/save``：存檔（戰鬥中也可以）。
 
 Phase 3-6：節點改變（戰後結算、升級、營火、結束）與每個戰鬥動作之後自動存檔（同一個檔案覆寫）。
@@ -26,12 +29,20 @@ from fastapi import APIRouter, HTTPException, Request
 
 from trpg.api.attribute_text import attribute_affects, attribute_suggestion
 from trpg.api.presenter import battle_response
-from trpg.api.run_presenter import allocation_preview, keyword_refs, run_response, save_summary
+from trpg.api.run_presenter import (
+    allocation_preview,
+    flash_preview,
+    keyword_refs,
+    run_response,
+    save_summary,
+)
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
     AllocationPreviewRequest,
     CreateRunRequest,
     DevPackOut,
+    FlashPreviewOut,
+    FlashPreviewRequest,
     LoadRunRequest,
     OriginOption,
     RaceOption,
@@ -60,7 +71,7 @@ from trpg.roguelite.start import (
     starter_pools,
     starting_skill,
 )
-from trpg.roguelite.state import Choice, RerollChoice
+from trpg.roguelite.state import Choice
 
 __all__ = ["router"]
 
@@ -297,8 +308,18 @@ def post_choice(run_id: str, choice: Choice, request: Request) -> RunResponse:
         return _respond(store, session)
 
 
+@router.post("/{run_id}/flash-preview")
+def post_flash_preview(run_id: str, body: FlashPreviewRequest, request: Request) -> FlashPreviewOut:
+    """閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（Phase 3W-5）：不扣點、不改狀態。"""
+    store = runs_of(request)
+    session = store.get(run_id)
+    with session.lock:
+        store.sync(session)
+        return flash_preview(session.library, session.run, body.skill, body.slot)
+
+
 DEV_ROUTES_ENV = "TRPG_DEV_ROUTES"
-_DEV_TARGETS = ("gear_offer", "level_up", "campfire", "campfire_offer", "ended")
+_DEV_TARGETS = ("gear_offer", "level_up", "complete_offer", "campfire", "ended")
 
 
 @router.post("/{run_id}/dev-advance")
@@ -314,11 +335,8 @@ def dev_advance(run_id: str, to: str, request: Request) -> RunResponse:
     with session.lock:
         if session.battle is not None:
             raise HTTPException(status_code=409, detail="戰鬥進行中")
-        kind = "campfire" if to == "campfire_offer" else to
-        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: r.node.kind == kind)
+        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: r.node.kind == to)
         session.run = run
-        if to == "campfire_offer" and run.node.kind == "campfire":
-            store.choose(session, RerollChoice())
         return _respond(store, session)
 
 

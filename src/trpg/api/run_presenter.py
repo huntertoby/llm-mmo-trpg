@@ -10,8 +10,11 @@ from trpg.api.run_schemas import (
     AllocationPreviewOut,
     AttributePerkOut,
     BattlePlanOut,
-    EvolutionChoiceOut,
-    EvolutionOptionOut,
+    FlashCategoryOut,
+    FlashOptionOut,
+    FlashPreviewOut,
+    FlashRecordOut,
+    FlashRulesOut,
     GearCandidateOut,
     GearOfferOut,
     HeroGearSlotOut,
@@ -20,42 +23,51 @@ from trpg.api.run_schemas import (
     NodeOut,
     OfferOut,
     OfferTagOut,
+    PendingFlashOut,
     RunResponse,
     SaveSummary,
-    SkillGrowthOut,
+    SkillFlashOut,
 )
 from trpg.api.runs import RunSession
 from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_ZH, SLOTS
-from trpg.narrative.skill_levels import skill_level_info
 from trpg.narrative.skills import CardOwner, KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
-from trpg.roguelite.gear import current_item, equip_notes, target_slot, weapon_swap_prompt
-from trpg.roguelite.growth import (
-    crosses_evolution,
-    evolution_choices,
-    level_of,
-    raise_problem,
-    uses_of,
+from trpg.roguelite.flashes import (
+    flash_categories,
+    flash_request,
+    owned_skills,
+    problem_of,
+    state_of,
 )
+from trpg.roguelite.gear import current_item, equip_notes, target_slot, weapon_swap_prompt
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.progress import hero_effective_attributes, run_loadout
 from trpg.roguelite.start import apply_allocation
 from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
+    CompleteOfferNode,
     EndedNode,
     GearOfferNode,
     LevelUpNode,
     SkillOffer,
 )
 from trpg.shared.types import Attribute
+from trpg.skillgen.flash_major import transform_slot_plan
+from trpg.skillgen.flash_state import (
+    FlashRecord,
+    SkillFlash,
+    dissolve_refund,
+    flash_count,
+    slot_is_major,
+)
 
-__all__ = ["keyword_refs", "run_response", "save_summary", "start_label"]
+__all__ = ["flash_preview", "keyword_refs", "run_response", "save_summary", "start_label"]
 
-_TAG_LABELS = {"deepen": "加深", "bridge": "橋接", "count": "數量", "new": "新方向"}
+_TAG_LABELS = {"deepen": "加深", "bridge": "橋接", "new": "新方向"}
 
 
 def keyword_refs(library: ContentLibrary, ids: tuple[str, ...]) -> tuple[KeywordRef, ...]:
@@ -77,10 +89,8 @@ def start_label(library: ContentLibrary, run: RunState) -> str:
     return f"{weapon.name_zh if weapon is not None else run.start.weapon}・{names}"
 
 
-def _card(
-    library: ContentLibrary, run: RunState, skill: SkillDef, *, owned: bool = False
-) -> SkillCard:
-    """技能卡；``owned``（主角持有的技能）才帶技能等級的顯示資料（Phase 3-26a）。"""
+def _card(library: ContentLibrary, run: RunState, skill: SkillDef) -> SkillCard:
+    """技能卡（帶主角目前的有效屬性與武器）。"""
     attrs = run.hero.attributes
     weapon = library.weapons.get(run.hero.weapon)
     mastery = (  # 專精看縮放屬性是不是自己最高；武器技看手上武器（3H-6）
@@ -92,51 +102,145 @@ def _card(
     # 召喚物資訊維持 1 級基準值（標明「基準值」）
     effective = hero_effective_attributes(library, run)
     owner = CardOwner(weapon=weapon, attr_get=effective.__getitem__)
-    card = skill_card(library, skill, mastery_active=mastery, owner=owner)
-    if not owned:
-        return card
-    level = level_of(run, skill.id)
-    record = run.evolutions.get(skill.id)
-    blocked = None
-    if skill.id in run.hero.skills and level < library.ruleset.skill_growth.max_level:
-        blocked = raise_problem(library, run, skill, skill.id, level + 1)
-    info = skill_level_info(
-        library,
-        skill,
-        level,
-        uses=uses_of(run, skill.id),
-        evolved_from_zh=None if record is None else record.base_name_zh,
-        blocked_text=blocked,
+    return skill_card(library, skill, mastery_active=mastery, owner=owner)
+
+
+def _category_zh(library: ContentLibrary, category: str) -> str:
+    if category == "transform":
+        return "轉型"
+    found = next((c for c in library.flash.categories if c.id == category), None)
+    return category if found is None else found.name_zh
+
+
+def _summary(library: ContentLibrary, record: FlashRecord) -> str:
+    variation = record.variation
+    template = library.flash.minor_template(variation.template)
+    if template is not None:
+        return template.summary_zh
+    return _category_zh(library, variation.category)
+
+
+def _record_out(library: ContentLibrary, record: FlashRecord) -> FlashRecordOut:
+    variation = record.variation
+    return FlashRecordOut(
+        nth=record.nth,
+        source=variation.source,
+        category=variation.category,
+        category_zh=_category_zh(library, variation.category),
+        template=variation.template,
+        summary_zh=_summary(library, record),
+        reflashes=record.reflashes,
     )
-    return card.model_copy(update={"growth": info})
 
 
-def _evolutions(library: ContentLibrary, run: RunState) -> tuple[EvolutionChoiceOut, ...]:
-    """升到分歧進化那一級時可選的兩支（Phase 3-26b）：已達門檻、還沒進化的裝備中主動技能。"""
-    growth = library.ruleset.skill_growth
-    out = []
-    for skill in skill_defs(library, run, run.hero.skills):
-        if skill.kind != "active" or not crosses_evolution(
-            library, run, skill.id, growth.evolve_level
-        ):
-            continue
-        if raise_problem(library, run, skill, skill.id, growth.evolve_level) is not None:
-            continue
-        options = tuple(
-            EvolutionOptionOut(
-                index=i,
-                branch=e.branch,
-                label_zh=_TAG_LABELS[e.branch],
-                template=e.template,
-                keyword=None if e.keyword is None else keyword_refs(library, (e.keyword,))[0],
-                summary_zh=e.summary_zh,
-                fallback=e.fallback,
-                card=_card(library, run, e.skill),
+def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFlashOut:
+    """一招學會的技能的閃現狀態（Phase 3W-5）。"""
+    rules = library.flash.rules
+    state: SkillFlash = state_of(run, skill_id)
+    problem = problem_of(library, run, skill_id)
+    records = [*state.records, *([state.adjustment] if state.adjustment else [])]
+    major = state.record(rules.major_flash)
+    return SkillFlashOut(
+        skill_id=skill_id,
+        base_id=state.base_id,
+        flashes=flash_count(rules, state),
+        complete=state.complete,
+        used=state.used,
+        can_flash=problem is None,
+        flash_problem_zh=problem,
+        next_major=not state.complete and len(state.records) + 1 == rules.major_flash,
+        records=tuple(_record_out(library, r) for r in records),
+        spent=state.spent,
+        dissolve_refund=dissolve_refund(rules, state),
+        reflash_transform_hint=(
+            not state.complete and major is not None and major.variation.source != "transform"
+        ),
+    )
+
+
+def _flash_rules(library: ContentLibrary) -> FlashRulesOut:
+    table = library.flash
+    open_rule, focused = table.pricing.rule(False), table.pricing.rule(True)
+    return FlashRulesOut(
+        open_cost=open_rule.cost,
+        open_options=open_rule.options,
+        focused_cost=focused.cost,
+        focused_options=focused.options,
+        allow_focus=table.pricing.allow_focus,
+        max_flashes=table.rules.max_flashes,
+        major_flash=table.rules.major_flash,
+        insight_per_win=table.rules.insight_per_win,
+    )
+
+
+def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
+    pending = run.pending_flash
+    if pending is None:
+        return None
+    offer = pending.offer
+    equipped = skill_defs(library, run, run.hero.skills)
+    options = []
+    for index, option in enumerate(offer.options):
+        unequip: tuple[str, ...] = ()
+        if pending.skill in run.hero.skills:
+            plan = transform_slot_plan(
+                equipped, pending.skill, option.skill, library.ruleset.core.skill_slots
             )
-            for i, e in enumerate(evolution_choices(library, run, skill.id))
+            unequip = plan.candidates if plan.needs_unequip else ()
+        variation = option.variation
+        options.append(
+            FlashOptionOut(
+                index=index,
+                source=variation.source,
+                category=variation.category,
+                category_zh=_category_zh(library, variation.category),
+                template=variation.template,
+                summary_zh=option.summary_zh,
+                transform=variation.source == "transform",
+                card=_card(library, run, option.skill),
+                unequip_candidates=unequip,
+            )
         )
-        out.append(EvolutionChoiceOut(skill_id=skill.id, name_zh=skill.name_zh, options=options))
-    return tuple(out)
+    return PendingFlashOut(
+        skill_id=pending.skill,
+        nth=offer.nth,
+        slot=offer.slot,
+        category=offer.category,
+        major=offer.major,
+        cost=offer.cost,
+        options=tuple(options),
+    )
+
+
+def flash_preview(
+    library: ContentLibrary, run: RunState, skill_id: str, slot: int | None
+) -> FlashPreviewOut:
+    """閃現或重閃之前的預覽：能不能閃、這一次是不是大變化、每個可指定類別的合法變化數量（3W-2c）。"""
+    problem = problem_of(library, run, skill_id, slot)
+    table = library.flash
+    nth = 0
+    major = False
+    categories: tuple[FlashCategoryOut, ...] = ()
+    if skill_id in owned_skills(run):
+        request = flash_request(library, run, skill_id, slot=slot)
+        nth = request.nth
+        major = slot_is_major(table.rules, request.state, nth)
+    if problem is None:
+        counts = flash_categories(library, run, skill_id, slot)
+        categories = tuple(
+            FlashCategoryOut(id=c, name_zh=_category_zh(library, c), count=n)
+            for c, n in counts.items()
+        )
+    return FlashPreviewOut(
+        skill_id=skill_id,
+        slot=slot,
+        nth=nth,
+        major=major,
+        problem_zh=problem,
+        open_cost=table.pricing.rule(False).cost,
+        focused_cost=table.pricing.rule(True).cost,
+        categories=categories,
+    )
 
 
 def _offer(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> OfferOut | None:
@@ -195,15 +299,17 @@ def _node(library: ContentLibrary, run: RunState) -> NodeOut:
             kind="level_up",
             level=node.level,
             points=node.points,
+            tier_up=node.tier_up,
+            offer=_offer(library, run, node.offer),
+        )
+    if isinstance(node, CompleteOfferNode):
+        return NodeOut(
+            kind="complete_offer",
+            after_battle=node.after_battle,
             offer=_offer(library, run, node.offer),
         )
     if isinstance(node, CampfireNode):
-        return NodeOut(
-            kind="campfire",
-            after_battle=node.after_battle,
-            rerolls_left=node.rerolls_left,
-            offer=_offer(library, run, node.offer),
-        )
+        return NodeOut(kind="campfire", after_battle=node.after_battle)
     assert isinstance(node, EndedNode)
     return NodeOut(kind="ended", victory=node.victory)
 
@@ -225,7 +331,6 @@ def _origin_name(library: ContentLibrary, origin: str | None) -> str:
 
 def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
-    growth = library.ruleset.skill_growth
     weapon = library.weapons.get(run.hero.weapon)
     off_item = run_loadout(library, run).item_in("off_hand")
     offhand = None if off_item is None else off_item.item.offhand_def
@@ -285,24 +390,13 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             if offhand is None
             else offhand.trait_lines_zh(library.ruleset.core, effective.__getitem__)
         ),
-        skills=tuple(
-            _card(library, run, s, owned=True) for s in skill_defs(library, run, run.hero.skills)
-        ),
+        skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
         start_keywords=() if run.start is None else keyword_refs(library, run.start.keywords),
         dev_pack=None if run.start is None else run.start.dev_pack,
-        skill_points=run.skill_points,
-        skill_growth=SkillGrowthOut(
-            max_level=growth.max_level,
-            upgrade_cost=growth.upgrade_cost,
-            points_per_level=growth.points_per_level,
-            trait_level=growth.trait_level,
-            evolve_level=growth.evolve_level,
-            evolve_uses=growth.evolve_uses,
-        ),
-        bench=tuple(
-            _card(library, run, s, owned=True) for s in skill_defs(library, run, run.bench)
-        ),
-        evolutions=_evolutions(library, run),
+        insight=run.insight,
+        flash_rules=_flash_rules(library),
+        flash=tuple(_flash_out(library, run, s) for s in owned_skills(run)),
+        bench=tuple(_card(library, run, s) for s in skill_defs(library, run, run.bench)),
         equipment=tuple(
             HeroGearSlotOut(
                 slot=slot,
@@ -402,6 +496,7 @@ def run_response(session: RunSession, *, with_notice: bool = False) -> RunRespon
         llm=run.llm,
         llm_notice=session.llm_notice if with_notice else None,
         llm_stats=llm_stats(run, session.alert_permille),
+        pending_flash=_pending(library, run),
     )
 
 

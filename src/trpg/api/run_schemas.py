@@ -23,6 +23,12 @@ __all__ = [
     "BattlePlanOut",
     "CreateRunRequest",
     "DevPackOut",
+    "FlashCategoryOut",
+    "FlashOptionOut",
+    "FlashPreviewOut",
+    "FlashPreviewRequest",
+    "FlashRecordOut",
+    "FlashRulesOut",
     "GearCandidateOut",
     "GearOfferOut",
     "HeroGearSlotOut",
@@ -32,13 +38,14 @@ __all__ = [
     "OfferOut",
     "OfferTagOut",
     "OriginOption",
+    "PendingFlashOut",
     "RaceOption",
     "RunBattleResponse",
     "RunResponse",
     "RunRules",
     "SaveOut",
     "SaveSummary",
-    "SkillGrowthOut",
+    "SkillFlashOut",
     "StartKeywordOption",
     "StartOptions",
     "StartPreview",
@@ -244,42 +251,126 @@ class RunRules(_ApiModel):
     """每點體質的最大 HP（``core.yaml``；配點預覽用）。"""
 
 
-class SkillGrowthOut(_ApiModel):
-    """技能成長的規則（Phase 3-26a，``content/skill_growth.yaml``）：前端不寫死數值。"""
+class FlashRulesOut(_ApiModel):
+    """閃現的規則（Phase 3W-5，``content/flash_templates.yaml``）：前端不寫死數值。"""
 
-    max_level: int
-    upgrade_cost: int
-    points_per_level: int
-    trait_level: int
-    evolve_level: int
-    evolve_uses: int = 0
-    """升到 ``evolve_level`` 前要用過的次數（Phase 3-26b）。"""
+    open_cost: int
+    """不指定類別的價格（點）。"""
+    open_options: int
+    """不指定類別出幾個選項。"""
+    focused_cost: int
+    """指定類別的價格（點）。"""
+    focused_options: int
+    """指定類別出幾個選項（該類不足時少出）。"""
+    allow_focus: bool
+    max_flashes: int
+    """每招最多閃幾次。"""
+    major_flash: int
+    """第幾次是大變化（加深、橋接、轉型）。"""
+    insight_per_win: int
+    """每打贏一場得到的靈感點。"""
 
 
-class EvolutionOptionOut(_ApiModel):
-    """一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。"""
+class FlashRecordOut(_ApiModel):
+    """技能變化歷程的一筆（第幾次、哪一類、一句話說明）。"""
 
-    index: int
-    branch: Literal["deepen", "bridge", "count"]
-    label_zh: str
-    """「加深」或「橋接」。"""
+    nth: int
+    """第幾次閃現（完整技能的調整欄為 0）。"""
+    source: Literal["minor", "major", "transform"]
+    category: str
+    category_zh: str
     template: str
-    keyword: KeywordRef | None
-    """帶的關鍵字（換形狀等不看關鍵字的模板為 ``None``）。"""
     summary_zh: str
-    fallback: bool
-    """橋接做不出來、改用第二個加深模板。"""
-    card: SkillCard
-    """進化後的技能卡（等級沿用目前的等級＋升上去的級數，由前端顯示）。"""
+    reflashes: int
+    """這一欄被重閃過幾次。"""
 
 
-class EvolutionChoiceOut(_ApiModel):
-    """一個升到分歧進化那一級時要二選一的技能（已達門檻、還沒進化）。"""
+class SkillFlashOut(_ApiModel):
+    """一招學會的技能的閃現狀態（Phase 3W-5；卡片的「已閃 N／5 次」「可以閃現了」與變化歷程）。"""
 
     skill_id: str
+    base_id: str
+    """閃現前的原本技能 ID（種子標籤用）。"""
+    flashes: int
+    """視為閃過幾次（完整技能為 3）。"""
+    complete: bool
+    """完整技能（不能再閃，只能重閃調整欄）。"""
+    used: bool
+    """自上次閃現（或取得）後已在戰鬥中用過。"""
+    can_flash: bool
+    """點數以外的條件都符合，可以閃現（「可以閃現了」）。"""
+    flash_problem_zh: str | None = None
+    """不能閃現的原因（可以時為 ``None``）。"""
+    next_major: bool = False
+    """下一次閃現是大變化（第 3 次）。"""
+    records: tuple[FlashRecordOut, ...] = ()
+    """變化歷程（依次序；完整技能的調整欄放最後）。"""
+    spent: int = 0
+    """花在這招身上的靈感點。"""
+    dissolve_refund: int = 0
+    """溶掉會退回的點數（花掉的一半，無條件捨去）。"""
+    reflash_transform_hint: bool = False
+    """升階提示用（交給 3W-6）：第 3 次是大變化但不是轉型，可以重閃第 3 格試試轉型（照常付點）。"""
+
+
+class FlashOptionOut(_ApiModel):
+    """待選閃現的一個選項：變化與套用後的技能卡。"""
+
+    index: int
+    source: Literal["minor", "major", "transform"]
+    category: str
+    category_zh: str
+    """類別中文名；轉型為「轉型」。"""
+    template: str
+    summary_zh: str
+    transform: bool
+    """轉型選項（第 3 次的保底，列在最後時標示「轉型」）。"""
+    card: SkillCard
+    unequip_candidates: tuple[str, ...] = ()
+    """選這個（轉型換到已滿的欄位）要卸下其中一招到備用（送 ``flash_pick`` 的 ``unequip``）。"""
+
+
+class PendingFlashOut(_ApiModel):
+    """已付點、還沒選的閃現選項（Phase 3W-5）；選之前不能做別的事。"""
+
+    skill_id: str
+    nth: int
+    slot: int | None
+    """重閃的欄位；閃現為 ``None``。"""
+    category: str | None
+    major: bool
+    cost: int
+    options: tuple[FlashOptionOut, ...]
+
+
+class FlashPreviewRequest(_ApiModel):
+    """閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽：選類別畫面用。"""
+
+    skill: str
+    slot: int | None = Field(default=None, ge=0)
+
+
+class FlashCategoryOut(_ApiModel):
+    """可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。"""
+
+    id: str
     name_zh: str
-    options: tuple[EvolutionOptionOut, ...]
-    """0～2 支；沒有任何合格的進化時為空（照常升級，不進化）。"""
+    count: int
+
+
+class FlashPreviewOut(_ApiModel):
+    """閃現或重閃之前的預覽（Phase 3W-5，含 3W-2c 的每類數量）。"""
+
+    skill_id: str
+    slot: int | None
+    nth: int
+    major: bool
+    problem_zh: str | None
+    """不能閃現（或重閃）的原因（點數與地點另外看）；可以時為 ``None``。"""
+    open_cost: int
+    focused_cost: int
+    categories: tuple[FlashCategoryOut, ...]
+    """可指定的類別（資料順序）；有問題時為空。"""
 
 
 class AttributePerkOut(_ApiModel):
@@ -382,13 +473,13 @@ class HeroOut(_ApiModel):
     origin_id: str | None = None
     origin_name_zh: str = ""
     """這一輪的出身（Phase 3R-3a；沒有出身時 ``None``／空字串）。"""
-    skill_points: int = 0
-    """還沒花的技能點（Phase 3-26a）。"""
-    skill_growth: SkillGrowthOut | None = None
+    insight: int = 0
+    """還沒花的靈感點（Phase 3W-5）。"""
+    flash_rules: FlashRulesOut | None = None
+    flash: tuple[SkillFlashOut, ...] = ()
+    """學會的每招技能（裝備中依技能列順序，再來是備用）的閃現狀態（Phase 3W-5）。"""
     bench: tuple[SkillCard, ...] = ()
-    """備用技能（Phase 3-26a；卸下的技能，等級保留，卡片的 ``growth`` 帶實際等級）。"""
-    evolutions: tuple[EvolutionChoiceOut, ...] = ()
-    """升到分歧進化那一級時可選的兩支（Phase 3-26b；只列已達門檻、還沒進化的裝備中主動技能）。"""
+    """備用技能（Phase 3-26a；卸下的技能，閃現狀態保留）。"""
     equipment: tuple[HeroGearSlotOut, ...] = ()
     """目前穿戴的裝備（Phase 3K-2；依欄位固定順序，9 個欄位都列）。"""
     backpack: tuple[GearCandidateOut, ...] = ()
@@ -420,7 +511,8 @@ class OfferTagOut(_ApiModel):
 
 
 class OfferOut(_ApiModel):
-    reason: Literal["level_up", "reroll"]
+    reason: Literal["level_up", "complete"]
+    """``level_up`` 升級的白板三選一；``complete`` 完整技能三選一（Phase 3W-5）。"""
     tier: int
     top_attribute: Attribute
     candidates: tuple[SkillCard, ...]
@@ -432,17 +524,18 @@ class OfferOut(_ApiModel):
 
 class NodeOut(_ApiModel):
     """目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
-    ``level_up``（``level``、``points``、
-    ``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、
+    ``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，
+    ``after_battle``、``offer``；Phase 3W-5）、``campfire``（``after_battle``）、
     ``ended``（``victory``）。"""
 
-    kind: Literal["battle", "gear_offer", "level_up", "campfire", "ended"]
+    kind: Literal["battle", "gear_offer", "level_up", "complete_offer", "campfire", "ended"]
     battle_index: int | None = None
     boss: bool | None = None
     level: int | None = None
     points: int | None = None
+    tier_up: bool | None = None
+    """這次升級讓角色升階（升階提示「可以重閃第 3 格轉型」；Phase 3W-5 提供旗標，3W-6 顯示）。"""
     after_battle: int | None = None
-    rerolls_left: int | None = None
     offer: OfferOut | None = None
     victory: bool | None = None
     gear: GearOfferOut | None = None
@@ -490,6 +583,8 @@ class RunResponse(_ApiModel):
     """只在開新一輪的回應帶出一次（例如「連不到本機模型，這一輪改用一般技能生成」）。"""
     llm_stats: LlmStatsOut | None = None
     """LLM 統計；這一輪沒開 LLM 且沒有任何題目時為 ``None``。"""
+    pending_flash: PendingFlashOut | None = None
+    """已付點、還沒選的閃現選項（Phase 3W-5）。"""
 
 
 class RunBattleResponse(_ApiModel):
@@ -513,7 +608,7 @@ class SaveSummary(_ApiModel):
     level: int
     battles_done: int
     battles_total: int
-    node: Literal["battle", "gear_offer", "level_up", "campfire", "ended"]
+    node: Literal["battle", "gear_offer", "level_up", "complete_offer", "campfire", "ended"]
     in_battle: bool
     victory: bool | None = None
     """已結束的一輪是否勝利；未結束為 ``None``。"""

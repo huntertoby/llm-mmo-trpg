@@ -43,7 +43,6 @@ from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.summons.core import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
-from trpg.narrative.skill_levels import SkillLevelInfo
 from trpg.narrative.summon_info import (
     SummonInfoCard,
     infusion_hint,
@@ -72,7 +71,6 @@ __all__ = [
     "KeywordRef",
     "SkillCard",
     "SkillCardKeywords",
-    "SkillLevelInfo",
     "SkillStackRef",
     "SkillVariantCard",
     "activation_text",
@@ -1543,9 +1541,6 @@ class SkillCard(BaseModel):
     0.5（目前 +6.5）」。有持有者（一輪主角、戰鬥中）時附「目前」加成與武器骰；其他卡片只有算式。"""
     stacks: tuple[SkillStackRef, ...] = ()
     """這張卡製造或消耗的層數（3-41c）：前端用它在卡片上提供層數說明框。"""
-    growth: SkillLevelInfo | None = None
-    """技能等級的顯示資料（Phase 3-26a）：只有一輪中主角持有（裝備或備用）的主動技能卡片帶它，
-    由 ``trpg.api.run_presenter`` 帶入實際等級；候選、技能庫與工坊的卡片為 ``None``。"""
 
 
 def _variant_card(

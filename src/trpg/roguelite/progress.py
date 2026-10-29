@@ -2,12 +2,17 @@
 
 全部是純函式（``RunState`` 進、``RunState`` 出）。節點順序：
 
-1. 戰鬥（第 i 場）→ 打贏：寫回主角 HP、法力、源力（＋戰後獎勵），加經驗；沒打贏（含輪數上限）→
-   一輪失敗。
-2. 每升一級一個升級節點（＋屬性點、3 選 1 或跳過）。角色升階時（3W-9，6.34.9）先把主角每招技能
-   照新階級的預算重配（``trpg.roguelite.retier``），候選也用新階級。
-3. 打完的場數在 ``campfire_after`` 內 → 營火（進入時 HP、法力回滿，源力 ＋N；可重骰一次）。
-4. 下一場；下一場是 Boss 戰時源力至少 ``boss_floor``。Boss 戰打贏 → 一輪勝利。
+1. 戰鬥（第 i 場）→ 打贏：寫回主角 HP、法力、源力（＋戰後獎勵），加經驗與靈感點、記下「先上場
+   用過」（3W-5）；沒打贏（含輪數上限）→ 一輪失敗。
+2. 一般戰鬥打贏 → 裝備三選一（3K-2）。
+3. 每升一級一個升級節點（＋屬性點、白板 3 選 1 或跳過）。角色升階時（3W-9，6.34.9）先把主角每招
+   技能照新階級的預算重配（``trpg.roguelite.retier``），候選也用新階級。
+4. 打完的場數在 ``complete_skill_after`` 內 → 完整技能三選一（3W-5，06 6.34.6）。
+5. 打完的場數在 ``campfire_after`` 內 → 營火（進入時 HP、法力回滿，源力 ＋N）。
+6. 下一場；下一場是 Boss 戰時源力至少 ``boss_floor``。Boss 戰打贏 → 一輪勝利。
+
+閃現（3W-5，:mod:`trpg.roguelite.flashes`）不推進節點：戰鬥之間（一輪沒結束、不在戰鬥中）都可以
+閃現；重閃、溶掉、傳承只在營火。付了點還沒選的閃現選項要先選完，才能做別的選擇。
 """
 
 from __future__ import annotations
@@ -24,10 +29,18 @@ from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState, state_to_json
 from trpg.roguelite.attributes import allocate_attributes, merge_spent, respec_attributes
 from trpg.roguelite.errors import ChoiceError, NodeConflictError
+from trpg.roguelite.flashes import (
+    after_battle_flash,
+    dissolve,
+    inherit,
+    open_flash,
+    pick_flash,
+    with_acquired,
+)
 from trpg.roguelite.gear import equip, gear_offer_node, run_loadout, take_gear
-from trpg.roguelite.growth import battle_levels, respec, set_loadout, spend_points
+from trpg.roguelite.growth import set_loadout
 from trpg.roguelite.offers import make_offer, offer_updates, take_candidate
-from trpg.roguelite.retier import sync_skill_tier
+from trpg.roguelite.retier import run_tier, sync_skill_tier
 from trpg.roguelite.start import allocation_problems, apply_allocation
 from trpg.roguelite.state import (
     AllocateChoice,
@@ -35,20 +48,23 @@ from trpg.roguelite.state import (
     BattleRecord,
     CampfireNode,
     Choice,
+    CompleteOfferNode,
+    CompletePickChoice,
+    DissolveChoice,
     EndedNode,
     EquipChoice,
+    FlashChoice,
+    FlashPickChoice,
     GearOfferNode,
     GearPickChoice,
+    InheritChoice,
     LeaveChoice,
     LevelUpChoice,
     LevelUpNode,
     LoadoutChoice,
-    PickChoice,
-    RerollChoice,
     RespecAttributesChoice,
-    RespecChoice,
     RunState,
-    SpendChoice,
+    SkillOffer,
 )
 from trpg.shared.types import Attribute, Team, UnitId
 from trpg.skillgen.usage import SkillUsage, collect_usage, merge_usage
@@ -71,6 +87,7 @@ _NODE_TEXT = {
     "battle": "戰鬥",
     "gear_offer": "裝備三選一",
     "level_up": "升級",
+    "complete_offer": "完整技能三選一",
     "campfire": "營火",
     "ended": "一輪已結束",
 }
@@ -91,14 +108,14 @@ def hero_effective_attributes(library: ContentLibrary, run: RunState) -> dict[At
 
 
 def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
-    """主角的出場設定：帶目前的 HP、法力、耐力、源力、等級加成與技能等級（一輪與單場戰鬥共用）。"""
+    """主角的出場設定：帶目前的 HP、法力、耐力、源力與等級加成（一輪與單場戰鬥共用）。Phase 3W-5
+    起沒有技能等級（閃現的變化已經套用在技能定義上）。"""
     core = library.ruleset.core
     # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
     leveled = run.hero.model_copy(
         update={
             "max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level),
             "scaled_resources": True,  # 法力與耐力上限依屬性（3H-2；舊存檔的主角範本沒有此旗標）
-            "skill_levels": battle_levels(run),  # 技能等級（3-26a）：戰鬥設定帶入，重播一致
             "level": run.level,  # 角色等級（3-33b）：召喚物成長依施放者等級
         }
     )
@@ -223,10 +240,13 @@ def finish_battle(
     )
     history = (*run.history, record)
     behavior = add_behavior(run.behavior, actions, hero_unit_id(state))
-    usage = merge_usage(run.skill_usage, battle_usage(library, run, actions, hero_unit_id(state)))
+    this_battle = battle_usage(library, run, actions, hero_unit_id(state))
+    usage = merge_usage(run.skill_usage, this_battle)
+    flashed = after_battle_flash(library, run, this_battle, won=won)  # 靈感點與先上場用過（3W-5）
     if not won:
         return run.model_copy(
             update={
+                **flashed,
                 "behavior": behavior,
                 "skill_usage": usage,
                 "hp": 0 if hero.downed else hero.hp,
@@ -250,6 +270,7 @@ def finish_battle(
         hp = max(run.max_hp_in(core), hero.max_hp)
     finished = run.model_copy(
         update={
+            **flashed,
             "hp": hp,
             "mana": mana,
             "stamina": stamina,
@@ -275,35 +296,13 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
     rules = library.roguelite
     core = library.ruleset.core
     if run.levels_pending > 0:
-        leveled = with_hp_change(
-            library,
-            run,
-            run.model_copy(
-                update={
-                    "level": run.level + 1,
-                    "levels_pending": run.levels_pending - 1,
-                    "skill_points": run.skill_points
-                    + library.ruleset.skill_growth.points_per_level,
-                }
-            ),
-        )
-        # 升階重算（3W-9，6.34.9）：角色升階的當下（戰鬥之間）每招照新階級的預算重配
-        leveled = sync_skill_tier(library, leveled)
-        offer = make_offer(library, leveled, "level_up")
-        node = LevelUpNode(
-            level=leveled.level, points=rules.attribute_points_per_level, offer=offer
-        )
-        return leveled.model_copy(
-            update={
-                "offers_made": run.offers_made + 1,
-                "node": node,
-                **offer_updates(leveled, offer),
-            }
-        )
+        return _level_up(library, run)
     run = sync_skill_tier(library, run)  # 舊存檔（skill_tier 為空）在戰鬥之間照角色階級重配一次
     done = run.battles_done
     if done >= len(run.plan):
         return run.model_copy(update={"node": EndedNode(victory=True)})
+    if done in rules.complete_skill_after and done not in run.complete_offers_done:
+        return _complete_offer(library, run, done)
     if done in rules.campfire_after and done not in run.campfires_done:
         return run.model_copy(
             update={
@@ -312,7 +311,7 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
                 "stamina": run.max_stamina_in(core),
                 "source": min(core.source_max, run.source + rules.source.campfire),
                 "campfires_done": (*run.campfires_done, done),
-                "node": CampfireNode(after_battle=done, rerolls_left=rules.rerolls_per_campfire),
+                "node": CampfireNode(after_battle=done),
             }
         )
     source = run.source
@@ -321,16 +320,74 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
     return run.model_copy(update={"source": source, "node": BattleNode(index=done + 1)})
 
 
+def _level_up(library: ContentLibrary, run: RunState) -> RunState:
+    """處理一次升級：等級 +1、最大 HP 同步，角色升階時每招重配（3W-9），產生白板候選。"""
+    before_tier = run_tier(library, run)
+    leveled = with_hp_change(
+        library,
+        run,
+        run.model_copy(update={"level": run.level + 1, "levels_pending": run.levels_pending - 1}),
+    )
+    # 升階重算（3W-9，6.34.9）：角色升階的當下（戰鬥之間）每招照新階級的預算重配
+    leveled = sync_skill_tier(library, leveled)
+    offer = make_offer(library, leveled, "level_up")
+    node = LevelUpNode(
+        level=leveled.level,
+        points=library.roguelite.attribute_points_per_level,
+        offer=offer,
+        tier_up=run_tier(library, leveled) > before_tier,
+    )
+    return leveled.model_copy(
+        update={"offers_made": run.offers_made + 1, "node": node, **offer_updates(leveled, offer)}
+    )
+
+
+def _complete_offer(library: ContentLibrary, run: RunState, after: int) -> RunState:
+    """完整技能三選一（3W-5，06 6.34.6）：候選照完整技能的強度重調。"""
+    offer = make_offer(library, run, "complete")
+    return run.model_copy(
+        update={
+            "offers_made": run.offers_made + 1,
+            "complete_offers_done": (*run.complete_offers_done, after),
+            "node": CompleteOfferNode(after_battle=after, offer=offer),
+            **offer_updates(run, offer),
+        }
+    )
+
+
+def _take(
+    library: ContentLibrary,
+    run: RunState,
+    offer: SkillOffer,
+    pick: int | None,
+    replace: str | None,
+) -> RunState:
+    """裝上候選（白板或完整技能），閃現狀態從頭算。"""
+    taken = take_candidate(library, run, offer, pick, replace)
+    if pick is None:
+        return taken
+    return with_acquired(taken, offer.candidates[pick].id, complete=offer.reason == "complete")
+
+
 def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunState:
     """套用升級或營火的選擇。節點不符時拋出 :class:`NodeConflictError`，內容不合法時拋出
     :class:`ChoiceError`（狀態不變）。"""
-    node = run.node
-    if isinstance(choice, SpendChoice | RespecChoice | LoadoutChoice):
+    if run.pending_flash is not None and not isinstance(choice, FlashPickChoice):
+        raise NodeConflictError("還有閃現的選項沒有選，請先送出 flash_pick")
+    if isinstance(
+        choice, FlashChoice | FlashPickChoice | DissolveChoice | InheritChoice | LoadoutChoice
+    ):
         return _manage_skills(library, run, choice)
     if isinstance(choice, RespecAttributesChoice | AllocateChoice):
         return _manage_attributes(library, run, choice)
     if isinstance(choice, EquipChoice):
         return _equip_from_backpack(library, run, choice)
+    return _node_choice(library, run, choice)
+
+
+def _node_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunState:
+    """推進節點的選擇（裝備三選一、升級、完整技能三選一、營火離開）。"""
+    node = run.node
     if isinstance(node, GearOfferNode):
         if not isinstance(choice, GearPickChoice):
             raise NodeConflictError("目前在裝備三選一，請送出 gear_pick（pick 為空 ＝ 跳過）")
@@ -346,10 +403,14 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         allocated = with_hp_change(
             library, run, run.model_copy(update={"hero": hero, "attribute_spent": spent})
         )
-        taken = take_candidate(library, allocated, node.offer, choice.pick, choice.replace)
-        if choice.levels or choice.evolve:
-            taken = spend_points(library, taken, choice.levels, choice.evolve)
+        taken = _take(library, allocated, node.offer, choice.pick, choice.replace)
         return next_node(library, taken)
+    if isinstance(node, CompleteOfferNode):
+        if not isinstance(choice, CompletePickChoice):
+            raise NodeConflictError(
+                "目前在完整技能三選一，請送出 complete_pick（pick 為空 ＝ 跳過）"
+            )
+        return next_node(library, _take(library, run, node.offer, choice.pick, choice.replace))
     if isinstance(node, CampfireNode):
         return _campfire(library, run, node, choice)
     raise NodeConflictError(f"目前是{_NODE_TEXT[node.kind]}，沒有可以選擇的東西")
@@ -365,19 +426,32 @@ def _equip_from_backpack(library: ContentLibrary, run: RunState, choice: EquipCh
     return equip(library, run, held, choice.slot, from_backpack=True)
 
 
+_CAMPFIRE_ONLY = {"inherit": "傳承", "dissolve": "溶掉技能", "loadout": "換技能"}
+
+
 def _manage_skills(
-    library: ContentLibrary, run: RunState, choice: SpendChoice | RespecChoice | LoadoutChoice
+    library: ContentLibrary,
+    run: RunState,
+    choice: FlashChoice | FlashPickChoice | DissolveChoice | InheritChoice | LoadoutChoice,
 ) -> RunState:
-    """技能點與換裝（Phase 3-26a；不推進節點）：花點數在升級、營火、戰鬥前都可以；重配與換裝
-    只在營火。"""
-    if isinstance(choice, SpendChoice):
-        if run.ended:
-            raise NodeConflictError(f"目前是{_NODE_TEXT[run.node.kind]}，不能花技能點")
-        return spend_points(library, run, choice.levels, choice.evolve)
-    if not isinstance(run.node, CampfireNode):
-        raise NodeConflictError(f"重配點數與換裝只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
-    if isinstance(choice, RespecChoice):
-        return respec(library, run)
+    """靈感點與技能庫（Phase 3W-5；不推進節點）：閃現在戰鬥之間都可以；重閃、溶掉、傳承與換技能只在
+    營火（06 6.34.3、6.34.9）。戰鬥進行中由 API 擋下。"""
+    if run.ended:
+        raise NodeConflictError(f"目前是{_NODE_TEXT[run.node.kind]}，不能管理技能")
+    if isinstance(choice, FlashPickChoice):
+        return pick_flash(library, run, choice)
+    camp = isinstance(run.node, CampfireNode)
+    if isinstance(choice, FlashChoice):
+        if choice.slot is not None and not camp:
+            raise NodeConflictError(f"重閃只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
+        return open_flash(library, run, choice)
+    if not camp:
+        what = _CAMPFIRE_ONLY[choice.kind]
+        raise NodeConflictError(f"{what}只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
+    if isinstance(choice, DissolveChoice):
+        return dissolve(library, run, choice)
+    if isinstance(choice, InheritChoice):
+        return inherit(library, run, choice)
     return set_loadout(library, run, choice.skills)
 
 
@@ -400,25 +474,7 @@ def _campfire(
 ) -> RunState:
     if isinstance(choice, LeaveChoice):
         return next_node(library, run)
-    if isinstance(choice, RerollChoice):
-        if node.offer is not None:
-            raise NodeConflictError("已經重骰過，請先選擇或放棄候選")
-        if node.rerolls_left <= 0:
-            raise NodeConflictError("這個營火沒有重骰次數了")
-        offer = make_offer(library, run, "reroll")
-        rerolled = node.model_copy(update={"offer": offer, "rerolls_left": node.rerolls_left - 1})
-        return run.model_copy(
-            update={
-                "offers_made": run.offers_made + 1,
-                "node": rerolled,
-                **offer_updates(run, offer),
-            }
-        )
-    if isinstance(choice, PickChoice):
-        if node.offer is None:
-            raise NodeConflictError("還沒有重骰，沒有候選可以選")
-        taken = take_candidate(library, run, node.offer, choice.pick, choice.replace)
-        if node.rerolls_left > 0:
-            return taken.model_copy(update={"node": node.model_copy(update={"offer": None})})
-        return next_node(library, taken)
-    raise NodeConflictError("目前在營火，請送出 reroll、pick 或 leave")
+    raise NodeConflictError(
+        "目前在營火，請送出 flash、dissolve、inherit、loadout、equip、respec_attributes、"
+        "allocate 或 leave"
+    )

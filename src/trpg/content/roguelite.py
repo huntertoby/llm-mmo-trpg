@@ -176,7 +176,7 @@ class RunRules(ContentModel):
     start_free_points: int = Field(ge=0)
     """開局自由分配的點數。"""
     offer_size: int = Field(ge=1)
-    """升級與重骰的技能候選數。"""
+    """升級與完整技能三選一的候選數。"""
     off_route_per_offer: int = Field(ge=0)
     """候選中「偏離路線」的個數（縮放屬性與主角目前最高屬性不同）。"""
     offer_tier_by_level: tuple[int, ...] = Field(min_length=1)
@@ -185,7 +185,8 @@ class RunRules(ContentModel):
     """湊齊候選最多嘗試幾個組合器種子。"""
     campfire_after: tuple[int, ...]
     """在第幾場（一般戰鬥）打完之後有營火。"""
-    rerolls_per_campfire: int = Field(ge=0)
+    complete_skill_after: tuple[int, ...] = ()
+    """在第幾場（一般戰鬥）打完之後有「完整技能三選一」（Phase 3W-5，06 6.34.6）；在營火之前。"""
     refill_after_battle: tuple[ResourceKind, ...] = ()
     """每場戰鬥打贏後回滿的資源（Phase 3H-2 設定點）：例如 ``[mana]`` 就是「每場法力回滿」
     （待使用者決定的 B 選項，目前不開）。沒列出的資源在戰鬥之間不回復，營火回滿。"""
@@ -193,7 +194,7 @@ class RunRules(ContentModel):
     start: StartRules = Field(default_factory=StartRules)
     """新開局（Phase 3-24b2）。"""
     candidates: CandidateSettings = Field(default_factory=CandidateSettings)
-    """升級與營火三選一的候選產生器（Phase 3-24b2）。"""
+    """升級與完整技能三選一的候選產生器（Phase 3-24b2）。"""
 
     @model_validator(mode="after")
     def _check(self) -> RunRules:
@@ -204,6 +205,9 @@ class RunRules(ContentModel):
         bad = [n for n in self.campfire_after if not 1 <= n <= self.battles]
         if bad or len(set(self.campfire_after)) != len(self.campfire_after):
             raise ValueError(f"campfire_after 必須是 1～{self.battles} 且不重複")
+        bad = [n for n in self.complete_skill_after if not 1 <= n <= self.battles]
+        if bad or len(set(self.complete_skill_after)) != len(self.complete_skill_after):
+            raise ValueError(f"complete_skill_after 必須是 1～{self.battles} 且不重複")
         if self.off_route_per_offer > self.offer_size:
             raise ValueError("off_route_per_offer 不可超過 offer_size")
         if self.objective_rotation.min_escape + self.objective_rotation.min_defend > self.battles:

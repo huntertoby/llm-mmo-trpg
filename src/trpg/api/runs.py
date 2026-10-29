@@ -4,7 +4,7 @@
   戰鬥工作階段表裡，用既有的 ``/api/battles/{id}`` 端點操作）。
 - 戰鬥結束後，任何一輪的請求先 :meth:`RunSession.sync`：以 ``finish_battle`` 寫回主角並前進到下一個
   節點。
-- 存檔：``RunSave``（``trpg-run/11``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；
+- 存檔：``RunSave``（``trpg-run/12``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；
   讀檔時重建 ``setup``、重播步驟、還原指令（:meth:`SessionStore.open`）。
 - 鎖的順序：一輪的鎖 → 戰鬥的鎖。
 """
@@ -39,18 +39,20 @@ from trpg.roguelite import (
     write_save,
 )
 from trpg.roguelite.errors import NodeConflictError
-from trpg.roguelite.llm_hook import use_proposer
+from trpg.roguelite.llm_hook import FlashSourceFactory, use_flash_source, use_proposer
 from trpg.roguelite.start import with_origin, with_race
 from trpg.roguelite.state import (
     AllocateChoice,
     BattleNode,
-    CampfireNode,
     Choice,
+    CompleteOfferNode,
+    DissolveChoice,
+    FlashChoice,
+    FlashPickChoice,
+    InheritChoice,
     LevelUpNode,
     LoadoutChoice,
     RespecAttributesChoice,
-    RespecChoice,
-    SpendChoice,
 )
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Attribute
@@ -74,6 +76,8 @@ class RunSession:
         self.lock = threading.Lock()
         self.proposer: LlmProposer | None = None
         """這一輪的 LLM 提議器（4-L6b；``run.llm`` 為真且有模型來源時才有）。"""
+        self.flash_source: FlashSourceFactory | None = None
+        """這一輪的閃現變化提議來源（3W-5；``run.llm`` 為真且有模型來源時才有）。"""
         self.llm_notice: str | None = None
         """開局時要提示一次的訊息（例如本機模型未啟動）；只在建立的回應帶出。"""
         self.alert_permille = DEFAULT_ALERT_PERMILLE
@@ -111,12 +115,14 @@ class RunSession:
         return node.index
 
     def known_skills(self) -> list[SkillDef]:
-        """這一輪的生成技能與目前的候選（``/api/skills/{id}`` 找不到內容庫的技能時查這裡）。"""
+        """這一輪的生成技能、目前的候選與待選的閃現選項（``/api/skills/{id}`` 找不到內容庫的技能時
+        查這裡）。"""
         skills = list(self.run.generated_skills)
         node = self.run.node
-        offer = node.offer if isinstance(node, LevelUpNode | CampfireNode) else None
-        if offer is not None:
-            skills += offer.candidates
+        if isinstance(node, LevelUpNode | CompleteOfferNode):
+            skills += node.offer.candidates
+        if self.run.pending_flash is not None:
+            skills += [o.skill for o in self.run.pending_flash.offer.options]
         return skills
 
 
@@ -206,6 +212,7 @@ class RunStore:
         session.alert_permille = self.llm.alert_permille()
         if session.run.llm:
             session.proposer = self.llm.proposer(self.library)
+            session.flash_source = self.llm.flash_source(self.library)
 
     def get(self, run_id: str) -> RunSession:
         with self._lock:
@@ -221,6 +228,8 @@ class RunStore:
             return session.battle, []
         if not isinstance(session.run.node, BattleNode):
             raise NodeConflictError(f"目前不是戰鬥（{session.run.node.kind}）")
+        if session.run.pending_flash is not None:
+            raise NodeConflictError("還有閃現的選項沒有選，請先送出 flash_pick")
         setup = battle_setup(self.library, session.run)
         seed = session.run.plan_of(session.battle_index()).seed
         battle, records = self.battles.open(setup, seed)
@@ -232,11 +241,17 @@ class RunStore:
         self.sync(session)
         if session.battle is not None and isinstance(
             choice,
-            SpendChoice | RespecChoice | LoadoutChoice | RespecAttributesChoice | AllocateChoice,
+            FlashChoice
+            | FlashPickChoice
+            | DissolveChoice
+            | InheritChoice
+            | LoadoutChoice
+            | RespecAttributesChoice
+            | AllocateChoice,
         ):
-            # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能花點數
-            raise NodeConflictError("戰鬥進行中不能分配技能點、屬性點或換裝")
-        with use_proposer(session.proposer):
+            # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能閃現、配點或換裝
+            raise NodeConflictError("戰鬥進行中不能閃現、分配屬性點或換裝")
+        with use_proposer(session.proposer), use_flash_source(session.flash_source):
             session.run = apply_choice(self.library, session.run, choice)
         self.autosave(session)
 

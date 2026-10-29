@@ -1,4 +1,4 @@
-"""升級與重骰的技能候選，以及把候選裝上主角（Phase 3-5a；3-24b2 改用共用候選產生器）。
+"""升級與完整技能三選一的技能候選，以及把候選裝上主角（Phase 3-5a；3-24b2 改用共用候選產生器）。
 
 候選由 :func:`trpg.skillgen.candidates.generate_candidates` 產生（06 6.27.4）：**加深**（持有最多的
 關鍵字）、**橋接**（同時帶兩個已持有的關鍵字）、**新方向**（還沒有的關鍵字），依序排列；每個候選的標示
@@ -22,7 +22,11 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 白板（Phase 3W-4，06 6.34.1）：``roguelite.yaml`` 的 ``candidates.whiteboard`` 為真（預設）時，
 三選一一律是白板（單一效果、1 階，主動 70／被動 20／反應 10；
 :mod:`trpg.skillgen.whiteboard_candidates`），LLM 來源在這個模式下關閉；為假時走完整技能的
-候選產生器（保留給之後的完整技能三選一）。
+候選產生器。
+
+完整技能三選一（Phase 3W-5，06 6.34.6）：一律走完整技能的候選產生器（組合器、技能池；LLM 開著時
+先請 LLM 整招提議），再把每個候選照「已閃 3 次」的預算上限（``flash_templates.yaml`` 的
+``complete.budget_permille``，+120‰）重調（:func:`as_complete`，預算分數不低於重調前）。
 
 ``off_route``（偏離路線，0.2 C）仍照舊標示：候選的縮放屬性與主角目前最高屬性不同的索引（只是標示，
 不再刻意湊一個）；武器技看主角手上武器的縮放屬性（3H-7）。
@@ -53,6 +57,9 @@ from trpg.skillgen.candidates import (
     generate_candidates,
     keyword_distribution,
 )
+from trpg.skillgen.evolution import budget_power, retune
+from trpg.skillgen.flash import TUNE_ATTEMPTS, with_budget_bonus
+from trpg.skillgen.flash_ops import base_draft
 from trpg.skillgen.proposal_topic import primitive_uses
 from trpg.skillgen.skill_tier import character_tier, retier
 from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates
@@ -60,6 +67,8 @@ from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates
 _TIER_ID = re.compile(r"^(skill_[a-z0-9_]+?)_t(\d+)$")
 
 __all__ = [
+    "COMPLETE_SUFFIX",
+    "as_complete",
     "at_run_tier",
     "candidate_request",
     "equip_problems",
@@ -92,12 +101,12 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         weapon_attrs=weapon_scaling_attrs(weapon),  # 武器技看手上武器（Phase 3H-7）
         held=loadout_held(weapon, _hero_loadout(library, run)),  # 招牌技與武器親和（3I-5）
         llm_uses=dict(run.llm_uses),  # run 內配額（Phase 4-L6）
-        # 進化前的技能也排除（Phase 3-26b：進化後原技能不再出現在候選）
+        # 閃現前的原本技能也排除（Phase 3W-5：閃現後原技能不再出現在候選）
         exclude=frozenset(
             (
                 *run.hero.skills,
                 *run.bench,
-                *(r.base_id for r in run.evolutions.values()),
+                *(f.base_id for f in run.flash.values()),
                 *(
                     b
                     for s in (*run.hero.skills, *run.bench)
@@ -132,11 +141,37 @@ def at_run_tier(library: ContentLibrary, skill: SkillDef, tier: int) -> SkillDef
     return done.model_copy(update={"id": f"{base}_t{tier}"})
 
 
+COMPLETE_SUFFIX = "_cp"
+"""完整技能的 ID 後綴（候選是內容庫的手寫技能時，重調後成為生成技能 ``<原 ID>_cp``）。"""
+
+
+def as_complete(library: ContentLibrary, skill: SkillDef, seed: int) -> SkillDef:
+    """把一招技能變成完整技能的強度（06 6.34.6：視為已閃 3 次，預算上限
+    +``complete.budget_permille``‰）：結構不變，由預算器依新的上限重調（預算分數不低於重調前）。點數固定、沒有旋鈕的結構（召喚、
+    姿態等）調不動時只記下上限加成（待 PM 決定）。手寫技能重調後換成生成技能 ``<原 ID>_cp``。"""
+    bonus = library.flash.rules.complete.budget_permille
+    boosted = with_budget_bonus(skill, bonus)
+    base, effects = base_draft(boosted)
+    floor = budget_power(skill, library)
+    rng = Rng(seed).fork(f"complete/{skill.id}")
+    done: SkillDef | None = None
+    for attempt in range(TUNE_ATTEMPTS):
+        done = retune(base, effects, rng.fork(str(attempt)), library, floor=floor)
+        if done is not None:
+            break
+    result = boosted if done is None else done
+    if library_base(library, skill.id) is not None or result.id in library.skills:
+        result = result.model_copy(update={"id": f"{skill.id}{COMPLETE_SUFFIX}"})
+    return result
+
+
 def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffer:
-    """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。"""
+    """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。``reason`` 為 ``level_up``（白板
+    三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。"""
     settings = library.roguelite.candidates
     request = candidate_request(library, run)
-    if settings.whiteboard:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
+    complete = reason == "complete"
+    if settings.whiteboard and not complete:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
         found = generate_whiteboard_candidates(library, request, settings.composer_tries)
         tier = request.tier
     else:
@@ -156,8 +191,10 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
         tier = request.tier
     top = top_attribute(run.hero.attributes)
     candidates = tuple(at_run_tier(library, c.skill, tier) for c in found)
+    if complete:
+        candidates = tuple(as_complete(library, s, request.seed) for s in candidates)
     return SkillOffer(
-        reason="level_up" if reason == "level_up" else "reroll",
+        reason="complete" if complete else "level_up",
         tier=tier,
         top_attribute=top,
         candidates=candidates,
@@ -263,7 +300,7 @@ def take_candidate(
     if problems:
         hint = "；請指定要替換的技能（replace）" if replace is None else ""
         raise ChoiceError("；".join(problems) + hint)
-    # 被換掉的技能進備用（等級保留，3-26a；營火可以換回）
+    # 被換掉的技能進備用（閃現狀態保留；營火可以換回）
     bench = tuple(sorted({*run.bench, *([] if replace is None else [replace])}))
     # 候選可能是內容庫的手寫技能（技能池，3-24b2）：只有生成技能才存定義
     new = () if skill.id in library.skills else (skill,)

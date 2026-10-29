@@ -53,9 +53,12 @@ off_route_per_offer: 1        # 其中 1 個「偏離路線」：縮放屬性與
 offer_tier_by_level: [1, 1, 2, 2, 3, 3]       # 主角等級 → 候選的階級
 offer_max_attempts: 200       # 湊齊候選最多試幾個組合器種子
 
-# 營火（0.11 G）：HP、法力、耐力（3H-2）回滿，源力 +campfire，並提供重骰（0.2 F）。中段（第 3 場後）與 Boss 前（第 5 場後）。
+# 營火（0.11 G）：HP、法力、耐力（3H-2）回滿，源力 +campfire。中段（第 3 場後）與 Boss 前（第 5 場後）。
+# Phase 3W-5（06 6.34）：營火可以閃現、重閃、溶掉、傳承與換裝；舊的「重骰候選」取消。
 campfire_after: [3, 5]
-rerolls_per_campfire: 1
+# 完整技能三選一（Phase 3W-5，06 6.34.6、07 7.1）：一輪中段與 Boss 前各一次，取代舊的技能進化或重骰候選。
+# 原型只有 5 場一般戰鬥，所以和營火同一個時點（第 3 場後＝中段、第 5 場後＝Boss 前）；在營火之前出現。
+complete_skill_after: [3, 5]
 # 每場打贏後回滿的資源（Phase 3H-2 設定點；mana／stamina）。耐力每場回滿（3H-5，使用者決定 #45）；法力只在營火回滿。
 refill_after_battle: [stamina]
 

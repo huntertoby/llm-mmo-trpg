@@ -9,20 +9,19 @@
   等級與經驗、**目前 HP、法力、耐力（3H-2）、源力**（戰鬥之間不回復，0.11 G、K）。技能清單就是
   裝備（主動 ≤ 6、被動 ≤ 3、反應 ≤ 1、姿態 ≤ 1，``core.yaml`` 的 ``skill_slots``）；欄位滿時要
   替換或放棄。
-- 技能成長（Phase 3-26a）：``skill_points`` 未花的技能點、``skill_levels`` 技能等級、``bench``
-  備用技能（卸下的技能，等級保留）；規則在 ``content/skill_growth.yaml``，邏輯在
-  ``trpg.roguelite.growth``。
-- 分歧進化（Phase 3-26b）：``skill_usage`` 每招的用法統計、``evolutions`` 進化紀錄（進化後的技能
-  定義也放在 ``generated_skills``）；
-  邏輯在 ``trpg.roguelite.growth`` 與 ``trpg.skillgen.evolution``。
+- 靈感點與閃現（Phase 3W-5，06 6.34）：``insight`` 未花的靈感點（每打贏一場 1 點）、``flash`` 每招
+  技能的閃現狀態（變化歷程、先上場用過、花掉的點數；以 **目前的技能 ID** 為鍵，沒有記錄＝剛取得）、
+  ``flash_bases`` 閃現前的原本技能定義（推出閃現後技能的起點）、``pending_flash`` 已付點、還沒選的
+  閃現選項；``bench`` 備用技能（卸下的技能，閃現狀態保留）。邏輯在 ``trpg.roguelite.flashes``。
+- ``skill_usage``：每招的用法統計（Phase 3-26b；閃現選項的排序讀它）。
 - ``skill_tier``（Phase 3W-9）：主角技能目前用的階級（＝角色階級；升階時重配，見
   ``trpg.roguelite.retier``）。
 - ``generated_skills``：主角目前裝備與備用的 **生成技能定義**（隨機組合器的產物不在內容庫裡；讀檔與
   開戰時以 ``Ruleset.with_skills`` 加回規則包）。
 - ``plan``：開局時以種子排好的每一場（地圖、敵人、戰鬥種子）；存進存檔，所以之後改了抽選方式，
   舊存檔的下一場仍然不變。
-- ``node``：目前在等什麼（戰鬥／升級／營火／結束）；升級與重骰的候選 **連同完整技能定義**
-  存在節點裡。
+- ``node``：目前在等什麼（戰鬥／裝備三選一／升級／完整技能三選一／營火／結束）；升級與完整技能的
+  候選 **連同完整技能定義** 存在節點裡。
 """
 
 from __future__ import annotations
@@ -36,6 +35,8 @@ from trpg.content.equipment import ItemDef
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
+from trpg.skillgen.flash import FlashOffer
+from trpg.skillgen.flash_state import SkillFlash, Variation
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
@@ -45,11 +46,18 @@ __all__ = [
     "BattleRecord",
     "CampfireNode",
     "Choice",
+    "CompleteOfferNode",
+    "CompletePickChoice",
+    "DissolveChoice",
     "EndedNode",
     "EquipChoice",
-    "EvolutionRecord",
+    "FlashChoice",
+    "FlashLlmName",
+    "FlashLlmRecord",
+    "FlashPickChoice",
     "GearOfferNode",
     "GearPickChoice",
+    "InheritChoice",
     "LeaveChoice",
     "LevelUpChoice",
     "LevelUpNode",
@@ -57,14 +65,11 @@ __all__ = [
     "LoadoutChoice",
     "Node",
     "OfferTag",
-    "PickChoice",
-    "RerollChoice",
+    "PendingFlash",
     "RespecAttributesChoice",
-    "RespecChoice",
     "RunStart",
     "RunState",
     "SkillOffer",
-    "SpendChoice",
 ]
 
 
@@ -154,10 +159,11 @@ class OfferTag(_Model):
 
 
 class SkillOffer(_Model):
-    """升級或重骰的技能候選。``off_route`` 是「偏離路線」候選的索引（縮放屬性與當時主角最高屬性
-    不同；湊不到時為空）。``tags`` 與 ``candidates`` 一一對應（Phase 3-24b2 起）。"""
+    """升級（白板）或完整技能三選一（Phase 3W-5）的技能候選。``off_route`` 是「偏離路線」候選的
+    索引（縮放屬性與當時主角最高屬性不同；湊不到時為空）。``tags`` 與 ``candidates`` 一一對應
+    （Phase 3-24b2 起）。"""
 
-    reason: Literal["level_up", "reroll"]
+    reason: Literal["level_up", "complete"]
     tier: int
     top_attribute: Attribute
     """產生候選時主角的最高屬性（並列時取六屬性順序的第一個）。"""
@@ -172,11 +178,23 @@ class BattleNode(_Model):
 
 
 class LevelUpNode(_Model):
-    """升級：分配 ``points`` 屬性點，並從候選選 1 個（可跳過）。"""
+    """升級：分配 ``points`` 屬性點，並從候選選 1 個（可跳過）。``tier_up`` 表示這次升級讓角色升階
+    （3W-9 重配每招；3W-5 起給前端顯示升階提示「可以重閃第 3 格轉型」用）。"""
 
     kind: Literal["level_up"] = "level_up"
     level: int
     points: int
+    offer: SkillOffer
+    tier_up: bool = False
+
+
+class CompleteOfferNode(_Model):
+    """完整技能三選一（Phase 3W-5，06 6.34.6、07 7.1）：一輪中段與 Boss 前各一次（``roguelite.yaml``
+    的 ``complete_skill_after``）。候選已是完整技能的強度（視為已閃 3 次、預算上限 +120‰），選 1 個
+    或跳過；之後才是營火。"""
+
+    kind: Literal["complete_offer"] = "complete_offer"
+    after_battle: int
     offer: SkillOffer
 
 
@@ -190,12 +208,11 @@ class GearOfferNode(_Model):
 
 
 class CampfireNode(_Model):
-    """營火（進入時已回滿 HP、法力並加源力）：可以重骰（得到 ``offer``）或離開。"""
+    """營火（進入時已回滿 HP、法力並加源力）：可以閃現、重閃、溶掉、傳承、換技能與裝備、重配屬性，
+    之後離開（Phase 3W-5 起沒有重骰候選）。"""
 
     kind: Literal["campfire"] = "campfire"
     after_battle: int
-    rerolls_left: int
-    offer: SkillOffer | None = None
 
 
 class EndedNode(_Model):
@@ -204,21 +221,45 @@ class EndedNode(_Model):
 
 
 type Node = Annotated[
-    BattleNode | GearOfferNode | LevelUpNode | CampfireNode | EndedNode,
+    BattleNode | GearOfferNode | LevelUpNode | CompleteOfferNode | CampfireNode | EndedNode,
     Field(discriminator="kind"),
 ]
 
 
-class EvolutionRecord(_Model):
-    """一次分歧進化（Phase 3-26b）：進化前的技能 ID、分支（加深／橋接）、模板、帶的關鍵字，
-    ``fallback`` 表示橋接做不出來、改用第二個加深模板。進化後的技能定義在 ``generated_skills``。"""
+class PendingFlash(_Model):
+    """已付點、還沒選的閃現（或重閃）選項（Phase 3W-5）：``skill`` 是目前的技能 ID，``offer`` 連同
+    套用後的技能定義存下來（選擇時不重抽、不重算，重播不呼叫 LLM）。"""
 
-    base_id: str
-    base_name_zh: str
-    branch: Literal["deepen", "bridge", "count"]
+    skill: str
+    offer: FlashOffer
+
+
+class FlashLlmName(_Model):
+    """閃現選項命名（4-L7）的紀錄（``trpg.llm.flash_propose.FlashNameRecord`` 的同形欄位）。"""
+
     template: str
-    keyword: str | None = None
-    fallback: bool = False
+    source: Literal["llm", "fallback"]
+    attempts: int
+    codes: tuple[str, ...] = ()
+    naming_prompt_version: str = ""
+
+
+class FlashLlmRecord(_Model):
+    """一次閃現變化提議的紀錄（Phase 3W-5 接 3W-7；``trpg.llm.flash_propose.FlashProposalRecord``
+    的同形欄位，``trpg.roguelite`` 不得匯入 ``trpg.llm`` 所以另外定義）。``seconds`` 只供報表，比對
+    一輪的紀錄時排除（:func:`trpg.roguelite.flashes.comparable_run`）。"""
+
+    tag: str
+    prompt_version: str = ""
+    source: Literal["llm", "partial", "template"] = "template"
+    wanted: int = 0
+    attempts: int = 0
+    codes: tuple[tuple[str, ...], ...] = ()
+    accepted: tuple[Variation, ...] = ()
+    rejected: tuple[str, ...] = ()
+    reason: str | None = None
+    seconds: float = 0.0
+    names: tuple[FlashLlmName, ...] = ()
 
 
 class LevelUpChoice(_Model):
@@ -229,10 +270,15 @@ class LevelUpChoice(_Model):
     attributes: dict[Attribute, int] = Field(default_factory=dict)
     pick: int | None = None
     replace: str | None = None
-    levels: dict[str, int] = Field(default_factory=dict)
-    """選完候選之後順便花技能點（Phase 3-26a；同 ``SpendChoice.levels``，空 ＝ 先不花）。"""
-    evolve: dict[str, int] = Field(default_factory=dict)
-    """升到 3 級時選的進化分支（Phase 3-26b；同 ``SpendChoice.evolve``）。"""
+
+
+class CompletePickChoice(_Model):
+    """完整技能三選一的選擇（Phase 3W-5）：``pick`` 為候選索引（``None`` ＝ 跳過）；欄位滿時
+    ``replace`` 指定要換掉的技能 ID（換下的進備用）。"""
+
+    kind: Literal["complete_pick"] = "complete_pick"
+    pick: int | None = None
+    replace: str | None = None
 
 
 class GearPickChoice(_Model):
@@ -251,49 +297,59 @@ class EquipChoice(_Model):
     slot: str | None = None
 
 
-class RerollChoice(_Model):
-    """營火：重骰（產生一組新的候選）。"""
-
-    kind: Literal["reroll"] = "reroll"
-
-
-class PickChoice(_Model):
-    """營火重骰後：選 1 個候選（``None`` ＝ 放棄），之後離開營火。"""
-
-    kind: Literal["pick"] = "pick"
-    pick: int | None = None
-    replace: str | None = None
-
-
 class LeaveChoice(_Model):
     """離開營火（有候選沒選時視為放棄）。"""
 
     kind: Literal["leave"] = "leave"
 
 
-class SpendChoice(_Model):
-    """花技能點升級（Phase 3-26a）：``levels`` 是技能 ID → 升到的等級（只能升、不能降；每升 1 級花
-    ``skill_growth.upgrade_cost`` 點）。升級、營火與下一場戰鬥之前都可以送；不推進節點。"""
+class FlashChoice(_Model):
+    """閃現或重閃（Phase 3W-5，06 6.34.3）：付點出題，選項存進 ``RunState.pending_flash``，接著要用
+    ``flash_pick`` 選一個。
 
-    kind: Literal["spend"] = "spend"
-    levels: dict[str, int] = Field(default_factory=dict)
-    evolve: dict[str, int] = Field(default_factory=dict)
-    """分歧進化（Phase 3-26b）：技能 ID → 選的分支索引（0 或 1，
-    對應 ``evolution_options`` 的順序）。
-    升到 ``skill_growth.evolve_level``（含以上）而且還沒進化過的技能必須選；進化後技能換成進化後的
-    定義（新的 ID），等級跟著過去。"""
+    - ``skill``：學會的技能（裝備中或備用）的目前 ID。
+    - ``slot``：``None`` ＝ 閃現（下一次）；否則重閃第 ``slot`` 次的變化（完整技能為 0，換調整欄）。
+      重閃只在營火；閃現在戰鬥之間都可以（戰鬥中不行）。
+    - ``category``：``None`` ＝ 不指定（1 點出 4 個）；指定類別 2 點出 3 個（只出該類；第 3 次另附
+      「轉型」保底）。0 個合法變化的類別會被拒絕（沒有扣點）。"""
+
+    kind: Literal["flash"] = "flash"
+    skill: str
+    slot: int | None = Field(default=None, ge=0)
+    category: str | None = None
 
 
-class RespecChoice(_Model):
-    """營火：免費重配（Phase 3-26a）——全部技能退回 1 級，花掉的點數退回，之後再用 ``spend`` 重新
-    分配。不推進節點。"""
+class FlashPickChoice(_Model):
+    """選閃現的第 ``pick`` 個選項（點數在出題時已付，不能放棄）。轉型讓技能換到另一種已滿的欄位時，
+    ``unequip`` 指定要卸下到備用的技能（必須是那一欄目前裝備的技能）。不推進節點。"""
 
-    kind: Literal["respec"] = "respec"
+    kind: Literal["flash_pick"] = "flash_pick"
+    pick: int = Field(ge=0)
+    unequip: str | None = None
+
+
+class DissolveChoice(_Model):
+    """溶掉一招學會的技能（Phase 3W-5，#71）：技能消失，退回花在它身上的靈感點的一半（無條件捨去）。
+    只在營火；欄位空出（可以用 ``loadout`` 從備用補上）。不推進節點。"""
+
+    kind: Literal["dissolve"] = "dissolve"
+    skill: str
+
+
+class InheritChoice(_Model):
+    """傳承（Phase 3W-5，#72，06 6.34.9 第 4 點）：還沒閃過的白板 ``skill`` 帶走舊技能 ``source`` 的
+    最多 2 個小變化（``records`` 是舊技能變化歷程的「第幾次」，依序變成新技能的第 1、2 次）。舊技能
+    消失、不退點；完整技能不能接受；變化必須對新技能合法。只在營火（和溶掉二選一）。不推進節點。"""
+
+    kind: Literal["inherit"] = "inherit"
+    skill: str
+    source: str
+    records: tuple[int, ...] = Field(min_length=1, max_length=2)
 
 
 class RespecAttributesChoice(_Model):
     """營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用
-    ``allocate`` 重新分配。和技能點的 ``respec`` 同一個畫面、同樣免費、不推進節點。"""
+    ``allocate`` 重新分配。免費、不推進節點。"""
 
     kind: Literal["respec_attributes"] = "respec_attributes"
 
@@ -308,7 +364,7 @@ class AllocateChoice(_Model):
 
 class LoadoutChoice(_Model):
     """營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合
-    欄位上限）；沒裝上的進備用，技能等級保留。不推進節點。"""
+    欄位上限）；沒裝上的進備用，閃現狀態保留。不推進節點。"""
 
     kind: Literal["loadout"] = "loadout"
     skills: tuple[str, ...]
@@ -316,11 +372,12 @@ class LoadoutChoice(_Model):
 
 type Choice = Annotated[
     LevelUpChoice
-    | RerollChoice
-    | PickChoice
+    | CompletePickChoice
     | LeaveChoice
-    | SpendChoice
-    | RespecChoice
+    | FlashChoice
+    | FlashPickChoice
+    | DissolveChoice
+    | InheritChoice
     | RespecAttributesChoice
     | AllocateChoice
     | LoadoutChoice
@@ -366,19 +423,27 @@ class RunState(_Model):
     history: tuple[BattleRecord, ...] = ()
     behavior: dict[str, int] = Field(default_factory=dict)
     """主角用過的動作類型 → 次數（每場戰後累加；候選產生器的行為紀錄，Phase 3-24b2）。"""
-    skill_points: int = Field(default=0, ge=0)
-    """還沒花掉的技能點（Phase 3-26a；每升 1 級 ``skill_growth.points_per_level`` 點）。"""
-    skill_levels: dict[str, int] = Field(default_factory=dict)
-    """技能等級（Phase 3-26a）：技能 ID → 等級（2～``max_level``，1 級不列）。技能點跟著技能走：
-    卸下（進備用）後等級保留。依 ID 排序存入，所以序列化確定。"""
+    insight: int = Field(default=0, ge=0)
+    """還沒花掉的靈感點（Phase 3W-5，06 6.34.2；每打贏一場 ``flash_templates.yaml`` 的
+    ``insight_per_win`` 點，可以存、不設上限）。"""
+    flash: dict[str, SkillFlash] = Field(default_factory=dict)
+    """每招學會的技能的閃現狀態（Phase 3W-5）：**目前的技能 ID** → 狀態（``base_id`` 是閃現前的
+    原本技能）。沒有記錄 ＝ 剛取得（沒有變化、還沒用過）。依 ID 排序存入。"""
+    flash_bases: tuple[SkillDef, ...] = ()
+    """閃現過的生成技能的原本定義（Phase 3W-5；內容庫的手寫技能不存）。閃現後的技能由原本的技能依
+    變化歷程推出（``trpg.skillgen.flash.derive_skill``）。依 ID 排序。"""
+    pending_flash: PendingFlash | None = None
+    """已付點、還沒選的閃現選項（Phase 3W-5）；有它時只能送 ``flash_pick``。"""
+    complete_offers_done: tuple[int, ...] = ()
+    """已出過完整技能三選一的場次（Phase 3W-5）。"""
+    flash_llm_log: tuple[FlashLlmRecord, ...] = ()
+    """閃現選項請 LLM 提議的紀錄（Phase 3W-5 接 3W-7；``llm`` 開著而且外層裝了來源時才有）。"""
     bench: tuple[str, ...] = ()
-    """備用技能 ID（Phase 3-26a）：被替換或在營火卸下的技能，等級保留，可在營火換回；定義在
+    """備用技能 ID（Phase 3-26a）：被替換或在營火卸下的技能，閃現狀態保留，可在營火換回；定義在
     ``generated_skills``（生成技能）或內容庫。"""
     skill_usage: dict[str, SkillUsage] = Field(default_factory=dict)
     """每招技能在這一輪的用法統計（Phase 3-26b；戰後由事件重播累加，``trpg.skillgen.usage``）：
-    技能 ID → 統計，依 ID 排序。進化的門檻與兩支的推導都讀它。"""
-    evolutions: dict[str, EvolutionRecord] = Field(default_factory=dict)
-    """分歧進化（Phase 3-26b）：進化後的技能 ID → 紀錄。進化結果跟著技能走（卸下、重配都保留）。"""
+    技能 ID → 統計，依 ID 排序。閃現選項依它排序。"""
     attribute_points: int = Field(default=0, ge=0)
     """還沒分配的屬性點（Phase 3H-3；營火重配退回的點數，用 ``allocate`` 分配）。"""
     attribute_spent: dict[Attribute, int] = Field(default_factory=dict)
