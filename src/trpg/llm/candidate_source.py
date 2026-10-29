@@ -22,7 +22,12 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, rarity_rank
 from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient
-from trpg.llm.naming import DEFAULT_NAMING_ATTEMPTS, apply_naming, name_skill
+from trpg.llm.naming import (
+    DEFAULT_NAMING_ATTEMPTS,
+    apply_naming,
+    name_skill,
+    template_text,
+)
 from trpg.llm.prompts.builder import PROMPT_VERSION
 from trpg.llm.prompts.naming import NAMING_PROMPT_VERSION
 from trpg.llm.prompts.proposal import build_proposal_prompt
@@ -45,6 +50,7 @@ __all__ = [
     "mock_naming_client",
     "mock_proposer",
     "name_attempt",
+    "template_attempt",
 ]
 
 MOCK_TRIES = 30
@@ -107,6 +113,17 @@ def name_attempt(
     )
 
 
+def template_attempt(attempt: LlmAttempt, library: ContentLibrary, taken: set[str]) -> LlmAttempt:
+    """命名關閉時（4-L8b）：技能的名稱與敘事換成組合式名稱與模板敘事；不呼叫模型，也不算命名
+    （``name_source`` 維持 ``None``）。"""
+    skill = attempt.skill
+    if skill is None:
+        return attempt
+    plain = template_text(library, skill, taken)
+    taken.add(plain.name_zh)
+    return replace(attempt, skill=plain)
+
+
 def make_proposer(
     client: LLMClient | Callable[[ProposalRequest, int], LLMClient],
     library: ContentLibrary,
@@ -119,8 +136,9 @@ def make_proposer(
     （Mock 用）。題目沒有可用結構、退回也失敗等都算失敗（``LlmAttempt.skill`` 為 ``None``）。
 
     ``naming``（4-L7）：給了就在結構合格後請它為技能命名與寫敘事（``name_skill``，最多
-    ``max_attempts`` 次，失敗用組合式名稱）；``None`` ＝ 沿用提議裡的名稱與敘事（不多呼叫一次）。
-    已用過的名稱記在提議器內，同一個提議器產生的技能不會重名。"""
+    ``max_attempts`` 次，失敗用組合式名稱）；``None`` ＝ 命名關閉：不多呼叫一次，名稱與敘事都用
+    組合式名稱與模板敘事（4-L8b，不採用提議裡的敘事）。已用過的名稱記在提議器內，同一個提議器
+    產生的技能不會重名。"""
     taken: set[str] = set()
 
     def propose(request: ProposalRequest, ctx: ProposalContext, seed: int) -> LlmAttempt:
@@ -135,7 +153,7 @@ def make_proposer(
             stats.add(outcome)
         attempt = _attempt_of(outcome)
         if naming is None:
-            return attempt
+            return template_attempt(attempt, library, taken)
         return name_attempt(
             attempt, naming, library, request, seed=seed, taken=taken, max_attempts=max_attempts
         )
