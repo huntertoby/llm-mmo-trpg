@@ -28,3 +28,33 @@ themes:
   - id: nature
     name_zh: 自然
     hint_zh: 自然主題的技能以毒素（中毒）、大地、風、治療（感知）、藤蔓召喚物、荊棘牆（障礙或表面）組合；不要使用火、冰、雷的元素。
+# 技能命名與敘事的文字規則（4-L7）：長度上限與禁字（指令字樣、標籤、程式碼片段）。
+naming:
+  name_max_chars: 12
+  concept_max_chars: 80
+  flavor_max_chars: 80
+  forbidden_terms:
+    - 忽略
+    - 無視
+    - 指令
+    - 系統
+    - 提示
+    - 扮演
+    - 輸出
+    - 以上規則
+    - 玩家輸入
+    - player_input
+    - system
+    - ignore
+    - prompt
+    - json
+    - "```"
+    - "<"
+    - ">"
+    - "{"
+    - "}"
+    - "["
+    - "]"
+    - "def "
+    - "import "
+    - "http"

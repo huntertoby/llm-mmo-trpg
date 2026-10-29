@@ -15,22 +15,35 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Protocol
 
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import rarity_rank
+from trpg.content.skills import SkillDef, rarity_rank
+from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.naming import DEFAULT_NAMING_ATTEMPTS, apply_naming, name_skill
 from trpg.llm.prompts.proposal import build_proposal_prompt
 from trpg.llm.propose import DEFAULT_MAX_ATTEMPTS, ProposalOutcome, propose_skill
 from trpg.shared.rng import Rng
 from trpg.skillgen.candidates import skill_has_keywords
+from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal import ProposalContext, proposal_from_skill
 from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_fallback import FallbackError, wanted_kind
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError
 from trpg.skillgen.proposal_topic import LlmAttempt, LlmProposer
 
-__all__ = ["MOCK_EMPTY", "ProposerStats", "make_proposer", "mock_client_for", "mock_proposer"]
+__all__ = [
+    "MOCK_EMPTY",
+    "NamingClient",
+    "ProposerStats",
+    "make_proposer",
+    "mock_client_for",
+    "mock_naming_client",
+    "mock_proposer",
+    "name_attempt",
+]
 
 MOCK_TRIES = 30
 """Mock 每個放寬階段最多檢查幾份提議。"""
@@ -51,15 +64,60 @@ def _attempt_of(outcome: ProposalOutcome) -> LlmAttempt:
     return LlmAttempt(None, outcome.attempts, codes, outcome.reason)
 
 
+type NamingClient = LLMClient | Callable[[SkillDef, int], LLMClient]
+"""命名用的 client：固定的 client（同一個本機模型），或依（技能，種子）建立的函式（Mock 用）。"""
+
+
+def _theme_name(request: ProposalRequest) -> str | None:
+    if request.theme is None:
+        return None
+    world = load_world_style()
+    return next((t.name_zh for t in world.themes if t.id == request.theme), None)
+
+
+def name_attempt(
+    attempt: LlmAttempt,
+    naming: NamingClient,
+    library: ContentLibrary,
+    request: ProposalRequest,
+    *,
+    seed: int,
+    taken: set[str],
+    max_attempts: int,
+) -> LlmAttempt:
+    """結構合格的 LLM 技能再請模型命名與寫敘事（4-L7）：只換文字，失敗用組合式名稱。"""
+    skill = attempt.skill
+    if skill is None:
+        return attempt
+    used = naming if isinstance(naming, LLMClient) else naming(skill, seed)
+    result = name_skill(
+        used, library, skill, taken=taken, theme=_theme_name(request), max_attempts=max_attempts
+    )
+    taken.add(result.text.name_zh)
+    return replace(
+        attempt,
+        skill=apply_naming(skill, result.text),
+        name_source=result.source,
+        name_attempts=result.attempts,
+        name_codes=result.codes,
+    )
+
+
 def make_proposer(
     client: LLMClient | Callable[[ProposalRequest, int], LLMClient],
     library: ContentLibrary,
     *,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     stats: ProposerStats | None = None,
+    naming: NamingClient | None = None,
 ) -> LlmProposer:
     """真模型的提議器。``client`` 可以是固定的 client，或依（題目，種子）建立 client 的函式
-    （Mock 用）。題目沒有可用結構、退回也失敗等都算失敗（``LlmAttempt.skill`` 為 ``None``）。"""
+    （Mock 用）。題目沒有可用結構、退回也失敗等都算失敗（``LlmAttempt.skill`` 為 ``None``）。
+
+    ``naming``（4-L7）：給了就在結構合格後請它為技能命名與寫敘事（``name_skill``，最多
+    ``max_attempts`` 次，失敗用組合式名稱）；``None`` ＝ 沿用提議裡的名稱與敘事（不多呼叫一次）。
+    已用過的名稱記在提議器內，同一個提議器產生的技能不會重名。"""
+    taken: set[str] = set()
 
     def propose(request: ProposalRequest, ctx: ProposalContext, seed: int) -> LlmAttempt:
         used = client if isinstance(client, LLMClient) else client(request, seed)
@@ -71,9 +129,32 @@ def make_proposer(
             return LlmAttempt(None, 0, (), str(exc))
         if stats is not None:
             stats.add(outcome)
-        return _attempt_of(outcome)
+        attempt = _attempt_of(outcome)
+        if naming is None:
+            return attempt
+        return name_attempt(
+            attempt, naming, library, request, seed=seed, taken=taken, max_attempts=max_attempts
+        )
 
     return propose
+
+
+# 命名用的 Mock 詞庫（全形中文）：「<詞首><骨架>之<詞尾>」，由種子挑選，不需網路與金鑰。
+_MOCK_HEADS = ("碎光", "殘響", "裂隙", "浮影", "晶輝", "沉霧", "曦痕", "遠嵐")
+_MOCK_TAILS = ("低語", "餘燼", "回聲", "迴旋", "誓約", "斷章")
+
+
+def mock_naming_client(library: ContentLibrary, skill: SkillDef, seed: int) -> MockLLMClient:
+    """合格的命名回應（確定性：依種子挑詞）。名稱與既有技能重複時，命名步驟會重試後改用組合式名稱。"""
+    rng = Rng(seed).fork("llm.naming.mock")
+    skeleton = plain_name(skill.skeleton, library)
+    name = f"{rng.choice(_MOCK_HEADS)}{rng.choice(_MOCK_TAILS)}"
+    text = {
+        "name_zh": name,
+        "concept": f"源晶碎片的頻率凝成{skeleton}。",
+        "cast_flavor": f"碎界的低鳴應聲而起，{name}隨你而動。",
+    }
+    return MockLLMClient([json.dumps(text, ensure_ascii=False)] * DEFAULT_NAMING_ATTEMPTS)
 
 
 def _mock_texts(
@@ -145,11 +226,14 @@ def mock_proposer(
     *,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     stats: ProposerStats | None = None,
+    naming: bool = False,
 ) -> LlmProposer:
-    """Mock 提議器（見模組說明）；不需網路與金鑰。"""
+    """Mock 提議器（見模組說明）；不需網路與金鑰。``naming`` 為真時結構合格後用 Mock 命名
+    （:func:`mock_naming_client`）。"""
     return make_proposer(
         lambda request, seed: mock_client_for(library, request, seed, max_attempts),
         library,
         max_attempts=max_attempts,
         stats=stats,
+        naming=(lambda skill, seed: mock_naming_client(library, skill, seed)) if naming else None,
     )
