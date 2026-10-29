@@ -30,8 +30,8 @@ export const MARK_STYLES: Readonly<Record<string, MarkStyle>> = {
   zone_expired: { glyph: "散", color: 0xc0c0c0, priority: 1 },
   // 定時炸彈（Phase 3D-8b）：爆炸的格子、帶著炸彈的單位（標倒數）、炸彈目前的波及範圍
   bomb_exploded: { glyph: "炸", color: 0xff3b30, priority: 8 },
-  bomb: { glyph: "炸", color: 0xff7a1a, priority: 9 },
-  bomb_area: { glyph: "炸", color: 0xff7a1a, priority: 1 },
+  bomb: { glyph: "炸", color: 0xff6a1a, priority: 9 },
+  bomb_area: { glyph: "炸", color: 0xff6a1a, priority: 1 },
   // 延遲段（蓄力，Phase 3F-4b）：蓄力中的單位（標還要幾回合）與預計範圍（在施放者的回合開始時結算，
   // 不在環境回合，但一起預告）
   charge: { glyph: "蓄", color: 0xb06bff, priority: 9 },
