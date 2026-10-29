@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
@@ -36,6 +36,8 @@ __all__ = [
     "StanceRules",
     "StructureRules",
     "TuningRules",
+    "WhiteboardRecipe",
+    "WhiteboardRules",
 ]
 
 _PERMILLE_MAX = 1000
@@ -411,6 +413,75 @@ class LlmCostRules(ContentModel):
         return self
 
 
+class WhiteboardRecipe(ContentModel):
+    """白板「單一效果」模式的一個配方（Phase 3W-4，06 6.34.1）：一個關鍵字、一個核心效果。
+
+    ``effect`` 是 ``SkillDef.effects[0]`` 的字典（旋鈕欄位由組合器的強度調整填值）；``skeleton``
+    決定驗證用的骨架。主動配方的 ``shapes`` 是可選的形狀（簡單：單體或小範圍）；被動配方用
+    ``trigger_event``（``trigger.event``）；反應配方用 ``reaction_event``。
+    """
+
+    id: str = Field(min_length=1)
+    keyword: str = Field(min_length=1)
+    skeleton: str = Field(min_length=1)
+    effect: dict[str, Any]
+    name_zh: str = Field(min_length=1)
+    concept_zh: str = Field(min_length=1)
+    flavor_zh: str = Field(min_length=1)
+    theme: Element | None = None
+    """技能的主題元素（名稱與標籤）；省略 ＝ 取 ``effect.element``，仍無則為物理。"""
+    shapes: tuple[str, ...] = ("single",)
+    categories: tuple[Literal["spell", "weapon"], ...] = ("spell", "weapon")
+    trigger_event: str | None = None
+    reaction_event: str | None = None
+
+
+class WhiteboardRules(ContentModel):
+    """白板技能的產生規則（Phase 3W-4，``docs/design/06-技能.md`` 6.34.1；
+    ``content/skill_composer.yaml`` 的 ``whiteboard``）。"""
+
+    kind_permille: dict[Literal["active", "passive", "reaction"], int]
+    """升級與任務三選一的種類比例（‰；07 7.6：主動 70％、被動 20％、反應 10％），總和 1000。"""
+    tier: int = Field(default=1, ge=1)
+    ap_cost: int = Field(default=2, ge=1, le=3)
+    """主動白板的預設 AP。"""
+    cooldown: IntRange
+    """主動白板的冷卻範圍（含兩端）。"""
+    passive_mana: IntRange
+    reaction_mana: IntRange
+    reaction_cooldown: IntRange
+    max_attempts: int = Field(default=60, ge=1)
+    """一個種子最多重抽幾次（配方、形狀、費用與強度調整）。"""
+    active: tuple[WhiteboardRecipe, ...] = ()
+    passive: tuple[WhiteboardRecipe, ...] = ()
+    reaction: tuple[WhiteboardRecipe, ...] = ()
+
+    @model_validator(mode="after")
+    def _check(self) -> WhiteboardRules:
+        if sum(self.kind_permille.values()) != _PERMILLE_MAX or set(self.kind_permille) != {
+            "active",
+            "passive",
+            "reaction",
+        }:
+            raise ValueError("kind_permille 必須剛好有 active、passive、reaction，總和 1000")
+        ids = [r.id for r in (*self.active, *self.passive, *self.reaction)]
+        if len(set(ids)) != len(ids):
+            raise ValueError("白板配方 id 不可重複")
+        if any(r.trigger_event is None for r in self.passive):
+            raise ValueError("被動配方必須有 trigger_event")
+        if any(r.reaction_event is None for r in self.reaction):
+            raise ValueError("反應配方必須有 reaction_event")
+        return self
+
+    def recipes(self, kind: str) -> tuple[WhiteboardRecipe, ...]:
+        """``kind``（active／passive／reaction）的配方。"""
+        return {"active": self.active, "passive": self.passive, "reaction": self.reaction}[kind]
+
+    def keywords(self) -> frozenset[str]:
+        """有配方的關鍵字（任何種類）。"""
+        return frozenset(r.keyword for r in (*self.active, *self.passive, *self.reaction))
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -449,6 +520,8 @@ class ComposerRules(ContentModel):
     """LLM 提議題目的多樣性參數（Phase 4-L6）。"""
     llm_cost: LlmCostRules = Field(default_factory=LlmCostRules)
     """LLM 提議的費用旋鈕（Phase 4-L8b）。"""
+    whiteboard: WhiteboardRules
+    """白板技能的產生規則（Phase 3W-4）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:
