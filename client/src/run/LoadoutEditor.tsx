@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { RunHero } from "../api/types";
 import { SLOT_LABELS, SLOT_LIMITS, type SlotKind } from "./flow";
-import { canEquip, levelBadge, levelOf, loadoutChanged, loadoutUsage, ownedCards } from "./skillGrowth";
+import { canEquip, loadoutChanged, loadoutUsage, ownedCards } from "./loadout";
 import { Hint } from "../ui/Hint";
 
 interface Props {
@@ -34,7 +34,6 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
             <li key={id}>
               <span>
                 {card.name_zh}
-                {card.growth != null && <span className="muted small"> {levelBadge(levelOf(card))}</span>}
               </span>
               <button type="button" disabled={disabled} onClick={() => setIds(ids.filter((x) => x !== id))}>
                 卸下
@@ -55,8 +54,7 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
                 <li key={id}>
                   <span>
                     {card.name_zh}
-                    {card.growth != null && <span className="muted small"> {levelBadge(levelOf(card))}</span>}
-                  </span>
+                      </span>
                   <Hint text={ok ? undefined : "這種欄位已滿，先卸下一個"}>
                   <button
                     type="button"

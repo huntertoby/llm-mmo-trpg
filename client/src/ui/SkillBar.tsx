@@ -9,7 +9,6 @@ import type { ActionMode, SkillButton } from "../battle/targeting";
 import { gearSkillBadge } from "../battle/gearSkills";
 import { grantedBadge } from "../battle/granted";
 import { activeVariantCard, variantBadge } from "../battle/variants";
-import { levelBadge } from "../run/skillGrowth";
 import { SkillCardView } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 import { FloatCard, useFloatCard } from "./useFloatCard";
@@ -79,7 +78,7 @@ function SkillSlot({
         <span className="skill-button-text">
           <span className="skill-name">
             {b.name}
-            {level > 1 && <span className="skill-lv">{levelBadge(level)}</span>}
+            {level > 1 && <span className="skill-lv">{`Lv.${level}`}</span>}
           </span>
           {b.grantedRemaining != null && (
             <span className="skill-granted" aria-label="暫時技能">

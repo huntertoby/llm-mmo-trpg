@@ -104,19 +104,15 @@ describe("runView：每種節點", () => {
     expect(() => runView(run({ kind: "level_up", level: 3, points: 2 }))).toThrow();
   });
 
-  it("campfire：未重骰與已重骰", () => {
-    expect(runView(run({ kind: "campfire", after_battle: 3, rerolls_left: 1 }))).toEqual({
-      screen: "campfire",
-      afterBattle: 3,
-      rerollsLeft: 1,
-      offer: null,
-    });
+  it("campfire 與完整技能三選一（3W-5）", () => {
+    expect(runView(run({ kind: "campfire", after_battle: 3 }))).toEqual({ screen: "campfire", afterBattle: 3 });
     const o = offer();
-    expect(runView(run({ kind: "campfire", after_battle: 3, rerolls_left: 0, offer: o }))).toMatchObject({
-      screen: "campfire",
-      rerollsLeft: 0,
+    expect(runView(run({ kind: "complete_offer", after_battle: 3, offer: o }))).toEqual({
+      screen: "complete_offer",
+      afterBattle: 3,
       offer: o,
     });
+    expect(() => runView(run({ kind: "complete_offer", after_battle: 3 }))).toThrow();
   });
 
   it("ended：勝利與失敗", () => {
@@ -165,9 +161,9 @@ describe("候選顯示順序（偏離路線不固定在最後）", () => {
 
   it("offerGroupKey 隨升級或營火變動", () => {
     const up = runView(run({ kind: "level_up", level: 3, points: 2, offer: offer() }));
-    const camp = runView(run({ kind: "campfire", after_battle: 3, rerolls_left: 0, offer: offer() }));
+    const complete = runView(run({ kind: "complete_offer", after_battle: 3, offer: offer() }));
     expect(offerGroupKey(up)).toBe("level_up:3");
-    expect(offerGroupKey(camp)).toBe("campfire:3:0");
+    expect(offerGroupKey(complete)).toBe("complete:3");
   });
 });
 
@@ -241,8 +237,8 @@ describe("升級確定鈕與送出內容", () => {
       pick: 1,
       replace: "a3",
     });
-    const camp = runView(run({ kind: "campfire", after_battle: 3, rerolls_left: 0, offer: o }));
-    expect(pickChoice(camp, {}, null, null)).toEqual({ kind: "pick", pick: null, replace: null });
+    const complete = runView(run({ kind: "complete_offer", after_battle: 3, offer: o }));
+    expect(pickChoice(complete, {}, null, null)).toEqual({ kind: "complete_pick", pick: null, replace: null });
   });
 });
 

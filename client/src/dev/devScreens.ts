@@ -1,10 +1,10 @@
-// 開發用入口（Phase 3U-3）：不打戰鬥就直接進戰後畫面（裝備三選一、升級選技、營火、營火有候選、一輪結束）。
+// 開發用入口（Phase 3U-3）：不打戰鬥就直接進戰後畫面（裝備三選一、升級選技、完整技能三選一、營火、一輪結束）。
 // 只在網址帶 `?dev=1` 時啟用，伺服器還要設環境變數 `TRPG_DEV_ROUTES=1`（否則 404）。
 // 用法：開 `/?dev=1&screen=level_up`（`screen` 見 `DEV_SCREENS`），或在頁面裡 `await window.__layoutSmoke.enterDevScreen("campfire")`。
 import { api } from "../api/client";
 import type { RunResponse } from "../api/types";
 
-export const DEV_SCREENS = ["gear_offer", "level_up", "campfire", "campfire_offer", "ended"] as const;
+export const DEV_SCREENS = ["gear_offer", "level_up", "complete_offer", "campfire", "ended"] as const;
 export type DevScreen = (typeof DEV_SCREENS)[number];
 
 /** 固定種子（這個種子的 AI 打得到營火）。 */

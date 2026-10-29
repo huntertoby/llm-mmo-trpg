@@ -7,7 +7,6 @@ import { RuleText } from "../ui/ruleText";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { itemTipLines, wornGear } from "./gearOffer";
 import { raceOriginText } from "./raceOrigin";
-import { levelBadge, levelOf } from "./skillGrowth";
 import {
   ATTRIBUTES,
   affectsOf,
@@ -156,9 +155,9 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}
         </span>
       </div>
-      {(hero.skill_points ?? 0) > 0 && (
-        <div className="small run-skill-points-hint" data-testid="run-skill-points">
-          未花的技能點：<b>{hero.skill_points}</b>
+      {(hero.insight ?? 0) > 0 && (
+        <div className="small run-skill-points-hint" data-testid="run-insight">
+          未花的靈感點：<b>{hero.insight}</b>
         </div>
       )}
       <ul className="run-skill-list">
@@ -167,7 +166,6 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
             <details>
               <summary>
                 {s.name_zh}{" "}
-                {s.growth != null && <b className="skill-level-badge">{levelBadge(levelOf(s))}</b>}{" "}
                 <span className="muted small">
                   {s.kind}・{s.rarity}
                 </span>
