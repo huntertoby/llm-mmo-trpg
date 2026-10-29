@@ -67,6 +67,7 @@ __all__ = [
     "starter_pools",
     "starting_skill",
     "top_attribute",
+    "with_origin",
     "with_race",
 ]
 
@@ -544,6 +545,20 @@ def with_race(library: ContentLibrary, run: RunState, race: str | None) -> RunSt
         )
         raise ChoiceError(f"未知的種族：{race}（可用：{known}）") from None
     return run.model_copy(update={"hero": run.hero.model_copy(update={"race": race})})
+
+
+def with_origin(library: ContentLibrary, run: RunState, origin: str | None) -> RunState:
+    """為這一輪指定出身（Phase 3R-3a；``None`` 不改，未知的出身拋出 :class:`ChoiceError`）。
+
+    出身不影響戰鬥，只記在 ``run.origin``，隨存檔保存。"""
+    if origin is None:
+        return run
+    table = library.origins
+    known = {o.id for o in table.origins} if table is not None else set()
+    if origin not in known:
+        listing = "、".join(sorted(known)) if known else "（沒有出身資料）"
+        raise ChoiceError(f"未知的出身：{origin}（可用：{listing}）")
+    return run.model_copy(update={"origin": origin})
 
 
 def default_start(library: ContentLibrary, seed: int) -> tuple[str, tuple[str, ...]]:

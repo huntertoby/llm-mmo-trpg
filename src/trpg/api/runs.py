@@ -4,7 +4,7 @@
   戰鬥工作階段表裡，用既有的 ``/api/battles/{id}`` 端點操作）。
 - 戰鬥結束後，任何一輪的請求先 :meth:`RunSession.sync`：以 ``finish_battle`` 寫回主角並前進到下一個
   節點。
-- 存檔：``RunSave``（``trpg-run/6``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；讀檔時
+- 存檔：``RunSave``（``trpg-run/7``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；讀檔時
   重建 ``setup``、重播步驟、還原指令（:meth:`SessionStore.open`）。
 - 鎖的順序：一輪的鎖 → 戰鬥的鎖。
 """
@@ -37,7 +37,7 @@ from trpg.roguelite import (
     write_save,
 )
 from trpg.roguelite.errors import NodeConflictError
-from trpg.roguelite.start import with_race
+from trpg.roguelite.start import with_origin, with_race
 from trpg.roguelite.state import (
     AllocateChoice,
     BattleNode,
@@ -150,6 +150,7 @@ class RunStore:
         test_mode: bool = False,
         test_equipment: dict[str, str] | None = None,
         race: str | None = None,
+        origin: str | None = None,
     ) -> RunSession:
         """開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``、``dev_pack`` 或 ``build`` 擇一。"""
         if build is not None:
@@ -168,6 +169,7 @@ class RunStore:
                 test_equipment=test_equipment,
             )
         run = with_race(self.library, run, race)  # 種族（Phase 3R-2）
+        run = with_origin(self.library, run, origin)  # 出身（Phase 3R-3a）
         with self._lock:
             run_id = self._new_id()
             while run_id in self._runs:  # pragma: no cover - 機率極低

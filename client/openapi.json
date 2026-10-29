@@ -3762,6 +3762,17 @@
             ],
             "title": "Race"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
           "test_equipment": {
             "additionalProperties": {
               "type": "string"
@@ -6401,6 +6412,38 @@
             ],
             "title": "Dev Pack"
           },
+          "race_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Id"
+          },
+          "race_name_zh": {
+            "type": "string",
+            "title": "Race Name Zh",
+            "default": ""
+          },
+          "origin_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Id"
+          },
+          "origin_name_zh": {
+            "type": "string",
+            "title": "Origin Name Zh",
+            "default": ""
+          },
           "skill_points": {
             "type": "integer",
             "title": "Skill Points",
@@ -7768,6 +7811,41 @@
         "title": "OrderSet",
         "description": "一個陣營目前的指令。單位有自己的指令時，**完全取代** 陣營指令。每種 ``kind`` 最多一個。"
       },
+      "OriginOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "realm": {
+            "type": "string",
+            "title": "Realm"
+          },
+          "realm_name_zh": {
+            "type": "string",
+            "title": "Realm Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "realm",
+          "realm_name_zh",
+          "description_zh"
+        ],
+        "title": "OriginOption",
+        "description": "開局可選的出身（Phase 3R-3a）：界域與簡介；出身不影響戰鬥。"
+      },
       "OutcomeOut": {
         "properties": {
           "kind": {
@@ -8513,6 +8591,66 @@
         ],
         "title": "Protect",
         "description": "保護指定友方。"
+      },
+      "RaceOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "home_realm": {
+            "type": "string",
+            "title": "Home Realm"
+          },
+          "home_realm_name_zh": {
+            "type": "string",
+            "title": "Home Realm Name Zh"
+          },
+          "skill_name_zh": {
+            "type": "string",
+            "title": "Skill Name Zh"
+          },
+          "skill_description_zh": {
+            "type": "string",
+            "title": "Skill Description Zh"
+          },
+          "skill_ap": {
+            "type": "integer",
+            "title": "Skill Ap"
+          },
+          "skill_uses": {
+            "type": "integer",
+            "title": "Skill Uses"
+          },
+          "passive_name_zh": {
+            "type": "string",
+            "title": "Passive Name Zh"
+          },
+          "passive_description_zh": {
+            "type": "string",
+            "title": "Passive Description Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "home_realm",
+          "home_realm_name_zh",
+          "skill_name_zh",
+          "skill_description_zh",
+          "skill_ap",
+          "skill_uses",
+          "passive_name_zh",
+          "passive_description_zh"
+        ],
+        "title": "RaceOption",
+        "description": "開局可選的種族（Phase 3R-3a）：種族技與環境被動的說明（都不給數值，7.7）。"
       },
       "RaceView": {
         "properties": {
@@ -10165,6 +10303,22 @@
           "keyword_count": {
             "type": "integer",
             "title": "Keyword Count"
+          },
+          "races": {
+            "items": {
+              "$ref": "#/components/schemas/RaceOption"
+            },
+            "type": "array",
+            "title": "Races",
+            "default": []
+          },
+          "origins": {
+            "items": {
+              "$ref": "#/components/schemas/OriginOption"
+            },
+            "type": "array",
+            "title": "Origins",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -10175,7 +10329,7 @@
           "keyword_count"
         ],
         "title": "StartOptions",
-        "description": "開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。"
+        "description": "開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字；3R-3a 起另有種族與出身。"
       },
       "StartPreview": {
         "properties": {

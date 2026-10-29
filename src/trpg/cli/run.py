@@ -35,7 +35,7 @@ from trpg.roguelite import (
 )
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.save import default_save_dir
-from trpg.roguelite.start import default_start, with_race
+from trpg.roguelite.start import default_start, with_origin, with_race
 from trpg.roguelite.state import (
     BattleNode,
     BattleRecord,
@@ -113,6 +113,11 @@ def _add_start_args(parser: argparse.ArgumentParser, *, build_help: str) -> None
     parser.add_argument(
         "--race", default=None, help="主角的種族（content/races.yaml 的 ID；省略＝無種族）"
     )
+    parser.add_argument(
+        "--origin",
+        default=None,
+        help="出身（content/origins.yaml 的 ID，不影響戰鬥；省略＝無出身）",
+    )
 
 
 def _seed(text: str) -> int:
@@ -179,6 +184,8 @@ class StartArgs:
     test_equipment: Mapping[str, str] | None = None
     race: str | None = None
     """主角的種族（Phase 3R-2，``content/races.yaml``）；省略＝無種族。"""
+    origin: str | None = None
+    """出身（Phase 3R-3a，``content/origins.yaml``）；省略＝無出身。"""
 
 
 def _start_of(args: argparse.Namespace) -> StartArgs:
@@ -190,6 +197,7 @@ def _start_of(args: argparse.Namespace) -> StartArgs:
         test_mode=getattr(args, "test_mode", False),
         test_equipment=getattr(args, "test_equipment", None),
         race=getattr(args, "race", None),
+        origin=getattr(args, "origin", None),
     )
 
 
@@ -200,7 +208,8 @@ def start_run(
     attrs: Mapping[Attribute, int] | None = None,
 ) -> RunState:
     """依命令列的開局選擇開新一輪；選擇不合法時拋出 :class:`RunError`。"""
-    return with_race(library, _start_base(library, seed, start, attrs), start.race)
+    run = with_race(library, _start_base(library, seed, start, attrs), start.race)
+    return with_origin(library, run, start.origin)
 
 
 def _start_base(

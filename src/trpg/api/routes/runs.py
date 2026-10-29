@@ -31,6 +31,8 @@ from trpg.api.run_schemas import (
     CreateRunRequest,
     DevPackOut,
     LoadRunRequest,
+    OriginOption,
+    RaceOption,
     RunBattleResponse,
     RunResponse,
     RunRules,
@@ -46,6 +48,7 @@ from trpg.api.run_schemas import (
 )
 from trpg.api.runs import RunSession, RunStore
 from trpg.api.state import runs_of
+from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import skill_card
 from trpg.roguelite.start import (
@@ -79,6 +82,7 @@ def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
         test_mode=body.test_mode,
         test_equipment=body.test_equipment,
         race=body.race,
+        origin=body.origin,
     )
     with session.lock:
         return _respond(store, session)
@@ -109,6 +113,52 @@ def get_start_options(request: Request) -> StartOptions:
         weapons=tuple(weapons),
         keywords=keyword_refs(library, library.keywords.start_ids()),
         keyword_count=rules.start.keywords,
+        races=_race_options(library),
+        origins=_origin_options(library),
+    )
+
+
+def _realm_names(library: ContentLibrary) -> dict[str, str]:
+    regions = library.regions
+    return {r.id: r.name_zh for r in regions.regions} if regions is not None else {}
+
+
+def _race_options(library: ContentLibrary) -> tuple[RaceOption, ...]:
+    table = library.ruleset.races
+    if table is None:
+        return ()
+    realms = _realm_names(library)
+    return tuple(
+        RaceOption(
+            id=r.id,
+            name_zh=r.name_zh,
+            home_realm=r.home_realm,
+            home_realm_name_zh=realms.get(r.home_realm, r.home_realm),
+            skill_name_zh=r.skill.name_zh,
+            skill_description_zh=r.skill.description_zh,
+            skill_ap=1,
+            skill_uses=r.skill.uses_per_battle,
+            passive_name_zh=r.passive.name_zh,
+            passive_description_zh=r.passive.description_zh,
+        )
+        for r in table.races
+    )
+
+
+def _origin_options(library: ContentLibrary) -> tuple[OriginOption, ...]:
+    table = library.origins
+    if table is None:
+        return ()
+    realms = _realm_names(library)
+    return tuple(
+        OriginOption(
+            id=o.id,
+            name_zh=o.name_zh,
+            realm=o.realm,
+            realm_name_zh=realms.get(o.realm, o.realm),
+            description_zh=o.description_zh,
+        )
+        for o in table.origins
     )
 
 

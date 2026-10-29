@@ -226,7 +226,7 @@ def test_save_mid_battle_load_and_continue_matches(
     assert saved == {
         "run_id": run["run_id"],
         "file": f"run-{run['run_id']}.json",
-        "format": "trpg-run/6",
+        "format": "trpg-run/7",
         "in_battle": True,
     }
     assert (save_dir / saved["file"]).is_file()
@@ -254,7 +254,7 @@ def test_corrupt_save_is_422(runs_client: TestClient, save_dir: Path) -> None:
     (save_dir / "run-bad.json").write_text('{"format": "trpg-run/0"}', encoding="utf-8")
     reply = runs_client.post("/api/runs/load", json={"run_id": "bad"})
     assert reply.status_code == 422
-    assert "trpg-run/6" in reply.json()["detail"]
+    assert "trpg-run/7" in reply.json()["detail"]
     assert runs_client.get("/api/runs/saves").json() == []
 
 

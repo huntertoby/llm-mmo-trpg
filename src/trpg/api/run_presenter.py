@@ -207,6 +207,21 @@ def _node(library: ContentLibrary, run: RunState) -> NodeOut:
     return NodeOut(kind="ended", victory=node.victory)
 
 
+def _race_name(library: ContentLibrary, race: str | None) -> str:
+    if race is None:
+        return ""
+    try:
+        return library.ruleset.race_def(race).name_zh
+    except KeyError:
+        return race
+
+
+def _origin_name(library: ContentLibrary, origin: str | None) -> str:
+    if origin is None or library.origins is None:
+        return ""
+    return next((o.name_zh for o in library.origins.origins if o.id == origin), origin)
+
+
 def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
     growth = library.ruleset.skill_growth
@@ -218,6 +233,10 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     core = library.ruleset.core
     return HeroOut(
         build_id=run.build_id or "",
+        race_id=run.hero.race,
+        race_name_zh=_race_name(library, run.hero.race),
+        origin_id=run.origin,
+        origin_name_zh=_origin_name(library, run.origin),
         name_zh=run.hero.name_zh,
         level=run.level,
         xp=run.xp,
