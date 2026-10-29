@@ -927,6 +927,8 @@ class AttackIntercepted(EventBase):
     skill_id: str | None = None
     guard: bool = False
     """``True`` 為「守護」動作的轉移（Phase 3-21a），否則為 ``intercept`` 反應技。"""
+    decoy: bool = False
+    """``True`` 為狐火誘餌（Phase 3R-2b）：攻擊在擲命中之前轉向誘餌而落空，誘餌隨即消散。"""
 
 
 class ReactionModeSet(EventBase):

@@ -14,6 +14,7 @@ from tests.engine.helpers import (
     give_turn,
     library,
     make_map,
+    make_skill,
     make_state,
     no_reactions,
     spawn,
@@ -32,6 +33,7 @@ from tests.engine.race_helpers import (
     race_state,
     use,
 )
+from tests.engine.skill_helpers import SID, battle, cast, hit_with
 from trpg.content.races import RaceEffect, RaceSkill
 from trpg.engine import BattleState, Move, ResolveResult, legal_actions, resolve
 from trpg.engine.actions import Action, Attack, UseRaceSkill
@@ -49,6 +51,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.ids import CONCEALED, DECOY_TAG, PRONE, RACE_ADAPT, RACE_STONEWALL
 from trpg.engine.state import UnitState
+from trpg.narrative.events import describe_event
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, ObjectId, Pos, Surface, Team, UnitId
@@ -247,37 +250,64 @@ def _enemy_attack_after_decoy(seed: int) -> ResolveResult:
     return resolve(give_turn(state, U2), Attack(unit_id=U2, target_id=U1))
 
 
-def test_decoy_takes_the_next_single_target_hit() -> None:
-    seen_hit = False
+def test_decoy_redirects_the_next_attack_before_the_hit_roll() -> None:
+    """3R-2b：不論原本會不會命中，攻擊都在擲命中之前轉向誘餌、落空，誘餌消失。"""
     for seed in range(40):
         result = _enemy_attack_after_decoy(seed)
-        rolled = of(result, AttackRolled)
-        if not rolled[0].hit:
-            assert not of(result, AttackIntercepted)
-            continue
-        seen_hit = True
+        assert not of(result, AttackRolled)  # 沒有擲命中
         (intercepted,) = of(result, AttackIntercepted)
-        assert intercepted.target_id == U1
+        assert intercepted.target_id == U1 and intercepted.decoy
         assert result.state.units[U1].hp == result.state.units[U1].max_hp
         assert not _decoys(result.state)  # 誘餌用掉就消失
         assert any(e.reason == "decoy_hit" for e in of(result, SummonExpired))
         assert not of(result, DamageDealt)
-    assert seen_hit
 
 
 def test_decoy_is_spent_after_one_interception() -> None:
-    for seed in range(40):
-        result = _enemy_attack_after_decoy(seed)
-        if not of(result, AttackRolled)[0].hit:
-            continue
-        again = give_turn(result.state, U2)
-        for _ in range(40):  # 第二次命中時不會再被攔
-            second = resolve(again, Attack(unit_id=U2, target_id=U1))
-            assert not of(second, AttackIntercepted)
-            if of(second, DamageDealt):
-                return
-            again = give_turn(second.state, U2)
-    pytest.fail("找不到命中的種子")
+    result = _enemy_attack_after_decoy(1)
+    second = resolve(give_turn(result.state, U2), Attack(unit_id=U2, target_id=U1))
+    assert not of(second, AttackIntercepted)
+    assert of(second, AttackRolled)  # 第二次正常擲命中
+
+
+def test_enemy_can_attack_the_decoy_directly() -> None:
+    state = race_state("fox", foes=((4, 3),))
+    state = act(state, pos=(4, 4)).state
+    (decoy,) = _decoys(state)
+    result = resolve(give_turn(state, U2), Attack(unit_id=U2, target_id=decoy.id))
+    assert not of(result, AttackIntercepted)
+    assert of(result, AttackRolled)
+
+
+def test_decoy_redirects_single_target_skill_before_the_hit_roll() -> None:
+    skill = make_skill(
+        SID, {"type": "single", "range": 4}, [{"type": "damage", "dice": "1d6", "element": "fire"}]
+    )
+    decoy = no_reactions("bandit", tags=["decoy"], max_hp=1)
+    state = battle(skill, [(4, 3), (6, 6, decoy)])
+    state.units[U3].owner_id = U2  # 召喚物才會被 dismiss_summon 移除
+    result = cast(hit_with(state), target_id=U2)
+    assert not of(result, AttackRolled) and not of(result, DamageDealt)
+    (intercepted,) = of(result, AttackIntercepted)
+    assert intercepted.decoy and intercepted.skill_id == SID
+    assert result.state.units[U2].hp == result.state.units[U2].max_hp
+    assert not _decoys(result.state)
+
+
+def _text(result: ResolveResult) -> str:
+    lines = [describe_event(e, result.state) for e in result.events]
+    return "\n".join(x for x in lines if x)
+
+
+def test_decoy_log_lines() -> None:
+    state = race_state("fox", foes=((4, 3),), foe_attrs={"str": 18, "dex": 18})
+    placed = act(state, pos=(2, 3))
+    assert "放出一團狐火誘餌" in _text(placed)
+    placed.state.rng_state = Rng(1).get_state()
+    result = resolve(give_turn(placed.state, U2), Attack(unit_id=U2, target_id=U1))
+    text = _text(result)
+    assert "狐火誘餌引走了" in text and "隨即消散" in text
+    assert "攔下了一次攻擊" not in text
 
 
 # ---------------------------------------------------------------------------

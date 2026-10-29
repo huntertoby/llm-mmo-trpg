@@ -73,6 +73,7 @@ from trpg.engine.reactions import (
     hit_reactions,
     opportunity_attacks,
     spell_hit_reactions,
+    take_decoy,
     try_intercept,
 )
 from trpg.engine.refunds import refund_ap, refund_cooldown
@@ -120,6 +121,26 @@ _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
 
 _NO_ALLY_ROLL = "shockwave"
 """震波（Phase 3-54d，06 6.33 #64）：對敵方先擲命中，對友方（``affects: all`` 也一樣）不擲命中。"""
+
+
+def _decoy_miss() -> AttackRoll:
+    """狐火誘餌（3R-2b）攔下的單體攻擊：沒有擲命中，結果就是落空。"""
+    return AttackRoll(
+        rolls=(),
+        advantage="none",
+        natural=0,
+        attack_value=0,
+        defense_value_permille=0,
+        hit_modifier=0,
+        proficiency=0,
+        situational=0,
+        cover=0,
+        cover_object_id=None,
+        total=0,
+        target_number=0,
+        hit=False,
+        crit=False,
+    )
 
 
 class Cast:
@@ -248,6 +269,11 @@ class Cast:
         if ctx.preview is not None:
             ctx.mark_branch()
             forced = "hit" if ctx.preview == "min" else "crit"
+        single = ctx.preview is None and self.skill.shape.type == "single"
+        if single and take_decoy(ctx, self.caster, unit, skill_id=self.skill.id) is not None:
+            missed = _decoy_miss()  # 狐火誘餌（3R-2b）：擲命中之前轉向誘餌，這次攻擊落空
+            self.hits[unit.id] = missed
+            return missed
         bonus = self.modifier(modifiers.hit_bonus, unit) + self.aim_bonus
         self.caster.aimed = self.caster.aimed and not self.aim_bonus  # 用掉瞄準
         roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus)

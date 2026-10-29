@@ -134,6 +134,7 @@ from trpg.engine.events import (
     ZoneMoved,
     ZoneTriggered,
 )
+from trpg.engine.race_skills import DECOY_TEMPLATE
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
 from trpg.shared.types import Pos, Surface, rune_name
@@ -1223,6 +1224,8 @@ def _unit_escaped(e: UnitEscaped, v: _View) -> str:
 def _unit_summoned(e: UnitSummoned, v: _View) -> str:
     owner = v.name.get(e.owner_id, e.owner_id)
     summon = v.name.get(e.unit_id, e.unit_id)
+    if e.template_id == DECOY_TEMPLATE:
+        return f"  {owner} 放出一團狐火誘餌"
     if e.orphan:  # 規則改變「殘影」的分身（Phase 3D-6）：召喚者已倒下
         return (
             f"  {owner} 的原地留下了 {summon}（{xy_text(e.pos)}，接替 {owner} 的行動順序，"
@@ -1336,7 +1339,9 @@ _SUMMON_EXPIRY_TEXT = {
 
 
 @_handles(SummonExpired)
-def _summon_expired(e: SummonExpired, v: _View) -> str:
+def _summon_expired(e: SummonExpired, v: _View) -> str | None:
+    if e.reason == "decoy_hit":
+        return None  # 已由 attack_intercepted 的「…隨即消散」說明（3R-2b）
     why = _SUMMON_EXPIRY_TEXT[e.reason]
     return f"  {why}：{v.name.get(e.unit_id, e.unit_id)} 消失了"
 
@@ -1533,6 +1538,8 @@ def _reaction_mode_set(e: ReactionModeSet, v: _View) -> str:
 def _intercepted(e: AttackIntercepted, v: _View) -> str:
     name = v.name
     skill = "" if e.skill_id is None else f"「{_skill_name(v, e.skill_id)}」"
+    if e.decoy:
+        return f"  狐火誘餌引走了 {name[e.attacker_id]} 的攻擊，隨即消散"
     if e.guard:
         return (
             f"  🛡 {name[e.guardian_id]} 守護 {name[e.target_id]}：{name[e.attacker_id]} 的"
