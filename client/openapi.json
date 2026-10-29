@@ -5001,6 +5001,17 @@
             },
             "type": "array",
             "title": "Categories"
+          },
+          "history_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Note Zh"
           }
         },
         "additionalProperties": false,
@@ -9808,6 +9819,17 @@
               }
             ],
             "title": "Llm Notice"
+          },
+          "load_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Load Notice"
           },
           "llm_stats": {
             "anyOf": [

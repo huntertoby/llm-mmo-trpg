@@ -266,7 +266,8 @@ def load_run(body: LoadRunRequest, request: Request) -> RunResponse:
     store = runs_of(request)
     session = store.load(body.run_id)
     with session.lock:
-        return _respond(store, session)
+        store.sync(session)
+        return run_response(session, with_notice=True)
 
 
 @router.post("/{run_id}/allocation-preview")

@@ -42,9 +42,9 @@ from trpg.roguelite.state import (
 )
 from trpg.skillgen.candidates import keyword_distribution
 from trpg.skillgen.flash import (
-    FlashError,
     FlashOptionSource,
     FlashRequest,
+    FlashStepError,
     UsageSource,
     category_counts,
     category_ranking,
@@ -133,6 +133,7 @@ def flash_request(
         category=category,
         held_keywords=keyword_distribution(others, library),
         tier=character_tier(library, run.level),
+        current=skill_defs(library, run, [skill_id])[0],  # 歷程重推不了時的退路（3W-R1）
     )
 
 
@@ -384,7 +385,14 @@ def _carried_problem(library: ContentLibrary, source: SkillFlash, picked: list[i
             return f"舊技能沒有第 {nth} 次的變化"
         if record.variation.source != "minor":
             return "大變化、轉型、完整技能的調整欄不能傳承"
+        if library.flash.minor_template(record.variation.template) is None:
+            return _stale_text(nth, record.variation.template)
     return None
+
+
+def _stale_text(nth: int, template: str) -> str:
+    """舊技能的某一筆變化在目前的內容版本已經沒有了（內容改版；3W-R1，與「對這招不合法」分開）。"""
+    return f"舊技能第 {nth} 次的變化（{template}）在目前的內容版本已經沒有了，不能帶走"
 
 
 def inherit(library: ContentLibrary, run: RunState, choice: InheritChoice) -> RunState:
@@ -404,8 +412,11 @@ def inherit(library: ContentLibrary, run: RunState, choice: InheritChoice) -> Ru
     base = base_def(library, run, choice.skill)
     try:
         skill = derive_skill(library, base, state, run.seed, character_tier(library, run.level))
-    except FlashError as exc:
-        raise ChoiceError(f"傳承的變化對這招不合法：{exc}") from exc
+    except FlashStepError as exc:
+        nth = choice.records[exc.nth - 1]  # 帶走的第 i 筆 ＝ 舊技能的第 records[i-1] 次
+        raise ChoiceError(
+            f"舊技能第 {nth} 次的變化（{exc.template}）對 {base.name_zh} 不合法，請改帶別的變化"
+        ) from exc
     gone = _without(run, choice.source)
     return _replace(library, gone, choice.skill, skill, state=state, base=base)
 

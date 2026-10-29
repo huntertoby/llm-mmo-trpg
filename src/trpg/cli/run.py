@@ -31,6 +31,7 @@ from trpg.roguelite import (
     RunState,
     auto_play,
     load_save,
+    load_save_noted,
     new_dev_run,
     new_keyword_run,
     new_run,
@@ -350,10 +351,13 @@ def _run_auto(
 ) -> int:
     try:
         if from_path is not None:
-            save = upgrade_save(library, load_save(from_path))  # 舊存檔照角色階級重配（3W-9）
+            loaded, notice = load_save_noted(from_path)  # 格式過舊的戰鬥捨棄（3W-R1）
+            save = upgrade_save(library, loaded)  # 舊存檔照角色階級重配（3W-9）
             run, run_id = save.run, save.run_id
             battle = restore_battle(library, save)
             print(f"從存檔接續：{from_path}", file=out)
+            if notice is not None:
+                print(notice, file=out)
         else:
             assert seed is not None
             run = start_run(library, seed, start if start is not None else StartArgs())

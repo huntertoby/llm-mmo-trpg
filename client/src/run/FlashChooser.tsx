@@ -86,6 +86,9 @@ export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, bu
       {loadError !== null && <div className="flash-problem small">{loadError}</div>}
       {preview === null && loadError === null && <div className="muted small">載入中……</div>}
       {problem !== null && <div className="flash-problem small" data-testid="flash-problem">{problem}</div>}
+      {preview?.history_note_zh != null && (
+        <div className="flash-problem small" data-testid="flash-history-note">{preview.history_note_zh}</div>
+      )}
       {preview !== null && problem === null && (
         <>
           <div className="flash-modes">

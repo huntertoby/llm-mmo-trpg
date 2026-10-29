@@ -371,6 +371,8 @@ class FlashPreviewOut(_ApiModel):
     focused_cost: int
     categories: tuple[FlashCategoryOut, ...]
     """可指定的類別（資料順序）；有問題時為空。"""
+    history_note_zh: str | None = None
+    """已存的變化歷程在目前的內容版本重推不了時的原因（3W-R1；這時改用存檔裡的數值當起點）。"""
 
 
 class AttributePerkOut(_ApiModel):
@@ -581,6 +583,8 @@ class RunResponse(_ApiModel):
     """這一輪有開 LLM 生成（Phase 4-L6b）。"""
     llm_notice: str | None = None
     """只在開新一輪的回應帶出一次（例如「連不到本機模型，這一輪改用一般技能生成」）。"""
+    load_notice: str | None = None
+    """只在讀檔的回應帶出一次（例如「這場戰鬥的紀錄格式已更新，從這場的開頭重新開始。」，3W-R1）。"""
     llm_stats: LlmStatsOut | None = None
     """LLM 統計；這一輪沒開 LLM 且沒有任何題目時為 ``None``。"""
     pending_flash: PendingFlashOut | None = None

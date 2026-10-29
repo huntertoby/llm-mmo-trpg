@@ -37,8 +37,9 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  /** 開局時的 LLM 提示（例如本機模型未啟動）；只在建立的回應帶出，顯示一次。 */
-  const [llmNotice, setLlmNotice] = useState<string | null>(initial.llm_notice ?? null);
+  /** 開局時的 LLM 提示（例如本機模型未啟動）或讀檔提示（例如格式過舊的戰鬥從頭開始，3W-R1）；只在
+   * 建立／讀檔的回應帶出，顯示一次。 */
+  const [llmNotice, setLlmNotice] = useState<string | null>(initial.llm_notice ?? initial.load_notice ?? null);
   const closeLlmNotice = useCallback(() => setLlmNotice(null), []);
   const resumedRef = useRef(false);
   const runId = run.run_id;

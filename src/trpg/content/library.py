@@ -528,6 +528,12 @@ class ContentLibrary:
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
+    retier_cache: dict[str, SkillDef] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    """技能照角色階級重配的快取（:func:`trpg.skillgen.skill_tier.retier`，3W-R1）：掛在內容庫上、隨它
+    回收；鍵是「技能內容的 SHA-256 ＋ 階級」。不是建構參數，``dataclasses.replace`` 換內容後是新的空
+    快取；不參與相等比較。"""
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
         """單位範本的裝備快照（``equipment`` 解析成內嵌定義的 :class:`Loadout`；沒有裝備時
