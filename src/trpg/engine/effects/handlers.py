@@ -106,7 +106,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
-        dealt = _dealt_permille(ctx, effect)  # 虛弱
+        dealt = _dealt_permille(ctx, effect, unit)  # 虛弱
         status_ppm = dealt * damage_taken_permille(
             ctx.rules, unit, effect.element
         )  # 易傷、石膚；千分比 × 千分比
@@ -225,11 +225,12 @@ def _cap_backlash(ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int) 
     return min(amount, unit.hp - 1 + shield_amount(ctx.rules, unit))
 
 
-def _dealt_permille(ctx: Ctx, effect: DamageEffect) -> int:
+def _dealt_permille(ctx: Ctx, effect: DamageEffect, target: UnitState) -> int:
     """攻擊者造成傷害的狀態倍率（‰，虛弱）；不是攻擊或沒有來源時 1000。"""
     source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
     if effect.cause == "attack" and source is not None:
-        return damage_dealt_permille(ctx.rules, source, effect.element)
+        on_water = ctx.state.tile(target.pos.x, target.pos.y).surface is Surface.WATER
+        return damage_dealt_permille(ctx.rules, source, effect.element, on_water=on_water)
     return PERMILLE
 
 

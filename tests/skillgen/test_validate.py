@@ -452,6 +452,7 @@ def test_beneficial_flags_in_content() -> None:
         "shielded_mending",
         "shielded_wet",
         "shielded_marking",
+        "shielded_charged",
         # 3W-2b：元素姿態階梯
         *(f"stance_{e}_{n}" for e in ELEMENTS_9 for n in range(1, 6)),
         # 3C-4a

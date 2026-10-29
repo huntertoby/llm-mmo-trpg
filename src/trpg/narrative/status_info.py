@@ -97,6 +97,10 @@ def _modifier_lines(status: StatusDef, library: ContentLibrary) -> list[str]:
     if status.element_dealt is not None:
         name = status.element_dealt.display_name
         lines.append(f"自己造成的{name}傷害 {_times(status.element_dealt_permille)}")
+        if status.element_dealt_wet_permille != NEUTRAL_PERMILLE:
+            lines.append(
+                f"目標站在水上時，{name}傷害再 {_times(status.element_dealt_wet_permille)}"
+            )
     for status_id, turns in sorted(status.status_duration_bonus.items()):
         lines.append(
             f"自己施加的「{library.ruleset.status_def(status_id).name_zh}」多持續 {turns} 回合"

@@ -559,6 +559,8 @@ def extra_variations(
         if template.only == "shield" and template.keyword is not None:
             if template.keyword in set(derive_keywords(skill, library.keywords).all()):
                 continue  # 這招已經有這個關鍵字
+            if template.needs_held and held.get(template.keyword, 0) <= 0:
+                continue  # 持有者沒有這個關鍵字就不出（帶電）
             out.append(
                 Variation(
                     source="major",

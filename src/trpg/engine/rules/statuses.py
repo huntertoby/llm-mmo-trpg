@@ -111,21 +111,28 @@ def skip_turn_status(rules: Ruleset, unit: UnitState) -> str | None:
     return None
 
 
-def damage_dealt_permille(rules: Ruleset, unit: UnitState, element: Element | None = None) -> int:
+def damage_dealt_permille(
+    rules: Ruleset, unit: UnitState, element: Element | None = None, *, on_water: bool = False
+) -> int:
     """自己造成的攻擊傷害倍率（‰；虛弱 750）；``element`` 與狀態的 ``element_dealt`` 相同時再乘
-    ``element_dealt_permille``（元素姿態，Phase 3W-2b）。"""
+    ``element_dealt_permille``（元素姿態，Phase 3W-2b）；目標站在水上（``on_water``）時再乘
+    ``element_dealt_wet_permille``（雷霆架勢，Phase 3W-2c）。"""
     combined = _combined(rules, unit, lambda d: d.damage_dealt_permille)
     if element is None:
         return combined
-    return (
-        combined
-        * _combined(
+    elemental = _combined(
+        rules,
+        unit,
+        lambda d: d.element_dealt_permille if d.element_dealt is element else PERMILLE,
+    )
+    if on_water:
+        wet = _combined(
             rules,
             unit,
-            lambda d: d.element_dealt_permille if d.element_dealt is element else PERMILLE,
+            lambda d: d.element_dealt_wet_permille if d.element_dealt is element else PERMILLE,
         )
-        // PERMILLE
-    )
+        elemental = elemental * wet // PERMILLE
+    return combined * elemental // PERMILLE
 
 
 def status_duration_bonus(rules: Ruleset, unit: UnitState, status_id: str) -> int:

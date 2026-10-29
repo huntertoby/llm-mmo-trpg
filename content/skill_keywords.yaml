@@ -74,6 +74,7 @@ keywords:
       - {change: add_element, element: lightning}
       - {effect: add_stack, stack: static_charge}
       - {effect: add_stack, stack: overload_surge}
+      - {effect: shield, status: shielded_charged}   # 3W-2c：破盾時電擊攻擊者的護盾
     uses:
       - {shape: chain}
       - {effect: consume_stack, stack: static_charge}

@@ -11,6 +11,8 @@ from trpg.skillgen.flash import (
     UsageSource,
     _Builder,
     _fill_up,
+    allowed_categories,
+    category_counts,
     make_offer,
 )
 from trpg.skillgen.flash_state import acquire
@@ -80,12 +82,49 @@ def test_summon_whiteboards_get_the_toughen_variation() -> None:
     assert found >= 1
 
 
-def test_focused_offers_are_filled_too() -> None:
+def test_focused_offers_never_borrow_from_other_categories() -> None:
+    """3W-2c：指定類別只出該類（不到選項數就少出）；每個選項的類別都是指定的那一類。"""
     lib = library()
-    filled = 0
-    for board in _boards("active", 2):
-        if board.skeleton != "strike":
-            continue
-        offer = make_offer(lib, _request(board, 5, 2, category="combo"))
-        filled += len(offer.options) == lib.flash.pricing.focused.options
-    assert filled >= 1
+    rule = lib.flash.pricing.focused
+    short = full = 0
+    for tier in (1, 2, 3):
+        for board in _boards("active", tier, 20):
+            request = _request(board, 5, tier)
+            for category, count in category_counts(lib, request).items():
+                if count == 0:
+                    continue
+                offer = make_offer(lib, _request(board, 5, tier, category=category))
+                assert offer.options, (board.id, category)
+                assert {o.variation.category for o in offer.options} == {category}
+                assert len(offer.options) == count <= rule.options
+                short += count < rule.options
+                full += count == rule.options
+    assert short >= 1 and full >= 1  # 兩種情況都有被測到
+
+
+def test_category_counts_match_what_a_focused_offer_shows() -> None:
+    lib = library()
+    for board in _boards("active", 2, 15) + _boards("passive", 2, 15):
+        request = _request(board, 7, 2)
+        counts = category_counts(lib, request)
+        assert counts and all(
+            c in counts for c in allowed_categories(lib.flash, board, major=False)
+        )
+        for category, count in counts.items():
+            focused = _request(board, 7, 2, category=category)
+            if count == 0:
+                with pytest.raises(ValueError, match="沒有合格"):
+                    make_offer(lib, focused)
+            else:
+                assert len(make_offer(lib, focused).options) == count
+
+
+def test_unfocused_offers_may_still_fill_from_any_category() -> None:
+    lib = library()
+    rule = lib.flash.pricing.open
+    categories_seen = 0
+    for board in _boards("active", 2, 20):
+        offer = make_offer(lib, _request(board, 5, 2))
+        assert len(offer.options) <= rule.options
+        categories_seen += len({o.variation.category for o in offer.options}) >= 2
+    assert categories_seen >= 1

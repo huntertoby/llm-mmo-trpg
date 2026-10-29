@@ -233,6 +233,10 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     c.arc(0, 0, 3, 0, TAU);
     c.fill();
   },
+  shielded_charged: (c) => {
+    shield(c);
+    line(c, [[1, -4], [-2, 0], [2, 0], [-1, 4]]);
+  },
   shielded: (c) => {
     circle(c, 0, 0, 9); // 泡泡（吸收量）
     c.globalAlpha *= 0.35;
