@@ -243,3 +243,58 @@ def test_earth_stance_lowers_physical_damage_taken() -> None:
         damage_taken_permille(rules, unit, Element.PHYSICAL) == 900
     )  # 大地架勢（3 階）：物理 −10%
     assert damage_taken_permille(rules, unit, Element.FIRE) == 1000
+
+
+def _lightning_bolt_damage(bolt: SkillDef, seed: int, *, stance: str | None, water: bool) -> int:
+    m = make_map(
+        FLAT7,
+        ally=[(3, 3)],
+        enemy=[(4, 3)],
+        surfaces=[(4, 3, "water")] if water else [],
+    )
+    owner = caster_template([bolt], max_hp=999)
+    state = give_turn(
+        make_state(
+            m,
+            [spawn(Team.ALLY, (3, 3), owner), spawn(Team.ENEMY, (4, 3), no_reactions(max_hp=999))],
+            seed=seed,
+            skills=[bolt],
+        ),
+        U1,
+    )
+    if stance is not None:
+        state.units[U1].statuses.append(StatusInstance(status_id=stance))
+    result = answered(resolve(state, UseSkill(unit_id=U1, skill_id=bolt.id, target_id=U2)))
+    return sum(e.amount for e in of(result, DamageDealt) if e.target_id == U2)
+
+
+def test_thunder_stance_has_no_blind_bonus_and_boosts_wet_targets() -> None:
+    lib = library().ruleset
+    for level in range(1, 6):
+        defn = lib.status_def(f"stance_lightning_{level}")
+        assert "blinded" not in defn.status_duration_bonus
+        assert defn.element_dealt_wet_permille > 1000
+    unit = _scene(_stance("skill_t_stance_t", "stance_lightning_3", 1)).units[U1]
+    unit.statuses.append(StatusInstance(status_id="stance_lightning_3"))
+    dry = damage_dealt_permille(lib, unit, Element.LIGHTNING)
+    wet = damage_dealt_permille(lib, unit, Element.LIGHTNING, on_water=True)
+    assert wet > dry > 1000
+    assert damage_dealt_permille(lib, unit, Element.FIRE, on_water=True) == 1000
+
+
+def test_thunder_stance_real_damage_is_higher_on_water() -> None:
+    bolt = make_skill(
+        "skill_t_bolt_l",
+        {"type": "single", "range": 3},
+        [{"type": "damage", "element": "lightning", "dice": "2d6"}],
+    )
+    stance = "stance_lightning_5"
+    more = 0
+    for seed in range(8):
+        dry_plain = _lightning_bolt_damage(bolt, seed, stance=None, water=False)
+        dry = _lightning_bolt_damage(bolt, seed, stance=stance, water=False)
+        wet = _lightning_bolt_damage(bolt, seed, stance=stance, water=True)
+        assert dry >= dry_plain
+        assert wet >= dry
+        more += wet > dry
+    assert more >= 1

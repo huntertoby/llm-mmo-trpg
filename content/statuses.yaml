@@ -744,7 +744,7 @@ statuses:
   - id: stance_lightning_1
     polarity: neutral
     name_zh: 雷霆架勢·壹
-    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    description_zh: 雷電傷害提高，命中站在水上的目標時再多一點（雷電導水）；持續到取消，每回合付維持費（級數越高越強）。
     expires: never
     stacking: refresh
     beneficial: true
@@ -753,11 +753,11 @@ statuses:
     stance: true
     element_dealt: lightning
     element_dealt_permille: 1100
-    status_duration_bonus: {blinded: 1}
+    element_dealt_wet_permille: 1050
   - id: stance_lightning_2
     polarity: neutral
     name_zh: 雷霆架勢·貳
-    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    description_zh: 雷電傷害提高，命中站在水上的目標時再多一點（雷電導水）；持續到取消，每回合付維持費（級數越高越強）。
     expires: never
     stacking: refresh
     beneficial: true
@@ -766,11 +766,11 @@ statuses:
     stance: true
     element_dealt: lightning
     element_dealt_permille: 1150
-    status_duration_bonus: {blinded: 1}
+    element_dealt_wet_permille: 1075
   - id: stance_lightning_3
     polarity: neutral
     name_zh: 雷霆架勢·參
-    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    description_zh: 雷電傷害提高，命中站在水上的目標時再多一點（雷電導水）；持續到取消，每回合付維持費（級數越高越強）。
     expires: never
     stacking: refresh
     beneficial: true
@@ -779,11 +779,11 @@ statuses:
     stance: true
     element_dealt: lightning
     element_dealt_permille: 1200
-    status_duration_bonus: {blinded: 1}
+    element_dealt_wet_permille: 1100
   - id: stance_lightning_4
     polarity: neutral
     name_zh: 雷霆架勢·肆
-    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    description_zh: 雷電傷害提高，命中站在水上的目標時再多一點（雷電導水）；持續到取消，每回合付維持費（級數越高越強）。
     expires: never
     stacking: refresh
     beneficial: true
@@ -792,11 +792,11 @@ statuses:
     stance: true
     element_dealt: lightning
     element_dealt_permille: 1250
-    status_duration_bonus: {blinded: 1}
+    element_dealt_wet_permille: 1125
   - id: stance_lightning_5
     polarity: neutral
     name_zh: 雷霆架勢·伍
-    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    description_zh: 雷電傷害提高，命中站在水上的目標時再多一點（雷電導水）；持續到取消，每回合付維持費（級數越高越強）。
     expires: never
     stacking: refresh
     beneficial: true
@@ -805,7 +805,7 @@ statuses:
     stance: true
     element_dealt: lightning
     element_dealt_permille: 1300
-    status_duration_bonus: {blinded: 1}
+    element_dealt_wet_permille: 1150
   - id: stance_poison_1
     polarity: neutral
     name_zh: 劇毒架勢·壹

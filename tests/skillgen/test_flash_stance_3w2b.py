@@ -140,7 +140,20 @@ def test_card_numbers_match_the_engine_for_every_level(tier: int) -> None:
             status = lib.ruleset.status_def(status_id)
             text = "".join(status_rules(status, lib))
             assert f"×{status.element_dealt_permille / 10:g}%" in text
+            if status.element_dealt_wet_permille != 1000:  # 3W-2c：雷霆架勢的雷電導水
+                assert f"×{status.element_dealt_wet_permille / 10:g}%" in text
     del tier
+
+
+def test_thunder_ladder_wet_bonus_grows_and_stays_small() -> None:
+    lib = library()
+    wet = [
+        lib.ruleset.status_def(s).element_dealt_wet_permille
+        for s in lib.flash.stance_ladders["lightning"]
+    ]
+    assert wet == sorted(wet)
+    assert wet[0] > 1000
+    assert wet[-1] <= 1200  # 「多一點」：額外加成不超過 +20%
 
 
 @pytest.mark.parametrize("tier", [2, 3])

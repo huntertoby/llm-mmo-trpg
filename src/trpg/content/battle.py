@@ -826,6 +826,9 @@ class StatusDef(ContentModel):
     """元素傷害加成（Phase 3W-2b，元素姿態）：帶有者造成這個元素的攻擊傷害再 ×
     ``element_dealt_permille``。"""
     element_dealt_permille: int = Field(default=1000, ge=1000, le=3000)
+    element_dealt_wet_permille: int = Field(default=1000, ge=1000, le=3000)
+    """元素姿態（Phase 3W-2c，雷霆架勢的「雷電導水」）：目標站在水上時，``element_dealt`` 元素的
+    傷害再 × 這個倍率（‰）。只能與 ``element_dealt`` 一起設定。"""
     shield_reflect: int = Field(default=0, ge=0, le=5)
     """護盾附反傷（Phase 3W-2b，只有 ``absorbs_damage`` 的狀態）：護盾吸收一次相鄰（近戰）攻擊
     時，對攻擊者反彈這麼多點物理傷害。"""
@@ -888,6 +891,8 @@ class StatusDef(ContentModel):
         """元素姿態（3W-2b）的欄位：元素與倍率成對；狀態持續加成每項 1～2 回合。"""
         if (self.element_dealt is None) != (self.element_dealt_permille == _NEUTRAL_PERMILLE):
             raise ValueError(f"狀態 {self.id}：element_dealt 與 element_dealt_permille 要一起設定")
+        if self.element_dealt_wet_permille != _NEUTRAL_PERMILLE and self.element_dealt is None:
+            raise ValueError(f"狀態 {self.id}：element_dealt_wet_permille 需要 element_dealt")
         if any(not 1 <= n <= _MAX_DURATION_BONUS for n in self.status_duration_bonus.values()):
             raise ValueError(f"狀態 {self.id}：status_duration_bonus 每項必須是 1 或 2")
 
