@@ -16,7 +16,7 @@ from __future__ import annotations
 import time
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from typing import Literal
 
@@ -162,6 +162,13 @@ def propose_skill(
     ``LLMUnavailable`` 立即退回；``LLMTimeout``／``LLMBadResponse`` 算一次嘗試。``SubsetError``
     （題目沒有可用結構）不呼叫 LLM、直接退回。未知的骨架或關鍵字 ID 丟 ``ValueError``；退回也失敗時
     丟 :class:`~trpg.skillgen.proposal_fallback.FallbackError`。``clock`` 只用來計時（報表）。"""
+    # 題目的關鍵字與指定的核心原語一併交給驗證器（Phase 4-L6：`keyword.required`、`core.required`）
+    ctx = replace(
+        ctx,
+        keywords=request.keywords,
+        core_primitive=request.core_primitive,
+        weapon_class=request.weapon_class,
+    )
     loop = _Loop(client, library, request, ctx, seed, max_attempts, player_text, clock)
     reason: str | None = None
     for number in range(1, max_attempts + 1):

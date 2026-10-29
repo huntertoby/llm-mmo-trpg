@@ -21,6 +21,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skill_keywords import KeywordDef
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import PrimitiveDef, SkillRarity, rarity_rank
+from trpg.shared.rng import Rng
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET, estimate_tokens
 from trpg.skillgen.proposal import (
     CLOSED_SKELETONS,
@@ -43,6 +44,8 @@ __all__ = [
     "build_subset_models",
     "json_chars",
     "json_tokens",
+    "legal_core_primitives",
+    "menu_order",
     "select_subset",
     "subset_tokens",
 ]
@@ -74,6 +77,20 @@ class ProposalRequest:
     kind: str | None = None
     skeleton: str | None = None
     keywords: tuple[str, ...] = ()
+    core_primitive: str | None = None
+    """題目指定的核心原語（Phase 4-L6，3C 節第 1 點）：只開放它當核心，附帶原語照舊；
+    提議必須用到它。
+    不在合法核心原語內時 :func:`select_subset` 丟 :class:`SubsetError`。"""
+    menu_seed: int | None = None
+    """輪替選單的種子（Phase 4-L6，3C 節第 2 點）：有值時附帶原語與條件只開放一部分
+    （``skill_composer.yaml`` 的 ``llm_topic``），且 ``available`` 的順序由它打亂；
+    ``None`` ＝ 全開、
+    依 ID 排序（與 4-L5c 相同）。"""
+    weapon_class: str | None = None
+    """主角的武器大類（Phase 4-L6）：進 prompt 的題目區塊，技能的武器需求要相容。不影響子集。"""
+    theme: str | None = None
+    """主題詞 ID（``content/llm/world_*.yaml`` 的 ``themes``；Phase 4-L6，例如 ``nature`` 自然）。
+    只進 prompt 的題目區塊，不影響子集。"""
 
     def __post_init__(self) -> None:
         if self.tier < 1:
@@ -106,6 +123,8 @@ class ProposalSubset:
     dropped: tuple[tuple[str, str], ...] = ()
     tokens: int = 0
     rarity: SkillRarity | None = None
+    menu_seed: int | None = None
+    """``available`` 的順序種子（``None`` ＝ 依 ID 排序）；只影響呈現，不影響驗證。"""
 
 
 # ---------------------------------------------------------------------------
@@ -138,22 +157,40 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
     conditions = rules.conditions.by_id()
     triggers = rules.skill_triggers.by_id()
     keywords = rules.keywords.by_id()
+    seed = subset.menu_seed
     return {
         "layouts": _layout_entries(library, subset),
         "skeletons": [
-            _skeleton_entry(library, library.skeletons[i], subset) for i in sorted(subset.skeletons)
+            _skeleton_entry(library, library.skeletons[i], subset)
+            for i in menu_order(subset.skeletons, seed, "skeletons")
         ],
-        "primitives": [_primitive_entry(primitives[i]) for i in sorted(subset.primitives)],
-        "shapes": [{"id": i, "hint": shapes[i].llm_hint} for i in sorted(subset.shapes)],
+        "primitives": [
+            _primitive_entry(primitives[i])
+            for i in menu_order(subset.primitives, seed, "primitives")
+        ],
+        "shapes": [
+            {"id": i, "hint": shapes[i].llm_hint} for i in menu_order(subset.shapes, seed, "shapes")
+        ],
         "conditions": [
-            {"id": i, "hint": conditions[i].llm_hint} for i in sorted(subset.conditions)
+            {"id": i, "hint": conditions[i].llm_hint}
+            for i in menu_order(subset.conditions, seed, "conditions")
         ],
-        "triggers": [{"id": i, "hint": triggers[i].llm_hint} for i in sorted(subset.triggers)],
+        "triggers": [
+            {"id": i, "hint": triggers[i].llm_hint}
+            for i in menu_order(subset.triggers, seed, "triggers")
+        ],
         "keywords": [
             {"id": i, "name_zh": keywords[i].name_zh, "hint": keywords[i].description_zh}
             for i in sorted(subset.keywords)
         ],
     }
+
+
+def menu_order(ids: Iterable[str], seed: int | None, label: str) -> list[str]:
+    """選單的呈現順序：沒有種子依 ID 排序；有種子時由 ``Rng(seed).fork(label)`` 打亂排序後的清單
+    （避免模型偏好排在前面的項目；只影響呈現，不影響驗證）。"""
+    ordered = sorted(ids)
+    return ordered if seed is None else Rng(seed).fork(f"menu/{label}").shuffled(ordered)
 
 
 def _layout_entries(library: ContentLibrary, subset: ProposalSubset) -> list[dict[str, str]]:
@@ -467,6 +504,8 @@ def select_subset(
         reasons = "；".join(f"{k}：{v}" for k, v in sorted(sel.dropped.items())) or "沒有候選骨架"
         raise SubsetError(f"沒有可用的骨架（{reasons}）")
 
+    if request.core_primitive is not None:
+        skeletons = _with_core(sel, skeletons, request.core_primitive)
     plan = _plan(sel, skeletons, kind, wants)
 
     def make(n_prims: int, n_conds: int) -> ProposalSubset:
@@ -481,6 +520,7 @@ def select_subset(
             triggers=tuple(sorted(plan.triggers)),
             keywords=tuple(sorted(request.keywords)),
             rarity=request.rarity,
+            menu_seed=request.menu_seed,
         )
 
     def fits(n_prims: int, n_conds: int) -> bool:
@@ -524,8 +564,9 @@ def _plan(
     core: set[str] = set()
     optional: set[str] = set()
     shapes: set[str] = set()
+    only = sel.request.core_primitive
     for skeleton in skeletons:
-        core.update(sel.core_primitives(skeleton))
+        core.update(sel.core_primitives(skeleton) if only is None else [only])
         core.update(sel.legal_primitives(skeleton.require_any_primitives))
         optional.update(sel.secondary_primitives(skeleton))
         shapes.update(sel.skeleton_shapes(skeleton))
@@ -545,6 +586,12 @@ def _plan(
     ranked = [*prioritized, *(i for i in rest if i not in core and i not in prioritized)]
     ranked_conditions = [c for c in wanted_conditions if c not in required]
     ranked_conditions += [c for c in conditions if c not in required and c not in ranked_conditions]
+    if sel.request.menu_seed is not None:
+        must = [*prioritized, *(i for i in sel.support_primitives(wanted) if i not in core)]
+        ranked = _rotate(sel, ranked, must, "primitives", sel.library.composer.llm_topic)
+        ranked_conditions = _rotate(
+            sel, ranked_conditions, wanted_conditions, "conditions", sel.library.composer.llm_topic
+        )
     return _Plan(
         core=tuple(sorted(core)),
         ranked_primitives=tuple(ranked),
@@ -553,6 +600,52 @@ def _plan(
         shapes=tuple(sorted(shapes)),
         triggers=tuple(sorted(triggers)),
     )
+
+
+def _with_core(
+    sel: _Selector, skeletons: list[SkeletonDef], core_primitive: str
+) -> list[SkeletonDef]:
+    """題目指定核心原語：只留核心可以用它的骨架；沒有就丟 :class:`SubsetError`。"""
+    found = [s for s in skeletons if core_primitive in sel.core_primitives(s)]
+    if not found:
+        legal = "、".join(sorted({p for s in skeletons for p in sel.core_primitives(s)}))
+        raise SubsetError(f"核心原語 {core_primitive} 不在合法的核心原語內（{legal}）")
+    return found
+
+
+def legal_core_primitives(library: ContentLibrary, request: ProposalRequest) -> tuple[str, ...]:
+    """題目（忽略 ``core_primitive``）可以當核心的原語：合法骨架 × 稀有度足夠的核心原語，扣掉
+    ``skill_composer.yaml`` 的 ``llm_topic.core_exclude``（依 YAML 順序）。題目沒有可用結構時丟
+    :class:`SubsetError`。"""
+    plain = replace(request, core_primitive=None, menu_seed=None)
+    sel = _Selector(library, plain)
+    kind = sel.resolve_kind()
+    sel.kind = kind
+    skeletons = [s for s in sel.candidate_skeletons(kind) if sel.viable(s, kind)]
+    if not skeletons:
+        raise SubsetError("沒有可用的骨架")
+    found = {p for s in skeletons for p in sel.core_primitives(s)}
+    excluded = set(library.composer.llm_topic.core_exclude)
+    return tuple(
+        p.id
+        for p in library.ruleset.primitives.primitives
+        if p.id in found and p.id not in excluded
+    )
+
+
+def _rotate(
+    sel: _Selector, ranked: list[str], must: Iterable[str], label: str, rules: Any
+) -> list[str]:
+    """輪替選單：必收的（題目關鍵字要的與其巢狀所需）照收，其餘由種子抽最多 N 個（保持原順序）。"""
+    limit = rules.secondary_count if label == "primitives" else rules.condition_count
+    keep = set(must)
+    rest = [i for i in ranked if i not in keep]
+    seed = sel.request.menu_seed or 0
+    picked = set(Rng(seed).fork(f"rotate/{label}").shuffled(rest)[:limit])
+    for item in rest:
+        if item not in picked:
+            sel.drop(item, "輪替選單未收入")
+    return [i for i in ranked if i in keep or i in picked]
 
 
 def _largest(upper: int, ok: Any) -> int | None:

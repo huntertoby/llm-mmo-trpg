@@ -87,3 +87,7 @@ candidates:
   composer_tries: 8
 # 基礎技能（沒有專屬關鍵字，玩法決定 #55）：「新方向」那一格有這個機率（‰）從通用池抽；抽不到再走原本的新方向。
   general_share_permille: 100
+# LLM 來源（Phase 4-L6；config/llm.toml 的 enabled 或 CLI --llm 打開時才用）：每個候選先以 llm_share_permille 的機率請
+# 本機模型提議（失敗時退回上面的組合器與技能池，候選仍湊滿 3 個）；llm_theme_permille 的題目帶主題詞（例如自然）。
+  llm_share_permille: 800
+  llm_theme_permille: 100

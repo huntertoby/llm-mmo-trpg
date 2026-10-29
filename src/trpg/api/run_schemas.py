@@ -413,7 +413,7 @@ class OfferTagOut(_ApiModel):
     keywords: tuple[KeywordRef, ...]
     fallback: bool
     """定義做不到而退回（例：只持有 1 個關鍵字時的橋接改成「持有的 ＋ 新的」）。"""
-    source: Literal["pool", "composer"]
+    source: Literal["pool", "composer", "llm"]
 
 
 class OfferOut(_ApiModel):

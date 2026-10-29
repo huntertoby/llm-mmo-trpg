@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import time
 from collections import Counter
 from collections.abc import Sequence
@@ -23,6 +22,7 @@ from trpg.llm import (
     OpenAICompatClient,
     load_llm_config,
 )
+from trpg.llm.candidate_source import mock_client_for
 from trpg.llm.errors import LLM_START_HINT
 from trpg.llm.propose import ProposalOutcome, ProposalStats, propose_skill
 from trpg.shared.rng import Rng
@@ -30,9 +30,8 @@ from trpg.skillgen.proposal import (
     CLOSED_SKELETONS,
     PROPOSAL_KINDS,
     ProposalContext,
-    proposal_from_skill,
 )
-from trpg.skillgen.proposal_fallback import FallbackError, fallback_skill, wanted_kind
+from trpg.skillgen.proposal_fallback import FallbackError, fallback_skill
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError, select_subset
 
 __all__ = ["PROPOSE_RARITIES", "ProposeArgs", "cmd_llm_ping", "cmd_llm_propose", "propose_requests"]
@@ -41,8 +40,6 @@ PROPOSE_RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic")
 """沒有指定稀有度時輪替的稀有度（傳說要源力代價等提議模型沒有的欄位，只在指定時使用）。"""
 ROTATION_TRIES = 12
 """輪替出的題目不可行時，最多換幾組（依種子確定性）；都不可行就用第一組。"""
-MOCK_EMPTY = "{}"
-"""Mock 找不到合適的手寫技能時回傳的空提議（會一路失敗、走退回）。"""
 
 
 def cmd_llm_ping(
@@ -164,26 +161,9 @@ def propose_requests(
 def _mock_client(
     library: ContentLibrary, request: ProposalRequest, seed: int, attempts: int
 ) -> MockLLMClient:
-    """回傳 ``proposal_from_skill`` 產生的提議（同階級、稀有度、種類與骨架的手寫技能，依種子
-    挑一個；不看關鍵字）；沒有合適的技能時回傳空提議（走退回）。"""
-    kind = wanted_kind(library, request)
-    texts: list[str] = []
-    for skill_id in sorted(library.skills):
-        skill = library.skills[skill_id]
-        if (
-            skill.tier != request.tier
-            or skill.rarity != request.rarity
-            or skill.kind != kind
-            or (request.skeleton is not None and skill.skeleton != request.skeleton)
-        ):
-            continue
-        try:
-            proposal = proposal_from_skill(skill, library)
-        except ValueError:
-            continue
-        texts.append(json.dumps(proposal, ensure_ascii=False, sort_keys=True))
-    text = Rng(seed).fork("llm.propose.mock").choice(texts) if texts else MOCK_EMPTY
-    return MockLLMClient([text] * attempts)
+    """見 :func:`trpg.llm.candidate_source.mock_client_for`（Phase 4-L6 起也看題目的關鍵字與核心
+    原語，因為驗證器會要求提議帶到它們）。"""
+    return mock_client_for(library, request, seed, attempts)
 
 
 def _describe(request: ProposalRequest) -> str:

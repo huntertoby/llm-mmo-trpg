@@ -15,6 +15,9 @@ max_tokens = 2048
 # response_format、guided_json、none（不附約束）
 json_schema_mode = "auto"
 fallback_alert_permille = 200   # 退回率超過 20% 就提醒
+# LLM 生成開關（Phase 4-L6）：true 時 `trpg run` 的候選請本機模型提議技能；預設 false（沒有本機模型時照舊）。
+# 命令列 `--llm`／`--llm-mock` 也能打開；環境變數 TRPG_LLM_GENERATE（true／false）可覆寫。
+generate = false
 # Qwen3 預設會先「思考」，2048 個輸出 token 會全被思考用掉（content 為空、約 45 秒）；
 # false 時請求帶 chat_template_kwargs: {enable_thinking: false}（約 6 秒）。
 # 環境變數 TRPG_LLM_ENABLE_THINKING（true／false）可覆寫。

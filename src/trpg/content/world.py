@@ -11,7 +11,14 @@ from pathlib import Path
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.schemas import ContentModel
 
-__all__ = ["DEFAULT_WORLD_FILE", "GlossaryEntry", "Realm", "WorldStyle", "load_world_style"]
+__all__ = [
+    "DEFAULT_WORLD_FILE",
+    "GlossaryEntry",
+    "Realm",
+    "Theme",
+    "WorldStyle",
+    "load_world_style",
+]
 
 DEFAULT_WORLD_FILE = "llm/world_shattered.yaml"
 
@@ -26,6 +33,15 @@ class GlossaryEntry(ContentModel):
     meaning_zh: str
 
 
+class Theme(ContentModel):
+    """主題詞（玩法決定 #48）：主題名稱、不是元素。題目帶主題時，``hint_zh`` 進 prompt 的題目區塊，
+    告訴模型用哪些既有的機制組合；不改元素表。"""
+
+    id: str
+    name_zh: str
+    hint_zh: str
+
+
 class WorldStyle(ContentModel):
     id: str
     name_zh: str
@@ -33,6 +49,10 @@ class WorldStyle(ContentModel):
     tone_zh: str
     realms: tuple[Realm, ...]
     glossary: tuple[GlossaryEntry, ...]
+    themes: tuple[Theme, ...] = ()
+
+    def theme_ids(self) -> tuple[str, ...]:
+        return tuple(t.id for t in self.themes)
 
     def summary(self) -> str:
         return f"{self.name_zh}（{len(self.realms)} 個界域、{len(self.glossary)} 個名詞）"

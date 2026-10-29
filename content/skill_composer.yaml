@@ -178,3 +178,14 @@ variant:
     - {id: lightning, name_zh: 雷電, element: lightning}
     - {id: ice, name_zh: 寒霜, element: ice}
     - {id: prone, name_zh: 擊倒, add_effect: {type: knock_prone}}
+
+# LLM 提議題目的多樣性（Phase 4-L6，docs/phases/Phase4計畫.md 3C 節；trpg.skillgen.proposal_topic）：結構的多樣性由引擎
+# 決定，不交給模型的偏好。核心原語由種子加權抽出；run 內配額＝原語已出現在這一輪的候選 n 次時，權重 ＝ 基礎 × 100 ÷ (100 ＋ n × 係數)。
+# 輪替選單：附帶原語與條件只開放一部分（題目關鍵字要的必收），並由種子打亂 available 的順序。
+llm_topic:
+  secondary_count: 6
+  condition_count: 4
+  core_exclude: [enter_form, leave_form]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）
+  base_weight: 100
+  quota_percent_per_use: 100
+  core_weights: {}                          # 個別原語的基礎權重（沒列出的用 base_weight）

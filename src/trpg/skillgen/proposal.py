@@ -41,7 +41,7 @@ from pydantic import (
 )
 
 from trpg.content.battle import ID_PATTERN
-from trpg.content.keyword_derive import skill_condition_specs
+from trpg.content.keyword_derive import derive_keywords, skill_condition_specs
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     AFFECTS_VALUES,
@@ -64,6 +64,7 @@ from trpg.content.skills import (
     TriggerSpec,
     VariantWhen,
     rarity_rank,
+    weapon_problem,
 )
 from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.option_gear import gear_pool
@@ -181,6 +182,14 @@ class ProposalContext:
     held: Mapping[str, str] | None = None
     """主角手上的主手武器與副手（ID → 中文名；Phase 3I-5）。有值時，提議的「手持某種武器時」
     條件只能指定這些裝備（否則加成永遠不會成立）；``None`` ＝ 不檢查。"""
+    keywords: tuple[str, ...] = ()
+    """題目的關鍵字（Phase 4-L6）：技能（依專屬規則推導）必須全部帶到，否則
+    ``keyword.required``。"""
+    core_primitive: str | None = None
+    """題目指定的核心原語（Phase 4-L6）：技能的效果必須用到它，否則 ``core.required``。"""
+    weapon_class: str | None = None
+    """主角的武器大類（``melee``／``ranged``／``focus``；Phase 4-L6）：技能的武器需求必須與它相容
+    （含 ``held``），否則 ``weapon.incompatible``，讓模型重提而不是白白浪費這個候選。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1181,10 +1190,51 @@ def evaluate_proposal(
     violations = validate_skill(skill, library)
     if violations:
         return ProposalResult(None, tuple(_rule_error(v.rule, v.message) for v in violations))
-    unheld = _unheld_errors(skill, ctx)
-    if unheld:
-        return ProposalResult(None, tuple(unheld))
-    return ProposalResult(skill, ())
+    extra = [*_unheld_errors(skill, ctx), *_topic_errors(skill, ctx, library)]
+    return ProposalResult(None, tuple(extra)) if extra else ProposalResult(skill, ())
+
+
+def _topic_errors(
+    skill: SkillDef, ctx: ProposalContext, library: ContentLibrary
+) -> list[ProposalError]:
+    """題目要求（Phase 4-L6）：帶到題目的關鍵字、用到指定的核心原語。沒有題目要求時不檢查。"""
+    errors: list[ProposalError] = []
+    if ctx.keywords:
+        found = derive_keywords(skill, library.keywords, exclusive_only=True).all()
+        lacking = tuple(k for k in ctx.keywords if k not in found)
+        if lacking:
+            errors.append(
+                ProposalError(
+                    stage="rules",
+                    path="effects",
+                    code="keyword.required",
+                    message=f"技能必須製造或利用題目的關鍵字 {'、'.join(lacking)}，但提議沒有帶到",
+                    allowed=lacking,
+                )
+            )
+    if ctx.weapon_class is not None:
+        problem = weapon_problem(skill, ctx.weapon_class, ctx.held or {})
+        if problem is not None:
+            errors.append(
+                ProposalError(
+                    stage="rules",
+                    path="weapon_req",
+                    code="weapon.incompatible",
+                    message=f"技能與主角的武器不相容：{problem}",
+                )
+            )
+    core = ctx.core_primitive
+    if core is not None and all(e.type != core for e in skill.effects):
+        errors.append(
+            ProposalError(
+                stage="rules",
+                path="effects",
+                code="core.required",
+                message=f"題目指定核心原語 {core}：effects 裡必須有 type 為 {core} 的效果",
+                allowed=(core,),
+            )
+        )
+    return errors
 
 
 def _unheld_errors(skill: SkillDef, ctx: ProposalContext) -> list[ProposalError]:

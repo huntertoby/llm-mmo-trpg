@@ -134,6 +134,10 @@ class CandidateSettings(ContentModel):
     """組合器每個候選最多試幾個種子。"""
     general_share_permille: int = Field(default=100, ge=0, le=1000)
     """「新方向」那一格從通用池（基礎技能，沒有專屬關鍵字；玩法決定 #55）抽的機率（‰）。"""
+    llm_share_permille: int = Field(default=800, ge=0, le=1000)
+    """LLM 生成開關打開時，每個候選先請 LLM 提議的機率（‰；Phase 4-L6）。關閉時不使用。"""
+    llm_theme_permille: int = Field(default=100, ge=0, le=1000)
+    """LLM 題目帶主題詞（例如「自然」，``content/llm/world_*.yaml`` 的 ``themes``）的機率（‰）。"""
 
 
 class RunRules(ContentModel):

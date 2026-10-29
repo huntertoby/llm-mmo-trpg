@@ -27,6 +27,7 @@ _ENV_OVERRIDES = (
     ("timeout_s", "TRPG_LLM_TIMEOUT_S"),
     ("api_key", "TRPG_LLM_API_KEY"),
     ("enable_thinking", "TRPG_LLM_ENABLE_THINKING"),
+    ("generate", "TRPG_LLM_GENERATE"),
 )
 
 
@@ -46,6 +47,10 @@ class LLMConfig(BaseModel):
     max_tokens: int = Field(default=2048, ge=1)
     json_schema_mode: Literal["auto", "response_format", "guided_json", "none"] = "auto"
     fallback_alert_permille: int = Field(default=200, ge=0, le=1000)
+    generate: bool = False
+    """LLM 生成開關（Phase 4-L6）：打開時 ``trpg run`` 的候選請本機模型提議技能；預設關
+    （沒有本機模型時照舊）。命令列 ``--llm`` 也能打開；環境變數 ``TRPG_LLM_GENERATE``
+    （true／false）可覆寫。"""
     enable_thinking: bool = False
     """Qwen3 等模型預設會先「思考」而把 ``max_tokens`` 用光；請求一律帶
     ``chat_template_kwargs: {"enable_thinking": …}``（Phase 4-L5 實測）。"""

@@ -7768,7 +7768,8 @@
             "type": "string",
             "enum": [
               "pool",
-              "composer"
+              "composer",
+              "llm"
             ],
             "title": "Source"
           }

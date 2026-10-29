@@ -26,6 +26,7 @@ __all__ = [
     "DurationRules",
     "IntRange",
     "LadderRange",
+    "LlmTopicRules",
     "PassiveRules",
     "ReactionRules",
     "ScalingRules",
@@ -351,6 +352,31 @@ class VariantRules(ContentModel):
     """候選＝條件 × 替換內容的所有組合；依亂數順序逐一試，第一個通過驗證的採用。"""
 
 
+class LlmTopicRules(ContentModel):
+    """LLM 提議題目的多樣性參數（Phase 4-L6，``docs/phases/Phase4計畫.md`` 3C 節）。
+
+    結構的多樣性由引擎決定，不交給模型的偏好：核心原語由種子加權抽出（含 run 內配額）、附帶原語與
+    條件只開放一部分（輪替選單）。權重與數量都在這裡，不寫死在程式。
+    """
+
+    secondary_count: int = Field(default=6, ge=0)
+    """輪替選單：附帶原語最多開放幾個（題目關鍵字要的必收，不計入）。"""
+    condition_count: int = Field(default=4, ge=0)
+    """輪替選單：條件最多開放幾個（題目關鍵字要的與骨架必要的必收，不計入）。"""
+    core_exclude: tuple[str, ...] = ("enter_form", "leave_form")
+    """不能被抽成題目核心原語的原語（形態只由手寫內容提供）。"""
+    core_weights: dict[str, int] = Field(default_factory=dict)
+    """核心原語的基礎權重（沒列出的用 ``base_weight``）。"""
+    base_weight: int = Field(default=100, ge=1)
+    quota_percent_per_use: int = Field(default=100, ge=0)
+    """run 內配額：原語已出現在這一輪的候選 ``n`` 次時，權重 ＝ 基礎權重 × 100 ÷
+    （100 ＋ ``n`` × 這個值）（整數除法，至少 1）。0 ＝ 不看配額。"""
+
+    def weight_of(self, primitive: str, uses: int) -> int:
+        base = self.core_weights.get(primitive, self.base_weight)
+        return max(1, base * 100 // (100 + uses * self.quota_percent_per_use))
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -385,6 +411,8 @@ class ComposerRules(ContentModel):
     scaling: ScalingRules
     special: SpecialRules
     variant: VariantRules
+    llm_topic: LlmTopicRules = Field(default_factory=LlmTopicRules)
+    """LLM 提議題目的多樣性參數（Phase 4-L6）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:
