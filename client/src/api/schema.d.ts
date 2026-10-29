@@ -539,6 +539,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/dev-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dev Advance
+         * @description 開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
+         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
+         */
+        post: operations["dev_advance_api_runs__run_id__dev_advance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}/save": {
         parameters: {
             query?: never;
@@ -6299,6 +6320,39 @@ export interface operations {
                 "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dev_advance_api_runs__run_id__dev_advance_post: {
+        parameters: {
+            query: {
+                to: string;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
