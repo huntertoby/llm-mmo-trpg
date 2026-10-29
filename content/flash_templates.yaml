@@ -1,0 +1,86 @@
+# 白板技能的閃現（靈光一閃）（Phase 3W-1，docs/design/06-技能.md 6.34；玩法決定 #69、#70）。
+#
+# 花靈感點指定一招技能，跳出幾個「變化」，選 1 個套用。每次閃現讓這招的預算上限 +budget_step_permille‰
+# （佔同階預算），套用變化之後由預算器依新的上限重調強度（trpg.skillgen.flash），仍受 6.6 硬上限約束。
+# 模板只描述「怎麼改」，不寫強度。op 沒有實作的模板不會出現（3W-1 只實作 area、range；其餘 3W-2）。
+# 選項由種子衍生：標籤 flash/<技能>/<第幾次>/<重閃次數>[/<指定類別>]，同種子同選項，可重播。
+
+rules:
+  max_flashes: 5              # 每招最多閃 5 次
+  major_flash: 3              # 第 3 次是大變化（加深、橋接；有合法轉型時轉型一定是選項之一）
+  budget_step_permille: 40    # 每次閃現：預算上限 +40‰（初值；5 次共 +200‰）
+  needs_use: true             # 自上次閃現（或取得）後要先上場用過
+  reflash_needs_use: false    # 重閃不需要先上場用過，也不增加閃現次數
+  dissolve_refund_permille: 500  # 溶掉技能退回花在它身上的靈感點的一半，無條件捨去（#71）
+  insight_per_win: 1          # roguelite 原型：每打贏一場 1 點靈感（3W-5 接）
+  complete:                   # 完整技能（6.34.6）：視為已閃 3 次、+120‰、不能再閃、可以重閃
+    flashes: 3
+    budget_permille: 120
+    can_flash: false
+    can_reflash: true
+
+# 出題方式（#70，使用者：「選擇 類別 多花1點」）。重閃和閃現同價。
+pricing:
+  open:                       # 不指定類別：花 1 點，出 4 個混合變化，至少涵蓋 2 類
+    cost: 1
+    options: 4
+    min_categories: 2
+  focused:                    # 指定類別：花 2 點，從該類出 3 個（類別內依用法統計排序）
+    cost: 2
+    options: 3
+  reflash_same_price: true
+  allow_focus: true
+  transform_guaranteed: true  # 第 3 次（或重閃第 3 次）有合法轉型時一定是選項之一；指定加深／橋接時另列第 4 個
+
+# 變化類別。kinds：可以出這類的技能種類；support_only：只給輔助技（治療、護盾、增益，沒有傷害）。
+categories:
+  - {id: area, name_zh: 範圍, kinds: [active]}
+  - {id: combo, name_zh: 連段, kinds: [active]}
+  - {id: element, name_zh: 元素與關鍵字, kinds: [active, passive, reaction]}
+  - {id: cost, name_zh: 費用, kinds: [active]}            # 蓄力或輕巧，只限主動技
+  - {id: extend, name_zh: 延長與收割, kinds: [active, passive, reaction]}
+  - {id: support, name_zh: 輔助, kinds: [active], support_only: true}
+  - {id: trigger, name_zh: 觸發, kinds: [passive, reaction]}
+  - {id: deepen, name_zh: 加深, stage: major, kinds: [active, passive, reaction, stance]}
+  - {id: bridge, name_zh: 橋接, stage: major, kinds: [active, passive, reaction, stance]}
+
+# 小變化模板（第 1、2、4、5 次）。
+minor:
+  - id: area_plus
+    category: area
+    op: area
+    delta: 1
+    prefix_zh: 擴展
+    summary_zh: 範圍 +1（傷害依預算調整）
+  - id: range_plus
+    category: area
+    op: range
+    delta: 1
+    prefix_zh: 遠射
+    summary_zh: 距離 +1（傷害依預算調整）
+
+# 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
+major:
+  - {id: major_intensify, category: deepen, evolution: intensify}
+  - {id: major_reshape, category: deepen, evolution: reshape}
+  - {id: major_extend, category: deepen, evolution: extend}
+  - {id: major_delayed_burst, category: deepen, evolution: delayed_burst}
+  - {id: major_kill_chain, category: deepen, evolution: kill_chain}
+  - {id: major_battle_variant, category: deepen, evolution: battle_variant}
+  - {id: major_bridge_exploit, category: bridge, evolution: bridge_exploit}
+  - {id: major_bridge_imbue, category: bridge, evolution: bridge_imbue}
+
+# 主動技轉型（3W-3 實作；這裡先放 6.34.5 的兩個例子）。效果縮小到 scale_permille 後照被動、反應的預算重算。
+transforms:
+  - id: to_passive_on_hit
+    to: passive
+    prefix_zh: 餘波
+    summary_zh: 轉成被動：普攻打中敵人時，對旁邊一名敵人濺出縮小版的這招
+    trigger: {event: on_hit, target: other}
+    scale_permille: 500
+  - id: to_reaction_melee
+    to: reaction
+    prefix_zh: 反擊
+    summary_zh: 轉成反應：被近戰攻擊時，對攻擊者施放縮小版的這招
+    reaction: {event: hit_by_melee}
+    scale_permille: 600

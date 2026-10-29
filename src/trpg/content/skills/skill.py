@@ -186,6 +186,10 @@ class SkillDef(ContentModel):
     variants: tuple[VariantSpec, ...] = ()
     """戰場變奏（Phase 3-25a，6.24）：0～2 個，條件成立時施放的是變奏型態（:meth:`variant_form`）；
     多個成立時取排在前面的。只有主動技能可以帶；稀有度上限是跨檔案檢查（``core.yaml``）。"""
+    budget_bonus_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
+    """閃現（靈光一閃，Phase 3W-1，6.34.3）提高的預算上限（‰，佔同階預算）：可用預算再 ×（1000 ＋
+    它）÷ 1000。每閃一次 +40‰、完整技能 +120‰（``flash_templates.yaml``）；省略＝沒有加成。只影響
+    預算驗證與重調，不影響結算（結算只看技能本身的數值）。"""
 
     @field_validator("skeleton")
     @classmethod

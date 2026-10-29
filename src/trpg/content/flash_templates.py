@@ -1,0 +1,229 @@
+"""白板技能的閃現（靈光一閃）設定與模板（``content/flash_templates.yaml``；Phase 3W-1，
+``docs/design/06-技能.md`` 6.34；玩法決定 #69、#70）。
+
+這份資料只描述「規則數值」與「有哪些變化模板」；怎麼套用（純函式）在 :mod:`trpg.skillgen.flash`，
+閃現狀態（每招次數、變化歷程、先上場用過）在 :mod:`trpg.skillgen.flash_state`。
+
+- ``rules``：次數上限、第幾次是大變化、每次的預算上限加成（‰）、完整技能、靈感點。
+- ``pricing``：不指定類別（花 1 點出 4 個混合、至少涵蓋 2 類）與指定類別（花 2 點出 3 個）；
+  重閃同價。
+- ``categories``：變化的類別（範圍、連段、元素與關鍵字、費用、延長與收割、輔助、觸發；大變化的
+  加深、橋接），各自限定可用的技能種類。
+- ``minor``：小變化模板（第 1、2、4、5 次）；``op`` 的實作在 :data:`trpg.skillgen.flash.FLASH_OPS`
+  （3W-1 只實作 ``area``、``range``，其餘由 3W-2 補上）。
+- ``major``：大變化（第 3 次）沿用 ``skill_evolution.yaml`` 的進化模板（以 ID 引用）。
+- ``transforms``：主動 → 被動／反應的轉型模板（3W-3 實作；有合法轉型時一定是選項之一，#70）。
+
+跨檔案檢查（``major`` 引用的進化模板存在且分支相符、轉型的觸發時機存在）在
+:mod:`trpg.content.library` 載入時。
+"""
+
+from __future__ import annotations
+
+from collections import Counter
+from typing import Literal
+
+from pydantic import Field, model_validator
+
+from trpg.content.battle import ID_PATTERN
+from trpg.content.schemas import ContentModel
+from trpg.content.skills import ReactionSpec, ShapeSpec, TriggerSpec
+
+__all__ = [
+    "FLASH_KINDS",
+    "CompleteSkillRules",
+    "FlashCategory",
+    "FlashKind",
+    "FlashPricing",
+    "FlashRules",
+    "FlashTable",
+    "FlashTemplate",
+    "MajorFlashTemplate",
+    "PriceRule",
+    "TransformTemplate",
+]
+
+type FlashKind = Literal["active", "passive", "reaction", "stance", "modifier"]
+FLASH_KINDS: tuple[FlashKind, ...] = ("active", "passive", "reaction", "stance", "modifier")
+
+
+class CompleteSkillRules(ContentModel):
+    """完整技能（6.34.6）：視為「已閃 ``flashes`` 次」、預算上限 +``budget_permille``‰、不能再閃，
+    可以重閃換掉一個附帶效果或形狀。"""
+
+    flashes: int = Field(default=3, ge=0, le=9)
+    budget_permille: int = Field(default=120, ge=0, le=1000)
+    can_flash: bool = False
+    can_reflash: bool = True
+
+
+class FlashRules(ContentModel):
+    """閃現的規則數值（6.34.2、6.34.3）。"""
+
+    max_flashes: int = Field(default=5, ge=1, le=9)
+    major_flash: int = Field(default=3, ge=1, le=9)
+    """第幾次閃現是大變化（加深、橋接、轉型）。"""
+    budget_step_permille: int = Field(default=40, ge=0, le=200)
+    """每次閃現讓這招的預算上限多幾 ‰（佔同階預算；5 次共 +200‰）。"""
+    needs_use: bool = True
+    """閃現前這招要自上次閃現（或取得）後在戰鬥中用過（主動技放出 1 次；被動、反應、姿態裝備著
+    打完一場）。"""
+    reflash_needs_use: bool = False
+    """重閃不需要先上場用過。"""
+    dissolve_refund_permille: int = Field(default=500, ge=0, le=1000)
+    """溶掉一招時退回「花在它身上的靈感點」的比例（‰，無條件捨去；#71：一半）。"""
+    insight_per_win: int = Field(default=1, ge=0)
+    """roguelite 原型每打贏一場給的靈感點（3W-5 接）。"""
+    complete: CompleteSkillRules = CompleteSkillRules()
+
+    @model_validator(mode="after")
+    def _check(self) -> FlashRules:
+        if self.major_flash > self.max_flashes:
+            raise ValueError("major_flash 不可大於 max_flashes")
+        return self
+
+    def budget_bonus_permille(self, flashes: int) -> int:
+        """閃了 ``flashes`` 次後的預算上限加成（‰）。"""
+        return self.budget_step_permille * max(0, min(flashes, self.max_flashes))
+
+    def is_major(self, nth: int) -> bool:
+        return nth == self.major_flash
+
+
+class PriceRule(ContentModel):
+    """一種出題方式的價格與選項數。"""
+
+    cost: int = Field(ge=0)
+    """花幾點靈感。"""
+    options: int = Field(ge=1, le=6)
+    """出幾個選項（不含指定類別時另列的轉型）。"""
+    min_categories: int = Field(default=1, ge=1)
+    """選項至少涵蓋幾類（做得到時）。"""
+
+
+class FlashPricing(ContentModel):
+    """出題方式（#70）：不指定類別（``open``）與指定類別（``focused``）。重閃和閃現同價。"""
+
+    open: PriceRule = PriceRule(cost=1, options=4, min_categories=2)
+    focused: PriceRule = PriceRule(cost=2, options=3)
+    reflash_same_price: bool = True
+    """重閃的價格與選項數和閃現相同（#70）；之後若要不同價，改成另一組 ``PriceRule``。"""
+    allow_focus: bool = True
+    """是否允許指定類別（先選方向）。"""
+    transform_guaranteed: bool = True
+    """大變化時有合法轉型就一定是選項之一（不指定時佔其中一個；指定加深或橋接時另列一個）。"""
+
+    def rule(self, focused: bool) -> PriceRule:
+        return self.focused if focused else self.open
+
+
+class FlashCategory(ContentModel):
+    """一個變化類別。``stage``：``minor`` 用在第 1、2、4、5 次，``major`` 用在第 3 次。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    stage: Literal["minor", "major"] = "minor"
+    kinds: tuple[FlashKind, ...] = ("active",)
+    """可以出這類變化的技能種類。"""
+    support_only: bool = False
+    """只給輔助技（治療、護盾、增益，沒有傷害；
+    見 :func:`trpg.skillgen.flash.is_support_skill`）。"""
+
+
+class FlashTemplate(ContentModel):
+    """一個小變化模板。數值欄位依 ``op`` 使用；強度不寫在這裡（套用後由預算器重調）。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    category: str = Field(pattern=ID_PATTERN)
+    op: str = Field(pattern=ID_PATTERN)
+    """改法；實作登錄在 :data:`trpg.skillgen.flash.FLASH_OPS`（沒有實作的模板不會出現）。"""
+    kinds: tuple[FlashKind, ...] | None = None
+    """限定的技能種類；省略時沿用類別的 ``kinds``。"""
+    prefix_zh: str = Field(min_length=1)
+    summary_zh: str = Field(min_length=1)
+    delta: int | None = Field(default=None, ge=-3, le=3)
+    """``area``／``range`` 的增量（格）。"""
+    shapes: tuple[ShapeSpec, ...] = ()
+    """``reshape`` 的候選形狀（3W-2）。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> FlashTemplate:
+        if self.op in ("area", "range") and not self.delta:
+            raise ValueError(f"模板 {self.id}：{self.op} 必須填非 0 的 delta")
+        return self
+
+
+class MajorFlashTemplate(ContentModel):
+    """大變化模板：引用 ``skill_evolution.yaml`` 的進化模板（``evolution``），類別是加深或橋接。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    category: str = Field(pattern=ID_PATTERN)
+    evolution: str = Field(pattern=ID_PATTERN)
+
+
+class TransformTemplate(ContentModel):
+    """主動技轉型（6.34.5，3W-3 實作）：把效果縮小到 ``scale_permille``，掛到觸發（被動）或
+    反應上。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    to: Literal["passive", "reaction"]
+    prefix_zh: str = Field(min_length=1)
+    summary_zh: str = Field(min_length=1)
+    trigger: TriggerSpec | None = None
+    reaction: ReactionSpec | None = None
+    scale_permille: int = Field(default=500, ge=100, le=1000)
+
+    @model_validator(mode="after")
+    def _check(self) -> TransformTemplate:
+        if (self.to == "passive") != (self.trigger is not None):
+            raise ValueError(f"轉型 {self.id}：轉成被動時必須（且只有被動）填 trigger")
+        if (self.to == "reaction") != (self.reaction is not None):
+            raise ValueError(f"轉型 {self.id}：轉成反應時必須（且只有反應）填 reaction")
+        return self
+
+
+class FlashTable(ContentModel):
+    """``content/flash_templates.yaml``。"""
+
+    rules: FlashRules = FlashRules()
+    pricing: FlashPricing = FlashPricing()
+    categories: tuple[FlashCategory, ...] = ()
+    minor: tuple[FlashTemplate, ...] = ()
+    major: tuple[MajorFlashTemplate, ...] = ()
+    transforms: tuple[TransformTemplate, ...] = ()
+
+    @model_validator(mode="after")
+    def _check(self) -> FlashTable:
+        ids = [c.id for c in self.categories]
+        templates = [t.id for t in self.minor]
+        templates += [t.id for t in self.major]
+        templates += [t.id for t in self.transforms]
+        for label, values in (("類別", ids), ("模板", templates)):
+            dup = sorted(k for k, n in Counter(values).items() if n > 1)
+            if dup:
+                raise ValueError(f"{label} ID 重複：{', '.join(dup)}")
+        stages = {c.id: c.stage for c in self.categories}
+        for template in self.minor:
+            if stages.get(template.category) != "minor":
+                raise ValueError(
+                    f"小變化模板 {template.id} 的類別 {template.category} 不是小變化類別"
+                )
+        for major in self.major:
+            if stages.get(major.category) != "major":
+                raise ValueError(f"大變化模板 {major.id} 的類別 {major.category} 不是大變化類別")
+        return self
+
+    def category(self, category_id: str) -> FlashCategory:
+        for category in self.categories:
+            if category.id == category_id:
+                return category
+        raise KeyError(f"未知的閃現類別：{category_id}")
+
+    def stage_categories(self, stage: Literal["minor", "major"]) -> tuple[FlashCategory, ...]:
+        return tuple(c for c in self.categories if c.stage == stage)
+
+    def minor_template(self, template_id: str) -> FlashTemplate | None:
+        return next((t for t in self.minor if t.id == template_id), None)
+
+    def major_template(self, template_id: str) -> MajorFlashTemplate | None:
+        return next((t for t in self.major if t.id == template_id), None)
