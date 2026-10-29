@@ -22,6 +22,7 @@ from trpg.roguelite.battle import ActiveBattle, SavedBattle
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, RunError, SaveFormatError
 from trpg.roguelite.progress import apply_choice, battle_setup, finish_battle, next_node
 from trpg.roguelite.save import (
+    CONTENT_CHANGED_NOTICE,
     SAVE_FORMAT,
     STALE_BATTLE_NOTICE,
     RunSave,
@@ -40,6 +41,7 @@ from trpg.roguelite.start import new_dev_run, new_keyword_run, new_run
 from trpg.roguelite.state import RunState
 
 __all__ = [
+    "CONTENT_CHANGED_NOTICE",
     "FLASH_POLICIES",
     "SAVE_FORMAT",
     "STALE_BATTLE_NOTICE",

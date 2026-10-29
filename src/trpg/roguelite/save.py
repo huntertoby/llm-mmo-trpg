@@ -67,6 +67,7 @@ from trpg.roguelite.state import BattleNode, RunState
 
 __all__ = [
     "COMPATIBLE_FORMATS",
+    "CONTENT_CHANGED_NOTICE",
     "OLD_FORMATS",
     "RUN_ID_PATTERN",
     "SAVE_DIR_ENV",
@@ -109,6 +110,7 @@ RUN_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
 SAVE_DIR_ENV = "TRPG_SAVE_DIR"
 """可覆寫存檔資料夾的環境變數。"""
 STALE_BATTLE_NOTICE = "這場戰鬥的紀錄格式已更新，從這場的開頭重新開始。"
+CONTENT_CHANGED_NOTICE = "內容檔已更新，這場戰鬥從開頭重新開始。"
 """戰鬥中的存檔引擎版本不符、捨棄那場戰鬥時給玩家的提示（3W-R1）。"""
 
 

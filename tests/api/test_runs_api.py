@@ -299,16 +299,18 @@ def _save_mid_battle(client: TestClient, library: ContentLibrary) -> str:
     return str(run["run_id"])
 
 
-def test_mid_battle_load_rejects_a_changed_ruleset_hash(
+def test_mid_battle_save_with_a_changed_ruleset_hash_restarts_that_battle(
     runs_client: TestClient, library: ContentLibrary, save_dir: Path
 ) -> None:
+    """內容檔改過的戰鬥中存檔和引擎版本不符一樣：捨棄那場戰鬥、回到該戰鬥節點開頭，提示一次。"""
     run_id = _save_mid_battle(runs_client, library)
     assert json.loads((save_dir / f"run-{run_id}.json").read_text(encoding="utf-8"))["ruleset_hash"]
     _rewrite_save(save_dir, run_id, ruleset_hash="0" * 64)
-    reply = runs_client.post("/api/runs/load", json={"run_id": run_id})
-    assert reply.status_code == 422
-    assert "內容檔已變更" in reply.json()["detail"]
-    assert "戰鬥之間的存檔" in reply.json()["detail"]
+    loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run_id}))
+    assert loaded["battle_id"] is None and loaded["node"]["kind"] == "battle"
+    assert loaded["load_notice"] == "內容檔已更新，這場戰鬥從開頭重新開始。"
+    battle = _ok(runs_client.post(f"/api/runs/{run_id}/battle"))["battle"]
+    assert battle["view"]["round"] == 1
 
 
 def test_mid_battle_save_from_an_old_engine_restarts_that_battle(
@@ -325,14 +327,14 @@ def test_mid_battle_save_from_an_old_engine_restarts_that_battle(
     assert battle["view"]["round"] == 1  # 從頭開打
 
 
-def test_old_mid_battle_save_without_hash_is_rejected(
+def test_old_mid_battle_save_without_hash_restarts_that_battle(
     runs_client: TestClient, library: ContentLibrary, save_dir: Path
 ) -> None:
     run_id = _save_mid_battle(runs_client, library)
     _rewrite_save(save_dir, run_id, ruleset_hash=None)
-    reply = runs_client.post("/api/runs/load", json={"run_id": run_id})
-    assert reply.status_code == 422
-    assert "內容檔已變更" in reply.json()["detail"]
+    loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run_id}))
+    assert loaded["battle_id"] is None and loaded["node"]["kind"] == "battle"
+    assert loaded["load_notice"] == "內容檔已更新，這場戰鬥從開頭重新開始。"
 
 
 def test_between_battles_save_ignores_the_hash(runs_client: TestClient, save_dir: Path) -> None:

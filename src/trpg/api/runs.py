@@ -22,6 +22,7 @@ from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.roguelite import (
+    CONTENT_CHANGED_NOTICE,
     RunSave,
     RunState,
     SavedBattle,
@@ -300,12 +301,14 @@ class RunStore:
         if not path.is_file():
             raise RunNotFoundError(f"找不到存檔 {path.name}")
         loaded, notice = load_save_noted(path)  # 引擎版本不符的戰鬥中存檔捨棄那場戰鬥（3W-R1）
+        if loaded.battle is not None and loaded.ruleset_hash != self.ruleset_hash():
+            # 內容檔改過（或舊存檔沒有雜湊）：同樣捨棄那場戰鬥、回到該戰鬥節點開頭
+            loaded = loaded.model_copy(update={"battle": None})
+            notice = CONTENT_CHANGED_NOTICE
         save = upgrade_save(self.library, loaded)  # 舊存檔照角色階級重配技能（3W-9）
         session = RunSession(save.run_id, self.library, save.run)
         session.load_notice = notice
         if save.battle is not None:
-            if save.ruleset_hash != self.ruleset_hash():
-                raise SaveFormatError("內容檔已變更，無法重播戰鬥中的存檔；可讀取戰鬥之間的存檔")
             node = save.run.node
             assert isinstance(node, BattleNode)
             if save.battle.seed != save.run.plan_of(node.index).seed:
