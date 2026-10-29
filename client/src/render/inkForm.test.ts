@@ -182,16 +182,17 @@ describe("主角主色與光環", () => {
   it("光環半徑：認得的形態 16 × size × 縮放；不認得的用預設 20 × 小人縮放", () => {
     const bear = formArtOf("form_bear");
     expect(bear).not.toBeNull();
-    expect(formAuraRadius("form_bear", DOLL_SCALE)).toBeCloseTo(16 * 1.3 * 0.6 * 1.3, 6);
+    expect(formAuraRadius("form_bear", DOLL_SCALE)).toBeCloseTo(16 * 1.3 * 0.6 * (DOLL_SCALE / 0.74) * 1.3, 6);
     expect(formAuraRadius("nope", DOLL_SCALE)).toBeCloseTo(20 * DOLL_SCALE, 6);
   });
 });
 
 describe("體型：縮放與頭頂狀態列上移", () => {
-  it("形態縮放 ＝ 0.6 × min(size, 1.3)；龍與巨人封頂", () => {
-    expect(formScale(FORM_ARTS.dragon!)).toBeCloseTo(0.78, 6);
-    expect(formScale(FORM_ARTS.giant!)).toBeCloseTo(0.78, 6);
-    expect(formScale(FORM_ARTS.roc!)).toBeCloseTo(0.72, 6);
+  it("形態縮放 ＝ 0.6 × (DOLL_SCALE／0.74) × min(size, 1.3)；龍與巨人封頂 1.3 不變", () => {
+    const g = DOLL_SCALE / 0.74;
+    expect(formScale(FORM_ARTS.dragon!)).toBeCloseTo(0.78 * g, 6);
+    expect(formScale(FORM_ARTS.giant!)).toBeCloseTo(0.78 * g, 6);
+    expect(formScale(FORM_ARTS.roc!)).toBeCloseTo(0.72 * g, 6);
   });
 
   it("狀態列：矮的形態不下移（0）、比小人高的（樹人、龍、狼人）往上移；不認得的 0", () => {

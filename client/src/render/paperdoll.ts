@@ -13,8 +13,12 @@ import type { View } from "./inkStyle";
 export const DOLL_W = 64;
 export const DOLL_H = 88; // C 畫風頭頂最高約 -70（尖帽），要留夠
 export const DOLL_FOOT_Y = DOLL_H - 6;
-/** C 畫風的戰場縮放：52px 格約 0.74 倍，人約 40px 高（需求第 2 節）。 */
-export const DOLL_SCALE = 0.74;
+/** 3U-2 之前的戰場縮放（0.74）；頭頂狀態列的位移以它為基準算增量。 */
+export const DOLL_SCALE_OLD = 0.74;
+/** C 畫風的戰場縮放（3U-2，美術 PM 定案）：52px 格約 0.92 倍，人約 48px 高、佔格高約 92%，頭頂可超出上一格。 */
+export const DOLL_SCALE = 0.92;
+/** 野獸、物件類召喚物（用 64×64 舊畫布）的戰場縮放：舊的 1 → 1.15（3U-2）。 */
+export const SUMMON_SCALE = 1.15;
 /** 非人形召喚物（summonArt.ts 自己的畫法）沿用的畫布大小與腳底位置：舊的 64×64，不隨 C 骨架改。 */
 export const SUMMON_W = 64;
 export const SUMMON_H = 64;
