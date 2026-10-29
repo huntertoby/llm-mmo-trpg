@@ -21,6 +21,7 @@ from trpg.roguelite.offers import at_run_tier, candidate_request, library_base, 
 from trpg.roguelite.retier import run_tier, sync_skill_tier
 from trpg.roguelite.state import LevelUpNode, RunState
 from trpg.skillgen.evolution import budget_power
+from trpg.skillgen.flash_state import acquire
 from trpg.skillgen.skill_tier import character_tier
 from trpg.skillgen.validate import validate_skill
 
@@ -71,16 +72,21 @@ def test_a_level_up_without_a_tier_change_keeps_the_skills() -> None:
         assert after.hero.skills == run.hero.skills
 
 
-def test_handwritten_skills_become_tier_copies_and_keep_their_levels() -> None:
+def test_handwritten_skills_become_tier_copies_and_keep_their_flash_state() -> None:
     run = _run()
     hero = run.hero.model_copy(update={"skills": (*run.hero.skills, HANDWRITTEN)})
     run = run.model_copy(
-        update={"hero": hero, "skill_levels": {HANDWRITTEN: 2}, "level": 3, "skill_tier": 1}
+        update={
+            "hero": hero,
+            "flash": {HANDWRITTEN: acquire(HANDWRITTEN).model_copy(update={"used": True})},
+            "level": 3,
+            "skill_tier": 1,
+        }
     )
     synced = sync_skill_tier(LIB, run)
     copy_id = f"{HANDWRITTEN}_t{character_tier(LIB, 3)}"
     assert copy_id in synced.hero.skills and HANDWRITTEN not in synced.hero.skills
-    assert synced.skill_levels == {copy_id: 2}
+    assert set(synced.flash) == {copy_id} and synced.flash[copy_id].used
     copy = synced.generated(copy_id)
     assert copy is not None and copy.tier == character_tier(LIB, 3)
     assert library_base(LIB, copy_id) == HANDWRITTEN
@@ -110,7 +116,7 @@ def test_old_saves_are_upgraded_between_battles() -> None:
     run = new_dev_run(LIB, next(iter(LIB.dev_starters.by_id())), 2)
     old = run.model_copy(update={"level": 5})
     loaded = loads_save(_old_text(old))
-    assert loaded.format == SAVE_FORMAT == "trpg-run/11"
+    assert loaded.format == SAVE_FORMAT == "trpg-run/12"
     assert loaded.run.skill_tier is None
     upgraded = upgrade_save(LIB, loaded)
     tier = character_tier(LIB, 5)

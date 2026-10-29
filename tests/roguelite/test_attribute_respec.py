@@ -123,7 +123,7 @@ def test_constitution_respec_adjusts_hp_with_max_hp() -> None:
     lib = library()
     core = lib.ruleset.core
     run = new_run(lib, BUILD, 0, {A.CON: 4})
-    camp = run.model_copy(update={"node": CampfireNode(after_battle=2, rerolls_left=1)})
+    camp = run.model_copy(update={"node": CampfireNode(after_battle=2)})
     camp = camp.model_copy(update={"hp": camp.max_hp_in(core)})
     refunded = apply_choice(lib, camp, RespecAttributesChoice())
     drop = camp.max_hp_in(core) - refunded.max_hp_in(core)

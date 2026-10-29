@@ -63,7 +63,12 @@ def test_the_campfire_refills_stamina() -> None:
     lib = library()
     core = lib.ruleset.core
     run = new_run(lib, "build_push", 2)
-    camp = next_node(lib, run.model_copy(update={"battles_done": 3, "stamina": 0, "mana": 0}))
+    camp = next_node(
+        lib,
+        run.model_copy(
+            update={"battles_done": 3, "stamina": 0, "mana": 0, "complete_offers_done": (3,)}
+        ),
+    )
     assert isinstance(camp.node, CampfireNode)
     assert (camp.stamina, camp.mana) == (run.max_stamina_in(core), run.max_mana_in(core))
 

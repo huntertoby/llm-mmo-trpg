@@ -77,7 +77,7 @@ def _to_campfire(client: TestClient, run_id: str) -> None:
     runs = client.app.state.runs  # type: ignore[attr-defined]
     assert isinstance(runs, RunStore)
     session = runs.get(run_id)
-    node = CampfireNode(after_battle=1, rerolls_left=1)
+    node = CampfireNode(after_battle=1)
     session.run = session.run.model_copy(update={"node": node})
 
 
