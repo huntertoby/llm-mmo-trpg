@@ -20,7 +20,7 @@ from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.validate import share_violations
 
-__all__ = ["tune", "tuning_bounds"]
+__all__ = ["base_ratio", "tune", "tuning_bounds"]
 
 
 def tuning_bounds(library: ContentLibrary) -> tuple[Fraction, Fraction]:
@@ -105,6 +105,23 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
             _apply(knob, ev.targets)
             ev.ratio()
     return one, True
+
+
+def base_ratio(
+    library: ContentLibrary,
+    base: dict[str, Any],
+    effects: list[dict[str, Any]],
+    knobs: list[Knob],
+    *,
+    extra: Sequence[dict[str, Any]] = (),
+) -> Fraction | None:
+    """所有旋鈕在最弱時的預算比例（Phase 4-L8b：判斷結構在最低強度下是否已超出預算）；旋鈕會被
+    歸零。結構不合法時為 ``None``。"""
+    ev = _Evaluator(library, base, effects, extra)
+    for knob in knobs:
+        knob.pos = 0
+        _apply(knob, ev.targets)
+    return ev.ratio()
 
 
 def tune(

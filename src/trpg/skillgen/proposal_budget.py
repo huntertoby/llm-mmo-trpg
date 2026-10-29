@@ -24,11 +24,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from trpg.content.composer_rules import CostStep
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.composer_parts import Knob, effect_knobs
-from trpg.skillgen.composer_tuning import tune
+from trpg.skillgen.composer_tuning import base_ratio, tune, tuning_bounds
 from trpg.skillgen.proposal import (
     ProposalContext,
     ProposalError,
@@ -189,12 +190,59 @@ def _tune_once(library: ContentLibrary, data: dict[str, Any], rng: Rng, *, core_
     knobs = _knobs(library, data, core_only=core_only)
     if knobs is None:
         return False
+    extra = _extra_of(data)  # 與 base 裡的是同一批物件
+    return tune(rng, library, _base_of(data), data["effects"], knobs, extra=extra)
+
+
+def _base_of(data: dict[str, Any]) -> dict[str, Any]:
     base = {k: v for k, v in data.items() if k != "effects"}
     base["id"] = _PROBE_ID
     base.setdefault("name_zh", _PROBE_NAME)
+    return base
+
+
+def _with_step(library: ContentLibrary, data: dict[str, Any], step: CostStep) -> dict[str, Any]:
+    """``data`` 套上費用階梯的一階（各欄位取較大者）；``data`` 本身不變。"""
+    out = dict(data)
+    cost = dict(out.get("cost") or {})
+    if step.ap is not None:
+        out["ap_cost"] = max(int(out.get("ap_cost") or 0), step.ap)
+    if step.cooldown is not None:
+        cost["cooldown"] = max(int(cost.get("cooldown") or 0), step.cooldown)
+    if step.mana is not None:
+        category = str(out.get("category"))
+        resource = library.budget.resource_of(category)  # type: ignore[arg-type]
+        amount = step.mana if resource == "mana" else library.budget.stamina_for_mana(step.mana)
+        cost[resource] = max(int(cost.get(resource) or 0), amount)
+    out["cost"] = cost
+    return out
+
+
+def raise_costs(library: ContentLibrary, data: dict[str, Any]) -> dict[str, Any]:
+    """費用旋鈕（Phase 4-L8b）：旋鈕全在最弱時預算比例仍高於上限，就依 ``skill_composer.yaml``
+    ``llm_cost.steps`` 由輕到重往上試，取第一個讓比例回到上限以內的階（回傳套用後的新資料）。
+    沒有超出、不是主動技能、沒有階能解決（維持原狀交給驗證器報錯）、結構不合法時原樣回傳。"""
+    rules = library.composer.llm_cost
+    if data.get("kind") != "active" or not rules.steps or not data.get("effects"):
+        return data
+    high = tuning_bounds(library)[1]
+    for step in (None, *rules.steps):
+        trial = data if step is None else _with_step(library, data, step)
+        knobs = _knobs(library, trial, core_only=False)
+        if knobs is None:
+            return data
+        extra = _extra_of(trial)
+        ratio = base_ratio(library, _base_of(trial), trial["effects"], knobs, extra=extra)
+        if ratio is None:
+            return data
+        if ratio <= high:
+            return trial
+    return data
+
+
+def _extra_of(data: dict[str, Any]) -> list[dict[str, Any]]:
     follow = data.get("followup")
-    extra = follow["effects"] if isinstance(follow, dict) else []  # 與 base 裡的是同一批物件
-    return tune(rng, library, base, data["effects"], knobs, extra=extra)
+    return follow["effects"] if isinstance(follow, dict) else []
 
 
 def _tune(
@@ -230,6 +278,7 @@ def budget_filler(
             cost = dict(out.get("cost") or {})
             cost["cooldown"] = max(int(cost.get("cooldown") or 0), cooldown)
             out["cost"] = cost
+        out = raise_costs(library, out)
         _tune(library, out, seed, wanted)
         return out
 
