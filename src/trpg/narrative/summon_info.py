@@ -236,8 +236,10 @@ def summon_attack_text(
     bonus = 0 if stats is None else stats.bonus_permille
     if bonus:
         text += f"，傷害加成 +{bonus / 10:g}%"
-    if power_permille is not None and power_permille != _PERMILLE:
+    if power_permille is not None and power_permille < _PERMILLE:
         text += f"，每隻只有一般的 {power_permille / 10:g}%"
+    elif power_permille is not None and power_permille > _PERMILLE:  # 完整技能（3W-5b）
+        text += f"，傷害 ×{power_permille / 10:g}%"
     return text
 
 

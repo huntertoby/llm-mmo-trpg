@@ -26,7 +26,8 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 
 完整技能三選一（Phase 3W-5，06 6.34.6）：一律走完整技能的候選產生器（組合器、技能池；LLM 開著時
 先請 LLM 整招提議），再把每個候選照「已閃 3 次」的預算上限（``flash_templates.yaml`` 的
-``complete.budget_permille``，+120‰）重調（:func:`as_complete`，預算分數不低於重調前）。
+``complete.budget_permille``，+120‰）重做（:func:`as_complete`；3W-5b 起預算分數至少 ×1.12，
+召喚加召喚物 HP 與傷害、姿態加幅度，仍加不上去時減代價）。
 
 ``off_route``（偏離路線，0.2 C）仍照舊標示：候選的縮放屬性與主角目前最高屬性不同的索引（只是標示，
 不再刻意湊一個）；武器技看主角手上武器的縮放屬性（3H-7）。
@@ -57,9 +58,7 @@ from trpg.skillgen.candidates import (
     generate_candidates,
     keyword_distribution,
 )
-from trpg.skillgen.evolution import budget_power, retune
-from trpg.skillgen.flash import TUNE_ATTEMPTS, with_budget_bonus
-from trpg.skillgen.flash_ops import base_draft
+from trpg.skillgen.complete import complete_strength
 from trpg.skillgen.proposal_topic import primitive_uses
 from trpg.skillgen.skill_tier import character_tier, retier
 from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates
@@ -145,21 +144,12 @@ COMPLETE_SUFFIX = "_cp"
 """完整技能的 ID 後綴（候選是內容庫的手寫技能時，重調後成為生成技能 ``<原 ID>_cp``）。"""
 
 
-def as_complete(library: ContentLibrary, skill: SkillDef, seed: int) -> SkillDef:
+def as_complete(library: ContentLibrary, skill: SkillDef) -> SkillDef:
     """把一招技能變成完整技能的強度（06 6.34.6：視為已閃 3 次，預算上限
-    +``complete.budget_permille``‰）：結構不變，由預算器依新的上限重調（預算分數不低於重調前）。點數固定、沒有旋鈕的結構（召喚、
-    姿態等）調不動時只記下上限加成（待 PM 決定）。手寫技能重調後換成生成技能 ``<原 ID>_cp``。"""
-    bonus = library.flash.rules.complete.budget_permille
-    boosted = with_budget_bonus(skill, bonus)
-    base, effects = base_draft(boosted)
-    floor = budget_power(skill, library)
-    rng = Rng(seed).fork(f"complete/{skill.id}")
-    done: SkillDef | None = None
-    for attempt in range(TUNE_ATTEMPTS):
-        done = retune(base, effects, rng.fork(str(attempt)), library, floor=floor)
-        if done is not None:
-            break
-    result = boosted if done is None else done
+    +``complete.budget_permille``‰，而且實際加上去，3W-5b：
+    :func:`~trpg.skillgen.complete.complete_strength`）。手寫技能重調後換成生成技能
+    ``<原 ID>_cp``。"""
+    result = complete_strength(library, skill)
     if library_base(library, skill.id) is not None or result.id in library.skills:
         result = result.model_copy(update={"id": f"{skill.id}{COMPLETE_SUFFIX}"})
     return result
@@ -192,7 +182,7 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
     top = top_attribute(run.hero.attributes)
     candidates = tuple(at_run_tier(library, c.skill, tier) for c in found)
     if complete:
-        candidates = tuple(as_complete(library, s, request.seed) for s in candidates)
+        candidates = tuple(as_complete(library, s) for s in candidates)
     return SkillOffer(
         reason="complete" if complete else "level_up",
         tier=tier,

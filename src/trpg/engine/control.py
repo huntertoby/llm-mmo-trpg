@@ -105,8 +105,10 @@ def status_effect(
     attack_attr: Attribute,
     attack_value: int,
     skill_id: str | None = None,
+    magnitude_permille: int | None = None,
 ) -> ApplyStatusEffect | None:
     """技能對 ``target`` 施加狀態：轉換、抵抗判定，回傳要入列的效果（被抵抗時為 ``None``）。
+    ``magnitude_permille``：姿態的幅度（完整姿態技能，3W-5b；只對姿態狀態有作用）。
 
     預覽：抵抗判定是分歧點——``min`` 視為抵抗成功（不施加）、``max`` 視為失敗（施加）。
     """
@@ -137,6 +139,7 @@ def status_effect(
         status_id=plan.status_id,
         duration=duration,
         skill_id=stance_skill,
+        magnitude_permille=magnitude_permille or 1000,
     )
     if plan.save_attr is None or target.team is caster.team:
         return effect

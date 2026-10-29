@@ -191,6 +191,7 @@ _FIELD_ZH: dict[str, str] = {
     "knock_prone": "擊倒",
     "landing": "落點",
     "lifesteal_permille": "吸血",
+    "magnitude_permille": "幅度",
     "mana": "法力",
     "max_distance": "最大距離",
     "max_hp_permille": "最大生命比例",

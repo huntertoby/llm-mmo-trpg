@@ -75,6 +75,10 @@ class StatusInstance:
     cost_status: bool = False
     """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``），
     淨化與驅散都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""
+    magnitude_permille: int = 1000
+    """姿態的幅度（‰，Phase 3W-5b，完整技能的 ``apply_status.magnitude_permille``）：狀態倍率欄位
+    對持有者有利的那一邊離中性值（1000）的距離乘上它，見
+    :func:`~trpg.engine.rules.statuses.scaled_permille`。1000 ＝ 照狀態定義。"""
 
 
 @dataclass(slots=True, frozen=True)

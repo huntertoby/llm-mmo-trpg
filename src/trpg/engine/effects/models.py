@@ -191,6 +191,8 @@ class ApplyStatusEffect(EffectBase):
     self_paid: bool = False
     """自己付的代價（``cost.self_status``／``cost.overdraft``，Phase 3-50）：不觸發控制遞減，也不受
     Boss 硬控轉換影響。"""
+    magnitude_permille: int = Field(default=1000, ge=1000)
+    """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）。"""
 
     def sort_target(self) -> str:
         return self.target_id

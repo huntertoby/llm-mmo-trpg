@@ -19,6 +19,17 @@ rules:
     budget_permille: 120
     can_flash: false
     can_reflash: true
+    # +120‰ 怎麼加上去（3W-5b）：預算器的強度旋鈕（傷害、治療、護盾、推拉）照舊，召喚與姿態另外多一個旋鈕，
+    # 一起重調到預算分數 ≥ 原本 ×1.12。數值是倍率（‰），從 1000（不變）往上。
+    summon_power_steps: [1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300]     # 召喚物 HP 與傷害（乘在 power_permille 上）
+    stance_magnitude_steps: [1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300] # 姿態幅度（有利那一邊離 100% 的距離）
+    # 仍然沒有可加的數值時，依序一次減一格代價（維持費、冷卻、法力、耐力、AP），直到 +120‰ 或沒有能減的
+    cost_cuts:
+      - {field: stance_upkeep, step: 1}
+      - {field: cooldown, step: 1}
+      - {field: mana, step: 1}
+      - {field: stamina, step: 1}
+      - {field: ap_cost, step: 1}
 
 # 出題方式（#70，使用者：「選擇 類別 多花1點」）。重閃和閃現同價。
 pricing:

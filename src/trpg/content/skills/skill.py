@@ -585,8 +585,16 @@ class SkillDef(ContentModel):
         count = summons[0].count or 1
         if count not in (1, MAX_SUMMON_COUNT):
             raise ValueError(f"summon 的 count 只能是 1 或 {MAX_SUMMON_COUNT}，收到 {count}")
-        if (count > 1) != (summons[0].power_permille is not None):
-            raise ValueError("summon 的 power_permille 與 count: 2 必須一起填（數量型分歧進化）")
+        power = summons[0].power_permille
+        if count > 1 and (power is None or power >= _PERMILLE):
+            raise ValueError(
+                "summon 的 count: 2 必須填小於 1000 的 power_permille（數量型分歧進化）"
+            )
+        if count == 1 and power is not None and power < _PERMILLE:
+            raise ValueError(
+                "只召喚一隻時 power_permille 不能小於 1000（大於 1000 是完整技能的強化）；"
+                "小於 1000 是數量型分歧進化，必須搭配 count: 2"
+            )
 
     def _check_revive(self) -> None:
         """復活（Phase 3D-8b）：必須填 ``hp_permille``。只能用在主動技能、最多一個、形狀
@@ -880,6 +888,12 @@ class SkillDef(ContentModel):
             self.kind != "stance" or any(e.type == ENTER_FORM for e in self.effects)
         ):
             raise ValueError("stance_upkeep 只有一般姿態（不含形態）可以填")
+        magnitudes = [e for e in self.effects if e.magnitude_permille is not None]
+        not_stance = self.kind != "stance" or any(e.type != "apply_status" for e in magnitudes)
+        if magnitudes and not_stance:
+            raise ValueError("magnitude_permille 只有姿態技能的 apply_status 可以填")
+        if any((e.magnitude_permille or 0) < _PERMILLE for e in magnitudes):
+            raise ValueError("magnitude_permille 不能小於 1000（姿態幅度的強化）")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""

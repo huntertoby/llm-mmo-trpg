@@ -918,6 +918,7 @@ class Cast:
             attack_attr=skill_scaling_attr(self.caster, self.skill),
             attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
             skill_id=self.skill.id,
+            magnitude_permille=spec.magnitude_permille,
         )
         return [] if planned is None else [planned]
 

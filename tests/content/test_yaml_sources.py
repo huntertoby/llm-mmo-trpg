@@ -71,7 +71,7 @@ def test_shape_roles_must_name_known_roles_and_existing_shapes() -> None:
         ({"type": "damage", "dice": "1d6", "multiplier_permille": 0}, "1–10000"),
         ({"type": "delayed_damage", "dice": "1d6", "rounds": 4, "radius": 1}, "1–3"),
         ({"type": "delayed_damage", "dice": "1d6", "rounds": 1, "radius": 3}, "0–2"),
-        ({"type": "summon", "unit": "x", "duration": 2, "power_permille": 1000}, "100–999"),
+        ({"type": "summon", "unit": "x", "duration": 2, "power_permille": 2001}, "100–2000"),
         ({"type": "consume_status", "status": "burning", "splash": 2}, "1–1"),
     ],
 )
