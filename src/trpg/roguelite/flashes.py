@@ -47,6 +47,7 @@ from trpg.skillgen.flash import (
     FlashRequest,
     UsageSource,
     category_counts,
+    category_ranking,
     choose,
     derive_skill,
     make_offer,
@@ -71,6 +72,7 @@ __all__ = [
     "dissolve",
     "flash_categories",
     "flash_request",
+    "focus_order",
     "inherit",
     "inherit_problem",
     "open_flash",
@@ -153,6 +155,12 @@ def flash_categories(
     """選類別畫面用：每個可指定的類別目前有幾個合法變化（3W-2c；0 個不能選）。"""
     request = flash_request(library, run, skill_id, slot=slot)
     return category_counts(library, request, _source(run, lambda _record: None))
+
+
+def focus_order(library: ContentLibrary, run: RunState, skill_id: str) -> list[str]:
+    """指定類別時的建議順序（3W-8 模擬的 AI 用）：目前有合法變化的類別，依用法排第一的在前。"""
+    request = flash_request(library, run, skill_id)
+    return category_ranking(library, request, _source(run, lambda _record: None))
 
 
 # ---------------------------------------------------------------------------

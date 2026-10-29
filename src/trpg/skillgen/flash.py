@@ -99,6 +99,7 @@ __all__ = [
     "at_role_tier",
     "at_tier",
     "category_counts",
+    "category_ranking",
     "choose",
     "derive_skill",
     "flashed_identity",
@@ -951,6 +952,33 @@ def category_counts(
         category: len(builder.take(source.ranked(library, request, category, before), cap))
         for category in allowed_categories(table, before, major=major)
     }
+
+
+def category_ranking(
+    library: ContentLibrary,
+    request: FlashRequest,
+    source: FlashOptionSource | None = None,
+) -> list[str]:
+    """可指定（目前有合法變化）的類別，依用法排序（3W-8，模擬的「全指定類別」玩家用）：每類取排
+    第一的變化的用法分數，高的在前，同分依資料順序；大變化類別沒有用法分數（0 分）。"""
+    source = source or UsageSource()
+    counts = category_counts(library, request, source)
+    before = skill_before(library, request)
+    order = {c.id: i for i, c in enumerate(library.flash.categories)}
+    scored: list[tuple[int, int, str]] = []
+    for category, count in counts.items():
+        if count == 0:
+            continue
+        ranked = source.ranked(library, request, category, before)
+        top = ranked[0] if ranked else None
+        template = None if top is None else library.flash.minor_template(top.template)
+        score = (
+            _usage_score(library, request.usage, template, top)
+            if top is not None and template is not None
+            else 0
+        )
+        scored.append((-score, order.get(category, len(order)), category))
+    return [category for *_, category in sorted(scored)]
 
 
 def make_offer(

@@ -23,7 +23,9 @@ from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_ZH
 from trpg.llm import LLMConfigError
 from trpg.roguelite import (
+    FLASH_POLICIES,
     ChoiceError,
+    FlashPolicy,
     RunError,
     RunSave,
     RunState,
@@ -172,6 +174,12 @@ def add_run_parser(
     auto.add_argument("--from", dest="from_path", type=Path, default=None, help="從存檔接續")
     auto.add_argument("--save", action="store_true", help="結束後把一輪存檔")
     auto.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾（預設 saves/）")
+    auto.add_argument(
+        "--flash-policy",
+        choices=FLASH_POLICIES,
+        default="none",
+        help="AI 閃現的策略（none 不指定類別、all 全指定類別、mixed 混合；預設 none）",
+    )
     add_llm_args(auto)
     auto.set_defaults(func=lambda a: with_library(lambda lib: _auto(lib, a)))
     show = sub.add_parser("show", help="顯示存檔內容")
@@ -269,6 +277,7 @@ def _auto(library: ContentLibrary, args: argparse.Namespace) -> int:
         from_path=args.from_path,
         save_dir=_dir(args) if args.save else None,
         llm=LlmArgs.of(args),
+        flash_policy=args.flash_policy,
     )
 
 
@@ -309,6 +318,7 @@ def cmd_run_auto(
     from_path: Path | None = None,
     save_dir: Path | None = None,
     llm: LlmArgs | None = None,
+    flash_policy: FlashPolicy = "none",
 ) -> int:
     try:
         with llm_session(library, llm or LlmArgs()) as enabled:
@@ -320,6 +330,7 @@ def cmd_run_auto(
                 from_path=from_path,
                 save_dir=save_dir,
                 enabled=enabled,
+                flash_policy=flash_policy,
             )
     except LLMConfigError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
@@ -335,6 +346,7 @@ def _run_auto(
     from_path: Path | None,
     save_dir: Path | None,
     enabled: bool,
+    flash_policy: FlashPolicy,
 ) -> int:
     try:
         if from_path is not None:
@@ -350,7 +362,11 @@ def _run_auto(
             run = run.model_copy(update={"llm": True})
         _print_header(library, run, out)
         final, _ = auto_play(
-            library, run, battle, on_node=lambda a, b: _print_node(library, a, b, out)
+            library,
+            run,
+            battle,
+            on_node=lambda a, b: _print_node(library, a, b, out),
+            flash_policy=flash_policy,
         )
     except RunError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)

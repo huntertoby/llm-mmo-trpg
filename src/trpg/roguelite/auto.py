@@ -16,18 +16,23 @@
 
   出題失敗（這一次沒有合法變化）的技能在同一個節點跳過，不會卡住。
 
+- 策略（Phase 3W-8，只影響模擬；預設 ``none`` ＝ 上面的行為）：``none`` 不指定類別；``all`` 每次閃現
+  都指定類別（依用法排第一的類別，2 點；點數不夠就等到存夠；該招沒有可指定的類別才退回不指定）；
+  ``mixed`` 在這一輪已經閃過的總次數為偶數時照 ``all`` 的做法，奇數時不指定。
+
 全部確定性：同一個 ``RunState`` 必得相同結果。
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.roguelite.battle import ActiveBattle
 from trpg.roguelite.errors import ChoiceError
-from trpg.roguelite.flashes import owned_skills, problem_of, state_of
+from trpg.roguelite.flashes import focus_order, owned_skills, problem_of, state_of
 from trpg.roguelite.gear import auto_gear_pick
 from trpg.roguelite.offers import skill_defs, take_candidate
 from trpg.roguelite.progress import apply_choice, finish_battle
@@ -51,7 +56,18 @@ from trpg.roguelite.state import (
 from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_state import COMPLETE_SLOT
 
-__all__ = ["AutoStop", "auto_choice", "auto_flash_choice", "auto_play"]
+__all__ = [
+    "FLASH_POLICIES",
+    "AutoStop",
+    "FlashPolicy",
+    "auto_choice",
+    "auto_flash_choice",
+    "auto_play",
+]
+
+type FlashPolicy = Literal["none", "all", "mixed"]
+"""AI 花靈感點的策略（3W-8）：不指定類別、全指定類別、混合。"""
+FLASH_POLICIES: tuple[FlashPolicy, ...] = ("none", "all", "mixed")
 
 type AutoStop = Callable[[RunState, ActiveBattle | None], bool]
 """停止條件：在每個節點與每個戰鬥步驟之前呼叫（``ActiveBattle`` 為進行中的戰鬥或 ``None``）。"""
@@ -111,11 +127,21 @@ def _unadjusted_complete(run: RunState) -> list[str]:
     ]
 
 
+def _wants_focus(run: RunState, policy: FlashPolicy) -> bool:
+    """這一次閃現想指定類別嗎（``mixed``：這一輪已經閃過的總次數為偶數時）。"""
+    if policy == "mixed":
+        return sum(len(s.records) for s in run.flash.values()) % 2 == 0
+    return policy == "all"
+
+
 def auto_flash_choice(
-    library: ContentLibrary, run: RunState, skip: frozenset[str] = frozenset()
+    library: ContentLibrary,
+    run: RunState,
+    skip: frozenset[str] = frozenset(),
+    policy: FlashPolicy = "none",
 ) -> FlashChoice | None:
     """AI 這一個節點要花的靈感點（見模組說明）；不花時 ``None``。``skip`` 是這個節點出題失敗過的
-    技能。"""
+    技能；``policy`` 是指定類別的策略。"""
     cost = library.flash.pricing.rule(False).cost
     if run.ended or run.insight < cost:
         return None
@@ -129,7 +155,13 @@ def auto_flash_choice(
     if not ready:
         return None
     best = max(ready, key=lambda s: (len(state_of(run, s).records), -run.hero.skills.index(s)))
-    return FlashChoice(skill=best)
+    category = None
+    if _wants_focus(run, policy):
+        if run.insight - reserve < library.flash.pricing.rule(True).cost:
+            return None  # 想指定類別就等到存夠點數
+        order = focus_order(library, run, best)
+        category = order[0] if order else None
+    return FlashChoice(skill=best, category=category)
 
 
 def auto_choice(library: ContentLibrary, run: RunState) -> Choice:
@@ -161,9 +193,10 @@ def _spend(
     run: RunState,
     skip: set[str],
     on_node: Callable[[RunState, RunState], None] | None,
+    policy: FlashPolicy,
 ) -> RunState:
     """這個節點能花的靈感點都花掉（閃現出題 → 選第一個選項）。"""
-    while (flash := auto_flash_choice(library, run, frozenset(skip))) is not None:
+    while (flash := auto_flash_choice(library, run, frozenset(skip), policy)) is not None:
         before = run
         try:
             run = apply_choice(library, run, flash)
@@ -183,10 +216,11 @@ def auto_play(
     *,
     stop: AutoStop | None = None,
     on_node: Callable[[RunState, RunState], None] | None = None,
+    flash_policy: FlashPolicy = "none",
 ) -> tuple[RunState, ActiveBattle | None]:
     """AI 代打到一輪結束或 ``stop`` 為真。``battle`` 是要接續的進行中戰鬥（讀檔）。回傳最後的
     ``RunState`` 與進行中的戰鬥（停在戰鬥中時；否則 ``None``）。``on_node(之前, 之後)`` 在每個
-    節點完成後（以及每次閃現後）呼叫（CLI 印出進度）。"""
+    節點完成後（以及每次閃現後）呼叫（CLI 印出進度）。``flash_policy`` 見模組說明。"""
     while not run.ended:
         if stop is not None and stop(run, battle):
             return run, battle
@@ -202,7 +236,7 @@ def auto_play(
             battle = None
         else:
             if run.pending_flash is None:
-                run = _spend(library, run, set(), on_node)
+                run = _spend(library, run, set(), on_node, flash_policy)
                 before = run
             run = apply_choice(library, run, auto_choice(library, run))
         if on_node is not None:
