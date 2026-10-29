@@ -236,6 +236,27 @@ class TerrainAreaTier(ContentModel):
     tier: int = Field(ge=1)
 
 
+class RetierGrowthRules(ContentModel):
+    """升階時放大效果本身（Phase 3W-9b，06 6.34.9「升階時重算」；``skill_budget.yaml`` 的
+    ``retier_growth``）。只用在點數固定（沒有骰子、倍率這類強度旋鈕）的技能升階時：
+
+    - ``stretch``：原語 → 參數 → 升階時可以放大到的上限（狀態、表面的持續回合）。只放大組合器本來
+      就有旋鈕的參數（硬控狀態的持續回合沒有旋鈕，不會被放大），而且只增不減。
+    - ``area_shapes``：表面與升降地形放大格數時依序換的形狀（同一種選取方式，格數由少到多）。新形狀
+      要符合角色階級（``min_character_tier`` 的形狀與升降地形格數表）。
+    - ``max_extra_cooldown``：換成較大的形狀時，最多可以多加幾回合冷卻（互斥規則「無冷卻的大範圍」、
+      或格數放大後超過預算上限時）。
+    """
+
+    stretch: dict[str, dict[str, int]] = Field(default_factory=dict)
+    area_shapes: tuple[str, ...] = ()
+    max_extra_cooldown: int = Field(default=0, ge=0)
+    max_extra_ap: int = Field(default=0, ge=0, le=2)
+    """換成較大的形狀時最多多加幾 AP（加冷卻還超過預算上限時，例如 1 AP 的隆地；不超過 3 AP）。"""
+    target_tolerance_permille: int = Field(default=50, ge=0, le=300)
+    """重配維持原本比例的容許差（‰）：候選的比例與升階前相差在這之內就採用，否則取最接近的。"""
+
+
 class CharacterTierRules(ContentModel):
     """技能內容的「最低角色階級」（Phase 3W-9，06 6.34.9 的表；``skill_budget.yaml`` 的
     ``min_character_tier``）。沒列出的種類、原語、骨架、形狀都是 1 階。驗證器、技能工坊、組合器、
@@ -501,6 +522,8 @@ class BudgetRules(ContentModel):
     min_character_tier: CharacterTierRules = Field(default_factory=CharacterTierRules)
     """技能內容的最低角色階級（Phase 3W-9，06 6.34.9）：取代原語、骨架、形狀的「最低稀有度」門檻
     （稀有度改成只由結構自動算的標記）。"""
+    retier_growth: RetierGrowthRules = Field(default_factory=RetierGrowthRules)
+    """升階時放大效果本身（Phase 3W-9b）：點數固定的狀態、表面與升降地形。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:

@@ -133,6 +133,7 @@ def tune(
     *,
     extra: Sequence[dict[str, Any]] = (),
     min_ratio: Fraction | None = None,
+    target_ratio: Fraction | None = None,
 ) -> bool:
     """調整旋鈕使比例落在 ``[low, high]``；成功時 ``effects`` 已是最終數值。
 
@@ -143,13 +144,16 @@ def tune(
 
     ``min_ratio``（Phase 3W-2，閃現的強度下限）：最終比例至少要有這麼多——目標比例與上限都跟著抬高
     到它（上限最多再多一個 ``target_margin``，仍受驗證器的 0.70–1.00 窗約束）。
+
+    ``target_ratio``（Phase 3W-9b，升階重配維持原本的比例）：目標比例改用它、不再抽；合格區間放寬到
+    驗證器的窗（0.70–1.00）。
     """
     rules = library.composer.tuning
     low, high = tuning_bounds(library)
     ev = _Evaluator(library, base, effects, extra)
     margin = Fraction(rules.target_margin_permille, 1000)
-    if min_ratio is not None:
-        high = ev.high = Fraction(1)  # 有下限時上限放到驗證器的上限（1.00）
+    if min_ratio is not None or target_ratio is not None:
+        high = ev.high = Fraction(1)  # 有下限或指定目標時上限放到驗證器的上限（1.00）
     for knob in knobs:
         knob.pos = 0
         _apply(knob, ev.targets)
@@ -158,9 +162,13 @@ def tune(
         return False
     span = high - low - margin
     target = low + span * Fraction(rng.randint(0, rules.target_steps), rules.target_steps)
+    if target_ratio is not None:
+        target = target_ratio
+        low = Fraction(library.budget.min_ratio_permille, 1000)
     if min_ratio is not None:
         target = max(target, min_ratio)
     blocked: set[int] = set()
+    last: Knob | None = None
     while ratio < target:
         live = [k for k in knobs if k.can_up() and id(k) not in blocked]
         if not live:
@@ -169,4 +177,32 @@ def tune(
         ratio, accepted = _raise(knob, ev, ratio, target)
         if not accepted:
             blocked.add(id(knob))
-    return ratio >= max(low, min_ratio or low) and ev.shares == 0
+        else:
+            last = knob
+    floor = max(low, min_ratio or low)
+    if target_ratio is not None and last is not None and ratio > target:
+        ratio = _nearer(last, ev, ratio, target, floor)
+    return ratio >= floor and ev.shares == 0
+
+
+def _nearer(
+    knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction, floor: Fraction
+) -> Fraction:
+    """指定目標比例時（3W-9b）：最後調的旋鈕往回一格若更接近目標（且不低於 ``floor``）就退回。"""
+    if knob.pos == 0:
+        return ratio
+    shares = ev.shares
+    knob.pos -= 1
+    _apply(knob, ev.targets)
+    back = ev.ratio()
+    if (
+        back is not None
+        and back >= floor
+        and ev.shares <= shares
+        and target - back < ratio - target
+    ):
+        return back
+    knob.pos += 1
+    _apply(knob, ev.targets)
+    ev.ratio()
+    return ratio

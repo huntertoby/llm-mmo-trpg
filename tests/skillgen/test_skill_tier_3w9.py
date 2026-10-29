@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from fractions import Fraction
 
 import pytest
@@ -16,6 +17,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
+from trpg.content.skill_rules import RetierGrowthRules
 from trpg.content.skills import SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
@@ -198,7 +200,7 @@ def test_retier_is_deterministic_and_same_tier_is_identity() -> None:
 
 @pytest.mark.parametrize("tier", [2, 3])
 def test_terrain_skills_pass_the_budget_floor_at_higher_tiers(tier: int) -> None:
-    """升降地形的點數固定：2／3 階靠費用減輕或「地形＋落石」把數值照預算配進窗內。"""
+    """升降地形的點數固定：2／3 階先放大格數（3W-9b），再靠費用或「地形＋落石」配進窗內。"""
     sources = [
         LIB.skills[s] for s in ("skill_sinkhole", "skill_raise_perch", "skill_earth_collapse")
     ]
@@ -212,10 +214,12 @@ def test_terrain_skills_pass_the_budget_floor_at_higher_tiers(tier: int) -> None
 
 
 def test_retier_report_flags_structures_that_cannot_keep_up() -> None:
-    """純狀態的白板（淬毒）點數追不上 3 階：數值推到最大，標成不在窗內，分數仍不低於升階前。"""
-    venom = compose_whiteboard(0, recipe_id="venom", tier=1, library=LIB)
-    done = retier(LIB, venom, 3)
-    report = retier_report(LIB, venom, done)
+    """沒有放大旋鈕時（3W-9b 的 ``retier_growth`` 清空），純狀態的白板（淬毒）點數追不上 3 階：數值
+    推到最大，標成不在窗內，分數仍不低於升階前。"""
+    lib = replace(LIB, budget=LIB.budget.model_copy(update={"retier_growth": RetierGrowthRules()}))
+    venom = compose_whiteboard(0, recipe_id="venom", tier=1, library=lib)
+    done = retier(lib, venom, 3)
+    report = retier_report(lib, venom, done)
     assert not report.in_window and report.after >= report.before
 
 
