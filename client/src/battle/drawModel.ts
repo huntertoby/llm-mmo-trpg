@@ -31,6 +31,7 @@ function copyTarget(view: BattleView, u: BattleView["units"][number]): DollInput
     team: owner.team,
     summon: false,
     dollLook: owner.doll_look,
+    raceLook: owner.race?.look ?? null,
     weaponId: owner.weapon_id,
     weaponClass: owner.weapon_class,
     attackElement: owner.attack_element ?? null,
@@ -116,6 +117,8 @@ export interface UnitDraw {
   facing: Facing;
   /** 紙娃娃外觀（Phase 3E-2e，單位視圖的 `doll_look`）；沒有時依陣營退回預設。 */
   dollLook?: DollLook | null;
+  /** 種族預設外觀（Phase 3R-3b，`UnitView.race.look`）；沒有種族為 `null`。 */
+  raceLook?: Readonly<Record<string, unknown>> | null;
   /** 武器 ID（紙娃娃主手外觀用）。 */
   weaponId: string;
   /** 武器大類（melee、ranged、focus）：不認得 `weaponId` 時依此退回武器圖。 */
@@ -291,6 +294,7 @@ export function buildDrawModel(
       infused: u.infused_skill_id != null,
       facing: u.facing,
       dollLook: u.doll_look ?? null,
+      raceLook: u.race?.look ?? null,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,
       attackElement: u.attack_element ?? null,

@@ -7,6 +7,7 @@ import type { DollLook } from "../api/types";
 import { weaponLookEntry } from "../battle/glossary";
 import { ELEMENT_VFX } from "../battle/vfxPalette";
 import { numToHex } from "./artPalette";
+import { raceLookToLook } from "./inkRace";
 import { dollGear, isTwoHandedPart, pairedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
@@ -30,6 +31,14 @@ export interface Look {
   eyes?: string;
   /** 體型（C 畫風骨架縮放；3R 種族欄位接上前只有骨架支援）：stout 矮壯、tall 高瘦；不認得的值當作普通。 */
   build?: "stout" | "tall";
+  /** 種族外觀（Phase 3R-3b；來自 `UnitView.race.look`，欄位值不認得時當作沒有）。 */
+  ears?: "pointed" | "fin" | "beast";
+  horns?: "small" | "curved" | "dragon";
+  tail?: "fox" | "scaled" | "demon" | "dragon";
+  hornColor?: string;
+  tailColor?: string;
+  /** 鱗色（目前只用在粗尾巴的預設色；龍鱗紋路屬 3R-3c）。 */
+  scaleColor?: string;
 }
 
 export type GearSlot = "head" | "body" | "hands" | "feet" | "cloak" | "main_hand" | "off_hand";
@@ -177,6 +186,8 @@ export interface DollInput {
   equipment?: readonly DollEquipment[] | undefined;
   /** 目前生效的普攻元素（`UnitView.attack_element`，Phase 3I-6；附魔、詞條或武器本身）：有值時主手改用該元素色，物理與缺漏沿用武器外觀。 */
   attackElement?: string | null | undefined;
+  /** 主角的種族預設外觀（`UnitView.race.look`，Phase 3R-3b）：疊在範本外觀上（膚色、髮型換成種族的，耳角尾加上去）；沒有種族為 `null`。 */
+  raceLook?: Readonly<Record<string, unknown>> | null | undefined;
 }
 
 /** 單位 → 紙娃娃規格；永遠回傳畫得出來的規格（未知範本、武器、kind 都有退回）。 */
@@ -220,7 +231,8 @@ export function resolveDoll(input: DollInput): DollSpec {
     if (gear.main_hand !== undefined) gear.main_hand = { ...gear.main_hand, element: infused };
     if (pairedKind !== null && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
   }
-  return { look: app.look, gear, ...(rarity !== undefined ? { rarity } : {}) };
+  const look = input.summon || app.look.skull === true ? app.look : { ...app.look, ...raceLookToLook(input.raceLook) };
+  return { look, gear, ...(rarity !== undefined ? { rarity } : {}) };
 }
 
 /** 穩定的快取鍵（物件鍵排序）：同一套裝備＋朝向＋姿勢共用一張貼圖。 */

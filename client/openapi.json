@@ -8514,6 +8514,191 @@
         "title": "Protect",
         "description": "保護指定友方。"
       },
+      "RaceLook": {
+        "properties": {
+          "skin": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Skin"
+          },
+          "hair": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair"
+          },
+          "hair_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair Color"
+          },
+          "ears": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ears"
+          },
+          "horns": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horns"
+          },
+          "horn_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horn Color"
+          },
+          "tail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tail"
+          },
+          "tail_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tail Color"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "mark_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark Color"
+          },
+          "eyes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eyes"
+          },
+          "build": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build"
+          },
+          "beard": {
+            "type": "boolean",
+            "title": "Beard",
+            "default": false
+          },
+          "tusks": {
+            "type": "boolean",
+            "title": "Tusks",
+            "default": false
+          },
+          "scale_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale Color"
+          },
+          "slit_eyes": {
+            "type": "boolean",
+            "title": "Slit Eyes",
+            "default": false
+          },
+          "ridge": {
+            "type": "boolean",
+            "title": "Ridge",
+            "default": false
+          },
+          "spines": {
+            "type": "boolean",
+            "title": "Spines",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skin"
+        ],
+        "title": "RaceLook",
+        "description": "預設外觀參數（顯示用，不進引擎結算）；欄位照 ``docs/art/sample/raceArt.js`` 的 ``look``\n（駝峰改底線）。\n\n``hair``／``ears``／``horns``／``tail``／``pattern``／``build`` 的值由 3R-3 的前端決定畫法；\n這裡只擋非 ID 值。顏色為 ``#rrggbb``。省略＝部件不存在。"
+      },
       "RaceView": {
         "properties": {
           "id": {
@@ -8586,6 +8771,9 @@
           "passive_active": {
             "type": "boolean",
             "title": "Passive Active"
+          },
+          "look": {
+            "$ref": "#/components/schemas/RaceLook"
           }
         },
         "additionalProperties": false,
@@ -8603,7 +8791,8 @@
           "skill_range",
           "passive_name_zh",
           "passive_description_zh",
-          "passive_active"
+          "passive_active",
+          "look"
         ],
         "title": "RaceView",
         "description": "單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。\n\n種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的\n欄位決定（前端依 ``skill_shape`` 選格子或單位）。"

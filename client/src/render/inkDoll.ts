@@ -8,6 +8,7 @@ import { drawFootDetail, drawInkBodyArmor, drawInkHand, drawInkHeadgearMore, foo
 import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon } from "./inkGear";
 import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { drawInkWeaponMore } from "./inkWeapons";
+import { drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawInkHorns, drawInkTail, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
 import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
 
 export type InkView = "front" | "back" | "side";
@@ -228,8 +229,15 @@ function drawHair(t: Ctxt, view: InkView): void {
   else ink(t.ctx, "hair-s", [[-9.2, -38], [-9.4, -47], [-4, -52.5], [3, -52.6], [8.6, -48.5], [9.4, -44.6], [6, -46], [3, -45.5], [1, -43], [-1.4, -41], [-2.6, -37], [-6, -35.4]], c);
 }
 
+function earCtx(t: Ctxt, view: InkView): EarCtx {
+  const head = t.spec.gear.head;
+  return { look: t.spec.look, view, head, headColor: colorOf(t.hooks, head, "#7a5a3a") };
+}
+
 function drawHead(t: Ctxt, view: InkView): void {
   const { ctx } = t;
+  const ears = earCtx(t, view);
+  drawEarsUnder(ctx, ears); // 尖耳、鰭耳（正面、背面）畫在頭之前，頭蓋住耳根
   if (view === "side") {
     ink(ctx, "head-side", HEAD_SIDE, t.skin, { w: 1 });
     ink(ctx, "ear-s", ellPts(-2.6, -40, 1.4, 1.9, 10), t.skin, { shade: false, w: 0.6 });
@@ -238,6 +246,8 @@ function drawHead(t: Ctxt, view: InkView): void {
   }
   if (view !== "back") drawFace(t, view);
   drawHair(t, view);
+  drawSideEarBeforeHat(ctx, ears);
+  drawBeastEarsBeforeHat(ctx, ears);
 }
 
 // ============================== 武器、盾（現行畫法，座標對到 C 骨架） ==============================
@@ -287,10 +297,23 @@ function drawWoodShieldBack(t: Ctxt, off: GearItem): void {
   stroke(t.ctx, "shield-strap", [[5, -24], [12.2, -18]], 1.2, "#5a3a1e");
 }
 
-function drawHeadgear(t: Ctxt, view: InkView): void {
+function drawHeadgearItem(t: Ctxt, view: InkView): void {
   const it = t.spec.gear.head;
-  if (it === undefined || drawInkHeadgear(t.ctx, it, view, t.hooks.colors)) return;
-  drawInkHeadgearMore(t.ctx, it, view, t.hooks.colors);
+  if (it === undefined) return;
+  // 有種族角時：角盔改畫成一般頭盔、小帽變窄、寬帽與巫師帽抬高（可玩種族評估.md 第 2 節）
+  const adj = hatAdjust(t.spec.look, it);
+  t.ctx.save();
+  if (adj.dy !== 0) t.ctx.translate(0, adj.dy);
+  if (adj.sx !== 1) t.ctx.scale(adj.sx, 1);
+  if (!drawInkHeadgear(t.ctx, adj.item, view, t.hooks.colors)) drawInkHeadgearMore(t.ctx, adj.item, view, t.hooks.colors);
+  t.ctx.restore();
+}
+
+/** 頭部裝備 → 穿出帽子的耳朵（戴頭盔的側面尖耳、小帽的獸耳、兜帽的耳朵凸起）→ 角（永遠在最上層）。 */
+function drawHeadgear(t: Ctxt, view: InkView): void {
+  drawHeadgearItem(t, view);
+  drawEarsAfterHat(t.ctx, earCtx(t, view));
+  drawInkHorns(t.ctx, t.spec.look, view);
 }
 
 // ============================== 組合 ==============================
@@ -300,6 +323,7 @@ function drawFront(t: Ctxt): void {
   const off = offItemOf(spec);
   const spread = spreadOf(spec);
   drawCloak(t, "front");
+  drawInkTail(t.ctx, spec.look, "front");
   drawHairBack(t, "front");
   drawLegs(t, "front");
   drawBody(t, "front");
@@ -339,6 +363,7 @@ function drawBack(t: Ctxt): void {
   drawHand(t, -9, -23.2, "hand-bl", 0.32);
   drawHand(t, 9, -23.2, "hand-br", -0.32);
   drawCloak(t, "back");
+  drawInkTail(ctx, spec.look, "back");
   if (off !== undefined && isShield(off)) drawWoodShieldBack(t, off);
   drawHead(t, "back");
   drawHeadgear(t, "back");
@@ -349,6 +374,7 @@ function drawSide(t: Ctxt): void {
   const { gear } = spec;
   const off = offItemOf(spec);
   drawCloak(t, "side");
+  drawInkTail(ctx, spec.look, "side");
   drawHairBack(t, "side");
   // 成對武器的副手在遠側手，畫在身體後面，比近側手往前上錯開約 3px
   if (off !== undefined && !heldNotMirrored(off)) {
