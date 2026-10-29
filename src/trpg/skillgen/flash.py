@@ -652,7 +652,7 @@ class UsageSource(DataOrderSource):
         skill: SkillDef,
     ) -> list[Variation]:
         base = {"source": "minor", "template": template.id, "category": template.category}
-        if template.op == "reshape":
+        if template.op in ("reshape", "terrain_area"):
             reach = (
                 _FAR_SHAPES
                 if request.usage.avg_distance_permille >= (library.evolution.far_distance * 1000)

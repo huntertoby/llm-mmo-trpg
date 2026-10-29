@@ -161,11 +161,17 @@ class FlashTemplate(ContentModel):
     """通用變化（3W-2）：用法統計不夠時（放出次數少於 ``rules.usage_min_uses``）先出這些。"""
     elements: tuple[str, ...] = ()
     """``element`` 模板的候選元素（3W-2）；空 ＝ 不限。"""
+    min_cells: int | None = Field(default=None, ge=1)
+    max_cells: int | None = Field(default=None, ge=1)
+    """``terrain_area`` 的影響格數範圍（3W-2b，#58）：新形狀的格數（``cell_count``）要落在其中
+    （2 階 4～6 格、3 階 7 格以上）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
         if self.op in ("area", "range") and not self.delta:
             raise ValueError(f"模板 {self.id}：{self.op} 必須填非 0 的 delta")
+        if self.op == "terrain_area" and (not self.shapes or self.min_cells is None):
+            raise ValueError(f"模板 {self.id}：terrain_area 必須填 shapes 與 min_cells")
         return self
 
 

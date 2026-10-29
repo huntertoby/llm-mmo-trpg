@@ -99,6 +99,27 @@ minor:
     summary_zh: 換成連鎖跳躍（再跳 2 次，傷害依預算調整）
     shapes:
       - {type: chain, range: 4, jumps: 2, jump_range: 2}
+  # 地形變化（#58 的稀有度門檻 → 3W 改成最低角色階級；只有升降地形的技能套得上）：影響格數 4～6 格 2 階、7 格以上 3 階
+  - id: terrain_mid
+    category: area
+    op: terrain_area
+    min_tier: 2
+    min_cells: 4
+    max_cells: 6
+    prefix_zh: 隆起
+    summary_zh: 地形變化：升降地形的影響範圍擴大到 4～6 格（十字），必要時附帶少量落石傷害（強度由預算補）
+    shapes:
+      - {type: cross, range: 4}
+  - id: terrain_wide
+    category: area
+    op: terrain_area
+    min_tier: 3
+    min_cells: 7
+    prefix_zh: 崩山
+    summary_zh: 地形變化：升降地形的影響範圍擴大到 7 格以上（3×3 或更大），必要時附帶少量落石傷害（強度由預算補）
+    shapes:
+      - {type: square3, range: 4}
+      - {type: allies_in_radius, radius: 2}
   # ---- 連段 ----
   - id: multi_hit
     category: combo

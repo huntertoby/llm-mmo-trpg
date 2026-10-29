@@ -12,6 +12,7 @@
 ``area``           範圍 +1（形狀的大小參數）
 ``range``          距離 +1
 ``reshape``        換形狀（直線、錐形、十字、3×3；沿用進化的 ``reshape`` 候選）
+``terrain_area``   地形變化：升降地形的技能換成 4～6 格（2 階）或 7 格以上（3 階）的形狀
 ``multi_hit``      多打一下：同一目標多一段命中（複製第一個傷害效果）
 ``followup``       接續段：命中後接一小段傷害（6.23 複合技，``when: on_hit``）
 ``element``        第二元素：多一個別種元素的傷害效果
@@ -59,6 +60,7 @@ __all__ = [
     "Draft",
     "FlashOp",
     "base_draft",
+    "cell_count",
     "tuning_extras",
 ]
 
@@ -183,6 +185,53 @@ def _op_reshape(
         base["shape"] = shape.model_dump(mode="json", exclude_none=True)
         drafts.append((base, effects))
     return drafts
+
+
+_TERRAIN_PRIMITIVES = frozenset({"raise_terrain", "lower_terrain"})
+
+
+def _op_terrain_area(
+    skill: SkillDef, template: FlashTemplate, variation: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """地形變化（3W-2b，#58）：升降地形的技能換成影響格數落在 ``min_cells``～``max_cells`` 的形狀
+    （2 階 4～6 格、3 階 7 格以上）；格數要比現在多，且技能原本不能已經在這個範圍內。形狀的稀有度
+    與地形格數的稀有度門檻（rare／epic）由重調時依結構自動補（稀有度只是複雜度標記）。"""
+    if not _reshapable(skill) or not any(e.type in _TERRAIN_PRIMITIVES for e in skill.effects):
+        return []
+    current = cell_count(skill.shape, library)
+    shapes = (variation.shape,) if variation.shape is not None else template.shapes
+    drafts: list[Draft] = []
+    for shape in shapes:
+        cells = cell_count(shape, library)
+        if (
+            cells is None
+            or (current is not None and cells <= current)
+            or cells < (template.min_cells or 1)
+            or (template.max_cells is not None and cells > template.max_cells)
+        ):
+            continue
+        # 升降地形的點數是固定的，階級高、預算變大後單靠地形追不上預算下限：先試純地形，再試「地形
+        # ＋落石」（多一個大地傷害效果，強度由預算器調）
+        for rocks in (False, True):
+            base, effects = base_draft(skill)
+            base["shape"] = shape.model_dump(mode="json", exclude_none=True)
+            if rocks:
+                if len(effects) >= 4:  # noqa: PLR2004 - MAX_EFFECTS
+                    continue
+                effects.append(_new_damage(skill, {}, "earth"))
+            drafts.append((base, effects))
+    return drafts
+
+
+def cell_count(shape: Any, library: ContentLibrary) -> int | None:
+    """形狀影響的格數（``skill_shapes.yaml`` 的 ``cell_count``）；沒有資料時 ``None``。"""
+    definition = library.ruleset.shapes.by_id().get(shape.type)
+    if definition is None or definition.cell_count is None:
+        return None
+    try:
+        return definition.cell_count.count_for(shape.param_values())
+    except ValueError:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +671,7 @@ FLASH_OPS: dict[str, FlashOp] = {
     "area": _op_area,
     "range": _op_range,
     "reshape": _op_reshape,
+    "terrain_area": _op_terrain_area,
     "multi_hit": _op_multi_hit,
     "followup": _op_followup,
     "element": _op_element,

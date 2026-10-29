@@ -19,7 +19,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from trpg.content.skills import SkillDef
+from trpg.content.skills import ShapeSpec, SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
 from trpg.engine.battle import legal_actions
@@ -109,7 +109,14 @@ def _pool() -> tuple[SkillDef, ...]:
         )
         if done is not None:
             stances.append(done.model_copy(update={"id": f"{base}_stance_test"}))
-    return (*plain, *stances)
+    # 3W-2b：地形變化需要影響格數比較小的升降地形技能（內容裡的都是十字以上）
+    small = lib.skills["skill_sinkhole"].model_copy(
+        update={
+            "id": "skill_sinkhole_small_test",
+            "shape": ShapeSpec.model_validate({"type": "ground_tile", "range": 4}),
+        }
+    )
+    return (*plain, *stances, small)
 
 
 @cache
@@ -231,8 +238,9 @@ TIER_TWO = {
     "element_second",
     "support_area_wide",
     "trigger_range_wide",
+    "terrain_mid",
 }
-TIER_THREE = {"reshape_line6", "reshape_chain", "dual_scaling"}
+TIER_THREE = {"reshape_line6", "reshape_chain", "dual_scaling", "terrain_wide"}
 
 
 def test_template_min_tiers_follow_decision_72() -> None:
