@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from functools import cache
+from types import MappingProxyType
 from typing import Any
 
 from trpg.content.battle import StatusDef
@@ -21,6 +22,8 @@ from trpg.content.skill_rules import SkeletonDef, SkillMatch
 from trpg.content.skills import (
     LEGACY_REACTION_EVENTS,
     PrimitiveDef,
+    PrimitiveKnob,
+    PrimitiveParam,
     SkillRarity,
     default_affects,
     rarity_rank,
@@ -29,6 +32,7 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Surface
 
 __all__ = [
+    "KNOB_LADDERS",
     "NON_INTERCEPT_EVENTS",
     "Ctx",
     "Knob",
@@ -153,83 +157,119 @@ def _multiplier_ladder(ranges: tuple[LadderRange, ...]) -> tuple[int, ...]:
 type KnobSpec = tuple[str, tuple[Any, ...], int]
 """一個旋鈕的定義：（欄位, 由弱到強的值, 抽中權重）。"""
 
-_GAMBLE_CHANCES = tuple(range(300, 951, 50))
+type _Ladder = Callable[
+    [ContentLibrary, PrimitiveKnob, PrimitiveParam, Mapping[str, Any]], tuple[Any, ...]
+]
 
 
-def _status_knobs(library: ContentLibrary, status_id: object) -> tuple[KnobSpec, ...]:
-    status = library.ruleset.statuses.by_id().get(str(status_id))
+def _status_ladder(
+    library: ContentLibrary, _knob: PrimitiveKnob, _param: PrimitiveParam, effect: Mapping[str, Any]
+) -> tuple[Any, ...]:
+    """狀態的持續回合（依狀態的預設持續與控制類別；只有一階時不算旋鈕）。"""
+    status = library.ruleset.statuses.by_id().get(str(effect.get("status")))
     if status is None:
         return ()
-    rules = library.composer.duration
-    values = _duration_values(status.duration, status.control_group, rules)
-    return (("duration", values, rules.status_weight),) if len(values) > 1 else ()
+    values = _duration_values(status.duration, status.control_group, library.composer.duration)
+    return values if len(values) > 1 else ()
 
 
-def _surface_knobs(library: ContentLibrary, surface_id: object) -> tuple[KnobSpec, ...]:
+def _surface_ladder(
+    library: ContentLibrary, _knob: PrimitiveKnob, _param: PrimitiveParam, effect: Mapping[str, Any]
+) -> tuple[Any, ...]:
+    """表面的持續回合（1 到預設持續 ＋ ``surface_extra``，不超過 ``cap``）。"""
+    surface_id = effect.get("surface")
     surface = next((s for s in library.ruleset.surfaces.surfaces if s.id.value == surface_id), None)
     if surface is None or surface.duration is None:
         return ()
     rules = library.composer.duration
-    values = tuple(range(1, min(surface.duration + rules.surface_extra, rules.cap) + 1))
-    return (("duration", values, rules.surface_weight),)
+    return tuple(range(1, min(surface.duration + rules.surface_extra, rules.cap) + 1))
 
 
-def _stack_knobs(library: ContentLibrary, effect: Mapping[str, Any]) -> tuple[KnobSpec, ...]:
-    rules = library.composer.builder
-    other = library.composer.structure.knob_weight_other
-    if effect["type"] == "consume_stack":
-        ladder = tuple(range(rules.per_stack.start, rules.per_stack.stop, rules.per_stack.step))
-        return (("per_stack_permille", ladder, other),)
+def _stack_amount_ladder(
+    library: ContentLibrary, _knob: PrimitiveKnob, _param: PrimitiveParam, effect: Mapping[str, Any]
+) -> tuple[Any, ...]:
+    """累積的層數（1 到層數上限與 ``builder.max_amount`` 的較小者）。"""
     stack = next((s for s in library.ruleset.stacks.stacks if s.id == effect.get("stack")), None)
     if stack is None:
         return ()
-    return (("amount", tuple(range(1, min(stack.max, rules.max_amount) + 1)), other),)
+    return tuple(range(1, min(stack.max, library.composer.builder.max_amount) + 1))
+
+
+def _per_stack_ladder(
+    library: ContentLibrary,
+    _knob: PrimitiveKnob,
+    _param: PrimitiveParam,
+    _effect: Mapping[str, Any],
+) -> tuple[Any, ...]:
+    ladder = library.composer.builder.per_stack
+    return tuple(range(ladder.start, ladder.stop, ladder.step))
+
+
+def _param_range_ladder(
+    _library: ContentLibrary, knob: PrimitiveKnob, param: PrimitiveParam, _effect: Mapping[str, Any]
+) -> tuple[Any, ...]:
+    low = param.min if knob.start is None else knob.start
+    high = param.max if knob.max is None else knob.max
+    assert low is not None and high is not None  # PrimitiveParam 驗證過
+    return tuple(range(low, high + 1, knob.step))
+
+
+KNOB_LADDERS: Mapping[str, _Ladder] = MappingProxyType(
+    {
+        "dice": lambda library, _k, _p, _e: dice_ladder(library.composer.dice),
+        "multipliers": lambda library, _k, _p, _e: _multiplier_ladder(library.composer.multipliers),
+        "push_pull_distances": lambda library, _k, _p, _e: tuple(
+            library.composer.structure.push_pull_distances
+        ),
+        "blow_distances": lambda library, _k, _p, _e: tuple(
+            library.composer.structure.blow_distances
+        ),
+        "status_duration": _status_ladder,
+        "surface_duration": _surface_ladder,
+        "stack_amount": _stack_amount_ladder,
+        "per_stack": _per_stack_ladder,
+        "param_range": _param_range_ladder,
+    }
+)
+"""旋鈕的階梯來源（``skill_primitives.yaml`` 參數的 ``knob.ladder``；Phase 3T-1）。空 tuple ＝ 這次
+沒有旋鈕（例如引用的狀態不存在）。"""
+
+
+def _knob_weight(library: ContentLibrary, knob: PrimitiveKnob, weight: int) -> int:
+    if isinstance(knob.weight, int):
+        return knob.weight
+    rules = library.composer
+    return {
+        "caller": weight,
+        "core": rules.structure.knob_weight_core,
+        "other": rules.structure.knob_weight_other,
+        "status": rules.duration.status_weight,
+        "surface": rules.duration.surface_weight,
+    }[knob.weight]
 
 
 def effect_knobs(
     library: ContentLibrary, effect: Mapping[str, Any], *, category: str, weight: int
 ) -> tuple[KnobSpec, ...]:
     """一個效果（``SkillDef`` 形狀的字典，至少有 ``type`` 與決定階梯的欄位，例如 ``status``）的
-    強度旋鈕。隨機組合器與 LLM 提議的預算器（:mod:`trpg.skillgen.proposal_budget`）共用。
+    強度旋鈕：``skill_primitives.yaml`` 各參數的 ``knob``（Phase 3T-1，唯一來源；依參數順序，每個
+    參數取第一個成立的旋鈕）。隨機組合器與 LLM 提議的預算器（:mod:`trpg.skillgen.proposal_budget`）
+    共用。
 
-    ``weight`` 用於傷害、治療、護盾（呼叫端依核心或附帶傳入）；其他原語的權重固定（與組合器
-    相同）。沒有旋鈕的原語回傳空 tuple。"""
-    rules = library.composer
-    structure = rules.structure
-    kind = effect["type"]
-    dice = dice_ladder(rules.dice)
-    if kind == "damage" and category != "spell":
-        return (("multiplier_permille", _multiplier_ladder(rules.multipliers), weight),)
-    lookups: dict[str, Callable[[], tuple[KnobSpec, ...]]] = {
-        "apply_status": lambda: _status_knobs(library, effect.get("status")),
-        "create_surface": lambda: _surface_knobs(library, effect.get("surface")),
-        "add_stack": lambda: _stack_knobs(library, effect),
-        "consume_stack": lambda: _stack_knobs(library, effect),
-    }
-    if kind in lookups:
-        return lookups[kind]()
-    mana = effect.get("resource") == "mana"
-    fixed: dict[str, tuple[KnobSpec, ...]] = {
-        "damage": (("dice", dice, weight),),
-        "heal": (("dice", dice, weight),),
-        "shield": (("dice", dice, weight),),
-        # 只給手寫技能、組合器不會產生的骰子原語（LLM 提議的預算器用；3E-2g 之後）
-        "charge_through": (("dice", dice, weight),),
-        "hurl_object": (("dice", dice, weight),),
-        "detonate_runes": (("dice", dice, weight),),
-        "push": (("distance", tuple(structure.push_pull_distances), 1),),
-        "blow_surface": (("distance", tuple(structure.blow_distances), 1),),
-        "pull": (("distance", tuple(structure.push_pull_distances), 1),),
-        "sacrifice_summon": (("dice", dice, structure.knob_weight_core),),
-        "inscribe": (("duration", (1, 2, 3, 4, 5), structure.knob_weight_core),),
-        "reveal": (("duration", (1, 2, 3), structure.knob_weight_other),),
-        "delayed_damage": (("dice", dice, structure.knob_weight_other),),
-        "gamble": (("chance_permille", _GAMBLE_CHANCES, structure.knob_weight_other),),
-        "restore_resource": (
-            (("amount", tuple(range(1, 11)), structure.knob_weight_other),) if mana else ()
-        ),
-    }
-    return fixed.get(kind, ())
+    ``weight`` 用於 ``weight: caller`` 的旋鈕（傷害、治療、護盾等骰子；呼叫端依核心或附帶傳入）。
+    沒有旋鈕的原語回傳空 tuple。"""
+    primitive = library.ruleset.find_primitive(str(effect["type"]))
+    if primitive is None:
+        return ()
+    out: list[KnobSpec] = []
+    for name, param in primitive.params.items():
+        knob = next((k for k in param.knobs() if k.applies(category, effect)), None)
+        if knob is None:
+            continue
+        values = KNOB_LADDERS[knob.ladder](library, knob, param, effect)
+        if values:
+            out.append((name, values, _knob_weight(library, knob, weight)))
+    return tuple(out)
 
 
 # ---------------------------------------------------------------------------

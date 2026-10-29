@@ -17,8 +17,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, replace
+from types import MappingProxyType
 
 from trpg.content.skills import (
     SHAPE_CHANGES,
@@ -51,6 +52,7 @@ from trpg.shared.types import Element
 
 __all__ = [
     "ATTACK",
+    "CHANGE_HANDLERS",
     "INTERACT",
     "SHOVE",
     "TRIP",
@@ -622,3 +624,32 @@ def _helps_allies(state: BattleState, skill: SkillDef) -> bool:
         (e.affects or default_affects(rules.primitive_def(e.type))) == "allies"
         for e in skill.effects
     )
+
+
+CHANGE_HANDLERS: Mapping[str, Callable[..., object]] = MappingProxyType(
+    {
+        "damage_permille": damage_permille,
+        "hit_bonus": hit_bonus,
+        "cooldown_delta": cooldown_delta,
+        "push_distance_delta": displace_split,
+        "ap_delta": ap_cost,
+        "range_delta": range_delta,
+        "add_element": damage_element,
+        "add_tags": effective_tags,
+        "on_hit_effects": on_hit_rules,
+        "grant_pierce": grants_pierce,
+        "area_delta": shaped_skill,
+        "shape_to": shaped_skill,
+        "allow_self_target": shaped_skill,
+        "heal_permille": heal_permille,
+        "summon_hp_permille": summon_hp_permille,
+        "summon_attack_dice": summon_attack_dice,
+        "summon_limit_delta": summon_limit_delta,
+        "summon_duration_delta": summon_duration_delta,
+        "summon_damage_permille": summon_damage_permille,
+        "form_upkeep_permille": form_upkeep_permille,
+        "form_entry_permille": form_entry_permille,
+    }
+)
+"""每種修正規則改變（``content/modifier_changes.yaml``）由哪個查詢函式套用（Phase 3T-1 的宣告表；
+:mod:`trpg.primitive_coverage` 載入時檢查每種都有）。新增一種改變要寫查詢函式並加進這裡。"""

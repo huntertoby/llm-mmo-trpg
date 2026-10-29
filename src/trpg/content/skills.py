@@ -32,6 +32,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.forms import FormCategory
 from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.modifier_changes import bundled_modifier_changes
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_tags import UNKNOWN_TAG_TEXT
@@ -102,6 +103,7 @@ __all__ = [
     "MAX_VARIANTS",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
+    "NONZERO_CHANGES",
     "ON_HIT_PRIMITIVES",
     "ON_KILL_TYPES",
     "ON_MISS_MIN_RARITY",
@@ -137,6 +139,7 @@ __all__ = [
     "TELEPORT_TARGET",
     "TIME_BOMB",
     "TOPPLE",
+    "TRUE_ONLY_CHANGES",
     "VARIANT_CONDITIONS",
     "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
@@ -162,6 +165,7 @@ __all__ = [
     "NarrativeDef",
     "ParamDef",
     "PrimitiveDef",
+    "PrimitiveKnob",
     "PrimitiveParam",
     "PrimitiveTable",
     "Provenance",
@@ -591,6 +595,67 @@ class RequiredWhen(ContentModel):
         return not sibling_filled(self.unless_filled)
 
 
+type KnobLadder = Literal[
+    "dice",
+    "multipliers",
+    "push_pull_distances",
+    "blow_distances",
+    "status_duration",
+    "surface_duration",
+    "stack_amount",
+    "per_stack",
+    "param_range",
+]
+"""強度旋鈕的階梯來源（Phase 3T-1；實作在 :data:`trpg.skillgen.composer_parts.KNOB_LADDERS`）。"""
+
+type KnobWeight = Literal["caller", "core", "other", "status", "surface"] | int
+"""旋鈕被抽中的權重：``caller`` 由呼叫端依核心／附帶傳入、``core``／``other`` 為
+``skill_composer.yaml`` 的 ``structure.knob_weight_core``／``knob_weight_other``、``status``／
+``surface`` 為 ``duration.status_weight``／``surface_weight``，或直接寫整數。"""
+
+
+class PrimitiveKnob(ContentModel):
+    """原語參數的強度旋鈕（Phase 3T-1，原本是 ``composer_parts.effect_knobs`` 的 ``fixed`` 表）：
+    隨機組合器與 LLM 提議的預算器（:mod:`trpg.skillgen.proposal_budget`）依這個階梯由弱到強調整
+    參數值，讓技能的預算落在區間內。
+
+    - ``ladder``：階梯來源（``dice`` 骰子階梯、``multipliers`` 武器倍率、``push_pull_distances``／
+      ``blow_distances`` 位移格數、``status_duration``／``surface_duration`` 依引用的狀態／表面、
+      ``stack_amount``／``per_stack`` 層數、``param_range`` 參數自己的 ``min``～``max``）。
+    - ``start``／``max``／``step``（只給 ``param_range``）：從 ``start``（省略＝參數的 ``min``）到
+      ``max``（省略＝參數的 ``max``），每 ``step`` 一階。
+    - ``categories``／``exclude_categories``：只在這些技能類別／不在這些類別時有旋鈕。
+    - ``when``：同一個效果的其他參數值（鍵＝參數名，值＝允許的值）符合時才有旋鈕。
+    """
+
+    ladder: KnobLadder
+    weight: KnobWeight
+    start: int | None = None
+    max: int | None = None
+    step: int = Field(default=1, ge=1)
+    categories: tuple[str, ...] | None = None
+    exclude_categories: tuple[str, ...] = ()
+    when: dict[str, tuple[str, ...]] | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> PrimitiveKnob:
+        if self.ladder != "param_range" and (
+            self.start is not None or self.max is not None or self.step != 1
+        ):
+            raise ValueError("knob 的 start、max、step 只給 ladder: param_range 用")
+        return self
+
+    def applies(self, category: str, effect: Mapping[str, Any]) -> bool:
+        """這個旋鈕在技能類別 ``category``、效果 ``effect``（``SkillDef`` 形狀）時是否成立。"""
+        if self.categories is not None and category not in self.categories:
+            return False
+        if category in self.exclude_categories:
+            return False
+        if self.when is None:
+            return True
+        return all(str(effect.get(name)) in values for name, values in self.when.items())
+
+
 class PrimitiveParam(ContentModel):
     """原語的一個參數。
 
@@ -646,12 +711,30 @@ class PrimitiveParam(ContentModel):
     llm_hint: str = ""
     """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名；
     ``description_zh`` 是給開發者的。出貨的資料一律要寫（``tests/content/test_llm_hint.py``）。"""
+    knob: Literal["none"] | PrimitiveKnob | tuple[PrimitiveKnob, ...] | None = None
+    """強度旋鈕（Phase 3T-1，:class:`PrimitiveKnob`；多個時取第一個成立的）。``none`` ＝ 明寫沒有
+    旋鈕；省略只允許在 ``budget_basis: fixed`` 的原語（:mod:`trpg.primitive_coverage` 檢查）。"""
 
     @model_validator(mode="after")
     def _check_required_when(self) -> PrimitiveParam:
         if self.required_when is not None and not self.required:
             raise ValueError("required_when 必須搭配 required: true")
+        for knob in self.knobs():
+            if knob.ladder != "param_range":
+                continue
+            low = self.min if knob.start is None else knob.start
+            high = self.max if knob.max is None else knob.max
+            if self.type != "int" or low is None or high is None or low > high:
+                raise ValueError("knob 的 ladder: param_range 需要 int 參數的 min 與 max")
         return self
+
+    def knobs(self) -> tuple[PrimitiveKnob, ...]:
+        """宣告的旋鈕（``none`` 或省略時為空）。"""
+        if self.knob is None or self.knob == "none":
+            return ()
+        if isinstance(self.knob, PrimitiveKnob):
+            return (self.knob,)
+        return self.knob
 
 
 class PrimitiveDef(ContentModel):
@@ -1861,83 +1944,31 @@ type BasicAction = Literal["attack", "shove", "trip", "interact"]
 
 BASIC_ACTIONS: tuple[str, ...] = ("attack", "shove", "trip", "interact")
 
-MODIFIER_CHANGES: tuple[str, ...] = (
-    "damage_permille",
-    "hit_bonus",
-    "cooldown_delta",
-    "push_distance_delta",
-    "ap_delta",
-    "range_delta",
-    "add_element",
-    "add_tags",
-    "on_hit_effects",
-    "grant_pierce",
-    "area_delta",
-    "shape_to",
-    "allow_self_target",
-    "heal_permille",
-    "summon_hp_permille",
-    "summon_attack_dice",
-    "summon_limit_delta",
-    "summon_duration_delta",
-    "summon_damage_permille",
-    "form_upkeep_permille",
-    "form_entry_permille",
-)
-"""``change`` 的種類（每條規則恰好一種）。"""
+_CHANGES = bundled_modifier_changes()
+"""修正規則的改變種類（``content/modifier_changes.yaml``，Phase 3T-1；唯一來源）。"""
 
-SHAPE_CHANGES: frozenset[str] = frozenset({"area_delta", "shape_to", "allow_self_target"})
-"""讓技能變形的修正（Phase 3D-3）：選目標之前就決定，只套用在主動技能；引擎以
-:func:`trpg.engine.modifiers.shaped_skill` 產生變形後的技能。"""
+MODIFIER_CHANGES: tuple[str, ...] = _CHANGES.ids
+"""``change`` 的種類（每條規則恰好一種；依 YAML 順序）。"""
 
-_ATTACK_TARGETS = frozenset({"attack", "all_attacks", "all_skills", "skill_tags"})
-_DAMAGE_TARGETS = frozenset({*_ATTACK_TARGETS, "weapon_skills"})
-_SKILL_TARGETS = frozenset({"all_skills", "skill_tags"})
+SHAPE_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.reshapes)
+"""讓技能變形的修正（Phase 3D-3；YAML 的 ``reshapes``）：選目標之前就決定，只套用在主動技能；
+引擎以 :func:`trpg.engine.modifiers.shaped_skill` 產生變形後的技能。"""
+
 CHANGE_TARGETS: dict[str, frozenset[str]] = {
-    "damage_permille": _DAMAGE_TARGETS,
-    "hit_bonus": _ATTACK_TARGETS,
-    "cooldown_delta": _SKILL_TARGETS,
-    "push_distance_delta": frozenset({"shove", "all_skills", "skill_tags"}),
-    "ap_delta": frozenset({*BASIC_ACTIONS, "all_attacks", "all_skills", "skill_tags"}),
-    "range_delta": _ATTACK_TARGETS,
-    "add_element": _ATTACK_TARGETS,
-    "add_tags": _SKILL_TARGETS,
-    "on_hit_effects": _ATTACK_TARGETS,
-    "grant_pierce": _SKILL_TARGETS,
-    "area_delta": frozenset({"all_attacks", "all_skills", "skill_tags"}),
-    "shape_to": frozenset({"all_attacks", "all_skills", "skill_tags"}),
-    "allow_self_target": _SKILL_TARGETS,
-    "heal_permille": _SKILL_TARGETS,
-    "summon_hp_permille": _SKILL_TARGETS,
-    "summon_attack_dice": _SKILL_TARGETS,
-    "summon_limit_delta": _SKILL_TARGETS,
-    "summon_duration_delta": _SKILL_TARGETS,
-    "summon_damage_permille": _SKILL_TARGETS,
-    "form_upkeep_permille": _SKILL_TARGETS,
-    "form_entry_permille": _SKILL_TARGETS,
+    c.id: frozenset(c.applies_to) for c in _CHANGES.changes
 }
-"""每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
-命中骰，基本動作沒有冷卻與標籤。"""
+"""每種 ``change`` 可以套用的對象（YAML 的 ``applies_to``；``applies_to`` 的每一項都必須在內）：
+推擊、絆倒、互動沒有傷害與命中骰，基本動作沒有冷卻與標籤。"""
 
-SELF_ONLY_CHANGES: frozenset[str] = frozenset(
-    {
-        "ap_delta",
-        "range_delta",
-        "add_element",
-        "add_tags",
-        "grant_pierce",
-        "heal_permille",
-        "summon_hp_permille",
-        "summon_attack_dice",
-        "summon_limit_delta",
-        "summon_duration_delta",
-        "summon_damage_permille",
-        "form_upkeep_permille",
-        "form_entry_permille",
-        *SHAPE_CHANGES,
-    }
-)
-"""在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
+SELF_ONLY_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.self_only)
+"""在選目標之前就要決定的修正（YAML 的 ``self_only``）：條件只能看持有者自己
+（``self_hp_below``）或省略。"""
+
+NONZERO_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.nonzero)
+"""數值不可為 0 的 ``change`` 種類（YAML 的 ``nonzero``）。"""
+
+TRUE_ONLY_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.true_only)
+"""只能是 ``true`` 的 ``change`` 種類（YAML 的 ``true_only``）。"""
 
 WIELDING_WEAPON = "wielding_weapon"
 """武器親和條件（Phase 3I-5）。"""
@@ -1977,8 +2008,10 @@ ON_HIT_PRIMITIVES: tuple[str, ...] = (
 """``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。``detonate_runes``、
 ``inscribe``（Phase 3-31 普攻與符文）只作用在目標所在的那 1 格。"""
 
-PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset({"damage_permille", "on_hit_effects"})
-"""可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31）。"""
+PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset(
+    c.id for c in _CHANGES.changes if c.per_turn_limit
+)
+"""可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31；YAML 的 ``per_turn_limit``）。"""
 
 _MAX_MODIFIERS = 2
 _MAX_MASTERY_MODIFIERS = 4
@@ -2113,22 +2146,11 @@ class ModifierChange(ContentModel):
             raise ValueError(f"change 必須恰好一種（{'、'.join(MODIFIER_CHANGES)}），收到 {got}")
         kind = given[0]
         value = getattr(self, kind)
-        if (
-            kind
-            in (
-                "damage_permille",
-                "hit_bonus",
-                "ap_delta",
-                "range_delta",
-                "heal_permille",
-                "summon_limit_delta",
-            )
-            and value == 0
-        ):
+        if kind in NONZERO_CHANGES and value == 0:
             raise ValueError(f"change.{kind} 不可為 0")
         if kind == "add_element" and value is Element.PHYSICAL:
             raise ValueError("change.add_element 不可是物理（physical）")
-        if kind in ("grant_pierce", "allow_self_target") and value is not True:
+        if kind in TRUE_ONLY_CHANGES and value is not True:
             raise ValueError(f"change.{kind} 只能是 true")
         if kind == "add_tags":
             self._check_tags(value)

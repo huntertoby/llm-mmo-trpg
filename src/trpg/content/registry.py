@@ -20,6 +20,7 @@ from trpg.content.environment import (
     WeatherTable,
 )
 from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.modifier_changes import ModifierChangeTable
 from trpg.content.races import OriginTable, RaceTable
 from trpg.content.regions import RegionTable
 from trpg.content.roguelite import RunRules
@@ -65,6 +66,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_triggers.yaml", SkillTriggerTable),
     ContentFile("stacks.yaml", StackTable),
     ContentFile("skill_budget.yaml", BudgetRules),
+    ContentFile("modifier_changes.yaml", ModifierChangeTable),
     ContentFile("skill_composer.yaml", ComposerRules),
     ContentFile("sim/builds.yaml", BuildTable),
     ContentFile("skill_synergies.yaml", SynergyTable),
