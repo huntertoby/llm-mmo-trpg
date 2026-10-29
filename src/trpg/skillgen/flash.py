@@ -95,6 +95,7 @@ __all__ = [
     "ProposingSource",
     "allowed_categories",
     "apply_variation",
+    "category_counts",
     "choose",
     "derive_skill",
     "flashed_identity",
@@ -912,6 +913,30 @@ def _fill_up(
     return [*options, *builder.take(pool, count - len(options))]
 
 
+def category_counts(
+    library: ContentLibrary,
+    request: FlashRequest,
+    source: FlashOptionSource | None = None,
+) -> dict[str, int]:
+    """這一次每個可指定的類別目前有幾個合法變化（3W-2c；給選類別的畫面標「連段（2）」）。
+
+    只算那一類自己合格的變化（套得上、過預算與強度下限），**最多算到** 指定類別出題的選項數
+    （玩家實際會看到的數量）；0 個的類別不能指定（:func:`make_offer` 會拒絕）。類別依資料順序；
+    不能指定類別時（``allow_focus`` 關閉）回傳空表。"""
+    source = source or UsageSource()
+    table = library.flash
+    if not table.pricing.allow_focus:
+        return {}
+    major = slot_is_major(table.rules, request.state, request.nth)
+    before = skill_before(library, request)
+    builder = _Builder(library, request, _replaced_floor(library, request))
+    cap = table.pricing.rule(True).options
+    return {
+        category: len(builder.take(source.ranked(library, request, category, before), cap))
+        for category in allowed_categories(table, before, major=major)
+    }
+
+
 def make_offer(
     library: ContentLibrary,
     request: FlashRequest,
@@ -919,7 +944,10 @@ def make_offer(
 ) -> FlashOffer:
     """出一次題（閃現或重閃；不檢查點數與先上場用過，呼叫者先用 ``flash_state`` 的檢查）。
 
-    指定了不合法的類別時拋出 :class:`ValueError`。可能湊不滿選項數（合格的變化不夠時）。"""
+    指定了不合法的類別、或該類目前 0 個合法變化時拋出 :class:`ValueError`（沒有扣點）。
+
+    選項不夠時（3W-2c）：**指定類別** 只出該類，不到選項數就少出，不拿別類補；**不指定** 從任何
+    類別補滿，真的沒有合法變化才少出。"""
     source = source or UsageSource()
     table = library.flash
     major = slot_is_major(table.rules, request.state, request.nth)
@@ -944,9 +972,7 @@ def make_offer(
         )
         if not options:
             raise ValueError(f"類別 {request.category} 這一次沒有合格的變化（沒有扣點）")
-        options = _fill_up(
-            library, request, source, builder, before, options=options, count=rule.options
-        )
+        # 指定類別（3W-2c）：只出該類，不到 rule.options 個就少出，不拿別類補。
         if transform is not None:
             options.append(transform)
     else:
