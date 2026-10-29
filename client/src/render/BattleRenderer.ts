@@ -197,6 +197,7 @@ export class BattleRenderer {
     const size = stagePixels(model);
     this.world.y = topReserve(model);
     const resolution = (window.devicePixelRatio || 1) * this.scale;
+    this.art.setScreenScale(resolution);
     const r = this.app.renderer;
     if (r.screen.width !== size.width || r.screen.height !== size.height || r.resolution !== resolution) {
       r.resize(size.width, size.height, resolution);

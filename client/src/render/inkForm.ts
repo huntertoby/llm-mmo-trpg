@@ -7,6 +7,7 @@ import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import { darken, isHex, lighten, mix } from "./color";
 import { elementTintColors } from "./palette";
+import { DOLL_SCALE, DOLL_SCALE_OLD } from "./paperdoll";
 import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, type Pt } from "./inkStyle";
 
 /** 無元素的光環色。 */
@@ -260,9 +261,9 @@ export function formArtOf(look: string | null | undefined): { id: string; art: F
   return id === undefined || art === undefined ? null : { id, art };
 }
 
-/** 形態小人的畫面縮放（相對 52px 虛擬格）：樣張戰場用 0.6 × min(size, 1.3)，免得龍與巨人超出一格太多。 */
+/** 形態小人的畫面縮放（相對 52px 虛擬格）：樣張戰場用 0.6 × min(size, 1.3)，免得龍與巨人超出一格太多；3U-2 起隨小人縮放一起放大（× DOLL_SCALE／0.74），封頂 1.3 不變。 */
 export function formScale(art: FormArt): number {
-  return 0.6 * Math.min(art.size, 1.3);
+  return 0.6 * (DOLL_SCALE / DOLL_SCALE_OLD) * Math.min(art.size, 1.3);
 }
 
 /** 光環半徑（52px 虛擬格單位，已含縮放）：樣張的 16 × size × 縮放；不認得的形態用預設 20 × 小人縮放。 */

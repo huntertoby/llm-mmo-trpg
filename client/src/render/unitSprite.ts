@@ -12,7 +12,7 @@ import { raceLookToLook } from "./inkRace";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_SCALE_OLD, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMON_SCALE, SUMMON_W } from "./paperdoll";
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
@@ -205,9 +205,9 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
-  // C 骨架（人形與紙娃娃）：52px 格縮放約 0.74，人約 40px 高；非人形召喚物沿用舊的 64×64 畫布與縮放 1.0
+  // C 骨架（人形與紙娃娃）：52px 格縮放 0.92（3U-2），人約 48px 高；非人形召喚物沿用舊的 64×64 畫布，縮放 1.15
   const humanoid = sl === null || sl.body === "humanoid";
-  const k = (T / 52) * (humanoid ? DOLL_SCALE : 1);
+  const k = (T / 52) * (humanoid ? DOLL_SCALE : SUMMON_SCALE);
   const [w, h, footY] = humanoid ? [DOLL_W, DOLL_H, DOLL_FOOT_Y] : [SUMMON_W, SUMMON_H, SUMMON_FOOT_Y];
   sprite.anchor.set(0.5, footY / h);
   sprite.width = w * k;
@@ -291,6 +291,10 @@ function rowIconTexture(id: string): Texture | null {
 
 /** 頭頂狀態列的圖示中心（相對格子中心）：略低於格子頂端，圖示上緣不蓋住上一格單位的血條。 */
 const ROW_Y = -T / 2 + 5.5;
+/** 人（含人形召喚物）放大後頭頂多出的高度（3U-2，52px 格 ≈ 9.4px），狀態列跟著上移。 */
+const ROW_RISE_HUMAN = 52 * (DOLL_SCALE - DOLL_SCALE_OLD);
+/** 野獸、物件召喚物放大（1 → 1.15）後多出的高度（52px 格 ≈ 7.8px）。 */
+const ROW_RISE_BEAST = 52 * (SUMMON_SCALE - 1);
 /** 有「灌」徽章（左上）時，狀態列最多 2 格並右移，避免重疊。 */
 const ROW_INFUSED_SHIFT = 9;
 
@@ -304,7 +308,9 @@ function statusRow(u: UnitDraw): Container | null {
   const row = new Container();
   // 高瘦體型（精靈）頭頂較高，狀態列跟著升高；召喚物不套用種族外觀
   const tall = u.summon || u.raceLook == null ? 0 : buildRowRise({ skin: "", ...raceLookToLook(u.raceLook) }) * DOLL_SCALE * (T / 52);
-  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y - tall - (u.form != null && !u.summon ? formRowRise(u.form.look, T, DOLL_SCALE) : 0));
+  const sl = u.summon ? summonLookOf(u) : null;
+  const grow = ((sl !== null && sl.body !== "humanoid" ? ROW_RISE_BEAST : ROW_RISE_HUMAN) * T) / 52;
+  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y - grow - tall - (u.form != null && !u.summon ? formRowRise(u.form.look, T, DOLL_SCALE) : 0));
   for (const item of items) {
     if (item.kind === "icon") {
       const tex = rowIconTexture(item.id);
