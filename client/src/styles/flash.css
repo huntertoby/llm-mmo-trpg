@@ -1,0 +1,207 @@
+/* Phase 3W-6：靈感閃現、重閃、溶掉、傳承、完整技能 */
+
+.run-flash,
+.flash-chooser,
+.campfire-reflash,
+.campfire-old,
+.run-flash-pending {
+  margin: 8px 0;
+}
+
+.flash-skill-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flash-skill-row,
+.reflash-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.flash-skill-row > details {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.flash-skill-row > details > summary {
+  cursor: pointer;
+}
+
+.reflash-row > div:first-child {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.reflash-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.reflash-slots button {
+  text-align: left;
+  white-space: normal;
+}
+
+.flash-warning {
+  margin: 4px 0;
+  color: #f0c060;
+}
+
+.flash-problem {
+  margin: 4px 0;
+  color: #e8a060;
+}
+
+.flash-modes {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.flash-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  white-space: normal;
+}
+
+.flash-mode.selected,
+.flash-cat.selected {
+  box-shadow: 0 0 0 1px #f0c060 inset;
+}
+
+.flash-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.flash-cat-title {
+  margin-top: 6px;
+}
+
+.skill-flash-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 2px 0;
+}
+
+.skill-flash-count {
+  color: #e6c777;
+}
+
+.skill-flash-ready {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #6fd6a0;
+  border-radius: 8px;
+  color: #6fd6a0;
+  font-size: 12px;
+}
+
+.skill-flash-transform {
+  color: #6ac0f0;
+  cursor: help;
+}
+
+.skill-flash-history {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.skill-card-rarity {
+  cursor: help;
+}
+
+.flash-options .flash-option.transform {
+  border-color: #6ac0f0;
+}
+
+.flash-option-tag {
+  color: #f0c060;
+}
+
+.flash-option-tag.transform {
+  color: #6ac0f0;
+}
+
+.flash-option-summary {
+  font-weight: 600;
+  margin: 2px 0;
+}
+
+.flash-diff {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 0;
+}
+
+.flash-diff .was {
+  color: #a8a8a8;
+}
+
+.flash-diff .now {
+  color: #6fd6a0;
+}
+
+.offer-badge {
+  color: #e6c777;
+  margin-bottom: 2px;
+}
+
+.complete-intro {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+
+.old-actions,
+.dissolve-confirm,
+.inherit-form {
+  margin-top: 8px;
+}
+
+.inherit-records {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+
+.inherit-records label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.inherit-records input[type="checkbox"] {
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .flash-skill-row,
+  .reflash-row {
+    flex-direction: column;
+  }
+  .reflash-slots {
+    width: 100%;
+  }
+}

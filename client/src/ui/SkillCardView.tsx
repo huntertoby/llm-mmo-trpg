@@ -1,6 +1,9 @@
 // 技能卡片（滑過技能按鈕時顯示；升級與營火候選卡、工坊也用）。
 // Phase 3-18a：大圖示用小圖模式；部件區是「組裝算式」，每個部件都能滑過或點一下看說明。
-import type { SkillCard } from "../api/types";
+import type { FlashRules, SkillCard, SkillFlash } from "../api/types";
+import { RARITY_HINT } from "../run/flash";
+import { Hint } from "./Hint";
+import { SkillFlashInfo } from "./SkillFlashInfo";
 import { categoryLabel, kindLabel, sourceCostText } from "../battle/source";
 import { KeywordLine } from "./KeywordLine";
 import { RuleText } from "./ruleText";
@@ -20,9 +23,12 @@ interface Props {
   activeVariantId?: string | null;
   /** 不顯示設計概念（工坊玩家模式：隨機組合器的暫定句，Phase 3H-8）。 */
   hideConcept?: boolean;
+  /** 這招的閃現狀態與規則（3W-6）：卡片上顯示「已閃 N／5 次」「可以閃現了」與變化歷程。 */
+  flash?: SkillFlash | undefined;
+  flashRules?: FlashRules | null | undefined;
 }
 
-export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false }: Props) {
+export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false, flash, flashRules }: Props) {
   const source = sourceCostText(card, SOURCE_MAX);
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`}>
@@ -33,7 +39,16 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
             {card.name_zh}
             <span className="muted small">
               {" "}
-              <span className="skill-card-rarity">{card.rarity}</span>・{kindLabel(card)}
+              {compact ? (
+                <span className="skill-card-rarity">{card.rarity}</span>
+              ) : (
+                <Hint text={RARITY_HINT}>
+                  <span className="skill-card-rarity" data-testid="skill-card-rarity" tabIndex={0}>
+                    {card.rarity}
+                  </span>
+                </Hint>
+              )}
+              ・{kindLabel(card)}
               {(card.skeleton_zh ?? "") !== "" && `・${card.skeleton_zh}`}・{categoryLabel(card)}
             </span>
           </div>
@@ -42,6 +57,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
           <div className="small muted">{card.shape}</div>
         </div>
       </div>
+      <SkillFlashInfo flash={flash} rules={flashRules} />
       <AssemblyFormula icon={card.icon} />
       <KeywordLine keywords={card.keywords} />
       {(card.weapon_only ?? null) !== null && (

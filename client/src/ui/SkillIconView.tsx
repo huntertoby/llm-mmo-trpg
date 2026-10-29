@@ -17,7 +17,7 @@ interface IconProps {
   label?: string;
 }
 
-const useFontEpoch = (): number => useSyncExternalStore(subscribeFonts, fontEpoch);
+const useFontEpoch = (): number => useSyncExternalStore(subscribeFonts, fontEpoch, fontEpoch);
 
 export function SkillIconView({ icon, size, small, className, label }: IconProps) {
   const ref = useRef<HTMLCanvasElement>(null);

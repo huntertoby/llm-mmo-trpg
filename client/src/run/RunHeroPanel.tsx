@@ -3,6 +3,7 @@ import type { RunHero } from "../api/types";
 import { GearIcon } from "../ui/GearIcon";
 import { PartTip } from "../ui/PartTip";
 import { SkillCardView } from "../ui/SkillCardView";
+import { CAN_FLASH_TEXT, flashCountText, flashOf, showCanFlash } from "./flash";
 import { RuleText } from "../ui/ruleText";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { itemTipLines, wornGear } from "./gearOffer";
@@ -168,9 +169,11 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
                 {s.name_zh}{" "}
                 <span className="muted small">
                   {s.kind}・{s.rarity}
+                  {flashOf(hero, s.id) !== undefined && `・${flashCountText(flashOf(hero, s.id), hero.flash_rules)}`}
                 </span>
+                {showCanFlash(flashOf(hero, s.id)) && <span className="skill-flash-ready small">{CAN_FLASH_TEXT}</span>}
               </summary>
-              <SkillCardView card={s} />
+              <SkillCardView card={s} flash={flashOf(hero, s.id)} flashRules={hero.flash_rules} />
             </details>
           </li>
         ))}

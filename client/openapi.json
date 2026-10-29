@@ -1443,7 +1443,7 @@
           "runs"
         ],
         "summary": "Dev Advance",
-        "description": "開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數\n``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。",
+        "description": "開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數\n``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。\n``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。",
         "operationId": "dev_advance_api_runs__run_id__dev_advance_post",
         "parameters": [
           {
@@ -1462,6 +1462,16 @@
             "schema": {
               "type": "string",
               "title": "To"
+            }
+          },
+          {
+            "name": "insight",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Insight"
             }
           }
         ],

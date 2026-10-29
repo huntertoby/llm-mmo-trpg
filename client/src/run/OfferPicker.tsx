@@ -25,6 +25,8 @@ interface Props {
   replace: string | null;
   /** 後端回 422（例如規則改變型傳說只能裝 1 個）後，替換清單改列全部技能。 */
   forceReplace?: boolean;
+  /** 每張卡上方加一個固定標籤（完整技能三選一用「完整技能」，3W-6）。 */
+  badge?: string;
   disabled?: boolean;
   onPick(pick: number | null): void;
   onReplace(skillId: string | null): void;
@@ -38,6 +40,7 @@ export function OfferPicker({
   pick,
   replace,
   forceReplace = false,
+  badge,
   disabled = false,
   onPick,
   onReplace,
@@ -61,6 +64,11 @@ export function OfferPicker({
               key={card.id}
               className={`run-offer-card${pick === index ? " selected" : ""}${off ? " off-route" : ""}`}
             >
+              {badge !== undefined && (
+                <div className="offer-badge" data-testid="offer-badge">
+                  <b>{badge}</b>
+                </div>
+              )}
               {tag !== undefined && (
                 <div className={`offer-kind-tag offer-kind-${tag.kind}`} data-testid="offer-kind">
                   <b>{offerTagText(tag)}</b>

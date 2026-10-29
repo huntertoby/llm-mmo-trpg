@@ -209,6 +209,8 @@
 
 .skill-card-headtext {
   min-width: 0;
+  /* 三張候選卡並排時卡頭只剩約 140px，「（換 25% 預算；代價狀態，無法淨化）」的標點禁則（括號不能斷行）會溢出 3px（3W-6 排版掃描） */
+  line-break: anywhere;
 }
 
 .skill-card.compact {
@@ -330,16 +332,6 @@
 }
 
 /* Phase 3-26a：技能點、技能等級、營火換裝 */
-
-.skill-level-badge {
-  color: #f0c060;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.skill-card-growth {
-  color: #e6c777;
-}
 
 /* Phase 3-25b：戰場變奏（技能卡的型態列表、技能列按鈕發亮、預覽的型態） */
 

@@ -4,11 +4,13 @@
 import { api } from "../api/client";
 import type { RunResponse } from "../api/types";
 
-export const DEV_SCREENS = ["gear_offer", "level_up", "complete_offer", "campfire", "ended"] as const;
+export const DEV_SCREENS = ["gear_offer", "flash", "level_up", "complete_offer", "campfire", "ended"] as const;
 export type DevScreen = (typeof DEV_SCREENS)[number];
 
 /** 固定種子（這個種子的 AI 打得到營火）。 */
 export const DEV_SEED = 1;
+/** 閃現相關畫面補到的靈感點。 */
+export const DEV_INSIGHT = 8;
 export const DEV_ENTER_EVENT = "trpg:dev-enter-run";
 
 export function devScreenParam(search: string): DevScreen | null {
@@ -25,6 +27,9 @@ export async function createDevRun(to: DevScreen): Promise<RunResponse> {
   const first = packs[0];
   if (first === undefined) throw new Error("沒有開發者起始包");
   const run = await api.createRun({ dev_pack: first.id, seed: DEV_SEED });
+  // 閃現畫面（3W-6）：戰後裝備三選一節點上補足靈感點；營火也補，才有點可以重閃、溶掉、傳承。
+  if (to === "flash") return api.devAdvance(run.run_id, "gear_offer", DEV_INSIGHT);
+  if (to === "campfire") return api.devAdvance(run.run_id, to, DEV_INSIGHT);
   return api.devAdvance(run.run_id, to);
 }
 

@@ -323,9 +323,10 @@ _DEV_TARGETS = ("gear_offer", "level_up", "complete_offer", "campfire", "ended")
 
 
 @router.post("/{run_id}/dev-advance")
-def dev_advance(run_id: str, to: str, request: Request) -> RunResponse:
+def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> RunResponse:
     """開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
-    ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。"""
+    ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
+    ``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。"""
     if os.environ.get(DEV_ROUTES_ENV) != "1":
         raise HTTPException(status_code=404, detail="Not Found")
     if to not in _DEV_TARGETS:
@@ -336,6 +337,8 @@ def dev_advance(run_id: str, to: str, request: Request) -> RunResponse:
         if session.battle is not None:
             raise HTTPException(status_code=409, detail="戰鬥進行中")
         run, _ = auto_play(session.library, session.run, stop=lambda r, _b: r.node.kind == to)
+        if insight > run.insight:
+            run = run.model_copy(update={"insight": insight})
         session.run = run
         return _respond(store, session)
 

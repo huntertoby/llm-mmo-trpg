@@ -571,7 +571,8 @@ export interface paths {
         /**
          * Dev Advance
          * @description 開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
-         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
+         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。``insight`` 大於 0 時把靈感點補到
+         *     至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。
          */
         post: operations["dev_advance_api_runs__run_id__dev_advance_post"];
         delete?: never;
@@ -6503,6 +6504,7 @@ export interface operations {
         parameters: {
             query: {
                 to: string;
+                insight?: number;
             };
             header?: never;
             path: {

@@ -31,6 +31,7 @@ import type {
   StartPreview,
   StartResources,
   AllocationPreview,
+  FlashPreview,
   UseSkill,
   WorkshopArena,
   WorkshopCheck,
@@ -152,13 +153,16 @@ export const api = {
     request<AllocationPreview>("POST", `/runs/${encodeURIComponent(runId)}/allocation-preview`, { attributes }),
   devPacks: () => request<DevPack[]>("GET", "/runs/dev-packs"),
   /** 開發用（3U-3）：AI 代打到指定的戰後畫面；伺服器要帶 `TRPG_DEV_ROUTES=1`，否則 404。 */
-  devAdvance: (runId: string, to: string) =>
-    request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/dev-advance?to=${encodeURIComponent(to)}`),
+  devAdvance: (runId: string, to: string, insight = 0) =>
+    request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/dev-advance?to=${encodeURIComponent(to)}${insight > 0 ? `&insight=${insight}` : ""}`),
   runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),
   run: (runId: string) => request<RunResponse>("GET", `/runs/${encodeURIComponent(runId)}`),
   runBattle: (runId: string) =>
     request<RunBattleResponse>("POST", `/runs/${encodeURIComponent(runId)}/battle`),
+  /** 閃現或重閃之前的預覽（3W-5）：能不能閃、價格、每類合法變化數量；不扣點。 */
+  flashPreview: (runId: string, skill: string, slot: number | null) =>
+    request<FlashPreview>("POST", `/runs/${encodeURIComponent(runId)}/flash-preview`, { skill, slot }),
   runChoice: (runId: string, choice: RunChoice) =>
     request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/choice`, choice),
   saveRun: (runId: string) =>

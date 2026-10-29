@@ -414,11 +414,6 @@
   border-left-color: #59b36b;
 }
 
-.growth-panel {
-  margin: 8px 0;
-}
-
-.growth-list,
 .loadout-list {
   list-style: none;
   margin: 4px 0;
@@ -426,35 +421,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.growth-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto minmax(0, 1.6fr);
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.growth-skill > summary {
-  cursor: pointer;
-}
-
-.growth-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.growth-level {
-  min-width: 56px;
-  text-align: center;
-  font-weight: 700;
-}
-
-.growth-level.raised {
-  color: #f0c060;
 }
 
 .loadout-editor {
@@ -471,77 +437,6 @@
 .run-skill-points-hint {
   margin: 4px 0;
   color: #f0c060;
-}
-
-/* 展開技能卡的那一列：第一欄給卡片至少 260px，否則窄視窗（800px）卡片只剩約 200px，效果文字頂到卡片邊框（3U-3） */
-@media (min-width: 641px) {
-  .growth-row:has(.growth-skill[open]) {
-    grid-template-columns: minmax(260px, 1fr) auto minmax(0, 1.2fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .growth-row {
-    grid-template-columns: 1fr auto;
-  }
-  .growth-next {
-    grid-column: 1 / -1;
-  }
-}
-
-/* ---- Phase 3-26b：分歧進化的兩支比較 ---- */
-
-.growth-blocked {
-  color: #e8a060;
-}
-
-.evo-compare {
-  grid-column: 1 / -1;
-  margin: 6px 0 4px;
-  padding: 8px;
-  border: 1px solid #5a4a2a;
-  border-radius: 6px;
-  background: rgba(240, 192, 96, 0.06);
-}
-
-.evo-title {
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.evo-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 8px;
-}
-
-.evo-option {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid #444;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.evo-option.picked {
-  border-color: #f0c060;
-  box-shadow: 0 0 0 1px #f0c060 inset;
-}
-
-.evo-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.evo-deepen .evo-tag {
-  color: #f08a60;
-}
-
-.evo-bridge .evo-tag {
-  color: #6ac0f0;
 }
 
 /* 一輪的測試模式（Phase 3-39） */
