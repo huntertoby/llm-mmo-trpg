@@ -27,7 +27,7 @@ from trpg.engine.events import (
     StatusRemoved,
     StatusSaveRolled,
 )
-from trpg.engine.gear import cap_damage_bonus
+from trpg.engine.gear.core import cap_damage_bonus
 from trpg.engine.lifecycle import weapon_reaction_rules
 from trpg.engine.modifiers import ATTACK, reap_permille, skill_use
 from trpg.engine.rules.statuses import effective_attribute, move_points_for_turn

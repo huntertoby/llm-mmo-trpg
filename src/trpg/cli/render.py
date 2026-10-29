@@ -20,7 +20,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.rules.combat import is_concealed
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summons import totem_of
+from trpg.engine.summons.core import totem_of
 from trpg.engine.traps import visible_traps
 from trpg.engine.zones import next_zone_cells, zone_cells, zone_spec
 from trpg.narrative.events import (

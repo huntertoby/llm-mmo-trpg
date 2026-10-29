@@ -42,7 +42,7 @@ from trpg.engine.events import (
     UnitSummoned,
 )
 from trpg.engine.lifecycle import down_unit
-from trpg.engine.summon_control import command_options
+from trpg.engine.summons.control import command_options
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, Team, UnitId
 

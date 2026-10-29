@@ -19,9 +19,9 @@ from trpg.engine.events import (
     UnitEscaped,
 )
 from trpg.engine.forms import leave_form
-from trpg.engine.gear import build_gear, geared_template
-from trpg.engine.gear_enhance import geared_weapon
-from trpg.engine.gear_reactions import gear_reaction_rules
+from trpg.engine.gear.core import build_gear, geared_template
+from trpg.engine.gear.enhance import geared_weapon
+from trpg.engine.gear.reactions import gear_reaction_rules
 from trpg.engine.heights import change_height
 from trpg.engine.rules.facing import default_facing
 from trpg.engine.rules.race import race_element_mods
@@ -132,7 +132,7 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *retire_focus(ctx, unit),  # 集火的目標倒下：召喚物退回跟隨（3-33c）
     ]
     if unit.is_summon:  # 爆裂傀儡被打倒時自爆（Phase 3-33e2a）；延後匯入：召喚匯入本模組
-        from trpg.engine.summons import detonate_on_downed  # noqa: PLC0415
+        from trpg.engine.summons.core import detonate_on_downed  # noqa: PLC0415
 
         detonate_on_downed(ctx, unit)
     if unit.activations or unit.gear.affixes:  # 規則改變「殘影」：倒下時留下分身（Phase 3D-6）
@@ -324,7 +324,7 @@ def make_unit(
 ) -> UnitState:
     """由範本建立戰鬥中的單位（開場與戰鬥中產生的單位共用）。``facing`` 省略時我方朝東、敵方
     朝西（Phase 3D-8d）。``equipment``（Phase 3G-G1）：裝備快照；數值類詞條併進範本的屬性、
-    最大 HP、抗性與速度（:func:`~trpg.engine.gear.geared_template`）。"""
+    最大 HP、抗性與速度（:func:`~trpg.engine.gear.core.geared_template`）。"""
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）

@@ -1,5 +1,5 @@
 # 召喚物（Phase 3R-2）：狐族種族技「狐火誘餌」放出的誘餌。不是由 summon 原語召喚，而是由種族技產生
-# （src/trpg/engine/race_skills.py）。1 點 HP、不行動（inert）、不擋路以外沒有任何作用：敵人的下一次
+# （src/trpg/engine/race/skills.py）。1 點 HP、不行動（inert）、不擋路以外沒有任何作用：敵人的下一次
 # 單體攻擊命中時會被它攔下（reactions.try_intercept），被攔下後誘餌消失；沒被打到也會在 3 輪後消散。
 id: summon_foxfire_decoy
 name_zh: 狐火誘餌

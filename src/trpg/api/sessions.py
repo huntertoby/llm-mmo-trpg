@@ -44,7 +44,7 @@ from trpg.engine.runner import (
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
 from trpg.engine.skill_infusion import InfuseChoice, infuse_choices
 from trpg.engine.state import BattleState, PendingResolution, state_from_json
-from trpg.engine.summon_control import CommandOption, command_options, summon_problem
+from trpg.engine.summons.control import CommandOption, command_options, summon_problem
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.progress import hero_spawn
 from trpg.roguelite.start import new_dev_run, new_keyword_run

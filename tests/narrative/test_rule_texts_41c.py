@@ -26,7 +26,7 @@ from trpg.engine import Attack, UseSkill, resolve
 from trpg.engine.events import DamageDealt, UnitSummoned
 from trpg.engine.rules.statuses import effective_attribute, weapon_attribute
 from trpg.engine.skills.targeting import damage_parameters
-from trpg.engine.summons import summon_stats
+from trpg.engine.summons.core import summon_stats
 from trpg.narrative.skills import CardOwner, skill_card
 from trpg.narrative.status_info import status_rules
 from trpg.narrative.summon_info import summon_behavior_lines

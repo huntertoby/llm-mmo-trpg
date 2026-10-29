@@ -12,7 +12,7 @@ from typing import Literal
 from trpg.content.battle import WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
-from trpg.engine.gear import gear_defense_permille
+from trpg.engine.gear.core import gear_defense_permille
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.rules.facing import is_behind
@@ -134,7 +134,8 @@ def defense_value_permille(unit: UnitState, rules: Ruleset, cut: int = 0) -> int
 
     基礎防禦值最低視為 1，防禦值至少 1（Phase 3-24a1：破甲 ``defense_break`` 狀態與防禦姿態的
     加成直接相加；Phase 3-24a2：``cut`` 為攻擊者武器的 ``armor_pierce_permille``，同樣直接相減；
-    Phase 3G-G1：裝備的防禦加成也直接相加，見 :func:`~trpg.engine.gear.gear_defense_permille`）。
+    Phase 3G-G1：裝備的防禦加成也直接相加，
+    見 :func:`~trpg.engine.gear.core.gear_defense_permille`）。
     """
     base = max(1, effective_attribute(rules, unit, Attribute.DEX) + unit.armor_bonus)
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0

@@ -43,8 +43,8 @@ from trpg.engine.events import (
     UnitDowned,
     UnitSummoned,
 )
-from trpg.engine.gear_state import GearAffix, GearState
-from trpg.engine.gear_summon import (
+from trpg.engine.gear.state import GearAffix, GearState
+from trpg.engine.gear.summon import (
     gear_sacrifice_permille,
     gear_summon_cooldown,
     gear_summon_duration,

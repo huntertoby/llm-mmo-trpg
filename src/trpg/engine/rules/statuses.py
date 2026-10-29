@@ -11,7 +11,7 @@ from collections.abc import Callable
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import Ruleset
-from trpg.engine.gear import gear_damage_taken_permille
+from trpg.engine.gear.core import gear_damage_taken_permille
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.forms import form_move_delta, form_taken_permille
 from trpg.engine.rules.race import weather_move_bonus

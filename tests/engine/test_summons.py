@@ -239,7 +239,7 @@ def test_the_limit_comes_from_the_core_rules() -> None:
 
 def _with_enemy_summon(state: BattleState) -> tuple[BattleState, UnitId]:
     """讓敵人 U2 召喚一隻元素之靈（直接用引擎函式，敵人沒有召喚技能）。"""
-    from trpg.engine.summons import summon_unit  # noqa: PLC0415
+    from trpg.engine.summons.core import summon_unit  # noqa: PLC0415
 
     ctx = Ctx(state.clone())
     [event] = of(summon_unit(ctx, ctx.state.units[U2], SPIRIT, (5, 5), 3, SID), UnitSummoned)

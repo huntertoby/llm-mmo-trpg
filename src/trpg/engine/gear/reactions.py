@@ -21,7 +21,7 @@ from trpg.content.battle import ReactionRule, ReactionWhen
 from trpg.content.equipment import ReactionAffix
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
-from trpg.engine.gear_state import GearAffix, GearState
+from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.state import UnitState, reaction_limit
 
 __all__ = [

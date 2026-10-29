@@ -30,10 +30,10 @@ from trpg.content.slots import SLOT_ZH
 from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.delayed import charge_infos
-from trpg.engine.gear_state import GearAffix, GearState
-from trpg.engine.gear_view import GearTotalView, gear_totals
+from trpg.engine.gear.state import GearAffix, GearState
+from trpg.engine.gear.view import GearTotalView, gear_totals
 from trpg.engine.infusion import infusion_options
-from trpg.engine.race_skills import race_skill_of, race_uses_left
+from trpg.engine.race.skills import race_skill_of, race_uses_left
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import effective_attribute
@@ -47,7 +47,7 @@ from trpg.engine.state import (
     UnitState,
     reaction_limit,
 )
-from trpg.engine.summons import summon_inert, totem_of
+from trpg.engine.summons.core import summon_inert, totem_of
 from trpg.engine.traps import visible_traps
 from trpg.engine.zones import next_zone_cells, zone_cells, zone_is_harmful, zone_spec
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId, rune_name

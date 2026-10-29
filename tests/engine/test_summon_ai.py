@@ -14,7 +14,7 @@ from trpg.engine.ai.summon import summon_estimate, summon_gains
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import AttackRolled, SummonExpired, TurnStarted, UnitSummoned
 from trpg.engine.rules.geometry import manhattan
-from trpg.engine.summons import growth_of
+from trpg.engine.summons.core import growth_of
 from trpg.shared.types import Pos
 
 

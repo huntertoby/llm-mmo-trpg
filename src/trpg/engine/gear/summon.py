@@ -7,15 +7,15 @@
   100／50／25／0%）再套硬上限。
 - **繼承普攻附加**（第 4 類 ``summon_inherit``）：召喚物的裝備狀態只放施放者 1 條可繼承的普攻附加
   （普攻元素、命中附帶狀態、連擊、分裂；符文不繼承），依詞條 ID 取第一條。
-- **召喚物倒下時**（第 6 類觸發 ``on_summon_downed``）：見 :mod:`trpg.engine.gear_triggers`。
+- **召喚物倒下時**（第 6 類觸發 ``on_summon_downed``）：見 :mod:`trpg.engine.gear.triggers`。
 """
 
 from __future__ import annotations
 
 from trpg.content.equipment import AttackAffix, KeywordAffix
 from trpg.content.skills import SUMMON, SkillDef
-from trpg.engine.gear import cap_cooldown, cap_damage_bonus, diminished_total
-from trpg.engine.gear_state import GearAffix, GearState
+from trpg.engine.gear.core import cap_cooldown, cap_damage_bonus, diminished_total
+from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
@@ -101,6 +101,6 @@ def gear_summon_duration(unit: UnitState) -> int:
 
 def gear_sacrifice_permille(state: BattleState, unit: UnitState) -> int:
     """獻祭（``sacrifice_summon``）的傷害與治療加成（‰，遞減後）。獻祭的傷害加成計入全身 +50% 上限
-    （:func:`~trpg.engine.gear.cap_damage_bonus`）；治療用同一個數字。"""
+    （:func:`~trpg.engine.gear.core.cap_damage_bonus`）；治療用同一個數字。"""
     total = _total(unit, "sacrifice_permille", "exploit")
     return max(0, cap_damage_bonus(state.ruleset, total))

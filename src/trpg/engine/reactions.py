@@ -45,7 +45,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
-from trpg.engine.gear_reactions import (
+from trpg.engine.gear.reactions import (
     extra_uses_left,
     reaction_available,
     redirect_affix,

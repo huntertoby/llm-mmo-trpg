@@ -84,11 +84,11 @@ from trpg.engine.events import (
     UnitVaulted,
 )
 from trpg.engine.forms import leave_form
-from trpg.engine.gear_charge import charge_actions, do_activate_charge
+from trpg.engine.gear.charge import charge_actions, do_activate_charge
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
-from trpg.engine.race_skills import do_race_skill, race_skill_actions
+from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
     enemy_enters_adjacent_reactions,
@@ -144,8 +144,8 @@ from trpg.engine.state import (
     state_from_json,
     state_to_json,
 )
-from trpg.engine.summon_control import command_problem, mode_problem
-from trpg.engine.summons import detonate_if_adjacent
+from trpg.engine.summons.control import command_problem, mode_problem
+from trpg.engine.summons.core import detonate_if_adjacent
 from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
 from trpg.engine.weapon_traits import attack_dice, spend_ammo
 from trpg.shared.errors import IllegalActionError

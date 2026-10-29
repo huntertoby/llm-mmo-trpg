@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from trpg.content.equipment import AttackAffix
-from trpg.engine.gear_enhance import gear_attack_element
+from trpg.engine.gear.enhance import gear_attack_element
 from trpg.engine.state import UnitState
 from trpg.shared.types import Element
 

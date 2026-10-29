@@ -53,7 +53,7 @@ from trpg.engine.events import (
     StatusApplied,
     TriggerLimitReached,
 )
-from trpg.engine.gear_charge import charge_problem
+from trpg.engine.gear.charge import charge_problem
 from trpg.engine.refunds import refund_ap
 from trpg.engine.rewrites import grant_ap
 from trpg.engine.skill_triggers import reset_round_counts

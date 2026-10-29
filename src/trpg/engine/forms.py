@@ -45,7 +45,7 @@ from trpg.engine.events import (
     FormUpkeepPaid,
     StatusRemoved,
 )
-from trpg.engine.gear_state import GearState
+from trpg.engine.gear.state import GearState
 from trpg.engine.ids import CONCEALED
 from trpg.engine.modifiers import form_entry_permille, form_upkeep_permille
 from trpg.engine.rules.forms import (

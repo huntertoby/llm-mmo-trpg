@@ -18,7 +18,7 @@ from fractions import Fraction
 from trpg.content.environment import AiProfile
 from trpg.content.skills import DETONATE_RUNES, INSCRIBE, SkillDef
 from trpg.engine.events import EventBase, RuneInscribed, RuneRemoved
-from trpg.engine.gear_enhance import rune_affixes
+from trpg.engine.gear.enhance import rune_affixes
 from trpg.engine.preview import Preview
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rune_queries import own_runes_at

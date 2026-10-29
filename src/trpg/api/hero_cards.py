@@ -2,7 +2,7 @@
 
 `GET /api/skills/{id}` 的卡片是純算式、召喚物資訊是 1 級基準值；戰鬥中的技能列改用這裡的卡片：
 傷害算法附「目前」加成（有效屬性，含狀態加值）與武器骰、召喚物資訊用
-:func:`trpg.engine.summons.summon_stats`（和引擎生成召喚物同一組函式）。只讀取狀態、不推進戰鬥。
+:func:`trpg.engine.summons.core.summon_stats`（和引擎生成召喚物同一組函式）。只讀取狀態、不推進戰鬥。
 只回傳有算式或召喚物的技能（其餘的卡片和基本版一樣）。
 """
 
@@ -13,7 +13,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summons import SummonStats, summon_stats
+from trpg.engine.summons.core import SummonStats, summon_stats
 from trpg.narrative.skills import CardOwner, SkillCard, skill_card
 from trpg.shared.types import Attribute, UnitId
 

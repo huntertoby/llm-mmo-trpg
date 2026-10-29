@@ -30,7 +30,7 @@ from trpg.engine.events import (
 from trpg.engine.lifecycle import dismiss_summon, down_unit
 from trpg.engine.rules.movement import find_path, reachable_tiles
 from trpg.engine.state import InfusedSkill
-from trpg.engine.summons import pulse_summon, weakest_ally
+from trpg.engine.summons.core import pulse_summon, weakest_ally
 from trpg.engine.turns import end_turn, start_turn
 from trpg.narrative.events import describe_event
 from trpg.shared.errors import IllegalActionError

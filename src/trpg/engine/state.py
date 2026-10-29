@@ -23,7 +23,7 @@ from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
 from trpg.content.maps import MapEvent, Objective
 from trpg.content.rules import CoreRules
-from trpg.engine.gear_state import GearState
+from trpg.engine.gear.state import GearState
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
@@ -476,7 +476,7 @@ class UnitState:
     不變（可共用，不必複製）。見 :mod:`trpg.engine.skill_levels`。"""
     gear: GearState = field(default_factory=GearState)
     """裝備狀態（Phase 3G-G1）：開戰時由裝備快照算好、戰鬥中不變（數值類已併進上面的屬性、HP、
-    抗性與速度；條件數值與代價型在戰鬥中查詢，見 :mod:`trpg.engine.gear`）。"""
+    抗性與速度；條件數值與代價型在戰鬥中查詢，見 :mod:`trpg.engine.gear.core`）。"""
     doll: DollLook | None = None
     """紙娃娃外觀（Phase 3E-2e，純顯示資料）：由範本帶入、戰鬥中不變，不參與任何結算；
     ``view.py`` 投影成 ``UnitView.doll_look``。"""

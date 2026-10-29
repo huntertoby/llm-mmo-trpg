@@ -1,6 +1,6 @@
 """裝備充能（第 7 類）的啟動（Phase 3G-G3a，``docs/design/08-裝備.md`` 8.21.2.7）。
 
-累積層數見 :mod:`trpg.engine.gear_triggers`；這裡是 ``ActivateCharge`` 動作：花 ``cost_stacks`` 層
+累積層數見 :mod:`trpg.engine.gear.triggers`；這裡是 ``ActivateCharge`` 動作：花 ``cost_stacks`` 層
 與 ``cost_ap`` AP，結算詞條的 ``effects``（發出 ``charge_activated``）。
 
 - 只在自己的回合、層數與 AP 足夠時合法（前端放在行動面板的「更多動作」）。
@@ -15,8 +15,8 @@ from trpg.content.equipment import ChargeAffix
 from trpg.engine.actions import Action, ActivateCharge
 from trpg.engine.context import Ctx
 from trpg.engine.events import ChargeActivated
-from trpg.engine.gear_state import GearAffix
-from trpg.engine.gear_triggers import gear_carrier
+from trpg.engine.gear.state import GearAffix
+from trpg.engine.gear.triggers import gear_carrier
 from trpg.engine.rules.combat import attack_problem
 from trpg.engine.skill_triggers import holding
 from trpg.engine.skills.casting import use_gear_effects

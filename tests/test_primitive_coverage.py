@@ -23,7 +23,7 @@ from trpg.engine.ai.coverage import PRIMITIVE_VALUATION
 from trpg.engine.forms import FORM_EFFECT_CONSUMERS, FORM_ENTRY_CONSUMERS
 from trpg.engine.modifiers import CHANGE_HANDLERS
 from trpg.engine.preview import PRIMITIVE_PREVIEW
-from trpg.engine.race_skills import RACE_EFFECT_EXECUTORS
+from trpg.engine.race.skills import RACE_EFFECT_EXECUTORS
 from trpg.engine.skills.primitives import PRIMITIVE_HANDLERS, primitive_handler
 from trpg.narrative.skills import DESCRIBED_CHANGES, DESCRIBED_PRIMITIVES
 from trpg.primitive_coverage import (

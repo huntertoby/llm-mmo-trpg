@@ -64,7 +64,7 @@ from trpg.engine.skills.targeting import (
     selections,
 )
 from trpg.engine.state import BattleState, InfusedSkill, UnitState
-from trpg.engine.summon_control import summon_problem
+from trpg.engine.summons.control import summon_problem
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Attribute, Pos, UnitId
 

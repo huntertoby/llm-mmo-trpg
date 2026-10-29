@@ -18,7 +18,7 @@ from trpg.content.equipment import ItemDef, StatAffix, loadout_problems
 from trpg.content.item_gen import generate_item
 from trpg.content.library import ContentLibrary
 from trpg.engine import begin_battle
-from trpg.engine.gear import build_gear, geared_template
+from trpg.engine.gear.core import build_gear, geared_template
 from trpg.narrative.events import _skill_name, _View
 from trpg.roguelite import (
     ActiveBattle,

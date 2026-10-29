@@ -32,8 +32,8 @@ from trpg.engine.events import DamageDealt, EventBase, SummonExpired, UnitSummon
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summon_control import mode_problem
-from trpg.engine.summons import growth_of, totem_of
+from trpg.engine.summons.control import mode_problem
+from trpg.engine.summons.core import growth_of, totem_of
 from trpg.shared.types import Team, UnitId
 
 __all__ = [

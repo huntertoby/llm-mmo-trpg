@@ -24,8 +24,8 @@ from trpg.content.battle import OffhandDef
 from trpg.content.equipment import Loadout, loadout_problems, resolve_loadout
 from trpg.engine import BattleState, UseSkill, resolve
 from trpg.engine.events import AttackRolled, DamageDealt
-from trpg.engine.gear import cap_damage_bonus
-from trpg.engine.gear_state import GearBonus
+from trpg.engine.gear.core import cap_damage_bonus
+from trpg.engine.gear.state import GearBonus
 from trpg.engine.modifiers import ATTACK, damage_permille, skill_use
 from trpg.engine.rules.statuses import effective_attribute, move_points_for_turn
 from trpg.engine.setup import UnitSpawn

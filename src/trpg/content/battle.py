@@ -1186,7 +1186,7 @@ class UnitTemplate(ContentModel):
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
     race: str | None = Field(default=None, pattern=ID_PATTERN)
     """可玩種族（Phase 3R-2，``content/races.yaml``）：帶種族的單位有 1 招種族技與 1 項環境被動
-    （:mod:`trpg.engine.race_skills`、:mod:`trpg.engine.race_passives`）；省略＝無種族（預設）。"""
+    （:mod:`trpg.engine.race.skills`、:mod:`trpg.engine.race_passives`）；省略＝無種族（預設）。"""
     level: int = Field(default=1, ge=1, le=99)
     """角色等級（Phase 3-33b）：召喚物的 HP 與傷害依施放者的等級成長；一輪的主角帶入目前等級，
     其他單位為 1。"""
