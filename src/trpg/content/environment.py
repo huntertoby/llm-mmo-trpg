@@ -878,6 +878,21 @@ class RuneAiRules(ContentModel):
     read_points: int = Field(default=6, ge=0)
 
 
+class TerrainAiRules(ContentModel):
+    """純地形技能的 AI 數值（Phase 3T-5；ai_profiles.yaml 的 ``terrain:``；初值未經模擬）。
+
+    收益的單位是等值傷害點數，乘上行為模式的 ``damage`` 權重：
+
+    - ``height_points``：站在被改變的格子上的單位，高度每變一層的價值——敵人被降低或友方被抬高
+      為收益，反過來為損失（施放者自己站的格子由位置價值的 ``height`` 權重處理，不重複計算）；
+    - ``pit_points``：下陷造出的坑旁邊，每名高出墜落門檻的敵人（我方有推擊或拉扯技能時才算；
+      把敵人推進坑才會墜落）。
+    """
+
+    height_points: int = Field(default=4, ge=0)
+    pit_points: int = Field(default=6, ge=0)
+
+
 class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -908,6 +923,8 @@ class AiProfile(ContentModel):
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
+    """純地形技能的 AI 數值（Phase 3T-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     form: FormAiRules = Field(default_factory=FormAiRules)
     """形態的 AI 數值（Phase 3J-1a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     """自己付的代價的 AI 使用條件（Phase 3-50）；由 :class:`AiProfileTable` 的同名欄位填入。"""
@@ -1031,6 +1048,7 @@ class AiProfileTable(ContentModel):
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
     form: FormAiRules = Field(default_factory=FormAiRules)
+    terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
     basic: BasicActionAiRules = Field(default_factory=BasicActionAiRules)
     """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
@@ -1064,6 +1082,7 @@ class AiProfileTable(ContentModel):
                 "rune",
                 "self_cost",
                 "form",
+                "terrain",
             )
             if key in data
         }
