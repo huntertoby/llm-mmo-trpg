@@ -120,6 +120,29 @@ def test_weapon_class_focus_only_gets_spells() -> None:
         assert skill.category == "spell"
 
 
+@pytest.mark.parametrize("tier", [1, 2, 3])
+def test_whiteboards_use_the_hero_tier_budget(tier: int) -> None:
+    """#72：白板用角色目前階級的預算；3×3 要 2 階才開放（十字 1 階就有）。"""
+    shapes: set[str] = set()
+    made = 0
+    for kind in WHITEBOARD_KINDS:
+        for keyword in sorted(whiteboard_keywords(LIB, kind)):
+            for seed in range(4):
+                try:
+                    skill = compose_whiteboard(
+                        seed, kind=kind, keyword=keyword, tier=tier, library=LIB
+                    )
+                except ComposeError:  # 弱的單一效果在高階湊不到預算下限：呼叫端退回手寫池
+                    continue
+                made += 1
+                assert skill.tier == tier and whiteboard_problems(skill, LIB, tier) == []
+                assert validate_skill(skill, LIB) == []
+                shapes.add(skill.shape.type)
+    assert made >= 50
+    assert ("square3" in shapes) == (tier >= 2)
+    assert whiteboard_problems(compose_whiteboard(1, keyword="ignite", library=LIB), LIB, 2)
+
+
 def test_the_full_composer_is_untouched() -> None:
     """完整模式不受影響（留給完整技能三選一）：同種子仍組出同一招，且不是白板限定的單一效果。"""
     skill = compose_random_skill(3, tier=2, library=LIB)
@@ -143,7 +166,7 @@ def _problems(skill: SkillDef) -> str:
 def test_validator_rejects_each_part_of_the_definition() -> None:
     board = _board()
     assert is_whiteboard(board, LIB)
-    assert "必須是 1 階" in _problems(board.model_copy(update={"tier": 2}))
+    assert "必須是 2 階" in "；".join(whiteboard_problems(board, LIB, 2))
     assert "AP 必須是 2" in _problems(board.model_copy(update={"ap_cost": 3}))
     cost = board.cost.model_copy(update={"cooldown": 3})
     assert "冷卻最多 2" in _problems(board.model_copy(update={"cost": cost}))
@@ -194,7 +217,7 @@ def test_kind_ratio_is_70_20_10_and_lives_in_content() -> None:
 def _request(
     counts: dict[str, int], seed: int = 1, weapon_class: str = "focus"
 ) -> CandidateRequest:
-    return CandidateRequest(keyword_counts=counts, weapon_class=weapon_class, seed=seed, tier=3)
+    return CandidateRequest(keyword_counts=counts, weapon_class=weapon_class, seed=seed, tier=2)
 
 
 HELD = {"ignite": 2, "marked": 1, "charged": 1}

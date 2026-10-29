@@ -20,8 +20,8 @@
 白板定義的）。**LLM 來源在白板模式下關閉**（LLM 整招提議保留給之後的完整技能三選一，
 3W-7 另做「變化提議」）。
 
-**階級**：白板固定 1 階（``whiteboard.tier``），候選的 ``request.tier`` 不影響；成長改靠
-閃現（3W-1）。
+**階級**：白板用角色目前階級的預算與形狀（``request.tier``，6.34.9）；手寫池的退回也只取該階級
+以下的技能。創角的起始技能不走這裡（一律 1 階）。
 
 **確定性**：亂數只來自 ``Rng(request.seed).fork(<種類>)`` 與其子串流；同樣的輸入必得同樣的候選。
 """
@@ -128,6 +128,7 @@ class _Maker:
                 kind=board_kind,
                 keyword=keyword,
                 weapon_class=request.weapon_class,
+                tier=request.tier,
                 library=self.library,
                 hero_attributes=attrs,
                 avoid_attr=avoid,
@@ -142,11 +143,11 @@ class _Maker:
     def _from_pool(self, rng: Rng, keyword: str) -> SkillDef | None:
         """手寫技能池的 1 階技能（優先選符合白板定義的；階級與白板一致）。"""
         request = self.request
-        tier = self.library.composer.whiteboard.tier
+        tier = request.tier
         options = [
             skill
             for skill_id in sorted(self.library.skills)
-            if (skill := self.library.skills[skill_id]).tier == tier
+            if (skill := self.library.skills[skill_id]).tier <= tier
             and skill.rarity != "legendary"
             and skill.form_id is None
             and skill.kind in WHITEBOARD_KINDS
@@ -157,7 +158,7 @@ class _Maker:
         ]
         if not options:
             return None
-        boards = [s for s in options if is_whiteboard(s, self.library)]
+        boards = [s for s in options if is_whiteboard(s, self.library, s.tier)]
         return rng.choice(boards or options)
 
 

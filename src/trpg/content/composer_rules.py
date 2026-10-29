@@ -443,6 +443,9 @@ class WhiteboardRules(ContentModel):
     kind_permille: dict[Literal["active", "passive", "reaction"], int]
     """升級與任務三選一的種類比例（‰；07 7.6：主動 70％、被動 20％、反應 10％），總和 1000。"""
     tier: int = Field(default=1, ge=1)
+    """沒有指定階級時的階級（創角的起始技能一律 1 階，6.34.9 創角例外）。"""
+    shape_min_tier: dict[str, int] = Field(default_factory=dict)
+    """形狀的最低角色階級（6.34.9：3×3 要 2 階；沒列出的 1 階就有）。"""
     ap_cost: int = Field(default=2, ge=1, le=3)
     """主動白板的預設 AP。"""
     cooldown: IntRange

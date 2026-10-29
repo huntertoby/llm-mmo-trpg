@@ -95,7 +95,7 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
     request = candidate_request(library, run)
     if settings.whiteboard:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
         found = generate_whiteboard_candidates(library, request, settings.composer_tries)
-        tier = library.composer.whiteboard.tier
+        tier = request.tier
     else:
         found = generate_candidates(
             library,

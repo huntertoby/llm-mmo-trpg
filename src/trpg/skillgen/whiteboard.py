@@ -73,10 +73,12 @@ def whiteboard_keywords(library: ContentLibrary, kind: str = "active") -> frozen
 # ---------------------------------------------------------------------------
 
 
-def whiteboard_problems(skill: SkillDef, library: ContentLibrary) -> list[str]:
+def whiteboard_problems(
+    skill: SkillDef, library: ContentLibrary, tier: int | None = None
+) -> list[str]:
     """白板定義的檢查（06 6.34.1）；空串列 ＝ 是白板。逐條列出不符合的地方（繁體中文）。
 
-    - 1 階（``whiteboard.tier``）、主動／被動／反應；
+    - 階級等於 ``tier``（角色目前階級，6.34.9；省略 ＝ 不檢查），主動／被動／反應；
     - 一個核心效果：所有層級的效果合計 1 個，沒有附帶效果、條件、修正規則、變奏、第二段、陷阱；
     - 一個關鍵字（專屬規則推導）；
     - 形狀簡單（自身、單體、單格、十字、3×3）；
@@ -85,8 +87,8 @@ def whiteboard_problems(skill: SkillDef, library: ContentLibrary) -> list[str]:
     """
     rules = _rules(library)
     problems: list[str] = []
-    if skill.tier != rules.tier:
-        problems.append(f"白板必須是 {rules.tier} 階，收到 {skill.tier} 階")
+    if tier is not None and skill.tier != tier:
+        problems.append(f"白板必須是 {tier} 階，收到 {skill.tier} 階")
     if skill.kind not in WHITEBOARD_KINDS:
         problems.append(f"白板只能是主動、被動或反應，收到 {skill.kind}")
     problems += _structure_problems(skill)
@@ -146,9 +148,9 @@ def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
     return problems
 
 
-def is_whiteboard(skill: SkillDef, library: ContentLibrary) -> bool:
+def is_whiteboard(skill: SkillDef, library: ContentLibrary, tier: int | None = None) -> bool:
     """技能符合白板定義（:func:`whiteboard_problems` 為空）。"""
-    return not whiteboard_problems(skill, library)
+    return not whiteboard_problems(skill, library, tier)
 
 
 # ---------------------------------------------------------------------------
@@ -264,21 +266,31 @@ def _base(
     }
 
 
+def _shapes(rules: WhiteboardRules, recipe: WhiteboardRecipe, tier: int) -> tuple[str, ...]:
+    """配方的形狀裡，角色階級已開放的（``shape_min_tier``；例如 3×3 要 2 階，6.34.9）。"""
+    found = tuple(s for s in recipe.shapes if rules.shape_min_tier.get(s, 1) <= tier)
+    if not found:
+        raise Retry
+    return found
+
+
 def _attempt_active(
     rng: Rng,
     library: ContentLibrary,
     seed: int,
     recipe: WhiteboardRecipe,
     weapon_class: str | None,
+    *,
+    tier: int,
 ) -> SkillDef:
     rules = _rules(library)
     category = _pick_category(rng, library, recipe, weapon_class)
     req, scaling = _weapon_req(rng, library, category, weapon_class)
     skeleton = library.skeletons[recipe.skeleton]
-    ctx = Ctx(library, rng, skeleton, "epic", rules.tier, category, rules.ap_cost, _theme(recipe))
-    build_shape(ctx, [str(recipe.effect["type"])], only=recipe.shapes)
+    ctx = Ctx(library, rng, skeleton, "epic", tier, category, rules.ap_cost, _theme(recipe))
+    build_shape(ctx, [str(recipe.effect["type"])], only=_shapes(rules, recipe, tier))
     _build_effect(ctx, recipe)
-    base = _base(recipe, seed, rules.tier, category, ctx)
+    base = _base(recipe, seed, tier, category, ctx)
     base |= {"weapon_req": req, "scaling_attr": scaling, "ap_cost": rules.ap_cost}
     base["rarity"] = _min_rarity({**base, "cost": {}}, ctx.effects, library)
     base["cost"] = _active_cost(ctx, rules)
@@ -288,15 +300,13 @@ def _attempt_active(
 
 
 def _attempt_passive(
-    rng: Rng, library: ContentLibrary, seed: int, recipe: WhiteboardRecipe
+    rng: Rng, library: ContentLibrary, seed: int, recipe: WhiteboardRecipe, tier: int
 ) -> SkillDef:
     rules = _rules(library)
     composer = library.composer
     weights = composer.spell_attr_weights
     scaling = rng.choice(["int"] * weights.int_ + ["wis"] * weights.wis + ["wil"] * weights.wil)
-    ctx = Ctx(
-        library, rng, library.skeletons["passive"], "epic", rules.tier, "spell", 1, _theme(recipe)
-    )
+    ctx = Ctx(library, rng, library.skeletons["passive"], "epic", tier, "spell", 1, _theme(recipe))
     ctx.shape = "self"
     _build_effect(ctx, recipe)
     timing = next(
@@ -309,14 +319,14 @@ def _attempt_passive(
     }
     mana = rng.randint(rules.passive_mana.min, rules.passive_mana.max)
     base: dict[str, Any] = {
-        **_base(recipe, seed, rules.tier, "spell", ctx),
+        **_base(recipe, seed, tier, "spell", ctx),
         "kind": "passive",
         "weapon_req": "any",
         "ap_cost": None,
         "scaling_attr": scaling,
         "shape": {"type": "self"},
         "trigger": trigger,
-        "cost": {"mana": mana + (rules.tier - 1) * composer.passive.mana_per_tier},
+        "cost": {"mana": mana + (tier - 1) * composer.passive.mana_per_tier},
     }
     base["rarity"] = _min_rarity(base, ctx.effects, library)
     if not tune(rng, library, base, ctx.effects, ctx.knobs):
@@ -330,28 +340,32 @@ def _attempt_reaction(
     seed: int,
     recipe: WhiteboardRecipe,
     weapon_class: str | None,
+    *,
+    tier: int,
 ) -> SkillDef:
     rules = _rules(library)
     category = _pick_category(rng, library, recipe, weapon_class)
     req, scaling = _weapon_req(rng, library, category, weapon_class)
     ctx = Ctx(
-        library, rng, library.skeletons["reaction"], "epic", rules.tier, category, 1, _theme(recipe)
+        library, rng, library.skeletons["reaction"], "epic", tier, category, 1, _theme(recipe)
     )
     build_shape(
-        ctx, [] if recipe.shapes == ("self",) else [str(recipe.effect["type"])], only=recipe.shapes
+        ctx,
+        [] if recipe.shapes == ("self",) else [str(recipe.effect["type"])],
+        only=_shapes(rules, recipe, tier),
     )
     _build_effect(ctx, recipe)
     mana = rng.randint(rules.reaction_mana.min, rules.reaction_mana.max)
     cooldown = rng.randint(rules.reaction_cooldown.min, rules.reaction_cooldown.max)
     base: dict[str, Any] = {
-        **_base(recipe, seed, rules.tier, category, ctx),
+        **_base(recipe, seed, tier, category, ctx),
         "kind": "reaction",
         "weapon_req": req,
         "scaling_attr": scaling,
         "ap_cost": None,
         "reaction": {"event": recipe.reaction_event},
         "cost": {
-            "mana": mana + (rules.tier - 1) * library.composer.reaction.mana_per_tier,
+            "mana": mana + (tier - 1) * library.composer.reaction.mana_per_tier,
             "cooldown": cooldown,
         },
     }
@@ -375,6 +389,7 @@ def compose_whiteboard(
     kind: str = "active",
     keyword: str | None = None,
     weapon_class: str | None = None,
+    tier: int | None = None,
     library: ContentLibrary | None = None,
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
@@ -384,6 +399,8 @@ def compose_whiteboard(
 
     ``kind``：``active``／``passive``／``reaction``；``keyword``：指定關鍵字（省略 ＝ 任何有
     配方的）；
+    ``tier``：角色目前階級（預算與可用的形狀照這一階，6.34.9；省略 ＝ ``whiteboard.tier``，
+    創角用）；
     ``weapon_class``：``melee``／``ranged``／``focus``，給了就只組出這類武器能用的白板；
     ``hero_attributes``／``avoid_attr``：與完整模式相同，縮放屬性跟著主角最高屬性（新方向避開）。
     組不出來（沒有配方、或 ``max_attempts`` 次都做不出合格的白板）拋出 :class:`ComposeError`。
@@ -392,23 +409,24 @@ def compose_whiteboard(
     if kind not in WHITEBOARD_KINDS:
         raise ComposeError(f"未知的白板種類 {kind!r}（可用：{'、'.join(WHITEBOARD_KINDS)}）")
     rules = _rules(lib)
+    tier = rules.tier if tier is None else tier
     rng = Rng(seed).fork("whiteboard")
     for _ in range(rules.max_attempts):
         recipe = _pick_recipe(rng, rules, kind, keyword, weapon_class)
         try:
             if kind == "active":
-                skill = _attempt_active(rng, lib, seed, recipe, weapon_class)
+                skill = _attempt_active(rng, lib, seed, recipe, weapon_class, tier=tier)
             elif kind == "passive":
-                skill = _attempt_passive(rng, lib, seed, recipe)
+                skill = _attempt_passive(rng, lib, seed, recipe, tier)
             else:
-                skill = _attempt_reaction(rng, lib, seed, recipe, weapon_class)
+                skill = _attempt_reaction(rng, lib, seed, recipe, weapon_class, tier=tier)
         except (Retry, ValidationError, BudgetError):
             continue
         if hero_attributes is not None:
             skill = retarget_scaling(skill, hero_attributes, lib, avoid=avoid_attr)
         if (
             not validate_skill(skill, lib)
-            and not whiteboard_problems(skill, lib)
+            and not whiteboard_problems(skill, lib, tier)
             and (weapon_class is None or weapon_problem(skill, weapon_class, held or {}) is None)
         ):
             return skill

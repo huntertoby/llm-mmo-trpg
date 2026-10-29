@@ -220,7 +220,8 @@ llm_cost:
 # （例如被動至少 epic、推擊至少 rare），不增加強度。數值為初值，未經模擬。
 whiteboard:
   kind_permille: {active: 700, passive: 200, reaction: 100}   # 升級與任務三選一的種類比例（07 7.6）
-  tier: 1
+  tier: 1                             # 沒指定階級時（創角）；升級與任務三選一用角色目前階級（roguelite.yaml 的 offer_tier_by_level，#72）
+  shape_min_tier: {square3: 2}        # 6.34.9：3×3 要角色 2 階；十字等其餘形狀 1 階就有
   ap_cost: 2
   cooldown: {min: 0, max: 2}
   passive_mana: {min: 0, max: 2}
