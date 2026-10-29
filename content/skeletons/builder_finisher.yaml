@@ -11,3 +11,7 @@ secondary:
   primitives: [add_stack, consume_stack, apply_status]
   max_count: 2
 require_any_primitives: [add_stack, consume_stack]
+composer:   # 隨機組合器的骨架專屬設定（3T-8）
+  setup: stack
+  condition_mode: never
+  explicit_only_active: true

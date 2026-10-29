@@ -285,9 +285,10 @@ def _core_count(ctx: Ctx, options: list[str]) -> int:
     limit = min(len(options), 2)
     if limit < 1:
         raise Retry
-    if ctx.skeleton.id in ("control", "aura", "displace"):
-        if ctx.skeleton.id == "displace":
-            return 1 + ctx.chance(ctx.rules.structure.displace_second_core_permille)
+    mode = ctx.skeleton.composer.core_count
+    if mode == "second_by_chance":
+        return 1 + ctx.chance(ctx.rules.structure.displace_second_core_permille)
+    if mode == "up_to_two":
         return ctx.rng.randint(1, limit)
     return 1
 
@@ -307,7 +308,7 @@ def choose_core(ctx: Ctx) -> list[str]:
         picked.remove("pull")
     if "teleport" in picked:  # 傳送只能搭配 ground_tile，不與其他位移並存
         picked = ["teleport"]
-    if ctx.skeleton.id == "combo":  # 連段：第二個核心是帶條件的追加傷害
+    if ctx.skeleton.composer.double_damage_core:  # 連段：第二個核心是帶條件的追加傷害
         double = ctx.chance(ctx.rules.structure.combo_double_damage_permille)
         picked = ["damage", "damage"] if double else ["damage"]
     return picked
@@ -367,7 +368,7 @@ def _shape_param(ctx: Ctx, name: str, low: int, high: int, allow_weapon: bool) -
 def _beneficial_affects(ctx: Ctx) -> str:
     """有益效果的對象：範圍型光環是範圍內友方；光環骨架的 ``single`` 是被選中的友方（含自己，
     2D-1）；其他形狀（自身、控場的單體……）只作用在施放者身上。"""
-    if ctx.shape in _ALLY_SHAPES or (ctx.shape == "single" and ctx.skeleton.id == "aura"):
+    if ctx.shape in _ALLY_SHAPES or (ctx.shape == "single" and ctx.skeleton.composer.single_allies):
         return "allies"
     return "self"
 
@@ -411,7 +412,7 @@ def _status_effect(ctx: Ctx, *, beneficial: bool) -> None:
     candidates = _status_candidates(ctx, beneficial)
     if not candidates:
         raise Retry
-    if ctx.shape == "self" and not beneficial and ctx.skeleton.id != "passive":
+    if ctx.shape == "self" and not beneficial and not ctx.skeleton.composer.self_shape_harmful_ok:
         raise Retry  # 自身形狀不得有對敵方的效果（被動的 self 形狀是「作用在觸發對象」）
     status = ctx.rng.choice(candidates)
     spec: dict[str, Any] = {"type": "apply_status", "status": status.id}
@@ -568,7 +569,7 @@ def _wants_buff(ctx: Ctx, core: bool) -> bool:
         return True
     return (
         core
-        and ctx.skeleton.id == "control"
+        and ctx.skeleton.composer.buff_core_chance
         and ctx.chance(ctx.rules.structure.control_buff_permille)
     )
 
@@ -618,7 +619,7 @@ def _conflicts(ctx: Ctx, name: str) -> bool:
 
 def _secondary_count(ctx: Ctx) -> int:
     limit = ctx.library.budget.rarity[ctx.rarity].max_effects - len(ctx.effects)
-    structural = 1 if ctx.skeleton.id in ("builder_finisher", "trap") else 0  # 層數／陷阱的結構效果
+    structural = 1 if ctx.skeleton.composer.setup is not None else 0  # 層數／陷阱的結構效果
     most = min(ctx.skeleton.secondary.max_count - structural, limit)
     if most <= 0:
         return 0
@@ -669,14 +670,15 @@ def _stack_effect(ctx: Ctx) -> None:
 def build_effects(ctx: Ctx, core: list[str]) -> None:
     """核心效果，再加 0 到 ``max_count`` 個附帶效果。"""
     beneficial = ctx.skeleton.core.beneficial_only
-    if ctx.skeleton.id == "trap":
+    setup = ctx.skeleton.composer.setup
+    if setup == "trap":
         _trap_setup(ctx)
     ctx.core_count = len(ctx.effects) + len(core)
     for name in core:
         _make_effect(ctx, name, core=True, beneficial_only=beneficial)
-    if ctx.skeleton.id == "builder_finisher":
+    if setup == "stack":
         _stack_effect(ctx)
-    if ctx.skeleton.id == "aura" or ctx.skeleton.core.beneficial_only:
+    if ctx.skeleton.composer.no_secondary or ctx.skeleton.core.beneficial_only:
         return
     for _ in range(_secondary_count(ctx)):
         pool = _secondary_pool(ctx)
@@ -689,14 +691,11 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
     _gamble_last(ctx)
 
 
-_BLOW_SKELETONS = ("area",)
-
-
 def _blow_secondary(ctx: Ctx) -> None:
     """吹送（Phase 3-54a）：範圍骨架（稀有以上、附帶效果與效果數都還有空位）以
     ``structure.blow_surface_permille`` 的機率加上一個吹送附帶效果。用 ``composer.blow`` 的獨立
     串流抽，沒抽中的種子得到與加入吹送之前完全相同的技能。"""
-    if ctx.skeleton.id not in _BLOW_SKELETONS or not _skeleton_allows(
+    if not ctx.skeleton.composer.blow_secondary or not _skeleton_allows(
         ctx, "blow_surface", core=False
     ):
         return
@@ -711,15 +710,12 @@ def _blow_secondary(ctx: Ctx) -> None:
     ctx.add_knobbed({"type": "blow_surface"})
 
 
-_SHOCKWAVE_SKELETONS = ("area",)
-
-
 def _shockwave_secondary(ctx: Ctx) -> None:
     """震波（Phase 3-54b，06 6.33）：大地主題、直線形狀的範圍骨架（稀有以上、附帶效果與效果數都還有
     空位）以 ``structure.shockwave_permille`` 的機率加上一個震波附帶效果。用 ``composer.shockwave``
     的獨立串流抽，沒抽中的種子得到與加入震波之前完全相同的技能。"""
     if (
-        ctx.skeleton.id not in _SHOCKWAVE_SKELETONS
+        not ctx.skeleton.composer.shockwave_secondary
         or ctx.theme is not Element.EARTH
         or ctx.shape != "line"
         or not _skeleton_allows(ctx, "shockwave", core=False)
@@ -803,7 +799,7 @@ def _condition_kinds(ctx: Ctx, enemy_effects: list[int]) -> list[str]:
         if rarity_rank(c.min_rarity) <= ctx.rank
     }
     own = list(ctx.rules.condition.self_conditions)
-    if ctx.skeleton.id == "aura":
+    if ctx.skeleton.composer.condition_mode == "allies":
         kinds = own + (["target_hp_below"] if ctx.shape != "self" else [])
     elif ctx.shape == "self" or not enemy_effects:
         kinds = own
@@ -843,7 +839,7 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
     稀有（含）以上 30% 機率有條件；骨架要求條件（連段）時一定有。
     """
     required = ctx.skeleton.requires_condition
-    if ctx.skeleton.id in ("builder_finisher", "trap"):
+    if ctx.skeleton.composer.condition_mode == "never":
         return None  # 蓄力／終結與陷阱不帶技能條件（陷阱觸發時沒有施放時的選取）
     if not required and not _rolls_condition(ctx):
         return None
@@ -855,7 +851,7 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
         return None
     spec = _condition_spec(ctx, _with_extra_condition(ctx, ctx.rng.choice(kinds)))
     damages = [i for i, e in enumerate(ctx.effects) if e["type"] == "damage"]
-    effect_level = ctx.skeleton.id == "combo" and len(damages) > 1
+    effect_level = ctx.skeleton.composer.effect_level_condition and len(damages) > 1
     if effect_level or (not required and ctx.chance(ctx.rules.condition.effect_level_permille)):
         index = damages[1] if effect_level else ctx.rng.choice(enemy or [0])
         ctx.effects[index]["condition"] = spec

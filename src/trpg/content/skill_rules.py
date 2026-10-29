@@ -679,6 +679,44 @@ class SecondaryRules(ContentModel):
     max_share_permille: dict[str, int] = Field(default_factory=dict)
 
 
+class ComposerTraits(ContentModel):
+    """隨機組合器對這個骨架的專屬設定（3T-8；原本是依骨架 ID 寫死的分支）。
+
+    - ``core_count``：核心原語數量。``one`` ＝ 1；``up_to_two`` ＝ 1 到 2 隨機；
+      ``second_by_chance`` ＝ 1，再以 ``structure.displace_second_core_permille`` 的機率加第二個。
+    - ``double_damage_core``：核心固定是傷害，再以 ``structure.combo_double_damage_permille`` 的機率
+      變成兩段傷害（連段）。
+    - ``single_allies``：``single`` 形狀的有益效果作用在被選中的友方（光環）。
+    - ``self_shape_harmful_ok``：``self`` 形狀可以有對敵方的效果（被動：作用在觸發對象）。
+    - ``buff_core_chance``：核心狀態有機率改成自我增益（``structure.control_buff_permille``）。
+    - ``setup``：第一個結構效果。``trap`` ＝ 陷阱欄位與 ``place_trap``；
+      ``stack`` ＝ 蓄力／終結的層數效果。有結構效果時，附帶效果上限扣掉 1。
+    - ``no_secondary``：不加附帶效果（光環）。
+    - ``blow_secondary`` / ``shockwave_secondary``：可能加上吹送／震波附帶效果（獨立亂數串流）。
+    - ``condition_mode``：技能層級條件。``default`` ＝ 一般；``never`` ＝ 不帶技能條件；
+      ``allies`` ＝ 只用自身條件（非自身形狀再加 ``target_hp_below``）。
+    - ``effect_level_condition``：有兩段以上傷害時，條件寫在第二段傷害上（連段）。
+    - ``hand_written_only``：隨機組合器不產生（手寫技能專用）。
+    - ``explicit_only_active``：主動骨架，只在明確指定或由特殊骨架抽選時使用。
+    - ``legendary``：傳說技能可用的骨架。
+    """
+
+    core_count: Literal["one", "up_to_two", "second_by_chance"] = "one"
+    double_damage_core: bool = False
+    single_allies: bool = False
+    self_shape_harmful_ok: bool = False
+    buff_core_chance: bool = False
+    setup: Literal["trap", "stack"] | None = None
+    no_secondary: bool = False
+    blow_secondary: bool = False
+    shockwave_secondary: bool = False
+    condition_mode: Literal["default", "never", "allies"] = "default"
+    effect_level_condition: bool = False
+    hand_written_only: bool = False
+    explicit_only_active: bool = False
+    legendary: bool = False
+
+
 class SkeletonDef(ContentModel):
     """一種技能骨架（``content/skeletons/<id>.yaml``）。
 
@@ -705,6 +743,8 @@ class SkeletonDef(ContentModel):
     """使用此骨架的技能必須是這個類別（``None`` ＝ 不限；被動：``spell``）。"""
     required_weapon_req: WeaponReq | None = None
     """使用此骨架的技能必須是這個武器需求（``None`` ＝ 不限；被動：``any``）。"""
+    composer: ComposerTraits = Field(default_factory=ComposerTraits)
+    """隨機組合器的骨架專屬設定（3T-8）。"""
     min_rarity: SkillRarity = "common"
     """使用此骨架的最低稀有度（2E：被動 epic；之後的反應技、姿態、蓄力／終結、陷阱 rare）。"""
 
