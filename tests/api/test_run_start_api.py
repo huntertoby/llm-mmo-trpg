@@ -92,11 +92,11 @@ def test_dev_advance_is_off_by_default_and_reaches_post_battle_screens(
     monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
     assert client.post(f"/api/runs/{run['run_id']}/dev-advance?to=nope").status_code == 422
     run = _ok(client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 1}))
-    for target in ("gear_offer", "level_up", "campfire"):
+    for target in ("gear_offer", "level_up", "complete_offer", "campfire"):
         got = _ok(client.post(f"/api/runs/{run['run_id']}/dev-advance?to={target}"))
         assert got["node"]["kind"] == target
-    got = _ok(client.post(f"/api/runs/{run['run_id']}/dev-advance?to=campfire_offer"))
-    assert got["node"]["kind"] == "campfire" and got["node"]["offer"] is not None
+        if target == "complete_offer":
+            assert got["node"]["offer"]["reason"] == "complete"
 
 
 def test_dev_packs_endpoint_and_start(client: TestClient, library: ContentLibrary) -> None:
