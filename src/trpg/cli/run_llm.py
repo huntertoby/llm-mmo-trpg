@@ -62,7 +62,7 @@ def llm_session(
             raise
         config = LLMConfig()  # 沒有指定 --llm 時，壞掉的設定檔不影響原本的流程（開關預設關）
     if args.mock:
-        with use_proposer(mock_proposer(library, max_attempts=config.max_retries)):
+        with use_proposer(mock_proposer(library, max_attempts=config.max_retries, naming=True)):
             yield True
         return
     if not (args.llm or config.generate):
@@ -70,7 +70,8 @@ def llm_session(
         return
     client = OpenAICompatClient(config)
     try:
-        with use_proposer(make_proposer(client, library, max_attempts=config.max_retries)):
+        proposer = make_proposer(client, library, max_attempts=config.max_retries, naming=client)
+        with use_proposer(proposer):
             yield True
     finally:
         client.close()
@@ -100,4 +101,12 @@ def llm_lines(run: RunState, *, alert_permille: int | None = None) -> list[str]:
     )
     if permille > limit:
         line += f"　〔提醒：退回率超過 {limit / 10:g}%〕"
-    return [line]
+    lines = [line]
+    named = [r for r in run.llm_log if r.name_source is not None]
+    if named:
+        generated = sum(1 for r in named if r.name_source == "llm")
+        lines.append(
+            f"  LLM 命名：{len(named)} 個，生成 {generated}，組合式名稱 {len(named) - generated}，"
+            f"呼叫 {sum(r.name_attempts for r in named)} 次"
+        )
+    return lines

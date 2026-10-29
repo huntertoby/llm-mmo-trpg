@@ -15,6 +15,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, SkillRarity
@@ -53,6 +54,11 @@ class LlmAttempt:
     attempts: int
     codes: tuple[str, ...] = ()
     reason: str | None = None
+    name_source: Literal["llm", "fallback"] | None = None
+    """命名（4-L7）的來源：``llm``（生成的名稱與敘事）或 ``fallback``（組合式名稱）；
+    沒有命名步驟為 ``None``。"""
+    name_attempts: int = 0
+    name_codes: tuple[str, ...] = ()
 
 
 type LlmProposer = Callable[[ProposalRequest, ProposalContext, int], LlmAttempt]

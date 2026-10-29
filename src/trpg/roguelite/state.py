@@ -129,6 +129,10 @@ class LlmRecord(_Model):
     ok: bool = False
     codes: tuple[str, ...] = ()
     reason: str | None = None
+    name_source: Literal["llm", "fallback"] | None = None
+    """命名與敘事（4-L7）的來源；舊存檔與沒有命名步驟為 ``None``。"""
+    name_attempts: int = 0
+    name_codes: tuple[str, ...] = ()
 
 
 class OfferTag(_Model):
