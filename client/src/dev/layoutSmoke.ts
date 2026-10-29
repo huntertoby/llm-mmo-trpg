@@ -9,6 +9,7 @@
 // 不需要安裝任何套件。
 
 import { NARROW_WIDTH } from "../battle/skillTray";
+import { enterDevScreen, type DevScreen } from "./devScreens";
 
 export interface Box {
   left: number;
@@ -471,9 +472,51 @@ export async function runScreens(title: string): Promise<string> {
   await sleep(600);
   // 開始畫面
   await fillStartPartial(doc, rows, win);
+  // 戰後畫面（3U-3）：用開發入口直接進（需要 `?dev=1` 與伺服器 `TRPG_DEV_ROUTES=1`）；進不去就記一項失敗
+  rows.push(...(await postBattleStages(doc, win)));
   const viewport = `${win.innerWidth}×${win.innerHeight}`;
   const { text } = formatTable(`${title}（視窗 ${viewport}）`, rows);
   return text;
+}
+
+/** 戰後畫面階段：畫面名、進去之後要等的元素、要滑過看浮動卡的選擇器（依序滑過第一個、中間、最後一個）。 */
+const POST_BATTLE: readonly { screen: DevScreen; label: string; waitFor: string; hover: string }[] = [
+  { screen: "gear_offer", label: "戰後・裝備三選一", waitFor: '[data-testid="gear-offer"]', hover: ".run-offer-card .part-tip" },
+  { screen: "level_up", label: "戰後・升級選技", waitFor: ".run-levelup .run-offer-card", hover: ".run-levelup .run-offer-card .part-tip" },
+  { screen: "campfire", label: "戰後・營火", waitFor: ".run-campfire", hover: ".run-campfire .part-tip" },
+  { screen: "campfire_offer", label: "戰後・營火候選", waitFor: ".run-campfire .run-offer-card", hover: ".run-campfire .run-offer-card .part-tip" },
+  { screen: "ended", label: "戰後・一輪結束", waitFor: ".run-actions", hover: ".part-tip" },
+];
+
+async function waitFor(doc: Document, selector: string, tries = 40): Promise<boolean> {
+  for (let i = 0; i < tries && doc.querySelector(selector) === null; i++) await sleep(150);
+  return doc.querySelector(selector) !== null;
+}
+
+async function postBattleStages(doc: Document, win: Window): Promise<CheckResult[]> {
+  const rows: CheckResult[] = [];
+  for (const stage of POST_BATTLE) {
+    try {
+      await enterDevScreen(stage.screen, win);
+    } catch (e) {
+      rows.push(result(`${stage.label}/enter`, `${stage.label}：進得了畫面`, false, e instanceof Error ? e.message : String(e)));
+      continue;
+    }
+    if (!(await waitFor(doc, stage.waitFor))) {
+      rows.push(result(`${stage.label}/enter`, `${stage.label}：進得了畫面`, false, `等不到 ${stage.waitFor}`));
+      continue;
+    }
+    await sleep(500);
+    rows.push(...stageRows(stage.label, doc, win, false));
+    const count = doc.querySelectorAll(stage.hover).length;
+    const picks = [...new Set([0, Math.floor(count / 2), count - 1])].filter((i) => i >= 0 && i < count);
+    for (const i of picks) {
+      await hoverFirst(doc, stage.hover, i);
+      rows.push(...stageRows(`${stage.label}・滑過#${i}`, doc, win, true));
+      await unhover(doc, stage.hover, i);
+    }
+  }
+  return rows;
 }
 
 async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window): Promise<void> {
@@ -503,10 +546,10 @@ async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window)
 
 declare global {
   interface Window {
-    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
+    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; enterDevScreen: typeof enterDevScreen; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
   }
 }
 
 export function installLayoutSmoke(win: Window): void {
-  win.__layoutSmoke = { runCase, runScreens, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
+  win.__layoutSmoke = { runCase, runScreens, enterDevScreen, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
 }

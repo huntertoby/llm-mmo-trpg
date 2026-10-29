@@ -151,6 +151,9 @@ export const api = {
   allocationPreview: (runId: string, attributes: Record<string, number>) =>
     request<AllocationPreview>("POST", `/runs/${encodeURIComponent(runId)}/allocation-preview`, { attributes }),
   devPacks: () => request<DevPack[]>("GET", "/runs/dev-packs"),
+  /** 開發用（3U-3）：AI 代打到指定的戰後畫面；伺服器要帶 `TRPG_DEV_ROUTES=1`，否則 404。 */
+  devAdvance: (runId: string, to: string) =>
+    request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/dev-advance?to=${encodeURIComponent(to)}`),
   runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),
   run: (runId: string) => request<RunResponse>("GET", `/runs/${encodeURIComponent(runId)}`),
