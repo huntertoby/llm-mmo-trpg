@@ -17,3 +17,14 @@
 - 行為不變：`tests/cli` 戰鬥快照雜湊不變（3T-2 的 `ruleset_hash` 會改紀錄內容，例外並說明）、重播一致、卡片文字不變。
 - pytest（相關目錄，`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports；前端段：vitest、tsc、build、排版煙霧檢查、截圖前後對照。
 - 報告 `Phase3T-N報告.md`。
+
+## 3. 驗收紀錄
+
+### 3.1 3T-4 驗收（2026-10-29，開發 PM）
+- 報告 `Phase3T-4報告.md`。`render/color.ts`、`render/material.ts`、`render/palette.ts`（8 處改讀）、舊武器畫法刪除、武器小圖示改 ink、`withShadeDir`、`COVERS` 合併（新增 `hair` 旗標）、觸控釘住（沿用 `pinOn: "touch"`）、`ArtTextures.canvas()`、`applyLook`。doll／summon／gear-gallery 前後逐位元相同。合併後 vitest 1097、tsc、build、api 通過。
+- 美術 PM 決定（`docs/art/3T-4檢查.md`）：火 `#ff6a1a`、雷 `#fff36b`，`PAL.fire` 也改、全專案只留一個火色；墨線鋼鐵色與材質表保留兩份；`hair` 旗標維持 → **3T-4b**。
+
+### 3.2 3T-4b｜武器小圖示重調＋單一火色（sonnet；約 0.2 段）
+1. `PAL.fire` 改 `#ff6a1a`，全專案只留一個火色（搜尋所有 `#ff7a1a`）。
+2. 武器小圖示（照 `docs/art/3T-4檢查.md` 第 2 點）：在圖示大小直接用向量畫（不放大點陣圖），墨線寬度除以放大倍率（約 1.2～1.5px）；依武器外框縮放，對角線填滿圖示約 80%；斧、錘、錘矛、鐮刀、杖頭的頭部放大 1.5 倍（柄不變）；錘頭畫成橫的長方塊，和錘矛分開；一律 45° 斜放。
+3. 驗收：vitest、tsc、build；前後對照圖 `docs/phases/img/3T-4b-*`（全部武器 kind 一張）。報告 `Phase3T-4b報告.md`。
