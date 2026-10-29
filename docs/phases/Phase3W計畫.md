@@ -93,3 +93,9 @@
 5. **測試**：一律 `MockLLMClient`；Mock 回傳合格／不合格／形態或種族原語／數值欄位／英文代號 → 驗證與退回；選項數與類別數規則；重播不呼叫。
 6. **4-L9 評估加項**的指標與腳本入口先寫好（通過率、退回率、各類別命中、名稱抽樣），真模型評估仍等使用者開模型。
 7. 驗收：pytest（skillgen、llm、roguelite，`-m "(slow or not slow) and not llm"`、`tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports。報告 `Phase3W-7報告.md`。
+### 4.5 3W-4b、3W-7 合併與 3W-fix（2026-10-29，開發 PM）
+- **3W-4b**（報告 `Phase3W-4b報告.md`）、**3W-7**（報告 `Phase3W-7報告.md`：`trpg.llm.flash_propose`、`flash_catalog.py`、`flash_merge.py`、prompt `flash-variation/1`、`scripts/eval_flash_llm.py`）已合併到本機 main，**尚未 push**。玩法 PM 確認 3W-4b 偏離（06 6.34.1，`3664e63f`）：位移帶小補強、召喚 AP 1／冷卻 2～4、修正型被動幅度照預算 → 接受；補配方 5 個 → 3W-2b。3W-7 待決全部接受（`llm_hint` 之後補、`FlashProposalRecord.seconds` 在 3W-5 排除於逐位元比對）。
+- 3W-4b 合併後全量有 5 個失敗（3W-3 與 3W-4b 交互）：`test_flash_major.py` 三項（大變化至少各 1 加深橋接、強度下限、白板轉型每種）、`tests/cli/test_run_cli.py::test_run_auto_reaches_a_branching_evolution[5]`（白板模式下 run auto 不再出分歧進化）、前端 `statusIcon.test.ts`（新姿態狀態缺 `status_look`／圖樣）→ **3W-fix**。
+
+### 3W-fix｜合併後失敗修正（sonnet；約 0.3 段）
+修好上面 5 個失敗：判斷是測試假設過時（白板取代舊成長流程）還是程式錯誤，前者更新測試並說明，後者修程式；新姿態狀態補 `status_look` 與前端圖樣（照既有狀態圖樣的做法，必要時用通用圖樣並寫進報告）；run auto 的分歧進化測試在 3W-5 會整個改寫，本段先改成驗證白板模式的行為或標記為 3W-5 待改（寫明理由）。驗收：全量 pytest（除 llm）、vitest、build 全過。報告 `Phase3W-fix報告.md`。
