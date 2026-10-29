@@ -1144,3 +1144,53 @@ statuses:
     stance: true
     damage_taken_permille: 550
     move_permille: 500
+  # --- 3W-2b｜護盾類大變化（06 6.34.5）：帶附帶效果的護盾是另一個吸收傷害的狀態（shield 效果的 status 參數指定）。
+  # budget_points 是附帶效果的價值（加在護盾效果的點數上）；數值為初值，未經模擬。---
+  - id: shielded_thorns
+    polarity: buff
+    min_rarity: rare
+    name_zh: 反傷護盾
+    description_zh: 帶有吸收量；吸收相鄰的攻擊時，對攻擊者反彈物理傷害；吸收量歸零時消失。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_reflect: 2
+    budget_points: 2
+  - id: shielded_mending
+    polarity: buff
+    min_rarity: rare
+    name_zh: 回春護盾
+    description_zh: 帶有吸收量；護盾結束（被打破或到期）時回復少量生命。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_end_heal: 3
+    budget_points: 2
+  - id: shielded_wet
+    polarity: buff
+    min_rarity: rare
+    name_zh: 水幕護盾
+    description_zh: 帶有吸收量；護盾被打破時，在自己腳下造出一灘水。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_break_surface: water
+    budget_points: 1
+  - id: shielded_marking
+    polarity: buff
+    min_rarity: rare
+    name_zh: 烙印護盾
+    description_zh: 帶有吸收量；護盾被打破時，對打破它的攻擊者施加標記。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_break_status: marked
+    budget_points: 2

@@ -573,7 +573,9 @@ class DataOrderSource:
                 out.append(
                     Variation(source="major", template=major.id, category=category, keyword=keyword)
                 )
-        return out + extra_variations(library, skill, category, support=is_support_skill(skill))
+        return out + extra_variations(
+            library, skill, category, support=is_support_skill(skill), held=request.held_keywords
+        )
 
     @staticmethod
     def _keywords(

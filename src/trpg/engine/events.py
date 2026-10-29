@@ -92,6 +92,7 @@ __all__ = [
     "RuneRemovalReason",
     "RuneRemoved",
     "ShieldAbsorbed",
+    "ShieldEnded",
     "ShieldGained",
     "ShotPierced",
     "SkillActivated",
@@ -555,6 +556,22 @@ class ShieldAbsorbed(EventBase):
     unit_id: UnitId
     absorbed: int
     remaining: int
+    status_id: str = "shielded"
+    """吸收傷害的護盾狀態（3W-2b：有附帶效果的護盾是另一種狀態）。"""
+    source_id: UnitId | None = None
+    melee: bool = False
+    """這次傷害是相鄰的攻擊（近戰；反傷的條件）。"""
+
+
+class ShieldEnded(EventBase):
+    """帶附帶效果的護盾結束了（Phase 3W-2b）：被打破（``broken``，``breaker_id`` 是造成傷害的單位）
+    或到期。結束回復、破盾造表面與破盾施加狀態由這個事件觸發。"""
+
+    type: Literal["shield_ended"] = "shield_ended"
+    unit_id: UnitId
+    status_id: str
+    broken: bool
+    breaker_id: UnitId | None = None
 
 
 class StatusApplied(EventBase):
@@ -1848,6 +1865,7 @@ type Event = Annotated[
     | Healed
     | ShieldGained
     | ShieldAbsorbed
+    | ShieldEnded
     | StatusApplied
     | StatusRemoved
     | StatusSaveRolled

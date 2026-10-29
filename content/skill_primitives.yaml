@@ -108,6 +108,7 @@ primitives:
     params:
       dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
       duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合, knob: none}
+      status: {llm_hint: "帶附帶效果的護盾狀態（省略＝一般護盾）。", type: status, description_zh: 帶附帶效果的護盾狀態（反傷、結束回復、破盾造水或標記）, knob: none}
   - id: cleanse
     name_zh: 淨化
     llm_hint: "移除目標身上所有負面狀態（減益）；增益與中性狀態保留。"

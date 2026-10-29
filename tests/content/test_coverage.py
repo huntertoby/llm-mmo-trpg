@@ -34,6 +34,10 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "stance_frost": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_glacier": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_bastion": "只由閃現的防守姿態轉型施加（3W-2b），沒有手寫技能",
+        "shielded_thorns": "只由閃現的護盾類大變化施加（3W-2b，shield 的 status），沒有手寫技能",
+        "shielded_mending": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
+        "shielded_wet": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
+        "shielded_marking": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
     },
     "stack": {},
 }

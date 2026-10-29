@@ -2278,6 +2278,78 @@
     "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×55%",
     "回合開始時的移動點數（無條件捨去） ×50%"
    ]
+  },
+  {
+   "id": "shielded_thorns",
+   "name_zh": "反傷護盾",
+   "description_zh": "帶有吸收量；吸收相鄰的攻擊時，對攻擊者反彈物理傷害；吸收量歸零時消失。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": true,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "shielded_mending",
+   "name_zh": "回春護盾",
+   "description_zh": "帶有吸收量；護盾結束（被打破或到期）時回復少量生命。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": true,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "shielded_wet",
+   "name_zh": "水幕護盾",
+   "description_zh": "帶有吸收量；護盾被打破時，在自己腳下造出一灘水。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": true,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "shielded_marking",
+   "name_zh": "烙印護盾",
+   "description_zh": "帶有吸收量；護盾被打破時，對打破它的攻擊者施加標記。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": true,
+    "prevents_move": false
+   },
+   "rules_zh": []
   }
  ],
  "stacks": [

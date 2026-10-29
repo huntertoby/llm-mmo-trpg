@@ -56,6 +56,7 @@ keywords:
       - {effect: summon, infusion: wet}   # 3-33f2：橋接進化的第二個灌注關鍵字
       - {effect: summon, unit: summon_water_sprite}   # 3-33e1：召喚物的固有關鍵字
       - {effect: create_surface, surface: water}
+      - {effect: shield, status: shielded_wet}   # 3W-2b：破盾時在腳下造水的護盾
       - {effect: zone, surface: water}
     uses:
       - {condition: target_on_surface, surface: water}
@@ -141,6 +142,7 @@ keywords:
       - {effect: summon, infusion: marked}   # 3-33f2：橋接進化的第二個灌注關鍵字
       - {effect: summon, unit: summon_hawk}   # 3-33e1：召喚物的固有關鍵字
       - {effect: apply_status, status: marked}
+      - {effect: shield, status: shielded_marking}   # 3W-2b：破盾時標記攻擊者的護盾
       - {effect: inscribe}
       - {effect: reveal}
       - {effect: apply_status, status: overwatch}

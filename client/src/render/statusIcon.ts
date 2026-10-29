@@ -211,6 +211,28 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[-3, -4], [0, -1], [-2, 2], [1, 5]]);
     line(c, [[0, -1], [4, 0]]);
   },
+  // 3W-2b：帶附帶效果的護盾（顏色走 polarity，圖樣在盾上加一個小記號）
+  shielded_thorns: (c) => {
+    shield(c);
+    line(c, [[-3, 2], [0, -3], [3, 2]]);
+  },
+  shielded_mending: (c) => {
+    shield(c);
+    line(c, [[0, -4], [0, 4]]);
+    line(c, [[-4, 0], [4, 0]]);
+  },
+  shielded_wet: (c) => {
+    shield(c);
+    c.beginPath();
+    c.arc(0, 1, 2.5, 0, TAU);
+    c.stroke();
+  },
+  shielded_marking: (c) => {
+    shield(c);
+    c.beginPath();
+    c.arc(0, 0, 3, 0, TAU);
+    c.fill();
+  },
   shielded: (c) => {
     circle(c, 0, 0, 9); // 泡泡（吸收量）
     c.globalAlpha *= 0.35;

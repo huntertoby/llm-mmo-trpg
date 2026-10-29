@@ -310,6 +310,11 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "stance_blaze": 18,
         "stance_glacier": 18,
         "stance_bastion": 21,  # 3W-2b：防守姿態第四級
+        # 3W-2b：帶附帶效果的護盾（附帶效果的價值）
+        "shielded_thorns": 2,
+        "shielded_mending": 2,
+        "shielded_wet": 1,
+        "shielded_marking": 2,
         # 3W-2b：元素姿態階梯（每個元素 5 級）
         **{
             f"stance_{e}_{n}": points

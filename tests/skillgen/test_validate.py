@@ -447,6 +447,11 @@ def test_beneficial_flags_in_content() -> None:
         "stance_frost",
         "stance_glacier",
         "stance_bastion",
+        # 3W-2b：帶附帶效果的護盾
+        "shielded_thorns",
+        "shielded_mending",
+        "shielded_wet",
+        "shielded_marking",
         # 3W-2b：元素姿態階梯
         *(f"stance_{e}_{n}" for e in ELEMENTS_9 for n in range(1, 6)),
         # 3C-4a

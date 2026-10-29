@@ -392,13 +392,14 @@ def _plain_base_points(  # noqa: PLR0911
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
+        extra, extra_note = _shield_rider_points(primitive.id, effect, library)
         if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
             permille = library.budget.shield_duration_permille[min(max(effect.duration, 2), 3) - 2]
             return (
-                _dice_average(effect.dice) * Fraction(permille, _PERMILLE),
-                f"{effect.dice} 平均 × 持續 {effect.duration} 回合 {permille}‰",
+                _dice_average(effect.dice) * Fraction(permille, _PERMILLE) + extra,
+                f"{effect.dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
             )
-        return _dice_average(effect.dice), f"{effect.dice} 平均"
+        return _dice_average(effect.dice) + extra, f"{effect.dice} 平均{extra_note}"
     if basis == "damage":
         permille = effect.multiplier_permille or _PERMILLE
         reference = rules.core.budget_reference_weapon_damage
@@ -408,6 +409,17 @@ def _plain_base_points(  # noqa: PLR0911
     if basis == "surface":
         return _surface_points(effect, library)
     raise BudgetError(f"原語 {primitive.id} 的預算算法 {basis} 沒有實作")
+
+
+def _shield_rider_points(
+    primitive_id: str, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """帶附帶效果的護盾（3W-2b，``shield`` 的 ``status``）：附帶效果的價值是狀態的點數。"""
+    if primitive_id != "shield" or effect.status is None:
+        return Fraction(0), ""
+    status = library.ruleset.status_def(effect.status)
+    points = Fraction(status.budget_points or 0)
+    return points, f" ＋ {status.name_zh}附帶 {points} 點"
 
 
 def _restore_resource_points(

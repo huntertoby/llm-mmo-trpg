@@ -75,6 +75,7 @@ from trpg.engine.events import (
     RuneInscribed,
     RuneRemoved,
     ShieldAbsorbed,
+    ShieldEnded,
     ShieldGained,
     ShotPierced,
     SkillActivated,
@@ -760,6 +761,12 @@ def _shield_gained(e: ShieldGained, v: _View) -> str:
 @_handles(ShieldAbsorbed)
 def _shield_absorbed(e: ShieldAbsorbed, v: _View) -> str:
     return f"    {v.name[e.unit_id]} 的護盾吸收了 {e.absorbed} 點傷害，剩餘 {e.remaining}"
+
+
+@_handles(ShieldEnded)
+def _shield_ended(e: ShieldEnded, v: _View) -> str:
+    how = "被打破了" if e.broken else "到期了"
+    return f"    {v.name[e.unit_id]} 的護盾{how}"
 
 
 @_handles(StatusRemoved)
