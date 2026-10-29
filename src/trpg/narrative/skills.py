@@ -1318,6 +1318,13 @@ def timing_text(library: ContentLibrary, skill: SkillDef) -> str | None:
 def trigger_timing_text(library: ContentLibrary, trigger: TriggerSpec) -> str:
     """被動觸發時機的一句話，帶參數的時機寫出參數（Phase 3-41a），例如「每命中 2 次」
     「施放帶「火焰」標籤的技能後」「敵人進入你的「水」表面時」。"""
+    text = _trigger_timing(library, trigger)
+    if trigger.target == "nearest_enemy":  # 3W-2b
+        text += f"，對 {trigger.max_distance} 格內最近的一名敵人"
+    return text
+
+
+def _trigger_timing(library: ContentLibrary, trigger: TriggerSpec) -> str:
     rules = library.ruleset
     name = rules.trigger_def(trigger.event).name_zh
     if trigger.n is not None:

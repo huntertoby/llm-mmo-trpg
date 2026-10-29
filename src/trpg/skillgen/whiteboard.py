@@ -44,7 +44,11 @@ from trpg.skillgen.random_composer import (
 )
 from trpg.skillgen.scaling import retarget_scaling
 from trpg.skillgen.validate import rarity_requirements, validate_skill
-from trpg.skillgen.whiteboard_check import is_whiteboard, whiteboard_problems
+from trpg.skillgen.whiteboard_check import (
+    is_whiteboard,
+    whiteboard_keywords_of,
+    whiteboard_problems,
+)
 
 __all__ = [
     "WHITEBOARD_KINDS",
@@ -250,7 +254,8 @@ def _attempt_passive(
     weights = composer.spell_attr_weights
     scaling = rng.choice(["int"] * weights.int_ + ["wis"] * weights.wis + ["wil"] * weights.wil)
     ctx = Ctx(library, rng, library.skeletons["passive"], "epic", tier, "spell", 1, _theme(recipe))
-    ctx.shape = "self"
+    shape = deepcopy(recipe.skill.get("shape", {"type": "self"}))  # 例：回合開始標記 3 格內的敵人
+    ctx.shape = str(shape["type"])
     _build_effect(ctx, recipe)
     timing = next(
         t for t in library.ruleset.skill_triggers.triggers if t.id == recipe.trigger_event
@@ -268,7 +273,7 @@ def _attempt_passive(
         "weapon_req": "any",
         "ap_cost": None,
         "scaling_attr": scaling,
-        "shape": {"type": "self"},
+        "shape": shape,
         "trigger": trigger,
         "cost": {"mana": mana + (tier - 1) * composer.passive.mana_per_tier},
     }
@@ -433,6 +438,16 @@ def _attempt(
     return _attempt_reaction(rng, library, seed, recipe, weapon_class, tier=tier)
 
 
+def _keyword_matches(
+    skill: SkillDef, recipe: WhiteboardRecipe, keyword: str | None, library: ContentLibrary
+) -> bool:
+    """指定關鍵字時，召喚白板推導出來的關鍵字必須就是它（3W-2b，3664e63f）：近戰的骷髏戰士會
+    推導成「倒地」，所以選「召喚物」時優先給遠程的基本召喚物（推導出來沒有別的關鍵字）。"""
+    if keyword is None or recipe.species != "summon":
+        return True
+    return whiteboard_keywords_of(skill, library) == (keyword,)
+
+
 def compose_whiteboard(
     seed: int,
     *,
@@ -476,6 +491,8 @@ def compose_whiteboard(
             continue
         if hero_attributes is not None and recipe.species != "dual":
             skill = retarget_scaling(skill, hero_attributes, lib, avoid=avoid_attr)
+        if not _keyword_matches(skill, recipe, keyword, lib):
+            continue
         if (
             not validate_skill(skill, lib)
             and not whiteboard_problems(skill, lib, tier)
