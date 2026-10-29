@@ -114,6 +114,10 @@ class StartRules(ContentModel):
     keywords: int = Field(default=2, ge=1, le=4)
     composer_tries: int = Field(default=16, ge=0)
     """池裡沒有與武器相容的起始技能時，隨機組合器（指定關鍵字）最多試幾個種子。"""
+    whiteboard: bool = True
+    """2 招起始技能是主動白板（Phase 3W-4，06 6.34.1）：單一效果、1 階，由組合器的單一效果模式
+    產生（``trpg.skillgen.whiteboard``）；形態池照舊給 1 階化身（6.30）；沒有白板配方的關鍵字
+    （召喚物、倒地、撞擊、潮濕）退回手寫的起始技能池。``False`` ＝ 全部走手寫池（舊行為）。"""
     heroes: dict[str, StartHero] = Field(default_factory=_default_heroes)
     """武器大類（``melee``／``ranged``／``focus``）→ 主角的基礎數值。"""
 
@@ -140,6 +144,11 @@ class CandidateSettings(ContentModel):
     """LLM 題目帶主題詞（例如「自然」，``content/llm/world_*.yaml`` 的 ``themes``）的機率（‰）。"""
     llm_reaction_permille: int = Field(default=100, ge=0, le=1000)
     """LLM 題目出反應技（而非主動技能）的機率（‰；Phase 4-L8b）。出不了反應題就改出主動技能題。"""
+    whiteboard: bool = True
+    """升級與任務三選一一律是白板（Phase 3W-4，06 6.34.1，
+    ``trpg.skillgen.whiteboard_candidates``）：單一效果、1 階、種類比例 70／20／10。
+    白板模式下 LLM 來源與通用池關閉。``False`` ＝ 完整技能三選一（加深／橋接／新方向的整招
+    候選，之後給完整技能節點用）。"""
 
 
 class RunRules(ContentModel):

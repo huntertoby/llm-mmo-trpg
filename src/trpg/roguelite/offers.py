@@ -15,6 +15,11 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 產生器先請 LLM 提議（失敗退回組合器與技能池，候選仍湊滿）；題目、嘗試次數與來源記在候選的
 ``OfferTag.llm``，run 內配額與紀錄由 :func:`offer_updates` 併入 ``RunState``。
 
+白板（Phase 3W-4，06 6.34.1）：``roguelite.yaml`` 的 ``candidates.whiteboard`` 為真（預設）時，
+三選一一律是白板（單一效果、1 階，主動 70／被動 20／反應 10；
+:mod:`trpg.skillgen.whiteboard_candidates`），LLM 來源在這個模式下關閉；為假時走完整技能的
+候選產生器（保留給之後的完整技能三選一）。
+
 ``off_route``（偏離路線，0.2 C）仍照舊標示：候選的縮放屬性與主角目前最高屬性不同的索引（只是標示，
 不再刻意湊一個）；武器技看主角手上武器的縮放屬性（3H-7）。
 ``roguelite.yaml`` 的 ``offer_size``、``off_route_per_offer``、
@@ -44,6 +49,7 @@ from trpg.skillgen.candidates import (
     keyword_distribution,
 )
 from trpg.skillgen.proposal_topic import primitive_uses
+from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates
 
 __all__ = [
     "candidate_request",
@@ -87,24 +93,29 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
     """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。"""
     settings = library.roguelite.candidates
     request = candidate_request(library, run)
-    found = generate_candidates(
-        library,
-        request,
-        CandidateRules(
-            composer_share_permille=settings.composer_share_permille,
-            composer_tries=settings.composer_tries,
-            general_share_permille=settings.general_share_permille,
-            llm_share_permille=settings.llm_share_permille,
-            llm_theme_permille=settings.llm_theme_permille,
-            llm_reaction_permille=settings.llm_reaction_permille,
-        ),
-        llm=current_proposer() if run.llm else None,
-    )
+    if settings.whiteboard:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
+        found = generate_whiteboard_candidates(library, request, settings.composer_tries)
+        tier = request.tier
+    else:
+        found = generate_candidates(
+            library,
+            request,
+            CandidateRules(
+                composer_share_permille=settings.composer_share_permille,
+                composer_tries=settings.composer_tries,
+                general_share_permille=settings.general_share_permille,
+                llm_share_permille=settings.llm_share_permille,
+                llm_theme_permille=settings.llm_theme_permille,
+                llm_reaction_permille=settings.llm_reaction_permille,
+            ),
+            llm=current_proposer() if run.llm else None,
+        )
+        tier = request.tier
     top = top_attribute(run.hero.attributes)
     candidates = tuple(c.skill for c in found)
     return SkillOffer(
         reason="level_up" if reason == "level_up" else "reroll",
-        tier=request.tier,
+        tier=tier,
         top_attribute=top,
         candidates=candidates,
         off_route=tuple(

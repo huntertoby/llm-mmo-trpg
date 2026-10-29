@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.roguelite.helpers import library
+from tests.roguelite.helpers import full_library as library
 from trpg.roguelite import (
     ActiveBattle,
     ChoiceError,

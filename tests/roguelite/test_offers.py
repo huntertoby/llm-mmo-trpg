@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.roguelite.helpers import library
+from tests.roguelite.helpers import full_library, library
 from trpg.content.skills import weapon_problem
 from trpg.roguelite import ChoiceError, RunState, new_run
 from trpg.roguelite.offers import equip_problems, make_offer, skill_defs, take_candidate
@@ -51,9 +51,28 @@ def test_offer_is_deterministic_and_depends_on_the_counter() -> None:
 
 
 @pytest.mark.slow
-def test_offer_tier_follows_the_level() -> None:
-    run = new_run(library(), "build_push", 5).model_copy(update={"level": 5})
-    assert {s.tier for s in _offer(run).candidates} == {library().roguelite.offer_tier(5)}
+def test_full_skill_offer_tier_follows_the_level() -> None:
+    """完整技能三選一（``candidates.whiteboard: false``）的階級依主角等級。"""
+    lib = full_library()
+    run = new_run(lib, "build_push", 5).model_copy(update={"level": 5})
+    offer = make_offer(lib, run, "level_up")
+    assert {s.tier for s in offer.candidates} == {lib.roguelite.offer_tier(5)}
+
+
+def test_whiteboard_offer_follows_the_hero_tier() -> None:
+    """白板三選一（預設；3W-4、#72）用角色目前階級的預算（offer_tier_by_level）。手寫池退回的技能
+    階級不高於角色階級。"""
+    lib = library()
+    for level in (1, 4, 8):
+        run = new_run(lib, "build_fire", 5).model_copy(update={"level": level})
+        offer = make_offer(lib, run, "level_up")
+        tier = lib.roguelite.offer_tier(level)
+        assert offer.tier == tier
+        assert all(s.tier <= tier for s in offer.candidates)
+        boards = [
+            s for s, t in zip(offer.candidates, offer.tags, strict=True) if t.source == "composer"
+        ]
+        assert boards and all(s.tier == tier for s in boards)
 
 
 def test_skip_keeps_the_skills() -> None:

@@ -212,3 +212,46 @@ llm_cost:
     - {ap: 3, cooldown: 4}
     - {ap: 3, cooldown: 5}
     - {ap: 3, cooldown: 5, mana: 6}
+
+# 白板技能（Phase 3W-4，docs/design/06-技能.md 6.34.1、玩法決定 #69；trpg.skillgen.whiteboard）：1 階、一個核心效果、一個關鍵字、
+# 形狀簡單（單體或小範圍）、沒有附帶效果、沒有條件；主動技用預設費用（AP 2、冷卻 0～2）；預算照同階規則（比例收在 tuning 區間內，
+# 即 75～95%，落在驗收的 70～100% 內）。「單一效果」模式只從下面的配方出（配方 ＝ 一個關鍵字的一個核心效果），所以每個白板剛好製造
+# 一個關鍵字；沒有配方的關鍵字（召喚物、形態，以及各種類缺的組合）由呼叫端退回手寫技能池或主動白板。稀有度取「配方需要的最低稀有度」
+# （例如被動至少 epic、推擊至少 rare），不增加強度。數值為初值，未經模擬。
+whiteboard:
+  kind_permille: {active: 700, passive: 200, reaction: 100}   # 升級與任務三選一的種類比例（07 7.6）
+  tier: 1                             # 沒指定階級時（創角）；升級與任務三選一用角色目前階級（roguelite.yaml 的 offer_tier_by_level，#72）
+  shape_min_tier: {square3: 2}        # 6.34.9：3×3 要角色 2 階；十字等其餘形狀 1 階就有
+  ap_cost: 2
+  cooldown: {min: 0, max: 2}
+  passive_mana: {min: 0, max: 2}
+  reaction_mana: {min: 0, max: 2}
+  reaction_cooldown: {min: 1, max: 2}
+  max_attempts: 60
+  active:
+    - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
+    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 烈焰爆, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
+    - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
+    - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
+    - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}
+    - {id: frost_shard, keyword: frozen, skeleton: strike, effect: {type: damage, element: ice}, name_zh: 冰錐, concept_zh: 一根冰錐射向目標, flavor_zh: 寒氣在掌心凝成尖錐，貼著空氣飛出去}
+    - {id: frost_patch, keyword: frozen, skeleton: control, effect: {type: create_surface, surface: ice}, theme: ice, shapes: [cross, square3], name_zh: 凝冰, concept_zh: 讓地面結出一層冰, flavor_zh: 霜花沿著地面蔓延，眨眼間凍成滑溜溜的冰面}
+    - {id: venom, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cross, square3], name_zh: 淬毒, concept_zh: 讓目標中毒, flavor_zh: 一絲綠光滲進傷口，毒性開始在血管裡蔓延}
+    - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
+    - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
+    - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
+    - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [cross, square3], categories: [spell], name_zh: 隆地, concept_zh: 讓一塊地面升高, flavor_zh: 地面隆隆震動，一塊平台緩緩頂了起來}
+  passive:
+    - {id: ember_touch, keyword: ignite, skeleton: passive, effect: {type: apply_status, status: burning, affects: enemies}, theme: fire, trigger_event: on_hit, name_zh: 餘燼, concept_zh: 命中時讓目標燒起來, flavor_zh: 每一次命中都留下一點燒不盡的餘燼}
+    - {id: flame_brand, keyword: ignite, skeleton: passive, effect: {type: damage, element: fire, affects: enemies}, trigger_event: on_hit, name_zh: 灼痕, concept_zh: 命中時額外灼傷目標, flavor_zh: 傷口邊緣冒出細小的火星}
+    - {id: static_touch, keyword: charged, skeleton: passive, effect: {type: damage, element: lightning, affects: enemies}, trigger_event: on_hit, name_zh: 靜電, concept_zh: 命中時放出一點電流, flavor_zh: 指尖劈啪作響，每次碰到目標都帶出一道電光}
+    - {id: chill_touch, keyword: frozen, skeleton: passive, effect: {type: damage, element: ice, affects: enemies}, trigger_event: on_hit, name_zh: 寒意, concept_zh: 命中時讓目標凍傷, flavor_zh: 一絲寒氣順著傷口鑽進去}
+    - {id: venom_touch, keyword: poisoned, skeleton: passive, effect: {type: apply_status, status: poison, affects: enemies}, theme: poison, trigger_event: on_hit, name_zh: 毒牙, concept_zh: 命中時讓目標中毒, flavor_zh: 兵刃上殘留的毒液隨傷口滲了進去}
+    - {id: shadow_edge, keyword: concealed, skeleton: passive, effect: {type: damage, element: shadow, affects: enemies}, trigger_event: on_hit, name_zh: 暗刃, concept_zh: 命中時附帶一道暗影傷害, flavor_zh: 影子沿著刃口延伸，多割開一道看不見的口子}
+  reaction:
+    - {id: flame_retort, keyword: ignite, skeleton: reaction, effect: {type: damage, element: fire}, reaction_event: hit_by_melee, shapes: [single], name_zh: 火焰反擊, concept_zh: 被近戰打中時反手噴出火焰, flavor_zh: 才剛挨了一下，火舌就已經貼上對手的臉}
+    - {id: spark_retort, keyword: charged, skeleton: reaction, effect: {type: damage, element: lightning}, reaction_event: hit_by_attack, shapes: [single], name_zh: 反震電流, concept_zh: 被攻擊命中時回敬一道電流, flavor_zh: 身上的靜電順著兵刃反竄回去}
+    - {id: frost_retort, keyword: frozen, skeleton: reaction, effect: {type: damage, element: ice}, reaction_event: hit_by_spell, shapes: [single], name_zh: 寒霜反噬, concept_zh: 被法術命中時回敬一道寒氣, flavor_zh: 法術撞上護身的霜氣，碎成冰屑彈了回去}
+    - {id: venom_retort, keyword: poisoned, skeleton: reaction, effect: {type: apply_status, status: poison}, theme: poison, reaction_event: enemy_enters_adjacent, shapes: [single], name_zh: 毒刺迎擊, concept_zh: 敵人貼上來時讓他中毒, flavor_zh: 對手剛踏進刀圈，毒刺已經等在那裡}
+    - {id: veil_retort, keyword: concealed, skeleton: reaction, effect: {type: apply_status, status: concealed, affects: self}, theme: shadow, reaction_event: hit_by_attack, shapes: [self], categories: [spell], name_zh: 隱身脫離, concept_zh: 被攻擊命中後藏進陰影, flavor_zh: 挨了一下之後，身影跟著一晃就融進暗處}
+    - {id: mark_retort, keyword: marked, skeleton: reaction, effect: {type: apply_status, status: marked}, reaction_event: enemy_leaves_adjacent, shapes: [single], name_zh: 追蹤印記, concept_zh: 敵人退開時給他留下印記, flavor_zh: 對手剛想轉身，背上已經多了一道光紋}

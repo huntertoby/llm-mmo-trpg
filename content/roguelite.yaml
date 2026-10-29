@@ -93,3 +93,6 @@ candidates:
   llm_theme_permille: 100
 # 4-L8b：LLM 題目出反應技（kind: reaction，骨架與事件由子集決定）的機率（‰，初值）；出不了反應題（關鍵字、稀有度沒有可用的反應骨架）就改出主動技能題。
   llm_reaction_permille: 100
+# 白板（Phase 3W-4，06 6.34.1、玩法決定 #69）：升級與任務三選一一律是白板（單一效果、1 階；主動 70／被動 20／反應 10 在 skill_composer.yaml 的
+# whiteboard.kind_permille）。白板模式下 LLM 來源與通用池關閉；false ＝ 完整技能三選一（保留給之後的完整技能節點）。
+  whiteboard: true
