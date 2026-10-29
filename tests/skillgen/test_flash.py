@@ -255,8 +255,8 @@ def test_templates_that_do_not_fit_return_none() -> None:
     assert apply_variation(lib, single, AREA, bonus=40, rng=Rng(0)) is None
     unknown = Variation(source="minor", template="nope", category="area")
     assert apply_variation(lib, single, unknown, bonus=40, rng=Rng(0)) is None
-    transform = Variation(source="transform", template="to_passive_on_hit", category="transform")
-    assert apply_variation(lib, single, transform, bonus=120, rng=Rng(0)) is None  # 3W-3 才實作
+    transform = Variation(source="transform", template="nope", category="transform")
+    assert apply_variation(lib, single, transform, bonus=120, rng=Rng(0)) is None
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +335,8 @@ def test_open_major_offer_mixes_deepen_and_bridge() -> None:
     state, _ = _walk(FIRE_BOLT, 2)
     offer = _offer(FIRE_BOLT, state)
     assert offer.major and len(offer.options) == 4
-    assert {o.variation.category for o in offer.options} == {"deepen", "bridge"}
+    # 第 3 次：加深、橋接各至少 1，有合法轉型時另有轉型（3W-3）
+    assert {o.variation.category for o in offer.options} == {"deepen", "bridge", "transform"}
 
 
 def test_open_minor_offer_covers_two_categories_when_it_can() -> None:
@@ -367,8 +368,8 @@ def test_focused_offer_costs_two_and_stays_in_its_category() -> None:
     state, _ = _walk(FIRE_BOLT, 2)
     offer = _offer(FIRE_BOLT, state, category="bridge")
     assert offer.cost == 2 and offer.category == "bridge"
-    assert 1 <= len(offer.options) <= 3
-    assert all(o.variation.category == "bridge" for o in offer.options)
+    assert 1 <= len(offer.options) <= 4  # 指定類別 3 個 ＋ 轉型保底另列 1 個
+    assert all(o.variation.category in ("bridge", "transform") for o in offer.options)
     moved, _skill = choose(state, offer, 0)
     assert moved.spent == state.spent + 2
     with pytest.raises(ValueError, match="不能指定類別"):
@@ -397,16 +398,7 @@ def test_categories_follow_skill_kind() -> None:
     assert "support" in allowed_categories(table, heal, major=False)
 
 
-def _fake_transform(skill: SkillDef, _v: Variation, _lib: object) -> list[Any]:
-    """測試用的轉型：結構不變（只為了檢查保底規則；真正的轉型在 3W-3）。"""
-    base = skill.model_dump(mode="json")
-    effects = [e.model_dump(mode="json", exclude_none=True) for e in skill.effects]
-    base.pop("effects")
-    return [(base, effects)]
-
-
-def test_transform_is_guaranteed_on_the_major_flash(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(flash.TRANSFORM_OPS, "to_passive_on_hit", _fake_transform)
+def test_transform_is_guaranteed_on_the_major_flash() -> None:
     state, _ = _walk(FIRE_BOLT, 2)
     open_offer = _offer(FIRE_BOLT, state)
     sources = [o.variation.source for o in open_offer.options]
@@ -419,7 +411,8 @@ def test_transform_is_guaranteed_on_the_major_flash(monkeypatch: pytest.MonkeyPa
     reflash = _offer(FIRE_BOLT, _walk(FIRE_BOLT, 3)[0], slot=3)
     assert any(o.variation.source == "transform" for o in reflash.options)  # 重閃第 3 次也保底
     transformed = next(o for o in open_offer.options if o.variation.source == "transform")
-    assert transformed.skill.name_zh.startswith("餘波・")
+    assert transformed.skill.name_zh.split("・")[0] in ("餘波", "反擊")  # 1 階只開被動、反應
+    assert transformed.skill.kind in ("passive", "reaction")
 
 
 def test_complete_skill_reflashes_its_adjustment_slot_only() -> None:

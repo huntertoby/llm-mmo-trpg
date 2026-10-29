@@ -250,12 +250,29 @@ major:
   - {id: major_bridge_exploit, category: bridge, evolution: bridge_exploit}
   - {id: major_bridge_imbue, category: bridge, evolution: bridge_imbue}
 
-# 主動技轉型（3W-3 實作；這裡先放 6.34.5 的兩個例子）。效果縮小到 scale_permille 後照被動、反應的預算重算。
+
+# ---------------------------------------------------------------------------
+# 3W-3：大變化補充模板與轉型（獨立區段，避免和小變化模板的修改衝突）。
+# ---------------------------------------------------------------------------
+
+# 大變化補充（6.34.5、原 3-26b 待辦「輔助類模板」）：進化模板做不出來的輔助技（治療、護盾、增益），
+# 與召喚技能（沿用 3-33f2 的三支）。op 的實作在 trpg.skillgen.flash_major。
+extra_major:
+  - {id: support_wide, category: deepen, op: support_wide, only: support, prefix_zh: 廣佈, summary_zh: 加深：影響範圍擴大 1 格，多照顧一個人（效果依預算調整）}
+  - {id: support_ease, category: deepen, op: support_ease, only: support, prefix_zh: 輕盈, summary_zh: 加深：冷卻縮短 1 回合，能更常使用（效果依預算調整）}
+  - {id: support_imbue, category: bridge, op: support_imbue, only: support, prefix_zh: 附帶, summary_zh: "橋接{keyword}：施放時在目標腳下留下{keyword}的場地"}
+  - {id: summon_deepen, category: deepen, op: summon_deepen, only: summon, prefix_zh: 強化, summary_zh: 加深：召喚物更強壯，並多一個小特性}
+  - {id: summon_count, category: deepen, op: summon_count, only: summon, prefix_zh: 雙生, summary_zh: 加深：一次召喚 2 隻較弱的召喚物}
+  - {id: summon_bridge, category: bridge, op: summon_bridge, only: summon, prefix_zh: 灌注, summary_zh: "橋接{keyword}：召喚物多帶一個{keyword}灌注"}
+
+# 轉型（6.34.5、#73）：第 3 次閃現（或重閃第 3 次）有合法轉型時一定是選項之一（#70）；可轉的種類有好幾種時
+# 由種子挑一種。min_tier：最低角色階級（1 階被動、反應；2 階起召喚、陷阱、姿態；3 階起修正型被動）。
+# 轉型後照新種類的預算重算；之前的小變化對新種類合法的保留、不合法的換成同類別的合法變化。
 transforms:
   - id: to_passive_on_hit
     to: passive
     prefix_zh: 餘波
-    summary_zh: 轉成被動：普攻打中敵人時，對旁邊一名敵人濺出縮小版的這招
+    summary_zh: 轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招
     trigger: {event: on_hit, target: other}
     scale_permille: 500
   - id: to_reaction_melee
@@ -264,3 +281,42 @@ transforms:
     summary_zh: 轉成反應：被近戰攻擊時，對攻擊者施放縮小版的這招
     reaction: {event: hit_by_melee}
     scale_permille: 600
+  - id: to_summon
+    to: summon
+    min_tier: 2
+    prefix_zh: 靈召
+    summary_zh: 轉成召喚：召喚一隻幫你出手的召喚物（依這招的元素）
+    summon_duration: 2
+    summon_boosts:        # 角色階級高、預算變大時依序加試（先試不強化的）
+      - {duration: 3}
+      - {duration: 4}
+      - {duration: 4, max_hp_permille: 300}
+      - {duration: 4, max_hp_permille: 600}
+    units:
+      fire: [summon_fire_spirit]
+      ice: [summon_ice_spirit]
+      lightning: [summon_thunder_spirit]
+      wind: [summon_hawk]
+      poison: [summon_vine]
+      earth: [summon_golem, summon_earth_wall]
+      holy: [summon_guardian_spirit]
+      shadow: [summon_shade]
+      any: [summon_war_wolf, summon_skeleton_warrior, summon_elemental_spirit]
+  - id: to_trap
+    to: trap
+    min_tier: 2
+    prefix_zh: 伏設
+    summary_zh: 轉成陷阱：在地上布下陷阱，敵人踩上去時才發動這招的效果
+    trap: {trigger: enter, rounds: 3, shape: single}
+  - id: to_stance
+    to: stance
+    min_tier: 2
+    prefix_zh: 架式
+    summary_zh: 轉成姿態：進入一個持續到取消的姿態（原招有傷害給攻擊向、沒有傷害給防守向）
+    stances: {offense: stance_fury, defense: stance_bulwark}
+  - id: to_modifier
+    to: modifier
+    min_tier: 3
+    prefix_zh: 化氣
+    summary_zh: 轉成修正型被動：你的同元素技能命中時，帶上這招的效果（沒有可帶的效果時改為傷害提高）
+    damage_permille_steps: [400, 300, 200, 150, 100, 50]
