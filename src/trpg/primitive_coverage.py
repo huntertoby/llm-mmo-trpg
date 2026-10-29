@@ -31,12 +31,21 @@ from __future__ import annotations
 from collections.abc import Collection
 from pathlib import Path
 
+from trpg.content.forms import FormEffects, FormEntry
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.modifier_changes import MODIFIER_CHANGES_FILE, ModifierChangeDef
+from trpg.content.races import RACE_EFFECT_SPECS
 from trpg.content.skills import PrimitiveDef
 from trpg.engine.ai.coverage import PRIMITIVE_VALUATION
+from trpg.engine.ai.race import RACE_EFFECT_SCORERS, RIDER_ONLY_EFFECTS
+from trpg.engine.forms import FORM_EFFECT_CONSUMERS, FORM_ENTRY_CONSUMERS
 from trpg.engine.modifiers import CHANGE_HANDLERS
 from trpg.engine.preview import PRIMITIVE_PREVIEW
+from trpg.engine.race_skills import (
+    RACE_EFFECT_EXECUTORS,
+    RACE_EFFECT_PROBLEMS,
+    UNCONDITIONAL_RACE_EFFECTS,
+)
 from trpg.engine.skills.primitives import PRIMITIVE_HANDLERS
 from trpg.narrative.skills import DESCRIBED_CHANGES, DESCRIBED_PRIMITIVES
 from trpg.shared.errors import ContentError
@@ -47,8 +56,11 @@ __all__ = [
     "change_coverage_problems",
     "check_primitive_coverage",
     "coverage_problems",
+    "form_coverage_problems",
     "knob_problems",
     "load_checked_library",
+    "race_coverage_problems",
+    "race_lead_problems",
 ]
 
 PRIMITIVES_FILE = "skill_primitives.yaml"
@@ -145,6 +157,66 @@ def change_coverage_problems(
     return problems
 
 
+def race_coverage_problems(
+    *,
+    effect_types: Collection[str] = RACE_EFFECT_SPECS.keys(),
+    executors: Collection[str] = RACE_EFFECT_EXECUTORS.keys(),
+    problems_table: Collection[str] = RACE_EFFECT_PROBLEMS.keys(),
+    unconditional: Collection[str] = UNCONDITIONAL_RACE_EFFECTS,
+    scorers: Collection[str] = RACE_EFFECT_SCORERS.keys(),
+    riders: Collection[str] = RIDER_ONLY_EFFECTS,
+) -> list[str]:
+    """每種種族技效果缺少的對應項（中文，依種類排序）：結算（executor）、合法性檢查（或明確宣告
+    無條件）、AI 計分函式（或明確宣告只作附帶效果）。參數給測試替換用。"""
+    problems: list[str] = []
+    for kind in sorted(effect_types):
+        if kind not in executors:
+            problems.append(f"種族技效果 {kind} 沒有結算（請補 race_skills.RACE_EFFECT_EXECUTORS）")
+        if kind not in problems_table and kind not in unconditional:
+            problems.append(
+                f"種族技效果 {kind} 沒有合法性檢查"
+                "（請補 race_skills.RACE_EFFECT_PROBLEMS，或列入 UNCONDITIONAL_RACE_EFFECTS）"
+            )
+        if kind not in scorers and kind not in riders:
+            problems.append(
+                f"種族技效果 {kind} 沒有 AI 計分函式"
+                "（請補 ai.race.RACE_EFFECT_SCORERS，或列入 RIDER_ONLY_EFFECTS）"
+            )
+    return problems
+
+
+def race_lead_problems(
+    leads: Collection[tuple[str, str]], riders: Collection[str] = RIDER_ONLY_EFFECTS
+) -> list[str]:
+    """種族技（``(種族技 ID, 第一個效果類型)``）以只能作附帶效果的類型開頭時，AI 永遠不會用它。"""
+    return [
+        f"種族技 {skill_id} 以附帶效果 {kind} 開頭（AI 只看第一個效果，永遠不會使用）"
+        for skill_id, kind in sorted(leads)
+        if kind in riders
+    ]
+
+
+def form_coverage_problems(
+    *,
+    effect_fields: Collection[str] = FormEffects.model_fields.keys(),
+    entry_fields: Collection[str] = FormEntry.model_fields.keys(),
+    effect_consumers: Collection[str] = FORM_EFFECT_CONSUMERS.keys(),
+    entry_consumers: Collection[str] = FORM_ENTRY_CONSUMERS.keys(),
+) -> list[str]:
+    """形態的效果欄位（``FormEffects``）與進入獎勵欄位（``FormEntry``）缺少的引擎對應項。"""
+    problems = [
+        f"形態效果欄位 {name} 沒有引擎處理（請補 engine.forms.FORM_EFFECT_CONSUMERS）"
+        for name in sorted(effect_fields)
+        if name not in effect_consumers
+    ]
+    problems += [
+        f"形態進入獎勵欄位 {name} 沒有引擎處理（請補 engine.forms.FORM_ENTRY_CONSUMERS）"
+        for name in sorted(entry_fields)
+        if name not in entry_consumers
+    ]
+    return problems
+
+
 def check_primitive_coverage(library: ContentLibrary) -> None:
     """檢查 ``library`` 的每個原語都有五處對應項與強度旋鈕的宣告、每種修正規則改變都有引擎、
     卡片文字與預算的對應項；
@@ -160,6 +232,13 @@ def check_primitive_coverage(library: ContentLibrary) -> None:
         raise ContentError(
             library.root / MODIFIER_CHANGES_FILE, f"修正規則改變的對應項不完整：\n{lines}"
         )
+    race_table = library.ruleset.races
+    races = () if race_table is None else race_table.races
+    leads = [(r.skill.id, r.skill.effects[0].type) for r in races]
+    problems = race_coverage_problems() + race_lead_problems(leads) + form_coverage_problems()
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(library.root / "races.yaml", f"種族技與形態的對應項不完整：\n{lines}")
 
 
 def load_checked_library(content_dir: Path | None = None) -> ContentLibrary:

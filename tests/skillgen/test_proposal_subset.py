@@ -47,7 +47,7 @@ def _evaluate(models: ProposalModels, data: dict[str, Any]) -> Any:
 
 
 BASE: dict[str, Any] = {
-    "form": "standard",
+    "layout": "standard",
     "name_zh": "測試技",
     "kind": "active",
     "skeleton": "area",
@@ -511,7 +511,7 @@ def _handmade_subset() -> ProposalSubset:
 def test_available_payload_format_snapshot() -> None:
     payload = available_payload(_lib(), _handmade_subset())
     assert list(payload) == [
-        "forms",
+        "layouts",
         "skeletons",
         "primitives",
         "shapes",
@@ -528,8 +528,8 @@ def test_available_payload_format_snapshot() -> None:
     assert set(passive["core"]) == {"primitives", "note"}
     assert set(passive["secondary"]) == {"primitives", "note"}
     assert passive["shapes"] == ["self"]
-    assert [e["id"] for e in payload["forms"]] == ["standard"]
-    assert all(set(e) == {"id", "hint"} for e in payload["forms"])
+    assert [e["id"] for e in payload["layouts"]] == ["standard"]
+    assert all(set(e) == {"id", "hint"} for e in payload["layouts"])
     assert all(set(e) == {"id", "hint"} for e in payload["shapes"])
     assert all(set(e) == {"id", "hint"} for e in payload["conditions"])
     assert all(set(e) == {"id", "hint"} for e in payload["triggers"])

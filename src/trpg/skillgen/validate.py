@@ -37,6 +37,7 @@ from trpg.content.skills import (
     COMPOSITE_KIND_ZH,
     COMPOSITE_MOVES,
     GATHER_SHAPES,
+    MAX_EFFECTS,
     ON_MISS_MIN_RARITY,
     REVIVE,
     SPLIT_SKELETONS,
@@ -65,7 +66,6 @@ __all__ = [
 ]
 
 _PERMILLE = 1000
-_MAX_EFFECTS = 4
 RARITY_STATUS_PRIMITIVES: tuple[str, ...] = ("apply_status",)
 """施加的狀態要檢查稀有度（``rarity.status``）的原語；LLM 提議模型依同一份清單篩狀態的列舉
 （Phase 4-L5b）。"""
@@ -179,8 +179,6 @@ def _scaling_range_violations(skill: SkillDef, library: ContentLibrary) -> list[
         )
         return [Violation(skill.id, "scaling.range", message)]
     allowed = library.scaling_range(skill)
-    if not allowed:  # 沒有載入縮放規則（測試用的內容庫）
-        return []
     out: list[Violation] = []
     if skill.scaling_attr not in allowed:
         out.append(_range_violation(skill, library, skill.scaling_attr, "縮放屬性", allowed))
@@ -366,8 +364,8 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
         out.append(Violation(skill.id, rule, message))
 
     count = effect_count(skill)
-    if not 1 <= count <= _MAX_EFFECTS:
-        add("cap.effects", f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {count} 個")
+    if not 1 <= count <= MAX_EFFECTS:
+        add("cap.effects", f"效果原語必須有 1 到 {MAX_EFFECTS} 個，收到 {count} 個")
     allowed = _WEAPON_REQ[skill.category]
     if skill.weapon_req not in allowed:
         add(

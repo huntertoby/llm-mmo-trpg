@@ -1,4 +1,4 @@
-"""Phase 4-L5b：讓隱藏的組合規則看得見——提議的型態（form）、稀有度篩狀態、錯誤路徑。
+"""Phase 4-L5b：讓隱藏的組合規則看得見——提議的版型（form）、稀有度篩狀態、錯誤路徑。
 
 全部用固定的提議 JSON，不需要網路與模型。"""
 
@@ -28,7 +28,7 @@ from trpg.skillgen.proposal import (
     evaluate_proposal,
     proposal_from_skill,
 )
-from trpg.skillgen.proposal_forms import STANDARD_FORM, form_id, is_special, plan_forms
+from trpg.skillgen.proposal_layouts import STANDARD_LAYOUT, is_special, layout_id, plan_layouts
 from trpg.skillgen.proposal_subset import (
     ProposalRequest,
     available_payload,
@@ -54,7 +54,7 @@ def _evaluate(data: dict[str, Any], models: ProposalModels | None = None) -> Pro
 
 RUSH: dict[str, Any] = {"type": "charge_through", "on_hit": "knock_prone"}
 CHARGE: dict[str, Any] = {
-    "form": "charge_through",
+    "layout": "charge_through",
     "name_zh": "蠻牛衝撞",
     "kind": "active",
     "skeleton": "displace",
@@ -71,7 +71,7 @@ def _by_path(result: ProposalResult) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# 型態：組合規則進 schema
+# 版型：組合規則進 schema
 # ---------------------------------------------------------------------------
 
 
@@ -83,7 +83,7 @@ def test_charge_through_form_only_offers_ground_tile() -> None:
 
 
 def test_charge_through_is_not_in_the_standard_form() -> None:
-    result = _evaluate({**CHARGE, "form": STANDARD_FORM})
+    result = _evaluate({**CHARGE, "layout": STANDARD_LAYOUT})
     error = _by_path(result)["effects[0]"]
     assert error.code == "union_tag_invalid"
     assert "charge_through" not in error.allowed
@@ -114,8 +114,8 @@ def test_position_rule_is_reported_with_a_path() -> None:
     assert "第一個效果" in error.message
 
 
-def test_sole_effect_forms_allow_one_effect() -> None:
-    form = next(f for f in plan_forms(_lib(), **_full())[0] if f.id == "teleport_target")
+def test_sole_effect_layouts_allow_one_effect() -> None:
+    form = next(f for f in plan_layouts(_lib(), **_full())[0] if f.id == "teleport_target")
     assert form.max_effects == 1
     assert form.effects == ("teleport_target",)
     assert form.shapes == ("unit_then_tile",)
@@ -131,22 +131,22 @@ def _full() -> dict[str, Any]:
 
 
 def test_every_special_primitive_has_a_form_and_standard_has_none() -> None:
-    plans, excluded = plan_forms(_lib(), **_full())
+    plans, excluded = plan_layouts(_lib(), **_full())
     rules = composition_rules()
     by_id = {p.id: p for p in plans}
-    standard = by_id[STANDARD_FORM]
+    standard = by_id[STANDARD_LAYOUT]
     for primitive in _lib().ruleset.primitives.primitives:
         rule = rules[primitive.id]
         if is_special(rule):
             assert primitive.id not in standard.effects
-            assert primitive.id in by_id[form_id(rule)].leads, primitive.id
-            form = by_id[form_id(rule)]
+            assert primitive.id in by_id[layout_id(rule)].leads, primitive.id
+            form = by_id[layout_id(rule)]
             if rule.allowed_shapes is not None:
                 assert set(form.shapes) <= set(rule.allowed_shapes), primitive.id
         else:
             assert primitive.id in standard.effects
     assert excluded == ()
-    # 要求特定原語的形狀不在一般型態
+    # 要求特定原語的形狀不在一般版型
     assert set(standard.shapes).isdisjoint(SHAPE_REQUIRED_PRIMITIVES)
 
 
@@ -157,22 +157,22 @@ def test_shape_required_primitives_agree_with_yaml() -> None:
             assert shape in (rules[primitive].allowed_shapes or ()), (shape, primitive)
 
 
-def test_handwritten_skills_map_to_existing_forms() -> None:
-    forms = {f for f, _ in _models().forms}
+def test_handwritten_skills_map_to_existing_layouts() -> None:
+    layouts = {f for f, _ in _models().layouts}
     for skill in sorted(_lib().skills.values(), key=lambda s: s.id):
         try:
             proposal = proposal_from_skill(skill, _lib())
         except ValueError:
             continue
-        assert proposal["form"] in forms, (skill.id, proposal["form"])
-        assert next(iter(proposal)) == "form"
+        assert proposal["layout"] in layouts, (skill.id, proposal["layout"])
+        assert next(iter(proposal)) == "layout"
 
 
-def test_missing_form_lists_the_forms() -> None:
-    data = {k: v for k, v in CHARGE.items() if k != "form"}
-    error = _by_path(_evaluate(data))["form"]
+def test_missing_form_lists_the_layouts() -> None:
+    data = {k: v for k, v in CHARGE.items() if k != "layout"}
+    error = _by_path(_evaluate(data))["layout"]
     assert error.code == "union_tag_not_found"
-    assert set(error.allowed) == {f for f, _ in _models().forms}
+    assert set(error.allowed) == {f for f, _ in _models().layouts}
 
 
 def test_schema_drops_annotation_keywords() -> None:
@@ -281,7 +281,7 @@ def test_rarity_blocked_status_is_rejected_at_proposal_stage() -> None:
     subset = select_subset(_lib(), ProposalRequest(tier=1, rarity="common", skeleton="strike"))
     models = build_subset_models(_lib(), subset)
     proposal = {
-        "form": "standard",
+        "layout": "standard",
         "name_zh": "測試",
         "kind": "active",
         "skeleton": "strike",
@@ -308,15 +308,15 @@ def test_non_active_requests_drop_active_only_primitives() -> None:
 
 
 # ---------------------------------------------------------------------------
-# available：型態與骨架結構
+# available：版型與骨架結構
 # ---------------------------------------------------------------------------
 
 
-def test_available_lists_forms_and_skeleton_structure() -> None:
+def test_available_lists_layouts_and_skeleton_structure() -> None:
     subset = select_subset(_lib(), ProposalRequest(tier=2, rarity="rare", skeleton="displace"))
     payload = available_payload(_lib(), subset)
-    forms = {f["id"]: f["hint"] for f in payload["forms"]}
-    assert forms == dict(build_subset_models(_lib(), subset).forms)
+    layouts = {f["id"]: f["hint"] for f in payload["layouts"]}
+    assert layouts == dict(build_subset_models(_lib(), subset).layouts)
     skeleton = payload["skeletons"][0]
     core = _lib().skeletons["displace"].core
     assert skeleton["core"]["primitives"] == [p for p in core.primitives if p in subset.primitives]

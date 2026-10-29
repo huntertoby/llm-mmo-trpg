@@ -138,7 +138,7 @@ def test_stun_on_single_target_is_repaired_by_the_engine(
 ) -> None:
     """形狀已經是 single 的硬控提議：缺的只有冷卻，引擎補到 4 後通過，不必回 LLM。"""
     proposal = {
-        "form": "standard",
+        "layout": "standard",
         "name_zh": "冰封",
         "kind": "active",
         "skeleton": "control",
@@ -210,7 +210,7 @@ def test_repairable_codes(library: ContentLibrary) -> None:
     [
         # 3T-1 補上的旋鈕（原本 fixed 表沒有，LLM 選這些原語時數值只能停在最小值）
         ({"type": "grant_ap"}, "spell", (("amount", (1, 2), 1),)),
-        ({"type": "extra_reaction"}, "spell", (("amount", (1,), 1),)),
+        ({"type": "extra_reaction"}, "spell", ()),  # 只有一階：knob: none（3T-2）
         ({"type": "summon"}, "spell", (("duration", (1, 2, 3, 4), 1),)),
         ({"type": "zone"}, "spell", (("duration", (1, 2, 3, 4), 1),)),
         ({"type": "revive"}, "spell", (("hp_permille", tuple(range(100, 1001, 100)), 1),)),

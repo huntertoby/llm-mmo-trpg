@@ -209,7 +209,7 @@ def test_stats_and_alert(library: ContentLibrary) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4-L5b：先修可修的、再回報其餘；型態與骨架結構進 prompt
+# 4-L5b：先修可修的、再回報其餘；版型與骨架結構進 prompt
 # ---------------------------------------------------------------------------
 
 
@@ -233,17 +233,17 @@ def test_mixed_errors_engine_repairs_cooldown_first(library: ContentLibrary) -> 
 
 
 def test_charge_through_form_in_prompt_and_schema(library: ContentLibrary) -> None:
-    """帶 charge_through 的提議走自己的型態：available 有它的說明、形狀只有 ground_tile。"""
+    """帶 charge_through 的提議走自己的版型：available 有它的說明、形狀只有 ground_tile。"""
     request = ProposalRequest(1, "rare", skeleton="displace")
     prompt = build_proposal_prompt(library, request)
-    forms = dict(prompt.models.forms)
-    assert "charge_through" in forms and "ground_tile" in forms["charge_through"]
+    layouts = dict(prompt.models.layouts)
+    assert "charge_through" in layouts and "ground_tile" in layouts["charge_through"]
     user = _user(prompt.messages)
-    assert "charge_through" in user and '"forms"' in user
+    assert "charge_through" in user and '"layouts"' in user
     shape = prompt.json_schema["$defs"]["SkillProposal_charge_through"]["properties"]["shape"]
     assert shape == {"$ref": "#/$defs/Shape_ground_tile"}
     rush = _proposal_text(library, "skill_bull_rush")
-    assert json.loads(rush)["form"] == "charge_through"
+    assert json.loads(rush)["layout"] == "charge_through"
     outcome = propose_skill(
         MockLLMClient([rush]), library, request, ProposalContext(1, "rare"), seed=3
     )

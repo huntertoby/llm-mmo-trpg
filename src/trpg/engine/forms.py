@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Literal
 
@@ -47,13 +48,22 @@ from trpg.engine.events import (
 from trpg.engine.gear_state import GearState
 from trpg.engine.ids import CONCEALED
 from trpg.engine.modifiers import form_entry_permille, form_upkeep_permille
-from trpg.engine.rules.forms import form_heal_permille
+from trpg.engine.rules.forms import (
+    form_collision_permille,
+    form_defense_permille,
+    form_flat_height,
+    form_heal_permille,
+    form_move_delta,
+    form_taken_permille,
+)
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import effective_attribute, stance_status_ids
 from trpg.engine.state import FormState, UnitState
 from trpg.shared.types import Element
 
 __all__ = [
+    "FORM_EFFECT_CONSUMERS",
+    "FORM_ENTRY_CONSUMERS",
     "enter_form",
     "leave_all_forms",
     "leave_form",
@@ -291,3 +301,29 @@ def pay_upkeep(ctx: Ctx, unit: UnitState) -> bool:
         remaining=have - amount,
     )
     return False
+
+
+FORM_EFFECT_CONSUMERS: dict[str, Callable[..., object]] = {
+    "defense_permille": form_defense_permille,
+    "move": form_move_delta,
+    "max_hp_permille": enter_form,
+    "damage_taken": form_taken_permille,
+    "heal_permille": form_heal_permille,
+    "flat_height": form_flat_height,
+}
+"""``FormEffects`` 的每個欄位由哪個函式在引擎中生效（``primitive_coverage`` 檢查欄位與此表一致；
+卡片文字另由 ``form_text`` 檢查）。形態的價值由 AI 的預覽收益（``form_entered`` 事件）統一評估，
+沒有逐欄位的計分函式。"""
+FORM_ENTRY_CONSUMERS: dict[str, Callable[..., object]] = {
+    "shield_max_hp_permille": _entry_effects,
+    "shield_duration": _entry_effects,
+    "heal_max_hp_permille": _entry_effects,
+    "next_attack_hit": _entry_effects,
+    "next_attack_crit": _entry_effects,
+    "move": _entry_effects,
+    "conceal": _entry_effects,
+    "burst": _burst_effects,
+    "heal_adjacent": _heal_adjacent_effects,
+    "collision_permille": form_collision_permille,
+}
+"""``FormEntry`` 的每個欄位由哪個函式在引擎中生效（同上）。"""

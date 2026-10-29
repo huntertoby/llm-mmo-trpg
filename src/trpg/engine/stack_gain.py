@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from trpg.content.equipment import ChargeAffix
+from trpg.content.form_breath import BREATH_PREFIX
 from trpg.content.library import Ruleset
 from trpg.content.skills import CONSUME_STACK, SkillDef
 from trpg.content.stacks import GainOn, StackDef
@@ -42,20 +43,19 @@ STACK_GAIN_PREFIX = "stack_gain:"
 """``Fired.event`` 的前綴（``stack_gain:<時機>``；``Fired.skill_id`` 為層數 ID）。"""
 
 
-def _skill(rules: Ruleset, skill_id: str) -> SkillDef | None:
-    try:
-        return rules.skill_def(skill_id)
-    except KeyError:
+def _event_skill(rules: Ruleset, skill_id: str) -> SkillDef | None:
+    """攻擊事件的技能。形態的蓄力吐息技能由形態資料臨時組出、不登錄在規則包（回傳 ``None``，
+    它不是武器技也不消耗層數）；其餘 ID 找不到就是資料錯誤，直接拋 ``KeyError``。"""
+    if skill_id.startswith(BREATH_PREFIX):
         return None
+    return rules.skill_def(skill_id)
 
 
 def consumes(rules: Ruleset, unit: UnitState, stack_id: str) -> bool:
     """``unit`` 身上有沒有消耗 ``stack_id`` 的技能（``consume_stack``）。"""
     for skill_id in unit.skills:
-        skill = _skill(rules, skill_id)
-        if skill is not None and any(
-            e.type == CONSUME_STACK and e.stack == stack_id for e in skill.effects
-        ):
+        skill = rules.skill_def(skill_id)
+        if any(e.type == CONSUME_STACK and e.stack == stack_id for e in skill.effects):
             return True
     return False
 
@@ -111,7 +111,7 @@ def collect_attack(ctx: Ctx, event: AttackRolled) -> None:
     if event.skill_id is None:
         _collect(ctx, event.seq, event.attacker_id, "basic_attack_hit", event.target_id)
         return
-    skill = _skill(ctx.rules, event.skill_id)
+    skill = _event_skill(ctx.rules, event.skill_id)
     if skill is not None and skill.category == "weapon":
         _collect(ctx, event.seq, event.attacker_id, "weapon_skill_hit", event.target_id)
 

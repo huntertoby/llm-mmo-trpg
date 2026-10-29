@@ -31,12 +31,11 @@ from trpg.engine.skills import shapes
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Surface
 
-__all__ = ["race_ai_action"]
+__all__ = ["RACE_EFFECT_SCORERS", "RIDER_ONLY_EFFECTS", "race_ai_action"]
 
 _MIN_AP_AFTER = 2
 """用完種族技後還要能行動（一般動作 1 AP）：回合開始 AP 至少這麼多才用需要「接著行動」的種族技。"""
 _RESTORE_MIN_DEFICIT = 6
-_DECOY_RANGE = 7
 _MIN_CLUSTER = 2
 
 type _Scorer = Callable[[BattleState, UnitState, UseRaceSkill], int]
@@ -72,8 +71,11 @@ def _adapt_score(state: BattleState, unit: UnitState, _a: UseRaceSkill) -> int:
 
 
 def _decoy_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
+    skill = race_skill_of(state, unit)
+    assert skill is not None
+    decoy = next(e for e in skill.effects if e.type == "decoy")  # 第一個效果是 decoy 才會到這裡
     nearest = _nearest(state, unit)
-    if nearest is None or nearest > _DECOY_RANGE or unit.ap < _MIN_AP_AFTER:
+    if nearest is None or nearest > (decoy.ai_trigger_range or 0) or unit.ap < _MIN_AP_AFTER:
         return 0
     if any(u.owner_id == unit.id and u.has_tag(DECOY_TAG) for u in state.living_units()):
         return 0  # 已經有一個誘餌
@@ -148,7 +150,7 @@ def _surface_score(state: BattleState, unit: UnitState, action: UseRaceSkill) ->
     return len(inside) if len(inside) >= _MIN_CLUSTER else 0
 
 
-_SCORERS: dict[str, _Scorer] = {
+RACE_EFFECT_SCORERS: dict[str, _Scorer] = {
     "bonus_move": _adapt_score,
     "conceal_self": _near_score(7),
     "decoy": _decoy_score,
@@ -161,14 +163,20 @@ _SCORERS: dict[str, _Scorer] = {
 }
 
 
+RIDER_ONLY_EFFECTS = frozenset({"ignore_opportunity_attack"})
+"""不單獨決定「要不要用」的效果類型：只作為同一招第一個效果的附帶效果（應變的「移動不觸發藉機
+攻擊」）。AI 依第一個效果的計分函式決定；其餘類型必須在 :data:`RACE_EFFECT_SCORERS` 有計分函式
+（``primitive_coverage`` 檢查，且內建種族不得以附帶效果開頭）。"""
+
+
 def race_ai_action(state: BattleState, unit: UnitState) -> UseRaceSkill | None:
     """``unit`` 此刻要不要用種族技；要的話回傳分數最高的合法動作（同分取列舉順序在前的）。"""
     if unit.race is None or unit.is_summon or unit.has_tag(DECOY_TAG):
         return None
     skill = race_skill_of(state, unit)
-    scorer = None if skill is None else _SCORERS.get(skill.effects[0].type)
-    if scorer is None:
+    if skill is None or skill.effects[0].type in RIDER_ONLY_EFFECTS:
         return None
+    scorer = RACE_EFFECT_SCORERS[skill.effects[0].type]
     best: UseRaceSkill | None = None
     best_score = 0
     for action in race_skill_actions(state, unit):

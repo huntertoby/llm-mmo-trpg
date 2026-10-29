@@ -498,6 +498,9 @@ class ContentLibrary:
     """roguelite 一輪的參數（``roguelite.yaml``，Phase 3-5a）。"""
     workshop: WorkshopRules
     """技能工坊「裝上試玩」的設定（``workshop.yaml``，Phase 3F-1）。"""
+    skill_scaling: SkillScalingRules
+    """技能縮放屬性的允許範圍（``skill_scaling.yaml``，Phase 3H-1；武器技看武器、法術技依主題）。
+    必填（Phase 3T-2）：沒有縮放規則的內容庫無法驗證技能。"""
     affixes: dict[str, AffixDef] = field(default_factory=dict)
     """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
     offhands: dict[str, OffhandDef] = field(default_factory=dict)
@@ -514,12 +517,6 @@ class ContentLibrary:
     """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
     workshop_text: WorkshopTextTable = field(default_factory=WorkshopTextTable)
     """工坊說明的玩家語氣對照表（``workshop_text.yaml``，Phase 3-48f）；不屬於規則。"""
-    skill_scaling: SkillScalingRules = field(
-        default_factory=lambda: SkillScalingRules.model_construct(
-            spell_themes=(), body_attrs=(), overrides=()
-        )
-    )
-    """技能縮放屬性的允許範圍（``skill_scaling.yaml``，Phase 3H-1；武器技看武器、法術技依主題）。"""
     regions: RegionTable | None = None
     """區域主題表（``regions.yaml``，Phase 3-37a；純顯示資料）。"""
     races: RaceTable | None = None
@@ -668,6 +665,7 @@ def load_library(  # noqa: PLR0915
         shapes=shapes.by_id(),
         weather=weather.by_id(),
         terrain=terrain.by_id(),
+        summons=frozenset(s.id for s in summons.summons),
     )
     try:
         ruleset = Ruleset(
@@ -860,6 +858,7 @@ def _load_races(
     shapes: Mapping[str, object],
     weather: Mapping[str, object],
     terrain: Mapping[str, object],
+    summons: frozenset[str],
 ) -> tuple[RaceTable | None, OriginTable | None]:
     """種族與出身（Phase 3R-1；兩個檔案可以都不存在，但要有就一起有）與跨檔案檢查。"""
     has_races = (root / "races.yaml").exists()
@@ -879,6 +878,7 @@ def _load_races(
         shape_ids=frozenset(shapes),
         weather_ids=frozenset(weather),
         terrain_ids=frozenset(terrain),
+        summon_ids=summons,
     )
     if problems:
         raise ContentError(root / "races.yaml", "；".join(problems))

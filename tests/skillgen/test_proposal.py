@@ -77,7 +77,7 @@ def test_one_branch_per_primitive_from_yaml() -> None:
     lib = _lib()
     schema = _models().json_schema()
     primitives = lib.ruleset.primitives.by_id()
-    # 一般型態只有沒有組合規則的原語；有組合規則的原語在自己的型態（Phase 4-L5b）
+    # 一般版型只有沒有組合規則的原語；有組合規則的原語在自己的版型（Phase 4-L5b）
     assert general_effect_tags(schema) == set(primitives) - _special_ids()
     assert {f"Effect_{i}" for i in primitives} <= set(schema["$defs"])
     for primitive in primitives.values():
@@ -192,7 +192,7 @@ def test_primitive_subset_shrinks_schema() -> None:
 # ---------------------------------------------------------------------------
 
 CLEAVE = {
-    "form": "standard",
+    "layout": "standard",
     "name_zh": "橫掃劈砍",
     "concept": "巨劍掃出一道弧，把前方的人一起削倒",
     "cast_flavor": "盜賊頭目雙手揮動巨劍，朝面前橫掃",
