@@ -63,3 +63,6 @@
 - **3R-3c**（報告 `Phase3R-3c報告.md`）：體型、臉部紋路、鬍子、獠牙、豎瞳、龍裔定案版；角魔 `horn_color` `#bfb0a4`、角抬帽時頭髮照不遮頭頂畫（美術 PM 小修）。待美術 PM 驗收。
 - 合併後全量（除 llm，含 3R-3a）：pytest 8527、vitest 1097、mypy、lint-imports、build、重播（swamp 種子 12，矮人）全過；3R-3c 合併後 vitest 1103、build、api／content 1826 通過。
 - **3R 可玩種族與出身完成**（美術 PM 驗收 3R-3c 後）。
+
+### 4.7 3R-4｜鱗族被動改版（#68，07 7.7，`359c927c`；使用者：「鱗族 A」；sonnet；約 0.15 段）
+新規則：自己回合開始時站在水或冰面（看那一格的表面）→ 這回合移動 +1（只加這回合；回合中離開水面不收回）；在冰面上不滑倒（維持）。刪掉原本「水與冰面移動不花額外點數」的半句（`content/races.yaml` 被動規則、卡片句）。表格測試：回合開始站水／冰／一般地面 × 鱗族／非鱗族；回合中離開不收回；冰面不滑倒照舊。驗收：pytest（engine、content、narrative，`-m "(slow or not slow) and not llm"`、`tests/cli --timeout=3000`）、ruff、format、mypy；改紀錄格式就遞增 `LOG_FORMAT`（目前 `/86`）。報告 `Phase3R-4報告.md`。
