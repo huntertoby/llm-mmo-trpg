@@ -271,3 +271,7 @@
 - 報告 `Phase4-L6報告.md`。`llm` 候選來源（`candidates.llm_share_permille` 800‰、主題 `llm_theme_permille` 100‰，初值）；每種候選最多一次 LLM，失敗退回組合器 → 技能池；`keyword.required` 強制；形態關鍵字不出題、`enter_form`／`leave_form` 不進核心抽籤；3C 的 0～3（「自然」主題、`core_primitive`、輪替選單附帶 6／條件 4、`available` 由種子打亂、run 內配額 `skill_composer.yaml` `llm_topic`）；新增 `weapon.incompatible` 檢查；生成結果寫進 run（`trpg-run/8`，/5～/7 可讀）、重播不呼叫；退回率 > 20% 寫進摘要；`trpg run new|auto --llm／--llm-mock`；`config/llm.toml` `generate`（預設 false）；`OfferTagOut.source` 加 `"llm"`。
 - 合併後全量（除 llm）：pytest 8593、vitest 1104、mypy、lint-imports、build 全過；`trpg run auto --seed 5 --llm-mock` 跑完（Mock 只能挑手寫技能，7 題全部退回、觸發提醒——Mock 的限制，真模型看 4-L9）。
 - 待決 → 決定：#2 schema 列舉順序不打亂（只打亂 `available`）、#3 每種候選只請一次、#4、#6、#7、#8 → 接受，4-L9 看真模型再調；#1 Mock 成功率 → 接受（不另寫 Mock）；#5 網頁開關 → 之後的前端段（API 欄位＋設定畫面）。
+
+### 4.9 4-L7 驗收（2026-10-29，開發 PM）
+- 報告 `Phase4-L7報告.md`。命名 prompt `skill-naming/1`；長度上限與禁字在 `content/llm/world_shattered.yaml` `naming`；`trpg.llm.naming`（長度、空字串、字元集、禁字、重名；3 次後退回組合式名稱「元素・骨架」＋模板敘事）；`make_proposer(..., naming=)` 只對 `llm` 來源命名；存檔 `trpg-run/9`（/5～/8 可讀），`LlmRecord` 加 `name_source`／`name_attempts`／`name_codes`。合併後 ruff、mypy、llm／roguelite／skillgen 2391 通過；`trpg run auto --seed 1 --llm-mock` 命名 1 個成功。
+- 待決 → 決定：#2 提議 schema 移除 `name_zh`、#8 prompt 版本號寫進 run 紀錄 → 併入 4-L8；#1 去重看不到本輪持有技能、#3 呼叫次數、#4 敘事禁阿拉伯數字、#5 禁字表 → 4-L9 看真模型再調；#6、#7 接受。
