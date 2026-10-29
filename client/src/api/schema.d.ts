@@ -3530,6 +3530,67 @@ export interface components {
             ward: string;
         };
         /**
+         * RaceLook
+         * @description 預設外觀參數（顯示用，不進引擎結算）；欄位照 ``docs/art/sample/raceArt.js`` 的 ``look``
+         *     （駝峰改底線）。
+         *
+         *     ``hair``／``ears``／``horns``／``tail``／``pattern``／``build`` 的值由 3R-3 的前端決定畫法；
+         *     這裡只擋非 ID 值。顏色為 ``#rrggbb``。省略＝部件不存在。
+         */
+        RaceLook: {
+            /** Skin */
+            skin: string;
+            /** Hair */
+            hair?: string | null;
+            /** Hair Color */
+            hair_color?: string | null;
+            /** Ears */
+            ears?: string | null;
+            /** Horns */
+            horns?: string | null;
+            /** Horn Color */
+            horn_color?: string | null;
+            /** Tail */
+            tail?: string | null;
+            /** Tail Color */
+            tail_color?: string | null;
+            /** Pattern */
+            pattern?: string | null;
+            /** Mark Color */
+            mark_color?: string | null;
+            /** Eyes */
+            eyes?: string | null;
+            /** Build */
+            build?: string | null;
+            /**
+             * Beard
+             * @default false
+             */
+            beard: boolean;
+            /**
+             * Tusks
+             * @default false
+             */
+            tusks: boolean;
+            /** Scale Color */
+            scale_color?: string | null;
+            /**
+             * Slit Eyes
+             * @default false
+             */
+            slit_eyes: boolean;
+            /**
+             * Ridge
+             * @default false
+             */
+            ridge: boolean;
+            /**
+             * Spines
+             * @default false
+             */
+            spines: boolean;
+        };
+        /**
          * RaceView
          * @description 單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。
          *
@@ -3570,6 +3631,7 @@ export interface components {
             passive_description_zh: string;
             /** Passive Active */
             passive_active: boolean;
+            look: components["schemas"]["RaceLook"];
         };
         /**
          * ReactionRuleView

@@ -24,6 +24,7 @@ from trpg.content.equipment import (
 )
 from trpg.content.form_text import form_effect_lines, natural_weapon_text, upkeep_text
 from trpg.content.maps import Objective
+from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.attack_element import effective_attack_element
@@ -327,6 +328,9 @@ class RaceView(_ViewModel):
     passive_description_zh: str
     passive_active: bool
     """環境被動此刻有沒有作用（天氣型、地圖型看目前戰場；其餘恆為真）。"""
+    look: RaceLook
+    """種族的預設外觀（Phase 3R-3b，``races.yaml`` 的 ``look``；純顯示資料）：
+    前端紙娃娃疊在單位外觀上。"""
 
 
 class UnitView(_ViewModel):
@@ -983,6 +987,7 @@ def _race_view(state: BattleState, unit: UnitState) -> RaceView | None:
         passive_name_zh=race.passive.name_zh,
         passive_description_zh=race.passive.description_zh,
         passive_active=passive_active(state, unit),
+        look=race.look,
     )
 
 
