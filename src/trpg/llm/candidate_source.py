@@ -23,6 +23,8 @@ from trpg.content.skills import SkillDef, rarity_rank
 from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient
 from trpg.llm.naming import DEFAULT_NAMING_ATTEMPTS, apply_naming, name_skill
+from trpg.llm.prompts.builder import PROMPT_VERSION
+from trpg.llm.prompts.naming import NAMING_PROMPT_VERSION
 from trpg.llm.prompts.proposal import build_proposal_prompt
 from trpg.llm.propose import DEFAULT_MAX_ATTEMPTS, ProposalOutcome, propose_skill
 from trpg.shared.rng import Rng
@@ -59,9 +61,10 @@ class ProposerStats(Protocol):
 
 def _attempt_of(outcome: ProposalOutcome) -> LlmAttempt:
     codes = tuple(dict.fromkeys(c for record in outcome.records for c in record.codes))
+    version = PROMPT_VERSION if outcome.attempts else None  # 寫進 run 紀錄（4-L8）
     if outcome.source == "llm":
-        return LlmAttempt(outcome.skill, outcome.attempts, codes)
-    return LlmAttempt(None, outcome.attempts, codes, outcome.reason)
+        return LlmAttempt(outcome.skill, outcome.attempts, codes, prompt_version=version)
+    return LlmAttempt(None, outcome.attempts, codes, outcome.reason, prompt_version=version)
 
 
 type NamingClient = LLMClient | Callable[[SkillDef, int], LLMClient]
@@ -100,6 +103,7 @@ def name_attempt(
         name_source=result.source,
         name_attempts=result.attempts,
         name_codes=result.codes,
+        naming_prompt_version=NAMING_PROMPT_VERSION,
     )
 
 

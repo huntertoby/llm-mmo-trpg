@@ -70,10 +70,12 @@ from trpg.content.skills import (
     TriggerSpec,
     VariantWhen,
     rarity_rank,
+    skill_elements,
     weapon_problem,
 )
 from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.option_gear import gear_pool
+from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal_costs import (
     COST_DOCS,
     apply_cost_choices,
@@ -112,6 +114,7 @@ __all__ = [
     "ProposalResult",
     "budget_statuses",
     "build_proposal_models",
+    "combined_skill_name",
     "composite_allowed",
     "evaluate_proposal",
     "feedback_payload",
@@ -1010,7 +1013,7 @@ def build_proposal_models(
         )
     sk = SkillDef.model_fields
     common: dict[str, Any] = {
-        "name_zh": (str, Field(min_length=1, max_length=12)),
+        # 名稱不在提議裡（4-L8，PM 追加）：由命名步驟（4-L7）產生，沒有命名時用組合式名稱
         "description_zh": (str | None, None),
         "concept": (str, Field(default="", max_length=80)),
         "cast_flavor": (str, Field(default="", max_length=80)),
@@ -1108,8 +1111,32 @@ def _skill_data(
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
     data = fill(data)
+    data["name_zh"] = _combined_name(data, library)
     data["id"] = _skill_id(data)
     return data
+
+
+PLACEHOLDER_NAME = "提議技能"
+"""結構不合法、算不出組合式名稱時的名稱（轉換會在 ``skill`` 階段報錯，不會出現在遊戲裡）。"""
+
+
+def combined_skill_name(library: ContentLibrary, skill: SkillDef) -> str:
+    """組合式名稱「元素・骨架」（沒有元素就只有骨架；和隨機組合器、4-L7 的退回名稱同一做法）。
+    LLM 提議沒有名稱欄位（4-L8）：轉成技能時先用它，命名步驟（``trpg.llm.naming``）再換成
+    生成的名稱。"""
+    skeleton = plain_name(skill.skeleton, library)
+    elements = sorted(e.display_name for e in skill_elements(skill))
+    return f"{elements[0]}・{skeleton}" if elements else skeleton
+
+
+def _combined_name(data: dict[str, Any], library: ContentLibrary | None) -> str:
+    if library is None:
+        return PLACEHOLDER_NAME
+    try:
+        probe = SkillDef.model_validate({**data, "name_zh": PLACEHOLDER_NAME, "id": "skill_probe"})
+    except ValidationError:
+        return PLACEHOLDER_NAME
+    return combined_skill_name(library, probe)
 
 
 def to_skill_def(
@@ -1153,7 +1180,6 @@ _SUPPORTED_SKILL_KEYS = frozenset(
     {
         "id",
         "schema_version",
-        "name_zh",
         "description_zh",
         "tier",
         "rank",
@@ -1192,6 +1218,7 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     full = skill.model_dump(mode="json", exclude_defaults=True)
     data, _ = split_numbers(full, library)
     data.update(cost_choices_of(full.get("cost") or {}, data))  # 4-L8 的代價欄位
+    data.pop("name_zh", None)  # 名稱由命名步驟產生（4-L8），不在提議裡
     if isinstance(data.get("cost"), dict):  # 自己付的代價（3-50）→ cost_penalty
         penalty, overdraft = penalty_of_cost(data["cost"])
         if penalty is not None:

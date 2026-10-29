@@ -133,6 +133,10 @@ class LlmRecord(_Model):
     """命名與敘事（4-L7）的來源；舊存檔與沒有命名步驟為 ``None``。"""
     name_attempts: int = 0
     name_codes: tuple[str, ...] = ()
+    prompt_version: str | None = None
+    """提議 prompt 的版本號（``trpg.llm`` 的 ``PROMPT_VERSION``；4-L8）；沒有請 LLM 為 ``None``。"""
+    naming_prompt_version: str | None = None
+    """命名 prompt 的版本號（``NAMING_PROMPT_VERSION``；4-L8）；沒有命名步驟為 ``None``。"""
 
 
 class OfferTag(_Model):

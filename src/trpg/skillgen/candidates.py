@@ -160,6 +160,8 @@ class LlmTrace:
     name_source: Literal["llm", "fallback"] | None = None
     name_attempts: int = 0
     name_codes: tuple[str, ...] = ()
+    prompt_version: str | None = None
+    naming_prompt_version: str | None = None
 
 
 def keyword_distribution(skills: Iterable[SkillDef], library: ContentLibrary) -> dict[str, int]:
@@ -256,6 +258,8 @@ class _Search:
             name_source=result.name_source,
             name_attempts=result.name_attempts,
             name_codes=result.name_codes,
+            prompt_version=result.prompt_version,
+            naming_prompt_version=result.naming_prompt_version,
         )
         if not ok or skill is None:
             return None

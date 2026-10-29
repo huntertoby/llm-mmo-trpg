@@ -1,7 +1,7 @@
 模型：Mock（proposal_from_skill）；每題最多 3 次
-  1. common／strike／charged｜llm｜嘗試 1｜通過｜0.00 秒｜聚雷
-  2. rare／不限骨架／summon｜llm｜嘗試 1｜通過｜0.00 秒｜召喚石像
-  3. epic／不限骨架／poisoned｜llm｜嘗試 1｜通過｜0.00 秒｜荊棘牆術
+  1. common／strike／charged｜llm｜嘗試 1｜通過｜0.00 秒｜雷電・打擊
+  2. rare／不限骨架／summon｜llm｜嘗試 1｜通過｜0.00 秒｜大地・召喚
+  3. epic／不限骨架／poisoned｜llm｜嘗試 1｜通過｜0.00 秒｜控場
 
 題目數　　　　3
 一次通過率　　100.0%（3）

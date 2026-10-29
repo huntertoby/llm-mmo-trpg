@@ -30,11 +30,11 @@ def test_run_new_writes_a_save_and_show_reads_it(
     assert "力量 13" in out and "體質 11" in out
     assert "第 6 場 Boss" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
-    assert raw["format"] == "trpg-run/9"
+    assert raw["format"] == "trpg-run/10"
     assert raw["run"]["seed"] == 4
     code, shown, _ = _run(["run", "show", str(saves[0])], capsys)
     assert code == 0
-    assert "trpg-run/9" in shown and "build_push" in shown and "目前：戰鬥" in shown
+    assert "trpg-run/10" in shown and "build_push" in shown and "目前：戰鬥" in shown
 
 
 @pytest.mark.parametrize(
