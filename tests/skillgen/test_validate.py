@@ -417,6 +417,9 @@ def test_aura_core_status_and_surface_must_be_beneficial() -> None:
         )
 
 
+ELEMENTS_9 = ("physical", "fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow")
+
+
 def test_beneficial_flags_in_content() -> None:
     rules = lib().ruleset
     statuses = {s.id for s in rules.statuses.statuses if s.beneficial}
@@ -443,6 +446,9 @@ def test_beneficial_flags_in_content() -> None:
         "stance_blaze",
         "stance_frost",
         "stance_glacier",
+        "stance_bastion",
+        # 3W-2b：元素姿態階梯
+        *(f"stance_{e}_{n}" for e in ELEMENTS_9 for n in range(1, 6)),
         # 3C-4a
         "undying",
         # 3F-4b：延遲段的等待狀態（有益，不被淨化）

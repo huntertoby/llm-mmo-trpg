@@ -89,6 +89,7 @@ from trpg.engine.events import (
     SnareTriggered,
     SourceChanged,
     StacksChanged,
+    StanceUpkeepPaid,
     StatusApplied,
     StatusConverted,
     StatusRemoved,
@@ -668,6 +669,15 @@ def _form_upkeep(e: FormUpkeepPaid, v: _View) -> str:
     name = "耐力" if e.resource == "stamina" else "法力"
     return (
         f"  {v.name[e.unit_id]} 維持{_form_name(v, e.form_id)}形態：−{e.amount} {name}"
+        f"（剩 {e.remaining}）"
+    )
+
+
+@_handles(StanceUpkeepPaid)
+def _stance_upkeep(e: StanceUpkeepPaid, v: _View) -> str:
+    name = "耐力" if e.resource == "stamina" else "法力"
+    return (
+        f"  {v.name[e.unit_id]} 維持{_skill_name(v, e.skill_id)}：−{e.amount} {name}"
         f"（剩 {e.remaining}）"
     )
 

@@ -28,6 +28,9 @@
 ``mod_range``      作用範圍 +1（修正型被動：射程 +1，或多一條範圍 +1 的規則）
 ``mod_keyword``    加第二個關鍵字（修正型被動：多一條不同關鍵字條件的同樣修正）
 ``mod_relax``      條件放寬一級（修正型被動）
+``stance_light``   輕巧（姿態）：維持費 −1、元素姿態換到較低級（效果降低）
+``stance_heavy``   蓄力（姿態）：維持費 +1、元素姿態換到較高級（效果提高）
+``stance_potency`` 修正（姿態）：維持費不變、元素姿態換到較高級（效果提高）
 =================  ============================================================
 
 輔助類（6.34.4）沒有獨立的改法：效果 + 用 ``potency``、範圍 +1 用 ``area``、附帶關鍵字用
@@ -76,7 +79,7 @@ RELAX_PERMILLE = 150
 """條件放寬一級：血量門檻（‰）放寬多少。"""
 MAX_RELAX_PERMILLE = 900
 
-STRICT_OPS = frozenset({"potency", "mod_potency"})
+STRICT_OPS = frozenset({"potency", "mod_potency", "stance_potency"})
 """結構不變、只靠重調變強的改法：強度下限要嚴格大於變化前（否則可能「閃了沒變化」）。"""
 
 
@@ -528,6 +531,70 @@ def _op_mod_relax(
 
 
 # ---------------------------------------------------------------------------
+# 姿態（元素姿態階梯上的換級；維持費在 SkillDef.stance_upkeep）
+# ---------------------------------------------------------------------------
+
+MAX_STANCE_UPKEEP = 2
+"""姿態維持費的上限（``SkillDef.stance_upkeep`` 的 schema 上限）。"""
+
+
+def _stance_rung(skill: SkillDef, library: ContentLibrary) -> tuple[tuple[str, ...], int] | None:
+    """姿態目前的元素姿態階梯與位置；不是元素姿態時 ``None``。"""
+    if skill.kind != "stance" or skill.form_id is not None or len(skill.effects) != 1:
+        return None
+    status = skill.effects[0].status
+    return None if status is None else library.flash.stance_rung(status)
+
+
+def _stance_drafts(
+    skill: SkillDef, levels: Sequence[str], upkeep: int, ladder: tuple[str, ...]
+) -> list[Draft]:
+    """每個候選級別一份草稿（維持費 ``upkeep``）；依序試，第一個通過預算窗與強度下限的是結果。"""
+    drafts: list[Draft] = []
+    for status in levels:
+        if status not in ladder:
+            continue
+        base, effects = base_draft(skill)
+        base["stance_upkeep"] = upkeep
+        effects[0]["status"] = status
+        drafts.append((base, effects))
+    return drafts
+
+
+def _op_stance_light(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """輕巧（姿態）：維持費 −1，換到較低的級別（效果降低）；沒有維持費可減就不出。"""
+    rung = _stance_rung(skill, library)
+    if rung is None or skill.stance_upkeep <= 0:
+        return []
+    ladder, index = rung
+    return _stance_drafts(skill, ladder[:index][::-1], skill.stance_upkeep - 1, ladder)
+
+
+def _op_stance_heavy(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """蓄力（姿態）：維持費 +1（最多 2），換到較高的級別（效果提高）。"""
+    rung = _stance_rung(skill, library)
+    if rung is None or skill.stance_upkeep >= MAX_STANCE_UPKEEP:
+        return []
+    ladder, index = rung
+    return _stance_drafts(skill, ladder[index + 1 :], skill.stance_upkeep + 1, ladder)
+
+
+def _op_stance_potency(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """修正（姿態）：維持費不變，換到較高的級別（效果提高，預算分數嚴格變大）。"""
+    rung = _stance_rung(skill, library)
+    if rung is None:
+        return []
+    ladder, index = rung
+    return _stance_drafts(skill, ladder[index + 1 :], skill.stance_upkeep, ladder)
+
+
+# ---------------------------------------------------------------------------
 # 登錄表與重調的額外旋鈕
 # ---------------------------------------------------------------------------
 
@@ -552,6 +619,9 @@ FLASH_OPS: dict[str, FlashOp] = {
     "mod_range": _op_mod_range,
     "mod_keyword": _op_mod_keyword,
     "mod_relax": _op_mod_relax,
+    "stance_light": _op_stance_light,
+    "stance_heavy": _op_stance_heavy,
+    "stance_potency": _op_stance_potency,
 }
 """小變化的改法登錄表（``op`` → 草稿）。資料裡 ``op`` 沒有登錄的模板不會出現
 （:func:`trpg.skillgen.flash.unimplemented_ops` 列出）。"""

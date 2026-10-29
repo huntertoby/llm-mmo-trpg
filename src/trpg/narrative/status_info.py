@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
-from trpg.content.rules import CoreRules
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.shared.types import Attribute
@@ -87,13 +86,21 @@ def _attr_bonus_line(status: StatusDef) -> str | None:
     return "、".join(f"{a.display_name} {v:+d}" for a, v in sorted(bonus.items()))
 
 
-def _modifier_lines(status: StatusDef, core: CoreRules) -> list[str]:
+def _modifier_lines(status: StatusDef, library: ContentLibrary) -> list[str]:
     """由狀態欄位與核心規則產生的數值句（3-41c 第 4 點）：說明裡不再寫死數字。"""
+    core = library.ruleset.core
     lines: list[str] = []
     for field, label in _PERMILLE_FIELDS:
         permille: int = getattr(status, field)
         if permille != NEUTRAL_PERMILLE:
             lines.append(f"{label} {_times(permille)}")
+    if status.element_dealt is not None:
+        name = status.element_dealt.display_name
+        lines.append(f"自己造成的{name}傷害 {_times(status.element_dealt_permille)}")
+    for status_id, turns in sorted(status.status_duration_bonus.items()):
+        lines.append(
+            f"自己施加的「{library.ruleset.status_def(status_id).name_zh}」多持續 {turns} 回合"
+        )
     if status.move_delta:
         lines.append(f"回合開始時的移動點數 {status.move_delta:+d}（最低 0）")
     if (attr := _attr_bonus_line(status)) is not None:
@@ -115,7 +122,7 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
     """狀態的規則句（清單 4.1～4.4、3-41c 第 4 點）：數值修正、持續傷害與治療、元素解除、破甲、
     抵抗、控制遞減、Boss。"""
     core = library.ruleset.core
-    lines: list[str] = _modifier_lines(status, core)
+    lines: list[str] = _modifier_lines(status, library)
     dot = status.on_turn_start_damage
     if dot is not None:
         lines.append(

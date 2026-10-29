@@ -424,6 +424,6 @@ def test_a_battle_with_wind_test_skills_replays_identically() -> None:
     run = run_battle(setup, 7, UtilityAI(library().ai_profiles))
     again = replay(setup, 7, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
-    assert LOG_FORMAT.endswith("/87")
+    assert LOG_FORMAT.endswith("/88")
     used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
     assert used & {"skill_t_gust", "skill_t_shove"}

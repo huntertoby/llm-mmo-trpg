@@ -1312,6 +1312,972 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "stance_physical_1",
+   "name_zh": "戰意架勢·壹",
+   "description_zh": "物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的物理傷害 ×110%",
+    "自己施加的「流血」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_physical_2",
+   "name_zh": "戰意架勢·貳",
+   "description_zh": "物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的物理傷害 ×115%",
+    "自己施加的「流血」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_physical_3",
+   "name_zh": "戰意架勢·參",
+   "description_zh": "物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的物理傷害 ×120%",
+    "自己施加的「流血」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_physical_4",
+   "name_zh": "戰意架勢·肆",
+   "description_zh": "物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的物理傷害 ×125%",
+    "自己施加的「流血」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_physical_5",
+   "name_zh": "戰意架勢·伍",
+   "description_zh": "物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的物理傷害 ×130%",
+    "自己施加的「流血」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_fire_1",
+   "name_zh": "烈焰架勢·壹",
+   "description_zh": "火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的火焰傷害 ×110%",
+    "自己施加的「燃燒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_fire_2",
+   "name_zh": "烈焰架勢·貳",
+   "description_zh": "火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的火焰傷害 ×115%",
+    "自己施加的「燃燒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_fire_3",
+   "name_zh": "烈焰架勢·參",
+   "description_zh": "火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的火焰傷害 ×120%",
+    "自己施加的「燃燒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_fire_4",
+   "name_zh": "烈焰架勢·肆",
+   "description_zh": "火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的火焰傷害 ×125%",
+    "自己施加的「燃燒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_fire_5",
+   "name_zh": "烈焰架勢·伍",
+   "description_zh": "火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的火焰傷害 ×130%",
+    "自己施加的「燃燒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_ice_1",
+   "name_zh": "寒霜架勢·壹",
+   "description_zh": "冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的冰霜傷害 ×110%",
+    "自己施加的「緩速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_ice_2",
+   "name_zh": "寒霜架勢·貳",
+   "description_zh": "冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的冰霜傷害 ×115%",
+    "自己施加的「緩速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_ice_3",
+   "name_zh": "寒霜架勢·參",
+   "description_zh": "冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的冰霜傷害 ×120%",
+    "自己施加的「緩速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_ice_4",
+   "name_zh": "寒霜架勢·肆",
+   "description_zh": "冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的冰霜傷害 ×125%",
+    "自己施加的「緩速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_ice_5",
+   "name_zh": "寒霜架勢·伍",
+   "description_zh": "冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的冰霜傷害 ×130%",
+    "自己施加的「緩速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_lightning_1",
+   "name_zh": "雷霆架勢·壹",
+   "description_zh": "雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的雷電傷害 ×110%",
+    "自己施加的「致盲」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_lightning_2",
+   "name_zh": "雷霆架勢·貳",
+   "description_zh": "雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的雷電傷害 ×115%",
+    "自己施加的「致盲」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_lightning_3",
+   "name_zh": "雷霆架勢·參",
+   "description_zh": "雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的雷電傷害 ×120%",
+    "自己施加的「致盲」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_lightning_4",
+   "name_zh": "雷霆架勢·肆",
+   "description_zh": "雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的雷電傷害 ×125%",
+    "自己施加的「致盲」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_lightning_5",
+   "name_zh": "雷霆架勢·伍",
+   "description_zh": "雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的雷電傷害 ×130%",
+    "自己施加的「致盲」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_poison_1",
+   "name_zh": "劇毒架勢·壹",
+   "description_zh": "毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的毒素傷害 ×110%",
+    "自己施加的「中毒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_poison_2",
+   "name_zh": "劇毒架勢·貳",
+   "description_zh": "毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的毒素傷害 ×115%",
+    "自己施加的「中毒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_poison_3",
+   "name_zh": "劇毒架勢·參",
+   "description_zh": "毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的毒素傷害 ×120%",
+    "自己施加的「中毒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_poison_4",
+   "name_zh": "劇毒架勢·肆",
+   "description_zh": "毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的毒素傷害 ×125%",
+    "自己施加的「中毒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_poison_5",
+   "name_zh": "劇毒架勢·伍",
+   "description_zh": "毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的毒素傷害 ×130%",
+    "自己施加的「中毒」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_wind_1",
+   "name_zh": "疾風架勢·壹",
+   "description_zh": "風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的風傷害 ×110%",
+    "自己施加的「加速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_wind_2",
+   "name_zh": "疾風架勢·貳",
+   "description_zh": "風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的風傷害 ×115%",
+    "自己施加的「加速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_wind_3",
+   "name_zh": "疾風架勢·參",
+   "description_zh": "風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的風傷害 ×120%",
+    "自己施加的「加速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_wind_4",
+   "name_zh": "疾風架勢·肆",
+   "description_zh": "風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的風傷害 ×125%",
+    "自己施加的「加速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_wind_5",
+   "name_zh": "疾風架勢·伍",
+   "description_zh": "風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的風傷害 ×130%",
+    "自己施加的「加速」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_earth_1",
+   "name_zh": "大地架勢·壹",
+   "description_zh": "大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的物理骰值傷害 ×96%",
+    "自己造成的大地傷害 ×110%"
+   ]
+  },
+  {
+   "id": "stance_earth_2",
+   "name_zh": "大地架勢·貳",
+   "description_zh": "大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的物理骰值傷害 ×94%",
+    "自己造成的大地傷害 ×115%"
+   ]
+  },
+  {
+   "id": "stance_earth_3",
+   "name_zh": "大地架勢·參",
+   "description_zh": "大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的物理骰值傷害 ×92%",
+    "自己造成的大地傷害 ×120%"
+   ]
+  },
+  {
+   "id": "stance_earth_4",
+   "name_zh": "大地架勢·肆",
+   "description_zh": "大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的物理骰值傷害 ×90%",
+    "自己造成的大地傷害 ×125%"
+   ]
+  },
+  {
+   "id": "stance_earth_5",
+   "name_zh": "大地架勢·伍",
+   "description_zh": "大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的物理骰值傷害 ×88%",
+    "自己造成的大地傷害 ×130%"
+   ]
+  },
+  {
+   "id": "stance_holy_1",
+   "name_zh": "聖輝架勢·壹",
+   "description_zh": "神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的神聖傷害 ×110%",
+    "自己施加的「再生」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_holy_2",
+   "name_zh": "聖輝架勢·貳",
+   "description_zh": "神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的神聖傷害 ×115%",
+    "自己施加的「再生」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_holy_3",
+   "name_zh": "聖輝架勢·參",
+   "description_zh": "神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的神聖傷害 ×120%",
+    "自己施加的「再生」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_holy_4",
+   "name_zh": "聖輝架勢·肆",
+   "description_zh": "神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的神聖傷害 ×125%",
+    "自己施加的「再生」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_holy_5",
+   "name_zh": "聖輝架勢·伍",
+   "description_zh": "神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的神聖傷害 ×130%",
+    "自己施加的「再生」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_shadow_1",
+   "name_zh": "暗影架勢·壹",
+   "description_zh": "暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的暗影傷害 ×110%",
+    "自己施加的「被標記」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_shadow_2",
+   "name_zh": "暗影架勢·貳",
+   "description_zh": "暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的暗影傷害 ×115%",
+    "自己施加的「被標記」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_shadow_3",
+   "name_zh": "暗影架勢·參",
+   "description_zh": "暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的暗影傷害 ×120%",
+    "自己施加的「被標記」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_shadow_4",
+   "name_zh": "暗影架勢·肆",
+   "description_zh": "暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的暗影傷害 ×125%",
+    "自己施加的「被標記」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_shadow_5",
+   "name_zh": "暗影架勢·伍",
+   "description_zh": "暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的暗影傷害 ×130%",
+    "自己施加的「被標記」多持續 1 回合"
+   ]
+  },
+  {
+   "id": "stance_bastion",
+   "name_zh": "堡壘姿態",
+   "description_zh": "受到的骰值傷害大幅降低，但回合開始時的移動點數減少；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×55%",
+    "回合開始時的移動點數（無條件捨去） ×50%"
+   ]
   }
  ],
  "stacks": [

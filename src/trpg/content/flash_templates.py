@@ -211,8 +211,9 @@ class TransformTemplate(ContentModel):
     """``summon``：角色階級高、預算變大時，依序加試的強化（``summon`` 效果的 ``duration``、
     ``max_hp_permille``、``count``、``power_permille``）；先試不強化的版本。"""
     trap: TrapSpec | None = None
-    stances: dict[str, str] = Field(default_factory=dict)
-    """``stance``：``offense``（原招有傷害）、``defense``（沒有傷害）→ 姿態狀態 ID。"""
+    stances: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """``stance``：``offense``（原招有傷害）、``defense``（沒有傷害）→ 候選姿態狀態 ID（依序試，第一
+    個落在預算窗內的）。原招有傷害時先試 :attr:`FlashTable.stance_ladders` 的同元素元素姿態。"""
     damage_permille_steps: tuple[int, ...] = ()
     """``modifier``：「傷害 +n‰」候選（由大到小，第一個落在預算窗內的）。"""
 
@@ -259,6 +260,9 @@ class FlashTable(ContentModel):
     major: tuple[MajorFlashTemplate, ...] = ()
     extra_major: tuple[ExtraMajorTemplate, ...] = ()
     transforms: tuple[TransformTemplate, ...] = ()
+    stance_ladders: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """元素姿態的階梯（3W-2b）：元素 ID（``physical`` 也有）→ 由弱到強的姿態狀態 ID。轉型優先
+    轉成同元素的姿態；姿態的「費用」「修正」類小變化在同一階梯上換級（維持費 ±1 搭配效果升降）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTable:
@@ -304,6 +308,13 @@ class FlashTable(ContentModel):
 
     def extra_template(self, template_id: str) -> ExtraMajorTemplate | None:
         return next((t for t in self.extra_major if t.id == template_id), None)
+
+    def stance_rung(self, status_id: str) -> tuple[tuple[str, ...], int] | None:
+        """``status_id`` 所在的元素姿態階梯與它的位置；不在任何階梯上時 ``None``。"""
+        for ladder in self.stance_ladders.values():
+            if status_id in ladder:
+                return ladder, ladder.index(status_id)
+        return None
 
     def transform_template(self, template_id: str) -> TransformTemplate | None:
         return next((t for t in self.transforms if t.id == template_id), None)

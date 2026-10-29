@@ -191,6 +191,11 @@ class SkillDef(ContentModel):
     它）÷ 1000。每閃一次 +40‰、完整技能 +120‰（``flash_templates.yaml``）；省略＝沒有加成。只影響
     預算驗證與重調，不影響結算（結算只看技能本身的數值）。"""
 
+    stance_upkeep: int = Field(default=0, ge=0, le=2)
+    """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
+    這麼多點（武器技扣耐力、法術技扣法力，每點數量見 ``forms.yaml``）；付不起就自動解除姿態。
+    維持費換到預算折抵（``allowance.stance_upkeep_per_point``）；0＝免費。"""
+
     @field_validator("skeleton")
     @classmethod
     def _skeleton(cls, value: str) -> str:
@@ -264,6 +269,7 @@ class SkillDef(ContentModel):
         if self.kind != "passive" and self.trigger is not None:
             raise ValueError(f"只有被動技能可以有 trigger，收到 kind: {self.kind}")
         self._check_reaction_and_stance()
+        self._check_stance_upkeep()
         self._check_trap_and_stacks()
         self._check_scaling_and_mastery()
         self._check_gear_limits()
@@ -868,6 +874,12 @@ class SkillDef(ContentModel):
             raise ValueError("pierce 的單體形狀射程必須大於 1")
         if not any(e.type == "damage" for e in self.effects):
             raise ValueError("pierce 的技能必須有傷害效果")
+
+    def _check_stance_upkeep(self) -> None:
+        if self.stance_upkeep and (
+            self.kind != "stance" or any(e.type == ENTER_FORM for e in self.effects)
+        ):
+            raise ValueError("stance_upkeep 只有一般姿態（不含形態）可以填")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""

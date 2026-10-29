@@ -120,7 +120,7 @@ def test_transform_data_matches_decision_73() -> None:
         assert lib.ruleset.summon_def(unit) is not None
     statuses = lib.ruleset.statuses.by_id()
     for t in table.transforms:
-        for status in t.stances.values():
+        for status in (s for ids in t.stances.values() for s in ids):
             assert statuses[status].stance
     extra = {t.id: (t.category, t.only) for t in table.extra_major}
     assert extra["support_wide"] == ("deepen", "support")
@@ -286,7 +286,9 @@ def test_stance_transform_enters_its_stance() -> None:
     casts = [a for a in legal_actions(state) if isinstance(a, UseSkill) and a.skill_id == skill.id]
     result = resolve(state, casts[0])
     applied = [e for e in result.events if isinstance(e, StatusApplied)]
-    assert [e.status_id for e in applied] == ["stance_fury"]  # 原招有傷害：攻擊向
+    # 原招是火焰箭：轉成同元素的元素姿態（3W-2b；沒有元素才是狂怒）
+    assert [e.status_id for e in applied] == [skill.effects[0].status]
+    assert skill.effects[0].status in library().flash.stance_ladders["fire"]
     assert applied[0].target_id == UnitId("unit_0001")
 
 
@@ -638,5 +640,11 @@ def test_support_skill_transforms_to_a_defensive_stance_only() -> None:
     stance = apply_variation(
         lib, with_budget_bonus(heal, 120), _transform(STANCE), bonus=120, rng=Rng(1)
     )
-    assert stance is not None and stance.effects[0].status == "stance_bulwark"
+    assert stance is not None
+    assert stance.effects[0].status in {
+        "stance_bulwark",
+        "stance_guard",
+        "stance_ironwall",
+        "stance_bastion",
+    }
     assert apply_variation(lib, heal, _transform(PASSIVE), bonus=120, rng=Rng(1)) is None

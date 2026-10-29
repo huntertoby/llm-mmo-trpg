@@ -228,7 +228,7 @@ def _dealt_permille(ctx: Ctx, effect: DamageEffect) -> int:
     """攻擊者造成傷害的狀態倍率（‰，虛弱）；不是攻擊或沒有來源時 1000。"""
     source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
     if effect.cause == "attack" and source is not None:
-        return damage_dealt_permille(ctx.rules, source)
+        return damage_dealt_permille(ctx.rules, source, effect.element)
     return PERMILLE
 
 

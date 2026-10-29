@@ -304,6 +304,8 @@ def test_explicit_stances_are_valid_in_every_tier_and_have_a_stance_status() -> 
     library = lib()
     stances = {s.id for s in library.ruleset.statuses.statuses if s.stance}
     stances -= library.composer.whiteboard.reserved_statuses()  # 3W-4b：白板姿態專用，完整模式不抽
+    # 3W-2b：元素姿態階梯只給轉型與費用類小變化
+    stances -= {s.id for s in library.ruleset.statuses.statuses if s.element_dealt}
     seen: set[str] = set()
     for tier in range(1, 6):
         for seed in range(30):

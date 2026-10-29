@@ -43,6 +43,7 @@ from trpg.engine.events import (
     FormLeaveReason,
     FormLeft,
     FormUpkeepPaid,
+    StanceUpkeepPaid,
     StatusRemoved,
 )
 from trpg.engine.gear.state import GearState
@@ -67,6 +68,7 @@ __all__ = [
     "enter_form",
     "leave_all_forms",
     "leave_form",
+    "pay_stance_upkeep",
     "pay_upkeep",
     "tick_form_cooldowns",
 ]
@@ -301,6 +303,47 @@ def pay_upkeep(ctx: Ctx, unit: UnitState) -> bool:
         remaining=have - amount,
     )
     return False
+
+
+def pay_stance_upkeep(ctx: Ctx, unit: UnitState) -> None:
+    """自己的回合開始付一般姿態的維持費（Phase 3W-2b）：施加姿態的技能有 ``stance_upkeep`` 時，
+    武器技扣耐力、法術技扣法力（每點數量見 ``forms.yaml``）；付不起就移除姿態（``status_removed``
+    原因 ``upkeep``）。維持費是 0 或找不到技能的姿態（舊姿態、道具）不付。"""
+    for status in sorted(unit.statuses, key=lambda s: s.status_id):
+        if not ctx.rules.status_def(status.status_id).stance or status.skill_id is None:
+            continue
+        try:
+            skill = ctx.rules.skill_def(status.skill_id)
+        except KeyError:
+            continue
+        if skill.stance_upkeep <= 0:
+            continue
+        table = ctx.rules.forms
+        if skill.category == "weapon":
+            resource: Literal["stamina", "mana"] = "stamina"
+            amount = skill.stance_upkeep * table.stance_upkeep_stamina
+            have = unit.stamina
+        else:
+            resource = "mana"
+            amount = skill.stance_upkeep * table.stance_upkeep_mana
+            have = unit.mana
+        if have < amount:
+            unit.statuses = [s for s in unit.statuses if s.status_id != status.status_id]
+            ctx.emit(StatusRemoved, target_id=unit.id, status_id=status.status_id, reason="upkeep")
+            continue
+        if resource == "stamina":
+            unit.stamina -= amount
+        else:
+            unit.mana -= amount
+        ctx.emit(
+            StanceUpkeepPaid,
+            unit_id=unit.id,
+            skill_id=skill.id,
+            status_id=status.status_id,
+            resource=resource,
+            amount=amount,
+            remaining=have - amount,
+        )
 
 
 FORM_EFFECT_CONSUMERS: dict[str, Callable[..., object]] = {

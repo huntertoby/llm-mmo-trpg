@@ -424,7 +424,12 @@ def budget_power(skill: SkillDef, library: ContentLibrary) -> Fraction:
     不改費用的變化，係數不變，等於直接比總點數；蓄力、輕巧、每回合觸發次數這類改了係數的變化，
     比的是「換算回同一個係數」之後的分數，所以輕巧 AP −1 不會因為係數變小而永遠過不了。"""
     report = skill_budget(skill, library)
-    return report.total / report.ap_coefficient
+    power = report.total / report.ap_coefficient
+    if (
+        skill.kind == "stance"
+    ):  # 姿態的維持費折抵也換算掉：維持費 ±1 搭配效果升降，分數不變（3W-2b）
+        power /= Fraction(1000 + report.allowance_permille, 1000)
+    return power
 
 
 def _floor_ratio(

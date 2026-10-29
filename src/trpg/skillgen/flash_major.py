@@ -80,6 +80,7 @@ _LEGENDARY = rarity_rank("legendary")
 _RESET: dict[str, Any] = {
     "followup": None,
     "variants": [],
+    "stance_upkeep": 0,
     "trap": None,
     "trigger": None,
     "reaction": None,
@@ -273,22 +274,43 @@ def _to_trap(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> lis
     return drafts
 
 
-def _to_stance(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+_STANCE_UPKEEPS = (1, 2, 0)
+"""元素姿態轉型依序試的維持費（先 1 點：隨階級變強的階梯在維持費 1 時對上預算窗）。"""
+
+
+def _stance_candidates(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    """姿態轉型的（狀態, 維持費）候選：有傷害的招式先試同元素（沒有元素＝物理）的元素姿態階梯
+    （3W-2b，隨階級變強），再試通用姿態；沒有傷害的招式只試防守姿態。"""
     offense = any(e.type in ("damage", "delayed_damage") for e in skill.effects)
-    status = t.stances.get("offense" if offense else "defense")
-    if status is None or status not in lib.ruleset.statuses.by_id():
-        return []
-    base = _new_base(
-        skill,
-        kind="stance",
-        skeleton="stance",
-        ap_cost=None,
-        shape={"type": "self"},
-        cost={},
-        tags=_retag(skill, "stance"),
-        narrative=_concept(skill, t),
-    )
-    return [(base, [{"type": "apply_status", "status": status, "affects": "self"}])]
+    known = lib.ruleset.statuses.by_id()
+    out: list[tuple[str, int]] = []
+    if offense:
+        ladder = lib.flash.stance_ladders.get(skill_element_id(skill) or "physical", ())
+        out += [(s, u) for u in _STANCE_UPKEEPS for s in ladder]
+    out += [(s, 0) for s in t.stances.get("offense" if offense else "defense", ())]
+    return [
+        ({"upkeep": u}, [{"type": "apply_status", "status": s, "affects": "self"}])
+        for s, u in out
+        if s in known
+    ]
+
+
+def _to_stance(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    drafts: list[_Draft] = []
+    for extra, effects in _stance_candidates(skill, t, lib):
+        base = _new_base(
+            skill,
+            kind="stance",
+            skeleton="stance",
+            ap_cost=None,
+            shape={"type": "self"},
+            cost={},
+            stance_upkeep=extra["upkeep"],
+            tags=_retag(skill, "stance"),
+            narrative=_concept(skill, t),
+        )
+        drafts.append((base, effects))
+    return drafts
 
 
 def _modifier_changes(skill: SkillDef, t: TransformTemplate) -> list[dict[str, Any]]:

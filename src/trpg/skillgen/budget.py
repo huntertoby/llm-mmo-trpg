@@ -1231,6 +1231,13 @@ def _allowance_parts(
         parts.append(("透支（下回合少 1 AP）", allowance.overdraft_permille))
     if any(effect.type == LEAVE_FORM for effect in skill.effects):  # 解除形態（3J-4c）：算代價
         parts.append(("解除形態（先離開目前的形態）", allowance.leave_form_permille))
+    if skill.stance_upkeep:  # 姿態維持費（3W-2b）
+        parts.append(
+            (
+                f"姿態維持費 {skill.stance_upkeep}",
+                skill.stance_upkeep * allowance.stance_upkeep_per_point,
+            )
+        )
     if cost.source is not None:
         parts.append(
             (

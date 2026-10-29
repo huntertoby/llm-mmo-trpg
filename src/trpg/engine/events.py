@@ -107,6 +107,7 @@ __all__ = [
     "SourceChanged",
     "SourceReason",
     "StacksChanged",
+    "StanceUpkeepPaid",
     "StatusApplied",
     "StatusConverted",
     "StatusRemoved",
@@ -631,6 +632,7 @@ class StatusRemoved(EventBase):
         "revealed",
         "fired",
         "ambushed",
+        "upkeep",
     ]
     """``ambushed``：隱蔽中發動攻擊（潛行偷襲）後脫離隱蔽（Phase 3D-8d）；
     ``fired``：監視（``overwatch``）射擊後結束（Phase 3D-8c）；
@@ -1780,6 +1782,20 @@ class FormUpkeepPaid(EventBase):
     remaining: int
 
 
+class StanceUpkeepPaid(EventBase):
+    """回合開始付一般姿態的維持費（Phase 3W-2b，``SkillDef.stance_upkeep``）：``resource`` 是
+    ``stamina``（武器技）或 ``mana``（法術技），``remaining`` 是付完後剩下的量。付不起時不發出，
+    改發 ``status_removed``（``reason: upkeep``）。"""
+
+    type: Literal["stance_upkeep_paid"] = "stance_upkeep_paid"
+    unit_id: UnitId
+    skill_id: str
+    status_id: str
+    resource: Literal["stamina", "mana"]
+    amount: int
+    remaining: int
+
+
 type RuleChangeKindName = Literal[
     "element_heals_allies", "push_any_object", "pass_through_apply", "on_downed_spawn"
 ]
@@ -1886,6 +1902,7 @@ type Event = Annotated[
     | FormEntered
     | FormLeft
     | FormUpkeepPaid
+    | StanceUpkeepPaid
     | SkillTriggered
     | TriggerLimitReached
     | StacksChanged

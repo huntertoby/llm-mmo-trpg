@@ -263,6 +263,9 @@ def test_shape_multiplier_table() -> None:
     assert mult("allies_in_radius", radius=2) == F(18, 10)
 
 
+ELEMENTS_9 = ("physical", "fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow")
+
+
 def test_status_and_surface_points_match_the_spec() -> None:
     rules = lib().ruleset
     statuses = {s.id: s.budget_points for s in rules.statuses.statuses}
@@ -306,6 +309,13 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "stance_ironwall": 18,
         "stance_blaze": 18,
         "stance_glacier": 18,
+        "stance_bastion": 21,  # 3W-2b：防守姿態第四級
+        # 3W-2b：元素姿態階梯（每個元素 5 級）
+        **{
+            f"stance_{e}_{n}": points
+            for e in ELEMENTS_9
+            for n, points in enumerate((15, 17, 19, 22, 28), start=1)
+        },
         "undying": None,  # 3C-4a：只能由 cheat_death 原語施加
         "soul_link": None,  # 3C-4b：只能由 redirect_damage 原語施加
         "revealed": None,  # 3D-8a：只能由 reveal 原語施加

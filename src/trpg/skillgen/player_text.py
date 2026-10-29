@@ -167,6 +167,7 @@ _FIELD_ZH: dict[str, str] = {
     "count": "顆數",
     "created_by": "建立者",
     "crit_range": "暴擊範圍",
+    "stance_upkeep": "姿態維持費",
     "damage_multiplier_permille": "傷害倍率",
     "description_zh": "說明",
     "distance": "距離",

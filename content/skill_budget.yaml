@@ -183,6 +183,8 @@ allowance:
   overdraft_permille: 200
   # 解除形態（leave_form 原語，Phase 3J-4c；解形爆發，初值，未經模擬）：施放時先解除自己的形態，固定折抵。
   leave_form_permille: 200
+  # 姿態維持費（SkillDef.stance_upkeep，Phase 3W-2b）：每點折抵（初值，未經模擬）。
+  stance_upkeep_per_point: 200
   # 源力代價（cost.source，傳說技能，Phase 3C-4a；初值，未經模擬）：每點折抵 source_per_point，上限 source_cap
   source_per_point: 250
   source_cap: 500
