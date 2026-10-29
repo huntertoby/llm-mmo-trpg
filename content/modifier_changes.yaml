@@ -1,0 +1,139 @@
+# 修正規則的改變種類（change；Phase 3T-1，原本散在 content/skills.py、skillgen/budget.py、
+# skillgen/player_text.py 的 Python 常數）。docs/design/06-技能.md 6.14.1、6.14.3；docs/phases/Phase3C計畫.md 4.1。
+#
+# 每一種 change 一筆，依顯示順序排列（錯誤訊息與技能工坊的選項依此順序）：
+#   id               ：ModifierChange 的欄位名（數值範圍與型別仍由 ModifierChange 的欄位宣告；載入時檢查兩邊一致）
+#   name_zh          ：玩家看得到的名稱（工坊的選項、檢查訊息的欄位中文）
+#   applies_to       ：可以套用的對象（attack／shove／trip／interact／all_attacks／all_skills／skill_tags／weapon_skills）
+#   self_only        ：選目標之前就要決定，條件只能看持有者自己（self_hp_below）或省略
+#   reshapes         ：讓技能變形（3D-3；只套用在主動技能，選目標之前決定）
+#   per_turn_limit   ：可以帶 per_turn_limit（3-31）
+#   nonzero          ：數值不可為 0
+#   true_only        ：只能是 true
+#   budget           ：預算（skillgen/budget.py 的修正規則點數）
+#     unit           ：structured 由其他資料算（傷害‰、治療‰、推擊格數、命中後效果、形狀轉換；算法在 budget.py）／
+#                      magnitude 數值的絕對值 ÷ per 份／count 列表的項數／flag 每次 1 份
+#     points         ：skill_budget.yaml 的 modifier.points_milli 的鍵（每份的價值，千分之一點）
+#     points_if_negative：數值為負時改用這個鍵
+#     signed         ：數值為負時點數取負（代價）
+#     per            ：magnitude 每幾單位算 1 份（預設 1）
+#     note           ：預算說明（{value} 數值、{count} 項數；省略＝id）
+#     hit_gated      ：命中後才生效（使用次數 × modifier.hit_rate_permille）
+#
+# 新增一種 change：在這裡加一筆，並補 ModifierChange 的欄位、引擎（trpg.engine.modifiers 的 CHANGE_HANDLERS）、
+# 卡片文字（trpg.narrative.skills 的 DESCRIBED_CHANGES）；budget.unit 為 structured 時另補 budget.py 的算法。
+# 漏寫時載入內容就會丟 ContentError（trpg/primitive_coverage.py）。
+changes:
+  - id: damage_permille
+    name_zh: 傷害 ±‰
+    applies_to: [attack, all_attacks, all_skills, skill_tags, weapon_skills]
+    per_turn_limit: true
+    nonzero: true
+    budget: {unit: structured, hit_gated: true}
+  - id: hit_bonus
+    name_zh: 命中 ±
+    applies_to: [attack, all_attacks, all_skills, skill_tags]
+    nonzero: true
+    budget: {unit: magnitude, points: hit_bonus, signed: true}
+  - id: cooldown_delta
+    name_zh: 命中後冷卻 −1／−2
+    applies_to: [all_skills, skill_tags]
+    budget: {unit: magnitude, points: cooldown_delta, hit_gated: true}
+  - id: push_distance_delta
+    name_zh: 推擊距離 +1／+2
+    applies_to: [shove, all_skills, skill_tags]
+    budget: {unit: structured, hit_gated: true}
+  - id: ap_delta
+    name_zh: AP 成本 ±1
+    applies_to: [attack, shove, trip, interact, all_attacks, all_skills, skill_tags]
+    self_only: true
+    nonzero: true
+    budget: {unit: magnitude, points: ap_increase, points_if_negative: ap_decrease, note: "AP {value:+d}"}
+  - id: range_delta
+    name_zh: 射程 −1～＋2
+    applies_to: [attack, all_attacks, all_skills, skill_tags]
+    self_only: true
+    nonzero: true
+    budget: {unit: magnitude, points: range_delta, signed: true}
+  - id: add_element
+    name_zh: 傷害獲得元素
+    applies_to: [attack, all_attacks, all_skills, skill_tags]
+    self_only: true
+    budget: {unit: flag, points: add_element, hit_gated: true}
+  - id: add_tags
+    name_zh: 技能獲得標籤
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: count, points: add_tag, note: "標籤 +{count}"}
+  - id: on_hit_effects
+    name_zh: 命中後附加效果
+    applies_to: [attack, all_attacks, all_skills, skill_tags]
+    per_turn_limit: true
+    budget: {unit: structured, hit_gated: true}
+  - id: grant_pierce
+    name_zh: 獲得穿透
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    true_only: true
+    budget: {unit: flag, points: grant_pierce}
+  - id: area_delta
+    name_zh: 範圍 +1
+    applies_to: [all_attacks, all_skills, skill_tags]
+    self_only: true
+    reshapes: true
+    budget: {unit: flag, points: area_delta}
+  - id: shape_to
+    name_zh: 形狀轉換
+    applies_to: [all_attacks, all_skills, skill_tags]
+    self_only: true
+    reshapes: true
+    budget: {unit: structured}
+  - id: allow_self_target
+    name_zh: 範圍包含自己
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    reshapes: true
+    true_only: true
+    budget: {unit: flag, points: allow_self_target}
+  - id: heal_permille
+    name_zh: 治療量 ±‰
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    nonzero: true
+    budget: {unit: structured}
+  - id: summon_hp_permille
+    name_zh: 召喚物最大 HP +‰
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: magnitude, points: summon_hp_per_100, per: 100}
+  - id: summon_attack_dice
+    name_zh: 召喚物攻擊 +1 顆傷害骰
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: magnitude, points: summon_attack_die}
+  - id: summon_limit_delta
+    name_zh: 召喚物同時上限 ±1
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    nonzero: true
+    budget: {unit: magnitude, points: summon_limit, signed: true}
+  - id: summon_duration_delta
+    name_zh: 召喚物持續 +輪數
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: magnitude, points: summon_duration}
+  - id: summon_damage_permille
+    name_zh: 召喚物傷害 +‰
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: magnitude, points: summon_damage_per_100, per: 100}
+  - id: form_upkeep_permille
+    name_zh: 形態維持費 −‰
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: magnitude, points: form_upkeep_per_100, per: 100}
+  - id: form_entry_permille
+    name_zh: 形態進入獎勵 +‰
+    applies_to: [all_skills, skill_tags]
+    self_only: true
+    budget: {unit: magnitude, points: form_entry_per_100, per: 100}

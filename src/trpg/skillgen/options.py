@@ -89,7 +89,7 @@ from trpg.skillgen.option_rules import (
 )
 from trpg.skillgen.option_scaling import scaling_extra_fields
 from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
-from trpg.skillgen.player_text import CHANGE_TEXT, plainify
+from trpg.skillgen.player_text import change_text, plainify
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 from trpg.skillgen.validate import rarity_requirements
 
@@ -981,7 +981,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
         player += "這個改變在選目標之前就生效，所以條件只能看你自己的 HP。"
     base: dict[str, Any] = {
         "field": name,
-        "name_zh": CHANGE_TEXT[name],
+        "name_zh": change_text(library, name),
         "description_zh": player,  # 玩家語氣由程式產生（玩法 PM 2026-10-24 的樣板，#44）
         "dev_description_zh": f"可套用：{'、'.join(targets)}{when}",
     }

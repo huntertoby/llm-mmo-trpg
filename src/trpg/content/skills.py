@@ -32,6 +32,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.forms import FormCategory
 from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.modifier_changes import bundled_modifier_changes
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_tags import UNKNOWN_TAG_TEXT
@@ -102,6 +103,7 @@ __all__ = [
     "MAX_VARIANTS",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
+    "NONZERO_CHANGES",
     "ON_HIT_PRIMITIVES",
     "ON_KILL_TYPES",
     "ON_MISS_MIN_RARITY",
@@ -137,6 +139,7 @@ __all__ = [
     "TELEPORT_TARGET",
     "TIME_BOMB",
     "TOPPLE",
+    "TRUE_ONLY_CHANGES",
     "VARIANT_CONDITIONS",
     "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
@@ -1861,83 +1864,31 @@ type BasicAction = Literal["attack", "shove", "trip", "interact"]
 
 BASIC_ACTIONS: tuple[str, ...] = ("attack", "shove", "trip", "interact")
 
-MODIFIER_CHANGES: tuple[str, ...] = (
-    "damage_permille",
-    "hit_bonus",
-    "cooldown_delta",
-    "push_distance_delta",
-    "ap_delta",
-    "range_delta",
-    "add_element",
-    "add_tags",
-    "on_hit_effects",
-    "grant_pierce",
-    "area_delta",
-    "shape_to",
-    "allow_self_target",
-    "heal_permille",
-    "summon_hp_permille",
-    "summon_attack_dice",
-    "summon_limit_delta",
-    "summon_duration_delta",
-    "summon_damage_permille",
-    "form_upkeep_permille",
-    "form_entry_permille",
-)
-"""``change`` 的種類（每條規則恰好一種）。"""
+_CHANGES = bundled_modifier_changes()
+"""修正規則的改變種類（``content/modifier_changes.yaml``，Phase 3T-1；唯一來源）。"""
 
-SHAPE_CHANGES: frozenset[str] = frozenset({"area_delta", "shape_to", "allow_self_target"})
-"""讓技能變形的修正（Phase 3D-3）：選目標之前就決定，只套用在主動技能；引擎以
-:func:`trpg.engine.modifiers.shaped_skill` 產生變形後的技能。"""
+MODIFIER_CHANGES: tuple[str, ...] = _CHANGES.ids
+"""``change`` 的種類（每條規則恰好一種；依 YAML 順序）。"""
 
-_ATTACK_TARGETS = frozenset({"attack", "all_attacks", "all_skills", "skill_tags"})
-_DAMAGE_TARGETS = frozenset({*_ATTACK_TARGETS, "weapon_skills"})
-_SKILL_TARGETS = frozenset({"all_skills", "skill_tags"})
+SHAPE_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.reshapes)
+"""讓技能變形的修正（Phase 3D-3；YAML 的 ``reshapes``）：選目標之前就決定，只套用在主動技能；
+引擎以 :func:`trpg.engine.modifiers.shaped_skill` 產生變形後的技能。"""
+
 CHANGE_TARGETS: dict[str, frozenset[str]] = {
-    "damage_permille": _DAMAGE_TARGETS,
-    "hit_bonus": _ATTACK_TARGETS,
-    "cooldown_delta": _SKILL_TARGETS,
-    "push_distance_delta": frozenset({"shove", "all_skills", "skill_tags"}),
-    "ap_delta": frozenset({*BASIC_ACTIONS, "all_attacks", "all_skills", "skill_tags"}),
-    "range_delta": _ATTACK_TARGETS,
-    "add_element": _ATTACK_TARGETS,
-    "add_tags": _SKILL_TARGETS,
-    "on_hit_effects": _ATTACK_TARGETS,
-    "grant_pierce": _SKILL_TARGETS,
-    "area_delta": frozenset({"all_attacks", "all_skills", "skill_tags"}),
-    "shape_to": frozenset({"all_attacks", "all_skills", "skill_tags"}),
-    "allow_self_target": _SKILL_TARGETS,
-    "heal_permille": _SKILL_TARGETS,
-    "summon_hp_permille": _SKILL_TARGETS,
-    "summon_attack_dice": _SKILL_TARGETS,
-    "summon_limit_delta": _SKILL_TARGETS,
-    "summon_duration_delta": _SKILL_TARGETS,
-    "summon_damage_permille": _SKILL_TARGETS,
-    "form_upkeep_permille": _SKILL_TARGETS,
-    "form_entry_permille": _SKILL_TARGETS,
+    c.id: frozenset(c.applies_to) for c in _CHANGES.changes
 }
-"""每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
-命中骰，基本動作沒有冷卻與標籤。"""
+"""每種 ``change`` 可以套用的對象（YAML 的 ``applies_to``；``applies_to`` 的每一項都必須在內）：
+推擊、絆倒、互動沒有傷害與命中骰，基本動作沒有冷卻與標籤。"""
 
-SELF_ONLY_CHANGES: frozenset[str] = frozenset(
-    {
-        "ap_delta",
-        "range_delta",
-        "add_element",
-        "add_tags",
-        "grant_pierce",
-        "heal_permille",
-        "summon_hp_permille",
-        "summon_attack_dice",
-        "summon_limit_delta",
-        "summon_duration_delta",
-        "summon_damage_permille",
-        "form_upkeep_permille",
-        "form_entry_permille",
-        *SHAPE_CHANGES,
-    }
-)
-"""在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
+SELF_ONLY_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.self_only)
+"""在選目標之前就要決定的修正（YAML 的 ``self_only``）：條件只能看持有者自己
+（``self_hp_below``）或省略。"""
+
+NONZERO_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.nonzero)
+"""數值不可為 0 的 ``change`` 種類（YAML 的 ``nonzero``）。"""
+
+TRUE_ONLY_CHANGES: frozenset[str] = frozenset(c.id for c in _CHANGES.changes if c.true_only)
+"""只能是 ``true`` 的 ``change`` 種類（YAML 的 ``true_only``）。"""
 
 WIELDING_WEAPON = "wielding_weapon"
 """武器親和條件（Phase 3I-5）。"""
@@ -1977,8 +1928,10 @@ ON_HIT_PRIMITIVES: tuple[str, ...] = (
 """``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。``detonate_runes``、
 ``inscribe``（Phase 3-31 普攻與符文）只作用在目標所在的那 1 格。"""
 
-PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset({"damage_permille", "on_hit_effects"})
-"""可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31）。"""
+PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset(
+    c.id for c in _CHANGES.changes if c.per_turn_limit
+)
+"""可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31；YAML 的 ``per_turn_limit``）。"""
 
 _MAX_MODIFIERS = 2
 _MAX_MASTERY_MODIFIERS = 4
@@ -2113,22 +2066,11 @@ class ModifierChange(ContentModel):
             raise ValueError(f"change 必須恰好一種（{'、'.join(MODIFIER_CHANGES)}），收到 {got}")
         kind = given[0]
         value = getattr(self, kind)
-        if (
-            kind
-            in (
-                "damage_permille",
-                "hit_bonus",
-                "ap_delta",
-                "range_delta",
-                "heal_permille",
-                "summon_limit_delta",
-            )
-            and value == 0
-        ):
+        if kind in NONZERO_CHANGES and value == 0:
             raise ValueError(f"change.{kind} 不可為 0")
         if kind == "add_element" and value is Element.PHYSICAL:
             raise ValueError("change.add_element 不可是物理（physical）")
-        if kind in ("grant_pierce", "allow_self_target") and value is not True:
+        if kind in TRUE_ONLY_CHANGES and value is not True:
             raise ValueError(f"change.{kind} 只能是 true")
         if kind == "add_tags":
             self._check_tags(value)

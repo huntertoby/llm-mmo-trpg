@@ -63,6 +63,7 @@ from trpg.skillgen.keywords import (
 
 __all__ = [
     "CATEGORY_TEXT",
+    "DESCRIBED_CHANGES",
     "DESCRIBED_PRIMITIVES",
     "KIND_TEXT",
     "RARITY_TEXT",
@@ -1129,6 +1130,24 @@ _SIMPLE_CHANGE_TEXT = {
     "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
+DESCRIBED_CHANGES: frozenset[str] = frozenset(
+    {
+        *_SIMPLE_CHANGE_TEXT,
+        "damage_permille",
+        "heal_permille",
+        "summon_hp_permille",
+        "summon_damage_permille",
+        "push_distance_delta",
+        "form_upkeep_permille",
+        "form_entry_permille",
+        "add_element",
+        "add_tags",
+        "shape_to",
+        "on_hit_effects",
+    }
+)
+"""卡片文字（:func:`modifier_summary`）有寫法的修正規則改變種類（Phase 3T-1；
+:mod:`trpg.primitive_coverage` 載入時檢查 ``modifier_changes.yaml`` 的每種都在內）。"""
 
 
 def _shape_to_text(library: ContentLibrary, target: str) -> str:

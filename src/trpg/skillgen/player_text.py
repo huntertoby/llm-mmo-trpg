@@ -14,31 +14,13 @@ from typing import Any
 from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
 
-__all__ = ["CHANGE_TEXT", "plain_name", "plainify"]
+__all__ = ["change_text", "plain_name", "plainify"]
 
-CHANGE_TEXT: dict[str, str] = {
-    "damage_permille": "傷害 ±‰",
-    "hit_bonus": "命中 ±",
-    "cooldown_delta": "命中後冷卻 −1／−2",
-    "push_distance_delta": "推擊距離 +1／+2",
-    "ap_delta": "AP 成本 ±1",
-    "range_delta": "射程 −1～＋2",
-    "add_element": "傷害獲得元素",
-    "add_tags": "技能獲得標籤",
-    "on_hit_effects": "命中後附加效果",
-    "grant_pierce": "獲得穿透",
-    "area_delta": "範圍 +1",
-    "shape_to": "形狀轉換",
-    "allow_self_target": "範圍包含自己",
-    "heal_permille": "治療量 ±‰",
-    "summon_hp_permille": "召喚物最大 HP +‰",
-    "summon_attack_dice": "召喚物攻擊 +1 顆傷害骰",
-    "summon_limit_delta": "召喚物同時上限 ±1",
-    "summon_duration_delta": "召喚物持續 +輪數",
-    "summon_damage_permille": "召喚物傷害 +‰",
-    "form_upkeep_permille": "形態維持費 −‰",
-    "form_entry_permille": "形態進入獎勵 +‰",
-}
+
+def change_text(library: ContentLibrary, kind: str) -> str:
+    """修正規則改變種類的玩家名稱（``modifier_changes.yaml`` 的 ``name_zh``；Phase 3T-1）。"""
+    return library.modifier_changes.by_id()[kind].name_zh
+
 
 _INDEXED = re.compile(r"\b(effects|modifiers|variants)\[(\d+)\]")
 _LIST_ZH = {"effects": "效果", "modifiers": "修正規則", "variants": "變奏"}
@@ -164,17 +146,12 @@ _FIELD_ZH: dict[str, str] = {
     "actions": "基本動作",
     "activation": "啟動方式",
     "add_effect": "加一個效果",
-    "add_element": "加元素",
-    "add_tags": "加標籤",
     "all": "敵我雙方",
     "all_attacks": "所有攻擊",
     "all_skills": "所有技能",
-    "allow_self_target": "包含自己",
     "amount": "數量",
     "anchor": "錨點",
-    "ap_delta": "AP 調整",
     "applies_to": "套用對象",
-    "area_delta": "範圍調整",
     "bound": "綁定",
     "by": "依據",
     "cap_permille": "上限",
@@ -187,12 +164,10 @@ _FIELD_ZH: dict[str, str] = {
     "collision_dice": "撞擊骰",
     "concept": "概念",
     "condition": "條件",
-    "cooldown_delta": "冷卻調整",
     "count": "顆數",
     "created_by": "建立者",
     "crit_range": "暴擊範圍",
     "damage_multiplier_permille": "傷害倍率",
-    "damage_permille": "傷害加成",
     "description_zh": "說明",
     "distance": "距離",
     "effect": "效果",
@@ -202,10 +177,7 @@ _FIELD_ZH: dict[str, str] = {
     "exclusive_group": "互斥群組",
     "explode": "爆骰",
     "followup": "第二段",
-    "grant_pierce": "獲得穿透",
     "form_bonus_permille": "形態加成",
-    "heal_permille": "治療加成",
-    "hit_bonus": "命中加成",
     "hp_percent": "生命代價",
     "hp_permille": "生命比例",
     "id": "代號",
@@ -229,7 +201,6 @@ _FIELD_ZH: dict[str, str] = {
     "narrative": "敘述",
     "object": "物件",
     "on_hit": "命中後",
-    "on_hit_effects": "命中後效果",
     "on_kill": "擊殺時",
     "on_miss": "失手時",
     "origin": "來源",
@@ -242,7 +213,6 @@ _FIELD_ZH: dict[str, str] = {
     "pierce": "穿透",
     "power_permille": "威力",
     "provenance": "出處",
-    "push_distance_delta": "推擊距離調整",
     "radius": "半徑",
     "rank": "等第",
     "release": "釋放時機",
@@ -255,7 +225,6 @@ _FIELD_ZH: dict[str, str] = {
     "self_damage_permille_of_hit": "反噬自傷",
     "self_status": "自身狀態",
     "overdraft": "透支",
-    "shape_to": "形狀轉換",
     "sides": "面數",
     "size": "大小",
     "skill": "技能",
@@ -269,13 +238,6 @@ _FIELD_ZH: dict[str, str] = {
     "stacks": "層數",
     "stamina": "耐力",
     "status": "狀態",
-    "summon_attack_dice": "召喚物攻擊骰",
-    "summon_damage_permille": "召喚物傷害",
-    "summon_duration_delta": "召喚物持續調整",
-    "summon_hp_permille": "召喚物生命",
-    "summon_limit_delta": "召喚物上限調整",
-    "form_entry_permille": "形態進入獎勵",
-    "form_upkeep_permille": "形態維持費",
     "weapon_skills": "武器技",
     "surface": "表面",
     "tag": "標籤",
@@ -303,7 +265,8 @@ _FIELD_ZH: dict[str, str] = {
     "delay": "延遲",
     "enter": "踩到時",
 }
-"""技能定義的欄位名 → 中文（schema 錯誤訊息的位置用；3-48h：不露欄位代號）。"""
+"""技能定義的欄位名 → 中文（schema 錯誤訊息的位置用；3-48h：不露欄位代號）。修正規則的改變種類
+（``change`` 的欄位）不在這裡：一律用 ``modifier_changes.yaml`` 的 ``name_zh``（3T-1）。"""
 
 
 def _key(value: Any) -> str:
@@ -316,7 +279,7 @@ def _tables(library: ContentLibrary) -> dict[str, str]:
     names: dict[str, str] = {}
     for attr in Attribute:
         names[attr.value] = attr.display_name
-    names.update(CHANGE_TEXT)
+    names.update({c.id: c.name_zh for c in library.modifier_changes.changes})
     groups: list[Any] = [
         library.elements.elements,
         rules.surfaces.surfaces,

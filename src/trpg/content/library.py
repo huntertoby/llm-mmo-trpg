@@ -73,6 +73,12 @@ from trpg.content.keyword_derive import (
 )
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
+from trpg.content.modifier_changes import (
+    MODIFIER_CHANGES_FILE,
+    ModifierChangeTable,
+    bundled_modifier_changes,
+    modifier_change_problems,
+)
 from trpg.content.races import OriginTable, RaceDef, RaceTable, race_reference_problems
 from trpg.content.regions import RegionTable, sanitize_map_theme
 from trpg.content.roguelite import RunRules, roguelite_problems
@@ -103,6 +109,7 @@ from trpg.content.skills import (
     SKELETON_IDS,
     ConditionDef,
     ConditionTable,
+    ModifierChange,
     PrimitiveDef,
     PrimitiveTable,
     ShapeDef,
@@ -519,6 +526,9 @@ class ContentLibrary:
     """可玩種族（``races.yaml``，Phase 3R-1；已通過防最佳解驗證）。"""
     origins: OriginTable | None = None
     """出身（``origins.yaml``，Phase 3R-1；不影響戰鬥）。"""
+    modifier_changes: ModifierChangeTable = field(default_factory=bundled_modifier_changes)
+    """修正規則的改變種類（``modifier_changes.yaml``，Phase 3T-1）；不嵌入規則包（引擎只用
+    :mod:`trpg.content.skills` 由內建資料推導的常數）。"""
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
@@ -628,6 +638,8 @@ def load_library(  # noqa: PLR0915
     skill_triggers = load("skill_triggers.yaml", SkillTriggerTable)
     stacks = load("stacks.yaml", StackTable)
     budget = load("skill_budget.yaml", BudgetRules)
+    modifier_changes = load(MODIFIER_CHANGES_FILE, ModifierChangeTable)
+    _check_modifier_changes(root, modifier_changes, budget)
     composer = load("skill_composer.yaml", ComposerRules)
     builds = load("sim/builds.yaml", BuildTable)
     synergies = load("skill_synergies.yaml", SynergyTable)
@@ -814,9 +826,19 @@ def load_library(  # noqa: PLR0915
         regions=regions,
         races=races,
         origins=origins,
+        modifier_changes=modifier_changes,
         map_warnings=tuple(map_warnings),
         files=files,
     )
+
+
+def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: BudgetRules) -> None:
+    """``modifier_changes.yaml`` 與 ``ModifierChange`` 的欄位、``points_milli`` 的鍵一致。"""
+    points = type(budget.modifier.points_milli).model_fields
+    problems = modifier_change_problems(table, ModifierChange.model_fields, points)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / MODIFIER_CHANGES_FILE, f"修正規則的改變種類對不上：\n{lines}")
 
 
 def _check_unit_races(
