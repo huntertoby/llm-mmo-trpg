@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.roguelite.helpers import full_library
 from trpg.api.app import create_app
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
@@ -90,9 +91,11 @@ def test_start_preview_suggests_the_attribute_most_skills_scale_with(
 def _campfire_session(client: TestClient, library: ContentLibrary) -> str:
     created = _ok(client.post("/api/runs", json={"build": "build_fire", "seed": 0}))
     run_id: str = created["run_id"]
+    # AI 代打走完整技能三選一才活得到營火（預設的白板三選一較弱，3W-4）
+    skilled = full_library()
     run, _ = auto_play(
-        library,
-        new_run(library, "build_fire", 0),
+        skilled,
+        new_run(skilled, "build_fire", 0),
         stop=lambda r, b: isinstance(r.node, CampfireNode),
     )
     runs = client.app.state.runs  # type: ignore[attr-defined]

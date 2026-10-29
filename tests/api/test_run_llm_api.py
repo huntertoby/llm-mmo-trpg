@@ -13,10 +13,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.roguelite.helpers import full_library
 from trpg.api.app import create_app
 from trpg.api.llm_source import LLM_OFF_NOTICE, LocalLlmProvider, MockLlmProvider
 from trpg.api.runs import RunStore
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.llm.candidate_source import mock_proposer
 from trpg.roguelite.state import CampfireNode
 from trpg.skillgen.proposal import ProposalContext
@@ -45,7 +46,8 @@ class _Provider(MockLlmProvider):
 
 @pytest.fixture(scope="module")
 def library() -> ContentLibrary:
-    return load_library()
+    # LLM 來源只在完整技能三選一（whiteboard: false）使用；預設的白板三選一不請 LLM（3W-4）
+    return full_library()
 
 
 def _client(library: ContentLibrary, tmp_path: Path, provider: Any) -> TestClient:

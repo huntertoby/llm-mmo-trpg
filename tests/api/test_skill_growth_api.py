@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.roguelite.helpers import full_library
 from trpg.api.app import create_app
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
@@ -47,7 +48,8 @@ def _session_at(client: TestClient, library: ContentLibrary, kind: type[object])
         return isinstance(run.node, kind)
 
     stopper: AutoStop = stop
-    run, _ = auto_play(library, new_run(library, BUILD, 0), stop=stopper)
+    skilled = full_library()  # AI 代打走完整技能三選一才活得到營火（預設是白板，3W-4）
+    run, _ = auto_play(skilled, new_run(skilled, BUILD, 0), stop=stopper)
     _runs(client).get(run_id).run = run
     return run_id
 
