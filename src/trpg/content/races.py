@@ -333,7 +333,7 @@ PASSIVE_RULE_SPECS: dict[str, PassiveRule] = {
     "conduction_immunity": PassiveRule(("surfaces",)),
     "knockback_reduction_at_hazard": PassiveRule(("terrain", "amount")),
     "burn_immunity_on": PassiveRule(("surfaces",)),
-    "free_move_on": PassiveRule(("surfaces",)),
+    "surface_move_bonus": PassiveRule(("surfaces", "amount")),
     "weather_move_bonus": PassiveRule(("weathers", "amount")),
 }
 """環境被動允許的規則（封閉清單，只有環境互動的小規則；3R-2 照此結算）。"""

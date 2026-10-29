@@ -14,9 +14,9 @@ from trpg.content.library import Ruleset
 from trpg.engine.gear.core import gear_damage_taken_permille
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.forms import form_move_delta, form_taken_permille
-from trpg.engine.rules.race import weather_move_bonus
+from trpg.engine.rules.race import surface_move_bonus, weather_move_bonus
 from trpg.engine.state import UnitState
-from trpg.shared.types import Attribute, Element, UnitId
+from trpg.shared.types import Attribute, Element, Surface, UnitId
 
 __all__ = [
     "ap_penalty",
@@ -65,14 +65,21 @@ def _combined(rules: Ruleset, unit: UnitState, field: Callable[[StatusDef], int]
     return value
 
 
-def move_points_for_turn(rules: Ruleset, unit: UnitState, weather_id: str | None = None) -> int:
+def move_points_for_turn(
+    rules: Ruleset,
+    unit: UnitState,
+    weather_id: str | None = None,
+    surface: Surface | None = None,
+) -> int:
     """回合開始時的移動點數：速度 × 各狀態的 ``move_permille``，無條件捨去（緩速 ×50%）；再減
     ``move_reduction`` 狀態的數值（多個取最大；鞭的纏繞，Phase 3I-1），最低 0。海民的「雨中海步」
-    （Phase 3R-2）在下雨天氣（``weather_id``）再 +1。"""
+    （Phase 3R-2）在下雨天氣（``weather_id``）再 +1；鱗族的「流線身形」（#68）在回合開始時腳下
+    （``surface``）是水或冰面時 +1。"""
     points = unit.speed * _combined(rules, unit, lambda d: d.move_permille) // PERMILLE
     delta = sum(rules.status_def(s.status_id).move_delta for s in unit.statuses)  # 石膚 −1
     delta += form_move_delta(rules, unit)  # 形態的移動加減（Phase 3J-1a）
     delta += weather_move_bonus(rules, unit, weather_id)  # 種族的環境被動（Phase 3R-2）
+    delta += surface_move_bonus(rules, unit, surface)  # 鱗族（3R-4）
     return max(0, points + delta - move_reduction(rules, unit))
 
 

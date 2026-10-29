@@ -37,7 +37,6 @@ from trpg.engine.rules.combat import (
     concealment_problem,
 )
 from trpg.engine.rules.geometry import has_line_of_sight, sight_range
-from trpg.engine.rules.movement import path_map
 from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import move_points_for_turn
 from trpg.engine.state import TrapState
@@ -200,7 +199,7 @@ def test_dragonkin_takes_twenty_percent_less_fire_damage_only() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 矮人：穩健步伐（冰面不滑倒）／鱗族：流線身形（水與冰面不滑倒、不花額外點數）
+# 矮人：穩健步伐（冰面不滑倒）／鱗族：流線身形（回合開始站水或冰面移動 +1、冰面不滑倒）
 # ---------------------------------------------------------------------------
 
 
@@ -229,13 +228,49 @@ def test_slip_fall_only_happens_to_others() -> None:
     assert falls["dwarf"] == 0 and falls["scalefolk"] == 0
 
 
-def test_scalefolk_water_and_ice_cost_no_extra_movement_points() -> None:
-    """引擎本來就沒有水與冰面的額外移動花費；這個測試鎖住「鱗族走水與冰面的花費和平地相同」。"""
-    for surface in ("water", "ice"):
-        state = race_state("scalefolk", foes=((6, 6),), surfaces=[(4, 3, surface)])
-        flat = race_state("scalefolk", foes=((6, 6),))
-        cost = path_map(state, state.units[U1], 5).cost
-        assert cost[(4, 3)] == path_map(flat, flat.units[U1], 5).cost[(4, 3)] == 1
+def _start_of_u1_turn(race: str | None, surface: str | None) -> tuple[BattleState, int]:
+    """U1 站在 (3,3)（表面 ``surface``）；回傳輪到 U1 時的狀態與 ``TurnStarted.move_points``。"""
+    surfaces = [] if surface is None else [(3, 3, surface)]
+    s = race_state(race, foes=((6, 6),), surfaces=surfaces)
+    for _ in range(8):
+        r = end_turn(s)
+        s = r.state
+        started = [e for e in r.events if isinstance(e, TurnStarted) and e.unit_id == U1]
+        if started:
+            return s, started[0].move_points
+    raise AssertionError("沒有輪到 U1")
+
+
+@pytest.mark.parametrize("surface", ["water", "ice", None, "oil"])
+@pytest.mark.parametrize("race", ["scalefolk", None, "dwarf"])
+def test_scalefolk_gets_one_more_move_point_when_the_turn_starts_on_water_or_ice(
+    race: str | None, surface: str | None
+) -> None:
+    """表格：回合開始站水／冰／一般地面 × 鱗族／非鱗族（#68）。"""
+    base = _start_of_u1_turn(None, None)[1]
+    bonus = 1 if race == "scalefolk" and surface in ("water", "ice") else 0
+    assert _start_of_u1_turn(race, surface)[1] == base + bonus
+
+
+def test_scalefolk_move_bonus_is_kept_after_leaving_the_water() -> None:
+    state, points = _start_of_u1_turn("scalefolk", "water")
+    plain = _start_of_u1_turn("scalefolk", None)[1]
+    assert points == plain + 1
+    result = resolve(state, Move(unit_id=U1, path=(Pos(x=3, y=3), Pos(x=3, y=4))))
+    assert result.state.units[U1].move_points == points - 1  # 離開水面不收回
+
+
+def test_scalefolk_bonus_is_not_given_again_next_turn_when_off_the_water() -> None:
+    state, points = _start_of_u1_turn("scalefolk", "water")
+    moved = resolve(state, Move(unit_id=U1, path=(Pos(x=3, y=3), Pos(x=3, y=4)))).state
+    for _ in range(8):
+        r = end_turn(moved)
+        moved = r.state
+        started = [e for e in r.events if isinstance(e, TurnStarted) and e.unit_id == U1]
+        if started:
+            assert started[0].move_points == points - 1  # 這回合開始站在一般地面：沒有加值
+            return
+    raise AssertionError("沒有輪到 U1")
 
 
 def test_water_has_no_slip_check_for_anyone() -> None:
@@ -478,7 +513,7 @@ def test_every_passive_rule_has_a_behaviour_test() -> None:
         "conduction_immunity",
         "knockback_reduction_at_hazard",
         "burn_immunity_on",
-        "free_move_on",
+        "surface_move_bonus",
         "weather_move_bonus",
     }
     assert set(PASSIVE_RULE_SPECS) == covered

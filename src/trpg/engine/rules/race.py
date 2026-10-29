@@ -8,11 +8,13 @@
 - ``detect_hidden_nearby``（狐族）：:func:`reveal_radius`（``combat.concealment_problem``、
   ``combat.advantage_sources``、``traps.detect_traps``、``traps.visible_traps``）；
 - ``damage_taken_permille``（龍裔）：:func:`race_element_mods`（開戰時併進元素修正）；
-- ``slip_immunity``／``free_move_on``（矮人、鱗族）：:func:`slip_immune`（``enter_surface``）；
+- ``slip_immunity``（矮人）、``surface_move_bonus``（鱗族，同時不滑倒）：:func:`slip_immune`
+  （``enter_surface``）；
 - ``conduction_immunity``（晶能義體人）：:func:`conduction_immune`（``interactions`` 的導電）；
 - ``knockback_reduction_at_hazard``（獸人）：:func:`hazard_push_reduction`（``push_distance``）；
 - ``burn_immunity_on``（角魔）：:func:`burn_immune`（``interactions``／``turns`` 的表面燃燒）；
-- ``weather_move_bonus``（海民）：:func:`weather_move_bonus`（``statuses.move_points_for_turn``）。
+- ``weather_move_bonus``（海民）：:func:`weather_move_bonus`（``statuses.move_points_for_turn``）；
+- ``surface_move_bonus``（鱗族）的移動 +1：:func:`surface_move_bonus`（同上，看回合開始時腳下）。
 
 查詢只讀 ``Ruleset.races`` 與單位／戰鬥狀態，是確定性的純函式。
 """
@@ -40,6 +42,7 @@ __all__ = [
     "reveal_radius",
     "sight_range_for",
     "slip_immune",
+    "surface_move_bonus",
     "weather_move_bonus",
 ]
 
@@ -130,8 +133,8 @@ def race_element_mods(rules: Ruleset, template: UnitTemplate) -> dict[Element, i
 
 
 def slip_immune(rules: Ruleset, unit: UnitState, surface: Surface) -> bool:
-    """在 ``surface`` 上不會滑倒：矮人（冰）；鱗族在水與冰面上移動不花額外點數、不滑倒。"""
-    for rule in ("slip_immunity", "free_move_on"):
+    """在 ``surface`` 上不會滑倒：矮人（冰）、鱗族（水與冰面）。"""
+    for rule in ("slip_immunity", "surface_move_bonus"):
         passive = passive_of(rules, unit, rule)
         if passive is not None and surface in (passive.surfaces or ()):
             return True
@@ -154,6 +157,15 @@ def weather_move_bonus(rules: Ruleset, unit: UnitState, weather_id: str | None) 
     """指定天氣下回合開始的移動點數加值（海民「雨中海步」：下雨 +1）。"""
     passive = passive_of(rules, unit, "weather_move_bonus")
     if passive is None or weather_id is None or weather_id not in (passive.weathers or ()):
+        return 0
+    return passive.amount or 0
+
+
+def surface_move_bonus(rules: Ruleset, unit: UnitState, surface: Surface | None) -> int:
+    """回合開始時腳下表面（``surface``）的移動點數加值（鱗族「流線身形」：水或冰面 +1；只加在
+    這個回合，回合中離開水面不收回）。"""
+    passive = passive_of(rules, unit, "surface_move_bonus")
+    if passive is None or surface is None or surface not in (passive.surfaces or ()):
         return 0
     return passive.amount or 0
 
