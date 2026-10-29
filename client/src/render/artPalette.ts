@@ -1,6 +1,8 @@
 // 程式繪製美術的色票（Phase 3-16a；來源：美術 PM 的 docs/art/移植需求.md 第 1 節）。
 // 整體偏低彩度，讓陣營色與特效跳出來。元件只引用這裡的鍵，不寫死色碼，之後整組換色只改這個檔。
 
+import { MATERIAL } from "./material";
+
 export const PAL = {
   stone: "#8e8a80",
   stoneGap: "#6c685f",
@@ -48,46 +50,15 @@ export const RING = {
 
 export type PalKey = keyof typeof PAL;
 
-export function hexRgb(h: string): [number, number, number] {
-  const n = parseInt(h.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-/** 把亮度乘上 `f`，回傳 CSS 顏色。 */
-export function shade(h: string, f: number): string {
-  const [r, g, b] = hexRgb(h);
-  const c = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
-  return `rgb(${c(r * f)},${c(g * f)},${c(b * f)})`;
-}
-
-export function rgba(h: string, a: number): string {
-  const [r, g, b] = hexRgb(h);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-/** Pixi 的數字顏色 → `#rrggbb`。 */
-export function numToHex(n: number): string {
-  return `#${(n & 0xffffff).toString(16).padStart(6, "0")}`;
-}
-
 // ---- 裝備圖示色票（Phase 3G-G5a；來源：docs/art/裝備外觀移植需求.md 第 2 節）----
 
 /** 圖示描邊色。 */
 export const GEAR_INK = "#16181d";
 
 /** 材質 `[主色, 暗色]`；`shine`：銀，加 1.4px 白色亮線。 */
-export const GEAR_MATERIAL: Readonly<Record<string, { c: readonly [string, string]; shine?: boolean }>> = {
-  iron: { c: ["#7a828b", "#474c52"] },
-  steel: { c: ["#a9b6c6", "#6d7a8a"] },
-  copper: { c: ["#b06a3c", "#6e3e20"] },
-  silver: { c: ["#e8edf2", "#a8b0ba"], shine: true },
-  gold: { c: ["#e8bb48", "#9c7420"] },
-  wood: { c: ["#a06a36", "#6a4420"] },
-  leather: { c: ["#8a5a32", "#5e3b1f"] },
-  cloth: { c: ["#8a8f99", "#5d6168"] },
-  bone: { c: ["#e9e3cf", "#a8a08a"] },
-  crystal: { c: ["#b8a8ff", "#7a68c8"] },
-};
+export const GEAR_MATERIAL: Readonly<Record<string, { c: readonly [string, string]; shine?: boolean }>> = Object.fromEntries(
+  Object.entries(MATERIAL).map(([id, c]) => [id, id === "silver" ? { c, shine: true } : { c }]),
+);
 
 /** 染色（暗色＝染色混黑 35%）。 */
 export const GEAR_DYE: Readonly<Record<string, string>> = {

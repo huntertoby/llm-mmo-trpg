@@ -3,7 +3,7 @@
 // 座標以 52px 的虛擬格為單位（同 terrainArt／objectArt）；每個畫法都由資料欄位決定，
 // 不認得的值（元素、觸發方式、表面）一律退回灰色預設。快取鍵只用級距與色碼，不用原始比例。
 import { SURFACES } from "../battle/glossary";
-import { rgba } from "./artPalette";
+import { rgba } from "./color";
 import { TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { FONT } from "./labels";

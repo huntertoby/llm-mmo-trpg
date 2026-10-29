@@ -1,7 +1,8 @@
 // 場景物件的程式繪製（Phase 3-16a；移植自美術 PM 樣張 procedural.js 的 OBJECT_DRAW）。
 // 每個物件畫成一張透明背景的離屏貼圖（座標以 ART_T ＝ 52 的虛擬格為單位）。
 // 沒有畫法的新物件：灰色六角形（字 glyph 由繪圖端疊上），不會出錯。
-import { PAL, rgba } from "./artPalette";
+import { PAL } from "./artPalette";
+import { rgba } from "./color";
 import { flame, roundRect, shadowEllipse, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { cracks, type HpStage } from "./fieldFx";
