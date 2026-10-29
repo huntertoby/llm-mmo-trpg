@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function PartTip({ cat, label, tip, lines, children, pin = true, className }: Props) {
-  const f = useFloatCard({ pinOn: pin ? "always" : "never" });
+  const f = useFloatCard({ pinOn: pin ? "always" : "touch" });
   const { onKeyDown: triggerKeyDown, ...trigger } = f.triggerProps;
   return (
     <span
