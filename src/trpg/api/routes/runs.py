@@ -65,6 +65,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import skill_card
 from trpg.roguelite.auto import auto_play
+from trpg.roguelite.flashes import owned_skills, state_of
 from trpg.roguelite.start import (
     start_resources,
     start_weapons,
@@ -329,6 +330,12 @@ def _dev_reached(run: RunState, to: str) -> bool:
     return run.node.kind == to
 
 
+def _dev_mark_used(run: RunState) -> RunState:
+    """開發用：學會的技能都算「先上場用過」，閃現區才有按鈕可以掃（AI 代打會把可閃的都閃掉）。"""
+    flash = {s: state_of(run, s).model_copy(update={"used": True}) for s in owned_skills(run)}
+    return run.model_copy(update={"flash": {**run.flash, **flash}})
+
+
 @router.post("/{run_id}/dev-advance")
 def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> RunResponse:
     """開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
@@ -346,6 +353,8 @@ def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> Run
         run, _ = auto_play(session.library, session.run, stop=lambda r, _b: _dev_reached(r, to))
         if insight > run.insight:
             run = run.model_copy(update={"insight": insight})
+        if to == "next_battle" and insight > 0:
+            run = _dev_mark_used(run)
         session.run = run
         return _respond(store, session)
 
