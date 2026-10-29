@@ -214,6 +214,13 @@
 5. 測試一律 `MockLLMClient`；需要真模型的標 `@pytest.mark.llm`。
 6. 驗收：pytest（skillgen、llm、content、roguelite、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports；`trpg llm propose -n 10 --seed 0`（Mock）輸出正常。報告 `Phase4-L8報告.md`（含盤點表與開放前後覆蓋率）。
 
+## 3I. 4-L8b 規格（4-L8 待決收尾；開發 PM 2026-10-29；sonnet，約 0.5 段）
+1. **只能巢狀的效果**（`refund_ap`、`refund_cooldown`、`damage_multiplier`、`self_damage_of_hit` 等）：在 `skill_primitives.yaml` 加旗標（例如 `nested_only: true` 與允許的父結構），提議 schema 與子集照旗標產生，coverage 檢查涵蓋；`ash_harvest`、`blood_sacrifice` 往返成功，覆蓋率下限隨之提高。
+2. **AP、冷卻、耐力成為預算旋鈕**（4-L3 待決 #2、4-L8 待決 #6）：補值器可以調高費用讓超預算的結構回到 70～100%（例如 `leap_slam` 類複合技能）；上限照 06 6.5（冷卻最多 5 等）；手寫技能預算不變（比照 3T-1 的前後對照）。
+3. **候選產生器也出反應題**（4-L8 待決 #10）：照 `trpg llm propose` 的輪替，反應技的比例放 `content/`（初值寫進報告）。
+4. 命名關閉時，敘事也換成模板敘事（4-L8 待決 #8）；`trpg llm propose` 加 `--naming`（#9）。
+5. 驗收：pytest（skillgen、llm、content、roguelite、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports；`trpg llm propose --mock -n 10 --seed 0`、`trpg run auto --llm-mock` 正常。報告 `Phase4-L8b報告.md`。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）
@@ -275,3 +282,7 @@
 ### 4.9 4-L7 驗收（2026-10-29，開發 PM）
 - 報告 `Phase4-L7報告.md`。命名 prompt `skill-naming/1`；長度上限與禁字在 `content/llm/world_shattered.yaml` `naming`；`trpg.llm.naming`（長度、空字串、字元集、禁字、重名；3 次後退回組合式名稱「元素・骨架」＋模板敘事）；`make_proposer(..., naming=)` 只對 `llm` 來源命名；存檔 `trpg-run/9`（/5～/8 可讀），`LlmRecord` 加 `name_source`／`name_attempts`／`name_codes`。合併後 ruff、mypy、llm／roguelite／skillgen 2391 通過；`trpg run auto --seed 1 --llm-mock` 命名 1 個成功。
 - 待決 → 決定：#2 提議 schema 移除 `name_zh`、#8 prompt 版本號寫進 run 紀錄 → 併入 4-L8；#1 去重看不到本輪持有技能、#3 呼叫次數、#4 敘事禁阿拉伯數字、#5 禁字表 → 4-L9 看真模型再調；#6、#7 接受。
+
+### 4.10 4-L8 驗收（2026-10-29，開發 PM）
+- 報告 `Phase4-L8報告.md`。往返盤點 `skillgen/proposal_coverage.py`，覆蓋率 241／301 → **264／301**（測試下限 264）；開放代價欄位（每場一次、HP 代價、失手反噬；源力、每場次數、層數、HP 比例由補值器補）、`reaction`、`followup`（第二段骨架／形狀／位移範圍、旋鈕調第二段）；提議 schema 移除 `name_zh`；`LlmRecord` 加 `prompt_version`／`naming_prompt_version`；存檔 `trpg-run/10`（/5～/9 可讀）；`PROMPT_VERSION` `skill-proposal/4`。schema 最大 91,020 字元、prompt 最大 8,069 token。
+- 待決 → 決定：#1、#6、#8、#9、#10 → **4-L8b**；#2 HP 代價 200‰、#3 說明搬 YAML、#4 第二段全開、#5 `displace` 沒有 `ring`、#7 傳說源力 → 接受，4-L9 看真模型再調。
