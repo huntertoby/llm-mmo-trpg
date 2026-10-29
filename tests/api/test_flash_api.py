@@ -52,7 +52,7 @@ def _at_gear(client: TestClient, **create: Any) -> tuple[str, RunState]:
 
 
 def _ready(body: dict[str, Any]) -> str:
-    return next(f["skill_id"] for f in body["hero"]["flash"] if f["can_flash"])
+    return str(next(f["skill_id"] for f in body["hero"]["flash"] if f["can_flash"]))
 
 
 def test_the_hero_reports_insight_rules_and_flash_state(client: TestClient) -> None:
