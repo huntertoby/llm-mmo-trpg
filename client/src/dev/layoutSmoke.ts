@@ -483,8 +483,8 @@ export async function runScreens(title: string): Promise<string> {
 const POST_BATTLE: readonly { screen: DevScreen; label: string; waitFor: string; hover: string }[] = [
   { screen: "gear_offer", label: "戰後・裝備三選一", waitFor: '[data-testid="gear-offer"]', hover: ".run-offer-card .part-tip" },
   { screen: "level_up", label: "戰後・升級選技", waitFor: ".run-levelup .run-offer-card", hover: ".run-levelup .run-offer-card .part-tip" },
+  { screen: "complete_offer", label: "戰後・完整技能三選一", waitFor: ".run-complete-offer .run-offer-card", hover: ".run-complete-offer .run-offer-card .part-tip" },
   { screen: "campfire", label: "戰後・營火", waitFor: ".run-campfire", hover: ".run-campfire .part-tip" },
-  { screen: "campfire_offer", label: "戰後・營火候選", waitFor: ".run-campfire .run-offer-card", hover: ".run-campfire .run-offer-card .part-tip" },
   { screen: "ended", label: "戰後・一輪結束", waitFor: ".run-actions", hover: ".part-tip" },
 ];
 

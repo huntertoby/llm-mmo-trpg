@@ -167,12 +167,11 @@ export type DevPack = Schemas["DevPackOut"];
 export type OfferTag = Schemas["OfferTagOut"];
 /** 一輪的 LLM 生成統計（Phase 4-L6b）。 */
 export type LlmStats = Schemas["LlmStatsOut"];
-// 技能點與技能等級（Phase 3-26a）
-export type SkillLevelInfo = Schemas["SkillLevelInfo"];
-export type SkillGrowth = Schemas["SkillGrowthOut"];
-// 分歧進化（Phase 3-26b）
-export type EvolutionChoice = Schemas["EvolutionChoiceOut"];
-export type EvolutionOption = Schemas["EvolutionOptionOut"];
+// 靈感點與閃現（Phase 3W-5；畫面在 3W-6）
+export type FlashRules = Schemas["FlashRulesOut"];
+export type SkillFlash = Schemas["SkillFlashOut"];
+export type PendingFlash = Schemas["PendingFlashOut"];
+export type FlashPreview = Schemas["FlashPreviewOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 // 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）
@@ -181,11 +180,12 @@ export type AttributeSuggestion = Schemas["AttributeSuggestionOut"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
 export type RunChoice =
   | Schemas["LevelUpChoice"]
-  | Schemas["RerollChoice"]
-  | Schemas["PickChoice"]
+  | Schemas["CompletePickChoice"]
   | Schemas["LeaveChoice"]
-  | Schemas["SpendChoice"]
-  | Schemas["RespecChoice"]
+  | Schemas["FlashChoice"]
+  | Schemas["FlashPickChoice"]
+  | Schemas["DissolveChoice"]
+  | Schemas["InheritChoice"]
   | Schemas["RespecAttributesChoice"]
   | Schemas["AllocateChoice"]
   | Schemas["LoadoutChoice"]

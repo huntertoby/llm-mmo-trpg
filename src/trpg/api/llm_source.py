@@ -2,7 +2,8 @@
 
 - :class:`LlmProvider`：``POST /api/runs`` 的 ``llm: true`` 用它判斷「這一輪能不能開 LLM 生成」。
   :meth:`probe` 回傳 ``None`` ＝ 可用；否則回傳要顯示給玩家的提示（連不到模型**不報錯**，那一輪
-  自動當作關閉）。:meth:`proposer` 建立候選產生器的提議器（經 ``trpg.roguelite.llm_hook`` 掛接）。
+  自動當作關閉）。:meth:`proposer` 建立候選產生器的提議器、:meth:`flash_source` 建立閃現變化提議
+  的來源工廠（Phase 3W-5 接 3W-7；都經 ``trpg.roguelite.llm_hook`` 掛接）。
 - :class:`LocalLlmProvider`：讀 ``config/llm.toml``，連線檢查有逾時（``probe_timeout_s``），
   不會卡住開局。
 - :class:`MockLlmProvider`：測試與離線預覽用（``MockLLMClient``，不連任何位址）。
@@ -20,6 +21,8 @@ import httpx
 from trpg.content.library import ContentLibrary
 from trpg.llm import LLMConfig, LLMConfigError, OpenAICompatClient, load_llm_config
 from trpg.llm.candidate_source import make_proposer, mock_proposer
+from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
+from trpg.roguelite.llm_hook import FlashSourceFactory
 from trpg.skillgen.proposal_topic import LlmProposer
 
 __all__ = [
@@ -45,6 +48,10 @@ class LlmProvider(Protocol):
 
     def proposer(self, library: ContentLibrary) -> LlmProposer | None:
         """建立候選用的提議器；設定壞掉等做不到時回傳 ``None``（該輪不使用 LLM）。"""
+        ...
+
+    def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
+        """建立閃現變化提議的來源工廠（3W-5）；做不到時回傳 ``None``（閃現只用模板）。"""
         ...
 
     def alert_permille(self) -> int:
@@ -92,6 +99,13 @@ class LocalLlmProvider:
         client = OpenAICompatClient(config, transport=self._transport)
         return make_proposer(client, library, max_attempts=config.max_retries, naming=client)
 
+    def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
+        config = self._config()
+        if config is None:
+            return None
+        client = OpenAICompatClient(config, transport=self._transport)
+        return lambda sink: LlmFlashSource(client, max_attempts=config.max_retries, sink=sink)
+
     def alert_permille(self) -> int:
         config = self._config()
         return DEFAULT_ALERT_PERMILLE if config is None else config.fallback_alert_permille
@@ -113,6 +127,9 @@ class MockLlmProvider:
 
     def proposer(self, library: ContentLibrary) -> LlmProposer | None:
         return mock_proposer(library, naming=True)
+
+    def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
+        return lambda sink: mock_flash_source(library, sink=sink)
 
     def alert_permille(self) -> int:
         return self._alert

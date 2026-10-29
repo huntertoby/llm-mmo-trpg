@@ -24,6 +24,7 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.runner import BattleLog, replay
 from trpg.engine.state import state_to_json
 from trpg.roguelite import auto_choice, auto_play, load_save, restore_battle
+from trpg.roguelite.auto import auto_flash_choice
 from trpg.roguelite.state import BattleNode
 
 BUILD, SEED = "build_fire", 0
@@ -302,17 +303,29 @@ def test_api_load_and_cli_auto_from_finish_identically(
     assert direct == cli_final
     # API：讀檔後由「效用 AI 主角」打到結束（戰鬥走網頁動作，節點走選擇端點）
     _ok(runs_client.post("/api/runs/load", json={"run_id": run_id}))
-    for _ in range(80):
+    skip: set[str] = set()  # 這個節點出題失敗的技能（和 auto_play 的花點規則相同，3W-5）
+    url = f"/api/runs/{run_id}/choice"
+    for _ in range(200):
         session = _runs(runs_client).get(run_id)
         if session.run.ended:
             break
-        if isinstance(session.run.node, BattleNode):
+        flash = auto_flash_choice(library, session.run, frozenset(skip))
+        if isinstance(session.run.node, BattleNode) and session.run.pending_flash is None:
             battle = _ok(runs_client.post(f"/api/runs/{run_id}/battle"))["battle"]
             while battle["awaiting"] in ("action", "decision"):
                 battle = _step(runs_client, library, battle)
+        elif session.run.pending_flash is None and flash is not None:
+            reply = runs_client.post(url, json=flash.model_dump(mode="json"))
+            if reply.status_code == 422:
+                skip.add(flash.skill)
+            else:
+                assert reply.status_code == 200, reply.text
         else:
+            node = session.run.node
             choice = auto_choice(library, session.run)
-            _ok(runs_client.post(f"/api/runs/{run_id}/choice", json=choice.model_dump(mode="json")))
+            _ok(runs_client.post(url, json=choice.model_dump(mode="json")))
+            if session.run.node != node:
+                skip = set()
     api_final = load_save(_file(save_dir, run_id)).run
     assert api_final == cli_final
     assert [h.state_digest for h in api_final.history] == [

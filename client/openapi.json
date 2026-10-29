@@ -1305,19 +1305,22 @@
                     "$ref": "#/components/schemas/LevelUpChoice"
                   },
                   {
-                    "$ref": "#/components/schemas/RerollChoice"
-                  },
-                  {
-                    "$ref": "#/components/schemas/PickChoice"
+                    "$ref": "#/components/schemas/CompletePickChoice"
                   },
                   {
                     "$ref": "#/components/schemas/LeaveChoice"
                   },
                   {
-                    "$ref": "#/components/schemas/SpendChoice"
+                    "$ref": "#/components/schemas/FlashChoice"
                   },
                   {
-                    "$ref": "#/components/schemas/RespecChoice"
+                    "$ref": "#/components/schemas/FlashPickChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DissolveChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InheritChoice"
                   },
                   {
                     "$ref": "#/components/schemas/RespecAttributesChoice"
@@ -1339,11 +1342,12 @@
                   "propertyName": "kind",
                   "mapping": {
                     "level_up": "#/components/schemas/LevelUpChoice",
-                    "reroll": "#/components/schemas/RerollChoice",
-                    "pick": "#/components/schemas/PickChoice",
+                    "complete_pick": "#/components/schemas/CompletePickChoice",
                     "leave": "#/components/schemas/LeaveChoice",
-                    "spend": "#/components/schemas/SpendChoice",
-                    "respec": "#/components/schemas/RespecChoice",
+                    "flash": "#/components/schemas/FlashChoice",
+                    "flash_pick": "#/components/schemas/FlashPickChoice",
+                    "dissolve": "#/components/schemas/DissolveChoice",
+                    "inherit": "#/components/schemas/InheritChoice",
                     "respec_attributes": "#/components/schemas/RespecAttributesChoice",
                     "allocate": "#/components/schemas/AllocateChoice",
                     "loadout": "#/components/schemas/LoadoutChoice",
@@ -1363,6 +1367,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/flash-preview": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Post Flash Preview",
+        "description": "閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（Phase 3W-5）：不扣點、不改狀態。",
+        "operationId": "post_flash_preview_api_runs__run_id__flash_preview_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlashPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlashPreviewOut"
                 }
               }
             }
@@ -3568,6 +3625,42 @@
         "title": "CommandSummon",
         "description": "指揮自己一隻召喚物（Phase 3-33c，6.29.2；``summon_command_ap_cost`` AP）：立刻執行指定的\n移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，\n移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪\n最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**\n``legal_actions``（組合太多），由 :func:`trpg.engine.summons.control.command_problem` 與\nAPI 的指揮選項（``command-options``）提供。"
       },
+      "CompletePickChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "complete_pick",
+            "title": "Kind",
+            "default": "complete_pick"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "replace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replace"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CompletePickChoice",
+        "description": "完整技能三選一的選擇（Phase 3W-5）：``pick`` 為候選索引（``None`` ＝ 跳過）；欄位滿時\n``replace`` 指定要換掉的技能 ID（換下的進備用）。"
+      },
       "CoverOut": {
         "properties": {
           "penalty": {
@@ -4064,6 +4157,27 @@
         "title": "DisplaceCheckOut",
         "description": "預覽中的位移抵抗判定（Phase 3D-2b）：敵方 ``unit_id`` 被移動的成功率（千分比）；\n``resist_bonus`` 是目標的抵抗加成，``lethal`` 為落點是致命地形。"
       },
+      "DissolveChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "dissolve",
+            "title": "Kind",
+            "default": "dissolve"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill"
+        ],
+        "title": "DissolveChoice",
+        "description": "溶掉一招學會的技能（Phase 3W-5，#71）：技能消失，退回花在它身上的靈感點的一半（無條件捨去）。\n只在營火；欄位空出（可以用 ``loadout`` 從備用補上）。不推進節點。"
+      },
       "DollGear": {
         "properties": {
           "kind": {
@@ -4451,94 +4565,6 @@
         "title": "EquipmentSlotView",
         "description": "一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"
       },
-      "EvolutionChoiceOut": {
-        "properties": {
-          "skill_id": {
-            "type": "string",
-            "title": "Skill Id"
-          },
-          "name_zh": {
-            "type": "string",
-            "title": "Name Zh"
-          },
-          "options": {
-            "items": {
-              "$ref": "#/components/schemas/EvolutionOptionOut"
-            },
-            "type": "array",
-            "title": "Options"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "skill_id",
-          "name_zh",
-          "options"
-        ],
-        "title": "EvolutionChoiceOut",
-        "description": "一個升到分歧進化那一級時要二選一的技能（已達門檻、還沒進化）。"
-      },
-      "EvolutionOptionOut": {
-        "properties": {
-          "index": {
-            "type": "integer",
-            "title": "Index"
-          },
-          "branch": {
-            "type": "string",
-            "enum": [
-              "deepen",
-              "bridge",
-              "count"
-            ],
-            "title": "Branch"
-          },
-          "label_zh": {
-            "type": "string",
-            "title": "Label Zh"
-          },
-          "template": {
-            "type": "string",
-            "title": "Template"
-          },
-          "keyword": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/KeywordRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "summary_zh": {
-            "type": "string",
-            "title": "Summary Zh"
-          },
-          "fallback": {
-            "type": "boolean",
-            "title": "Fallback"
-          },
-          "card": {
-            "$ref": "#/components/schemas/SkillCard"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "index",
-          "branch",
-          "label_zh",
-          "template",
-          "keyword",
-          "summary_zh",
-          "fallback",
-          "card"
-        ],
-        "title": "EvolutionOptionOut",
-        "description": "一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。"
-      },
       "Facing": {
         "type": "string",
         "enum": [
@@ -4750,6 +4776,364 @@
           "modifiers",
           "variants"
         ]
+      },
+      "FlashCategoryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "count"
+        ],
+        "title": "FlashCategoryOut",
+        "description": "可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。"
+      },
+      "FlashChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "flash",
+            "title": "Kind",
+            "default": "flash"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill"
+        ],
+        "title": "FlashChoice",
+        "description": "閃現或重閃（Phase 3W-5，06 6.34.3）：付點出題，選項存進 ``RunState.pending_flash``，接著要用\n``flash_pick`` 選一個。\n\n- ``skill``：學會的技能（裝備中或備用）的目前 ID。\n- ``slot``：``None`` ＝ 閃現（下一次）；否則重閃第 ``slot`` 次的變化（完整技能為 0，換調整欄）。\n  重閃只在營火；閃現在戰鬥之間都可以（戰鬥中不行）。\n- ``category``：``None`` ＝ 不指定（1 點出 4 個）；指定類別 2 點出 3 個（只出該類；第 3 次另附\n  「轉型」保底）。0 個合法變化的類別會被拒絕（沒有扣點）。"
+      },
+      "FlashOptionOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "minor",
+              "major",
+              "transform"
+            ],
+            "title": "Source"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_zh": {
+            "type": "string",
+            "title": "Category Zh"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          },
+          "transform": {
+            "type": "boolean",
+            "title": "Transform"
+          },
+          "card": {
+            "$ref": "#/components/schemas/SkillCard"
+          },
+          "unequip_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unequip Candidates",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "source",
+          "category",
+          "category_zh",
+          "template",
+          "summary_zh",
+          "transform",
+          "card"
+        ],
+        "title": "FlashOptionOut",
+        "description": "待選閃現的一個選項：變化與套用後的技能卡。"
+      },
+      "FlashPickChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "flash_pick",
+            "title": "Kind",
+            "default": "flash_pick"
+          },
+          "pick": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pick"
+          },
+          "unequip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unequip"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pick"
+        ],
+        "title": "FlashPickChoice",
+        "description": "選閃現的第 ``pick`` 個選項（點數在出題時已付，不能放棄）。轉型讓技能換到另一種已滿的欄位時，\n``unequip`` 指定要卸下到備用的技能（必須是那一欄目前裝備的技能）。不推進節點。"
+      },
+      "FlashPreviewOut": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          },
+          "nth": {
+            "type": "integer",
+            "title": "Nth"
+          },
+          "major": {
+            "type": "boolean",
+            "title": "Major"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          },
+          "open_cost": {
+            "type": "integer",
+            "title": "Open Cost"
+          },
+          "focused_cost": {
+            "type": "integer",
+            "title": "Focused Cost"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/FlashCategoryOut"
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "slot",
+          "nth",
+          "major",
+          "problem_zh",
+          "open_cost",
+          "focused_cost",
+          "categories"
+        ],
+        "title": "FlashPreviewOut",
+        "description": "閃現或重閃之前的預覽（Phase 3W-5，含 3W-2c 的每類數量）。"
+      },
+      "FlashPreviewRequest": {
+        "properties": {
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill"
+        ],
+        "title": "FlashPreviewRequest",
+        "description": "閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽：選類別畫面用。"
+      },
+      "FlashRecordOut": {
+        "properties": {
+          "nth": {
+            "type": "integer",
+            "title": "Nth"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "minor",
+              "major",
+              "transform"
+            ],
+            "title": "Source"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_zh": {
+            "type": "string",
+            "title": "Category Zh"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          },
+          "reflashes": {
+            "type": "integer",
+            "title": "Reflashes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "nth",
+          "source",
+          "category",
+          "category_zh",
+          "template",
+          "summary_zh",
+          "reflashes"
+        ],
+        "title": "FlashRecordOut",
+        "description": "技能變化歷程的一筆（第幾次、哪一類、一句話說明）。"
+      },
+      "FlashRulesOut": {
+        "properties": {
+          "open_cost": {
+            "type": "integer",
+            "title": "Open Cost"
+          },
+          "open_options": {
+            "type": "integer",
+            "title": "Open Options"
+          },
+          "focused_cost": {
+            "type": "integer",
+            "title": "Focused Cost"
+          },
+          "focused_options": {
+            "type": "integer",
+            "title": "Focused Options"
+          },
+          "allow_focus": {
+            "type": "boolean",
+            "title": "Allow Focus"
+          },
+          "max_flashes": {
+            "type": "integer",
+            "title": "Max Flashes"
+          },
+          "major_flash": {
+            "type": "integer",
+            "title": "Major Flash"
+          },
+          "insight_per_win": {
+            "type": "integer",
+            "title": "Insight Per Win"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "open_cost",
+          "open_options",
+          "focused_cost",
+          "focused_options",
+          "allow_focus",
+          "max_flashes",
+          "major_flash",
+          "insight_per_win"
+        ],
+        "title": "FlashRulesOut",
+        "description": "閃現的規則（Phase 3W-5，``content/flash_templates.yaml``）：前端不寫死數值。"
       },
       "FocusTarget": {
         "properties": {
@@ -6501,20 +6885,28 @@
             "title": "Origin Name Zh",
             "default": ""
           },
-          "skill_points": {
+          "insight": {
             "type": "integer",
-            "title": "Skill Points",
+            "title": "Insight",
             "default": 0
           },
-          "skill_growth": {
+          "flash_rules": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SkillGrowthOut"
+                "$ref": "#/components/schemas/FlashRulesOut"
               },
               {
                 "type": "null"
               }
             ]
+          },
+          "flash": {
+            "items": {
+              "$ref": "#/components/schemas/SkillFlashOut"
+            },
+            "type": "array",
+            "title": "Flash",
+            "default": []
           },
           "bench": {
             "items": {
@@ -6522,14 +6914,6 @@
             },
             "type": "array",
             "title": "Bench",
-            "default": []
-          },
-          "evolutions": {
-            "items": {
-              "$ref": "#/components/schemas/EvolutionChoiceOut"
-            },
-            "type": "array",
-            "title": "Evolutions",
             "default": []
           },
           "equipment": {
@@ -7089,6 +7473,42 @@
         "title": "InfusionPreviewOut",
         "description": "灌注技能的預覽（Phase 3-33d）：召喚物 ``summon_id`` 以目前位置 ``origin`` 與目前模式會選的\n目標與範圍（``tiles``／``units``）；``no_target`` 為真時選不到目標（下回合會放棄，法力與冷卻\n不退）。實際在召喚物的回合開始時才選，位置或戰況改變時可能不同。"
       },
+      "InheritChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "inherit",
+            "title": "Kind",
+            "default": "inherit"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "records": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Records"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill",
+          "source",
+          "records"
+        ],
+        "title": "InheritChoice",
+        "description": "傳承（Phase 3W-5，#72，06 6.34.9 第 4 點）：還沒閃過的白板 ``skill`` 帶走舊技能 ``source`` 的\n最多 2 個小變化（``records`` 是舊技能變化歷程的「第幾次」，依序變成新技能的第 1、2 次）。舊技能\n消失、不退點；完整技能不能接受；變化必須對新技能合法。只在營火（和溶掉二選一）。不推進節點。"
+      },
       "Interact": {
         "properties": {
           "unit_id": {
@@ -7343,20 +7763,6 @@
               }
             ],
             "title": "Replace"
-          },
-          "levels": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Levels"
-          },
-          "evolve": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Evolve"
           }
         },
         "additionalProperties": false,
@@ -7461,7 +7867,7 @@
           "skills"
         ],
         "title": "LoadoutChoice",
-        "description": "營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合\n欄位上限）；沒裝上的進備用，技能等級保留。不推進節點。"
+        "description": "營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合\n欄位上限）；沒裝上的進備用，閃現狀態保留。不推進節點。"
       },
       "MapSummary": {
         "properties": {
@@ -7575,6 +7981,7 @@
               "battle",
               "gear_offer",
               "level_up",
+              "complete_offer",
               "campfire",
               "ended"
             ],
@@ -7624,6 +8031,17 @@
             ],
             "title": "Points"
           },
+          "tier_up": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier Up"
+          },
           "after_battle": {
             "anyOf": [
               {
@@ -7634,17 +8052,6 @@
               }
             ],
             "title": "After Battle"
-          },
-          "rerolls_left": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rerolls Left"
           },
           "offer": {
             "anyOf": [
@@ -7684,7 +8091,7 @@
           "kind"
         ],
         "title": "NodeOut",
-        "description": "目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、\n``level_up``（``level``、``points``、\n``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、\n``ended``（``victory``）。"
+        "description": "目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、\n``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，\n``after_battle``、``offer``；Phase 3W-5）、``campfire``（``after_battle``）、\n``ended``（``victory``）。"
       },
       "ObjectView": {
         "properties": {
@@ -7810,7 +8217,7 @@
             "type": "string",
             "enum": [
               "level_up",
-              "reroll"
+              "complete"
             ],
             "title": "Reason"
           },
@@ -8114,6 +8521,68 @@
         "title": "Pending",
         "description": "結算暫停、等待玩家決定（``prompt`` 反應、``copy_skill`` 選目標，或複合技能的第二段選目標）。\n\n以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == \"copy_skill\"`` 時\n``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）；``kind == \"followup\"``（Phase 3F-4a，\n「動作 → 位移」「擊殺 → 接下一段」）時 ``Decision.followup_target`` 給出第二段的選取\n（``skill_id`` 是施放的複合技能；第一段已經結算，``accept=False`` 只放棄第二段）。"
       },
+      "PendingFlashOut": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "nth": {
+            "type": "integer",
+            "title": "Nth"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "major": {
+            "type": "boolean",
+            "title": "Major"
+          },
+          "cost": {
+            "type": "integer",
+            "title": "Cost"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/FlashOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "nth",
+          "slot",
+          "category",
+          "major",
+          "cost",
+          "options"
+        ],
+        "title": "PendingFlashOut",
+        "description": "已付點、還沒選的閃現選項（Phase 3W-5）；選之前不能做別的事。"
+      },
       "PendingView": {
         "properties": {
           "kind": {
@@ -8201,42 +8670,6 @@
         ],
         "title": "PendingView",
         "description": "目前的反應詢問（只有公開欄位；內部的重播資料不外流）。"
-      },
-      "PickChoice": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "pick",
-            "title": "Kind",
-            "default": "pick"
-          },
-          "pick": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pick"
-          },
-          "replace": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Replace"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "PickChoice",
-        "description": "營火重骰後：選 1 個候選（``None`` ＝ 放棄），之後離開營火。"
       },
       "PierceObjectOut": {
         "properties": {
@@ -9151,20 +9584,6 @@
         "title": "Reload",
         "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
       },
-      "RerollChoice": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "reroll",
-            "title": "Kind",
-            "default": "reroll"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "RerollChoice",
-        "description": "營火：重骰（產生一組新的候選）。"
-      },
       "RespecAttributesChoice": {
         "properties": {
           "kind": {
@@ -9177,21 +9596,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "RespecAttributesChoice",
-        "description": "營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用\n``allocate`` 重新分配。和技能點的 ``respec`` 同一個畫面、同樣免費、不推進節點。"
-      },
-      "RespecChoice": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "respec",
-            "title": "Kind",
-            "default": "respec"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "RespecChoice",
-        "description": "營火：免費重配（Phase 3-26a）——全部技能退回 1 級，花掉的點數退回，之後再用 ``spend`` 重新\n分配。不推進節點。"
+        "description": "營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用\n``allocate`` 重新分配。免費、不推進節點。"
       },
       "RetreatTo": {
         "properties": {
@@ -9403,6 +9808,16 @@
                 "type": "null"
               }
             ]
+          },
+          "pending_flash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingFlashOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9570,6 +9985,7 @@
               "battle",
               "gear_offer",
               "level_up",
+              "complete_offer",
               "campfire",
               "ended"
             ],
@@ -10083,16 +10499,6 @@
             "type": "array",
             "title": "Stacks",
             "default": []
-          },
-          "growth": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SkillLevelInfo"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "additionalProperties": false,
@@ -10159,45 +10565,84 @@
         "title": "SkillCardKeywords",
         "description": "技能製造與利用的關鍵字（Phase 3-24b1，``docs/design/06-技能.md`` 6.27.1；由原語、條件、觸發\n自動推導）。技能卡顯示「製造：點燃｜利用：倒地」。"
       },
-      "SkillGrowthOut": {
+      "SkillFlashOut": {
         "properties": {
-          "max_level": {
-            "type": "integer",
-            "title": "Max Level"
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
           },
-          "upgrade_cost": {
-            "type": "integer",
-            "title": "Upgrade Cost"
+          "base_id": {
+            "type": "string",
+            "title": "Base Id"
           },
-          "points_per_level": {
+          "flashes": {
             "type": "integer",
-            "title": "Points Per Level"
+            "title": "Flashes"
           },
-          "trait_level": {
-            "type": "integer",
-            "title": "Trait Level"
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
           },
-          "evolve_level": {
-            "type": "integer",
-            "title": "Evolve Level"
+          "used": {
+            "type": "boolean",
+            "title": "Used"
           },
-          "evolve_uses": {
+          "can_flash": {
+            "type": "boolean",
+            "title": "Can Flash"
+          },
+          "flash_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flash Problem Zh"
+          },
+          "next_major": {
+            "type": "boolean",
+            "title": "Next Major",
+            "default": false
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/FlashRecordOut"
+            },
+            "type": "array",
+            "title": "Records",
+            "default": []
+          },
+          "spent": {
             "type": "integer",
-            "title": "Evolve Uses",
+            "title": "Spent",
             "default": 0
+          },
+          "dissolve_refund": {
+            "type": "integer",
+            "title": "Dissolve Refund",
+            "default": 0
+          },
+          "reflash_transform_hint": {
+            "type": "boolean",
+            "title": "Reflash Transform Hint",
+            "default": false
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "max_level",
-          "upgrade_cost",
-          "points_per_level",
-          "trait_level",
-          "evolve_level"
+          "skill_id",
+          "base_id",
+          "flashes",
+          "complete",
+          "used",
+          "can_flash"
         ],
-        "title": "SkillGrowthOut",
-        "description": "技能成長的規則（Phase 3-26a，``content/skill_growth.yaml``）：前端不寫死數值。"
+        "title": "SkillFlashOut",
+        "description": "一招學會的技能的閃現狀態（Phase 3W-5；卡片的「已閃 N／5 次」「可以閃現了」與變化歷程）。"
       },
       "SkillIcon": {
         "properties": {
@@ -10329,123 +10774,6 @@
         "title": "SkillIcon",
         "description": "組裝式圖示需要的全部欄位（由 :func:`icon_of` 推導）。\n\n``kind``、``rarity``、``weapon_req`` 為技能定義的代碼；草稿缺漏時退回\n``active``／``common``／``any``。``partial`` 為真表示這是組到一半的草稿（沒有形狀或沒有效果），\n前端據此把還沒決定的部件畫成「（未選）」。"
       },
-      "SkillLevelInfo": {
-        "properties": {
-          "level": {
-            "type": "integer",
-            "title": "Level"
-          },
-          "max_level": {
-            "type": "integer",
-            "title": "Max Level"
-          },
-          "bonus_permille": {
-            "type": "integer",
-            "title": "Bonus Permille"
-          },
-          "current_text": {
-            "type": "string",
-            "title": "Current Text"
-          },
-          "next_level": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Level"
-          },
-          "next_text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Text"
-          },
-          "trait": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "area",
-                  "cooldown"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trait"
-          },
-          "trait_text": {
-            "type": "string",
-            "title": "Trait Text"
-          },
-          "trait_active": {
-            "type": "boolean",
-            "title": "Trait Active"
-          },
-          "cost": {
-            "type": "integer",
-            "title": "Cost"
-          },
-          "uses": {
-            "type": "integer",
-            "title": "Uses",
-            "default": 0
-          },
-          "evolve_uses": {
-            "type": "integer",
-            "title": "Evolve Uses",
-            "default": 0
-          },
-          "evolved_from_zh": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Evolved From Zh"
-          },
-          "blocked_text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blocked Text"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "level",
-          "max_level",
-          "bonus_permille",
-          "current_text",
-          "next_level",
-          "next_text",
-          "trait",
-          "trait_text",
-          "trait_active",
-          "cost"
-        ],
-        "title": "SkillLevelInfo",
-        "description": "一個技能在某個等級的顯示資料。只有主動技能有（其他技能的卡片 ``growth`` 為 ``None``）。"
-      },
       "SkillRarity": {
         "type": "string",
         "enum": [
@@ -10558,34 +10886,6 @@
           "neck",
           "ring"
         ]
-      },
-      "SpendChoice": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "spend",
-            "title": "Kind",
-            "default": "spend"
-          },
-          "levels": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Levels"
-          },
-          "evolve": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Evolve"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "SpendChoice",
-        "description": "花技能點升級（Phase 3-26a）：``levels`` 是技能 ID → 升到的等級（只能升、不能降；每升 1 級花\n``skill_growth.upgrade_cost`` 點）。升級、營火與下一場戰鬥之前都可以送；不推進節點。"
       },
       "StartKeywordOption": {
         "properties": {

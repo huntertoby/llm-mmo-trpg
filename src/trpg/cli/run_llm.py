@@ -4,8 +4,9 @@
 - ``--llm-mock``：用 Mock 提議器跑（不需網路與金鑰；CI 與本機試跑用）。
 - 都沒有時看設定檔的 ``generate``（預設關：沒有本機模型時照舊）。
 
-提議器經 :func:`trpg.roguelite.llm_hook.use_proposer` 裝上；生成的技能與題目存在 run 裡，之後的
-重播與讀檔不再呼叫模型。
+提議器經 :func:`trpg.roguelite.llm_hook.use_proposer` 裝上，閃現的變化提議（3W-7，Phase 3W-5 接上）
+經 :func:`~trpg.roguelite.llm_hook.use_flash_source` 裝上；生成的技能、閃現選項與題目存在 run 裡，
+之後的重播與讀檔不再呼叫模型。閃現提議的紀錄另外摘要（:func:`flash_llm_lines`）。
 """
 
 from __future__ import annotations
@@ -19,7 +20,8 @@ from pathlib import Path
 from trpg.content.library import ContentLibrary
 from trpg.llm import LLMConfig, LLMConfigError, OpenAICompatClient, load_llm_config
 from trpg.llm.candidate_source import make_proposer, mock_proposer
-from trpg.roguelite.llm_hook import use_proposer
+from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
+from trpg.roguelite.llm_hook import use_flash_source, use_proposer
 from trpg.roguelite.state import RunState
 
 __all__ = ["LlmArgs", "add_llm_args", "llm_lines", "llm_session"]
@@ -62,7 +64,14 @@ def llm_session(
             raise
         config = LLMConfig()  # 沒有指定 --llm 時，壞掉的設定檔不影響原本的流程（開關預設關）
     if args.mock:
-        with use_proposer(mock_proposer(library, max_attempts=config.max_retries, naming=True)):
+        proposer = mock_proposer(library, max_attempts=config.max_retries, naming=True)
+        retries = config.max_retries
+        with (
+            use_proposer(proposer),
+            use_flash_source(
+                lambda sink: mock_flash_source(library, max_attempts=retries, sink=sink)
+            ),
+        ):
             yield True
         return
     if not (args.llm or config.generate):
@@ -71,7 +80,12 @@ def llm_session(
     client = OpenAICompatClient(config)
     try:
         proposer = make_proposer(client, library, max_attempts=config.max_retries, naming=client)
-        with use_proposer(proposer):
+        with (
+            use_proposer(proposer),
+            use_flash_source(
+                lambda sink: LlmFlashSource(client, max_attempts=config.max_retries, sink=sink)
+            ),
+        ):
             yield True
     finally:
         client.close()
@@ -102,6 +116,14 @@ def llm_lines(run: RunState, *, alert_permille: int | None = None) -> list[str]:
     if permille > limit:
         line += f"　〔提醒：退回率超過 {limit / 10:g}%〕"
     lines = [line]
+    flash = run.flash_llm_log
+    if flash:
+        llm = sum(1 for r in flash if r.source == "llm")
+        partial = sum(1 for r in flash if r.source == "partial")
+        lines.append(
+            f"  LLM 閃現提議：{len(flash)} 題，湊滿 {llm}，部分 {partial}，"
+            f"退回模板 {len(flash) - llm - partial}"
+        )
     named = [r for r in run.llm_log if r.name_source is not None]
     if named:
         generated = sum(1 for r in named if r.name_source == "llm")

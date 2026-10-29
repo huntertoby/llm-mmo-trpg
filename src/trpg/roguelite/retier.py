@@ -4,8 +4,8 @@
 用的階級（``RunState.skill_tier``）不同時，裝備與備用的每招技能照新階級的預算重配
 （:func:`~trpg.skillgen.skill_tier.retier`：結構與變化保留、預算分數不低於升階前）。只在戰鬥之間
 呼叫（升級節點、讀入舊存檔），戰鬥中不會變。手寫技能（內容庫裡的，例如手寫池退回的候選、開發者
-起始包）重配後成為生成技能 ``<原 ID>_t<階級>``（:func:`~trpg.roguelite.offers.at_run_tier`），等級、
-用法統計、備用清單跟著換 ID。
+起始包）重配後成為生成技能 ``<原 ID>_t<階級>``（:func:`~trpg.roguelite.offers.at_run_tier`），閃現
+狀態、用法統計、備用清單跟著換 ID。
 """
 
 from __future__ import annotations
@@ -42,15 +42,15 @@ def sync_skill_tier(library: ContentLibrary, run: RunState) -> RunState:
     bench = tuple(sorted(rename.get(s, s) for s in run.bench))
     keep = {*skills, *bench}
     kept = {k: v for k, v in generated.items() if k in keep}
-    levels = {rename.get(k, k): v for k, v in run.skill_levels.items()}
     usage = {rename.get(k, k): v for k, v in run.skill_usage.items()}
+    flash = {rename.get(k, k): v for k, v in run.flash.items()}
     return run.model_copy(
         update={
             "hero": run.hero.model_copy(update={"skills": skills}),
             "bench": bench,
             "generated_skills": tuple(kept[k] for k in sorted(kept)),
-            "skill_levels": {k: levels[k] for k in sorted(levels)},
             "skill_usage": {k: usage[k] for k in sorted(usage)},
+            "flash": {k: flash[k] for k in sorted(flash)},
             "skill_tier": tier,
         }
     )

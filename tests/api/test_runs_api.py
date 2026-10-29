@@ -85,8 +85,8 @@ def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) 
         "boss": False,
         "level": None,
         "points": None,
+        "tier_up": None,
         "after_battle": None,
-        "rerolls_left": None,
         "offer": None,
         "victory": None,
         "gear": None,
@@ -178,7 +178,7 @@ def test_finished_battle_writes_back_and_levels_up(
     )
     assert (
         offered["hero"]["level"] == 1
-        and runs_client.post(f"{url}/choice", json={"kind": "reroll"}).status_code == 409
+        and runs_client.post(f"{url}/choice", json={"kind": "leave"}).status_code == 409
     )
     assert all(slot["item"] is None for slot in offered["hero"]["equipment"][1:])
     taken = _ok(runs_client.post(f"{url}/choice", json={"kind": "gear_pick", "pick": 0}))
@@ -201,7 +201,7 @@ def test_finished_battle_writes_back_and_levels_up(
     # 生成技能的卡片也查得到
     generated = offer["candidates"][0]["id"]
     assert _ok(runs_client.get(f"/api/skills/{generated}"))["id"] == generated
-    assert runs_client.post(f"{url}/choice", json={"kind": "reroll"}).status_code == 409
+    assert runs_client.post(f"{url}/choice", json={"kind": "leave"}).status_code == 409
     bad = {"kind": "level_up", "attributes": {"int": 1}, "pick": None}
     assert runs_client.post(f"{url}/choice", json=bad).status_code == 422
     pick = {"kind": "level_up", "attributes": {"int": 2}, "pick": 0, "replace": None}
@@ -226,7 +226,7 @@ def test_save_mid_battle_load_and_continue_matches(
     assert saved == {
         "run_id": run["run_id"],
         "file": f"run-{run['run_id']}.json",
-        "format": "trpg-run/11",
+        "format": "trpg-run/12",
         "in_battle": True,
     }
     assert (save_dir / saved["file"]).is_file()
@@ -254,7 +254,7 @@ def test_corrupt_save_is_422(runs_client: TestClient, save_dir: Path) -> None:
     (save_dir / "run-bad.json").write_text('{"format": "trpg-run/0"}', encoding="utf-8")
     reply = runs_client.post("/api/runs/load", json={"run_id": "bad"})
     assert reply.status_code == 422
-    assert "trpg-run/11" in reply.json()["detail"]
+    assert "trpg-run/12" in reply.json()["detail"]
     assert runs_client.get("/api/runs/saves").json() == []
 
 
@@ -266,13 +266,15 @@ def test_campfire_choices_over_the_api(runs_client: TestClient) -> None:
         runs.library, session.run.model_copy(update={"battles_done": 3, "hp": 1})
     )
     url = f"/api/runs/{run['run_id']}"
-    camp = _ok(runs_client.get(url))
-    assert camp["node"]["kind"] == "campfire" and camp["node"]["rerolls_left"] == 1
+    offer = _ok(runs_client.get(url))  # 第 3 場後先是完整技能三選一（3W-5），再到營火
+    assert offer["node"]["kind"] == "complete_offer" and offer["node"]["after_battle"] == 3
+    assert offer["node"]["offer"]["reason"] == "complete"
+    assert len(offer["node"]["offer"]["candidates"]) == 3
+    assert runs_client.post(f"{url}/choice", json={"kind": "leave"}).status_code == 409
+    camp = _ok(runs_client.post(f"{url}/choice", json={"kind": "complete_pick", "pick": None}))
+    assert camp["node"]["kind"] == "campfire" and camp["node"]["after_battle"] == 3
     assert camp["hero"]["hp"] == camp["hero"]["max_hp"]
-    rerolled = _ok(runs_client.post(f"{url}/choice", json={"kind": "reroll"}))
-    assert rerolled["node"]["offer"]["reason"] == "reroll"
-    assert runs_client.post(f"{url}/choice", json={"kind": "reroll"}).status_code == 409
-    left = _ok(runs_client.post(f"{url}/choice", json={"kind": "pick", "pick": None}))
+    left = _ok(runs_client.post(f"{url}/choice", json={"kind": "leave"}))
     assert left["node"] == {**left["node"], "kind": "battle", "battle_index": 4}
 
 

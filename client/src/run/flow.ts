@@ -76,7 +76,8 @@ export type RunView =
     }
   | { screen: "gear_offer"; afterBattle: number; candidates: readonly GearCandidate[] }
   | { screen: "level_up"; level: number; points: number; offer: RunOffer }
-  | { screen: "campfire"; afterBattle: number; rerollsLeft: number; offer: RunOffer | null }
+  | { screen: "complete_offer"; afterBattle: number; offer: RunOffer }
+  | { screen: "campfire"; afterBattle: number }
   | { screen: "ended"; victory: boolean };
 
 /** 由一輪的回應決定畫面。節點資料不完整（不該發生）時拋出錯誤，讓畫面顯示錯誤而不是空白。 */
@@ -91,13 +92,12 @@ export function runView(run: RunResponse): RunView {
     if (node.offer == null) throw new Error("升級節點缺少技能候選");
     return { screen: "level_up", level: node.level ?? run.hero.level, points: node.points ?? 0, offer: node.offer };
   }
+  if (node.kind === "complete_offer") {
+    if (node.offer == null) throw new Error("完整技能三選一節點缺少候選");
+    return { screen: "complete_offer", afterBattle: node.after_battle ?? run.battles_done, offer: node.offer };
+  }
   if (node.kind === "campfire") {
-    return {
-      screen: "campfire",
-      afterBattle: node.after_battle ?? run.battles_done,
-      rerollsLeft: node.rerolls_left ?? 0,
-      offer: node.offer ?? null,
-    };
+    return { screen: "campfire", afterBattle: node.after_battle ?? run.battles_done };
   }
   const index = node.battle_index ?? run.battles_done + 1;
   const plan = run.plan.find((p) => p.index === index);
@@ -175,10 +175,10 @@ export function displayOrder(runSeed: number, groupKey: string, count: number): 
   return order;
 }
 
-/** 這一組候選的識別字串（升級：第幾級；營火：第幾場後 ＋ 剩餘重骰次數）。 */
+/** 這一組候選的識別字串（升級：第幾級；完整技能三選一：第幾場後）。 */
 export function offerGroupKey(view: RunView): string {
   if (view.screen === "level_up") return `level_up:${view.level}`;
-  if (view.screen === "campfire") return `campfire:${view.afterBattle}:${view.rerollsLeft}`;
+  if (view.screen === "complete_offer") return `complete:${view.afterBattle}`;
   return "none";
 }
 
@@ -256,22 +256,12 @@ export function replaceOptions(skills: readonly SkillCard[], card: SkillCard, an
   return skills.filter((s) => any || slotOf(s) === kind);
 }
 
-/** 升級／營火選好一張候選後送出的請求。`replace` 只在需要替換時帶。 */
-export function pickChoice(
-  view: RunView,
-  alloc: Allocation,
-  pick: number | null,
-  replace: string | null,
-  levels: Readonly<Record<string, number>> = {},
-  evolve: Readonly<Record<string, number>> = {},
-): RunChoice {
+/** 升級／完整技能三選一選好一張候選後送出的請求。`replace` 只在需要替換時帶。 */
+export function pickChoice(view: RunView, alloc: Allocation, pick: number | null, replace: string | null): RunChoice {
   if (view.screen === "level_up") {
-    const base = { kind: "level_up" as const, attributes: cleanAllocation(alloc), pick, replace };
-    // 選完候選之後順便花技能點（Phase 3-26a）與分歧進化的選擇（3-26b）；沒有要花的就不帶
-    const withLevels = Object.keys(levels).length > 0 ? { ...base, levels: { ...levels } } : base;
-    return Object.keys(evolve).length > 0 ? { ...withLevels, evolve: { ...evolve } } : withLevels;
+    return { kind: "level_up" as const, attributes: cleanAllocation(alloc), pick, replace };
   }
-  return { kind: "pick", pick, replace };
+  return { kind: "complete_pick", pick, replace };
 }
 
 /** 升級畫面能不能按「確定」：配點配滿，且（有選技能時）需要替換就已選好要換掉的。 */
@@ -288,7 +278,7 @@ export function levelUpReady(
   return pickReady(hero, offer, pick, replace, forceReplace);
 }
 
-/** 營火重骰後能不能按「選這個」。 */
+/** 選好候選後能不能按「確定」（跳過、或需要替換時已選好要換掉的）。 */
 export function pickReady(
   hero: RunHero,
   offer: RunOffer,

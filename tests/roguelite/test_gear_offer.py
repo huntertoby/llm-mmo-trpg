@@ -48,6 +48,8 @@ from trpg.roguelite.progress import hero_effective_attributes, hero_unit_id
 from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
+    CompleteOfferNode,
+    CompletePickChoice,
     EquipChoice,
     GearOfferNode,
     GearPickChoice,
@@ -261,6 +263,8 @@ def _campfire_run() -> RunState:
         run = apply_choice(lib, run, GearPickChoice(pick=0))
         if isinstance(run.node, LevelUpNode):
             run = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: run.node.points}))
+        if isinstance(run.node, CompleteOfferNode):  # 完整技能三選一在營火之前（3W-5）
+            run = apply_choice(lib, run, CompletePickChoice(pick=None))
         assert isinstance(run.node, BattleNode | CampfireNode)
     return run
 
@@ -367,7 +371,7 @@ def test_save_round_trip_keeps_equipment_and_backpack_and_the_gear_node() -> Non
     taken = apply_choice(lib, after, GearPickChoice(pick=0))
     taken = taken.model_copy(update={"backpack": (taken.equipment[next(iter(taken.equipment))],)})
     raw = json.loads(dumps_save(RunSave(run_id="g", run=taken)))
-    assert raw["format"] == "trpg-run/11" and raw["run"]["equipment"] and raw["run"]["backpack"]
+    assert raw["format"] == "trpg-run/12" and raw["run"]["equipment"] and raw["run"]["backpack"]
     assert loads_save(json.dumps(raw)).run == taken
 
 
@@ -377,7 +381,7 @@ def test_a_trpg_run_5_save_without_the_new_fields_still_loads() -> None:
     raw["format"] = "trpg-run/5"
     del raw["run"]["equipment"], raw["run"]["backpack"]
     loaded = loads_save(json.dumps(raw))
-    assert loaded.format == "trpg-run/11"
+    assert loaded.format == "trpg-run/12"
     assert loaded.run.equipment == {} and loaded.run.backpack == ()
     assert loaded.run == run
 

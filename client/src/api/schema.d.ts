@@ -539,6 +539,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/flash-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Flash Preview
+         * @description 閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（Phase 3W-5）：不扣點、不改狀態。
+         */
+        post: operations["post_flash_preview_api_runs__run_id__flash_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}/dev-advance": {
         parameters: {
             query?: never;
@@ -1486,6 +1506,22 @@ export interface components {
             /** Target Id */
             target_id?: string | null;
         };
+        /**
+         * CompletePickChoice
+         * @description 完整技能三選一的選擇（Phase 3W-5）：``pick`` 為候選索引（``None`` ＝ 跳過）；欄位滿時
+         *     ``replace`` 指定要換掉的技能 ID（換下的進備用）。
+         */
+        CompletePickChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "complete_pick";
+            /** Pick */
+            pick?: number | null;
+            /** Replace */
+            replace?: string | null;
+        };
         /** CoverOut */
         CoverOut: {
             /** Penalty */
@@ -1678,6 +1714,20 @@ export interface components {
             lethal: boolean;
         };
         /**
+         * DissolveChoice
+         * @description 溶掉一招學會的技能（Phase 3W-5，#71）：技能消失，退回花在它身上的靈感點的一半（無條件捨去）。
+         *     只在營火；欄位空出（可以用 ``loadout`` 從備用補上）。不推進節點。
+         */
+        DissolveChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "dissolve";
+            /** Skill */
+            skill: string;
+        };
+        /**
          * DollGear
          * @description 範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
          */
@@ -1836,41 +1886,6 @@ export interface components {
              */
             appearance: components["schemas"]["AppearanceView"];
         };
-        /**
-         * EvolutionChoiceOut
-         * @description 一個升到分歧進化那一級時要二選一的技能（已達門檻、還沒進化）。
-         */
-        EvolutionChoiceOut: {
-            /** Skill Id */
-            skill_id: string;
-            /** Name Zh */
-            name_zh: string;
-            /** Options */
-            options: components["schemas"]["EvolutionOptionOut"][];
-        };
-        /**
-         * EvolutionOptionOut
-         * @description 一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。
-         */
-        EvolutionOptionOut: {
-            /** Index */
-            index: number;
-            /**
-             * Branch
-             * @enum {string}
-             */
-            branch: "deepen" | "bridge" | "count";
-            /** Label Zh */
-            label_zh: string;
-            /** Template */
-            template: string;
-            keyword: components["schemas"]["KeywordRef"] | null;
-            /** Summary Zh */
-            summary_zh: string;
-            /** Fallback */
-            fallback: boolean;
-            card: components["schemas"]["SkillCard"];
-        };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
         /**
@@ -1971,6 +1986,164 @@ export interface components {
         };
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
+        /**
+         * FlashCategoryOut
+         * @description 可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。
+         */
+        FlashCategoryOut: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Count */
+            count: number;
+        };
+        /**
+         * FlashChoice
+         * @description 閃現或重閃（Phase 3W-5，06 6.34.3）：付點出題，選項存進 ``RunState.pending_flash``，接著要用
+         *     ``flash_pick`` 選一個。
+         *
+         *     - ``skill``：學會的技能（裝備中或備用）的目前 ID。
+         *     - ``slot``：``None`` ＝ 閃現（下一次）；否則重閃第 ``slot`` 次的變化（完整技能為 0，換調整欄）。
+         *       重閃只在營火；閃現在戰鬥之間都可以（戰鬥中不行）。
+         *     - ``category``：``None`` ＝ 不指定（1 點出 4 個）；指定類別 2 點出 3 個（只出該類；第 3 次另附
+         *       「轉型」保底）。0 個合法變化的類別會被拒絕（沒有扣點）。
+         */
+        FlashChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flash";
+            /** Skill */
+            skill: string;
+            /** Slot */
+            slot?: number | null;
+            /** Category */
+            category?: string | null;
+        };
+        /**
+         * FlashOptionOut
+         * @description 待選閃現的一個選項：變化與套用後的技能卡。
+         */
+        FlashOptionOut: {
+            /** Index */
+            index: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "minor" | "major" | "transform";
+            /** Category */
+            category: string;
+            /** Category Zh */
+            category_zh: string;
+            /** Template */
+            template: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Transform */
+            transform: boolean;
+            card: components["schemas"]["SkillCard"];
+            /**
+             * Unequip Candidates
+             * @default []
+             */
+            unequip_candidates: string[];
+        };
+        /**
+         * FlashPickChoice
+         * @description 選閃現的第 ``pick`` 個選項（點數在出題時已付，不能放棄）。轉型讓技能換到另一種已滿的欄位時，
+         *     ``unequip`` 指定要卸下到備用的技能（必須是那一欄目前裝備的技能）。不推進節點。
+         */
+        FlashPickChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flash_pick";
+            /** Pick */
+            pick: number;
+            /** Unequip */
+            unequip?: string | null;
+        };
+        /**
+         * FlashPreviewOut
+         * @description 閃現或重閃之前的預覽（Phase 3W-5，含 3W-2c 的每類數量）。
+         */
+        FlashPreviewOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Slot */
+            slot: number | null;
+            /** Nth */
+            nth: number;
+            /** Major */
+            major: boolean;
+            /** Problem Zh */
+            problem_zh: string | null;
+            /** Open Cost */
+            open_cost: number;
+            /** Focused Cost */
+            focused_cost: number;
+            /** Categories */
+            categories: components["schemas"]["FlashCategoryOut"][];
+        };
+        /**
+         * FlashPreviewRequest
+         * @description 閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽：選類別畫面用。
+         */
+        FlashPreviewRequest: {
+            /** Skill */
+            skill: string;
+            /** Slot */
+            slot?: number | null;
+        };
+        /**
+         * FlashRecordOut
+         * @description 技能變化歷程的一筆（第幾次、哪一類、一句話說明）。
+         */
+        FlashRecordOut: {
+            /** Nth */
+            nth: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "minor" | "major" | "transform";
+            /** Category */
+            category: string;
+            /** Category Zh */
+            category_zh: string;
+            /** Template */
+            template: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Reflashes */
+            reflashes: number;
+        };
+        /**
+         * FlashRulesOut
+         * @description 閃現的規則（Phase 3W-5，``content/flash_templates.yaml``）：前端不寫死數值。
+         */
+        FlashRulesOut: {
+            /** Open Cost */
+            open_cost: number;
+            /** Open Options */
+            open_options: number;
+            /** Focused Cost */
+            focused_cost: number;
+            /** Focused Options */
+            focused_options: number;
+            /** Allow Focus */
+            allow_focus: boolean;
+            /** Max Flashes */
+            max_flashes: number;
+            /** Major Flash */
+            major_flash: number;
+            /** Insight Per Win */
+            insight_per_win: number;
+        };
         /**
          * FocusTarget
          * @description 集火指定敵人。
@@ -2734,21 +2907,21 @@ export interface components {
              */
             origin_name_zh: string;
             /**
-             * Skill Points
+             * Insight
              * @default 0
              */
-            skill_points: number;
-            skill_growth?: components["schemas"]["SkillGrowthOut"] | null;
+            insight: number;
+            flash_rules?: components["schemas"]["FlashRulesOut"] | null;
+            /**
+             * Flash
+             * @default []
+             */
+            flash: components["schemas"]["SkillFlashOut"][];
             /**
              * Bench
              * @default []
              */
             bench: components["schemas"]["SkillCard"][];
-            /**
-             * Evolutions
-             * @default []
-             */
-            evolutions: components["schemas"]["EvolutionChoiceOut"][];
             /**
              * Equipment
              * @default []
@@ -2963,6 +3136,25 @@ export interface components {
             no_target: boolean;
         };
         /**
+         * InheritChoice
+         * @description 傳承（Phase 3W-5，#72，06 6.34.9 第 4 點）：還沒閃過的白板 ``skill`` 帶走舊技能 ``source`` 的
+         *     最多 2 個小變化（``records`` 是舊技能變化歷程的「第幾次」，依序變成新技能的第 1、2 次）。舊技能
+         *     消失、不退點；完整技能不能接受；變化必須對新技能合法。只在營火（和溶掉二選一）。不推進節點。
+         */
+        InheritChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "inherit";
+            /** Skill */
+            skill: string;
+            /** Source */
+            source: string;
+            /** Records */
+            records: number[];
+        };
+        /**
          * Interact
          * @description 互動：移動相鄰的 ``pushable`` 物件 1 格（只對物件，不能對單位）。
          *
@@ -3086,14 +3278,6 @@ export interface components {
             pick?: number | null;
             /** Replace */
             replace?: string | null;
-            /** Levels */
-            levels?: {
-                [key: string]: number;
-            };
-            /** Evolve */
-            evolve?: {
-                [key: string]: number;
-            };
         };
         /**
          * LlmStatsOut
@@ -3129,7 +3313,7 @@ export interface components {
         /**
          * LoadoutChoice
          * @description 營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合
-         *     欄位上限）；沒裝上的進備用，技能等級保留。不推進節點。
+         *     欄位上限）；沒裝上的進備用，閃現狀態保留。不推進節點。
          */
         LoadoutChoice: {
             /**
@@ -3190,8 +3374,8 @@ export interface components {
         /**
          * NodeOut
          * @description 目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
-         *     ``level_up``（``level``、``points``、
-         *     ``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、
+         *     ``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，
+         *     ``after_battle``、``offer``；Phase 3W-5）、``campfire``（``after_battle``）、
          *     ``ended``（``victory``）。
          */
         NodeOut: {
@@ -3199,7 +3383,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "battle" | "gear_offer" | "level_up" | "campfire" | "ended";
+            kind: "battle" | "gear_offer" | "level_up" | "complete_offer" | "campfire" | "ended";
             /** Battle Index */
             battle_index?: number | null;
             /** Boss */
@@ -3208,10 +3392,10 @@ export interface components {
             level?: number | null;
             /** Points */
             points?: number | null;
+            /** Tier Up */
+            tier_up?: boolean | null;
             /** After Battle */
             after_battle?: number | null;
-            /** Rerolls Left */
-            rerolls_left?: number | null;
             offer?: components["schemas"]["OfferOut"] | null;
             /** Victory */
             victory?: boolean | null;
@@ -3268,7 +3452,7 @@ export interface components {
              * Reason
              * @enum {string}
              */
-            reason: "level_up" | "reroll";
+            reason: "level_up" | "complete";
             /** Tier */
             tier: number;
             top_attribute: components["schemas"]["Attribute"];
@@ -3394,6 +3578,26 @@ export interface components {
             hp_cost_permille: number;
         };
         /**
+         * PendingFlashOut
+         * @description 已付點、還沒選的閃現選項（Phase 3W-5）；選之前不能做別的事。
+         */
+        PendingFlashOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Nth */
+            nth: number;
+            /** Slot */
+            slot: number | null;
+            /** Category */
+            category: string | null;
+            /** Major */
+            major: boolean;
+            /** Cost */
+            cost: number;
+            /** Options */
+            options: components["schemas"]["FlashOptionOut"][];
+        };
+        /**
          * PendingView
          * @description 目前的反應詢問（只有公開欄位；內部的重播資料不外流）。
          */
@@ -3418,21 +3622,6 @@ export interface components {
             mana_cost: number;
             /** Hp Cost Permille */
             hp_cost_permille: number;
-        };
-        /**
-         * PickChoice
-         * @description 營火重骰後：選 1 個候選（``None`` ＝ 放棄），之後離開營火。
-         */
-        PickChoice: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "pick";
-            /** Pick */
-            pick?: number | null;
-            /** Replace */
-            replace?: string | null;
         };
         /** PierceObjectOut */
         PierceObjectOut: {
@@ -3792,20 +3981,9 @@ export interface components {
             type: "reload";
         };
         /**
-         * RerollChoice
-         * @description 營火：重骰（產生一組新的候選）。
-         */
-        RerollChoice: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "reroll";
-        };
-        /**
          * RespecAttributesChoice
          * @description 營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用
-         *     ``allocate`` 重新分配。和技能點的 ``respec`` 同一個畫面、同樣免費、不推進節點。
+         *     ``allocate`` 重新分配。免費、不推進節點。
          */
         RespecAttributesChoice: {
             /**
@@ -3813,18 +3991,6 @@ export interface components {
              * @enum {string}
              */
             kind: "respec_attributes";
-        };
-        /**
-         * RespecChoice
-         * @description 營火：免費重配（Phase 3-26a）——全部技能退回 1 級，花掉的點數退回，之後再用 ``spend`` 重新
-         *     分配。不推進節點。
-         */
-        RespecChoice: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "respec";
         };
         /**
          * RetreatTo
@@ -3922,6 +4088,7 @@ export interface components {
             /** Llm Notice */
             llm_notice?: string | null;
             llm_stats?: components["schemas"]["LlmStatsOut"] | null;
+            pending_flash?: components["schemas"]["PendingFlashOut"] | null;
         };
         /**
          * RunRules
@@ -3987,7 +4154,7 @@ export interface components {
              * Node
              * @enum {string}
              */
-            node: "battle" | "gear_offer" | "level_up" | "campfire" | "ended";
+            node: "battle" | "gear_offer" | "level_up" | "complete_offer" | "campfire" | "ended";
             /** In Battle */
             in_battle: boolean;
             /** Victory */
@@ -4208,7 +4375,6 @@ export interface components {
              * @default []
              */
             stacks: components["schemas"]["SkillStackRef"][];
-            growth?: components["schemas"]["SkillLevelInfo"] | null;
         };
         /**
          * SkillCardKeywords
@@ -4233,25 +4399,49 @@ export interface components {
             basic: boolean;
         };
         /**
-         * SkillGrowthOut
-         * @description 技能成長的規則（Phase 3-26a，``content/skill_growth.yaml``）：前端不寫死數值。
+         * SkillFlashOut
+         * @description 一招學會的技能的閃現狀態（Phase 3W-5；卡片的「已閃 N／5 次」「可以閃現了」與變化歷程）。
          */
-        SkillGrowthOut: {
-            /** Max Level */
-            max_level: number;
-            /** Upgrade Cost */
-            upgrade_cost: number;
-            /** Points Per Level */
-            points_per_level: number;
-            /** Trait Level */
-            trait_level: number;
-            /** Evolve Level */
-            evolve_level: number;
+        SkillFlashOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Base Id */
+            base_id: string;
+            /** Flashes */
+            flashes: number;
+            /** Complete */
+            complete: boolean;
+            /** Used */
+            used: boolean;
+            /** Can Flash */
+            can_flash: boolean;
+            /** Flash Problem Zh */
+            flash_problem_zh?: string | null;
             /**
-             * Evolve Uses
+             * Next Major
+             * @default false
+             */
+            next_major: boolean;
+            /**
+             * Records
+             * @default []
+             */
+            records: components["schemas"]["FlashRecordOut"][];
+            /**
+             * Spent
              * @default 0
              */
-            evolve_uses: number;
+            spent: number;
+            /**
+             * Dissolve Refund
+             * @default 0
+             */
+            dissolve_refund: number;
+            /**
+             * Reflash Transform Hint
+             * @default false
+             */
+            reflash_transform_hint: boolean;
         };
         /**
          * SkillIcon
@@ -4296,46 +4486,6 @@ export interface components {
             trap_trigger?: string | null;
             /** Zone Element */
             zone_element?: string | null;
-        };
-        /**
-         * SkillLevelInfo
-         * @description 一個技能在某個等級的顯示資料。只有主動技能有（其他技能的卡片 ``growth`` 為 ``None``）。
-         */
-        SkillLevelInfo: {
-            /** Level */
-            level: number;
-            /** Max Level */
-            max_level: number;
-            /** Bonus Permille */
-            bonus_permille: number;
-            /** Current Text */
-            current_text: string;
-            /** Next Level */
-            next_level: number | null;
-            /** Next Text */
-            next_text: string | null;
-            /** Trait */
-            trait: ("area" | "cooldown") | null;
-            /** Trait Text */
-            trait_text: string;
-            /** Trait Active */
-            trait_active: boolean;
-            /** Cost */
-            cost: number;
-            /**
-             * Uses
-             * @default 0
-             */
-            uses: number;
-            /**
-             * Evolve Uses
-             * @default 0
-             */
-            evolve_uses: number;
-            /** Evolved From Zh */
-            evolved_from_zh?: string | null;
-            /** Blocked Text */
-            blocked_text?: string | null;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
@@ -4387,26 +4537,6 @@ export interface components {
         };
         /** @enum {string} */
         SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
-        /**
-         * SpendChoice
-         * @description 花技能點升級（Phase 3-26a）：``levels`` 是技能 ID → 升到的等級（只能升、不能降；每升 1 級花
-         *     ``skill_growth.upgrade_cost`` 點）。升級、營火與下一場戰鬥之前都可以送；不推進節點。
-         */
-        SpendChoice: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "spend";
-            /** Levels */
-            levels?: {
-                [key: string]: number;
-            };
-            /** Evolve */
-            evolve?: {
-                [key: string]: number;
-            };
-        };
         /**
          * StartKeywordOption
          * @description 一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字
@@ -6317,7 +6447,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"];
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["CompletePickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["FlashChoice"] | components["schemas"]["FlashPickChoice"] | components["schemas"]["DissolveChoice"] | components["schemas"]["InheritChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"];
             };
         };
         responses: {
@@ -6328,6 +6458,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_flash_preview_api_runs__run_id__flash_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlashPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlashPreviewOut"];
                 };
             };
             /** @description Validation Error */

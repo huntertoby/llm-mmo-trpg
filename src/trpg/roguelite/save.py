@@ -2,9 +2,15 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/11``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
-  （``trpg-run/5``～``/10``：之後的版本只新增有預設值的欄位與一種新節點，所以舊存檔照常讀入，
-  之後寫出為 ``/11``），否則拒絕。Phase 3W-9 起技能的預算用角色階級：``run.skill_tier`` 記主角技能
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/12``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
+  （``trpg-run/5``～``/11``），否則拒絕；舊格式讀入後寫出為 ``/12``。
+  Phase 3W-5 起技能點、技能等級與分歧進化取消，改成靈感點與閃現（``/12``：``run.insight``、
+  ``run.flash``、``run.flash_bases``、``run.pending_flash``、``run.complete_offers_done``、
+  ``run.flash_llm_log``、節點 ``complete_offer``；營火沒有重骰）。舊存檔由 :func:`convert_raw_run`
+  轉換（**最保守**，待 PM 決定）：技能等級與未花的技能點作廢，靈感點 ＝ 已打贏的一般戰鬥場數
+  （照新規則「每贏一場 1 點」重算，不把舊技能點換成靈感點）；分歧進化過的技能保留進化後的定義，
+  視為剛取得的技能（閃現 0 次）；營火的重骰候選丟棄；升級候選照舊。
+  Phase 3W-9 起技能的預算用角色階級：``run.skill_tier`` 記主角技能
   目前照哪一階配數值（``/11``；舊存檔沒有＝還沒照角色階級重配），:func:`upgrade_save` 在戰鬥之間
   把舊存檔的每招技能照角色階級重配一次（戰鬥中的存檔等那場打完，下一個節點再重配）。
   Phase 4-L8 起提議紀錄多了提議與命名 prompt 的版本號
@@ -43,6 +49,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -60,6 +67,7 @@ __all__ = [
     "SAVE_DIR_ENV",
     "SAVE_FORMAT",
     "RunSave",
+    "convert_raw_run",
     "default_save_dir",
     "dumps_save",
     "load_save",
@@ -71,7 +79,7 @@ __all__ = [
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/11"
+SAVE_FORMAT = "trpg-run/12"
 COMPATIBLE_FORMATS = (
     "trpg-run/5",
     "trpg-run/6",
@@ -79,8 +87,11 @@ COMPATIBLE_FORMATS = (
     "trpg-run/8",
     "trpg-run/9",
     "trpg-run/10",
+    "trpg-run/11",
 )
-"""仍可讀入的舊格式（新增的欄位都有預設值，讀入後視為目前格式）。"""
+"""仍可讀入的舊格式（讀入時由 :func:`convert_raw_run` 轉成目前的格式）。"""
+_GROWTH_FORMATS = frozenset(COMPATIBLE_FORMATS)
+"""還有技能點、技能等級、分歧進化（Phase 3-26a／b）的格式：讀入時轉成靈感點（3W-5）。"""
 OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 """已知的舊存檔格式（讀檔時提示開新一輪）。"""
 RUN_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
@@ -125,6 +136,22 @@ def dumps_save(save: RunSave) -> str:
     return save.model_dump_json(indent=1)
 
 
+def convert_raw_run(raw: dict[str, Any]) -> dict[str, Any]:
+    """``/11`` 以前的一輪（JSON 物件）轉成 ``/12``（Phase 3W-5，見模組說明）：拿掉技能點、技能
+    等級、分歧進化，靈感點 ＝ 已打贏的一般戰鬥場數；營火的重骰候選丟棄。不改原物件。"""
+    run = dict(raw)
+    run.pop("skill_points", None)
+    run.pop("skill_levels", None)
+    run.pop("evolutions", None)
+    history = run.get("history") or []
+    wins = sum(1 for r in history if isinstance(r, dict) and r.get("won") and not r.get("boss"))
+    run.setdefault("insight", wins)
+    node = run.get("node")
+    if isinstance(node, dict) and node.get("kind") == "campfire":
+        run["node"] = {k: v for k, v in node.items() if k not in ("rerolls_left", "offer")}
+    return run
+
+
 def loads_save(text: str) -> RunSave:
     """解析存檔；格式不對、版本不符時拋出 :class:`SaveFormatError`。"""
     try:
@@ -135,6 +162,8 @@ def loads_save(text: str) -> RunSave:
     if found != SAVE_FORMAT and found not in COMPATIBLE_FORMATS:
         hint = "（舊版存檔無法讀取，請開新一輪）" if found in OLD_FORMATS else ""
         raise SaveFormatError(f"存檔格式必須是 {SAVE_FORMAT}，收到 {found!r}{hint}")
+    if found in _GROWTH_FORMATS and isinstance(raw.get("run"), dict):
+        raw = {**raw, "run": convert_raw_run(raw["run"])}
     try:
         save = RunSave.model_validate({**raw, "format": SAVE_FORMAT})
     except ValidationError as exc:

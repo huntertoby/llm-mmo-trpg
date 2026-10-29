@@ -1,6 +1,6 @@
 """營火的免費屬性重配（Phase 3H-3，``docs/design/07-角色成長.md`` 7.2「重配」）。
 
-和技能點重配（:func:`trpg.roguelite.growth.respec`）同一個畫面、同一個精神：
+和營火換技能同一個畫面、同一個精神：
 
 - ``RunState.attribute_spent``：玩家分配出去的屬性點（開局的自由配點＋每次升級的配點＋重配後再分配的
   點數）；範本的基礎屬性（``base_attribute``）不在內。

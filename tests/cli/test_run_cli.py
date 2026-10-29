@@ -30,11 +30,11 @@ def test_run_new_writes_a_save_and_show_reads_it(
     assert "力量 13" in out and "體質 11" in out
     assert "第 6 場 Boss" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
-    assert raw["format"] == "trpg-run/11"
+    assert raw["format"] == "trpg-run/12"
     assert raw["run"]["seed"] == 4
     code, shown, _ = _run(["run", "show", str(saves[0])], capsys)
     assert code == 0
-    assert "trpg-run/11" in shown and "build_push" in shown and "目前：戰鬥" in shown
+    assert "trpg-run/12" in shown and "build_push" in shown and "目前：戰鬥" in shown
 
 
 @pytest.mark.parametrize(
@@ -158,39 +158,34 @@ def test_run_auto_without_a_start_draws_weapon_and_keywords(
 
 @pytest.mark.parametrize("seed", [1, 2])
 @pytest.mark.slow
-def test_run_auto_spends_skill_points_and_shows_levels(
+def test_run_auto_flashes_and_shows_flash_counts(
     seed: int, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Phase 3-26a：``trpg run auto`` 升級時花技能點，進度與存檔列出技能等級。"""
+    """Phase 3W-5：``trpg run auto`` 每贏一場得到靈感點並閃現，進度列出閃現前後與已閃次數。"""
     code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
     assert code == 0
-    assert "技能點升級：" in out and " Lv." in out
+    assert "閃現（第 1 次" in out and " 已閃 1 次" in out and "；靈感 " in out
+    assert "技能點" not in out and " Lv." not in out
     assert out.splitlines()[-1].startswith("結果：")
 
 
-@pytest.mark.parametrize(
-    "seed",
-    [
-        3,
-        # 3W-4b 起起始技能是白板，種子 5 的一輪不再出分歧進化；整支測試 3W-5 會改寫
-        pytest.param(5, marks=pytest.mark.xfail(reason="3W-5 改寫", strict=False)),
-    ],
-)  # 3-33e1／e2a／e2b：種子 1、4 的一輪不再進化；3I-1、3I-3 改用 4、5；3J-4b 開局池改變，4 改為 3；
-# 3W-9 升階重算與候選照角色階級後種子 3 不再進化，改 2；3W-9b 重配維持比例後種子 2 不再進化，改回 3
+# 3W-5：取代 3-26b 的分歧進化測試（3W-fix 的 xfail）。AI 把點數集中在閃過最多次的技能，第 3 次是
+# 大變化；中段與 Boss 前各一次完整技能三選一；有還沒重閃過調整欄的完整技能時保留 1 點到營火重閃。
+# 種子 1～8 中 3、6 會練到第 3 次大變化（其他種子的主角常在某場沒放出那招，不能連閃）。
+@pytest.mark.parametrize("seed", [3, 6])
 @pytest.mark.slow
-def test_run_auto_reaches_a_branching_evolution(
+def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Phase 3-26b：``trpg run auto`` 跑到至少一次分歧進化，進度印出進化前後的技能。"""
     code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
     assert code == 0
-    lines = [line for line in out.splitlines() if "分歧進化：" in line]
-    # 3-51：新方向可能抽到基礎技能，第一次進化不一定是加深：任何一行是加深即可
-    assert (
-        lines
-        and all("_evo_" in line for line in lines)
-        and any("（加深）" in line for line in lines)
-    )
+    lines = out.splitlines()
+    major = [line for line in lines if "閃現（第 3 次" in line]
+    assert major and all(
+        "_fl_" in line and "・" in line for line in major
+    )  # 大變化改名「前綴・原名」
+    assert any("完整技能三選一：選 " in line and "〔完整技能〕" in line for line in lines)
+    assert any(line.strip().startswith("重閃：") and "〔完整技能〕" in line for line in lines)
 
 
 def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:
@@ -204,6 +199,7 @@ def test_run_auto_with_llm_mock_is_replayable(capsys: pytest.CaptureFixture[str]
     argv = ["run", "auto", "--seed", "3", "--llm-mock"]
     code, first, _ = _run(argv, capsys)
     assert code == 0 and "LLM 提議：" in first and "退回" in first
+    assert "LLM 閃現提議：" in first  # 3W-5：閃現出題接上 3W-7 的變化提議（Mock）
     code, second, _ = _run(argv, capsys)
     assert second == first
     code, plain, _ = _run(["run", "auto", "--seed", "3"], capsys)

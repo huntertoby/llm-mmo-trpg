@@ -73,12 +73,18 @@ def _create(client: TestClient, **over: Any) -> dict[str, Any]:
 
 
 def _to_campfire(client: TestClient, run_id: str) -> None:
-    """把一輪直接放到營火節點（不打戰鬥）：重骰會呼叫候選產生器。"""
+    """把一輪直接放到第 3 場後、還沒出過完整技能三選一的營火（不打戰鬥）：離開營火時會產生完整技能
+    三選一（3W-5；取代舊的營火重骰），走候選產生器。"""
     runs = client.app.state.runs  # type: ignore[attr-defined]
     assert isinstance(runs, RunStore)
     session = runs.get(run_id)
-    node = CampfireNode(after_battle=1, rerolls_left=1)
-    session.run = session.run.model_copy(update={"node": node})
+    node = CampfireNode(after_battle=3)
+    session.run = session.run.model_copy(
+        update={"node": node, "battles_done": 3, "campfires_done": (3,)}
+    )
+
+
+LEAVE = {"kind": "leave"}
 
 
 def test_switch_off_by_default_does_not_probe_or_report(
@@ -88,7 +94,7 @@ def test_switch_off_by_default_does_not_probe_or_report(
     assert run["llm"] is False and run["llm_notice"] is None and run["llm_stats"] is None
     assert provider.probes == 0 and provider.calls == 0
     _to_campfire(client, run["run_id"])
-    reply = client.post(f"/api/runs/{run['run_id']}/choice", json={"kind": "reroll"})
+    reply = client.post(f"/api/runs/{run['run_id']}/choice", json=LEAVE)
     assert reply.status_code == 200 and provider.calls == 0
     offer = reply.json()["node"]["offer"]
     assert all(t["source"] != "llm" for t in offer["tags"])
@@ -110,7 +116,7 @@ def test_switch_on_generates_candidates_through_the_provider(
 ) -> None:
     run = _create(client, llm=True)
     _to_campfire(client, run["run_id"])
-    reply = client.post(f"/api/runs/{run['run_id']}/choice", json={"kind": "reroll"})
+    reply = client.post(f"/api/runs/{run['run_id']}/choice", json=LEAVE)
     assert reply.status_code == 200, reply.text
     body = reply.json()
     assert len(body["node"]["offer"]["candidates"]) == 3
@@ -133,7 +139,7 @@ def test_unreachable_model_does_not_fail_and_notifies_once(
         again = client.get(f"/api/runs/{run['run_id']}").json()
         assert again["llm"] is False and again["llm_notice"] is None
         _to_campfire(client, run["run_id"])
-        client.post(f"/api/runs/{run['run_id']}/choice", json={"kind": "reroll"})
+        client.post(f"/api/runs/{run['run_id']}/choice", json=LEAVE)
         assert provider.calls == 0  # 當作關閉：不呼叫提議器
 
 
@@ -168,7 +174,7 @@ def test_saved_llm_run_reloads_with_the_flag_and_a_proposer(
     loaded = client.post("/api/runs/load", json={"run_id": run_id}).json()
     assert loaded["llm"] is True and loaded["llm_notice"] is None
     _to_campfire(client, run_id)
-    client.post(f"/api/runs/{run_id}/choice", json={"kind": "reroll"})
+    client.post(f"/api/runs/{run_id}/choice", json=LEAVE)
     assert provider.calls >= 1
 
 

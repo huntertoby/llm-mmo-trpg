@@ -22,14 +22,14 @@ from trpg.roguelite.progress import hero_unit_id
 from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
+    CompleteOfferNode,
+    CompletePickChoice,
     EndedNode,
     GearOfferNode,
     GearPickChoice,
     LeaveChoice,
     LevelUpChoice,
     LevelUpNode,
-    PickChoice,
-    RerollChoice,
 )
 from trpg.shared.types import Attribute, Team
 
@@ -149,14 +149,14 @@ def _after(run: RunState, done: int, **update: object) -> RunState:
 
 def test_campfire_mid_run_restores_hp_and_mana_and_adds_source() -> None:
     run = new_run(library(), "build_push", 2)
-    camp = _after(run, 3, hp=5, mana=0, source=1)
-    assert camp.node == CampfireNode(after_battle=3, rerolls_left=1)
+    camp = _after(run, 3, hp=5, mana=0, source=1, complete_offers_done=(3,))
+    assert camp.node == CampfireNode(after_battle=3)
     assert (camp.hp, camp.mana, camp.source) == (
         run.max_hp_in(library().ruleset.core),
         run.max_mana_in(library().ruleset.core),
         2,
     )
-    capped = _after(run, 3, source=3)
+    capped = _after(run, 3, source=3, complete_offers_done=(3,))
     assert capped.source == 3
     left = apply_choice(library(), camp, LeaveChoice())
     assert left.node == BattleNode(index=4)
@@ -171,33 +171,29 @@ def test_no_campfire_outside_the_configured_points() -> None:
 
 def test_boss_floor_applies_before_the_boss_battle() -> None:
     run = new_run(library(), "build_push", 2)
-    boss = _after(run, 5, source=0, campfires_done=(3, 5))
+    boss = _after(run, 5, source=0, campfires_done=(3, 5), complete_offers_done=(3, 5))
     assert boss.node == BattleNode(index=6)
     assert boss.plan_of(6).boss
     assert boss.source == library().roguelite.source.boss_floor
-    assert _after(run, 5, source=3, campfires_done=(3, 5)).source == 3
-    assert _after(run, 6, campfires_done=(3, 5)).node == EndedNode(victory=True)
+    done = {"campfires_done": (3, 5), "complete_offers_done": (3, 5)}
+    assert _after(run, 5, source=3, **done).source == 3
+    assert _after(run, 6, **done).node == EndedNode(victory=True)
 
 
-def test_campfire_reroll_once_then_pick_or_leave() -> None:
+def test_complete_offer_comes_before_the_campfire_and_can_be_skipped() -> None:
     lib = library()
-    camp = _after(new_run(lib, "build_push", 2), 3)
-    rerolled = apply_choice(lib, camp, RerollChoice())
-    node = rerolled.node
-    assert isinstance(node, CampfireNode) and node.offer is not None
-    assert node.offer.reason == "reroll"
-    assert len(node.offer.candidates) == 3
-    assert rerolled.offers_made == camp.offers_made + 1
-    with pytest.raises(NodeConflictError, match="已經重骰過"):
-        apply_choice(lib, rerolled, RerollChoice())
-    skipped = apply_choice(lib, rerolled, PickChoice(pick=None))
-    assert skipped.node == BattleNode(index=4)
-    assert skipped.hero.skills == camp.hero.skills
-    no_more = camp.model_copy(update={"node": CampfireNode(after_battle=3, rerolls_left=0)})
-    with pytest.raises(NodeConflictError, match="沒有重骰次數"):
-        apply_choice(lib, no_more, RerollChoice())
-    with pytest.raises(NodeConflictError, match="還沒有重骰"):
-        apply_choice(lib, camp, PickChoice(pick=0))
+    offer = _after(new_run(lib, "build_push", 2), 3)
+    node = offer.node
+    assert isinstance(node, CompleteOfferNode) and node.after_battle == 3
+    assert node.offer.reason == "complete" and len(node.offer.candidates) == 3
+    assert offer.complete_offers_done == (3,)
+    with pytest.raises(NodeConflictError, match="complete_pick"):
+        apply_choice(lib, offer, LeaveChoice())
+    skipped = apply_choice(lib, offer, CompletePickChoice(pick=None))
+    assert isinstance(skipped.node, CampfireNode)
+    assert skipped.hero.skills == offer.hero.skills
+    with pytest.raises(NodeConflictError, match="營火"):
+        apply_choice(lib, skipped, CompletePickChoice(pick=0))
 
 
 def test_level_up_gives_two_points_and_a_skippable_offer() -> None:
@@ -209,7 +205,7 @@ def test_level_up_gives_two_points_and_a_skippable_offer() -> None:
     with pytest.raises(ChoiceError, match="必須分配 2 點"):
         apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 1}))
     with pytest.raises(NodeConflictError, match="升級"):
-        apply_choice(lib, run, RerollChoice())
+        apply_choice(lib, run, LeaveChoice())
     after = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.WIL: 2}))
     assert after.hero.attributes[Attribute.WIL] == run.hero.attributes[Attribute.WIL] + 2
     assert after.hero.skills == run.hero.skills
@@ -233,12 +229,13 @@ def test_choices_are_rejected_in_battle_and_after_the_end() -> None:
         apply_choice(lib, run.model_copy(update={"node": EndedNode(victory=True)}), LeaveChoice())
 
 
-def test_a_full_victorious_run_visits_both_campfires_and_rerolls_twice() -> None:
+def test_a_full_victorious_run_visits_both_campfires_and_both_complete_offers() -> None:
     run = full_run(*VICTORY)
     assert run.node == EndedNode(victory=True)
     assert run.campfires_done == (3, 5)
     assert len(run.history) == len(run.plan) == 6
     assert run.history[-1].boss and all(r.won for r in run.history)
     levels = run.level - 1
-    assert run.offers_made == levels + 2  # 每次升級一組 ＋ 兩次重骰
+    assert run.complete_offers_done == (3, 5)
+    assert run.offers_made == levels + 2  # 每次升級一組 ＋ 兩次完整技能三選一
     assert 0 <= run.source <= 3

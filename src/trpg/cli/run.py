@@ -43,11 +43,13 @@ from trpg.roguelite.state import (
     BattleNode,
     BattleRecord,
     CampfireNode,
+    CompleteOfferNode,
     GearOfferNode,
     LevelUpNode,
 )
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute
+from trpg.skillgen.flash_state import Variation
 
 __all__ = [
     "StartArgs",
@@ -67,6 +69,7 @@ _NODE_TEXT = {
     "battle": "戰鬥",
     "gear_offer": "裝備三選一",
     "level_up": "升級",
+    "complete_offer": "完整技能三選一",
     "campfire": "營火",
     "ended": "結束",
 }
@@ -386,8 +389,13 @@ def _attrs_text(run: RunState) -> str:
 
 def _skill_name(library: ContentLibrary, run: RunState, skill_id: str) -> str:
     skill = skill_defs(library, run, [skill_id])[0]
-    level = run.skill_levels.get(skill_id, 1)
-    return f"{skill.name_zh}（{skill_id}）" + (f" Lv.{level}" if level > 1 else "")
+    state = run.flash.get(skill_id)
+    if state is not None and state.complete:
+        mark = " 〔完整技能〕"
+    else:
+        count = 0 if state is None else len(state.records)
+        mark = f" 已閃 {count} 次" if count else ""
+    return f"{skill.name_zh}（{skill_id}）{mark}"
 
 
 def _resources(library: ContentLibrary, run: RunState) -> str:
@@ -431,8 +439,8 @@ def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
         print(f"  裝備：{gear}；背包 {len(run.backpack)} 件", file=out)
     if run.bench:
         print("  備用：" + "、".join(_skill_name(library, run, s) for s in run.bench), file=out)
-    if run.skill_points:
-        print(f"  未花的技能點：{run.skill_points}", file=out)
+    if run.insight:
+        print(f"  未花的靈感點：{run.insight}", file=out)
     for plan in run.plan:
         enemies = "、".join(library.unit(t).name_zh for t in plan.enemies)
         mark = "Boss " if plan.boss else ""
@@ -454,6 +462,9 @@ def _record_text(library: ContentLibrary, record: BattleRecord) -> str:
 def _print_node(library: ContentLibrary, before: RunState, after: RunState, out: TextIO) -> None:
     """一個節點完成後的一行（或幾行）進度。"""
     node = before.node
+    if after.node == node and not isinstance(node, BattleNode):
+        print(f"    {_flash_text(library, before, after)}", file=out)
+        return
     if isinstance(node, BattleNode):
         level = f"；等級 {after.level} 經驗 {after.xp}" if after.history[-1].won else ""
         print(f"  {_record_text(library, after.history[-1])}{level}", file=out)
@@ -465,26 +476,14 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
             for a in Attribute
             if after.hero.attributes[a] != before.hero.attributes[a]
         ]
-        raised = [
-            f"{_skill_name(library, after, s)}"
-            for s in sorted(after.skill_levels)
-            if after.skill_levels[s] != before.skill_levels.get(s, 1)
-        ]
-        spent = f"；技能點升級：{'、'.join(raised)}" if raised else ""
         print(
-            f"    升級 Lv{node.level}：{' '.join(gained)}；"
-            f"{_skill_change(library, before, after)}{spent}",
+            f"    升級 Lv{node.level}：{' '.join(gained)}；{_skill_change(library, before, after)}",
             file=out,
         )
-        for line in _evolution_lines(library, before, after):
-            print(f"      {line}", file=out)
-    elif isinstance(node, CampfireNode) and isinstance(after.node, CampfireNode):
-        print(
-            f"    營火重骰：{len(after.node.offer.candidates) if after.node.offer else 0} 個候選",
-            file=out,
-        )
+    elif isinstance(node, CompleteOfferNode):
+        print(f"    完整技能三選一：{_skill_change(library, before, after)}", file=out)
     elif isinstance(node, CampfireNode):
-        print(f"    離開營火：{_skill_change(library, before, after)}", file=out)
+        print("    離開營火", file=out)
     if isinstance(after.node, CampfireNode) and not isinstance(node, CampfireNode):
         print(
             f"    營火（第 {after.node.after_battle} 場後）：HP、法力、耐力回滿，"
@@ -502,29 +501,47 @@ def _gear_text(node: GearOfferNode, before: RunState, after: RunState) -> str:
     return f"{head} → 換上「{picked[0].name_zh}」" if picked else f"{head} → 跳過"
 
 
-_BRANCH_TEXT = {"deepen": "加深", "bridge": "橋接", "count": "數量"}
+def _flash_text(library: ContentLibrary, before: RunState, after: RunState) -> str:
+    """一次閃現或重閃（Phase 3W-5）：「閃現（第 3 次，加深）：火焰箭 → 擴展・火焰箭；
+    靈感 2 → 1」。"""
+    gone = [
+        s
+        for s in (*before.hero.skills, *before.bench)
+        if s not in (*after.hero.skills, *after.bench)
+    ]
+    new = [
+        s
+        for s in (*after.hero.skills, *after.bench)
+        if s not in (*before.hero.skills, *before.bench)
+    ]
+    points = f"靈感 {before.insight} → {after.insight}"
+    if not gone or not new:
+        return f"技能管理；{points}"
+    state = after.flash.get(new[0])
+    old = before.flash.get(gone[0])
+    old_count = 0 if old is None else len(old.records)
+    if state is not None and len(state.records) > old_count:
+        record = state.records[-1]
+        verb = f"閃現（第 {record.nth} 次，{_variation_text(library, record.variation)}）"
+    else:
+        verb = "重閃"
+    head = f"{_skill_name(library, before, gone[0])} → {_skill_name(library, after, new[0])}"
+    return f"{verb}：{head}；{points}"
 
 
-def _evolution_lines(library: ContentLibrary, before: RunState, after: RunState) -> list[str]:
-    """這次新增的分歧進化（Phase 3-26b）：「分歧進化：火焰箭 → 灼燃・火焰箭（加深）」。"""
-    lines = []
-    for evolved in sorted(set(after.evolutions) - set(before.evolutions)):
-        record = after.evolutions[evolved]
-        branch = _BRANCH_TEXT[record.branch] + ("（退回）" if record.fallback else "")
-        lines.append(
-            f"分歧進化：{record.base_name_zh} → {_skill_name(library, after, evolved)}（{branch}）"
-        )
-    return lines
+def _variation_text(library: ContentLibrary, variation: Variation) -> str:
+    template = library.flash.minor_template(variation.template)
+    if template is not None:
+        return template.summary_zh
+    if variation.source == "transform":
+        return "轉型"
+    category = next((c for c in library.flash.categories if c.id == variation.category), None)
+    return variation.category if category is None else category.name_zh
 
 
 def _skill_change(library: ContentLibrary, before: RunState, after: RunState) -> str:
-    evolved = {r.base_id for k, r in after.evolutions.items() if k not in before.evolutions}
-    added = [
-        s
-        for s in after.hero.skills
-        if s not in before.hero.skills and after.evolutions.get(s) is None
-    ]
-    removed = [s for s in before.hero.skills if s not in after.hero.skills and s not in evolved]
+    added = [s for s in after.hero.skills if s not in before.hero.skills]
+    removed = [s for s in before.hero.skills if s not in after.hero.skills]
     if not added:
         return "跳過技能"
     text = "選 " + "、".join(_skill_name(library, after, s) for s in added)
