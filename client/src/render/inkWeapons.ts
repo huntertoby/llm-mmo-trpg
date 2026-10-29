@@ -69,8 +69,10 @@ function drawHammer(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   }
   if (it.form === "flail") {
     haft(ctx, k, 4, -18, c.wood);
-    stroke(ctx, `${k}-chain`, [[0, -18], [3.8, -22], [3.2, -26]], 0.9, c.dark);
-    ink(ctx, `${k}-ball`, ellPts(3, -30, 4.4, 4.4, 12), c.metal, { w: 0.8 });
+    iconHead(ctx, 0, -18, () => {
+      stroke(ctx, `${k}-chain`, [[0, -18], [3.8, -22], [3.2, -26]], 0.9, c.dark);
+      ink(ctx, `${k}-ball`, ellPts(3, -30, 4.4, 4.4, 12), c.metal, { w: 0.8 });
+    });
     return;
   }
   haft(ctx, k, 4, -27, c.wood, 1);
@@ -88,11 +90,25 @@ function drawSpear(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
     ink(ctx, `${k}-cross`, rect(-4.4, -39, 4.4, -37.2), c.metal, { shade: false, w: 0.6 });
     return;
   }
-  ink(ctx, `${k}-head`, [[0, -50], [3.6, -43], [0, -36], [-3.6, -43]], c.metal, { w: 0.8 });
-  if (it.form === "halberd") ink(ctx, `${k}-axe`, [[1.4, -45], [8.6, -46.4], [8.4, -38.4], [1.4, -39.6]], c.metal, { w: 0.8 });
+  // 小圖示：矛頭、戟斧頭放大 1.5 倍（3T-4c），28px 下矛和戟才分得出來
+  iconHead(ctx, 0, -36, () => {
+    ink(ctx, `${k}-head`, [[0, -50], [3.6, -43], [0, -36], [-3.6, -43]], c.metal, { w: 0.8 });
+    if (it.form === "halberd") ink(ctx, `${k}-axe`, [[1.4, -45], [8.6, -46.4], [8.4, -38.4], [1.4, -39.6]], c.metal, { w: 0.8 });
+  });
+}
+
+/** 小圖示的拳套（3T-4c）：正面指虎——鋼色圓角方塊、上緣 4 個指節凸起、下方一個握孔，沒有尖刺。 */
+function drawFistIcon(ctx: Ctx, k: string, c: Cols): void {
+  for (const x of [-4.5, -1.5, 1.5, 4.5]) ink(ctx, `${k}-knuckle${x}`, ellPts(x, -3.6, 1.8, 1.8, 10), c.metal, { w: 0.7 });
+  ink(ctx, `${k}-block`, rect(-6.4, -3.6, 6.4, 4.4), c.metal, { w: 0.9, sharp: true });
+  ink(ctx, `${k}-hole`, ellPts(0, 1.2, 3, 1.7, 12), c.dark, { shade: false, w: 0.6 });
 }
 
 function drawFist(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
+  if (inIconMode(ctx)) {
+    drawFistIcon(ctx, k, c);
+    return;
+  }
   ink(ctx, `${k}-block`, rect(-3.4, -4, 3.4, 3), c.metal, { w: 0.8 });
   if (it.form === "knuckle") {
     for (const x of [-2.2, 0, 2.2]) ink(ctx, `${k}-stud${x}`, ellPts(x, -4.6, 1.1, 1.1, 8), c.dark, { shade: false, w: 0.4 });
@@ -156,19 +172,27 @@ function drawTotem(ctx: Ctx, _it: GearItem, k: string): void {
 // ============================== 火器、弩（朝 +x） ==============================
 function drawPistol(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   const L = it.form === "derringer" ? 6.5 : it.form === "revolver" ? 10.5 : 9;
-  ink(ctx, `${k}-grip`, [[-1.8, -1.4], [1.8, -1.4], [1.2, 5.8], [-2, 5.8]], it.form === "flintlock" ? STOCK : GRIP, { shade: false, w: 0.6 });
-  ink(ctx, `${k}-barrel`, rect(-1.4, -4.4, L, -1.2), c.metal, { w: 0.7 });
+  // 小圖示：握把從槍管後端往左下斜（側面 L 形，長約槍管一半）
+  const grip: Pt[] = inIconMode(ctx) ? [[-1.4, -1.4], [2.2, -1.4], [-1.4, 5.4], [-5, 5.4]] : [[-1.8, -1.4], [1.8, -1.4], [1.2, 5.8], [-2, 5.8]];
+  ink(ctx, `${k}-grip`, grip, it.form === "flintlock" ? STOCK : GRIP, { shade: false, w: 0.6, sharp: inIconMode(ctx) });
+  ink(ctx, `${k}-barrel`, rect(-1.4, -4.4, L, -1.2), c.metal, { w: 0.7, sharp: inIconMode(ctx) });
   if (it.form === "derringer") ink(ctx, `${k}-barrel2`, rect(-1.4, -1.2, L, 1.2), c.dark, { shade: false, w: 0.6 });
   if (it.form === "revolver") ink(ctx, `${k}-cyl`, ellPts(1.6, -2.8, 3, 3.2, 10), c.dark, { shade: false, w: 0.6 });
   if (it.form === "flintlock") ink(ctx, `${k}-cock`, [[-0.6, -4.4], [-2.4, -8], [0.4, -8.4], [1.8, -4.4]], c.dark, { shade: false, w: 0.5 });
 }
 
 function drawShotgun(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
-  const L = it.form === "blunderbuss" ? 15 : 20;
-  ink(ctx, `${k}-stock`, [[-9, -5], [0, -4.6], [0, 0], [-6.4, 1.8], [-9, -1]], STOCK, { shade: false, w: 0.7 });
+  const icon = inIconMode(ctx);
+  // 小圖示（3T-4c）：雙管上下並排、比長槍（22）短約 25％、槍托較寬
+  const L = it.form === "blunderbuss" ? 15 : icon ? 16.5 : 20;
+  const stock: Pt[] = icon ? [[-9, -6.4], [0, -5.4], [0, 0.4], [-6.4, 3.6], [-9, 0.4]] : [[-9, -5], [0, -4.6], [0, 0], [-6.4, 1.8], [-9, -1]];
+  ink(ctx, `${k}-stock`, stock, STOCK, { shade: false, w: 0.7, sharp: icon });
   ink(ctx, `${k}-grip`, [[-1.6, -1], [1.2, -1], [0.8, 4.6], [-1.8, 4.6]], GRIP, { shade: false, w: 0.5 });
-  ink(ctx, `${k}-barrel`, rect(0, -5.2, L, -1.2), c.metal, { w: 0.8 });
-  if (it.form === "double") ink(ctx, `${k}-barrel2`, rect(0, -1.2, L, 1.8), c.dark, { shade: false, w: 0.6 });
+  if (icon && it.form !== "blunderbuss") {
+    ink(ctx, `${k}-barrel`, rect(0, -5.4, L, -2.7), c.metal, { w: 0.8, sharp: true });
+    ink(ctx, `${k}-barrel-low`, rect(0, -2.7, L, 0), c.metal, { w: 0.8, sharp: true });
+  } else ink(ctx, `${k}-barrel`, rect(0, -5.2, L, -1.2), c.metal, { w: 0.8 });
+  if (it.form === "double" && !icon) ink(ctx, `${k}-barrel2`, rect(0, -1.2, L, 1.8), c.dark, { shade: false, w: 0.6 });
   if (it.form === "pump") ink(ctx, `${k}-slide`, rect(6, -1.2, 13, 1.6), STOCK, { shade: false, w: 0.6 });
   if (it.form === "blunderbuss") ink(ctx, `${k}-flare`, [[L - 6, -5.2], [L + 2.4, -9], [L + 2.4, 3], [L - 6, -0.8]], c.metal, { w: 0.8 });
 }
