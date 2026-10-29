@@ -112,6 +112,18 @@ def test_dev_advance_can_top_up_insight(
     assert again["hero"]["insight"] == 8
 
 
+def test_dev_advance_reaches_the_next_battle_node(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """3W-6b：「下一場前」是打完至少一場後的 battle 節點，閃現畫面的掃描與截圖用。"""
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    packs = _ok(client.get("/api/runs/dev-packs"))
+    run = _ok(client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 1}))
+    got = _ok(client.post(f"/api/runs/{run['run_id']}/dev-advance?to=next_battle&insight=8"))
+    assert got["node"]["kind"] == "battle" and got["battles_done"] >= 1
+    assert got["hero"]["insight"] == 8
+
+
 def test_dev_packs_endpoint_and_start(client: TestClient, library: ContentLibrary) -> None:
     packs = _ok(client.get("/api/runs/dev-packs"))
     assert len(packs) == 29 and {p["label_zh"] for p in packs} == _school_names(library)

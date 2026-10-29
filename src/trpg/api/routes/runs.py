@@ -71,7 +71,7 @@ from trpg.roguelite.start import (
     starter_pools,
     starting_skill,
 )
-from trpg.roguelite.state import Choice
+from trpg.roguelite.state import Choice, RunState
 
 __all__ = ["router"]
 
@@ -319,7 +319,14 @@ def post_flash_preview(run_id: str, body: FlashPreviewRequest, request: Request)
 
 
 DEV_ROUTES_ENV = "TRPG_DEV_ROUTES"
-_DEV_TARGETS = ("gear_offer", "level_up", "complete_offer", "campfire", "ended")
+_DEV_TARGETS = ("gear_offer", "next_battle", "level_up", "complete_offer", "campfire", "ended")
+
+
+def _dev_reached(run: RunState, to: str) -> bool:
+    """``next_battle``＝打完至少一場後的「下一場前」節點（3W-6b：閃現區只在這裡與營火）。"""
+    if to == "next_battle":
+        return run.node.kind == "battle" and run.battles_done >= 1
+    return run.node.kind == to
 
 
 @router.post("/{run_id}/dev-advance")
@@ -336,7 +343,7 @@ def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> Run
     with session.lock:
         if session.battle is not None:
             raise HTTPException(status_code=409, detail="戰鬥進行中")
-        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: r.node.kind == to)
+        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: _dev_reached(r, to))
         if insight > run.insight:
             run = run.model_copy(update={"insight": insight})
         session.run = run

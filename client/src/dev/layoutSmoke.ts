@@ -482,7 +482,7 @@ export async function runScreens(title: string): Promise<string> {
 /** 戰後畫面階段：畫面名、進去之後要等的元素、要滑過看浮動卡的選擇器（依序滑過第一個、中間、最後一個）。 */
 const POST_BATTLE: readonly { screen: DevScreen; label: string; waitFor: string; hover: string }[] = [
   { screen: "gear_offer", label: "戰後・裝備三選一", waitFor: '[data-testid="gear-offer"]', hover: ".run-offer-card .part-tip" },
-  { screen: "flash", label: "戰後・靈感閃現", waitFor: ".run-flash", hover: ".run-flash .part-tip" },
+  { screen: "flash", label: "戰後・下一場前（靈感閃現）", waitFor: ".run-flash", hover: ".run-flash .part-tip" },
   { screen: "level_up", label: "戰後・升級選技", waitFor: ".run-levelup .run-offer-card", hover: ".run-levelup .run-offer-card .part-tip" },
   { screen: "complete_offer", label: "戰後・完整技能三選一", waitFor: ".run-complete-offer .run-offer-card", hover: ".run-complete-offer .run-offer-card .part-tip" },
   { screen: "campfire", label: "戰後・營火", waitFor: ".run-campfire", hover: ".run-campfire .part-tip" },

@@ -13,6 +13,7 @@ from functools import cache
 import pytest
 
 from tests.roguelite.helpers import library
+from trpg.api.run_presenter import _flash_out
 from trpg.engine.state import state_to_json
 from trpg.roguelite import (
     ActiveBattle,
@@ -256,7 +257,7 @@ def test_inherit_carries_minor_variations_and_removes_the_old_skill() -> None:
 
 
 def _inherit_with_target_used(*, used: bool) -> tuple[RunState, str]:
-    """營火傳承：白板自己的「先上場用過」設成 ``used``（舊技能一律是用過的）。回傳（傳承後, 新技能）。"""
+    """營火傳承：白板自己的「先上場用過」設成 ``used``（舊技能一律用過）；回傳傳承後與新技能。"""
     lib = library()
     run, source = _flashed_at_campfire()
     minors = [r.nth for r in state_of(run, source).records if r.variation.source == "minor"]
@@ -277,8 +278,6 @@ def _inherit_with_target_used(*, used: bool) -> tuple[RunState, str]:
 
 
 def test_inherit_unused_whiteboard_cannot_flash_even_if_the_old_skill_was_used() -> None:
-    from trpg.api.run_presenter import _flash_out
-
     lib = library()
     after, new_id = _inherit_with_target_used(used=False)
     assert state_of(after, new_id).used is False
@@ -287,8 +286,6 @@ def test_inherit_unused_whiteboard_cannot_flash_even_if_the_old_skill_was_used()
 
 
 def test_inherit_used_whiteboard_can_flash() -> None:
-    from trpg.api.run_presenter import _flash_out
-
     lib = library()
     after, new_id = _inherit_with_target_used(used=True)
     assert state_of(after, new_id).used is True
