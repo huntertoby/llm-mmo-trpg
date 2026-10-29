@@ -103,7 +103,7 @@ def test_save_round_trip_and_replay_never_calls_the_llm() -> None:
         offer = make_offer(lib, run, "level_up")
     run = run.model_copy(update=offer_updates(run, offer))
     text = dumps_save(RunSave(run_id="llm1", run=run))
-    assert json.loads(text)["format"] == "trpg-run/10"
+    assert json.loads(text)["format"] == "trpg-run/11"
     back = loads_save(text)
     assert back.run == run
     calls = counter.calls
@@ -119,7 +119,7 @@ def test_old_format_7_save_is_readable() -> None:
     for key in ("llm", "llm_uses", "llm_log"):
         raw["run"].pop(key)
     back = loads_save(json.dumps(raw))
-    assert back.format == "trpg-run/10" and not back.run.llm and back.run.llm_log == ()
+    assert back.format == "trpg-run/11" and not back.run.llm and back.run.llm_log == ()
 
 
 def test_full_run_with_mock_llm_is_deterministic() -> None:
@@ -185,4 +185,4 @@ def test_old_format_8_save_without_naming_fields_is_readable() -> None:
     run = new_run(lib, "build_push", 1)
     raw = json.loads(dumps_save(RunSave(run_id="old8", run=run)))
     raw["format"] = "trpg-run/8"
-    assert loads_save(json.dumps(raw)).format == "trpg-run/10"
+    assert loads_save(json.dumps(raw)).format == "trpg-run/11"

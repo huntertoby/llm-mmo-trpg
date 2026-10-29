@@ -270,7 +270,7 @@ def test_replay_is_deterministic_with_levels_and_the_save_round_trips() -> None:
     )
     assert a.skill_levels  # 這一輪確實升了級
     raw = json.loads(dumps_save(RunSave(run_id="a", run=a)))
-    assert raw["format"] == "trpg-run/10"
+    assert raw["format"] == "trpg-run/11"
     assert raw["run"]["skill_levels"] == a.skill_levels and "bench" in raw["run"]
     assert loads_save(json.dumps(raw)).run == a
 

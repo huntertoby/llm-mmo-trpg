@@ -78,9 +78,9 @@ def test_versions_survive_the_save_and_old_saves_load() -> None:
     run = new_run(LIB, "build_push", 1)
     run = run.model_copy(update={"llm_log": (record,)})
     back = loads_save(dumps_save(RunSave(run_id="v", run=run)))
-    assert back.format == "trpg-run/10"
+    assert back.format == "trpg-run/11"
     assert back.run.llm_log[0].prompt_version == PROMPT_VERSION
     assert back.run.llm_log[0].naming_prompt_version == NAMING_PROMPT_VERSION
     raw = json.loads(dumps_save(RunSave(run_id="v9", run=new_run(LIB, "build_push", 1))))
     raw["format"] = "trpg-run/9"
-    assert loads_save(json.dumps(raw)).format == "trpg-run/10"
+    assert loads_save(json.dumps(raw)).format == "trpg-run/11"

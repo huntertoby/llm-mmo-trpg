@@ -42,5 +42,5 @@ def test_race_and_origin_roundtrip_and_old_saves_without_them_load() -> None:
     for old in ("trpg-run/5", "trpg-run/6"):
         raw["format"] = old
         back = loads_save(json.dumps(raw))
-        assert back.format == "trpg-run/10"
+        assert back.format == "trpg-run/11"
         assert back.run.origin is None and back.run.hero.race is None
