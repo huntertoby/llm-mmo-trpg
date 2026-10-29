@@ -197,6 +197,23 @@
 4. 測試一律 `MockLLMClient`：輸出過長／空字串／含指令字樣／含英文代號／重名 → 退回組合式名稱；合格 → 卡片顯示生成名稱與敘事；重播不呼叫。
 5. 驗收：pytest（llm、skillgen、roguelite、narrative、api、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports、一輪 `trpg run auto --llm-mock`。報告 `Phase4-L7報告.md`。
 
+## 3H. 4-L8 規格（開放更多結構；開發 PM 2026-10-29；**opus**，約 1 段，必要時拆 a／b）
+
+**目的**：提高「手寫技能能不能用提議模型表達」的結構往返覆蓋率（4-L3 時 163／217；現在技能 301 招，先重量現況），並讓 LLM 能提議目前被擋掉的結構。
+**受影響的既有功能**：`trpg.skillgen.proposal*`（提議模型由 `skill_primitives.yaml` 產生、`proposal_subset` 子集、`proposal_layouts` 版型、`proposal_numbers` 數值拆補）、預算器補數值（3T-1 的旋鈕）、驗證器（同源）、4-L6 候選產生器、`llm_hint`（新開放的部分要有說明）、prompt 版本號、`trpg llm propose` CLI 與 Mock 快照。
+
+1. **先量**：寫一個往返盤點（`proposal_from_skill` 對全部手寫技能），列出不能表達的技能與原因分類（followup、reaction、只能巢狀的原語、代價欄位、修正規則、形態／種族專屬、其他），寫進報告第 1 節。
+2. **開放**（依盤點的數量決定順序，每項都要 schema、子集篩選、`llm_hint`、預算器補數值、驗證同源、Mock 測試）：
+   - `followup`（複合技能：第二段骨架與觸發時機 `when`，照 06 6.23 的規則）；
+   - `reaction`（反應技能，照觸發表 `skill_triggers.yaml`）；
+   - 只能巢狀的原語（例如只出現在 zone、陷阱、召喚物等內部的效果）；
+   - 代價類欄位（`cost.self_status`、`cost.overdraft`、HP 代價等，照 06 6.5 的上限，數值由預算器補）。
+   **不開放**：形態（`enter_form`／`leave_form`／`in_form`／`form_bonus_permille`）、種族技、修正規則的 change 欄位（`modifier` 骨架維持關閉；3T-1 待決 1、7，另案由 PM 決定）。
+3. 往返覆蓋率測試：開放後的數字寫進測試下限（不得下降）；每個新開放結構至少 1 個手寫技能往返成功。
+4. `PROMPT_VERSION` 遞增；`SCHEMA_CHAR_LIMIT` 與 token 估算照舊（開放後 schema 變大，子集要確保不超過上限；超過時依規則縮小，不超出 30k）。
+5. 測試一律 `MockLLMClient`；需要真模型的標 `@pytest.mark.llm`。
+6. 驗收：pytest（skillgen、llm、content、roguelite、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports；`trpg llm propose -n 10 --seed 0`（Mock）輸出正常。報告 `Phase4-L8報告.md`（含盤點表與開放前後覆蓋率）。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）
