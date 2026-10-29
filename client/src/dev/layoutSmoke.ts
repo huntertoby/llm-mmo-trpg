@@ -38,6 +38,17 @@ export interface LayoutSnapshot {
   moreMenu: { open: boolean; tooltips: number; hintBefore: number } | null;
   /** 畫面上多餘的說明卡外框（舊版 `Hint` 的 `.hint-tip`）數量，應為 0。 */
   hintWrappers: number;
+  /** 畫面上顯示中的每張浮動卡（`.float-card`、`.unit-float`）與它是否有底色（3U-1）。 */
+  floatCards: FloatCardBg[];
+  /** 文字溢出自己的框、或相鄰元素矩形互相重疊的描述（3U-1）；應為空。 */
+  textIssues: string[];
+}
+
+export interface FloatCardBg {
+  /** 卡片的 class 與開頭文字，方便定位。 */
+  name: string;
+  /** 外框、內容區、或其中的 `.skill-card` 的最大底色不透明度（0～1）。 */
+  alpha: number;
 }
 
 export interface CheckResult {
@@ -134,6 +145,17 @@ function handleCheck(s: LayoutSnapshot, check: (s: LayoutSnapshot) => CheckResul
   return { ...r, pass: handle === null, detail: handle === null ? "窄螢幕不顯示拖曳線（略過）" : "窄螢幕卻出現拖曳線" };
 }
 
+function floatCardsOpaque(s: LayoutSnapshot): CheckResult {
+  const label = "每張顯示中的浮動卡有底色（3U-1）";
+  const bad = s.floatCards.filter((c) => c.alpha < 0.5);
+  return result("float-card-bg", label, bad.length === 0, bad.length === 0 ? `${s.floatCards.length} 張` : `無底色：${bad.map((c) => c.name).join("；")}`);
+}
+
+function noTextClash(s: LayoutSnapshot): CheckResult {
+  const label = "沒有文字溢出自己的框、相鄰元素沒有互相重疊（3U-1）";
+  return result("no-text-clash", label, s.textIssues.length === 0, s.textIssues.length === 0 ? "0 項" : s.textIssues.join("；"));
+}
+
 /** 純函式：把量測結果轉成逐項 PASS／FAIL。 */
 export function evaluate(s: LayoutSnapshot): CheckResult[] {
   return [
@@ -146,6 +168,8 @@ export function evaluate(s: LayoutSnapshot): CheckResult[] {
     tileHint(s),
     moreMenu(s),
     noWrapper(s),
+    floatCardsOpaque(s),
+    noTextClash(s),
   ];
 }
 
@@ -201,7 +225,79 @@ function collectBase(doc: Document, win: Window): LayoutSnapshot {
     tileCard: null,
     moreMenu: null,
     hintWrappers: doc.querySelectorAll(".hint-tip").length,
+    floatCards: collectFloatCards(doc, win),
+    textIssues: scanTextIssues(doc, win),
   };
+}
+
+const isShown = (el: Element, win: Window): boolean => {
+  const r = el.getBoundingClientRect();
+  const cs = win.getComputedStyle(el);
+  return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+};
+
+/** 顯示中的浮動卡的底色：外框、內容區、內容區裡的 `.skill-card` 取最大不透明度。 */
+export function collectFloatCards(doc: Document, win: Window): FloatCardBg[] {
+  const out: FloatCardBg[] = [];
+  for (const el of doc.querySelectorAll(".float-card, .unit-float")) {
+    if (!isShown(el, win)) continue;
+    const parts = [el, el.querySelector(".float-card-body"), el.querySelector(".skill-card")].filter((e): e is Element => e !== null);
+    const alpha = Math.max(...parts.map((e) => alphaOf(win.getComputedStyle(e).backgroundColor)));
+    out.push({ name: `${el.className.toString().replace(/\s+/g, ".")}「${(el.textContent ?? "").trim().slice(0, 12)}」`, alpha });
+  }
+  return out;
+}
+
+const describe = (el: Element): string => `${el.tagName.toLowerCase()}${el.className.toString() === "" ? "" : "." + el.className.toString().trim().split(/\s+/).join(".")}「${(el.textContent ?? "").trim().slice(0, 10)}」`;
+const MAX_ISSUES = 12;
+
+/** 文字溢出：自己的內容比框寬、又沒有 `overflow` 處理（溢出的字會畫到鄰居身上）。 */
+function overflowIssues(doc: Document, win: Window): string[] {
+  const out: string[] = [];
+  for (const el of doc.body.querySelectorAll("*")) {
+    if (el.closest("svg, canvas") !== null) continue;
+    if (el.clientWidth === 0 || el.scrollWidth <= el.clientWidth + 1) continue;
+    const cs = win.getComputedStyle(el);
+    if (cs.overflowX !== "visible" || !isShown(el, win)) continue;
+    // 只看自己有文字的元素（直接子文字節點），避免容器內含超寬子元素重複回報
+    if (![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? "").trim() !== "")) continue;
+    out.push(`溢出 ${describe(el)} ${el.scrollWidth}>${el.clientWidth}`);
+    if (out.length >= MAX_ISSUES) break;
+  }
+  return out;
+}
+
+const overlapArea = (a: DOMRect, b: DOMRect): { x: number; y: number } => ({
+  x: Math.min(a.right, b.right) - Math.max(a.left, b.left),
+  y: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top),
+});
+
+/** 相鄰（同一父元素的）元素矩形互相重疊 > 2px：只看正常流程排版的（不含 absolute／fixed）。 */
+function overlapIssues(doc: Document, win: Window): string[] {
+  const out: string[] = [];
+  for (const parent of doc.body.querySelectorAll("*")) {
+    if (parent.closest("svg, canvas") !== null) continue;
+    const kids = [...parent.children].filter((k) => {
+      const cs = win.getComputedStyle(k);
+      // 行內元素（inline）折行時外框矩形本來就會互相重疊，不算
+      return cs.display !== "inline" && cs.position !== "absolute" && cs.position !== "fixed" && cs.display !== "contents" && isShown(k, win) && (k.textContent ?? "").trim() !== "";
+    });
+    for (let i = 0; i < kids.length; i++) {
+      for (let j = i + 1; j < kids.length; j++) {
+        const a = kids[i] as Element;
+        const b = kids[j] as Element;
+        const o = overlapArea(a.getBoundingClientRect(), b.getBoundingClientRect());
+        if (o.x > 2 && o.y > 2) out.push(`重疊 ${describe(a)} × ${describe(b)}`);
+      }
+    }
+    if (out.length >= MAX_ISSUES) break;
+  }
+  return out;
+}
+
+/** 掃描目前畫面的文字溢出與相鄰重疊（3U-1）。 */
+export function scanTextIssues(doc: Document, win: Window): string[] {
+  return [...overflowIssues(doc, win), ...overlapIssues(doc, win)].slice(0, MAX_ISSUES);
 }
 
 function collectTileCard(doc: Document, win: Window): LayoutSnapshot["tileCard"] {
@@ -271,11 +367,12 @@ function setSeed(doc: Document, seed: number): void {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-/** 從開始畫面進入一場戰鬥（選前兩個關鍵字）。 */
-export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON, viaRun = false): Promise<void> {
-  const button = (text: string) => [...doc.querySelectorAll<HTMLButtonElement>("button")].find((b) => (b.textContent ?? "").trim().startsWith(text));
-  if (doc.querySelector(".battle-bottom") !== null) return; // 已經在戰鬥畫面
-  if (viaRun) button("開新一輪")?.click();
+const buttonOf = (doc: Document, text: string): HTMLButtonElement | undefined =>
+  [...doc.querySelectorAll<HTMLButtonElement>("button")].find((b) => (b.textContent ?? "").trim().startsWith(text));
+
+/** 開始畫面：固定種族／出身、選武器、選前兩個關鍵字（viaRun 時先按「開新一輪」）。 */
+async function fillStart(doc: Document, seed: number, weapon: string, viaRun: boolean): Promise<void> {
+  if (viaRun) buttonOf(doc, "開新一輪")?.click();
   const ready = () => doc.querySelector(".run-keyword") !== null && (!viaRun || doc.querySelector('[data-testid="start-races"]') !== null);
   for (let i = 0; i < 30 && !ready(); i++) await sleep(200);
   setSeed(doc, seed);
@@ -288,14 +385,19 @@ export async function startBattle(doc: Document = document, seed = SMOKE_SEED, w
   }
   [...doc.querySelectorAll<HTMLElement>(".run-weapon")].find((b) => (b.textContent ?? "").startsWith(weapon))?.click();
   // 關鍵字：換武器後預覽才回來，湊不到起始技能的會被取消；一律挑「目前可選、還沒選」的第一個，直到選滿 2 個
-  for (let picked = 0; picked < 2; ) {
+  for (let tries = 0; tries < 12 && doc.querySelectorAll(".run-keyword.selected").length < 2; tries++) {
     await sleep(600);
     const next = [...doc.querySelectorAll<HTMLButtonElement>(".run-keyword")].find((b) => !b.disabled && !b.classList.contains("selected") && !b.classList.contains("unavailable"));
-    if (next === undefined) break;
-    next.click();
-    picked = doc.querySelectorAll(".run-keyword.selected").length;
+    next?.click();
   }
   await sleep(400);
+}
+
+/** 從開始畫面進入一場戰鬥（選前兩個關鍵字）。 */
+export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON, viaRun = false): Promise<void> {
+  const button = (text: string) => buttonOf(doc, text);
+  if (doc.querySelector(".battle-bottom") !== null) return; // 已經在戰鬥畫面
+  await fillStart(doc, seed, weapon, viaRun);
   if (viaRun) {
     button("自動配點並開始")?.click();
     for (let i = 0; i < 30 && button("開始第 1 場") === undefined; i++) await sleep(200);
@@ -315,17 +417,96 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
   await hoverUntilCard(document);
   snap.tileCard = collectTileCard(document, window);
   snap.moreMenu = await probeMoreMenu(document);
+  await hoverFirst(document, ".skill-slot button, .race-slot button");
+  snap.floatCards = collectFloatCards(document, window);
+  snap.textIssues = scanTextIssues(document, window);
   storage.removeItem(LAYOUT_KEY);
   const { text } = formatTable(`${title}（視窗 ${snap.viewport.width}×${snap.viewport.height}）`, evaluate(snap));
   return text;
 }
 
+/** 對符合的第一個元素送 pointerover（觸發浮動卡的滑過），等卡片出現。 */
+async function hoverFirst(doc: Document, selector: string, index = 0): Promise<boolean> {
+  const el = doc.querySelectorAll(selector)[index];
+  if (el === undefined) return false;
+  el.dispatchEvent(new PointerEvent("pointerover", { pointerType: "mouse", pointerId: 1, bubbles: true, isPrimary: true }));
+  await sleep(600);
+  return true;
+}
+
+async function unhover(doc: Document, selector: string, index = 0): Promise<void> {
+  doc.querySelectorAll(selector)[index]?.dispatchEvent(new PointerEvent("pointerout", { pointerType: "mouse", pointerId: 1, bubbles: true, isPrimary: true }));
+  await sleep(450); // 離開寬限約 250ms
+}
+
+/** 一個畫面階段的掃描結果轉成兩列檢查（浮動卡底色、文字溢出／重疊）。 */
+function stageRows(stage: string, doc: Document, win: Window, needCard: boolean): CheckResult[] {
+  const cards = collectFloatCards(doc, win);
+  const issues = scanTextIssues(doc, win);
+  const missing = needCard && cards.length === 0;
+  const clear = cards.filter((c) => c.alpha < 0.5);
+  return [
+    result(`${stage}/card-bg`, `${stage}：顯示中的浮動卡有底色`, clear.length === 0 && !missing, missing ? "應該出現浮動卡卻沒有" : clear.length === 0 ? `${cards.length} 張` : `無底色：${clear.map((c) => c.name).join("；")}`),
+    result(`${stage}/text-clash`, `${stage}：沒有文字溢出或相鄰重疊`, issues.length === 0, issues.length === 0 ? "0 項" : issues.join("；")),
+  ];
+}
+
+/**
+ * 全站排版掃描（3U-1）：技能工坊 → 開始畫面（種族卡、出身卡、武器、關鍵字、屬性分配）→ 一輪畫面 → 戰鬥畫面。
+ * 每個階段量「浮動卡有底色」與「文字溢出／相鄰重疊」。從首頁開始（先 `localStorage.clear()` 並重新載入）。
+ */
+export async function runScreens(title: string): Promise<string> {
+  const doc = document;
+  const win = window;
+  const rows: CheckResult[] = [];
+  // 首頁與技能工坊
+  rows.push(...stageRows("首頁", doc, win, false));
+  buttonOf(doc, "進入技能工坊")?.click();
+  await sleep(600);
+  rows.push(...stageRows("工坊・技能", doc, win, false));
+  buttonOf(doc, "裝備")?.click();
+  await sleep(600);
+  rows.push(...stageRows("工坊・裝備", doc, win, false));
+  buttonOf(doc, "回首頁")?.click();
+  await sleep(600);
+  // 開始畫面
+  await fillStartPartial(doc, rows, win);
+  const viewport = `${win.innerWidth}×${win.innerHeight}`;
+  const { text } = formatTable(`${title}（視窗 ${viewport}）`, rows);
+  return text;
+}
+
+async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window): Promise<void> {
+  buttonOf(doc, "開新一輪")?.click();
+  for (let i = 0; i < 30 && doc.querySelector('[data-testid="start-races"]') === null; i++) await sleep(200);
+  rows.push(...stageRows("開局", doc, win, false));
+  await hoverFirst(doc, '[data-testid^="race-"]', 0);
+  rows.push(...stageRows("開局・種族卡", doc, win, true));
+  await unhover(doc, '[data-testid^="race-"]', 0);
+  await hoverFirst(doc, '[data-testid^="origin-"]', 0);
+  rows.push(...stageRows("開局・出身卡", doc, win, true));
+  await unhover(doc, '[data-testid^="origin-"]', 0);
+  await fillStart(doc, SMOKE_SEED, SMOKE_WEAPON, false);
+  await hoverFirst(doc, ".run-keyword", 0);
+  rows.push(...stageRows("開局・關鍵字", doc, win, true));
+  await unhover(doc, ".run-keyword", 0);
+  rows.push(...stageRows("開局・屬性分配", doc, win, false));
+  buttonOf(doc, "自動配點並開始")?.click();
+  for (let i = 0; i < 30 && buttonOf(doc, "開始第 1 場") === undefined; i++) await sleep(200);
+  rows.push(...stageRows("一輪畫面", doc, win, false));
+  buttonOf(doc, "開始第 1 場")?.click();
+  for (let i = 0; i < 50 && doc.querySelector(".battle-bottom") === null; i++) await sleep(200);
+  await sleep(1500);
+  await hoverFirst(doc, ".skill-slot button, .race-slot button");
+  rows.push(...stageRows("戰鬥・技能卡", doc, win, true));
+}
+
 declare global {
   interface Window {
-    __layoutSmoke?: { runCase: typeof runCase; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
+    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
   }
 }
 
 export function installLayoutSmoke(win: Window): void {
-  win.__layoutSmoke = { runCase, startBattle, evaluate, formatTable };
+  win.__layoutSmoke = { runCase, runScreens, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
 }
