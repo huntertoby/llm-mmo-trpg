@@ -14,6 +14,7 @@ from trpg.content.schemas import ContentModel
 __all__ = [
     "DEFAULT_WORLD_FILE",
     "GlossaryEntry",
+    "NamingRules",
     "Realm",
     "Theme",
     "WorldStyle",
@@ -42,6 +43,16 @@ class Theme(ContentModel):
     hint_zh: str
 
 
+class NamingRules(ContentModel):
+    """技能命名與敘事的文字規則（Phase 4-L7）：長度上限與禁字。禁字是指令字樣、標籤與程式碼片段；
+    英文字母與數字另由字元集檢查擋下（名稱只能是全形中文）。"""
+
+    name_max_chars: int = 12
+    concept_max_chars: int = 80
+    flavor_max_chars: int = 80
+    forbidden_terms: tuple[str, ...] = ()
+
+
 class WorldStyle(ContentModel):
     id: str
     name_zh: str
@@ -50,6 +61,7 @@ class WorldStyle(ContentModel):
     realms: tuple[Realm, ...]
     glossary: tuple[GlossaryEntry, ...]
     themes: tuple[Theme, ...] = ()
+    naming: NamingRules = NamingRules()
 
     def theme_ids(self) -> tuple[str, ...]:
         return tuple(t.id for t in self.themes)
