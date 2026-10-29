@@ -205,7 +205,9 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
     print(
         f"  可用預算 ＝ tier_budget {report.tier_budget}"
         f" × {report.coefficient_label} {_num(report.ap_coefficient)}"
-        f" × (1000 + 折抵 {report.allowance_permille}‰) ÷ 1000 ＝ {_num(report.usable)}",
+        f" × (1000 + 折抵 {report.allowance_permille}‰) ÷ 1000"
+        + (f" × (1000 + 閃現 {report.bonus_permille}‰) ÷ 1000" if report.bonus_permille else "")
+        + f" ＝ {_num(report.usable)}",
         file=out,
     )
     print(f"  代價折抵 {parts}", file=out)
