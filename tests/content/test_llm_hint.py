@@ -18,6 +18,7 @@ def _entries() -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     groups = (
         ("原語", ruleset.primitives.primitives),
+        ("只能巢狀的效果", ruleset.primitives.nested_only_effects),
         ("形狀", ruleset.shapes.shapes),
         ("條件", ruleset.conditions.conditions),
         ("觸發", ruleset.skill_triggers.triggers),

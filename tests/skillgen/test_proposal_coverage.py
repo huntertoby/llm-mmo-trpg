@@ -9,8 +9,8 @@ from tests.engine.helpers import library
 from trpg.content.library import ContentLibrary
 from trpg.skillgen.proposal_coverage import CATEGORIES, Inventory, round_trip_inventory
 
-MIN_ROUND_TRIP = 264
-"""往返成功的手寫技能數下限（4-L8 開工時 241／301；開放結構後只能往上調，不得下降）。"""
+MIN_ROUND_TRIP = 266
+"""往返成功的手寫技能數下限（4-L8 開工時 241／301，4-L8b 起 266／301；只能往上調）。"""
 
 NEVER_OPEN = ("modifier", "form")
 """規格明定不開放的結構（修正規則的 change 欄位、形態／種族）。"""
