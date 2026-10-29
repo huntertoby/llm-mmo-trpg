@@ -251,6 +251,8 @@ class RetierGrowthRules(ContentModel):
     stretch: dict[str, dict[str, int]] = Field(default_factory=dict)
     area_shapes: tuple[str, ...] = ()
     max_extra_cooldown: int = Field(default=0, ge=0)
+    max_cooldown: int = Field(default=6, ge=0)
+    """換成較大的形狀時冷卻的總上限（06 6.34，玩法 PM 6fc1e9b0：6 回合）；原本就超過的不再加。"""
     max_extra_ap: int = Field(default=0, ge=0, le=2)
     """換成較大的形狀時最多多加幾 AP（加冷卻還超過預算上限時，例如 1 AP 的隆地；不超過 3 AP）。"""
     target_tolerance_permille: int = Field(default=50, ge=0, le=300)

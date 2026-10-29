@@ -126,3 +126,7 @@
 ### 4.8 3W-9 驗收（2026-10-30，開發 PM）
 - 合併 3W-9（角色階級預算、`min_character_tier` 表、稀有度改結構標記、升階 `retier`、存檔 `trpg-run/11`）。全量：ruff、format、mypy（831 檔）、lint-imports、client build、vitest 1158、pytest 9510 通過（14 skipped、4 xfail、1 xpass）；swamp 種子 7 重播通過；`LOG_FORMAT` 仍 /88。
 - 報告第 4 節由玩法 PM 定（06 6.34「升階時重算」，`ac7abc6a`）：手寫、工坊、推導技能不擋（工坊開放玩家時改擋）；點數固定白板放大效果、升降地形先放大格數、重配維持升階前比例 → **3W-9b**。CLI `llm propose --mock` 依關鍵字選可行階級（開發 PM 定）併入 3W-9b。
+
+### 4.9 3W-9b 驗收（2026-10-30，開發 PM）
+- 合併 3W-9b（重配維持升階前比例、點數固定白板放大效果、升降地形先放大格數、`llm propose --mock` 自動選階）。合併後 ruff、format、mypy（832 檔）、lint-imports、skillgen／roguelite／cli pytest 3252 通過；swamp 種子 7 重播通過。2 階 138／138、3 階 198／198 在窗內；比例差最大 0.09（容許 0.10，開發 PM 接受）。
+- 報告第 4 節由玩法 PM 定（06 6.34，`6fc1e9b0`）：隆地費用換格數接受；形狀分檔 1 格 → 十字 5 → 方陣 9，不新增；持續上限 10 回合、不加層數（平衡待辦 B-3W-4）；控制類不放大；**冷卻上限 6 回合**（開發 PM 補 `retier_growth.max_cooldown: 6` 與測試）。

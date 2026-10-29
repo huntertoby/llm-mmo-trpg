@@ -207,6 +207,9 @@ def test_terrain_cells_follow_the_tier_table(chain: bool) -> None:
             report = retier_report(LIB, prev, done)
             assert report.in_window and not report.problems, (source.id, tier)
             assert report.after >= report.before
+            # 換大形狀加的冷卻不超過總上限（06 6.34，玩法 PM 6fc1e9b0：6 回合）
+            cap = max(LIB.budget.retier_growth.max_cooldown, prev.cost.cooldown or 0)
+            assert (done.cost.cooldown or 0) <= cap, (source.id, tier, done.cost.cooldown)
             prev = done
 
 

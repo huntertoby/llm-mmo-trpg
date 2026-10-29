@@ -238,7 +238,8 @@ def _growth_drafts(skill: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
     ap_cost = skill.ap_cost or 0  # 只有主動技能會換形狀（_bigger_shapes），一定有 AP
     top = min(ap_cost + rules.max_extra_ap, _MAX_AP)
     for ap in range(ap_cost, max(top, ap_cost) + 1):
-        for cooldown in range(start, start + rules.max_extra_cooldown + 1):
+        last = max(start, min(start + rules.max_extra_cooldown, rules.max_cooldown))
+        for cooldown in range(start, last + 1):
             base, effects = base_draft(skill)
             base["ap_cost"] = ap or None
             base["cost"] = {**base["cost"], "cooldown": cooldown or None}
