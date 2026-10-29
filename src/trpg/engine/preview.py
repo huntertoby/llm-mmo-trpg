@@ -51,7 +51,7 @@ from trpg.engine.actions import (
     UseSkill,
     Vault,
 )
-from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
+from trpg.engine.battle import acting_unit, action_ap_cost, simulate_preview
 from trpg.engine.bombs import blast_tiles, bomb_spec
 from trpg.engine.control import plan_status, status_save_chance
 from trpg.engine.events import (
@@ -1310,7 +1310,7 @@ def _gamble_outcome(
 ) -> GambleOutcome:
     """強制賭注走 ``kind`` 分支的預覽（最少後果與最多後果各模擬一次）。"""
     assert spec.chance_permille is not None
-    actor = _actor(state, action)
+    actor = acting_unit(state, action)
     low, high = simulate_preview(stripped, action, kind)
     branch = _build(state, action, actor, low, high)
     effects = (spec.win if kind == "win" else spec.lose) or ()
@@ -1380,7 +1380,7 @@ def preview(state: BattleState, action: Action) -> Preview:
     不合法時拋出 ``IllegalActionError``。技能有賭注（Phase 3D-7a）時，``gamble`` 另外附上兩個
     分支各自的完整預覽；其餘欄位只算賭注以外的效果。
     """
-    actor = _actor(state, action)
+    actor = acting_unit(state, action)
     stripped = strip_hidden_traps(state, actor.team)
     low, high = simulate_preview(stripped, action)
     base = _build(state, action, actor, low, high)

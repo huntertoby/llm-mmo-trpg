@@ -48,7 +48,7 @@ from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import prevents_concealment
 from trpg.engine.skills import shapes
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summons.core import _insert_in_order, _order_index
+from trpg.engine.summons.core import insert_in_order, owner_order_index
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import ObjectId, Pos, Surface, UnitId
 
@@ -397,8 +397,8 @@ def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:
     unit.summon_expires_round = state.round + effect.lifetime
     unit.initiative = owner.initiative
     state.units[uid] = unit
-    index = _order_index(state, owner.id)
-    _insert_in_order(state, uid, index)
+    index = owner_order_index(state, owner.id)
+    insert_in_order(state, uid, index)
     ctx.emit(
         UnitSummoned,
         unit_id=uid,
