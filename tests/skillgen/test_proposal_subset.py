@@ -168,7 +168,7 @@ def test_empty_shapes_or_skeletons_are_rejected() -> None:
     with pytest.raises(ValueError):
         build_proposal_models(_lib(), shapes=[])
     with pytest.raises(ValueError):
-        build_proposal_models(_lib(), skeletons=["reaction"])
+        build_proposal_models(_lib(), skeletons=["modifier"])  # 修正型不開放
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ def test_request_validation_messages_are_chinese() -> None:
     with pytest.raises(ValueError, match="階級"):
         ProposalRequest(tier=0, rarity="rare")
     with pytest.raises(ValueError, match="技能種類"):
-        ProposalRequest(tier=1, rarity="rare", kind="reaction")
+        ProposalRequest(tier=1, rarity="rare", kind="modifier")  # 反應技 4-L8 起開放
     with pytest.raises(ValueError, match="關鍵字"):
         ProposalRequest(tier=1, rarity="rare", keywords=("ignite", "wet", "charged"))
     with pytest.raises(ValueError, match="關鍵字"):
@@ -199,7 +199,9 @@ def test_no_valid_skeleton_raises_subset_error() -> None:
         ProposalRequest(tier=1, rarity="common", skeleton="passive"),  # 稀有度不足
         ProposalRequest(tier=1, rarity="common", skeleton="stance"),
         ProposalRequest(tier=1, rarity="common", skeleton="combo"),  # 需要條件，普通沒有條件
-        ProposalRequest(tier=1, rarity="legendary", skeleton="reaction"),  # 提議不開放
+        ProposalRequest(
+            tier=1, rarity="legendary", skeleton="trap"
+        ),  # 提議不開放（反應 4-L8 開放）
         ProposalRequest(tier=1, rarity="legendary", skeleton="strike", kind="stance"),
         ProposalRequest(tier=1, rarity="common", kind="passive"),
     ]
@@ -355,7 +357,8 @@ def test_keyword_primitives_appear_under_some_skeleton(keyword_id: str) -> None:
 
 
 # 3-54c：控場骨架的核心原語多了清除表面，核心結構約 1530 token，緊預算由 1_500 放寬到 1_600。
-TIGHT_BUDGET = 1_600
+# 4-L8：主動技能的 available 多了代價欄位與複合技能第二段（固定約 1_200 token），再加 1_200。
+TIGHT_BUDGET = 2_800
 
 
 def test_keyword_primitives_survive_a_tight_budget() -> None:
@@ -427,9 +430,9 @@ def test_subset_fits_within_the_token_budget() -> None:
     assert subset.tokens <= DEFAULT_SUBSET_TOKEN_BUDGET
     assert DEFAULT_SUBSET_TOKEN_BUDGET < PROMPT_TOKEN_BUDGET
     small = select_subset(
-        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=1_500
+        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=2_700
     )
-    assert small.tokens <= 1_500
+    assert small.tokens <= 2_700
     assert len(small.conditions) < len(subset.conditions)
 
 

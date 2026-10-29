@@ -46,11 +46,15 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     AFFECTS_VALUES,
     BACKLASH_TYPES,
+    COMPOSITE_MOVES,
     CONSUME_THEN_TYPES,
+    DELAYED_RELEASE_VALUES,
+    FOLLOWUP_WHEN_VALUES,
     GAMBLE_BRANCH_TYPES,
+    MAX_EFFECTS,
     ON_KILL_TYPES,
-    ON_MISS_MIN_RARITY,
     SKILL_ID_PATTERN,
+    SKILL_REACTION_EVENTS,
     WIELDING_WEAPON,
     ZONE_EFFECT_TYPES,
     CompositionRule,
@@ -70,7 +74,17 @@ from trpg.content.skills import (
 )
 from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.option_gear import gear_pool
-from trpg.skillgen.proposal_costs import apply_cost_choices, cost_choices_of
+from trpg.skillgen.proposal_costs import (
+    COST_DOCS,
+    apply_cost_choices,
+    cost_choices_of,
+    on_miss_allowed,
+)
+from trpg.skillgen.proposal_followup import (
+    FOLLOWUP_DOC,
+    followup_effect_ids,
+    followup_shape_ids,
+)
 from trpg.skillgen.proposal_layouts import (
     STANDARD_LAYOUT,
     LayoutPlan,
@@ -87,7 +101,7 @@ from trpg.skillgen.proposal_numbers import (
 )
 from trpg.skillgen.scaling import fit_scaling, grant_dual, retarget_scaling
 from trpg.skillgen.self_penalty import penalty_choices, penalty_cost, penalty_of_cost
-from trpg.skillgen.validate import RARITY_STATUS_PRIMITIVES, validate_skill
+from trpg.skillgen.validate import COMPOSITE_MIN_RARITY, RARITY_STATUS_PRIMITIVES, validate_skill
 
 __all__ = [
     "LLM_ID_PREFIX",
@@ -98,20 +112,23 @@ __all__ = [
     "ProposalResult",
     "budget_statuses",
     "build_proposal_models",
+    "composite_allowed",
     "evaluate_proposal",
     "feedback_payload",
     "kind_choices",
     "proposal_from_skill",
     "rarity_statuses",
+    "reaction_events",
     "to_skill_def",
 ]
 
 LLM_ID_PREFIX = "skill_llm_"
 
-PROPOSAL_KINDS: tuple[str, ...] = ("active", "passive", "stance")
-"""原型開放的技能種類（反應、修正型需要 ``reaction``／``modifiers``，原型不開放）。"""
-CLOSED_SKELETONS: frozenset[str] = frozenset({"reaction", "modifier", "trap"})
-"""原型不開放的骨架（需要提議模型沒有的欄位）。"""
+PROPOSAL_KINDS: tuple[str, ...] = ("active", "passive", "stance", "reaction")
+"""開放提議的技能種類（反應技 Phase 4-L8 開放，帶 ``reaction``；修正型需要 ``modifiers``，
+不開放）。"""
+CLOSED_SKELETONS: frozenset[str] = frozenset({"modifier", "trap"})
+"""不開放的骨架（需要提議模型沒有的欄位：修正規則、陷阱設定）。"""
 
 NESTED_EFFECT_TYPES: dict[str, tuple[str, ...]] = {
     "then": CONSUME_THEN_TYPES,
@@ -419,6 +436,7 @@ class _Builder:
         triggers: frozenset[str] | None = None,
         *,
         statuses: tuple[str, ...] | None = None,
+        extra_shapes: frozenset[str] = frozenset(),
     ) -> None:
         self.library = library
         self.refs = _Refs.of(library)
@@ -426,7 +444,9 @@ class _Builder:
         self.budget_statuses = budget_statuses(library)
         self.trigger_ids = triggers
         self.condition = _alias("Condition", self._condition_union(conditions))
-        self.shapes = self._shape_models(shapes)
+        # 複合技能第二段可以用子集以外的形狀（extra_shapes，Phase 4-L8）；版型只用 shapes
+        self.all_shapes = self._shape_models(None if shapes is None else shapes | extra_shapes)
+        self.shapes = {k: v for k, v in self.all_shapes.items() if shapes is None or k in shapes}
         primitives = [
             p for p in library.ruleset.primitives.primitives if only is None or p.id in only
         ]
@@ -460,6 +480,11 @@ class _Builder:
         }
         self.trigger = _alias("Trigger", self._trigger_union())
 
+    def outside_models(self, ids: Iterable[str]) -> dict[str, Any]:
+        """子集外原語的模型（複合技能第二段的自身位移，Phase 4-L8；沒有巢狀參數的版本）。"""
+        table = self.library.ruleset.primitives.by_id()
+        return {i: self._effect_model(table[i], None) for i in ids if i not in self.effects}
+
     def self_effect(self, primitive_id: str) -> Any:
         """只作用在施放者的版本（``affects`` 只能是 ``self``，預設 ``self``）。"""
         model = self._self_models.get(primitive_id)
@@ -470,7 +495,7 @@ class _Builder:
         return model
 
     def shape_union(self, ids: Iterable[str]) -> Any:
-        return _union([self.shapes[i] for i in ids], "type")
+        return _union([self.all_shapes[i] for i in ids], "type")
 
     def _nested_type(self, name: str, leaves: Mapping[str, Any]) -> Any:
         allowed = [t for t in NESTED_EFFECT_TYPES.get(name, ()) if t in leaves]
@@ -669,6 +694,24 @@ def _variant_model(effect: Any | None, shape: Any) -> Any:
     )
 
 
+def reaction_events(library: ContentLibrary) -> tuple[tuple[str, str], ...]:
+    """反應技能用的觸發事件（ID、說明；Phase 4-L8）：:data:`SKILL_REACTION_EVENTS` 的順序，說明取
+    ``reactions.yaml`` 的 ``events``（給玩家看的短句；沒有就用 ID）。"""
+    texts = {e.id: e.description_zh for e in library.ruleset.reactions.events}
+    return tuple((e, texts.get(e, e)) for e in SKILL_REACTION_EVENTS)
+
+
+def _reaction_model(library: ContentLibrary) -> Any:
+    """``reaction``：反應技能的觸發事件（``kind: reaction`` 必填，其他種類不可填）。"""
+    lines = "；".join(f"{e}＝{text}" for e, text in reaction_events(library))
+    return create_model(
+        "Reaction",
+        __base__=_Proposal,
+        __doc__=f"反應技能（kind: reaction）必填：不花 AP、在事件發生時自動施放。{lines}",
+        event=(_literal(SKILL_REACTION_EVENTS), ...),
+    )
+
+
 def _skeleton_choices(library: ContentLibrary, skeletons: Iterable[str] | None) -> list[str]:
     available = set(library.skeletons) - CLOSED_SKELETONS
     if skeletons is None:
@@ -704,19 +747,6 @@ def budget_statuses(library: ContentLibrary) -> tuple[str, ...]:
     )
 
 
-_PENALTY_DOC = (
-    "可省略。用自己的代價換更強的效果：填一個自身負面狀態（施放後自己獲得；stun 暈眩＝自己跳過"
-    "下一個回合、silenced 沉默＝只能用在法術技、bleed 流血等）；一招最多一個，數值由遊戲決定"
-)
-_OVERDRAFT_DOC = (
-    "可省略。填 true＝施放後自己下一個回合少 1 AP（透支）；可以和 cost_penalty 同時使用"
-)
-_ONCE_DOC = "可省略。填 true＝每場戰鬥只能用一次（換更強的效果）"
-_HP_DOC = "可省略。填 true＝施放時付出自己的一部分最大 HP（數值由遊戲決定）"
-_ON_MISS_DOC = (
-    "可省略，只有主動技能可用。失手反噬：攻擊沒命中時施放者自己承受的 1～2 個效果（傷害或負面"
-    "狀態），換更強的效果；數值由遊戲決定"
-)
 _SKILL_DOC = "LLM 提議的技能（ID、稀有度、階級與來源由遊戲決定，不要填）。"
 _GENERAL_TAG = "~general"
 """版型的效果 union 中「一般原語」那一支的標籤（不是原語 ID；錯誤路徑會略過它）。"""
@@ -739,6 +769,8 @@ class _Shared:
     standard_shape: Any
     variant: Any
     variant_ids: tuple[str, ...]
+    followup: Any = None
+    """複合技能第二段的模型（Phase 4-L8；沒有可用的效果或形狀時為 ``None``）。"""
 
 
 def _shared_types(
@@ -784,10 +816,15 @@ def _layout_effects(builder: _Builder, plan: LayoutPlan, shared: _Shared) -> Any
         members = [i for i in plan.effects if i not in shared.general_ids]
         has_general = any(i in shared.general_ids for i in plan.effects)
         general = shared.general if has_general else None
+    return _tagged_effects(builder.effects, members, general)
+
+
+def _tagged_effects(models: Mapping[str, Any], members: Sequence[str], general: Any) -> Any:
+    """特殊原語各一支（標籤是原語 ID）＋ 一般原語的具名 union（``general``，可為 ``None``）。"""
     if not members:
         return general
     if general is None and len(members) == 1:
-        return builder.effects[members[0]]
+        return models[members[0]]
     tags = frozenset(members)
 
     def pick(value: Any) -> str | None:
@@ -796,10 +833,73 @@ def _layout_effects(builder: _Builder, plan: LayoutPlan, shared: _Shared) -> Any
             return tag
         return _GENERAL_TAG
 
-    choices: list[Any] = [Annotated[builder.effects[i], Tag(i)] for i in members]
+    choices: list[Any] = [Annotated[models[i], Tag(i)] for i in members]
     if general is not None:
         choices.append(Annotated[general, Tag(_GENERAL_TAG)])
     return Annotated[Union[tuple(choices)], Discriminator(pick)]  # noqa: UP007
+
+
+def _followup_model(
+    library: ContentLibrary,
+    builder: _Builder,
+    shared: _Shared,
+    skeleton: Any,
+    shape_ids: Iterable[str],
+    *,
+    moves: Iterable[str] = (),
+) -> Any:
+    """複合技能第二段（``followup``，Phase 4-L8；見 :mod:`trpg.skillgen.proposal_followup`）。第二段
+    能用的一般原語與一般版型相同時共用 ``GeneralEffect``，否則另建 ``FollowupEffect``；``moves``
+    是子集外也開放給第二段的施放者自身位移（「動作 → 位移」、「擊殺 → 接下一段」用）。沒有可用的
+    效果或形狀時回傳 ``None``（提議不開放 ``followup``）。"""
+    allowed = followup_effect_ids(list(builder.effects))
+    outside = builder.outside_models(m for m in moves if m in COMPOSITE_MOVES)
+    models = {**builder.effects, **outside}
+    general_ids = [i for i in allowed if i in shared.general_ids]
+    members = [i for i in allowed if i not in shared.general_ids] + list(outside)
+    shapes = followup_shape_ids(library, shape_ids)
+    if not (general_ids or members) or not shapes:
+        return None
+    if set(general_ids) == shared.general_ids:
+        general = shared.general
+    else:
+        general = _alias(
+            "FollowupEffect", _union_or_none([builder.effects[i] for i in general_ids])
+        )
+    fields: dict[str, Any] = {
+        "when": (_literal(FOLLOWUP_WHEN_VALUES) | None, None),
+        "skeleton": (skeleton, ...),
+        "shape": (builder.shape_union(shapes), ...),
+        "effects": (
+            _list_of(_tagged_effects(models, members, general)),
+            Field(min_length=1, max_length=MAX_EFFECTS - 1),
+        ),
+        "release": (_literal(DELAYED_RELEASE_VALUES) | None, None),
+    }
+    if builder.condition is not None:
+        fields["condition"] = (Union[builder.condition, None], None)  # noqa: UP007
+    return create_model("Followup", __base__=_Proposal, __doc__=FOLLOWUP_DOC, **fields)
+
+
+def composite_allowed(rarity: SkillRarity | None) -> bool:
+    """這個稀有度能不能做複合技能（``None`` ＝ 不篩；規則同驗證器的 ``rarity.composite``）。"""
+    return rarity is None or rarity_rank(rarity) >= rarity_rank(COMPOSITE_MIN_RARITY)
+
+
+def _followup_skeletons(
+    library: ContentLibrary,
+    skeleton_ids: Sequence[str],
+    wanted: Iterable[str] | None,
+    same: Any,
+) -> Any:
+    """第二段的骨架型別：沒有另外指定（或與第一段相同）時共用 ``Skeleton``，否則另建
+    ``FollowupSkeleton``。"""
+    if wanted is None:
+        return same
+    ids = _skeleton_choices(library, wanted)
+    if ids == list(skeleton_ids):
+        return same
+    return _alias("FollowupSkeleton", _literal(ids))
 
 
 def _layout_model(
@@ -836,6 +936,8 @@ def _layout_model(
         fields["condition"] = (Union[builder.condition, None], None)  # noqa: UP007
     if builder.trigger is not None:
         fields["trigger"] = (Union[builder.trigger, None], None)  # noqa: UP007
+    if shared.followup is not None and "active" in plan.kinds:
+        fields["followup"] = (shared.followup | None, Field(default=None))
     name = "SkillProposal" if plan.id == STANDARD_LAYOUT else f"SkillProposal_{plan.id}"
     return create_model(
         name,
@@ -854,6 +956,10 @@ def build_proposal_models(
     triggers: Iterable[str] | None = None,
     skeletons: Iterable[str] | None = None,
     rarity: SkillRarity | None = None,
+    followup: bool = True,
+    followup_skeletons: Iterable[str] | None = None,
+    followup_shapes: Iterable[str] | None = None,
+    followup_moves: Iterable[str] = (),
 ) -> ProposalModels:
     """由內容庫產生提議模型（原語的參數、範圍與可用值全部取自內容資料，不寫死在這裡）。
 
@@ -865,7 +971,13 @@ def build_proposal_models(
 
     頂層是以 ``layout`` 區分的版型（Phase 4-L5b，見 :mod:`trpg.skillgen.proposal_layouts`）：有組合
     規則的原語各自一個版型，形狀與其他效果依 ``skill_primitives.yaml`` 的組合規則限制。``rarity``
-    有給時，``apply_status`` 只列這個稀有度能用的狀態。"""
+    有給時，``apply_status`` 只列這個稀有度能用的狀態。
+
+    Phase 4-L8 起另開放：反應技能（``reaction``，所選骨架有反應技時）、複合技能第二段
+    （``followup``，有主動技能的版型、稀有度不低於複合技能的最低稀有度；``followup=False`` 時不
+    開放；第二段的骨架與形狀另由 ``followup_skeletons``／``followup_shapes`` 指定，``None`` ＝
+    與第一段相同的骨架、全部形狀；``followup_moves`` 是子集外也開放給第二段的施放者自身位移）、
+    代價類欄位（見 :mod:`trpg.skillgen.proposal_costs`）。"""
     statuses = None if rarity is None else rarity_statuses(library, rarity)
     builder = _Builder(
         library,
@@ -874,6 +986,7 @@ def build_proposal_models(
         _only(conditions),
         _only(triggers),
         statuses=statuses,
+        extra_shapes=frozenset(followup_shapes or ()),
     )
     skeleton_ids = _skeleton_choices(library, skeletons)
     plans, layout_excluded = plan_layouts(
@@ -885,13 +998,23 @@ def build_proposal_models(
     if not plans:
         raise ValueError("提議模型沒有任何可用的版型（篩選後沒有可以組成技能的原語與形狀）")
     shared = _shared_types(library, builder, plans)
+    skeleton_type = _alias("Skeleton", _literal(skeleton_ids))
+    if followup and composite_allowed(rarity) and any("active" in p.kinds for p in plans):
+        second = _followup_skeletons(library, skeleton_ids, followup_skeletons, skeleton_type)
+        shape_ids = builder.all_shapes if followup_shapes is None else followup_shapes
+        shared = replace(
+            shared,
+            followup=_followup_model(
+                library, builder, shared, second, shape_ids, moves=followup_moves
+            ),
+        )
     sk = SkillDef.model_fields
     common: dict[str, Any] = {
         "name_zh": (str, Field(min_length=1, max_length=12)),
         "description_zh": (str | None, None),
         "concept": (str, Field(default="", max_length=80)),
         "cast_flavor": (str, Field(default="", max_length=80)),
-        "skeleton": (_alias("Skeleton", _literal(skeleton_ids)), ...),
+        "skeleton": (skeleton_type, ...),
         "category": (sk["category"].annotation, ...),
         "weapon_req": (sk["weapon_req"].annotation, ...),
         "scaling_attr": (sk["scaling_attr"].annotation, ...),
@@ -899,22 +1022,29 @@ def build_proposal_models(
         "element": (sk["element"].annotation, None),
         "cost_penalty": (
             _penalty_type(penalty_choices(library, rarity)),
-            Field(default=None, description=_PENALTY_DOC),
+            Field(default=None, description=COST_DOCS["cost_penalty"]),
         ),
         "cost_overdraft": (
             Literal[True] | None,
-            Field(default=None, description=_OVERDRAFT_DOC),
+            Field(default=None, description=COST_DOCS["cost_overdraft"]),
         ),
         "cost_once_per_battle": (
             Literal[True] | None,
-            Field(default=None, description=_ONCE_DOC),
+            Field(default=None, description=COST_DOCS["cost_once_per_battle"]),
         ),
-        "cost_hp": (Literal[True] | None, Field(default=None, description=_HP_DOC)),
+        "cost_hp": (Literal[True] | None, Field(default=None, description=COST_DOCS["cost_hp"])),
     }
-    if rarity is None or rarity_rank(rarity) >= rarity_rank(ON_MISS_MIN_RARITY):
+    if "reaction" in kind_choices(library, skeleton_ids):
+        common["reaction"] = (_reaction_model(library) | None, Field(default=None))
+    if on_miss_allowed(rarity):
         common["cost_on_miss"] = (
             _list_of(builder.backlash_union()) | None,
-            Field(default=None, min_length=1, max_length=_MAX_NESTED, description=_ON_MISS_DOC),
+            Field(
+                default=None,
+                min_length=1,
+                max_length=_MAX_NESTED,
+                description=COST_DOCS["cost_on_miss"],
+            ),
         )
     hints = {p.id: layout_hint(library, p) for p in plans}
     layouts = [_layout_model(builder, p, common, shared) for p in plans]
@@ -1045,6 +1175,8 @@ _SUPPORTED_SKILL_KEYS = frozenset(
         "cost_once_per_battle",
         "cost_hp",
         "cost_on_miss",
+        "reaction",
+        "followup",
         "tags",
         "narrative",
         "provenance",

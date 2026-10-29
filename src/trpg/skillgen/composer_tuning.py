@@ -32,13 +32,19 @@ def tuning_bounds(library: ContentLibrary) -> tuple[Fraction, Fraction]:
 
 class _Evaluator:
     def __init__(
-        self, library: ContentLibrary, base: dict[str, Any], effects: list[dict[str, Any]]
+        self,
+        library: ContentLibrary,
+        base: dict[str, Any],
+        effects: list[dict[str, Any]],
+        extra: Sequence[dict[str, Any]] = (),
     ) -> None:
         self.library = library
         self.high = tuning_bounds(library)[1]
         self.jump_share = Fraction(library.composer.tuning.jump_share_permille, 1000)
         self.base = base
         self.effects = effects
+        self.targets: list[dict[str, Any]] = [*effects, *extra]
+        """旋鈕調整的效果字典：``effects`` 之後接 ``extra``（同一批物件，就地修改）。"""
         self.shares = 0
 
     def ratio(self) -> Fraction | None:
@@ -78,11 +84,11 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
     start = knob.pos
     shares = ev.shares
     knob.pos = start + 1
-    _apply(knob, ev.effects)
+    _apply(knob, ev.targets)
     one = ev.ratio()
     if one is None or one > ev.high or ev.shares > shares:
         knob.pos = start
-        _apply(knob, ev.effects)
+        _apply(knob, ev.targets)
         ev.shares = shares
         return ratio, False
     step = one - ratio
@@ -91,12 +97,12 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
         extra = min(int(gap / step * ev.jump_share), len(knob.values) - 1 - knob.pos)
         if extra > 0:
             knob.pos += extra
-            _apply(knob, ev.effects)
+            _apply(knob, ev.targets)
             far = ev.ratio()
             if far is not None and far <= ev.high and ev.shares <= shares:
                 return far, True
             knob.pos = start + 1
-            _apply(knob, ev.effects)
+            _apply(knob, ev.targets)
             ev.ratio()
     return one, True
 
@@ -107,17 +113,22 @@ def tune(
     base: dict[str, Any],
     effects: list[dict[str, Any]],
     knobs: list[Knob],
+    *,
+    extra: Sequence[dict[str, Any]] = (),
 ) -> bool:
     """調整旋鈕使比例落在 ``[low, high]``；成功時 ``effects`` 已是最終數值。
 
     先抽目標比例（均勻分佈在 ``[low, high − margin]``）再往上調，所以整體的比例分佈是均勻的。
+    ``extra``（Phase 4-L8）：``base`` 裡其他要調的效果字典（例如複合技能第二段的效果，與
+    ``base["followup"]["effects"]`` 是同一批物件）；旋鈕的 ``index`` 超過 ``effects`` 的長度時指向
+    ``extra``。隨機組合器不傳，行為不變。
     """
     rules = library.composer.tuning
     low, high = tuning_bounds(library)
-    ev = _Evaluator(library, base, effects)
+    ev = _Evaluator(library, base, effects, extra)
     for knob in knobs:
         knob.pos = 0
-        _apply(knob, effects)
+        _apply(knob, ev.targets)
     ratio = ev.ratio()
     if ratio is None or ratio > high:
         return False

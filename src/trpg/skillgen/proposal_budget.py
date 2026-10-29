@@ -9,10 +9,10 @@
   代碼——由引擎修一次再驗，不回給 LLM（:func:`evaluate_with_repair`）。Phase 4-L5b 起「先修可修的、
   再回報其餘」：錯誤裡只要有可修的代碼就先修，修補後剩下的錯誤才回給 LLM。
 
-旋鈕只建在頂層效果上（與組合器相同）；巢狀效果（``then``、``win``／``lose``、``effects`` 等）的
-數值維持最小值。AP 與冷卻不是旋鈕（4-L3 待決 #2，留給 4-L8）：AP 補 2、沒有冷卻；唯一的例外是
-修「補冷卻即可」的互斥規則（``exclusion.*``，由 ``skill_exclusions.yaml`` 推導）時補到規則要求的
-冷卻。
+旋鈕建在頂層效果與複合技能第二段的效果上（Phase 4-L8；組合器只有頂層）；巢狀效果（``then``、
+``win``／``lose``、``effects`` 等）的數值維持最小值。AP 與冷卻不是旋鈕（4-L3 待決 #2，4-L8 仍
+未開放）：AP 補 2、沒有冷卻；唯一的例外是修「補冷卻即可」的互斥規則（``exclusion.*``，由
+``skill_exclusions.yaml`` 推導）時補到規則要求的冷卻。
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import SkillDef
+from trpg.content.skills import EffectSpec, SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.composer_parts import Knob, effect_knobs
 from trpg.skillgen.composer_tuning import tune
@@ -48,6 +48,7 @@ __all__ = [
     "is_repairable",
     "repairable_codes",
     "repairable_errors",
+    "segment_code",
 ]
 
 REPAIRABLE_CODES: tuple[str, ...] = (
@@ -65,6 +66,7 @@ REPAIR_COOLDOWN = 1
 """「有冷卻就不適用」的互斥規則（例：沒有冷卻的大範圍）補的冷卻回合（預算折抵照
 ``skill_budget.yaml``）。"""
 EXCLUSION_PREFIX = "exclusion."
+FOLLOWUP_PREFIX = "followup."
 REPAIR_TUNES = 4
 """修補時最多重調幾次（每次換一條亂數串流，核心優先與全部旋鈕交替）。"""
 _PROBE_ID = "skill_llm_probe"
@@ -92,8 +94,16 @@ def cooldown_repairs(library: ContentLibrary) -> dict[str, int]:
     return out
 
 
+def segment_code(code: str) -> str:
+    """去掉複合技能第二段的前綴（``followup.``，驗證器對第二段的規則代碼；Phase 4-L8）：第二段的
+    預算、占比與「補冷卻即可」的互斥規則和第一段一樣由引擎修（冷卻是整招共用的）。"""
+    return code.removeprefix(FOLLOWUP_PREFIX)
+
+
 def is_repairable(code: str, library: ContentLibrary) -> bool:
-    """``code`` 是否可由引擎修（:data:`REPAIRABLE_CODES` 或 :func:`cooldown_repairs`）。"""
+    """``code`` 是否可由引擎修（:data:`REPAIRABLE_CODES` 或 :func:`cooldown_repairs`；第二段的
+    ``followup.`` 代碼同樣適用）。"""
+    code = segment_code(code)
     if code.startswith(EXCLUSION_PREFIX):
         return code in cooldown_repairs(library)
     return any(fnmatchcase(code, pattern) for pattern in REPAIRABLE_CODES)
@@ -116,19 +126,23 @@ def repairable_errors(errors: Iterable[ProposalError], library: ContentLibrary) 
 # ---------------------------------------------------------------------------
 
 
-def _knobs(library: ContentLibrary, data: dict[str, Any], *, core_only: bool) -> list[Knob] | None:
-    """頂層效果的旋鈕；結構不合法（無法判斷核心）時為 ``None``。"""
-    skeleton = library.skeletons.get(str(data.get("skeleton")))
+def _segment_knobs(
+    library: ContentLibrary,
+    skeleton_id: str,
+    raws: list[dict[str, Any]],
+    effects: Iterable[EffectSpec],
+    *,
+    category: str,
+    offset: int,
+    core_only: bool,
+) -> list[Knob] | None:
+    """一段（技能本身或複合技能第二段）的旋鈕；核心依該段的骨架判斷，索引從 ``offset`` 起算。"""
+    skeleton = library.skeletons.get(skeleton_id)
     if skeleton is None:
         return None
-    try:
-        skill = SkillDef.model_validate({"name_zh": _PROBE_NAME, **data, "id": _PROBE_ID})
-    except ValidationError:
-        return None
     structure = library.composer.structure
-    category = str(data.get("category", "spell"))
     knobs: list[Knob] = []
-    for index, (raw, effect) in enumerate(zip(data["effects"], skill.effects, strict=True)):
+    for index, (raw, effect) in enumerate(zip(raws, effects, strict=True)):
         core = is_core_effect(library, skeleton, effect)
         if core_only and not core:
             continue
@@ -136,8 +150,39 @@ def _knobs(library: ContentLibrary, data: dict[str, Any], *, core_only: bool) ->
         for name, values, knob_weight in effect_knobs(
             library, raw, category=category, weight=weight
         ):
-            knobs.append(Knob(index, name, values, knob_weight))
+            knobs.append(Knob(offset + index, name, values, knob_weight))
     return knobs
+
+
+def _knobs(library: ContentLibrary, data: dict[str, Any], *, core_only: bool) -> list[Knob] | None:
+    """頂層效果與複合技能第二段效果（Phase 4-L8；索引接在頂層效果之後）的旋鈕；結構不合法
+    （無法判斷核心）時為 ``None``。"""
+    try:
+        skill = SkillDef.model_validate({"name_zh": _PROBE_NAME, **data, "id": _PROBE_ID})
+    except ValidationError:
+        return None
+    category = str(data.get("category", "spell"))
+    knobs = _segment_knobs(
+        library,
+        str(data.get("skeleton")),
+        data["effects"],
+        skill.effects,
+        category=category,
+        offset=0,
+        core_only=core_only,
+    )
+    if knobs is None or skill.followup is None:
+        return knobs
+    second = _segment_knobs(
+        library,
+        skill.followup.skeleton,
+        data["followup"]["effects"],
+        skill.followup.effects,
+        category=category,
+        offset=len(data["effects"]),
+        core_only=core_only,
+    )
+    return None if second is None else knobs + second
 
 
 def _tune_once(library: ContentLibrary, data: dict[str, Any], rng: Rng, *, core_only: bool) -> bool:
@@ -147,7 +192,9 @@ def _tune_once(library: ContentLibrary, data: dict[str, Any], rng: Rng, *, core_
     base = {k: v for k, v in data.items() if k != "effects"}
     base["id"] = _PROBE_ID
     base.setdefault("name_zh", _PROBE_NAME)
-    return tune(rng, library, base, data["effects"], knobs)
+    follow = data.get("followup")
+    extra = follow["effects"] if isinstance(follow, dict) else []  # 與 base 裡的是同一批物件
+    return tune(rng, library, base, data["effects"], knobs, extra=extra)
 
 
 def _tune(
@@ -171,7 +218,7 @@ def budget_filler(
     """預算補值器：必填最小值 → 旋鈕 → ``tune``。``repairs`` 是要修的驗證代碼（見
     :data:`REPAIRABLE_CODES`）；調不進區間時照樣回傳（交給驗證器報錯）。"""
     minimal = minimal_filler(library)
-    wanted = frozenset(repairs)
+    wanted = frozenset(segment_code(c) for c in repairs)
     needs = cooldown_repairs(library)
     cooldown = max((needs[c] for c in wanted if c in needs), default=0)
 

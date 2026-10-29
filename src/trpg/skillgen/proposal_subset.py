@@ -20,7 +20,7 @@ from typing import Any
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_keywords import KeywordDef
 from trpg.content.skill_rules import SkeletonDef
-from trpg.content.skills import PrimitiveDef, SkillRarity, rarity_rank
+from trpg.content.skills import COMPOSITE_MOVES, PrimitiveDef, SkillRarity, rarity_rank
 from trpg.shared.rng import Rng
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET, estimate_tokens
 from trpg.skillgen.proposal import (
@@ -29,7 +29,16 @@ from trpg.skillgen.proposal import (
     PROPOSAL_KINDS,
     ProposalModels,
     build_proposal_models,
+    composite_allowed,
     kind_choices,
+    reaction_events,
+)
+from trpg.skillgen.proposal_costs import cost_entries
+from trpg.skillgen.proposal_followup import (
+    FOLLOWUP_DOC,
+    followup_shape_ids,
+    followup_when_entries,
+    release_entries,
 )
 from trpg.skillgen.proposal_layouts import layout_hint, plan_layouts
 from trpg.skillgen.proposal_numbers import numeric_param_names
@@ -125,6 +134,14 @@ class ProposalSubset:
     rarity: SkillRarity | None = None
     menu_seed: int | None = None
     """``available`` 的順序種子（``None`` ＝ 依 ID 排序）；只影響呈現，不影響驗證。"""
+    followup_skeletons: tuple[str, ...] = ()
+    """複合技能第二段可用的骨架（Phase 4-L8；空的 ＝ 不開放 ``followup``）：主動技能、稀有度夠時為
+    此稀有度可用的全部主動骨架（不受題目骨架限制）。"""
+    followup_shapes: tuple[str, ...] = ()
+    """複合技能第二段可用的形狀（Phase 4-L8；YAML 順序，稀有度夠的第二段形狀）。"""
+    followup_moves: tuple[str, ...] = ()
+    """複合技能第二段另外可用的施放者自身位移（Phase 4-L8；YAML 順序，稀有度夠的
+    ``COMPOSITE_MOVES``，即使不在 ``primitives``）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +159,10 @@ def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> Prop
         triggers=subset.triggers,
         skeletons=subset.skeletons,
         rarity=subset.rarity,
+        followup=bool(subset.followup_skeletons),
+        followup_skeletons=subset.followup_skeletons or None,
+        followup_shapes=subset.followup_shapes,
+        followup_moves=subset.followup_moves,
     )
 
 
@@ -158,7 +179,7 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
     triggers = rules.skill_triggers.by_id()
     keywords = rules.keywords.by_id()
     seed = subset.menu_seed
-    return {
+    payload: dict[str, Any] = {
         "layouts": _layout_entries(library, subset),
         "skeletons": [
             _skeleton_entry(library, library.skeletons[i], subset)
@@ -184,6 +205,34 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
             for i in sorted(subset.keywords)
         ],
     }
+    payload.update(_extra_entries(library, subset))
+    return payload
+
+
+def _extra_entries(library: ContentLibrary, subset: ProposalSubset) -> dict[str, Any]:
+    """依技能種類多列的結構（Phase 4-L8）：主動技能的代價欄位 ``costs`` 與複合技能 ``followup``；
+    反應技能的觸發事件 ``reactions``。"""
+    if subset.kind == "reaction":
+        return {"reactions": [{"id": e, "hint": h} for e, h in reaction_events(library)]}
+    if subset.kind != "active":
+        return {}
+    out: dict[str, Any] = {"costs": cost_entries(library, subset.rarity)}
+    if subset.followup_skeletons:
+        shapes = library.ruleset.shapes.by_id()
+        primitives = library.ruleset.primitives.by_id()
+        out["followup"] = {
+            "hint": FOLLOWUP_DOC,
+            "when": followup_when_entries(),
+            "release": release_entries(),
+            "skeletons": list(subset.followup_skeletons),
+            "shapes": [{"id": i, "hint": shapes[i].llm_hint} for i in subset.followup_shapes],
+            "moves": [
+                {"id": i, "hint": primitives[i].llm_hint}
+                for i in subset.followup_moves
+                if i not in subset.primitives
+            ],
+        }
+    return out
 
 
 def menu_order(ids: Iterable[str], seed: int | None, label: str) -> list[str]:
@@ -508,6 +557,8 @@ def select_subset(
         skeletons = _with_core(sel, skeletons, request.core_primitive)
     plan = _plan(sel, skeletons, kind, wants)
 
+    follow_skeletons, follow_shapes, follow_moves = _followup_scope(sel, kind)
+
     def make(n_prims: int, n_conds: int) -> ProposalSubset:
         return ProposalSubset(
             kind=kind,
@@ -521,6 +572,9 @@ def select_subset(
             keywords=tuple(sorted(request.keywords)),
             rarity=request.rarity,
             menu_seed=request.menu_seed,
+            followup_skeletons=follow_skeletons,
+            followup_shapes=follow_shapes,
+            followup_moves=follow_moves,
         )
 
     def fits(n_prims: int, n_conds: int) -> bool:
@@ -600,6 +654,31 @@ def _plan(
         shapes=tuple(sorted(shapes)),
         triggers=tuple(sorted(triggers)),
     )
+
+
+def _followup_scope(
+    sel: _Selector, kind: str
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """複合技能第二段的骨架、形狀與自身位移（Phase 4-L8）：主動技能、稀有度不低於複合技能最低
+    稀有度時，為此稀有度可用的主動骨架（排序）、第二段形狀與 ``COMPOSITE_MOVES``（YAML 順序）；
+    否則都是空的（不開放）。"""
+    if kind != "active" or not composite_allowed(sel.rarity):
+        return (), (), ()
+    skeletons = tuple(
+        sorted(
+            s.id
+            for s in sel.library.skeletons.values()
+            if s.enabled
+            and "active" in s.kinds
+            and s.id not in CLOSED_SKELETONS
+            and sel._unusable_reason(s, "active") is None
+        )
+    )
+    legal = [
+        s.id for s in sel.library.ruleset.shapes.shapes if _rarity_ok(s.min_rarity, sel.rarity)
+    ]
+    moves = tuple(sel.legal_primitives(COMPOSITE_MOVES))
+    return skeletons, tuple(followup_shape_ids(sel.library, legal)), moves
 
 
 def _with_core(
