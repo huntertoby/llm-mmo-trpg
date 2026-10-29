@@ -362,12 +362,12 @@ function drawBack(t: Ctxt): void {
   if (off !== undefined && !isShield(off)) screen(() => legacyHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false }));
   drawLegs(t, "back");
   drawBody(t, "back");
-  drawBackSpines(ctx, spec.look, "back");
   drawArmFront(t, -1);
   drawArmFront(t, 1);
   drawHand(t, -9, -23.2, "hand-bl", 0.32);
   drawHand(t, 9, -23.2, "hand-br", -0.32);
   drawCloak(t, "back");
+  drawBackSpines(ctx, spec.look, "back"); // 背刺畫在披風之上（當作披風開了口）
   drawInkTail(ctx, spec.look, "back");
   if (off !== undefined && isShield(off)) drawWoodShieldBack(t, off);
   drawHead(t, "back");

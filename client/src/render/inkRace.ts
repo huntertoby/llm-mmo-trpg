@@ -309,7 +309,7 @@ export function drawBackSpines(ctx: Ctx, look: Look, view: RaceView): void {
     const py = (dx / n) * 1.7;
     ink(ctx, key, [[x + px, y + py], [x + dx, y + dy], [x - px, y - py]], c, { shade: false, w: 0.5 });
   };
-  if (view === "front") for (const x of [-6.5, 6.5]) spike(`spine-f-${x}`, x, -29, 0, -5);
+  if (view === "front") for (const x of [-5.6, 5.6]) spike(`spine-f-${x}`, x, -30, 0, -6.5);
   else if (view === "back") for (const x of [-4.5, 0, 4.5]) spike(`spine-b-${x}`, x, -28, 0, -5.2);
   else for (const [x, y] of [[-3.6, -30], [-4.8, -26.4], [-5.2, -22.8]] as const) spike(`spine-s-${y}`, x, y, -4.4, -0.6);
 }
