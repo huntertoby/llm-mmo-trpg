@@ -145,3 +145,9 @@
 
 ### 4.13 3W-6b 驗收（2026-10-30，開發 PM）
 - 合併 3W-6b：閃現區只在「下一場前」與營火；傳承的「先上場用過」照接受者（後端原本已是，補明寫與 2 個測試）；`dev-advance?to=next_battle`（開發路由）。合併後 ruff、format、mypy、tsc、vitest 1174、roguelite＋api pytest 531 通過；實作者 `runPostBattle()` 1440×900、800×600 全 PASS；截圖 `docs/phases/img/3W-6b-next-battle-flash.jpg`。開發 PM 定：「繼續戰鬥」畫面不顯示閃現區、保留 `next_battle` 開發目標。
+
+## 6. 大段結束審查（2026-10-30，reviewer opus，範圍 `7666fb3b..HEAD`）與整理子階段 3W-R
+審查 10 點（依嚴重度）：① 升階後 `sync_skill_tier` 的 `retier` 與閃現的 `derive_chain` 兩條路數值不同、ID 相同；② 舊歷程重推失敗被吞成「沒有合法變化」、重閃下限變 0、傳承報錯；③ 預算爬升／重調三套（complete `_climb`、skill_tier 旋鈕、`retune`）；④ 規則常數寫在程式（`whiteboard_check` 形狀／原語／比例、`flash_ops` 的 `4`、`skill_tier` 的 `_TERRAIN`／`_AREA`／`_MAX_AP`、`flash._SUPPORT_TYPES`）；⑤ `sim/flash_report` 在執行期替換 `offers.as_complete`；⑥ 前端重寫傳承／重閃資格規則；⑦ `flash.py` 1110 行等模組過大；⑧ `flash_major` 無作用的一對一對照表；⑨ `skill_tier._CACHE` 行程全域快取；⑩ 舊戰鬥中存檔整個拒絕、靈感換算的「待 PM 決定」標記過時。整體：建議先排整理子階段。
+開發 PM 決定：全部排進 3W-R，分兩段依序做（都動 `skillgen/flash*`，不平行）。⑩ 舊戰鬥中存檔（技術決定）：捨棄該場戰鬥、回到該戰鬥節點開頭；靈感換算已由玩法 PM 確認（`1752ae6c`），拿掉標記。
+- **3W-R1｜真相來源與失敗處理**（opus；約 0.8 段）：①、②、⑨、⑩。
+- **3W-R2｜旋鈕統一、內容即資料、拆檔**（opus；約 1 段；R1 後）：③、④、⑤、⑥、⑧，最後 ⑦ 只搬檔不改邏輯。
