@@ -1,12 +1,12 @@
 // 網頁版 LLM 開關（Phase 4-L6b）的純函式：開局欄位、候選卡來源標記、一輪結束摘要。
-// 標記與說明文字是暫定用語（待玩法 PM 確認），集中在這裡。
+// 標記與說明文字集中在這裡（玩法 PM 2026-10-29 定案）。
 import type { CreateRunRequest, LlmStats, OfferTag } from "../api/types";
 
 /** 候選卡的 LLM 來源標記（暫定）。 */
 export const LLM_SOURCE_LABEL = "源晶推演";
 export const LLM_SOURCE_HINT = "這張技能由本機模型提議，數值由規則補齊。";
 /** 開新一輪畫面的開關文字與說明（說明走共用浮動卡）。 */
-export const LLM_TOGGLE_LABEL = "LLM 生成升級技能";
+export const LLM_TOGGLE_LABEL = "用本機模型生成升級技能";
 export const LLM_TOGGLE_HINT = "由本機模型生成升級技能；需要先啟動本機模型。沒有啟動時，這一輪照常使用一般技能生成。";
 
 /** 開局欄位加上 LLM 開關：沒開就原樣回傳（請求不帶 `llm`，與以往逐字相同）。 */

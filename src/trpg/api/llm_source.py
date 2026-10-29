@@ -33,7 +33,7 @@ __all__ = [
 
 DEFAULT_ALERT_PERMILLE = 200
 DEFAULT_PROBE_TIMEOUT_S = 3.0
-LLM_OFF_NOTICE = "本機模型未啟動，這一輪使用一般技能生成。"
+LLM_OFF_NOTICE = "連不到本機模型，這一輪改用一般技能生成。"
 """連不到本機模型時顯示的提示（這一輪自動當作關閉，照常開局）。"""
 _SERVER_ERROR_MIN = 500
 

@@ -487,7 +487,7 @@ class RunResponse(_ApiModel):
     llm: bool = False
     """這一輪有開 LLM 生成（Phase 4-L6b）。"""
     llm_notice: str | None = None
-    """只在開新一輪的回應帶出一次（例如「本機模型未啟動，這一輪使用一般技能生成」）。"""
+    """只在開新一輪的回應帶出一次（例如「連不到本機模型，這一輪改用一般技能生成」）。"""
     llm_stats: LlmStatsOut | None = None
     """LLM 統計；這一輪沒開 LLM 且沒有任何題目時為 ``None``。"""
 

@@ -298,3 +298,7 @@
 - 報告 `Phase4-L8b報告.md`。`skill_primitives.yaml` 新增頂層 `nested_only_effects`（`parents`），往返覆蓋率 264 → **266／301**；AP、冷卻、耐力成為補值器旋鈕（15 階、冷卻上限 5、只用於主動技能；手寫技能預算逐字相同；`leap_slam` 子集 0／10 → 10／10）；候選反應題 `candidates.llm_reaction_permille` 100‰；命名關閉時敘事換模板、`trpg llm propose --naming`。合併後 ruff、mypy、skillgen／llm／roguelite／content 4000 通過。
 - 待決 → 決定：#1～#5、#7 接受（初值，4-L9 看真模型再調）；#6 命名開關傳進 schema 組裝 → 4-L9 後的小修；**#8 驗收指令改成 `-m "(slow or not slow) and not llm"`**（`llm` 標記的測試會連 8001 埠），之後的派工 prompt 照此寫。
 - **4-L9 需要使用者啟動本機模型**，已請專案 PM 詢問時間（2026-10-29）。
+
+### 4.12 4-L6b 驗收（2026-10-29，開發 PM）
+- 報告 `Phase4-L6b報告.md`。`POST /api/runs` 選填 `llm`（預設關）；開局 `GET {base_url}/models` 探測、逾時 3 秒，連不到當作關閉並帶 `llm_notice` 一次；`RunResponse` 加 `llm`／`llm_notice`／`llm_stats`；`trpg.api.llm_source`（`LocalLlmProvider`、`MockLlmProvider`）；前端開關、`NoticeBanner`、候選卡「源晶推演」標記、一輪摘要 LLM 統計；存檔不變（`trpg-run/10`）。合併後全量（除 llm，含 3T-6）：pytest 8732、vitest 1107、mypy、lint-imports、build、重播（lava_crossing 種子 3，角魔）全過。
+- 玩法 PM 定案文字：標記「源晶推演」維持；開關改「用本機模型生成升級技能」；提示改「連不到本機模型，這一輪改用一般技能生成。」（開發 PM 已改）。待決 #2～#9 接受（只探測一次、同步生成、讀檔不探測、`generate` 不影響網頁）；`trpg serve --llm-mock`（瀏覽器離線看 LLM 候選）→ 需要時再加。

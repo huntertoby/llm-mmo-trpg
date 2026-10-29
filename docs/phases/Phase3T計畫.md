@@ -64,3 +64,4 @@
 - 3T-7：前端 `BattleScreen.tsx`（1268 行、77 個 hook）拆分，`onTileClick` 抽純函式（審查 W10），`styles.css` 依畫面拆檔；外觀與行為不變（排版煙霧檢查＋截圖對照）。
 - 3T-8：組合器骨架 ID 分支移 YAML、私有匯入改公開（審查 P9）。
 - 鱗族被動小修（玩法 PM 寫進 07 7.7 後）。
+- **3T-6 驗收**（2026-10-29）：報告 `Phase3T-6報告.md`。`engine/gear/`（`core`、`charge`、`enhance`、`reactions`、`state`、`summon`、`triggers`、`view`）、`engine/summons/`（`core`、`control`、`variants`）、`engine/race/`（`skills`）；約 80 處呼叫端改新路徑、無相容轉發；快照不變。合併後全量通過（同 Phase4 4.12）。
