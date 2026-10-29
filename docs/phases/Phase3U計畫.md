@@ -27,3 +27,7 @@
 2. `layoutSmoke` 的 `runScreens()` 涵蓋這些畫面（含滑過候選卡、裝備卡等浮動卡），三種視窗 1600×900、1280×720、800×600；底色與溢出／重疊兩項檢查照 3U-1。
 3. 掃到的問題一起修，逐條寫進報告附前後截圖（png，`docs/phases/img/3U-3-*`）。
 4. 驗收：vitest、tsc、build、`runScreens` 全 PASS。報告 `Phase3U-3報告.md`。
+
+## 4. 3U-2 驗收與 3U-2b｜狀態列移到腳邊（2026-10-29）
+- **3U-2 驗收**：報告 `Phase3U-2報告.md`。`DOLL_SCALE` 0.92、形態 `formScale = 0.6×(DOLL_SCALE/0.74)×min(size,1.3)`、野獸／物件召喚物 ×1.15、貼圖解析度含 dpr 與場景縮放（1.5～6，快取鍵含解析度）、開發頁 `scale-gallery`。合併後 vitest 1151、tsc、build 通過；效能無退步。美術 PM 驗收通過，但狀態列要改位置（`docs/art/人物放大.md` 末節）。
+- **3U-2b（sonnet；約 0.15 段）**：照 `docs/art/人物放大.md` 末節——狀態圖示列移到腳邊、HP 條正上方置中、畫在自己的小人之上；圖示縮到約 60%（88px 格約 20px）；**拿掉所有上移規則**（`ROW_Y` 的 9.4、7.8、高瘦、形態加量）；字母標記、召喚物回合數、HP 條不動；圖示碰到字母標記就整排往右讓。驗收：vitest、tsc、build、排版煙霧檢查；同一場面 88px 截圖一張 `docs/phases/img/3U-2b-after-88.png`（交美術 PM）。報告 `Phase3U-2b報告.md`。
