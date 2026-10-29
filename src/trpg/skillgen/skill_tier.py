@@ -53,7 +53,8 @@ _PUSH_PULL = frozenset({"push", "pull"})
 _SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
 _TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
 _MAX_EFFECTS = 4
-_CACHE: dict[tuple[int, str, int], SkillDef] = {}
+_CACHE: dict[tuple[int, str, int], tuple[ContentLibrary, SkillDef]] = {}
+"""重算結果的快取：鍵是內容庫 ``id``、技能 JSON、階級；值保留內容庫本身（``id`` 重用時不取錯）。"""
 _CACHE_LIMIT = 4096
 
 
@@ -258,12 +259,12 @@ def retier(library: ContentLibrary, skill: SkillDef, tier: int) -> SkillDef:
         raise ValueError(f"沒有階級 {tier} 的預算（tier_budget）")
     key = (id(library), skill.model_dump_json(), tier)
     cached = _CACHE.get(key)
-    if cached is not None:
-        return cached
+    if cached is not None and cached[0] is library:
+        return cached[1]
     done = _retier(skill, tier, library)
     if len(_CACHE) >= _CACHE_LIMIT:
         _CACHE.clear()
-    _CACHE[key] = done
+    _CACHE[key] = (library, done)
     return done
 
 

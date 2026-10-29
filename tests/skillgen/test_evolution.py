@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from tests.engine.helpers import library
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.skill_evolution import EvolutionTable, EvolutionTemplate
-from trpg.content.skills import SkillDef, rarity_rank
+from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import (
     Evolution,
@@ -20,7 +20,7 @@ from trpg.skillgen.evolution import (
     evolution_options,
 )
 from trpg.skillgen.usage import SkillUsage
-from trpg.skillgen.validate import validate_skill
+from trpg.skillgen.validate import structural_rarity, validate_skill
 
 FIRE_BOLT = "skill_fire_bolt"
 """火焰箭（1 階普通：1d8 火焰 ＋ 燃燒 1 回合）：製造點燃。"""
@@ -113,8 +113,10 @@ def test_every_option_passes_the_validator_within_the_same_tier_budget() -> None
                 assert Fraction(7, 10) <= report.ratio <= 1, evolved.id
                 assert evolved.tier == skill.tier and evolved.kind == skill.kind
                 assert evolved.ap_cost == skill.ap_cost
-                # 稀有度不加強度：只會因為新內容需要而提高，不會變成傳說
-                assert rarity_rank(evolved.rarity) >= rarity_rank(skill.rarity)
+                # 稀有度不加強度：3W-9 起是由結構自動算的標記；不會長出傳說（傳說只來自原本就是
+                # 傳說的技能）
+                assert evolved.rarity == structural_rarity(evolved, lib)
+                assert evolved.rarity != "legendary" or skill.rarity == "legendary"
                 assert evolved.rarity != "legendary" or skill.rarity == "legendary"
                 assert evolved.id != skill.id and evolved.provenance.parents == (skill.id,)
                 assert evolved.name_zh.endswith(f"・{skill.name_zh}")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from tests.roguelite.helpers import library
+from trpg.content.skills import SkillDef
 from trpg.roguelite import (
     SAVE_FORMAT,
     RunSave,
@@ -31,7 +32,7 @@ def _run() -> RunState:
     return new_keyword_run(LIB, "fire_staff", ("ignite", "charged"), 3)
 
 
-def _owned(run: RunState) -> list:
+def _owned(run: RunState) -> list[SkillDef]:
     return skill_defs(LIB, run, (*run.hero.skills, *run.bench))
 
 
@@ -122,7 +123,7 @@ def test_old_saves_are_upgraded_between_battles() -> None:
 
 def test_old_saves_in_battle_wait_for_the_next_node() -> None:
     run = _run().model_copy(update={"level": 5})
-    battle = SavedBattle(index=1, seed=run.plan_of(1).seed, steps=(), orders=())
+    battle = SavedBattle(index=1, seed=run.plan_of(1).seed, steps=[], orders=[])
     loaded = loads_save(_old_text(run, battle))
     assert upgrade_save(LIB, loaded) == loaded  # 戰鬥中：技能不動（重播用存檔當時的技能）
     synced = sync_skill_tier(LIB, loaded.run)
