@@ -59,6 +59,11 @@ export class ArtTextures {
     return this.screenScale === null ? FIGURE_RESOLUTION : figureResolution(display * this.screenScale);
   }
 
+  /** 目前快取的貼圖數量（效能量測用）。 */
+  get size(): number {
+    return this.cache.size;
+  }
+
   beginFrame(): void {
     this.used = new Set<string>();
   }
