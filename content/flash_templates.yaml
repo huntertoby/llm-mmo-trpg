@@ -92,7 +92,7 @@ transforms:
   - id: to_passive_on_hit
     to: passive
     prefix_zh: 餘波
-    summary_zh: 轉成被動：普攻打中敵人時，對旁邊一名敵人濺出縮小版的這招
+    summary_zh: 轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招
     trigger: {event: on_hit, target: other}
     scale_permille: 500
   - id: to_reaction_melee

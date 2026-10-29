@@ -36,6 +36,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from trpg.content.flash_templates import ExtraMajorTemplate, TransformTemplate
+from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import SkillSlots
 from trpg.content.skills import SkillDef, rarity_rank, skill_elements
@@ -160,6 +161,7 @@ def _new_base(skill: SkillDef, **changes: Any) -> dict[str, Any]:
     base, _ = _base(skill)
     base.update(_RESET)
     base.update({"category": "spell", "weapon_req": "any"})
+    base["provenance"] = {**base["provenance"], "origin": "level_up", "parents": [skill.id]}
     base.update(changes)
     return base
 
@@ -503,18 +505,22 @@ def extra_variations(
                 for k in _support_keywords(library, skill)
             ]
         elif template.op == "summon_bridge":
-            keywords = dict.fromkeys(
-                o.keyword
-                for o in summon_evolution_options(library, _request(skill))
-                if o.branch == "bridge" and o.keyword is not None
-            )
             out += [
                 Variation(source="major", template=template.id, category=category, keyword=k)
-                for k in keywords
+                for k in _summon_keywords(library, skill)
             ]
         else:
             out.append(Variation(source="major", template=template.id, category=category))
     return out
+
+
+def _summon_keywords(library: ContentLibrary, skill: SkillDef) -> list[str]:
+    """召喚技能橋接可帶的灌注關鍵字：灌注對照表中、這招還沒有的（依關鍵字表順序，最多
+    ``bridge_keyword_tries`` 個）。"""
+    own = set(derive_keywords(skill, library.keywords).all())
+    table = library.ruleset.core.summon_infusions
+    found = [k for k in library.keywords.ids() if k in table and k != "summon" and k not in own]
+    return found[: library.evolution.bridge_keyword_tries]
 
 
 def is_extra_template(library: ContentLibrary, template_id: str) -> bool:
@@ -542,8 +548,12 @@ def extra_summary(library: ContentLibrary, variation: Variation) -> str:
     return template.summary_zh.replace("{keyword}", name)
 
 
-def _request(skill: SkillDef) -> EvolutionRequest:
-    return EvolutionRequest(skill=skill, usage=SkillUsage(), held_keywords={}, seed=0)
+_PREFER = 1_000
+"""指定橋接關鍵字時給的「持有數」（遠大於實際值，讓它排第一）。"""
+
+
+def _request(skill: SkillDef, held: dict[str, int] | None = None) -> EvolutionRequest:
+    return EvolutionRequest(skill=skill, usage=SkillUsage(), held_keywords=held or {}, seed=0)
 
 
 def _support_wide(skill: SkillDef, _v: Variation, library: ContentLibrary) -> list[_Draft]:
@@ -618,7 +628,9 @@ def _apply_summon(
         "summon_count": "summon_count",
         "summon_bridge": "summon_bridge",
     }[template.op]
-    for option in summon_evolution_options(library, _request(skill)):
+    # 指定的橋接關鍵字：以「持有者其他技能持有很多」讓它排在最前面
+    held = {} if variation.keyword is None else {variation.keyword: _PREFER}
+    for option in summon_evolution_options(library, _request(skill, held)):
         if option.template != wanted:
             continue
         if wanted == "summon_bridge" and option.keyword != variation.keyword:

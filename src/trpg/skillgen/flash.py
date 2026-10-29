@@ -43,7 +43,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.engine.skill_levels import grow_shape
 from trpg.shared.rng import Rng
-from trpg.skillgen.evolution import finish_draft, retune, template_drafts, template_prefix
+from trpg.skillgen.evolution import finish_draft, template_drafts, template_prefix
 from trpg.skillgen.flash_major import (
     TRANSFORM_CATEGORY,
     apply_extra,
@@ -247,8 +247,7 @@ def apply_variation(
     current = with_budget_bonus(skill, bonus)
     if variation.source == "major":
         return _apply_major(current, variation, rng, library)
-    is_transform = variation.source == "transform"
-    if is_transform:
+    if variation.source == "transform":
         op = TRANSFORM_OPS.get(variation.template)
         drafts = (
             transform_drafts(current, variation, library)
@@ -258,12 +257,8 @@ def apply_variation(
     else:
         drafts = _minor_drafts(current, variation, library)
     for index, (base, effects) in enumerate(drafts):
-        child = rng.fork(str(index))
-        done = (
-            finish_transform(base, effects, child, library)
-            if is_transform
-            else retune(base, effects, child, library)
-        )
+        # 有旋鈕的交給調整器；固定強度的種類（召喚、姿態、修正型被動）直接檢查預算窗（3W-3）
+        done = finish_transform(base, effects, rng.fork(str(index)), library)
         if done is not None:
             return done
     return None
