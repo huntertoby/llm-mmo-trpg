@@ -1,13 +1,20 @@
-"""白板技能：組合器的「單一效果」模式與白板定義的驗證（Phase 3W-4，
-``docs/design/06-技能.md`` 6.34.1）。
+"""白板技能：組合器的「單一效果」模式（Phase 3W-4／3W-4b，``docs/design/06-技能.md`` 6.34.1、
+6.34.9）。白板定義的驗證在 :mod:`trpg.skillgen.whiteboard_check`。
 
-**白板** ＝ 1 階、一個核心效果、一個關鍵字、形狀簡單（單體或小範圍）、沒有附帶效果；主動技用預設費用
-（AP 2、冷卻 0～2）；預算照同階規則（比例 70～100%）。分主動、被動、反應三種（升級與任務三選一的
-種類比例 70／20／10，``content/skill_composer.yaml`` 的 ``whiteboard.kind_permille``）。
+**白板** ＝ 角色目前階級的預算、一個核心效果、一個關鍵字、形狀簡單（單體或小範圍）、沒有附帶效果；
+主動技用預設費用（AP 2、冷卻 0～2）；預算照同階規則（比例 70～100%）。分主動、被動、反應三種（升級與
+任務三選一的種類比例 70／20／10，``content/skill_composer.yaml`` 的 ``whiteboard.kind_permille``）。
 
-**單一效果模式**（:func:`compose_whiteboard`）：從 ``whiteboard`` 的配方（一個關鍵字的一個核心效果）
-挑一個，再用組合器既有的零件填形狀、旋鈕（骰子、倍率、持續……）與費用，強度調整到預算區間內，最後過
-``validate_skill`` 與 :func:`whiteboard_problems`。完整模式（:func:`~trpg.skillgen.random_composer.
+**種類依角色階級開放**（6.34.9；配方的 ``min_tier``）：1 階是數值型、簡單形狀、簡單觸發的被動與
+反應；2 階起有召喚、陷阱、姿態、自身位移或互換；3 階起有修正型被動與雙屬性縮放。姿態佔主動欄、
+修正型被動佔被動欄，所以出題的種類比例（主動 70／被動 20／反應 10）不變。沒有關鍵字的基礎白板
+（通用池，#55）配方用 ``whiteboard.generic_keyword``。
+
+**單一效果模式**（:func:`compose_whiteboard`）：從 ``whiteboard`` 的配方挑一個，再用組合器既有的零件
+填形狀、旋鈕（骰子、倍率、持續……）與費用，強度調整到預算區間內，最後過 ``validate_skill`` 與
+:func:`whiteboard_problems`。基本配方（``species: basic``）走 :func:`_attempt_active`、
+:func:`_attempt_passive`、:func:`_attempt_reaction`；新種類的配方把技能欄位直接寫在配方裡
+（``skill``），走 :func:`_attempt_template`。完整模式（:func:`~trpg.skillgen.random_composer.
 compose_random_skill`）不受影響，留給之後的完整技能三選一。
 
 **確定性**：亂數只來自 ``Rng(seed).fork("whiteboard")``；相同的種子與參數必得相同的白板。
@@ -17,7 +24,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from copy import deepcopy
-from fractions import Fraction
 from typing import Any, Literal
 
 from pydantic import ValidationError
@@ -27,10 +33,9 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, SkillRarity, rarity_rank, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
-from trpg.skillgen.budget import BudgetError, skill_budget
+from trpg.skillgen.budget import BudgetError
 from trpg.skillgen.composer_parts import Ctx, Retry, _needs_cooldown, build_shape
 from trpg.skillgen.composer_tuning import tune
-from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.random_composer import (
     ComposeError,
     _finish,
@@ -39,6 +44,7 @@ from trpg.skillgen.random_composer import (
 )
 from trpg.skillgen.scaling import retarget_scaling
 from trpg.skillgen.validate import rarity_requirements, validate_skill
+from trpg.skillgen.whiteboard_check import is_whiteboard, whiteboard_problems
 
 __all__ = [
     "WHITEBOARD_KINDS",
@@ -50,107 +56,21 @@ __all__ = [
 ]
 
 type WhiteboardKind = Literal["active", "passive", "reaction"]
-"""白板的種類：``active``（主動）、``passive``（被動）、``reaction``（反應）。"""
+"""白板的種類（出題比例的分類）：``active``（主動欄：含召喚、陷阱、姿態、位移）、``passive``
+（被動欄：含修正型被動）、``reaction``（反應）。"""
 WHITEBOARD_KINDS: tuple[WhiteboardKind, ...] = ("active", "passive", "reaction")
-
-_MIN_RATIO = Fraction(7, 10)
-_MAX_RATIO = Fraction(1)
-_SIMPLE_SHAPES = frozenset({"self", "single", "ground_tile", "cross", "square3"})
-"""白板允許的形狀：自身、單體、單格、十字與 3×3（小範圍）。"""
 
 
 def _rules(library: ContentLibrary) -> WhiteboardRules:
     return library.composer.whiteboard
 
 
-def whiteboard_keywords(library: ContentLibrary, kind: str = "active") -> frozenset[str]:
-    """``kind`` 的白板配方涵蓋的關鍵字（沒有配方的關鍵字由呼叫端退回別的來源）。"""
-    return frozenset(r.keyword for r in _rules(library).recipes(kind))
-
-
-# ---------------------------------------------------------------------------
-# 驗證
-# ---------------------------------------------------------------------------
-
-
-def whiteboard_problems(
-    skill: SkillDef, library: ContentLibrary, tier: int | None = None
-) -> list[str]:
-    """白板定義的檢查（06 6.34.1）；空串列 ＝ 是白板。逐條列出不符合的地方（繁體中文）。
-
-    - 階級等於 ``tier``（角色目前階級，6.34.9；省略 ＝ 不檢查），主動／被動／反應；
-    - 一個核心效果：所有層級的效果合計 1 個，沒有附帶效果、條件、修正規則、變奏、第二段、陷阱；
-    - 一個關鍵字（專屬規則推導）；
-    - 形狀簡單（自身、單體、單格、十字、3×3）；
-    - 主動技用預設費用：AP ＝ ``ap_cost``、冷卻不超過範圍上限，沒有每場次數、自身狀態、透支；
-    - 預算比例在 70～100%（同階規則）。
-    """
-    rules = _rules(library)
-    problems: list[str] = []
-    if tier is not None and skill.tier != tier:
-        problems.append(f"白板必須是 {tier} 階，收到 {skill.tier} 階")
-    if skill.kind not in WHITEBOARD_KINDS:
-        problems.append(f"白板只能是主動、被動或反應，收到 {skill.kind}")
-    problems += _structure_problems(skill)
-    keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
-    if len(keywords) != 1:
-        problems.append(f"白板必須剛好一個關鍵字，收到 {len(keywords)} 個（{'、'.join(keywords)}）")
-    if skill.shape.type not in _SIMPLE_SHAPES:
-        problems.append(f"白板的形狀必須簡單（單體或小範圍），收到 {skill.shape.type}")
-    if skill.kind == "active":
-        problems += _cost_problems(skill, rules)
-    try:
-        ratio = skill_budget(skill, library).ratio
-    except BudgetError as exc:
-        problems.append(f"預算算不出來：{exc}")
-    else:
-        if not _MIN_RATIO <= ratio <= _MAX_RATIO:
-            problems.append(f"預算比例必須在 70%～100%，收到 {float(ratio) * 100:.0f}%")
-    return problems
-
-
-def _structure_problems(skill: SkillDef) -> list[str]:
-    problems: list[str] = []
-    effect_count = len(list(skill.iter_effects(include_followup=True, include_variants=True)))
-    if len(skill.effects) != 1 or effect_count != 1:
-        problems.append(f"白板只能有 1 個核心效果（沒有附帶效果），收到 {effect_count} 個")
-    if skill.condition is not None or any(e.condition is not None for e in skill.effects):
-        problems.append("白板不能有條件")
-    extras = (
-        ("修正規則", bool(skill.modifiers)),
-        ("變奏", bool(skill.variants)),
-        ("第二段", skill.followup is not None),
-        ("陷阱", skill.trap is not None),
-        ("專精", skill.mastery is not None),
-        ("第二縮放屬性", skill.secondary_scaling_attr is not None),
-    )
-    problems += [f"白板不能有{label}" for label, present in extras if present]
-    return problems
-
-
-def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
-    problems: list[str] = []
-    cost = skill.cost
-    if skill.ap_cost != rules.ap_cost:
-        problems.append(f"主動白板的 AP 必須是 {rules.ap_cost}，收到 {skill.ap_cost}")
-    if (cost.cooldown or 0) > rules.cooldown.max:
-        problems.append(f"主動白板的冷卻最多 {rules.cooldown.max}，收到 {cost.cooldown}")
-    for label, present in (
-        ("每場次數", cost.uses_per_battle is not None),
-        ("自身狀態代價", cost.self_status is not None),
-        ("透支", cost.overdraft is not None),
-        ("層數需求", cost.stacks is not None),
-        ("生命代價", cost.hp_percent is not None),
-        ("失手反噬", bool(cost.on_miss)),
-    ):
-        if present:
-            problems.append(f"主動白板用預設費用，不能有{label}")
-    return problems
-
-
-def is_whiteboard(skill: SkillDef, library: ContentLibrary, tier: int | None = None) -> bool:
-    """技能符合白板定義（:func:`whiteboard_problems` 為空）。"""
-    return not whiteboard_problems(skill, library, tier)
+def whiteboard_keywords(
+    library: ContentLibrary, kind: str = "active", tier: int | None = None
+) -> frozenset[str]:
+    """``kind`` 的白板配方涵蓋的關鍵字（沒有配方的關鍵字由呼叫端退回別的來源）；給了 ``tier``
+    就只算該角色階級開放的配方。沒有關鍵字的基礎白板用 ``whiteboard.generic_keyword``。"""
+    return frozenset(r.keyword for r in _rules(library).recipes(kind, tier))
 
 
 # ---------------------------------------------------------------------------
@@ -166,22 +86,35 @@ def _theme(recipe: WhiteboardRecipe) -> Element:
 
 
 def _category_options(recipe: WhiteboardRecipe, weapon_class: str | None) -> tuple[str, ...]:
-    """配方在這種武器大類下能用的類別（法器只能用法術技；近戰與遠程兩者皆可）。"""
+    """配方在這種武器大類下能用的類別（法器只能用法術技；近戰與遠程兩者皆可；配方指定近戰或遠程的
+    武器需求時，只給同類的武器）。"""
+    required = recipe.skill.get("weapon_req")
+    if required in ("melee", "ranged") and weapon_class is not None and required != weapon_class:
+        return ()
     if weapon_class == "focus":
         return tuple(c for c in recipe.categories if c == "spell")
     return tuple(recipe.categories)
 
 
 def _pick_recipe(
-    rng: Rng, rules: WhiteboardRules, kind: str, keyword: str | None, weapon_class: str | None
+    rng: Rng,
+    rules: WhiteboardRules,
+    kind: str,
+    *,
+    keyword: str | None,
+    weapon_class: str | None,
+    tier: int,
+    recipe_id: str | None = None,
 ) -> WhiteboardRecipe:
     options = [
         r
-        for r in rules.recipes(kind)
-        if (keyword is None or r.keyword == keyword) and _category_options(r, weapon_class)
+        for r in rules.recipes(kind, tier)
+        if (keyword is None or r.keyword == keyword)
+        and (recipe_id is None or r.id == recipe_id)
+        and _category_options(r, weapon_class)
     ]
     if not options:
-        raise ComposeError(f"沒有關鍵字 {keyword} 的{kind}白板配方")
+        raise ComposeError(f"沒有關鍵字 {keyword} 的{kind}白板配方（{tier} 階）")
     return rng.choice(options)
 
 
@@ -214,6 +147,8 @@ def _min_rarity(
     """配方需要的最低稀有度（不增加強度，只是開放原語、狀態、形狀與觸發時機）。"""
     draft = SkillDef.model_validate({**base, "rarity": "epic", "effects": effects})
     ranks = [rarity_rank(n.minimum) for n in rarity_requirements(draft, library)]
+    if base.get("secondary_scaling_attr") is not None:  # 雙屬性縮放（驗證器另查）
+        ranks.append(rarity_rank(library.ruleset.core.dual_scaling_min_rarity))
     order: tuple[SkillRarity, ...] = ("common", "rare", "epic")
     return order[min(max(ranks, default=0), len(order) - 1)]
 
@@ -244,9 +179,16 @@ def _active_cost(ctx: Ctx, rules: WhiteboardRules) -> dict[str, Any]:
 
 
 def _build_effect(ctx: Ctx, recipe: WhiteboardRecipe) -> None:
+    """核心效果（可帶條件：利用者例外）與配方的第二個效果（製造者例外、位移的小補強）。"""
+    if not recipe.effect:  # 修正型被動：沒有效果，規則在 skill.modifiers
+        return
     spec = deepcopy(recipe.effect)
+    if recipe.condition is not None:
+        spec["condition"] = deepcopy(recipe.condition)
     ctx.add_knobbed(spec, ctx.rules.structure.knob_weight_core)
-    ctx.core_count = 1
+    ctx.core_count = len(ctx.effects)
+    if recipe.rider is not None:
+        ctx.add_knobbed(deepcopy(recipe.rider), ctx.rules.structure.knob_weight_other)
 
 
 def _base(
@@ -287,11 +229,12 @@ def _attempt_active(
     category = _pick_category(rng, library, recipe, weapon_class)
     req, scaling = _weapon_req(rng, library, category, weapon_class)
     skeleton = library.skeletons[recipe.skeleton]
-    ctx = Ctx(library, rng, skeleton, "epic", tier, category, rules.ap_cost, _theme(recipe))
+    ap = int(recipe.skill.get("ap_cost", rules.ap_cost))
+    ctx = Ctx(library, rng, skeleton, "epic", tier, category, ap, _theme(recipe))
     build_shape(ctx, [str(recipe.effect["type"])], only=_shapes(rules, recipe, tier))
     _build_effect(ctx, recipe)
     base = _base(recipe, seed, tier, category, ctx)
-    base |= {"weapon_req": req, "scaling_attr": scaling, "ap_cost": rules.ap_cost}
+    base |= {"weapon_req": req, "scaling_attr": scaling, "ap_cost": ap}
     base["rarity"] = _min_rarity({**base, "cost": {}}, ctx.effects, library)
     base["cost"] = _active_cost(ctx, rules)
     if not tune(rng, library, base, ctx.effects, ctx.knobs):
@@ -317,6 +260,7 @@ def _attempt_passive(
         "target": "other" if timing.has_other else "self",
         "max_per_round": 1,
     }
+    trigger |= recipe.skill.get("trigger", {})  # 例：擊倒時得護盾，作用在自己而不是倒下的敵人
     mana = rng.randint(rules.passive_mana.min, rules.passive_mana.max)
     base: dict[str, Any] = {
         **_base(recipe, seed, tier, "spell", ctx),
@@ -375,12 +319,118 @@ def _attempt_reaction(
     return _named(_finish(library, seed, base, ctx), recipe)
 
 
+def _merge(target: dict[str, Any], patch: Mapping[str, Any]) -> None:
+    """``patch`` 深度合併進 ``target``（字典合併；長度相同的字典串列逐項合併；其餘整個取代）。"""
+    for key, value in patch.items():
+        current = target.get(key)
+        if isinstance(value, dict) and isinstance(current, dict):
+            _merge(current, value)
+        elif (
+            isinstance(value, list)
+            and isinstance(current, list)
+            and len(value) == len(current)
+            and all(isinstance(v, dict) for v in (*value, *current))
+        ):
+            for old, new in zip(current, value, strict=True):
+                _merge(old, new)
+        else:
+            target[key] = deepcopy(value)
+
+
+def _apply_patch(
+    base: dict[str, Any], effects: list[dict[str, Any]], patch: Mapping[str, Any]
+) -> None:
+    """配方 ``vary`` 的一個選項：``effect0``／``effect1`` 合併進對應的效果，其餘合併進技能字典。"""
+    for key, value in patch.items():
+        if key.startswith("effect"):
+            _merge(effects[int(key.removeprefix("effect"))], value)
+        else:
+            _merge(base, {key: value})
+
+
+def _template_cost(ctx: Ctx, rules: WhiteboardRules, kind: str) -> dict[str, Any]:
+    if kind == "active":
+        return _active_cost(ctx, rules)
+    if kind == "stance":
+        span = ctx.rules.stance.mana
+        return {"mana": ctx.rng.randint(span.min, span.max) + (ctx.tier - 1)}
+    return {}
+
+
+def _attempt_template(
+    rng: Rng,
+    library: ContentLibrary,
+    seed: int,
+    recipe: WhiteboardRecipe,
+    weapon_class: str | None,
+    *,
+    tier: int,
+) -> SkillDef:
+    """新種類的白板（召喚、陷阱、姿態、位移、修正型被動、雙屬性縮放；3W-4b）：技能欄位由配方的
+    ``skill`` 給，旋鈕仍用組合器的強度調整；``vary`` 的選項（例如召喚的冷卻）隨機挑一個試。"""
+    rules = _rules(library)
+    spec = deepcopy(recipe.skill)
+    kind = str(spec.pop("kind", "active"))
+    category = str(spec.pop("category", None) or _pick_category(rng, library, recipe, weapon_class))
+    req, scaling = _weapon_req(rng, library, category, weapon_class)
+    req = str(spec.pop("weapon_req", req))
+    shape = spec.pop("shape", {"type": "single"})
+    ap = spec.pop("ap_cost", rules.ap_cost) if kind == "active" else None
+    ctx = Ctx(
+        library, rng, library.skeletons[recipe.skeleton], "epic", tier, category, ap or 1,
+        _theme(recipe),
+    )  # fmt: skip
+    ctx.shape = str(shape["type"])
+    if "trap" in spec:
+        ctx.add({"type": "place_trap"}, ())
+    _build_effect(ctx, recipe)
+    base: dict[str, Any] = {
+        **_base(recipe, seed, tier, category, ctx),
+        "kind": kind,
+        "weapon_req": req,
+        "scaling_attr": scaling,
+        "ap_cost": ap,
+        "shape": deepcopy(shape),
+        "cost": _template_cost(ctx, rules, kind),
+    }
+    cost_patch = spec.pop("cost", {})
+    _merge(base["cost"], cost_patch)
+    _merge(base, spec)
+    base["rarity"] = _min_rarity({**base, "cost": {}}, ctx.effects, library)
+    for patch in rng.shuffled(list(recipe.vary)) if recipe.vary else [{}]:
+        trial, effects = deepcopy(base), deepcopy(ctx.effects)
+        _apply_patch(trial, effects, patch)
+        if tune(rng, library, trial, effects, ctx.knobs):
+            ctx.effects = effects
+            return _named(_finish(library, seed, trial, ctx), recipe)
+    raise Retry
+
+
 def _named(skill: SkillDef, recipe: WhiteboardRecipe) -> SkillDef:
     """名稱與敘事取配方的（組合器的「元素・骨架」名稱與暫定敘事不適合白板）。"""
     narrative = skill.narrative.model_copy(
         update={"concept": recipe.concept_zh, "cast_flavor": recipe.flavor_zh}
     )
     return skill.model_copy(update={"name_zh": recipe.name_zh, "narrative": narrative})
+
+
+def _attempt(
+    rng: Rng,
+    library: ContentLibrary,
+    seed: int,
+    kind: str,
+    recipe: WhiteboardRecipe,
+    *,
+    weapon_class: str | None,
+    tier: int,
+) -> SkillDef:
+    if recipe.species != "basic":
+        return _attempt_template(rng, library, seed, recipe, weapon_class, tier=tier)
+    if kind == "active":
+        return _attempt_active(rng, library, seed, recipe, weapon_class, tier=tier)
+    if kind == "passive":
+        return _attempt_passive(rng, library, seed, recipe, tier)
+    return _attempt_reaction(rng, library, seed, recipe, weapon_class, tier=tier)
 
 
 def compose_whiteboard(
@@ -394,15 +444,19 @@ def compose_whiteboard(
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
     held: Mapping[str, str] | None = None,
+    recipe_id: str | None = None,
 ) -> SkillDef:
     """依種子組出一個白板技能（``id`` 為 ``skill_rand_<seed>``；單一效果模式）。
 
-    ``kind``：``active``／``passive``／``reaction``；``keyword``：指定關鍵字（省略 ＝ 任何有
-    配方的）；
-    ``tier``：角色目前階級（預算與可用的形狀照這一階，6.34.9；省略 ＝ ``whiteboard.tier``，
+    ``kind``：``active``／``passive``／``reaction``（出題的分類；姿態、召喚、陷阱、位移屬
+    ``active``，修正型被動屬 ``passive``）；
+    ``keyword``：指定關鍵字（省略 ＝ 任何有配方的；沒有關鍵字的基礎白板用
+    ``whiteboard.generic_keyword``）；
+    ``tier``：角色目前階級（預算、可用的形狀與種類照這一階，6.34.9；省略 ＝ ``whiteboard.tier``，
     創角用）；
     ``weapon_class``：``melee``／``ranged``／``focus``，給了就只組出這類武器能用的白板；
-    ``hero_attributes``／``avoid_attr``：與完整模式相同，縮放屬性跟著主角最高屬性（新方向避開）。
+    ``hero_attributes``／``avoid_attr``：與完整模式相同，縮放屬性跟著主角最高屬性（新方向避開）；
+    雙屬性縮放白板的屬性由配方決定，不跟著主角；``recipe_id``：只用這個配方（測試與覆蓋表用）。
     組不出來（沒有配方、或 ``max_attempts`` 次都做不出合格的白板）拋出 :class:`ComposeError`。
     """
     lib = library if library is not None else default_library()
@@ -412,17 +466,15 @@ def compose_whiteboard(
     tier = rules.tier if tier is None else tier
     rng = Rng(seed).fork("whiteboard")
     for _ in range(rules.max_attempts):
-        recipe = _pick_recipe(rng, rules, kind, keyword, weapon_class)
+        recipe = _pick_recipe(
+            rng, rules, kind, keyword=keyword, weapon_class=weapon_class, tier=tier,
+            recipe_id=recipe_id,
+        )  # fmt: skip
         try:
-            if kind == "active":
-                skill = _attempt_active(rng, lib, seed, recipe, weapon_class, tier=tier)
-            elif kind == "passive":
-                skill = _attempt_passive(rng, lib, seed, recipe, tier)
-            else:
-                skill = _attempt_reaction(rng, lib, seed, recipe, weapon_class, tier=tier)
+            skill = _attempt(rng, lib, seed, kind, recipe, weapon_class=weapon_class, tier=tier)
         except (Retry, ValidationError, BudgetError):
             continue
-        if hero_attributes is not None:
+        if hero_attributes is not None and recipe.species != "dual":
             skill = retarget_scaling(skill, hero_attributes, lib, avoid=avoid_attr)
         if (
             not validate_skill(skill, lib)

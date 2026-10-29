@@ -1157,11 +1157,15 @@ def build_reaction_cost(ctx: Ctx) -> dict[str, Any]:
 
 def build_stance_effects(ctx: Ctx) -> None:
     """姿態的效果：一個姿態狀態（對自己，不帶持續），階級 2 以上（或抽中）再加一個自身護盾。"""
+    reserved = ctx.rules.whiteboard.reserved_statuses()  # 3W-4b：白板姿態專用
     stances = sorted(
         (
             s
             for s in ctx.library.ruleset.statuses.statuses
-            if s.stance and s.budget_points is not None and rarity_rank(s.min_rarity) <= ctx.rank
+            if s.stance
+            and s.budget_points is not None
+            and rarity_rank(s.min_rarity) <= ctx.rank
+            and s.id not in reserved
         ),
         key=lambda s: s.id,
     )

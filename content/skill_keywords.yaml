@@ -30,6 +30,8 @@ keywords:
       - {effect: summon, unit: summon_bomb_puppet}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: apply_status, status: burning}
       - {effect: apply_status, status: infused_fire}   # 3I-6：火焰附魔讓普攻帶火
+      - {effect: apply_status, status: stance_flame}   # 3W-4b：焰刃姿態（白板，普攻帶火）
+      - {effect: apply_status, status: stance_blaze}   # 3W-4b：烈焰姿態（3 階白板）
       - {effect: damage, element: fire}
       - {effect: create_surface, surface: fire}
       - {effect: create_surface, surface: oil}
@@ -84,6 +86,8 @@ keywords:
       - {effect: summon, unit: summon_ice_spirit}   # 3-33e1：召喚物的固有關鍵字
       - {effect: apply_status, status: frozen}
       - {effect: damage, element: ice}
+      - {effect: apply_status, status: stance_frost}   # 3W-4b：霜刃姿態（白板，普攻帶冰）
+      - {effect: apply_status, status: stance_glacier}   # 3W-4b：冰川姿態（3 階白板）
       - {effect: create_surface, surface: ice}
       - {effect: create_obstacle, object: ice_wall}
       - {effect: inscribe, element: ice}

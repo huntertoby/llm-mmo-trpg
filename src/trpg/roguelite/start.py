@@ -334,8 +334,11 @@ def _whiteboard_starter(
 ) -> SkillDef | None:
     """起始技能的主動白板（Phase 3W-4，06 6.34.1）：``keyword`` 有白板配方且
     ``start.whiteboard`` 為真時，組合器的單一效果模式最多試 ``composer_tries`` 個種子；沒有配方
-    （形態、召喚物、倒地、撞擊、潮濕）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。"""
-    if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(library):
+    （形態）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。"""
+    tier = library.composer.whiteboard.tier  # 創角例外：起始技能一律 1 階（6.34.9）
+    if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(
+        library, "active", tier
+    ):
         return None
     for _ in range(library.roguelite.start.composer_tries):
         try:
@@ -344,6 +347,7 @@ def _whiteboard_starter(
                 kind="active",
                 keyword=keyword,
                 weapon_class=weapon_class,
+                tier=tier,
                 library=library,
                 held=held,
             )

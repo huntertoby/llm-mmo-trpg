@@ -1120,6 +1120,128 @@
    ]
   },
   {
+   "id": "stance_guard",
+   "name_zh": "堅守姿態",
+   "description_zh": "受到的骰值傷害降低，但回合開始時的移動點數減少；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×70%",
+    "回合開始時的移動點數（無條件捨去） ×50%"
+   ]
+  },
+  {
+   "id": "stance_ironwall",
+   "name_zh": "鐵壁姿態",
+   "description_zh": "受到的骰值傷害大幅降低，但回合開始時的移動點數減少；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×60%",
+    "回合開始時的移動點數（無條件捨去） ×50%"
+   ]
+  },
+  {
+   "id": "stance_flame",
+   "name_zh": "焰刃姿態",
+   "description_zh": "普攻與沒有自己元素的武器技改成火焰傷害，造成的骰值傷害提高；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×110%"
+   ]
+  },
+  {
+   "id": "stance_blaze",
+   "name_zh": "烈焰姿態",
+   "description_zh": "普攻與沒有自己元素的武器技改成火焰傷害，造成的骰值傷害大幅提高；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×120%"
+   ]
+  },
+  {
+   "id": "stance_frost",
+   "name_zh": "霜刃姿態",
+   "description_zh": "普攻與沒有自己元素的武器技改成冰霜傷害，造成的骰值傷害提高；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×110%"
+   ]
+  },
+  {
+   "id": "stance_glacier",
+   "name_zh": "冰川姿態",
+   "description_zh": "普攻與沒有自己元素的武器技改成冰霜傷害，造成的骰值傷害大幅提高；持續到取消。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×120%"
+   ]
+  },
+  {
    "id": "infused_fire",
    "name_zh": "火焰附魔",
    "description_zh": "普攻與沒有自己元素的武器技，物理傷害改成火焰（可點燃油與易燃物）；與其他附魔不並存，後施放的覆蓋先施放的。",

@@ -431,6 +431,80 @@ statuses:
     stance: true
     damage_taken_permille: 750
     move_permille: 500
+  # --- 3W-4b｜白板姿態（06 6.34.1、6.34.9：2 階起）。姿態沒有可調的旋鈕，所以每一階一個狀態，budget_points 對上該階的
+  # 預算（姿態技的可用預算 ＝ tier_budget × 1.0：2 階 18、3 階 23；70～100% ＝ 12.6～18 / 16.1～23）。數值為初值，未經模擬。---
+  - id: stance_guard
+    polarity: neutral
+    name_zh: 堅守姿態
+    description_zh: 受到的骰值傷害降低，但回合開始時的移動點數減少；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 14
+    min_rarity: rare
+    stance: true
+    damage_taken_permille: 700
+    move_permille: 500
+  - id: stance_ironwall
+    polarity: neutral
+    name_zh: 鐵壁姿態
+    description_zh: 受到的骰值傷害大幅降低，但回合開始時的移動點數減少；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 18
+    min_rarity: rare
+    stance: true
+    damage_taken_permille: 600
+    move_permille: 500
+  - id: stance_flame
+    polarity: neutral
+    name_zh: 焰刃姿態
+    description_zh: 普攻與沒有自己元素的武器技改成火焰傷害，造成的骰值傷害提高；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 14
+    min_rarity: rare
+    stance: true
+    attack_element: fire
+    damage_dealt_permille: 1100
+  - id: stance_blaze
+    polarity: neutral
+    name_zh: 烈焰姿態
+    description_zh: 普攻與沒有自己元素的武器技改成火焰傷害，造成的骰值傷害大幅提高；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 18
+    min_rarity: rare
+    stance: true
+    attack_element: fire
+    damage_dealt_permille: 1200
+  - id: stance_frost
+    polarity: neutral
+    name_zh: 霜刃姿態
+    description_zh: 普攻與沒有自己元素的武器技改成冰霜傷害，造成的骰值傷害提高；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 14
+    min_rarity: rare
+    stance: true
+    attack_element: ice
+    damage_dealt_permille: 1100
+  - id: stance_glacier
+    polarity: neutral
+    name_zh: 冰川姿態
+    description_zh: 普攻與沒有自己元素的武器技改成冰霜傷害，造成的骰值傷害大幅提高；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 18
+    min_rarity: rare
+    stance: true
+    attack_element: ice
+    damage_dealt_permille: 1200
   - id: infused_fire
     polarity: buff
     name_zh: 火焰附魔
