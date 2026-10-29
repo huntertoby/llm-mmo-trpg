@@ -54,3 +54,13 @@
 - **3T-3**（報告 `Phase3T-3報告.md`）：`content/skills.py` → `content/skills/` 套件 13 個模組，`__init__` 重新匯出，呼叫端零改動、CLI 快照不變。待決（`skill.py` 1309 行、`constants.py` 812 行再拆）→ 延後。
 - **3T-5**（報告 `Phase3T-5報告.md`）：`engine/ai/terrain.py`（降敵、抬友、坑旁推擊三項收益；無收益不施放）；`ai_profiles.yaml` `terrain: {height_points: 4, pit_points: 6}`；小樣本大地崩陷施放 0 → 6。待決：「高低差阻擋近戰」未做、坑判定粗估、權重初值 → 平衡階段。
 - **Phase 3T 全部完成**。
+
+## 4. 4-L9 延後期間的整理（2026-10-29；使用者：「鱗族 A 4-L9先不做 改天」，專案 PM 轉達：做不需要模型的整理與待辦，不進平衡階段或 Phase 5）
+
+### 4.1 3T-6｜`engine/` 拆子套件（審查 P10；sonnet；約 0.4 段）
+純搬移、行為不變：`engine/` 頂層 66 個模組拆出 `engine/gear/`（`gear*.py` 8 個）、`engine/summons/`（`summons.py`、`summon_control.py`、`summon_variants.py`、`gear_summon.py` 視相依決定歸屬）、`engine/race/`（`race_skills.py`，與 `rules/race.py`、`ai/race.py` 的關係在報告說明，不必搬 `rules/`、`ai/` 底下的）。舊匯入路徑：專案內呼叫端全部改成新路徑（不留相容轉發模組，避免兩套路徑）；import-linter 契約與 `tests/test_architecture.py` 照過；戰鬥快照、重播不變。驗收：ruff、format、mypy、lint-imports、pytest（engine、content、skillgen、narrative、api、roguelite、sim，`-m "(slow or not slow) and not llm"`、`tests/cli --timeout=3000`）。報告 `Phase3T-6報告.md`。
+
+### 4.2 之後（依序，一次最多 2 個）
+- 3T-7：前端 `BattleScreen.tsx`（1268 行、77 個 hook）拆分，`onTileClick` 抽純函式（審查 W10），`styles.css` 依畫面拆檔；外觀與行為不變（排版煙霧檢查＋截圖對照）。
+- 3T-8：組合器骨架 ID 分支移 YAML、私有匯入改公開（審查 P9）。
+- 鱗族被動小修（玩法 PM 寫進 07 7.7 後）。
