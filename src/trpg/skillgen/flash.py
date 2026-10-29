@@ -89,10 +89,12 @@ __all__ = [
     "TRANSFORM_OPS",
     "DataOrderSource",
     "FlashError",
+    "FlashHistoryError",
     "FlashOffer",
     "FlashOption",
     "FlashOptionSource",
     "FlashRequest",
+    "FlashStepError",
     "ProposingSource",
     "allowed_categories",
     "apply_variation",
@@ -103,6 +105,8 @@ __all__ = [
     "choose",
     "derive_skill",
     "flashed_identity",
+    "history_error",
+    "history_problem",
     "is_support_skill",
     "make_offer",
     "skill_before",
@@ -121,7 +125,33 @@ type TransformOp = Callable[[SkillDef, Variation, ContentLibrary], list[_Draft]]
 
 
 class FlashError(ValueError):
-    """變化歷程無法套用（資料改了、或重閃後後面的變化不再合法）。"""
+    """變化套用不了（基底類別；見 :class:`FlashStepError`、:class:`FlashHistoryError`）。"""
+
+
+class FlashStepError(FlashError):
+    """推出技能時，歷程的第 ``nth`` 次變化套用不了（:func:`derive_chain`）。呼叫者依情況解讀：
+    正在試的那一個變化 → 「這個變化不合法」；已存的歷程 → :class:`FlashHistoryError`。"""
+
+    def __init__(self, base_id: str, nth: int, template: str) -> None:
+        super().__init__(f"{base_id} 第 {nth} 次的變化 {template} 套用不了")
+        self.base_id = base_id
+        self.nth = nth
+        self.template = template
+
+
+class FlashHistoryError(FlashError):
+    """**已存的** 變化歷程在目前的內容無法重推（內容改版、模板拿掉或數值改了；3W-R1）。與「這一次
+    試的變化不合法」分開：出題、重閃下限、升階改用存檔裡已推出的定義當起點
+    （:attr:`FlashRequest.current`）。
+    ``reason_zh`` 是給玩家看的原因。"""
+
+    def __init__(self, step: FlashStepError) -> None:
+        self.step = step
+        self.reason_zh = (
+            f"這招第 {step.nth} 次的變化（{step.template}）在目前的內容版本套用不了，"
+            "改用存檔裡的數值當起點"
+        )
+        super().__init__(self.reason_zh)
 
 
 # ---------------------------------------------------------------------------
@@ -416,29 +446,31 @@ def derive_chain(
                 library, skill, record.variation, bonus=bonus, rng=rng, replaced=replaced
             )
         if applied is None:
-            raise FlashError(
-                f"{base.id} 第 {record.nth} 次的變化 {record.variation.template} 套用不了"
-            )
+            raise FlashStepError(base.id, record.nth, record.variation.template)
         skill = applied
         chain.append(skill)
     return chain
 
 
-def derive_skill(
+def history_error(
     library: ContentLibrary,
     base: SkillDef,
     state: SkillFlash,
     seed: int,
     tier: int | None = None,
+) -> FlashHistoryError | None:
+    """已存的歷程 ``state`` 能不能在目前的內容重推；不能時回傳 :class:`FlashHistoryError`。"""
+    try:
+        derive_chain(library, base, state, seed, tier)
+    except FlashStepError as exc:
+        return FlashHistoryError(exc)
+    return None
+
+
+def _identify(
+    library: ContentLibrary, base: SkillDef, state: SkillFlash, skill: SkillDef
 ) -> SkillDef:
-    """原本的技能依變化歷程逐筆套用後的技能（沒有變化時是 ``base`` 加上預算上限加成）。``tier`` 是
-    角色階級。任何一筆套用不了時拋出 :class:`FlashError`。"""
-    chain = derive_chain(library, base, state, seed, tier)
-    if not chain:
-        return with_budget_bonus(
-            at_role_tier(library, base, tier), bonus_permille(library.flash.rules, state)
-        )
-    skill = chain[-1]
+    """套完變化的技能換上閃現後的 ID、名稱與來源（:func:`flashed_identity`）。"""
     new_id, name = flashed_identity(library, base, state)
     return skill.model_copy(
         update={
@@ -449,6 +481,45 @@ def derive_skill(
             ),
         }
     )
+
+
+def derive_skill(
+    library: ContentLibrary,
+    base: SkillDef,
+    state: SkillFlash,
+    seed: int,
+    tier: int | None = None,
+) -> SkillDef:
+    """原本的技能依變化歷程逐筆套用後的技能（沒有變化時是 ``base`` 加上預算上限加成）。``tier`` 是
+    角色階級。任何一筆套用不了時拋出 :class:`FlashStepError`。"""
+    chain = derive_chain(library, base, state, seed, tier)
+    if not chain:
+        return with_budget_bonus(
+            at_role_tier(library, base, tier), bonus_permille(library.flash.rules, state)
+        )
+    return _identify(library, base, state, chain[-1])
+
+
+def _derive_on_current(
+    library: ContentLibrary, request: FlashRequest, state: SkillFlash, variation: Variation
+) -> SkillDef:
+    """歷程重推失敗時（3W-R1 退路）的新一次閃現：把 ``variation`` 套在存檔裡已推出的定義
+    （``request.current``）上，強度下限照它；轉型照常從原本的技能起算（轉型之前套不上的變化省略）。
+    套不上時拋出 :class:`FlashStepError`（＝這個變化不合法）。"""
+    assert request.current is not None
+    record = state.records[-1]
+    bonus = _record_bonus(library, state, record)
+    if variation.source == "transform":
+        origin = at_role_tier(library, request.base, request.tier)
+        applied = _apply_transform(
+            library, origin, state.records[:-1], record, request.seed, bonus=bonus
+        )
+    else:
+        rng = variation_rng(request.seed, state.base_id, record)
+        applied = apply_variation(library, request.current, variation, bonus=bonus, rng=rng)
+    if applied is None:
+        raise FlashStepError(request.base.id, record.nth, variation.template)
+    return _identify(library, request.base, state, applied)
 
 
 # ---------------------------------------------------------------------------
@@ -507,6 +578,9 @@ class FlashRequest:
     tier: int | None = None
     """角色階級（#72）：模板的最低階級與預算都看它；``None`` ＝ 沿用技能自己的階級。同種子、同階級
     必得同樣的選項。"""
+    current: SkillDef | None = None
+    """存檔裡已推出的這招（目前的定義，卡片上的數字；3W-R1）。已存的歷程在目前的內容重推不了時
+    （:class:`FlashHistoryError`）當起點與強度下限的退路；``None`` ＝ 沒有退路（照舊）。"""
 
     @property
     def role_tier(self) -> int:
@@ -788,6 +862,8 @@ class _Builder:
     request: FlashRequest
     floor_permille: int = 0
     """重閃時被換掉那一筆的預算分數（‰，進位）；閃現為 0。"""
+    broken: FlashHistoryError | None = None
+    """已存的歷程在目前的內容重推不了（3W-R1）：閃現改用 ``request.current`` 當起點。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
@@ -799,7 +875,10 @@ class _Builder:
             )
         )
         try:
-            skill = derive_skill(self.library, request.base, state, request.seed, request.tier)
+            if self.broken is not None and request.slot is None and request.current is not None:
+                skill = _derive_on_current(self.library, request, state, variation)
+            else:
+                skill = derive_skill(self.library, request.base, state, request.seed, request.tier)
         except FlashError:
             return None
         return FlashOption(
@@ -820,11 +899,22 @@ class _Builder:
         return found
 
 
+def _builder(library: ContentLibrary, request: FlashRequest) -> _Builder:
+    """這次請求的選項產生器：先重推一次已存的歷程（重推不了時記下原因，走 3W-R1 的退路），再算重閃的
+    強度下限。"""
+    try:
+        chain = derive_chain(library, request.base, request.state, request.seed, request.tier)
+    except FlashStepError as exc:
+        broken = FlashHistoryError(exc)
+        return _Builder(library, request, _fallback_floor(library, request), broken)
+    return _Builder(library, request, _replaced_floor(library, request, chain))
+
+
 def try_variation(
     library: ContentLibrary, request: FlashRequest, variation: Variation
 ) -> FlashOption | None:
     """把一個變化套在這次的請求上：合格回傳選項，套不上回傳 ``None``（LLM 提議的引擎檢查用）。"""
-    return _Builder(library, request, _replaced_floor(library, request)).option(variation)
+    return _builder(library, request).option(variation)
 
 
 def _summary(library: ContentLibrary, variation: Variation) -> str:
@@ -847,15 +937,14 @@ def _summary(library: ContentLibrary, variation: Variation) -> str:
     return str(evolution.summary_zh).replace("{keyword}", name)
 
 
-def _replaced_floor(library: ContentLibrary, request: FlashRequest) -> int:
-    """重閃時被換掉那一筆的預算分數（‰，進位；強度下限，見 :func:`power_floor`）。閃現為 0。"""
+def _replaced_floor(
+    library: ContentLibrary, request: FlashRequest, chain: Sequence[SkillDef]
+) -> int:
+    """重閃時被換掉那一筆的預算分數（‰，進位；強度下限，見 :func:`power_floor`）。閃現為 0。
+    ``chain`` 是已存歷程重推的結果（:func:`derive_chain`）。"""
     if request.slot is None:
         return 0
     state = request.state
-    try:
-        chain = derive_chain(library, request.base, state, request.seed, request.tier)
-    except FlashError:
-        return 0
     old = state.record(request.slot)
     if old is None:
         skill = with_budget_bonus(
@@ -865,6 +954,26 @@ def _replaced_floor(library: ContentLibrary, request: FlashRequest) -> int:
     else:
         skill = chain[[r.nth for r in _records(state)].index(old.nth)]
     return math.ceil(budget_power(skill, library) * 1000)
+
+
+def _fallback_floor(library: ContentLibrary, request: FlashRequest) -> int:
+    """歷程重推不了時的重閃強度下限（3W-R1）：存檔裡已推出的這招（``request.current``）的預算分數
+    （它不低於被換掉的那一筆，下限只會更嚴、不會變 0）；沒有存檔的定義時用原本的技能。閃現為 0。"""
+    if request.slot is None:
+        return 0
+    skill = request.current
+    if skill is None:
+        skill = with_budget_bonus(
+            at_role_tier(library, request.base, request.tier),
+            bonus_permille(library.flash.rules, request.state),
+        )
+    return math.ceil(budget_power(skill, library) * 1000)
+
+
+def history_problem(library: ContentLibrary, request: FlashRequest) -> str | None:
+    """已存的歷程在目前的內容重推不了時給玩家看的原因（3W-R1；API 顯示用）；可以重推時 ``None``。"""
+    found = history_error(library, request.base, request.state, request.seed, request.tier)
+    return None if found is None else found.reason_zh
 
 
 def skill_before(library: ContentLibrary, request: FlashRequest) -> SkillDef:
@@ -879,7 +988,8 @@ def skill_before(library: ContentLibrary, request: FlashRequest) -> SkillDef:
     try:
         return derive_skill(library, request.base, state, request.seed, request.tier)
     except FlashError:
-        return request.base
+        # 歷程重推不了（3W-R1）：退回存檔裡已推出的定義（沒有時才用原本的技能）
+        return request.base if request.current is None else request.current
 
 
 def _mixed(
@@ -946,7 +1056,7 @@ def category_counts(
         return {}
     major = slot_is_major(table.rules, request.state, request.nth)
     before = skill_before(library, request)
-    builder = _Builder(library, request, _replaced_floor(library, request))
+    builder = _builder(library, request)
     cap = table.pricing.rule(True).options
     return {
         category: len(builder.take(source.ranked(library, request, category, before), cap))
@@ -1003,7 +1113,7 @@ def make_offer(
     rule = table.pricing.rule(focused)
     tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
     rng = Rng(request.seed).fork(tag)
-    builder = _Builder(library, request, _replaced_floor(library, request))
+    builder = _builder(library, request)
     transform = _transform_option(library, request, source, builder, before) if major else None
     proposed = _proposed_options(library, source, builder, request, before=before, allowed=allowed)
     if focused:

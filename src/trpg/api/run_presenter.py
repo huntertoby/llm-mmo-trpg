@@ -56,6 +56,7 @@ from trpg.roguelite.state import (
     SkillOffer,
 )
 from trpg.shared.types import Attribute
+from trpg.skillgen.flash import history_problem
 from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_state import (
     FlashRecord,
@@ -221,10 +222,12 @@ def flash_preview(
     nth = 0
     major = False
     categories: tuple[FlashCategoryOut, ...] = ()
+    note = None
     if skill_id in owned_skills(run):
         request = flash_request(library, run, skill_id, slot=slot)
         nth = request.nth
         major = slot_is_major(table.rules, request.state, nth)
+        note = history_problem(library, request)
     if problem is None:
         counts = flash_categories(library, run, skill_id, slot)
         categories = tuple(
@@ -240,6 +243,7 @@ def flash_preview(
         open_cost=table.pricing.rule(False).cost,
         focused_cost=table.pricing.rule(True).cost,
         categories=categories,
+        history_note_zh=note,
     )
 
 
@@ -495,6 +499,7 @@ def run_response(session: RunSession, *, with_notice: bool = False) -> RunRespon
         resource_rule_zh=resource_rule_text(library, test_mode=run.test_mode),
         llm=run.llm,
         llm_notice=session.llm_notice if with_notice else None,
+        load_notice=session.load_notice if with_notice else None,
         llm_stats=llm_stats(run, session.alert_permille),
         pending_flash=_pending(library, run),
     )

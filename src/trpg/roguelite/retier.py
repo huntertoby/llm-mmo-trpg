@@ -6,14 +6,23 @@
 呼叫（升級節點、讀入舊存檔），戰鬥中不會變。手寫技能（內容庫裡的，例如手寫池退回的候選、開發者
 起始包）重配後成為生成技能 ``<原 ID>_t<階級>``（:func:`~trpg.roguelite.offers.at_run_tier`），閃現
 狀態、用法統計、備用清單跟著換 ID。
+
+**同一招只有一個真相來源**（3W-R1）：閃過的技能（有變化歷程）不重配存著的定義，而是從原本的技能
+照新階級重推整條歷程（:func:`~trpg.skillgen.flash.derive_skill`，與閃現出題同一個函式），所以卡片
+上的數字就是下一次閃現的「套用前」與重閃的強度下限；ID 由歷程決定，不變。:func:`retier` 只處理沒
+閃過的技能。歷程在目前的內容重推不了時（:class:`~trpg.skillgen.flash.FlashHistoryError`），退回
+重配存著的定義（之後的閃現也以它為起點，見 ``FlashRequest.current``）。
 """
 
 from __future__ import annotations
 
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
+from trpg.roguelite.flashes import base_def, state_of
 from trpg.roguelite.offers import at_run_tier, skill_defs
 from trpg.roguelite.state import RunState
-from trpg.skillgen.skill_tier import character_tier
+from trpg.skillgen.flash import FlashError, derive_skill
+from trpg.skillgen.skill_tier import character_tier, retier
 
 __all__ = ["run_tier", "sync_skill_tier"]
 
@@ -32,7 +41,7 @@ def sync_skill_tier(library: ContentLibrary, run: RunState) -> RunState:
     rename: dict[str, str] = {}
     generated = {s.id: s for s in run.generated_skills}
     for skill in skill_defs(library, run, owned):
-        new = at_run_tier(library, skill, tier)
+        new = _at_tier(library, run, skill, tier)
         if new.id != skill.id:
             rename[skill.id] = new.id
             generated.pop(skill.id, None)
@@ -54,3 +63,15 @@ def sync_skill_tier(library: ContentLibrary, run: RunState) -> RunState:
             "skill_tier": tier,
         }
     )
+
+
+def _at_tier(library: ContentLibrary, run: RunState, skill: SkillDef, tier: int) -> SkillDef:
+    """一招學會的技能換到角色階級 ``tier``：閃過的從原本的技能照新階級重推歷程（重推不了時重配存著
+    的定義），沒閃過的照 :func:`~trpg.roguelite.offers.at_run_tier` 重配。"""
+    state = state_of(run, skill.id)
+    if not state.records and state.adjustment is None:
+        return at_run_tier(library, skill, tier)
+    try:
+        return derive_skill(library, base_def(library, run, skill.id), state, run.seed, tier)
+    except FlashError:
+        return retier(library, skill, tier)

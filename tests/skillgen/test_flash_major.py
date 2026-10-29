@@ -43,8 +43,7 @@ from trpg.skillgen.flash import (
     FlashOffer,
     FlashRequest,
     UsageSource,
-    _Builder,
-    _replaced_floor,
+    _builder,
     apply_variation,
     choose,
     derive_skill,
@@ -372,7 +371,7 @@ def test_open_major_offer_has_at_least_one_deepen_and_one_bridge() -> None:
         # 3W-2b 起護盾類白板也有加深與橋接（專屬測試見 test_flash_shield_3w2b.py）；
         # 仍有做不出某一類的白板，能做到的類別才要求各出現
         before = skill_before(lib, request)
-        builder = _Builder(lib, request, _replaced_floor(lib, request))
+        builder = _builder(lib, request)
         feasible = {
             c
             for c in ("deepen", "bridge")
