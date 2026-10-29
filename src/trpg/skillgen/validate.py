@@ -1129,9 +1129,10 @@ def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
 
 STARTER_ORIGIN = "starter"
 """創角例外（6.34.9）：``provenance.origin`` 是它的技能不受最低角色階級限制。"""
-UNGATED_ORIGINS = frozenset({"builtin", STARTER_ORIGIN})
+UNGATED_ORIGINS = frozenset({"builtin", "workshop", STARTER_ORIGIN})
 """不受最低角色階級限制的來源：手寫內容（敵人與手寫技能池，保留原本的階級與內容；候選另依
-:func:`minimum_tier` 篩）與創角的起始技能。"""
+:func:`minimum_tier` 篩）、技能工坊（開發者寫手寫技能的工具，工坊另外顯示最低角色階級）與創角的
+起始技能。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1229,7 +1230,8 @@ def tier_violations(
     skill: SkillDef, library: ContentLibrary, tier: int | None = None
 ) -> list[Violation]:
     """``tier``（省略 ＝ 技能的 ``tier``，即角色階級）用不到的內容。只檢查「從零產生」的技能（白板、
-    組合器、LLM 提議、工坊）；手寫內容（``builtin``）與創角的起始技能（``starter``）不檢查
+    組合器、LLM 提議）；手寫內容（``builtin``）、工坊（``workshop``）與創角的起始技能
+    （``starter``）不檢查
     （:data:`UNGATED_ORIGINS`）；由既有技能推出來的（``provenance.parents`` 非空：閃現、轉型、
     分歧進化）保留原本的結構，新加的內容由變化模板自己的最低角色階級把關
     （``min_tier``，6.34.9 表 3）。"""
