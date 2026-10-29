@@ -45,9 +45,11 @@ from trpg.content.keyword_derive import derive_keywords, skill_condition_specs
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     AFFECTS_VALUES,
+    BACKLASH_TYPES,
     CONSUME_THEN_TYPES,
     GAMBLE_BRANCH_TYPES,
     ON_KILL_TYPES,
+    ON_MISS_MIN_RARITY,
     SKILL_ID_PATTERN,
     WIELDING_WEAPON,
     ZONE_EFFECT_TYPES,
@@ -68,6 +70,7 @@ from trpg.content.skills import (
 )
 from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.option_gear import gear_pool
+from trpg.skillgen.proposal_costs import apply_cost_choices, cost_choices_of
 from trpg.skillgen.proposal_layouts import (
     STANDARD_LAYOUT,
     LayoutPlan,
@@ -434,6 +437,7 @@ class _Builder:
         self.nested: dict[str, dict[str, Any]] = {}
         self.excluded: list[tuple[str, str]] = []
         self._self_models: dict[str, Any] = {}
+        self._backlash: Any = None
         for p in primitives:
             nested = {
                 name: self._nested_type(name, leaves)
@@ -475,22 +479,42 @@ class _Builder:
         item = _union([leaves[t] for t in allowed], "type")
         return _list_of(item)
 
+    def backlash_union(self) -> Any:
+        """失手反噬（``cost_on_miss``，Phase 4-L8）的效果 union：:data:`BACKLASH_TYPES` 中內容庫有的
+        原語，沒有 ``affects``（對象固定是施放者）與 ``condition``、沒有巢狀參數；不受原語子集
+        篩選（反噬不是技能的效果）。"""
+        if self._backlash is None:
+            table = self.library.ruleset.primitives.by_id()
+            models = [
+                self._effect_model(table[t], None, mode="backlash")
+                for t in BACKLASH_TYPES
+                if t in table
+            ]
+            self._backlash = _alias("BacklashEffect", _union_or_none(models))
+        return self._backlash
+
     def _effect_model(
-        self, primitive: PrimitiveDef, nested: Mapping[str, Any] | None, *, self_only: bool = False
+        self,
+        primitive: PrimitiveDef,
+        nested: Mapping[str, Any] | None,
+        *,
+        self_only: bool = False,
+        mode: Literal["effect", "backlash"] = "effect",
     ) -> Any:
         """一個原語的提議模型；``nested`` 為 ``None`` 時是巢狀位置用的版本（沒有巢狀參數）；
-        ``self_only`` 是「其他效果只作用在施放者」的版型用的版本。"""
-        affects: Any = (
-            (Literal["self"], Field(default="self", description=_SELF_AFFECTS_DOC))
-            if self_only
-            else (_affects_type(primitive) | None, None)
-        )
+        ``self_only`` 是「其他效果只作用在施放者」的版型用的版本；``mode="backlash"`` 是失手
+        反噬用的版本（沒有 ``affects``、``condition``）。"""
         fields: dict[str, Any] = {
             "type": (_literal((primitive.id,)), Field(description=primitive.name_zh)),
-            "affects": affects,
         }
-        if self.condition is not None:
-            fields["condition"] = (Union[self.condition, None], None)  # noqa: UP007
+        if mode == "effect":
+            fields["affects"] = (
+                (Literal["self"], Field(default="self", description=_SELF_AFFECTS_DOC))
+                if self_only
+                else (_affects_type(primitive) | None, None)
+            )
+            if self.condition is not None:
+                fields["condition"] = (Union[self.condition, None], None)  # noqa: UP007
         for name, spec in sorted(primitive.params.items()):
             doc = spec.llm_hint
             if _is_numeric(spec):
@@ -504,7 +528,9 @@ class _Builder:
             annotation, limits = self._param(primitive, name, spec)
             required = _required(spec)
             fields[name] = _field(annotation, limits, required=required, doc=doc)
-        if self_only:
+        if mode == "backlash":
+            prefix = "BacklashEffect"
+        elif self_only:
             prefix = "SelfEffect"
         else:
             prefix = "NestedEffect" if nested is None and _has_nested(primitive) else "Effect"
@@ -684,6 +710,12 @@ _PENALTY_DOC = (
 )
 _OVERDRAFT_DOC = (
     "可省略。填 true＝施放後自己下一個回合少 1 AP（透支）；可以和 cost_penalty 同時使用"
+)
+_ONCE_DOC = "可省略。填 true＝每場戰鬥只能用一次（換更強的效果）"
+_HP_DOC = "可省略。填 true＝施放時付出自己的一部分最大 HP（數值由遊戲決定）"
+_ON_MISS_DOC = (
+    "可省略，只有主動技能可用。失手反噬：攻擊沒命中時施放者自己承受的 1～2 個效果（傷害或負面"
+    "狀態），換更強的效果；數值由遊戲決定"
 )
 _SKILL_DOC = "LLM 提議的技能（ID、稀有度、階級與來源由遊戲決定，不要填）。"
 _GENERAL_TAG = "~general"
@@ -873,7 +905,17 @@ def build_proposal_models(
             Literal[True] | None,
             Field(default=None, description=_OVERDRAFT_DOC),
         ),
+        "cost_once_per_battle": (
+            Literal[True] | None,
+            Field(default=None, description=_ONCE_DOC),
+        ),
+        "cost_hp": (Literal[True] | None, Field(default=None, description=_HP_DOC)),
     }
+    if rarity is None or rarity_rank(rarity) >= rarity_rank(ON_MISS_MIN_RARITY):
+        common["cost_on_miss"] = (
+            _list_of(builder.backlash_union()) | None,
+            Field(default=None, min_length=1, max_length=_MAX_NESTED, description=_ON_MISS_DOC),
+        )
     hints = {p.id: layout_hint(library, p) for p in plans}
     layouts = [_layout_model(builder, p, common, shared) for p in plans]
     skill = layouts[0] if len(layouts) == 1 else _union(layouts, "layout")
@@ -929,6 +971,7 @@ def _skill_data(
         data["cost"] = {**data.get("cost", {}), **penalty_cost(library, penalty)}
     if data.pop("cost_overdraft", None):  # 透支（3-50b）：不算自身狀態，可以並用
         data["cost"] = {**data.get("cost", {}), "overdraft": 1}
+    apply_cost_choices(data, library)  # 每場一次、HP 代價、失手反噬（4-L8）
     if library is not None:  # 層數的對象由層數決定（3-52），LLM 只挑層數
         data["effects"] = [_stack_target(e, library) for e in data.get("effects", [])]
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
@@ -999,6 +1042,9 @@ _SUPPORTED_SKILL_KEYS = frozenset(
         "cost",
         "cost_penalty",
         "cost_overdraft",
+        "cost_once_per_battle",
+        "cost_hp",
+        "cost_on_miss",
         "tags",
         "narrative",
         "provenance",
@@ -1011,8 +1057,9 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     """手寫技能 → 提議 JSON（few-shot 範例與結構往返測試用；數值欄位已移除）。用到提議模型沒有的
     欄位時丟 ``ValueError``。要連同數值一起取得時用
     :func:`~trpg.skillgen.proposal_numbers.split_numbers`。"""
-    data = skill.model_dump(mode="json", exclude_defaults=True)
-    data, _ = split_numbers(data, library)
+    full = skill.model_dump(mode="json", exclude_defaults=True)
+    data, _ = split_numbers(full, library)
+    data.update(cost_choices_of(full.get("cost") or {}, data))  # 4-L8 的代價欄位
     if isinstance(data.get("cost"), dict):  # 自己付的代價（3-50）→ cost_penalty
         penalty, overdraft = penalty_of_cost(data["cost"])
         if penalty is not None:
