@@ -145,6 +145,8 @@ class FlashTemplate(ContentModel):
     """限定的技能種類；省略時沿用類別的 ``kinds``。"""
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
     delta: int | None = Field(default=None, ge=-3, le=3)
     """``area``／``range`` 的增量（格）。"""
     shapes: tuple[ShapeSpec, ...] = ()
@@ -173,6 +175,8 @@ class MajorFlashTemplate(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     category: str = Field(pattern=ID_PATTERN)
     evolution: str = Field(pattern=ID_PATTERN)
+    llm_hint: str = ""
+    """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用進化模板的說明。"""
 
 
 type TransformTarget = Literal["passive", "reaction", "summon", "trap", "stance", "modifier"]
@@ -195,6 +199,8 @@ class TransformTemplate(ContentModel):
     min_tier: int = Field(default=1, ge=1, le=3)
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
     trigger: TriggerSpec | None = None
     reaction: ReactionSpec | None = None
     scale_permille: int = Field(default=500, ge=100, le=1000)
@@ -239,6 +245,8 @@ class ExtraMajorTemplate(ContentModel):
     """適用對象：輔助技（治療、護盾、增益）或召喚技能。"""
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
 
 
 class FlashTable(ContentModel):

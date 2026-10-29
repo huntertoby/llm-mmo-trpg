@@ -66,6 +66,7 @@ from trpg.skillgen.flash_major import (
     transform_summary,
     transform_variations,
 )
+from trpg.skillgen.flash_merge import merge_options
 from trpg.skillgen.flash_ops import FLASH_OPS, STRICT_OPS, tuning_extras
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
@@ -91,6 +92,7 @@ __all__ = [
     "FlashOption",
     "FlashOptionSource",
     "FlashRequest",
+    "ProposingSource",
     "allowed_categories",
     "apply_variation",
     "choose",
@@ -98,6 +100,8 @@ __all__ = [
     "flashed_identity",
     "is_support_skill",
     "make_offer",
+    "skill_before",
+    "try_variation",
     "unimplemented_ops",
     "variation_rng",
     "with_budget_bonus",
@@ -521,6 +525,17 @@ class FlashOptionSource(Protocol):
         ...
 
 
+class ProposingSource(FlashOptionSource, Protocol):
+    """會先 **提議** 一批變化的來源（3W-7 LLM 提議、重播）：:func:`make_offer` 先試這些（依序、
+    合格的才留），不夠的數量與類別由 ``ranked`` 的資料順序補滿。"""
+
+    def proposed(
+        self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
+    ) -> Sequence[Variation]:
+        """提議的變化（可以含不合格的；數量不限）。``skill`` 是套用這一次之前的技能。"""
+        ...
+
+
 class DataOrderSource:
     """最簡單的候選來源（3W-1，測試用）：依資料檔順序，不看用法統計。
 
@@ -786,6 +801,13 @@ class _Builder:
         return found
 
 
+def try_variation(
+    library: ContentLibrary, request: FlashRequest, variation: Variation
+) -> FlashOption | None:
+    """把一個變化套在這次的請求上：合格回傳選項，套不上回傳 ``None``（LLM 提議的引擎檢查用）。"""
+    return _Builder(library, request, _replaced_floor(library, request)).option(variation)
+
+
 def _summary(library: ContentLibrary, variation: Variation) -> str:
     table = library.flash
     if variation.source == "minor":
@@ -825,7 +847,7 @@ def _replaced_floor(library: ContentLibrary, request: FlashRequest) -> int:
     return math.ceil(budget_power(skill, library) * 1000)
 
 
-def _skill_before(library: ContentLibrary, request: FlashRequest) -> SkillDef:
+def skill_before(library: ContentLibrary, request: FlashRequest) -> SkillDef:
     """套用這一次之前的技能（重閃時只套用到前一筆，用來給候選來源參考）。"""
     state = request.state
     if request.slot is not None and not state.complete:
@@ -872,7 +894,7 @@ def make_offer(
     source = source or UsageSource()
     table = library.flash
     major = slot_is_major(table.rules, request.state, request.nth)
-    before = _skill_before(library, request)
+    before = skill_before(library, request)
     allowed = allowed_categories(table, before, major=major)
     focused = request.category is not None
     if focused and (not table.pricing.allow_focus or request.category not in allowed):
@@ -882,10 +904,15 @@ def make_offer(
     rng = Rng(request.seed).fork(tag)
     builder = _Builder(library, request, _replaced_floor(library, request))
     transform = _transform_option(library, request, source, builder, before) if major else None
+    proposed = _proposed_options(library, source, builder, request, before=before, allowed=allowed)
     if focused:
         assert request.category is not None
         ranked = source.ranked(library, request, request.category, before)
-        options = builder.take(ranked, rule.options)
+        options = merge_options(
+            [o for o in proposed if o.variation.category == request.category],
+            builder.take(ranked, rule.options),
+            rule.options,
+        )
         if not options:
             raise ValueError(f"類別 {request.category} 這一次沒有合格的變化（沒有扣點）")
         if transform is not None:
@@ -894,6 +921,9 @@ def make_offer(
         count = rule.options - (1 if transform is not None else 0)
         queues = {c: list(source.ranked(library, request, c, before)) for c in allowed}
         options = _mixed(rng, queues, builder, count)
+        options = merge_options(
+            proposed, options, count, min_categories=min(rule.min_categories, count)
+        )
         if transform is not None:
             options.insert(rng.randint(0, len(options)), transform)
     return FlashOffer(
@@ -906,6 +936,31 @@ def make_offer(
         cost=rule.cost,
         options=tuple(options),
     )
+
+
+def _proposed_options(
+    library: ContentLibrary,
+    source: FlashOptionSource,
+    builder: _Builder,
+    request: FlashRequest,
+    *,
+    before: SkillDef,
+    allowed: Sequence[str],
+) -> list[FlashOption]:
+    """來源提議的變化中，類別可用、不重複、真的套得上的選項（沒有提議的來源回傳空）。"""
+    propose = getattr(source, "proposed", None)
+    if propose is None:
+        return []
+    found: list[FlashOption] = []
+    seen: set[str] = set()
+    for variation in propose(library, request, before):
+        if variation.category not in allowed or variation.key() in seen:
+            continue
+        seen.add(variation.key())
+        option = builder.option(variation)
+        if option is not None:
+            found.append(option)
+    return found
 
 
 def _transform_option(
