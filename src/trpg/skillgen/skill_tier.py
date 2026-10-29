@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from fractions import Fraction
@@ -61,9 +62,8 @@ _TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
 _AREA = _TERRAIN | {"create_surface"}
 _MAX_EFFECTS = 4
 _MAX_AP = 3
-_CACHE: dict[tuple[int, str, int], tuple[ContentLibrary, SkillDef]] = {}
-"""重算結果的快取：鍵是內容庫 ``id``、技能 JSON、階級；值保留內容庫本身（``id`` 重用時不取錯）。"""
 _CACHE_LIMIT = 4096
+"""內容庫上重配快取（``ContentLibrary.retier_cache``）的上限：滿了就清空。"""
 
 
 def character_tier(library: ContentLibrary, level: int) -> int:
@@ -508,15 +508,22 @@ def retier(library: ContentLibrary, skill: SkillDef, tier: int) -> SkillDef:
         return skill
     if tier not in library.ruleset.core.tier_budget:
         raise ValueError(f"沒有階級 {tier} 的預算（tier_budget）")
-    key = (id(library), skill.model_dump_json(), tier)
-    cached = _CACHE.get(key)
-    if cached is not None and cached[0] is library:
-        return cached[1]
+    cache = library.retier_cache
+    key = _cache_key(skill, tier)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
     done = _retier(skill, tier, library)
-    if len(_CACHE) >= _CACHE_LIMIT:
-        _CACHE.clear()
-    _CACHE[key] = (library, done)
+    if len(cache) >= _CACHE_LIMIT:
+        cache.clear()
+    cache[key] = done
     return done
+
+
+def _cache_key(skill: SkillDef, tier: int) -> str:
+    """重配快取的鍵（3W-R1）：技能 JSON 的 SHA-256 ＋ 階級（不用內建 ``hash()`` 與 ``id()``）。"""
+    digest = hashlib.sha256(skill.model_dump_json().encode("utf-8")).hexdigest()
+    return f"{digest}/{tier}"
 
 
 @dataclass(frozen=True, slots=True)
