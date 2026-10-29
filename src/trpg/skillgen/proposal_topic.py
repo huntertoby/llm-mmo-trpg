@@ -81,6 +81,9 @@ class TopicRequest:
     held: Mapping[str, str] | None = None
     theme_permille: int = 0
     weapon_class: str | None = None
+    reaction_permille: int = 0
+    """出反應技題目的機率（‰；Phase 4-L8b，``roguelite.yaml`` 的 ``llm_reaction_permille``）。
+    0 ＝ 一律出主動技能題（與 4-L8 之前相同）。"""
 
 
 def composable_keywords(library: ContentLibrary, keywords: Sequence[str]) -> bool:
@@ -146,9 +149,23 @@ def make_topic(
 
     稀有度依權重抽，題目必須 :func:`select_subset` 得出（否則換下一個稀有度）；核心原語在合法的核心
     原語中依權重與 run 內配額抽，抽出後仍得不出子集就省略（退回 4-L4 行為）。題目關鍵字含不能交給
-    LLM 的關鍵字（形態）或所有稀有度都出不了題時回傳 ``None``。"""
+    LLM 的關鍵字（形態）或所有稀有度都出不了題時回傳 ``None``。
+
+    ``reaction_permille``（4-L8b）：依機率先出反應技題目（種類 ``reaction``，骨架由子集決定），
+    出不了題（沒有符合關鍵字與稀有度的反應骨架）就改出主動技能題。"""
     if not composable_keywords(library, topic.keywords):
         return None
+    kind_rng = Rng(topic.seed).fork("llm_topic.kind")  # 獨立的串流：不影響後面的抽選
+    if topic.reaction_permille > 0 and kind_rng.chance_permille(topic.reaction_permille):
+        made = _make_topic_of_kind(library, topic, "reaction")
+        if made is not None:
+            return made
+    return _make_topic_of_kind(library, topic, None)
+
+
+def _make_topic_of_kind(
+    library: ContentLibrary, topic: TopicRequest, kind: str | None
+) -> tuple[ProposalRequest, ProposalContext, int] | None:
     rng = Rng(topic.seed).fork("llm_topic")
     themes = _theme_ids(library.root)
     theme = rng.choice(themes) if themes and rng.chance_permille(topic.theme_permille) else None
@@ -157,6 +174,7 @@ def make_topic(
         request = ProposalRequest(
             topic.tier,
             rarity,
+            kind=kind,
             keywords=topic.keywords,
             menu_seed=menu_seed,
             theme=theme,
@@ -172,6 +190,7 @@ def make_topic(
             with_core = ProposalRequest(
                 topic.tier,
                 rarity,
+                kind=kind,
                 keywords=topic.keywords,
                 core_primitive=core,
                 menu_seed=menu_seed,

@@ -99,6 +99,8 @@ class CandidateRules:
     """有傳 ``llm`` 時，每個候選先請 LLM 提議的機率（‰；Phase 4-L6）。"""
     llm_theme_permille: int = 0
     """LLM 題目帶主題詞的機率（‰；Phase 4-L6）。"""
+    llm_reaction_permille: int = 0
+    """LLM 題目出反應技的機率（‰；Phase 4-L8b）；0 ＝ 一律主動技能。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -236,6 +238,7 @@ class _Search:
                 hero_attributes=attrs,
                 held=self.request.held or None,
                 theme_permille=self.rules.llm_theme_permille,
+                reaction_permille=self.rules.llm_reaction_permille,
                 weapon_class=self.request.weapon_class,
             ),
         )

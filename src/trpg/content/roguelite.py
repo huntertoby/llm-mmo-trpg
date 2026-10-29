@@ -138,6 +138,8 @@ class CandidateSettings(ContentModel):
     """LLM 生成開關打開時，每個候選先請 LLM 提議的機率（‰；Phase 4-L6）。關閉時不使用。"""
     llm_theme_permille: int = Field(default=100, ge=0, le=1000)
     """LLM 題目帶主題詞（例如「自然」，``content/llm/world_*.yaml`` 的 ``themes``）的機率（‰）。"""
+    llm_reaction_permille: int = Field(default=100, ge=0, le=1000)
+    """LLM 題目出反應技（而非主動技能）的機率（‰；Phase 4-L8b）。出不了反應題就改出主動技能題。"""
 
 
 class RunRules(ContentModel):
