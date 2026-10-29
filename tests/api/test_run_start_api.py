@@ -99,7 +99,9 @@ def test_dev_advance_is_off_by_default_and_reaches_post_battle_screens(
             assert got["node"]["offer"]["reason"] == "complete"
 
 
-def test_dev_advance_can_top_up_insight(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dev_advance_can_top_up_insight(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """3W-6：閃現畫面的排版掃描要有靈感點可花；只往上補，不會扣。"""
     monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
     packs = _ok(client.get("/api/runs/dev-packs"))
