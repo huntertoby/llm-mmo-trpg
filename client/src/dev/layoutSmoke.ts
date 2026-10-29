@@ -253,6 +253,8 @@ async function probeMoreMenu(doc: Document): Promise<LayoutSnapshot["moreMenu"]>
 export interface CaseOptions {
   /** 先把底部列高度設成最矮（`BOTTOM_MIN`），測「拉到最矮」。 */
   shortBottom?: boolean;
+  /** 走「開新一輪」（種族與出身 → 武器 → 關鍵字 → 第 1 場）而不是首頁的單場戰鬥。 */
+  viaRun?: boolean;
 }
 
 const LAYOUT_KEY = "trpg.battleLayout";
@@ -270,17 +272,35 @@ function setSeed(doc: Document, seed: number): void {
 }
 
 /** 從開始畫面進入一場戰鬥（選前兩個關鍵字）。 */
-export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON): Promise<void> {
-  for (let i = 0; i < 30 && doc.querySelector(".run-keyword") === null; i++) await sleep(200);
+export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON, viaRun = false): Promise<void> {
+  const button = (text: string) => [...doc.querySelectorAll<HTMLButtonElement>("button")].find((b) => (b.textContent ?? "").trim().startsWith(text));
+  if (doc.querySelector(".battle-bottom") !== null) return; // 已經在戰鬥畫面
+  if (viaRun) button("開新一輪")?.click();
+  const ready = () => doc.querySelector(".run-keyword") !== null && (!viaRun || doc.querySelector('[data-testid="start-races"]') !== null);
+  for (let i = 0; i < 30 && !ready(); i++) await sleep(200);
   setSeed(doc, seed);
+  // 一輪的開局第一步：固定種族（人類）與出身（第一個）；首頁的單場戰鬥沒有這一步
+  if (doc.querySelector('[data-testid="start-races"]') !== null) {
+    doc.querySelector<HTMLElement>('[data-testid="race-human"]')?.click();
+    await sleep(200); // 等重繪：兩次點擊之間不等的話，出身會用舊的選擇蓋掉種族
+    doc.querySelector<HTMLElement>('[data-testid="start-origins"] button')?.click();
+    await sleep(200);
+  }
   [...doc.querySelectorAll<HTMLElement>(".run-weapon")].find((b) => (b.textContent ?? "").startsWith(weapon))?.click();
-  await sleep(300);
-  const keywords = doc.querySelectorAll<HTMLElement>(".run-keyword");
-  keywords[0]?.click();
-  await sleep(200);
-  doc.querySelectorAll<HTMLElement>(".run-keyword")[1]?.click();
-  await sleep(300);
-  [...doc.querySelectorAll<HTMLButtonElement>("button")].find((b) => (b.textContent ?? "").trim().startsWith("開始戰鬥"))?.click();
+  // 關鍵字：換武器後預覽才回來，湊不到起始技能的會被取消；一律挑「目前可選、還沒選」的第一個，直到選滿 2 個
+  for (let picked = 0; picked < 2; ) {
+    await sleep(600);
+    const next = [...doc.querySelectorAll<HTMLButtonElement>(".run-keyword")].find((b) => !b.disabled && !b.classList.contains("selected") && !b.classList.contains("unavailable"));
+    if (next === undefined) break;
+    next.click();
+    picked = doc.querySelectorAll(".run-keyword.selected").length;
+  }
+  await sleep(400);
+  if (viaRun) {
+    button("自動配點並開始")?.click();
+    for (let i = 0; i < 30 && button("開始第 1 場") === undefined; i++) await sleep(200);
+    button("開始第 1 場")?.click();
+  } else button("開始戰鬥")?.click();
   for (let i = 0; i < 50 && doc.querySelector(".battle-bottom") === null; i++) await sleep(200);
   await sleep(1500); // 等第一次畫面與動畫
 }
@@ -290,7 +310,7 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
   const storage = window.localStorage;
   if (options.shortBottom === true) storage.setItem(LAYOUT_KEY, JSON.stringify({ sideWidth: 300, bottomHeight: 120, heroWidth: 300, zoom: null }));
   else storage.removeItem(LAYOUT_KEY);
-  await startBattle();
+  await startBattle(document, SMOKE_SEED, SMOKE_WEAPON, options.viaRun === true);
   const snap = collectBase(document, window);
   await hoverUntilCard(document);
   snap.tileCard = collectTileCard(document, window);
