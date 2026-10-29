@@ -38,6 +38,7 @@ from trpg.shared.types import Element
 __all__ = [
     "MODIFIER_USE_KEYS",
     "BudgetRules",
+    "CharacterTierRules",
     "CostAllowance",
     "EffectPattern",
     "ExclusionRule",
@@ -226,6 +227,64 @@ class TerrainAreaRarity(ContentModel):
 
     min_cells: int = Field(ge=1)
     rarity: SkillRarity
+
+
+class TerrainAreaTier(ContentModel):
+    """影響格數 ``min_cells`` 以上的升降地形，角色階級至少要 ``tier``。"""
+
+    min_cells: int = Field(ge=1)
+    tier: int = Field(ge=1)
+
+
+class CharacterTierRules(ContentModel):
+    """技能內容的「最低角色階級」（Phase 3W-9，06 6.34.9 的表；``skill_budget.yaml`` 的
+    ``min_character_tier``）。沒列出的種類、原語、骨架、形狀都是 1 階。驗證器、技能工坊、組合器、
+    白板、閃現與 LLM 提議共用（:func:`trpg.skillgen.validate.tier_requirements`）。
+
+    - ``kinds``：技能種類（``modifier`` 修正型被動 3 階、``stance`` 姿態 2 階）。
+    - ``primitives``：原語（召喚、陷阱、自身位移或互換 2 階）。
+    - ``skeletons``：骨架（召喚、陷阱、姿態 2 階）。
+    - ``shapes``：形狀（3×3 2 階、連鎖跳躍 3 階）。
+    - ``line_length``：直線長度不小於它時要 ``line_tier`` 階（整排直線，長 6）。
+    - ``followup``：接續段（複合技能的第二段）。
+    - ``second_element``：傷害帶兩種以上的元素（第二元素）。
+    - ``dual_scaling``：雙屬性縮放。
+    - ``terrain_area``：升降地形的影響格數（4～6 格 2 階、7 格以上 3 階，#58）。
+    """
+
+    kinds: dict[str, int] = Field(default_factory=dict)
+    primitives: dict[str, int] = Field(default_factory=dict)
+    skeletons: dict[str, int] = Field(default_factory=dict)
+    shapes: dict[str, int] = Field(default_factory=dict)
+    line_length: int = Field(default=6, ge=2)
+    line_tier: int = Field(default=3, ge=1)
+    followup: int = Field(default=2, ge=1)
+    second_element: int = Field(default=2, ge=1)
+    dual_scaling: int = Field(default=3, ge=1)
+    terrain_area: tuple[TerrainAreaTier, ...] = ()
+
+    @model_validator(mode="after")
+    def _check(self) -> CharacterTierRules:
+        cells = [t.min_cells for t in self.terrain_area]
+        tiers = [t.tier for t in self.terrain_area]
+        if cells != sorted(set(cells)) or tiers != sorted(tiers):
+            raise ValueError("terrain_area 必須依 min_cells 嚴格遞增、階級不遞減")
+        return self
+
+    def highest(self) -> int:
+        """表裡最高的階級（沒有任何項目時 1）。"""
+        values = [
+            *self.kinds.values(),
+            *self.primitives.values(),
+            *self.skeletons.values(),
+            *self.shapes.values(),
+            self.line_tier,
+            self.followup,
+            self.second_element,
+            self.dual_scaling,
+            *(t.tier for t in self.terrain_area),
+        ]
+        return max(values, default=1)
 
 
 class BudgetRules(ContentModel):
@@ -439,6 +498,9 @@ class BudgetRules(ContentModel):
     """修正技能的預算（Phase 3C-2）。"""
     cost_resource: dict[SkillCategory, ResourceKind] = Field(default_factory=_default_cost_resource)
     """技能的費用花哪種資源（Phase 3H-2，06 6.10）：武器技花耐力、法術技花法力。"""
+    min_character_tier: CharacterTierRules = Field(default_factory=CharacterTierRules)
+    """技能內容的最低角色階級（Phase 3W-9，06 6.34.9）：取代原語、骨架、形狀的「最低稀有度」門檻
+    （稀有度改成只由結構自動算的標記）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:

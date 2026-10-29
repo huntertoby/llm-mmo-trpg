@@ -4,7 +4,7 @@
   戰鬥工作階段表裡，用既有的 ``/api/battles/{id}`` 端點操作）。
 - 戰鬥結束後，任何一輪的請求先 :meth:`RunSession.sync`：以 ``finish_battle`` 寫回主角並前進到下一個
   節點。
-- 存檔：``RunSave``（``trpg-run/10``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；
+- 存檔：``RunSave``（``trpg-run/11``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；
   讀檔時重建 ``setup``、重播步驟、還原指令（:meth:`SessionStore.open`）。
 - 鎖的順序：一輪的鎖 → 戰鬥的鎖。
 """
@@ -35,6 +35,7 @@ from trpg.roguelite import (
     new_run,
     ruleset_hash,
     save_path,
+    upgrade_save,
     write_save,
 )
 from trpg.roguelite.errors import NodeConflictError
@@ -280,7 +281,7 @@ class RunStore:
         path = save_path(self.save_dir, run_id)
         if not path.is_file():
             raise RunNotFoundError(f"找不到存檔 {path.name}")
-        save = load_save(path)
+        save = upgrade_save(self.library, load_save(path))  # 舊存檔照角色階級重配技能（3W-9）
         session = RunSession(save.run_id, self.library, save.run)
         if save.battle is not None:
             if save.ruleset_hash != self.ruleset_hash():

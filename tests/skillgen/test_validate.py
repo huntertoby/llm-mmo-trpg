@@ -17,6 +17,7 @@ from tests.skillgen.helpers import (
     violations,
 )
 from trpg.content.skills import EffectSpec, SkillDef
+from trpg.skillgen.validate import structural_rarity
 
 DMG = {"type": "damage", "dice": "2d6", "element": "fire"}
 
@@ -173,9 +174,10 @@ def test_a_fake_rule_rewrite_primitive_needs_legendary() -> None:
         effects=(EffectSpec(type="fake_rewrite"),),
         cost=skill().cost.model_copy(update={"uses_per_battle": 1}),
     )
-    assert "rarity.primitive" in rules_of(s, fake)
+    # 3W-9：傳說核心只在完整技能（稀有度標記為傳說）
+    assert "rarity.legendary" in rules_of(s, fake)
     legendary = s.model_copy(update={"rarity": "legendary"})
-    assert "rarity.primitive" not in rules_of(legendary, fake)
+    assert "rarity.legendary" not in rules_of(legendary, fake)
 
 
 # ---------------------------------------------------------------------------
@@ -555,9 +557,12 @@ def common(**overrides: Any) -> SkillDef:
         "three",
     ],
 )
-def test_common_skills_cannot_use_rarer_content(overrides: dict[str, Any], rule: str) -> None:
-    assert rule in rules_of(common(**overrides))
-    assert rule not in rules_of(skill(rarity="rare", **overrides))  # rare 以上可以
+def test_rarer_content_only_raises_the_rarity_marker(overrides: dict[str, Any], rule: str) -> None:
+    """3W-9（6.34.9）：稀有度不再是門檻，只是由結構自動算的標記；普通也合法，標記算出稀有以上。"""
+    assert not any(r.startswith("rarity") for r in rules_of(common(**overrides)))
+    assert rule.startswith("rarity.")
+    marker = structural_rarity(common(**overrides), lib())
+    assert marker in ("rare", "epic"), marker
 
 
 def test_common_skills_can_use_numeric_primitives_and_simple_shapes() -> None:

@@ -131,8 +131,9 @@ def test_a_common_composite_is_flagged_by_the_check() -> None:
         "rarity": "common",
     }
     check = check_draft(draft, lib)
-    assert not check.legal
-    assert any("composite" in p.rule for p in check.problems)
+    # 3W-9：稀有度只是標記，普通的複合技能不再被擋；工坊的「最低稀有度」仍照結構算
+    assert not any("composite" in p.rule for p in check.problems)
+    assert check.minimum_rarity == "rare"
 
 
 def test_the_leap_then_cross_slam_walks_to_a_legal_skill() -> None:

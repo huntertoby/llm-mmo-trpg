@@ -221,7 +221,6 @@ llm_cost:
 whiteboard:
   kind_permille: {active: 700, passive: 200, reaction: 100}   # 升級與任務三選一的種類比例（07 7.6）
   tier: 1                             # 沒指定階級時（創角）；升級與任務三選一用角色目前階級（roguelite.yaml 的 offer_tier_by_level，#72）
-  shape_min_tier: {square3: 2}        # 6.34.9：3×3 要角色 2 階；十字等其餘形狀 1 階就有
   ap_cost: 2
   cooldown: {min: 0, max: 2}
   passive_mana: {min: 0, max: 2}
@@ -240,7 +239,9 @@ whiteboard:
     - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
     - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
     - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
-    - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [cross, square3], categories: [spell], name_zh: 隆地, concept_zh: 讓一塊地面升高, flavor_zh: 地面隆隆震動，一塊平台緩緩頂了起來}
+    # 3W-9：升降地形影響 4～6 格要角色 2 階、7 格以上 3 階（6.34.9 #58），十字（5 格）的隆地 1 階不能出；改成只升一格（AP 1：單一效果的點數固定，
+    # AP 2 湊不到預算下限）。2、3 階由升階重算補「落石」傷害（數值照預算）。
+    - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [ground_tile], categories: [spell], skill: {ap_cost: 1}, name_zh: 隆地, concept_zh: 讓一格地面升高, flavor_zh: 地面隆隆震動，一塊小平台緩緩頂了起來}
     # --- 3W-4b｜潮濕、倒地、撞擊的例外（06 6.34.1）：利用者＝條件傷害（條件傷害本身算一個核心效果）；製造者＝弱傷害＋製造該關鍵字 ---
     - {id: soak_strike, keyword: wet, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_on_surface, surface: water}, name_zh: 順水重擊, concept_zh: 對站在水裡的目標打出更重的一擊, flavor_zh: 腳下的積水讓目標站不穩，這一擊落得格外沉}
     - {id: water_bolt, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [cross, square3], name_zh: 水彈, concept_zh: 一發水彈砸開，地上積起一灘水, flavor_zh: 水球炸開，濺濕了一片地面}
@@ -249,8 +250,9 @@ whiteboard:
     - {id: collision_slam, keyword: collision, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_collided}, name_zh: 乘勢重擊, concept_zh: 對剛撞過牆的目標補上重擊, flavor_zh: 目標還暈著，這一擊結結實實地砸在他身上}
     - {id: shoulder_charge, keyword: collision, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: push, distance: 1}, name_zh: 頂撞, concept_zh: 一記頂撞，把目標撞開一格, flavor_zh: 肩膀狠狠撞上去，目標被撞得向後踉蹌}
     # --- 3W-4b｜召喚白板（6.34.1、6.29.5）：1 隻最基本的召喚物，沒有附帶效果；1 階（創角）給近戰型與遠程型各一，2 階起依關鍵字挑對應的召喚物 ---
-    - {id: summon_spirit, species: summon, keyword: summon, skeleton: summon, effect: {type: summon, unit: summon_elemental_spirit}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: &summon_cooldowns [{cost: {cooldown: 2}}, {cost: {cooldown: 3}}, {cost: {cooldown: 4}}, {cost: {cooldown: 3, mana: 8}}, {cost: {cooldown: 4, mana: 8}}, {cost: {cooldown: 4, mana: 12}}, {cost: {cooldown: 4, mana: 16}}], name_zh: 召喚元素之靈, concept_zh: 呼喚一縷元素之靈，替你在遠處噴吐火花, flavor_zh: 你的手往地上一指，一團光霧凝聚成形}
-    - {id: summon_skeleton, species: summon, keyword: summon, skeleton: summon, effect: {type: summon, unit: summon_skeleton_warrior}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 喚起骷髏, concept_zh: 從地底喚起一具聽命的骷髏戰士，替你擋在前線, flavor_zh: 泥土翻動，一隻白骨手臂破土而出}
+    # 3W-9：召喚要角色 2 階（6.34.9）；基本召喚物的 1 階只給創角（creation_tier，創角例外），三選一 2 階起才出
+    - {id: summon_spirit, species: summon, keyword: summon, min_tier: 2, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_elemental_spirit}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: &summon_cooldowns [{cost: {cooldown: 2}}, {cost: {cooldown: 3}}, {cost: {cooldown: 4}}, {cost: {cooldown: 3, mana: 8}}, {cost: {cooldown: 4, mana: 8}}, {cost: {cooldown: 4, mana: 12}}, {cost: {cooldown: 4, mana: 16}}], name_zh: 召喚元素之靈, concept_zh: 呼喚一縷元素之靈，替你在遠處噴吐火花, flavor_zh: 你的手往地上一指，一團光霧凝聚成形}
+    - {id: summon_skeleton, species: summon, keyword: summon, min_tier: 2, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_skeleton_warrior}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 喚起骷髏, concept_zh: 從地底喚起一具聽命的骷髏戰士，替你擋在前線, flavor_zh: 泥土翻動，一隻白骨手臂破土而出}
     - {id: summon_fire, species: summon, min_tier: 2, keyword: ignite, skeleton: summon, effect: {type: summon, unit: summon_fire_spirit}, theme: fire, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚火靈, concept_zh: 呼喚一縷火靈，替你在遠處噴吐火焰, flavor_zh: 一團火光從空中凝聚成形}
     - {id: summon_ice, species: summon, min_tier: 2, keyword: frozen, skeleton: summon, effect: {type: summon, unit: summon_ice_spirit}, theme: ice, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚冰靈, concept_zh: 呼喚一縷冰靈，用寒氣拖慢敵人, flavor_zh: 空氣中凝出細碎的冰晶，聚成一個人形}
     - {id: summon_thunder, species: summon, min_tier: 2, keyword: charged, skeleton: summon, effect: {type: summon, unit: summon_thunder_spirit}, theme: lightning, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 召喚雷靈, concept_zh: 呼喚一縷雷靈，電弧在它身邊亂竄, flavor_zh: 一道細電落地，凝成一團跳動的光}

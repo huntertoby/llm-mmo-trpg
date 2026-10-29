@@ -15,6 +15,10 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 產生器先請 LLM 提議（失敗退回組合器與技能池，候選仍湊滿）；題目、嘗試次數與來源記在候選的
 ``OfferTag.llm``，run 內配額與紀錄由 :func:`offer_updates` 併入 ``RunState``。
 
+角色階級（Phase 3W-9，06 6.34.9）：候選的階級是 :func:`~trpg.skillgen.skill_tier.character_tier`；
+手寫池退回的技能（階級和角色不同）照角色階級重配成生成技能（``<原 ID>_t<階級>``），候選池也只取最低
+角色階級（``min_character_tier``）不高於角色的技能。
+
 白板（Phase 3W-4，06 6.34.1）：``roguelite.yaml`` 的 ``candidates.whiteboard`` 為真（預設）時，
 三選一一律是白板（單一效果、1 階，主動 70／被動 20／反應 10；
 :mod:`trpg.skillgen.whiteboard_candidates`），LLM 來源在這個模式下關閉；為假時走完整技能的
@@ -28,6 +32,7 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from trpg.content.battle import WeaponDef
@@ -49,11 +54,16 @@ from trpg.skillgen.candidates import (
     keyword_distribution,
 )
 from trpg.skillgen.proposal_topic import primitive_uses
+from trpg.skillgen.skill_tier import character_tier, retier
 from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates
 
+_TIER_ID = re.compile(r"^(skill_[a-z0-9_]+?)_t(\d+)$")
+
 __all__ = [
+    "at_run_tier",
     "candidate_request",
     "equip_problems",
+    "library_base",
     "make_offer",
     "offer_updates",
     "skill_defs",
@@ -76,7 +86,7 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         keyword_counts=keyword_distribution(held, library),
         weapon_class=weapon.weapon_class,
         seed=Rng(run.seed).fork(f"offer/{run.offers_made}").next_u32(),
-        tier=library.roguelite.offer_tier(run.level),
+        tier=character_tier(library, run.level),  # 角色階級（3W-9：技能預算用角色階級，同一個函式）
         behavior=dict(run.behavior),
         hero_attributes=dict(run.hero.attributes),  # 新技能跟主屬性（Phase 3H-3）
         weapon_attrs=weapon_scaling_attrs(weapon),  # 武器技看手上武器（Phase 3H-7）
@@ -84,9 +94,42 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         llm_uses=dict(run.llm_uses),  # run 內配額（Phase 4-L6）
         # 進化前的技能也排除（Phase 3-26b：進化後原技能不再出現在候選）
         exclude=frozenset(
-            (*run.hero.skills, *run.bench, *(r.base_id for r in run.evolutions.values()))
+            (
+                *run.hero.skills,
+                *run.bench,
+                *(r.base_id for r in run.evolutions.values()),
+                *(
+                    b
+                    for s in (*run.hero.skills, *run.bench)
+                    if (b := library_base(library, s)) is not None
+                ),
+            )
         ),
     )
+
+
+def library_base(library: ContentLibrary, skill_id: str) -> str | None:
+    """``skill_id`` 對應的手寫技能 ID：本身在內容庫裡，或是手寫技能重配到角色階級後的
+    ``<原 ID>_t<階級>``（3W-9）；都不是時 ``None``（生成技能）。"""
+    if skill_id in library.skills:
+        return skill_id
+    found = _TIER_ID.match(skill_id)
+    if found is not None and found.group(1) in library.skills:
+        return found.group(1)
+    return None
+
+
+def at_run_tier(library: ContentLibrary, skill: SkillDef, tier: int) -> SkillDef:
+    """技能換到角色階級 ``tier``（3W-9，:func:`~trpg.skillgen.skill_tier.retier`）；階級相同時原樣
+    回傳。手寫技能不能改內容庫，重配後成為一招生成技能，ID 是 ``<原 ID>_t<階級>``（再升階時換成新
+    階級的後綴）；生成技能沿用 ID。候選也走這裡，所以卡片上的數字就是拿到後的數字。"""
+    if skill.tier == tier:
+        return skill
+    done = retier(library, skill, tier)
+    base = library_base(library, skill.id)
+    if base is None:
+        return done
+    return done.model_copy(update={"id": f"{base}_t{tier}"})
 
 
 def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffer:
@@ -112,7 +155,7 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
         )
         tier = request.tier
     top = top_attribute(run.hero.attributes)
-    candidates = tuple(c.skill for c in found)
+    candidates = tuple(at_run_tier(library, c.skill, tier) for c in found)
     return SkillOffer(
         reason="level_up" if reason == "level_up" else "reroll",
         tier=tier,

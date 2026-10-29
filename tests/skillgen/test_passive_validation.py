@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from tests.skillgen.helpers import lib, rules_of, violations
 from trpg.content.skills import SkillDef
+from trpg.skillgen.validate import structural_rarity
 
 
 def passive(**overrides: Any) -> SkillDef:
@@ -65,8 +66,10 @@ def test_max_per_round_is_between_one_and_three() -> None:
             passive(trigger=_trigger(max_per_round=bad))
 
 
-def test_a_passive_below_epic_is_rejected() -> None:
-    assert any(r.startswith("rarity") for r in rules_of(passive(rarity="rare")))
+def test_a_passive_below_epic_is_only_a_marker() -> None:
+    # 3W-9：稀有度只是「長得多複雜」的標記，不再擋（6.34.9）；被動的結構算出來是史詩
+    assert not any(r.startswith("rarity") for r in rules_of(passive(rarity="rare")))
+    assert structural_rarity(passive(rarity="rare"), lib()) == "epic"
 
 
 def test_a_passive_must_be_a_spell_with_any_weapon() -> None:

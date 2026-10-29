@@ -326,14 +326,17 @@ def _has_status(ctx: Ctx, beneficial: bool) -> bool:
 
 
 def build_shape(ctx: Ctx, core: list[str], only: tuple[str, ...] | None = None) -> None:
-    """形狀（骨架允許、稀有度夠、核心原語接受；``only`` 再限縮），再依形狀的參數範圍隨機填值。"""
+    """形狀（骨架允許、稀有度夠、角色階級已開放、核心原語接受；``only`` 再限縮），再依形狀的參數
+    範圍隨機填值。"""
     shapes = ctx.library.ruleset.shapes.by_id()
+    tiers = ctx.library.budget.min_character_tier.shapes
     allowed = [
         s
         for s in ctx.skeleton.shapes
         if s not in _HAND_WRITTEN_SHAPES
         and (only is None or s in only)
         and rarity_rank(shapes[s].min_rarity) <= ctx.rank
+        and tiers.get(s, 1) <= ctx.tier
         and all(_accepts(ctx.primitive(p), s) for p in core)
     ]
     if not allowed:
@@ -357,6 +360,9 @@ def _shape_param(ctx: Ctx, name: str, low: int, high: int, allow_weapon: bool) -
         return 0 if zero else rng.randint(max(low, ctx.rules.structure.cross_min_range), high)
     if name == "range":
         return rng.randint(min(max(low, ctx.rules.structure.other_min_range), high), high)
+    table = ctx.library.budget.min_character_tier
+    if ctx.shape == "line" and name == "size" and ctx.tier < table.line_tier:
+        high = max(low, min(high, table.line_length - 1))  # 整排直線（長 6）要 3 階（3W-9）
     return rng.randint(low, high)
 
 
@@ -969,8 +975,14 @@ _HAND_WRITTEN_SHAPES = frozenset({"object_then_tile", "unit_then_tile", "unit_pa
 
 def _composable(ctx: Ctx, name: str) -> bool:
     """組合器可以使用的原語：改寫規則型（Phase 3C-4a 的 ``grant_ap`` 等）與場景物件原語
-    （3C-5a）只給手寫技能。"""
-    return ctx.primitive(name).category != "rule_rewrite" and name not in _HAND_WRITTEN_PRIMITIVES
+    （3C-5a）只給手寫技能；角色階級（``ctx.tier``）還沒開放的原語不用（最低角色階級表，3W-9，
+    驗證器同源）。"""
+    tier = ctx.library.budget.min_character_tier.primitives.get(name, 1)
+    return (
+        ctx.primitive(name).category != "rule_rewrite"
+        and name not in _HAND_WRITTEN_PRIMITIVES
+        and tier <= ctx.tier
+    )
 
 
 def _match_names(match: SkillMatch, field: str) -> set[str]:

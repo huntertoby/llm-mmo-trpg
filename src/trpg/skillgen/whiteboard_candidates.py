@@ -47,6 +47,7 @@ from trpg.skillgen.candidates import (
 )
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.random_composer import ComposeError
+from trpg.skillgen.validate import minimum_tier
 from trpg.skillgen.whiteboard import (
     WHITEBOARD_KINDS,
     WhiteboardKind,
@@ -148,6 +149,7 @@ class _Maker:
             skill
             for skill_id in sorted(self.library.skills)
             if (skill := self.library.skills[skill_id]).tier <= tier
+            and minimum_tier(skill, self.library) <= tier  # 最低角色階級（3W-9，6.34.9）
             and skill.rarity != "legendary"
             and skill.form_id is None
             and skill.kind in WHITEBOARD_KINDS

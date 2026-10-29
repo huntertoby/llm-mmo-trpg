@@ -15,6 +15,8 @@
 - 分歧進化（Phase 3-26b）：``skill_usage`` 每招的用法統計、``evolutions`` 進化紀錄（進化後的技能
   定義也放在 ``generated_skills``）；
   邏輯在 ``trpg.roguelite.growth`` 與 ``trpg.skillgen.evolution``。
+- ``skill_tier``（Phase 3W-9）：主角技能目前用的階級（＝角色階級；升階時重配，見
+  ``trpg.roguelite.retier``）。
 - ``generated_skills``：主角目前裝備與備用的 **生成技能定義**（隨機組合器的產物不在內容庫裡；讀檔與
   開戰時以 ``Ruleset.with_skills`` 加回規則包）。
 - ``plan``：開局時以種子排好的每一場（地圖、敵人、戰鬥種子）；存進存檔，所以之後改了抽選方式，
@@ -349,6 +351,10 @@ class RunState(_Model):
     （舊存檔沒有此欄位；讀檔時以上限計，見 :meth:`stamina_in`）。"""
     source: int = Field(ge=0)
     generated_skills: tuple[SkillDef, ...] = ()
+    skill_tier: int | None = Field(default=None, ge=1)
+    """主角的技能目前照哪一階的預算配數值（Phase 3W-9，06 6.34.9：技能的預算用角色階級）。和角色
+    階級不同時，下一個戰鬥之間的節點（升級）把每招照新階級重配（``trpg.roguelite.retier``）。
+    ``None`` ＝ 舊存檔（``/10`` 以前），讀檔或下一個節點時照角色階級重配一次。"""
     plan: tuple[BattlePlan, ...]
     battles_done: int = 0
     """打完（打贏）的場數，含 Boss。"""

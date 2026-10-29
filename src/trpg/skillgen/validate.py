@@ -8,7 +8,12 @@
    已由第 1 項的參數範圍檢查涵蓋）。
 3. ``exclusion.<id>``：互斥規則（4.4，規則在 ``skill_exclusions.yaml``，通用處理）。
 4. ``skeleton.*``：骨架結構（4.5）。
-5. ``rarity.*``：稀有度限制（4.6）。
+5. ``tier.*``：最低角色階級（Phase 3W-9，06 6.34.9：技能用到的內容要角色到第幾階，表在
+   ``skill_budget.yaml`` 的 ``min_character_tier``，:func:`tier_requirements`；技能的 ``tier`` 就是
+   角色階級）。``rarity.legendary``：傳說核心（改寫規則等）只出現在稀有度標記為傳說的技能（完整
+   技能）。**稀有度不再是門檻**：它是由結構自動算的「複雜度」標記（:func:`structural_rarity`，
+   原本的稀有度需求與 #58 地形格數照算），原語、形狀、骨架的「最低稀有度」只決定這個標記。
+   創角的起始技能（``provenance.origin: starter``）不受階級限制（6.34.9 創角例外）。
 6. ``budget.*``：預算區間（4.2）。
 7. （``keyword.required`` 已於 Phase 3-51 移除：沒有關鍵字的是「基礎技能」，不擋，06 6.27.1。）
 8. ``scaling.weapon``／``scaling.range``：縮放屬性（含第二屬性）在 ``skill_scaling.yaml`` 的
@@ -43,6 +48,7 @@ from trpg.content.skills import (
     SPLIT_SKELETONS,
     EffectSpec,
     SkillDef,
+    SkillRarity,
     rarity_rank,
     skill_elements,
 )
@@ -54,14 +60,21 @@ from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 __all__ = [
     "EFFECT_PARAM_RULES",
     "RARITY_STATUS_PRIMITIVES",
+    "STARTER_ORIGIN",
+    "UNGATED_ORIGINS",
     "RarityNeed",
+    "TierNeed",
     "Violation",
     "effect_count",
     "effect_param_violations",
     "forbidden_affects_violations",
     "is_core_effect",
+    "minimum_tier",
     "rarity_requirements",
     "share_violations",
+    "structural_rarity",
+    "tier_requirements",
+    "tier_violations",
     "validate_skill",
 ]
 
@@ -226,7 +239,7 @@ def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     out += _exclusion_violations(skill, library)
     report, budget_out = _budget_violations(skill, library)
     out += _skeleton_violations(skill, library, report)
-    out += _rarity_violations(skill, library)
+    out += _rarity_violations(skill, library) + tier_violations(skill, library)
     return out + budget_out + _variant_violations(skill, library, report)
 
 
@@ -282,7 +295,7 @@ def _composite_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     second = _segment_violations(follow, library, lone=_is_lone_move(follow))
     label = "動作段" if when == "after_move" else "第二段"
     out += [Violation(v.skill_id, f"followup.{v.rule}", f"{label}：{v.message}") for v in second]
-    out += _rarity_violations(skill, library)
+    out += _rarity_violations(skill, library) + tier_violations(skill, library)
     _, budget_out = _budget_violations(skill, library)
     return out + budget_out
 
@@ -724,7 +737,7 @@ def _modifier_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
                 f"收到 {skill.shape.type}",
             )
         )
-    out += _rarity_violations(skill, library)
+    out += _rarity_violations(skill, library) + tier_violations(skill, library)
     _, budget_out = _budget_violations(skill, library)
     return out + budget_out
 
@@ -1064,31 +1077,179 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
     return needs
 
 
+def structural_rarity(skill: SkillDef, library: ContentLibrary) -> SkillRarity:
+    """技能的稀有度標記（Phase 3W-9，06 6.34.9「長得多複雜」）：由目前的結構自動算——
+    :func:`rarity_requirements`（形狀、骨架、觸發、原語、狀態、條件、失手反噬、#58 地形格數）、
+    效果數量（``rarity.*.max_effects``）、變奏數（``variant_max_by_rarity``）與雙屬性縮放
+    （``dual_scaling_min_rarity``）中最高的。傳說核心（改寫規則等）算出傳說；稀有度標記為傳說的
+    技能（完整技能）維持傳說。不增加強度，也不限制能用的內容
+    （能用什麼看 :func:`tier_requirements`）。"""
+    order: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
+    legendary = rarity_rank("legendary")
+    if skill.rarity == "legendary":
+        return "legendary"
+    need = max((rarity_rank(n.minimum) for n in rarity_requirements(skill, library)), default=0)
+    count = effect_count(skill)
+    limits = library.budget.rarity
+    need = max(
+        need,
+        next((i for i, r in enumerate(order) if limits[r].max_effects >= count), legendary),
+    )
+    caps = library.ruleset.core.variant_max_by_rarity
+    variants = len(skill.variants)
+    need = max(
+        need,
+        next((i for i, r in enumerate(order) if caps.get(r, 0) >= variants), legendary),
+    )
+    if skill.secondary_scaling_attr is not None:
+        need = max(need, rarity_rank(library.ruleset.core.dual_scaling_min_rarity))
+    return order[need]
+
+
 def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
-    have = rarity_rank(skill.rarity)
+    """傳說核心只在完整技能（Phase 3W-9）：結構需要傳說（改寫規則型原語、效果數超過史詩上限……）
+    的技能，稀有度標記必須是傳說。其餘稀有度需求不再是門檻（只決定標記）。"""
+    if skill.rarity == "legendary" or structural_rarity(skill, library) != "legendary":
+        return []
+    reasons = [n.what for n in rarity_requirements(skill, library) if n.minimum == "legendary"]
+    text = "、".join(dict.fromkeys(reasons)) if reasons else f"{effect_count(skill)} 個效果"
+    return [
+        Violation(
+            skill.id,
+            "rarity.legendary",
+            f"{text}是傳說的核心，只有完整技能（稀有度傳說）能用",
+        )
+    ]
+
+
+# ---------------------------------------------------------------------------
+# 最低角色階級（Phase 3W-9，06 6.34.9）
+# ---------------------------------------------------------------------------
+
+
+STARTER_ORIGIN = "starter"
+"""創角例外（6.34.9）：``provenance.origin`` 是它的技能不受最低角色階級限制。"""
+UNGATED_ORIGINS = frozenset({"builtin", "workshop", STARTER_ORIGIN})
+"""不受最低角色階級限制的來源：手寫內容（敵人與手寫技能池，保留原本的階級與內容；候選另依
+:func:`minimum_tier` 篩）、技能工坊（開發者寫手寫技能的工具，工坊另外顯示最低角色階級）與創角的
+起始技能。"""
+
+
+@dataclass(frozen=True, slots=True)
+class TierNeed:
+    """一項階級需求：``rule`` 規則代碼（``primitive``、``shape``……）、``what`` 中文說明、
+    ``minimum`` 最低角色階級。"""
+
+    rule: str
+    what: str
+    minimum: int
+
+
+_DAMAGE_TYPES = ("damage", "delayed_damage")
+_SECOND_ELEMENT = 2
+
+
+def _damage_elements(skill: SkillDef) -> set[str]:
+    """傷害效果（含接續段）的元素（不含物理），加上技能自己的主題元素。"""
+    found = {e.value for e in skill_elements(skill)}
+    follow = skill.followup.effects if skill.followup is not None else ()
+    for effect in (*skill.effects, *follow):
+        if effect.type in _DAMAGE_TYPES and effect.element is not None:
+            found.add(effect.element.value)
+    found.discard("physical")
+    return found
+
+
+def _shape_tier_needs(skill: SkillDef, library: ContentLibrary) -> list[TierNeed]:
+    table = library.budget.min_character_tier
+    shapes = [skill.shape]
+    follow_shape = getattr(skill.followup, "shape", None)
+    if follow_shape is not None:
+        shapes.append(follow_shape)
+    needs: list[TierNeed] = []
+    for shape in shapes:
+        tier = table.shapes.get(shape.type)
+        if tier is not None:
+            needs.append(TierNeed("shape", f"形狀 {shape.type}", tier))
+        size = shape.param_values().get("size")
+        if shape.type == "line" and isinstance(size, int) and size >= table.line_length:
+            needs.append(TierNeed("line", f"直線長 {size}", table.line_tier))
+    return needs
+
+
+def _terrain_tier_needs(skill: SkillDef, library: ContentLibrary) -> list[TierNeed]:
+    table = library.budget.min_character_tier.terrain_area
+    if not table or not any(e.type in _TERRAIN_PRIMITIVES for e in skill.effects):
+        return []
+    try:
+        cells = zone_cell_count(skill, library)
+    except BudgetError:
+        return []
+    minimum = next((t.tier for t in reversed(table) if cells >= t.min_cells), None)
+    if minimum is None:
+        return []
+    return [TierNeed("terrain_area", f"升降地形影響 {cells} 格", minimum)]
+
+
+def tier_requirements(skill: SkillDef, library: ContentLibrary) -> list[TierNeed]:
+    """技能用到的內容各自要角色到第幾階（06 6.34.9 的表，``min_character_tier``；只列 2 階以上的，
+    依出現順序、不去重）。驗證器的 ``tier.*``、技能工坊、組合器、白板、閃現與 LLM 提議共用。"""
+    table = library.budget.min_character_tier
+    needs: list[TierNeed] = []
+    if skill.kind in table.kinds:
+        needs.append(TierNeed("kind", f"{skill.kind} 技能", table.kinds[skill.kind]))
+    if skill.skeleton in table.skeletons:
+        needs.append(
+            TierNeed("skeleton", f"骨架 {skill.skeleton}", table.skeletons[skill.skeleton])
+        )
+    needs += _shape_tier_needs(skill, library)
+    on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
+    follow = skill.followup.effects if skill.followup is not None else ()
+    for effect in (*skill.effects, *follow, *on_hit):
+        tier = table.primitives.get(effect.type)
+        if tier is not None:
+            needs.append(TierNeed("primitive", f"原語 {effect.type}", tier))
+    if skill.followup is not None:
+        needs.append(TierNeed("followup", "接續段", table.followup))
+    elements = _damage_elements(skill)
+    if len(elements) >= _SECOND_ELEMENT:
+        names = "、".join(sorted(elements))
+        needs.append(TierNeed("element", f"兩種元素（{names}）", table.second_element))
+    if skill.secondary_scaling_attr is not None:
+        needs.append(TierNeed("dual_scaling", "雙屬性縮放", table.dual_scaling))
+    needs += _terrain_tier_needs(skill, library)
+    return [n for n in needs if n.minimum > 1]
+
+
+def minimum_tier(skill: SkillDef, library: ContentLibrary) -> int:
+    """技能最低要角色幾階（:func:`tier_requirements` 的最大值；沒有需求時 1）。"""
+    return max((n.minimum for n in tier_requirements(skill, library)), default=1)
+
+
+def tier_violations(
+    skill: SkillDef, library: ContentLibrary, tier: int | None = None
+) -> list[Violation]:
+    """``tier``（省略 ＝ 技能的 ``tier``，即角色階級）用不到的內容。只檢查「從零產生」的技能（白板、
+    組合器、LLM 提議）；手寫內容（``builtin``）、工坊（``workshop``）與創角的起始技能
+    （``starter``）不檢查
+    （:data:`UNGATED_ORIGINS`）；由既有技能推出來的（``provenance.parents`` 非空：閃現、轉型、
+    分歧進化）保留原本的結構，新加的內容由變化模板自己的最低角色階級把關
+    （``min_tier``，6.34.9 表 3）。"""
+    if skill.provenance.origin in UNGATED_ORIGINS or skill.provenance.parents:
+        return []
+    have = skill.tier if tier is None else tier
     out: list[Violation] = []
     seen: set[tuple[str, str]] = set()
-    for need in rarity_requirements(skill, library):
-        rule, what, minimum = need.rule, need.what, need.minimum
-        if rarity_rank(minimum) > have and (rule, what) not in seen:
-            seen.add((rule, what))
+    for need in tier_requirements(skill, library):
+        if need.minimum > have and (need.rule, need.what) not in seen:
+            seen.add((need.rule, need.what))
             out.append(
                 Violation(
                     skill.id,
-                    f"rarity.{rule}",
-                    f"稀有度 {skill.rarity} 不能使用{what}（至少需要 {minimum}）",
+                    f"tier.{need.rule}",
+                    f"角色 {have} 階還不能用{need.what}（要 {need.minimum} 階）",
                 )
             )
-    limit = library.budget.rarity[skill.rarity].max_effects
-    count = effect_count(skill)
-    if count > limit:
-        out.append(
-            Violation(
-                skill.id,
-                "rarity.max_effects",
-                f"稀有度 {skill.rarity} 的技能最多 {limit} 個效果，收到 {count} 個",
-            )
-        )
     return out
 
 

@@ -116,19 +116,22 @@ def test_recipes_follow_the_tier_table_of_decision_72() -> None:
             assert recipe.species == "stance" or recipe.min_tier == 2, recipe.id
         if recipe.species in ("modifier", "dual"):
             assert recipe.min_tier == 3, recipe.id
-        if recipe.species == "summon" and recipe.keyword != "summon":
+        if recipe.species == "summon":  # 3W-9：召喚 2 階；基本召喚物 1 階只給創角
             assert recipe.min_tier == 2, recipe.id
+            assert recipe.creation_tier == (1 if recipe.keyword == "summon" else None), recipe.id
     by_tier = {
         t: {r.species for k in WHITEBOARD_KINDS for r in RULES.recipes(k, t)} for t in (1, 2, 3)
     }
-    assert by_tier[1] == {"basic", "summon"}
+    assert by_tier[1] == {"basic"}
+    created = {r.species for k in WHITEBOARD_KINDS for r in RULES.recipes(k, 1, creation=True)}
+    assert created == {"basic", "summon"}
     assert {"trap", "stance", "displace"} <= by_tier[2] and not {"modifier", "dual"} & by_tier[2]
     assert {"modifier", "dual", "trap", "stance", "displace"} <= by_tier[3]
 
 
 def test_every_keyword_has_a_whiteboard_from_tier_one() -> None:
     """潮濕、倒地、撞擊、召喚物也有白板（不必退回手寫池）；形態仍沒有。"""
-    covered = whiteboard_keywords(LIB, "active", 1)
+    covered = whiteboard_keywords(LIB, "active", 1, creation=True)  # 創角例外：召喚物（3W-9）
     assert set(LIB.keywords.ids()) - {"form"} <= covered | {"high_ground"} | {"marked"}
     assert {"wet", "prone", "collision", "summon"} <= covered
 
@@ -174,8 +177,8 @@ def test_creation_summon_gets_a_summon_whiteboard_not_a_handwritten_skill() -> N
     # 近戰的骷髏戰士會推導成「倒地」，不符合所選關鍵字，創角不再給
     assert ranged and not melee
     melee_board = compose_whiteboard(
-        3, kind="active", tier=1, library=LIB, recipe_id="summon_skeleton"
-    )
+        3, kind="active", tier=2, library=LIB, recipe_id="summon_skeleton"
+    )  # 3W-9：召喚 2 階起（1 階只給創角）
     assert melee_board.effects[0].unit == "summon_skeleton_warrior"  # 配方仍在，其他情境可出
 
 

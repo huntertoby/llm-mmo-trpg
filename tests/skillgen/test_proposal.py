@@ -302,6 +302,12 @@ def test_every_expressible_builtin_skill_round_trips() -> None:
             allowed = {("proposal", c) for c in _EXCLUDED_CODES}
             if _lib().budget.min_cost_problem(skill.kind, skill.category, skill.cost):
                 allowed.add(("rules", "cap.min_cost"))  # 內建技能不達最低花費（3-48c，列在報告）
+            # 手寫技能用到自己階級還沒開放的內容（最低角色階級，3W-9）
+            allowed |= {
+                ("rules", e.code)
+                for e in result.errors
+                if e.code.startswith("tier.") or ".tier." in e.code
+            }
             if skill.id in RANGE_BUDGET_EXCEPTIONS:  # 射程係數後超出預算範圍（3-49，列在報告）
                 allowed |= {("rules", "budget.over"), ("rules", "budget.weak")}
             assert {(e.stage, e.code) for e in result.errors} <= allowed, (skill.id, result.errors)

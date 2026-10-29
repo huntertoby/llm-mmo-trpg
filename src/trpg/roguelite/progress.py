@@ -4,7 +4,8 @@
 
 1. 戰鬥（第 i 場）→ 打贏：寫回主角 HP、法力、源力（＋戰後獎勵），加經驗；沒打贏（含輪數上限）→
    一輪失敗。
-2. 每升一級一個升級節點（＋屬性點、3 選 1 或跳過）。
+2. 每升一級一個升級節點（＋屬性點、3 選 1 或跳過）。角色升階時（3W-9，6.34.9）先把主角每招技能
+   照新階級的預算重配（``trpg.roguelite.retier``），候選也用新階級。
 3. 打完的場數在 ``campfire_after`` 內 → 營火（進入時 HP、法力回滿，源力 ＋N；可重骰一次）。
 4. 下一場；下一場是 Boss 戰時源力至少 ``boss_floor``。Boss 戰打贏 → 一輪勝利。
 """
@@ -26,6 +27,7 @@ from trpg.roguelite.errors import ChoiceError, NodeConflictError
 from trpg.roguelite.gear import equip, gear_offer_node, run_loadout, take_gear
 from trpg.roguelite.growth import battle_levels, respec, set_loadout, spend_points
 from trpg.roguelite.offers import make_offer, offer_updates, take_candidate
+from trpg.roguelite.retier import sync_skill_tier
 from trpg.roguelite.start import allocation_problems, apply_allocation
 from trpg.roguelite.state import (
     AllocateChoice,
@@ -285,6 +287,8 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
                 }
             ),
         )
+        # 升階重算（3W-9，6.34.9）：角色升階的當下（戰鬥之間）每招照新階級的預算重配
+        leveled = sync_skill_tier(library, leveled)
         offer = make_offer(library, leveled, "level_up")
         node = LevelUpNode(
             level=leveled.level, points=rules.attribute_points_per_level, offer=offer
@@ -296,6 +300,7 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
                 **offer_updates(leveled, offer),
             }
         )
+    run = sync_skill_tier(library, run)  # 舊存檔（skill_tier 為空）在戰鬥之間照角色階級重配一次
     done = run.battles_done
     if done >= len(run.plan):
         return run.model_copy(update={"node": EndedNode(victory=True)})

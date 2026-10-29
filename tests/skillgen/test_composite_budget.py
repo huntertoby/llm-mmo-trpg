@@ -70,7 +70,9 @@ def test_the_workshop_check_lists_both_segments() -> None:
     assert result.minimum_rarity == "rare"
 
 
-def test_a_common_composite_is_flagged_by_the_workshop_check() -> None:
+def test_a_common_composite_is_only_marked_by_the_workshop_check() -> None:
+    # 3W-9：稀有度只是標記，普通的複合技能不再被擋；最低稀有度仍照結構算
     result = check_draft({**combo_data(), "kind": "active", "rarity": "common"}, library())
     assert result.complete, result.missing_steps
-    assert "rarity.composite" in [p.rule for p in result.problems]
+    assert "rarity.composite" not in [p.rule for p in result.problems]
+    assert result.minimum_rarity == "rare"

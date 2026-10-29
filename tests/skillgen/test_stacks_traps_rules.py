@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from tests.skillgen.helpers import lib, rules_of
 from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import skill_budget
+from trpg.skillgen.validate import tier_violations
 
 
 def variant(base_id: str, **overrides: Any) -> SkillDef:
@@ -111,9 +112,16 @@ def test_unknown_stack_ids_are_rejected() -> None:
 def test_the_enabled_skeletons_require_their_structural_primitive_and_rarity() -> None:
     plain = [{"type": "damage", "dice": "1d8", "element": "lightning"}]
     assert "skeleton.required_primitive" in rules_of(variant("skill_static_palm", effects=plain))
-    assert any(
+    # 3W-9：稀有度只是標記；陷阱改由最低角色階級把關（從零產生的技能 1 階不能用陷阱骨架）
+    assert not any(
         r.startswith("rarity") for r in rules_of(variant("skill_cinder_mine", rarity="common"))
     )
+    mine = lib().skills["skill_cinder_mine"]
+    fresh = mine.model_copy(
+        update={"provenance": mine.provenance.model_copy(update={"origin": "level_up"})}
+    )
+    assert {v.rule for v in tier_violations(fresh, lib(), 1)} >= {"tier.skeleton"}
+    assert tier_violations(fresh, lib(), 2) == []
 
 
 def test_consume_stack_adds_expected_bonus_points() -> None:

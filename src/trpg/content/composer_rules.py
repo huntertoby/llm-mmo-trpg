@@ -440,6 +440,9 @@ class WhiteboardRecipe(ContentModel):
     """最低角色階級（6.34.9：召喚、陷阱、姿態、位移 2 階；修正型被動、雙屬性縮放 3 階）。"""
     max_tier: int | None = Field(default=None, ge=1)
     """最高角色階級（數值固定的配方，例如不同點數的姿態狀態，只在對得上預算的階級出）。"""
+    creation_tier: int | None = Field(default=None, ge=1)
+    """創角例外（6.34.9，Phase 3W-9）：創角的起始技能可以在這一階就用這個配方（例如 1 階的召喚
+    白板），不受 ``min_tier`` 限制；三選一照 ``min_tier``。"""
     condition: dict[str, Any] | None = None
     """核心效果的條件（潮濕、倒地、撞擊的「利用者」白板：條件傷害本身算一個核心效果）。"""
     rider: dict[str, Any] | None = None
@@ -458,8 +461,6 @@ class WhiteboardRules(ContentModel):
     """升級與任務三選一的種類比例（‰；07 7.6：主動 70％、被動 20％、反應 10％），總和 1000。"""
     tier: int = Field(default=1, ge=1)
     """沒有指定階級時的階級（創角的起始技能一律 1 階，6.34.9 創角例外）。"""
-    shape_min_tier: dict[str, int] = Field(default_factory=dict)
-    """形狀的最低角色階級（6.34.9：3×3 要 2 階；沒列出的 1 階就有）。"""
     ap_cost: int = Field(default=2, ge=1, le=3)
     """主動白板的預設 AP。"""
     cooldown: IntRange
@@ -479,8 +480,6 @@ class WhiteboardRules(ContentModel):
     """召喚白板的冷卻上限（冷卻換來較高的可用預算，讓不同強度的召喚物都落在 70～100%）。"""
     self_ap_cost: int = Field(default=1, ge=1, le=3)
     """自身位移、互換與自身增益白板的 AP（單一效果的點數固定，AP 2 湊不到預算下限）。"""
-    dual_min_tier: int = Field(default=3, ge=1)
-    """雙屬性縮放白板的最低角色階級（6.34.9）。"""
     active: tuple[WhiteboardRecipe, ...] = ()
     passive: tuple[WhiteboardRecipe, ...] = ()
     reaction: tuple[WhiteboardRecipe, ...] = ()
@@ -505,12 +504,22 @@ class WhiteboardRules(ContentModel):
             raise ValueError("反應配方必須有 reaction_event")
         return self
 
-    def recipes(self, kind: str, tier: int | None = None) -> tuple[WhiteboardRecipe, ...]:
-        """``kind``（active／passive／reaction）的配方；給了 ``tier`` 就只留角色階級開放的。"""
+    def recipes(
+        self, kind: str, tier: int | None = None, *, creation: bool = False
+    ) -> tuple[WhiteboardRecipe, ...]:
+        """``kind``（active／passive／reaction）的配方；給了 ``tier`` 就只留角色階級開放的
+        （``creation``：創角的起始技能另外開放 ``creation_tier`` 不高於 ``tier`` 的配方）。"""
         found = {"active": self.active, "passive": self.passive, "reaction": self.reaction}[kind]
         if tier is None:
             return found
-        return tuple(r for r in found if r.min_tier <= tier and (r.max_tier or tier) >= tier)
+
+        def opened(r: WhiteboardRecipe) -> bool:
+            low = r.min_tier
+            if creation and r.creation_tier is not None:
+                low = min(low, r.creation_tier)
+            return low <= tier and (r.max_tier or tier) >= tier
+
+        return tuple(r for r in found if opened(r))
 
     def reserved_statuses(self) -> frozenset[str]:
         """白板配方專用的狀態（姿態）：完整模式的組合器不抽它們，既有種子的輸出不變。"""

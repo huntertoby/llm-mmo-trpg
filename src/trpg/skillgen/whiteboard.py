@@ -30,7 +30,7 @@ from pydantic import ValidationError
 
 from trpg.content.composer_rules import WhiteboardRecipe, WhiteboardRules
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import SkillDef, SkillRarity, rarity_rank, weapon_problem
+from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.budget import BudgetError
@@ -43,7 +43,7 @@ from trpg.skillgen.random_composer import (
     default_library,
 )
 from trpg.skillgen.scaling import retarget_scaling
-from trpg.skillgen.validate import rarity_requirements, validate_skill
+from trpg.skillgen.validate import STARTER_ORIGIN, structural_rarity, validate_skill
 from trpg.skillgen.whiteboard_check import (
     is_whiteboard,
     whiteboard_keywords_of,
@@ -70,11 +70,16 @@ def _rules(library: ContentLibrary) -> WhiteboardRules:
 
 
 def whiteboard_keywords(
-    library: ContentLibrary, kind: str = "active", tier: int | None = None
+    library: ContentLibrary,
+    kind: str = "active",
+    tier: int | None = None,
+    *,
+    creation: bool = False,
 ) -> frozenset[str]:
     """``kind`` 的白板配方涵蓋的關鍵字（沒有配方的關鍵字由呼叫端退回別的來源）；給了 ``tier``
-    就只算該角色階級開放的配方。沒有關鍵字的基礎白板用 ``whiteboard.generic_keyword``。"""
-    return frozenset(r.keyword for r in _rules(library).recipes(kind, tier))
+    就只算該角色階級開放的配方（``creation``：創角例外另外開放的，3W-9）。沒有關鍵字的基礎白板用
+    ``whiteboard.generic_keyword``。"""
+    return frozenset(r.keyword for r in _rules(library).recipes(kind, tier, creation=creation))
 
 
 # ---------------------------------------------------------------------------
@@ -109,10 +114,11 @@ def _pick_recipe(
     weapon_class: str | None,
     tier: int,
     recipe_id: str | None = None,
+    creation: bool = False,
 ) -> WhiteboardRecipe:
     options = [
         r
-        for r in rules.recipes(kind, tier)
+        for r in rules.recipes(kind, tier, creation=creation)
         if (keyword is None or r.keyword == keyword)
         and (recipe_id is None or r.id == recipe_id)
         and _category_options(r, weapon_class)
@@ -148,13 +154,9 @@ def _weapon_req(
 def _min_rarity(
     base: dict[str, Any], effects: list[dict[str, Any]], library: ContentLibrary
 ) -> str:
-    """配方需要的最低稀有度（不增加強度，只是開放原語、狀態、形狀與觸發時機）。"""
-    draft = SkillDef.model_validate({**base, "rarity": "epic", "effects": effects})
-    ranks = [rarity_rank(n.minimum) for n in rarity_requirements(draft, library)]
-    if base.get("secondary_scaling_attr") is not None:  # 雙屬性縮放（驗證器另查）
-        ranks.append(rarity_rank(library.ruleset.core.dual_scaling_min_rarity))
-    order: tuple[SkillRarity, ...] = ("common", "rare", "epic")
-    return order[min(max(ranks, default=0), len(order) - 1)]
+    """稀有度標記（Phase 3W-9：由結構自動算，不增加強度，也不限制內容）。"""
+    draft = SkillDef.model_validate({**base, "rarity": "common", "effects": effects})
+    return structural_rarity(draft, library)
 
 
 def _active_cost(ctx: Ctx, rules: WhiteboardRules) -> dict[str, Any]:
@@ -212,9 +214,11 @@ def _base(
     }
 
 
-def _shapes(rules: WhiteboardRules, recipe: WhiteboardRecipe, tier: int) -> tuple[str, ...]:
-    """配方的形狀裡，角色階級已開放的（``shape_min_tier``；例如 3×3 要 2 階，6.34.9）。"""
-    found = tuple(s for s in recipe.shapes if rules.shape_min_tier.get(s, 1) <= tier)
+def _shapes(library: ContentLibrary, recipe: WhiteboardRecipe, tier: int) -> tuple[str, ...]:
+    """配方的形狀裡，角色階級已開放的（最低角色階級表 ``min_character_tier.shapes``，驗證器同源；
+    例如 3×3 要 2 階，6.34.9）。"""
+    table = library.budget.min_character_tier.shapes
+    found = tuple(s for s in recipe.shapes if table.get(s, 1) <= tier)
     if not found:
         raise Retry
     return found
@@ -235,7 +239,7 @@ def _attempt_active(
     skeleton = library.skeletons[recipe.skeleton]
     ap = int(recipe.skill.get("ap_cost", rules.ap_cost))
     ctx = Ctx(library, rng, skeleton, "epic", tier, category, ap, _theme(recipe))
-    build_shape(ctx, [str(recipe.effect["type"])], only=_shapes(rules, recipe, tier))
+    build_shape(ctx, [str(recipe.effect["type"])], only=_shapes(library, recipe, tier))
     _build_effect(ctx, recipe)
     base = _base(recipe, seed, tier, category, ctx)
     base |= {"weapon_req": req, "scaling_attr": scaling, "ap_cost": ap}
@@ -301,7 +305,7 @@ def _attempt_reaction(
     build_shape(
         ctx,
         [] if recipe.shapes == ("self",) else [str(recipe.effect["type"])],
-        only=_shapes(rules, recipe, tier),
+        only=_shapes(library, recipe, tier),
     )
     _build_effect(ctx, recipe)
     mana = rng.randint(rules.reaction_mana.min, rules.reaction_mana.max)
@@ -460,6 +464,7 @@ def compose_whiteboard(
     avoid_attr: Attribute | None = None,
     held: Mapping[str, str] | None = None,
     recipe_id: str | None = None,
+    starter: bool = False,
 ) -> SkillDef:
     """依種子組出一個白板技能（``id`` 為 ``skill_rand_<seed>``；單一效果模式）。
 
@@ -471,7 +476,9 @@ def compose_whiteboard(
     創角用）；
     ``weapon_class``：``melee``／``ranged``／``focus``，給了就只組出這類武器能用的白板；
     ``hero_attributes``／``avoid_attr``：與完整模式相同，縮放屬性跟著主角最高屬性（新方向避開）；
-    雙屬性縮放白板的屬性由配方決定，不跟著主角；``recipe_id``：只用這個配方（測試與覆蓋表用）。
+    雙屬性縮放白板的屬性由配方決定，不跟著主角；``recipe_id``：只用這個配方（測試與覆蓋表用）；
+    ``starter``：創角的起始技能（6.34.9 創角例外：來源記成 ``starter``，不受最低角色階級限制，例如
+    1 階的召喚白板）。
     組不出來（沒有配方、或 ``max_attempts`` 次都做不出合格的白板）拋出 :class:`ComposeError`。
     """
     lib = library if library is not None else default_library()
@@ -483,12 +490,18 @@ def compose_whiteboard(
     for _ in range(rules.max_attempts):
         recipe = _pick_recipe(
             rng, rules, kind, keyword=keyword, weapon_class=weapon_class, tier=tier,
-            recipe_id=recipe_id,
+            recipe_id=recipe_id, creation=starter,
         )  # fmt: skip
         try:
             skill = _attempt(rng, lib, seed, kind, recipe, weapon_class=weapon_class, tier=tier)
         except (Retry, ValidationError, BudgetError):
             continue
+        if starter:
+            skill = skill.model_copy(
+                update={
+                    "provenance": skill.provenance.model_copy(update={"origin": STARTER_ORIGIN})
+                }
+            )
         if hero_attributes is not None and recipe.species != "dual":
             skill = retarget_scaling(skill, hero_attributes, lib, avoid=avoid_attr)
         if not _keyword_matches(skill, recipe, keyword, lib):

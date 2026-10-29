@@ -430,7 +430,7 @@ def test_subset_fits_within_the_token_budget() -> None:
     assert subset.tokens <= DEFAULT_SUBSET_TOKEN_BUDGET
     assert DEFAULT_SUBSET_TOKEN_BUDGET < PROMPT_TOKEN_BUDGET
     small = select_subset(
-        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=2_700
+        _lib(), ProposalRequest(tier=2, rarity="legendary", skeleton="control"), token_budget=2_700
     )
     assert small.tokens <= 2_700
     assert len(small.conditions) < len(subset.conditions)
