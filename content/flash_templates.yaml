@@ -313,7 +313,7 @@ extra_major:
   - {id: shield_mending, category: deepen, op: shield_status, only: shield, status: shielded_mending, prefix_zh: 回春, summary_zh: 加深：護盾結束時（打破或到期）回復少量生命}
   - {id: shield_wet, category: bridge, op: shield_status, only: shield, status: shielded_wet, keyword: wet, prefix_zh: 水幕, summary_zh: 橋接潮濕：護盾被打破時，在自己腳下造出一灘水}
   - {id: shield_marking, category: bridge, op: shield_status, only: shield, status: shielded_marking, keyword: marked, prefix_zh: 烙印, summary_zh: 橋接標記：護盾被打破時，對打破它的攻擊者施加標記}
-  - {id: shield_charged, category: bridge, op: shield_status, only: shield, status: shielded_charged, keyword: charged, needs_held: true, prefix_zh: 帶電, summary_zh: 橋接帶電：護盾被打破時，對打破它的攻擊者造成小量雷電傷害}
+  - {id: shield_charged, category: bridge, op: shield_status, only: shield, status: shielded_charged, keyword: charged, prefix_zh: 帶電, summary_zh: 橋接帶電：護盾被打破時，對打破它的攻擊者造成小量雷電傷害}
   - {id: summon_deepen, category: deepen, op: summon_deepen, only: summon, prefix_zh: 強化, summary_zh: 加深：召喚物更強壯，並多一個小特性}
   - {id: summon_count, category: deepen, op: summon_count, only: summon, prefix_zh: 雙生, summary_zh: 加深：一次召喚 2 隻較弱的召喚物}
   - {id: summon_bridge, category: bridge, op: summon_bridge, only: summon, prefix_zh: 灌注, summary_zh: "橋接{keyword}：召喚物多帶一個{keyword}灌注"}

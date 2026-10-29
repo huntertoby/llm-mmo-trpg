@@ -154,7 +154,8 @@ def test_held_keywords_order_the_bridge_options() -> None:
         for v in source.ranked(LIB, marked_first, "bridge", board)
         if v.template.startswith("shield_")
     ]
-    assert set(plain) == set(ranked) == {"shield_wet", "shield_marking"}  # 沒持有雷電就沒有帶電
+    # 橋接一直可以出現，持有對應關鍵字的排前面（06 6.34，玩法 PM 567967d0）
+    assert set(plain) == set(ranked) == {"shield_wet", "shield_marking", "shield_charged"}
     assert ranked[0] == "shield_marking"
     charged_held = FlashRequest(
         board, acquire(board.id), SkillUsage(), 7, held_keywords={"charged": 5}, tier=2
