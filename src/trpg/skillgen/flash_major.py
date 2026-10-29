@@ -725,19 +725,14 @@ def apply_extra(
 def _apply_summon(
     library: ContentLibrary, skill: SkillDef, template: ExtraMajorTemplate, variation: Variation
 ) -> SkillDef | None:
+    """召喚類補充大變化：模板的 ``op`` 就是召喚分歧進化的模板 ID（``summon_deepen``、
+    ``summon_count``、``summon_bridge``），只做那一支。"""
     if not is_summon_skill(skill):
         return None
-    wanted = {
-        "summon_deepen": "summon_deepen",
-        "summon_count": "summon_count",
-        "summon_bridge": "summon_bridge",
-    }[template.op]
     # 指定的橋接關鍵字：以「持有者其他技能持有很多」讓它排在最前面
     held = {} if variation.keyword is None else {variation.keyword: _PREFER}
-    for option in summon_evolution_options(library, _request(skill, held)):
-        if option.template != wanted:
-            continue
-        if wanted == "summon_bridge" and option.keyword != variation.keyword:
+    for option in summon_evolution_options(library, _request(skill, held), only=template.op):
+        if template.op == "summon_bridge" and option.keyword != variation.keyword:
             continue
         return option.skill if meets_floor(skill, option.skill, library) else None
     return None

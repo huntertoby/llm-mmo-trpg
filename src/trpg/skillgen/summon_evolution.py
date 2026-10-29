@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from trpg.content.keyword_derive import derive_keywords
@@ -200,18 +201,21 @@ def _count(skill: SkillDef, unit: str, library: ContentLibrary) -> Evolution | N
 
 
 def summon_evolution_options(
-    library: ContentLibrary, request: EvolutionRequest
+    library: ContentLibrary, request: EvolutionRequest, *, only: str | None = None
 ) -> tuple[Evolution, ...]:
-    """召喚技能的分歧進化：加深、橋接、數量型（依序；做不出來的省略，所以可能只有 0～3 支）。"""
+    """召喚技能的分歧進化：加深、橋接、數量型（依序；做不出來的省略，所以可能只有 0～3 支）。
+    ``only`` 給了就只做那一支（``summon_deepen``／``summon_bridge``／``summon_count``；閃現的
+    補充大變化用，3W-R2），不先產生全部。"""
     skill = request.skill
     unit = skill.effects[_summon_index(skill)].unit
     if unit is None or skill.effects[_summon_index(skill)].duration is None:
         return ()
-    options = (
-        _deepen(skill, unit, library),
-        _bridge(skill, unit, request, library),
-        _count(skill, unit, library),
+    builders: tuple[tuple[str, Callable[[], Evolution | None]], ...] = (
+        (_DEEPEN, lambda: _deepen(skill, unit, library)),
+        (_BRIDGE, lambda: _bridge(skill, unit, request, library)),
+        (_COUNT, lambda: _count(skill, unit, library)),
     )
+    options = (build() for name, build in builders if only is None or name == only)
     return tuple(o for o in options if o is not None)
 
 
