@@ -66,3 +66,5 @@
 - 鱗族被動小修（玩法 PM 寫進 07 7.7 後）。
 - **3T-6 驗收**（2026-10-29）：報告 `Phase3T-6報告.md`。`engine/gear/`（`core`、`charge`、`enhance`、`reactions`、`state`、`summon`、`triggers`、`view`）、`engine/summons/`（`core`、`control`、`variants`）、`engine/race/`（`skills`）；約 80 處呼叫端改新路徑、無相容轉發；快照不變。合併後全量通過（同 Phase4 4.12）。
 - **3T-8 驗收**（2026-10-29）：報告 `Phase3T-8報告.md`。`SkeletonDef.composer`（`ComposerTraits`，13 個骨架 YAML 填 `composer:`），15 組骨架 ID 分支改讀資料；`acting_unit`、`owner_order_index`、`insert_in_order` 改公開。組合器 6000 次呼叫前後 SHA-256 相同。待決：`content/skills/` 套件內部底線名稱、測試白箱匯入、`_wants_special` 機率表 → 接受現狀（收益低）。
+- **3T-7 驗收**（2026-10-29）：報告 `Phase3T-7報告.md`。`BattleScreen.tsx` 1268 → 397 行（`battle/tileClick.ts` 的 `decideTileClick` 純函式＋38 列表格測試；9 個 hook；`screens/battle/` 子元件）；`styles.css` → `client/src/styles/` 11 檔＋`index.css`（規則 696 個單位缺 0 多 0、層疊順序翻轉 15 組人工確認安全）。合併後全量（除 llm）：pytest 8766、vitest 1145、mypy、lint-imports、build、重播（narrow_halls 種子 19）全過。開發 PM 在內建瀏覽器（1600×900）補測頂列四個彈出面板（反應設定、隊友指令、圖例、版面）：都展開在畫面內、Esc 關閉；排版煙霧檢查全 PASS。待決（Context、CSS 重複選擇器規則、jsdom／testing-library）→ 之後需要時再排。
+- **4-L9 延後期間的整理全部完成**（3T-6、3T-7、3T-8、3R-4）。
