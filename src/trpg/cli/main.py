@@ -400,7 +400,13 @@ def _add_llm_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser
     propose = llm_commands.add_parser(
         "propose", help="請 LLM 提議技能（重試＋退回），印出每題結果與統計摘要"
     )
-    propose.add_argument("--tier", type=int, choices=range(1, 6), default=1, help="階級（預設 1）")
+    propose.add_argument(
+        "--tier",
+        type=int,
+        choices=range(1, 6),
+        default=None,
+        help="角色階級（預設 1；--mock 時每題自動選 Mock 答得出的最低階級）",
+    )
     propose.add_argument(
         "--rarity",
         choices=("common", "rare", "epic", "legendary"),

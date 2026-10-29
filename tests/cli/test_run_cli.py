@@ -171,12 +171,12 @@ def test_run_auto_spends_skill_points_and_shows_levels(
 @pytest.mark.parametrize(
     "seed",
     [
-        2,
+        3,
         # 3W-4b 起起始技能是白板，種子 5 的一輪不再出分歧進化；整支測試 3W-5 會改寫
         pytest.param(5, marks=pytest.mark.xfail(reason="3W-5 改寫", strict=False)),
     ],
 )  # 3-33e1／e2a／e2b：種子 1、4 的一輪不再進化；3I-1、3I-3 改用 4、5；3J-4b 開局池改變，4 改為 3；
-# 3W-9 升階重算與候選照角色階級後種子 3 不再進化，改 2
+# 3W-9 升階重算與候選照角色階級後種子 3 不再進化，改 2；3W-9b 重配維持比例後種子 2 不再進化，改回 3
 @pytest.mark.slow
 def test_run_auto_reaches_a_branching_evolution(
     seed: int, capsys: pytest.CaptureFixture[str]

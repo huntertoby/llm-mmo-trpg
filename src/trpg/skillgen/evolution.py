@@ -439,12 +439,13 @@ def _tuned(
     extra: Sequence[dict[str, Any]] = (),
     extra_knobs: Sequence[Knob] = (),
     effect_knobs: Sequence[Knob] = (),
+    target_ratio: Fraction | None = None,
 ) -> SkillDef | None:
     """調整強度後通過全部驗證的技能；不合格時 ``None``。
 
     ``floor``（Phase 3W-2）：調整後的 :func:`budget_power` 至少要有這麼多（閃現的強度下限）。
     ``extra``／``extra_knobs``：``attempt`` 裡其他要調的字典（接續段的效果、修正規則的 change），
-    旋鈕的 ``index`` 是它在 ``extra`` 裡的位置。"""
+    旋鈕的 ``index`` 是它在 ``extra`` 裡的位置。``target_ratio``：指定的目標比例（3W-9b）。"""
     trial = [dict(e) for e in effects]
     knobs = _knobs(attempt["category"], trial, library)
     knobs += [Knob(len(trial) + k.index, k.field, k.values, k.weight) for k in extra_knobs]
@@ -460,7 +461,16 @@ def _tuned(
     if floor is not None and min_ratio is None:
         return None
     try:
-        if not tune(rng, library, attempt, trial, knobs, extra=extra, min_ratio=min_ratio):
+        if not tune(
+            rng,
+            library,
+            attempt,
+            trial,
+            knobs,
+            extra=extra,
+            min_ratio=min_ratio,
+            target_ratio=target_ratio,
+        ):
             return None
         # 縮放屬性收進允許範圍（3H-7；效果變了主題可能跟著變）
         evolved = fit_scaling(SkillDef.model_validate({**attempt, "effects": trial}), library)
@@ -642,10 +652,12 @@ def retune(
     extra: Sequence[dict[str, Any]] = (),
     extra_knobs: Sequence[Knob] = (),
     effect_knobs: Sequence[Knob] = (),
+    target_ratio: Fraction | None = None,
 ) -> SkillDef | None:
     """只用 ``attempt`` 的骨架與代價調整強度並驗證（不折抵）；不合格時 ``None``。``floor``、
     ``extra``、``extra_knobs`` 見 :func:`_tuned`；``effect_knobs`` 是效果本身另外的旋鈕（``index``
-    指向 ``effects``；Phase 3W-9 升階重算的狀態持續回合）。"""
+    指向 ``effects``；Phase 3W-9 升階重算的狀態持續回合）；``target_ratio`` 是指定的目標比例
+    （3W-9b 升階重配維持原本的比例，見 :func:`~trpg.skillgen.composer_tuning.tune`）。"""
     return _tuned(
         attempt,
         effects,
@@ -655,6 +667,7 @@ def retune(
         extra=extra,
         extra_knobs=extra_knobs,
         effect_knobs=effect_knobs,
+        target_ratio=target_ratio,
     )
 
 

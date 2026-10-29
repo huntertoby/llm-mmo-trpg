@@ -6,14 +6,19 @@
 
 **升階重算**（:func:`retier`）：角色升階的當下（戰鬥之間），每招照新階級的預算重新配數值：
 
-- 結構與閃現的變化保留（骨架、形狀、效果種類、條件、觸發都不動；閃現的 +40‰／完整技能的 +120‰
+- 結構與閃現的變化保留（骨架、效果種類、條件、觸發都不動；閃現的 +40‰／完整技能的 +120‰
   疊在上面，``budget_bonus_permille`` 原樣保留）。
 - 預算分數（:func:`~trpg.skillgen.evolution.budget_power`）不低於升階前（6.34.3 強度下限）。
-- 有強度旋鈕的（傷害、治療、護盾、延遲爆炸的骰子或武器倍率、推拉距離、狀態持續、修正幅度、接續段
-  傷害）交給預算器重調（組合器的 75～95% 目標）。
+- **維持原本的比例**（3W-9b）：重配的目標是升階前的預算比例（夾在驗證器的 70～100% 窗內），不重新
+  抽 75～95%；玩家看到的是「同一招，數字變大」。
+- 有強度旋鈕的（傷害、治療、護盾、延遲爆炸的骰子或武器倍率、推拉距離、修正幅度、接續段傷害）交給
+  預算器重調。
+- **點數固定的狀態／表面與升降地形放大效果本身**（3W-9b，``skill_budget.yaml`` 的
+  ``retier_growth``）：表面與升降地形先換成格數較多的形狀（照角色階級的形狀與地形格數表），狀態與
+  表面的持續回合可以放大到 ``stretch`` 的上限（只增不減）；不補傷害。
 - 沒有旋鈕的固定強度結構依序試：姿態換到元素姿態階梯上合適的一級、召喚物的最大 HP 加成、費用
-  （冷卻、資源）減輕；升降地形最後再試「地形＋落石」（多一個大地傷害效果，強度照預算；與 3W-2b
-  地形變化模板同一個做法）。
+  （冷卻、資源）減輕，取比例最接近目標的；升降地形放大到上限仍不到 70% 時才補「落石」（多一個大地
+  傷害效果，強度照預算；與 3W-2b 地形變化模板、位移白板的小補強同一種例外）。
 - 都做不出來時保留原本的數值（只換階級），由 :func:`retier_report` 標示「不在預算窗內」。
 
 戰鬥中不會變：重算只發生在戰鬥之間（:mod:`trpg.roguelite.progress` 的升級流程）。全部確定性：
@@ -22,7 +27,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any
@@ -37,7 +42,7 @@ from trpg.skillgen.composer_parts import Knob, effect_knobs
 from trpg.skillgen.evolution import budget_power, effect_strength_knobs, retune
 from trpg.skillgen.flash_major import fixed_strength
 from trpg.skillgen.flash_ops import Draft, base_draft, tuning_extras
-from trpg.skillgen.validate import structural_rarity, validate_skill
+from trpg.skillgen.validate import structural_rarity, tier_requirements, validate_skill
 
 __all__ = [
     "RETIER_ATTEMPTS",
@@ -52,7 +57,9 @@ RETIER_ATTEMPTS = 3
 _PUSH_PULL = frozenset({"push", "pull"})
 _SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
 _TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
+_AREA = _TERRAIN | {"create_surface"}
 _MAX_EFFECTS = 4
+_MAX_AP = 3
 _CACHE: dict[tuple[int, str, int], tuple[ContentLibrary, SkillDef]] = {}
 """重算結果的快取：鍵是內容庫 ``id``、技能 JSON、階級；值保留內容庫本身（``id`` 重用時不取錯）。"""
 _CACHE_LIMIT = 4096
@@ -66,6 +73,23 @@ def character_tier(library: ContentLibrary, level: int) -> int:
 
 def _rng(skill: SkillDef, tier: int) -> Rng:
     return Rng(0).fork(f"retier/{skill.id}/{tier}")
+
+
+@dataclass(frozen=True, slots=True)
+class _Job:
+    """一次重算的共同參數：``moved`` 換好階級的技能、``tier`` 新階級、``floor`` 強度下限（升階前的
+    預算分數；降階為 ``None``）、``target`` 目標比例（升階前的比例，夾在窗內）。"""
+
+    moved: SkillDef
+    tier: int
+    library: ContentLibrary
+    rng: Rng
+    floor: Fraction | None
+    target: Fraction | None
+
+    @property
+    def upgrade(self) -> bool:
+        return self.floor is not None
 
 
 _TUNED_FIELDS = frozenset({"dice", "multiplier_permille"})
@@ -86,30 +110,167 @@ def _param_knobs(
     return knobs
 
 
-def _knob_retune(
-    moved: SkillDef, library: ContentLibrary, rng: Rng, floor: Fraction | None
-) -> SkillDef | None:
+def _stretch_knobs(
+    effects: list[dict[str, Any]], category: str, library: ContentLibrary
+) -> list[Knob]:
+    """升階時的效果參數旋鈕（3W-9b）：``retier_growth.stretch`` 列出的參數（狀態、表面的持續回合）
+    放大到上限，而且只增不減（從目前的值起跳）；其餘參數照組合器的階梯。"""
+    stretch = library.budget.retier_growth.stretch
+    statuses = library.ruleset.statuses.by_id()
+    out: list[Knob] = []
+    for knob in _param_knobs(effects, category, library):
+        effect = effects[knob.index]
+        cap = stretch.get(str(effect["type"]), {}).get(knob.field)
+        status = statuses.get(str(effect.get("status")))
+        if cap is None or (status is not None and status.control_group is not None):
+            out.append(knob)  # 控制類狀態（移動、心智、硬控）照組合器的上限，不放大
+            continue
+        current = effect.get(knob.field)
+        start = min(knob.values) if current is None else int(current)
+        values = tuple(range(start, max(cap, start) + 1))
+        out.append(Knob(knob.index, knob.field, values, knob.weight))
+    return out
+
+
+def _knob_candidates(
+    job: _Job, moved: SkillDef | None = None, draft: Draft | None = None
+) -> Iterator[SkillDef | None]:
     """有強度旋鈕的技能：預算器依新階級重調。先只用預算器原本的旋鈕（傷害、治療、護盾、推拉距離、
-    修正幅度、接續段）；調不進窗內時再加上效果參數的旋鈕（狀態、表面的持續回合等）。"""
-    base, effects = base_draft(moved)
-    op = "followup" if moved.followup is not None else ""
-    extra, knobs = tuning_extras(op, base, library)
-    params = _param_knobs(effects, moved.category, library)
+    修正幅度、接續段）；離目標太遠時再加上效果參數的旋鈕（狀態、表面的持續回合等；升階時用
+    :func:`_stretch_knobs`）。``draft`` 給了就用它（換過形狀或費用的草稿）。"""
+    skill = job.moved if moved is None else moved
+    base, effects = base_draft(skill) if draft is None else draft
+    op = "followup" if skill.followup is not None else ""
+    extra, knobs = tuning_extras(op, base, job.library)
+    if job.upgrade:
+        params = _stretch_knobs(effects, skill.category, job.library)
+    else:
+        params = _param_knobs(effects, skill.category, job.library)
     for more in ((), params) if params else ((),):
         for attempt in range(RETIER_ATTEMPTS):
             done = retune(
                 base,
                 effects,
-                rng.fork(f"{len(more)}/{attempt}"),
-                library,
-                floor=floor,
+                job.rng.fork(f"{base['shape']['type']}/{len(more)}/{attempt}"),
+                job.library,
+                floor=job.floor,
                 extra=extra,
                 extra_knobs=knobs,
                 effect_knobs=more,
+                target_ratio=job.target,
             )
+            yield done
             if done is not None:
-                return done
-    return None
+                break  # 同一組旋鈕換亂數不會更接近目標
+
+
+def _settle(job: _Job, candidates: Iterable[SkillDef | None]) -> SkillDef | None:
+    """候選裡第一個與目標比例相差在 ``target_tolerance_permille`` 內的；都不在範圍內時取最接近的
+    （同樣接近取先出現的）。沒有目標時取第一個。"""
+    tolerance = Fraction(job.library.budget.retier_growth.target_tolerance_permille, 1000)
+    best: SkillDef | None = None
+    gap: Fraction | None = None
+    for done in candidates:
+        if done is None:
+            continue
+        if job.target is None:
+            return done
+        distance = abs(_ratio(done, job.library) - job.target)
+        if distance <= tolerance:
+            return done
+        if gap is None or distance < gap:
+            best, gap = done, distance
+    return best
+
+
+def _has_strength_knobs(moved: SkillDef, library: ContentLibrary) -> bool:
+    """技能有沒有預算器的強度旋鈕（骰子、倍率、推拉距離、修正幅度、接續段）；沒有的是「點數固定」。"""
+    base, effects = base_draft(moved)
+    op = "followup" if moved.followup is not None else ""
+    return bool(effect_strength_knobs(moved.category, effects, library)) or bool(
+        tuning_extras(op, base, library)[1]
+    )
+
+
+# ---------------------------------------------------------------------------
+# 放大格數（3W-9b：表面與升降地形）
+# ---------------------------------------------------------------------------
+
+
+def _bigger_shapes(moved: SkillDef, library: ContentLibrary) -> list[str]:
+    """表面與升降地形可以換的較大形狀（``retier_growth.area_shapes`` 裡排在目前形狀之後的；由大到
+    小）。複合技能、陷阱與沒有表面或地形效果的技能不換。"""
+    ladder = library.budget.retier_growth.area_shapes
+    if (
+        moved.shape.type not in ladder
+        or moved.kind != "active"
+        or moved.followup is not None
+        or moved.trap is not None
+        or not any(e.type in _AREA for e in moved.effects)
+    ):
+        return []
+    return list(reversed(ladder[ladder.index(moved.shape.type) + 1 :]))
+
+
+def _reshaped(moved: SkillDef, shape_id: str, library: ContentLibrary) -> SkillDef | None:
+    """``moved`` 換成形狀 ``shape_id``（射程夾在新形狀的範圍內）；角色階級還不能用時 ``None``。"""
+    shape = library.ruleset.shapes.by_id()[shape_id]
+    spec: dict[str, Any] = {"type": shape_id}
+    reach = moved.shape.range
+    limits = shape.params.get("range")
+    if limits is not None and isinstance(reach, int):
+        spec["range"] = min(max(reach, limits.min), limits.max)
+    try:
+        trial = moved.model_copy(update={"shape": moved.shape.model_validate(spec)})
+    except ValidationError:
+        return None
+    needs = tier_requirements(trial, library)
+    if max((n.minimum for n in needs), default=1) > moved.tier:
+        return None
+    return trial
+
+
+def _growth_drafts(skill: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
+    """換成較大形狀時試的費用：原本的，再往上加冷卻（``max_extra_cooldown``），最後才加 AP
+    （``max_extra_ap``，不超過 3）。"""
+    rules = library.budget.retier_growth
+    start = skill.cost.cooldown or 0
+    ap_cost = skill.ap_cost or 0  # 只有主動技能會換形狀（_bigger_shapes），一定有 AP
+    top = min(ap_cost + rules.max_extra_ap, _MAX_AP)
+    for ap in range(ap_cost, max(top, ap_cost) + 1):
+        for cooldown in range(start, start + rules.max_extra_cooldown + 1):
+            base, effects = base_draft(skill)
+            base["ap_cost"] = ap or None
+            base["cost"] = {**base["cost"], "cooldown": cooldown or None}
+            yield base, effects
+
+
+def _grown_skills(job: _Job) -> Iterator[SkillDef]:
+    for shape_id in _bigger_shapes(job.moved, job.library):
+        grown = _reshaped(job.moved, shape_id, job.library)
+        if grown is not None:
+            yield grown
+
+
+def _terrain(skill: SkillDef) -> bool:
+    return any(e.type in _TERRAIN for e in skill.effects)
+
+
+def _area_candidates(job: _Job) -> Iterator[SkillDef | None]:
+    """點數固定的表面與升降地形：先換成格數較多的形狀（由大到小試）。表面（或已帶落石的升降地形）
+    再用旋鈕調到目標比例；只有地形的沒有旋鈕，在費用的組合裡取比例最接近目標的。"""
+    for grown in _grown_skills(job):
+        if not _has_strength_knobs(grown, job.library) and _terrain(grown):
+            drafts = [*_growth_drafts(grown, job.library), *_cost_drafts(grown)]
+            yield _closest(drafts, job)
+            continue
+        for draft in _growth_drafts(grown, job.library):
+            yield from _knob_candidates(job, grown, draft)
+
+
+# ---------------------------------------------------------------------------
+# 固定強度的結構（姿態、召喚、費用）與落石
+# ---------------------------------------------------------------------------
 
 
 def _stance_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int, dict[str, Any]]]:
@@ -152,6 +313,13 @@ def _cost_variants(moved: SkillDef) -> list[dict[str, Any]]:
     return out
 
 
+def _cost_drafts(moved: SkillDef) -> Iterator[Draft]:
+    for cost in _cost_variants(moved):
+        base, effects = base_draft(moved)
+        base["cost"] = {**base["cost"], **cost}
+        yield base, effects
+
+
 def _strength_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
     """沒有旋鈕的固定強度結構：（姿態級別或召喚物 HP）×（費用減輕）的每個組合，依序試。"""
     structures = _stance_variants(moved, library) or _summon_variants(moved) or [{}]
@@ -168,38 +336,59 @@ def _strength_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft
             yield base, effects
 
 
-def _rock_drafts(moved: SkillDef) -> Iterator[Draft]:
-    """升降地形：「地形＋落石」（多一個大地傷害效果，數值由預算器調；3W-2b 地形變化模板的做法）。"""
-    if not any(e.type in _TERRAIN for e in moved.effects) or len(moved.effects) >= _MAX_EFFECTS:
+def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
+    """升降地形：「地形＋落石」（多一個大地傷害效果，數值由預算器調；3W-2b 地形變化模板的做法）。
+    ``grown``：用放大過格數的形狀（由大到小，費用照 :func:`_growth_drafts`）；否則用原本的形狀。"""
+    moved = job.moved
+    if not _terrain(moved) or len(moved.effects) >= _MAX_EFFECTS:
         return
-    base, effects = base_draft(moved)
-    rock: dict[str, Any] = {"type": "damage", "element": "earth"}
-    if moved.category == "spell":
-        rock["dice"] = "1d4"
+    if grown:
+        drafts: Iterable[Draft] = (
+            d for g in _grown_skills(job) for d in _growth_drafts(g, job.library)
+        )
     else:
-        rock["multiplier_permille"] = 300
-    effects.append(rock)
-    yield base, effects
-
-
-def _fixed(
-    drafts: Iterator[Draft], library: ContentLibrary, floor: Fraction | None
-) -> SkillDef | None:
+        drafts = [base_draft(moved)]
     for base, effects in drafts:
-        done = fixed_strength(base, effects, library, floor=floor)
-        if done is not None:
+        rock: dict[str, Any] = {"type": "damage", "element": "earth"}
+        if moved.category == "spell":
+            rock["dice"] = "1d4"
+        else:
+            rock["multiplier_permille"] = 300
+        effects.append(rock)
+        yield base, effects
+
+
+def _ratio(skill: SkillDef, library: ContentLibrary) -> Fraction:
+    return skill_budget(skill, library).ratio
+
+
+def _closest(drafts: Iterable[Draft], job: _Job) -> SkillDef | None:
+    """草稿裡通過驗證（含預算窗）、分數不低於下限的，取比例最接近目標的（同樣接近取先出現的）；沒有
+    目標時取第一個。"""
+    best: SkillDef | None = None
+    gap: Fraction | None = None
+    for base, effects in drafts:
+        done = fixed_strength(base, effects, job.library, floor=job.floor)
+        if done is None:
+            continue
+        if job.target is None:
             return done
-    return None
+        distance = abs(_ratio(done, job.library) - job.target)
+        if gap is None or distance < gap:
+            best, gap = done, distance
+    return best
 
 
-def _best_effort(
-    moved: SkillDef, library: ContentLibrary, floor: Fraction | None
-) -> SkillDef | None:
+def _best_effort(job: _Job) -> SkillDef | None:
     """調不進窗內時的最後一步：每個強度旋鈕都推到最大（費用不動）；除了「過弱」之外要通過驗證，
     預算分數不低於下限。新階級的預算太大、這個結構追不上時用它（:func:`retier_report` 會標出）。"""
+    moved, library = job.moved, job.library
     base, effects = base_draft(moved)
     knobs = [*effect_strength_knobs(moved.category, effects, library)]
-    knobs += _param_knobs(effects, moved.category, library)
+    if job.upgrade:
+        knobs += _stretch_knobs(effects, moved.category, library)
+    else:
+        knobs += _param_knobs(effects, moved.category, library)
     if not knobs:
         return None
     for knob in knobs:
@@ -210,7 +399,7 @@ def _best_effort(
     except (ValidationError, ValueError):
         return None
     problems = [v for v in validate_skill(trial, library) if not v.rule.endswith("budget.weak")]
-    if problems or (floor is not None and budget_power(trial, library) < floor):
+    if problems or (job.floor is not None and budget_power(trial, library) < job.floor):
         return None
     return trial
 
@@ -225,20 +414,73 @@ def _floor(skill: SkillDef, tier: int, library: ContentLibrary) -> Fraction | No
         return None
 
 
+def _target(skill: SkillDef, library: ContentLibrary) -> Fraction | None:
+    """重配的目標比例（3W-9b）：升階前的預算比例，夾在驗證器的窗內（70～100%）。"""
+    try:
+        ratio = _ratio(skill, library)
+    except BudgetError:
+        return None
+    rules = library.budget
+    low = Fraction(rules.min_ratio_permille, 1000)
+    high = Fraction(rules.max_ratio_permille, 1000)
+    return min(max(ratio, low), high)
+
+
+def _rocks(job: _Job, *, grown: bool) -> SkillDef | None:
+    for base, effects in _rock_drafts(job, grown=grown):
+        done = retune(
+            base, effects, job.rng.fork("rocks"), job.library, floor=job.floor,
+            target_ratio=job.target,
+        )  # fmt: skip
+        if done is not None:
+            return done
+    return None
+
+
+def _grow(job: _Job) -> SkillDef | None:
+    """點數固定的表面與升降地形升階時先放大格數（取最接近目標比例的）；升降地形放大到上限仍不到
+    70% 時補落石（放大過的形狀）。升降地形一律放大（已帶落石的也是，格數照角色階級表）；表面只有
+    點數固定的才放大（帶傷害的表面技能照預算器調骰子）。"""
+    if not job.upgrade:
+        return None
+    if not _terrain(job.moved) and _has_strength_knobs(job.moved, job.library):
+        return None
+    done = _settle(job, _area_candidates(job))
+    if done is None and _terrain(job.moved):
+        done = _rocks(job, grown=True)
+    return done
+
+
+def _same_shape(job: _Job) -> Iterator[SkillDef | None]:
+    """形狀不變的候選：預算器重調 → 固定強度的結構與費用。"""
+    yield from _knob_candidates(job)
+    yield _closest(_strength_drafts(job.moved, job.library), job)
+
+
+def _solve(job: _Job) -> SkillDef | None:
+    """放大格數 → 形狀不變的候選（取最接近目標比例的，:func:`_settle`）→ 原本的形狀補落石 → 旋鈕
+    推到最大。"""
+    done = _grow(job)
+    if done is None:
+        done = _settle(job, _same_shape(job))
+    if done is None:
+        done = _rocks(job, grown=False)
+    return done if done is not None else _best_effort(job)
+
+
 def _retier(skill: SkillDef, tier: int, library: ContentLibrary) -> SkillDef:
-    moved = skill.model_copy(update={"tier": tier})
     floor = _floor(skill, tier, library)
-    rng = _rng(skill, tier)
-    done = _knob_retune(moved, library, rng, floor)
+    job = _Job(
+        moved=skill.model_copy(update={"tier": tier}),
+        tier=tier,
+        library=library,
+        rng=_rng(skill, tier),
+        floor=floor,
+        target=_target(skill, library),
+    )
+    done = _solve(job)
     if done is None:
-        done = _fixed(_strength_drafts(moved, library), library, floor)
-    if done is None:
-        for base, effects in _rock_drafts(moved):
-            done = retune(base, effects, rng.fork("rocks"), library, floor=floor)
-    if done is None:
-        done = _best_effort(moved, library, floor)
-    if done is None:
-        return moved
+        return job.moved
     # ID、名稱、來源、閃現加成都沿用原本的（重算只改數值）
     return done.model_copy(
         update={

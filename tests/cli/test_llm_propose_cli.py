@@ -109,3 +109,18 @@ def test_naming_flag_adds_generated_names(capsys: pytest.CaptureFixture[str]) ->
     assert main(["llm", "propose", "--mock", "-n", "6", "--seed", "0"]) == 0
     plain = capsys.readouterr().out
     assert "命名" not in plain
+
+
+def test_mock_picks_the_lowest_tier_the_keyword_allows(library: ContentLibrary) -> None:
+    """3W-9b：``--mock`` 沒指定階級時，每題自動選 Mock 答得出的最低角色階級（召喚物 → 2 階），
+    不再因為 1 階還不能用而退回手寫池；指定 ``--tier`` 或不用 Mock 時照舊 1 階。"""
+    summon = propose_requests(library, ProposeArgs(count=2, mock=True, keywords=("summon",)))
+    assert summon and all(r.tier == 2 for r, _ in summon)
+    out, err = io.StringIO(), io.StringIO()
+    args = ProposeArgs(count=2, mock=True, keywords=("summon",))
+    assert cmd_llm_propose(library, args, out, err) == 0
+    assert "2 階／" in out.getvalue() and "來源　　　　　llm 2" in out.getvalue()
+    fixed = ProposeArgs(count=2, mock=True, tier=1, keywords=("summon",))
+    assert all(r.tier == 1 for r, _ in propose_requests(library, fixed))
+    real = ProposeArgs(count=2, keywords=("summon",))
+    assert all(r.tier == 1 for r, _ in propose_requests(library, real))
