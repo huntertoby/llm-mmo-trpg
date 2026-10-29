@@ -12,6 +12,9 @@ AI 估值、敘事、預覽都有對應項，缺了就拋出 :class:`ContentErro
 - AI 估值：:data:`trpg.engine.ai.coverage.PRIMITIVE_VALUATION`（宣告表）。
 - 敘事：:data:`trpg.narrative.skills.DESCRIBED_PRIMITIVES`（效果敘述）。
 - 預覽：:data:`trpg.engine.preview.PRIMITIVE_PREVIEW`（宣告表）。
+- 強度旋鈕（Phase 3T-1）：``budget_basis`` 不是 ``fixed`` 的原語，每個 ``int``／``dice`` 參數都要
+  宣告 ``knob``（或明寫 ``knob: none``）；階梯來源要在
+  :data:`trpg.skillgen.composer_parts.KNOB_LADDERS`。
 
 修正規則的改變種類（``content/modifier_changes.yaml``，Phase 3T-1）也在這裡檢查：
 
@@ -38,11 +41,13 @@ from trpg.engine.skills.primitives import PRIMITIVE_HANDLERS
 from trpg.narrative.skills import DESCRIBED_CHANGES, DESCRIBED_PRIMITIVES
 from trpg.shared.errors import ContentError
 from trpg.skillgen.budget import BUDGET_BASES, STRUCTURED_CHANGES
+from trpg.skillgen.composer_parts import KNOB_LADDERS
 
 __all__ = [
     "change_coverage_problems",
     "check_primitive_coverage",
     "coverage_problems",
+    "knob_problems",
     "load_checked_library",
 ]
 
@@ -87,6 +92,35 @@ def coverage_problems(
     return problems
 
 
+_KNOBBED_TYPES = frozenset({"int", "dice"})
+"""必須宣告旋鈕的參數型別（``budget_basis`` 不是 ``fixed`` 的原語）。"""
+
+
+def knob_problems(
+    primitives: Collection[PrimitiveDef], ladders: Collection[str] = KNOB_LADDERS.keys()
+) -> list[str]:
+    """強度旋鈕的宣告（Phase 3T-1）：``budget_basis`` 不是 ``fixed`` 的原語，每個 ``int``／``dice``
+    參數都要寫 ``knob``（沒有旋鈕寫 ``knob: none``），階梯來源要有實作。中文、依原語與參數排序。"""
+    have = set(ladders)
+    problems: list[str] = []
+    for primitive in sorted(primitives, key=lambda p: p.id):
+        for name in sorted(primitive.params):
+            param = primitive.params[name]
+            needs = primitive.budget_basis != "fixed" and param.type in _KNOBBED_TYPES
+            if needs and param.knob is None:
+                problems.append(
+                    f"原語 {primitive.id} 的參數 {name} 沒有宣告強度旋鈕"
+                    "（請在 skill_primitives.yaml 補 knob；沒有旋鈕請寫 knob: none）"
+                )
+            problems += [
+                f"原語 {primitive.id} 的參數 {name} 的旋鈕階梯 {k.ladder} 沒有實作"
+                "（請補 trpg.skillgen.composer_parts.KNOB_LADDERS）"
+                for k in param.knobs()
+                if k.ladder not in have
+            ]
+    return problems
+
+
 def change_coverage_problems(
     changes: Collection[ModifierChangeDef],
     tables: tuple[tuple[str, str, Collection[str]], ...] = _CHANGE_TABLES,
@@ -112,9 +146,11 @@ def change_coverage_problems(
 
 
 def check_primitive_coverage(library: ContentLibrary) -> None:
-    """檢查 ``library`` 的每個原語都有五處對應項、每種修正規則改變都有引擎、卡片文字與預算的對應項；
+    """檢查 ``library`` 的每個原語都有五處對應項與強度旋鈕的宣告、每種修正規則改變都有引擎、
+    卡片文字與預算的對應項；
     有缺時拋出 :class:`ContentError`（列出全部）。"""
-    problems = coverage_problems(library.ruleset.primitives.primitives)
+    primitives = library.ruleset.primitives.primitives
+    problems = coverage_problems(primitives) + knob_problems(primitives)
     if problems:
         lines = "\n".join(f"  - {p}" for p in problems)
         raise ContentError(library.root / PRIMITIVES_FILE, f"原語的對應項不完整：\n{lines}")

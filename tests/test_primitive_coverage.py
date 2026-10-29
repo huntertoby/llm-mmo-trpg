@@ -24,6 +24,7 @@ from trpg.primitive_coverage import (
     change_coverage_problems,
     check_primitive_coverage,
     coverage_problems,
+    knob_problems,
     load_checked_library,
 )
 from trpg.shared.errors import ContentError
@@ -189,3 +190,68 @@ def test_check_coverage_rejects_change_without_engine() -> None:
         check_primitive_coverage(broken)
     assert caught.value.path == library.root / "modifier_changes.yaml"
     assert "修正規則改變 frost_bonus 沒有引擎的對應項" in caught.value.reason
+
+
+# ---------------------------------------------------------------------------
+# 強度旋鈕（Phase 3T-1）
+# ---------------------------------------------------------------------------
+
+
+def _knobbed(knob: object = None, basis: str = "per_amount") -> PrimitiveDef:
+    param: dict[str, object] = {"type": "int", "min": 1, "max": 3}
+    if knob is not None:
+        param["knob"] = knob
+    return PrimitiveDef.model_validate(
+        {
+            "id": "frost_nova",
+            "name_zh": "測試",
+            "description_zh": "測試",
+            "category": "numeric",
+            "harmful": True,
+            "budget_basis": basis,
+            "base_points": 1,
+            "params": {"amount": param},
+        }
+    )
+
+
+def test_real_content_declares_every_knob() -> None:
+    assert knob_problems(load_library().ruleset.primitives.primitives) == []
+
+
+def test_numeric_param_without_knob_is_reported() -> None:
+    assert knob_problems([_knobbed()]) == [
+        "原語 frost_nova 的參數 amount 沒有宣告強度旋鈕"
+        "（請在 skill_primitives.yaml 補 knob；沒有旋鈕請寫 knob: none）"
+    ]
+    assert knob_problems([_knobbed(basis="fixed")]) == []  # 固定點數的原語不需要
+    assert knob_problems([_knobbed("none")]) == []
+
+
+def test_unimplemented_knob_ladder_is_reported() -> None:
+    primitive = _knobbed({"ladder": "param_range", "weight": "other"})
+    assert knob_problems([primitive], ladders=()) == [
+        "原語 frost_nova 的參數 amount 的旋鈕階梯 param_range 沒有實作"
+        "（請補 trpg.skillgen.composer_parts.KNOB_LADDERS）"
+    ]
+
+
+def test_param_range_knob_needs_int_min_and_max() -> None:
+    with pytest.raises(ValueError, match="param_range"):
+        _knobbed({"ladder": "param_range", "weight": 1, "start": 5})  # start > max
+
+
+def test_load_checked_library_rejects_missing_knob(tmp_path: Path) -> None:
+    content = tmp_path / "content"
+    shutil.copytree(PROJECT_ROOT / "content", content)
+    yaml_path = content / "skill_primitives.yaml"
+    text = yaml_path.read_text(encoding="utf-8")
+    knob = ", knob: {ladder: param_range, weight: other}}"
+    start = text.index("  - id: grant_ap")
+    end = text.index(knob, start)
+    yaml_path.write_text(text[:end] + "}" + text[end + len(knob) :], encoding="utf-8")
+    load_library(content)  # 內容本身合法
+    with pytest.raises(ContentError) as caught:
+        load_checked_library(content)
+    assert caught.value.path == yaml_path
+    assert "原語 grant_ap 的參數 amount 沒有宣告強度旋鈕" in caught.value.reason

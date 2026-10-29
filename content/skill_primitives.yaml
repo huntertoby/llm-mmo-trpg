@@ -16,6 +16,14 @@
 #   active_only（只能用在主動技能）
 # params：可填的參數（type：dice／int／status／surface／object／element）
 #   int 參數的 min／max 是唯一的範圍來源（Phase 3E-2f）；allowed_skeletons：只能用在這些骨架
+#   knob：強度旋鈕（Phase 3T-1；隨機組合器與 LLM 提議的預算器依此由弱到強調數值）。none ＝ 沒有旋鈕；
+#     budget_basis 不是 fixed 的原語，每個 int／dice 參數都必須寫（載入時檢查）。欄位：
+#     ladder：dice 骰子階梯／multipliers 武器倍率／push_pull_distances、blow_distances 位移格數
+#       （skill_composer.yaml）／status_duration、surface_duration 依引用的狀態、表面／stack_amount、
+#       per_stack 層數／param_range 參數自己的 min～max（start、max、step 可改）
+#     weight：caller（核心或附帶，由呼叫端決定）／core／other／status／surface（skill_composer.yaml）或整數
+#     categories／exclude_categories：只在這些技能類別／不在這些類別；when：其他參數的值符合時才有
+#     多個旋鈕寫成列表，取第一個成立的
 # status：這個原語固定施加的狀態 ID（Phase 3E-2f；引擎的常數 CHEAT_DEATH_STATUS 等從這裡讀）
 # 不是由原語施加、由技能機制使用的狀態（Phase 3E-2f）：charging＝複合技延遲段（followup.when: delayed）的蓄力。
 mechanic_statuses:
@@ -31,15 +39,15 @@ primitives:
     harmful: true
     budget_basis: damage
     params:
-      dice: {llm_hint: "法術傷害的骰子（幾顆幾面）。", type: dice, required: true, required_when: {category: spell}, description_zh: 法術技必填；武器技不可填（用武器骰）}
-      multiplier_permille: {llm_hint: "武器傷害的倍率。", type: int, min: 1, max: 10000, description_zh: 武器技的倍率（‰），預設 1000}
+      dice: {llm_hint: "法術傷害的骰子（幾顆幾面）。", type: dice, required: true, required_when: {category: spell}, description_zh: 法術技必填；武器技不可填（用武器骰）, knob: {ladder: dice, weight: caller, categories: [spell]}}
+      multiplier_permille: {llm_hint: "武器傷害的倍率。", type: int, min: 1, max: 10000, description_zh: 武器技的倍率（‰），預設 1000, knob: {ladder: multipliers, weight: caller, exclude_categories: [spell]}}
       element: {llm_hint: "傷害的元素。", type: element, description_zh: 法術技必填；武器技省略時繼承武器元素}
       explode: {llm_hint: "擲到骰子最大值時再追加擲一次。", type: bool, true_only: true, description_zh: "爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true"}
       scaling: {llm_hint: "傷害會隨某種情況逐步增加，並有上限。", type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
-      lifesteal_permille: {llm_hint: "施放者依造成的傷害比例回復生命。", type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)"}
+      lifesteal_permille: {llm_hint: "施放者依造成的傷害比例回復生命。", type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)", knob: none}
       on_kill: {llm_hint: "這個傷害讓敵人倒下時，施放者額外獲得的效果。", type: effects, description_zh: "技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）"}
-      form_bonus_permille: {llm_hint: "施放者在形態中時，這個效果的數值多出的比例。", type: int, min: 1, max: 1000, description_zh: "在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)"}
-      spread: {llm_hint: "風元素傷害把範圍內的火、冰、毒往風向擴大的格數（1 或 2；省略為 1）。", type: int, show_when: {element: wind}, min: 1, max: 2, description_zh: "元素擴散格數（Phase 3-54b）：只有風元素（element: wind）的技能自己的傷害效果可以填；風吹到的火、冰、毒表面與火、冰、毒、雷區域往風向擴大 1 或 2 格（省略＝core.yaml 的 wind.spread_distance，預設 1）；預算：傷害點數 × wind_spread_permille（2 格較貴）"}
+      form_bonus_permille: {llm_hint: "施放者在形態中時，這個效果的數值多出的比例。", type: int, min: 1, max: 1000, description_zh: "在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)", knob: none}
+      spread: {llm_hint: "風元素傷害把範圍內的火、冰、毒往風向擴大的格數（1 或 2；省略為 1）。", type: int, show_when: {element: wind}, min: 1, max: 2, description_zh: "元素擴散格數（Phase 3-54b）：只有風元素（element: wind）的技能自己的傷害效果可以填；風吹到的火、冰、毒表面與火、冰、毒、雷區域往風向擴大 1 或 2 格（省略＝core.yaml 的 wind.spread_distance，預設 1）；預算：傷害點數 × wind_spread_permille（2 格較貴）", knob: none}
       split_heal: {llm_hint: "對敵人造成傷害的同時，用同樣的數值治療友方。", type: bool, true_only: true, allowed_skeletons: [aura, area], description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
@@ -50,8 +58,8 @@ primitives:
     harmful: false
     budget_basis: dice_average
     params:
-      dice: {llm_hint: "治療量的骰子（幾顆幾面）。", type: dice, required: true}
-      form_bonus_permille: {llm_hint: "施放者在形態中時，這個效果的數值多出的比例。", type: int, min: 1, max: 1000, description_zh: "在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)"}
+      dice: {llm_hint: "治療量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
+      form_bonus_permille: {llm_hint: "施放者在形態中時，這個效果的數值多出的比例。", type: int, min: 1, max: 1000, description_zh: "在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)", knob: none}
   - id: shield
     name_zh: 護盾
     llm_hint: "替目標加上一層護盾，之後的傷害先由護盾吸收。"
@@ -61,8 +69,8 @@ primitives:
     harmful: false
     budget_basis: dice_average
     params:
-      dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true}
-      duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合}
+      dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
+      duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合, knob: none}
   - id: cleanse
     name_zh: 淨化
     llm_hint: "移除目標身上所有負面狀態（減益）；增益與中性狀態保留。"
@@ -84,8 +92,8 @@ primitives:
     budget_basis: per_distance
     base_points: 2
     params:
-      distance: {llm_hint: "推開的格數。", type: int, required: true, min: 1, max: 2}
-      collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points}
+      distance: {llm_hint: "推開的格數。", type: int, required: true, min: 1, max: 2, knob: {ladder: push_pull_distances, weight: 1}}
+      collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points, knob: none}
   - id: pull
     name_zh: 拉扯
     llm_hint: "把目標往自己的方向拉近，被擋住就停下並受到撞擊傷害。"
@@ -97,8 +105,8 @@ primitives:
     budget_basis: per_distance
     base_points: 2
     params:
-      distance: {llm_hint: "拉近的格數。", type: int, required: true, min: 1, max: 2}
-      collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points}
+      distance: {llm_hint: "拉近的格數。", type: int, required: true, min: 1, max: 2, knob: {ladder: push_pull_distances, weight: 1}}
+      collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points, knob: none}
   - id: knock_prone
     name_zh: 擊倒
     llm_hint: "把目標打倒在地，倒地的單位需要花行動站起來。"
@@ -178,7 +186,7 @@ primitives:
     acts_on: caster
     allowed_shapes: [ground_tile]
     params:
-      dice: {llm_hint: "衝撞傷害的骰子。", type: dice, required: true, description_zh: 每個被撞到的敵人受到的物理傷害}
+      dice: {llm_hint: "衝撞傷害的骰子。", type: dice, required: true, description_zh: 每個被撞到的敵人受到的物理傷害, knob: {ladder: dice, weight: caller}}
       on_hit: {llm_hint: "被撞到的敵人除了傷害之外，是被擊倒還是被推到路旁。", type: on_hit, required: true, description_zh: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）}
   # --- Phase 3D-8d：朝向與背刺（docs/design/06-技能.md 6.21；點數為初值，未經模擬）---
   - id: shadowstep
@@ -262,7 +270,7 @@ primitives:
     budget_basis: status
     params:
       status: {llm_hint: "要施加的狀態。", type: status, required: true}
-      duration: {llm_hint: "狀態持續的回合數。", type: int, min: 1, max: 10}
+      duration: {llm_hint: "狀態持續的回合數。", type: int, min: 1, max: 10, knob: {ladder: status_duration, weight: status}}
   - id: create_surface
     name_zh: 產生表面
     llm_hint: "在地面製造一種表面（例如水、油、火）。"
@@ -275,7 +283,7 @@ primitives:
     acts_on: tile
     params:
       surface: {llm_hint: "要製造的表面種類。", type: surface, required: true}
-      duration: {llm_hint: "表面持續的回合數。", type: int, min: 1, max: 10}
+      duration: {llm_hint: "表面持續的回合數。", type: int, min: 1, max: 10, knob: {ladder: surface_duration, weight: surface}}
   - id: destroy_object
     name_zh: 摧毀物件
     llm_hint: "摧毀範圍內的可破壞物件。"
@@ -300,7 +308,7 @@ primitives:
     acts_on: tile
     params:
       object: {llm_hint: "要放置的物件種類。", type: object, required: true}
-      duration: {llm_hint: "障礙持續的回合數，不填則永久存在。", type: int, min: 1, max: 10}
+      duration: {llm_hint: "障礙持續的回合數，不填則永久存在。", type: int, min: 1, max: 10, knob: none}
   - id: raise_terrain
     name_zh: 隆起地形
     llm_hint: "把格子的地形抬高。"
@@ -352,7 +360,7 @@ primitives:
     base_points: 2
     params:
       stack: {llm_hint: "要累積的層數種類。", type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
-      amount: {llm_hint: "一次增加的層數。", type: int, required: true, min: 1, max: 3, description_zh: 累積的層數}
+      amount: {llm_hint: "一次增加的層數。", type: int, required: true, min: 1, max: 3, description_zh: 累積的層數, knob: {ladder: stack_amount, weight: other}}
   - id: consume_stack
     name_zh: 消耗層數
     llm_hint: "消耗目標身上累積的層數，每一層都轉成額外的威力。"
@@ -364,7 +372,7 @@ primitives:
     budget_basis: consume_stack
     params:
       stack: {llm_hint: "要消耗的層數種類。", type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
-      per_stack_permille: {llm_hint: "每一層帶來的威力。", type: int, required: true, min: 50, max: 500, description_zh: 每層的傷害加成（‰）}
+      per_stack_permille: {llm_hint: "每一層帶來的威力。", type: int, required: true, min: 50, max: 500, description_zh: 每層的傷害加成（‰）, knob: {ladder: per_stack, weight: other}}
   # --- Phase 3C-3b：狀態當燃料（docs/design/06-技能.md 6.14.2 管道 1；點數為初值，未經模擬）---
   - id: consume_status
     nested_core: true
@@ -381,7 +389,7 @@ primitives:
       then: {llm_hint: "移除狀態之後接著結算的效果。", type: effects, required: true, description_zh: 移除狀態後結算的效果（1–2 個）}
       scale: {llm_hint: "後續效果的威力依剩餘回合數或層數放大。", type: scale, description_zh: 後續效果依狀態的剩餘回合數或層數放大威力（省略＝不放大）}
       stack: {llm_hint: "同時消耗的層數種類。", type: stack, show_when: {scale: stacks}, description_zh: 後續效果依層數放大時，要消耗的層數種類}
-      splash: {llm_hint: "後續效果也波及被消耗者周圍的敵人，範圍是幾格。", type: int, min: 1, max: 1, description_zh: 後續效果也作用在被消耗者周圍這麼遠（格）的敵方單位}
+      splash: {llm_hint: "後續效果也波及被消耗者周圍的敵人，範圍是幾格。", type: int, min: 1, max: 1, description_zh: 後續效果也作用在被消耗者周圍這麼遠（格）的敵方單位, knob: none}
   - id: place_trap
     name_zh: 放置陷阱
     llm_hint: "在格子上設下陷阱，敵人踏入時才發動。"
@@ -409,7 +417,7 @@ primitives:
     base_points: 4
     forbid_affects: [enemies, all]
     params:
-      amount: {llm_hint: "獲得的 AP 點數。", type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP}
+      amount: {llm_hint: "獲得的 AP 點數。", type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP, knob: {ladder: param_range, weight: other}}
   - id: reset_cooldown
     name_zh: 重置冷卻
     llm_hint: "讓技能的冷卻重新歸零。"
@@ -481,7 +489,7 @@ primitives:
     base_points: 7
     forbid_affects: [enemies, all]
     params:
-      amount: {llm_hint: "增加的反應次數。", type: int, required: true, min: 1, max: 1, description_zh: 額外的反應次數}
+      amount: {llm_hint: "增加的反應次數。", type: int, required: true, min: 1, max: 1, description_zh: 額外的反應次數, knob: {ladder: param_range, weight: other}}
   # --- Phase 3C-5a：場景物件原語（docs/design/06-技能.md 6.15；點數為初值，未經模擬）---
   - id: hurl_object
     name_zh: 投擲物件
@@ -496,8 +504,8 @@ primitives:
     budget_basis: hurl_object
     allowed_shapes: [object_then_tile]
     params:
-      range: {llm_hint: "可以舉起的物件離施放者最遠幾格。", type: int, required: true, min: 1, max: 6, description_zh: 可以舉起的物件與施放者的最遠距離}
-      dice: {llm_hint: "砸中時的傷害骰子。", type: dice, required: true, description_zh: 落點單位受到的物理傷害}
+      range: {llm_hint: "可以舉起的物件離施放者最遠幾格。", type: int, required: true, min: 1, max: 6, description_zh: 可以舉起的物件與施放者的最遠距離, knob: none}
+      dice: {llm_hint: "砸中時的傷害骰子。", type: dice, required: true, description_zh: 落點單位受到的物理傷害, knob: {ladder: dice, weight: caller}}
       knock_prone: {llm_hint: "砸中落點的單位時是否一併擊倒。", type: bool, description_zh: 命中時另外擊倒（對抗判定）}
   - id: topple
     name_zh: 推倒
@@ -524,7 +532,7 @@ primitives:
     forbid_affects: [enemies, all]
     params:
       resource: {llm_hint: "回復的是法力還是技能冷卻。", type: resource, required: true, description_zh: mana 回復法力、cooldown 縮短冷卻}
-      amount: {llm_hint: "回復的數量。", type: int, required: true, min: 1, max: 10, description_zh: 回復的法力點數，或縮短的冷卻回合（最多 2）}
+      amount: {llm_hint: "回復的數量。", type: int, required: true, min: 1, max: 10, description_zh: 回復的法力點數，或縮短的冷卻回合（最多 2）, knob: [{ladder: param_range, weight: other, when: {resource: [mana]}}, {ladder: param_range, max: 2, weight: other, when: {resource: [cooldown]}}]}
   - id: steal_buff
     name_zh: 奪取增益
     llm_hint: "奪取目標身上的一個增益狀態，轉到施放者身上。"
@@ -560,7 +568,7 @@ primitives:
     budget_basis: reveal
     forbid_affects: [allies, all, self]
     params:
-      duration: {llm_hint: "揭露效果持續的回合數。", type: int, required: true, min: 1, max: 3, description_zh: 被揭露的敵人不能再隱蔽的回合數}
+      duration: {llm_hint: "揭露效果持續的回合數。", type: int, required: true, min: 1, max: 3, description_zh: 被揭露的敵人不能再隱蔽的回合數, knob: {ladder: param_range, weight: other}}
 
   # --- Phase 3D-8b：復活與定時炸彈 ---
   - id: revive
@@ -578,7 +586,7 @@ primitives:
     allowed_shapes: [single]
     forbid_affects: [enemies, all, self]
     params:
-      hp_permille: {llm_hint: "站起來時回復的生命比例。", type: int, required: true, min: 100, max: 1000, description_zh: 站起來時的 HP（最大 HP 的 n‰，至少 1）}
+      hp_permille: {llm_hint: "站起來時回復的生命比例。", type: int, required: true, min: 100, max: 1000, description_zh: 站起來時的 HP（最大 HP 的 n‰，至少 1）, knob: {ladder: param_range, step: 100, weight: other}}
   - id: delayed_damage
     status: time_bomb
     name_zh: 定時炸彈
@@ -595,10 +603,10 @@ primitives:
     allowed_shapes: [single]
     forbid_affects: [allies, all, self]
     params:
-      dice: {llm_hint: "爆炸傷害的骰子。", type: dice, required: true}
+      dice: {llm_hint: "爆炸傷害的骰子。", type: dice, required: true, knob: {ladder: dice, weight: other}}
       element: {llm_hint: "爆炸的元素。", type: element, required: true}
-      rounds: {llm_hint: "幾輪後爆炸。", type: int, required: true, min: 1, max: 3, description_zh: 倒數的環境回合數}
-      radius: {llm_hint: "爆炸波及的半徑。", type: int, required: true, min: 0, max: 2, description_zh: 爆炸半徑（曼哈頓距離，0 只波及目標）}
+      rounds: {llm_hint: "幾輪後爆炸。", type: int, required: true, min: 1, max: 3, description_zh: 倒數的環境回合數, knob: none}
+      radius: {llm_hint: "爆炸波及的半徑。", type: int, required: true, min: 0, max: 2, description_zh: 爆炸半徑（曼哈頓距離，0 只波及目標）, knob: none}
 
   # --- Phase 3D-4a：召喚（docs/design/06-技能.md 6.16 B；點數為初值，未經模擬）---
   - id: summon
@@ -617,10 +625,10 @@ primitives:
     allowed_shapes: [ground_tile]
     params:
       unit: {llm_hint: "要召喚的單位種類。", type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
-      duration: {llm_hint: "召喚物停留的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數}
-      count: {llm_hint: "一次召喚的隻數。", type: int, min: 1, max: 2, description_zh: 一次召喚的數量（1 或 2；2 是數量型分歧進化，必須同時填 power_permille；省略為 1）}
-      power_permille: {llm_hint: "多隻召喚物時，每隻相對於一般強度的比例。", type: int, show_when: {count: "2"}, min: 100, max: 999, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）}
-      max_hp_permille: {llm_hint: "召喚物額外增加的最大生命比例。", type: int, min: 1, max: 1000, description_zh: 加深分歧進化：召喚物的最大 HP 多這麼多‰}
+      duration: {llm_hint: "召喚物停留的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數, knob: {ladder: param_range, weight: other}}
+      count: {llm_hint: "一次召喚的隻數。", type: int, min: 1, max: 2, description_zh: 一次召喚的數量（1 或 2；2 是數量型分歧進化，必須同時填 power_permille；省略為 1）, knob: none}
+      power_permille: {llm_hint: "多隻召喚物時，每隻相對於一般強度的比例。", type: int, show_when: {count: "2"}, min: 100, max: 999, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）, knob: none}
+      max_hp_permille: {llm_hint: "召喚物額外增加的最大生命比例。", type: int, min: 1, max: 1000, description_zh: 加深分歧進化：召喚物的最大 HP 多這麼多‰, knob: none}
       trait: {llm_hint: "召喚物擁有的小特性。", type: summon_trait, description_zh: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）}
       infusion: {llm_hint: "召喚物固有的灌注元素。", type: infusion, description_zh: 橋接分歧進化：召喚物固有的第二個灌注關鍵字（core.yaml 的 summon_infusions）}
 
@@ -643,9 +651,9 @@ primitives:
     params:
       anchor: {llm_hint: "區域固定在施放處、跟著施放者，還是會往前移動。", type: anchor, required: true, description_zh: 固定在施放時的格子、跟隨施放者，或沿施放方向移動}
       when: {llm_hint: "區域的效果在單位進入時、回合開始時，或兩者都結算。", type: zone_when, required: true, description_zh: 單位進入區域時、回合開始時站在區域內時，或兩者都結算}
-      duration: {llm_hint: "區域持續的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 區域持續的輪數}
+      duration: {llm_hint: "區域持續的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 區域持續的輪數, knob: {ladder: param_range, weight: other}}
       effects: {llm_hint: "區域對單位結算的效果。", type: effects, required: true, description_zh: 區域結算的效果（1–2 個）}
-      speed: {llm_hint: "移動型區域每輪前進的格數。", type: int, show_when: {anchor: moving}, min: 1, max: 2, description_zh: 區域每個環境回合沿施放方向前進的格數}
+      speed: {llm_hint: "移動型區域每輪前進的格數。", type: int, show_when: {anchor: moving}, min: 1, max: 2, description_zh: 區域每個環境回合沿施放方向前進的格數, knob: none}
       surface: {llm_hint: "區域留下的表面種類。", type: surface, description_zh: 區域新覆蓋的格子留下的表面（省略＝不留）}
 
   # --- Phase 3D-6：規則改變（docs/design/06-技能.md 6.16 F、6.14.4；點數在 rule_changes.yaml 的 kinds）---
@@ -684,7 +692,7 @@ primitives:
     budget_basis: gamble
     acts_on: caster
     params:
-      chance_permille: {llm_hint: "成功的機率。", type: int, required: true, min: 50, max: 950, description_zh: 成功（結算 win）的機率（‰）}
+      chance_permille: {llm_hint: "成功的機率。", type: int, required: true, min: 50, max: 950, description_zh: 成功（結算 win）的機率（‰）, knob: {ladder: param_range, start: 300, step: 50, weight: other}}
       win: {llm_hint: "成功時結算的效果。", type: effects, description_zh: 成功時結算的效果（0–2 個）}
       lose: {llm_hint: "失敗時結算的效果。", type: effects, description_zh: 失敗時結算的效果（0–2 個）}
 
@@ -704,7 +712,7 @@ primitives:
     forbid_affects: [enemies, all]
     params:
       skill: {llm_hint: "要給予的技能。", type: skill, required: true, description_zh: 暫時給出的技能 ID（content/skills/）}
-      duration: {llm_hint: "技能可使用的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 持續的輪數（在目標回合結束時倒數）}
+      duration: {llm_hint: "技能可使用的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 持續的輪數（在目標回合結束時倒數）, knob: none}
 
   # --- Phase 3-23：刻印（docs/design/06-技能.md 6.25；點數為初值，未經模擬）---
   - id: inscribe
@@ -723,7 +731,7 @@ primitives:
     params:
       element: {llm_hint: "符文的元素。", type: element, required: true, required_when: {unless_filled: tag}, description_zh: 符文的元素（選了標籤就不用選；元素和標籤恰好選一個）}
       tag: {llm_hint: "符文帶有的標籤，供其他技能辨識。", type: tag, description_zh: 符文的標籤（只能選已定義的符文標籤；元素和標籤恰好選一個）}
-      duration: {llm_hint: "符文持續的回合數。", type: int, min: 1, max: 5, description_zh: 符文持續的環境回合數}
+      duration: {llm_hint: "符文持續的回合數。", type: int, min: 1, max: 5, description_zh: 符文持續的環境回合數, knob: {ladder: param_range, weight: core}}
   - id: detonate_runes
     name_zh: 引爆符文
     llm_hint: "引爆範圍內自己刻下的符文，造成傷害。"
@@ -737,7 +745,7 @@ primitives:
     forbid_affects: [self, allies, tiles]
     allowed_shapes: [cross, square3, ring, allies_in_radius]
     params:
-      dice: {llm_hint: "引爆傷害的骰子。", type: dice, required: true, description_zh: 每格的傷害骰}
+      dice: {llm_hint: "引爆傷害的骰子。", type: dice, required: true, description_zh: 每格的傷害骰, knob: {ladder: dice, weight: caller}}
       element: {llm_hint: "只引爆這個元素的符文。", type: element, description_zh: 傷害元素（省略時取符文的元素）}
       scope: {llm_hint: "只引爆被命中目標腳下那一格的符文。", type: scope, description_zh: 填 target_cell 只引爆被命中目標所在的那 1 格（只能用在修正規則的命中後效果與普攻詞條；主動技能不可填）}
 
@@ -755,8 +763,8 @@ primitives:
     forbid_affects: [self, enemies, all, tiles]
     allowed_shapes: [single]
     params:
-      dice: {llm_hint: "爆炸傷害的骰子。", type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰}
-      radius: {llm_hint: "爆炸波及的半徑。", type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）}
+      dice: {llm_hint: "爆炸傷害的骰子。", type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰, knob: {ladder: dice, weight: core}}
+      radius: {llm_hint: "爆炸波及的半徑。", type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）, knob: none}
       element: {llm_hint: "爆炸的元素。", type: element, description_zh: 填了＝爆炸（傷害敵人）；省略＝治療範圍內的友方}
 
   # --- Phase 3-54a：風的吹送（docs/design/06-技能.md 6.33，#56；點數為初值，未經模擬）---
@@ -774,7 +782,7 @@ primitives:
     acts_on: tile
     forbid_affects: [self, enemies, allies, all]   # 吹送只作用在格子
     params:
-      distance: {llm_hint: "表面被吹走的格數。", type: int, required: true, min: 2, max: 3, description_zh: 表面往風向平移的格數}
+      distance: {llm_hint: "表面被吹走的格數。", type: int, required: true, min: 2, max: 3, description_zh: 表面往風向平移的格數, knob: {ladder: blow_distances, weight: 1}}
 
   # --- Phase 3-54c：清除表面（06 6.33 清風，#63；點數為初值，未經模擬）---
   - id: clear_surface

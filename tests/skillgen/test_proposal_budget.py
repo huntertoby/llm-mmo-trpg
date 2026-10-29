@@ -203,3 +203,48 @@ def test_repairable_codes(library: ContentLibrary) -> None:
     assert not repairable_errors([rules, shape], library)
     assert not repairable_errors([rules, core], library)
     assert repairable_codes([rules, shape, core, rules], library) == ("budget.weak",)
+
+
+@pytest.mark.parametrize(
+    ("effect", "category", "expected"),
+    [
+        # 3T-1 補上的旋鈕（原本 fixed 表沒有，LLM 選這些原語時數值只能停在最小值）
+        ({"type": "grant_ap"}, "spell", (("amount", (1, 2), 1),)),
+        ({"type": "extra_reaction"}, "spell", (("amount", (1,), 1),)),
+        ({"type": "summon"}, "spell", (("duration", (1, 2, 3, 4), 1),)),
+        ({"type": "zone"}, "spell", (("duration", (1, 2, 3, 4), 1),)),
+        ({"type": "revive"}, "spell", (("hp_permille", tuple(range(100, 1001, 100)), 1),)),
+        ({"type": "restore_resource", "resource": "cooldown"}, "spell", (("amount", (1, 2), 1),)),
+        # 原本 fixed 表的旋鈕（搬進 YAML 後不變）
+        (
+            {"type": "restore_resource", "resource": "mana"},
+            "spell",
+            (("amount", tuple(range(1, 11)), 1),),
+        ),
+        ({"type": "gamble"}, "spell", (("chance_permille", tuple(range(300, 951, 50)), 1),)),
+        ({"type": "inscribe"}, "spell", (("duration", (1, 2, 3, 4, 5), "core"),)),
+        ({"type": "reveal"}, "spell", (("duration", (1, 2, 3), 1),)),
+        ({"type": "cleanse"}, "spell", ()),
+    ],
+)
+def test_effect_knobs_come_from_primitive_yaml(
+    library: ContentLibrary,
+    effect: dict[str, object],
+    category: str,
+    expected: tuple[tuple[str, tuple[int, ...], int | str], ...],
+) -> None:
+    """強度旋鈕由 ``skill_primitives.yaml`` 參數的 ``knob`` 決定（Phase 3T-1）。權重：1 ＝
+    ``knob_weight_other``（目前 1）、``"core"`` ＝ ``knob_weight_core``（skill_composer.yaml）。"""
+    structure = library.composer.structure
+    assert structure.knob_weight_other == 1
+    weights = {"core": structure.knob_weight_core}
+    want = tuple((name, values, weights.get(str(w), w)) for name, values, w in expected)
+    assert effect_knobs(library, effect, category=category, weight=9) == want
+
+
+def test_damage_knob_depends_on_category(library: ContentLibrary) -> None:
+    """法術傷害調骰子、武器傷害調倍率（權重由呼叫端傳入）。"""
+    spell = effect_knobs(library, {"type": "damage"}, category="spell", weight=7)
+    weapon = effect_knobs(library, {"type": "damage"}, category="weapon", weight=7)
+    assert [(name, weight) for name, _, weight in spell] == [("dice", 7)]
+    assert [(name, weight) for name, _, weight in weapon] == [("multiplier_permille", 7)]

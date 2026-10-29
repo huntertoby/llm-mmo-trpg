@@ -165,6 +165,7 @@ __all__ = [
     "NarrativeDef",
     "ParamDef",
     "PrimitiveDef",
+    "PrimitiveKnob",
     "PrimitiveParam",
     "PrimitiveTable",
     "Provenance",
@@ -594,6 +595,67 @@ class RequiredWhen(ContentModel):
         return not sibling_filled(self.unless_filled)
 
 
+type KnobLadder = Literal[
+    "dice",
+    "multipliers",
+    "push_pull_distances",
+    "blow_distances",
+    "status_duration",
+    "surface_duration",
+    "stack_amount",
+    "per_stack",
+    "param_range",
+]
+"""強度旋鈕的階梯來源（Phase 3T-1；實作在 :data:`trpg.skillgen.composer_parts.KNOB_LADDERS`）。"""
+
+type KnobWeight = Literal["caller", "core", "other", "status", "surface"] | int
+"""旋鈕被抽中的權重：``caller`` 由呼叫端依核心／附帶傳入、``core``／``other`` 為
+``skill_composer.yaml`` 的 ``structure.knob_weight_core``／``knob_weight_other``、``status``／
+``surface`` 為 ``duration.status_weight``／``surface_weight``，或直接寫整數。"""
+
+
+class PrimitiveKnob(ContentModel):
+    """原語參數的強度旋鈕（Phase 3T-1，原本是 ``composer_parts.effect_knobs`` 的 ``fixed`` 表）：
+    隨機組合器與 LLM 提議的預算器（:mod:`trpg.skillgen.proposal_budget`）依這個階梯由弱到強調整
+    參數值，讓技能的預算落在區間內。
+
+    - ``ladder``：階梯來源（``dice`` 骰子階梯、``multipliers`` 武器倍率、``push_pull_distances``／
+      ``blow_distances`` 位移格數、``status_duration``／``surface_duration`` 依引用的狀態／表面、
+      ``stack_amount``／``per_stack`` 層數、``param_range`` 參數自己的 ``min``～``max``）。
+    - ``start``／``max``／``step``（只給 ``param_range``）：從 ``start``（省略＝參數的 ``min``）到
+      ``max``（省略＝參數的 ``max``），每 ``step`` 一階。
+    - ``categories``／``exclude_categories``：只在這些技能類別／不在這些類別時有旋鈕。
+    - ``when``：同一個效果的其他參數值（鍵＝參數名，值＝允許的值）符合時才有旋鈕。
+    """
+
+    ladder: KnobLadder
+    weight: KnobWeight
+    start: int | None = None
+    max: int | None = None
+    step: int = Field(default=1, ge=1)
+    categories: tuple[str, ...] | None = None
+    exclude_categories: tuple[str, ...] = ()
+    when: dict[str, tuple[str, ...]] | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> PrimitiveKnob:
+        if self.ladder != "param_range" and (
+            self.start is not None or self.max is not None or self.step != 1
+        ):
+            raise ValueError("knob 的 start、max、step 只給 ladder: param_range 用")
+        return self
+
+    def applies(self, category: str, effect: Mapping[str, Any]) -> bool:
+        """這個旋鈕在技能類別 ``category``、效果 ``effect``（``SkillDef`` 形狀）時是否成立。"""
+        if self.categories is not None and category not in self.categories:
+            return False
+        if category in self.exclude_categories:
+            return False
+        if self.when is None:
+            return True
+        return all(str(effect.get(name)) in values for name, values in self.when.items())
+
+
 class PrimitiveParam(ContentModel):
     """原語的一個參數。
 
@@ -649,12 +711,30 @@ class PrimitiveParam(ContentModel):
     llm_hint: str = ""
     """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名；
     ``description_zh`` 是給開發者的。出貨的資料一律要寫（``tests/content/test_llm_hint.py``）。"""
+    knob: Literal["none"] | PrimitiveKnob | tuple[PrimitiveKnob, ...] | None = None
+    """強度旋鈕（Phase 3T-1，:class:`PrimitiveKnob`；多個時取第一個成立的）。``none`` ＝ 明寫沒有
+    旋鈕；省略只允許在 ``budget_basis: fixed`` 的原語（:mod:`trpg.primitive_coverage` 檢查）。"""
 
     @model_validator(mode="after")
     def _check_required_when(self) -> PrimitiveParam:
         if self.required_when is not None and not self.required:
             raise ValueError("required_when 必須搭配 required: true")
+        for knob in self.knobs():
+            if knob.ladder != "param_range":
+                continue
+            low = self.min if knob.start is None else knob.start
+            high = self.max if knob.max is None else knob.max
+            if self.type != "int" or low is None or high is None or low > high:
+                raise ValueError("knob 的 ladder: param_range 需要 int 參數的 min 與 max")
         return self
+
+    def knobs(self) -> tuple[PrimitiveKnob, ...]:
+        """宣告的旋鈕（``none`` 或省略時為空）。"""
+        if self.knob is None or self.knob == "none":
+            return ()
+        if isinstance(self.knob, PrimitiveKnob):
+            return (self.knob,)
+        return self.knob
 
 
 class PrimitiveDef(ContentModel):
