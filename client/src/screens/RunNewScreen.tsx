@@ -5,6 +5,8 @@ import { api } from "../api/client";
 import type { RunResponse, RunRules } from "../api/types";
 import { AttributeAllocator } from "../run/AttributeAllocator";
 import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPicker";
+import { RaceOriginPicker } from "../run/RaceOriginPicker";
+import { raceOriginBody, raceOriginDone, type RaceOriginChoice } from "../run/raceOrigin";
 import { allocationComplete, baseAttributes, cleanAllocation, type Allocation } from "../run/flow";
 import { resourceText, useStartResources } from "../run/startResources";
 import { isDevMode } from "../run/startFlow";
@@ -32,6 +34,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const dev = isDevMode(window.location.search);
   const seed = parseSeed(seedText);
   const picker = useStartPicker(seed, dev);
+  const [raceOrigin, setRaceOrigin] = useState<RaceOriginChoice>({ race: "", origin: "" });
 
   useEffect(() => {
     let cancelled = false;
@@ -48,14 +51,14 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const resources = useStartResources(weapon, alloc);
   const points = rules?.start_points ?? 0;
   const complete = rules !== null && allocationComplete(alloc, points);
-  const ready = seed !== null && picker.body !== null && gearLegal;
+  const ready = seed !== null && picker.body !== null && gearLegal && raceOriginDone(picker.options, raceOrigin);
 
   async function create(auto: boolean) {
     if (!ready || seed === null || (!auto && !complete)) return;
     setBusy(true);
     setError(null);
     try {
-      const base = { weapon, keywords: selected, seed, ...(auto ? {} : { attributes: cleanAllocation(alloc) }) };
+      const base = { weapon, keywords: selected, seed, ...raceOriginBody(raceOrigin), ...(auto ? {} : { attributes: cleanAllocation(alloc) }) };
       const body = withTestMode(base, testMode, gear);
       onCreated(await api.createRun(body));
     } catch (err) {
@@ -69,7 +72,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
     setBusy(true);
     setError(null);
     try {
-      onCreated(await api.createRun({ dev_pack: picker.packId, seed }));
+      onCreated(await api.createRun({ dev_pack: picker.packId, seed, ...raceOriginBody(raceOrigin) }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);
@@ -86,6 +89,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
       <h1>開新一輪</h1>
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <form className="panel start-form" onSubmit={submit}>
+        <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
         <StartPickerView picker={picker} disabled={busy} />
         {weaponDef !== undefined && (
           <div className="muted small">
