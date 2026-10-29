@@ -1,7 +1,7 @@
 # 開發 PM 交接文件
 
 > 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-10-28**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
-> 現況一句話（2026-10-29 第五任）：**3-54c～e、3J 形態（全部）、C 紙娃娃畫風（C-1a～C-3）、3R 種族（全部）完成；Phase 4 前整理 3T 進行中**。下一步見 **3.0000**。
+> 現況一句話（2026-10-29 第五任，晚）：**3J、C 畫風、3R、3T 整理、Phase 4 的 4-L6～4-L8b 與 4-L6b 完成；4-L9 真模型評估依使用者指示延後（「4-L9先不做 改天」），等專案 PM 通知**。沒有 agent 在跑。下一步見 **3.0000**。
 
 ---
 
@@ -55,7 +55,8 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 > 第五任開發 PM 的 session：`local_ab425b7d`（由專案 PM `local_69ff6dd8-1a56-4d3a-950d-054825e07625` 啟動）。**下面 3.000 第 5 點的各 PM session id 已過期**：專案 PM `local_69ff6dd8-1a56-4d3a-950d-054825e07625`、玩法 PM `local_9c79efb1-a93e-4b28-8a2f-7c97ec50b846`、美術 PM `local_cb74dfda-1832-4c4b-bf87-d4dcb9fbf335`（美術分支 `claude/art-pm-fcab45`）。
 
 1. **完成**（驗收紀錄）：3-54c／d／e（`Phase3計畫.md` 66～68 節）；3J-1a～3J-5、3J-4b／4c（`Phase3J計畫.md` 4.x）；C-1a～C-3（`PhaseC畫風計畫.md`，美術 PM 檢查在 `docs/art/*檢查.md`）；3R-1～3R-3c（`Phase3R計畫.md` 4.x）。技能 301；`LOG_FORMAT` `/85`；存檔 `trpg-run/7`；最後全量 pytest 8527、vitest 1103。
-2. **進行中**：Phase 3T（`Phase3T計畫.md`，兩份後段審查的整理）：3T-1（change 種類與預算旋鈕進 YAML，opus）、3T-4（前端整理）；之後 3T-2 → 3T-3（可和 Phase 4 平行）→ **Phase 4 從 4-L6 起**（`Phase4計畫.md`）。
+2. **2026-10-29 晚更新**：3T（1～8）、3R-4（鱗族 #68）、4-L6／6b／7／8／8b 全部完成並 push；技能 301、`LOG_FORMAT` `/87`、存檔 `trpg-run/10`；最後全量 pytest 8766、vitest 1145。**下一步：等專案 PM 通知使用者開本機模型後做 4-L9**（`Phase4計畫.md` 表格 4-L9 列與 3C 節 4～6）；不進平衡階段或 Phase 5。派工的 pytest 一律 `-m "(slow or not slow) and not llm"`。
+2b. **（舊）進行中**：Phase 3T（`Phase3T計畫.md`，兩份後段審查的整理）：3T-1（change 種類與預算旋鈕進 YAML，opus）、3T-4（前端整理）；之後 3T-2 → 3T-3（可和 Phase 4 平行）→ **Phase 4 從 4-L6 起**（`Phase4計畫.md`）。
 3. **待使用者決定**：鱗族「水與冰面移動不花額外點數」（引擎本來沒有額外花費，被動實際只有不滑倒；玩法 PM 已交專案 PM）。
 4. **待辦（不擋 Phase 4）**：AI 不施放純地形技能（大地崩陷）；`Phase3T計畫.md` 第 1 節末的延後項；晶能義體人辨識樣張（美術 PM 之後出）；召喚物實戰外觀美術 PM 尚未看（等有可選的召喚角色）。
 5. **經驗**：兩個 agent 同時遞增 `LOG_FORMAT` 幾乎每次都撞，合併時取較大＋1，用 `git grep "battle-log/NN"` 找齊字面值（含 `endswith("/NN")`），`runner.py` 文件字串要補齊每一版；agent 一次跑全部 tests 曾讓 xdist 卡住，派工 prompt 要寫「不要一次跑全部 tests、跑測試時不要同時改檔」；審查 agent 沒用 worktree 時會直接 commit 到 main，合併前看 `git status`。
