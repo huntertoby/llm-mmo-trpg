@@ -221,6 +221,13 @@
 4. 命名關閉時，敘事也換成模板敘事（4-L8 待決 #8）；`trpg llm propose` 加 `--naming`（#9）。
 5. 驗收：pytest（skillgen、llm、content、roguelite、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports；`trpg llm propose --mock -n 10 --seed 0`、`trpg run auto --llm-mock` 正常。報告 `Phase4-L8b報告.md`。
 
+## 3J. 4-L6b 規格（網頁版 LLM 開關；開發 PM 2026-10-29；sonnet，約 0.4 段；不需要真模型）
+**受影響的既有功能**：`POST /api/runs`（新增選填欄位，例如 `llm: true`）、run 狀態（記錄這一輪有沒有開 LLM；存檔已有 `LlmRecord`，格式若變就遞增並保持舊存檔可讀）、前端開新一輪畫面（`StartPicker`）、升級三選一的候選卡（`OfferTagOut.source == "llm"` 可顯示小標記「源晶推演」之類，文字請沿用既有世界觀用語或寫進報告待玩法 PM 確認）、一輪結束摘要（LLM 題數、退回率、> 20% 提醒）。
+1. API：開新一輪可選擇開 LLM；伺服器端讀 `config/llm.toml` 的連線設定；**連不到本機模型時不報錯**，該輪自動當作關閉並在回應與畫面上提示一次（例如「本機模型未啟動，這一輪使用一般技能生成」）。連線檢查要有逾時，不能卡住開局。
+2. 前端：開新一輪畫面加一個開關（預設關），旁邊用共用浮動卡說明「由本機模型生成升級技能；需要先啟動本機模型」；候選卡顯示 LLM 來源標記；一輪摘要顯示 LLM 統計。彈出卡片照 6.5.1。
+3. 測試：API 用 `MockLLMClient`／假的連線失敗（不連 8001）；開關關閉時行為與現在逐字相同；連不到模型時退回一般生成並提示；vitest 涵蓋開關與標記。
+4. 驗收：pytest（api、roguelite、llm，`-m "(slow or not slow) and not llm"`、`tests/cli --timeout=3000`）、ruff、format、mypy、vitest、tsc、build、排版煙霧檢查（`runCase(title, {viaRun: true})`）；內建瀏覽器走一次開局（開關打開、沒有模型 → 看到提示並照常開局）。報告 `Phase4-L6b報告.md`。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）
