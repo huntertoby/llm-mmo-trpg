@@ -84,3 +84,12 @@
 ### 4.4 3W-3 驗收（2026-10-29，開發 PM）
 - 報告 `Phase3W-3報告.md`（第 6 節為合併 3W-2）。`skillgen/flash_major.py`（6 種轉型、補充大變化、`SlotPlan` 卸下判定）、`flash_templates.yaml` `extra_major`／`transforms`、`evolution.rarity_of`、`summon_boosts`；轉型不設強度下限、固定強度結構走 `fixed_strength`。與 3W-2 在 `flash.py` 衝突，由實作者在分支解完後合併。合併後 ruff、mypy 通過；開發 PM 重跑 `tests/skillgen` 2356、`tests/cli`＋確定性 162 全過（實作者那邊的 xdist node down 是當時環境記憶體壓力，不是測試變慢；最慢的是 `test_player_text` 135 秒）。
 - 新問題：姿態轉型在 2 階以上過不了預算下限（狀態點數固定）→ **3W-2b 的元素姿態效果數值照預算、隨階級變強**，順帶解決；陷阱／被動／反應約 77～90% 成功率 → 3W-9 後再量。其他待決（輔助技缺口、召喚元素對應初值、高階手寫轉型成功率）→ 3W-9 或平衡。
+
+### 3W-7 細化（2026-10-29 開發 PM）
+1. **變化提議**：輸入原技能（結構＋卡片文字）、用法統計摘要、題目（第幾次閃現、角色階級、指定類別或不指定、可用類別與模板清單＋`llm_hint`）；輸出 1 個「變化」（類別、改法 ID 與結構參數，**沒有數值**；數值由預算器補、強度下限照 6.34.3）。結構比整招小，schema 由 `flash_templates.yaml` 產生；經 pydantic 與引擎驗證（守則 3）。
+2. **數量**：不指定時要 4 個選項（至少 2 類）。採「一次呼叫回傳 4 個」為主，不合格的那幾個用模板補；指定類別 3 個同理。重試上限與退回照 4-L5（失敗退回模板）。
+3. **名稱**：大變化／轉型的名稱交給 4-L7 命名步驟（命名關閉時用「{前綴}・{原名}」）。
+4. **開關與確定性**：跟 `config/llm.toml` `generate`／網頁 `llm` 開關同一個；題目與結果寫進 run（種子標籤 `flash/...`），重播不呼叫 LLM。prompt 版本號寫進紀錄。
+5. **測試**：一律 `MockLLMClient`；Mock 回傳合格／不合格／形態或種族原語／數值欄位／英文代號 → 驗證與退回；選項數與類別數規則；重播不呼叫。
+6. **4-L9 評估加項**的指標與腳本入口先寫好（通過率、退回率、各類別命中、名稱抽樣），真模型評估仍等使用者開模型。
+7. 驗收：pytest（skillgen、llm、roguelite，`-m "(slow or not slow) and not llm"`、`tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports。報告 `Phase3W-7報告.md`。
