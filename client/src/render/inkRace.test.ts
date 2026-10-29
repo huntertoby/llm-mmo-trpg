@@ -2,11 +2,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Facing } from "../api/types";
 import type { DollSpec, GearItem, Look } from "./appearance";
-import { COVERS, coverOf, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawInkHorns, drawInkTail, drawSideEarBeforeHat, hatAdjust, raceLookToLook, type EarCtx } from "./inkRace";
+import { COVERS, coverOf, drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawInkHorns, drawInkTail, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, raceLookToLook, type EarCtx } from "./inkRace";
 import raceLooks from "./fixtures/raceLooks.json";
 import { drawFigure } from "./paperdoll";
 import { resolveDoll } from "./appearance";
 import { resolveDollT } from "./testDolls";
+import { buildRowRise, buildScale } from "./inkDoll";
 
 function recorder(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -48,7 +49,7 @@ describe("種族外觀的欄位對照（3R-3b）", () => {
     const fox = raceLookToLook(LOOKS["fox"]);
     expect(fox).toMatchObject({ skin: "#f1d0b0", hair: "short", hairColor: "#d8762a", ears: "beast", tail: "fox" });
     const fiend = raceLookToLook(LOOKS["fiend"]);
-    expect(fiend).toMatchObject({ horns: "curved", hornColor: "#3a2a2a", tail: "demon" });
+    expect(fiend).toMatchObject({ horns: "curved", hornColor: "#bfb0a4", tail: "demon" });
     expect(raceLookToLook(LOOKS["elf"])).toMatchObject({ ears: "pointed" });
     expect(raceLookToLook(LOOKS["scalefolk"])).toMatchObject({ ears: "fin", eyes: "#103030" });
     expect(raceLookToLook(LOOKS["dragonkin"])).toMatchObject({ horns: "dragon", tail: "dragon", scaleColor: "#c8402a" });
@@ -171,5 +172,95 @@ describe("整隻小人：10 族 × 頭部裝備 × 四方向（全組合自測�
   it("所有種族 × 未知值（亂 look）不出錯", () => {
     const weird: DollSpec = { look: { skin: "#abcdef", ears: "wings" as never, horns: "x" as never, tail: "y" as never }, gear: {} };
     for (const f of FACINGS) expect(() => drawFigure(recorder().ctx, weird, f)).not.toThrow();
+  });
+});
+
+describe("體型、臉部紋路、鬍子、獠牙、龍裔（3R-3c）", () => {
+  const look = (race: string): Look => ({ skin: "#eab48a", ...raceLookToLook(LOOKS[race]) });
+
+  it("欄位對照：體型、紋路、旗標；亂值＝沒有", () => {
+    expect(raceLookToLook(LOOKS["dwarf"])).toMatchObject({ build: "stout", beard: true });
+    expect(raceLookToLook(LOOKS["elf"])).toMatchObject({ build: "tall" });
+    expect(raceLookToLook(LOOKS["orc"])).toMatchObject({ tusks: true });
+    expect(raceLookToLook(LOOKS["cyborg"])).toMatchObject({ pattern: "circuit" });
+    expect(raceLookToLook(LOOKS["seafolk"])).toMatchObject({ pattern: "marks" });
+    expect(raceLookToLook(LOOKS["scalefolk"])).toMatchObject({ pattern: "scales" });
+    expect(raceLookToLook(LOOKS["dragonkin"])).toMatchObject({ pattern: "dragonscale", slitEyes: true, ridge: true, spines: true });
+    const odd = raceLookToLook({ build: "giant", pattern: "stripes", beard: "yes", tusks: 1, slit_eyes: "true", ridge: null, spines: 0, mark_color: "blue" });
+    expect(odd).toEqual({});
+  });
+
+  it("體型縮放：矮壯 x(1.12, 0.88)、高瘦 x(0.96, 1.1)、其餘不縮放；高瘦才升高狀態列", () => {
+    expect(buildScale(look("dwarf"))).toEqual([1.12, 0.88]);
+    expect(buildScale(look("elf"))).toEqual([0.96, 1.1]);
+    expect(buildScale(look("human"))).toEqual([1, 1]);
+    expect(buildRowRise(look("elf"))).toBeGreaterThan(0);
+    expect(buildRowRise(look("dwarf"))).toBe(0);
+    expect(buildRowRise(look("human"))).toBe(0);
+  });
+
+  it("臉部：各紋路、獠牙、鬍子、鱗脊、背刺各自會畫；背面與沒有該欄位不畫；鱗色換了畫法不同", () => {
+    const n = (r: string, v: "front" | "side"): number => count((c) => drawRaceFace(c, look(r), v));
+    expect(n("human", "front")).toBe(0);
+    for (const r of ["scalefolk", "seafolk", "cyborg", "dragonkin", "orc", "dwarf"]) {
+      expect(n(r, "front")).toBeGreaterThan(0);
+      expect(n(r, "side")).toBeGreaterThan(0);
+    }
+    for (const v of ["front", "side"] as const) expect(count((c) => drawRidge(c, look("dragonkin"), v))).toBeGreaterThan(0);
+    expect(count((c) => drawRidge(c, look("dragonkin"), "back"))).toBe(0);
+    expect(count((c) => drawRidge(c, look("human"), "front"))).toBe(0);
+    for (const v of VIEWS) {
+      expect(count((c) => drawBackSpines(c, look("dragonkin"), v))).toBeGreaterThan(0);
+      expect(count((c) => drawBackSpines(c, look("fiend"), v))).toBe(0);
+    }
+    const red = recorder();
+    drawRaceFace(red.ctx, { ...look("dragonkin"), scaleColor: "#c8402a" }, "front");
+    const blue = recorder();
+    drawRaceFace(blue.ctx, { ...look("dragonkin"), scaleColor: "#3a78c8" }, "front");
+    expect(red.calls.join()).not.toBe(blue.calls.join());
+  });
+
+  it("整隻小人：龍裔多種鱗色 x 四方向、其他種族 x 全部頭部裝備，不出錯且確定、不用 Math.random", () => {
+    const rand = vi.spyOn(Math, "random");
+    for (const c of ["#c8402a", "#3a78c8", "#d8a830", "bad"]) {
+      for (const f of ["south", "north", "east", "west"] as Facing[]) {
+        const spec = hero("dragonkin");
+        const s2 = { ...spec, look: { ...spec.look, scaleColor: c } };
+        const a = recorder();
+        const b = recorder();
+        drawFigure(a.ctx, s2, f, false);
+        drawFigure(b.ctx, s2, f, false);
+        expect(a.calls).toEqual(b.calls);
+        expect(a.calls.length).toBeGreaterThan(50);
+      }
+    }
+    for (const r of ["dwarf", "orc", "cyborg", "seafolk", "scalefolk", "elf"]) {
+      for (const k of [undefined, ...Object.keys(COVERS), "unknown_kind"]) {
+        for (const f of ["south", "north", "east", "west"] as Facing[]) {
+          const { ctx } = recorder();
+          drawFigure(ctx, hero(r, k === undefined ? undefined : hat(k)), f, false);
+        }
+      }
+    }
+    expect(rand).not.toHaveBeenCalled();
+    rand.mockRestore();
+  });
+
+  it("豎瞳與一般眼畫法不同", () => {
+    const slit = recorder();
+    const plain = recorder();
+    const l = look("dragonkin");
+    drawFigure(slit.ctx, { ...hero("dragonkin"), look: l }, "south", false);
+    drawFigure(plain.ctx, { ...hero("dragonkin"), look: { ...l, slitEyes: false } }, "south", false);
+    expect(slit.calls.join()).not.toBe(plain.calls.join());
+  });
+
+  it("角魔戴巫師帽（帽子抬高）保留頭髮；沒角的人戴巫師帽照舊蓋住頭髮", () => {
+    const fiend = recorder();
+    const fiendNoHorns = recorder();
+    const f = hero("fiend", hat("wizard_hat"));
+    drawFigure(fiend.ctx, f, "south", false);
+    drawFigure(fiendNoHorns.ctx, { ...f, look: { ...f.look, horns: undefined } }, "south", false);
+    expect(fiend.calls.length).toBeGreaterThan(fiendNoHorns.calls.length);
   });
 });

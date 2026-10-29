@@ -1,10 +1,10 @@
 // C 畫風的種族部件：耳、角、尾（Phase 3R-3b；移植自 docs/art/sample/storyDoll.js 的 `tail`、`ears`、`horns`，
 // 衝突規則以 docs/art/可玩種族評估.md 第 2 節為準，不是樣張的簡化版）。
 // 規則寫在「頭部裝備的種類」上（`COVERS`，每種 kind 一個標記），新增帽子或種族時不用一一配對。
-// 所有欄位選填，不認得的值＝沒有，不會出錯；體型、臉部紋路、鬍子、獠牙、龍鱗等屬 3R-3c，這裡不畫。
+// 所有欄位選填，不認得的值＝沒有，不會出錯。Phase 3R-3c 加上體型、臉部紋路、鬍子、獠牙、豎瞳、鱗脊、背刺。
 import type { Ctx } from "./artDraw";
 import type { GearItem, Look } from "./appearance";
-import { ink, stroke, type Pt } from "./inkStyle";
+import { dot, ink, stroke, type Pt } from "./inkStyle";
 
 export type RaceView = "front" | "back" | "side";
 
@@ -12,6 +12,8 @@ export type RaceView = "front" | "back" | "side";
 const EARS = ["pointed", "fin", "beast"] as const;
 const HORNS = ["small", "curved", "dragon"] as const;
 const TAILS = ["fox", "scaled", "demon", "dragon"] as const;
+const PATTERNS = ["scales", "marks", "circuit", "dragonscale"] as const;
+const BUILDS = ["stout", "tall"] as const;
 const HEX = /^#[0-9a-f]{6}$/i;
 
 const pick = <T extends string>(list: readonly T[], v: unknown): T | undefined => (typeof v === "string" ? list.find((x) => x === v) : undefined);
@@ -41,6 +43,18 @@ export function raceLookToLook(r: Readonly<Record<string, unknown>> | null | und
   if (tailColor !== undefined) out.tailColor = tailColor;
   const scaleColor = hex(r["scale_color"]);
   if (scaleColor !== undefined) out.scaleColor = scaleColor;
+  const build = pick(BUILDS, r["build"]);
+  if (build !== undefined) out.build = build;
+  const pattern = pick(PATTERNS, r["pattern"]);
+  if (pattern !== undefined) out.pattern = pattern;
+  const markColor = hex(r["mark_color"]);
+  if (markColor !== undefined) out.markColor = markColor;
+  // 旗標欄位：只有明確的 true 才算（"true"、1 之類不認得的值＝沒有）
+  if (r["beard"] === true) out.beard = true;
+  if (r["tusks"] === true) out.tusks = true;
+  if (r["slit_eyes"] === true) out.slitEyes = true;
+  if (r["ridge"] === true) out.ridge = true;
+  if (r["spines"] === true) out.spines = true;
   return out;
 }
 
@@ -221,4 +235,81 @@ export function drawInkHorns(ctx: Ctx, look: Look, view: RaceView): void {
     one("horn-near", 1, false);
     ctx.restore();
   }
+}
+
+// ============================== 臉部（Phase 3R-3c） ==============================
+const INK_EYE = "#1d1a22";
+const DRAGON_FALLBACK = "#a8784a";
+
+/** 眼睛：豎瞳（金色眼白＋黑色細縫）或一般圓眼。`x` 是眼的橫向位置。 */
+export function drawEye(ctx: Ctx, look: Look, x: number): void {
+  if (look.slitEyes === true) {
+    dot(ctx, x, -41, 1.3, 1.5, "#e8b830");
+    dot(ctx, x, -41, 0.35, 1.3, INK_EYE);
+  } else dot(ctx, x, -41, 0.9, 1.3, look.eyes ?? INK_EYE);
+}
+
+function drawFacePattern(ctx: Ctx, look: Look, view: "front" | "side"): void {
+  const F = view === "front";
+  const pc = look.scaleColor ?? look.markColor ?? dark(look.skin ?? "#eab48a", 0.25);
+  const k = pick(PATTERNS, look.pattern);
+  if (k === "scales" || k === "dragonscale") {
+    const base: ReadonlyArray<readonly [number, number]> = F ? [[-6.6, -43.6], [-7.4, -41], [6.6, -43.6], [7.4, -41], [0, -48]] : [[1.6, -44], [0.4, -41.4], [2.6, -47.6]];
+    // 龍鱗：臉頰到下顎再多一排，線條加粗，鱗色才看得出來
+    const more: ReadonlyArray<readonly [number, number]> = k !== "dragonscale" ? [] : F ? [[-7, -38.4], [7, -38.4], [-5.8, -36], [5.8, -36]] : [[2.4, -38.6], [4, -36]];
+    for (const [x, y] of [...base, ...more]) stroke(ctx, `scale-${view}-${x}-${y}`, [[x - 1.2, y], [x, y + 1], [x + 1.2, y]], k === "dragonscale" ? 0.8 : 0.6, pc);
+  } else if (k === "marks") {
+    const mc = look.markColor ?? pc;
+    for (const sx of F ? [-1, 1] : [1]) {
+      const x = F ? sx * 6 : 2.6;
+      stroke(ctx, `mark-${view}-${sx}`, [[x - 1.4, -40.4], [x + 1.4, -39.4]], 0.8, mc);
+      stroke(ctx, `mark2-${view}-${sx}`, [[x - 1.4, -38.6], [x + 1.4, -37.6]], 0.8, mc);
+    }
+  } else if (k === "circuit") {
+    const x = F ? 5 : 1.4;
+    const cc = "#3ad0e8";
+    stroke(ctx, `circ-${view}`, [[x, -46], [x, -42.6], [x + 2.4, -41]], 0.6, cc);
+    dot(ctx, x + 2.4, -41, 0.6, 0.6, cc);
+    dot(ctx, x, -46, 0.6, 0.6, cc);
+  }
+}
+
+/** 臉部紋路、獠牙、鬍子（畫在眼睛與嘴之後、頭髮與頭部裝備之前，所以頭盔、頭髮會蓋住該蓋的部分）。背面不畫。 */
+export function drawRaceFace(ctx: Ctx, look: Look, view: "front" | "side"): void {
+  const F = view === "front";
+  drawFacePattern(ctx, look, view);
+  if (look.tusks === true) {
+    for (const x of F ? [-1.8, 1.8] : [6.6]) ink(ctx, `tusk-${view}-${x}`, [[x - 0.7, -36.4], [x, -39.2], [x + 0.7, -36.4]], "#f4ecd8", { shade: false, w: 0.45 });
+  }
+  if (look.beard === true) {
+    const c = look.hairColor ?? "#a8481e";
+    if (F) ink(ctx, "beard", [[-7.6, -40], [-4, -37.6], [0, -38.2], [4, -37.6], [7.6, -40], [6.4, -32], [2.4, -28.6], [-2.4, -28.6], [-6.4, -32]], c);
+    else ink(ctx, "beard-s", [[1, -38.6], [9, -37], [8, -32], [4.4, -28.8], [0.4, -31]], c);
+  }
+}
+
+/** 鱗脊：鼻樑到額頭一排小尖，畫在頭髮之後（不被瀏海蓋住）、頭部裝備之前。 */
+export function drawRidge(ctx: Ctx, look: Look, view: RaceView): void {
+  if (look.ridge !== true || view === "back") return;
+  const c = look.scaleColor ?? DRAGON_FALLBACK;
+  const F = view === "front";
+  [-46.4, -44, -41.6].forEach((y, i) => {
+    const x = F ? 0 : 5.4 - i * 0.4;
+    ink(ctx, `ridge-${view}-${i}`, [[x - 1.2, y + 1.1], [x, y - 1.1], [x + 1.2, y + 1.1]], light(c, 0.15), { shade: false, w: 0.5 });
+  });
+}
+
+/** 背刺：肩後三根骨刺。正面只從肩頭露出尖端（畫在身體之前，身體蓋住大半）；背面畫在背上；側面在背後。 */
+export function drawBackSpines(ctx: Ctx, look: Look, view: RaceView): void {
+  if (look.spines !== true) return;
+  const c = light(look.scaleColor ?? DRAGON_FALLBACK, 0.2);
+  const spike = (key: string, x: number, y: number, dx: number, dy: number): void => {
+    const n = Math.hypot(dx, dy);
+    const px = (-dy / n) * 1.7;
+    const py = (dx / n) * 1.7;
+    ink(ctx, key, [[x + px, y + py], [x + dx, y + dy], [x - px, y - py]], c, { shade: false, w: 0.5 });
+  };
+  if (view === "front") for (const x of [-5.6, 5.6]) spike(`spine-f-${x}`, x, -30, 0, -6.5);
+  else if (view === "back") for (const x of [-4.5, 0, 4.5]) spike(`spine-b-${x}`, x, -28, 0, -5.2);
+  else for (const [x, y] of [[-3.6, -30], [-4.8, -26.4], [-5.2, -22.8]] as const) spike(`spine-s-${y}`, x, y, -4.4, -0.6);
 }
