@@ -87,9 +87,9 @@ def test_exclusion_violation_names_the_exclusion_rule() -> None:
 
 def test_minimum_rarity_violation_and_reasons() -> None:
     draft = _draft(STRIKE) | {"rarity": "common"}
-    rules = _rules(draft)
-    assert rules["rarity.primitive"] == "稀有度 普通 不能使用原語 擊倒（至少需要 稀有）"
     result = check_draft(draft, library())
+    # 3W-9：稀有度只是標記，不擋；最低稀有度仍照結構算
+    assert not any(p.rule.startswith("rarity") for p in result.problems)
     assert result.minimum_rarity == "rare"
     assert result.rarity_reasons == ("原語 擊倒：至少稀有",)
 

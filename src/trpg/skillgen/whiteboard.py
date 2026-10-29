@@ -70,11 +70,16 @@ def _rules(library: ContentLibrary) -> WhiteboardRules:
 
 
 def whiteboard_keywords(
-    library: ContentLibrary, kind: str = "active", tier: int | None = None
+    library: ContentLibrary,
+    kind: str = "active",
+    tier: int | None = None,
+    *,
+    creation: bool = False,
 ) -> frozenset[str]:
     """``kind`` 的白板配方涵蓋的關鍵字（沒有配方的關鍵字由呼叫端退回別的來源）；給了 ``tier``
-    就只算該角色階級開放的配方。沒有關鍵字的基礎白板用 ``whiteboard.generic_keyword``。"""
-    return frozenset(r.keyword for r in _rules(library).recipes(kind, tier))
+    就只算該角色階級開放的配方（``creation``：創角例外另外開放的，3W-9）。沒有關鍵字的基礎白板用
+    ``whiteboard.generic_keyword``。"""
+    return frozenset(r.keyword for r in _rules(library).recipes(kind, tier, creation=creation))
 
 
 # ---------------------------------------------------------------------------
@@ -109,10 +114,11 @@ def _pick_recipe(
     weapon_class: str | None,
     tier: int,
     recipe_id: str | None = None,
+    creation: bool = False,
 ) -> WhiteboardRecipe:
     options = [
         r
-        for r in rules.recipes(kind, tier)
+        for r in rules.recipes(kind, tier, creation=creation)
         if (keyword is None or r.keyword == keyword)
         and (recipe_id is None or r.id == recipe_id)
         and _category_options(r, weapon_class)
@@ -484,7 +490,7 @@ def compose_whiteboard(
     for _ in range(rules.max_attempts):
         recipe = _pick_recipe(
             rng, rules, kind, keyword=keyword, weapon_class=weapon_class, tier=tier,
-            recipe_id=recipe_id,
+            recipe_id=recipe_id, creation=starter,
         )  # fmt: skip
         try:
             skill = _attempt(rng, lib, seed, kind, recipe, weapon_class=weapon_class, tier=tier)

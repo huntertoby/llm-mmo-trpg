@@ -203,7 +203,9 @@ def test_scout_mark_picks_the_lower_id_on_a_distance_tie(monkeypatch: pytest.Mon
 def test_creation_prefers_the_ranged_basic_summon() -> None:
     """選「召喚物」時推導出來沒有別的關鍵字的遠程基本召喚物優先（近戰骷髏會推導成倒地）。"""
     for seed in range(12):
-        skill = compose_whiteboard(seed, kind="active", keyword="summon", tier=1, library=LIB)
+        skill = compose_whiteboard(
+            seed, kind="active", keyword="summon", tier=1, library=LIB, starter=True
+        )
         assert skill.effects[0].unit == "summon_elemental_spirit"
         assert whiteboard_keywords_of(skill, LIB) == ("summon",)
 

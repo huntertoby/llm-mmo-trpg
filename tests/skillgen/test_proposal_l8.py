@@ -266,7 +266,7 @@ def test_followup_is_closed_when_disabled() -> None:
 def test_budget_filler_tunes_the_second_segment() -> None:
     """第一段只有傳送（沒有旋鈕）：預算器調第二段的傷害倍率，把強度調進區間。"""
     data = _proposal("skill_shadow_whirl")
-    ctx = ProposalContext(1, "rare")
+    ctx = ProposalContext(2, "rare")  # 接續段、傳送要角色 2 階（3W-9）
     result = evaluate_proposal(data, _models(), _lib(), ctx, fill=budget_filler(_lib(), seed=5))
     assert result.skill is not None, result.errors
     assert result.skill.followup is not None
@@ -283,9 +283,9 @@ def test_mock_followup_proposal(skill_id: str) -> None:
     original = _lib().skills[skill_id]
     assert original.followup is not None
     text = json.dumps(_proposal(skill_id), ensure_ascii=False)
-    request = ProposalRequest(1, "rare", skeleton=original.skeleton)
+    request = ProposalRequest(2, "rare", skeleton=original.skeleton)  # 接續段要 2 階（3W-9）
     outcome = propose_skill(
-        MockLLMClient([text]), _lib(), request, ProposalContext(1, "rare"), seed=6
+        MockLLMClient([text]), _lib(), request, ProposalContext(2, "rare"), seed=6
     )
     assert outcome.source == "llm", outcome.reason
     assert outcome.skill.followup is not None
@@ -303,7 +303,9 @@ def test_followup_scope_in_subsets() -> None:
     common = select_subset(_lib(), ProposalRequest(1, "common", skeleton="strike"))
     assert common.followup_skeletons == ()
     assert "followup" not in available_payload(_lib(), common)
-    rare = select_subset(_lib(), ProposalRequest(1, "rare", skeleton="area"))
+    first = select_subset(_lib(), ProposalRequest(1, "rare", skeleton="area"))
+    assert first.followup_skeletons == ()  # 接續段要角色 2 階（3W-9，6.34.9）
+    rare = select_subset(_lib(), ProposalRequest(2, "rare", skeleton="area"))
     assert {"area", "strike", "displace"} <= set(rare.followup_skeletons)
     assert "leap" in rare.followup_moves
     assert "leap" not in rare.primitives

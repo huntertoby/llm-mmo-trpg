@@ -96,8 +96,11 @@ def test_dice_use_the_allowed_sides_and_counts() -> None:
 
 @pytest.mark.parametrize("skeleton", ENABLED)
 def test_every_enabled_skeleton_can_be_composed(skeleton: str) -> None:
+    # 3W-9：召喚、陷阱、姿態骨架要角色 2 階（最低角色階級表），用 2 階以上組
+    low = lib().budget.min_character_tier.skeletons.get(skeleton, 1)
     for seed in range(5):
-        skill = compose_random_skill(seed, skeleton=skeleton, rarity="epic")
+        tier = None if low == 1 else low + seed % 2
+        skill = compose_random_skill(seed, skeleton=skeleton, rarity="epic", tier=tier)
         assert skill.skeleton == skeleton and skill.rarity == "epic"
 
 
@@ -307,7 +310,7 @@ def test_explicit_stances_are_valid_in_every_tier_and_have_a_stance_status() -> 
     # 3W-2b：元素姿態階梯只給轉型與費用類小變化
     stances -= {s.id for s in library.ruleset.statuses.statuses if s.element_dealt}
     seen: set[str] = set()
-    for tier in range(1, 6):
+    for tier in range(2, 6):  # 姿態要角色 2 階（3W-9）
         for seed in range(30):
             skill = compose_random_skill(seed, skeleton="stance", rarity="rare", tier=tier)
             assert validate_skill(skill, library) == [], (tier, seed)
@@ -365,8 +368,8 @@ def test_the_composer_sometimes_adds_a_valid_dual_attribute_or_mastery() -> None
     rules = library.ruleset
     found = [compose_random_skill(seed, library=library) for seed in range(400)]
     sacrifices = [
-        compose_random_skill(seed, rarity="epic", skeleton="sacrifice", library=library)
-        for seed in range(80)
+        compose_random_skill(seed, rarity="epic", skeleton="sacrifice", tier=3, library=library)
+        for seed in range(80)  # 獻祭召喚物要角色 2 階、雙屬性縮放 3 階（3W-9）
     ]
     dual = [s for s in (*found, *sacrifices) if s.secondary_scaling_attr is not None]
     mastered = [s for s in found if s.mastery is not None]

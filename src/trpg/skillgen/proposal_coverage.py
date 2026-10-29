@@ -24,6 +24,7 @@ from trpg.skillgen.proposal import (
     proposal_from_skill,
 )
 from trpg.skillgen.proposal_numbers import fixed_filler, split_numbers
+from trpg.skillgen.validate import tier_requirements
 
 __all__ = [
     "CATEGORIES",
@@ -151,10 +152,21 @@ def _row(skill: SkillDef, library: ContentLibrary, models: ProposalModels) -> In
 _BUDGET_RANGE = frozenset({"rules/budget.over", "rules/budget.weak"})
 
 
+def _is_tier_code(code: str) -> bool:
+    """最低角色階級的違規（含變奏、第二段裡的；3W-9）。"""
+    rule = code.removeprefix("rules/")
+    return rule.startswith("tier.") or ".tier." in rule
+
+
 def _known_rules_only(skill: SkillDef, library: ContentLibrary, codes: list[str]) -> bool:
     """手寫技能本身已知的規則問題（不是提議格式的問題）：最低花費（3-48c）、射程係數後超出預算
-    範圍（3-49 已知例外）。結構可以表達，算往返成功。"""
+    範圍（3-49 已知例外）、手寫技能用到自己階級還沒開放的內容（最低角色階級 ``tier.*``，3W-9：手寫
+    內容保留原本的階級，提議題目用的卻是「從零產生」的規則）。結構可以表達，算往返成功。"""
     allowed: set[str] = set()
+    if tier_requirements(skill, library) or skill.variants:
+        codes = [c for c in codes if not _is_tier_code(c)]
+        if not codes:
+            return True
     if library.budget.min_cost_problem(skill.kind, skill.category, skill.cost):
         allowed.add("rules/cap.min_cost")
     if skill.id in library.budget.known_budget_exceptions:

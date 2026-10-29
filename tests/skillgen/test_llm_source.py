@@ -177,16 +177,17 @@ def test_core_primitive_restricts_the_subset(library: ContentLibrary) -> None:
 
 
 def test_menu_rotation_shrinks_and_shuffle_keeps_membership(library: ContentLibrary) -> None:
-    full = select_subset(library, ProposalRequest(1, "epic"))
+    # 3 階：最低角色階級全開，選單夠大才看得出輪替（3W-9）
+    full = select_subset(library, ProposalRequest(3, "epic"))
     rules = library.composer.llm_topic
-    rotated = select_subset(library, ProposalRequest(1, "epic", menu_seed=5))
+    rotated = select_subset(library, ProposalRequest(3, "epic", menu_seed=5))
     assert len(rotated.conditions) <= rules.condition_count + 1  # 骨架必要的條件另計
     assert set(rotated.primitives) < set(full.primitives)
-    other = select_subset(library, ProposalRequest(1, "epic", menu_seed=6))
+    other = select_subset(library, ProposalRequest(3, "epic", menu_seed=6))
     assert rotated != other
     ids = [e["id"] for e in available_payload(library, rotated)["primitives"]]
     assert sorted(ids) == sorted(rotated.primitives)
-    assert select_subset(library, ProposalRequest(1, "epic", menu_seed=5)) == rotated
+    assert select_subset(library, ProposalRequest(3, "epic", menu_seed=5)) == rotated
 
 
 def test_shuffle_does_not_change_evaluation(library: ContentLibrary) -> None:

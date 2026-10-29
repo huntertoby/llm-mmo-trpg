@@ -30,6 +30,7 @@ from trpg.skillgen.proposal_budget import (
 )
 from trpg.skillgen.proposal_numbers import split_numbers
 from trpg.skillgen.random_composer import default_library
+from trpg.skillgen.validate import minimum_tier
 
 WEAK_ONLY = ("skill_fire_arrow", "skill_cleave", "skill_execute", "skill_bloodlust")
 """最小補值下只剩 ``budget.weak``、預算器補完直接合格的手寫技能（結構）。"""
@@ -47,7 +48,9 @@ def models(library: ContentLibrary) -> ProposalModels:
 
 def _proposal(library: ContentLibrary, skill_id: str) -> tuple[dict[str, Any], ProposalContext]:
     skill = library.skills[skill_id]
-    return proposal_from_skill(skill, library), ProposalContext(skill.tier, skill.rarity)
+    # 3W-9：題目用角色階級；手寫技能用到的內容要的階級比它自己高時，用那一階出題
+    tier = max(skill.tier, minimum_tier(skill, library))
+    return proposal_from_skill(skill, library), ProposalContext(tier, skill.rarity)
 
 
 @pytest.mark.parametrize("skill_id", WEAK_ONLY)
@@ -101,7 +104,9 @@ def test_different_seeds_may_differ_but_stay_in_bounds(
 def test_no_cooldown_big_area_repaired_with_minimal_cooldown(
     library: ContentLibrary, models: ProposalModels
 ) -> None:
-    proposal, ctx = _proposal(library, "skill_blinding_dark")
+    proposal, _ = _proposal(library, "skill_blinding_dark")
+    # 3×3 要角色 2 階（3W-9）；這裡只驗修補機制，照手寫技能自己的 1 階出題（來源手寫，不受階級限制）
+    ctx = ProposalContext(1, "rare", origin="builtin")
     plain = evaluate_proposal(proposal, models, library, ctx, fill=budget_filler(library, seed=3))
     assert [e.code for e in plain.errors] == ["exclusion.no_cooldown_big_area"]
     evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=3)

@@ -1228,9 +1228,12 @@ def minimum_tier(skill: SkillDef, library: ContentLibrary) -> int:
 def tier_violations(
     skill: SkillDef, library: ContentLibrary, tier: int | None = None
 ) -> list[Violation]:
-    """``tier``（省略 ＝ 技能的 ``tier``，即角色階級）用不到的內容。手寫內容（``builtin``）與創角的
-    起始技能（``starter``）不檢查（:data:`UNGATED_ORIGINS`）。"""
-    if skill.provenance.origin in UNGATED_ORIGINS:
+    """``tier``（省略 ＝ 技能的 ``tier``，即角色階級）用不到的內容。只檢查「從零產生」的技能（白板、
+    組合器、LLM 提議、工坊）；手寫內容（``builtin``）與創角的起始技能（``starter``）不檢查
+    （:data:`UNGATED_ORIGINS`）；由既有技能推出來的（``provenance.parents`` 非空：閃現、轉型、
+    分歧進化）保留原本的結構，新加的內容由變化模板自己的最低角色階級把關
+    （``min_tier``，6.34.9 表 3）。"""
+    if skill.provenance.origin in UNGATED_ORIGINS or skill.provenance.parents:
         return []
     have = skill.tier if tier is None else tier
     out: list[Violation] = []

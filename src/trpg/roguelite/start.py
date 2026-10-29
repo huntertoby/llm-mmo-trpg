@@ -339,7 +339,7 @@ def _whiteboard_starter(
     （形態）或湊不到時回傳 ``None``，由呼叫端退回手寫的起始技能池。"""
     tier = library.composer.whiteboard.tier  # 創角例外：起始技能一律 1 階（6.34.9）
     if not library.roguelite.start.whiteboard or keyword not in whiteboard_keywords(
-        library, "active", tier
+        library, "active", tier, creation=True
     ):
         return None
     for _ in range(library.roguelite.start.composer_tries):

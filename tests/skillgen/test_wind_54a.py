@@ -66,7 +66,8 @@ def test_validator_accepts_blow_on_tiles_and_rejects_units_and_common() -> None:
     assert ok.legal, ok.problems
     units = _draft("area", [WIND, {**BLOW, "affects": "enemies"}])
     assert not check_draft({**units, "rarity": "rare"}, LIB).legal
-    assert not check_draft({**_draft("area", [WIND, BLOW]), "rarity": "common"}, LIB).legal
+    # 3W-9：稀有度只是標記，普通也合法（吹送是 1 階就有的內容）
+    assert check_draft({**_draft("area", [WIND, BLOW]), "rarity": "common"}, LIB).legal
 
 
 def test_budget_counts_blow_per_distance_and_wind_push_collisions() -> None:

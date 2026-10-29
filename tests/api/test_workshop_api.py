@@ -45,9 +45,12 @@ def test_check_endpoint_returns_budget_rarity_and_card(client: TestClient) -> No
     assert body["minimum_rarity"] == "rare"
     assert body["card"]["name_zh"] == "衝鋒擊退"
     assert body["card"]["effect_ids"] == ["dash", "damage", "push"]
-    bad = client.post("/api/workshop/check", json={"skill": {**CHARGE, "rarity": "common"}}).json()
+    # 3W-9：稀有度只是標記，普通也合法；不合法的例子改用階級 5（同樣的數字在 5 階過弱）
+    plain = client.post("/api/workshop/check", json={"skill": {**CHARGE, "rarity": "common"}})
+    assert plain.json()["legal"] is True
+    bad = client.post("/api/workshop/check", json={"skill": {**CHARGE, "tier": 5}}).json()
     assert bad["legal"] is False
-    assert any(p["rule"] == "rarity.primitive" for p in bad["problems"])
+    assert any(p["rule"] == "budget.weak" for p in bad["problems"])
 
 
 def test_rune_duration_card_and_export_follow_the_draft_in_both_edit_orders(
@@ -127,7 +130,7 @@ STRIKE_DRAFT = walk_draft(STRIKE)
 
 def test_export_refuses_illegal_skills_unless_dev_mode(client: TestClient) -> None:
     """玩家模式（預設）不合法技能不能匯出；開發者模式傳 ``allow_illegal`` 才能（Phase 3H-8）。"""
-    illegal = {**CHARGE, "rarity": "common"}
+    illegal = {**CHARGE, "tier": 5}  # 3W-9：稀有度不再擋，改用過弱
     blocked = client.post("/api/workshop/export", json={"skill": illegal})
     assert blocked.status_code == 422 and "不合法" in blocked.json()["detail"]
     dev = client.post("/api/workshop/export", json={"skill": illegal, "allow_illegal": True}).json()
@@ -306,7 +309,7 @@ def test_the_workshop_builds_teleport_then_cone_through_the_api(client: TestClie
     common = client.post(
         "/api/workshop/check", json={"skill": {**TELEPORT_CONE, "rarity": "common"}}
     ).json()
-    assert common["legal"] is False
+    assert common["legal"] is True  # 3W-9：稀有度只是標記
 
 
 def test_try_out_teleport_then_cone_and_cast_it(client: TestClient) -> None:

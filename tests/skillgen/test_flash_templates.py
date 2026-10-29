@@ -35,6 +35,7 @@ from trpg.skillgen.flash import (
     FlashRequest,
     UsageSource,
     apply_variation,
+    at_role_tier,
     at_tier,
     choose,
     derive_chain,
@@ -332,7 +333,7 @@ def _walk_powers(skill_id: str, picks: int, tier: int = 2) -> list[Fraction]:
     lib = library()
     base = lib.skills[skill_id]
     state = _used(skill_id)
-    powers = [budget_power(at_tier(base, tier), lib)]
+    powers = [budget_power(at_role_tier(lib, base, tier), lib)]
     for _ in range(picks):
         offer = make_offer(lib, FlashRequest(base, state, SkillUsage(), SEED, tier=tier))
         if not offer.options:  # 模板有限：被動、反應可能不到 5 次就沒有合格的變化
@@ -350,8 +351,11 @@ def _walk_powers(skill_id: str, picks: int, tier: int = 2) -> list[Fraction]:
     "skill_id", ["skill_fire_bolt", "skill_radiant_mend", "skill_ember_brand", "skill_reflex_ward"]
 )
 def test_power_never_drops_along_five_flashes(skill_id: str) -> None:
+    # 3W-9：技能先照角色階級（2 階）的預算重配，起點就在預算窗內；被動模板較少，燃燒印記在 2 階
+    # 起點較高、強度下限擋掉之後的選項，所以只要求至少閃 1 次（其餘至少 3 次）
     powers = _walk_powers(skill_id, 5)
-    assert len(powers) >= 4, powers  # 至少閃了 3 次
+    least = 2 if skill_id == "skill_ember_brand" else 4
+    assert len(powers) >= least, powers
     assert powers == sorted(powers), powers
 
 

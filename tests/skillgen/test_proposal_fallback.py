@@ -47,7 +47,7 @@ def test_composer_first_with_keywords(library: ContentLibrary) -> None:
     ("request_", "kind"),
     [
         (ProposalRequest(1, "epic", kind="passive"), "passive"),
-        (ProposalRequest(1, "rare", kind="stance"), "stance"),
+        (ProposalRequest(2, "rare", kind="stance"), "stance"),  # 姿態要角色 2 階（3W-9）
         (ProposalRequest(1, "common", skeleton="strike"), "active"),
     ],
 )

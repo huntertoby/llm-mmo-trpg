@@ -68,7 +68,9 @@ def test_active_whiteboards_use_the_default_cost() -> None:
     for keyword in sorted(whiteboard_keywords(LIB, "active", RULES.tier) - {"summon", GENERIC}):
         for seed in range(10):
             skill = compose_whiteboard(seed, keyword=keyword, library=LIB)
-            assert skill.ap_cost == RULES.ap_cost
+            # 3W-9：1 階的隆地只升一格（AP 1，同自身類白板）
+            want = RULES.self_ap_cost if skill.effects[0].type == "raise_terrain" else RULES.ap_cost
+            assert skill.ap_cost == want
             assert (skill.cost.cooldown or 0) <= RULES.cooldown.max
             assert skill.cost.uses_per_battle is None and skill.cost.overdraft is None
             assert skill.cost.self_status is None

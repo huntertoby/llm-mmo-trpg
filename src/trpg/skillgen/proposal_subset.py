@@ -670,7 +670,11 @@ def _followup_scope(
     """複合技能第二段的骨架、形狀與自身位移（Phase 4-L8）：主動技能、稀有度不低於複合技能最低
     稀有度時，為此稀有度可用的主動骨架（排序）、第二段形狀與 ``COMPOSITE_MOVES``（YAML 順序）；
     否則都是空的（不開放）。"""
-    if kind != "active" or not composite_allowed(sel.rarity):
+    if (
+        kind != "active"
+        or not composite_allowed(sel.rarity)
+        or sel.tier < sel.tiers.followup  # 接續段要角色 2 階（3W-9，6.34.9）
+    ):
         return (), (), ()
     skeletons = tuple(
         sorted(
