@@ -25,7 +25,7 @@ export const PAL = {
   water: "#3a86d8",
   ice: "#d4f0ff",
   oil: "#211a10",
-  fire: "#ff7a1a",
+  fire: "#ff6a1a",
   poison: "#74c23c",
   smoke: "#dcdfe6",
   holy: "#ffe58a",

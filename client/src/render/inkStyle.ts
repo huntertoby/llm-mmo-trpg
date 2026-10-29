@@ -99,6 +99,56 @@ export function withShadeDir<T>(ctx: Ctx, dir: ShadeDir, fn: () => T): T {
   }
 }
 
+/**
+ * 小圖示模式（Phase 3T-4b）：武器小圖示直接在圖示大小用向量畫，墨線寬度要除以放大倍率才不會變粗（`lineScale`），
+ * 頭部太小的武器（斧、錘、錘矛、鐮刀、杖頭）把頭放大（`headScale`，見 `iconHead`）。跟著畫布走、結束時還原；
+ * 沒有指定的畫布（小人、戰場）完全不受影響。
+ */
+export interface IconMode {
+  lineScale: number;
+  headScale: number;
+}
+const iconModes = new WeakMap<object, IconMode>();
+
+/** 在 `fn` 執行期間把 `ctx` 設成小圖示模式，結束時還原（含例外）。 */
+export function withIconMode<T>(ctx: Ctx, mode: IconMode, fn: () => T): T {
+  const before = iconModes.get(ctx);
+  iconModes.set(ctx, mode);
+  try {
+    return fn();
+  } finally {
+    if (before === undefined) iconModes.delete(ctx);
+    else iconModes.set(ctx, before);
+  }
+}
+
+/** 目前是不是在畫小圖示。 */
+export const inIconMode = (ctx: Ctx): boolean => iconModes.has(ctx);
+
+const lineMul = (ctx: Ctx): number => iconModes.get(ctx)?.lineScale ?? 1;
+
+/**
+ * 小圖示裡把「頭」（斧刃、錘頭、鐮刃、杖頭）以 (ax, ay)（頭與柄交接處）為中心放大 `headScale` 倍，柄不變；
+ * 放大後墨線寬度除回去，線不會跟著變粗。不是小圖示時照原樣畫。
+ */
+export function iconHead(ctx: Ctx, ax: number, ay: number, fn: () => void): void {
+  const mode = iconModes.get(ctx);
+  if (mode === undefined || mode.headScale === 1) {
+    fn();
+    return;
+  }
+  const h = mode.headScale;
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.scale(h, h);
+  ctx.translate(-ax, -ay);
+  try {
+    withIconMode(ctx, { ...mode, lineScale: mode.lineScale / h }, fn);
+  } finally {
+    ctx.restore();
+  }
+}
+
 export interface InkOpt {
   /** 墨線寬（預設 0.85；第二次描線為 0.45 倍）。 */
   w?: number;
@@ -133,7 +183,7 @@ function hatch(ctx: Ctx, pts: readonly Pt[], sharp: boolean | undefined): void {
   const a = dir > 0 ? x0 + w * 0.6 : x0 - h;
   const b = dir > 0 ? x1 + h : x0 + w * 0.4;
   ctx.strokeStyle = "rgba(43,30,22,0.42)";
-  ctx.lineWidth = 0.35;
+  ctx.lineWidth = 0.35 * lineMul(ctx);
   ctx.beginPath();
   for (let x = a; x < b; x += 1.3) {
     ctx.moveTo(x, y0);
@@ -154,7 +204,7 @@ export function ink(ctx: Ctx, key: string, pts: readonly Pt[], color: string, op
   ctx.fill();
   ctx.globalAlpha = 0.35;
   ctx.strokeStyle = "rgba(0,0,0,0.55)";
-  ctx.lineWidth = 0.9;
+  ctx.lineWidth = 0.9 * lineMul(ctx);
   ctx.stroke();
   ctx.restore();
   if (opt.shade !== false) hatch(ctx, pts, opt.sharp);
@@ -163,10 +213,10 @@ export function ink(ctx: Ctx, key: string, pts: readonly Pt[], color: string, op
   ctx.strokeStyle = INK;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.lineWidth = w;
+  ctx.lineWidth = w * lineMul(ctx);
   outline(ctx, wobble(pts, r, 0.5), opt.sharp);
   ctx.stroke();
-  ctx.lineWidth = w * 0.45;
+  ctx.lineWidth = w * 0.45 * lineMul(ctx);
   outline(ctx, wobble(pts, r, 0.85), opt.sharp);
   ctx.stroke();
 }
@@ -175,7 +225,7 @@ export function ink(ctx: Ctx, key: string, pts: readonly Pt[], color: string, op
 export function stroke(ctx: Ctx, key: string, pts: readonly Pt[], w = 0.7, color: string = INK): void {
   const r = lcg(seedOf(key));
   ctx.strokeStyle = color;
-  ctx.lineWidth = w;
+  ctx.lineWidth = w * lineMul(ctx);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   smooth(ctx, wobble(pts, r, 0.35), false);

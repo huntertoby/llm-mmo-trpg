@@ -250,7 +250,7 @@ export const HIGHLIGHT = {
   /** 不影響我方的持續區域（3-37b）：虛線外框＋淡底色。 */
   zone_neutral: 0xb0b8c4,
   /** 定時炸彈（Phase 3D-8b）：預覽的爆炸範圍與倒數；倒地的友方（可復活）與復活的位置。 */
-  bomb: 0xff7a1a,
+  bomb: 0xff6a1a,
   downed: 0xff3b30,
   revive: 0x7dff7d,
   /** 複合技能（Phase 3F-3b）：動作段的範圍（紫色）。 */

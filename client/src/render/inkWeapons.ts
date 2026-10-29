@@ -7,7 +7,7 @@ import type { Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
 import { drawInkWeapon, metalOf, type ColorFn, type HeldOpt } from "./inkGear";
-import { dot, ellPts, ink, MAT, stroke, type Pt } from "./inkStyle";
+import { dot, ellPts, iconHead, inIconMode, ink, MAT, stroke, type Pt } from "./inkStyle";
 
 const GOLD = MAT.gold;
 const WOOD = MAT.wood;
@@ -61,8 +61,10 @@ function drawGreatsword(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
 function drawHammer(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   if (it.form === "mace") {
     haft(ctx, k, 4, -22, c.wood);
-    ink(ctx, `${k}-ball`, ellPts(0, -25, 5, 5, 12), c.metal, { w: 0.8 });
-    stroke(ctx, `${k}-flange`, [[-5, -25], [5, -25]], 0.5, c.dark);
+    iconHead(ctx, 0, -22, () => {
+      ink(ctx, `${k}-ball`, ellPts(0, -25, 5, 5, 12), c.metal, { w: 0.8 });
+      stroke(ctx, `${k}-flange`, [[-5, -25], [5, -25]], 0.5, c.dark);
+    });
     return;
   }
   if (it.form === "flail") {
@@ -72,8 +74,11 @@ function drawHammer(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
     return;
   }
   haft(ctx, k, 4, -27, c.wood, 1);
-  ink(ctx, `${k}-head`, rect(-7.6, -35, 7.6, -26), c.metal, { w: 0.9 });
-  stroke(ctx, `${k}-band`, [[-7.6, -30.5], [7.6, -30.5]], 0.5, c.dark);
+  iconHead(ctx, 0, -26, () => {
+    // 小圖示：錘頭是橫的長方塊（尖角，不圓滑化），和圓頭的錘矛分得開
+    ink(ctx, `${k}-head`, rect(-7.6, -35, 7.6, -26), c.metal, { w: 0.9, sharp: inIconMode(ctx) });
+    stroke(ctx, `${k}-band`, [[-7.6, -30.5], [7.6, -30.5]], 0.5, c.dark);
+  });
 }
 
 function drawSpear(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
@@ -99,7 +104,7 @@ function drawFist(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
 
 function drawScythe(ctx: Ctx, _it: GearItem, k: string, c: Cols): void {
   haft(ctx, k, 8, -34, c.wood);
-  ink(ctx, `${k}-blade`, [[0, -35], [7, -38], [15, -33], [18.4, -22], [11, -28], [0, -29]], c.metal, { w: 0.8 });
+  iconHead(ctx, 0, -32, () => ink(ctx, `${k}-blade`, [[0, -35], [7, -38], [15, -33], [18.4, -22], [11, -28], [0, -29]], c.metal, { w: 0.8 }));
 }
 
 function drawWhip(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
@@ -126,10 +131,12 @@ function drawArcaneSword(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
 function drawScepter(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   const gem = elementTint(it.element) ?? c.metal;
   ink(ctx, `${k}-shaft`, rect(-1.3, -30, 1.3, 8), WOOD_DARK, { shade: false, w: 0.6 });
-  const ring = ellPts(0, -34, 6, 6, 16);
-  stroke(ctx, `${k}-ring`, [...ring, ring[0]!], 1.5, c.gold);
-  ink(ctx, `${k}-gem`, ellPts(0, -34, 3, 3, 10), gem, { shade: false, w: 0.6 });
-  dot(ctx, -1, -35, 0.8, 0.8, "#ffffff");
+  iconHead(ctx, 0, -29, () => {
+    const ring = ellPts(0, -34, 6, 6, 16);
+    stroke(ctx, `${k}-ring`, [...ring, ring[0]!], 1.5, c.gold);
+    ink(ctx, `${k}-gem`, ellPts(0, -34, 3, 3, 10), gem, { shade: false, w: 0.6 });
+    dot(ctx, -1, -35, 0.8, 0.8, "#ffffff");
+  });
 }
 
 function drawTotem(ctx: Ctx, _it: GearItem, k: string): void {
@@ -244,7 +251,8 @@ function shapeOf(it: GearItem): Shape {
   return SHAPES[it.kind]!;
 }
 
-function leanOf(it: GearItem, o: HeldOpt): number {
+function leanOf(ctx: Ctx, it: GearItem, o: HeldOpt): number {
+  if (inIconMode(ctx)) return 0; // 小圖示一律 45° 斜放，由圖示自己轉，不再加握法的傾斜
   if (it.kind === "sword") return o.side ? 0.75 : 0;
   if (it.kind === "staff") return o.side ? (it.form === "totem" ? 0.4 : 0.4) : 0;
   const [front, side] = LEAN[it.kind] ?? [0, 0];
@@ -273,7 +281,7 @@ export function drawInkWeaponMore(ctx: Ctx, it: GearItem, key: string, x: number
   // 外側朝 +x：正面主手（mirror ＝ false）在畫面左，外側是 -x
   if (!o.side && !o.mirror) ctx.scale(-1, 1);
   if (o.side && it.kind === "staff" && it.form === "totem") ctx.translate(2, 0);
-  ctx.rotate(leanOf(it, o));
+  ctx.rotate(leanOf(ctx, it, o));
   shapeOf(it)(ctx, it, key, c);
   ctx.restore();
   return true;

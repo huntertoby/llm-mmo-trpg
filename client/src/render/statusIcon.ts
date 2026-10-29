@@ -33,7 +33,7 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   revealed: "#ffd04a",
   marked: "#ff6a4a",
   overwatch: "#ffd04a",
-  infused_fire: "#ff7a1a", // 臨時附魔（3I-6）：武器上纏著該元素的色
+  infused_fire: "#ff6a1a", // 臨時附魔（3I-6）：武器上纏著該元素的色
   infused_holy: "#ffe9a0",
 };
 

@@ -4,7 +4,7 @@
 import { TAU, type Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
-import { ellPts, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
+import { ellPts, iconHead, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
 
 /** 取一件裝備的 [主色, 暗色]（paperdoll.ts 的 `itemColors`）。 */
 export type ColorFn = (it: GearItem) => readonly [string, string];
@@ -114,25 +114,29 @@ function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string, outward =
 
 function drawAxe(ctx: Ctx, key: string, metal: string, wood: string): void {
   ink(ctx, `${key}-haft`, [[-0.8, 9], [0.8, 9], [0.8, -24], [-0.8, -24]], wood, { shade: false, w: 0.6 });
-  ink(ctx, `${key}-head`, [[0.6, -23], [7.6, -27], [9.4, -20.6], [7.6, -14], [0.6, -18]], metal, { w: 0.8 });
-  ink(ctx, `${key}-head2`, [[-0.6, -22.4], [-4.6, -24.4], [-5.2, -20.4], [-4.6, -16.6], [-0.6, -18.6]], metal, { w: 0.7 });
+  iconHead(ctx, 0, -20, () => {
+    ink(ctx, `${key}-head`, [[0.6, -23], [7.6, -27], [9.4, -20.6], [7.6, -14], [0.6, -18]], metal, { w: 0.8 });
+    ink(ctx, `${key}-head2`, [[-0.6, -22.4], [-4.6, -24.4], [-5.2, -20.4], [-4.6, -16.6], [-0.6, -18.6]], metal, { w: 0.7 });
+  });
 }
 
 /** 杖頭光暈：用同心半透明圓疊出柔邊（不用漸層，確定性、好測）。 */
 function drawStaff(ctx: Ctx, it: GearItem, key: string, wood: string): void {
   ink(ctx, `${key}-pole`, [[-0.8, 22], [0.8, 22], [0.9, -27], [-0.9, -27]], wood, { shade: false, w: 0.6 });
   const glow = elementTint(it.element) ?? STAFF_GLOW;
-  ctx.save();
-  ctx.fillStyle = glow;
-  for (const [r, a] of [[8, 0.14], [6.2, 0.2], [4.4, 0.28]] as const) {
-    ctx.globalAlpha = a;
-    ctx.beginPath();
-    ctx.arc(0, -30, r, 0, TAU);
-    ctx.fill();
-  }
-  ctx.restore();
-  ink(ctx, `${key}-claw`, [[-3, -27], [-2.6, -33.4], [0, -29], [2.6, -33.4], [3, -27]], wood, { shade: false, w: 0.6 });
-  ink(ctx, `${key}-orb`, ellPts(0, -30.4, 2.4, 2.4, 10), glow, { shade: false, w: 0.6 });
+  iconHead(ctx, 0, -27, () => {
+    ctx.save();
+    ctx.fillStyle = glow;
+    for (const [r, a] of [[8, 0.14], [6.2, 0.2], [4.4, 0.28]] as const) {
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.arc(0, -30, r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    ink(ctx, `${key}-claw`, [[-3, -27], [-2.6, -33.4], [0, -29], [2.6, -33.4], [3, -27]], wood, { shade: false, w: 0.6 });
+    ink(ctx, `${key}-orb`, ellPts(0, -30.4, 2.4, 2.4, 10), glow, { shade: false, w: 0.6 });
+  });
 }
 
 function drawBow(ctx: Ctx, key: string, wood: string): void {
