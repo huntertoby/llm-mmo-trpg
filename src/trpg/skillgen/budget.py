@@ -39,6 +39,7 @@ from trpg.content.skills import (
     REFUND_COOLDOWN,
     SELF_DAMAGE_OF_HIT,
     ConditionDef,
+    ConditionSpec,
     EffectSpec,
     ModifierChange,
     ModifierSpec,
@@ -1153,12 +1154,20 @@ def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fracti
 
 
 def _condition_multiplier(
-    condition_type: str, conditions: dict[str, ConditionDef], budget: BudgetRules
+    condition_type: str,
+    conditions: dict[str, ConditionDef],
+    budget: BudgetRules,
+    any_of: tuple[ConditionSpec, ...] | None = None,
 ) -> Fraction:
+    """條件的預算倍率；有 ``any_of`` 時取各分支中最寬鬆（倍率最大）的那個（3W-2b：「或」比任何一個
+    分支都容易成立，不會比最寬鬆的更嚴）。"""
     definition = conditions.get(condition_type)
     if definition is None:
         raise BudgetError(f"未知的條件 {condition_type!r}")
-    return Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    best = Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    for part in any_of or ():
+        best = max(best, _condition_multiplier(part.type, conditions, budget))
+    return best
 
 
 def _effect_budget(
@@ -1181,7 +1190,9 @@ def _effect_budget(
     target = Fraction(budget.all_target_permille, _PERMILLE) if affects == "all" else Fraction(1)
     condition = Fraction(1)
     if effect.condition is not None:
-        condition = _condition_multiplier(effect.condition.type, rules.conditions.by_id(), budget)
+        condition = _condition_multiplier(
+            effect.condition.type, rules.conditions.by_id(), budget, effect.condition.any_of
+        )
     return EffectBudget(
         index=index,
         type=effect.type,
@@ -1460,7 +1471,9 @@ def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectB
             count *= Fraction(budget.modifier.shape_benefit_permille, _PERMILLE)
         condition = Fraction(1)
         if rule.condition is not None:
-            condition = _condition_multiplier(rule.condition.type, rules.conditions.by_id(), budget)
+            condition = _condition_multiplier(
+                rule.condition.type, rules.conditions.by_id(), budget, rule.condition.any_of
+            )
         base = count * value
         out.append(
             EffectBudget(
@@ -1658,7 +1671,7 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     condition_multiplier = Fraction(1)
     if skill.condition is not None:
         condition_multiplier = _condition_multiplier(
-            skill.condition.type, rules.conditions.by_id(), budget
+            skill.condition.type, rules.conditions.by_id(), budget, skill.condition.any_of
         )
     tags = mechanic_tags(skill, rules)
     synergies = tuple(

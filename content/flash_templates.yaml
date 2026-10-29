@@ -237,13 +237,13 @@ minor:
     op: mod_range
     kinds: [modifier]
     prefix_zh: 廣域
-    summary_zh: 作用範圍 +1（光環類：射程或範圍 +1，幅度依預算調整）
+    summary_zh: 作用範圍 +1（多一條光環半徑 +1 的規則，或射程 +1，幅度依預算調整）
   - id: mod_keyword
     category: modifier
     op: mod_keyword
     kinds: [modifier]
     prefix_zh: 雙引
-    summary_zh: 加第二個關鍵字：另一種狀態或表面也套用同樣的修正（幅度依預算調整）
+    summary_zh: 加第二個關鍵字：條件變成「原條件，或另一個關鍵字的條件」（幅度依預算調整）
   - id: stance_potency
     category: modifier
     op: stance_potency
@@ -256,7 +256,7 @@ minor:
     op: mod_relax
     kinds: [modifier]
     prefix_zh: 寬限
-    summary_zh: 條件放寬一級（幅度依預算調整）
+    summary_zh: 條件放寬一級：血量門檻放寬，或多一個「或」分支（幅度依預算調整）
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:

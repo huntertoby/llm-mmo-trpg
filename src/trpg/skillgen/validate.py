@@ -1028,7 +1028,9 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
         if effect.condition is not None:
             cond_specs.append(effect.condition)
     needs += [
-        RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs
+        RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity)
+        for spec in cond_specs
+        for c in spec.alternatives()  # 3W-2b：any_of 的每個分支都算
     ]
     needs += _terrain_area_needs(skill, library)
     follow = skill.followup_skill()

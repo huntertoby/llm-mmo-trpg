@@ -122,6 +122,8 @@ def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> li
         known = ", ".join(sorted(refs.conditions))
         return [f"{where}.type：未知的條件 {condition.type!r}（可用：{known}）"]
     problems: list[str] = []
+    for index, part in enumerate(condition.any_of or ()):  # 3W-2b：「或」的每個分支都要合法
+        problems += _condition_problems(f"{where}.any_of[{index}]", part, refs)
     values = condition.param_values()
     for name, value in values.items():
         spec = definition.params.get(name)

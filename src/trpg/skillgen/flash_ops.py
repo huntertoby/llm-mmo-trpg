@@ -25,9 +25,9 @@
 ``trigger_range``  觸發範圍 +1（被動、反應）
 ``trigger_cap``    每回合觸發次數上限 +1（被動；不超過 6.6）
 ``mod_potency``    修正幅度 +（修正型被動）
-``mod_range``      作用範圍 +1（修正型被動：射程 +1，或多一條範圍 +1 的規則）
-``mod_keyword``    加第二個關鍵字（修正型被動：多一條不同關鍵字條件的同樣修正）
-``mod_relax``      條件放寬一級（修正型被動）
+``mod_range``      作用範圍 +1（修正型被動：多一條光環半徑 +1 的規則，或射程 +1）
+``mod_keyword``    加第二個關鍵字（修正型被動：條件改成「原條件，或另一個關鍵字的條件」，any_of）
+``mod_relax``      條件放寬一級（修正型被動：血量門檻放寬，或條件加一個「或」分支）
 ``stance_light``   輕巧（姿態）：維持費 −1、元素姿態換到較低級（效果降低）
 ``stance_heavy``   蓄力（姿態）：維持費 +1、元素姿態換到較高級（效果提高）
 ``stance_potency`` 修正（姿態）：維持費不變、元素姿態換到較高級（效果提高）
@@ -39,7 +39,6 @@
 
 from __future__ import annotations
 
-import copy
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -459,7 +458,8 @@ def _op_mod_potency(
 def _op_mod_range(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """作用範圍 +1：射程 +1 的規則升成 +2；否則多一條「範圍 +1」或「射程 +1」的規則。"""
+    """作用範圍 +1（3W-2b：照光環半徑）：多一條「範圍 +1」（``area_delta``，範圍型形狀與光環的半徑
+    +1）的規則；射程 +1 的規則升成 +2；都不行時多一條「射程 +1」。"""
     if skill.kind != "modifier":
         return []
     drafts: list[Draft] = []
@@ -470,7 +470,10 @@ def _op_mod_range(
             drafts.append((base, effects))
     if len(skill.modifiers) < 2:  # noqa: PLR2004 - 修正規則最多 2 條
         applies = skill.modifiers[0].applies_to.model_dump(mode="json")
-        for change in ({"range_delta": 1}, {"area_delta": 1}):
+        has_area = any(m.change.area_delta is not None for m in skill.modifiers)
+        for change in ({"area_delta": 1}, {"range_delta": 1}):
+            if has_area and "area_delta" in change:
+                continue
             base, effects = base_draft(skill)
             base["modifiers"].append({"applies_to": applies, "change": change})
             drafts.append((base, effects))
@@ -487,47 +490,64 @@ def _graft_condition(library: ContentLibrary, keyword: str) -> dict[str, Any] | 
 def _op_mod_keyword(
     skill: SkillDef, _t: FlashTemplate, variation: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """加第二個關鍵字：多一條同樣修正、條件換成另一個關鍵字的規則（例：燃燒中的敵人 → 另加潮濕
-    表面上的敵人）。兩條都成立時幅度相加。"""
+    """加第二個關鍵字：條件改成真正的「或」（``ConditionSpec.any_of``，3W-2b；例：燃燒中的敵人 →
+    燃燒或潮濕表面上的敵人），規則只有一條。"""
     keyword = variation.keyword
-    condition = None if keyword is None else _graft_condition(library, keyword)
-    if skill.kind != "modifier" or condition is None or len(skill.modifiers) >= 2:  # noqa: PLR2004
+    alternative = None if keyword is None else _graft_condition(library, keyword)
+    if skill.kind != "modifier" or alternative is None:
         return []
-    rule = skill.modifiers[0]
-    if (
-        rule.condition is None
-        or rule.condition.model_dump(mode="json", exclude_none=True) == condition
-    ):
-        return []
-    base, effects = base_draft(skill)
-    clone = copy.deepcopy(base["modifiers"][0])
-    clone["condition"] = condition
-    base["modifiers"].append(clone)
-    return [(base, effects)]
+    drafts: list[Draft] = []
+    for index, rule in enumerate(skill.modifiers):
+        condition = rule.condition
+        if (
+            condition is None
+            or condition.any_of is not None
+            or condition.model_dump(mode="json", exclude_none=True) == alternative
+        ):
+            continue
+        base, effects = base_draft(skill)
+        base["modifiers"][index]["condition"] = {
+            **condition.model_dump(mode="json", exclude_none=True),
+            "any_of": [alternative],
+        }
+        drafts.append((base, effects))
+    return drafts[:1]
+
+
+_RELAX_ALTERNATIVES = (
+    {"type": "target_hp_below", "permille": 500},
+    {"type": "self_hp_below", "permille": 500},
+)
+"""條件放寬時多加的「或」分支（依序試；只改自己的規則只能用 self_hp_below）。"""
 
 
 def _op_mod_relax(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """條件放寬一級：血量門檻放寬 150‰（最多 900‰）；其他條件放寬成沒有條件（預算照算，幅度由預算
-    器重調得小一點）。"""
+    """條件放寬一級（3W-2b）：血量門檻放寬 150‰（最多 900‰）；其他條件加一個「或」分支（目標血量低於
+    50%；選目標前就決定的規則改用自身血量低於 50%），例：居高臨下 → 居高臨下，或目標血量低於 50%。
+    預算照 ``any_of`` 的最寬鬆倍率算，幅度由預算器重調。"""
     if skill.kind != "modifier":
         return []
     drafts: list[Draft] = []
     for index, rule in enumerate(skill.modifiers):
         condition = rule.condition
-        if condition is None:
+        if condition is None or condition.any_of is not None:
             continue
-        base, effects = base_draft(skill)
         if condition.permille is not None:
             widened = min(condition.permille + RELAX_PERMILLE, MAX_RELAX_PERMILLE)
             if widened == condition.permille:
                 continue
+            base, effects = base_draft(skill)
             base["modifiers"][index]["condition"]["permille"] = widened
-        else:
-            base["modifiers"][index]["condition"] = None
-        drafts.append((base, effects))
-    return drafts[:1]
+            drafts.append((base, effects))
+            continue
+        for alternative in _RELAX_ALTERNATIVES:
+            base, effects = base_draft(skill)
+            base["modifiers"][index]["condition"]["any_of"] = [dict(alternative)]
+            drafts.append((base, effects))
+        break
+    return drafts[:3]
 
 
 # ---------------------------------------------------------------------------
