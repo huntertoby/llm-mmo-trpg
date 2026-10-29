@@ -1,6 +1,6 @@
 // Phase C-1a：C 手繪墨線畫法層 — 確定性（同 key 同點、不同 key 不同點、不用 Math.random）、ink／stroke 的畫法結構。
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dot, ellPts, ink, INK, lcg, seedOf, setShadeDir, shadow, stroke, wobble, type Pt } from "./inkStyle";
+import { dot, ellPts, ink, INK, lcg, seedOf, shadow, stroke, withShadeDir, wobble, type Pt } from "./inkStyle";
 
 function recorder(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -67,7 +67,6 @@ describe("ink／stroke", () => {
   });
 
   it("畫法結構：水彩填色（偏移 0.45,0.35、透明度 0.94、35% 深色邊）→ 排線（裁在形狀內）→ 墨線畫兩次（w 與 0.45w）", () => {
-    setShadeDir(1);
     const { ctx, calls } = recorder();
     ink(ctx, "k", SQUARE, "#336699");
     expect(calls[0]).toBe("save()");
@@ -106,17 +105,22 @@ describe("ink／stroke", () => {
     expect(wide.calls).toContain("lineWidth=2");
   });
 
-  it("暗面方向：正面排線偏右、側面／背面偏左（斜線起點 x 不同）", () => {
-    const first = (dir: 1 | -1): string => {
-      setShadeDir(dir);
+  it("暗面方向：正面排線偏右、側面／背面偏左（斜線起點 x 不同）；預設 1，withShadeDir 結束後還原（不依賴呼叫順序）", () => {
+    const hatchX = (calls: string[]): number => Number((calls.slice(calls.indexOf("clip()")).find((c) => c.startsWith("moveTo(")) ?? "").slice(7).split(",")[0]);
+    const first = (dir: 1 | -1 | null): number => {
       const { ctx, calls } = recorder();
-      ink(ctx, "k", SQUARE, "#fff", { line: false });
-      return calls.slice(calls.indexOf("clip()")).find((c) => c.startsWith("moveTo(")) ?? "";
+      const draw = (): void => ink(ctx, "k", SQUARE, "#fff", { line: false });
+      if (dir === null) draw();
+      else withShadeDir(ctx, dir, draw);
+      return hatchX(calls);
     };
-    const right = Number(first(1).slice(7).split(",")[0]);
-    const left = Number(first(-1).slice(7).split(",")[0]);
-    expect(right).toBeGreaterThan(left);
-    setShadeDir(1);
+    expect(first(1)).toBeGreaterThan(first(-1));
+    expect(first(null)).toBe(first(1));
+    // 同一個畫布：內層用完還原成外層，外層用完回到預設
+    const { ctx, calls } = recorder();
+    withShadeDir(ctx, -1, () => withShadeDir(ctx, 1, () => undefined));
+    ink(ctx, "k", SQUARE, "#fff", { line: false });
+    expect(hatchX(calls)).toBe(first(1));
   });
 
   it("太小的形狀（寬或高 ≤ 3）不畫排線", () => {

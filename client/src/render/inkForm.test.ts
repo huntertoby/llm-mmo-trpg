@@ -22,9 +22,9 @@ import {
   formKey,
   formRowRise,
   formScale,
-  mixColor,
 } from "./inkForm";
-import { drawInkWeapon, lighten } from "./inkGear";
+import { lighten, mix } from "./color";
+import { drawInkWeapon } from "./inkGear";
 import { drawFigure, DOLL_SCALE, itemColors } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
 import { buildUnitSprite, Pulses } from "./unitSprite";
@@ -121,7 +121,7 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
     }
     // 熊的毛色混主色 30%、背紋是主色
     const bear = fills(draw("bear", "#4f7a3a"));
-    expect(bear).toContain(mixColor("#6a4a32", "#4f7a3a", 0.3));
+    expect(bear).toContain(mix("#6a4a32", "#4f7a3a", 0.3));
   });
 
   it("元素化身與龍吃元素：火／冰／雷畫出不同顏色；沒有或不認得的元素用火", () => {
@@ -139,7 +139,7 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
 
   it("不是 #rrggbb 的主色不出錯（混色原樣回傳）", () => {
     expect(() => draw("bear", "red")).not.toThrow();
-    expect(mixColor("red", "#ffffff", 0.5)).toBe("red");
+    expect(mix("red", "#ffffff", 0.5)).toBe("red");
   });
 });
 

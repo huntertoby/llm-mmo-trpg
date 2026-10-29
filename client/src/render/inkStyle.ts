@@ -2,6 +2,7 @@
 // ink() ＝ 水彩填色（略溢出、邊緣深一圈）＋暗面斜排線＋兩次抖動墨線；stroke() ＝ 開放的抖動線。
 // 確定性：抖動的亂數種子 ＝ 部件名稱 key 的 FNV-1a 雜湊，再用 LCG；禁止 Math.random()，同一部件每次重畫完全一樣。
 import { TAU, type Ctx } from "./artDraw";
+import { MATERIAL } from "./material";
 
 export const INK = "#2b1e16";
 
@@ -73,10 +74,29 @@ function outline(ctx: Ctx, pts: readonly Pt[], sharp: boolean | undefined): void
   ctx.closePath();
 }
 
-/** 暗面方向：1 ＝ 暗面在右（正面，光從左上）；-1 ＝ 暗面在左（側面朝東、背面）。畫圖是同步的，用模組狀態即可。 */
-let shadeDir = 1;
-export function setShadeDir(dir: 1 | -1): void {
-  shadeDir = dir;
+/** 視角：正面、背面、側面（東；西由呼叫端左右鏡像）。小人、裝備、種族部件共用。 */
+export type View = "front" | "back" | "side";
+
+/** 暗面方向：1 ＝ 暗面在右（正面，光從左上）；-1 ＝ 暗面在左（側面朝東、背面）。 */
+export type ShadeDir = 1 | -1;
+
+/**
+ * 暗面方向跟著畫布走（Phase 3T-4：原本是模組變數，畫出來的樣子取決於「上一個畫的是誰」）。
+ * 沒有指定的畫布一律 1；要改方向請用 `withShadeDir`，它在結束時還原，所以呼叫順序不影響結果。
+ * 貼圖快取鍵已含朝向（暗面方向由朝向決定），不需另外加。
+ */
+const shadeDirs = new WeakMap<object, ShadeDir>();
+
+/** 在 `fn` 執行期間把 `ctx` 的暗面方向設成 `dir`，結束時還原（含例外）。 */
+export function withShadeDir<T>(ctx: Ctx, dir: ShadeDir, fn: () => T): T {
+  const before = shadeDirs.get(ctx);
+  shadeDirs.set(ctx, dir);
+  try {
+    return fn();
+  } finally {
+    if (before === undefined) shadeDirs.delete(ctx);
+    else shadeDirs.set(ctx, before);
+  }
 }
 
 export interface InkOpt {
@@ -93,6 +113,7 @@ export interface InkOpt {
 }
 
 function hatch(ctx: Ctx, pts: readonly Pt[], sharp: boolean | undefined): void {
+  const dir = shadeDirs.get(ctx) ?? 1;
   let x0 = Infinity;
   let x1 = -Infinity;
   let y0 = Infinity;
@@ -109,8 +130,8 @@ function hatch(ctx: Ctx, pts: readonly Pt[], sharp: boolean | undefined): void {
   ctx.save();
   outline(ctx, pts, sharp);
   ctx.clip();
-  const a = shadeDir > 0 ? x0 + w * 0.6 : x0 - h;
-  const b = shadeDir > 0 ? x1 + h : x0 + w * 0.4;
+  const a = dir > 0 ? x0 + w * 0.6 : x0 - h;
+  const b = dir > 0 ? x1 + h : x0 + w * 0.4;
   ctx.strokeStyle = "rgba(43,30,22,0.42)";
   ctx.lineWidth = 0.35;
   ctx.beginPath();
@@ -185,3 +206,14 @@ export function shadow(ctx: Ctx, rx = 9): void {
 
 /** 左右鏡像一組點。 */
 export const mirrorPts = (pts: readonly Pt[]): Pt[] => pts.map(([x, y]): Pt => [-x, y]);
+
+/**
+ * 墨線畫風共用的材質色（Phase 3T-4）。金、木取自 `appearance.MATERIAL`（同一份）；
+ * 鋼、鐵是墨線畫風專用的較亮金屬色（美術 PM 定案，與 `MATERIAL` 的 steel／iron 不同，改了會動所有小人的盔甲與劍）。
+ */
+export const MAT = {
+  steel: "#c3ccd6",
+  iron: "#8d969f",
+  gold: MATERIAL["gold"]![0],
+  wood: MATERIAL["wood"]![0],
+} as const;

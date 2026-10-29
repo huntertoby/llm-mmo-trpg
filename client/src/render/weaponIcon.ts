@@ -1,9 +1,11 @@
-// 武器小圖示（Phase 3-18b；一輪中英雄面板用）：與地圖上小人手持的同一套畫法（`paperdoll.drawWeaponAlone`），
+// 武器小圖示（Phase 3-18b；一輪中英雄面板用）：與地圖上小人手持的同一套 C 墨線畫法（`inkWeapons.drawInkWeaponAlone`），
 // 武器 ID 不認得時依武器大類退回（`appearance.weaponLook`）。畫好後量出實際佔用的範圍，等比放大填滿小圖示
 // （劍、匕首轉成斜放），所以匕首與法杖看起來一樣大。
 import { weaponLook, type GearItem } from "./appearance";
 import { pairedPart } from "./dollGear";
-import { drawWeaponAlone } from "./paperdoll";
+import { drawInkWeaponAlone } from "./inkWeapons";
+import { withShadeDir } from "./inkStyle";
+import { itemColors } from "./paperdoll";
 
 /** 暫時畫布的虛擬大小與解析度倍率（武器最長約 40 個虛擬單位）。 */
 const WORK = 120;
@@ -35,8 +37,7 @@ function workCanvas(item: GearItem): { canvas: HTMLCanvasElement; box: { x: numb
   ctx.scale(WORK_RES, WORK_RES);
   ctx.translate(WORK / 2, WORK / 2);
   if (isDiagonal(item.kind)) ctx.rotate(Math.PI / 4);
-  ctx.translate(0, 9.5); // drawWeapon 內部會往上移 9.5：還原成握把在原點
-  drawWeaponAlone(ctx as unknown as Parameters<typeof drawWeaponAlone>[0], item);
+  withShadeDir(ctx, 1, () => drawInkWeaponAlone(ctx, item, itemColors));
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   let x0 = canvas.width;
   let y0 = canvas.height;

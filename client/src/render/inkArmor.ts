@@ -3,28 +3,29 @@
 // 不認得的 kind／form／材質退回預設，不出錯。座標同 inkDoll.ts（頭心 (0,-42)）。
 import type { Ctx } from "./artDraw";
 import type { GearItem } from "./appearance";
-import { darken, drawHelmet, lighten, metalOf, type ColorFn, type GearView } from "./inkGear";
-import { dot, ellPts, ink, stroke, type Pt } from "./inkStyle";
+import { darken, lighten } from "./color";
+import { drawHelmet, metalOf, type ColorFn } from "./inkGear";
+import { dot, ellPts, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
 
-const GOLD = "#e8bb48";
+const GOLD = MAT.gold;
 const FUR = "#e9e3cf";
 const HORN = "#efe6cc";
 
 const shiftX = (pts: readonly Pt[], dx: number): Pt[] => pts.map(([x, y]): Pt => [x + dx, y]);
 
 // ============================== 身體 ==============================
-const COAT: Record<GearView, Pt[]> = {
+const COAT: Record<View, Pt[]> = {
   front: [[-7, -33], [7, -33], [6, -23], [9.4, -6], [1, -5], [0, -9.5], [-1, -5], [-9.4, -6], [-6, -23]],
   back: [[-7, -33], [7, -33], [6, -23], [9.4, -6], [0, -4.6], [-9.4, -6], [-6, -23]],
   side: [[-4, -33], [3.4, -33], [5, -27], [4, -22], [7, -6], [-1, -5], [-7, -6], [-4.2, -22]],
 };
-const MAIL: Record<GearView, Pt[]> = {
+const MAIL: Record<View, Pt[]> = {
   front: [[-7, -33], [7, -33], [6, -23], [8, -14], [0, -12.5], [-8, -14], [-6, -23]],
   back: [[-7, -33], [7, -33], [6, -23], [8, -14], [0, -12.5], [-8, -14], [-6, -23]],
   side: [[-4, -33], [3.4, -33], [5, -27], [4, -22], [5.2, -14], [-1, -12.5], [-5.6, -14], [-4.2, -22]],
 };
 
-function drawCoat(ctx: Ctx, it: GearItem, view: GearView, c: string, d: string): void {
+function drawCoat(ctx: Ctx, it: GearItem, view: View, c: string, d: string): void {
   ink(ctx, `coat-${view}`, COAT[view], c);
   if (view === "front") {
     ink(ctx, "coat-lapel", [[-4.4, -33], [0, -25.6], [4.4, -33], [2, -33.4], [0, -30.6], [-2, -33.4]], d, { shade: false, w: 0.6 });
@@ -40,7 +41,7 @@ function drawCoat(ctx: Ctx, it: GearItem, view: GearView, c: string, d: string):
   else ink(ctx, `coat-cape-${view}`, [[-9.2, -33.4], [9.2, -33.4], [10.4, -27], [0, -25.6], [-10.4, -27]], d, { w: 0.7 });
 }
 
-function drawMail(ctx: Ctx, it: GearItem, view: GearView, c: string): void {
+function drawMail(ctx: Ctx, it: GearItem, view: View, c: string): void {
   ink(ctx, `torso-${view}`, MAIL[view], c);
   const side = view === "side";
   const x0 = side ? -3 : -4.6;
@@ -57,7 +58,7 @@ function drawMail(ctx: Ctx, it: GearItem, view: GearView, c: string): void {
 }
 
 /** 身體：mail、coat 的 C 版（含軀幹）。回傳 false ＝ 不是這一層的 kind。 */
-export function drawInkBodyArmor(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): boolean {
+export function drawInkBodyArmor(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): boolean {
   const [c, d] = colors(it);
   if (it.kind === "mail") drawMail(ctx, it, view, c);
   else if (it.kind === "coat") drawCoat(ctx, it, view, c, d);
@@ -68,7 +69,7 @@ export function drawInkBodyArmor(ctx: Ctx, it: GearItem, view: GearView, colors:
 // ============================== 頭 ==============================
 const baseColor = (it: GearItem, colors: ColorFn): string => it.color ?? colors(it)[0];
 
-function drawWideHat(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+function drawWideHat(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): void {
   const c = baseColor(it, colors);
   const trim = it.trim ?? darken(c, 0.4);
   const dx = view === "side" ? -1 : 0;
@@ -77,7 +78,7 @@ function drawWideHat(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): v
   stroke(ctx, `wide-band-${view}`, [[-7 + dx, -49.4], [7 + dx, -49.4]], 1.4, trim);
 }
 
-function drawCap(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+function drawCap(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): void {
   const [c, d] = colors(it);
   const fur = it.form === "fur";
   const dx = view === "side" ? -0.6 : 0;
@@ -86,7 +87,7 @@ function drawCap(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void 
   ink(ctx, `cap-band-${view}`, shiftX([[-10.2, -46.8], [10.2, -46.8], [10.4, bot], [-10.4, bot]], dx), fur ? FUR : d, { w: 0.7 });
 }
 
-function drawCirclet(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+function drawCirclet(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): void {
   const c = baseColor(it, colors);
   const dx = view === "side" ? -0.6 : 0;
   if (it.kind === "crown") {
@@ -100,13 +101,13 @@ function drawCirclet(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): v
   else ink(ctx, `bandana-tail-${view}`, shiftX([[8.4, -47], [13, -44.4], [11.8, -40.4], [9, -44]], dx), tail, { w: 0.6 });
 }
 
-const GREAT: Record<GearView, Pt[]> = {
+const GREAT: Record<View, Pt[]> = {
   front: [[-10.4, -34], [-10.6, -49], [-5, -54.8], [5, -54.8], [10.6, -49], [10.4, -34], [5, -32.4], [-5, -32.4]],
   back: [[-10.4, -34], [-10.6, -49], [-5, -54.8], [5, -54.8], [10.6, -49], [10.4, -34], [5, -32.4], [-5, -32.4]],
   side: [[-10, -35], [-10.4, -48], [-5, -54.6], [4, -54.2], [9.8, -49], [10.6, -39], [7.6, -33.6], [-6, -33.4]],
 };
 
-function drawGreathelm(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+function drawGreathelm(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): void {
   ink(ctx, `great-${view}`, GREAT[view], metalOf(it, colors));
   if (view === "front") {
     ink(ctx, "great-slit", [[-6.8, -44.6], [6.8, -44.6], [6.8, -42.6], [-6.8, -42.6]], "#1d1a22", { shade: false, w: 0.5 });
@@ -119,7 +120,7 @@ function drawGreathelm(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn):
   }
 }
 
-function drawHorned(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+function drawHorned(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): void {
   if (view === "side") {
     // 兩支角都往後彎：遠側那支先畫、暗 30%，近側那支在頭盔之後
     ink(ctx, "horn-far", [[-1, -50.4], [-7, -53.4], [-9, -61], [-4.2, -57.4], [1.6, -52.8]], darken(HORN, 0.3), { w: 0.7 });
@@ -132,7 +133,7 @@ function drawHorned(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): vo
 }
 
 /** 其餘頭部裝備（dollGear 已把 helmet 的 horned／greathelm 形制轉成 horned_helm／greathelm kind）。 */
-export function drawInkHeadgearMore(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): boolean {
+export function drawInkHeadgearMore(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): boolean {
   switch (it.kind) {
     case "wide_hat":
       drawWideHat(ctx, it, view, colors);
@@ -203,7 +204,7 @@ export function footTop(feet: GearItem | undefined): number | undefined {
 }
 
 /** 鞋靴的額外細節（綁腿、鐵靴鞋尖與護片），畫在腿與靴之後。 */
-export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: GearView, colors: ColorFn, heavy = false): void {
+export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: View, colors: ColorFn, heavy = false): void {
   if (feet === undefined) return;
   const sides = view === "side" ? [1] : [-1, 1];
   if (feet.kind === "shoes" && feet.form === "wrapped") {

@@ -5,8 +5,9 @@
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import type { DollSpec, Gear } from "./appearance";
-import { FORM_AURA_NEUTRAL, drawFormAura, mixColor } from "./inkForm";
-import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
+import { mix } from "./color";
+import { FORM_AURA_NEUTRAL, drawFormAura } from "./inkForm";
+import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, type Pt } from "./inkStyle";
 import { DOLL_H, DOLL_W, renderFigureCanvas, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
 
 
@@ -79,7 +80,7 @@ export function summonKey(look: ResolvedLook, facing: Facing, ownerKey = ""): st
   return [look.body, look.variant, look.element ?? "", look.size, look.trait ?? "", facing, copy].join("|");
 }
 
-const light = (c: string, t = 0.3): string => mixColor(c, "#ffffff", t);
+const light = (c: string, t = 0.3): string => mix(c, "#ffffff", t);
 const elemColor = (s: ResolvedLook, fallback: string): string => (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? fallback;
 
 /** 矩形的四個角點（搭配 `sharp: true` 畫石塊、木柱）。 */
@@ -139,7 +140,7 @@ function spirit(ctx: Ctx, s: ResolvedLook, side: Side): void {
   ctx.beginPath();
   ctx.arc(0, -14, 18, 0, TAU);
   ctx.fill();
-  ink(ctx, "sp-body", DROP, mixColor(c, "#ffffff", 0.25), { alpha: 0.9 });
+  ink(ctx, "sp-body", DROP, mix(c, "#ffffff", 0.25), { alpha: 0.9 });
   ink(ctx, "sp-shine", ellPts(-3, -16, 3, 5, 10), light(c, 0.7), { shade: false, line: false, alpha: 0.8 });
   spiritEdge(ctx, s, c);
   eyes(ctx, side, -17, "#1d1a22", 2.6);
@@ -315,26 +316,27 @@ export function drawSummonGround(ctx: Ctx, look: ResolvedLook): void {
  */
 export function drawSummonBody(ctx: Ctx, look: ResolvedLook, facing: Facing): void {
   const side = sideOf(facing);
-  setShadeDir(side === 0 ? 1 : -1);
-  switch (look.body) {
-    case "spirit":
-      spirit(ctx, look, side);
-      break;
-    case "construct":
-      construct(ctx, look, side);
-      break;
-    case "beast":
-      beast(ctx, look, side);
-      break;
-    case "plant":
-      plant(ctx);
-      break;
-    case "totem":
-      totem(ctx, look, side);
-      break;
-    case "humanoid":
-      break;
-  }
+  withShadeDir(ctx, side === 0 ? 1 : -1, () => {
+    switch (look.body) {
+      case "spirit":
+        spirit(ctx, look, side);
+        break;
+      case "construct":
+        construct(ctx, look, side);
+        break;
+      case "beast":
+        beast(ctx, look, side);
+        break;
+      case "plant":
+        plant(ctx);
+        break;
+      case "totem":
+        totem(ctx, look, side);
+        break;
+      case "humanoid":
+        break;
+    }
+  });
 }
 
 // ---- 人形：沿用紙娃娃，依款式選範本與修飾 ----

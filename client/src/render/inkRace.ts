@@ -3,10 +3,10 @@
 // 規則寫在「頭部裝備的種類」上（`COVERS`，每種 kind 一個標記），新增帽子或種族時不用一一配對。
 // 所有欄位選填，不認得的值＝沒有，不會出錯。Phase 3R-3c 加上體型、臉部紋路、鬍子、獠牙、豎瞳、鱗脊、背刺。
 import type { Ctx } from "./artDraw";
+import { darken, lighten } from "./color";
 import type { GearItem, Look } from "./appearance";
-import { dot, ink, stroke, type Pt } from "./inkStyle";
+import { dot, ink, stroke, type Pt, type View } from "./inkStyle";
 
-export type RaceView = "front" | "back" | "side";
 
 // ============================== 欄位值的檢查 ==============================
 const EARS = ["pointed", "fin", "beast"] as const;
@@ -59,19 +59,14 @@ export function raceLookToLook(r: Readonly<Record<string, unknown>> | null | und
 }
 
 // ============================== 顏色 ==============================
-function mix(a: string, b: string, t: number): string {
-  if (!HEX.test(a) || !HEX.test(b)) return a;
-  const x = parseInt(a.slice(1), 16);
-  const y = parseInt(b.slice(1), 16);
-  const m = (s: number): number => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t);
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
-}
-const dark = (c: string, t = 0.3): string => mix(c, "#000000", t);
-const light = (c: string, t = 0.3): string => mix(c, "#ffffff", t);
+const dark = (c: string, t = 0.3): string => darken(c, t);
+const light = (c: string, t = 0.3): string => lighten(c, t);
 
 // ============================== 頭部裝備的遮蓋（衝突規則） ==============================
 /** top ＝ 蓋頭頂、side ＝ 蓋兩側、hood ＝ 兜帽（有耳朵版）、tall ＝ 寬帽／巫師帽（有角時要抬高）、narrow ＝ 小帽（有角時變窄）。 */
 export interface Cover {
+  /** 蓋住頭髮（正面、側面不畫頭髮；背面後腦的頭髮照畫）。目前只有真正包住頭的帽子。 */
+  hair?: boolean;
   top?: boolean;
   side?: boolean;
   hood?: boolean;
@@ -80,15 +75,15 @@ export interface Cover {
 }
 
 export const COVERS: Readonly<Record<string, Cover>> = {
-  helmet: { top: true, side: true },
-  greathelm: { top: true, side: true },
-  horned_helm: { top: true, side: true },
-  hood: { top: true, side: true, hood: true },
-  cap: { top: true, narrow: true },
+  helmet: { top: true, side: true, hair: true },
+  greathelm: { top: true, side: true, hair: true },
+  horned_helm: { top: true, side: true, hair: true },
+  hood: { top: true, side: true, hood: true, hair: true },
+  cap: { top: true, narrow: true, hair: true },
   bandana: { top: true, narrow: true },
   crown: { narrow: true },
   wide_hat: { top: true, tall: true },
-  wizard_hat: { top: true, tall: true },
+  wizard_hat: { top: true, tall: true, hair: true },
 };
 
 /** 沒戴＝什麼都不蓋；沒登記的 kind 當作只蓋頭頂。 */
@@ -106,7 +101,7 @@ export function hatAdjust(look: Look, head: GearItem): { item: GearItem; dy: num
 
 // ============================== 尾巴 ==============================
 /** 正面：從腰側往畫面右邊伸出；側面：往身後（西）伸出；背面：畫在披風之上。畫在身體之前（身體、下襬會蓋住根部）。 */
-export function drawInkTail(ctx: Ctx, look: Look, view: RaceView): void {
+export function drawInkTail(ctx: Ctx, look: Look, view: View): void {
   const k = pick(TAILS, look.tail);
   if (k === undefined) return;
   const s = view === "side" ? -1 : 1;
@@ -142,7 +137,7 @@ export function drawInkTail(ctx: Ctx, look: Look, view: RaceView): void {
 // ============================== 耳朵 ==============================
 export interface EarCtx {
   look: Look;
-  view: RaceView;
+  view: View;
   head: GearItem | undefined;
   /** 頭部裝備的主色（兜帽的耳朵凸起用）。 */
   headColor: string;
@@ -213,7 +208,7 @@ export function drawEarsAfterHat(ctx: Ctx, e: EarCtx): void {
 
 // ============================== 角 ==============================
 /** 角：永遠在最上層。小角、彎角（3R-3c 美術 PM 小修：底寬約 4px 的牛角形）、龍角（龍角的雙叉外形照樣張；鱗色、龍鱗屬 3R-3c）。 */
-export function drawInkHorns(ctx: Ctx, look: Look, view: RaceView): void {
+export function drawInkHorns(ctx: Ctx, look: Look, view: View): void {
   const k = pick(HORNS, look.horns);
   if (k === undefined) return;
   const c = look.hornColor ?? "#e8d8b8";
@@ -289,7 +284,7 @@ export function drawRaceFace(ctx: Ctx, look: Look, view: "front" | "side"): void
 }
 
 /** 鱗脊：鼻樑到額頭一排小尖，畫在頭髮之後（不被瀏海蓋住）、頭部裝備之前。 */
-export function drawRidge(ctx: Ctx, look: Look, view: RaceView): void {
+export function drawRidge(ctx: Ctx, look: Look, view: View): void {
   if (look.ridge !== true || view === "back") return;
   const c = look.scaleColor ?? DRAGON_FALLBACK;
   const F = view === "front";
@@ -300,7 +295,7 @@ export function drawRidge(ctx: Ctx, look: Look, view: RaceView): void {
 }
 
 /** 背刺：肩後三根骨刺。正面只從肩頭露出尖端（畫在身體之前，身體蓋住大半）；背面畫在背上；側面在背後。 */
-export function drawBackSpines(ctx: Ctx, look: Look, view: RaceView): void {
+export function drawBackSpines(ctx: Ctx, look: Look, view: View): void {
   if (look.spines !== true) return;
   const c = light(look.scaleColor ?? DRAGON_FALLBACK, 0.2);
   const spike = (key: string, x: number, y: number, dx: number, dy: number): void => {
