@@ -17,6 +17,7 @@ rules:
   complete:                   # 完整技能（6.34.6）：視為已閃 3 次、+120‰、不能再閃、可以重閃
     flashes: 3
     budget_permille: 120
+    cap_permille: 150         # 實際加上去的上限；一步超過時先用較細的旋鈕補（06 6.34.6）
     can_flash: false
     can_reflash: true
     # +120‰ 怎麼加上去（3W-5b）：預算器的強度旋鈕（傷害、治療、護盾、推拉）照舊，召喚與姿態另外多一個旋鈕，

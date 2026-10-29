@@ -6,17 +6,21 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 import pytest
 
 from tests.engine.helpers import library
 from trpg.content.skills import SkillDef
 from trpg.roguelite.offers import COMPLETE_SUFFIX, as_complete
 from trpg.skillgen.complete import (
+    _climb,
     _next_step,
     complete_gain_permille,
     complete_power,
     complete_strength,
 )
+from trpg.skillgen.flash import with_budget_bonus
 from trpg.skillgen.validate import validate_skill
 
 GAIN = 120
@@ -105,3 +109,26 @@ def test_complete_strength_is_deterministic() -> None:
     lib = library()
     skill = lib.skills["skill_fire_bolt"]
     assert complete_strength(lib, skill) == complete_strength(lib, skill)
+
+
+@pytest.mark.parametrize("skill_id", ["skill_cinder_mine", "skill_chain_lightning", "skill_all_in"])
+def test_gain_stays_under_150_when_a_finer_knob_can_fill_in(skill_id: str) -> None:
+    """+150‰ 上限（06 6.34.6，玩法 PM ec73486f）：骰子一階就超過時先用較細的旋鈕補（這幾招不加上限
+    時是 +232／+166／+172‰）。"""
+    before, after = _done(skill_id)
+    assert 120 <= complete_gain_permille(before, after, library()) <= 150
+
+
+def test_over_150_only_when_no_capped_path_reaches_120() -> None:
+    """超過 +150‰ 的只能是「只走不超過上限的步子到不了 +120‰」的技能
+    例如火球：骰子一階就是 +166‰。"""
+    lib = library()
+    rules = lib.flash.rules.complete
+    for skill_id in ("skill_fire_bolt", "skill_ember_brand"):
+        before, after = _done(skill_id)
+        assert complete_gain_permille(before, after, lib) > rules.cap_permille
+        base = complete_power(before, lib)
+        target = base * Fraction(1000 + rules.budget_permille, 1000)
+        cap = base * Fraction(1000 + rules.cap_permille, 1000)
+        start = with_budget_bonus(before, rules.budget_permille)
+        assert _climb(lib, rules, start, target, cap)[1] < target

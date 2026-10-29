@@ -80,6 +80,9 @@ class CompleteSkillRules(ContentModel):
 
     flashes: int = Field(default=3, ge=0, le=9)
     budget_permille: int = Field(default=120, ge=0, le=1000)
+    cap_permille: int = Field(default=150, ge=0, le=1000)
+    """實際加上去的上限（06 6.34.6，玩法 PM ec73486f）：
+    一步會超過時先用較細的旋鈕補，都不行才接受超過。"""
     can_flash: bool = False
     can_reflash: bool = True
     summon_power_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)

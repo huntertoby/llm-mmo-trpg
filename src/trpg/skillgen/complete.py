@@ -72,17 +72,33 @@ def complete_strength(library: ContentLibrary, skill: SkillDef) -> SkillDef:
     ID 不變（換 ID 是呼叫者的事）。"""
     rules = library.flash.rules.complete
     scale = Fraction(_PERMILLE + rules.budget_permille, _PERMILLE)
-    target = complete_power(skill, library) * scale
-    current = with_budget_bonus(skill, rules.budget_permille)
+    base = complete_power(skill, library)
+    target = base * scale
+    cap = base * Fraction(_PERMILLE + rules.cap_permille, _PERMILLE)
+    start = with_budget_bonus(skill, rules.budget_permille)
+    # 先只走不超過上限的步子（較細的旋鈕補上）；這樣達不到 +120‰ 才接受超過上限（06 6.34.6）
+    capped, power = _climb(library, rules, start, target, cap)
+    if power >= target:
+        return capped
+    return _climb(library, rules, start, target, None)[0]
+
+
+def _climb(
+    library: ContentLibrary,
+    rules: CompleteSkillRules,
+    current: SkillDef,
+    target: Fraction,
+    cap: Fraction | None,
+) -> _Trial:
     power = complete_power(current, library)
     for _ in range(_MAX_STEPS):
         if power >= target:
             break
-        step = _next_step(library, rules, current, target)
+        step = _next_step(library, rules, current, target, cap)
         if step is None:
             break
         current, power = step
-    return current
+    return current, power
 
 
 # ---------------------------------------------------------------------------
@@ -103,16 +119,22 @@ type _Group = Callable[[ContentLibrary, CompleteSkillRules, SkillDef, _Draft], l
 
 
 def _next_step(
-    library: ContentLibrary, rules: CompleteSkillRules, skill: SkillDef, target: Fraction
+    library: ContentLibrary,
+    rules: CompleteSkillRules,
+    skill: SkillDef,
+    target: Fraction,
+    cap: Fraction | None = None,
 ) -> _Trial | None:
-    """往上加一格後的（技能, 分數）；三組依序，前一組都加不動才看下一組。"""
+    """往上加一格後的（技能, 分數）；三組依序，前一組都加不動才看下一組。``cap`` 不是 ``None`` 時
+    只考慮不超過它的步子。"""
     groups: tuple[_Group, ...] = (_strength_knobs, _param_knobs)
-    for group in groups:
-        found = _best(_raised(library, rules, skill, group), target)
-        if found is not None:
-            return found
-    for cut in rules.cost_cuts:
-        found = _cut(library, skill, cut)
+    trial_sets: list[Iterator[_Trial | None]] = [
+        _raised(library, rules, skill, group) for group in groups
+    ]
+    trial_sets += [iter([_cut(library, skill, cut)]) for cut in rules.cost_cuts]
+    for trials in trial_sets:
+        kept = trials if cap is None else (t for t in trials if t is not None and t[1] <= cap)
+        found = _best(kept, target)
         if found is not None:
             return found
     return None
