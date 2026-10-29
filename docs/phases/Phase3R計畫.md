@@ -66,3 +66,4 @@
 
 ### 4.7 3R-4｜鱗族被動改版（#68，07 7.7，`359c927c`；使用者：「鱗族 A」；sonnet；約 0.15 段）
 新規則：自己回合開始時站在水或冰面（看那一格的表面）→ 這回合移動 +1（只加這回合；回合中離開水面不收回）；在冰面上不滑倒（維持）。刪掉原本「水與冰面移動不花額外點數」的半句（`content/races.yaml` 被動規則、卡片句）。表格測試：回合開始站水／冰／一般地面 × 鱗族／非鱗族；回合中離開不收回；冰面不滑倒照舊。驗收：pytest（engine、content、narrative，`-m "(slow or not slow) and not llm"`、`tests/cli --timeout=3000`）、ruff、format、mypy；改紀錄格式就遞增 `LOG_FORMAT`（目前 `/86`）。報告 `Phase3R-4報告.md`。
+- **3R-4 驗收**（2026-10-29，開發 PM）：報告 `Phase3R-4報告.md`。規則 `free_move_on` → `surface_move_bonus`（`surfaces`、`amount`），`move_points_for_turn` 依回合開始腳下表面（水、冰；不含水地形，照 #68「看那一格的表面」）；`LOG_FORMAT` `/87`。合併後 ruff、mypy、engine／narrative／content 5573 通過。
