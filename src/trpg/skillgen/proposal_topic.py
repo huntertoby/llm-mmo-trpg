@@ -70,6 +70,7 @@ class TopicRequest:
     hero_attributes: Mapping[Attribute, int] | None = None
     held: Mapping[str, str] | None = None
     theme_permille: int = 0
+    weapon_class: str | None = None
 
 
 def composable_keywords(library: ContentLibrary, keywords: Sequence[str]) -> bool:
@@ -144,7 +145,12 @@ def make_topic(
     menu_seed = rng.next_u32()
     for rarity in _rarity_order(library, rng):
         request = ProposalRequest(
-            topic.tier, rarity, keywords=topic.keywords, menu_seed=menu_seed, theme=theme
+            topic.tier,
+            rarity,
+            keywords=topic.keywords,
+            menu_seed=menu_seed,
+            theme=theme,
+            weapon_class=topic.weapon_class,
         )
         try:
             legal = legal_core_primitives(library, request)
@@ -160,6 +166,7 @@ def make_topic(
                 core_primitive=core,
                 menu_seed=menu_seed,
                 theme=theme,
+                weapon_class=topic.weapon_class,
             )
             try:
                 select_subset(library, with_core)
@@ -168,7 +175,11 @@ def make_topic(
             else:
                 request = with_core
         ctx = ProposalContext(
-            topic.tier, rarity, hero_attributes=topic.hero_attributes, held=topic.held
+            topic.tier,
+            rarity,
+            hero_attributes=topic.hero_attributes,
+            held=topic.held,
+            weapon_class=topic.weapon_class,
         )
         return request, ctx, rng.next_u32()
     return None

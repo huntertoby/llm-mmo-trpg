@@ -16,6 +16,7 @@ import pytest
 
 from trpg.cli.llm import ProposeArgs, _feasible, cmd_llm_propose, propose_requests
 from trpg.cli.main import main
+from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.llm import LLMUnavailable, MockLLMClient
 from trpg.skillgen.proposal import proposal_from_skill
@@ -58,7 +59,8 @@ def test_injected_client_and_fallback_lines(library: ContentLibrary) -> None:
     skill = library.skills["skill_fire_arrow"]
     good = json.dumps(proposal_from_skill(skill, library), ensure_ascii=False)
     out, err = io.StringIO(), io.StringIO()
-    args = ProposeArgs(count=1, rarity="common", skeleton="strike")
+    owned = derive_keywords(skill, library.keywords, exclusive_only=True).all()
+    args = ProposeArgs(count=1, rarity="common", skeleton="strike", keywords=owned[:1])
     assert cmd_llm_propose(library, args, out, err, client=MockLLMClient([good])) == 0
     assert "｜llm｜嘗試 1｜通過｜" in out.getvalue()
     out = io.StringIO()

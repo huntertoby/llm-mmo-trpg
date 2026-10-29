@@ -231,6 +231,7 @@ class _Search:
                 hero_attributes=attrs,
                 held=self.request.held or None,
                 theme_permille=self.rules.llm_theme_permille,
+                weapon_class=self.request.weapon_class,
             ),
         )
         if made is None:

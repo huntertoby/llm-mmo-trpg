@@ -191,3 +191,14 @@ def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["run", "auto", "--seed", "1", "--dev-pack", "dev_tidestorm"], capsys)
     assert code == 0
     assert "〔起始包 dev_tidestorm〕" in out and "潮雷" not in out
+
+
+def test_run_auto_with_llm_mock_is_replayable(capsys: pytest.CaptureFixture[str]) -> None:
+    """Phase 4-L6：--llm-mock 跑完整一輪，印出 LLM 提議摘要，同種子兩次輸出一致。"""
+    argv = ["run", "auto", "--seed", "3", "--llm-mock"]
+    code, first, _ = _run(argv, capsys)
+    assert code == 0 and "LLM 提議：" in first and "退回" in first
+    code, second, _ = _run(argv, capsys)
+    assert second == first
+    code, plain, _ = _run(["run", "auto", "--seed", "3"], capsys)
+    assert code == 0 and "LLM 提議" not in plain

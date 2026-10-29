@@ -82,6 +82,8 @@ def _request_payload(
     }
     if request.skeleton is not None:
         payload["skeleton"] = request.skeleton
+    if request.weapon_class is not None:  # 技能的武器需求必須與主角的武器相容（4-L6）
+        payload["weapon_class"] = request.weapon_class
     if request.core_primitive is not None:  # 題目指定核心原語（4-L6）：提議必須用到它
         payload["core_primitive"] = request.core_primitive
         payload["core_primitive_note_zh"] = (

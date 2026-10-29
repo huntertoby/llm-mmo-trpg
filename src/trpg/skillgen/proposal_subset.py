@@ -86,6 +86,8 @@ class ProposalRequest:
     （``skill_composer.yaml`` 的 ``llm_topic``），且 ``available`` 的順序由它打亂；
     ``None`` ＝ 全開、
     依 ID 排序（與 4-L5c 相同）。"""
+    weapon_class: str | None = None
+    """主角的武器大類（Phase 4-L6）：進 prompt 的題目區塊，技能的武器需求要相容。不影響子集。"""
     theme: str | None = None
     """主題詞 ID（``content/llm/world_*.yaml`` 的 ``themes``；Phase 4-L6，例如 ``nature`` 自然）。
     只進 prompt 的題目區塊，不影響子集。"""

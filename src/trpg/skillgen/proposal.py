@@ -64,6 +64,7 @@ from trpg.content.skills import (
     TriggerSpec,
     VariantWhen,
     rarity_rank,
+    weapon_problem,
 )
 from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.option_gear import gear_pool
@@ -186,6 +187,9 @@ class ProposalContext:
     ``keyword.required``。"""
     core_primitive: str | None = None
     """題目指定的核心原語（Phase 4-L6）：技能的效果必須用到它，否則 ``core.required``。"""
+    weapon_class: str | None = None
+    """主角的武器大類（``melee``／``ranged``／``focus``；Phase 4-L6）：技能的武器需求必須與它相容
+    （含 ``held``），否則 ``weapon.incompatible``，讓模型重提而不是白白浪費這個候選。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1206,6 +1210,17 @@ def _topic_errors(
                     code="keyword.required",
                     message=f"技能必須製造或利用題目的關鍵字 {'、'.join(lacking)}，但提議沒有帶到",
                     allowed=lacking,
+                )
+            )
+    if ctx.weapon_class is not None:
+        problem = weapon_problem(skill, ctx.weapon_class, ctx.held or {})
+        if problem is not None:
+            errors.append(
+                ProposalError(
+                    stage="rules",
+                    path="weapon_req",
+                    code="weapon.incompatible",
+                    message=f"技能與主角的武器不相容：{problem}",
                 )
             )
     core = ctx.core_primitive
