@@ -337,7 +337,7 @@ def test_every_form_field_has_card_text() -> None:
     }
     assert set(effects) == set(FormEffects.model_fields)
     for name, value in effects.items():
-        probe = form.model_copy(update={"effects": FormEffects(**{name: value})})
+        probe = form.model_copy(update={"effects": FormEffects.model_validate({name: value})})
         assert form_effect_lines(probe), name
     entry = {
         "shield_max_hp_permille": 100,
@@ -353,4 +353,4 @@ def test_every_form_field_has_card_text() -> None:
     # shield_duration 只是護盾的持續回合，文字與護盾同一行
     assert set(entry) | {"shield_duration"} == set(FormEntry.model_fields)
     for name, value in entry.items():
-        assert form_entry_lines(FormEntry(**{name: value})), name
+        assert form_entry_lines(FormEntry.model_validate({name: value})), name
