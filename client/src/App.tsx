@@ -7,6 +7,8 @@ import { BattleScreen } from "./screens/BattleScreen";
 import { StartScreen } from "./screens/StartScreen";
 import { WorkshopScreen } from "./screens/WorkshopScreen";
 import { isNotFoundStatus, readCurrentRun, resumeRun, writeCurrentRun } from "./run/flow";
+import { isDevMode } from "./run/startFlow";
+import { createDevRun, DEV_ENTER_EVENT, devScreenParam } from "./dev/devScreens";
 import { RunNewScreen } from "./screens/RunNewScreen";
 import { RunScreen } from "./screens/RunScreen";
 import { ErrorBanner } from "./ui/ErrorBanner";
@@ -70,6 +72,25 @@ export function App() {
     setNotice(null);
     setRun({ data, auto });
   };
+
+  // 開發用入口（3U-3）：`?dev=1&screen=…` 或排版掃描送來的事件，直接進戰後畫面；不帶 `?dev=1` 就不聽。
+  useEffect(() => {
+    if (!ready || !isDevMode(window.location.search)) return undefined;
+    const onEnter = (e: Event) => {
+      setBattle(null);
+      enterRun((e as CustomEvent<RunResponse>).detail, false);
+    };
+    window.addEventListener(DEV_ENTER_EVENT, onEnter);
+    const screenParam = devScreenParam(window.location.search);
+    if (screenParam !== null) {
+      createDevRun(screenParam).then(
+        (data) => enterRun(data, false),
+        (err: unknown) => setNotice(err instanceof Error ? err.message : String(err)),
+      );
+    }
+    return () => window.removeEventListener(DEV_ENTER_EVENT, onEnter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
   const leaveRun = (next: "start" | "run_new") => {
     writeCurrentRun(null);
     setRun(null);
