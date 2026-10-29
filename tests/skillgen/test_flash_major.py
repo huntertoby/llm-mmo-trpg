@@ -525,7 +525,7 @@ def _supports() -> list[SkillDef]:
     return [
         s
         for s in sorted(lib.skills.values(), key=lambda s: s.id)
-        if s.kind == "active" and is_support_skill(s)
+        if s.kind == "active" and is_support_skill(s, lib.flash)
     ]
 
 

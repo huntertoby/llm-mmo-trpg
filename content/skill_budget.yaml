@@ -151,6 +151,8 @@ retier_growth:
   max_extra_cooldown: 4
   max_cooldown: 6
   max_extra_ap: 1
+  terrain_effects: [raise_terrain, lower_terrain]                   # 3W-R2：升降地形的原語（放大格數、補落石）
+  area_effects: [raise_terrain, lower_terrain, create_surface]      # 點數固定、升階時放大格數的原語
 # 3-54b 風元素傷害的元素擴散格數（spread）：擴散 n 格時（n ＝ 1、2；省略 ＝ 1），傷害效果的點數 × 第 n 項（‰）。初值，未經模擬。
 wind_spread_permille: [1000, 1150]
 # 3-24c 獻祭召喚物（初值，未經模擬）：點數 ＝ 骰子平均 × sacrifice_summon_permille ÷ 1000（需要先有召喚物、且召喚物會消失的折扣）。

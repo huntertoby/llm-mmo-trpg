@@ -393,7 +393,7 @@ def test_categories_follow_skill_kind() -> None:
     heal = next(
         s
         for s in sorted(lib.skills.values(), key=lambda s: s.id)
-        if s.kind == "active" and flash.is_support_skill(s)
+        if s.kind == "active" and flash.is_support_skill(s, lib.flash)
     )
     assert "support" in allowed_categories(table, heal, major=False)
 

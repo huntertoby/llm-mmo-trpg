@@ -305,6 +305,16 @@ class ExtraMajorTemplate(ContentModel):
     """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
 
 
+class SupportSkillRule(ContentModel):
+    """「輔助技」的判定（「輔助」類 ``support_only`` 用；3W-R2 從程式移到資料）：沒有
+    ``harm_effects``，而且有 ``help_effects``，或有作用於友方（``affects: allies``）的
+    ``ally_effects``。見 :func:`trpg.skillgen.flash_category.is_support_skill`。"""
+
+    harm_effects: tuple[str, ...] = ("damage", "delayed_damage")
+    help_effects: tuple[str, ...] = ("heal", "shield")
+    ally_effects: tuple[str, ...] = ("heal", "shield", "apply_status", "cleanse", "grant_ap")
+
+
 class FlashTable(ContentModel):
     """``content/flash_templates.yaml``。"""
 
@@ -315,6 +325,8 @@ class FlashTable(ContentModel):
     major: tuple[MajorFlashTemplate, ...] = ()
     extra_major: tuple[ExtraMajorTemplate, ...] = ()
     transforms: tuple[TransformTemplate, ...] = ()
+    support: SupportSkillRule = SupportSkillRule()
+    """輔助技的判定（``support_only`` 類別用）。"""
     stance_ladders: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """元素姿態的階梯（3W-2b）：元素 ID（``physical`` 也有）→ 由弱到強的姿態狀態 ID。轉型優先
     轉成同元素的姿態；姿態的「費用」「修正」類小變化在同一階梯上換級（維持費 ±1 搭配效果升降）。"""

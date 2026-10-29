@@ -37,6 +37,7 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
@@ -57,10 +58,6 @@ __all__ = [
 RETIER_ATTEMPTS = 3
 """同一份草稿最多試幾次不同的調整亂數。"""
 _SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
-_TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
-_AREA = _TERRAIN | {"create_surface"}
-_MAX_EFFECTS = 4
-_MAX_AP = 3
 _CACHE_LIMIT = 4096
 """內容庫上重配快取（``ContentLibrary.retier_cache``）的上限：滿了就清空。"""
 
@@ -179,7 +176,7 @@ def _bigger_shapes(moved: SkillDef, library: ContentLibrary) -> list[str]:
         or moved.kind != "active"
         or moved.followup is not None
         or moved.trap is not None
-        or not any(e.type in _AREA for e in moved.effects)
+        or not any(e.type in library.budget.retier_growth.area_effects for e in moved.effects)
     ):
         return []
     return list(reversed(ladder[ladder.index(moved.shape.type) + 1 :]))
@@ -209,7 +206,7 @@ def _growth_drafts(skill: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
     rules = library.budget.retier_growth
     start = skill.cost.cooldown or 0
     ap_cost = skill.ap_cost or 0  # 只有主動技能會換形狀（_bigger_shapes），一定有 AP
-    top = min(ap_cost + rules.max_extra_ap, _MAX_AP)
+    top = min(ap_cost + rules.max_extra_ap, MAX_AP_COST)
     for ap in range(ap_cost, max(top, ap_cost) + 1):
         last = max(start, min(start + rules.max_extra_cooldown, rules.max_cooldown))
         for cooldown in range(start, last + 1):
@@ -226,15 +223,16 @@ def _grown_skills(job: _Job) -> Iterator[SkillDef]:
             yield grown
 
 
-def _terrain(skill: SkillDef) -> bool:
-    return any(e.type in _TERRAIN for e in skill.effects)
+def _terrain(skill: SkillDef, library: ContentLibrary) -> bool:
+    terrain = library.budget.retier_growth.terrain_effects
+    return any(e.type in terrain for e in skill.effects)
 
 
 def _area_candidates(job: _Job) -> Iterator[SkillDef | None]:
     """點數固定的表面與升降地形：先換成格數較多的形狀（由大到小試）。表面（或已帶落石的升降地形）
     再用旋鈕調到目標比例；只有地形的沒有旋鈕，在費用的組合裡取比例最接近目標的。"""
     for grown in _grown_skills(job):
-        if not has_strength_knobs(grown, job.library) and _terrain(grown):
+        if not has_strength_knobs(grown, job.library) and _terrain(grown, job.library):
             drafts = [*_growth_drafts(grown, job.library), *_cost_drafts(grown)]
             yield _closest(drafts, job)
             continue
@@ -314,7 +312,7 @@ def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
     """升降地形：「地形＋落石」（多一個大地傷害效果，數值由預算器調；3W-2b 地形變化模板的做法）。
     ``grown``：用放大過格數的形狀（由大到小，費用照 :func:`_growth_drafts`）；否則用原本的形狀。"""
     moved = job.moved
-    if not _terrain(moved) or len(moved.effects) >= _MAX_EFFECTS:
+    if not _terrain(moved, job.library) or len(moved.effects) >= MAX_EFFECTS:
         return
     if grown:
         drafts: Iterable[Draft] = (
@@ -417,10 +415,10 @@ def _grow(job: _Job) -> SkillDef | None:
     點數固定的才放大（帶傷害的表面技能照預算器調骰子）。"""
     if not job.upgrade:
         return None
-    if not _terrain(job.moved) and has_strength_knobs(job.moved, job.library):
+    if not _terrain(job.moved, job.library) and has_strength_knobs(job.moved, job.library):
         return None
     done = _settle(job, _area_candidates(job))
-    if done is None and _terrain(job.moved):
+    if done is None and _terrain(job.moved, job.library):
         done = _rocks(job, grown=True)
     return done
 

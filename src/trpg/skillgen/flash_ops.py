@@ -47,7 +47,7 @@ from typing import Any
 from trpg.content.flash_templates import FlashTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.skills.constants import FOLLOWUP_FORBIDDEN
+from trpg.content.skills.constants import FOLLOWUP_FORBIDDEN, MAX_EFFECTS
 from trpg.engine.shape_growth import grow_shape
 from trpg.shared.types import Element
 from trpg.skillgen.composer_parts import Knob, dice_ladder
@@ -217,7 +217,7 @@ def _op_terrain_area(
             base, effects = base_draft(skill)
             base["shape"] = shape.model_dump(mode="json", exclude_none=True)
             if rocks:
-                if len(effects) >= 4:  # noqa: PLR2004 - MAX_EFFECTS
+                if len(effects) >= MAX_EFFECTS:
                     continue
                 effects.append(_new_damage(skill, {}, "earth"))
             drafts.append((base, effects))
@@ -246,7 +246,8 @@ def _op_multi_hit(
     """多打一下：第一個傷害效果之後再加一個同元素、同對象的傷害效果（同一目標多一段命中）。"""
     base, effects = base_draft(skill)
     index = _first_damage(effects)
-    if not _hits(skill) or skill.followup is not None or index is None or len(effects) >= 4:  # noqa: PLR2004 - MAX_EFFECTS
+    full = len(effects) >= MAX_EFFECTS
+    if not _hits(skill) or skill.followup is not None or index is None or full:
         return []
     source = effects[index]
     extra = _new_damage(skill, source, source.get("element"))
@@ -308,7 +309,7 @@ def _op_element(
         not _hits(skill)
         or element is None
         or index is None
-        or len(effects) >= 4  # noqa: PLR2004 - MAX_EFFECTS
+        or len(effects) >= MAX_EFFECTS
         or (template.elements and element not in template.elements)
         or element == (effects[index].get("element") or Element.PHYSICAL.value)
         or any(e.get("element") == element for e in effects)

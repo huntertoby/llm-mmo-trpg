@@ -45,6 +45,13 @@ pricing:
   allow_focus: true
   transform_guaranteed: true  # 第 3 次（或重閃第 3 次）有合法轉型時一定是選項之一；指定加深／橋接時另列第 4 個
 
+# 輔助技的判定（support_only 類別用；3W-R2 從程式移到資料）：沒有 harm_effects，而且有 help_effects，
+# 或有作用於友方（affects: allies）的 ally_effects。
+support:
+  harm_effects: [damage, delayed_damage]
+  help_effects: [heal, shield]
+  ally_effects: [heal, shield, apply_status, cleanse, grant_ap]
+
 # 變化類別。kinds：可以出這類的技能種類；support_only：只給輔助技（治療、護盾、增益，沒有傷害）。
 # 姿態可以出「修正」「費用」兩類（玩法 PM 3W-2）。3W-2b：姿態有每招維持費欄位（SkillDef.stance_upkeep），
 # 元素姿態（stance_ladders）的費用類＝維持費 ±1 搭配效果降低／提高，修正類＝同維持費換到較高級。

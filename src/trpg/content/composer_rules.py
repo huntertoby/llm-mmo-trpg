@@ -480,6 +480,14 @@ class WhiteboardRules(ContentModel):
     """召喚白板的冷卻上限（冷卻換來較高的可用預算，讓不同強度的召喚物都落在 70～100%）。"""
     self_ap_cost: int = Field(default=1, ge=1, le=3)
     """自身位移、互換與自身增益白板的 AP（單一效果的點數固定，AP 2 湊不到預算下限）。"""
+    simple_shapes: tuple[str, ...] = ("self", "single", "ground_tile", "cross", "square3")
+    """白板允許的形狀（3W-R2 從程式移到資料）：自身、單體、單格、十字與 3×3（小範圍）。"""
+    self_move_effects: tuple[str, ...] = ("teleport", "swap", "leap")
+    """自身位移或互換的原語（6.34.9 的「位移類」，不含推拉別人）：主動白板用 ``self_ap_cost``。"""
+    displace_effects: tuple[str, ...] = ("teleport", "swap", "leap", "push", "pull")
+    """位移類核心效果的原語：可以帶一個小補強（單一位移的點數追不上預算下限）。"""
+    terrain_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain")
+    """升降地形的原語：單格的升降地形白板用 ``self_ap_cost``（3W-9）。"""
     active: tuple[WhiteboardRecipe, ...] = ()
     passive: tuple[WhiteboardRecipe, ...] = ()
     reaction: tuple[WhiteboardRecipe, ...] = ()

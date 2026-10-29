@@ -527,17 +527,14 @@ def _derive_on_current(
 # ---------------------------------------------------------------------------
 
 
-_SUPPORT_TYPES = frozenset({"heal", "shield", "apply_status", "cleanse", "grant_ap"})
-
-
-def is_support_skill(skill: SkillDef) -> bool:
-    """輔助技（「輔助」類用）：沒有傷害類效果，而且有治療、護盾或作用於友方的效果。
-
-    3W-1 的保守判定；3W-2 可改依原語分類。"""
-    if any(e.type in ("damage", "delayed_damage") for e in skill.effects):
+def is_support_skill(skill: SkillDef, table: FlashTable) -> bool:
+    """輔助技（「輔助」類用）：沒有傷害類效果，而且有治療、護盾或作用於友方的效果（原語分類在
+    ``flash_templates.yaml`` 的 ``support``）。"""
+    rule = table.support
+    if any(e.type in rule.harm_effects for e in skill.effects):
         return False
-    helps = any(e.type in ("heal", "shield") for e in skill.effects)
-    buffs = any(e.type in _SUPPORT_TYPES and e.affects == "allies" for e in skill.effects)
+    helps = any(e.type in rule.help_effects for e in skill.effects)
+    buffs = any(e.type in rule.ally_effects and e.affects == "allies" for e in skill.effects)
     return helps or buffs
 
 
@@ -547,14 +544,16 @@ def _kinds(table: FlashTable, template: FlashTemplate) -> tuple[str, ...]:
     return table.category(template.category).kinds
 
 
-def _category_ok(category: FlashCategory, skill: SkillDef) -> bool:
-    return skill.kind in category.kinds and (not category.support_only or is_support_skill(skill))
+def _category_ok(table: FlashTable, category: FlashCategory, skill: SkillDef) -> bool:
+    return skill.kind in category.kinds and (
+        not category.support_only or is_support_skill(skill, table)
+    )
 
 
 def allowed_categories(table: FlashTable, skill: SkillDef, *, major: bool) -> tuple[str, ...]:
     """這招這一次可以出（或指定）的類別（資料順序）。"""
     categories = table.stage_categories("major" if major else "minor")
-    return tuple(c.id for c in categories if _category_ok(c, skill))
+    return tuple(c.id for c in categories if _category_ok(table, c, skill))
 
 
 # ---------------------------------------------------------------------------
@@ -665,7 +664,11 @@ class DataOrderSource:
                     Variation(source="major", template=major.id, category=category, keyword=keyword)
                 )
         return out + extra_variations(
-            library, skill, category, support=is_support_skill(skill), held=request.held_keywords
+            library,
+            skill,
+            category,
+            support=is_support_skill(skill, library.flash),
+            held=request.held_keywords,
         )
 
     @staticmethod
