@@ -32,6 +32,7 @@ from trpg.content.skills import (
     DAMAGE_MULTIPLIER,
     EXTRA_REACTION,
     GRANT_AP,
+    LEAVE_FORM,
     REFUND_AP,
     REFUND_COOLDOWN,
     SELF_DAMAGE_OF_HIT,
@@ -1227,6 +1228,8 @@ def _allowance_parts(
         parts.append(_self_status_allowance(cost.self_status, budget, statuses))
     if cost.overdraft is not None:  # 透支（3-50）：固定折抵
         parts.append(("透支（下回合少 1 AP）", allowance.overdraft_permille))
+    if any(effect.type == LEAVE_FORM for effect in skill.effects):  # 解除形態（3J-4c）：算代價
+        parts.append(("解除形態（先離開目前的形態）", allowance.leave_form_permille))
     if cost.source is not None:
         parts.append(
             (

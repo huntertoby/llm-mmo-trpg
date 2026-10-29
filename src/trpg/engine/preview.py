@@ -1615,6 +1615,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "revive": "revives",
         "delayed_damage": "bombs",
         "summon": "summons",
+        "leave_form": f"{_OUTCOMES}（解除形態本身不列預覽結果；其餘效果照一般事件）",
         "enter_form": f"{_OUTCOMES}（form：進入形態；護盾、治療、範圍傷害等進入獎勵照一般事件）",
         "zone": f"affected_tiles、{_OUTCOMES}",
         "rule_change": _OUTCOMES,

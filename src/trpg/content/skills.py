@@ -94,6 +94,7 @@ __all__ = [
     "INSCRIBE",
     "INTERCEPT",
     "LEAP",
+    "LEAVE_FORM",
     "LEGACY_REACTION_EVENTS",
     "MAX_GRANT_DURATION",
     "MAX_MODIFIERS",
@@ -1568,6 +1569,9 @@ CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
 ENTER_FORM = "enter_form"
 """Phase 3J-1a 的進入形態原語 ID（6.30）：姿態（``kind: stance``）唯一的效果，參數 ``form``。"""
+LEAVE_FORM = "leave_form"
+"""Phase 3J-4c 的解除形態原語 ID（6.30 解形爆發）：主動技能的第一個效果，施放者先解除目前的形態
+（照常冷卻），之後的效果照一般順序結算；不在形態中不能施放。"""
 SUMMON = "summon"
 MAX_SUMMON_COUNT = 2
 """一次召喚的數量上限（Phase 3-33f2，數量型分歧進化：2 隻各 ``power_permille``）。"""

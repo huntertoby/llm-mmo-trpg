@@ -23,6 +23,7 @@ from trpg.engine.events import (
     EffectFizzled,
 )
 from trpg.engine.forms import enter_form as enter_unit_form
+from trpg.engine.forms import leave_form as leave_unit_form
 from trpg.engine.ids import CONCEALED, REVEALED
 from trpg.engine.resources import (
     dispelled_buffs,
@@ -301,9 +302,17 @@ def enter_form(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[Ef
     return enter_unit_form(cast.ctx, cast.caster, spec.form, element, cast.skill.id)
 
 
+def leave_form(cast: Cast, _effect: ResolvedEffect, _spec: EffectSpec) -> list[EffectBase]:
+    """``leave_form``（Phase 3J-4c，6.30 解形爆發）：施放者解除目前的形態（原因 ``released``；
+    照常冷卻）；不在形態中沒有效果（施放前 ``skill_problem`` 已擋下）。"""
+    leave_unit_form(cast.ctx, cast.caster, "released")
+    return []
+
+
 HANDLERS: dict[str, Handler] = {
     "apply_status": apply_status,
     "enter_form": enter_form,
+    "leave_form": leave_form,
     "consume_status": consume_status,
     "steal_buff": steal_buff,
     "dispel": dispel,

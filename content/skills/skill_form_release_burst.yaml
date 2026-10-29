@@ -1,0 +1,25 @@
+# 解形爆發（Phase 3J-4c，06 6.30「形態池名單」；數值為初值，未經模擬）：只能在形態中施放；先解除目前的形態
+# （leave_form：照常冷卻），再對自己周圍 1 格的敵人造成較高的傷害。解除形態算代價（allowance.leave_form_permille）。
+id: skill_form_release_burst
+schema_version: 1
+name_zh: 解形爆發
+tier: 2
+rank: 1
+rarity: epic
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: con
+shape: {type: ring, radius: 1}
+effects:
+  - {type: leave_form, affects: self}
+  - {type: damage, dice: 3d6, element: physical}
+condition: null
+cost: {mana: 8}
+tags: [physical, area, aoe]
+narrative:
+  concept: 讓變身的力量一口氣炸開，身邊的敵人被震飛，而你變回原形
+  cast_flavor: 你放開體內的野性，形體崩解成一圈衝擊波，把身邊的敵人轟得連連後退
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

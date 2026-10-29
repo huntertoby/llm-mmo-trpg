@@ -17,7 +17,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     },
     "reaction_event": {},
     "condition": {
-        "in_form": "3J-4b 起主動利用者改用效果的 form_bonus_permille；3J-4c 的解形爆發會再用它"
+        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）"
     },
     "primitive": {},
     "status": {

@@ -25,6 +25,7 @@ from trpg.content.skills import (
     GAMBLE,
     HURL_OBJECT,
     LEAP,
+    LEAVE_FORM,
     PIERCE_SHAPES,
     REVIVE,
     SACRIFICE_SUMMON,
@@ -408,6 +409,8 @@ def _already_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> st
     form_id = skill.form_id
     if form_id is not None and (problem := form_problem(unit, form_id)) is not None:
         return f"{problem}：{skill.name_zh}"  # 形態（Phase 3J-1a）
+    if unit.form is None and any(e.type == LEAVE_FORM for e in skill.effects):
+        return f"只能在形態中使用：{skill.name_zh}"  # 解除形態（Phase 3J-4c）
     return activation_problem(state, unit, skill)
 
 

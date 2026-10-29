@@ -222,5 +222,6 @@ keywords:
       - {effect: enter_form}
     uses:
       - {condition: in_form}
+      - {effect: leave_form}   # 3J-4c：解形爆發（只能在形態中施放，先解除形態）
       - {change: form_upkeep_permille}
       - {change: form_entry_permille}

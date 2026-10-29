@@ -36,7 +36,8 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # 225 ＋ 3I-5 的 29 招武器親和 ＋ 3-52 的 14 招層數示範
     # ＋ 3-54c 的 14 招風毒聖種子 ＋ 3-54d 的 2 招大地種子 ＋ 3-54e 的 2 招大地種子
     # ＋ 3J-1a 的 5 招測試用形態 ＋ 3J-1b 的 5 招 ＋ 3J-3 的化形專精 ＋ 3J-4 的 3 招形態利用者
-    assert len(BUILTIN) == 300
+    # ＋ 3J-4c 的解形爆發
+    assert len(BUILTIN) == 301
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 
