@@ -138,7 +138,7 @@ def test_a_flash_right_after_a_tier_up_starts_from_the_card() -> None:
     last = state_of(up, skill_id).records[-1].nth
     builder = _builder(lib, flash_request(lib, up, skill_id, slot=last))
     assert builder.broken is None
-    assert builder.floor_permille == math.ceil(budget_power(card, lib) * 1000)  # type: ignore[arg-type]
+    assert builder.floor_permille == math.ceil(budget_power(card, lib) * 1000)
     # 重閃第 1 筆：強度下限 ＝ 同一條歷程（照新階級重推）第 1 筆的預算分數
     first = flash_request(lib, up, skill_id, slot=1)
     chain = derive_chain(lib, first.base, first.state, up.seed, up.skill_tier)
