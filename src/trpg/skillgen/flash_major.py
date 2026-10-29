@@ -2,7 +2,8 @@
 ``docs/design/06-技能.md`` 6.34.5；玩法決定 #70、#73）。
 
 純函式、確定性。資料在 ``content/flash_templates.yaml`` 的 ``transforms``（轉型）與 ``extra_major``
-（補充的大變化）兩個區段；:mod:`trpg.skillgen.flash` 負責把它們接進出題（``make_offer``）與套用
+（補充的大變化）兩個區段；:mod:`trpg.skillgen.flash_offer`
+負責把它們接進出題（``make_offer``），:mod:`trpg.skillgen.flash_derive` 負責套用
 （``apply_variation``、``derive_skill``）。
 
 **轉型**（:data:`TransformTemplate`）：主動技轉成別種技能，依 **角色階級** 開放（#73）：
@@ -629,7 +630,7 @@ def extra_summary(library: ContentLibrary, variation: Variation) -> str:
 
 
 _STRICT_MARGIN = Fraction(1, 100)
-"""護盾量提高要比原本的預算分數嚴格多出來的點數（同 ``flash.STRICT_MARGIN``）。"""
+"""護盾量提高要比原本的預算分數嚴格多出來的點數（同 ``flash_derive.STRICT_MARGIN``）。"""
 
 _PREFER = 1_000
 """指定橋接關鍵字時給的「持有數」（遠大於實際值，讓它排第一）。"""

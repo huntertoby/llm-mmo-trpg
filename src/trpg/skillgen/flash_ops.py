@@ -2,8 +2,9 @@
 的 ``minor`` 模板用 ``op`` 引用這裡的函式，登錄表是 :data:`FLASH_OPS`）。
 
 每個改法的簽名 ``(技能, 模板, 變化, 內容庫) -> 草稿列表``：草稿是（技能欄位 dict、效果 dict 列表），
-只描述「怎麼改」，**不寫強度**——強度由 :func:`trpg.skillgen.flash.apply_variation` 在預算上限提高後
-依預算器重調（旋鈕從最弱開始往上調，守則 3）。做不出來（種類不對、形狀不能改、沒有可以改的效果）
+只描述「怎麼改」，**不寫強度**——強度由 :func:`trpg.skillgen.flash_derive.apply_variation`
+在預算上限提高後依預算器重調（旋鈕從最弱開始往上調，守則 3）。
+做不出來（種類不對、形狀不能改、沒有可以改的效果）
 時回傳空列表，那個變化就不會出現在選項裡。多個草稿時依序試，第一個合格的就是結果。
 
 十三類（6.34.4；``op`` → 說明）：
@@ -721,7 +722,7 @@ FLASH_OPS: dict[str, FlashOp] = {
     "stance_potency": _op_stance_potency,
 }
 """小變化的改法登錄表（``op`` → 草稿）。資料裡 ``op`` 沒有登錄的模板不會出現
-（:func:`trpg.skillgen.flash.unimplemented_ops` 列出）。"""
+（:func:`trpg.skillgen.flash_derive.unimplemented_ops` 列出）。"""
 
 
 def tuning_extras(

@@ -62,8 +62,8 @@ from trpg.roguelite.state import (
     SkillOffer,
 )
 from trpg.shared.types import Attribute
-from trpg.skillgen.flash import history_problem
 from trpg.skillgen.flash_major import transform_slot_plan
+from trpg.skillgen.flash_offer import history_problem
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,

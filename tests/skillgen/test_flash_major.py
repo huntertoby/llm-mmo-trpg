@@ -37,25 +37,22 @@ from trpg.narrative.skills import skill_card
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team, UnitId
 from trpg.skillgen.budget import skill_budget
-from trpg.skillgen.flash import (
-    DataOrderSource,
-    FlashError,
-    FlashOffer,
-    FlashRequest,
-    UsageSource,
-    _builder,
-    apply_variation,
-    choose,
-    derive_skill,
-    is_support_skill,
-    make_offer,
-    skill_before,
-    with_budget_bonus,
-)
+from trpg.skillgen.flash_category import is_support_skill
+from trpg.skillgen.flash_derive import FlashError, apply_variation, derive_skill, with_budget_bonus
 from trpg.skillgen.flash_major import (
     meets_floor,
     transform_slot_plan,
     transform_variations,
+)
+from trpg.skillgen.flash_offer import (
+    DataOrderSource,
+    FlashOffer,
+    FlashRequest,
+    UsageSource,
+    _builder,
+    choose,
+    make_offer,
+    skill_before,
 )
 from trpg.skillgen.flash_state import FlashRecord, SkillFlash, Variation, acquire
 from trpg.skillgen.usage import SkillUsage

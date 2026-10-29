@@ -24,12 +24,8 @@ from trpg.engine.events import TerrainChanged
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team
 from trpg.skillgen.budget import skill_budget
-from trpg.skillgen.flash import (
-    FlashRequest,
-    UsageSource,
-    apply_variation,
-    at_tier,
-)
+from trpg.skillgen.flash_derive import apply_variation, at_tier
+from trpg.skillgen.flash_offer import FlashRequest, UsageSource
 from trpg.skillgen.flash_ops import cell_count
 from trpg.skillgen.flash_state import Variation, acquire
 from trpg.skillgen.usage import SkillUsage

@@ -36,7 +36,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
-from trpg.skillgen.flash import with_budget_bonus
+from trpg.skillgen.flash_derive import with_budget_bonus
 from trpg.skillgen.flash_ops import base_draft
 from trpg.skillgen.knobs import knob_targets, next_moves, param_knobs, strength_knobs
 from trpg.skillgen.validate import validate_skill

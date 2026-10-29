@@ -35,7 +35,7 @@ from trpg.content.equipment import ItemDef
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
-from trpg.skillgen.flash import FlashOffer
+from trpg.skillgen.flash_offer import FlashOffer
 from trpg.skillgen.flash_state import SkillFlash, Variation
 from trpg.skillgen.usage import SkillUsage
 
@@ -431,7 +431,7 @@ class RunState(_Model):
     原本技能）。沒有記錄 ＝ 剛取得（沒有變化、還沒用過）。依 ID 排序存入。"""
     flash_bases: tuple[SkillDef, ...] = ()
     """閃現過的生成技能的原本定義（Phase 3W-5；內容庫的手寫技能不存）。閃現後的技能由原本的技能依
-    變化歷程推出（``trpg.skillgen.flash.derive_skill``）。依 ID 排序。"""
+    變化歷程推出（``trpg.skillgen.flash_derive.derive_skill``）。依 ID 排序。"""
     pending_flash: PendingFlash | None = None
     """已付點、還沒選的閃現選項（Phase 3W-5）；有它時只能送 ``flash_pick``。"""
     complete_offers_done: tuple[int, ...] = ()

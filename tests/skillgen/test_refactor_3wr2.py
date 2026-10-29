@@ -20,7 +20,7 @@ import pytest
 from tests.engine.helpers import library
 from trpg.content.skills import SkillDef
 from trpg.skillgen.complete import complete_strength
-from trpg.skillgen.flash import FlashRequest, choose, make_offer
+from trpg.skillgen.flash_offer import FlashRequest, choose, make_offer
 from trpg.skillgen.flash_state import SkillFlash, acquire
 from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.usage import SkillUsage

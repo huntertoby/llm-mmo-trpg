@@ -32,7 +32,9 @@ from trpg.llm.prompts.flash import (
     flash_prompt_record,
     flash_schema,
 )
-from trpg.skillgen.flash import (
+from trpg.skillgen.flash_catalog import build_catalog
+from trpg.skillgen.flash_merge import merge_options
+from trpg.skillgen.flash_offer import (
     FlashOffer,
     FlashRequest,
     UsageSource,
@@ -40,8 +42,6 @@ from trpg.skillgen.flash import (
     make_offer,
     skill_before,
 )
-from trpg.skillgen.flash_catalog import build_catalog
-from trpg.skillgen.flash_merge import merge_options
 from trpg.skillgen.flash_state import SkillFlash, Variation, acquire
 from trpg.skillgen.usage import SkillUsage
 

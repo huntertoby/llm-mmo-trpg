@@ -18,7 +18,7 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Team
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
-from trpg.skillgen.flash import apply_variation, at_tier
+from trpg.skillgen.flash_derive import apply_variation, at_tier
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.validate import validate_skill
 

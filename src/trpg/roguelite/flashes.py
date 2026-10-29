@@ -1,6 +1,7 @@
 """一輪裡的靈感點與閃現（Phase 3W-5，``docs/design/06-技能.md`` 6.34；玩法決定 #69～#72）。
 
-純函式（``RunState`` 進、``RunState`` 出），不推進節點；規則核心在 :mod:`trpg.skillgen.flash` 與
+純函式（``RunState`` 進、``RunState`` 出），不推進節點；規則核心在
+:mod:`trpg.skillgen.flash_offer` 與
 :mod:`trpg.skillgen.flash_state`，這裡只把它接到一輪：
 
 - **靈感點**（6.34.2）：每打贏一場 ``insight_per_win`` 點（:func:`after_battle_flash`），可以存。
@@ -41,18 +42,17 @@ from trpg.roguelite.state import (
     RunState,
 )
 from trpg.skillgen.candidates import keyword_distribution
-from trpg.skillgen.flash import (
+from trpg.skillgen.flash_derive import FlashStepError, derive_skill
+from trpg.skillgen.flash_major import transform_slot_plan
+from trpg.skillgen.flash_offer import (
     FlashOptionSource,
     FlashRequest,
-    FlashStepError,
     UsageSource,
     category_counts,
     category_ranking,
     choose,
-    derive_skill,
     make_offer,
 )
-from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     FlashRecord,

@@ -30,13 +30,8 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Surface, Team
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
-from trpg.skillgen.flash import (
-    FlashRequest,
-    UsageSource,
-    apply_variation,
-    make_offer,
-    with_budget_bonus,
-)
+from trpg.skillgen.flash_derive import apply_variation, with_budget_bonus
+from trpg.skillgen.flash_offer import FlashRequest, UsageSource, make_offer
 from trpg.skillgen.flash_state import FlashRecord, SkillFlash, Variation, acquire
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.usage import SkillUsage

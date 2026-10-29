@@ -1,6 +1,7 @@
 """閃現變化的「目錄」（Phase 3W-7）：這一次可以提議哪些模板、每個模板可帶哪些參數。
 
-LLM 提議只能在目錄裡挑（守則 3）：目錄由資料來源（:class:`~trpg.skillgen.flash.UsageSource`，與一般
+LLM 提議只能在目錄裡挑（守則 3）：目錄由資料來源
+（:class:`~trpg.skillgen.flash_offer.UsageSource`，與一般
 出題同一套候選）展開，所以提議的變化一定是「資料本來就可能出的變化」，只是由模型挑哪幾個。目錄同時
 是 prompt 的選單、JSON schema 的列舉與提議的驗證表（:meth:`FlashCatalog.resolve`）。純函式、確定性。
 """
@@ -12,7 +13,8 @@ from dataclasses import dataclass, field
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.skillgen.flash import FlashOptionSource, FlashRequest, UsageSource, allowed_categories
+from trpg.skillgen.flash_category import allowed_categories
+from trpg.skillgen.flash_offer import FlashOptionSource, FlashRequest, UsageSource
 from trpg.skillgen.flash_state import Variation
 
 __all__ = ["CatalogEntry", "FlashCatalog", "build_catalog"]

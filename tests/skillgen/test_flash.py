@@ -29,20 +29,16 @@ from trpg.engine.preview import preview
 from trpg.narrative.skills import skill_card
 from trpg.shared.rng import Rng
 from trpg.shared.types import Team, UnitId
-from trpg.skillgen import flash
 from trpg.skillgen.budget import skill_budget
-from trpg.skillgen.flash import (
-    FLASH_OPS,
-    FlashOffer,
-    FlashRequest,
-    allowed_categories,
+from trpg.skillgen.flash_category import allowed_categories, is_support_skill
+from trpg.skillgen.flash_derive import (
     apply_variation,
-    choose,
     derive_skill,
-    make_offer,
     unimplemented_ops,
     with_budget_bonus,
 )
+from trpg.skillgen.flash_offer import FlashOffer, FlashRequest, choose, make_offer
+from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import COMPLETE_SLOT, SkillFlash, Variation, acquire
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import validate_skill
@@ -393,7 +389,7 @@ def test_categories_follow_skill_kind() -> None:
     heal = next(
         s
         for s in sorted(lib.skills.values(), key=lambda s: s.id)
-        if s.kind == "active" and flash.is_support_skill(s, lib.flash)
+        if s.kind == "active" and is_support_skill(s, lib.flash)
     )
     assert "support" in allowed_categories(table, heal, major=False)
 

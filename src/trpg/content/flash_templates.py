@@ -1,7 +1,8 @@
 """白板技能的閃現（靈光一閃）設定與模板（``content/flash_templates.yaml``；Phase 3W-1，
 ``docs/design/06-技能.md`` 6.34；玩法決定 #69、#70）。
 
-這份資料只描述「規則數值」與「有哪些變化模板」；怎麼套用（純函式）在 :mod:`trpg.skillgen.flash`，
+這份資料只描述「規則數值」與「有哪些變化模板」；怎麼套用（純函式）在
+:mod:`trpg.skillgen.flash_derive`，
 閃現狀態（每招次數、變化歷程、先上場用過）在 :mod:`trpg.skillgen.flash_state`。
 
 - ``rules``：次數上限、第幾次是大變化、每次的預算上限加成（‰）、完整技能、靈感點。
@@ -9,7 +10,8 @@
   重閃同價。
 - ``categories``：變化的類別（範圍、連段、元素與關鍵字、費用、延長與收割、輔助、觸發；大變化的
   加深、橋接），各自限定可用的技能種類。
-- ``minor``：小變化模板（第 1、2、4、5 次）；``op`` 的實作在 :data:`trpg.skillgen.flash.FLASH_OPS`
+- ``minor``：小變化模板（第 1、2、4、5 次）；``op`` 的實作在
+  :data:`trpg.skillgen.flash_ops.FLASH_OPS`
   （3W-1 只實作 ``area``、``range``，其餘由 3W-2 補上）。
 - ``major``：大變化（第 3 次）沿用 ``skill_evolution.yaml`` 的進化模板（以 ID 引用）。
 - ``transforms``：主動 → 被動／反應的轉型模板（3W-3 實作；有合法轉型時一定是選項之一，#70）。
@@ -174,7 +176,7 @@ class FlashCategory(ContentModel):
     """可以出這類變化的技能種類。"""
     support_only: bool = False
     """只給輔助技（治療、護盾、增益，沒有傷害；
-    見 :func:`trpg.skillgen.flash.is_support_skill`）。"""
+    見 :func:`trpg.skillgen.flash_category.is_support_skill`）。"""
 
 
 class FlashTemplate(ContentModel):
@@ -183,7 +185,7 @@ class FlashTemplate(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     category: str = Field(pattern=ID_PATTERN)
     op: str = Field(pattern=ID_PATTERN)
-    """改法；實作登錄在 :data:`trpg.skillgen.flash.FLASH_OPS`（沒有實作的模板不會出現）。"""
+    """改法；實作登錄在 :data:`trpg.skillgen.flash_ops.FLASH_OPS`（沒有實作的模板不會出現）。"""
     kinds: tuple[FlashKind, ...] | None = None
     """限定的技能種類；省略時沿用類別的 ``kinds``。"""
     prefix_zh: str = Field(min_length=1)

@@ -20,7 +20,7 @@ from trpg.skillgen.complete import (
     complete_power,
     complete_strength,
 )
-from trpg.skillgen.flash import with_budget_bonus
+from trpg.skillgen.flash_derive import with_budget_bonus
 from trpg.skillgen.validate import validate_skill
 
 GAIN = 120
