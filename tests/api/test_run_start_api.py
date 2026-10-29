@@ -82,6 +82,25 @@ def test_preview_marks_keywords_every_weapon_can_reach(client: TestClient) -> No
     assert ignite["skill"] is not None
 
 
+def test_dev_advance_is_off_by_default_and_reaches_post_battle_screens(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    packs = _ok(client.get("/api/runs/dev-packs"))
+    run = _ok(client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 3}))
+    monkeypatch.delenv("TRPG_DEV_ROUTES", raising=False)
+    assert client.post(f"/api/runs/{run['run_id']}/dev-advance?to=level_up").status_code == 404
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    assert client.post(f"/api/runs/{run['run_id']}/dev-advance?to=nope").status_code == 422
+    run = _ok(
+        client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 1})
+    )
+    for target in ("gear_offer", "level_up", "campfire"):
+        got = _ok(client.post(f"/api/runs/{run['run_id']}/dev-advance?to={target}"))
+        assert got["node"]["kind"] == target
+    got = _ok(client.post(f"/api/runs/{run['run_id']}/dev-advance?to=campfire_offer"))
+    assert got["node"]["kind"] == "campfire" and got["node"]["offer"] is not None
+
+
 def test_dev_packs_endpoint_and_start(client: TestClient, library: ContentLibrary) -> None:
     packs = _ok(client.get("/api/runs/dev-packs"))
     assert len(packs) == 29 and {p["label_zh"] for p in packs} == _school_names(library)

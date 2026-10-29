@@ -20,7 +20,9 @@ Phase 3-6：節點改變（戰後結算、升級、營火、結束）與每個�
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+import os
+
+from fastapi import APIRouter, HTTPException, Request
 
 from trpg.api.attribute_text import attribute_affects, attribute_suggestion
 from trpg.api.presenter import battle_response
@@ -51,13 +53,14 @@ from trpg.api.state import runs_of
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import skill_card
+from trpg.roguelite.auto import auto_play
 from trpg.roguelite.start import (
     start_resources,
     start_weapons,
     starter_pools,
     starting_skill,
 )
-from trpg.roguelite.state import Choice
+from trpg.roguelite.state import Choice, RerollChoice
 
 __all__ = ["router"]
 
@@ -291,6 +294,31 @@ def post_choice(run_id: str, choice: Choice, request: Request) -> RunResponse:
     session = store.get(run_id)
     with session.lock:
         store.choose(session, choice)
+        return _respond(store, session)
+
+
+DEV_ROUTES_ENV = "TRPG_DEV_ROUTES"
+_DEV_TARGETS = ("gear_offer", "level_up", "campfire", "campfire_offer", "ended")
+
+
+@router.post("/{run_id}/dev-advance")
+def dev_advance(run_id: str, to: str, request: Request) -> RunResponse:
+    """開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
+    ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。"""
+    if os.environ.get(DEV_ROUTES_ENV) != "1":
+        raise HTTPException(status_code=404, detail="Not Found")
+    if to not in _DEV_TARGETS:
+        raise HTTPException(status_code=422, detail=f"to 必須是 {', '.join(_DEV_TARGETS)}")
+    store = runs_of(request)
+    session = store.get(run_id)
+    with session.lock:
+        if session.battle is not None:
+            raise HTTPException(status_code=409, detail="戰鬥進行中")
+        kind = "campfire" if to == "campfire_offer" else to
+        run, _ = auto_play(session.library, session.run, stop=lambda r, _b: r.node.kind == kind)
+        session.run = run
+        if to == "campfire_offer" and run.node.kind == "campfire":
+            store.choose(session, RerollChoice())
         return _respond(store, session)
 
 
