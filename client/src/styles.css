@@ -2739,6 +2739,34 @@ button.selected {
 .run-keyword {
   text-align: left;
 }
+/* Phase 3R-3a：開局第一步，種族卡與出身卡 */
+.race-pick-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.race-pick-slot {
+  display: inline-block;
+}
+.race-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 2px;
+  min-width: 96px;
+}
+.race-pick-sub {
+  opacity: 0.8;
+}
+.race-pick-detail {
+  margin: 2px 0 10px;
+  line-height: 1.6;
+}
+.float-card.race-pick-card {
+  max-width: 320px;
+}
 .run-keyword.unavailable {
   opacity: 0.45;
 }

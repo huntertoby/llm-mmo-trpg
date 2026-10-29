@@ -6,6 +6,7 @@ import { SkillCardView } from "../ui/SkillCardView";
 import { RuleText } from "../ui/ruleText";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { itemTipLines, wornGear } from "./gearOffer";
+import { raceOriginText } from "./raceOrigin";
 import { levelBadge, levelOf } from "./skillGrowth";
 import {
   ATTRIBUTES,
@@ -48,6 +49,7 @@ function Bar({ label, value, max, kind }: { label: string; value: number; max: n
 
 export function RunHeroPanel({ hero }: { hero: RunHero }) {
   const usage = slotUsage(hero.skills);
+  const raceLine = raceOriginText(hero.race_name_zh, hero.origin_name_zh);
   const traits: readonly string[] = (hero as { weapon_traits_zh?: readonly string[] }).weapon_traits_zh ?? [];
   const kinds = Object.keys(SLOT_LIMITS) as SlotKind[];
   // 主手沒換過時是主角原本的基礎武器（id 以 base_ 開頭；武器已在上面顯示），不算穿戴的裝備
@@ -71,6 +73,11 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           {Array.from({ length: hero.source_max }, (_, i) => (i < hero.source ? "●" : "○")).join("")}
         </span>
       </div>
+      {raceLine !== null && (
+        <div className="run-race small" data-testid="run-race">
+          <span className="muted">種族・出身</span> <b>{raceLine}</b>
+        </div>
+      )}
       <div className="run-weapon" data-testid="run-weapon">
         <WeaponIcon weaponId={hero.weapon} weaponClass={hero.weapon_class} size={24} />
         <span className="muted">武器</span> <b>{hero.weapon_name_zh === "" ? hero.weapon : hero.weapon_name_zh}</b>

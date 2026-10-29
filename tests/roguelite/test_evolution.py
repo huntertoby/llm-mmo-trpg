@@ -163,7 +163,7 @@ def test_the_save_round_trips_and_a_full_run_is_deterministic() -> None:
         assert run.generated(evolved) is not None
         assert record.base_id not in run.hero.skills
     raw = json.loads(dumps_save(RunSave(run_id="e", run=run)))
-    assert raw["format"] == "trpg-run/6" and raw["run"]["evolutions"]
+    assert raw["format"] == "trpg-run/7" and raw["run"]["evolutions"]
     assert loads_save(json.dumps(raw)).run == run
     lib = library()
     again, _ = auto_play(lib, new_run(lib, BUILD, SEED))

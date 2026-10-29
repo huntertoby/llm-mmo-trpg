@@ -2,9 +2,10 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/6``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
-  （``trpg-run/5``：Phase 3K-2 只新增有預設值的欄位與一種新節點，所以 ``/5`` 的存檔照常讀入，
-  之後寫出為 ``/6``），否則拒絕。
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/7``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
+  （``trpg-run/5``、``/6``：之後的版本只新增有預設值的欄位與一種新節點，所以舊存檔照常讀入，
+  之後寫出為 ``/7``），否則拒絕。Phase 3R-3a 起多了出身 ``run.origin``（``/7``；舊存檔沒有＝無出身，
+  種族 ``run.hero.race`` 同理沒有＝無種族）。
   Phase 3-22 起每場戰鬥的安排多了勝利條件 ``objective``（``/2``）；Phase 3-24b2 起開局改成「武器 ＋
   關鍵字」（``run.start``，``build_id`` 可為空）、多了行為紀錄 ``run.behavior`` 與候選標示
   ``offer.tags``（``/3``）；Phase 3-26a 起多了技能成長 ``run.skill_points``、``run.skill_levels``、
@@ -58,8 +59,8 @@ __all__ = [
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/6"
-COMPATIBLE_FORMATS = ("trpg-run/5",)
+SAVE_FORMAT = "trpg-run/7"
+COMPATIBLE_FORMATS = ("trpg-run/5", "trpg-run/6")
 """仍可讀入的舊格式（新增的欄位都有預設值，讀入後視為目前格式）。"""
 OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 """已知的舊存檔格式（讀檔時提示開新一輪）。"""

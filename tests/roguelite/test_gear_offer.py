@@ -367,7 +367,7 @@ def test_save_round_trip_keeps_equipment_and_backpack_and_the_gear_node() -> Non
     taken = apply_choice(lib, after, GearPickChoice(pick=0))
     taken = taken.model_copy(update={"backpack": (taken.equipment[next(iter(taken.equipment))],)})
     raw = json.loads(dumps_save(RunSave(run_id="g", run=taken)))
-    assert raw["format"] == "trpg-run/6" and raw["run"]["equipment"] and raw["run"]["backpack"]
+    assert raw["format"] == "trpg-run/7" and raw["run"]["equipment"] and raw["run"]["backpack"]
     assert loads_save(json.dumps(raw)).run == taken
 
 
@@ -377,7 +377,7 @@ def test_a_trpg_run_5_save_without_the_new_fields_still_loads() -> None:
     raw["format"] = "trpg-run/5"
     del raw["run"]["equipment"], raw["run"]["backpack"]
     loaded = loads_save(json.dumps(raw))
-    assert loaded.format == "trpg-run/6"
+    assert loaded.format == "trpg-run/7"
     assert loaded.run.equipment == {} and loaded.run.backpack == ()
     assert loaded.run == run
 

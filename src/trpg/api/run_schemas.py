@@ -31,6 +31,8 @@ __all__ = [
     "NodeOut",
     "OfferOut",
     "OfferTagOut",
+    "OriginOption",
+    "RaceOption",
     "RunBattleResponse",
     "RunResponse",
     "RunRules",
@@ -68,8 +70,9 @@ class CreateRunRequest(_ApiModel):
     test_mode: bool = False
     """測試模式（Phase 3-39）：戰後回滿，可挑裝備；只能用 ``weapon`` ＋ ``keywords`` 開局。"""
     race: str | None = None
-    """主角的種族（Phase 3R-2，``races.yaml`` 的 ID）；省略＝無種族。開局選種族的介面是 3R-3，這裡
-    先讓 API 與測試能指定；未知的種族回 422。"""
+    """主角的種族（Phase 3R-2，``races.yaml`` 的 ID）；省略＝無種族；未知的種族回 422。"""
+    origin: str | None = None
+    """出身（Phase 3R-3a，``origins.yaml`` 的 ID，不影響戰鬥）；省略＝無出身；未知的出身回 422。"""
     test_equipment: dict[str, str] = Field(default_factory=dict)
     """測試模式挑的裝備（欄位 → 物品 ID，Phase 3-39）；只有 ``test_mode`` 時可非空。"""
 
@@ -134,12 +137,40 @@ class AllocationPreviewOut(_ApiModel):
     summary_zh: str
 
 
+class RaceOption(_ApiModel):
+    """開局可選的種族（Phase 3R-3a）：種族技與環境被動的說明（都不給數值，7.7）。"""
+
+    id: str
+    name_zh: str
+    home_realm: str
+    home_realm_name_zh: str
+    skill_name_zh: str
+    skill_description_zh: str
+    skill_ap: int
+    skill_uses: int
+    """每場限用次數。"""
+    passive_name_zh: str
+    passive_description_zh: str
+
+
+class OriginOption(_ApiModel):
+    """開局可選的出身（Phase 3R-3a）：界域與簡介；出身不影響戰鬥。"""
+
+    id: str
+    name_zh: str
+    realm: str
+    realm_name_zh: str
+    description_zh: str
+
+
 class StartOptions(_ApiModel):
-    """開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。"""
+    """開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字；3R-3a 起另有種族與出身。"""
 
     weapons: tuple[StartWeaponOption, ...]
     keywords: tuple[KeywordRef, ...]
     keyword_count: int
+    races: tuple[RaceOption, ...] = ()
+    origins: tuple[OriginOption, ...] = ()
 
 
 class StartPreviewRequest(_ApiModel):
@@ -342,6 +373,12 @@ class HeroOut(_ApiModel):
     """開局選的關鍵字（Phase 3-24b2；以 build 開局時為空）。"""
     dev_pack: str | None = None
     """開發者起始包 ID（Phase 3-24b2，開發用）。"""
+    race_id: str | None = None
+    race_name_zh: str = ""
+    """主角的種族（Phase 3R-3a；沒有種族時 ``None``／空字串）。"""
+    origin_id: str | None = None
+    origin_name_zh: str = ""
+    """這一輪的出身（Phase 3R-3a；沒有出身時 ``None``／空字串）。"""
     skill_points: int = 0
     """還沒花的技能點（Phase 3-26a）。"""
     skill_growth: SkillGrowthOut | None = None

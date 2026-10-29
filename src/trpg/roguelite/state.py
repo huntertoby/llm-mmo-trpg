@@ -306,6 +306,9 @@ class RunState(_Model):
     start: RunStart | None = None
     """一般開局與開發者起始包的選擇（Phase 3-24b2）；以回歸範本開局時為 ``None``。"""
     hero: UnitTemplate
+    origin: str | None = None
+    """出身（Phase 3R-3a，``content/origins.yaml`` 的 ID）；不影響戰鬥（只決定預設外觀、開場劇情鍵、
+    NPC 態度）。舊存檔沒有此欄位＝無出身。種族存在 ``hero.race``。"""
     level: int = Field(ge=1)
     xp: int = Field(ge=0)
     hp: int = Field(ge=0)

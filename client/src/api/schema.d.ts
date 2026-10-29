@@ -1552,6 +1552,8 @@ export interface components {
             test_mode: boolean;
             /** Race */
             race?: string | null;
+            /** Origin */
+            origin?: string | null;
             /** Test Equipment */
             test_equipment?: {
                 [key: string]: string;
@@ -2691,6 +2693,20 @@ export interface components {
             start_keywords: components["schemas"]["KeywordRef"][];
             /** Dev Pack */
             dev_pack?: string | null;
+            /** Race Id */
+            race_id?: string | null;
+            /**
+             * Race Name Zh
+             * @default
+             */
+            race_name_zh: string;
+            /** Origin Id */
+            origin_id?: string | null;
+            /**
+             * Origin Name Zh
+             * @default
+             */
+            origin_name_zh: string;
             /**
              * Skill Points
              * @default 0
@@ -3251,6 +3267,22 @@ export interface components {
                 [key: string]: components["schemas"]["TacticalOrder"][];
             };
         };
+        /**
+         * OriginOption
+         * @description 開局可選的出身（Phase 3R-3a）：界域與簡介；出身不影響戰鬥。
+         */
+        OriginOption: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Realm */
+            realm: string;
+            /** Realm Name Zh */
+            realm_name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+        };
         /** OutcomeOut */
         OutcomeOut: {
             /** Kind */
@@ -3589,6 +3621,32 @@ export interface components {
              * @default false
              */
             spines: boolean;
+        };
+        /**
+         * RaceOption
+         * @description 開局可選的種族（Phase 3R-3a）：種族技與環境被動的說明（都不給數值，7.7）。
+         */
+        RaceOption: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Home Realm */
+            home_realm: string;
+            /** Home Realm Name Zh */
+            home_realm_name_zh: string;
+            /** Skill Name Zh */
+            skill_name_zh: string;
+            /** Skill Description Zh */
+            skill_description_zh: string;
+            /** Skill Ap */
+            skill_ap: number;
+            /** Skill Uses */
+            skill_uses: number;
+            /** Passive Name Zh */
+            passive_name_zh: string;
+            /** Passive Description Zh */
+            passive_description_zh: string;
         };
         /**
          * RaceView
@@ -4302,7 +4360,7 @@ export interface components {
         };
         /**
          * StartOptions
-         * @description 開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。
+         * @description 開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字；3R-3a 起另有種族與出身。
          */
         StartOptions: {
             /** Weapons */
@@ -4311,6 +4369,16 @@ export interface components {
             keywords: components["schemas"]["KeywordRef"][];
             /** Keyword Count */
             keyword_count: number;
+            /**
+             * Races
+             * @default []
+             */
+            races: components["schemas"]["RaceOption"][];
+            /**
+             * Origins
+             * @default []
+             */
+            origins: components["schemas"]["OriginOption"][];
         };
         /** StartPreview */
         StartPreview: {
