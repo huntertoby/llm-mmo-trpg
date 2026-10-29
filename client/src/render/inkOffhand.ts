@@ -3,12 +3,13 @@
 // 背面可被身體遮住大半。不認得的形制 → 預設（鳶盾／典籍／水晶球）。
 import { TAU, type Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
-import { darken, type ColorFn } from "./inkGear";
-import { ellPts, ink, stroke, type Pt } from "./inkStyle";
+import { darken } from "./color";
+import type { ColorFn } from "./inkGear";
+import { ellPts, ink, MAT, stroke, type Pt } from "./inkStyle";
 
-const GOLD = "#e8bb48";
+const GOLD = MAT.gold;
 const PAGE = "#f2ead6";
-const WOOD = "#a06a36";
+const WOOD = MAT.wood;
 
 export const isKiteShield = (it: GearItem): boolean => it.kind === "shield_kite";
 export const isInkOffhandHeld = (it: GearItem): boolean => it.kind === "tome" || it.kind === "orb" || it.kind === "shield_kite";

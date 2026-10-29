@@ -3,7 +3,7 @@
 // 功能特徵不變：牆要比單位高、深淵與岩漿與冰窟要看得出致命（崖線、紅色、深色水）。
 // 這個檔案不匯入 terrainArt 的值（避免循環匯入）；表由 terrainArt 組裝。
 import { roundRect, TAU, type Ctx } from "./artDraw";
-import { rgba, shade } from "./artPalette";
+import { rgba, shade } from "./color";
 import { rng } from "./artRandom";
 import type { TileArtSpec } from "./terrainArt";
 

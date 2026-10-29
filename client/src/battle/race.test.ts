@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Action, RaceView } from "../api/types";
 import { actionLabel } from "./actions";
-import { passiveLine, raceBlockedReason, raceCardLines, raceHudText, raceLabel, raceModes, raceUsesText } from "./race";
+import { passiveLine, raceBlockedReason, raceBattleCardLines, raceHudText, raceLabel, raceModes, raceUsesText } from "./race";
 import { actionAtTile, basicModes, fallbackActions, isSelfOnly } from "./targeting";
 import { smallView, unit } from "./testFixtures";
 
@@ -116,7 +116,7 @@ describe("race skill modes (Phase 3R-2)", () => {
 
 describe("race text", () => {
   it("builds the card lines from the same data the engine uses", () => {
-    const lines = raceCardLines(race());
+    const lines = raceBattleCardLines(race());
     expect(lines[0]).toContain("拉近 2 格");
     expect(lines[1]).toBe("花費 1 AP・本場限用 1 次（剩 1 次）・不佔技能欄");
     expect(lines[2]).toBe("選一個目標・射程 4 格");

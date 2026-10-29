@@ -3,7 +3,8 @@
 // 圖層順序（移植需求第 2 節）：地形 → 高度明暗 → 表面 → 格線。
 // 崖面、描邊與抬高位移（3-19 整格抬高）由 Pixi 另畫（render/heightArt.ts），不在貼圖裡。
 // 新地形、新表面沒有畫法時有預設，不會出錯。
-import { numToHex, PAL, rgba, shade } from "./artPalette";
+import { PAL } from "./artPalette";
+import { numToHex, rgba, shade } from "./color";
 import { flame, roundRect, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";

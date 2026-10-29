@@ -3,13 +3,12 @@
 // 其他 kind（以及魔導劍、權杖、圖騰杖）回傳 false，由 inkDoll.ts 退回現行畫法（C-2 換）。不認得的值一律退回預設，不出錯。
 import { TAU, type Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
-import { ellPts, ink, stroke, type Pt } from "./inkStyle";
+import { darken } from "./color";
+import { ellPts, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
 
-export type GearView = "front" | "back" | "side";
 /** 取一件裝備的 [主色, 暗色]（paperdoll.ts 的 `itemColors`）。 */
 export type ColorFn = (it: GearItem) => readonly [string, string];
 
-const MAT = { steel: "#c3ccd6", gold: "#e8bb48", wood: "#a06a36" } as const;
 /** 法杖杖頭光暈的預設色（需求第 4 節）。 */
 export const STAFF_GLOW = "#8fe3ff";
 const SHIELD_FALLBACK = "#2f5fae";
@@ -36,20 +35,6 @@ export function isInkWeapon(it: GearItem): boolean {
   }
 }
 
-/** 與白色混合（亮 t）；不是 #rrggbb 的值原樣回傳。 */
-export const lighten = (c: string, t: number): string => {
-  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
-  const n = parseInt(c.slice(1), 16);
-  const m = (s: number): number => Math.round(((n >> s) & 255) * (1 - t) + 255 * t);
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
-};
-
-export const darken = (c: string, t: number): string => {
-  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
-  const n = parseInt(c.slice(1), 16);
-  const m = (s: number): number => Math.round(((n >> s) & 255) * (1 - t));
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
-};
 
 /** 金屬部分的顏色：指定顏色或材質色；沒有材質、木材或不認得 → 鋼色（元素仍混色）。 */
 export function metalOf(it: GearItem, colors: ColorFn): string {
@@ -58,7 +43,7 @@ export function metalOf(it: GearItem, colors: ColorFn): string {
 }
 
 // ============================== 頭部裝備 ==============================
-export function drawHelmet(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+export function drawHelmet(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): void {
   const m = metalOf(it, colors);
   if (view !== "side") {
     ink(ctx, "helm", [[-10, -42], [-9.6, -49], [-4.6, -53.6], [4.6, -53.6], [9.6, -49], [10, -42], [10.4, -40], [-10.4, -40]], m);
@@ -74,13 +59,13 @@ const HOOD_BACK: Pt[] = [[-11, -36], [-11.4, -48], [-5, -55], [5, -55], [11.4, -
 const HOOD_FRONT: Pt[] = [[-11, -36], [-11.4, -48], [-5, -55], [5, -55], [11.4, -48], [11, -36], [7.6, -36.6], [8.4, -45], [0, -48], [-8.4, -45], [-7.6, -36.6]];
 const HOOD_SIDE: Pt[] = [[-11, -33], [-11.4, -46], [-5, -55], [4, -54.4], [9.6, -48.6], [9.4, -45], [4, -46.6], [0.6, -42], [-1.6, -36], [-6, -33.4]];
 
-function drawHood(ctx: Ctx, view: GearView, c: string): void {
+function drawHood(ctx: Ctx, view: View, c: string): void {
   if (view === "back") ink(ctx, "hood-b", HOOD_BACK, c);
   else if (view === "front") ink(ctx, "hood", HOOD_FRONT, c);
   else ink(ctx, "hood-s", HOOD_SIDE, c);
 }
 
-function drawWizardHat(ctx: Ctx, it: GearItem, view: GearView, c: string): void {
+function drawWizardHat(ctx: Ctx, it: GearItem, view: View, c: string): void {
   const trim = it.trim ?? MAT.gold;
   if (view !== "side") {
     ink(ctx, "hat-brim", [[-14, -47], [-6, -50.6], [6, -50.6], [14, -47], [6, -45.4], [-6, -45.4]], c);
@@ -94,7 +79,7 @@ function drawWizardHat(ctx: Ctx, it: GearItem, view: GearView, c: string): void 
 }
 
 /** 畫 C 畫風的頭部裝備（座標＝C 骨架，頭心 (0,-42)）。不是這一層畫得出來的 kind 回傳 false。 */
-export function drawInkHeadgear(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): boolean {
+export function drawInkHeadgear(ctx: Ctx, it: GearItem, view: View, colors: ColorFn): boolean {
   if (!isInkHeadgear(it)) return false;
   if (it.kind === "helmet") drawHelmet(ctx, it, view, colors);
   else if (it.kind === "hood") drawHood(ctx, view, it.color ?? colors(it)[0]);

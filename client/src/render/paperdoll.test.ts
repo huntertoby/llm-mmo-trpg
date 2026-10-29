@@ -4,7 +4,7 @@ import { ringArrow } from "../battle/facing";
 import { dollKey, elementTint, KNOWN_KINDS, weaponLook, type DollSpec } from "./appearance";
 import { resolveDollT, UNIT_DOLLS } from "./testDolls";
 import { weaponLookEntry } from "../battle/glossary";
-import { drawFigure, drawFigurePose, handSides, itemColors } from "./paperdoll";
+import { drawFigure, drawFigurePose, itemColors } from "./paperdoll";
 
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
@@ -161,13 +161,6 @@ describe("drawFigure（假 Canvas）", () => {
     const { ctx, calls } = mockCtx();
     drawFigure(ctx, resolveDollT({ team: "ally", summon: true, template: "summon_war_totem", totem: true }), "south");
     expect(calls.length).toBeGreaterThan(5);
-  });
-
-  it("慣用手：正面在畫面左、背面在右、側面在前方", () => {
-    expect(handSides("south").main).toBeLessThan(0);
-    expect(handSides("north").main).toBeGreaterThan(0);
-    expect(handSides("east").main).toBeGreaterThan(0);
-    expect(handSides("west").main).toBeLessThan(0);
   });
 });
 

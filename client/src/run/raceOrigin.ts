@@ -24,7 +24,7 @@ export function raceOriginBody(choice: RaceOriginChoice): { race?: string; origi
 }
 
 /** 種族卡浮動卡的各行：種族技（說明已含每場次數）、花費與環境被動。 */
-export function raceCardLines(race: RaceOption): string[] {
+export function raceStartCardLines(race: RaceOption): string[] {
   return [
     `種族技・${race.skill_name_zh}：${race.skill_description_zh}`,
     `花費 ${race.skill_ap} AP・不佔技能欄`,

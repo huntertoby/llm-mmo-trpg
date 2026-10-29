@@ -5,17 +5,21 @@
 // 不認得的形制 → 該 kind 的預設形制；不是這一層的 kind 回傳 false。
 import type { Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
-import { darken, metalOf, type ColorFn, type HeldOpt } from "./inkGear";
-import { dot, ellPts, ink, stroke, type Pt } from "./inkStyle";
+import { darken } from "./color";
+import { drawInkWeapon, metalOf, type ColorFn, type HeldOpt } from "./inkGear";
+import { dot, ellPts, ink, MAT, stroke, type Pt } from "./inkStyle";
 
-const GOLD = "#e8bb48";
-const WOOD = "#a06a36";
+const GOLD = MAT.gold;
+const WOOD = MAT.wood;
 const WOOD_DARK = "#6a4420";
 const STOCK = "#7a5232";
 const GRIP = "#3a2a1c";
-/** 魔導劍預設劍身色（冷灰）、源晶槽預設光色、黃銅齒輪（同 paperdoll.ts 現行常數，paperdoll.ts 會匯入 inkDoll，所以在這裡另放一份）。 */
+/** 魔導劍預設劍身色（冷灰，比一般鋼劍暗一點，讓光槽更明顯）。 */
 const ARCANE_BLADE = "#8a93a8";
-const ARCANE_GLOW = "#9a86ff";
+/** 魔導劍的源晶槽預設光色（沒有元素時）；有元素換元素色。 */
+export const ARCANE_GLOW = "#9a86ff";
+/** 魔導劍的源晶槽顏色：有元素換元素色，否則藍紫（供測試與圖示共用）。 */
+export const arcaneGlow = (element: string | undefined): string => elementTint(element) ?? ARCANE_GLOW;
 const BRASS = "#b08a4a";
 
 interface Cols {
@@ -110,7 +114,7 @@ function drawWhip(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
 // ============================== 魔導劍、杖 ==============================
 function drawArcaneSword(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   const L = 21;
-  const glow = elementTint(it.element) ?? ARCANE_GLOW;
+  const glow = arcaneGlow(it.element);
   ink(ctx, `${k}-blade`, [[-1.5, -2], [-1.3, -L + 1.8], [0, -L], [1.3, -L + 1.8], [1.5, -2]], c.metal, { shade: false, w: 0.7 });
   ink(ctx, `${k}-groove`, rect(-0.6, -L + 2.4, 0.6, -5), glow, { shade: false, line: false, w: 0.4 });
   for (const y of [-6.5, -10.5, -14.5]) dot(ctx, 0, y, 1, 0.45, "#e8e2ff");
@@ -273,4 +277,13 @@ export function drawInkWeaponMore(ctx: Ctx, it: GearItem, key: string, x: number
   shapeOf(it)(ctx, it, key, c);
   ctx.restore();
   return true;
+}
+
+/**
+ * 單獨畫一件主手武器（小圖示用）：原點在手的位置，不是側面；和小人手持的同一套 C 畫法。
+ * 以「副手鏡像」的方向畫，外側朝 +x 的武器（斧、槍弩、魔導劍…）槍口與刃朝右。畫不出來的 kind 回傳 false。
+ */
+export function drawInkWeaponAlone(ctx: Ctx, it: GearItem, colors: ColorFn): boolean {
+  const o: HeldOpt = { mirror: true, side: false, far: false, back: true }; // back：匕首不往外斜（圖示本來就斜放）
+  return drawInkWeapon(ctx, it, "icon", 0, 0, o, colors) || drawInkWeaponMore(ctx, it, "icon", 0, 0, o, colors);
 }

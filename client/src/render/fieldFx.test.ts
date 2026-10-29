@@ -179,7 +179,7 @@ describe("陷阱踏板", () => {
 describe("元素色", () => {
   it("元素 → 表面色 → 灰；不認得的值都是灰", () => {
     const gray = fxColor(null);
-    expect(fxColor("fire")).toBe("#ff7a1a");
+    expect(fxColor("fire")).toBe("#ff6a1a");
     expect(fxColor("brand_new_element")).toBe(gray);
     expect(fxColor("brand_new_element", "brand_new_surface")).toBe(gray);
     expect(fxColor(null, "fire")).toBe(surfaceHex("fire"));

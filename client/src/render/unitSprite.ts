@@ -130,11 +130,33 @@ function summonLookOf(u: UnitDraw): ResolvedLook | null {
   return u.summon && u.summonLook != null ? resolveSummonLook(u.summonLook) : null;
 }
 
-/** 人形召喚物用的紙娃娃規格：骷髏沿用範本外觀，殘影複製召喚者（找不到時用預設戰士）。 */
+/** 人形召喚物沿用的範本（骷髏）與殘影找不到召喚者時的預設（戰士）。 */
+const SKELETON_TEMPLATE = "summon_skeleton_warrior";
+const DEFAULT_OWNER_TEMPLATE = "hero_fighter";
+let defaultOwner: DollSpec | undefined;
+
+/** 人形召喚物用的紙娃娃規格：骷髏沿用範本外觀，殘影複製召喚者（找不到時用預設戰士；預設戰士全程只算一次）。 */
 function summonHumanoidSpec(u: UnitDraw, look: ResolvedLook): DollSpec {
-  const skeleton = resolveDoll({ template: "summon_skeleton_warrior", team: u.team, summon: true, weaponId: u.weaponId, weaponClass: u.weaponClass });
-  const owner = u.copyOf !== undefined ? resolveDoll(u.copyOf) : resolveDoll({ template: "hero_fighter", team: "ally", summon: false });
-  return humanoidSpec(look, skeleton, owner);
+  const skeleton = resolveDoll({ template: SKELETON_TEMPLATE, team: u.team, summon: true, weaponId: u.weaponId, weaponClass: u.weaponClass });
+  defaultOwner ??= resolveDoll({ template: DEFAULT_OWNER_TEMPLATE, team: "ally", summon: false });
+  return humanoidSpec(look, skeleton, u.copyOf !== undefined ? resolveDoll(u.copyOf) : defaultOwner);
+}
+
+/** 倒地單位的灰階濾鏡：全部單位共用一個（`destroy({children:true})` 不會銷毀濾鏡，所以不能每次重畫都 new）。 */
+let grayFilter: ColorMatrixFilter | undefined;
+function gray(): ColorMatrixFilter {
+  if (grayFilter === undefined) {
+    grayFilter = new ColorMatrixFilter();
+    grayFilter.desaturate();
+  }
+  return grayFilter;
+}
+
+/** 小人貼圖共通的外觀：透明度（含隱匿）與倒地灰階。 */
+function applyLook(sprite: Sprite, u: UnitDraw, look: DownedLook): Sprite {
+  sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
+  if (look.grayscale) sprite.filters = [gray()];
+  return sprite;
 }
 
 /** 形態外觀（3J-5）：單位有形態、而且認得外觀 id 時回傳畫法 id、主角主色與元素；否則 `null`（形態不認得時仍畫原角色紙娃娃）。 */
@@ -155,13 +177,7 @@ function formDoll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number,
   sprite.width = FORM_W * k;
   sprite.height = FORM_H * k;
   sprite.position.set(0, feet);
-  sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
-  if (look.grayscale) {
-    const gray = new ColorMatrixFilter();
-    gray.desaturate();
-    sprite.filters = [gray];
-  }
-  return sprite;
+  return applyLook(sprite, u, look);
 }
 
 /** 腳下的形態光環（手繪虛線橢圓＋18% 填色）：元素色、無元素 #9a86ff；不認得的形態也畫。 */
@@ -197,13 +213,7 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   sprite.width = w * k;
   sprite.height = h * k;
   sprite.position.set(0, feet);
-  sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
-  if (look.grayscale) {
-    const gray = new ColorMatrixFilter();
-    gray.desaturate();
-    sprite.filters = [gray];
-  }
-  return sprite;
+  return applyLook(sprite, u, look);
 }
 
 function summonBadge(u: UnitDraw): Container {

@@ -22,9 +22,9 @@ import {
   formKey,
   formRowRise,
   formScale,
-  mixColor,
 } from "./inkForm";
-import { drawInkWeapon, lighten } from "./inkGear";
+import { lighten, mix } from "./color";
+import { drawInkWeapon } from "./inkGear";
 import { drawFigure, DOLL_SCALE, itemColors } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
 import { buildUnitSprite, Pulses } from "./unitSprite";
@@ -121,7 +121,7 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
     }
     // 熊的毛色混主色 30%、背紋是主色
     const bear = fills(draw("bear", "#4f7a3a"));
-    expect(bear).toContain(mixColor("#6a4a32", "#4f7a3a", 0.3));
+    expect(bear).toContain(mix("#6a4a32", "#4f7a3a", 0.3));
   });
 
   it("元素化身與龍吃元素：火／冰／雷畫出不同顏色；沒有或不認得的元素用火", () => {
@@ -134,12 +134,16 @@ describe("10 種形態的畫法（C 畫風 ink）", () => {
       expect(draw(id, "#4f7fbf", "plasma").join("|"), id).toBe(fire);
     }
     expect(fills(draw("avatar", "#4f7fbf", "ice"))).toContain("#8fe3ff");
-    expect(fills(draw("dragon", "#4f7fbf", "lightning"))).toContain("#ffe14a");
+    expect(fills(draw("dragon", "#4f7fbf", "lightning"))).toContain("#fff36b");
+    // 3T-4：所有元素都有顏色（不只火／冰／雷）；物理與不認得的元素當作沒有元素
+    const all = ["fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow", "water"].map((el) => draw("dragon", "#4f7fbf", el).join("|"));
+    expect(new Set(all).size).toBe(all.length);
+    expect(draw("dragon", "#4f7fbf", "physical").join("|")).toBe(draw("dragon", "#4f7fbf", null).join("|"));
   });
 
   it("不是 #rrggbb 的主色不出錯（混色原樣回傳）", () => {
     expect(() => draw("bear", "red")).not.toThrow();
-    expect(mixColor("red", "#ffffff", 0.5)).toBe("red");
+    expect(mix("red", "#ffffff", 0.5)).toBe("red");
   });
 });
 
@@ -152,11 +156,13 @@ describe("主角主色與光環", () => {
     expect(formHeroColor("rgb(1,2,3)", "")).toBe(FORM_HERO_FALLBACK);
   });
 
-  it("光環色：火／冰／雷用元素色、無元素與不認得的元素 #9a86ff", () => {
-    expect(formAuraColor("fire")).toBe("#ff7a1a");
+  it("光環色：認得的元素用元素色、無元素（含物理）與不認得的元素 #9a86ff", () => {
+    expect(formAuraColor("fire")).toBe("#ff6a1a");
     expect(formAuraColor("ice")).toBe("#8fe3ff");
-    expect(formAuraColor("lightning")).toBe("#ffe14a");
-    for (const e of [null, undefined, "", "plasma", "shadow"]) expect(formAuraColor(e), String(e)).toBe(FORM_AURA_NEUTRAL);
+    expect(formAuraColor("lightning")).toBe("#fff36b");
+    expect(formAuraColor("poison")).toBe("#7ddc3a"); // 3T-4：水、毒、聖、暗…也有元素色
+    expect(formAuraColor("shadow")).toBe("#9a6ad8");
+    for (const e of [null, undefined, "", "plasma", "physical"]) expect(formAuraColor(e), String(e)).toBe(FORM_AURA_NEUTRAL);
     expect(FORM_AURA_NEUTRAL).toBe("#9a86ff");
   });
 

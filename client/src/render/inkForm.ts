@@ -5,48 +5,34 @@
 // 座標：腳底 (0,0)、往上是 -y、朝東（+x 是前方）；西與北用左右鏡像。
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
-import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
+import { darken, isHex, lighten, mix } from "./color";
+import { elementTintColors } from "./palette";
+import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, type Pt } from "./inkStyle";
 
 /** 無元素的光環色。 */
 export const FORM_AURA_NEUTRAL = "#9a86ff";
 /** 找不到身體裝備顏色與披風顏色時的主角主色（陣營藍）。 */
 export const FORM_HERO_FALLBACK = "#4f7fbf";
-
-const HEX = /^#[0-9a-f]{6}$/i;
-const rgb = (h: string): [number, number, number] => {
-  const n = parseInt(h.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-};
-
-/** 兩色混合（不是 #rrggbb 的值原樣回傳，不出錯）。 */
-export function mixColor(a: string, b: string, t: number): string {
-  if (!HEX.test(a) || !HEX.test(b)) return a;
-  const [r1, g1, b1] = rgb(a);
-  const [r2, g2, b2] = rgb(b);
-  const m = (x: number, y: number): number => Math.round(x * (1 - t) + y * t);
-  return `#${((m(r1, r2) << 16) | (m(g1, g2) << 8) | m(b1, b2)).toString(16).padStart(6, "0")}`;
-}
-const dark = (c: string, t = 0.3): string => mixColor(c, "#000000", t);
-const light = (c: string, t = 0.3): string => mixColor(c, "#ffffff", t);
+const dark = (c: string, t = 0.3): string => darken(c, t);
+const light = (c: string, t = 0.3): string => lighten(c, t);
 
 const limb = (ctx: Ctx, key: string, pts: readonly Pt[], w: number, color: string): void => {
   stroke(ctx, key, pts, w + 1.4, INK);
   stroke(ctx, key, pts, w, color);
 };
 
-type Element = "fire" | "ice" | "lightning";
-/** 元素 → [身體色, 亮色]；元素色也是光環色。 */
-const ELEMENT_COLORS: Readonly<Record<Element, readonly [string, string]>> = {
-  fire: ["#ff7a1a", "#ffd04a"],
-  ice: ["#8fe3ff", "#e8fbff"],
-  lightning: ["#ffe14a", "#fff7c0"],
+/** 形態認得的元素（`palette.ts`，物理與不認得的算「沒有元素」）；回傳元素 id。 */
+const elementOf = (el: string | null | undefined): string | null => (elementTintColors(el) === undefined ? null : (el ?? null));
+/** 元素 → [身體色, 亮色]（元素色也是光環色）；沒有元素時用火。 */
+const elementPair = (el: string | null | undefined): readonly [string, string] => {
+  const c = elementTintColors(elementOf(el)) ?? elementTintColors("fire")!;
+  return [c.primary, c.bright];
 };
-const elementOf = (el: string | null | undefined): Element | null => (el === "fire" || el === "ice" || el === "lightning" ? el : null);
 
 /** 光環色：認得的元素用元素色，其餘（無元素、不認得的元素）用 #9a86ff。 */
 export function formAuraColor(element: string | null | undefined): string {
   const el = elementOf(element);
-  return el === null ? FORM_AURA_NEUTRAL : ELEMENT_COLORS[el][0];
+  return el === null ? FORM_AURA_NEUTRAL : elementPair(el)[0];
 }
 
 interface FormArt {
@@ -59,7 +45,7 @@ interface FormArt {
 }
 
 function drawBear(ctx: Ctx, h: string): void {
-  const c = mixColor("#6a4a32", h, 0.3);
+  const c = mix("#6a4a32", h, 0.3);
   for (const x of [-11, 6]) ink(ctx, `bear-legf-${x}`, [[x - 2.8, -12], [x + 2.8, -12], [x + 3, 0], [x - 3, 0]], dark(c, 0.25));
   ink(ctx, "bear-body", [[-17, -9], [-17, -22], [-8, -29.6], [4, -29], [14, -22], [15, -9], [-2, -7]], c);
   for (const x of [-8, -2, 4]) stroke(ctx, `bear-stripe-${x}`, [[x, -28], [x + 2, -21]], 2, h);
@@ -72,7 +58,7 @@ function drawBear(ctx: Ctx, h: string): void {
 }
 
 function drawWerewolf(ctx: Ctx, h: string): void {
-  const c = mixColor("#5a5a66", h, 0.25);
+  const c = mix("#5a5a66", h, 0.25);
   ink(ctx, "ww-legfar", [[-5, -16], [-1, -16], [-2, -6], [-6, 0], [-9.6, 0], [-5.6, -6]], dark(c, 0.25));
   ink(ctx, "ww-tail", [[-7, -18], [-16, -17], [-21, -11], [-17, -11.4], [-8, -13]], c);
   ink(ctx, "ww-body", [[-8, -18], [-7, -32], [0, -40], [8, -37], [8, -26], [4, -16], [-4, -14]], c);
@@ -92,8 +78,8 @@ function drawWerewolf(ctx: Ctx, h: string): void {
 }
 
 function drawDragon(ctx: Ctx, h: string, element: string | null | undefined): void {
-  const c = mixColor("#8a3a2a", h, 0.3);
-  const e = ELEMENT_COLORS[elementOf(element) ?? "fire"][0];
+  const c = mix("#8a3a2a", h, 0.3);
+  const e = elementPair(element)[0];
   ink(ctx, "dr-wingfar", [[10, -29], [7, -40], [2, -49], [-7, -54], [-4.6, -46.4], [-6.4, -38.6], [-2, -40.4], [-1.6, -32.6], [2, -34], [2, -28]], dark(c, 0.3));
   for (const x of [-13, 4]) ink(ctx, `dr-legfar-${x}`, [[x - 2.6, -12], [x + 2.6, -12], [x + 2.4, 0], [x - 3, 0]], dark(c, 0.25));
   ink(ctx, "dr-tail", [[-14, -14], [-26, -12], [-34, -4], [-28, -4.6], [-14, -8]], c);
@@ -116,7 +102,7 @@ function drawDragon(ctx: Ctx, h: string, element: string | null | undefined): vo
 }
 
 function drawCat(ctx: Ctx, h: string): void {
-  const c = mixColor("#3a3440", h, 0.35);
+  const c = mix("#3a3440", h, 0.35);
   const d = dark(c, 0.3);
   for (const x of [-8, 10]) ink(ctx, `cat-legfar-${x}`, [[x - 1.6, -9], [x + 1.6, -9], [x + 1.8, 0], [x - 1.8, 0]], d, { shade: false, w: 0.6 });
   ink(ctx, "cat-tail", [[-12, -12.4], [-21, -14.6], [-23.6, -22], [-21.6, -25.4], [-19.4, -22.6], [-18.6, -16.6], [-12, -9]], c);
@@ -190,7 +176,7 @@ function drawGiant(ctx: Ctx, h: string): void {
 
 function drawAvatar(ctx: Ctx, h: string, element: string | null | undefined): void {
   const el = elementOf(element) ?? "fire";
-  const [ec, el2] = ELEMENT_COLORS[el];
+  const [ec, el2] = elementPair(el);
   ctx.save();
   ctx.globalAlpha = 0.8;
   for (const [x, y, s] of [[-6, -4, 3], [5, -2, 2.5], [0, 1, 2]] as const) ink(ctx, `av-wisp${x}`, ellPts(x, y, s, s, 10), ec, { shade: false, w: 0.5 });
@@ -228,7 +214,7 @@ function drawShadow(ctx: Ctx, h: string): void {
 function drawTreant(ctx: Ctx, h: string): void {
   const bark = "#6a4a2a";
   const bd = dark(bark, 0.3);
-  const leaf = mixColor("#4a8a3a", h, 0.35);
+  const leaf = mix("#4a8a3a", h, 0.35);
   for (const x of [-5, 5]) ink(ctx, `tr-root${x}`, [[x - 3, -14], [x + 3, -14], [x + 4, 0], [x + 1, -1.4], [x - 1.6, 0], [x - 4, 0]], bd, { w: 0.7 });
   ink(ctx, "tr-trunk", [[-8, -38], [8, -38], [8.6, -12], [-8.6, -12]], bark);
   for (const y of [-32, -25, -18]) stroke(ctx, `tr-bark${y}`, [[-5, y], [-2, y + 3]], 0.6);
@@ -295,7 +281,7 @@ export function formRowRise(look: string | null | undefined, tile: number, doll:
 
 /** 主角主色：身體裝備 color → 披風 color → 陣營藍；不是 #rrggbb 的值跳過。 */
 export function formHeroColor(bodyColor?: string, cloakColor?: string): string {
-  for (const c of [bodyColor, cloakColor]) if (c !== undefined && HEX.test(c)) return c;
+  for (const c of [bodyColor, cloakColor]) if (c !== undefined && isHex(c)) return c;
   return FORM_HERO_FALLBACK;
 }
 
@@ -328,13 +314,14 @@ function lieDown(ctx: Ctx, art: FormArt): void {
 export function drawForm(ctx: Ctx, id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean): boolean {
   const art = Object.hasOwn(FORM_ARTS, id) ? FORM_ARTS[id] : undefined;
   if (art === undefined) return false;
-  setShadeDir(-1);
-  ctx.save();
-  if (facing === "west" || facing === "north") ctx.scale(-1, 1);
-  if (downed) lieDown(ctx, art);
-  else shadow(ctx, 14);
-  art.draw(ctx, hero, element);
-  ctx.restore();
+  withShadeDir(ctx, -1, () => {
+    ctx.save();
+    if (facing === "west" || facing === "north") ctx.scale(-1, 1);
+    if (downed) lieDown(ctx, art);
+    else shadow(ctx, 14);
+    art.draw(ctx, hero, element);
+    ctx.restore();
+  });
   return true;
 }
 

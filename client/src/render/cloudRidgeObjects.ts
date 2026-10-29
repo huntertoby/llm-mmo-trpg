@@ -2,7 +2,7 @@
 // 換皮不換功能：擋視線的要高（樑柱、老松）、半掩護的要矮（竹籠、矮垣、倒竹）、可燃的是竹木色、會爆的罈身有危險記號。
 // 這個檔案不匯入 objectArt 的值（避免循環匯入）；表由 objectArt 組裝。
 import { roundRect, shadowEllipse, TAU, type Ctx } from "./artDraw";
-import { rgba } from "./artPalette";
+import { rgba } from "./color";
 import { CLOUD } from "./cloudRidgeTerrain";
 import { drawLowWall, type LowWallPalette } from "./lowWallArt";
 import { rng } from "./artRandom";

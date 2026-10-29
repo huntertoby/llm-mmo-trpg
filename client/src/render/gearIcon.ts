@@ -4,7 +4,9 @@
 // 清單來自 content/equipment/appearance.yaml（匯出成 gearAppearance.json），色票在 artPalette.ts。
 // 只做 style: common；風格包等世界觀定案再說。顯示尺寸 ≤ 36px 不畫關鍵字小圖樣（第 5 層），快取鍵含是否小圖。
 import appearance from "./gearAppearance.json";
-import { GEAR_DYE, GEAR_INK, GEAR_KEYWORD, GEAR_MATERIAL, GEAR_RARITY } from "./artPalette";
+import { GEAR_DYE, GEAR_INK, GEAR_MATERIAL, GEAR_RARITY } from "./artPalette";
+import { mix } from "./color";
+import { KEYWORD_COLOR, TINT_KEYWORDS } from "./palette";
 
 type Ctx = CanvasRenderingContext2D;
 /** 已驗證的外觀（`resolveGear` 的結果）。 */
@@ -91,17 +93,10 @@ export function resolveGear(it: GearLook | null | undefined, slot?: string): Res
   const material = src.material != null && mats.includes(src.material) ? src.material : (form.defaultMaterial ?? K.defaultMaterial);
   const dye = (appearance.dyeMaterials as string[]).includes(material) && src.dye != null && GEAR_DYE[src.dye] !== undefined ? src.dye : null;
   const fromElement = src.element != null ? KEYWORD_OF_ELEMENT[src.element] : undefined;
-  const given = (src.keywords ?? []).filter((k) => GEAR_KEYWORD[k] !== undefined);
+  const given = (src.keywords ?? []).filter((k) => KEYWORD_COLOR[k] !== undefined);
   const keywords = (fromElement !== undefined && !given.includes(fromElement) ? [fromElement, ...given] : given).slice(0, MAX_KEYWORDS);
   const rarity = src.rarity != null && GEAR_RARITY[src.rarity] !== undefined ? src.rarity : "common";
   return { kind, form: form.id, material, dye, keywords, rarity, style: "common" };
-}
-
-function mix(a: string, b: string, t: number): string {
-  const pa = parseInt(a.slice(1), 16);
-  const pb = parseInt(b.slice(1), 16);
-  const m = (s: number): number => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
 }
 
 /** 主色、暗色、強調色（寶石、寶珠用）。 */
@@ -112,7 +107,7 @@ function palette(r: Resolved): Pal {
     a = GEAR_DYE[r.dye] as string;
     d = mix(a, "#000000", 0.35);
   }
-  const el = r.keywords.map((k) => GEAR_KEYWORD[k]).find((k) => k?.tint === true);
+  const el = r.keywords.map((k) => ({ c: KEYWORD_COLOR[k], tint: TINT_KEYWORDS.has(k) })).find((k) => k.tint && k.c !== undefined) as { c: string } | undefined;
   if (el !== undefined) {
     if (r.material === "crystal") {
       a = el.c;
@@ -125,7 +120,7 @@ function palette(r: Resolved): Pal {
     }
   }
   const first = r.keywords[0];
-  const accent = first !== undefined ? (GEAR_KEYWORD[first] as { c: string }).c : r.material === "crystal" ? "#b8a8ff" : "#e04060";
+  const accent = first !== undefined ? (KEYWORD_COLOR[first] as string) : r.material === "crystal" ? "#b8a8ff" : "#e04060";
   return { a, d, accent, shine: mat.shine === true, handle: "#5e3b1f", guard: r.rarity === "epic" || r.rarity === "legendary" ? "#e8bb48" : "#7a5a3a" };
 }
 
@@ -150,8 +145,8 @@ function gem(ctx: Ctx, x: number, y: number, r: number, c: string) {
 
 // ---- 關鍵字小圖樣（畫在器物上，最多 2 個關鍵字、各 2 處）----
 export function motif(ctx: Ctx, kw: string, x: number, y: number) {
-  const k = GEAR_KEYWORD[kw];
-  if (k === undefined) return; ctx.save(); ctx.fillStyle = k.c; ctx.strokeStyle = k.c; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+  const kc = KEYWORD_COLOR[kw];
+  if (kc === undefined) return; ctx.save(); ctx.fillStyle = kc; ctx.strokeStyle = kc; ctx.lineWidth = 1.6; ctx.lineCap = "round";
   switch (kw) {
     case "ignite": ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 4.5, y, x, y + 3); ctx.quadraticCurveTo(x - 4.5, y, x, y - 6); ctx.fill(); break;
     case "wet": ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.quadraticCurveTo(x + 4, y + 1, x, y + 3); ctx.quadraticCurveTo(x - 4, y + 1, x, y - 5); ctx.fill(); break;
@@ -309,7 +304,7 @@ D.tome = (ctx: Ctx, r: Resolved, P: Pal): Spots => {
   return [[24, 22], [40, 44]];
 };
 D.orb = (ctx: Ctx, r: Resolved, P: Pal): Spots => {
-  const c = r.keywords.length && GEAR_KEYWORD[r.keywords[0] as string]?.tint ? P.a : r.material === "crystal" ? P.a : P.a;
+  const c = P.a;
   if (r.form === "ball") {
     shape(ctx, "#7a5a3a", () => { ctx.moveTo(20, 54); ctx.lineTo(44, 54); ctx.lineTo(38, 44); ctx.lineTo(26, 44); ctx.closePath(); }, 2);
     shape(ctx, c, () => ctx.arc(32, 30, 15, 0, TAU), 2.5);

@@ -6,6 +6,7 @@
 import type { StatusLook } from "../api/types";
 import { statusLook, statusName } from "../battle/glossary";
 import { FONT } from "./labels";
+import { elementColor } from "./palette";
 import type { Ctx } from "./skillGlyphs";
 
 const TAU = Math.PI * 2;
@@ -35,21 +36,6 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   infused_fire: "#ff7a1a", // 臨時附魔（3I-6）：武器上纏著該元素的色
   infused_holy: "#ffe9a0",
 };
-/** 元素色（持續傷害的圖樣色與腳邊粒子；與技能圖示、召喚物共用的關鍵字色）。 */
-const ELEMENT: Readonly<Record<string, string>> = {
-  fire: "#ff7a1a",
-  ice: "#9fe6ff",
-  lightning: "#ffe14a",
-  poison: "#8fdc4a",
-  holy: "#ffe9a0",
-  shadow: "#a77bff",
-  physical: "#e05050",
-  earth: "#c8a060",
-  wind: "#bff0d8",
-  water: "#4aa3ff",
-  none: "#d8d8e0",
-};
-export const elementColor = (el: string): string => ELEMENT[el] ?? ELEMENT["none"] ?? "#d8d8e0";
 
 const isPolarity = (p: string | undefined): p is Polarity => p === "buff" || p === "debuff" || p === "neutral";
 

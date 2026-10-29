@@ -2405,6 +2405,11 @@ button.selected {
   pointer-events: none;
 }
 
+/* 觸控釘住後要能捲動、點選卡片內容（3T-4） */
+.float-card.part-tip-box.no-bridge.pinned {
+  pointer-events: auto;
+}
+
 .gear-cell-tip {
   display: block;
 }

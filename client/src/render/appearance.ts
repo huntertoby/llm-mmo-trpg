@@ -5,9 +5,8 @@
 // 純資料與純函式（不碰 Canvas），可以用 vitest 檢查。
 import type { DollLook } from "../api/types";
 import { weaponLookEntry } from "../battle/glossary";
-import { ELEMENT_VFX } from "../battle/vfxPalette";
-import { numToHex } from "./artPalette";
 import { raceLookToLook } from "./inkRace";
+import { elementTintColors } from "./palette";
 import { dollGear, isTwoHandedPart, pairedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
@@ -75,28 +74,11 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
   off_hand: ["shield_round", "shield_kite", "tome", "orb"],
 };
 
-/** 材質 → [主色, 暗色]；不認得的材質用布料色。 */
-export const MATERIAL: Readonly<Record<string, readonly [string, string]>> = {
-  cloth: ["#8a8f99", "#5d6168"],
-  leather: ["#8a5a32", "#5e3b1f"],
-  iron: ["#7a828b", "#474c52"],
-  steel: ["#a9b6c6", "#6d7a8a"],
-  gold: ["#e8bb48", "#9c7420"],
-  wood: ["#a06a36", "#6a4420"],
-  bone: ["#e9e3cf", "#a8a08a"],
-  // Phase 3G-G5b：裝備外觀新增的材質（色票同 artPalette 的 GEAR_MATERIAL）；原有 7 種不動，舊單位畫面不變
-  copper: ["#b06a3c", "#6e3e20"],
-  silver: ["#e8edf2", "#a8b0ba"],
-  crystal: ["#b8a8ff", "#7a68c8"],
-};
-
 export const RARITY_GLOW: Readonly<Record<string, string>> = { epic: "#b06cff", legendary: "#ffbf3a" };
 
-/** 元素 → 色（沿用技能特效的 `ELEMENT_VFX` 主色）；物理與不認得的元素回傳 `undefined`（不套元素色）。 */
+/** 元素 → 色（`palette.ts` 的元素主色，與技能特效同一份）；物理與不認得的元素回傳 `undefined`（不套元素色）。 */
 export function elementTint(element: string | undefined): string | undefined {
-  if (element === undefined || element === "physical") return undefined;
-  const v = ELEMENT_VFX[element];
-  return v === undefined ? undefined : numToHex(v.primary);
+  return elementTintColors(element)?.primary;
 }
 
 function known(slot: GearSlot, item: GearItem | undefined): GearItem | undefined {
@@ -239,8 +221,9 @@ export function resolveDoll(input: DollInput): DollSpec {
   const infused = input.attackElement;
   if (infused != null && infused !== "physical") {
     // 臨時附魔（3I-6）：外觀顯示目前生效的元素色；成對武器的第二把一起換
+    const pairedOff = gear.main_hand !== undefined && gear.off_hand?.kind === gear.main_hand.kind; // 副手和主手同種武器（不依賴 weaponId 查得到外觀）
     if (gear.main_hand !== undefined) gear.main_hand = { ...gear.main_hand, element: infused };
-    if (pairedKind !== null && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
+    if (pairedOff && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
   }
   const look = input.summon || app.look.skull === true ? app.look : { ...app.look, ...raceLookToLook(input.raceLook) };
   return { look, gear, ...(rarity !== undefined ? { rarity } : {}) };

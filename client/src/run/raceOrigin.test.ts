@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OriginOption, RaceOption, StartOptions } from "../api/types";
-import { hasRaceOrigin, originCardLines, raceCardLines, raceOriginBody, raceOriginDone, raceOriginText, raceSummary } from "./raceOrigin";
+import { hasRaceOrigin, originCardLines, raceStartCardLines, raceOriginBody, raceOriginDone, raceOriginText, raceSummary } from "./raceOrigin";
 
 const race: RaceOption = {
   id: "elf",
@@ -39,7 +39,7 @@ describe("開局的種族與出身", () => {
   });
 
   it("種族卡列出種族技、花費次數與環境被動；出身卡寫明不影響戰鬥", () => {
-    const lines = raceCardLines(race);
+    const lines = raceStartCardLines(race);
     expect(lines[0]).toContain("林隱");
     expect(lines[1]).toBe("花費 1 AP・不佔技能欄");
     expect(lines[2]).toContain("林間視野");

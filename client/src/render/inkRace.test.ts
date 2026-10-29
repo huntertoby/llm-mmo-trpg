@@ -76,7 +76,7 @@ describe("種族外觀的欄位對照（3R-3b）", () => {
 
 describe("衝突規則（可玩種族評估.md 第 2 節）", () => {
   it("每種頭部裝備 kind 一個 covers 標記；沒戴不遮、沒登記的 kind 只蓋頭頂", () => {
-    expect(COVERS["helmet"]).toEqual({ top: true, side: true });
+    expect(COVERS["helmet"]).toEqual({ top: true, side: true, hair: true });
     expect(COVERS["hood"]?.hood).toBe(true);
     expect(coverOf(undefined)).toEqual({});
     expect(coverOf(hat("mystery"))).toEqual({ top: true });

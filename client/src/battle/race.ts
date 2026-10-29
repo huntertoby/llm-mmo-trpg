@@ -47,7 +47,7 @@ export function raceModes(hero: UnitView | null, legal: readonly Action[]): Acti
 }
 
 /** 種族技卡片（浮動卡）的各行：說明、花費與次數、選取方式。 */
-export function raceCardLines(race: RaceView): string[] {
+export function raceBattleCardLines(race: RaceView): string[] {
   const lines = [race.skill_description_zh, `花費 ${race.skill_ap} AP・本場限用 ${race.skill_uses_max} 次（剩 ${race.skill_uses_left} 次）・不佔技能欄`];
   const reach = race.skill_range > 0 ? `射程 ${race.skill_range} 格` : "";
   const how = SHAPE_HOW[race.skill_shape];

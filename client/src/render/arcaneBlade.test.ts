@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { weaponLookEntry } from "../battle/glossary";
 import { weaponLook } from "./appearance";
 import type { DollSpec } from "./appearance";
-import { ARCANE_GLOW, arcaneGlow, drawFigure, drawWeaponAlone } from "./paperdoll";
+import { ARCANE_GLOW, arcaneGlow, drawInkWeaponAlone } from "./inkWeapons";
+import { drawFigure, itemColors } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
 import { isDiagonal, weaponIconItem } from "./weaponIcon";
 
@@ -16,7 +17,7 @@ interface Call {
 }
 
 /** 記錄所有畫圖呼叫的假畫布（測試只看畫了什麼，不看像素）。 */
-function recorder(): { ctx: Parameters<typeof drawWeaponAlone>[0]; calls: Call[]; fills: string[] } {
+function recorder(): { ctx: Parameters<typeof drawInkWeaponAlone>[0]; calls: Call[]; fills: string[] } {
   const calls: Call[] = [];
   const fills: string[] = [];
   const state: Record<string, unknown> = {};
@@ -33,7 +34,7 @@ function recorder(): { ctx: Parameters<typeof drawWeaponAlone>[0]; calls: Call[]
       return true;
     },
   });
-  return { ctx: target as unknown as Parameters<typeof drawWeaponAlone>[0], calls, fills };
+  return { ctx: target as unknown as Parameters<typeof drawInkWeaponAlone>[0], calls, fills };
 }
 
 const arcane = { kind: "sword", form: "arcane", material: "steel" } as const;
@@ -62,7 +63,7 @@ describe("魔導劍的外觀（Phase 3I-3）", () => {
   it("有無元素都畫得出來；源晶槽與齒輪中心是光色、三個符文刻點是淡白", () => {
     for (const element of [undefined, "fire"] as const) {
       const { ctx, calls, fills } = recorder();
-      drawWeaponAlone(ctx, { ...arcane, ...(element !== undefined ? { element } : {}) });
+      drawInkWeaponAlone(ctx, { ...arcane, ...(element !== undefined ? { element } : {}) }, itemColors);
       expect(calls.length).toBeGreaterThan(0);
       const glow = arcaneGlow(element);
       expect(fills.filter((f) => f === glow).length).toBeGreaterThanOrEqual(2); // 槽＋齒輪中心
@@ -74,7 +75,7 @@ describe("魔導劍的外觀（Phase 3I-3）", () => {
   it("一般單手劍沒有這些：不認得 arcane 的形制退回一般劍", () => {
     for (const form of [undefined, "straight", "no_such_form"]) {
       const { ctx, fills } = recorder();
-      drawWeaponAlone(ctx, { kind: "sword", material: "steel", ...(form !== undefined ? { form } : {}) });
+      drawInkWeaponAlone(ctx, { kind: "sword", material: "steel", ...(form !== undefined ? { form } : {}) }, itemColors);
       expect(fills).not.toContain("#b08a4a");
       expect(fills).not.toContain(ARCANE_GLOW);
     }

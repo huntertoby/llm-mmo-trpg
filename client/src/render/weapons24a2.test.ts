@@ -4,7 +4,8 @@ import type { Facing } from "../api/types";
 import { dollKey, KNOWN_KINDS, weaponLook, type DollSpec } from "./appearance";
 import { resolveDollT } from "./testDolls";
 import { weaponLookEntry } from "../battle/glossary";
-import { drawFigure, drawWeaponAlone } from "./paperdoll";
+import { drawInkWeaponAlone } from "./inkWeapons";
+import { drawFigure, itemColors } from "./paperdoll";
 import { weaponIconItem } from "./weaponIcon";
 
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -35,7 +36,7 @@ const LONGGUNS = ["flintlock", "hunting", "sniper"] as const;
 
 function drawn(kind: string, form: string, material: string): string[] {
   const { ctx, calls } = mockCtx();
-  drawWeaponAlone(ctx as unknown as Parameters<typeof drawWeaponAlone>[0], { kind, material, form });
+  drawInkWeaponAlone(ctx as unknown as Parameters<typeof drawInkWeaponAlone>[0], { kind, material, form }, itemColors);
   return calls;
 }
 

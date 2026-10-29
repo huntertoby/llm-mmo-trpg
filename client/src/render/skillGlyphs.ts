@@ -1,8 +1,8 @@
 // 組裝式技能圖示的底圖（Phase 3-17）：元素標誌與紋理、形狀主圖、骨架徽章、外框形狀。
 // 全部在 100×100 的座標系畫（呼叫端先縮放），只有 Canvas 2D 繪圖，沒有任何外部素材。
 // 不認得的元素＝紫色六角（預設）、不認得的形狀＝自身光環、不認得的骨架＝空心圓徽章，永遠畫得出來。
-// 元素色與 `battle/vfxPalette.ts` 的 `ELEMENT_VFX` 取自同一張 `ELEMENT_COLORS`。
-import { ELEMENT_COLORS } from "../battle/vfxPalette";
+// 元素色與 `battle/vfxPalette.ts` 的 `ELEMENT_VFX` 取自同一張 `render/palette.ts` 的 `ELEMENT_COLORS`。
+import { ELEMENT_COLORS } from "./palette";
 
 export type Ctx = CanvasRenderingContext2D;
 
@@ -17,7 +17,7 @@ export interface ElementIcon {
   light: string;
 }
 
-/** 元素 → 圖示配色；顏色與特效共用 `battle/vfxPalette.ts` 的 `ELEMENT_COLORS`（唯一來源）。 */
+/** 元素 → 圖示配色；顏色與特效共用 `render/palette.ts` 的 `ELEMENT_COLORS`（唯一來源）。 */
 export const ELEMENT_ICON: Readonly<Record<string, ElementIcon>> = Object.fromEntries(
   Object.entries(ELEMENT_COLORS).map(([id, c]) => [id, { name: c.name, accent: c.accent, dark: c.dark, light: c.light }]),
 );

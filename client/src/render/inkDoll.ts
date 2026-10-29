@@ -1,41 +1,29 @@
 // C 手繪墨線繪本的紙娃娃骨架與四方向（Phase C-1a；移植自 docs/art/sample/storyDoll.js，需求 docs/art/C畫風移植需求.md 第 2 節）。
 // 座標：腳底 (0,0)，往上是 -y；頭 (0,-42)、身體 -33～-12.5、腿 -15～0、手 (±9,-23.2)，頭頂最高約 -70（尖帽）。
-// 這一層畫：影子、披風、腿、身體（基本衣著）、手臂與手、頭、臉、頭髮；頭部裝備、武器、盾暫時由 `InkHooks` 呼叫現行畫法（C-1b、C-2 換）。
+// 這一層畫：影子、披風、腿、身體（基本衣著）、手臂與手、頭、臉、頭髮；頭部裝備、武器、盾分別在 inkGear／inkArmor／inkWeapons／inkOffhand。
 // 規則不動：`look`、裝備欄位、主手副手左右、成對武器、倒地；不認得的值退回預設，不出錯。
 import type { Ctx } from "./artDraw";
+import { darken } from "./color";
 import type { DollSpec, GearItem, Look } from "./appearance";
 import { drawFootDetail, drawInkBodyArmor, drawInkHand, drawInkHeadgearMore, footTop } from "./inkArmor";
 import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon } from "./inkGear";
 import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { drawInkWeaponMore } from "./inkWeapons";
-import { drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawEye, drawInkHorns, drawInkTail, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
-import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
+import { drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawEye, drawInkHorns, drawInkTail, coverOf, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
+import { dot, ellPts, ink, INK, MAT, shadow, stroke, type Pt, type View, withShadeDir } from "./inkStyle";
 
-export type InkView = "front" | "back" | "side";
 
-/** 還沒換成 C 畫法的部件，由 paperdoll.ts 提供現行畫法（避免循環匯入）。座標都是 C 骨架的座標。 */
+/** 由 paperdoll.ts 提供的裝備顏色解析（避免循環匯入）。 */
 export interface InkHooks {
   colors: (it: GearItem) => readonly [string, string];
-  /** 現行畫法的手持物：(x, y) ＝ 手的位置；mirror ＝ 成對武器的副手鏡像；far ＝ 側面遠側那把。 */
-  weapon: (it: GearItem, x: number, y: number, o: { front: boolean; mirror: boolean; far: boolean; side: boolean; scale: number }) => void;
 }
 
-const MAT = { steel: "#c3ccd6", iron: "#8d969f", gold: "#e8bb48", wood: "#a06a36" } as const;
 const SKIN_FALLBACK = "#eab48a";
 const HAIR_FALLBACK = "#6a3a1e";
 const PANTS_FALLBACK = "#4a4038";
 const BOOT_FALLBACK = "#5a4030";
 const SHIRT_FALLBACK = "#d8cdb4";
 
-/** 現行畫法裡「蓋住頭髮」的頭部裝備 kind（沿用 paperdoll.ts 的 HAIR_COVERED）。 */
-const HAIR_COVERED: readonly string[] = ["helmet", "hood", "wizard_hat", "horned_helm", "greathelm", "cap"];
-
-const darken = (c: string, t: number): string => {
-  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
-  const n = parseInt(c.slice(1), 16);
-  const m = (s: number): number => Math.round(((n >> s) & 255) * (1 - t));
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
-};
 interface Ctxt {
   ctx: Ctx;
   spec: DollSpec;
@@ -46,7 +34,7 @@ interface Ctxt {
 const colorOf = (h: InkHooks, it: GearItem | undefined, fallback: string): string => (it === undefined ? fallback : h.colors(it)[0]);
 
 // ============================== 腿 ==============================
-function drawLegs(t: Ctxt, view: InkView): void {
+function drawLegs(t: Ctxt, view: View): void {
   const { ctx, spec, hooks } = t;
   const { look, gear } = spec;
   const heavy = gear.body?.kind === "plate";
@@ -72,18 +60,18 @@ function drawLegs(t: Ctxt, view: InkView): void {
 }
 
 // ============================== 身體 ==============================
-const TORSO: Record<InkView, Pt[]> = {
+const TORSO: Record<View, Pt[]> = {
   front: [[-7, -33], [7, -33], [6, -23], [8, -14], [0, -12.5], [-8, -14], [-6, -23]],
   side: [[-4, -33], [3.4, -33], [5, -27], [4, -22], [5.2, -14], [-1, -12.5], [-5.6, -14], [-4.2, -22]],
   back: [[-7, -33], [7, -33], [6, -23], [8, -14], [0, -12.5], [-8, -14], [-6, -23]],
 };
 
-function robePts(view: InkView, hem: number): Pt[] {
+function robePts(view: View, hem: number): Pt[] {
   if (view === "side") return [[-4, -33], [3.4, -33], [5, -27], [4, -22], [7.4, hem], [-1, hem + 0.8], [-7.6, hem], [-4.2, -22]];
   return [[-7, -33], [7, -33], [6, -23], [10, hem], [0, hem + 1], [-10, hem], [-6, -23]];
 }
 
-function drawRobe(t: Ctxt, it: GearItem, view: InkView, c: string): void {
+function drawRobe(t: Ctxt, it: GearItem, view: View, c: string): void {
   const { ctx } = t;
   const F = view !== "side";
   const hem = it.form === "short" ? -9 : -1.6;
@@ -102,7 +90,7 @@ function drawRobe(t: Ctxt, it: GearItem, view: InkView, c: string): void {
   stroke(ctx, `sash-${view}`, F ? [[-6.2, -23], [6.2, -23]] : [[-4.2, -23], [4.4, -23]], 1.8, darken(c, 0.4));
 }
 
-function drawPlateDetail(t: Ctxt, view: InkView): void {
+function drawPlateDetail(t: Ctxt, view: View): void {
   const { ctx } = t;
   if (view !== "side") {
     stroke(ctx, "plate-c", [[0, -32], [0, -24]], 0.5);
@@ -114,7 +102,7 @@ function drawPlateDetail(t: Ctxt, view: InkView): void {
   ink(ctx, "pauldron-s", ellPts(-0.4, -31.4, 3.8, 2.9, 12), MAT.steel, { w: 0.7 });
 }
 
-function drawBelt(t: Ctxt, view: InkView): void {
+function drawBelt(t: Ctxt, view: View): void {
   const { ctx } = t;
   const F = view !== "side";
   const bx = F ? 6.2 : 4.3;
@@ -128,7 +116,7 @@ function drawBelt(t: Ctxt, view: InkView): void {
   }
 }
 
-function drawBody(t: Ctxt, view: InkView): void {
+function drawBody(t: Ctxt, view: View): void {
   const { ctx, spec } = t;
   const it = spec.gear.body;
   const kind = it?.kind ?? "shirt";
@@ -154,7 +142,7 @@ function drawBody(t: Ctxt, view: InkView): void {
   if (!bone) drawBelt(t, view);
 }
 
-function drawCloak(t: Ctxt, view: InkView): void {
+function drawCloak(t: Ctxt, view: View): void {
   const { ctx, spec } = t;
   const it = spec.gear.cloak;
   if (it === undefined) return;
@@ -184,7 +172,7 @@ function drawHand(t: Ctxt, x: number, y: number, key: string, ang: number): void
 // ============================== 頭 ==============================
 const HEAD_SIDE: Pt[] = [[-8.6, -42], [-8, -49], [-2, -51.5], [5, -50], [8.4, -45], [8.2, -42], [9.6, -39.6], [8, -38.6], [6.6, -35], [0, -34], [-6.4, -36]];
 
-function drawHairBack(t: Ctxt, view: InkView): void {
+function drawHairBack(t: Ctxt, view: View): void {
   const { look } = t.spec;
   if (look.hair !== "long" || look.skull === true) return;
   const c = darken(look.hairColor ?? HAIR_FALLBACK, 0.15);
@@ -192,7 +180,7 @@ function drawHairBack(t: Ctxt, view: InkView): void {
   else if (view === "side") ink(t.ctx, "hair-back-s", [[-9.6, -44], [-10.6, -29], [-5, -28.4], [-2, -34], [0, -46]], c);
 }
 
-function drawFace(t: Ctxt, view: InkView): void {
+function drawFace(t: Ctxt, view: View): void {
   const { ctx } = t;
   const { look } = t.spec;
   const F = view === "front";
@@ -212,12 +200,12 @@ function drawFace(t: Ctxt, view: InkView): void {
   drawRaceFace(ctx, look, F ? "front" : "side");
 }
 
-function drawHair(t: Ctxt, view: InkView): void {
+function drawHair(t: Ctxt, view: View): void {
   const { look, gear } = t.spec;
   if (look.hair === undefined || look.hair === "none" || look.skull === true) return;
   const c = look.hairColor ?? HAIR_FALLBACK;
   // 有種族角、帽子被抬高時（巫師帽、寬帽），帽緣下面要看得到頭髮：照「沒有遮頭頂」畫
-  const covered = gear.head !== undefined && HAIR_COVERED.includes(gear.head.kind) && hatAdjust(look, gear.head).dy === 0;
+  const covered = gear.head !== undefined && coverOf(gear.head).hair === true && hatAdjust(look, gear.head).dy === 0;
   if (view === "back") {
     // 背面：帽子只蓋頭頂，後腦頭髮照畫
     const pts: Pt[] = look.hair === "long"
@@ -231,12 +219,12 @@ function drawHair(t: Ctxt, view: InkView): void {
   else ink(t.ctx, "hair-s", [[-9.2, -38], [-9.4, -47], [-4, -52.5], [3, -52.6], [8.6, -48.5], [9.4, -44.6], [6, -46], [3, -45.5], [1, -43], [-1.4, -41], [-2.6, -37], [-6, -35.4]], c);
 }
 
-function earCtx(t: Ctxt, view: InkView): EarCtx {
+function earCtx(t: Ctxt, view: View): EarCtx {
   const head = t.spec.gear.head;
   return { look: t.spec.look, view, head, headColor: colorOf(t.hooks, head, "#7a5a3a") };
 }
 
-function drawHead(t: Ctxt, view: InkView): void {
+function drawHead(t: Ctxt, view: View): void {
   const { ctx } = t;
   const ears = earCtx(t, view);
   drawEarsUnder(ctx, ears); // 尖耳、鰭耳（正面、背面）畫在頭之前，頭蓋住耳根
@@ -253,12 +241,10 @@ function drawHead(t: Ctxt, view: InkView): void {
   drawBeastEarsBeforeHat(ctx, ears);
 }
 
-// ============================== 武器、盾（現行畫法，座標對到 C 骨架） ==============================
+// ============================== 武器、盾（座標對到 C 骨架） ==============================
 const HAND_FRONT: Pt = [-9, -23.2];
 const HAND_SIDE_NEAR: Pt = [4.6, -24];
 const HAND_SIDE_FAR: Pt = [5.6, -27];
-const WEAPON_SCALE = 1.3;
-const SHIELD_SCALE = 1.15;
 
 const isShield = (it: GearItem | undefined): boolean => it?.kind.startsWith("shield") === true;
 const heldNotMirrored = (it: GearItem): boolean => isShield(it) || it.kind === "tome" || it.kind === "orb";
@@ -273,8 +259,8 @@ function spreadOf(spec: DollSpec): number {
   return spec.gear.main_hand?.kind === "dagger" && offItemOf(spec)?.kind === "dagger" ? 2 : 0;
 }
 
-/** 手持物：樣張畫過的走 C 畫法（inkGear.ts），其餘退回現行畫法。`inkOpt` ＝ C 畫法專用的 key 與鏡像（背面主手鏡像、副手不鏡像）。 */
-function legacyHeld(
+/** 手持物（C 畫法：inkGear／inkOffhand／inkWeapons；`resolveDoll` 只留認得的 kind，不會走到畫不出來的）。`inkOpt` ＝ C 畫法專用的 key 與鏡像（背面主手鏡像、副手不鏡像）。 */
+function drawHeld(
   t: Ctxt,
   it: GearItem,
   x: number,
@@ -286,9 +272,7 @@ function legacyHeld(
   if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors)) return;
   const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
   const held = { mirror: k.mirror, side: o.side, far: o.far, back: !o.front };
-  if (drawInkWeapon(t.ctx, it, k.key, x, y, held, t.hooks.colors) || drawInkWeaponMore(t.ctx, it, k.key, x, y, held, t.hooks.colors)) return;
-  const scale = heldNotMirrored(it) ? SHIELD_SCALE : WEAPON_SCALE;
-  t.hooks.weapon(it, x, y, { ...o, scale });
+  if (!drawInkWeapon(t.ctx, it, k.key, x, y, held, t.hooks.colors)) drawInkWeaponMore(t.ctx, it, k.key, x, y, held, t.hooks.colors);
 }
 
 function drawWoodShieldBack(t: Ctxt, off: GearItem): void {
@@ -300,7 +284,7 @@ function drawWoodShieldBack(t: Ctxt, off: GearItem): void {
   stroke(t.ctx, "shield-strap", [[5, -24], [12.2, -18]], 1.2, "#5a3a1e");
 }
 
-function drawHeadgearItem(t: Ctxt, view: InkView): void {
+function drawHeadgearItem(t: Ctxt, view: View): void {
   const it = t.spec.gear.head;
   if (it === undefined) return;
   // 有種族角時：角盔改畫成一般頭盔、小帽變窄、寬帽與巫師帽抬高（可玩種族評估.md 第 2 節）
@@ -313,7 +297,7 @@ function drawHeadgearItem(t: Ctxt, view: InkView): void {
 }
 
 /** 頭部裝備 → 穿出帽子的耳朵（戴頭盔的側面尖耳、小帽的獸耳、兜帽的耳朵凸起）→ 角（永遠在最上層）。 */
-function drawHeadgear(t: Ctxt, view: InkView): void {
+function drawHeadgear(t: Ctxt, view: View): void {
   drawHeadgearItem(t, view);
   drawEarsAfterHat(t.ctx, earCtx(t, view));
   drawInkHorns(t.ctx, t.spec.look, view);
@@ -334,13 +318,13 @@ function drawFront(t: Ctxt): void {
   drawArmFront(t, 1);
   if (off !== undefined) {
     const mirror = !heldNotMirrored(off);
-    legacyHeld(t, off, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: true, mirror, far: false, side: false });
+    drawHeld(t, off, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: true, mirror, far: false, side: false });
   }
   if (off === undefined || !isShield(off)) drawHand(t, 9, -23.2, "hand-r", -0.32);
   drawHead(t, "front");
   drawHeadgear(t, "front");
   drawArmFront(t, -1);
-  if (gear.main_hand !== undefined) legacyHeld(t, gear.main_hand, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false });
+  if (gear.main_hand !== undefined) drawHeld(t, gear.main_hand, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false });
   drawHand(t, -9, -23.2, "hand-l", 0.32);
 }
 
@@ -358,8 +342,8 @@ function drawBack(t: Ctxt): void {
     fn();
     ctx.restore();
   };
-  if (gear.main_hand !== undefined) screen(() => legacyHeld(t, gear.main_hand!, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }));
-  if (off !== undefined && !isShield(off)) screen(() => legacyHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false }));
+  if (gear.main_hand !== undefined) screen(() => drawHeld(t, gear.main_hand!, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }));
+  if (off !== undefined && !isShield(off)) screen(() => drawHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false }));
   drawLegs(t, "back");
   drawBody(t, "back");
   drawArmFront(t, -1);
@@ -383,12 +367,12 @@ function drawSide(t: Ctxt): void {
   drawHairBack(t, "side");
   // 成對武器的副手在遠側手，畫在身體後面，比近側手往前上錯開約 3px
   if (off !== undefined && !heldNotMirrored(off)) {
-    legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
+    drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
     dot(ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
   }
   // 書、法球（非武器、非盾的副手物品）也畫在身體後面（美術 PM：照 storyDoll.js）；盾留在身體前面
   if (off !== undefined && !isShield(off) && heldNotMirrored(off)) {
-    legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
+    drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
   }
   drawLegs(t, "side");
   drawBackSpines(ctx, spec.look, "side");
@@ -397,7 +381,7 @@ function drawSide(t: Ctxt): void {
   drawHead(t, "side");
   drawHeadgear(t, "side");
   ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));
-  if (gear.main_hand !== undefined) legacyHeld(t, gear.main_hand, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true });
+  if (gear.main_hand !== undefined) drawHeld(t, gear.main_hand, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true });
   drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
 }
 
@@ -417,15 +401,16 @@ export function buildRowRise(look: Look): number {
 }
 
 /** 畫一個 C 畫風小人（腳底中心在 (0,0)）。facing 的鏡像（西）由呼叫端處理；`ground` ＝ false 時不畫地面影子（倒地）。 */
-export function drawInkFigure(ctx: Ctx, spec: DollSpec, view: InkView, hooks: InkHooks, ground = true): void {
+export function drawInkFigure(ctx: Ctx, spec: DollSpec, view: View, hooks: InkHooks, ground = true): void {
   const t: Ctxt = { ctx, spec, hooks, skin: spec.look.skin ?? SKIN_FALLBACK };
-  setShadeDir(view === "front" ? 1 : -1);
-  ctx.save();
-  const [sx, sy] = buildScale(spec.look);
-  if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
-  if (ground) shadow(ctx);
-  if (view === "front") drawFront(t);
-  else if (view === "back") drawBack(t);
-  else drawSide(t);
-  ctx.restore();
+  withShadeDir(ctx, view === "front" ? 1 : -1, () => {
+    ctx.save();
+    const [sx, sy] = buildScale(spec.look);
+    if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
+    if (ground) shadow(ctx);
+    if (view === "front") drawFront(t);
+    else if (view === "back") drawBack(t);
+    else drawSide(t);
+    ctx.restore();
+  });
 }
