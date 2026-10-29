@@ -157,6 +157,7 @@ __all__ = [
     "ACTION_HANDLERS",
     "INTERACT_CHOICES",
     "MovePlan",
+    "acting_unit",
     "begin_battle",
     "has_only_end_turn",
     "interact_actions",
@@ -406,7 +407,7 @@ def start_battle(setup: BattleSetup, seed: int) -> BattleState:
 # ---------------------------------------------------------------------------
 
 
-def _actor(state: BattleState, action: Action) -> UnitState:
+def acting_unit(state: BattleState, action: Action) -> UnitState:
     if state.ended:
         raise IllegalActionError("戰鬥已結束")
     if state.pending is not None:
@@ -1156,7 +1157,7 @@ def resolve(state: BattleState, action: Action) -> ResolveResult:
 
     不修改傳入的 ``state``。不合法時拋出 :class:`IllegalActionError`。
     """
-    _actor(state, action)
+    acting_unit(state, action)
     return resolve_with(state, action)
 
 

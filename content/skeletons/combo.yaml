@@ -7,3 +7,6 @@ shapes: [single, line, cone, chain]
 core: {primitives: [damage], min_share_permille: 500}
 secondary: {max_count: 1}
 requires_condition: true
+composer:   # 隨機組合器的骨架專屬設定（3T-8）
+  double_damage_core: true
+  effect_level_condition: true

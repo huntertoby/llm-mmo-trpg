@@ -79,6 +79,8 @@ __all__ = [
     "detonate_on_downed",
     "expire_summons",
     "growth_of",
+    "insert_in_order",
+    "owner_order_index",
     "pulse_summon",
     "pulse_totem",
     "summon_inert",
@@ -129,7 +131,7 @@ def growth_of(state: BattleState, owner: UnitState, skill_id: str) -> Growth:
     )
 
 
-def _order_index(state: BattleState, owner_id: UnitId) -> int:
+def owner_order_index(state: BattleState, owner_id: UnitId) -> int:
     """新召喚物在先攻順序中的位置：召喚者之後、同一召喚者已有的召喚物之後。"""
     order = state.turn_order
     if owner_id not in order:
@@ -140,7 +142,7 @@ def _order_index(state: BattleState, owner_id: UnitId) -> int:
     return index
 
 
-def _insert_in_order(state: BattleState, uid: UnitId, index: int) -> None:
+def insert_in_order(state: BattleState, uid: UnitId, index: int) -> None:
     state.turn_order.insert(index, uid)
     # 插在目前位置之前（或正好插在行動者的位置）時，目前位置往後移一格，維持指向同一個單位
     if index < state.turn_pos or (index == state.turn_pos and state.active_unit is not None):
@@ -326,8 +328,8 @@ def summon_unit(  # noqa: PLR0917
     unit.summon_expires_round = state.round + duration
     unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定
     state.units[uid] = unit
-    index = _order_index(state, owner.id) if order_index is None else order_index
-    _insert_in_order(state, uid, index)
+    index = owner_order_index(state, owner.id) if order_index is None else order_index
+    insert_in_order(state, uid, index)
     events.append(
         ctx.emit(
             UnitSummoned,

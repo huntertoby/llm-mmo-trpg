@@ -110,9 +110,9 @@ def _skeleton_feasible(
     rank = rarity_rank(rarity)
     if not skeleton.enabled or rank < rarity_rank(skeleton.min_rarity):
         return False
-    if skeleton.id in _HAND_WRITTEN_ONLY:
+    if skeleton.composer.hand_written_only:
         return False
-    if skeleton.id in _EXPLICIT_ONLY_ACTIVE:
+    if skeleton.composer.explicit_only_active:
         return explicit and _active_feasible(skeleton, rank, library)
     if "active" not in skeleton.kinds:
         return explicit and skeleton.kinds in (
@@ -135,15 +135,16 @@ def _active_feasible(skeleton: SkeletonDef, rank: int, library: ContentLibrary) 
     return True
 
 
-_HAND_WRITTEN_ONLY = frozenset({"consume_status", "summon"})
-"""隨機組合器不產生的骨架（3C-3b：``consume_status`` 的 ``then`` 要手寫，組合器不支援巢狀效果；
-3D-4a：``summon`` 只給手寫技能，召喚物範本與持續輪數另外設計）。"""
+def _explicit_only_active(library: ContentLibrary, name: str) -> bool:
+    """主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。
+    來源：骨架 YAML 的 ``composer.explicit_only_active``（3T-8）。"""
+    skeleton = library.skeletons.get(name)
+    return skeleton is not None and skeleton.composer.explicit_only_active
 
-_LEGENDARY_SKELETONS = frozenset({"modifier", "aura"})
-"""傳說技能的骨架（3C-6b）：修正規則用 ``modifier``，規則改變與改寫規則型原語用 ``aura``。"""
 
-_EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap", "rune", "sacrifice"})
-"""主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。"""
+def _legendary_skeletons(library: ContentLibrary) -> tuple[str, ...]:
+    """傳說技能可用的骨架（3C-6b；骨架 YAML 的 ``composer.legendary``，依 ID 排序）。"""
+    return tuple(n for n in sorted(library.skeletons) if library.skeletons[n].composer.legendary)
 
 
 def _feasible_skeletons(rarity: SkillRarity, library: ContentLibrary) -> list[SkeletonDef]:
@@ -162,7 +163,7 @@ def _choose_rarity_and_skeleton(
             r
             for r in _RARITIES
             if skeleton is None
-            or (r == "legendary" and skeleton in _LEGENDARY_SKELETONS)
+            or (r == "legendary" and skeleton in _legendary_skeletons(library))
             or (
                 r != "legendary"
                 and _skeleton_feasible(_known(library, skeleton), r, library, explicit=True)
@@ -176,8 +177,9 @@ def _choose_rarity_and_skeleton(
         picked = rarity
     if picked == "legendary":
         # 傳說（Phase 3C-6b）：由 composer_special 組合（核心三擇一 ＋ 源力），不走一般的骨架流程
-        if skeleton is not None and skeleton not in _LEGENDARY_SKELETONS:
-            raise ComposeError(f"骨架 {skeleton} 不能產生傳說技能（可用：modifier、aura）")
+        if skeleton is not None and skeleton not in _legendary_skeletons(library):
+            allowed = "、".join(_legendary_skeletons(library))
+            raise ComposeError(f"骨架 {skeleton} 不能產生傳說技能（可用：{allowed}）")
         return picked, _known(library, skeleton or "aura")
     if skeleton is not None:
         chosen = _known(library, skeleton)
@@ -574,7 +576,7 @@ def _compose_special(
         chosen = chosen or "spell"  # 獻祭是法術技
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            if kind in _EXPLICIT_ONLY_ACTIVE:  # 主動骨架：走一般的主動技能流程
+            if _explicit_only_active(lib, kind):  # 主動骨架：走一般的主動技能流程
                 fixed = (tier, rarity, lib.skeletons[kind], chosen or "spell")
                 skill = _attempt(rng, lib, seed, fixed, ap_cost)
             elif kind == "reaction":
@@ -753,7 +755,7 @@ def _compose_plain(
             _wants_special(seed, rarity_value, lib) if skeleton is None else None
         )
     if special is not None:
-        if special not in _EXPLICIT_ONLY_ACTIVE and (
+        if not _explicit_only_active(lib, special) and (
             ap_cost is not None or (special == "stance" and category not in (None, "spell"))
         ):
             raise ComposeError("反應技與姿態不花 AP：不能指定 ap_cost（姿態也不能是武器技）")
