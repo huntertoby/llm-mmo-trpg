@@ -22,6 +22,8 @@
 - ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]
   [--ally-build a,b]``：每張地圖以預設陣容（或指定的 build）批次模擬，印出勝率、輪數、DPR、
   控制回合、技能使用與異常。
+- ``trpg sim flash [--policies none,all,mixed] [--seeds 20] [--seed-start 0] [--jobs N]``：
+  閃現模擬報表（Phase 3W-8）。
 - ``trpg sim completion [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N]``：完成度檢查
   （9 種指揮官設定 × 地圖 × 種子；exception、max_actions、draw 必須為 0，否則結束碼 1）。
 - ``trpg battle`` 與 ``trpg sim maps`` 都可加 ``--ally-commander``／``--enemy-commander <id>``
@@ -51,6 +53,7 @@ from trpg.cli.run import add_run_parser
 from trpg.cli.serve import DEFAULT_HOST, DEFAULT_PORT, cmd_serve
 from trpg.cli.sim import cmd_sim_keywords, cmd_sim_maps
 from trpg.cli.sim_completion import cmd_sim_completion
+from trpg.cli.sim_flash import cmd_sim_flash
 from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.cli.skills_random import cmd_skills_random
@@ -280,6 +283,20 @@ def _add_sim_report_parsers(
     completion.add_argument(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
+    flash = sim_commands.add_parser(
+        "flash",
+        help="閃現模擬報表（Phase 3W-8）：策略 × 種子各跑一整輪 AI，輸出靈感點、閃現與完整技能摘要",
+    )
+    flash.add_argument(
+        "--policies",
+        default=None,
+        help="AI 閃現策略，以逗號分隔（none 不指定類別、all 全指定類別、mixed 混合；預設全部）",
+    )
+    flash.add_argument("--seeds", type=_positive_int, default=20, help="每個策略的輪數（預設 20）")
+    flash.add_argument("--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）")
+    flash.add_argument(
+        "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
+    )
     skills = sim_commands.add_parser(
         "skills", help="技能報表：施放者 DPR、勝率、使用率，依階級與骨架彙總，標出 DPR 離群的技能"
     )
@@ -314,6 +331,7 @@ def _add_sim_report_parsers(
     )
     matrix.set_defaults(func=_sim_matrix)
     completion.set_defaults(func=_sim_completion)
+    flash.set_defaults(func=_sim_flash)
     skills.set_defaults(func=_sim_skills)
     keywords.set_defaults(func=_sim_keywords)
 
@@ -508,6 +526,21 @@ def _sim_matrix(args: argparse.Namespace) -> int:
             seed_start=args.seed_start,
             jobs=_resolve_jobs(args.jobs),
             json_path=args.json,
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
+
+
+def _sim_flash(args: argparse.Namespace) -> int:
+    policies = None if args.policies is None else _split(args.policies)
+    return _with_library(
+        lambda lib: cmd_sim_flash(
+            lib,
+            policies=policies,
+            seeds=args.seeds,
+            seed_start=args.seed_start,
+            jobs=_resolve_jobs(args.jobs),
             out=sys.stdout,
             err=sys.stderr,
         )
