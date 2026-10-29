@@ -34,7 +34,7 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.environment import telegraph
 from trpg.engine.events import EVENT_LIST_ADAPTER, EventBase, RoundStarted, UnitMoved
 from trpg.engine.results import ResolveResult
-from trpg.engine.runner import LOG_FORMAT, BattleLog, replay, run_battle
+from trpg.engine.runner import BattleLog, log_replay_problem, replay, run_battle
 from trpg.engine.setup import BattleSetupError, assign_races, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
 from trpg.narrative.events import describe_event
@@ -259,8 +259,9 @@ def cmd_replay(path: Path, out: TextIO) -> int:
     except ValidationError as exc:
         print(f"錯誤：{path} 不是有效的戰鬥紀錄：\n{exc}", file=sys.stderr)
         return 1
-    if log.format != LOG_FORMAT:
-        print(f"錯誤：不支援的紀錄格式 {log.format!r}（預期 {LOG_FORMAT!r}）", file=sys.stderr)
+    problem = log_replay_problem(log)
+    if problem is not None:
+        print(f"錯誤：{path}：{problem}", file=sys.stderr)
         return 1
     run = replay(log.setup, log.seed, log.actions)
     same_state = state_to_json(run.state) == state_to_json(log.final_state)

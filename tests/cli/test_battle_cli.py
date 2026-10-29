@@ -70,7 +70,7 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     )
     assert code == 0 and log.is_file() and str(log) in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/85"
+    assert data["format"] == "trpg-battle-log/86"
     assert data["seed"] == 7 and data["actions"] and data["events"]
     assert data["events"][0]["type"] == "battle_started"
 
@@ -94,6 +94,26 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     tampered.write_text(json.dumps(data), encoding="utf-8")
     code, _, err = _run(["battle", "replay", str(tampered)], capsys)
     assert code == 1 and "不支援的紀錄格式" in err
+
+    data = json.loads(log.read_text(encoding="utf-8"))
+    data["format"] = "trpg-battle-log/85"  # 舊版紀錄：說明舊格式無法重播
+    tampered.write_text(json.dumps(data), encoding="utf-8")
+    code, _, err = _run(["battle", "replay", str(tampered)], capsys)
+    assert code == 1 and "舊格式的紀錄無法重播" in err and "戰鬥紀錄格式變更.md" in err
+
+    data = json.loads(log.read_text(encoding="utf-8"))
+    del data["ruleset_hash"]
+    tampered.write_text(json.dumps(data), encoding="utf-8")
+    code, _, err = _run(["battle", "replay", str(tampered)], capsys)
+    assert code == 1 and "紀錄缺少 ruleset_hash" in err
+
+    data = json.loads(log.read_text(encoding="utf-8"))
+    core = data["setup"]["ruleset"]["core"]
+    key = next(k for k, v in core.items() if isinstance(v, int) and not isinstance(v, bool))
+    core[key] += 1  # 改了內嵌規則包的一個數字，但沒有更新 ruleset_hash
+    tampered.write_text(json.dumps(data), encoding="utf-8")
+    code, _, err = _run(["battle", "replay", str(tampered)], capsys)
+    assert code == 1 and "規則包雜湊不符" in err
 
 
 def test_replay_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

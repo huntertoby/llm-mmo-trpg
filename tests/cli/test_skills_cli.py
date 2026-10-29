@@ -32,7 +32,7 @@ def test_oil_depot_battle_uses_at_least_three_different_skills_and_replays(
     assert re.search(r"（AP 3，移動 \d+，法力 \d+/\d+）", out)  # 回合標頭顯示法力
     assert re.search(r"以「.+?」攻擊 .+?：d20=", out)  # 命中擲骰看得出技能
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/85"
+    assert data["format"] == "trpg-battle-log/86"
     assert any(a.get("type") == "use_skill" for a in data["actions"])
     assert any(e["type"] == "skill_used" for e in data["events"])
     code, replayed, _ = _run(["battle", "replay", str(log)], capsys)
