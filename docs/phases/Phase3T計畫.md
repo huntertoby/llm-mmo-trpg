@@ -65,3 +65,4 @@
 - 3T-8：組合器骨架 ID 分支移 YAML、私有匯入改公開（審查 P9）。
 - 鱗族被動小修（玩法 PM 寫進 07 7.7 後）。
 - **3T-6 驗收**（2026-10-29）：報告 `Phase3T-6報告.md`。`engine/gear/`（`core`、`charge`、`enhance`、`reactions`、`state`、`summon`、`triggers`、`view`）、`engine/summons/`（`core`、`control`、`variants`）、`engine/race/`（`skills`）；約 80 處呼叫端改新路徑、無相容轉發；快照不變。合併後全量通過（同 Phase4 4.12）。
+- **3T-8 驗收**（2026-10-29）：報告 `Phase3T-8報告.md`。`SkeletonDef.composer`（`ComposerTraits`，13 個骨架 YAML 填 `composer:`），15 組骨架 ID 分支改讀資料；`acting_unit`、`owner_order_index`、`insert_in_order` 改公開。組合器 6000 次呼叫前後 SHA-256 相同。待決：`content/skills/` 套件內部底線名稱、測試白箱匯入、`_wants_special` 機率表 → 接受現狀（收益低）。
