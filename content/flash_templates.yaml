@@ -163,6 +163,13 @@ minor:
     generic: true
     prefix_zh: 恆久
     summary_zh: 延長：這招的狀態、表面與區域多持續 1 回合（效果依預算調整）
+  - id: summon_toughen
+    category: extend
+    op: summon_toughen
+    kinds: [active]
+    generic: true
+    prefix_zh: 強壯
+    summary_zh: 強壯：召喚物的最大生命再多一截（召喚技能的小變化，強度固定所以靠這個補）
   - id: kill_refund
     category: extend
     op: kill_refund
@@ -376,3 +383,7 @@ stance_ladders:
   earth: [stance_earth_1, stance_earth_2, stance_earth_3, stance_earth_4, stance_earth_5]
   holy: [stance_holy_1, stance_holy_2, stance_holy_3, stance_holy_4, stance_holy_5]
   shadow: [stance_shadow_1, stance_shadow_2, stance_shadow_3, stance_shadow_4, stance_shadow_5]
+  # 白板姿態（3W-4b）的階梯：轉型不看這幾條（沒有同名元素），只給「費用」「修正」類小變化換級
+  guard: [stance_guard, stance_ironwall, stance_bastion]
+  flame: [stance_flame, stance_blaze]
+  frost: [stance_frost, stance_glacier]

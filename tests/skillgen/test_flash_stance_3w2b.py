@@ -55,9 +55,10 @@ def _stance(element: str, tier: int) -> SkillDef | None:
 def test_every_element_has_a_five_level_ladder_in_the_data() -> None:
     lib = library()
     ladders = lib.flash.stance_ladders
-    assert set(ladders) == {"physical", *ELEMENT_SKILLS}
+    assert set(ladders) == {"physical", *ELEMENT_SKILLS, "guard", "flame", "frost"}
     statuses = lib.ruleset.statuses.by_id()
-    for element, ladder in ladders.items():
+    for element in ("physical", *ELEMENT_SKILLS):
+        ladder = ladders[element]
         assert len(ladder) == 5
         points = [statuses[s].budget_points or 0 for s in ladder]
         assert points == sorted(points) and len(set(points)) == 5
@@ -134,8 +135,8 @@ def test_support_skill_still_gets_a_defensive_stance() -> None:
 def test_card_numbers_match_the_engine_for_every_level(tier: int) -> None:
     """卡片（狀態規則句）寫的元素加成＝引擎實際用的倍率。"""
     lib = library()
-    for ladder in lib.flash.stance_ladders.values():
-        for status_id in ladder:
+    for element in ("physical", *ELEMENT_SKILLS):
+        for status_id in lib.flash.stance_ladders[element]:
             status = lib.ruleset.status_def(status_id)
             text = "".join(status_rules(status, lib))
             assert f"×{status.element_dealt_permille / 10:g}%" in text
@@ -207,8 +208,8 @@ def test_engine_multiplier_for_each_ladder_level_matches_the_data() -> None:
         ],
     )
     unit = state.units[U1]
-    for element, ladder in lib.flash.stance_ladders.items():
-        for status_id in ladder:
+    for element in ("physical", *ELEMENT_SKILLS):
+        for status_id in lib.flash.stance_ladders[element]:
             unit.statuses = [StatusInstance(status_id=status_id)]
             wanted = lib.ruleset.status_def(status_id).element_dealt_permille
             assert damage_dealt_permille(lib.ruleset, unit, Element(element)) == wanted

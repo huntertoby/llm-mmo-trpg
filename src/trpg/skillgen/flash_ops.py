@@ -20,6 +20,7 @@
 ``keyword_exploit``  第二個關鍵字（利用）：沿用橋接的 ``graft_uses``
 ``extend``         延長狀態、表面、區域 1 回合（沿用恆久的草稿）
 ``kill_refund``    擊殺返還 1 AP
+``summon_toughen`` 強壯（召喚技能）：召喚物最大 HP 再多一截
 ``charge``         蓄力：冷卻 +2（最多 5）、威力提高
 ``light``          輕巧：AP −1（最少 1）、冷卻 0～1、威力降低
 ``potency``        輔助、觸發類的「效果 +」：結構不變，預算上限提高後重調得更強
@@ -369,6 +370,30 @@ def _op_extend(
     return template_drafts(evolution, skill, None, SkillUsage(), library)
 
 
+_SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
+"""召喚物最大 HP 加成（‰）的階梯：強度固定的召喚技能沒有旋鈕，依序試，第一個過預算窗與下限
+的是結果。"""
+
+
+def _op_summon_toughen(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """強壯（召喚技能，3W-2b）：召喚物的最大 HP 再多一截（``max_hp_permille``，往上一階）。召喚
+    技能的點數是固定的，沒有骰子旋鈕可調，所以補這個讓召喚白板也有小變化可選。"""
+    index = next((i for i, e in enumerate(skill.effects) if e.type == "summon"), None)
+    if skill.kind != "active" or index is None or skill.effects[index].count not in (None, 1):
+        return []
+    current = skill.effects[index].max_hp_permille or 0
+    drafts: list[Draft] = []
+    for step in _SUMMON_HP_STEPS:
+        if step <= current:
+            continue
+        base, effects = base_draft(skill)
+        effects[index]["max_hp_permille"] = step
+        drafts.append((base, effects))
+    return drafts
+
+
 def _op_kill_refund(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
@@ -679,6 +704,7 @@ FLASH_OPS: dict[str, FlashOp] = {
     "keyword_exploit": _keyword_op("bridge_exploit", "uses"),
     "extend": _op_extend,
     "kill_refund": _op_kill_refund,
+    "summon_toughen": _op_summon_toughen,
     "charge": _op_charge,
     "light": _op_light,
     "potency": _op_potency,
