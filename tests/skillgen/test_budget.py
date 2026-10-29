@@ -299,6 +299,13 @@ def test_status_and_surface_points_match_the_spec() -> None:
         # 2E-2：姿態（stance）
         "stance_fury": 11,
         "stance_bulwark": 11,
+        # 3W-4b：白板姿態，點數對上 2 階（14）與 3 階（18）的姿態預算
+        "stance_guard": 14,
+        "stance_flame": 14,
+        "stance_frost": 14,
+        "stance_ironwall": 18,
+        "stance_blaze": 18,
+        "stance_glacier": 18,
         "undying": None,  # 3C-4a：只能由 cheat_death 原語施加
         "soul_link": None,  # 3C-4b：只能由 redirect_damage 原語施加
         "revealed": None,  # 3D-8a：只能由 reveal 原語施加

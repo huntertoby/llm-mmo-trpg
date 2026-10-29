@@ -436,6 +436,13 @@ def test_beneficial_flags_in_content() -> None:
         # 2E-2
         "stance_fury",
         "stance_bulwark",
+        # 3W-4b：白板姿態
+        "stance_guard",
+        "stance_ironwall",
+        "stance_flame",
+        "stance_blaze",
+        "stance_frost",
+        "stance_glacier",
         # 3C-4a
         "undying",
         # 3F-4b：延遲段的等待狀態（有益，不被淨化）

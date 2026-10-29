@@ -424,7 +424,7 @@ class WhiteboardRecipe(ContentModel):
     id: str = Field(min_length=1)
     keyword: str = Field(min_length=1)
     skeleton: str = Field(min_length=1)
-    effect: dict[str, Any]
+    effect: dict[str, Any] = Field(default_factory=dict)
     name_zh: str = Field(min_length=1)
     concept_zh: str = Field(min_length=1)
     flavor_zh: str = Field(min_length=1)
@@ -434,6 +434,20 @@ class WhiteboardRecipe(ContentModel):
     categories: tuple[Literal["spell", "weapon"], ...] = ("spell", "weapon")
     trigger_event: str | None = None
     reaction_event: str | None = None
+    species: Literal["basic", "summon", "trap", "stance", "displace", "modifier", "dual"] = "basic"
+    """種類：``basic`` 是 3W-4 的單一效果；其餘是 6.34.9 依角色階級開放的新種類（3W-4b）。"""
+    min_tier: int = Field(default=1, ge=1)
+    """最低角色階級（6.34.9：召喚、陷阱、姿態、位移 2 階；修正型被動、雙屬性縮放 3 階）。"""
+    max_tier: int | None = Field(default=None, ge=1)
+    """最高角色階級（數值固定的配方，例如不同點數的姿態狀態，只在對得上預算的階級出）。"""
+    condition: dict[str, Any] | None = None
+    """核心效果的條件（潮濕、倒地、撞擊的「利用者」白板：條件傷害本身算一個核心效果）。"""
+    rider: dict[str, Any] | None = None
+    """第二個效果：製造者例外的「弱傷害＋製造關鍵字」（核心是傷害）、位移白板的小補強。"""
+    skill: dict[str, Any] = Field(default_factory=dict)
+    """``SkillDef`` 欄位的覆寫（種類、AP、形狀、陷阱、修正規則、第二縮放屬性、武器需求……）。"""
+    vary: tuple[dict[str, Any], ...] = ()
+    """強度調整前可選的數值變化（深度合併進技能字典；``effect0``／``effect1`` 合併進效果）。"""
 
 
 class WhiteboardRules(ContentModel):
@@ -455,6 +469,18 @@ class WhiteboardRules(ContentModel):
     reaction_cooldown: IntRange
     max_attempts: int = Field(default=60, ge=1)
     """一個種子最多重抽幾次（配方、形狀、費用與強度調整）。"""
+    generic_keyword: str = "generic"
+    """沒有關鍵字的基礎白板（通用池，#55）配方使用的關鍵字代號。"""
+    exception_keywords: tuple[str, ...] = ("wet", "prone", "collision")
+    """單一效果追不上預算下限的關鍵字（6.34.1）：利用者用條件傷害、製造者允許「弱傷害＋製造」。"""
+    summon_ap_cost: int = Field(default=1, ge=1, le=3)
+    """召喚白板的 AP（召喚物的點數固定，AP 2 湊不到預算下限）。"""
+    summon_cooldown_max: int = Field(default=4, ge=0)
+    """召喚白板的冷卻上限（冷卻換來較高的可用預算，讓不同強度的召喚物都落在 70～100%）。"""
+    self_ap_cost: int = Field(default=1, ge=1, le=3)
+    """自身位移、互換與自身增益白板的 AP（單一效果的點數固定，AP 2 湊不到預算下限）。"""
+    dual_min_tier: int = Field(default=3, ge=1)
+    """雙屬性縮放白板的最低角色階級（6.34.9）。"""
     active: tuple[WhiteboardRecipe, ...] = ()
     passive: tuple[WhiteboardRecipe, ...] = ()
     reaction: tuple[WhiteboardRecipe, ...] = ()
@@ -470,15 +496,28 @@ class WhiteboardRules(ContentModel):
         ids = [r.id for r in (*self.active, *self.passive, *self.reaction)]
         if len(set(ids)) != len(ids):
             raise ValueError("白板配方 id 不可重複")
-        if any(r.trigger_event is None for r in self.passive):
-            raise ValueError("被動配方必須有 trigger_event")
+        if any(r.trigger_event is None for r in self.passive if r.species != "modifier"):
+            raise ValueError("被動配方必須有 trigger_event（修正型被動除外）")
+        every = (*self.active, *self.passive, *self.reaction)
+        if any(not r.effect for r in every if r.species != "modifier"):
+            raise ValueError("配方必須有核心效果 effect（修正型被動除外）")
         if any(r.reaction_event is None for r in self.reaction):
             raise ValueError("反應配方必須有 reaction_event")
         return self
 
-    def recipes(self, kind: str) -> tuple[WhiteboardRecipe, ...]:
-        """``kind``（active／passive／reaction）的配方。"""
-        return {"active": self.active, "passive": self.passive, "reaction": self.reaction}[kind]
+    def recipes(self, kind: str, tier: int | None = None) -> tuple[WhiteboardRecipe, ...]:
+        """``kind``（active／passive／reaction）的配方；給了 ``tier`` 就只留角色階級開放的。"""
+        found = {"active": self.active, "passive": self.passive, "reaction": self.reaction}[kind]
+        if tier is None:
+            return found
+        return tuple(r for r in found if r.min_tier <= tier and (r.max_tier or tier) >= tier)
+
+    def reserved_statuses(self) -> frozenset[str]:
+        """白板配方專用的狀態（姿態）：完整模式的組合器不抽它們，既有種子的輸出不變。"""
+        every = (*self.active, *self.passive, *self.reaction)
+        return frozenset(
+            str(r.effect["status"]) for r in every if r.species == "stance" and "status" in r.effect
+        )
 
     def keywords(self) -> frozenset[str]:
         """有配方的關鍵字（任何種類）。"""

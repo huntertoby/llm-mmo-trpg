@@ -303,6 +303,7 @@ def test_explicit_reactions_are_valid_in_every_tier_and_cover_every_event() -> N
 def test_explicit_stances_are_valid_in_every_tier_and_have_a_stance_status() -> None:
     library = lib()
     stances = {s.id for s in library.ruleset.statuses.statuses if s.stance}
+    stances -= library.composer.whiteboard.reserved_statuses()  # 3W-4b：白板姿態專用，完整模式不抽
     seen: set[str] = set()
     for tier in range(1, 6):
         for seed in range(30):

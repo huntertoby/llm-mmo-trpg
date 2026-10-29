@@ -22,15 +22,17 @@ from trpg.skillgen.whiteboard import (
     whiteboard_problems,
 )
 from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates, pick_whiteboard_kind
+from trpg.skillgen.whiteboard_check import whiteboard_keywords_of
 
 LIB = library()
+GENERIC = LIB.composer.whiteboard.generic_keyword
 RULES = LIB.composer.whiteboard
 SEEDS = range(6)
 WEAPON_CLASSES = (None, "melee", "ranged", "focus")
 
 
 def _exclusive(skill: SkillDef) -> tuple[str, ...]:
-    return derive_keywords(skill, LIB.keywords, exclusive_only=True).all()
+    return whiteboard_keywords_of(skill, LIB)
 
 
 def _recipes() -> list[tuple[str, str]]:
@@ -46,7 +48,7 @@ def _recipes() -> list[tuple[str, str]]:
 def test_every_keyword_with_recipes_composes_valid_whiteboards(kind: str) -> None:
     """每個有配方的（種類, 關鍵字）、每種武器大類、多個種子：做得出白板，通過驗證器與白板定義，
     且恰好製造配方的那一個關鍵字。"""
-    for keyword in sorted(whiteboard_keywords(LIB, kind)):
+    for keyword in sorted(whiteboard_keywords(LIB, kind, RULES.tier)):
         for seed in SEEDS:
             for weapon_class in WEAPON_CLASSES:
                 skill = compose_whiteboard(
@@ -55,7 +57,7 @@ def test_every_keyword_with_recipes_composes_valid_whiteboards(kind: str) -> Non
                 assert skill.kind == kind and skill.tier == RULES.tier
                 assert validate_skill(skill, LIB) == []
                 assert whiteboard_problems(skill, LIB) == []
-                assert _exclusive(skill) == (keyword,)
+                assert keyword in (*_exclusive(skill), GENERIC, "summon")
                 if weapon_class is not None:
                     assert weapon_problem(skill, weapon_class, {}) is None
 
@@ -63,14 +65,14 @@ def test_every_keyword_with_recipes_composes_valid_whiteboards(kind: str) -> Non
 def test_active_whiteboards_use_the_default_cost() -> None:
     """主動白板：AP 2、冷卻 0～2、沒有每場次數／自身狀態／透支；單體或小範圍的形狀。"""
     seen_shapes: set[str] = set()
-    for keyword in sorted(whiteboard_keywords(LIB, "active")):
+    for keyword in sorted(whiteboard_keywords(LIB, "active", RULES.tier) - {"summon", GENERIC}):
         for seed in range(10):
             skill = compose_whiteboard(seed, keyword=keyword, library=LIB)
             assert skill.ap_cost == RULES.ap_cost
             assert (skill.cost.cooldown or 0) <= RULES.cooldown.max
             assert skill.cost.uses_per_battle is None and skill.cost.overdraft is None
             assert skill.cost.self_status is None
-            assert len(skill.effects) == 1 and skill.condition is None
+            assert skill.condition is None
             seen_shapes.add(skill.shape.type)
     assert seen_shapes <= {"single", "ground_tile", "cross", "square3"}
     assert {"single", "cross"} <= seen_shapes
@@ -88,7 +90,7 @@ def test_passive_and_reaction_whiteboards_have_their_own_fields() -> None:
 def test_whiteboard_budget_ratio_is_inside_the_tuning_window() -> None:
     """預算 70～100%（同階規則）；組合器收在 75～95%。"""
     for kind in WHITEBOARD_KINDS:
-        for keyword in sorted(whiteboard_keywords(LIB, kind)):
+        for keyword in sorted(whiteboard_keywords(LIB, kind, RULES.tier)):
             for seed in range(5):
                 skill = compose_whiteboard(seed, kind=kind, keyword=keyword, library=LIB)
                 ratio = skill_budget(skill, LIB).ratio
@@ -106,12 +108,12 @@ def test_whiteboard_is_deterministic_and_seeds_differ() -> None:
 
 
 def test_unknown_or_unavailable_requests_raise() -> None:
-    with pytest.raises(ComposeError, match="沒有關鍵字 wet"):
-        compose_whiteboard(1, keyword="wet", library=LIB)  # 潮濕沒有單一效果配方
+    with pytest.raises(ComposeError, match="沒有關鍵字 form"):
+        compose_whiteboard(1, keyword="form", library=LIB)  # 形態不可組合
     with pytest.raises(ComposeError, match="未知的白板種類"):
         compose_whiteboard(1, kind="stance", library=LIB)
-    with pytest.raises(ComposeError, match="沒有關鍵字 collision"):
-        compose_whiteboard(1, kind="reaction", keyword="collision", library=LIB)
+    with pytest.raises(ComposeError, match="沒有關鍵字 form"):
+        compose_whiteboard(1, kind="reaction", keyword="form", library=LIB)
 
 
 def test_weapon_class_focus_only_gets_spells() -> None:
@@ -126,7 +128,7 @@ def test_whiteboards_use_the_hero_tier_budget(tier: int) -> None:
     shapes: set[str] = set()
     made = 0
     for kind in WHITEBOARD_KINDS:
-        for keyword in sorted(whiteboard_keywords(LIB, kind)):
+        for keyword in sorted(whiteboard_keywords(LIB, kind, RULES.tier)):
             for seed in range(4):
                 try:
                     skill = compose_whiteboard(
@@ -182,7 +184,7 @@ def test_validator_rejects_two_keywords_and_budget_out_of_range() -> None:
     burning = compose_whiteboard(2, keyword="ignite", library=LIB)
     other = compose_whiteboard(2, kind="passive", keyword="charged", library=LIB)
     merged = burning.model_copy(update={"effects": (*burning.effects, *other.effects)})
-    assert "剛好一個關鍵字" in _problems(merged)
+    assert "最多一個關鍵字" in _problems(merged)
     bolt = next(
         s
         for s in (compose_whiteboard(x, keyword="charged", library=LIB) for x in range(30))
@@ -228,15 +230,18 @@ def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
         found = generate_whiteboard_candidates(LIB, _request(HELD, seed))
         assert [c.kind for c in found] == ["deepen", "bridge", "new"]
         for c in found:
-            assert len(c.keywords) == 1 and c.keywords[0] in _exclusive(c.skill)
-            if c.keywords[0] in whiteboard_keywords(LIB, "active"):
+            if not c.keywords:  # 通用池白板（3W-4b）：沒有關鍵字
+                assert c.kind == "new" and c.source == "composer" and _exclusive(c.skill) == ()
+                continue
+            assert len(c.keywords) == 1
+            if c.keywords[0] in whiteboard_keywords(LIB, "active", 2):
                 assert c.source == "composer" and is_whiteboard(c.skill, LIB), c.skill.id
-                assert _exclusive(c.skill) == c.keywords
+                assert c.keywords[0] in derive_keywords(c.skill, LIB.keywords).all()
             else:  # 沒有白板配方的關鍵字退回手寫池的 1 階技能
                 assert c.source == "pool" and c.skill.tier == RULES.tier
         assert found[0].keywords == ("ignite",) and not found[0].fallback
         assert found[1].keywords[0] in {"marked", "charged"}
-        assert found[2].keywords[0] not in HELD
+        assert not found[2].keywords or found[2].keywords[0] not in HELD
         assert len({c.skill.id for c in found}) == 3
 
 
@@ -265,11 +270,12 @@ def test_candidates_with_no_keywords_fall_back_to_new_directions() -> None:
     assert len({c.keywords for c in found}) == 3
 
 
-def test_keywords_without_recipes_fall_back_to_the_handwritten_pool() -> None:
+def test_exception_keywords_now_get_composer_boards_not_the_pool() -> None:
+    """3W-4b：潮濕、倒地、撞擊有白板配方，不再退回手寫池。"""
     found = generate_whiteboard_candidates(LIB, _request({"wet": 3, "prone": 1}, 2))
     deepen = found[0]
-    assert deepen.keywords == ("wet",) and deepen.source == "pool"
-    assert deepen.skill.id in LIB.skills and deepen.skill.tier == RULES.tier
+    assert deepen.keywords == ("wet",) and deepen.source == "composer"
+    assert is_whiteboard(deepen.skill, LIB, 2)
 
 
 def test_excluded_and_weapon_incompatible_skills_never_appear() -> None:

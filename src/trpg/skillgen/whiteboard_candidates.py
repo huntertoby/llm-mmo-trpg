@@ -28,7 +28,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
@@ -77,7 +77,7 @@ class _Maker:
         self.request = request
         self.tries = tries
         self.taken: set[str] = set()
-        self.active_keywords = whiteboard_keywords(library, "active")
+        self.active_keywords = whiteboard_keywords(library, "active", request.tier)
 
     def make(
         self, rng: Rng, kind: CandidateKind, keyword: str, want: AttrWant
@@ -85,7 +85,7 @@ class _Maker:
         """關鍵字 ``keyword`` 的白板；做不出來回傳 ``None``（呼叫端換關鍵字）。"""
         board_kind = pick_whiteboard_kind(self.library, rng.fork(f"kind/{keyword}"))
         if keyword in self.active_keywords:
-            if keyword not in whiteboard_keywords(self.library, board_kind):
+            if keyword not in whiteboard_keywords(self.library, board_kind, self.request.tier):
                 board_kind = "active"
             made = self._compose(rng, board_kind, keyword, want)
             if made is not None:
@@ -218,12 +218,50 @@ def generate_whiteboard_candidates(
         found.append(None if hit is None else Candidate("bridge", (hit[0],), hit[1], hit[2], True))
     taken_keywords = set(deepened) | (set() if found[1] is None else set(found[1].keywords))
 
+    found.append(
+        _new_direction(
+            library,
+            request,
+            maker,
+            held=held,
+            unheld=unheld,
+            behavior=behavior,
+            taken_keywords=taken_keywords,
+        )
+    )
+    return tuple(c for c in found if c is not None)
+
+
+def _general_board(
+    library: ContentLibrary, request: CandidateRequest, maker: _Maker
+) -> Candidate | None:
+    """「新方向」有 ``general_share_permille`` 的機率出通用池白板（#55、6.34.1；沒有關鍵字的基礎
+    白板，例：振奮、重擊）。擲骰用獨立的 ``fork("new_general")``，沒中時不影響其他候選的亂數。"""
+    rng = Rng(request.seed).fork("new_general")
+    if not rng.chance_permille(library.roguelite.candidates.general_share_permille):
+        return None
+    hit = _first(maker, rng, "new", [library.composer.whiteboard.generic_keyword], want="other")
+    return None if hit is None else Candidate("new", (), hit[1], hit[2])
+
+
+def _new_direction(
+    library: ContentLibrary,
+    request: CandidateRequest,
+    maker: _Maker,
+    *,
+    held: Sequence[str],
+    unheld: Sequence[str],
+    behavior: Mapping[str, int],
+    taken_keywords: set[str],
+) -> Candidate | None:
+    general = _general_board(library, request, maker)
+    if general is not None:
+        return general
     rng = Rng(request.seed).fork("new")
     fresh = [k for k in _weighted_order(rng, unheld, behavior) if k not in taken_keywords]
     hit = _first(maker, rng, "new", fresh, want="other")
     if hit is not None:
-        found.append(Candidate("new", (hit[0],), hit[1], hit[2]))
-    else:  # 每個關鍵字都有了（或還沒有的都做不出來）：退回持有最少的關鍵字
-        hit = _first(maker, rng, "new", list(reversed(held)), want="other")
-        found.append(None if hit is None else Candidate("new", (hit[0],), hit[1], hit[2], True))
-    return tuple(c for c in found if c is not None)
+        return Candidate("new", (hit[0],), hit[1], hit[2])
+    # 每個關鍵字都有了（或還沒有的都做不出來）：退回持有最少的關鍵字
+    hit = _first(maker, rng, "new", list(reversed(held)), want="other")
+    return None if hit is None else Candidate("new", (hit[0],), hit[1], hit[2], True)
