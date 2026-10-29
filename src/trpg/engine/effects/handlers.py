@@ -694,6 +694,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         and (definition.skip_turn or definition.blocks_spells)
         and ctx.state.active_unit == unit.id,  # 自暈／自我沉默：本回合照常，回合結束才生效
         cost_status=effect.self_paid,  # 代價狀態：淨化與驅散移除不了（#62）
+        magnitude_permille=effect.magnitude_permille if definition.stance else 1000,  # 3W-5b
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
@@ -732,6 +733,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
             amount=existing.amount,
             skill_id=existing.skill_id,
             cost_status=existing.cost_status,
+            magnitude_permille=existing.magnitude_permille,
         )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)

@@ -474,8 +474,8 @@ def test_beneficial_flags_in_content() -> None:
 
 def test_combo_structure_requires_a_condition() -> None:
     assert "skeleton.condition" in rules_of(skill(skeleton="combo"))
-    skill_level = skill(skeleton="combo", condition={"type": "target_hp_below", "permille": 500})
-    assert "skeleton.condition" not in rules_of(skill_level)
+    skill_wide = skill(skeleton="combo", condition={"type": "target_hp_below", "permille": 500})
+    assert "skeleton.condition" not in rules_of(skill_wide)
     effect_level = skill(
         skeleton="combo",
         effects=[

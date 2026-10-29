@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Literal
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import Ruleset
@@ -38,6 +39,8 @@ __all__ = [
     "move_points_for_turn",
     "move_reduction",
     "prevents_concealment",
+    "scaled_permille",
+    "scaled_status_def",
     "shield_amount",
     "skip_turn_status",
     "stance_status_ids",
@@ -59,10 +62,53 @@ def boss_converted_status(rules: Ruleset, unit: UnitState, status_id: str) -> st
     return status_id
 
 
-def _combined(rules: Ruleset, unit: UnitState, field: Callable[[StatusDef], int]) -> int:
+type Better = Literal["up", "down"]
+"""倍率欄位對持有者有利的方向：``up``（造成的傷害、移動、受到的治療）、``down``（受到的傷害）。"""
+
+
+def scaled_permille(value: int, magnitude: int, better: Better) -> int:
+    """姿態幅度（Phase 3W-5b）套用在一個倍率欄位上：對持有者有利的一邊（``better``）離中性值
+    1000 的距離 × ``magnitude``‰（無條件捨去），不利的一邊（例如堅守姿態的移動減半）照原值。
+    ``magnitude`` 為 1000 時原樣回傳。卡片的數字也用這個函式算（3W-5b：卡片數字＝實戰）。"""
+    if magnitude == PERMILLE:
+        return value
+    gain = value - PERMILLE if better == "up" else PERMILLE - value
+    if gain <= 0:
+        return value
+    gain = gain * magnitude // PERMILLE
+    return PERMILLE + gain if better == "up" else max(0, PERMILLE - gain)
+
+
+_BETTER: dict[str, Better] = {
+    "damage_dealt_permille": "up",
+    "element_dealt_permille": "up",
+    "element_dealt_wet_permille": "up",
+    "healing_received_permille": "up",
+    "move_permille": "up",
+    "damage_taken_permille": "down",
+    "physical_taken_permille": "down",
+}
+"""狀態的倍率欄位與對持有者有利的方向（:func:`_combined` 各呼叫處用的方向與這裡相同）。"""
+
+
+def scaled_status_def(status: StatusDef, magnitude: int) -> StatusDef:
+    """狀態定義的倍率欄位都套上姿態幅度 ``magnitude`` 之後的樣子（卡片顯示用，數字與結算相同；
+    3W-5b）。1000 時原樣回傳。"""
+    if magnitude == PERMILLE:
+        return status
+    return status.model_copy(
+        update={f: scaled_permille(getattr(status, f), magnitude, b) for f, b in _BETTER.items()}
+    )
+
+
+def _combined(
+    rules: Ruleset, unit: UnitState, field: Callable[[StatusDef], int], better: Better = "up"
+) -> int:
     value = PERMILLE
     for status in unit.statuses:  # 狀態清單依狀態 ID 排序，順序確定
-        value = value * field(rules.status_def(status.status_id)) // PERMILLE
+        own = field(rules.status_def(status.status_id))
+        own = scaled_permille(own, status.magnitude_permille, better)  # 完整姿態的幅度（3W-5b）
+        value = value * own // PERMILLE
     return value
 
 
@@ -147,12 +193,14 @@ def damage_taken_permille(rules: Ruleset, unit: UnitState, element: Element | No
     """受到的骰值傷害倍率（‰；易傷 1250）；``element`` 是物理時再乘各狀態的
     ``physical_taken_permille``（石膚 700，Phase 3-54b）；再乘上裝備的受傷倍率（Phase 3G-G1，
     例如 ``affix_cost_glass`` 的 1100），無條件捨去。"""
-    combined = _combined(rules, unit, lambda d: d.damage_taken_permille)
+    combined = _combined(rules, unit, lambda d: d.damage_taken_permille, "down")
     if unit.form is not None:  # 形態的受傷修正（Phase 3J-1a，依元素）
         combined = combined * form_taken_permille(rules, unit, element) // PERMILLE
     if element is Element.PHYSICAL:
         combined = (
-            combined * _combined(rules, unit, lambda d: d.physical_taken_permille) // PERMILLE
+            combined
+            * _combined(rules, unit, lambda d: d.physical_taken_permille, "down")
+            // PERMILLE
         )
     if not unit.gear.bonuses:
         return combined

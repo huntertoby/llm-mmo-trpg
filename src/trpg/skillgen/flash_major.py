@@ -41,7 +41,7 @@ from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import SkillSlots
 from trpg.content.skills import SkillDef, rarity_rank, skill_elements
-from trpg.engine.skill_levels import grow_shape
+from trpg.engine.shape_growth import grow_shape
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget

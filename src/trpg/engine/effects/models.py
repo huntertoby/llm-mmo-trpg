@@ -191,6 +191,8 @@ class ApplyStatusEffect(EffectBase):
     self_paid: bool = False
     """自己付的代價（``cost.self_status``／``cost.overdraft``，Phase 3-50）：不觸發控制遞減，也不受
     Boss 硬控轉換影響。"""
+    magnitude_permille: int = Field(default=1000, ge=1000)
+    """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -256,7 +258,8 @@ class ShieldEffect(EffectBase):
     flat: int = 0
     scaled_permille: int = 0
     multiplier_permille: int = 1000
-    """技能等級的效果倍率（‰；Phase 3-26a）；1000 為不變，護盾量 ＝ 上式 × 倍率，無條件捨去。"""
+    """護盾量倍率（‰；消耗層數的加成，Phase 3-52）；1000 為不變，護盾量 ＝ 上式 × 倍率，
+    無條件捨去。"""
     duration: int | None = None
     """護盾持續回合（Phase 3-50b）；``None`` ＝ ``shielded`` 狀態的預設回合。"""
     status_id: str | None = None

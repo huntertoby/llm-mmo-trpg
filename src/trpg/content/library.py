@@ -88,7 +88,6 @@ from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_evolution import EvolutionTable
-from trpg.content.skill_growth import SkillGrowthRules
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import (
     BudgetRules,
@@ -204,9 +203,6 @@ class Ruleset(ContentModel):
     keywords: KeywordTable = KeywordTable.model_construct(keywords=())
     """關鍵字推導表（Phase 3G-G2，``content/skill_keywords.yaml``）：裝備的技能強化詞條依關鍵字
     選取技能。嵌入規則包，重播不依賴資料檔。"""
-    skill_growth: SkillGrowthRules = SkillGrowthRules()
-    """技能成長（Phase 3-26a，``content/skill_growth.yaml``）：技能等級的效果倍率與 5 級小特性。
-    嵌入規則包，重播不依賴資料檔。"""
     skill_tags: SkillTagTable = SkillTagTable()
     """技能標籤的中文名（Phase 3-41a，``content/skill_tags.yaml``）：說明文字與刻印符文名用。"""
     gear_names: dict[str, str] = Field(default_factory=dict)
@@ -645,7 +641,6 @@ def load_library(  # noqa: PLR0915
     synergies = load("skill_synergies.yaml", SynergyTable)
     keywords = load("skill_keywords.yaml", KeywordTable)
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
-    skill_growth = load("skill_growth.yaml", SkillGrowthRules)
     skill_tags = load("skill_tags.yaml", SkillTagTable)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
@@ -692,7 +687,6 @@ def load_library(  # noqa: PLR0915
             races=races,
             equipment=equipment_rules,
             keywords=keywords,
-            skill_growth=skill_growth,
             skill_tags=skill_tags,
             gear_names={
                 **{w.id: w.name_zh for w in weapons.weapons},

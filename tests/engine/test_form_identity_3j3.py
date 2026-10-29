@@ -115,7 +115,7 @@ def _form_skill(condition: dict[str, Any], *, top: bool = False) -> SkillDef:
     return skill.model_copy(update={"condition": ConditionSpec(**condition)}) if top else skill
 
 
-def test_skill_level_in_form_makes_the_skill_usable_only_in_a_form() -> None:
+def test_skill_wide_in_form_makes_the_skill_usable_only_in_a_form() -> None:
     skill = _form_skill({"type": "in_form"}, top=True)
     state = scene(extra_skills=(skill,))
 

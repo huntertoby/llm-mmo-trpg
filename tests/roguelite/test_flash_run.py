@@ -334,7 +334,7 @@ def test_a_full_run_flashes_reaches_a_major_and_is_deterministic() -> None:
     assert any(len(s.records) >= lib.flash.rules.major_flash for s in states)
     assert any(s.complete for s in states)
     raw = json.loads(dumps_save(RunSave(run_id="a", run=a)))
-    assert raw["format"] == "trpg-run/12" and "insight" in raw["run"]
+    assert raw["format"] == "trpg-run/13" and "insight" in raw["run"]
     assert loads_save(json.dumps(raw)).run == a
 
 

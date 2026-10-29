@@ -77,6 +77,7 @@ PARAM_TEXT: dict[str, str] = {
     "lifesteal_permille": "吸血（‰）",
     "lose": "失敗時的效果",
     "max_hp_permille": "召喚物最大 HP 加成（‰）",
+    "magnitude_permille": "姿態幅度（‰）",
     "multiplier_permille": "武器倍率（‰）",
     "object": "物件",
     "on_hit": "撞到時",

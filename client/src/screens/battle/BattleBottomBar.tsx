@@ -81,7 +81,6 @@ export function BattleBottomBar(p: Props) {
         raceModes={p.raceModeList}
         buttons={p.buttons}
         cards={p.cards}
-        levels={hero?.skill_levels}
         selectedKey={mode?.key ?? null}
         enabled={canAct}
         hint={actionHintText({

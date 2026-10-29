@@ -53,7 +53,7 @@ def survival(state: BattleState, summon: UnitState, rules: SummonAiRules) -> Fra
 def _cast_state(
     state: BattleState, owner: UnitState, summon: UnitState, skill_id: str
 ) -> BattleState:
-    """假設的狀態：召喚物是行動者、用施放者的屬性快照、武器與技能等級，裝著這招技能、資源足夠
+    """假設的狀態：召喚物是行動者、用施放者的屬性快照與武器，裝著這招技能、資源足夠
     （代價已由施放者付，不影響召喚物）。"""
     sim = state.clone()
     unit = sim.units[summon.id]
@@ -61,7 +61,6 @@ def _cast_state(
     skill = state.ruleset.skill_def(skill_id)
     unit.attributes = dict(snap.attributes)
     unit.weapon = owner.weapon
-    unit.skill_levels = {skill_id: snap.skill_level} if snap.skill_level > 1 else {}
     unit.skills = (skill_id,)
     unit.granted_skills = ()
     unit.mana = max(unit.mana, skill.cost.mana)

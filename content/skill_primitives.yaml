@@ -309,6 +309,7 @@ primitives:
     params:
       status: {llm_hint: "要施加的狀態。", type: status, required: true}
       duration: {llm_hint: "狀態持續的回合數。", type: int, min: 1, max: 10, knob: {ladder: status_duration, weight: status}}
+      magnitude_permille: {llm_hint: "姿態效果的強化比例（只有姿態技能可用）。", type: int, min: 1000, max: 2000, description_zh: 完整姿態技能：姿態狀態對自己有利的倍率離中性值的距離放大的比例（‰，只有姿態技能可填）, knob: none}
   - id: create_surface
     name_zh: 產生表面
     llm_hint: "在地面製造一種表面（例如水、油、火）。"
@@ -665,7 +666,7 @@ primitives:
       unit: {llm_hint: "要召喚的單位種類。", type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
       duration: {llm_hint: "召喚物停留的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數, knob: {ladder: param_range, weight: other}}
       count: {llm_hint: "一次召喚的隻數。", type: int, min: 1, max: 2, description_zh: 一次召喚的數量（1 或 2；2 是數量型分歧進化，必須同時填 power_permille；省略為 1）, knob: none}
-      power_permille: {llm_hint: "多隻召喚物時，每隻相對於一般強度的比例。", type: int, show_when: {count: "2"}, min: 100, max: 999, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）, knob: none}
+      power_permille: {llm_hint: "多隻召喚物時，每隻相對於一般強度的比例。", type: int, show_when: {count: "2"}, min: 100, max: 2000, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）, knob: none}
       max_hp_permille: {llm_hint: "召喚物額外增加的最大生命比例。", type: int, min: 1, max: 1000, description_zh: 加深分歧進化：召喚物的最大 HP 多這麼多‰, knob: none}
       trait: {llm_hint: "召喚物擁有的小特性。", type: summon_trait, description_zh: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）}
       infusion: {llm_hint: "召喚物固有的灌注元素。", type: infusion, description_zh: 橋接分歧進化：召喚物固有的第二個灌注關鍵字（core.yaml 的 summon_infusions）}

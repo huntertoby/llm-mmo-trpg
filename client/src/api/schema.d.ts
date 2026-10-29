@@ -5078,13 +5078,6 @@ export interface components {
             tags: string[];
             /** Skills */
             skills: string[];
-            /**
-             * Skill Levels
-             * @default {}
-             */
-            skill_levels: {
-                [key: string]: number;
-            };
             /** Statuses */
             statuses: components["schemas"]["StatusView"][];
             /** Stacks */

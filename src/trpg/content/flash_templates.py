@@ -49,14 +49,54 @@ type FlashKind = Literal["active", "passive", "reaction", "stance", "modifier"]
 FLASH_KINDS: tuple[FlashKind, ...] = ("active", "passive", "reaction", "stance", "modifier")
 
 
+type CostCutField = Literal["stance_upkeep", "cooldown", "mana", "stamina", "ap_cost"]
+
+
+class CostCut(ContentModel):
+    """完整技能沒有可加的數值時，依序減的一項代價（3W-5b）：``field`` 減 ``step``。"""
+
+    field: CostCutField
+    step: int = Field(default=1, ge=1, le=10)
+
+
+def _ladder(values: tuple[int, ...], name: str) -> tuple[int, ...]:
+    if not values or values[0] != _NEUTRAL or list(values) != sorted(set(values)):
+        raise ValueError(f"{name} 必須從 1000 開始、嚴格遞增")
+    return values
+
+
+_NEUTRAL = 1000
+
+
 class CompleteSkillRules(ContentModel):
     """完整技能（6.34.6）：視為「已閃 ``flashes`` 次」、預算上限 +``budget_permille``‰、不能再閃，
-    可以重閃換掉一個附帶效果或形狀。"""
+    可以重閃換掉一個附帶效果或形狀。
+
+    強度怎麼加上去（3W-5b，06 6.34.6「沒有一般數值可調的結構」）：預算器的強度旋鈕（傷害、治療、
+    護盾的骰子或倍率、推拉距離）之外，召喚再加 ``summon_power_steps``（召喚物 HP 與傷害的倍率，
+    乘在原本的 ``power_permille`` 上）、姿態再加 ``stance_magnitude_steps``（姿態幅度）一起重調；
+    仍然調不上去時，依 ``cost_cuts`` 的順序一次減一格代價，直到預算分數達到 +``budget_permille``‰
+    或沒有能減的。"""
 
     flashes: int = Field(default=3, ge=0, le=9)
     budget_permille: int = Field(default=120, ge=0, le=1000)
     can_flash: bool = False
     can_reflash: bool = True
+    summon_power_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
+    stance_magnitude_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
+    cost_cuts: tuple[CostCut, ...] = (
+        CostCut(field="stance_upkeep"),
+        CostCut(field="cooldown"),
+        CostCut(field="mana"),
+        CostCut(field="stamina"),
+        CostCut(field="ap_cost"),
+    )
+
+    @model_validator(mode="after")
+    def _check_ladders(self) -> CompleteSkillRules:
+        _ladder(self.summon_power_steps, "summon_power_steps")
+        _ladder(self.stance_magnitude_steps, "stance_magnitude_steps")
+        return self
 
 
 class FlashRules(ContentModel):

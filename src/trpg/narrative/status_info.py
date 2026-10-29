@@ -18,8 +18,10 @@ from trpg.shared.types import Attribute
 __all__ = [
     "BOOST_TEXT",
     "CONTROL_GROUP_TEXT",
+    "NEUTRAL_PERMILLE",
     "stack_gain_text",
     "stack_rules",
+    "status_modifier_lines",
     "status_rules",
 ]
 
@@ -84,6 +86,11 @@ def _attr_bonus_line(status: StatusDef) -> str | None:
             "（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）"
         )
     return "、".join(f"{a.display_name} {v:+d}" for a, v in sorted(bonus.items()))
+
+
+def status_modifier_lines(status: StatusDef, library: ContentLibrary) -> list[str]:
+    """狀態的數值句（:func:`_modifier_lines` 的公開名稱；完整姿態的卡片用，3W-5b）。"""
+    return _modifier_lines(status, library)
 
 
 def _modifier_lines(status: StatusDef, library: ContentLibrary) -> list[str]:

@@ -694,7 +694,8 @@ def _summon_variant_points(
     - 橋接 ``infusion``：第二個灌注關鍵字的特性點數（同固有灌注的算法）；
     - 加深 ``max_hp_permille``：每輪價值 ×（1 ＋ 多出的 HP 比例 × ``summon_hp_weight_permille``）；
       ``trait``：小特性的一次性點數；
-    - 數量型 ``count`` × ``power_permille``：每隻只有一般的比例（HP 與傷害），整體 × 隻數。
+    - 數量型 ``count`` × ``power_permille``：每隻只有一般的比例（HP 與傷害），整體 × 隻數；
+      只召喚一隻時的 ``power_permille``（大於 1000，完整技能的強化，3W-5b）同樣乘上去。
     """
     notes: list[str] = []
     core = library.ruleset.core
@@ -719,11 +720,11 @@ def _summon_variant_points(
         once += trait.budget_points
         notes.append(f"小特性 {trait.name_zh}")
     count = effect.count if isinstance(effect.count, int) else 1
-    if count > 1:
+    if count > 1 or effect.power_permille:
         scale = count * Fraction(effect.power_permille or _PERMILLE, _PERMILLE)
         total *= scale
         once *= scale
-        notes.append(f"{count} 隻各 {(effect.power_permille or _PERMILLE) // 10}%")
+        notes.append(f"{count} 隻各 {(effect.power_permille or _PERMILLE) / 10:g}%")
     return total, once, notes
 
 
@@ -1149,6 +1150,8 @@ def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[
     if status.budget_points is None:
         raise BudgetError(f"狀態 {status.id}（{status.name_zh}）沒有預算點數，不能由技能施加")
     ratio = _duration_ratio(effect.duration, status.duration)
+    if effect.magnitude_permille and status.stance:  # 完整姿態的幅度（3W-5b）：點數等比例放大
+        ratio *= Fraction(effect.magnitude_permille, _PERMILLE)
     return status.budget_points * ratio, f"{status.id} {status.budget_points}×{_fmt(ratio)}"
 
 

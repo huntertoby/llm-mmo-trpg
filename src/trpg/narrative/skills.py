@@ -41,8 +41,10 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
+from trpg.engine.rules.statuses import scaled_status_def
 from trpg.engine.summons.core import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
+from trpg.narrative.status_info import NEUTRAL_PERMILLE, status_modifier_lines
 from trpg.narrative.summon_info import (
     SummonInfoCard,
     infusion_hint,
@@ -445,6 +447,8 @@ def _summon_variant_text(lib: ContentLibrary, spec: EffectSpec) -> str:
         parts.append(
             f"一次召喚 {spec.count} 隻，每隻只有 {spec.power_permille / 10:g}% 的 HP 與傷害"
         )
+    elif spec.power_permille is not None and spec.power_permille > NEUTRAL_PERMILLE:  # 3W-5b
+        parts.append(f"召喚物的 HP 與傷害 ×{spec.power_permille / 10:g}%")
     if spec.max_hp_permille:
         parts.append(f"最大 HP +{spec.max_hp_permille / 10:g}%")
     trait = lib.ruleset.core.summon_traits.get(spec.trait or "")
@@ -582,8 +586,15 @@ def status_duration_text(lib: ContentLibrary, status_id: str, duration: int | No
 
 def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.status is not None
-    name = lib.ruleset.status_def(spec.status).name_zh
-    return f"狀態「{name}」{status_duration_text(lib, spec.status, spec.duration)}"
+    status = lib.ruleset.status_def(spec.status)
+    text = f"狀態「{status.name_zh}」{status_duration_text(lib, spec.status, spec.duration)}"
+    magnitude = spec.magnitude_permille
+    if magnitude is None or magnitude == NEUTRAL_PERMILLE or not status.stance:
+        return text
+    # 完整姿態（3W-5b）：數值句用與結算同一個算法放大，卡片數字＝實戰
+    lines = status_modifier_lines(scaled_status_def(status, magnitude), lib)
+    detail = f"：{'；'.join(lines)}" if lines else ""
+    return f"{text}，幅度強化 ×{magnitude / 10:g}%{detail}"
 
 
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:

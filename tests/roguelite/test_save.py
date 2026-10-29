@@ -121,7 +121,7 @@ def test_save_json_has_format_and_engine_version(tmp_path: Path) -> None:
     assert path == save_path(tmp_path / "saves", "abc")
     assert path.name == "run-abc.json"
     raw = json.loads(path.read_text(encoding="utf-8"))
-    assert raw["format"] == SAVE_FORMAT == "trpg-run/12"
+    assert raw["format"] == SAVE_FORMAT == "trpg-run/13"
     assert raw["engine"] == LOG_FORMAT
     assert raw["battle"]["index"] == 1 and len(raw["battle"]["steps"]) == 3
     loaded = load_save(path)
@@ -145,7 +145,7 @@ def test_wrong_format_and_engine_are_rejected() -> None:
     run, battle = auto_play(lib, new_run(lib, *VICTORY), stop=_mid_battle(1, 3))
     assert battle is not None
     raw = json.loads(dumps_save(RunSave(run_id="w", run=run, battle=battle.to_saved())))
-    with pytest.raises(SaveFormatError, match="trpg-run/12"):
+    with pytest.raises(SaveFormatError, match="trpg-run/13"):
         loads_save(json.dumps({**raw, "format": "trpg-run/0"}))
     for old in (
         "trpg-run/1",
@@ -180,3 +180,17 @@ def test_ruleset_hash_is_stable_and_follows_content() -> None:
     assert first == ruleset_hash(lib)
     assert len(first) == 64
     assert ruleset_hash(dataclasses.replace(lib, files=lib.files[1:])) != first
+
+
+def test_run_12_saves_drop_the_hero_skill_levels() -> None:
+    """3W-5b：引擎沒有技能等級；``/12`` 的主角範本還帶 ``skill_levels``，讀入時拿掉，寫成
+    ``/13``。"""
+    lib = library()
+    run, _ = auto_play(lib, new_run(lib, *VICTORY), stop=lambda r, b: b is None and r.history != ())
+    raw = json.loads(dumps_save(RunSave(run_id="old12", run=run)))
+    raw["format"] = "trpg-run/12"
+    raw["run"]["hero"]["skill_levels"] = {}
+    loaded = loads_save(json.dumps(raw))
+    assert loaded.format == SAVE_FORMAT == "trpg-run/13"
+    assert loaded.run == run
+    assert "skill_levels" not in json.loads(dumps_save(loaded))["run"]["hero"]

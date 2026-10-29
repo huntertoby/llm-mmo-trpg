@@ -48,6 +48,7 @@ __all__ = [
     "RETIER_ATTEMPTS",
     "RetierReport",
     "character_tier",
+    "param_knobs",
     "retier",
     "retier_report",
 ]
@@ -108,6 +109,13 @@ def _param_knobs(
                 continue
             knobs.append(Knob(index, name, tuple(values), weight))
     return knobs
+
+
+def param_knobs(
+    effects: list[dict[str, Any]], category: str, library: ContentLibrary
+) -> list[Knob]:
+    """:func:`_param_knobs` 的公開名稱（完整技能的重調也用，3W-5b）。"""
+    return _param_knobs(effects, category, library)
 
 
 def _stretch_knobs(

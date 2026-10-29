@@ -242,6 +242,7 @@ ON_MISS_MIN_RARITY = "rare"
 YAML_RANGED_FIELDS = frozenset(
     {
         "lifesteal_permille",
+        "magnitude_permille",
         "max_hp_permille",
         "multiplier_permille",
         "power_permille",

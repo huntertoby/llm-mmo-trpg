@@ -3,9 +3,8 @@
 技能可以帶 0～2 個變奏（:class:`~trpg.content.skills.VariantSpec`）：條件成立時，施放的是套上替換
 內容的型態（:meth:`~trpg.content.skills.SkillDef.variant_form`）。多個成立時取資料中排在前面的。
 
-結算順序（PM 決定 #3）：**基礎 → 變奏（:func:`varied_skill`）→ 技能等級
-（:func:`~trpg.engine.skill_levels.leveled_skill`）→ 修正
-（:func:`~trpg.engine.modifiers.shaped_skill`）**。
+結算順序（PM 決定 #3）：**基礎 → 變奏（:func:`varied_skill`）→ 修正
+（:func:`~trpg.engine.modifiers.shaped_skill`）**（Phase 3-26a 的技能等級在 3W-5b 移除）。
 施放、預覽、合法動作與 AI 都經過 :func:`varied_skill`。
 
 四種條件（PM 決定 #2）：
