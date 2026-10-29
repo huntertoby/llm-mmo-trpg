@@ -140,6 +140,23 @@ def test_reflash_dissolve_and_inherit_only_at_the_campfire(client: TestClient) -
     assert all(f["skill_id"] != again["skill_id"] for f in gone["hero"]["flash"])
 
 
+def test_the_backend_sends_reflash_slots_and_inherit_rules(client: TestClient) -> None:
+    """3W-R2：可重閃的欄、可帶走的變化、傳承目標與不能傳承的原因由後端下發（前端不自己推）。"""
+    run_id, _ = _at_gear(client)
+    url = f"/api/runs/{run_id}/choice"
+    skill = _ready(_ok(client.get(f"/api/runs/{run_id}")))
+    _ok(client.post(url, json={"kind": "flash", "skill": skill}))
+    hero = _ok(client.post(url, json={"kind": "flash_pick", "pick": 0}))["hero"]
+    assert hero["flash_rules"]["max_carry"] == hero["flash_rules"]["major_flash"] - 1 == 2
+    flashed = next(f for f in hero["flash"] if f["flashes"] == 1)
+    assert flashed["reflash_slots"] == [{"slot": 1, "transform_hint": False}]
+    assert flashed["carryable"] == [1] and not flashed["inherit_target"]
+    assert flashed["inherit_problem_zh"] is None
+    fresh = [f for f in hero["flash"] if f["flashes"] == 0]
+    assert fresh and all(f["inherit_target"] and f["reflash_slots"] == [] for f in fresh)
+    assert all(f["carryable"] == [] and f["inherit_problem_zh"] for f in fresh)
+
+
 def test_no_flash_while_a_battle_is_in_progress(client: TestClient) -> None:
     run_id = _ok(client.post("/api/runs", json=START))["run_id"]
     _ok(client.post(f"/api/runs/{run_id}/battle"))

@@ -30,18 +30,15 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
-from trpg.skillgen.flash import (
-    FLASH_OPS,
-    FlashRequest,
-    UsageSource,
+from trpg.skillgen.flash_derive import (
     apply_variation,
     at_role_tier,
     at_tier,
-    choose,
     derive_chain,
     derive_skill,
-    make_offer,
 )
+from trpg.skillgen.flash_offer import FlashRequest, UsageSource, choose, make_offer
+from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import COMPLETE_SLOT, Variation, acquire
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import validate_skill

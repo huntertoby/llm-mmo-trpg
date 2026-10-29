@@ -19,8 +19,8 @@ from trpg.llm.client import ChatMessage
 from trpg.llm.naming import skill_summary
 from trpg.llm.prompts.escape import escape_text
 from trpg.llm.prompts.world import WorldStyle, load_world_style
-from trpg.skillgen.flash import FlashRequest
 from trpg.skillgen.flash_catalog import FlashCatalog
+from trpg.skillgen.flash_offer import FlashRequest
 
 __all__ = [
     "FLASH_PROMPT_VERSION",

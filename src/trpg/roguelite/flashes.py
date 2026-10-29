@@ -1,6 +1,7 @@
 """一輪裡的靈感點與閃現（Phase 3W-5，``docs/design/06-技能.md`` 6.34；玩法決定 #69～#72）。
 
-純函式（``RunState`` 進、``RunState`` 出），不推進節點；規則核心在 :mod:`trpg.skillgen.flash` 與
+純函式（``RunState`` 進、``RunState`` 出），不推進節點；規則核心在
+:mod:`trpg.skillgen.flash_offer` 與
 :mod:`trpg.skillgen.flash_state`，這裡只把它接到一輪：
 
 - **靈感點**（6.34.2）：每打贏一場 ``insight_per_win`` 點（:func:`after_battle_flash`），可以存。
@@ -41,19 +42,19 @@ from trpg.roguelite.state import (
     RunState,
 )
 from trpg.skillgen.candidates import keyword_distribution
-from trpg.skillgen.flash import (
+from trpg.skillgen.flash_derive import FlashStepError, derive_skill
+from trpg.skillgen.flash_major import transform_slot_plan
+from trpg.skillgen.flash_offer import (
     FlashOptionSource,
     FlashRequest,
-    FlashStepError,
     UsageSource,
     category_counts,
     category_ranking,
     choose,
-    derive_skill,
     make_offer,
 )
-from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_state import (
+    COMPLETE_SLOT,
     FlashRecord,
     SkillFlash,
     acquire,
@@ -68,6 +69,7 @@ from trpg.skillgen.usage import SkillUsage
 __all__ = [
     "after_battle_flash",
     "base_def",
+    "carryable_records",
     "comparable_run",
     "dissolve",
     "flash_categories",
@@ -75,10 +77,14 @@ __all__ = [
     "focus_order",
     "inherit",
     "inherit_problem",
+    "inherit_source_problem",
+    "inherit_target_problem",
+    "max_carry",
     "open_flash",
     "owned_skills",
     "pick_flash",
     "problem_of",
+    "reflash_slots",
     "state_of",
     "with_acquired",
 ]
@@ -366,19 +372,51 @@ def inherit_problem(
         return "傳承的兩招都必須是學會的技能"
     if skill_id == source_id:
         return "不能傳承給自己"
-    target = state_of(run, skill_id)
+    problem = inherit_target_problem(state_of(run, skill_id))
+    if problem is not None:
+        return problem
+    return _carried_problem(library, state_of(run, source_id), list(records))
+
+
+def inherit_target_problem(target: SkillFlash) -> str | None:
+    """這招不能 **接受** 傳承的原因（只看它自己的閃現狀態）；可以時 ``None``。"""
     if target.complete:
         return "完整技能不能接受傳承"
     if target.records:
         return "只有還沒閃過的技能可以接受傳承"
-    return _carried_problem(library, state_of(run, source_id), list(records))
+    return None
+
+
+def carryable_records(library: ContentLibrary, source: SkillFlash) -> tuple[int, ...]:
+    """舊技能可以被帶走的變化（第幾次；一筆一筆照 :func:`inherit_problem` 的規則檢查）。"""
+    return tuple(
+        r.nth for r in source.records if _carried_problem(library, source, [r.nth]) is None
+    )
+
+
+def inherit_source_problem(library: ContentLibrary, run: RunState, skill_id: str) -> str | None:
+    """這招不能 **傳承給別招** 的原因（3W-R2，給前端顯示；可以時 ``None``）：沒有可以帶走的
+    小變化，或沒有別招可以接受傳承。"""
+    if not carryable_records(library, state_of(run, skill_id)):
+        return "這招沒有可以帶走的小變化（大變化、轉型、完整技能的調整欄不能傳承）"
+    others = (s for s in owned_skills(run) if s != skill_id)
+    if all(inherit_target_problem(state_of(run, s)) is not None for s in others):
+        return "沒有還沒閃過的新技能可以接受傳承"
+    return None
+
+
+def reflash_slots(library: ContentLibrary, state: SkillFlash) -> tuple[int, ...]:
+    """這招可以重閃的欄（完整技能只有調整欄 0；一般技能是已有的各次變化；點數與地點另外檢查）。"""
+    rules = library.flash.rules
+    slots = (COMPLETE_SLOT,) if state.complete else tuple(r.nth for r in state.records)
+    return tuple(s for s in slots if reflash_problem(rules, state, s) is None)
 
 
 def _carried_problem(library: ContentLibrary, source: SkillFlash, picked: list[int]) -> str | None:
     if len(set(picked)) != len(picked):
         return "同一個變化不能帶兩次"
-    if len(picked) > library.flash.rules.major_flash - 1:
-        return f"最多帶走 {library.flash.rules.major_flash - 1} 個小變化"
+    if len(picked) > max_carry(library):
+        return f"最多帶走 {max_carry(library)} 個小變化"
     for nth in picked:
         record = None if source.complete else source.record(nth)
         if record is None:
@@ -432,3 +470,8 @@ def comparable_run(run: RunState) -> dict[str, Any]:
     for record in data.get("flash_llm_log", []):
         record.pop("seconds", None)
     return data
+
+
+def max_carry(library: ContentLibrary) -> int:
+    """傳承時最多帶走幾個小變化：第 ``major_flash`` 次是大變化，所以是它 − 1。"""
+    return library.flash.rules.major_flash - 1

@@ -34,7 +34,7 @@ from trpg.roguelite.battle import ActiveBattle
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.flashes import focus_order, owned_skills, problem_of, state_of
 from trpg.roguelite.gear import auto_gear_pick
-from trpg.roguelite.offers import skill_defs, take_candidate
+from trpg.roguelite.offers import CompleteObserver, observe_complete, skill_defs, take_candidate
 from trpg.roguelite.progress import apply_choice, finish_battle
 from trpg.roguelite.start import primary_attribute
 from trpg.roguelite.state import (
@@ -217,10 +217,27 @@ def auto_play(
     stop: AutoStop | None = None,
     on_node: Callable[[RunState, RunState], None] | None = None,
     flash_policy: FlashPolicy = "none",
+    on_complete: CompleteObserver | None = None,
 ) -> tuple[RunState, ActiveBattle | None]:
     """AI 代打到一輪結束或 ``stop`` 為真。``battle`` 是要接續的進行中戰鬥（讀檔）。回傳最後的
     ``RunState`` 與進行中的戰鬥（停在戰鬥中時；否則 ``None``）。``on_node(之前, 之後)`` 在每個
-    節點完成後（以及每次閃現後）呼叫（CLI 印出進度）。``flash_policy`` 見模組說明。"""
+    節點完成後（以及每次閃現後）呼叫（CLI 印出進度）。``flash_policy`` 見模組說明。
+    ``on_complete(原本的技能, 完整技能)`` 在每次做出完整技能候選時呼叫（模擬報表用，3W-R2）。"""
+    with observe_complete(on_complete):
+        return _auto_play(
+            library, run, battle, stop=stop, on_node=on_node, flash_policy=flash_policy
+        )
+
+
+def _auto_play(
+    library: ContentLibrary,
+    run: RunState,
+    battle: ActiveBattle | None,
+    *,
+    stop: AutoStop | None,
+    on_node: Callable[[RunState, RunState], None] | None,
+    flash_policy: FlashPolicy,
+) -> tuple[RunState, ActiveBattle | None]:
     while not run.ended:
         if stop is not None and stop(run, battle):
             return run, battle

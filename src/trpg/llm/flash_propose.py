@@ -8,9 +8,10 @@
    英文代號都拒絕）。
 2. 每一項再由 :class:`~trpg.skillgen.flash_catalog.FlashCatalog` 檢查：類別與模板必須是這一次可用的
    （形態、種族這類原語不是模板，直接拒絕）、參數必須在模板的選單內；最後由引擎真的套用一次
-   （:func:`~trpg.skillgen.flash.try_variation`），套不上就拒絕。
+   （:func:`~trpg.skillgen.flash_offer.try_variation`），套不上就拒絕。
 3. 不合格的項目帶錯誤回饋重試（最多 ``max_attempts`` 次，合格的累積）；仍不足的數量與類別由
-   :func:`~trpg.skillgen.flash.make_offer` 用資料順序的模板補滿（4-L5 的「失敗退回模板」）。轉型保底
+   :func:`~trpg.skillgen.flash_offer.make_offer` 用資料順序的模板補滿（4-L5 的「失敗退回模板」）。
+   轉型保底
    仍由資料決定，不交給模型。
 
 結果（提議的變化、錯誤代碼、prompt 版本號）寫成 :class:`FlashProposalRecord`，隨一輪存下來；重播用
@@ -46,7 +47,8 @@ from trpg.llm.prompts.naming import NAMING_PROMPT_VERSION
 from trpg.llm.propose import LLM_ERROR_CODES, AttemptRecord
 from trpg.llm.response import clean_response
 from trpg.shared.rng import Rng
-from trpg.skillgen.flash import (
+from trpg.skillgen.flash_catalog import FlashCatalog, build_catalog
+from trpg.skillgen.flash_offer import (
     FlashOffer,
     FlashOptionSource,
     FlashRequest,
@@ -54,7 +56,6 @@ from trpg.skillgen.flash import (
     skill_before,
     try_variation,
 )
-from trpg.skillgen.flash_catalog import FlashCatalog, build_catalog
 from trpg.skillgen.flash_state import Variation, seed_tag, slot_is_major
 
 __all__ = [
@@ -351,7 +352,7 @@ def propose_variations(
     clock: Clock = time.perf_counter,
 ) -> FlashProposalRecord:
     """請 LLM 為這次的閃現提議一批變化（最多 ``max_attempts`` 次，合格的累積）。`LLMUnavailable`
-    立即停止；不足的部分由 :func:`~trpg.skillgen.flash.make_offer` 用模板補。"""
+    立即停止；不足的部分由 :func:`~trpg.skillgen.flash_offer.make_offer` 用模板補。"""
     table = library.flash
     before = skill_before(library, request)
     major = slot_is_major(table.rules, request.state, request.nth)

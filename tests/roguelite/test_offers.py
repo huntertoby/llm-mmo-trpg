@@ -7,7 +7,14 @@ import pytest
 from tests.roguelite.helpers import full_library, library
 from trpg.content.skills import weapon_problem
 from trpg.roguelite import ChoiceError, RunState, new_run
-from trpg.roguelite.offers import equip_problems, make_offer, skill_defs, take_candidate
+from trpg.roguelite.offers import (
+    as_complete,
+    equip_problems,
+    make_offer,
+    observe_complete,
+    skill_defs,
+    take_candidate,
+)
 from trpg.roguelite.start import top_attribute
 from trpg.roguelite.state import SkillOffer
 from trpg.shared.types import Attribute
@@ -196,3 +203,15 @@ def test_offer_follows_top_attribute_and_keeps_one_new_direction() -> None:
     again = _offer(heavy)
     assert again.top_attribute is Attribute.WIL
     assert again.candidates[2].scaling_attr is not Attribute.WIL
+
+
+def test_observe_complete_notifies_and_restores() -> None:
+    """3W-R2：模擬報表用觀察者量完整技能，不在執行期替換 ``as_complete``。"""
+    lib = library()
+    skill = lib.skills["skill_fire_bolt"]
+    seen: list[tuple[str, str]] = []
+    with observe_complete(lambda before, after: seen.append((before.id, after.id))):
+        done = as_complete(lib, skill)
+    assert seen == [(skill.id, done.id)]
+    as_complete(lib, skill)
+    assert len(seen) == 1

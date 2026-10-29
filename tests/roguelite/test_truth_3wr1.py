@@ -40,16 +40,14 @@ from trpg.roguelite.retier import sync_skill_tier
 from trpg.roguelite.state import CampfireNode, FlashChoice, FlashPickChoice, InheritChoice
 from trpg.skillgen import skill_tier
 from trpg.skillgen.evolution import budget_power
-from trpg.skillgen.flash import (
+from trpg.skillgen.flash_derive import (
     FlashHistoryError,
     FlashStepError,
-    _builder,
     derive_chain,
     derive_skill,
     history_error,
-    history_problem,
-    skill_before,
 )
+from trpg.skillgen.flash_offer import _builder, history_problem, skill_before
 from trpg.skillgen.skill_tier import character_tier, retier
 
 FIXTURE = Path(__file__).parent / "fixtures" / "flash_history_3wr1.json"

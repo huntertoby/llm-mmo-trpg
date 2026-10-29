@@ -38,7 +38,9 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from trpg.content.battle import WeaponDef
 from trpg.content.equipment import Loadout, loadout_held, resolve_loadout
@@ -67,12 +69,14 @@ _TIER_ID = re.compile(r"^(skill_[a-z0-9_]+?)_t(\d+)$")
 
 __all__ = [
     "COMPLETE_SUFFIX",
+    "CompleteObserver",
     "as_complete",
     "at_run_tier",
     "candidate_request",
     "equip_problems",
     "library_base",
     "make_offer",
+    "observe_complete",
     "offer_updates",
     "skill_defs",
     "take_candidate",
@@ -144,14 +148,36 @@ COMPLETE_SUFFIX = "_cp"
 """完整技能的 ID 後綴（候選是內容庫的手寫技能時，重調後成為生成技能 ``<原 ID>_cp``）。"""
 
 
+type CompleteObserver = Callable[[SkillDef, SkillDef], None]
+"""完整技能的觀察者：``(原本的技能, 完整技能)``（模擬報表量實際加上的 ‰ 用；只讀不改）。"""
+
+_COMPLETE_OBSERVER: ContextVar[CompleteObserver | None] = ContextVar(
+    "trpg_complete_observer", default=None
+)
+
+
+@contextmanager
+def observe_complete(observer: CompleteObserver | None) -> Iterator[None]:
+    """在 ``with`` 區塊內，每次 :func:`as_complete` 做出完整技能都通知 ``observer``（離開時還原；
+    3W-R2，取代模擬在執行期替換 ``as_complete``）。不影響結果。"""
+    token = _COMPLETE_OBSERVER.set(observer)
+    try:
+        yield
+    finally:
+        _COMPLETE_OBSERVER.reset(token)
+
+
 def as_complete(library: ContentLibrary, skill: SkillDef) -> SkillDef:
     """把一招技能變成完整技能的強度（06 6.34.6：視為已閃 3 次，預算上限
     +``complete.budget_permille``‰，而且實際加上去，3W-5b：
     :func:`~trpg.skillgen.complete.complete_strength`）。手寫技能重調後換成生成技能
-    ``<原 ID>_cp``。"""
+    ``<原 ID>_cp``。裝了觀察者（:func:`observe_complete`）時通知它。"""
     result = complete_strength(library, skill)
     if library_base(library, skill.id) is not None or result.id in library.skills:
         result = result.model_copy(update={"id": f"{skill.id}{COMPLETE_SUFFIX}"})
+    observer = _COMPLETE_OBSERVER.get()
+    if observer is not None:
+        observer(skill, result)
     return result
 
 

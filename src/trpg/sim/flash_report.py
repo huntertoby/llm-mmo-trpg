@@ -24,7 +24,6 @@ from fractions import Fraction
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.roguelite import offers as _offers
 from trpg.roguelite.auto import FlashPolicy, auto_play
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.start import default_start, new_keyword_run
@@ -139,11 +138,12 @@ def _pick_of(
 
 
 class _Collector:
-    """``auto_play`` 的 ``on_node`` 回呼：收集一輪的數字。"""
+    """``auto_play`` 的 ``on_node`` 回呼：收集一輪的數字。:meth:`complete` 是 ``on_complete``
+    觀察者：比較完整技能前後的定義，記下實際加上的 ‰。"""
 
-    def __init__(self, library: ContentLibrary, gains: dict[str, int]) -> None:
+    def __init__(self, library: ContentLibrary) -> None:
         self.library = library
-        self.gains = gains
+        self.gains: dict[str, int] = {}
         self.picks: list[FlashPick] = []
         self.curve: list[tuple[int, int, int]] = []
         self.spent = 0
@@ -163,6 +163,9 @@ class _Collector:
             return
         self._flashes(before, after)
 
+    def complete(self, before: SkillDef, after: SkillDef) -> None:
+        self.gains[after.id] = complete_gain_permille(before, after, self.library)
+
     def _flashes(self, before: RunState, after: RunState) -> None:
         if before.insight <= after.insight:
             return
@@ -173,32 +176,14 @@ class _Collector:
                 self.picks.append(pick)
 
 
-def _recording_as_complete(
-    library: ContentLibrary, gains: dict[str, int]
-) -> Callable[[ContentLibrary, SkillDef], SkillDef]:
-    """包住 ``offers.as_complete``，記下每個完整技能實際加上的 ‰（只在模擬行程內暫時換上）。"""
-    original = _offers.as_complete
-
-    def wrapper(lib: ContentLibrary, skill: SkillDef) -> SkillDef:
-        result = original(lib, skill)
-        gains[result.id] = complete_gain_permille(skill, result, library)
-        return result
-
-    return wrapper
-
-
 def simulate_run(library: ContentLibrary, policy: FlashPolicy, seed: int) -> RunMetrics:
     """一個（策略, 種子）的一整輪（開局為種子抽的武器與關鍵字，同 ``trpg run auto``）。"""
     weapon, keywords = default_start(library, seed)
     run = new_keyword_run(library, weapon, keywords, seed)
-    gains: dict[str, int] = {}
-    collector = _Collector(library, gains)
-    original = _offers.as_complete
-    vars(_offers)["as_complete"] = _recording_as_complete(library, gains)
-    try:
-        final, _ = auto_play(library, run, on_node=collector, flash_policy=policy)
-    finally:
-        vars(_offers)["as_complete"] = original
+    collector = _Collector(library)
+    final, _ = auto_play(
+        library, run, on_node=collector, flash_policy=policy, on_complete=collector.complete
+    )
     return _metrics(library, policy, seed, final, collector)
 
 

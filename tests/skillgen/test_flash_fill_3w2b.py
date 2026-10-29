@@ -6,12 +6,12 @@ import pytest
 
 from tests.engine.helpers import library
 from trpg.content.skills import SkillDef
-from trpg.skillgen.flash import (
+from trpg.skillgen.flash_category import allowed_categories
+from trpg.skillgen.flash_offer import (
     FlashRequest,
     UsageSource,
     _Builder,
     _fill_up,
-    allowed_categories,
     category_counts,
     make_offer,
 )

@@ -8,9 +8,9 @@
 狀態、用法統計、備用清單跟著換 ID。
 
 **同一招只有一個真相來源**（3W-R1）：閃過的技能（有變化歷程）不重配存著的定義，而是從原本的技能
-照新階級重推整條歷程（:func:`~trpg.skillgen.flash.derive_skill`，與閃現出題同一個函式），所以卡片
+照新階級重推整條歷程（:func:`~trpg.skillgen.flash_derive.derive_skill`，與閃現出題同一個函式），所以卡片
 上的數字就是下一次閃現的「套用前」與重閃的強度下限；ID 由歷程決定，不變。:func:`retier` 只處理沒
-閃過的技能。歷程在目前的內容重推不了時（:class:`~trpg.skillgen.flash.FlashHistoryError`），退回
+閃過的技能。歷程在目前的內容重推不了時（:class:`~trpg.skillgen.flash_derive.FlashHistoryError`），退回
 重配存著的定義（之後的閃現也以它為起點，見 ``FlashRequest.current``）。
 """
 
@@ -21,7 +21,7 @@ from trpg.content.skills import SkillDef
 from trpg.roguelite.flashes import base_def, state_of
 from trpg.roguelite.offers import at_run_tier, skill_defs
 from trpg.roguelite.state import RunState
-from trpg.skillgen.flash import FlashError, derive_skill
+from trpg.skillgen.flash_derive import FlashError, derive_skill
 from trpg.skillgen.skill_tier import character_tier, retier
 
 __all__ = ["run_tier", "sync_skill_tier"]

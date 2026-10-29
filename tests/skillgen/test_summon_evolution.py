@@ -62,6 +62,17 @@ def test_summon_skills_use_the_summon_evolution_path() -> None:
         assert evolution_options(lib, request) == summon_evolution_options(lib, request)
 
 
+def test_only_builds_just_that_branch() -> None:
+    """3W-R2：``only`` 只做指定的那一支，結果與全部做完再挑相同。"""
+    lib = library()
+    for skill in _summon_skills():
+        request = EvolutionRequest(skill, SkillUsage(), {}, 1)
+        every = summon_evolution_options(lib, request)
+        for template in ("summon_deepen", "summon_bridge", "summon_count"):
+            picked = tuple(o for o in every if o.template == template)
+            assert summon_evolution_options(lib, request, only=template) == picked
+
+
 def test_fire_spirit_gets_all_three_branches() -> None:
     deepen, bridge, count = _options(FIRE_SPIRIT)
     assert (deepen.branch, bridge.branch, count.branch) == ("deepen", "bridge", "count")

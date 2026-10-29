@@ -24,7 +24,7 @@ from trpg.roguelite.auto import AutoStop
 from trpg.roguelite.flashes import comparable_run, problem_of
 from trpg.roguelite.llm_hook import FlashSourceFactory, use_flash_source
 from trpg.roguelite.state import CampfireNode, FlashChoice, FlashPickChoice, GearOfferNode
-from trpg.skillgen.flash import FlashOptionSource
+from trpg.skillgen.flash_offer import FlashOptionSource
 
 BUILD = "build_fire"
 SEED = 6

@@ -37,31 +37,27 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_parts import Knob, effect_knobs
+from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.evolution import budget_power, effect_strength_knobs, retune
 from trpg.skillgen.flash_major import fixed_strength
 from trpg.skillgen.flash_ops import Draft, base_draft, tuning_extras
+from trpg.skillgen.knobs import has_strength_knobs, param_knobs
 from trpg.skillgen.validate import structural_rarity, tier_requirements, validate_skill
 
 __all__ = [
     "RETIER_ATTEMPTS",
     "RetierReport",
     "character_tier",
-    "param_knobs",
     "retier",
     "retier_report",
 ]
 
 RETIER_ATTEMPTS = 3
 """同一份草稿最多試幾次不同的調整亂數。"""
-_PUSH_PULL = frozenset({"push", "pull"})
 _SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
-_TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
-_AREA = _TERRAIN | {"create_surface"}
-_MAX_EFFECTS = 4
-_MAX_AP = 3
 _CACHE_LIMIT = 4096
 """內容庫上重配快取（``ContentLibrary.retier_cache``）的上限：滿了就清空。"""
 
@@ -93,31 +89,6 @@ class _Job:
         return self.floor is not None
 
 
-_TUNED_FIELDS = frozenset({"dice", "multiplier_permille"})
-"""預算器本來就會調的效果欄位（:func:`~trpg.skillgen.evolution.retune` 的旋鈕）。"""
-
-
-def _param_knobs(
-    effects: list[dict[str, Any]], category: str, library: ContentLibrary
-) -> list[Knob]:
-    """效果參數上的其他強度旋鈕（``skill_primitives.yaml`` 的 ``knob``，組合器同源）：狀態與表面的
-    持續回合、累積層數……；預算器本來就會調的骰子、倍率與推拉距離除外。"""
-    knobs: list[Knob] = []
-    for index, effect in enumerate(effects):
-        for name, values, weight in effect_knobs(library, effect, category=category, weight=1):
-            if name in _TUNED_FIELDS or (name == "distance" and effect["type"] in _PUSH_PULL):
-                continue
-            knobs.append(Knob(index, name, tuple(values), weight))
-    return knobs
-
-
-def param_knobs(
-    effects: list[dict[str, Any]], category: str, library: ContentLibrary
-) -> list[Knob]:
-    """:func:`_param_knobs` 的公開名稱（完整技能的重調也用，3W-5b）。"""
-    return _param_knobs(effects, category, library)
-
-
 def _stretch_knobs(
     effects: list[dict[str, Any]], category: str, library: ContentLibrary
 ) -> list[Knob]:
@@ -126,7 +97,7 @@ def _stretch_knobs(
     stretch = library.budget.retier_growth.stretch
     statuses = library.ruleset.statuses.by_id()
     out: list[Knob] = []
-    for knob in _param_knobs(effects, category, library):
+    for knob in param_knobs(effects, category, library):
         effect = effects[knob.index]
         cap = stretch.get(str(effect["type"]), {}).get(knob.field)
         status = statuses.get(str(effect.get("status")))
@@ -153,7 +124,7 @@ def _knob_candidates(
     if job.upgrade:
         params = _stretch_knobs(effects, skill.category, job.library)
     else:
-        params = _param_knobs(effects, skill.category, job.library)
+        params = param_knobs(effects, skill.category, job.library)
     for more in ((), params) if params else ((),):
         for attempt in range(RETIER_ATTEMPTS):
             done = retune(
@@ -191,15 +162,6 @@ def _settle(job: _Job, candidates: Iterable[SkillDef | None]) -> SkillDef | None
     return best
 
 
-def _has_strength_knobs(moved: SkillDef, library: ContentLibrary) -> bool:
-    """技能有沒有預算器的強度旋鈕（骰子、倍率、推拉距離、修正幅度、接續段）；沒有的是「點數固定」。"""
-    base, effects = base_draft(moved)
-    op = "followup" if moved.followup is not None else ""
-    return bool(effect_strength_knobs(moved.category, effects, library)) or bool(
-        tuning_extras(op, base, library)[1]
-    )
-
-
 # ---------------------------------------------------------------------------
 # 放大格數（3W-9b：表面與升降地形）
 # ---------------------------------------------------------------------------
@@ -214,7 +176,7 @@ def _bigger_shapes(moved: SkillDef, library: ContentLibrary) -> list[str]:
         or moved.kind != "active"
         or moved.followup is not None
         or moved.trap is not None
-        or not any(e.type in _AREA for e in moved.effects)
+        or not any(e.type in library.budget.retier_growth.area_effects for e in moved.effects)
     ):
         return []
     return list(reversed(ladder[ladder.index(moved.shape.type) + 1 :]))
@@ -244,7 +206,7 @@ def _growth_drafts(skill: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
     rules = library.budget.retier_growth
     start = skill.cost.cooldown or 0
     ap_cost = skill.ap_cost or 0  # 只有主動技能會換形狀（_bigger_shapes），一定有 AP
-    top = min(ap_cost + rules.max_extra_ap, _MAX_AP)
+    top = min(ap_cost + rules.max_extra_ap, MAX_AP_COST)
     for ap in range(ap_cost, max(top, ap_cost) + 1):
         last = max(start, min(start + rules.max_extra_cooldown, rules.max_cooldown))
         for cooldown in range(start, last + 1):
@@ -261,15 +223,16 @@ def _grown_skills(job: _Job) -> Iterator[SkillDef]:
             yield grown
 
 
-def _terrain(skill: SkillDef) -> bool:
-    return any(e.type in _TERRAIN for e in skill.effects)
+def _terrain(skill: SkillDef, library: ContentLibrary) -> bool:
+    terrain = library.budget.retier_growth.terrain_effects
+    return any(e.type in terrain for e in skill.effects)
 
 
 def _area_candidates(job: _Job) -> Iterator[SkillDef | None]:
     """點數固定的表面與升降地形：先換成格數較多的形狀（由大到小試）。表面（或已帶落石的升降地形）
     再用旋鈕調到目標比例；只有地形的沒有旋鈕，在費用的組合裡取比例最接近目標的。"""
     for grown in _grown_skills(job):
-        if not _has_strength_knobs(grown, job.library) and _terrain(grown):
+        if not has_strength_knobs(grown, job.library) and _terrain(grown, job.library):
             drafts = [*_growth_drafts(grown, job.library), *_cost_drafts(grown)]
             yield _closest(drafts, job)
             continue
@@ -349,7 +312,7 @@ def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
     """升降地形：「地形＋落石」（多一個大地傷害效果，數值由預算器調；3W-2b 地形變化模板的做法）。
     ``grown``：用放大過格數的形狀（由大到小，費用照 :func:`_growth_drafts`）；否則用原本的形狀。"""
     moved = job.moved
-    if not _terrain(moved) or len(moved.effects) >= _MAX_EFFECTS:
+    if not _terrain(moved, job.library) or len(moved.effects) >= MAX_EFFECTS:
         return
     if grown:
         drafts: Iterable[Draft] = (
@@ -397,7 +360,7 @@ def _best_effort(job: _Job) -> SkillDef | None:
     if job.upgrade:
         knobs += _stretch_knobs(effects, moved.category, library)
     else:
-        knobs += _param_knobs(effects, moved.category, library)
+        knobs += param_knobs(effects, moved.category, library)
     if not knobs:
         return None
     for knob in knobs:
@@ -452,10 +415,10 @@ def _grow(job: _Job) -> SkillDef | None:
     點數固定的才放大（帶傷害的表面技能照預算器調骰子）。"""
     if not job.upgrade:
         return None
-    if not _terrain(job.moved) and _has_strength_knobs(job.moved, job.library):
+    if not _terrain(job.moved, job.library) and has_strength_knobs(job.moved, job.library):
         return None
     done = _settle(job, _area_candidates(job))
-    if done is None and _terrain(job.moved):
+    if done is None and _terrain(job.moved, job.library):
         done = _rocks(job, grown=True)
     return done
 

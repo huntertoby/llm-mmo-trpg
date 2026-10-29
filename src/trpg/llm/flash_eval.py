@@ -19,7 +19,8 @@ from trpg.llm.flash_propose import (
     LlmFlashSource,
     name_offer,
 )
-from trpg.skillgen.flash import FlashRequest, UsageSource, allowed_categories, choose, make_offer
+from trpg.skillgen.flash_category import allowed_categories
+from trpg.skillgen.flash_offer import FlashRequest, UsageSource, choose, make_offer
 from trpg.skillgen.flash_state import SkillFlash, acquire
 from trpg.skillgen.usage import SkillUsage
 

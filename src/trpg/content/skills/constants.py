@@ -148,7 +148,9 @@ _MAX_DISPLACE = 2
 _MAX_COOLDOWN = 6
 
 
-_MAX_AP_COST = 3
+MAX_AP_COST = 3
+"""主動技能 ``ap_cost`` 的上限（1～3）。"""
+_MAX_AP_COST = MAX_AP_COST
 
 
 _PERMILLE = 1000

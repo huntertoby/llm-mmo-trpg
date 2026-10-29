@@ -257,6 +257,10 @@ class RetierGrowthRules(ContentModel):
     """換成較大的形狀時最多多加幾 AP（加冷卻還超過預算上限時，例如 1 AP 的隆地；不超過 3 AP）。"""
     target_tolerance_permille: int = Field(default=50, ge=0, le=300)
     """重配維持原本比例的容許差（‰）：候選的比例與升階前相差在這之內就採用，否則取最接近的。"""
+    terrain_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain")
+    """升降地形的原語（3W-R2 從程式移到資料）：放大格數、補「落石」只看這些。"""
+    area_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain", "create_surface")
+    """點數固定、升階時放大格數的原語（升降地形與表面）。"""
 
 
 class CharacterTierRules(ContentModel):

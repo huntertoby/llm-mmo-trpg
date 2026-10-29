@@ -2146,6 +2146,8 @@ export interface components {
             major_flash: number;
             /** Insight Per Win */
             insight_per_win: number;
+            /** Max Carry */
+            max_carry: number;
         };
         /**
          * FocusTarget
@@ -3970,6 +3972,19 @@ export interface components {
             gear_source_zh: string;
         };
         /**
+         * ReflashSlotOut
+         * @description 可以重閃的一欄（3W-R2：前端不自己推規則）。
+         */
+        ReflashSlotOut: {
+            /** Slot */
+            slot: number;
+            /**
+             * Transform Hint
+             * @default false
+             */
+            transform_hint: boolean;
+        };
+        /**
          * Reload
          * @description 裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個
          *     上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。
@@ -4447,6 +4462,23 @@ export interface components {
              * @default false
              */
             reflash_transform_hint: boolean;
+            /**
+             * Reflash Slots
+             * @default []
+             */
+            reflash_slots: components["schemas"]["ReflashSlotOut"][];
+            /**
+             * Carryable
+             * @default []
+             */
+            carryable: number[];
+            /** Inherit Problem Zh */
+            inherit_problem_zh?: string | null;
+            /**
+             * Inherit Target
+             * @default false
+             */
+            inherit_target: boolean;
         };
         /**
          * SkillIcon

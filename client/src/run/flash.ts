@@ -1,4 +1,5 @@
 // 靈感閃現的純函式（Phase 3W-6；規則在 06 6.34.3，數值由後端 `flash_rules` 提供，這裡不寫死）。
+// 3W-R2：可重閃的欄、可傳承的目標、可帶走的變化與上限、不能傳承的原因都由後端下發，這裡只讀。
 // 文字集中在這裡：價格說明、技能卡的「已閃 N／5 次」、稀有度提示、溶掉確認、傳承條件。
 import type { FlashOption, FlashPreview, PendingFlash, RunChoice, RunHero, SkillCard, SkillFlash } from "../api/types";
 import { ownedCards } from "./loadout";
@@ -14,7 +15,7 @@ export const TRANSFORM_HINT_TIP = "角色升階後，新的轉型選擇變多了
 type Rules = RunHero["flash_rules"];
 
 /** 後端沒給規則時的備用（舊回應）；數值與 `flash_templates.yaml` 初值相同。 */
-const FALLBACK = { open_cost: 1, open_options: 4, focused_cost: 2, focused_options: 3, max_flashes: 5, major_flash: 3 };
+const FALLBACK = { open_cost: 1, open_options: 4, focused_cost: 2, focused_options: 3, max_flashes: 5, major_flash: 3, max_carry: 2 };
 
 export function rulesOf(rules: Rules | undefined) {
   return { ...FALLBACK, ...(rules ?? {}) };
@@ -115,21 +116,19 @@ export interface ReflashSlot {
   transformHint: boolean;
 }
 
-/** 這招可以重閃的格子：一般技能是已有的各次變化；完整技能只有「調整欄」（0）。 */
-export function reflashSlots(f: SkillFlash | undefined, rules: Rules | undefined): ReflashSlot[] {
+/** 這招可以重閃的格子（後端 `reflash_slots`）；完整技能的調整欄（0）標「調整欄」。 */
+export function reflashSlots(f: SkillFlash | undefined): ReflashSlot[] {
   if (f === undefined) return [];
-  if (f.complete) return [{ slot: 0, label: "調整欄", transformHint: false }];
-  const major = rulesOf(rules).major_flash;
-  return f.records.map((r) => ({
-    slot: r.nth,
-    label: recordLine(r),
-    transformHint: f.reflash_transform_hint && r.nth === major,
-  }));
+  return (f.reflash_slots ?? []).map((s) => {
+    const record = f.records.find((r) => r.nth === s.slot);
+    const label = s.slot === 0 || record === undefined ? "調整欄" : recordLine(record);
+    return { slot: s.slot, label, transformHint: s.transform_hint };
+  });
 }
 
 /** 營火重閃列表：有格子可重閃的技能。 */
 export function reflashable(hero: RunHero): OwnedSkill[] {
-  return ownedSkills(hero).filter((s) => reflashSlots(s.flash, hero.flash_rules).length > 0);
+  return ownedSkills(hero).filter((s) => reflashSlots(s.flash).length > 0);
 }
 
 // ---- 溶掉 --------------------------------------------------------------------------------
@@ -150,21 +149,27 @@ export function dissolveChoice(skill: string): RunChoice {
 
 // ---- 傳承 --------------------------------------------------------------------------------
 
-/** 能接受傳承的技能：還沒閃過、不是完整技能。 */
+/** 能接受傳承的技能（後端 `inherit_target`：還沒閃過、不是完整技能）。 */
 export function inheritTargets(hero: RunHero): OwnedSkill[] {
-  return ownedSkills(hero).filter((s) => s.flash !== undefined && !s.flash.complete && s.flash.records.length === 0);
+  return ownedSkills(hero).filter((s) => s.flash?.inherit_target === true);
 }
 
-/** 可以帶走的小變化（大變化、轉型、完整技能的調整欄都不行）。 */
+/** 可以帶走的變化（後端 `carryable`；大變化、轉型、完整技能的調整欄都不行）。 */
 export function carryable(f: SkillFlash | undefined): SkillFlash["records"] {
-  if (f === undefined || f.complete) return [];
-  return f.records.filter((r) => r.source === "minor");
+  if (f === undefined) return [];
+  const allowed = new Set(f.carryable ?? []);
+  return f.records.filter((r) => allowed.has(r.nth));
 }
 
+/** 這招不能傳承給別招的原因（後端 `inherit_problem_zh`）；可以時 `undefined`。 */
+export function inheritProblem(f: SkillFlash | undefined): string | undefined {
+  if (f === undefined) return "這招沒有可以帶走的小變化";
+  return f.inherit_problem_zh ?? undefined;
+}
 
-/** 最多帶走幾個小變化（第 3 次是大變化，所以是 major_flash − 1）。 */
+/** 最多帶走幾個小變化（後端 `flash_rules.max_carry`）。 */
 export function maxCarry(rules: Rules | undefined): number {
-  return rulesOf(rules).major_flash - 1;
+  return rulesOf(rules).max_carry;
 }
 
 export function toggleCarry(picked: readonly number[], nth: number, limit: number): number[] {

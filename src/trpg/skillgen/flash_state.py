@@ -3,7 +3,7 @@
 
 純函式、確定性；不碰亂數以外的任何外部狀態。roguelite（3W-5）與之後的大世界共用：一輪或角色為
 每招學會的技能存一個 :class:`SkillFlash`（以 **原本的技能 ID** 為鍵），套用的結果由
-:func:`trpg.skillgen.flash.derive_skill` 從原本的技能與變化歷程推出。
+:func:`trpg.skillgen.flash_derive.derive_skill` 從原本的技能與變化歷程推出。
 
 - **次數**：每招最多 ``max_flashes`` 次；第 ``major_flash`` 次是大變化。完整技能視為已閃
   ``complete.flashes`` 次，不能再閃，只能重閃它唯一的「調整」欄位（``adjustment``，第 0 次）。

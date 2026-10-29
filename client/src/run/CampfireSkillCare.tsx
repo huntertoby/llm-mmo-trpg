@@ -11,6 +11,7 @@ import {
   dissolveConfirm,
   INHERIT_RULE_TEXT,
   inheritChoice,
+  inheritProblem,
   inheritTargets,
   maxCarry,
   ownedSkills,
@@ -44,7 +45,7 @@ function ReflashSection({ runId, hero, busy, onChoose }: Props) {
   const [target, setTarget] = useState<{ id: string; slot: number } | null>(null);
   const list = reflashable(hero);
   const chosen = target === null ? undefined : list.find((s) => s.card.id === target.id);
-  const slotLabel = chosen === undefined || target === null ? undefined : reflashSlots(chosen.flash, hero.flash_rules).find((s) => s.slot === target.slot)?.label;
+  const slotLabel = chosen === undefined || target === null ? undefined : reflashSlots(chosen.flash).find((s) => s.slot === target.slot)?.label;
   return (
     <div className="panel campfire-reflash" data-testid="campfire-reflash">
       <div className="section-title">重閃（只在營火）</div>
@@ -79,7 +80,7 @@ function ReflashSection({ runId, hero, busy, onChoose }: Props) {
               <SkillFlashInfo flash={flash} rules={hero.flash_rules} brief />
             </div>
             <div className="reflash-slots">
-              {reflashSlots(flash, hero.flash_rules).map((s) => (
+              {reflashSlots(flash).map((s) => (
                 <button
                   key={s.slot}
                   type="button"
@@ -191,9 +192,7 @@ function OldSkillSection({ hero, busy, onChoose }: Omit<Props, "runId">) {
 
 function InheritModeButton({ hero, oldId, mode, busy, onMode }: { hero: RunHero; oldId: string; mode: Mode | null; busy: boolean; onMode(m: Mode): void }) {
   const source = ownedSkills(hero).find((s) => s.card.id === oldId);
-  const carry = carryable(source?.flash).length;
-  const targets = inheritTargets(hero).filter((t) => t.card.id !== oldId);
-  const reason = carry === 0 ? "這招沒有可以帶走的小變化（大變化、轉型、完整技能的調整欄不能傳承）" : targets.length === 0 ? "沒有還沒閃過的新技能可以接受傳承" : undefined;
+  const reason = inheritProblem(source?.flash);
   return (
     <Hint text={reason}>
       <button type="button" className={mode === "inherit" ? "primary" : ""} disabled={busy || reason !== undefined} data-testid="old-mode-inherit" onClick={() => onMode("inherit")}>

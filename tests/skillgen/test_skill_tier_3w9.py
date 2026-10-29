@@ -28,7 +28,8 @@ from trpg.narrative.skills import skill_card
 from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
-from trpg.skillgen.flash import FlashRequest, at_role_tier, make_offer
+from trpg.skillgen.flash_derive import at_role_tier
+from trpg.skillgen.flash_offer import FlashRequest, make_offer
 from trpg.skillgen.flash_state import acquire
 from trpg.skillgen.skill_tier import character_tier, retier, retier_report
 from trpg.skillgen.usage import SkillUsage

@@ -32,15 +32,7 @@ __all__ = [
 
 SKILL_KINDS = frozenset({"active", "passive", "reaction", "stance", "modifier"})
 """白板技能的 ``kind``：姿態佔主動欄、修正型被動佔被動欄（3W-3 同）。"""
-SELF_MOVES = frozenset({"teleport", "swap", "leap"})
-"""自身位移或互換（6.34.9 的「位移類」，不含推拉別人）。"""
-DISPLACE = frozenset({"teleport", "swap", "leap", "push", "pull"})
-"""位移類核心效果；可以帶一個小補強。"""
-
-_MIN_RATIO = Fraction(7, 10)
-_MAX_RATIO = Fraction(1)
-_SIMPLE_SHAPES = frozenset({"self", "single", "ground_tile", "cross", "square3"})
-"""白板允許的形狀：自身、單體、單格、十字與 3×3（小範圍）。"""
+_PERMILLE = 1000
 _SUMMON = "summon"
 _PAIR = 2
 
@@ -79,7 +71,7 @@ def whiteboard_problems(
     dual = library.budget.min_character_tier.dual_scaling  # 最低角色階級表（3W-9，驗證器同源）
     if skill.secondary_scaling_attr is not None and skill.tier < dual:
         problems.append(f"雙屬性縮放白板要 {dual} 階起，收到 {skill.tier} 階")
-    if skill.shape.type not in _SIMPLE_SHAPES:
+    if skill.shape.type not in rules.simple_shapes:
         problems.append(f"白板的形狀必須簡單（單體或小範圍），收到 {skill.shape.type}")
     if skill.kind == "active":
         problems += _cost_problems(skill, rules)
@@ -88,8 +80,11 @@ def whiteboard_problems(
     except BudgetError as exc:
         problems.append(f"預算算不出來：{exc}")
     else:
-        if not _MIN_RATIO <= ratio <= _MAX_RATIO:
-            problems.append(f"預算比例必須在 70%～100%，收到 {float(ratio) * 100:.0f}%")
+        low, high = library.budget.min_ratio_permille, library.budget.max_ratio_permille
+        if not Fraction(low, _PERMILLE) <= ratio <= Fraction(high, _PERMILLE):
+            problems.append(
+                f"預算比例必須在 {low // 10}%～{high // 10}%，收到 {float(ratio) * 100:.0f}%"
+            )
     return problems
 
 
@@ -103,7 +98,8 @@ def _rider_ok(types: list[str], keywords: tuple[str, ...], rules: WhiteboardRule
     或 3W-2b 的小護盾：潮濕被動「被攻擊後得小護盾並在腳下造水」）。"""
     if len(types) != _PAIR:
         return False
-    if types[0] in DISPLACE and types[1] not in DISPLACE:
+    displace = rules.displace_effects
+    if types[0] in displace and types[1] not in displace:
         return True
     maker = bool(set(keywords) & set(rules.exception_keywords))
     return maker and types[0] in ("damage", "shield") and types[1] != types[0]
@@ -136,9 +132,6 @@ def _structure_problems(
     return problems
 
 
-_TERRAIN = frozenset({"raise_terrain", "lower_terrain"})
-
-
 def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
     problems: list[str] = []
     cost = skill.cost
@@ -148,9 +141,10 @@ def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
     if first == _SUMMON:  # 召喚物的點數固定，AP 1、冷卻較長才落在預算內
         expected_ap, max_cooldown = rules.summon_ap_cost, rules.summon_cooldown_max
     elif (
-        first in SELF_MOVES
+        first in rules.self_move_effects
         or (skill.shape.type == "self" and first == "apply_status")
-        or (first in _TERRAIN and skill.shape.type == "ground_tile")  # 1 階的單格隆地（3W-9）
+        # 1 階的單格隆地（3W-9）
+        or (first in rules.terrain_effects and skill.shape.type == "ground_tile")
     ):
         expected_ap = rules.self_ap_cost
     if skill.ap_cost != expected_ap:

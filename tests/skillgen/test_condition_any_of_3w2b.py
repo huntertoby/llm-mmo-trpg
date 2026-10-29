@@ -29,7 +29,7 @@ from trpg.engine.state import StatusInstance
 from trpg.shared.rng import Rng
 from trpg.shared.types import Team
 from trpg.skillgen.budget import _condition_multiplier, skill_budget
-from trpg.skillgen.flash import apply_variation, at_tier
+from trpg.skillgen.flash_derive import apply_variation, at_tier
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.whiteboard import compose_whiteboard

@@ -5139,6 +5139,10 @@
           "insight_per_win": {
             "type": "integer",
             "title": "Insight Per Win"
+          },
+          "max_carry": {
+            "type": "integer",
+            "title": "Max Carry"
           }
         },
         "additionalProperties": false,
@@ -5151,7 +5155,8 @@
           "allow_focus",
           "max_flashes",
           "major_flash",
-          "insight_per_win"
+          "insight_per_win",
+          "max_carry"
         ],
         "title": "FlashRulesOut",
         "description": "閃現的規則（Phase 3W-5，``content/flash_templates.yaml``）：前端不寫死數值。"
@@ -9584,6 +9589,26 @@
         "title": "ReactionRuleView",
         "description": "單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。"
       },
+      "ReflashSlotOut": {
+        "properties": {
+          "slot": {
+            "type": "integer",
+            "title": "Slot"
+          },
+          "transform_hint": {
+            "type": "boolean",
+            "title": "Transform Hint",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot"
+        ],
+        "title": "ReflashSlotOut",
+        "description": "可以重閃的一欄（3W-R2：前端不自己推規則）。"
+      },
       "Reload": {
         "properties": {
           "unit_id": {
@@ -10660,6 +10685,38 @@
           "reflash_transform_hint": {
             "type": "boolean",
             "title": "Reflash Transform Hint",
+            "default": false
+          },
+          "reflash_slots": {
+            "items": {
+              "$ref": "#/components/schemas/ReflashSlotOut"
+            },
+            "type": "array",
+            "title": "Reflash Slots",
+            "default": []
+          },
+          "carryable": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Carryable",
+            "default": []
+          },
+          "inherit_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inherit Problem Zh"
+          },
+          "inherit_target": {
+            "type": "boolean",
+            "title": "Inherit Target",
             "default": false
           }
         },

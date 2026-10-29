@@ -1,7 +1,8 @@
 """白板技能的閃現（靈光一閃）設定與模板（``content/flash_templates.yaml``；Phase 3W-1，
 ``docs/design/06-技能.md`` 6.34；玩法決定 #69、#70）。
 
-這份資料只描述「規則數值」與「有哪些變化模板」；怎麼套用（純函式）在 :mod:`trpg.skillgen.flash`，
+這份資料只描述「規則數值」與「有哪些變化模板」；怎麼套用（純函式）在
+:mod:`trpg.skillgen.flash_derive`，
 閃現狀態（每招次數、變化歷程、先上場用過）在 :mod:`trpg.skillgen.flash_state`。
 
 - ``rules``：次數上限、第幾次是大變化、每次的預算上限加成（‰）、完整技能、靈感點。
@@ -9,7 +10,8 @@
   重閃同價。
 - ``categories``：變化的類別（範圍、連段、元素與關鍵字、費用、延長與收割、輔助、觸發；大變化的
   加深、橋接），各自限定可用的技能種類。
-- ``minor``：小變化模板（第 1、2、4、5 次）；``op`` 的實作在 :data:`trpg.skillgen.flash.FLASH_OPS`
+- ``minor``：小變化模板（第 1、2、4、5 次）；``op`` 的實作在
+  :data:`trpg.skillgen.flash_ops.FLASH_OPS`
   （3W-1 只實作 ``area``、``range``，其餘由 3W-2 補上）。
 - ``major``：大變化（第 3 次）沿用 ``skill_evolution.yaml`` 的進化模板（以 ID 引用）。
 - ``transforms``：主動 → 被動／反應的轉型模板（3W-3 實作；有合法轉型時一定是選項之一，#70）。
@@ -174,7 +176,7 @@ class FlashCategory(ContentModel):
     """可以出這類變化的技能種類。"""
     support_only: bool = False
     """只給輔助技（治療、護盾、增益，沒有傷害；
-    見 :func:`trpg.skillgen.flash.is_support_skill`）。"""
+    見 :func:`trpg.skillgen.flash_category.is_support_skill`）。"""
 
 
 class FlashTemplate(ContentModel):
@@ -183,7 +185,7 @@ class FlashTemplate(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     category: str = Field(pattern=ID_PATTERN)
     op: str = Field(pattern=ID_PATTERN)
-    """改法；實作登錄在 :data:`trpg.skillgen.flash.FLASH_OPS`（沒有實作的模板不會出現）。"""
+    """改法；實作登錄在 :data:`trpg.skillgen.flash_ops.FLASH_OPS`（沒有實作的模板不會出現）。"""
     kinds: tuple[FlashKind, ...] | None = None
     """限定的技能種類；省略時沿用類別的 ``kinds``。"""
     prefix_zh: str = Field(min_length=1)
@@ -305,6 +307,16 @@ class ExtraMajorTemplate(ContentModel):
     """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
 
 
+class SupportSkillRule(ContentModel):
+    """「輔助技」的判定（「輔助」類 ``support_only`` 用；3W-R2 從程式移到資料）：沒有
+    ``harm_effects``，而且有 ``help_effects``，或有作用於友方（``affects: allies``）的
+    ``ally_effects``。見 :func:`trpg.skillgen.flash_category.is_support_skill`。"""
+
+    harm_effects: tuple[str, ...] = ("damage", "delayed_damage")
+    help_effects: tuple[str, ...] = ("heal", "shield")
+    ally_effects: tuple[str, ...] = ("heal", "shield", "apply_status", "cleanse", "grant_ap")
+
+
 class FlashTable(ContentModel):
     """``content/flash_templates.yaml``。"""
 
@@ -315,6 +327,8 @@ class FlashTable(ContentModel):
     major: tuple[MajorFlashTemplate, ...] = ()
     extra_major: tuple[ExtraMajorTemplate, ...] = ()
     transforms: tuple[TransformTemplate, ...] = ()
+    support: SupportSkillRule = SupportSkillRule()
+    """輔助技的判定（``support_only`` 類別用）。"""
     stance_ladders: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """元素姿態的階梯（3W-2b）：元素 ID（``physical`` 也有）→ 由弱到強的姿態狀態 ID。轉型優先
     轉成同元素的姿態；姿態的「費用」「修正」類小變化在同一階梯上換級（維持費 ±1 搭配效果升降）。"""

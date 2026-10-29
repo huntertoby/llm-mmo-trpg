@@ -2,7 +2,7 @@
 
 來源（LLM 提議或重播）先提議一批變化，``make_offer`` 把其中合格的選項放前面，
 不夠的數量用資料順序的選項補滿；不指定類別時至少涵蓋 ``min_categories`` 類（做得到時）：提議全擠在
-同一類時，從後面換成補位選項裡別的類別。純函式，不依賴 :mod:`trpg.skillgen.flash`。
+同一類時，從後面換成補位選項裡別的類別。純函式，不依賴 :mod:`trpg.skillgen.flash_offer`。
 """
 
 from __future__ import annotations

@@ -227,6 +227,11 @@ whiteboard:
   reaction_mana: {min: 0, max: 2}
   reaction_cooldown: {min: 1, max: 2}
   max_attempts: 60
+  # 3W-R2：白板的形狀與原語分類（原本寫在 skillgen/whiteboard_check.py）
+  simple_shapes: [self, single, ground_tile, cross, square3]   # 白板允許的形狀：自身、單體、單格、十字、3×3
+  self_move_effects: [teleport, swap, leap]                  # 自身位移或互換（主動白板用 self_ap_cost）
+  displace_effects: [teleport, swap, leap, push, pull]       # 位移類核心效果：可以帶一個小補強
+  terrain_effects: [raise_terrain, lower_terrain]            # 升降地形（單格的升降地形白板用 self_ap_cost）
   active:
     - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
     - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 烈焰爆, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
