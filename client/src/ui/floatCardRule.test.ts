@@ -151,4 +151,25 @@ describe("浮動卡規則（6.5.1）", () => {
   it("styles/*.css 沒有已移除的死碼（.modal-backdrop、.fallback-list）", () => {
     expect(styles).not.toMatch(/\.modal-backdrop|\.fallback-list/);
   });
+
+  it("每個 <FloatCard> 要嘛帶 .skill-card（SkillCardView）、要嘛用有底色的變體（part-tip-box／float-panel）", () => {
+    // 3U-1：種族卡的浮動卡內容不是技能卡，整張透明，說明文字疊在畫面文字上
+    const bad: string[] = [];
+    for (const [path, text] of files) {
+      if (SHARED.has(path)) continue;
+      for (const m of text.matchAll(/<FloatCard\b([^>]*)>([\s\S]*?)<\/FloatCard>/g)) {
+        const attrs = m[1] ?? "";
+        const body = m[2] ?? "";
+        const hasBg = /\b(part-tip-box|float-panel)\b/.test(attrs);
+        if (!hasBg && !/<SkillCardView\b/.test(body)) bad.push(`${path}:${text.slice(0, m.index).split("\n").length}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it(".float-panel 的內容區有不透明底色與邊框", () => {
+    const m = styles.match(/\.float-card\.float-panel\s*>\s*\.float-card-body\s*\{([^{}]*)\}/);
+    expect(m?.[1]).toMatch(/background:\s*#[0-9a-f]{6}/i);
+    expect(m?.[1]).toMatch(/border:/);
+  });
 });

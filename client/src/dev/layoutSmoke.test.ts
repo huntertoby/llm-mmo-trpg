@@ -19,6 +19,8 @@ const good = (): LayoutSnapshot => ({
   tileCard: { float: bx(643, 344, 900, 480), bar: bx(643, 450, 900, 480), barAlpha: 0.96 },
   moreMenu: { open: true, tooltips: 0, hintBefore: 1 },
   hintWrappers: 0,
+  floatCards: [{ name: "float-card.skill-card-float「刺擊」", alpha: 1 }],
+  textIssues: [],
 });
 
 const failedIds = (s: LayoutSnapshot): string[] => evaluate(s).filter((r) => !r.pass).map((r) => r.id);
@@ -59,6 +61,12 @@ describe("排版煙霧檢查 evaluate", () => {
     // 滑過時說明卡根本沒出現：這項檢查沒有意義，不算通過
     expect(failedIds({ ...good(), moreMenu: { open: true, tooltips: 0, hintBefore: 0 } })).toEqual(["more-menu"]);
     expect(failedIds({ ...good(), hintWrappers: 40 })).toEqual(["no-hint-wrapper"]);
+  });
+
+  it("浮動卡沒有底色、文字溢出或重疊 → FAIL（3U-1）", () => {
+    const clear = { ...good(), floatCards: [{ name: "float-card.race-pick-card「人類」", alpha: 0 }] };
+    expect(failedIds(clear)).toEqual(["float-card-bg"]);
+    expect(failedIds({ ...good(), textIssues: ["溢出 span.run-alloc-name「敏捷 ★建議」"] })).toEqual(["no-text-clash"]);
   });
 
   it("窄螢幕不顯示拖曳線：沒有才 PASS，出現反而 FAIL", () => {

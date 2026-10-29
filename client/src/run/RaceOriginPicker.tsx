@@ -37,7 +37,7 @@ function PickCard({
         {children}
       </button>
       {f.open && (
-        <FloatCard float={f} className="skill-card-float race-pick-card">
+        <FloatCard float={f} className="skill-card-float float-panel race-pick-card">
           <div className="section-title">{heading}</div>
           {lines.map((line) => (
             <div key={line} className="small">

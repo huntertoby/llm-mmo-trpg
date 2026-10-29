@@ -142,7 +142,7 @@ function RaceSlot({
         </span>
       </button>
       {f.open && (
-        <FloatCard float={f} className="skill-card-float race-card">
+        <FloatCard float={f} className="skill-card-float float-panel race-card">
           <div className="section-title">
             {race.name_zh}・{race.skill_name_zh}
           </div>
