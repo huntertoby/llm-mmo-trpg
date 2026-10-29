@@ -59,6 +59,18 @@ export class ArtTextures {
     return tex;
   }
 
+  /** 查快取 → 沒有就用 `make` 畫一張離屏 canvas 轉成貼圖（Phase 3T-4：人物、召喚物、形態、光環共用同一段）；畫不出來（沒有 DOM）回傳 `null`。 */
+  canvas(key: string, make: () => HTMLCanvasElement | null): Texture | null {
+    this.used.add(key);
+    const hit = this.cache.get(key);
+    if (hit !== undefined) return hit;
+    const canvas = make();
+    if (canvas === null) return null;
+    const tex = Texture.from(canvas);
+    this.cache.set(key, tex);
+    return tex;
+  }
+
   tile(spec: TileArtSpec): Texture | null {
     return this.get(`t|${tileArtKey(spec)}`, (ctx) => drawTile(ctx, spec));
   }
@@ -79,55 +91,23 @@ export class ArtTextures {
 
   /** 紙娃娃小人貼圖（鍵 ＝ 裝備組合＋朝向＋姿勢）；沒有 DOM 時回傳 `null`。 */
   figure(spec: DollSpec, facing: Facing, downed: boolean): Texture | null {
-    const key = `f|${dollKey(spec, facing, downed)}`;
-    this.used.add(key);
-    const hit = this.cache.get(key);
-    if (hit !== undefined) return hit;
-    const canvas = renderFigureCanvas(spec, facing, downed, FIGURE_RESOLUTION);
-    if (canvas === null) return null;
-    const tex = Texture.from(canvas);
-    this.cache.set(key, tex);
-    return tex;
+    return this.canvas(`f|${dollKey(spec, facing, downed)}`, () => renderFigureCanvas(spec, facing, downed, FIGURE_RESOLUTION));
   }
 
   /** 召喚物貼圖（Phase 3-33h1；鍵 ＝ 外觀＋朝向，殘影另加召喚者外觀）；人形傳入 `humanoid` 紙娃娃規格。 */
   summon(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null): Texture | null {
     const owner = look.variant === "afterimage" && humanoid !== null ? dollKey(humanoid, facing, false) : "";
-    const key = `s|${summonKey(look, facing, owner)}`;
-    this.used.add(key);
-    const hit = this.cache.get(key);
-    if (hit !== undefined) return hit;
-    const canvas = renderSummonCanvas(look, facing, humanoid, FIGURE_RESOLUTION);
-    if (canvas === null) return null;
-    const tex = Texture.from(canvas);
-    this.cache.set(key, tex);
-    return tex;
+    return this.canvas(`s|${summonKey(look, facing, owner)}`, () => renderSummonCanvas(look, facing, humanoid, FIGURE_RESOLUTION));
   }
 
   /** 形態貼圖（Phase 3J-5；鍵 ＝ 畫法＋主色＋元素＋朝向＋姿勢）；不認得的畫法或沒有 DOM 時回傳 `null`。 */
   form(id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean): Texture | null {
-    const key = `g|${formKey(id, hero, element, facing, downed)}`;
-    this.used.add(key);
-    const hit = this.cache.get(key);
-    if (hit !== undefined) return hit;
-    const canvas = renderFormCanvas(id, hero, element, facing, downed, FIGURE_RESOLUTION, DOLL_SCALE);
-    if (canvas === null) return null;
-    const tex = Texture.from(canvas);
-    this.cache.set(key, tex);
-    return tex;
+    return this.canvas(`g|${formKey(id, hero, element, facing, downed)}`, () => renderFormCanvas(id, hero, element, facing, downed, FIGURE_RESOLUTION, DOLL_SCALE));
   }
 
   /** 腳下的形態光環貼圖（鍵 ＝ 顏色＋半徑）。 */
   formAura(color: string, rx: number): Texture | null {
-    const key = `a|${color}|${rx.toFixed(2)}`;
-    this.used.add(key);
-    const hit = this.cache.get(key);
-    if (hit !== undefined) return hit;
-    const canvas = renderAuraCanvas(color, rx, FIGURE_RESOLUTION);
-    if (canvas === null) return null;
-    const tex = Texture.from(canvas);
-    this.cache.set(key, tex);
-    return tex;
+    return this.canvas(`a|${color}|${rx.toFixed(2)}`, () => renderAuraCanvas(color, rx, FIGURE_RESOLUTION));
   }
 
   destroy(): void {

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { OriginOption, RaceOption, StartOptions } from "../api/types";
 import { FloatCard, useFloatCard } from "../ui/useFloatCard";
-import { originCardLines, raceCardLines, raceSummary, type RaceOriginChoice } from "./raceOrigin";
+import { originCardLines, raceStartCardLines, raceSummary, type RaceOriginChoice } from "./raceOrigin";
 
 interface Props {
   options: StartOptions | null;
@@ -52,7 +52,7 @@ function PickCard({
 
 function RaceCard({ race, selected, disabled, onPick }: { race: RaceOption; selected: boolean; disabled: boolean; onPick(): void }) {
   return (
-    <PickCard selected={selected} disabled={disabled} onPick={onPick} testId={`race-${race.id}`} heading={race.name_zh} lines={raceCardLines(race)}>
+    <PickCard selected={selected} disabled={disabled} onPick={onPick} testId={`race-${race.id}`} heading={race.name_zh} lines={raceStartCardLines(race)}>
       <b>{race.name_zh}</b>
       <span className="small race-pick-sub">{raceSummary(race)}</span>
     </PickCard>
@@ -94,7 +94,7 @@ export function RaceOriginPicker({ options, choice, onChoice, disabled = false }
           <span className="muted">請選一個種族與一個出身。</span>
         ) : (
           <>
-            {raceCardLines(chosen).map((line) => (
+            {raceStartCardLines(chosen).map((line) => (
               <div key={line}>{line}</div>
             ))}
             {chosenOrigin !== undefined && (

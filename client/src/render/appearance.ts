@@ -221,8 +221,9 @@ export function resolveDoll(input: DollInput): DollSpec {
   const infused = input.attackElement;
   if (infused != null && infused !== "physical") {
     // 臨時附魔（3I-6）：外觀顯示目前生效的元素色；成對武器的第二把一起換
+    const pairedOff = gear.main_hand !== undefined && gear.off_hand?.kind === gear.main_hand.kind; // 副手和主手同種武器（不依賴 weaponId 查得到外觀）
     if (gear.main_hand !== undefined) gear.main_hand = { ...gear.main_hand, element: infused };
-    if (pairedKind !== null && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
+    if (pairedOff && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
   }
   const look = input.summon || app.look.skull === true ? app.look : { ...app.look, ...raceLookToLook(input.raceLook) };
   return { look, gear, ...(rarity !== undefined ? { rarity } : {}) };

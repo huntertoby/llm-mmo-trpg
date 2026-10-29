@@ -3,7 +3,7 @@
 // 灰掉原因、滑過看卡片、選取提示照舊；卡片用共用的浮動卡規則（`useFloatCard`，Phase 3-30）：貼齊按鈕上方，滑過約 150ms 顯示，
 // 離開有 250ms 寬限可滑進卡片，點卡片釘住，Esc／點外面關閉。
 import type { RaceView, SkillCard } from "../api/types";
-import { passiveLine, raceCardLines, raceUsesText } from "../battle/race";
+import { passiveLine, raceBattleCardLines, raceUsesText } from "../battle/race";
 import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
 import { gearSkillBadge } from "../battle/gearSkills";
@@ -147,7 +147,7 @@ function RaceSlot({
             {race.name_zh}・{race.skill_name_zh}
           </div>
           {reason !== undefined && <div className="skill-card-reason">現在不能用：{reason}</div>}
-          {raceCardLines(race).map((line) => (
+          {raceBattleCardLines(race).map((line) => (
             <div key={line} className="small">
               {line}
             </div>
