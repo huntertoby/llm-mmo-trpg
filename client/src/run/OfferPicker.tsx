@@ -2,6 +2,7 @@
 // 偏離路線那張有明顯標籤；可跳過；欄位滿時選要換掉的技能。
 import { useMemo } from "react";
 import type { RunHero, RunOffer } from "../api/types";
+import { Hint } from "../ui/Hint";
 import { SkillCardView } from "../ui/SkillCardView";
 import {
   displayOrder,
@@ -12,6 +13,7 @@ import {
   SLOT_LABELS,
   slotOf,
 } from "./flow";
+import { isLlmTag, LLM_SOURCE_HINT, LLM_SOURCE_LABEL } from "./llmFlow";
 import { offerTagHint, offerTagText } from "./startFlow";
 
 interface Props {
@@ -64,6 +66,13 @@ export function OfferPicker({
                   <b>{offerTagText(tag)}</b>
                   <span className="small">　{offerTagHint(tag)}</span>
                 </div>
+              )}
+              {isLlmTag(tag) && (
+                <Hint text={LLM_SOURCE_HINT}>
+                  <div className="offer-llm-tag" data-testid="offer-llm" tabIndex={0}>
+                    <b>{LLM_SOURCE_LABEL}</b>
+                  </div>
+                </Hint>
               )}
               {off && (
                 <div className="off-route-tag">

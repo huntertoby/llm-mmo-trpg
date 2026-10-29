@@ -1558,6 +1558,11 @@ export interface components {
             test_equipment?: {
                 [key: string]: string;
             };
+            /**
+             * Llm
+             * @default false
+             */
+            llm: boolean;
         };
         /** DamageOut */
         DamageOut: {
@@ -3069,6 +3074,32 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /**
+         * LlmStatsOut
+         * @description 一輪的 LLM 生成統計（Phase 4-L6b；與 ``trpg run`` 摘要同源）。
+         */
+        LlmStatsOut: {
+            /** Total */
+            total: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Failed */
+            failed: number;
+            /** Fallback Permille */
+            fallback_permille: number;
+            /** Attempts */
+            attempts: number;
+            /** Alert Permille */
+            alert_permille: number;
+            /** Alert */
+            alert: boolean;
+            /** Named */
+            named: number;
+            /** Name Generated */
+            name_generated: number;
+            /** Name Fallback */
+            name_fallback: number;
+        };
         /** LoadRunRequest */
         LoadRunRequest: {
             /** Run Id */
@@ -3862,6 +3893,14 @@ export interface components {
              * @default
              */
             resource_rule_zh: string;
+            /**
+             * Llm
+             * @default false
+             */
+            llm: boolean;
+            /** Llm Notice */
+            llm_notice?: string | null;
+            llm_stats?: components["schemas"]["LlmStatsOut"] | null;
         };
         /**
          * RunRules

@@ -16,6 +16,7 @@ from trpg.api.run_schemas import (
     GearOfferOut,
     HeroGearSlotOut,
     HeroOut,
+    LlmStatsOut,
     NodeOut,
     OfferOut,
     OfferTagOut,
@@ -349,7 +350,30 @@ def allocation_preview(
     return AllocationPreviewOut(hp=new[0], mana=new[1], stamina=new[2], summary_zh="、".join(parts))
 
 
-def run_response(session: RunSession) -> RunResponse:
+def llm_stats(run: RunState, alert_permille: int) -> LlmStatsOut | None:
+    """LLM 統計（與 ``trpg.cli.run_llm.llm_lines`` 同算法）；沒開 LLM 且沒有題目為 ``None``。"""
+    total = len(run.llm_log)
+    if not run.llm and total == 0:
+        return None
+    failed = run.llm_fallbacks
+    permille = failed * 1000 // total if total else 0
+    named = [r for r in run.llm_log if r.name_source is not None]
+    generated = sum(1 for r in named if r.name_source == "llm")
+    return LlmStatsOut(
+        total=total,
+        succeeded=total - failed,
+        failed=failed,
+        fallback_permille=permille,
+        attempts=sum(r.attempts for r in run.llm_log),
+        alert_permille=alert_permille,
+        alert=permille > alert_permille,
+        named=len(named),
+        name_generated=generated,
+        name_fallback=len(named) - generated,
+    )
+
+
+def run_response(session: RunSession, *, with_notice: bool = False) -> RunResponse:
     library, run = session.library, session.run
     plan = tuple(
         BattlePlanOut(
@@ -375,6 +399,9 @@ def run_response(session: RunSession) -> RunResponse:
         test_mode=run.test_mode,
         test_equipment=dict(run.test_equipment),
         resource_rule_zh=resource_rule_text(library, test_mode=run.test_mode),
+        llm=run.llm,
+        llm_notice=session.llm_notice if with_notice else None,
+        llm_stats=llm_stats(run, session.alert_permille),
     )
 
 

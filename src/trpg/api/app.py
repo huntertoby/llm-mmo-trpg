@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
 from trpg.api.gear import GearRequestError
+from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.routes import battles, content, gear, runs, workshop
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
@@ -73,12 +74,15 @@ def create_app(
     max_auto_steps: int = DEFAULT_MAX_ACTIONS,
     static_dir: Path | None = None,
     save_dir: Path | None = None,
+    llm: LlmProvider | None = None,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
     （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
     ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）。
+    ``llm`` 是網頁版 LLM 開關的模型來源（4-L6b；省略時讀 ``config/llm.toml`` 連本機模型，連不到就
+    把那一輪當作關閉）；測試傳 :class:`~trpg.api.llm_source.MockLlmProvider`。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
     所以 ``/api/*`` 優先）。
     """
@@ -87,7 +91,10 @@ def create_app(
     check_primitive_coverage(lib)
     app.state.store = SessionStore(lib, max_auto_steps=max_auto_steps)
     app.state.runs = RunStore(
-        lib, app.state.store, save_dir if save_dir is not None else default_save_dir()
+        lib,
+        app.state.store,
+        save_dir if save_dir is not None else default_save_dir(),
+        llm=llm if llm is not None else LocalLlmProvider(),
     )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))

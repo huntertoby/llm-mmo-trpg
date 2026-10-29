@@ -17,6 +17,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from trpg.api.llm_source import DEFAULT_ALERT_PERMILLE, LLM_OFF_NOTICE, LlmProvider
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
@@ -37,6 +38,7 @@ from trpg.roguelite import (
     write_save,
 )
 from trpg.roguelite.errors import NodeConflictError
+from trpg.roguelite.llm_hook import use_proposer
 from trpg.roguelite.start import with_origin, with_race
 from trpg.roguelite.state import (
     AllocateChoice,
@@ -51,6 +53,7 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Attribute
+from trpg.skillgen.proposal_topic import LlmProposer
 
 __all__ = ["RunNotFoundError", "RunSession", "RunStore"]
 
@@ -68,6 +71,11 @@ class RunSession:
         self.run = run
         self.battle: BattleSession | None = None
         self.lock = threading.Lock()
+        self.proposer: LlmProposer | None = None
+        """這一輪的 LLM 提議器（4-L6b；``run.llm`` 為真且有模型來源時才有）。"""
+        self.llm_notice: str | None = None
+        """開局時要提示一次的訊息（例如本機模型未啟動）；只在建立的回應帶出。"""
+        self.alert_permille = DEFAULT_ALERT_PERMILLE
 
     def sync(self) -> bool:
         """目前的戰鬥結束了就結算（寫回主角、前進到下一個節點）；有結算時回傳 ``True``。"""
@@ -77,9 +85,10 @@ class RunSession:
         with battle.lock:
             if not battle.state.ended:
                 return False
-            self.run = finish_battle(
-                self.library, self.run, battle.state, len(battle.steps), battle.steps
-            )
+            with use_proposer(self.proposer):
+                self.run = finish_battle(
+                    self.library, self.run, battle.state, len(battle.steps), battle.steps
+                )
         self.battle = None
         return True
 
@@ -124,11 +133,13 @@ class RunStore:
         save_dir: Path,
         *,
         new_id: Callable[[], str] = _new_run_id,
+        llm: LlmProvider | None = None,
     ) -> None:
         self.library = library
         self.battles = battles
         self.save_dir = save_dir
         self._new_id = new_id
+        self.llm = llm
         self._runs: dict[str, RunSession] = {}
         self._ruleset_hash: str | None = None
         self._lock = threading.Lock()
@@ -151,6 +162,7 @@ class RunStore:
         test_equipment: dict[str, str] | None = None,
         race: str | None = None,
         origin: str | None = None,
+        llm: bool = False,
     ) -> RunSession:
         """開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``、``dev_pack`` 或 ``build`` 擇一。"""
         if build is not None:
@@ -170,13 +182,29 @@ class RunStore:
             )
         run = with_race(self.library, run, race)  # 種族（Phase 3R-2）
         run = with_origin(self.library, run, origin)  # 出身（Phase 3R-3a）
+        notice = None
+        if llm:  # LLM 生成開關（Phase 4-L6b）：連不到本機模型時這一輪當作關閉並提示一次
+            notice = self.llm.probe() if self.llm is not None else LLM_OFF_NOTICE
+            if notice is None:
+                run = run.model_copy(update={"llm": True})
         with self._lock:
             run_id = self._new_id()
             while run_id in self._runs:  # pragma: no cover - 機率極低
                 run_id = self._new_id()
-        session = self._register(RunSession(run_id, self.library, run))
+        session = RunSession(run_id, self.library, run)
+        session.llm_notice = notice
+        self._attach_llm(session)
+        self._register(session)
         self.autosave(session)
         return session
+
+    def _attach_llm(self, session: RunSession) -> None:
+        """``run.llm`` 的一輪裝上提議器（開局與讀檔共用；讀檔不探測連線，失敗走原本的退回）。"""
+        if self.llm is None:
+            return
+        session.alert_permille = self.llm.alert_permille()
+        if session.run.llm:
+            session.proposer = self.llm.proposer(self.library)
 
     def get(self, run_id: str) -> RunSession:
         with self._lock:
@@ -207,7 +235,8 @@ class RunStore:
         ):
             # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能花點數
             raise NodeConflictError("戰鬥進行中不能分配技能點、屬性點或換裝")
-        session.run = apply_choice(self.library, session.run, choice)
+        with use_proposer(session.proposer):
+            session.run = apply_choice(self.library, session.run, choice)
         self.autosave(session)
 
     def sync(self, session: RunSession) -> None:
@@ -267,6 +296,7 @@ class RunStore:
                 )
             except TrpgError as exc:
                 raise SaveFormatError(f"存檔的戰鬥無法重播：{exc}") from exc
+        self._attach_llm(session)
         return self._register(session)
 
     def saves(self) -> list[RunSave]:

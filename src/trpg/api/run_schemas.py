@@ -75,6 +75,9 @@ class CreateRunRequest(_ApiModel):
     """出身（Phase 3R-3a，``origins.yaml`` 的 ID，不影響戰鬥）；省略＝無出身；未知的出身回 422。"""
     test_equipment: dict[str, str] = Field(default_factory=dict)
     """測試模式挑的裝備（欄位 → 物品 ID，Phase 3-39）；只有 ``test_mode`` 時可非空。"""
+    llm: bool = False
+    """LLM 生成開關（Phase 4-L6b）：升級技能候選請本機模型提議。連不到模型時不報錯，這一輪自動當作
+    關閉，回應的 ``llm_notice`` 帶提示。預設關。"""
 
     @model_validator(mode="after")
     def _one_start(self) -> CreateRunRequest:
@@ -446,6 +449,25 @@ class NodeOut(_ApiModel):
     """戰後裝備三選一（``gear_offer``；Phase 3K-2）。"""
 
 
+class LlmStatsOut(_ApiModel):
+    """一輪的 LLM 生成統計（Phase 4-L6b；與 ``trpg run`` 摘要同源）。"""
+
+    total: int
+    """請 LLM 提議的題數。"""
+    succeeded: int
+    failed: int
+    """退回（提議器 3 次重試後仍失敗，改用一般生成）的題數。"""
+    fallback_permille: int
+    attempts: int
+    """呼叫模型的總次數（提議）。"""
+    alert_permille: int
+    alert: bool
+    """退回率超過提醒線。"""
+    named: int
+    name_generated: int
+    name_fallback: int
+
+
 class RunResponse(_ApiModel):
     run_id: str
     seed: int
@@ -462,6 +484,12 @@ class RunResponse(_ApiModel):
     """測試模式挑的裝備（欄位 → 物品 ID）。"""
     resource_rule_zh: str = ""
     """戰鬥之間 HP、法力怎麼回復的說明（Phase 3-41b，由 ``roguelite.yaml`` 的營火設定產生）。"""
+    llm: bool = False
+    """這一輪有開 LLM 生成（Phase 4-L6b）。"""
+    llm_notice: str | None = None
+    """只在開新一輪的回應帶出一次（例如「本機模型未啟動，這一輪使用一般技能生成」）。"""
+    llm_stats: LlmStatsOut | None = None
+    """LLM 統計；這一輪沒開 LLM 且沒有任何題目時為 ``None``。"""
 
 
 class RunBattleResponse(_ApiModel):

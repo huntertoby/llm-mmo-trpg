@@ -13,7 +13,9 @@ import { isDevMode } from "../run/startFlow";
 import { TestModePanel } from "../run/TestModePanel";
 import { withTestMode } from "../run/testMode";
 import type { Selection } from "../gear/gearDraft";
+import { LLM_TOGGLE_HINT, LLM_TOGGLE_LABEL, withLlm } from "../run/llmFlow";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { Hint } from "../ui/Hint";
 import { parseSeed, randomSeed } from "./StartScreen";
 
 interface Props {
@@ -31,6 +33,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const [testMode, setTestMode] = useState(false);
   const [gear, setGear] = useState<Selection>({});
   const [gearLegal, setGearLegal] = useState(true);
+  const [llm, setLlm] = useState(false);
   const dev = isDevMode(window.location.search);
   const seed = parseSeed(seedText);
   const picker = useStartPicker(seed, dev);
@@ -59,7 +62,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
     setError(null);
     try {
       const base = { weapon, keywords: selected, seed, ...raceOriginBody(raceOrigin), ...(auto ? {} : { attributes: cleanAllocation(alloc) }) };
-      const body = withTestMode(base, testMode, gear);
+      const body = withLlm(withTestMode(base, testMode, gear), llm);
       onCreated(await api.createRun(body));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -72,7 +75,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
     setBusy(true);
     setError(null);
     try {
-      onCreated(await api.createRun({ dev_pack: picker.packId, seed, ...raceOriginBody(raceOrigin) }));
+      onCreated(await api.createRun(withLlm({ dev_pack: picker.packId, seed, ...raceOriginBody(raceOrigin) }, llm)));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setBusy(false);
@@ -114,6 +117,11 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           onLegal={setGearLegal}
           disabled={busy}
         />
+        <Hint text={LLM_TOGGLE_HINT}>
+          <label className="run-llm-toggle" data-testid="llm-toggle">
+            <input type="checkbox" checked={llm} disabled={busy} onChange={(e) => setLlm(e.target.checked)} /> {LLM_TOGGLE_LABEL}
+          </label>
+        </Hint>
         <label>
           種子
           <span className="seed-row">

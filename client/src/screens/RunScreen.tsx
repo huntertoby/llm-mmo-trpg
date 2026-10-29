@@ -1,5 +1,5 @@
 // 一輪的主畫面：依節點（戰鬥／升級／營火／結束）顯示進度、升級、營火或結束摘要；戰鬥沿用戰鬥畫面。
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BattleResponse, RunChoice, RunResponse } from "../api/types";
 import { OBJECTIVE_ICONS, objectiveBadge } from "../battle/objective";
@@ -9,6 +9,7 @@ import { AttributeRespecSection } from "../run/AttributeRespecSection";
 import { SkillPointsSection } from "../run/SkillPointsSection";
 import { TestModeBadge } from "../ui/TestModeBadge";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { NoticeBanner } from "../ui/NoticeBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { BattleScreen } from "./BattleScreen";
 import { RunCampfire } from "./RunCampfire";
@@ -34,6 +35,9 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** 開局時的 LLM 提示（例如本機模型未啟動）；只在建立的回應帶出，顯示一次。 */
+  const [llmNotice, setLlmNotice] = useState<string | null>(initial.llm_notice ?? null);
+  const closeLlmNotice = useCallback(() => setLlmNotice(null), []);
   const resumedRef = useRef(false);
   const runId = run.run_id;
 
@@ -157,6 +161,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
         </div>
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      <NoticeBanner message={llmNotice} onClose={closeLlmNotice} autoCloseMs={12000} />
       {notice !== null && <div className="run-notice">{notice}</div>}
       {view.screen === "ended" ? (
         <RunEnded run={run} victory={view.victory} onNewRun={onNewRun} onHome={onHome} />

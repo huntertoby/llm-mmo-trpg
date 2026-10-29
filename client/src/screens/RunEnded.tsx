@@ -1,6 +1,7 @@
 // 一輪結束摘要：勝敗、每場的地圖與結果、輪數；開新一輪。
 import type { RunResponse } from "../api/types";
 import { battleName, recordText } from "../run/flow";
+import { llmSummaryLines } from "../run/llmFlow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { TestModeBadge } from "../ui/TestModeBadge";
 
@@ -13,6 +14,7 @@ interface Props {
 
 export function RunEnded({ run, victory, onNewRun, onHome }: Props) {
   const totalRounds = run.history.reduce((n, h) => n + h.rounds, 0);
+  const llmLines = llmSummaryLines(run.llm_stats);
   return (
     <div className="run-ended">
       <div className={`panel run-result ${victory ? "victory" : "defeat"}`}>
@@ -49,6 +51,16 @@ export function RunEnded({ run, victory, onNewRun, onHome }: Props) {
           </tbody>
         </table>
       </div>
+      {llmLines.length > 0 && (
+        <div className="panel" data-testid="llm-summary">
+          <div className="section-title">LLM 生成</div>
+          {llmLines.map((line) => (
+            <div key={line} className={`small${line.startsWith("提醒") ? " llm-alert" : " muted"}`}>
+              {line}
+            </div>
+          ))}
+        </div>
+      )}
       <RunHeroPanel hero={run.hero} />
       <div className="run-actions">
         <button type="button" className="primary" onClick={onNewRun}>

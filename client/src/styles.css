@@ -2796,6 +2796,35 @@ button.selected {
   border-left: 4px solid #8a8a8a;
   background: rgba(255, 255, 255, 0.05);
 }
+.offer-llm-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  border: 1px solid #b08cff;
+  color: #d3c0ff;
+  background: rgba(176, 140, 255, 0.12);
+  font-size: 12px;
+  cursor: help;
+}
+.start-form .run-llm-toggle,
+.run-llm-toggle {
+  display: flex;
+  flex-direction: row; /* 蓋過 .start-form label 的直排 */
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.run-llm-toggle input {
+  width: auto;
+  margin: 0;
+  flex: none;
+}
+.llm-alert {
+  color: #ffb04a;
+}
 .offer-kind-deepen {
   border-left-color: #d9822b;
 }
