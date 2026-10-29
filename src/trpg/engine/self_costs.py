@@ -2,6 +2,8 @@
 
 施放結算完之後，施放者自己獲得 ``cost.self_status`` 的狀態與 ``cost.overdraft`` 的透支狀態
 （不擲抵抗、不觸發控制遞減、不受 Boss 硬控轉換影響——見 ``ApplyStatusEffect.self_paid``）。
+透支的持續回合用 ``statuses.yaml`` 的 ``overdrawn.duration``（2：施放當回合結束 −1，剩下的 1
+在下一個回合開始時扣 AP、該回合結束移除）。
 """
 
 from __future__ import annotations
@@ -14,10 +16,7 @@ from trpg.engine.ids import OVERDRAWN
 from trpg.engine.state import UnitState
 from trpg.shared.types import UnitId
 
-__all__ = ["OVERDRAFT_DURATION", "pay_self_costs", "self_cost_effects"]
-
-OVERDRAFT_DURATION = 2
-"""透支狀態的持續回合：施放當回合結束 −1，剩下的 1 在下一個回合開始時扣 AP、該回合結束移除。"""
+__all__ = ["pay_self_costs", "self_cost_effects"]
 
 
 def self_cost_effects(caster_id: UnitId, skill: SkillDef) -> list[EffectBase]:
@@ -40,7 +39,6 @@ def self_cost_effects(caster_id: UnitId, skill: SkillDef) -> list[EffectBase]:
                 source_id=caster_id,
                 target_id=caster_id,
                 status_id=OVERDRAWN,
-                duration=OVERDRAFT_DURATION,
                 self_paid=True,
             )
         )

@@ -134,7 +134,7 @@ from trpg.engine.events import (
     ZoneMoved,
     ZoneTriggered,
 )
-from trpg.engine.race_skills import DECOY_TEMPLATE
+from trpg.engine.race_skills import decoy_template_ids
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
 from trpg.shared.types import Pos, Surface, rune_name
@@ -1225,7 +1225,7 @@ def _unit_escaped(e: UnitEscaped, v: _View) -> str:
 def _unit_summoned(e: UnitSummoned, v: _View) -> str:
     owner = v.name.get(e.owner_id, e.owner_id)
     summon = v.name.get(e.unit_id, e.unit_id)
-    if e.template_id == DECOY_TEMPLATE:
+    if e.template_id in decoy_template_ids(v.state.ruleset):
         return f"  {owner} 放出一團狐火誘餌"
     if e.orphan:  # 規則改變「殘影」的分身（Phase 3D-6）：召喚者已倒下
         return (

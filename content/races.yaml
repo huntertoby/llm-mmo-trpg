@@ -56,7 +56,7 @@ races:
       uses_per_battle: 1
       shape: {type: ground_tile, range: 2}
       effects:
-        - {type: decoy, range: 2}
+        - {type: decoy, range: 2, summon: summon_foxfire_decoy, lifetime: 3, ai_trigger_range: 7}
     passive:
       id: fox_keen_senses
       name_zh: 靈覺

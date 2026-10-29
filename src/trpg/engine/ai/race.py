@@ -36,7 +36,6 @@ __all__ = ["RACE_EFFECT_SCORERS", "RIDER_ONLY_EFFECTS", "race_ai_action"]
 _MIN_AP_AFTER = 2
 """用完種族技後還要能行動（一般動作 1 AP）：回合開始 AP 至少這麼多才用需要「接著行動」的種族技。"""
 _RESTORE_MIN_DEFICIT = 6
-_DECOY_RANGE = 7
 _MIN_CLUSTER = 2
 
 type _Scorer = Callable[[BattleState, UnitState, UseRaceSkill], int]
@@ -72,8 +71,11 @@ def _adapt_score(state: BattleState, unit: UnitState, _a: UseRaceSkill) -> int:
 
 
 def _decoy_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
+    skill = race_skill_of(state, unit)
+    assert skill is not None
+    decoy = next(e for e in skill.effects if e.type == "decoy")  # 第一個效果是 decoy 才會到這裡
     nearest = _nearest(state, unit)
-    if nearest is None or nearest > _DECOY_RANGE or unit.ap < _MIN_AP_AFTER:
+    if nearest is None or nearest > (decoy.ai_trigger_range or 0) or unit.ap < _MIN_AP_AFTER:
         return 0
     if any(u.owner_id == unit.id and u.has_tag(DECOY_TAG) for u in state.living_units()):
         return 0  # 已經有一個誘餌

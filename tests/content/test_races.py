@@ -347,3 +347,31 @@ def test_library_requires_origin_for_every_realm(tmp_path: Path) -> None:
     with pytest.raises(ContentError) as info:
         load_library(root)
     assert "沒有出身" in str(info.value)
+
+
+def _fox_decoy(data: dict[str, Any]) -> dict[str, Any]:
+    fox = next(r for r in data["races"] if r["id"] == "fox")
+    return fox["skill"]["effects"][0]  # type: ignore[no-any-return]
+
+
+def test_decoy_template_lifetime_and_ai_range_come_from_the_yaml() -> None:
+    effect = _fox_decoy(_raw_races())
+    assert effect["summon"] == "summon_foxfire_decoy"
+    assert effect["lifetime"] == 3 and effect["ai_trigger_range"] == 7
+
+
+@pytest.mark.parametrize("missing", ["summon", "lifetime", "ai_trigger_range"])
+def test_decoy_requires_its_parameters(tmp_path: Path, missing: str) -> None:
+    data = _raw_races()
+    del _fox_decoy(data)[missing]
+    assert f"缺少必填參數 {missing}" in _load_bad(tmp_path, data)
+
+
+def test_decoy_with_unknown_summon_template_is_rejected(tmp_path: Path) -> None:
+    root = _copy_content(tmp_path)
+    data = _raw_races()
+    _fox_decoy(data)["summon"] = "summon_nowhere"
+    (root / "races.yaml").write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    with pytest.raises(ContentError) as info:
+        load_library(root)
+    assert "未知的召喚物範本 summon_nowhere" in str(info.value)

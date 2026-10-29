@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 
+from trpg.content.library import Ruleset
 from trpg.content.races import RaceEffect, RaceSkill
 from trpg.engine.actions import Direction, UseRaceSkill
 from trpg.engine.context import Ctx
@@ -52,10 +53,10 @@ from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import ObjectId, Pos, Surface, UnitId
 
 __all__ = [
-    "DECOY_TEMPLATE",
     "RACE_EFFECT_EXECUTORS",
     "RACE_EFFECT_PROBLEMS",
     "UNCONDITIONAL_RACE_EFFECTS",
+    "decoy_template_ids",
     "do_race_skill",
     "race_skill_actions",
     "race_skill_of",
@@ -63,10 +64,6 @@ __all__ = [
     "race_uses_left",
 ]
 
-DECOY_TEMPLATE = "summon_foxfire_decoy"
-"""狐火誘餌的召喚物範本（``content/units/summons/summon_foxfire_decoy.yaml``）。"""
-DECOY_LIFETIME_ROUNDS = 3
-"""誘餌沒被打到時，到第幾輪消失（施放輪 ＋ 此值）。"""
 
 _SHAPE_FIELDS: dict[str, tuple[str, ...]] = {
     "self": (),
@@ -86,6 +83,18 @@ def race_skill_of(state: BattleState, unit: UnitState) -> RaceSkill | None:
     if unit.race is None:
         return None
     return state.ruleset.race_def(unit.race).skill
+
+
+def decoy_template_ids(rules: Ruleset) -> frozenset[str]:
+    """所有種族的誘餌召喚物範本 ID（敘事用來認出誘餌的召喚事件）。"""
+    if rules.races is None:
+        return frozenset()
+    return frozenset(
+        e.summon
+        for race in rules.races.races
+        for e in race.skill.effects
+        if e.type == "decoy" and e.summon is not None
+    )
 
 
 def race_uses_left(unit: UnitState, skill: RaceSkill) -> int:
@@ -363,10 +372,14 @@ def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:
     """在 ``xy`` 放狐火誘餌：同一個主人同時只有一個（舊的消失）；排在主人之後的先攻順序。"""
 
     state = ctx.state
+    skill = race_skill_of(state, owner)
+    assert skill is not None
+    effect = next(e for e in skill.effects if e.type == "decoy")
+    assert effect.summon is not None and effect.lifetime is not None  # 內容驗證保證
     for old in state.units_sorted():
         if old.owner_id == owner.id and old.has_tag(DECOY_TAG) and old.alive:
             dismiss_summon(ctx, old, "limit")
-    summon = state.ruleset.summon_def(DECOY_TEMPLATE)
+    summon = state.ruleset.summon_def(effect.summon)
     uid = UnitId(f"unit_{len(state.units) + 1:04d}")
     unit = make_unit(
         uid,
@@ -381,7 +394,7 @@ def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:
     unit.owner_id = owner.id
     unit.level = owner.level
     unit.summon_mode = "hold"
-    unit.summon_expires_round = state.round + DECOY_LIFETIME_ROUNDS
+    unit.summon_expires_round = state.round + effect.lifetime
     unit.initiative = owner.initiative
     state.units[uid] = unit
     index = _order_index(state, owner.id)
@@ -390,7 +403,7 @@ def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:
         UnitSummoned,
         unit_id=uid,
         owner_id=owner.id,
-        template_id=DECOY_TEMPLATE,
+        template_id=effect.summon,
         team=owner.team,
         pos=unit.pos,
         skill_id=skill_id,

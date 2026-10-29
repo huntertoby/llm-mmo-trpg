@@ -211,7 +211,7 @@ RACE_EFFECT_SPECS: dict[str, EffectSpecRule] = {
     "bonus_move": EffectSpecRule(required=("amount",)),
     "ignore_opportunity_attack": EffectSpecRule(optional=("duration",)),
     "conceal_self": EffectSpecRule(optional=("requires",)),
-    "decoy": EffectSpecRule(required=("range",)),
+    "decoy": EffectSpecRule(required=("range", "summon", "lifetime", "ai_trigger_range")),
     "push": EffectSpecRule(required=("distance",), flags=("no_collision_damage",)),
     "pull": EffectSpecRule(required=("distance",), flags=("no_collision_damage",)),
     "immovable": EffectSpecRule(required=("duration",)),
@@ -232,6 +232,9 @@ _EFFECT_PARAM_FIELDS = (
     "requires",
     "no_collision_damage",
     "no_damage",
+    "summon",
+    "lifetime",
+    "ai_trigger_range",
 )
 
 
@@ -250,6 +253,12 @@ class RaceEffect(ContentModel):
     """``conceal_self``：站在這些地形／表面上才能用。"""
     no_collision_damage: bool | None = None
     no_damage: bool | None = None
+    summon: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``decoy``：誘餌的召喚物範本 ID（``content/units/summons/``）。"""
+    lifetime: int | None = Field(default=None, ge=1, le=6)
+    """``decoy``：沒被打到時，施放輪之後第幾輪消失。"""
+    ai_trigger_range: int | None = Field(default=None, ge=1, le=12)
+    """``decoy``：AI 在最近的敵人進入這個距離內才會放誘餌（只影響 AI 的使用時機）。"""
 
     @model_validator(mode="after")
     def _check_params(self) -> RaceEffect:
@@ -500,6 +509,7 @@ def race_reference_problems(
     shape_ids: frozenset[str],
     weather_ids: frozenset[str],
     terrain_ids: frozenset[str],
+    summon_ids: frozenset[str],
 ) -> list[str]:
     """種族與出身引用的界域、形狀、天氣、地形都要存在；每個界域恰有一個出身。"""
     problems: list[str] = []
@@ -508,6 +518,9 @@ def race_reference_problems(
             problems.append(f"種族 {race.id}：未知的界域 {race.home_realm}")
         if race.skill.shape.type not in shape_ids:
             problems.append(f"種族技 {race.skill.id}：未知的形狀 {race.skill.shape.type}")
+        for effect in race.skill.effects:
+            if effect.summon is not None and effect.summon not in summon_ids:
+                problems.append(f"種族技 {race.skill.id}：未知的召喚物範本 {effect.summon}")
         passive = race.passive
         bad_weather = sorted(set(passive.weathers or ()) - weather_ids)
         if bad_weather:

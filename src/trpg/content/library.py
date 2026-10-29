@@ -665,6 +665,7 @@ def load_library(  # noqa: PLR0915
         shapes=shapes.by_id(),
         weather=weather.by_id(),
         terrain=terrain.by_id(),
+        summons=frozenset(s.id for s in summons.summons),
     )
     try:
         ruleset = Ruleset(
@@ -857,6 +858,7 @@ def _load_races(
     shapes: Mapping[str, object],
     weather: Mapping[str, object],
     terrain: Mapping[str, object],
+    summons: frozenset[str],
 ) -> tuple[RaceTable | None, OriginTable | None]:
     """種族與出身（Phase 3R-1；兩個檔案可以都不存在，但要有就一起有）與跨檔案檢查。"""
     has_races = (root / "races.yaml").exists()
@@ -876,6 +878,7 @@ def _load_races(
         shape_ids=frozenset(shapes),
         weather_ids=frozenset(weather),
         terrain_ids=frozenset(terrain),
+        summon_ids=summons,
     )
     if problems:
         raise ContentError(root / "races.yaml", "；".join(problems))
