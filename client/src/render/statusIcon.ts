@@ -363,6 +363,54 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     c.fillRect(-8, -2, 16, 10); // 城垛
     for (const dx of [-8, -2, 4]) c.fillRect(dx, -7, 4, 5);
   },
+  // 3W-4b 的姿態狀態：顏色走 polarity／持續元素，圖樣在這裡
+  stance_guard: (c) => {
+    // 堅守：盾牌
+    c.beginPath();
+    c.moveTo(-8, -8);
+    c.lineTo(8, -8);
+    c.lineTo(8, 1);
+    c.lineTo(0, 10);
+    c.lineTo(-8, 1);
+    c.closePath();
+    c.stroke();
+  },
+  stance_ironwall: (c) => {
+    // 鐵壁：磚牆
+    c.strokeRect(-9, -7, 18, 14);
+    line(c, [[-9, 0], [9, 0]]);
+    line(c, [[-3, -7], [-3, 0]]);
+    line(c, [[3, 0], [3, 7]]);
+  },
+  stance_flame: (c) => {
+    // 焰刃：劍＋火苗
+    line(c, [[-7, 8], [7, -8]]);
+    line(c, [[-9, 3], [-3, 9]]);
+    c.beginPath();
+    c.arc(7, 6, 3, 0, TAU);
+    c.fill();
+  },
+  stance_blaze: (c) => {
+    // 烈焰：大火焰
+    c.beginPath();
+    c.moveTo(0, -10);
+    c.quadraticCurveTo(9, -1, 6, 6);
+    c.quadraticCurveTo(0, 12, -6, 6);
+    c.quadraticCurveTo(-8, 0, -2, -4);
+    c.quadraticCurveTo(-1, -7, 0, -10);
+    c.closePath();
+    c.stroke();
+  },
+  stance_frost: (c) => {
+    // 霜刃：劍＋小雪花
+    line(c, [[-7, 8], [7, -8]]);
+    line(c, [[3, 4], [9, 4]]);
+    line(c, [[6, 1], [6, 7]]);
+  },
+  stance_glacier: (c) => {
+    // 冰川：雪花
+    for (const [x, y] of [[0, 9], [8, 4.5], [8, -4.5]] as const) line(c, [[-x, -y], [x, y]]);
+  },
 };
 
 /** 在以 (0,0) 為中心、半徑約 10 的範圍畫狀態圖樣（顏色與線寬由呼叫端設）；不認得的狀態畫名稱第一個字。 */

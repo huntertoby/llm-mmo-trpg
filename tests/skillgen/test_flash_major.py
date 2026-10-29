@@ -42,11 +42,15 @@ from trpg.skillgen.flash import (
     FlashError,
     FlashOffer,
     FlashRequest,
+    UsageSource,
+    _Builder,
+    _replaced_floor,
     apply_variation,
     choose,
     derive_skill,
     is_support_skill,
     make_offer,
+    skill_before,
     with_budget_bonus,
 )
 from trpg.skillgen.flash_major import (
@@ -349,16 +353,33 @@ def test_open_major_offer_has_at_least_one_deepen_and_one_bridge() -> None:
     checked = 0
     for seed in range(14):
         board = _board(seed)
-        state = _state(board.id, RANGE, RANGE)
+        # 白板種類多（3W-4b），不是每張都能 +距離：改用小變化的出題結果走完前 2 次閃現
+        state = acquire(board.id)
+        minors: list[Variation] = []
+        for _ in range(2):
+            first = make_offer(lib, FlashRequest(board, state, SkillUsage(), seed)).options[0]
+            minors.append(first.variation)
+            state = _state(board.id, *minors)
         try:
             derive_skill(lib, board, state, seed, 2)
-        except FlashError:  # 這張白板的距離變化套不上：換一張
+        except FlashError:
             continue
-        offer = make_offer(lib, FlashRequest(board, state, SkillUsage(), seed, tier=2))
+        request = FlashRequest(board, state, SkillUsage(), seed, tier=2)
+        offer = make_offer(lib, request)
         cats = Counter(o.variation.category for o in offer.options)
-        assert len(offer.options) == 4
-        assert cats["deepen"] >= 1 and cats["bridge"] >= 1 and cats["transform"] == 1, cats
-        checked += 1
+        # 有些白板（例：純護盾）沒有任何合法的加深或橋接：能做到的類別才要求各出現
+        before = skill_before(lib, request)
+        builder = _Builder(lib, request, _replaced_floor(lib, request))
+        feasible = {
+            c
+            for c in ("deepen", "bridge")
+            if any(builder.option(v) for v in UsageSource().ranked(lib, request, c, before))
+        }
+        assert cats["transform"] == 1 and len(offer.options) >= 3, cats
+        assert all(cats[c] >= 1 for c in feasible), (feasible, cats)
+        if len(feasible) == 2:
+            assert len(offer.options) == 4
+            checked += 1
     assert checked >= 4
 
 
@@ -567,7 +588,10 @@ def test_major_results_never_fall_below_the_budget_score_before() -> None:
                 done = apply_variation(lib, board, variation, bonus=120, rng=Rng(seed))
                 if done is not None:
                     assert skill_budget(done, lib).total >= before
-                    assert done.name_zh == board.name_zh  # 名稱由 derive_skill 統一換
+                    # 召喚類模板會自己加前綴（強化・、雙生・…）；其餘沿用原名
+                    assert done.name_zh == board.name_zh or done.name_zh.endswith(
+                        f"・{board.name_zh}"
+                    )
                     checked += 1
     assert checked >= 20
 
@@ -595,7 +619,15 @@ def test_whiteboards_can_transform_into_every_kind() -> None:
         for template in ALL_TRANSFORMS:
             if apply_variation(lib, board, _transform(template), bonus=120, rng=Rng(seed)):
                 ok[template] += 1
-    assert all(ok[t] >= total * 0.7 for t in ALL_TRANSFORMS), ok
+    # 3W-4b 後白板種類多（治療、輔助等不適合每種轉型）：每種轉型都要有白板可達，
+    # 且每張白板至少有一種合法轉型（出題保底靠這點）。
+    assert all(ok[t] >= total * 0.2 for t in ALL_TRANSFORMS), ok
+    for seed in range(20):
+        board = _board(seed)
+        assert any(
+            apply_variation(lib, board, _transform(t), bonus=120, rng=Rng(seed))
+            for t in ALL_TRANSFORMS
+        ), seed
 
 
 def test_support_skill_transforms_to_a_defensive_stance_only() -> None:
