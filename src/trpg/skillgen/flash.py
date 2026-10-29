@@ -44,6 +44,20 @@ from trpg.content.skills import SkillDef
 from trpg.engine.skill_levels import grow_shape
 from trpg.shared.rng import Rng
 from trpg.skillgen.evolution import finish_draft, retune, template_drafts, template_prefix
+from trpg.skillgen.flash_major import (
+    TRANSFORM_CATEGORY,
+    apply_extra,
+    extra_prefix,
+    extra_summary,
+    extra_variations,
+    finish_transform,
+    is_extra_template,
+    meets_floor,
+    transform_drafts,
+    transform_prefix,
+    transform_summary,
+    transform_variations,
+)
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     FlashRecord,
@@ -79,9 +93,6 @@ __all__ = [
     "variation_rng",
     "with_budget_bonus",
 ]
-
-TRANSFORM_CATEGORY = "transform"
-"""轉型變化的類別 ID（不是可指定的類別；大變化時保底出現）。"""
 
 type _Draft = tuple[dict[str, Any], list[dict[str, Any]]]
 type FlashOp = Callable[[SkillDef, FlashTemplate, Variation, ContentLibrary], list[_Draft]]
@@ -190,6 +201,8 @@ def _minor_drafts(skill: SkillDef, variation: Variation, library: ContentLibrary
 def _apply_major(
     skill: SkillDef, variation: Variation, rng: Rng, library: ContentLibrary
 ) -> SkillDef | None:
+    if is_extra_template(library, variation.template):
+        return apply_extra(library, skill, variation, rng)
     major = library.flash.major_template(variation.template)
     evolution = None if major is None else _evolution_template(library, major.evolution)
     if evolution is None:
@@ -200,7 +213,11 @@ def _apply_major(
         drafts = [d for d in drafts if d[0].get("shape") == wanted]
     for index, draft in enumerate(drafts):
         done = finish_draft(draft, skill, evolution, rng.fork(str(index)), library)
-        if done is not None and _carries(done, variation, library):
+        if (
+            done is not None
+            and _carries(done, variation, library)
+            and meets_floor(skill, done, library)
+        ):
             return done
     return None
 
@@ -230,13 +247,23 @@ def apply_variation(
     current = with_budget_bonus(skill, bonus)
     if variation.source == "major":
         return _apply_major(current, variation, rng, library)
-    if variation.source == "transform":
+    is_transform = variation.source == "transform"
+    if is_transform:
         op = TRANSFORM_OPS.get(variation.template)
-        drafts = [] if op is None else op(current, variation, library)
+        drafts = (
+            transform_drafts(current, variation, library)
+            if op is None
+            else op(current, variation, library)
+        )
     else:
         drafts = _minor_drafts(current, variation, library)
     for index, (base, effects) in enumerate(drafts):
-        done = retune(base, effects, rng.fork(str(index)), library)
+        child = rng.fork(str(index))
+        done = (
+            finish_transform(base, effects, child, library)
+            if is_transform
+            else retune(base, effects, child, library)
+        )
         if done is not None:
             return done
     return None
@@ -260,8 +287,9 @@ def flashed_identity(library: ContentLibrary, base: SkillDef, state: SkillFlash)
 
 def _big_prefix(library: ContentLibrary, variation: Variation) -> str | None:
     if variation.source == "transform":
-        found = next((t for t in library.flash.transforms if t.id == variation.template), None)
-        return None if found is None else found.prefix_zh
+        return transform_prefix(library, variation)
+    if variation.source == "major" and is_extra_template(library, variation.template):
+        return extra_prefix(library, variation)
     if variation.source == "major":
         major = library.flash.major_template(variation.template)
         evolution = None if major is None else _evolution_template(library, major.evolution)
@@ -280,6 +308,46 @@ def _record_bonus(library: ContentLibrary, state: SkillFlash, record: FlashRecor
     return rules.budget_bonus_permille(record.nth)
 
 
+def _substitute(
+    library: ContentLibrary, skill: SkillDef, old: Variation, *, bonus: int, rng: Rng
+) -> SkillDef | None:
+    """``old``（轉型前的小變化）在新種類上不合法時，換成同類別、資料順序第一個合法的小變化。"""
+    for template in library.flash.minor:
+        if template.category != old.category or template.id == old.template:
+            continue
+        candidate = old.model_copy(update={"template": template.id})
+        done = apply_variation(library, skill, candidate, bonus=bonus, rng=rng.fork(template.id))
+        if done is not None:
+            return done
+    return None
+
+
+def _apply_transform(
+    library: ContentLibrary,
+    base: SkillDef,
+    earlier: Sequence[FlashRecord],
+    record: FlashRecord,
+    seed: int,
+    *,
+    bonus: int,
+) -> SkillDef | None:
+    """轉型（6.34.5、#73）：從 **原本的技能** 轉成新種類（預算照新種類重算），再把轉型之前的小變化
+    逐筆套在新技能上——對新種類合法的保留、不合法的換成同類別的合法變化（都不合法就省略）。
+    重套的變化都用轉型這一次的預算加成，所以最後的加成與轉型同次。"""
+    rng = variation_rng(seed, base.id, record)
+    skill = apply_variation(library, base, record.variation, bonus=bonus, rng=rng)
+    if skill is None:
+        return None
+    for old in earlier:
+        sub_rng = variation_rng(seed, base.id, old).fork("transform")
+        done = apply_variation(library, skill, old.variation, bonus=bonus, rng=sub_rng)
+        if done is None and old.variation.source == "minor":
+            done = _substitute(library, skill, old.variation, bonus=bonus, rng=sub_rng)
+        if done is not None:
+            skill = done
+    return skill
+
+
 def derive_skill(library: ContentLibrary, base: SkillDef, state: SkillFlash, seed: int) -> SkillDef:
     """原本的技能依變化歷程逐筆套用後的技能（沒有變化時是 ``base`` 加上預算上限加成）。任何一筆
     套用不了時拋出 :class:`FlashError`。"""
@@ -287,10 +355,13 @@ def derive_skill(library: ContentLibrary, base: SkillDef, state: SkillFlash, see
     records = _records(state)
     if not records:
         return skill
-    for record in records:
+    for index, record in enumerate(records):
         rng = variation_rng(seed, state.base_id, record)
         bonus = _record_bonus(library, state, record)
-        applied = apply_variation(library, skill, record.variation, bonus=bonus, rng=rng)
+        if record.variation.source == "transform":
+            applied = _apply_transform(library, base, records[:index], record, seed, bonus=bonus)
+        else:
+            applied = apply_variation(library, skill, record.variation, bonus=bonus, rng=rng)
         if applied is None:
             raise FlashError(
                 f"{base.id} 第 {record.nth} 次的變化 {record.variation.template} 套用不了"
@@ -399,7 +470,12 @@ class DataOrderSource:
     - 加深：每個進化模板一個（``intensify`` 帶這招自己的第一個專屬關鍵字）。
     - 橋接：這招沒有的關鍵字（持有者其他技能多的優先，再依嫁接表順序）× 橋接模板，最多
       ``bridge_keyword_tries`` 個關鍵字。
+    - 補充（3W-3）：進化模板之外適用的輔助類、召喚類大變化排在後面。
+    - 轉型（3W-3）：依 ``tier``（角色階級，預設 1 階）開放的轉型，種類由種子洗牌。
     """
+
+    def __init__(self, tier: int = 1) -> None:
+        self.tier = tier
 
     def ranked(
         self, library: ContentLibrary, request: FlashRequest, category: str, skill: SkillDef
@@ -424,7 +500,7 @@ class DataOrderSource:
                 out.append(
                     Variation(source="major", template=major.id, category=category, keyword=keyword)
                 )
-        return out
+        return out + extra_variations(library, skill, category, support=is_support_skill(skill))
 
     @staticmethod
     def _keywords(
@@ -442,12 +518,9 @@ class DataOrderSource:
     def transforms(
         self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
     ) -> Sequence[Variation]:
-        if skill.kind != "active":
-            return []
-        return [
-            Variation(source="transform", template=t.id, category=TRANSFORM_CATEGORY)
-            for t in library.flash.transforms
-        ]
+        tag = seed_tag(request.state.base_id, request.nth, request.reflashes)
+        rng = Rng(request.seed).fork(f"{tag}/transform")
+        return transform_variations(library, skill, tier=self.tier, rng=rng)
 
 
 class FlashOption(BaseModel):
@@ -515,8 +588,9 @@ def _summary(library: ContentLibrary, variation: Variation) -> str:
         template = table.minor_template(variation.template)
         return "" if template is None else template.summary_zh
     if variation.source == "transform":
-        found = next((t for t in table.transforms if t.id == variation.template), None)
-        return "" if found is None else found.summary_zh
+        return transform_summary(library, variation)
+    if is_extra_template(library, variation.template):
+        return extra_summary(library, variation)
     major = table.major_template(variation.template)
     evolution = None if major is None else _evolution_template(library, major.evolution)
     if evolution is None:

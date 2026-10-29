@@ -56,6 +56,7 @@ __all__ = [
     "evolution_options",
     "evolved_id",
     "finish_draft",
+    "rarity_of",
     "retune",
     "template_drafts",
     "template_prefix",
@@ -597,3 +598,8 @@ def template_prefix(
     """組合式名稱的前綴（模板的 ``prefix_zh``，沒有時用關鍵字的前綴）。"""
     graft = library.evolution.grafts.get(keyword or "")
     return template.prefix_zh or (graft.prefix_zh if graft is not None else "進化")
+
+
+def rarity_of(draft: dict[str, Any], effects: list[dict[str, Any]], library: ContentLibrary) -> str:
+    """草稿需要的稀有度（原本與新內容需要的較高者；需要傳說時回傳傳說，呼叫者視為不合格）。"""
+    return _rarity(draft, effects, library)

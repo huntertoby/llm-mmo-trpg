@@ -27,11 +27,12 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import ReactionSpec, ShapeSpec, TriggerSpec
+from trpg.content.skills import ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
 
 __all__ = [
     "FLASH_KINDS",
     "CompleteSkillRules",
+    "ExtraMajorTemplate",
     "FlashCategory",
     "FlashKind",
     "FlashPricing",
@@ -40,6 +41,7 @@ __all__ = [
     "FlashTemplate",
     "MajorFlashTemplate",
     "PriceRule",
+    "TransformTarget",
     "TransformTemplate",
 ]
 
@@ -161,25 +163,67 @@ class MajorFlashTemplate(ContentModel):
     evolution: str = Field(pattern=ID_PATTERN)
 
 
+type TransformTarget = Literal["passive", "reaction", "summon", "trap", "stance", "modifier"]
+
+
 class TransformTemplate(ContentModel):
-    """主動技轉型（6.34.5，3W-3 實作）：把效果縮小到 ``scale_permille``，掛到觸發（被動）或
-    反應上。"""
+    """主動技轉型（6.34.5、#73）：把這招轉成別種技能。
+
+    - ``to``：新種類。``passive``／``reaction`` 把效果縮小後掛到觸發（``trigger``）或反應
+      （``reaction``）上；``summon`` 召喚一隻幫你打的召喚物（``units``）；``trap`` 放置陷阱
+      （``trap``）；``stance`` 進入姿態（``stances``）；``modifier`` 修正型被動（持續改變你的
+      同元素技能）。
+    - ``min_tier``：最低角色階級（#73：1 階被動、反應；2 階起召喚、陷阱、姿態；3 階起修正型被動）。
+    - 強度不寫在這裡：轉型後照新種類的預算由預算器重調（``scale_permille`` 只是起點的提示，
+      被動／反應的數值最後仍以預算為準）。
+    """
 
     id: str = Field(pattern=ID_PATTERN)
-    to: Literal["passive", "reaction"]
+    to: TransformTarget
+    min_tier: int = Field(default=1, ge=1, le=3)
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
     trigger: TriggerSpec | None = None
     reaction: ReactionSpec | None = None
     scale_permille: int = Field(default=500, ge=100, le=1000)
+    units: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """``summon``：技能元素（``any`` ＝ 沒有元素或沒列到時）→ 候選召喚物（依序試）。"""
+    summon_duration: int = Field(default=2, ge=1, le=6)
+    trap: TrapSpec | None = None
+    stances: dict[str, str] = Field(default_factory=dict)
+    """``stance``：``offense``（原招有傷害）、``defense``（沒有傷害）→ 姿態狀態 ID。"""
+    damage_permille_steps: tuple[int, ...] = ()
+    """``modifier``：「傷害 +n‰」候選（由大到小，第一個落在預算窗內的）。"""
 
     @model_validator(mode="after")
     def _check(self) -> TransformTemplate:
-        if (self.to == "passive") != (self.trigger is not None):
-            raise ValueError(f"轉型 {self.id}：轉成被動時必須（且只有被動）填 trigger")
-        if (self.to == "reaction") != (self.reaction is not None):
-            raise ValueError(f"轉型 {self.id}：轉成反應時必須（且只有反應）填 reaction")
+        needs = {
+            "passive": ("trigger", self.trigger is not None),
+            "reaction": ("reaction", self.reaction is not None),
+            "summon": ("units", bool(self.units)),
+            "trap": ("trap", self.trap is not None),
+            "stance": ("stances", bool(self.stances)),
+            "modifier": ("damage_permille_steps", bool(self.damage_permille_steps)),
+        }
+        for kind, (field, present) in needs.items():
+            if (self.to == kind) != present:
+                raise ValueError(f"轉型 {self.id}：轉成 {kind} 時必須（且只有 {kind}）填 {field}")
         return self
+
+
+class ExtraMajorTemplate(ContentModel):
+    """大變化的補充模板（3W-3）：進化模板做不出來的輔助技、召喚技能用的加深與橋接。
+
+    ``op`` 的實作在 :mod:`trpg.skillgen.flash_major`；``only`` 是適用的對象。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    category: str = Field(pattern=ID_PATTERN)
+    op: str = Field(pattern=ID_PATTERN)
+    only: Literal["support", "summon"]
+    """適用對象：輔助技（治療、護盾、增益）或召喚技能。"""
+    prefix_zh: str = Field(min_length=1)
+    summary_zh: str = Field(min_length=1)
 
 
 class FlashTable(ContentModel):
@@ -190,6 +234,7 @@ class FlashTable(ContentModel):
     categories: tuple[FlashCategory, ...] = ()
     minor: tuple[FlashTemplate, ...] = ()
     major: tuple[MajorFlashTemplate, ...] = ()
+    extra_major: tuple[ExtraMajorTemplate, ...] = ()
     transforms: tuple[TransformTemplate, ...] = ()
 
     @model_validator(mode="after")
@@ -197,6 +242,7 @@ class FlashTable(ContentModel):
         ids = [c.id for c in self.categories]
         templates = [t.id for t in self.minor]
         templates += [t.id for t in self.major]
+        templates += [t.id for t in self.extra_major]
         templates += [t.id for t in self.transforms]
         for label, values in (("類別", ids), ("模板", templates)):
             dup = sorted(k for k, n in Counter(values).items() if n > 1)
@@ -211,6 +257,11 @@ class FlashTable(ContentModel):
         for major in self.major:
             if stages.get(major.category) != "major":
                 raise ValueError(f"大變化模板 {major.id} 的類別 {major.category} 不是大變化類別")
+        for extra in self.extra_major:
+            if stages.get(extra.category) != "major":
+                raise ValueError(
+                    f"大變化補充模板 {extra.id} 的類別 {extra.category} 不是大變化類別"
+                )
         return self
 
     def category(self, category_id: str) -> FlashCategory:
@@ -227,3 +278,9 @@ class FlashTable(ContentModel):
 
     def major_template(self, template_id: str) -> MajorFlashTemplate | None:
         return next((t for t in self.major if t.id == template_id), None)
+
+    def extra_template(self, template_id: str) -> ExtraMajorTemplate | None:
+        return next((t for t in self.extra_major if t.id == template_id), None)
+
+    def transform_template(self, template_id: str) -> TransformTemplate | None:
+        return next((t for t in self.transforms if t.id == template_id), None)
