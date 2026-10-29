@@ -165,6 +165,8 @@ export type AllocationPreview = Schemas["AllocationPreviewOut"];
 export type StartKeywordOption = Schemas["StartKeywordOption"];
 export type DevPack = Schemas["DevPackOut"];
 export type OfferTag = Schemas["OfferTagOut"];
+/** 一輪的 LLM 生成統計（Phase 4-L6b）。 */
+export type LlmStats = Schemas["LlmStatsOut"];
 // 技能點與技能等級（Phase 3-26a）
 export type SkillLevelInfo = Schemas["SkillLevelInfo"];
 export type SkillGrowth = Schemas["SkillGrowthOut"];
@@ -190,7 +192,9 @@ export type RunChoice =
   | Schemas["GearPickChoice"]
   | Schemas["EquipChoice"];
 /** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
-export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | "test_mode" | "test_equipment"> & {
+export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | "test_mode" | "test_equipment" | "llm"> & {
+  /** LLM 生成開關（4-L6b）：升級技能候選請本機模型提議；省略 ＝ 關閉。連不到模型時伺服器把這一輪當作關閉並在回應提示。 */
+  llm?: boolean;
   attributes?: Partial<Record<AttributeId, number>>;
   /** 測試模式（3-39）：戰後 HP、法力回滿；省略 ＝ 正式模式。 */
   test_mode?: boolean;
