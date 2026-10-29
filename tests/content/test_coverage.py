@@ -27,6 +27,12 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
         "overdrawn": "只由 cost.overdraft 施加（3-50，竭力一擊），不是效果原語",
+        "stance_guard": "只由白板姿態配方施加（3W-4b，skill_composer.yaml），沒有手寫技能",
+        "stance_ironwall": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
+        "stance_flame": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
+        "stance_blaze": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
+        "stance_frost": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
+        "stance_glacier": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
     },
     "stack": {},
 }
