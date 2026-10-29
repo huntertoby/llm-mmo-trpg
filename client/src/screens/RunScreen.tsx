@@ -112,6 +112,8 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
       return null;
     } catch (e) {
       setError(errorText(e));
+      // 營火的傳承、重閃等按鈕離頁首很遠：把錯誤訊息捲到看得見的地方（3W-6）
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return e instanceof ApiError ? e.status : 0;
     } finally {
       setBusy(false);

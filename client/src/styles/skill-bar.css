@@ -209,6 +209,8 @@
 
 .skill-card-headtext {
   min-width: 0;
+  /* 三張候選卡並排時卡頭只剩約 140px，「（換 25% 預算；代價狀態，無法淨化）」的標點禁則（括號不能斷行）會溢出 3px（3W-6 排版掃描） */
+  line-break: anywhere;
 }
 
 .skill-card.compact {
