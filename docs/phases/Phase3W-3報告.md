@@ -91,3 +91,12 @@
 8. **召喚物候選表**（`to_summon.units`）是我依元素挑的初值（火→火靈、冰→冰靈、雷→雷靈、風→鷹、毒→藤蔓、地→石像鬼／土牆、聖→守護靈、暗→暗影、其餘→戰狼等），未經平衡；高階手寫技能轉召喚後預算窗內的比例也未調。
 9. **「1/3 機率」初值已不用**：計畫表舊文字的機率被 #70 保底取代（有合法轉型一定出現，玩家不選才是「偶爾」），沒有實作機率。
 10. **規則包雜湊／存檔**：沒有新增 `SkillDef` 欄位，規則包雜湊與 `LOG_FORMAT`、存檔版本都沒動；`FlashTable` 新欄位在 `flash_templates.yaml`（不嵌入規則包）。轉型產生的技能的 `provenance.origin` 是 `level_up`（為了讓縮放屬性可以收進允許範圍）。
+
+## 6. 合併 3W-2（main `fcfeec26`）
+
+- `git merge main`，衝突在 `flash.py`（5 處）與 `evolution.py`（`__all__`）。解法：保留 3W-2 的 `derive_chain`／`derive_skill(..., tier)`、`power_floor`、`apply_variation(replaced=)`、`tuning_extras`、`FlashRequest.tier`、小變化 `FLASH_OPS`（`flash_ops.py`）；再接上本段的轉型（`transform_drafts`）、補充大變化（`apply_extra`）與轉型後的小變化重套（`_apply_transform`，在 `derive_chain` 遇到轉型時呼叫，從 `at_tier(base, tier)` 重新轉型）。
+- **待決 1 已處理**：`DataOrderSource` 不再有 `tier` 參數，轉型階級改用 3W-2 的 `request.role_tier`；測試改在 `FlashRequest(..., tier=…)` 帶階級。
+- `apply_variation`：3W-2 的調整器（含強度下限）先試；失敗後對固定強度的結構（召喚、姿態、修正型被動）改用 `fixed_strength`（預算窗＋同一個 `floor`），轉型本身走 `finish_transform`（不設下限，與 3W-2 `power_floor` 對轉型回傳 `None` 一致）。
+- **合併後發現的問題**：3W-2 的 `at_tier` 讓技能依角色階級重算預算，固定強度的種類不隨階級變大，導致 2、3 階時召喚（8/30、0/30 張白板可轉）與姿態（0/30）落到預算窗下限以下。處理：召喚加 `summon_boosts`（持續輪數、最大 HP 依序加試）→ 2、3 階都 30/30；**姿態無解**（驗證器規定姿態只能有一個狀態效果，狀態點數固定），2 階以上轉不出姿態。陷阱（23/30）、被動（26～27/30）、反應（23/30）、修正型被動（30/30）不受影響。→ 待玩法 PM：高階姿態需要隨階級變強的姿態狀態，或 2 階以上改開別的轉型。
+- 驗證：`ruff check`、`ruff format --check`、`mypy`（810 檔）、`lint-imports`（7 kept）全過；pytest：`test_flash_major.py`（30）、`test_flash.py`＋`test_flash_templates.py`＋`test_flash_state.py`（141）、`tests/content`＋`tests/test_architecture.py`＋`tests/roguelite/test_evolution.py`（1540）全通過。
+- **未完成的驗證（請 PM 在合併時確認）**：整個 `tests/skillgen`、`tests/cli`、`tests/engine/test_skill_determinism.py` 在本機跑不完——合併前同一組 `tests/skillgen` 約 150 秒，合併後多次跑了 30～60 分鐘仍停在 30～60%，而且出現過 xdist 的 `node down: Not properly terminated`；同時間機器上有一個 4 GB 的 python 行程（不是我啟動的、我沒有動它），疑似記憶體壓力。單獨跑 flash 相關檔案與 `test_candidates.py` 速度正常，所以無法判斷是環境還是合併後某個測試變慢。我已停掉自己啟動的長跑。
