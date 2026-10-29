@@ -377,6 +377,15 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
       dot(c, 8, 0, 2);
     },
   ],
+  // 解除形態（3J-4c）：星＋往左的箭頭＋人形（變回原形）
+  leave_form: [
+    "#c9a0ff",
+    (c) => {
+      dot(c, -8, 0, 2);
+      arrow(c, 1, 0, -6, 0, 3);
+      person(c, 6, 0, 0.8);
+    },
+  ],
   // 清除表面（3-54c）：表面加一條劃掉的斜線
   clear_surface: [
     "#cfe8ff",

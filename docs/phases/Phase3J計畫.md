@@ -130,3 +130,9 @@
 
 ### 4.15 3J-4b 驗收（2026-10-29，開發 PM）
 - 報告 `Phase3J-4b報告.md`。起始技能只為 1 階 `enter_form` 開放姿態；`starter_pools()["form"]` 只剩熊、貓、巨鵰、狼人；`EffectSpec.form_bonus_permille`（在形態中整體乘 1.3，屬性只算一次），三招利用者改用它（預算按 `in_form` harsh 0.6 計入，初值）。與 3R-2 撞 `LOG_FORMAT` → **`/83`**。合併後全量（除 llm，含 3R-2）：pytest 8498、vitest 1080、mypy、lint-imports、build、重播全過。
+
+### 4.16 3J-4c、3R-2b 驗收（2026-10-29，開發 PM）——3J 完成
+- **3J-4c**（報告 `Phase3J-4c報告.md`）：原語 `leave_form`（第一個效果、照常冷卻、`form_left` 原因 `released`、`allowance.leave_form_permille` 200）；解形爆發 `skill_form_release_burst`（2 階、ring 1、3d6，約 85%）；技能 301。工坊說明換成玩法 PM 的句子（06 6.30，`3b761d67`）；開發 PM 補上 `skillParts.ts` 的 `leave_form` 圖示部件（合併後全量唯一失敗）。
+- **3R-2b**（報告 `Phase3R-2b報告.md`）：`reactions.take_decoy`，擲命中前轉向誘餌；只攔單體攻擊（玩法 PM 同意）；兩句紀錄文字。兩段撞 `LOG_FORMAT` → **`/85`**（`runner.py` 補上 `/84` 說明）。
+- 合併後全量（除 llm）：pytest 8518、vitest 1080（修正後）、mypy、lint-imports、build、重播（`build_form_user`＋狐族）全過。
+- **3J 形態系統全部完成**（3J-1a～3J-5、3J-4b／4c）。
