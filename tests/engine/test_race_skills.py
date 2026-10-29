@@ -35,7 +35,7 @@ from tests.engine.race_helpers import (
 )
 from tests.engine.skill_helpers import SID, battle, cast, hit_with
 from trpg.content.races import RaceEffect, RaceSkill
-from trpg.engine import BattleState, Move, ResolveResult, legal_actions, resolve
+from trpg.engine import BattleState, Move, ResolveResult, legal_actions, race_skills, resolve
 from trpg.engine.actions import Action, Attack, UseRaceSkill
 from trpg.engine.effects import ApplyStatusEffect, DamageEffect, PushEffect, run_effects
 from trpg.engine.events import (
@@ -526,3 +526,31 @@ def test_damage_effect_import_is_used() -> None:
         state, [DamageEffect(target_id=U1, element=Element.FIRE, flat=10, source_id=U2)]
     )
     assert of(r, DamageDealt)
+
+
+# ---------------------------------------------------------------------------
+# 合法性檢查走過全部效果（Phase 3T-2）
+# ---------------------------------------------------------------------------
+
+
+def test_legality_checks_every_effect_not_only_the_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    """第二個效果的條件（隱蔽要站在草叢或黑暗中）也要檢查，不能因第一個效果不需條件就放行。"""
+    two = _skill("human").model_copy(
+        update={
+            "effects": (
+                _effect("human", "bonus_move"),
+                RaceEffect(type="conceal_self", requires=("grass",)),
+            )
+        }
+    )
+    monkeypatch.setattr(race_skills, "race_skill_of", lambda _state, _unit: two)
+    state = race_state("human")
+    problem = race_skills.race_skill_problem(state, state.units[U1], use())
+    assert problem is not None and "草叢" in problem
+
+
+def test_choice_is_required_when_any_effect_restores() -> None:
+    """選取欄位以全部效果計算：``restore_choice`` 不在第一個也要求 ``choice``。"""
+    base = _skill("cyborg")
+    two = base.model_copy(update={"effects": (_effect("human", "bonus_move"), *base.effects)})
+    assert race_skills._required_fields(two) == ("choice",)

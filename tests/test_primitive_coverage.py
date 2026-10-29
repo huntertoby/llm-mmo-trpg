@@ -8,26 +8,36 @@ from pathlib import Path
 
 import pytest
 
+from trpg.content.battle import Dice
+from trpg.content.form_text import form_effect_lines, form_entry_lines
+from trpg.content.forms import EntryBurst, EntryHealAdjacent, FormEffects, FormEntry, TakenMod
 from trpg.content.library import load_library
 from trpg.content.modifier_changes import (
     ModifierChangeDef,
     ModifierChangeTable,
     modifier_change_problems,
 )
+from trpg.content.races import RACE_EFFECT_SPECS
 from trpg.content.skills import ModifierChange, PrimitiveDef
 from trpg.engine.ai.coverage import PRIMITIVE_VALUATION
+from trpg.engine.forms import FORM_EFFECT_CONSUMERS, FORM_ENTRY_CONSUMERS
 from trpg.engine.modifiers import CHANGE_HANDLERS
 from trpg.engine.preview import PRIMITIVE_PREVIEW
+from trpg.engine.race_skills import RACE_EFFECT_EXECUTORS
 from trpg.engine.skills.primitives import PRIMITIVE_HANDLERS, primitive_handler
 from trpg.narrative.skills import DESCRIBED_CHANGES, DESCRIBED_PRIMITIVES
 from trpg.primitive_coverage import (
     change_coverage_problems,
     check_primitive_coverage,
     coverage_problems,
+    form_coverage_problems,
     knob_problems,
     load_checked_library,
+    race_coverage_problems,
+    race_lead_problems,
 )
 from trpg.shared.errors import ContentError
+from trpg.shared.types import Attribute, Element
 from trpg.skillgen.budget import STRUCTURED_CHANGES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -255,3 +265,92 @@ def test_load_checked_library_rejects_missing_knob(tmp_path: Path) -> None:
         load_checked_library(content)
     assert caught.value.path == yaml_path
     assert "原語 grant_ap 的參數 amount 沒有宣告強度旋鈕" in caught.value.reason
+
+
+# ---------------------------------------------------------------------------
+# 種族技與形態（Phase 3T-2）
+# ---------------------------------------------------------------------------
+
+
+def test_real_race_effects_are_fully_covered() -> None:
+    """每種種族效果都有結算、合法性檢查（或宣告無條件）、AI 計分函式（或宣告附帶效果）。"""
+    assert race_coverage_problems() == []
+    assert set(RACE_EFFECT_EXECUTORS) == set(RACE_EFFECT_SPECS)
+
+
+def test_no_bundled_race_leads_with_a_rider_effect() -> None:
+    races = load_library().ruleset.races
+    assert races is not None
+    leads = [(r.skill.id, r.skill.effects[0].type) for r in races.races]
+    assert race_lead_problems(leads) == []
+    assert race_lead_problems([("race_x", "ignore_opportunity_attack")])
+
+
+def test_new_race_effect_without_entries_lists_every_missing_place() -> None:
+    problems = race_coverage_problems(effect_types=[*RACE_EFFECT_SPECS, "teleport"])
+    assert len(problems) == 3
+    assert all("teleport" in p for p in problems)
+    assert any("結算" in p for p in problems)
+    assert any("合法性檢查" in p for p in problems)
+    assert any("AI 計分函式" in p for p in problems)
+
+
+def test_riders_and_unconditional_effects_need_no_entry() -> None:
+    assert (
+        race_coverage_problems(
+            effect_types=["x"],
+            executors=["x"],
+            problems_table=[],
+            unconditional=["x"],
+            scorers=[],
+            riders=["x"],
+        )
+        == []
+    )
+
+
+def test_real_form_effects_are_fully_covered() -> None:
+    assert form_coverage_problems() == []
+    assert set(FORM_EFFECT_CONSUMERS) == set(FormEffects.model_fields)
+    assert set(FORM_ENTRY_CONSUMERS) == set(FormEntry.model_fields)
+
+
+def test_new_form_field_is_reported() -> None:
+    problems = form_coverage_problems(
+        effect_fields=[*FormEffects.model_fields, "lifesteal"],
+        entry_fields=[*FormEntry.model_fields, "teleport"],
+    )
+    assert len(problems) == 2
+    assert "lifesteal" in problems[0] and "teleport" in problems[1]
+
+
+def test_every_form_field_has_card_text() -> None:
+    """每個形態效果與進入獎勵欄位設了值就有卡片文字（欄位不是只在引擎生效而玩家看不到）。"""
+    form = next(f for f in load_library().ruleset.forms.forms)
+    effects = {
+        "defense_permille": 100,
+        "move": 1,
+        "max_hp_permille": 100,
+        "damage_taken": (TakenMod(element=Element.FIRE, permille=500),),
+        "heal_permille": 100,
+        "flat_height": 1,
+    }
+    assert set(effects) == set(FormEffects.model_fields)
+    for name, value in effects.items():
+        probe = form.model_copy(update={"effects": FormEffects(**{name: value})})
+        assert form_effect_lines(probe), name
+    entry = {
+        "shield_max_hp_permille": 100,
+        "heal_max_hp_permille": 100,
+        "next_attack_hit": 1,
+        "next_attack_crit": 1,
+        "move": 1,
+        "conceal": 1,
+        "burst": EntryBurst(radius=1, dice=Dice(count=1, sides=4), element=Element.FIRE),
+        "heal_adjacent": EntryHealAdjacent(dice=Dice(count=1, sides=4), attr=Attribute.WIL),
+        "collision_permille": 100,
+    }
+    # shield_duration 只是護盾的持續回合，文字與護盾同一行
+    assert set(entry) | {"shield_duration"} == set(FormEntry.model_fields)
+    for name, value in entry.items():
+        assert form_entry_lines(FormEntry(**{name: value})), name

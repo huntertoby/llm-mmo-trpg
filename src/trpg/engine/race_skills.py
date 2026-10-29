@@ -53,6 +53,9 @@ from trpg.shared.types import ObjectId, Pos, Surface, UnitId
 
 __all__ = [
     "DECOY_TEMPLATE",
+    "RACE_EFFECT_EXECUTORS",
+    "RACE_EFFECT_PROBLEMS",
+    "UNCONDITIONAL_RACE_EFFECTS",
     "do_race_skill",
     "race_skill_actions",
     "race_skill_of",
@@ -99,13 +102,11 @@ def _reach(skill: RaceSkill) -> int:
     return reach if isinstance(reach, int) else 0
 
 
-def _primary(skill: RaceSkill) -> RaceEffect:
-    return skill.effects[0]
-
-
 def _required_fields(skill: RaceSkill) -> tuple[str, ...]:
+    """選取欄位：形狀需要的，加上任何一個 ``restore_choice`` 效果需要的 ``choice``。"""
     fields = _SHAPE_FIELDS.get(skill.shape.type, ())
-    return (*fields, "choice") if _primary(skill).type == "restore_choice" else fields
+    needs_choice = any(e.type == "restore_choice" for e in skill.effects)
+    return (*fields, "choice") if needs_choice else fields
 
 
 def _field_problem(skill: RaceSkill, action: UseRaceSkill) -> str | None:
@@ -121,7 +122,7 @@ def _field_problem(skill: RaceSkill, action: UseRaceSkill) -> str | None:
 
 def race_skill_problem(state: BattleState, unit: UnitState, action: UseRaceSkill) -> str | None:
     """種族技不合法的原因（繁體中文）；合法時 ``None``。順序：有沒有種族技、AP、次數、選取欄位、
-    各效果自己的條件。"""
+    各效果自己的條件（依效果順序，每個效果都檢查，回傳第一個不成立的）。"""
     skill = race_skill_of(state, unit)
     if skill is None:
         return f"{unit.name_zh} 沒有種族技"
@@ -132,8 +133,12 @@ def race_skill_problem(state: BattleState, unit: UnitState, action: UseRaceSkill
     problem = _field_problem(skill, action)
     if problem is not None:
         return problem
-    checker = _PROBLEMS.get(_primary(skill).type)
-    return None if checker is None else checker(state, unit, skill, action)
+    for effect in skill.effects:
+        checker = RACE_EFFECT_PROBLEMS.get(effect.type)
+        problem = None if checker is None else checker(state, unit, skill, effect, action)
+        if problem is not None:
+            return problem
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -142,14 +147,18 @@ def race_skill_problem(state: BattleState, unit: UnitState, action: UseRaceSkill
 
 
 def _conceal_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, _action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    _action: UseRaceSkill,
 ) -> str | None:
     if prevents_concealment(state.ruleset, unit):
         return "被揭露中，不能隱蔽"
     if unit.has_status(CONCEALED):
         return "已經在隱蔽中"
     tile = state.tile(*unit.xy)
-    requires = _primary(skill).requires or ()
+    requires = effect.requires or ()
     in_grass = "grass" in requires and state.object_has_tag(*unit.xy, "conceal")
     in_dark = "darkness" in requires and tile.surface is Surface.DARKNESS
     if not (in_grass or in_dark):
@@ -163,11 +172,15 @@ def _tile_problem(state: BattleState, unit: UnitState, xy: XY, reach: int) -> st
 
 
 def _decoy_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
 ) -> str | None:
     assert action.target_pos is not None
     xy = (action.target_pos.x, action.target_pos.y)
-    problem = _tile_problem(state, unit, xy, _primary(skill).range or 0)
+    problem = _tile_problem(state, unit, xy, effect.range or 0)
     if problem is not None:
         return problem
     if state.unit_at(*xy) is not None:
@@ -178,7 +191,11 @@ def _decoy_problem(
 
 
 def _push_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
 ) -> str | None:
     assert action.direction is not None
     if not _cone_targets(state, unit, skill, action.direction):
@@ -187,7 +204,11 @@ def _push_problem(
 
 
 def _pull_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
 ) -> str | None:
     assert action.target_id is not None
     target = state.units.get(action.target_id)
@@ -207,14 +228,18 @@ def _pull_problem(
 
 
 def _hurl_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
 ) -> str | None:
     assert action.target_object_id is not None and action.target_pos is not None
     obj = state.objects.get(action.target_object_id)
     if obj is None or obj.destroyed:
         return f"找不到物件：{action.target_object_id}"
     definition = state.object_def(obj)
-    reach = _primary(skill).range or 0
+    reach = effect.range or 0
     if "pushable" not in definition.tags:
         return f"{definition.name_zh}無法投擲（不是可推動的物件）"
     distance = manhattan(unit.xy, obj.xy)
@@ -229,7 +254,11 @@ def _hurl_problem(
 
 
 def _surface_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
 ) -> str | None:
     if skill.shape.type == "self":
         return None
@@ -239,9 +268,12 @@ def _surface_problem(
 
 
 def _restore_problem(
-    state: BattleState, unit: UnitState, skill: RaceSkill, action: UseRaceSkill
+    state: BattleState,
+    unit: UnitState,
+    skill: RaceSkill,
+    effect: RaceEffect,
+    action: UseRaceSkill,
 ) -> str | None:
-    effect = _primary(skill)
     if action.choice not in (effect.resources or ()):
         return f"只能選擇回復{'或'.join(effect.resources or ())}"
     current, maximum = _resource(unit, action.choice)
@@ -256,9 +288,9 @@ def _resource(unit: UnitState, choice: str | None) -> tuple[int, int]:
     return (unit.stamina, unit.max_stamina) if choice == "stamina" else (unit.mana, unit.max_mana)
 
 
-type _Problem = Callable[[BattleState, UnitState, RaceSkill, UseRaceSkill], str | None]
+type _Problem = Callable[[BattleState, UnitState, RaceSkill, RaceEffect, UseRaceSkill], str | None]
 
-_PROBLEMS: dict[str, _Problem] = {
+RACE_EFFECT_PROBLEMS: dict[str, _Problem] = {
     "conceal_self": _conceal_problem,
     "decoy": _decoy_problem,
     "push": _push_problem,
@@ -267,6 +299,9 @@ _PROBLEMS: dict[str, _Problem] = {
     "create_surface": _surface_problem,
     "restore_choice": _restore_problem,
 }
+UNCONDITIONAL_RACE_EFFECTS = frozenset({"bonus_move", "ignore_opportunity_attack", "immovable"})
+"""沒有額外合法性條件的效果類型（只受 AP、次數、選取欄位限制）；其餘類型必須在
+:data:`RACE_EFFECT_PROBLEMS` 有檢查函式（``primitive_coverage`` 檢查）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -277,9 +312,10 @@ _PROBLEMS: dict[str, _Problem] = {
 def _candidates(state: BattleState, unit: UnitState, skill: RaceSkill) -> Iterator[UseRaceSkill]:
     """依形狀列舉候選動作（確定性順序：方向、單位 ID、物件 ID、格子 ``(y, x)``）。"""
     uid = unit.id
-    shape, effect = skill.shape.type, _primary(skill)
-    if effect.type == "restore_choice":
-        for choice in effect.resources or ():
+    shape = skill.shape.type
+    restore = next((e for e in skill.effects if e.type == "restore_choice"), None)
+    if restore is not None:
+        for choice in restore.resources or ():
             yield UseRaceSkill(unit_id=uid, choice=choice)
     elif shape == "self":
         yield UseRaceSkill(unit_id=uid)
@@ -477,7 +513,7 @@ def _do_surface(ctx: Ctx, unit: UnitState, effect: RaceEffect, action: UseRaceSk
 
 type _Executor = Callable[[Ctx, UnitState, RaceEffect, UseRaceSkill], None]
 
-_EXECUTORS: dict[str, _Executor] = {
+RACE_EFFECT_EXECUTORS: dict[str, _Executor] = {
     "bonus_move": _do_bonus_move,
     "ignore_opportunity_attack": _do_adapt,
     "conceal_self": _do_conceal,
@@ -513,4 +549,4 @@ def do_race_skill(ctx: Ctx, unit: UnitState, action: UseRaceSkill) -> None:
         uses_left=race_uses_left(unit, skill),
     )
     for effect in skill.effects:
-        _EXECUTORS[effect.type](ctx, unit, effect, action)
+        RACE_EFFECT_EXECUTORS[effect.type](ctx, unit, effect, action)
