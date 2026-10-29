@@ -9,9 +9,9 @@
   本回合（``limit: per_turn``，自己回合開始時清除）或本輪（``per_round``）還沒觸發過，深度在
   ``max_trigger_depth`` 內，才發出 ``gear_triggered`` 並結算效果（自動命中、歸給持有者）。**每條
   每回合最多 1 次**；深度超過時發出 ``trigger_limit_reached``（不計次數）。同 id 兩件只算 1 條
-  （G1 的非數值類遞減：:meth:`~trpg.engine.gear_state.GearState.active_affixes` 只回傳生效的）。
+  （G1 的非數值類遞減：:meth:`~trpg.engine.gear.state.GearState.active_affixes` 只回傳生效的）。
 - **充能累積**（:class:`~trpg.content.equipment.ChargeAffix`）：``gain_trigger`` 時持有者累積 1 層
-  （裝備版上限 ``max_stacks``，沒有每回合限制）。啟動見 :mod:`trpg.engine.gear_charge`。
+  （裝備版上限 ``max_stacks``，沒有每回合限制）。啟動見 :mod:`trpg.engine.gear.charge`。
 
 效果的包裝：詞條的 ``effects`` 包成一個被動技能（:func:`gear_carrier`），沒有寫 ``affects`` 的效果
 依 ``effect_target`` 補上（``self`` → 持有者自己，其餘 → 敵方）。

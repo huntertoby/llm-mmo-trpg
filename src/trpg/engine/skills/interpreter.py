@@ -415,7 +415,7 @@ def use_gear_effects(
     ctx: Ctx, owner: UnitState, carrier: SkillDef, subject: UnitState | None
 ) -> None:
     """結算裝備詞條（第 6、7 類，Phase 3G-G3a）的效果：``carrier`` 是詞條包成的被動技能
-    （:func:`trpg.engine.gear_triggers.gear_carrier`），作用在 ``subject``（沒有時為持有者自己）；
+    （:func:`trpg.engine.gear.triggers.gear_carrier`），作用在 ``subject``（沒有時為持有者自己）；
     比照被動觸發：自動命中、狀態照常擲抵抗，不受修正規則影響；``grant_ap`` 受裝備的每回合 AP 回復
     上限約束。"""
     target = owner if subject is None else subject

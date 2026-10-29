@@ -36,7 +36,7 @@ from trpg.engine.events import (
     TurnStarted,
 )
 from trpg.engine.forms import pay_upkeep, tick_form_cooldowns
-from trpg.engine.gear import gear_turn_start
+from trpg.engine.gear.core import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.ids import BURNING
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
@@ -54,7 +54,7 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import BattleState, StatusInstance, UnitState
-from trpg.engine.summons import (
+from trpg.engine.summons.core import (
     detonate_if_adjacent,
     expire_summons,
     pulse_summon,

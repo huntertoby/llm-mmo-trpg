@@ -21,8 +21,8 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import DamageEffect
 from trpg.engine.events import GearTriggered
-from trpg.engine.gear_enhance import strike_affixes
-from trpg.engine.gear_state import GearAffix
+from trpg.engine.gear.enhance import strike_affixes
+from trpg.engine.gear.state import GearAffix
 from trpg.engine.modifiers import ATTACK, damage_element
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import weapon_attribute, weapon_scale_attr

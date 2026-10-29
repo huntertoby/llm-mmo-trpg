@@ -14,7 +14,8 @@
   ``steady.hit``），或特例 ``range_mod.penalty``（距離修正裡的懲罰部分乘上倍率）；``delta`` 加減、
   ``scale_permille`` 倍率。暴擊範圍不低於 ``caps.crit_range_min``。
 
-所有數字都先經過 :func:`~trpg.engine.gear.diminished_total` 的遞減（同 id 100／50／25／0%）。這個
+所有數字都先經過
+:func:`~trpg.engine.gear.core.diminished_total` 的遞減（同 id 100／50／25／0%）。這個
 模組只讀狀態（:func:`geared_weapon` 回傳新的武器資料）。
 """
 
@@ -35,8 +36,8 @@ from trpg.content.equipment import (
 from trpg.content.keyword_derive import Facts, SkillKeywords
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.weapon_params import set_weapon_param
-from trpg.engine.gear import diminished_total
-from trpg.engine.gear_state import GearAffix, GearState
+from trpg.engine.gear.core import diminished_total
+from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.rune_queries import has_own_rune
 from trpg.shared.types import Element
 

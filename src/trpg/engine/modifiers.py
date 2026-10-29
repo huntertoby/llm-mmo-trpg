@@ -35,8 +35,8 @@ from trpg.engine.attack_element import (
     attack_element_sources,
     resolve_attack_element,
 )
-from trpg.engine.gear import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
-from trpg.engine.gear_enhance import (
+from trpg.engine.gear.core import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
+from trpg.engine.gear.enhance import (
     gear_area_delta,
     gear_keyword_damage_permille,
     gear_rune_read_permille,

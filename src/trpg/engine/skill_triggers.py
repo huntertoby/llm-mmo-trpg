@@ -24,7 +24,7 @@
 裝備的觸發與充能詞條（Phase 3G-G3a，第 6、7 類）走同一套收集與延後結算：持有者身上生效中的
 詞條依觸發時機（``trigger`` 或 ``gain_trigger``）加進 :class:`PassiveIndex`，收集時記一筆
 ``event`` 為 ``gear:<時機>`` 的 :class:`Fired`（``skill_id`` 放詞條 ID），結算在
-:mod:`trpg.engine.gear_triggers`（每條每回合／每輪最多 1 次、深度檢查、充能累積）。
+:mod:`trpg.engine.gear.triggers`（每條每回合／每輪最多 1 次、深度檢查、充能累積）。
 
 這個模組在載入時不匯入效果佇列與技能解譯器（它們反過來匯入 :mod:`trpg.engine.context`），
 :func:`settle` 在呼叫時才延後匯入。
@@ -53,7 +53,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
-from trpg.engine.gear_state import GearAffix
+from trpg.engine.gear.state import GearAffix
 from trpg.engine.rules.combat import NATURAL_HIT
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import skip_turn_status
@@ -610,7 +610,7 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
 
 def _resolve_gear(ctx: Ctx, fired: Fired) -> None:
     """裝備的觸發與充能詞條（Phase 3G-G3a）。"""
-    from trpg.engine.gear_triggers import resolve_gear_fired  # noqa: PLC0415
+    from trpg.engine.gear.triggers import resolve_gear_fired  # noqa: PLC0415
 
     resolve_gear_fired(ctx, fired)
 

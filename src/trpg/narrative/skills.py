@@ -41,7 +41,7 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
-from trpg.engine.summons import SummonStats
+from trpg.engine.summons.core import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_levels import SkillLevelInfo
 from trpg.narrative.summon_info import (
@@ -1556,7 +1556,7 @@ class CardOwner:
     attr_get: Callable[[Attribute], int] | None = None
     """讀持有者目前的屬性值（一輪為基礎＋裝備，戰鬥中為有效屬性）。"""
     summon_stats: Callable[[EffectSpec], SummonStats | None] | None = None
-    """召喚效果 → 施放者當下的召喚物實際值（:func:`trpg.engine.summons.summon_stats`）。"""
+    """召喚效果 → 施放者當下的召喚物實際值（:func:`trpg.engine.summons.core.summon_stats`）。"""
 
 
 def _scaling_attr_ids(skill: SkillDef, weapon: WeaponDef | None) -> tuple[str, ...]:

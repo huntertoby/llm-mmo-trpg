@@ -29,7 +29,7 @@ from trpg.engine import Attack, BattleState, preview, start_battle
 from trpg.engine import modifiers as mods
 from trpg.engine.context import Ctx
 from trpg.engine.events import GearHpLost
-from trpg.engine.gear import (
+from trpg.engine.gear.core import (
     build_gear,
     cap_ap_gain,
     cap_cooldown,

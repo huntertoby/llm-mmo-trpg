@@ -11,7 +11,7 @@ from fractions import Fraction
 
 from trpg.content.environment import AiProfile, BasicActionAiRules
 from trpg.engine.actions import ActivateCharge
-from trpg.engine.gear_charge import find_charge
+from trpg.engine.gear.charge import find_charge
 from trpg.engine.state import BattleState
 
 __all__ = ["charge_score"]

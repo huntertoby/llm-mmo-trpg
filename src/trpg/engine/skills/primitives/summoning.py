@@ -13,7 +13,7 @@ from trpg.engine.effects.models import (
     EffectBase,
     HealEffect,
 )
-from trpg.engine.gear_summon import gear_sacrifice_permille
+from trpg.engine.gear.summon import gear_sacrifice_permille
 from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.geometry import XY, manhattan
@@ -24,8 +24,8 @@ from trpg.engine.skills.revive import revive_unit
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
 )
-from trpg.engine.summon_variants import second_summon_site
-from trpg.engine.summons import summon_unit
+from trpg.engine.summons.core import summon_unit
+from trpg.engine.summons.variants import second_summon_site
 from trpg.engine.zones import create_zone
 from trpg.shared.types import Element
 
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 def summon(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     """``summon``（Phase 3D-4a）：在選取的格子召喚 ``unit``，持續 ``duration`` 輪（直接結算，
-    見 :mod:`trpg.engine.summons`）。"""
+    見 :mod:`trpg.engine.summons.core`）。"""
     action = cast.action
     if action is None or action.target_pos is None:
         return []

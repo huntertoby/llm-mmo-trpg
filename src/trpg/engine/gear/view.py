@@ -1,6 +1,6 @@
 """裝備加成的來源摘要（Phase 3G-G4，唯讀；給英雄面板與單位資訊顯示）。
 
-只讀 :class:`~trpg.engine.gear_state.GearState`（開戰時已算好的遞減後加值）與規則包的硬上限，
+只讀 :class:`~trpg.engine.gear.state.GearState`（開戰時已算好的遞減後加值）與規則包的硬上限，
 不參與任何結算：每一行是「某個數值 ＋ 實際值 ＋ 來自哪些物品的哪些詞條 ＋ 遞減與截斷的說明」。
 """
 
@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.equipment import CostAffix, StatAffix
 from trpg.content.skills import condition_text
-from trpg.engine.gear_state import (
+from trpg.engine.gear.state import (
     BASE_BONUS_PREFIX,
     BonusStat,
     GearAffix,

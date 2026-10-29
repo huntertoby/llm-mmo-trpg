@@ -21,7 +21,7 @@ from trpg.content.rules import SummonInfusion
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.summons import SummonDef, summon_scaled_hp, summon_spec_hp
 from trpg.engine.ids import BLOCKS_SIGHT_TAG, CONCEALED, IMMOVABLE, PRONE
-from trpg.engine.summons import SummonStats
+from trpg.engine.summons.core import SummonStats
 from trpg.engine.weapon_traits import TRIP_ATTR
 
 _PERMILLE = 1000
@@ -361,7 +361,7 @@ def summon_info(
     """``skill`` 的召喚效果 ``spec`` 的資訊小卡；範本不存在時 ``None``。
 
     ``stats`` 為 ``None`` 時是 1 級基準值（:func:`summon_card_hp`）；戰鬥中傳入施放者當下的實際值
-    （:func:`trpg.engine.summons.summon_stats`，和引擎生成召喚物同一個算法）。"""
+    （:func:`trpg.engine.summons.core.summon_stats`，和引擎生成召喚物同一個算法）。"""
     try:
         summon = lib.ruleset.summon_def(spec.unit or "")
     except KeyError:

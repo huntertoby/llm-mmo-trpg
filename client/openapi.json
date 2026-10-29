@@ -3514,7 +3514,7 @@
           "summon_id"
         ],
         "title": "CommandSummon",
-        "description": "指揮自己一隻召喚物（Phase 3-33c，6.29.2；``summon_command_ap_cost`` AP）：立刻執行指定的\n移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，\n移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪\n最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**\n``legal_actions``（組合太多），由 :func:`trpg.engine.summon_control.command_problem` 與\nAPI 的指揮選項（``command-options``）提供。"
+        "description": "指揮自己一隻召喚物（Phase 3-33c，6.29.2；``summon_command_ap_cost`` AP）：立刻執行指定的\n移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，\n移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪\n最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**\n``legal_actions``（組合太多），由 :func:`trpg.engine.summons.control.command_problem` 與\nAPI 的指揮選項（``command-options``）提供。"
       },
       "CoverOut": {
         "properties": {
@@ -9609,7 +9609,7 @@
           "mode"
         ],
         "title": "SetSummonMode",
-        "description": "切換自己一隻召喚物的模式（Phase 3-33c，6.29.2；**0 AP**、不結束回合，只能在自己的回合）：\n``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、\n``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**\n``legal_actions``（同 :class:`SetReactionMode`），由\n:func:`trpg.engine.summon_control.mode_problem` 判斷合法。"
+        "description": "切換自己一隻召喚物的模式（Phase 3-33c，6.29.2；**0 AP**、不結束回合，只能在自己的回合）：\n``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、\n``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**\n``legal_actions``（同 :class:`SetReactionMode`），由\n:func:`trpg.engine.summons.control.mode_problem` 判斷合法。"
       },
       "Shove": {
         "properties": {
@@ -12335,7 +12335,7 @@
           "unit_id"
         ],
         "title": "UseRaceSkill",
-        "description": "使用種族技（Phase 3R-2，``docs/design/07-角色成長.md`` 7.7）：種族技由單位的種族決定\n（``content/races.yaml``），所以不帶技能 ID；1 AP、每場限用 1～2 次、不佔技能欄。依種族技的\n形狀只允許對應的欄位：\n\n- ``self``：都不給（過充另外要 ``choice``：``stamina`` 或 ``mana``）；\n- ``ground_tile``（狐火誘餌）、``square3``（潮息）：``target_pos``；\n- ``cone``（龍息震退）：``direction``；\n- ``single``（拋錨）：``target_id``；\n- ``object_then_tile``（蠻力投擲）：``target_object_id`` 與 ``target_pos``（落點）。\n\n是否合法由 :func:`trpg.engine.race_skills.race_skill_problem` 判斷。"
+        "description": "使用種族技（Phase 3R-2，``docs/design/07-角色成長.md`` 7.7）：種族技由單位的種族決定\n（``content/races.yaml``），所以不帶技能 ID；1 AP、每場限用 1～2 次、不佔技能欄。依種族技的\n形狀只允許對應的欄位：\n\n- ``self``：都不給（過充另外要 ``choice``：``stamina`` 或 ``mana``）；\n- ``ground_tile``（狐火誘餌）、``square3``（潮息）：``target_pos``；\n- ``cone``（龍息震退）：``direction``；\n- ``single``（拋錨）：``target_id``；\n- ``object_then_tile``（蠻力投擲）：``target_object_id`` 與 ``target_pos``（落點）。\n\n是否合法由 :func:`trpg.engine.race.skills.race_skill_problem` 判斷。"
       },
       "UseSkill-Input": {
         "properties": {

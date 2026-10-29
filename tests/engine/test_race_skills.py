@@ -35,7 +35,7 @@ from tests.engine.race_helpers import (
 )
 from tests.engine.skill_helpers import SID, battle, cast, hit_with
 from trpg.content.races import RaceEffect, RaceSkill
-from trpg.engine import BattleState, Move, ResolveResult, legal_actions, race_skills, resolve
+from trpg.engine import BattleState, Move, ResolveResult, legal_actions, resolve
 from trpg.engine.actions import Action, Attack, UseRaceSkill
 from trpg.engine.effects import ApplyStatusEffect, DamageEffect, PushEffect, run_effects
 from trpg.engine.events import (
@@ -50,6 +50,7 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.ids import CONCEALED, DECOY_TAG, PRONE, RACE_ADAPT, RACE_STONEWALL
+from trpg.engine.race import skills as race_skills
 from trpg.engine.state import UnitState
 from trpg.narrative.events import describe_event
 from trpg.shared.errors import IllegalActionError

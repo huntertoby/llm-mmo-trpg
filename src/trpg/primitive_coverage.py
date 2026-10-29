@@ -41,7 +41,7 @@ from trpg.engine.ai.race import RACE_EFFECT_SCORERS, RIDER_ONLY_EFFECTS
 from trpg.engine.forms import FORM_EFFECT_CONSUMERS, FORM_ENTRY_CONSUMERS
 from trpg.engine.modifiers import CHANGE_HANDLERS
 from trpg.engine.preview import PRIMITIVE_PREVIEW
-from trpg.engine.race_skills import (
+from trpg.engine.race.skills import (
     RACE_EFFECT_EXECUTORS,
     RACE_EFFECT_PROBLEMS,
     UNCONDITIONAL_RACE_EFFECTS,
@@ -171,11 +171,11 @@ def race_coverage_problems(
     problems: list[str] = []
     for kind in sorted(effect_types):
         if kind not in executors:
-            problems.append(f"種族技效果 {kind} 沒有結算（請補 race_skills.RACE_EFFECT_EXECUTORS）")
+            problems.append(f"種族技效果 {kind} 沒有結算（請補 race.skills.RACE_EFFECT_EXECUTORS）")
         if kind not in problems_table and kind not in unconditional:
             problems.append(
                 f"種族技效果 {kind} 沒有合法性檢查"
-                "（請補 race_skills.RACE_EFFECT_PROBLEMS，或列入 UNCONDITIONAL_RACE_EFFECTS）"
+                "（請補 race.skills.RACE_EFFECT_PROBLEMS，或列入 UNCONDITIONAL_RACE_EFFECTS）"
             )
         if kind not in scorers and kind not in riders:
             problems.append(

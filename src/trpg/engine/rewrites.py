@@ -19,7 +19,7 @@ from trpg.content.skills import EffectSpec, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.events import ApGranted, EffectFizzled, ReactionsGranted, SkillCooldownChanged
-from trpg.engine.gear import cap_ap_gain
+from trpg.engine.gear.core import cap_ap_gain
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [

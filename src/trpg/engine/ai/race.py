@@ -23,7 +23,7 @@ from collections.abc import Callable
 
 from trpg.engine.actions import UseRaceSkill
 from trpg.engine.ids import DECOY_TAG
-from trpg.engine.race_skills import race_skill_actions, race_skill_of
+from trpg.engine.race.skills import race_skill_actions, race_skill_of
 from trpg.engine.rules.combat import attack_problem, attack_reach
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.movement import is_deadly

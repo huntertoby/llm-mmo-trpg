@@ -29,7 +29,7 @@ from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import ManeuverRolled, UnitSummoned
 from trpg.engine.infusion import active_keywords
 from trpg.engine.rules.statuses import status_attack_bonus
-from trpg.engine.summons import pulse_summon
+from trpg.engine.summons.core import pulse_summon
 from trpg.engine.turns import start_turn
 from trpg.engine.weapon_traits import apply_hit_traits, attack_dice, chain_targets, height_permille
 from trpg.shared.types import Pos, Surface, Team, UnitId
@@ -312,7 +312,7 @@ def test_war_totem_gives_rallied_to_allies_and_other_summons_within_two() -> Non
         u for u in skeleton_state.units.values() if u.template_id == "summon_skeleton_warrior"
     )
     ctx = Ctx(skeleton_state.clone())
-    from trpg.engine.summons import pulse_totem  # noqa: PLC0415
+    from trpg.engine.summons.core import pulse_totem  # noqa: PLC0415
 
     pulse_totem(ctx, ctx.state.units[tid])
     rules = ctx.state.ruleset

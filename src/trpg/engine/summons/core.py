@@ -57,7 +57,7 @@ from trpg.engine.events import (
     UnitMoved,
     UnitSummoned,
 )
-from trpg.engine.gear_summon import gear_summon_duration, inherit_attack_gear
+from trpg.engine.gear.summon import gear_summon_duration, inherit_attack_gear
 from trpg.engine.ids import CONCEALED, PRONE, next_unit_id
 from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
@@ -67,7 +67,7 @@ from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.scaling import skill_scaling_attr
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summon_variants import apply_summon_spec, trait_adjusted
+from trpg.engine.summons.variants import apply_summon_spec, trait_adjusted
 from trpg.engine.triggers import register_trigger
 from trpg.shared.rng import PERMILLE
 from trpg.shared.types import Pos, UnitId
@@ -265,7 +265,7 @@ def summon_unit(  # noqa: PLR0917
     ``infusion``（Phase 3-33b）：灌注的關鍵字（已由動作檢查過）；省略時取施放者第一個可選的。
 
     ``spec``（Phase 3-33f2）：技能的 ``summon`` 效果；分歧進化的 HP、強度、小特性與第二個灌注
-    （:mod:`trpg.engine.summon_variants`）從這裡來。召喚物持續的輪數另外加上施放者的召喚持續詞條。"""
+    （:mod:`trpg.engine.summons.variants`）從這裡來。召喚物持續的輪數另外加上施放者的召喚持續詞條。"""
     state = ctx.state
     try:
         summon = state.ruleset.summon_def(template_id)

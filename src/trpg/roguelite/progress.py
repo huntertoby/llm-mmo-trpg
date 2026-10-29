@@ -17,7 +17,7 @@ from collections.abc import Mapping, Sequence
 
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import MANAGEMENT_ACTION_TYPES, Step
-from trpg.engine.gear import build_gear, geared_template
+from trpg.engine.gear.core import build_gear, geared_template
 from trpg.engine.results import battle_result
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState, state_to_json
@@ -82,7 +82,7 @@ def _battle_node(run: RunState) -> BattleNode:
 
 def hero_effective_attributes(library: ContentLibrary, run: RunState) -> dict[Attribute, int]:
     """主角的有效屬性（戰鬥之間沒有狀態）：基礎屬性＋裝備的屬性詞條，和引擎開戰時的
-    :func:`trpg.engine.gear.geared_template` 同一個算法（角色面板的常駐數值階數用）。"""
+    :func:`trpg.engine.gear.core.geared_template` 同一個算法（角色面板的常駐數值階數用）。"""
     ruleset = library.ruleset
     gear = build_gear(run_loadout(library, run), ruleset.equipment)
     return dict(geared_template(run.hero, gear, ruleset).attributes)

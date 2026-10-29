@@ -20,7 +20,7 @@ from trpg.engine.rules.combat import attack_problem
 from trpg.engine.rules.movement import available_move_budget, path_map
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summons import summon_inert
+from trpg.engine.summons.core import summon_inert
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, UnitId
 

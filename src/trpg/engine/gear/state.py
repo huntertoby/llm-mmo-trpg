@@ -1,6 +1,7 @@
 """單位的裝備狀態（Phase 3G-G1）：開戰時由裝備快照算好、戰鬥中不變的資料。
 
-放在獨立模組，讓 :mod:`trpg.engine.state` 能引用而不循環匯入；計算與查詢在 :mod:`trpg.engine.gear`。
+放在獨立模組，讓 :mod:`trpg.engine.state` 能引用而不循環匯入；計算與查詢在
+:mod:`trpg.engine.gear.core`。
 
 - :class:`GearAffix`：身上每一條詞條（含遞減權重），依詞條 id、再依遞減順序排列。G2、G3 的類別
   （技能強化、普攻附加、觸發、充能、動作、反應、改變規則）從這裡取 **生效中**（``weight_permille``

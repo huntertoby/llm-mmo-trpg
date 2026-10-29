@@ -48,7 +48,7 @@ from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import prevents_concealment
 from trpg.engine.skills import shapes
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summons import _insert_in_order, _order_index
+from trpg.engine.summons.core import _insert_in_order, _order_index
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import ObjectId, Pos, Surface, UnitId
 

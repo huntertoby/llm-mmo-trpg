@@ -3,7 +3,7 @@
 - **加深**（``summon.max_hp_permille`` ＋ ``summon.trait``）：召喚物最大 HP 多 ‰，並多一個小特性
   （``core.summon_traits``：護甲、移動、暴擊範圍）。
 - **橋接**（``summon.infusion``）：召喚物固有第二個灌注關鍵字（``UnitState.bonus_infusion``），
-  和範本固有的、施放時選的並存；由 :func:`trpg.engine.summons.summon_unit` 在算灌注 HP 前設定。
+  和範本固有的、施放時選的並存；由 :func:`trpg.engine.summons.core.summon_unit` 在算灌注 HP 前設定。
 - **數量型**（``summon.count: 2`` ＋ ``summon.power_permille``）：一次召喚 2 隻，每隻最大 HP 與傷害
   只有一般的 ``power_permille`` ‰（``UnitState.summon_power_permille`` 乘在傷害倍率上）；第二隻
   放在第一隻旁邊第一個合法的空格（東、西、南、北的順序）。

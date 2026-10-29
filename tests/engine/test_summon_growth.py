@@ -32,7 +32,7 @@ from trpg.engine.events import DamageDealt, SummonExpired, UnitSummoned
 from trpg.engine.infusion import infusion_options, preferred_infusion
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.targeting import compute_area
-from trpg.engine.summons import growth_of, summon_limit
+from trpg.engine.summons.core import growth_of, summon_limit
 from trpg.engine.weapon_traits import apply_hit_traits
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Attribute, Pos, Team, UnitId

@@ -1444,7 +1444,7 @@ export interface components {
          *     移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，
          *     移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪
          *     最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**
-         *     ``legal_actions``（組合太多），由 :func:`trpg.engine.summon_control.command_problem` 與
+         *     ``legal_actions``（組合太多），由 :func:`trpg.engine.summons.control.command_problem` 與
          *     API 的指揮選項（``command-options``）提供。
          */
         CommandSummon: {
@@ -4001,7 +4001,7 @@ export interface components {
          *     ``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、
          *     ``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**
          *     ``legal_actions``（同 :class:`SetReactionMode`），由
-         *     :func:`trpg.engine.summon_control.mode_problem` 判斷合法。
+         *     :func:`trpg.engine.summons.control.mode_problem` 判斷合法。
          */
         SetSummonMode: {
             /** Unit Id */
@@ -5034,7 +5034,7 @@ export interface components {
          *     - ``single``（拋錨）：``target_id``；
          *     - ``object_then_tile``（蠻力投擲）：``target_object_id`` 與 ``target_pos``（落點）。
          *
-         *     是否合法由 :func:`trpg.engine.race_skills.race_skill_problem` 判斷。
+         *     是否合法由 :func:`trpg.engine.race.skills.race_skill_problem` 判斷。
          */
         UseRaceSkill: {
             /** Unit Id */

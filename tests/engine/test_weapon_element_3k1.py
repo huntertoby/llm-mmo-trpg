@@ -30,9 +30,9 @@ from trpg.engine.attack_element import (
     weapon_affix_element,
 )
 from trpg.engine.events import DamageDealt
-from trpg.engine.gear import build_gear, gear_defense_permille
-from trpg.engine.gear_summon import inherit_attack_gear
-from trpg.engine.gear_view import gear_totals
+from trpg.engine.gear.core import build_gear, gear_defense_permille
+from trpg.engine.gear.summon import inherit_attack_gear
+from trpg.engine.gear.view import gear_totals
 from trpg.engine.setup import UnitSpawn
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.targeting import damage_parameters

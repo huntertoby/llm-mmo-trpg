@@ -3,7 +3,7 @@
 **計算位置**（G2、G3 接在這裡）：
 
 1. 開戰時 :func:`build_gear` 把單位的裝備快照（:class:`~trpg.content.equipment.Loadout`）算成
-   :class:`~trpg.engine.gear_state.GearState`：
+   :class:`~trpg.engine.gear.state.GearState`：
 
    - **遞減**（:func:`diminish`）：同一詞條 id 的條目依數值大到小（同值依欄位固定順序）排序，數值類
      權重 ``rules/equipment.yaml`` 的 1000／500／250／0‰；非數值類同 id 只有第一條生效。
@@ -55,7 +55,7 @@ from trpg.content.library import Ruleset
 from trpg.content.skills import ConditionSpec
 from trpg.content.slots import SLOT_INDEX
 from trpg.engine.events import GearHpLost
-from trpg.engine.gear_state import (
+from trpg.engine.gear.state import (
     BASE_BONUS_PREFIX,
     BonusStat,
     GearAffix,

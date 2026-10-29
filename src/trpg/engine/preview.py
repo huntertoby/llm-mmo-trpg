@@ -90,11 +90,11 @@ from trpg.engine.events import (
     UnitRevived,
     UnitSummoned,
 )
-from trpg.engine.gear_charge import find_charge
+from trpg.engine.gear.charge import find_charge
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
-from trpg.engine.race_skills import race_skill_of
+from trpg.engine.race.skills import race_skill_of
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import (
     PERMILLE,

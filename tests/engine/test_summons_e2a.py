@@ -26,7 +26,7 @@ from trpg.engine.events import (
     WallToppled,
 )
 from trpg.engine.rules.geometry import has_line_of_sight
-from trpg.engine.summons import summon_inert
+from trpg.engine.summons.core import summon_inert
 from trpg.engine.turns import start_turn
 from trpg.narrative.events import describe_event
 from trpg.shared.types import Pos, Surface, UnitId

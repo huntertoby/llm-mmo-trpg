@@ -36,8 +36,8 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import EffectBase, PushEffect
 from trpg.engine.events import StatusApplied
-from trpg.engine.gear import build_gear
-from trpg.engine.gear_enhance import (
+from trpg.engine.gear.core import build_gear
+from trpg.engine.gear.enhance import (
     attack_keywords,
     gear_area_delta,
     gear_attack_element,

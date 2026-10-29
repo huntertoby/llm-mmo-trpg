@@ -37,7 +37,7 @@ from trpg.engine.effects.models import (
     HealEffect,
     PushEffect,
 )
-from trpg.engine.gear_enhance import gear_on_hit_statuses
+from trpg.engine.gear.enhance import gear_on_hit_statuses
 from trpg.engine.ids import ARMOR_BROKEN, BLEED, ENTANGLED, PRONE, REVEALED
 from trpg.engine.infusion import active_infusions, template_of
 from trpg.engine.maneuvers import contest

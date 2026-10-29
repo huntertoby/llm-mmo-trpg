@@ -24,7 +24,7 @@ from trpg.engine.rules.geometry import manhattan
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills.casting import use_rule_change_effects
 from trpg.engine.state import UnitState
-from trpg.engine.summons import summon_unit
+from trpg.engine.summons.core import summon_unit
 from trpg.shared.types import UnitId
 
 __all__ = ["expire_orphan_summons", "pass_through", "spawn_on_downed"]

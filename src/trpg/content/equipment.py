@@ -13,7 +13,7 @@
 
 單位的裝備在開戰時解析成 :class:`Loadout`（物品 ＋ 詞條定義 ＋ 擲出的數值，**內嵌完整定義**），
 放進 ``BattleSetup``，重播不依賴當下的資料檔。數值結算（遞減、上限、各類詞條）在
-:mod:`trpg.engine.gear`。
+:mod:`trpg.engine.gear.core`。
 
 數值單位：``value_unit: permille`` 的數值是千分比（150 ＝ 15%），``flat`` 是整數點數。
 """

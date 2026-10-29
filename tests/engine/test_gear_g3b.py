@@ -69,8 +69,8 @@ from trpg.engine.events import (
     StatusResisted,
     SurfaceChanged,
 )
-from trpg.engine.gear import build_gear
-from trpg.engine.gear_reactions import extra_uses_left, gear_reaction_rules
+from trpg.engine.gear.core import build_gear
+from trpg.engine.gear.reactions import extra_uses_left, gear_reaction_rules
 from trpg.engine.setup import BattleSetupError
 from trpg.engine.skill_triggers import reset_round_counts
 from trpg.engine.state import state_from_json, state_to_json

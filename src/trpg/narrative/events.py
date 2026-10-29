@@ -134,7 +134,7 @@ from trpg.engine.events import (
     ZoneMoved,
     ZoneTriggered,
 )
-from trpg.engine.race_skills import decoy_template_ids
+from trpg.engine.race.skills import decoy_template_ids
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
 from trpg.shared.types import Pos, Surface, rune_name
