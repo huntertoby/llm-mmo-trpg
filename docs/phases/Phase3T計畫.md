@@ -42,3 +42,10 @@
 - **3T-2**（報告 `Phase3T-2報告.md`）：種族技合法性走全部效果、race／form coverage；`ruleset_hash`＋`log_replay_problem`、`LOG_FORMAT` **`/86`**、變更紀錄搬到 `docs/phases/戰鬥紀錄格式變更.md`；`proposal_forms` → `proposal_layouts`、`PROMPT_VERSION` `skill-proposal/3`；種族 `except KeyError` 移除、`skill_scaling` 必填；誘餌範本／壽命／AI 觸發距離（`ai_trigger_range: 7`）進 races.yaml。待決全部接受（`stack_gain` 吐息例外、無 golden 紀錄、`Ruleset` 欄位增減需遷移）。
 - 合併後全量（除 llm）：pytest 8569、vitest 1104、mypy、lint-imports、build、重播（frozen_lake 種子 8，鱗族）全過。
 - **3T 必做項完成**；3T-3（拆 `content/skills.py`）與 Phase 4 平行。
+
+### 3.6 3T-5｜AI 施放純地形技能（sonnet；約 0.3 段；3-54e 待決，延後項）
+起因：3-54e 報告——效用 AI 對純地形技能（只有隆起／下陷，例如大地崩陷、築高台、陷地術）沒有評分，AI 單位不會主動施放。
+1. 效用 AI 加地形改變的評分項（`trpg.engine.ai`）：例如「下陷讓敵人站低處（我方得高處優勢）」「隆起讓我方遠程站高處」「在敵人與我方之間造成高低差阻擋近戰」「挖坑後有推擊技能可以把敵人推進去」；權重放 `content/ai_profiles.yaml`，初值寫進報告。
+2. 不讓 AI 濫用：沒有實際收益（例如範圍內沒有單位、高低差不影響任何人）就不施放。
+3. 測試：表格測試（有收益／無收益情境 × 隆起／下陷）；一場含大地崩陷的 AI 對戰重播一致；`trpg sim` 小樣本只量（大地 build 的施放次數前後對照，寫進報告，不調數值）。
+4. 驗收：pytest（engine、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy；戰鬥快照若因 AI 行為改變而變，逐場說明。報告 `Phase3T-5報告.md`。
