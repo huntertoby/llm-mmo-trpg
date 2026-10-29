@@ -14,7 +14,7 @@ import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, SUMMON_FOOT_Y, SUMMON_H, SUMMO
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
-import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, statusRowLayout, type BodyEffects } from "./statusIcon";
+import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
@@ -297,39 +297,64 @@ const MARKER_RIGHT = -T * 0.37 + 8;
 /** 腳邊狀態列的中心 y（相對格子中心）：HP 條正上方；不隨體型、形態、頭頂高度改變。 */
 export const ROW_Y_FEET = T * 0.36 - ROW_GAP_HP - ROW_ICON_FEET / 2;
 
-/** 狀態列整排往右讓字母標記所需的位移（px，>= 0）：`n` 為排內項目數，間距 `ROW_ICON_FEET + 1`。 */
-export function rowShiftForMarker(n: number): number {
-  const left = -((n - 1) * (ROW_ICON_FEET + 1)) / 2 - ROW_ICON_FEET / 2;
+/** 狀態列最多顯示的圖示數（3U-2c）；超過時在第 2 個圖示右上角疊「+N」，不多佔一格。 */
+export const ROW_MAX_ICONS = 2;
+/** 圖示最小間距（px）：召喚物回合數徽章擠壓時才會小於 `ROW_ICON_FEET + 1`。 */
+const ROW_MIN_PITCH = 6;
+
+/** 狀態列整排往右讓字母標記所需的位移（px，>= 0）：`n` 為排內項目數，`pitch` 為圖示間距。 */
+export function rowShiftForMarker(n: number, pitch = ROW_ICON_FEET + 1): number {
+  const left = -((n - 1) * pitch) / 2 - ROW_ICON_FEET / 2;
   return Math.max(0, MARKER_RIGHT + 1 - left);
 }
 
-/** 腳邊狀態列（HP 條正上方、置中，畫在小人之上）：最多 3 個圖示（超過時 2 個加「+N」），倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
+/**
+ * 狀態列在字母標記（左）與召喚物回合數徽章（右，`badgeLeft` 為其左緣 x，無則 null）之間的排法。
+ * 空間不夠時縮小間距（圖示輕微重疊），大小不變。
+ */
+export function rowPlacement(n: number, badgeLeft: number | null): { shift: number; pitch: number } {
+  let pitch = ROW_ICON_FEET + 1;
+  if (n > 1 && badgeLeft !== null) {
+    const room = badgeLeft - 1 - (MARKER_RIGHT + 1) - ROW_ICON_FEET;
+    pitch = Math.max(ROW_MIN_PITCH, Math.min(pitch, room / (n - 1)));
+  }
+  return { shift: rowShiftForMarker(n, pitch), pitch };
+}
+
+/** 腳邊狀態列（HP 條正上方，畫在小人之上）：最多 2 個圖示，超過時第 2 個右上角疊「+N」；倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
 function statusRow(u: UnitDraw): Container | null {
   if (u.downed) return null;
-  const ids = (u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING);
-  const infused = u.infused === true;
-  const items = statusRowLayout(ids, infused ? 2 : 3, ROW_ICON_FEET);
-  if (items.length === 0) return null;
+  const ids = sortStatuses((u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING));
+  const shown = ids.slice(0, ROW_MAX_ICONS);
+  if (shown.length === 0) return null;
+  const extra = ids.length - shown.length;
+  const badgeLeft = u.summon ? summonBadgeOffset(u, T).x - SUMMON_BADGE_RADIUS : null;
+  const { shift, pitch } = rowPlacement(shown.length, badgeLeft);
   const row = new Container();
-  row.position.set(rowShiftForMarker(items.length), ROW_Y_FEET);
-  for (const item of items) {
-    if (item.kind === "icon") {
-      const tex = rowIconTexture(item.id);
-      if (tex === null) continue;
+  row.position.set(shift, ROW_Y_FEET);
+  let x = -((shown.length - 1) * pitch) / 2;
+  let lastX = x;
+  for (const id of shown) {
+    lastX = x;
+    const tex = rowIconTexture(id);
+    if (tex !== null) {
       const icon = new Sprite(tex);
       icon.anchor.set(0.5);
       icon.width = ROW_ICON_FEET;
       icon.height = ROW_ICON_FEET;
-      icon.position.set(item.x, 0);
+      icon.position.set(x, 0);
       row.addChild(icon);
-    } else {
-      const half = ROW_ICON_FEET / 2;
-      row.addChild(new Graphics().roundRect(item.x - half, -half, ROW_ICON_FEET, ROW_ICON_FEET, 3).fill({ color: 0x0c0c10, alpha: 0.88 }).stroke({ width: 1.5, color: 0x9aa0aa }));
-      const more = label(`+${item.extra}`, 8, 0xffffff, true);
-      more.anchor.set(0.5);
-      more.position.set(item.x, 0.5);
-      row.addChild(more);
     }
+    x += pitch;
+  }
+  if (extra > 0) {
+    const cx = lastX + ROW_ICON_FEET / 2 - 2;
+    const cy = -ROW_ICON_FEET / 2 + 2;
+    row.addChild(new Graphics().circle(cx, cy, 4.5).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
+    const more = label(`+${extra}`, 7, 0xffffff, true);
+    more.anchor.set(0.5);
+    more.position.set(cx, cy + 0.5);
+    row.addChild(more);
   }
   return row;
 }
