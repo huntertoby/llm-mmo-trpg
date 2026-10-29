@@ -14,6 +14,7 @@ from trpg.content.skills import SkillDef
 from trpg.content.stacks import OverloadSpec, StackDef, StackTable
 from trpg.engine.preview import dice_distribution
 from trpg.skillgen.budget import _explode_ratio, skill_budget
+from trpg.skillgen.validate import structural_rarity
 
 DAMAGE: dict[str, Any] = {"type": "damage", "multiplier_permille": 1800}
 SCALING: dict[str, Any] = {"by": "missing_hp_10pct", "per_step_permille": 80, "cap_permille": 800}
@@ -169,10 +170,11 @@ def test_the_cap_is_required_and_limited_by_the_core_rule() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_the_miss_backlash_needs_at_least_rare() -> None:
+def test_the_miss_backlash_marks_at_least_rare() -> None:
+    # 3W-9：稀有度只是標記，不擋；失手反噬讓標記至少稀有
     cost = {"mana": 4, "cooldown": 2, "on_miss": [{"type": "apply_status", "status": "prone"}]}
-    assert "rarity.on_miss" not in rules_of(skill(cost=cost, rarity="rare"))
-    assert "rarity.on_miss" in rules_of(skill(cost=cost, rarity="common"))
+    assert "rarity.on_miss" not in rules_of(skill(cost=cost, rarity="common"))
+    assert structural_rarity(skill(cost=cost, rarity="common"), lib()) == "rare"
 
 
 # ---------------------------------------------------------------------------

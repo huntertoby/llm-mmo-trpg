@@ -13,7 +13,7 @@ from trpg.cli.budget import print_skill_budget
 from trpg.content.skills import MODIFIER_CHANGES, SkillDef, skill_problems
 from trpg.narrative.skills import modifier_summary, skill_card
 from trpg.skillgen.budget import skill_budget
-from trpg.skillgen.validate import validate_skill
+from trpg.skillgen.validate import minimum_tier, structural_rarity, validate_skill
 
 DEMOS = ("skill_searing_scar", "skill_thunder_hand", "skill_heavy_stomp", "skill_ember_cycle")
 
@@ -209,10 +209,12 @@ def test_cross_file_checks_cover_rule_conditions_and_on_hit_effects() -> None:
         assert _problems(SkillDef.model_validate(data(spec))) == []
 
 
-def test_modifier_skills_need_epic_rarity_and_pass_validation() -> None:
+def test_modifier_skills_are_marked_epic_and_pass_validation() -> None:
     lib = library()
     rare = SkillDef.model_validate(data(VALID_CHANGES["damage_permille"], rarity="rare"))
-    assert "rarity.skeleton" in {v.rule for v in validate_skill(rare, lib)}
+    # 3W-9：稀有度只是標記（結構算出史詩），不擋；修正型被動改由最低角色階級（3 階）把關
+    assert not any(v.rule.startswith("rarity") for v in validate_skill(rare, lib))
+    assert structural_rarity(rare, lib) == "epic" and minimum_tier(rare, lib) == 3
     for skill_id in DEMOS:
         skill = lib.skills[skill_id]
         assert skill.kind == "modifier" and skill.rarity == "epic"

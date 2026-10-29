@@ -35,7 +35,8 @@ def test_explicit_sacrifice_skeleton_composes_valid_skills() -> None:
     lib = library()
     modes = set()
     for seed in range(40):
-        skill = compose_random_skill(seed, library=lib, skeleton="sacrifice")
+        # 獻祭召喚物要角色 2 階（3W-9）
+        skill = compose_random_skill(seed, library=lib, skeleton="sacrifice", tier=2 + seed % 2)
         assert skill.skeleton == "sacrifice" and validate_skill(skill, lib) == [], seed
         modes.add(skill.effects[0].element is None)
     assert modes == {True, False}  # 爆炸與治療兩種都做得出來

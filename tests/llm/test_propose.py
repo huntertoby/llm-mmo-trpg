@@ -132,8 +132,9 @@ def test_budget_weak_only_is_fixed_without_llm(library: ContentLibrary) -> None:
 
 def test_no_cooldown_big_area_filled_by_engine(library: ContentLibrary) -> None:
     skill = library.skills["skill_blinding_dark"]
-    request = ProposalRequest(skill.tier, skill.rarity, skeleton=skill.skeleton)
-    ctx = ProposalContext(skill.tier, skill.rarity)
+    # 3W-9：3×3 要角色 2 階才在選單裡；這裡只驗修補機制，照手寫技能自己的 1 階驗證（來源手寫）
+    request = ProposalRequest(2, skill.rarity, skeleton=skill.skeleton)
+    ctx = ProposalContext(skill.tier, skill.rarity, origin="builtin")
     client = MockLLMClient([_proposal_text(library, "skill_blinding_dark")])
     outcome = propose_skill(client, library, request, ctx, seed=3)
     assert outcome.source == "llm" and len(client.calls) == 1
@@ -217,8 +218,8 @@ def test_mixed_errors_engine_repairs_cooldown_first(library: ContentLibrary) -> 
     """可修（沒有冷卻的大範圍）與不可修（骨架不合）混在一起：引擎先補冷卻，回給 LLM 的錯誤
     只剩不可修的；第二次 LLM 改對後通過。"""
     skill = library.skills["skill_blinding_dark"]
-    request = ProposalRequest(skill.tier, skill.rarity)
-    ctx = ProposalContext(skill.tier, skill.rarity)
+    request = ProposalRequest(2, skill.rarity)  # 3×3 要角色 2 階（3W-9；同上）
+    ctx = ProposalContext(skill.tier, skill.rarity, origin="builtin")
     good = proposal_from_skill(skill, library)
     bad = {**good, "skeleton": "strike"}
     client = MockLLMClient([json.dumps(bad, ensure_ascii=False), json.dumps(good)])
@@ -234,7 +235,7 @@ def test_mixed_errors_engine_repairs_cooldown_first(library: ContentLibrary) -> 
 
 def test_charge_through_form_in_prompt_and_schema(library: ContentLibrary) -> None:
     """帶 charge_through 的提議走自己的版型：available 有它的說明、形狀只有 ground_tile。"""
-    request = ProposalRequest(1, "rare", skeleton="displace")
+    request = ProposalRequest(2, "rare", skeleton="displace")  # 衝鋒穿越要角色 2 階（3W-9）
     prompt = build_proposal_prompt(library, request)
     layouts = dict(prompt.models.layouts)
     assert "charge_through" in layouts and "ground_tile" in layouts["charge_through"]
@@ -245,7 +246,7 @@ def test_charge_through_form_in_prompt_and_schema(library: ContentLibrary) -> No
     rush = _proposal_text(library, "skill_bull_rush")
     assert json.loads(rush)["layout"] == "charge_through"
     outcome = propose_skill(
-        MockLLMClient([rush]), library, request, ProposalContext(1, "rare"), seed=3
+        MockLLMClient([rush]), library, request, ProposalContext(2, "rare"), seed=3
     )
     assert outcome.source == "llm" and outcome.skill.shape.type == "ground_tile"
 

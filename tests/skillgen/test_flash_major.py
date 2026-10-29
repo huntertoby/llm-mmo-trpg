@@ -616,8 +616,9 @@ def test_whiteboards_can_transform_into_every_kind() -> None:
     lib = library()
     ok: Counter[str] = Counter()
     total = 0
+    # 3W-9：陷阱、召喚、姿態的轉型要角色 2 階起（#73），用 2 階的白板量覆蓋
     for seed in range(20):
-        board = _board(seed)
+        board = compose_whiteboard(seed, kind="active", tier=2, library=lib)
         total += 1
         for template in ALL_TRANSFORMS:
             if apply_variation(lib, board, _transform(template), bonus=120, rng=Rng(seed)):

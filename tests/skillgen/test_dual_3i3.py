@@ -113,7 +113,7 @@ def test_the_composer_with_a_hero_gives_the_highest_mind_attribute_only_when_clo
         for hero, near_case in ((near, True), (far, False)):
             skill = compose_random_skill(
                 seed,
-                tier=2,
+                tier=3,  # 雙屬性縮放要角色 3 階（3W-9）
                 rarity="rare",
                 skeleton="strike",
                 category="weapon",

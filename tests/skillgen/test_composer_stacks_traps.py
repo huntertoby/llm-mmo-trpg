@@ -30,7 +30,7 @@ def test_builder_finisher_skills_have_exactly_one_stack_effect() -> None:
 def test_trap_skills_start_with_place_trap_and_have_a_trap_field() -> None:
     triggers, shapes = set(), set()
     for seed in SEEDS:
-        skill = compose_random_skill(seed, skeleton="trap")
+        skill = compose_random_skill(seed, skeleton="trap", tier=2 + seed % 2)  # 陷阱 2 階（3W-9）
         assert validate_skill(skill, lib()) == []
         assert skill.effects[0].type == "place_trap" and skill.shape.type == "ground_tile"
         assert skill.trap is not None and skill.kind == "active"
