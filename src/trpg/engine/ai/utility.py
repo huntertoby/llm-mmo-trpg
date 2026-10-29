@@ -123,6 +123,7 @@ from trpg.engine.ai.summon import (
     summon_gains,
     summon_template,
 )
+from trpg.engine.ai.terrain import is_terrain_only, terrain_estimate, terrain_gains
 from trpg.engine.ai.variant import cast_form, variant_move_bonus
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
@@ -1005,6 +1006,8 @@ def _gains(
         gains += blocker_gains(state, actor, [*p.min_events, *p.max_events], profile, f.hit)
     if f.w.expose or f.w.cover_damage:
         gains += _cover_gains(state, actor, p, f.w, f.hit, only)
+    if only is None and isinstance(p.action, UseSkill):  # 純地形技能（3T-5）
+        gains += terrain_gains(state, p.min_state, actor, p.min_events, profile)
     return gains + _defend_gains(f)
 
 
@@ -1695,7 +1698,12 @@ def _special_estimate(  # noqa: PLR0917
         return scene_estimate(state, unit, skill, action, area)
     if effect_types & set(DISPLACE_PRIMITIVES):
         return displace_estimate(state, unit, skill, action, _harmful)
-    return _UNHANDLED
+    # 純地形（3T-5）：隆起／下陷
+    return (
+        terrain_estimate(state, unit, skill, area, w.height)
+        if is_terrain_only(skill)
+        else _UNHANDLED
+    )
 
 
 def _charge_estimate(  # noqa: PLR0917
