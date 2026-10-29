@@ -30,7 +30,7 @@ from trpg.skillgen.proposal import (
     build_proposal_models,
     kind_choices,
 )
-from trpg.skillgen.proposal_forms import form_hint, plan_forms
+from trpg.skillgen.proposal_layouts import layout_hint, plan_layouts
 from trpg.skillgen.proposal_numbers import numeric_param_names
 
 __all__ = [
@@ -139,7 +139,7 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
     triggers = rules.skill_triggers.by_id()
     keywords = rules.keywords.by_id()
     return {
-        "forms": _form_entries(library, subset),
+        "layouts": _layout_entries(library, subset),
         "skeletons": [
             _skeleton_entry(library, library.skeletons[i], subset) for i in sorted(subset.skeletons)
         ],
@@ -156,15 +156,15 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
     }
 
 
-def _form_entries(library: ContentLibrary, subset: ProposalSubset) -> list[dict[str, str]]:
-    """型態（Phase 4-L5b）：``form`` 的可用值與說明（schema 不進 prompt，模型只看得到這裡）。"""
-    plans, _ = plan_forms(
+def _layout_entries(library: ContentLibrary, subset: ProposalSubset) -> list[dict[str, str]]:
+    """版型（Phase 4-L5b）：``layout`` 的可用值與說明（schema 不進 prompt，模型只看得到這裡）。"""
+    plans, _ = plan_layouts(
         library,
         primitives=subset.primitives,
         shapes=subset.shapes,
         kinds=kind_choices(library, subset.skeletons),
     )
-    return [{"id": p.id, "hint": form_hint(library, p)} for p in plans]
+    return [{"id": p.id, "hint": layout_hint(library, p)} for p in plans]
 
 
 def _percent(permille: int) -> str:

@@ -97,6 +97,7 @@ __all__ = [
     "LEAP",
     "LEAVE_FORM",
     "LEGACY_REACTION_EVENTS",
+    "MAX_EFFECTS",
     "MAX_GRANT_DURATION",
     "MAX_MODIFIERS",
     "MAX_SUMMON_COUNT",
@@ -305,7 +306,8 @@ def rarity_rank(rarity: str) -> int:
     return RARITY_ORDER.index(rarity)
 
 
-_MAX_EFFECTS = 4
+MAX_EFFECTS = 4
+"""一個技能（複合技能兩段合計）最多幾個效果原語；內容驗證、提議與預算檢查共用這個值。"""
 _MAX_DISPLACE = 2
 _MAX_COOLDOWN = 6
 _MAX_AP_COST = 3
@@ -2513,9 +2515,9 @@ class SkillDef(ContentModel):
         if self.kind == "modifier":
             self._check_modifier()
         else:
-            if not 1 <= len(self.effects) <= _MAX_EFFECTS:
+            if not 1 <= len(self.effects) <= MAX_EFFECTS:
                 raise ValueError(
-                    f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {len(self.effects)} 個"
+                    f"效果原語必須有 1 到 {MAX_EFFECTS} 個，收到 {len(self.effects)} 個"
                 )
             if self.modifiers:
                 raise ValueError(
@@ -2713,8 +2715,8 @@ class SkillDef(ContentModel):
             )
         _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
         total = len(self.effects) + len(follow.effects)
-        if total > _MAX_EFFECTS:
-            raise ValueError(f"複合技能兩段合計最多 {_MAX_EFFECTS} 個效果，收到 {total} 個")
+        if total > MAX_EFFECTS:
+            raise ValueError(f"複合技能兩段合計最多 {MAX_EFFECTS} 個效果，收到 {total} 個")
         try:
             self.followup_skill()
         except ValueError as exc:

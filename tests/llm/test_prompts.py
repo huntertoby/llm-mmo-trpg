@@ -139,6 +139,8 @@ SNAPSHOTS = {
     "skill-proposal/1": "d3fd8e0311a738001661089c87839459f6666cf882b9d014b3fe3f77d088fd66",
     # 4-L5b：系統指令說明 form（型態）與 available 的骨架結構
     "skill-proposal/2": "bddf7bbb943b2a3e769a1a9bf384488dec4de4e23d97213ed66dbed018601546",
+    # 3T-2：form（型態）改名 layout（版型），available.forms 改 available.layouts
+    "skill-proposal/3": "fa56b01df86dd173ab777019d7892e29d9dde019261cdbb02635dc097c5a23df",
 }
 
 

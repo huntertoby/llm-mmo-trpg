@@ -138,7 +138,7 @@ def test_stun_on_single_target_is_repaired_by_the_engine(
 ) -> None:
     """形狀已經是 single 的硬控提議：缺的只有冷卻，引擎補到 4 後通過，不必回 LLM。"""
     proposal = {
-        "form": "standard",
+        "layout": "standard",
         "name_zh": "冰封",
         "kind": "active",
         "skeleton": "control",
