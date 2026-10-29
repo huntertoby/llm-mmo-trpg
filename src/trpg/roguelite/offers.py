@@ -130,6 +130,9 @@ def _tag(candidate: Candidate, offer_index: int) -> OfferTag:
             ok=trace.ok,
             codes=trace.codes,
             reason=trace.reason,
+            name_source=trace.name_source,
+            name_attempts=trace.name_attempts,
+            name_codes=trace.name_codes,
         )
     )
     return OfferTag(

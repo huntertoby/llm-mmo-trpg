@@ -157,6 +157,9 @@ class LlmTrace:
     ok: bool
     codes: tuple[str, ...] = ()
     reason: str | None = None
+    name_source: Literal["llm", "fallback"] | None = None
+    name_attempts: int = 0
+    name_codes: tuple[str, ...] = ()
 
 
 def keyword_distribution(skills: Iterable[SkillDef], library: ContentLibrary) -> dict[str, int]:
@@ -250,6 +253,9 @@ class _Search:
             ok=ok,
             codes=result.codes,
             reason=result.reason if skill is None else (None if ok else "技能不適用目前的武器"),
+            name_source=result.name_source,
+            name_attempts=result.name_attempts,
+            name_codes=result.name_codes,
         )
         if not ok or skill is None:
             return None

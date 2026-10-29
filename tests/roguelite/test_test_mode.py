@@ -155,6 +155,6 @@ def test_old_save_without_the_fields_still_loads() -> None:
     raw = json.loads(dumps_save(RunSave(run_id="old", run=_run())))
     del raw["run"]["test_mode"], raw["run"]["test_equipment"]
     loaded = loads_save(json.dumps(raw))
-    assert loaded.format == "trpg-run/8"
+    assert loaded.format == "trpg-run/9"
     assert loaded.run.test_mode is False
     assert loaded.run.test_equipment == {}
