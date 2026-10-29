@@ -68,6 +68,8 @@ DEFAULT_SCALING = {"per_step_permille": 10, "cap_permille": 100}
 LEGENDARY = "legendary"
 MIN_SOURCE = 1
 """傳說技能補的源力（``cost.source`` 的最小值；Phase 4-L8）。"""
+MIN_COOLDOWN = 1
+"""帶 ``refund_cooldown`` 的技能補的冷卻（4-L8b）。"""
 
 
 def numeric_param_names(params: Mapping[str, PrimitiveParam]) -> frozenset[str]:
@@ -150,6 +152,14 @@ def _node(data: Any, path: NumberPath) -> Any:
 # ---------------------------------------------------------------------------
 
 
+def _effect_params(library: ContentLibrary) -> dict[str, dict[str, PrimitiveParam]]:
+    """效果類型 → 參數表：原語，加上只能巢狀的效果（Phase 4-L8b）。"""
+    table = library.ruleset.primitives
+    out = {p.id: p.params for p in table.primitives}
+    out.update({n.id: n.params for n in table.nested_only_effects})
+    return out
+
+
 def split_numbers(
     data: Mapping[str, Any], library: ContentLibrary
 ) -> tuple[dict[str, Any], list[RemovedNumber]]:
@@ -162,11 +172,11 @@ def split_numbers(
             if key in node:
                 removed.append(((*path, key), node.pop(key)))
 
-    primitives = library.ruleset.primitives.by_id()
+    primitives = _effect_params(library)
     for path, effect in _walk_effects(out):
-        primitive = primitives.get(str(effect.get("type")))
-        if primitive is not None:
-            take(path, effect, sorted(numeric_param_names(primitive.params)))
+        params = primitives.get(str(effect.get("type")))
+        if params is not None:
+            take(path, effect, sorted(numeric_param_names(params)))
         scaling = effect.get("scaling")
         if isinstance(scaling, dict):
             take((*path, "scaling"), scaling, SCALING_NUMBER_FIELDS)
@@ -247,25 +257,31 @@ def _fill_cost(out: dict[str, Any], library: ContentLibrary, category: str) -> N
         if not isinstance(cost.get(resource), int) or cost[resource] < 1:
             cost[resource] = 1
         out["cost"] = cost
+    if any(e.get("type") == "refund_cooldown" for _, e in _walk_effects(out, followup=False)):
+        # 擊殺時冷卻歸零（4-L8b）要有冷卻可以歸零
+        cost = dict(out.get("cost") or {})
+        cost.setdefault("cooldown", MIN_COOLDOWN)
+        out["cost"] = cost
 
 
 def minimal_filler(library: ContentLibrary) -> NumberFiller:
     """保守的預設補值器：只補驗證必填的數值（int 取最小值、骰子取 ``1d4``、主動技能 AP 取 2、
     ``scaling`` 取小的步進與上限、傳說技能 1 點源力）；選填的數值保持省略（引擎用預設值）。不保證
     通過預算——真正的數值由 4-L5 的預算器決定。"""
-    primitives = library.ruleset.primitives.by_id()
+    primitives = _effect_params(library)
 
     def fill_effects(group: list[dict[str, Any]], category: str) -> None:
         for effect in group:
-            primitive = primitives.get(str(effect.get("type")))
-            if primitive is None:
+            type_id = str(effect.get("type"))
+            params = primitives.get(type_id)
+            if params is None:
                 continue
-            for name in sorted(numeric_param_names(primitive.params)):
-                spec = primitive.params[name]
+            for name in sorted(numeric_param_names(params)):
+                spec = params[name]
                 required = param_required_for(
                     spec,
                     category=category,
-                    sibling_filled=functools.partial(_filled_in, group, primitive.id),
+                    sibling_filled=functools.partial(_filled_in, group, type_id),
                 )
                 if required and effect.get(name) is None:
                     effect[name] = _min_value(spec)

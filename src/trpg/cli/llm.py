@@ -22,8 +22,9 @@ from trpg.llm import (
     OpenAICompatClient,
     load_llm_config,
 )
-from trpg.llm.candidate_source import mock_client_for
+from trpg.llm.candidate_source import mock_client_for, mock_naming_client
 from trpg.llm.errors import LLM_START_HINT
+from trpg.llm.naming import apply_naming, name_skill, template_text
 from trpg.llm.propose import ProposalOutcome, ProposalStats, propose_skill
 from trpg.shared.rng import Rng
 from trpg.skillgen.proposal import (
@@ -89,6 +90,9 @@ class ProposeArgs:
     skeleton: str | None = None
     keywords: tuple[str, ...] = ()
     mock: bool = False
+    naming: bool = False
+    """通過驗證的 LLM 技能再請模型命名與寫敘事（4-L7；Mock 用 ``mock_naming_client``）。
+    關閉時名稱與敘事都用組合式名稱與模板敘事（4-L8b）。"""
 
 
 def _open_skeletons(library: ContentLibrary, rarity: SkillRarity) -> list[str]:
@@ -177,12 +181,62 @@ def _attempt_codes(codes: tuple[str, ...]) -> str:
     return "、".join(f"{c}×{counts[c]}" if counts[c] > 1 else c for c in counts) or "通過"
 
 
-def _outcome_line(index: int, request: ProposalRequest, outcome: ProposalOutcome) -> str:
+def _outcome_line(
+    index: int, request: ProposalRequest, outcome: ProposalOutcome, name: str, note: str = ""
+) -> str:
     codes = "；".join(_attempt_codes(c) for c in outcome.codes) or "—"
     return (
         f"{index:>3}. {_describe(request)}｜{outcome.source}｜嘗試 {outcome.attempts}｜"
-        f"{codes}｜{outcome.seconds:.2f} 秒｜{outcome.skill.name_zh}"
+        f"{codes}｜{outcome.seconds:.2f} 秒｜{name}{note}"
     )
+
+
+@dataclass(slots=True)
+class _Naming:
+    """命名步驟的結果統計（只有 ``--naming`` 時使用）。"""
+
+    generated: int = 0
+    fallback: int = 0
+    calls: int = 0
+
+    def line(self) -> str:
+        total = self.generated + self.fallback
+        return (
+            f"命名：{total} 個，生成 {self.generated}，組合式名稱 {self.fallback}，"
+            f"呼叫 {self.calls} 次"
+        )
+
+
+def _name_outcome(
+    library: ContentLibrary,
+    args: ProposeArgs,
+    outcome: ProposalOutcome,
+    seed: int,
+    client: LLMClient | None,
+    *,
+    taken: set[str],
+    attempts: int,
+    naming: _Naming,
+) -> tuple[str, str]:
+    """通過驗證的 LLM 技能的最終名稱與備註。命名關閉時（4-L8b）換成組合式名稱與模板敘事；
+    只處理 ``llm`` 來源（退回的技能本來就是組合式名稱與模板敘事）。"""
+    skill = outcome.skill
+    if outcome.source != "llm":
+        return skill.name_zh, ""
+    if not args.naming:
+        plain = template_text(library, skill, taken)
+        taken.add(plain.name_zh)
+        return plain.name_zh, ""
+    used = mock_naming_client(library, skill, seed) if client is None else client
+    result = name_skill(used, library, skill, taken=taken, max_attempts=attempts)
+    taken.add(result.text.name_zh)
+    named = apply_naming(skill, result.text)
+    naming.calls += result.attempts
+    if result.source == "llm":
+        naming.generated += 1
+    else:
+        naming.fallback += 1
+    return named.name_zh, f"（命名 {result.source}，{result.attempts} 次）"
 
 
 def cmd_llm_propose(
@@ -209,6 +263,8 @@ def cmd_llm_propose(
     label = "Mock（proposal_from_skill）" if args.mock else f"{config.model}（{config.base_url}）"
     print(f"模型：{label}；每題最多 {config.max_retries} 次", file=out)
     stats = ProposalStats(alert_permille=config.fallback_alert_permille)
+    naming = _Naming()
+    taken: set[str] = set()
     try:
         for index, (request, seed) in enumerate(requests, start=1):
             used = client or real or _mock_client(library, request, seed, config.max_retries)
@@ -227,11 +283,24 @@ def cmd_llm_propose(
                 print(f"{index:>3}. {_describe(request)}｜失敗：{exc}", file=out)
                 continue
             stats.add(outcome)
-            print(_outcome_line(index, request, outcome), file=out)
+            name_client = client or real
+            name, note = _name_outcome(
+                library,
+                args,
+                outcome,
+                seed,
+                None if args.mock else name_client,
+                taken=taken,
+                attempts=config.max_retries,
+                naming=naming,
+            )
+            print(_outcome_line(index, request, outcome, name, note), file=out)
     finally:
         if real is not None:
             real.close()
     print("", file=out)
     for line in stats.summary_lines():
         print(line, file=out)
+    if args.naming:
+        print(naming.line(), file=out)
     return 0

@@ -60,6 +60,7 @@ from trpg.content.skills import (
     CompositionRule,
     ConditionSpec,
     EffectSpec,
+    NestedOnlyDef,
     Origin,
     PrimitiveDef,
     PrimitiveParam,
@@ -140,8 +141,9 @@ NESTED_EFFECT_TYPES: dict[str, tuple[str, ...]] = {
     "on_kill": ON_KILL_TYPES,
     "effects": ZONE_EFFECT_TYPES,
 }
-"""巢狀效果參數（``type: effects``）可用的效果類型；只開放其中是原語的類型（``refund_ap``、
-``damage_multiplier`` 等非原語效果原型不開放）。"""
+"""巢狀效果參數（``type: effects``）可用的效果類型；其中不是原語的類型（``refund_ap``、
+``damage_multiplier`` 等）是只能巢狀的效果（Phase 4-L8b，``skill_primitives.yaml`` 的
+``nested_only_effects``，父結構以 YAML 的 ``parents`` 為準）。"""
 _MAX_NESTED = 2
 _MAX_VARIANTS = 2
 _MAX_TAGS = 8
@@ -442,6 +444,7 @@ class _Builder:
         extra_shapes: frozenset[str] = frozenset(),
     ) -> None:
         self.library = library
+        self.nested_only = library.ruleset.primitives.nested_only_by_id()
         self.refs = _Refs.of(library)
         self.statuses = statuses
         self.budget_statuses = budget_statuses(library)
@@ -501,11 +504,35 @@ class _Builder:
         return _union([self.all_shapes[i] for i in ids], "type")
 
     def _nested_type(self, name: str, leaves: Mapping[str, Any]) -> Any:
-        allowed = [t for t in NESTED_EFFECT_TYPES.get(name, ()) if t in leaves]
-        if not allowed:
+        """巢狀參數 ``name`` 的效果清單型別：:data:`NESTED_EFFECT_TYPES` 中是原語的類型，加上
+        只能巢狀的效果（Phase 4-L8b；``skill_primitives.yaml`` 的 ``nested_only_effects``，
+        ``parents`` 含 ``name`` 才收）。"""
+        models = []
+        for t in NESTED_EFFECT_TYPES.get(name, ()):
+            if t in leaves:
+                models.append(leaves[t])
+            elif t in self.nested_only and name in self.nested_only[t].parents:
+                models.append(self._nested_only_model(self.nested_only[t]))
+        if not models:
             return None
-        item = _union([leaves[t] for t in allowed], "type")
-        return _list_of(item)
+        return _list_of(_union(models, "type"))
+
+    def _nested_only_model(self, definition: NestedOnlyDef) -> Any:
+        """只能巢狀的效果的提議模型：``type`` 與非數值參數（目前都沒有；數值由補值器補）。"""
+        fields: dict[str, Any] = {
+            "type": (_literal((definition.id,)), Field(description=definition.name_zh)),
+        }
+        for name, spec in sorted(definition.params.items()):
+            if _is_numeric(spec):
+                continue
+            annotation, limits = _param_type(name, spec, self.refs, EffectSpec.model_fields)
+            fields[name] = _field(annotation, limits, required=_required(spec), doc=spec.llm_hint)
+        return create_model(
+            f"NestedOnly_{definition.id}",
+            __base__=_Proposal,
+            __doc__=definition.llm_hint,
+            **fields,
+        )
 
     def backlash_union(self) -> Any:
         """失手反噬（``cost_on_miss``，Phase 4-L8）的效果 union：:data:`BACKLASH_TYPES` 中內容庫有的

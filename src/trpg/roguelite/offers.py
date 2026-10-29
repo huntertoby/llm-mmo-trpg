@@ -96,6 +96,7 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
             general_share_permille=settings.general_share_permille,
             llm_share_permille=settings.llm_share_permille,
             llm_theme_permille=settings.llm_theme_permille,
+            llm_reaction_permille=settings.llm_reaction_permille,
         ),
         llm=current_proposer() if run.llm else None,
     )

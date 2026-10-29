@@ -97,3 +97,15 @@ def test_explicit_requests_are_not_replaced(library: ContentLibrary) -> None:
     # 只指定骨架時，其餘依種子換到可行的題目
     partial = propose_requests(library, ProposeArgs(count=4, seed=3, skeleton="passive"))
     assert all(_feasible(library, r, s) for r, s in partial)
+
+
+def test_naming_flag_adds_generated_names(capsys: pytest.CaptureFixture[str]) -> None:
+    """``--naming``（4-L8b）：通過驗證的 LLM 技能再命名（Mock 命名），摘要多一行命名統計；
+    不加時名稱是組合式名稱。"""
+    assert main(["llm", "propose", "--mock", "-n", "6", "--seed", "0", "--naming"]) == 0
+    named = capsys.readouterr().out
+    assert "（命名 llm，1 次）" in named
+    assert "命名：" in named and "組合式名稱 0" in named
+    assert main(["llm", "propose", "--mock", "-n", "6", "--seed", "0"]) == 0
+    plain = capsys.readouterr().out
+    assert "命名" not in plain

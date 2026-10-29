@@ -29,6 +29,43 @@
 mechanic_statuses:
   charging: charging
 
+# --- 只能巢狀的效果（Phase 4-L8b）---
+# 不是原語（沒有預算基礎點數、不能放在技能頂層），只能出現在 parents 指定的巢狀參數裡；預算與組合規則由引擎專用程式處理
+# （skillgen/budget.py、SkillDef 的 on_kill／gamble 檢查）。這裡的資料讓 LLM 提議（schema、補值器、往返盤點）知道：
+# 哪些父結構可以放（parents：on_kill＝damage 的擊殺時效果；win／lose＝gamble 的分支）、說明與數值參數（int／dice 一律由補值器補）。
+# 載入時另有測試（tests/content/test_nested_only.py）：parents 與 constants.py 的 ON_KILL_TYPES／GAMBLE_BRANCH_TYPES 一致。
+nested_only_effects:
+  - id: refund_ap
+    name_zh: 返還 AP
+    llm_hint: "擊倒目標時，把部分行動點數還給施放者。"
+    description_zh: 擊殺時效果：目標被這次傷害擊倒時，施放者回復 amount 點 AP（1–2）。預算：amount × refund_ap_points。
+    nested_only: true
+    parents: [on_kill]
+    params:
+      amount: {llm_hint: "返還的行動點數。", type: int, required: true, min: 1, max: 2, description_zh: 返還的 AP（1–2）, knob: none}
+  - id: refund_cooldown
+    name_zh: 冷卻歸零
+    llm_hint: "擊倒目標時，讓這個技能的冷卻立刻結束。"
+    description_zh: 擊殺時效果：目標被這次傷害擊倒時，本技能的冷卻歸零；技能必須有冷卻。預算：技能冷卻回合 × restore_cooldown_points。
+    nested_only: true
+    parents: [on_kill]
+  - id: damage_multiplier
+    name_zh: 傷害倍率
+    llm_hint: "把這次施放的傷害乘上一個倍率。"
+    description_zh: 賭注分支專用：本次施放的傷害效果乘上 damage_multiplier_permille（不等於 1000；2000 ＝ 加倍）；技能必須有傷害效果。預算：傷害點數 ×（倍率 − 1）。
+    nested_only: true
+    parents: [win, lose]
+    params:
+      damage_multiplier_permille: {llm_hint: "傷害的倍率。", type: int, required: true, min: 1500, max: 3000, description_zh: 傷害倍率（‰；2000 ＝ 加倍；引擎允許 100–10000 且不等於 1000，提議取 1500–3000）, knob: none}
+  - id: self_damage_of_hit
+    name_zh: 反噬自身
+    llm_hint: "施放者承受這次所造成傷害的一部分。"
+    description_zh: 賭注分支專用：施放者受到本次施放對敵人造成傷害的 self_damage_permille_of_hit ‰（反噬，不致命，不會讓 HP 低於 1）；技能必須有傷害效果。預算：傷害點數 × n‰，再依自傷折扣。
+    nested_only: true
+    parents: [win, lose]
+    params:
+      self_damage_permille_of_hit: {llm_hint: "承受的傷害比例。", type: int, required: true, min: 100, max: 1000, description_zh: 反噬比例（‰）, knob: none}
+
 primitives:
   - id: damage
     name_zh: 傷害

@@ -417,6 +417,11 @@ def _add_llm_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser
         "--mock", action="store_true", help="不連模型：Mock 回傳手寫技能轉成的提議（測試與示範）"
     )
     propose.add_argument(
+        "--naming",
+        action="store_true",
+        help="通過驗證的技能再請模型命名與寫敘事（--mock 用 Mock）；不加則用組合式名稱與模板敘事",
+    )
+    propose.add_argument(
         "--config", type=Path, default=None, help="設定檔路徑（預設 config/llm.toml）"
     )
     propose.set_defaults(func=_run_llm_propose)
@@ -435,6 +440,7 @@ def _run_llm_propose(args: argparse.Namespace) -> int:
         skeleton=args.skeleton,
         keywords=tuple(args.keyword or ()),
         mock=args.mock,
+        naming=args.naming,
     )
     return _with_library(
         lambda library: cmd_llm_propose(

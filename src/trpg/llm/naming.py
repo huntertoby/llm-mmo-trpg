@@ -39,6 +39,7 @@ __all__ = [
     "fallback_naming",
     "name_skill",
     "skill_summary",
+    "template_text",
 ]
 
 DEFAULT_NAMING_ATTEMPTS = 3
@@ -250,6 +251,16 @@ def _fallback(
         tuple(dict.fromkeys(codes)),
         reason,
     )
+
+
+def template_text(
+    library: ContentLibrary, skill: SkillDef, taken: Collection[str] = ()
+) -> SkillDef:
+    """命名關閉時（Phase 4-L8b）：名稱與敘事都換成組合式名稱與模板敘事（:func:`fallback_naming`），
+    不採用提議裡的 ``concept``／``cast_flavor``。``taken`` 是已用過的名稱（內容庫技能的名稱一併
+    避開）；結構與數值不動。"""
+    used = set(taken) | {s.name_zh for s in library.skills.values()}
+    return apply_naming(skill, fallback_naming(library, skill, used))
 
 
 def apply_naming(skill: SkillDef, text: NamingText) -> SkillDef:

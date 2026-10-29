@@ -189,3 +189,26 @@ llm_topic:
   base_weight: 100
   quota_percent_per_use: 100
   core_weights: {}                          # 個別原語的基礎權重（沒列出的用 base_weight）
+
+# LLM 提議的費用旋鈕（Phase 4-L8b，4-L3 待決 #2、4-L8 待決 #6）：結構在最低費用（AP 2、1 點資源、沒有冷卻）下仍超出預算上限時，
+# 補值器依序往上試 steps（由輕到重；每階各自獨立，欄位取「原本的值」與「這一階」中較大者），取第一個讓預算比例回到上限以內的，
+# 再照一般旋鈕調進區間。只影響補值器補 LLM 提議的數值，不影響手寫技能與隨機組合器；只用在主動技能。
+# max_cooldown：冷卻上限 5（06 6.5；比引擎硬上限 6 保守）。mana：法力，武器技依 stamina_per_mana 換成耐力。初值，未經模擬。
+llm_cost:
+  max_cooldown: 5
+  steps:
+    - {cooldown: 1}
+    - {cooldown: 2}
+    - {cooldown: 3}
+    - {cooldown: 4}
+    - {cooldown: 5}
+    - {cooldown: 5, mana: 3}
+    - {cooldown: 5, mana: 6}
+    - {cooldown: 5, mana: 10}
+    - {ap: 3}
+    - {ap: 3, cooldown: 1}
+    - {ap: 3, cooldown: 2}
+    - {ap: 3, cooldown: 3}
+    - {ap: 3, cooldown: 4}
+    - {ap: 3, cooldown: 5}
+    - {ap: 3, cooldown: 5, mana: 6}

@@ -367,7 +367,9 @@ from trpg.content.skills.modifiers import (
     ModifierTarget,
 )
 from trpg.content.skills.primitives import (
+    NESTED_PARENTS,
     ConditionDef,
+    NestedOnlyDef,
     PrimitiveDef,
     PrimitiveKnob,
     PrimitiveParam,
@@ -549,6 +551,7 @@ __all__ = [
     "MAX_VARIANTS",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
+    "NESTED_PARENTS",
     "NONZERO_CHANGES",
     "ON_HIT_PRIMITIVES",
     "ON_KILL_TYPES",
@@ -609,6 +612,7 @@ __all__ = [
     "ModifierSpec",
     "ModifierTarget",
     "NarrativeDef",
+    "NestedOnlyDef",
     "ParamDef",
     "PrimitiveDef",
     "PrimitiveKnob",

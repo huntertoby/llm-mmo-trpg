@@ -263,16 +263,49 @@ class PrimitiveDef(ContentModel):
         return self.name_zh
 
 
+NESTED_PARENTS = ("on_kill", "win", "lose")
+"""只能巢狀的效果可以放的父結構（效果的巢狀參數名）：``damage`` 的 ``on_kill``、
+``gamble`` 的 ``win``／``lose``。"""
+
+
+class NestedOnlyDef(ContentModel):
+    """只能巢狀的效果（Phase 4-L8b）：不是原語（沒有預算基礎點數、不能放在技能頂層），只能出現在
+    ``parents`` 指定的巢狀參數裡——``refund_ap``、``refund_cooldown``（``on_kill``）、
+    ``damage_multiplier``、``self_damage_of_hit``（賭注的 ``win``／``lose``）。預算與組合規則仍由
+    引擎的專用程式處理；這裡只宣告「LLM 提議能不能表達」所需的資料：父結構、說明與參數（數值參數
+    由預算器補，同原語的 ``int``／``dice``）。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    description_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（同 :attr:`PrimitiveDef.llm_hint`）。"""
+    nested_only: Literal[True] = True
+    parents: tuple[Literal["on_kill", "win", "lose"], ...] = Field(min_length=1)
+    """允許的父結構（巢狀參數名）。"""
+    params: dict[str, PrimitiveParam] = Field(default_factory=dict)
+
+    def summary(self) -> str:
+        return self.name_zh
+
+
 class PrimitiveTable(ContentModel):
     """``content/skill_primitives.yaml``。"""
 
     primitives: tuple[PrimitiveDef, ...] = Field(min_length=1)
+    nested_only_effects: tuple[NestedOnlyDef, ...] = ()
+    """只能巢狀的效果（:class:`NestedOnlyDef`；Phase 4-L8b）。"""
     mechanic_statuses: dict[str, str] = Field(default_factory=dict)
     """不是由原語施加、由技能機制使用的狀態 ID（``charging``；Phase 3E-2f）。"""
 
     @model_validator(mode="after")
     def _check(self) -> PrimitiveTable:
         _unique((p.id for p in self.primitives), "原語")
+        _unique((p.id for p in self.nested_only_effects), "只能巢狀的效果")
+        clash = sorted({p.id for p in self.primitives} & {n.id for n in self.nested_only_effects})
+        if clash:
+            raise ValueError(f"只能巢狀的效果不可與原語同名：{', '.join(clash)}")
         return self
 
     def status_refs(self) -> set[str]:
@@ -283,6 +316,9 @@ class PrimitiveTable(ContentModel):
 
     def by_id(self) -> dict[str, PrimitiveDef]:
         return {p.id: p for p in self.primitives}
+
+    def nested_only_by_id(self) -> dict[str, NestedOnlyDef]:
+        return {n.id: n for n in self.nested_only_effects}
 
     def summary(self) -> str:
         return f"{len(self.primitives)} 種效果原語"

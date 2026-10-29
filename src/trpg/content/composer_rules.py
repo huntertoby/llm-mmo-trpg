@@ -22,10 +22,12 @@ __all__ = [
     "ComposerRules",
     "ConditionRules",
     "CostRules",
+    "CostStep",
     "DiceRules",
     "DurationRules",
     "IntRange",
     "LadderRange",
+    "LlmCostRules",
     "LlmTopicRules",
     "PassiveRules",
     "ReactionRules",
@@ -377,6 +379,38 @@ class LlmTopicRules(ContentModel):
         return max(1, base * 100 // (100 + uses * self.quota_percent_per_use))
 
 
+class CostStep(ContentModel):
+    """費用旋鈕的一階（Phase 4-L8b）：每一階各自獨立（不累加），省略的欄位不動；套用時各欄位取
+    「技能原本的值」與「這一階的值」中較大者，不會把已有的較高費用往下調。"""
+
+    ap: int | None = Field(default=None, ge=1, le=3)
+    """主動技能的 AP。"""
+    cooldown: int | None = Field(default=None, ge=1)
+    """冷卻回合。"""
+    mana: int | None = Field(default=None, ge=1)
+    """法力（法術技）；武器技依 ``allowance.stamina_per_mana`` 換成等價的耐力。"""
+
+
+class LlmCostRules(ContentModel):
+    """LLM 提議的費用旋鈕（Phase 4-L8b，4-L3 待決 #2、4-L8 待決 #6）：結構在最低費用下仍超出預算時，
+    補值器依序往上試 ``steps``（由輕到重），取第一個讓預算比例回到上限以內的；之後才照一般旋鈕調到
+    區間內。只在補值器作用（手寫技能與隨機組合器的費用、預算不受影響）；只用在主動技能。
+    """
+
+    steps: tuple[CostStep, ...] = ()
+    """費用階梯（空 ＝ 不開放），由輕到重（預算折抵與 AP 係數單調上升；
+    ``tests/skillgen/test_proposal_l8b_cost.py`` 檢查）。"""
+    max_cooldown: int = Field(default=5, ge=1)
+    """冷卻上限（06 6.5；比引擎的硬上限更保守）。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> LlmCostRules:
+        for i, step in enumerate(self.steps):
+            if step.cooldown is not None and step.cooldown > self.max_cooldown:
+                raise ValueError(f"steps[{i}]：冷卻 {step.cooldown} 超過 max_cooldown")
+        return self
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -413,6 +447,8 @@ class ComposerRules(ContentModel):
     variant: VariantRules
     llm_topic: LlmTopicRules = Field(default_factory=LlmTopicRules)
     """LLM 提議題目的多樣性參數（Phase 4-L6）。"""
+    llm_cost: LlmCostRules = Field(default_factory=LlmCostRules)
+    """LLM 提議的費用旋鈕（Phase 4-L8b）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:

@@ -221,11 +221,33 @@ def _topic(library: ContentLibrary) -> tuple[SkillDef, ProposalRequest, str]:
     return skill, request, json.dumps(proposal_from_skill(skill, library), ensure_ascii=False)
 
 
-def test_proposer_without_naming_keeps_proposed_text(library: ContentLibrary) -> None:
+def test_proposer_without_naming_uses_template_text(library: ContentLibrary) -> None:
+    """命名關閉時（4-L8b）：不呼叫命名、不算命名，名稱與敘事都是組合式名稱與模板敘事，
+    不採用提議裡 LLM 寫的 concept／cast_flavor。"""
     skill, request, good = _topic(library)
     ctx = ProposalContext(skill.tier, skill.rarity)
-    result = make_proposer(MockLLMClient([good]), library)(request, ctx, 1)
+    proposal = json.loads(good)
+    proposal["concept"] = "提議裡的概念。"
+    proposal["cast_flavor"] = "提議裡的施放描述。"
+    result = make_proposer(MockLLMClient([json.dumps(proposal, ensure_ascii=False)]), library)(
+        request, ctx, 1
+    )
     assert result.skill is not None and result.name_source is None and result.name_attempts == 0
+    narrative = result.skill.narrative
+    assert narrative.concept != "提議裡的概念。" and narrative.concept.endswith("的技能。")
+    assert narrative.cast_flavor == "力量依你的意志成形。"
+    template = fallback_naming(library, result.skill)
+    assert result.skill.name_zh == template.name_zh
+
+
+def test_proposer_without_naming_dedupes_names(library: ContentLibrary) -> None:
+    skill, request, good = _topic(library)
+    ctx = ProposalContext(skill.tier, skill.rarity)
+    proposer = make_proposer(MockLLMClient([good, good]), library)
+    first = proposer(request, ctx, 1).skill
+    second = proposer(request, ctx, 1).skill
+    assert first is not None and second is not None
+    assert first.name_zh != second.name_zh
 
 
 def test_proposer_with_naming_applies_generated_text(library: ContentLibrary) -> None:
