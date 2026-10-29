@@ -165,6 +165,29 @@
 
 驗收（4-L5c）：Mock 測試覆蓋 1～5；`proposal_from_skill` 往返數不下降；`ruff`、`mypy`、`lint-imports`；`PROMPT_VERSION` 有改 prompt 才升。報告 `Phase4-L5c報告.md`。PM 驗收後重跑種子 0、1 的小測試。
 
+## 3F. 4-L6 規格（接進候選產生器＋原語多樣性；開發 PM 2026-10-29 細化；sonnet，約 1 段，必要時拆 a／b）
+
+> 恢復 Phase 4。上次暫停在 4-L5c（2026-10-23）；之後 Phase 3 後段新增了大量內容（3-47～3R、3T 整理），本節補「受影響的既有功能」。
+
+**受影響的既有功能（盤點）**
+- 候選產生器（`trpg.skillgen.candidates`）與一輪的升級三選一、營火：新增 `llm` 來源；`content/roguelite.yaml` 的來源比例。
+- run 紀錄與存檔（`trpg-run/7`）：生成的 `SkillDef`、題目（關鍵字、核心原語、選單種子）、`attempts`、來源寫進 run；重播與讀檔不呼叫 LLM。存檔格式有變就遞增並保持舊存檔可讀。
+- 設定：`config/llm.toml` 新增「LLM 生成開關」（預設關：沒有本機模型時照舊）；API／前端不改（候選卡片照常顯示，來源標記可選）。
+- **Phase 3 後段新內容與 LLM 的界線**（守則 3、4）：形態（`enter_form`、`leave_form`、`in_form`、`form_bonus_permille`）、種族技、定向蓄力只由手寫內容提供 → **LLM 題目不出「形態」關鍵字**（沿用 `KeywordDef.composable: false`），核心原語抽籤排除 `enter_form`／`leave_form`；`clear_surface`、`blow_surface`、`shockwave`、`raise_terrain`／`lower_terrain`（限大地技能元素）照 YAML 旗標與互斥規則決定可不可抽。新增的 `SkillDef.element`（技能元素）納入提議模型（3-54d 已有）並受 `terrain_needs_earth` 規則約束。
+- 3T-1 的旋鈕與 change 種類 YAML：預算器補數值走它；提議 schema 的 change 欄位仍不開放（4-L8）。
+- 3T-2：提議 JSON 欄位 `layout`（原 `form`）、`PROMPT_VERSION` `skill-proposal/3`。
+
+**交付項目**
+1. **`llm` 來源**：候選產生器在開關打開時，依 `content/roguelite.yaml` 設定的比例（初值寫進報告）出 LLM 題目，呼叫 `propose_skill`；失敗（含 3 次重試後退回）時候選仍湊滿 3 個（退回順序照第 0 節決定 5）。開關關閉時行為與現在逐字相同（候選、亂數串流不變；表格測試）。
+2. **關鍵字**（4-L5 待決 #1）：LLM 技能必須帶題目關鍵字（`keyword.required` 檢查走同一個驗證器）；做不到算失敗走重試／退回。
+3. **3C 節原語多樣性 0～3**：「自然」主題詞、題目指定核心原語（`core_primitive`）、輪替選單（附帶原語、條件抽部分＋順序由種子打亂）、run 內配額（權重表放 `content/skill_composer.yaml`）；測試照 3C 節。
+4. **確定性**：題目、選單、打亂全由 run 種子決定；生成結果寫進 run，重播與讀檔不呼叫 LLM（`MockLLMClient` 記錄呼叫次數＝0 的測試）。
+5. **退回率提醒**：一輪結束時統計 LLM 退回率，> 20%（`fallback_alert_permille`）寫進 run 摘要與 CLI `trpg run show`。
+6. CLI：`trpg run new|auto --llm`（或讀設定），`--llm-mock` 用 Mock 跑完整一輪（CI 用）。
+7. 行為一致測試：Mock 回傳合格提議 → 候選出現該技能且數值由預算器補、比例 70～100%；Mock 回傳壞 JSON／不帶關鍵字／形態原語 → 重試後退回、候選仍 3 個；開關關閉＝現狀；存檔往返與重播不呼叫 LLM。
+8. **範圍外**：名稱與敘事（4-L7）、開放更多結構（4-L8）、真模型評估（4-L9，需使用者開模型）。
+9. 驗收：pytest（skillgen、llm、roguelite、api、content、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports、一輪 `trpg run auto --llm-mock` 跑完並重播一致。報告 `Phase4-L6報告.md`。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）

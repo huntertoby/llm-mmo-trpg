@@ -36,3 +36,9 @@
 
 ### 3.4 3T-4c｜短武器圖示造型（sonnet；約 0.15 段；照 `docs/art/3T-4b檢查.md`）
 只改圖示、不動小人：手槍不斜放（側面 L 形：鋼色槍管橫向朝右約佔寬 70%，木色握把從後端往左下、長約槍管一半）；矛頭、戟斧頭、連枷球放大 1.5 倍（28px 下矛和戟要分得出）；匕首護手改細橫桿（約刀身寬 2 倍）、刀身約佔全長 60%；拳套改正面指虎（鋼色圓角方塊、上緣 4 個指節凸起、下方一個握孔、不要尖刺）；霰彈槍雙管並排、比長槍短約 25%、槍托較寬。驗收：vitest、tsc、build；28px 對照圖 `docs/phases/img/3T-4c-*`。報告 `Phase3T-4c報告.md`。
+
+### 3.5 3T-4c／4d、3T-2 驗收（2026-10-29，開發 PM）
+- **3T-4c／4d**（報告 `Phase3T-4c報告.md`、`Phase3T-4d報告.md`）：短武器圖示造型、指虎指節、矛頭 2 倍、霰彈槍托楔形；美術 PM 驗收通過（`docs/art/3T-4c檢查.md`），4d 不需再驗；非圖示模式雜湊測試鎖住小人不變。
+- **3T-2**（報告 `Phase3T-2報告.md`）：種族技合法性走全部效果、race／form coverage；`ruleset_hash`＋`log_replay_problem`、`LOG_FORMAT` **`/86`**、變更紀錄搬到 `docs/phases/戰鬥紀錄格式變更.md`；`proposal_forms` → `proposal_layouts`、`PROMPT_VERSION` `skill-proposal/3`；種族 `except KeyError` 移除、`skill_scaling` 必填；誘餌範本／壽命／AI 觸發距離（`ai_trigger_range: 7`）進 races.yaml。待決全部接受（`stack_gain` 吐息例外、無 golden 紀錄、`Ruleset` 欄位增減需遷移）。
+- 合併後全量（除 llm）：pytest 8569、vitest 1104、mypy、lint-imports、build、重播（frozen_lake 種子 8，鱗族）全過。
+- **3T 必做項完成**；3T-3（拆 `content/skills.py`）與 Phase 4 平行。
