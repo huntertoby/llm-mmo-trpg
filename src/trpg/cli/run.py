@@ -483,7 +483,7 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
     elif isinstance(node, CompleteOfferNode):
         print(f"    完整技能三選一：{_skill_change(library, before, after)}", file=out)
     elif isinstance(node, CampfireNode):
-        print(f"    離開營火：{_skill_change(library, before, after)}", file=out)
+        print("    離開營火", file=out)
     if isinstance(after.node, CampfireNode) and not isinstance(node, CampfireNode):
         print(
             f"    營火（第 {after.node.after_battle} 場後）：HP、法力、耐力回滿，"
