@@ -473,6 +473,13 @@
   color: #f0c060;
 }
 
+/* 展開技能卡的那一列：第一欄給卡片至少 260px，否則窄視窗（800px）卡片只剩約 200px，效果文字頂到卡片邊框（3U-3） */
+@media (min-width: 641px) {
+  .growth-row:has(.growth-skill[open]) {
+    grid-template-columns: minmax(260px, 1fr) auto minmax(0, 1.2fr);
+  }
+}
+
 @media (max-width: 640px) {
   .growth-row {
     grid-template-columns: 1fr auto;

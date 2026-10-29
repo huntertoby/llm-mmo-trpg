@@ -234,7 +234,7 @@ function collectBase(doc: Document, win: Window): LayoutSnapshot {
 const isShown = (el: Element, win: Window): boolean => {
   const r = el.getBoundingClientRect();
   const cs = win.getComputedStyle(el);
-  return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+  return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && el.checkVisibility?.({ contentVisibilityAuto: true }) !== false;
 };
 
 /** 顯示中的浮動卡的底色：外框、內容區、內容區裡的 `.skill-card` 取最大不透明度。 */
@@ -493,6 +493,12 @@ async function waitFor(doc: Document, selector: string, tries = 40): Promise<boo
   return doc.querySelector(selector) !== null;
 }
 
+/** 只掃戰後畫面（3U-3）：不必從首頁開始，需要 `?dev=1` 與伺服器 `TRPG_DEV_ROUTES=1`。 */
+export async function runPostBattle(title: string): Promise<string> {
+  const rows = await postBattleStages(document, window);
+  return formatTable(`${title}（視窗 ${window.innerWidth}×${window.innerHeight}）`, rows).text;
+}
+
 async function postBattleStages(doc: Document, win: Window): Promise<CheckResult[]> {
   const rows: CheckResult[] = [];
   for (const stage of POST_BATTLE) {
@@ -506,6 +512,7 @@ async function postBattleStages(doc: Document, win: Window): Promise<CheckResult
       rows.push(result(`${stage.label}/enter`, `${stage.label}：進得了畫面`, false, `等不到 ${stage.waitFor}`));
       continue;
     }
+    for (const d of doc.querySelectorAll("details")) d.open = true; // 展開的技能卡也要量（關著的 details 內容不會畫出來）
     await sleep(500);
     rows.push(...stageRows(stage.label, doc, win, false));
     const count = doc.querySelectorAll(stage.hover).length;
@@ -546,10 +553,10 @@ async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window)
 
 declare global {
   interface Window {
-    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; enterDevScreen: typeof enterDevScreen; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
+    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; runPostBattle: typeof runPostBattle; enterDevScreen: typeof enterDevScreen; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
   }
 }
 
 export function installLayoutSmoke(win: Window): void {
-  win.__layoutSmoke = { runCase, runScreens, enterDevScreen, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
+  win.__layoutSmoke = { runCase, runScreens, runPostBattle, enterDevScreen, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
 }
