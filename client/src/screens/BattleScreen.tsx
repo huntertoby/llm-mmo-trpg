@@ -6,14 +6,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { flushSync } from "react-dom";
 import { api, ApiError } from "../api/client";
 import type { Action, BattleResponse, BattleView, OrderSet, Pos, ReactionMode } from "../api/types";
-import { actionForClick, actionLabel, classifyActions, type LabeledAction } from "../battle/actions";
+import { actionLabel, classifyActions, type LabeledAction } from "../battle/actions";
 import { buildDrawModel } from "../battle/drawModel";
 import { fxSkillsOf } from "../battle/fxSkills";
 import { posKey, samePos } from "../battle/geometry";
 import type { LogLine } from "../battle/log";
 import {
   EMPTY_ORDERS,
-  orderFromTile,
   orderTargetTiles,
   withOrder,
   type OrderKind,
@@ -32,7 +31,7 @@ import {
   setModeAction,
   triggerEventText,
 } from "../battle/reactions";
-import { blockedPushAt, withPushReasons } from "../battle/pushReasons";
+import { withPushReasons } from "../battle/pushReasons";
 import { runButton, runRangeTiles } from "../battle/runAction";
 import { previewOverlays } from "../battle/scenePreview";
 import { marksTextAt, telegraphMarks } from "../battle/telegraph";
@@ -43,10 +42,8 @@ import {
   copyMode,
   DIRECTION_ARROWS,
   fallbackActions,
-  hurlObjectAt,
   hurlPickPos,
   isCopyPending,
-  isHurlMode,
   isSelfOnly,
   moreModes,
   skillButtons,
@@ -100,15 +97,17 @@ import { CopyDialog } from "../ui/CopyDialog";
 import { FollowupDialog } from "../ui/FollowupDialog";
 import { InfusionDialog } from "../ui/InfusionDialog";
 import { infusionChoices, withInfusion } from "../battle/infusion";
-import { SummonPanel, type CommandSession, type InfuseSession } from "../ui/SummonPanel";
+import { SummonPanel } from "../ui/SummonPanel";
 import {
-  commandAction,
   commandMoveTiles,
   commandTargetTiles,
+  type CommandSession,
   controllableSummons,
+  type InfuseSession,
   infusionTargetTiles,
   optionAt,
 } from "../battle/summonControl";
+import { decideTileClick } from "../battle/tileClick";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
@@ -760,70 +759,37 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
 
   const onTileClick = useCallback(
     (tile: Pos, shift: boolean) => {
-      // 資訊卡釘住（3-40，使用者選 C）：Shift＋左鍵任何格子都釘；沒有動作的格子左鍵點就釘；不是自己的回合時點任何格子都釘。
-      // 已釘住時點同一格取消；有動作的點擊照常行動並關掉釘住的卡。
+      // 規則在 battle/tileClick.ts（純函式、有表格測試）；這裡只執行它回傳的動作。
+      // 資訊卡釘住（3-40，使用者選 C）：沒有動作的格子左鍵點就釘；已釘住時點同一格取消；有動作的點擊照常行動並關掉釘住的卡。
       const pin = tileCard.ctl;
-      if (shift) {
-        pin.pinAt(tile);
-        return;
-      }
-      if (command !== null && canAct && hero !== null) {
-        // 指揮召喚物：點藍格選終點；選好終點後點紅框的敵人 ＝ 移動並攻擊
-        if (command.dest !== null) {
-          const chosen = optionAt(command.options, command.dest);
-          const foe = chosen?.targets.find((id) => samePos(view.units.find((u) => u.id === id)?.pos ?? { x: -1, y: -1 }, tile));
-          if (chosen !== undefined && foe !== undefined) {
-            const action = commandAction(hero.id, command.summonId, chosen, foe);
-            if (action !== null) act(action);
-            return;
-          }
-        }
-        if (optionAt(command.options, tile) !== undefined) setCommand({ ...command, dest: tile });
-        return;
-      }
-      if (orderPick !== null && canOrder) {
-        const order = orderFromTile(orderPick, view, tile);
-        if (order !== null) issueOrders(withOrder(response.orders, order));
-        return;
-      }
-      if (!((canAct || copying) && hero !== null)) {
-        pin.pinAt(tile);
-        return;
-      }
-      if ((canAct || copying) && hero !== null) {
-        if (mode !== null) {
-          if (mode.kind === "shove_aside") return; // 撥開要用面板選方向
-          if (isHurlMode(mode)) {
-            // 投擲物件：第 1 段選物件、第 2 段選落點（落點優先；再點別的物件改選，點同一個取消）
-            const landing = actionAtTile(mode, view, hero, tile, hurlPick);
-            if (landing !== null) {
-              if (copying) decideCopy(landing);
-              else act(landing);
-              return;
-            }
-            const object = hurlObjectAt(mode, view, tile);
-            if (object !== null) setHurlPick(object === hurlPick ? null : object);
-            return;
-          }
-          const a = actionAtTile(mode, view, hero, tile);
-          if (a !== null) {
-            if (pin.pinned) pin.dismiss();
-            if (copying) decideCopy(a);
-            else act(a);
-            return;
-          }
-          const why = blockedPushAt(mode, view, tile);
-          if (why !== null) setHint(why);
-          else pin.pinAt(tile);
+      const result = decideTileClick(
+        { shift, pinned: pin.pinned, view, hero, canAct, copying, canOrder, orderPick, command, mode, hurlPick, classified },
+        tile,
+      );
+      switch (result.kind) {
+        case "ignore":
           return;
-        }
-        const action = actionForClick(classified, view, tile);
-        if (action !== null) {
-          if (pin.pinned) pin.dismiss();
-          act(action);
-        } else {
-          pin.pinAt(tile);
-        }
+        case "pin":
+          pin.pinAt(result.tile);
+          return;
+        case "command_dest":
+          setCommand((cur) => (cur === null ? cur : { ...cur, dest: result.dest }));
+          return;
+        case "hurl_pick":
+          setHurlPick(result.pick);
+          return;
+        case "hint":
+          setHint(result.text);
+          return;
+        case "order":
+          issueOrders(withOrder(response.orders, result.order));
+          return;
+        case "act":
+        case "submit":
+          if (result.dismissPin) pin.dismiss();
+          if (result.kind === "submit" && copying) decideCopy(result.action);
+          else act(result.action);
+          return;
       }
     },
     [

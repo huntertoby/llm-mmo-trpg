@@ -6,10 +6,12 @@
 // 灌注（Phase 3-33d）：「灌注（1 AP）」→ 伺服器給技能選單（不能灌注的變灰、附中文原因）→ 滑過技能預覽
 // 召喚物從自己位置施放的範圍 → 點一下灌注；有待施放的技能時列上顯示「待施放：〔技能〕」。
 import { useState } from "react";
-import type { Action, BattleView, CommandOption, CommandOptions, InfuseOptions, InfusionPreview, Pos, SkillCard, UnitView } from "../api/types";
+import type { Action, BattleView, CommandOption, InfusionPreview, Pos, SkillCard, UnitView } from "../api/types";
 import {
   commandAction,
   commandBlocked,
+  type CommandSession,
+  type InfuseSession,
   focusTargets,
   INFUSE_HINT,
   infuseAction,
@@ -32,19 +34,6 @@ import type { UnitNames } from "../battle/units";
 import { posKey } from "../battle/geometry";
 import { PartTip } from "./PartTip";
 import { SkillIconView } from "./SkillIconView";
-
-/** 進行中的灌注：哪隻、伺服器給的技能選單。 */
-export interface InfuseSession {
-  summonId: string;
-  options: InfuseOptions;
-}
-
-/** 進行中的指揮：哪隻、伺服器給的選項、目前選的終點（`null` ＝ 還沒選）。 */
-export interface CommandSession {
-  summonId: string;
-  options: CommandOptions;
-  dest: Pos | null;
-}
 
 interface Props {
   view: BattleView;
