@@ -56,3 +56,10 @@
 
 #### 3R-3c｜種族外觀：體型、臉部紋路、鬍子、獠牙、龍裔（sonnet；約 0.5 段；3R-3b 後）
 `stout`／`tall` 接上資料來源；臉部紋路（鱗片、刺青、晶路）、鬍子、獠牙、豎瞳；龍裔定案版（大龍角、龍鱗、粗龍尾＋背刺、鱗色）。檢查清單「種族」全部打勾。報告 `Phase3R-3c報告.md`。
+
+### 4.6 3R-3a／3b／3c 驗收（2026-10-29，開發 PM）——3R 完成
+- **3R-3a**（報告 `Phase3R-3a報告.md`）：`RunState.origin`、`POST /api/runs` 的 `origin`、`start-options` 的 `races`／`origins`、`trpg run new|auto --origin`；存檔 `trpg-run/7`（`/5`、`/6` 可讀）；開局「種族與出身 → 武器 → 2 關鍵字」（前端必選、API／CLI 選填）；`layoutSmoke.runCase(title, {viaRun: true})` 走新開局。待決（種族與出身獨立、出身只記錄、浮動卡 `pinOn: "touch"`）→ 接受。
+- **3R-3b**（報告 `Phase3R-3b報告.md`，`inkRace.ts`、`RaceView.look`、`raceLooks.json`）：耳、角、尾、膚色、衝突規則；美術 PM 驗收通過（`docs/art/3R-3b檢查.md`），小修 2 點併入 3R-3c。只有主角帶種族外觀。
+- **3R-3c**（報告 `Phase3R-3c報告.md`）：體型、臉部紋路、鬍子、獠牙、豎瞳、龍裔定案版；角魔 `horn_color` `#bfb0a4`、角抬帽時頭髮照不遮頭頂畫（美術 PM 小修）。待美術 PM 驗收。
+- 合併後全量（除 llm，含 3R-3a）：pytest 8527、vitest 1097、mypy、lint-imports、build、重播（swamp 種子 12，矮人）全過；3R-3c 合併後 vitest 1103、build、api／content 1826 通過。
+- **3R 可玩種族與出身完成**（美術 PM 驗收 3R-3c 後）。
