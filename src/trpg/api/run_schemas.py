@@ -269,6 +269,8 @@ class FlashRulesOut(_ApiModel):
     """第幾次是大變化（加深、橋接、轉型）。"""
     insight_per_win: int
     """每打贏一場得到的靈感點。"""
+    max_carry: int
+    """傳承時最多帶走幾個小變化（第 3 次是大變化，所以是 ``major_flash`` − 1；3W-R2）。"""
 
 
 class FlashRecordOut(_ApiModel):
@@ -283,6 +285,15 @@ class FlashRecordOut(_ApiModel):
     summary_zh: str
     reflashes: int
     """這一欄被重閃過幾次。"""
+
+
+class ReflashSlotOut(_ApiModel):
+    """可以重閃的一欄（3W-R2：前端不自己推規則）。"""
+
+    slot: int
+    """第幾次（完整技能的調整欄為 0）。"""
+    transform_hint: bool = False
+    """這一欄是第 3 次大變化但還不是轉型（升階後建議重閃）。"""
 
 
 class SkillFlashOut(_ApiModel):
@@ -311,6 +322,14 @@ class SkillFlashOut(_ApiModel):
     """溶掉會退回的點數（花掉的一半，無條件捨去）。"""
     reflash_transform_hint: bool = False
     """升階提示用（交給 3W-6）：第 3 次是大變化但不是轉型，可以重閃第 3 格試試轉型（照常付點）。"""
+    reflash_slots: tuple[ReflashSlotOut, ...] = ()
+    """可以重閃的欄（點數與地點另外檢查；3W-R2）。"""
+    carryable: tuple[int, ...] = ()
+    """傳承時可以被帶走的變化（第幾次；3W-R2）。"""
+    inherit_problem_zh: str | None = None
+    """這招不能傳承給別招的原因（可以時為 ``None``；3W-R2）。"""
+    inherit_target: bool = False
+    """這招可以接受傳承（還沒閃過、不是完整技能；3W-R2）。"""
 
 
 class FlashOptionOut(_ApiModel):

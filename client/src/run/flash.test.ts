@@ -20,6 +20,7 @@ import {
   flashWarning,
   focusedMode,
   inheritChoice,
+  inheritProblem,
   inheritTargets,
   maxCarry,
   openMode,
@@ -113,23 +114,24 @@ describe("技能卡文字", () => {
 describe("重閃", () => {
   it("一般技能每個已閃的格子可以重閃；完整技能只有調整欄", () => {
     const flashed = CAMPFIRE.hero.flash.find((f) => f.records.length === 3);
-    const slots = reflashSlots(flashed, CAMPFIRE.hero.flash_rules);
+    const slots = reflashSlots(flashed);
     expect(slots.map((s) => s.slot)).toEqual([1, 2, 3]);
     const complete = CAMPFIRE.hero.flash.find((f) => f.complete);
-    expect(reflashSlots(complete, CAMPFIRE.hero.flash_rules)).toEqual([{ slot: 0, label: "調整欄", transformHint: false }]);
-    expect(reflashSlots(undefined, null)).toEqual([]);
+    expect(reflashSlots(complete)).toEqual([{ slot: 0, label: "調整欄", transformHint: false }]);
+    expect(reflashSlots(undefined)).toEqual([]);
   });
   it("升階後第 3 格還不是轉型：只有第 3 格帶轉型提示", () => {
     const flashed = CAMPFIRE.hero.flash.find((f) => f.records.length === 3);
     expect(flashed?.reflash_transform_hint).toBe(true);
-    const slots = reflashSlots(flashed, CAMPFIRE.hero.flash_rules);
+    const slots = reflashSlots(flashed);
     expect(slots.filter((s) => s.transformHint).map((s) => s.slot)).toEqual([3]);
   });
-  it("沒有旗標就沒有提示", () => {
+  it("後端沒標就沒有提示；只列後端下發的格子", () => {
     const flashed = CAMPFIRE.hero.flash.find((f) => f.records.length === 3);
     if (flashed === undefined) throw new Error("夾具缺少已閃過的技能");
-    const slots = reflashSlots({ ...flashed, reflash_transform_hint: false }, CAMPFIRE.hero.flash_rules);
-    expect(slots.some((s) => s.transformHint)).toBe(false);
+    const plain = flashed.reflash_slots.map((s) => ({ ...s, transform_hint: false }));
+    expect(reflashSlots({ ...flashed, reflash_slots: plain }).some((s) => s.transformHint)).toBe(false);
+    expect(reflashSlots({ ...flashed, reflash_slots: [] })).toEqual([]);
   });
 });
 
@@ -151,8 +153,21 @@ describe("溶掉與傳承", () => {
     expect(targets).not.toContain(CAMPFIRE.hero.flash.find((f) => f.complete)?.skill_id);
     expect(targets.length).toBeGreaterThan(0);
   });
+  it("傳承：可以帶走的變化、目標與不能傳承的原因都照後端資料", () => {
+    const flashed = CAMPFIRE.hero.flash.find((f) => f.records.length === 3);
+    if (flashed === undefined) throw new Error("夾具缺少已閃過的技能");
+    expect(carryable({ ...flashed, carryable: [2] }).map((r) => r.nth)).toEqual([2]);
+    expect(inheritProblem(flashed)).toBeUndefined();
+    const fresh = CAMPFIRE.hero.flash.find((f) => f.records.length === 0 && !f.complete);
+    expect(inheritProblem(fresh)).toContain("沒有可以帶走的小變化");
+    expect(inheritProblem({ ...flashed, inherit_problem_zh: "測試原因" })).toBe("測試原因");
+    const only = CAMPFIRE.hero.flash.map((f) => ({ ...f, inherit_target: false }));
+    expect(inheritTargets({ ...CAMPFIRE.hero, flash: only })).toEqual([]);
+  });
   it("最多帶走 2 個；選滿後不能再加，再按一次取消", () => {
     expect(maxCarry(CAMPFIRE.hero.flash_rules)).toBe(2);
+    if (CAMPFIRE.hero.flash_rules === null || CAMPFIRE.hero.flash_rules === undefined) throw new Error("夾具缺少規則");
+    expect(maxCarry({ ...CAMPFIRE.hero.flash_rules, max_carry: 1 })).toBe(1);
     expect(toggleCarry([], 1, 2)).toEqual([1]);
     expect(toggleCarry([1, 2], 3, 2)).toEqual([1, 2]);
     expect(toggleCarry([1, 2], 1, 2)).toEqual([2]);

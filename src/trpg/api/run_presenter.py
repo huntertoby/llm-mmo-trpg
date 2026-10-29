@@ -24,6 +24,7 @@ from trpg.api.run_schemas import (
     OfferOut,
     OfferTagOut,
     PendingFlashOut,
+    ReflashSlotOut,
     RunResponse,
     SaveSummary,
     SkillFlashOut,
@@ -36,10 +37,15 @@ from trpg.content.slots import SLOT_ZH, SLOTS
 from trpg.narrative.skills import CardOwner, KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.flashes import (
+    carryable_records,
     flash_categories,
     flash_request,
+    inherit_source_problem,
+    inherit_target_problem,
+    max_carry,
     owned_skills,
     problem_of,
+    reflash_slots,
     state_of,
 )
 from trpg.roguelite.gear import current_item, equip_notes, target_slot, weapon_swap_prompt
@@ -141,6 +147,7 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
     problem = problem_of(library, run, skill_id)
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     major = state.record(rules.major_flash)
+    hint = not state.complete and major is not None and major.variation.source != "transform"
     return SkillFlashOut(
         skill_id=skill_id,
         base_id=state.base_id,
@@ -153,9 +160,14 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
         records=tuple(_record_out(library, r) for r in records),
         spent=state.spent,
         dissolve_refund=dissolve_refund(rules, state),
-        reflash_transform_hint=(
-            not state.complete and major is not None and major.variation.source != "transform"
+        reflash_transform_hint=hint,
+        reflash_slots=tuple(
+            ReflashSlotOut(slot=s, transform_hint=hint and s == rules.major_flash)
+            for s in reflash_slots(library, state)
         ),
+        carryable=carryable_records(library, state),
+        inherit_problem_zh=inherit_source_problem(library, run, skill_id),
+        inherit_target=inherit_target_problem(state) is None,
     )
 
 
@@ -171,6 +183,7 @@ def _flash_rules(library: ContentLibrary) -> FlashRulesOut:
         max_flashes=table.rules.max_flashes,
         major_flash=table.rules.major_flash,
         insight_per_win=table.rules.insight_per_win,
+        max_carry=max_carry(library),
     )
 
 
