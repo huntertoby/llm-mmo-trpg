@@ -1,7 +1,8 @@
 // 刻印的符文（Phase 3-23）：格子上的小紋樣（施放者陣營色外框＋元素色內紋）、資訊卡文字（純函式）。
 import type { BattleView, Pos, RuneView } from "../api/types";
 import { TEAM_COLORS } from "./glossary";
-import { ELEMENT_COLORS, hexToNumber } from "./vfxPalette";
+import { ELEMENT_COLORS } from "../render/palette";
+import { hexToNumber } from "./vfxPalette";
 
 /** 標籤符文（不帶元素）的內紋顏色。 */
 export const TAG_RUNE_COLOR = 0xd8d0b8;

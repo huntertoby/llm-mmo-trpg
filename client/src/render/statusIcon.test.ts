@@ -95,8 +95,8 @@ describe("35 個狀態", () => {
     expect(glyphColor("slow")).toBe("#6ac8ff");
     expect(glyphColor("root")).toBe("#6ac8ff");
     expect(glyphColor("feared")).toBe("#c890ff");
-    expect(glyphColor("burning")).toBe("#ff7a1a");
-    expect(glyphColor("poison")).toBe("#8fdc4a");
+    expect(glyphColor("burning")).toBe("#ff6a1a");
+    expect(glyphColor("poison")).toBe("#7ddc3a");
     expect(glyphColor("shielded")).toBe("#8ac8ff");
     expect(glyphColor("weaken")).toBe("#ff8a8a"); // 其餘依 polarity
   });

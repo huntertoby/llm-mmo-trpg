@@ -6,7 +6,7 @@ import {
   drawSummonGround,
   hasNoRing,
   humanoidSpec,
-  KEYWORD_COLOR,
+  SUMMON_KEYWORDS,
   renderSummonCanvas,
   resolveSummonLook,
   SIZE_SCALE,
@@ -39,7 +39,7 @@ function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
 const FACINGS: Facing[] = ["north", "east", "south", "west"];
 const BODIES = ["humanoid", "spirit", "construct", "beast", "plant", "totem"];
 const VARIANTS = ["skeleton", "shade", "afterimage", "guardian", "golem", "bomb", "wall", "wolf", "bird", "war", "pull", "plateau", "nope", "", null, undefined];
-const ELEMENTS = [...Object.keys(KEYWORD_COLOR), "unknown_element", null, undefined];
+const ELEMENTS = [...SUMMON_KEYWORDS, "unknown_element", null, undefined];
 const SIZES = ["small", "medium", "large", "huge", null, undefined];
 const TRAITS = ["puddle", "shield", "translucent", "glow", "fuse", "flying", "aura", "no_ring", "ground", "weird", null, undefined];
 

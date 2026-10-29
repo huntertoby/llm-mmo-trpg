@@ -6,7 +6,8 @@ import { buildDrawModel } from "./drawModel";
 import { LABEL_RUNE, tileSections } from "./tileInfo";
 import { smallView, tile } from "./testFixtures";
 import { ownerNameOf, runeColor, runeDraws, runeLine, runesAt, runesOf, TAG_RUNE_COLOR } from "./runes";
-import { ELEMENT_COLORS, hexToNumber } from "./vfxPalette";
+import { ELEMENT_COLORS } from "../render/palette";
+import { hexToNumber } from "./vfxPalette";
 import { TEAM_COLORS } from "./glossary";
 
 function rune(over: Partial<RuneView> = {}): RuneView {

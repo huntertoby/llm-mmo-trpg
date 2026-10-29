@@ -1,6 +1,7 @@
 // 技能特效的元素對照表（Phase 3-12）：每個元素一組顏色與粒子行為，加上粒子軌跡的純函式。
 // 元素代碼以引擎的 `Element`（`/api/glossary` 的 `elements`）為準；不認得的元素用 `DEFAULT_VFX`。
 // 畫布（`render/BattleRenderer.ts`）只照這裡算出的位置與大小畫圖，所以軌跡可以用 vitest 檢查。
+import { ELEMENT_COLORS, WATER_COLOR } from "../render/palette";
 
 /** 粒子行為：火星上飄、碎晶、鋸齒閃電、水花、綠泡、弧線、碎石、光柱、煙霧、火花、閃光。 */
 export type ParticleKind =
@@ -34,36 +35,6 @@ function vfx(primary: number, secondary: number, particle: ParticleKind, particl
   return { primary, secondary, particle, particles, jagged: false, column: false, ...extra };
 }
 
-/**
- * 元素顏色的唯一來源（Phase 3-18a）：特效（`primary`、`secondary`）與技能圖示（`accent`、`dark`、`light`）
- * 都從這一張表取色。顏色一律寫十六進位字串，需要數字的地方用 `hexToNumber`。
- */
-export interface ElementColors {
-  /** 中文名。 */
-  name: string;
-  /** 特效主色（飛行物、光束、範圍底色）。 */
-  primary: string;
-  /** 特效副色（粒子、外圈、拖尾）。 */
-  secondary: string;
-  /** 圖示標誌與主圖的亮色。 */
-  accent: string;
-  /** 圖示底色漸層的暗端與亮端。 */
-  dark: string;
-  light: string;
-}
-
-export const ELEMENT_COLORS: Readonly<Record<string, ElementColors>> = {
-  physical: { name: "物理", primary: "#f2f2f2", secondary: "#b8bcc8", accent: "#e8ebf0", dark: "#2c313b", light: "#7d8798" },
-  fire: { name: "火", primary: "#ff6a1a", secondary: "#ffd23f", accent: "#ffb23a", dark: "#4a1104", light: "#e8541a" },
-  ice: { name: "冰", primary: "#8fe3ff", secondary: "#ffffff", accent: "#d8f6ff", dark: "#0b2f4e", light: "#3fa6d8" },
-  lightning: { name: "雷", primary: "#fff36b", secondary: "#8fd0ff", accent: "#fff36b", dark: "#1d1d4a", light: "#5a5ac8" },
-  poison: { name: "毒", primary: "#7ddc3a", secondary: "#3f8f2a", accent: "#b6f06a", dark: "#12320c", light: "#4f9a28" },
-  wind: { name: "風", primary: "#c8ffe8", secondary: "#7fe0c0", accent: "#dcfff1", dark: "#0b3f3a", light: "#3fb59a" },
-  earth: { name: "大地", primary: "#b0814a", secondary: "#6e5236", accent: "#f0c890", dark: "#2e1d0e", light: "#9a6a36" },
-  holy: { name: "聖光", primary: "#fff2b0", secondary: "#ffd75e", accent: "#fff6c8", dark: "#5a3a06", light: "#e7b23a" },
-  shadow: { name: "暗影", primary: "#9a6ad8", secondary: "#2a1840", accent: "#d2b0ff", dark: "#10071e", light: "#5a3590" },
-};
-
 /** `#rrggbb` → 0xrrggbb。 */
 export function hexToNumber(hex: string): number {
   return parseInt(hex.slice(1), 16);
@@ -87,7 +58,7 @@ export const ELEMENT_VFX: Readonly<Record<string, ElementVfx>> = {
   holy: fromColors("holy", "pillar", 9, { column: true }),
   shadow: fromColors("shadow", "smoke", 9),
   // 水不是元素（只是表面）；保留一組水花，若之後內容加入水元素可直接使用。
-  water: vfx(0x4aa8ff, 0xd8f0ff, "splash", 10),
+  water: vfx(hexToNumber(WATER_COLOR), 0xd8f0ff, "splash", 10),
 };
 
 /** 生成水表面的技能用水花配色（水不是元素，`ELEMENT_VFX.water`）。 */

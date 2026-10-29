@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import type { SkillIconData } from "../api/types";
-import { ELEMENT_COLORS, ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
+import { ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
+import { ELEMENT_COLORS } from "./palette";
 import fixture from "./fixtures/skill_icons.json";
 import { ELEMENT_ICON, elementPalette, isRanged, SKELETON_NAME } from "./skillGlyphs";
 import {

@@ -3,6 +3,7 @@
 // 內容新增種類時找不到的鍵會退回預設值（顯示 ID），不會壞掉。
 
 import type { Glossary, GlossaryEntry, StatusLook, Surface, WeaponLookEntry } from "../api/types";
+import { SURFACE_GROUND_COLOR } from "../render/palette";
 
 // ---- 名詞對照（由 /api/glossary 提供；啟動時載入）-------------------------------------------
 
@@ -127,16 +128,19 @@ export interface SurfaceStyle {
   alpha: number;
 }
 
+/** 表面的顏色取自 `render/palette.ts`（單一來源），這裡只決定疊色比例。 */
+const ground = (id: string, alpha: number): SurfaceStyle => ({ color: parseInt((SURFACE_GROUND_COLOR[id] ?? "#888888").slice(1), 16), alpha });
+
 export const SURFACES: Readonly<Record<Surface, SurfaceStyle | null>> = {
   none: null,
-  oil: { color: 0x2b2416, alpha: 0.6 },
-  water: { color: 0x3a7bd5, alpha: 0.55 },
-  fire: { color: 0xff7a1a, alpha: 0.7 },
-  ice: { color: 0xc8ecff, alpha: 0.7 },
-  poison: { color: 0x7bc043, alpha: 0.6 },
-  holy: { color: 0xfff1a8, alpha: 0.6 },
-  darkness: { color: 0x3b1f4f, alpha: 0.65 },
-  smoke: { color: 0xb8b8c0, alpha: 0.6 },
+  oil: ground("oil", 0.6),
+  water: ground("water", 0.55),
+  fire: ground("fire", 0.7),
+  ice: ground("ice", 0.7),
+  poison: ground("poison", 0.6),
+  holy: ground("holy", 0.6),
+  darkness: ground("darkness", 0.65),
+  smoke: ground("smoke", 0.6),
 };
 
 export interface ObjectStyle {

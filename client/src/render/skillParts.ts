@@ -4,6 +4,7 @@
 // 其他畫「?」，永遠畫得出來（不丟例外）。
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
 import { FONT } from "./labels";
+import { SURFACE_ICON_COLOR } from "./palette";
 import { drawGlyph, GLYPH, glyphColor } from "./statusIcon";
 import { elementGlyph, ELEMENT_ICON, starPath, type Ctx } from "./skillGlyphs";
 
@@ -228,17 +229,7 @@ export function statusColor(id: string | null | undefined): string {
 
 // ---- 表面：落在地上的一滴，顏色是表面色 ----
 
-const SURFACE_COLOR: Readonly<Record<string, string>> = {
-  fire: "#ff7a1a",
-  ice: "#cdeeff",
-  oil: "#5a4a30",
-  water: "#4a9af0",
-  holy: "#ffe58a",
-  darkness: "#8a5ad0",
-  smoke: "#c0c0c8",
-  poison: "#86d84a",
-};
-export const surfaceColor = (id: string | null | undefined): string => (id == null ? "#c8c8c8" : (SURFACE_COLOR[id] ?? "#c8c8c8"));
+export const surfaceColor = (id: string | null | undefined): string => (id == null ? "#c8c8c8" : (SURFACE_ICON_COLOR[id] ?? "#c8c8c8"));
 
 export function surfaceGlyph(ctx: Ctx, id: string | null | undefined): void {
   ctx.save();
@@ -1332,7 +1323,7 @@ export function drawChip(ctx: Ctx, part: Part, x: number, y: number, r: number, 
 export const KNOWN_PARTS = {
   effects: Object.keys(EFFECT),
   statuses: Object.keys(STATUS),
-  surfaces: Object.keys(SURFACE_COLOR),
+  surfaces: Object.keys(SURFACE_ICON_COLOR),
   conditions: Object.keys(COND),
   triggers: Object.keys(TRIG),
   links: Object.keys(LINK),

@@ -6,6 +6,7 @@
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import { darken, isHex, lighten, mix } from "./color";
+import { elementTintColors } from "./palette";
 import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, type Pt } from "./inkStyle";
 
 /** 無元素的光環色。 */
@@ -20,19 +21,18 @@ const limb = (ctx: Ctx, key: string, pts: readonly Pt[], w: number, color: strin
   stroke(ctx, key, pts, w, color);
 };
 
-type Element = "fire" | "ice" | "lightning";
-/** 元素 → [身體色, 亮色]；元素色也是光環色。 */
-const ELEMENT_COLORS: Readonly<Record<Element, readonly [string, string]>> = {
-  fire: ["#ff7a1a", "#ffd04a"],
-  ice: ["#8fe3ff", "#e8fbff"],
-  lightning: ["#ffe14a", "#fff7c0"],
+/** 形態認得的元素（`palette.ts`，物理與不認得的算「沒有元素」）；回傳元素 id。 */
+const elementOf = (el: string | null | undefined): string | null => (elementTintColors(el) === undefined ? null : (el ?? null));
+/** 元素 → [身體色, 亮色]（元素色也是光環色）；沒有元素時用火。 */
+const elementPair = (el: string | null | undefined): readonly [string, string] => {
+  const c = elementTintColors(elementOf(el)) ?? elementTintColors("fire")!;
+  return [c.primary, c.bright];
 };
-const elementOf = (el: string | null | undefined): Element | null => (el === "fire" || el === "ice" || el === "lightning" ? el : null);
 
 /** 光環色：認得的元素用元素色，其餘（無元素、不認得的元素）用 #9a86ff。 */
 export function formAuraColor(element: string | null | undefined): string {
   const el = elementOf(element);
-  return el === null ? FORM_AURA_NEUTRAL : ELEMENT_COLORS[el][0];
+  return el === null ? FORM_AURA_NEUTRAL : elementPair(el)[0];
 }
 
 interface FormArt {
@@ -79,7 +79,7 @@ function drawWerewolf(ctx: Ctx, h: string): void {
 
 function drawDragon(ctx: Ctx, h: string, element: string | null | undefined): void {
   const c = mix("#8a3a2a", h, 0.3);
-  const e = ELEMENT_COLORS[elementOf(element) ?? "fire"][0];
+  const e = elementPair(element)[0];
   ink(ctx, "dr-wingfar", [[10, -29], [7, -40], [2, -49], [-7, -54], [-4.6, -46.4], [-6.4, -38.6], [-2, -40.4], [-1.6, -32.6], [2, -34], [2, -28]], dark(c, 0.3));
   for (const x of [-13, 4]) ink(ctx, `dr-legfar-${x}`, [[x - 2.6, -12], [x + 2.6, -12], [x + 2.4, 0], [x - 3, 0]], dark(c, 0.25));
   ink(ctx, "dr-tail", [[-14, -14], [-26, -12], [-34, -4], [-28, -4.6], [-14, -8]], c);
@@ -176,7 +176,7 @@ function drawGiant(ctx: Ctx, h: string): void {
 
 function drawAvatar(ctx: Ctx, h: string, element: string | null | undefined): void {
   const el = elementOf(element) ?? "fire";
-  const [ec, el2] = ELEMENT_COLORS[el];
+  const [ec, el2] = elementPair(el);
   ctx.save();
   ctx.globalAlpha = 0.8;
   for (const [x, y, s] of [[-6, -4, 3], [5, -2, 2.5], [0, 1, 2]] as const) ink(ctx, `av-wisp${x}`, ellPts(x, y, s, s, 10), ec, { shade: false, w: 0.5 });

@@ -72,22 +72,6 @@ export const GEAR_DYE: Readonly<Record<string, string>> = {
   gold: "#d9a83a",
 };
 
-/** 關鍵字（id 同 skill_keywords.yaml）：`tint` ＝ 元素，主色混入 40%、暗色混入 25%。 */
-export const GEAR_KEYWORD: Readonly<Record<string, { c: string; tint?: boolean }>> = {
-  ignite: { c: "#ff6a1a", tint: true },
-  wet: { c: "#4aa8ff", tint: true },
-  charged: { c: "#fff36b", tint: true },
-  frozen: { c: "#8fe3ff", tint: true },
-  prone: { c: "#e0b080" },
-  collision: { c: "#ff9a4a" },
-  marked: { c: "#d06aff" },
-  high_ground: { c: "#ffe9a8" },
-  concealed: { c: "#a0a0c8" },
-  summon: { c: "#7dffb0" },
-  poisoned: { c: "#7ad04a" },
-  form: { c: "#e0a35a" },
-};
-
 /** 稀有度外框色。 */
 export const GEAR_RARITY: Readonly<Record<string, string>> = {
   common: "#8a8f99",

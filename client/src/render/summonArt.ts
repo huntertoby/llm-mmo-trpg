@@ -6,6 +6,7 @@ import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import type { DollSpec, Gear } from "./appearance";
 import { mix } from "./color";
+import { KEYWORD_COLOR } from "./palette";
 import { FORM_AURA_NEUTRAL, drawFormAura } from "./inkForm";
 import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, type Pt } from "./inkStyle";
 import { DOLL_H, DOLL_W, renderFigureCanvas, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
@@ -32,19 +33,8 @@ export interface ResolvedLook {
   trait: string | undefined;
 }
 
-/** 關鍵字色票（關鍵字 ID → 色；來源樣張的 KW，ID 換成 `skill_keywords.yaml` 的正式 ID）。 */
-export const KEYWORD_COLOR: Readonly<Record<string, string>> = {
-  ignite: "#ff6a1a",
-  wet: "#4aa8ff",
-  charged: "#fff36b",
-  frozen: "#8fe3ff",
-  prone: "#e0b080",
-  collision: "#ff9a4a",
-  marked: "#d06aff",
-  high_ground: "#ffe9a8",
-  concealed: "#a0a0c8",
-  summon: "#7dffb0",
-};
+/** 召喚物外觀認得的關鍵字（顏色在 `palette.ts` 的 `KEYWORD_COLOR`；`poisoned`、`form` 不是召喚物的元素，不列）。 */
+export const SUMMON_KEYWORDS: readonly string[] = ["ignite", "wet", "charged", "frozen", "prone", "collision", "marked", "high_ground", "concealed", "summon"];
 
 export const SIZE_SCALE: Readonly<Record<SummonSize, number>> = { small: 0.8, medium: 1, large: 1.25 };
 
@@ -64,7 +54,7 @@ export function resolveSummonLook(look: SummonLookDraw | null | undefined): Reso
   if (look == null || body === undefined) return { body: "humanoid", variant: "skeleton", element: undefined, size: "medium", trait: undefined };
   const variants = VARIANTS[body];
   const variant = variants.find((v) => v === look.variant) ?? variants[0] ?? "";
-  const element = look.element != null && look.element in KEYWORD_COLOR ? look.element : undefined;
+  const element = look.element != null && SUMMON_KEYWORDS.includes(look.element) ? look.element : undefined;
   const size: SummonSize = look.size === "small" || look.size === "large" ? look.size : "medium";
   return { body, variant, element, size, trait: look.trait ?? undefined };
 }
@@ -207,7 +197,7 @@ function bird(ctx: Ctx, side: Side): void {
   ink(ctx, "bird-head", ellPts(8, -2, 3.5, 3.5, 10), c, { w: 0.7 });
   ink(ctx, "bird-beak", [[11, -3], [14, -1.5], [11, -0.5]], "#e8bb48", { sharp: true, shade: false, w: 0.6 });
   if (side !== null) dot(ctx, 9, -2.6, 0.9, 0.9, "#1d1a22");
-  dot(ctx, 8, -9, 1.6, 1.6, KEYWORD_COLOR.marked ?? "#d06aff");
+  dot(ctx, 8, -9, 1.6, 1.6, KEYWORD_COLOR["marked"] ?? "#d06aff");
 }
 
 function wolf(ctx: Ctx, side: Side): void {

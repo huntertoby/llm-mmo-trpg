@@ -5,9 +5,8 @@
 // 純資料與純函式（不碰 Canvas），可以用 vitest 檢查。
 import type { DollLook } from "../api/types";
 import { weaponLookEntry } from "../battle/glossary";
-import { ELEMENT_VFX } from "../battle/vfxPalette";
-import { numToHex } from "./color";
 import { raceLookToLook } from "./inkRace";
+import { elementTintColors } from "./palette";
 import { dollGear, isTwoHandedPart, pairedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
@@ -77,11 +76,9 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
 
 export const RARITY_GLOW: Readonly<Record<string, string>> = { epic: "#b06cff", legendary: "#ffbf3a" };
 
-/** 元素 → 色（沿用技能特效的 `ELEMENT_VFX` 主色）；物理與不認得的元素回傳 `undefined`（不套元素色）。 */
+/** 元素 → 色（`palette.ts` 的元素主色，與技能特效同一份）；物理與不認得的元素回傳 `undefined`（不套元素色）。 */
 export function elementTint(element: string | undefined): string | undefined {
-  if (element === undefined || element === "physical") return undefined;
-  const v = ELEMENT_VFX[element];
-  return v === undefined ? undefined : numToHex(v.primary);
+  return elementTintColors(element)?.primary;
 }
 
 function known(slot: GearSlot, item: GearItem | undefined): GearItem | undefined {

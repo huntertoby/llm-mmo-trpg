@@ -7,7 +7,7 @@ import { rgba } from "./color";
 import { TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { FONT } from "./labels";
-import { elementColor } from "./statusIcon";
+import { elementColor } from "./palette";
 
 const T = 52;
 const GRAY = "#d8d8e0";
