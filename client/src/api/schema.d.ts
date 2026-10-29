@@ -3250,7 +3250,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "pool" | "composer";
+            source: "pool" | "composer" | "llm";
         };
         /**
          * OrderSet

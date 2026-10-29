@@ -38,6 +38,14 @@
 的）；偏好湊不到時放寬（取同來源的備選），所以候選數量不變。最高屬性同分依六屬性順序
 （:func:`trpg.shared.types.top_attribute`）。
 
+**LLM 來源**（Phase 4-L6，``docs/phases/Phase4計畫.md`` 3F 節）：呼叫端傳入 ``llm``
+（:data:`~trpg.skillgen.proposal_topic.LlmProposer`）時，每個候選種類先以
+``llm_share_permille`` 的機率
+請 LLM 提議（題目由 :func:`~trpg.skillgen.proposal_topic.make_topic` 決定：核心原語依種子與
+``llm_uses`` 配額加權抽出、輪替選單、主題詞）；每種候選最多呼叫一次，失敗（含 3 次重試後退回）就照
+上面的退回順序走組合器與技能池，所以候選仍湊滿。沒有傳 ``llm`` 時行為與之前逐字相同（擲骰用獨立的
+``fork``，不消耗其他亂數）。``Candidate.llm`` 記錄這次嘗試（成功或失敗），供 run 紀錄與退回率統計。
+
 確定性：亂數只來自 ``Rng(request.seed).fork(<種類>)``；同樣的輸入必得同樣的候選。
 """
 
@@ -45,7 +53,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import combinations
 from typing import Literal
 
@@ -54,6 +62,7 @@ from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.proposal_topic import LlmProposer, TopicRequest, make_topic
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 
 __all__ = [
@@ -62,6 +71,7 @@ __all__ = [
     "CandidateKind",
     "CandidateRequest",
     "CandidateRules",
+    "LlmTrace",
     "behavior_weights",
     "follows_attr",
     "generate_candidates",
@@ -85,6 +95,10 @@ class CandidateRules:
     composer_tries: int = 8
     general_share_permille: int = 100
     """「新方向」那一格從通用池（基礎技能）抽的機率（‰；Phase 3-51，玩法決定 #55）。"""
+    llm_share_permille: int = 0
+    """有傳 ``llm`` 時，每個候選先請 LLM 提議的機率（‰；Phase 4-L6）。"""
+    llm_theme_permille: int = 0
+    """LLM 題目帶主題詞的機率（‰；Phase 4-L6）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +122,8 @@ class CandidateRequest:
     weapon_attrs: tuple[Attribute, ...] = ()
     """主角手上武器的縮放屬性（含第二縮放屬性；Phase 3H-7）。武器技看手上武器（3H-6），所以比對
     屬性偏好時武器技用這個，不用技能自己的 ``scaling_attr``（只是顯示提示）；空 ＝ 退回技能的。"""
+    llm_uses: Mapping[str, int] = field(default_factory=dict)
+    """run 內配額（Phase 4-L6）：原語 → 已出現在這一輪候選中的次數（核心原語抽籤的權重折減）。"""
     held: Mapping[str, str] = field(default_factory=dict)
     """主角手上的主手武器與副手（ID → 中文名；Phase 3I-5）：限定武器的招牌技只在拿著那種武器時
     才會出現在候選裡；隨機組合器的武器親和條件也只挑拿著的那一種。空 ＝ 不給限定武器的技能。"""
@@ -120,8 +136,27 @@ class Candidate:
     kind: CandidateKind
     keywords: tuple[str, ...]
     skill: SkillDef
-    source: Literal["pool", "composer"]
+    source: Literal["pool", "composer", "llm"]
     fallback: bool = False
+    llm: LlmTrace | None = None
+    """這個種類請過 LLM 時的紀錄（成功 ``ok``，或失敗後改走組合器／技能池）。"""
+
+
+@dataclass(frozen=True, slots=True)
+class LlmTrace:
+    """一次 LLM 提議的紀錄（Phase 4-L6）：題目（關鍵字、稀有度、核心原語、選單種子、主題）、
+    嘗試次數、
+    錯誤代碼、是否成功（``ok``）與失敗原因。寫進 run（``OfferTag``），重播與讀檔不再呼叫 LLM。"""
+
+    keywords: tuple[str, ...]
+    rarity: str
+    core_primitive: str | None
+    menu_seed: int | None
+    theme: str | None
+    attempts: int
+    ok: bool
+    codes: tuple[str, ...] = ()
+    reason: str | None = None
 
 
 def keyword_distribution(skills: Iterable[SkillDef], library: ContentLibrary) -> dict[str, int]:
@@ -168,6 +203,57 @@ class _Search:
     pool: tuple[tuple[SkillDef, tuple[str, ...]], ...]
     """可用的手寫技能與它（專屬規則）帶的關鍵字。"""
     taken: set[str]
+    llm: LlmProposer | None = None
+    kind: CandidateKind = "deepen"
+    """目前正在找的候選種類（LLM 來源每種最多請一次）。"""
+    llm_done: set[str] = field(default_factory=set)
+    traces: dict[str, LlmTrace] = field(default_factory=dict)
+
+    def from_llm(
+        self, keywords: Sequence[str], want: AttrWant | None
+    ) -> tuple[SkillDef, Literal["llm"]] | None:
+        """請 LLM 提議（每種候選最多一次；擲骰與出題用獨立的 ``fork``，不影響其他亂數）。失敗回傳
+        ``None``（呼叫端走組合器與技能池）。"""
+        if self.llm is None or self.kind in self.llm_done:
+            return None
+        rng = Rng(self.request.seed).fork(f"llm/{self.kind}")
+        if not rng.chance_permille(self.rules.llm_share_permille):
+            return None
+        self.llm_done.add(self.kind)
+        attrs = None if want == "other" else (self.request.hero_attributes or None)
+        made = make_topic(
+            self.library,
+            TopicRequest(
+                tier=self.request.tier,
+                keywords=tuple(keywords),
+                seed=rng.next_u32(),
+                uses=self.request.llm_uses,
+                hero_attributes=attrs,
+                held=self.request.held or None,
+                theme_permille=self.rules.llm_theme_permille,
+            ),
+        )
+        if made is None:
+            return None
+        topic, ctx, seed = made
+        result = self.llm(topic, ctx, seed)
+        skill = result.skill
+        ok = skill is not None and self.usable(skill)
+        self.traces[self.kind] = LlmTrace(
+            keywords=topic.keywords,
+            rarity=topic.rarity,
+            core_primitive=topic.core_primitive,
+            menu_seed=topic.menu_seed,
+            theme=topic.theme,
+            attempts=result.attempts,
+            ok=ok,
+            codes=result.codes,
+            reason=result.reason if skill is None else (None if ok else "技能不適用目前的武器"),
+        )
+        if not ok or skill is None:
+            return None
+        self.taken.add(skill.id)
+        return skill, "llm"
 
     def usable(self, skill: SkillDef) -> bool:
         return (
@@ -229,8 +315,11 @@ class _Search:
 
     def find(
         self, rng: Rng, keywords: Sequence[str], want: AttrWant | None = None
-    ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
+    ) -> tuple[SkillDef, Literal["pool", "composer", "llm"]] | None:
         want = want if self.request.hero_attributes else None
+        from_llm = self.from_llm(keywords, want)
+        if from_llm is not None:
+            return from_llm
         composer_first = rng.chance_permille(self.rules.composer_share_permille)
         order: tuple[Literal["pool", "composer"], ...] = (
             ("composer", "pool") if composer_first else ("pool", "composer")
@@ -296,7 +385,7 @@ def _weighted_order(rng: Rng, keywords: Sequence[str], behavior: Mapping[str, in
 
 def _first(
     search: _Search, rng: Rng, options: Iterable[tuple[str, ...]], want: AttrWant | None = None
-) -> tuple[tuple[str, ...], SkillDef, Literal["pool", "composer"]] | None:
+) -> tuple[tuple[str, ...], SkillDef, Literal["pool", "composer", "llm"]] | None:
     for keywords in options:
         found = search.find(rng, keywords, want)
         if found is not None:
@@ -308,6 +397,7 @@ def _deepen(
     search: _Search, held: list[str], unheld: list[str], behavior: Mapping[str, int]
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("deepen")
+    search.kind = "deepen"
     if held:
         hit = _first(search, rng, ((k,) for k in held), "same")
         if hit is not None:
@@ -320,6 +410,7 @@ def _bridge(
     search: _Search, held: list[str], unheld: list[str], behavior: Mapping[str, int]
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("bridge")
+    search.kind = "bridge"
     pairs = [tuple(sorted(p, key=held.index)) for p in combinations(held, 2)]
     hit = _first(search, rng, rng.shuffled(pairs), "same")
     if hit is not None:
@@ -336,6 +427,7 @@ def _new(
     search: _Search, unheld: list[str], held: list[str], behavior: Mapping[str, int]
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("new")
+    search.kind = "new"
     hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "other")
     if hit is not None:
         return Candidate("new", hit[0], hit[1], hit[2])
@@ -376,9 +468,13 @@ def _general(search: _Search) -> Candidate | None:
 
 
 def generate_candidates(
-    library: ContentLibrary, request: CandidateRequest, rules: CandidateRules | None = None
+    library: ContentLibrary,
+    request: CandidateRequest,
+    rules: CandidateRules | None = None,
+    llm: LlmProposer | None = None,
 ) -> tuple[Candidate, ...]:
-    """加深、橋接、新方向各一個候選（依序；找不到的種類略過）。見模組說明。"""
+    """加深、橋接、新方向各一個候選（依序；找不到的種類略過）。見模組說明；``llm`` 為 LLM 來源
+    （省略 ＝ 不使用，行為與 Phase 4 之前相同）。"""
     rules = rules if rules is not None else CandidateRules()
     order = library.keywords.ids()
     unknown = sorted(set(request.keyword_counts) - set(order))
@@ -386,7 +482,7 @@ def generate_candidates(
         raise ValueError(f"未知的關鍵字：{', '.join(unknown)}")
     behavior = behavior_weights(library, request.behavior)
     held = _ranked_held(request.keyword_counts, order, behavior)
-    search = _Search(library, request, rules, _pool(library, request.tier), set())
+    search = _Search(library, request, rules, _pool(library, request.tier), set(), llm)
     found: list[Candidate | None] = []
     # 依「加深 → 橋接 → 新方向」的順序產生；退回到「還沒有的關鍵字」的候選用掉的關鍵字，不再給
     # 下一個候選（盡量讓三個候選不同），已被前一個候選用掉的技能也不會重複。
@@ -399,7 +495,11 @@ def generate_candidates(
         search, _without(_without(unheld, deepen), bridge), held, behavior
     )
     found.append(new)
-    return tuple(c for c in found if c is not None)
+    return tuple(
+        replace(c, llm=search.traces.get(c.kind)) if c.kind in search.traces else c
+        for c in found
+        if c is not None
+    )
 
 
 def _without(keywords: list[str], candidate: Candidate | None) -> list[str]:

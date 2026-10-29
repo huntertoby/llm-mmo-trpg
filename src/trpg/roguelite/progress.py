@@ -25,7 +25,7 @@ from trpg.roguelite.attributes import allocate_attributes, merge_spent, respec_a
 from trpg.roguelite.errors import ChoiceError, NodeConflictError
 from trpg.roguelite.gear import equip, gear_offer_node, run_loadout, take_gear
 from trpg.roguelite.growth import battle_levels, respec, set_loadout, spend_points
-from trpg.roguelite.offers import make_offer, take_candidate
+from trpg.roguelite.offers import make_offer, offer_updates, take_candidate
 from trpg.roguelite.start import allocation_problems, apply_allocation
 from trpg.roguelite.state import (
     AllocateChoice,
@@ -289,7 +289,13 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
         node = LevelUpNode(
             level=leveled.level, points=rules.attribute_points_per_level, offer=offer
         )
-        return leveled.model_copy(update={"offers_made": run.offers_made + 1, "node": node})
+        return leveled.model_copy(
+            update={
+                "offers_made": run.offers_made + 1,
+                "node": node,
+                **offer_updates(leveled, offer),
+            }
+        )
     done = run.battles_done
     if done >= len(run.plan):
         return run.model_copy(update={"node": EndedNode(victory=True)})
@@ -396,7 +402,13 @@ def _campfire(
             raise NodeConflictError("這個營火沒有重骰次數了")
         offer = make_offer(library, run, "reroll")
         rerolled = node.model_copy(update={"offer": offer, "rerolls_left": node.rerolls_left - 1})
-        return run.model_copy(update={"offers_made": run.offers_made + 1, "node": rerolled})
+        return run.model_copy(
+            update={
+                "offers_made": run.offers_made + 1,
+                "node": rerolled,
+                **offer_updates(run, offer),
+            }
+        )
     if isinstance(choice, PickChoice):
         if node.offer is None:
             raise NodeConflictError("還沒有重骰，沒有候選可以選")

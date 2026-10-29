@@ -69,7 +69,10 @@ def estimate_messages_tokens(messages: list[ChatMessage]) -> int:
 
 
 def _request_payload(
-    request: ProposalRequest, subset: ProposalSubset, names: dict[str, str]
+    request: ProposalRequest,
+    subset: ProposalSubset,
+    names: dict[str, str],
+    world: WorldStyle | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "tier": request.tier,
@@ -79,6 +82,18 @@ def _request_payload(
     }
     if request.skeleton is not None:
         payload["skeleton"] = request.skeleton
+    if request.core_primitive is not None:  # 題目指定核心原語（4-L6）：提議必須用到它
+        payload["core_primitive"] = request.core_primitive
+        payload["core_primitive_note_zh"] = (
+            f"核心效果必須使用原語 {request.core_primitive}（effects 要有 type 為它的效果）。"
+        )
+    if request.theme is not None and world is not None:  # 主題詞（4-L6）：不是元素
+        theme = next((t for t in world.themes if t.id == request.theme), None)
+        if theme is None:
+            raise ValueError(
+                f"未知的主題 {request.theme!r}（可用：{'、'.join(world.theme_ids())}）"
+            )
+        payload["theme"] = {"name_zh": theme.name_zh, "hint_zh": theme.hint_zh}
     return payload
 
 
@@ -105,7 +120,7 @@ def build_proposal_prompt(
     models = build_subset_models(library, subset)
     names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
     messages = build_skill_proposal_messages(
-        _request_payload(request, subset, names),
+        _request_payload(request, subset, names, style),
         available=available_payload(library, subset),
         previous_proposal=previous_proposal,
         errors=errors,

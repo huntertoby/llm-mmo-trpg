@@ -11,6 +11,10 @@
 新技能跟主屬性（Phase 3H-3）：候選產生器拿到主角目前的屬性，加深與橋接優先取縮放屬性＝最高屬性的
 技能，新方向保留給不同屬性（見 ``trpg.skillgen.candidates``）。
 
+LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``trpg.roguelite.llm_hook``）時，候選
+產生器先請 LLM 提議（失敗退回組合器與技能池，候選仍湊滿）；題目、嘗試次數與來源記在候選的
+``OfferTag.llm``，run 內配額與紀錄由 :func:`offer_updates` 併入 ``RunState``。
+
 ``off_route``（偏離路線，0.2 C）仍照舊標示：候選的縮放屬性與主角目前最高屬性不同的索引（只是標示，
 不再刻意湊一個）；武器技看主角手上武器的縮放屬性（3H-7）。
 ``roguelite.yaml`` 的 ``offer_size``、``off_route_per_offer``、
@@ -26,19 +30,29 @@ from trpg.content.equipment import Loadout, loadout_held, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems
 from trpg.roguelite.errors import ChoiceError
+from trpg.roguelite.llm_hook import current_proposer
 from trpg.roguelite.names import unique_skill_name
-from trpg.roguelite.state import OfferTag, RunState, SkillOffer
+from trpg.roguelite.state import LlmRecord, OfferTag, RunState, SkillOffer
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.candidates import (
+    Candidate,
     CandidateRequest,
     CandidateRules,
     follows_attr,
     generate_candidates,
     keyword_distribution,
 )
+from trpg.skillgen.proposal_topic import primitive_uses
 
-__all__ = ["candidate_request", "equip_problems", "make_offer", "skill_defs", "take_candidate"]
+__all__ = [
+    "candidate_request",
+    "equip_problems",
+    "make_offer",
+    "offer_updates",
+    "skill_defs",
+    "take_candidate",
+]
 
 
 def _hero_loadout(library: ContentLibrary, run: RunState) -> Loadout:
@@ -61,6 +75,7 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         hero_attributes=dict(run.hero.attributes),  # 新技能跟主屬性（Phase 3H-3）
         weapon_attrs=weapon_scaling_attrs(weapon),  # 武器技看手上武器（Phase 3H-7）
         held=loadout_held(weapon, _hero_loadout(library, run)),  # 招牌技與武器親和（3I-5）
+        llm_uses=dict(run.llm_uses),  # run 內配額（Phase 4-L6）
         # 進化前的技能也排除（Phase 3-26b：進化後原技能不再出現在候選）
         exclude=frozenset(
             (*run.hero.skills, *run.bench, *(r.base_id for r in run.evolutions.values()))
@@ -79,7 +94,10 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
             composer_share_permille=settings.composer_share_permille,
             composer_tries=settings.composer_tries,
             general_share_permille=settings.general_share_permille,
+            llm_share_permille=settings.llm_share_permille,
+            llm_theme_permille=settings.llm_theme_permille,
         ),
+        llm=current_proposer() if run.llm else None,
     )
     top = top_attribute(run.hero.attributes)
     candidates = tuple(c.skill for c in found)
@@ -91,11 +109,48 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
         off_route=tuple(
             i for i, s in enumerate(candidates) if not follows_attr(s, top, request.weapon_attrs)
         ),
-        tags=tuple(
-            OfferTag(kind=c.kind, keywords=c.keywords, source=c.source, fallback=c.fallback)
-            for c in found
-        ),
+        tags=tuple(_tag(c, run.offers_made) for c in found),
     )
+
+
+def _tag(candidate: Candidate, offer_index: int) -> OfferTag:
+    trace = candidate.llm
+    record = (
+        None
+        if trace is None
+        else LlmRecord(
+            offer=offer_index,
+            kind=candidate.kind,
+            keywords=trace.keywords,
+            rarity=trace.rarity,
+            core_primitive=trace.core_primitive,
+            menu_seed=trace.menu_seed,
+            theme=trace.theme,
+            attempts=trace.attempts,
+            ok=trace.ok,
+            codes=trace.codes,
+            reason=trace.reason,
+        )
+    )
+    return OfferTag(
+        kind=candidate.kind,
+        keywords=candidate.keywords,
+        source=candidate.source,
+        fallback=candidate.fallback,
+        llm=record,
+    )
+
+
+def offer_updates(run: RunState, offer: SkillOffer) -> dict[str, object]:
+    """產生一組候選之後要併入 ``RunState`` 的欄位（Phase 4-L6）：LLM 生成開關打開時，累加候選裡各
+    原語的出現次數（run 內配額）並附上這組候選的 LLM 紀錄；關閉時是空的（行為與以往相同）。"""
+    if not run.llm:
+        return {}
+    uses = dict(run.llm_uses)
+    for primitive, count in primitive_uses(offer.candidates).items():
+        uses[primitive] = uses.get(primitive, 0) + count
+    records = tuple(t.llm for t in offer.tags if t.llm is not None)
+    return {"llm_uses": dict(sorted(uses.items())), "llm_log": (*run.llm_log, *records)}
 
 
 def weapon_scaling_attrs(weapon: WeaponDef) -> tuple[Attribute, ...]:

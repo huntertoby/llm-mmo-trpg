@@ -18,8 +18,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
+from trpg.cli.run_llm import LlmArgs, add_llm_args, llm_lines, llm_session
 from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_ZH
+from trpg.llm import LLMConfigError
 from trpg.roguelite import (
     ChoiceError,
     RunError,
@@ -146,6 +148,7 @@ def add_run_parser(
         default=None,
         help="測試模式挑的裝備（欄位=物品ID，逗號分隔；需 --test-mode）",
     )
+    add_llm_args(new)
     new.set_defaults(
         func=lambda a: with_library(
             lambda lib: cmd_run_new(
@@ -155,6 +158,7 @@ def add_run_parser(
                 attrs=a.attrs,
                 save_dir=_dir(a),
                 out=sys.stdout,
+                llm=LlmArgs.of(a).llm or LlmArgs.of(a).mock,
             )
         )
     )
@@ -164,6 +168,7 @@ def add_run_parser(
     auto.add_argument("--from", dest="from_path", type=Path, default=None, help="從存檔接續")
     auto.add_argument("--save", action="store_true", help="結束後把一輪存檔")
     auto.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾（預設 saves/）")
+    add_llm_args(auto)
     auto.set_defaults(func=lambda a: with_library(lambda lib: _auto(lib, a)))
     show = sub.add_parser("show", help="顯示存檔內容")
     show.add_argument("path", type=Path, help="存檔路徑（saves/run-<id>.json）")
@@ -259,6 +264,7 @@ def _auto(library: ContentLibrary, args: argparse.Namespace) -> int:
         start=_start_of(args),
         from_path=args.from_path,
         save_dir=_dir(args) if args.save else None,
+        llm=LlmArgs.of(args),
     )
 
 
@@ -274,12 +280,15 @@ def cmd_run_new(
     attrs: Mapping[Attribute, int] | None,
     save_dir: Path,
     out: TextIO,
+    llm: bool = False,
 ) -> int:
     try:
         run = start_run(library, seed, start, attrs)
     except RunError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
         return 2
+    if llm:  # LLM 生成開關寫進這一輪（Phase 4-L6）；之後 trpg run auto --from 接續時沿用
+        run = run.model_copy(update={"llm": True})
     run_id = _new_run_id()
     path = write_save(save_dir, RunSave(run_id=run_id, run=run))
     _print_summary(library, run, out)
@@ -295,6 +304,33 @@ def cmd_run_auto(
     start: StartArgs | None = None,
     from_path: Path | None = None,
     save_dir: Path | None = None,
+    llm: LlmArgs | None = None,
+) -> int:
+    try:
+        with llm_session(library, llm or LlmArgs()) as enabled:
+            return _run_auto(
+                library,
+                out,
+                seed=seed,
+                start=start,
+                from_path=from_path,
+                save_dir=save_dir,
+                enabled=enabled,
+            )
+    except LLMConfigError as exc:
+        print(f"錯誤：{exc}", file=sys.stderr)
+        return 1
+
+
+def _run_auto(
+    library: ContentLibrary,
+    out: TextIO,
+    *,
+    seed: int | None,
+    start: StartArgs | None,
+    from_path: Path | None,
+    save_dir: Path | None,
+    enabled: bool,
 ) -> int:
     try:
         if from_path is not None:
@@ -306,6 +342,8 @@ def cmd_run_auto(
             assert seed is not None
             run = start_run(library, seed, start if start is not None else StartArgs())
             run_id, battle = _new_run_id(), None
+        if enabled and not run.llm:
+            run = run.model_copy(update={"llm": True})
         _print_header(library, run, out)
         final, _ = auto_play(
             library, run, battle, on_node=lambda a, b: _print_node(library, a, b, out)
@@ -384,6 +422,8 @@ def _print_header(library: ContentLibrary, run: RunState, out: TextIO) -> None:
 def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     _print_header(library, run, out)
     print(f"  {_resources(library, run)}；目前：{_NODE_TEXT[run.node.kind]}", file=out)
+    for line in llm_lines(run):
+        print(line, file=out)
     print("  技能：" + "、".join(_skill_name(library, run, s) for s in run.hero.skills), file=out)
     if run.equipment:
         gear = "、".join(f"{SLOT_ZH[s]}={i.name_zh}" for s, i in run.equipment.items())
@@ -497,3 +537,5 @@ def _print_result(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     won = sum(1 for r in run.history if r.won)
     result = "勝利" if victory else "失敗"
     print(f"結果：{result}（{won}/{len(run.plan)} 場），{_resources(library, run)}", file=out)
+    for line in llm_lines(run):
+        print(line, file=out)

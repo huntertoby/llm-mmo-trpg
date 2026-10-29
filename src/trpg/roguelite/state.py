@@ -51,6 +51,7 @@ __all__ = [
     "LeaveChoice",
     "LevelUpChoice",
     "LevelUpNode",
+    "LlmRecord",
     "LoadoutChoice",
     "Node",
     "OfferTag",
@@ -110,14 +111,36 @@ class RunStart(_Model):
     dev_pack: str | None = None
 
 
+class LlmRecord(_Model):
+    """一次 LLM 提議的紀錄（Phase 4-L6）：題目（關鍵字、稀有度、核心原語、選單種子、主題）、
+    嘗試次數、
+    是否成功、錯誤代碼與失敗原因。``ok`` 為假表示候選改走組合器或技能池（退回）。重播與讀檔直接用
+    存下來的候選，不再呼叫 LLM。"""
+
+    offer: int = 0
+    """第幾組候選（``RunState.offers_made`` 當時的值）。"""
+    kind: Literal["deepen", "bridge", "new"] = "deepen"
+    keywords: tuple[str, ...] = ()
+    rarity: str = "common"
+    core_primitive: str | None = None
+    menu_seed: int | None = None
+    theme: str | None = None
+    attempts: int = 0
+    ok: bool = False
+    codes: tuple[str, ...] = ()
+    reason: str | None = None
+
+
 class OfferTag(_Model):
     """候選的標示（Phase 3-24b2，候選產生器）：``kind`` 加深／橋接／新方向、它帶的關鍵字、來源，
-    ``fallback`` 表示定義做不到而退回（例：只持有 1 個關鍵字時的橋接）。"""
+    ``fallback`` 表示定義做不到而退回（例：只持有 1 個關鍵字時的橋接）。``llm``（Phase 4-L6）是這個
+    候選請過 LLM 的紀錄（來源為 ``llm`` 表示成功；失敗時來源是退回後的組合器或技能池）。"""
 
     kind: Literal["deepen", "bridge", "new"]
     keywords: tuple[str, ...]
-    source: Literal["pool", "composer"]
+    source: Literal["pool", "composer", "llm"]
     fallback: bool = False
+    llm: LlmRecord | None = None
 
 
 class SkillOffer(_Model):
@@ -354,6 +377,13 @@ class RunState(_Model):
     backpack: tuple[ItemDef, ...] = ()
     """背包（Phase 3K-2）：換下與沒穿上的裝備，一輪內不限數量；營火可以換回。"""
     node: Node
+    llm: bool = False
+    """LLM 生成開關（Phase 4-L6）：打開時候選產生器請 LLM 提議技能（需要呼叫端裝上提議器，見
+    ``trpg.roguelite.llm_hook``）；關閉時行為與以往完全相同。舊存檔沒有此欄位＝關閉。"""
+    llm_uses: dict[str, int] = Field(default_factory=dict)
+    """run 內配額（Phase 4-L6）：原語 → 已出現在這一輪候選中的次數（核心原語抽籤的權重折減）。"""
+    llm_log: tuple[LlmRecord, ...] = ()
+    """這一輪每次請 LLM 提議的紀錄（Phase 4-L6；退回率統計與 ``trpg run show`` 讀它）。"""
     test_mode: bool = False
     """測試模式（Phase 3-39）：每場戰鬥結束後 HP、法力回滿，並可在開局挑裝備。**只存在這一輪的設定
     裡**，不進模擬、不計入任何統計；舊存檔沒有此欄位時為 ``False``。"""
@@ -384,6 +414,11 @@ class RunState(_Model):
     @property
     def ended(self) -> bool:
         return isinstance(self.node, EndedNode)
+
+    @property
+    def llm_fallbacks(self) -> int:
+        """LLM 提議失敗而退回的次數（Phase 4-L6）。"""
+        return sum(1 for r in self.llm_log if not r.ok)
 
     def plan_of(self, index: int) -> BattlePlan:
         return self.plan[index - 1]
