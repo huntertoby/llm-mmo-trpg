@@ -188,6 +188,15 @@
 8. **範圍外**：名稱與敘事（4-L7）、開放更多結構（4-L8）、真模型評估（4-L9，需使用者開模型）。
 9. 驗收：pytest（skillgen、llm、roguelite、api、content、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports、一輪 `trpg run auto --llm-mock` 跑完並重播一致。報告 `Phase4-L6報告.md`。
 
+## 3G. 4-L7 規格（名稱與敘事；開發 PM 2026-10-29；sonnet，約 0.6 段）
+
+**受影響的既有功能**：`SkillDef.name_zh` 與 `narrative`（`concept`、`cast_flavor`）、4-L6 的 LLM 候選（目前名稱沿用提議裡的 `name_zh`）、組合器的組合式名稱（退回用）、卡片與戰鬥紀錄、run 紀錄（生成文字寫進 run，重播不呼叫）、`trpg.llm.prompts`（版本號）、`test_player_text.py`（玩家文字不露英文代號）。
+1. **命名與敘事 prompt**（同一個本機模型、`LLMClient` 介面）：輸入技能結構（原語、元素、形狀、關鍵字、主題）與碎界語氣／名詞表（`content/llm/`），輸出 `name_zh`（長度上限、全形中文）、`concept`、`cast_flavor`（各有長度上限）；JSON schema 約束。**只寫文字，不能改任何數值或結構**（守則 3）。
+2. **檢查**：長度、空字串、禁字（指令字樣、英文代號、`<player_input>` 等標籤、程式碼片段）、和既有技能名稱重複；不過就重試（上限照設定），仍失敗用組合式名稱與模板敘事（現有組合器的做法）。
+3. **接點**：4-L6 的 LLM 候選在結構合格後呼叫命名；組合器與技能池的候選不呼叫（照舊）。開關跟 4-L6 同一個 `generate`。結果寫進 run 紀錄，重播與讀檔不呼叫 LLM。
+4. 測試一律 `MockLLMClient`：輸出過長／空字串／含指令字樣／含英文代號／重名 → 退回組合式名稱；合格 → 卡片顯示生成名稱與敘事；重播不呼叫。
+5. 驗收：pytest（llm、skillgen、roguelite、narrative、api、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、lint-imports、一輪 `trpg run auto --llm-mock`。報告 `Phase4-L7報告.md`。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）
@@ -240,3 +249,8 @@
 
 **Phase 4 暫停點（2026-10-23，使用者：「讓正在跑的 4-L2、4-L3 做完就停」）**：4-L1～L3 完成，下一段 4-L4（見 `docs/開發PM交接.md` 3.00）。
 
+
+### 4.8 4-L6 驗收（2026-10-29，開發 PM）
+- 報告 `Phase4-L6報告.md`。`llm` 候選來源（`candidates.llm_share_permille` 800‰、主題 `llm_theme_permille` 100‰，初值）；每種候選最多一次 LLM，失敗退回組合器 → 技能池；`keyword.required` 強制；形態關鍵字不出題、`enter_form`／`leave_form` 不進核心抽籤；3C 的 0～3（「自然」主題、`core_primitive`、輪替選單附帶 6／條件 4、`available` 由種子打亂、run 內配額 `skill_composer.yaml` `llm_topic`）；新增 `weapon.incompatible` 檢查；生成結果寫進 run（`trpg-run/8`，/5～/7 可讀）、重播不呼叫；退回率 > 20% 寫進摘要；`trpg run new|auto --llm／--llm-mock`；`config/llm.toml` `generate`（預設 false）；`OfferTagOut.source` 加 `"llm"`。
+- 合併後全量（除 llm）：pytest 8593、vitest 1104、mypy、lint-imports、build 全過；`trpg run auto --seed 5 --llm-mock` 跑完（Mock 只能挑手寫技能，7 題全部退回、觸發提醒——Mock 的限制，真模型看 4-L9）。
+- 待決 → 決定：#2 schema 列舉順序不打亂（只打亂 `available`）、#3 每種候選只請一次、#4、#6、#7、#8 → 接受，4-L9 看真模型再調；#1 Mock 成功率 → 接受（不另寫 Mock）；#5 網頁開關 → 之後的前端段（API 欄位＋設定畫面）。
