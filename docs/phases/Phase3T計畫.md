@@ -49,3 +49,8 @@
 2. 不讓 AI 濫用：沒有實際收益（例如範圍內沒有單位、高低差不影響任何人）就不施放。
 3. 測試：表格測試（有收益／無收益情境 × 隆起／下陷）；一場含大地崩陷的 AI 對戰重播一致；`trpg sim` 小樣本只量（大地 build 的施放次數前後對照，寫進報告，不調數值）。
 4. 驗收：pytest（engine、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy；戰鬥快照若因 AI 行為改變而變，逐場說明。報告 `Phase3T-5報告.md`。
+
+### 3.7 3T-3、3T-5 驗收（2026-10-29，開發 PM）
+- **3T-3**（報告 `Phase3T-3報告.md`）：`content/skills.py` → `content/skills/` 套件 13 個模組，`__init__` 重新匯出，呼叫端零改動、CLI 快照不變。待決（`skill.py` 1309 行、`constants.py` 812 行再拆）→ 延後。
+- **3T-5**（報告 `Phase3T-5報告.md`）：`engine/ai/terrain.py`（降敵、抬友、坑旁推擊三項收益；無收益不施放）；`ai_profiles.yaml` `terrain: {height_points: 4, pit_points: 6}`；小樣本大地崩陷施放 0 → 6。待決：「高低差阻擋近戰」未做、坑判定粗估、權重初值 → 平衡階段。
+- **Phase 3T 全部完成**。
