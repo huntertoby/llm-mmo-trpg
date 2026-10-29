@@ -2,7 +2,7 @@
 #
 # 花靈感點指定一招技能，跳出幾個「變化」，選 1 個套用。每次閃現讓這招的預算上限 +budget_step_permille‰
 # （佔同階預算），套用變化之後由預算器依新的上限重調強度（trpg.skillgen.flash），仍受 6.6 硬上限約束。
-# 模板只描述「怎麼改」，不寫強度。op 沒有實作的模板不會出現（3W-1 只實作 area、range；其餘 3W-2）。
+# 模板只描述「怎麼改」，不寫強度。op 沒有實作的模板不會出現（實作在 trpg.skillgen.flash_ops）。
 # 選項由種子衍生：標籤 flash/<技能>/<第幾次>/<重閃次數>[/<指定類別>]，同種子同選項，可重播。
 
 rules:
@@ -13,6 +13,7 @@ rules:
   reflash_needs_use: false    # 重閃不需要先上場用過，也不增加閃現次數
   dissolve_refund_permille: 500  # 溶掉技能退回花在它身上的靈感點的一半，無條件捨去（#71）
   insight_per_win: 1          # roguelite 原型：每打贏一場 1 點靈感（3W-5 接）
+  usage_min_uses: 3           # 這招的放出次數少於這個數，用法統計不夠，先出通用變化（generic）
   complete:                   # 完整技能（6.34.6）：視為已閃 3 次、+120‰、不能再閃、可以重閃
     flashes: 3
     budget_permille: 120
@@ -33,31 +34,210 @@ pricing:
   transform_guaranteed: true  # 第 3 次（或重閃第 3 次）有合法轉型時一定是選項之一；指定加深／橋接時另列第 4 個
 
 # 變化類別。kinds：可以出這類的技能種類；support_only：只給輔助技（治療、護盾、增益，沒有傷害）。
+# 姿態可以出「修正」「費用」兩類（玩法 PM 3W-2）；姿態目前沒有可調的數值（維持費是形態表的全域設定，
+# 技能上沒有欄位），所以這兩類對姿態還沒有可用的模板，等引擎有「每招維持費」欄位再補（見 3W-2 報告）。
 categories:
   - {id: area, name_zh: 範圍, kinds: [active]}
   - {id: combo, name_zh: 連段, kinds: [active]}
   - {id: element, name_zh: 元素與關鍵字, kinds: [active, passive, reaction]}
-  - {id: cost, name_zh: 費用, kinds: [active]}            # 蓄力或輕巧，只限主動技
+  - {id: cost, name_zh: 費用, kinds: [active, stance]}    # 蓄力或輕巧（主動技）；姿態改成維持費 ±1
   - {id: extend, name_zh: 延長與收割, kinds: [active, passive, reaction]}
   - {id: support, name_zh: 輔助, kinds: [active], support_only: true}
   - {id: trigger, name_zh: 觸發, kinds: [passive, reaction]}
-  - {id: deepen, name_zh: 加深, stage: major, kinds: [active, passive, reaction, stance]}
-  - {id: bridge, name_zh: 橋接, stage: major, kinds: [active, passive, reaction, stance]}
+  - {id: modifier, name_zh: 修正, kinds: [modifier, stance]}   # 修正型被動、姿態
+  - {id: deepen, name_zh: 加深, stage: major, kinds: [active, passive, reaction, stance, modifier]}
+  - {id: bridge, name_zh: 橋接, stage: major, kinds: [active, passive, reaction, stance, modifier]}
 
-# 小變化模板（第 1、2、4、5 次）。
+# 小變化模板（第 1、2、4、5 次）。op 的實作在 trpg.skillgen.flash_ops。generic: true 是「通用變化」
+# （用法統計少的技能先出這些，usage_min_uses 見 rules）。強度不寫在這裡，套用後由預算器重調。
 minor:
+  # ---- 範圍 ----
   - id: area_plus
     category: area
     op: area
     delta: 1
+    generic: true
     prefix_zh: 擴展
     summary_zh: 範圍 +1（傷害依預算調整）
   - id: range_plus
     category: area
     op: range
     delta: 1
+    generic: true
     prefix_zh: 遠射
     summary_zh: 距離 +1（傷害依預算調整）
+  - id: reshape_shape
+    category: area
+    op: reshape
+    prefix_zh: 擴散
+    summary_zh: 換形狀（直線 3、錐形 2、十字）：一次打到更多目標（傷害依預算調整）
+    shapes:
+      - {type: line, size: 3}
+      - {type: cone, size: 2}
+      - {type: cross, range: 3}
+  - id: reshape_square3
+    category: area
+    op: reshape
+    min_tier: 2
+    prefix_zh: 方陣
+    summary_zh: 換成 3×3（傷害依預算調整）
+    shapes:
+      - {type: square3, range: 4}
+  - id: reshape_line6
+    category: area
+    op: reshape
+    min_tier: 3
+    prefix_zh: 貫穿
+    summary_zh: 換成整排直線（長度 6，傷害依預算調整）
+    shapes:
+      - {type: line, size: 6}
+  - id: reshape_chain
+    category: area
+    op: reshape
+    min_tier: 3
+    prefix_zh: 連鎖
+    summary_zh: 換成連鎖跳躍（再跳 2 次，傷害依預算調整）
+    shapes:
+      - {type: chain, range: 4, jumps: 2, jump_range: 2}
+  # ---- 連段 ----
+  - id: multi_hit
+    category: combo
+    op: multi_hit
+    prefix_zh: 連打
+    summary_zh: 多打一下：同一個目標多一段命中（每段傷害依預算調整）
+  - id: followup_hit
+    min_tier: 2
+    category: combo
+    op: followup
+    prefix_zh: 追擊
+    summary_zh: 接續段：命中後再接一小段傷害（6.23 複合技，傷害依預算調整）
+  # ---- 元素與關鍵字 ----
+  - id: element_second
+    min_tier: 2
+    category: element
+    op: element
+    prefix_zh: 雙元
+    summary_zh: 加第二元素：多一段別種元素的傷害（傷害依預算調整）
+    elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
+  - id: dual_scaling
+    min_tier: 3
+    category: element
+    op: dual_scaling
+    prefix_zh: 雙修
+    summary_zh: 雙屬性縮放：加第二縮放屬性（命中與傷害取兩個屬性的平均）
+  - id: keyword_imbue
+    category: element
+    op: keyword_imbue
+    prefix_zh: 附魔
+    summary_zh: 加第二個關鍵字：命中時額外製造該關鍵字
+  - id: keyword_exploit
+    category: element
+    op: keyword_exploit
+    prefix_zh: 借勢
+    summary_zh: 加第二個關鍵字：目標帶有該關鍵字時加碼
+  # ---- 延長與收割 ----
+  - id: extend_duration
+    category: extend
+    op: extend
+    generic: true
+    prefix_zh: 恆久
+    summary_zh: 延長：這招的狀態、表面與區域多持續 1 回合（效果依預算調整）
+  - id: kill_refund
+    category: extend
+    op: kill_refund
+    prefix_zh: 收割
+    summary_zh: 擊殺返還 1 AP
+    kinds: [active]
+  # ---- 費用方向（只限主動技；姿態改維持費，待引擎欄位） ----
+  - id: cost_charge
+    category: cost
+    op: charge
+    kinds: [active]
+    prefix_zh: 蓄力
+    summary_zh: 蓄力：冷卻 +2（最多 5 回合），威力提高
+  - id: cost_light
+    category: cost
+    op: light
+    kinds: [active]
+    prefix_zh: 輕巧
+    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低
+  # ---- 輔助（治療、護盾、增益） ----
+  - id: support_potency
+    category: support
+    op: potency
+    generic: true
+    prefix_zh: 強效
+    summary_zh: 效果 +（治療、護盾、增益依預算提高）
+  - id: support_area
+    category: support
+    op: area
+    delta: 1
+    prefix_zh: 廣布
+    summary_zh: 範圍 +1（效果依預算調整）
+  - id: support_area_wide
+    category: support
+    op: area
+    delta: 2
+    min_tier: 2
+    prefix_zh: 遍布
+    summary_zh: 範圍 +2（光環類，效果依預算調整）
+  - id: support_keyword
+    category: support
+    op: keyword_imbue
+    prefix_zh: 附帶
+    summary_zh: 附帶第二個關鍵字（例：治療時造水＝潮濕）
+    keywords: [wet, concealed]
+  # ---- 觸發（被動、反應） ----
+  - id: trigger_range
+    category: trigger
+    op: trigger_range
+    prefix_zh: 廣域
+    summary_zh: 觸發範圍 +1（效果依預算調整）
+  - id: trigger_range_wide
+    category: trigger
+    op: trigger_range
+    delta: 2
+    min_tier: 2
+    prefix_zh: 遠域
+    summary_zh: 觸發範圍 +2（效果依預算調整）
+  - id: trigger_potency
+    category: trigger
+    op: potency
+    generic: true
+    prefix_zh: 強效
+    summary_zh: 效果 +（依預算提高）
+  - id: trigger_cap
+    category: trigger
+    op: trigger_cap
+    kinds: [passive]
+    prefix_zh: 連發
+    summary_zh: 每回合觸發次數上限 +1（效果依預算調整，不超過 6.6）
+  # ---- 修正（修正型被動、姿態） ----
+  - id: mod_potency
+    category: modifier
+    op: mod_potency
+    kinds: [modifier]
+    generic: true
+    prefix_zh: 強效
+    summary_zh: 修正幅度 +（依預算提高）
+  - id: mod_range
+    category: modifier
+    op: mod_range
+    kinds: [modifier]
+    prefix_zh: 廣域
+    summary_zh: 作用範圍 +1（光環類：射程或範圍 +1，幅度依預算調整）
+  - id: mod_keyword
+    category: modifier
+    op: mod_keyword
+    kinds: [modifier]
+    prefix_zh: 雙引
+    summary_zh: 加第二個關鍵字：另一種狀態或表面也套用同樣的修正（幅度依預算調整）
+  - id: mod_relax
+    category: modifier
+    op: mod_relax
+    kinds: [modifier]
+    prefix_zh: 寬限
+    summary_zh: 條件放寬一級（幅度依預算調整）
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
@@ -107,6 +287,11 @@ transforms:
     prefix_zh: 靈召
     summary_zh: 轉成召喚：召喚一隻幫你出手的召喚物（依這招的元素）
     summon_duration: 2
+    summon_boosts:        # 角色階級高、預算變大時依序加試（先試不強化的）
+      - {duration: 3}
+      - {duration: 4}
+      - {duration: 4, max_hp_permille: 300}
+      - {duration: 4, max_hp_permille: 600}
     units:
       fire: [summon_fire_spirit]
       ice: [summon_ice_spirit]

@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Any
 
 from pydantic import ValidationError
@@ -44,7 +45,7 @@ from trpg.engine.skill_levels import grow_shape
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.evolution import EvolutionRequest, retune
+from trpg.skillgen.evolution import EvolutionRequest, budget_power, retune
 from trpg.skillgen.evolution import rarity_of as _rarity_of
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.scaling import fit_scaling
@@ -60,6 +61,7 @@ __all__ = [
     "extra_summary",
     "extra_variations",
     "finish_transform",
+    "fixed_strength",
     "is_extra_template",
     "meets_floor",
     "transform_drafts",
@@ -231,19 +233,21 @@ def _to_summon(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> l
     element = skill_element_id(skill)
     units = [*t.units.get(element or "", ()), *t.units.get("any", ())]
     drafts: list[_Draft] = []
-    for unit in dict.fromkeys(units):
-        for cost in _SUMMON_COSTS:
-            base = _new_base(
-                skill,
-                kind="active",
-                skeleton="summon",
-                ap_cost=1,
-                shape={"type": "ground_tile", "range": 4},
-                cost=cost,
-                tags=_retag(skill, "summon"),
-                narrative=_concept(skill, t),
-            )
-            drafts.append((base, [{"type": "summon", "unit": unit, "duration": t.summon_duration}]))
+    for boost in ({}, *t.summon_boosts):
+        for unit in dict.fromkeys(units):
+            for cost in _SUMMON_COSTS:
+                base = _new_base(
+                    skill,
+                    kind="active",
+                    skeleton="summon",
+                    ap_cost=1,
+                    shape={"type": "ground_tile", "range": 4},
+                    cost=cost,
+                    tags=_retag(skill, "summon"),
+                    narrative=_concept(skill, t),
+                )
+                effect = {"type": "summon", "unit": unit, "duration": t.summon_duration, **boost}
+                drafts.append((base, [effect]))
     return drafts
 
 
@@ -362,6 +366,20 @@ def _validated(
     except (ValidationError, BudgetError, ValueError):
         return None
     return None if validate_skill(fitted, library) else fitted
+
+
+def fixed_strength(
+    base: dict[str, Any],
+    effects: list[dict[str, Any]],
+    library: ContentLibrary,
+    *,
+    floor: Fraction | None = None,
+) -> SkillDef | None:
+    """固定強度（沒有旋鈕）的小變化：直接檢查預算窗與驗證器；給了 floor 還要分數不低於它。"""
+    done = _validated(base, effects, library)
+    if done is None or (floor is not None and budget_power(done, library) < floor):
+        return None
+    return done
 
 
 def finish_transform(

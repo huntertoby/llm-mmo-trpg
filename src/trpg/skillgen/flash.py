@@ -31,8 +31,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -41,9 +43,15 @@ from trpg.content.flash_templates import FlashCategory, FlashTable, FlashTemplat
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.engine.skill_levels import grow_shape
 from trpg.shared.rng import Rng
-from trpg.skillgen.evolution import finish_draft, template_drafts, template_prefix
+from trpg.skillgen.evolution import (
+    bridge_keywords,
+    budget_power,
+    finish_draft,
+    retune,
+    template_drafts,
+    template_prefix,
+)
 from trpg.skillgen.flash_major import (
     TRANSFORM_CATEGORY,
     apply_extra,
@@ -51,13 +59,14 @@ from trpg.skillgen.flash_major import (
     extra_summary,
     extra_variations,
     finish_transform,
+    fixed_strength,
     is_extra_template,
-    meets_floor,
     transform_drafts,
     transform_prefix,
     transform_summary,
     transform_variations,
 )
+from trpg.skillgen.flash_ops import FLASH_OPS, STRICT_OPS, tuning_extras
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     FlashRecord,
@@ -95,7 +104,10 @@ __all__ = [
 ]
 
 type _Draft = tuple[dict[str, Any], list[dict[str, Any]]]
-type FlashOp = Callable[[SkillDef, FlashTemplate, Variation, ContentLibrary], list[_Draft]]
+TUNE_ATTEMPTS = 3
+"""同一份草稿最多試幾次不同的調整亂數（強度下限讓一次調整失敗的機會變大）。"""
+STRICT_MARGIN = Fraction(1, 100)
+"""結構不變、只靠重調變強的變化（``STRICT_OPS``）：預算分數至少要比變化前多這麼多點。"""
 type TransformOp = Callable[[SkillDef, Variation, ContentLibrary], list[_Draft]]
 
 
@@ -106,59 +118,6 @@ class FlashError(ValueError):
 # ---------------------------------------------------------------------------
 # 模板 → 草稿
 # ---------------------------------------------------------------------------
-
-
-def _base(skill: SkillDef) -> _Draft:
-    base = skill.model_dump(mode="json")
-    effects: list[dict[str, Any]] = [
-        e.model_dump(mode="json", exclude_none=True) for e in skill.effects
-    ]
-    base.pop("effects")
-    return base, effects
-
-
-def _reshapable(skill: SkillDef) -> bool:
-    """形狀可以改（複合技能與陷阱不改形狀，同 5 級小特性的保守做法）。"""
-    return skill.kind == "active" and skill.followup is None and skill.trap is None
-
-
-def _op_area(
-    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
-) -> list[_Draft]:
-    """範圍 +delta：形狀第一個可增加的大小參數（``size``／``radius``），不超過形狀上限（6.6）。"""
-    if not _reshapable(skill):
-        return []
-    grown = grow_shape(library.ruleset, skill.shape, template.delta or 0)
-    if grown == skill.shape:
-        return []
-    base, effects = _base(skill)
-    base["shape"] = grown.model_dump(mode="json", exclude_none=True)
-    return [(base, effects)]
-
-
-def _op_range(
-    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
-) -> list[_Draft]:
-    """距離 +delta：固定射程（整數）加 delta，不超過形狀上限；武器射程與沒有射程的形狀不適用。"""
-    shape = skill.shape
-    if not _reshapable(skill) or not isinstance(shape.range, int) or shape.range < 1:
-        return []
-    param = library.ruleset.shape_def(shape.type).params.get("range")
-    if param is None:
-        return []
-    value = min(shape.range + (template.delta or 0), param.max)
-    if value == shape.range or value < 1:
-        return []
-    base, effects = _base(skill)
-    base["shape"] = shape.model_copy(update={"range": value}).model_dump(
-        mode="json", exclude_none=True
-    )
-    return [(base, effects)]
-
-
-FLASH_OPS: dict[str, FlashOp] = {"area": _op_area, "range": _op_range}
-"""小變化的改法登錄表（``op`` → 草稿）。3W-2 在這裡補上其餘類別；資料裡 ``op`` 沒有登錄的模板不會
-出現（:func:`unimplemented_ops` 列出）。"""
 
 TRANSFORM_OPS: dict[str, TransformOp] = {}
 """轉型的改法登錄表（轉型模板 ID → 草稿；3W-3 實作）。空的時候不會出現轉型選項。"""
@@ -193,13 +152,22 @@ def variation_rng(seed: int, base_id: str, record: FlashRecord) -> Rng:
 def _minor_drafts(skill: SkillDef, variation: Variation, library: ContentLibrary) -> list[_Draft]:
     template = library.flash.minor_template(variation.template)
     op = None if template is None else FLASH_OPS.get(template.op)
-    if template is None or op is None or skill.kind not in _kinds(library.flash, template):
+    if (
+        template is None
+        or op is None
+        or skill.tier < template.min_tier
+        or skill.kind not in _kinds(library.flash, template)
+    ):
         return []
     return op(skill, template, variation, library)
 
 
 def _apply_major(
-    skill: SkillDef, variation: Variation, rng: Rng, library: ContentLibrary
+    skill: SkillDef,
+    variation: Variation,
+    rng: Rng,
+    library: ContentLibrary,
+    floor: Fraction | None = None,
 ) -> SkillDef | None:
     if is_extra_template(library, variation.template):
         return apply_extra(library, skill, variation, rng)
@@ -212,19 +180,17 @@ def _apply_major(
         wanted = variation.shape.model_dump(mode="json", exclude_none=True)
         drafts = [d for d in drafts if d[0].get("shape") == wanted]
     for index, draft in enumerate(drafts):
-        done = finish_draft(draft, skill, evolution, rng.fork(str(index)), library)
-        if (
-            done is not None
-            and _carries(done, variation, library)
-            and meets_floor(skill, done, library)
-        ):
+        done = finish_draft(draft, skill, evolution, rng.fork(str(index)), library, floor=floor)
+        if done is not None and _carries(done, variation, library):
             return done
     return None
 
 
 def _carries(skill: SkillDef, variation: Variation, library: ContentLibrary) -> bool:
-    """橋接的變化套用後必須真的帶那個關鍵字（專屬規則，同 3-26b）。"""
-    if variation.category != "bridge" or variation.keyword is None:
+    """橋接與「第二個關鍵字」的變化套用後必須真的帶那個關鍵字（專屬規則，同 3-26b）。"""
+    if variation.keyword is None or (
+        variation.category != "bridge" and variation.template not in _keyword_templates(library)
+    ):
         return True
     derived = derive_keywords(skill, library.keywords, exclusive_only=True)
     return variation.keyword in derived.all()
@@ -234,6 +200,33 @@ def _evolution_template(library: ContentLibrary, template_id: str) -> Any:
     return next((t for t in library.evolution.templates if t.id == template_id), None)
 
 
+def _keyword_templates(library: ContentLibrary) -> frozenset[str]:
+    """「第二個關鍵字」的小變化模板 ID（套用後必須真的帶那個關鍵字）。"""
+    ops = ("keyword_imbue", "keyword_exploit")
+    return frozenset(t.id for t in library.flash.minor if t.op in ops)
+
+
+def power_floor(
+    library: ContentLibrary,
+    current: SkillDef,
+    variation: Variation,
+    replaced: Fraction | None = None,
+) -> Fraction | None:
+    """這一次變化後，預算分數（:func:`~trpg.skillgen.evolution.budget_power`）至少要有多少
+    （玩法 PM：閃現後不低於閃現前；重閃不低於換掉之前）。``replaced`` 是重閃時被換掉那一筆的分數；
+    結構不變、只靠重調變強的變化（``STRICT_OPS``）再多 :data:`STRICT_MARGIN` 點。轉型是把效果
+    縮小掛到別的觸發上（6.34.5），不設下限（3W-3 決定）。"""
+    if variation.source == "transform":
+        return None
+    floor = budget_power(current, library)
+    if replaced is not None:
+        floor = max(floor, replaced)
+    template = library.flash.minor_template(variation.template)
+    if variation.source == "minor" and template is not None and template.op in STRICT_OPS:
+        floor += STRICT_MARGIN
+    return floor
+
+
 def apply_variation(
     library: ContentLibrary,
     skill: SkillDef,
@@ -241,12 +234,18 @@ def apply_variation(
     *,
     bonus: int,
     rng: Rng,
+    replaced: Fraction | None = None,
 ) -> SkillDef | None:
     """把 ``variation`` 套在 ``skill`` 上，依預算上限加成 ``bonus``（‰）重調強度並驗證；做不出來時
-    ``None``。回傳的技能 ID、名稱與原本相同（由 :func:`derive_skill` 統一換）。"""
+    ``None``。回傳的技能 ID、名稱與原本相同（由 :func:`derive_skill` 統一換）。
+
+    **強度下限**（:func:`power_floor`）：重調後的預算分數不低於套用前（重閃時再不低於
+    ``replaced``），
+    個別數字可以變小（例：範圍 +1 後傷害骰變小）。"""
     current = with_budget_bonus(skill, bonus)
+    floor = power_floor(library, current, variation, replaced)
     if variation.source == "major":
-        return _apply_major(current, variation, rng, library)
+        return _apply_major(current, variation, rng, library, floor)
     if variation.source == "transform":
         op = TRANSFORM_OPS.get(variation.template)
         drafts = (
@@ -254,13 +253,35 @@ def apply_variation(
             if op is None
             else op(current, variation, library)
         )
+        tag = ""
     else:
         drafts = _minor_drafts(current, variation, library)
+        template = library.flash.minor_template(variation.template)
+        tag = "" if template is None else template.op
     for index, (base, effects) in enumerate(drafts):
-        # 有旋鈕的交給調整器；固定強度的種類（召喚、姿態、修正型被動）直接檢查預算窗（3W-3）
-        done = finish_transform(base, effects, rng.fork(str(index)), library)
-        if done is not None:
-            return done
+        extra, knobs = tuning_extras(tag, base, library)
+        for attempt in range(TUNE_ATTEMPTS):
+            # 第一次的子亂數與 3W-1 相同；強度下限讓調整更容易失敗，所以同一份草稿多試幾次
+            fork = str(index) if attempt == 0 else f"{index}.r{attempt}"
+            done = retune(
+                base,
+                effects,
+                rng.fork(fork),
+                library,
+                floor=floor,
+                extra=extra,
+                extra_knobs=knobs,
+            )
+            if done is not None and _carries(done, variation, library):
+                return done
+        # 固定強度的種類（召喚、姿態、修正型被動）沒有旋鈕：直接檢查預算窗與強度下限（3W-3）
+        fixed = (
+            finish_transform(base, effects, rng.fork(f"{index}.fx"), library)
+            if variation.source == "transform"
+            else fixed_strength(base, effects, library, floor=floor)
+        )
+        if fixed is not None and _carries(fixed, variation, library):
+            return fixed
     return None
 
 
@@ -303,6 +324,14 @@ def _record_bonus(library: ContentLibrary, state: SkillFlash, record: FlashRecor
     return rules.budget_bonus_permille(record.nth)
 
 
+def at_tier(skill: SkillDef, tier: int | None) -> SkillDef:
+    """技能改用角色階級 ``tier`` 的預算（#72，6.34.9；``None`` ＝ 沿用技能自己的階級）。「技能的預算
+    用角色階級」的完整改法另排 3W-9，這裡先用傳進來的階級重算。"""
+    if tier is None or tier == skill.tier:
+        return skill
+    return skill.model_copy(update={"tier": tier})
+
+
 def _substitute(
     library: ContentLibrary, skill: SkillDef, old: Variation, *, bonus: int, rng: Rng
 ) -> SkillDef | None:
@@ -343,25 +372,52 @@ def _apply_transform(
     return skill
 
 
-def derive_skill(library: ContentLibrary, base: SkillDef, state: SkillFlash, seed: int) -> SkillDef:
-    """原本的技能依變化歷程逐筆套用後的技能（沒有變化時是 ``base`` 加上預算上限加成）。任何一筆
-    套用不了時拋出 :class:`FlashError`。"""
-    skill = with_budget_bonus(base, bonus_permille(library.flash.rules, state))
+def derive_chain(
+    library: ContentLibrary,
+    base: SkillDef,
+    state: SkillFlash,
+    seed: int,
+    tier: int | None = None,
+) -> list[SkillDef]:
+    """變化歷程每套完一筆之後的技能（ID、名稱還是原本的；依序，沒有變化時為空）。每一筆都受強度
+    下限約束：不低於前一筆，重閃過的那一筆不低於當時被換掉的（``floor_permille``）。``tier`` 是角色
+    階級（預算與模板的最低階級都看它）。任何一筆套用不了時拋出 :class:`FlashError`。"""
+    skill = with_budget_bonus(at_tier(base, tier), bonus_permille(library.flash.rules, state))
+    chain: list[SkillDef] = []
     records = _records(state)
-    if not records:
-        return skill
     for index, record in enumerate(records):
         rng = variation_rng(seed, state.base_id, record)
         bonus = _record_bonus(library, state, record)
+        replaced = Fraction(record.floor_permille, 1000) if record.floor_permille else None
         if record.variation.source == "transform":
-            applied = _apply_transform(library, base, records[:index], record, seed, bonus=bonus)
+            origin = at_tier(base, tier)
+            applied = _apply_transform(library, origin, records[:index], record, seed, bonus=bonus)
         else:
-            applied = apply_variation(library, skill, record.variation, bonus=bonus, rng=rng)
+            applied = apply_variation(
+                library, skill, record.variation, bonus=bonus, rng=rng, replaced=replaced
+            )
         if applied is None:
             raise FlashError(
                 f"{base.id} 第 {record.nth} 次的變化 {record.variation.template} 套用不了"
             )
         skill = applied
+        chain.append(skill)
+    return chain
+
+
+def derive_skill(
+    library: ContentLibrary,
+    base: SkillDef,
+    state: SkillFlash,
+    seed: int,
+    tier: int | None = None,
+) -> SkillDef:
+    """原本的技能依變化歷程逐筆套用後的技能（沒有變化時是 ``base`` 加上預算上限加成）。``tier`` 是
+    角色階級。任何一筆套用不了時拋出 :class:`FlashError`。"""
+    chain = derive_chain(library, base, state, seed, tier)
+    if not chain:
+        return with_budget_bonus(at_tier(base, tier), bonus_permille(library.flash.rules, state))
+    skill = chain[-1]
     new_id, name = flashed_identity(library, base, state)
     return skill.model_copy(
         update={
@@ -427,6 +483,13 @@ class FlashRequest:
     slot: int | None = None
     category: str | None = None
     held_keywords: Mapping[str, int] = field(default_factory=dict)
+    tier: int | None = None
+    """角色階級（#72）：模板的最低階級與預算都看它；``None`` ＝ 沿用技能自己的階級。同種子、同階級
+    必得同樣的選項。"""
+
+    @property
+    def role_tier(self) -> int:
+        return self.base.tier if self.tier is None else self.tier
 
     @property
     def nth(self) -> int:
@@ -469,9 +532,6 @@ class DataOrderSource:
     - 轉型（3W-3）：依 ``tier``（角色階級，預設 1 階）開放的轉型，種類由種子洗牌。
     """
 
-    def __init__(self, tier: int = 1) -> None:
-        self.tier = tier
-
     def ranked(
         self, library: ContentLibrary, request: FlashRequest, category: str, skill: SkillDef
     ) -> Sequence[Variation]:
@@ -480,7 +540,10 @@ class DataOrderSource:
             return [
                 Variation(source="minor", template=t.id, category=category)
                 for t in table.minor
-                if t.category == category and t.op in FLASH_OPS and skill.kind in _kinds(table, t)
+                if t.category == category
+                and t.op in FLASH_OPS
+                and t.min_tier <= request.role_tier
+                and skill.kind in _kinds(table, t)
             ]
         keywords = self._keywords(library, request, skill, category)
         out: list[Variation] = []
@@ -515,7 +578,144 @@ class DataOrderSource:
     ) -> Sequence[Variation]:
         tag = seed_tag(request.state.base_id, request.nth, request.reflashes)
         rng = Rng(request.seed).fork(f"{tag}/transform")
-        return transform_variations(library, skill, tier=self.tier, rng=rng)
+        return transform_variations(library, skill, tier=request.role_tier, rng=rng)
+
+
+_FAR_SHAPES = ("line", "square3")
+_NEAR_SHAPES = ("cone", "cross")
+_MULTI_TARGETS_PERMILLE = 1500
+"""平均目標數達到這個數（‰）視為「常打到多個目標」。"""
+_FREQUENT_USES = 6
+"""放出次數達到這個數視為常用（輕巧優先）。"""
+_KEYWORD_CAP = 6
+"""每個「第二個關鍵字」模板最多列幾個關鍵字。"""
+
+
+class UsageSource(DataOrderSource):
+    """依用法統計排序的候選來源（Phase 3W-2，#70：類別內依用法統計排序）。
+
+    - 小變化：每個模板展開成帶參數的變化（換形狀的目標形狀、第二元素、第二個關鍵字），類別內依
+      「用法分數」由高到低（同分依資料順序）。用法分數看統計：常打到多個目標 → 範圍 +1；單體用法 →
+      換形狀、多打一下；平均距離遠 → 距離 +1；用這招擊倒過敵人 → 擊殺返還；目標身上常有某關鍵字 →
+      延長、借勢（利用）該關鍵字；沒有訊號的關鍵字 → 附魔（製造）；常用（≥ 6 次）→ 輕巧。
+    - **用法統計少**（放出次數 < ``usage_min_uses``）：先出通用變化（``generic``），其餘依資料順序。
+    - 大變化（加深、橋接）沿用 :class:`DataOrderSource`（3W-3 補用法統計）。
+    """
+
+    def ranked(
+        self, library: ContentLibrary, request: FlashRequest, category: str, skill: SkillDef
+    ) -> Sequence[Variation]:
+        table = library.flash
+        if table.category(category).stage != "minor":
+            return super().ranked(library, request, category, skill)
+        sparse = request.usage.uses < table.rules.usage_min_uses
+        scored: list[tuple[int, int, int, Variation]] = []
+        templates = [
+            t
+            for t in table.minor
+            if t.category == category
+            and t.op in FLASH_OPS
+            and t.min_tier <= request.role_tier
+            and skill.kind in _kinds(table, t)
+        ]
+        for order, template in enumerate(templates):
+            for sub, variation in enumerate(self._variants(library, request, template, skill)):
+                score = (
+                    int(template.generic)
+                    if sparse
+                    else _usage_score(library, request.usage, template, variation)
+                )
+                scored.append((-score, order, sub, variation))
+        scored.sort(key=lambda item: item[:3])
+        return [item[3] for item in scored]
+
+    def _variants(
+        self,
+        library: ContentLibrary,
+        request: FlashRequest,
+        template: FlashTemplate,
+        skill: SkillDef,
+    ) -> list[Variation]:
+        base = {"source": "minor", "template": template.id, "category": template.category}
+        if template.op == "reshape":
+            reach = (
+                _FAR_SHAPES
+                if request.usage.avg_distance_permille >= (library.evolution.far_distance * 1000)
+                else _NEAR_SHAPES
+            )
+            shapes = sorted(template.shapes, key=lambda s: s.type not in reach)
+            return [Variation.model_validate({**base, "shape": s}) for s in shapes]
+        if template.op == "dual_scaling":
+            attrs = [a.value for a in library.secondary_range(skill) if a != skill.scaling_attr]
+            return [Variation.model_validate({**base, "keyword": a}) for a in attrs]
+        if template.op == "element":
+            own = {e.element.value for e in skill.effects if e.element is not None}
+            elements = [e for e in template.elements if e not in own]
+            return [Variation.model_validate({**base, "element": e}) for e in elements]
+        if template.op in _KEYWORD_OPS:
+            keywords = _keyword_candidates(library, request, template, skill)
+            return [Variation.model_validate({**base, "keyword": k}) for k in keywords]
+        return [Variation.model_validate(base)]
+
+
+_KEYWORD_OPS = frozenset({"keyword_imbue", "keyword_exploit", "mod_keyword"})
+
+
+def _keyword_signal(usage: SkillUsage, keyword: str) -> int:
+    """這個關鍵字在用法統計裡的訊號：前後搭配的技能與目標身上出現的次數。"""
+    return usage.partners().get(keyword, 0) + usage.target_keywords.get(keyword, 0)
+
+
+def _keyword_candidates(
+    library: ContentLibrary, request: FlashRequest, template: FlashTemplate, skill: SkillDef
+) -> list[str]:
+    """「第二個關鍵字」的候選：這招沒有的關鍵字，用法統計有訊號的優先（沿用橋接的排序），其次是
+    持有者其他技能多的，最後依嫁接表順序；模板限定時只留限定的。"""
+    own = set(derive_keywords(skill, library.keywords).all())
+    grafts = library.evolution.grafts
+    signaled = bridge_keywords(library, skill, request.usage, request.held_keywords)
+    order = list(grafts)
+    rest = sorted(
+        (k for k in order if k not in own and k not in signaled),
+        key=lambda k: (-request.held_keywords.get(k, 0), order.index(k)),
+    )
+
+    def usable(keyword: str) -> bool:
+        graft = grafts.get(keyword)
+        if graft is None or keyword in own:
+            return False
+        if template.keywords and keyword not in template.keywords:
+            return False
+        if template.op == "keyword_imbue":
+            return graft.makes is not None
+        return graft.uses is not None
+
+    return [k for k in (*signaled, *rest) if usable(k)][:_KEYWORD_CAP]
+
+
+def _usage_score(
+    library: ContentLibrary, usage: SkillUsage, template: FlashTemplate, variation: Variation
+) -> int:
+    """用法分數（越高越優先）；見 :class:`UsageSource`。"""
+    op = template.op
+    multi = usage.avg_targets_permille >= _MULTI_TARGETS_PERMILLE
+    keyword = variation.keyword
+    signal = 0 if keyword is None else _keyword_signal(usage, keyword)
+    scores: dict[str, bool | int] = {
+        "area": 2 * multi,
+        "range": 2 * (usage.avg_distance_permille >= library.evolution.far_distance * 1000),
+        "reshape": 2 * (not multi and usage.uses > 0),
+        "multi_hit": 2 * (not multi and usage.uses > 0),
+        "followup": int(usage.uses > 0),
+        "kill_refund": 3 * (usage.kills > 0),
+        "extend": 2 * (sum(usage.target_keywords.values()) > 0),
+        "charge": int(multi),
+        "light": int(usage.uses >= _FREQUENT_USES),
+        "keyword_exploit": 3 * (signal > 0),
+        "keyword_imbue": int(signal == 0),
+        "mod_keyword": 2 * (signal > 0),
+    }
+    return int(scores.get(op, 0))
 
 
 class FlashOption(BaseModel):
@@ -526,6 +726,8 @@ class FlashOption(BaseModel):
     variation: Variation
     skill: SkillDef
     summary_zh: str
+    floor_permille: int = Field(default=0, ge=0)
+    """重閃時被換掉那一筆的預算分數下限（‰，進位；選擇時寫進 :class:`FlashRecord`）；閃現為 0。"""
 
 
 class FlashOffer(BaseModel):
@@ -550,20 +752,27 @@ class _Builder:
 
     library: ContentLibrary
     request: FlashRequest
+    floor_permille: int = 0
+    """重閃時被換掉那一筆的預算分數（‰，進位）；閃現為 0。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
         state = (
             with_flash(request.state, variation)
             if request.slot is None
-            else with_reflash(request.state, request.slot, variation)
+            else with_reflash(
+                request.state, request.slot, variation, floor_permille=self.floor_permille
+            )
         )
         try:
-            skill = derive_skill(self.library, request.base, state, request.seed)
+            skill = derive_skill(self.library, request.base, state, request.seed, request.tier)
         except FlashError:
             return None
         return FlashOption(
-            variation=variation, skill=skill, summary_zh=_summary(self.library, variation)
+            variation=variation,
+            skill=skill,
+            summary_zh=_summary(self.library, variation),
+            floor_permille=self.floor_permille,
         )
 
     def take(self, variations: Sequence[Variation], count: int) -> list[FlashOption]:
@@ -597,6 +806,25 @@ def _summary(library: ContentLibrary, variation: Variation) -> str:
     return str(evolution.summary_zh).replace("{keyword}", name)
 
 
+def _replaced_floor(library: ContentLibrary, request: FlashRequest) -> int:
+    """重閃時被換掉那一筆的預算分數（‰，進位；強度下限，見 :func:`power_floor`）。閃現為 0。"""
+    if request.slot is None:
+        return 0
+    state = request.state
+    try:
+        chain = derive_chain(library, request.base, state, request.seed, request.tier)
+    except FlashError:
+        return 0
+    old = state.record(request.slot)
+    if old is None:
+        skill = with_budget_bonus(
+            at_tier(request.base, request.tier), bonus_permille(library.flash.rules, state)
+        )
+    else:
+        skill = chain[[r.nth for r in _records(state)].index(old.nth)]
+    return math.ceil(budget_power(skill, library) * 1000)
+
+
 def _skill_before(library: ContentLibrary, request: FlashRequest) -> SkillDef:
     """套用這一次之前的技能（重閃時只套用到前一筆，用來給候選來源參考）。"""
     state = request.state
@@ -607,7 +835,7 @@ def _skill_before(library: ContentLibrary, request: FlashRequest) -> SkillDef:
     elif request.slot is not None:
         state = state.model_copy(update={"adjustment": None})
     try:
-        return derive_skill(library, request.base, state, request.seed)
+        return derive_skill(library, request.base, state, request.seed, request.tier)
     except FlashError:
         return request.base
 
@@ -641,7 +869,7 @@ def make_offer(
     """出一次題（閃現或重閃；不檢查點數與先上場用過，呼叫者先用 ``flash_state`` 的檢查）。
 
     指定了不合法的類別時拋出 :class:`ValueError`。可能湊不滿選項數（合格的變化不夠時）。"""
-    source = source or DataOrderSource()
+    source = source or UsageSource()
     table = library.flash
     major = slot_is_major(table.rules, request.state, request.nth)
     before = _skill_before(library, request)
@@ -652,12 +880,14 @@ def make_offer(
     rule = table.pricing.rule(focused)
     tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
     rng = Rng(request.seed).fork(tag)
-    builder = _Builder(library, request)
+    builder = _Builder(library, request, _replaced_floor(library, request))
     transform = _transform_option(library, request, source, builder, before) if major else None
     if focused:
         assert request.category is not None
         ranked = source.ranked(library, request, request.category, before)
         options = builder.take(ranked, rule.options)
+        if not options:
+            raise ValueError(f"類別 {request.category} 這一次沒有合格的變化（沒有扣點）")
         if transform is not None:
             options.append(transform)
     else:
@@ -710,4 +940,13 @@ def choose(state: SkillFlash, offer: FlashOffer, index: int) -> tuple[SkillFlash
         raise ValueError(f"沒有第 {offer.slot} 次的變化可以重閃")
     if (0 if record is None else current + 1) != offer.reflashes:
         raise ValueError("題目已過期（這一欄的重閃次數已改變）")
-    return with_reflash(state, offer.slot, option.variation, cost=offer.cost), option.skill
+    return (
+        with_reflash(
+            state,
+            offer.slot,
+            option.variation,
+            cost=offer.cost,
+            floor_permille=option.floor_permille,
+        ),
+        option.skill,
+    )

@@ -64,15 +64,21 @@ def _offer(skill_id: str, state: SkillFlash | None = None, **fields: Any) -> Fla
     return make_offer(lib, FlashRequest(lib.skills[skill_id], state, SkillUsage(), SEED, **fields))
 
 
+PREFER = ("range_plus", "extend_duration", "cost_charge")
+"""走 ``_walk`` 時優先選的小變化（結構單純，之後的大變化選項才穩定）。"""
+
+
 def _walk(skill_id: str, picks: int) -> tuple[SkillFlash, SkillDef]:
-    """閃 ``picks`` 次（每次選第一個）。"""
+    """閃 ``picks`` 次（有 ``PREFER`` 裡的模板就選它，否則選第一個）。"""
     lib = library()
     state = _used(acquire(skill_id))
     skill = lib.skills[skill_id]
     for _ in range(picks):
         offer = _offer(skill_id, state)
         assert offer.options, f"{skill_id} 第 {len(state.records) + 1} 次沒有選項"
-        state, skill = choose(state, offer, 0)
+        names = [o.variation.template for o in offer.options]
+        index = next((names.index(p) for p in PREFER if p in names), 0)
+        state, skill = choose(state, offer, index)
         state = _used(state)
     return state, skill
 
@@ -91,9 +97,18 @@ def test_content_matches_decisions_69_and_70() -> None:
     assert (table.pricing.open.cost, table.pricing.open.options) == (1, 4)
     assert (table.pricing.focused.cost, table.pricing.focused.options) == (2, 3)
     minor = [c.id for c in table.stage_categories("minor")]
-    assert minor == ["area", "combo", "element", "cost", "extend", "support", "trigger"]
+    assert minor == [
+        "area",
+        "combo",
+        "element",
+        "cost",
+        "extend",
+        "support",
+        "trigger",
+        "modifier",
+    ]
     assert [c.id for c in table.stage_categories("major")] == ["deepen", "bridge"]
-    assert table.category("cost").kinds == ("active",)
+    assert table.category("cost").kinds == ("active", "stance")
     assert set(table.category("trigger").kinds) == {"passive", "reaction"}
     assert table.category("support").support_only
 

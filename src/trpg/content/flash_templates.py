@@ -76,6 +76,8 @@ class FlashRules(ContentModel):
     """溶掉一招時退回「花在它身上的靈感點」的比例（‰，無條件捨去；#71：一半）。"""
     insight_per_win: int = Field(default=1, ge=0)
     """roguelite 原型每打贏一場給的靈感點（3W-5 接）。"""
+    usage_min_uses: int = Field(default=3, ge=0)
+    """用法統計要有這麼多次放出才算數（3W-2）；不夠時先出通用變化（``generic``）。"""
     complete: CompleteSkillRules = CompleteSkillRules()
 
     @model_validator(mode="after")
@@ -147,6 +149,16 @@ class FlashTemplate(ContentModel):
     """``area``／``range`` 的增量（格）。"""
     shapes: tuple[ShapeSpec, ...] = ()
     """``reshape`` 的候選形狀（3W-2）。"""
+    keywords: tuple[str, ...] = ()
+    """限定可用的關鍵字（3W-2；``keyword_*`` 模板，例：輔助技只能加不會傷到友方的關鍵字，像「潮濕」
+    「暗影」）；空 ＝ 不限（嫁接表有的都可以）。"""
+    min_tier: int = Field(default=1, ge=1, le=3)
+    """最低角色階級（#72，6.34.9）：角色階級不到就不出這個模板（1 階基本版、2 階 3×3／接續段／第二
+    元素／範圍 +2、3 階整排直線／連鎖跳躍／雙屬性縮放）。第 3 次大變化不受階級限制。"""
+    generic: bool = False
+    """通用變化（3W-2）：用法統計不夠時（放出次數少於 ``rules.usage_min_uses``）先出這些。"""
+    elements: tuple[str, ...] = ()
+    """``element`` 模板的候選元素（3W-2）；空 ＝ 不限。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
@@ -189,6 +201,9 @@ class TransformTemplate(ContentModel):
     units: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """``summon``：技能元素（``any`` ＝ 沒有元素或沒列到時）→ 候選召喚物（依序試）。"""
     summon_duration: int = Field(default=2, ge=1, le=6)
+    summon_boosts: tuple[dict[str, int], ...] = ()
+    """``summon``：角色階級高、預算變大時，依序加試的強化（``summon`` 效果的 ``duration``、
+    ``max_hp_permille``、``count``、``power_permille``）；先試不強化的版本。"""
     trap: TrapSpec | None = None
     stances: dict[str, str] = Field(default_factory=dict)
     """``stance``：``offense``（原招有傷害）、``defense``（沒有傷害）→ 姿態狀態 ID。"""

@@ -318,9 +318,9 @@ def _offer(
 ) -> FlashOffer:
     lib = library()
     request = FlashRequest(
-        lib.skills[base_id], state, SkillUsage(), SEED, slot=slot, category=category
+        lib.skills[base_id], state, SkillUsage(), SEED, slot=slot, category=category, tier=tier
     )
-    return make_offer(lib, request, DataOrderSource(tier=tier))
+    return make_offer(lib, request)
 
 
 def test_major_offer_always_has_a_legal_transform_and_respects_tier() -> None:
@@ -351,12 +351,10 @@ def test_open_major_offer_has_at_least_one_deepen_and_one_bridge() -> None:
         board = _board(seed)
         state = _state(board.id, RANGE, RANGE)
         try:
-            derive_skill(lib, board, state, seed)
+            derive_skill(lib, board, state, seed, 2)
         except FlashError:  # 這張白板的距離變化套不上：換一張
             continue
-        offer = make_offer(
-            lib, FlashRequest(board, state, SkillUsage(), seed), DataOrderSource(tier=2)
-        )
+        offer = make_offer(lib, FlashRequest(board, state, SkillUsage(), seed, tier=2))
         cats = Counter(o.variation.category for o in offer.options)
         assert len(offer.options) == 4
         assert cats["deepen"] >= 1 and cats["bridge"] >= 1 and cats["transform"] == 1, cats
@@ -372,11 +370,11 @@ def test_transform_choice_is_deterministic_and_round_trips() -> None:
     index = next(i for i, o in enumerate(first.options) if o.variation.source == "transform")
     moved, skill = choose(state, first, index)
     lib = library()
-    assert derive_skill(lib, lib.skills[FIRE_BOLT], moved, SEED) == skill
+    assert derive_skill(lib, lib.skills[FIRE_BOLT], moved, SEED, 3) == skill
     picks: Counter[str] = Counter()
     for seed in range(30):
-        request = FlashRequest(lib.skills[FIRE_BOLT], state, SkillUsage(), seed)
-        offer = make_offer(lib, request, DataOrderSource(tier=3))
+        request = FlashRequest(lib.skills[FIRE_BOLT], state, SkillUsage(), seed, tier=3)
+        offer = make_offer(lib, request)
         picks[
             next(o for o in offer.options if o.variation.source == "transform").variation.template
         ] += 1
@@ -448,7 +446,7 @@ def test_reflashing_a_minor_slot_keeps_the_transform() -> None:
     assert offer.options
     after, skill = choose(state, offer, 0)
     assert skill.name_zh.startswith("靈召・") and skill.kind == "active"
-    assert derive_skill(lib, lib.skills[FIRE_BOLT], after, SEED) == skill
+    assert derive_skill(lib, lib.skills[FIRE_BOLT], after, SEED, 3) == skill
 
 
 # ---------------------------------------------------------------------------
@@ -558,7 +556,7 @@ def test_summon_skills_use_the_summon_evolutions() -> None:
 
 def test_major_results_never_fall_below_the_budget_score_before() -> None:
     lib = library()
-    source = DataOrderSource(tier=3)
+    source = DataOrderSource()
     checked = 0
     for seed in range(15):
         board = _board(seed)

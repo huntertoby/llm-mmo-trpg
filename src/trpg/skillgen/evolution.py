@@ -31,8 +31,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Any, Literal
 
 from pydantic import ValidationError
@@ -42,7 +43,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skill_evolution import EvolutionTemplate
 from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
 from trpg.shared.rng import Rng
-from trpg.skillgen.budget import BudgetError
+from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.scaling import fit_scaling
@@ -53,9 +54,13 @@ from trpg.skillgen.variant_gen import variant_specs, with_variant
 __all__ = [
     "Evolution",
     "EvolutionRequest",
+    "bridge_keywords",
+    "budget_power",
     "evolution_options",
+    "evolution_template",
     "evolved_id",
     "finish_draft",
+    "multiplier_ladder",
     "rarity_of",
     "retune",
     "template_drafts",
@@ -414,37 +419,83 @@ MAX_EVOLVED_COOLDOWN = 5
 """進化時折抵用的冷卻上限（回合）。"""
 
 
+def budget_power(skill: SkillDef, library: ContentLibrary) -> Fraction:
+    """技能的「預算分數」（Phase 3W-2，閃現的強度下限用）：預算總點數 ÷ AP（被動為觸發）係數。
+    不改費用的變化，係數不變，等於直接比總點數；蓄力、輕巧、每回合觸發次數這類改了係數的變化，
+    比的是「換算回同一個係數」之後的分數，所以輕巧 AP −1 不會因為係數變小而永遠過不了。"""
+    report = skill_budget(skill, library)
+    return report.total / report.ap_coefficient
+
+
+def _floor_ratio(
+    attempt: dict[str, Any], trial: list[dict[str, Any]], floor: Fraction, library: ContentLibrary
+) -> Fraction | None:
+    """強度下限換算成預算比例（旋鈕在最弱時的係數與可用預算）；結構不合法時 ``None``。"""
+    try:
+        report = skill_budget(SkillDef.model_validate({**attempt, "effects": trial}), library)
+    except (ValidationError, BudgetError):
+        return None
+    return floor * report.ap_coefficient / report.usable
+
+
 def _tuned(
-    attempt: dict[str, Any], effects: list[dict[str, Any]], rng: Rng, library: ContentLibrary
+    attempt: dict[str, Any],
+    effects: list[dict[str, Any]],
+    rng: Rng,
+    library: ContentLibrary,
+    *,
+    floor: Fraction | None = None,
+    extra: Sequence[dict[str, Any]] = (),
+    extra_knobs: Sequence[Knob] = (),
 ) -> SkillDef | None:
-    """調整強度後通過全部驗證的技能；不合格時 ``None``。"""
+    """調整強度後通過全部驗證的技能；不合格時 ``None``。
+
+    ``floor``（Phase 3W-2）：調整後的 :func:`budget_power` 至少要有這麼多（閃現的強度下限）。
+    ``extra``／``extra_knobs``：``attempt`` 裡其他要調的字典（接續段的效果、修正規則的 change），
+    旋鈕的 ``index`` 是它在 ``extra`` 裡的位置。"""
     trial = [dict(e) for e in effects]
     knobs = _knobs(attempt["category"], trial, library)
+    knobs += [Knob(len(trial) + k.index, k.field, k.values, k.weight) for k in extra_knobs]
+    targets = [*trial, *extra]
     for knob in knobs:
-        trial[knob.index][knob.field] = knob.values[0]
+        targets[knob.index][knob.field] = knob.values[0]
     rarity = _rarity(attempt, trial, library)
     if rarity_rank(rarity) >= _LEGENDARY > rarity_rank(attempt["rarity"]):
         return None
     attempt = {**attempt, "rarity": rarity}
+    min_ratio = None if floor is None else _floor_ratio(attempt, trial, floor, library)
+    if floor is not None and min_ratio is None:
+        return None
     try:
-        if not tune(rng, library, attempt, trial, knobs):
+        if not tune(rng, library, attempt, trial, knobs, extra=extra, min_ratio=min_ratio):
             return None
         # 縮放屬性收進允許範圍（3H-7；效果變了主題可能跟著變）
         evolved = fit_scaling(SkillDef.model_validate({**attempt, "effects": trial}), library)
+        ok = not validate_skill(evolved, library) and (
+            floor is None or budget_power(evolved, library) >= floor
+        )
     except (ValidationError, BudgetError, ValueError):
         return None
-    return None if validate_skill(evolved, library) else evolved
+    return evolved if ok else None
 
 
 def _finish(
-    draft: _Draft, skill: SkillDef, template: EvolutionTemplate, rng: Rng, library: ContentLibrary
+    draft: _Draft,
+    skill: SkillDef,
+    template: EvolutionTemplate,
+    rng: Rng,
+    library: ContentLibrary,
+    *,
+    floor: Fraction | None = None,
 ) -> SkillDef | None:
     """依序試「原骨架 → 模板列出的骨架」×「原代價 → 冷卻 +1」，回傳第一個合格的版本。"""
     base, effects = draft
     for skeleton in dict.fromkeys((skill.skeleton, *template.skeletons)):
         for index, cost in enumerate(cost_attempts(skill)):
             attempt = {**base, "skeleton": skeleton, "cost": cost}
-            evolved = _tuned(attempt, effects, rng.fork(f"{skeleton}/{index}"), library)
+            evolved = _tuned(
+                attempt, effects, rng.fork(f"{skeleton}/{index}"), library, floor=floor
+            )
             if evolved is not None:
                 return evolved
     return None
@@ -580,16 +631,48 @@ def finish_draft(
     template: EvolutionTemplate,
     rng: Rng,
     library: ContentLibrary,
+    *,
+    floor: Fraction | None = None,
 ) -> SkillDef | None:
-    """同 3-26b 的進化：依「原骨架 → 模板骨架」×「原代價 → 冷卻折抵」調整強度並驗證。"""
-    return _finish(draft, skill, template, rng, library)
+    """同 3-26b 的進化：依「原骨架 → 模板骨架」×「原代價 → 冷卻折抵」調整強度並驗證
+    （``floor``：閃現的強度下限，見 :func:`budget_power`）。"""
+    return _finish(draft, skill, template, rng, library, floor=floor)
 
 
 def retune(
-    attempt: dict[str, Any], effects: list[dict[str, Any]], rng: Rng, library: ContentLibrary
+    attempt: dict[str, Any],
+    effects: list[dict[str, Any]],
+    rng: Rng,
+    library: ContentLibrary,
+    *,
+    floor: Fraction | None = None,
+    extra: Sequence[dict[str, Any]] = (),
+    extra_knobs: Sequence[Knob] = (),
 ) -> SkillDef | None:
-    """只用 ``attempt`` 的骨架與代價調整強度並驗證（不折抵）；不合格時 ``None``。"""
-    return _tuned(attempt, effects, rng, library)
+    """只用 ``attempt`` 的骨架與代價調整強度並驗證（不折抵）；不合格時 ``None``。``floor``、
+    ``extra``、``extra_knobs`` 見 :func:`_tuned`。"""
+    return _tuned(attempt, effects, rng, library, floor=floor, extra=extra, extra_knobs=extra_knobs)
+
+
+def multiplier_ladder(library: ContentLibrary) -> tuple[int, ...]:
+    """武器倍率的旋鈕階梯（含往下延伸的低倍率），給閃現新增的傷害效果與接續段用。"""
+    return _multipliers(library)
+
+
+def evolution_template(library: ContentLibrary, template_id: str) -> EvolutionTemplate | None:
+    """``template_id`` 的進化模板（閃現的小變化共用它的草稿函式）。"""
+    return next((t for t in library.evolution.templates if t.id == template_id), None)
+
+
+def bridge_keywords(
+    library: ContentLibrary,
+    skill: SkillDef,
+    usage: SkillUsage,
+    held_keywords: Mapping[str, int],
+) -> list[str]:
+    """橋接用的關鍵字（這招沒有的；依前後搭配、目標身上、持有、推導表順序排序，最多
+    ``bridge_keyword_tries`` 個）；給閃現的「第二個關鍵字」共用。"""
+    return _bridge_keywords(EvolutionRequest(skill, usage, held_keywords, 0), library)
 
 
 def template_prefix(
