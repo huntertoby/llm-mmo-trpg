@@ -83,9 +83,11 @@ def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
         test_equipment=body.test_equipment,
         race=body.race,
         origin=body.origin,
+        llm=body.llm,
     )
     with session.lock:
-        return _respond(store, session)
+        store.sync(session)
+        return run_response(session, with_notice=True)
 
 
 @router.get("/start-options")

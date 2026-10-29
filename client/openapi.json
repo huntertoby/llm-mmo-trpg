@@ -3779,6 +3779,11 @@
             },
             "type": "object",
             "title": "Test Equipment"
+          },
+          "llm": {
+            "type": "boolean",
+            "title": "Llm",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -7307,6 +7312,66 @@
         "title": "LevelUpChoice",
         "description": "升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；\n欄位滿時 ``replace`` 指定要換掉的技能 ID。"
       },
+      "LlmStatsOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "succeeded": {
+            "type": "integer",
+            "title": "Succeeded"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "fallback_permille": {
+            "type": "integer",
+            "title": "Fallback Permille"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "alert_permille": {
+            "type": "integer",
+            "title": "Alert Permille"
+          },
+          "alert": {
+            "type": "boolean",
+            "title": "Alert"
+          },
+          "named": {
+            "type": "integer",
+            "title": "Named"
+          },
+          "name_generated": {
+            "type": "integer",
+            "title": "Name Generated"
+          },
+          "name_fallback": {
+            "type": "integer",
+            "title": "Name Fallback"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total",
+          "succeeded",
+          "failed",
+          "fallback_permille",
+          "attempts",
+          "alert_permille",
+          "alert",
+          "named",
+          "name_generated",
+          "name_fallback"
+        ],
+        "title": "LlmStatsOut",
+        "description": "一輪的 LLM 生成統計（Phase 4-L6b；與 ``trpg run`` 摘要同源）。"
+      },
       "LoadRunRequest": {
         "properties": {
           "run_id": {
@@ -9260,6 +9325,32 @@
             "type": "string",
             "title": "Resource Rule Zh",
             "default": ""
+          },
+          "llm": {
+            "type": "boolean",
+            "title": "Llm",
+            "default": false
+          },
+          "llm_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Notice"
+          },
+          "llm_stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LlmStatsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
