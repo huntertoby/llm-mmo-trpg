@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import dataclasses
 
+from trpg.content.library import Ruleset
 from trpg.content.skills import CHARGING
 from trpg.engine.activations import expire_activations
 from trpg.engine.context import Ctx
@@ -94,7 +95,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.ap_gain_turn = unit.ap_pending  # 回合外存下的 AP 算在這個回合的 AP 回復上限內（3G-G3a）
     unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
-    unit.move_points = move_points_for_turn(ctx.rules, unit, _weather_id(state))
+    unit.move_points = _turn_move_points(state, ctx.rules, unit)
     gained = max(0, min(unit.stamina_regen, unit.max_stamina - unit.stamina))  # 耐力回復（3H-5）
     unit.stamina += gained
     if summon_inert(state, unit):
@@ -113,7 +114,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     _tick_cooldowns(ctx, unit)
     tick_form_cooldowns(unit)  # 形態的冷卻（Phase 3J-1a）
     if pay_upkeep(ctx, unit):  # 維持費不夠：自動解除，移動點數不再含形態的加減
-        unit.move_points = move_points_for_turn(ctx.rules, unit, _weather_id(state))
+        unit.move_points = _turn_move_points(state, ctx.rules, unit)
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
     detect_traps(ctx, unit)  # 感知的常駐數值（Phase 3H-1）
 
@@ -210,6 +211,11 @@ def _tick_cooldowns(ctx: Ctx, unit: UnitState) -> None:
         else:
             unit.cooldowns[skill_id] = remaining
         ctx.emit(SkillCooldownChanged, unit_id=unit.id, skill_id=skill_id, remaining=remaining)
+
+
+def _turn_move_points(state: BattleState, rules: Ruleset, unit: UnitState) -> int:
+    """回合開始的移動點數：含天氣（海民）與腳下表面（鱗族）的種族被動。"""
+    return move_points_for_turn(rules, unit, _weather_id(state), state.tile(*unit.xy).surface)
 
 
 def _weather_id(state: BattleState) -> str | None:

@@ -193,9 +193,10 @@ races:
     passive:
       id: scalefolk_sleek
       name_zh: 流線身形
-      description_zh: 在水與冰面上移動不花額外點數、不滑倒。
-      rule: free_move_on
+      description_zh: 回合開始時站在水或冰面上，這回合移動 +1；在冰面上不滑倒。
+      rule: surface_move_bonus
       surfaces: [water, ice]
+      amount: 1
     look: {skin: "#78b4aa", ears: fin, pattern: scales, eyes: "#103030"}
 
   - id: seafolk
