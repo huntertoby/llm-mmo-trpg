@@ -9,7 +9,7 @@
   Phase 3W-5 起技能點、技能等級與分歧進化取消，改成靈感點與閃現（``/12``：``run.insight``、
   ``run.flash``、``run.flash_bases``、``run.pending_flash``、``run.complete_offers_done``、
   ``run.flash_llm_log``、節點 ``complete_offer``；營火沒有重骰）。舊存檔由 :func:`convert_raw_run`
-  轉換（**最保守**，待 PM 決定）：技能等級與未花的技能點作廢，靈感點 ＝ 已打贏的一般戰鬥場數
+  轉換（玩法 PM 已確認，``1752ae6c``）：技能等級與未花的技能點作廢，靈感點 ＝ 已打贏的一般戰鬥場數
   （照新規則「每贏一場 1 點」重算，不把舊技能點換成靈感點）；分歧進化過的技能保留進化後的定義，
   視為剛取得的技能（閃現 0 次）；營火的重骰候選丟棄；升級候選照舊。
   Phase 3W-9 起技能的預算用角色階級：``run.skill_tier`` 記主角技能
@@ -31,7 +31,10 @@
   ``run.evolutions``（``/5``）；Phase 3K-2 起多了戰後裝備 ``run.equipment``、``run.backpack`` 與節點
   ``gear_offer``（``/6``）。更舊的存檔明確拒絕並提示開新一輪。
 - ``engine``：寫入時引擎的戰鬥紀錄格式（``LOG_FORMAT``）。只有 **戰鬥進行中** 的存檔需要重播；
-  此時版本不同就拒絕（舊版引擎的步驟不保證能在新版重播出同樣結果）。戰鬥之間的存檔不受影響。
+  此時版本不同（舊版引擎的步驟不保證能在新版重播出同樣結果）就 **捨棄那場戰鬥、回到該戰鬥節點的
+  開頭**（清掉 ``battle``、保留節點；開戰不改一輪的狀態，所以等於還沒開打），並回傳提示
+  :data:`STALE_BATTLE_NOTICE`（3W-R1，開發 PM 決定；:func:`loads_save_noted`）。戰鬥之間的存檔
+  不受影響。
 - ``run_id``：一輪的 ID（檔名 ``run-<run_id>.json``）。
 - ``run``：:class:`~trpg.roguelite.state.RunState`（主角、進度、生成技能定義、每一場的安排、歷程、
   目前節點與候選）。
@@ -68,13 +71,16 @@ __all__ = [
     "RUN_ID_PATTERN",
     "SAVE_DIR_ENV",
     "SAVE_FORMAT",
+    "STALE_BATTLE_NOTICE",
     "RunSave",
     "convert_raw_hero",
     "convert_raw_run",
     "default_save_dir",
     "dumps_save",
     "load_save",
+    "load_save_noted",
     "loads_save",
+    "loads_save_noted",
     "restore_battle",
     "ruleset_hash",
     "save_path",
@@ -102,6 +108,8 @@ OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 RUN_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
 SAVE_DIR_ENV = "TRPG_SAVE_DIR"
 """可覆寫存檔資料夾的環境變數。"""
+STALE_BATTLE_NOTICE = "這場戰鬥的紀錄格式已更新，從這場的開頭重新開始。"
+"""戰鬥中的存檔引擎版本不符、捨棄那場戰鬥時給玩家的提示（3W-R1）。"""
 
 
 def default_save_dir() -> Path:
@@ -167,7 +175,13 @@ def convert_raw_hero(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def loads_save(text: str) -> RunSave:
-    """解析存檔；格式不對、版本不符時拋出 :class:`SaveFormatError`。"""
+    """解析存檔；格式不對時拋出 :class:`SaveFormatError`（提示見 :func:`loads_save_noted`）。"""
+    return loads_save_noted(text)[0]
+
+
+def loads_save_noted(text: str) -> tuple[RunSave, str | None]:
+    """解析存檔，連同讀檔時要給玩家的提示（沒有時 ``None``）；格式不對時拋出
+    :class:`SaveFormatError`。戰鬥中的存檔引擎版本不符時捨棄那場戰鬥（見模組說明）。"""
     try:
         raw = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -184,17 +198,16 @@ def loads_save(text: str) -> RunSave:
         save = RunSave.model_validate({**raw, "format": SAVE_FORMAT})
     except ValidationError as exc:
         raise SaveFormatError(f"存檔內容不合法：{exc.error_count()} 個錯誤：{exc}") from exc
-    if save.battle is not None:
-        if save.engine != LOG_FORMAT:
-            raise SaveFormatError(
-                f"這是戰鬥中的存檔，寫入時的引擎版本 {save.engine} 與目前的 {LOG_FORMAT} 不同，"
-                "無法重播"
-            )
-        if not isinstance(save.run.node, BattleNode):
-            raise SaveFormatError("存檔有進行中的戰鬥，但一輪的節點不是戰鬥")
     if re.match(RUN_ID_PATTERN, save.run_id) is None:
         raise SaveFormatError(f"不合法的 run_id：{save.run_id!r}")
-    return save
+    notice = None
+    if save.battle is not None:
+        if not isinstance(save.run.node, BattleNode):
+            raise SaveFormatError("存檔有進行中的戰鬥，但一輪的節點不是戰鬥")
+        if save.engine != LOG_FORMAT:
+            save = save.model_copy(update={"battle": None, "engine": LOG_FORMAT})
+            notice = STALE_BATTLE_NOTICE
+    return save, notice
 
 
 def upgrade_save(library: ContentLibrary, save: RunSave) -> RunSave:
@@ -222,11 +235,16 @@ def write_save(save_dir: Path, save: RunSave) -> Path:
 
 
 def load_save(path: Path) -> RunSave:
+    return load_save_noted(path)[0]
+
+
+def load_save_noted(path: Path) -> tuple[RunSave, str | None]:
+    """讀取存檔檔案，連同讀檔提示（:func:`loads_save_noted`）。"""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SaveFormatError(f"無法讀取存檔 {path}：{exc}") from exc
-    return loads_save(text)
+    return loads_save_noted(text)
 
 
 def restore_battle(library: ContentLibrary, save: RunSave) -> ActiveBattle | None:

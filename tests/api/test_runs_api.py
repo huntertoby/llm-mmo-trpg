@@ -311,6 +311,20 @@ def test_mid_battle_load_rejects_a_changed_ruleset_hash(
     assert "戰鬥之間的存檔" in reply.json()["detail"]
 
 
+def test_mid_battle_save_from_an_old_engine_restarts_that_battle(
+    runs_client: TestClient, library: ContentLibrary, save_dir: Path
+) -> None:
+    """3W-R1：引擎版本不符的戰鬥中存檔捨棄那場戰鬥、回到該戰鬥節點開頭，讀檔回應帶提示一次。"""
+    run_id = _save_mid_battle(runs_client, library)
+    _rewrite_save(save_dir, run_id, engine="trpg-battle-log/1")
+    loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run_id}))
+    assert loaded["battle_id"] is None and loaded["node"]["kind"] == "battle"
+    assert loaded["load_notice"] == "這場戰鬥的紀錄格式已更新，從這場的開頭重新開始。"
+    assert _ok(runs_client.get(f"/api/runs/{run_id}"))["load_notice"] is None
+    battle = _ok(runs_client.post(f"/api/runs/{run_id}/battle"))["battle"]
+    assert battle["view"]["round"] == 1  # 從頭開打
+
+
 def test_old_mid_battle_save_without_hash_is_rejected(
     runs_client: TestClient, library: ContentLibrary, save_dir: Path
 ) -> None:

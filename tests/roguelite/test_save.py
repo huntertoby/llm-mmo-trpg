@@ -14,6 +14,7 @@ from trpg.engine.runner import LOG_FORMAT
 from trpg.engine.state import state_to_json
 from trpg.roguelite import (
     SAVE_FORMAT,
+    STALE_BATTLE_NOTICE,
     ActiveBattle,
     RunSave,
     RunState,
@@ -22,6 +23,7 @@ from trpg.roguelite import (
     dumps_save,
     load_save,
     loads_save,
+    loads_save_noted,
     new_run,
     restore_battle,
     ruleset_hash,
@@ -155,8 +157,9 @@ def test_wrong_format_and_engine_are_rejected() -> None:
     ):  # 3-22、3-24b2、3-26a、3-26b：舊版存檔拒絕並提示
         with pytest.raises(SaveFormatError, match="開新一輪"):
             loads_save(json.dumps({**raw, "format": old}))
-    with pytest.raises(SaveFormatError, match="引擎版本"):
-        loads_save(json.dumps({**raw, "engine": "trpg-battle-log/1"}))
+    # 3W-R1：引擎版本不符的戰鬥中存檔不再拒絕，捨棄那場戰鬥、回到該戰鬥節點開頭
+    stale, notice = loads_save_noted(json.dumps({**raw, "engine": "trpg-battle-log/1"}))
+    assert stale.battle is None and stale.run == run and notice == STALE_BATTLE_NOTICE
     between = json.loads(dumps_save(RunSave(run_id="w", run=run)))
     assert loads_save(json.dumps({**between, "engine": "trpg-battle-log/1"})).battle is None
     with pytest.raises(SaveFormatError, match="JSON"):

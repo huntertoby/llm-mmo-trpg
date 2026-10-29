@@ -30,6 +30,7 @@ from trpg.roguelite import (
     battle_setup,
     finish_battle,
     load_save,
+    load_save_noted,
     new_dev_run,
     new_keyword_run,
     new_run,
@@ -80,6 +81,8 @@ class RunSession:
         """這一輪的閃現變化提議來源（3W-5；``run.llm`` 為真且有模型來源時才有）。"""
         self.llm_notice: str | None = None
         """開局時要提示一次的訊息（例如本機模型未啟動）；只在建立的回應帶出。"""
+        self.load_notice: str | None = None
+        """讀檔時要提示一次的訊息（例如捨棄了格式過舊的戰鬥，3W-R1）；只在讀檔的回應帶出。"""
         self.alert_permille = DEFAULT_ALERT_PERMILLE
 
     def sync(self) -> bool:
@@ -296,8 +299,10 @@ class RunStore:
         path = save_path(self.save_dir, run_id)
         if not path.is_file():
             raise RunNotFoundError(f"找不到存檔 {path.name}")
-        save = upgrade_save(self.library, load_save(path))  # 舊存檔照角色階級重配技能（3W-9）
+        loaded, notice = load_save_noted(path)  # 引擎版本不符的戰鬥中存檔捨棄那場戰鬥（3W-R1）
+        save = upgrade_save(self.library, loaded)  # 舊存檔照角色階級重配技能（3W-9）
         session = RunSession(save.run_id, self.library, save.run)
+        session.load_notice = notice
         if save.battle is not None:
             if save.ruleset_hash != self.ruleset_hash():
                 raise SaveFormatError("內容檔已變更，無法重播戰鬥中的存檔；可讀取戰鬥之間的存檔")
