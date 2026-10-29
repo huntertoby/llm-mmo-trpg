@@ -31,7 +31,12 @@ from trpg.narrative.skills import effect_summary
 from trpg.narrative.status_info import status_rules
 from trpg.shared.types import Element, Team, UnitId
 from trpg.skillgen.budget import skill_budget
-from trpg.skillgen.validate import rarity_requirements, validate_skill
+from trpg.skillgen.validate import (
+    minimum_tier,
+    rarity_requirements,
+    structural_rarity,
+    validate_skill,
+)
 
 LIB = library()
 FOE = UnitId("unit_0002")
@@ -270,17 +275,19 @@ def test_terrain_area_sets_the_minimum_rarity(
 
 
 def test_a_rare_skill_cannot_use_seven_cells_but_an_epic_one_can() -> None:
+    # 3W-9：稀有度只是標記（7 格算出史詩）；門檻改成最低角色階級（7 格以上 3 階）
     rare = _terrain(
         "raise_terrain", {"type": "square3", "range": 3}, tags=("earth",), rarity="rare"
     )
-    assert "rarity.terrain_area" in _problems(rare)
-    epic = rare.model_copy(update={"rarity": "epic"})
-    assert "rarity.terrain_area" not in _problems(epic)
+    assert "rarity.terrain_area" not in _problems(rare)
+    assert structural_rarity(rare, LIB) == "epic"
+    assert minimum_tier(rare, LIB) == 3
 
 
 def test_a_common_skill_cannot_use_four_to_six_cells() -> None:
     skill = _terrain("lower_terrain", {"type": "line", "size": 5}, tags=("earth",), rarity="common")
-    assert "rarity.terrain_area" in _problems(skill)
+    assert "rarity.terrain_area" not in _problems(skill)  # 3W-9：標記算出稀有、門檻 2 階
+    assert structural_rarity(skill, LIB) == "rare" and minimum_tier(skill, LIB) == 2
 
 
 # ---------------------------------------------------------------------------

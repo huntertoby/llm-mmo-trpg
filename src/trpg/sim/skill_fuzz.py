@@ -63,7 +63,8 @@ MAX_ROUNDS = 20
 ARENA_MAP = "test_flat_6x6"
 _CASTER_POS = (0, 3)
 _ALLY_POS = (0, 4)
-_DISTANCES = (1, 3, 5)
+_DISTANCES = (1, 3, 5, 2)
+"""試的站位距離（依序，第一個合法的就用）；2 放最後：環形半徑 2 只打得到距離 2 的目標（3W-9）。"""
 _BASE_UNIT = {
     "melee": "hero_fighter",
     "ranged": "hero_archer",

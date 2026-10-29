@@ -51,7 +51,7 @@ from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team, UnitId
 from trpg.sim.matrix import library_with_builds
-from trpg.skillgen.validate import validate_skill
+from trpg.skillgen.validate import structural_rarity, tier_violations, validate_skill
 
 U1, U2, U3, U4 = (UnitId(f"unit_000{i}") for i in range(1, 5))
 SID = "skill_t_combo"
@@ -220,7 +220,12 @@ def test_the_followup_is_checked_with_its_own_skeleton_and_the_composite_needs_r
     assert "followup.skeleton.shape" in [v.rule for v in validate_skill(wrong, lib)]
     common = SkillDef.model_validate({**combo_data(), "rarity": "common"})
     rules = [v.rule for v in validate_skill(common, lib)]
-    assert "rarity.composite" in rules
+    # 3W-9：稀有度只是標記（結構算出稀有）；從零產生的複合技能要角色 2 階（接續段）
+    assert "rarity.composite" not in rules and structural_rarity(common, lib) == "rare"
+    fresh = common.model_copy(
+        update={"provenance": common.provenance.model_copy(update={"origin": "level_up"})}
+    )
+    assert "tier.followup" in {v.rule for v in tier_violations(fresh, lib, 1)}
     # 位移段骨架必須是 displace
     other = SkillDef.model_validate({**combo_data(), "skeleton": "strike"})
     assert "composite.skeleton" in [v.rule for v in validate_skill(other, lib)]

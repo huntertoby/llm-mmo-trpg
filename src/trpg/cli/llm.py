@@ -95,7 +95,9 @@ class ProposeArgs:
     關閉時名稱與敘事都用組合式名稱與模板敘事（4-L8b）。"""
 
 
-def _open_skeletons(library: ContentLibrary, rarity: SkillRarity) -> list[str]:
+def _open_skeletons(library: ContentLibrary, rarity: SkillRarity, tier: int) -> list[str]:
+    """這個稀有度、角色階級（最低角色階級表，3W-9）可以出題的骨架。"""
+    tiers = library.budget.min_character_tier.skeletons
     return sorted(
         s.id
         for s in library.skeletons.values()
@@ -103,6 +105,7 @@ def _open_skeletons(library: ContentLibrary, rarity: SkillRarity) -> list[str]:
         and s.id not in CLOSED_SKELETONS
         and any(k in PROPOSAL_KINDS for k in s.kinds)
         and rarity_rank(s.min_rarity) <= rarity_rank(rarity)
+        and tiers.get(s.id, 1) <= tier
     )
 
 
@@ -125,7 +128,7 @@ def _rotated_request(
     rarity = args.rarity or PROPOSE_RARITIES[(args.seed + index + attempt) % len(PROPOSE_RARITIES)]
     skeleton = args.skeleton
     if skeleton is None and rng.chance_permille(500):
-        skeleton = rng.choice(_open_skeletons(library, rarity))
+        skeleton = rng.choice(_open_skeletons(library, rarity, args.tier))
     picked = args.keywords
     if not picked and rng.chance_permille(500):
         picked = (rng.choice(keywords),)
