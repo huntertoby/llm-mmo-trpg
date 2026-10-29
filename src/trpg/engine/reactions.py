@@ -95,6 +95,7 @@ __all__ = [
     "opportunity_attacks",
     "perform_unit_attack",
     "spell_hit_reactions",
+    "take_decoy",
     "try_intercept",
 ]
 
@@ -362,13 +363,14 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
         perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
 
 
-def _decoy_intercept(
-    ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, skill_id: str | None
+def take_decoy(
+    ctx: Ctx, attacker: UnitState, target: UnitState, *, skill_id: str | None = None
 ) -> UnitState | None:
-    """狐族「狐火誘餌」（Phase 3R-2）：``target`` 的陣營有誘餌時，敵人這次已命中的單體攻擊由誘餌
-    攔下（依單位 ID，第一個）；誘餌隨即消失（原因 ``decoy_hit``），攻擊的後續效果落空。直接攻擊
-    誘餌本身不攔。"""
-    if target.has_tag(DECOY_TAG):
+    """狐族「狐火誘餌」（Phase 3R-2b）：敵人對 ``target`` 的單體攻擊，在**擲命中之前**，若
+    ``target`` 的陣營有誘餌（依單位 ID，第一個），這次攻擊轉向誘餌——攻擊落空（呼叫端不擲命中、
+    不結算任何效果），誘餌消失（原因 ``decoy_hit``）；不論會不會命中都算用掉。直接攻擊誘餌本身不攔。
+    回傳被用掉的誘餌（沒有則 ``None``）。"""
+    if attacker.team is target.team or target.has_tag(DECOY_TAG):
         return None
     for decoy in ctx.state.units_sorted():
         if not decoy.alive or not decoy.has_tag(DECOY_TAG) or decoy.team is not target.team:
@@ -379,8 +381,8 @@ def _decoy_intercept(
             attacker_id=attacker.id,
             target_id=target.id,
             skill_id=skill_id,
+            decoy=True,
         )
-        redirect_fired(ctx, seq, target.id, decoy.id)
         dismiss_summon(ctx, decoy, "decoy_hit")
         return decoy
     return None
@@ -420,9 +422,6 @@ def try_intercept(
     """
     if attacker.team is target.team:
         return None
-    decoy = _decoy_intercept(ctx, attacker, target, seq, skill_id)
-    if decoy is not None:
-        return decoy
     guarded = _guard_transfer(ctx, attacker, target, seq, skill_id)
     if guarded is not None:
         return guarded
@@ -663,6 +662,8 @@ def _attack_once(
     ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
     if not attacker.alive or not target.alive:
         return False, False, target
+    if ctx.preview is None and take_decoy(ctx, attacker, target) is not None:
+        return attacker.has_status(CONCEALED), False, target  # 狐火誘餌：落空，不擲命中（3R-2b）
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
         ctx.mark_branch()

@@ -38,7 +38,7 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/83"
+LOG_FORMAT = "trpg-battle-log/84"
 """``/83``（Phase 3R-2）：種族技與環境被動——單位範本與單位狀態多了 ``race``，規則包多了 ``races``
 （``content/races.yaml``），戰鬥狀態多了 ``map_tags``（地圖標籤 ``forest``），新動作
 ``use_race_skill``、新事件 ``race_skill_used``、``push_resisted`` 與 ``summon_expired`` 的新原因，
