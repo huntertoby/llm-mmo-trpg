@@ -573,7 +573,9 @@ class DataOrderSource:
                 out.append(
                     Variation(source="major", template=major.id, category=category, keyword=keyword)
                 )
-        return out + extra_variations(library, skill, category, support=is_support_skill(skill))
+        return out + extra_variations(
+            library, skill, category, support=is_support_skill(skill), held=request.held_keywords
+        )
 
     @staticmethod
     def _keywords(
@@ -652,7 +654,7 @@ class UsageSource(DataOrderSource):
         skill: SkillDef,
     ) -> list[Variation]:
         base = {"source": "minor", "template": template.id, "category": template.category}
-        if template.op == "reshape":
+        if template.op in ("reshape", "terrain_area"):
             reach = (
                 _FAR_SHAPES
                 if request.usage.avg_distance_permille >= (library.evolution.far_distance * 1000)
@@ -883,6 +885,33 @@ def _mixed(
     return found
 
 
+def _fill_up(
+    library: ContentLibrary,
+    request: FlashRequest,
+    source: FlashOptionSource,
+    builder: _Builder,
+    before: SkillDef,
+    *,
+    options: list[FlashOption],
+    count: int,
+) -> list[FlashOption]:
+    """選項不足 ``count`` 個（強度下限讓不少候選被濾掉，或這一招的候選本來就少）時，用這一招的
+    **小變化** 補滿（3W-2b，不出空選項）：通用變化（``generic``）優先，其次是其餘小變化，依各類別的
+    用法統計排序；已經在選項裡的不重複。補不滿（連小變化都沒有合格的）就維持原樣。"""
+    if len(options) >= count:
+        return options
+    table = library.flash
+    taken = {o.variation.key() for o in options}
+    pool: list[Variation] = []
+    for category in allowed_categories(table, before, major=False):
+        pool += [
+            v for v in source.ranked(library, request, category, before) if v.key() not in taken
+        ]
+    generic = {t.id for t in table.minor if t.generic}
+    pool.sort(key=lambda v: v.template not in generic)  # 穩定排序：通用變化在前
+    return [*options, *builder.take(pool, count - len(options))]
+
+
 def make_offer(
     library: ContentLibrary,
     request: FlashRequest,
@@ -915,6 +944,9 @@ def make_offer(
         )
         if not options:
             raise ValueError(f"類別 {request.category} 這一次沒有合格的變化（沒有扣點）")
+        options = _fill_up(
+            library, request, source, builder, before, options=options, count=rule.options
+        )
         if transform is not None:
             options.append(transform)
     else:
@@ -924,6 +956,7 @@ def make_offer(
         options = merge_options(
             proposed, options, count, min_categories=min(rule.min_categories, count)
         )
+        options = _fill_up(library, request, source, builder, before, options=options, count=count)
         if transform is not None:
             options.insert(rng.randint(0, len(options)), transform)
     return FlashOffer(

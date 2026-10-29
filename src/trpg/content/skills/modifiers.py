@@ -254,7 +254,7 @@ class ModifierSpec(ContentModel):
         if (
             kind in SELF_ONLY_CHANGES
             and condition is not None
-            and condition.type not in SELF_CONDITIONS
+            and any(part.type not in SELF_CONDITIONS for part in condition.alternatives())
         ):
             raise ValueError(
                 f"change.{kind} 在選目標之前就決定，條件只能是 self_hp_below，收到 {condition.type}"

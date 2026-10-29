@@ -19,7 +19,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from trpg.content.skills import SkillDef
+from trpg.content.skills import ShapeSpec, SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
 from trpg.engine.battle import legal_actions
@@ -95,12 +95,37 @@ def _used(skill_id: str):  # type: ignore[no-untyped-def]
 
 
 @cache
+def _pool() -> tuple[SkillDef, ...]:
+    """手寫技能（依 ID 排序），後面接 3 招轉型出來的元素姿態（3W-2b：沒有手寫的元素姿態）。"""
+    lib = library()
+    plain = sorted(lib.skills.values(), key=lambda s: s.id)
+    transform = Variation(source="transform", template="to_stance", category="transform")
+    stances: list[SkillDef] = []
+    for base in ("skill_fire_bolt", "skill_scholars_bolt", "skill_cluster_bolt"):
+        if base not in lib.skills:
+            continue
+        done = apply_variation(
+            lib, at_tier(lib.skills[base], TIER), transform, bonus=120, rng=Rng(SEED)
+        )
+        if done is not None:
+            stances.append(done.model_copy(update={"id": f"{base}_stance_test"}))
+    # 3W-2b：地形變化需要影響格數比較小的升降地形技能（內容裡的都是十字以上）
+    small = lib.skills["skill_sinkhole"].model_copy(
+        update={
+            "id": "skill_sinkhole_small_test",
+            "shape": ShapeSpec.model_validate({"type": "ground_tile", "range": 4}),
+        }
+    )
+    return (*plain, *stances, small)
+
+
+@cache
 def _found(template_id: str) -> tuple[Found, ...]:
     """這個模板在 3 招代表性技能（技能 ID 排序後第一批套得上的）上的結果。"""
     lib = library()
     source = UsageSource()
     out: list[Found] = []
-    for plain in sorted(lib.skills.values(), key=lambda s: s.id):
+    for plain in _pool():
         if len(out) >= 3:
             break
         skill = at_tier(plain, TIER)
@@ -213,8 +238,9 @@ TIER_TWO = {
     "element_second",
     "support_area_wide",
     "trigger_range_wide",
+    "terrain_mid",
 }
-TIER_THREE = {"reshape_line6", "reshape_chain", "dual_scaling"}
+TIER_THREE = {"reshape_line6", "reshape_chain", "dual_scaling", "terrain_wide"}
 
 
 def test_template_min_tiers_follow_decision_72() -> None:

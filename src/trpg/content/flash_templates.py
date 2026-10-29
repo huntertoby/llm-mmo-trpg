@@ -161,11 +161,17 @@ class FlashTemplate(ContentModel):
     """通用變化（3W-2）：用法統計不夠時（放出次數少於 ``rules.usage_min_uses``）先出這些。"""
     elements: tuple[str, ...] = ()
     """``element`` 模板的候選元素（3W-2）；空 ＝ 不限。"""
+    min_cells: int | None = Field(default=None, ge=1)
+    max_cells: int | None = Field(default=None, ge=1)
+    """``terrain_area`` 的影響格數範圍（3W-2b，#58）：新形狀的格數（``cell_count``）要落在其中
+    （2 階 4～6 格、3 階 7 格以上）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
         if self.op in ("area", "range") and not self.delta:
             raise ValueError(f"模板 {self.id}：{self.op} 必須填非 0 的 delta")
+        if self.op == "terrain_area" and (not self.shapes or self.min_cells is None):
+            raise ValueError(f"模板 {self.id}：terrain_area 必須填 shapes 與 min_cells")
         return self
 
 
@@ -211,8 +217,9 @@ class TransformTemplate(ContentModel):
     """``summon``：角色階級高、預算變大時，依序加試的強化（``summon`` 效果的 ``duration``、
     ``max_hp_permille``、``count``、``power_permille``）；先試不強化的版本。"""
     trap: TrapSpec | None = None
-    stances: dict[str, str] = Field(default_factory=dict)
-    """``stance``：``offense``（原招有傷害）、``defense``（沒有傷害）→ 姿態狀態 ID。"""
+    stances: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """``stance``：``offense``（原招有傷害）、``defense``（沒有傷害）→ 候選姿態狀態 ID（依序試，第一
+    個落在預算窗內的）。原招有傷害時先試 :attr:`FlashTable.stance_ladders` 的同元素元素姿態。"""
     damage_permille_steps: tuple[int, ...] = ()
     """``modifier``：「傷害 +n‰」候選（由大到小，第一個落在預算窗內的）。"""
 
@@ -241,8 +248,12 @@ class ExtraMajorTemplate(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     category: str = Field(pattern=ID_PATTERN)
     op: str = Field(pattern=ID_PATTERN)
-    only: Literal["support", "summon"]
-    """適用對象：輔助技（治療、護盾、增益）或召喚技能。"""
+    only: Literal["support", "summon", "shield"]
+    """適用對象：輔助技（治療、護盾、增益）、召喚技能或護盾類（有護盾效果，3W-2b）。"""
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``only: shield`` 的加深／橋接：護盾改用的狀態（``statuses.yaml`` 的 ``shielded_*``）。"""
+    keyword: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``only: shield`` 的橋接：這個模板橋接到的關鍵字（持有者持有越多越優先）。"""
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
     llm_hint: str = ""
@@ -259,6 +270,9 @@ class FlashTable(ContentModel):
     major: tuple[MajorFlashTemplate, ...] = ()
     extra_major: tuple[ExtraMajorTemplate, ...] = ()
     transforms: tuple[TransformTemplate, ...] = ()
+    stance_ladders: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """元素姿態的階梯（3W-2b）：元素 ID（``physical`` 也有）→ 由弱到強的姿態狀態 ID。轉型優先
+    轉成同元素的姿態；姿態的「費用」「修正」類小變化在同一階梯上換級（維持費 ±1 搭配效果升降）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTable:
@@ -304,6 +318,13 @@ class FlashTable(ContentModel):
 
     def extra_template(self, template_id: str) -> ExtraMajorTemplate | None:
         return next((t for t in self.extra_major if t.id == template_id), None)
+
+    def stance_rung(self, status_id: str) -> tuple[tuple[str, ...], int] | None:
+        """``status_id`` 所在的元素姿態階梯與它的位置；不在任何階梯上時 ``None``。"""
+        for ladder in self.stance_ladders.values():
+            if status_id in ladder:
+                return ladder, ladder.index(status_id)
+        return None
 
     def transform_template(self, template_id: str) -> TransformTemplate | None:
         return next((t for t in self.transforms if t.id == template_id), None)

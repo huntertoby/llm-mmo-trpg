@@ -11,6 +11,8 @@
 # （1d8＋智力 × 0.3 的所選元素傷害）；range 只用來列出「朝某個敵人」的快捷動作。
 upkeep_stamina: 8                # #67（2026-10-29，使用者「A」）：5 → 8，耐力每回合回 5，淨扣 3
 upkeep_mana: 3
+stance_upkeep_stamina: 2         # 3W-2b：一般姿態每點維持費（SkillDef.stance_upkeep）的耐力數（武器技）
+stance_upkeep_mana: 1            # 法力數（法術技）
 cooldown: 2
 forms:
   - id: bear

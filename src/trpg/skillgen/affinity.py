@@ -39,6 +39,7 @@ def _bonus_indexes(skill: SkillDef, library: ContentLibrary) -> list[int]:
         if i >= 1
         and effect.condition is not None
         and effect.condition.type != WIELDING_WEAPON
+        and effect.condition.any_of is None
         and conditions[effect.condition.type].harshness == "common"
     ]
 

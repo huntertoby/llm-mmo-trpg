@@ -39,6 +39,7 @@ from trpg.content.skills import (
     REFUND_COOLDOWN,
     SELF_DAMAGE_OF_HIT,
     ConditionDef,
+    ConditionSpec,
     EffectSpec,
     ModifierChange,
     ModifierSpec,
@@ -391,13 +392,14 @@ def _plain_base_points(  # noqa: PLR0911
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
+        extra, extra_note = _shield_rider_points(primitive.id, effect, library)
         if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
             permille = library.budget.shield_duration_permille[min(max(effect.duration, 2), 3) - 2]
             return (
-                _dice_average(effect.dice) * Fraction(permille, _PERMILLE),
-                f"{effect.dice} 平均 × 持續 {effect.duration} 回合 {permille}‰",
+                _dice_average(effect.dice) * Fraction(permille, _PERMILLE) + extra,
+                f"{effect.dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
             )
-        return _dice_average(effect.dice), f"{effect.dice} 平均"
+        return _dice_average(effect.dice) + extra, f"{effect.dice} 平均{extra_note}"
     if basis == "damage":
         permille = effect.multiplier_permille or _PERMILLE
         reference = rules.core.budget_reference_weapon_damage
@@ -407,6 +409,17 @@ def _plain_base_points(  # noqa: PLR0911
     if basis == "surface":
         return _surface_points(effect, library)
     raise BudgetError(f"原語 {primitive.id} 的預算算法 {basis} 沒有實作")
+
+
+def _shield_rider_points(
+    primitive_id: str, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """帶附帶效果的護盾（3W-2b，``shield`` 的 ``status``）：附帶效果的價值是狀態的點數。"""
+    if primitive_id != "shield" or effect.status is None:
+        return Fraction(0), ""
+    status = library.ruleset.status_def(effect.status)
+    points = Fraction(status.budget_points or 0)
+    return points, f" ＋ {status.name_zh}附帶 {points} 點"
 
 
 def _restore_resource_points(
@@ -1153,12 +1166,20 @@ def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fracti
 
 
 def _condition_multiplier(
-    condition_type: str, conditions: dict[str, ConditionDef], budget: BudgetRules
+    condition_type: str,
+    conditions: dict[str, ConditionDef],
+    budget: BudgetRules,
+    any_of: tuple[ConditionSpec, ...] | None = None,
 ) -> Fraction:
+    """條件的預算倍率；有 ``any_of`` 時取各分支中最寬鬆（倍率最大）的那個（3W-2b：「或」比任何一個
+    分支都容易成立，不會比最寬鬆的更嚴）。"""
     definition = conditions.get(condition_type)
     if definition is None:
         raise BudgetError(f"未知的條件 {condition_type!r}")
-    return Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    best = Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    for part in any_of or ():
+        best = max(best, _condition_multiplier(part.type, conditions, budget))
+    return best
 
 
 def _effect_budget(
@@ -1181,7 +1202,9 @@ def _effect_budget(
     target = Fraction(budget.all_target_permille, _PERMILLE) if affects == "all" else Fraction(1)
     condition = Fraction(1)
     if effect.condition is not None:
-        condition = _condition_multiplier(effect.condition.type, rules.conditions.by_id(), budget)
+        condition = _condition_multiplier(
+            effect.condition.type, rules.conditions.by_id(), budget, effect.condition.any_of
+        )
     return EffectBudget(
         index=index,
         type=effect.type,
@@ -1231,6 +1254,13 @@ def _allowance_parts(
         parts.append(("透支（下回合少 1 AP）", allowance.overdraft_permille))
     if any(effect.type == LEAVE_FORM for effect in skill.effects):  # 解除形態（3J-4c）：算代價
         parts.append(("解除形態（先離開目前的形態）", allowance.leave_form_permille))
+    if skill.stance_upkeep:  # 姿態維持費（3W-2b）
+        parts.append(
+            (
+                f"姿態維持費 {skill.stance_upkeep}",
+                skill.stance_upkeep * allowance.stance_upkeep_per_point,
+            )
+        )
     if cost.source is not None:
         parts.append(
             (
@@ -1453,7 +1483,9 @@ def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectB
             count *= Fraction(budget.modifier.shape_benefit_permille, _PERMILLE)
         condition = Fraction(1)
         if rule.condition is not None:
-            condition = _condition_multiplier(rule.condition.type, rules.conditions.by_id(), budget)
+            condition = _condition_multiplier(
+                rule.condition.type, rules.conditions.by_id(), budget, rule.condition.any_of
+            )
         base = count * value
         out.append(
             EffectBudget(
@@ -1651,7 +1683,7 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     condition_multiplier = Fraction(1)
     if skill.condition is not None:
         condition_multiplier = _condition_multiplier(
-            skill.condition.type, rules.conditions.by_id(), budget
+            skill.condition.type, rules.conditions.by_id(), budget, skill.condition.any_of
         )
     tags = mechanic_tags(skill, rules)
     synergies = tuple(

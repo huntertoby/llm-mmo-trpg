@@ -133,8 +133,73 @@ function sword(c: Ctx): void {
 
 type Glyph = (c: Ctx) => void;
 
+// 3W-2b 的元素姿態（`stance_<元素>_<級>`，每個元素 5 級）：劍＋該元素的小記號＋底下 N 顆級數點。
+// 顏色仍走 polarity／持續元素（不另設）。
+const STANCE_ELEMENTS = ["physical", "fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow"] as const;
+const STANCE_LEVELS = 5;
+
+function elementMark(c: Ctx, element: string): void {
+  switch (element) {
+    case "fire":
+      c.beginPath();
+      c.arc(7, -5, 3, 0, TAU);
+      c.fill();
+      break;
+    case "ice":
+      line(c, [[4, -5], [10, -5]]);
+      line(c, [[7, -8], [7, -2]]);
+      break;
+    case "lightning":
+      line(c, [[5, -9], [8, -5], [5, -4], [8, 0]]);
+      break;
+    case "poison":
+      c.beginPath();
+      c.arc(7, -4, 2.5, 0, TAU);
+      c.stroke();
+      break;
+    case "wind":
+      line(c, [[3, -7], [10, -7]]);
+      line(c, [[4, -3], [9, -3]]);
+      break;
+    case "earth":
+      c.strokeRect(4, -9, 6, 6);
+      break;
+    case "holy":
+      line(c, [[7, -9], [7, -1]]);
+      line(c, [[3, -5], [11, -5]]);
+      break;
+    case "shadow":
+      c.beginPath();
+      c.arc(7, -5, 3.5, Math.PI * 0.5, Math.PI * 1.5);
+      c.stroke();
+      break;
+    default:
+      break;
+  }
+}
+
+function elementStanceGlyphs(): Record<string, Glyph> {
+  const out: Record<string, Glyph> = {};
+  for (const element of STANCE_ELEMENTS) {
+    for (let level = 1; level <= STANCE_LEVELS; level++) {
+      out[`stance_${element}_${level}`] = (c) => {
+        line(c, [[-8, 5], [4, -7]]);
+        line(c, [[-9, 0], [-4, 5]]);
+        elementMark(c, element);
+        for (let i = 0; i < level; i++) {
+          c.beginPath();
+          c.arc(-8 + i * 4, 10, 1.2, 0, TAU);
+          c.fill();
+        }
+      };
+    }
+  }
+  return out;
+}
+
 /** 一個狀態一個圖樣（圖樣查表；不認得的狀態畫名稱第一個字）。 */
 export const GLYPH: Readonly<Record<string, Glyph>> = {
+  ...elementStanceGlyphs(),
   defending: (c) => shield(c),
   guarded: (c) => {
     shield(c);
@@ -145,6 +210,28 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     shield(c);
     line(c, [[-3, -4], [0, -1], [-2, 2], [1, 5]]);
     line(c, [[0, -1], [4, 0]]);
+  },
+  // 3W-2b：帶附帶效果的護盾（顏色走 polarity，圖樣在盾上加一個小記號）
+  shielded_thorns: (c) => {
+    shield(c);
+    line(c, [[-3, 2], [0, -3], [3, 2]]);
+  },
+  shielded_mending: (c) => {
+    shield(c);
+    line(c, [[0, -4], [0, 4]]);
+    line(c, [[-4, 0], [4, 0]]);
+  },
+  shielded_wet: (c) => {
+    shield(c);
+    c.beginPath();
+    c.arc(0, 1, 2.5, 0, TAU);
+    c.stroke();
+  },
+  shielded_marking: (c) => {
+    shield(c);
+    c.beginPath();
+    c.arc(0, 0, 3, 0, TAU);
+    c.fill();
   },
   shielded: (c) => {
     circle(c, 0, 0, 9); // 泡泡（吸收量）
@@ -374,6 +461,13 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     c.lineTo(-8, 1);
     c.closePath();
     c.stroke();
+  },
+  stance_bastion: (c) => {
+    // 堡壘：雙層磚牆
+    c.strokeRect(-9, -8, 18, 16);
+    line(c, [[-9, -2], [9, -2]]);
+    line(c, [[-9, 4], [9, 4]]);
+    line(c, [[0, -8], [0, -2]]);
   },
   stance_ironwall: (c) => {
     // 鐵壁：磚牆

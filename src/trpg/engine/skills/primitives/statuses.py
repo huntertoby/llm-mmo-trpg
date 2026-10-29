@@ -162,6 +162,7 @@ def _then_effect(cast: Cast, spec: EffectSpec, target: UnitState) -> list[Effect
                 scaled_permille=cast.spell_scaled(),
                 multiplier_permille=cast.level_permille(),
                 duration=spec.duration,
+                status_id=spec.status,
             )
         ]
     return cast.status_effects(spec, target)

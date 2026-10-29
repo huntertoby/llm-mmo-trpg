@@ -296,6 +296,8 @@ class ConditionalAffix(_AffixBase):
             raise ValueError(f"詞條 {self.id}：條件數值必須有 value 範圍")
         if self.effect in ("damage", "defense") and self.value_unit != "permille":
             raise ValueError(f"詞條 {self.id}：{self.effect} 的 value_unit 必須是 permille")
+        if self.condition.any_of is not None:
+            raise ValueError(f"詞條 {self.id}：裝備詞條的條件不能用 any_of")
         if self.effect == "defense" and self.condition.type not in SELF_EVALUABLE_CONDITIONS:
             allowed = "、".join(sorted(SELF_EVALUABLE_CONDITIONS))
             raise ValueError(f"詞條 {self.id}：防禦類條件數值的條件只能是 {allowed}")

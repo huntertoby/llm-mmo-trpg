@@ -170,7 +170,13 @@ def test_creation_summon_gets_a_summon_whiteboard_not_a_handwritten_skill() -> N
             unit = skill.effects[0].unit
             melee += unit == "summon_skeleton_warrior"
             ranged += unit == "summon_elemental_spirit"
-    assert melee and ranged  # 近戰型與遠程型各一
+    # 3W-2b（06 6.34.1，3664e63f）：選「召喚物」時優先給遠程基本召喚物（推導出來沒有別的關鍵字）；
+    # 近戰的骷髏戰士會推導成「倒地」，不符合所選關鍵字，創角不再給
+    assert ranged and not melee
+    melee_board = compose_whiteboard(
+        3, kind="active", tier=1, library=LIB, recipe_id="summon_skeleton"
+    )
+    assert melee_board.effects[0].unit == "summon_skeleton_warrior"  # 配方仍在，其他情境可出
 
 
 def test_tier_two_summons_follow_the_whiteboard_keyword() -> None:

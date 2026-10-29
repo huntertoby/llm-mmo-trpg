@@ -75,6 +75,7 @@ from trpg.engine.events import (
     RuneInscribed,
     RuneRemoved,
     ShieldAbsorbed,
+    ShieldEnded,
     ShieldGained,
     ShotPierced,
     SkillActivated,
@@ -89,6 +90,7 @@ from trpg.engine.events import (
     SnareTriggered,
     SourceChanged,
     StacksChanged,
+    StanceUpkeepPaid,
     StatusApplied,
     StatusConverted,
     StatusRemoved,
@@ -672,6 +674,15 @@ def _form_upkeep(e: FormUpkeepPaid, v: _View) -> str:
     )
 
 
+@_handles(StanceUpkeepPaid)
+def _stance_upkeep(e: StanceUpkeepPaid, v: _View) -> str:
+    name = "耐力" if e.resource == "stamina" else "法力"
+    return (
+        f"  {v.name[e.unit_id]} 維持{_skill_name(v, e.skill_id)}：−{e.amount} {name}"
+        f"（剩 {e.remaining}）"
+    )
+
+
 @_handles(SkillCooldownChanged)
 def _cooldown(e: SkillCooldownChanged, v: _View) -> str | None:
     if e.remaining > 0:
@@ -750,6 +761,12 @@ def _shield_gained(e: ShieldGained, v: _View) -> str:
 @_handles(ShieldAbsorbed)
 def _shield_absorbed(e: ShieldAbsorbed, v: _View) -> str:
     return f"    {v.name[e.unit_id]} 的護盾吸收了 {e.absorbed} 點傷害，剩餘 {e.remaining}"
+
+
+@_handles(ShieldEnded)
+def _shield_ended(e: ShieldEnded, v: _View) -> str:
+    how = "被打破了" if e.broken else "到期了"
+    return f"    {v.name[e.unit_id]} 的護盾{how}"
 
 
 @_handles(StatusRemoved)

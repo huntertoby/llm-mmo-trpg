@@ -31,6 +31,7 @@ from trpg.engine.events import (
     MoveMode,
     RuleChangeTriggered,
     ShieldAbsorbed,
+    ShieldEnded,
     ShieldGained,
     StatusApplied,
     StatusConverted,
@@ -44,7 +45,7 @@ from trpg.engine.ids import BOSS_TAG, CONCEALED, IMMOVABLE, PRONE, RACE_STONEWAL
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
-from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import is_deadly, is_flying, is_standable
 from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import (
@@ -127,7 +128,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         if mended is not None:
             return mended
         amount = _cap_backlash(ctx, unit, effect, amount)
-        absorbed = _absorb(ctx, unit, amount, events)  # 護盾：所有倍率之後、扣 HP 之前
+        absorbed = _absorb(ctx, unit, amount, events, effect)  # 護盾：所有倍率之後、扣 HP 之前
     link = redirect_link(ctx, unit, effect)
     redirected = 0 if link is None else (amount - absorbed) * (link[0].amount or 0) // PERMILLE
     hp_before = unit.hp
@@ -228,7 +229,7 @@ def _dealt_permille(ctx: Ctx, effect: DamageEffect) -> int:
     """攻擊者造成傷害的狀態倍率（‰，虛弱）；不是攻擊或沒有來源時 1000。"""
     source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
     if effect.cause == "attack" and source is not None:
-        return damage_dealt_permille(ctx.rules, source)
+        return damage_dealt_permille(ctx.rules, source, effect.element)
     return PERMILLE
 
 
@@ -365,8 +366,13 @@ def _thaw(ctx: Ctx, unit: UnitState, element: Element) -> list[EventBase]:
     ]
 
 
-def _absorb(ctx: Ctx, unit: UnitState, amount: int, events: list[EventBase]) -> int:
-    """護盾吸收 ``amount`` 點傷害，回傳吸收的點數；吸收量歸零的護盾狀態立即移除。"""
+def _absorb(
+    ctx: Ctx, unit: UnitState, amount: int, events: list[EventBase], effect: DamageEffect
+) -> int:
+    """護盾吸收 ``amount`` 點傷害，回傳吸收的點數；吸收量歸零的護盾狀態立即移除。帶附帶效果的護盾
+    （3W-2b）另發出 ``shield_absorbed``（反傷用）與 ``shield_ended``（打破時）。"""
+    source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
+    melee = effect.cause == "attack" and source is not None and manhattan(source.xy, unit.xy) == 1
     absorbed = 0
     kept: list[StatusInstance] = []
     removed: list[str] = []
@@ -387,7 +393,15 @@ def _absorb(ctx: Ctx, unit: UnitState, amount: int, events: list[EventBase]) -> 
                 removed.append(status.status_id)
             if take > 0:
                 events.append(
-                    ctx.emit(ShieldAbsorbed, unit_id=unit.id, absorbed=take, remaining=left)
+                    ctx.emit(
+                        ShieldAbsorbed,
+                        unit_id=unit.id,
+                        absorbed=take,
+                        remaining=left,
+                        status_id=status.status_id,
+                        source_id=effect.source_id,
+                        melee=melee,
+                    )
                 )
             continue
         kept.append(status)
@@ -396,6 +410,16 @@ def _absorb(ctx: Ctx, unit: UnitState, amount: int, events: list[EventBase]) -> 
         events.append(
             ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="depleted")
         )
+        if ctx.rules.status_def(status_id).has_shield_riders:
+            events.append(
+                ctx.emit(
+                    ShieldEnded,
+                    unit_id=unit.id,
+                    status_id=status_id,
+                    broken=True,
+                    breaker_id=effect.source_id,
+                )
+            )
     return absorbed
 
 
@@ -450,7 +474,7 @@ def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         * effect.multiplier_permille
         // (PERMILLE * PERMILLE),
     )
-    status_id = SHIELDED
+    status_id = effect.status_id or SHIELDED  # 3W-2b：帶附帶效果的護盾是另一個狀態
     current = unit.get_status(status_id)
     total = max(amount, 0 if current is None or current.amount is None else current.amount)
     duration = effect.duration or ctx.rules.status_def(status_id).duration

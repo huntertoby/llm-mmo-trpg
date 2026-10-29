@@ -29,7 +29,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any
@@ -80,6 +80,7 @@ _LEGENDARY = rarity_rank("legendary")
 _RESET: dict[str, Any] = {
     "followup": None,
     "variants": [],
+    "stance_upkeep": 0,
     "trap": None,
     "trigger": None,
     "reaction": None,
@@ -273,22 +274,43 @@ def _to_trap(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> lis
     return drafts
 
 
-def _to_stance(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+_STANCE_UPKEEPS = (1, 2, 0)
+"""元素姿態轉型依序試的維持費（先 1 點：隨階級變強的階梯在維持費 1 時對上預算窗）。"""
+
+
+def _stance_candidates(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    """姿態轉型的（狀態, 維持費）候選：有傷害的招式先試同元素（沒有元素＝物理）的元素姿態階梯
+    （3W-2b，隨階級變強），再試通用姿態；沒有傷害的招式只試防守姿態。"""
     offense = any(e.type in ("damage", "delayed_damage") for e in skill.effects)
-    status = t.stances.get("offense" if offense else "defense")
-    if status is None or status not in lib.ruleset.statuses.by_id():
-        return []
-    base = _new_base(
-        skill,
-        kind="stance",
-        skeleton="stance",
-        ap_cost=None,
-        shape={"type": "self"},
-        cost={},
-        tags=_retag(skill, "stance"),
-        narrative=_concept(skill, t),
-    )
-    return [(base, [{"type": "apply_status", "status": status, "affects": "self"}])]
+    known = lib.ruleset.statuses.by_id()
+    out: list[tuple[str, int]] = []
+    if offense:
+        ladder = lib.flash.stance_ladders.get(skill_element_id(skill) or "physical", ())
+        out += [(s, u) for u in _STANCE_UPKEEPS for s in ladder]
+    out += [(s, 0) for s in t.stances.get("offense" if offense else "defense", ())]
+    return [
+        ({"upkeep": u}, [{"type": "apply_status", "status": s, "affects": "self"}])
+        for s, u in out
+        if s in known
+    ]
+
+
+def _to_stance(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    drafts: list[_Draft] = []
+    for extra, effects in _stance_candidates(skill, t, lib):
+        base = _new_base(
+            skill,
+            kind="stance",
+            skeleton="stance",
+            ap_cost=None,
+            shape={"type": "self"},
+            cost={},
+            stance_upkeep=extra["upkeep"],
+            tags=_retag(skill, "stance"),
+            narrative=_concept(skill, t),
+        )
+        drafts.append((base, effects))
+    return drafts
 
 
 def _modifier_changes(skill: SkillDef, t: TransformTemplate) -> list[dict[str, Any]]:
@@ -504,18 +526,47 @@ def _support_keywords(library: ContentLibrary, skill: SkillDef) -> list[str]:
     ]
 
 
+def _shield_index(skill: SkillDef) -> int | None:
+    """第一個一般護盾效果（還沒有帶附帶效果的 ``status``）的位置；沒有時 ``None``。"""
+    return next(
+        (i for i, e in enumerate(skill.effects) if e.type == "shield" and e.status is None), None
+    )
+
+
 def extra_variations(
-    library: ContentLibrary, skill: SkillDef, category: str, *, support: bool
+    library: ContentLibrary,
+    skill: SkillDef,
+    category: str,
+    *,
+    support: bool,
+    held: Mapping[str, int] | None = None,
 ) -> list[Variation]:
-    """進化模板之外、適用這招的大變化候選（資料順序）。``support``：這招是輔助技。"""
+    """進化模板之外、適用這招的大變化候選（資料順序；護盾類的橋接依持有者持有的關鍵字多的優先）。
+    ``support``：這招是輔助技。"""
     out: list[Variation] = []
     summon = is_summon_skill(skill)
+    shield = _shield_index(skill) is not None
+    held = held or {}
     for template in library.flash.extra_major:
         if template.category != category:
             continue
-        if (template.only == "support" and not support) or (
-            template.only == "summon" and not summon
+        if (
+            (template.only == "support" and not support)
+            or (template.only == "summon" and not summon)
+            or (template.only == "shield" and not shield)
         ):
+            continue
+        if template.only == "shield" and template.keyword is not None:
+            if template.keyword in set(derive_keywords(skill, library.keywords).all()):
+                continue  # 這招已經有這個關鍵字
+            out.append(
+                Variation(
+                    source="major",
+                    template=template.id,
+                    category=category,
+                    keyword=template.keyword,
+                )
+            )
             continue
         if template.op == "support_imbue":
             out += [
@@ -529,7 +580,16 @@ def extra_variations(
             ]
         else:
             out.append(Variation(source="major", template=template.id, category=category))
+    if held:  # 護盾橋接：持有者持有越多的關鍵字越優先（穩定排序，其餘維持資料順序）
+        out.sort(
+            key=lambda v: -held.get(v.keyword or "", 0) if _is_shield_bridge(library, v) else 0
+        )
     return out
+
+
+def _is_shield_bridge(library: ContentLibrary, variation: Variation) -> bool:
+    template = library.flash.extra_template(variation.template)
+    return template is not None and template.only == "shield" and template.keyword is not None
 
 
 def _summon_keywords(library: ContentLibrary, skill: SkillDef) -> list[str]:
@@ -565,6 +625,9 @@ def extra_summary(library: ContentLibrary, variation: Variation) -> str:
     )
     return template.summary_zh.replace("{keyword}", name)
 
+
+_STRICT_MARGIN = Fraction(1, 100)
+"""護盾量提高要比原本的預算分數嚴格多出來的點數（同 ``flash.STRICT_MARGIN``）。"""
 
 _PREFER = 1_000
 """指定橋接關鍵字時給的「持有數」（遠大於實際值，讓它排第一）。"""
@@ -620,6 +683,25 @@ def _support_drafts(
     return [] if op is None else op(skill, variation, library)
 
 
+def _apply_shield(
+    library: ContentLibrary, skill: SkillDef, template: ExtraMajorTemplate, rng: Rng
+) -> SkillDef | None:
+    """護盾類的加深與橋接（3W-2b）：``shield_potency`` 護盾量提高（預算上限提高後重調，分數要嚴格
+    變大）；``shield_status`` 把護盾換成帶附帶效果的狀態（附帶效果的點數由預算器從護盾量扣掉）。"""
+    index = _shield_index(skill)
+    if index is None:
+        return None
+    base, effects = _base(skill)
+    potency = template.op == "shield_potency"
+    if not potency:
+        effects[index]["status"] = template.status
+    floor = budget_power(skill, library) + (_STRICT_MARGIN if potency else Fraction(0))
+    done = retune(base, effects, rng, library, floor=floor)
+    if done is None or not meets_floor(skill, done, library):
+        return None
+    return done
+
+
 def apply_extra(
     library: ContentLibrary, skill: SkillDef, variation: Variation, rng: Rng
 ) -> SkillDef | None:
@@ -629,6 +711,8 @@ def apply_extra(
         return None
     if template.only == "summon":
         return _apply_summon(library, skill, template, variation)
+    if template.only == "shield":
+        return _apply_shield(library, skill, template, rng)
     for index, (base, effects) in enumerate(_support_drafts(skill, template, variation, library)):
         done = finish_transform(base, effects, rng.fork(str(index)), library)
         if done is not None and meets_floor(skill, done, library):

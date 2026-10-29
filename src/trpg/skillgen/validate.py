@@ -222,6 +222,7 @@ def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     out = _cap_violations(skill, library)
     out += _passive_violations(skill, library)
     out += _stance_violations(skill, library)
+    out += _shield_status_violations(skill, library)
     out += _exclusion_violations(skill, library)
     report, budget_out = _budget_violations(skill, library)
     out += _skeleton_violations(skill, library, report)
@@ -520,6 +521,22 @@ def _skeleton_category_mismatch(skill: SkillDef, skeleton: SkeletonDef) -> bool:
     return (wanted_category is not None and skill.category != wanted_category) or (
         wanted_weapon is not None and skill.weapon_req != wanted_weapon
     )
+
+
+def _shield_status_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """護盾效果指定的 ``status``（3W-2b）必須是吸收傷害（``absorbs_damage``）的狀態。"""
+    statuses = library.ruleset.statuses.by_id()
+    return [
+        Violation(
+            skill.id,
+            "shield.status",
+            f"effects[{index}]：護盾的 status {effect.status!r} 必須是 absorbs_damage 的狀態",
+        )
+        for index, effect in enumerate(skill.effects)
+        if effect.type == "shield"
+        and effect.status is not None
+        and not (effect.status in statuses and statuses[effect.status].absorbs_damage)
+    ]
 
 
 def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
@@ -1028,7 +1045,9 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
         if effect.condition is not None:
             cond_specs.append(effect.condition)
     needs += [
-        RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs
+        RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity)
+        for spec in cond_specs
+        for c in spec.alternatives()  # 3W-2b：any_of 的每個分支都算
     ]
     needs += _terrain_area_needs(skill, library)
     follow = skill.followup_skill()

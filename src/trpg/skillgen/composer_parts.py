@@ -1166,6 +1166,7 @@ def build_stance_effects(ctx: Ctx) -> None:
             and s.budget_points is not None
             and rarity_rank(s.min_rarity) <= ctx.rank
             and s.id not in reserved
+            and s.element_dealt is None  # 3W-2b：元素姿態階梯只給轉型與費用類小變化
         ),
         key=lambda s: s.id,
     )

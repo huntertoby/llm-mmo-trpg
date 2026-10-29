@@ -25,7 +25,11 @@ from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import StatusConverted, StatusResisted, StatusSaveRolled
 from trpg.engine.rules.combat import PERMILLE, is_hit
 from trpg.engine.rules.perks import attribute_perk
-from trpg.engine.rules.statuses import boss_converted_status, effective_attribute
+from trpg.engine.rules.statuses import (
+    boss_converted_status,
+    effective_attribute,
+    status_duration_bonus,
+)
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute
 
@@ -118,8 +122,21 @@ def status_effect(
             to_status=plan.status_id,
             source_id=caster.id,
         )
+    bonus = status_duration_bonus(ctx.rules, caster, plan.status_id)
+    if bonus:  # 元素姿態的小特色（3W-2b）：你施加的某種狀態多持續幾回合
+        base = (
+            duration if duration is not None else state.ruleset.status_def(plan.status_id).duration
+        )
+        if base is not None:
+            duration = base + bonus
+    # 姿態記下是哪個技能施加的（3W-2b：回合開始依技能的 stance_upkeep 付維持費）
+    stance_skill = skill_id if state.ruleset.status_def(plan.status_id).stance else None
     effect = ApplyStatusEffect(
-        source_id=caster.id, target_id=target.id, status_id=plan.status_id, duration=duration
+        source_id=caster.id,
+        target_id=target.id,
+        status_id=plan.status_id,
+        duration=duration,
+        skill_id=stance_skill,
     )
     if plan.save_attr is None or target.team is caster.team:
         return effect

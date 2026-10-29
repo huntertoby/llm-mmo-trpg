@@ -42,6 +42,7 @@ __all__ = [
     "skip_turn_status",
     "stance_status_ids",
     "status_attack_bonus",
+    "status_duration_bonus",
     "weapon_attribute",
 ]
 
@@ -110,9 +111,29 @@ def skip_turn_status(rules: Ruleset, unit: UnitState) -> str | None:
     return None
 
 
-def damage_dealt_permille(rules: Ruleset, unit: UnitState) -> int:
-    """自己造成的攻擊傷害倍率（‰；虛弱 750）。"""
-    return _combined(rules, unit, lambda d: d.damage_dealt_permille)
+def damage_dealt_permille(rules: Ruleset, unit: UnitState, element: Element | None = None) -> int:
+    """自己造成的攻擊傷害倍率（‰；虛弱 750）；``element`` 與狀態的 ``element_dealt`` 相同時再乘
+    ``element_dealt_permille``（元素姿態，Phase 3W-2b）。"""
+    combined = _combined(rules, unit, lambda d: d.damage_dealt_permille)
+    if element is None:
+        return combined
+    return (
+        combined
+        * _combined(
+            rules,
+            unit,
+            lambda d: d.element_dealt_permille if d.element_dealt is element else PERMILLE,
+        )
+        // PERMILLE
+    )
+
+
+def status_duration_bonus(rules: Ruleset, unit: UnitState, status_id: str) -> int:
+    """自己施加 ``status_id`` 時多出來的持續回合（所有狀態的 ``status_duration_bonus`` 相加；
+    元素姿態的小特色，Phase 3W-2b）。"""
+    return sum(
+        rules.status_def(s.status_id).status_duration_bonus.get(status_id, 0) for s in unit.statuses
+    )
 
 
 def damage_taken_permille(rules: Ruleset, unit: UnitState, element: Element | None = None) -> int:

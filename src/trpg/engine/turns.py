@@ -36,7 +36,7 @@ from trpg.engine.events import (
     TurnSkipped,
     TurnStarted,
 )
-from trpg.engine.forms import pay_upkeep, tick_form_cooldowns
+from trpg.engine.forms import pay_stance_upkeep, pay_upkeep, tick_form_cooldowns
 from trpg.engine.gear.core import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.ids import BURNING
@@ -46,6 +46,7 @@ from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.movement import is_flying
 from trpg.engine.rules.race import burn_immune
 from trpg.engine.rules.statuses import ap_penalty, move_points_for_turn, skip_turn_status
+from trpg.engine.shield_riders import expiry_effects
 from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
     collect_turn_end,
@@ -115,6 +116,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     tick_form_cooldowns(unit)  # 形態的冷卻（Phase 3J-1a）
     if pay_upkeep(ctx, unit):  # 維持費不夠：自動解除，移動點數不再含形態的加減
         unit.move_points = _turn_move_points(state, ctx.rules, unit)
+    pay_stance_upkeep(ctx, unit)  # 一般姿態的維持費（3W-2b）；付不起就解除姿態
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
     detect_traps(ctx, unit)  # 感知的常駐數值（Phase 3H-1）
 
@@ -284,6 +286,9 @@ def end_turn(ctx: Ctx) -> None:
     unit.statuses = [dataclasses.replace(s, dormant=False) if s.dormant else s for s in kept]
     for status_id in expired:
         ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="expired")
+        riders = expiry_effects(ctx, unit, status_id)  # 護盾到期的結束回復（3W-2b）
+        if riders:
+            execute(ctx, riders)
     unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)
     unit.ap = 0
     unit.move_points = 0

@@ -1253,6 +1253,13 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
             f"代價：施放後自己下一個回合少 {cost.overdraft} AP"
             f"（換 {percent:g}% 預算；代價狀態，無法淨化）"
         )
+    if skill.stance_upkeep:  # 姿態維持費（3W-2b）：每個自己的回合開始付，付不起就解除
+        table = library.ruleset.forms
+        weapon = skill.category == "weapon"
+        amount = skill.stance_upkeep * (
+            table.stance_upkeep_stamina if weapon else table.stance_upkeep_mana
+        )
+        parts.append(f"維持費 每回合{'耐力' if weapon else '法力'} {amount}（付不起就解除姿態）")
     if cost.cooldown:
         parts.append(f"冷卻 {cost.cooldown} 回合")
     if cost.uses_per_battle:
@@ -1311,6 +1318,13 @@ def timing_text(library: ContentLibrary, skill: SkillDef) -> str | None:
 def trigger_timing_text(library: ContentLibrary, trigger: TriggerSpec) -> str:
     """被動觸發時機的一句話，帶參數的時機寫出參數（Phase 3-41a），例如「每命中 2 次」
     「施放帶「火焰」標籤的技能後」「敵人進入你的「水」表面時」。"""
+    text = _trigger_timing(library, trigger)
+    if trigger.target == "nearest_enemy":  # 3W-2b
+        text += f"，對 {trigger.max_distance} 格內最近的一名敵人"
+    return text
+
+
+def _trigger_timing(library: ContentLibrary, trigger: TriggerSpec) -> str:
     rules = library.ruleset
     name = rules.trigger_def(trigger.event).name_zh
     if trigger.n is not None:

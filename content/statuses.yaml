@@ -543,3 +543,654 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
+
+  # --- 3W-2b｜元素姿態（06 6.34.5）：每個元素 5 級，點數 15／17／19／22／28。轉型與「費用」類小變化（維持費 ±1）在同元素的階梯上
+  # 換級（skillgen.flash_ops）；效果數值隨級數變強：該元素傷害 +10～30%、一個元素小特色。姿態維持費在技能上（stance_upkeep）。數值為初值，未經模擬。---
+  - id: stance_physical_1
+    polarity: neutral
+    name_zh: 戰意架勢·壹
+    description_zh: 物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: physical
+    element_dealt_permille: 1100
+    status_duration_bonus: {bleed: 1}
+  - id: stance_physical_2
+    polarity: neutral
+    name_zh: 戰意架勢·貳
+    description_zh: 物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: physical
+    element_dealt_permille: 1150
+    status_duration_bonus: {bleed: 1}
+  - id: stance_physical_3
+    polarity: neutral
+    name_zh: 戰意架勢·參
+    description_zh: 物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: physical
+    element_dealt_permille: 1200
+    status_duration_bonus: {bleed: 1}
+  - id: stance_physical_4
+    polarity: neutral
+    name_zh: 戰意架勢·肆
+    description_zh: 物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: physical
+    element_dealt_permille: 1250
+    status_duration_bonus: {bleed: 1}
+  - id: stance_physical_5
+    polarity: neutral
+    name_zh: 戰意架勢·伍
+    description_zh: 物理傷害提高，你造成的流血多持續一回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: physical
+    element_dealt_permille: 1300
+    status_duration_bonus: {bleed: 1}
+  - id: stance_fire_1
+    polarity: neutral
+    name_zh: 烈焰架勢·壹
+    description_zh: 火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: fire
+    element_dealt_permille: 1100
+    status_duration_bonus: {burning: 1}
+  - id: stance_fire_2
+    polarity: neutral
+    name_zh: 烈焰架勢·貳
+    description_zh: 火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: fire
+    element_dealt_permille: 1150
+    status_duration_bonus: {burning: 1}
+  - id: stance_fire_3
+    polarity: neutral
+    name_zh: 烈焰架勢·參
+    description_zh: 火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: fire
+    element_dealt_permille: 1200
+    status_duration_bonus: {burning: 1}
+  - id: stance_fire_4
+    polarity: neutral
+    name_zh: 烈焰架勢·肆
+    description_zh: 火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: fire
+    element_dealt_permille: 1250
+    status_duration_bonus: {burning: 1}
+  - id: stance_fire_5
+    polarity: neutral
+    name_zh: 烈焰架勢·伍
+    description_zh: 火焰傷害提高，你造成的燃燒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: fire
+    element_dealt_permille: 1300
+    status_duration_bonus: {burning: 1}
+  - id: stance_ice_1
+    polarity: neutral
+    name_zh: 寒霜架勢·壹
+    description_zh: 冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: ice
+    element_dealt_permille: 1100
+    status_duration_bonus: {slow: 1}
+  - id: stance_ice_2
+    polarity: neutral
+    name_zh: 寒霜架勢·貳
+    description_zh: 冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: ice
+    element_dealt_permille: 1150
+    status_duration_bonus: {slow: 1}
+  - id: stance_ice_3
+    polarity: neutral
+    name_zh: 寒霜架勢·參
+    description_zh: 冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: ice
+    element_dealt_permille: 1200
+    status_duration_bonus: {slow: 1}
+  - id: stance_ice_4
+    polarity: neutral
+    name_zh: 寒霜架勢·肆
+    description_zh: 冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: ice
+    element_dealt_permille: 1250
+    status_duration_bonus: {slow: 1}
+  - id: stance_ice_5
+    polarity: neutral
+    name_zh: 寒霜架勢·伍
+    description_zh: 冰霜傷害提高，你造成的減速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: ice
+    element_dealt_permille: 1300
+    status_duration_bonus: {slow: 1}
+  - id: stance_lightning_1
+    polarity: neutral
+    name_zh: 雷霆架勢·壹
+    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: lightning
+    element_dealt_permille: 1100
+    status_duration_bonus: {blinded: 1}
+  - id: stance_lightning_2
+    polarity: neutral
+    name_zh: 雷霆架勢·貳
+    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: lightning
+    element_dealt_permille: 1150
+    status_duration_bonus: {blinded: 1}
+  - id: stance_lightning_3
+    polarity: neutral
+    name_zh: 雷霆架勢·參
+    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: lightning
+    element_dealt_permille: 1200
+    status_duration_bonus: {blinded: 1}
+  - id: stance_lightning_4
+    polarity: neutral
+    name_zh: 雷霆架勢·肆
+    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: lightning
+    element_dealt_permille: 1250
+    status_duration_bonus: {blinded: 1}
+  - id: stance_lightning_5
+    polarity: neutral
+    name_zh: 雷霆架勢·伍
+    description_zh: 雷電傷害提高，你造成的致盲多 1 回合（閃光）；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: lightning
+    element_dealt_permille: 1300
+    status_duration_bonus: {blinded: 1}
+  - id: stance_poison_1
+    polarity: neutral
+    name_zh: 劇毒架勢·壹
+    description_zh: 毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: poison
+    element_dealt_permille: 1100
+    status_duration_bonus: {poison: 1}
+  - id: stance_poison_2
+    polarity: neutral
+    name_zh: 劇毒架勢·貳
+    description_zh: 毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: poison
+    element_dealt_permille: 1150
+    status_duration_bonus: {poison: 1}
+  - id: stance_poison_3
+    polarity: neutral
+    name_zh: 劇毒架勢·參
+    description_zh: 毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: poison
+    element_dealt_permille: 1200
+    status_duration_bonus: {poison: 1}
+  - id: stance_poison_4
+    polarity: neutral
+    name_zh: 劇毒架勢·肆
+    description_zh: 毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: poison
+    element_dealt_permille: 1250
+    status_duration_bonus: {poison: 1}
+  - id: stance_poison_5
+    polarity: neutral
+    name_zh: 劇毒架勢·伍
+    description_zh: 毒素傷害提高，你造成的中毒多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: poison
+    element_dealt_permille: 1300
+    status_duration_bonus: {poison: 1}
+  - id: stance_wind_1
+    polarity: neutral
+    name_zh: 疾風架勢·壹
+    description_zh: 風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: wind
+    element_dealt_permille: 1100
+    status_duration_bonus: {hasted: 1}
+  - id: stance_wind_2
+    polarity: neutral
+    name_zh: 疾風架勢·貳
+    description_zh: 風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: wind
+    element_dealt_permille: 1150
+    status_duration_bonus: {hasted: 1}
+  - id: stance_wind_3
+    polarity: neutral
+    name_zh: 疾風架勢·參
+    description_zh: 風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: wind
+    element_dealt_permille: 1200
+    status_duration_bonus: {hasted: 1}
+  - id: stance_wind_4
+    polarity: neutral
+    name_zh: 疾風架勢·肆
+    description_zh: 風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: wind
+    element_dealt_permille: 1250
+    status_duration_bonus: {hasted: 1}
+  - id: stance_wind_5
+    polarity: neutral
+    name_zh: 疾風架勢·伍
+    description_zh: 風傷害提高，你施加的加速多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: wind
+    element_dealt_permille: 1300
+    status_duration_bonus: {hasted: 1}
+  - id: stance_earth_1
+    polarity: neutral
+    name_zh: 大地架勢·壹
+    description_zh: 大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: earth
+    element_dealt_permille: 1100
+    physical_taken_permille: 960
+  - id: stance_earth_2
+    polarity: neutral
+    name_zh: 大地架勢·貳
+    description_zh: 大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: earth
+    element_dealt_permille: 1150
+    physical_taken_permille: 940
+  - id: stance_earth_3
+    polarity: neutral
+    name_zh: 大地架勢·參
+    description_zh: 大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: earth
+    element_dealt_permille: 1200
+    physical_taken_permille: 920
+  - id: stance_earth_4
+    polarity: neutral
+    name_zh: 大地架勢·肆
+    description_zh: 大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: earth
+    element_dealt_permille: 1250
+    physical_taken_permille: 900
+  - id: stance_earth_5
+    polarity: neutral
+    name_zh: 大地架勢·伍
+    description_zh: 大地傷害提高，受到的物理傷害降低；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: earth
+    element_dealt_permille: 1300
+    physical_taken_permille: 880
+  - id: stance_holy_1
+    polarity: neutral
+    name_zh: 聖輝架勢·壹
+    description_zh: 神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: holy
+    element_dealt_permille: 1100
+    status_duration_bonus: {regenerating: 1}
+  - id: stance_holy_2
+    polarity: neutral
+    name_zh: 聖輝架勢·貳
+    description_zh: 神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: holy
+    element_dealt_permille: 1150
+    status_duration_bonus: {regenerating: 1}
+  - id: stance_holy_3
+    polarity: neutral
+    name_zh: 聖輝架勢·參
+    description_zh: 神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: holy
+    element_dealt_permille: 1200
+    status_duration_bonus: {regenerating: 1}
+  - id: stance_holy_4
+    polarity: neutral
+    name_zh: 聖輝架勢·肆
+    description_zh: 神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: holy
+    element_dealt_permille: 1250
+    status_duration_bonus: {regenerating: 1}
+  - id: stance_holy_5
+    polarity: neutral
+    name_zh: 聖輝架勢·伍
+    description_zh: 神聖傷害提高，你施加的再生多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: holy
+    element_dealt_permille: 1300
+    status_duration_bonus: {regenerating: 1}
+  - id: stance_shadow_1
+    polarity: neutral
+    name_zh: 暗影架勢·壹
+    description_zh: 暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 15
+    min_rarity: rare
+    stance: true
+    element_dealt: shadow
+    element_dealt_permille: 1100
+    status_duration_bonus: {marked: 1}
+  - id: stance_shadow_2
+    polarity: neutral
+    name_zh: 暗影架勢·貳
+    description_zh: 暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 17
+    min_rarity: rare
+    stance: true
+    element_dealt: shadow
+    element_dealt_permille: 1150
+    status_duration_bonus: {marked: 1}
+  - id: stance_shadow_3
+    polarity: neutral
+    name_zh: 暗影架勢·參
+    description_zh: 暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 19
+    min_rarity: rare
+    stance: true
+    element_dealt: shadow
+    element_dealt_permille: 1200
+    status_duration_bonus: {marked: 1}
+  - id: stance_shadow_4
+    polarity: neutral
+    name_zh: 暗影架勢·肆
+    description_zh: 暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 22
+    min_rarity: rare
+    stance: true
+    element_dealt: shadow
+    element_dealt_permille: 1250
+    status_duration_bonus: {marked: 1}
+  - id: stance_shadow_5
+    polarity: neutral
+    name_zh: 暗影架勢·伍
+    description_zh: 暗影傷害提高，你施加的標記多 1 回合；持續到取消，每回合付維持費（級數越高越強）。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 28
+    min_rarity: rare
+    stance: true
+    element_dealt: shadow
+    element_dealt_permille: 1300
+    status_duration_bonus: {marked: 1}
+  # 3W-2b：防守姿態的第四級（3 階的大變化 +120‰ 後，鐵壁 18 點落到預算窗下限以下；轉型的防守向姿態用）
+  - id: stance_bastion
+    polarity: neutral
+    name_zh: 堡壘姿態
+    description_zh: 受到的骰值傷害大幅降低，但回合開始時的移動點數減少；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 21
+    min_rarity: rare
+    stance: true
+    damage_taken_permille: 550
+    move_permille: 500
+  # --- 3W-2b｜護盾類大變化（06 6.34.5）：帶附帶效果的護盾是另一個吸收傷害的狀態（shield 效果的 status 參數指定）。
+  # budget_points 是附帶效果的價值（加在護盾效果的點數上）；數值為初值，未經模擬。---
+  - id: shielded_thorns
+    polarity: buff
+    min_rarity: rare
+    name_zh: 反傷護盾
+    description_zh: 帶有吸收量；吸收相鄰的攻擊時，對攻擊者反彈物理傷害；吸收量歸零時消失。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_reflect: 2
+    budget_points: 2
+  - id: shielded_mending
+    polarity: buff
+    min_rarity: rare
+    name_zh: 回春護盾
+    description_zh: 帶有吸收量；護盾結束（被打破或到期）時回復少量生命。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_end_heal: 3
+    budget_points: 2
+  - id: shielded_wet
+    polarity: buff
+    min_rarity: rare
+    name_zh: 水幕護盾
+    description_zh: 帶有吸收量；護盾被打破時，在自己腳下造出一灘水。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_break_surface: water
+    budget_points: 1
+  - id: shielded_marking
+    polarity: buff
+    min_rarity: rare
+    name_zh: 烙印護盾
+    description_zh: 帶有吸收量；護盾被打破時，對打破它的攻擊者施加標記。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+    shield_break_status: marked
+    budget_points: 2

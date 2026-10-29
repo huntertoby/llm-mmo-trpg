@@ -259,6 +259,8 @@ class ShieldEffect(EffectBase):
     """技能等級的效果倍率（‰；Phase 3-26a）；1000 為不變，護盾量 ＝ 上式 × 倍率，無條件捨去。"""
     duration: int | None = None
     """護盾持續回合（Phase 3-50b）；``None`` ＝ ``shielded`` 狀態的預設回合。"""
+    status_id: str | None = None
+    """護盾狀態（Phase 3W-2b）：``None`` ＝ ``shielded``；帶附帶效果的護盾是另一個狀態。"""
 
     def sort_target(self) -> str:
         return self.target_id

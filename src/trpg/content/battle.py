@@ -696,6 +696,10 @@ class StatusTickHeal(ContentModel):
     dice: Dice
 
 
+_NEUTRAL_PERMILLE = 1000
+_MAX_DURATION_BONUS = 2
+
+
 class StatusDef(ContentModel):
     """一種狀態。
 
@@ -818,6 +822,22 @@ class StatusDef(ContentModel):
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)
     damage_taken_permille: int = Field(default=1000, ge=0, le=10000)
     physical_taken_permille: int = Field(default=1000, ge=0, le=10000)
+    element_dealt: Element | None = None
+    """元素傷害加成（Phase 3W-2b，元素姿態）：帶有者造成這個元素的攻擊傷害再 ×
+    ``element_dealt_permille``。"""
+    element_dealt_permille: int = Field(default=1000, ge=1000, le=3000)
+    shield_reflect: int = Field(default=0, ge=0, le=5)
+    """護盾附反傷（Phase 3W-2b，只有 ``absorbs_damage`` 的狀態）：護盾吸收一次相鄰（近戰）攻擊
+    時，對攻擊者反彈這麼多點物理傷害。"""
+    shield_end_heal: int = Field(default=0, ge=0, le=10)
+    """護盾結束時（被打破或到期）回復持有者這麼多點生命。"""
+    shield_break_surface: Surface | None = None
+    """護盾被打破時在持有者自己的格子造出這種表面（例：水＝潮濕）。"""
+    shield_break_status: str | None = Field(default=None, pattern=ID_PATTERN)
+    """護盾被打破時對打破它的攻擊者施加這個狀態（例：標記）。"""
+    status_duration_bonus: dict[str, int] = Field(default_factory=dict)
+    """帶有者施加的狀態多持續幾回合（Phase 3W-2b，元素姿態的小特色：``{burning: 1}`` ＝ 你造成的
+    燃燒多 1 回合）。只加在有倒數回合的狀態上。"""
     move_delta: int = Field(default=0, ge=-3, le=0)
     healing_received_permille: int = Field(default=1000, ge=0, le=10000)
     save_attr: Attribute | None = None
@@ -835,6 +855,17 @@ class StatusDef(ContentModel):
             raise ValueError(f"狀態 {self.id}：polarity: debuff 不可 beneficial: true")
         if self.stance and (self.expires != "never" or self.duration is not None):
             raise ValueError(f"狀態 {self.id}：姿態（stance）必須 expires: never 且不設 duration")
+        self._check_elemental_stance()
+        riders = (
+            self.shield_reflect
+            or self.shield_end_heal
+            or self.shield_break_surface
+            or self.shield_break_status
+        )
+        if riders and not self.absorbs_damage:
+            raise ValueError(
+                f"狀態 {self.id}：護盾附帶效果（shield_*）只能用在 absorbs_damage 的狀態"
+            )
         if self.attack_element is Element.PHYSICAL:
             raise ValueError(f"狀態 {self.id}：attack_element 不能是 physical")
         if self.control_group is not None and self.save_attr is None:
@@ -842,6 +873,23 @@ class StatusDef(ContentModel):
         if self.expires == "turn_end" and self.duration is None:
             raise ValueError(f"狀態 {self.id}：expires 為 turn_end 時必須設定 duration")
         return self
+
+    @property
+    def has_shield_riders(self) -> bool:
+        """護盾狀態帶有反傷、結束回復、破盾造表面或破盾施加狀態（3W-2b）。"""
+        return bool(
+            self.shield_reflect
+            or self.shield_end_heal
+            or self.shield_break_surface
+            or self.shield_break_status
+        )
+
+    def _check_elemental_stance(self) -> None:
+        """元素姿態（3W-2b）的欄位：元素與倍率成對；狀態持續加成每項 1～2 回合。"""
+        if (self.element_dealt is None) != (self.element_dealt_permille == _NEUTRAL_PERMILLE):
+            raise ValueError(f"狀態 {self.id}：element_dealt 與 element_dealt_permille 要一起設定")
+        if any(not 1 <= n <= _MAX_DURATION_BONUS for n in self.status_duration_bonus.values()):
+            raise ValueError(f"狀態 {self.id}：status_duration_bonus 每項必須是 1 或 2")
 
 
 class StatusTable(ContentModel):

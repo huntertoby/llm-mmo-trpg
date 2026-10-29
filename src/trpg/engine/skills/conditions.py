@@ -161,9 +161,18 @@ _UNIT_CONDITIONS = frozenset(
 def condition_met(
     state: BattleState, caster: UnitState, condition: ConditionSpec | None, subject: Subject
 ) -> bool:
-    """``condition`` 對 ``subject`` 是否成立（``None`` 永遠成立）。"""
+    """``condition`` 對 ``subject`` 是否成立（``None`` 永遠成立；有 ``any_of`` 時任何一個分支成立
+    就成立，3W-2b）。"""
     if condition is None:
         return True
+    return any(
+        _single_condition_met(state, caster, part, subject) for part in condition.alternatives()
+    )
+
+
+def _single_condition_met(
+    state: BattleState, caster: UnitState, condition: ConditionSpec, subject: Subject
+) -> bool:
     kind = condition.type
     if kind in CASTER_CONDITIONS:
         return _caster_condition_met(state, caster, condition)
@@ -195,7 +204,7 @@ def skill_condition_met(
     condition = skill.condition
     if condition is None:
         return True
-    if condition.type in CASTER_CONDITIONS:
+    if condition.type in CASTER_CONDITIONS and condition.any_of is None:
         return condition_met(state, caster, condition, Subject(caster, caster.xy))
     return any(
         condition_met(state, caster, condition, subject)

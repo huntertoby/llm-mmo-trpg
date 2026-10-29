@@ -143,6 +143,7 @@ def shield(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectB
             scaled_permille=scaled,
             multiplier_permille=multiplier,
             duration=spec.duration,
+            status_id=spec.status,
         )
         for unit in cast.targets(effect.affects, spec.condition)
     ]

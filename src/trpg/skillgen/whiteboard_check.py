@@ -96,13 +96,14 @@ def _core_types(skill: SkillDef) -> list[str]:
 
 
 def _rider_ok(types: list[str], keywords: tuple[str, ...], rules: WhiteboardRules) -> bool:
-    """兩個效果的例外：位移類加小補強，或例外關鍵字的「弱傷害＋製造該關鍵字」。"""
+    """兩個效果的例外：位移類加小補強，或例外關鍵字的「弱核心效果＋製造該關鍵字」（核心是傷害，
+    或 3W-2b 的小護盾：潮濕被動「被攻擊後得小護盾並在腳下造水」）。"""
     if len(types) != _PAIR:
         return False
     if types[0] in DISPLACE and types[1] not in DISPLACE:
         return True
     maker = bool(set(keywords) & set(rules.exception_keywords))
-    return maker and types[0] == "damage" and types[1] != "damage"
+    return maker and types[0] in ("damage", "shield") and types[1] != types[0]
 
 
 def _structure_problems(

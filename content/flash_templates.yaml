@@ -34,13 +34,13 @@ pricing:
   transform_guaranteed: true  # 第 3 次（或重閃第 3 次）有合法轉型時一定是選項之一；指定加深／橋接時另列第 4 個
 
 # 變化類別。kinds：可以出這類的技能種類；support_only：只給輔助技（治療、護盾、增益，沒有傷害）。
-# 姿態可以出「修正」「費用」兩類（玩法 PM 3W-2）；姿態目前沒有可調的數值（維持費是形態表的全域設定，
-# 技能上沒有欄位），所以這兩類對姿態還沒有可用的模板，等引擎有「每招維持費」欄位再補（見 3W-2 報告）。
+# 姿態可以出「修正」「費用」兩類（玩法 PM 3W-2）。3W-2b：姿態有每招維持費欄位（SkillDef.stance_upkeep），
+# 元素姿態（stance_ladders）的費用類＝維持費 ±1 搭配效果降低／提高，修正類＝同維持費換到較高級。
 categories:
   - {id: area, name_zh: 範圍, kinds: [active]}
   - {id: combo, name_zh: 連段, kinds: [active]}
   - {id: element, name_zh: 元素與關鍵字, kinds: [active, passive, reaction]}
-  - {id: cost, name_zh: 費用, kinds: [active, stance]}    # 蓄力或輕巧（主動技）；姿態改成維持費 ±1
+  - {id: cost, name_zh: 費用, kinds: [active, stance]}    # 蓄力或輕巧（主動技）；姿態＝維持費 ±1（元素姿態階梯）
   - {id: extend, name_zh: 延長與收割, kinds: [active, passive, reaction]}
   - {id: support, name_zh: 輔助, kinds: [active], support_only: true}
   - {id: trigger, name_zh: 觸發, kinds: [passive, reaction]}
@@ -99,6 +99,27 @@ minor:
     summary_zh: 換成連鎖跳躍（再跳 2 次，傷害依預算調整）
     shapes:
       - {type: chain, range: 4, jumps: 2, jump_range: 2}
+  # 地形變化（#58 的稀有度門檻 → 3W 改成最低角色階級；只有升降地形的技能套得上）：影響格數 4～6 格 2 階、7 格以上 3 階
+  - id: terrain_mid
+    category: area
+    op: terrain_area
+    min_tier: 2
+    min_cells: 4
+    max_cells: 6
+    prefix_zh: 隆起
+    summary_zh: 地形變化：升降地形的影響範圍擴大到 4～6 格（十字），必要時附帶少量落石傷害（強度由預算補）
+    shapes:
+      - {type: cross, range: 4}
+  - id: terrain_wide
+    category: area
+    op: terrain_area
+    min_tier: 3
+    min_cells: 7
+    prefix_zh: 崩山
+    summary_zh: 地形變化：升降地形的影響範圍擴大到 7 格以上（3×3 或更大），必要時附帶少量落石傷害（強度由預算補）
+    shapes:
+      - {type: square3, range: 4}
+      - {type: allies_in_radius, radius: 2}
   # ---- 連段 ----
   - id: multi_hit
     category: combo
@@ -142,6 +163,13 @@ minor:
     generic: true
     prefix_zh: 恆久
     summary_zh: 延長：這招的狀態、表面與區域多持續 1 回合（效果依預算調整）
+  - id: summon_toughen
+    category: extend
+    op: summon_toughen
+    kinds: [active]
+    generic: true
+    prefix_zh: 強壯
+    summary_zh: 強壯：召喚物的最大生命再多一截（召喚技能的小變化，強度固定所以靠這個補）
   - id: kill_refund
     category: extend
     op: kill_refund
@@ -161,6 +189,18 @@ minor:
     kinds: [active]
     prefix_zh: 輕巧
     summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低
+  - id: stance_cost_light
+    category: cost
+    op: stance_light
+    kinds: [stance]
+    prefix_zh: 輕巧
+    summary_zh: 輕巧：姿態維持費 −1，效果降低一級
+  - id: stance_cost_heavy
+    category: cost
+    op: stance_heavy
+    kinds: [stance]
+    prefix_zh: 蓄力
+    summary_zh: 蓄力：姿態維持費 +1，效果提高
   # ---- 輔助（治療、護盾、增益） ----
   - id: support_potency
     category: support
@@ -225,19 +265,26 @@ minor:
     op: mod_range
     kinds: [modifier]
     prefix_zh: 廣域
-    summary_zh: 作用範圍 +1（光環類：射程或範圍 +1，幅度依預算調整）
+    summary_zh: 作用範圍 +1（多一條光環半徑 +1 的規則，或射程 +1，幅度依預算調整）
   - id: mod_keyword
     category: modifier
     op: mod_keyword
     kinds: [modifier]
     prefix_zh: 雙引
-    summary_zh: 加第二個關鍵字：另一種狀態或表面也套用同樣的修正（幅度依預算調整）
+    summary_zh: 加第二個關鍵字：條件變成「原條件，或另一個關鍵字的條件」（幅度依預算調整）
+  - id: stance_potency
+    category: modifier
+    op: stance_potency
+    kinds: [stance]
+    generic: true
+    prefix_zh: 強效
+    summary_zh: 姿態效果 +（元素傷害加成與小特色提高一級，維持費不變）
   - id: mod_relax
     category: modifier
     op: mod_relax
     kinds: [modifier]
     prefix_zh: 寬限
-    summary_zh: 條件放寬一級（幅度依預算調整）
+    summary_zh: 條件放寬一級：血量門檻放寬，或多一個「或」分支（幅度依預算調整）
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
@@ -261,6 +308,11 @@ extra_major:
   - {id: support_wide, category: deepen, op: support_wide, only: support, prefix_zh: 廣佈, summary_zh: 加深：影響範圍擴大 1 格，多照顧一個人（效果依預算調整）}
   - {id: support_ease, category: deepen, op: support_ease, only: support, prefix_zh: 輕盈, summary_zh: 加深：冷卻縮短 1 回合，能更常使用（效果依預算調整）}
   - {id: support_imbue, category: bridge, op: support_imbue, only: support, prefix_zh: 附帶, summary_zh: "橋接{keyword}：施放時在目標腳下留下{keyword}的場地"}
+  - {id: shield_potency, category: deepen, op: shield_potency, only: shield, prefix_zh: 厚實, summary_zh: 加深：護盾量提高（依預算）}
+  - {id: shield_thorns, category: deepen, op: shield_status, only: shield, status: shielded_thorns, prefix_zh: 荊棘, summary_zh: 加深：護盾附反傷（吸收近戰攻擊時，對攻擊者反彈物理傷害）}
+  - {id: shield_mending, category: deepen, op: shield_status, only: shield, status: shielded_mending, prefix_zh: 回春, summary_zh: 加深：護盾結束時（打破或到期）回復少量生命}
+  - {id: shield_wet, category: bridge, op: shield_status, only: shield, status: shielded_wet, keyword: wet, prefix_zh: 水幕, summary_zh: 橋接潮濕：護盾被打破時，在自己腳下造出一灘水}
+  - {id: shield_marking, category: bridge, op: shield_status, only: shield, status: shielded_marking, keyword: marked, prefix_zh: 烙印, summary_zh: 橋接標記：護盾被打破時，對打破它的攻擊者施加標記}
   - {id: summon_deepen, category: deepen, op: summon_deepen, only: summon, prefix_zh: 強化, summary_zh: 加深：召喚物更強壯，並多一個小特性}
   - {id: summon_count, category: deepen, op: summon_count, only: summon, prefix_zh: 雙生, summary_zh: 加深：一次召喚 2 隻較弱的召喚物}
   - {id: summon_bridge, category: bridge, op: summon_bridge, only: summon, prefix_zh: 灌注, summary_zh: "橋接{keyword}：召喚物多帶一個{keyword}灌注"}
@@ -312,11 +364,31 @@ transforms:
     to: stance
     min_tier: 2
     prefix_zh: 架式
-    summary_zh: 轉成姿態：進入一個持續到取消的姿態（原招有傷害給攻擊向、沒有傷害給防守向）
-    stances: {offense: stance_fury, defense: stance_bulwark}
+    summary_zh: 轉成姿態：進入一個持續到取消的姿態（原招有傷害給同元素的元素姿態、沒有傷害給防守向）
+    stances:
+      offense: [stance_fury]
+      defense: [stance_bulwark, stance_guard, stance_ironwall, stance_bastion]
   - id: to_modifier
     to: modifier
     min_tier: 3
     prefix_zh: 化氣
     summary_zh: 轉成修正型被動：你的同元素技能命中時，帶上這招的效果（沒有可帶的效果時改為傷害提高）
     damage_permille_steps: [400, 300, 200, 150, 100, 50]
+
+# 元素姿態的階梯（3W-2b、06 6.34.5）：元素 → 由弱到強 5 級的姿態狀態（statuses.yaml `stance_<元素>_<級>`）。
+# 轉型（to_stance）優先轉成同元素的姿態（沒有元素＝物理，戰意架勢）；姿態的「費用」「修正」類小變化在同一階梯上換級。
+# 級別的預算點數 15／17／19／22／28 搭配維持費折抵（skill_budget.yaml stance_upkeep_per_point）對上 2、3 階的預算窗。
+stance_ladders:
+  physical: [stance_physical_1, stance_physical_2, stance_physical_3, stance_physical_4, stance_physical_5]
+  fire: [stance_fire_1, stance_fire_2, stance_fire_3, stance_fire_4, stance_fire_5]
+  ice: [stance_ice_1, stance_ice_2, stance_ice_3, stance_ice_4, stance_ice_5]
+  lightning: [stance_lightning_1, stance_lightning_2, stance_lightning_3, stance_lightning_4, stance_lightning_5]
+  poison: [stance_poison_1, stance_poison_2, stance_poison_3, stance_poison_4, stance_poison_5]
+  wind: [stance_wind_1, stance_wind_2, stance_wind_3, stance_wind_4, stance_wind_5]
+  earth: [stance_earth_1, stance_earth_2, stance_earth_3, stance_earth_4, stance_earth_5]
+  holy: [stance_holy_1, stance_holy_2, stance_holy_3, stance_holy_4, stance_holy_5]
+  shadow: [stance_shadow_1, stance_shadow_2, stance_shadow_3, stance_shadow_4, stance_shadow_5]
+  # 白板姿態（3W-4b）的階梯：轉型不看這幾條（沒有同名元素），只給「費用」「修正」類小變化換級
+  guard: [stance_guard, stance_ironwall, stance_bastion]
+  flame: [stance_flame, stance_blaze]
+  frost: [stance_frost, stance_glacier]

@@ -35,10 +35,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, TriggerSpec
 from trpg.engine import modifiers, stack_gain
 from trpg.engine.events import (
     AttackRolled,
@@ -60,7 +60,7 @@ from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skills.casting import use_modifier_effects, use_triggered_skill
 from trpg.engine.skills.conditions import Subject, condition_met, skill_condition_met
 from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
-from trpg.engine.state import UnitState
+from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import UnitId
 
 if TYPE_CHECKING:
@@ -578,6 +578,37 @@ def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
     return resource_problem(ctx.state, owner, skill) is None
 
 
+def nearest_enemy(state: BattleState, owner: UnitState, max_distance: int) -> UnitState | None:
+    """``max_distance`` 格（曼哈頓）內離 ``owner`` 最近的存活敵人；同距離取單位 ID 小的。"""
+    best: tuple[int, str] | None = None
+    found: UnitState | None = None
+    for unit in state.units_sorted():
+        if not unit.alive or unit.team is owner.team:
+            continue
+        distance = manhattan(owner.xy, unit.xy)
+        if distance <= max_distance and (best is None or (distance, unit.id) < best):
+            best, found = (distance, unit.id), unit
+    return found
+
+
+def _trigger_other(
+    state: BattleState, fired: Fired, owner: UnitState, trigger: TriggerSpec
+) -> UnitState | Literal[False] | None:
+    """被動效果作用的另一方：``self`` 為 ``None``；``other`` 是該時機的另一方；``nearest_enemy``
+    （3W-2b）是 ``max_distance`` 格內最近的敵人。找不到或太遠時回傳 ``False``（不觸發）。"""
+    if trigger.target == "self":
+        return None
+    if trigger.target == "nearest_enemy":
+        assert trigger.max_distance is not None
+        return nearest_enemy(state, owner, trigger.max_distance) or False
+    other = None if fired.other_id is None else state.units.get(fired.other_id)
+    if other is None or (not other.alive and fired.event != "on_kill"):
+        return False
+    if trigger.max_distance is not None and manhattan(owner.xy, other.xy) > trigger.max_distance:
+        return False
+    return other
+
+
 def _resolve_one(ctx: Ctx, fired: Fired) -> None:
     state = ctx.state
     if state.ended:
@@ -588,16 +619,10 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
     assert trigger is not None
     if owner is None or not _usable(ctx, owner, skill):
         return
-    other: UnitState | None = None
-    if trigger.target == "other":
-        other = None if fired.other_id is None else state.units.get(fired.other_id)
-        if other is None or (not other.alive and fired.event != "on_kill"):
-            return
-        if (
-            trigger.max_distance is not None
-            and manhattan(owner.xy, other.xy) > trigger.max_distance
-        ):
-            return
+    found = _trigger_other(state, fired, owner, trigger)
+    if found is False:
+        return
+    other = found
     subject = owner if other is None else other
     if not skill_condition_met(state, owner, skill, [subject.xy]):
         return

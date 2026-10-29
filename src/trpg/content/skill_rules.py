@@ -108,6 +108,8 @@ class CostAllowance(ContentModel):
     leave_form_permille: int = Field(default=200, ge=0)
     """解除形態（``leave_form`` 原語，Phase 3J-4c，06 6.30 解形爆發）的固定折抵（‰；初值，未經
     模擬）：施放時先解除自己的形態（照常冷卻），算代價。"""
+    stance_upkeep_per_point: int = Field(default=200, ge=0)
+    """姿態維持費（``SkillDef.stance_upkeep``，Phase 3W-2b）每點的折抵（‰；初值，未經模擬）。"""
     source_per_point: int = Field(default=250, ge=0)
     """源力代價（``cost.source``，Phase 3C-4a）每點的折抵（‰；初值，未經模擬）。"""
     source_cap: int = Field(default=500, ge=0)

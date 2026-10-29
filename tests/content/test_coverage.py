@@ -33,9 +33,31 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "stance_blaze": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_frost": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_glacier": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
+        "stance_bastion": "只由閃現的防守姿態轉型施加（3W-2b），沒有手寫技能",
+        "shielded_thorns": "只由閃現的護盾類大變化施加（3W-2b，shield 的 status），沒有手寫技能",
+        "shielded_mending": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
+        "shielded_wet": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
+        "shielded_marking": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
     },
     "stack": {},
 }
+_UNCOVERED["status"].update(
+    {
+        f"stance_{element}_{level}": "只由閃現的姿態轉型與費用類小變化施加（3W-2b，元素姿態階梯）"
+        for element in (
+            "physical",
+            "fire",
+            "ice",
+            "lightning",
+            "poison",
+            "wind",
+            "earth",
+            "holy",
+            "shadow",
+        )
+        for level in range(1, 6)
+    }
+)
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。
 # prone 由 knock_prone 原語產生、shielded 由 shield 原語產生、undying 由 cheat_death 原語產生

@@ -92,6 +92,7 @@ __all__ = [
     "RuneRemovalReason",
     "RuneRemoved",
     "ShieldAbsorbed",
+    "ShieldEnded",
     "ShieldGained",
     "ShotPierced",
     "SkillActivated",
@@ -107,6 +108,7 @@ __all__ = [
     "SourceChanged",
     "SourceReason",
     "StacksChanged",
+    "StanceUpkeepPaid",
     "StatusApplied",
     "StatusConverted",
     "StatusRemoved",
@@ -554,6 +556,22 @@ class ShieldAbsorbed(EventBase):
     unit_id: UnitId
     absorbed: int
     remaining: int
+    status_id: str = "shielded"
+    """吸收傷害的護盾狀態（3W-2b：有附帶效果的護盾是另一種狀態）。"""
+    source_id: UnitId | None = None
+    melee: bool = False
+    """這次傷害是相鄰的攻擊（近戰；反傷的條件）。"""
+
+
+class ShieldEnded(EventBase):
+    """帶附帶效果的護盾結束了（Phase 3W-2b）：被打破（``broken``，``breaker_id`` 是造成傷害的單位）
+    或到期。結束回復、破盾造表面與破盾施加狀態由這個事件觸發。"""
+
+    type: Literal["shield_ended"] = "shield_ended"
+    unit_id: UnitId
+    status_id: str
+    broken: bool
+    breaker_id: UnitId | None = None
 
 
 class StatusApplied(EventBase):
@@ -631,6 +649,7 @@ class StatusRemoved(EventBase):
         "revealed",
         "fired",
         "ambushed",
+        "upkeep",
     ]
     """``ambushed``：隱蔽中發動攻擊（潛行偷襲）後脫離隱蔽（Phase 3D-8d）；
     ``fired``：監視（``overwatch``）射擊後結束（Phase 3D-8c）；
@@ -1780,6 +1799,20 @@ class FormUpkeepPaid(EventBase):
     remaining: int
 
 
+class StanceUpkeepPaid(EventBase):
+    """回合開始付一般姿態的維持費（Phase 3W-2b，``SkillDef.stance_upkeep``）：``resource`` 是
+    ``stamina``（武器技）或 ``mana``（法術技），``remaining`` 是付完後剩下的量。付不起時不發出，
+    改發 ``status_removed``（``reason: upkeep``）。"""
+
+    type: Literal["stance_upkeep_paid"] = "stance_upkeep_paid"
+    unit_id: UnitId
+    skill_id: str
+    status_id: str
+    resource: Literal["stamina", "mana"]
+    amount: int
+    remaining: int
+
+
 type RuleChangeKindName = Literal[
     "element_heals_allies", "push_any_object", "pass_through_apply", "on_downed_spawn"
 ]
@@ -1832,6 +1865,7 @@ type Event = Annotated[
     | Healed
     | ShieldGained
     | ShieldAbsorbed
+    | ShieldEnded
     | StatusApplied
     | StatusRemoved
     | StatusSaveRolled
@@ -1886,6 +1920,7 @@ type Event = Annotated[
     | FormEntered
     | FormLeft
     | FormUpkeepPaid
+    | StanceUpkeepPaid
     | SkillTriggered
     | TriggerLimitReached
     | StacksChanged

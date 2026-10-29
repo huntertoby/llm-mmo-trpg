@@ -12,6 +12,7 @@
 ``area``           範圍 +1（形狀的大小參數）
 ``range``          距離 +1
 ``reshape``        換形狀（直線、錐形、十字、3×3；沿用進化的 ``reshape`` 候選）
+``terrain_area``   地形變化：升降地形的技能換成 4～6 格（2 階）或 7 格以上（3 階）的形狀
 ``multi_hit``      多打一下：同一目標多一段命中（複製第一個傷害效果）
 ``followup``       接續段：命中後接一小段傷害（6.23 複合技，``when: on_hit``）
 ``element``        第二元素：多一個別種元素的傷害效果
@@ -19,15 +20,19 @@
 ``keyword_exploit``  第二個關鍵字（利用）：沿用橋接的 ``graft_uses``
 ``extend``         延長狀態、表面、區域 1 回合（沿用恆久的草稿）
 ``kill_refund``    擊殺返還 1 AP
+``summon_toughen`` 強壯（召喚技能）：召喚物最大 HP 再多一截
 ``charge``         蓄力：冷卻 +2（最多 5）、威力提高
 ``light``          輕巧：AP −1（最少 1）、冷卻 0～1、威力降低
 ``potency``        輔助、觸發類的「效果 +」：結構不變，預算上限提高後重調得更強
 ``trigger_range``  觸發範圍 +1（被動、反應）
 ``trigger_cap``    每回合觸發次數上限 +1（被動；不超過 6.6）
 ``mod_potency``    修正幅度 +（修正型被動）
-``mod_range``      作用範圍 +1（修正型被動：射程 +1，或多一條範圍 +1 的規則）
-``mod_keyword``    加第二個關鍵字（修正型被動：多一條不同關鍵字條件的同樣修正）
-``mod_relax``      條件放寬一級（修正型被動）
+``mod_range``      作用範圍 +1（修正型被動：多一條光環半徑 +1 的規則，或射程 +1）
+``mod_keyword``    加第二個關鍵字（修正型被動：條件改成「原條件，或另一個關鍵字的條件」，any_of）
+``mod_relax``      條件放寬一級（修正型被動：血量門檻放寬，或條件加一個「或」分支）
+``stance_light``   輕巧（姿態）：維持費 −1、元素姿態換到較低級（效果降低）
+``stance_heavy``   蓄力（姿態）：維持費 +1、元素姿態換到較高級（效果提高）
+``stance_potency`` 修正（姿態）：維持費不變、元素姿態換到較高級（效果提高）
 =================  ============================================================
 
 輔助類（6.34.4）沒有獨立的改法：效果 + 用 ``potency``、範圍 +1 用 ``area``、附帶關鍵字用
@@ -36,7 +41,6 @@
 
 from __future__ import annotations
 
-import copy
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -57,6 +61,7 @@ __all__ = [
     "Draft",
     "FlashOp",
     "base_draft",
+    "cell_count",
     "tuning_extras",
 ]
 
@@ -76,7 +81,7 @@ RELAX_PERMILLE = 150
 """條件放寬一級：血量門檻（‰）放寬多少。"""
 MAX_RELAX_PERMILLE = 900
 
-STRICT_OPS = frozenset({"potency", "mod_potency"})
+STRICT_OPS = frozenset({"potency", "mod_potency", "stance_potency"})
 """結構不變、只靠重調變強的改法：強度下限要嚴格大於變化前（否則可能「閃了沒變化」）。"""
 
 
@@ -181,6 +186,53 @@ def _op_reshape(
         base["shape"] = shape.model_dump(mode="json", exclude_none=True)
         drafts.append((base, effects))
     return drafts
+
+
+_TERRAIN_PRIMITIVES = frozenset({"raise_terrain", "lower_terrain"})
+
+
+def _op_terrain_area(
+    skill: SkillDef, template: FlashTemplate, variation: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """地形變化（3W-2b，#58）：升降地形的技能換成影響格數落在 ``min_cells``～``max_cells`` 的形狀
+    （2 階 4～6 格、3 階 7 格以上）；格數要比現在多，且技能原本不能已經在這個範圍內。形狀的稀有度
+    與地形格數的稀有度門檻（rare／epic）由重調時依結構自動補（稀有度只是複雜度標記）。"""
+    if not _reshapable(skill) or not any(e.type in _TERRAIN_PRIMITIVES for e in skill.effects):
+        return []
+    current = cell_count(skill.shape, library)
+    shapes = (variation.shape,) if variation.shape is not None else template.shapes
+    drafts: list[Draft] = []
+    for shape in shapes:
+        cells = cell_count(shape, library)
+        if (
+            cells is None
+            or (current is not None and cells <= current)
+            or cells < (template.min_cells or 1)
+            or (template.max_cells is not None and cells > template.max_cells)
+        ):
+            continue
+        # 升降地形的點數是固定的，階級高、預算變大後單靠地形追不上預算下限：先試純地形，再試「地形
+        # ＋落石」（多一個大地傷害效果，強度由預算器調）
+        for rocks in (False, True):
+            base, effects = base_draft(skill)
+            base["shape"] = shape.model_dump(mode="json", exclude_none=True)
+            if rocks:
+                if len(effects) >= 4:  # noqa: PLR2004 - MAX_EFFECTS
+                    continue
+                effects.append(_new_damage(skill, {}, "earth"))
+            drafts.append((base, effects))
+    return drafts
+
+
+def cell_count(shape: Any, library: ContentLibrary) -> int | None:
+    """形狀影響的格數（``skill_shapes.yaml`` 的 ``cell_count``）；沒有資料時 ``None``。"""
+    definition = library.ruleset.shapes.by_id().get(shape.type)
+    if definition is None or definition.cell_count is None:
+        return None
+    try:
+        return definition.cell_count.count_for(shape.param_values())
+    except ValueError:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -316,6 +368,30 @@ def _op_extend(
     if evolution is None or skill.kind not in ("active", "passive", "reaction"):
         return []
     return template_drafts(evolution, skill, None, SkillUsage(), library)
+
+
+_SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
+"""召喚物最大 HP 加成（‰）的階梯：強度固定的召喚技能沒有旋鈕，依序試，第一個過預算窗與下限
+的是結果。"""
+
+
+def _op_summon_toughen(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """強壯（召喚技能，3W-2b）：召喚物的最大 HP 再多一截（``max_hp_permille``，往上一階）。召喚
+    技能的點數是固定的，沒有骰子旋鈕可調，所以補這個讓召喚白板也有小變化可選。"""
+    index = next((i for i, e in enumerate(skill.effects) if e.type == "summon"), None)
+    if skill.kind != "active" or index is None or skill.effects[index].count not in (None, 1):
+        return []
+    current = skill.effects[index].max_hp_permille or 0
+    drafts: list[Draft] = []
+    for step in _SUMMON_HP_STEPS:
+        if step <= current:
+            continue
+        base, effects = base_draft(skill)
+        effects[index]["max_hp_permille"] = step
+        drafts.append((base, effects))
+    return drafts
 
 
 def _op_kill_refund(
@@ -456,7 +532,8 @@ def _op_mod_potency(
 def _op_mod_range(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """作用範圍 +1：射程 +1 的規則升成 +2；否則多一條「範圍 +1」或「射程 +1」的規則。"""
+    """作用範圍 +1（3W-2b：照光環半徑）：多一條「範圍 +1」（``area_delta``，範圍型形狀與光環的半徑
+    +1）的規則；射程 +1 的規則升成 +2；都不行時多一條「射程 +1」。"""
     if skill.kind != "modifier":
         return []
     drafts: list[Draft] = []
@@ -467,7 +544,10 @@ def _op_mod_range(
             drafts.append((base, effects))
     if len(skill.modifiers) < 2:  # noqa: PLR2004 - 修正規則最多 2 條
         applies = skill.modifiers[0].applies_to.model_dump(mode="json")
-        for change in ({"range_delta": 1}, {"area_delta": 1}):
+        has_area = any(m.change.area_delta is not None for m in skill.modifiers)
+        for change in ({"area_delta": 1}, {"range_delta": 1}):
+            if has_area and "area_delta" in change:
+                continue
             base, effects = base_draft(skill)
             base["modifiers"].append({"applies_to": applies, "change": change})
             drafts.append((base, effects))
@@ -484,47 +564,128 @@ def _graft_condition(library: ContentLibrary, keyword: str) -> dict[str, Any] | 
 def _op_mod_keyword(
     skill: SkillDef, _t: FlashTemplate, variation: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """加第二個關鍵字：多一條同樣修正、條件換成另一個關鍵字的規則（例：燃燒中的敵人 → 另加潮濕
-    表面上的敵人）。兩條都成立時幅度相加。"""
+    """加第二個關鍵字：條件改成真正的「或」（``ConditionSpec.any_of``，3W-2b；例：燃燒中的敵人 →
+    燃燒或潮濕表面上的敵人），規則只有一條。"""
     keyword = variation.keyword
-    condition = None if keyword is None else _graft_condition(library, keyword)
-    if skill.kind != "modifier" or condition is None or len(skill.modifiers) >= 2:  # noqa: PLR2004
+    alternative = None if keyword is None else _graft_condition(library, keyword)
+    if skill.kind != "modifier" or alternative is None:
         return []
-    rule = skill.modifiers[0]
-    if (
-        rule.condition is None
-        or rule.condition.model_dump(mode="json", exclude_none=True) == condition
-    ):
-        return []
-    base, effects = base_draft(skill)
-    clone = copy.deepcopy(base["modifiers"][0])
-    clone["condition"] = condition
-    base["modifiers"].append(clone)
-    return [(base, effects)]
+    drafts: list[Draft] = []
+    for index, rule in enumerate(skill.modifiers):
+        condition = rule.condition
+        if (
+            condition is None
+            or condition.any_of is not None
+            or condition.model_dump(mode="json", exclude_none=True) == alternative
+        ):
+            continue
+        base, effects = base_draft(skill)
+        base["modifiers"][index]["condition"] = {
+            **condition.model_dump(mode="json", exclude_none=True),
+            "any_of": [alternative],
+        }
+        drafts.append((base, effects))
+    return drafts[:1]
+
+
+_RELAX_ALTERNATIVES = (
+    {"type": "target_hp_below", "permille": 500},
+    {"type": "self_hp_below", "permille": 500},
+)
+"""條件放寬時多加的「或」分支（依序試；只改自己的規則只能用 self_hp_below）。"""
 
 
 def _op_mod_relax(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """條件放寬一級：血量門檻放寬 150‰（最多 900‰）；其他條件放寬成沒有條件（預算照算，幅度由預算
-    器重調得小一點）。"""
+    """條件放寬一級（3W-2b）：血量門檻放寬 150‰（最多 900‰）；其他條件加一個「或」分支（目標血量低於
+    50%；選目標前就決定的規則改用自身血量低於 50%），例：居高臨下 → 居高臨下，或目標血量低於 50%。
+    預算照 ``any_of`` 的最寬鬆倍率算，幅度由預算器重調。"""
     if skill.kind != "modifier":
         return []
     drafts: list[Draft] = []
     for index, rule in enumerate(skill.modifiers):
         condition = rule.condition
-        if condition is None:
+        if condition is None or condition.any_of is not None:
             continue
-        base, effects = base_draft(skill)
         if condition.permille is not None:
             widened = min(condition.permille + RELAX_PERMILLE, MAX_RELAX_PERMILLE)
             if widened == condition.permille:
                 continue
+            base, effects = base_draft(skill)
             base["modifiers"][index]["condition"]["permille"] = widened
-        else:
-            base["modifiers"][index]["condition"] = None
+            drafts.append((base, effects))
+            continue
+        for alternative in _RELAX_ALTERNATIVES:
+            base, effects = base_draft(skill)
+            base["modifiers"][index]["condition"]["any_of"] = [dict(alternative)]
+            drafts.append((base, effects))
+        break
+    return drafts[:3]
+
+
+# ---------------------------------------------------------------------------
+# 姿態（元素姿態階梯上的換級；維持費在 SkillDef.stance_upkeep）
+# ---------------------------------------------------------------------------
+
+MAX_STANCE_UPKEEP = 2
+"""姿態維持費的上限（``SkillDef.stance_upkeep`` 的 schema 上限）。"""
+
+
+def _stance_rung(skill: SkillDef, library: ContentLibrary) -> tuple[tuple[str, ...], int] | None:
+    """姿態目前的元素姿態階梯與位置；不是元素姿態時 ``None``。"""
+    if skill.kind != "stance" or skill.form_id is not None or len(skill.effects) != 1:
+        return None
+    status = skill.effects[0].status
+    return None if status is None else library.flash.stance_rung(status)
+
+
+def _stance_drafts(
+    skill: SkillDef, levels: Sequence[str], upkeep: int, ladder: tuple[str, ...]
+) -> list[Draft]:
+    """每個候選級別一份草稿（維持費 ``upkeep``）；依序試，第一個通過預算窗與強度下限的是結果。"""
+    drafts: list[Draft] = []
+    for status in levels:
+        if status not in ladder:
+            continue
+        base, effects = base_draft(skill)
+        base["stance_upkeep"] = upkeep
+        effects[0]["status"] = status
         drafts.append((base, effects))
-    return drafts[:1]
+    return drafts
+
+
+def _op_stance_light(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """輕巧（姿態）：維持費 −1，換到較低的級別（效果降低）；沒有維持費可減就不出。"""
+    rung = _stance_rung(skill, library)
+    if rung is None or skill.stance_upkeep <= 0:
+        return []
+    ladder, index = rung
+    return _stance_drafts(skill, ladder[:index][::-1], skill.stance_upkeep - 1, ladder)
+
+
+def _op_stance_heavy(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """蓄力（姿態）：維持費 +1（最多 2），換到較高的級別（效果提高）。"""
+    rung = _stance_rung(skill, library)
+    if rung is None or skill.stance_upkeep >= MAX_STANCE_UPKEEP:
+        return []
+    ladder, index = rung
+    return _stance_drafts(skill, ladder[index + 1 :], skill.stance_upkeep + 1, ladder)
+
+
+def _op_stance_potency(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """修正（姿態）：維持費不變，換到較高的級別（效果提高，預算分數嚴格變大）。"""
+    rung = _stance_rung(skill, library)
+    if rung is None:
+        return []
+    ladder, index = rung
+    return _stance_drafts(skill, ladder[index + 1 :], skill.stance_upkeep, ladder)
 
 
 # ---------------------------------------------------------------------------
@@ -535,6 +696,7 @@ FLASH_OPS: dict[str, FlashOp] = {
     "area": _op_area,
     "range": _op_range,
     "reshape": _op_reshape,
+    "terrain_area": _op_terrain_area,
     "multi_hit": _op_multi_hit,
     "followup": _op_followup,
     "element": _op_element,
@@ -542,6 +704,7 @@ FLASH_OPS: dict[str, FlashOp] = {
     "keyword_exploit": _keyword_op("bridge_exploit", "uses"),
     "extend": _op_extend,
     "kill_refund": _op_kill_refund,
+    "summon_toughen": _op_summon_toughen,
     "charge": _op_charge,
     "light": _op_light,
     "potency": _op_potency,
@@ -552,6 +715,9 @@ FLASH_OPS: dict[str, FlashOp] = {
     "mod_range": _op_mod_range,
     "mod_keyword": _op_mod_keyword,
     "mod_relax": _op_mod_relax,
+    "stance_light": _op_stance_light,
+    "stance_heavy": _op_stance_heavy,
+    "stance_potency": _op_stance_potency,
 }
 """小變化的改法登錄表（``op`` → 草稿）。資料裡 ``op`` 沒有登錄的模板不會出現
 （:func:`trpg.skillgen.flash.unimplemented_ops` 列出）。"""
