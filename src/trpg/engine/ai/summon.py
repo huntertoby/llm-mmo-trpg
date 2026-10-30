@@ -17,7 +17,7 @@ from fractions import Fraction
 from trpg.content.battle import SummonMode
 from trpg.content.environment import AiProfile, SummonAiRules
 from trpg.content.skills import SACRIFICE_SUMMON, SUMMON, SkillDef
-from trpg.content.summons import summon_dpr
+from trpg.content.summons import SummonDef, summon_dpr
 from trpg.engine.actions import (
     Action,
     Attack,
@@ -148,6 +148,48 @@ def summon_estimate(
     return Fraction(_ESTIMATE_BASE - nearest) - tie
 
 
+def _ranged_allies(state: BattleState, team: object) -> int:
+    """站上高台有好處的友方：存活、非召喚物、遠程武器。"""
+    return sum(
+        1
+        for u in state.living_units()
+        if u.team is team and not u.is_summon and not u.weapon.is_melee
+    )
+
+
+def _trait_value(
+    state: BattleState, summon: SummonDef, rounds: int, team: object, profile: AiProfile
+) -> tuple[Fraction, Fraction]:
+    """召喚物特性（BAL-5 B5）的估值：（等值傷害點數〔乘 ``damage`` 權重〕, 護盾分數〔已乘權重〕）。
+    護盾、拉扯、纏繞、高台；係數在 ``summon:`` 的 ``*_round_*`` 欄位，0 ＝ 不估值。"""
+    rules = profile.summon
+    template = summon.template
+    points = Fraction(0)
+    shield = Fraction(0)
+    pulse = template.pulse
+    if pulse is not None:
+        if pulse.shield_dice is not None or pulse.shield_flat:
+            dice = pulse.shield_dice
+            avg = Fraction(pulse.shield_flat)
+            if dice is not None:
+                avg += Fraction(dice.count * (dice.sides + 1), 2)
+            shield = (
+                profile.weights.shield
+                * avg
+                * rounds
+                * Fraction(rules.shield_round_permille, _PERMILLE)
+            )
+        if pulse.pull_radius > 0:
+            points += Fraction(rules.pull_round_points * rounds)
+    snare = template.snare
+    if snare is not None:
+        value = profile.status_values.get(snare.status, profile.weights.status)
+        points += value * Fraction(rules.snare_likelihood_permille, _PERMILLE) * rounds
+    if template.platform is not None:
+        points += Fraction(rules.platform_points * _ranged_allies(state, team))  # 一次性，不乘輪數
+    return points, shield
+
+
 def _is_totem(state: BattleState, template_id: str) -> bool:
     try:
         return state.ruleset.summon_def(template_id).template.totem is not None
@@ -192,7 +234,8 @@ def _value(
             average = Fraction(blast.dice.count * (blast.dice.sides + 1), 2) + blast.flat
             extra += average * Fraction(rules.detonate_targets_permille, _PERMILLE)
             rounds = min(rounds, 1)
-        return profile.weights.damage * (dpr * rounds + extra) * hit
+        traits, shield = _trait_value(state, summon, rounds, team, profile)
+        return (profile.weights.damage * (dpr * rounds + extra + traits) + shield) * hit
     points = profile.ally_status_values.get(spec.status, rules.totem_ally_points)
     allies = _totem_allies(state, team, template_id, xy)
     return profile.weights.support * points * allies * min(rounds, 99) * hit

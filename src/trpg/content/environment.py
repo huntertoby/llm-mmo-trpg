@@ -852,6 +852,17 @@ class SummonAiRules(ContentModel):
     inert_round_points: int = Field(default=2, ge=0)
     infuse_value_permille: int = Field(default=0, ge=0, le=2000)
     infuse_threat_damage: int = Field(default=4, ge=0)
+    shield_round_permille: int = Field(default=0, ge=0, le=2000)
+    """（BAL-5 B5）護盾脈動（守護靈）：每輪護盾量平均 × ``shield`` 權重 × 這個千分比 × 持續輪數。"""
+    pull_round_points: int = Field(default=0, ge=0)
+    """（BAL-5 B5）拉扯脈動（吸引圖騰）：每輪的等值傷害點數（× ``damage`` 權重 × 持續輪數）。"""
+    snare_likelihood_permille: int = Field(default=0, ge=0, le=1000)
+    """（BAL-5 B5）纏繞（藤蔓）：每輪觸發的機率；價值 ＝ 狀態在 ``status_values`` 的價值 × 機率
+    × 持續輪數
+    （× ``damage`` 權重）。"""
+    platform_points: int = Field(default=0, ge=0)
+    """（BAL-5 B5）高台（高台圖騰）：每名遠程友方（非召喚物）的一次性等值傷害點數（不乘輪數；
+    模擬顯示乘輪數會讓 AI 反覆召喚圖騰、拖長戰鬥而不提高勝率）。"""
 
 
 class ZoneAiRules(ContentModel):

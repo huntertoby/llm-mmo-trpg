@@ -97,7 +97,7 @@ from trpg.engine.ai.charge import charge_score
 from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.gamble import cautious, on_miss_cost
-from trpg.engine.ai.infuse import infuse_setups, infuse_value, survival
+from trpg.engine.ai.infuse import ap_ratio, infuse_setups, infuse_value, survival
 from trpg.engine.ai.objective import hold_guard_bonus, objective_cost
 from trpg.engine.ai.orders import (
     FocusTarget,
@@ -2320,7 +2320,8 @@ class UtilityAI:
             if scored.score <= 0:
                 continue
             summon = state.units[setup.action.summon_id]
-            value = infuse_value(scored.score, survival(state, summon, rules), rules)
+            ratio = ap_ratio(state, setup.action.skill_id)
+            value = infuse_value(scored.score, survival(state, summon, rules), rules, ratio)
             if best is None or value > best[0]:
                 best = (value, setup.action)
         return best

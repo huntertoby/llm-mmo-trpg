@@ -140,7 +140,13 @@ rewrite:
 #   distance_cost_permille  召喚位置與最近敵人每差一格扣的分數（‰；在同一技能的位置之間排序）
 #   totem_ally_points       圖騰：範圍內每個友方 × 狀態價值（ally_status_values，沒列出的用這個值）×
 #                           持續輪數 × support 權重，同樣乘 hit_permille 折合
-summon: {hit_permille: 500, distance_cost_permille: 100, totem_ally_points: 3, boss_blocker_points: 60, boss_blocker_slack: 1, follow_radius: 3, guard_radius: 2, guard_threat_range: 1, auto_guard_hp_permille: 400, auto_focus_boss: true, infusion_points: 1, detonate_targets_permille: 1000, inert_round_points: 2, infuse_value_permille: 700, infuse_threat_damage: 4}   # boss_blocker_*：3-33b，Boss 優先清擋在它與我方非召喚物單位之間的召喚物（初值）；detonate_targets_permille／inert_round_points：3-33e2a，自爆與不行動（土牆）召喚物的估值（初值）
+summon: {hit_permille: 500, distance_cost_permille: 100, totem_ally_points: 3, boss_blocker_points: 60, boss_blocker_slack: 1, follow_radius: 3, guard_radius: 2, guard_threat_range: 1, auto_guard_hp_permille: 400, auto_focus_boss: true, infusion_points: 1, detonate_targets_permille: 1000, inert_round_points: 2, infuse_value_permille: 1000, infuse_threat_damage: 2, shield_round_permille: 1000, pull_round_points: 3, snare_likelihood_permille: 400, platform_points: 2}   # boss_blocker_*：3-33b，Boss 優先清擋在它與我方非召喚物單位之間的召喚物（初值）；detonate_targets_permille／inert_round_points：3-33e2a，自爆與不行動（土牆）召喚物的估值（初值）
+# summon 的 BAL-5 B5 欄位（AI／原型數值初值，待玩法 PM 確認）：
+#   灌注：infuse_value_permille 700 → 1000、infuse_threat_damage 4 → 2（3H 後灌注幾乎都輸給「自己直接放同一招」：同樣 1 AP、同樣法力，
+#         灌注卻再打 7 折又乘偏悲觀的存活率）；灌注分數另乘「省下的 AP」＝ 技能 AP ÷ 灌注 AP（至少 1；2 AP 的技能灌注只花 1 AP）。
+#   特性估值（原本為 0）：shield_round_permille 護盾脈動每輪護盾量平均 × shield 權重 × ‰；pull_round_points 拉扯脈動每輪等值傷害點數；
+#         snare_likelihood_permille 纏繞每輪觸發的機率（× 狀態價值）；platform_points 高台每名遠程友方（非召喚物）一次性的等值傷害點數
+#         （不乘輪數：乘輪數時 AI 反覆召喚圖騰、戰鬥拖長而勝率沒變；改放在施放者旁邊則圖騰不再替我方吸引火力，勝率掉到 50%，已撤回）。
 # zone（Phase 3D-5；初值未經模擬）：持續區域的評分。收益 ＝ 區域每次觸發的價值（傷害骰平均 × damage 權重、
 # 狀態價值、治療 × heal 權重……）× 區域格內與移動路徑上的對象數 × 持續輪數 × likelihood_permille（之後
 # 每輪真的有對象觸發的比例）；移動型路徑上的對象乘 path_permille。建立當下就在區域內的對象由預覽計算。
