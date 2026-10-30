@@ -13,6 +13,7 @@ LLM 寫的名稱、概念、施放敘事（與閃現 note_zh）只能描述技�
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -110,9 +111,20 @@ def _strip_ignored(text: str, group: EffectWordGroup) -> str:
     return text
 
 
+def strip_similes(text: str, words: EffectWords) -> str:
+    """去掉比喻片段（比喻引導詞起到下一個標點為止，標點保留）；規則是詞表資料。"""
+    if not words.simile_markers:
+        return text
+    markers = "|".join(re.escape(m) for m in sorted(words.simile_markers, key=lambda m: -len(m)))
+    end = re.escape(words.simile_end)
+    pattern = f"(?:{markers})[^{end}]*" if end else f"(?:{markers}).*"
+    return re.sub(pattern, "　", text)
+
+
 def mentioned_groups(text: str, words: EffectWords) -> list[tuple[EffectWordGroup, str]]:
-    """``text`` 提到的詞組與第一個被提到的詞（依詞表順序）。"""
+    """``text`` 提到的詞組與第一個被提到的詞（依詞表順序）；比喻片段不算。"""
     found: list[tuple[EffectWordGroup, str]] = []
+    text = strip_similes(text, words)
     for group in words.groups:
         cleaned = _strip_ignored(text, group)
         word = next((w for w in group.words if w in cleaned), None)
@@ -152,7 +164,7 @@ def check_added(
     missing: list[str] = []
     for fact in sorted(added):
         groups = [g for g in words.groups if fact in g.matches.facts()]
-        if not groups:
+        if len(groups) != 1:  # 沒有對應詞、或同時對應多組（clear_surface 之類）的不要求
             continue
         if not any(any(w in _strip_ignored(joined, g) for w in g.words) for g in groups):
             missing.append(groups[0].words[0])

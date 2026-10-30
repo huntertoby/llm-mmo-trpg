@@ -62,6 +62,10 @@ class EffectWordGroup(ContentModel):
 
 class EffectWords(ContentModel):
     groups: tuple[EffectWordGroup, ...] = Field(min_length=1)
+    simile_markers: tuple[str, ...] = ()
+    """比喻引導詞（如、像…）：從引導詞到下一個標點之間的片段不做一致性檢查。"""
+    simile_end: str = ""
+    """結束比喻片段的標點集合（每個字元都算）。"""
 
     @model_validator(mode="after")
     def _unique(self) -> EffectWords:

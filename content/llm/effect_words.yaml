@@ -5,13 +5,16 @@
 # 閃現變化加上的效果（變化後有、變化前沒有的狀態／元素／表面／原語／召喚物）若出現在某組的 matches，
 # 名稱、概念或施放敘事要提到那些組的其中一個詞（note_zh 有填時也要提到）。
 # 詞選得保守：單字只留不常被比喻用的（火、冰、雷、毒…），「風」「土」「石」「浪」這類常當形容的字只收複合詞。
+# 比喻句不檢查：引導詞起到下一個標點（simile_end 的任一字元）之間的片段整段跳過。
+simile_markers: [如, 像, 宛如, 彷彿, 猶如, 好似]
+simile_end: "，。；：！？、,.;:!?\n"
 groups:
   # ---- 控制 ----
   - id: slow
     words: [遲緩, 減速, 緩速, 拖慢]
     matches: {statuses: [slow, frozen]}
   - id: root
-    words: [定身, 禁錮, 束縛, 纏縛, 纏繞]
+    words: [定身, 禁錮, 束縛, 纏縛]
     matches: {statuses: [root, entangled, frozen], primitives: [cleanse]}
   - id: stun
     words: [暈眩, 昏迷, 震暈, 擊暈]
@@ -46,10 +49,16 @@ groups:
   - id: stealth
     words: [隱蔽, 潛行, 隱身, 隱匿]
     matches: {statuses: [concealed], surfaces: [smoke, darkness], primitives: [shadowstep]}
+  - id: vulnerable
+    words: [易傷, 破綻]
+    matches: {statuses: [vulnerable]}
   # ---- 元素 ----
+  - id: burning
+    words: [點燃, 引燃, 著火]
+    matches: {statuses: [burning], surfaces: [fire]}
   - id: fire
     words: [火, 焰, 炎, 燃, 焚, 熾]
-    ignore: [怒火, 開火, 火花, 火網, 魂火, 燃起, 燃燒一點, 火速, 電光石火]
+    ignore: [怒火, 開火, 火花, 火網, 魂火, 燃起, 燃燒一點, 火速, 電光石火, 點燃, 引燃, 著火]
     matches:
       elements: [fire]
       statuses: [burning, stance_flame, stance_blaze, infused_fire]
@@ -77,11 +86,11 @@ groups:
       surfaces: [poison]
       primitives: [cleanse, clear_surface, blow_surface]
   - id: wind
-    words: [狂風, 旋風, 疾風, 颶風, 暴風, 強風, 烈風, 勁風, 風刃, 風壓, 氣流]
+    words: [狂風, 旋風, 疾風, 颶風, 暴風, 強風, 烈風, 勁風, 風刃, 風壓]
     matches: {elements: [wind], primitives: [blow_surface]}
   - id: earth
     words: [大地, 岩, 地脈, 地裂, 裂地, 沙]
-    ignore: [岩漿]
+    ignore: [岩漿, 獻予大地, 大地深層]
     matches:
       elements: [earth]
       statuses: [stoneskin]
@@ -122,7 +131,7 @@ groups:
     words: [瞬移, 傳送]
     matches: {primitives: [teleport, shadowstep, swap, swap_any, teleport_target, leap, dash]}
   - id: heal
-    words: [治療, 治癒, 癒合]
+    words: [治療, 治癒]
     matches: {primitives: [heal, revive], statuses: [regenerating]}
   - id: shield
     words: [護盾, 屏障, 護罩]

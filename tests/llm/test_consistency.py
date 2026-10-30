@@ -107,9 +107,74 @@ def test_added_effects_must_be_mentioned() -> None:
     after = _with_burning(FIRE_ARROW)
     added = added_facts(LIB, FIRE_ARROW, after)
     assert added == {"status:burning", "primitive:apply_status"}
-    missing = check_added(["一箭射穿。"], added, WORDS, code="narrative.missing_added")
+    only_one_group = frozenset({"status:stun"})
+    missing = check_added(["一箭射穿。"], only_one_group, WORDS, code="narrative.missing_added")
     assert missing and missing[0].code == "narrative.missing_added"
-    assert check_added(["一箭燃起烈焰。"], added, WORDS, code="x") == []
+    assert check_added(["一箭讓敵人暈眩。"], only_one_group, WORDS, code="x") == []
+
+
+def test_added_effects_in_several_groups_are_not_required() -> None:
+    """4-L11b：同時對應多組的新增項目（clear_surface、燃燒狀態、火表面…）不拿來要求。"""
+    multi = frozenset({"primitive:clear_surface", "primitive:blow_surface", "status:burning"})
+    assert check_added(["一箭射穿。"], multi, WORDS, code="x") == []
+    mixed = multi | {"status:stun"}  # 只屬於一組的項目照樣要求
+    assert check_added(["一箭射穿。"], mixed, WORDS, code="x")
+
+
+@pytest.mark.parametrize(
+    ("text", "burning", "ok"),
+    [
+        ("對目標造成火焰傷害並使其點燃。", False, False),  # 4-L11 人工抽看：烈燼擊只有火傷害
+        ("對目標造成火焰傷害並使其點燃。", True, True),
+        ("引燃一片枯草。", False, False),
+        ("敵人著火了。", False, False),
+        ("火焰凝成的箭。", False, True),  # 沒提點燃，火元素就夠
+    ],
+)
+def test_burning_group_needs_the_burning_status(text: str, burning: bool, ok: bool) -> None:
+    skill = _with_burning(FIRE_ARROW) if burning else FIRE_ARROW
+    errors = check_mentions("concept", text, skill_facts(LIB, skill), WORDS)
+    assert (errors == []) is ok
+
+
+def test_vulnerable_group() -> None:
+    facts = skill_facts(LIB, FIRE_ARROW)
+    assert check_mentions("concept", "使目標陷入易傷狀態。", facts, WORDS)
+    assert check_mentions("concept", "撕開敵人的破綻。", facts, WORDS)
+    vulnerable = EffectSpec.model_validate(
+        {"type": "apply_status", "status": "vulnerable", "duration": 2}
+    )
+    skill = FIRE_ARROW.model_copy(update={"effects": (*FIRE_ARROW.effects, vulnerable)})
+    assert check_mentions("concept", "使目標陷入易傷狀態。", skill_facts(LIB, skill), WORDS) == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "微光貼附皮膚，如薄冰般封閉了外界侵擾的通道。",
+        "光暈擴散，如靜水般洗去污穢。",
+        "蛛網彷彿纏上周身，宛如寒霜覆體，猶如雷鳴，好似烈焰，像毒霧一樣。",
+    ],
+)
+def test_similes_are_skipped(text: str) -> None:
+    assert check_mentions("cast_flavor", text, skill_facts(LIB, FIRE_ARROW), WORDS) == []
+
+
+def test_simile_ends_at_punctuation() -> None:
+    facts = skill_facts(LIB, FIRE_ARROW)
+    # 比喻只跳到標點為止：後一句的冰仍要檢查
+    assert check_mentions("x", "如薄冰般輕盈，寒霜覆上箭鏃。", facts, WORDS)
+    assert check_mentions("x", "寒霜覆上箭鏃，如薄冰般輕盈。", facts, WORDS)
+
+
+@pytest.mark.parametrize("text", ["枯枝纏繞間腐液滲出。", "腐敗的氣流收束。", "傷口在柔光中癒合。"])
+def test_removed_words_are_no_longer_checked(text: str) -> None:
+    assert check_mentions("x", text, skill_facts(LIB, FIRE_ARROW), WORDS) == []
+
+
+@pytest.mark.parametrize("text", ["藤蔓纏縛敵人。", "強風吹襲。", "施以治療。"])
+def test_kept_words_still_checked(text: str) -> None:
+    assert check_mentions("x", text, skill_facts(LIB, FIRE_ARROW), WORDS)
 
 
 # -- 世界觀詞 -----------------------------------------------------------------
@@ -176,12 +241,15 @@ def test_exhausted_retries_fall_back_to_template_text() -> None:
 
 
 def test_added_effect_from_flash_must_be_named() -> None:
-    after = _with_burning(FIRE_ARROW)
-    client = MockLLMClient([_reply(concept="箭矢穿透。", flavor="弦響。"), _reply()])
+    stun = EffectSpec.model_validate({"type": "apply_status", "status": "stun", "duration": 1})
+    after = FIRE_ARROW.model_copy(update={"effects": (*FIRE_ARROW.effects, stun)})
+    client = MockLLMClient(
+        [_reply(concept="箭矢穿透。", flavor="弦響。"), _reply(concept="火焰箭矢令敵暈眩。")]
+    )
     outcome = name_skill(client, LIB, after, before=FIRE_ARROW)
     assert outcome.source == "llm" and outcome.codes == ("narrative.missing_added",)
     first = client.calls[0][1]["content"]
-    assert "added_effects" in first and "燃燒" in first
+    assert "added_effects" in first and "暈眩" in first
     # 沒給變化前的技能（一般升級）：不要求提到
     plain = name_skill(MockLLMClient([_reply(concept="箭矢穿透。")]), LIB, after)
     assert plain.source == "llm"
