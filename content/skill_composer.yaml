@@ -212,6 +212,21 @@ llm_cost:
     - {ap: 3, cooldown: 4}
     - {ap: 3, cooldown: 5}
     - {ap: 3, cooldown: 5, mana: 6}
+  # 過弱階梯（Phase 4-L10b，4-L9 建議 B1，使用者採 b）：沒有旋鈕的結構（傳送、互換、地形、淨化等核心）在旋鈕全部調完
+  # （含巢狀效果的數值，例如 consume_status 的 then）後仍低於預算下限 70% 時，補值器依序試 weak_steps（由輕到重），取第一個讓
+  # 比例落進驗證器窗（70～100%）且占比合格的。ap：AP 往下取（取「原本」與「這一階」中較小者；AP 1 的係數 500‰）；cooldown／mana：
+  # 往上取（較大者，冷卻與法力只是把 AP 1 調過頭的部分補回來，不會低於互斥規則要求的冷卻）。不降預算下限；仍補不到才照舊回報
+  # budget.weak。只用在主動技能與補值器（手寫技能、隨機組合器不受影響）。初值，未經模擬。
+  weak_steps:
+    - {ap: 1}
+    - {ap: 1, cooldown: 1}
+    - {ap: 1, cooldown: 2}
+    - {ap: 1, cooldown: 3}
+    - {ap: 1, cooldown: 4}
+    - {ap: 1, cooldown: 5}
+    - {ap: 1, cooldown: 5, mana: 3}
+    - {ap: 1, cooldown: 5, mana: 6}
+    - {ap: 1, cooldown: 5, mana: 10}
 
 # 白板技能（Phase 3W-4，docs/design/06-技能.md 6.34.1、玩法決定 #69；trpg.skillgen.whiteboard）：1 階、一個核心效果、一個關鍵字、
 # 形狀簡單（單體或小範圍）、沒有附帶效果、沒有條件；主動技用預設費用（AP 2、冷卻 0～2）；預算照同階規則（比例收在 tuning 區間內，

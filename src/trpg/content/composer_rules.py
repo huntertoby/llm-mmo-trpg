@@ -383,7 +383,8 @@ class LlmTopicRules(ContentModel):
 
 class CostStep(ContentModel):
     """費用旋鈕的一階（Phase 4-L8b）：每一階各自獨立（不累加），省略的欄位不動；套用時各欄位取
-    「技能原本的值」與「這一階的值」中較大者，不會把已有的較高費用往下調。"""
+    「技能原本的值」與「這一階的值」中較大者，不會把已有的較高費用往下調（過弱階梯 ``weak_steps``
+    的 ``ap`` 例外：取較小者，見 :class:`LlmCostRules`）。"""
 
     ap: int | None = Field(default=None, ge=1, le=3)
     """主動技能的 AP。"""
@@ -404,12 +405,17 @@ class LlmCostRules(ContentModel):
     ``tests/skillgen/test_proposal_l8b_cost.py`` 檢查）。"""
     max_cooldown: int = Field(default=5, ge=1)
     """冷卻上限（06 6.5；比引擎的硬上限更保守）。"""
+    weak_steps: tuple[CostStep, ...] = ()
+    """過弱階梯（Phase 4-L10b，4-L9 建議 B1）：旋鈕（含巢狀效果）全部調完仍低於預算下限時依序試，
+    取第一個讓比例落進驗證器窗的。``ap`` 往下取（原本與這一階的較小者），``cooldown``／``mana``
+    往上取（較大者）。空 ＝ 不開放。"""
 
     @model_validator(mode="after")
     def _check(self) -> LlmCostRules:
-        for i, step in enumerate(self.steps):
-            if step.cooldown is not None and step.cooldown > self.max_cooldown:
-                raise ValueError(f"steps[{i}]：冷卻 {step.cooldown} 超過 max_cooldown")
+        for name, steps in (("steps", self.steps), ("weak_steps", self.weak_steps)):
+            for i, step in enumerate(steps):
+                if step.cooldown is not None and step.cooldown > self.max_cooldown:
+                    raise ValueError(f"{name}[{i}]：冷卻 {step.cooldown} 超過 max_cooldown")
         return self
 
 

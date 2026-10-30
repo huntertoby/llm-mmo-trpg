@@ -11,15 +11,19 @@
 
 旋鈕建在頂層效果與複合技能第二段的效果上（Phase 4-L8；組合器只有頂層）；巢狀效果（``then``、
 ``win``／``lose``、``effects`` 等）的數值維持最小值。AP 與冷卻不是旋鈕（4-L3 待決 #2，4-L8 仍
-未開放）：AP 補 2、沒有冷卻；唯一的例外是修「補冷卻即可」的互斥規則（``exclusion.*``，由
-``skill_exclusions.yaml`` 推導）時補到規則要求的冷卻。
+未開放）：AP 補 2、沒有冷卻；例外是修「補冷卻即可」的互斥規則（``exclusion.*``，由
+``skill_exclusions.yaml`` 推導）時補到規則要求的冷卻，以及修 ``budget.weak`` 時的過弱補強
+（Phase 4-L10b，:func:`lift_weak`）：先把巢狀效果（``then``、``on_kill``）的數值也當旋鈕重調，
+仍過弱就依 ``skill_composer.yaml`` ``llm_cost.weak_steps`` 降 AP（必要時補回冷卻／法力）。
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
+from fractions import Fraction
 from typing import Any
 
 from pydantic import ValidationError
@@ -28,6 +32,7 @@ from trpg.content.composer_rules import CostStep
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.shared.rng import Rng
+from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob, effect_knobs
 from trpg.skillgen.composer_tuning import base_ratio, tune, tuning_bounds
 from trpg.skillgen.proposal import (
@@ -38,7 +43,7 @@ from trpg.skillgen.proposal import (
     evaluate_proposal,
 )
 from trpg.skillgen.proposal_numbers import NumberFiller, minimal_filler
-from trpg.skillgen.validate import is_core_effect
+from trpg.skillgen.validate import is_core_effect, share_violations
 
 __all__ = [
     "REPAIRABLE_CODES",
@@ -47,6 +52,7 @@ __all__ = [
     "cooldown_repairs",
     "evaluate_with_repair",
     "is_repairable",
+    "lift_weak",
     "repairable_codes",
     "repairable_errors",
     "segment_code",
@@ -73,6 +79,10 @@ REPAIR_TUNES = 4
 _PROBE_ID = "skill_llm_probe"
 _PROBE_NAME = "試算"
 _CORE_FIRST = frozenset({"skeleton.core_share", "skeleton.secondary_share"})
+WEAK = "budget.weak"
+NESTED_KNOB_KEYS = ("then", "on_kill")
+"""過弱補強（4-L10b）時也當旋鈕調的巢狀效果欄位：消耗狀態後的追加效果、擊殺時效果（都是施放者
+這一方得利的效果；失手反噬、賭注的輸方不調）。"""
 
 
 def cooldown_repairs(library: ContentLibrary) -> dict[str, int]:
@@ -186,6 +196,33 @@ def _knobs(library: ContentLibrary, data: dict[str, Any], *, core_only: bool) ->
     return None if second is None else knobs + second
 
 
+def _nested_of(effects: Iterable[Any]) -> Iterator[dict[str, Any]]:
+    """``effects`` 裡（遞迴）:data:`NESTED_KNOB_KEYS` 底下的效果字典（就是資料裡的同一批物件）。"""
+    for effect in effects:
+        if not isinstance(effect, dict):
+            continue
+        for key in NESTED_KNOB_KEYS:
+            items = effect.get(key)
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        yield item
+                yield from _nested_of(items)
+
+
+def _nested_knobs(
+    library: ContentLibrary, nested: list[dict[str, Any]], *, category: str, offset: int
+) -> list[Knob]:
+    weight = library.composer.structure.knob_weight_other
+    return [
+        Knob(offset + index, name, values, knob_weight)
+        for index, raw in enumerate(nested)
+        for name, values, knob_weight in effect_knobs(
+            library, raw, category=category, weight=weight
+        )
+    ]
+
+
 def _tune_once(library: ContentLibrary, data: dict[str, Any], rng: Rng, *, core_only: bool) -> bool:
     knobs = _knobs(library, data, core_only=core_only)
     if knobs is None:
@@ -260,6 +297,68 @@ def _tune(
             return
 
 
+def _window_ok(library: ContentLibrary, data: dict[str, Any]) -> bool | None:
+    """``data`` 的預算比例是否落在驗證器的窗（``min_ratio``～``max_ratio``）且骨架占比合格；結構不
+    合法時為 ``None``。"""
+    try:
+        skill = SkillDef.model_validate(_base_of(data) | {"effects": data["effects"]})
+        report = skill_budget(skill, library)
+    except (ValidationError, BudgetError):
+        return None
+    return report.ok and not share_violations(skill, library, report)
+
+
+def _with_weak_step(
+    library: ContentLibrary, data: dict[str, Any], step: CostStep
+) -> dict[str, Any]:
+    """過弱階梯的一階（``data`` 本身不變，回傳深拷貝）：AP 取較小者，冷卻與法力取較大者。"""
+    out = deepcopy(data)
+    if step.ap is not None:
+        out["ap_cost"] = min(int(out.get("ap_cost") or step.ap), step.ap)
+    return _with_step(library, out, step.model_copy(update={"ap": None}))
+
+
+def lift_weak(library: ContentLibrary, data: dict[str, Any], seed: int) -> dict[str, Any]:
+    """過弱補強（Phase 4-L10b，4-L9 建議 B1）：一般旋鈕調完仍不在驗證器的窗內時，
+
+    1. 連同巢狀效果（:data:`NESTED_KNOB_KEYS`）的數值一起重調；
+    2. 仍不行（主動技能）就依 ``llm_cost.weak_steps`` 由輕到重：降 AP（必要時補冷卻／法力把過頭的
+       部分拉回），每一階都重調旋鈕；
+
+    取第一個落進窗且占比合格的結果。全部不行時原樣回傳（交給驗證器照舊報 ``budget.weak``）。
+    不降預算下限；確定性：同一份資料＋同一個 ``seed`` 必得相同結果。"""
+    if _window_ok(library, data) is not False:
+        return data
+    steps: tuple[CostStep | None, ...] = (None,)
+    if data.get("kind") == "active" and data.get("ap_cost") is not None:
+        steps += library.composer.llm_cost.weak_steps
+    low = Fraction(library.budget.min_ratio_permille, 1000)
+    root = Rng(seed).fork("proposal.weak")
+    category = str(data.get("category", "spell"))
+    for attempt, step in enumerate(steps):
+        trial = deepcopy(data) if step is None else _with_weak_step(library, data, step)
+        knobs = _knobs(library, trial, core_only=False)
+        if knobs is None:
+            return data
+        nested = list(_nested_of([*trial["effects"], *_extra_of(trial)]))
+        extra = _extra_of(trial)
+        offset = len(trial["effects"]) + len(extra)
+        knobs += _nested_knobs(library, nested, category=category, offset=offset)
+        rng = root.fork(f"weak.{attempt}")
+        tune(
+            rng,
+            library,
+            _base_of(trial),
+            trial["effects"],
+            knobs,
+            extra=[*extra, *nested],
+            min_ratio=low,
+        )
+        if _window_ok(library, trial):
+            return trial
+    return data
+
+
 def budget_filler(
     library: ContentLibrary, *, seed: int, repairs: Iterable[str] = ()
 ) -> NumberFiller:
@@ -280,6 +379,8 @@ def budget_filler(
             out["cost"] = cost
         out = raise_costs(library, out)
         _tune(library, out, seed, wanted)
+        if WEAK in wanted:
+            out = lift_weak(library, out, seed)
         return out
 
     return fill
