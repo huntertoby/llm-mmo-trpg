@@ -48,7 +48,7 @@ start_zones:
 # 勝利條件輪替（Phase 3-22）：roguelite 抽到撤離或守點時用這裡的格子與輪數（初值，未經平衡）。
 alt_objectives:
   escape: {rounds: 7, tiles: [[11, 0], [10, 0], [11, 8], [10, 8]]}
-  defend: {rounds: 6, tiles: [[4, 5]]}
+  defend: {rounds: 4, tiles: [[4, 5]]}  # BAL-7（原型）：原 6 輪，−2
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
   enemies: [bandit_shieldbearer, bandit, bandit_archer, bandit_archer]

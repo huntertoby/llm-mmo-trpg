@@ -21,9 +21,9 @@ encounters:
   - options:
       - [bandit, bandit, bandit_archer]
       - [bandit, bandit_archer, bandit_shieldbearer]
-  - options:
-      - [bandit, bandit, bandit_archer, bandit_shieldbearer]
-      - [bandit, bandit_archer, bandit_archer, bandit_shieldbearer]
+  - options:   # BAL-7（原型）：第 3 場 4 名 → 3 名（BAL-6 一輪消耗量測；各選項去掉最後一名盾兵）
+      - [bandit, bandit, bandit_archer]
+      - [bandit, bandit_archer, bandit_archer]
   - options:
       - [bandit, bandit, bandit_archer, bandit_archer]
       - [bandit, bandit_shieldbearer, bandit_archer, bandit_archer]
