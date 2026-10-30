@@ -219,6 +219,16 @@ def test_duration_scales_status_and_surface_points() -> None:
     assert points({"type": "create_surface", "surface": "oil", "duration": 7}) == 2  # 永久表面
 
 
+def test_surface_none_is_a_budget_error_not_a_crash() -> None:
+    """LLM 提議 ``surface: none``（4-L10 重跑評估時當機）：預算器回報 BudgetError。"""
+    s = _spell(
+        shape={"type": "single", "range": 4},
+        effects=[{"type": "create_surface", "surface": "none", "duration": 2}],
+    )
+    with pytest.raises(BudgetError, match="不能製造"):
+        skill_budget(s, lib())
+
+
 def test_structural_primitive_points() -> None:
     def points(effect: dict[str, Any], shape: dict[str, Any] | None = None) -> F:
         s = _spell(shape=shape or {"type": "single", "range": 4}, effects=[effect])

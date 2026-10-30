@@ -1158,7 +1158,10 @@ def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[
 def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fraction, str]:
     if effect.surface is None:
         raise BudgetError("create_surface 缺少 surface")
-    surface = library.ruleset.surfaces.get(effect.surface)
+    try:
+        surface = library.ruleset.surfaces.get(effect.surface)
+    except KeyError:  # 例如 LLM 提議的 surface: none（不是可製造的表面）
+        raise BudgetError(f"表面 {effect.surface.value} 不能製造") from None
     if surface.budget_points is None:
         raise BudgetError(f"表面 {surface.id.value}（{surface.name_zh}）沒有預算點數")
     ratio = _duration_ratio(effect.duration, surface.duration)
