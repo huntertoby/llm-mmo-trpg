@@ -97,8 +97,14 @@ def main(argv: list[str] | None = None) -> int:
 
 def report(out: Path) -> int:
     """合併 ``stage_*.csv`` 成 ``sweep.md``（依階段檔名排序）。"""
-    sections: list[str] = ["# BAL-4 難度與法力旋鈕掃描", ""]
-    for path in sorted(out.glob("stage_*.csv")):
+    sections: list[str] = [
+        "# BAL-4 難度與法力旋鈕掃描",
+        "",
+        "旋鈕單位為千分比（1000 ＝ 現行）。地圖達標數 ＝ 勝率落在 35–65% 的示範地圖數；"
+        "短缺 ＝ Boss 戰情境該 build 的法力不足回合比例；一輪／一輪 Boss 勝率括號為樣本數。",
+        "",
+    ]
+    for path in sorted(out.glob("stage_*.csv"), key=lambda p: (p.stem != "stage_singles", p.name)):
         with path.open(encoding="utf-8", newline="") as f:
             rows = list(csv.DictReader(f))
         measures = [
