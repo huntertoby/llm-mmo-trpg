@@ -143,6 +143,8 @@ SNAPSHOTS = {
     "skill-proposal/3": "fa56b01df86dd173ab777019d7892e29d9dde019261cdbb02635dc097c5a23df",
     # 4-L8：available 多了 costs／followup／reactions，提議不再填技能名稱
     "skill-proposal/4": "e50d5d59de8e5f4c0223c42c91ead65f8e69cdbb8f0424ebb86dba187dc5e4fb",
+    # 4-L10a：系統指令加「代價、變奏、條件是選填，沒要求就不要填」
+    "skill-proposal/5": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
 }
 
 
@@ -163,3 +165,10 @@ def test_prompt_snapshot_requires_version_bump() -> None:
     assert _snapshot_digest() == SNAPSHOTS[PROMPT_VERSION], (
         "prompt 內容改變了：請修改 PROMPT_VERSION 並在 SNAPSHOTS 新增新版本的雜湊"
     )
+
+
+def test_system_prompt_says_optional_fields_are_optional() -> None:
+    """4-L10a A5：代價、變奏、條件是選填，題目沒要求就不要填。"""
+    system = build_skill_proposal_messages({"rarity": "rare"})[0]["content"]
+    assert "代價（cost_*）、變奏（variants）、條件（condition）都是選填" in system
+    assert "越簡單越容易通過" in system
