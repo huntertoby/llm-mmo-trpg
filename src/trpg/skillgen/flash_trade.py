@@ -56,6 +56,7 @@ __all__ = [
     "Trade",
     "apply_trade",
     "cap_points",
+    "convergible",
     "has_power",
     "no_gain",
     "target_power",
@@ -307,7 +308,7 @@ _STEP_DOWN = {"square3": "cross"}
 """縮小一級換成另一種形狀的（3×3 → 十字，射程沿用）；直線、錐形是長度 −1。"""
 
 
-def _convergible(skill: SkillDef, library: ContentLibrary) -> bool:
+def convergible(skill: SkillDef, library: ContentLibrary) -> bool:
     """可以收束：主動技（陷阱除外，BAL-10e）、有作用在目標的威力、形狀是多格範圍。複合技只看第一段
     的形狀（接續段不動）。"""
     if skill.kind != "active" or skill.trap is not None or not has_power(skill, library):
@@ -358,7 +359,7 @@ def _op_converge_single(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """收成單體：多格形狀 → 單體（射程見 :func:`_single_range`）；範圍造的表面、區域跟著縮。"""
-    if not _convergible(skill, library):
+    if not convergible(skill, library):
         return []
     single = ShapeSpec(type="single", range=_single_range(skill.shape, library))
     return _with_shape(skill, template, single, library)
@@ -368,7 +369,7 @@ def _op_converge_step(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """縮小一級：直線、錐形長度 −1（不低於形狀的最小值），3×3 → 十字；已是最小一級不出。"""
-    if not _convergible(skill, library):
+    if not convergible(skill, library):
         return []
     shape = skill.shape
     smaller = _STEP_DOWN.get(shape.type)

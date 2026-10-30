@@ -338,7 +338,7 @@ def top_scores(library: ContentLibrary, subjects: Sequence[Subject]) -> dict[str
                 template = None if top is None else library.flash.minor_template(top.template)
                 if top is None or template is None:
                     continue
-                score = _usage_score(library, usage, template, top)
+                score = _usage_score(library, usage, template, top, before)
                 out[f"{name}/{category}"][str(score)] += 1
     return out
 
