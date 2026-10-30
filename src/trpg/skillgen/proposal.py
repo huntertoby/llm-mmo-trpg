@@ -51,12 +51,19 @@ from trpg.content.skills import (
     DELAYED_RELEASE_VALUES,
     FOLLOWUP_WHEN_VALUES,
     GAMBLE_BRANCH_TYPES,
+    GRANT_SKILL,
+    INSCRIBE,
     MAX_EFFECTS,
     ON_KILL_TYPES,
+    SHADOWSTEP,
     SKILL_ID_PATTERN,
     SKILL_REACTION_EVENTS,
+    VARIANT_CONDITIONS,
     WIELDING_WEAPON,
+    ZONE,
+    ZONE_CASTER_SHAPES,
     ZONE_EFFECT_TYPES,
+    ZONE_MOVING_SHAPES,
     CompositionRule,
     ConditionSpec,
     EffectSpec,
@@ -69,12 +76,12 @@ from trpg.content.skills import (
     SkillRarity,
     SkillRuleError,
     TriggerSpec,
-    VariantWhen,
     error_path_of,
     rarity_rank,
     skill_elements,
     weapon_problem,
 )
+from trpg.content.skills.constants import SHADOWSTEP_SHAPES
 from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.option_gear import gear_pool
 from trpg.skillgen.player_text import plain_name
@@ -241,6 +248,8 @@ class ProposalModels:
     variant_primitive_ids: tuple[str, ...]
     excluded_primitives: tuple[tuple[str, str], ...]
     layouts: tuple[tuple[str, str], ...] = ()
+    kinds: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    """各版型可選的技能種類（錯誤回饋的可用值用；4-L10a）。"""
 
     def json_schema(self) -> dict[str, Any]:
         """給 LLM（structured output／tool input schema）的 JSON Schema。
@@ -328,6 +337,8 @@ class _Refs:
     infusions: tuple[str, ...]
     weapons: tuple[str, ...]
     """玩家手上會出現的武器與副手 ID（``wielding_weapon`` 條件的 ``weapon``；3I-5）。"""
+    skills: tuple[str, ...] = ()
+    """``grant_skill`` 能給的技能 ID（:func:`grantable_skills`；Phase 4-L10a）。"""
 
     @classmethod
     def of(cls, library: ContentLibrary) -> _Refs:
@@ -341,6 +352,7 @@ class _Refs:
             summon_traits=tuple(sorted(rules.core.summon_traits)),
             infusions=tuple(sorted(rules.core.summon_infusions)),
             weapons=tuple(sorted(gear_id for gear_id, _, _ in gear_pool(library))),
+            skills=grantable_skills(library),
         )
 
     def ids_for(self, param_type: str) -> tuple[str, ...] | None:
@@ -353,8 +365,30 @@ class _Refs:
             "summon_trait": self.summon_traits,
             "infusion": self.infusions,
             "weapon": self.weapons,
+            "skill": self.skills,
         }
         return table.get(param_type)
+
+
+def grantable_skills(library: ContentLibrary) -> tuple[str, ...]:
+    """``grant_skill`` 能給的技能 ID（排序；Phase 4-L10a A4）：規則與跨技能檢查
+    :func:`~trpg.content.skills.granted_skill_problems` 相同——一般的主動技能、不是傳說、不含改寫
+    規則型與規則改變型原語、不是 ``grant_skill`` 技能（「不能給出自己」：提議的 ID 是雜湊，不會撞到
+    內容庫的技能）。"""
+    primitives = library.ruleset.primitives.by_id()
+
+    def ok(skill: SkillDef) -> bool:
+        if skill.kind != "active" or skill.rarity == "legendary":
+            return False
+        for effect in skill.effects:
+            primitive = primitives.get(effect.type)
+            if effect.type == GRANT_SKILL:
+                return False
+            if primitive is not None and primitive.category in ("rule_rewrite", "rule_change"):
+                return False
+        return True
+
+    return tuple(sorted(s.id for s in library.skills.values() if ok(s)))
 
 
 _FIXED_PARAM_TYPES: dict[str, tuple[Any, dict[str, Any]]] = {
@@ -362,9 +396,9 @@ _FIXED_PARAM_TYPES: dict[str, tuple[Any, dict[str, Any]]] = {
     "element": (Element, {}),
     "surface": (Surface, {}),
     "tag": (str, {"pattern": ID_PATTERN}),
-    "skill": (str, {"pattern": SKILL_ID_PATTERN}),
 }
-"""與內容庫無關的參數型別（數值型別 ``int``、``dice`` 不開放，見 :func:`_is_numeric`）。"""
+"""與內容庫無關的參數型別（數值型別 ``int``、``dice`` 不開放，見 :func:`_is_numeric`）。``skill``
+（``grant_skill`` 給的技能）列舉能給的技能（4-L10a；內容庫沒有時退回 ID 格式）。"""
 
 _CONDITION_FIELDS = {**EffectSpec.model_fields, **ConditionSpec.model_fields}
 """條件參數退回欄位型別時查的欄位（條件自己的欄位優先，如 ``form_category``）。"""
@@ -388,7 +422,7 @@ def _param_type(
         return fixed[0], dict(fixed[1])
     ids = refs.ids_for(spec.type)
     if ids is not None:
-        return _id_choice(ids)
+        return _id_choice(ids, SKILL_ID_PATTERN if spec.type == "skill" else ID_PATTERN)
     # 其餘型別（which、scale、resource、on_hit、landing、anchor、zone_when、scope、scaling、count）
     # 沿用 EffectSpec 欄位的型別：可用值寫在 schema 的 Literal 或子模型裡。
     return _strip_none(fallback[name].annotation), {}
@@ -429,6 +463,89 @@ def _has_nested(primitive: PrimitiveDef) -> bool:
     return any(p.type == "effects" for p in primitive.params.values())
 
 
+TOP_ONLY_DAMAGE_PARAMS: tuple[str, ...] = (
+    "explode",
+    "scaling",
+    "lifesteal_permille",
+    "split_heal",
+    "spread",
+)
+"""只能用在技能自己的傷害效果的參數（驗證器 ``_check_variable_damage``）：巢狀位置（``then``、
+``on_kill``、區域效果、賭注分支）與失手反噬的模型不提供（Phase 4-L10a A2）。"""
+ZONE_AFFECTS: tuple[str, ...] = ("enemies", "allies", "all")
+"""持續區域必填的 ``affects``（驗證器 ``_check_zone_effect``）。"""
+_ZONE_AFFECTS_DOC = "必填：區域對誰結算（enemies 敵方、allies 友方、all 全部）。"
+EXACTLY_ONE_PARAMS: dict[str, tuple[str, ...]] = {INSCRIBE: ("element", "tag")}
+"""必須恰好填其中一個的參數（驗證器 ``_check_runes``）：拆成以欄位區分的分支（4-L10a A3）。"""
+_SPLIT_HEAL = "split_heal"
+
+
+def _top_only_params(primitive: PrimitiveDef) -> frozenset[str]:
+    return frozenset(n for n in TOP_ONLY_DAMAGE_PARAMS if n in primitive.params)
+
+
+def _get(value: Any, key: str) -> Any:
+    """dict 或模型的欄位值（判別函式用）。"""
+    return value.get(key) if isinstance(value, dict) else getattr(value, key, None)
+
+
+def _without_none(annotation: Any) -> Any:
+    args = get_args(annotation)
+    if type(None) not in args:
+        return annotation
+    return _strip_none(annotation)
+
+
+def _require(entry: tuple[Any, Any]) -> tuple[Any, Any]:
+    annotation, info = entry
+    doc = getattr(info, "description", None)
+    return (_without_none(annotation), Field(description=doc))
+
+
+def _split_effect(
+    name: str, primitive: PrimitiveDef, fields: dict[str, Any], *, fixed_affects: bool
+) -> Any:
+    """效果模型；有「恰好填一個」的參數（:data:`EXACTLY_ONE_PARAMS`）或 ``split_heal``（須
+    ``affects: all``，驗證器 ``_check_split_heal``）時拆成以欄位區分的分支（具名 union，各支
+    ``additionalProperties: false``；標籤含 ``~``，錯誤路徑會略過）。``fixed_affects``：對象已
+    固定（只作用在施放者、失手反噬），不拆 ``split_heal``。"""
+    one_of = EXACTLY_ONE_PARAMS.get(primitive.id, ())
+    branches: list[tuple[str, str, dict[str, Any]]] = []
+    if one_of and all(f in fields for f in one_of):
+        for keep in one_of:
+            sub = {k: v for k, v in fields.items() if k not in one_of}
+            sub[keep] = _require(fields[keep])
+            branches.append((f"{primitive.id}~{keep}", f"{name}_{keep}", sub))
+
+        def pick(value: Any) -> str:
+            found = next((f for f in one_of if _get(value, f) is not None), one_of[0])
+            return f"{primitive.id}~{found}"
+
+    elif _SPLIT_HEAL in fields and not fixed_affects and "affects" in fields:
+        plain = {k: v for k, v in fields.items() if k != _SPLIT_HEAL}
+        heal = {**fields, _SPLIT_HEAL: _require(fields[_SPLIT_HEAL])}
+        heal["affects"] = (Literal["all"], Field(description="split_heal 必須搭配 affects: all"))
+        branches = [
+            (f"{primitive.id}~plain", f"{name}_plain", plain),
+            (f"{primitive.id}~{_SPLIT_HEAL}", f"{name}_{_SPLIT_HEAL}", heal),
+        ]
+
+        def pick(value: Any) -> str:
+            heals = _get(value, _SPLIT_HEAL) is not None
+            return f"{primitive.id}~{_SPLIT_HEAL if heals else 'plain'}"
+
+    else:
+        return create_model(name, __base__=_Proposal, __doc__=primitive.llm_hint, **fields)
+    models = [
+        Annotated[
+            create_model(model_name, __base__=_Proposal, __doc__=primitive.llm_hint, **sub),
+            Tag(tag),
+        ]
+        for tag, model_name, sub in branches
+    ]
+    return _alias(name, Annotated[Union[tuple(models)], Discriminator(pick)])  # noqa: UP007
+
+
 _SELF_AFFECTS_DOC = "這個版型的其他效果只作用在施放者。"
 
 
@@ -458,8 +575,9 @@ class _Builder:
             p for p in library.ruleset.primitives.primitives if only is None or p.id in only
         ]
         self.defs = {p.id: p for p in primitives}
-        # 巢狀位置（then、win／lose、on_kill、zone 的 effects）不能再巢狀：用去掉巢狀參數的模型。
-        leaves = {p.id: self._effect_model(p, None) for p in primitives}
+        # 巢狀位置（then、win／lose、on_kill、zone 的 effects）不能再巢狀：用去掉巢狀參數的模型；
+        # 也沒有只能用在技能自己的傷害的旗標（TOP_ONLY_DAMAGE_PARAMS，4-L10a）。
+        leaves = {p.id: self._effect_model(p, None, inner=True) for p in primitives}
         self.effects: dict[str, Any] = {}
         self.nested: dict[str, dict[str, Any]] = {}
         self.excluded: list[tuple[str, str]] = []
@@ -480,6 +598,8 @@ class _Builder:
             elif nested:
                 self.nested[p.id] = nested
                 self.effects[p.id] = self._effect_model(p, nested)
+            elif _top_only_params(p):
+                self.effects[p.id] = self._effect_model(p, None)
             else:
                 self.effects[p.id] = leaves[p.id]
         self.lookup_ids = {
@@ -549,6 +669,12 @@ class _Builder:
             self._backlash = _alias("BacklashEffect", _union_or_none(models))
         return self._backlash
 
+    def restricted(self, primitive_id: str, param: str, value: str) -> Any:
+        """``param`` 固定為 ``value`` 的版本（版型依參數分支用：瞬步的 ``landing``、持續區域的
+        ``anchor``；Phase 4-L10a A3）。"""
+        primitive = self.defs[primitive_id]
+        return self._effect_model(primitive, self.nested.get(primitive_id), fixed={param: value})
+
     def _effect_model(
         self,
         primitive: PrimitiveDef,
@@ -556,24 +682,29 @@ class _Builder:
         *,
         self_only: bool = False,
         mode: Literal["effect", "backlash"] = "effect",
+        inner: bool = False,
+        fixed: Mapping[str, str] | None = None,
     ) -> Any:
         """一個原語的提議模型；``nested`` 為 ``None`` 時是巢狀位置用的版本（沒有巢狀參數）；
         ``self_only`` 是「其他效果只作用在施放者」的版型用的版本；``mode="backlash"`` 是失手
-        反噬用的版本（沒有 ``affects``、``condition``）。"""
+        反噬用的版本（沒有 ``affects``、``condition``）。
+
+        Phase 4-L10a：``inner``（巢狀位置）與失手反噬的版本沒有只能用在技能自己的傷害的旗標
+        （:data:`TOP_ONLY_DAMAGE_PARAMS`）；失手反噬的 ``apply_status`` 不列硬控、跳過回合與持續
+        傷害的狀態；持續區域的 ``affects`` 必填；``fixed`` 把參數固定成一個值（版型分支用）；
+        「恰好填一個」的參數（``inscribe`` 的 ``element``／``tag``）與 ``split_heal``（須
+        ``affects: all``）拆成以欄位區分的分支（見 :func:`_split_effect`）。"""
         fields: dict[str, Any] = {
             "type": (_literal((primitive.id,)), Field(description=primitive.name_zh)),
         }
         if mode == "effect":
-            fields["affects"] = (
-                (Literal["self"], Field(default="self", description=_SELF_AFFECTS_DOC))
-                if self_only
-                else (_affects_type(primitive) | None, None)
-            )
+            fields["affects"] = self._affects_field(primitive, self_only=self_only)
             if self.condition is not None:
                 fields["condition"] = (Union[self.condition, None], None)  # noqa: UP007
+        drop = _top_only_params(primitive) if inner or mode == "backlash" else frozenset()
         for name, spec in sorted(primitive.params.items()):
             doc = spec.llm_hint
-            if _is_numeric(spec):
+            if _is_numeric(spec) or name in drop:
                 continue
             if spec.type == "effects":
                 if nested is None or nested[name] is None:
@@ -581,30 +712,44 @@ class _Builder:
                 limits = {"min_length": 1, "max_length": _MAX_NESTED}
                 fields[name] = _field(nested[name], limits, required=spec.required, doc=doc)
                 continue
-            annotation, limits = self._param(primitive, name, spec)
-            required = _required(spec)
-            fields[name] = _field(annotation, limits, required=required, doc=doc)
+            if fixed is not None and name in fixed:
+                fields[name] = (_literal((fixed[name],)), Field(description=doc or None))
+                continue
+            annotation, limits = self._param(primitive, name, spec, backlash=mode == "backlash")
+            fields[name] = _field(annotation, limits, required=_required(spec), doc=doc)
         if mode == "backlash":
             prefix = "BacklashEffect"
         elif self_only:
             prefix = "SelfEffect"
+        elif inner and (_has_nested(primitive) or _top_only_params(primitive)):
+            prefix = "NestedEffect"
         else:
-            prefix = "NestedEffect" if nested is None and _has_nested(primitive) else "Effect"
-        return create_model(
-            f"{prefix}_{primitive.id}",
-            __base__=_Proposal,
-            __doc__=primitive.llm_hint,
-            **fields,
-        )
+            prefix = "Effect"
+        name = f"{prefix}_{primitive.id}"
+        if fixed:
+            name += "".join(f"_{v}" for _, v in sorted(fixed.items()))
+        return _split_effect(name, primitive, fields, fixed_affects=self_only or mode == "backlash")
+
+    def _affects_field(self, primitive: PrimitiveDef, *, self_only: bool) -> tuple[Any, Any]:
+        if self_only:
+            return (Literal["self"], Field(default="self", description=_SELF_AFFECTS_DOC))
+        if primitive.id == ZONE:  # 持續區域：affects 必填（驗證器 _check_zone_effect）
+            values = [v for v in ZONE_AFFECTS if v in get_args(_affects_type(primitive))]
+            return (_literal(values), Field(description=_ZONE_AFFECTS_DOC))
+        return (_affects_type(primitive) | None, None)
 
     def _param(
-        self, primitive: PrimitiveDef, name: str, spec: PrimitiveParam
+        self, primitive: PrimitiveDef, name: str, spec: PrimitiveParam, *, backlash: bool = False
     ) -> tuple[Any, dict[str, Any]]:
         """參數型別；稀有度檢查狀態的原語（``apply_status``）只列稀有度夠的狀態（Phase 4-L5b）；
         以狀態點數計預算的原語（``budget_basis: status``）只列有 ``budget_points`` 的狀態
-        （4-L5c）。"""
+        （4-L5c）；失手反噬不列不能當反噬的狀態（硬控、跳過回合、持續傷害；4-L10a）。"""
         if spec.type == "status":
             ids = self._status_choices(primitive)
+            if backlash:
+                unsafe = self.library.ruleset.unsafe_backlash_statuses()
+                base = self.refs.statuses if ids is None else ids
+                ids = tuple(i for i in base if i not in unsafe)
             if ids is not None:
                 return _id_choice(ids)
         return _param_type(name, spec, self.refs, EffectSpec.model_fields)
@@ -697,13 +842,55 @@ class _Builder:
         return _param_type(name, spec, self.refs, TriggerSpec.model_fields)
 
 
-def _variant_model(effect: Any | None, shape: Any) -> Any:
+def _surface_ids(library: ContentLibrary) -> tuple[str, ...]:
+    """``surfaces.yaml`` 的表面 ID（變奏條件可用的表面；驗證器同一份表）。"""
+    return tuple(s.id.value for s in library.ruleset.surfaces.surfaces)
+
+
+_WHEN_DOCS: dict[str, str] = {
+    "caster_surface": "施放者所在格的表面是其中之一",
+    "caster_high_ground": "施放者所在格比目標點高（填 true）",
+    "caster_adjacent_blocker": "施放者相鄰的格子有牆壁或阻擋物（填 true）",
+    "target_surface": "目標點的表面是其中之一",
+}
+
+
+def _when_model(surfaces: Sequence[str]) -> Any:
+    """變奏條件 ``when``（Phase 4-L10a A3、A4）：四種條件各一支、恰好填一種（驗證器
+    :class:`~trpg.content.skills.VariantWhen`）；表面只列 ``surfaces.yaml`` 的表面。分支以填了
+    哪個欄位區分（標籤含 ``~``）。"""
+    surface: Any = _literal(surfaces) if surfaces else Annotated[str, Field(pattern=ID_PATTERN)]
+    listed = (_list_of(surface), Field(min_length=1, max_length=len(surfaces) or None))
+    types: dict[str, Any] = {
+        "caster_surface": listed,
+        "caster_high_ground": (Literal[True], ...),
+        "caster_adjacent_blocker": (Literal[True], ...),
+        "target_surface": listed,
+    }
+    branches = []
+    for name in VARIANT_CONDITIONS:
+        model = create_model(
+            f"When_{name}",
+            __base__=_Proposal,
+            __doc__=f"變奏條件（四種恰好填一種）：{_WHEN_DOCS.get(name, name)}。",
+            **{name: types[name]},
+        )
+        branches.append(Annotated[model, Tag(f"when~{name}")])
+
+    def pick(value: Any) -> str:
+        found = next((n for n in VARIANT_CONDITIONS if _get(value, n) is not None), None)
+        return f"when~{found or VARIANT_CONDITIONS[0]}"
+
+    return _alias("VariantWhen", Annotated[Union[tuple(branches)], Discriminator(pick)])  # noqa: UP007
+
+
+def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ()) -> Any:
     """戰場變奏；``effect`` 是變奏能加入或替換的效果（不含 ``lookup_by_skill_id`` 原語），
     ``None`` 時不開放 ``add_effect``／``replace_effect``。"""
     fields: dict[str, Any] = {
         "id": (str, Field(pattern=ID_PATTERN)),
         "name_zh": (str, Field(min_length=1, max_length=12)),
-        "when": (VariantWhen, ...),
+        "when": (_when_model(surfaces), ...),
         "shape": (shape | None, None),
         "element": (Element | None, None),
     }
@@ -802,6 +989,8 @@ class _Shared:
     variant_ids: tuple[str, ...]
     followup: Any = None
     """複合技能第二段的模型（Phase 4-L8；沒有可用的效果或形狀時為 ``None``）。"""
+    reaction: Any = None
+    """反應技能的 ``reaction`` 模型（所選骨架有反應技時；反應技分支必填，4-L10a）。"""
 
 
 def _shared_types(
@@ -825,7 +1014,7 @@ def _shared_types(
             "VariantEffect", _union_or_none([builder.effects[i] for i in variant_ids])
         )
     shape = _alias("StandardShape", builder.shape_union(standard.shapes))
-    variant = _variant_model(variant_effect, shape)
+    variant = _variant_model(variant_effect, shape, _surface_ids(library))
     return _Shared(frozenset(general_ids), general, self_general, shape, variant, variant_ids)
 
 
@@ -838,8 +1027,14 @@ def _effect_tag(value: Any) -> str | None:
     return raw if isinstance(raw, str) else None
 
 
-def _layout_effects(builder: _Builder, plan: LayoutPlan, shared: _Shared) -> Any:
-    """版型的效果 union：特殊原語各一支（標籤是原語 ID），一般原語共用一個具名 union。"""
+def _layout_effects(
+    builder: _Builder,
+    plan: LayoutPlan,
+    shared: _Shared,
+    models: Mapping[str, Any] | None = None,
+) -> Any:
+    """版型的效果 union：特殊原語各一支（標籤是原語 ID），一般原語共用一個具名 union；
+    ``models`` 可換掉特殊原語的模型（參數分支，4-L10a）。"""
     if plan.self_effects:
         members = list(plan.effects)
         general = shared.self_general
@@ -847,7 +1042,7 @@ def _layout_effects(builder: _Builder, plan: LayoutPlan, shared: _Shared) -> Any
         members = [i for i in plan.effects if i not in shared.general_ids]
         has_general = any(i in shared.general_ids for i in plan.effects)
         general = shared.general if has_general else None
-    return _tagged_effects(builder.effects, members, general)
+    return _tagged_effects(builder.effects if models is None else models, members, general)
 
 
 def _tagged_effects(models: Mapping[str, Any], members: Sequence[str], general: Any) -> Any:
@@ -933,49 +1128,258 @@ def _followup_skeletons(
     return _alias("FollowupSkeleton", _literal(ids))
 
 
+WEAPON_REQ_BY_CATEGORY: dict[str, tuple[str, ...]] = {
+    "weapon": ("melee", "ranged"),
+    "spell": ("focus", "any"),
+}
+"""技能類別 → 可用的武器需求（驗證器 ``SkillDef`` 的 weapon_req 檢查；Phase 4-L10a A2）。
+
+``split_category=True`` 時頂層依類別分支，武器技只列 melee／ranged、法術技只列 focus／any；
+預設不分支（分支讓頂層模型數加倍，寬題目的 schema 超過 ``SCHEMA_CHAR_LIMIT``），改在
+``weapon_req`` 的說明寫清楚（:data:`WEAPON_REQ_DOC`），見 4-L10a 報告。"""
+CATEGORIES: tuple[str, ...] = tuple(WEAPON_REQ_BY_CATEGORY)
+WEAPON_REQ_DOC = (
+    "必須與 category 配對：category: weapon（武器技）只能填 melee 或 ranged；"
+    "category: spell（法術技）只能填 focus 或 any。"
+)
+ACTIVE_ONLY_FIELDS: tuple[str, ...] = (
+    "cost_penalty",
+    "cost_overdraft",
+    "cost_on_miss",
+    "variants",
+    "trigger",
+    "followup",
+)
+"""反應技分支不提供的欄位（驗證器：自身代價、透支、失手反噬、變奏、複合技能只有主動技能可以有；
+trigger 只有被動技能可以有；Phase 4-L10a A2）。反應技分支的 ``reaction`` 必填。"""
+LAYOUT_SPLITS: dict[str, tuple[str, dict[str, tuple[str, ...] | None]]] = {
+    SHADOWSTEP: ("landing", {k: (v,) for k, v in SHADOWSTEP_SHAPES.items()}),
+    ZONE: (
+        "anchor",
+        {"tile": None, "caster": ZONE_CASTER_SHAPES, "moving": ZONE_MOVING_SHAPES},
+    ),
+}
+"""依特殊原語的參數決定形狀的版型（驗證器 ``_check_shadowstep``、``_check_zone_effect``）：版型依
+參數值分支，各支只列該值可用的形狀（``None`` ＝ 不限；Phase 4-L10a A3）。"""
+_MAIN, _REACTION = "main", "reaction"
+
+
+@cache
+def _weapon_req_type() -> Any:
+    """``weapon_req``（不依類別分支時）：四種值，說明寫明與 category 的配對（具名型別，各分支以
+    ``$ref`` 引用）。"""
+    values = [v for pair in WEAPON_REQ_BY_CATEGORY.values() for v in pair]
+    return _alias("WeaponReq", Annotated[_literal(values), Field(description=WEAPON_REQ_DOC)])
+
+
+@dataclass(frozen=True, slots=True)
+class _Branch:
+    """頂層的一支：版型 × 種類組（一般／反應技）× 參數分支 × 技能類別。"""
+
+    plan: LayoutPlan
+    group: str
+    kinds: tuple[str, ...]
+    split: tuple[str, str, str] | None
+    """（原語、參數、值）。"""
+    shapes: tuple[str, ...]
+    category: str | None
+    """技能類別（``None`` ＝ 不依類別分支）。"""
+
+    @property
+    def tag(self) -> str:
+        sub = "" if self.split is None else self.split[2]
+        return "~".join((self.plan.id, self.group, sub, self.category or ""))
+
+    @property
+    def model_name(self) -> str:
+        base = (
+            "SkillProposal" if self.plan.id == STANDARD_LAYOUT else f"SkillProposal_{self.plan.id}"
+        )
+        parts = [base]
+        if self.split is not None:
+            parts.append(self.split[2])
+        if self.group == _REACTION:
+            parts.append(_REACTION)
+        if self.category is not None:
+            parts.append(self.category)
+        return "_".join(parts)
+
+
+def _kind_groups(plan: LayoutPlan) -> list[tuple[str, tuple[str, ...]]]:
+    main = tuple(k for k in plan.kinds if k != "reaction")
+    groups = [(_MAIN, main)] if main else []
+    if "reaction" in plan.kinds:
+        groups.append((_REACTION, ("reaction",)))
+    return groups
+
+
+def _splits(plan: LayoutPlan) -> list[tuple[tuple[str, str, str] | None, tuple[str, ...]]]:
+    for lead in plan.leads:
+        if lead not in LAYOUT_SPLITS:
+            continue
+        param, table = LAYOUT_SPLITS[lead]
+        out: list[tuple[tuple[str, str, str] | None, tuple[str, ...]]] = []
+        for value, allowed in table.items():
+            shapes = (
+                plan.shapes if allowed is None else tuple(s for s in plan.shapes if s in allowed)
+            )
+            if shapes:
+                out.append(((lead, param, value), shapes))
+        if out:
+            return out
+    return [(None, plan.shapes)]
+
+
+def _branches(plan: LayoutPlan, *, split_category: bool = False) -> list[_Branch]:
+    categories: tuple[str | None, ...] = CATEGORIES if split_category else (None,)
+    return [
+        _Branch(plan, group, kinds, split, shapes, category)
+        for group, kinds in _kind_groups(plan)
+        for split, shapes in _splits(plan)
+        for category in categories
+    ]
+
+
+def _branch_picker(branches: Sequence[_Branch]) -> Callable[[Any], str | None]:
+    """頂層的判別函式：版型 → 種類組（``kind: reaction`` 走反應技分支）→ 參數分支（版型的特殊
+    原語的參數值）→ 技能類別。值不合法時退回第一支，讓錯誤落在該欄位上。"""
+    by_layout: dict[str, list[_Branch]] = {}
+    for branch in branches:
+        by_layout.setdefault(branch.plan.id, []).append(branch)
+
+    def pick(value: Any) -> str | None:
+        layout = _get(value, "layout")
+        options = by_layout.get(layout) if isinstance(layout, str) else None
+        if options is None:
+            return layout if isinstance(layout, str) else None
+        groups = [b.group for b in options]
+        group = (
+            _REACTION if _get(value, "kind") == "reaction" and _REACTION in groups else groups[0]
+        )
+        split = options[0].split
+        sub = ""
+        if split is not None:
+            values = [b.split[2] for b in options if b.split is not None]
+            found = next(
+                (
+                    _get(e, split[1])
+                    for e in _get(value, "effects") or ()
+                    if _get(e, "type") == split[0]
+                ),
+                None,
+            )
+            sub = found if found in values else values[0]
+        category = ""
+        if options[0].category is not None:
+            given = _get(value, "category")
+            category = given if given in CATEGORIES else CATEGORIES[0]
+        return "~".join((layout, group, sub, category))
+
+    return pick
+
+
 def _layout_model(
     builder: _Builder,
-    plan: LayoutPlan,
+    branch: _Branch,
     common: Mapping[str, Any],
     shared: _Shared,
 ) -> Any:
-    """一個版型的頂層模型（欄位順序：``layout`` 最先，讓模型先決定版型）。"""
-    if plan.id == STANDARD_LAYOUT and shared.standard_shape is not None:
+    """頂層的一支（欄位順序：``layout``、``kind``、``category`` 最先，讓模型先決定分支）。"""
+    plan = branch.plan
+    if branch.split is None and plan.id == STANDARD_LAYOUT and shared.standard_shape is not None:
         shape = shared.standard_shape
     else:
-        shape = builder.shape_union(plan.shapes)
+        shape = builder.shape_union(branch.shapes)
+    models: Mapping[str, Any] = builder.effects
+    if branch.split is not None:
+        lead, param, value = branch.split
+        models = {**builder.effects, lead: builder.restricted(lead, param, value)}
+    reaction = branch.group == _REACTION
     fields: dict[str, Any] = {
         "layout": (_literal((plan.id,)), ...),
-        **common,
-        "kind": (_literal(plan.kinds), ...),
-        "shape": (shape, ...),
-        "effects": (
-            _list_of(_layout_effects(builder, plan, shared)),
-            Field(min_length=1, max_length=plan.max_effects),
-        ),
-        "tags": (
-            list[Annotated[str, Field(pattern=ID_PATTERN)]],
-            Field(default_factory=list, max_length=_MAX_TAGS),
-        ),
+        "kind": (_literal(branch.kinds), ...),
     }
-    if plan.variants and shared.variant is not None:
+    if branch.category is not None:
+        fields["category"] = (_literal((branch.category,)), ...)
+        fields["weapon_req"] = (_literal(WEAPON_REQ_BY_CATEGORY[branch.category]), ...)
+    else:
+        fields["category"] = (SkillDef.model_fields["category"].annotation, ...)
+        fields["weapon_req"] = (_weapon_req_type(), ...)
+    fields.update({k: v for k, v in common.items() if not (reaction and k in ACTIVE_ONLY_FIELDS)})
+    if reaction:
+        fields["reaction"] = (shared.reaction, ...)
+    fields["shape"] = (shape, ...)
+    fields["effects"] = (
+        _list_of(_layout_effects(builder, plan, shared, models)),
+        Field(min_length=1, max_length=plan.max_effects),
+    )
+    fields["tags"] = (
+        list[Annotated[str, Field(pattern=ID_PATTERN)]],
+        Field(default_factory=list, max_length=_MAX_TAGS),
+    )
+    if plan.variants and shared.variant is not None and not reaction:
         fields["variants"] = (
             _list_of(shared.variant),
             Field(default_factory=list, max_length=_MAX_VARIANTS),
         )
     if builder.condition is not None:
         fields["condition"] = (Union[builder.condition, None], None)  # noqa: UP007
-    if builder.trigger is not None:
+    if builder.trigger is not None and not reaction:
         fields["trigger"] = (Union[builder.trigger, None], None)  # noqa: UP007
-    if shared.followup is not None and "active" in plan.kinds:
+    if shared.followup is not None and "active" in branch.kinds:
         fields["followup"] = (shared.followup | None, Field(default=None))
-    name = "SkillProposal" if plan.id == STANDARD_LAYOUT else f"SkillProposal_{plan.id}"
     return create_model(
-        name,
+        branch.model_name,
         __base__=_Proposal,
         __doc__=_SKILL_DOC if plan.id == STANDARD_LAYOUT else None,
         **fields,
     )
+
+
+def _optional_alias(name: str, annotation: Any, doc: str, **limits: Any) -> tuple[Any, Any]:
+    """選填欄位的具名型別（說明寫在 ``$defs`` 一次，各分支以 ``$ref`` 引用；4-L10a 縮小
+    schema）。"""
+    inner: Any = Annotated[annotation, Field(**limits)] if limits else annotation
+    optional = Annotated[Union[inner, None], Field(description=doc)]  # noqa: UP007
+    return (_alias(name, optional), None)
+
+
+def _common_fields(
+    library: ContentLibrary, builder: _Builder, skeleton_type: Any, rarity: SkillRarity | None
+) -> dict[str, Any]:
+    """各分支共用的欄位（種類、類別、武器需求、反應另依分支）。"""
+    sk = SkillDef.model_fields
+    common: dict[str, Any] = {
+        # 名稱不在提議裡（4-L8，PM 追加）：由命名步驟（4-L7）產生，沒有命名時用組合式名稱
+        "description_zh": (str | None, None),
+        "concept": (str, Field(default="", max_length=80)),
+        "cast_flavor": (str, Field(default="", max_length=80)),
+        "skeleton": (skeleton_type, ...),
+        "scaling_attr": (sk["scaling_attr"].annotation, ...),
+        # 技能元素（3-54d）：選填；隆起、下陷、石膚、震波只有 earth 的技能能用（同一條互斥規則）
+        "element": (sk["element"].annotation, None),
+        "cost_penalty": _optional_alias(
+            "CostPenalty",
+            _literal(penalty_choices(library, rarity)),
+            COST_DOCS["cost_penalty"],
+        ),
+        "cost_overdraft": _optional_alias(
+            "CostOverdraft", Literal[True], COST_DOCS["cost_overdraft"]
+        ),
+        "cost_once_per_battle": _optional_alias(
+            "CostOncePerBattle", Literal[True], COST_DOCS["cost_once_per_battle"]
+        ),
+        "cost_hp": _optional_alias("CostHp", Literal[True], COST_DOCS["cost_hp"]),
+    }
+    if on_miss_allowed(rarity):
+        common["cost_on_miss"] = _optional_alias(
+            "CostOnMiss",
+            _list_of(builder.backlash_union()),
+            COST_DOCS["cost_on_miss"],
+            min_length=1,
+            max_length=_MAX_NESTED,
+        )
+    return common
 
 
 def build_proposal_models(
@@ -991,6 +1395,7 @@ def build_proposal_models(
     followup_skeletons: Iterable[str] | None = None,
     followup_shapes: Iterable[str] | None = None,
     followup_moves: Iterable[str] = (),
+    split_category: bool = False,
 ) -> ProposalModels:
     """由內容庫產生提議模型（原語的參數、範圍與可用值全部取自內容資料，不寫死在這裡）。
 
@@ -1008,7 +1413,12 @@ def build_proposal_models(
     （``followup``，有主動技能的版型、稀有度不低於複合技能的最低稀有度；``followup=False`` 時不
     開放；第二段的骨架與形狀另由 ``followup_skeletons``／``followup_shapes`` 指定，``None`` ＝
     與第一段相同的骨架、全部形狀；``followup_moves`` 是子集外也開放給第二段的施放者自身位移）、
-    代價類欄位（見 :mod:`trpg.skillgen.proposal_costs`）。"""
+    代價類欄位（見 :mod:`trpg.skillgen.proposal_costs`）。
+
+    Phase 4-L10a：每個版型再依「種類組（反應技另一支，``reaction`` 必填、沒有只限主動技能的
+    欄位）× 參數分支（:data:`LAYOUT_SPLITS`）」分支，以判別函式選支（JSON Schema 是 ``oneOf``）；
+    ``split_category=True`` 時再依技能類別分支（:data:`WEAPON_REQ_BY_CATEGORY`；預設關，
+    見該常數）。"""
     statuses = None if rarity is None else rarity_statuses(library, rarity)
     builder = _Builder(
         library,
@@ -1039,47 +1449,16 @@ def build_proposal_models(
                 library, builder, shared, second, shape_ids, moves=followup_moves
             ),
         )
-    sk = SkillDef.model_fields
-    common: dict[str, Any] = {
-        # 名稱不在提議裡（4-L8，PM 追加）：由命名步驟（4-L7）產生，沒有命名時用組合式名稱
-        "description_zh": (str | None, None),
-        "concept": (str, Field(default="", max_length=80)),
-        "cast_flavor": (str, Field(default="", max_length=80)),
-        "skeleton": (skeleton_type, ...),
-        "category": (sk["category"].annotation, ...),
-        "weapon_req": (sk["weapon_req"].annotation, ...),
-        "scaling_attr": (sk["scaling_attr"].annotation, ...),
-        # 技能元素（3-54d）：選填；隆起、下陷、石膚、震波只有 earth 的技能能用（同一條互斥規則）
-        "element": (sk["element"].annotation, None),
-        "cost_penalty": (
-            _penalty_type(penalty_choices(library, rarity)),
-            Field(default=None, description=COST_DOCS["cost_penalty"]),
-        ),
-        "cost_overdraft": (
-            Literal[True] | None,
-            Field(default=None, description=COST_DOCS["cost_overdraft"]),
-        ),
-        "cost_once_per_battle": (
-            Literal[True] | None,
-            Field(default=None, description=COST_DOCS["cost_once_per_battle"]),
-        ),
-        "cost_hp": (Literal[True] | None, Field(default=None, description=COST_DOCS["cost_hp"])),
-    }
     if "reaction" in kind_choices(library, skeleton_ids):
-        common["reaction"] = (_reaction_model(library) | None, Field(default=None))
-    if on_miss_allowed(rarity):
-        common["cost_on_miss"] = (
-            _list_of(builder.backlash_union()) | None,
-            Field(
-                default=None,
-                min_length=1,
-                max_length=_MAX_NESTED,
-                description=COST_DOCS["cost_on_miss"],
-            ),
-        )
+        shared = replace(shared, reaction=_reaction_model(library))
+    common = _common_fields(library, builder, skeleton_type, rarity)
     hints = {p.id: layout_hint(library, p) for p in plans}
-    layouts = [_layout_model(builder, p, common, shared) for p in plans]
-    skill = layouts[0] if len(layouts) == 1 else _union(layouts, "layout")
+    branches = [b for p in plans for b in _branches(p, split_category=split_category)]
+    choices = [Annotated[_layout_model(builder, b, common, shared), Tag(b.tag)] for b in branches]
+    skill: Any = Annotated[
+        Union[tuple(choices)],  # noqa: UP007
+        Discriminator(_branch_picker(branches)),
+    ]
     used = {i for p in plans for i in (*p.effects, *p.self_effects)}
     lookup = sorted(i for i in builder.lookup_ids if i in used)
     excluded = (
@@ -1093,6 +1472,7 @@ def build_proposal_models(
         variant_primitive_ids=shared.variant_ids,
         excluded_primitives=excluded,
         layouts=tuple((p.id, hints[p.id]) for p in plans),
+        kinds=tuple((p.id, p.kinds) for p in plans),
     )
 
 
@@ -1288,12 +1668,9 @@ def _json_path(loc: Sequence[int | str], data: object) -> str:
         if (
             isinstance(node, dict)
             and item not in node
-            and item
-            in (
-                node.get("type"),
-                node.get("event"),
-                node.get("layout"),
-                _GENERAL_TAG,
+            and (
+                item in (node.get("type"), node.get("event"), node.get("layout"), _GENERAL_TAG)
+                or "~" in item  # 判別函式的分支標籤（4-L10a）
             )
         ):
             continue  # union 標籤
@@ -1406,15 +1783,29 @@ def _rule_error(rule: str, message: str, skill: SkillDef | None = None) -> Propo
     return ProposalError(stage="rules", path=_proposal_path(path), code=rule, message=message)
 
 
-def _layout_hints(errors: list[ProposalError], models: ProposalModels) -> list[ProposalError]:
-    """頂層缺 ``layout`` 時，``allowed`` 列出可用的版型（pydantic 的錯誤不帶這份清單）。"""
+def _layout_hints(
+    errors: list[ProposalError], models: ProposalModels, data: object = None
+) -> list[ProposalError]:
+    """頂層的錯誤補上完整的可用值（頂層依種類組與類別分支，pydantic 的錯誤只帶該支的值；
+    4-L10a）：缺 ``layout`` 或版型不存在時列出可用的版型；``category`` 列出全部類別；``kind``
+    列出這個版型可選的種類。"""
     layouts = tuple(f for f, _ in models.layouts)
-    return [
-        replace(e, path="layout", message="缺少版型欄位 layout", allowed=layouts)
-        if e.code == "union_tag_not_found" and e.path == "" and layouts
-        else e
-        for e in errors
-    ]
+    kinds = dict(models.kinds)
+    layout = data.get("layout") if isinstance(data, dict) else None
+    out: list[ProposalError] = []
+    for error in errors:
+        fixed = error
+        if error.path == "" and error.code == "union_tag_not_found" and layouts:
+            fixed = replace(error, path="layout", message="缺少版型欄位 layout", allowed=layouts)
+        elif error.path == "" and error.code == "union_tag_invalid" and layouts:
+            message = f"未知的版型 {layout!r}"
+            fixed = replace(error, path="layout", message=message, allowed=layouts)
+        elif error.path == "category" and error.code == "literal_error":
+            fixed = replace(error, allowed=CATEGORIES)
+        elif error.path == "kind" and error.code == "literal_error" and layout in kinds:
+            fixed = replace(error, allowed=kinds[layout])
+        out.append(fixed)
+    return out
 
 
 def evaluate_proposal(
@@ -1437,7 +1828,7 @@ def evaluate_proposal(
     try:
         proposal = TypeAdapter(models.skill).validate_python(data)
     except ValidationError as exc:
-        errors = _layout_hints(_pydantic_errors(exc, "proposal", data), models)
+        errors = _layout_hints(_pydantic_errors(exc, "proposal", data), models, data)
         return ProposalResult(None, tuple(errors))
     try:
         skill = to_skill_def(proposal, ctx, fill or minimal_filler(library), library)
