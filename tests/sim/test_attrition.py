@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from trpg.content.library import ContentLibrary, load_library
+from trpg.content.maps import SpawnUnitsEvent
 from trpg.shared.types import Team
-from trpg.sim.attrition import AttritionConfig, apply_config, format_rows
+from trpg.sim.attrition import NO_REINFORCE, AttritionConfig, apply_config, format_rows
 
 
 def _library() -> ContentLibrary:
@@ -36,7 +37,10 @@ def test_defend_rounds_delta_applies_to_every_defend_map() -> None:
     original = library.maps["open_plain"].alt_objectives
     assert original is not None
     assert original.defend is not None
-    assert original.defend.rounds == new.defend.rounds + 2  # 覆寫沒有改到原 library
+    overridden = out.maps["open_plain"].alt_objectives
+    assert overridden is not None
+    assert overridden.defend is not None
+    assert original.defend.rounds - 2 == overridden.defend.rounds  # 原 library 沒被改到
 
 
 def test_tile_modes_stay_legal() -> None:
@@ -74,3 +78,24 @@ def test_third_battle_enemies_trimmed() -> None:
 
 def test_format_rows_header() -> None:
     assert format_rows([]).startswith("| 設定 | 一輪勝率")
+
+
+def test_boss_overrides_guards_and_reinforcements() -> None:
+    library = _library()
+    boss = library.roguelite.boss
+    base_events = [e for e in library.maps[boss.map].events if isinstance(e, SpawnUnitsEvent)]
+    assert base_events
+
+    out = apply_config(library, AttritionConfig(boss_guards_delta=-2))
+    assert out.roguelite.boss.enemies == boss.enemies[:-2]
+    assert out.roguelite.boss.enemies[0] == boss.enemies[0]  # 頭目保留
+    assert library.roguelite.boss.enemies == boss.enemies
+
+    out = apply_config(library, AttritionConfig(boss_reinforce_round=4, boss_reinforce_delta=-1))
+    events = [e for e in out.maps[boss.map].events if isinstance(e, SpawnUnitsEvent)]
+    assert [e.round for e in events] == [4] * len(base_events)
+    assert [len(e.units) for e in events] == [len(e.units) - 1 for e in base_events]
+
+    out = apply_config(library, AttritionConfig(boss_reinforce_round=NO_REINFORCE))
+    assert not [e for e in out.maps[boss.map].events if isinstance(e, SpawnUnitsEvent)]
+    assert "無援軍" in AttritionConfig(boss_reinforce_round=NO_REINFORCE).label

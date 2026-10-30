@@ -15,6 +15,7 @@ from trpg.content.maps import (
     AltObjective,
     AltObjectives,
     MapDef,
+    MapEvent,
     SpawnPlacement,
     SpawnUnitsEvent,
     check_map,
@@ -34,8 +35,8 @@ __all__ = [
     "BossResult",
     "RunOutcome",
     "apply_config",
-    "format_rows",
     "format_boss_rows",
+    "format_rows",
     "run_boss_config",
     "run_config",
 ]
@@ -173,7 +174,7 @@ def _override_map(library: ContentLibrary, map_def: MapDef, config: AttritionCon
 
 def _override_boss_events(map_def: MapDef, config: AttritionConfig) -> MapDef:
     """援軍事件（``spawn_units``）：改輪數、人數或整個拿掉；其他事件不動。"""
-    events = []
+    events: list[MapEvent] = []
     for event in map_def.events:
         if not isinstance(event, SpawnUnitsEvent):
             events.append(event)
@@ -329,7 +330,8 @@ def run_boss_config(
 def format_boss_rows(boss: Sequence[BossResult], runs: Sequence[AttritionResult]) -> str:
     """Markdown 表（一列一個設定；``boss`` 與 ``runs`` 同序）。"""
     head = (
-        "| 設定 | Boss 有召喚勝率／輪數 | Boss 無召喚勝率／輪數 | 一輪勝率 | 平均贏幾場 | 打到 Boss 的輪數 |\n"
+        "| 設定 | Boss 有召喚勝率／輪數 | Boss 無召喚勝率／輪數 | 一輪勝率 "
+        "| 平均贏幾場 | 打到 Boss 的輪數 |\n"
         "|---|---|---|---|---|---|\n"
     )
     rows = [
