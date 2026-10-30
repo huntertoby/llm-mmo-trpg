@@ -1,0 +1,637 @@
+[
+  {
+    "name": "open_plain",
+    "max_rounds": 30,
+    "battles": 40,
+    "completed": 40,
+    "ally_wins": 20,
+    "enemy_wins": 20,
+    "draws": 0,
+    "ally_win_rate": 0.5,
+    "enemy_win_rate": 0.5,
+    "draw_rate": 0.0,
+    "rounds_mean": 4.4,
+    "rounds_median": 4.0,
+    "rounds_min": 2,
+    "rounds_max": 7,
+    "actions_mean": 88.15,
+    "teams": [
+      {
+        "team": "ally",
+        "dpr_direct": 28.437142857142856,
+        "dpr_indirect": 2.4301190476190477,
+        "damage_friendly": 0.175,
+        "environment_damage_taken": 1.3,
+        "shield_absorbed": 0.0
+      },
+      {
+        "team": "enemy",
+        "dpr_direct": 25.631666666666668,
+        "dpr_indirect": 2.551488095238095,
+        "damage_friendly": 1.425,
+        "environment_damage_taken": 7.525,
+        "shield_absorbed": 0.0
+      }
+    ],
+    "templates": [
+      {
+        "template_id": "hero_archer",
+        "team": "ally",
+        "instances": 40,
+        "dpr": 11.937916666666666,
+        "damage_taken": 33.125,
+        "healing": 0.0,
+        "kills": 0.85,
+        "survival": 0.475,
+        "ap_per_turn": 2.8940397350993377,
+        "shield_provided": 0.0,
+        "teammate_survival": 0.3125
+      },
+      {
+        "template_id": "hero_fighter",
+        "team": "ally",
+        "instances": 40,
+        "dpr": 8.747083333333334,
+        "damage_taken": 52.325,
+        "healing": 0.0,
+        "kills": 0.65,
+        "survival": 0.325,
+        "ap_per_turn": 2.9508196721311477,
+        "shield_provided": 0.0,
+        "teammate_survival": 0.3875
+      },
+      {
+        "template_id": "hero_mage",
+        "team": "ally",
+        "instances": 40,
+        "dpr": 18.377083333333335,
+        "damage_taken": 35.475,
+        "healing": 0.0,
+        "kills": 0.8,
+        "survival": 0.3,
+        "ap_per_turn": 2.817073170731707,
+        "shield_provided": 0.0,
+        "teammate_survival": 0.4
+      },
+      {
+        "template_id": "bandit",
+        "team": "enemy",
+        "instances": 80,
+        "dpr": 5.829791666666667,
+        "damage_taken": 32.1625,
+        "healing": 0.0,
+        "kills": 0.325,
+        "survival": 0.225,
+        "ap_per_turn": 2.6018957345971563,
+        "shield_provided": 0.0,
+        "teammate_survival": null
+      },
+      {
+        "template_id": "bandit_archer",
+        "team": "enemy",
+        "instances": 40,
+        "dpr": 14.9075,
+        "damage_taken": 24.925,
+        "healing": 0.0,
+        "kills": 0.325,
+        "survival": 0.35,
+        "ap_per_turn": 2.751937984496124,
+        "shield_provided": 0.0,
+        "teammate_survival": null
+      },
+      {
+        "template_id": "bandit_captain",
+        "team": "enemy",
+        "instances": 40,
+        "dpr": 8.280892857142858,
+        "damage_taken": 43.975,
+        "healing": 0.0,
+        "kills": 0.875,
+        "survival": 0.5,
+        "ap_per_turn": 2.712328767123288,
+        "shield_provided": 0.0,
+        "teammate_survival": null
+      }
+    ],
+    "control": [
+      {
+        "source": "ally",
+        "turns": {
+          "stun": 0.0,
+          "frozen": 0.0,
+          "root": 0.05,
+          "slow": 0.0
+        }
+      },
+      {
+        "source": "enemy",
+        "turns": {
+          "stun": 0.0,
+          "frozen": 0.0,
+          "root": 0.0,
+          "slow": 0.0
+        }
+      },
+      {
+        "source": "environment",
+        "turns": {
+          "stun": 0.0,
+          "frozen": 0.0,
+          "root": 0.0,
+          "slow": 0.0
+        }
+      }
+    ],
+    "skills": [
+      {
+        "skill_id": "skill_fire_bolt",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 2.4,
+        "hit_rate": 0.6145833333333334,
+        "avg_damage": 7.958333333333333,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_cleave",
+        "teams": [
+          "enemy"
+        ],
+        "uses_per_battle": 1.525,
+        "hit_rate": 0.6081081081081081,
+        "avg_damage": 7.360655737704918,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_rending_strike",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 1.15,
+        "hit_rate": 0.5869565217391305,
+        "avg_damage": 2.0,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_bone_crusher",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.9,
+        "hit_rate": 0.5277777777777778,
+        "avg_damage": 5.138888888888889,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_ashen_oath",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.825,
+        "hit_rate": 0.673469387755102,
+        "avg_damage": 16.181818181818183,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_grapple_arrow",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.65,
+        "hit_rate": 0.5769230769230769,
+        "avg_damage": 1.6538461538461537,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_high_ground_shot",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.65,
+        "hit_rate": 0.6153846153846154,
+        "avg_damage": 7.961538461538462,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_cinder_burst",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.6,
+        "hit_rate": 0.4583333333333333,
+        "avg_damage": 14.291666666666666,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_whirlwind",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.525,
+        "hit_rate": 0.5510204081632653,
+        "avg_damage": 6.571428571428571,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_gale_kick",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.4,
+        "hit_rate": 0.625,
+        "avg_damage": 1.0625,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_frost_shackle",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.35,
+        "hit_rate": 0.5714285714285714,
+        "avg_damage": 4.642857142857143,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_smoke_arrow",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.35,
+        "hit_rate": null,
+        "avg_damage": 0.0,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_execute",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.1,
+        "hit_rate": 0.75,
+        "avg_damage": 5.5,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_piercing_shot",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.1,
+        "hit_rate": 0.6666666666666666,
+        "avg_damage": 10.75,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_fire_arrow",
+        "teams": [
+          "enemy"
+        ],
+        "uses_per_battle": 0.025,
+        "hit_rate": 1.0,
+        "avg_damage": 3.0,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_smoke_bomb",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.025,
+        "hit_rate": null,
+        "avg_damage": 0.0,
+        "avg_healed": null
+      }
+    ],
+    "unused_skills": [
+      "skill_blink",
+      "skill_vanish"
+    ],
+    "anomalies": [],
+    "scene_events": {},
+    "positional_events": {
+      "backstab:ally": 12,
+      "backstab:enemy": 46
+    },
+    "summon_events": {}
+  },
+  {
+    "name": "oil_depot",
+    "max_rounds": 30,
+    "battles": 40,
+    "completed": 40,
+    "ally_wins": 26,
+    "enemy_wins": 14,
+    "draws": 0,
+    "ally_win_rate": 0.65,
+    "enemy_win_rate": 0.35,
+    "draw_rate": 0.0,
+    "rounds_mean": 4.35,
+    "rounds_median": 4.0,
+    "rounds_min": 2,
+    "rounds_max": 8,
+    "actions_mean": 82.575,
+    "teams": [
+      {
+        "team": "ally",
+        "dpr_direct": 29.569077380952383,
+        "dpr_indirect": 7.202023809523809,
+        "damage_friendly": 0.65,
+        "environment_damage_taken": 2.05,
+        "shield_absorbed": 0.0
+      },
+      {
+        "team": "enemy",
+        "dpr_direct": 24.138541666666665,
+        "dpr_indirect": 2.0663988095238097,
+        "damage_friendly": 0.2,
+        "environment_damage_taken": 13.875,
+        "shield_absorbed": 0.0
+      }
+    ],
+    "templates": [
+      {
+        "template_id": "hero_archer",
+        "team": "ally",
+        "instances": 40,
+        "dpr": 12.66422619047619,
+        "damage_taken": 29.9,
+        "healing": 0.0,
+        "kills": 0.8,
+        "survival": 0.575,
+        "ap_per_turn": 2.8947368421052633,
+        "shield_provided": 0.0,
+        "teammate_survival": 0.4625
+      },
+      {
+        "template_id": "hero_fighter",
+        "team": "ally",
+        "instances": 40,
+        "dpr": 10.634494047619048,
+        "damage_taken": 47.05,
+        "healing": 0.0,
+        "kills": 1.075,
+        "survival": 0.45,
+        "ap_per_turn": 2.8257575757575757,
+        "shield_provided": 0.0,
+        "teammate_survival": 0.525
+      },
+      {
+        "template_id": "hero_mage",
+        "team": "ally",
+        "instances": 40,
+        "dpr": 20.579583333333332,
+        "damage_taken": 33.0,
+        "healing": 0.0,
+        "kills": 1.15,
+        "survival": 0.475,
+        "ap_per_turn": 2.782608695652174,
+        "shield_provided": 0.0,
+        "teammate_survival": 0.5125
+      },
+      {
+        "template_id": "bandit",
+        "team": "enemy",
+        "instances": 101,
+        "dpr": 6.017491749174917,
+        "damage_taken": 31.168316831683168,
+        "healing": 0.0,
+        "kills": 0.3069306930693069,
+        "survival": 0.1782178217821782,
+        "ap_per_turn": 2.4708520179372195,
+        "shield_provided": 0.0,
+        "teammate_survival": null
+      },
+      {
+        "template_id": "bandit_archer",
+        "team": "enemy",
+        "instances": 40,
+        "dpr": 11.755833333333333,
+        "damage_taken": 28.7,
+        "healing": 0.0,
+        "kills": 0.1,
+        "survival": 0.15,
+        "ap_per_turn": 2.4831460674157304,
+        "shield_provided": 0.0,
+        "teammate_survival": null
+      },
+      {
+        "template_id": "bandit_captain",
+        "team": "enemy",
+        "instances": 40,
+        "dpr": 10.384166666666667,
+        "damage_taken": 51.95,
+        "healing": 0.0,
+        "kills": 0.575,
+        "survival": 0.25,
+        "ap_per_turn": 2.828125,
+        "shield_provided": 0.0,
+        "teammate_survival": null
+      }
+    ],
+    "control": [
+      {
+        "source": "ally",
+        "turns": {
+          "stun": 0.0,
+          "frozen": 0.0,
+          "root": 0.0,
+          "slow": 0.0
+        }
+      },
+      {
+        "source": "enemy",
+        "turns": {
+          "stun": 0.0,
+          "frozen": 0.0,
+          "root": 0.0,
+          "slow": 0.0
+        }
+      },
+      {
+        "source": "environment",
+        "turns": {
+          "stun": 0.0,
+          "frozen": 0.0,
+          "root": 0.0,
+          "slow": 0.0
+        }
+      }
+    ],
+    "skills": [
+      {
+        "skill_id": "skill_fire_bolt",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 1.95,
+        "hit_rate": 0.45454545454545453,
+        "avg_damage": 5.897435897435898,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_cleave",
+        "teams": [
+          "enemy"
+        ],
+        "uses_per_battle": 1.625,
+        "hit_rate": 0.6164383561643836,
+        "avg_damage": 8.892307692307693,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_grapple_arrow",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 1.1,
+        "hit_rate": 0.6363636363636364,
+        "avg_damage": 2.1136363636363638,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_ashen_oath",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 1.0,
+        "hit_rate": 0.7323943661971831,
+        "avg_damage": 22.45,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_gale_kick",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.775,
+        "hit_rate": 0.6129032258064516,
+        "avg_damage": 0.9354838709677419,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_rending_strike",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.725,
+        "hit_rate": 0.4827586206896552,
+        "avg_damage": 1.7586206896551724,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_bone_crusher",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.675,
+        "hit_rate": 0.6666666666666666,
+        "avg_damage": 6.407407407407407,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_cinder_burst",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.65,
+        "hit_rate": 0.6538461538461539,
+        "avg_damage": 19.923076923076923,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_whirlwind",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.6,
+        "hit_rate": 0.6111111111111112,
+        "avg_damage": 6.541666666666667,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_frost_shackle",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.525,
+        "hit_rate": 0.5,
+        "avg_damage": 2.761904761904762,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_smoke_arrow",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.325,
+        "hit_rate": null,
+        "avg_damage": 0.0,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_piercing_shot",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.175,
+        "hit_rate": 0.6153846153846154,
+        "avg_damage": 10.285714285714286,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_execute",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.125,
+        "hit_rate": 0.6,
+        "avg_damage": 7.8,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_high_ground_shot",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.075,
+        "hit_rate": 0.6666666666666666,
+        "avg_damage": 1.6666666666666667,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_blink",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.025,
+        "hit_rate": null,
+        "avg_damage": 0.0,
+        "avg_healed": null
+      },
+      {
+        "skill_id": "skill_smoke_bomb",
+        "teams": [
+          "ally"
+        ],
+        "uses_per_battle": 0.025,
+        "hit_rate": null,
+        "avg_damage": 0.0,
+        "avg_healed": null
+      }
+    ],
+    "unused_skills": [
+      "skill_fire_arrow",
+      "skill_vanish"
+    ],
+    "anomalies": [],
+    "scene_events": {},
+    "positional_events": {
+      "ambush:ally": 1,
+      "backstab:ally": 4,
+      "backstab:enemy": 49
+    },
+    "summon_events": {}
+  }
+]

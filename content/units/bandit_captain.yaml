@@ -1,0 +1,16 @@
+# 盜賊隊長（BAL-6）：帶隊的精英，數值介於一般盜賊與盜賊頭目之間；不帶 boss 標籤（沒有 Boss 的傷害與生命旋鈕，
+# 擊倒時照精英給源力）。用在 open_plain、oil_depot 的預設陣容（原本放頭目）。
+id: bandit_captain
+name_zh: 盜賊隊長
+attributes: {str: 14, dex: 12, con: 14, int: 8, wis: 10, wil: 10}
+max_hp: 45
+speed: 5
+armor_bonus: 3
+weapon: one_handed_sword
+resist: {physical: 50}
+element_mods: {}
+tags: [elite, humanoid]
+max_mana: 14
+skills: [skill_cleave]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#a8724c', hair: short, hair_color: '#1c1410', gear: {body: {kind: leather, material: iron}, feet: {kind: boots, material: leather}, head: {kind: bandana, material: cloth, color: '#a32a2a'}}}

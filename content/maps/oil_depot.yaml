@@ -65,7 +65,7 @@ alt_objectives:
   defend: {rounds: 6, tiles: [[1, 4]]}
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
-  enemies: [bandit, bandit, bandit_archer, bandit_boss]
+  enemies: [bandit, bandit, bandit_archer, bandit_captain]
 events:
   - kind: spawn_units
     round: 3
