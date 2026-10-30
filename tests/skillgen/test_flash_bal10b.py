@@ -426,7 +426,7 @@ def test_mod_cooldown_deepens_the_cooldown_cut() -> None:
         _sound(before, got)
         assert got.modifiers[0].change.cooldown_delta == -2
         assert "冷卻 -2 回合" in " ".join(skill_card(lib, got).modifiers)
-    assert done >= 1
+    assert done >= 2
 
 
 def test_mod_cost_lightens_a_drawback_and_keeps_form_upkeep() -> None:
