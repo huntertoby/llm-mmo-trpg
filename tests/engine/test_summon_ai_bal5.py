@@ -45,7 +45,7 @@ def test_the_trait_weights_are_data_and_nonzero() -> None:
     assert rules.pull_round_points > 0
     assert rules.snare_likelihood_permille > 0
     assert rules.platform_points > 0
-    assert rules.infuse_value_permille == 1000
+    assert rules.infuse_value_permille == 1300  # 玩法 PM BAL-5：灌注優先於直接施放
 
 
 @pytest.mark.parametrize(
@@ -73,4 +73,5 @@ def test_infusing_a_two_ap_skill_counts_the_saved_ap() -> None:
     assert state.ruleset.skill_def("skill_air_burst").ap_cost == 2
     assert ap_ratio(state, "skill_air_burst") == 2
     rules = _profile().summon
-    assert infuse_value(Fraction(10), Fraction(1), rules, Fraction(2)) == 20
+    scale = Fraction(rules.infuse_value_permille, 1000)
+    assert infuse_value(Fraction(10), Fraction(1), rules, Fraction(2)) == 20 * scale
