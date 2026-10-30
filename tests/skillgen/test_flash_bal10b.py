@@ -474,7 +474,7 @@ def _with_drawback(skill_id: str, drawback: dict[str, int]) -> SkillDef:
 
 @pytest.mark.parametrize("skill_id", ["skill_heavy_stomp", "skill_summon_elite"])
 def test_mod_cost_never_removes_a_one_step_drawback(skill_id: str) -> None:
-    """BAL-10c：AP +1、召喚上限 −1、射程 −1 這類只有 1 格的代價，減了就消失，所以不出（比照 3W-5b）。"""
+    """BAL-10c：AP +1、召喚上限 −1、射程 −1 這類只有 1 格的代價，減了就消失，所以不出。"""
     lib = library()
     base = lib.skills[skill_id]
     template = lib.flash.minor_template("mod_cost")

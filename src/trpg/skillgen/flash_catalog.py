@@ -13,9 +13,9 @@ from dataclasses import dataclass, field, replace
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.rng import Rng
 from trpg.skillgen.flash_category import allowed_categories
 from trpg.skillgen.flash_offer import FlashOptionSource, FlashRequest, UsageSource
-from trpg.shared.rng import Rng
 from trpg.skillgen.flash_state import Variation
 
 __all__ = ["CatalogEntry", "FlashCatalog", "build_catalog"]
