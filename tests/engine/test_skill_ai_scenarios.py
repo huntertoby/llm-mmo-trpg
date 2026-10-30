@@ -172,7 +172,8 @@ def test_mana_and_cooldown_weights_lower_a_skills_score() -> None:
     )
     cost = score_action(state, action, free).score - score_action(state, action, profile).score
     weights = profile.weights
-    assert cost == weights.mana * 12 + weights.cooldown * 2 and cost > 0
+    mana = library().ruleset.skill_def("skill_ashen_oath").cost.mana  # 內容檔 12 × 倍率（BAL-4b）
+    assert cost == weights.mana * mana + weights.cooldown * 2 and cost > 0
 
 
 # ---------------------------------------------------------------------------

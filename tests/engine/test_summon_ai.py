@@ -108,7 +108,7 @@ def _trapper_run(map_id: str, seed: int) -> Any:
 
 
 def test_the_ai_casts_the_summon_and_the_summon_acts() -> None:
-    _, run = _trapper_run("dark_forest", 6)
+    _, run = _trapper_run("dark_forest", 1)
     # 3D-6：build_trapper 另有殘影之誓（倒下時的分身，orphan），這裡只看喚起骷髏；
     # 原本的 swamp 種子 1
     # 改為啟動殘影之誓後不再召喚，換成 dark_forest 種子 0；

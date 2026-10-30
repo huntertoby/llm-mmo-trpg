@@ -217,8 +217,8 @@ def apply_ally_mana_cost(
     ``permille`` ＝ 1000 時原樣回傳。只動 ``Ruleset.skills``（戰鬥實際結算的版本）；
     ``ContentLibrary.skills`` 保持內容檔的原始值，預算、閃現、組合器都以原始費用計算（生成技能
     同理：先照原始費用過預算，進規則包時才由 ``Ruleset.with_skills`` 乘倍率）。``load_library``
-    以 ``core.ally_mana_cost_permille`` 呼叫一次；模擬的難度覆寫（``trpg.sim.difficulty``）再在已縮放
-    的值上乘它自己的倍率。"""
+    以 ``core.ally_mana_cost_permille`` 呼叫一次；模擬的難度覆寫（``trpg.sim.difficulty``）再在
+    已縮放的值上乘它自己的倍率。"""
     if permille == _PERMILLE:
         return ruleset
     enemy_skills = {s for i in enemy_ids for s in units[i].skills}

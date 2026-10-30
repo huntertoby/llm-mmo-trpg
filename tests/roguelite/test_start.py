@@ -24,7 +24,9 @@ def test_new_run_uses_the_build_hero_with_base_attributes_and_four_free_points()
     core = lib.ruleset.core
     assert (run.hp, run.mana) == (
         core.template_max_hp(build) + core.hp_per_con_point,
-        build.max_mana,
+        core.resources.max_for(
+            "mana", build.max_mana, run.hero.attributes
+        ),  # ×法力上限倍率（BAL-4b）
     )
     assert run.hp == run.max_hp_in(core)
     assert run.source == lib.ruleset.core.source_min_at_start

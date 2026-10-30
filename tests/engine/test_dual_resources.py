@@ -122,9 +122,14 @@ def test_hero_caps_follow_the_highest_attribute_of_each_group() -> None:
     attrs = {a: 10 for a in Attribute} | {Attribute.WIL: 16, Attribute.INT: 12, Attribute.CON: 13}
     mana, stamina = _unit(attributes=attrs, max_mana=40, stamina=30, scaled_resources=True)
     assert core.resources.mana.per_point == core.resources.stamina.per_point == 2
-    assert (mana, stamina) == (40 + (16 - 10) * 2, 30 + (13 - 10) * 2)
+    cap = core.resources.mana_cap_permille  # 法力上限倍率（BAL-4b，content）
+
+    def capped(v: int) -> int:
+        return (v * cap + 500) // 1000
+
+    assert (mana, stamina) == (capped(40 + (16 - 10) * 2), 30 + (13 - 10) * 2)
     low = {a: 8 for a in Attribute}
-    assert _unit(attributes=low, max_mana=40, stamina=30, scaled_resources=True) == (36, 26)
+    assert _unit(attributes=low, max_mana=40, stamina=30, scaled_resources=True) == (capped(36), 26)
 
 
 def test_other_units_keep_their_fixed_caps() -> None:

@@ -159,7 +159,7 @@ def test_autosave_failure_does_not_break_the_game(library: ContentLibrary, tmp_p
 
 def test_standalone_battles_do_not_autosave(runs_client: TestClient, save_dir: Path) -> None:
     created = runs_client.post(
-        "/api/battles", json={"map_id": "open_plain", "hero_build": BUILD, "seed": 1}
+        "/api/battles", json={"map_id": "open_plain", "hero_build": BUILD, "seed": 0}
     )
     assert created.status_code == 201, created.text
     battle = created.json()

@@ -95,7 +95,7 @@ def _campfire_session(client: TestClient, library: ContentLibrary) -> str:
     skilled = full_library()
     run, _ = auto_play(
         skilled,
-        new_run(skilled, "build_fire", 0),
+        new_run(skilled, "build_fire", 1),  # 種子 0 在 BAL-4b 數值下打不到營火
         stop=lambda r, b: isinstance(r.node, CampfireNode),
     )
     runs = client.app.state.runs  # type: ignore[attr-defined]

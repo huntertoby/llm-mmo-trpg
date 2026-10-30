@@ -41,6 +41,27 @@
    }
   }
  },
+ "bandit_archer_guard": {
+  "skin": "#d9a47a",
+  "hair": "short",
+  "hair_color": "#3a2a1c",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "hood",
+    "material": "cloth",
+    "color": "#6a4a2e"
+   }
+  }
+ },
  "bandit_boss": {
   "skin": "#a8724c",
   "hair": "short",
@@ -71,7 +92,55 @@
   },
   "rarity": "epic"
  },
+ "bandit_guard": {
+  "skin": "#a8724c",
+  "hair": "short",
+  "hair_color": "#2a1c14",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "bandana",
+    "material": "cloth",
+    "color": "#b33a3a"
+   }
+  }
+ },
  "bandit_shieldbearer": {
+  "skin": "#7a4e32",
+  "hair": "short",
+  "hair_color": "#1c1410",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "mail",
+    "material": "iron"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "helmet",
+    "material": "iron"
+   },
+   "off_hand": {
+    "kind": "shield_kite",
+    "material": "wood",
+    "color": "#8a5a32"
+   }
+  },
+  "main_material": "iron",
+  "main_color": "#9a8a76"
+ },
+ "bandit_shieldbearer_guard": {
   "skin": "#7a4e32",
   "hair": "short",
   "hair_color": "#1c1410",

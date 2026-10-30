@@ -73,8 +73,8 @@ def test_skill_condition_target_hp_below() -> None:
 def test_target_hp_below_is_strict_at_the_boundary() -> None:
     skill = _with_condition({"type": "target_hp_below", "permille": 500})
     state = battle(skill, [(4, 3)])
+    state.units[U2].max_hp = 36  # 邊界測試要偶數 HP（範本 HP 隨平衡調整）
     half = state.units[U2].max_hp // 2
-    assert state.units[U2].max_hp % 2 == 0
     assert not _usable(_set_hp(battle(skill, [(4, 3)]), U2, half))  # 剛好 50% 不算「低於」
     assert _usable(_set_hp(battle(skill, [(4, 3)]), U2, half - 1))
 
