@@ -11,6 +11,7 @@ from pathlib import Path
 
 from trpg.content.battle import OffhandTable, StatusTable, TerrainTable, WeaponTable
 from trpg.content.composer_rules import ComposerRules
+from trpg.content.effect_words import EffectWords
 from trpg.content.environment import (
     AiProfileTable,
     InteractionTable,
@@ -78,6 +79,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("origins.yaml", OriginTable),
     ContentFile("roguelite.yaml", RunRules),
     ContentFile("llm/world_shattered.yaml", WorldStyle),
+    ContentFile("llm/effect_words.yaml", EffectWords),
 )
 """單一資料檔。資料夾（``units/``、``maps/``、``skills/``）與跨檔案檢查由
 :func:`trpg.content.library.load_library` 負責。"""

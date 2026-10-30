@@ -14,6 +14,7 @@ LLM 只提議：技能的數值一律來自預算器（``propose_skill`` 內）�
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import replace
 from typing import Protocol
@@ -22,6 +23,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, rarity_rank
 from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.consistency import effect_phrases
 from trpg.llm.naming import (
     DEFAULT_NAMING_ATTEMPTS,
     apply_naming,
@@ -162,18 +164,28 @@ def make_proposer(
 
 
 # 命名用的 Mock 詞庫（全形中文）：「<詞首><骨架>之<詞尾>」，由種子挑選，不需網路與金鑰。
-_MOCK_HEADS = ("碎光", "殘響", "裂隙", "浮影", "晶輝", "沉霧", "曦痕", "遠嵐")
+_MOCK_HEADS = ("碎光", "殘響", "裂隙", "浮影", "星輝", "沉霧", "曦痕", "遠嵐")
 _MOCK_TAILS = ("低語", "餘燼", "回聲", "迴旋", "誓約", "斷章")
+_MOCK_CHARS = re.compile(r"[A-Za-z0-9_ ]")
 
 
 def mock_naming_client(library: ContentLibrary, skill: SkillDef, seed: int) -> MockLLMClient:
-    """合格的命名回應（確定性：依種子挑詞）。名稱與既有技能重複時，命名步驟會重試後改用組合式名稱。"""
+    """合格的命名回應（確定性：依種子挑詞）。名稱與既有技能重複時，命名步驟會重試後改用組合式名稱。
+    概念列出效果摘要（4-L11：敘事只寫技能有的效果、閃現加上的效果也會被提到；世界觀詞每段最多一個）。"""
     rng = Rng(seed).fork("llm.naming.mock")
     skeleton = plain_name(skill.skeleton, library)
     name = f"{rng.choice(_MOCK_HEADS)}{rng.choice(_MOCK_TAILS)}"
+    limit = load_world_style().naming.concept_max_chars
+    phrases = effect_phrases(library, skill)
+    concept = f"以{skeleton}為形的技能。"
+    for count in range(len(phrases), 0, -1):
+        candidate = f"以{skeleton}為形：{'、'.join(phrases[:count])}。"
+        if len(candidate) <= limit:
+            concept = candidate
+            break
     text = {
         "name_zh": name,
-        "concept": f"源晶碎片的頻率凝成{skeleton}。",
+        "concept": _MOCK_CHARS.sub("", concept),
         "cast_flavor": f"碎界的低鳴應聲而起，{name}隨你而動。",
     }
     return MockLLMClient([json.dumps(text, ensure_ascii=False)] * DEFAULT_NAMING_ATTEMPTS)

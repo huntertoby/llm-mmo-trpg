@@ -242,6 +242,8 @@ class FlashLlmName(_Model):
     attempts: int
     codes: tuple[str, ...] = ()
     naming_prompt_version: str = ""
+    consistency_retries: int = 0
+    """因敘事一致性或世界觀詞檢查（4-L11）不過而重試的次數（舊紀錄沒有＝0）。"""
 
 
 class FlashLlmRecord(_Model):

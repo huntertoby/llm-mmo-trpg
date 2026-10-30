@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import Field
+
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.schemas import ContentModel
 
@@ -18,6 +20,7 @@ __all__ = [
     "Realm",
     "Theme",
     "WorldStyle",
+    "WorldTermRules",
     "load_world_style",
 ]
 
@@ -43,6 +46,22 @@ class Theme(ContentModel):
     hint_zh: str
 
 
+class WorldTermRules(ContentModel):
+    """世界觀詞的用量上限（Phase 4-L11，初值交玩法 PM 定稿）：名稱與敘事少用世界觀詞頭。
+
+    - ``terms``：世界觀詞（子字串比對；由長到短、由左到右不重疊計數）。
+    - ``name_prefix_chars``：名稱前 ``name_prefix_len`` 個字不得含這些字（例如「晶」「頻」）；
+      名稱也不得以 ``terms`` 的詞開頭。
+    - ``name_max``：名稱最多幾個世界觀詞；``text_max``：概念、施放敘事（與閃現 note）每段
+      最多幾個。"""
+
+    terms: tuple[str, ...] = ()
+    name_prefix_chars: tuple[str, ...] = ()
+    name_prefix_len: int = Field(default=2, ge=1)
+    name_max: int = Field(default=1, ge=0)
+    text_max: int = Field(default=1, ge=0)
+
+
 class NamingRules(ContentModel):
     """技能命名與敘事的文字規則（Phase 4-L7）：長度上限與禁字。禁字是指令字樣、標籤與程式碼片段；
     英文字母與數字另由字元集檢查擋下（名稱只能是全形中文）。"""
@@ -51,6 +70,7 @@ class NamingRules(ContentModel):
     concept_max_chars: int = 80
     flavor_max_chars: int = 80
     forbidden_terms: tuple[str, ...] = ()
+    world_terms: WorldTermRules = WorldTermRules()
 
 
 class WorldStyle(ContentModel):

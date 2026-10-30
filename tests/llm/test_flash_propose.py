@@ -72,7 +72,7 @@ def _third_flash_state() -> SkillFlash:
 
 def _item(template: str, category: str, **extra: Any) -> dict[str, Any]:
     return {"category": category, "template": template, "keyword": None, "element": None,
-            "shape": None, "note_zh": "貼合這招的用法。", **extra}  # fmt: skip
+            "shape": None, "note_zh": None, **extra}  # fmt: skip
 
 
 def _text(*items: dict[str, Any]) -> str:
@@ -145,7 +145,7 @@ def test_prompt_is_versioned_and_data_is_escaped() -> None:
     assert "<b>" not in user and "&lt;b&gt;" in user
     assert "不要填任何數值" in messages[0]["content"]
     record = flash_prompt_record(messages)
-    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/1"
+    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/2"
     assert len(record["system_hash"]) == 12
 
 

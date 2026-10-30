@@ -44,7 +44,7 @@ def skill(library: ContentLibrary) -> SkillDef:
 
 
 def _reply(
-    name: str = "碎光低語", concept: str = "源晶碎片的頻率凝成箭矢。", flavor: str = "碎界低鳴。"
+    name: str = "碎光低語", concept: str = "源晶碎片凝成箭矢。", flavor: str = "碎界低鳴。"
 ) -> str:
     return json.dumps(
         {"name_zh": name, "concept": concept, "cast_flavor": flavor}, ensure_ascii=False
@@ -163,7 +163,7 @@ def test_fallback_names_are_unique_and_valid(library: ContentLibrary, skill: Ski
 
 def test_apply_naming_changes_only_text(library: ContentLibrary, skill: SkillDef) -> None:
     named = apply_naming(skill, NamingText.model_validate_json(GOOD))
-    assert named.name_zh == "碎光低語" and named.narrative.concept == "源晶碎片的頻率凝成箭矢。"
+    assert named.name_zh == "碎光低語" and named.narrative.concept == "源晶碎片凝成箭矢。"
     assert named.model_dump(exclude={"name_zh", "narrative"}) == skill.model_dump(
         exclude={"name_zh", "narrative"}
     )
@@ -193,6 +193,8 @@ NAMING_SNAPSHOTS = {
     "skill-naming/1": "968cb1624ae2d5d3c0100cd73c43e0547ef29cf3b5f88253acf4f738fad2f045",
     # 4-L10a C3：避免重複用世界觀名詞當開頭、不要和 taken_names 同開頭
     "skill-naming/2": "316b6c32362526c1a1ffb4c187ff5f849d58c78164abb5b0a52088c740c6bf28",
+    # 4-L11：效果摘要、只描述摘要裡的效果、閃現加上的效果要提到、世界觀詞用量
+    "skill-naming/3": "0a02a4f4f35cec43aa04de466174b4acde2a7b7ed0885fc036ef0a4ad770149a",
 }
 
 
@@ -332,7 +334,7 @@ def test_names_taken_this_run_reach_the_naming_prompt(library: ContentLibrary) -
     """同一個提議器（一輪）先取的名稱，會出現在下一個命名 prompt 的 taken_names。"""
     skill, request, good = _topic(library)
     ctx = ProposalContext(skill.tier, skill.rarity)
-    namer = MockLLMClient([GOOD, _reply(name="霜脈斷章")])
+    namer = MockLLMClient([GOOD, _reply(name="殘脈斷章")])
     proposer = make_proposer(lambda _r, _s: MockLLMClient([good]), library, naming=namer)
     assert proposer(request, ctx, 1).skill is not None
     assert proposer(request, ctx, 2).skill is not None
