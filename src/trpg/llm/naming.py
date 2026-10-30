@@ -25,6 +25,7 @@ from trpg.llm.client import LLMClient
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.naming import build_naming_messages, naming_schema
 from trpg.llm.response import clean_response
+from trpg.llm.simplified import simplified_chars
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal import combined_skill_name
@@ -47,6 +48,8 @@ _NUMERALS = "二三四五六七八九十"
 type NamingSource = Literal["llm", "fallback"]
 
 _NAME_CHARS = re.compile(r"^[一-鿿・（）]+$")
+SIMPLIFIED_CHECKED: tuple[str, ...] = ("concept", "cast_flavor")
+"""檢查簡體字的欄位（Phase 4-L10a C4；字表見 :mod:`trpg.llm.simplified`）。"""
 _TEXT_CHARS = re.compile(r"^[一-鿿　-〿＀-￯・—…‘-”、。，；：！？（）「」『』《》—…・]+$")
 """敘事文字允許的字元：中文字、全形標點與符號（沒有英文字母、數字、半形符號與空白）。"""
 
@@ -97,13 +100,22 @@ def _check_text(label: str, text: str, limit: int, rules: NamingRules) -> list[N
     bad = next((t for t in rules.forbidden_terms if t.lower() in lowered), None)
     if bad is not None:
         out.append(NameCheck(f"{label}.forbidden", f"{label} 含有不可使用的字樣。"))
+    found = simplified_chars(text) if label in SIMPLIFIED_CHECKED else []
+    if found:  # 4-L10a C4：敘事要用繁體中文
+        out.append(
+            NameCheck(
+                f"{label}.simplified",
+                f"{label} 有簡體字（{'、'.join(found)}），請改用繁體中文。",
+            )
+        )
     return out
 
 
 def check_naming(
     text: NamingText, rules: NamingRules, taken: Collection[str] = ()
 ) -> list[NameCheck]:
-    """檢查命名文字：長度、空字串、字元集、禁字、重名（``taken`` 為已使用的技能名稱）。"""
+    """檢查命名文字：長度、空字串、字元集、禁字、簡體字（``concept``／``cast_flavor``，4-L10a）、
+    重名（``taken`` 為已使用的技能名稱）。"""
     errors = _check_text("name_zh", text.name_zh, rules.name_max_chars, rules)
     errors += _check_text("concept", text.concept, rules.concept_max_chars, rules)
     errors += _check_text("cast_flavor", text.cast_flavor, rules.flavor_max_chars, rules)
