@@ -11,20 +11,32 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import AltObjective, AltObjectives, MapDef, check_map
+from trpg.content.maps import (
+    AltObjective,
+    AltObjectives,
+    MapDef,
+    SpawnPlacement,
+    SpawnUnitsEvent,
+    check_map,
+)
 from trpg.engine.rules.geometry import manhattan
 from trpg.roguelite.auto import auto_play
 from trpg.roguelite.start import default_start, new_keyword_run
 from trpg.shared.types import Team
+from trpg.sim.baseline import _run_packs  # 與基準線同一套 Boss 戰跑法
 from trpg.sim.parallel import run_tasks
+from trpg.sim.summon_report import BOSS_MAP
 
 __all__ = [
     "TILE_MODES",
     "AttritionConfig",
     "AttritionResult",
+    "BossResult",
     "RunOutcome",
     "apply_config",
     "format_rows",
+    "format_boss_rows",
+    "run_boss_config",
     "run_config",
 ]
 
@@ -33,6 +45,8 @@ TILE_MODES = ("current", "wide", "back")
 ``back`` ＝ 改成最貼近我方起始區、仍合法（不在起始區、可站立）的格子（敵人最難搶到）。"""
 
 THIRD_BATTLE = 3
+NO_REINFORCE = -1
+"""``boss_reinforce_round`` 的值：拿掉 Boss 戰的援軍事件。"""
 
 Tiles = tuple[tuple[int, int], ...]
 
@@ -45,6 +59,12 @@ class AttritionConfig:
     tile_mode: str = "current"
     third_battle_enemies: int = 0
     """第 3 場每個選項保留前幾名敵人；0 ＝ 不改。"""
+    boss_guards_delta: int = 0
+    """Boss 戰護衛人數差（負數；從陣容尾端去掉，即先拿掉盾兵護衛，再拿掉弓手護衛）；0 ＝ 不改。"""
+    boss_reinforce_round: int = 0
+    """Boss 戰援軍出現的輪數；0 ＝ 不改，``NO_REINFORCE``（-1）＝ 無援軍。"""
+    boss_reinforce_delta: int = 0
+    """Boss 戰援軍人數差（負數，從事件單位列表尾端去掉）；0 ＝ 不改。"""
 
     @property
     def label(self) -> str:
@@ -55,6 +75,14 @@ class AttritionConfig:
             parts.append(f"格子={self.tile_mode}")
         if self.third_battle_enemies:
             parts.append(f"第3場{self.third_battle_enemies}名")
+        if self.boss_guards_delta:
+            parts.append(f"護衛{self.boss_guards_delta:+d}")
+        if self.boss_reinforce_round == NO_REINFORCE:
+            parts.append("無援軍")
+        elif self.boss_reinforce_round:
+            parts.append(f"援軍第{self.boss_reinforce_round}輪")
+        if self.boss_reinforce_delta:
+            parts.append(f"援軍人數{self.boss_reinforce_delta:+d}")
         return " ".join(parts) if parts else "現況"
 
 
@@ -143,12 +171,44 @@ def _override_map(library: ContentLibrary, map_def: MapDef, config: AttritionCon
     return map_def.model_copy(update={"alt_objectives": new_alt})
 
 
+def _override_boss_events(map_def: MapDef, config: AttritionConfig) -> MapDef:
+    """援軍事件（``spawn_units``）：改輪數、人數或整個拿掉；其他事件不動。"""
+    events = []
+    for event in map_def.events:
+        if not isinstance(event, SpawnUnitsEvent):
+            events.append(event)
+            continue
+        if config.boss_reinforce_round == NO_REINFORCE:
+            continue
+        units: tuple[SpawnPlacement, ...] = event.units
+        if config.boss_reinforce_delta:
+            units = units[: max(1, len(units) + config.boss_reinforce_delta)]
+        rnd = config.boss_reinforce_round or event.round
+        events.append(event.model_copy(update={"round": rnd, "units": units}))
+    return map_def.model_copy(update={"events": tuple(events)})
+
+
+def _is_boss_config(config: AttritionConfig) -> bool:
+    return bool(
+        config.boss_guards_delta or config.boss_reinforce_round or config.boss_reinforce_delta
+    )
+
+
 def apply_config(library: ContentLibrary, config: AttritionConfig) -> ContentLibrary:
     """套用覆寫的 library 副本（``config`` 為預設時回傳原物件）。"""
     if config == AttritionConfig():
         return library
     maps = {k: _override_map(library, v, config) for k, v in sorted(library.maps.items())}
     rules = library.roguelite
+    if _is_boss_config(config):
+        boss_map = rules.boss.map
+        maps[boss_map] = _override_boss_events(maps[boss_map], config)
+        if config.boss_guards_delta:
+            enemies = rules.boss.enemies
+            keep = max(1, len(enemies) + config.boss_guards_delta)  # 第一名是頭目，永遠保留
+            rules = rules.model_copy(
+                update={"boss": rules.boss.model_copy(update={"enemies": enemies[:keep]})}
+            )
     keep = config.third_battle_enemies
     if keep:
         steps = list(rules.encounters)
@@ -210,5 +270,73 @@ def format_rows(results: Sequence[AttritionResult]) -> str:
         f"| {r.wins_mean:.2f} | {r.boss_runs} | {r.defend_win:.1f}% ({r.defend_n}) "
         f"| {r.third_win:.1f}% ({r.third_n}) |"
         for r in results
+    ]
+    return head + "\n".join(rows) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Boss 戰護衛與援軍（BAL-7）
+# ---------------------------------------------------------------------------
+
+SUMMON_PACKS: tuple[str, ...] = ("dev_spirit", "dev_summoner", "dev_summoner_bone")
+PLAIN_PACKS: tuple[str, ...] = ("dev_bulwark", "dev_blaze", "dev_hawkeye")
+
+
+@dataclass(frozen=True, slots=True)
+class BossResult:
+    """一個設定的 Boss 戰（有召喚包與無召喚對照包分開）。"""
+
+    config: AttritionConfig
+    summon_win: float
+    summon_rounds: float
+    summon_n: int
+    plain_win: float
+    plain_rounds: float
+    plain_n: int
+
+
+def run_boss_config(
+    library: ContentLibrary,
+    config: AttritionConfig,
+    seeds: Sequence[int],
+    *,
+    jobs: int = 1,
+    summon_packs: Sequence[str] = SUMMON_PACKS,
+    plain_packs: Sequence[str] = PLAIN_PACKS,
+) -> BossResult:
+    """Boss 戰（效用 AI、專屬地圖）：每包每個種子一場。"""
+    lib = apply_config(library, config)
+    plan = [(p, BOSS_MAP, s) for p in (*summon_packs, *plain_packs) for s in seeds]
+    results = _run_packs(lib, plan, jobs)
+
+    def agg(packs: Sequence[str]) -> tuple[float, float, int]:
+        battles = wins = 0
+        rounds: list[int] = []
+        for r in results:
+            m = r.sample.metrics
+            if r.sample.pack not in packs or m is None:
+                continue
+            battles += 1
+            wins += 1 if m.result == "ally" else 0
+            rounds.append(m.rounds)
+        return _pct(wins, battles), (sum(rounds) / len(rounds) if rounds else 0.0), battles
+
+    sw, sr, sn = agg(summon_packs)
+    pw, pr, pn = agg(plain_packs)
+    return BossResult(config, sw, sr, sn, pw, pr, pn)
+
+
+def format_boss_rows(boss: Sequence[BossResult], runs: Sequence[AttritionResult]) -> str:
+    """Markdown 表（一列一個設定；``boss`` 與 ``runs`` 同序）。"""
+    head = (
+        "| 設定 | Boss 有召喚勝率／輪數 | Boss 無召喚勝率／輪數 | 一輪勝率 | 平均贏幾場 | 打到 Boss 的輪數 |\n"
+        "|---|---|---|---|---|---|\n"
+    )
+    rows = [
+        f"| {b.config.label} | {b.summon_win:.1f}%（{b.summon_n}）／{b.summon_rounds:.1f} "
+        f"| {b.plain_win:.1f}%（{b.plain_n}）／{b.plain_rounds:.1f} "
+        f"| {r.run_win:.1f}%（{round(r.run_win * r.runs / 100)}/{r.runs}） "
+        f"| {r.wins_mean:.2f} | {r.boss_runs} |"
+        for b, r in zip(boss, runs, strict=True)
     ]
     return head + "\n".join(rows) + "\n"
