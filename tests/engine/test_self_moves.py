@@ -763,7 +763,7 @@ def test_charger_battles_replay_exactly(map_id: str, seed: int) -> None:
 
 def test_the_ai_uses_every_self_move_somewhere() -> None:
     modes: set[str] = set()
-    for map_id, seed in [("open_plain", 2), ("ruined_fort", 1)]:
+    for map_id, seed in [("open_plain", 1), ("ruined_fort", 1)]:
         _, run = _charger_run(map_id, seed)
         modes |= {e.mode for e in run.events if isinstance(e, UnitMoved)}
     assert {"dash", "leap", "swap"} <= modes

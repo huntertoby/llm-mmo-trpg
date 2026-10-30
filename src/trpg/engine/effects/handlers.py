@@ -41,7 +41,15 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.forms import leave_form
-from trpg.engine.ids import BOSS_TAG, CONCEALED, IMMOVABLE, PRONE, RACE_STONEWALL, SHIELDED
+from trpg.engine.ids import (
+    BOSS_ESCORT_TAG,
+    BOSS_TAG,
+    CONCEALED,
+    IMMOVABLE,
+    PRONE,
+    RACE_STONEWALL,
+    SHIELDED,
+)
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
@@ -188,11 +196,14 @@ def _boss_vs_summon_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) 
 
 
 def _difficulty_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> int:
-    """難度旋鈕（BAL-4，模擬用）：敵方單位（有 ``boss`` 標籤者用 ``boss_damage_permille``，其餘用
-    ``enemy_damage_permille``）對非敵方單位造成的傷害倍率；預設 1000（不變）。"""
+    """難度數值（BAL-4b，原型專用）：敵方單位對非敵方單位造成的傷害倍率——``boss`` 標籤用
+    ``boss_damage_permille``、``boss_escort`` 標籤用 ``boss_escort_damage_permille``，其餘用
+    ``enemy_damage_permille``；全為 1000 時不變。"""
     core = ctx.core
     if effect.source_id is None or (
-        core.enemy_damage_permille == PERMILLE and core.boss_damage_permille == PERMILLE
+        core.enemy_damage_permille == PERMILLE
+        and core.boss_damage_permille == PERMILLE
+        and core.boss_escort_damage_permille == PERMILLE
     ):
         return PERMILLE
     source = ctx.state.units.get(effect.source_id)
@@ -200,6 +211,8 @@ def _difficulty_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> i
         return PERMILLE
     if source.has_tag(BOSS_TAG):
         return core.boss_damage_permille
+    if source.has_tag(BOSS_ESCORT_TAG):
+        return core.boss_escort_damage_permille
     return core.enemy_damage_permille
 
 

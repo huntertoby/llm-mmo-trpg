@@ -19,6 +19,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
+from trpg.content.library import scale_mana_cost
 from trpg.content.skills import SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import Attack, Move, UseSkill
@@ -186,7 +187,10 @@ def test_every_transform_is_valid_and_within_the_budget_window(template: str) ->
     assert skill.provenance.parents == (FIRE_BOLT,)
     card = skill_card(lib, skill)
     assert card.id == skill.id and card.name_zh == skill.name_zh
-    assert lib.ruleset.with_skills([skill]).skills.by_id()[skill.id] == skill
+    played = scale_mana_cost(
+        skill, lib.ruleset.core.ally_mana_cost_permille
+    )  # 規則包內的版本（BAL-4b）
+    assert lib.ruleset.with_skills([skill]).skills.by_id()[skill.id] == played
     for effect in skill.effects:  # 卡片上的骰子＝技能資料的骰子
         if effect.dice is not None:
             assert str(effect.dice) in " ".join(card.effects)

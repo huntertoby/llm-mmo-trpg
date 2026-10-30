@@ -96,6 +96,7 @@ resources:
   base: 10
   mana:    {attrs: [int, wis, wil], per_point: 2}   # 法力：法術技
   stamina: {attrs: [str, dex, con], per_point: 2}   # 耐力：武器技、格擋（反應）共用同一個池
+  mana_cap_permille: 1400   # 法力上限 ×1.4（BAL-4b，原型專用；套用在依屬性算上限的角色）
   stamina_regen: 5          # 耐力每回合開始回復（3H-5，初值；只套用主角，不超過上限；戰後回滿見 roguelite.yaml）
 
 # --- 視線與隱蔽（Phase 1B）---
@@ -153,6 +154,11 @@ summon_role_hp_permille:         # 依定位的召喚物 HP 係數‰（3-33f1�
   bomber: 1000                  # 自爆（傀儡）
 summon_max_duration: 4        # 召喚物持續輪數上限（技能的 duration 超過時以此為準）
 boss_summon_damage_permille: 2000   # Boss（boss 標籤）對召喚物的傷害倍率（‰；×2）
+# 難度與法力數值（BAL-4b，原型專用；玩法 PM 採用 BAL-4 的建議組合，敵人 HP ×1.2 寫在單位範本 max_hp）
+enemy_damage_permille: 1200         # 一般敵方傷害 ×1.2
+boss_damage_permille: 1000          # Boss 本人傷害不動
+boss_escort_damage_permille: 1200   # Boss 戰護衛與援軍（boss_escort 標籤）傷害；預設同一般敵方，可獨立調
+ally_mana_cost_permille: 800        # 我方技能法力費用 ×0.8（載入時縮放，見 scale_mana_cost）
 summon_command_ap_cost: 1     # 指揮召喚物（Phase 3-33c，6.29.2）的 AP；切換模式（集火／守護我／跟隨／待命）免費
 summon_infuse_ap_cost: 1      # 灌注技能（Phase 3-33d，6.29.3）：施放者花的 AP（法力、冷卻照技能，灌注當下付）
 summon_infused_cast_ap_cost: 1  # 召喚物在自己回合開始時施放灌注的技能，佔用牠自己的 AP（取代一次普攻；初值）

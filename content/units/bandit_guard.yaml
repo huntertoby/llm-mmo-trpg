@@ -1,0 +1,13 @@
+# Boss 戰護衛與援軍（BAL-4b）：bandit 的複本（帶 boss_escort 標籤），Boss 戰的陣容與一般遭遇分開調。
+id: bandit_guard
+name_zh: 盜賊
+attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
+max_hp: 29   # Boss 戰護衛／援軍專用（BAL-4b）：預設與 bandit 相同，可獨立調
+speed: 5
+armor_bonus: 2
+weapon: dagger
+resist: {}
+element_mods: {}
+tags: [humanoid, boss_escort]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#a8724c', hair: short, hair_color: '#2a1c14', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: bandana, material: cloth, color: '#b33a3a'}}}

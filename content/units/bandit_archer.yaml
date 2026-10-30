@@ -1,7 +1,7 @@
 id: bandit_archer
 name_zh: 盜賊弓手
 attributes: {str: 10, dex: 14, con: 10, int: 8, wis: 12, wil: 8}
-max_hp: 26
+max_hp: 31   # BAL-4b 原型專用：×1.2（原 26，四捨五入）；Boss 戰護衛見 bandit_archer_guard
 speed: 5
 armor_bonus: 1
 weapon: bow

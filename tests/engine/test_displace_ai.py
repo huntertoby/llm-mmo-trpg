@@ -183,7 +183,7 @@ def test_an_ai_battle_with_a_void_swap_replays(
 
     3-20 跑步改變 AI 軌跡，種子原為 0（3-21a 後改 4；3H-1 常駐數值與心智三分後換成 3）。"""
     log = tmp_path / "void_swap.json"
-    argv = ["battle", "--map", "open_plain", "--seed", "3", "--ally-build", "build_banisher"]
+    argv = ["battle", "--map", "open_plain", "--seed", "18", "--ally-build", "build_banisher"]
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "施放「虛空互換」" in capsys.readouterr().out
     replayed = io.StringIO()

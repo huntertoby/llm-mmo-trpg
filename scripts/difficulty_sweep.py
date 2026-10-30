@@ -109,7 +109,7 @@ def report(out: Path) -> int:
             rows = list(csv.DictReader(f))
         measures = [
             Measure(
-                difficulty=Difficulty(**{k: int(r[k]) for k in KNOB_NAMES}),
+                difficulty=Difficulty(**{k: int(r.get(k, 1000)) for k in KNOB_NAMES}),
                 **{  # type: ignore[arg-type]
                     k: (int(r[k]) if k in _INT_FIELDS else float(r[k]))
                     for k in r

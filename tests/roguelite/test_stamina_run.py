@@ -33,7 +33,9 @@ def test_a_new_run_starts_with_full_resources_from_the_formula() -> None:
     base = lib.roguelite.start.heroes["focus"]
     best_mental = max(run.hero.attributes[a] for a in (Attribute.INT, Attribute.WIS, Attribute.WIL))
     best_body = max(run.hero.attributes[a] for a in (Attribute.STR, Attribute.DEX, Attribute.CON))
-    assert run.max_mana_in(core) == base.max_mana + (best_mental - 10) * 2
+    assert run.max_mana_in(core) == core.resources.max_for(
+        "mana", base.max_mana + (best_mental - 10) * 2, {}
+    )  # 法力上限再乘倍率（BAL-4b）
     assert run.max_stamina_in(core) == (base.stamina or core.default_stamina) + (best_body - 10) * 2
     assert run.mana == run.max_mana_in(core)
     assert run.stamina is None and run.stamina_in(core) == run.max_stamina_in(core)

@@ -11,10 +11,13 @@ from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 # 遷移前（Phase 3-6）每個範本與 build 英雄的 ``max_hp``，亦即遷移後必須維持的最終 HP。
 OLD_HP = {
-    "bandit": 30,
-    "bandit_archer": 26,
+    "bandit": 35,  # BAL-4b：基礎 HP ×1.2（24→29）
+    "bandit_guard": 35,
+    "bandit_archer": 31,  # BAL-4b（26→31）
+    "bandit_archer_guard": 31,
     "bandit_boss": 80,
-    "bandit_shieldbearer": 32,
+    "bandit_shieldbearer": 36,  # BAL-4b（20→24）
+    "bandit_shieldbearer_guard": 36,
     "bandit_warlord": 110,
     "gear_tester_g2": 60,  # 3G-G2 新增
     "gear_tester_g3a": 60,  # 3G-G3a 新增
@@ -138,7 +141,7 @@ def test_enemies_use_the_same_formula() -> None:
         name="x",
         rules=lib.ruleset,
     )
-    assert unit.max_hp == 30  # 基礎 24 ＋ (12 − 10) × 3
+    assert unit.max_hp == bandit.max_hp + 6  # 範本基礎 HP ＋ (12 − 10) × 3
 
 
 def test_migration_keeps_every_template_final_hp() -> None:

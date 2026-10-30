@@ -54,7 +54,7 @@ from trpg.roguelite.state import (
 from trpg.skillgen.flash_state import COMPLETE_SLOT
 
 BUILD = "build_fire"
-SEED = 6
+SEED = 2  # BAL-4b 數值改變後，原本的種子 6 抽不到能接受傳承的技能
 
 
 def _stop_at(kind: type[object], *, nth: int = 1) -> AutoStop:

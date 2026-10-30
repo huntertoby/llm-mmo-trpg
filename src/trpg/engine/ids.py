@@ -16,6 +16,7 @@ __all__ = [
     "ARMOR_BROKEN",
     "BLEED",
     "BLOCKS_SIGHT_TAG",
+    "BOSS_ESCORT_TAG",
     "BOSS_TAG",
     "BURNING",
     "CONCEALED",
@@ -72,6 +73,9 @@ DECOY_TAG = "decoy"
 """狐火誘餌的單位標籤（Phase 3R-2）：敵人的下一次單體攻擊命中時由它攔下，攔下後消失。"""
 BOSS_TAG = "boss"
 """首領單位的標籤。"""
+BOSS_ESCORT_TAG = "boss_escort"
+"""Boss 戰護衛與援軍的標籤（BAL-4b）：
+與一般敵人分開的傷害倍率（``boss_escort_damage_permille``）。"""
 ELITE_TAG = "elite"
 """精英單位的標籤（落入致命地形的規則也用它）。"""
 FLYING = "flying"
