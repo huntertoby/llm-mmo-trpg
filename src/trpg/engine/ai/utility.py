@@ -1224,7 +1224,9 @@ def _preview_score(
     if orders is not None:
         score += _order_bonus(state, actor, p, profile, orders)
     if isinstance(action, UseSkill):
-        score -= skill_cost(state, actor, action, w, profile.status_values)
+        score -= skill_cost(
+            state, actor, action, w, {**profile.status_values, **profile.self_status_values}
+        )
         score += _rewrite_gains(state, actor, action, p, profile)
         score += w.multi_target * extra_targets(state, actor, p)
     elif isinstance(action, Attack):  # 蓄力吐息（3J-2）：開始蓄力的收益是預計範圍內的敵人

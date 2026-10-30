@@ -929,6 +929,9 @@ class AiProfile(ContentModel):
     ally_status_values: dict[str, int] = Field(default_factory=dict)
     """對友方（含自己）施加各增益的價值（等值傷害點數，Phase 2D-1）；收益 ＝ ``support`` 權重 ×
     價值 × 新增的持續比例。由 :class:`AiProfileTable` 的 ``ally_status_values`` 填入。"""
+    self_status_values: dict[str, int] = Field(default_factory=dict)
+    """技能「自己承受的狀態代價」的估值（BAL-8b）：優先於 ``status_values``，只用在
+    ``skill_cost`` 的自身狀態代價與透支；對敵人施加同一狀態的收益仍用 ``status_values``。"""
     trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
     """放置陷阱時，估計陷阱真的會被踩中或波及敵人的機率（‰，Phase 2E-3）；由 :class:`AiProfileTable`
     的同名欄位填入。"""
@@ -1060,6 +1063,8 @@ class AiProfileTable(ContentModel):
     skill_candidates: int = Field(default=3, ge=1)
     status_values: dict[str, int] = Field(default_factory=dict)
     ally_status_values: dict[str, int] = Field(default_factory=dict)
+    self_status_values: dict[str, int] = Field(default_factory=dict)
+    """自己承受的狀態代價的估值（BAL-8b），填入每個行為模式（見 AiProfile）。"""
     trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
     """AI 放置陷阱的收益 ＝ 陷阱效果的價值 × 範圍波及的預期敵人數 × 這個機率（‰；初值未經模擬）。"""
     trap: TrapAiRules = Field(default_factory=TrapAiRules)
@@ -1097,6 +1102,7 @@ class AiProfileTable(ContentModel):
             return data
         shared = data.get("status_values")
         ally_shared = data.get("ally_status_values")
+        self_shared = data.get("self_status_values")
         trap_shared = {
             key: data[key]
             for key in (
@@ -1121,6 +1127,7 @@ class AiProfileTable(ContentModel):
         if (
             not isinstance(shared, dict)
             and not isinstance(ally_shared, dict)
+            and not isinstance(self_shared, dict)
             and not trap_shared
             and not isinstance(facing, dict)
         ):
@@ -1132,6 +1139,7 @@ class AiProfileTable(ContentModel):
                 **p,
                 "status_values": {**(shared or {}), **p.get("status_values", {})},
                 "ally_status_values": {**(ally_shared or {}), **p.get("ally_status_values", {})},
+                "self_status_values": {**(self_shared or {}), **p.get("self_status_values", {})},
                 "weights": _with_facing(p.get("weights"), facing),
             }
             if isinstance(p, dict)

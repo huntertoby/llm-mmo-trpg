@@ -61,7 +61,8 @@ def test_the_new_weapons_are_data_with_the_designed_parameters() -> None:
         True,
         2,
     )
-    assert (dd.dice.count, dd.dice.sides, dd.two_handed) == (1, 4, False)
+    # BAL-8b 原型專用：雙匕首 1d4 → 1d3
+    assert (dd.dice.count, dd.dice.sides, dd.two_handed) == (1, 3, False)
     assert (sg.weapon_class, sg.range, sg.two_handed, sg.magazine, sg.gunshot) == (
         "ranged",
         4,
