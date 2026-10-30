@@ -25,6 +25,7 @@ import csv
 import io
 import json
 import statistics
+import threading
 import time
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -429,17 +430,37 @@ def _name(
     client: ItemClient,
     naming: NamingFactory,
     result: ItemResult,
+    taken: _TakenNames | None = None,
 ) -> None:
     from trpg.llm.naming import name_skill  # noqa: PLC0415 - 只有升級候選命名
 
     used = naming(item, skill, client)
     start = time.perf_counter()
-    outcome = name_skill(used.client, library, skill)
+    names = set() if taken is None else taken.snapshot()
+    outcome = name_skill(used.client, library, skill, taken=names)
+    if taken is not None:
+        taken.add(outcome.text.name_zh)
     result.name_seconds = time.perf_counter() - start
     result.name = outcome.text.name_zh
     result.concept = outcome.text.concept
     result.name_source = outcome.source
     result.name_attempts = outcome.attempts
+
+
+class _TakenNames:
+    """平行評估共用的已取名稱（執行緒安全）。"""
+
+    def __init__(self) -> None:
+        self._names: set[str] = set()
+        self._lock = threading.Lock()
+
+    def snapshot(self) -> set[str]:
+        with self._lock:
+            return set(self._names)
+
+    def add(self, name: str) -> None:
+        with self._lock:
+            self._names.add(name)
 
 
 def run_item(
@@ -449,8 +470,10 @@ def run_item(
     *,
     max_attempts: int,
     naming: NamingFactory | None = None,
+    taken: _TakenNames | None = None,
 ) -> ItemResult:
-    """跑一題：提議迴圈（失敗時退回），合格且有 ``naming`` 時再命名。"""
+    """跑一題：提議迴圈（失敗時退回），合格且有 ``naming`` 時再命名（``taken``：這次評估已取過
+    的名稱，帶進命名 prompt 的 taken_names，4-L10a C3）。"""
     client = clients(item)
     result = ItemResult(item, None)
     _prompt_facts(library, item, result)
@@ -476,7 +499,15 @@ def run_item(
     if outcome.source == "llm":
         result.chosen = _skill_primitives(outcome.skill)
         if naming is not None:
-            _name(library, item, skill=outcome.skill, client=client, naming=naming, result=result)
+            _name(
+                library,
+                item,
+                skill=outcome.skill,
+                client=client,
+                naming=naming,
+                result=result,
+                taken=taken,
+            )
             result.name_calls = list(client.calls[len(result.calls) :])
     client.close()
     return result
@@ -494,10 +525,13 @@ def run_items(
 ) -> list[ItemResult]:
     """平行跑全部題目（最多 ``workers`` 個同時請求），結果依題目順序回傳。"""
     done = 0
+    taken = _TakenNames()
 
     def one(item: EvalItem) -> ItemResult:
         nonlocal done
-        result = run_item(library, item, clients, max_attempts=max_attempts, naming=naming)
+        result = run_item(
+            library, item, clients, max_attempts=max_attempts, naming=naming, taken=taken
+        )
         done += 1
         if progress is not None:
             progress(done, len(items))

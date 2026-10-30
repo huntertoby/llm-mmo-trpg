@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import Any
 
 import pytest
 
@@ -190,6 +191,8 @@ def test_player_text_is_wrapped_and_escaped(library: ContentLibrary, skill: Skil
 # 快照：改命名 prompt（系統指令、區塊格式、世界觀資料）必須同時改 NAMING_PROMPT_VERSION 並新增快照。
 NAMING_SNAPSHOTS = {
     "skill-naming/1": "968cb1624ae2d5d3c0100cd73c43e0547ef29cf3b5f88253acf4f738fad2f045",
+    # 4-L10a C3：避免重複用世界觀名詞當開頭、不要和 taken_names 同開頭
+    "skill-naming/2": "316b6c32362526c1a1ffb4c187ff5f849d58c78164abb5b0a52088c740c6bf28",
 }
 
 
@@ -316,3 +319,28 @@ def test_mock_naming_client_is_valid_and_deterministic(
     a = name_skill(mock_naming_client(library, skill, 5), library, skill)
     b = name_skill(mock_naming_client(library, skill, 5), library, skill)
     assert a == b and a.source == "llm"
+
+
+def test_naming_prompt_discourages_repeated_world_prefixes() -> None:
+    """4-L10a C3：命名指令要求避免重複用世界觀名詞當開頭、不和本輪已用名稱同開頭。"""
+    system = build_naming_messages({"skeleton": "單體攻擊"})[0]["content"]
+    assert "避免重複使用名詞表裡的世界觀名詞當開頭" in system
+    assert "不要和 taken_names 的名稱用同樣的開頭" in system
+
+
+def test_names_taken_this_run_reach_the_naming_prompt(library: ContentLibrary) -> None:
+    """同一個提議器（一輪）先取的名稱，會出現在下一個命名 prompt 的 taken_names。"""
+    skill, request, good = _topic(library)
+    ctx = ProposalContext(skill.tier, skill.rarity)
+    namer = MockLLMClient([GOOD, _reply(name="霜脈斷章")])
+    proposer = make_proposer(lambda _r, _s: MockLLMClient([good]), library, naming=namer)
+    assert proposer(request, ctx, 1).skill is not None
+    assert proposer(request, ctx, 2).skill is not None
+    first, second = (json.loads(_skill_block(c)) for c in namer.calls)
+    assert first["taken_names"] == [] and second["taken_names"] == ["碎光低語"]
+
+
+def _skill_block(messages: Any) -> str:
+    """命名 prompt 資料區的 <skill> JSON（沒有重試回饋時 user 訊息只有這一塊）。"""
+    user = str(messages[1]["content"])
+    return user[user.index("{") : user.rindex("}") + 1]
