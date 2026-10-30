@@ -195,7 +195,7 @@ weapons:
     element: physical
     crit_range: 20
     two_handed: true
-    pierce_line: 5
+    pierce_line: 3  # BAL-9b 原型專用：5 → 3（骰面維持 1d5）
     ignore_height: true
   # 火槍（火器）：彈匣 1 發、裝填 1 AP；槍聲；直射（沒有 lob）；站定狙擊；直射穿甲；貼臉懲罰與遠距加成。
   - id: longgun
