@@ -840,7 +840,7 @@ def _form_view(state: BattleState, unit: UnitState) -> FormView | None:
     if current is None:
         return None
     rules = state.ruleset
-    form = rules.form_def(current.form_id)
+    form = rules.scaled_form(current.form_id, current.magnitude_permille)  # 形態幅度（BAL-2c）
     chosen = current.element
     lines = form_effect_lines(form, chosen=chosen)
     if unit.next_attack_hit:  # 進入獎勵還沒用掉

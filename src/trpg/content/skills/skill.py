@@ -938,9 +938,13 @@ class SkillDef(ContentModel):
         ):
             raise ValueError("stance_upkeep 只有一般姿態（不含形態）可以填")
         magnitudes = [e for e in self.effects if e.magnitude_permille is not None]
-        not_stance = self.kind != "stance" or any(e.type != "apply_status" for e in magnitudes)
+        not_stance = self.kind != "stance" or any(
+            e.type not in ("apply_status", ENTER_FORM) for e in magnitudes
+        )
         if magnitudes and not_stance:
-            raise ValueError("magnitude_permille 只有姿態技能的 apply_status 可以填")
+            raise ValueError(
+                "magnitude_permille 只有姿態技能的 apply_status 與 enter_form（形態幅度）可以填"
+            )
         if any((e.magnitude_permille or 0) < _PERMILLE for e in magnitudes):
             raise ValueError("magnitude_permille 不能小於 1000（姿態幅度的強化）")
 
@@ -1332,6 +1336,15 @@ class SkillDef(ContentModel):
             if effect.type == ENTER_FORM:
                 return effect.form
         return None
+
+    @property
+    def form_magnitude(self) -> int:
+        """進入形態的技能的形態幅度（‰，BAL-2c，``enter_form.magnitude_permille``）；沒填或不是形態
+        技能時為 1000。"""
+        for effect in self.effects:
+            if effect.type == ENTER_FORM:
+                return effect.magnitude_permille or _PERMILLE
+        return _PERMILLE
 
     @property
     def slot_kind(self) -> str:

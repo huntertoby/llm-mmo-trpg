@@ -63,7 +63,7 @@ from trpg.content.equipment import (
     resolve_loadout,
 )
 from trpg.content.flash_templates import FlashTable
-from trpg.content.forms import FormDef, FormTable
+from trpg.content.forms import FormDef, FormTable, scaled_form_def
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.keyword_derive import (
     Facts,
@@ -441,6 +441,13 @@ class Ruleset(ContentModel):
         """形態定義（Phase 3J-1a）；不存在時拋出 ``KeyError``。"""
         index: dict[str, FormDef] = self.__pydantic_private__["_form_index"]  # type: ignore[index]
         return index[form_id]
+
+    def scaled_form(self, form_id: str, magnitude: int) -> FormDef:
+        """套上幅度 ``magnitude``（‰，BAL-2c）的形態定義
+        （:func:`~trpg.content.forms.scaled_form_def`；幅度 1000 時就是 :meth:`form_def`）；形態
+        不存在時拋出 ``KeyError``。不快取在規則包上：pydantic 的相等比較包含私有屬性，快取會讓
+        同樣的規則包比較起來不相等。"""
+        return scaled_form_def(self.form_def(form_id), magnitude)
 
     def rule_change_def(self, rule_id: str) -> RuleChangeDef:
         """規則改變（Phase 3D-6）；找不到時拋出 ``KeyError``。"""

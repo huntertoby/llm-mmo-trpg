@@ -41,6 +41,7 @@ __all__ = [
     "NaturalTraits",
     "NaturalWeapon",
     "TakenMod",
+    "scaled_form_def",
 ]
 
 type FormCategory = Literal["physical", "mental"]
@@ -49,6 +50,9 @@ type FormCategory = Literal["physical", "mental"]
 CHOSEN = "chosen"
 """「進入時選的元素」：受傷修正與進入獎勵的範圍傷害可以寫它，代表形態目前的元素。"""
 
+PERMILLE = 1000
+MAX_MAGNITUDE = 2000
+"""形態幅度的上限（‰，BAL-2c；同完整姿態的 ``apply_status.magnitude_permille``）。"""
 _MAX_ATTRS = 2
 _MAX_MELEE_RANGE = 2
 _NATURAL_PREFIX = "form_"
@@ -223,6 +227,10 @@ class FormDef(ContentModel):
     entry: FormEntry = FormEntry()
     look: str = Field(pattern=ID_PATTERN)
     """外觀 id（3J-5 依它畫整身外觀；前端不認得時退回原角色＋光環）。"""
+    magnitude_permille: int = Field(default=PERMILLE, ge=PERMILLE, le=MAX_MAGNITUDE)
+    """形態的幅度（‰，BAL-2c）：``forms.yaml`` 不填（1000）；由 :func:`scaled_form_def` 依技能的
+    ``enter_form.magnitude_permille`` 設定。其他欄位已是放大後的值，這個欄位只給沒辦法改寫成整數的
+    部分（進入獎勵的範圍傷害與相鄰治療的骰子）當倍率，以及卡片顯示用。"""
 
     @model_validator(mode="after")
     def _check(self) -> FormDef:
@@ -273,3 +281,73 @@ class FormTable(ContentModel):
 
     def summary(self) -> str:
         return f"{len(self.forms)} 種形態"
+
+
+def _gain(value: int, magnitude: int) -> int:
+    """對自己有利的正值（加成、格數）× 幅度（無條件捨去）；0 與負值（代價）照原值。"""
+    return value * magnitude // PERMILLE if value > 0 else value
+
+
+def _less_taken(permille: int, magnitude: int) -> int:
+    """受傷倍率：低於 1000（減傷）的部分離 1000 的距離 × 幅度（無條件捨去，最低 0）；高於 1000 的
+    （弱點，代價）照原值。和姿態的 ``scaled_permille``（``down``）同一個算法。"""
+    if permille >= PERMILLE:
+        return permille
+    return max(0, PERMILLE - (PERMILLE - permille) * magnitude // PERMILLE)
+
+
+def _scaled_entry(entry: FormEntry, magnitude: int) -> FormEntry:
+    shield = entry.shield_max_hp_permille
+    heal = entry.heal_max_hp_permille
+    return entry.model_copy(
+        update={
+            "shield_max_hp_permille": None if shield is None else _gain(shield, magnitude),
+            "heal_max_hp_permille": None if heal is None else _gain(heal, magnitude),
+            "next_attack_hit": _gain(entry.next_attack_hit, magnitude),
+            "next_attack_crit": _gain(entry.next_attack_crit, magnitude),
+            "move": _gain(entry.move, magnitude),
+            "collision_permille": _gain(entry.collision_permille, magnitude),
+        }
+    )
+
+
+def scaled_form_def(form: FormDef, magnitude: int) -> FormDef:
+    """形態套上幅度 ``magnitude``（‰，BAL-2c）之後的定義：**只放大對自己有利的部分**，和完整姿態的
+    幅度同一個意思（3W-5b）。引擎（:func:`trpg.engine.rules.forms.active_form`）、卡片與 HUD 都用
+    這個函式，數字一致。1000 時原樣回傳。
+
+    - 形態效果：最大 HP、防禦、移動、治療加成、高度差的 **正值** × 幅度；受傷倍率低於 100% 的減傷
+      距離 × 幅度。負值（熊的移動 −1、狼人的防禦 −10%、巨鵰的最大 HP −10%）與弱點（樹人受火傷害
+      +50%）是代價，不放大。
+    - 天生武器的傷害加成（元素化身 +10%）× 幅度；骰子、射程與特性（打幾下、推擊…）不變。
+    - 進入獎勵：護盾、回復、下一次攻擊命中／暴擊、本回合移動、撞擊加成 × 幅度；範圍傷害與相鄰治療
+      的骰子以 ``magnitude_permille`` 當倍率；隱蔽與護盾的回合數不變（同化形專精）。
+    - 維持費照形態種類固定（#67），不在這裡。
+    """
+    if magnitude == PERMILLE:
+        return form
+    e = form.effects
+    effects = e.model_copy(
+        update={
+            "defense_permille": _gain(e.defense_permille, magnitude),
+            "move": _gain(e.move, magnitude),
+            "max_hp_permille": _gain(e.max_hp_permille, magnitude),
+            "damage_taken": tuple(
+                m.model_copy(update={"permille": _less_taken(m.permille, magnitude)})
+                for m in e.damage_taken
+            ),
+            "heal_permille": _gain(e.heal_permille, magnitude),
+            "flat_height": _gain(e.flat_height, magnitude),
+        }
+    )
+    weapon = form.natural_weapon
+    bonus = _gain(weapon.damage_permille, magnitude)
+    natural = weapon.model_copy(update={"damage_permille": bonus})
+    return form.model_copy(
+        update={
+            "effects": effects,
+            "entry": _scaled_entry(form.entry, magnitude),
+            "natural_weapon": natural,
+            "magnitude_permille": magnitude,
+        }
+    )

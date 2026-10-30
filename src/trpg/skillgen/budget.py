@@ -32,6 +32,7 @@ from trpg.content.skill_rules import BudgetRules, ModifierBudget, ModifierPoints
 from trpg.content.skills import (
     ADD_STACK,
     DAMAGE_MULTIPLIER,
+    ENTER_FORM,
     EXTRA_REACTION,
     GRANT_AP,
     LEAVE_FORM,
@@ -378,6 +379,11 @@ def _plain_base_points(  # noqa: PLR0911
         raise BudgetError(f"原語 {primitive.id} 沒有預算算法（budget_basis）")
     if basis == "fixed":
         assert primitive.base_points is not None
+        magnitude = effect.magnitude_permille
+        if primitive.id == ENTER_FORM and magnitude and magnitude != _PERMILLE:
+            # 形態幅度（BAL-2c）：同完整姿態，點數等比例放大
+            ratio = Fraction(magnitude, _PERMILLE)
+            return primitive.base_points * ratio, f"固定 × 形態幅度 {_fmt(ratio)}"
         return Fraction(primitive.base_points), "固定"
     if basis == "per_distance":
         return _per_distance_points(skill, effect, primitive, library)

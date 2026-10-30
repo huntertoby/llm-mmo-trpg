@@ -15,6 +15,9 @@
 - **進入獎勵倍率**：化形專精的 ``form_entry_permille`` 在進入時結算成倍率
   （``FormState.entry_permille``），護盾、治療、下一次攻擊命中／暴擊、本回合移動、撞擊加成、範圍傷害與相鄰治療的數值都乘上它
   （各自無條件捨去）；隱蔽的回合數不放大。
+- **形態幅度**（BAL-2c）：技能的 ``enter_form.magnitude_permille`` 存進
+  ``FormState.magnitude_permille``，形態定義一律經 ``Ruleset.scaled_form`` 取用（只放大對自己有利
+  的部分；維持費不變）。
 - **冷卻**（:func:`tick_form_cooldowns`）：自己的回合開始時每個形態的冷卻 −1（同技能冷卻）。
 
 移動加減在回合開始計算移動點數時套用（同狀態的 ``move_delta``），進入或離開當回合不重算。
@@ -90,12 +93,18 @@ def _strip_hand_affixes(gear: GearState) -> GearState:
 
 
 def enter_form(
-    ctx: Ctx, unit: UnitState, form_id: str, element: Element | None, skill_id: str | None
+    ctx: Ctx,
+    unit: UnitState,
+    form_id: str,
+    element: Element | None,
+    skill_id: str | None,
+    *,
+    magnitude: int = PERMILLE,
 ) -> list[EffectBase]:
     """``unit`` 進入 ``form_id``（合法性由呼叫端先檢查）：回傳進入獎勵中要交給效果佇列結算的
-    效果。"""
+    效果。``magnitude``：形態幅度（‰，BAL-2c；技能的 ``enter_form.magnitude_permille``）。"""
     rules = ctx.rules
-    form = rules.form_def(form_id)
+    form = rules.scaled_form(form_id, magnitude)
     for old in stance_status_ids(rules, unit):  # 和姿態互斥：進入形態取代一般姿態
         unit.statuses = [s for s in unit.statuses if s.status_id != old]
         ctx.emit(StatusRemoved, target_id=unit.id, status_id=old, reason="replaced")
@@ -114,6 +123,7 @@ def enter_form(
         skill_id=skill_id,
         entered_round=ctx.state.round,
         entry_permille=scale,
+        magnitude_permille=magnitude,
     )
     unit.weapon = form.natural_weapon.weapon_def(form.id, chosen)
     unit.gear = _strip_hand_affixes(unit.gear)
@@ -128,14 +138,21 @@ def enter_form(
         max_hp=unit.max_hp,
         hp=unit.hp,
     )
-    return _entry_effects(ctx, unit, form.entry, chosen, scale)
+    return _entry_effects(ctx, unit, form.entry, chosen, scale, magnitude=form.magnitude_permille)
 
 
 def _entry_effects(
-    ctx: Ctx, unit: UnitState, entry: FormEntry, chosen: Element | None, scale: int
+    ctx: Ctx,
+    unit: UnitState,
+    entry: FormEntry,
+    chosen: Element | None,
+    scale: int,
+    *,
+    magnitude: int = PERMILLE,
 ) -> list[EffectBase]:
     """進入獎勵：命中／暴擊與本回合移動直接寫進單位；其餘回傳效果（依固定順序）。``scale``：
-    進入獎勵的數值倍率（‰；一般 1000，化形專精 1500）。"""
+    進入獎勵的數值倍率（‰；一般 1000，化形專精 1500）。``entry`` 已套上形態幅度（BAL-2c）；
+    骰子類（範圍傷害、相鄰治療）另外乘 ``magnitude``。"""
     unit.next_attack_hit = max(unit.next_attack_hit, entry.next_attack_hit * scale // PERMILLE)
     unit.next_attack_crit = max(unit.next_attack_crit, entry.next_attack_crit * scale // PERMILLE)
     unit.move_points += entry.move * scale // PERMILLE
@@ -161,8 +178,9 @@ def _entry_effects(
                 target_id=unit.id, source_id=unit.id, status_id=CONCEALED, duration=entry.conceal
             )
         )
-    effects += _burst_effects(ctx, unit, entry, chosen, scale)
-    effects += _heal_adjacent_effects(ctx, unit, entry, scale)
+    dice_scale = scale * magnitude // PERMILLE
+    effects += _burst_effects(ctx, unit, entry, chosen, dice_scale)
+    effects += _heal_adjacent_effects(ctx, unit, entry, dice_scale)
     return effects
 
 

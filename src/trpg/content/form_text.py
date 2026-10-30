@@ -126,8 +126,12 @@ def form_effect_lines(form: FormDef, *, chosen: Element | None = None) -> list[s
     return lines
 
 
-def form_entry_lines(entry: FormEntry, *, chosen: Element | None = None) -> list[str]:
-    """進入獎勵（資料順序固定）。"""
+def form_entry_lines(
+    entry: FormEntry, *, chosen: Element | None = None, dice_permille: int = _PERMILLE
+) -> list[str]:
+    """進入獎勵（資料順序固定）。``dice_permille``：形態幅度（BAL-2c）給骰子類（範圍傷害、相鄰治療）
+    的倍率，不是 1000 時附「×N%」（和引擎同一個倍率）。"""
+    times = "" if dice_permille == _PERMILLE else f" ×{dice_permille / 10:g}%"
     lines: list[str] = []
     if entry.shield_max_hp_permille is not None:
         pct = _percent(entry.shield_max_hp_permille).removeprefix("+")
@@ -146,13 +150,13 @@ def form_entry_lines(entry: FormEntry, *, chosen: Element | None = None) -> list
     if entry.burst is not None:
         b = entry.burst
         element = _element_text(b.element, chosen)
-        lines.append(f"{b.radius} 格內的敵人受 {b.dice} {element}傷害")
+        lines.append(f"{b.radius} 格內的敵人受 {b.dice} {element}傷害{times}")
     if entry.collision_permille:
         lines.append(f"本回合你造成的撞擊傷害 {_percent(entry.collision_permille)}")
     if entry.heal_adjacent is not None:
         h = entry.heal_adjacent
         lines.append(
-            f"治療相鄰友方 {h.dice}＋{h.attr.display_name} × {h.attr_permille / _PERMILLE:g}"
+            f"治療相鄰友方 {h.dice}＋{h.attr.display_name} × {h.attr_permille / _PERMILLE:g}{times}"
         )
     return lines
 
@@ -176,12 +180,14 @@ def form_sentence(
     """技能卡的一句話：「化身為熊（物理形態，持續到取消）：普攻改用熊爪 1d8 近戰（…）；形態中：
     最大 HP +15%、防禦 +10%、移動 −1；進入時：護盾＝最大 HP 的 10%；每回合開始 −5 耐力…」。"""
     kind = "物理" if form.category == "physical" else "心智"
-    parts = [f"化身為{form.name_zh}（{kind}形態，持續到取消）"]
+    magnitude = form.magnitude_permille
+    strong = "" if magnitude == _PERMILLE else f"，幅度強化 ×{magnitude / 10:g}%"
+    parts = [f"化身為{form.name_zh}（{kind}形態，持續到取消{strong}）"]
     parts.append(f"普攻改用{natural_weapon_text(form, core, attr_get=attr_get)}")
     effects = form_effect_lines(form)
     if effects:
         parts.append("形態中：" + "、".join(effects))
-    entry = form_entry_lines(form.entry)
+    entry = form_entry_lines(form.entry, dice_permille=magnitude)
     if entry:
         parts.append("進入時：" + "、".join(entry))
     parts.append(upkeep_text(table, form))
