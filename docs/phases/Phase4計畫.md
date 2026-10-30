@@ -307,3 +307,9 @@
 - 合併 4-L9（`src/trpg/llm/skill_eval.py`、`scripts/eval_llm_skills.py`、Mock 測試 8 個；結果 `docs/phases/4-L9/`，報告 `Phase4-L9報告.md`）。模型 `swift`（Qwen3.8-27B NVFP4）。
 - 結論：技能生成在現行 schema 下不夠用——升級候選 50 題一次通過 10%、累計 28%、退回 72%；強制測試退回 75%；自由測試通過 75% 但只做「傷害＋狀態」（35 個原語 0 次）。主因是 schema 允許、驗證器擋下的選填欄位組合（`value_error` 418，其中 203 為失手反噬帶 explode／scaling）與錯誤路徑不準；其次無旋鈕結構 `budget.weak` 121、`skeleton.secondary_share` 66。速度與容量 OK（每題 p50 16～19 秒、strict 全部接受）。閃現變化提議可用（退回 7.6%、補位 55%），但約一半選項套不上、指定類別 0 題完整通過。
 - 建議：先不換模型；先做 schema／提示修正（A1～A5）與引擎補強（B1～B4）、閃現模板列舉只放套得上的（F1／F2），再重跑；升級候選仍 < 60% 再考慮 thinking 或更大模型（須使用者決定）。目前 `whiteboard: true` 時升級三選一不走 LLM，正式一輪實際用到的是閃現提議。排段待專案 PM／使用者決定。
+
+## 4-L10｜4-L9 後修正（2026-10-30；使用者：「修正」）
+依 `Phase4-L9報告.md` 第 7 節。目標：不換模型，讓格式／提示與規則對齊、引擎補得起來，修完重跑 4-L9 評估（升級候選目標 ≥ 60%）。不改遊戲規則（預算下限、稀有度可用內容不動）。兩段可平行，各自只動自己的範圍。
+- **4-L10a｜schema、提示、閃現模板列舉**（opus）：A1 巢狀錯誤帶完整路徑；A2 巢狀位置精簡效果型別（反噬排除硬控／持續傷害狀態、反應技不給 overdraft／on_miss 且 `reaction` 必填、武器技 `weapon_req` 只列 melee／ranged）；A3「恰好其一」「必填」規則進 schema；A4 變奏表面列舉照 `surfaces` 表、`grant_skill.skill` 改列舉；A5 system 指令加「選填欄位沒必要不要填」（只改提示，升 `PROMPT_VERSION`；不依稀有度收 schema）；F1／F2 閃現模板列舉只放這招套得上的、指定類別只列該類；C2 `max_tokens` 1024；C3 命名避免重複詞頭並帶入本輪已用名稱；C4 `concept`／`cast_flavor` 簡體字檢查；C5 形態原語排除於自由題選單。
+- **4-L10b｜引擎補值與說明**（opus）：B1 無旋鈕結構採 b——補值器可往上補附帶效果數值或降冷卻（不降預算下限）；B2 可修清單加 `cap.revive_cost`、`cap.rule_rewrite_cost`；B3 `secondary_share` 修補降到最低骰、仍超標回報「移除傷害」；B4 `shockwave`／`raise_terrain`／`lower_terrain` 的 `llm_hint` 補大地元素；B5 擊殺效果 hint 補「只能給自己有益的效果」。
+- 不做：C6 平行請求（白板模式下升級不走 LLM，之後需要時再排）；換模型或 thinking（重跑後仍 < 60% 再請使用者決定）。
