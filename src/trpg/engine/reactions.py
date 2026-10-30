@@ -600,13 +600,21 @@ def perform_unit_attack(
             return  # 空膛（Phase 3-24a2）：合法性已在 attack_problem 檢查，這裡只是保險
         reveal = gunshot_reveals(ctx.state, attacker)
         behind = pierce_line_targets(ctx.state, attacker, target)  # 開火前的直線（弩，3-24a2）
+        pierce = attacker.weapon.pierce_permille
         spend_ammo(attacker)
         ambushed, rolled, victim = _attack_once(
             ctx, attacker, target, primary=primary, reaction=reaction
         )
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
-                _attack_once(ctx, attacker, extra, primary=False, reaction=reaction)
+                _attack_once(
+                    ctx,
+                    attacker,
+                    extra,
+                    primary=False,
+                    reaction=reaction,
+                    extra_permille=None if pierce == PERMILLE else pierce,
+                )
         for _ in range(attacker.weapon.strikes - 1):  # 連擊武器（雙匕首，3I-4）：每一下各自結算
             if not (attacker.alive and target.alive):
                 break

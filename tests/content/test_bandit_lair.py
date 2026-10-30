@@ -38,7 +38,9 @@ def test_boss_uses_the_lair_and_the_warlord() -> None:
     assert roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget) == []
     warlord, boss = lib.unit("bandit_warlord"), lib.unit("bandit_boss")
     assert {"boss", "elite"} <= set(warlord.tags)
-    assert warlord.max_hp > boss.max_hp
+    # BAL-9c：首領 HP 為原型專用的 700‰（60），比 bandit_boss 少；加強版改看護甲與屬性
+    assert warlord.armor_bonus > boss.armor_bonus
+    assert sum(warlord.attributes.values()) > sum(boss.attributes.values())
     assert 3 <= len(rules.boss.enemies) - 1 <= 4
 
 

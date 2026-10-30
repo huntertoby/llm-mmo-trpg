@@ -77,6 +77,20 @@ weapons:
     crit_range: 20
     two_handed: true
     lob: 1
+  # 弓手護衛專用弓（BAL-9c 原型專用）：bow 的複本，骰面降一階（1d8 → 1d6），只有 bandit_archer_guard 使用。
+  - id: bow_guard
+    name_zh: 弓
+    look: {kind: bow, material: wood}
+    weapon_class: ranged
+    range: 8
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: true
+    lob: 1
   - id: fire_staff
     name_zh: 火焰法杖
     look: {kind: staff, material: wood, element: fire}
@@ -195,7 +209,8 @@ weapons:
     element: physical
     crit_range: 20
     two_handed: true
-    pierce_line: 3  # BAL-9b 原型專用：5 → 3（骰面維持 1d5）
+    pierce_line: 5  # BAL-9c 原型專用：還原 5（BAL-9b 證實降到 3 無效；骰面維持 1d5）
+    pierce_permille: 400  # BAL-9c 原型專用：穿透到後方的敵人只吃 40% 傷害（DPR 比 124.2%）
     ignore_height: true
   # 火槍（火器）：彈匣 1 發、裝填 1 AP；槍聲；直射（沒有 lob）；站定狙擊；直射穿甲；貼臉懲罰與遠距加成。
   - id: longgun

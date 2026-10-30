@@ -3,7 +3,7 @@
 id: bandit_warlord
 name_zh: 盜賊首領
 attributes: {str: 18, dex: 10, con: 18, int: 10, wis: 10, wil: 14}
-max_hp: 86
+max_hp: 60   # BAL-9c 原型專用：86 × 700‰（Boss 戰長度與勝率，見 docs/phases/BAL-9c）
 speed: 5
 armor_bonus: 5
 weapon: greatsword

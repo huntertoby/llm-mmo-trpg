@@ -664,3 +664,25 @@ def test_weapon_rule_lines_show_grip_and_shared_backstab() -> None:
     assert f"命中 +{core.backstab_hit_bonus}" in backstab
     bigger = core.model_copy(update={"backstab_hit_bonus": 5})
     assert "命中 +5" in "".join(dagger.rule_lines_zh(bigger))
+
+
+def test_pierce_permille_discounts_only_the_enemies_behind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """BAL-9c：``pierce_permille`` 只折扣穿透到後方的敵人；1000 ＝ 不打折（BAL-9b 以前的行為）。"""
+    dice(monkeypatch)
+
+    def damage(permille: int) -> dict[UnitId, int]:
+        state = line_state(3, pierce_permille=permille)
+        return {e.target_id: e.amount for e in kinds(shoot(state), DamageDealt)}
+
+    full, half = damage(1000), damage(500)
+    assert full[U2] == full[U3] == full[U4]
+    assert half[U2] == full[U2]
+    assert half[U3] == half[U4] < full[U3]
+
+
+def test_prototype_crossbow_discounts_the_pierced_enemies() -> None:
+    cb = weapon("crossbow")
+    assert cb.pierce_line == 5 and cb.pierce_permille < 1000
+    assert "後方敵人受" in " ".join(cb.trait_lines_zh())
