@@ -69,7 +69,9 @@ from trpg.skillgen.usage import SkillUsage
 __all__ = [
     "FIXED_FIRST_OPS",
     "FLASH_OPS",
+    "RECLAIM_MOD_OP",
     "STRICT_OPS",
+    "SUMMON_HP_STEPS",
     "Draft",
     "FlashOp",
     "base_draft",
@@ -538,7 +540,7 @@ def _op_extend(
     return template_drafts(evolution, skill, None, SkillUsage(), library)
 
 
-_SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
+SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
 """召喚物最大 HP 加成（‰）的階梯：強度固定的召喚技能沒有旋鈕，依序試，第一個過預算窗與下限
 的是結果。"""
 
@@ -553,7 +555,7 @@ def _op_summon_toughen(
         return []
     current = skill.effects[index].max_hp_permille or 0
     drafts: list[Draft] = []
-    for step in _SUMMON_HP_STEPS:
+    for step in SUMMON_HP_STEPS:
         if step <= current:
             continue
         base, effects = base_draft(skill)
@@ -1190,7 +1192,11 @@ def _from_current(values: tuple[Any, ...], current: Any, keep: bool) -> tuple[An
 
 NEW_MOD_OPS = frozenset({"mod_duration", "mod_stack", "mod_cooldown", "mod_cost"})
 """BAL-10b 新增的修正模板。"""
-EXTENDED_MOD_OPS = NEW_MOD_OPS | {"mod_potency"}
+RECLAIM_MOD_OP = "reclaim_modifier"
+"""收回家族（BAL-10e 專注，:mod:`trpg.skillgen.flash_reclaim`）換修正幅度時用的旋鈕組：同
+:data:`NEW_MOD_OPS` 的細階梯與其他幅度（結構一變點數常跳太多，要能往下補）。"""
+FINE_MOD_OPS = NEW_MOD_OPS | {RECLAIM_MOD_OP}
+EXTENDED_MOD_OPS = FINE_MOD_OPS | {"mod_potency"}
 """會用 ``rules.modifier_knobs`` 幅度的修正模板（``mod_potency`` 只在沒有傷害、治療幅度時；
 BAL-10b）。"""
 
@@ -1208,7 +1214,7 @@ def _modifier_knobs(
       幅度時加，有的時候照舊。"""
     flash = library.flash.rules
     changes = [m["change"] for m in rules]
-    fine = op in NEW_MOD_OPS
+    fine = op in FINE_MOD_OPS
     ladder = tuple(range(flash.modifier_fine_step, 1001, flash.modifier_fine_step))
     knobs = [
         Knob(i, name, ladder if fine else MODIFIER_LADDER)

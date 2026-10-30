@@ -55,16 +55,16 @@ def _used(state: SkillFlash) -> SkillFlash:
     return state.model_copy(update={"used": True})
 
 
-def _request(state: SkillFlash | None = None, **fields: Any) -> FlashRequest:
+def _request(state: SkillFlash | None = None, *, seed: int = SEED, **fields: Any) -> FlashRequest:
     state = state or _used(acquire(FIRE_BOLT))
-    return FlashRequest(LIB.skills[FIRE_BOLT], state, SkillUsage(), SEED, **fields)
+    return FlashRequest(LIB.skills[FIRE_BOLT], state, SkillUsage(), seed, **fields)
 
 
-def _third_flash_state() -> SkillFlash:
+def _third_flash_state(seed: int = SEED) -> SkillFlash:
     """已閃 2 次（下一次是第 3 次大變化）。"""
     state = _used(acquire(FIRE_BOLT))
     for _ in range(2):
-        offer = make_offer(LIB, _request(state))
+        offer = make_offer(LIB, _request(state, seed=seed))
         state, _skill = choose(state, offer, 0)
         state = _used(state)
     return state
@@ -184,8 +184,10 @@ def test_focused_proposal_gives_three_in_the_category_and_costs_two() -> None:
 
 
 def test_major_flash_keeps_the_transform_guarantee() -> None:
-    state = _third_flash_state()
-    request = _request(state)
+    # BAL-10e 重挑種子：種子 7 的前兩次會選到精煉（拿掉燃燒），之後「恆久」沒有狀態可延長
+    seed = 5
+    state = _third_flash_state(seed)
+    request = _request(state, seed=seed)
     items = (
         _item("major_intensify", "deepen", keyword="ignite"),
         _item("major_reshape", "deepen"),

@@ -186,7 +186,8 @@ minor:
       - {type: square3, range: 4}
       - {type: allies_in_radius, radius: 2}
   # 收束（BAL-10d，#74；06 6.34.4「收束」「收回家族」）：把範圍收小，省下的預算＋這次的 +40‰ 全部換成威力
-  # （trpg.skillgen.flash_trade）。只對有傷害／治療／護盾量的主動技（陷阱除外）；複合技只動第一段形狀；
+  # （trpg.skillgen.flash_trade）。只對有傷害／治療／護盾量的主動技；BAL-10e 補陷阱（觸發範圍）與地面格（持續區域
+  # 裡的傷害／治療／護盾）；複合技只動第一段形狀；
   # 範圍造的表面、區域跟著縮。單發上限見 rules.single_hit_cap_permille。排在範圍類最後；常打單體時靠用法分數往前（BAL-10d2）。
   - id: converge_single
     category: area
@@ -218,6 +219,13 @@ minor:
     kinds: [active]
     prefix_zh: 續勁
     summary_zh: 接續段強化：接續段的傷害提高（依預算）
+  # 精煉・多段併一段（BAL-10e，#75；06 6.34.4「收回家族」）：同一目標的多段同元素傷害併成一段，總量不變、只換成單發
+  - id: refine_merge
+    category: combo
+    op: refine_merge
+    kinds: [active]
+    prefix_zh: 精煉
+    summary_zh: 多段併一段：同一目標的幾段傷害併成一段單發（總量不變，依預算換成威力）
   # ---- 元素與關鍵字 ----
   - id: element_second
     min_tier: 2
@@ -250,6 +258,15 @@ minor:
     op: keyword_exploit
     prefix_zh: 借勢
     summary_zh: 加第二個關鍵字：目標帶有該關鍵字時加碼
+  # 精煉（BAL-10e，#75；06 6.34.4「收回家族」）：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字、接續段），
+  # 拿掉的預算＋這次的 +40‰ 全部換成主要效果的威力（trpg.skillgen.flash_reclaim；共用 trpg.skillgen.flash_trade）。
+  - id: refine
+    category: element
+    op: refine
+    kinds: [active]
+    prefix_zh: 精煉
+    summary_zh: 精煉：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字或接續段），省下的預算全部換成主要效果的威力
+    skeletons: [strike, combo]   # 拿掉附帶效果後原骨架不合適時（例：控制技拿掉狀態）依序改試打擊、連擊
   # ---- 延長與收割 ----
   - id: extend_duration
     category: extend
@@ -331,6 +348,14 @@ minor:
     prefix_zh: 附帶
     summary_zh: 附帶第二個關鍵字（例：治療時造水＝潮濕）
     keywords: [wet, concealed]
+  # 合體（BAL-10e，#75；06 6.34.4「收回家族」，設計表歸「輔助」）：一次召喚 2 隻以上的召喚技，隻數 −1，
+  # 換成召喚物更強（最大 HP，照強壯 summon_toughen 的階梯）。
+  - id: fuse
+    category: support
+    op: fuse
+    kinds: [active]
+    prefix_zh: 合體
+    summary_zh: 合體：召喚隻數 −1，省下的預算全部換成召喚物的生命（一隻時恢復完整強度）
   # ---- 觸發（被動、反應） ----
   - id: trigger_range
     category: trigger
@@ -360,6 +385,17 @@ minor:
     kinds: [passive]
     prefix_zh: 連發
     summary_zh: 每回合觸發次數上限 +1（效果依預算調整，不超過 6.6）
+  # 專注（BAL-10e，#75；06 6.34.4「收回家族」）：觸發範圍收回一級，或觸發條件收緊一級，換成觸發效果的威力
+  - id: focus_range
+    category: trigger
+    op: focus_range
+    prefix_zh: 專注
+    summary_zh: 專注：觸發範圍收回一級，省下的預算全部換成觸發效果（依預算）
+  - id: focus_condition
+    category: trigger
+    op: focus_condition
+    prefix_zh: 專注
+    summary_zh: 專注：觸發條件收緊一級（例：被攻擊時 → 被近戰攻擊時；沒有條件 → 目標血量低於 50%），換成觸發效果（依預算）
   # ---- 修正（修正型被動、姿態） ----
   - id: mod_potency
     category: modifier
@@ -426,6 +462,19 @@ minor:
     kinds: [modifier]
     prefix_zh: 減負
     summary_zh: 代價減輕：附帶的代價（傷害降低、命中降低……）減輕一級，不會變成沒有代價（其他幅度依預算調整）
+  # 專注（修正型被動，BAL-10e，#75）：作用範圍收回一級，或規則的條件收緊一級，換成修正幅度
+  - id: focus_mod_range
+    category: modifier
+    op: focus_mod_range
+    kinds: [modifier]
+    prefix_zh: 專注
+    summary_zh: 專注：作用範圍收回一級（範圍、射程 −1），省下的預算全部換成修正幅度
+  - id: focus_mod_condition
+    category: modifier
+    op: focus_mod_condition
+    kinds: [modifier]
+    prefix_zh: 專注
+    summary_zh: 專注：條件收緊一級（沒有條件 → 目標血量低於 50%；血量門檻收緊；「或」拿掉一支），換成修正幅度
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
