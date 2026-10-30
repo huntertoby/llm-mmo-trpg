@@ -19,6 +19,7 @@ from trpg.content.skills import (
     error_path_of,
     granted_skill_problems,
 )
+from trpg.llm.skill_eval import free_items
 from trpg.skillgen.proposal import (
     ACTIVE_ONLY_FIELDS,
     CATEGORIES,
@@ -36,6 +37,7 @@ from trpg.skillgen.proposal import (
     grantable_skills,
     proposal_from_skill,
 )
+from trpg.skillgen.proposal_subset import ProposalRequest, select_subset
 
 
 @cache
@@ -347,3 +349,24 @@ def test_error_paths_never_contain_branch_tags() -> None:
     data["effects"] = [{"type": "inscribe", "element": "fire", "tag": "x"}]
     result = evaluate_proposal(data, _models(), _lib(), ProposalContext(1, "rare"))
     assert result.errors and all("~" not in e.path for e in result.errors)
+
+
+# -- C5：自由題選單不出形態原語 ---------------------------------------------------
+
+
+@pytest.mark.parametrize("skeleton", [None, "stance", "area"])
+def test_free_menu_excludes_form_primitives(skeleton: str | None) -> None:
+    excluded = set(_lib().composer.llm_topic.core_exclude)
+    assert {"enter_form", "leave_form"} <= excluded
+    request = ProposalRequest(2, "rare", skeleton=skeleton)
+    subset = select_subset(_lib(), request)
+    assert excluded.isdisjoint(subset.primitives)
+    dropped = dict(subset.dropped)
+    assert any(dropped.get(i) == "形態只由手寫內容提供，自由題不收" for i in excluded)
+
+
+def test_free_eval_items_never_offer_form_primitives() -> None:
+    excluded = set(_lib().composer.llm_topic.core_exclude)
+    for item in free_items(_lib(), 12, seed=2):
+        subset = select_subset(_lib(), item.request)
+        assert excluded.isdisjoint(subset.primitives), item.index
