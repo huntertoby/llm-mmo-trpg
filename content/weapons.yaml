@@ -203,7 +203,7 @@ weapons:
     look: {kind: longgun, material: steel, form: flintlock}
     weapon_class: ranged
     range: 8
-    dice: 1d12
+    dice: 1d6  # BAL-8b 原型專用：1d12 → 1d6
     flat: 0
     attack_bonus: 0
     scaling_attr: dex
