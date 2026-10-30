@@ -16,7 +16,8 @@
 1. 拿掉之前用預算器算一次總點數；拿掉之後的草稿再算一次可用預算。
 2. 目標點數 ＝ 拿掉之前的總點數 ＋ 這一次閃現的 ``budget_step_permille``（佔同階可用預算）：拿掉的
    部分（例：形狀倍率 2000‰ → 1000‰）在總點數不變的前提下全部換成威力，再加這次的 +40‰。
-   由預算器只用威力旋鈕重調到這個比例（強度下限照 6.34.3）。
+   目標比例 ＝ max(這個點數 ÷ 拿掉之後的可用預算, 一般重調的隨機目標)（BAL-10d2：和其他小變化一樣
+   可以吃到之前沒用完的加成），由預算器只用威力旋鈕重調到這個比例（強度下限照 6.34.3）。
 3. **單發上限**：對單一目標的期望量 ≤ 同階、同 AP 單體技能預算（``tier_budget`` × AP 係數）×
    ``single_hit_cap_permille``。超過時威力壓回上限，省下的預算依 ``complete.cost_cuts`` 的順序一次減
    一格代價（減費用），直到「每單位可用預算的強度」不低於強度下限；減不動就不出這個選項。
@@ -40,6 +41,7 @@ from trpg.content.skills import ShapeSpec, SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.composer_parts import Knob
+from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.evolution import retune
 from trpg.skillgen.flash_ops import FLASH_OPS, Draft, FlashOp, base_draft, cell_count
 from trpg.skillgen.flash_state import Variation
@@ -215,9 +217,8 @@ def apply_trade(
         if report is None:
             continue
         sub = rng.fork(str(index))
-        done = _tuned(
-            library, draft, trade, sub, ratio=min(wanted / report.usable, top), floor=floor
-        )
+        ratio = min(max(wanted / report.usable, _random_target(library, sub.fork("target"))), top)
+        done = _tuned(library, draft, trade, sub, ratio=ratio, floor=floor)
         if done is None:
             continue
         if _cap_excess(done, library, trade.core) <= 1:
@@ -229,6 +230,15 @@ def apply_trade(
         if cut is not None:
             return cut
     return None
+
+
+def _random_target(library: ContentLibrary, rng: Rng) -> Fraction:
+    """一般重調（有強度下限時）抽的目標比例：均勻分佈在 ``[low, 1.00 − margin]``（同
+    :func:`~trpg.skillgen.composer_tuning.tune`）。"""
+    rules = library.composer.tuning
+    low, _ = tuning_bounds(library)
+    span = 1 - low - Fraction(rules.target_margin_permille, _PERMILLE)
+    return low + span * Fraction(rng.randint(0, rules.target_steps), rules.target_steps)
 
 
 def _cost_cuts(base: dict[str, Any], library: ContentLibrary) -> Iterator[dict[str, Any]]:

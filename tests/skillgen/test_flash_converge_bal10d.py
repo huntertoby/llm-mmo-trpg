@@ -281,3 +281,21 @@ def test_converge_is_deterministic() -> None:
     skill = lib().skills["skill_tempest"]
     assert _apply(skill, SINGLE) == _apply(skill, SINGLE)
     assert _apply(skill, STEP) == _apply(skill, STEP)
+
+
+# ---------------------------------------------------------------------------
+# BAL-10d2
+# ---------------------------------------------------------------------------
+
+
+def test_converge_target_ratio_can_reroll_like_other_flashes() -> None:
+    """④ 目標比例 ＝ max(收束前比例＋40‰, 一般重調的隨機目標)：不同亂數抽到的比例會不同，
+    但都不低於收束前的強度。"""
+    skill = lib().skills["skill_tempest"]
+    ratios = []
+    for seed in range(1, 13):
+        done = apply_variation(lib(), skill, _variation(SINGLE), bonus=BONUS, rng=Rng(seed))
+        assert done is not None
+        assert budget_power(done, lib()) >= budget_power(skill, lib())
+        ratios.append(skill_budget(done, lib()).ratio)
+    assert max(ratios) - min(ratios) >= Fraction(5, 100)
