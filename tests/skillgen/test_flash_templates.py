@@ -38,8 +38,8 @@ from trpg.skillgen.flash_derive import (
     derive_skill,
 )
 from trpg.skillgen.flash_offer import FlashRequest, UsageSource, choose, make_offer
-from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import COMPLETE_SLOT, Variation, acquire
+from trpg.skillgen.flash_trade import MINOR_OPS
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import validate_skill
 
@@ -186,7 +186,7 @@ def test_the_thirteen_families_are_all_in_the_data_and_registered() -> None:
     assert ops >= FAMILIES, FAMILIES - ops
     assert ops >= TRIGGER_OPS
     assert ops >= MODIFIER_OPS
-    assert ops <= set(FLASH_OPS), ops - set(FLASH_OPS)
+    assert ops <= set(MINOR_OPS), ops - set(MINOR_OPS)
 
 
 @pytest.mark.parametrize("template_id", _minor_ids())
@@ -508,6 +508,8 @@ ENGINE_TEMPLATES = [
     "cost_charge",
     "cost_light",
     "dual_scaling",
+    "converge_single",
+    "converge_step",
 ]
 
 

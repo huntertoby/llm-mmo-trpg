@@ -53,7 +53,6 @@ from trpg.skillgen.flash_major import (
     transform_variations,
 )
 from trpg.skillgen.flash_merge import merge_options
-from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     SkillFlash,
@@ -65,6 +64,7 @@ from trpg.skillgen.flash_state import (
     with_flash,
     with_reflash,
 )
+from trpg.skillgen.flash_trade import MINOR_OPS
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
@@ -174,7 +174,7 @@ class DataOrderSource:
                 Variation(source="minor", template=t.id, category=category)
                 for t in table.minor
                 if t.category == category
-                and t.op in FLASH_OPS
+                and t.op in MINOR_OPS
                 and t.min_tier <= request.role_tier
                 and skill.kind in template_kinds(table, t)
             ]
@@ -253,7 +253,7 @@ class UsageSource(DataOrderSource):
             t
             for t in table.minor
             if t.category == category
-            and t.op in FLASH_OPS
+            and t.op in MINOR_OPS
             and t.min_tier <= request.role_tier
             and skill.kind in template_kinds(table, t)
         ]
