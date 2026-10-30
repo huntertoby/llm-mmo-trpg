@@ -210,6 +210,9 @@ class FlashTemplate(ContentModel):
     max_cells: int | None = Field(default=None, ge=1)
     """``terrain_area`` 的影響格數範圍（3W-2b，#58）：新形狀的格數（``cell_count``）要落在其中
     （2 階 4～6 格、3 階 7 格以上）。"""
+    usage_base: int = Field(default=0, ge=0, le=5)
+    """基本用法分（BAL-2b）：加在用法分數上。觸發、修正類沒有對應的用法統計（用法統計只記主動技的
+    命中與目標），沒有基本分就永遠 0 分、被「全指定」策略排在最後；其他模板省略（0）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:

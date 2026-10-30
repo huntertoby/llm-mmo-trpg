@@ -249,11 +249,13 @@ minor:
   # ---- 觸發（被動、反應） ----
   - id: trigger_range
     category: trigger
+    usage_base: 1
     op: trigger_range
     prefix_zh: 廣域
     summary_zh: 觸發範圍 +1（效果依預算調整）
   - id: trigger_range_wide
     category: trigger
+    usage_base: 1
     op: trigger_range
     delta: 2
     min_tier: 2
@@ -261,12 +263,14 @@ minor:
     summary_zh: 觸發範圍 +2（效果依預算調整）
   - id: trigger_potency
     category: trigger
+    usage_base: 2
     op: potency
     generic: true
     prefix_zh: 強效
     summary_zh: 效果 +（依預算提高）
   - id: trigger_cap
     category: trigger
+    usage_base: 1
     op: trigger_cap
     kinds: [passive]
     prefix_zh: 連發
@@ -274,6 +278,7 @@ minor:
   # ---- 修正（修正型被動、姿態） ----
   - id: mod_potency
     category: modifier
+    usage_base: 2
     op: mod_potency
     kinds: [modifier]
     generic: true
@@ -281,6 +286,7 @@ minor:
     summary_zh: 修正幅度 +（依預算提高）
   - id: mod_range
     category: modifier
+    usage_base: 1
     op: mod_range
     kinds: [modifier]
     prefix_zh: 廣域
@@ -293,6 +299,7 @@ minor:
     summary_zh: 加第二個關鍵字：條件變成「原條件，或另一個關鍵字的條件」（幅度依預算調整）
   - id: stance_potency
     category: modifier
+    usage_base: 2
     op: stance_potency
     kinds: [stance]
     generic: true
@@ -300,6 +307,7 @@ minor:
     summary_zh: 姿態效果 +（元素傷害加成與小特色提高一級，維持費不變）
   - id: mod_relax
     category: modifier
+    usage_base: 1
     op: mod_relax
     kinds: [modifier]
     prefix_zh: 寬限
