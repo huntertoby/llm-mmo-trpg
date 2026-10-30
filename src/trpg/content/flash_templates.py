@@ -30,6 +30,7 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
+from trpg.content.skills.modifiers import ModifierChange
 
 __all__ = [
     "FLASH_KINDS",
@@ -52,6 +53,8 @@ FLASH_KINDS: tuple[FlashKind, ...] = ("active", "passive", "reaction", "stance",
 
 
 type CostCutField = Literal["stance_upkeep", "cooldown", "mana", "stamina", "ap_cost"]
+type EntryCostField = Literal["ap_cost", "cooldown", "mana", "stamina"]
+"""姿態的「進入代價」（施放費用）可以動的欄位（BAL-10b）；維持費不在內（#67）。"""
 
 
 class CostCut(ContentModel):
@@ -68,6 +71,8 @@ def _ladder(values: tuple[int, ...], name: str) -> tuple[int, ...]:
 
 
 _NEUTRAL = 1000
+_FIXED_MODIFIER_CHANGES = frozenset({"form_upkeep_permille"})
+"""不能當閃現旋鈕的修正改變：形態維持費照 #67 固定（化形專精減半）。"""
 _MAX_FORM_MAGNITUDE = 2000
 """形態幅度的上限（‰；``enter_form.magnitude_permille`` 的參數上限，BAL-2c）。"""
 
@@ -150,6 +155,17 @@ class FlashRules(ContentModel):
     """沒有階梯的單一狀態姿態（狂怒、堅壁…，BAL-2b）費用、修正類小變化可換到的姿態幅度（‰，
     ``apply_status.magnitude_permille``）。比完整技能的級距寬：這些姿態是固定點數，角色階級高時
     要靠幅度把預算分數拉進預算窗。"""
+    modifier_knobs: dict[str, tuple[int, ...]] = Field(default_factory=dict)
+    """修正型被動除了傷害、治療幅度以外可以重調的幅度（BAL-10b；``ModifierChange`` 的欄位 → 由弱到
+    強的值）。只給 ``mod_potency`` 在沒有正的傷害／治療幅度時與 BAL-10b 新增的修正模板用；形態維持費
+    （``form_upkeep_permille``）照 #67 不列；冷卻、持續回合有自己的模板（``mod_cooldown``、
+    ``mod_duration``），也不列。"""
+    modifier_on_hit_dice: bool = True
+    """同上，命中後效果（``on_hit_effects``）的骰子也當旋鈕（組合器的骰子階梯；BAL-10b）。"""
+    modifier_fine_step: int = Field(default=5, ge=1, le=50)
+    """BAL-10b 新增的修正模板重調正的傷害、治療幅度用的階梯間距（‰；從這個數到 1000）。"""
+    modifier_drawback_step: int = Field(default=100, ge=1, le=500)
+    """``mod_cost``（代價減輕）：負的傷害、治療幅度（‰）往 0 減輕多少（BAL-10b）。"""
     form_magnitudes: tuple[int, ...] = tuple(range(1000, 2001, 50))
     """變身姿態（BAL-2c）修正類小變化與升階重配可換到的形態幅度（‰，``enter_form.magnitude_permille``；
     上限 2000）。比 ``stance_magnitudes`` 細：升階重配把形態拉到接近原本的比例（例如 99%）之後，
@@ -157,6 +173,11 @@ class FlashRules(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
+        for name, values in self.modifier_knobs.items():
+            if name not in ModifierChange.model_fields or name in _FIXED_MODIFIER_CHANGES:
+                raise ValueError(f"modifier_knobs.{name} 不是可以重調的修正改變")
+            if not values or list(values) != sorted(set(values), key=abs):
+                raise ValueError(f"modifier_knobs.{name} 必須非空、由弱到強（絕對值嚴格遞增）")
         if self.major_flash > self.max_flashes:
             raise ValueError("major_flash 不可大於 max_flashes")
         _ladder(self.stance_magnitudes, "stance_magnitudes")
@@ -247,6 +268,10 @@ class FlashTemplate(ContentModel):
     usage_base: int = Field(default=0, ge=0, le=5)
     """基本用法分（BAL-2b）：加在用法分數上。觸發、修正類沒有對應的用法統計（用法統計只記主動技的
     命中與目標），沒有基本分就永遠 0 分、被「全指定」策略排在最後；其他模板省略（0）。"""
+    cost_fields: tuple[EntryCostField, ...] = ()
+    """姿態的進入代價（施放費用）可以動的欄位，依序試（BAL-10b）：``stance_enter_light`` 減 1；
+    姿態費用類（``stance_light``／``stance_heavy``）填了就也適用變身姿態（形態的維持費照 #67 不動，
+    改用進入代價當費用旋鈕）。空 ＝ 不動進入代價（變身姿態不出費用類，同 BAL-2c）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:

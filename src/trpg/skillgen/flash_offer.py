@@ -287,8 +287,13 @@ class UsageSource(DataOrderSource):
         if template.op == "dual_scaling":
             attrs = [a.value for a in library.secondary_range(skill) if a != skill.scaling_attr]
             return [Variation.model_validate({**base, "keyword": a}) for a in attrs]
-        if template.op == "element":
-            own = {e.element.value for e in skill.effects if e.element is not None}
+        if template.op in ("element", "followup_element"):
+            followup = (
+                skill.followup.effects
+                if template.op == "followup_element" and skill.followup is not None
+                else ()
+            )
+            own = {e.element.value for e in (*skill.effects, *followup) if e.element is not None}
             elements = [e for e in template.elements if e not in own]
             return [Variation.model_validate({**base, "element": e}) for e in elements]
         if template.op in _KEYWORD_OPS:
@@ -346,6 +351,7 @@ def _usage_score(
         "reshape": 2 * (not multi and usage.uses > 0),
         "multi_hit": 2 * (not multi and usage.uses > 0),
         "followup": int(usage.uses > 0),
+        "followup_potency": int(usage.uses > 0),
         "kill_refund": 3 * (usage.kills > 0),
         "extend": 2 * (sum(usage.target_keywords.values()) > 0),
         "charge": int(multi),

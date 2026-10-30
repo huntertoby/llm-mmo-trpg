@@ -2,7 +2,8 @@
 
 - 修正類（``stance_potency``）：維持費不變（照形態種類，#67）、形態幅度提高、預算分數嚴格變大、
   預算比例在窗內、1～3 階都合法。
-- 費用類（蓄力、輕巧）不出：維持費不能動，形態上沒有其他可動的代價。
+- 費用類：BAL-2c 時不出；BAL-10b 起改用進入代價（模板 ``cost_fields``）當費用旋鈕，維持費照舊不動
+  （細節見 ``test_flash_bal10b.py``）。這裡只留「沒填 ``cost_fields`` 時照 BAL-2c 不出」。
 - 行為一致：閃現後卡片的數字＝引擎（同一個 ``scaled_form_def``）。
 """
 
@@ -16,7 +17,8 @@ from trpg.narrative.skills import skill_card
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
-from trpg.skillgen.flash_derive import apply_variation, at_role_tier
+from trpg.skillgen.flash_derive import apply_variation, at_role_tier, with_budget_bonus
+from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.validate import validate_skill
 
@@ -54,12 +56,15 @@ def test_potency_raises_the_form_magnitude_at_every_tier(skill_id: str, tier: in
 
 
 @pytest.mark.parametrize("skill_id", _form_skills())
-def test_cost_templates_are_not_offered_for_forms(skill_id: str) -> None:
+def test_cost_templates_without_entry_cost_fields_are_not_offered_for_forms(skill_id: str) -> None:
     lib = library()
     for tier in (1, 3):
-        stance = _at(skill_id, tier)
+        stance = with_budget_bonus(_at(skill_id, tier), 40)
         for variation in (LIGHT, HEAVY):
-            assert apply_variation(lib, stance, variation, bonus=40, rng=Rng(3)) is None
+            template = lib.flash.minor_template(variation.template)
+            assert template is not None and template.cost_fields  # BAL-10b 資料有填
+            bare = template.model_copy(update={"cost_fields": ()})
+            assert FLASH_OPS[template.op](stance, bare, variation, lib) == []
 
 
 def test_the_flashed_form_card_shows_the_engine_numbers() -> None:
