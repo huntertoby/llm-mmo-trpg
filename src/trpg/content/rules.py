@@ -52,6 +52,7 @@ HIT_TABLE_SCALE = 1_000_000
 """門檻比例的放大倍數（10⁶）。"""
 
 _DECIMAL_PRECISION = 60
+_PERMILLE = 1000
 
 
 PerkKind = Literal[
@@ -130,9 +131,16 @@ class ResourceRules(ContentModel):
         best = max(attributes.get(a, self.base) for a in pool.attrs)
         return (best - self.base) * pool.per_point
 
+    mana_cap_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
+    """法力上限倍率（‰；BAL-4 模擬旋鈕，**預設 1000 ＝ 現行行為**）：只由 ``trpg.sim.difficulty``
+    在記憶體內的副本上設定，不寫進內容檔；``exclude`` 讓它不進序列化與規則包雜湊。"""
+
     def max_for(self, kind: ResourceKind, base: int, attributes: Mapping[Attribute, int]) -> int:
-        """上限 ＝ max(0, ``base`` ＋ :meth:`bonus`)。"""
-        return max(0, base + self.bonus(kind, attributes))
+        """上限 ＝ max(0, ``base`` ＋ :meth:`bonus`)；法力再乘 ``mana_cap_permille``。"""
+        value = max(0, base + self.bonus(kind, attributes))
+        if kind == "mana" and self.mana_cap_permille != _PERMILLE:
+            return (value * self.mana_cap_permille + _PERMILLE // 2) // _PERMILLE
+        return value
 
 
 class AttributePerks(ContentModel):
@@ -494,6 +502,14 @@ class CoreRules(ContentModel):
     """召喚物持續輪數的上限（Phase 3-33b）：召喚技能的 ``duration`` 超過時以此為準。"""
     boss_summon_damage_permille: int = Field(default=2000, ge=1000, le=5000)
     """Boss（``boss`` 標籤）對召喚物造成的傷害倍率（‰；Phase 3-33b，預設 ×2）。"""
+    enemy_damage_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
+    """敵方（非 ``boss`` 標籤）對我方造成的傷害倍率（‰；BAL-4 模擬旋鈕，預設 1000 ＝ 現行行為）：
+    只由 ``trpg.sim.difficulty`` 在記憶體內的副本上設定；``exclude`` 讓它不進序列化與規則包雜湊。"""
+    boss_damage_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
+    """Boss（``boss`` 標籤）造成的傷害倍率（‰；BAL-4 模擬旋鈕，同上）。"""
+    ally_mana_cost_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
+    """技能法力費用倍率（‰；BAL-4 模擬旋鈕，同上）：``trpg.sim.difficulty`` 縮放規則包內技能的
+    ``cost.mana``，``Ruleset.with_skills`` 加入的技能也套用；這裡只記錄倍率。"""
     summon_command_ap_cost: int = Field(default=1, ge=0, le=3)
     """指揮召喚物（Phase 3-33c）的 AP 花費（切換模式免費）。"""
     summon_infuse_ap_cost: int = Field(default=1, ge=0, le=3)

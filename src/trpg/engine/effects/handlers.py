@@ -112,6 +112,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         )  # 易傷、石膚；千分比 × 千分比
         multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
         multiplier //= PERMILLE
+        multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
         amount = max(
             raw_permille
             * mod_ppm
@@ -184,6 +185,22 @@ def _boss_vs_summon_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) 
     if source is None or source.team is target.team or not source.has_tag(BOSS_TAG):
         return PERMILLE
     return ctx.core.boss_summon_damage_permille
+
+
+def _difficulty_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> int:
+    """難度旋鈕（BAL-4，模擬用）：敵方單位（有 ``boss`` 標籤者用 ``boss_damage_permille``，其餘用
+    ``enemy_damage_permille``）對非敵方單位造成的傷害倍率；預設 1000（不變）。"""
+    core = ctx.core
+    if effect.source_id is None or (
+        core.enemy_damage_permille == PERMILLE and core.boss_damage_permille == PERMILLE
+    ):
+        return PERMILLE
+    source = ctx.state.units.get(effect.source_id)
+    if source is None or source.team is not Team.ENEMY or target.team is Team.ENEMY:
+        return PERMILLE
+    if source.has_tag(BOSS_TAG):
+        return core.boss_damage_permille
+    return core.enemy_damage_permille
 
 
 def _damage_rolls(ctx: Ctx, effect: DamageEffect) -> tuple[tuple[int, ...], int]:
