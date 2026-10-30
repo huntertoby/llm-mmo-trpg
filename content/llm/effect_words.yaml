@@ -49,7 +49,7 @@ groups:
   # ---- 元素 ----
   - id: fire
     words: [火, 焰, 炎, 燃, 焚, 熾]
-    ignore: [怒火, 開火, 火花, 火網, 魂火, 燃起, 燃燒一點]
+    ignore: [怒火, 開火, 火花, 火網, 魂火, 燃起, 燃燒一點, 火速, 電光石火]
     matches:
       elements: [fire]
       statuses: [burning, stance_flame, stance_blaze, infused_fire]
@@ -58,6 +58,7 @@ groups:
       units: [summon_fire_spirit, summon_foxfire_decoy, summon_bomb_puppet, summon_elemental_spirit]
   - id: ice
     words: [冰, 霜, 凍, 寒氣, 嚴寒, 極寒]
+    ignore: [冰冷]
     matches:
       elements: [ice]
       statuses: [frozen, stance_frost, stance_glacier]
@@ -65,10 +66,11 @@ groups:
       units: [summon_ice_spirit, summon_elemental_spirit]
   - id: lightning
     words: [雷, 電, 閃電, 霹靂]
-    ignore: [地雷, 悶雷]
+    ignore: [地雷, 悶雷, 閃電般, 電光石火]
     matches: {elements: [lightning], units: [summon_thunder_spirit, summon_elemental_spirit]}
   - id: poison
     words: [毒, 瘴]
+    ignore: [毒辣, 惡毒]
     matches:
       elements: [poison]
       statuses: [poison]
@@ -98,6 +100,7 @@ groups:
       units: [summon_shade, summon_afterimage]
   - id: water
     words: [水, 濕, 潮水, 潮濕]
+    ignore: [行雲流水]
     matches:
       surfaces: [water]
       primitives: [clear_surface, blow_surface]
