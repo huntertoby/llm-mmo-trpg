@@ -93,3 +93,27 @@
 
 ## 複雜度與例外
 無新增 `noqa`。
+
+## BAL-10e2（玩法 PM 2026-10-31，06 6.34.4「BAL-10e 定」，`cb83926f`）
+
+### 做了什麼
+- ① **合體改歸「範圍」類**（`content/flash_templates.yaml`：`fuse` 的 `category: area`，排在兩種收束前面，三個收回都在範圍類最後）。召喚技的範圍類候選現在有合體（測試：雙生後的召喚技 `allowed_categories` 有範圍類、範圍類候選含 `fuse`）。
+- ④ **條件收緊一級固定視為拿掉 100‰**：`rules.tighten_permille: 100`（`FlashRules` 新欄位）；`Trade` 多 `tighten` 旗標，`focus_condition`、`focus_mod_condition` 開啟。`apply_trade` 的目標點數＝收回前總點數＋同階可用預算 ×（100＋40）‰，再取和一般重調隨機目標的較大者（同 BAL-10d2）。
+- ②③⑤不改。
+- 測試（`test_flash_reclaim_bal10e.py` 共 43 個）：合體在範圍類；收緊時預算比例不低於 `tighten_permille: 0` 的版本，且總點數至少約為收緊前＋140‰。
+- **行為快照**重產，**5 筆閃現出題變**（完整技能強度、升階重配不變）：`skill_attack_mastery@5@2`、`skill_covering_fire@3@1／@5@2`、`skill_rune_breaker@3@1／@11@1`。原因都是專注選項的重調結果變強（出題雜湊含套用後的技能），之後的選項跟著變。
+
+### 新量測（`reclaim_bal10e.md` 已更新）
+- 專注・觸發條件：套得上 14／24 不變；倍數 1.04／1.10／1.27 → **1.09／1.21／1.27**（最小／中位／最大）。
+- 專注・修正條件：套得上 5／18 不變；倍數 1.22／1.43／2.50 → **1.36／1.43／2.50**。套不上的仍是沒有幅度可調的規則，或已是最緊的條件（狀態、符文）。
+- 合體：雙生 → 合體 14／16、單隻 HP 3.00～3.33 倍（不變）。AI 4 個策略都沒選到：要第 3 次選了雙生、第 4 次又抽到範圍類，自動玩家很少走到。
+- AI 選中收回（含收束）：均衡 2.1%（不變）、集中 2.6% → 3.0%（專注・觸發條件 3 → 4）、全指定 4.2%、混合 4.1%（不變）。
+- 覆蓋重掃（`minor_coverage_bal10e.*` 已更新）：不足名單 **247 列不變**。覆蓋只看選項出不出得來，加預算不會多出選項；合體要第 3 次以後才用得到，掃描只看第 1、2 次。
+
+### 檢查結果
+- ruff check、ruff format --check、mypy（908 檔）、lint-imports（7 kept）通過。
+- pytest（`-m "not llm" -n 6`，含 slow）：tests/skillgen、tests/llm、tests/content、tests/roguelite、test_architecture、tests/sim 閃現 5 檔 **6093 passed、14 skipped**。
+- 重播：swamp 種子 7 通過（76 個動作、250 個事件）。
+
+### 待 PM 決定
+- 無新增。前面的第 2～8 點已由「BAL-10e 定」處理或照現狀。

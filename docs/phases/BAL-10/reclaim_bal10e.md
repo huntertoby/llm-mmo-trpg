@@ -10,9 +10,9 @@
 | 精煉（多段併一段） | `refine_merge` | 247 | 0 | 0 | — | — | — | — |
 | 合體 | `fuse` | 247 | 0 | 0 | — | — | — | — |
 | 專注（觸發範圍） | `focus_range` | 24 | 0 | 0 | — | — | — | — |
-| 專注（觸發條件） | `focus_condition` | 24 | 22 | 14 | 1.04 | 1.10 | 1.27 | skill_twin_strike 1.27 |
+| 專注（觸發條件） | `focus_condition` | 24 | 22 | 14 | 1.09 | 1.21 | 1.27 | skill_twin_strike 1.27 |
 | 專注（修正：作用範圍） | `focus_mod_range` | 18 | 0 | 0 | — | — | — | — |
-| 專注（修正：條件） | `focus_mod_condition` | 18 | 14 | 5 | 1.22 | 1.43 | 2.50 | skill_summon_elite 2.50 |
+| 專注（修正：條件） | `focus_mod_condition` | 18 | 14 | 5 | 1.36 | 1.43 | 2.50 | skill_summon_elite 2.50 |
 | 收束・收成單體（陷阱／地面格） | `converge_single` | 5 | 3 | 2 | 2.44 | 2.65 | 2.86 | skill_venom_pit 2.86 |
 | 收束・縮小一級（陷阱／地面格） | `converge_step` | 5 | 0 | 0 | — | — | — | — |
 
@@ -29,9 +29,9 @@
 
 自動玩家一律選第一個選項（不指定類別時選項順序由種子洗牌）。
 
-| 策略 | 輪數 | 小變化選擇 | 收回合計 | 收回／小變化 | converge_single | converge_step | refine_merge | refine | fuse | focus_range | focus_condition | focus_mod_range | focus_mod_condition |
+| 策略 | 輪數 | 小變化選擇 | 收回合計 | 收回／小變化 | fuse | converge_single | converge_step | refine_merge | refine | focus_range | focus_condition | focus_mod_range | focus_mod_condition |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| balanced | 48 | 237 | 5 | 2.1% | 0 | 0 | 0 | 2 | 0 | 0 | 3 | 0 | 0 |
-| none | 48 | 232 | 6 | 2.6% | 1 | 0 | 0 | 2 | 0 | 0 | 3 | 0 | 0 |
-| all | 48 | 144 | 6 | 4.2% | 5 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| mixed | 48 | 171 | 7 | 4.1% | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| balanced | 48 | 237 | 5 | 2.1% | 0 | 0 | 0 | 0 | 2 | 0 | 3 | 0 | 0 |
+| none | 48 | 232 | 7 | 3.0% | 0 | 1 | 0 | 0 | 2 | 0 | 4 | 0 | 0 |
+| all | 48 | 144 | 6 | 4.2% | 0 | 5 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| mixed | 48 | 171 | 7 | 4.1% | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
