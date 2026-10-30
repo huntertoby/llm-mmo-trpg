@@ -285,6 +285,8 @@ class WeaponDef(ContentModel):
 
     - ``pierce_line``：穿透一直線——普攻命中（結算）目標之後，子彈／弩箭沿同一直線繼續飛，最多再
       擊中這麼多名射程內、視線未被擋住的敵人（各自擲命中與傷害）；
+    - ``pierce_permille``（BAL-9c）：穿透到後方敵人的傷害千分比（1000 ＝ 不打折；不是 1000 時
+      穿透的那幾下不再觸發分裂與連擊）；
     - ``ignore_height``：不受高度影響——這把武器的攻擊沒有高打低、低打高的命中修正；
     - ``magazine``／``reload_ap``：彈匣容量與裝填的 AP 花費（0 ＝ 不用裝填）；開火一次用掉 1 發，
       彈匣空了不能普攻，要先裝填（彈匣空時才能裝填）；有彈匣的武器是直射——不可同時有 ``lob``；
@@ -327,6 +329,7 @@ class WeaponDef(ContentModel):
     reap: Reap | None = None
     entangle: Entangle | None = None
     pierce_line: int = Field(default=0, ge=0, le=8)
+    pierce_permille: int = Field(default=1000, ge=0, le=1000)
     ignore_height: bool = False
     magazine: int = Field(default=0, ge=0, le=6)
     reload_ap: int = Field(default=1, ge=1, le=3)
@@ -488,7 +491,10 @@ def _signed(value: int) -> str:
 def _weapon_ranged_lines(w: WeaponDef) -> list[str]:
     lines: list[str] = []
     if w.pierce_line:
-        lines.append("穿透：命中後箭矢貫穿同一直線上的後方敵人")
+        text = "穿透：命中後箭矢貫穿同一直線上的後方敵人"
+        if w.pierce_permille < _NEUTRAL_PERMILLE:
+            text += f"（後方敵人受 {w.pierce_permille / 10:g}% 傷害）"
+        lines.append(text)
     if w.ignore_height:
         lines.append("不受高度影響：命中沒有高低差修正")
     if w.magazine:
