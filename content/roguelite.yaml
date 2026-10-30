@@ -32,7 +32,7 @@ encounters:
       - [bandit_shieldbearer, bandit_shieldbearer, bandit_archer, bandit_archer]
 
 # Boss 戰（Phase 3-5b）：專屬地圖 bandit_lair（地圖類型 boss，不進一般抽選）與加強版頭目。
-# 地圖另有第 3 輪的援軍事件（2 名盜賊）。
+# 地圖另有第 3 輪的援軍事件（1 名盜賊；BAL-7 由 2 名減為 1 名，原型專用）。
 boss:
   map: bandit_lair
   enemies: [bandit_warlord, bandit_guard, bandit_archer_guard, bandit_shieldbearer_guard]   # 護衛為 *_guard（BAL-4b，與一般遭遇分開調）

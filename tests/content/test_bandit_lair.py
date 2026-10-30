@@ -63,4 +63,4 @@ def test_lair_battle_runs_to_the_end_and_reinforcements_arrive() -> None:
     spec = map_spec(lib, LAIR, [6])
     run = run_tracked(spec.setup, 6, spec.policy_factory())
     spawned = [e for e in run.events if isinstance(e, UnitSpawned)]
-    assert len(spawned) >= 2
+    assert len(spawned) >= 1  # 援軍 1 名（BAL-7 由 2 名減為 1 名）

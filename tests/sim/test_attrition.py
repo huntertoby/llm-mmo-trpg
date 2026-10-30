@@ -94,7 +94,7 @@ def test_boss_overrides_guards_and_reinforcements() -> None:
     out = apply_config(library, AttritionConfig(boss_reinforce_round=4, boss_reinforce_delta=-1))
     events = [e for e in out.maps[boss.map].events if isinstance(e, SpawnUnitsEvent)]
     assert [e.round for e in events] == [4] * len(base_events)
-    assert [len(e.units) for e in events] == [len(e.units) - 1 for e in base_events]
+    assert [len(e.units) for e in events] == [max(1, len(e.units) - 1) for e in base_events]
 
     out = apply_config(library, AttritionConfig(boss_reinforce_round=NO_REINFORCE))
     assert not [e for e in out.maps[boss.map].events if isinstance(e, SpawnUnitsEvent)]

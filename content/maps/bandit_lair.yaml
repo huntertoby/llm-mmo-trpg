@@ -61,6 +61,5 @@ encounter:
 events:
   - kind: spawn_units
     round: 3
-    units:
+    units:   # 援軍 2 → 1 名（BAL-7，玩法 PM：重複兵種拿掉一名；原型專用）
       - {template: bandit_guard, at: [11, 0], team: enemy}
-      - {template: bandit_guard, at: [11, 9], team: enemy}
