@@ -302,3 +302,8 @@
 ### 4.12 4-L6b 驗收（2026-10-29，開發 PM）
 - 報告 `Phase4-L6b報告.md`。`POST /api/runs` 選填 `llm`（預設關）；開局 `GET {base_url}/models` 探測、逾時 3 秒，連不到當作關閉並帶 `llm_notice` 一次；`RunResponse` 加 `llm`／`llm_notice`／`llm_stats`；`trpg.api.llm_source`（`LocalLlmProvider`、`MockLlmProvider`）；前端開關、`NoticeBanner`、候選卡「源晶推演」標記、一輪摘要 LLM 統計；存檔不變（`trpg-run/10`）。合併後全量（除 llm，含 3T-6）：pytest 8732、vitest 1107、mypy、lint-imports、build、重播（lava_crossing 種子 3，角魔）全過。
 - 玩法 PM 定案文字：標記「源晶推演」維持；開關改「用本機模型生成升級技能」；提示改「連不到本機模型，這一輪改用一般技能生成。」（開發 PM 已改）。待決 #2～#9 接受（只探測一次、同步生成、讀檔不探測、`generate` 不影響網頁）；`trpg serve --llm-mock`（瀏覽器離線看 LLM 候選）→ 需要時再加。
+
+### 4-L9 驗收（2026-10-30，開發 PM；使用者：「模型開好了  4-L9 真模型評估」）
+- 合併 4-L9（`src/trpg/llm/skill_eval.py`、`scripts/eval_llm_skills.py`、Mock 測試 8 個；結果 `docs/phases/4-L9/`，報告 `Phase4-L9報告.md`）。模型 `swift`（Qwen3.8-27B NVFP4）。
+- 結論：技能生成在現行 schema 下不夠用——升級候選 50 題一次通過 10%、累計 28%、退回 72%；強制測試退回 75%；自由測試通過 75% 但只做「傷害＋狀態」（35 個原語 0 次）。主因是 schema 允許、驗證器擋下的選填欄位組合（`value_error` 418，其中 203 為失手反噬帶 explode／scaling）與錯誤路徑不準；其次無旋鈕結構 `budget.weak` 121、`skeleton.secondary_share` 66。速度與容量 OK（每題 p50 16～19 秒、strict 全部接受）。閃現變化提議可用（退回 7.6%、補位 55%），但約一半選項套不上、指定類別 0 題完整通過。
+- 建議：先不換模型；先做 schema／提示修正（A1～A5）與引擎補強（B1～B4）、閃現模板列舉只放套得上的（F1／F2），再重跑；升級候選仍 < 60% 再考慮 thinking 或更大模型（須使用者決定）。目前 `whiteboard: true` 時升級三選一不走 LLM，正式一輪實際用到的是閃現提議。排段待專案 PM／使用者決定。
