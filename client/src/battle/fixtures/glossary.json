@@ -3865,6 +3865,17 @@
    }
   },
   {
+   "id": "bow_guard",
+   "weapon_class": "ranged",
+   "two_handed": true,
+   "look": {
+    "kind": "bow",
+    "material": "wood",
+    "element": null,
+    "form": null
+   }
+  },
+  {
    "id": "crossbow",
    "weapon_class": "ranged",
    "two_handed": true,
