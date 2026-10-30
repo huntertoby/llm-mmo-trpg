@@ -1,0 +1,25 @@
+# Boss 戰護衛與援軍（BAL-4b）：bandit_shieldbearer 的複本（帶 boss_escort 標籤），Boss 戰的陣容與一般遭遇分開調。
+# 盜賊盾衛（Phase 1C 決定 #7）：持盾、高護甲、守衛行為模式（保護受傷的同伴、守點）。
+# 盾牌讓格擋對遠程攻擊也有效（targeted_by_attack）；耐力降到 10 以下時不再格擋。
+id: bandit_shieldbearer_guard
+name_zh: 盜賊盾衛
+attributes: {str: 13, dex: 10, con: 14, int: 8, wis: 10, wil: 10}
+max_hp: 24   # Boss 戰護衛／援軍專用（BAL-4b）：預設與 bandit_shieldbearer 相同，可獨立調
+speed: 4
+armor_bonus: 6
+weapon: one_handed_sword
+stamina: 30
+ai_profile: guard
+reactions:
+  - reaction: block
+    when: {event: targeted_by_attack}
+    unless: {self_stamina_below: 10}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+resist: {physical: 100}
+element_mods: {}
+tags: [humanoid, shield, boss_escort]
+max_mana: 8
+skills: [skill_shield_bash]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#7a4e32', hair: short, hair_color: '#1c1410', main_material: iron, main_color: '#9a8a76', gear: {body: {kind: mail, material: iron}, feet: {kind: boots, material: leather}, head: {kind: helmet, material: iron}, off_hand: {kind: shield_kite, material: wood, color: '#8a5a32'}}}

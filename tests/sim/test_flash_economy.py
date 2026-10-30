@@ -74,7 +74,9 @@ def test_sweep_small_deterministic_and_start_bonus_counts() -> None:
 
 def test_preboss_bonus_lands_after_last_normal_battle() -> None:
     lib = library()
-    rows = run_economy_sweep(lib, [Economy(1, 0, 2)], ["none"], [0, 1], jobs=1)
+    rows = run_economy_sweep(
+        lib, [Economy(1, 0, 2)], ["none"], list(range(8)), jobs=1
+    )  # BAL-4b 後較難，多幾個種子才有跑到第 5 場的
     seen = 0
     for run in rows[0].runs:
         for n, held, spent in run.curve:

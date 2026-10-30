@@ -135,6 +135,8 @@ __all__ = [
     "REQUIRED_STATUSES",
     "ContentLibrary",
     "Ruleset",
+    "apply_ally_mana_cost",
+    "enemy_template_ids",
     "gear_class_problem",
     "gear_reference_problems",
     "load_library",
@@ -184,6 +186,53 @@ def scale_mana_cost(skill: SkillDef, permille: int) -> SkillDef:
         return skill
     scaled = max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
     return skill.model_copy(update={"cost": skill.cost.model_copy(update={"mana": scaled})})
+
+
+def enemy_template_ids(
+    units: Mapping[str, UnitTemplate], maps: Mapping[str, MapDef], rules: RunRules
+) -> tuple[str, ...]:
+    """敵方範本 ID（排序）：一輪的遭遇與 Boss 陣容、地圖預設陣容與援軍事件；不含召喚物。"""
+    ids: set[str] = set()
+    for step in rules.encounters:
+        for option in step.options:
+            ids.update(option)
+    ids.update(rules.boss.enemies)
+    for map_def in maps.values():
+        if map_def.encounter is not None:
+            ids.update(map_def.encounter.enemies)
+        for event in map_def.events:
+            if isinstance(event, SpawnUnitsEvent):
+                ids.update(p.template for p in event.units)
+    return tuple(sorted(i for i in ids if i in units and not units[i].summon))
+
+
+def apply_ally_mana_cost(
+    ruleset: Ruleset,
+    units: Mapping[str, UnitTemplate],
+    enemy_ids: Iterable[str],
+    permille: int,
+) -> Ruleset:
+    """規則包內我方技能的法力費用乘 ``permille``‰（敵方陣容裝備的技能不縮放），回傳新的規則包。
+
+    ``permille`` ＝ 1000 時原樣回傳。只動 ``Ruleset.skills``（戰鬥實際結算的版本）；
+    ``ContentLibrary.skills`` 保持內容檔的原始值，預算、閃現、組合器都以原始費用計算（生成技能
+    同理：先照原始費用過預算，進規則包時才由 ``Ruleset.with_skills`` 乘倍率）。``load_library``
+    以 ``core.ally_mana_cost_permille`` 呼叫一次；模擬的難度覆寫（``trpg.sim.difficulty``）再在已縮放
+    的值上乘它自己的倍率。"""
+    if permille == _PERMILLE:
+        return ruleset
+    enemy_skills = {s for i in enemy_ids for s in units[i].skills}
+    table = ruleset.skills.model_copy(
+        update={
+            "skills": tuple(
+                s if s.id in enemy_skills else scale_mana_cost(s, permille)
+                for s in ruleset.skills.skills
+            )
+        }
+    )
+    new_ruleset = ruleset.model_copy(update={"skills": table})
+    new_ruleset.model_post_init(None)
+    return new_ruleset
 
 
 class Ruleset(ContentModel):
@@ -819,6 +868,14 @@ def load_library(  # noqa: PLR0915
     flash = _load_flash(root, load, evolution, skill_triggers)
     skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
     _check_scaling(root, skill_scaling, skills, weapon_map)
+
+    # 我方技能法力費用倍率（BAL-4b，原型專用）：驗證都用內容檔的原始費用，驗證完才縮放
+    ruleset = apply_ally_mana_cost(
+        ruleset,
+        units,
+        enemy_template_ids(units, maps, roguelite),
+        core.ally_mana_cost_permille,
+    )
 
     return ContentLibrary(
         root=root,

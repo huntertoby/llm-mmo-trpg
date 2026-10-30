@@ -52,8 +52,10 @@ SINGLE_GRID: dict[str, tuple[int, ...]] = {
     "boss_damage": (800, 900, 1000),
     "mana_cost": (800, 900, 1000),
     "mana_cap": (1000, 1200, 1400),
+    "escort_hp": (800, 1000, 1200),
+    "escort_damage": (800, 1000, 1200),
 }
-"""單一旋鈕掃描的值（‰）；1000 ＝ 現行，所有旋鈕共用同一組 baseline。"""
+"""單一旋鈕掃描的值（‰）；1000 ＝ content 現況（BAL-4b 起含採用的數值）。"""
 
 WIN_LO, WIN_HI = 35.0, 65.0
 

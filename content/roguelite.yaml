@@ -35,7 +35,7 @@ encounters:
 # 地圖另有第 3 輪的援軍事件（2 名盜賊）。
 boss:
   map: bandit_lair
-  enemies: [bandit_warlord, bandit, bandit_archer, bandit_shieldbearer]
+  enemies: [bandit_warlord, bandit_guard, bandit_archer_guard, bandit_shieldbearer_guard]   # 護衛為 *_guard（BAL-4b，與一般遭遇分開調）
 
 companions: [sim_companion_fighter, sim_companion_archer]   # 每場 2 名標準隊友（0.11 H）
 max_rounds: 30                # 每場輪數上限；超過算沒有打贏（一輪失敗）

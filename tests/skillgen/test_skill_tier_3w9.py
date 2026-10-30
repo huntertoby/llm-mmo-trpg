@@ -17,6 +17,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
+from trpg.content.library import scale_mana_cost
 from trpg.content.skill_rules import RetierGrowthRules
 from trpg.content.skills import SkillDef
 from trpg.engine import resolve
@@ -231,7 +232,10 @@ def test_card_numbers_equal_the_engine_at_every_tier() -> None:
         assert dice is not None
         assert any(str(dice) in line for line in skill_card(LIB, skill).effects)
         rules = LIB.ruleset.with_skills([skill])
-        assert rules.skills.by_id()[skill.id] == skill
+        played = scale_mana_cost(
+            skill, LIB.ruleset.core.ally_mana_cost_permille
+        )  # 規則包內的版本（BAL-4b）
+        assert rules.skills.by_id()[skill.id] == played
         m = make_map("\n".join(["000000"] * 6), ally=[(0, 0)], enemy=[(3, 0)])
         spawns = [
             spawn(Team.ALLY, (0, 0), caster_template([skill])),
