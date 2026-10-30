@@ -664,7 +664,7 @@ def _op_stance_light(
 
     - 元素姿態（有階梯）：換到較低的級別；
     - 其他單一狀態的姿態（狂怒、堅壁…）：姿態幅度降一格（不低於 100%）。
-    變身姿態沒有每招維持費與強度旋鈕（enter_form 必須是唯一的效果），不出（見 BAL-2b 報告）。"""
+    變身姿態不出：維持費照形態種類固定（#67），形態上沒有其他可動的代價（BAL-2c；只開修正類）。"""
     family = _stance_family(skill, library)
     if family == "status" and skill.stance_upkeep > 0:
         return _magnitude_drafts(skill, library, skill.stance_upkeep - 1, down=True)
@@ -680,7 +680,8 @@ def _op_stance_heavy(
 ) -> list[Draft]:
     """蓄力（姿態）：維持費 +1（最多 2），效果提高一級。
 
-    - 元素姿態：換到較高的級別；其他單一狀態的姿態：姿態幅度提高。變身姿態不出。"""
+    - 元素姿態：換到較高的級別；其他單一狀態的姿態：姿態幅度提高。
+    - 變身姿態不出（維持費不動，沒有可加的代價；BAL-2c）。"""
     family = _stance_family(skill, library)
     if family == "status" and skill.stance_upkeep < MAX_STANCE_UPKEEP:
         return _magnitude_drafts(skill, library, skill.stance_upkeep + 1, down=False)
@@ -696,9 +697,11 @@ def _op_stance_potency(
 ) -> list[Draft]:
     """修正（姿態）：維持費不變，效果提高（預算分數嚴格變大）。
 
-    - 元素姿態：換到較高的級別；其他單一狀態的姿態：姿態幅度提高。變身姿態不出。"""
+    - 元素姿態：換到較高的級別；其他單一狀態的姿態：姿態幅度提高。
+    - 變身姿態（BAL-2c）：形態幅度（``enter_form.magnitude_permille``）提高；維持費照形態種類
+      固定。"""
     family = _stance_family(skill, library)
-    if family == "status":
+    if family in ("status", "form"):
         return _magnitude_drafts(skill, library, skill.stance_upkeep, down=False)
     rung = _stance_rung(skill, library)
     if rung is None:
@@ -708,7 +711,7 @@ def _op_stance_potency(
 
 
 def _stance_family(skill: SkillDef, library: ContentLibrary) -> str | None:
-    """姿態屬於哪一族（BAL-2b）：``ladder`` 元素姿態階梯、``form`` 變身姿態（目前不出）、
+    """姿態屬於哪一族（BAL-2b）：``ladder`` 元素姿態階梯、``form`` 變身姿態（BAL-2c：只出修正類）、
     ``status`` 其他單一狀態的姿態（白板姿態：狂怒、堅壁…）；不是姿態或做不了時 ``None``。"""
     if skill.kind != "stance":
         return None
@@ -727,16 +730,19 @@ def _stance_family(skill: SkillDef, library: ContentLibrary) -> str | None:
 def _magnitude_drafts(
     skill: SkillDef, library: ContentLibrary, upkeep: int, *, down: bool
 ) -> list[Draft]:
-    """沒有階梯的單一狀態姿態：維持費改成 ``upkeep``，姿態幅度（``magnitude_permille``，有利那一邊
-    離 100% 的距離）換一格（``down`` 往低、否則往高；級距見 ``rules.stance_magnitudes``）。
-    依距離現在由近到遠各一份草稿，第一個通過預算窗與強度下限的是結果。"""
+    """沒有階梯的單一狀態姿態與變身姿態：維持費改成 ``upkeep``（變身姿態沒有每招維持費，不動），
+    幅度（``magnitude_permille``，有利那一邊離 100% 的距離）換一格（``down`` 往低、否則往高；級距見
+    ``rules.stance_magnitudes``）。依距離現在由近到遠各一份草稿，第一個通過預算窗與強度下限的是
+    結果。"""
     start = skill.effects[0].magnitude_permille or 1000
     values = library.flash.rules.stance_magnitudes
     wanted = [v for v in values if v < start][::-1] if down else [v for v in values if v > start]
+    form = skill.form_id is not None
     drafts: list[Draft] = []
     for value in wanted:
         base, effects = base_draft(skill)
-        base["stance_upkeep"] = upkeep
+        if not form:
+            base["stance_upkeep"] = upkeep
         effects[0]["magnitude_permille"] = value
         drafts.append((base, effects))
     return drafts
