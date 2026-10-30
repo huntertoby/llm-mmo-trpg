@@ -36,7 +36,7 @@ def test_defend_rounds_delta_applies_to_every_defend_map() -> None:
     original = library.maps["open_plain"].alt_objectives
     assert original is not None
     assert original.defend is not None
-    assert original.defend.rounds == 6
+    assert original.defend.rounds == new.defend.rounds + 2  # 覆寫沒有改到原 library
 
 
 def test_tile_modes_stay_legal() -> None:
