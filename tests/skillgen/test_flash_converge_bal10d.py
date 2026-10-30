@@ -299,3 +299,27 @@ def test_converge_target_ratio_can_reroll_like_other_flashes() -> None:
         assert budget_power(done, lib()) >= budget_power(skill, lib())
         ratios.append(skill_budget(done, lib()).ratio)
     assert max(ratios) - min(ratios) >= Fraction(5, 100)
+
+
+UNSINGLE = {
+    # 帶表面／split_heal／destroy_object／shockwave／leave_form：不出收成單體；縮得了才出縮小一級
+    "skill_ashen_oath": True,  # 錐形 3 → 2
+    "skill_holy_burst": True,  # 3×3 → 十字
+    "skill_shatter_blast": True,  # 3×3 → 十字
+    "skill_quake_wave": True,  # 直線 4 → 3
+    "skill_holy_water": False,  # 十字：沒有更小一級
+    "skill_oil_flask": False,
+    "skill_form_release_burst": False,  # 環形
+}
+
+
+@pytest.mark.parametrize("skill_id", sorted(UNSINGLE))
+def test_side_effect_area_skills_only_shrink_one_step(skill_id: str) -> None:
+    """③ 骨架不放寬：這 7 招不出收成單體，只出縮小一級（縮不了就不出）。"""
+    skill = lib().skills[skill_id]
+    assert _apply(skill, SINGLE) is None
+    step = _apply(skill, STEP)
+    assert (step is not None) is UNSINGLE[skill_id]
+    if step is not None:
+        assert step.shape.type != "single"
+        assert step.skeleton == skill.skeleton
