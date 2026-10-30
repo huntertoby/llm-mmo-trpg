@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.engine.helpers import library as _load_library
 from trpg.api.app import create_app
 from trpg.api.llm_source import MockLlmProvider
 from trpg.api.runs import RunStore
@@ -18,6 +19,8 @@ from trpg.roguelite import auto_play
 from trpg.roguelite.state import CampfireNode, GearOfferNode, RunState
 
 START = {"build": "build_fire", "seed": 6}
+# 每打贏一場的靈感點（取 content 的值，不寫死）
+INSIGHT_PER_WIN = _load_library().flash.rules.insight_per_win
 
 
 @pytest.fixture
@@ -59,11 +62,15 @@ def test_the_hero_reports_insight_rules_and_flash_state(client: TestClient) -> N
     run_id, _ = _at_gear(client)
     body = _ok(client.get(f"/api/runs/{run_id}"))
     hero = body["hero"]
-    assert hero["insight"] == 1
+    assert hero["insight"] == INSIGHT_PER_WIN
     rules = hero["flash_rules"]
     assert (rules["open_cost"], rules["open_options"]) == (1, 4)
     assert (rules["focused_cost"], rules["focused_options"]) == (2, 3)
-    assert (rules["max_flashes"], rules["major_flash"], rules["insight_per_win"]) == (5, 3, 1)
+    assert (rules["max_flashes"], rules["major_flash"], rules["insight_per_win"]) == (
+        5,
+        3,
+        INSIGHT_PER_WIN,
+    )
     owned = [c["id"] for c in hero["skills"]] + [c["id"] for c in hero["bench"]]
     assert [f["skill_id"] for f in hero["flash"]] == owned
     flash = next(f for f in hero["flash"] if f["can_flash"])
@@ -84,7 +91,7 @@ def test_preview_lists_category_counts_and_problems(client: TestClient) -> None:
     bad = _ok(client.post(f"/api/runs/{run_id}/flash-preview", json={"skill": "skill_nobody"}))
     assert bad["problem_zh"] and bad["categories"] == []
     # 預覽不改狀態
-    assert _ok(client.get(f"/api/runs/{run_id}"))["hero"]["insight"] == 1
+    assert _ok(client.get(f"/api/runs/{run_id}"))["hero"]["insight"] == INSIGHT_PER_WIN
 
 
 def test_flash_then_pick_over_the_api(client: TestClient) -> None:
@@ -94,7 +101,8 @@ def test_flash_then_pick_over_the_api(client: TestClient) -> None:
     opened = _ok(client.post(url, json={"kind": "flash", "skill": skill}))
     pending = opened["pending_flash"]
     assert pending["skill_id"] == skill and pending["cost"] == 1 and pending["slot"] is None
-    assert len(pending["options"]) == 4 and opened["hero"]["insight"] == 0
+    assert len(pending["options"]) == 4
+    assert opened["hero"]["insight"] == INSIGHT_PER_WIN - 1
     option = pending["options"][0]
     assert option["card"]["id"] and option["summary_zh"] and option["category_zh"]
     # 生成的選項技能卡查得到
@@ -108,7 +116,9 @@ def test_flash_then_pick_over_the_api(client: TestClient) -> None:
     assert state["flashes"] == 1 and not state["used"] and state["spent"] == 1
     assert state["records"][0]["nth"] == 1 and state["records"][0]["summary_zh"]
     assert not state["can_flash"] and state["flash_problem_zh"]
-    # 沒點了
+    # 沒點了（明確把點數設為 0，不依賴每勝點數）
+    session = _store(client).get(run_id)
+    session.run = session.run.model_copy(update={"insight": 0})
     other = _ready(picked)
     assert client.post(url, json={"kind": "flash", "skill": other}).status_code == 422
 

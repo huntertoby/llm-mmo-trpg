@@ -12,7 +12,7 @@ rules:
   needs_use: true             # 自上次閃現（或取得）後要先上場用過
   reflash_needs_use: false    # 重閃不需要先上場用過，也不增加閃現次數
   dissolve_refund_permille: 500  # 溶掉技能退回花在它身上的靈感點的一半，無條件捨去（#71）
-  insight_per_win: 1          # roguelite 原型：每打贏一場 1 點靈感（3W-5 接）
+  insight_per_win: 2          # BAL-1（玩法 PM 204014e9, 06 6.34.2）：原型專用，每打贏一場 2 點靈感
   insight_start: 0            # 開局給的靈感點（BAL-1 經濟旋鈕，預設 0＝不給）
   insight_preboss: 0          # 打贏最後一場一般戰鬥（下一場是 Boss）額外加給的點數（BAL-1，預設 0）
   usage_min_uses: 3           # 這招的放出次數少於這個數，用法統計不夠，先出通用變化（generic）

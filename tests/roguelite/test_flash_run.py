@@ -102,11 +102,11 @@ def _flash(run: RunState, skill: str, **fields: object) -> RunState:
 # ---------------------------------------------------------------------------
 
 
-def test_a_new_run_has_no_insight_and_each_win_gives_one() -> None:
+def test_a_new_run_has_no_insight_and_each_win_gives_the_configured_points() -> None:
     lib = library()
     assert new_run(lib, BUILD, SEED).insight == 0
     run = _at(GearOfferNode)
-    assert run.insight == lib.flash.rules.insight_per_win == 1
+    assert run.insight == lib.flash.rules.insight_per_win
     # 用過的主動技記下「先上場用過」，沒放出過的主動技不算
     defs = {s.id: s for s in skill_defs(lib, run, run.hero.skills)}
     for skill_id, skill in defs.items():
@@ -120,7 +120,7 @@ def test_a_new_run_has_no_insight_and_each_win_gives_one() -> None:
 
 def test_a_flash_costs_one_point_shows_four_options_and_swaps_the_skill() -> None:
     lib = library()
-    run = _at(GearOfferNode)
+    run = _at(GearOfferNode).model_copy(update={"insight": 1})  # 明確 1 點，不依賴每勝點數
     skill = _ready(run)
     opened = _flash(run, skill)
     pending = opened.pending_flash
@@ -147,7 +147,7 @@ def test_a_flash_costs_one_point_shows_four_options_and_swaps_the_skill() -> Non
 
 
 def test_flash_needs_points_and_a_use_and_happens_only_between_battles() -> None:
-    run = _at(GearOfferNode)
+    run = _at(GearOfferNode).model_copy(update={"insight": 1})  # 1 點：夠開放式，不夠指定類別
     skill = _ready(run)
     with pytest.raises(ChoiceError, match="靈感點不足"):
         _flash(run.model_copy(update={"insight": 0}), skill)

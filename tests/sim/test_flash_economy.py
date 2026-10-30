@@ -18,7 +18,10 @@ from trpg.sim.flash_report import simulate_run
 
 def test_defaults_equal_current_behavior() -> None:
     lib = library()
-    assert current_economy(lib) == Economy(win=1, start=0, preboss=0)
+    rules = lib.flash.rules
+    assert current_economy(lib) == Economy(
+        win=rules.insight_per_win, start=rules.insight_start, preboss=rules.insight_preboss
+    )
 
 
 def test_with_economy_does_not_touch_original() -> None:
@@ -26,7 +29,11 @@ def test_with_economy_does_not_touch_original() -> None:
     copy = with_economy(lib, Economy(win=2, start=3, preboss=1))
     assert (copy.flash.rules.insight_per_win, copy.flash.rules.insight_start) == (2, 3)
     assert copy.flash.rules.insight_preboss == 1
-    assert current_economy(lib) == Economy(1, 0, 0)
+    assert current_economy(lib) == Economy(
+        lib.flash.rules.insight_per_win,
+        lib.flash.rules.insight_start,
+        lib.flash.rules.insight_preboss,
+    )
 
 
 def test_default_override_is_identical_to_plain_run() -> None:
@@ -40,7 +47,7 @@ def test_parse_economy_product_and_defaults() -> None:
     lib = library()
     combos = parse_economy(lib, "win=1,2;start=0,2")
     assert combos == [Economy(1, 0, 0), Economy(1, 2, 0), Economy(2, 0, 0), Economy(2, 2, 0)]
-    assert parse_economy(lib, "") == [Economy(1, 0, 0)]
+    assert parse_economy(lib, "") == [current_economy(lib)]
 
 
 @pytest.mark.parametrize("spec", ["bogus=1", "win=", "win=-1", "win=x", "win"])
