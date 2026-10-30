@@ -190,6 +190,9 @@ class RunRules(ContentModel):
     refill_after_battle: tuple[ResourceKind, ...] = ()
     """每場戰鬥打贏後回滿的資源（Phase 3H-2 設定點）：例如 ``[mana]`` 就是「每場法力回滿」
     （待使用者決定的 B 選項，目前不開）。沒列出的資源在戰鬥之間不回復，營火回滿。"""
+    heal_after_battle_permille: int = Field(default=0, ge=0, le=1000)
+    """每場一般戰鬥打贏後主角回復最大生命的千分比（BAL-4c 設定點，預設 0 ＝ 不回復；模擬掃描用，
+    是否採用由 PM 決定）。四捨五入向下、不超過最大生命。"""
     source: RunSourceRules
     start: StartRules = Field(default_factory=StartRules)
     """新開局（Phase 3-24b2）。"""
