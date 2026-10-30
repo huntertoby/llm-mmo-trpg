@@ -1,7 +1,9 @@
 """完成度檢查（Phase 2C-4 3.4）：全部非測試地圖 × 全部指揮官設定 × 多個種子，確認每場戰鬥都打得完。
 
 這不是平衡工具：勝率與輪數只記錄。驗收標準是三種異常（``exception``、``max_actions``、
-``draw``）全部為 0。結果依（設定、地圖、種子）排序後才彙總，所以輸出與 ``--jobs`` 無關。
+``draw``）全部為 0。雙方同時全滅（同歸於盡）是合法結束，不算 ``draw`` 異常、另列次數
+（BAL-4c）；輪數上限造成的平手仍算異常。
+結果依（設定、地圖、種子）排序後才彙總，所以輸出與 ``--jobs`` 無關。
 """
 
 from __future__ import annotations
@@ -10,7 +12,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary
-from trpg.sim.batch import DEFAULT_MAX_ROUNDS, BatchReport, map_spec, run_batches
+from trpg.sim.batch import (
+    DEFAULT_MAX_ROUNDS,
+    MUTUAL_WIPE_DETAIL,
+    BatchReport,
+    map_spec,
+    run_batches,
+)
 from trpg.sim.commanders import COMMANDER_IDS
 
 __all__ = [
@@ -78,6 +86,8 @@ class CompletionReport:
     cells: tuple[CompletionCell, ...]
     """依（設定順序、地圖順序）排列。"""
     anomalies: tuple[CompletionAnomaly, ...]
+    mutual_wipes: tuple[CompletionAnomaly, ...] = ()
+    """雙方同歸於盡的場次（合法結束，不算異常；``kind`` 為 ``draw``）。"""
 
     def cell(self, config: CompletionConfig, map_id: str) -> CompletionCell:
         return next(c for c in self.cells if c.config == config and c.map_id == map_id)
@@ -100,6 +110,10 @@ def _anomalies_of(
                 CompletionAnomaly(config, map_id, seed, kind, anomaly.details.get(seed, ""))
             )
     return found
+
+
+def _is_mutual_wipe(anomaly: CompletionAnomaly) -> bool:
+    return anomaly.kind == "draw" and anomaly.detail == MUTUAL_WIPE_DETAIL
 
 
 def run_completion(
@@ -128,8 +142,11 @@ def run_completion(
     reports = run_batches(specs, jobs=jobs)
     cells: list[CompletionCell] = []
     anomalies: list[CompletionAnomaly] = []
+    wipes: list[CompletionAnomaly] = []
     for (config, map_id), report in zip(keys, reports, strict=True):
-        found = _anomalies_of(config, map_id, report)
+        listed = _anomalies_of(config, map_id, report)
+        found = [a for a in listed if not _is_mutual_wipe(a)]
+        wipes.extend(a for a in listed if _is_mutual_wipe(a))
         anomalies.extend(found)
         cells.append(
             CompletionCell(
@@ -141,7 +158,9 @@ def run_completion(
                 len(found),
             )
         )
-    return CompletionReport(config_list, maps, tuple(seeds), tuple(cells), tuple(anomalies))
+    return CompletionReport(
+        config_list, maps, tuple(seeds), tuple(cells), tuple(anomalies), tuple(wipes)
+    )
 
 
 def format_completion(report: CompletionReport) -> str:
@@ -170,6 +189,10 @@ def format_completion(report: CompletionReport) -> str:
         + "、".join(f"{kind} {counts[kind]}" for kind in COMPLETION_ANOMALY_KINDS)
         + (" —— 通過" if report.clean else " —— 未通過")
     )
+    if report.mutual_wipes:
+        listed = "、".join(f"({a.config.label}, {a.map_id}, {a.seed})" for a in report.mutual_wipes)
+        count = len(report.mutual_wipes)
+        lines.append(f"同歸於盡（雙方同時全滅，合法結束、不算異常）{count} 場：{listed}")
     if report.anomalies:
         lines.append("")
         lines.append("異常清單（設定, 地圖, 種子）：")
