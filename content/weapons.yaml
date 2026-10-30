@@ -285,13 +285,13 @@ weapons:
     crit_range: 20
     two_handed: false
   # --- Phase 3I-4：第二批其他武器（08 8.11 #46；傷害骰為初值，未經模擬）---
-  # 雙匕首（成對，占雙手）：普攻打兩下 1d4（strikes: 2），背刺時兩下都吃背刺加成。
+  # 雙匕首（成對，占雙手）：普攻打兩下 1d3（strikes: 2），背刺時兩下都吃背刺加成。
   - id: dual_dagger
     name_zh: 雙匕首
     look: {kind: dual_dagger, form: short, material: iron}
     weapon_class: melee
     range: 1
-    dice: 1d4
+    dice: 1d3  # BAL-8b 原型專用：1d4 → 1d3（每下）
     flat: 0
     attack_bonus: 0
     scaling_attr: dex
