@@ -1,0 +1,450 @@
+suite,index,core_primitive,attempt,code,path,message
+upgrade,0,cleanse,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 14.07 ＝ 21.3%（下限 70.0%，階級 1）
+upgrade,0,cleanse,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,0,cleanse,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,2,heal,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+upgrade,2,heal,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+upgrade,2,heal,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+upgrade,3,apply_status,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+upgrade,3,apply_status,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 charged，但提議沒有帶到
+upgrade,3,apply_status,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 charged，但提議沒有帶到
+upgrade,4,sacrifice_summon,1,keyword.required,effects,技能必須製造或利用題目的關鍵字 marked，但提議沒有帶到
+upgrade,5,heal,1,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,5,heal,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,5,heal,3,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+upgrade,6,consume_status,1,skeleton.core_share,,骨架 consume_status：核心效果（consume_status）占 14.9%，低於下限 70.0%
+upgrade,8,topple,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+upgrade,11,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 4），冷卻 無，效果 raise_terrain）
+upgrade,11,raise_terrain,1,budget.weak,,過弱：total 7.00 ÷ 可用預算 23.11 ＝ 30.3%（下限 70.0%，階級 3）
+upgrade,11,raise_terrain,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,11,raise_terrain,3,value_error,variants[0].replace_effect.index,變奏「晶簇圖騰」：主傷害（第 1 個效果）不能被換掉
+upgrade,12,knock_prone,1,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,12,knock_prone,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,12,knock_prone,3,variant.summon_echo.budget.over,variants[0],晶鳴殘響：超出預算：total 8.80 ÷ 可用預算 7.04 ＝ 125.1%（上限 100.0%，階級 1）
+upgrade,14,create_surface,1,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 ground_tile（range 3），冷卻 4 回合，效果 create_surface、apply_status:frozen）
+upgrade,15,zone,1,budget.weak,,過弱：total 1.44 ÷ 可用預算 14.07 ＝ 10.2%（下限 70.0%，階級 1）
+upgrade,15,zone,2,budget.weak,,過弱：total 2.64 ÷ 可用預算 14.07 ＝ 18.8%（下限 70.0%，階級 1）
+upgrade,17,pull,1,budget.weak,,過弱：total 2.40 ÷ 可用預算 13.80 ＝ 17.4%（下限 70.0%，階級 3）
+upgrade,17,pull,2,budget.weak,,過弱：total 11.00 ÷ 可用預算 16.56 ＝ 66.4%（下限 70.0%，階級 3）
+upgrade,18,topple,1,budget.weak,,過弱：total 4.33 ÷ 可用預算 14.03 ＝ 30.9%（下限 70.0%，階級 1）
+upgrade,19,shadowstep,1,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 unit_then_tile（range 3），冷卻 4 回合，效果 shadowstep、apply_status:stun）
+upgrade,20,teleport,1,budget.weak,,過弱：total 3.40 ÷ 可用預算 23.11 ＝ 14.7%（下限 70.0%，階級 3）
+upgrade,20,teleport,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 high_ground，但提議沒有帶到
+upgrade,20,teleport,3,budget.weak,,過弱：total 6.77 ÷ 可用預算 23.11 ＝ 29.3%（下限 70.0%，階級 3）
+upgrade,21,topple,1,keyword.required,effects,技能必須製造或利用題目的關鍵字 marked，但提議沒有帶到
+upgrade,22,cleanse,1,skeleton.core_beneficial,effects[1],骨架 aura：effects[1]（apply_status）的狀態 poison不是有益的（beneficial），不能作為核心
+upgrade,22,cleanse,2,budget.weak,,過弱：total 3.00 ÷ 可用預算 18.09 ＝ 16.6%（下限 70.0%，階級 2）
+upgrade,22,cleanse,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 poisoned，但提議沒有帶到
+upgrade,23,heal,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+upgrade,25,zone,1,budget.weak,,過弱：total 2.34 ÷ 可用預算 18.09 ＝ 12.9%（下限 70.0%，階級 2）
+upgrade,26,cleanse,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 23.11 ＝ 13.0%（下限 70.0%，階級 3）
+upgrade,26,cleanse,2,budget.weak,,過弱：total 6.60 ÷ 可用預算 24.27 ＝ 27.2%（下限 70.0%，階級 3）
+upgrade,27,grant_skill,1,budget.weak,,過弱：total 4.56 ÷ 可用預算 14.07 ＝ 32.4%（下限 70.0%，階級 1）
+upgrade,27,grant_skill,2,budget.weak,,過弱：total 4.56 ÷ 可用預算 14.07 ＝ 32.4%（下限 70.0%，階級 1）
+upgrade,27,grant_skill,3,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（damage）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,28,heal,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 heal、apply_status:bleed）
+upgrade,28,heal,1,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,28,heal,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 collision，但提議沒有帶到
+upgrade,28,heal,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 heal、apply_status:bleed）
+upgrade,28,heal,3,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,29,shield,1,shield.status,effects[0],護盾的 status 'poison' 必須是 absorbs_damage 的狀態
+upgrade,31,apply_status,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+upgrade,31,apply_status,2,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 apply_status:regenerating）
+upgrade,31,apply_status,2,skeleton.core,,骨架 aura：沒有核心效果（需要 heal、shield、cleanse、apply_status、create_surface、grant_ap、reset_cooldown、cheat_death、redirect_damage、copy_skill、extra_reaction、restore_resource、zone、rule_change、revive、grant_skill）
+upgrade,31,apply_status,2,skeleton.forbidden_affects,effects[0],骨架 aura：effects[0]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,31,apply_status,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 apply_status:regenerating）
+upgrade,31,apply_status,3,skeleton.core,,骨架 aura：沒有核心效果（需要 heal、shield、cleanse、apply_status、create_surface、grant_ap、reset_cooldown、cheat_death、redirect_damage、copy_skill、extra_reaction、restore_resource、zone、rule_change、revive、grant_skill）
+upgrade,31,apply_status,3,skeleton.forbidden_affects,effects[0],骨架 aura：effects[0]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,32,heal,1,skeleton.core_beneficial,effects[1],骨架 aura：effects[1]（apply_status）的狀態 poison不是有益的（beneficial），不能作為核心
+upgrade,32,heal,1,variant.variant_1.skeleton.core_beneficial,effects[1],毒愈：骨架 aura：effects[1]（apply_status）的狀態 poison不是有益的（beneficial），不能作為核心
+upgrade,32,heal,1,variant.variant_1.skeleton.core_beneficial,variants[0].add_effect,毒愈：骨架 aura：effects[2]（apply_status）的狀態 poison不是有益的（beneficial），不能作為核心
+upgrade,32,heal,2,skeleton.core_beneficial,effects[1],骨架 aura：effects[1]（apply_status）的狀態 poison不是有益的（beneficial），不能作為核心
+upgrade,32,heal,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 poisoned，但提議沒有帶到
+upgrade,33,apply_status,1,budget.weak,,過弱：total 3.74 ÷ 可用預算 14.77 ＝ 25.3%（下限 70.0%，階級 1）
+upgrade,35,steal_buff,1,value_error,variants[0].replace_effect.index,變奏「純奪」：唯一的效果不能被 replace_effect 換掉
+upgrade,35,steal_buff,2,value_error,variants[0].replace_effect.index,變奏「純奪」：主傷害（第 1 個效果）不能被換掉
+upgrade,35,steal_buff,3,budget.weak,,過弱：total 6.17 ÷ 可用預算 23.11 ＝ 26.7%（下限 70.0%，階級 3）
+upgrade,36,detonate_runes,1,keyword.required,effects,技能必須製造或利用題目的關鍵字 wet，但提議沒有帶到
+upgrade,39,create_obstacle,1,budget.weak,,過弱：total 2.70 ÷ 可用預算 14.07 ＝ 19.2%（下限 70.0%，階級 1）
+upgrade,39,create_obstacle,2,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+upgrade,39,create_obstacle,2,budget.weak,,過弱：total 7.80 ÷ 可用預算 14.07 ＝ 55.5%（下限 70.0%，階級 1）
+upgrade,39,create_obstacle,3,budget.weak,,過弱：total 4.20 ÷ 可用預算 14.07 ＝ 29.9%（下限 70.0%，階級 1）
+upgrade,40,shield,1,shield.status,effects[0],護盾的 status 'concealed' 必須是 absorbs_damage 的狀態
+upgrade,41,hurl_object,1,value_error,,複合技能的第一段不能有位移、召喚、區域、陷阱等原語（不能套娃），收到 hurl_object
+upgrade,41,hurl_object,2,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 object_then_tile（range 5），冷卻 4 回合，效果 hurl_object、damage、apply_status:frozen）
+upgrade,41,hurl_object,3,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 object_then_tile（range 5），冷卻 4 回合，效果 hurl_object、damage、apply_status:frozen）
+upgrade,44,apply_status,1,budget.weak,,過弱：total 6.72 ÷ 可用預算 23.11 ＝ 29.1%（下限 70.0%，階級 3）
+upgrade,44,apply_status,2,budget.weak,,過弱：total 6.72 ÷ 可用預算 23.11 ＝ 29.1%（下限 70.0%，階級 3）
+upgrade,44,apply_status,3,budget.weak,,過弱：total 15.28 ÷ 可用預算 23.11 ＝ 66.1%（下限 70.0%，階級 3）
+upgrade,45,push,1,budget.weak,,過弱：total 5.90 ÷ 可用預算 14.07 ＝ 41.9%（下限 70.0%，階級 1）
+upgrade,45,push,2,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 line（size 3），冷卻 5 回合，效果 push、damage、apply_status:stun）
+upgrade,46,clear_surface,1,keyword.required,effects,技能必須製造或利用題目的關鍵字 prone，但提議沒有帶到
+upgrade,46,clear_surface,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 prone，但提議沒有帶到
+upgrade,46,clear_surface,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 prone，但提議沒有帶到
+upgrade,47,clear_surface,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+upgrade,47,clear_surface,1,budget.weak,,過弱：total 7.80 ÷ 可用預算 23.11 ＝ 33.8%（下限 70.0%，階級 3）
+upgrade,47,clear_surface,2,budget.weak,,過弱：total 5.40 ÷ 可用預算 23.11 ＝ 23.4%（下限 70.0%，階級 3）
+upgrade,47,clear_surface,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+upgrade,47,clear_surface,3,budget.weak,,過弱：total 10.59 ÷ 可用預算 24.27 ＝ 43.7%（下限 70.0%，階級 3）
+upgrade,48,cleanse,1,skeleton.core_beneficial,effects[1],骨架 aura：effects[1]（apply_status）的狀態 prone不是有益的（beneficial），不能作為核心
+upgrade,48,cleanse,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 prone，但提議沒有帶到
+upgrade,48,cleanse,3,skeleton.core_beneficial,effects[1],骨架 aura：effects[1]（apply_status）的狀態 prone不是有益的（beneficial），不能作為核心
+upgrade,49,cleanse,1,budget.weak,,過弱：total 2.85 ÷ 可用預算 18.09 ＝ 15.8%（下限 70.0%，階級 2）
+forced,1,damage,1,json_invalid,,不是合法的 JSON：Expecting value
+forced,2,damage,1,skeleton.secondary,effects[1],骨架 strike：effects[1]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+forced,3,heal,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,3,heal,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,3,heal,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,5,heal,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,5,heal,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,5,heal,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,7,shield,1,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,7,shield,1,variant.variant_1.shield.status,effects[0],結晶壁壘：effects[0]：護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,7,shield,1,variant.variant_1.skeleton.forbidden_affects,variants[0].add_effect,結晶壁壘：骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,7,shield,1,variant.variant_2.shield.status,effects[0],源晶共振：effects[0]：護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,7,shield,1,variant.variant_2.skeleton.forbidden_affects,variants[1].add_effect,源晶共振：骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,7,shield,2,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,7,shield,2,variant.variant_1.shield.status,effects[0],結晶壁壘：effects[0]：護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,7,shield,2,variant.variant_1.skeleton.forbidden_affects,variants[0].add_effect,結晶壁壘：骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,7,shield,2,variant.variant_2.shield.status,effects[0],源晶共振：effects[0]：護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,7,shield,2,variant.variant_2.skeleton.forbidden_affects,variants[1].add_effect,源晶共振：骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,9,cleanse,1,budget.weak,,過弱：total 2.85 ÷ 可用預算 18.09 ＝ 15.8%（下限 70.0%，階級 2）
+forced,10,cleanse,1,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,10,cleanse,2,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,10,cleanse,3,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,11,cleanse,1,budget.weak,,過弱：total 4.59 ÷ 可用預算 18.99 ＝ 24.2%（下限 70.0%，階級 2）
+forced,11,cleanse,2,variant.swift.budget.over,variants[0],迅捷：超出預算：total 23.40 ÷ 可用預算 21.69 ＝ 107.9%（上限 100.0%，階級 2）
+forced,11,cleanse,3,budget.weak,,過弱：total 5.94 ÷ 可用預算 18.99 ＝ 31.3%（下限 70.0%，階級 2）
+forced,11,cleanse,3,variant.swift.cap.rule_rewrite_cost,variants[0],迅捷：有改寫規則型原語（reset_cooldown）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,13,push,1,budget.weak,,過弱：total 2.89 ÷ 可用預算 10.80 ＝ 26.8%（下限 70.0%，階級 2）
+forced,14,push,1,budget.weak,,過弱：total 4.59 ÷ 可用預算 8.40 ＝ 54.6%（下限 70.0%，階級 1）
+forced,16,pull,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,16,pull,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,16,pull,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,17,pull,1,budget.weak,,過弱：total 2.46 ÷ 可用預算 15.12 ＝ 16.2%（下限 70.0%，階級 2）
+forced,17,pull,2,budget.weak,,過弱：total 10.20 ÷ 可用預算 16.20 ＝ 63.0%（下限 70.0%，階級 2）
+forced,17,pull,3,budget.weak,,過弱：total 10.20 ÷ 可用預算 16.20 ＝ 63.0%（下限 70.0%，階級 2）
+forced,18,knock_prone,1,skeleton.secondary_share,effects[1],骨架 displace：damage 占 54.6%，超過上限 50.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,18,knock_prone,1,budget.weak,,過弱：total 5.61 ÷ 可用預算 14.03 ＝ 40.0%（下限 70.0%，階級 1）
+forced,19,knock_prone,1,budget.weak,,過弱：total 3.90 ÷ 可用預算 18.09 ＝ 21.6%（下限 70.0%，階級 2）
+forced,20,knock_prone,1,budget.weak,,過弱：total 5.02 ÷ 可用預算 18.09 ＝ 27.7%（下限 70.0%，階級 2）
+forced,21,shockwave,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 5），冷卻 無，效果 shockwave）
+forced,21,shockwave,1,budget.weak,,過弱：total 6.73 ÷ 可用預算 23.11 ＝ 29.1%（下限 70.0%，階級 3）
+forced,21,shockwave,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 5），冷卻 3 回合，效果 shockwave、damage）
+forced,21,shockwave,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 5），冷卻 3 回合，效果 shockwave、damage）
+forced,22,shockwave,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 4），冷卻 5 回合，效果 shockwave、damage）
+forced,22,shockwave,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 4），冷卻 5 回合，效果 shockwave、damage）
+forced,23,shockwave,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 shockwave）
+forced,24,teleport,1,budget.weak,,過弱：total 4.00 ÷ 可用預算 23.11 ＝ 17.3%（下限 70.0%，階級 3）
+forced,26,teleport,1,budget.weak,,過弱：total 4.00 ÷ 可用預算 18.09 ＝ 22.1%（下限 70.0%，階級 2）
+forced,33,leap,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 18.09 ＝ 16.6%（下限 70.0%，階級 2）
+forced,34,leap,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 18.09 ＝ 16.6%（下限 70.0%，階級 2）
+forced,34,leap,2,budget.weak,,過弱：total 5.58 ÷ 可用預算 18.09 ＝ 30.8%（下限 70.0%，階級 2）
+forced,35,leap,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 23.11 ＝ 13.0%（下限 70.0%，階級 3）
+forced,36,swap,1,budget.weak,,過弱：total 3.23 ÷ 可用預算 23.11 ＝ 14.0%（下限 70.0%，階級 3）
+forced,37,swap,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「緩速」是負面狀態
+forced,37,swap,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+forced,37,swap,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「緩速」是負面狀態
+forced,38,swap,1,budget.weak,,過弱：total 3.80 ÷ 可用預算 18.09 ＝ 21.0%（下限 70.0%，階級 2）
+forced,46,apply_status,1,budget.weak,,過弱：total 4.08 ÷ 可用預算 10.08 ＝ 40.5%（下限 70.0%，階級 1）
+forced,47,apply_status,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 apply_status:shielded_charged、heal）
+forced,47,apply_status,2,budget.weak,,過弱：total 4.25 ÷ 可用預算 10.80 ＝ 39.4%（下限 70.0%，階級 2）
+forced,48,create_surface,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 56.3%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,48,create_surface,1,budget.weak,,過弱：total 8.69 ÷ 可用預算 24.27 ＝ 35.8%（下限 70.0%，階級 3）
+forced,48,create_surface,2,budget.weak,,過弱：total 4.00 ÷ 可用預算 24.27 ＝ 16.5%（下限 70.0%，階級 3）
+forced,48,create_surface,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 62.1%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,48,create_surface,3,budget.weak,,過弱：total 10.56 ÷ 可用預算 26.69 ＝ 39.6%（下限 70.0%，階級 3）
+forced,49,create_surface,1,budget.weak,,過弱：total 1.80 ÷ 可用預算 23.11 ＝ 7.8%（下限 70.0%，階級 3）
+forced,50,create_surface,1,budget.weak,,過弱：total 2.80 ÷ 可用預算 14.07 ＝ 19.9%（下限 70.0%，階級 1）
+forced,51,create_obstacle,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 14.07 ＝ 21.3%（下限 70.0%，階級 1）
+forced,51,create_obstacle,2,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,51,create_obstacle,2,budget.weak,,過弱：total 9.53 ÷ 可用預算 14.07 ＝ 67.8%（下限 70.0%，階級 1）
+forced,52,create_obstacle,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,52,create_obstacle,1,budget.weak,,過弱：total 5.30 ÷ 可用預算 23.11 ＝ 22.9%（下限 70.0%，階級 3）
+forced,52,create_obstacle,2,budget.weak,,過弱：total 2.85 ÷ 可用預算 23.11 ＝ 12.3%（下限 70.0%，階級 3）
+forced,52,create_obstacle,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.5%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,52,create_obstacle,3,budget.weak,,過弱：total 5.22 ÷ 可用預算 23.11 ＝ 22.6%（下限 70.0%，階級 3）
+forced,53,create_obstacle,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,53,create_obstacle,1,budget.weak,,過弱：total 5.30 ÷ 可用預算 18.09 ＝ 29.3%（下限 70.0%，階級 2）
+forced,53,create_obstacle,2,budget.weak,,過弱：total 2.85 ÷ 可用預算 18.09 ＝ 15.8%（下限 70.0%，階級 2）
+forced,53,create_obstacle,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.5%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,53,create_obstacle,3,budget.weak,,過弱：total 5.22 ÷ 可用預算 18.09 ＝ 28.9%（下限 70.0%，階級 2）
+forced,54,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 raise_terrain、damage）
+forced,54,raise_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 raise_terrain、damage）
+forced,54,raise_terrain,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 raise_terrain、damage）
+forced,55,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 6），冷卻 2 回合，效果 raise_terrain）
+forced,56,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 6），冷卻 無，效果 raise_terrain）
+forced,56,raise_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 6），冷卻 無，效果 raise_terrain）
+forced,56,raise_terrain,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 6），冷卻 無，效果 raise_terrain）
+forced,57,lower_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 lower_terrain、damage）
+forced,57,lower_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 lower_terrain、damage）
+forced,57,lower_terrain,3,value_error,variants[0].when,"when.target_surface 必須是不重複的表面 id，收到 darkness, fire, fire, fire, fire"
+forced,58,lower_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 2），冷卻 無，效果 lower_terrain）
+forced,58,lower_terrain,1,budget.weak,,過弱：total 5.36 ÷ 可用預算 23.11 ＝ 23.2%（下限 70.0%，階級 3）
+forced,59,lower_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 2），冷卻 無，效果 lower_terrain）
+forced,60,intercept,1,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+forced,60,intercept,2,budget.weak,,過弱：total 4.00 ÷ 可用預算 8.40 ＝ 47.6%（下限 70.0%，階級 1）
+forced,61,intercept,1,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+forced,61,intercept,2,budget.weak,,過弱：total 4.00 ÷ 可用預算 13.80 ＝ 29.0%（下限 70.0%，階級 3）
+forced,62,intercept,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 intercept、damage）
+forced,62,intercept,2,budget.weak,,過弱：total 7.00 ÷ 可用預算 10.80 ＝ 64.8%（下限 70.0%，階級 2）
+forced,62,intercept,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 intercept、damage）
+forced,67,grant_ap,1,budget.weak,,過弱：total 8.64 ÷ 可用預算 27.71 ＝ 31.2%（下限 70.0%，階級 3）
+forced,67,grant_ap,2,cap.rule_rewrite,,改寫規則型原語最多 1 個，收到 2 個（grant_ap、extra_reaction）
+forced,67,grant_ap,3,budget.weak,,過弱：total 17.60 ÷ 可用預算 27.71 ＝ 63.5%（下限 70.0%，階級 3）
+forced,69,reset_cooldown,1,budget.weak,,過弱：total 11.85 ÷ 可用預算 23.10 ＝ 51.3%（下限 70.0%，階級 1）
+forced,70,reset_cooldown,1,budget.weak,,過弱：total 12.60 ÷ 可用預算 21.69 ＝ 58.1%（下限 70.0%，階級 2）
+forced,70,reset_cooldown,2,shield.status,effects[1],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,71,reset_cooldown,1,budget.weak,,過弱：total 7.00 ÷ 可用預算 27.71 ＝ 25.3%（下限 70.0%，階級 3）
+forced,71,reset_cooldown,2,value_error,variants[0].add_effect,變奏「晶頻共振」：effects[2]（reset_cooldown）：which: tag 必須填 tag，which: all 不可填 tag
+forced,71,reset_cooldown,3,value_error,variants[0].add_effect,變奏「晶頻共振」：effects[2]（reset_cooldown）：which: tag 必須填 tag，which: all 不可填 tag
+forced,73,cheat_death,1,budget.weak,,過弱：total 6.80 ÷ 可用預算 25.29 ＝ 26.9%（下限 70.0%，階級 2）
+forced,73,cheat_death,2,budget.weak,,過弱：total 13.60 ÷ 可用預算 27.00 ＝ 50.4%（下限 70.0%，階級 2）
+forced,73,cheat_death,3,budget.weak,,過弱：total 14.40 ÷ 可用預算 21.69 ＝ 66.4%（下限 70.0%，階級 2）
+forced,74,cheat_death,1,budget.weak,,過弱：total 4.08 ÷ 可用預算 16.87 ＝ 24.2%（下限 70.0%，階級 1）
+forced,74,cheat_death,2,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,74,cheat_death,2,budget.weak,,過弱：total 9.97 ÷ 可用預算 16.87 ＝ 59.1%（下限 70.0%，階級 1）
+forced,74,cheat_death,3,skeleton.forbidden_affects,effects[1],骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,74,cheat_death,3,budget.weak,,過弱：total 9.97 ÷ 可用預算 16.87 ＝ 59.1%（下限 70.0%，階級 1）
+forced,76,redirect_damage,1,budget.weak,,過弱：total 7.00 ÷ 可用預算 21.69 ＝ 32.3%（下限 70.0%，階級 2）
+forced,76,redirect_damage,2,cap.rule_rewrite,,改寫規則型原語最多 1 個，收到 2 個（redirect_damage、redirect_damage）
+forced,76,redirect_damage,3,budget.weak,,過弱：total 7.00 ÷ 可用預算 21.69 ＝ 32.3%（下限 70.0%，階級 2）
+forced,77,redirect_damage,1,budget.weak,,過弱：total 7.32 ÷ 可用預算 27.71 ＝ 26.4%（下限 70.0%，階級 3）
+forced,77,redirect_damage,1,variant.v1.skeleton.forbidden_affects,variants[0].add_effect,殘響：骨架 aura：effects[1]（dispel）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,77,redirect_damage,1,variant.v1.budget.weak,variants[0],殘響：過弱：total 9.50 ÷ 可用預算 27.71 ＝ 34.3%（下限 70.0%，階級 3）
+forced,77,redirect_damage,2,budget.weak,,過弱：total 6.65 ÷ 可用預算 27.71 ＝ 24.0%（下限 70.0%，階級 3）
+forced,80,copy_skill,1,budget.weak,,過弱：total 7.65 ÷ 可用預算 27.71 ＝ 27.6%（下限 70.0%，階級 3）
+forced,80,copy_skill,2,budget.weak,,過弱：total 9.00 ÷ 可用預算 27.71 ＝ 32.5%（下限 70.0%，階級 3）
+forced,80,copy_skill,3,value_error,,複合技能的第一段不能有位移、召喚、區域、陷阱等原語（不能套娃），收到 copy_skill
+forced,81,extra_reaction,1,budget.weak,,過弱：total 7.00 ÷ 可用預算 21.69 ＝ 32.3%（下限 70.0%，階級 2）
+forced,85,hurl_object,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+forced,85,hurl_object,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+forced,87,topple,1,budget.weak,,過弱：total 5.70 ÷ 可用預算 18.09 ＝ 31.5%（下限 70.0%，階級 2）
+forced,91,restore_resource,1,budget.weak,,過弱：total 6.25 ÷ 可用預算 18.09 ＝ 34.5%（下限 70.0%，階級 2）
+forced,92,restore_resource,1,value_error,variants[0].replace_effect.index,變奏「晶頻共振」：唯一的效果不能被 replace_effect 換掉
+forced,92,restore_resource,2,budget.weak,,過弱：total 5.95 ÷ 可用預算 23.11 ＝ 25.7%（下限 70.0%，階級 3）
+forced,93,steal_buff,1,budget.weak,,過弱：total 4.00 ÷ 可用預算 14.07 ＝ 28.4%（下限 70.0%，階級 1）
+forced,94,steal_buff,1,budget.weak,,過弱：total 4.20 ÷ 可用預算 18.09 ＝ 23.2%（下限 70.0%，階級 2）
+forced,95,steal_buff,1,budget.weak,,過弱：total 5.85 ÷ 可用預算 18.09 ＝ 32.3%（下限 70.0%，階級 2）
+forced,95,steal_buff,2,budget.weak,,過弱：total 6.21 ÷ 可用預算 18.09 ＝ 34.3%（下限 70.0%，階級 2）
+forced,95,steal_buff,3,variant.v1.skeleton.secondary_count,variants[0],碎頻：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,95,steal_buff,3,variant.v1.skeleton.secondary_share,variants[0],碎頻：骨架 control：damage 占 55.9%，超過上限 40.0%
+forced,96,dispel,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,96,dispel,1,budget.weak,,過弱：total 6.13 ÷ 可用預算 14.07 ＝ 43.6%（下限 70.0%，階級 1）
+forced,96,dispel,2,budget.weak,,過弱：total 3.30 ÷ 可用預算 14.07 ＝ 23.5%（下限 70.0%，階級 1）
+forced,97,dispel,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 23.11 ＝ 13.0%（下限 70.0%，階級 3）
+forced,97,dispel,2,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.9%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,97,dispel,2,budget.weak,,過弱：total 5.55 ÷ 可用預算 25.43 ＝ 21.8%（下限 70.0%，階級 3）
+forced,97,dispel,3,budget.weak,,過弱：total 3.00 ÷ 可用預算 23.11 ＝ 13.0%（下限 70.0%，階級 3）
+forced,98,dispel,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.5%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,98,dispel,1,budget.weak,,過弱：total 5.50 ÷ 可用預算 18.09 ＝ 30.4%（下限 70.0%，階級 2）
+forced,98,dispel,2,budget.weak,,過弱：total 5.70 ÷ 可用預算 18.99 ＝ 30.0%（下限 70.0%，階級 2）
+forced,98,dispel,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,98,dispel,3,budget.weak,,過弱：total 10.59 ÷ 可用預算 18.99 ＝ 55.8%（下限 70.0%，階級 2）
+forced,100,reveal,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.5%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,100,reveal,1,budget.weak,,過弱：total 11.00 ÷ 可用預算 24.27 ＝ 45.3%（下限 70.0%，階級 3）
+forced,103,revive,1,combo.max_per_skill,effects[1],一個技能最多一個 revive 效果
+forced,108,summon,1,value_error,,複合技能的位移段只能有一個施放者自身位移原語（teleport、leap、dash、charge_through、shadowstep），收到 summon、heal
+forced,111,zone,1,reference,effects[0].surface,不能產生 none 表面
+forced,111,zone,2,budget.weak,,過弱：total 2.34 ÷ 可用預算 18.09 ＝ 12.9%（下限 70.0%，階級 2）
+forced,111,zone,3,budget.weak,,過弱：total 3.54 ÷ 可用預算 18.09 ＝ 19.6%（下限 70.0%，階級 2）
+forced,112,zone,1,budget.weak,,過弱：total 5.04 ÷ 可用預算 18.09 ＝ 27.9%（下限 70.0%，階級 2）
+forced,113,zone,1,value_error,effects[0].effects[0],effects[0]（zone）.effects[0]：區域的效果不可自帶 affects 或 condition
+forced,113,zone,2,budget.weak,,過弱：total 1.87 ÷ 可用預算 14.07 ＝ 13.3%（下限 70.0%，階級 1）
+forced,113,zone,3,budget.weak,,過弱：total 2.83 ÷ 可用預算 14.07 ＝ 20.1%（下限 70.0%，階級 1）
+forced,117,inscribe,1,budget.weak,,過弱：total 6.65 ÷ 可用預算 23.11 ＝ 28.8%（下限 70.0%，階級 3）
+forced,118,inscribe,1,budget.weak,,過弱：total 7.00 ÷ 可用預算 23.11 ＝ 30.3%（下限 70.0%，階級 3）
+forced,118,inscribe,2,budget.weak,,過弱：total 9.50 ÷ 可用預算 23.11 ＝ 41.1%（下限 70.0%，階級 3）
+forced,120,detonate_runes,1,value_error,effects[0],effects[0]（detonate_runes）：scope 只能用在修正規則的命中後效果
+forced,126,blow_surface,1,budget.weak,,過弱：total 4.20 ÷ 可用預算 18.09 ＝ 23.2%（下限 70.0%，階級 2）
+forced,126,blow_surface,2,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,126,blow_surface,2,budget.weak,,過弱：total 11.15 ÷ 可用預算 18.99 ＝ 58.7%（下限 70.0%，階級 2）
+forced,126,blow_surface,3,budget.weak,,過弱：total 6.00 ÷ 可用預算 18.99 ＝ 31.6%（下限 70.0%，階級 2）
+forced,127,blow_surface,1,budget.weak,,過弱：total 4.20 ÷ 可用預算 14.07 ＝ 29.9%（下限 70.0%，階級 1）
+forced,127,blow_surface,2,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,127,blow_surface,2,budget.weak,,過弱：total 8.92 ÷ 可用預算 14.07 ＝ 63.4%（下限 70.0%，階級 1）
+forced,128,blow_surface,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.5%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,128,blow_surface,1,budget.weak,,過弱：total 7.70 ÷ 可用預算 23.11 ＝ 33.3%（下限 70.0%，階級 3）
+forced,128,blow_surface,2,budget.weak,,過弱：total 4.80 ÷ 可用預算 23.11 ＝ 20.8%（下限 70.0%，階級 3）
+forced,128,blow_surface,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 45.5%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,128,blow_surface,3,budget.weak,,過弱：total 11.55 ÷ 可用預算 24.27 ＝ 47.6%（下限 70.0%，階級 3）
+forced,129,clear_surface,1,budget.weak,,過弱：total 2.85 ÷ 可用預算 14.07 ＝ 20.3%（下限 70.0%，階級 1）
+forced,130,clear_surface,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,130,clear_surface,1,budget.weak,,過弱：total 8.92 ÷ 可用預算 23.11 ＝ 38.6%（下限 70.0%，階級 3）
+forced,130,clear_surface,2,budget.weak,,過弱：total 4.80 ÷ 可用預算 23.11 ＝ 20.8%（下限 70.0%，階級 3）
+forced,130,clear_surface,3,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,130,clear_surface,3,budget.weak,,過弱：total 8.92 ÷ 可用預算 23.11 ＝ 38.6%（下限 70.0%，階級 3）
+forced,131,clear_surface,1,budget.weak,,過弱：total 3.30 ÷ 可用預算 23.11 ＝ 14.3%（下限 70.0%，階級 3）
+forced,131,clear_surface,2,skeleton.secondary_share,effects[1],骨架 control：damage 占 46.2%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+forced,131,clear_surface,2,budget.weak,,過弱：total 11.71 ÷ 可用預算 24.27 ＝ 48.2%（下限 70.0%，階級 3）
+forced,131,clear_surface,3,budget.weak,,過弱：total 6.60 ÷ 可用預算 24.27 ＝ 27.2%（下限 70.0%，階級 3）
+free,3,,1,skeleton.core_share,,骨架 strike：核心效果（damage）占 44.8%，低於下限 60.0%
+free,3,,1,variant.variant_shard.skeleton.secondary,variants[0].add_effect,晶棱裂紋：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,3,,1,variant.variant_shard.skeleton.secondary_count,variants[0],晶棱裂紋：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,3,,1,variant.variant_shard.skeleton.core_share,variants[0],晶棱裂紋：骨架 strike：核心效果（damage）占 37.1%，低於下限 60.0%
+free,3,,1,variant.variant_shard.budget.over,variants[0],晶棱裂紋：超出預算：total 17.50 ÷ 可用預算 16.87 ＝ 103.7%（上限 100.0%，階級 1）
+free,4,,1,value_error,effects[0].on_kill[0],effects[0].on_kill[0]（heal）：對象只能是施放者（省略 affects 或寫 self），不可自帶 condition
+free,6,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「緩速」是負面狀態
+free,6,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,7,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,7,,2,budget.weak,,過弱：total 4.00 ÷ 可用預算 10.80 ＝ 37.0%（下限 70.0%，階級 2）
+free,7,,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 intercept、apply_status:shielded_charged）
+free,13,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,15,,1,value_error,variants[0].replace_effect.index,變奏「裂空」：主傷害（第 0 個效果）不能被換掉
+free,16,,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 single（range 4），冷卻 無，效果 damage、apply_status:stoneskin）
+free,22,,1,budget.weak,,過弱：total 9.43 ÷ 可用預算 18.09 ＝ 52.1%（下限 70.0%，階級 2）
+free,22,,1,variant.variant_1.exclusion.stun_single_long_cooldown,variants[0],碎晶：互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 single（range 3），冷卻 無，效果 create_surface、damage、apply_status:stun）
+free,23,,1,value_error,,延遲段必須指定 release（next_turn、attacked）：何時釋放第二段
+free,23,,2,value_error,shape,followup 的形狀只能是 cross、square3、ring，收到 single
+free,23,,3,value_error,shape,followup 的形狀 cross 以第二段的原點為中心，range 必須是 0，收到 2
+free,26,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,26,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,26,,3,budget.weak,,過弱：total 4.00 ÷ 可用預算 13.80 ＝ 29.0%（下限 70.0%，階級 3）
+free,27,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,27,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,27,,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,29,,1,value_error,variants[0].replace_effect.index,變奏「雷鳴」：主傷害（第 0 個效果）不能被換掉
+free,29,,2,variant.v1.skeleton.shape,variants[0],雷鳴：骨架 strike：形狀只能是 single、unit_then_tile，收到 chain
+free,29,,2,variant.v1.budget.over,variants[0],雷鳴：超出預算：total 27.65 ÷ 可用預算 23.11 ＝ 119.6%（上限 100.0%，階級 3）
+free,29,,3,variant.v1.budget.over,variants[0],雷鳴：超出預算：total 24.06 ÷ 可用預算 23.11 ＝ 104.1%（上限 100.0%，階級 3）
+free,30,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,30,,1,variant.variant_fire.skeleton.secondary,variants[0].add_effect,餘燼：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,30,,1,variant.variant_fire.skeleton.secondary_count,variants[0],餘燼：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,32,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,33,,1,skeleton.core_share,,骨架 strike：核心效果（damage）占 51.1%，低於下限 60.0%
+free,34,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「暈眩」是負面狀態
+free,37,,1,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,37,,2,variant.lightning_bolt.skeleton.secondary,variants[0].add_effect,雷殛：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,37,,2,variant.lightning_bolt.skeleton.secondary_count,variants[0],雷殛：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,37,,3,variant.lightning_bolt.skeleton.secondary_count,variants[0],雷殛：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,44,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,51,,1,value_error,variants[0].replace_effect.index,變奏「重擊」：唯一的效果不能被 replace_effect 換掉
+free,51,,2,value_error,variants[0].replace_effect.index,變奏「重擊」：主傷害（第 0 個效果）不能被換掉
+free,61,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,62,,1,variant.v1.exclusion.no_repeated_control_group,variants[0],霜結：互斥規則「同類控制不重複」：同一技能不得施加兩個相同 control_group 的狀態（形狀 cross（range 2），冷卻 無，效果 apply_status:root、apply_status:slow）
+free,62,,2,variant.v1.exclusion.no_repeated_control_group,variants[0],霜結：互斥規則「同類控制不重複」：同一技能不得施加兩個相同 control_group 的狀態（形狀 cross（range 2），冷卻 無，效果 apply_status:root、apply_status:slow）
+free,64,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「暈眩」是負面狀態
+free,69,,1,value_error,variants[0].replace_effect.index,變奏「碎晶」：主傷害（第 0 個效果）不能被換掉
+free,69,,2,variant.shatter.budget.weak,variants[0],碎晶：過弱：total 9.70 ÷ 可用預算 14.07 ＝ 68.9%（下限 70.0%，階級 1）
+free,69,,3,value_error,variants[0].replace_effect.index,變奏「碎晶」：主傷害（第 0 個效果）不能被換掉
+free,70,,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+free,79,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,81,,1,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+free,81,,2,shield.status,effects[0],護盾的 status 'armor_broken' 必須是 absorbs_damage 的狀態
+free,87,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,88,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,88,,2,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+free,90,,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 56.3%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+free,90,,1,budget.weak,,過弱：total 4.80 ÷ 可用預算 14.07 ＝ 34.1%（下限 70.0%，階級 1）
+free,94,,1,value_error,variants[0].element,變奏「冰晶符」：沒有傷害效果，不能換元素（element）
+free,94,,2,variant.v2.skeleton.secondary,variants[0].add_effect,霜符：骨架 rune：effects[2]（create_surface）不在允許的附帶原語內（允許：damage、apply_status）
+free,94,,2,variant.v2.skeleton.secondary_count,variants[0],霜符：骨架 rune：附帶效果最多 1 個，收到 2 個
+free,94,,3,variant.v2.skeleton.secondary_count,variants[0],霜符：骨架 rune：附帶效果最多 1 個，收到 2 個
+free,99,,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 56.3%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+free,99,,1,budget.weak,,過弱：total 7.32 ÷ 可用預算 14.07 ＝ 52.0%（下限 70.0%，階級 1）
+free,100,,1,skeleton.secondary_share,effects[1],骨架 control：damage 占 56.3%，超過上限 40.0%。引擎已把這個傷害（damage）降到最低值仍超過上限：請移除 effects[1] 的 damage，只保留骨架的核心效果（或改用允許 damage 當主軸的骨架）
+free,100,,1,budget.weak,,過弱：total 6.41 ÷ 可用預算 18.09 ＝ 35.4%（下限 70.0%，階級 2）
+free,102,,1,variant.v1.skeleton.secondary,variants[0].add_effect,裂土：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,102,,1,variant.v1.skeleton.secondary_count,variants[0],裂土：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,102,,2,variant.v1.skeleton.secondary_count,variants[0],裂土：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,102,,2,variant.v1.skeleton.core_share,variants[0],裂土：骨架 strike：核心效果（damage）占 59.5%，低於下限 60.0%
+free,102,,2,variant.v1.budget.over,variants[0],裂土：超出預算：total 14.43 ÷ 可用預算 14.03 ＝ 102.9%（上限 100.0%，階級 1）
+free,102,,3,variant.v1.skeleton.secondary_count,variants[0],裂土：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,102,,3,variant.v1.skeleton.core_share,variants[0],裂土：骨架 strike：核心效果（damage）占 59.5%，低於下限 60.0%
+free,102,,3,variant.v1.budget.over,variants[0],裂土：超出預算：total 14.43 ÷ 可用預算 14.03 ＝ 102.9%（上限 100.0%，階級 1）
+free,106,,1,budget.weak,,過弱：total 5.95 ÷ 可用預算 18.09 ＝ 32.9%（下限 70.0%，階級 2）
+free,107,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「暈眩」是負面狀態
+free,108,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,109,,1,variant.v1.exclusion.no_repeated_control_group,variants[0],殘響：互斥規則「同類控制不重複」：同一技能不得施加兩個相同 control_group 的狀態（形狀 single（range 3），冷卻 無，效果 damage、apply_status:slow、apply_status:root）
+free,109,,1,variant.v1.skeleton.secondary_count,variants[0],殘響：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,109,,2,variant.v1.skeleton.secondary_count,variants[0],殘響：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,109,,2,variant.v1.budget.over,variants[0],殘響：超出預算：total 20.07 ÷ 可用預算 18.09 ＝ 111.0%（上限 100.0%，階級 2）
+free,109,,3,variant.v1.skeleton.secondary_count,variants[0],殘響：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,109,,3,variant.v1.budget.over,variants[0],殘響：超出預算：total 20.07 ÷ 可用預算 18.09 ＝ 111.0%（上限 100.0%，階級 2）
+free,116,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,116,,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 single（range 3），冷卻 無，效果 damage、apply_status:stoneskin）
+free,121,,1,value_error,,只有延遲段（when: delayed）可以指定 release，收到 when: after_move
+free,121,,2,value_error,,只有延遲段（when: delayed）可以指定 release，收到 when: after_move
+free,121,,3,value_error,,只有延遲段（when: delayed）可以指定 release，收到 when: after_move
+free,125,,1,budget.weak,,過弱：total 6.65 ÷ 可用預算 23.11 ＝ 28.8%（下限 70.0%，階級 3）
+free,126,,1,value_error,variants[0].replace_effect.index,變奏「雷弧」：唯一的效果不能被 replace_effect 換掉
+free,129,,1,variant.v1.budget.over,variants[0],源晶共振：超出預算：total 16.74 ÷ 可用預算 15.48 ＝ 108.2%（上限 100.0%，階級 1）
+free,129,,2,variant.v1.skeleton.secondary_count,variants[0],源晶共振：骨架 area：附帶效果最多 2 個，收到 3 個
+free,129,,2,variant.v1.skeleton.core_share,variants[0],源晶共振：骨架 area：核心效果（damage）占 37.4%，低於下限 50.0%
+free,129,,2,variant.v1.budget.over,variants[0],源晶共振：超出預算：total 20.57 ÷ 可用預算 15.48 ＝ 132.9%（上限 100.0%，階級 1）
+free,129,,3,variant.v1.skeleton.core_share,variants[0],源晶共振：骨架 area：核心效果（damage）占 42.3%，低於下限 50.0%
+free,129,,3,variant.v1.budget.over,variants[0],源晶共振：超出預算：total 22.32 ÷ 可用預算 15.48 ＝ 144.2%（上限 100.0%，階級 1）
+free,134,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,136,,1,value_error,,condition：「手持某種武器時」只能寫在效果上（沒拿那種武器時技能照常可用，只是少那個加成）；想限定武器才能用，請改用限定武器
+free,136,,2,skeleton.core,,骨架 reaction：沒有核心效果（需要 damage、heal、shield、apply_status、push、pull、intercept）
+free,136,,2,skeleton.secondary_count,,骨架 reaction：附帶效果最多 1 個，收到 2 個
+free,136,,3,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+free,140,,1,value_error,variants[0].replace_effect.index,變奏「重擊」：主傷害（第 0 個效果）不能被換掉
+free,140,,2,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,141,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,155,,1,value_error,variants[0].replace_effect.index,變奏「裂空震盪」：主傷害（第 0 個效果）不能被換掉
+free,157,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,158,,1,value_error,,法術技（category: spell）的 weapon_req 只能是 focus、any，收到 melee
+free,159,,1,variant.v1.skeleton.secondary,variants[0].add_effect,裂縫：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,159,,1,variant.v1.skeleton.secondary_count,variants[0],裂縫：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,159,,1,variant.v1.skeleton.core_share,variants[0],裂縫：骨架 strike：核心效果（damage）占 50.0%，低於下限 60.0%
+free,159,,1,variant.v1.budget.over,variants[0],裂縫：超出預算：total 14.49 ÷ 可用預算 14.07 ＝ 103.0%（上限 100.0%，階級 1）
+free,159,,2,variant.v1.skeleton.secondary_count,variants[0],裂縫：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,159,,2,variant.v1.skeleton.core_share,variants[0],裂縫：骨架 strike：核心效果（damage）占 50.0%，低於下限 60.0%
+free,159,,2,variant.v1.budget.over,variants[0],裂縫：超出預算：total 14.49 ÷ 可用預算 14.07 ＝ 103.0%（上限 100.0%，階級 1）
+free,159,,3,variant.v1.tier.element,variants[0],裂縫：角色 1 階還不能用兩種元素（fire、lightning）（要 2 階）
+free,165,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「緩速」是負面狀態
+free,171,,1,skeleton.core_share,,骨架 area：核心效果（damage）占 48.4%，低於下限 50.0%
+free,175,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,175,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,175,,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,176,,1,budget.weak,,過弱：total 7.00 ÷ 可用預算 23.11 ＝ 30.3%（下限 70.0%，階級 3）
+free,180,,1,value_error,variants[0].replace_effect.index,變奏「裂地重擊」：主傷害（第 0 個效果）不能被換掉
+free,180,,2,variant.v_earth_shatter.skeleton.secondary,variants[0].replace_effect.effect,裂地重擊：骨架 strike：effects[1]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,180,,2,variant.v_earth_shatter.budget.weak,variants[0],裂地重擊：過弱：total 9.24 ÷ 可用預算 14.07 ＝ 65.7%（下限 70.0%，階級 1）
+free,185,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,185,,2,budget.weak,,過弱：total 4.00 ÷ 可用預算 13.80 ＝ 29.0%（下限 70.0%，階級 3）
+free,185,,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,193,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,200,,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+free,205,,1,variant.v1.budget.over,variants[0],碎晶共振：超出預算：total 11.55 ÷ 可用預算 9.04 ＝ 127.7%（上限 100.0%，階級 2）
+free,205,,2,variant.v1.budget.over,variants[0],碎晶共振：超出預算：total 11.47 ÷ 可用預算 9.04 ＝ 126.8%（上限 100.0%，階級 2）
+free,205,,3,budget.weak,,過弱：total 1.90 ÷ 可用預算 18.09 ＝ 10.5%（下限 70.0%，階級 2）
+free,206,,1,shield.status,effects[0],護盾的 status 'armor_broken' 必須是 absorbs_damage 的狀態
+free,208,,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+free,215,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,215,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,215,,3,budget.weak,,過弱：total 4.00 ÷ 可用預算 13.80 ＝ 29.0%（下限 70.0%，階級 3）
+free,217,,1,value_error,variants[0].replace_effect.index,變奏「碎光裂縫」：主傷害（第 0 個效果）不能被換掉
+free,217,,2,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,228,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,233,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,234,,1,shield.status,effects[0],護盾的 status 'defending' 必須是 absorbs_damage 的狀態
+free,241,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,241,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,242,,1,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+free,242,,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 shield、apply_status:marked）
+free,242,,2,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+free,246,,1,shield.status,effects[0],護盾的 status 'armor_broken' 必須是 absorbs_damage 的狀態
+free,248,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,263,,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+free,264,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,271,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,272,,1,variant.variant_ash.skeleton.secondary_count,variants[0],灰燼餘韻：骨架 area：附帶效果最多 2 個，收到 3 個
+free,272,,1,variant.variant_ash.budget.over,variants[0],灰燼餘韻：超出預算：total 29.94 ÷ 可用預算 23.11 ＝ 129.5%（上限 100.0%，階級 3）
+free,272,,2,variant.variant_ash.skeleton.secondary_count,variants[0],灰燼餘韻：骨架 area：附帶效果最多 2 個，收到 3 個
+free,272,,2,variant.variant_ash.budget.over,variants[0],灰燼餘韻：超出預算：total 29.94 ÷ 可用預算 23.11 ＝ 129.5%（上限 100.0%，階級 3）
+free,272,,3,variant.variant_ash.budget.over,variants[0],灰燼餘韻：超出預算：total 29.07 ÷ 可用預算 23.11 ＝ 125.8%（上限 100.0%，階級 3）
+free,283,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,286,,1,value_error,variants[0].replace_effect.index,變奏「裂空」：主傷害（第 0 個效果）不能被換掉
+free,286,,2,variant.v_shock.exclusion.stun_single_long_cooldown,variants[0],裂空：互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 single（range 3），冷卻 無，效果 damage、apply_status:stun）
+free,286,,2,variant.v_shock.skeleton.core_share,variants[0],裂空：骨架 strike：核心效果（damage）占 56.8%，低於下限 60.0%
+free,287,,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 shield、apply_status:hasted）
+free,288,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,292,,1,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+free,292,,2,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+free,292,,3,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+free,294,,1,variant.v1.tier.element,variants[0],殘響：角色 1 階還不能用兩種元素（fire、lightning）（要 2 階）
+free,294,,1,variant.v1.budget.over,variants[0],殘響：超出預算：total 15.20 ÷ 可用預算 14.07 ＝ 108.0%（上限 100.0%，階級 1）
+free,294,,2,variant.v1.budget.over,variants[0],殘響：超出預算：total 15.20 ÷ 可用預算 14.07 ＝ 108.0%（上限 100.0%，階級 1）
+free,295,,1,value_error,variants[0].replace_effect.index,變奏「裂縫餘波」：主傷害（第 0 個效果）不能被換掉

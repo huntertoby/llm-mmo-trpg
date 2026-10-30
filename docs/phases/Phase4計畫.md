@@ -313,3 +313,17 @@
 - **4-L10a｜schema、提示、閃現模板列舉**（opus）：A1 巢狀錯誤帶完整路徑；A2 巢狀位置精簡效果型別（反噬排除硬控／持續傷害狀態、反應技不給 overdraft／on_miss 且 `reaction` 必填、武器技 `weapon_req` 只列 melee／ranged）；A3「恰好其一」「必填」規則進 schema；A4 變奏表面列舉照 `surfaces` 表、`grant_skill.skill` 改列舉；A5 system 指令加「選填欄位沒必要不要填」（只改提示，升 `PROMPT_VERSION`；不依稀有度收 schema）；F1／F2 閃現模板列舉只放這招套得上的、指定類別只列該類；C2 `max_tokens` 1024；C3 命名避免重複詞頭並帶入本輪已用名稱；C4 `concept`／`cast_flavor` 簡體字檢查；C5 形態原語排除於自由題選單。
 - **4-L10b｜引擎補值與說明**（opus）：B1 無旋鈕結構採 b——補值器可往上補附帶效果數值或降冷卻（不降預算下限）；B2 可修清單加 `cap.revive_cost`、`cap.rule_rewrite_cost`；B3 `secondary_share` 修補降到最低骰、仍超標回報「移除傷害」；B4 `shockwave`／`raise_terrain`／`lower_terrain` 的 `llm_hint` 補大地元素；B5 擊殺效果 hint 補「只能給自己有益的效果」。
 - 不做：C6 平行請求（白板模式下升級不走 LLM，之後需要時再排）；換模型或 thinking（重跑後仍 < 60% 再請使用者決定）。
+
+### 4-L10 驗收與重跑（2026-10-30，開發 PM）
+- 合併 4-L10a（報告 `Phase4-L10a報告.md`，`PROMPT_VERSION` `skill-proposal/5`、`skill-naming/2`、`max_tokens` 1024）與 4-L10b（報告 `Phase4-L10b報告.md`）；開發 PM 補：`LLMConfig` 預設 `max_tokens` 1024、註解簡體字、**重跑時發現 `surface: none` 讓預算器 KeyError 當機 → 改回報 BudgetError**（測試 `test_surface_none_is_a_budget_error_not_a_crash`）。合併後 llm／skillgen／cli／content pytest 5589 通過。
+- 真模型重跑（同種子 0，結果 `docs/phases/4-L9/*_rerun_4L10*`）：
+
+| 項目 | 4-L9 | 4-L10 後 |
+|---|---|---|
+| 升級候選 50 題：一次通過／累計通過／退回 | 10%／28%／72% | 26%／**62%**／38% |
+| 強制測試 132 題：累計通過／退回 | 25%／75% | **77%**／23% |
+| 自由測試 300 題：累計通過／退回 | 75%／25% | **93%**／7% |
+| 閃現提議：通過／補位／退回 | 37%／55%／7.6% | **67%**／28%／5.1% |
+| 每題耗時 p50／p90 | 16～19／29～35 秒 | 14.8／21.4 秒 |
+
+- 升級候選達到 60% 目標，**不需換模型或開 thinking**。剩餘主要錯誤：`budget.weak` 28（無旋鈕單一核心）、`keyword.required` 20（沒帶題目關鍵字）、`value_error` 8；自由測試仍只做「傷害＋狀態＋表面」，35 個原語 0 次（正式流程由引擎指定核心，不影響）。待決（4-L10a #1 `weapon_req` 維持說明、#2 #3 #5 接受、#6 `grant_skill` 全列、#7 形態原語只排除自由題、#8 閃現 `note_zh` 未查簡體；4-L10b #1 #2 #4 接受、#3 錯誤訊息建議「加有數值的附帶效果」）→ 之後需要時再排。
