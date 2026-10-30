@@ -139,9 +139,9 @@ def _hostile_core(skill: SkillDef) -> list[dict[str, Any]]:
             continue
         item: dict[str, Any] = {"type": effect.type, "affects": "enemies"}
         if effect.type == "damage":
+            # 新種類是法術類（_new_base），法術技的傷害一定要有元素：物理武器技帶 physical
             element = skill_element_id(skill) if effect.element is None else effect.element.value
-            if element is not None and element != "physical":
-                item["element"] = element
+            item["element"] = element or Element.PHYSICAL.value
         else:
             if effect.status is None:
                 continue

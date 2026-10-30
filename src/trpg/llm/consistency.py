@@ -18,6 +18,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from trpg.content.battle import StatusDef
 from trpg.content.effect_words import EffectWordGroup, EffectWords
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_elements
@@ -92,7 +93,26 @@ def skill_facts(library: ContentLibrary, skill: SkillDef) -> frozenset[str]:
     out: set[str] = set()
     _walk(skill.model_dump(mode="json", exclude=_EXCLUDED), primitives, out)
     out.update(f"element:{e.value}" for e in skill_elements(skill))
+    statuses = library.ruleset.statuses.by_id()
+    for fact in sorted(out):
+        if fact.startswith("status:"):
+            out.update(_rider_facts(statuses.get(fact.removeprefix("status:"))))
     return frozenset(out)
+
+
+def _rider_facts(status: StatusDef | None) -> set[str]:
+    """狀態本身帶的附帶效果（護盾被打破時造表面、雷電傷害、施加狀態；3W-2b 的護盾橋接）。
+    技能資料只寫狀態 ID，這些效果在狀態定義上，敘事提到它們（「一灘水」「雷電」）也算有對應。"""
+    if status is None:
+        return set()
+    out: set[str] = set()
+    if status.shield_break_surface is not None:
+        out.add(f"surface:{status.shield_break_surface.value}")
+    if status.shield_break_lightning:
+        out.add(f"element:{Element.LIGHTNING.value}")
+    if status.shield_break_status is not None:
+        out.add(f"status:{status.shield_break_status}")
+    return out
 
 
 def added_facts(library: ContentLibrary, before: SkillDef, after: SkillDef) -> frozenset[str]:
