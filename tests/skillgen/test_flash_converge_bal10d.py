@@ -242,9 +242,7 @@ def test_expanding_first_does_not_beat_converging_first(skill_id: str) -> None:
     skill = lib().skills[skill_id]
     tier = 3
     early = _chain(skill, EARLY_PLANS[skill_id], tier)
-    late = _chain(
-        skill, [(1, "area_plus"), (2, "area_plus"), (4, SINGLE), (5, CHARGE)], tier
-    )
+    late = _chain(skill, [(1, "area_plus"), (2, "area_plus"), (4, SINGLE), (5, CHARGE)], tier)
     assert early.shape.type == late.shape.type == "single"
     assert _core(late) <= _core(early)
     origin = at_role_tier(lib(), skill, tier)
