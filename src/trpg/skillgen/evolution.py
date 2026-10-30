@@ -440,14 +440,19 @@ def _tuned(
     extra_knobs: Sequence[Knob] = (),
     effect_knobs: Sequence[Knob] = (),
     target_ratio: Fraction | None = None,
+    power_only: bool = False,
 ) -> SkillDef | None:
     """調整強度後通過全部驗證的技能；不合格時 ``None``。
 
     ``floor``（Phase 3W-2）：調整後的 :func:`budget_power` 至少要有這麼多（閃現的強度下限）。
     ``extra``／``extra_knobs``：``attempt`` 裡其他要調的字典（接續段的效果、修正規則的 change），
-    旋鈕的 ``index`` 是它在 ``extra`` 裡的位置。``target_ratio``：指定的目標比例（3W-9b）。"""
+    旋鈕的 ``index`` 是它在 ``extra`` 裡的位置。``target_ratio``：指定的目標比例（3W-9b）。
+    ``power_only``（BAL-10d 收回家族）：效果旋鈕只用威力（傷害、治療、護盾），推拉距離維持草稿
+    原樣。"""
     trial = [dict(e) for e in effects]
     knobs = _knobs(attempt["category"], trial, library)
+    if power_only:
+        knobs = [k for k in knobs if k.field != "distance"]
     knobs += [Knob(len(trial) + k.index, k.field, k.values, k.weight) for k in extra_knobs]
     knobs += [Knob(k.index, k.field, k.values, k.weight) for k in effect_knobs]
     targets = [*trial, *extra]
@@ -653,11 +658,13 @@ def retune(
     extra_knobs: Sequence[Knob] = (),
     effect_knobs: Sequence[Knob] = (),
     target_ratio: Fraction | None = None,
+    power_only: bool = False,
 ) -> SkillDef | None:
     """只用 ``attempt`` 的骨架與代價調整強度並驗證（不折抵）；不合格時 ``None``。``floor``、
     ``extra``、``extra_knobs`` 見 :func:`_tuned`；``effect_knobs`` 是效果本身另外的旋鈕（``index``
     指向 ``effects``；Phase 3W-9 升階重算的狀態持續回合）；``target_ratio`` 是指定的目標比例
-    （3W-9b 升階重配維持原本的比例，見 :func:`~trpg.skillgen.composer_tuning.tune`）。"""
+    （3W-9b 升階重配維持原本的比例，見 :func:`~trpg.skillgen.composer_tuning.tune`）；``power_only``
+    見 :func:`_tuned`。"""
     return _tuned(
         attempt,
         effects,
@@ -668,6 +675,7 @@ def retune(
         extra_knobs=extra_knobs,
         effect_knobs=effect_knobs,
         target_ratio=target_ratio,
+        power_only=power_only,
     )
 
 

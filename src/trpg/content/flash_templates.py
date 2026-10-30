@@ -170,6 +170,10 @@ class FlashRules(ContentModel):
     """變身姿態（BAL-2c）修正類小變化與升階重配可換到的形態幅度（‰，``enter_form.magnitude_permille``；
     上限 2000）。比 ``stance_magnitudes`` 細：升階重配把形態拉到接近原本的比例（例如 99%）之後，
     一次閃現的 +40‰ 預算仍要放得下下一格。"""
+    single_hit_cap_permille: int = Field(default=3000, ge=1000, le=10000)
+    """收回家族（收束起，BAL-10d，06 6.34.4）的單發上限：收回後一次施放對單一目標的期望傷害（治療、
+    護盾同理）最多是「同階、同 AP 的單體技能預算」（``tier_budget`` × AP 係數）的這麼多‰；超過的預算
+    改成減費用（減不動就不出這個選項）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
@@ -272,6 +276,9 @@ class FlashTemplate(ContentModel):
     """姿態的進入代價（施放費用）可以動的欄位，依序試（BAL-10b）：``stance_enter_light`` 減 1；
     姿態費用類（``stance_light``／``stance_heavy``）填了就也適用變身姿態（形態的維持費照 #67 不動，
     改用進入代價當費用旋鈕）。空 ＝ 不動進入代價（變身姿態不出費用類，同 BAL-2c）。"""
+    skeletons: tuple[str, ...] = ()
+    """收束（BAL-10d）：新形狀不在原骨架允許的形狀內時，依序改試的骨架（例：範圍骨架收成單體 →
+    打擊、連擊）；只取允許新形狀的。空 ＝ 只用原骨架。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
