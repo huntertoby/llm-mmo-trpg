@@ -22,6 +22,7 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from bal9_sweep import with_boss_approach  # type: ignore[import-not-found]
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.events import DamageDealt, TurnStarted
 from trpg.engine.rules.geometry import manhattan, neighbors4
@@ -57,13 +58,17 @@ class Sample:
     boss_damage: int = 0
 
 
-def _setup(build: str) -> BatchSpec:
-    lib = _CACHE.get("lib")
+def _setup(build: str, boss_approach: int | None = None) -> BatchSpec:
+    """``boss_approach``（BAL-9）：不為 None 時覆寫每個行為模式的 boss_approach（library 副本）。"""
+    lib_key = f"lib:{boss_approach}"
+    lib = _CACHE.get(lib_key)
     if lib is None:
         lib = load_library()
-        _CACHE["lib"] = lib
+        if boss_approach is not None:
+            lib = with_boss_approach(lib, boss_approach)
+        _CACHE[lib_key] = lib
     assert isinstance(lib, ContentLibrary)
-    key = f"spec:{build}"
+    key = f"spec:{build}:{boss_approach}"
     spec = _CACHE.get(key)
     if spec is None:
         spec = matrix_specs(lib, [build], [MAP_ID], [0])[0][2]
@@ -98,9 +103,9 @@ def _turn_category(state: BattleState, hero_id: UnitId, boss_id: UnitId) -> str:
     return "far"
 
 
-def run_sample(task: tuple[str, int]) -> Sample:
-    build, seed = task
-    spec = _setup(build)
+def run_sample(task: tuple[str, int, int | None]) -> Sample:
+    build, seed, boss_approach = task
+    spec = _setup(build, boss_approach)
     sample = Sample(build, seed)
     ids: dict[str, UnitId] = {}
 
@@ -182,9 +187,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--jobs", type=int, default=1)
     p.add_argument("--seeds", type=int, default=20)
     p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--boss-approach", type=int, default=None, help="BAL-9：覆寫 boss_approach 權重")
     args = p.parse_args(argv)
     groups = {"白板近戰": WHITE_MELEE, "技能近戰": SKILL_MELEE, "遠程（對照）": RANGED}
-    tasks = [(b, s) for bs in groups.values() for b in bs for s in range(args.seeds)]
+    tasks = [
+        (b, s, args.boss_approach) for bs in groups.values() for b in bs for s in range(args.seeds)
+    ]
     if args.jobs > 1:
         with ProcessPoolExecutor(args.jobs) as ex:
             samples = list(ex.map(run_sample, tasks, chunksize=2))

@@ -158,7 +158,7 @@ from trpg.engine.events import (
     UnitRevived,
 )
 from trpg.engine.grants import granted_remaining
-from trpg.engine.ids import OVERDRAWN, PRONE
+from trpg.engine.ids import BOSS_TAG, OVERDRAWN, PRONE
 from trpg.engine.infusion import preferred_infusion, template_of
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
@@ -410,6 +410,23 @@ def _approach_distance(scene: _Scene, xy: XY) -> int:
     return min(manhattan(xy, e.xy) for e in targets)
 
 
+def _boss_distance(unit: UnitState, scene: _Scene, xy: XY) -> int:
+    """近戰單位到最近 Boss 的距離（BAL-9 ``boss_approach``）；非近戰武器、沒有 Boss、有集火
+    目標時為 0。"""
+    if scene.focus is not None or not unit.weapon.is_melee:
+        return 0
+    bosses = [e for e in scene.enemies if BOSS_TAG in e.tags]
+    if not bosses:
+        return 0
+    walk = scene.walk
+    best: int | None = None
+    for boss in bosses:
+        d = walk.to(boss, xy) if walk is not None else None
+        d = manhattan(xy, boss.xy) if d is None else d
+        best = d if best is None else min(best, d)
+    return best or 0
+
+
 @dataclass(frozen=True, slots=True)
 class _Scene:
     """同一次決策中不隨行動者位置改變的資料（虛擬移動評分時共用）。"""
@@ -447,6 +464,8 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
     """位置價值中與敵人有關的部分：接近、威脅、保持距離、掩護、被壓制、夾擊（Phase 3D-8c）。"""
     xy, enemies = unit.xy, scene.enemies
     value = -w.approach * _approach_distance(scene, xy)
+    if w.boss_approach:
+        value -= w.boss_approach * _boss_distance(unit, scene, xy)
     if w.threat:
         value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
     if w.keep_distance:

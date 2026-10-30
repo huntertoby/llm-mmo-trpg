@@ -38,8 +38,9 @@ def test_a_unit_with_riposte_hits_back_in_an_ai_battle(
 ) -> None:
     log = tmp_path / "duelist.json"
     argv = ["battle", "--map", "test_flat_6x6", "--allies", "sim_duelist,hero_archer,hero_mage"]
-    # 種子 0：Phase 3C-3a 加入撞擊傷害後，種子 3 的戰局改變；3C-6a 被近戰攻擊後轉身，種子 2 又改變
-    code, out = _run([*argv, "--seed", "0", "--log-json", str(log)], capsys)
+    # 種子 16：Phase 3C-3a 加入撞擊傷害後，種子 3 的戰局改變；
+    # 3C-6a 被近戰攻擊後轉身，種子 2 又改變；BAL-9 近戰朝 Boss 靠近（盜賊頭目）後種子 0 又改變
+    code, out = _run([*argv, "--seed", "16", "--log-json", str(log)], capsys)
     assert code == 0 and "反應：「還擊」" in out and "以「還擊」攻擊" in out
     code, replayed = _run(["battle", "replay", str(log)], capsys)
     assert code == 0 and "重播驗證通過" in replayed

@@ -188,7 +188,7 @@ weapons:
     look: {kind: crossbow, material: wood, form: light}
     weapon_class: ranged
     range: 6
-    dice: 1d6  # BAL-8b 原型專用：1d8 → 1d6（降一階）
+    dice: 1d5  # BAL-9 原型專用：1d8 → 1d6（BAL-8b）→ 1d5（再降一階）
     flat: 0
     attack_bonus: 0
     scaling_attr: dex

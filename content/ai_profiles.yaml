@@ -188,7 +188,8 @@ facing: {backstab: 4, back_exposed: 3}
 # （模式自己列出的優先）。只影響「近距離武器」：距離傷害修正（range_mod 的 damage_permille）的最佳距離 ≤ 2 格、且比射程近
 # （依武器資料判斷，不寫死 ID；目前只有霰彈槍）。
 #   close_range  站位能打到的敵人中，距離傷害千分比最高者 × 這個值 ÷ 1000；保持距離（keep_distance）只計比最佳距離更近的敵人
-weapon_ai: {close_range: 40}
+#   boss_approach（BAL-9，原型專用）  近戰武器單位在場上有 Boss 時，與 Boss 的走路步數每一格額外扣的位置分數（疊加在 approach 上；0 ＝ 不套用，非 Boss 戰不受影響）；掃描 0／3／6／10／15／25，10 起近戰從沒碰到 Boss 的場數降到約一半
+weapon_ai: {close_range: 40, boss_approach: 10}
 # skill_ai（BAL-5 B1；AI／原型數值初值，待玩法 PM 確認）：技能選用的權重，敵我同一套，填入每個行為模式的 weights。
 #   multi_target  範圍技每多打到一名敵人（預期，乘命中率；只要命中判定的敵人算命中率、不用判定的算 1）的加分；
 #                 只打到 1 名時 0。目的：有 ≥ 2 名敵人可打時優先用範圍技（3-32d 的選用率 40% → ≥ 70%）
