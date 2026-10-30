@@ -527,6 +527,7 @@ def new_keyword_run(
         hp=start.hp,
         mana=start.mana,
         source=core.source_min_at_start,
+        insight=library.flash.rules.insight_start,
         generated_skills=tuple(generated),
         plan=make_plan(library, seed),
         attribute_spent=merge_spent({}, allocation),

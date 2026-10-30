@@ -293,6 +293,14 @@ def _add_sim_report_parsers(
         help="AI 閃現策略，以逗號分隔（none 不指定類別、all 全指定類別、mixed 混合；預設全部）",
     )
     flash.add_argument("--seeds", type=_positive_int, default=20, help="每個策略的輪數（預設 20）")
+    flash.add_argument(
+        "--economy",
+        default=None,
+        help=(
+            "靈感經濟掃描（BAL-1；只在模擬覆寫，不改 content）：例 "
+            '"win=1,2;start=0,2;preboss=0,2"（每勝／開局／Boss 前加給，逗號列出的值取笛卡兒積）'
+        ),
+    )
     flash.add_argument("--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）")
     flash.add_argument(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
@@ -543,6 +551,7 @@ def _sim_flash(args: argparse.Namespace) -> int:
             jobs=_resolve_jobs(args.jobs),
             out=sys.stdout,
             err=sys.stderr,
+            economy=args.economy,
         )
     )
 

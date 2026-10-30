@@ -243,6 +243,8 @@ def finish_battle(
     this_battle = battle_usage(library, run, actions, hero_unit_id(state))
     usage = merge_usage(run.skill_usage, this_battle)
     flashed = after_battle_flash(library, run, this_battle, won=won)  # 靈感點與先上場用過（3W-5）
+    if won and not plan.boss and run.plan_of(node.index + 1).boss:  # Boss 前加給（BAL-1，預設 0）
+        flashed["insight"] += library.flash.rules.insight_preboss
     if not won:
         return run.model_copy(
             update={
