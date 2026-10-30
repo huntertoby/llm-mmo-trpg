@@ -1,0 +1,992 @@
+suite,index,core_primitive,attempt,code,path,message
+upgrade,0,cleanse,1,skeleton.forbidden_affects,,骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,0,cleanse,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,0,cleanse,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,1,revive,1,cap.revive_cost,,有復活（revive）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+upgrade,1,revive,2,cap.revive_cost,,有復活（revive）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+upgrade,2,heal,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+upgrade,3,apply_status,1,skeleton.secondary_share,,骨架 control：damage 占 80.7%，超過上限 40.0%
+upgrade,3,apply_status,1,tier.element,,角色 1 階還不能用兩種元素（earth、poison）（要 2 階）
+upgrade,3,apply_status,2,skeleton.secondary_share,,骨架 control：damage 占 80.7%，超過上限 40.0%
+upgrade,3,apply_status,3,budget.weak,,過弱：total 6.00 ÷ 可用預算 14.07 ＝ 42.6%（下限 70.0%，階級 1）
+upgrade,4,sacrifice_summon,1,value_error,,複合技能不能是陷阱，也不能有失手反噬 cost.on_miss
+upgrade,4,sacrifice_summon,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 marked，但提議沒有帶到
+upgrade,4,sacrifice_summon,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 marked，但提議沒有帶到
+upgrade,5,heal,1,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 bleed不是有益的（beneficial），不能作為核心
+upgrade,5,heal,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到
+upgrade,5,heal,3,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 slow不是有益的（beneficial），不能作為核心
+upgrade,6,consume_status,1,budget.weak,,過弱：total 1.75 ÷ 可用預算 14.07 ＝ 12.4%（下限 70.0%，階級 1）
+upgrade,6,consume_status,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,6,consume_status,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,7,teleport_target,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（stun）
+upgrade,7,teleport_target,2,budget.weak,,過弱：total 11.19 ÷ 可用預算 23.86 ＝ 46.9%（下限 70.0%，階級 2）
+upgrade,7,teleport_target,3,budget.weak,,過弱：total 11.19 ÷ 可用預算 23.86 ＝ 46.9%（下限 70.0%，階級 2）
+upgrade,8,topple,1,budget.weak,,過弱：total 9.86 ÷ 可用預算 23.05 ＝ 42.8%（下限 70.0%，階級 3）
+upgrade,8,topple,2,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+upgrade,8,topple,3,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+upgrade,9,pull,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,9,pull,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,9,pull,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,11,raise_terrain,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,11,raise_terrain,2,reference,variants.v1.when,"未知的表面 ground（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+upgrade,11,raise_terrain,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 raise_terrain、damage）
+upgrade,11,raise_terrain,3,budget.weak,,過弱：total 10.56 ÷ 可用預算 37.95 ＝ 27.8%（下限 70.0%，階級 3）
+upgrade,11,raise_terrain,3,variant.v1.exclusion.terrain_needs_earth,,裂地：互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 raise_terrain、damage、raise_terrain）
+upgrade,11,raise_terrain,3,variant.v1.budget.weak,,裂地：過弱：total 16.25 ÷ 可用預算 37.95 ＝ 42.8%（下限 70.0%，階級 3）
+upgrade,12,knock_prone,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,12,knock_prone,1,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+upgrade,12,knock_prone,1,reference,variants.variant_1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,12,knock_prone,1,reference,variants.variant_2.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,12,knock_prone,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+upgrade,12,knock_prone,2,variant.variant_1.skeleton.secondary_count,,碎晶震盪：骨架 displace：附帶效果最多 2 個，收到 3 個
+upgrade,12,knock_prone,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「暈眩」是負面狀態
+upgrade,13,grant_skill,1,reference,effects[0].skill,未知的技能 'skill_id_temp_01'
+upgrade,13,grant_skill,2,reference,effects[0].skill,未知的技能 'skill_wet_slap'
+upgrade,13,grant_skill,3,reference,effects[0].skill,未知的技能 'skill_id_wet_slap'
+upgrade,14,create_surface,1,value_error,,變奏「碎冰」：主傷害（第 2 個效果）不能被換掉
+upgrade,14,create_surface,2,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,14,create_surface,2,reference,variants.shatter.cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,14,create_surface,3,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 ground_tile（range 5），冷卻 4 回合，效果 create_surface、damage、apply_status:frozen）
+upgrade,14,create_surface,3,budget.weak,,過弱：total 23.93 ÷ 可用預算 37.95 ＝ 63.0%（下限 70.0%，階級 3）
+upgrade,14,create_surface,3,variant.shatter.skeleton.secondary_share,,碎冰：骨架 control：damage 占 44.9%，超過上限 40.0%
+upgrade,14,create_surface,3,variant.shatter.budget.weak,,碎冰：過弱：total 20.18 ÷ 可用預算 37.95 ＝ 53.2%（下限 70.0%，階級 3）
+upgrade,15,zone,1,value_error,effects[0],effects[0]（zone）：affects 必須明寫 enemies、allies 或 all
+upgrade,15,zone,2,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+upgrade,15,zone,3,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+upgrade,16,heal,1,variant.v1.budget.weak,,晶脈迴響：過弱：total 14.75 ÷ 可用預算 28.81 ＝ 51.2%（下限 70.0%，階級 2）
+upgrade,16,heal,2,variant.v1.budget.weak,,晶脈迴響：過弱：total 14.39 ÷ 可用預算 28.81 ＝ 49.9%（下限 70.0%，階級 2）
+upgrade,16,heal,3,variant.v1.budget.over,,晶脈迴響：超出預算：total 23.10 ÷ 可用預算 22.59 ＝ 102.3%（上限 100.0%，階級 2）
+upgrade,17,pull,1,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+upgrade,17,pull,2,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+upgrade,17,pull,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 pull、heal）
+upgrade,18,topple,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,19,shadowstep,1,value_error,shape.type,shadowstep 的 landing: behind 必須搭配形狀 single，收到 unit_then_tile
+upgrade,19,shadowstep,2,budget.weak,,過弱：total 6.95 ÷ 可用預算 23.86 ＝ 29.1%（下限 70.0%，階級 2）
+upgrade,19,shadowstep,3,value_error,shape.type,shadowstep 的 landing: behind 必須搭配形狀 single，收到 unit_then_tile
+upgrade,20,teleport,1,budget.weak,,過弱：total 9.70 ÷ 可用預算 30.49 ＝ 31.8%（下限 70.0%，階級 3）
+upgrade,20,teleport,2,budget.weak,,過弱：total 19.38 ÷ 可用預算 30.49 ＝ 63.6%（下限 70.0%，階級 3）
+upgrade,20,teleport,3,budget.weak,,過弱：total 18.10 ÷ 可用預算 30.49 ＝ 59.4%（下限 70.0%，階級 3）
+upgrade,21,topple,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（poison）
+upgrade,21,topple,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,21,topple,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 marked，但提議沒有帶到
+upgrade,22,cleanse,1,budget.weak,,過弱：total 2.85 ÷ 可用預算 21.69 ＝ 13.1%（下限 70.0%，階級 2）
+upgrade,22,cleanse,2,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 poison不是有益的（beneficial），不能作為核心
+upgrade,22,cleanse,3,budget.weak,,過弱：total 2.85 ÷ 可用預算 18.09 ＝ 15.8%（下限 70.0%，階級 2）
+upgrade,23,heal,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+upgrade,24,restore_resource,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,24,restore_resource,1,reference,variants.variant_breach.cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,24,restore_resource,2,variant.variant_breach.skeleton.secondary_count,,裂界·深淵迴響：骨架 aura：附帶效果最多 1 個，收到 2 個
+upgrade,24,restore_resource,2,variant.variant_breach.skeleton.forbidden_affects,,裂界·深淵迴響：骨架 aura：effects[2]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,24,restore_resource,2,variant.variant_breach.budget.weak,,裂界·深淵迴響：過弱：total 15.15 ÷ 可用預算 23.10 ＝ 65.6%（下限 70.0%，階級 1）
+upgrade,24,restore_resource,3,variant.variant_breach.skeleton.secondary_count,,裂界·深淵迴響：骨架 aura：附帶效果最多 1 個，收到 2 個
+upgrade,24,restore_resource,3,variant.variant_breach.skeleton.forbidden_affects,,裂界·深淵迴響：骨架 aura：effects[2]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,24,restore_resource,3,variant.variant_breach.budget.over,,裂界·深淵迴響：超出預算：total 24.41 ÷ 可用預算 20.37 ＝ 119.8%（上限 100.0%，階級 1）
+upgrade,25,zone,1,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+upgrade,25,zone,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,25,zone,3,budget.weak,,過弱：total 0.90 ÷ 可用預算 29.70 ＝ 3.0%（下限 70.0%，階級 2）
+upgrade,27,grant_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,27,grant_skill,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,27,grant_skill,3,reference,effects[0].skill,未知的技能 'skill_nature_vine'
+upgrade,28,heal,1,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 weaken不是有益的（beneficial），不能作為核心
+upgrade,28,heal,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 collision，但提議沒有帶到
+upgrade,28,heal,3,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 vulnerable不是有益的（beneficial），不能作為核心
+upgrade,30,grant_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,30,grant_skill,2,reference,effects[0].skill,未知的技能 'skill_id'
+upgrade,30,grant_skill,3,reference,effects[0].skill,未知的技能 'skill_id'
+upgrade,31,apply_status,1,budget.weak,,過弱：total 6.48 ÷ 可用預算 27.00 ＝ 24.0%（下限 70.0%，階級 2）
+upgrade,31,apply_status,2,skeleton.secondary_share,,骨架 control：damage 占 70.6%，超過上限 40.0%
+upgrade,31,apply_status,3,skeleton.secondary_share,,骨架 control：damage 占 70.6%，超過上限 40.0%
+upgrade,32,heal,1,skeleton.forbidden_affects,,骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,32,heal,2,skeleton.forbidden_affects,,骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,33,apply_status,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+upgrade,33,apply_status,2,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,33,apply_status,2,reference,variants.high_ground.cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,33,apply_status,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 apply_status:vulnerable、raise_terrain）
+upgrade,33,apply_status,3,variant.high_ground.exclusion.terrain_needs_earth,,高處：互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 apply_status:vulnerable、raise_terrain、apply_status:weaken）
+upgrade,33,apply_status,3,variant.high_ground.budget.over,,高處：超出預算：total 22.23 ÷ 可用預算 21.64 ＝ 102.7%（上限 100.0%，階級 1）
+upgrade,35,steal_buff,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,35,steal_buff,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（stun）
+upgrade,35,steal_buff,3,skeleton.secondary_share,,骨架 control：damage 占 84.2%，超過上限 40.0%
+upgrade,36,detonate_runes,1,value_error,effects[0],effects[0]（detonate_runes）：scope 只能用在修正規則的命中後效果
+upgrade,36,detonate_runes,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 wet，但提議沒有帶到
+upgrade,36,detonate_runes,3,keyword.required,effects,技能必須製造或利用題目的關鍵字 wet，但提議沒有帶到
+upgrade,38,swap_any,1,budget.weak,,過弱：total 10.66 ÷ 可用預算 37.95 ＝ 28.1%（下限 70.0%，階級 3）
+upgrade,38,swap_any,2,skeleton.core,,骨架 displace：沒有核心效果（需要 push、pull、teleport、knock_prone、hurl_object、topple、leap、swap、teleport_target、swap_any、charge_through、shadowstep）
+upgrade,38,swap_any,2,skeleton.secondary_count,,骨架 displace：附帶效果最多 2 個，收到 3 個
+upgrade,38,swap_any,3,budget.weak,,過弱：total 13.20 ÷ 可用預算 23.11 ＝ 57.1%（下限 70.0%，階級 3）
+upgrade,39,create_obstacle,1,skeleton.secondary_share,,骨架 control：damage 占 80.5%，超過上限 40.0%
+upgrade,39,create_obstacle,2,budget.weak,,過弱：total 3.30 ÷ 可用預算 14.07 ＝ 23.5%（下限 70.0%，階級 1）
+upgrade,39,create_obstacle,3,skeleton.secondary_share,,骨架 control：damage 占 71.4%，超過上限 40.0%
+upgrade,40,shield,1,json_invalid,,不是合法的 JSON：Expecting value
+upgrade,40,shield,2,value_error,,反應技（kind: reaction）必須有 reaction
+upgrade,40,shield,3,value_error,,反應技（kind: reaction）必須有 reaction
+upgrade,41,hurl_object,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,41,hurl_object,2,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 object_then_tile（range 6），冷卻 4 回合，效果 hurl_object、apply_status:frozen、damage）
+upgrade,42,delayed_damage,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,43,heal,1,json_invalid,,不是合法的 JSON：Expecting value
+upgrade,43,heal,2,json_invalid,,不是合法的 JSON：Expecting value
+upgrade,44,apply_status,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 4），冷卻 無，效果 apply_status:stoneskin、damage）
+upgrade,44,apply_status,1,budget.weak,,過弱：total 20.00 ÷ 可用預算 34.50 ＝ 58.0%（下限 70.0%，階級 3）
+upgrade,44,apply_status,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 4），冷卻 無，效果 apply_status:stoneskin、damage）
+upgrade,44,apply_status,2,budget.weak,,過弱：total 20.00 ÷ 可用預算 34.50 ＝ 58.0%（下限 70.0%，階級 3）
+upgrade,44,apply_status,3,budget.weak,,過弱：total 13.44 ÷ 可用預算 23.11 ＝ 58.1%（下限 70.0%，階級 3）
+upgrade,45,push,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,45,push,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,45,push,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「暈眩」是負面狀態
+upgrade,45,push,3,budget.weak,,過弱：total 11.58 ÷ 可用預算 18.56 ＝ 62.4%（下限 70.0%，階級 1）
+upgrade,46,clear_surface,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,46,clear_surface,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+upgrade,46,clear_surface,3,skeleton.secondary_share,,骨架 control：damage 占 79.6%，超過上限 40.0%
+upgrade,47,clear_surface,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+upgrade,47,clear_surface,2,skeleton.secondary_share,,骨架 control：damage 占 85.2%，超過上限 40.0%
+upgrade,47,clear_surface,3,skeleton.secondary_share,,骨架 control：damage 占 85.2%，超過上限 40.0%
+upgrade,48,cleanse,1,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 prone不是有益的（beneficial），不能作為核心
+upgrade,48,cleanse,1,budget.weak,,過弱：total 6.00 ÷ 可用預算 14.07 ＝ 42.6%（下限 70.0%，階級 1）
+upgrade,48,cleanse,2,keyword.required,effects,技能必須製造或利用題目的關鍵字 prone，但提議沒有帶到
+upgrade,48,cleanse,3,skeleton.forbidden_affects,,骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+upgrade,48,cleanse,3,budget.weak,,過弱：total 5.85 ÷ 可用預算 14.07 ＝ 41.6%（下限 70.0%，階級 1）
+upgrade,49,cleanse,1,budget.weak,,過弱：total 3.00 ÷ 可用預算 21.69 ＝ 13.8%（下限 70.0%，階級 2）
+forced,0,damage,1,json_invalid,,不是合法的 JSON：Expecting value
+forced,0,damage,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+forced,0,damage,3,cap.rule_rewrite_cost,,有改寫規則型原語（grant_ap）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,0,damage,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 damage、grant_ap）
+forced,1,damage,1,value_error,,只有主動技能可以有 cost.self_status，收到 kind: reaction
+forced,3,heal,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+forced,3,heal,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,3,heal,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,4,heal,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,4,heal,2,value_error,effects[1],effects[1]（consume_status）.then[0]：then 的效果不可自帶 affects 或 condition
+forced,5,heal,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+forced,5,heal,2,value_error,,反應技（kind: reaction）必須有 reaction
+forced,5,heal,3,value_error,,反應技（kind: reaction）必須有 reaction
+forced,6,shield,1,reference,shape.range,single 的 range 必須在 1–10，收到 12
+forced,6,shield,1,reference,variants.v1.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,6,shield,1,reference,variants.v1.shape.range,single 的 range 必須在 1–10，收到 12
+forced,6,shield,1,reference,variants.v2.when,"未知的表面 resonant（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,6,shield,1,reference,variants.v2.shape.range,single 的 range 必須在 1–10，收到 12
+forced,6,shield,2,shield.status,effects[0],護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,6,shield,2,variant.v1.shield.status,,結晶壁壘：effects[0]：護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,6,shield,2,variant.v1.shield.status,,結晶壁壘：effects[1]：護盾的 status 'prone' 必須是 absorbs_damage 的狀態
+forced,6,shield,2,variant.v1.budget.over,,結晶壁壘：超出預算：total 20.43 ÷ 可用預算 18.56 ＝ 110.1%（上限 100.0%，階級 1）
+forced,6,shield,2,variant.v2.shield.status,,源頻共振：effects[0]：護盾的 status 'guarded' 必須是 absorbs_damage 的狀態
+forced,6,shield,2,variant.v2.shield.status,,源頻共振：effects[1]：護盾的 status 'vulnerable' 必須是 absorbs_damage 的狀態
+forced,6,shield,2,variant.v2.budget.over,,源頻共振：超出預算：total 21.73 ÷ 可用預算 18.56 ＝ 117.1%（上限 100.0%，階級 1）
+forced,8,shield,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,8,shield,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,8,shield,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,10,cleanse,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,10,cleanse,2,budget.weak,,過弱：total 10.40 ÷ 可用預算 34.50 ＝ 30.1%（下限 70.0%，階級 3）
+forced,11,cleanse,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,11,cleanse,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,11,cleanse,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,12,push,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,12,push,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,12,push,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,13,push,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+forced,13,push,2,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+forced,13,push,3,value_error,,反應技（kind: reaction）必須有 reaction
+forced,14,push,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+forced,14,push,2,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+forced,14,push,3,value_error,,反應技（kind: reaction）必須有 reaction
+forced,15,pull,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+forced,15,pull,2,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+forced,15,pull,3,value_error,,反應技（kind: reaction）必須有 reaction
+forced,16,pull,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,16,pull,2,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,16,pull,3,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,17,pull,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+forced,17,pull,2,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 self，冷卻 4 回合，效果 pull、apply_status:stun）
+forced,17,pull,2,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 4 回合，效果 pull、apply_status:stun）
+forced,17,pull,3,budget.weak,,過弱：total 8.67 ÷ 可用預算 12.96 ＝ 66.9%（下限 70.0%，階級 2）
+forced,18,knock_prone,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,18,knock_prone,2,skeleton.secondary_share,,骨架 displace：damage 占 75.4%，超過上限 50.0%
+forced,18,knock_prone,2,variant.height_advantage.skeleton.secondary_share,,高處壓制：骨架 displace：damage 占 55.4%，超過上限 50.0%
+forced,18,knock_prone,2,variant.height_advantage.budget.over,,高處壓制：超出預算：total 26.73 ÷ 可用預算 21.64 ＝ 123.5%（上限 100.0%，階級 1）
+forced,18,knock_prone,3,variant.height_advantage.budget.over,,高處壓制：超出預算：total 16.94 ÷ 可用預算 16.87 ＝ 100.4%（上限 100.0%，階級 1）
+forced,19,knock_prone,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,19,knock_prone,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,19,knock_prone,3,budget.weak,,過弱：total 11.82 ÷ 可用預算 29.70 ＝ 39.8%（下限 70.0%，階級 2）
+forced,20,knock_prone,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,20,knock_prone,2,skeleton.secondary_share,,骨架 displace：damage 占 91.6%，超過上限 50.0%
+forced,20,knock_prone,3,budget.weak,,過弱：total 8.52 ÷ 可用預算 27.82 ＝ 30.6%（下限 70.0%，階級 2）
+forced,21,shockwave,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 shockwave、damage）
+forced,21,shockwave,1,skeleton.secondary_share,,骨架 control：damage 占 87.1%，超過上限 40.0%
+forced,21,shockwave,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 shockwave、damage）
+forced,21,shockwave,2,budget.weak,,過弱：total 10.01 ÷ 可用預算 23.11 ＝ 43.3%（下限 70.0%，階級 3）
+forced,21,shockwave,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 4），冷卻 無，效果 shockwave、damage）
+forced,21,shockwave,3,budget.weak,,過弱：total 11.57 ÷ 可用預算 23.11 ＝ 50.1%（下限 70.0%，階級 3）
+forced,22,shockwave,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 5），冷卻 無，效果 shockwave、damage）
+forced,22,shockwave,1,skeleton.secondary_share,,骨架 control：damage 占 71.0%，超過上限 40.0%
+forced,22,shockwave,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 5），冷卻 無，效果 shockwave、damage）
+forced,22,shockwave,2,budget.weak,,過弱：total 12.46 ÷ 可用預算 29.70 ＝ 41.9%（下限 70.0%，階級 2）
+forced,22,shockwave,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 5），冷卻 無，效果 shockwave、damage）
+forced,22,shockwave,3,skeleton.secondary_share,,骨架 control：damage 占 71.0%，超過上限 40.0%
+forced,23,shockwave,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,23,shockwave,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 shockwave、damage）
+forced,23,shockwave,2,skeleton.secondary_share,,骨架 control：damage 占 75.1%，超過上限 40.0%
+forced,23,shockwave,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 3），冷卻 無，效果 shockwave、damage）
+forced,23,shockwave,3,skeleton.secondary_share,,骨架 control：damage 占 72.5%，超過上限 40.0%
+forced,24,teleport,1,budget.weak,,過弱：total 13.02 ÷ 可用預算 35.55 ＝ 36.6%（下限 70.0%，階級 3）
+forced,24,teleport,2,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+forced,24,teleport,3,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+forced,25,teleport,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,25,teleport,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,25,teleport,3,budget.weak,,過弱：total 13.60 ÷ 可用預算 30.49 ＝ 44.6%（下限 70.0%，階級 3）
+forced,26,teleport,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,26,teleport,2,budget.weak,,過弱：total 15.42 ÷ 可用預算 29.70 ＝ 51.9%（下限 70.0%，階級 2）
+forced,26,teleport,3,value_error,,複合技能的位移段只能有一個施放者自身位移原語（teleport、leap、dash、charge_through、shadowstep），收到 teleport、damage、apply_status
+forced,27,charge_through,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,28,charge_through,1,value_error,,法術技（category: spell）的 weapon_req 只能是 focus、any，收到 melee
+forced,29,charge_through,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,30,shadowstep,1,value_error,shape.type,shadowstep 的 landing: behind 必須搭配形狀 single，收到 unit_then_tile
+forced,30,shadowstep,2,skeleton.secondary_share,,骨架 displace：damage 占 85.3%，超過上限 50.0%
+forced,31,shadowstep,1,value_error,shape.type,shadowstep 的 landing: behind 必須搭配形狀 single，收到 unit_then_tile
+forced,32,shadowstep,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,32,shadowstep,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+forced,32,shadowstep,2,budget.weak,,過弱：total 7.53 ÷ 可用預算 30.41 ＝ 24.7%（下限 70.0%，階級 3）
+forced,32,shadowstep,3,value_error,,複合技能的第一段不能有位移、召喚、區域、陷阱等原語（不能套娃），收到 shadowstep
+forced,33,leap,1,budget.weak,,過弱：total 8.68 ÷ 可用預算 27.82 ＝ 31.2%（下限 70.0%，階級 2）
+forced,33,leap,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,33,leap,3,budget.weak,,過弱：total 8.07 ÷ 可用預算 27.82 ＝ 29.0%（下限 70.0%，階級 2）
+forced,34,leap,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,34,leap,2,budget.weak,,過弱：total 4.65 ÷ 可用預算 18.09 ＝ 25.7%（下限 70.0%，階級 2）
+forced,34,leap,3,value_error,,複合技能的位移段只能有一個施放者自身位移原語（teleport、leap、dash、charge_through、shadowstep），收到 leap、create_surface、apply_status
+forced,35,leap,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,35,leap,2,budget.weak,,過弱：total 13.12 ÷ 可用預算 30.49 ＝ 43.1%（下限 70.0%，階級 3）
+forced,35,leap,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+forced,36,swap,1,budget.weak,,過弱：total 20.40 ÷ 可用預算 37.95 ＝ 53.8%（下限 70.0%，階級 3）
+forced,36,swap,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+forced,36,swap,2,budget.weak,,過弱：total 21.67 ÷ 可用預算 37.95 ＝ 57.1%（下限 70.0%，階級 3）
+forced,36,swap,3,budget.weak,,過弱：total 21.37 ÷ 可用預算 37.95 ＝ 56.3%（下限 70.0%，階級 3）
+forced,37,swap,1,budget.weak,,過弱：total 19.06 ÷ 可用預算 37.95 ＝ 50.2%（下限 70.0%，階級 3）
+forced,37,swap,2,budget.weak,,過弱：total 19.25 ÷ 可用預算 35.47 ＝ 54.3%（下限 70.0%，階級 3）
+forced,37,swap,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,38,swap,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,38,swap,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,38,swap,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,39,teleport_target,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,39,teleport_target,2,budget.weak,,過弱：total 11.03 ÷ 可用預算 18.56 ＝ 59.4%（下限 70.0%，階級 1）
+forced,39,teleport_target,3,budget.weak,,過弱：total 11.03 ÷ 可用預算 18.56 ＝ 59.4%（下限 70.0%，階級 1）
+forced,40,teleport_target,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,40,teleport_target,2,budget.weak,,過弱：total 6.72 ÷ 可用預算 35.55 ＝ 18.9%（下限 70.0%，階級 3）
+forced,40,teleport_target,3,value_error,,複合技能的位移段只能有一個施放者自身位移原語（teleport、leap、dash、charge_through、shadowstep），收到 teleport_target
+forced,41,teleport_target,1,budget.weak,,過弱：total 11.69 ÷ 可用預算 18.56 ＝ 63.0%（下限 70.0%，階級 1）
+forced,42,swap_any,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,42,swap_any,2,budget.weak,,過弱：total 12.13 ÷ 可用預算 37.95 ＝ 32.0%（下限 70.0%，階級 3）
+forced,42,swap_any,3,value_error,,複合技能的位移段只能有一個施放者自身位移原語（teleport、leap、dash、charge_through、shadowstep），收到 swap_any
+forced,43,swap_any,1,budget.weak,,過弱：total 12.79 ÷ 可用預算 23.86 ＝ 53.6%（下限 70.0%，階級 2）
+forced,43,swap_any,2,budget.weak,,過弱：total 12.79 ÷ 可用預算 23.86 ＝ 53.6%（下限 70.0%，階級 2）
+forced,43,swap_any,3,budget.weak,,過弱：total 12.13 ÷ 可用預算 23.86 ＝ 50.8%（下限 70.0%，階級 2）
+forced,44,swap_any,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,45,apply_status,1,value_error,,變奏「霜結」：主傷害（第 1 個效果）不能被換掉
+forced,45,apply_status,2,skeleton.secondary_share,,骨架 control：damage 占 93.3%，超過上限 40.0%
+forced,45,apply_status,2,variant.v1.exclusion.stun_single_long_cooldown,,霜結：互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 cross（range 2），冷卻 無，效果 damage、apply_status:stun）
+forced,45,apply_status,2,variant.v1.skeleton.secondary_share,,霜結：骨架 control：damage 占 65.0%，超過上限 40.0%
+forced,45,apply_status,2,variant.v1.budget.over,,霜結：超出預算：total 41.59 ÷ 可用預算 37.95 ＝ 109.6%（上限 100.0%，階級 3）
+forced,45,apply_status,3,budget.weak,,過弱：total 5.85 ÷ 可用預算 37.95 ＝ 15.4%（下限 70.0%，階級 3）
+forced,46,apply_status,1,budget.weak,,過弱：total 4.25 ÷ 可用預算 8.40 ＝ 50.6%（下限 70.0%，階級 1）
+forced,47,apply_status,1,budget.weak,,過弱：total 4.25 ÷ 可用預算 10.80 ＝ 39.4%（下限 70.0%，階級 2）
+forced,48,create_surface,1,skeleton.secondary_share,,骨架 control：damage 占 89.5%，超過上限 40.0%
+forced,48,create_surface,2,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+forced,48,create_surface,3,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+forced,49,create_surface,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,49,create_surface,2,budget.weak,,過弱：total 5.70 ÷ 可用預算 23.11 ＝ 24.7%（下限 70.0%，階級 3）
+forced,49,create_surface,3,shield.status,effects[1],護盾的 status 'burning' 必須是 absorbs_damage 的狀態
+forced,49,create_surface,3,skeleton.secondary,,骨架 control：effects[1]（shield）不在允許的附帶原語內（允許：damage）
+forced,50,create_surface,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,50,create_surface,2,budget.weak,,過弱：total 6.00 ÷ 可用預算 14.07 ＝ 42.6%（下限 70.0%，階級 1）
+forced,50,create_surface,3,budget.weak,,過弱：total 9.00 ÷ 可用預算 14.07 ＝ 64.0%（下限 70.0%，階級 1）
+forced,51,create_obstacle,1,skeleton.secondary_share,,骨架 control：damage 占 84.3%，超過上限 40.0%
+forced,51,create_obstacle,2,skeleton.secondary_share,,骨架 control：damage 占 84.3%，超過上限 40.0%
+forced,51,create_obstacle,3,budget.weak,,過弱：total 2.85 ÷ 可用預算 14.07 ＝ 20.3%（下限 70.0%，階級 1）
+forced,52,create_obstacle,1,value_error,,變奏「堅實」：唯一的效果不能被 replace_effect 換掉
+forced,52,create_obstacle,2,reference,variants.variant_1.when,"未知的表面 rock（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,52,create_obstacle,2,reference,variants.variant_2.when,"未知的表面 ground（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,52,create_obstacle,3,skeleton.secondary_share,,骨架 control：damage 占 91.5%，超過上限 40.0%
+forced,52,create_obstacle,3,variant.variant_1.skeleton.secondary_share,,堅實：骨架 control：damage 占 91.0%，超過上限 40.0%
+forced,52,create_obstacle,3,variant.variant_1.budget.over,,堅實：超出預算：total 49.84 ÷ 可用預算 37.95 ＝ 131.3%（上限 100.0%，階級 3）
+forced,52,create_obstacle,3,variant.variant_2.exclusion.no_cooldown_big_area,,重擊：互斥規則「無冷卻的大範圍」：沒有冷卻的技能不得使用 square3、allies_in_radius、ring 半徑 2、cone 大小 4（形狀 square3（range 1），冷卻 無，效果 create_obstacle、damage）
+forced,52,create_obstacle,3,variant.variant_2.skeleton.secondary_share,,重擊：骨架 control：damage 占 91.0%，超過上限 40.0%
+forced,52,create_obstacle,3,variant.variant_2.budget.over,,重擊：超出預算：total 52.33 ÷ 可用預算 37.95 ＝ 137.9%（上限 100.0%，階級 3）
+forced,53,create_obstacle,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,53,create_obstacle,2,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+forced,53,create_obstacle,3,skeleton.secondary_share,,骨架 control：damage 占 90.1%，超過上限 40.0%
+forced,54,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 1），冷卻 無，效果 raise_terrain、damage）
+forced,54,raise_terrain,1,budget.weak,,過弱：total 9.13 ÷ 可用預算 23.10 ＝ 39.5%（下限 70.0%，階級 1）
+forced,54,raise_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 1），冷卻 無，效果 raise_terrain、damage）
+forced,54,raise_terrain,2,budget.weak,,過弱：total 9.24 ÷ 可用預算 23.10 ＝ 40.0%（下限 70.0%，階級 1）
+forced,54,raise_terrain,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 1），冷卻 無，效果 raise_terrain、damage）
+forced,54,raise_terrain,3,budget.weak,,過弱：total 9.24 ÷ 可用預算 23.10 ＝ 40.0%（下限 70.0%，階級 1）
+forced,55,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 5），冷卻 無，效果 raise_terrain）
+forced,55,raise_terrain,1,budget.weak,,過弱：total 6.38 ÷ 可用預算 21.64 ＝ 29.5%（下限 70.0%，階級 1）
+forced,55,raise_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 5），冷卻 無，效果 raise_terrain、damage）
+forced,55,raise_terrain,2,budget.weak,,過弱：total 9.92 ÷ 可用預算 21.64 ＝ 45.9%（下限 70.0%，階級 1）
+forced,56,raise_terrain,1,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 raise_terrain）
+forced,56,raise_terrain,1,budget.weak,,過弱：total 6.90 ÷ 可用預算 27.82 ＝ 24.8%（下限 70.0%，階級 2）
+forced,56,raise_terrain,1,variant.variant_1.exclusion.terrain_needs_earth,,岩壁：互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 line（size 2），冷卻 無，效果 raise_terrain、damage）
+forced,56,raise_terrain,1,variant.variant_1.budget.weak,,岩壁：過弱：total 11.12 ÷ 可用預算 27.82 ＝ 40.0%（下限 70.0%，階級 2）
+forced,56,raise_terrain,2,variant.variant_1.skeleton.secondary_count,,斷層：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,56,raise_terrain,2,variant.variant_1.skeleton.secondary_share,,斷層：骨架 control：damage 占 50.7%，超過上限 40.0%
+forced,56,raise_terrain,2,variant.variant_1.budget.over,,斷層：超出預算：total 19.89 ÷ 可用預算 18.09 ＝ 110.0%（上限 100.0%，階級 2）
+forced,56,raise_terrain,3,variant.variant_1.skeleton.secondary_count,,斷層：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,56,raise_terrain,3,variant.variant_1.skeleton.secondary_share,,斷層：骨架 control：damage 占 50.5%，超過上限 40.0%
+forced,57,lower_terrain,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,57,lower_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 square3（range 2），冷卻 1 回合，效果 lower_terrain、damage）
+forced,57,lower_terrain,2,tier.terrain_area,,角色 2 階還不能用升降地形影響 9 格（要 3 階）
+forced,57,lower_terrain,2,budget.weak,,過弱：total 16.33 ÷ 可用預算 24.85 ＝ 65.7%（下限 70.0%，階級 2）
+forced,57,lower_terrain,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 cross（range 2），冷卻 無，效果 lower_terrain、damage）
+forced,58,lower_terrain,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,58,lower_terrain,2,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,58,lower_terrain,3,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,59,lower_terrain,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,59,lower_terrain,2,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 lower_terrain、damage）
+forced,59,lower_terrain,2,budget.weak,,過弱：total 8.49 ÷ 可用預算 18.56 ＝ 45.7%（下限 70.0%，階級 1）
+forced,59,lower_terrain,3,exclusion.terrain_needs_earth,,互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 無，效果 lower_terrain、damage）
+forced,59,lower_terrain,3,budget.weak,,過弱：total 10.37 ÷ 可用預算 18.56 ＝ 55.9%（下限 70.0%，階級 1）
+forced,60,intercept,1,value_error,,反應技（kind: reaction）必須有 reaction
+forced,60,intercept,2,value_error,,反應技（kind: reaction）必須有 reaction
+forced,60,intercept,3,value_error,,反應技（kind: reaction）必須有 reaction
+forced,61,intercept,1,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+forced,61,intercept,2,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+forced,61,intercept,3,value_error,,法術技（category: spell）的 weapon_req 只能是 focus、any，收到 melee
+forced,62,intercept,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+forced,62,intercept,2,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+forced,62,intercept,3,budget.weak,,過弱：total 3.40 ÷ 可用預算 10.80 ＝ 31.5%（下限 70.0%，階級 2）
+forced,63,consume_status,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,63,consume_status,2,skeleton.core_share,,骨架 consume_status：核心效果（consume_status）占 29.9%，低於下限 70.0%
+forced,63,consume_status,2,budget.weak,,過弱：total 5.56 ÷ 可用預算 27.82 ＝ 20.0%（下限 70.0%，階級 2）
+forced,63,consume_status,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,64,consume_status,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,64,consume_status,2,skeleton.core_share,,骨架 consume_status：核心效果（consume_status）占 15.4%，低於下限 70.0%
+forced,64,consume_status,2,budget.weak,,過弱：total 11.96 ÷ 可用預算 18.56 ＝ 64.5%（下限 70.0%，階級 1）
+forced,64,consume_status,3,budget.weak,,過弱：total 1.84 ÷ 可用預算 14.07 ＝ 13.1%（下限 70.0%，階級 1）
+forced,65,consume_status,1,skeleton.core_share,,骨架 consume_status：核心效果（consume_status）占 16.3%，低於下限 70.0%
+forced,65,consume_status,1,budget.weak,,過弱：total 11.21 ÷ 可用預算 30.49 ＝ 36.8%（下限 70.0%，階級 3）
+forced,65,consume_status,1,variant.variant_1.exclusion.stun_single_long_cooldown,,晶脈共振：互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 single（range 3），冷卻 無，效果 consume_status、apply_status:stun）
+forced,65,consume_status,1,variant.variant_1.skeleton.core_share,,晶脈共振：骨架 consume_status：核心效果（consume_status）占 20.1%，低於下限 70.0%
+forced,65,consume_status,1,variant.variant_1.budget.weak,,晶脈共振：過弱：total 8.29 ÷ 可用預算 30.49 ＝ 27.2%（下限 70.0%，階級 3）
+forced,65,consume_status,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,65,consume_status,3,value_error,,變奏「晶脈共振」：唯一的效果不能被 replace_effect 換掉
+forced,66,grant_ap,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,66,grant_ap,2,reference,variants.v1.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,66,grant_ap,2,reference,variants.v2.when,"未知的表面 ash（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,66,grant_ap,3,variant.v1.cap.rule_rewrite,,源晶共振：改寫規則型原語最多 1 個，收到 2 個（grant_ap、redirect_damage）
+forced,66,grant_ap,3,variant.v1.budget.over,,源晶共振：超出預算：total 27.54 ÷ 可用預算 27.00 ＝ 102.0%（上限 100.0%，階級 2）
+forced,66,grant_ap,3,variant.v2.cap.rule_rewrite,,餘頻擴散：改寫規則型原語最多 1 個，收到 2 個（grant_ap、grant_ap）
+forced,67,grant_ap,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,67,grant_ap,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,67,grant_ap,3,value_error,effects[0],effects[0]（damage）：法術技的傷害必須指定 dice 與 element
+forced,68,grant_ap,1,budget.weak,,過弱：total 6.42 ÷ 可用預算 23.10 ＝ 27.8%（下限 70.0%，階級 1）
+forced,68,grant_ap,2,cap.rule_rewrite_cost,,有改寫規則型原語（grant_ap）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,68,grant_ap,3,cap.rule_rewrite_cost,,有改寫規則型原語（grant_ap）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,68,grant_ap,3,budget.weak,,過弱：total 4.80 ÷ 可用預算 14.07 ＝ 34.1%（下限 70.0%，階級 1）
+forced,69,reset_cooldown,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,69,reset_cooldown,2,value_error,effects[0],effects[0]（damage）：法術技的傷害必須指定 dice 與 element
+forced,69,reset_cooldown,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,70,reset_cooldown,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,70,reset_cooldown,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,70,reset_cooldown,3,cap.rule_rewrite_cost,,有改寫規則型原語（reset_cooldown）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,70,reset_cooldown,3,shield.status,effects[1],護盾的 status 'regenerating' 必須是 absorbs_damage 的狀態
+forced,71,reset_cooldown,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,71,reset_cooldown,2,value_error,effects[0],effects[0]（reset_cooldown）：which: tag 必須填 tag，which: all 不可填 tag
+forced,71,reset_cooldown,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,72,cheat_death,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,72,cheat_death,2,cap.rule_rewrite,,改寫規則型原語最多 1 個，收到 2 個（cheat_death、redirect_damage）
+forced,72,cheat_death,2,cap.rule_rewrite_cost,,有改寫規則型原語（cheat_death、redirect_damage）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,72,cheat_death,2,budget.weak,,過弱：total 19.80 ÷ 可用預算 28.86 ＝ 68.6%（下限 70.0%，階級 3）
+forced,72,cheat_death,3,value_error,,延遲段必須指定 release（next_turn、attacked）：何時釋放第二段
+forced,73,cheat_death,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,73,cheat_death,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,73,cheat_death,3,reference,variants.v1.when,"未知的表面 bleed（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,74,cheat_death,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,74,cheat_death,2,reference,variants.self_hp_below.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,74,cheat_death,3,cap.rule_rewrite_cost,,有改寫規則型原語（cheat_death）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,74,cheat_death,3,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 cheat_death、apply_status:shielded_charged）
+forced,74,cheat_death,3,skeleton.forbidden_affects,,骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,74,cheat_death,3,budget.weak,,過弱：total 8.58 ÷ 可用預算 19.67 ＝ 43.6%（下限 70.0%，階級 1）
+forced,74,cheat_death,3,variant.self_hp_below.cap.rule_rewrite_cost,,瀕死反響：有改寫規則型原語（cheat_death）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,74,cheat_death,3,variant.self_hp_below.exclusion.self_shape_no_enemy_effect,,瀕死反響：互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 cheat_death、apply_status:shielded_charged、apply_status:regenerating）
+forced,74,cheat_death,3,variant.self_hp_below.skeleton.secondary_count,,瀕死反響：骨架 aura：附帶效果最多 1 個，收到 2 個
+forced,74,cheat_death,3,variant.self_hp_below.skeleton.forbidden_affects,,瀕死反響：骨架 aura：effects[1]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,74,cheat_death,3,variant.self_hp_below.skeleton.forbidden_affects,,瀕死反響：骨架 aura：effects[2]（apply_status）的對象 ['enemies'] 不被允許（不得有對 enemies、all 的效果）
+forced,74,cheat_death,3,variant.self_hp_below.budget.weak,,瀕死反響：過弱：total 10.20 ÷ 可用預算 19.67 ＝ 51.9%（下限 70.0%，階級 1）
+forced,75,redirect_damage,1,cap.rule_rewrite_cost,,有改寫規則型原語（redirect_damage）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,75,redirect_damage,1,budget.weak,,過弱：total 11.57 ÷ 可用預算 18.56 ＝ 62.4%（下限 70.0%，階級 1）
+forced,75,redirect_damage,2,cap.rule_rewrite_cost,,有改寫規則型原語（redirect_damage）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,75,redirect_damage,2,budget.weak,,過弱：total 6.67 ÷ 可用預算 18.56 ＝ 36.0%（下限 70.0%，階級 1）
+forced,75,redirect_damage,3,budget.weak,,過弱：total 13.00 ÷ 可用預算 19.67 ＝ 66.1%（下限 70.0%，階級 1）
+forced,76,redirect_damage,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,76,redirect_damage,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,76,redirect_damage,3,cap.rule_rewrite_cost,,有改寫規則型原語（redirect_damage）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,76,redirect_damage,3,budget.weak,,過弱：total 9.80 ÷ 可用預算 26.19 ＝ 37.4%（下限 70.0%，階級 2）
+forced,77,redirect_damage,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,77,redirect_damage,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,77,redirect_damage,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,78,copy_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,78,copy_skill,2,value_error,effects[0],effects[0]（damage）：法術技的傷害必須指定 dice 與 element
+forced,78,copy_skill,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,79,copy_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,79,copy_skill,2,cap.rule_rewrite_cost,,有改寫規則型原語（copy_skill）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,79,copy_skill,2,budget.weak,,過弱：total 7.65 ÷ 可用預算 18.09 ＝ 42.3%（下限 70.0%，階級 2）
+forced,79,copy_skill,3,value_error,,複合技能的位移段只能有一個施放者自身位移原語（teleport、leap、dash、charge_through、shadowstep），收到 copy_skill
+forced,80,copy_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,80,copy_skill,2,budget.weak,,過弱：total 9.00 ÷ 可用預算 34.50 ＝ 26.1%（下限 70.0%，階級 3）
+forced,80,copy_skill,3,value_error,,延遲段必須指定 release（next_turn、attacked）：何時釋放第二段
+forced,81,extra_reaction,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,81,extra_reaction,2,cap.rule_rewrite_cost,,有改寫規則型原語（extra_reaction）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,81,extra_reaction,2,budget.weak,,過弱：total 12.60 ÷ 可用預算 22.59 ＝ 55.8%（下限 70.0%，階級 2）
+forced,81,extra_reaction,3,cap.rule_rewrite_cost,,有改寫規則型原語（extra_reaction）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,81,extra_reaction,3,budget.weak,,過弱：total 12.60 ÷ 可用預算 18.99 ＝ 66.4%（下限 70.0%，階級 2）
+forced,82,extra_reaction,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,82,extra_reaction,2,cap.rule_rewrite,,改寫規則型原語最多 1 個，收到 2 個（extra_reaction、grant_ap）
+forced,82,extra_reaction,2,cap.rule_rewrite_cost,,有改寫規則型原語（extra_reaction、grant_ap）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,82,extra_reaction,3,budget.weak,,過弱：total 7.00 ÷ 可用預算 32.31 ＝ 21.7%（下限 70.0%，階級 3）
+forced,83,extra_reaction,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,84,hurl_object,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+forced,85,hurl_object,1,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 object_then_tile（range 3），冷卻 4 回合，效果 hurl_object、damage、apply_status:stun）
+forced,87,topple,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,87,topple,2,budget.weak,,過弱：total 7.70 ÷ 可用預算 29.70 ＝ 25.9%（下限 70.0%，階級 2）
+forced,87,topple,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+forced,87,topple,3,budget.weak,,過弱：total 19.02 ÷ 可用預算 29.70 ＝ 64.0%（下限 70.0%，階級 2）
+forced,88,topple,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（stun）
+forced,88,topple,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,88,topple,3,budget.weak,,過弱：total 7.17 ÷ 可用預算 30.41 ＝ 23.6%（下限 70.0%，階級 3）
+forced,89,topple,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,89,topple,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,89,topple,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,90,restore_resource,1,budget.weak,,過弱：total 16.23 ÷ 可用預算 24.85 ＝ 65.3%（下限 70.0%，階級 2）
+forced,90,restore_resource,2,budget.weak,,過弱：total 15.85 ÷ 可用預算 24.85 ＝ 63.8%（下限 70.0%，階級 2）
+forced,91,restore_resource,1,budget.weak,,過弱：total 6.65 ÷ 可用預算 18.09 ＝ 36.8%（下限 70.0%，階級 2）
+forced,92,restore_resource,1,budget.weak,,過弱：total 5.95 ÷ 可用預算 23.11 ＝ 25.7%（下限 70.0%，階級 3）
+forced,92,restore_resource,2,cap.rule_rewrite_cost,,有改寫規則型原語（reset_cooldown）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,92,restore_resource,3,cap.rule_rewrite_cost,,有改寫規則型原語（reset_cooldown）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 1）
+forced,92,restore_resource,3,budget.weak,,過弱：total 15.12 ÷ 可用預算 24.27 ＝ 62.3%（下限 70.0%，階級 3）
+forced,93,steal_buff,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,93,steal_buff,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,93,steal_buff,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,94,steal_buff,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,94,steal_buff,2,budget.weak,,過弱：total 6.17 ÷ 可用預算 21.69 ＝ 28.5%（下限 70.0%，階級 2）
+forced,94,steal_buff,3,skeleton.secondary_share,,骨架 control：damage 占 84.8%，超過上限 40.0%
+forced,95,steal_buff,1,skeleton.secondary_share,,骨架 control：damage 占 83.3%，超過上限 40.0%
+forced,95,steal_buff,2,budget.weak,,過弱：total 6.17 ÷ 可用預算 18.09 ＝ 34.1%（下限 70.0%，階級 2）
+forced,95,steal_buff,3,skeleton.secondary_share,,骨架 control：damage 占 75.7%，超過上限 40.0%
+forced,96,dispel,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,96,dispel,2,skeleton.secondary_share,,骨架 control：damage 占 87.6%，超過上限 40.0%
+forced,96,dispel,3,skeleton.secondary_share,,骨架 control：damage 占 87.2%，超過上限 40.0%
+forced,97,dispel,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,97,dispel,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,97,dispel,3,skeleton.secondary_share,,骨架 control：damage 占 85.4%，超過上限 40.0%
+forced,98,dispel,1,reference,variants.crystalline_burst.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,98,dispel,2,skeleton.secondary_share,,骨架 control：damage 占 79.8%，超過上限 40.0%
+forced,98,dispel,2,variant.crystalline_burst.skeleton.secondary_count,,晶鳴震盪：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,98,dispel,2,variant.crystalline_burst.skeleton.secondary_share,,晶鳴震盪：骨架 control：damage 占 82.9%，超過上限 40.0%
+forced,98,dispel,3,skeleton.secondary_share,,骨架 control：damage 占 65.4%，超過上限 40.0%
+forced,98,dispel,3,variant.crystalline_burst.skeleton.secondary_count,,晶鳴震盪：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,98,dispel,3,variant.crystalline_burst.skeleton.secondary_share,,晶鳴震盪：骨架 control：damage 占 73.3%，超過上限 40.0%
+forced,98,dispel,3,variant.crystalline_burst.budget.over,,晶鳴震盪：超出預算：total 19.22 ÷ 可用預算 18.09 ＝ 106.2%（上限 100.0%，階級 2）
+forced,99,reveal,1,budget.weak,,過弱：total 16.12 ÷ 可用預算 29.70 ＝ 54.3%（下限 70.0%，階級 2）
+forced,99,reveal,2,skeleton.secondary_share,,骨架 control：damage 占 52.0%，超過上限 40.0%
+forced,100,reveal,1,skeleton.secondary_share,,骨架 control：damage 占 65.2%，超過上限 40.0%
+forced,100,reveal,2,skeleton.secondary_share,,骨架 control：damage 占 65.2%，超過上限 40.0%
+forced,100,reveal,3,budget.weak,,過弱：total 9.62 ÷ 可用預算 31.75 ＝ 30.3%（下限 70.0%，階級 3）
+forced,101,reveal,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,101,reveal,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,101,reveal,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,102,revive,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,102,revive,2,value_error,effects[0],effects[0]（damage）：法術技的傷害必須指定 dice 與 element
+forced,102,revive,3,cap.revive_cost,,有復活（revive）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,103,revive,1,combo.max_per_skill,effects[1],一個技能最多一個 revive 效果
+forced,103,revive,2,combo.max_per_skill,effects[1],一個技能最多一個 revive 效果
+forced,103,revive,3,combo.max_per_skill,effects[1],一個技能最多一個 revive 效果
+forced,104,revive,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,104,revive,2,cap.revive_cost,,有復活（revive）的技能必須每場限一次，或冷卻至少 4 回合（目前：每場 不限、冷卻 0）
+forced,104,revive,2,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 slow不是有益的（beneficial），不能作為核心
+forced,104,revive,2,budget.weak,,過弱：total 19.10 ÷ 可用預算 35.55 ＝ 53.7%（下限 70.0%，階級 3）
+forced,104,revive,3,skeleton.core_beneficial,,骨架 aura：effects[1]（apply_status）的狀態 stun不是有益的（beneficial），不能作為核心
+forced,104,revive,3,budget.weak,,過弱：total 22.60 ÷ 可用預算 35.55 ＝ 63.6%（下限 70.0%，階級 3）
+forced,106,delayed_damage,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,108,summon,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,108,summon,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,108,summon,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,110,summon,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,110,summon,2,budget.weak,,過弱：total 12.43 ÷ 可用預算 30.49 ＝ 40.8%（下限 70.0%，階級 3）
+forced,110,summon,3,budget.weak,,過弱：total 12.80 ÷ 可用預算 23.11 ＝ 55.4%（下限 70.0%，階級 3）
+forced,111,zone,1,value_error,effects[0],effects[0]（zone）：affects 必須明寫 enemies、allies 或 all
+forced,111,zone,2,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+forced,111,zone,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,112,zone,1,value_error,effects[0],effects[0]（zone）：affects 必須明寫 enemies、allies 或 all
+forced,112,zone,2,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+forced,112,zone,3,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+forced,113,zone,1,value_error,effects[0],effects[0]（zone）：affects 必須明寫 enemies、allies 或 all
+forced,113,zone,2,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+forced,113,zone,3,value_error,effects[0],effects[0]（zone）：anchor: caster 的形狀必須是 self、ring、allies_in_radius
+forced,114,grant_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,114,grant_skill,2,reference,effects[0].skill,未知的技能 'skill_id_temp_placeholder'
+forced,114,grant_skill,3,reference,effects[0].skill,未知的技能 'skill_grant_self'
+forced,115,grant_skill,1,reference,effects[0].skill,未知的技能 'skill_heal_minor'
+forced,115,grant_skill,2,reference,effects[0].skill,未知的技能 'skill_bless_shield'
+forced,115,grant_skill,3,reference,effects[0].skill,未知的技能 'skill_temporary_shield'
+forced,116,grant_skill,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,116,grant_skill,2,reference,effects[0].skill,未知的技能 'skill_id_placeholder'
+forced,116,grant_skill,3,reference,effects[0].skill,未知的技能 'skill_id_placeholder'
+forced,117,inscribe,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,117,inscribe,2,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,117,inscribe,3,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+forced,118,inscribe,1,value_error,effects[0],effects[0]（inscribe）：必須恰好填 element 或 tag 其中一個
+forced,118,inscribe,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,118,inscribe,3,budget.weak,,過弱：total 13.40 ÷ 可用預算 30.49 ＝ 44.0%（下限 70.0%，階級 3）
+forced,119,inscribe,1,value_error,effects[0],effects[0]（inscribe）：必須恰好填 element 或 tag 其中一個
+forced,119,inscribe,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,119,inscribe,3,reference,variants.v1.when,"未知的表面 stone（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+forced,120,detonate_runes,1,value_error,effects[0],effects[0]（detonate_runes）：scope 只能用在修正規則的命中後效果
+forced,121,detonate_runes,1,value_error,effects[0],effects[0]（detonate_runes）：scope 只能用在修正規則的命中後效果
+forced,121,detonate_runes,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+forced,122,detonate_runes,1,value_error,effects[0],effects[0]（detonate_runes）：scope 只能用在修正規則的命中後效果
+forced,122,detonate_runes,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,124,sacrifice_summon,1,json_invalid,,不是合法的 JSON：Expecting value
+forced,124,sacrifice_summon,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,124,sacrifice_summon,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,125,sacrifice_summon,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,125,sacrifice_summon,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,126,blow_surface,1,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+forced,126,blow_surface,2,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+forced,126,blow_surface,3,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+forced,127,blow_surface,1,skeleton.secondary_share,,骨架 control：damage 占 70.4%，超過上限 40.0%
+forced,127,blow_surface,2,skeleton.secondary_share,,骨架 control：damage 占 75.7%，超過上限 40.0%
+forced,127,blow_surface,3,skeleton.secondary_share,,骨架 control：damage 占 75.1%，超過上限 40.0%
+forced,128,blow_surface,1,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+forced,128,blow_surface,2,budget.weak,,過弱：total 2.76 ÷ 可用預算 37.95 ＝ 7.3%（下限 70.0%，階級 3）
+forced,128,blow_surface,2,variant.v1.skeleton.secondary_share,,晶風：骨架 control：damage 占 67.7%，超過上限 40.0%
+forced,128,blow_surface,2,variant.v1.budget.weak,,晶風：過弱：total 7.75 ÷ 可用預算 37.95 ＝ 20.4%（下限 70.0%，階級 3）
+forced,128,blow_surface,3,skeleton.secondary_share,,骨架 control：damage 占 86.0%，超過上限 40.0%
+forced,128,blow_surface,3,variant.v1.skeleton.secondary_count,,晶風：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,128,blow_surface,3,variant.v1.skeleton.secondary_share,,晶風：骨架 control：damage 占 88.0%，超過上限 40.0%
+forced,129,clear_surface,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,129,clear_surface,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,129,clear_surface,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+forced,130,clear_surface,1,budget.weak,,過弱：total 3.83 ÷ 可用預算 30.49 ＝ 12.5%（下限 70.0%，階級 3）
+forced,130,clear_surface,2,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+forced,130,clear_surface,3,budget.weak,,過弱：total 3.83 ÷ 可用預算 30.49 ＝ 12.5%（下限 70.0%，階級 3）
+forced,131,clear_surface,1,skeleton.secondary_share,,骨架 control：damage 占 70.0%，超過上限 40.0%
+forced,131,clear_surface,1,variant.v1.skeleton.secondary_count,,淨空：骨架 control：附帶效果最多 1 個，收到 2 個
+forced,131,clear_surface,1,variant.v1.skeleton.secondary_share,,淨空：骨架 control：damage 占 76.1%，超過上限 40.0%
+forced,131,clear_surface,2,skeleton.secondary_share,,骨架 control：damage 占 75.0%，超過上限 40.0%
+forced,131,clear_surface,3,skeleton.secondary_share,,骨架 control：damage 占 72.0%，超過上限 40.0%
+free,1,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,3,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,3,,2,skeleton.secondary_share,,骨架 control：damage 占 60.0%，超過上限 40.0%
+free,3,,3,budget.weak,,過弱：total 5.70 ÷ 可用預算 14.07 ＝ 40.5%（下限 70.0%，階級 1）
+free,4,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,4,,2,skeleton.shape,,骨架 strike：形狀只能是 single、unit_then_tile，收到 line
+free,6,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,6,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,6,,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,6,,3,reference,variants.v_1.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,6,,3,reference,variants.v_1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,7,,1,value_error,shape,ally_downed 的反應技形狀必須是 self（另一方已經倒下）
+free,11,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,12,,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,12,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,13,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,15,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,15,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,17,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,17,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「虛弱」是負面狀態
+free,18,,1,skeleton.secondary_share,,骨架 control：damage 占 73.7%，超過上限 40.0%
+free,18,,2,skeleton.secondary_share,,骨架 control：damage 占 71.4%，超過上限 40.0%
+free,18,,3,budget.weak,,過弱：total 5.70 ÷ 可用預算 14.07 ＝ 40.5%（下限 70.0%，階級 1）
+free,19,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,19,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,19,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,20,,1,value_error,,condition：「手持某種武器時」只能寫在效果上（沒拿那種武器時技能照常可用，只是少那個加成）；想限定武器才能用，請改用限定武器
+free,25,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,25,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,25,,3,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,25,,3,reference,variants.v1.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,26,,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 damage、restore_resource）
+free,27,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,27,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,27,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,30,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,30,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,31,,1,skeleton.secondary_share,,骨架 control：damage 占 53.7%，超過上限 40.0%
+free,31,,2,skeleton.secondary_share,,骨架 control：damage 占 53.7%，超過上限 40.0%
+free,32,,1,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+free,32,,2,value_error,,只有主動技能可以帶變奏（被動、反應、姿態、陷阱之後再開放）
+free,33,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,33,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,33,,3,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,34,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,34,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,34,,3,variant.frost_shatter.budget.over,,霜裂：超出預算：total 26.07 ÷ 可用預算 24.85 ＝ 104.9%（上限 100.0%，階級 2）
+free,35,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,35,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,35,,2,reference,variants.variant_ashen.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,35,,3,variant.variant_ashen.skeleton.secondary_count,,灰燼變奏：骨架 area：附帶效果最多 2 個，收到 3 個
+free,36,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,36,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,36,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,37,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,37,,2,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,37,,2,reference,variants.v2.when,"未知的表面 stone, earth（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,37,,3,variant.v1.skeleton.secondary,,裂晶迴響：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,37,,3,variant.v1.skeleton.secondary_count,,裂晶迴響：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,38,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,38,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,38,,3,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,39,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,39,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,39,,3,skeleton.secondary_share,,骨架 control：damage 占 80.5%，超過上限 40.0%
+free,40,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,42,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,44,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,54,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,56,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,56,,2,value_error,,複合技能不能是陷阱，也不能有失手反噬 cost.on_miss
+free,56,,3,followup.skeleton.core,,第二段：骨架 strike：沒有核心效果（需要 damage）
+free,56,,3,followup.skeleton.secondary,,第二段：骨架 strike：effects[0]（consume_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,56,,3,followup.skeleton.secondary_count,,第二段：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,56,,3,followup.skeleton.core_share,,第二段：骨架 strike：核心效果（damage）占 0.0%，低於下限 60.0%
+free,57,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,57,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,58,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,58,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,58,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,59,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,60,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,60,,2,skeleton.secondary_share,,骨架 control：damage 占 89.6%，超過上限 40.0%
+free,64,,1,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,64,,1,reference,variants.v2.when,"未知的表面 crystal（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,64,,1,reference,variants.v2.effects[2].affects,層數 focus（owner: self）的add_stack只能是 affects: self，收到 enemies
+free,64,,2,variant.v1.skeleton.secondary_count,,斷界一擊：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,64,,3,variant.v1.skeleton.secondary_count,,斷界一擊：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,65,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,65,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,65,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,67,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,67,,2,budget.weak,,過弱：total 15.82 ÷ 可用預算 23.86 ＝ 66.3%（下限 70.0%，階級 2）
+free,68,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,69,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,70,,1,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 self，冷卻 4 回合，效果 damage、apply_status:stun）
+free,70,,1,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 4 回合，效果 damage、apply_status:stun）
+free,71,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,73,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,73,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,73,,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,73,,3,reference,variants.v1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,73,,3,reference,variants.v2.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,74,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,74,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,74,,3,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,79,,1,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+free,80,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,81,,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,81,,2,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,81,,3,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,82,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,82,,1,variant.variant_1.skeleton.secondary_count,,裂空：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,83,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,85,,1,skeleton.secondary_share,,骨架 control：damage 占 90.3%，超過上限 40.0%
+free,85,,2,budget.weak,,過弱：total 11.31 ÷ 可用預算 27.82 ＝ 40.7%（下限 70.0%，階級 2）
+free,87,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,87,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「燃燒」是負面狀態
+free,88,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,88,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,88,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,90,,1,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 cross（range 4），冷卻 4 回合，效果 damage、apply_status:stun）
+free,91,,1,value_error,,變奏「凝滯」：主傷害（第 1 個效果）不能被換掉
+free,91,,2,skeleton.secondary_share,,骨架 control：damage 占 90.2%，超過上限 40.0%
+free,91,,2,variant.v1.skeleton.secondary_share,,凝滯：骨架 control：damage 占 85.1%，超過上限 40.0%
+free,91,,3,skeleton.secondary_share,,骨架 control：damage 占 84.6%，超過上限 40.0%
+free,91,,3,variant.v1.skeleton.secondary_share,,凝滯：骨架 control：damage 占 78.6%，超過上限 40.0%
+free,92,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,92,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,92,,3,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,93,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,93,,2,skeleton.secondary_share,,骨架 control：damage 占 84.1%，超過上限 40.0%
+free,93,,2,variant.v1.skeleton.secondary_share,,焦土：骨架 control：damage 占 66.0%，超過上限 40.0%
+free,93,,2,variant.v1.budget.over,,焦土：超出預算：total 19.48 ÷ 可用預算 18.56 ＝ 105.0%（上限 100.0%，階級 1）
+free,93,,3,skeleton.secondary_share,,骨架 control：damage 占 81.8%，超過上限 40.0%
+free,102,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,102,,2,budget.weak,,過弱：total 11.43 ÷ 可用預算 23.10 ＝ 49.5%（下限 70.0%，階級 1）
+free,102,,3,skeleton.secondary_count,,骨架 displace：附帶效果最多 2 個，收到 3 個
+free,105,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,105,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「燃燒」是負面狀態
+free,106,,1,variant.frostbite.exclusion.stun_single_long_cooldown,,霜咬：互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 square3（range 3），冷卻 1 回合，效果 create_surface、apply_status:slow、apply_status:frozen）
+free,106,,1,variant.frostbite.budget.over,,霜咬：超出預算：total 37.17 ÷ 可用預算 24.85 ＝ 149.6%（上限 100.0%，階級 2）
+free,107,,1,value_error,,變奏「碎裂」：主傷害（第 0 個效果）不能被換掉
+free,107,,2,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,109,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,109,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,109,,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,110,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,110,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,111,,1,value_error,effects[0],effects[0]（inscribe）：必須恰好填 element 或 tag 其中一個
+free,113,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,113,,2,variant.v1.skeleton.secondary,,碎影：骨架 strike：effects[2]（create_surface）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）
+free,113,,2,variant.v1.skeleton.secondary_count,,碎影：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,113,,3,variant.v1.skeleton.secondary_count,,碎影：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,114,,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,117,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,118,,1,value_error,effects[0],effects[0]（inscribe）：必須恰好填 element 或 tag 其中一個
+free,118,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,118,,3,value_error,,變奏「晶鳴」：主傷害（第 1 個效果）不能被換掉
+free,119,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,119,,2,value_error,,複合技能不能是陷阱，也不能有失手反噬 cost.on_miss
+free,121,,1,variant.v1.exclusion.no_repeated_control_group,,霜潮延遲：互斥規則「同類控制不重複」：同一技能不得施加兩個相同 control_group 的狀態（形狀 cone（size 2），冷卻 無，效果 damage、apply_status:slow、create_surface、apply_status:root）
+free,121,,1,variant.v1.skeleton.secondary_count,,霜潮延遲：骨架 area：附帶效果最多 2 個，收到 3 個
+free,121,,1,variant.v1.skeleton.core_share,,霜潮延遲：骨架 area：核心效果（damage）占 49.0%，低於下限 50.0%
+free,121,,2,variant.v1.skeleton.secondary_count,,霜潮延遲：骨架 area：附帶效果最多 2 個，收到 3 個
+free,121,,2,variant.v1.skeleton.core_share,,霜潮延遲：骨架 area：核心效果（damage）占 49.0%，低於下限 50.0%
+free,121,,2,variant.v1.budget.over,,霜潮延遲：超出預算：total 30.63 ÷ 可用預算 27.82 ＝ 110.1%（上限 100.0%，階級 2）
+free,122,,1,budget.weak,,過弱：total 20.11 ÷ 可用預算 31.75 ＝ 63.3%（下限 70.0%，階級 3）
+free,123,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,125,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,127,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,130,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,130,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,130,,3,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,131,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,131,,2,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,131,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,132,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,133,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,136,,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,136,,1,value_error,variants[1].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,136,,2,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,136,,2,value_error,variants[1].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,136,,3,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,136,,3,value_error,variants[1].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,137,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,137,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,137,,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,138,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,138,,2,skeleton.secondary_share,,骨架 control：damage 占 83.6%，超過上限 40.0%
+free,138,,3,skeleton.secondary_share,,骨架 control：damage 占 81.4%，超過上限 40.0%
+free,139,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,141,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,144,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,144,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,145,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,145,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「燃燒」是負面狀態
+free,146,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,146,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,146,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,149,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,149,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,149,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,150,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,151,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,151,,2,skeleton.core,,骨架 displace：沒有核心效果（需要 push、pull、teleport、knock_prone、hurl_object、topple、leap、swap、teleport_target、swap_any、charge_through、shadowstep）
+free,153,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,153,,2,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+free,153,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,154,,1,value_error,,變奏「重擊」：主傷害（第 0 個效果）不能被換掉
+free,154,,2,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,154,,2,reference,variants.variant_light.when,"未知的表面 stone, dirt（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,154,,3,variant.variant_heavy.budget.weak,,重擊：過弱：total 19.90 ÷ 可用預算 29.70 ＝ 67.0%（下限 70.0%，階級 2）
+free,155,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,156,,1,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,156,,1,reference,variants.v1.when,"未知的表面 wind（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,157,,1,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,157,,2,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,157,,3,value_error,variants[0].when,變奏條件 when 必須恰好填一種（caster_surface、caster_high_ground、caster_adjacent_blocker、target_surface），收到 0 種
+free,158,,1,value_error,,反應技（kind: reaction）必須有 reaction
+free,158,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,158,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,159,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,160,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,160,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,160,,3,budget.weak,,過弱：total 14.22 ÷ 可用預算 23.86 ＝ 59.6%（下限 70.0%，階級 2）
+free,162,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,162,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,162,,2,budget.weak,,過弱：total 12.53 ÷ 可用預算 23.10 ＝ 54.2%（下限 70.0%，階級 1）
+free,162,,3,budget.weak,,過弱：total 14.57 ÷ 可用預算 23.10 ＝ 63.1%（下限 70.0%，階級 1）
+free,163,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,163,,2,exclusion.self_shape_no_enemy_effect,,互斥規則「自身形狀不打敵人」：self 形狀不得有對象為 enemies 的效果（形狀 self，冷卻 無，效果 damage）
+free,165,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,166,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,166,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,168,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,168,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,168,,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,169,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,169,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,169,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,171,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,171,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,171,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,172,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,172,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,175,,1,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+free,175,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,175,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,176,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,177,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,178,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,178,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,178,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,188,,1,value_error,effects[0],effects[0]（inscribe）：必須恰好填 element 或 tag 其中一個
+free,188,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「緩速」是負面狀態
+free,188,,2,skeleton.secondary_share,,骨架 rune：damage 占 74.3%，超過上限 40.0%
+free,188,,3,skeleton.secondary_share,,骨架 rune：damage 占 77.9%，超過上限 40.0%
+free,189,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,191,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,191,,2,variant.variant_frostbite.budget.over,,凍裂：超出預算：total 33.67 ÷ 可用預算 30.49 ＝ 110.4%（上限 100.0%，階級 3）
+free,191,,3,variant.variant_frostbite.budget.over,,凍裂：超出預算：total 31.77 ÷ 可用預算 30.49 ＝ 104.2%（上限 100.0%，階級 3）
+free,199,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,199,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,200,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,200,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,200,,3,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,201,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,201,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,201,,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,202,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,202,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,204,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,205,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,205,,2,budget.weak,,過弱：total 9.97 ÷ 可用預算 21.69 ＝ 46.0%（下限 70.0%，階級 2）
+free,207,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,207,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,208,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,208,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,208,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,209,,1,variant.v1.skeleton.secondary_count,,碎冰：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,209,,2,variant.v1.skeleton.secondary_count,,碎冰：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,209,,3,variant.v1.skeleton.secondary_count,,碎冰：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,211,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,211,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,212,,1,skeleton.secondary_share,,骨架 control：damage 占 67.7%，超過上限 40.0%
+free,212,,1,variant.variant_frost.skeleton.secondary_share,,霜結：骨架 control：damage 占 84.9%，超過上限 40.0%
+free,212,,1,variant.variant_frost.budget.weak,,霜結：過弱：total 19.43 ÷ 可用預算 30.49 ＝ 63.7%（下限 70.0%，階級 3）
+free,212,,2,budget.weak,,過弱：total 17.74 ÷ 可用預算 30.49 ＝ 58.2%（下限 70.0%，階級 3）
+free,212,,2,variant.variant_frost.budget.weak,,霜結：過弱：total 11.18 ÷ 可用預算 30.49 ＝ 36.7%（下限 70.0%，階級 3）
+free,213,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,213,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,213,,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,214,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,214,,2,value_error,effects[0],effects[0]（damage）：法術技的傷害必須指定 dice 與 element
+free,215,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,215,,2,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+free,215,,3,value_error,effects[1],effects[1]（damage）：split_heal 必須搭配 affects: all
+free,218,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,218,,1,reference,variants.v1.when,"未知的表面 ash（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,218,,1,reference,variants.v1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,218,,2,variant.v1.skeleton.secondary_count,,餘燼：骨架 area：附帶效果最多 2 個，收到 3 個
+free,218,,3,variant.v1.skeleton.secondary_count,,餘燼：骨架 area：附帶效果最多 2 個，收到 3 個
+free,219,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,220,,1,exclusion.stun_single_long_cooldown,,互斥規則「暈眩的限制」：施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合（形狀 cone（size 3），冷卻 4 回合，效果 damage、apply_status:stun、create_surface）
+free,220,,1,skeleton.core_share,,骨架 area：核心效果（damage）占 28.0%，低於下限 50.0%
+free,222,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,223,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,223,,2,value_error,,「擊殺 → 接下一段」的第一段必須有傷害效果（damage），收到 create_surface、apply_status
+free,223,,3,skeleton.secondary_share,,骨架 control：damage 占 55.6%，超過上限 40.0%
+free,224,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,224,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,227,,1,value_error,,變奏「餘燼」：主傷害（第 1 個效果）不能被換掉
+free,227,,2,value_error,,變奏「燃盡」：主傷害（第 1 個效果）不能被換掉
+free,227,,3,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,227,,3,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,227,,3,reference,variants.v1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,227,,3,reference,variants.v2.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,228,,1,value_error,,反應技（kind: reaction）必須有 reaction
+free,228,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,228,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,230,,1,value_error,,複合技能不能是陷阱，也不能有失手反噬 cost.on_miss
+free,232,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,234,,1,json_invalid,,不是合法的 JSON：Expecting value
+free,234,,2,json_invalid,,不是合法的 JSON：Expecting value
+free,234,,3,json_invalid,,不是合法的 JSON：Expecting value
+free,235,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,235,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,235,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,237,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,237,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,237,,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「燃燒」是負面狀態
+free,239,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,239,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,241,,1,value_error,,反應技（kind: reaction）必須有 reaction
+free,241,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,241,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,243,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,244,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,245,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,245,,2,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+free,245,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,246,,1,budget.over,,超出預算：total 12.41 ÷ 可用預算 11.09 ＝ 111.9%（上限 100.0%，階級 1）
+free,247,,1,value_error,,變奏「裂擊」：唯一的效果不能被 replace_effect 換掉
+free,247,,2,reference,variants,稀有度 common 最多帶 0 個變奏，收到 1 個
+free,247,,2,reference,variants.v1.when,"未知的表面 brittle（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,249,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,249,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,249,,3,value_error,,變奏「殘燼」：主傷害（第 0 個效果）不能被換掉
+free,251,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,251,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,251,,2,reference,variants.v1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,251,,2,reference,variants.v2.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,251,,3,variant.v1.skeleton.secondary_count,,延燒：骨架 area：附帶效果最多 2 個，收到 3 個
+free,251,,3,variant.v2.skeleton.secondary_count,,殘火：骨架 area：附帶效果最多 2 個，收到 3 個
+free,252,,1,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「流血」是負面狀態
+free,255,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,255,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,255,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,256,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,256,,2,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,256,,3,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,259,,1,value_error,,變奏「碎冰」：主傷害（第 2 個效果）不能被換掉
+free,259,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,259,,2,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,259,,2,reference,variants.shatter.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,259,,2,reference,variants.flow.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,259,,3,variant.shatter.skeleton.secondary_count,,碎冰：骨架 control：附帶效果最多 1 個，收到 2 個
+free,259,,3,variant.shatter.skeleton.secondary_share,,碎冰：骨架 control：damage 占 47.8%，超過上限 40.0%
+free,259,,3,variant.shatter.budget.weak,,碎冰：過弱：total 19.11 ÷ 可用預算 29.70 ＝ 64.3%（下限 70.0%，階級 2）
+free,261,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,263,,1,value_error,,反應技（kind: reaction）必須有 reaction
+free,263,,2,value_error,,反應技（kind: reaction）必須有 reaction
+free,263,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,264,,1,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,264,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,266,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,267,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,267,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,269,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,269,,1,reference,variants.v1.when,"未知的表面 blood, shadow（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,269,,1,reference,variants.v1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,269,,2,reference,variants.v1.when,"未知的表面 shadow（可用：darkness, fire, holy, ice, oil, poison, smoke, water）"
+free,269,,3,variant.v1.skeleton.secondary_count,,裂影：骨架 strike：附帶效果最多 1 個，收到 2 個
+free,270,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,271,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,271,,2,budget.weak,,過弱：total 15.22 ÷ 可用預算 23.86 ＝ 63.8%（下限 70.0%，階級 2）
+free,272,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,272,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,272,,2,reference,variants.v1.effects[2].affects,層數 combo_point（owner: self）的consume_stack只能是 affects: self，收到 enemies
+free,272,,2,reference,variants.v1.effects[2].stack,層數 combo_point 只有符合條件的技能可以消耗（見層數說明）
+free,272,,2,reference,variants.v1.cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,272,,3,reference,variants.v1.effects[2].affects,層數 combo_point（owner: self）的consume_stack只能是 affects: self，收到 enemies
+free,272,,3,reference,variants.v1.effects[2].stack,層數 combo_point 只有符合條件的技能可以消耗（見層數說明）
+free,276,,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,279,,1,reference,cost.on_miss[0].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,279,,2,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,281,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,282,,1,budget.weak,,過弱：total 7.25 ÷ 可用預算 18.56 ＝ 39.1%（下限 70.0%，階級 1）
+free,283,,1,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,283,,2,value_error,effects[0],effects[0]（damage）：split_heal 必須搭配 affects: all
+free,284,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,286,,1,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（burning）
+free,287,,1,value_error,,只有主動技能可以有 cost.overdraft，收到 kind: reaction
+free,287,,2,value_error,,只有主動技能可以有 cost.on_miss，收到 kind: reaction
+free,287,,3,value_error,,反應技（kind: reaction）必須有 reaction
+free,291,,1,value_error,,武器技（category: weapon）的 weapon_req 只能是 melee、ranged，收到 any
+free,292,,1,value_error,,intercept 只能用在 event: ally_hit_adjacent 的反應技
+free,292,,2,value_error,,ally_hit_adjacent 的反應技必須有 intercept 效果
+free,292,,3,budget.weak,,過弱：total 3.40 ÷ 可用預算 10.80 ＝ 31.5%（下限 70.0%，階級 2）
+free,294,,1,value_error,effects[0],effects[0]（damage）：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果
+free,294,,2,reference,cost.on_miss[1].status,反噬不能使用硬控、跳過回合或持續傷害的狀態（bleed）
+free,294,,3,on_kill.beneficial,,擊殺時效果會作用在你自己身上，只能施加有益的狀態；「易傷」是負面狀態
+free,295,,1,reference,variants,稀有度 rare 最多帶 1 個變奏，收到 2 個
+free,299,,1,reference,shape.range,single 的 range 必須在 1–10，收到 12
+free,299,,1,reference,variants.v_fire.shape.range,single 的 range 必須在 1–10，收到 12
+free,299,,2,variant.v_fire.budget.weak,,焚界：過弱：total 19.77 ÷ 可用預算 35.55 ＝ 55.6%（下限 70.0%，階級 3）
+free,299,,3,variant.v_fire.budget.weak,,焚界：過弱：total 19.87 ÷ 可用預算 35.55 ＝ 55.9%（下限 70.0%，階級 3）
