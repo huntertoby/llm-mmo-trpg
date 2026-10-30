@@ -420,17 +420,23 @@ class PositionalBonus:
 
 
 def positional_bonus(
-    state: BattleState, attacker: UnitState, target: UnitState, profile: AttackProfile
+    state: BattleState,
+    attacker: UnitState,
+    target: UnitState,
+    profile: AttackProfile,
+    *,
+    backstab_allowed: bool = True,
 ) -> PositionalBonus:
     """一次命中判定的背刺與潛行偷襲加成。
 
     - 背刺：近戰攻擊（``profile.melee``）且攻擊者站在目標的背後格（目標朝向的反方向相鄰格）——
       命中 ``+backstab_hit_bonus``、暴擊範圍擴大 ``backstab_crit_range_bonus``。Boss 照常適用。
+      ``backstab_allowed=False``（連擊武器的後續幾下，BAL-8 ``backstab_first_only``）時不算背刺。
     - 潛行偷襲：攻擊者帶 ``concealed`` 狀態——命中 ``+ambush_hit_bonus``（攻擊結算完後由呼叫端
       移除隱蔽）。站在黑暗或草叢裡的隱蔽不算（只看狀態）。
     """
     core = state.ruleset.core
-    behind = profile.melee and is_behind(attacker.xy, target)
+    behind = backstab_allowed and profile.melee and is_behind(attacker.xy, target)
     backstab = core.backstab_hit_bonus if behind else 0
     ambush = core.ambush_hit_bonus if attacker.has_status(CONCEALED) else 0
     crit_range = profile.crit_range - (
@@ -452,6 +458,7 @@ def roll_attack(  # noqa: PLR0917
     profile: AttackProfile | None = None,
     *,
     bonus: int = 0,
+    backstab_allowed: bool = True,
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
@@ -470,7 +477,9 @@ def roll_attack(  # noqa: PLR0917
     cover = half_cover(state, attacker, target, profile)
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
-    positional = positional_bonus(state, attacker, target, profile)
+    positional = positional_bonus(
+        state, attacker, target, profile, backstab_allowed=backstab_allowed
+    )
     if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
         bonus += weapon_hit_bonus(attacker, manhattan(attacker.xy, target.xy))
     bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）

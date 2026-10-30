@@ -315,6 +315,8 @@ class WeaponDef(ContentModel):
     two_handed: bool = False
     paired: bool = False
     strikes: int = Field(default=1, ge=1, le=3)
+    backstab_first_only: bool = False
+    """（BAL-8 B18）連擊武器：背刺（命中與暴擊加成）只算第一下；預設 False ＝ 每下都吃。"""
     armor_break: ArmorBreak | None = None
     knockback: int = Field(default=0, ge=0, le=3)
     reach: int = Field(default=1, ge=1)

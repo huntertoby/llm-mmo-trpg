@@ -125,7 +125,12 @@ from trpg.engine.ai.summon import (
 )
 from trpg.engine.ai.terrain import is_terrain_only, terrain_estimate, terrain_gains
 from trpg.engine.ai.variant import cast_form, variant_move_bonus
-from trpg.engine.ai.weapon_range import best_distance, damage_permille_at, is_close_range
+from trpg.engine.ai.weapon_range import (
+    best_distance,
+    damage_permille_at,
+    is_close_range,
+    is_far_range,
+)
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.bombs import blast_tiles
@@ -476,7 +481,12 @@ def _close_range_term(
     """近距離武器的站位（BAL-5 B19）：打得到的敵人中距離傷害千分比最高者 × ``close_range``
     ÷ 1000。"""
     weapon = unit.weapon
-    if not w.close_range or not is_close_range(weapon, _KEEP_DISTANCE):
+    weight = 0
+    if w.close_range and is_close_range(weapon, _KEEP_DISTANCE):
+        weight = w.close_range
+    elif w.far_range and is_far_range(weapon, _KEEP_DISTANCE):
+        weight = w.far_range  # 遠距加成武器（BAL-8 火槍）：同樣的算式，偏好遠距
+    if not weight:
         return 0
     best = max(
         (
@@ -486,7 +496,7 @@ def _close_range_term(
         ),
         default=0,
     )
-    return w.close_range * best // _PERMILLE_AI
+    return weight * best // _PERMILLE_AI
 
 
 def _knock_collides(state: BattleState, unit: UnitState, enemy: UnitState) -> bool:
