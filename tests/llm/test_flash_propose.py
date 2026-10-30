@@ -41,6 +41,7 @@ from trpg.skillgen.flash_offer import (
     choose,
     make_offer,
     skill_before,
+    try_variation,
 )
 from trpg.skillgen.flash_state import SkillFlash, Variation, acquire
 from trpg.skillgen.usage import SkillUsage
@@ -482,3 +483,74 @@ def test_evaluation_entry_runs_on_the_mock_and_reports() -> None:
     assert stats.pass_permille > 0 and not stats.alert
     assert result.csv_lines()[0].startswith("skill,scenario")
     assert stats.name_samples
+
+
+# ---------------------------------------------------------------------------
+# 4-L10a F1／F2：目錄只列套得上的模板
+# ---------------------------------------------------------------------------
+
+
+def _applicable(request: FlashRequest) -> Any:
+    return lambda v: try_variation(LIB, request, v) is not None
+
+
+def _flash_skills() -> list[str]:
+    return [s for s in pick_skills(LIB, 12) if s in LIB.skills]
+
+
+@pytest.mark.parametrize("category", [None, "area", "element", "cost"])
+def test_catalog_lists_only_applicable_variations(category: str | None) -> None:
+    """套得上的篩選後：目錄的每個變化引擎都套得上，模板的參數選單只留套得上的值；指定類別時只有
+    該類（F2）。"""
+    dropped = 0
+    for skill_id in _flash_skills():
+        state = _used(acquire(skill_id))
+        request = FlashRequest(LIB.skills[skill_id], state, SkillUsage(), SEED, category=category)
+        before = skill_before(LIB, request)
+        full = build_catalog(LIB, request, before, major=False)
+        catalog = build_catalog(LIB, request, before, major=False, applicable=_applicable(request))
+        applicable = {k for k, v in full.pool.items() if try_variation(LIB, request, v)}
+        assert set(catalog.pool) == applicable, skill_id
+        for entry in catalog.entries:
+            variations = [v for v in catalog.pool.values() if v.template == entry.template]
+            assert variations, entry.template
+            assert set(entry.keywords) == {v.keyword for v in variations} - {None}
+        assert set(catalog.categories) == {e.category for e in catalog.entries}
+        if category is not None:
+            assert set(catalog.categories) <= {category}
+        dropped += len(full.pool) - len(catalog.pool)
+    assert dropped > 0  # 篩選確實拿掉了套不上的變化
+
+
+def test_unfiltered_catalog_is_unchanged() -> None:
+    request = _request()
+    before = skill_before(LIB, request)
+    full = build_catalog(LIB, request, before, major=False)
+    same = build_catalog(LIB, request, before, major=False, applicable=lambda _v: True)
+    assert full.entries == same.entries and full.categories == same.categories
+    assert list(full.pool) == list(same.pool)
+
+
+def test_proposal_prompt_and_schema_use_the_filtered_catalog() -> None:
+    """LLM 提議送出的 schema 列舉與 prompt 目錄只有套得上的模板（F1）。"""
+    for skill_id in _flash_skills():
+        for category in (None, "element"):
+            state = _used(acquire(skill_id))
+            request = FlashRequest(
+                LIB.skills[skill_id], state, SkillUsage(), SEED, category=category
+            )
+            client = MockLLMClient(['{"variations": []}'])
+            propose_variations(client, LIB, request, max_attempts=1)
+            if not client.schemas:
+                continue  # 目錄是空的：不呼叫模型
+            schema = client.schemas[0]
+            assert schema is not None
+            templates = schema["properties"]["variations"]["items"]["properties"]["template"]
+            before = skill_before(LIB, request)
+            full = build_catalog(LIB, request, before, major=False)
+            for template in templates["enum"]:
+                assert any(
+                    try_variation(LIB, request, v)
+                    for v in full.pool.values()
+                    if v.template == template
+                ), (skill_id, category, template)

@@ -356,7 +356,15 @@ def propose_variations(
     table = library.flash
     before = skill_before(library, request)
     major = slot_is_major(table.rules, request.state, request.nth)
-    catalog = build_catalog(library, request, before, major=major)
+    # 目錄只列這招套得上的模板與參數（4-L10a F1／F2）：模型看不到會被 flash.not_applicable 擋下的
+    # 選項；指定類別時目錄本來就只有該類
+    catalog = build_catalog(
+        library,
+        request,
+        before,
+        major=major,
+        applicable=lambda v: try_variation(library, request, v) is not None,
+    )
     want = table.pricing.rule(request.category is not None).options
     tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
     if not catalog.entries:
