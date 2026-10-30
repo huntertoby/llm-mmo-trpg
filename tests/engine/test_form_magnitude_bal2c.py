@@ -100,7 +100,7 @@ def test_only_the_favourable_parts_grow() -> None:
     assert treant.effects.heal_permille == 300 and treant.effects.move == -2
     assert [m.permille for m in treant.effects.damage_taken] == [1500]
     werewolf = rules.scaled_form("werewolf", 1500)
-    assert werewolf.effects.defense_permille == -100 and werewolf.effects.move == 1
+    assert werewolf.effects.defense_permille == -100 and werewolf.effects.move == 2  # 1.5 四捨五入
     assert werewolf.entry.heal_max_hp_permille == 150
     elemental = rules.scaled_form("elemental", 1500)
     assert elemental.natural_weapon.damage_permille == 150
@@ -197,3 +197,21 @@ def test_state_round_trip_keeps_the_magnitude_and_old_states_default() -> None:
     assert '"magnitude_permille":1300' not in old
     legacy = state_from_json(old).units[U1].form
     assert legacy is not None and legacy.magnitude_permille == 1000
+
+
+def test_integer_fields_round_half_up_and_weapon_damage_scales() -> None:
+    """BAL-2d：整數欄位四捨五入（half-up），天生武器傷害也放大；代價不放大。"""
+    rules = library().ruleset
+    cat = rules.scaled_form("cat", 1300)  # 移動 +1 × 1.3 -> 1；暴擊 +2 × 1.3 = 2.6 -> 3
+    assert cat.effects.move == 1 and cat.entry.next_attack_crit == 3
+    assert rules.scaled_form("cat", 1500).effects.move == 2  # 1.5 -> 2（half-up）
+    assert rules.scaled_form("cat", 1450).effects.move == 1  # 1.45 -> 1
+    assert rules.scaled_form("bear", 1500).effects.move == -1  # 代價不動
+    weapon = rules.form_def("elemental").natural_weapon.damage_permille
+    scaled = rules.scaled_form("elemental", 1250).natural_weapon.damage_permille
+    assert scaled == (weapon * 1250 + 500) // 1000
+    # 減傷離 100% 的距離也四捨五入；弱點不動
+    base = {m.element: m.permille for m in rules.form_def("shadow").effects.damage_taken}
+    got = {m.element: m.permille for m in rules.scaled_form("shadow", 1250).effects.damage_taken}
+    assert got[Element.PHYSICAL] == 1000 - ((1000 - base[Element.PHYSICAL]) * 1250 + 500) // 1000
+    assert got[Element.HOLY] == base[Element.HOLY]
