@@ -632,8 +632,11 @@ def test_whiteboards_can_transform_into_every_kind() -> None:
 
 def test_support_skill_transforms_to_a_defensive_stance_only() -> None:
     lib = library()
+    # 複合技（蓄力斬、格擋反擊）整招含接續段的傷害，轉型時算攻擊招（複合技轉型），不在此列
     heal = next(
-        s for s in _supports() if apply_variation(lib, s, _transform(STANCE), bonus=120, rng=Rng(1))
+        s
+        for s in _supports()
+        if s.followup is None and apply_variation(lib, s, _transform(STANCE), bonus=120, rng=Rng(1))
     )
     stance = apply_variation(
         lib, with_budget_bonus(heal, 120), _transform(STANCE), bonus=120, rng=Rng(1)

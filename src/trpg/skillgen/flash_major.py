@@ -41,7 +41,7 @@ from trpg.content.flash_templates import ExtraMajorTemplate, TransformTemplate
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import SkillSlots
-from trpg.content.skills import SkillDef, rarity_rank, skill_elements
+from trpg.content.skills import EffectSpec, SkillDef, rarity_rank, skill_elements
 from trpg.engine.shape_growth import grow_shape
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
@@ -120,9 +120,17 @@ def _base(skill: SkillDef) -> _Draft:
     return base, effects
 
 
+def _whole_effects(skill: SkillDef) -> tuple[EffectSpec, ...]:
+    """轉型的基底：整招的頂層效果，主段在前、接續段在後（複合技轉型帶走接續段；玩法 PM 決定，
+    ``docs/phases/複合技轉型報告.md``）。新種類都沒有接續段，接續段的效果併入新結構的效果清單。"""
+    followup = skill.followup.effects if skill.followup is not None else ()
+    return (*skill.effects, *followup)
+
+
 def skill_element_id(skill: SkillDef) -> str | None:
-    """技能的主題元素 ID（傷害效果的非物理元素優先，其次技能元素）；沒有時 ``None``。"""
-    for effect in skill.effects:
+    """技能的主題元素 ID（整招含接續段的傷害效果的非物理元素優先，其次技能元素）；沒有時
+    ``None``。"""
+    for effect in _whole_effects(skill):
         if effect.type == "damage" and effect.element not in (None, Element.PHYSICAL):
             assert effect.element is not None
             return effect.element.value
@@ -131,10 +139,10 @@ def skill_element_id(skill: SkillDef) -> str | None:
 
 
 def _hostile_core(skill: SkillDef) -> list[dict[str, Any]]:
-    """敵對的核心效果（傷害優先、再來狀態），最多 :data:`_MAX_CARRIED` 個；去掉骰子與倍率（新種類
-    由預算器重調）。"""
+    """整招（含接續段）敵對的核心效果（傷害優先、再來狀態；同類主段在前），最多
+    :data:`_MAX_CARRIED` 個；去掉骰子與倍率（新種類由預算器重調）。"""
     out: list[dict[str, Any]] = []
-    for effect in sorted(skill.effects, key=lambda e: e.type != "damage"):
+    for effect in sorted(_whole_effects(skill), key=lambda e: e.type != "damage"):
         if effect.type not in _CORE_TYPES or effect.affects not in _HOSTILE:
             continue
         item: dict[str, Any] = {"type": effect.type, "affects": "enemies"}
@@ -282,7 +290,7 @@ _STANCE_UPKEEPS = (1, 2, 0)
 def _stance_candidates(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
     """姿態轉型的（狀態, 維持費）候選：有傷害的招式先試同元素（沒有元素＝物理）的元素姿態階梯
     （3W-2b，隨階級變強），再試通用姿態；沒有傷害的招式只試防守姿態。"""
-    offense = any(e.type in ("damage", "delayed_damage") for e in skill.effects)
+    offense = any(e.type in ("damage", "delayed_damage") for e in _whole_effects(skill))
     known = lib.ruleset.statuses.by_id()
     out: list[tuple[str, int]] = []
     if offense:
