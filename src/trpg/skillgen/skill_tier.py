@@ -16,9 +16,10 @@
 - **點數固定的狀態／表面與升降地形放大效果本身**（3W-9b，``skill_budget.yaml`` 的
   ``retier_growth``）：表面與升降地形先換成格數較多的形狀（照角色階級的形狀與地形格數表），狀態與
   表面的持續回合可以放大到 ``stretch`` 的上限（只增不減）；不補傷害。
-- 沒有旋鈕的固定強度結構依序試：姿態換到元素姿態階梯上合適的一級、召喚物的最大 HP 加成、費用
-  （冷卻、資源）減輕，取比例最接近目標的；升降地形放大到上限仍不到 70% 時才補「落石」（多一個大地
-  傷害效果，強度照預算；與 3W-2b 地形變化模板、位移白板的小補強同一種例外）。
+- 沒有旋鈕的固定強度結構依序試：姿態換到元素姿態階梯上合適的一級、變身姿態的形態幅度（BAL-2c，
+  上限 2000‰）、召喚物的最大 HP 加成、費用（冷卻、資源）減輕，取比例最接近目標的；升降地形放大
+  到上限仍不到 70% 時才補「落石」（多一個大地傷害效果，強度照預算；與 3W-2b 地形變化模板、位移
+  白板的小補強同一種例外）。
 - 都做不出來時保留原本的數值（只換階級），由 :func:`retier_report` 標示「不在預算窗內」。
 
 戰鬥中不會變：重算只發生在戰鬥之間（:mod:`trpg.roguelite.progress` 的升級流程）。全部確定性：
@@ -58,6 +59,7 @@ __all__ = [
 RETIER_ATTEMPTS = 3
 """同一份草稿最多試幾次不同的調整亂數。"""
 _SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
+_PERMILLE = 1000
 _CACHE_LIMIT = 4096
 """內容庫上重配快取（``ContentLibrary.retier_cache``）的上限：滿了就清空。"""
 
@@ -258,6 +260,17 @@ def _stance_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int,
     return [{0: {"status": ladder[i]}} for i in order]
 
 
+def _form_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int, dict[str, Any]]]:
+    """變身姿態（BAL-2c）：形態幅度（``enter_form.magnitude_permille``）的每一級，由目前的值由近到遠
+    （級距同閃現的 ``rules.form_magnitudes``，上限 2000‰；1000 ＝ 拿掉）。維持費不動。"""
+    if moved.form_id is None:
+        return []
+    current = moved.form_magnitude
+    steps = library.flash.rules.form_magnitudes
+    order = sorted(steps, key=lambda v: (abs(v - current), v))
+    return [{0: {"magnitude_permille": None if v == _PERMILLE else v}} for v in order]
+
+
 def _summon_variants(moved: SkillDef) -> list[dict[int, dict[str, Any]]]:
     """召喚：召喚物的最大 HP 加成（‰）由小到大（0 ＝ 拿掉加成）。"""
     index = next((i for i, e in enumerate(moved.effects) if e.type == "summon"), None)
@@ -293,8 +306,13 @@ def _cost_drafts(moved: SkillDef) -> Iterator[Draft]:
 
 
 def _strength_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
-    """沒有旋鈕的固定強度結構：（姿態級別或召喚物 HP）×（費用減輕）的每個組合，依序試。"""
-    structures = _stance_variants(moved, library) or _summon_variants(moved) or [{}]
+    """沒有旋鈕的固定強度結構：（姿態級別、形態幅度或召喚物 HP）×（費用減輕）的每個組合，依序試。"""
+    structures = (
+        _stance_variants(moved, library)
+        or _form_variants(moved, library)
+        or _summon_variants(moved)
+        or [{}]
+    )
     for structure in structures:
         for cost in _cost_variants(moved):
             base, effects = base_draft(moved)

@@ -732,12 +732,13 @@ def _magnitude_drafts(
 ) -> list[Draft]:
     """沒有階梯的單一狀態姿態與變身姿態：維持費改成 ``upkeep``（變身姿態沒有每招維持費，不動），
     幅度（``magnitude_permille``，有利那一邊離 100% 的距離）換一格（``down`` 往低、否則往高；級距見
-    ``rules.stance_magnitudes``）。依距離現在由近到遠各一份草稿，第一個通過預算窗與強度下限的是
-    結果。"""
+    ``rules.stance_magnitudes``，變身姿態用較細的 ``rules.form_magnitudes``）。依距離現在由近到遠
+    各一份草稿，第一個通過預算窗與強度下限的是結果。"""
     start = skill.effects[0].magnitude_permille or 1000
-    values = library.flash.rules.stance_magnitudes
-    wanted = [v for v in values if v < start][::-1] if down else [v for v in values if v > start]
     form = skill.form_id is not None
+    rules = library.flash.rules
+    values = rules.form_magnitudes if form else rules.stance_magnitudes
+    wanted = [v for v in values if v < start][::-1] if down else [v for v in values if v > start]
     drafts: list[Draft] = []
     for value in wanted:
         base, effects = base_draft(skill)
