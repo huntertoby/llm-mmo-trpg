@@ -124,11 +124,32 @@ class FlashRules(ContentModel):
     usage_min_uses: int = Field(default=3, ge=0)
     """用法統計要有這麼多次放出才算數（3W-2）；不夠時先出通用變化（``generic``）。"""
     complete: CompleteSkillRules = CompleteSkillRules()
+    stance_magnitudes: tuple[int, ...] = (
+        1000,
+        1040,
+        1080,
+        1120,
+        1160,
+        1200,
+        1250,
+        1300,
+        1400,
+        1500,
+        1600,
+        1700,
+        1800,
+        1900,
+        2000,
+    )
+    """沒有階梯的單一狀態姿態（狂怒、堅壁…，BAL-2b）費用、修正類小變化可換到的姿態幅度（‰，
+    ``apply_status.magnitude_permille``）。比完整技能的級距寬：這些姿態是固定點數，角色階級高時
+    要靠幅度把預算分數拉進預算窗。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
         if self.major_flash > self.max_flashes:
             raise ValueError("major_flash 不可大於 max_flashes")
+        _ladder(self.stance_magnitudes, "stance_magnitudes")
         return self
 
     def budget_bonus_permille(self, flashes: int) -> int:

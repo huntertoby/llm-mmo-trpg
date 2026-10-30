@@ -409,7 +409,7 @@ def test_complete_skill_adjustment_is_not_weaker_and_replaces() -> None:
 
 def test_a_focused_category_with_no_option_is_refused_before_paying() -> None:
     lib = library()
-    stance = lib.skills["skill_bulwark_stance"]
+    stance = lib.skills["skill_form_bear"]  # 變身姿態沒有旋鈕（BAL-2b：堅壁等姿態改成合法）
     with pytest.raises(ValueError, match="沒有合格的變化"):
         make_offer(lib, FlashRequest(stance, _used(stance.id), SkillUsage(), SEED, category="cost"))
 

@@ -660,7 +660,14 @@ def _stance_drafts(
 def _op_stance_light(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """輕巧（姿態）：維持費 −1，換到較低的級別（效果降低）；沒有維持費可減就不出。"""
+    """輕巧（姿態）：維持費 −1，效果降低一級；沒有維持費可減就不出。
+
+    - 元素姿態（有階梯）：換到較低的級別；
+    - 其他單一狀態的姿態（狂怒、堅壁…）：姿態幅度降一格（不低於 100%）。
+    變身姿態沒有每招維持費與強度旋鈕（enter_form 必須是唯一的效果），不出（見 BAL-2b 報告）。"""
+    family = _stance_family(skill, library)
+    if family == "status" and skill.stance_upkeep > 0:
+        return _magnitude_drafts(skill, library, skill.stance_upkeep - 1, down=True)
     rung = _stance_rung(skill, library)
     if rung is None or skill.stance_upkeep <= 0:
         return []
@@ -671,7 +678,12 @@ def _op_stance_light(
 def _op_stance_heavy(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """蓄力（姿態）：維持費 +1（最多 2），換到較高的級別（效果提高）。"""
+    """蓄力（姿態）：維持費 +1（最多 2），效果提高一級。
+
+    - 元素姿態：換到較高的級別；其他單一狀態的姿態：姿態幅度提高。變身姿態不出。"""
+    family = _stance_family(skill, library)
+    if family == "status" and skill.stance_upkeep < MAX_STANCE_UPKEEP:
+        return _magnitude_drafts(skill, library, skill.stance_upkeep + 1, down=False)
     rung = _stance_rung(skill, library)
     if rung is None or skill.stance_upkeep >= MAX_STANCE_UPKEEP:
         return []
@@ -682,12 +694,52 @@ def _op_stance_heavy(
 def _op_stance_potency(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """修正（姿態）：維持費不變，換到較高的級別（效果提高，預算分數嚴格變大）。"""
+    """修正（姿態）：維持費不變，效果提高（預算分數嚴格變大）。
+
+    - 元素姿態：換到較高的級別；其他單一狀態的姿態：姿態幅度提高。變身姿態不出。"""
+    family = _stance_family(skill, library)
+    if family == "status":
+        return _magnitude_drafts(skill, library, skill.stance_upkeep, down=False)
     rung = _stance_rung(skill, library)
     if rung is None:
         return []
     ladder, index = rung
     return _stance_drafts(skill, ladder[index + 1 :], skill.stance_upkeep, ladder)
+
+
+def _stance_family(skill: SkillDef, library: ContentLibrary) -> str | None:
+    """姿態屬於哪一族（BAL-2b）：``ladder`` 元素姿態階梯、``form`` 變身姿態（目前不出）、
+    ``status`` 其他單一狀態的姿態（白板姿態：狂怒、堅壁…）；不是姿態或做不了時 ``None``。"""
+    if skill.kind != "stance":
+        return None
+    if skill.form_id is not None:
+        return "form"
+    if len(skill.effects) != 1 or skill.effects[0].type != "apply_status":
+        return None
+    status_id = skill.effects[0].status
+    if status_id is None:
+        return None
+    if library.flash.stance_rung(status_id) is not None:
+        return "ladder"
+    return "status" if library.ruleset.status_def(status_id).stance else None
+
+
+def _magnitude_drafts(
+    skill: SkillDef, library: ContentLibrary, upkeep: int, *, down: bool
+) -> list[Draft]:
+    """沒有階梯的單一狀態姿態：維持費改成 ``upkeep``，姿態幅度（``magnitude_permille``，有利那一邊
+    離 100% 的距離）換一格（``down`` 往低、否則往高；級距見 ``rules.stance_magnitudes``）。
+    依距離現在由近到遠各一份草稿，第一個通過預算窗與強度下限的是結果。"""
+    start = skill.effects[0].magnitude_permille or 1000
+    values = library.flash.rules.stance_magnitudes
+    wanted = [v for v in values if v < start][::-1] if down else [v for v in values if v > start]
+    drafts: list[Draft] = []
+    for value in wanted:
+        base, effects = base_draft(skill)
+        base["stance_upkeep"] = upkeep
+        effects[0]["magnitude_permille"] = value
+        drafts.append((base, effects))
+    return drafts
 
 
 # ---------------------------------------------------------------------------
