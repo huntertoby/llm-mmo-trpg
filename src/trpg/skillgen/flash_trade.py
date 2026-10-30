@@ -9,7 +9,10 @@
   :func:`~trpg.skillgen.flash_ops.tuning_extras`；收束只換威力，回傳空的）。
 
 另有 ``core``：單發上限要量的「對單一目標的核心數值」（預設 :func:`target_power`：傷害、治療、
-護盾各自的期望量）。
+護盾各自的期望量）；``knobs``：效果本身威力以外的旋鈕（BAL-10e 合體的召喚物 HP）。
+
+登錄表 :data:`TRADES`：收束（BAL-10d；BAL-10e 補陷阱與地面格）與精煉、合體、專注（BAL-10e，
+「拿掉什麼」在 :mod:`trpg.skillgen.flash_reclaim`）。
 
 **流程**（:func:`apply_trade`）：
 
