@@ -1214,9 +1214,29 @@ def _preview_score(
     if isinstance(action, UseSkill):
         score -= skill_cost(state, actor, action, w, profile.status_values)
         score += _rewrite_gains(state, actor, action, p, profile)
+        score += w.multi_target * extra_targets(state, actor, p)
     elif isinstance(action, Attack):  # 蓄力吐息（3J-2）：開始蓄力的收益是預計範圍內的敵人
         score += profile.weights.damage * _delayed_points(state, actor, p, profile.rewrite)
     return score
+
+
+def extra_targets(state: BattleState, actor: UnitState, p: Preview) -> Fraction:
+    """範圍技（BAL-5 B1）預期打到的敵人數超過 1 的部分：要命中判定的敵人各算命中率，不用判定、
+    在最少結果裡就受傷的敵人算 1；扣掉其中最大的一個（第一個目標本來就由傷害收益計分）。"""
+    chances: dict[UnitId, Fraction] = {
+        t.unit_id: t.hit_chance for t in p.targets if not t.ally and t.damage is not None
+    }
+    for e in p.min_events:
+        if (
+            isinstance(e, DamageDealt)
+            and e.target_id not in chances
+            and e.target_id in state.units
+            and state.units[e.target_id].team is not actor.team
+        ):
+            chances[e.target_id] = Fraction(1)
+    if len(chances) < 2:  # noqa: PLR2004
+        return Fraction(0)
+    return sum(chances.values(), Fraction(0)) - max(chances.values())
 
 
 _REWRITE_SCORED = frozenset(
