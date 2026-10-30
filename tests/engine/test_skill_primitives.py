@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from tests.engine.helpers import library, make_skill, no_reactions, with_rolls
+from tests.engine.helpers import ally_mana, library, make_skill, no_reactions, with_rolls
 from tests.engine.skill_helpers import SID, U1, U2, U3, battle, cast, hit_with, of
 from trpg.engine import ResolveResult, UseSkill, legal_actions, resolve
 from trpg.engine.events import (
@@ -45,9 +45,10 @@ def test_spell_damage_uses_dice_plus_attribute_and_the_hit_roll() -> None:
     assert dmg.amount == (7 * 1000 + mage_int * 500) // 1000  # 骰值 + 智力 × 0.5
     assert result.state.units[U2].hp == state.units[U2].hp - dmg.amount
     caster = result.state.units[U1]
-    assert (caster.ap, caster.mana) == (state.units[U1].ap - 1, 99 - 7)
+    paid = ally_mana(7)  # 我方付打折後的費用（BAL-4c）
+    assert (caster.ap, caster.mana) == (state.units[U1].ap - 1, 99 - paid)
     (used,) = of(result, SkillUsed)
-    assert (used.skill_id, used.ap, used.mana, used.mana_after) == (SID, 1, 7, 92)
+    assert (used.skill_id, used.ap, used.mana, used.mana_after) == (SID, 1, paid, 99 - paid)
 
 
 def test_a_miss_deals_no_damage_but_still_costs() -> None:
@@ -55,7 +56,7 @@ def test_a_miss_deals_no_damage_but_still_costs() -> None:
     result = cast(with_rolls(battle(skill, [(5, 3)]), [(20, 1)]), target_id=U2)
     assert not of(result, AttackRolled)[0].hit
     assert not of(result, DamageDealt)
-    assert result.state.units[U1].mana == 92
+    assert result.state.units[U1].mana == 99 - ally_mana(7)
 
 
 def test_critical_hit_doubles_the_dice_count() -> None:

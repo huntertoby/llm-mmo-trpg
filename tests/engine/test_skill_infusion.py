@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     caster_template,
     give_turn,
     library,
@@ -131,7 +132,7 @@ def test_infusing_costs_one_ap_and_the_skills_mana_and_cooldown_now() -> None:
     result = infuse(state, sid)
     after = result.state.units[U1]
     assert after.ap == owner.ap - 1
-    assert after.mana == owner.mana - 3
+    assert after.mana == owner.mana - ally_mana(3)  # 我方施放者付打折後的費用（BAL-4c）
     assert after.cooldowns[BOLT] == 2
     [event] = of(result, SkillInfused)
     assert (event.unit_id, event.owner_id, event.skill_id, event.ap) == (sid, U1, BOLT, 1)

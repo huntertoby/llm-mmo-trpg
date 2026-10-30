@@ -197,6 +197,11 @@ def with_rolls(state: BattleState, rolls: Sequence[tuple[int, int]]) -> BattleSt
     return s
 
 
+def ally_mana(raw: int) -> int:
+    """我方施放者實際付的法力（BAL-4c：``ally_mana_cost_permille`` 依施放者陣營打折）。"""
+    return library().ruleset.core.ally_mana(raw)
+
+
 def no_reactions(base: str = "bandit", **overrides: object) -> UnitTemplate:
     """沒有反應規則的範本（不格擋、不藉機攻擊），方便驗證其他規則。"""
     return template(base, reactions=[], **overrides)

@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     caster_template,
     give_turn,
     library,
@@ -377,13 +378,15 @@ def test_not_enough_mana_means_no_trigger_and_triggering_pays_the_mana(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     always(monkeypatch)
+    paid = ally_mana(5)  # 我方持有者付打折後的費用（BAL-4c）
     poor = _hit_scene(mana=5)
-    poor.units[U1].mana = 4
+    poor.units[U1].mana = paid - 1
     assert not triggered(attack(poor).events)
     rich = _hit_scene(mana=5)
     rich.units[U1].mana = 7
     result = attack(rich)
-    assert triggered(result.events)[0].mana_after == 2 and result.state.units[U1].mana == 2
+    left = 7 - paid
+    assert triggered(result.events)[0].mana_after == left and result.state.units[U1].mana == left
 
 
 def test_cooldown_blocks_the_next_trigger_until_it_expires(

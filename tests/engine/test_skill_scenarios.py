@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     caster_template,
     give_turn,
     library,
@@ -257,9 +258,10 @@ def test_not_enough_mana_makes_the_skill_illegal() -> None:
     state = battle(_bolt(mana=10), [(5, 3)])
     action = UseSkill(unit_id=U1, skill_id=SID, target_id=U2)
     assert action in legal_actions(state)
-    state.units[U1].mana = 9
+    need = ally_mana(10)  # 我方付打折後的費用（BAL-4c）
+    state.units[U1].mana = need - 1
     _unavailable(state, "法力不足")
-    state.units[U1].mana = 10
+    state.units[U1].mana = need
     assert action in legal_actions(state)
     assert resolve(state, action).state.units[U1].mana == 0
 

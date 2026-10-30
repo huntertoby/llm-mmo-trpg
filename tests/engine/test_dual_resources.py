@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     give_turn,
     library,
     make_map,
@@ -74,9 +75,10 @@ def test_not_enough_stamina_blocks_the_weapon_skill_with_a_reason() -> None:
 def test_not_enough_mana_blocks_the_spell_and_stamina_does_not_help() -> None:
     skill = make_skill(SID, {"type": "single", "range": 5}, [BOLT], cost={"mana": 6})
     state = battle(skill, [(5, 3)])
-    state.units[U1].mana = 5
+    need = ally_mana(6)  # 我方付打折後的費用（BAL-4c）
+    state.units[U1].mana = need - 1
     state.units[U1].stamina = 99
-    _blocked(state, "法力不足：需要 6，剩餘 5")
+    _blocked(state, f"法力不足：需要 {need}，剩餘 {need - 1}")
 
 
 def test_block_shares_the_stamina_pool_with_weapon_skills() -> None:
