@@ -90,6 +90,7 @@ from trpg.content.skills.effects import (
     SkillRuleError,
     _check_composition,
     composition_shapes,
+    error_path_of,
     true_only_params,
 )
 from trpg.content.skills.followup import _FOLLOWUP_CHECKS
@@ -281,7 +282,7 @@ class SkillDef(ContentModel):
                 f"{'、'.join(allowed)}，收到 {self.weapon_req}"
             )
         for index, effect in enumerate(self.effects):
-            self._check_effect(index, effect, top=True)
+            self._check_effect(f"effects[{index}]", effect, top=True)
         self._check_variance()
         self._add_gamble_tag()
         self._check_followup()
@@ -305,12 +306,38 @@ class SkillDef(ContentModel):
             raise ValueError("複合技能（有 followup）不能帶變奏")
         if self.is_activatable:
             raise ValueError("常駐類傳說（有 activation）不能帶變奏")
-        for variant in self.variants:
-            self._check_variant(variant)
+        for index, variant in enumerate(self.variants):
+            self._check_variant(index, variant)
             try:
                 self.variant_form(variant.id)
             except ValueError as exc:
-                raise ValueError(f"變奏「{variant.name_zh}」：{exc}") from None
+                raise SkillRuleError(
+                    f"變奏「{variant.name_zh}」：{exc}",
+                    path=self.variant_error_path(index, error_path_of(str(exc))),
+                ) from None
+
+    def variant_error_path(self, index: int, inner: str = "") -> str:
+        """變奏型態裡的錯誤路徑 → 技能（提議）裡的路徑（Phase 4-L10a）：型態的 ``effects[j]`` 是
+        變奏換上的效果時指向 ``variants[i].replace_effect.effect``、加上的效果時指向
+        ``variants[i].add_effect``，其餘是基礎技能自己的效果（原樣）；形狀錯誤在變奏有換形狀時指向
+        ``variants[i].shape``；``when`` 指向 ``variants[i].when``；沒有路徑時指向
+        ``variants[i]``。"""
+        variant = self.variants[index]
+        base = f"variants[{index}]"
+        match = re.match(r"effects\[(\d+)\](.*)$", inner)
+        if match is not None:
+            position, rest = int(match.group(1)), match.group(2)
+            swap = variant.replace_effect
+            if swap is not None and position == swap.index:
+                return f"{base}.replace_effect.effect{rest}"
+            if variant.add_effect is not None and position == len(self.effects):
+                return f"{base}.add_effect{rest}"
+            return inner
+        if inner.startswith("shape"):
+            return f"{base}.{inner}" if variant.shape is not None else inner
+        if not inner or inner.startswith("when"):
+            return f"{base}.{inner}" if inner else base
+        return inner
 
     def iter_effects(
         self,
@@ -347,27 +374,38 @@ class SkillDef(ContentModel):
         for root in roots:
             yield from walk_effect(root)
 
-    def _check_variant(self, variant: VariantSpec) -> None:
+    def _check_variant(self, position: int, variant: VariantSpec) -> None:
         main = self.main_damage_index
         swap = variant.replace_effect
+        at = f"variants[{position}]"
         if swap is not None:
+            where = f"{at}.replace_effect.index"
             if len(self.effects) == 1:
-                raise ValueError(f"變奏「{variant.name_zh}」：唯一的效果不能被 replace_effect 換掉")
+                raise SkillRuleError(
+                    f"變奏「{variant.name_zh}」：唯一的效果不能被 replace_effect 換掉", path=where
+                )
             if swap.index >= len(self.effects):
-                raise ValueError(
+                raise SkillRuleError(
                     f"變奏「{variant.name_zh}」：replace_effect.index {swap.index} 超出效果數"
-                    f" {len(self.effects)}"
+                    f" {len(self.effects)}",
+                    path=where,
                 )
             if swap.index == main:
-                raise ValueError(f"變奏「{variant.name_zh}」：主傷害（第 {main} 個效果）不能被換掉")
+                raise SkillRuleError(
+                    f"變奏「{variant.name_zh}」：主傷害（第 {main} 個效果）不能被換掉", path=where
+                )
         if variant.element is not None and main is None:
-            raise ValueError(f"變奏「{variant.name_zh}」：沒有傷害效果，不能換元素（element）")
+            raise SkillRuleError(
+                f"變奏「{variant.name_zh}」：沒有傷害效果，不能換元素（element）",
+                path=f"{at}.element",
+            )
         if variant.range_delta is not None:
             shape = variant.shape or self.shape
             if not isinstance(shape.range, int):
-                raise ValueError(
+                raise SkillRuleError(
                     f"變奏「{variant.name_zh}」：range_delta 只能用在射程是數字的形狀，"
-                    f"收到 {shape.type} 的射程 {shape.range!r}"
+                    f"收到 {shape.type} 的射程 {shape.range!r}",
+                    path=f"{at}.range_delta",
                 )
 
     @property
@@ -638,10 +676,11 @@ class SkillDef(ContentModel):
         if bomb.dice is None or bomb.element is None or bomb.rounds is None or bomb.radius is None:
             raise ValueError("delayed_damage 必須填 dice、element、rounds、radius")
 
-    def _check_on_kill(self, where: str, effect: EffectSpec, *, top: bool) -> None:
+    def _check_on_kill(self, at: str, effect: EffectSpec, *, top: bool) -> None:
         """``on_kill``（Phase 3D-8b）：只有主動技能自己的 ``damage`` 效果可以有；內容 1–2 個、類型在
         :data:`ON_KILL_TYPES`、對象只能是施放者；``refund_ap`` 與 ``refund_cooldown`` 只能出現在
         ``on_kill`` 裡。"""
+        where = f"{at}（{effect.type}）"
         if effect.type in (REFUND_AP, REFUND_COOLDOWN):
             raise ValueError(f"{where}：{effect.type} 只能出現在 on_kill 裡")
         if effect.on_kill is None:
@@ -654,10 +693,11 @@ class SkillDef(ContentModel):
         if not 1 <= len(subs) <= MAX_ON_KILL_EFFECTS:
             raise ValueError(f"{where}：on_kill 必須有 1 到 {MAX_ON_KILL_EFFECTS} 個效果")
         for i, sub in enumerate(subs):
-            self._check_on_kill_sub(f"{where}.on_kill[{i}]（{sub.type}）", sub)
+            self._check_on_kill_sub(f"{at}.on_kill[{i}]", sub)
 
-    def _check_on_kill_sub(self, at: str, sub: EffectSpec) -> None:
-        """``on_kill`` 的一個效果：類型、對象與各類型自己的欄位。"""
+    def _check_on_kill_sub(self, path: str, sub: EffectSpec) -> None:
+        """``on_kill`` 的一個效果：類型、對象與各類型自己的欄位（``path`` 是完整路徑，4-L10a）。"""
+        at = f"{path}（{sub.type}）"
         if sub.type not in ON_KILL_TYPES:
             raise ValueError(f"{at}：只能使用 {'、'.join(ON_KILL_TYPES)}")
         if sub.condition is not None or sub.affects not in (None, "self"):
@@ -671,7 +711,7 @@ class SkillDef(ContentModel):
             if not self.cost.cooldown:
                 raise ValueError(f"{at}：技能沒有冷卻（cost.cooldown），沒有東西可以歸零")
         else:
-            self._check_effect(0, sub)
+            self._check_effect(path, sub)
 
     def _check_runes(self) -> None:
         """刻印（Phase 3-23）：``inscribe`` 恰好填 ``element`` 或 ``tag`` 其中一個（標籤符文不可同時
@@ -746,7 +786,7 @@ class SkillDef(ContentModel):
                 raise ValueError(
                     f"{where}.effects[{sub_index}]：區域的效果不可自帶 affects 或 condition"
                 )
-            self._check_effect(0, sub)
+            self._check_effect(f"effects[0].effects[{sub_index}]", sub)
 
     def _check_gamble(self) -> None:
         """賭博型（Phase 3D-7a）：``gamble`` 只能用在主動技能、每個技能一個而且是最後一個效果
@@ -764,7 +804,7 @@ class SkillDef(ContentModel):
         if not gambles:
             return
         # 只能用在主動技能、最多一個、最後一個效果：skill_primitives.yaml（_check_composition）
-        self._check_gamble_effect(gambles[0], f"effects[{len(self.effects) - 1}]（gamble）")
+        self._check_gamble_effect(gambles[0], f"effects[{len(self.effects) - 1}]")
 
     def _check_on_miss(self) -> None:
         """``cost.on_miss``（失手反噬）：只有主動技能可以有。"""
@@ -774,8 +814,9 @@ class SkillDef(ContentModel):
             raise ValueError(f"只有主動技能可以有 cost.on_miss，收到 kind: {self.kind}")
         self._check_branch("cost.on_miss", self.cost.on_miss, BACKLASH_TYPES, backlash=True)
 
-    def _check_gamble_effect(self, gamble: EffectSpec, where: str) -> None:
+    def _check_gamble_effect(self, gamble: EffectSpec, path: str) -> None:
         """``gamble`` 效果本身：必填 ``chance_permille``、``win`` 與 ``lose`` 至少一邊有效果。"""
+        where = f"{path}（gamble）"
         if gamble.chance_permille is None:
             raise ValueError(f"{where}：必須填 chance_permille")
         if not (gamble.win or gamble.lose):
@@ -783,7 +824,13 @@ class SkillDef(ContentModel):
         for name in ("win", "lose"):
             branch = getattr(gamble, name) or ()
             if branch:
-                self._check_branch(f"{where}.{name}", branch, GAMBLE_BRANCH_TYPES, backlash=False)
+                self._check_branch(
+                    f"{where}.{name}",
+                    branch,
+                    GAMBLE_BRANCH_TYPES,
+                    backlash=False,
+                    path=f"{path}.{name}",
+                )
 
     def _check_branch(
         self,
@@ -792,9 +839,11 @@ class SkillDef(ContentModel):
         allowed: tuple[str, ...],
         *,
         backlash: bool,
+        path: str | None = None,
     ) -> None:
         """賭注分支或失手反噬的效果列表：1–2 個、類型在 ``allowed`` 內、不自帶 ``condition``；
-        反噬的對象只能是施放者自己；倍率與自傷各至多一個，而且技能要有傷害效果可以乘。"""
+        反噬的對象只能是施放者自己；倍率與自傷各至多一個，而且技能要有傷害效果可以乘。
+        ``path`` 是分支的完整路徑（省略＝``where``；4-L10a 讓巢狀錯誤帶完整路徑）。"""
         if not 1 <= len(branch) <= _MAX_BRANCH_EFFECTS:
             raise ValueError(
                 f"{where}：必須有 1 到 {_MAX_BRANCH_EFFECTS} 個效果，收到 {len(branch)}"
@@ -812,7 +861,7 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{at}：不能用 affects: tiles")
             self._check_branch_fields(at, sub, has_damage=has_damage)
             if sub.type not in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
-                self._check_effect(0, sub)
+                self._check_effect(f"{path or where}[{i}]", sub)
         for special in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
             if sum(1 for e in branch if e.type == special) > 1:
                 raise ValueError(f"{where}：每個分支最多一個 {special}")
@@ -960,10 +1009,8 @@ class SkillDef(ContentModel):
             raise ValueError(f"modifiers：{RUNE_BOTH_MESSAGE}")
         for rule_index, rule in enumerate(self.modifiers):
             for index, effect in enumerate(rule.change.on_hit_effects or ()):
-                try:
-                    self._check_effect(index, effect)
-                except ValueError as exc:
-                    raise ValueError(f"modifiers[{rule_index}].change.on_hit_{exc}") from None
+                at = f"modifiers[{rule_index}].change.on_hit_effects[{index}]"
+                self._check_effect(at, effect)
 
     def _check_gear_limits(self) -> None:
         """武器親和與限定武器的結構（3I-5，6.10 #50）：``wielding_weapon`` 只能寫在效果上（沒拿
@@ -1008,10 +1055,10 @@ class SkillDef(ContentModel):
         if banned:
             raise ValueError(f"陷阱技能不能有 {'、'.join(banned)}（陷阱觸發時才結算其餘效果）")
 
-    def _check_consume_status(self, index: int, effect: EffectSpec) -> None:
+    def _check_consume_status(self, at: str, effect: EffectSpec) -> None:
         """``consume_status`` 的結構（3C-3b）：``then`` 1–2 個、只能用 :data:`CONSUME_THEN_TYPES`、
         不自帶對象；``scale``、``splash``、``then`` 只屬於 ``consume_status``。"""
-        where = f"effects[{index}]（{effect.type}）"
+        where = f"{at}（{effect.type}）"
         if effect.type != CONSUME_STATUS:
             if effect.then is not None or effect.scale is not None or effect.splash is not None:
                 raise ValueError(f"{where}：只有 consume_status 使用 then、scale、splash")
@@ -1033,7 +1080,7 @@ class SkillDef(ContentModel):
                 raise ValueError(
                     f"{where}.then[{sub_index}]：then 的效果不可自帶 affects 或 condition"
                 )
-            self._check_effect(index, sub)
+            self._check_effect(f"{at}.then[{sub_index}]", sub)
 
     def _check_restore_resource(self, where: str, effect: EffectSpec) -> None:
         """``restore_resource`` 的結構（3D-1）：必須填 ``resource``；冷卻最多 −2。"""
@@ -1092,13 +1139,13 @@ class SkillDef(ContentModel):
             raise ValueError(f"{where}：split_heal 不能與 lifesteal、explode、scaling 並用")
 
     @staticmethod
-    def _check_true_only(index: int, where: str, effect: EffectSpec) -> None:
+    def _check_true_only(at: str, where: str, effect: EffectSpec) -> None:
         """只能填 ``true`` 的開關（資料見 :func:`true_only_params`）：填 ``false`` 一律擋下。"""
         for name in sorted(true_only_params().get(effect.type, ())):
             if getattr(effect, name, None) is False:
                 raise SkillRuleError(
                     f"{where}：{name} 只能填 true（不啟用就省略）",
-                    path=f"effects[{index}].{name}",
+                    path=f"{at}.{name}",
                     code="flag.true_only",
                 )
 
@@ -1111,12 +1158,14 @@ class SkillDef(ContentModel):
         if not any(e.type == "damage" for e in self.effects):
             raise ValueError("crit_range、damage_permille 需要技能有傷害效果")
 
-    def _check_effect(self, index: int, effect: EffectSpec, *, top: bool = False) -> None:
-        where = f"effects[{index}]（{effect.type}）"
-        self._check_true_only(index, where, effect)
+    def _check_effect(self, at: str, effect: EffectSpec, *, top: bool = False) -> None:
+        """一個效果的結構；``at`` 是它的完整路徑（``effects[0]``、``cost.on_miss[1]``、
+        ``effects[0].then[0]``…；4-L10a：巢狀效果的錯誤指向自己，不再一律報 ``effects[0]``）。"""
+        where = f"{at}（{effect.type}）"
+        self._check_true_only(at, where, effect)
         self._check_variable_damage(where, effect, top=top)
-        self._check_on_kill(where, effect, top=top)
-        self._check_consume_status(index, effect)
+        self._check_on_kill(at, effect, top=top)
+        self._check_consume_status(at, effect)
         if effect.type == RESET_COOLDOWN:
             if effect.which is None:
                 raise ValueError(f"{where}：reset_cooldown 必須填 which（all 或 tag）")

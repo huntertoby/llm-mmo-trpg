@@ -70,6 +70,7 @@ from trpg.content.skills import (
     SkillRuleError,
     TriggerSpec,
     VariantWhen,
+    error_path_of,
     rarity_rank,
     skill_elements,
     weapon_problem,
@@ -1333,23 +1334,38 @@ def _message_zh(error: Mapping[str, Any]) -> tuple[str, tuple[str, ...]]:
     return message, allowed
 
 
-_EFFECT_REF = re.compile(r"(?:followup\.)?effects\[\d+\](?:\.[A-Za-z_]\w*)?")
+_VARIANT_PATH = re.compile(r"^variants\.([^.\[]+)(?:\.(.*))?$")
+
+
+def _proposal_path(path: str, skill: SkillDef | None = None) -> str:
+    """``SkillDef`` 的錯誤路徑 → 提議的路徑（Phase 4-L10a）：``cost.on_miss`` 在提議裡是
+    ``cost_on_miss``；跨檔案驗證以變奏 ID 標的 ``variants.<id>.…`` 換成 ``variants[i]`` 並把型態的
+    效果對回變奏的 ``add_effect``／``replace_effect.effect``（見
+    :meth:`~trpg.content.skills.SkillDef.variant_error_path`）。"""
+    match = _VARIANT_PATH.match(path)
+    if match is not None and skill is not None:
+        ids = [v.id for v in skill.variants]
+        if match.group(1) in ids:
+            path = skill.variant_error_path(ids.index(match.group(1)), match.group(2) or "")
+    return path.replace("cost.on_miss", "cost_on_miss")
 
 
 def _skill_path(error: Mapping[str, Any], loc_path: str, message: str) -> str:
     """``SkillDef`` 自己的檢查（``stage: skill``）的路徑（Phase 4-L5b）：驗證器以
-    :class:`~trpg.content.skills.SkillRuleError` 帶出的路徑優先；否則從訊息找 ``effects[i]``；
-    訊息講形狀時指向 ``shape``；都沒有就只用 pydantic 的位置（技能層級為空字串）。"""
+    :class:`~trpg.content.skills.SkillRuleError` 帶出的路徑優先；否則從訊息找效果的完整路徑
+    （含巢狀的 ``then``、``on_kill``、賭注分支與失手反噬，4-L10a）；訊息講形狀時指向 ``shape``；
+    都沒有就只用 pydantic 的位置（技能層級為空字串）。"""
     raw = (error.get("ctx") or {}).get("error")
     found = ""
     if isinstance(raw, SkillRuleError):
         found = raw.path
-    elif (match := _EFFECT_REF.search(message)) is not None:
-        found = match.group(0)
+    elif found := error_path_of(message):
+        pass
     elif "形狀" in message:
         found = "shape"
     if not found:
         return loc_path
+    found = _proposal_path(found)
     return f"{loc_path}.{found}" if loc_path else found
 
 
@@ -1376,11 +1392,18 @@ def _pydantic_errors(exc: ValidationError, stage: Stage, data: object) -> list[P
     return out
 
 
-def _rule_error(rule: str, message: str) -> ProposalError:
+def _rule_error(rule: str, message: str, skill: SkillDef | None = None) -> ProposalError:
+    """跨檔案驗證的一項違規 → 錯誤：訊息開頭的路徑優先；變奏型態的違規（``variant.<id>.…``）
+    指向該變奏（訊息提到的效果對回變奏換上或加上的效果）；其餘從訊息找效果路徑（4-L10a）。"""
     match = _PATH_PREFIX.match(message)
-    if match is None:
-        return ProposalError(stage="rules", path="", code=rule, message=message)
-    return ProposalError(stage="rules", path=match.group(1), code=rule, message=match.group(2))
+    if match is not None:
+        path = _proposal_path(match.group(1), skill)
+        return ProposalError(stage="rules", path=path, code=rule, message=match.group(2))
+    path = error_path_of(message)
+    variant = re.match(r"^variant\.([^.]+)\.", rule)
+    if variant is not None and skill is not None:
+        path = _proposal_path(f"variants.{variant.group(1)}.{path}".rstrip("."), skill)
+    return ProposalError(stage="rules", path=_proposal_path(path), code=rule, message=message)
 
 
 def _layout_hints(errors: list[ProposalError], models: ProposalModels) -> list[ProposalError]:
@@ -1422,7 +1445,8 @@ def evaluate_proposal(
         return ProposalResult(None, tuple(_pydantic_errors(exc, "skill", data)))
     violations = validate_skill(skill, library)
     if violations:
-        return ProposalResult(None, tuple(_rule_error(v.rule, v.message) for v in violations))
+        rule_errors = tuple(_rule_error(v.rule, v.message, skill) for v in violations)
+        return ProposalResult(None, rule_errors)
     extra = [*_unheld_errors(skill, ctx), *_topic_errors(skill, ctx, library)]
     return ProposalResult(None, tuple(extra)) if extra else ProposalResult(skill, ())
 
