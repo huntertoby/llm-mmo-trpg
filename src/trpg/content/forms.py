@@ -284,16 +284,18 @@ class FormTable(ContentModel):
 
 
 def _gain(value: int, magnitude: int) -> int:
-    """對自己有利的正值（加成、格數）× 幅度（無條件捨去）；0 與負值（代價）照原值。"""
-    return value * magnitude // PERMILLE if value > 0 else value
+    """對自己有利的正值（加成、格數、天生武器傷害）× 幅度（整數四捨五入 half-up：
+    ``(value × 幅度 + 500) // 1000``）；0 與負值（代價）照原值。"""
+    return (value * magnitude + PERMILLE // 2) // PERMILLE if value > 0 else value
 
 
 def _less_taken(permille: int, magnitude: int) -> int:
-    """受傷倍率：低於 1000（減傷）的部分離 1000 的距離 × 幅度（無條件捨去，最低 0）；高於 1000 的
-    （弱點，代價）照原值。和姿態的 ``scaled_permille``（``down``）同一個算法。"""
+    """受傷倍率：低於 1000（減傷）的部分離 1000 的距離 × 幅度（四捨五入 half-up，
+    最低 0）；高於 1000 的（弱點，代價）照原值。和姿態的 ``scaled_permille``（``down``）同一個
+    算法。"""
     if permille >= PERMILLE:
         return permille
-    return max(0, PERMILLE - (PERMILLE - permille) * magnitude // PERMILLE)
+    return max(0, PERMILLE - ((PERMILLE - permille) * magnitude + PERMILLE // 2) // PERMILLE)
 
 
 def _scaled_entry(entry: FormEntry, magnitude: int) -> FormEntry:

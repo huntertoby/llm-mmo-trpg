@@ -132,3 +132,37 @@ def test_over_150_only_when_no_capped_path_reaches_120() -> None:
         cap = base * Fraction(1000 + rules.cap_permille, 1000)
         start = with_budget_bonus(before, rules.budget_permille)
         assert _climb(lib, rules, start, target, cap)[1] < target
+
+
+FORM_SKILLS = (
+    "skill_form_bear",
+    "skill_form_cat",
+    "skill_form_demon",
+    "skill_form_dragon",
+    "skill_form_elemental",
+    "skill_form_giant",
+    "skill_form_roc",
+    "skill_form_shadow",
+    "skill_form_treant",
+    "skill_form_werewolf",
+)
+
+
+@pytest.mark.parametrize("skill_id", FORM_SKILLS)
+def test_form_skill_gets_a_bigger_form_magnitude(skill_id: str) -> None:
+    """BAL-2d：變身技能的完整版把 +120‰ 加在形態幅度上（級距 ``form_magnitudes``）。"""
+    lib = library()
+    before, after = _done(skill_id)
+    assert after.effects[0].type == "enter_form"
+    assert after.form_magnitude > before.form_magnitude
+    assert after.form_magnitude in lib.flash.rules.form_magnitudes
+    gain = complete_gain_permille(before, after, lib)
+    assert validate_skill(after, lib) == []
+    if gain < GAIN:
+        # 達上限：再加一格（50‰）就超出預算窗（1 階的形態停在 +100‰，已記錄於 BAL-2d 報告）
+        steps = lib.flash.rules.form_magnitudes
+        nxt = steps[steps.index(after.form_magnitude) + 1]
+        data = after.model_dump(mode="json")
+        data["effects"][0]["magnitude_permille"] = nxt
+        rules = {v.rule for v in validate_skill(SkillDef.model_validate(data), lib)}
+        assert "budget.over" in rules

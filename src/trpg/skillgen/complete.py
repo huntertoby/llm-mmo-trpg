@@ -195,6 +195,13 @@ def _strength_knobs(
             and status.stance
         ):
             field, steps = "magnitude_permille", rules.stance_magnitude_steps
+        elif effect["type"] == "enter_form":
+            # 變身技能：形態幅度（BAL-2d），照 form_magnitudes 的級距往上一格一格加
+            start = int(effect.get("magnitude_permille") or _PERMILLE)
+            effect["magnitude_permille"] = start
+            values = tuple(v for v in library.flash.rules.form_magnitudes if v >= start)
+            knobs.append(Knob(index, "magnitude_permille", values))
+            continue
         else:
             continue
         start = int(effect.get(field) or _PERMILLE)
