@@ -7,7 +7,9 @@ AI 把「灌注 ``skill`` 給召喚物 ``s``」當作一個候選動作：
   預覽評分（呼叫端負責）；
 - **存活機率**（:func:`survival`，保守估計）：召喚物 HP ÷（HP ＋ 能打到牠的敵人數 ×
   ``infuse_threat_damage``）；能打到 ＝ 敵人與召喚物的距離不超過敵人的武器射程 ＋ 速度；
-- 分數 ＝ 技能價值 × ``infuse_value_permille`` ‰ × 存活機率；只在高於其他動作的最佳分數時灌注。
+- 分數 ＝ 技能價值 × ``infuse_value_permille`` ‰ × 存活機率 × 省下的 AP（BAL-5 B5：灌注固定花
+  ``summon_infuse_ap_cost``，技能本身要 2 AP 時省 1 AP，乘 技能 AP ÷ 灌注 AP，至少 1）；只在高於
+  其他動作的最佳分數時灌注。
 
 敵我規則對稱（任何由效用 AI 操作、帶著召喚物的施放者都會考慮）。
 """
@@ -24,7 +26,7 @@ from trpg.engine.rules.geometry import manhattan
 from trpg.engine.skill_infusion import infuse_problem, infused_pick, snapshot
 from trpg.engine.state import BattleState, UnitState
 
-__all__ = ["InfuseSetup", "infuse_setups", "infuse_value", "survival"]
+__all__ = ["InfuseSetup", "ap_ratio", "infuse_setups", "infuse_value", "survival"]
 
 _PERMILLE = 1000
 
@@ -92,6 +94,15 @@ def infuse_setups(
             yield InfuseSetup(action, _cast_state(state, owner, summon, skill_id), found[0])
 
 
-def infuse_value(score: Fraction, chance: Fraction, rules: SummonAiRules) -> Fraction:
-    """灌注的分數：技能價值 × ``infuse_value_permille`` ‰ × 存活機率。"""
-    return score * Fraction(rules.infuse_value_permille, _PERMILLE) * chance
+def ap_ratio(state: BattleState, skill_id: str) -> Fraction:
+    """灌注省下的 AP 比例（BAL-5 B5）：技能 AP ÷ 灌注 AP，至少 1。"""
+    cost = max(state.ruleset.core.summon_infuse_ap_cost, 1)
+    skill_ap = state.ruleset.skill_def(skill_id).ap_cost or 1
+    return max(Fraction(skill_ap, cost), Fraction(1))
+
+
+def infuse_value(
+    score: Fraction, chance: Fraction, rules: SummonAiRules, ratio: Fraction = Fraction(1)
+) -> Fraction:
+    """灌注的分數：技能價值 × ``infuse_value_permille`` ‰ × 存活機率 × 省下的 AP 比例。"""
+    return score * Fraction(rules.infuse_value_permille, _PERMILLE) * chance * ratio

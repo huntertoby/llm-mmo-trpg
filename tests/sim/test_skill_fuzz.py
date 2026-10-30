@@ -147,8 +147,8 @@ def test_one_thousand_skills_pass_everything_and_the_summary_is_reproducible() -
 def test_a_passive_is_fought_and_its_triggers_are_counted() -> None:
     library = lib()
     ember = library.skills["skill_second_wind"]
-    # 3D-8d：朝向與背刺改變了 AI 的走位，種子 3 的戰鬥裡回氣不再觸發；改用會觸發的種子 2
-    outcome = check_skill(library, 2, with_battle=False, attempts=1, skill=ember)
+    # 3D-8d：朝向與背刺改變了 AI 的走位，種子 3 → 2；BAL-5 AI 調整後種子 2 → 0
+    outcome = check_skill(library, 0, with_battle=False, attempts=1, skill=ember)
     assert outcome.error is None and outcome.castable and outcome.battle_ran
     assert outcome.triggers > 0
     text = format_report(FuzzReport(2, outcomes=[outcome], primitive_ids=(), status_ids=()))
