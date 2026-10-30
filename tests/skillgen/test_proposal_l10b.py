@@ -34,7 +34,13 @@ from trpg.skillgen.proposal import (
     build_proposal_models,
     evaluate_proposal,
 )
-from trpg.skillgen.proposal_budget import budget_filler, evaluate_with_repair, lift_weak
+from trpg.skillgen.proposal_budget import (
+    budget_filler,
+    cap_cooldown,
+    evaluate_with_repair,
+    is_repairable,
+    lift_weak,
+)
 from trpg.skillgen.proposal_layouts import layout_of_effects
 from trpg.skillgen.random_composer import default_library
 from trpg.skillgen.validate import validate_skill
@@ -289,3 +295,75 @@ def test_weak_steps_lower_ap_and_only_add_back_cooldown_or_mana(library: Content
         assert (step.cooldown or 0) <= rules.max_cooldown
     keys = [((s.cooldown or 0), (s.mana or 0)) for s in rules.weak_steps]
     assert keys == sorted(keys)  # 由輕到重
+
+
+# ---------------------------------------------------------------------------
+# B2：復活與改寫規則型原語的「每場一次或最低冷卻」由引擎補冷卻
+# ---------------------------------------------------------------------------
+
+B2_CASES: dict[str, tuple[str, str, dict[str, Any], str | None]] = {
+    # 原語: (規則代碼, 版型, 形狀, 對象)
+    "revive": ("cap.revive_cost", "revive", {"type": "single", "range": 3}, None),
+    "grant_ap": ("cap.rule_rewrite_cost", "standard", {"type": "self"}, "self"),
+    "reset_cooldown": ("cap.rule_rewrite_cost", "standard", SINGLE, "allies"),
+    "cheat_death": ("cap.rule_rewrite_cost", "standard", SINGLE, "allies"),
+    "redirect_damage": ("cap.rule_rewrite_cost", "standard", SINGLE, "allies"),
+    "copy_skill": ("cap.rule_rewrite_cost", "copy_skill", {"type": "self"}, None),
+    "extra_reaction": ("cap.rule_rewrite_cost", "standard", SINGLE, "allies"),
+}
+
+
+def _b2_proposal(primitive: str) -> tuple[str, dict[str, Any]]:
+    code, layout, shape, affects = B2_CASES[primitive]
+    effect: dict[str, Any] = {"type": primitive}
+    if affects is not None:
+        effect["affects"] = affects
+    if primitive == "reset_cooldown":
+        effect["which"] = "all"
+    return code, {
+        "layout": layout,
+        "kind": "active",
+        "skeleton": "aura",
+        "category": "spell",
+        "weapon_req": "any",
+        "scaling_attr": "wis",
+        "shape": shape,
+        "effects": [effect],
+    }
+
+
+@pytest.mark.parametrize("primitive", sorted(B2_CASES))
+@pytest.mark.parametrize("tier", [1, 3])
+def test_rule_rewrite_and_revive_cost_are_repaired_with_a_cooldown(
+    library: ContentLibrary, models: ProposalModels, primitive: str, tier: int
+) -> None:
+    code, proposal = _b2_proposal(primitive)
+    ctx = ProposalContext(tier, "epic")
+    plain = evaluate_proposal(proposal, models, library, ctx, fill=budget_filler(library, seed=3))
+    assert code in [e.code for e in plain.errors]
+    evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=3)
+    assert code in evaluation.repaired
+    left = [e.code for e in evaluation.result.errors]
+    assert code not in left
+    if tier > 1:  # 單獨一個固定點數的原語在 3 階補不到下限：只剩 budget.weak（B1 範圍，照舊回報）
+        assert set(left) <= {"budget.weak"}
+        return
+    assert evaluation.ok, evaluation.result.errors
+    skill = evaluation.result.skill
+    assert skill is not None and validate_skill(skill, library) == []
+    assert skill.cost.uses_per_battle is None  # 補冷卻，不是每場一次
+    assert (skill.cost.cooldown or 0) >= library.budget.rule_rewrite_min_cooldown
+
+
+def test_cap_cooldown_comes_from_the_budget_rules(library: ContentLibrary) -> None:
+    budget = library.budget
+    paid = {"cost": {"source": 1}}
+    assert cap_cooldown(library, "cap.rule_rewrite_cost", paid) == (
+        budget.rule_rewrite_min_cooldown_with_source
+    )
+    assert cap_cooldown(library, "cap.rule_rewrite_cost", {}) == budget.rule_rewrite_min_cooldown
+    assert cap_cooldown(library, "cap.revive_cost", paid) == budget.rule_rewrite_min_cooldown
+    assert cap_cooldown(library, "budget.weak", paid) == 0
+    for code in ("cap.revive_cost", "cap.rule_rewrite_cost", "followup.cap.rule_rewrite_cost"):
+        assert is_repairable(code, library)
+    assert not is_repairable("cap.rule_rewrite", library)  # 超過個數是結構問題

@@ -187,6 +187,8 @@ def test_repairable_codes(library: ContentLibrary) -> None:
         "budget.weak",
         "skeleton.core_share",
         "skeleton.secondary_share",
+        "cap.revive_cost",  # 4-L10b B2
+        "cap.rule_rewrite_cost",
     )
     # 補冷卻即可的互斥規則由 skill_exclusions.yaml 推導
     assert cooldown_repairs(library) == {

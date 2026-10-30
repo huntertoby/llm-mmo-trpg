@@ -49,6 +49,7 @@ __all__ = [
     "REPAIRABLE_CODES",
     "RepairedEvaluation",
     "budget_filler",
+    "cap_cooldown",
     "cooldown_repairs",
     "evaluate_with_repair",
     "is_repairable",
@@ -63,10 +64,14 @@ REPAIRABLE_CODES: tuple[str, ...] = (
     "budget.weak",
     "skeleton.core_share",
     "skeleton.secondary_share",
+    "cap.revive_cost",
+    "cap.rule_rewrite_cost",
 )
 """引擎可修的驗證代碼（``fnmatch`` 樣式）。``budget.over``／``budget.weak``：換一條亂數串流重調
 旋鈕（核心優先、全部旋鈕交替）；``skeleton.core_share``、``skeleton.secondary_share``：先只調核心效果的旋鈕（附帶效果停在最小值）。
 互斥規則（``exclusion.*``）中「補冷卻即可」的由 :func:`cooldown_repairs` 從 YAML 推導。
+``cap.revive_cost``／``cap.rule_rewrite_cost``（Phase 4-L10b，4-L9 建議 B2）：補到
+``skill_budget.yaml`` 要求的最低冷卻（:func:`cap_cooldown`；和互斥規則同法）。
 ``budget.unavailable``（預算無法計算）是結構問題，不在清單內。"""
 
 REPAIR_COOLDOWN = 1
@@ -103,6 +108,29 @@ def cooldown_repairs(library: ContentLibrary) -> dict[str, int]:
         if need:
             out[EXCLUSION_PREFIX + rule.id] = need
     return out
+
+
+REVIVE_COST = "cap.revive_cost"
+RULE_REWRITE_COST = "cap.rule_rewrite_cost"
+
+
+def cap_cooldown(library: ContentLibrary, code: str, data: Mapping[str, Any]) -> int:
+    """「每場一次或冷卻至少 N 回合」的上限規則（復活、改寫規則型原語）要補到的冷卻；不是這兩條規則
+    時為 0。門檻取自 ``skill_budget.yaml``：``rule_rewrite_min_cooldown``，改寫規則型且花源力時用
+    ``rule_rewrite_min_cooldown_with_source``（與驗證器同一個來源）。引擎選「補冷卻」而不是「每場
+    一次」：和 ``exclusion.*`` 的修法一致，也不會多出每場一次的大額折抵。"""
+    budget = library.budget
+    if code == RULE_REWRITE_COST:
+        cost = data.get("cost")
+        paid = isinstance(cost, Mapping) and cost.get("source") is not None
+        return (
+            budget.rule_rewrite_min_cooldown_with_source
+            if paid
+            else budget.rule_rewrite_min_cooldown
+        )
+    if code == REVIVE_COST:
+        return budget.rule_rewrite_min_cooldown
+    return 0
 
 
 def segment_code(code: str) -> str:
@@ -373,9 +401,10 @@ def budget_filler(
         out = minimal(data)
         if not isinstance(out.get("effects"), list) or not out["effects"]:
             return out
-        if cooldown:
+        need = max([cooldown, *(cap_cooldown(library, c, out) for c in wanted)])
+        if need:
             cost = dict(out.get("cost") or {})
-            cost["cooldown"] = max(int(cost.get("cooldown") or 0), cooldown)
+            cost["cooldown"] = max(int(cost.get("cooldown") or 0), need)
             out["cost"] = cost
         out = raise_costs(library, out)
         _tune(library, out, seed, wanted)
