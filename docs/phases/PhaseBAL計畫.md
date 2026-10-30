@@ -88,3 +88,14 @@
 **驗收（2026-10-31 開發 PM）**
 - **BAL-10c 待決**：玩法 PM 定（`0174faa3`）：變身姿態第 1 次只剩「強效」接受、`mod_cost` 只對 2 格以上代價接受，不改程式；目錄打亂效果等真模型。
 - **BAL-10d／10d2**（`f8e8b619`、`59b8dca7`，報告 `BAL-10d報告.md`，量測 `BAL-10/converge_bal10d.md`）：共用機制 `trpg.skillgen.flash_trade`（Trade＝remove／gain／core）；收成單體、縮小一級；單發上限 `single_hit_cap_permille` 3000（基準 tier_budget × AP 係數，安全欄）；收束目標比例＝max(收束前＋40‰, 一般重調)；平均目標 < 1.5 時用法分數 3。火球收成單體 2.22 倍、閃滿 (a) 2.44／(b) 2.72；同預算 (b)≤(a) 18/18；超上限 0 列；AI 選中收束 均衡 0%、集中 0.4%、全指定 4.2%、混合 4.1%。合併後 pytest（skillgen／llm／content／roguelite／architecture）6016 通過、swamp 種子 7 重播通過。
+
+## 5. BAL-10e 實作規格（收回家族，2026-10-31）
+
+設計真相：`docs/design/06-技能.md` 6.34.4「收回家族」表（含「BAL-10d 定」）。在 BAL-10d 的 `trpg.skillgen.flash_trade`（`TRADES` 加 remove／gain）上接：
+1. **精煉**（主動技；類別「元素與關鍵字」，多段併一段歸「連段」）：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字、接續段）或多段併一段（總量不變、換成單發）→ 主要效果威力。
+2. **合體**（一次召喚 ≥ 2 隻的召喚技；歸「輔助」）：召喚隻數 −1 → 召喚物更強（沿用召喚強化 `summon_toughen` 的做法）。
+3. **專注**（被動、反應、修正型被動；歸「觸發」，修正型被動歸「修正」）：觸發／光環範圍收回一級，或觸發條件收緊一級（被攻擊 → 被近戰攻擊；所有敵人 → 帶某狀態的敵人）→ 觸發效果或修正幅度。
+4. **陷阱、地面格收束**（BAL-10d 留下的）：範圍收成單格或縮小一級 → 威力。
+共同：只拿身上真的有的；拿掉的預算＋40‰ 換核心數值（目標比例同 BAL-10d2：max(前＋40‰, 一般重調)）；單發上限 3 倍，超過改減費用；第 1、2、4、5 次、1 階起；名稱前綴照設計表；選項混合照 6.34.3（收回不擠滿選項）。
+**量測**：各收回在內建技能的可出列數與換到的倍數（`scripts/flash_converge_measure.py` 擴充或新腳本）；AI 選中比例；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數），特別看專注對修正型被動補多少。
+**驗收**：新測試 `tests/skillgen/test_flash_reclaim_bal10e.py`；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-10e報告.md`（含待 PM 決定）。
