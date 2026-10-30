@@ -68,7 +68,11 @@ from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.casting import use_reaction_skill
 from trpg.engine.skills.conditions import Subject, skill_condition_met
-from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
+from trpg.engine.skills.targeting import (
+    reaction_problem,
+    reaction_target_problem,
+    skill_mana_cost,
+)
 from trpg.engine.state import UnitState
 from trpg.engine.strikes import after_attack_hit
 from trpg.engine.weapon_traits import (
@@ -225,7 +229,7 @@ def _pending(
             trigger_unit_id=trigger.id,
             skill_id=picked.id,
             trigger_event_seq=_trigger_event_seq(ctx, unit, rule.when.event, trigger),
-            mana_cost=picked.cost.mana,
+            mana_cost=skill_mana_cost(ctx.core, unit, picked),
             stamina_cost=picked.cost.stamina,
             hp_cost_permille=picked.cost.hp_percent or 0,
         )

@@ -556,14 +556,14 @@ def _pay_costs(
     ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea, *, variant: str | None = None
 ) -> None:
     ap = skill_ap_cost(ctx.state, skill, caster)
-    paid: PaidCost = pay_skill_cost(caster, skill, ap=ap)
+    paid: PaidCost = pay_skill_cost(ctx.core, caster, skill, ap=ap)
     ctx.emit(
         SkillUsed,
         unit_id=caster.id,
         skill_id=skill.id,
         name_zh=skill.name_zh,
         ap=paid.ap,
-        mana=skill.cost.mana,
+        mana=paid.mana,
         mana_after=caster.mana,
         stamina=skill.cost.stamina,
         stamina_after=caster.stamina,

@@ -217,7 +217,7 @@ def do_infuse_skill(ctx: Ctx, owner: UnitState, action: InfuseSkill) -> None:
     skill = state.ruleset.skill_def(action.skill_id)
     summon = state.units[action.summon_id]
     ap = ctx.core.summon_infuse_ap_cost
-    paid = pay_skill_cost(owner, skill, ap=ap)
+    paid = pay_skill_cost(ctx.core, owner, skill, ap=ap)
     summon.infused_skill = snapshot(state, owner, skill.id)
     summon.infused_round = state.round
     ctx.emit(
@@ -227,7 +227,7 @@ def do_infuse_skill(ctx: Ctx, owner: UnitState, action: InfuseSkill) -> None:
         skill_id=skill.id,
         name_zh=skill.name_zh,
         ap=paid.ap,
-        mana=skill.cost.mana,
+        mana=paid.mana,
         mana_after=owner.mana,
         stamina=skill.cost.stamina,
         stamina_after=owner.stamina,

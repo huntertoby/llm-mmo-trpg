@@ -19,7 +19,6 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from trpg.content.library import scale_mana_cost
 from trpg.content.skills import ShapeSpec, SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
@@ -179,10 +178,7 @@ def test_template_result_is_valid_in_budget_and_never_weaker(template_id: str) -
         assert budget_power(got, lib) >= before, (template_id, item.skill.id)
         assert (got.kind, got.tier) == (item.skill.kind, item.skill.tier)
         playable = _renamed(got)
-        played = scale_mana_cost(
-            playable, lib.ruleset.core.ally_mana_cost_permille
-        )  # 規則包內的版本（BAL-4b）
-        assert lib.ruleset.with_skills([playable]).skills.by_id()[playable.id] == played
+        assert lib.ruleset.with_skills([playable]).skills.by_id()[playable.id] == playable
         assert skill_card(lib, got).id == got.id
 
 

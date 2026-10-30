@@ -10,9 +10,9 @@ BAL-4b 起，採用的數值（敵人 HP ×1.2、敵人與護衛傷害 ×1.2、�
   「Boss」＝ 有 ``boss`` 標籤的敵方範本；「護衛」＝ 有 ``boss_escort`` 標籤的（Boss 戰護衛與援軍，
   ``*_guard``）；其餘敵方範本（一輪與地圖的陣容與援軍，不含召喚物）為「敵人」。
 - 敵人傷害／Boss 傷害／護衛傷害：``CoreRules.enemy_damage_permille`` 等欄位 ＝ content 值 × 旋鈕。
-- 技能法力費用：已縮放過的技能費用再乘旋鈕（兩次四捨五入、有費用者至少 1），
-  ``CoreRules.ally_mana_cost_permille`` ＝ content 值 × 旋鈕
-  （之後 ``Ruleset.with_skills`` 加入的技能  依這個**絕對**倍率從原始費用縮放）。
+- 技能法力費用：``CoreRules.ally_mana_cost_permille`` ＝ content 值 × 旋鈕（BAL-4c 起引擎依施放者
+  陣營、從原始費用一次縮放，只有一次四捨五入；BAL-4b 時是規則包內技能先縮放再乘旋鈕，
+  兩次四捨五入）。
 - 法力上限：``ResourceRules.mana_cap_permille`` ＝ content 值 × 旋鈕。
 
 要回到 BAL-4 的「純 1000」基準，把旋鈕設成 content 值的倒數（例如費用 1250、上限 714）；一般用法是
@@ -26,7 +26,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from trpg.content.battle import UnitTemplate
-from trpg.content.library import ContentLibrary, apply_ally_mana_cost, enemy_template_ids
+from trpg.content.library import ContentLibrary, enemy_template_ids
 from trpg.engine.ids import BOSS_ESCORT_TAG, BOSS_TAG
 
 __all__ = ["NEUTRAL", "Difficulty", "enemy_roster", "with_difficulty"]
@@ -117,6 +117,5 @@ def with_difficulty(library: ContentLibrary, d: Difficulty) -> ContentLibrary:
         }
     )
     new_ruleset = ruleset.model_copy(update={"core": core})
-    new_ruleset = apply_ally_mana_cost(new_ruleset, units, roster, d.mana_cost)
     new_ruleset.model_post_init(None)
     return dataclasses.replace(library, units=units, ruleset=new_ruleset)

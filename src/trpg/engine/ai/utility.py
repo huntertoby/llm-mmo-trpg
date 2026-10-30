@@ -192,6 +192,7 @@ from trpg.engine.skills.targeting import (
     center_tiles,
     hp_cost,
     resolve_effects,
+    skill_mana_cost,
 )
 from trpg.engine.state import BattleState, UnitState, reaction_limit
 from trpg.engine.traps import own_traps
@@ -674,7 +675,8 @@ def _has_usable_spell(state: BattleState, unit: UnitState) -> bool:
     rules = state.ruleset
     for sid in sorted(unit.all_skills):
         skill = rules.skill_def(sid)
-        if skill.is_active and skill.category == "spell" and unit.mana >= skill.cost.mana:
+        mana = skill_mana_cost(rules.core, unit, skill)
+        if skill.is_active and skill.category == "spell" and unit.mana >= mana:
             return True
     return False
 
@@ -1496,7 +1498,7 @@ def skill_cost(
     同一狀態的收益對稱）。"""
     skill = state.ruleset.skill_def(action.skill_id)
     cost = Fraction(
-        w.mana * skill.cost.mana
+        w.mana * skill_mana_cost(state.ruleset.core, actor, skill)
         + Fraction(w.stamina_permille * skill.cost.stamina, 1000)
         + w.cooldown * (skill.cost.cooldown or 0)
         + w.friendly_fire * hp_cost(actor, skill)

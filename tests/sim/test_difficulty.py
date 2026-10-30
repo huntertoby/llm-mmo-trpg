@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library, scale_mana_cost
+from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.ruleset_hash import hash_ruleset
 from trpg.shared.types import Attribute
 from trpg.sim.batch import map_spec, run_batches
@@ -100,32 +100,28 @@ def test_scale_int_rounds_half_up() -> None:
     assert scale_int(5, 1200) == 6
 
 
-def test_mana_cost_scaling_applies_to_base_and_added_skills(library: ContentLibrary) -> None:
+def test_mana_cost_knob_scales_the_ally_permille_not_the_skill_data(
+    library: ContentLibrary,
+) -> None:
+    """BAL-4c：技能資料一律是原始費用；旋鈕只改 ``ally_mana_cost_permille``（content × 旋鈕）。"""
     skill_id = _mana_skill_id(library)
-    base = library.ruleset.skill_def(skill_id)
-    other = with_difficulty(library, Difficulty(mana_cost=800))
-    # 旋鈕在 content 值上再乘：已縮放的費用再乘 0.8
-    assert other.ruleset.skill_def(skill_id).cost.mana == scale_int(base.cost.mana, 800)
-    assert other.skills[skill_id] == library.skills[skill_id]  # library.skills 保持原始值
-    # 加入的技能（一輪的生成技能走 with_skills）依「絕對」倍率（800 × 800 ＝ 640）從原始費用縮放
     raw = library.skills[skill_id]
+    assert library.ruleset.skill_def(skill_id) == raw  # 規則包內也是原始費用
+    other = with_difficulty(library, Difficulty(mana_cost=800))
+    assert other.ruleset.core.ally_mana_cost_permille == 640  # 800 × 800‰
+    assert other.ruleset.skill_def(skill_id) == raw
+    assert other.ruleset.core.ally_mana(raw.cost.mana) == max(1, scale_int(raw.cost.mana, 640))
     clone = raw.model_copy(update={"id": "skill_bal4_clone"})
-    assert other.ruleset.core.ally_mana_cost_permille == 640
-    added = other.ruleset.with_skills([clone])
-    assert added.skill_def("skill_bal4_clone").cost.mana == scale_int(raw.cost.mana, 640)
-    assert added.skill_def("skill_bal4_clone").cost.stamina == base.cost.stamina
-    # content 倍率（800）：with_skills 也縮放
-    content_added = library.ruleset.with_skills([clone]).skill_def("skill_bal4_clone")
-    assert content_added.cost.mana == scale_int(raw.cost.mana, 800)
+    assert library.ruleset.with_skills([clone]).skill_def("skill_bal4_clone") == clone
 
 
-def test_scale_mana_cost_keeps_minimum_one_and_identity() -> None:
-    lib = load_library()
-    skill = next(s for s in lib.ruleset.skills.skills if s.cost.mana == 1)
-    assert scale_mana_cost(skill, 100).cost.mana == 1
-    assert scale_mana_cost(skill, 1000) is skill
-    free = next(s for s in lib.ruleset.skills.skills if s.cost.mana == 0)
-    assert scale_mana_cost(free, 800) is free
+def test_ally_mana_keeps_minimum_one_and_identity() -> None:
+    core = load_library().ruleset.core
+    assert core.model_copy(update={"ally_mana_cost_permille": 100}).ally_mana(1) == 1
+    assert core.model_copy(update={"ally_mana_cost_permille": 1000}).ally_mana(7) == 7
+    assert core.ally_mana(0) == 0
+    assert core.ally_mana(10) == 8  # 800‰
+    assert core.ally_mana(7) == 6  # 5.6 → 6（四捨五入）
 
 
 def test_mana_cap_scales_only_mana(library: ContentLibrary) -> None:

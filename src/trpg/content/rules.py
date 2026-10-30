@@ -513,11 +513,9 @@ class CoreRules(ContentModel):
     與一般敵人分開調，
     ``content/rules/core.yaml`` 預設與 ``enemy_damage_permille`` 相同（行為與一般敵人一致）。"""
     ally_mana_cost_permille: int = Field(default=1000, ge=100, le=5000)
-    """我方技能法力費用倍率（‰；BAL-4b，原型專用）：
-    ``load_library`` 載入完成後把規則包內技能（敵方陣容
-    裝備的技能除外）的 ``cost.mana`` 乘上它（四捨五入、原本有費用者至少 1，
-    ``scale_mana_cost``）；``Ruleset.with_skills`` 加入的技能（一輪的生成技能）同樣乘。
-    內容檔寫的是未縮放的原始費用。"""
+    """我方技能法力費用倍率（‰；BAL-4b，原型專用）。BAL-4c 起依**施放者陣營**套用：我方單位
+    （含我方召喚物）施放、灌注、觸發技能時付 :meth:`ally_mana` 的費用，敵方照原價；技能資料
+    （內容檔、規則包、生成技能）一律保持原始費用，預算、閃現、組合器都以原始費用計算。"""
     summon_command_ap_cost: int = Field(default=1, ge=0, le=3)
     """指揮召喚物（Phase 3-33c）的 AP 花費（切換模式免費）。"""
     summon_infuse_ap_cost: int = Field(default=1, ge=0, le=3)
@@ -577,6 +575,14 @@ class CoreRules(ContentModel):
         if any(a >= b for a, b in itertools.pairwise(values)) or values[0] < 1:
             raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
         return self
+
+    def ally_mana(self, mana: int) -> int:
+        """我方施放者實際付的法力（BAL-4c）：``mana × ally_mana_cost_permille‰``，四捨五入（半數
+        進位）、原本有費用者至少 1；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
+        permille = self.ally_mana_cost_permille
+        if mana == 0 or permille == _PERMILLE:
+            return mana
+        return max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
 
     def max_hp_for(self, base_hp: int, con: int) -> int:
         """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""

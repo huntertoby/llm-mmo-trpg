@@ -694,7 +694,7 @@ def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:
 
 
 def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
-    paid: PaidCost = pay_skill_cost(owner, skill)
+    paid: PaidCost = pay_skill_cost(ctx.core, owner, skill)
     owner.trigger_counts[skill.id] = owner.trigger_counts.get(skill.id, 0) + 1
     ctx.emit(
         SkillTriggered,
@@ -704,7 +704,7 @@ def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
         trigger=fired.event,
         other_id=fired.other_id,
         trigger_depth=fired.depth,
-        mana=skill.cost.mana,
+        mana=paid.mana,
         mana_after=owner.mana,
         stamina=skill.cost.stamina,
         stamina_after=owner.stamina,

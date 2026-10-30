@@ -88,13 +88,7 @@ def test_ashen_oath_example_matches_spec() -> None:
     )
     assert skill.shape.type == "cone" and skill.shape.size == 3
     assert [e.type for e in skill.effects] == ["damage", "create_surface"]
-    raw_mana = (
-        12  # 內容檔的原始費用；規則包內（戰鬥結算用）乘 ally_mana_cost_permille（BAL-4b，四捨五入）
-    )
-    assert skill.cost.mana == raw_mana  # ContentLibrary.skills 保持原始值
-    permille = library().ruleset.core.ally_mana_cost_permille
-    played = library().ruleset.skill_def("skill_ashen_oath")
-    assert (played.cost.mana, played.cost.cooldown) == ((raw_mana * permille + 500) // 1000, 2)
+    assert (skill.cost.mana, skill.cost.cooldown) == (12, 2)
     assert skill.provenance.origin == "builtin" and skill.provenance.bound
     assert not skill.provenance.tradeable
 

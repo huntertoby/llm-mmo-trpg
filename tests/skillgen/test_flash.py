@@ -20,7 +20,6 @@ from tests.engine.helpers import (
     spawn,
 )
 from trpg.content.flash_templates import FlashTable
-from trpg.content.library import scale_mana_cost
 from trpg.content.skills import SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
@@ -434,10 +433,7 @@ def test_complete_skill_reflashes_its_adjustment_slot_only() -> None:
 def test_a_flashed_skill_plays_in_the_engine_as_its_card_says() -> None:
     lib = library()
     _state, skill = _walk(FIRE_BOLT, 1)  # 距離 +1：射程 6
-    played = scale_mana_cost(
-        skill, lib.ruleset.core.ally_mana_cost_permille
-    )  # 規則包內的版本（BAL-4b）
-    assert lib.ruleset.with_skills([skill]).skills.by_id()[skill.id] == played
+    assert lib.ruleset.with_skills([skill]).skills.by_id()[skill.id] == skill
     card = skill_card(lib, skill)
     assert card.id == skill.id
     m = make_map("\n".join(["0000000"] * 7), ally=[(0, 0)], enemy=[(6, 0)])
