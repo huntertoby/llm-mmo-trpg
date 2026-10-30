@@ -170,6 +170,7 @@ def test_skills_without_power_are_not_offered() -> None:
         and s.trap is None
         and s.shape.type in shapes
         and not has_power(s, lib())
+        and all(e.type != "zone" for e in s.effects)  # BAL-10e：地面格（持續區域）裡的威力也能收束
     ]
     assert powerless
     for skill in powerless[:6]:

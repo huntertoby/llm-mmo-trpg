@@ -42,8 +42,19 @@ from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.composer_tuning import tuning_bounds
-from trpg.skillgen.evolution import retune
+from trpg.skillgen.evolution import effect_strength_knobs, retune
 from trpg.skillgen.flash_ops import FLASH_OPS, Draft, FlashOp, base_draft, cell_count
+from trpg.skillgen.flash_reclaim import (
+    fuse_knobs,
+    modifier_gain,
+    op_focus_condition,
+    op_focus_mod_condition,
+    op_focus_mod_range,
+    op_focus_range,
+    op_fuse,
+    op_refine,
+    op_refine_merge,
+)
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.mechanics import resolved_affects
 
@@ -53,12 +64,15 @@ __all__ = [
     "TRADES",
     "CoreFn",
     "GainFn",
+    "KnobFn",
     "Trade",
     "apply_trade",
     "cap_points",
+    "converge_gain",
     "convergible",
     "has_power",
     "no_gain",
+    "no_knobs",
     "target_power",
 ]
 
@@ -67,6 +81,7 @@ type GainFn = Callable[
     tuple[list[dict[str, Any]], list[Knob]],
 ]
 type CoreFn = Callable[[SkillDef, ContentLibrary], dict[str, Fraction]]
+type KnobFn = Callable[[list[dict[str, Any]], ContentLibrary], list[Knob]]
 
 _PERMILLE = 1000
 _TUNE_ATTEMPTS = 3
@@ -145,13 +160,21 @@ def no_gain(
     return [], []
 
 
+def no_knobs(_effects: list[dict[str, Any]], _library: ContentLibrary) -> list[Knob]:
+    """效果本身沒有威力以外的旋鈕。"""
+    return []
+
+
 @dataclass(frozen=True, slots=True)
 class Trade:
-    """一種收回：``remove`` 拿掉什麼、``gain`` 換成什麼（額外旋鈕）、``core`` 單發上限量什麼。"""
+    """一種收回：``remove`` 拿掉什麼、``gain`` 換成什麼（額外的字典與旋鈕）、``knobs`` 換成什麼
+    （效果本身威力以外的旋鈕，``index`` 指向效果；BAL-10e 合體的召喚物 HP）、``core`` 單發上限量
+    什麼。"""
 
     remove: FlashOp
     gain: GainFn = no_gain
     core: CoreFn = target_power
+    knobs: KnobFn = no_knobs
 
 
 def _usable(
@@ -183,6 +206,7 @@ def _tuned(
             floor=floor,
             extra=extra,
             extra_knobs=knobs,
+            effect_knobs=trade.knobs(effects, library),
             target_ratio=ratio,
             power_only=True,
         )
@@ -299,25 +323,60 @@ def _cost_cut(
 
 
 # ---------------------------------------------------------------------------
-# 收束（#74）：收成單體、縮小一級
+# 收束（#74）：收成單體、縮小一級；BAL-10e 補陷阱與地面格（持續區域）
 # ---------------------------------------------------------------------------
 
 _NOT_AREA_TARGETING = frozenset({"unit_tile", "unit_pair", "object_tile"})
 """選兩個東西的特殊形狀（傳送、投擲）：不算「範圍」，不收束。"""
 _STEP_DOWN = {"square3": "cross"}
-"""縮小一級換成另一種形狀的（3×3 → 十字，射程沿用）；直線、錐形是長度 −1。"""
+"""縮小一級換成另一種形狀的（3×3 → 十字，射程沿用）；直線、錐形是長度 −1。陷阱的觸發範圍同樣
+3×3 → 十字（十字再小就是單格＝收成單體）。"""
+_ZONE = "zone"
+
+
+def _zone_power(skill: SkillDef) -> bool:
+    """地面格（持續區域，6.16 G）裡有傷害、治療或護盾（區域結算的效果）。"""
+    return any(
+        effect.type == _ZONE and any(e.type in POWER_GROUPS for e in effect.effects or ())
+        for effect in skill.effects
+    )
 
 
 def convergible(skill: SkillDef, library: ContentLibrary) -> bool:
-    """可以收束：主動技（陷阱除外，BAL-10e）、有作用在目標的威力、形狀是多格範圍。複合技只看第一段
-    的形狀（接續段不動）。"""
-    if skill.kind != "active" or skill.trap is not None or not has_power(skill, library):
+    """可以收束：主動技、有威力（作用在目標的傷害／治療／護盾，或地面格裡的），形狀是多格範圍；
+    陷阱看觸發範圍（``trap.shape``，BAL-10e）。複合技只看第一段的形狀（接續段不動）。"""
+    if skill.kind != "active":
+        return False
+    if skill.trap is not None:
+        return has_power(skill, library) and skill.trap.shape != "single"
+    if not (has_power(skill, library) or _zone_power(skill)):
         return False
     definition = library.ruleset.shapes.by_id().get(skill.shape.type)
     if definition is None or definition.targeting in _NOT_AREA_TARGETING:
         return False
     cells = cell_count(skill.shape, library)
     return cells is None or cells > 1
+
+
+def converge_gain(
+    base: dict[str, Any], effects: list[dict[str, Any]], library: ContentLibrary
+) -> tuple[list[dict[str, Any]], list[Knob]]:
+    """收束換到的威力：效果本身的威力以外，地面格裡的傷害、治療、護盾也一起調（BAL-10e；區域結算
+    的效果字典與 ``effects`` 裡的是同一批物件）。沒有地面格時同 :func:`no_gain`。"""
+    extra: list[dict[str, Any]] = []
+    knobs: list[Knob] = []
+    for effect in effects:
+        if effect["type"] != _ZONE:
+            continue
+        nested = effect.get("effects") or []
+        offset = len(extra)
+        extra += nested
+        knobs += [
+            Knob(offset + k.index, k.field, k.values, k.weight)
+            for k in effect_strength_knobs(base["category"], nested, library)
+            if k.field != "distance"
+        ]
+    return extra, knobs
 
 
 def _single_range(shape: ShapeSpec, library: ContentLibrary) -> int | Literal["weapon"]:
@@ -355,12 +414,22 @@ def _with_shape(
     return drafts
 
 
+def _with_trap_shape(skill: SkillDef, shape: str) -> list[Draft]:
+    """陷阱的觸發範圍換成 ``shape``（放置的形狀與骨架不動）。"""
+    base, effects = base_draft(skill)
+    base["trap"] = {**base["trap"], "shape": shape}
+    return [(base, effects)]
+
+
 def _op_converge_single(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """收成單體：多格形狀 → 單體（射程見 :func:`_single_range`）；範圍造的表面、區域跟著縮。"""
+    """收成單體：多格形狀 → 單體（射程見 :func:`_single_range`）；範圍造的表面、區域跟著縮。陷阱的
+    觸發範圍收成單格。"""
     if not convergible(skill, library):
         return []
+    if skill.trap is not None:
+        return _with_trap_shape(skill, "single")
     single = ShapeSpec(type="single", range=_single_range(skill.shape, library))
     return _with_shape(skill, template, single, library)
 
@@ -368,9 +437,13 @@ def _op_converge_single(
 def _op_converge_step(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """縮小一級：直線、錐形長度 −1（不低於形狀的最小值），3×3 → 十字；已是最小一級不出。"""
+    """縮小一級：直線、錐形長度 −1（不低於形狀的最小值），3×3 → 十字；已是最小一級不出。陷阱的觸發
+    範圍 3×3 → 十字。"""
     if not convergible(skill, library):
         return []
+    if skill.trap is not None:
+        smaller = _STEP_DOWN.get(skill.trap.shape)
+        return [] if smaller is None else _with_trap_shape(skill, smaller)
     shape = skill.shape
     smaller = _STEP_DOWN.get(shape.type)
     if smaller is not None:
@@ -385,10 +458,18 @@ def _op_converge_step(
 
 
 TRADES: dict[str, Trade] = {
-    "converge_single": Trade(remove=_op_converge_single),
-    "converge_step": Trade(remove=_op_converge_step),
+    "converge_single": Trade(remove=_op_converge_single, gain=converge_gain),
+    "converge_step": Trade(remove=_op_converge_step, gain=converge_gain),
+    # BAL-10e（#75）：精煉、合體、專注（trpg.skillgen.flash_reclaim）
+    "refine": Trade(remove=op_refine),
+    "refine_merge": Trade(remove=op_refine_merge),
+    "fuse": Trade(remove=op_fuse, knobs=fuse_knobs),
+    "focus_range": Trade(remove=op_focus_range),
+    "focus_condition": Trade(remove=op_focus_condition),
+    "focus_mod_range": Trade(remove=op_focus_mod_range, gain=modifier_gain),
+    "focus_mod_condition": Trade(remove=op_focus_mod_condition, gain=modifier_gain),
 }
-"""收回家族的登錄表（``op`` → :class:`Trade`）。BAL-10e 的精煉、合體、專注接在這裡。"""
+"""收回家族的登錄表（``op`` → :class:`Trade`）：收束（BAL-10d）與精煉、合體、專注（BAL-10e）。"""
 
 MINOR_OPS: dict[str, FlashOp] = {**FLASH_OPS, **{op: t.remove for op, t in TRADES.items()}}
 """全部小變化的改法（一般改法 ＋ 收回的「拿掉什麼」）；出題與推出技能用它判斷模板有沒有實作。"""
