@@ -508,6 +508,8 @@ ENGINE_TEMPLATES = [
     "cost_charge",
     "cost_light",
     "dual_scaling",
+    "converge_single",
+    "converge_step",
 ]
 
 
