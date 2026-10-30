@@ -554,3 +554,73 @@ def test_proposal_prompt_and_schema_use_the_filtered_catalog() -> None:
                     for v in full.pool.values()
                     if v.template == template
                 ), (skill_id, category, template)
+
+
+# ---------------------------------------------------------------------------
+# BAL-10c：目錄依種子打亂（呈現順序），不影響驗證
+# ---------------------------------------------------------------------------
+
+
+def _full_catalog() -> Any:
+    request = _request()
+    return build_catalog(LIB, request, skill_before(LIB, request), major=False)
+
+
+def test_shuffled_catalog_is_deterministic_per_seed_and_differs_between_seeds() -> None:
+    catalog = _full_catalog()
+    assert catalog.shuffled(5, "tag") == catalog.shuffled(5, "tag")  # 同種子同順序
+    orders = {catalog.shuffled(s, "tag").templates() for s in range(1, 9)}
+    assert len(orders) > 1  # 不同種子不同順序
+    assert catalog.shuffled(5, "tag").templates() != catalog.shuffled(5, "other").templates()
+
+
+def test_shuffling_changes_only_the_presentation() -> None:
+    catalog = _full_catalog()
+    shown = catalog.shuffled(9, "tag")
+    assert shown.pool is catalog.pool
+    assert set(shown.templates()) == set(catalog.templates())
+    assert set(shown.categories) == set(catalog.categories)
+
+    def params(c: Any) -> dict[str, Any]:
+        return {e.template: (set(e.keywords), set(e.elements), set(e.shapes)) for e in c.entries}
+
+    assert params(shown) == params(catalog)
+    # 驗證結果不變：每個變化都解得回同一個變化
+    for variation in catalog.pool.values():
+        args = (
+            variation.template,
+            variation.keyword,
+            variation.element,
+            variation.shape.type if variation.shape is not None else None,
+        )
+        assert shown.resolve(*args) == catalog.resolve(*args)
+    # schema 列舉與 prompt 目錄用的是同一個順序
+    item = flash_schema(shown, 4)["properties"]["variations"]["items"]["properties"]
+    assert item["template"]["enum"] == list(shown.templates())
+    assert item["category"]["enum"] == list(shown.categories)
+
+
+def test_proposal_schema_order_follows_the_question_seed() -> None:
+    orders = set()
+    for seed in range(1, 7):
+        request = FlashRequest(LIB.skills[FIRE_BOLT], _used(acquire(FIRE_BOLT)), SkillUsage(), seed)
+        client = MockLLMClient(['{"variations": []}'])
+        propose_variations(client, LIB, request, max_attempts=1)
+        again = MockLLMClient(['{"variations": []}'])
+        propose_variations(again, LIB, request, max_attempts=1)
+        assert client.schemas == again.schemas
+        schema = client.schemas[0]
+        assert schema is not None
+        item = schema["properties"]["variations"]["items"]["properties"]
+        orders.add(tuple(item["template"]["enum"]))
+    assert len(orders) > 1
+
+
+def test_shuffled_catalog_does_not_change_which_proposals_pass() -> None:
+    """同樣的回覆，不管目錄怎麼排，都收下同一組合格的變化（四個提議都合格）。"""
+    for seed in (1, 2, 3):
+        request = FlashRequest(LIB.skills[FIRE_BOLT], _used(acquire(FIRE_BOLT)), SkillUsage(), seed)
+        source = _source(_text(*GOOD4))
+        offer = make_offer(LIB, request, source)
+        assert source.records[0].source == "llm"
+        assert [o.variation.template for o in offer.options] == [v["template"] for v in GOOD4]

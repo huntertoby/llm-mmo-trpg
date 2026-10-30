@@ -9,10 +9,11 @@ LLM 提議只能在目錄裡挑（守則 3）：目錄由資料來源
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.rng import Rng
 from trpg.skillgen.flash_category import allowed_categories
 from trpg.skillgen.flash_offer import FlashOptionSource, FlashRequest, UsageSource
 from trpg.skillgen.flash_state import Variation
@@ -41,6 +42,27 @@ class FlashCatalog:
     entries: tuple[CatalogEntry, ...]
     pool: dict[str, Variation] = field(default_factory=dict)
     """所有可提議的變化（以 :meth:`Variation.key` 為鍵）。"""
+
+    def shuffled(self, seed: int, label: str) -> FlashCatalog:
+        """呈現順序依種子打亂的目錄（BAL-10c；同 4-L6 的輪替選單，``menu_order``）：類別、模板與每個
+        模板的參數選單各自打亂，避免模型偏好排在前面的選項（第一個提議 83% 取自選單前三分之一）。
+        只影響呈現（prompt 的 ``<catalog>`` 與 schema 列舉）；``pool``、:meth:`resolve` 與驗證不變。
+        先排序再打亂，所以結果只取決於種子與目錄內容；同種子同順序。"""
+        rng = Rng(seed).fork(f"menu/flash/{label}")
+        entries = [
+            replace(
+                e,
+                keywords=tuple(rng.shuffled(sorted(e.keywords))),
+                elements=tuple(rng.shuffled(sorted(e.elements))),
+                shapes=tuple(rng.shuffled(sorted(e.shapes))),
+            )
+            for e in sorted(self.entries, key=lambda e: e.template)
+        ]
+        return FlashCatalog(
+            tuple(rng.shuffled(sorted(self.categories))),
+            tuple(rng.shuffled(entries)),
+            self.pool,
+        )
 
     def entry(self, template: str) -> CatalogEntry | None:
         return next((e for e in self.entries if e.template == template), None)
