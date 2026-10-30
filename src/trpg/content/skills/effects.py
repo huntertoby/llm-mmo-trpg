@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -326,6 +327,26 @@ class SkillRuleError(ValueError):
         self.code = (
             code  # 穩定的錯誤代碼（Phase 4-L5c，例 combo.position）；空字串＝沿用 value_error
         )
+
+
+_TYPE_NOTE = re.compile(r"（[A-Za-z_]+）")
+"""錯誤訊息裡路徑後面的類型註記（``effects[0]（damage）``）。"""
+_ERROR_PATH = re.compile(
+    r"(?:followup\.)?"
+    r"(?:modifiers\[\d+\]\.change\.on_hit_effects|effects|cost\.on_miss)\[\d+\]"
+    r"(?:\.(?:then|on_kill|effects|win|lose)\[\d+\])*"
+    r"(?:\.[A-Za-z_]\w*)?"
+)
+"""錯誤訊息裡的效果路徑：頂層效果、失手反噬、修正規則的命中後效果，以及其中的巢狀效果
+（``then``、``on_kill``、區域的 ``effects``、賭注 ``win``／``lose``；Phase 4-L10a）。"""
+
+
+def error_path_of(message: str) -> str:
+    """從結構檢查的錯誤訊息找出出錯效果的完整路徑（例：``cost.on_miss[0]``、
+    ``effects[1].then[0]``、``effects[2].win[0].status``）；找不到時回傳空字串。訊息裡路徑後面的
+    類型註記（``（damage）``）先去掉再找。"""
+    match = _ERROR_PATH.search(_TYPE_NOTE.sub("", message))
+    return "" if match is None else match.group(0)
 
 
 def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:

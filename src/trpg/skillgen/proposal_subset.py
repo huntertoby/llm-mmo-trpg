@@ -642,6 +642,11 @@ def _plan(
     required = conditions[:1] if any(s.requires_condition for s in skeletons) else []
 
     core.update(sel.support_primitives(core))
+    if only is None:  # 自由題（不指定核心）不出形態原語（4-L10a C5；llm_topic.core_exclude）
+        for item in sorted(set(sel.library.composer.llm_topic.core_exclude) & (core | optional)):
+            sel.drop(item, "形態只由手寫內容提供，自由題不收")
+        core -= set(sel.library.composer.llm_topic.core_exclude)
+        optional -= set(sel.library.composer.llm_topic.core_exclude)
     yaml_order = [p.id for p in sel.library.ruleset.primitives.primitives]
     prioritized = [i for i in yaml_order if i in wanted and i not in core]
     rest = [i for i in yaml_order if i in optional | set(sel.support_primitives(wanted))]

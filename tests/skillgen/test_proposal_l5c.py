@@ -81,6 +81,8 @@ def test_flag_schema_only_accepts_true(flag: str) -> None:
         for effect in data["effects"]:
             if effect["type"] == "damage":
                 effect[flag] = value
+                if flag == "split_heal":  # split_heal 須搭配 affects: all（4-L10a 進 schema）
+                    effect["affects"] = "all"
         return data
 
     ok = evaluate_proposal(with_flag(True), models, _lib(), ctx)
@@ -126,7 +128,11 @@ def test_apply_status_lists_only_statuses_with_budget_points() -> None:
     expected = set(budget_statuses(lib))
     assert expected.isdisjoint(without) and expected
     enums = _status_enums(build_proposal_models(lib).json_schema())
-    assert enums and all(set(v) == expected for v in enums.values())
+    unsafe = lib.ruleset.unsafe_backlash_statuses()  # 失手反噬另外排除（4-L10a）
+    assert enums and all(
+        set(v) == (expected - unsafe if name.startswith("Backlash") else expected)
+        for name, v in enums.items()
+    )
 
 
 def test_rarity_and_budget_filters_combine() -> None:

@@ -188,7 +188,10 @@ def test_reaction_kind_without_event_is_locatable() -> None:
     data = _proposal("skill_riposte", reaction=None)
     result = evaluate_proposal(data, _models(), _lib(), ProposalContext(1, "rare"))
     assert result.skill is None
-    assert {e.stage for e in result.errors} == {"skill"}, result.errors
+    # 4-L10a：反應技分支的 reaction 必填，缺了在提議格式階段就指到 reaction
+    assert [(e.stage, e.path, e.code) for e in result.errors] == [
+        ("proposal", "reaction", "missing")
+    ], result.errors
 
 
 def test_mock_reaction_proposal_gets_budgeted_numbers() -> None:

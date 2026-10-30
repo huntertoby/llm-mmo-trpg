@@ -11,7 +11,12 @@ import pytest
 
 from tests.engine.helpers import library
 from tests.known_budget_exceptions import RANGE_BUDGET_EXCEPTIONS
-from tests.skillgen.helpers import general_effect_tags, standard_form, union_tags
+from tests.skillgen.helpers import (
+    effect_branches,
+    general_effect_tags,
+    standard_form,
+    union_tags,
+)
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.skillgen.proposal import (
@@ -79,16 +84,24 @@ def test_one_branch_per_primitive_from_yaml() -> None:
     primitives = lib.ruleset.primitives.by_id()
     # 一般版型只有沒有組合規則的原語；有組合規則的原語在自己的版型（Phase 4-L5b）
     assert general_effect_tags(schema) == set(primitives) - _special_ids()
-    assert {f"Effect_{i}" for i in primitives} <= set(schema["$defs"])
+    # 持續區域依 anchor 分支（4-L10a）：模型是 Effect_zone_<anchor>
+    split = {"zone": "Effect_zone_tile"}
+    names = {i: split.get(i, f"Effect_{i}") for i in primitives}
+    assert set(names.values()) <= set(schema["$defs"])
     for primitive in primitives.values():
-        model = schema["$defs"][f"Effect_{primitive.id}"]
-        # 每一支只有該原語自己的非數值參數（加上 type、affects、condition）
+        branches = effect_branches(schema, names[primitive.id])
+        # 每一支只有該原語自己的非數值參數（加上 type、affects、condition）；「恰好填一個」的
+        # 參數與 split_heal 拆成分支（4-L10a），各支的參數合起來等於原語的參數
         params = {n for n, spec in primitive.params.items() if spec.type not in ("int", "dice")}
-        assert set(model["properties"]) == {"type", "affects", "condition"} | params, primitive.id
+        found = set().union(*(set(m["properties"]) for m in branches))
+        assert found == {"type", "affects", "condition"} | params, primitive.id
+        for model in branches:
+            assert model["additionalProperties"] is False
+            assert model["description"] == primitive.llm_hint
+        if len(branches) > 1 or primitive.id == "zone":
+            continue
         expected = ["type", *sorted(n for n in params if _must(primitive.params[n]))]
-        assert model.get("required", ["type"]) == expected, primitive.id
-        assert model["additionalProperties"] is False
-        assert model["description"] == primitive.llm_hint
+        assert branches[0].get("required", ["type"]) == expected, primitive.id
 
 
 def _must(spec: Any) -> bool:
@@ -111,7 +124,10 @@ def test_proposal_has_no_numeric_fields() -> None:
     for key, item in items.items():
         numeric = numeric_param_names(item.params)
         all_numeric |= numeric
-        assert numeric.isdisjoint(schema["$defs"][key]["properties"]), key
+        if key not in schema["$defs"]:  # 依參數分支的版型（4-L10a）
+            continue
+        for model in effect_branches(schema, key):
+            assert numeric.isdisjoint(model["properties"]), key
     assert {"dice", "duration", "distance", "permille", "multiplier_permille"} <= all_numeric
     assert set(schema["$defs"]["Scaling"]["properties"]) == {"by"}
     assert set(standard_form(schema)["properties"]).isdisjoint({"ap_cost", "cost"})
@@ -122,9 +138,10 @@ def test_proposal_has_no_numeric_fields() -> None:
 
 
 def test_required_when_params_are_optional_in_proposal() -> None:
-    inscribe = _models().json_schema()["$defs"]["Effect_inscribe"]
-    assert "element" in inscribe["properties"]
-    assert "element" not in inscribe.get("required", [])  # required_when: unless_filled tag
+    """``inscribe`` 的 element／tag 恰好填一個（4-L10a）：拆成兩支，各支只有一個、而且必填。"""
+    element, tag = effect_branches(_models().json_schema(), "Effect_inscribe")
+    assert "element" in element["required"] and "tag" not in element["properties"]
+    assert "tag" in tag["required"] and "element" not in tag["properties"]
 
 
 def test_trigger_models_follow_yaml_params() -> None:

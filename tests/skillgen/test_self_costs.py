@@ -329,6 +329,8 @@ def test_the_proposal_schema_lists_exactly_the_allowed_penalties() -> None:
     def walk(node: Any) -> None:
         if isinstance(node, dict):
             prop = node.get("properties", {}).get("cost_penalty")
+            if isinstance(prop, dict) and "$ref" in prop:  # 具名型別（4-L10a）
+                prop = schema["$defs"][str(prop["$ref"]).rsplit("/", 1)[-1]]
             if isinstance(prop, dict):
                 for option in prop.get("anyOf", [prop]):
                     enum_values.update(option.get("enum", []))

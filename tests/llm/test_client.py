@@ -69,6 +69,7 @@ def test_default_config_file_loads() -> None:
     assert cfg.api_key == "local"
     assert cfg.max_retries == 3
     assert cfg.fallback_alert_permille == 200
+    assert cfg.max_tokens == 1024  # 4-L10a C2
 
 
 def test_config_env_override(tmp_path: Path) -> None:

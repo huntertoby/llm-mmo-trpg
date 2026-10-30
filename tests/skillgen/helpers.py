@@ -91,11 +91,20 @@ def lib_with_rewrite_primitive() -> ContentLibrary:
 
 def standard_form(schema: dict[str, Any]) -> dict[str, Any]:
     """提議 schema 的一般型態（Phase 4-L5b：頂層是以 ``form`` 區分的型態；只有一個型態時
-    就是根）。"""
+    就是根；4-L10a 起反應技另一支，這裡取一般種類組那一支）。"""
     if "properties" in schema:
         return schema
     found: dict[str, Any] = schema["$defs"]["SkillProposal"]
     return found
+
+
+def effect_branches(schema: dict[str, Any], name: str) -> list[dict[str, Any]]:
+    """效果模型的各支（4-L10a：「恰好填一個」與 split_heal 的效果拆成以欄位區分的分支；沒有拆
+    的就是模型本身）。"""
+    model: dict[str, Any] = schema["$defs"][name]
+    if "properties" in model:
+        return [model]
+    return [schema["$defs"][str(i["$ref"]).rsplit("/", 1)[-1]] for i in model["oneOf"]]
 
 
 def general_effect_tags(schema: dict[str, Any]) -> set[str]:

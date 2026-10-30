@@ -8,7 +8,7 @@ LLM 提議只能在目錄裡挑（守則 3）：目錄由資料來源
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from trpg.content.library import ContentLibrary
@@ -97,9 +97,14 @@ def build_catalog(
     *,
     major: bool,
     source: FlashOptionSource | None = None,
+    applicable: Callable[[Variation], bool] | None = None,
 ) -> FlashCatalog:
     """這一次（``major``：是不是第 3 次大變化）可以提議的變化目錄。轉型不在目錄內（由資料保底）。
-    指定類別時只含該類。"""
+    指定類別時只含該類。
+
+    ``applicable``（Phase 4-L10a F1／F2）：只收這招套得上的變化（LLM 提議用引擎真的套一次的
+    檢查，與 ``flash.not_applicable`` 同一個判斷）；模板的參數選單只留套得上的值，沒有任何套得上
+    變化的模板與類別不列入。"""
     source = source or UsageSource()
     table = library.flash
     categories = allowed_categories(table, before, major=major)
@@ -109,7 +114,9 @@ def build_catalog(
     order: dict[str, list[Variation]] = {}
     for category in categories:
         for variation in source.ranked(library, request, category, before):
-            pool.setdefault(variation.key(), variation)
+            if variation.key() in pool or (applicable is not None and not applicable(variation)):
+                continue
+            pool[variation.key()] = variation
             order.setdefault(variation.template, []).append(variation)
     entries = tuple(
         CatalogEntry(
@@ -123,4 +130,6 @@ def build_catalog(
         )
         for template, variations in order.items()
     )
+    if applicable is not None:
+        categories = tuple(c for c in categories if any(e.category == c for e in entries))
     return FlashCatalog(categories, entries, pool)

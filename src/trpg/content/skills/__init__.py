@@ -305,6 +305,7 @@ from trpg.content.skills.effects import (
     SkillRuleError,
     composition_rules,
     composition_shapes,
+    error_path_of,
     true_only_params,
 )
 from trpg.content.skills.effects import (
@@ -640,6 +641,7 @@ __all__ = [
     "composition_shapes",
     "condition_text",
     "default_affects",
+    "error_path_of",
     "granted_skill_problems",
     "held_gear",
     "is_wind_skill",

@@ -85,6 +85,29 @@ def test_run_items_with_mock_keeps_order_and_names() -> None:
     assert len(rows) == 5
 
 
+def test_run_items_share_taken_names_with_naming() -> None:
+    """4-L10a C3：同一次評估已取過的名稱帶進之後命名 prompt 的 taken_names。"""
+    seen: list[list[str]] = []
+
+    def naming(item: EvalItem, skill: SkillDef, _client: ItemClient) -> ItemClient:
+        client = mock_naming_client(LIB, skill, item.seed)
+        inner = client.complete
+
+        def complete(messages, *, json_schema=None):  # type: ignore[no-untyped-def]
+            user = messages[1]["content"]
+            seen.append(json.loads(user[user.index("{") : user.rindex("}") + 1])["taken_names"])
+            return inner(messages, json_schema=json_schema)
+
+        client.complete = complete  # type: ignore[method-assign]
+        return ItemClient(client)
+
+    items = forced_items(LIB, per=2, seed=0, only=("damage", "heal"))
+    results = run_items(LIB, items, _mock, max_attempts=3, workers=1, naming=naming)
+    named = [r.name for r in results if r.name_source]
+    assert len(named) >= 2 and len(seen) >= 2
+    assert seen[0] == [] and named[0] in seen[1]
+
+
 def test_failing_answers_record_error_details() -> None:
     items = forced_items(LIB, per=1, seed=0, only=("damage",))
 
