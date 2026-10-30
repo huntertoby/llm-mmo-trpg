@@ -610,7 +610,14 @@ def perform_unit_attack(
         for _ in range(attacker.weapon.strikes - 1):  # 連擊武器（雙匕首，3I-4）：每一下各自結算
             if not (attacker.alive and target.alive):
                 break
-            _attack_once(ctx, attacker, target, primary=False, reaction=reaction)
+            _attack_once(
+                ctx,
+                attacker,
+                target,
+                primary=False,
+                reaction=reaction,
+                backstab_allowed=not attacker.weapon.backstab_first_only,
+            )
         attacker.next_attack_hit = attacker.next_attack_crit = (
             0  # 形態的進入獎勵：整次攻擊用完才失效
         )
@@ -657,6 +664,7 @@ def _attack_once(
     primary: bool,
     extra_permille: int | None = None,
     reaction: bool = False,
+    backstab_allowed: bool = True,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
     攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
@@ -682,7 +690,9 @@ def _attack_once(
     if attacker.aimed:  # 瞄準（Phase 3-21a）：下一次需要擲命中的攻擊，用掉即失效
         bonus += ctx.core.aim_hit_bonus
         attacker.aimed = False
-    roll = roll_attack(state, ctx.rng, attacker, target, forced, bonus=bonus)
+    roll = roll_attack(
+        state, ctx.rng, attacker, target, forced, bonus=bonus, backstab_allowed=backstab_allowed
+    )
     rolled_event = ctx.emit(
         AttackRolled,
         attacker_id=attacker.id,

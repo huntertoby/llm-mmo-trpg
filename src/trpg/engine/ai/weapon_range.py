@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from trpg.content.battle import WeaponDef
 
-__all__ = ["best_distance", "damage_permille_at", "is_close_range"]
+__all__ = ["best_distance", "damage_permille_at", "is_close_range", "is_far_range"]
 
 _PERMILLE = 1000
 
@@ -43,3 +43,11 @@ def is_close_range(weapon: WeaponDef, keep_radius: int) -> bool:
         return False
     best = best_distance(weapon)
     return best is not None and best <= keep_radius and best < weapon.range
+
+
+def is_far_range(weapon: WeaponDef, keep_radius: int) -> bool:
+    """遠距加成武器（BAL-8）：非近戰、最佳距離超過 ``keep_radius``、該距離傷害高於基準（火槍）。"""
+    if weapon.is_melee:
+        return False
+    best = best_distance(weapon)
+    return best is not None and best > keep_radius and damage_permille_at(weapon, best) > _PERMILLE
