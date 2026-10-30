@@ -48,8 +48,9 @@ export function buildTryoutRequest(
   return body;
 }
 
-/** 技能的法力代價（沒有就是 0）。 */
+/** 技能的法力代價（沒有就是 0）：我方實際會扣的費用（`battle_mana`，打折後，BAL-4c），沒有時用原始費用。 */
 export function skillMana(check: WorkshopCheck | null): number {
+  if (typeof check?.battle_mana === "number") return check.battle_mana;
   const mana = getPath(check?.skill ?? null, "cost.mana");
   return typeof mana === "number" ? mana : 0;
 }

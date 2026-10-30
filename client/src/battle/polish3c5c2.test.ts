@@ -68,4 +68,9 @@ describe("tryout mana note with the build's mana limit (3-5c-2)", () => {
     expect(manaNote(withMana)).toContain("8 點法力");
     expect(manaNote({ skill: {} } as unknown as WorkshopCheck, 3)).toBeNull();
   });
+  it("uses the discounted battle_mana when the server sends it (BAL-4c)", () => {
+    const discounted = { skill: { cost: { mana: 8 } }, battle_mana: 6 } as unknown as WorkshopCheck;
+    expect(manaNote(discounted, 3)).toContain("法力上限 3，技能需要 6");
+    expect(manaNote(discounted, 6)).toContain("夠用");
+  });
 });

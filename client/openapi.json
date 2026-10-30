@@ -13441,6 +13441,17 @@
               }
             ]
           },
+          "battle_mana": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Mana"
+          },
           "icon": {
             "$ref": "#/components/schemas/SkillIcon"
           },

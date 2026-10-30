@@ -53,6 +53,7 @@ def _check(
 ) -> WorkshopCheck:
     result = check_draft(skill, library)
     card = None
+    battle_mana = None
     if result.skill is not None:
         built = build_skill(result.skill)
         held = None if weapon is None else library.weapons.get(weapon)
@@ -60,9 +61,11 @@ def _check(
             held = None  # 大類不符（例如遠程技能配近戰武器）：不拿它當持有者
         owner = None if held is None else CardOwner(weapon=held)
         card = skill_card(library, built, owner=owner)
+        battle_mana = library.ruleset.core.ally_mana(built.cost.mana)
     return WorkshopCheck(
         **result.model_dump(),
         card=card,
+        battle_mana=battle_mana,
         concept_provisional=card is not None and PROVISIONAL_MARK in card.concept,
         icon=icon_of(skill),
         keywords=draft_card_keywords(library, skill),
