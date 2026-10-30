@@ -290,8 +290,9 @@ def _gain(value: int, magnitude: int) -> int:
 
 
 def _less_taken(permille: int, magnitude: int) -> int:
-    """受傷倍率：低於 1000（減傷）的部分離 1000 的距離 × 幅度（四捨五入 half-up，最低 0）；高於 1000 的
-    （弱點，代價）照原值。和姿態的 ``scaled_permille``（``down``）同一個算法。"""
+    """受傷倍率：低於 1000（減傷）的部分離 1000 的距離 × 幅度（四捨五入 half-up，
+    最低 0）；高於 1000 的（弱點，代價）照原值。和姿態的 ``scaled_permille``（``down``）同一個
+    算法。"""
     if permille >= PERMILLE:
         return permille
     return max(0, PERMILLE - ((PERMILLE - permille) * magnitude + PERMILLE // 2) // PERMILLE)
