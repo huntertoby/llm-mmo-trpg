@@ -10,7 +10,7 @@ import time
 from typing import TextIO
 
 from trpg.content.library import ContentLibrary
-from trpg.roguelite.auto import FLASH_POLICIES, FlashPolicy
+from trpg.roguelite.auto import ALL_FLASH_POLICIES, FLASH_POLICIES, FlashPolicy
 from trpg.sim.flash_economy import format_economy_report, parse_economy, run_economy_sweep
 from trpg.sim.flash_report import format_flash_report, run_flash_sim
 
@@ -29,14 +29,14 @@ def cmd_sim_flash(
     economy: str | None = None,
 ) -> int:
     names = list(FLASH_POLICIES) if policies is None else policies
-    unknown = [p for p in names if p not in FLASH_POLICIES]
+    unknown = [p for p in names if p not in ALL_FLASH_POLICIES]
     if unknown or not names:
         print(
-            f"錯誤：--policies 只能是 {', '.join(FLASH_POLICIES)}（收到 {unknown or '空'}）",
+            f"錯誤：--policies 只能是 {', '.join(ALL_FLASH_POLICIES)}（收到 {unknown or '空'}）",
             file=err,
         )
         return 2
-    chosen: list[FlashPolicy] = [p for p in FLASH_POLICIES if p in names]
+    chosen: list[FlashPolicy] = [p for p in ALL_FLASH_POLICIES if p in names]
     started = time.perf_counter()
     if economy is not None:
         return _economy(

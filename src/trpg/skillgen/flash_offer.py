@@ -354,7 +354,7 @@ def _usage_score(
         "keyword_imbue": int(signal == 0),
         "mod_keyword": 2 * (signal > 0),
     }
-    return int(scores.get(op, 0))
+    return int(scores.get(op, 0)) + template.usage_base
 
 
 class FlashOption(BaseModel):

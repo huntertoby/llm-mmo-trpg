@@ -22,7 +22,7 @@
 - ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]
   [--ally-build a,b]``：每張地圖以預設陣容（或指定的 build）批次模擬，印出勝率、輪數、DPR、
   控制回合、技能使用與異常。
-- ``trpg sim flash [--policies none,all,mixed] [--seeds 20] [--seed-start 0] [--jobs N]``：
+- ``trpg sim flash [--policies none,all,mixed,balanced] [--seeds 20] [--seed-start 0] [--jobs N]``：
   閃現模擬報表（Phase 3W-8）。
 - ``trpg sim completion [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N]``：完成度檢查
   （9 種指揮官設定 × 地圖 × 種子；exception、max_actions、draw 必須為 0，否則結束碼 1）。
@@ -290,7 +290,10 @@ def _add_sim_report_parsers(
     flash.add_argument(
         "--policies",
         default=None,
-        help="AI 閃現策略，以逗號分隔（none 不指定類別、all 全指定類別、mixed 混合；預設全部）",
+        help=(
+            "AI 閃現策略，以逗號分隔（none 不指定類別、all 全指定類別、mixed 混合、balanced 均衡；"
+            "預設前三種）"
+        ),
     )
     flash.add_argument("--seeds", type=_positive_int, default=20, help="每個策略的輪數（預設 20）")
     flash.add_argument(

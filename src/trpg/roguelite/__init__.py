@@ -17,7 +17,13 @@
 
 from __future__ import annotations
 
-from trpg.roguelite.auto import FLASH_POLICIES, FlashPolicy, auto_choice, auto_play
+from trpg.roguelite.auto import (
+    ALL_FLASH_POLICIES,
+    FLASH_POLICIES,
+    FlashPolicy,
+    auto_choice,
+    auto_play,
+)
 from trpg.roguelite.battle import ActiveBattle, SavedBattle
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, RunError, SaveFormatError
 from trpg.roguelite.progress import apply_choice, battle_setup, finish_battle, next_node
@@ -41,6 +47,7 @@ from trpg.roguelite.start import new_dev_run, new_keyword_run, new_run
 from trpg.roguelite.state import RunState
 
 __all__ = [
+    "ALL_FLASH_POLICIES",
     "CONTENT_CHANGED_NOTICE",
     "FLASH_POLICIES",
     "SAVE_FORMAT",

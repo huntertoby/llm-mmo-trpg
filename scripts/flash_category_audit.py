@@ -29,7 +29,7 @@ from trpg.content.flash_templates import FlashTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.roguelite import auto as auto_module
-from trpg.roguelite.auto import FLASH_POLICIES, FlashPolicy, auto_play
+from trpg.roguelite.auto import ALL_FLASH_POLICIES, FLASH_POLICIES, FlashPolicy, auto_play
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.start import default_start, new_keyword_run
 from trpg.roguelite.state import FlashChoice, FlashPickChoice
@@ -525,7 +525,7 @@ def report_sim(results: Sequence[SimStats]) -> list[str]:
         by_policy[r.policy].append(r)
     categories = sorted({c for r in results for c, _ in r.options})
     rows: list[list[str]] = []
-    for policy in FLASH_POLICIES:
+    for policy in ALL_FLASH_POLICIES:
         group = by_policy.get(policy)
         if not group:
             continue
@@ -553,7 +553,7 @@ def report_sim(results: Sequence[SimStats]) -> list[str]:
     )
     lines += ["### 被閃現的技能種類與主角持有的種類（每次出題）", ""]
     krows: list[list[str]] = []
-    for policy in FLASH_POLICIES:
+    for policy in ALL_FLASH_POLICIES:
         group = by_policy.get(policy)
         if not group:
             continue
@@ -610,6 +610,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--sim-seeds", type=int, default=20, help="C 每個策略的種子數")
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument("--no-sim", action="store_true", help="略過 C（一輪實際模擬）")
+    parser.add_argument(
+        "--policies",
+        default=",".join(FLASH_POLICIES),
+        help="C 的策略（逗號分隔；none 集中、balanced 均衡、all 全指定；預設 none,all,mixed）",
+    )
     args = parser.parse_args(argv)
     library = default_library()
     ids = None if args.skills is None else [s for s in args.skills.split(",") if s]
@@ -622,7 +627,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     out += report_templates(library, templates)
     out += report_ranking(ranking, scores)
     if not args.no_sim:
-        tasks = [(p, s) for p in FLASH_POLICIES for s in range(1, args.sim_seeds + 1)]
+        policies: list[FlashPolicy] = [
+            p for p in ALL_FLASH_POLICIES if p in args.policies.split(",")
+        ]
+        tasks = [(p, s) for p in policies for s in range(1, args.sim_seeds + 1)]
         out += report_sim(run_tasks(simulate, library, tasks, jobs=args.jobs))
     sys.stdout.write("\n".join(out) + "\n")
     return 0

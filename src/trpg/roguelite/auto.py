@@ -20,6 +20,11 @@
   都指定類別（依用法排第一的類別，2 點；點數不夠就等到存夠；該招沒有可指定的類別才退回不指定）；
   ``mixed`` 在這一輪已經閃過的總次數為偶數時照 ``all`` 的做法，奇數時不指定。
 
+- 均衡玩家（BAL-2b，``balanced``，只影響挑哪一招閃；不指定類別）：優先閃還沒閃過的技能；候選之間
+  輪流各技能種類（主動、被動、反應、姿態、修正型被動：閃過次數最少的種類先，同次數依這個順序），
+  再取技能列順序；全部都閃過之後改挑閃過最少次的。``none`` 是「集中」玩家（閃過最多次的先閃）、
+  ``all`` 是「全指定」玩家（同樣集中，每次指定類別）。
+
 全部確定性：同一個 ``RunState`` 必得相同結果。
 """
 
@@ -57,6 +62,7 @@ from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_state import COMPLETE_SLOT
 
 __all__ = [
+    "ALL_FLASH_POLICIES",
     "FLASH_POLICIES",
     "AutoStop",
     "FlashPolicy",
@@ -65,9 +71,15 @@ __all__ = [
     "auto_play",
 ]
 
-type FlashPolicy = Literal["none", "all", "mixed"]
-"""AI 花靈感點的策略（3W-8）：不指定類別、全指定類別、混合。"""
+type FlashPolicy = Literal["none", "all", "mixed", "balanced"]
+"""AI 花靈感點的策略：不指定類別（集中）、全指定類別、混合（3W-8）、均衡（BAL-2b）。"""
 FLASH_POLICIES: tuple[FlashPolicy, ...] = ("none", "all", "mixed")
+"""``trpg sim flash`` 預設比較的策略（3W-8）。"""
+ALL_FLASH_POLICIES: tuple[FlashPolicy, ...] = (*FLASH_POLICIES, "balanced")
+"""全部可選的策略（含均衡）。"""
+
+_KIND_ROTATION = ("active", "passive", "reaction", "stance", "modifier")
+"""均衡玩家輪流的技能種類順序。"""
 
 type AutoStop = Callable[[RunState, ActiveBattle | None], bool]
 """停止條件：在每個節點與每個戰鬥步驟之前呼叫（``ActiveBattle`` 為進行中的戰鬥或 ``None``）。"""
@@ -134,6 +146,28 @@ def _wants_focus(run: RunState, policy: FlashPolicy) -> bool:
     return policy == "all"
 
 
+def _focus_pick(run: RunState, ready: list[str]) -> str:
+    """集中：閃過最多次的先閃，同次數依技能列順序。"""
+    return max(ready, key=lambda s: (len(state_of(run, s).records), -run.hero.skills.index(s)))
+
+
+def _balanced_pick(library: ContentLibrary, run: RunState, ready: list[str]) -> str:
+    """均衡：沒閃過的先閃；候選之間先挑閃過次數最少的技能種類（同次數依 ``_KIND_ROTATION``），再依
+    技能列順序；都閃過之後挑閃過最少次的。"""
+    kind_of = {d.id: d.kind for d in skill_defs(library, run, run.hero.skills)}
+    counts = dict.fromkeys(_KIND_ROTATION, 0)
+    for skill in run.hero.skills:
+        counts[kind_of[skill]] = counts.get(kind_of[skill], 0) + len(state_of(run, skill).records)
+
+    def key(skill: str) -> tuple[int, int, int, int, int]:
+        kind = kind_of[skill]
+        records = len(state_of(run, skill).records)
+        order = _KIND_ROTATION.index(kind) if kind in _KIND_ROTATION else len(_KIND_ROTATION)
+        return (int(records > 0), counts[kind], order, records, run.hero.skills.index(skill))
+
+    return min(ready, key=key)
+
+
 def auto_flash_choice(
     library: ContentLibrary,
     run: RunState,
@@ -154,7 +188,7 @@ def auto_flash_choice(
     ready = [s for s in run.hero.skills if s not in skip and problem_of(library, run, s) is None]
     if not ready:
         return None
-    best = max(ready, key=lambda s: (len(state_of(run, s).records), -run.hero.skills.index(s)))
+    best = _balanced_pick(library, run, ready) if policy == "balanced" else _focus_pick(run, ready)
     category = None
     if _wants_focus(run, policy):
         if run.insight - reserve < library.flash.pricing.rule(True).cost:
