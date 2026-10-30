@@ -156,6 +156,8 @@ def _why_active(op: str, skill: SkillDef) -> str:
         "kill_refund": "無傷害效果（或已有擊殺返還）",
         "summon_toughen": "不是單隻召喚",
         "extend": "沒有可延長的狀態／表面／區域",
+        "converge_single": "陷阱／沒有威力／不是多格範圍／骨架或效果不允許單體",
+        "converge_step": "陷阱／沒有威力／已是最小一級（或環形、連鎖、光環）",
     }
     return reasons.get(op, "其他")
 

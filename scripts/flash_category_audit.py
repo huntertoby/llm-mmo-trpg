@@ -50,8 +50,8 @@ from trpg.skillgen.flash_offer import (
     skill_before,
     try_variation,
 )
-from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import Variation, acquire
+from trpg.skillgen.flash_trade import MINOR_OPS
 from trpg.skillgen.random_composer import ComposeError, default_library
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.whiteboard import WHITEBOARD_KINDS, compose_whiteboard
@@ -199,7 +199,7 @@ def _static_reject(
         return "illegal:階級不足（模板 min_tier）"
     if subject.skill.kind not in template_kinds(library.flash, template):
         return "illegal:技能種類不符（模板 kinds）"
-    if template.op not in FLASH_OPS:
+    if template.op not in MINOR_OPS:
         return "illegal:op 未實作"
     return None
 
