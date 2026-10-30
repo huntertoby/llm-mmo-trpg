@@ -869,7 +869,8 @@ def _op_mod_cost(
     """代價減輕（修正型被動的「費用」方向）：負的傷害、治療幅度往 0 減輕
     ``rules.modifier_drawback_step`` ‰，命中 −n 改成 −(n−1)。
     BAL-10c（比照 3W-5b，減代價只減不拿掉）：
-    減了就歸 0 的代價（AP +1、召喚上限 −1、射程 −1、只剩 1 格的傷害、治療、命中）不出。其他規則的幅度由預算器重調；至少留一條規則。每個代價各一份草稿，依序試。"""
+    減了就歸 0 的代價（AP +1、召喚上限 −1、射程 −1、只剩 1 格的傷害、治療、命中）不出。
+    其他規則的幅度由預算器重調；至少留一條規則。每個代價各一份草稿，依序試。"""
     if skill.kind != "modifier" or len(skill.modifiers) < 2:  # noqa: PLR2004 - 至少留一條規則
         return []
     step = library.flash.rules.modifier_drawback_step
