@@ -157,7 +157,7 @@ def test_downing_a_normal_enemy_gives_nothing(monkeypatch: pytest.MonkeyPatch) -
 
 def test_only_the_boss_units_are_elites_in_content() -> None:
     elites = sorted(u.id for u in library().units.values() if "elite" in u.tags)
-    assert elites == ["bandit_boss", "bandit_warlord"]  # 3-5b 加入 Boss 戰頭目
+    assert elites == ["bandit_boss", "bandit_captain", "bandit_warlord"]  # BAL-6
 
 
 def _legend_state(source: int | None, skill: SkillDef | None = None) -> BattleState:
