@@ -19,9 +19,10 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable, Iterator, Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fnmatch import fnmatchcase
 from fractions import Fraction
 from typing import Any
@@ -85,6 +86,7 @@ _PROBE_ID = "skill_llm_probe"
 _PROBE_NAME = "試算"
 _CORE_FIRST = frozenset({"skeleton.core_share", "skeleton.secondary_share"})
 WEAK = "budget.weak"
+SECONDARY_SHARE = "skeleton.secondary_share"
 NESTED_KNOB_KEYS = ("then", "on_kill")
 """過弱補強（4-L10b）時也當旋鈕調的巢狀效果欄位：消耗狀態後的追加效果、擊殺時效果（都是施放者
 這一方得利的效果；失手反噬、賭注的輸方不調）。"""
@@ -323,6 +325,46 @@ def _tune(
         core_only = (attempt % 2 == 0) == core_first
         if _tune_once(library, data, root.fork(f"repair.{attempt}"), core_only=core_only):
             return
+    if SECONDARY_SHARE in repairs and _floor_secondary(library, data):
+        # 4-L10b B3：最後一次重調可能把附帶傷害調高了——降回最低值，只調核心
+        _tune_once(library, data, root.fork("repair.floor"), core_only=True)
+
+
+def _limited_types(library: ContentLibrary, data: dict[str, Any]) -> list[frozenset[str]]:
+    """每個旋鈕目標（頂層效果、第二段效果）所屬骨架有占比上限的原語。"""
+    out: list[frozenset[str]] = []
+    segments = [(data.get("skeleton"), data.get("effects") or [])]
+    follow = data.get("followup")
+    if isinstance(follow, dict):
+        segments.append((follow.get("skeleton"), follow.get("effects") or []))
+    for skeleton_id, effects in segments:
+        skeleton = library.skeletons.get(str(skeleton_id))
+        limited = frozenset(skeleton.secondary.max_share_permille) if skeleton else frozenset()
+        out += [limited] * len(effects)
+    return out
+
+
+def _floor_secondary(library: ContentLibrary, data: dict[str, Any]) -> bool:
+    """附帶效果中有占比上限的原語（骨架 ``secondary.max_share_permille``，例如控制骨架的傷害）的旋鈕
+    全部降到最低值（就地修改）；有任何旋鈕被降回 ``True``。"""
+    knobs = _knobs(library, data, core_only=False)
+    core = _knobs(library, data, core_only=True)
+    if knobs is None or core is None:
+        return False
+    core_keys = {(k.index, k.field) for k in core}
+    targets = [*data["effects"], *_extra_of(data)]
+    limited = _limited_types(library, data)
+    lowered = False
+    for knob in knobs:
+        effect = targets[knob.index]
+        if (knob.index, knob.field) in core_keys or str(effect.get("type")) not in limited[
+            knob.index
+        ]:
+            continue
+        if effect.get(knob.field) != knob.values[0]:
+            effect[knob.field] = knob.values[0]
+            lowered = True
+    return lowered
 
 
 def _window_ok(library: ContentLibrary, data: dict[str, Any]) -> bool | None:
@@ -450,4 +492,54 @@ def evaluate_with_repair(
     fill = budget_filler(library, seed=seed, repairs=codes)
     second = evaluate_proposal(raw, models, library, ctx, fill=fill)
     left = {e.code for e in second.errors}
+    if SECONDARY_SHARE in left:
+        second = _explain_secondary(raw, library, second)
     return RepairedEvaluation(second, tuple(c for c in codes if c not in left))
+
+
+def _raw_mapping(raw: str | Mapping[str, Any]) -> Mapping[str, Any]:
+    if isinstance(raw, Mapping):
+        return raw
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return {}
+    return data if isinstance(data, Mapping) else {}
+
+
+def _explain_secondary(
+    raw: str | Mapping[str, Any], library: ContentLibrary, result: ProposalResult
+) -> ProposalResult:
+    """修補後仍有 ``skeleton.secondary_share``（4-L10b B3）：引擎已把附帶效果降到最低值仍超標，
+    改寫成明確的建議——移除那個附帶效果（路徑指到它），讓模型重試時知道要改哪裡。"""
+    data = _raw_mapping(raw)
+    skeleton = library.skeletons.get(str(data.get("skeleton")))
+    effects = data.get("effects")
+    if skeleton is None or not isinstance(effects, list):
+        return result
+    limited = skeleton.secondary.max_share_permille
+    errors = tuple(
+        _secondary_advice(e, effects, limited, library) if e.code == SECONDARY_SHARE else e
+        for e in result.errors
+    )
+    return replace(result, errors=errors)
+
+
+def _secondary_advice(
+    error: ProposalError,
+    effects: list[Any],
+    limited: Mapping[str, int],
+    library: ContentLibrary,
+) -> ProposalError:
+    for index, effect in enumerate(effects):
+        kind = str(effect.get("type")) if isinstance(effect, dict) else ""
+        if kind not in limited or f"：{kind} 占" not in error.message:
+            continue
+        name = library.ruleset.primitives.by_id()[kind].name_zh
+        advice = (
+            f"{error.message}。引擎已把這個{name}（{kind}）降到最低值仍超過上限："
+            f"請移除 effects[{index}] 的 {kind}，只保留骨架的核心效果"
+            f"（或改用允許 {kind} 當主軸的骨架）"
+        )
+        return replace(error, path=f"effects[{index}]", message=advice)
+    return error

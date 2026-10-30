@@ -28,13 +28,17 @@ from trpg.engine.state import StatusInstance
 from trpg.narrative.skills import skill_card
 from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
+from trpg.skillgen.composer_parts import effect_knobs
 from trpg.skillgen.proposal import (
     ProposalContext,
+    ProposalError,
     ProposalModels,
+    ProposalResult,
     build_proposal_models,
     evaluate_proposal,
 )
 from trpg.skillgen.proposal_budget import (
+    _explain_secondary,
     budget_filler,
     cap_cooldown,
     evaluate_with_repair,
@@ -367,3 +371,68 @@ def test_cap_cooldown_comes_from_the_budget_rules(library: ContentLibrary) -> No
     for code in ("cap.revive_cost", "cap.rule_rewrite_cost", "followup.cap.rule_rewrite_cost"):
         assert is_repairable(code, library)
     assert not is_repairable("cap.rule_rewrite", library)  # 超過個數是結構問題
+
+
+# ---------------------------------------------------------------------------
+# B3：附帶傷害占比超標——先降到最低值，仍超標就明確建議移除
+# ---------------------------------------------------------------------------
+
+ICE = {"type": "damage", "element": "ice"}
+WEAPON = {"category": "weapon", "weapon_req": "ranged", "scaling_attr": "dex"}
+CROSS = {"type": "cross", "range": 4}
+
+B3_STUCK: dict[str, tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = {
+    # 名稱: (核心效果, 傷害, 其他欄位)；核心點數固定或很少，傷害降到最低仍超過 40%
+    "control_status": ({"type": "apply_status", "status": "slow"}, ICE, {}),
+    "dispel": ({"type": "dispel", "count": 1}, ICE, {}),
+    "steal_buff": ({"type": "steal_buff"}, {"type": "damage"}, WEAPON),
+    "blow_surface": ({"type": "blow_surface"}, ICE, {}),
+    "clear_surface": ({"type": "clear_surface"}, {"type": "damage"}, WEAPON),
+}
+
+
+@pytest.mark.parametrize("name", sorted(B3_STUCK))
+def test_secondary_damage_that_cannot_fit_is_floored_and_reported_with_advice(
+    library: ContentLibrary, models: ProposalModels, name: str
+) -> None:
+    core, damage, extra = B3_STUCK[name]
+    proposal = _proposal(library, "control", CROSS, [core, damage], **extra)
+    ctx = ProposalContext(1, "rare")
+    plain = evaluate_proposal(proposal, models, library, ctx, fill=budget_filler(library, seed=3))
+    assert "skeleton.secondary_share" in [e.code for e in plain.errors]
+    evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=3)
+    errors = [e for e in evaluation.result.errors if e.code == "skeleton.secondary_share"]
+    assert len(errors) == 1
+    assert errors[0].path == "effects[1]"
+    assert "請移除 effects[1] 的 damage" in errors[0].message
+    assert "降到最低值" in errors[0].message
+    # 修補時傷害停在最低值（骰子或武器倍率的第一階）
+    data = {k: v for k, v in proposal.items() if k != "layout"} | {"tier": 1, "rarity": "rare"}
+    filled = budget_filler(library, seed=3, repairs=["skeleton.secondary_share"])(data)
+    hit = filled["effects"][1]
+    knobs = effect_knobs(library, hit, category=filled["category"], weight=1)
+    assert knobs and all(hit[field] == values[0] for field, values, _ in knobs)
+    # 照建議移除傷害後，不再有占比錯誤
+    without = {**proposal, "effects": proposal["effects"][:1]}
+    again = evaluate_with_repair(without, models, library, ctx, seed=3)
+    assert "skeleton.secondary_share" not in [e.code for e in again.result.errors]
+
+
+def test_secondary_damage_that_fits_once_floored_is_repaired(
+    library: ContentLibrary, models: ProposalModels
+) -> None:
+    """表面骨架：核心（表面持續）有旋鈕，把傷害降到最低、調高核心就合格，不必回給 LLM。"""
+    effects = [{"type": "create_surface", "surface": "ice"}, ICE]
+    proposal = _proposal(library, "control", CROSS, effects)
+    ctx = ProposalContext(1, "rare")
+    plain = evaluate_proposal(proposal, models, library, ctx, fill=budget_filler(library, seed=3))
+    assert [e.code for e in plain.errors] == ["skeleton.secondary_share"]
+    evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=3)
+    assert evaluation.ok and evaluation.repaired == ("skeleton.secondary_share",)
+
+
+def test_secondary_advice_ignores_other_errors(library: ContentLibrary) -> None:
+    error = ProposalError("rules", "", "budget.weak", "過弱")
+    result = ProposalResult(None, (error,))
+    assert _explain_secondary({"skeleton": "control", "effects": []}, library, result) == result
+    assert _explain_secondary("not json", library, result) == result
