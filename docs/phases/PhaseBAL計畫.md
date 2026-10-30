@@ -82,3 +82,5 @@
 - 重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數），前後對照不足名單。
 
 **驗收**：上述測試（新增 `tests/skillgen/test_flash_converge_bal10d.py`：兩種形狀、自身中心射程 1、最小一級不出、無威力不出、上限截斷改減費、(a)/(b) 守恆）；ruff、format、mypy、lint-imports、skillgen／llm 相關 pytest、一場重播；報告 `docs/phases/BAL-10d報告.md`（含「待 PM 決定」）。
+
+**BAL-10d2（玩法 PM 2026-10-31，06 6.34.4「BAL-10d 定」，`c5ba8c65`）**：①單發上限基準維持 tier_budget × AP 係數 × 3（安全欄）；②平均命中目標數 < 1.5 時給收束加用法分數（原型權重）；③帶表面／split_heal／destroy_object／shockwave／leave_form 的 7 招不出「收成單體」，只出縮小一級、縮不了不出，骨架不放寬；④收束目標比例改為 max(收束前比例＋40‰, 一般重調的隨機目標)。改完重量 (a)/(b) 與 3×3 火球閃滿倍數、AI 選中比例。
