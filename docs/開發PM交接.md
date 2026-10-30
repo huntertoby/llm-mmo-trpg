@@ -60,7 +60,9 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 - **平衡階段**（`docs/phases/PhaseBAL計畫.md`，驗收紀錄在第 2 節、新順序在第 3 節）：BAL-1～BAL-9c、BAL-10a／10b 完成並驗收（靈感每勝 2、三種閃現 AI、姿態／形態幅度、難度倍率、守點、第 3 場 3 名、Boss 援軍 1、盜賊隊長、AI 修正、武器數值、boss_approach 10、頭目 HP 700‰、弓手護衛 1d6、弩 pierce_permille 400、小變化模板補第一段）。
 - **BAL-10c**（變身姿態只出修正類、進入代價 −1 可減法力／耐力、`mod_cost` 不讓代價消失、閃現目錄依種子打亂）：見本節第 2 點的狀態。
 
-**2. 交接時的狀態**（見本節末「交接時 git 狀態」）
+**2. 交接時的狀態**：BAL-10c 已交件、合併並 push（報告 `docs/phases/BAL-10c報告.md`；合併後 ruff、format、mypy、lint-imports、skillgen／llm／content／roguelite／narrative／cli pytest 6407 通過、swamp 種子 7 重播通過；最後一次**全量**是 BAL-9 合併後：pytest 10793、vitest 1176）。四位 PM 的交接 commit（專案 PM 2da95ec0、玩法 PM 6ef9bb2a／1dd74ae9／d343796d／8cd9a725／01ebc927、美術 PM c14a80fc）都已併入並 push，main ＝ origin/main。**沒有 agent 在跑**。工作區只有不明的 `tmp_x`（不是開發 PM 建的，不要動）。`LOG_FORMAT` `/90`、存檔 `trpg-run/13`。
+- BAL-10c 待決（交玩法 PM）：8 個變身姿態各階第 1 次只剩 1 個選項（只能新增非費用的形態旋鈕或接受）；`mod_cost` 只對 2 格以上代價出，內建幾乎沒有；打亂是否降低位置偏好待下次真模型量測。
+- 新開發 PM 建議先跑一次全量（`UV_NO_SYNC=1 uv run pytest -q tests -n 6 -m "not llm" --timeout=3000` 加 vitest、build），因為 BAL-9c～10c 之間只跑相關檢查。
 
 **3. 平衡方向（使用者 2026-10-31）**：「反正到時候大世界又不會要求你要打5局就要打BOSS…本來打不過就要練等不是嗎」→ **不追一輪勝率**；重心放在會帶到大世界的東西（單場難度、武器、技能數值、召喚、AI、資源）。已定的原型數值不再調。原型數值玩法 PM 可直接定；會帶到大世界的規則回使用者；**已寫入設計文件的決定只有使用者能改**（玩法 PM 自己定的細節由玩法 PM 改）。
 
