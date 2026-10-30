@@ -546,10 +546,10 @@ def test_demo_battles_replay_exactly(build: str, map_id: str, seed: int) -> None
 @pytest.mark.parametrize(
     ("build", "seed", "check"),
     [
-        ("build_seer", 0, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
+        ("build_seer", 5, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
         (
             "build_seer",
-            0,
+            5,  # BAL-6：open_plain 換隊長後種子 0 → 5
             lambda e: isinstance(e, ResourceRestored) and e.resource == "cooldown",
         ),
         ("build_warlock", 5, lambda e: isinstance(e, StatusRemoved) and e.reason == "stolen"),

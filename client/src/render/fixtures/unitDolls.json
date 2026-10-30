@@ -92,6 +92,27 @@
   },
   "rarity": "epic"
  },
+ "bandit_captain": {
+  "skin": "#a8724c",
+  "hair": "short",
+  "hair_color": "#1c1410",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "iron"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "bandana",
+    "material": "cloth",
+    "color": "#a32a2a"
+   }
+  }
+ },
  "bandit_guard": {
   "skin": "#a8724c",
   "hair": "short",
