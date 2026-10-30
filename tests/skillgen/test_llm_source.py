@@ -182,7 +182,10 @@ def test_menu_rotation_shrinks_and_shuffle_keeps_membership(library: ContentLibr
     rules = library.composer.llm_topic
     rotated = select_subset(library, ProposalRequest(3, "epic", menu_seed=5))
     assert len(rotated.conditions) <= rules.condition_count + 1  # 骨架必要的條件另計
-    assert set(rotated.primitives) < set(full.primitives)
+    # 4-L10a C5：自由題不收形態原語後，3 階 epic 的附帶原語都已是某骨架的核心（不輪替），
+    # 原語不一定變少；條件照樣輪替變少
+    assert set(rotated.primitives) <= set(full.primitives)
+    assert set(rotated.conditions) < set(full.conditions)
     other = select_subset(library, ProposalRequest(3, "epic", menu_seed=6))
     assert rotated != other
     ids = [e["id"] for e in available_payload(library, rotated)["primitives"]]
