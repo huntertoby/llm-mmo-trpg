@@ -41,8 +41,8 @@
 ``mod_duration``   持續回合 +1（修正型被動：命中後狀態／符文、召喚持續，BAL-10b）
 ``mod_stack``      計數上限 +1（修正型被動：依空欄位計算的格數，BAL-10b）
 ``mod_cooldown``   命中後冷卻 −1 → −2（修正型被動，BAL-10b）
-``mod_cost``       代價減輕（修正型被動：負的幅度減輕、一級代價拿掉，BAL-10b）
-``stance_enter_light``  進入代價 −1（姿態：施放費用 −1，維持費不動，BAL-10b）
+``mod_cost``       代價減輕（修正型被動：負的幅度減輕一格，不讓代價消失，BAL-10b／10c）
+``stance_enter_light``  進入代價 −1（姿態：進入時的冷卻、法力、耐力 −1，維持費不動，BAL-10b／10c）
 =================  ============================================================
 
 輔助類（6.34.4）沒有獨立的改法：效果 + 用 ``potency``、範圍 +1 用 ``area``、附帶關鍵字用
@@ -863,17 +863,13 @@ def _op_mod_cooldown(
     return drafts
 
 
-_DROP_DRAWBACKS = (("ap_delta", 1), ("summon_limit_delta", -1), ("range_delta", -1))
-"""代價減輕時整條拿掉的代價規則（改變種類, 數值）：這些只有一級，減輕就是沒有。"""
-
-
 def _op_mod_cost(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """代價減輕（修正型被動的「費用」方向）：負的傷害、治療幅度往 0 減輕
-    ``rules.modifier_drawback_step`` ‰（減到 0 就拿掉那條），命中 −n 改成 −(n−1)，AP +1、召喚上限
-    −1、射程 −1 這類一級的代價整條拿掉。其他規則的幅度由預算器重調；至少留一條規則。每個代價各一份
-    草稿，依序試。"""
+    ``rules.modifier_drawback_step`` ‰，命中 −n 改成 −(n−1)。BAL-10c（比照 3W-5b，減代價只減不拿掉）：
+    減了就歸 0 的代價（AP +1、召喚上限 −1、射程 −1、只剩 1 格的傷害、治療、命中）不出。其他規則的幅度
+    由預算器重調；至少留一條規則。每個代價各一份草稿，依序試。"""
     if skill.kind != "modifier" or len(skill.modifiers) < 2:  # noqa: PLR2004 - 至少留一條規則
         return []
     step = library.flash.rules.modifier_drawback_step
@@ -886,11 +882,8 @@ def _op_mod_cost(
         if kind in ("damage_permille", "heal_permille", "hit_bonus") and value < 0:
             lighter = min(value + (1 if kind == "hit_bonus" else step), 0)
             if lighter == 0:
-                del base["modifiers"][index]
-            else:
-                base["modifiers"][index]["change"][kind] = lighter
-        elif (kind, value) in _DROP_DRAWBACKS:
-            del base["modifiers"][index]
+                continue  # 減了就消失：不出（BAL-10c）
+            base["modifiers"][index]["change"][kind] = lighter
         else:
             continue
         drafts.append((base, effects))
@@ -965,8 +958,8 @@ def _entry_cost(skill: SkillDef, field: str, step: int) -> dict[str, Any] | None
         cost["cooldown"] = value or None
         return cost
     current = int(getattr(skill.cost, field))
-    if current + step < 0:
-        return None
+    if current + step < (1 if step < 0 else 0):
+        return None  # 法力、耐力減到 0 ＝ 代價消失，最少留 1（BAL-10c）
     cost[field] = current + step
     return cost
 

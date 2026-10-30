@@ -106,8 +106,7 @@ def test_card_numbers_match_the_engine_for_a_flashed_plain_stance(skill_id: str)
 
 def test_every_stance_with_a_knob_accepts_the_stance_templates() -> None:
     """階梯上的元素姿態、白板姿態與沒有階梯的單一狀態姿態，費用（蓄力）與修正類都有合法變化；
-    變身姿態（BAL-10b）：維持費不動，費用類改用進入代價——蓄力合法（進入冷卻 +1），沒有進入代價可減
-    所以輕巧不出。"""
+    變身姿態（BAL-10c 回到 BAL-2c）：只出修正類，費用類（輕巧、蓄力）不出。"""
     lib = library()
     forms = 0
     for skill in sorted(lib.skills.values(), key=lambda s: s.id):
@@ -116,7 +115,7 @@ def test_every_stance_with_a_knob_accepts_the_stance_templates() -> None:
         if skill.form_id is not None:
             forms += 1
             assert apply_variation(lib, skill, LIGHT, bonus=40, rng=Rng(1)) is None
-            assert apply_variation(lib, skill, HEAVY, bonus=40, rng=Rng(1)) is not None
+            assert apply_variation(lib, skill, HEAVY, bonus=40, rng=Rng(1)) is None
             assert apply_variation(lib, skill, POTENCY, bonus=40, rng=Rng(1)) is not None
             continue
         assert apply_variation(lib, skill, HEAVY, bonus=40, rng=Rng(1)) is not None, skill.id

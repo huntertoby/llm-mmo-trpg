@@ -2,8 +2,8 @@
 
 - 修正類（``stance_potency``）：維持費不變（照形態種類，#67）、形態幅度提高、預算分數嚴格變大、
   預算比例在窗內、1～3 階都合法。
-- 費用類：BAL-2c 時不出；BAL-10b 起改用進入代價（模板 ``cost_fields``）當費用旋鈕，維持費照舊不動
-  （細節見 ``test_flash_bal10b.py``）。這裡只留「沒填 ``cost_fields`` 時照 BAL-2c 不出」。
+- 費用類：不出（BAL-10b 曾放寬、BAL-10c 玩法 PM 2026-10-31 收回：姿態進入後一直持續，進入冷卻幾乎不是
+  代價）；資料裡 ``stance_cost_light／heavy`` 的 ``cost_fields`` 是空的。
 - 行為一致：閃現後卡片的數字＝引擎（同一個 ``scaled_form_def``）。
 """
 
@@ -56,15 +56,15 @@ def test_potency_raises_the_form_magnitude_at_every_tier(skill_id: str, tier: in
 
 
 @pytest.mark.parametrize("skill_id", _form_skills())
-def test_cost_templates_without_entry_cost_fields_are_not_offered_for_forms(skill_id: str) -> None:
+def test_cost_templates_are_not_offered_for_forms(skill_id: str) -> None:
     lib = library()
     for tier in (1, 3):
         stance = with_budget_bonus(_at(skill_id, tier), 40)
         for variation in (LIGHT, HEAVY):
             template = lib.flash.minor_template(variation.template)
-            assert template is not None and template.cost_fields  # BAL-10b 資料有填
-            bare = template.model_copy(update={"cost_fields": ()})
-            assert FLASH_OPS[template.op](stance, bare, variation, lib) == []
+            assert template is not None and not template.cost_fields  # BAL-10c 資料清空
+            assert FLASH_OPS[template.op](stance, template, variation, lib) == []
+            assert apply_variation(lib, stance, variation, bonus=40, rng=Rng(1)) is None
 
 
 def test_the_flashed_form_card_shows_the_engine_numbers() -> None:

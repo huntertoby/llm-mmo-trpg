@@ -76,8 +76,9 @@ support:
 # 降低／提高，修正類＝同維持費、幅度提高。
 # BAL-2c：變身姿態只出修正類＝形態幅度（enter_form.magnitude_permille，級距 rules.form_magnitudes）提高；維持費照形態種類
 # 固定（#67），形態上沒有其他可動的代價，所以費用類不出。
-# BAL-10b（玩法 PM 經開發 PM 轉達）：費用類放寬到變身姿態——維持費照舊不動，改用進入代價（施放費用，模板的 cost_fields）
-# ±1 當費用旋鈕；stance_cost_light／heavy 的 cost_fields 清空就回到 BAL-2c 的行為。多效果姿態只動姿態本體那個效果。
+# BAL-10b 曾放寬費用類到變身姿態（進入冷卻 ±1），BAL-10c 玩法 PM 2026-10-31 收回：姿態進入後一直持續到取消，
+# 進入冷卻幾乎不是代價，所以變身姿態仍只出修正類（BAL-2c）；stance_cost_light／heavy 的 cost_fields 保持空。
+# 多效果姿態只動姿態本體那個效果。
 categories:
   - {id: area, name_zh: 範圍, kinds: [active]}
   - {id: combo, name_zh: 連段, kinds: [active]}
@@ -261,30 +262,28 @@ minor:
     kinds: [active]
     prefix_zh: 輕巧
     summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低
-  # BAL-10b：cost_fields 填了，費用類也適用變身姿態——形態維持費照 #67 不動，改用進入代價（施放費用）±1；
-  # 多效果姿態只動姿態本體那個效果
+  # BAL-10c（玩法 PM 2026-10-31）：cost_fields 清空，變身姿態不出費用類（回到 BAL-2c）——姿態進入後一直持續，
+  # 進入冷卻幾乎不是代價；多效果姿態只動姿態本體那個效果
   - id: stance_cost_light
     category: cost
     op: stance_light
     kinds: [stance]
-    cost_fields: [cooldown]
     prefix_zh: 輕巧
-    summary_zh: 輕巧：姿態維持費 −1（變身姿態：進入冷卻 −1），效果降低一級
+    summary_zh: 輕巧：姿態維持費 −1，效果降低一級
   - id: stance_cost_heavy
     category: cost
     op: stance_heavy
     kinds: [stance]
-    cost_fields: [cooldown]
     prefix_zh: 蓄力
-    summary_zh: 蓄力：姿態維持費 +1（變身姿態：進入冷卻 +1），效果提高
-  # BAL-10b：進入代價 −1——只減施放費用（AP 或冷卻；姿態的進入 AP 由規則固定，實際只有冷卻），維持費照 #67 不動
+    summary_zh: 蓄力：姿態維持費 +1，效果提高
+  # BAL-10b／10c：進入代價 −1——只減進入時的施放費用（冷卻、法力、耐力，每項最少留 1；姿態的進入 AP 由規則固定），維持費不動
   - id: stance_enter_light
     category: cost
     op: stance_enter_light
     kinds: [stance]
-    cost_fields: [ap_cost, cooldown]
+    cost_fields: [ap_cost, cooldown, mana, stamina]
     prefix_zh: 俐落
-    summary_zh: 進入代價 −1：進入姿態的冷卻 −1（維持費不變，效果不變）
+    summary_zh: 進入代價 −1：進入姿態的冷卻、法力或耐力 −1（最少留 1；維持費不變，效果不變）
   # ---- 輔助（治療、護盾、增益） ----
   - id: support_potency
     category: support

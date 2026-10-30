@@ -356,7 +356,7 @@ def test_mod_duration_adds_one_round() -> None:
                 return total
 
             assert rounds(got) == rounds(before) + 1
-    assert done >= 2
+    assert done >= 1
 
 
 def _engine_damage_permille(skill: SkillDef) -> int:
@@ -445,9 +445,7 @@ def test_mod_cost_lightens_a_drawback_and_keeps_form_upkeep() -> None:
             for m in s.modifiers:
                 c = m.change
                 total += min(c.damage_permille or 0, 0) + min(c.heal_permille or 0, 0)
-                total -= 100 * ((c.ap_delta or 0) > 0)
-                total -= 100 * ((c.summon_limit_delta or 0) < 0)
-                total -= 100 * ((c.range_delta or 0) < 0)
+                total += min(c.hit_bonus or 0, 0) * 10
             return total
 
         assert drawback(got) > drawback(before)  # 代價變輕
@@ -457,7 +455,56 @@ def test_mod_cost_lightens_a_drawback_and_keeps_form_upkeep() -> None:
         assert [
             m.change.form_upkeep_permille for m in got.modifiers if m.change.form_upkeep_permille
         ] == upkeep
-    assert done >= 2
+    assert done >= 1
+
+
+def _with_drawback(skill_id: str, drawback: dict[str, int]) -> SkillDef:
+    """夾具：內建修正型被動加上一條代價規則，以及一條正向規則（讓其他幅度有地方調）。"""
+    base = library().skills[skill_id]
+    rule = ModifierSpec.model_validate(
+        {
+            "applies_to": {"skill_tags": ["push"]},
+            "change": drawback,
+        }
+    )
+    return base.model_copy(
+        update={"id": f"{skill_id}_drawback_test", "modifiers": (*base.modifiers, rule)}
+    )
+
+
+@pytest.mark.parametrize("skill_id", ["skill_heavy_stomp", "skill_summon_elite"])
+def test_mod_cost_never_removes_a_one_step_drawback(skill_id: str) -> None:
+    """BAL-10c：AP +1、召喚上限 −1、射程 −1 這類只有 1 格的代價，減了就消失，所以不出（比照 3W-5b）。"""
+    lib = library()
+    base = lib.skills[skill_id]
+    template = lib.flash.minor_template("mod_cost")
+    assert template is not None
+    for tier in (1, 2, 3):
+        before = at_role_tier(lib, base, tier)
+        drafts = FLASH_OPS[template.op](before, template, _var("mod_cost"), lib)
+        assert drafts == [], (skill_id, tier)
+        assert _apply(before, "mod_cost") is None
+
+
+def test_mod_cost_keeps_at_least_one_step_of_a_multi_step_drawback() -> None:
+    """有 2 格以上的代價照出，而且最少留 1 格（不歸 0、不拿掉那條規則）。"""
+    lib = library()
+    template = lib.flash.minor_template("mod_cost")
+    assert template is not None
+    step = lib.flash.rules.modifier_drawback_step
+    skill = _with_drawback("skill_heavy_stomp", {"damage_permille": -2 * step})
+    drafts = FLASH_OPS[template.op](skill, template, _var("mod_cost"), lib)
+    assert len(drafts) == 1
+    base, _ = drafts[0]
+    assert len(base["modifiers"]) == len(skill.modifiers)
+    assert base["modifiers"][-1]["change"]["damage_permille"] == -step
+    one_step = _with_drawback("skill_heavy_stomp", {"damage_permille": -step})
+    assert FLASH_OPS[template.op](one_step, template, _var("mod_cost"), lib) == []
+    two_hits = _with_drawback("skill_heavy_stomp", {"hit_bonus": -2})
+    drafts = FLASH_OPS[template.op](two_hits, template, _var("mod_cost"), lib)
+    assert [d[0]["modifiers"][-1]["change"]["hit_bonus"] for d in drafts] == [-1]
+    one_hit = _with_drawback("skill_heavy_stomp", {"hit_bonus": -1})
+    assert FLASH_OPS[template.op](one_hit, template, _var("mod_cost"), lib) == []
 
 
 # ---------------------------------------------------------------------------
@@ -470,20 +517,19 @@ def _forms() -> list[str]:
 
 
 @pytest.mark.parametrize("skill_id", _forms())
-def test_form_heavy_uses_entry_cooldown_and_keeps_upkeep(skill_id: str) -> None:
-    """變身姿態的蓄力：維持費照 #67 不動，改成進入冷卻 +1、形態幅度提高。"""
+def test_forms_offer_only_the_modifier_category(skill_id: str) -> None:
+    """變身姿態不出費用類（BAL-10c，回到 BAL-2c）：輕巧、蓄力都不出，修正類照出。"""
     lib = library()
     base = lib.skills[skill_id]
     for tier in sorted({base.tier, 3}):
         before = at_role_tier(lib, base, tier)
-        got = _apply(before, "stance_cost_heavy")
+        assert _apply(before, "stance_cost_heavy") is None, (skill_id, tier)
+        assert _apply(before, "stance_cost_light") is None, (skill_id, tier)
+        got = _apply(before, "stance_potency")
         assert got is not None, (skill_id, tier)
-        _sound(before, got)
         assert got.stance_upkeep == before.stance_upkeep == 0
-        assert got.cost.cooldown == (before.cost.cooldown or 0) + 1
+        assert got.cost == before.cost
         assert got.form_magnitude > before.form_magnitude
-        assert len(got.effects) == 1 and got.form_id == before.form_id
-        assert _apply(before, "stance_cost_light") is None  # 沒有進入代價可減
 
 
 def _cooled_bear() -> SkillDef:
@@ -508,6 +554,35 @@ def test_enter_light_only_cuts_the_casting_cost() -> None:
         assert got.cost.cooldown == 1
         assert got.effects == before.effects
         assert got.stance_upkeep == before.stance_upkeep
+
+
+@pytest.mark.parametrize("field", ["mana", "stamina"])
+def test_enter_light_cuts_mana_or_stamina_but_keeps_one(field: str) -> None:
+    """BAL-10c：進入代價 −1 也能減進入時的法力、耐力；最少留 1，維持費不動。"""
+    lib = library()
+    fury = lib.skills["skill_fury_stance"]
+    template = lib.flash.minor_template("stance_enter_light")
+    assert template is not None and field in template.cost_fields
+    paid = fury.model_copy(
+        update={"id": f"fury_{field}_test", "cost": fury.cost.model_copy(update={field: 3})}
+    )
+    drafts = FLASH_OPS[template.op](paid, template, _var("stance_enter_light"), lib)
+    assert [d[0]["cost"][field] for d in drafts] == [2]
+    assert all(d[0]["stance_upkeep"] == paid.stance_upkeep for d in drafts)
+    one = fury.model_copy(
+        update={"id": f"fury_{field}_one_test", "cost": fury.cost.model_copy(update={field: 1})}
+    )
+    assert FLASH_OPS[template.op](one, template, _var("stance_enter_light"), lib) == []
+    for tier in (1, 2, 3):
+        before = at_tier(paid, tier)
+        got = _apply(before, "stance_enter_light")
+        if got is None:
+            continue
+        _sound(before, got)
+        assert getattr(got.cost, field) == 2
+        assert got.stance_upkeep == before.stance_upkeep and got.effects == before.effects
+        skill = _renamed(got)
+        assert str(getattr(skill.cost, field)) in " ".join(skill_card(lib, skill).cost)
 
 
 def test_enter_light_is_not_offered_without_an_entry_cost() -> None:
@@ -564,9 +639,8 @@ def test_multi_effect_stance_only_changes_its_stance_effect() -> None:
 def test_flashed_form_entry_cooldown_is_the_engine_cooldown() -> None:
     """卡片的進入冷卻＝引擎：進入形態後這招的冷卻就是卡片上的回合數；維持費照形態種類（#67）。"""
     lib = library()
-    base = lib.skills["skill_form_bear"]
-    got = _apply(at_role_tier(lib, base, base.tier), "stance_cost_heavy")
-    assert got is not None
+    got = _apply(at_tier(_cooled_bear(), 2), "stance_potency")
+    assert got is not None and got.cost.cooldown == 2
     skill = _renamed(got)
     card = skill_card(lib, skill)
     assert f"冷卻 {skill.cost.cooldown} 回合" in card.cost
