@@ -405,7 +405,7 @@ minor:
     op: mod_cost
     kinds: [modifier]
     prefix_zh: 減負
-    summary_zh: 代價減輕：附帶的代價（傷害降低、AP +1、召喚上限 −1……）減輕一級（其他幅度依預算調整）
+    summary_zh: 代價減輕：附帶的代價（傷害降低、命中降低……）減輕一級，不會變成沒有代價（其他幅度依預算調整）
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
