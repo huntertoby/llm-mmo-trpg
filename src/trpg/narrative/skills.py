@@ -877,8 +877,8 @@ def _terrain(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
 def _enter_form(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     """進入形態（Phase 3J-1a）：天生武器、形態效果、進入獎勵、維持費與冷卻都由 ``forms.yaml``
     產生。"""
-    try:
-        form = lib.ruleset.form_def(spec.form or "")
+    try:  # 形態幅度（BAL-2c）：和引擎同一個函式放大，卡片數字＝實戰
+        form = lib.ruleset.scaled_form(spec.form or "", spec.magnitude_permille or 1000)
     except KeyError:
         return "進入形態"
     return form_sentence(lib.ruleset.forms, form, lib.ruleset.core)
@@ -897,7 +897,7 @@ def _form_formula(
     if form_id is None:
         return ()
     try:
-        form = library.ruleset.form_def(form_id)
+        form = library.ruleset.scaled_form(form_id, skill.form_magnitude)  # 形態幅度（BAL-2c）
     except KeyError:
         return ()
     attr_get = None if owner is None else owner.attr_get

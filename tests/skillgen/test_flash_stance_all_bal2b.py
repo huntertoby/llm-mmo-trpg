@@ -2,7 +2,7 @@
 
 沒有階梯的單一狀態姿態（狂怒、堅壁…）：費用類＝維持費 ±1 搭配姿態幅度（``magnitude_permille``）
 升降、修正類＝同維持費、幅度提高。行為一致：卡片數字＝實戰、預算比例在預算窗內、分數不低於變化前。
-變身姿態沒有每招維持費與強度旋鈕，不出（見 BAL-2b 報告）。
+變身姿態：BAL-2c 起只出修正類（形態幅度），見 ``test_flash_form_bal2c.py``。
 """
 
 from __future__ import annotations
@@ -106,7 +106,7 @@ def test_card_numbers_match_the_engine_for_a_flashed_plain_stance(skill_id: str)
 
 def test_every_stance_with_a_knob_accepts_the_stance_templates() -> None:
     """階梯上的元素姿態、白板姿態與沒有階梯的單一狀態姿態，費用（蓄力）與修正類都有合法變化；
-    只有變身姿態（沒有旋鈕）不出。"""
+    變身姿態只出修正類（BAL-2c：形態幅度；維持費不動，費用類不出）。"""
     lib = library()
     forms = 0
     for skill in sorted(lib.skills.values(), key=lambda s: s.id):
@@ -114,8 +114,9 @@ def test_every_stance_with_a_knob_accepts_the_stance_templates() -> None:
             continue
         if skill.form_id is not None:
             forms += 1
-            for variation in (LIGHT, HEAVY, POTENCY):
+            for variation in (LIGHT, HEAVY):
                 assert apply_variation(lib, skill, variation, bonus=40, rng=Rng(1)) is None
+            assert apply_variation(lib, skill, POTENCY, bonus=40, rng=Rng(1)) is not None
             continue
         assert apply_variation(lib, skill, HEAVY, bonus=40, rng=Rng(1)) is not None, skill.id
         assert apply_variation(lib, skill, POTENCY, bonus=40, rng=Rng(1)) is not None, skill.id

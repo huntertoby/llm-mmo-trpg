@@ -300,7 +300,10 @@ def enter_form(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[Ef
     assert spec.form is not None
     action = cast.action
     element = None if action is None else action.form_element
-    return enter_unit_form(cast.ctx, cast.caster, spec.form, element, cast.skill.id)
+    magnitude = spec.magnitude_permille or 1000  # 形態幅度（BAL-2c）
+    return enter_unit_form(
+        cast.ctx, cast.caster, spec.form, element, cast.skill.id, magnitude=magnitude
+    )
 
 
 def leave_form(cast: Cast, _effect: ResolvedEffect, _spec: EffectSpec) -> list[EffectBase]:

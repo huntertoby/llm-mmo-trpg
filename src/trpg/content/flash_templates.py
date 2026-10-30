@@ -68,6 +68,8 @@ def _ladder(values: tuple[int, ...], name: str) -> tuple[int, ...]:
 
 
 _NEUTRAL = 1000
+_MAX_FORM_MAGNITUDE = 2000
+"""形態幅度的上限（‰；``enter_form.magnitude_permille`` 的參數上限，BAL-2c）。"""
 
 
 class CompleteSkillRules(ContentModel):
@@ -148,12 +150,19 @@ class FlashRules(ContentModel):
     """沒有階梯的單一狀態姿態（狂怒、堅壁…，BAL-2b）費用、修正類小變化可換到的姿態幅度（‰，
     ``apply_status.magnitude_permille``）。比完整技能的級距寬：這些姿態是固定點數，角色階級高時
     要靠幅度把預算分數拉進預算窗。"""
+    form_magnitudes: tuple[int, ...] = tuple(range(1000, 2001, 50))
+    """變身姿態（BAL-2c）修正類小變化與升階重配可換到的形態幅度（‰，``enter_form.magnitude_permille``；
+    上限 2000）。比 ``stance_magnitudes`` 細：升階重配把形態拉到接近原本的比例（例如 99%）之後，
+    一次閃現的 +40‰ 預算仍要放得下下一格。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
         if self.major_flash > self.max_flashes:
             raise ValueError("major_flash 不可大於 max_flashes")
         _ladder(self.stance_magnitudes, "stance_magnitudes")
+        _ladder(self.form_magnitudes, "form_magnitudes")
+        if self.form_magnitudes[-1] > _MAX_FORM_MAGNITUDE:
+            raise ValueError(f"form_magnitudes 最多 {_MAX_FORM_MAGNITUDE}‰")
         return self
 
     def budget_bonus_permille(self, flashes: int) -> int:

@@ -856,3 +856,4 @@ primitives:
     base_points: 11
     params:
       form: {llm_hint: "要化身的形態。", type: form, required: true, description_zh: 形態 ID（content/forms.yaml）}
+      magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度, knob: none}

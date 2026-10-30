@@ -250,6 +250,8 @@ class FormState:
     - ``skill_id``：進入用的技能（紀錄與顯示用）；
     - ``entered_round``：進入的輪數（進入獎勵的「本回合」效果用，例：巨人的撞擊傷害 +50%）；
     - ``entry_permille``：進入獎勵的數值倍率（‰；化形專精 1500，一般 1000；進入時快照）。
+    - ``magnitude_permille``：形態幅度（‰，BAL-2c；進入用技能的 ``enter_form.magnitude_permille``，
+      一般 1000）：形態對自己有利的部分依它放大（``Ruleset.scaled_form``）。
     """
 
     form_id: str
@@ -260,6 +262,7 @@ class FormState:
     skill_id: str | None = None
     entered_round: int = 0
     entry_permille: int = 1000
+    magnitude_permille: int = 1000
 
 
 @dataclass(slots=True, frozen=True)

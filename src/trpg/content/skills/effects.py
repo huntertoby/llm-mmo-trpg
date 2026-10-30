@@ -127,7 +127,8 @@ class EffectSpec(ContentModel):
     magnitude_permille: int | None = None
     """``apply_status`` 專用（Phase 3W-5b，完整姿態技能）：姿態的幅度（‰，不小於 1000；1000 ＝
     不變）——狀態倍率欄位對持有者有利的一邊離中性值的距離乘上它（:func:`trpg.engine.rules.statuses.scaled_permille`）。
-    只能用在姿態技能（``kind: stance``）。"""
+    只能用在姿態技能（``kind: stance``）。``enter_form`` 也可以填（BAL-2c，形態幅度）：形態對自己
+    有利的部分放大（:func:`trpg.content.forms.scaled_form_def`），維持費不變。"""
     max_hp_permille: int | None = None
     """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
     修正規則之後相乘）。"""

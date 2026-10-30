@@ -39,8 +39,10 @@ PERMILLE = 1000
 
 
 def active_form(rules: Ruleset, unit: UnitState) -> FormDef | None:
-    """``unit`` 目前的形態定義；不在形態中為 ``None``。"""
-    return None if unit.form is None else rules.form_def(unit.form.form_id)
+    """``unit`` 目前的形態定義（已套上形態幅度，BAL-2c）；不在形態中為 ``None``。"""
+    if unit.form is None:
+        return None
+    return rules.scaled_form(unit.form.form_id, unit.form.magnitude_permille)
 
 
 def natural_charge(rules: Ruleset, unit: UnitState) -> NaturalCharge | None:
