@@ -651,6 +651,10 @@ class AiWeights(ContentModel):
     """（Phase 3-24a1）長柄近戰武器（射程 > 1，矛）：站在 2 格到射程內且打得到的每個敵人加分、緊貼的
     每個敵人扣同樣的分數（位置價值；偏好在觸及距離出手）。"""
     knock_angle: int = 0
+    close_range: int = 0
+    """（BAL-5 B19）近距離武器（距離傷害修正的最佳距離 ≤ 2 格，霰彈槍）：站位能打到的敵人中，
+    距離傷害千分比最高者 × 這個值 ÷ 1000（位置價值；越靠近最佳距離越高）；
+    保持距離只計比最佳距離更近的敵人。表格層級的 ``weapon_ai`` 填入每個行為模式。"""
     line_up: int = 0
     """（Phase 3-24a2）帶穿透的武器（弩）：能對準一條直線上有多名敵人的站位，每多穿透一名敵人加分
     （位置價值；低權重）。"""
@@ -1058,6 +1062,9 @@ class AiProfileTable(ContentModel):
     """勝利條件的 AI 權重（Phase 3-22；``contest``、``intercept``、``rush_exit``、``hold_point``、
     ``hold_radius``、``hold_guard``）：敵我同一套，填入每個行為模式的 ``weights``（行為模式自己
     列出的優先）。只在撤離或守點戰中生效。"""
+    weapon_ai: dict[str, int] = Field(default_factory=dict)
+    """武器站位的位置權重（BAL-5 B19；``close_range``）：敵我同一套，填入每個行為模式的 ``weights``
+    （行為模式自己列出的優先）。"""
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
@@ -1087,9 +1094,10 @@ class AiProfileTable(ContentModel):
             if key in data
         }
         facing = data.get("facing")
-        objective_ai = data.get("objective_ai")
-        if isinstance(objective_ai, dict):
-            facing = {**(facing if isinstance(facing, dict) else {}), **objective_ai}
+        for extra_key in ("objective_ai", "weapon_ai"):
+            extra = data.get(extra_key)
+            if isinstance(extra, dict):
+                facing = {**(facing if isinstance(facing, dict) else {}), **extra}
         if (
             not isinstance(shared, dict)
             and not isinstance(ally_shared, dict)

@@ -125,6 +125,7 @@ from trpg.engine.ai.summon import (
 )
 from trpg.engine.ai.terrain import is_terrain_only, terrain_estimate, terrain_gains
 from trpg.engine.ai.variant import cast_form, variant_move_bonus
+from trpg.engine.ai.weapon_range import best_distance, damage_permille_at, is_close_range
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.bombs import blast_tiles
@@ -215,6 +216,7 @@ __all__ = [
 
 _DEFEND_RADIUS = 6
 _KEEP_DISTANCE = 2
+_PERMILLE_AI = 1000
 _POSSIBLE_KILL_DIVISOR = 4
 _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
@@ -444,10 +446,9 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
     if w.keep_distance:
         # 隱蔽的敵人必須走到 2 格內才打得到（concealed_ranged_max_distance），所以遠程單位為了
         # 攻擊而進入 2 格內不扣分；否則兩名隱蔽的弓手會互相等待到平手（dark_forest 種子 7）
+        keep = _keep_radius(unit)
         close = sum(
-            1
-            for e in enemies
-            if manhattan(xy, e.xy) <= _KEEP_DISTANCE and not is_concealed(state, e)
+            1 for e in enemies if manhattan(xy, e.xy) <= keep and not is_concealed(state, e)
         )
         value -= w.keep_distance * close
     if w.cover:
@@ -457,6 +458,34 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
     if w.flank:
         value += w.flank * _flanked_count(state, unit, enemies)
     return value + _facing_terms(state, unit, w, enemies) + _weapon_terms(state, unit, w, enemies)
+
+
+def _keep_radius(unit: UnitState) -> int:
+    """保持距離的半徑：一般 2 格；近距離武器（BAL-5 B19，霰彈槍）只避開比最佳距離更近的敵人。"""
+    weapon = unit.weapon
+    if not is_close_range(weapon, _KEEP_DISTANCE):
+        return _KEEP_DISTANCE
+    best = best_distance(weapon)
+    return _KEEP_DISTANCE if best is None else best - 1
+
+
+def _close_range_term(
+    state: BattleState, unit: UnitState, w: AiWeights, enemies: list[UnitState]
+) -> int:
+    """近距離武器的站位（BAL-5 B19）：打得到的敵人中距離傷害千分比最高者 × ``close_range``
+    ÷ 1000。"""
+    weapon = unit.weapon
+    if not w.close_range or not is_close_range(weapon, _KEEP_DISTANCE):
+        return 0
+    best = max(
+        (
+            damage_permille_at(weapon, manhattan(unit.xy, e.xy))
+            for e in enemies
+            if attack_problem(state, unit, e) is None
+        ),
+        default=0,
+    )
+    return w.close_range * best // _PERMILLE_AI
 
 
 def _knock_collides(state: BattleState, unit: UnitState, enemy: UnitState) -> bool:
@@ -497,7 +526,7 @@ def _weapon_terms(
         value += w.knock_angle * sum(
             1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and _knock_collides(state, unit, e)
         )
-    return value
+    return value + _close_range_term(state, unit, w, enemies)
 
 
 def _facing_terms(
@@ -534,7 +563,7 @@ def _unit_position_value(
     if scene is None:
         scene = _scene(state, unit)
     xy = unit.xy
-    value = _enemy_terms(state, unit, w, scene) if scene.enemies else 0
+    value = _enemy_terms(state, _loaded(unit), w, scene) if scene.enemies else 0
     value += w.height * state.tile(*xy).height
     if w.protect and scene.ward is not None:
         value -= w.protect * manhattan(xy, scene.ward)
@@ -544,6 +573,17 @@ def _unit_position_value(
     if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
         value -= w.hazard  # 有害表面，或敵方會傷害自己的持續區域（Phase 3D-5）
     return Fraction(value)
+
+
+def _loaded(unit: UnitState) -> UnitState:
+    """位置價值用的「已裝填」複本（BAL-5 B19）：彈匣空的武器只差 1 AP 的裝填，站位的威脅、近距離、
+    被壓制等仍以裝填後計算；否則開火讓彈匣變空，位置價值就像「打不到任何敵人」，單發火器（霰彈槍、
+    火槍）的普攻分數被扣成負的而不開火。"""
+    if unit.weapon.magazine <= 0 or unit.ammo > 0:
+        return unit
+    loaded = unit.clone()
+    loaded.ammo = unit.weapon.magazine
+    return loaded
 
 
 def _flanked_count(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> int:
