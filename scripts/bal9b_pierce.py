@@ -12,8 +12,8 @@ import argparse
 from pathlib import Path
 
 from bal8_measure import SWORD, stats, with_weapon  # type: ignore[import-not-found]
-from trpg.content.library import load_library
 from trpg.cli.sim import default_sim_maps
+from trpg.content.library import load_library
 from trpg.sim.matrix import run_matrix
 
 CROSSBOW = "build_blank_crossbow"
