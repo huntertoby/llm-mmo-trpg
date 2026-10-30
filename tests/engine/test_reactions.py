@@ -110,7 +110,12 @@ def test_block_halves_melee_damage_and_costs_stamina() -> None:
     assert [(b.unit_id, b.reaction, b.stamina_spent) for b in blocked] == [(U1, "block", 10)]
     damage = next(e for e in result.events if isinstance(e, DamageDealt))
     # 匕首 1d4=4 + 敏捷 14 × 0.3 = 8.2；格擋 ×0.5 → 4.1 → 4（再套用戰士物理抗性 10%：3.69 → 3）
-    assert damage.multiplier_permille == 500 and damage.amount == 3
+    # 敵方傷害倍率（BAL-4b，content 1200）：格擋 ×0.5 再乘 enemy_damage_permille ＝ ×0.6，
+    # 8.2 × 0.6 = 4.92 → 套用戰士物理抗性 10%：4.43 → 4
+    enemy = state.ruleset.core.enemy_damage_permille
+    assert enemy == 1200
+    assert damage.multiplier_permille == 500 * enemy // 1000
+    assert damage.amount == 4
     assert result.state.units[U1].stamina == 20
 
 

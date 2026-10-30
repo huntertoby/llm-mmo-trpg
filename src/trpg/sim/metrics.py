@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.engine.actions import Decision, EndTurn, Step
 from trpg.engine.ai import Policy
@@ -181,6 +181,9 @@ class BattleMetrics(_Model):
     rounds: int
     actions: int
     """總動作數（含自動結束回合）。"""
+    mutual_wipe: bool = Field(default=False, exclude=True)
+    """``draw`` 且原因是雙方同時全滅（``eliminate``，BAL-4c）；輪數上限造成的平手為 ``False``。
+    不進序列化（JSON 報表與既有夾具不變）。"""
     units: tuple[UnitMetrics, ...]
     environment_damage: dict[str, int]
     """追溯不到來源的傷害，依受害陣營（``ally``／``enemy``）。"""
@@ -358,6 +361,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     winner: Team | None,
     rounds: int,
     actions: int,
+    end_reason: str | None = None,
 ) -> BattleMetrics:
     """由事件序列計算 :class:`BattleMetrics`（純函式）。
 
@@ -532,6 +536,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     return BattleMetrics(
         seed=seed,
         result=result,
+        mutual_wipe=winner is None and end_reason == "eliminate",
         rounds=rounds,
         actions=actions,
         units=tuple(
@@ -615,6 +620,7 @@ def battle_metrics(run: BattleRun) -> BattleMetrics:
         bounds=bounds,
         ap_spent=ap_spent,
         winner=run.state.winner,
+        end_reason=run.state.end_reason,
         rounds=run.state.round,
         actions=len(run.actions),
     )

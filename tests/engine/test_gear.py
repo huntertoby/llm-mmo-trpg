@@ -249,7 +249,7 @@ def test_blood_reduces_cooldown_with_floor_of_one() -> None:
     skill = library().skills["skill_whirlwind"]
     base = skill.cost.cooldown
     assert base is not None and base >= 2
-    paid = pay_skill_cost(unit, skill)
+    paid = pay_skill_cost(library().ruleset.core, unit, skill)
     assert paid.cooldown == base - 1 and unit.cooldowns[skill.id] == base - 1
 
 

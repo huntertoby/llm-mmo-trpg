@@ -1,0 +1,15 @@
+# Boss 戰護衛與援軍（BAL-4b）：bandit_archer 的複本（帶 boss_escort 標籤），Boss 戰的陣容與一般遭遇分開調。
+id: bandit_archer_guard
+name_zh: 盜賊弓手
+attributes: {str: 10, dex: 14, con: 10, int: 8, wis: 12, wil: 8}
+max_hp: 31   # Boss 戰護衛／援軍專用（BAL-4b）：預設與 bandit_archer 相同，可獨立調
+speed: 5
+armor_bonus: 1
+weapon: bow
+resist: {}
+element_mods: {fire: 250}   # 皮甲與箭袋易燃：火焰弱點 +25%
+tags: [humanoid, boss_escort]
+max_mana: 9
+skills: [skill_fire_arrow]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#d9a47a', hair: short, hair_color: '#3a2a1c', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: hood, material: cloth, color: '#6a4a2e'}}}

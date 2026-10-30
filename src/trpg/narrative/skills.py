@@ -1237,13 +1237,17 @@ def self_status_until(duration: int) -> str:
     return "到你下個回合結束" if nth <= 1 else f"到你下 {nth} 個回合結束"
 
 
-def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> list[str]:
-    """代價的各段文字（AP、法力、耐力、HP、施放後狀態、冷卻、每場次數）。"""
+def cost_parts(
+    library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True, ally: bool = False
+) -> list[str]:
+    """代價的各段文字（AP、法力、耐力、HP、施放後狀態、冷卻、每場次數）。``ally`` 時法力顯示我方
+    實際會扣的費用（``ally_mana_cost_permille`` 打折後，BAL-4c）；否則為技能資料的原始費用。"""
     cost = skill.cost
     ap = skill_ap(library, skill)
     parts = [f"AP {ap}"] if with_ap and ap is not None else []
     if cost.mana:
-        parts.append(f"法力 {cost.mana}")
+        mana = library.ruleset.core.ally_mana(cost.mana) if ally else cost.mana
+        parts.append(f"法力 {mana}")
     if cost.stamina:
         parts.append(f"耐力 {cost.stamina}")
     if cost.hp_percent:
@@ -1613,18 +1617,26 @@ def skill_card(
     *,
     mastery_active: bool | None = None,
     owner: CardOwner | None = None,
+    ally: bool = True,
 ) -> SkillCard:
     """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`；``owner`` 見
-    :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。"""
+    :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。
+    ``ally``（預設，卡片是給玩家看的）時代價的法力是我方實際會扣的費用（BAL-4c）；敵方單位的
+    卡片傳 ``False`` 顯示原價。"""
     token = _CARD_WEAPON.set(None if owner is None else owner.weapon)
     try:
-        return _build_card(library, skill, mastery_active, owner)
+        return _build_card(library, skill, mastery_active, owner, ally=ally)
     finally:
         _CARD_WEAPON.reset(token)
 
 
 def _build_card(
-    library: ContentLibrary, skill: SkillDef, mastery_active: bool | None, owner: CardOwner | None
+    library: ContentLibrary,
+    skill: SkillDef,
+    mastery_active: bool | None,
+    owner: CardOwner | None,
+    *,
+    ally: bool,
 ) -> SkillCard:
     return SkillCard(
         id=skill.id,
@@ -1639,7 +1651,9 @@ def _build_card(
         weapon_only=weapon_only_text(library, skill),
         scaling=scaling_detail(skill, None if owner is None else owner.weapon),
         ap_cost=skill_ap(library, skill),
-        cost=tuple(cost_parts(library, skill, with_ap=skill_ap(library, skill) is not None)),
+        cost=tuple(
+            cost_parts(library, skill, with_ap=skill_ap(library, skill) is not None, ally=ally)
+        ),
         source_cost=skill.cost.source,
         shape=skill_shape_text(library, skill),
         condition=(

@@ -42,6 +42,7 @@ from trpg.sim.parallel import run_tasks
 __all__ = [
     "ANOMALY_KINDS",
     "DEFAULT_MAX_ROUNDS",
+    "MUTUAL_WIPE_DETAIL",
     "ONE_SHOT_SEED_LIMIT",
     "REPORT_LIST_ADAPTER",
     "Anomaly",
@@ -64,6 +65,8 @@ __all__ = [
 DEFAULT_MAX_ROUNDS = 30
 ONE_SHOT_SEED_LIMIT = 5
 """``one_shot`` 只列出前幾個種子。"""
+MUTUAL_WIPE_DETAIL: Final = "同歸於盡"
+"""``draw`` 異常的說明：雙方同時全滅（不是輪數上限；BAL-4c，完成度檢查視為合法結束）。"""
 SEED_LIST_LIMIT = 40
 """文字報表的種子清單上限（JSON 一律完整）。"""
 ANOMALY_KINDS: Final = (
@@ -349,6 +352,8 @@ def _anomalies(outcomes: Sequence[BattleOutcome]) -> tuple[Anomaly, ...]:
         if m.result == "draw":
             seeds["draw"].append(m.seed)
             counts["draw"] += 1
+            if m.mutual_wipe:
+                details["draw"][m.seed] = MUTUAL_WIPE_DETAIL
         if m.rounds > LONG_BATTLE_ROUNDS:
             seeds["long_battle"].append(m.seed)
             details["long_battle"][m.seed] = f"{m.rounds} 輪"

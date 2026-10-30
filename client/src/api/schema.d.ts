@@ -5503,6 +5503,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             card?: components["schemas"]["SkillCard"] | null;
+            /** Battle Mana */
+            battle_mana?: number | null;
             icon: components["schemas"]["SkillIcon"];
             /**
              * Concept Provisional

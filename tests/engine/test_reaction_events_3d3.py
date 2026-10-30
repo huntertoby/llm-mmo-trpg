@@ -620,7 +620,7 @@ def test_previews_include_the_new_reactions() -> None:
     [
         ("build_assassin", "open_plain", 1, "迎頭痛擊"),
         ("build_tank", "swamp", 0, "悲憤"),
-        ("build_ranged", "dark_forest", 1, "掩護射擊"),  # BAL-5：AI 調整後改圖
+        ("build_ranged", "dark_forest", 4, "掩護射擊"),  # BAL-5 改圖；BAL-4c 合併後種子 1 → 4
     ],
 )
 def test_ai_battles_with_the_new_reactions_replay(

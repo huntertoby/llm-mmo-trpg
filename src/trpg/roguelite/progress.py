@@ -267,6 +267,7 @@ def finish_battle(
         mana = max(run.max_mana_in(core), hero.max_mana)
     if run.test_mode or "stamina" in refill:
         stamina = max(run.max_stamina_in(core), hero.max_stamina)
+    hp = _heal_after_battle(library, hp, hero.max_hp)  # BAL-4c 設定點，預設 0
     if run.test_mode:
         # 測試模式（Phase 3-39）：戰後回滿到戰鬥中的實際上限（含裝備加成；升級再依最大 HP 的差補上）
         hp = max(run.max_hp_in(core), hero.max_hp)
@@ -290,6 +291,14 @@ def finish_battle(
         if gear is not None:
             return finished.model_copy(update={"node": gear})
     return next_node(library, finished)
+
+
+def _heal_after_battle(library: ContentLibrary, hp: int, max_hp: int) -> int:
+    """打贏後回復 ``heal_after_battle_permille``‰ 最大生命（BAL-4c 設定點；預設 0 時原值）。"""
+    permille = library.roguelite.heal_after_battle_permille
+    if permille == 0:
+        return hp
+    return min(max_hp, hp + max_hp * permille // 1000)
 
 
 def next_node(library: ContentLibrary, run: RunState) -> RunState:

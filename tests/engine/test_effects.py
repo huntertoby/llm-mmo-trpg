@@ -194,7 +194,8 @@ def test_heal_caps_at_max_and_ignores_downed() -> None:
     s.units[U1].hp = 5
     result = run_effects(s, [HealEffect(target_id=U1, flat=1000)])
     healed = next(e for e in result.events if isinstance(e, Healed))
-    assert result.state.units[U1].hp == 30 and healed.amount == 25
+    max_hp = result.state.units[U1].max_hp  # 範本 HP 隨平衡調整（BAL-4b），不寫死
+    assert result.state.units[U1].hp == max_hp and healed.amount == max_hp - 5
     dead = run_effects(s, [DamageEffect(target_id=U1, mode="lethal")]).state
     assert run_effects(dead, [HealEffect(target_id=U1, flat=5)]).events == []
 

@@ -135,15 +135,13 @@ __all__ = [
     "REQUIRED_STATUSES",
     "ContentLibrary",
     "Ruleset",
+    "enemy_template_ids",
     "gear_class_problem",
     "gear_reference_problems",
     "load_library",
-    "scale_mana_cost",
     "skill_reference_problems",
     "unit_skill_problems",
 ]
-
-_PERMILLE = 1000
 
 REQUIRED_STATUSES = (
     "armor_broken",
@@ -175,15 +173,22 @@ class _CacheDict(dict[object, SkillKeywords]):
     __hash__ = None
 
 
-def scale_mana_cost(skill: SkillDef, permille: int) -> SkillDef:
-    """法力費用乘 ``permille``‰（四捨五入；原本有費用的技能至少 1）；1000 或沒有費用時回傳原物件。
-
-    BAL-4 難度旋鈕用（``trpg.sim.difficulty``）：整數運算、確定性；不驗證預算（只在模擬用）。"""
-    mana = skill.cost.mana
-    if permille == _PERMILLE or mana == 0:
-        return skill
-    scaled = max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
-    return skill.model_copy(update={"cost": skill.cost.model_copy(update={"mana": scaled})})
+def enemy_template_ids(
+    units: Mapping[str, UnitTemplate], maps: Mapping[str, MapDef], rules: RunRules
+) -> tuple[str, ...]:
+    """敵方範本 ID（排序）：一輪的遭遇與 Boss 陣容、地圖預設陣容與援軍事件；不含召喚物。"""
+    ids: set[str] = set()
+    for step in rules.encounters:
+        for option in step.options:
+            ids.update(option)
+    ids.update(rules.boss.enemies)
+    for map_def in maps.values():
+        if map_def.encounter is not None:
+            ids.update(map_def.encounter.enemies)
+        for event in map_def.events:
+            if isinstance(event, SpawnUnitsEvent):
+                ids.update(p.template for p in event.units)
+    return tuple(sorted(i for i in ids if i in units and not units[i].summon))
 
 
 class Ruleset(ContentModel):
@@ -366,7 +371,6 @@ class Ruleset(ContentModel):
                 raise ValueError(f"技能 ID {skill.id} 已存在，且內容不同")
         if not added:
             return self
-        permille = self.core.ally_mana_cost_permille
         combined = {**known, **added}
         problems = [
             f"{skill.id}：{p}"
@@ -375,8 +379,7 @@ class Ruleset(ContentModel):
         ]
         if problems:
             raise ValueError("；".join(problems))
-        new_skills = tuple(scale_mana_cost(s, permille) for s in added.values())  # BAL-4 旋鈕
-        merged = SkillTable(skills=(*self.skills.skills, *new_skills))
+        merged = SkillTable(skills=(*self.skills.skills, *added.values()))
         rules = self.model_copy(update={"skills": merged})
         rules.model_post_init(None)
         return rules

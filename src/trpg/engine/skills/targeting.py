@@ -16,6 +16,7 @@ from itertools import combinations
 from typing import NamedTuple
 
 from trpg.content.battle import Dice
+from trpg.content.rules import CoreRules
 from trpg.content.skills import (
     CHARGE_THROUGH,
     COPY_SKILL,
@@ -87,7 +88,7 @@ from trpg.engine.skills.revive import revive_candidates, revive_target_problem
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Element, ObjectId, Pos, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "DamageParameters",
@@ -117,6 +118,7 @@ __all__ = [
     "selections",
     "skill_ap_cost",
     "skill_is_height_limited",
+    "skill_mana_cost",
     "skill_problem",
     "skill_profile",
     "stack_problem",
@@ -322,9 +324,19 @@ class PaidCost:
     ap: int
     hp: int
     cooldown: int | None
+    mana: int = 0
+    """實際扣的法力（我方打折後，:func:`skill_mana_cost`）。"""
 
 
-def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCost:
+def skill_mana_cost(core: CoreRules, unit: UnitState, skill: SkillDef) -> int:
+    """``unit`` 施放 ``skill`` 實際要付的法力（BAL-4c）：我方單位（含我方召喚物）乘
+    ``core.ally_mana_cost_permille``（:meth:`CoreRules.ally_mana`），其他陣營照原價。
+    扣費、施放檢查、反應詢問、卡片與 AI 估價都用這一個函式。"""
+    mana = skill.cost.mana
+    return core.ally_mana(mana) if unit.team is Team.ALLY else mana
+
+
+def pay_skill_cost(core: CoreRules, caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCost:
     """支付技能代價（AP、法力、耐力、HP、冷卻、每場次數）；主動技能、反應技與被動觸發共用
     （Phase 2F-1 3.1，取代 ``skill_triggers._pay`` 與 ``interpreter._pay_costs`` 的重複邏輯）。
 
@@ -332,8 +344,9 @@ def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCo
     （主事件先、``SkillCooldownChanged`` 後）要維持不變，由呼叫端自己處理。
     """
     hp = hp_cost(caster, skill)
+    mana = skill_mana_cost(core, caster, skill)
     caster.ap -= ap
-    caster.mana -= skill.cost.mana
+    caster.mana -= mana
     caster.stamina -= skill.cost.stamina  # 武器技花耐力（3H-2）
     caster.hp -= hp
     if skill.cost.uses_per_battle is not None:
@@ -342,7 +355,7 @@ def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCo
     cooldown = gear_summon_cooldown(caster, skill, cooldown)  # 召喚技能冷卻詞條（3-33f2）
     if cooldown is not None:
         caster.cooldowns[skill.id] = cooldown
-    return PaidCost(ap=ap, hp=hp, cooldown=cooldown)
+    return PaidCost(ap=ap, hp=hp, cooldown=cooldown, mana=mana)
 
 
 def resource_problem(  # noqa: PLR0911
@@ -356,8 +369,9 @@ def resource_problem(  # noqa: PLR0911
         return f"空膛：{held_weapon(unit).name_zh}需要先裝填才能施放：{skill.name_zh}"
     if is_spell_for_silence(state.ruleset, skill) and blocks_spells(state.ruleset, unit):
         return f"沉默中：不能使用法術技：{skill.name_zh}"
-    if unit.mana < skill.cost.mana:
-        return f"法力不足：需要 {skill.cost.mana}，剩餘 {unit.mana}"
+    mana = skill_mana_cost(state.ruleset.core, unit, skill)
+    if unit.mana < mana:
+        return f"法力不足：需要 {mana}，剩餘 {unit.mana}"
     if unit.stamina < skill.cost.stamina:
         return f"耐力不足：需要 {skill.cost.stamina}，剩餘 {unit.stamina}"
     remaining = unit.cooldowns.get(skill.id, 0)

@@ -40,7 +40,7 @@ def _stop_at(kind: type[object]) -> object:
     return stop
 
 
-def _campfire(seed: int = 0) -> RunState:
+def _campfire(seed: int = 1) -> RunState:  # 種子 0 在 BAL-4b 數值下打不到營火
     lib = library()
     run, _ = auto_play(lib, new_run(lib, BUILD, seed), stop=_stop_at(CampfireNode))  # type: ignore[arg-type]
     assert isinstance(run.node, CampfireNode)
@@ -135,7 +135,7 @@ def test_constitution_respec_adjusts_hp_with_max_hp() -> None:
 
 def test_save_round_trip_after_respec() -> None:
     lib = library()
-    refunded = apply_choice(lib, _campfire(0), RespecAttributesChoice())
+    refunded = apply_choice(lib, _campfire(1), RespecAttributesChoice())
     state = apply_choice(lib, refunded, AllocateChoice(attributes={A.WIL: 2}))
     text = dumps_save(RunSave(run_id="r1", run=state))
     assert loads_save(text).run == state

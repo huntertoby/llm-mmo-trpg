@@ -491,7 +491,7 @@ def test_legal_actions_never_list_an_action_the_resolution_would_refuse(
     [
         (
             "build_healer",
-            "施放「回春」（AP 1，法力 5，冷卻 1 回合）→ 影響 4 格",
+            "施放「回春」（AP 1，法力 4，冷卻 1 回合）→ 影響 4 格",
         ),  # 直線 3 格 ＋ 自己
         (
             "build_tank",

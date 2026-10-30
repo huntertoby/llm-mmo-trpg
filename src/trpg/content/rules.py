@@ -131,9 +131,10 @@ class ResourceRules(ContentModel):
         best = max(attributes.get(a, self.base) for a in pool.attrs)
         return (best - self.base) * pool.per_point
 
-    mana_cap_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
-    """法力上限倍率（‰；BAL-4 模擬旋鈕，**預設 1000 ＝ 現行行為**）：只由 ``trpg.sim.difficulty``
-    在記憶體內的副本上設定，不寫進內容檔；``exclude`` 讓它不進序列化與規則包雜湊。"""
+    mana_cap_permille: int = Field(default=1000, ge=100, le=5000)
+    """法力上限倍率（‰；BAL-4b，**原型專用**難度數值）：
+    套用在依屬性算上限的角色（主角與 build 英雄）。
+    欄位預設 1000；``content/rules/core.yaml`` 寫 1400。進序列化與規則包雜湊。"""
 
     def max_for(self, kind: ResourceKind, base: int, attributes: Mapping[Attribute, int]) -> int:
         """上限 ＝ max(0, ``base`` ＋ :meth:`bonus`)；法力再乘 ``mana_cap_permille``。"""
@@ -502,14 +503,19 @@ class CoreRules(ContentModel):
     """召喚物持續輪數的上限（Phase 3-33b）：召喚技能的 ``duration`` 超過時以此為準。"""
     boss_summon_damage_permille: int = Field(default=2000, ge=1000, le=5000)
     """Boss（``boss`` 標籤）對召喚物造成的傷害倍率（‰；Phase 3-33b，預設 ×2）。"""
-    enemy_damage_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
-    """敵方（非 ``boss`` 標籤）對我方造成的傷害倍率（‰；BAL-4 模擬旋鈕，預設 1000 ＝ 現行行為）：
-    只由 ``trpg.sim.difficulty`` 在記憶體內的副本上設定；``exclude`` 讓它不進序列化與規則包雜湊。"""
-    boss_damage_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
-    """Boss（``boss`` 標籤）造成的傷害倍率（‰；BAL-4 模擬旋鈕，同上）。"""
-    ally_mana_cost_permille: int = Field(default=1000, ge=100, le=5000, exclude=True)
-    """技能法力費用倍率（‰；BAL-4 模擬旋鈕，同上）：``trpg.sim.difficulty`` 縮放規則包內技能的
-    ``cost.mana``，``Ruleset.with_skills`` 加入的技能也套用；這裡只記錄倍率。"""
+    enemy_damage_permille: int = Field(default=1000, ge=100, le=5000)
+    """一般敵方（非 ``boss``、非 ``boss_escort`` 標籤）對我方造成的傷害倍率（‰；BAL-4b，**原型專用**
+    難度數值）。欄位預設 1000；``content/rules/core.yaml`` 寫 1200。進序列化與規則包雜湊。"""
+    boss_damage_permille: int = Field(default=1000, ge=100, le=5000)
+    """Boss（``boss`` 標籤）造成的傷害倍率（‰；BAL-4b，原型專用）。"""
+    boss_escort_damage_permille: int = Field(default=1000, ge=100, le=5000)
+    """Boss 戰護衛與援軍（``boss_escort`` 標籤）造成的傷害倍率（‰；BAL-4b，原型專用）：
+    與一般敵人分開調，
+    ``content/rules/core.yaml`` 預設與 ``enemy_damage_permille`` 相同（行為與一般敵人一致）。"""
+    ally_mana_cost_permille: int = Field(default=1000, ge=100, le=5000)
+    """我方技能法力費用倍率（‰；BAL-4b，原型專用）。BAL-4c 起依**施放者陣營**套用：我方單位
+    （含我方召喚物）施放、灌注、觸發技能時付 :meth:`ally_mana` 的費用，敵方照原價；技能資料
+    （內容檔、規則包、生成技能）一律保持原始費用，預算、閃現、組合器都以原始費用計算。"""
     summon_command_ap_cost: int = Field(default=1, ge=0, le=3)
     """指揮召喚物（Phase 3-33c）的 AP 花費（切換模式免費）。"""
     summon_infuse_ap_cost: int = Field(default=1, ge=0, le=3)
@@ -569,6 +575,14 @@ class CoreRules(ContentModel):
         if any(a >= b for a, b in itertools.pairwise(values)) or values[0] < 1:
             raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
         return self
+
+    def ally_mana(self, mana: int) -> int:
+        """我方施放者實際付的法力（BAL-4c）：``mana × ally_mana_cost_permille‰``，四捨五入（半數
+        進位）、原本有費用者至少 1；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
+        permille = self.ally_mana_cost_permille
+        if mana == 0 or permille == _PERMILLE:
+            return mana
+        return max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
 
     def max_hp_for(self, base_hp: int, con: int) -> int:
         """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""

@@ -1,0 +1,2 @@
+enemy_hp,enemy_damage,boss_hp,boss_damage,mana_cost,mana_cap,escort_hp,escort_damage,map_win,map_rounds,maps_ok,maps_total,boss_summon_win,boss_summon_rounds,boss_plain_win,boss_plain_rounds,short_fire,short_summoner,run_win,run_wins_mean,run_boss_win,run_n,run_boss_n
+1000,1000,1000,1000,1000,1000,1000,1000,57.000,4.510,6,10,33.333,9.233,18.333,7.933,28.947,14.970,8.333,2.983,50.000,60,10

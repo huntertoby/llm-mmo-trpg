@@ -7,6 +7,7 @@ from collections.abc import Sequence
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     caster_template,
     give_turn,
     library,
@@ -172,7 +173,8 @@ def test_mana_and_cooldown_weights_lower_a_skills_score() -> None:
     )
     cost = score_action(state, action, free).score - score_action(state, action, profile).score
     weights = profile.weights
-    assert cost == weights.mana * 12 + weights.cooldown * 2 and cost > 0
+    mana = ally_mana(library().skills["skill_ashen_oath"].cost.mana)  # 我方實付（BAL-4c）
+    assert cost == weights.mana * mana + weights.cooldown * 2 and cost > 0
 
 
 # ---------------------------------------------------------------------------

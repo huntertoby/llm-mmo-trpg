@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library, scale_mana_cost
+from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.ruleset_hash import hash_ruleset
 from trpg.shared.types import Attribute
 from trpg.sim.batch import map_spec, run_batches
@@ -29,9 +29,34 @@ def test_neutral_returns_same_library(library: ContentLibrary) -> None:
     assert NEUTRAL.label == "baseline"
 
 
-def test_knobs_do_not_enter_ruleset_hash(library: ContentLibrary) -> None:
-    d = Difficulty(1200, 1200, 900, 900, 1000, 1400)  # 費用旋鈕會改技能表本身，不在此列
-    assert hash_ruleset(with_difficulty(library, d).ruleset) == hash_ruleset(library.ruleset)
+def test_content_values_are_adopted_and_enter_ruleset_hash(library: ContentLibrary) -> None:
+    """BAL-4b：採用的數值是正式欄位（寫在 content），會進序列化與規則包雜湊。"""
+    core = library.ruleset.core
+    assert (core.enemy_damage_permille, core.boss_damage_permille) == (1200, 1000)
+    assert core.boss_escort_damage_permille == 1200
+    assert core.ally_mana_cost_permille == 800
+    assert core.resources.mana_cap_permille == 1400
+    assert "boss_escort_damage_permille" in core.model_dump(mode="json")
+    d = Difficulty(enemy_damage=900)
+    assert hash_ruleset(with_difficulty(library, d).ruleset) != hash_ruleset(library.ruleset)
+
+
+def test_escort_templates_default_to_enemy_values(library: ContentLibrary) -> None:
+    """Boss 戰護衛／援軍是獨立範本（``*_guard``，帶 boss_escort 標籤），預設與一般敵人同值。"""
+    lair = library.maps["bandit_lair"]
+    assert lair.encounter is not None
+    guards = [e for e in lair.encounter.enemies if e != "bandit_warlord"]
+    assert guards and all("boss_escort" in library.units[e].tags for e in guards)
+    assert set(library.roguelite.boss.enemies) == set(lair.encounter.enemies)
+    for guard in guards:
+        assert library.units[guard].max_hp == library.units[guard.removesuffix("_guard")].max_hp
+    other = with_difficulty(library, Difficulty(escort_hp=1500, escort_damage=800))
+    for guard in guards:  # 護衛旋鈕只動護衛，不動同型的一般敵人
+        assert other.units[guard].max_hp == scale_int(library.units[guard].max_hp, 1500)
+        plain = guard.removesuffix("_guard")
+        assert other.units[plain].max_hp == library.units[plain].max_hp
+    assert other.ruleset.core.boss_escort_damage_permille == 960
+    assert other.ruleset.core.enemy_damage_permille == 1200
 
 
 def test_copy_leaves_original_untouched(library: ContentLibrary) -> None:
@@ -43,19 +68,25 @@ def test_copy_leaves_original_untouched(library: ContentLibrary) -> None:
     assert other is not library
     assert library.units["bandit_warlord"].max_hp == before_hp
     assert library.ruleset.skill_def(skill_id).cost.mana == before_mana
-    assert library.ruleset.core.enemy_damage_permille == 1000
+    assert library.ruleset.core.enemy_damage_permille == 1200
     assert library.ruleset.core.boss_damage_permille == 1000
-    assert library.ruleset.core.ally_mana_cost_permille == 1000
-    assert library.ruleset.core.resources.mana_cap_permille == 1000
+    assert library.ruleset.core.ally_mana_cost_permille == 800
+    assert library.ruleset.core.resources.mana_cap_permille == 1400
 
 
 def test_hp_scaling_splits_boss_and_enemy(library: ContentLibrary) -> None:
     other = with_difficulty(library, Difficulty(enemy_hp=1200, boss_hp=900))
     for template_id in enemy_roster(library):
         template = library.units[template_id]
-        permille = 900 if "boss" in template.tags else 1200
+        permille = 1200
+        if "boss" in template.tags:
+            permille = 900
+        elif "boss_escort" in template.tags:
+            permille = 1000  # 護衛有自己的旋鈕（escort_hp），不跟著 enemy_hp
         assert other.units[template_id].max_hp == max(1, scale_int(template.max_hp, permille))
-    assert other.units["bandit_warlord"].max_hp == scale_int(86, 900)
+    assert other.units["bandit_warlord"].max_hp == scale_int(
+        library.units["bandit_warlord"].max_hp, 900
+    )
     summons = [i for i, t in library.units.items() if t.summon]
     assert all(other.units[i].max_hp == library.units[i].max_hp for i in summons)
     assert "bandit_warlord" in enemy_roster(library)
@@ -69,36 +100,36 @@ def test_scale_int_rounds_half_up() -> None:
     assert scale_int(5, 1200) == 6
 
 
-def test_mana_cost_scaling_applies_to_base_and_added_skills(library: ContentLibrary) -> None:
+def test_mana_cost_knob_scales_the_ally_permille_not_the_skill_data(
+    library: ContentLibrary,
+) -> None:
+    """BAL-4c：技能資料一律是原始費用；旋鈕只改 ``ally_mana_cost_permille``（content × 旋鈕）。"""
     skill_id = _mana_skill_id(library)
-    base = library.ruleset.skill_def(skill_id)
+    raw = library.skills[skill_id]
+    assert library.ruleset.skill_def(skill_id) == raw  # 規則包內也是原始費用
     other = with_difficulty(library, Difficulty(mana_cost=800))
-    assert other.ruleset.skill_def(skill_id).cost.mana == scale_int(base.cost.mana, 800)
-    assert other.skills[skill_id].cost.mana == scale_int(base.cost.mana, 800)
-    # 加入的技能（一輪的生成技能走 with_skills）也縮放；其他欄位不變
-    clone = base.model_copy(update={"id": "skill_bal4_clone"})
-    added = other.ruleset.with_skills([clone])
-    assert added.skill_def("skill_bal4_clone").cost.mana == scale_int(base.cost.mana, 800)
-    assert added.skill_def("skill_bal4_clone").cost.stamina == base.cost.stamina
-    # 預設倍率：原樣
+    assert other.ruleset.core.ally_mana_cost_permille == 640  # 800 × 800‰
+    assert other.ruleset.skill_def(skill_id) == raw
+    assert other.ruleset.core.ally_mana(raw.cost.mana) == max(1, scale_int(raw.cost.mana, 640))
+    clone = raw.model_copy(update={"id": "skill_bal4_clone"})
     assert library.ruleset.with_skills([clone]).skill_def("skill_bal4_clone") == clone
 
 
-def test_scale_mana_cost_keeps_minimum_one_and_identity() -> None:
-    lib = load_library()
-    skill = next(s for s in lib.ruleset.skills.skills if s.cost.mana == 1)
-    assert scale_mana_cost(skill, 100).cost.mana == 1
-    assert scale_mana_cost(skill, 1000) is skill
-    free = next(s for s in lib.ruleset.skills.skills if s.cost.mana == 0)
-    assert scale_mana_cost(free, 800) is free
+def test_ally_mana_keeps_minimum_one_and_identity() -> None:
+    core = load_library().ruleset.core
+    assert core.model_copy(update={"ally_mana_cost_permille": 100}).ally_mana(1) == 1
+    assert core.model_copy(update={"ally_mana_cost_permille": 1000}).ally_mana(7) == 7
+    assert core.ally_mana(0) == 0
+    assert core.ally_mana(10) == 8  # 800‰
+    assert core.ally_mana(7) == 6  # 5.6 → 6（四捨五入）
 
 
 def test_mana_cap_scales_only_mana(library: ContentLibrary) -> None:
     attrs = {a: 10 for a in Attribute}
     base = library.ruleset.core.resources
     other = with_difficulty(library, Difficulty(mana_cap=1400)).ruleset.core.resources
-    assert base.max_for("mana", 20, attrs) == 20
-    assert other.max_for("mana", 20, attrs) == 28
+    assert base.max_for("mana", 20, attrs) == 28  # content：×1.4
+    assert other.max_for("mana", 20, attrs) == 39  # 1400 × 1400‰ ＝ 1960‰：39.2 → 39
     assert other.max_for("stamina", 20, attrs) == base.max_for("stamina", 20, attrs)
 
 

@@ -214,7 +214,7 @@ def test_an_ai_battle_with_pierce_shots_replays(
 
     3-20 跑步改變 AI 軌跡，種子原為 0。"""
     log = tmp_path / "pierce.json"
-    argv = ["battle", "--map", "dark_forest", "--seed", "4", "--ally-build", "build_ranged"]
+    argv = ["battle", "--map", "dark_forest", "--seed", "7", "--ally-build", "build_ranged"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
     assert "穿過了" in out and "穿甲箭" in out
@@ -229,7 +229,7 @@ def test_an_ai_battle_with_a_topple_replays(
 ) -> None:
     """build_push 在 lava_crossing 種子 0：AI 推倒石柱，重播一致（3F-4b、3I-3 換技能後換種子）。"""
     log = tmp_path / "topple.json"
-    argv = ["battle", "--map", "lava_crossing", "--seed", "0", "--ally-build", "build_push"]
+    argv = ["battle", "--map", "lava_crossing", "--seed", "1", "--ally-build", "build_push"]
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "倒下，壓住" in capsys.readouterr().out
     replayed = io.StringIO()

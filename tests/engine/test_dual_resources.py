@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     give_turn,
     library,
     make_map,
@@ -74,9 +75,10 @@ def test_not_enough_stamina_blocks_the_weapon_skill_with_a_reason() -> None:
 def test_not_enough_mana_blocks_the_spell_and_stamina_does_not_help() -> None:
     skill = make_skill(SID, {"type": "single", "range": 5}, [BOLT], cost={"mana": 6})
     state = battle(skill, [(5, 3)])
-    state.units[U1].mana = 5
+    need = ally_mana(6)  # 我方付打折後的費用（BAL-4c）
+    state.units[U1].mana = need - 1
     state.units[U1].stamina = 99
-    _blocked(state, "法力不足：需要 6，剩餘 5")
+    _blocked(state, f"法力不足：需要 {need}，剩餘 {need - 1}")
 
 
 def test_block_shares_the_stamina_pool_with_weapon_skills() -> None:
@@ -122,9 +124,14 @@ def test_hero_caps_follow_the_highest_attribute_of_each_group() -> None:
     attrs = {a: 10 for a in Attribute} | {Attribute.WIL: 16, Attribute.INT: 12, Attribute.CON: 13}
     mana, stamina = _unit(attributes=attrs, max_mana=40, stamina=30, scaled_resources=True)
     assert core.resources.mana.per_point == core.resources.stamina.per_point == 2
-    assert (mana, stamina) == (40 + (16 - 10) * 2, 30 + (13 - 10) * 2)
+    cap = core.resources.mana_cap_permille  # 法力上限倍率（BAL-4b，content）
+
+    def capped(v: int) -> int:
+        return (v * cap + 500) // 1000
+
+    assert (mana, stamina) == (capped(40 + (16 - 10) * 2), 30 + (13 - 10) * 2)
     low = {a: 8 for a in Attribute}
-    assert _unit(attributes=low, max_mana=40, stamina=30, scaled_resources=True) == (36, 26)
+    assert _unit(attributes=low, max_mana=40, stamina=30, scaled_resources=True) == (capped(36), 26)
 
 
 def test_other_units_keep_their_fixed_caps() -> None:

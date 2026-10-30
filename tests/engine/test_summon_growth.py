@@ -407,8 +407,9 @@ def hit_summon(foe_tags: Sequence[str], source: UnitId = U2) -> int:
 
 
 def test_boss_deals_double_damage_to_summons() -> None:
-    assert hit_summon(()) == 10
-    assert hit_summon(("boss",)) == 20
+    core = library().ruleset.core  # 敵方傷害倍率（BAL-4b，content）：一般 enemy、Boss boss
+    assert hit_summon(()) == 10 * core.enemy_damage_permille // 1000
+    assert hit_summon(("boss",)) == 20 * core.boss_damage_permille // 1000
     assert library().ruleset.core.boss_summon_damage_permille == 2000
 
 

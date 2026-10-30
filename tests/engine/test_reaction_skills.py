@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from tests.engine.helpers import (
+    ally_mana,
     caster_template,
     give_turn,
     library,
@@ -134,9 +135,10 @@ def test_mana_and_cooldown_are_paid_and_gate_the_reaction(monkeypatch: pytest.Mo
     mana = state.units[U1].mana
     result = resolve(state, Attack(unit_id=U2, target_id=U1))
     unit = result.state.units[U1]
-    assert unit.mana == mana - 5 and unit.cooldowns[skill.id] == 3
+    paid = ally_mana(5)  # 我方付打折後的費用（BAL-4c）
+    assert unit.mana == mana - paid and unit.cooldowns[skill.id] == 3
     broke = duel([skill])
-    broke.units[U1].mana = 4
+    broke.units[U1].mana = paid - 1
     assert not of(resolve(broke, Attack(unit_id=U2, target_id=U1)), ReactionTriggered)
     cooling = duel([skill])
     cooling.units[U1].cooldowns[skill.id] = 1

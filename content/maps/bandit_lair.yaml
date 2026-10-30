@@ -57,10 +57,10 @@ start_zones:
 source_wells: [[5, 5], [6, 4]]
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
-  enemies: [bandit_warlord, bandit, bandit_archer, bandit_shieldbearer]
+  enemies: [bandit_warlord, bandit_guard, bandit_archer_guard, bandit_shieldbearer_guard]
 events:
   - kind: spawn_units
     round: 3
     units:
-      - {template: bandit, at: [11, 0], team: enemy}
-      - {template: bandit, at: [11, 9], team: enemy}
+      - {template: bandit_guard, at: [11, 0], team: enemy}
+      - {template: bandit_guard, at: [11, 9], team: enemy}
