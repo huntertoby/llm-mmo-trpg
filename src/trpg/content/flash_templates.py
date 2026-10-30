@@ -174,6 +174,11 @@ class FlashRules(ContentModel):
     """收回家族（收束起，BAL-10d，06 6.34.4）的單發上限：收回後一次施放對單一目標的期望傷害（治療、
     護盾同理）最多是「同階、同 AP 的單體技能預算」（``tier_budget`` × AP 係數）的這麼多‰；超過的預算
     改成減費用（減不動就不出這個選項）。"""
+    converge_targets_permille: int = Field(default=1500, ge=1000, le=10000)
+    converge_usage_score: int = Field(default=3, ge=0, le=5)
+    """收束的用法分數（BAL-10d2，原型 AI 權重）：這招放過、平均命中目標數（‰）低於
+    ``converge_targets_permille`` 時，兩種收束各加這麼多分（換形狀在同樣條件下是 2 分，3 分讓
+    常打單體的範圍技優先看到收束）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:

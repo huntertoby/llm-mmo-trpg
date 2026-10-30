@@ -360,6 +360,10 @@ def _usage_score(
         "keyword_imbue": int(signal == 0),
         "mod_keyword": 2 * (signal > 0),
     }
+    rules = library.flash.rules
+    if op in ("converge_single", "converge_step"):  # BAL-10d2：常打單體 → 收束
+        few = usage.uses > 0 and usage.avg_targets_permille < rules.converge_targets_permille
+        scores[op] = rules.converge_usage_score * few
     return int(scores.get(op, 0)) + template.usage_base
 
 

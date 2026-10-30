@@ -33,6 +33,10 @@ rules:
   # 收回家族（收束起，BAL-10d，06 6.34.4）的單發上限：一次施放對單一目標的期望傷害（治療／護盾同理）最多是
   # 同階、同 AP 單體技能預算（tier_budget × AP 係數）的這麼多‰（初值 3 倍）；超過的預算改成減費用，減不動就不出
   single_hit_cap_permille: 3000
+  # 收束的用法分數（BAL-10d2，玩法 PM 2026-10-31；原型 AI 權重）：放過、平均命中目標數 < 1.5（‰ 門檻）時加分；
+  # 換形狀在同樣條件下是 2 分，給 3 分讓常打單體的範圍技先看到收束
+  converge_targets_permille: 1500
+  converge_usage_score: 3
   form_magnitudes: [1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600, 1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]
   complete:                   # 完整技能（6.34.6）：視為已閃 3 次、+120‰、不能再閃、可以重閃
     flashes: 3
@@ -183,7 +187,7 @@ minor:
       - {type: allies_in_radius, radius: 2}
   # 收束（BAL-10d，#74；06 6.34.4「收束」「收回家族」）：把範圍收小，省下的預算＋這次的 +40‰ 全部換成威力
   # （trpg.skillgen.flash_trade）。只對有傷害／治療／護盾量的主動技（陷阱除外）；複合技只動第一段形狀；
-  # 範圍造的表面、區域跟著縮。單發上限見 rules.single_hit_cap_permille。排在範圍類最後（保守：不搶既有模板的順位）。
+  # 範圍造的表面、區域跟著縮。單發上限見 rules.single_hit_cap_permille。排在範圍類最後；常打單體時靠用法分數往前（BAL-10d2）。
   - id: converge_single
     category: area
     op: converge_single

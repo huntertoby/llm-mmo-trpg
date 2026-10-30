@@ -301,6 +301,22 @@ def test_converge_target_ratio_can_reroll_like_other_flashes() -> None:
     assert max(ratios) - min(ratios) >= Fraction(5, 100)
 
 
+@pytest.mark.parametrize(("targets", "first"), [(4, True), (8, False)])
+def test_single_target_usage_ranks_converge_first(targets: int, first: bool) -> None:
+    """② 放過、平均命中目標數 < 1.5（content 門檻）時收束加用法分數，排到範圍類前面；常打多個目標
+    時不加（範圍 +1 優先）。"""
+    rules = lib().flash.rules
+    assert (rules.converge_targets_permille, rules.converge_usage_score) == (1500, 3)
+    skill = lib().skills["skill_tempest"]
+    state = acquire(skill.id).model_copy(update={"used": True})
+    usage = SkillUsage(uses=4, targets=targets)  # 平均 1.0 或 2.0 個目標
+    request = FlashRequest(skill, state, usage, 11, category="area", tier=2)
+    ranked = [v.template for v in UsageSource().ranked(lib(), request, "area", skill)]
+    assert (ranked[:2] == [SINGLE, STEP]) is first
+    if not first:
+        assert ranked[-2:] == [SINGLE, STEP]
+
+
 UNSINGLE = {
     # 帶表面／split_heal／destroy_object／shockwave／leave_form：不出收成單體；縮得了才出縮小一級
     "skill_ashen_oath": True,  # 錐形 3 → 2
