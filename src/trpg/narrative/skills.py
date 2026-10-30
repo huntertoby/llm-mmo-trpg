@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -82,9 +82,11 @@ __all__ = [
     "cost_parts",
     "cost_summary",
     "draft_card_keywords",
+    "effect_lines",
     "effect_summary",
     "followup_text",
     "keywords_card",
+    "mark_repeats",
     "mastery_text",
     "miss_text",
     "modifier_summary",
@@ -154,7 +156,8 @@ def followup_text(library: ContentLibrary, skill: SkillDef) -> str | None:
     follow = skill.followup_skill()
     if follow is None or skill.followup is None:
         return None
-    effects = "；".join(effect_summary(library, follow, e) for e in follow.effects)
+    texts = [effect_summary(library, follow, e) for e in follow.effects]
+    effects = "；".join(mark_repeats([e.type for e in follow.effects], texts))
     when = f"［條件：{condition_summary(library, follow.condition)}］" if follow.condition else ""
     if skill.followup.release is not None:  # 延遲段（Phase 3F-4b）
         lead = _DELAYED_LEADS[skill.followup.release]
@@ -1600,6 +1603,38 @@ def _summon_stats(owner: CardOwner | None, spec: EffectSpec) -> SummonStats | No
     return owner.summon_stats(spec)
 
 
+def mark_repeats(types: Sequence[str], texts: Sequence[str]) -> tuple[str, ...]:
+    """相鄰而且文字完全相同的效果行（連打變化把一段傷害拆成幾段，4-L11）：第一行標「第 1 擊」，
+    其後各行只寫「第 N 擊：同上」，不再把同一句說明重複列出。行數不變（和 ``effect_ids``
+    一一對應）。非傷害的重複效果寫「再一次：同上」。"""
+    out = list(texts)
+    run = 1
+    for index in range(1, len(texts)):
+        if texts[index] != texts[index - 1]:
+            run = 1
+            continue
+        run += 1
+        if types[index] == "damage":
+            if not out[index - 1].startswith("第 "):
+                out[index - 1] = f"第 1 擊：{texts[index - 1]}"
+            out[index] = f"第 {run} 擊：同上"
+        else:
+            out[index] = "再一次：同上"
+    return tuple(out)
+
+
+def effect_lines(
+    library: ContentLibrary, skill: SkillDef, owner: CardOwner | None = None
+) -> tuple[str, ...]:
+    """卡片的效果行：每個效果一行（:func:`effect_summary`），相鄰的相同行由 :func:`mark_repeats`
+    合併說明。"""
+    texts = [
+        effect_summary(library, skill, e, summon_stats=_summon_stats(owner, e))
+        for e in skill.effects
+    ]
+    return mark_repeats([e.type for e in skill.effects], texts)
+
+
 def _summon_cards(
     library: ContentLibrary, skill: SkillDef, owner: CardOwner | None
 ) -> tuple[SummonInfoCard, ...]:
@@ -1659,10 +1694,7 @@ def _build_card(
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)
         ),
-        effects=tuple(
-            effect_summary(library, skill, e, summon_stats=_summon_stats(owner, e))
-            for e in skill.effects
-        ),
+        effects=effect_lines(library, skill, owner),
         modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
         activation=activation_text(library, skill),
         activation_id=skill.activation,
