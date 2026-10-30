@@ -23,7 +23,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_ZH
 from trpg.llm import LLMConfigError
 from trpg.roguelite import (
-    FLASH_POLICIES,
+    ALL_FLASH_POLICIES,
     ChoiceError,
     FlashPolicy,
     RunError,
@@ -177,9 +177,12 @@ def add_run_parser(
     auto.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾（預設 saves/）")
     auto.add_argument(
         "--flash-policy",
-        choices=FLASH_POLICIES,
+        choices=ALL_FLASH_POLICIES,
         default="none",
-        help="AI 閃現的策略（none 不指定類別、all 全指定類別、mixed 混合；預設 none）",
+        help=(
+            "AI 閃現的策略（none 集中且不指定類別、all 全指定類別、mixed 混合、"
+            "balanced 均衡輪流各技能；預設 none）"
+        ),
     )
     add_llm_args(auto)
     auto.set_defaults(func=lambda a: with_library(lambda lib: _auto(lib, a)))
