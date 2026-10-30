@@ -121,6 +121,10 @@ class FlashRules(ContentModel):
     """溶掉一招時退回「花在它身上的靈感點」的比例（‰，無條件捨去；#71：一半）。"""
     insight_per_win: int = Field(default=1, ge=0)
     """roguelite 原型每打贏一場給的靈感點（3W-5 接）。"""
+    insight_start: int = Field(default=0, ge=0)
+    """開局給的靈感點（BAL-1 經濟旋鈕；預設 0＝現行行為）。"""
+    insight_preboss: int = Field(default=0, ge=0)
+    """打贏最後一場一般戰鬥（下一場是 Boss）時額外加給的靈感點（BAL-1；預設 0）。"""
     usage_min_uses: int = Field(default=3, ge=0)
     """用法統計要有這麼多次放出才算數（3W-2）；不夠時先出通用變化（``generic``）。"""
     complete: CompleteSkillRules = CompleteSkillRules()
