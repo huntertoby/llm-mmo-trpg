@@ -281,3 +281,61 @@ def test_converge_is_deterministic() -> None:
     skill = lib().skills["skill_tempest"]
     assert _apply(skill, SINGLE) == _apply(skill, SINGLE)
     assert _apply(skill, STEP) == _apply(skill, STEP)
+
+
+# ---------------------------------------------------------------------------
+# BAL-10d2
+# ---------------------------------------------------------------------------
+
+
+def test_converge_target_ratio_can_reroll_like_other_flashes() -> None:
+    """④ 目標比例 ＝ max(收束前比例＋40‰, 一般重調的隨機目標)：不同亂數抽到的比例會不同，
+    但都不低於收束前的強度。"""
+    skill = lib().skills["skill_tempest"]
+    ratios = []
+    for seed in range(1, 13):
+        done = apply_variation(lib(), skill, _variation(SINGLE), bonus=BONUS, rng=Rng(seed))
+        assert done is not None
+        assert budget_power(done, lib()) >= budget_power(skill, lib())
+        ratios.append(skill_budget(done, lib()).ratio)
+    assert max(ratios) - min(ratios) >= Fraction(5, 100)
+
+
+@pytest.mark.parametrize(("targets", "first"), [(4, True), (8, False)])
+def test_single_target_usage_ranks_converge_first(targets: int, first: bool) -> None:
+    """② 放過、平均命中目標數 < 1.5（content 門檻）時收束加用法分數，排到範圍類前面；常打多個目標
+    時不加（範圍 +1 優先）。"""
+    rules = lib().flash.rules
+    assert (rules.converge_targets_permille, rules.converge_usage_score) == (1500, 3)
+    skill = lib().skills["skill_tempest"]
+    state = acquire(skill.id).model_copy(update={"used": True})
+    usage = SkillUsage(uses=4, targets=targets)  # 平均 1.0 或 2.0 個目標
+    request = FlashRequest(skill, state, usage, 11, category="area", tier=2)
+    ranked = [v.template for v in UsageSource().ranked(lib(), request, "area", skill)]
+    assert (ranked[:2] == [SINGLE, STEP]) is first
+    if not first:
+        assert ranked[-2:] == [SINGLE, STEP]
+
+
+UNSINGLE = {
+    # 帶表面／split_heal／destroy_object／shockwave／leave_form：不出收成單體；縮得了才出縮小一級
+    "skill_ashen_oath": True,  # 錐形 3 → 2
+    "skill_holy_burst": True,  # 3×3 → 十字
+    "skill_shatter_blast": True,  # 3×3 → 十字
+    "skill_quake_wave": True,  # 直線 4 → 3
+    "skill_holy_water": False,  # 十字：沒有更小一級
+    "skill_oil_flask": False,
+    "skill_form_release_burst": False,  # 環形
+}
+
+
+@pytest.mark.parametrize("skill_id", sorted(UNSINGLE))
+def test_side_effect_area_skills_only_shrink_one_step(skill_id: str) -> None:
+    """③ 骨架不放寬：這 7 招不出收成單體，只出縮小一級（縮不了就不出）。"""
+    skill = lib().skills[skill_id]
+    assert _apply(skill, SINGLE) is None
+    step = _apply(skill, STEP)
+    assert (step is not None) is UNSINGLE[skill_id]
+    if step is not None:
+        assert step.shape.type != "single"
+        assert step.skeleton == skill.skeleton

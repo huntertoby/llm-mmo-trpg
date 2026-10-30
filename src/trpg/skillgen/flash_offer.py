@@ -64,7 +64,7 @@ from trpg.skillgen.flash_state import (
     with_flash,
     with_reflash,
 )
-from trpg.skillgen.flash_trade import MINOR_OPS
+from trpg.skillgen.flash_trade import MINOR_OPS, convergible
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
@@ -262,7 +262,7 @@ class UsageSource(DataOrderSource):
                 score = (
                     int(template.generic)
                     if sparse
-                    else _usage_score(library, request.usage, template, variation)
+                    else _usage_score(library, request.usage, template, variation, skill)
                 )
                 scored.append((-score, order, sub, variation))
         scored.sort(key=lambda item: item[:3])
@@ -338,9 +338,14 @@ def _keyword_candidates(
 
 
 def _usage_score(
-    library: ContentLibrary, usage: SkillUsage, template: FlashTemplate, variation: Variation
+    library: ContentLibrary,
+    usage: SkillUsage,
+    template: FlashTemplate,
+    variation: Variation,
+    skill: SkillDef | None = None,
 ) -> int:
-    """用法分數（越高越優先）；見 :class:`UsageSource`。"""
+    """用法分數（越高越優先）；見 :class:`UsageSource`。``skill``：收束只在這招收得了時加分
+    （BAL-10d2；省略時收束不加分）。"""
     op = template.op
     multi = usage.avg_targets_permille >= _MULTI_TARGETS_PERMILLE
     keyword = variation.keyword
@@ -360,6 +365,11 @@ def _usage_score(
         "keyword_imbue": int(signal == 0),
         "mod_keyword": 2 * (signal > 0),
     }
+    rules = library.flash.rules
+    if op in ("converge_single", "converge_step"):  # BAL-10d2：常打單體的範圍技 → 收束
+        few = usage.uses > 0 and usage.avg_targets_permille < rules.converge_targets_permille
+        few = few and skill is not None and convergible(skill, library)
+        scores[op] = rules.converge_usage_score * few
     return int(scores.get(op, 0)) + template.usage_base
 
 
@@ -628,7 +638,7 @@ def category_ranking(
         top = ranked[0] if ranked else None
         template = None if top is None else library.flash.minor_template(top.template)
         score = (
-            _usage_score(library, request.usage, template, top)
+            _usage_score(library, request.usage, template, top, before)
             if top is not None and template is not None
             else 0
         )
