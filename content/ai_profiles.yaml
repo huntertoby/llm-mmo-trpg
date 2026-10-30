@@ -179,7 +179,7 @@ facing: {backstab: 4, back_exposed: 3}
 # （模式自己列出的優先）。只影響「近距離武器」：距離傷害修正（range_mod 的 damage_permille）的最佳距離 ≤ 2 格、且比射程近
 # （依武器資料判斷，不寫死 ID；目前只有霰彈槍）。
 #   close_range  站位能打到的敵人中，距離傷害千分比最高者 × 這個值 ÷ 1000；保持距離（keep_distance）只計比最佳距離更近的敵人
-weapon_ai: {close_range: 24}
+weapon_ai: {close_range: 40}
 # objective_ai（Phase 3-22，玩法 #23；初值未經模擬，平衡階段再調）：撤離與守點戰的 AI 權重，敵我同一套，填入每個行為模式的 weights
 # （模式自己列出的優先）。只在撤離或守點的戰鬥生效，其他戰鬥完全不變：
 #   rush_exit    撤離戰，我方：離最近出口每一格的位置價值額外扣分（疊加在 objective 上）→ 朝出口
