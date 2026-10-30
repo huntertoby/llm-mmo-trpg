@@ -19,7 +19,7 @@ OLD_HP = {
     "bandit_captain": 57,  # BAL-6 新增（45 加體質 14 的 12 點）
     "bandit_shieldbearer": 36,  # BAL-4b（20→24）
     "bandit_shieldbearer_guard": 36,
-    "bandit_warlord": 110,
+    "bandit_warlord": 84,  # BAL-9c：基礎 HP ×700‰（原型專用，原 110）
     "gear_tester_g2": 60,  # 3G-G2 新增
     "gear_tester_g3a": 60,  # 3G-G3a 新增
     "gear_tester_g3b": 60,  # 3G-G3b 新增
