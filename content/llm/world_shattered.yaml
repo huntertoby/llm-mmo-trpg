@@ -58,3 +58,11 @@ naming:
     - "def "
     - "import "
     - "http"
+  # 世界觀詞的用量上限（4-L11 初稿，交玩法 PM 定稿）：名稱不得以世界觀詞開頭、名稱前 2 字不得含
+  # 「晶」「頻」、名稱最多 1 個世界觀詞；概念與施放敘事每段最多 1 個（同一詞重複也算）。
+  world_terms:
+    terms: [源晶, 晶頻, 碎界, 碎晶, 頻率, 界域, 晶核, 晶輝, 餘頻, 殘頻]
+    name_prefix_chars: [晶, 頻]
+    name_prefix_len: 2
+    name_max: 1
+    text_max: 1

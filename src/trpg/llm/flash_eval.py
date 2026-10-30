@@ -20,7 +20,13 @@ from trpg.llm.flash_propose import (
     name_offer,
 )
 from trpg.skillgen.flash_category import allowed_categories
-from trpg.skillgen.flash_offer import FlashRequest, UsageSource, choose, make_offer
+from trpg.skillgen.flash_offer import (
+    FlashRequest,
+    UsageSource,
+    choose,
+    make_offer,
+    skill_before,
+)
 from trpg.skillgen.flash_state import SkillFlash, acquire
 from trpg.skillgen.usage import SkillUsage
 
@@ -116,6 +122,7 @@ def evaluate_flash(
                     library,
                     seed=run_seed,
                     taken=taken,
+                    before=skill_before(library, request),
                 )
                 stats.add_names(o.skill for o in named.options if o.variation.source != "minor")
     return result

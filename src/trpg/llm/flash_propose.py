@@ -17,6 +17,10 @@
 結果（提議的變化、錯誤代碼、prompt 版本號）寫成 :class:`FlashProposalRecord`，隨一輪存下來；重播用
 :class:`RecordedSource` 直接取用，**不呼叫 LLM**。名稱由 :func:`name_offer` 交給 4-L7 命名步驟（命名
 關閉時沿用「{前綴}・{原名}」）。
+
+4-L11：``note_zh`` 另外檢查敘事與效果一致（提到的控制、元素、召喚詞要在變化後的技能找得到、變化加上
+的效果要提到）與世界觀詞用量；不過的項目帶錯誤碼重試。命名時把變化前的技能交給命名步驟，名稱與敘事
+同樣要提到變化加上的效果。
 """
 
 from __future__ import annotations
@@ -31,10 +35,19 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from trpg.content.effect_words import EffectWords, load_effect_words
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient, OpenAICompatClient
 from trpg.llm.config import LLMConfig
+from trpg.llm.consistency import (
+    NameCheck,
+    check_added,
+    check_mentions,
+    check_world_terms,
+    skill_facts,
+)
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.naming import apply_naming, name_skill
 from trpg.llm.prompts.flash import (
@@ -69,6 +82,7 @@ __all__ = [
     "mock_flash_client",
     "mock_flash_source",
     "name_offer",
+    "note_checker",
     "propose_variations",
     "select_flash_source",
 ]
@@ -76,6 +90,8 @@ __all__ = [
 DEFAULT_FLASH_ATTEMPTS = 3
 """同 4-L5／使用者決定 #5：每個題目最多 3 次（``config/llm.toml`` 的 ``max_retries``）。"""
 type Clock = Callable[[], float]
+type NoteCheck = Callable[[Variation, str], list[NameCheck]]
+"""（變化, note_zh）→ 一致性與世界觀詞的錯誤（4-L11）。"""
 type ProposalSource = Literal["llm", "partial", "template"]
 """``llm``：模型湊滿了題目要的數量；``partial``：只有一部分，其餘用模板補；``template``：全部退回模板。"""
 
@@ -205,15 +221,41 @@ def _structure_issue(
     return _param_issue(index, item, catalog)
 
 
+def _variation_issue(
+    index: int,
+    item: _Item,
+    variation: Variation | None,
+    check: Callable[[Variation], bool],
+    *,
+    taken: set[str],
+    note_check: NoteCheck | None,
+) -> _Issue | None:
+    if variation is None:
+        return _Issue(index, "flash.param_not_offered", "參數不在選單內", item.template)
+    if variation.key() in taken:
+        return _Issue(index, "flash.duplicate", "這個變化重複了", item.template)
+    if not check(variation):
+        return _Issue(index, "flash.not_applicable", "套不上這招", item.template)
+    if note_check is not None and item.note_zh is not None:
+        problems = note_check(variation, item.note_zh)
+        if problems:
+            message = "；".join(p.message for p in problems)
+            return _Issue(index, f"flash.{problems[0].code}", message, item.template)
+    return None
+
+
 def judge_items(
     items: Sequence[object],
     catalog: FlashCatalog,
     library: ContentLibrary,
     check: Callable[[Variation], bool],
     taken: set[str],
+    *,
+    note_check: NoteCheck | None = None,
 ) -> tuple[list[Variation], list[_Issue]]:
     """逐項檢查提議：回傳合格的變化（依回應順序、已去重、引擎真的套得上）與被拒絕的項目。
-    ``taken`` 是已經合格的變化鍵（會更新）。"""
+    ``taken`` 是已經合格的變化鍵（會更新）。``note_check``（4-L11）給了就檢查 ``note_zh`` 和變化後
+    的效果一致（錯誤碼 ``flash.note_zh.*``／``flash.note_zh.missing_added``）。"""
     accepted: list[Variation] = []
     issues: list[_Issue] = []
     for index, raw in enumerate(items):
@@ -222,18 +264,40 @@ def judge_items(
             issue = _text_issue(index, item) or _structure_issue(index, item, catalog, library)
         if issue is None and item is not None:
             variation = catalog.resolve(item.template, item.keyword, item.element, item.shape)
-            if variation is None:
-                issue = _Issue(index, "flash.param_not_offered", "參數不在選單內", item.template)
-            elif variation.key() in taken:
-                issue = _Issue(index, "flash.duplicate", "這個變化重複了", item.template)
-            elif not check(variation):
-                issue = _Issue(index, "flash.not_applicable", "套不上這招", item.template)
-            else:
+            issue = _variation_issue(
+                index, item, variation, check, taken=taken, note_check=note_check
+            )
+            if issue is None and variation is not None:
                 taken.add(variation.key())
                 accepted.append(variation)
         if issue is not None:
             issues.append(issue)
     return accepted, issues
+
+
+def note_checker(
+    library: ContentLibrary,
+    request: FlashRequest,
+    before: SkillDef,
+    words: EffectWords | None = None,
+) -> NoteCheck:
+    """``note_zh`` 的一致性與世界觀詞檢查（4-L11）：提到的詞要在變化後的技能找得到、變化加上的效果要
+    提到、世界觀詞不超過上限（``naming.world_terms.text_max``）。"""
+    vocab = words if words is not None else load_effect_words()
+    rules = load_world_style().naming.world_terms
+    before_facts = skill_facts(library, before)
+
+    def run(variation: Variation, note: str) -> list[NameCheck]:
+        option = try_variation(library, request, variation)
+        if option is None:
+            return []
+        facts = skill_facts(library, option.skill)
+        problems = check_mentions("note_zh", note, facts, vocab)
+        problems += check_added([note], facts - before_facts, vocab, code="note_zh.missing_added")
+        problems += check_world_terms(None, {"note_zh": note}, rules)
+        return problems
+
+    return run
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +315,8 @@ class FlashNameRecord(BaseModel):
     attempts: int
     codes: tuple[str, ...] = ()
     naming_prompt_version: str = NAMING_PROMPT_VERSION
+    consistency_retries: int = 0
+    """因一致性或世界觀詞檢查（4-L11）不過而重試的次數。"""
 
 
 class FlashProposalRecord(BaseModel):
@@ -298,6 +364,9 @@ class _Loop:
     def _check(self, variation: Variation) -> bool:
         return try_variation(self.library, self.request, variation) is not None
 
+    def _note_check(self, variation: Variation, note: str) -> list[NameCheck]:
+        return note_checker(self.library, self.request, self.before)(variation, note)
+
     def attempt(self, number: int) -> bool:
         """做一次嘗試；回傳是否應該繼續重試。"""
         remaining = self.want - len(self.accepted)
@@ -325,7 +394,14 @@ class _Loop:
             return True
         text = clean_response(raw)
         items, issues = _parse(text)
-        found, bad = judge_items(items, self.catalog, self.library, self._check, self.taken)
+        found, bad = judge_items(
+            items,
+            self.catalog,
+            self.library,
+            self._check,
+            self.taken,
+            note_check=self._note_check,
+        )
         issues += bad
         self.accepted += found
         self.rejected += [i.template for i in issues if i.template]
@@ -481,9 +557,12 @@ def name_offer(
     seed: int,
     taken: set[str],
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
+    before: SkillDef | None = None,
 ) -> tuple[FlashOffer, tuple[FlashNameRecord, ...]]:
     """大變化與轉型的選項請 4-L7 命名步驟取名與寫敘事（只換文字，失敗用「{前綴}・{原名}」）。
-    小變化不改名。命名關閉時不要呼叫這個函式——選項的名稱本來就是「{前綴}・{原名}」。"""
+    小變化不改名。命名關閉時不要呼叫這個函式——選項的名稱本來就是「{前綴}・{原名}」。
+    ``before``（4-L11，:func:`~trpg.skillgen.flash_offer.skill_before`）給了就要求名稱或敘事提到
+    變化加上的效果。"""
     options = []
     names: list[FlashNameRecord] = []
     for option in offer.options:
@@ -491,7 +570,9 @@ def name_offer(
             options.append(option)
             continue
         used = client if isinstance(client, LLMClient) else client(option.skill, seed)
-        result = name_skill(used, library, option.skill, taken=taken, max_attempts=max_attempts)
+        result = name_skill(
+            used, library, option.skill, taken=taken, max_attempts=max_attempts, before=before
+        )
         taken.add(result.text.name_zh)
         named = (
             option.skill if result.source == "fallback" else apply_naming(option.skill, result.text)
@@ -503,6 +584,7 @@ def name_offer(
                 source=result.source,
                 attempts=result.attempts,
                 codes=result.codes,
+                consistency_retries=result.consistency_retries,
             )
         )
     return offer.model_copy(update={"options": tuple(options)}), tuple(names)
@@ -520,7 +602,7 @@ def _item_json(variation: Variation) -> dict[str, Any]:
         "keyword": variation.keyword,
         "element": variation.element,
         "shape": None if variation.shape is None else variation.shape.type,
-        "note_zh": "貼合這招的用法。",
+        "note_zh": None,  # 4-L11：note 要提到變化加上的效果，Mock 不寫
     }
 
 
