@@ -179,6 +179,10 @@ class FlashRules(ContentModel):
     """收束的用法分數（BAL-10d2，原型 AI 權重）：這招放過、平均命中目標數（‰）低於
     ``converge_targets_permille`` 時，兩種收束各加這麼多分（換形狀在同樣條件下是 2 分，3 分讓
     常打單體的範圍技優先看到收束）。"""
+    tighten_permille: int = Field(default=100, ge=0, le=1000)
+    """專注的條件收緊一級（BAL-10e2，06 6.34.4「BAL-10e 定」）：預算器不幫條件計價，收緊一級固定
+    視為拿掉這麼多‰（佔同階可用預算），和這次閃現的 ``budget_step_permille`` 一起換觸發效果或
+    修正幅度。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:

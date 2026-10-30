@@ -18,17 +18,20 @@ from trpg.content.skills import SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.evolution import budget_power
+from trpg.skillgen.flash_category import allowed_categories
 from trpg.skillgen.flash_derive import apply_variation, at_tier
+from trpg.skillgen.flash_offer import FlashRequest, UsageSource
 from trpg.skillgen.flash_ops import Draft
-from trpg.skillgen.flash_state import Variation
+from trpg.skillgen.flash_state import Variation, acquire
 from trpg.skillgen.flash_trade import TRADES, cap_points, converge_gain, target_power
+from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import validate_skill
 
 BONUS = 40
 RECLAIMS = {
     "refine": ("element", "精煉"),
     "refine_merge": ("combo", "精煉"),
-    "fuse": ("support", "合體"),
+    "fuse": ("area", "合體"),  # BAL-10e2：數量換強度，歸範圍（輔助類只收輔助技）
     "focus_range": ("trigger", "專注"),
     "focus_condition": ("trigger", "專注"),
     "focus_mod_range": ("modifier", "專注"),
@@ -84,6 +87,12 @@ def _flashed(base: str, template: str, *, tier: int = 1, bonus: int = BONUS) -> 
     done = apply_variation(lib(), skill, variation, bonus=bonus, rng=Rng(11))
     assert done is not None, (base, template)
     return done.model_copy(update={"budget_bonus_permille": None})
+
+
+def _with_tighten(permille: int) -> ContentLibrary:
+    base = lib()
+    rules = base.flash.rules.model_copy(update={"tighten_permille": permille})
+    return dataclasses.replace(base, flash=base.flash.model_copy(update={"rules": rules}))
 
 
 def _with_cap(permille: int) -> ContentLibrary:
@@ -194,6 +203,37 @@ def test_fuse_turns_twin_summons_into_one_tougher() -> None:
     assert after.count in (None, 1) and after.power_permille is None
     assert (after.max_hp_permille or 0) > (before.max_hp_permille or 0)
     _sound(twin, done)
+
+
+def test_fuse_is_offered_in_the_area_category_for_summons() -> None:
+    """BAL-10e2：召喚技出題時範圍類可以出合體。"""
+    twin = _flashed("skill_summon_spirit", "summon_count", tier=2, bonus=3 * BONUS)
+    assert "area" in allowed_categories(lib().flash, twin, major=False)
+    request = FlashRequest(twin, acquire(twin.id), SkillUsage(), 1, tier=2)
+    ranked = [v.template for v in UsageSource().ranked(lib(), request, "area", twin)]
+    assert "fuse" in ranked
+
+
+def test_tightening_counts_as_a_fixed_budget_cut() -> None:
+    """BAL-10e2：條件收緊一級固定視為拿掉 ``tighten_permille``，加 +40‰ 一起換觸發效果。"""
+    assert lib().flash.rules.tighten_permille == 100
+    skill = lib().skills["skill_twin_strike"]
+    loose = _with_tighten(0)
+    for seed in range(1, 6):
+        done = _apply(skill, "focus_condition", seed=seed)
+        plain = _apply(skill, "focus_condition", loose, seed=seed)
+        assert done is not None and plain is not None
+        assert skill_budget(done, lib()).ratio >= skill_budget(plain, loose).ratio
+    done = _apply(skill, "focus_condition", seed=1)
+    assert done is not None
+    before = skill_budget(skill, lib())
+    after = skill_budget(done, lib())
+    # 收緊後的總點數至少是收緊前 ＋ 一份 140‰（佔同階可用預算）
+    plain_budget = before.tier_budget * before.ap_coefficient
+    wanted = before.total + plain_budget * Fraction(
+        1000 + before.allowance_permille, 1000
+    ) * Fraction(140, 1000)
+    assert after.total >= wanted * Fraction(95, 100)
 
 
 def test_fuse_needs_two_summons() -> None:
