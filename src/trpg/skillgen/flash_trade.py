@@ -178,6 +178,9 @@ class Trade:
     gain: GainFn = no_gain
     core: CoreFn = target_power
     knobs: KnobFn = no_knobs
+    tighten: bool = False
+    """條件收緊一級（BAL-10e2）：拿掉的部分固定算 ``rules.tighten_permille``（預算器不幫條件
+    計價）。"""
 
 
 def _usable(
@@ -234,7 +237,10 @@ def apply_trade(
         before = skill_budget(current, library)
     except BudgetError:
         return None
-    step = Fraction(library.flash.rules.budget_step_permille, _PERMILLE)
+    rules = library.flash.rules
+    step = Fraction(
+        rules.budget_step_permille + (rules.tighten_permille if trade.tighten else 0), _PERMILLE
+    )
     plain = before.tier_budget * before.ap_coefficient
     wanted = (
         before.total + plain * Fraction(_PERMILLE + before.allowance_permille, _PERMILLE) * step
@@ -468,9 +474,9 @@ TRADES: dict[str, Trade] = {
     "refine_merge": Trade(remove=op_refine_merge),
     "fuse": Trade(remove=op_fuse, knobs=fuse_knobs),
     "focus_range": Trade(remove=op_focus_range),
-    "focus_condition": Trade(remove=op_focus_condition),
+    "focus_condition": Trade(remove=op_focus_condition, tighten=True),
     "focus_mod_range": Trade(remove=op_focus_mod_range, gain=modifier_gain),
-    "focus_mod_condition": Trade(remove=op_focus_mod_condition, gain=modifier_gain),
+    "focus_mod_condition": Trade(remove=op_focus_mod_condition, gain=modifier_gain, tighten=True),
 }
 """收回家族的登錄表（``op`` → :class:`Trade`）：收束（BAL-10d）與精煉、合體、專注（BAL-10e）。"""
 
