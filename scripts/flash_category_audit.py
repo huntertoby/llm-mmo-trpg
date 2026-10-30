@@ -124,7 +124,16 @@ def _why_empty(op: str, skill: SkillDef, template: FlashTemplate, library: Conte
             else "其他"
         ),
         "trigger_cap": lambda: _why_cap(skill),
-        "mod_potency": lambda: "沒有正的傷害／治療幅度",
+        "mod_potency": lambda: "沒有正的傷害／治療幅度或可重調的幅度",
+        "mod_duration": lambda: "沒有帶持續回合的命中後效果或可加的召喚持續",
+        "mod_stack": lambda: "沒有依空欄位計算的規則（或已達上限）",
+        "mod_cooldown": lambda: "沒有命中後冷卻 −1 的規則",
+        "mod_cost": lambda: "沒有可減輕的代價規則（或只有一條規則）",
+        "stance_enter_light": lambda: "沒有進入代價可減（姿態的進入 AP 固定、沒有冷卻）",
+        "followup_potency": lambda: "不是複合技或接續段沒有傷害",
+        "followup_area": lambda: "不是複合技或接續段形狀沒有可增大的參數",
+        "followup_range": lambda: "不是複合技或接續段沒有固定射程（或已達上限）",
+        "followup_element": lambda: "不是複合技、接續段沒有傷害／效果已滿／元素已有",
         "mod_range": lambda: "規則已滿 2 條且沒有可升的射程 +1",
         "mod_keyword": lambda: _why_mod_keyword(skill),
         "mod_relax": lambda: _why_relax(skill),
@@ -162,12 +171,17 @@ def _why_relax(skill: SkillDef) -> str:
     return "血量門檻已達上限"
 
 
-def _why_stance(skill: SkillDef, library: ContentLibrary, which: str) -> str:
+def _why_stance(  # noqa: PLR0911 - 依序判斷的原因表
+    skill: SkillDef, library: ContentLibrary, which: str
+) -> str:
     if skill.kind != "stance":
         return "不是姿態"
-    if skill.form_id is not None or len(skill.effects) != 1:
-        return "非單一效果／變身姿態（無階梯）"
-    status = skill.effects[0].status
+    if skill.form_id is not None:
+        return "變身姿態沒有進入代價可減（或費用類沒填 cost_fields）"
+    stance_effects = [e for e in skill.effects if e.type == "apply_status"]
+    if len(stance_effects) != 1:
+        return "沒有恰好一個姿態本體效果"
+    status = stance_effects[0].status
     if status is None or library.flash.stance_rung(status) is None:
         return "姿態狀態不在階梯上（白板姿態或自訂）"
     if which == "light" and skill.stance_upkeep <= 0:

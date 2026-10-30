@@ -19,7 +19,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from trpg.content.skills import ShapeSpec, SkillDef
+from trpg.content.skills import ModifierSpec, ShapeSpec, SkillDef
 from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
 from trpg.engine.battle import legal_actions
@@ -114,7 +114,41 @@ def _pool() -> tuple[SkillDef, ...]:
             "shape": ShapeSpec.model_validate({"type": "ground_tile", "range": 4}),
         }
     )
-    return (*plain, *stances, small)
+    return (*plain, *stances, small, *_bal10b_fixtures())
+
+
+def _bal10b_fixtures() -> tuple[SkillDef, ...]:
+    """BAL-10b：內容裡沒有的結構——有進入冷卻的變身姿態（進入代價 −1）、命中後冷卻 −1 搭配一條傷害
+    加成的修正型被動（冷卻 −1 → −2 時傷害可以往下補）。"""
+    lib = library()
+    bear = lib.skills["skill_form_bear"]
+    form = bear.effects[0].model_copy(update={"magnitude_permille": 1400})
+    cooled = bear.model_copy(
+        update={
+            "id": "skill_form_bear_cooled_test",
+            "cost": bear.cost.model_copy(update={"cooldown": 2}),
+            "effects": (form,),
+        }
+    )
+    ember = lib.skills["skill_ember_cycle"]
+    rules = [
+        ModifierSpec.model_validate(
+            {
+                "applies_to": {"skill_tags": ["fire"]},
+                "condition": ember.modifiers[0].condition.model_dump(mode="json", exclude_none=True)
+                if ember.modifiers[0].condition is not None
+                else None,
+                "change": {"cooldown_delta": -1},
+            }
+        ),
+        ModifierSpec.model_validate(
+            {"applies_to": {"skill_tags": ["fire"]}, "change": {"damage_permille": 200}}
+        ),
+    ]
+    paired = ember.model_copy(
+        update={"id": "skill_ember_cycle_paired_test", "modifiers": tuple(rules)}
+    )
+    return cooled, paired
 
 
 @cache
@@ -182,7 +216,9 @@ def test_template_result_is_valid_in_budget_and_never_weaker(template_id: str) -
         assert skill_card(lib, got).id == got.id
 
 
-@pytest.mark.parametrize("template_id", ["support_potency", "trigger_potency", "mod_potency"])
+@pytest.mark.parametrize(
+    "template_id", ["support_potency", "trigger_potency", "mod_potency", "followup_potency"]
+)
 def test_effect_plus_templates_are_strictly_stronger(template_id: str) -> None:
     lib = library()
     items = _found(template_id)
@@ -234,6 +270,7 @@ TIER_TWO = {
     "reshape_square3",
     "followup_hit",
     "element_second",
+    "followup_element",
     "support_area_wide",
     "trigger_range_wide",
     "terrain_mid",
@@ -409,9 +446,12 @@ def test_complete_skill_adjustment_is_not_weaker_and_replaces() -> None:
 
 def test_a_focused_category_with_no_option_is_refused_before_paying() -> None:
     lib = library()
-    stance = lib.skills["skill_form_bear"]  # 變身姿態沒有旋鈕（BAL-2b：堅壁等姿態改成合法）
+    # 只有一條「傷害獲得元素」的修正型被動：沒有幅度、條件、計數或代價可以動（BAL-10b 之後變身姿態
+    # 的費用類改成合法，換這招）
+    passive = lib.skills["skill_thunder_hand"]
+    request = FlashRequest(passive, _used(passive.id), SkillUsage(), SEED, category="modifier")
     with pytest.raises(ValueError, match="沒有合格的變化"):
-        make_offer(lib, FlashRequest(stance, _used(stance.id), SkillUsage(), SEED, category="cost"))
+        make_offer(lib, request)
 
 
 # ---------------------------------------------------------------------------

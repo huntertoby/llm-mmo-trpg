@@ -49,7 +49,7 @@ from trpg.skillgen.flash_major import (
     transform_drafts,
     transform_prefix,
 )
-from trpg.skillgen.flash_ops import FLASH_OPS, STRICT_OPS, tuning_extras
+from trpg.skillgen.flash_ops import FIXED_FIRST_OPS, FLASH_OPS, STRICT_OPS, tuning_extras
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -260,6 +260,11 @@ def apply_variation(
         drafts = _minor_drafts(current, variation, library)
         template = library.flash.minor_template(variation.template)
         tag = "" if template is None else template.op
+    if tag in FIXED_FIRST_OPS:  # BAL-10b：先取最小的合格增幅（草稿已按增幅由小到大）
+        for base, effects in drafts:
+            fixed = fixed_strength(base, effects, library, floor=floor)
+            if fixed is not None and _carries(fixed, variation, library):
+                return fixed
     for index, (base, effects) in enumerate(drafts):
         extra, knobs = tuning_extras(tag, base, library)
         for attempt in range(TUNE_ATTEMPTS):

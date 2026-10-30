@@ -20,6 +20,16 @@ rules:
   stance_magnitudes: [1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000]
   # 變身姿態（BAL-2c）修正類與升階重配可換到的形態幅度（‰，上限 2000）：每 50 一格，比上面細——升階把形態拉到接近原本的
   # 比例（約 99%）後，一次閃現的 +40‰ 預算仍放得下下一格
+  # BAL-10b：修正型被動沒有正的傷害／治療幅度時，強效（mod_potency）與持續、計數、冷卻、代價減輕這幾個修正模板
+  # 可以重調的其他幅度（由弱到強）。形態維持費照 #67 不列；冷卻、召喚持續輪數有自己的模板，也不列。
+  modifier_knobs:
+    summon_hp_permille: [100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
+    summon_damage_permille: [100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
+    form_entry_permille: [100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
+    push_distance_delta: [1, 2]
+  modifier_on_hit_dice: true  # 命中後效果的骰子也當旋鈕
+  modifier_fine_step: 5       # 新增的修正模板重調傷害／治療‰ 的階梯間距（結構一變點數常跳太多，要能往下補）
+  modifier_drawback_step: 100 # 代價減輕（mod_cost）：負的傷害／治療‰ 往 0 減輕多少
   form_magnitudes: [1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600, 1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]
   complete:                   # 完整技能（6.34.6）：視為已閃 3 次、+120‰、不能再閃、可以重閃
     flashes: 3
@@ -66,6 +76,8 @@ support:
 # 降低／提高，修正類＝同維持費、幅度提高。
 # BAL-2c：變身姿態只出修正類＝形態幅度（enter_form.magnitude_permille，級距 rules.form_magnitudes）提高；維持費照形態種類
 # 固定（#67），形態上沒有其他可動的代價，所以費用類不出。
+# BAL-10b（玩法 PM 經開發 PM 轉達）：費用類放寬到變身姿態——維持費照舊不動，改用進入代價（施放費用，模板的 cost_fields）
+# ±1 當費用旋鈕；stance_cost_light／heavy 的 cost_fields 清空就回到 BAL-2c 的行為。多效果姿態只動姿態本體那個效果。
 categories:
   - {id: area, name_zh: 範圍, kinds: [active]}
   - {id: combo, name_zh: 連段, kinds: [active]}
@@ -129,6 +141,21 @@ minor:
     summary_zh: 換成連鎖跳躍（再跳 2 次，傷害依預算調整）
     shapes:
       - {type: chain, range: 4, jumps: 2, jump_range: 2}
+  # BAL-10b：複合技的接續段範圍、距離（第一段形狀不動）
+  - id: followup_area
+    category: area
+    op: followup_area
+    delta: 1
+    kinds: [active]
+    prefix_zh: 延展
+    summary_zh: 接續段範圍 +1（傷害依預算調整）
+  - id: followup_range
+    category: area
+    op: followup_range
+    delta: 1
+    kinds: [active]
+    prefix_zh: 長驅
+    summary_zh: 接續段距離 +1（傷害依預算調整）
   # 地形變化（#58 的稀有度門檻 → 3W 改成最低角色階級；只有升降地形的技能套得上）：影響格數 4～6 格 2 階、7 格以上 3 階
   - id: terrain_mid
     category: area
@@ -162,6 +189,13 @@ minor:
     op: followup
     prefix_zh: 追擊
     summary_zh: 接續段：命中後再接一小段傷害（6.23 複合技，傷害依預算調整）
+  # BAL-10b：複合技的接續段強化（複合技不改第一段形狀、也不再加接續段，改強化已有的接續段）
+  - id: followup_potency
+    category: combo
+    op: followup_potency
+    kinds: [active]
+    prefix_zh: 續勁
+    summary_zh: 接續段強化：接續段的傷害提高（依預算）
   # ---- 元素與關鍵字 ----
   - id: element_second
     min_tier: 2
@@ -169,6 +203,14 @@ minor:
     op: element
     prefix_zh: 雙元
     summary_zh: 加第二元素：多一段別種元素的傷害（傷害依預算調整）
+    elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
+  - id: followup_element
+    min_tier: 2
+    category: element
+    op: followup_element
+    kinds: [active]
+    prefix_zh: 雙元
+    summary_zh: 接續段加第二元素：接續段多一段別種元素的傷害（傷害依預算調整）
     elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
   - id: dual_scaling
     min_tier: 3
@@ -219,18 +261,30 @@ minor:
     kinds: [active]
     prefix_zh: 輕巧
     summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低
+  # BAL-10b：cost_fields 填了，費用類也適用變身姿態——形態維持費照 #67 不動，改用進入代價（施放費用）±1；
+  # 多效果姿態只動姿態本體那個效果
   - id: stance_cost_light
     category: cost
     op: stance_light
     kinds: [stance]
+    cost_fields: [cooldown]
     prefix_zh: 輕巧
-    summary_zh: 輕巧：姿態維持費 −1，效果降低一級
+    summary_zh: 輕巧：姿態維持費 −1（變身姿態：進入冷卻 −1），效果降低一級
   - id: stance_cost_heavy
     category: cost
     op: stance_heavy
     kinds: [stance]
+    cost_fields: [cooldown]
     prefix_zh: 蓄力
-    summary_zh: 蓄力：姿態維持費 +1，效果提高
+    summary_zh: 蓄力：姿態維持費 +1（變身姿態：進入冷卻 +1），效果提高
+  # BAL-10b：進入代價 −1——只減施放費用（AP 或冷卻；姿態的進入 AP 由規則固定，實際只有冷卻），維持費照 #67 不動
+  - id: stance_enter_light
+    category: cost
+    op: stance_enter_light
+    kinds: [stance]
+    cost_fields: [ap_cost, cooldown]
+    prefix_zh: 俐落
+    summary_zh: 進入代價 −1：進入姿態的冷卻 −1（維持費不變，效果不變）
   # ---- 輔助（治療、護盾、增益） ----
   - id: support_potency
     category: support
@@ -323,6 +377,35 @@ minor:
     kinds: [modifier]
     prefix_zh: 寬限
     summary_zh: 條件放寬一級：血量門檻放寬，或多一個「或」分支（幅度依預算調整）
+  # BAL-10b：修正型被動的持續、計數上限、冷卻、代價（其他幅度依預算調整；沒有傷害／治療幅度時用 rules.modifier_knobs）
+  - id: mod_duration
+    category: modifier
+    usage_base: 1
+    op: mod_duration
+    kinds: [modifier]
+    prefix_zh: 綿延
+    summary_zh: 持續回合 +1：命中後附帶的狀態、符文，或召喚物多持續 1 回合（幅度依預算調整）
+  - id: mod_stack
+    category: modifier
+    usage_base: 1
+    op: mod_stack
+    kinds: [modifier]
+    prefix_zh: 疊勢
+    summary_zh: 計數上限 +1：依空欄位計算的加成多算 1 格（幅度依預算調整）
+  - id: mod_cooldown
+    category: modifier
+    usage_base: 1
+    op: mod_cooldown
+    kinds: [modifier]
+    prefix_zh: 迴轉
+    summary_zh: 冷卻：命中後冷卻 −1 加深成 −2（幅度依預算調整）
+  - id: mod_cost
+    category: modifier
+    usage_base: 1
+    op: mod_cost
+    kinds: [modifier]
+    prefix_zh: 減負
+    summary_zh: 代價減輕：附帶的代價（傷害降低、AP +1、召喚上限 −1……）減輕一級（其他幅度依預算調整）
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
