@@ -84,3 +84,7 @@
 **驗收**：上述測試（新增 `tests/skillgen/test_flash_converge_bal10d.py`：兩種形狀、自身中心射程 1、最小一級不出、無威力不出、上限截斷改減費、(a)/(b) 守恆）；ruff、format、mypy、lint-imports、skillgen／llm 相關 pytest、一場重播；報告 `docs/phases/BAL-10d報告.md`（含「待 PM 決定」）。
 
 **BAL-10d2（玩法 PM 2026-10-31，06 6.34.4「BAL-10d 定」，`c5ba8c65`）**：①單發上限基準維持 tier_budget × AP 係數 × 3（安全欄）；②平均命中目標數 < 1.5 時給收束加用法分數（原型權重）；③帶表面／split_heal／destroy_object／shockwave／leave_form 的 7 招不出「收成單體」，只出縮小一級、縮不了不出，骨架不放寬；④收束目標比例改為 max(收束前比例＋40‰, 一般重調的隨機目標)。改完重量 (a)/(b) 與 3×3 火球閃滿倍數、AI 選中比例。
+
+**驗收（2026-10-31 開發 PM）**
+- **BAL-10c 待決**：玩法 PM 定（`0174faa3`）：變身姿態第 1 次只剩「強效」接受、`mod_cost` 只對 2 格以上代價接受，不改程式；目錄打亂效果等真模型。
+- **BAL-10d／10d2**（`f8e8b619`、`59b8dca7`，報告 `BAL-10d報告.md`，量測 `BAL-10/converge_bal10d.md`）：共用機制 `trpg.skillgen.flash_trade`（Trade＝remove／gain／core）；收成單體、縮小一級；單發上限 `single_hit_cap_permille` 3000（基準 tier_budget × AP 係數，安全欄）；收束目標比例＝max(收束前＋40‰, 一般重調)；平均目標 < 1.5 時用法分數 3。火球收成單體 2.22 倍、閃滿 (a) 2.44／(b) 2.72；同預算 (b)≤(a) 18/18；超上限 0 列；AI 選中收束 均衡 0%、集中 0.4%、全指定 4.2%、混合 4.1%。合併後 pytest（skillgen／llm／content／roguelite／architecture）6016 通過、swamp 種子 7 重播通過。
