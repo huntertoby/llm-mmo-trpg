@@ -447,6 +447,8 @@ def propose_variations(
         return FlashProposalRecord(
             tag=tag, wanted=want, reason="目錄是空的（這一次沒有可提議的變化）"
         )
+    # 呈現順序依這一題的種子打亂（BAL-10c）：模型的第一個提議偏好選單前段；只影響 prompt 與 schema
+    catalog = catalog.shuffled(request.seed, tag)
     loop = _Loop(client, library, request, before, catalog, major, want, max_attempts, clock)
     for number in range(1, max_attempts + 1):
         if not loop.attempt(number):
