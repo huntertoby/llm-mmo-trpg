@@ -11,6 +11,7 @@ import pytest
 from tests.engine.helpers import library
 from tests.engine.test_weapons_3i4 import _duel
 from tests.engine.test_weapons_24a2 import U1, armed, dice, foe, kinds, shoot, state_of, weapon
+from trpg.content.battle import WeaponDef
 from trpg.content.environment import AiProfile
 from trpg.engine.ai.utility import position_value
 from trpg.engine.ai.weapon_range import is_close_range, is_far_range
@@ -70,3 +71,23 @@ def test_far_range_weight_prefers_the_long_distance_and_zero_is_inert() -> None:
     # 權重 0 ＝ 現行；權重 > 0 時加上 far_range × 距離傷害千分比 ÷ 1000
     for distance, permille in ((1, 500), (2, 1000), (3, 1000), (4, 1250), (5, 1250)):
         assert values[distance][0] - values[distance][1] == 40 * permille // 1000
+
+
+def test_boss_approach_pulls_only_melee_units_toward_a_boss() -> None:
+    """BAL-9：``boss_approach`` 只對近戰武器、場上有 Boss 時生效；0 ＝ 不套用。"""
+    w0 = _archer().weights.model_copy(update={"boss_approach": 0})
+    w = w0.model_copy(update={"boss_approach": 5})
+
+    def gap(unit_weapon: WeaponDef, boss: bool) -> int:
+        tags = ["boss"] if boss else []
+        spawns = [armed(Team.ALLY, (1, 2), unit_weapon), foe((3, 2)), foe((7, 2), tags=tags)]
+        state = state_of(spawns)
+        return int(position_value(state, U1, w) - position_value(state, U1, w0))
+
+    assert gap(weapon("one_handed_sword"), boss=True) == -5 * 6  # 走路 6 步到 (7, 2)
+    assert gap(weapon("one_handed_sword"), boss=False) == 0
+    assert gap(weapon("bow"), boss=True) == 0
+
+
+def test_boss_approach_is_applied_to_the_prototype_content() -> None:
+    assert all(p.weights.boss_approach == 10 for p in library().ai_profiles.profiles)
