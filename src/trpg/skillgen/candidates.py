@@ -107,7 +107,7 @@ class CandidateRules:
 @dataclass(frozen=True, slots=True)
 class CandidateRequest:
     """產生器的輸入。``keyword_counts``：關鍵字 ID → 持有幾招帶該關鍵字的技能（見
-    :func:`keyword_distribution`）；``behavior``：動作類型 → 用過的次数；``weapon_class``：
+    :func:`keyword_distribution`）；``behavior``：動作類型 → 用過的次數；``weapon_class``：
     ``melee``／``ranged``／``focus``。"""
 
     keyword_counts: Mapping[str, int]

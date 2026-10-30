@@ -44,7 +44,7 @@ class LLMConfig(BaseModel):
     timeout_s: float = Field(default=120.0, gt=0)
     max_retries: int = Field(default=3, ge=1)
     temperature: float = Field(default=0.7, ge=0)
-    max_tokens: int = Field(default=2048, ge=1)
+    max_tokens: int = Field(default=1024, ge=1)
     json_schema_mode: Literal["auto", "response_format", "guided_json", "none"] = "auto"
     fallback_alert_permille: int = Field(default=200, ge=0, le=1000)
     generate: bool = False
