@@ -122,7 +122,7 @@ class BaselineSizes:
     """各區塊的場數與範圍（``None`` ＝ 用預設全集）。"""
 
     map_seeds: int = 30
-    matrix_seeds: int = 5
+    matrix_seeds: int = 30
     weapon_seeds: int = 5
     boss_seeds: int = 30
     summon_seeds: int = 8

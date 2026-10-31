@@ -198,10 +198,12 @@ def test_miss_backlash_is_limited_to_two_effects_on_the_caster() -> None:
 def test_the_gamble_budget_is_the_expected_value_of_its_branches() -> None:
     report = skill_budget(lib().skills["skill_blood_sacrifice"], lib())
     damage, gamble_row = report.effects
-    assert damage.points == Fraction(42, 5)  # 武器 ×1.2 × 基準 7
+    multiplier = lib().skills["skill_blood_sacrifice"].effects[0].multiplier_permille
+    assert multiplier is not None
+    assert damage.points == Fraction(multiplier, 1000) * 7  # 武器倍率（讀 content）× 基準 7
     # 60% × win（傷害 ×2 → +100% 傷害）＋ 40% × lose（自傷 50% × 折合 500‰ 的代價）
     expected = Fraction(6, 10) * damage.points - Fraction(4, 10) * damage.points / 2 / 2
-    assert gamble_row.points == expected == Fraction(21, 5)
+    assert gamble_row.points == expected
 
 
 def test_a_gamble_skill_gets_the_variance_bonus_on_its_usable_budget() -> None:

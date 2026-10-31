@@ -144,11 +144,11 @@ builds:
       id: build_assassin
       name_zh: 刺殺英雄
       attributes: {str: 14, dex: 16, con: 12, int: 10, wis: 10, wil: 10}   # 匕首吃敏捷、技能吃力量
-      max_hp: 44
+      max_hp: 53   # BAL-12d：44 ×1.2（存活率仍 < 30%）
       speed: 5
       armor_bonus: 2
       weapon: dagger
-      ai_profile: flanker   # 3D-8c：移動時偏好夾擊位置
+      ai_profile: assassin   # BAL-12d：夾擊／背刺位置＋打完退出敵人堆（原為 flanker）
       tags: [hero, sim]
       max_mana: 20
       skills: [skill_shadow_ambush, skill_retreating_slash, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_shadow_backstab, skill_ambush_stab]

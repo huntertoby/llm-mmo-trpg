@@ -316,6 +316,9 @@ class BatchReport(_Model):
     """背刺與潛行偷襲的總次數（Phase 3D-8d）：``backstab:ally`` 等（攻擊者的陣營）。"""
     summon_events: dict[str, int] = {}
     """召喚物出現的總次數（Phase 3C-6a）：``ally``、``enemy``（召喚物的陣營）。"""
+    ally_hp_ratio: float = 0.0
+    """我方隊伍剩餘 HP 比例（BAL-12d）：每場「戰鬥結束時我方（不含召喚物）HP 合計 ÷ 最大 HP 合計」，
+    對完成的戰鬥取平均。"""
 
     def anomaly(self, kind: str) -> Anomaly | None:
         return next((a for a in self.anomalies if a.kind == kind), None)
@@ -567,6 +570,17 @@ def _summon_events(done: Sequence[BattleMetrics]) -> dict[str, int]:
     return dict(sorted(total.items()))
 
 
+def _ally_hp_ratio(done: Sequence[BattleMetrics]) -> float:
+    ratios: list[Fraction] = []
+    for m in done:
+        summoned = {r.unit_id for r in m.summons}
+        mine = [u for u in m.units if u.team is Team.ALLY and u.unit_id not in summoned]
+        total = sum(u.max_hp for u in mine)
+        if total:
+            ratios.append(Fraction(sum(u.final_hp for u in mine), total))
+    return _ratio(sum(ratios, Fraction(0)), len(ratios)) if ratios else 0.0
+
+
 def build_report(
     name: str,
     outcomes: Sequence[BattleOutcome],
@@ -607,6 +621,7 @@ def build_report(
         scene_events=_scene_events(done),
         positional_events=_positional_events(done),
         summon_events=_summon_events(done),
+        ally_hp_ratio=_ally_hp_ratio(done),
     )
 
 

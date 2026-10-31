@@ -15,7 +15,7 @@ effects:
   - {type: damage, dice: 2d6, element: fire}
   - {type: create_surface, surface: fire, duration: 2}
 condition: null
-cost: {mana: 12, cooldown: 2}
+cost: {mana: 11, cooldown: 2}
 tags: [fire, ash, area]
 narrative:
   concept: 在燒毀村莊中覺醒的灰燼之力

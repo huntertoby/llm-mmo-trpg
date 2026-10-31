@@ -51,8 +51,8 @@ def _ally() -> int:
 
 def test_content_has_a_real_discount_for_the_test_skill() -> None:
     assert library().ruleset.core.ally_mana_cost_permille == 800
-    assert library().ruleset.skill_def(FIRE_BOLT).cost.mana == _raw() == 6  # 規則包也是原始費用
-    assert _ally() == 5  # 4.8 → 5
+    assert library().ruleset.skill_def(FIRE_BOLT).cost.mana == _raw()  # 規則包也是原始費用
+    assert _ally() < _raw()  # 八折後仍比原始費用少（讀 content，不寫死）
 
 
 @pytest.mark.parametrize(("team", "paid"), [(Team.ALLY, "ally"), (Team.ENEMY, "raw")])

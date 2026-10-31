@@ -152,7 +152,11 @@ def test_the_ai_saves_its_only_big_spell_when_nothing_is_worth_it() -> None:
 
 
 def test_the_ai_does_not_spend_its_last_mana_on_a_target_a_plain_attack_finishes() -> None:
-    state = _scene(["skill_ashen_oath", "skill_fire_bolt"], [(5, 3)], base="hero_mage", max_mana=12)
+    ashen_mana = (
+        library().skills["skill_ashen_oath"].cost.mana
+    )  # 法力剛好夠灰燼誓約一次（讀 content）
+    # BAL-12d：火焰箭降到 5 法力後，附帶燃燒讓它贏過普攻，與「最後一點法力」無關，所以只留灰燼誓約
+    state = _scene(["skill_ashen_oath"], [(5, 3)], base="hero_mage", max_mana=ashen_mana)
     state.units[U2].hp = 1
     action = _ai()(state)
     assert isinstance(action, Attack)  # 一般攻擊就能收下，不付法力

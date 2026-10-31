@@ -36,6 +36,7 @@ def _cell(build: str, map_id: str, archetype: str, wins: int, dpr: float, **kw: 
         hero_dpr=dpr,
         hero_survival=kw.get("survival", 1.0),
         rounds_mean=kw.get("rounds", 5.0),
+        team_hp_ratio=kw.get("hp", dpr / 100),  # 決勝用的隊伍剩餘 HP 比例：預設隨 DPR 排序
     )
 
 
@@ -70,18 +71,36 @@ def test_top_is_the_first_third_of_the_builds() -> None:
     assert [top_count(n) for n in (1, 2, 3, 5, 6, 9)] == [1, 1, 1, 1, 2, 3]
 
 
-def test_ranks_within_each_map_use_win_rate_then_hero_dpr() -> None:
+def test_ranks_within_each_map_use_wins_then_team_hp_ratio() -> None:
     report = _matrix(WINS, DPR)
     m1 = {c.build_id: c for c in report.cells if c.map_id == "m1"}
-    assert [m1[b].rank for b in BUILDS] == [1, 2, 3, 5, 4, 6]  # d 與 e 同為 4 勝 → e 的 DPR 較高
+    assert [m1[b].rank for b in BUILDS] == [
+        1,
+        2,
+        3,
+        5,
+        4,
+        6,
+    ]  # d 與 e 同為 4 勝 → e 的隊伍剩餘 HP 較高
     assert [b for b in BUILDS if m1[b].top] == ["a", "b"]  # 前 2 名
     assert m1["a"].win_rate == 0.9 and m1["a"].hero_dpr == 10.0
 
 
-def test_ties_in_win_rate_and_dpr_fall_back_to_build_order() -> None:
+def test_ties_in_wins_and_hp_fall_back_to_build_order() -> None:
     raw = [_cell(b, "m1", "forest", 5, 3.0) for b in BUILDS]
     report = assemble_matrix(BUILDS, [MAPS[0]], raw, [0])
     assert [c.rank for c in report.cells] == [1, 2, 3, 4, 5, 6]
+
+
+def test_a_win_gap_of_one_is_a_tie_decided_by_team_hp_and_two_is_not() -> None:
+    # 勝場差 ≤ 1 同分（BAL-12d）：a 9 勝、b 8 勝 → 比隊伍剩餘 HP，b 較高排第 1；c 7 勝差 2 → 不同分
+    raw = [
+        _cell("a", "m1", "forest", 9, 1.0, hp=0.2),
+        _cell("b", "m1", "forest", 8, 1.0, hp=0.6),
+        _cell("c", "m1", "forest", 7, 1.0, hp=0.9),
+    ]
+    report = assemble_matrix(("a", "b", "c"), [MAPS[0]], raw, [0])
+    assert {c.build_id: c.rank for c in report.cells} == {"b": 1, "a": 2, "c": 3}
 
 
 def test_an_archetype_with_two_maps_averages_its_values_before_ranking() -> None:

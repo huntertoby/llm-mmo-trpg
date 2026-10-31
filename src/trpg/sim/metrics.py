@@ -138,6 +138,10 @@ class UnitMetrics(_Model):
     """這個單位施放的護盾所吸收的傷害（Phase 2D-2；歸給護盾最後一次施加者）。"""
     triggers_fired: int = 0
     """這個單位的被動觸發次數（Phase 2E-1）。"""
+    max_hp: int = Field(default=0, exclude=True)
+    final_hp: int = Field(default=0, exclude=True)
+    """戰鬥結束時的 HP 與最大 HP（BAL-12d，前段判定的「隊伍剩餘 HP 比例」用）。不進序列化
+    （報表與既有夾具不變）；手工建構的 :class:`UnitInfo` 沒給 HP 時 ``final_hp`` ＝ ``max_hp``。"""
 
     @property
     def damage_dealt(self) -> int:
@@ -237,6 +241,8 @@ class UnitInfo:
     team: Team
     max_hp: int
     tags: tuple[str, ...] = ()
+    hp: int | None = None
+    """戰鬥結束時的 HP（``None`` ＝ 沒有資料，視為滿血）。"""
 
     @property
     def boss(self) -> bool:
@@ -558,6 +564,8 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
                 control_inflicted=dict(sorted(acc[u.unit_id].control.items())),
                 shield_absorbed=acc[u.unit_id].absorbed,
                 shield_provided=acc[u.unit_id].provided,
+                max_hp=u.max_hp,
+                final_hp=u.max_hp if u.hp is None else u.hp,
             )
             for u in units
         ),
@@ -611,7 +619,8 @@ def battle_metrics(run: BattleRun) -> BattleMetrics:
         trace = _trace_by_replay(run)
         bounds, ap_spent = trace.bounds, trace.ap_spent
     units = [
-        UnitInfo(u.id, u.template_id, u.team, u.max_hp, u.tags) for u in run.state.units.values()
+        UnitInfo(u.id, u.template_id, u.team, u.max_hp, u.tags, u.hp)
+        for u in run.state.units.values()
     ]
     return metrics_from_events(
         seed=run.seed,

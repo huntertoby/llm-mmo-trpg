@@ -14,7 +14,7 @@
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
 - ``trpg skills list`` / ``trpg skills show <id>``：技能的自動摘要。
 - ``trpg skills random --seed N [--tier T] [--rarity R] [--skeleton S] [--count C]``：隨機組合器。
-- ``trpg sim matrix [--builds a,b] [--maps a,b] [--seeds 20] [--jobs N] [--json out.json]``：
+- ``trpg sim matrix [--builds a,b] [--maps a,b] [--seeds 30] [--jobs N] [--json out.json]``：
   build × 地圖矩陣（勝率、英雄 DPR、存活率、排名、6.8 標準檢查）。
 - ``trpg sim skills [--demo] [--random N] [--seeds 10] [--jobs N]``：技能報表（DPR 分佈、離群）。
 - ``trpg sim keywords [--samples 20] [--seed-start 0] [--battles 1] [--maps a,b] [--jobs N]``：
@@ -261,7 +261,9 @@ def _add_sim_report_parsers(
     matrix.add_argument(
         "--maps", default=None, help="地圖 ID，以逗號分隔（預設：全部有 encounter 的非測試地圖）"
     )
-    matrix.add_argument("--seeds", type=_positive_int, default=20, help="每格的場數（預設 20）")
+    matrix.add_argument(
+        "--seeds", type=_positive_int, default=30, help="每格的場數（預設 30，06 6.8 要求至少 30）"
+    )
     matrix.add_argument(
         "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
     )
