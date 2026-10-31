@@ -33,6 +33,17 @@ rules:
   # 接續段強化類的接續段武器倍率每 25‰（3000‰ 以下，原每 100）；升階重配、完整技能、形態幅度照舊
   modifier_potency_step: 10
   followup_multiplier_step: 25
+  # BAL-12b 定（玩法 PM 2026-10-31，06 6.34.4）：
+  #   trigger_flat_bonus  被動、反應「效果 +」骰子一階跳過預算窗時，法術傷害再試 +1 固定值（damage.flat_bonus）
+  #   area_trap_shapes    「範圍 +1」用在陷阱：觸發範圍依序換到下一個
+  #   area_tile_shapes    「範圍 +1」用在地面格：指定格 → 十字（半徑 +1）
+  #   extend_effects      「延長」原本的狀態／表面／區域延長不了時，改延長這些效果的回合（召喚物存活、障礙、刻印）
+  #   extend_trap         「延長」也加陷阱持續回合（trap.rounds +1）
+  trigger_flat_bonus: 1
+  area_trap_shapes: [single, cross, square3]
+  area_tile_shapes: [ground_tile, cross]
+  extend_effects: [summon, create_obstacle, inscribe]
+  extend_trap: true
   modifier_drawback_step: 100 # 代價減輕（mod_cost）：負的傷害／治療‰ 往 0 減輕多少
   # 收回家族（收束起，BAL-10d，06 6.34.4）的單發上限：一次施放對單一目標的期望傷害（治療／護盾同理）最多是
   # 同階、同 AP 單體技能預算（tier_budget × AP 係數）的這麼多‰（初值 3 倍）；超過的預算改成減費用，減不動就不出

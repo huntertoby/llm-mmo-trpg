@@ -127,6 +127,13 @@ def _dice(dice: Dice) -> str:
     return f"{dice.count}d{dice.sides}"
 
 
+def _dice_flat(spec: EffectSpec) -> str:
+    """骰子，帶固定值加成時接「＋n」（BAL-12b）。"""
+    assert spec.dice is not None
+    flat = f"＋{spec.flat_bonus}" if spec.flat_bonus else ""
+    return f"{_dice(spec.dice)}{flat}"
+
+
 def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     """形狀與參數的一句話，例如「錐形 3」「單體 射程 6」。"""
     name = library.ruleset.shape_def(shape.type).name_zh
@@ -318,7 +325,7 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
     if skill.category == "spell":
         assert spec.dice is not None and spec.element is not None
         attr, element = scaling_label(skill, lib), spec.element.display_name
-        text = f"{_dice(spec.dice)}＋{attr}加成的{element}傷害"
+        text = f"{_dice_flat(spec)}＋{attr}加成的{element}傷害"
         if skill.damage_permille is not None:
             text += f"（基礎傷害 ×{discount / 1000:g}）"
     else:
@@ -359,7 +366,7 @@ def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
 
 def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
-    text = f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
+    text = f"治療 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
     if spec.form_bonus_permille is not None:
         text += f"（{_form_bonus_text(spec)}）"
     return text
@@ -603,7 +610,7 @@ def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> st
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
     status = lib.ruleset.status_def(SHIELD_STATUS)
-    amount = "" if spec.dice is None else f"{_dice(spec.dice)}＋"
+    amount = "" if spec.dice is None else f"{_dice_flat(spec)}＋"
     rounds = spec.duration or status.duration
     return (
         f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {rounds} 回合；"

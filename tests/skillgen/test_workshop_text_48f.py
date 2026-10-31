@@ -70,8 +70,9 @@ def test_table_has_the_164_rewritten_entries() -> None:
     # ＋ 3J-4c 的解除形態（原語一筆）
     # ＋ 3W-5b 的完整姿態幅度（原語參數一筆，實作者初稿，待玩法 PM 改寫）
     # ＋ BAL-2c 的形態幅度（原語參數一筆，實作者初稿，待玩法 PM 改寫）
-    assert len(TABLE.texts) == 166
-    assert len({e.id for e in TABLE.texts}) == 166
+    # ＋ BAL-12c 的固定值加成（傷害、治療、護盾原語參數各一，實作者初稿，待玩法 PM 改寫）
+    assert len(TABLE.texts) == 169
+    assert len({e.id for e in TABLE.texts}) == 169
 
 
 def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:

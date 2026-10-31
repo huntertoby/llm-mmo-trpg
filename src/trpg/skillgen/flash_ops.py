@@ -58,7 +58,12 @@ from typing import Any
 from trpg.content.flash_templates import FlashTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef, skill_elements
-from trpg.content.skills.constants import ENTER_FORM, FOLLOWUP_FORBIDDEN, MAX_EFFECTS
+from trpg.content.skills.constants import (
+    ENTER_FORM,
+    FLAT_BONUS_EFFECTS,
+    FOLLOWUP_FORBIDDEN,
+    MAX_EFFECTS,
+)
 from trpg.content.skills.effects import composition_rules
 from trpg.engine.shape_growth import grow_shape
 from trpg.shared.types import Element
@@ -157,14 +162,56 @@ def _new_damage(skill: SkillDef, source: dict[str, Any], element: str | None) ->
 def _op_area(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """範圍 +delta：形狀第一個可增加的大小參數（``size``／``radius``），不超過形狀上限（6.6）。"""
+    """範圍 +delta：形狀第一個可增加的大小參數（``size``／``radius``），不超過形狀上限（6.6）。
+
+    BAL-12b 定（只限 ``delta`` 1）：陷阱改觸發範圍（``rules.area_trap_shapes`` 的下一個）；形狀沒有
+    大小參數的地面格換成 ``rules.area_tile_shapes`` 的下一個（指定格 → 十字）。"""
+    if (
+        skill.kind == "active"
+        and skill.followup is None
+        and skill.trap is not None
+        and template.delta == 1
+    ):
+        return _trap_area(skill, library.flash.rules.area_trap_shapes)
     if not _reshapable(skill):
         return []
     grown = grow_shape(library.ruleset, skill.shape, template.delta or 0)
     if grown == skill.shape:
-        return []
+        return _tile_area(skill, library) if template.delta == 1 else []
     base, effects = base_draft(skill)
     base["shape"] = grown.model_dump(mode="json", exclude_none=True)
+    return [(base, effects)]
+
+
+def _next_in(ladder: Sequence[str], current: str) -> str | None:
+    if current not in ladder or current == ladder[-1]:
+        return None
+    return ladder[ladder.index(current) + 1]
+
+
+def _trap_area(skill: SkillDef, ladder: Sequence[str]) -> list[Draft]:
+    """陷阱觸發範圍升一級（BAL-12b 定）。"""
+    assert skill.trap is not None
+    shape = _next_in(ladder, skill.trap.shape)
+    if shape is None:
+        return []
+    base, effects = base_draft(skill)
+    base["trap"] = {**base["trap"], "shape": shape}
+    return [(base, effects)]
+
+
+def _tile_area(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """地面格半徑 +1（BAL-12b 定）：換成 ``area_tile_shapes`` 的下一個形狀，射程夾在新形狀的範圍內
+    （同升階重配的換形狀）；效果允不允許新形狀交給驗證器。"""
+    shape_id = _next_in(library.flash.rules.area_tile_shapes, skill.shape.type)
+    if shape_id is None:
+        return []
+    spec: dict[str, Any] = {"type": shape_id}
+    limits = library.ruleset.shape_def(shape_id).params.get("range")
+    if limits is not None and isinstance(skill.shape.range, int):
+        spec["range"] = min(max(skill.shape.range, limits.min), limits.max)
+    base, effects = base_draft(skill)
+    base["shape"] = spec
     return [(base, effects)]
 
 
@@ -576,11 +623,32 @@ def _inherit_affects(skill: SkillDef, effects: list[dict[str, Any]]) -> None:
 def _op_extend(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """延長狀態、表面、區域 1 回合（沿用「恆久」的草稿；硬控狀態不延長）。"""
+    """延長狀態、表面、區域 1 回合（沿用「恆久」的草稿；硬控狀態不延長）。
+
+    BAL-12b 定：這些都延長不了時，改延長 ``rules.extend_effects`` 列的效果（召喚物存活、障礙、
+    刻印）與陷阱持續回合（``rules.extend_trap``），各 +1 回合。"""
     evolution = evolution_template(library, "extend")
     if evolution is None or skill.kind not in ("active", "passive", "reaction"):
         return []
-    return template_drafts(evolution, skill, None, SkillUsage(), library)
+    drafts = template_drafts(evolution, skill, None, SkillUsage(), library)
+    return drafts or _extend_wider(skill, library)
+
+
+def _extend_wider(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """延長放寬的草稿（BAL-12b 定）：有回合數的召喚、障礙、刻印 +1，陷阱的 ``rounds`` +1；
+    參數上限交給驗證器（超過就不合法、不出）。沒有可延長的就不出。"""
+    rules = library.flash.rules
+    base, effects = base_draft(skill)
+    changed = False
+    for effect in effects:
+        if effect["type"] in rules.extend_effects and effect.get("duration"):
+            effect["duration"] += 1
+            changed = True
+    # 陷阱持續回合：只限觸發型（enter）；延遲型（delay）的 rounds 是引爆前的等待，加了反而變慢
+    if rules.extend_trap and skill.trap is not None and skill.trap.trigger == "enter":
+        base["trap"] = {**base["trap"], "rounds": skill.trap.rounds + 1}
+        changed = True
+    return [(base, effects)] if changed else []
 
 
 SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
@@ -1246,6 +1314,31 @@ def tuning_extras(
                 knobs.append(Knob(i, field, _from_current(ladder, e.get(field), keep=True)))
         return effects, knobs
     return [], []
+
+
+TRIGGER_FINE_OPS = frozenset({"potency"})
+"""用「觸發效果 +1 固定值」細旋鈕的改法（BAL-12b 定：被動、反應的「效果 +」）。"""
+
+
+def trigger_fine_knobs(
+    op: str, base: dict[str, Any], effects: list[dict[str, Any]], library: ContentLibrary
+) -> list[Knob]:
+    """被動、反應的「效果 +」（BAL-12b 定）：帶骰子的傷害（只限法術技）、治療、護盾的
+    ``flat_bonus``（無 → +1 … +``rules.trigger_flat_bonus``）；``index`` 指向 ``effects``。只在一般
+    重調失敗後才加（呼叫者決定）；``rules.trigger_flat_bonus`` 為 0、不是被動／反應時是空的。"""
+    top = library.flash.rules.trigger_flat_bonus
+    if op not in TRIGGER_FINE_OPS or not top or base.get("kind") not in ("passive", "reaction"):
+        return []
+    spell = base.get("category") == "spell"
+    values: tuple[int | None, ...] = (None, *range(1, top + 1))
+    return [
+        Knob(i, "flat_bonus", values)
+        for i, e in enumerate(effects)
+        if e["type"] in FLAT_BONUS_EFFECTS
+        and (spell or e["type"] != "damage")
+        and e.get("dice") is not None
+        and not e.get("flat_bonus")
+    ]
 
 
 def _from_current(values: tuple[Any, ...], current: Any, keep: bool) -> tuple[Any, ...]:

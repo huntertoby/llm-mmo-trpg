@@ -35,6 +35,7 @@ from trpg.content.skills.constants import (
     DELAYED_DAMAGE,
     DETONATE_RUNES,
     ENTER_FORM,
+    FLAT_BONUS_EFFECTS,
     GAMBLE,
     GAMBLE_BRANCH_TYPES,
     GAMBLE_TAG,
@@ -1119,6 +1120,18 @@ class SkillDef(ContentModel):
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 
+    def _check_flat_bonus(self, where: str, effect: EffectSpec, *, top: bool) -> None:
+        """``flat_bonus``（固定值加成，BAL-12b）：只有技能自己的傷害、治療、護盾可以用；傷害只限
+        法術技（武器技的傷害由武器骰與倍率決定）。"""
+        if effect.flat_bonus is None:
+            return
+        if effect.type not in FLAT_BONUS_EFFECTS:
+            raise ValueError(f"{where}：只有 damage、heal、shield 使用 flat_bonus")
+        if not top:
+            raise ValueError(f"{where}：flat_bonus 只能用在技能自己的傷害、治療或護盾效果")
+        if effect.type == "damage" and self.category != "spell":
+            raise ValueError(f"{where}：flat_bonus（固定值加成）的傷害只限法術技")
+
     @staticmethod
     def _check_form_bonus(where: str, effect: EffectSpec, *, top: bool) -> None:
         """``form_bonus_permille``（在形態中的倍率）：只有技能自己的傷害、治療可以用。"""
@@ -1188,6 +1201,7 @@ class SkillDef(ContentModel):
                 f"{where}：推擊與拉扯的距離必須是 1 到 {_MAX_DISPLACE} 格，收到 {effect.distance}"
             )
         self._check_form_bonus(where, effect, top=top)
+        self._check_flat_bonus(where, effect, top=top)
         if effect.type != "damage":
             return
         if self.category == "spell":
