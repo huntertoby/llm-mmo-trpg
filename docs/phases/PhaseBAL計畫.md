@@ -142,3 +142,10 @@
 4. `trigger_fine`：觸發效果 +1 固定值。不做 `trigger_cooldown_trade`、`rule_param_plus`；常駐接受不足。
 5. 不做：B-3W-4 升階持續上限（等使用者）。
 **驗收**：行為快照重產並列出變動（完整技能預期約 28 筆）；重掃 `scripts/flash_minor_coverage.py`（同 BAL-10c 參數）與 `scripts/bal12b_measure.py`；新測試 `tests/skillgen/test_flash_bal12c.py`；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-12c報告.md`。
+
+**BAL-12d｜套用 BAL-12a（玩法 PM 2026-10-31，`5f18bef7`；06 6.8 量測方式）**：
+1. content：fire 主動技法力費用 ×0.9（逐招取整，最少 1）；`hex_bolt` 傷害 +50%；gambler 攻擊技傷害 +30%；`chain_lightning` 傷害 −30%（法術技用技能層級 `damage_permille` 或骰子，照 BAL-12a 報告第 7 節）。
+2. assassin AI 保命：打完撤退或隱身、不留在敵人堆、會用瞬步脫離。改完英雄存活率仍 < 30% 才給英雄 HP +20%；匕首不動。
+3. 前段判定照 06 6.8：每格至少 30 場；勝場差 ≤ 1 視為同分，同分比隊伍剩餘 HP 比例（含隊友），不比英雄 DPR。30 場跑不動回報 PM。
+4. 重量全矩陣（新判定）；fire 仍 > 75% 時報告標出（另開段查燃燒與地形協同）。summoner 不動。
+**驗收**：靠種子的測試重挑種子、斷言不改；行為快照在合併 BAL-12c 後重產；ruff、format、mypy、lint-imports、相關 pytest、一場重播；報告 `docs/phases/BAL-12d報告.md`。
