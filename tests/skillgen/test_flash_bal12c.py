@@ -5,11 +5,49 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
 from tests.engine.helpers import library
+from trpg.content.flash_templates import FlashTemplate
+from trpg.content.skills import SkillDef
 from trpg.skillgen.complete import complete_gain_permille, complete_strength
+from trpg.skillgen.flash_offer import FlashRequest, try_variation
+from trpg.skillgen.flash_ops import FLASH_OPS
+from trpg.skillgen.flash_state import Variation, acquire
+from trpg.skillgen.usage import SkillUsage
+
+type Draft = tuple[dict[str, Any], list[dict[str, Any]]]
+
+
+def _template(template_id: str) -> FlashTemplate:
+    found = library().flash.minor_template(template_id)
+    assert found is not None
+    return found
+
+
+def _variation(template_id: str) -> Variation:
+    template = _template(template_id)
+    return Variation(source="minor", template=template_id, category=template.category)
+
+
+def _drafts(skill: SkillDef, template_id: str) -> list[Draft]:
+    template = _template(template_id)
+    return FLASH_OPS[template.op](skill, template, _variation(template_id), library())
+
+
+def _option(skill: SkillDef, template_id: str) -> bool:
+    """這招在第 1 次閃現（自己的階級）能不能出這個模板的合法選項。"""
+    state = acquire(skill.id).model_copy(update={"used": True})
+    request = FlashRequest(skill, state, SkillUsage(), 1, tier=skill.tier)
+    return try_variation(library(), request, _variation(template_id)) is not None
+
+
+def _builtin(predicate: Callable[[SkillDef], bool]) -> list[SkillDef]:
+    return [s for s in sorted(library().skills.values(), key=lambda s: s.id) if predicate(s)]
+
 
 # ---------------------------------------------------------------------------
 # 1. 完整技能
@@ -56,3 +94,47 @@ def test_complete_modifier_uses_fine_ladder(skill_id: str) -> None:
     values = [m.change.damage_permille for m in after.modifiers if m.change.damage_permille]
     step = lib.flash.rules.complete.modifier_step
     assert step is not None and values and all(v % step == 0 for v in values)
+
+
+# ---------------------------------------------------------------------------
+# 2. 輕巧在 AP 1 時改減冷卻或資源
+# ---------------------------------------------------------------------------
+
+
+def _ap1(skill: SkillDef) -> bool:
+    return skill.kind == "active" and (skill.ap_cost or 1) == 1 and skill.trap is None
+
+
+def test_light_at_ap1_cuts_cooldown_or_resource_by_one_keeping_one() -> None:
+    skills = _builtin(lambda s: _ap1(s) and (s.cost.cooldown or 0) > 1)
+    assert skills
+    for skill in skills:
+        drafts = _drafts(skill, "cost_light")
+        assert drafts, skill.id
+        for base, _ in drafts:
+            assert base.get("ap_cost") in (None, 1)
+            before = skill.cost.model_dump(mode="json")
+            changed = {k: v for k, v in base["cost"].items() if v != before.get(k)}
+            assert len(changed) == 1, (skill.id, changed)
+            ((field, value),) = changed.items()
+            assert field in ("cooldown", "mana", "stamina")
+            assert value == before[field] - 1 >= 1
+
+
+def test_light_at_ap1_without_anything_to_cut_is_not_offered() -> None:
+    skills = _builtin(
+        lambda s: (
+            _ap1(s)
+            and (s.cost.cooldown or 0) <= 1
+            and (s.cost.mana or 0) <= 1
+            and (s.cost.stamina or 0) <= 1
+        )
+    )
+    assert skills
+    assert all(_drafts(s, "cost_light") == [] for s in skills)
+
+
+def test_light_at_ap1_gives_legal_options() -> None:
+    """AP 1 的主動技（召喚、工具技等）現在拿得到合法的輕巧（BAL-12b 量測約 40 列可救）。"""
+    skills = _builtin(lambda s: _ap1(s) and (s.cost.cooldown or 0) > 1)
+    assert sum(1 for s in skills if _option(s, "cost_light")) >= 5

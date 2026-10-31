@@ -640,17 +640,39 @@ def _op_charge(
 
 
 def _op_light(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, template: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。"""
-    if skill.kind != "active" or (skill.ap_cost or 1) <= 1:
+    """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。
+
+    BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）−1，
+    威力照樣由預算器降低；每項最少留 1（只減不拿掉）。"""
+    if skill.kind != "active":
         return []
+    if (skill.ap_cost or 1) <= 1:
+        return _light_cost_drafts(skill, template.cost_fields)
     base, effects = base_draft(skill)
     base["ap_cost"] = (skill.ap_cost or 2) - 1
     cooldown = skill.cost.cooldown
     if cooldown is not None and cooldown > MAX_LIGHT_COOLDOWN:
         base["cost"] = {**base["cost"], "cooldown": MAX_LIGHT_COOLDOWN}
     return [(base, effects)]
+
+
+_LIGHT_COST_FIELDS = frozenset({"cooldown", "mana", "stamina"})
+"""AP 已是 1 時輕巧能減的代價（BAL-12b 定；AP、源力不在這裡）。"""
+
+
+def _light_cost_drafts(skill: SkillDef, fields: Sequence[str]) -> list[Draft]:
+    """``fields`` 依序各減 1 的草稿（每項最少留 1；沒有可減的就不出）。"""
+    drafts: list[Draft] = []
+    for field in fields:
+        current = getattr(skill.cost, field, None) if field in _LIGHT_COST_FIELDS else None
+        if not isinstance(current, int) or current - 1 < 1:
+            continue
+        base, effects = base_draft(skill)
+        base["cost"] = {**base["cost"], field: current - 1}
+        drafts.append((base, effects))
+    return drafts
 
 
 # ---------------------------------------------------------------------------

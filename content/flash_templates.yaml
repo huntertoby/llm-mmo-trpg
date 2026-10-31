@@ -315,7 +315,8 @@ minor:
     op: light
     kinds: [active]
     prefix_zh: 輕巧
-    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低
+    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）
+    cost_fields: [cooldown, mana, stamina]   # BAL-12b 定：AP 已是 1 時依序試這些代價 −1
   # BAL-10c（玩法 PM 2026-10-31）：cost_fields 清空，變身姿態不出費用類（回到 BAL-2c）——姿態進入後一直持續，
   # 進入冷卻幾乎不是代價；多效果姿態只動姿態本體那個效果
   - id: stance_cost_light
