@@ -1,0 +1,94 @@
+{
+ "build_gambler": {
+  "skill_blood_sacrifice": {
+   "battles": 300,
+   "uses": 63.0,
+   "dmg": 301.0,
+   "heal": 0.0,
+   "hits": 33.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_all_in": {
+   "battles": 300,
+   "uses": 191.0,
+   "dmg": 769.0,
+   "heal": 0.0,
+   "hits": 100.56610108158095,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_wild_blade": {
+   "battles": 300,
+   "uses": 212.0,
+   "dmg": 1412.0,
+   "heal": 0.0,
+   "hits": 130.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_berserker_rage": {
+   "battles": 300,
+   "uses": 295.0,
+   "dmg": 2584.0,
+   "heal": 0.0,
+   "hits": 192.14838709677417,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_reckless_lunge": {
+   "battles": 300,
+   "uses": 75.0,
+   "dmg": 1158.0,
+   "heal": 0.0,
+   "hits": 54.33333333333333,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_lucky_break": {
+   "battles": 300,
+   "uses": 63.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_bloodlust": {
+   "battles": 300,
+   "uses": 311.0,
+   "dmg": 0.0,
+   "heal": 2888.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_grief_rage": {
+   "battles": 300,
+   "uses": 133.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_first_strike": {
+   "battles": 300,
+   "uses": 137.0,
+   "dmg": 930.0,
+   "heal": 0.0,
+   "hits": 76.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ }
+}
