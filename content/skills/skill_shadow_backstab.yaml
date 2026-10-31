@@ -1,4 +1,4 @@
-# 主動（Phase 3D-8d 示範，數值為初值，未經模擬）：瞬步背刺——瞬間出現在敵人背後（背後被占住時改到最近的側面），接著一刀；從背後下手吃到背刺加成（命中 +2、暴擊 19–20），而且真的在背後時（from_behind）再多 50% 傷害。
+# 主動（Phase 3D-8d 示範，數值為初值，未經模擬）：瞬步背刺——瞬間出現在敵人背後（背後被占住時改到最近的側面），接著一刀；從背後下手吃到背刺加成（命中 +2、暴擊 19–20），而且真的在背後時（from_behind）再多 130% 傷害（BAL-13d：原 50%）。
 id: skill_shadow_backstab
 schema_version: 1
 name_zh: 瞬步背刺
@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 1000}
   # 3D-8d 背刺條件：真的落在目標背後（背後被占住、改落在側面時不加）
   - type: damage
-    multiplier_permille: 500
+    multiplier_permille: 1300   # BAL-13d：500 → 1300（瞬步 3 點、背刺條件 700‰ 後補滿預算，99.5%）
     condition: {type: from_behind}
 condition: null
 cost: {stamina: 10, cooldown: 3}

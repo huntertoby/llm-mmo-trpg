@@ -342,7 +342,8 @@ def default_affects(primitive: PrimitiveDef) -> Affects:
 class ConditionDef(ContentModel):
     """一種條件（``content/skill_conditions.yaml``）。
 
-    ``harshness``：``common`` 常見／``harsh`` 嚴苛，決定預算的條件倍率（2B-2）。
+    ``harshness``：``common`` 常見／``harsh`` 嚴苛，決定預算的條件倍率（2B-2；
+    ``budget_permille`` 可覆寫，BAL-13d）。
     ``min_rarity``：使用此條件的最低稀有度。
     ``params`` 沿用原語參數的格式（``int``／``status``／``surface``）。
     """
@@ -353,6 +354,9 @@ class ConditionDef(ContentModel):
     llm_hint: str = ""
     """給 LLM 看的一句話說明（Phase 4-L3）。"""
     harshness: Literal["common", "harsh"]
+    budget_permille: int | None = Field(default=None, ge=1, le=1000)
+    """預算的條件倍率（‰）覆寫（BAL-13d）：有填時取代 ``harshness`` 對應的 ``condition_permille``；
+    ``harshness`` 仍是條件的分類（武器親和等依它判斷）。"""
     min_rarity: SkillRarity = "common"
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
 

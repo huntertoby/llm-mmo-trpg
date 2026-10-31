@@ -1197,7 +1197,8 @@ def _condition_multiplier(
     definition = conditions.get(condition_type)
     if definition is None:
         raise BudgetError(f"未知的條件 {condition_type!r}")
-    best = Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    permille = definition.budget_permille or budget.condition_permille[definition.harshness]
+    best = Fraction(permille, _PERMILLE)
     for part in any_of or ():
         best = max(best, _condition_multiplier(part.type, conditions, budget))
     return best
