@@ -97,7 +97,7 @@ shapes:
   - id: chain
     name_zh: 連鎖
     llm_hint: "先選一個目標，效果再依序跳到附近的下一個目標。"
-    description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
+    description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。每跳一次，傷害、治療、護盾的威力 −25%（最低 25%），狀態照常施加。
     targeting: unit
     min_rarity: rare
     # BAL-13c（#77 連鎖衰減，第 k 跳威力 1000 − 250k‰，最低 250‰）：原本每跳 +250‰（＝每多一個目標的期望份量
