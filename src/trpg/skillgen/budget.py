@@ -65,9 +65,11 @@ __all__ = [
     "VariantBudget",
     "self_status_allowance_permille",
     "skill_budget",
+    "weak_floor_exempt",
 ]
 
 _PERMILLE = 1000
+_EXEMPT_MIN_TIER = 2
 _SHAPED_AFFECTS = frozenset({"enemies", "allies", "all", "tiles"})
 _ACTION_NAMES = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
@@ -1675,6 +1677,29 @@ def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         variant_surcharge_permille=surcharge,
         variants=forms,
     )
+
+
+def weak_floor_exempt(skill: SkillDef, library: ContentLibrary) -> bool:
+    """升階後豁免預算窗下限（BAL-12f，06 6.34.9「BAL-12e 定」；``retier_report`` 用，一般驗證
+    不受影響）：2 階以上、效果全是沒有數值的狀態（標記、隱蔽等，不含控制與姿態）或沒有數值的表面
+    （冰、水、油、煙霧、黑暗），也就是沒有任何可放大的數值——持續到上限 6 回合就不再加（#76
+    接受），掉出下限不補償、不標過弱。有任何一項數值（傷害、治療、護盾、位移、數值型狀態或表面、
+    召喚、形態、接續段）就不豁免。"""
+    if skill.tier < _EXEMPT_MIN_TIER or skill.followup is not None or not skill.effects:
+        return False
+    rules = library.ruleset
+    statuses = rules.statuses.by_id()
+    for effect in skill.effects:
+        if effect.type == "apply_status" and effect.status in statuses:
+            status = statuses[effect.status]
+            if status.stance or status.control_group is not None or status.scales_with_magnitude:
+                return False
+        elif effect.type == "create_surface" and effect.surface is not None:
+            if rules.surface_scales_with_magnitude(effect.surface):
+                return False
+        else:
+            return False
+    return True
 
 
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
