@@ -16,6 +16,7 @@ from tests.engine.helpers import (
     template,
     with_rolls,
 )
+from trpg.content.environment import InteractionRule
 from trpg.engine import Attack, BattleState, EndTurn, Move, Shove, legal_actions, resolve
 from trpg.engine.effects import (
     CreateSurfaceEffect,
@@ -271,7 +272,19 @@ def test_lightning_conducts_through_connected_water() -> None:
     assert [e.target_id for e in direct] == [U2]
     assert [e.target_id for e in conducted] == [U3]  # (2, 2) 不在水裡
     assert conducted[0].element is Element.LIGHTNING
-    assert conducted[0].amount == direct[0].amount  # damage_permille 1000
+    # 擴散 ＝ 主要目標套用倍率前的傷害 × 互動表的 damage_permille（兩個盜賊的元素修正相同）
+    assert direct[0].base_amount == direct[0].amount
+    assert conducted[0].amount == _conducted(state, direct[0].amount)
+
+
+def _conduct_rule(state: BattleState) -> InteractionRule:
+    return next(r for r in state.ruleset.interactions.rules if r.id == "lightning_conducts_water")
+
+
+def _conducted(state: BattleState, base: int) -> int:
+    """互動表的擴散傷害：``max(基準 × damage_permille ÷ 1000, min_damage)``（讀 content）。"""
+    outcome = _conduct_rule(state).then[0]
+    return max(base * outcome.damage_permille // 1000, outcome.min_damage)
 
 
 def test_lightning_conduct_applies_rain_bonus_only_once() -> None:
@@ -283,7 +296,8 @@ def test_lightning_conduct_applies_rain_bonus_only_once() -> None:
     conducted = next(e for e in damage if e.cause == "conduct")
     assert direct.weather_permille == 1200
     assert conducted.weather_permille == 1000
-    assert conducted.amount == direct.amount
+    assert direct.base_amount == direct.amount  # 已含天氣
+    assert conducted.amount == _conducted(state, direct.amount)
 
 
 def test_ice_freezes_water_then_slip_check() -> None:

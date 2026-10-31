@@ -417,6 +417,10 @@ class UnitState:
     """本回合做過主動移動（步行；傳送與強制位移不算；``moved_this_turn`` 條件，Phase 3D-1）；
     自己回合開始時清除。"""
     collided_round: int = 0
+    conducted_round: int = 0
+    """最近一次受到雷電擴散傷害（``damage_dealt`` 的 ``cause: conduct``）的輪數（0 為從未）：同一輪
+    （所有單位都行動完一次）內同一單位最多受一次擴散傷害，不論幾次雷擊、幾個施放者；直接命中不算
+    擴散（BAL-13c，#78）。"""
     """最近一次被撞擊（``collided`` 事件的受害者：被擋下的單位與撞到的單位）的輪數（0 為從未；
     ``target_collided`` 條件「目標本回合受過撞擊」，Phase 3-24c）。"""
     ran_this_turn: bool = False
@@ -586,6 +590,7 @@ class UnitState:
             extra_reactions=self.extra_reactions,
             moved_this_turn=self.moved_this_turn,
             collided_round=self.collided_round,
+            conducted_round=self.conducted_round,
             ran_this_turn=self.ran_this_turn,
             guarding_id=self.guarding_id,
             guard_transfers=self.guard_transfers,

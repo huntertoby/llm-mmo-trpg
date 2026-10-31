@@ -269,7 +269,8 @@ def test_shape_multiplier_table() -> None:
     assert [mult("cone", size=n) for n in (2, 3, 4)] == [F(13, 10), F(16, 10), F(2)]
     assert mult("cross") == F(18, 10) and mult("square3") == 2
     assert [mult("ring", radius=n) for n in (1, 2)] == [F(18, 10), F(22, 10)]
-    assert mult("chain", jumps=2) == F(15, 10) and mult("chain", jumps=1) == F(125, 100)
+    # BAL-13c（#77）：連鎖衰減後的倍率（公式見 test_chain_falloff_budget.py）
+    assert mult("chain", jumps=2) == F(1313, 1000) and mult("chain", jumps=1) == F(1188, 1000)
     assert mult("allies_in_radius", radius=2) == F(18, 10)
 
 

@@ -16,7 +16,7 @@ elements:
     resist_group: elemental
   - id: lightning
     name_zh: 雷電
-    description_zh: 沿著導電物與相連的水面擴散、連鎖。
+    description_zh: 沿著導電物與相連的水面擴散、連鎖；同一輪內每個單位最多受一次擴散傷害。
     resist_group: elemental
   - id: poison
     name_zh: 毒素
