@@ -68,9 +68,9 @@ def test_complete_stops_below_120_instead_of_overshooting_200(skill_id: str) -> 
 
 
 def test_complete_small_overshoot_is_still_accepted() -> None:
-    """+150～200‰ 照舊接受（火球骰子一階 +166‰）。"""
+    """+150～200‰ 照舊接受（連珠雷骰子一階；火焰箭 BAL-12e 起用燃燒的強度補到 +125‰）。"""
     lib = library()
-    before = lib.skills["skill_fire_bolt"]
+    before = lib.skills["skill_cluster_bolt"]
     gain = complete_gain_permille(before, complete_strength(lib, before), lib)
     rules = lib.flash.rules.complete
     assert rules.cap_permille < gain <= (rules.stop_over_permille or 0)

@@ -414,8 +414,14 @@ def _closest(drafts: Iterable[Draft], job: _Job) -> SkillDef | None:
 def _best_effort(job: _Job) -> SkillDef | None:
     """調不進窗內時的最後一步：每個強度旋鈕都推到最大（費用不動）；除了「過弱」之外要通過驗證，
     預算分數不低於下限。新階級的預算太大、這個結構追不上時用它（:func:`retier_report` 會標出）。"""
-    moved, library = job.moved, job.library
-    base, effects = base_draft(moved)
+    return _maxed(job, job.moved, base_draft(job.moved))
+
+
+def _maxed(job: _Job, moved: SkillDef, draft: Draft) -> SkillDef | None:
+    """``draft``（``moved`` 的草稿）每個強度旋鈕都推到最大；除了「過弱」之外通過驗證、預算分數
+    不低於下限時回傳。"""
+    library = job.library
+    base, effects = draft
     knobs = [*effect_strength_knobs(moved.category, effects, library)]
     if job.upgrade:
         full = _area_full(moved, library)
@@ -435,6 +441,27 @@ def _best_effort(job: _Job) -> SkillDef | None:
     if problems or (job.floor is not None and budget_power(trial, library) < job.floor):
         return None
     return trial
+
+
+def _weak_growth(job: _Job) -> SkillDef | None:
+    """表面放大格數後仍到不了預算窗（BAL-12e：持續回合上限 6、沒有數值可加強度的表面，例如冰）：
+    照樣換成較大的形狀（06 6.34.9「表面：格數增加」；沒有數值的到上限偏弱，#76 接受），取比例
+    最接近目標的（持續推到上限，只容許「過弱」）。地形照原本的落石流程，不走這裡。"""
+    if not job.upgrade or _terrain(job.moved, job.library):
+        return None
+    best: SkillDef | None = None
+    gap: Fraction | None = None
+    for grown in _grown_skills(job):
+        for draft in _growth_drafts(grown, job.library):
+            done = _maxed(job, grown, draft)
+            if done is None:
+                continue
+            if job.target is None:
+                return done
+            distance = abs(_ratio(done, job.library) - job.target)
+            if gap is None or distance < gap:
+                best, gap = done, distance
+    return best
 
 
 def _floor(skill: SkillDef, tier: int, library: ContentLibrary) -> Fraction | None:
@@ -491,13 +518,15 @@ def _same_shape(job: _Job) -> Iterator[SkillDef | None]:
 
 
 def _solve(job: _Job) -> SkillDef | None:
-    """放大格數 → 形狀不變的候選（取最接近目標比例的，:func:`_settle`）→ 原本的形狀補落石 → 旋鈕
-    推到最大。"""
+    """放大格數 → 形狀不變的候選（取最接近目標比例的，:func:`_settle`）→ 原本的形狀補落石 → 表面
+    照樣放大格數（偏弱，:func:`_weak_growth`）→ 旋鈕推到最大。"""
     done = _grow(job)
     if done is None:
         done = _settle(job, _same_shape(job))
     if done is None:
         done = _rocks(job, grown=False)
+    if done is None:
+        done = _weak_growth(job)  # BAL-12e：表面到不了窗也先加格數
     return done if done is not None else _best_effort(job)
 
 

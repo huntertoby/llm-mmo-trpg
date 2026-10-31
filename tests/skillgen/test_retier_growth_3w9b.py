@@ -70,6 +70,22 @@ def _window() -> tuple[Fraction, Fraction]:
     return Fraction(rules.min_ratio_permille, 1000), Fraction(rules.max_ratio_permille, 1000)
 
 
+def _capped_without_numbers(skill: SkillDef) -> bool:
+    """核心效果是沒有數值可加強度的狀態或表面，而且持續已到升階上限（BAL-12e，06 6.34.9）。"""
+    rules = LIB.ruleset
+    cap = LIB.budget.retier_growth.stretch["apply_status"]["duration"]
+    for effect in skill.effects:
+        if effect.type == "apply_status" and effect.status is not None:
+            numeric = rules.status_def(effect.status).scales_with_magnitude
+        elif effect.type == "create_surface" and effect.surface is not None:
+            numeric = rules.surface_scales_with_magnitude(effect.surface)
+        else:
+            continue
+        if not numeric and (effect.duration or 0) >= cap:
+            return True
+    return False
+
+
 def _durations(skill: SkillDef) -> list[int | None]:
     return [e.duration for e in skill.effects if e.type in ("apply_status", "create_surface")]
 
@@ -88,8 +104,14 @@ def test_fixed_blanks_scale_the_effect_itself(recipe: str, seed: int) -> None:
     for tier, skill in enumerate(ladder, start=1):
         assert skill.tier == tier
         assert [e.type for e in skill.effects] == [e.type for e in first.effects]  # 不補傷害
+        ratio = skill_budget(skill, LIB).ratio
+        if _capped_without_numbers(skill):
+            # BAL-12e（#76）：沒有數值的狀態／表面持續到 6 就不再加，偏弱接受（只容許「過弱」）
+            assert [v.rule for v in validate_skill(skill, LIB)] in ([], ["budget.weak"])
+            assert ratio <= high, (recipe, tier)
+            continue
         assert validate_skill(skill, LIB) == [], (recipe, tier)
-        assert low <= skill_budget(skill, LIB).ratio <= high, (recipe, tier)
+        assert low <= ratio <= high, (recipe, tier)
     for before, after in pairwise(ladder):
         assert budget_power(after, LIB) >= budget_power(before, LIB)
         # 持續回合只增不減
@@ -265,7 +287,9 @@ def test_retier_keeps_the_ratio(kind: str, recipe: str, start: int, starter: boo
         done = retier(LIB, prev, tier)
         before = min(max(skill_budget(prev, LIB).ratio, low), high)
         after = skill_budget(done, LIB).ratio
-        assert low <= after <= high, (recipe, tier, float(after))
-        assert abs(after - before) <= RATIO_SLACK, (recipe, tier, float(before), float(after))
         assert budget_power(done, LIB) >= budget_power(prev, LIB)
         prev = done
+        if _capped_without_numbers(done):
+            continue  # BAL-12e（#76）：沒有數值的狀態／表面持續到 6 就不再加，偏弱接受
+        assert low <= after <= high, (recipe, tier, float(after))
+        assert abs(after - before) <= RATIO_SLACK, (recipe, tier, float(before), float(after))

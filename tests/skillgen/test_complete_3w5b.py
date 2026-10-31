@@ -121,10 +121,10 @@ def test_gain_stays_under_150_when_a_finer_knob_can_fill_in(skill_id: str) -> No
 
 def test_over_150_only_when_no_capped_path_reaches_120() -> None:
     """超過 +150‰ 的只能是「只走不超過上限的步子到不了 +120‰」的技能
-    例如火球：骰子一階就是 +166‰。"""
+    例如連珠雷：骰子一階就超過。（火焰箭 BAL-12e 起用燃燒的強度補到 +125‰，不再超過。）"""
     lib = library()
     rules = lib.flash.rules.complete
-    for skill_id in ("skill_fire_bolt", "skill_cluster_bolt"):
+    for skill_id in ("skill_cluster_bolt",):
         before, after = _done(skill_id)
         assert complete_gain_permille(before, after, lib) > rules.cap_permille
         base = complete_power(before, lib)
