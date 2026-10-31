@@ -333,7 +333,7 @@ builds:
       speed: 5
       armor_bonus: 1
       weapon: fire_staff
-      ai_profile: cunning
+      ai_profile: seer   # BAL-13d：狡猾＋不重視自我回復（原為 cunning）
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40

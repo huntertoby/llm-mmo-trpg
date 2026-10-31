@@ -802,6 +802,25 @@ class SelfCostAiRules(ContentModel):
     overdraft_min_targets: int = Field(default=2, ge=1)
 
 
+class StanceAiRules(ContentModel):
+    """有代價的姿態的 AI 使用條件（BAL-13d；ai_profiles.yaml 的 ``stance:``；AI 數值初值）。
+
+    只套用在 ``risky_statuses`` 列出的姿態狀態（例：狂怒姿態，力量 +2 但受到的骰值傷害 ×1.2）：
+
+    - 進入：有敵人在「``enter_enemy_turns`` 回合可達範圍」內（曼哈頓距離 ≤ 回合數 × 速度 ＋ 普攻
+      射程），且不符合下面的取消條件，才考慮進入；
+    - 取消：HP 低於最大 HP 的 ``cancel_hp_below_permille``‰ 且 ``cancel_enemy_radius`` 格內有
+      敵人時，回合一開始就取消姿態（取消姿態不花 AP）。
+
+    其他姿態照舊（AI 不主動取消）。
+    """
+
+    risky_statuses: tuple[str, ...] = ()
+    enter_enemy_turns: int = Field(default=2, ge=1)
+    cancel_hp_below_permille: int = Field(default=400, ge=0, le=1000)
+    cancel_enemy_radius: int = Field(default=6, ge=1)
+
+
 class FormAiRules(ContentModel):
     """形態的 AI 數值（Phase 3J-1a，06 6.30；ai_profiles.yaml 的 ``form:``；初值未經模擬）。
 
@@ -953,6 +972,7 @@ class AiProfile(ContentModel):
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    stance: StanceAiRules = Field(default_factory=StanceAiRules)
     terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
     """純地形技能的 AI 數值（Phase 3T-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     form: FormAiRules = Field(default_factory=FormAiRules)
@@ -984,6 +1004,16 @@ def _with_facing(weights: Any, facing: Any) -> Any:
     if not isinstance(weights, dict) or not isinstance(facing, dict):
         return weights
     return {**facing, **weights}
+
+
+def _merged_tables(shared: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    """行為模式自己列出的表格（例：``rewrite:``）與表格層級的同名表格逐欄合併（BAL-13d：
+    行為模式只寫要改的欄位，其餘沿用表格層級的值）。"""
+    return {
+        key: {**shared[key], **value}
+        for key, value in profile.items()
+        if isinstance(value, dict) and isinstance(shared.get(key), dict)
+    }
 
 
 class RunAiRules(ContentModel):
@@ -1079,6 +1109,7 @@ class AiProfileTable(ContentModel):
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    stance: StanceAiRules = Field(default_factory=StanceAiRules)
     form: FormAiRules = Field(default_factory=FormAiRules)
     terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
@@ -1119,6 +1150,7 @@ class AiProfileTable(ContentModel):
                 "gamble",
                 "rune",
                 "self_cost",
+                "stance",
                 "form",
                 "terrain",
             )
@@ -1142,6 +1174,7 @@ class AiProfileTable(ContentModel):
             {
                 **trap_default,
                 **p,
+                **_merged_tables(trap_default, p),
                 "status_values": {**(shared or {}), **p.get("status_values", {})},
                 "ally_status_values": {**(ally_shared or {}), **p.get("ally_status_values", {})},
                 "self_status_values": {**(self_shared or {}), **p.get("self_status_values", {})},
