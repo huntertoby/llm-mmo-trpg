@@ -43,7 +43,7 @@ from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
 from trpg.shared.types import Surface
-from trpg.skillgen.budget import BudgetError, skill_budget
+from trpg.skillgen.budget import BudgetError, skill_budget, weak_floor_exempt
 from trpg.skillgen.composer_parts import STRETCH_FIELD, Knob, set_knob_value
 from trpg.skillgen.evolution import budget_power, effect_strength_knobs, retune
 from trpg.skillgen.flash_major import fixed_strength
@@ -601,11 +601,16 @@ def retier_report(library: ContentLibrary, before: SkillDef, after: SkillDef) ->
     ratio = report.ratio
     low = Fraction(rules.min_ratio_permille, 1000)
     high = Fraction(rules.max_ratio_permille, 1000)
+    exempt = weak_floor_exempt(after, library)
     return RetierReport(
         skill_id=after.id,
         before=budget_power(before, library),
         after=budget_power(after, library),
         ratio=ratio,
-        in_window=low <= ratio <= high,
-        problems=tuple(v.rule for v in validate_skill(after, library)),
+        in_window=(low <= ratio or exempt) and ratio <= high,  # BAL-12f
+        problems=tuple(
+            v.rule
+            for v in validate_skill(after, library)
+            if not (v.rule == "budget.weak" and exempt)  # BAL-12f
+        ),
     )

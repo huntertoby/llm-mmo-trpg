@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from trpg.content.rule_changes import ELEMENT_HEALS_ALLIES
 from trpg.engine.activations import active_rule_change
 from trpg.engine.context import Ctx
@@ -772,20 +774,8 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
                 )
                 break
     # 重複施加：不疊加，剩餘回合取較長者（None＝永久最長），見 docs/design/06-技能.md 6.6
-    if (
-        existing is not None
-        and _outlasts(existing.remaining, duration)
-        and not definition.redirects_damage  # 新的連結一律取代舊的（連結者與比例都可能不同）
-    ):
-        instance = StatusInstance(
-            status_id=status_id,
-            remaining=existing.remaining,
-            source_id=existing.source_id,
-            amount=existing.amount,
-            skill_id=existing.skill_id,
-            cost_status=existing.cost_status,
-            magnitude_permille=existing.magnitude_permille,
-        )
+    if existing is not None:
+        instance = _reapplied(existing, instance, redirects=definition.redirects_damage)
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
     if (
@@ -803,6 +793,21 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         )
     )
     return events
+
+
+def _reapplied(
+    existing: StatusInstance, instance: StatusInstance, *, redirects: bool
+) -> StatusInstance:
+    """重複施加時留下哪個實例：剩餘回合較長者，強度跟著它；剩餘回合相同時強度取較高者（BAL-12f，
+    06 6.34.9「BAL-12e 定」）。新的連結（``redirects``）一律取代舊的（連結者與比例都可能不同）。"""
+    if redirects:
+        return instance
+    if _outlasts(existing.remaining, instance.remaining):
+        return replace(existing, dormant=False)  # 舊實例的內容照舊（自暈的延後生效旗標不留）
+    if existing.remaining == instance.remaining:
+        magnitude = max(instance.magnitude_permille, existing.magnitude_permille)
+        return replace(instance, magnitude_permille=magnitude)
+    return instance
 
 
 def _outlasts(old: int | None, new: int | None) -> bool:

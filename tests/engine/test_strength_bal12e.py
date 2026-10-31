@@ -116,3 +116,29 @@ def test_regeneration_strength_scales_the_heal() -> None:
     result = resolve(with_rolls(state, [(4, 2)]), EndTurn(unit_id=U1))
     heals = [e for e in result.events if isinstance(e, Healed) and e.target_id == U2]
     assert heals and heals[0].amount == 4  # 2 × 2.0
+
+
+def _reapply(state: BattleState, duration: int, magnitude: int) -> BattleState:
+    effect = ApplyStatusEffect(
+        target_id=U2,
+        status_id="poison",
+        source_id=U1,
+        duration=duration,
+        magnitude_permille=magnitude,
+    )
+    return run_effects(state, [effect]).state
+
+
+def test_reapply_strength_follows_the_longer_instance_then_the_higher() -> None:
+    """BAL-12f：重複施加時強度跟著剩餘回合較長的；剩餘回合相同取較高者。"""
+
+    def held(state: BattleState) -> tuple[int | None, int]:
+        status = state.units[U2].get_status("poison")
+        assert status is not None
+        return status.remaining, status.magnitude_permille
+
+    base = _reapply(_duel(), 3, 1500)
+    assert held(_reapply(base, 5, 1100)) == (5, 1100)  # 新的較長：強度跟新的（即使較低）
+    assert held(_reapply(base, 2, 2000)) == (3, 1500)  # 舊的較長：強度留舊的
+    assert held(_reapply(base, 3, 1100)) == (3, 1500)  # 相同回合：取較高（舊的）
+    assert held(_reapply(base, 3, 1800)) == (3, 1800)  # 相同回合：取較高（新的）
