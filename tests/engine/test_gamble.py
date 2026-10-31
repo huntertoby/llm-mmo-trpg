@@ -241,7 +241,7 @@ def result_alive(result: Any, uid: str) -> bool:
     return bool(result.state.units[uid].alive)
 
 
-@pytest.mark.parametrize("seed", [7, 30])  # BAL-6：6 → 14；BAL-12d 賭徒攻擊技調整，14、20 → 7、30
+@pytest.mark.parametrize("seed", [4, 30])  # BAL-6：6 → 14；BAL-12d 14、20 → 7、30；BAL-13d 7 → 4
 def test_an_ai_battle_with_the_gambler_build_bets_and_replays_exactly(seed: int) -> None:
     """build_gambler 在 open_plain：種子 28 賭注失敗一次、種子 12 失手反噬一次（3D-7b 加了狂野之刃
     等技能後 AI 的選擇改變，所以拆成兩個種子）；紀錄重播的狀態與事件一致。

@@ -41,9 +41,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/93"
-"""目前的戰鬥紀錄版本（``/93``，BAL-12f：重複施加狀態時強度取剩餘回合較長者）。版號策略與完整
-變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，這裡只更新版號與這一行。"""
+LOG_FORMAT = "trpg-battle-log/94"
+"""目前的戰鬥紀錄版本（``/94``，BAL-13d：被每輪一次擋下的雷電擴散發出 ``conduct_blocked``）。
+版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
+這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000
 
 type StepCallback = Callable[[Step | None, ResolveResult], None]

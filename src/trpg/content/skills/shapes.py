@@ -45,29 +45,46 @@ class ShapeBudget(ContentModel):
 
     倍率 ＝ ``by_value_permille[參數值]``（有表格時），否則 ``base_permille ＋ per_unit_permille ×
     參數值``（``param`` 為 ``None`` 時只有 ``base_permille``）。
+
+    ``non_power_by_value_permille``（BAL-13d，06 6.5「BAL-13c 定」）：形狀會衰減威力時（連鎖每跳
+    −25%），不在 ``power_primitives`` 的效果（狀態、推擊、表面等照常施加的非數值效果）改查這張表
+    （連鎖維持衰減前的倍率）；``power_primitives`` 是威力會跟著衰減的原語（傷害、治療、護盾……）。
     """
 
     base_permille: int = Field(default=1000, ge=1)
     param: str | None = None
     per_unit_permille: int = Field(default=0, ge=0)
     by_value_permille: dict[int, int] | None = None
+    non_power_by_value_permille: dict[int, int] | None = None
+    power_primitives: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _check(self) -> ShapeBudget:
-        if self.param is None and (self.per_unit_permille or self.by_value_permille):
+        tables = (self.by_value_permille, self.non_power_by_value_permille)
+        if self.param is None and (self.per_unit_permille or any(tables)):
             raise ValueError("設定 per_unit_permille 或 by_value_permille 時必須指定 param")
-        if self.by_value_permille is not None and not self.by_value_permille:
+        if any(table is not None and not table for table in tables):
             raise ValueError("by_value_permille 不可為空")
+        if self.non_power_by_value_permille is not None and not self.power_primitives:
+            raise ValueError("設定 non_power_by_value_permille 時必須列出 power_primitives")
         return self
 
-    def permille_for(self, values: dict[str, int | str]) -> int:
-        """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。"""
+    def permille_for(self, values: dict[str, int | str], primitive: str | None = None) -> int:
+        """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。給了
+        ``primitive`` 且它不是威力原語時，有 ``non_power_by_value_permille`` 就查那張表。"""
         if self.param is None:
             return self.base_permille
         raw = values.get(self.param)
         value = raw if isinstance(raw, int) else 0
-        if self.by_value_permille is not None:
-            return self.by_value_permille.get(value, self.base_permille)
+        table = self.by_value_permille
+        if (
+            self.non_power_by_value_permille is not None
+            and primitive is not None
+            and primitive not in self.power_primitives
+        ):
+            table = self.non_power_by_value_permille
+        if table is not None:
+            return table.get(value, self.base_permille)
         return self.base_permille + self.per_unit_permille * value
 
 
@@ -144,11 +161,11 @@ class ShapeDef(ContentModel):
         spec = self.params.get(param)
         if spec is None:
             raise ValueError(f"形狀 {self.id}：budget.param {param!r} 不是這個形狀的參數")
-        table = self.budget.by_value_permille
-        if table is not None:
-            missing = [v for v in range(spec.min, spec.max + 1) if v not in table]
-            if missing:
-                raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
+        for table in (self.budget.by_value_permille, self.budget.non_power_by_value_permille):
+            if table is not None:
+                missing = [v for v in range(spec.min, spec.max + 1) if v not in table]
+                if missing:
+                    raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
         return self
 
     def summary(self) -> str:

@@ -103,7 +103,15 @@ shapes:
     # BAL-13c（#77 連鎖衰減，第 k 跳威力 1000 − 250k‰，最低 250‰）：原本每跳 +250‰（＝每多一個目標的期望份量
     # 0.25），改成 0.25 × 該跳的衰減後威力：1 跳 1000＋187.5、2 跳 ＋125、3 跳 ＋62.5（四捨五入；只降不升）。
     # tests/skillgen/test_chain_falloff_budget.py 由 core.yaml 的 chain_falloff_permille／chain_floor_permille 對照。
-    budget: {base_permille: 1000, param: jumps, by_value_permille: {1: 1188, 2: 1313, 3: 1375}}
+    # BAL-13d（06 6.5「BAL-13c 定」）：衰減只算在威力上，所以 power_primitives 以外的效果（狀態、推擊、表面……照常施加）
+    # 的點數維持舊倍率（每跳 +250‰：1250／1500／1750）。power_primitives ＝ 引擎會乘連鎖衰減的原語（傷害、治療、護盾、
+    # 投擲物件與衝撞的傷害）與加在傷害上的消耗層數。
+    budget:
+      base_permille: 1000
+      param: jumps
+      by_value_permille: {1: 1188, 2: 1313, 3: 1375}
+      non_power_by_value_permille: {1: 1250, 2: 1500, 3: 1750}
+      power_primitives: [damage, heal, shield, hurl_object, charge_through, consume_stack]
     params:
       range: {llm_hint: "第一個目標最遠可以選幾格外。", min: 1, max: 6}
       jumps: {llm_hint: "最多再跳幾次。", min: 1, max: 3}
