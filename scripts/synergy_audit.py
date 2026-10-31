@@ -341,6 +341,7 @@ def _edit_surface(library: ContentLibrary, surface_id: str, **fields: Any) -> Co
     for sf in library.ruleset.surfaces.surfaces:
         items.append(sf.model_copy(update=fields) if sf.id.value == surface_id else sf)
     table = library.ruleset.surfaces.model_copy(update={"surfaces": tuple(items)})
+    table.model_post_init(None)  # 重建查表索引（model_copy 不會重跑）
     return _with_ruleset(library, surfaces=table)
 
 
@@ -421,6 +422,20 @@ def _abl_ember_ward(lib: ContentLibrary) -> ContentLibrary:
     return _skill_edit(lib, "skill_ember_ward", effects=effects)
 
 
+def _fire_direct(permille: int) -> Any:
+    """資訊用：火系直接傷害法術（技能層級 ``damage_permille``）乘以 ``permille``‰。"""
+
+    def apply(lib: ContentLibrary) -> ContentLibrary:
+        changed = {}
+        for sid in ("skill_fire_bolt", "skill_shatter_blast", "skill_ashen_oath"):
+            skill = lib.skills[sid]
+            old = skill.damage_permille if skill.damage_permille is not None else 1000
+            changed[sid] = skill.model_copy(update={"damage_permille": old * permille // 1000})
+        return _with_skills(lib, changed)
+
+    return apply
+
+
 def _fire_surface_enter_only(lib: ContentLibrary) -> ContentLibrary:
     return _edit_surface(lib, "fire", on_turn_start=None)
 
@@ -431,6 +446,7 @@ OPTIONS: dict[str, Any] = {
     "chain_jumps_1": _chain_jumps(1),
     "twin_1d4": _dice("skill_twin_strike", 0, "1d4"),
     "fire_surface_enter_only": _fire_surface_enter_only,
+    "fire_direct_85": _fire_direct(850),
     "abl_ashen_surface": _abl_ashen_surface,
     "abl_ember_ward": _abl_ember_ward,
     "burn_tick_1d4": _burn_tick("1d4"),
