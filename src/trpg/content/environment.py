@@ -339,7 +339,8 @@ class InteractionOutcome(ContentModel):
     - ``explode``：物件爆炸（參數見 ``objects.yaml`` 的 ``explosion``）。
     - ``conduct``：沿相連的 water 格（與帶 ``conductive`` 的物件）擴散，其上的其他單位（含友方與
       攻擊者自己，不含主要目標）受到「主要目標套用自身抗性與格擋之前的傷害」× ``damage_permille``
-      的同元素傷害（最低 ``min_damage``），再各自套用自己的元素修正。
+      的同元素傷害（最低 ``min_damage``），再各自套用自己的元素修正。同一輪內同一單位最多受一次
+      擴散傷害（不論幾次雷擊、幾個施放者；直接命中不算；BAL-13c，#78）。
     - ``push``：推動該格的物件或單位（方向與距離由觸及的效果提供）。
     - ``spread_surface``：沿觸及的方向，在下一格產生 ``surface``。
     - ``fill_chasm``：移除物件，該格地形改為 ``terrain``。

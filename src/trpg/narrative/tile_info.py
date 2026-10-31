@@ -100,7 +100,10 @@ OUTCOME_TEXT: Mapping[str, _OutcomeText] = {
     "set_surface": _set_surface,
     "ignite_object": lambda o, n: "被點燃（燃燒後摧毀，並產生火焰）",
     "explode": lambda o, n: "爆炸",
-    "conduct": lambda o, n: "沿相連的水與導電物傳導，波及其上的其他單位",
+    "conduct": lambda o, n: (
+        f"沿相連的水與導電物傳導，波及其上的其他單位（傷害 ×{o.damage_permille / 1000:g}，"
+        "每輪每個單位最多一次）"
+    ),
     "push": lambda o, n: "被推動",
     "spread_surface": lambda o, n: (
         f"沿方向蔓延到下一格（{n.of(n.surface, o.surface.value if o.surface else None)}）"

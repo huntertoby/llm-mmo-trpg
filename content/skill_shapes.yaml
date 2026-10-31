@@ -97,10 +97,13 @@ shapes:
   - id: chain
     name_zh: 連鎖
     llm_hint: "先選一個目標，效果再依序跳到附近的下一個目標。"
-    description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
+    description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。每跳一次，傷害、治療、護盾的威力 −25%（最低 25%），狀態照常施加。
     targeting: unit
     min_rarity: rare
-    budget: {base_permille: 1000, param: jumps, per_unit_permille: 250}
+    # BAL-13c（#77 連鎖衰減，第 k 跳威力 1000 − 250k‰，最低 250‰）：原本每跳 +250‰（＝每多一個目標的期望份量
+    # 0.25），改成 0.25 × 該跳的衰減後威力：1 跳 1000＋187.5、2 跳 ＋125、3 跳 ＋62.5（四捨五入；只降不升）。
+    # tests/skillgen/test_chain_falloff_budget.py 由 core.yaml 的 chain_falloff_permille／chain_floor_permille 對照。
+    budget: {base_permille: 1000, param: jumps, by_value_permille: {1: 1188, 2: 1313, 3: 1375}}
     params:
       range: {llm_hint: "第一個目標最遠可以選幾格外。", min: 1, max: 6}
       jumps: {llm_hint: "最多再跳幾次。", min: 1, max: 3}

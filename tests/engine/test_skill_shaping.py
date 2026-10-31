@@ -405,9 +405,10 @@ def budget_of(*rules: dict[str, Any]) -> list[Any]:
 
 def test_the_budget_of_shape_to_is_the_shape_multiplier_difference() -> None:
     """基準傷害 7 ×（轉換後 − 轉換前的形狀倍率）× 使用次數 6（所有技能）× 站位受益 400‰。"""
+    chain_1 = library().ruleset.shapes.by_id()["chain"].budget.permille_for({"jumps": 1})
     expected = {
         "line": 7 * (1400 - 1000),  # 單體 1000‰ → 直線 3 格（800 + 200 × 3）
-        "chain": 7 * (1250 - 1000),  # 單體 → 連鎖 1 跳（1000 + 250 × 1）
+        "chain": 7 * (chain_1 - 1000),  # 單體 → 連鎖 1 跳（skill_shapes.yaml；BAL-13c 連鎖衰減）
         "cone": 7 * (1600 - 1400),  # 直線 3 格 1400‰ → 錐形 3 格 1600‰
     }
     for target, milli in expected.items():

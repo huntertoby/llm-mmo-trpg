@@ -15,6 +15,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
     template,
+    with_conduct_permille,
     with_rolls,
 )
 from trpg.engine import Attack, BattleState, EndTurn, Interact, Shove, legal_actions, resolve
@@ -221,7 +222,7 @@ def _damage_by_target(events: list[EventBase]) -> dict[str, int]:
 
 
 def test_conduct_base_is_damage_before_primary_resistance() -> None:
-    state = _conduct_scene()
+    state = with_conduct_permille(_conduct_scene())  # 1000‰：擴散 ＝ 基準（內容 500‰）
     result = run_effects(
         state,
         [
@@ -245,7 +246,7 @@ def test_conduct_base_is_damage_before_primary_resistance() -> None:
 
 
 def test_conduct_base_ignores_block_multiplier_and_includes_weather() -> None:
-    state = _conduct_scene()
+    state = with_conduct_permille(_conduct_scene())  # 擴散倍率 1000‰（BAL-13c 起內容 500‰）
     blocked = run_effects(
         state,
         [
@@ -264,7 +265,7 @@ def test_conduct_base_ignores_block_multiplier_and_includes_weather() -> None:
     assert dealt[U2] == 5  # 基準 10 × 元素抗性 50%
     assert dealt[U4] == 15
     wet = run_effects(
-        _conduct_scene("rain"),
+        with_conduct_permille(_conduct_scene("rain")),
         [
             DamageEffect(
                 target_id=U3, source_id=U1, cause="attack", element=Element.LIGHTNING, flat=10

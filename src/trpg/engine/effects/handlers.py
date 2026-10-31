@@ -90,11 +90,22 @@ def ability_modifier(ctx: Ctx, value: int) -> int:
     return (value - ctx.core.ability_mod_base) // ctx.core.ability_mod_divisor
 
 
+def _take_conduct(state: BattleState, unit: UnitState, effect: DamageEffect) -> bool:
+    """雷電擴散每輪每單位一次（BAL-13c，#78）：``cause: conduct`` 的傷害在本輪已受過擴散時不結算
+    （回傳 ``False``），否則記下本輪；其他傷害一律結算（直接命中不算擴散）。"""
+    if effect.cause != "conduct":
+        return True
+    if unit.conducted_round == state.round:
+        return False
+    unit.conducted_round = state.round
+    return True
+
+
 @register_effect("damage")
 def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, DamageEffect)
     unit = ctx.state.units.get(effect.target_id)
-    if unit is None or not unit.alive:
+    if unit is None or not unit.alive or not _take_conduct(ctx.state, unit, effect):
         return []
     rolls: tuple[int, ...] = ()
     exploded = 0
@@ -133,7 +144,12 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             effect.min_damage,
         )
         base_amount = max(
-            raw_permille * weather * dealt // (PERMILLE * PERMILLE * PERMILLE), effect.min_damage
+            raw_permille
+            * weather
+            * dealt
+            * effect.chain_permille
+            // (PERMILLE * PERMILLE * PERMILLE * PERMILLE),
+            effect.min_damage,
         )
         mended = _mend_ally(ctx, unit, effect, amount)  # 規則改變「慈焰」（Phase 3D-6）
         if mended is not None:
@@ -164,6 +180,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             weather_permille=weather,
             multiplier_permille=multiplier,
             pierce_permille=effect.pierce_permille,
+            chain_permille=effect.chain_permille,
             base_amount=base_amount,
             status_ppm=status_ppm,
             absorbed=absorbed,

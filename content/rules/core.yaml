@@ -76,6 +76,9 @@ topple_rubble_object: rubble  # 推倒後在最後一格產生的物件（object
 teleport_enemy_resist_bonus: 2   # 傳送敵人（Phase 3D-2b）：目標的抵抗加成（從 d20 總和扣除；同級成功率 60% → 50%；初值）
 teleport_lethal_resist_bonus: 8  # 傳送到致命地形時目標再加的抵抗加成（總 +10，同級成功率 10%；初值）
 hurl_scatter_radius: 1        # 投擲物件（Phase 3C-5a）：落點被占用時，放在這個距離內最近的空格（同距離依 (y, x)），沒有就摧毀
+# BAL-13c（#77，06 6.5「連鎖衰減」）：chain 形狀每跳傷害／治療／護盾 −25%（100、75、50…），最低 25%；狀態等非數值效果照常
+chain_falloff_permille: 250
+chain_floor_permille: 250
 pierce_behind_permille: 700   # 穿透（Phase 3C-5b）：穿過 penetrable 物件後，後方目標受到的傷害‰（物件本身受全額；初值，未經模擬）
 # 3D-8b：復活——原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；範圍內沒有空格就不能施放（初值）
 revive_landing_radius: 2
