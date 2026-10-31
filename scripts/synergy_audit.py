@@ -9,7 +9,7 @@
     uv run python scripts/synergy_audit.py trial --option conduct_half --seeds 30 --jobs 4 \
         --matrix docs/phases/BAL-12/12d_matrix.json --builds build_fire,build_storm,...
 
-拆解的分類（每筆 ``damage_dealt`` 的實際扣血 ``hp_before - hp_after``，與 ``trpg.sim.metrics`` 同口徑）：
+拆解的分類（每筆 ``damage_dealt`` 的實際扣血 ``hp_before - hp_after``，與 metrics 同口徑）：
 
 - ``skill_base``：技能的無條件傷害效果；``skill_cond``：技能的有條件傷害效果（協同加成：
   燃燒時 4d6、站在水上 2d8、連段第二道……）；``basic``：武器普攻；``passive``：被動觸發的攻擊傷害
@@ -26,7 +26,7 @@ import dataclasses
 import json
 import sys
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -35,20 +35,20 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.events import (
     AttackRolled,
     DamageDealt,
+    RoundStarted,
     SkillTriggered,
     SkillUsed,
     StatusApplied,
     StatusRemoved,
     TurnStarted,
     UnitDowned,
+    UnitEscaped,
+    UnitSpawned,
     UnitSummoned,
 )
 from trpg.shared.types import Team
 from trpg.sim.batch import BatchSpec
 from trpg.sim.matrix import (
-    MATRIX_ADAPTER,
-    MapInfo,
-    assemble_matrix,
     matrix_specs,
     run_matrix,
 )
@@ -92,7 +92,18 @@ def decompose_battle(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈
     extra: Counter[str] = Counter()
     chain_hits: Counter[int] = Counter()
     scar_base = 0
+    enemy_alive = {u.id for u in units.values() if u.team is Team.ENEMY and "summon" not in u.tags}
+    enemy_alive -= {e.unit_id for e in run.events if isinstance(e, UnitSpawned | UnitSummoned)}
     for event in run.events:
+        if isinstance(event, RoundStarted):
+            extra["enemy_unit_rounds"] += len(enemy_alive)
+        elif isinstance(event, UnitSpawned):
+            if event.team is Team.ENEMY:
+                enemy_alive.add(event.unit_id)
+        elif isinstance(event, UnitEscaped):
+            enemy_alive.discard(event.unit_id)
+        elif isinstance(event, AttackRolled) and team.get(event.attacker_id) is Team.ENEMY:
+            extra["enemy_attacks"] += 1
         if isinstance(event, UnitSummoned):
             if event.owner_id == hero:
                 summons.add(event.unit_id)
@@ -124,11 +135,17 @@ def decompose_battle(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈
                 burning.discard(event.target_id)
         elif isinstance(event, UnitDowned):
             burning.discard(event.unit_id)
+            enemy_alive.discard(event.unit_id)
         elif isinstance(event, TurnStarted):
             current, ctx_kind = None, "turn"
         elif isinstance(event, DamageDealt):
             amount = event.hp_before - event.hp_after
             src = event.source_id
+            if src is not None and team.get(src) is Team.ENEMY:
+                if event.target_id == hero:
+                    extra["taken_hero"] += amount
+                elif team.get(event.target_id) is Team.ALLY and event.target_id not in summons:
+                    extra["taken_companion"] += amount
             if src == hero:
                 origin = "hero"
             elif src in summons:
@@ -140,7 +157,7 @@ def decompose_battle(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈
             else:
                 continue  # 敵方造成的傷害不是這裡的主題
             side = "enemy" if team[event.target_id] is not team[hero] else "friendly"
-            cat = event.cause
+            cat: str = event.cause
             skill = current or "-"
             if event.cause == "attack":
                 if ctx_kind == "basic" or current is None:
@@ -152,11 +169,7 @@ def decompose_battle(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈
                     order = seen[(use_idx, event.target_id)] - 1
                     fl = flags.get(current, ())
                     uncond = [i for i, c in enumerate(fl) if not c]
-                    cond_effect = (
-                        order >= len(uncond)
-                        if len(uncond) < len(fl)
-                        else False
-                    )
+                    cond_effect = order >= len(uncond) if len(uncond) < len(fl) else False
                     cat = "skill_cond" if cond_effect else "skill_base"
                     if side == "enemy" and origin == "hero":
                         chain_hits[use_idx] += 1 if order == 0 else 0
@@ -232,9 +245,11 @@ def cmd_report(args: argparse.Namespace) -> int:
         for r in mine:
             extra.update(r["extra"])
         enemy_total = sum(v for k, v in dmg.items() if k.startswith("enemy|"))
-        print(f"\n### {build}：{n} 場，勝率 {wins * 100 / n:.1f}%，"
-              f"平均輪數 {sum(r['rounds'] for r in mine) / n:.1f}，"
-              f"每場對敵總傷害 {enemy_total / n:.1f}")
+        print(
+            f"\n### {build}：{n} 場，勝率 {wins * 100 / n:.1f}%，"
+            f"平均輪數 {sum(r['rounds'] for r in mine) / n:.1f}，"
+            f"每場對敵總傷害 {enemy_total / n:.1f}"
+        )
         print("| 來源 | 每場傷害 | 占對敵傷害 |")
         print("|---|---|---|")
         cats: Counter[str] = Counter()
@@ -245,7 +260,9 @@ def cmd_report(args: argparse.Namespace) -> int:
             share = f"{v * 100 / enemy_total:.1f}%" if k.startswith("enemy|") else "-"
             print(f"| {k} | {v / n:.2f} | {share} |")
         scar = sum(r["scar_base"] for r in mine)
-        print(f"\n燃燒中目標吃到的攻擊傷害 {scar / n:.2f}/場（灼傷之痕 +10% 約佔其 {100 / 11:.1f}%）")
+        print(
+            f"\n燃燒中目標吃到的攻擊傷害 {scar / n:.2f}/場（灼傷之痕 +10% 約佔其 {100 / 11:.1f}%）"
+        )
         print("| 技能（英雄）/ 類別 | 每場傷害 | 每場次數 |")
         print("|---|---|---|")
         per_skill: Counter[str] = Counter()
@@ -259,14 +276,23 @@ def cmd_report(args: argparse.Namespace) -> int:
         for k, v in sorted(per_skill.items(), key=lambda kv: -kv[1])[:14]:
             print(f"| {k} | {v / n:.2f} | {per_n[k] / n:.2f} |")
         uses = {k.removeprefix("use:"): v for k, v in extra.items() if k.startswith("use:")}
-        print("\n施放次數/場：" + "，".join(f"{k.removeprefix('skill_')} {v / n:.2f}" for k, v in
-                                    sorted(uses.items(), key=lambda kv: -kv[1])))
+        print(
+            "\n施放次數/場："
+            + "，".join(
+                f"{k.removeprefix('skill_')} {v / n:.2f}"
+                for k, v in sorted(uses.items(), key=lambda kv: -kv[1])
+            )
+        )
         tpu: Counter[int] = Counter()
         for r in mine:
             for k, v in r["targets_per_use"].items():
                 tpu[int(k)] += v
-        print("burn/conduct 事件：" + "，".join(f"{k} {v / n:.2f}" for k, v in sorted(extra.items())
-                                           if not k.startswith("use:")))
+        print(
+            "burn/conduct 事件："
+            + "，".join(
+                f"{k} {v / n:.2f}" for k, v in sorted(extra.items()) if not k.startswith("use:")
+            )
+        )
     return 0
 
 
@@ -295,8 +321,9 @@ def _edit_interaction(library: ContentLibrary, rule_id: str, **outcome: Any) -> 
     for rule in library.ruleset.interactions.rules:
         if rule.id == rule_id:
             then = tuple(o.model_copy(update=outcome) for o in rule.then)
-            rule = rule.model_copy(update={"then": then})
-        rules.append(rule)
+            rules.append(rule.model_copy(update={"then": then}))
+        else:
+            rules.append(rule)
     table = library.ruleset.interactions.model_copy(update={"rules": tuple(rules)})
     return _with_ruleset(library, interactions=table)
 
@@ -304,11 +331,17 @@ def _edit_interaction(library: ContentLibrary, rule_id: str, **outcome: Any) -> 
 def _edit_status(library: ContentLibrary, status_id: str, **fields: Any) -> ContentLibrary:
     items = []
     for st in library.ruleset.statuses.statuses:
-        if st.id == status_id:
-            st = st.model_copy(update=fields)
-        items.append(st)
+        items.append(st.model_copy(update=fields) if st.id == status_id else st)
     table = library.ruleset.statuses.model_copy(update={"statuses": tuple(items)})
     return _with_ruleset(library, statuses=table)
+
+
+def _edit_surface(library: ContentLibrary, surface_id: str, **fields: Any) -> ContentLibrary:
+    items = []
+    for sf in library.ruleset.surfaces.surfaces:
+        items.append(sf.model_copy(update=fields) if sf.id.value == surface_id else sf)
+    table = library.ruleset.surfaces.model_copy(update={"surfaces": tuple(items)})
+    return _with_ruleset(library, surfaces=table)
 
 
 def _scale_damage_effect(skill: Any, index: int, dice: str) -> Any:
@@ -333,10 +366,141 @@ def apply_option(library: ContentLibrary, option: str) -> ContentLibrary:
     handlers = OPTIONS
     if option not in handlers:
         raise ValueError(f"未知的選項：{option}（可用：{', '.join(handlers)}）")
-    return handlers[option](library)
+    result: ContentLibrary = handlers[option](library)
+    return result
 
 
-OPTIONS: dict[str, Any] = {}
+def _conduct(permille: int) -> Any:
+    def apply(lib: ContentLibrary) -> ContentLibrary:
+        lib = _edit_interaction(lib, "lightning_conducts_water", damage_permille=permille)
+        return _edit_interaction(lib, "lightning_conducts_object", damage_permille=permille)
+
+    return apply
+
+
+def _chain_jumps(jumps: int) -> Any:
+    def apply(lib: ContentLibrary) -> ContentLibrary:
+        skill = lib.skills["skill_chain_lightning"]
+        shape = skill.shape.model_copy(update={"jumps": jumps})
+        return _skill_edit(lib, "skill_chain_lightning", shape=shape)
+
+    return apply
+
+
+def _dice(skill_id: str, index: int, dice: str) -> Any:
+    def apply(lib: ContentLibrary) -> ContentLibrary:
+        edited = _scale_damage_effect(lib.skills[skill_id], index, dice)
+        return _with_skills(lib, {skill_id: edited})
+
+    return apply
+
+
+def _burn_tick(dice: str) -> Any:
+    def apply(lib: ContentLibrary) -> ContentLibrary:
+        status = next(st for st in lib.ruleset.statuses.statuses if st.id == "burning")
+        assert status.on_turn_start_damage is not None
+        tick = status.on_turn_start_damage.model_copy(update={"dice": dice})
+        return _edit_status(lib, "burning", on_turn_start_damage=tick)
+
+    return apply
+
+
+def _abl_ashen_surface(lib: ContentLibrary) -> ContentLibrary:
+    """對照用（拆掉一層看勝率掉多少）：灰燼誓約不再產生火焰表面。"""
+    skill = lib.skills["skill_ashen_oath"]
+    effects = tuple(e for e in skill.effects if e.type != "create_surface")
+    return _skill_edit(lib, "skill_ashen_oath", effects=effects)
+
+
+def _abl_ember_ward(lib: ContentLibrary) -> ContentLibrary:
+    """對照用：餘燼護體的護盾 1d6 → 1d1。"""
+    skill = lib.skills["skill_ember_ward"]
+    effects = tuple(
+        e.model_copy(update={"dice": "1d1"}) if e.type == "shield" else e for e in skill.effects
+    )
+    return _skill_edit(lib, "skill_ember_ward", effects=effects)
+
+
+def _fire_surface_enter_only(lib: ContentLibrary) -> ContentLibrary:
+    return _edit_surface(lib, "fire", on_turn_start=None)
+
+
+OPTIONS: dict[str, Any] = {
+    "conduct_500": _conduct(500),
+    "conduct_750": _conduct(750),
+    "chain_jumps_1": _chain_jumps(1),
+    "twin_1d4": _dice("skill_twin_strike", 0, "1d4"),
+    "fire_surface_enter_only": _fire_surface_enter_only,
+    "abl_ashen_surface": _abl_ashen_surface,
+    "abl_ember_ward": _abl_ember_ward,
+    "burn_tick_1d4": _burn_tick("1d4"),
+    "cinder_cond_3d6": _dice("skill_cinder_burst", 1, "3d6"),
+}
+
+
+def _rates(report: Any, builds: list[str]) -> dict[str, tuple[float, float, float, float]]:
+    """build → (勝率%, 英雄 DPR, 英雄存活%, 平均輪數)。"""
+    out: dict[str, tuple[float, float, float, float]] = {}
+    for b in builds:
+        cs = [c for c in report.cells if c.build_id == b]
+        done = sum(c.completed for c in cs)
+        out[b] = (
+            sum(c.ally_wins for c in cs) * 100 / done,
+            sum(c.hero_dpr for c in cs) / len(cs),
+            sum(c.hero_survival for c in cs) * 100 / len(cs),
+            sum(c.rounds_mean for c in cs) / len(cs),
+        )
+    return out
+
+
+def _json_baseline(path: Path, seeds: int) -> dict[str, tuple[float, float]]:
+    """由 decompose 的 JSON 取前 ``seeds`` 個種子的基準：build → (勝率%, 平均輪數)。"""
+    rows = [r for r in json.loads(path.read_text(encoding="utf-8")) if "error" not in r]
+    out: dict[str, tuple[float, float]] = {}
+    for b in sorted({r["build"] for r in rows}):
+        mine = [r for r in rows if r["build"] == b and r["seed"] < seeds]
+        out[b] = (
+            sum(r["win"] for r in mine) * 100 / len(mine),
+            sum(r["rounds"] for r in mine) / len(mine),
+        )
+    return out
+
+
+def cmd_trial(args: argparse.Namespace) -> int:
+    base = load_library()
+    maps = default_sim_maps(base)
+    seeds = range(args.seed_start, args.seed_start + args.seeds)
+    known = _json_baseline(args.baseline_json, args.seed_start + args.seeds)
+    started = time.perf_counter()
+    cache: dict[str, tuple[float, float]] = dict(known)
+    for spec in args.run:
+        option, _, build_text = spec.partition(":")
+        builds = build_text.split(",")
+        lib = apply_option(base, option)
+        missing = [b for b in builds if b not in cache]
+        if missing:
+            ref_report = run_matrix(base, missing, maps, seeds, jobs=args.jobs)
+            for b, v in _rates(ref_report, missing).items():
+                cache[b] = (v[0], v[3])
+            print(
+                f"[baseline {','.join(missing)} 完成 {time.perf_counter() - started:.0f}s]",
+                file=sys.stderr,
+                flush=True,
+            )
+        trial = run_matrix(lib, builds, maps, seeds, jobs=args.jobs)
+        got = _rates(trial, builds)
+        print(f"\n## {option}（每格 {len(seeds)} 場）")
+        print("| build | 基準勝率 | 本次勝率 | 差 | 基準輪數 | 本次輪數 | DPR | 存活% |")
+        print("|---|---|---|---|---|---|---|---|")
+        for b in builds:
+            w, dpr, surv, rounds = got[b]
+            print(
+                f"| {b} | {cache[b][0]:.1f} | {w:.1f} | {w - cache[b][0]:+.1f} "
+                f"| {cache[b][1]:.1f} | {rounds:.1f} | {dpr:.1f} | {surv:.0f} |",
+                flush=True,
+            )
+        print(f"[{option} 完成 {time.perf_counter() - started:.0f}s]", file=sys.stderr, flush=True)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -353,6 +517,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--input", type=Path, required=True)
     p.add_argument("--builds", required=True)
     p.set_defaults(fn=cmd_report)
+    p = sub.add_parser("trial")
+    p.add_argument("--run", action="append", required=True, help="選項:build,build,…")
+    p.add_argument("--baseline-json", type=Path, required=True)
+    p.add_argument("--seeds", type=int, default=20)
+    p.add_argument("--seed-start", type=int, default=0)
+    p.add_argument("--jobs", type=int, default=1)
+    p.set_defaults(fn=cmd_trial)
     args = parser.parse_args(argv)
     return int(args.fn(args))
 
