@@ -22,7 +22,7 @@ followup:
   effects:
     - {type: damage, dice: 1d12, element: fire}
 condition: null
-cost: {mana: 7, cooldown: 3}
+cost: {mana: 6, cooldown: 3}
 tags: [fire, spell, pull, aoe]
 narrative:
   concept: 在身邊撕開一道引力的漩渦，把周圍的敵人拖進來，再一口氣引爆

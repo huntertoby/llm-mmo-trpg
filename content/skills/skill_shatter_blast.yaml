@@ -17,7 +17,7 @@ effects:
   - {type: damage, dice: 2d4, element: fire}
   - {type: destroy_object}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 5, cooldown: 2}
 tags: [fire, spell, area, terrain]
 narrative:
   concept: 一發爆破轟開擋路的箱桶與矮牆，順便把站在旁邊的人炸飛
