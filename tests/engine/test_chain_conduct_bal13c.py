@@ -189,4 +189,4 @@ def test_a_blocked_conduct_writes_one_log_line_and_deals_nothing() -> None:
     assert _conducted(third.events) == [U2]
     assert third.state.units[U3].hp == first.state.units[U3].hp
     text = "".join(describe_event(e, third.state) or "" for e in third.events)
-    assert "已受過本輪擴散" in text
+    assert "這一輪已經被擴散打過" in text

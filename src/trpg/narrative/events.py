@@ -406,7 +406,7 @@ _FIZZLE_TEXT = {
 
 @_handles(ConductBlocked)
 def _conduct_blocked(e: ConductBlocked, v: _View) -> str:
-    return f"  ⚡ {v.name[e.unit_id]} 已受過本輪擴散（每輪最多一次），這次的擴散沒有傷害"
+    return f"  ⚡ {v.name[e.unit_id]} 這一輪已經被擴散打過，這次不受傷害"
 
 
 @_handles(EffectFizzled)
