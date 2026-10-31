@@ -1,0 +1,84 @@
+section,item,value,unit,n,target,status,deviation,note
+maps,bridge_chasm 我方勝率,60.000,%,30,35–65%,✓,0.000,平手 0
+maps,bridge_chasm 平均輪數,4.367,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,cliff_outpost 我方勝率,63.333,%,30,35–65%,✓,0.000,平手 0
+maps,cliff_outpost 平均輪數,4.300,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,dark_forest 我方勝率,83.333,%,30,35–65%,⚠,0.611,平手 0
+maps,dark_forest 平均輪數,4.633,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,frozen_lake 我方勝率,73.333,%,30,35–65%,⚠,0.278,平手 0
+maps,frozen_lake 平均輪數,4.667,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,lava_crossing 我方勝率,66.667,%,30,35–65%,⚠,0.056,平手 0
+maps,lava_crossing 平均輪數,4.700,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,narrow_halls 我方勝率,63.333,%,30,35–65%,✓,0.000,平手 0
+maps,narrow_halls 平均輪數,4.467,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,oil_depot 我方勝率,63.333,%,30,35–65%,✓,0.000,平手 0
+maps,oil_depot 平均輪數,4.433,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,open_plain 我方勝率,43.333,%,30,35–65%,✓,0.000,平手 0
+maps,open_plain 平均輪數,4.333,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,ruined_fort 我方勝率,33.333,%,30,35–65%,⚠,0.056,平手 0
+maps,ruined_fort 平均輪數,4.200,輪,30,4–6 輪,✓,0.000,一般遭遇
+maps,swamp 我方勝率,66.667,%,30,35–65%,⚠,0.056,平手 0
+maps,swamp 平均輪數,3.633,輪,30,4–6 輪,⚠,0.183,一般遭遇
+matrix,build_push 勝率,56.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 7.9
+matrix,build_push 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_fire 勝率,79.000,%,100,35–65%,⚠,0.467,偏強；英雄 DPR 14.6
+matrix,build_fire 前段類型數,7.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_storm 勝率,85.000,%,100,35–65%,⚠,0.667,偏強；英雄 DPR 31.8
+matrix,build_storm 前段類型數,8.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_tank 勝率,50.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 3.3
+matrix,build_tank 前段類型數,2.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_ranged 勝率,55.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 12.1
+matrix,build_ranged 前段類型數,2.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_assassin 勝率,34.000,%,100,35–65%,⚠,0.033,偏弱；英雄 DPR 7.5
+matrix,build_assassin 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_support 勝率,60.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 6.3
+matrix,build_support 前段類型數,1.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_healer 勝率,76.000,%,100,35–65%,⚠,0.367,偏強；英雄 DPR 2.8
+matrix,build_healer 前段類型數,7.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_warlock 勝率,65.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 18.5
+matrix,build_warlock 前段類型數,5.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_guardian 勝率,45.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 3.7
+matrix,build_guardian 前段類型數,1.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_striker 勝率,54.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 12.7
+matrix,build_striker 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_trapper 勝率,54.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 6.9
+matrix,build_trapper 前段類型數,1.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_charger 勝率,47.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 7.4
+matrix,build_charger 前段類型數,1.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_banisher 勝率,53.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 14.8
+matrix,build_banisher 前段類型數,2.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_summoner 勝率,74.000,%,100,35–65%,⚠,0.300,偏強；英雄 DPR 9.6
+matrix,build_summoner 前段類型數,6.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_gambler 勝率,44.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 7.0
+matrix,build_gambler 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_seer 勝率,47.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 8.9
+matrix,build_seer 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_bomber 勝率,50.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 12.6
+matrix,build_bomber 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_winged 勝率,39.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 7.2
+matrix,build_winged 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,build_telekinesis 勝率,73.000,%,100,35–65%,⚠,0.267,偏強；英雄 DPR 11.1
+matrix,build_telekinesis 前段類型數,6.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_wallburn 勝率,52.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 8.8
+matrix,build_wallburn 前段類型數,1.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_detonator 勝率,70.000,%,100,35–65%,⚠,0.167,偏強；英雄 DPR 21.2
+matrix,build_detonator 前段類型數,6.000,種,8,1–7 種（共 8）,✓,0.000,
+matrix,build_runeweaver 勝率,46.000,%,100,35–65%,✓,0.000,正常；英雄 DPR 10.6
+matrix,build_runeweaver 前段類型數,0.000,種,8,1–7 種（共 8）,⚠,0.500,
+matrix,標準1：所有類型都前段的 build 數,1.000,個,23,0（6.8 標準）,⚠,0.333,build_storm
+matrix,標準2：沒有任何前段類型的 build 數,8.000,個,23,0（6.8 標準）,⚠,2.667,build_push、build_assassin、build_striker、build_gambler、build_seer、build_bomber、build_winged、build_runeweaver
+resources,build_skill_archer × single 法力不足回合,0.000,%,232,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 88%
+resources,build_attack_archer × single 法力不足回合,0.000,%,169,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 78%
+resources,build_summoner × single 法力不足回合,0.000,%,179,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 90%
+resources,build_push × single 法力不足回合,0.000,%,242,≤ 20%（參考）,✓,0.000,耐力不足 18%；英雄勝率 62%
+resources,build_fire × single 法力不足回合,5.325,%,169,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 92%
+resources,build_skill_archer × area 法力不足回合,0.000,%,128,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 92%
+resources,build_attack_archer × area 法力不足回合,0.000,%,118,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 100%
+resources,build_summoner × area 法力不足回合,0.000,%,123,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 88%
+resources,build_push × area 法力不足回合,0.000,%,147,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 92%
+resources,build_fire × area 法力不足回合,0.000,%,126,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 100%
+resources,build_skill_archer × boss 法力不足回合,0.000,%,196,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 38%
+resources,build_attack_archer × boss 法力不足回合,0.000,%,176,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 32%
+resources,build_summoner × boss 法力不足回合,19.398,%,299,≤ 20%（參考）,✓,0.000,耐力不足 0%；英雄勝率 65%
+resources,build_push × boss 法力不足回合,0.000,%,281,≤ 20%（參考）,✓,0.000,耐力不足 16%；英雄勝率 2%
+resources,build_fire × boss 法力不足回合,25.087,%,287,≤ 20%（參考）,⚠,0.254,耐力不足 0%；英雄勝率 62%

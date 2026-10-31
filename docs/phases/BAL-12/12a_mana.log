@@ -1,0 +1,4 @@
+[   34.4s] baseline
+[   66.4s] @build:build_fire:mana*0.9;@build:build_summoner:mana*0.9
+[   98.8s] @build:build_fire:mana*0.8;@build:build_summoner:mana*0.8
+[  130.7s] skill_fire_bolt:mana=-1;skill_ashen_oath:mana=-2;skill_gravity_burst:mana=-1;skill_summon_spirit:mana=-2

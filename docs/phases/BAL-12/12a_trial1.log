@@ -1,0 +1,20 @@
+[   92.7s] baseline
+[  190.7s] skill_shadow_ambush,skill_retreating_slash,skill_pick_off,skill_shadow_backstab,skill_ambush_stab,skill_pincer_strike:dmg=1300;skill_tiger_charge,skill_decoy_swap,skill_shadow_whirl,skill_bull_rush:dmg=1300;skill_blood_sacrifice,skill_all_in,skill_wild_blade,skill_berserker_rage,skill_reckless_lunge,skill_first_strike:dmg=1300;skill_life_drain:dmg=1500;skill_hex_bolt,skill_dispel_magic,skill_blessing_thief:dmg=1500
+[  289.2s] skill_shadow_ambush,skill_retreating_slash,skill_pick_off,skill_shadow_backstab,skill_ambush_stab,skill_pincer_strike:dmg=1600;skill_tiger_charge,skill_decoy_swap,skill_shadow_whirl,skill_bull_rush:dmg=1600;skill_blood_sacrifice,skill_all_in,skill_wild_blade,skill_berserker_rage,skill_reckless_lunge,skill_first_strike:dmg=1600;skill_life_drain:dmg=2000;skill_hex_bolt,skill_dispel_magic,skill_blessing_thief:dmg=2000
+Traceback (most recent call last):
+  File "F:\PythonProject\LLM-MMO-TRPG\.claude\worktrees\agent-a84c124dbe72fadfe\scripts\skill_diagnosis.py", line 316, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "F:\PythonProject\LLM-MMO-TRPG\.claude\worktrees\agent-a84c124dbe72fadfe\scripts\skill_diagnosis.py", line 312, in main
+    return int(args.fn(args))
+               ^^^^^^^^^^^^^
+  File "F:\PythonProject\LLM-MMO-TRPG\.claude\worktrees\agent-a84c124dbe72fadfe\scripts\skill_diagnosis.py", line 237, in cmd_trial
+    library = with_edits(base, parse_edits(edit_text))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\PythonProject\LLM-MMO-TRPG\.claude\worktrees\agent-a84c124dbe72fadfe\scripts\skill_diagnosis.py", line 114, in with_edits
+    for skill_id in select_skills(library, selector):
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\PythonProject\LLM-MMO-TRPG\.claude\worktrees\agent-a84c124dbe72fadfe\scripts\skill_diagnosis.py", line 96, in select_skills
+    hero = library.builds.by_id()[selector.removeprefix("@build:")].hero
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'build_assassin,'
