@@ -1071,15 +1071,33 @@ def ladder_chunk(
     return list(coverage.scan_chunk(library, task))
 
 
-type CoverageKey = tuple[str, str, int]
+type CoverageKey = tuple[str, str, int, int]
+"""（來源, 技能, 角色階級, 第幾個同名）——白板配方在不同階級、種類可能同 ID，用出現順序區分。"""
+
+
+def _keyed[V](items: Sequence[tuple[str, str, int, V]]) -> dict[CoverageKey, V]:
+    seen: Counter[tuple[str, str, int]] = Counter()
+    out: dict[CoverageKey, V] = {}
+    for origin, skill_id, tier, value in items:
+        base = (origin, skill_id, tier)
+        out[(*base, seen[base])] = value
+        seen[base] += 1
+    return out
 
 
 def read_coverage(path: str) -> dict[CoverageKey, tuple[int, int]]:
     with Path(path).open(encoding="utf-8", newline="") as fh:
-        return {
-            (r["origin"], r["skill_id"], int(r["role_tier"])): (int(r["n1_min"]), int(r["n2_min"]))
-            for r in csv.DictReader(fh)
-        }
+        return _keyed(
+            [
+                (
+                    r["origin"],
+                    r["skill_id"],
+                    int(r["role_tier"]),
+                    (int(r["n1_min"]), int(r["n2_min"])),
+                )
+                for r in csv.DictReader(fh)
+            ]
+        )
 
 
 def report_ladder(
@@ -1320,8 +1338,8 @@ def _cmd_ladder(args: argparse.Namespace, library: ContentLibrary) -> list[str]:
     tasks = [(c, args.seeds) for c in _chunks(subjects, args.jobs)]
     parts = run_tasks(ladder_chunk, (args.override, library), tasks, jobs=args.jobs)
     rows = sorted((r for p in parts for r in p), key=lambda r: (r.origin, r.skill_id, r.role_tier))
-    after = {(r.origin, r.skill_id, r.role_tier): (r.n1_min, r.n2_min) for r in rows}
-    groups = {(r.origin, r.skill_id, r.role_tier): _group_of(r, library) for r in rows}
+    after = _keyed([(r.origin, r.skill_id, r.role_tier, (r.n1_min, r.n2_min)) for r in rows])
+    groups = _keyed([(r.origin, r.skill_id, r.role_tier, _group_of(r, library)) for r in rows])
     _write_csv(args.csv, coverage.to_csv(rows))
     out = [f"覆寫 `{args.override}`（{OVERRIDES[args.override].note}）；{len(rows)} 列。\n"]
     if args.base:

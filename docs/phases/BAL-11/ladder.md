@@ -15,8 +15,11 @@
 | builtin 姿態 | 6 | 0 → 0 | 0 → 0 | 0 → 0 |
 | builtin 姿態（形態） | 24 | 24 → 24 | 24 → 24 | 24 → 24 |
 | builtin 複合技 | 22 | 1 → 0 | 0 → 0 | 1 → 0 |
-| whiteboard active | 3 | 3 → 3 | 0 → 0 | 3 → 3 |
-| whiteboard reaction | 15 | 3 → 3 | 1 → 1 | 3 → 3 |
+| whiteboard active | 33 | 4 → 4 | 0 → 0 | 4 → 4 |
+| whiteboard passive | 33 | 18 → 18 | 3 → 3 | 18 → 18 |
+| whiteboard reaction | 36 | 4 → 4 | 1 → 1 | 4 → 4 |
+| whiteboard 修正型被動 | 3 | 0 → 0 | 0 → 0 | 0 → 0 |
+| whiteboard 姿態 | 3 | 3 → 3 | 1 → 1 | 3 → 3 |
 
 選項數有變的列 18；脫離不足 3、新進不足 0。
 
