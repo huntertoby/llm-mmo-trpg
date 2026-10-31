@@ -214,6 +214,11 @@ profiles:
     description_zh: 同莽夫，但移動時偏好能與友方夾擊敵人的位置（3D-8c；其餘權重與 brute 相同，初值未經模擬）。
     player_description_zh: 衝向敵人，並且找機會和隊友一前一後夾擊同一個敵人。
     weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, stamina_permille: 500, cooldown: 1, flank: 3, reach_spacing: 7, knock_angle: 2}
+  - id: assassin
+    name_zh: 刺客
+    description_zh: 同夾擊者，但打完會退出敵人堆：2 格內的敵人扣分、背對敵人與落單被圍扣更多，偏好瞬步與背後（BAL-12d，初值）。
+    player_description_zh: 找機會夾擊或繞到背後下手，打完就拉開距離，不留在敵人堆裡。
+    weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, keep_distance: 30, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, stamina_permille: 500, cooldown: 1, flank: 3, reach_spacing: 7, knock_angle: 2, shadowstep: 6, shadowstep_behind: 3, backstab: 6, back_exposed: 6}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
