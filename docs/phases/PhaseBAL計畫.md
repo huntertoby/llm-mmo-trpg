@@ -172,3 +172,5 @@
 2. #78：雷電沿 water 格或導電物擴散時，同一輪內同一單位最多受一次擴散傷害（不論幾次雷擊、幾個施放者）；直接命中不算擴散。
 3. 擴散倍率改 500‰（BAL-13a 原型，`content/interactions.yaml` 兩條 `lightning_conducts_*`；本段一起套，因為 4 個 engine 擴散測試寫死 1000‰ 的數值，要改成讀 content 或明確用測試用倍率）；套用後 storm 掉到 70% 以下，就改回 1000‰ 再量一次。
 **驗收**：重量 storm 與其他用 chain／雷的 build（全矩陣新判定）；`LOG_FORMAT`／快照照慣例；ruff、format、mypy、lint-imports、相關 pytest（含 engine）、重播；報告 `docs/phases/BAL-13c報告.md`。排在 BAL-12e 合併後（兩段都改引擎）。
+
+**BAL-12f｜BAL-12e 收尾（玩法 PM 2026-10-31，06 6.34.9「BAL-12e 定」，`2583317e`）**：①沒有數值的白板升階後掉出預算窗下限時，升階重配豁免下限、驗證器不標過弱、不補償；②重複施加時強度跟著剩餘回合較長的實例，剩餘回合相同時取強度較高的。其餘（表面上限 6、> 6 不加回合可加強度、姿態屬性與增益代價不放大、強度 25‰／上限 2000‰）照 BAL-12e 現狀。驗收：測試、快照（若變）、ruff、format、mypy、lint-imports、相關 pytest、重播；報告附在 `BAL-12e報告.md` 末節。排在 BAL-13b 之後（agent 上限 2）。
