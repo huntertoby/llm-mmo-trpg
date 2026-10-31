@@ -67,7 +67,8 @@ status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6
 # 對敵人施加暈眩的收益仍用 status_values.stun（12）。BAL-8b 原型專用：自暈代價 12 → 5。
 # BAL-13d（AI 數值）：自身易傷 6 → 1（捨身突刺）。6 是「對敵人施加易傷」的價值；自己付的易傷有效 1 回合，BAL-13b 量到 gambler 英雄每輪受到約 13 點傷害，
 # ×25% ≈ 3.3 HP；自己的 HP 損失照 hp_cost 用 friendly_fire（莽夫 4）計 ≈ 13 分 ＝ damage 權重 10 × 1.3，取整為 1（原本 6 等於把 2 回合易傷當成自損 15 HP）。
-self_status_values: {stun: 5, vulnerable: 1}
+# BAL-13e（玩法 PM 2026-10-31）：自身易傷 1 → 3（BAL-13d 的 1 讓捨身突刺用太多、gambler 存活下降）。
+self_status_values: {stun: 5, vulnerable: 3}
 # ally_status_values（Phase 2D-1）：對友方（含自己）施加各增益的價值，同樣是「等值的傷害點數」，收益 =
 # 行為模式的 support 權重 × 價值 × 新增的持續比例。初值未經模擬（平衡階段再調）：再生約 1d4 × 3 回合的
 # 治療，護衛約 30% 的減傷、激昂與加速約一回合的額外輸出或走位。
