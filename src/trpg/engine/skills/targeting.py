@@ -1382,7 +1382,7 @@ def damage_parameters(
         permille = spec.attr_permille
         if permille is None:
             permille = core.spell_attr_multiplier_permille
-        dice, flat, scaled = spec.dice, 0, attr * permille
+        dice, flat, scaled = spec.dice, spec.flat_bonus or 0, attr * permille
         multiplier = _PERMILLE
     else:
         weapon = held_weapon(caster)

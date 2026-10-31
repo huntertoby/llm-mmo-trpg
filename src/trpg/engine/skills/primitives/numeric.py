@@ -125,6 +125,7 @@ def heal(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBas
             target_id=unit.id,
             source_id=cast.caster.id,
             dice=spec.dice,
+            flat=spec.flat_bonus or 0,
             scaled_permille=scaled,
             multiplier_permille=cast.heal_multiplier(self_heal=effect.affects == "self", spec=spec),
         )
@@ -140,6 +141,7 @@ def shield(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectB
             target_id=unit.id,
             source_id=cast.caster.id,
             dice=spec.dice,
+            flat=spec.flat_bonus or 0,
             scaled_permille=scaled,
             multiplier_permille=multiplier,
             duration=spec.duration,

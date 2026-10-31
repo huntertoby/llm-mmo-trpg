@@ -41,6 +41,7 @@ _TOP_ONLY_PARAMS = frozenset(
         "explode",
         "scaling",
         "lifesteal_permille",
+        "flat_bonus",
         "split_heal",
         "on_kill",
         "spread",

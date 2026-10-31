@@ -75,6 +75,7 @@ PARAM_TEXT: dict[str, str] = {
     "knock_prone": "另外擊倒",
     "landing": "落點",
     "lifesteal_permille": "吸血（‰）",
+    "flat_bonus": "固定值加成",
     "lose": "失敗時的效果",
     "max_hp_permille": "召喚物最大 HP 加成（‰）",
     "magnitude_permille": "姿態幅度（‰）",
