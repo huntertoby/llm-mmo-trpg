@@ -241,7 +241,7 @@ primitives:
     position: first
     active_only: true
     budget_basis: fixed
-    base_points: 4
+    base_points: 3   # BAL-13d：4 → 3（瞬步背刺每 AP 傷害 ≥ 普攻 1.2 倍；scripts/bal13d_backstab.py）
     acts_on: caster
     allowed_shapes: [single, unit_then_tile]
     params:

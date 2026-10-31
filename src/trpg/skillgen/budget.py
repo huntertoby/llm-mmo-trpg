@@ -1141,8 +1141,9 @@ def _shape_parts(
         shape = rules.shapes.by_id()[skill.trap.shape]
         return Fraction(shape.budget.permille_for({}), _PERMILLE), Fraction(1)
     shape = rules.shapes.by_id()[skill.shape.type]
-    multiplier = Fraction(shape.budget.permille_for(skill.shape.param_values()), _PERMILLE)
-    return multiplier, range_coefficient(skill.shape, library.budget)[1]
+    # 連鎖的非威力效果（狀態等）不衰減，維持衰減前的倍率（BAL-13d，06 6.5「BAL-13c 定」）
+    permille = shape.budget.permille_for(skill.shape.param_values(), primitive.id)
+    return Fraction(permille, _PERMILLE), range_coefficient(skill.shape, library.budget)[1]
 
 
 def _shape_multiplier(
@@ -1196,7 +1197,8 @@ def _condition_multiplier(
     definition = conditions.get(condition_type)
     if definition is None:
         raise BudgetError(f"未知的條件 {condition_type!r}")
-    best = Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    permille = definition.budget_permille or budget.condition_permille[definition.harshness]
+    best = Fraction(permille, _PERMILLE)
     for part in any_of or ():
         best = max(best, _condition_multiplier(part.type, conditions, budget))
     return best

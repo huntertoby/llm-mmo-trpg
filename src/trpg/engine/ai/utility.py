@@ -112,6 +112,7 @@ from trpg.engine.ai.race import race_ai_action
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.ai.self_costs import self_cost_gate
+from trpg.engine.ai.stance import stance_cancel, stance_entry_blocked
 from trpg.engine.ai.summon import (
     auto_mode_action,
     blocker_gains,
@@ -2292,9 +2293,12 @@ class UtilityAI:
         """每個技能依便宜的估計（:func:`skill_estimate`）只保留前 ``skill_candidates`` 個選取，
         回傳它們在 ``actions`` 的索引（遞增）。"""
         by_skill: dict[str, list[tuple[Fraction, int]]] = {}
+        stance = self.profile_for(unit).stance
         for index, action in enumerate(actions):
             if not isinstance(action, UseSkill):
                 continue
+            if stance_entry_blocked(state, unit, state.ruleset.skill_def(action.skill_id), stance):
+                continue  # 有代價的姿態：敵人還不在可達範圍內、或血量已低（BAL-13d）
             est = skill_estimate(
                 state, unit, action, areas[id(action)], scene, w, before, trap=trap
             )
@@ -2316,6 +2320,9 @@ class UtilityAI:
         racial = race_ai_action(state, unit)  # 種族技的使用條件（Phase 3R-2）
         if racial is not None:
             return racial
+        cancel = stance_cancel(state, unit, self.profile_for(unit).stance)
+        if cancel is not None and cancel in legal_actions(state):  # 有代價的姿態（BAL-13d）
+            return cancel
         ranked = self.rank(state)
         taunter = _taunter(state, unit)
         if taunter is not None:

@@ -22,6 +22,7 @@ from trpg.engine.effects.models import (
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
     CheckRolled,
+    ConductBlocked,
     DamageDealt,
     DamageRedirected,
     DeathCheated,
@@ -101,12 +102,24 @@ def _take_conduct(state: BattleState, unit: UnitState, effect: DamageEffect) -> 
     return True
 
 
+def _skipped_damage(
+    ctx: Ctx, unit: UnitState | None, effect: DamageEffect
+) -> list[EventBase] | None:
+    """不結算的傷害：目標不在或已倒下（沒有事件）；本輪已受過擴散（只發 ``conduct_blocked``，
+    BAL-13d）。要結算時回傳 ``None``。"""
+    if unit is None or not unit.alive:
+        return []
+    if not _take_conduct(ctx.state, unit, effect):
+        return [ctx.emit(ConductBlocked, unit_id=unit.id, source_id=effect.source_id)]
+    return None
+
+
 @register_effect("damage")
 def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, DamageEffect)
-    unit = ctx.state.units.get(effect.target_id)
-    if unit is None or not unit.alive or not _take_conduct(ctx.state, unit, effect):
-        return []
+    skipped = _skipped_damage(ctx, unit := ctx.state.units.get(effect.target_id), effect)
+    if skipped is not None or unit is None:
+        return skipped or []
     rolls: tuple[int, ...] = ()
     exploded = 0
     mod_ppm = PPM

@@ -229,9 +229,9 @@ def _outcome_effects(  # noqa: PLR0911
             for tile in conducting_tiles(state, xy)
             if (unit := state.unit_at(*tile)) is not None
             and unit.id != exclude_unit
-            and unit.conducted_round != state.round  # 本輪已受過擴散（BAL-13c，#78；結算時再檢查）
             and not conduction_immune(state, unit)  # 晶能義體人站在水上不導電（Phase 3R-2）
         ]
+        # 本輪已受過擴散的單位由結算時擋下並寫一行紀錄（BAL-13c #78、BAL-13d）
         return [
             DamageEffect(
                 depth=depth,

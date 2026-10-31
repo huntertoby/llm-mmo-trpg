@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import Any
 
 import pytest
@@ -543,6 +544,19 @@ def test_demo_battles_replay_exactly(build: str, map_id: str, seed: int) -> None
     assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]
 
 
+def _with_hero_profile(lib: Any, build: str, profile: str | None) -> Any:
+    """把 build 英雄的行為模式換成 ``profile``（``None`` 為不換）。"""
+    if profile is None:
+        return lib
+    builds = tuple(
+        b.model_copy(update={"hero": b.hero.model_copy(update={"ai_profile": profile})})
+        if b.id == build
+        else b
+        for b in lib.builds.builds
+    )
+    return dataclasses.replace(lib, builds=lib.builds.model_copy(update={"builds": builds}))
+
+
 @pytest.mark.parametrize(
     ("build", "seed", "check"),
     [
@@ -558,7 +572,10 @@ def test_demo_battles_replay_exactly(build: str, map_id: str, seed: int) -> None
 def test_the_ai_uses_the_resource_skills_in_a_real_battle(
     build: str, seed: int, check: Any
 ) -> None:
-    lib, allies = build_allies(library(), [build])
+    # BAL-13d：seer 改用 seer 模式（不重視替自己回復，種子 0～79 都不再對自己回復），這裡量的是
+    # 「AI 會用回復技」，所以 seer 照舊用狡猾模式
+    profile = "cunning" if build == "build_seer" else None
+    lib, allies = build_allies(_with_hero_profile(library(), build, profile), [build])
     _, enemies = default_lineup(lib, "open_plain")
     setup = build_setup(lib, "open_plain", allies, enemies, max_rounds=30)
     run = run_battle(setup, seed, UtilityAI(lib.ai_profiles))

@@ -33,6 +33,7 @@ __all__ = [
     "CheckRolled",
     "Collided",
     "CollisionObstacle",
+    "ConductBlocked",
     "DamageCause",
     "DamageDealt",
     "DamageRedirected",
@@ -476,6 +477,15 @@ class AttackRolled(EventBase):
     ``backstab_crit_range_bonus``）。"""
     ambush: int = 0
     """潛行偷襲的命中加值（Phase 3D-8d；攻擊者帶 ``concealed`` 狀態；0 為沒有）。"""
+
+
+class ConductBlocked(EventBase):
+    """雷電擴散被「每輪一次」擋下（BAL-13d，#78）：``unit_id`` 本輪已受過擴散傷害，這次的擴散不結算
+    （不改數值，只讓戰鬥紀錄看得到）。``source_id`` 是引發擴散的單位。"""
+
+    type: Literal["conduct_blocked"] = "conduct_blocked"
+    unit_id: UnitId
+    source_id: UnitId | None = None
 
 
 class DamageDealt(EventBase):
@@ -1864,6 +1874,7 @@ type Event = Annotated[
     | EnteredDeadlyTerrain
     | AttackRolled
     | DamageDealt
+    | ConductBlocked
     | Healed
     | ShieldGained
     | ShieldAbsorbed

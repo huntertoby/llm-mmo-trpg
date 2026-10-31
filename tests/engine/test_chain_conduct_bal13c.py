@@ -19,7 +19,7 @@ from tests.engine.helpers import (
 from tests.engine.skill_helpers import FLAT7, U1, U2, U3, U4, U5, script_rolls
 from trpg.engine import BattleState, UseSkill, resolve
 from trpg.engine.effects import DamageEffect, run_effects
-from trpg.engine.events import DamageDealt, Healed, ShieldGained, StatusApplied
+from trpg.engine.events import ConductBlocked, DamageDealt, Healed, ShieldGained, StatusApplied
 from trpg.shared.types import Element, Team, UnitId
 
 SID = "skill_t_chain"
@@ -175,3 +175,18 @@ def test_two_strikes_in_one_batch_conduct_once() -> None:
     assert _conducted(result.events) == [U3, U4]
     assert all(result.state.units[u].conducted_round == result.state.round for u in (U3, U4))
     assert result.state.units[U2].conducted_round == 0  # 直接命中不算擴散
+
+
+def test_a_blocked_conduct_writes_one_log_line_and_deals_nothing() -> None:
+    """BAL-13d（第 8 項）：被每輪一次擋下的擴散發出 ``conduct_blocked``，紀錄寫一行，數值不變。"""
+    from trpg.narrative.events import describe_event  # noqa: PLC0415
+
+    first = run_effects(_pool(), [_bolt(U2)])
+    assert [e for e in first.events if isinstance(e, ConductBlocked)] == []
+    third = run_effects(first.state, [_bolt(U4)])
+    blocked = sorted(e.unit_id for e in third.events if isinstance(e, ConductBlocked))
+    assert blocked == [U3]  # U2 沒受過擴散（受一次）；U3 本輪已受過
+    assert _conducted(third.events) == [U2]
+    assert third.state.units[U3].hp == first.state.units[U3].hp
+    text = "".join(describe_event(e, third.state) or "" for e in third.events)
+    assert "已受過本輪擴散" in text

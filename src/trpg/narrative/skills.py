@@ -148,7 +148,15 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     for key, value in shape.param_values().items():
         text = "武器射程" if value == "weapon" else str(value)
         parts.append(f"{labels[key]} {text}")
+    falloff = library.ruleset.core.chain_falloff_permille
+    if shape.type == "chain" and falloff:  # 連鎖衰減（BAL-13d，06 6.5「BAL-13c 定」）
+        parts.append(f"每跳 −{_percent(falloff)}%")
     return f"{name}（{'，'.join(parts)}）" if parts else name
+
+
+def _percent(permille: int) -> str:
+    whole, rest = divmod(permille, 10)
+    return f"{whole}.{rest}" if rest else str(whole)
 
 
 def skill_shape_text(library: ContentLibrary, skill: SkillDef) -> str:

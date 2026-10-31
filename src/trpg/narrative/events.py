@@ -25,6 +25,7 @@ from trpg.engine.events import (
     ChargeActivated,
     CheckRolled,
     Collided,
+    ConductBlocked,
     DamageDealt,
     DamageRedirected,
     DeathCheated,
@@ -401,6 +402,11 @@ _FIZZLE_TEXT = {
     "stonewall": "  穩若磐石：擊不倒",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
 }
+
+
+@_handles(ConductBlocked)
+def _conduct_blocked(e: ConductBlocked, v: _View) -> str:
+    return f"  ⚡ {v.name[e.unit_id]} 已受過本輪擴散（每輪最多一次），這次的擴散沒有傷害"
 
 
 @_handles(EffectFizzled)

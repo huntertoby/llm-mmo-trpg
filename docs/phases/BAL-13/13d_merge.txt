@@ -1,0 +1,53 @@
+build              基準勝率  新勝率   差
+build_fire            79.0    79.0   +0.0 *
+build_summoner        74.3    74.3   +0.0 *
+build_healer          73.3    73.3   +0.0 *
+build_storm           79.7    73.0   -6.7 *
+build_detonator       71.3    71.3   +0.0 *
+build_warlock         69.0    69.0   +0.0 *
+build_telekinesis     69.0    69.0   +0.0 *
+build_support         64.3    64.3   +0.0 *
+build_push            59.3    60.3   +1.0 *
+build_seer            49.0    60.0  +11.0 *
+build_banisher        59.0    59.0   +0.0 *
+build_trapper         57.3    57.3   +0.0 *
+build_striker         56.3    56.3   +0.0 *
+build_ranged          54.7    54.7   +0.0 *
+build_bomber          54.7    54.7   +0.0 *
+build_wallburn        52.3    52.3   +0.0 *
+build_guardian        48.3    48.3   +0.0 *
+build_tank            47.7    47.7   +0.0 *
+build_charger         47.0    47.0   +0.0 *
+build_runeweaver      47.0    46.3   -0.7 *
+build_gambler         44.3    41.0   -3.3 *
+build_assassin        39.0    40.0   +1.0 *
+build_winged          39.7    39.7   +0.0 *
+
+top_count=7
+全類型前段：['build_storm']
+無前段：['build_assassin', 'build_striker', 'build_charger', 'build_banisher', 'build_gambler', 'build_winged', 'build_wallburn', 'build_runeweaver']
+（基準）全類型前段：['build_storm']
+（基準）無前段：['build_assassin', 'build_striker', 'build_charger', 'build_banisher', 'build_gambler', 'build_seer', 'build_winged', 'build_wallburn', 'build_runeweaver']
+build_assassin：bridge_chasm:21  ruined_heights:17  forest:18  frozen_lake:23  corridor:19  oil_depot:23  open_plain:22  swamp:16
+build_banisher：bridge_chasm:10  ruined_heights:9  forest:17  frozen_lake:16  corridor:11  oil_depot:8  open_plain:12  swamp:15
+build_bomber：bridge_chasm:6*  ruined_heights:14  forest:9  frozen_lake:21  corridor:15  oil_depot:18  open_plain:17  swamp:21
+build_charger：bridge_chasm:18  ruined_heights:20  forest:20  frozen_lake:10  corridor:18  oil_depot:20  open_plain:19  swamp:20
+build_detonator：bridge_chasm:4*  ruined_heights:8  forest:3*  frozen_lake:2*  corridor:6*  oil_depot:7*  open_plain:2*  swamp:4*
+build_fire：bridge_chasm:2*  ruined_heights:3*  forest:5*  frozen_lake:8  corridor:3*  oil_depot:1*  open_plain:3*  swamp:2*
+build_gambler：bridge_chasm:22  ruined_heights:19  forest:23  frozen_lake:15  corridor:22  oil_depot:13  open_plain:20  swamp:18
+build_guardian：bridge_chasm:19  ruined_heights:23  forest:14  frozen_lake:22  corridor:21  oil_depot:16  open_plain:8  swamp:7*
+build_healer：bridge_chasm:11  ruined_heights:4*  forest:1*  frozen_lake:3*  corridor:1*  oil_depot:3*  open_plain:1*  swamp:1*
+build_push：bridge_chasm:15  ruined_heights:11  forest:7*  frozen_lake:18  corridor:13  oil_depot:9  open_plain:11  swamp:11
+build_ranged：bridge_chasm:5*  ruined_heights:18  forest:19  frozen_lake:7*  corridor:8  oil_depot:15  open_plain:21  swamp:14
+build_runeweaver：bridge_chasm:20  ruined_heights:16  forest:10  frozen_lake:9  corridor:17  oil_depot:22  open_plain:16  swamp:22
+build_seer：bridge_chasm:7*  ruined_heights:10  forest:11  frozen_lake:12  corridor:9  oil_depot:14  open_plain:13  swamp:19
+build_storm：bridge_chasm:1*  ruined_heights:7*  forest:6*  frozen_lake:5*  corridor:5*  oil_depot:4*  open_plain:5*  swamp:3*
+build_striker：bridge_chasm:14  ruined_heights:13  forest:16  frozen_lake:14  corridor:12  oil_depot:17  open_plain:15  swamp:13
+build_summoner：bridge_chasm:3*  ruined_heights:1*  forest:2*  frozen_lake:1*  corridor:2*  oil_depot:6*  open_plain:10  swamp:10
+build_support：bridge_chasm:12  ruined_heights:6*  forest:8  frozen_lake:6*  corridor:14  oil_depot:12  open_plain:7*  swamp:5*
+build_tank：bridge_chasm:23  ruined_heights:21  forest:13  frozen_lake:13  corridor:23  oil_depot:10  open_plain:9  swamp:6*
+build_telekinesis：bridge_chasm:9  ruined_heights:2*  forest:21  frozen_lake:17  corridor:4*  oil_depot:2*  open_plain:6*  swamp:12
+build_trapper：bridge_chasm:13  ruined_heights:15  forest:12  frozen_lake:4*  corridor:10  oil_depot:19  open_plain:18  swamp:8
+build_wallburn：bridge_chasm:17  ruined_heights:12  forest:15  frozen_lake:20  corridor:16  oil_depot:11  open_plain:14  swamp:17
+build_warlock：bridge_chasm:8  ruined_heights:5*  forest:4*  frozen_lake:11  corridor:7*  oil_depot:5*  open_plain:4*  swamp:9
+build_winged：bridge_chasm:16  ruined_heights:22  forest:22  frozen_lake:19  corridor:20  oil_depot:21  open_plain:23  swamp:23
