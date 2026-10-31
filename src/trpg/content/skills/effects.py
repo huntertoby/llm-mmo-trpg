@@ -15,6 +15,7 @@ from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
+    _MAX_FLAT_BONUS,
     _MAX_MULTIPLIER_PERMILLE,
     _PERMILLE,
     EFFECT_NON_PARAM_FIELDS,
@@ -181,6 +182,10 @@ class EffectSpec(ContentModel):
     """``damage`` 專用（Phase 3-54b，06 6.33）：風元素傷害的元素擴散格數（1 或 2；省略＝
     ``core.wind.spread_distance``，預設 1）。只有 ``element: wind`` 的技能自己的傷害效果可以填；
     2 格的預算較貴（``wind_spread_permille``）。"""
+    flat_bonus: int | None = Field(default=None, ge=1, le=_MAX_FLAT_BONUS)
+    """``damage``、``heal``、``shield`` 專用（BAL-12b 定，06 6.34.4）：骰值之外的固定值加成
+    （骰值 ＋ n）。被動、反應的閃現「效果 +」在骰子一階跳過預算窗時用的細旋鈕；暴擊不加倍。只有技能
+    自己的效果可以用，傷害只限法術技；預算照骰子平均 ＋ n 計。"""
     split_heal: bool | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
     判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、

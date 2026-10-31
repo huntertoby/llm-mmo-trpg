@@ -151,7 +151,7 @@ def _why_active(op: str, skill: SkillDef) -> str:
         "terrain_area": "沒有升降地形效果",
         "multi_hit": "複合技／陷阱／無傷害／效果已滿",
         "followup": "複合技／陷阱／變奏／失手反噬／常駐／無傷害／禁用效果",
-        "light": "AP 已是 1" if (skill.ap_cost or 1) <= 1 else "其他",
+        "light": "AP 已是 1 且沒有冷卻／資源可減" if (skill.ap_cost or 1) <= 1 else "其他",
         "element": "沒有傷害效果／陷阱／效果已滿／元素已有",
         "kill_refund": "無傷害效果（或已有擊殺返還）",
         "summon_toughen": "不是單隻召喚",

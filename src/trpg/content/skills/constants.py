@@ -159,6 +159,12 @@ _PERMILLE = 1000
 _MAX_MULTIPLIER_PERMILLE = 10_000
 
 
+_MAX_FLAT_BONUS = 10
+FLAT_BONUS_EFFECTS = frozenset({"damage", "heal", "shield"})
+"""可以填 ``flat_bonus`` 的效果（BAL-12b；傷害只限法術技）。"""
+"""``damage.flat_bonus`` 的 schema 上限（BAL-12b；閃現實際只加 ``rules.trigger_flat_bonus``）。"""
+
+
 def _unique(ids: Iterable[str], what: str) -> None:
     dup = sorted(i for i, n in Counter(ids).items() if n > 1)
     if dup:

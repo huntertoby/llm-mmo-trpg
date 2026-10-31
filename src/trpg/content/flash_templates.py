@@ -92,6 +92,12 @@ class CompleteSkillRules(ContentModel):
     cap_permille: int = Field(default=150, ge=0, le=1000)
     """實際加上去的上限（06 6.34.6，玩法 PM ec73486f）：
     一步會超過時先用較細的旋鈕補，都不行才接受超過。"""
+    stop_over_permille: int | None = Field(default=None, ge=0, le=1000)
+    """BAL-12b 定（06 6.34.6）：都不行、要超過上限時，若會超過這個值，改成停在
+    +``budget_permille``‰ 以下最接近的那一階（只走上限內的步子停下的版本）；省略＝接受超過。"""
+    modifier_step: int | None = Field(default=None, ge=1, le=25)
+    """BAL-12b 定：完整技能的修正幅度（傷害、治療）改用每 ``modifier_step``‰ 一格的細階梯；
+    省略＝同升階重配的修正階梯。只用在完整技能。"""
     can_flash: bool = False
     can_reflash: bool = True
     summon_power_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
@@ -170,6 +176,19 @@ class FlashRules(ContentModel):
     followup_multiplier_step: int | None = Field(default=None, ge=1, le=100)
     """接續段強化類（BAL-10b 的 ``followup_*``）重調接續段武器倍率的細階梯間距（‰；3000‰ 以下，
     與原階梯合併；BAL-11b）。省略時用原階梯。"""
+    trigger_flat_bonus: int = Field(default=0, ge=0, le=10)
+    """被動、反應「效果 +」的細旋鈕（BAL-12b 定）：骰子重調不進預算窗時，法術傷害再試固定值
+    +1～+n（``damage.flat_bonus``）。0 ＝ 不用。"""
+    area_trap_shapes: tuple[str, ...] = ()
+    """「範圍 +1」用在陷阱時（BAL-12b 定）：陷阱觸發範圍（``trap.shape``）依序換到下一個；空 ＝ 陷阱
+    不改範圍（舊行為）。"""
+    area_tile_shapes: tuple[str, ...] = ()
+    """「範圍 +1」用在地面格（BAL-12b 定）：形狀依序換到下一個（例：指定格 → 十字）；空 ＝ 不改。"""
+    extend_effects: tuple[str, ...] = ()
+    """「延長」放寬的對象（BAL-12b 定）：原本的狀態、表面、區域延長不了時，這些效果的 ``duration``
+    ＋1（召喚物存活、障礙、刻印）；陷阱另看 ``extend_trap``。"""
+    extend_trap: bool = False
+    """「延長」也加陷阱持續回合（``trap.rounds`` ＋1，BAL-12b 定）。"""
     modifier_drawback_step: int = Field(default=100, ge=1, le=500)
     """``mod_cost``（代價減輕）：負的傷害、治療幅度（‰）往 0 減輕多少（BAL-10b）。"""
     form_magnitudes: tuple[int, ...] = tuple(range(1000, 2001, 50))

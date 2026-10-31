@@ -467,6 +467,7 @@ TOP_ONLY_DAMAGE_PARAMS: tuple[str, ...] = (
     "explode",
     "scaling",
     "lifesteal_permille",
+    "flat_bonus",
     "split_heal",
     "spread",
 )

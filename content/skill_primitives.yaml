@@ -85,6 +85,7 @@ primitives:
       on_kill: {llm_hint: "這個傷害擊倒敵人時給施放者的效果，只能對自己有益。", type: effects, description_zh: "技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）"}
       form_bonus_permille: {llm_hint: "施放者在形態中時，這個效果的數值多出的比例。", type: int, min: 1, max: 1000, description_zh: "在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)", knob: none}
       spread: {llm_hint: "風元素傷害把範圍內的火、冰、毒往風向擴大的格數（1 或 2；省略為 1）。", type: int, show_when: {element: wind}, min: 1, max: 2, description_zh: "元素擴散格數（Phase 3-54b）：只有風元素（element: wind）的技能自己的傷害效果可以填；風吹到的火、冰、毒表面與火、冰、毒、雷區域往風向擴大 1 或 2 格（省略＝core.yaml 的 wind.spread_distance，預設 1）；預算：傷害點數 × wind_spread_permille（2 格較貴）", knob: none}
+      flat_bonus: {llm_hint: "法術傷害在骰值之外多加的固定值。", type: int, min: 1, max: 10, description_zh: "固定值加成（BAL-12b 定）：只有法術技、技能自己的傷害效果可以填；傷害 ＝ 骰值 ＋ n ＋ 屬性加成，暴擊不加倍；預算：骰子平均 ＋ n。閃現的被動、反應「效果 +」用它當細旋鈕（rules.trigger_flat_bonus）", knob: none}
       split_heal: {llm_hint: "對敵人造成傷害的同時，用同樣的數值治療友方。", type: bool, true_only: true, allowed_skeletons: [aura, area], description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
@@ -96,6 +97,7 @@ primitives:
     budget_basis: dice_average
     params:
       dice: {llm_hint: "治療量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
+      flat_bonus: {llm_hint: "治療量在骰值之外多加的固定值。", type: int, min: 1, max: 10, description_zh: "固定值加成（BAL-12b 定）：只有技能自己的治療效果可以填；治療量 ＝ 骰值 ＋ n ＋ 屬性加成；預算：骰子平均 ＋ n", knob: none}
       form_bonus_permille: {llm_hint: "施放者在形態中時，這個效果的數值多出的比例。", type: int, min: 1, max: 1000, description_zh: "在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)", knob: none}
   - id: shield
     name_zh: 護盾
@@ -107,6 +109,7 @@ primitives:
     budget_basis: dice_average
     params:
       dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
+      flat_bonus: {llm_hint: "護盾量在骰值之外多加的固定值。", type: int, min: 1, max: 10, description_zh: "固定值加成（BAL-12b 定）：只有技能自己的護盾效果可以填；護盾量 ＝ 骰值 ＋ n ＋ 屬性加成；預算：骰子平均 ＋ n（再乘持續係數）", knob: none}
       duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合, knob: none}
       status: {llm_hint: "帶附帶效果的護盾狀態（省略＝一般護盾）。", type: status, description_zh: 帶附帶效果的護盾狀態（反傷、結束回復、破盾造水或標記）, knob: none}
   - id: cleanse

@@ -33,6 +33,17 @@ rules:
   # 接續段強化類的接續段武器倍率每 25‰（3000‰ 以下，原每 100）；升階重配、完整技能、形態幅度照舊
   modifier_potency_step: 10
   followup_multiplier_step: 25
+  # BAL-12b 定（玩法 PM 2026-10-31，06 6.34.4）：
+  #   trigger_flat_bonus  被動、反應「效果 +」骰子一階跳過預算窗時，法術傷害再試 +1 固定值（damage.flat_bonus）
+  #   area_trap_shapes    「範圍 +1」用在陷阱：觸發範圍依序換到下一個
+  #   area_tile_shapes    「範圍 +1」用在地面格：指定格 → 十字（半徑 +1）
+  #   extend_effects      「延長」原本的狀態／表面／區域延長不了時，改延長這些效果的回合（召喚物存活、障礙、刻印）
+  #   extend_trap         「延長」也加陷阱持續回合（trap.rounds +1）
+  trigger_flat_bonus: 1
+  area_trap_shapes: [single, cross, square3]
+  area_tile_shapes: [ground_tile, cross]
+  extend_effects: [summon, create_obstacle, inscribe]
+  extend_trap: true
   modifier_drawback_step: 100 # 代價減輕（mod_cost）：負的傷害／治療‰ 往 0 減輕多少
   # 收回家族（收束起，BAL-10d，06 6.34.4）的單發上限：一次施放對單一目標的期望傷害（治療／護盾同理）最多是
   # 同階、同 AP 單體技能預算（tier_budget × AP 係數）的這麼多‰（初值 3 倍）；超過的預算改成減費用，減不動就不出
@@ -48,6 +59,8 @@ rules:
     flashes: 3
     budget_permille: 120
     cap_permille: 150         # 實際加上去的上限；一步超過時先用較細的旋鈕補（06 6.34.6）
+    stop_over_permille: 200   # BAL-12b 定：都不行時若會超過 +200‰，改停在 +120‰ 以下最接近的一階
+    modifier_step: 5          # BAL-12b 定：完整技能的修正幅度每 5‰ 一格（只用在完整技能）
     can_flash: false
     can_reflash: true
     # +120‰ 怎麼加上去（3W-5b）：預算器的強度旋鈕（傷害、治療、護盾、推拉）照舊，召喚與姿態另外多一個旋鈕，
@@ -313,7 +326,8 @@ minor:
     op: light
     kinds: [active]
     prefix_zh: 輕巧
-    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低
+    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）
+    cost_fields: [cooldown, mana, stamina]   # BAL-12b 定：AP 已是 1 時依序試這些代價 −1
   # BAL-10c（玩法 PM 2026-10-31）：cost_fields 清空，變身姿態不出費用類（回到 BAL-2c）——姿態進入後一直持續，
   # 進入冷卻幾乎不是代價；多效果姿態只動姿態本體那個效果
   - id: stance_cost_light
