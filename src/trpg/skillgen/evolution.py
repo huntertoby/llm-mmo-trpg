@@ -44,7 +44,7 @@ from trpg.content.skill_evolution import EvolutionTemplate
 from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_parts import Knob, dice_ladder
+from trpg.skillgen.composer_parts import Knob, dice_ladder, set_knob_value
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.usage import SkillUsage
@@ -457,7 +457,7 @@ def _tuned(
     knobs += [Knob(k.index, k.field, k.values, k.weight) for k in effect_knobs]
     targets = [*trial, *extra]
     for knob in knobs:
-        targets[knob.index][knob.field] = knob.values[0]
+        set_knob_value(targets[knob.index], knob.field, knob.values[0])
     rarity = _rarity(attempt, trial, library)
     if rarity_rank(rarity) >= _LEGENDARY > rarity_rank(attempt["rarity"]):
         return None

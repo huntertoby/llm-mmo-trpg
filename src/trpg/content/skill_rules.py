@@ -255,8 +255,9 @@ class RetierGrowthRules(ContentModel):
     """升階時放大效果本身（Phase 3W-9b，06 6.34.9「升階時重算」；``skill_budget.yaml`` 的
     ``retier_growth``）。只用在點數固定（沒有骰子、倍率這類強度旋鈕）的技能升階時：
 
-    - ``stretch``：原語 → 參數 → 升階時可以放大到的上限（狀態、表面的持續回合）。只放大組合器本來
-      就有旋鈕的參數（硬控狀態的持續回合沒有旋鈕，不會被放大），而且只增不減。
+    - ``stretch``：原語 → 參數 → 升階時可以放大到的上限（狀態、表面的持續回合；BAL-12e 起 6）。只
+      放大組合器本來就有旋鈕的參數（硬控狀態的持續回合沒有旋鈕，不會被放大），而且只增不減；到上限
+      後數值型狀態與表面改加強度（``magnitude_step``／``magnitude_max``）。
     - ``area_shapes``：表面與升降地形放大格數時依序換的形狀（同一種選取方式，格數由少到多）。新形狀
       要符合角色階級（``min_character_tier`` 的形狀與升降地形格數表）。
     - ``max_extra_cooldown``：換成較大的形狀時，最多可以多加幾回合冷卻（互斥規則「無冷卻的大範圍」、
@@ -264,6 +265,11 @@ class RetierGrowthRules(ContentModel):
     """
 
     stretch: dict[str, dict[str, int]] = Field(default_factory=dict)
+    magnitude_step: int = Field(default=25, ge=1, le=500)
+    """BAL-12e（#76）：持續回合放大到 ``stretch`` 的上限（6）之後，數值型狀態與表面改加強度
+    （``magnitude_permille``）的級距（‰）。表面要先放大到最大的形狀才加強度。"""
+    magnitude_max: int = Field(default=2000, ge=1000, le=2000)
+    """升階重配的強度上限（‰；同原語參數的上限）。"""
     area_shapes: tuple[str, ...] = ()
     max_extra_cooldown: int = Field(default=0, ge=0)
     max_cooldown: int = Field(default=6, ge=0)

@@ -40,8 +40,9 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
+from trpg.shared.types import Surface
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_parts import Knob
+from trpg.skillgen.composer_parts import STRETCH_FIELD, Knob, set_knob_value
 from trpg.skillgen.evolution import budget_power, effect_strength_knobs, retune
 from trpg.skillgen.flash_major import fixed_strength
 from trpg.skillgen.flash_ops import Draft, base_draft, tuning_extras
@@ -92,25 +93,65 @@ class _Job:
 
 
 def _stretch_knobs(
-    effects: list[dict[str, Any]], category: str, library: ContentLibrary
+    effects: list[dict[str, Any]],
+    category: str,
+    library: ContentLibrary,
+    *,
+    area_full: bool = True,
 ) -> list[Knob]:
     """升階時的效果參數旋鈕（3W-9b）：``retier_growth.stretch`` 列出的參數（狀態、表面的持續回合）
-    放大到上限，而且只增不減（從目前的值起跳）；其餘參數照組合器的階梯。"""
-    stretch = library.budget.retier_growth.stretch
+    放大到上限，而且只增不減（從目前的值起跳）；其餘參數照組合器的階梯。
+
+    BAL-12e（#76）：持續回合的上限是 6；數值型狀態與表面的持續旋鈕換成複合旋鈕
+    （:data:`~trpg.skillgen.composer_parts.STRETCH_FIELD`）——先把回合加到上限，到上限後（原本就
+    超過的從原本的回合起）改加強度（``magnitude_step``，到 ``magnitude_max``）。表面只有在形狀已經
+    放大到最大（``area_full``）時才加強度。"""
+    growth = library.budget.retier_growth
     statuses = library.ruleset.statuses.by_id()
     out: list[Knob] = []
     for knob in param_knobs(effects, category, library):
         effect = effects[knob.index]
-        cap = stretch.get(str(effect["type"]), {}).get(knob.field)
+        cap = growth.stretch.get(str(effect["type"]), {}).get(knob.field)
         status = statuses.get(str(effect.get("status")))
         if cap is None or (status is not None and status.control_group is not None):
             out.append(knob)  # 控制類狀態（移動、心智、硬控）照組合器的上限，不放大
             continue
         current = effect.get(knob.field)
         start = min(knob.values) if current is None else int(current)
-        values = tuple(range(start, max(cap, start) + 1))
-        out.append(Knob(knob.index, knob.field, values, knob.weight))
+        durations = tuple(range(start, max(cap, start) + 1))
+        if knob.field != "duration" or not _magnitude_ok(effect, library, area_full=area_full):
+            out.append(Knob(knob.index, knob.field, durations, knob.weight))
+            continue
+        first = int(effect.get("magnitude_permille") or _PERMILLE)
+        top = growth.magnitude_max
+        values = [(d, first) for d in durations]
+        values += [
+            (durations[-1], m)
+            for m in range(first + growth.magnitude_step, top + 1, growth.magnitude_step)
+        ]
+        out.append(Knob(knob.index, STRETCH_FIELD, tuple(values), knob.weight))
     return out
+
+
+def _magnitude_ok(effect: dict[str, Any], library: ContentLibrary, *, area_full: bool) -> bool:
+    """這個效果升階時能不能加強度（BAL-12e）：數值型狀態（非控制、非姿態），或有數值的表面（形狀
+    已經放大到最大）。"""
+    rules = library.ruleset
+    if effect["type"] == "apply_status":
+        status = rules.statuses.by_id().get(str(effect.get("status")))
+        return status is not None and status.scales_with_magnitude
+    if effect["type"] == "create_surface" and area_full:
+        try:
+            return rules.surface_scales_with_magnitude(Surface(str(effect.get("surface"))))
+        except ValueError:
+            return False
+    return False
+
+
+def _area_full(skill: SkillDef, library: ContentLibrary) -> bool:
+    """表面的形狀已經放大到這個角色階級能用的最大（沒有更大的形狀可換；BAL-12e：表面先加格數，
+    到上限後才加強度）。不換形狀的技能（被動、反應、陷阱、複合技能）視為已經到上限。"""
+    return all(_reshaped(skill, s, library) is None for s in _bigger_shapes(skill, library))
 
 
 def _knob_candidates(
@@ -124,7 +165,8 @@ def _knob_candidates(
     op = "followup" if skill.followup is not None else ""
     extra, knobs = tuning_extras(op, base, job.library)
     if job.upgrade:
-        params = _stretch_knobs(effects, skill.category, job.library)
+        full = _area_full(skill, job.library)
+        params = _stretch_knobs(effects, skill.category, job.library, area_full=full)
     else:
         params = param_knobs(effects, skill.category, job.library)
     for more in ((), params) if params else ((),):
@@ -376,13 +418,14 @@ def _best_effort(job: _Job) -> SkillDef | None:
     base, effects = base_draft(moved)
     knobs = [*effect_strength_knobs(moved.category, effects, library)]
     if job.upgrade:
-        knobs += _stretch_knobs(effects, moved.category, library)
+        full = _area_full(moved, library)
+        knobs += _stretch_knobs(effects, moved.category, library, area_full=full)
     else:
         knobs += param_knobs(effects, moved.category, library)
     if not knobs:
         return None
     for knob in knobs:
-        effects[knob.index][knob.field] = knob.values[-1]
+        set_knob_value(effects[knob.index], knob.field, knob.values[-1])
     try:
         trial = SkillDef.model_validate({**base, "effects": effects})
         trial = trial.model_copy(update={"rarity": structural_rarity(trial, library)})

@@ -886,6 +886,31 @@ class StatusDef(ContentModel):
         return self
 
     @property
+    def scales_with_magnitude(self) -> bool:
+        """強度（BAL-12e，玩法決定 #76，06 6.3、6.34.9）能放大的數值型狀態：有每回合傷害或治療、
+        倍率欄位（移動、造成／受到的傷害、受到的治療、元素加成）、屬性加值或攻擊加值。控制類狀態
+        （``control_group``）與姿態（姿態用自己的幅度規則，3W-5b）不算；潮濕、標記、隱蔽這類沒有
+        數值的狀態也不算。"""
+        if self.control_group is not None or self.stance:
+            return False
+        permilles = (
+            self.move_permille,
+            self.damage_dealt_permille,
+            self.damage_taken_permille,
+            self.physical_taken_permille,
+            self.healing_received_permille,
+            self.element_dealt_permille,
+            self.element_dealt_wet_permille,
+        )
+        return bool(
+            self.on_turn_start_damage is not None
+            or self.on_turn_start_heal is not None
+            or any(v != _PERMILLE for v in permilles)
+            or any(self.attr_bonus.values())
+            or self.attack_bonus
+        )
+
+    @property
     def has_shield_riders(self) -> bool:
         """護盾狀態帶有反傷、結束回復、破盾造表面或破盾施加狀態（3W-2b）。"""
         return bool(

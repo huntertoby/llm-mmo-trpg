@@ -312,7 +312,7 @@ primitives:
     params:
       status: {llm_hint: "要施加的狀態。", type: status, required: true}
       duration: {llm_hint: "狀態持續的回合數。", type: int, min: 1, max: 10, knob: {ladder: status_duration, weight: status}}
-      magnitude_permille: {llm_hint: "姿態效果的強化比例（只有姿態技能可用）。", type: int, min: 1000, max: 2000, description_zh: 完整姿態技能：姿態狀態對自己有利的倍率離中性值的距離放大的比例（‰，只有姿態技能可填）, knob: none}
+      magnitude_permille: {llm_hint: "姿態效果的強化比例（只有姿態技能可用）。", type: int, min: 1000, max: 2000, description_zh: 完整姿態技能：姿態狀態對自己有利的倍率離中性值的距離放大的比例（‰）；數值型狀態（非控制、非姿態）的強度（BAL-12e，#76，目前只有升階重配與完整技能會填）：每回合傷害、治療、倍率與加值乘上它, knob: none}
   - id: create_surface
     name_zh: 產生表面
     llm_hint: "在地面製造一種表面（例如水、油、火）。"
@@ -326,6 +326,7 @@ primitives:
     params:
       surface: {llm_hint: "要製造的表面種類。", type: surface, required: true}
       duration: {llm_hint: "表面持續的回合數。", type: int, min: 1, max: 10, knob: {ladder: surface_duration, weight: surface}}
+      magnitude_permille: {llm_hint: "表面效果的強化比例（一般不用填）。", type: int, min: 1000, max: 2000, description_zh: 表面的強度（BAL-12e，#76，目前只有升階重配與完整技能會填）：回合開始的傷害、治療與表面施加的狀態乘上它（‰）, knob: none}
   - id: destroy_object
     name_zh: 摧毀物件
     llm_hint: "摧毀範圍內的可破壞物件。"

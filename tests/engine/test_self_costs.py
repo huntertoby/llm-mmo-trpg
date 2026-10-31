@@ -400,6 +400,6 @@ def test_a_battle_with_the_four_demo_skills_replays_identically() -> None:
     run = run_battle(setup, 11, policy)
     again = replay(setup, 11, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
-    assert LOG_FORMAT.endswith("/90")
+    assert LOG_FORMAT.endswith("/91")
     used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
     assert used & set(ids)  # AI 真的用到了示範技能

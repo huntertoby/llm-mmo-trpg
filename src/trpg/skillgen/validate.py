@@ -235,6 +235,7 @@ def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     out = _cap_violations(skill, library)
     out += _passive_violations(skill, library)
     out += _stance_violations(skill, library)
+    out += _magnitude_violations(skill, library)
     out += _shield_status_violations(skill, library)
     out += _exclusion_violations(skill, library)
     report, budget_out = _budget_violations(skill, library)
@@ -591,6 +592,36 @@ def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
         )
     ):
         out.append(Violation(skill.id, "stance.status", "姿態技能必須施加一個 stance: true 的狀態"))
+    return out
+
+
+def _magnitude_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """強度（BAL-12e，#76）：``magnitude_permille`` 只能填在有數值可放大的狀態（姿態另有幅度規則）
+    與表面上；潮濕、標記、隱蔽、控制類狀態這類沒有數值的不能填。"""
+    rules = library.ruleset
+    statuses = rules.statuses.by_id()
+    out: list[Violation] = []
+    for index, effect in enumerate(skill.effects):
+        if effect.magnitude_permille is None:
+            continue
+        if effect.type == "apply_status" and effect.status in statuses:
+            status = statuses[effect.status]
+            if status.stance or status.scales_with_magnitude:
+                continue
+            what = f"狀態 {status.id}（{status.name_zh}）"
+        elif effect.type == "create_surface" and effect.surface is not None:
+            if rules.surface_scales_with_magnitude(effect.surface):
+                continue
+            what = f"表面 {effect.surface.value}"
+        else:
+            continue
+        out.append(
+            Violation(
+                skill.id,
+                "magnitude.unscalable",
+                f"effects[{index}]：{what}沒有可放大的數值，不能填 magnitude_permille（強度）",
+            )
+        )
     return out
 
 

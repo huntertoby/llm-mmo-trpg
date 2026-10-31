@@ -1158,7 +1158,8 @@ def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[
     if status.budget_points is None:
         raise BudgetError(f"狀態 {status.id}（{status.name_zh}）沒有預算點數，不能由技能施加")
     ratio = _duration_ratio(effect.duration, status.duration)
-    if effect.magnitude_permille and status.stance:  # 完整姿態的幅度（3W-5b）：點數等比例放大
+    # 完整姿態的幅度（3W-5b）、數值型狀態的強度（BAL-12e，#76）：點數等比例放大
+    if effect.magnitude_permille and (status.stance or status.scales_with_magnitude):
         ratio *= Fraction(effect.magnitude_permille, _PERMILLE)
     return status.budget_points * ratio, f"{status.id} {status.budget_points}×{_fmt(ratio)}"
 
@@ -1173,6 +1174,9 @@ def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fracti
     if surface.budget_points is None:
         raise BudgetError(f"表面 {surface.id.value}（{surface.name_zh}）沒有預算點數")
     ratio = _duration_ratio(effect.duration, surface.duration)
+    magnitude = effect.magnitude_permille
+    if magnitude and library.ruleset.surface_scales_with_magnitude(surface.id):
+        ratio *= Fraction(magnitude, _PERMILLE)  # 表面的強度（BAL-12e，#76）：點數等比例放大
     return (
         surface.budget_points * ratio,
         f"{surface.id.value} {surface.budget_points}×{_fmt(ratio)}",

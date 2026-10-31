@@ -14,7 +14,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import Dice, WeaponDef, weapon_attr_examples_zh
+from trpg.content.battle import Dice, StatusDef, WeaponDef, weapon_attr_examples_zh
 from trpg.content.form_text import form_sentence, natural_weapon_text
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
@@ -599,12 +599,31 @@ def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> st
     status = lib.ruleset.status_def(spec.status)
     text = f"狀態「{status.name_zh}」{status_duration_text(lib, spec.status, spec.duration)}"
     magnitude = spec.magnitude_permille
-    if magnitude is None or magnitude == NEUTRAL_PERMILLE or not status.stance:
+    if magnitude is None or magnitude == NEUTRAL_PERMILLE:
         return text
+    if not status.stance:
+        if not status.scales_with_magnitude:
+            return text
+        return f"{text}，{_strength_text(lib, status, magnitude)}"
     # 完整姿態（3W-5b）：數值句用與結算同一個算法放大，卡片數字＝實戰
     lines = status_modifier_lines(scaled_status_def(status, magnitude), lib)
     detail = f"：{'；'.join(lines)}" if lines else ""
     return f"{text}，幅度強化 ×{magnitude / 10:g}%{detail}"
+
+
+def _strength_text(lib: ContentLibrary, status: StatusDef, magnitude: int) -> str:
+    """數值型狀態的強度（BAL-12e，#76）：每回合的傷害／治療寫倍率，倍率與加值的數字用與結算同一個
+    算法放大（卡片數字＝實戰）。"""
+    parts: list[str] = []
+    if status.on_turn_start_damage is not None:
+        parts.append("每回合傷害")
+    if status.on_turn_start_heal is not None:
+        parts.append("每回合治療")
+    head = f"強度 {magnitude / 10:g}%"
+    if parts:
+        head += f"（{'、'.join(parts)} ×{magnitude / 10:g}%）"
+    lines = status_modifier_lines(scaled_status_def(status, magnitude), lib)
+    return head + (f"：{'；'.join(lines)}" if lines else "")
 
 
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -626,7 +645,17 @@ def _cleanse(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
 def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.surface is not None
     turns = f" {spec.duration} 回合" if spec.duration else ""
-    return f"生成「{lib.ruleset.surface_def(spec.surface).name_zh}」表面{turns}"
+    text = f"生成「{lib.ruleset.surface_def(spec.surface).name_zh}」表面{turns}"
+    magnitude = spec.magnitude_permille
+    # 表面的強度（BAL-12e）
+    if (
+        magnitude
+        and magnitude != NEUTRAL_PERMILLE
+        and lib.ruleset.surface_scales_with_magnitude(spec.surface)
+    ):
+        pct = f"{magnitude / 10:g}%"
+        text += f"，強度 {pct}（表面每回合的傷害、治療與施加的狀態 ×{pct}）"
+    return text
 
 
 def _blow_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
