@@ -201,6 +201,9 @@ all_target_permille: 800    # affects: all（敵我不分）的對象係數
 allowance:
   cooldown_per_turn: 50     # 冷卻每回合
   cooldown_cap: 300
+  # 姿態／形態的冷卻折抵（BAL-11b，玩法 PM 2026-10-31，06 6.34.4「BAL-11a 定」）：姿態進入後持續到取消，冷卻幾乎不是代價
+  stance_cooldown_per_turn: 10
+  stance_cooldown_cap: 50
   uses_per_battle: {1: 400, 2: 250}
   uses_default: 100         # 每場 3 次以上
   mana_per_point: 5         # 法力每點
