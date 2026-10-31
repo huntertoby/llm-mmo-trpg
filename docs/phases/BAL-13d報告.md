@@ -140,3 +140,28 @@
 6. **（範圍）連鎖的 `power_primitives` 清單是我列的**：damage、heal、shield、hurl_object、charge_through、consume_stack。detonate_runes、delayed_damage 這類不經過連鎖衰減的原語，算成非威力效果、用舊倍率。
 7. **（量測）沒有價值的技能**：拿掉對照只做了 14 組（時間預算）。每場 ≤ 0.05 次的技能直接列名、沒做對照。修正型技能只量了灼傷之痕。餘燼護體拿掉 −18／−14，看起來很有價值。破魔、竊取祝福、照明彈三招在標準地圖組裡確實沒有作用（拿掉 ±1.7 內）。
 8. **（文字）**：`conduct_blocked` 的紀錄句、技能卡的「每跳 −25%」都是實作者初稿；瞬步背刺的說明文字改成「多 130% 傷害」。
+
+## BAL-13e｜gambler（玩法 PM 2026-10-31）
+
+依 `PhaseBAL計畫.md`「BAL-13e」。合併 main 41d14c24 後做；main 改過的 `conduct_blocked` 紀錄句（`narrative/events.py`、`test_chain_conduct_bal13c.py`）原樣保留。
+
+1. **捨身突刺自損估值 1 → 3**（`a5c8a3ad`）：`ai_profiles.yaml` 的 `self_status_values.vulnerable` 改成 3。
+2. **gambler 拿掉狂怒姿態，換成天賜好運**（`188f541c`）：`skill_lucky_break` 是被動技，擲出自然 20 時得到 1d4 護盾，法術技 2 法力。狂怒姿態本身沒改。
+   - **挑選理由**：內建技能裡有賭博或運氣標籤的只有 6 招（`gamble` 由 `SkillDef.is_gamble` 自動加上，`luck` 是內容自填的）。其中 5 招是攻擊技：孤注一擲、狂戰士之怒、血祭重擊、狂野之刃 4 招近戰技，加上法術攻擊技過載電流；前 4 招 gambler 已經帶了 3 招。唯一的防守或工具技是天賜好運（`luck`），也就是規格舉的例子。
+   - **其他條件**：它不要求特定武器（`weapon_req: any`）；gambler 的被動欄位還空 1 格；法力 2 在 gambler 的 24 點內；預算 98% 合格。主題文字跟著改成「天賜好運在擲出自然 20 時撐起護盾」。
+3. **重量 gambler**（30 場 × 10 圖，`scripts/bal13d_matrix.py run`，47 秒；其他 build 沿用 BAL-13d 的格子，合併結果在 `BAL-13/13e_merge.txt`）：
+
+| | 12d | BAL-13d | BAL-13e |
+|---|---|---|---|
+| gambler 勝率 | 44.3 | 41.0 | **48.3** |
+| 英雄存活 | 22% | 19% | **33%** |
+| DPR | 7.9 | 7.9 | 8.2 |
+| 承傷 | 58.6 | 57.4 | 54.8 |
+| 捨身突刺每場施放 | 0.03 | 0.69 | 0.25（每 AP 7.7） |
+| 天賜好運每場觸發 | — | — | 0.21 |
+
+- gambler 已不是全表最低：最低是 winged 39.7，其次是 assassin 40.0，gambler 48.3 在 23 個 build 中排第 17。所以**沒有加 HP +6**。gambler 仍在無前段名單，8 類名次是 12～22。
+- 全類型前段仍只有 storm；無前段名單和 BAL-13d 相同。
+- **快照**：CLI 輸出快照（slow）與行為快照都沒變；client fixture 不受影響。
+- **檢查**：ruff、ruff format --check、mypy（926 檔）、lint-imports（7 kept）通過。pytest：content、gamble／variance、姿態、自身代價、BAL-13d AI 等測試共 1610 通過；CLI 輸出快照、sim、combo_resources 共 206 通過。重播 swamp 種子 7 一致。
+- **待決**：沒有新增。補充一點：天賜好運每場只觸發 0.21 次，勝率的提升主要來自拿掉狂怒姿態（BAL-13d 的拿掉對照是 +5.0），換上的被動本身貢獻很小。

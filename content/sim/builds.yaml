@@ -308,7 +308,7 @@ builds:
 
   - id: build_gambler
     name_zh: 賭徒／狂戰士流
-    theme_zh: 拿血與運氣換傷害：血祭重擊 60% 傷害加倍、40% 反噬自己；孤注一擲傷害 +80%、失手就倒地；捨身突刺與狂怒姿態用代價換力量。贏的時候一擊決勝，運氣差、被集火或血量見底時不利；AI 在血量低於三成時不再亂賭（Phase 3D-7a，初值未經模擬）。
+    theme_zh: 拿血與運氣換傷害：血祭重擊 60% 傷害加倍、40% 反噬自己；孤注一擲傷害 +80%、失手就倒地；捨身突刺用代價換力量，天賜好運在擲出自然 20 時撐起護盾（BAL-13e 取代狂怒姿態）。贏的時候一擊決勝，運氣差、被集火或血量見底時不利；AI 在血量低於三成時不再亂賭（Phase 3D-7a，初值未經模擬）。
     hero:
       id: build_gambler
       name_zh: 賭徒英雄
@@ -320,7 +320,8 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_blood_sacrifice, skill_all_in, skill_wild_blade, skill_berserker_rage, skill_reckless_lunge, skill_fury_stance, skill_bloodlust, skill_grief_rage, skill_first_strike]
+      # BAL-13e：狂怒姿態 → 天賜好運（帶「luck」標籤的防守被動：擲出自然 20 時得 1d4 護盾；狂怒姿態本身不改）
+      skills: [skill_blood_sacrifice, skill_all_in, skill_wild_blade, skill_berserker_rage, skill_reckless_lunge, skill_lucky_break, skill_bloodlust, skill_grief_rage, skill_first_strike]
 
   - id: build_seer
     name_zh: 偵察破咒流
