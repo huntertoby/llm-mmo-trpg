@@ -38,6 +38,7 @@ from pydantic import ValidationError
 from trpg.content.flash_templates import CompleteSkillRules, CostCut
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.types import Surface
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.flash_derive import with_budget_bonus
@@ -231,10 +232,29 @@ def _strength_knobs(
 
 
 def _param_knobs(
-    library: ContentLibrary, _rules: CompleteSkillRules, skill: SkillDef, draft: _Draft
+    library: ContentLibrary, rules: CompleteSkillRules, skill: SkillDef, draft: _Draft
 ) -> list[Knob]:
-    """效果參數的旋鈕（:func:`~trpg.skillgen.knobs.param_knobs`，同升階重配）。"""
-    return param_knobs(draft[1], skill.category, library)
+    """效果參數的旋鈕（:func:`~trpg.skillgen.knobs.param_knobs`，同升階重配），加上數值型狀態與
+    表面的強度（BAL-12e，#76；``status_magnitude_steps`` 乘在原本的強度上，比持續 +1 回合細）。"""
+    effects = draft[1]
+    knobs = param_knobs(effects, skill.category, library)
+    ruleset = library.ruleset
+    statuses = ruleset.statuses.by_id()
+    for index, effect in enumerate(effects):
+        if effect["type"] == "apply_status":
+            status = statuses.get(str(effect.get("status")))
+            scalable = status is not None and status.scales_with_magnitude
+        elif effect["type"] == "create_surface" and effect.get("surface") is not None:
+            scalable = ruleset.surface_scales_with_magnitude(Surface(str(effect["surface"])))
+        else:
+            continue
+        if not scalable:
+            continue
+        start = int(effect.get("magnitude_permille") or _PERMILLE)
+        effect["magnitude_permille"] = start  # 比較大小用（只在這份草稿上）
+        values = tuple(start * s // _PERMILLE for s in rules.status_magnitude_steps)
+        knobs.append(Knob(index, "magnitude_permille", values))
+    return knobs
 
 
 # ---------------------------------------------------------------------------

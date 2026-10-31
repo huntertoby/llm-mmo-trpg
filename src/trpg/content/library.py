@@ -399,6 +399,25 @@ class Ruleset(ContentModel):
     def surface_def(self, surface: Surface) -> SurfaceDef:
         return self.surfaces.get(surface)
 
+    def surface_scales_with_magnitude(self, surface: Surface) -> bool:
+        """表面的強度（BAL-12e，#76）有沒有作用：回合開始的傷害或治療，或進入、回合開始時施加的
+        狀態是數值型（:attr:`StatusDef.scales_with_magnitude`，例如火焰表面的燃燒）。"""
+        if surface is Surface.NONE:
+            return False
+        definition = self.surface_def(surface)
+        start, enter = definition.on_turn_start, definition.on_enter
+        if start is not None and (start.damage is not None or start.heal is not None):
+            return True
+        applied = [
+            s
+            for s in (
+                None if start is None else start.apply_status,
+                None if enter is None else enter.apply_status,
+            )
+            if s is not None
+        ]
+        return any(self.status_def(s).scales_with_magnitude for s in applied)
+
     # 查表是引擎最常呼叫的函式之一：直接讀 ``__pydantic_private__``，略過 BaseModel.__getattr__
     # 的私有屬性慢速路徑（結果與 ``self._terrain_index`` 相同）。
     def reaction_def(self, reaction_id: str) -> ReactionDef:

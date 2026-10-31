@@ -137,6 +137,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
                     cause="status",
                     element=tick.element,
                     dice=tick.dice,
+                    multiplier_permille=status.magnitude_permille,  # 強度（BAL-12e）
                 )
             )
         if definition.on_turn_start_heal is not None:
@@ -145,6 +146,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
                     target_id=unit.id,
                     source_id=status.source_id,
                     dice=definition.on_turn_start_heal.dice,
+                    multiplier_permille=status.magnitude_permille,  # 強度（BAL-12e）
                 )
             )
     # 先移除到期狀態，再結算持續傷害（各自依狀態 ID 順序），最後是表面效果
@@ -233,24 +235,35 @@ def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
     if on_start is None:
         return []
     effects: list[EffectBase] = []
+    magnitude = tile.surface_magnitude_permille  # 表面的強度（BAL-12e）
     heal = on_start.heal
     if heal is not None:
         ally = not heal.allies_only or tile.surface_team is None or tile.surface_team is unit.team
         excluded = heal.exclude_tag is not None and unit.has_tag(heal.exclude_tag)
         if ally and not excluded:
-            effects.append(HealEffect(target_id=unit.id, dice=heal.dice))
+            effects.append(
+                HealEffect(target_id=unit.id, dice=heal.dice, multiplier_permille=magnitude)
+            )
     damage = on_start.damage
     if damage is not None and (damage.only_tag is None or unit.has_tag(damage.only_tag)):
         effects.append(
             DamageEffect(
-                target_id=unit.id, cause="surface", element=damage.element, dice=damage.dice
+                target_id=unit.id,
+                cause="surface",
+                element=damage.element,
+                dice=damage.dice,
+                multiplier_permille=magnitude,
             )
         )
     burn_proof = on_start.apply_status == BURNING and burn_immune(
         ctx.rules, unit, tile.surface
     )  # 角魔站在火焰表面上不會燃燒（Phase 3R-2）
     if on_start.apply_status is not None and not burn_proof:
-        effects.append(ApplyStatusEffect(target_id=unit.id, status_id=on_start.apply_status))
+        effects.append(
+            ApplyStatusEffect(
+                target_id=unit.id, status_id=on_start.apply_status, magnitude_permille=magnitude
+            )
+        )
     return effects
 
 
@@ -279,6 +292,7 @@ def end_turn(ctx: Ctx) -> None:
                     source_id=status.source_id,
                     amount=status.amount,
                     cost_status=status.cost_status,
+                    magnitude_permille=status.magnitude_permille,  # 強度（BAL-12e）
                 )
             )
             continue

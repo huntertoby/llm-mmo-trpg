@@ -939,15 +939,16 @@ class SkillDef(ContentModel):
         ):
             raise ValueError("stance_upkeep 只有一般姿態（不含形態）可以填")
         magnitudes = [e for e in self.effects if e.magnitude_permille is not None]
-        not_stance = self.kind != "stance" or any(
-            e.type not in ("apply_status", ENTER_FORM) for e in magnitudes
-        )
-        if magnitudes and not_stance:
+        # 姿態幅度（3W-5b）、形態幅度（BAL-2c）、狀態與表面的強度（BAL-12e，#76；哪些狀態與表面
+        # 有數值可放大由驗證器對照內容庫檢查）
+        if any(e.type not in ("apply_status", "create_surface", ENTER_FORM) for e in magnitudes):
             raise ValueError(
-                "magnitude_permille 只有姿態技能的 apply_status 與 enter_form（形態幅度）可以填"
+                "magnitude_permille 只有 apply_status、create_surface 與 enter_form 可以填"
             )
+        if any(e.type == ENTER_FORM for e in magnitudes) and self.kind != "stance":
+            raise ValueError("enter_form 的 magnitude_permille（形態幅度）只有姿態技能可以填")
         if any((e.magnitude_permille or 0) < _PERMILLE for e in magnitudes):
-            raise ValueError("magnitude_permille 不能小於 1000（姿態幅度的強化）")
+            raise ValueError("magnitude_permille 不能小於 1000（幅度與強度只能強化）")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""

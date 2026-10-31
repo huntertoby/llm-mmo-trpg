@@ -724,7 +724,11 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         and (definition.skip_turn or definition.blocks_spells)
         and ctx.state.active_unit == unit.id,  # 自暈／自我沉默：本回合照常，回合結束才生效
         cost_status=effect.self_paid,  # 代價狀態：淨化與驅散移除不了（#62）
-        magnitude_permille=effect.magnitude_permille if definition.stance else 1000,  # 3W-5b
+        magnitude_permille=(
+            effect.magnitude_permille
+            if definition.stance or definition.scales_with_magnitude
+            else 1000
+        ),  # 姿態幅度（3W-5b）、數值型狀態的強度（BAL-12e）
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):

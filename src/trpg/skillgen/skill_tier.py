@@ -15,7 +15,9 @@
   預算器重調。
 - **點數固定的狀態／表面與升降地形放大效果本身**（3W-9b，``skill_budget.yaml`` 的
   ``retier_growth``）：表面與升降地形先換成格數較多的形狀（照角色階級的形狀與地形格數表），狀態與
-  表面的持續回合可以放大到 ``stretch`` 的上限（只增不減）；不補傷害。
+  表面的持續回合可以放大到 ``stretch`` 的上限（只增不減；BAL-12e 起 6）；不補傷害。到上限後數值型
+  狀態與表面改加強度（``magnitude_permille``，#76；表面要先放大到最大的形狀）；沒有數值的到 6 就停，
+  表面仍先加格數（偏弱接受，:func:`_weak_growth`）。
 - 沒有旋鈕的固定強度結構依序試：姿態換到元素姿態階梯上合適的一級、變身姿態的形態幅度（BAL-2c，
   上限 2000‰）、召喚物的最大 HP 加成、費用（冷卻、資源）減輕，取比例最接近目標的；升降地形放大
   到上限仍不到 70% 時才補「落石」（多一個大地傷害效果，強度照預算；與 3W-2b 地形變化模板、位移
@@ -40,8 +42,9 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
+from trpg.shared.types import Surface
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_parts import Knob
+from trpg.skillgen.composer_parts import STRETCH_FIELD, Knob, set_knob_value
 from trpg.skillgen.evolution import budget_power, effect_strength_knobs, retune
 from trpg.skillgen.flash_major import fixed_strength
 from trpg.skillgen.flash_ops import Draft, base_draft, tuning_extras
@@ -92,25 +95,65 @@ class _Job:
 
 
 def _stretch_knobs(
-    effects: list[dict[str, Any]], category: str, library: ContentLibrary
+    effects: list[dict[str, Any]],
+    category: str,
+    library: ContentLibrary,
+    *,
+    area_full: bool = True,
 ) -> list[Knob]:
     """升階時的效果參數旋鈕（3W-9b）：``retier_growth.stretch`` 列出的參數（狀態、表面的持續回合）
-    放大到上限，而且只增不減（從目前的值起跳）；其餘參數照組合器的階梯。"""
-    stretch = library.budget.retier_growth.stretch
+    放大到上限，而且只增不減（從目前的值起跳）；其餘參數照組合器的階梯。
+
+    BAL-12e（#76）：持續回合的上限是 6；數值型狀態與表面的持續旋鈕換成複合旋鈕
+    （:data:`~trpg.skillgen.composer_parts.STRETCH_FIELD`）——先把回合加到上限，到上限後（原本就
+    超過的從原本的回合起）改加強度（``magnitude_step``，到 ``magnitude_max``）。表面只有在形狀已經
+    放大到最大（``area_full``）時才加強度。"""
+    growth = library.budget.retier_growth
     statuses = library.ruleset.statuses.by_id()
     out: list[Knob] = []
     for knob in param_knobs(effects, category, library):
         effect = effects[knob.index]
-        cap = stretch.get(str(effect["type"]), {}).get(knob.field)
+        cap = growth.stretch.get(str(effect["type"]), {}).get(knob.field)
         status = statuses.get(str(effect.get("status")))
         if cap is None or (status is not None and status.control_group is not None):
             out.append(knob)  # 控制類狀態（移動、心智、硬控）照組合器的上限，不放大
             continue
         current = effect.get(knob.field)
         start = min(knob.values) if current is None else int(current)
-        values = tuple(range(start, max(cap, start) + 1))
-        out.append(Knob(knob.index, knob.field, values, knob.weight))
+        durations = tuple(range(start, max(cap, start) + 1))
+        if knob.field != "duration" or not _magnitude_ok(effect, library, area_full=area_full):
+            out.append(Knob(knob.index, knob.field, durations, knob.weight))
+            continue
+        first = int(effect.get("magnitude_permille") or _PERMILLE)
+        top = growth.magnitude_max
+        values = [(d, first) for d in durations]
+        values += [
+            (durations[-1], m)
+            for m in range(first + growth.magnitude_step, top + 1, growth.magnitude_step)
+        ]
+        out.append(Knob(knob.index, STRETCH_FIELD, tuple(values), knob.weight))
     return out
+
+
+def _magnitude_ok(effect: dict[str, Any], library: ContentLibrary, *, area_full: bool) -> bool:
+    """這個效果升階時能不能加強度（BAL-12e）：數值型狀態（非控制、非姿態），或有數值的表面（形狀
+    已經放大到最大）。"""
+    rules = library.ruleset
+    if effect["type"] == "apply_status":
+        status = rules.statuses.by_id().get(str(effect.get("status")))
+        return status is not None and status.scales_with_magnitude
+    if effect["type"] == "create_surface" and area_full:
+        try:
+            return rules.surface_scales_with_magnitude(Surface(str(effect.get("surface"))))
+        except ValueError:
+            return False
+    return False
+
+
+def _area_full(skill: SkillDef, library: ContentLibrary) -> bool:
+    """表面的形狀已經放大到這個角色階級能用的最大（沒有更大的形狀可換；BAL-12e：表面先加格數，
+    到上限後才加強度）。不換形狀的技能（被動、反應、陷阱、複合技能）視為已經到上限。"""
+    return all(_reshaped(skill, s, library) is None for s in _bigger_shapes(skill, library))
 
 
 def _knob_candidates(
@@ -124,7 +167,8 @@ def _knob_candidates(
     op = "followup" if skill.followup is not None else ""
     extra, knobs = tuning_extras(op, base, job.library)
     if job.upgrade:
-        params = _stretch_knobs(effects, skill.category, job.library)
+        full = _area_full(skill, job.library)
+        params = _stretch_knobs(effects, skill.category, job.library, area_full=full)
     else:
         params = param_knobs(effects, skill.category, job.library)
     for more in ((), params) if params else ((),):
@@ -372,17 +416,24 @@ def _closest(drafts: Iterable[Draft], job: _Job) -> SkillDef | None:
 def _best_effort(job: _Job) -> SkillDef | None:
     """調不進窗內時的最後一步：每個強度旋鈕都推到最大（費用不動）；除了「過弱」之外要通過驗證，
     預算分數不低於下限。新階級的預算太大、這個結構追不上時用它（:func:`retier_report` 會標出）。"""
-    moved, library = job.moved, job.library
-    base, effects = base_draft(moved)
+    return _maxed(job, job.moved, base_draft(job.moved))
+
+
+def _maxed(job: _Job, moved: SkillDef, draft: Draft) -> SkillDef | None:
+    """``draft``（``moved`` 的草稿）每個強度旋鈕都推到最大；除了「過弱」之外通過驗證、預算分數
+    不低於下限時回傳。"""
+    library = job.library
+    base, effects = draft
     knobs = [*effect_strength_knobs(moved.category, effects, library)]
     if job.upgrade:
-        knobs += _stretch_knobs(effects, moved.category, library)
+        full = _area_full(moved, library)
+        knobs += _stretch_knobs(effects, moved.category, library, area_full=full)
     else:
         knobs += param_knobs(effects, moved.category, library)
     if not knobs:
         return None
     for knob in knobs:
-        effects[knob.index][knob.field] = knob.values[-1]
+        set_knob_value(effects[knob.index], knob.field, knob.values[-1])
     try:
         trial = SkillDef.model_validate({**base, "effects": effects})
         trial = trial.model_copy(update={"rarity": structural_rarity(trial, library)})
@@ -392,6 +443,27 @@ def _best_effort(job: _Job) -> SkillDef | None:
     if problems or (job.floor is not None and budget_power(trial, library) < job.floor):
         return None
     return trial
+
+
+def _weak_growth(job: _Job) -> SkillDef | None:
+    """表面放大格數後仍到不了預算窗（BAL-12e：持續回合上限 6、沒有數值可加強度的表面，例如冰）：
+    照樣換成較大的形狀（06 6.34.9「表面：格數增加」；沒有數值的到上限偏弱，#76 接受），取比例
+    最接近目標的（持續推到上限，只容許「過弱」）。地形照原本的落石流程，不走這裡。"""
+    if not job.upgrade or _terrain(job.moved, job.library):
+        return None
+    best: SkillDef | None = None
+    gap: Fraction | None = None
+    for grown in _grown_skills(job):
+        for draft in _growth_drafts(grown, job.library):
+            done = _maxed(job, grown, draft)
+            if done is None:
+                continue
+            if job.target is None:
+                return done
+            distance = abs(_ratio(done, job.library) - job.target)
+            if gap is None or distance < gap:
+                best, gap = done, distance
+    return best
 
 
 def _floor(skill: SkillDef, tier: int, library: ContentLibrary) -> Fraction | None:
@@ -448,13 +520,15 @@ def _same_shape(job: _Job) -> Iterator[SkillDef | None]:
 
 
 def _solve(job: _Job) -> SkillDef | None:
-    """放大格數 → 形狀不變的候選（取最接近目標比例的，:func:`_settle`）→ 原本的形狀補落石 → 旋鈕
-    推到最大。"""
+    """放大格數 → 形狀不變的候選（取最接近目標比例的，:func:`_settle`）→ 原本的形狀補落石 → 表面
+    照樣放大格數（偏弱，:func:`_weak_growth`）→ 旋鈕推到最大。"""
     done = _grow(job)
     if done is None:
         done = _settle(job, _same_shape(job))
     if done is None:
         done = _rocks(job, grown=False)
+    if done is None:
+        done = _weak_growth(job)  # BAL-12e：表面到不了窗也先加格數
     return done if done is not None else _best_effort(job)
 
 

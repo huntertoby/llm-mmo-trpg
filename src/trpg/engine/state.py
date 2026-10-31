@@ -78,7 +78,10 @@ class StatusInstance:
     magnitude_permille: int = 1000
     """姿態的幅度（‰，Phase 3W-5b，完整技能的 ``apply_status.magnitude_permille``）：狀態倍率欄位
     對持有者有利的那一邊離中性值（1000）的距離乘上它，見
-    :func:`~trpg.engine.rules.statuses.scaled_permille`。1000 ＝ 照狀態定義。"""
+    :func:`~trpg.engine.rules.statuses.scaled_permille`。1000 ＝ 照狀態定義。
+    數值型狀態的強度（BAL-12e，#76；升階重配給的 ``apply_status.magnitude_permille``）也存在這裡：
+    每回合的傷害與治療乘上它，倍率欄位離中性值的距離（增益放大有利的一邊、減益放大不利的一邊）、
+    屬性與攻擊加值也乘上它（無條件捨去）。"""
 
 
 @dataclass(slots=True, frozen=True)
@@ -90,6 +93,9 @@ class Tile:
     - ``surface_creator``：產生表面的單位 ID（Phase 3C-3b；``on_enter_surface`` 用）。蔓延、天氣、
       地圖原有的表面為 ``None``；環境互動產生的表面沿用觸及它的來源。
     - ``object_id``：格上的物件（最多一個；摧毀後清除）。
+    - ``surface_magnitude_permille``：表面的強度（‰，BAL-12e，#76；技能的
+      ``create_surface.magnitude_permille``）：回合開始的傷害與治療、進入或回合開始時施加的狀態
+      乘上它。1000 ＝ 照表面定義；表面換成別種時回到 1000（吹送與擴散照原表面帶著）。
     """
 
     height: int
@@ -99,6 +105,7 @@ class Tile:
     surface_team: Team | None = None
     object_id: ObjectId | None = None
     surface_creator: UnitId | None = None
+    surface_magnitude_permille: int = 1000
 
 
 @dataclass(slots=True, frozen=True)

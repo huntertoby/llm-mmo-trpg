@@ -34,6 +34,7 @@ from trpg.shared.types import Element, Surface
 __all__ = [
     "KNOB_LADDERS",
     "NON_INTERCEPT_EVENTS",
+    "STRETCH_FIELD",
     "Ctx",
     "Knob",
     "KnobSpec",
@@ -50,7 +51,27 @@ __all__ = [
     "choose_core",
     "dice_ladder",
     "effect_knobs",
+    "set_knob_value",
 ]
+
+STRETCH_FIELD = "duration+magnitude_permille"
+_NEUTRAL_MAGNITUDE = 1000
+"""升階重配的複合旋鈕（BAL-12e，#76）：值是 ``(持續回合, 強度‰)``，先把持續回合加到上限、再加強度
+（同一個旋鈕，所以順序固定）。強度 1000 時不寫進效果。"""
+
+
+def set_knob_value(target: dict[str, Any], field: str, value: Any) -> None:
+    """把旋鈕的值寫進效果字典；:data:`STRETCH_FIELD` 一次寫持續回合與強度。"""
+    if field != STRETCH_FIELD:
+        target[field] = value
+        return
+    duration, magnitude = value
+    target["duration"] = duration
+    if magnitude == _NEUTRAL_MAGNITUDE:
+        target.pop("magnitude_permille", None)
+    else:
+        target["magnitude_permille"] = magnitude
+
 
 # 抽選機率與範圍在 ``content/skill_composer.yaml``（``library.composer``）；這裡只留結構判斷。
 _BIG_SHAPES = frozenset({"square3", "allies_in_radius"})

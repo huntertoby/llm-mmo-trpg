@@ -111,8 +111,9 @@ def set_surface(
     creator: UnitId | None = None,
     use_default_duration: bool = True,
     depth: int = 0,
+    magnitude: int = PERMILLE,
 ) -> list[EventBase]:
-    """把 ``xy`` 的表面設為 ``surface``（不查互動表）。
+    """把 ``xy`` 的表面設為 ``surface``（不查互動表）。``magnitude``：表面的強度（‰，BAL-12e）。
 
     持續回合：``duration`` 優先；否則 ``use_default_duration`` 時用表面定義的預設值（``None`` 為
     永久）。表面與持續時間都沒有改變時不產生事件。
@@ -126,6 +127,7 @@ def set_surface(
         remaining = None
         team = None
         creator = None
+        magnitude = PERMILLE
     elif duration is not None:
         remaining = duration
     else:
@@ -135,6 +137,7 @@ def set_surface(
         and tile.surface_remaining == remaining
         and tile.surface_team == team
         and tile.surface_creator == creator
+        and tile.surface_magnitude_permille == magnitude
     ):
         return []
     before = tile.surface
@@ -146,6 +149,7 @@ def set_surface(
             surface_remaining=remaining,
             surface_team=team,
             surface_creator=creator,
+            surface_magnitude_permille=magnitude,
         ),
     )
     if before is surface:
@@ -214,6 +218,7 @@ def _create_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         creator=effect.source_id,
         depth=effect.depth,
         react=effect.react,
+        magnitude=effect.magnitude_permille,
     )
 
 
@@ -229,6 +234,7 @@ def place_surface(
     depth: int,
     react: bool = True,
     permanent: bool = False,
+    magnitude: int = PERMILLE,
 ) -> list[EventBase]:
     """在（已確認可以有表面的）``xy`` 放下 ``surface``：``react`` 時先查互動表的 ``surface_created``
     規則，放下帶元素的表面後格上物件被該元素觸及。``permanent``（吹送移動永久表面，Phase 3-54a）時
@@ -252,6 +258,7 @@ def place_surface(
         creator=creator,
         use_default_duration=not (permanent and kept),
         depth=depth,
+        magnitude=magnitude if kept else PERMILLE,  # 互動換成別種表面時強度回到 1000
     )
     element = ctx.rules.surface_def(final).element if final is not Surface.NONE else None
     if react and kept and element is not None and state.tile(*xy).object_id is not None:

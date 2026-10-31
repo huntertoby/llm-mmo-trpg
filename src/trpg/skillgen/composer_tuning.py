@@ -17,7 +17,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_parts import Knob
+from trpg.skillgen.composer_parts import Knob, set_knob_value
 from trpg.skillgen.validate import share_violations
 
 __all__ = ["base_ratio", "tune", "tuning_bounds"]
@@ -63,7 +63,7 @@ class _Evaluator:
 
 
 def _apply(knob: Knob, effects: list[dict[str, Any]]) -> None:
-    effects[knob.index][knob.field] = knob.value
+    set_knob_value(effects[knob.index], knob.field, knob.value)
 
 
 def _pick(rng: Rng, knobs: Sequence[Knob]) -> Knob:

@@ -144,9 +144,11 @@ min_character_tier:
 # 控制類狀態（移動、心智、硬控）的持續不放大，照組合器的上限。
 retier_growth:
   target_tolerance_permille: 50
-  stretch:
-    apply_status: {duration: 10}
-    create_surface: {duration: 10}
+  stretch:                                   # BAL-12e（#76）：持續回合最多放大到 6（原本就超過的不縮短）
+    apply_status: {duration: 6}
+    create_surface: {duration: 6}
+  magnitude_step: 25                         # BAL-12e：持續到 6 之後數值型狀態／表面改加強度（‰），每格 25‰
+  magnitude_max: 2000                        # 表面要先放大到最大的形狀才加強度；控制類與沒有數值的狀態不加
   area_shapes: [ground_tile, cross, square3]
   max_extra_cooldown: 4
   max_cooldown: 6

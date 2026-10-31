@@ -442,8 +442,16 @@ def _on_surface_entered(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBa
         and burn_immune(ctx.rules, unit, event.surface)
     ):
         return []  # 角魔走在火焰表面上不會燃燒（Phase 3R-2）
+    tile = ctx.state.tile(event.pos.x, event.pos.y)
+    # 表面的強度（BAL-12e）：格上還是同一種表面時照它的強度
+    magnitude = tile.surface_magnitude_permille if tile.surface is event.surface else 1000
     return [
-        ApplyStatusEffect(depth=depth, target_id=event.unit_id, status_id=on_enter.apply_status)
+        ApplyStatusEffect(
+            depth=depth,
+            target_id=event.unit_id,
+            status_id=on_enter.apply_status,
+            magnitude_permille=magnitude,
+        )
     ]
 
 

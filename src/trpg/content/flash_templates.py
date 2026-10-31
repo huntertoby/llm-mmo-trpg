@@ -102,6 +102,9 @@ class CompleteSkillRules(ContentModel):
     can_reflash: bool = True
     summon_power_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
     stance_magnitude_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
+    status_magnitude_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
+    """數值型狀態與表面的強度（BAL-12e，#76；``magnitude_permille``，乘在原本的強度上）。在效果參數
+    那一組（持續回合等）一起加，比持續 +1 回合細。"""
     cost_cuts: tuple[CostCut, ...] = (
         CostCut(field="stance_upkeep"),
         CostCut(field="cooldown"),
@@ -114,6 +117,7 @@ class CompleteSkillRules(ContentModel):
     def _check_ladders(self) -> CompleteSkillRules:
         _ladder(self.summon_power_steps, "summon_power_steps")
         _ladder(self.stance_magnitude_steps, "stance_magnitude_steps")
+        _ladder(self.status_magnitude_steps, "status_magnitude_steps")
         return self
 
 

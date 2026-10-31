@@ -49,6 +49,7 @@ def create_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
                 surface=spec.surface,
                 duration=duration,
                 team=cast.caster.team,
+                magnitude_permille=spec.magnitude_permille or 1000,  # 強度（BAL-12e）
             )
         )
     return batch

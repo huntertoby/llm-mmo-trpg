@@ -192,7 +192,8 @@ class ApplyStatusEffect(EffectBase):
     """自己付的代價（``cost.self_status``／``cost.overdraft``，Phase 3-50）：不觸發控制遞減，也不受
     Boss 硬控轉換影響。"""
     magnitude_permille: int = Field(default=1000, ge=1000)
-    """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）。"""
+    """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）；數值型狀態的
+    強度（BAL-12e，#76）。其他狀態一律 1000。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -361,6 +362,8 @@ class CreateSurfaceEffect(_AtPos):
     team: Team | None = None
     react: bool = True
     cause: str = "effect"
+    magnitude_permille: int = Field(default=1000, ge=1000)
+    """表面的強度（‰，BAL-12e，#76；``Tile.surface_magnitude_permille``）。"""
 
 
 class BlowSurfaceEffect(EffectBase):
