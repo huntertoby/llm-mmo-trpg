@@ -166,3 +166,9 @@
 **BAL-13b｜弱 build 診斷**（gambler 44.3%、seer 49.0%、assassin 39.0%，技能已頂預算）：各 build 技能使用率；AI 時機（seer 的標記／詛咒是否先上再打、gambler 高變異招怎麼選、assassin 背刺與瞬步）；死因與死亡回合；與同區間正常 build 對照。輸出「改 AI」或「改技能結構」的證據與候選。
 **產出**：`docs/phases/BAL-13/`、`BAL-13a報告.md`、`BAL-13b報告.md`（各含待 PM 決定）。
 - **BAL-12d 驗收**（`c98b76b8`，報告 `BAL-12d報告.md`）：fire 主動技法力 ×0.9；gambler 攻擊技加到預算上限（+17～28%）；`hex_bolt`、`chain_lightning` 卡預算區間不動（玩法 PM：同階同預算）；assassin AI 模式 `assassin`，改完存活 20% < 30% 故 HP 44 → 53（全矩陣存活 24%、勝率 34 → 39%）；前段判定照 06 6.8（30 場、勝場差 ≤ 1 同分比隊伍剩餘 HP）。全矩陣 storm 79.7、fire 79.0 → BAL-13a。合併後全量 2 個失敗（火焰箭法力測試、CLI 輸出快照，皆因火系法力改動、agent 未跑到），開發 PM 修正後通過；其餘 pytest 11024、vitest 1176、重播通過。
+
+**BAL-13c｜連鎖衰減與擴散每輪一次（玩法決定 #77、#78，使用者「1A 2A 好 寫入」，`17868caa`；06 6.5「連鎖衰減」、05 互動規則表）**：
+1. #77：chain 形狀的威力（傷害／治療／護盾）每跳 −25%（100、75、50…，最低 25%）；狀態等非數值效果照常施加；chain 形狀倍率依衰減後期望總份量重新校正（只降不升），內建連鎖技照新倍率重算預算（第一個目標可因此變強）。
+2. #78：雷電沿 water 格或導電物擴散時，同一輪內同一單位最多受一次擴散傷害（不論幾次雷擊、幾個施放者）；直接命中不算擴散。
+3. 擴散倍率改 500‰（BAL-13a 原型，`content/interactions.yaml` 兩條 `lightning_conducts_*`；本段一起套，因為 4 個 engine 擴散測試寫死 1000‰ 的數值，要改成讀 content 或明確用測試用倍率）；套用後 storm 掉到 70% 以下，就改回 1000‰ 再量一次。
+**驗收**：重量 storm 與其他用 chain／雷的 build（全矩陣新判定）；`LOG_FORMAT`／快照照慣例；ruff、format、mypy、lint-imports、相關 pytest（含 engine）、重播；報告 `docs/phases/BAL-13c報告.md`。排在 BAL-12e 合併後（兩段都改引擎）。
