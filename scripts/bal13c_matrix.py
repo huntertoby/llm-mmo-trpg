@@ -89,10 +89,12 @@ def _raw(cell: MatrixCell) -> RawCell:
 
 
 def merge(base: MatrixReport, parts: list[MatrixReport]) -> MatrixReport:
-    replaced = {c.build_id: c for p in parts for c in p.cells}
-    keep = [c for c in base.cells if c.build_id not in replaced]
-    cells = keep + [c for p in parts for c in p.cells]
-    return assemble_matrix(base.builds, base.maps, [_raw(c) for c in cells], base.seeds)
+    """後面的 ``parts`` 覆蓋前面的（同一格只留最後一份）。"""
+    cells = {(c.build_id, c.map_id): c for c in base.cells}
+    for part in parts:
+        cells.update({(c.build_id, c.map_id): c for c in part.cells})
+    raw = [_raw(cells[(c.build_id, c.map_id)]) for c in base.cells]
+    return assemble_matrix(base.builds, base.maps, raw, base.seeds)
 
 
 def _win(report: MatrixReport, build: str) -> float:
