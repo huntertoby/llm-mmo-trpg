@@ -92,6 +92,12 @@ class CompleteSkillRules(ContentModel):
     cap_permille: int = Field(default=150, ge=0, le=1000)
     """實際加上去的上限（06 6.34.6，玩法 PM ec73486f）：
     一步會超過時先用較細的旋鈕補，都不行才接受超過。"""
+    stop_over_permille: int | None = Field(default=None, ge=0, le=1000)
+    """BAL-12b 定（06 6.34.6）：都不行、要超過上限時，若會超過這個值，改成停在
+    +``budget_permille``‰ 以下最接近的那一階（只走上限內的步子停下的版本）；省略＝接受超過。"""
+    modifier_step: int | None = Field(default=None, ge=1, le=25)
+    """BAL-12b 定：完整技能的修正幅度（傷害、治療）改用每 ``modifier_step``‰ 一格的細階梯；
+    省略＝同升階重配的修正階梯。只用在完整技能。"""
     can_flash: bool = False
     can_reflash: bool = True
     summon_power_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)

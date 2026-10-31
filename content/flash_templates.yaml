@@ -48,6 +48,8 @@ rules:
     flashes: 3
     budget_permille: 120
     cap_permille: 150         # 實際加上去的上限；一步超過時先用較細的旋鈕補（06 6.34.6）
+    stop_over_permille: 200   # BAL-12b 定：都不行時若會超過 +200‰，改停在 +120‰ 以下最接近的一階
+    modifier_step: 5          # BAL-12b 定：完整技能的修正幅度每 5‰ 一格（只用在完整技能）
     can_flash: false
     can_reflash: true
     # +120‰ 怎麼加上去（3W-5b）：預算器的強度旋鈕（傷害、治療、護盾、推拉）照舊，召喚與姿態另外多一個旋鈕，
