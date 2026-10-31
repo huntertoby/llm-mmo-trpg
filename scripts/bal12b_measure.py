@@ -26,9 +26,12 @@ from typing import Any
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.skillgen import complete
+from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.flash_derive import with_budget_bonus
-from trpg.skillgen.random_composer import default_library
+from trpg.skillgen.random_composer import ComposeError, default_library
+from trpg.skillgen.skill_tier import retier
+from trpg.skillgen.whiteboard import compose_whiteboard
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "tests/skillgen/fixtures/refactor_3wr2.json"
@@ -379,6 +382,210 @@ def report_overcap(library: ContentLibrary, names: Sequence[str]) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# 第 2 項：升階持續回合上限 10（B-3W-4）
+# ---------------------------------------------------------------------------
+
+BATTLE_ROUNDS = 6
+"""一般遭遇 4–6 輪的上緣（``docs/專案計畫.md`` 平衡目標）：狀態持續超過這個回合數，一般戰鬥裡用不到。"""
+
+
+@dataclass(frozen=True, slots=True)
+class TierRow:
+    recipe: str
+    name: str
+    kind: str
+    seed: int
+    tier: int
+    effect: str
+    shape: str
+    duration: int
+    ratio: Fraction
+    target: Fraction
+    control: bool
+    complete_gain: int | None  # 3 階時的完整技能（+120‰）實際加了幾 ‰
+
+
+def _main_effect(skill: SkillDef) -> Any:
+    return next(e for e in skill.effects if e.type in ("apply_status", "create_surface"))
+
+
+def _is_control(effect: Any, library: ContentLibrary) -> bool:
+    if effect.type != "apply_status":
+        return False
+    return library.ruleset.statuses.by_id()[str(effect.status)].control_group is not None
+
+
+def _fixed_recipes(library: ContentLibrary) -> list[tuple[str, Any]]:
+    """點數固定的狀態／表面白板配方（核心效果是施加狀態或產生表面、species basic）。"""
+    rules = library.composer.whiteboard
+    out = []
+    for kind in ("active", "passive", "reaction"):
+        for recipe in rules.recipes(kind):
+            if recipe.species == "basic" and recipe.effect.get("type") in (
+                "apply_status",
+                "create_surface",
+            ):
+                out.append((kind, recipe))
+    return out
+
+
+def budget_ratio(skill: SkillDef, library: ContentLibrary) -> Fraction:
+    return skill_budget(skill, library).ratio
+
+
+def tier_rows(library: ContentLibrary, seeds: int) -> list[TierRow]:
+    rows: list[TierRow] = []
+    for kind, recipe in _fixed_recipes(library):
+        for seed in range(1, seeds + 1):
+            try:
+                skill = compose_whiteboard(
+                    seed, kind=kind, tier=recipe.min_tier, library=library, recipe_id=recipe.id
+                )
+            except ComposeError:
+                continue
+            target = budget_ratio(skill, library)
+            for tier in range(recipe.min_tier, 4):
+                if tier > skill.tier:
+                    skill = retier(library, skill, tier)
+                effect = _main_effect(skill)
+                gain = None
+                if tier == 3:
+                    whole = complete.complete_strength(library, skill)
+                    gain = complete.complete_gain_permille(skill, whole, library)
+                rows.append(
+                    TierRow(
+                        recipe.id,
+                        recipe.name_zh,
+                        kind,
+                        seed,
+                        tier,
+                        str(effect.status or effect.surface),
+                        skill.shape.type if skill.shape is not None else "-",
+                        effect.duration or 0,
+                        budget_ratio(skill, library),
+                        target,
+                        _is_control(effect, library),
+                        gain,
+                    )
+                )
+    return rows
+
+
+def _ceil(x: Fraction) -> int:
+    return -(-x.numerator // x.denominator)
+
+
+def _useful(r: TierRow) -> Fraction:
+    """實用比例：超過一般戰鬥輪數的回合不算。"""
+    if r.duration <= BATTLE_ROUNDS:
+        return r.ratio
+    return r.ratio * Fraction(BATTLE_ROUNDS, r.duration)
+
+
+def _stacked(r: TierRow) -> str:
+    """做法 B：層數 n ＝ ⌈持續 ÷ 6⌉、持續 ⌈持續 ÷ n⌉（點數 × 層數 × 持續 ÷ 預設）→ 帳面比例。"""
+    if r.duration <= BATTLE_ROUNDS:
+        return "-"
+    n = _ceil(Fraction(r.duration, BATTLE_ROUNDS))
+    dur = _ceil(Fraction(r.duration, n))
+    ratio = r.ratio * Fraction(n * dur, r.duration)
+    return f"{n}×{dur}→{float(ratio):.2f}"
+
+
+def _strengthened(r: TierRow) -> str:
+    """做法 A：持續停在 6、每回合強度 ×（持續 ÷ 6）（帳面比例不變、實用比例回到帳面）。"""
+    if r.duration <= BATTLE_ROUNDS:
+        return "-"
+    return f"{BATTLE_ROUNDS}、×{r.duration / BATTLE_ROUNDS:.2f}"
+
+
+def _span(values: Sequence[str]) -> str:
+    uniq = sorted(set(values))
+    return uniq[0] if len(uniq) == 1 else "／".join(uniq)
+
+
+def report_duration(library: ContentLibrary, seeds: int) -> list[str]:
+    rows = tier_rows(library, seeds)
+    cap = library.budget.retier_growth.stretch["apply_status"]["duration"]
+    lines = [
+        "## 2. 升階持續回合上限 10（B-3W-4）",
+        "",
+        f"點數固定的狀態／表面白板配方 {len({r.recipe for r in rows})} 個 × 種子 1～{seeds}，"
+        "在最低階級組出後逐階升階重配（`retier`）。",
+        "- 比例＝預算比例（驗證窗 0.70～1.00）；目標＝最低階組出時的比例（3W-9b 重配維持比例）。",
+        f"- 實用比例＝比例 × min(持續, {BATTLE_ROUNDS}) ÷ 持續：一般遭遇 4～6 輪，"
+        "超過的回合帳面算點數、戰鬥裡用不到。",
+        f"- A 加強度＝升階改加強度不加回合：持續停在 {BATTLE_ROUNDS}、每回合強度 ×（持續 ÷ "
+        f"{BATTLE_ROUNDS}），帳面比例不變，實用比例回到帳面。",
+        f"- B 層數＝施加狀態加層數參數：層數 ⌈持續 ÷ {BATTLE_ROUNDS}⌉、持續 ⌈持續 ÷ 層數⌉"
+        "（點數 × 層數），列帳面比例。",
+        "- 完整 ‰＝3 階這招做成完整技能（+120‰）實際加了多少（持續上限 10 擋住時加不上去）。",
+        "",
+    ]
+    grouped: dict[tuple[str, int], list[TierRow]] = {}
+    for r in rows:
+        grouped.setdefault((r.recipe, r.tier), []).append(r)
+    table = []
+    for (recipe, tier), rs in sorted(grouped.items()):
+        r0 = rs[0]
+        n = len(rs)
+        durs = sorted({r.duration for r in rs})
+        table.append(
+            [
+                f"{r0.name}（{recipe}）",
+                r0.kind,
+                r0.effect + ("・控制" if r0.control else ""),
+                tier,
+                _span([r.shape for r in rs]),
+                str(durs[0]) if len(durs) == 1 else f"{durs[0]}～{durs[-1]}",
+                f"{float(sum((r.ratio for r in rs), Fraction(0)) / n):.2f}",
+                f"{float(sum((r.target for r in rs), Fraction(0)) / n):.2f}",
+                f"{float(sum((_useful(r) for r in rs), Fraction(0)) / n):.2f}",
+                _span([_strengthened(r) for r in rs]),
+                _span([_stacked(r) for r in rs]),
+                "-" if tier != 3 else _span([str(r.complete_gain) for r in rs]),
+            ]
+        )
+    lines += _table(
+        [
+            "配方",
+            "種類",
+            "狀態／表面",
+            "階",
+            "形狀",
+            "持續",
+            "比例",
+            "目標",
+            "實用比例",
+            "A 加強度（持續、強度）",
+            "B 層數（層×持續→比例）",
+            "完整 ‰",
+        ],
+        table,
+    )
+    lines.append("")
+    at_cap = [r for r in rows if r.duration == cap and not r.control]
+    over = [r for r in rows if r.duration > BATTLE_ROUNDS and not r.control]
+    short: dict[str, list[int]] = {}
+    for r in rows:
+        if r.complete_gain is not None:
+            short.setdefault(r.recipe, []).append(r.complete_gain)
+    lacking = [
+        f"{k} {min(v)}～{max(v)}" for k, v in sorted(short.items()) if min(v) < 120
+    ]
+    total = sum(len(v) for v in short.values())
+    under = sum(1 for v in short.values() for g in v if g < 120)
+    lines += [
+        f"- 持續到頂（{cap}）的（非控制）{len(at_cap)} 列，其中帳面比例低於目標 "
+        f"{sum(1 for r in at_cap if r.ratio < r.target)} 列；"
+        f"持續 > {BATTLE_ROUNDS}（帳面有、戰鬥用不到）{len(over)}／{len(rows)} 列。",
+        f"- 3 階完整技能加不到 +120‰ 的 {under}／{total} 個：" + ("、".join(lacking) or "無") + "。",
+        "",
+    ]
+    return lines
+
+
+# ---------------------------------------------------------------------------
 # 主程式
 # ---------------------------------------------------------------------------
 
@@ -388,6 +595,8 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("overcap")
     p.add_argument("--overrides", default=",".join(OVERRIDES))
+    p = sub.add_parser("duration")
+    p.add_argument("--seeds", type=int, default=4)
     return parser
 
 
@@ -399,6 +608,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     out: list[str] = []
     if args.cmd == "overcap":
         out = report_overcap(library, args.overrides.split(","))
+    elif args.cmd == "duration":
+        out = report_duration(library, args.seeds)
     sys.stdout.write("\n".join(out) + "\n")
     return 0
 
