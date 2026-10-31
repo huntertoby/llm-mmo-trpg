@@ -74,3 +74,18 @@ ruff check、ruff format --check、mypy、lint-imports 通過；相關 pytest：
 6. **完整技能也會加強度**（`status_magnitude_steps`，和持續回合在同一組）：讓完整技能的 +120‰ 加得上去，但 24 招內建技能的完整版本改變（第 3 節）。
 7. 強度級距 25‰、上限 2000‰（同原語參數上限）是實作者初值；表面的「形狀放大到最大」以角色階級能用的最大形狀判斷，形狀放不大（被動、反應、陷阱）視為已到上限。
 8. 工坊兩筆說明（apply_status／create_surface 的強度）是實作者初稿，待玩法 PM 改寫。
+
+## 7. BAL-12f（BAL-12e 收尾，06 6.34.9「BAL-12e 定」）
+
+**做了什麼**
+1. **沒有數值的白板豁免預算窗下限**：新增 `skillgen.budget.weak_floor_exempt(skill, library)`。條件很窄：2 階以上、沒有接續段，而且 **所有** 效果都是沒有數值的狀態（`apply_status`，非控制、非姿態、非數值型）或沒有數值的表面（冰、水、油、煙霧、黑暗）。有任何傷害、治療、護盾、位移、數值型狀態或表面、召喚、形態、控制狀態的技能都不豁免、照舊檢查。`retier_report` 用它：掉出下限時 `in_window` 仍為 True（上限照查）、`problems` 不含 `budget.weak`；不補償，重配結果沒有改變（升階輸出與 BAL-12e 相同）。
+   - 豁免到的技能（2 階以上）：凝冰（冰）、隱身脫離（隱蔽）、烙印／追蹤印記／追蹤印痕／先機標記（標記）等只施加無數值狀態或表面的白板。
+2. **重複施加時的強度**（引擎）：`apply_status` 重複施加時，強度跟著剩餘回合較長的實例（舊的較長留舊的、新的較長用新的）；剩餘回合相同（含同為永久）時取強度較高者。邏輯抽成 `_reapplied`。舊實例留下時仍不帶自暈的 `dormant` 旗標（與原本一致）。
+- **LOG_FORMAT `/92` → `/93`**（結算語意改變：剩餘回合相同時原本一律換成新實例的強度）。已併入 main 的 BAL-13c（`/92`）後改成 `/93`；`docs/phases/戰鬥紀錄格式變更.md` 加了 `/93` 一條，字面值已更新。
+
+**快照變動**：`tests/skillgen/fixtures/refactor_3wr2.json` 沒有變（731 個 slow 快照全過）。
+
+**測試**：新增 `test_strength_bal12e.py::test_reapply_strength_follows_the_longer_instance_then_the_higher`、`test_retier_growth_3w9b.py` 的豁免與「豁免很窄」兩個測試。
+
+**待 PM 決定**
+- 豁免只放在 `retier_report`（升階重配的檢查），**沒有** 放進一般的 `validate_skill`：因為驗證器不分「升階來的」與「提案來的」，放進去會讓 3 階單獨傳送這類提案也不再標過弱（`test_proposal_l10b` 明確要求要標）；而且重配內部也用 `validate_skill` 挑候選，放進去會讓冰不再加格數。若要連 `validate_skill` 也豁免，需要在技能上加「升階來的」標記。
