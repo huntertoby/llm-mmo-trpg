@@ -14,7 +14,6 @@ shape: {type: chain, range: 5, jumps: 2, jump_range: 3}
 effects:
   - {type: damage, dice: 2d8, element: lightning}
 condition: null
-damage_permille: 940
 cost: {mana: 10}
 tags: [lightning, spell, chain]
 narrative:

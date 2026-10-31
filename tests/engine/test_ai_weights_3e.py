@@ -28,10 +28,11 @@ def test_the_defaults_keep_the_old_constants() -> None:
 
 
 def test_no_shipped_profile_overrides_the_new_weights() -> None:
-    """內容裡沒有行為模式改寫這三個權重（所以戰鬥結果不變）。"""
+    """內容裡除了 assassin（BAL-12d 刻意加重瞬步）以外，沒有行為模式改寫這三個權重。"""
     for profile in library().ai_profiles.profiles:
         w = profile.weights
-        assert (w.charge_per_enemy, w.shadowstep, w.shadowstep_behind) == (3, 3, 2), profile.id
+        expected = (3, 6, 3) if profile.id == "assassin" else (3, 3, 2)
+        assert (w.charge_per_enemy, w.shadowstep, w.shadowstep_behind) == expected, profile.id
 
 
 def test_the_charge_estimate_uses_the_weight_per_enemy() -> None:

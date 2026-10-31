@@ -235,7 +235,8 @@ def _summary(report: MatrixReport, build: str) -> str:
     tops = [a.archetype for a in report.archetype_cells if a.build_id == build and a.top]
     ranks = {a.archetype: a.rank for a in report.archetype_cells if a.build_id == build}
     rank_text = " ".join(f"{k[:6]}={v}" for k, v in sorted(ranks.items()))
-    return f"勝率 {rate:.1f}%｜英雄存活 {surv:.0f}%｜DPR {dpr:.1f}｜前段 {len(tops)} 類｜名次 {rank_text}"
+    head = f"勝率 {rate:.1f}%｜英雄存活 {surv:.0f}%｜DPR {dpr:.1f}"
+    return f"{head}｜前段 {len(tops)} 類｜名次 {rank_text}"
 
 
 def cmd_trial(args: argparse.Namespace) -> int:

@@ -95,7 +95,11 @@ def test_the_wild_blade_card_describes_explosion_crit_range_and_discount() -> No
     lib = library()
     card = skill_card(lib, lib.skills["skill_wild_blade"])
     (text,) = card.effects
-    assert "武器傷害 ×1.5" in text
+    skill = lib.skills["skill_wild_blade"]
+    base, discount = skill.effects[0].multiplier_permille, skill.damage_permille
+    assert base is not None and discount is not None
+    multiplier = base * discount / 1_000_000
+    assert f"武器傷害 ×{multiplier:g}" in text
     assert "爆骰" in text and "最多再擲 2 次" in text
     assert "暴擊範圍 17–20" in text
     assert "gamble" in card.tags
