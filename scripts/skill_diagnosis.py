@@ -19,7 +19,8 @@
 ``<技能ID（逗號分隔）、@標籤或@build:ID>:<鍵>=<值>|<鍵>*<倍率>``。
 鍵：``dmg``（傷害效果的 ``multiplier_permille`` 乘以倍率‰，如 ``dmg=1300``）、
 ``mana``／``stamina``／``cd``（增減；``mana=-1``）、
-``mana*0.9``（乘以倍率，費用至少 1，四捨五入）。
+``dur``（召喚持續回合增減）、``mana*0.9``（乘以倍率，費用至少 1，四捨五入）。
+法術技的 ``dmg`` 改設技能層級 ``damage_permille``（法術傷害不看效果的 multiplier_permille）。
 所有覆寫都只作用在記憶體內的 library 副本。
 """
 
@@ -56,6 +57,11 @@ def _round_half_up(value: float) -> int:
 def apply_edit(skill: SkillDef, key: str, op: str, value: float) -> SkillDef:
     """對單一技能套用一個覆寫。"""
     if key == "dmg":
+        if skill.category == "spell":
+            # 法術技的傷害不看效果的 multiplier_permille（引擎只用骰子＋屬性）；改用技能層級的
+            # damage_permille（高變異折扣，引擎對所有傷害效果一律乘上）。
+            old = skill.damage_permille if skill.damage_permille is not None else 1000
+            return skill.model_copy(update={"damage_permille": _round_half_up(old * value / 1000)})
         effects = []
         for eff in skill.effects:
             e = eff
@@ -63,6 +69,14 @@ def apply_edit(skill: SkillDef, key: str, op: str, value: float) -> SkillDef:
                 old = e.multiplier_permille if e.multiplier_permille is not None else 1000
                 e = e.model_copy(update={"multiplier_permille": _round_half_up(old * value / 1000)})
             effects.append(e)
+        return skill.model_copy(update={"effects": tuple(effects)})
+    if key == "dur":
+        effects = [
+            e.model_copy(update={"duration": max(1, (e.duration or 1) + int(value))})
+            if e.type == "summon"
+            else e
+            for e in skill.effects
+        ]
         return skill.model_copy(update={"effects": tuple(effects)})
     if key in ("mana", "stamina", "cd"):
         field = "cooldown" if key == "cd" else key
