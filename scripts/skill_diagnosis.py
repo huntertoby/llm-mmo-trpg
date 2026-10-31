@@ -12,9 +12,11 @@
     uv run python scripts/skill_diagnosis.py trial --builds build_assassin --seeds 5 --jobs 4 \\
         --matrix docs/phases/BAL-12/12a_matrix.json --edit "skill_pick_off:dmg=1300"
     # 火系法力：Boss 戰情境的法力短缺
-    uv run python scripts/skill_diagnosis.py mana --seeds 20 --jobs 4 --edit "@fire:mana*0.9"
+    uv run python scripts/skill_diagnosis.py mana --seeds 20 --jobs 4 \
+        --edit "@build:build_fire:mana*0.9"
 
-覆寫語法（``--edit``，可重複；``;`` 分隔多筆）：``<技能ID或@標籤>:<鍵>=<值>|<鍵>*<倍率>``。
+覆寫語法（``--edit``，可重複；``;`` 分隔多筆）：
+``<技能ID（逗號分隔）、@標籤或@build:ID>:<鍵>=<值>|<鍵>*<倍率>``。
 鍵：``dmg``（傷害效果的 ``multiplier_permille`` 乘以倍率‰，如 ``dmg=1300``）、
 ``mana``／``stamina``／``cd``（增減；``mana=-1``）、
 ``mana*0.9``（乘以倍率，費用至少 1，四捨五入）。
@@ -79,7 +81,9 @@ def parse_edits(text: str) -> list[tuple[str, str, str, float]]:
     """``skill:key=val|key*val;…`` → ``[(selector, key, op, value)]``。"""
     out: list[tuple[str, str, str, float]] = []
     for part in (p.strip() for p in text.split(";") if p.strip()):
-        selector, _, rest = part.partition(":")
+        head = 2 if part.startswith("@build:") else 1
+        *sel, rest = part.split(":", head)
+        selector = ":".join(sel)
         for item in rest.split("|"):
             op = "*" if "*" in item else "="
             key, _, val = item.partition(op)
@@ -88,12 +92,17 @@ def parse_edits(text: str) -> list[tuple[str, str, str, float]]:
 
 
 def select_skills(library: ContentLibrary, selector: str) -> list[str]:
+    if selector.startswith("@build:"):
+        hero = library.builds.by_id()[selector.removeprefix("@build:")].hero
+        return [s for s in hero.skills if library.skills[s].kind == "active"]
     if selector.startswith("@"):
         tag = selector[1:]
         return sorted(s.id for s in library.skills.values() if tag in s.tags and s.kind == "active")
-    if selector not in library.skills:
-        raise ValueError(f"未知的技能：{selector}")
-    return [selector]
+    ids = selector.split(",")
+    unknown = [s for s in ids if s not in library.skills]
+    if unknown:
+        raise ValueError(f"未知的技能：{','.join(unknown)}")
+    return ids
 
 
 def with_edits(library: ContentLibrary, edits: list[tuple[str, str, str, float]]) -> ContentLibrary:
