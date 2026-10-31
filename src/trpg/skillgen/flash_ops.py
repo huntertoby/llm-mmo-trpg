@@ -376,7 +376,20 @@ def _followup_knob(effect: dict[str, Any], library: ContentLibrary) -> tuple[str
     """接續段傷害的旋鈕欄位與階梯（骰子或武器倍率）。"""
     if effect.get("dice") is not None:
         return "dice", dice_ladder(library.composer.dice)
-    return "multiplier_permille", multiplier_ladder(library)
+    return "multiplier_permille", _followup_multipliers(library)
+
+
+_FINE_MULTIPLIER_TOP = 3000
+"""接續段細階梯只細到這裡（‰；以上照原階梯）。"""
+
+
+def _followup_multipliers(library: ContentLibrary) -> tuple[int, ...]:
+    """接續段強化類的武器倍率階梯：原階梯＋``rules.followup_multiplier_step`` 的細格（BAL-11b）。"""
+    ladder = multiplier_ladder(library)
+    step = library.flash.rules.followup_multiplier_step
+    if step is None:
+        return ladder
+    return tuple(sorted({*ladder, *range(ladder[0], _FINE_MULTIPLIER_TOP, step)}))
 
 
 def _op_followup_area(
@@ -1246,8 +1259,11 @@ def _modifier_knobs(
     changes = [m["change"] for m in rules]
     fine = op in FINE_MOD_OPS
     ladder = tuple(range(flash.modifier_fine_step, 1001, flash.modifier_fine_step))
+    plain = MODIFIER_LADDER
+    if op == "mod_potency" and flash.modifier_potency_step is not None:  # BAL-11b：只在閃現強效
+        plain = tuple(range(flash.modifier_potency_step, 1001, flash.modifier_potency_step))
     knobs = [
-        Knob(i, name, ladder if fine else MODIFIER_LADDER)
+        Knob(i, name, ladder if fine else plain)
         for i, change in enumerate(changes)
         for name in _MAGNITUDES
         if (change.get(name) or 0) > 0

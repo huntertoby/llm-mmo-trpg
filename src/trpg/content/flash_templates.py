@@ -164,6 +164,12 @@ class FlashRules(ContentModel):
     """同上，命中後效果（``on_hit_effects``）的骰子也當旋鈕（組合器的骰子階梯；BAL-10b）。"""
     modifier_fine_step: int = Field(default=5, ge=1, le=50)
     """BAL-10b 新增的修正模板重調正的傷害、治療幅度用的階梯間距（‰；從這個數到 1000）。"""
+    modifier_potency_step: int | None = Field(default=None, ge=1, le=50)
+    """閃現「強效」（``mod_potency``）重調正的傷害、治療幅度的階梯間距（‰；從這個數到 1000；
+    BAL-11b）。省略時用舊階梯（50～1000 每 25）。只在閃現；升階重配、完整技能照舊。"""
+    followup_multiplier_step: int | None = Field(default=None, ge=1, le=100)
+    """接續段強化類（BAL-10b 的 ``followup_*``）重調接續段武器倍率的細階梯間距（‰；3000‰ 以下，
+    與原階梯合併；BAL-11b）。省略時用原階梯。"""
     modifier_drawback_step: int = Field(default=100, ge=1, le=500)
     """``mod_cost``（代價減輕）：負的傷害、治療幅度（‰）往 0 減輕多少（BAL-10b）。"""
     form_magnitudes: tuple[int, ...] = tuple(range(1000, 2001, 50))
