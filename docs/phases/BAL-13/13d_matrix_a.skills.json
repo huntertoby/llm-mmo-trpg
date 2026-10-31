@@ -1,0 +1,1027 @@
+{
+ "build_push": {
+  "skill_gale_kick": {
+   "battles": 300,
+   "uses": 204.0,
+   "dmg": 263.0,
+   "heal": 0.0,
+   "hits": 134.69230769230768,
+   "teams": [
+    "ally",
+    "enemy"
+   ]
+  },
+  "skill_leap_slam": {
+   "battles": 300,
+   "uses": 221.0,
+   "dmg": 443.0,
+   "heal": 0.0,
+   "hits": 126.18407042647361,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_charged_cleave": {
+   "battles": 300,
+   "uses": 197.0,
+   "dmg": 697.0,
+   "heal": 0.0,
+   "hits": 112.98053511026708,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_parting_slash": {
+   "battles": 300,
+   "uses": 51.0,
+   "dmg": 156.0,
+   "heal": 0.0,
+   "hits": 34.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_bloodlust": {
+   "battles": 300,
+   "uses": 303.0,
+   "dmg": 0.0,
+   "heal": 2790.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_arcane_blade": {
+   "battles": 300,
+   "uses": 211.0,
+   "dmg": 1840.0,
+   "heal": 0.0,
+   "hits": 118.46196581196581,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_heavy_stomp": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_battering_ram": {
+   "battles": 300,
+   "uses": 292.0,
+   "dmg": 775.0,
+   "heal": 0.0,
+   "hits": 171.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_fracture_mark": {
+   "battles": 300,
+   "uses": 165.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_quake_topple": {
+   "battles": 300,
+   "uses": 16.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_fire": {
+  "skill_fire_bolt": {
+   "battles": 300,
+   "uses": 1030.0,
+   "dmg": 5342.0,
+   "heal": 0.0,
+   "hits": 549.5947877563929,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_cinder_burst": {
+   "battles": 300,
+   "uses": 108.0,
+   "dmg": 1274.0,
+   "heal": 0.0,
+   "hits": 50.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_ashen_oath": {
+   "battles": 300,
+   "uses": 230.0,
+   "dmg": 2549.0,
+   "heal": 0.0,
+   "hits": 129.2450230092037,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_shatter_blast": {
+   "battles": 300,
+   "uses": 445.0,
+   "dmg": 4793.0,
+   "heal": 0.0,
+   "hits": 233.21723434722702,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_detonate_burning": {
+   "battles": 300,
+   "uses": 21.0,
+   "dmg": 252.0,
+   "heal": 0.0,
+   "hits": 12.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_searing_scar": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_ember_cycle": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_ember_ward": {
+   "battles": 300,
+   "uses": 1090.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_gravity_burst": {
+   "battles": 300,
+   "uses": 116.0,
+   "dmg": 1169.0,
+   "heal": 0.0,
+   "hits": 64.96426253485076,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_storm": {
+  "skill_chain_lightning": {
+   "battles": 300,
+   "uses": 474.0,
+   "dmg": 7746.0,
+   "heal": 0.0,
+   "hits": 261.67923968740587,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_summon_tide": {
+   "battles": 300,
+   "uses": 164.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 91.22302888667659,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_frost_shackle": {
+   "battles": 300,
+   "uses": 183.0,
+   "dmg": 820.0,
+   "heal": 0.0,
+   "hits": 94.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_conductive_strike": {
+   "battles": 300,
+   "uses": 41.0,
+   "dmg": 304.0,
+   "heal": 0.0,
+   "hits": 26.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_twin_strike": {
+   "battles": 300,
+   "uses": 367.0,
+   "dmg": 4149.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_deep_freeze": {
+   "battles": 300,
+   "uses": 166.0,
+   "dmg": 1124.0,
+   "heal": 0.0,
+   "hits": 86.61111111111111,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_tide_snare": {
+   "battles": 300,
+   "uses": 134.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_arc_follow_up": {
+   "battles": 300,
+   "uses": 177.0,
+   "dmg": 1574.0,
+   "heal": 0.0,
+   "hits": 85.37456573910846,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_tank": {
+  "skill_encircled_sweep": {
+   "battles": 300,
+   "uses": 143.0,
+   "dmg": 679.0,
+   "heal": 0.0,
+   "hits": 80.9751803521145,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_parry_riposte": {
+   "battles": 300,
+   "uses": 188.0,
+   "dmg": 638.0,
+   "heal": 0.0,
+   "hits": 109.66243263387227,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_taunting_roar": {
+   "battles": 300,
+   "uses": 241.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 99.45242984455307,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_guardian_aegis": {
+   "battles": 300,
+   "uses": 1769.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_sunder_strike": {
+   "battles": 300,
+   "uses": 6.0,
+   "dmg": 12.0,
+   "heal": 0.0,
+   "hits": 5.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_armor_breaker": {
+   "battles": 300,
+   "uses": 108.0,
+   "dmg": 818.0,
+   "heal": 0.0,
+   "hits": 68.58333333333334,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_thunder_hand": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_grief_rage": {
+   "battles": 300,
+   "uses": 272.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_lingering_roar": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  }
+ },
+ "build_ranged": {
+  "skill_piercing_shot": {
+   "battles": 300,
+   "uses": 59.0,
+   "dmg": 539.0,
+   "heal": 0.0,
+   "hits": 39.35305435305435,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_high_ground_shot": {
+   "battles": 300,
+   "uses": 168.0,
+   "dmg": 822.0,
+   "heal": 0.0,
+   "hits": 86.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_sniper_shot": {
+   "battles": 300,
+   "uses": 575.0,
+   "dmg": 5018.0,
+   "heal": 0.0,
+   "hits": 322.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_overwatch": {
+   "battles": 300,
+   "uses": 231.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_lucky_break": {
+   "battles": 300,
+   "uses": 110.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_time_surge": {
+   "battles": 300,
+   "uses": 295.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_armor_piercing_arrow": {
+   "battles": 300,
+   "uses": 380.0,
+   "dmg": 2627.0,
+   "heal": 0.0,
+   "hits": 242.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_timber_piercer": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_covering_fire": {
+   "battles": 300,
+   "uses": 23.0,
+   "dmg": 79.0,
+   "heal": 0.0,
+   "hits": 15.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_assassin": {
+  "skill_shadow_ambush": {
+   "battles": 300,
+   "uses": 100.0,
+   "dmg": 285.0,
+   "heal": 0.0,
+   "hits": 71.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_retreating_slash": {
+   "battles": 300,
+   "uses": 163.0,
+   "dmg": 398.0,
+   "heal": 0.0,
+   "hits": 108.49447415329769,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_blink": {
+   "battles": 300,
+   "uses": 122.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_fury_stance": {
+   "battles": 300,
+   "uses": 235.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_crippling_crit": {
+   "battles": 300,
+   "uses": 119.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_pincer_strike": {
+   "battles": 300,
+   "uses": 5.0,
+   "dmg": 45.0,
+   "heal": 0.0,
+   "hits": 4.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_pick_off": {
+   "battles": 300,
+   "uses": 120.0,
+   "dmg": 626.0,
+   "heal": 0.0,
+   "hits": 75.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_shadow_backstab": {
+   "battles": 300,
+   "uses": 341.0,
+   "dmg": 2097.0,
+   "heal": 0.0,
+   "hits": 225.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_ambush_stab": {
+   "battles": 300,
+   "uses": 339.0,
+   "dmg": 748.0,
+   "heal": 0.0,
+   "hits": 206.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_support": {
+  "skill_war_hymn": {
+   "battles": 300,
+   "uses": 644.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_tailwind": {
+   "battles": 300,
+   "uses": 878.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_frost_shackle": {
+   "battles": 300,
+   "uses": 605.0,
+   "dmg": 2528.0,
+   "heal": 0.0,
+   "hits": 306.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_reflex_ward": {
+   "battles": 300,
+   "uses": 589.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_steady_breath": {
+   "battles": 300,
+   "uses": 1552.0,
+   "dmg": 0.0,
+   "heal": 7387.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_rallying_cry": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_mirror_cast": {
+   "battles": 300,
+   "uses": 62.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_life_drain": {
+   "battles": 300,
+   "uses": 573.0,
+   "dmg": 3338.0,
+   "heal": 865.0,
+   "hits": 306.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_healer": {
+  "skill_sanctuary": {
+   "battles": 300,
+   "uses": 266.0,
+   "dmg": 0.0,
+   "heal": 4570.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_renewal": {
+   "battles": 300,
+   "uses": 1049.0,
+   "dmg": 0.0,
+   "heal": 9959.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_purify": {
+   "battles": 300,
+   "uses": 925.0,
+   "dmg": 0.0,
+   "heal": 314.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_guardian_aegis": {
+   "battles": 300,
+   "uses": 1225.0,
+   "dmg": 0.0,
+   "heal": 105.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_second_wind": {
+   "battles": 300,
+   "uses": 246.0,
+   "dmg": 0.0,
+   "heal": 4549.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_resurrection": {
+   "battles": 300,
+   "uses": 108.0,
+   "dmg": 0.0,
+   "heal": 26.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_beam_of_mercy": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_self_mending": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_holy_burst": {
+   "battles": 300,
+   "uses": 285.0,
+   "dmg": 3984.0,
+   "heal": 3569.0,
+   "hits": 170.0581259921345,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_warlock": {
+  "skill_hex_bolt": {
+   "battles": 300,
+   "uses": 825.0,
+   "dmg": 4830.0,
+   "heal": 0.0,
+   "hits": 425.5721523959151,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_dread_gaze": {
+   "battles": 300,
+   "uses": 76.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 46.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_hush": {
+   "battles": 300,
+   "uses": 0.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": []
+  },
+  "skill_blinding_dark": {
+   "battles": 300,
+   "uses": 254.0,
+   "dmg": 3074.0,
+   "heal": 0.0,
+   "hits": 147.76434122261523,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_venom_cloud": {
+   "battles": 300,
+   "uses": 190.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 92.6091119664649,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_mark_detonation": {
+   "battles": 300,
+   "uses": 209.0,
+   "dmg": 2476.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_creeping_blight": {
+   "battles": 300,
+   "uses": 459.0,
+   "dmg": 4925.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_blessing_thief": {
+   "battles": 300,
+   "uses": 134.0,
+   "dmg": 585.0,
+   "heal": 0.0,
+   "hits": 66.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_guardian": {
+  "skill_taunting_roar": {
+   "battles": 300,
+   "uses": 202.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 84.74283126293996,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_stand_firm": {
+   "battles": 300,
+   "uses": 197.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_bulwark_stance": {
+   "battles": 300,
+   "uses": 300.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_thorn_skin": {
+   "battles": 300,
+   "uses": 155.0,
+   "dmg": 1573.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_soul_bond": {
+   "battles": 300,
+   "uses": 340.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_vigil_call": {
+   "battles": 300,
+   "uses": 576.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_charging_strike": {
+   "battles": 300,
+   "uses": 31.0,
+   "dmg": 252.0,
+   "heal": 0.0,
+   "hits": 20.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_shoulder_strike": {
+   "battles": 300,
+   "uses": 22.0,
+   "dmg": 206.0,
+   "heal": 0.0,
+   "hits": 14.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_mountain_mover": {
+   "battles": 300,
+   "uses": 338.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_striker": {
+  "skill_static_palm": {
+   "battles": 300,
+   "uses": 121.0,
+   "dmg": 756.0,
+   "heal": 0.0,
+   "hits": 71.2,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_thunder_finisher": {
+   "battles": 300,
+   "uses": 3.0,
+   "dmg": 18.0,
+   "heal": 0.0,
+   "hits": 1.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_overcurrent": {
+   "battles": 300,
+   "uses": 468.0,
+   "dmg": 2998.0,
+   "heal": 0.0,
+   "hits": 246.58978141191864,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_ember_brand": {
+   "battles": 300,
+   "uses": 483.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_cluster_bolt": {
+   "battles": 300,
+   "uses": 329.0,
+   "dmg": 3182.0,
+   "heal": 0.0,
+   "hits": 177.9420512820513,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_bloodwake_stride": {
+   "battles": 300,
+   "uses": 282.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_armor_break_combo": {
+   "battles": 300,
+   "uses": 140.0,
+   "dmg": 1036.0,
+   "heal": 0.0,
+   "hits": 69.3217964085241,
+   "teams": [
+    "ally"
+   ]
+  }
+ },
+ "build_trapper": {
+  "skill_cinder_mine": {
+   "battles": 300,
+   "uses": 60.0,
+   "dmg": 9.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_bear_trap": {
+   "battles": 300,
+   "uses": 417.0,
+   "dmg": 69.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_frost_shackle": {
+   "battles": 300,
+   "uses": 422.0,
+   "dmg": 2600.0,
+   "heal": 0.0,
+   "hits": 240.63081386879398,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_sinkhole": {
+   "battles": 300,
+   "uses": 49.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_fleet_foot": {
+   "battles": 300,
+   "uses": 755.0,
+   "dmg": 114.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_raise_skeleton": {
+   "battles": 300,
+   "uses": 204.0,
+   "dmg": 2.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  },
+  "skill_afterimage_vow": {
+   "battles": 300,
+   "uses": 295.0,
+   "dmg": 0.0,
+   "heal": 0.0,
+   "hits": 0.0,
+   "teams": [
+    "ally"
+   ]
+  }
+ }
+}
