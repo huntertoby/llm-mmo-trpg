@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from trpg.content.rule_changes import ELEMENT_HEALS_ALLIES
 from trpg.engine.activations import active_rule_change
 from trpg.engine.context import Ctx
@@ -768,6 +770,12 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
             skill_id=existing.skill_id,
             cost_status=existing.cost_status,
             magnitude_permille=existing.magnitude_permille,
+        )
+    elif existing is not None and existing.remaining == instance.remaining:
+        # 剩餘回合相同：強度取較高者（BAL-12f，06 6.34.9「BAL-12e 定」）；剩餘回合較長的一方本來就留下
+        instance = replace(
+            instance,
+            magnitude_permille=max(instance.magnitude_permille, existing.magnitude_permille),
         )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
