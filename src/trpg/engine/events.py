@@ -498,6 +498,8 @@ class DamageDealt(EventBase):
     """其他倍率（格擋 500）；穿透後方折扣也包含在內。"""
     pierce_permille: int = 1000
     """穿透後方折扣（‰，已包含在 ``multiplier_permille`` 裡；Phase 3C-6a 供紀錄分開顯示）。"""
+    chain_permille: int = 1000
+    """連鎖衰減（‰，已包含在 ``multiplier_permille`` 裡，也乘在 ``base_amount`` 上；BAL-13c）。"""
     base_amount: int | None = None
     """套用目標自身的元素修正與格擋等倍率 **之前** 的傷害（已含暴擊骰與天氣）。
 

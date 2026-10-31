@@ -165,12 +165,14 @@ class SkillArea:
     - ``units``：站在這些格子上的存活單位（連鎖為擊中的順序，其餘依單位 ID）。
     - ``origin``：推擊與拉扯的原點（中心格型為中心，其他為施放者所在格）。
     - ``direction``：方向型形狀的前進向量。
+    - ``chained``：``units`` 是連鎖形狀依序跳到的單位（連鎖衰減依這個順序；BAL-13c，#77）。
     """
 
     tiles: tuple[XY, ...]
     units: tuple[UnitId, ...]
     origin: XY
     direction: XY | None = None
+    chained: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -969,7 +971,9 @@ def compute_area(
     units = _tiles_to_units(state, tiles, chain)
     if any(e.type == CHARGE_THROUGH for e in effects):  # 隊友讓路：只有沿途的敵人會被撞
         units = tuple(u for u in units if state.units[u].team is not caster.team)
-    return SkillArea(tiles=tiles, units=units, origin=origin, direction=direction)
+    return SkillArea(
+        tiles=tiles, units=units, origin=origin, direction=direction, chained=chain is not None
+    )
 
 
 def _trap_site_problem(state: BattleState, center: XY) -> str | None:

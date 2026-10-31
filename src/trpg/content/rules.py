@@ -415,6 +415,11 @@ class CoreRules(ContentModel):
     teleport_lethal_resist_bonus: int = Field(default=8, ge=0, le=20)
     """傳送到致命地形時，目標再加的抵抗加成（與 ``teleport_enemy_resist_bonus`` 相加；同級時
     總 +10，d20 自然 19 與 20 才成功，成功率 10%）。"""
+    chain_falloff_permille: int = Field(default=250, ge=0, le=1000)
+    """連鎖衰減（BAL-13c，#77）：``chain`` 形狀每跳一次，傷害、治療、護盾的威力少這麼多‰
+    （第 1 個目標 1000、第 2 個 1000 − 此值……）。"""
+    chain_floor_permille: int = Field(default=250, ge=0, le=1000)
+    """連鎖衰減的下限（‰）：之後每跳都不低於這個值。"""
     pierce_behind_permille: int = Field(default=700, ge=1, le=1000)
     """穿透（Phase 3C-5b）：穿過 ``penetrable`` 物件之後，後方目標受到的傷害（‰；物件本身受全額
     傷害）。舊紀錄沒有此欄位。"""

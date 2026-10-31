@@ -707,13 +707,19 @@ def _damage(e: DamageDealt, v: _View) -> str:
     if e.block_permille != _PERMILLE:
         mod += f"（格擋 ×{e.block_permille / _PERMILLE:g}）"
     # 扣掉穿透折扣與格擋後，剩下的是技能／裝備／狀態的傷害加成
-    divisor = e.pierce_permille * max(e.block_permille, 1)
-    bonus = e.multiplier_permille * _PERMILLE * _PERMILLE // divisor if e.block_permille else 0
+    divisor = e.pierce_permille * max(e.block_permille, 1) * max(e.chain_permille, 1)
+    bonus = (
+        e.multiplier_permille * _PERMILLE**3 // divisor
+        if e.block_permille and e.chain_permille
+        else 0
+    )
     bonus = bonus or _PERMILLE
     if bonus != _PERMILLE:
         mod += f"（加成 ×{bonus / _PERMILLE:g}）"
     if e.pierce_permille != _PERMILLE:
         mod += f"（穿透後方 ×{e.pierce_permille / _PERMILLE:g}）"
+    if e.chain_permille != _PERMILLE:
+        mod += f"（連鎖衰減 ×{e.chain_permille / _PERMILLE:g}）"
     if e.status_ppm != _PPM:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
