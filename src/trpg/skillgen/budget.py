@@ -1240,7 +1240,7 @@ def _allowance_parts(
         parts.append(
             (
                 f"冷卻 {cost.cooldown} 回合",
-                min(cost.cooldown * allowance.cooldown_per_turn, allowance.cooldown_cap),
+                allowance.cooldown_allowance(cost.cooldown, stance=skill.kind == "stance"),
             )
         )
     if cost.uses_per_battle is not None:

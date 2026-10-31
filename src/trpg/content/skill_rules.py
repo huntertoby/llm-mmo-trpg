@@ -90,6 +90,21 @@ class CostAllowance(ContentModel):
 
     cooldown_per_turn: int = Field(ge=0)
     cooldown_cap: int = Field(ge=0)
+    stance_cooldown_per_turn: int | None = Field(default=None, ge=0)
+    """姿態／形態（``kind: stance``）的冷卻每回合折抵（BAL-11b，06 6.34.4「BAL-11a 定」）：
+    姿態進入後持續到取消，冷卻幾乎不是代價。省略時同 ``cooldown_per_turn``。"""
+    stance_cooldown_cap: int | None = Field(default=None, ge=0)
+    """姿態冷卻折抵的上限；省略時同 ``cooldown_cap``。"""
+
+    def cooldown_allowance(self, cooldown: int, *, stance: bool) -> int:
+        """冷卻 ``cooldown`` 回合的折抵（‰）：姿態用姿態專用的每回合值與上限。"""
+        per = self.stance_cooldown_per_turn if stance else None
+        cap = self.stance_cooldown_cap if stance else None
+        return min(
+            cooldown * (self.cooldown_per_turn if per is None else per),
+            self.cooldown_cap if cap is None else cap,
+        )
+
     uses_per_battle: dict[int, int]
     """每場次數 → 折抵；次數超過表中最大值時用 ``uses_default``。"""
     uses_default: int = Field(ge=0)

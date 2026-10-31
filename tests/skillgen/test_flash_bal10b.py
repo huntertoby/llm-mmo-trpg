@@ -534,7 +534,8 @@ def test_forms_offer_only_the_modifier_category(skill_id: str) -> None:
 
 def _cooled_bear() -> SkillDef:
     bear = library().skills["skill_form_bear"]
-    form = bear.effects[0].model_copy(update={"magnitude_permille": 1400})
+    # BAL-11b：姿態冷卻折抵改成每回合 10‰，冷卻 2 回合只折抵 20‰——幅度從 1400 降到 1300 才放得進預算
+    form = bear.effects[0].model_copy(update={"magnitude_permille": 1300})
     return bear.model_copy(
         update={
             "id": "skill_form_bear_cooled_test",

@@ -57,8 +57,9 @@ from typing import Any
 
 from trpg.content.flash_templates import FlashTemplate
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import EffectSpec, SkillDef
+from trpg.content.skills import EffectSpec, SkillDef, skill_elements
 from trpg.content.skills.constants import ENTER_FORM, FOLLOWUP_FORBIDDEN, MAX_EFFECTS
+from trpg.content.skills.effects import composition_rules
 from trpg.engine.shape_growth import grow_shape
 from trpg.shared.types import Element
 from trpg.skillgen.composer_parts import Knob, dice_ladder
@@ -375,7 +376,20 @@ def _followup_knob(effect: dict[str, Any], library: ContentLibrary) -> tuple[str
     """接續段傷害的旋鈕欄位與階梯（骰子或武器倍率）。"""
     if effect.get("dice") is not None:
         return "dice", dice_ladder(library.composer.dice)
-    return "multiplier_permille", multiplier_ladder(library)
+    return "multiplier_permille", _followup_multipliers(library)
+
+
+_FINE_MULTIPLIER_TOP = 3000
+"""接續段細階梯只細到這裡（‰；以上照原階梯）。"""
+
+
+def _followup_multipliers(library: ContentLibrary) -> tuple[int, ...]:
+    """接續段強化類的武器倍率階梯：原階梯＋``rules.followup_multiplier_step`` 的細格（BAL-11b）。"""
+    ladder = multiplier_ladder(library)
+    step = library.flash.rules.followup_multiplier_step
+    if step is None:
+        return ladder
+    return tuple(sorted({*ladder, *range(ladder[0], _FINE_MULTIPLIER_TOP, step)}))
 
 
 def _op_followup_area(
@@ -501,18 +515,47 @@ def _keyword_op(op: str, side: str) -> FlashOp:
             or keyword is None
             or (template.keywords and keyword not in template.keywords)
             or skill.kind not in ("active", "passive", "reaction")
+            or _graft_blocked(skill)
         ):
             return []
         drafts = template_drafts(evolution, skill, keyword, SkillUsage(), library)
         out: list[Draft] = []
         for base, effects in drafts:
             _inherit_affects(skill, effects)
+            if skill.category == "spell":
+                _spell_graft_damage(skill, effects, library)
             out.append((base, effects))
             if side == "uses" and skill.kind == "active" and skill.skeleton != "combo":
                 out.append(({**base, "skeleton": "combo"}, [dict(e) for e in effects]))
         return out
 
     return run
+
+
+def _graft_blocked(skill: SkillDef) -> bool:
+    """BAL-11b：技能裡有「必須是唯一的效果」或「其他效果只能作用在施放者」的原語（召喚、復活、
+    規則改變、持續區域……；``skill_primitives.yaml`` 的組合規則）時，嫁接第二個關鍵字一定不合法，
+    不出這類模板。"""
+    rules = composition_rules()
+    return any(
+        (rule := rules.get(e.type)) is not None
+        and (rule.sole_effect or rule.others_affect is not None)
+        for e in skill.effects
+    )
+
+
+def _spell_graft_damage(
+    skill: SkillDef, effects: list[dict[str, Any]], library: ContentLibrary
+) -> None:
+    """BAL-11b：法術技嫁接的傷害要有骰子與元素（schema 規定）。元素沿用這招的傷害元素、再來技能
+    元素，都沒有時用物理；骰子先給最小一格（由預算器重調）。"""
+    element = _damage_element(skill) or next(
+        iter(sorted(e.value for e in skill_elements(skill))), Element.PHYSICAL.value
+    )
+    for effect in effects[len(skill.effects) :]:
+        if effect["type"] == "damage":
+            effect.setdefault("element", element)
+            effect.setdefault("dice", dice_ladder(library.composer.dice)[0])
 
 
 def _inherit_affects(skill: SkillDef, effects: list[dict[str, Any]]) -> None:
@@ -1216,8 +1259,11 @@ def _modifier_knobs(
     changes = [m["change"] for m in rules]
     fine = op in FINE_MOD_OPS
     ladder = tuple(range(flash.modifier_fine_step, 1001, flash.modifier_fine_step))
+    plain = MODIFIER_LADDER
+    if op == "mod_potency" and flash.modifier_potency_step is not None:  # BAL-11b：只在閃現強效
+        plain = tuple(range(flash.modifier_potency_step, 1001, flash.modifier_potency_step))
     knobs = [
-        Knob(i, name, ladder if fine else MODIFIER_LADDER)
+        Knob(i, name, ladder if fine else plain)
         for i, change in enumerate(changes)
         for name in _MAGNITUDES
         if (change.get(name) or 0) > 0
