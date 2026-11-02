@@ -347,7 +347,10 @@ def _skill_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str
             f"（剩 {event.insight} 點），一定要選一個。"
         )
     if isinstance(event, FlashPickedEvent):
-        return f"選好變化：「{name(event.skill)}」→「{name(event.new_skill)}」。"
+        old, new = name(event.skill), name(event.new_skill)
+        if old == new:
+            return f"選好變化：「{old}」換上新的變化。"
+        return f"選好變化：「{old}」→「{new}」。"
     if isinstance(event, SkillDissolvedEvent):
         return f"溶掉「{name(event.skill)}」：退回 {event.refund} 點靈感（共 {event.insight} 點）。"
     if isinstance(event, SkillInheritedEvent):
