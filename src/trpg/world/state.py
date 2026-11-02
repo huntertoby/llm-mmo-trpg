@@ -78,6 +78,8 @@ class EncounterResult(_Model):
     day_phase: DayPhase
     at: int = Field(ge=0)
     """遇敵的時間（UTC 秒）。"""
+    from_location: str | None = None
+    """出發地點（撤退回這裡，5A-4）；5A-4 以前的資料沒有，撤退時回本區小鎮。"""
 
 
 class EventTrigger(_Model):
@@ -200,6 +202,22 @@ class CharacterState(_Model):
     """還沒處理的遭遇；有它時不能移動或紮營（5A-4 開戰後清掉）。"""
     camped_at: LocationRef | None = None
     """目前紮營中的地點（營火；移動就清掉）。"""
+    bench: tuple[str, ...] = ()
+    """備用技能（學會但沒裝上的，排序；同 ``RunState.bench``）。換技能在城鎮與營火（5A-4）。"""
+    fatigued: bool = False
+    """疲憊（9.6.9 #98）：全滅後的下一場開場 HP 打折，打完一場就消失（5A-4）。"""
+    attribute_points: int = Field(default=0, ge=0)
+    """升級給的、還沒分配的屬性點（5A-4 只累積；分配之後再做）。"""
+    visited_towns: tuple[str, ...] = ()
+    """到過小鎮的區域 ID（排序、不重複）；城鎮之間的傳送只能去這些區（5A-4）。"""
+
+    @field_validator("bench", "visited_towns")
+    @classmethod
+    def _sorted_ids(cls, ids: tuple[str, ...]) -> tuple[str, ...]:
+        if list(ids) != sorted(set(ids)):
+            raise ValueError("bench／visited_towns 必須排序且不重複")
+        return ids
+
     event_steps: int = Field(default=0, ge=0)
     """距離上次事件走了幾步（事件出現機率用；5B-1）。"""
     pending_event: EventTrigger | None = None

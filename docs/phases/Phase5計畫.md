@@ -941,6 +941,122 @@ threads:
 | 5B1-7 | 情境判定解法的屬性照 18.4 填 1～2 個（9.6.4 模板「2～3 種」是 5B-2 情境模板的事） | 5B-2 再定骨架解法和情境模板的對應 |
 | 5B1-8 | 新欄位有預設值、存檔格式版本不升 | 2.5；加欄位不破壞舊檔 |
 
-## 9. 之後各段規格
+## 9. 5A-4 詳細規格：遇敵展開戰鬥與城鎮服務
 
-（5A-3 驗收後補上 5A-4 起。）
+> 給實作 agent。只動 `src/trpg/world/`、`src/trpg/content/world_rules.py`、`content/world/rules.yaml`（末尾加區塊，改動小）、`content/units/sect_talisman_caster.yaml` 與 `content/world/enemies.yaml` 的雷符師（追加 B）、`tests/world/`、受影響的 `tests/content/`。**不做** API、前端（5A-5）；不改 `trpg.engine`、`trpg.roguelite`（只匯入重用）、`trpg-run` 格式與戰鬥紀錄格式。
+> 依據：09 9.6.2（遇敵展開的格子取自地點的地圖模板）、9.6.6（開戰前看得到陣容、可撤退、不扣任何東西；精英強度以建議等級為準）、9.6.7 #2（只有城鎮與營火完全回復、換技能）、#11（補給用完只能回城補）、#15（已清空、一段時間後重生）、9.6.2「城鎮之間用傳送點」、9.6.9 #98（野外全滅：回小鎮、HP 回滿、沒有戰利品、經驗不扣、下一場「疲憊」開場 HP 80%、打完一場就消失）、9.6.11 #113（耐力戰後回滿、法力只在營火與城鎮回滿、HP 不自動回）、#114（營火＝紮營，可換技能）；05 5.1「區域地圖池」（機制不動、只換 `region` 外觀）；07 7.6（換裝地點：主城、區域小鎮、營火；裝備欄上限；技能階級 1～3／4～7／8～10）、7.8（經驗、敵人不跟著玩家縮放、地點標建議等級）；本檔 2.1～2.4、6.4、7.2。
+> **追加（開發 PM 轉玩法 PM 2026-11-02，#81 練等前提）**：A. 敵人範本照地點建議等級成長（和主角同樣的成長；範本＝1 級基準）；B. 符籙師改成純控制（定身符＋封符），雷符師保留雷符＋定身符。
+
+### 9.1 目標
+
+大世界一場遭遇從頭到尾可玩、可重播：**移動 → 遇敵 → 看陣容（可撤退）→ 戰鬥 → 勝負回寫**；城鎮可休息、換技能、傳送；營火（5A-2 的紮營）可換技能。戰鬥本身沿用原型引擎（`trpg.engine`）與 roguelite 的主角出場算法，戰鬥的步驟寫進世界動作日誌，重播時用同一份設定與種子重算勝負（第 2.4 節）。
+
+### 9.2 交付項目
+
+1. **世界動作**（`trpg.world.actions`，加進 `WorldAction` 判別聯集）：
+
+   | 動作 | 欄位 | 條件（不合法拋 `WorldActionError`，狀態不變） |
+   |---|---|---|
+   | `retreat` | — | 有 `pending_encounter`；回到出發地點（`EncounterResult.from_location`；舊資料沒有時回本區小鎮），清掉遭遇；不扣補給、不擲骰（9.6.6「不扣任何東西」） |
+   | `fight` | `steps: tuple[Step, ...]` | 有 `pending_encounter`；以 9.3 的設定與 `battle_seed` 開戰，依序套用 `steps`（引擎 `apply_step`），套用後戰鬥必須已結束；回寫見 9.4 |
+   | `rest` | — | 在城鎮（`kind == "town"`）、沒有遭遇；HP、法力回滿、耐力滿、補給補到至少 `supplies.start`（9.6.7 #11「回城補」；代決 5A4-11）；免費 |
+   | `loadout` | `skills: tuple[str, ...]` | 在城鎮或營火（`camped_at` 是目前地點）、沒有遭遇；只能裝擁有的技能（裝備＋`bench`）、不重複、欄位上限（roguelite `equip_problems`）；沒裝上的進 `bench`（排序） |
+   | `teleport` | `region` | 沒有遭遇；在城鎮 → 目的區域的小鎮必須在 `visited_towns`；或在傳送點（`gate`）且 `gate_to == region`；目的區域要有地點圖；抵達目的區域的小鎮、記入 `visited_towns` |
+
+2. **事件**：`retreated`（from、to）、`battle_started`（地圖、`region`、陣容、敵人等級、天氣、我方開場 HP、`fatigued`）、`battle_ended`（won、end_reason、rounds、hp、mana、xp_gained、level）、`leveled_up`（level、attribute_points）、`defeated`（回到的地點、HP）、`location_cleared`（location、respawn_at）、`rested`、`loadout_changed`、`teleported`（region、location）。
+
+3. **狀態欄位**（全部有預設值，舊的 `trpg-char/1`／`trpg-world/1` 照樣讀得進來，格式字串不變）：
+   - `EncounterResult.from_location: str | None = None`（5A-2 的移動填入出發地點）。
+   - `CharacterState.bench: tuple[str, ...] = ()`（備用技能，同 `RunState.bench`，排序）、`fatigued: bool = False`、`attribute_points: int = 0`（升級給的未分配屬性點；分配介面在 5A-5 以後）、`visited_towns: tuple[str, ...] = ()`（到過的區域小鎮，記區域 ID，排序；`new_character` 記起始區）。
+
+4. **開戰設定** `trpg.world.battle`（新）：
+   - `encounter_setup(library, char) -> BattleSetup` 與 `encounter_lineup(library, char)`：5A-5 的 API 開戰與「看陣容」直接用；
+   - `fight_battle(library, world, char, steps)`／`auto_steps(library, char)`（效用 AI 代打，測試與 smoke 用）。
+
+5. **規則數值**（`content/world/rules.yaml` 末尾加，`WorldRules` 新欄位都有預設值）：
+
+   ```yaml
+   battle:                      # 5A-4（代決 5A4-*）
+     max_rounds: 30             # 同原型
+     xp_per_battle: 100         # Q8 初值；等級門檻沿用原型曲線（roguelite.yaml level_thresholds）
+     fatigue_hp_permille: 800   # #98「開場 HP 80%」
+     clear_kinds: [camp]        # 打贏後寫「已清空」的地點種類（9.6.7 #15「清掉的營地」）
+     respawn_seconds: 1800      # 已清空到重生：遊戲內 1 天（現實 30 分鐘）
+   enemy_growth:                # 追加 A
+     attribute_points_per_level: 2
+     skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]   # 07 7.6
+   ```
+
+6. **追加 B（只改 content）**：`sect_talisman_caster` 技能改為 `skill_frost_shackle`（定身符）＋`skill_hush`（噤聲：沉默 1 回合，現成技能＝封符）；雷符師變體改 `skill_swaps: {skill_hush: skill_static_palm}`（＝定身符＋雷符；武器 `lightning_staff` 不變）。
+
+7. **測試** `tests/world/`（9.6）與 **完成報告** `docs/phases/Phase5A-4報告.md`。
+
+### 9.3 開戰（`encounter_setup`）
+
+1. **地圖**：`EncounterResult.battle_map`；為 `None`（地點沒有戰鬥地圖：祭壇、遺跡、異象、Boss 據點）時，從該區 `map_pool` 的 archetype 裡的地圖（排除 `boss` archetype、依地圖 ID 排序）以 `Rng(fnv1a64(f"{battle_seed}:map"))` 均勻抽一張（代決 5A4-1）。
+2. **換皮**：地圖的 `region` 不是遭遇的區域時，改成遭遇的區域，`look` 換成該區 `regions.yaml` 的預設外觀（機制不動，05 5.1；代決 5A4-2）。
+3. **勝利條件**：地圖預設（全滅）；營地的勝利條件輪替之後再做（代決 5A4-3）。
+4. **天氣**：`EncounterResult.weather`。
+5. **我方**：主角（等級 HP 加成、`scaled_resources`、`level`，目前 HP／法力／耐力；疲憊時開場 HP ＝ min(目前, 最大 HP × 800‰)，至少 1）＋原型的 2 名標準隊友（`roguelite.yaml` 的 `companions`，滿狀態；5C-1 換成傭兵與影子；代決 5A4-4）。
+6. **敵方**：`roll_lineup` → `lineup_templates` → **依等級成長**（追加 A）：
+   - 等級 ＝ 地點的 `level_min`（代決 5A4-5）；1 級＝範本原樣。
+   - 屬性：每級 +2，全部加在範本最高的屬性（同分取屬性順序 str、dex、con、int、wis、wil 的第一個；代決 5A4-6）。
+   - HP：基礎 HP ＋ `level_hp_bonus`（同主角：每級 +5% 基礎 HP，`core.yaml` 的 `level_hp_permille`）。
+   - 技能階級：`enemy_growth.skill_tier_by_level[等級]`；技能目前階級較低時用 roguelite 的 `at_run_tier` 重配成 `<原 ID>_t<階級>`（只升不降），反應規則引用的技能 ID 一併改名；重配的技能以 `Ruleset.with_skills` 加進本場規則包。
+   - 範本的 `level` 欄位設為等級（召喚物依施放者等級成長）。
+7. **種子**：`EncounterResult.battle_seed`。
+
+### 9.4 勝負回寫（`fight`）
+
+- **打贏**（`winner == ally`）：HP ＝ 主角戰後 HP（倒下但勝利以 1 HP 繼續，同原型）；法力照戰後（不回）；耐力回滿（#113）；經驗 ＋`xp_per_battle`，等級照原型門檻；升級時最大 HP／法力上限增加的量加到目前值（同 roguelite `with_hp_change`），每級 `attribute_points` ＋ `roguelite.attribute_points_per_level`；地點種類在 `clear_kinds` 時寫 `ClearedLocation(respawn_at = now + respawn_seconds)`（已有就更新）；清掉遭遇；疲憊消失。
+- **沒打贏**（全滅或輪數上限，一律當全滅；代決 5A4-7）：回本區小鎮（代決 5A4-8：「最近的小鎮或營火」先只做小鎮）、HP 回滿、法力照戰後、耐力回滿；不給經驗、不扣經驗、背包裝備不掉；`fatigued = True`；清掉遭遇與 `camped_at`。
+- 戰利品、精英獎勵、靈感點：5D／之後（待 PM 決定）。
+- **已清空的營地**：移動到已清空且未重生的地點時遇敵機率為 0（擲骰照擲，亂數消耗不變；代決 5A4-9）。
+
+### 9.5 重播與確定性
+
+- `fight` 的 `steps` 寫在世界動作日誌（`trpg-wlog/1` 不變，多一種動作）；重播時由「角色快照＋遭遇＋內容庫」重建同一份設定、同一個種子、套用同樣的步驟，得到逐位元相同的戰鬥結果與回寫。戰鬥沒結束或步驟不合法 → `WorldActionError`。
+- `trpg.world` 內不讀時間、不用 `random`、`uuid4`、`hash()`；亂數只來自 `battle_seed` 與世界串流。
+
+### 9.6 測試（`tests/world/`）
+
+| 檔案 | 內容 |
+|---|---|
+| `test_battle_setup.py` | 有地圖的地點用遭遇的地圖、沒有地圖的地點從區域地圖池抽（確定性、archetype 在池內）、換皮成 `cloud_ridge`；天氣；我方＝主角＋2 名隊友；疲憊開場 HP 80% |
+| `test_enemy_growth.py` | 1 級不變；5 級：最高屬性 +8、HP ＋20%、技能升到 2 階（ID `_t2`、反應改名）、`level`；`level_min` 取值；規則包含重配技能 |
+| `test_fight.py` | 打贏：經驗、升級、耐力滿、HP 不回、法力不回、清掉遭遇、營地已清空與重生、已清空不遇敵；輸：回小鎮、HP 滿、疲憊、下一場開場 80% 後消失；沒結束、沒遭遇、步驟不合法 → 錯誤 |
+| `test_town.py` | 撤退回出發地點且不扣東西；休息（只在城鎮）；換技能（城鎮、營火可以，野外不行；不能裝沒有的、超過欄位）；傳送（城鎮到去過的小鎮、傳送點到 `gate_to`、沒地點圖或沒去過 → 錯誤） |
+| `test_replay.py`（加） | 移動 → 遇敵 → 戰鬥 → 回寫 → 休息的日誌重播兩次逐字相同；寫出再讀回相同 |
+
+### 9.7 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5A4-1 | 沒有戰鬥地圖的地點遇敵用哪張圖 | 區域地圖池（非 Boss）以 `{battle_seed}:map` 均勻抽 |
+| 5A4-2 | 換皮時地圖原本的單張 `look` 覆寫 | 換成該區預設外觀（原覆寫是給原區的） |
+| 5A4-3 | 營地的勝利條件輪替（9.6.2） | 先用地圖預設（全滅） |
+| 5A4-4 | 3 人隊伍的隊友（#97） | 5C-1 前用原型的 2 名標準隊友 |
+| 5A4-5 | 敵人等級取地點等級範圍的哪一點（追加 A） | `level_min` |
+| 5A4-6 | 敵人每級 +2 屬性加在哪 | 全部加在範本最高的屬性 |
+| 5A4-7 | 輪數上限沒打完 | 當全滅處理 |
+| 5A4-8 | 全滅「回最近的小鎮或營火」 | 先只回本區小鎮 |
+| 5A4-9 | 已清空的地點遇敵 | 機率 0（擲骰照擲） |
+| 5A4-10 | 已清空寫入與重生（9.6.7 #15「一段時間」） | 只有 `camp` 種類；遊戲內 1 天（1800 秒）後重生；數值在 `rules.yaml` |
+| 5A4-11 | 城鎮休息的費用與補給 | 免費；補給補到至少 `supplies.start` |
+| 5A4-12 | 傳送點 | 城鎮到「去過的」其他區小鎮；傳送點（gate）到 `gate_to` 區的小鎮 |
+| 5A4-13 | 經驗與等級 | 每場 100、沿用原型門檻（Q8）；升級屬性點先累積在 `attribute_points` |
+| 5A4-14 | 符籙師的「封符」（追加 B） | 現成的 `skill_hush`（噤聲：沉默 1 回合） |
+
+### 9.8 驗收
+
+- `uv run pytest -q tests/world tests/content tests/test_architecture.py -n 8 --timeout=1800` 通過；交件前 `tests/cli`（`-m "slow or not slow"`）。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；一場原型重播（`trpg battle --map swamp --seed 7 --log-json` ＋ `replay`）；一段世界日誌重播測試。
+
+### 9.9 不做的事
+
+- API、前端、地點圖畫面（5A-5）；傭兵與影子（5C）；戰利品、材料、精英獎勵（5D）；屬性點分配、閃現、重閃、溶掉、傳承、立誓、主角升階重配（之後的段，見報告待 PM 決定）。
+- 不改 `trpg-run`、戰鬥紀錄（`LOG_FORMAT`）格式；不改引擎與 roguelite。
+
+## 10. 之後各段規格
+
+（5A-4 驗收後補上 5A-5 起。）

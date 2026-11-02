@@ -47,3 +47,17 @@ weather:
   - region: frost_tide
     day: {clear: 1, rain: 3, fog: 3}
     night: {night: 1, rain: 3, fog: 3}
+# 遇敵戰鬥與勝負回寫（Phase 5A-4；docs/phases/Phase5計畫.md 8.4，代決 5A4-7～5A4-13）。
+# - xp_per_battle：打贏一場的經驗（Q8 初值）；等級門檻沿用原型（roguelite.yaml level_thresholds）。
+# - fatigue_hp_permille：全滅後下一場「疲憊」開場 HP 上限（9.6.9 #98「開場 HP 80%」）。
+# - clear_kinds／respawn_seconds：打贏後寫「已清空」的地點種類與重生秒數（9.6.7 #15；遊戲內 1 天）。
+battle:
+  max_rounds: 30
+  xp_per_battle: 100
+  fatigue_hp_permille: 800
+  clear_kinds: [camp]
+  respawn_seconds: 1800
+# 敵人依地點建議等級成長（5A-4 追加 A；和主角同樣：每級屬性 +2、HP +5%，技能階級照 07 7.6）。
+enemy_growth:
+  attribute_points_per_level: 2
+  skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]

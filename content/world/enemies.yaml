@@ -11,7 +11,7 @@ variants:
     name_zh: 雷符師
     theme: lightning
     weapon: lightning_staff
-    skill_swaps: {skill_frost_shackle: skill_spark_chain}
+    skill_swaps: {skill_hush: skill_static_palm}  # 5A-4 追加 B：雷符＋定身符
   - id: frost_crane_archer
     base: sect_crane_archer
     name_zh: 冰鶴使

@@ -9,7 +9,7 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import WorldRules
 from trpg.shared.types import Attribute
-from trpg.world.state import WorldState
+from trpg.world.state import EncounterResult, WorldState
 
 NOON = 1_793_592_000
 """2026-11-02 12:00 台北（UTC 04:00）；遊戲日的前半（白天）。"""
@@ -39,3 +39,26 @@ def make_world(**updates: Any) -> WorldState:
     data: dict[str, Any] = {"season_id": "s1", "season_seed": 20261102, "season_start": NOON}
     data.update(updates)
     return WorldState.model_validate(data)
+
+
+def make_encounter(
+    location: str,
+    *,
+    seed: int = 0,
+    battle_map: str | None = None,
+    level: int = 1,
+    from_location: str | None = None,
+    weather: str = "clear",
+) -> EncounterResult:
+    """雲嶺 ``location`` 的遭遇（5A-4 測試用）。"""
+    return EncounterResult(
+        region="cloud_ridge",
+        location=location,
+        level=level,
+        battle_map=battle_map,
+        battle_seed=seed,
+        weather=weather,
+        day_phase="day",
+        at=NOON,
+        from_location=from_location,
+    )
