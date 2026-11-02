@@ -1,0 +1,199 @@
+// 商店、背包與腰包（Phase 5D-1；docs/phases/Phase5計畫.md 25.6；最小可用，5D-4 再完整化）。
+// 商店在小鎮服務列「商店」切換後於面板內展開（不是新的彈出層）；背包與腰包是右側常駐面板。
+// 說明一律用共用 <Hint>（浮動卡規則 6.5.1）；能不能買、價格、限量、門檻都由後端算好。
+import { useState } from "react";
+import type { WorldAction, WorldBagItem, WorldInventory, WorldShop } from "../api/types";
+import { Hint } from "../ui/Hint";
+import { draftCount, pouchAction, pouchDraft, samePouch, setDraft } from "./economy";
+
+interface ActProps {
+  busy: boolean;
+  onAct(action: WorldAction): void;
+}
+
+function itemHint(item: { description_zh: string; battle_zh?: string | null }): string {
+  return [item.description_zh, item.battle_zh ?? ""].filter((s) => s !== "").join("　");
+}
+
+export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: WorldShop; inventory: WorldInventory | null | undefined }) {
+  const sellable = (inventory?.bag ?? []).filter((item) => item.sellable !== false);
+  return (
+    <div className="world-shop" data-testid="world-shop">
+      <div className="section-title small">
+        {shop.name_zh}　<span className="muted">店主 {shop.npc_name_zh}（{shop.rank_zh}）</span>
+      </div>
+      {shop.affinity_zh != null && <div className="muted small" data-testid="world-shop-affinity">{shop.affinity_zh}</div>}
+      {!shop.can_trade && shop.trade_problem_zh != null && <div className="muted small">買賣：{shop.trade_problem_zh}</div>}
+      <ul className="world-shop-list small">
+        {shop.items.map((item) => (
+          <li key={item.item} className={item.locked ? "locked" : undefined} data-testid={`world-shop-item-${item.item}`}>
+            <Hint text={itemHint(item)}>
+              <span className="world-shop-name">{item.name_zh}</span>
+            </Hint>
+            <span className="muted">{item.kind_zh}</span>
+            <span className="world-shop-price">{item.price} 金幣</span>
+            {item.stock_zh != null && <span className="muted">{item.stock_zh}</span>}
+            {item.locked && item.lock_zh != null && <span className="world-shop-lock">{item.lock_zh}</span>}
+            {/* 停用的按鈕不接滑鼠事件：說明卡掛在外層 span 上，買不了也看得到原因 */}
+            <Hint text={item.can_buy ? `買 1 個（${item.price} 金幣）` : item.problem_zh ?? "不能買"}>
+              <span className="world-shop-buy" data-testid={`world-buy-hint-${item.item}`}>
+                <button
+                  type="button"
+                  disabled={busy || !item.can_buy}
+                  onClick={() => onAct({ kind: "buy", shop: shop.shop, item: item.item })}
+                  data-testid={`world-buy-${item.item}`}
+                >
+                  買
+                </button>
+              </span>
+            </Hint>
+          </li>
+        ))}
+      </ul>
+      {sellable.length > 0 && (
+        <>
+          <div className="section-title small">賣東西（腰包裡的要先拿出來；材料不收）</div>
+          <ul className="world-shop-list small">
+            {sellable.map((item) => (
+              <li key={item.item}>
+                <span className="world-shop-name">{item.name_zh}</span>
+                <span className="muted">×{item.count}</span>
+                <span className="world-shop-price">賣 {item.sell_price} 金幣</span>
+                <button
+                  type="button"
+                  disabled={busy || !shop.can_trade}
+                  onClick={() => onAct({ kind: "sell", shop: shop.shop, item: item.item })}
+                  data-testid={`world-sell-${item.item}`}
+                >
+                  賣
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BagRow({ item, busy, canUse, onAct }: ActProps & { item: WorldBagItem; canUse: boolean }) {
+  return (
+    <li>
+      <Hint text={itemHint(item)}>
+        <span className="world-shop-name">{item.name_zh}</span>
+      </Hint>
+      <span className="muted">×{item.count}</span>
+      {item.field_usable && item.use_zh != null && (
+        <Hint text={`使用 1 個：${item.use_zh}`}>
+          <button type="button" disabled={busy || !canUse} onClick={() => onAct({ kind: "use_item", item: item.item })} data-testid={`world-use-${item.item}`}>
+            使用
+          </button>
+        </Hint>
+      )}
+    </li>
+  );
+}
+
+function PouchEditor({ inventory, busy, onAct, onDone }: ActProps & { inventory: WorldInventory; onDone(): void }) {
+  const [draft, setDraftState] = useState<Record<string, number>>(() => pouchDraft(inventory));
+  const choices = inventory.consumables ?? [];
+  return (
+    <div className="world-pouch-edit small" data-testid="world-pouch-editor">
+      {choices.length === 0 ? (
+        <div className="muted">背包裡沒有消耗品（可以到商店買）。</div>
+      ) : (
+        <ul className="world-shop-list">
+          {choices.map((c) => (
+            <li key={c.item}>
+              <span className="world-shop-name">{c.name_zh}</span>
+              <span className="muted">持有 {c.count}</span>
+              <label>
+                帶
+                <select
+                  value={draft[c.item] ?? 0}
+                  disabled={busy}
+                  onChange={(e) => setDraftState(setDraft(draft, inventory, c.item, Number(e.target.value)))}
+                  data-testid={`world-pouch-count-${c.item}`}
+                >
+                  {Array.from({ length: Math.min(c.count, inventory.pouch_max) + 1 }, (_, n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                個
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="run-actions">
+        <span className="muted">
+          {draftCount(draft)}／{inventory.pouch_max}
+        </span>
+        <button
+          type="button"
+          className="primary"
+          disabled={busy || samePouch(draft, inventory)}
+          onClick={() => {
+            onAct(pouchAction(draft));
+            onDone();
+          }}
+          data-testid="world-pouch-apply"
+        >
+          確定
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function InventoryPanel({ inventory, busy, onAct, canUse }: ActProps & { inventory: WorldInventory; canUse: boolean }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="panel world-inventory" data-testid="world-inventory">
+      <div className="section-title">
+        背包　<span className="muted small">{inventory.slots_used}／{inventory.slots_max} 格</span>
+      </div>
+      {inventory.bag.length === 0 ? (
+        <div className="muted small">空的。</div>
+      ) : (
+        <ul className="world-shop-list small" data-testid="world-bag">
+          {inventory.bag.map((item) => (
+            <BagRow key={item.item} item={item} busy={busy} canUse={canUse} onAct={onAct} />
+          ))}
+        </ul>
+      )}
+      <div className="section-title small">
+        腰包　<span className="muted">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
+      </div>
+      {inventory.pouch.length === 0 ? (
+        <div className="muted small">沒帶東西。</div>
+      ) : (
+        <ul className="world-shop-list small" data-testid="world-pouch">
+          {inventory.pouch.map((item) => (
+            <BagRow key={item.item} item={item} busy={busy} canUse={canUse} onAct={onAct} />
+          ))}
+        </ul>
+      )}
+      {inventory.can_pouch ? (
+        <div className="run-actions">
+          <button type="button" aria-expanded={editing} disabled={busy} onClick={() => setEditing((v) => !v)} data-testid="world-pouch-toggle">
+            {editing ? "收起整理腰包" : "整理腰包"}
+          </button>
+        </div>
+      ) : (
+        inventory.pouch_problem_zh != null && <div className="muted small">整理腰包：{inventory.pouch_problem_zh}</div>
+      )}
+      {editing && inventory.can_pouch && (
+        <PouchEditor
+          key={inventory.pouch.map((p) => `${p.item}:${p.count}`).join(",")}
+          inventory={inventory}
+          busy={busy}
+          onAct={onAct}
+          onDone={() => setEditing(false)}
+        />
+      )}
+    </div>
+  );
+}

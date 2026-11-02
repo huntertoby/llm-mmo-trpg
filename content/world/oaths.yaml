@@ -61,9 +61,9 @@ templates:
 
   - id: oath_no_items
     name_zh: 不使用道具
-    description_zh: 這場戰鬥裡，你不使用道具（目前是裝備給的技能；代決 5C3-8）。
+    description_zh: 這場戰鬥裡，你不使用道具（腰包的消耗品與裝備給的技能；代決 5C3-8、5D-1）。
     difficulty: easy
-    check: {kind: forbid_skill_tag, tags: [gear]}
+    check: {kind: forbid_skill_tag, tags: [gear, item]}
 
   - id: oath_no_reactions
     name_zh: 不使用反應

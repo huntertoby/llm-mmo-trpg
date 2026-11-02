@@ -29,6 +29,18 @@ from trpg.content.world_situations import (
 )
 from trpg.engine.actions import Step
 from trpg.shared.types import Attribute, Team
+from trpg.world.economy_actions import (
+    BuyAction,
+    CurrencyGainedEvent,
+    ItemBoughtEvent,
+    ItemSoldEvent,
+    ItemUsedEvent,
+    PouchAction,
+    PouchChangedEvent,
+    PouchUsedEvent,
+    SellAction,
+    UseItemAction,
+)
 from trpg.world.encounters import EncounterLineup
 from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
 
@@ -363,7 +375,11 @@ type WorldAction = Annotated[
     | TavernAction
     | EventSolveAction
     | HireAction
-    | ShadowAiAction,
+    | ShadowAiAction
+    | BuyAction  # 5D-1
+    | SellAction
+    | PouchAction
+    | UseItemAction,
     Field(discriminator="kind"),
 ]
 
@@ -967,6 +983,12 @@ type WorldEvent = Annotated[
     | OathBrokenEvent
     | OathKeptEvent
     | CompanionJoinedEvent
-    | CompanionLeftEvent,
+    | CompanionLeftEvent
+    | ItemBoughtEvent  # 5D-1
+    | ItemSoldEvent
+    | PouchChangedEvent
+    | ItemUsedEvent
+    | PouchUsedEvent
+    | CurrencyGainedEvent,
     Field(discriminator="kind"),
 ]

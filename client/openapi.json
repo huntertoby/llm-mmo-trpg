@@ -3004,6 +3004,78 @@
         "title": "AttributeSuggestionOut",
         "description": "開局建議的主屬性（Phase 3H-3）：起始技能最常用的縮放屬性（和自動配點同一個規則）。"
       },
+      "BagItemView": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "sell_price": {
+            "type": "integer",
+            "title": "Sell Price"
+          },
+          "sellable": {
+            "type": "boolean",
+            "title": "Sellable",
+            "default": true
+          },
+          "field_usable": {
+            "type": "boolean",
+            "title": "Field Usable"
+          },
+          "use_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Zh"
+          },
+          "battle_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "name_zh",
+          "kind_zh",
+          "count",
+          "description_zh",
+          "sell_price",
+          "field_usable"
+        ],
+        "title": "BagItemView",
+        "description": "背包或腰包裡的一種物品。"
+      },
       "BattleHistory": {
         "properties": {
           "steps": {
@@ -3930,6 +4002,41 @@
           "text"
         ],
         "title": "BurningOut"
+      },
+      "BuyAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "buy",
+            "title": "Kind",
+            "default": "buy"
+          },
+          "shop": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Shop"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^item_[a-z0-9_]+$",
+            "title": "Item"
+          },
+          "count": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "shop",
+          "item"
+        ],
+        "title": "BuyAction",
+        "description": "在店主所在的地點向他買東西（08 8.26.1）；一次 ``buy`` 算消費一次（代決 5D1-11）。"
       },
       "CampAction": {
         "properties": {
@@ -9204,6 +9311,76 @@
         "title": "InteractOptionOut",
         "description": "主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。\n``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。"
       },
+      "InventoryView": {
+        "properties": {
+          "bag": {
+            "items": {
+              "$ref": "#/components/schemas/BagItemView"
+            },
+            "type": "array",
+            "title": "Bag"
+          },
+          "slots_used": {
+            "type": "integer",
+            "title": "Slots Used"
+          },
+          "slots_max": {
+            "type": "integer",
+            "title": "Slots Max"
+          },
+          "pouch": {
+            "items": {
+              "$ref": "#/components/schemas/BagItemView"
+            },
+            "type": "array",
+            "title": "Pouch"
+          },
+          "pouch_count": {
+            "type": "integer",
+            "title": "Pouch Count"
+          },
+          "pouch_max": {
+            "type": "integer",
+            "title": "Pouch Max"
+          },
+          "can_pouch": {
+            "type": "boolean",
+            "title": "Can Pouch"
+          },
+          "pouch_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pouch Problem Zh"
+          },
+          "consumables": {
+            "items": {
+              "$ref": "#/components/schemas/BagItemView"
+            },
+            "type": "array",
+            "title": "Consumables",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bag",
+          "slots_used",
+          "slots_max",
+          "pouch",
+          "pouch_count",
+          "pouch_max",
+          "can_pouch",
+          "pouch_problem_zh"
+        ],
+        "title": "InventoryView"
+      },
       "JsonValue": {},
       "KeywordHint": {
         "properties": {
@@ -11064,6 +11241,28 @@
         "title": "Pos",
         "description": "格子座標（不可變、可雜湊）。\n\n座標系：``x`` 向右遞增、``y`` 向下遞增（與文字網格與螢幕座標一致），原點在左上角。"
       },
+      "PouchAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "pouch",
+            "title": "Kind",
+            "default": "pouch"
+          },
+          "items": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "maxProperties": 10,
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PouchAction",
+        "description": "整理腰包（城鎮或營火）：整組換成 ``items``（消耗品 → 個數，合計最多 3 個，8.17）。"
+      },
       "PreviewOut": {
         "properties": {
           "action": {
@@ -12673,6 +12872,41 @@
         "title": "SegmentLine",
         "description": "複合技能（Phase 3F-3a）一段的預算：``label`` 位移段／動作段，該段自己的效果點數、條件\n與協同。"
       },
+      "SellAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "sell",
+            "title": "Kind",
+            "default": "sell"
+          },
+          "shop": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Shop"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^item_[a-z0-9_]+$",
+            "title": "Item"
+          },
+          "count": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "shop",
+          "item"
+        ],
+        "title": "SellAction",
+        "description": "把背包裡的東西賣給商店（8.15「出售物品」得金幣；腰包裡的不賣）。"
+      },
       "SetReactionMode": {
         "properties": {
           "unit_id": {
@@ -12854,6 +13088,174 @@
         ],
         "title": "ShadowView",
         "description": "一個可以借的影子（5C-2；其他角色在城鎮整備時存的）。"
+      },
+      "ShopItemView": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price"
+          },
+          "weekly": {
+            "type": "boolean",
+            "title": "Weekly"
+          },
+          "stock_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Zh"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          },
+          "lock_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Zh"
+          },
+          "can_buy": {
+            "type": "boolean",
+            "title": "Can Buy"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          },
+          "battle_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "name_zh",
+          "kind_zh",
+          "description_zh",
+          "price",
+          "weekly",
+          "stock_zh",
+          "locked",
+          "lock_zh",
+          "can_buy",
+          "problem_zh"
+        ],
+        "title": "ShopItemView"
+      },
+      "ShopView": {
+        "properties": {
+          "shop": {
+            "type": "string",
+            "title": "Shop"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "npc": {
+            "type": "string",
+            "title": "Npc"
+          },
+          "npc_name_zh": {
+            "type": "string",
+            "title": "Npc Name Zh"
+          },
+          "rank_zh": {
+            "type": "string",
+            "title": "Rank Zh"
+          },
+          "affinity_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affinity Zh"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShopItemView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "can_trade": {
+            "type": "boolean",
+            "title": "Can Trade"
+          },
+          "trade_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "shop",
+          "name_zh",
+          "npc",
+          "npc_name_zh",
+          "rank_zh",
+          "affinity_zh",
+          "items",
+          "can_trade",
+          "trade_problem_zh"
+        ],
+        "title": "ShopView",
+        "description": "角色所在地點的店（8.26.1）。"
       },
       "Shove": {
         "properties": {
@@ -15911,6 +16313,28 @@
         "title": "UseEnvironment",
         "description": "優先利用環境（爆炸、推落、表面）。"
       },
+      "UseItemAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "use_item",
+            "title": "Kind",
+            "default": "use_item"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^item_[a-z0-9_]+$",
+            "title": "Item"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item"
+        ],
+        "title": "UseItemAction",
+        "description": "野外或城鎮使用消耗品（09 9.6.11 #113「HP 靠藥水」）；先用背包裡的，背包沒有再用腰包的。"
+      },
       "UseRaceSkill": {
         "properties": {
           "unit_id": {
@@ -16383,6 +16807,25 @@
         ],
         "title": "Vault",
         "description": "攀跳（Phase 3-21b，玩法 #24）：花 ``vault_ap_cost`` AP 與 ``vault_move_cost`` 點移動點數。\n\n``dest`` 是落點：相鄰且比現在高 2 層的格子＝**攀爬**；正前方隔著 1 格寬不可站立格（深淵、\n岩漿、斷橋缺口）的下一格＝**跳躍**。落點能分辨是哪一種，所以不另外帶 ``mode``。"
+      },
+      "WalletView": {
+        "properties": {
+          "gold": {
+            "type": "integer",
+            "title": "Gold"
+          },
+          "quest_coins": {
+            "type": "integer",
+            "title": "Quest Coins"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "gold",
+          "quest_coins"
+        ],
+        "title": "WalletView"
       },
       "WeaponLook": {
         "properties": {
@@ -16883,6 +17326,18 @@
           },
           {
             "$ref": "#/components/schemas/ShadowAiAction"
+          },
+          {
+            "$ref": "#/components/schemas/BuyAction"
+          },
+          {
+            "$ref": "#/components/schemas/SellAction"
+          },
+          {
+            "$ref": "#/components/schemas/PouchAction"
+          },
+          {
+            "$ref": "#/components/schemas/UseItemAction"
           }
         ],
         "discriminator": {
@@ -16890,6 +17345,7 @@
           "mapping": {
             "accept_quest": "#/components/schemas/AcceptQuestAction",
             "allocate": "#/components/schemas/AllocateAction",
+            "buy": "#/components/schemas/BuyAction",
             "camp": "#/components/schemas/CampAction",
             "dissolve": "#/components/schemas/DissolveAction",
             "event_solve": "#/components/schemas/EventSolveAction",
@@ -16899,16 +17355,19 @@
             "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
+            "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
             "respec": "#/components/schemas/RespecAction",
             "rest": "#/components/schemas/RestAction",
             "retreat": "#/components/schemas/RetreatAction",
+            "sell": "#/components/schemas/SellAction",
             "shadow_ai": "#/components/schemas/ShadowAiAction",
             "swear_oath": "#/components/schemas/SwearOathAction",
             "talk": "#/components/schemas/TalkAction",
             "tavern": "#/components/schemas/TavernAction",
             "teleport": "#/components/schemas/TeleportAction",
-            "travel": "#/components/schemas/TravelAction"
+            "travel": "#/components/schemas/TravelAction",
+            "use_item": "#/components/schemas/UseItemAction"
           }
         }
       },
@@ -17489,6 +17948,36 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/MyShadowView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wallet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WalletView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inventory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InventoryView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShopView"
               },
               {
                 "type": "null"

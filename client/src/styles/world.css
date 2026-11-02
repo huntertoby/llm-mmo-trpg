@@ -564,3 +564,47 @@
   max-height: 9em;
   overflow-y: auto;
 }
+
+/* 商店、背包與腰包（Phase 5D-1） */
+.world-shop {
+  margin-top: 6px;
+}
+
+.world-shop-list {
+  list-style: none;
+  margin: 2px 0 6px;
+  padding: 0;
+}
+
+.world-shop-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+}
+
+.world-shop-list li.locked {
+  opacity: 0.7;
+}
+
+.world-shop-name {
+  font-weight: 700;
+}
+
+.world-shop-price {
+  margin-left: auto;
+  color: #ffd04a;
+}
+
+.world-shop-lock {
+  color: #ff9a7a;
+}
+
+.world-wallet {
+  color: #ffd04a;
+}
+
+.world-pouch-edit select {
+  margin: 0 4px;
+}
