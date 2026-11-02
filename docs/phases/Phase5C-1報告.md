@@ -63,7 +63,7 @@
 ## 6. 檢查
 
 - `ruff check .`、`ruff format --check .`、`mypy`（1063 檔）、`lint-imports`（9 契約）通過。
-- `pytest tests/world tests/api tests/content tests/test_architecture.py -n 8`：2720 passed。
+- `pytest tests/world tests/api tests/content tests/test_architecture.py -n 8`：2758 passed（合併 main 5B-4c 後重跑）。
 - `pytest tests/cli -m "slow or not slow" --timeout=3000`：180 passed。
 - `npx vitest run`：128 檔、1219 passed；`npm run build`：通過。
-- 交件前 `git merge main`（只有文件變動，無衝突）。
+- 交件前 `git merge main`：與 5B-4c 在 `state.py`（新欄位並列）、`battle.py`（勝利條件＋傭兵）、`Phase5計畫.md`（5B-4c 佔第 21 節，5C-1 改第 22 節）衝突，已解；OpenAPI 重產無差異；合併後上列檢查全部重跑通過。
