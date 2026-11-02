@@ -1,0 +1,26 @@
+# BAL-19e（玩法決定 #110，06 6.27.4）：反應技，敵人離開相鄰格時，暗影纏上他的腳踝（意志：暗影）；數值為初值，未經模擬
+id: skill_rx_shadow_grasp
+schema_version: 1
+name_zh: 影縛
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: spell
+weapon_req: focus
+ap_cost: null
+scaling_attr: wil
+shape: {type: single, range: 3}
+effects:
+  - {type: damage, dice: 2d4, element: shadow}
+  - {type: apply_status, status: slow, duration: 2}
+condition: null
+trigger: null
+reaction: {event: enemy_leaves_adjacent}
+cost: {mana: 3, cooldown: 1}
+tags: [reaction, shadow, spell]
+narrative:
+  concept: 想從你身邊溜走，就得先甩掉自己的影子
+  cast_flavor: 對手一轉身，他腳下的影子忽然伸出手，死死拖住他的腳步
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

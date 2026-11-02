@@ -1,0 +1,23 @@
+# BAL-19e（玩法決定 #110，06 6.27.4）：感知姿態，守望陣線（受到的骰值傷害降低，但移動減少）；花 1 AP 進入，持續到取消；數值為初值，未經模擬
+id: skill_st_warden_watch
+schema_version: 1
+name_zh: 守望姿態
+tier: 2
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: apply_status, status: stance_guard, affects: self}
+condition: null
+cost: {}
+tags: [stance, guard, support]
+narrative:
+  concept: 守在原地看清每一個來襲的方向，把傷害卸到最小
+  cast_flavor: 你放慢呼吸，目光掃過整片戰場，身體自然擺出防守的架式
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
