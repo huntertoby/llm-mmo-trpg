@@ -85,3 +85,5 @@ xp:
 opportunity:
   tier_up_permille: 150
   tier_up_per_season: 1
+  # 5B-4d：第 7 天前保底 1 次（07 7.6）：賽季第 6 天起，沒遇過機遇的角色走到機遇地點就一定出現（不看天氣、時段）
+  guarantee_from_day: 6

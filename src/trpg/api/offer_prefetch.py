@@ -12,7 +12,7 @@
 - 背景還在算同一把鍵時，同步呼叫等它算完（比同時再算一次快；結果相同）。
 - 預測：
   - 機遇：``pending_event`` 的骨架有可用的機遇解法（條件成立、這季還沒拿過）→ 照
-    ``solutions._opportunity`` 的參數（``requires_keyword`` 當區域偏向、
+    ``solutions._opportunity`` 的參數（``requires_keyword`` 當區域偏向與指定關鍵字〔5B-4d〕、
     ``opportunity_tier_bonus``）。
   - 劇情步驟：每個進行中任務的下一步有 ``reward.offer`` → 照 ``quests._offer`` 的參數；另外再算
     一份「加上這一步經驗之後」的角色（升級可能換階級；鍵相同時只算一次）。
@@ -49,6 +49,7 @@ class OfferJob:
     mix: tuple[int, int, int] | None = None
     min_passive: int = 0
     tier_bonus: int = 0
+    pinned_keyword: str | None = None
 
     def key(self, view: ContentLibrary) -> str | None:
         return offer_key(
@@ -59,6 +60,7 @@ class OfferJob:
             mix=self.mix,
             min_passive=self.min_passive,
             tier_bonus=self.tier_bonus,
+            pinned_keyword=self.pinned_keyword,
         )
 
     def make(self, view: ContentLibrary) -> SkillOffer:
@@ -70,6 +72,7 @@ class OfferJob:
             mix=self.mix,
             min_passive=self.min_passive,
             tier_bonus=self.tier_bonus,
+            pinned_keyword=self.pinned_keyword,
         )
 
 
@@ -102,6 +105,7 @@ def _opportunity_jobs(
                 "complete",
                 region_keywords=() if keyword is None else (keyword,),
                 tier_bonus=opportunity_tier_bonus(library, world, char, trigger.skeleton),
+                pinned_keyword=keyword,
             )
         )
     return jobs

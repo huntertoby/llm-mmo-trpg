@@ -20,6 +20,7 @@ from trpg.world.actions import (
     TalkedEvent,
     ThreadAddedEvent,
 )
+from trpg.world.clock import next_refresh_at, refresh_day
 from trpg.world.events import event_candidates, mark_finished
 from trpg.world.quests import advance_quests
 from trpg.world.state import CharacterState
@@ -162,44 +163,76 @@ def test_granny_past_success_gives_secret_door(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("outcome", ["success", "partial", "failure"])
-def test_granny_past_once_resolved(
-    library: ContentLibrary, make_char: MakeChar, outcome: str
-) -> None:
+def _mist_ferry(library: ContentLibrary, char: CharacterState, now: int) -> list[str]:
+    candidates = event_candidates(
+        library,
+        make_world(),
+        "cloud_ridge",
+        "mist_ferry",
+        now,
+        unlocked=char.unlocked_skeletons,
+        finished=char.finished_skeletons,
+        failed=char.failed_skeletons,
+    )
+    return [s.id for s in candidates]
+
+
+def _granny_result(library: ContentLibrary, make_char: MakeChar, outcome: str) -> CharacterState:
     lib = sure(library, "granny_parley", outcome)
     char = at_event(make_char(unlocked_skeletons=("granny_past",)), "granny_past", "mist_ferry")
     char = at_event(char, "granny_past", "mist_ferry", strong=True)
     action = act("granny_parley", attribute=Attribute.WIL, method="parley")
-    result = world_step(lib, make_world(), char, action, NOON)
-    assert result.char.finished_skeletons == ("granny_past",)
-    world = make_world()
-    candidates = event_candidates(
-        library,
-        world,
-        "cloud_ridge",
-        "mist_ferry",
-        NOON,
-        unlocked=result.char.unlocked_skeletons,
-        finished=result.char.finished_skeletons,
-    )
-    assert [s.id for s in candidates] == ["tavern_storyteller"]  # 不再出現
+    return world_step(lib, make_world(), char, action, NOON).char
+
+
+@pytest.mark.parametrize("outcome", ["success", "partial"])
+def test_granny_past_once_resolved(
+    library: ContentLibrary, make_char: MakeChar, outcome: str
+) -> None:
+    """成功、部分成功才算解決（5B-4d，18.7.6；取代 5B4c-9）。"""
+    char = _granny_result(library, make_char, outcome)
+    assert char.finished_skeletons == ("granny_past",)
+    assert char.failed_skeletons == {}
+    assert _mist_ferry(library, char, NOON + DAY) == ["tavern_storyteller"]  # 不再出現
     # 聊天也不再解鎖或觸發
-    talked = result.char.model_copy(update={"affinity": {"granny_du": 70}})
-    again = world_step(library, world, talked, TalkAction(npc="granny_du"), NOON + DAY)
+    talked = char.model_copy(update={"affinity": {"granny_du": 70}})
+    again = world_step(library, make_world(), talked, TalkAction(npc="granny_du"), NOON + DAY)
     assert not any(isinstance(e, SkeletonUnlockedEvent | EventTriggeredEvent) for e in again.events)
 
 
+def test_granny_past_failure_retries_next_day(library: ContentLibrary, make_char: MakeChar) -> None:
+    """判定失敗不算解決：當天不再出現，隔天（6 點刷新後）回到候選（5B-4d，代決 5B4d-2）。"""
+    char = _granny_result(library, make_char, "failure")
+    assert char.finished_skeletons == ()
+    assert char.failed_skeletons == {"granny_past": refresh_day(NOON)}
+    assert _mist_ferry(library, char, NOON) == ["tavern_storyteller"]
+    refresh = next_refresh_at(NOON)
+    assert _mist_ferry(library, char, refresh - 1) == ["tavern_storyteller"]
+    assert _mist_ferry(library, char, refresh) == ["granny_past", "tavern_storyteller"]
+    # 隔天再試成功 → 解決、清掉失敗紀錄
+    retry = at_event(char, "granny_past", "mist_ferry", strong=True)
+    lib = sure(library, "granny_parley", "success")
+    action = act("granny_parley", attribute=Attribute.WIL, method="parley")
+    done = world_step(lib, make_world(), retry, action, refresh + 600).char
+    assert done.finished_skeletons == ("granny_past",)
+    assert done.failed_skeletons == {}
+
+
 def test_abandoning_is_not_resolving(library: ContentLibrary, make_char: MakeChar) -> None:
-    """放棄不算解決（代決 5B4c-9）：之後照一般擲骰還會出現。"""
+    """放棄不算解決（代決 5B4c-9）：之後照一般擲骰還會出現；失敗只記失敗那天（5B-4d）。"""
     char = make_char(unlocked_skeletons=("granny_past",))
     abandoned = EventResolvedEvent(
         skeleton="granny_past", location="mist_ferry", solution=0, outcome="abandoned"
     )
-    assert mark_finished(library, char, (abandoned,)) is char
+    assert mark_finished(library, char, (abandoned,), now=NOON) is char
     failed = abandoned.model_copy(update={"outcome": "failure"})
-    assert mark_finished(library, char, (failed,)).finished_skeletons == ("granny_past",)
+    marked = mark_finished(library, char, (failed,), now=NOON)
+    assert marked.finished_skeletons == ()
+    assert marked.failed_skeletons == {"granny_past": refresh_day(NOON)}
+    partial = abandoned.model_copy(update={"outcome": "partial"})
+    assert mark_finished(library, char, (partial,), now=NOON).finished_skeletons == ("granny_past",)
     other = failed.model_copy(update={"skeleton": "tavern_storyteller"})
-    assert mark_finished(library, char, (other,)) is char  # 不是 once 的骨架不記
+    assert mark_finished(library, char, (other,), now=NOON) is char  # 不是 once 的骨架不記
 
 
 def test_other_skeletons_are_not_once(library: ContentLibrary) -> None:

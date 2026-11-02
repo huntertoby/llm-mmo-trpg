@@ -128,6 +128,8 @@ class EventTrigger(_Model):
     """說書人已經敘述過這個事件（Phase 5B-3；每個事件只能敘述、換骨架 1 次）。"""
     combat_solution: int | None = Field(default=None, ge=0)
     """選了戰鬥解法（Phase 5B-4b）：骨架 ``solutions`` 的索引；遭遇結束時結算事件。"""
+    guaranteed: bool = False
+    """機遇保底觸發的（Phase 5B-4d，07 7.6「第 7 天前保底 1 次」：不看天氣、時段與機率）。"""
 
     @field_validator("candidates")
     @classmethod
@@ -497,6 +499,13 @@ class CharacterState(_Model):
     finished_skeletons: tuple[str, ...] = ()
     """解決過的 ``once`` 骨架（排序、不重複；18.4 補充「骨架 22 每個角色只出現到解決為止」）。"""
 
+    # --- 5B-4d 骨架 22 失敗可再試、機遇保底 ---
+    failed_skeletons: dict[str, int] = Field(default_factory=dict)
+    """判定失敗的 ``once`` 骨架 → 失敗那天（``refresh_day``；依骨架排序）。當天不再出現，隔天
+    （6 點刷新後）可以再試（18.7.6「失敗隔天可再試」）。"""
+    met_opportunities: tuple[str, ...] = ()
+    """觸發過的機遇骨架（有 ``opportunity`` 解法的骨架；排序、不重複；07 7.6 第 7 天前保底）。"""
+
     # --- 5C-1 隊伍（邏輯在 trpg.world.party） ---
     mercenaries: tuple[str, ...] = ()
     """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複）。5C-2 起沒有隊友＝獨行（玩法 PM 定 ③）。"""
@@ -522,12 +531,14 @@ class CharacterState(_Model):
     def _sorted_party_ai(cls, ai: dict[str, str]) -> dict[str, str]:
         return dict(sorted(ai.items()))
 
-    @field_validator("talk_days")
+    @field_validator("talk_days", "failed_skeletons")
     @classmethod
     def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:
         return dict(sorted(days.items()))
 
-    @field_validator("unlocked_skeletons", "opportunities", "finished_skeletons")
+    @field_validator(
+        "unlocked_skeletons", "opportunities", "finished_skeletons", "met_opportunities"
+    )
     @classmethod
     def _sorted_unlocked(cls, ids: tuple[str, ...]) -> tuple[str, ...]:
         if list(ids) != sorted(set(ids)):

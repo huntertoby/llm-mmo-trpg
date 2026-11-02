@@ -110,6 +110,7 @@
 | 5B-4b | 5B-4 收尾（玩法 PM 2026-11-03，18 18.7.5～18.7.7，`effc88a7`）：好感度加取得方式（完成該 NPC 相關任務步驟 +15、每天第一次聊天 +3；目標第 5 天 1～2 名 NPC 到信賴）；信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（交涉／察覺、DC 8，結果給「斷崖幫寨的暗門」，霧渡鎮），不直接給線頭（#85）；skillgen 區域偏向（新方向那張，玩家沒有該區關鍵字時優先，雲嶺：潮濕、帶電、隱蔽）；新手鏈保底（至少 1 招被動、加深／橋接／新方向 1／0／2）；放棄／交涉／戰鬥解法結算；線頭到期結局（叛徒戰、二當家坐大）；導師任務鏈 3 步（18.7.5） | 5B-4 | 1.5 h | 可與 5B-5 平行（不碰前端） |
 | 5B-4c | 5B-4b 收尾（玩法 PM 2026-11-03）：任務步驟好感度 +15 → +10（每天聊天 +3、主線 ① 加成保留），重量目標第 4～5 天到信賴；懸賞精英帶 1 個資料指定詞綴（疤面＝連心的、北坡狼王＝狂暴的、霧中劍客＝霧隱的，18.7.4）；機遇解法結算＝條件成立時給一次機遇技能三選一（07 7.6：通常同階、15% 高一階、每人每季最多 1 次高一階；首例古松祭壇：雷雨夜＋帶電技能）；戰鬥解法用現有勝利條件（骨架 2、14＝撤離，7＝守點，8＝獵人倒下即失敗，沒有保護目標時先用守點）；骨架 22 每角色解決一次後不再出現；世界級線頭到期結局（霧魅：之後 2 天雲嶺夜晚營地遭遇多 1 名霧魅，全服；碎片：灰燼之心第 1 階段護甲 +1，全服，荒原骨架 13 攔截可抵銷，19.4） | 5B-4b | 1.25 h | 可與 5B-M3 平行 |
 | 5B-4d | 5B-4c 收尾（玩法 PM 2026-11-03）：個別好感度來源（小蓮＝主線第 ②、③ 步各 +10；柳掌櫃＝在他店裡消費一次 +2、每天最多 +4，接 5D 商店；阿岳＝帶他打贏一場 +2、每天最多 +6，接 5C-3 劇情夥伴），目標第 4～6 天柳掌櫃到友善、阿岳與小蓮到信賴；骨架 22 只有成功／部分成功才算解決，失敗隔天（6 點）可再試；第 7 天前保底 1 次機遇（07 7.6）；skillgen「指定關鍵字」模式（機遇三張都帶觸發情境的關鍵字，例：雷擊點 → 帶電） | 5B-4c | 1 h | 可與 5C 平行；柳掌櫃、阿岳兩項在 5D／5C-3 做好後接 |
+| 5B-4e | 5B-4d 收尾（玩法 PM 2026-11-03）：骨架 2 成功給小蓮 +20、骨架 6 成功給小蓮 +10（目標第 6 天到信賴，量完回報）；第 4 天起酒館每週傳聞一定含 rumor_storm_altar，第 6 天起還沒遇過機遇的角色在霧渡鎮說書人順口提「古松那邊最近不太平」；保底機遇用專用文字（「古松樹皮上的焦痕還在發燙。你伸手一碰，一道細細的電流竄過掌心——像是有什麼在等你。」），保底時不檢查需要帶電技能、三張照樣帶帶電；渡婆婆信賴時聊天每天可再觸發骨架 22 一次 | 5B-4d | 0.75 h | 可與 5D 平行 |
 | 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表；路由接說書人（travel 觸發事件後送 `event_story`、聊天端點）；大世界自己的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）；隱藏地點揭露後名稱可公開，揭露前用提示語而非「某處」（玩法 PM 2026-11-03） | 5B-3、5B-4 | 1.5 h | 否 |
 
 ### 5C｜組隊、影子與傭兵（3 段）
@@ -125,6 +126,8 @@
 | 段 | 範圍 | 依賴 | 預估 | 可平行 |
 |---|---|---|---|---|
 | PERF-3 | 完整技能三選一再加速（玩法 PM 2026-11-03）：機遇與劇情步驟出現時在背景預先算好三選一；指定關鍵字的組合不抽傳說；橋接搜尋設變體數上限（照最壞約 3 秒定），到上限還沒找到就照 6.27.4 退回「放寬關鍵字」（③），不能少一張；結果仍由種子決定、可重播 | PERF-2 | 1 h | 可與 5C-3 平行（只動 skillgen 與 api 背景計算） |
+| 5C-3b | 5C-3 收尾（玩法 PM 2026-11-03）：戰後才判出的違反，「破誓」2 回合帶到下一場開場（下一場加成照常，#27）；立「不使用反應」誓約時自動關掉反應設定（玩家自己再打開而觸發仍算違反）；戰鬥中會違反誓約的動作按下前先警告（06 6.26）；阿岳用遠程保持距離的 AI 打法 | 5C-3 | 1 h | 可與 5D-1 平行 |
+| 5C-3c | LLM 把玩家誓詞轉成誓約模板（#27；接 5B-3 說書人的 LLM 管線，輸出過 pydantic 與模板檢查，模型關閉時退回選單）；優先度低 | 5C-3、5B-3 | 1 h | — |
 | 5D-1 | 貨幣（金幣、任務幣，8.15）、背包 30 格與腰包 3 個（8.17）、商店（只賣消耗品、粗料、染料；區域特產每週限量；好感度門檻，8.26.1）、霧渡鎮柳掌櫃 | 5A-4 | 1.5 h | 可與 5B 各段平行（不碰事件與 narrative） |
 | 5D-2 | 材料：雲嶺 8 種（18.2.4）＋通用粗／精／上料、敵人家族掉材料（M1；被我方擊倒的第三方照常掉材料，玩法 PM 2026-11-03）、掉落物品等級＝地點建議等級（8.26.2）、精英掉史詩；沿用 3G／3K 物品產生器 | 5D-1、5A-3 | 1.5 h | 否 |
 | 5D-3 | 鐵匠與附魔台：打造（指定部位＋1 條關鍵字詞條、其餘傾向由材料決定 M2、物品等級規則）、強化、重骰、精華指定詞條、配方碼與首位發現者（8.20、M6）、隱藏配方（M7，18 的「驚雷霧袍」）；2 件共鳴（M3） | 5D-2 | 1.5 h | 否 |
@@ -2800,6 +2803,86 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5C3-13 | 被動欄位 | 立誓時被動已滿就拒絕；有誓約時所有裝技能的地方照被動欄位 −1 |
 | 5C3-14 | `solo` 的判定 | 開場時有其他我方非召喚單位就違反（召喚物不算隊友） |
 
-## 25. 之後各段規格
+## 25. 5B-4d 詳細規格：5B-4c 收尾（小蓮好感度、骨架 22 失敗可再試、機遇保底、skillgen 指定關鍵字）
+
+> 給實作 agent。主要動 `content/world/quests/cloud_ridge.yaml`（主線第 ② 步 `npcs` 一行）、`content/world/rules.yaml`（`opportunity.guarantee_from_day`）、`src/trpg/content/world_rules.py`（`OpportunityRules` 加欄位）、`src/trpg/world/`（`events.py`、`step.py`、`solutions.py`、`state.py` 小改）、`src/trpg/skillgen/candidates.py`（`CandidateRequest.pinned_keyword` 與指定關鍵字模式）、`src/trpg/roguelite/offers.py`（`make_offer`／`offer_key` 加 keyword-only `pinned_keyword`，預設 `None`＝原行為）、`src/trpg/api/offer_prefetch.py`（機遇的預測帶同樣參數）、`tests/world/`、`tests/skillgen/`、`tests/roguelite/`、受影響的 `tests/api/`。**不做** 柳掌櫃的店內消費（5D）、阿岳的打贏加成（5C-3，另一個 agent 同時在改 `trpg.world` 的隊伍、阿岳、誓約與 `content/world/`：共用檔改動要小）。不動引擎、`content/skills/`、戰鬥紀錄格式；`trpg-char/1`、`trpg-world/1`、`trpg-wlog/1` 不升版號（新欄位都有預設值）。
+> 依據：玩法 PM 2026-11-03（本檔第 1 節 5B 表「5B-4d」列）；18 18.7.6（個別來源：小蓮＝主線第 ②、③ 步各 +10；骨架 22 只有成功或部分成功才算解決、失敗隔天可再試；機遇三張都帶「帶電」、第 7 天前保底 1 次）；07 7.6（機遇：關鍵字由觸發情境決定、第 7 天前保底 1 次、0／1／2）；06 6.27.4（加深、橋接、新方向）；`Phase5B-4c報告.md` 第 7 節待決 2、3、7、8；`PERF-3報告.md`（`skip_legendary`、`BRIDGE_VARIANT_CAP`、`offer_prefetch` 快取鍵）。
+
+### 25.1 目標
+
+把 5B-4c 留下的四件事做完，全部是 **資料驅動的世界動作**：寫進世界動作日誌、由「日誌＋內容庫＋賽季種子」重播逐字相同；不呼叫 LLM、不讀時間。原型 roguelite 與一般三選一不變（新參數預設＝原行為；`tests/skillgen/fixtures/refactor_3wr2.json` 不應變）。
+
+### 25.2 小蓮的好感度（18.7.6 個別來源）
+
+- 主線「霧中裂痕」第 ② 步 `enter_temple` 的 `npcs` 加 `acolyte_xiaolian`（第 ③ 步 `temple_split` 已列小蓮）→ 完成 ②、③ 各 +10（照 `quest_step_delta`；代決 5B4d-1）。
+- **重量**：`tests/world/test_affinity_pace.py` 照 21.2 的進度表重算；報告寫小蓮第幾天到信賴（目標第 4～6 天，18.7.6）。原有驗收（第 5 天前 1～2 名、第 3 天前沒有）不變；小蓮沒到目標時不改數值，寫進待決。
+
+### 25.3 骨架 22 只有成功／部分成功才算解決（18.7.6）
+
+- `mark_finished`：`once` 骨架的 `event_resolved` 結果是 `success`、`partial` → 加進 `finished_skeletons`（取代 5B4c-9）；`failure` → 記 `CharacterState.failed_skeletons[骨架] = refresh_day(now)`（依骨架排序）；`abandoned` 照舊不記。
+- `event_candidates`：`once` 骨架在 `failed_skeletons` 裡、而且 `refresh_day(now)` 還是失敗那天 → 不進候選；隔天（台北 6 點刷新後）回到候選，可以再試（之後成功才記 `finished_skeletons`）。
+- 再試的入口：照現有的移動擲骰（霧渡鎮抵達時）；聊天只在第一次解鎖時立刻觸發，失敗後不再由聊天觸發（代決 5B4d-2）。
+
+### 25.4 第 7 天前保底 1 次機遇（07 7.6）
+
+- **資料**：`OpportunityRules.guarantee_from_day: int = 0`（0＝不保底）；雲嶺 `rules.yaml` `opportunity.guarantee_from_day: 6`。
+- **狀態**：`CharacterState.met_opportunities: tuple[str, ...]`（排序）：觸發過的 **機遇骨架**（骨架有 `opportunity` 解法；`world_step` 在動作後看 `event_triggered` 記下，移動擲骰、聊天解鎖都算）。
+- **規則**（移動抵達的事件擲骰，`roll_event`）：賽季第 N 天（`refresh_day(now) − refresh_day(season_start) + 1`）≥ `guarantee_from_day`、角色 `met_opportunities` 與 `opportunities` 都是空的、這一步沒有遇敵 → 所在地點若有機遇骨架（`locations` 含所在地點；`unlock_only` 要已解鎖、`once` 要沒解決），**不看天氣、時段與事件機率** 直接觸發它（多個時取 ID 最小者；`EventTrigger.guaranteed = true`、`candidates`＝只有它）。擲骰照舊消耗（亂數計數不變），`event_check.triggered` 為真。之後照一般事件處理（機遇解法的條件 `requires_keyword` 不放寬）。
+- 雲嶺：古松祭壇（骨架 12）從第 6 天起，沒遇過機遇的角色走到古松祭壇就一定出現（不必雷雨夜）；第 7 天之後還沒遇過的照樣保底（代決 5B4d-3、5B4d-4）。
+
+### 25.5 skillgen「指定關鍵字」模式（07 7.6「關鍵字由觸發情境決定」）
+
+- **資料**：`CandidateRequest.pinned_keyword: str | None = None`（`None`＝原行為）；`make_offer(..., pinned_keyword=None)`、`offer_key(...)` 同名參數（PERF-3 快取鍵取自 `CandidateRequest` 全欄位，所以自動含新參數）。未知關鍵字 → `ValueError`。
+- **完整版產生器**（`generate_candidates`）的指定模式：三張都帶 `pinned_keyword`（同 6.27.4 的種類與找法，關鍵字組改成）：
+  - 加深：只帶指定關鍵字（角色沒持有它時 `fallback`）。
+  - 橋接：指定關鍵字＋另一個持有的關鍵字（依持有數排序）；都找不到 → 只帶指定關鍵字（`fallback`）。
+  - 新方向：指定關鍵字＋一個還沒有的關鍵字（行為權重抽順序、`region_keywords` 排前）；都找不到 → 只帶指定關鍵字（`fallback`）。不從通用池抽（通用技能沒有關鍵字）。
+  - 多關鍵字選項的組合器變體上限：橋接、新方向 **各自** `bridge_variant_cap`（400；PERF-3 的橋接上限照舊只管橋接，一般模式結果逐字不變）；組合器照舊 `skip_legendary=True`。
+  - 已持有該關鍵字的角色，等於拿到「加深＋兩張往外橋接」（玩法 PM 2026-11-03 的說明）。
+- 白板版產生器不看 `pinned_keyword`（目前只有完整技能的機遇會用；代決 5B4d-6）。
+- **機遇**：`solutions._opportunity` 與 `api.offer_prefetch` 的機遇預測都傳 `pinned_keyword=requires_keyword`（`region_keywords` 照舊）；一般三選一（任務、主線、許願池）不傳。
+
+### 25.6 新欄位、事件（全部有預設值）
+
+- 內容：`OpportunityRules.guarantee_from_day`；主線第 ② 步 `npcs`。
+- 狀態：角色 `failed_skeletons`（骨架 → 失敗那天）、`met_opportunities`；`EventTrigger.guaranteed`。
+- 函式：`make_offer`／`offer_key` 的 `pinned_keyword`；`CandidateRequest.pinned_keyword`；`world.events.mark_finished(..., now=)`、`mark_met_opportunities`。
+
+### 25.7 驗收
+
+- `uv run pytest -q tests/world tests/skillgen tests/roguelite tests/api -n 8 --timeout=1800`（受影響的）通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。行為快照 `refactor_3wr2.json` 若變，用 `uv run python -m tests.skillgen.test_refactor_3wr2` 重產並在報告列出。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 25.8 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/world/test_affinity_pace.py`（改） | 小蓮：主線 ②、③ 各 +10；重量印出 |
+| `tests/world/test_secret_event.py`（加） | 骨架 22 失敗：當天不再出現、隔天 6 點後回到候選；部分成功算解決；放棄照舊 |
+| `tests/world/test_opportunity.py`（加） | 保底：第 6 天前不保底；第 6 天起沒遇過的角色走到祭壇不看天氣直接觸發（`guaranteed`）；遇過（含聊天、一般觸發）或拿過就不保底；遇敵那步不觸發；機遇三張都帶「帶電」 |
+| `tests/skillgen/test_pinned_keyword.py`（新） | 三張都帶指定關鍵字；已持有時加深＋橋接；沒持有時 fallback；未知關鍵字錯；同輸入逐字相同；`None`＝原行為；上限各自計 |
+| `tests/roguelite/test_offer_cache.py`（加） | 快取鍵含 `pinned_keyword` |
+| `tests/api/test_offer_prefetch.py`（加） | 機遇預測帶 `pinned_keyword`，命中結果與同步計算逐字相同 |
+| `tests/world/test_quest_replay.py`（加） | 骨架 22 失敗 → 隔天再試 → 保底機遇 → 選技能 的日誌重播兩次逐字相同 |
+
+### 25.9 不做的事
+
+- 柳掌櫃的店內消費 +2（5D 商店）、阿岳的打贏加成 +2（5C-3 劇情夥伴）；其他機遇來源（擊殺稀有精英、隱藏祭壇）；保底機遇的說書提示（酒館傳聞、事件卡說明）；機遇高一階之後的升階拉平（5B-4c 待決 1）。
+
+### 25.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5B4d-1 | 小蓮「主線第 ②、③ 步各 +10」 | 當成通用的任務步驟好感度（`quest_step_delta`）：② 的 `npcs` 加小蓮，③ 原本就有；不另加第二份 +10 |
+| 5B4d-2 | 骨架 22 失敗後怎麼再試 | 失敗當天不進候選，隔天回到移動擲骰的候選；聊天不再立刻觸發 |
+| 5B4d-3 | 保底的觸發點 | 第 6 天起、沒遇過機遇的角色，走到有機遇骨架的地點（雲嶺＝古松祭壇）就直接觸發，不看天氣、時段、機率；遇敵那步照舊不出事件；不在別的地點硬生機遇 |
+| 5B4d-4 | 「觸發過機遇」與過了第 7 天 | 機遇骨架的事件出現過就算（拿不拿都算）；第 7 天後還沒遇過的照樣保底到遇過一次為止 |
+| 5B4d-5 | 保底時的條件 | 機遇解法的 `requires_keyword` 不放寬：沒有帶電技能的角色遇到保底事件只能選其他解法 |
+| 5B4d-6 | 指定關鍵字的範圍 | 只有完整版產生器（機遇用）；白板版忽略；一般三選一不傳 |
+| 5B4d-7 | 指定模式的搜尋上限 | 橋接、新方向的多關鍵字選項各自 400 個變體；找不到退回只帶指定關鍵字 |
+| 5B4d-8 | 07 7.6 的「0／1／2」 | 指定模式照「加深／橋接／新方向」各一張（三張都帶指定關鍵字；新方向＝指定＋新關鍵字），不另做 0／1／2 |
+
+
+## 26. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
