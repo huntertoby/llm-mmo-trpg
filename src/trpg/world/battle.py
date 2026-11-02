@@ -1,4 +1,4 @@
-"""遇敵展開戰鬥與勝負回寫（Phase 5A-4；``docs/phases/Phase5計畫.md`` 8.3～8.5）。
+"""遇敵展開戰鬥與勝負回寫（Phase 5A-4；``docs/phases/Phase5計畫.md`` 9.3～8.5）。
 
 - :func:`prepare_battle`：由角色身上的遭遇（:class:`~trpg.world.state.EncounterResult`）組出原型戰鬥
   引擎的設定——地點的地圖（沒有時從區域地圖池抽）並換皮成遭遇的區域、遭遇的天氣、主角（目前 HP、

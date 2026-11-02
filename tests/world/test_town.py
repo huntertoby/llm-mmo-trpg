@@ -1,4 +1,4 @@
-"""撤退與城鎮服務（Phase 5A-4；``docs/phases/Phase5計畫.md`` 8.2）。"""
+"""撤退與城鎮服務（Phase 5A-4；``docs/phases/Phase5計畫.md`` 9.2）。"""
 
 from __future__ import annotations
 

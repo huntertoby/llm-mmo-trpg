@@ -114,7 +114,7 @@ ClearKind = Literal[
 
 
 class BattleRules(ContentModel):
-    """遇敵戰鬥與勝負回寫（5A-4；``docs/phases/Phase5計畫.md`` 8.4）。"""
+    """遇敵戰鬥與勝負回寫（5A-4；``docs/phases/Phase5計畫.md`` 9.4）。"""
 
     max_rounds: int = Field(default=30, ge=1)
     xp_per_battle: int = Field(default=100, ge=0)

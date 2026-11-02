@@ -1,4 +1,4 @@
-"""戰鬥與勝負回寫（Phase 5A-4；``docs/phases/Phase5計畫.md`` 8.4）。
+"""戰鬥與勝負回寫（Phase 5A-4；``docs/phases/Phase5計畫.md`` 9.4）。
 
 戰鬥由效用 AI 代打（:func:`auto_steps`），步驟放進 ``fight`` 動作；同樣的步驟永遠得到同樣的結果，
 所以「找一個會贏／會輸的種子」是確定性的。

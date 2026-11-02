@@ -17,6 +17,7 @@ from trpg.world.state import CharacterState
 
 __all__ = [
     "STREAM_BATTLE",
+    "STREAM_EVENT",
     "STREAM_REVEAL",
     "STREAM_TRAVEL",
     "derive_seed",
@@ -30,6 +31,8 @@ STREAM_BATTLE: Final = "battle"
 """遭遇的戰鬥地圖與戰鬥種子。"""
 STREAM_REVEAL: Final = "reveal"
 """隱藏地點的感知判定。"""
+STREAM_EVENT: Final = "event"
+"""事件出現擲骰與骨架挑選（Phase 5B-1）。"""
 
 
 def derive_seed(season_seed: int, character_id: str, stream: str, counter: int) -> int:

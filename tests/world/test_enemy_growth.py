@@ -1,4 +1,4 @@
-"""敵人依地點建議等級成長（Phase 5A-4 追加 A；``docs/phases/Phase5計畫.md`` 8.3 第 6 項）。"""
+"""敵人依地點建議等級成長（Phase 5A-4 追加 A；``docs/phases/Phase5計畫.md`` 9.3 第 6 項）。"""
 
 from __future__ import annotations
 

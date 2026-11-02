@@ -16,7 +16,7 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.world_map import RevealMethod
 from trpg.engine.actions import Step
 from trpg.world.encounters import EncounterLineup
-from trpg.world.state import EncounterResult
+from trpg.world.state import EncounterResult, EventTrigger
 
 __all__ = [
     "BattleEndedEvent",
@@ -26,6 +26,9 @@ __all__ = [
     "DefeatedEvent",
     "EncounterCheckEvent",
     "EncounterEvent",
+    "EventCheckEvent",
+    "EventLeftEvent",
+    "EventTriggeredEvent",
     "FightAction",
     "LeveledUpEvent",
     "LoadoutAction",
@@ -161,6 +164,31 @@ class LocationRevealedEvent(_Model):
     method: RevealMethod
 
 
+class EventCheckEvent(_Model):
+    """事件擲骰（Phase 5B-1）：``roll``（0～999）< ``chance_permille`` 且這一步沒遇敵、有合格骨架
+    才觸發。``steps`` 是含這一步、距離上次事件的步數。"""
+
+    kind: Literal["event_check"] = "event_check"
+    location: str
+    steps: int
+    chance_permille: int
+    roll: int
+    triggered: bool
+
+
+class EventTriggeredEvent(_Model):
+    kind: Literal["event_triggered"] = "event_triggered"
+    trigger: EventTrigger
+
+
+class EventLeftEvent(_Model):
+    """離開地點時沒處理的事件作罷（Phase 5B-1 代決 5B1-4）。"""
+
+    kind: Literal["event_left"] = "event_left"
+    skeleton: str
+    location: str
+
+
 class CampedEvent(_Model):
     kind: Literal["camped"] = "camped"
     location: str
@@ -256,6 +284,9 @@ type WorldEvent = Annotated[
     | LocationClearedEvent
     | RestedEvent
     | LoadoutChangedEvent
-    | TeleportedEvent,
+    | TeleportedEvent
+    | EventCheckEvent
+    | EventTriggeredEvent
+    | EventLeftEvent,
     Field(discriminator="kind"),
 ]
