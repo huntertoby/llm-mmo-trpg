@@ -33,6 +33,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     StatusRemoved,
     TurnEnded,
+    TurnOrderSet,
     TurnSkipped,
     TurnStarted,
 )
@@ -313,6 +314,22 @@ def end_turn(ctx: Ctx) -> None:
     ctx.emit(TurnEnded, unit_id=unit.id, ap_carried=unit.ap_carry)
 
 
+def _restore_normal_order(ctx: Ctx) -> None:
+    """先手只影響第 1 輪（Phase 5A-6b）：第 2 輪起還原成正常的先攻順序。第 1 輪中途離場的單位
+    略過、中途加入的（召喚物、復活）接在後面，維持原本的相對順序。"""
+    state = ctx.state
+    normal = state.normal_turn_order
+    if not normal:
+        return
+    state.normal_turn_order = ()
+    current = state.turn_order
+    restored = [uid for uid in normal if uid in current]
+    restored += [uid for uid in current if uid not in normal]
+    if restored != current:
+        state.turn_order = restored
+        ctx.emit(TurnOrderSet, order=tuple(restored))
+
+
 def _end_round(ctx: Ctx) -> bool:
     """一輪結束：環境回合與每輪勝負判定。回傳戰鬥是否已結束。"""
     state = ctx.state
@@ -324,6 +341,7 @@ def _end_round(ctx: Ctx) -> bool:
         end_battle(ctx, None, "round_limit")
         return True
     state.round += 1
+    _restore_normal_order(ctx)
     for unit in state.units.values():
         unit.reactions_used = 0
         unit.extra_reactions = 0  # extra_reaction 到下一輪開始為止（Phase 3C-4b）
