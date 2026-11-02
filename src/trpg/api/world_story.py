@@ -18,7 +18,7 @@ from typing import Any
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world import WorldStyle
-from trpg.content.world_events import EventSkeletonDef, ThreadDef
+from trpg.content.world_events import EventSkeletonDef, NpcCardDef, ThreadDef
 from trpg.content.world_narration import StoryAllowed, StoryScene
 from trpg.content.world_situations import Outcome
 from trpg.llm.client import LLMClient
@@ -30,6 +30,7 @@ from trpg.world.actions import (
     ThreadAddedEvent,
     WorldEvent,
 )
+from trpg.world.affinity import talk_entries
 from trpg.world.clock import day_phase
 from trpg.world.common import world_map_of
 from trpg.world.narration import narration_problems, region_npcs, region_skeletons, story_choices
@@ -83,11 +84,18 @@ def _request(
         day_phase=phase,
         allowed=allowed,
         skeletons=skeletons,
-        npcs=tuple(cards[n] for n in npc_ids),
+        npcs=tuple(_card_for(library, char, cards[n]) for n in npc_ids),
         threads=tuple(threads[t] for t in allowed.threads if t in threads),
         location_names={loc: locations[loc].name_zh for loc in allowed.locations},
         **extra,
     )
+
+
+def _card_for(library: ContentLibrary, char: CharacterState, card: NpcCardDef) -> NpcCardDef:
+    """給說書人的人設卡：``hooks_zh`` 換成 NPC 依目前好感度能給的內容（5B-4，玩法 PM 定：中立給一般
+    傳聞、友善給隱藏任務入口、信賴才說祕密；沒有＝空字串）。LLM 只能包裝這些。"""
+    hooks = "；".join(e.text_zh for e in talk_entries(library, char, card.id))
+    return card.model_copy(update={"hooks_zh": hooks})
 
 
 def _finish(

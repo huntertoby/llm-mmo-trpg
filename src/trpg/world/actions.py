@@ -5,6 +5,7 @@
 
 5A-4 加上撤退、戰鬥（步驟寫進日誌，重播時重算勝負）、城鎮休息、換技能、傳送。
 5A-6 加上成長的動作：配點、重配、閃現、選閃現、溶掉、傳承、立誓、解除誓約。
+5B-4 加上任務與好感度：接任務、選任務給的技能、和 NPC 說話、在酒館聽傳聞。
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
 from trpg.content.world_narration import StoryScene, StoryText
 from trpg.content.world_oaths import OATH_TEXT_LIMIT, OathProposal
+from trpg.content.world_quests import AffinityRank, QuestKind
 from trpg.content.world_situations import (
     PLAYER_TEXT_LIMIT,
     CareItem,
@@ -30,6 +32,8 @@ from trpg.world.encounters import EncounterLineup
 from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
 
 __all__ = [
+    "AcceptQuestAction",
+    "AffinityChangedEvent",
     "AllocateAction",
     "AttributesAllocatedEvent",
     "AttributesRespeccedEvent",
@@ -62,20 +66,31 @@ __all__ = [
     "NarratedEvent",
     "OathReleasedEvent",
     "OathSwornEvent",
+    "OfferPickAction",
     "PerceptionCheckEvent",
+    "QuestCompletedEvent",
+    "QuestStartedEvent",
+    "QuestStepDoneEvent",
     "ReleaseOathAction",
     "RespecAction",
     "RestAction",
     "RestedEvent",
     "RetreatAction",
     "RetreatedEvent",
+    "RumorsHeardEvent",
     "SituationAction",
     "SituationCheckEvent",
     "SituationResultEvent",
     "SkillDissolvedEvent",
     "SkillInheritedEvent",
+    "SkillOfferTakenEvent",
+    "SkillOfferedEvent",
     "SkillTierChangedEvent",
+    "StorySkillGrantedEvent",
     "SwearOathAction",
+    "TalkAction",
+    "TalkedEvent",
+    "TavernAction",
     "TeleportAction",
     "TeleportedEvent",
     "ThreadAddedEvent",
@@ -250,6 +265,35 @@ class ReleaseOathAction(_Model):
     kind: Literal["release_oath"] = "release_oath"
 
 
+class AcceptQuestAction(_Model):
+    """接任務（Phase 5B-4；09 9.6.3）：在給任務的 NPC 所在地點、``start`` 條件成立。"""
+
+    kind: Literal["accept_quest"] = "accept_quest"
+    quest: str = Field(pattern=ID_PATTERN)
+
+
+class OfferPickAction(_Model):
+    """選任務給的技能三選一（07 7.6）：``pick`` 為 ``None`` ＝ 跳過；``replace`` 是要換掉的技能
+    （只在城鎮與營火）。"""
+
+    kind: Literal["offer_pick"] = "offer_pick"
+    pick: int | None = Field(default=None, ge=0)
+    replace: str | None = None
+
+
+class TalkAction(_Model):
+    """和所在地點的 NPC 說話（9.6.7 #3）：引擎依好感度列出能給的內容（只換資訊）。"""
+
+    kind: Literal["talk"] = "talk"
+    npc: str = Field(pattern=ID_PATTERN)
+
+
+class TavernAction(_Model):
+    """在城鎮的酒館聽本週傳聞（9.6.7 #1）。"""
+
+    kind: Literal["tavern"] = "tavern"
+
+
 type WorldAction = Annotated[
     TravelAction
     | CampAction
@@ -267,7 +311,11 @@ type WorldAction = Annotated[
     | DissolveAction
     | InheritAction
     | SwearOathAction
-    | ReleaseOathAction,
+    | ReleaseOathAction
+    | AcceptQuestAction
+    | OfferPickAction
+    | TalkAction
+    | TavernAction,
     Field(discriminator="kind"),
 ]
 
@@ -600,6 +648,89 @@ class OathReleasedEvent(_Model):
     cooldown_until: int
 
 
+class QuestStartedEvent(_Model):
+    kind: Literal["quest_started"] = "quest_started"
+    quest: str
+    quest_kind: QuestKind
+
+
+class QuestStepDoneEvent(_Model):
+    """完成任務的一步（Phase 5B-4）：``index`` 從 1 起；經驗與靈感已加上。"""
+
+    kind: Literal["quest_step_done"] = "quest_step_done"
+    quest: str
+    step: str
+    index: int
+    xp: int = 0
+    insight: int = 0
+    flags: tuple[str, ...] = ()
+
+
+class QuestCompletedEvent(_Model):
+    kind: Literal["quest_completed"] = "quest_completed"
+    quest: str
+
+
+class SkillOfferedEvent(_Model):
+    """任務給的技能三選一（候選存在角色的 ``pending_offers``）。"""
+
+    kind: Literal["skill_offered"] = "skill_offered"
+    quest: str
+    step: str
+    reason: Literal["level_up", "complete"]
+    candidates: tuple[str, ...]
+
+
+class SkillOfferTakenEvent(_Model):
+    """選了任務給的技能（``skill`` 為 ``None`` ＝ 跳過）；``placed`` 是裝上或放進備用。"""
+
+    kind: Literal["skill_offer_taken"] = "skill_offer_taken"
+    quest: str
+    step: str
+    skill: str | None
+    placed: Literal["equipped", "bench", "skipped"]
+
+
+class StorySkillGrantedEvent(_Model):
+    """主線給的劇情技能（07 7.6；完整技能、放進備用）。"""
+
+    kind: Literal["story_skill_granted"] = "story_skill_granted"
+    quest: str
+    step: str
+    skill: str
+
+
+class AffinityChangedEvent(_Model):
+    """NPC 好感度變化（9.6.7 #5、#116）。``source`` 例 ``event:<骨架>``、``quest:<任務>``。"""
+
+    kind: Literal["affinity_changed"] = "affinity_changed"
+    npc: str
+    delta: int
+    value: int
+    from_rank: AffinityRank
+    rank: AffinityRank
+    source: str
+
+
+class TalkedEvent(_Model):
+    """和 NPC 說話（9.6.7 #3）：依好感度能給的內容 ID 與可接的隱藏任務。"""
+
+    kind: Literal["talked"] = "talked"
+    npc: str
+    affinity: int
+    rank: AffinityRank
+    entries: tuple[str, ...]
+    quests_available: tuple[str, ...] = ()
+
+
+class RumorsHeardEvent(_Model):
+    """酒館的本週傳聞（9.6.7 #1）。"""
+
+    kind: Literal["rumors_heard"] = "rumors_heard"
+    week: int
+    rumors: tuple[str, ...]
+
+
 type WorldEvent = Annotated[
     TraveledEvent
     | EncounterCheckEvent
@@ -634,6 +765,15 @@ type WorldEvent = Annotated[
     | SkillDissolvedEvent
     | SkillInheritedEvent
     | OathSwornEvent
-    | OathReleasedEvent,
+    | OathReleasedEvent
+    | QuestStartedEvent
+    | QuestStepDoneEvent
+    | QuestCompletedEvent
+    | SkillOfferedEvent
+    | SkillOfferTakenEvent
+    | StorySkillGrantedEvent
+    | AffinityChangedEvent
+    | TalkedEvent
+    | RumorsHeardEvent,
     Field(discriminator="kind"),
 ]

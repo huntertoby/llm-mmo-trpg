@@ -1,0 +1,155 @@
+# 雲嶺任務（Phase 5B-4；docs/phases/Phase5計畫.md 16.3）。schema：src/trpg/content/world_quests.py。
+# 來源：docs/design/18-雲嶺內容.md 18.7（新手鏈、主線第 1 章、區域任務鏈；#111 玩法 PM 代決、待使用者確認）；
+# 07 7.6（新手鏈 3 招白板、主線劇情技能＝完整技能、區域鏈中段與結尾白板三選一）；
+# 經驗份數照 5A-SIM2（任務鏈一步 3 份、主線一步 5 份、隱藏地點 2 份）。
+# 開發 PM 自定（代決 5B4-5～5B4-14）：所有 ID、步驟拆法、條件、xp_level、靈感、好感度數值；
+# 主線第 4 步「三方混戰」先用源晶裂痕的一般戰鬥替代（5B-M3 後只改這裡）；隱藏任務 2 個用 18 已有的內容組成。
+region: cloud_ridge
+quests:
+  - id: starter_ferry
+    kind: starter
+    name_zh: 霧渡新手路
+    summary_zh: 渡婆婆要你先把渡口到梯田這一路走通。
+    giver: granny_du
+    steps:
+      - id: ferry_bandits
+        text_zh: 渡口石階：趕走搶渡船的盜賊
+        when: [{kind: win_battle, location: ferry_steps}]
+        reward: {xp_source: quest_chain_step, xp_level: 1, insight: 1, offer: {kind: whiteboard}}
+      - id: bamboo_wolves
+        text_zh: 竹林小徑：突破雨裡包圍的霧狼
+        when: [{kind: win_battle, location: bamboo_path}]
+        reward: {xp_source: quest_chain_step, xp_level: 1, insight: 1, offer: {kind: whiteboard}}
+      - id: terrace_clash
+        text_zh: 雨中梯田：平息盜賊和修士的衝突
+        when: [{kind: win_battle, location: rain_terraces}]
+        reward: {xp_source: quest_chain_step, xp_level: 2, insight: 1, offer: {kind: whiteboard}}
+
+  - id: main_mist_rift
+    kind: main
+    name_zh: 霧中裂痕
+    summary_zh: 霧渡鎮接連有人失蹤，線索指向山裡的源晶裂痕。
+    giver: granny_du
+    steps:
+      - id: missing_townsfolk
+        text_zh: 查霧渡鎮的失蹤案（夜裡的燈籠隊）
+        when: [{kind: hold_thread, thread: missing_went_to_rift}]
+        reward: {xp_source: main_step, xp_level: 1}
+      - id: enter_temple
+        text_zh: 進青霧觀山門（靠修士的信任或通行令）
+        when:
+          - {kind: at_location, location: mist_temple_gate}
+          - kind: any_of
+            conditions:
+              - {kind: affinity, npc: acolyte_xiaolian, rank: friendly}
+              - {kind: affinity, npc: daoist_qingya, rank: friendly}
+              - {kind: hold_thread, thread: temple_pass}
+        reward: {xp_source: main_step, xp_level: 2, story_skill: skill_mist_breaker}
+      - id: temple_split
+        text_zh: 觀內分裂：弄清楚誰在私通斷崖幫
+        when:
+          - kind: any_of
+            conditions:
+              - {kind: situation, skeleton: monks_dispute}
+              - {kind: hold_thread, thread: temple_traitor}
+        reward: {xp_source: main_step, xp_level: 2, affinity: {acolyte_xiaolian: 10}}
+      - id: rift_battle
+        text_zh: 源晶裂痕：霧魅湧出、盜賊搶碎片、修士守陣
+        when: [{kind: win_battle, location: crystal_rift}]
+        reward: {xp_source: main_step, xp_level: 5}
+      - id: summit_boss
+        text_zh: 雲頂觀：阻止霧鎖真人用碎片飛升
+        when: [{kind: win_battle, location: cloud_summit}]
+        reward: {xp_source: main_step, xp_level: 6}
+
+  - id: chain_temple_split
+    kind: chain
+    name_zh: 青霧觀的分裂
+    summary_zh: 青崖道長察覺觀裡有人私通盜賊，請你幫忙。
+    giver: daoist_qingya
+    start: [{kind: quest_step, quest: main_mist_rift, step: 2}]
+    steps:
+      - id: deliver_letter
+        text_zh: 替青崖道長送信到藥師谷
+        when: [{kind: at_location, location: herb_valley}]
+        reward: {xp_source: quest_chain_step, xp_level: 4, insight: 1}
+      - id: find_traitor
+        text_zh: 查出私通盜賊的人（看穿誰在說謊）
+        when:
+          - kind: any_of
+            conditions:
+              - {kind: situation, skeleton: monks_dispute, templates: [monks_see_lie], outcomes: [success]}
+              - {kind: hold_thread, thread: temple_traitor}
+        reward:
+          xp_source: quest_chain_step
+          xp_level: 2
+          insight: 1
+          # 18.7.3「偏向治療、帶電、隱蔽」：關鍵字表沒有「治療」；偏向先只記錄（待決）
+          offer: {kind: whiteboard, bias_keywords: [charged, concealed]}
+      - id: night_raid
+        text_zh: 斷崖幫寨夜襲（撤離勝利條件先用一般勝利）
+        when: [{kind: win_battle, location: cliff_gang_fort}]
+        reward:
+          xp_source: quest_chain_step
+          xp_level: 3
+          insight: 1
+          offer: {kind: whiteboard, bias_keywords: [charged, concealed]}
+          affinity: {daoist_qingya: 20}
+          flags: [mentor_qingya]
+
+  - id: hidden_elixir_cave
+    kind: hidden
+    name_zh: 丹爐之謎
+    summary_zh: 柳掌櫃說藥師谷深處有座沒人敢進的丹爐洞。
+    giver: shopkeeper_liu
+    start: [{kind: affinity, npc: shopkeeper_liu, rank: friendly}]
+    steps:
+      - id: reach_cave
+        text_zh: 找到丹爐洞
+        when: [{kind: at_location, location: elixir_cave}]
+        reward: {xp_source: hidden_location, xp_level: 5}
+      - id: tame_furnace
+        text_zh: 處理失控的丹爐
+        when: [{kind: situation, skeleton: runaway_furnace}]
+        reward: {xp_source: hidden_location, xp_level: 5}
+
+  - id: hidden_frost_riddle
+    kind: hidden
+    name_zh: 霜音的謎
+    summary_zh: 狐火領你到鶴歸崖，白狐在等人答她的謎。
+    start:
+      - {kind: hold_thread, thread: foxfire_guide}
+      - {kind: at_location, location: crane_cliff}
+    steps:
+      - id: answer_riddle
+        text_zh: 答出霜音的謎
+        when: [{kind: situation, skeleton: frost_chime_riddle}]
+        reward: {xp_source: hidden_location, xp_level: 6, affinity: {frost_chime: 10}}
+
+# 劇情技能（07 7.6：骨架固定、每人相同；LLM 依關鍵字換元素與名稱之後再接）。18.7.2「破霧」：一個範圍
+# 驅散霧與隱蔽、並對範圍內敵人造成小傷害的技能。給的時候照角色階級與完整技能強度（as_complete）。
+story_skills:
+  - id: skill_mist_breaker
+    schema_version: 1
+    name_zh: 破霧
+    tier: 1
+    rank: 1
+    rarity: rare
+    kind: active
+    skeleton: control
+    category: spell
+    weapon_req: any
+    ap_cost: 2
+    scaling_attr: wis
+    shape: {type: square3, range: 3}
+    effects:
+      - {type: reveal, duration: 1}
+      - {type: clear_surface, affects: tiles}
+      - {type: damage, dice: 1d4, element: holy}
+    condition: null
+    cost: {mana: 6, cooldown: 4}
+    tags: [wind, spell, reveal, area]
+    narrative:
+      concept: 一聲清嘯震開山霧，躲在霧裡的人與東西都無所遁形
+      cast_flavor: 你一掌推出，風從掌心炸開，濃霧被撕成碎片四散
+    provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

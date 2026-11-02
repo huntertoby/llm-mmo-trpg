@@ -91,7 +91,7 @@
 | 5A-SIM2 | 5A-SIM 套用（玩法 PM 代決 2026-11-03）：隊友（標準隊友、傭兵、影子）照主角等級成長；敵人成長維持（HP +5%／級、屬性 +2）；經驗門檻方案 B（1 份＝100×(1＋10%×(地點建議等級−1))；2～10 級累計 950／3800／8600／14350／20200／26050／31950／37800／43650）；戰鬥依一般／精英給、情境判定 0.5／0.25 份；雲海吊橋陣容最多 1 名遠程、寒湖石背熊只出現在 4 級以上陣容（其他換霧狼），兩處同等級約 75% 以上；套用後重量 | 5A-SIM | 1 h | 可與 5A-M1 平行 |
 | 5A-M1 | 引擎機制①（玩法 PM 2026-11-02，5A-3 待決）：蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護；做好後把雲嶺替代品換成正式機制（只改 content） | 5A-4 | 1.5 h | 可與 5A-ART 平行 |
 | 5A-M1b | 5A-M1 收尾（玩法 PM 代決 2026-11-03）：沉默可打斷法術型蓄力強招（武器技型照舊只吃倒下、暈眩、冰凍）；單位卡加「特性」欄（招牌被動、反應、精英詞綴，#82）。不做帶電表面、九轉回天維持 3×3 | 5A-M1 | 0.75 h | 可與 5B-3 平行 |
-| 5A-M2 | 引擎機制②（玩法 PM 2026-11-02）：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門；雲嶺劍陣弟子、詞綴連心的換正式機制（第 16 節） | 5A-M1 | 1 h | — |
+| 5A-M2 | 引擎機制②（玩法 PM 2026-11-02）：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門；雲嶺劍陣弟子、詞綴連心的換正式機制（第 17 節） | 5A-M1 | 1 h | — |
 | 5B-M3 | 引擎機制③：三方混戰（排在 5B 主線第 1 章之前） | 5A-M1 | 1 h | — |
 | 5A-ART1 | 敵人外觀移植①：異形畫法（`docs/art/敵人外觀.md` 第 3 節；美術代決待使用者確認，未確認時照代決先做，改名與配色只動資料） | 5A-3 | 1 h | 可與 5A-4 平行（只動 `client/`） |
 | 5A-ART2 | 敵人外觀移植②：精英與頭目記號 | 5A-ART1 | 0.5 h | 可與 5A-5 平行 |
@@ -106,6 +106,7 @@
 | 5B-2 | 情境判定引擎（9.6.4）：模板、LLM 提議的 pydantic schema 與合法性檢查（屬性在允許清單、難度 ±2、劣勢）、d20＋修正、三段結果、用心清單逐筆核對事實、種族 +1、獎懲照預算表；寫入事件日誌、可重播 | 5B-1 | 1.5 h | 否 |
 | 5B-3 | 說書人接線（`trpg.narrative`）：挑骨架、填角色與動機、短旁白（1～3 句＋多講一點）、情境敘述、NPC 自由聊天只換資訊；全部經 `LLMClient`、有 Mock、玩家輸入包 `<player_input>`；模型不可用時用模板文字降級（3.1） | 5B-2 | 1.5 h | 否 |
 | 5B-4 | 任務狀態機：新手任務鏈、主線第 1 章、區域任務鏈「青霧觀的分裂」（18.7）、隱藏任務、劇情技能與三選一接到現有候選產生器（7.6）；NPC 好感度（9.6.7 #5）；酒館傳聞 | 5B-2 | 1.5 h | 可與 5B-3 平行（不碰 `narrative`） |
+| 5B-4b | 5B-4 收尾（玩法 PM 2026-11-03，18 18.7.5～18.7.7，`effc88a7`）：好感度加取得方式（完成該 NPC 相關任務步驟 +15、每天第一次聊天 +3；目標第 5 天 1～2 名 NPC 到信賴）；信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（交涉／察覺、DC 8，結果給「斷崖幫寨的暗門」，霧渡鎮），不直接給線頭（#85）；skillgen 區域偏向（新方向那張，玩家沒有該區關鍵字時優先，雲嶺：潮濕、帶電、隱蔽）；新手鏈保底（至少 1 招被動、加深／橋接／新方向 1／0／2）；放棄／交涉／戰鬥解法結算；線頭到期結局（叛徒戰、二當家坐大）；導師任務鏈 3 步（18.7.5） | 5B-4 | 1.5 h | 可與 5B-5 平行（不碰前端） |
 | 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表；路由接說書人（travel 觸發事件後送 `event_story`、聊天端點）；大世界自己的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）；隱藏地點揭露後名稱可公開，揭露前用提示語而非「某處」（玩法 PM 2026-11-03） | 5B-3、5B-4 | 1.5 h | 否 |
 
 ### 5C｜組隊、影子與傭兵（3 段）
@@ -1812,16 +1813,181 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5B3-9 | 組裝放哪 | `trpg.api.world_story`（world 與 narrative 互不匯入）；路由與畫面在 5B-5 |
 
 
-## 16. 5A-M2 詳細規格：引擎機制②（陣法範圍加成、把傷害分給相鄰同門）
+## 16. 5B-4 詳細規格：任務狀態機與好感度
+
+> 給實作 agent。只動 `content/world/quests/`（新）、`content/world/social/`（新）、`content/world/affinity.yaml`（新）、`src/trpg/content/world_quests.py`（新：schema 與載入）、`src/trpg/content/library.py`（一個欄位、一行呼叫）、`src/trpg/world/`（新增 `quests.py`、`affinity.py`、`social.py`；`state.py`、`actions.py`、`step.py`、`narration.py` 小改）、`src/trpg/api/world_story.py`（給說書人的人設卡 `hooks_zh` 依好感度過濾）、`tests/content/`、`tests/world/`、`tests/api/`（只加測試）、CLI 快照（`trpg content check` 變了才重產）。**不做** 前端與 API 路由（5B-5）；三方混戰（5B-M3）；劇情夥伴入隊（5C-3）；懸賞（5F-1）；放棄／交涉／戰鬥解法的結算、線頭到期結局；LLM 改劇情技能的名稱與元素。不動 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、`trpg.narrative`、`content/skills/`、戰鬥紀錄文字、`client/`。
+> 依據：09 9.2（storylet：任務結構與獎勵由系統模板決定、LLM 只包裝）、9.6.3（主線、區域任務鏈 3～6 步結尾給三選一、隱藏任務由情境判定成功／探索秘境／行為條件觸發）、9.6.7 #1（酒館聽本週傳聞，指向機遇或隱藏地點）、#3（聊天只換資訊：線索、隱藏任務入口、傳聞；不換道具、經驗、戰力）、#5（好感度：玩家看得到、只影響對話內容與任務分支、不影響數值）、#6（線頭只能由事件結果產生）、9.6.11 #116（好感度 −100～100、5 級門檻）；07 7.6（新手鏈 3 招白板、主線劇情技能＝骨架固定每人相同的完整技能、區域任務鏈中段與結尾各 1 招白板三選一；所有來源走同一個候選產生器）；06 6.34.2（任務鏈段落給 1 點靈感）；18 18.5、18.7；`Phase5A-SIM報告.md` 第 5 節（任務鏈一步 3 份、主線一步 5 份、隱藏地點 2 份）；玩法 PM 2026-11-03（照 #85 2a）：**聊天只換資訊；人設卡 `hooks_zh` 依好感度過濾——中立給一般傳聞、友善給隱藏任務入口、信賴才說人設卡的「祕密」（例：渡婆婆說出暗門）**；本檔 2.1、2.4、8、10、12（`gain_xp`）、15（說書人）。
+
+### 16.1 目標
+
+任務、好感度、傳聞都是 **資料驅動的世界動作**：任務的步驟、條件、獎勵在 content；引擎（`trpg.world`）在每個世界動作之後核對進行中任務的條件、發獎勵（經驗照 5A-SIM2 份數、靈感、技能三選一、劇情技能、好感度）；NPC 好感度由資料表依事件結果與任務步驟加減，決定 **聊天能給什麼**（`talk` 動作列出依好感度可給的傳聞、隱藏任務入口、祕密；說書人的 `hooks_zh` 只看得到這些）；酒館每週的傳聞由賽季種子決定。全部寫進世界動作日誌、可重播；LLM 只包裝聊天文字，給什麼由引擎依好感度與資料決定。
+
+### 16.2 交付項目
+
+1. **schema `src/trpg/content/world_quests.py`**（`__all__` 明列、`ContentModel`、ID 用 `ID_PATTERN`、錯誤訊息繁中並指出 ID）：
+
+   ```python
+   AffinityRank = Literal["hostile", "cold", "neutral", "friendly", "trusted"]  # 敵視／冷淡／中立／友善／信賴
+
+   class AffinityRankDef(ContentModel): id: AffinityRank; name_zh: str; min: int
+   class AffinityRules(ContentModel):  # content/world/affinity.yaml
+       min_value: int = -100; max_value: int = 100
+       ranks: tuple[AffinityRankDef, ...]  # 5 級依序、min 遞增、第一級 min ＝ min_value（#116）
+       rumors_per_week: int = 3  # 酒館每週傳聞數（≥ 1）
+       week_days: int = 7
+       def rank_of(value) -> AffinityRank
+
+   # 條件（狀態型：動作之後的狀態成立即可；事件型：這一個世界動作產生的事件裡有）
+   class AtLocation(kind="at_location", location)          # 狀態：角色在該地點
+   class HoldThread(kind="hold_thread", thread)            # 狀態：持有有效線頭（個人或世界）
+   class AffinityAtLeast(kind="affinity", npc, rank)       # 狀態：好感度級 ≥ rank
+   class QuestStepReached(kind="quest_step", quest, step)  # 狀態：該任務已完成 ≥ step 步
+   class WinBattle(kind="win_battle", location)            # 事件：在該地點打贏
+   class SituationDone(kind="situation", skeleton, templates=(), outcomes=("success", "partial"))  # 事件
+   class Talked(kind="talk", npc)                          # 事件：和 NPC 說話（talk 動作）
+   class AnyOf(kind="any_of", conditions: tuple[葉條件, ...])  # 2 個以上、不可巢狀
+
+   class SkillOfferReward(ContentModel): kind: Literal["whiteboard", "complete"]; bias_keywords: tuple[str, ...] = ()
+   class StepReward(ContentModel):
+       xp_source: str | None = None  # world/rules.yaml 的 xp.shares_permille 鍵
+       xp_level: int = 1  # 份數換算用的地點建議等級（1～10）
+       insight: int = 0  # 06 6.34.2 任務鏈段落
+       offer: SkillOfferReward | None = None
+       story_skill: str | None = None  # 本檔 story_skills 的 ID
+       affinity: dict[str, int] = {}  # NPC → 增減（±1～100）
+       flags: tuple[str, ...] = ()  # 角色的劇情旗標（例：解鎖導師任務鏈）
+
+   class QuestStepDef(ContentModel): id; text_zh; when: tuple[QuestCondition, ...]（≥ 1，全部成立）; reward: StepReward = StepReward()
+   class QuestDef(ContentModel):
+       id; kind: Literal["starter", "main", "chain", "hidden"]; name_zh; summary_zh
+       giver: str | None = None  # NPC；接任務要在他所在的地點
+       start: tuple[QuestCondition, ...] = ()  # 只能用狀態型條件
+       steps: tuple[QuestStepDef, ...]  # ≥ 1；步驟 ID 任務內不重複
+   class QuestTable(ContentModel):  # content/world/quests/<region>.yaml
+       region; quests; story_skills: tuple[SkillDef, ...] = ()
+
+   class TalkEntry(ContentModel):  # 聊天能給的內容（依好感度）
+       id; npc; rank: AffinityRank; kind: Literal["rumor", "quest_entry", "secret"]; text_zh; quest: str | None = None
+   class EventAffinity(ContentModel): skeleton; outcome: Outcome; npc; delta: int  # 事件結果 → 好感度
+   class RumorDef(ContentModel): id; text_zh; location: str | None = None; skeleton: str | None = None  # 酒館傳聞（指向的地點或骨架，只是資訊）
+   class SocialTable(ContentModel):  # content/world/social/<region>.yaml
+       region; talk: tuple[TalkEntry, ...] = (); event_affinity: tuple[EventAffinity, ...] = (); rumors: tuple[RumorDef, ...] = ()
+   ```
+
+   **單檔驗證**：任務、步驟（任務內）、劇情技能、聊天內容、傳聞 ID 不重複；`start` 只能有狀態型條件；`any_of` 2 個以上且不巢狀；`TalkEntry` 的級別照玩法 PM 定：`rumor` ≥ 中立、`quest_entry` ≥ 友善、`secret` ＝ 信賴；`quest_entry` 必填 `quest`，其他不可填；傳聞 `location`／`skeleton` 至多填一個。
+   **跨檔案**（排序）：`region` 要有地點圖；地點在該區地點圖；NPC 在該區人設卡；線頭存在（任一區）；骨架與模板在該區且模板屬於該骨架；`quest_step` 的任務存在於同一個檔案且 `step` ≤ 步數；`story_skill` 在 `story_skills`；`bias_keywords` 在 `skill_keywords.yaml`；`xp_source` 在 `XP_SOURCES`；劇情技能過技能的引用與費用檢查（同 `content/skills/`，但 **不進技能池**）；`quest_entry` 的任務是本區 `hidden` 任務且 `giver` 是該 NPC。
+
+2. **載入**：`load_world_quest_content(root, world_maps, event_content, files, *, check_skill, keyword_ids) -> WorldQuestContent`（`quests: dict[region, QuestTable]`、`social: dict[region, SocialTable]`、`affinity: AffinityRules | None`）；`ContentLibrary.world_quests`（`library.py` 加一個欄位、一行呼叫）。檔名必須等於 `region`；任務、聊天內容、傳聞 ID 跨區不重複；不存在＝空／`None`。檔案加進 `library.files`。
+
+3. **雲嶺內容**（16.3～16.5）：`content/world/quests/cloud_ridge.yaml`、`content/world/social/cloud_ridge.yaml`、`content/world/affinity.yaml`。
+
+4. **`trpg.world`**：
+   - `state.py`：`QuestState`（`quest`、`steps_done`、`done`、`started_at`、`completed_at`）；`PendingOffer`（`quest`、`step`、`offer: SkillOffer`）；`CharacterState` 加 `quests`（依任務 ID 排序）、`affinity: dict[str, int]`（依 NPC 排序；沒有＝0）、`pending_offers: tuple[PendingOffer, ...]`、`offers_made: int`、`story_flags: tuple[str, ...]`。全部有預設值、`trpg-char/1` 不升版號。
+   - `actions.py`：動作 `accept_quest`（`quest`）、`offer_pick`（`pick: int | None`、`replace`）、`talk`（`npc`）、`tavern`；事件 `quest_started`、`quest_step_done`（任務、步驟、經驗、靈感）、`quest_completed`、`skill_offered`（任務、步驟、種類、候選 ID）、`skill_offer_taken`（技能或跳過、裝上或進備用）、`story_skill_granted`、`affinity_changed`（NPC、增減、新值、舊級、新級、來源）、`talked`（NPC、好感度、級別、給的內容 ID、可接的隱藏任務）、`rumors_heard`（週次、傳聞 ID）。
+   - `affinity.py`：`affinity_of`、`rank_of`、`change_affinity`（夾在 −100～100）、`talk_entries`（依級別過濾，給引擎與外層同一個函式）、`trusted_npcs`。
+   - `quests.py`：`accept_quest`、`advance_quests`（16.6）、`take_offer`。
+   - `social.py`：`talk`、`tavern`、`week_rumors`。
+   - `step.py`：分派新動作；**每個世界動作之後** 呼叫 `advance_quests`（事件好感度＋進行中任務）；有 `pending_offers` 時只能送 `offer_pick`（同閃現，閃現的待選優先）。
+   - `narration.py`：信賴級 NPC 的祕密不算禁止文字（玩法 PM 定）。
+
+5. **`trpg.api.world_story`**：給說書人的人設卡，`hooks_zh` 換成 `talk_entries` 依目前好感度可給的內容（`；` 連接；沒有＝空字串）；LLM 只能包裝這些。
+
+6. **測試**（16.8）與 **完成報告** `docs/phases/Phase5B-4報告.md`：交付、任務資料格式、好感度規則、可重播、用了 18 的哪些內容、代決、待 PM 決定。
+
+### 16.3 雲嶺任務（18.7 → 資料；ID、步驟拆法、條件、獎勵是開發 PM 代決）
+
+| 任務 `id` | 種類 | 給的人／開始條件 | 步驟（條件） | 獎勵 |
+|---|---|---|---|---|
+| `starter_ferry` 新手任務鏈 | starter | `granny_du`（霧渡鎮） | ① 渡口石階打贏 ② 竹林小徑打贏 ③ 雨中梯田打贏 | 每步：任務鏈一步 3 份（等級 1／1／2）＋1 靈感＋白板三選一（07 7.6「新手鏈 3 招白板」） |
+| `main_mist_rift` 主線第 1 章「霧中裂痕」 | main | `granny_du` | ① 持有「失蹤的人都去過裂痕」（事件 17）② 在青霧觀山門，且（小蓮或青崖道長友善以上，或持有「青霧觀的通行令」）③ 事件 6 判定成功或部分成功，或持有「觀內有人私通盜賊」④ 源晶裂痕打贏（**三方混戰用一般戰鬥替代**）⑤ 雲頂觀打贏（Boss 戰） | 每步主線一步 5 份（等級 1／2／2／5／6）；第 ② 步給劇情技能「破霧」（18.7.2「約第 2 天」）；第 ③ 步 小蓮 +10 |
+| `chain_temple_split` 區域任務鏈「青霧觀的分裂」 | chain | `daoist_qingya`（青霧觀山門）；主線第 ② 步完成後 | ① 到藥師谷（送信）② 事件 6「看穿誰在說謊」成功，或持有「觀內有人私通盜賊」③ 斷崖幫寨打贏（夜襲；撤離勝利條件先用一般勝利） | 每步任務鏈一步 3 份（等級 4／2／3）＋1 靈感；② 中段白板三選一（偏向 治療、帶電、隱蔽）；③ 結尾白板三選一、青崖道長 +20、劇情旗標 `mentor_qingya`（解鎖導師任務鏈，內容之後） |
+| `hidden_elixir_cave` 丹爐之謎 | hidden | `shopkeeper_liu`（友善以上；聊天給入口） | ① 到丹爐洞 ② 事件 20「失控的丹爐」判定成功或部分成功 | 每步隱藏地點 2 份（等級 5） |
+| `hidden_frost_riddle` 霜音的謎 | hidden | 無；持有「狐火在霧裡指路」且在鶴歸崖 | ① 事件 21「霜音的謎」判定成功或部分成功 | 隱藏地點 2 份（等級 6）；霜音 +10 |
+
+- 劇情技能「破霧」（18.7.2）：`story_skills` 一招 `skill_mist_breaker`（法術、任何武器、3×3 範圍：揭露隱蔽、清除煙霧、小傷害），給的時候照角色階級（07 7.6）並照完整技能強度（06 6.34.6，`as_complete`），放進備用、不能再閃；每人相同，LLM 換名稱與元素之後再接。
+- 偏向關鍵字（治療、帶電、隱蔽）先寫在資料、**不影響候選**（候選產生器沒有關鍵字偏向的輸入；改 `trpg.skillgen` 不在本段，列待決）。
+
+### 16.4 雲嶺好感度與聊天內容（`content/world/social/cloud_ridge.yaml`；玩法 PM 定級別、開發 PM 定內容）
+
+- **聊天內容**：每位 NPC 中立 1 條傳聞（取自 18.5「和線頭／任務的關係」與 18.4 骨架）、信賴 1 條祕密（＝人設卡 `secret_zh` 的說法；渡婆婆的祕密說出暗門，18.5）；柳掌櫃友善給「丹爐之謎」入口。
+- **事件好感度**（開發 PM 定初值）：事件 2 迷路的道童（賭注「修士的好感度」）成功 小蓮 +10、失敗 −5；事件 3 斷崖幫哨兵 成功（威嚇）疤面 −10；事件 6 兩名修士 成功 青崖道長 +10；事件 18 狐族旅人（賭注「狐族的好感度」）成功 霜音 +10；事件 19 阿岳的請託 成功 阿岳 +10。
+- **初值**：全部 0（中立）。
+
+### 16.5 酒館傳聞（`rumors`；開發 PM 定）
+
+- 霧渡鎮酒館的傳聞池 6 條：指向古松祭壇雷雨夜（骨架 12）、藥師谷毒泉（骨架 15）、劍冢殘劍（骨架 13）、北坡獵場、冬湖熊巢（骨架 10）、源晶裂痕。只是文字資訊，不給線頭、不揭露地點（9.6.7 #6「線頭只能由事件結果產生」）。
+- **本週傳聞**：週次＝(`refresh_day(now)` − `refresh_day(season_start)`) ÷ `week_days`；`Rng(fnv1a64(f"{season_seed}:{region}:rumors:{week}"))` 對傳聞池（依 ID 排序）洗牌取前 `rumors_per_week` 條，再依 ID 排序。同一週所有人聽到相同的傳聞，不耗角色的亂數串流。
+
+### 16.6 規則（`trpg.world`，純函式）
+
+**接任務**（`accept_quest`；不合法拋 `WorldActionError`、狀態不變）：任務存在於角色所在區、還沒接過；沒有遭遇；有 `giver` 時角色在他的地點、好感度不是敵視；`start` 條件全部成立。發 `quest_started`；接完立刻跑一次 `advance_quests`（狀態型條件可能已成立）。
+
+**每個世界動作之後**（`advance_quests(library, world, char, events, now)`；角色沒有進行中任務、事件也沒有對到好感度表時不做任何事、不發事件）：
+1. **事件好感度**：這個動作的 `situation_check`（骨架、結果）對到 `event_affinity` 的每一筆 → `change_affinity`、發 `affinity_changed`（依表的順序）。
+2. **任務**（依任務 ID 排序）：目前步驟的 `when` 全部成立 → 完成這一步：發 `quest_step_done`；獎勵依序＝經驗（`xp_for(xp_source, xp_level)` 呼叫 `gain_xp`，當下升級）、靈感（`insight_gained`，來源 `quest:<任務>`）、好感度、劇情旗標、劇情技能、技能三選一（排進 `pending_offers`）。最後一步完成 → `quest_completed`。同一個任務在同一個動作內可連續完成多步，但 **事件型條件只認一次**（完成了用事件型條件的步驟後，下一步若也有事件型條件就停在那一步）。
+3. 條件成立的判斷：狀態型看「這個動作之後」的角色與世界（線頭以 `now` 判斷有效）；事件型看這個動作的事件（`win_battle`＝`battle_started.location` 相符且 `battle_ended.won`；`situation`＝`situation_check` 的骨架相符、模板在清單（空＝不限）、結果在 `outcomes`；`talk`＝`talked.npc` 相符）。
+
+**技能三選一**：角色轉成 `RunState`（`as_run`，種子＝角色技能種子、`offers_made`＝角色的計數），用 `world_library` 呼叫 roguelite `make_offer`（白板＝`level_up`、完整＝`complete`），計數 +1；候選照角色階級（07 7.6）。`offer_pick`：`pick=None`＝跳過；在城鎮或營火時照 roguelite `take_candidate` 裝上（裝不下又沒指定 `replace` 時放進備用）；在野外一律放進備用、不可指定 `replace`（07 7.6 換裝地點）；`with_acquired`（完整技能標記不能再閃）。有待選時其他動作一律拒絕（閃現的待選優先）。
+**劇情技能**：已擁有就不再給；否則照角色階級 → 完整技能強度 → 放進備用與 `generated_skills`、`with_acquired(complete=True)`，發 `story_skill_granted`。
+
+**好感度**：值夾在 `min_value`～`max_value`；級別照 `ranks`（#116：≤ −50 敵視、−49～−10 冷淡、−9～19 中立、20～59 友善、≥ 60 信賴）。只影響對話內容與任務分支，不影響任何數值（9.6.7 #5）。
+
+**聊天**（`talk`）：NPC 在本區、在角色所在地點、沒有遭遇。`talk_entries`＝該 NPC 的聊天內容中 `rank` ≤ 目前級別者（敵視、冷淡時沒有）；`quests_available`＝其中 `quest_entry` 指向、還沒接的隱藏任務。發 `talked`；不改狀態（任務的 `talk` 條件會因此成立）。說書人的自由聊天（5B-3 `narrate` 的 `chat`）照舊不改狀態，外層給的 `hooks_zh` 只含 `talk_entries` 的文字；**信賴級 NPC 的祕密** 從禁止文字移除（其他 NPC 的祕密照舊禁止）。
+**酒館**（`tavern`）：在城鎮、沒有遭遇；發 `rumors_heard`（本週傳聞，16.5），不改狀態。
+
+**可重播**：新動作進 `WorldAction` 聯集、寫進 `trpg-wlog/1`；任務進度、好感度、候選、傳聞都由「日誌＋內容庫＋賽季種子」決定；三選一的候選存在角色快照（`pending_offers`），選的時候不重抽；不呼叫 LLM。
+
+### 16.7 驗收
+
+- `uv run pytest -q tests/world tests/content/test_world_quests.py tests/content/test_world_events.py tests/api/test_world_story.py tests/test_architecture.py -n 8 --timeout=1800` 通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 16.8 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_quests.py` | 載入雲嶺：5 個任務、聊天內容、事件好感度、傳聞、好感度規則、劇情技能；跨檔案問題為空；壞資料逐條：任務／步驟 ID 重複、`start` 用事件型條件、`any_of` 巢狀或只有 1 個、未知地點／NPC／線頭／骨架、模板不屬於骨架、`quest_step` 超過步數、未知劇情技能、未知關鍵字、未知經驗來源、聊天級別不符（祕密不是信賴、入口低於友善）、入口不是隱藏任務、檔名不等於 region；好感度級別表不合法；沒有資料夾＝空 |
+| `tests/world/test_quests.py` | 接任務（地點、敵視、重複、start 條件）；新手鏈三場打贏 → 三步、經驗照份數、靈感、白板三選一（野外進備用、城鎮可裝上、跳過、有待選時其他動作被拒）；主線：線頭 → 山門＋好感度／通行令 → 劇情技能（完整、照階級、備用、不重給）→ 事件 6 判定 → 一般戰鬥替代三方混戰；區域任務鏈（start 條件、三選一、旗標、好感度）；事件型條件同一動作只認一次；隱藏任務（聊天入口 → 接 → 完成）；沒有任務的角色不多任何事件 |
+| `tests/world/test_affinity.py` | 級別門檻（−50／−49／−10／−9／19／20／59／60）、夾上下限；事件好感度；聊天：中立只有傳聞、友善多入口、信賴多祕密、冷淡沒有、NPC 不在這裡被拒；說書人：信賴 NPC 的祕密可以說、其他仍被拒；酒館：同週相同、不耗角色亂數、不在城鎮被拒 |
+| `tests/world/test_quest_replay.py` | 接任務 → 打贏 → 三選一 → 聊天 → 酒館 的日誌重播兩次逐字相同、寫出讀回相同 |
+| `tests/api/test_world_story.py`（加） | 給說書人的 `hooks_zh` 依好感度過濾 |
+
+### 16.9 不做的事
+
+- 前端與 API 路由（任務日誌、NPC 對話、好感度顯示在 5B-5）；懸賞（5F-1）；劇情夥伴阿岳入隊（5C-3）；三方混戰（5B-M3，之後把主線第 ④ 步換成正式條件，只改 content）；Boss 階段（5F-2）。
+- 放棄／交涉／戰鬥解法的結算、線頭到期結局（二當家坐大、叛徒戰）；新手鏈的「教學」畫面；導師任務鏈內容；LLM 換劇情技能的名稱與元素、LLM 改寫三選一候選。
+- 聊天不給線頭、不揭露地點；傳聞只是文字。
+
+### 16.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 | 誰定 |
+|---|---|---|---|
+| 5B4-1 | 聊天給什麼 | 中立給一般傳聞、友善給隱藏任務入口、信賴才說人設卡的祕密（渡婆婆說出暗門）；`hooks_zh` 依好感度過濾 | **玩法 PM 定**（照 #85 2a，2026-11-03） |
+| 5B4-2 | 好感度級距與初值 | #116：−100～100，≤ −50 敵視、−49～−10 冷淡、−9～19 中立、20～59 友善、≥ 60 信賴；初值 0 | 玩法 PM 定（級距）／開發 PM 定（初值） |
+| 5B4-3 | 好感度怎麼變 | 只由資料：事件結果表（16.4）與任務步驟獎勵；聊天本身不加減 | 開發 PM 定 |
+| 5B4-4 | 聊天的祕密與線頭 | 祕密只是文字（暗門不給線頭，9.6.7 #6「線頭只能由事件結果產生」）；信賴級 NPC 的祕密不再是禁止文字 | 開發 PM 定 |
+| 5B4-5 | 任務怎麼開始 | 一律用 `accept_quest`（給任務的 NPC 所在地點、`start` 條件）；不自動接 | 開發 PM 定 |
+| 5B4-6 | 經驗份數 | 新手鏈與區域任務鏈每步 `quest_chain_step`（3 份）、主線每步 `main_step`（5 份）、隱藏任務每步 `hidden_location`（2 份）；份數的地點等級寫在步驟（`xp_level`） | 5A-SIM2 份數；地點等級開發 PM 定 |
+| 5B4-7 | 任務鏈段落的靈感 | 新手鏈與區域任務鏈每步 +1；主線、隱藏不給 | 06 6.34.2；開發 PM 定 |
+| 5B4-8 | 主線第 ④ 步三方混戰 | 先用源晶裂痕的一般戰鬥替代；5B-M3 後只改 content | 開發 PM 定（PM 指示） |
+| 5B4-9 | 劇情技能給的時間與形式 | 主線第 ② 步（進山門，約第 2 天）；完整技能、照角色階級、放進備用；名稱與元素固定（LLM 之後） | 開發 PM 定 |
+| 5B4-10 | 三選一 | 新手鏈每步、區域鏈中段與結尾 白板三選一；野外學到的放備用，城鎮與營火可直接裝上；有待選時其他動作被拒；偏向關鍵字只記在資料 | 07 7.6；開發 PM 定 |
+| 5B4-11 | 「青霧觀拒絕外人」的情境判定入口 | 沒有對應的情境模板，先只做好感度與通行令兩條路 | 開發 PM 定 |
+| 5B4-12 | 隱藏任務 | 18 沒列；用 18 已有的內容組 2 個（丹爐之謎：柳掌櫃友善入口＋丹爐洞＋事件 20；霜音的謎：狐火線頭＋鶴歸崖＋事件 21） | 開發 PM 定（待玩法 PM 確認） |
+| 5B4-13 | 酒館傳聞 | 每週 3 條、由賽季種子與週次決定、所有人相同；只是文字 | 開發 PM 定 |
+| 5B4-14 | 區域任務鏈的撤離勝利條件 | 先用一般勝利 | 開發 PM 定 |
+
+
+## 17. 5A-M2 詳細規格：引擎機制②（陣法範圍加成、把傷害分給相鄰同門）
 
 > 給實作 agent。主要動 `src/trpg/engine/`（新模組 `formation.py`、`effects/handlers.py` 傷害結算、`events.py`、`ai/utility.py`、`ai/priority.py`、`runner.py`）、`src/trpg/content/`（`battle.py` 狀態欄位、`environment.py` AI 欄位）、`src/trpg/narrative/`（`events.py` 戰鬥紀錄、`unit_traits.py` 特性欄）、`content/`（`statuses.yaml`、`ai_profiles.yaml`、`units/sect_array_disciple.yaml`、`world/enemies.yaml` 的詞綴「連心的」）、`docs/phases/戰鬥紀錄格式變更.md`、受影響的測試與快照。另一個 agent 在做 5B-4（`trpg.world`、`content/world/`），`content/world/enemies.yaml` 只改「連心的」一條。
 > 依據：18 18.2.1（劍陣弟子「劍陣」：與另一名劍陣弟子相隔 ≤ 3 格時傷害 +；落單時弱；三人一組。詞綴「連心的」：受到的傷害分一部分給相鄰同門）；玩法 PM 2026-11-02（5A-M2：陣法範圍加成——≤ 3 格內同門人數越多加成越高，資料設定每名加多少與上限，用在劍陣類敵人取代並肩斬；把傷害分給同伴——持有者受到傷害時分一部分給相鄰的同門，方向照設計、不是魂結的反方向，資料設定比例；做好後雲嶺替代品只改 content）；本檔 7.6 代決 5A3-2（劍陣＝並肩斬替代）、5A3-3（連心的＝魂結替代，方向相反）；第 14 節（`opening_statuses`、`on_death_surface` 的「中性、不倒數狀態＋開場掛上」做法）、5A-M1b（單位卡「特性」欄 `trpg.narrative.unit_traits`）。
 
-### 16.1 目標
+### 17.1 目標
 
 兩個 **資料設定** 的引擎機制，雲嶺的替代品（劍陣弟子的「並肩斬」、詞綴「連心的」的「魂結」）換成正式機制只改 content。每個機制：pydantic schema、引擎實作（純函式、確定性）、戰鬥紀錄中文、單位卡特性欄中文、AI 估值、測試。兩個都做成 **狀態欄位**（同 5A-M1 的 `on_death_surface`）：狀態 `polarity: neutral`、`expires: never`、不設 `duration`（不被淨化、驅散、奪取，整場都在），由範本 `opening_statuses`／詞綴 `add_opening_statuses` 開場掛上；`budget_points` 不設（技能不能施加），所以沒有技能預算問題。
 
-### 16.2 機制與資料格式
+### 17.2 機制與資料格式
 
 1. **陣法範圍加成**（`StatusDef.formation: FormationSpec | None`）：
    - `kin_tag`：同門標籤（ID 格式）；`range`：曼哈頓格數 1～5（預設 3）；`per_ally_permille`：每名同門的加成 ‰（1～1000）；`max_allies`：最多算幾名（1～5）；`alone_permille`：範圍內沒有任何同門時的倍率 ‰（100～1000，預設 1000 ＝ 不減）。
@@ -1835,28 +2001,28 @@ chat_text: '{name}看了你一眼，沒有多說。'
    - 墜落、致命地形與 `lethal` 不分（同魂結）。
    - `damage_dealt` 新增 `shared`（分給同門的總點數，預設 0）；實際扣血 ＝ `amount − absorbed − redirected − shared`。
 
-### 16.3 AI（`trpg.engine.ai`；數值初值，見 16.9）
+### 17.3 AI（`trpg.engine.ai`；數值初值，見 17.9）
 
 - **陣型（自己方）**：位置價值加 `formation` 權重 ×（站在該格時的陣法倍率 − 1000）÷ 100——帶陣法的單位傾向聚在 `range` 格內（落單是負分）。權重放在 `ai_profiles.yaml` 新的表格層級 `formation_ai: {formation: N}`（同 `weapon_ai`，填入每個行為模式；只有帶陣法狀態的單位會用到）。預覽本來就把倍率算進預估傷害。
 - **打散陣型（對方）**：預覽前後，對方（不同陣營）所有存活陣法持有者的倍率總和下降量 ÷ 1000 × `rewrite.formation_break_points` × 命中率 × `damage` 權重（擊倒、推開、拉走都算；`trpg.engine.ai.priority`）。
 - **分傷**：主要目標的期望傷害照預覽（含分出去的量）；再扣掉預覽中分給同門的點數（min／max 平均 × 命中率）× `rewrite.share_discount_permille` ÷ 1000 × `damage` 權重——集火持有者的效益下降；分出去也讓持有者更難被擊倒（預覽的擊倒本來就反映）。
 
-### 16.4 雲嶺換正式機制（只改 content）
+### 17.4 雲嶺換正式機制（只改 content）
 
 | 敵人／詞綴 | 原替代品 | 正式機制 |
 |---|---|---|
 | 劍陣弟子 | 並肩斬（相鄰同伴加傷，5A3-2） | 開場狀態 `sword_formation`「劍陣」（`kin_tag: sword_array`、3 格、每名 +20%、最多 2 名、落單 ×0.8）；範本加標籤 `sword_array`，技能欄拿掉並肩斬 |
 | 詞綴 連心的 | 魂結（替同伴分擔，方向相反，5A3-3） | 開場狀態 `heart_link`「連心」（不限標籤＝相鄰友方、分出 30%）；拿掉 `add_skills` 魂結 |
 
-陣眼石靈「存在時同門護盾 +、打碎才解除陣法」不在本段（見 16.8）。
+陣眼石靈「存在時同門護盾 +、打碎才解除陣法」不在本段（見 17.8）。
 
-### 16.5 戰鬥紀錄、單位卡與版號
+### 17.5 戰鬥紀錄、單位卡與版號
 
 - 戰鬥紀錄：`damage_dealt` 有陣法時加「（陣法 ×1.4）」（新欄位 `formation_permille`，已包含在 `status_ppm` 裡；預設 1000 不顯示）；有分傷時加「（N 點分給同門）」；同門承受走既有的 `damage_redirected` 文字「✦ X 分擔了 Y 的 N 點傷害（連心）」。
 - 單位卡特性欄（`unit_traits`）：帶這兩種欄位的開場狀態改用專門的句子，數字來自資料：「陣法「劍陣」：3 格內每有一名同門（帶 sword_array），攻擊傷害 +20%（最多 2 名）；落單時 ×0.8」、「連心「連心」：受到的傷害有 30% 平分給相鄰的同門」（措辭以實作為準，數字一律從資料產生）。
 - `StatusDef`、`DamageDealt` 加欄位、結算新增 → `LOG_FORMAT` `/103` → `/104`（`戰鬥紀錄格式變更.md`）。沒用到這些欄位的戰鬥結算與 `/103` 相同。
 
-### 16.6 測試
+### 17.6 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -1865,17 +2031,17 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/narrative/`（受影響） | 戰鬥紀錄文字、特性欄句子 |
 | `tests/world/test_enemy_smoke.py`（既有） | 換機制後雲嶺陣容照樣打完 |
 
-### 16.7 驗收
+### 17.7 驗收
 
 `uv run pytest -q tests/engine/test_mechanics_5am2.py tests/content tests/narrative tests/world -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`tests/api`、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播。
 
-### 16.8 不做的事
+### 17.8 不做的事
 
 - 陣眼石靈「存在時同門護盾 +」「打碎才解除陣法」（需要「陣法來源物件」的機制；目前石靈仍是不動的高護甲物件）；雲頂觀 Boss 階段「劍陣」（5F-2）。
 - 陣法加成護盾、治療等其他效果（`applies_to` 只有 `damage`）；地圖上畫陣法範圍或連線（前端不改畫法）。
 - 三方混戰（5B-M3）。
 
-### 16.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 17.9 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -1890,6 +2056,6 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5AM2-9 | 戰鬥紀錄版號 | `/104` |
 
 
-## 17. 之後各段規格
+## 18. 之後各段規格
 
-（5A-M1、5B-3 驗收後補上之後各段。）
+（5B-4 驗收後補上之後各段。）

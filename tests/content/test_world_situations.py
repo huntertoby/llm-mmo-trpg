@@ -232,6 +232,8 @@ def test_missing_situation_files_is_empty(tmp_path: Path, library: ContentLibrar
     content = _copy_content(tmp_path, library)
     shutil.rmtree(content / "world" / "situations")
     (content / "world" / "situation_rules.yaml").unlink()
+    shutil.rmtree(content / "world" / "quests")  # 5B-4：任務條件引用情境模板
+    shutil.rmtree(content / "world" / "social")  # 聊天的隱藏任務入口引用任務
     loaded = load_library(content)
     assert loaded.world_event_content.situations.templates == {}
     assert loaded.world_event_content.situations.rules is None
