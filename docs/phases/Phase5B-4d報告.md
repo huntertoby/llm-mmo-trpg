@@ -50,7 +50,7 @@
 
 - 全部是世界動作：失敗紀錄用 `refresh_day(now)`（`now` 來自日誌）；保底只看賽季天數、角色狀態與地點，不多耗亂數（擲骰照舊，測試比對亂數計數相同）；指定模式的亂數只來自 `Rng(seed).fork(<種類>)`。
 - `tests/world/test_quest_replay.py::test_5b4d_log_replays_identically`：骨架 22 失敗 → 走到古松祭壇（第 6 天保底，白天也出現）→ 機遇三選一（三張帶「帶電」）→ 選技能，重播兩次逐字相同。
-- 原型 roguelite、一般三選一：`pinned_keyword` 預設 `None`，產生器走原路徑；`tests/skillgen/fixtures/refactor_3wr2.json` SNAPSHOT_PLACEHOLDER
+- 原型 roguelite、一般三選一：`pinned_keyword` 預設 `None`，產生器走原路徑；`tests/skillgen/fixtures/refactor_3wr2.json` **沒有變**（`test_refactor_3wr2.py -m "slow or not slow"` 通過，不用重產）。
 
 ## 6. 代決（規格 25.10；最保守預設）
 
@@ -77,4 +77,7 @@
 
 ## 8. 檢查
 
-CHECK_PLACEHOLDER
+- 開發中：`uv run pytest -q tests/skillgen tests/roguelite tests/world tests/api -n 8 --timeout=1800`：4784 passed、14 skipped。
+- `tests/skillgen/test_refactor_3wr2.py tests/cli -m "slow or not slow" -n 8 --timeout=3000`：1057 passed（CLI 快照、行為快照都不用重產）。
+- 交件前 `git merge main`（5C-3 `8af2a55a`、`ea063447`）：計畫文件衝突（兩邊都新增第 24 節）→ 5C-3 留第 24 節、本段改第 25 節、之後各段第 26 節；`state.py`、`step.py` 自動合併。合併後 `tests/world tests/api tests/cli tests/test_architecture.py` 與本段新測試（`-m "slow or not slow"`、`--timeout=3000`）：1044 passed；好感度重量不變。
+- `ruff check .`、`ruff format --check .`、`mypy`（1084 檔）、`lint-imports`（9 kept）通過。沒有新增 `# noqa`；沒動引擎，不需戰鬥重播；沒跑全量 `scripts/check.py`。
