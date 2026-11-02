@@ -265,7 +265,7 @@ def test_battle_writes_back_to_world(
     lost = any("戰鬥失敗" in e for e in after["events"])
     assert won != lost
     if won:
-        assert after["character"]["xp"] == 100
+        assert after["character"]["xp"] in (100, 300)  # 一般 1 份、精英 3 份（種子隨機）
         assert after["here"]["location"] == "ferry_steps"
     else:
         assert after["here"]["location"] == "mist_ferry"

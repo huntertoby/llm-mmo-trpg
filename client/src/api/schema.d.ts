@@ -6756,7 +6756,7 @@ export interface components {
         /**
          * WorldLlmRequest
          * @description 大世界的 LLM 開關：``true`` 打開（先探測，連不到維持關閉）、``false`` 關閉、``null`` 回到
-         *     伺服器設定（17.2）。
+         *     伺服器設定（18.2）。
          */
         WorldLlmRequest: {
             /** Enabled */
