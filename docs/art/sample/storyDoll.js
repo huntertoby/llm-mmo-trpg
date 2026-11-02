@@ -141,6 +141,17 @@ window.StoryDoll = (() => {
         stroke(ctx, "robe-hem-s", [[-7.2, -3.2], [-1, -2.4], [7, -3.2]], 1.2, trim);
       }
       stroke(ctx, `sash-${view}`, F ? [[-6.2, -23], [6.2, -23]] : [[-4.2, -23], [4.4, -23]], 1.8, dark(c, 0.4));
+      // 圍裙（煉丹師）：袍子前面一片
+      if (it.apron && !BK) ink(ctx, `apron-${view}`, F ? [[-4.6, -24], [4.6, -24], [5.6, -6], [-5.6, -6]] : [[1.6, -24], [5, -24], [6.6, -6], [2.2, -6]], it.apron, { w: 0.6 });
+      return;
+    }
+    if (kind === "bare") {
+      // 赤膊（護法武僧）：膚色軀幹＋胸線，腰間一條布帶
+      const sk = unit.look?.skin ?? "#eab48a";
+      ink(ctx, `torso-bare-${view}`, TORSO[view], sk);
+      if (F && !BK) { stroke(ctx, "pec-l", [[-5, -28.6], [-1.6, -27.4]], 0.45, dark(sk, 0.35)); stroke(ctx, "pec-r", [[5, -28.6], [1.6, -27.4]], 0.45, dark(sk, 0.35)); }
+      stroke(ctx, `sash-bare-${view}`, F ? [[-6.4, -22.6], [6.4, -22.6]] : [[-4.2, -22.6], [4.4, -22.6]], 2.4, INK);
+      stroke(ctx, `sash-bare2-${view}`, F ? [[-6.4, -22.6], [6.4, -22.6]] : [[-4.2, -22.6], [4.4, -22.6]], 1.6, c);
       return;
     }
     ink(ctx, `torso-${view}`, TORSO[view], kind === "plate" ? MAT.steel : kind === "mail" ? MAT.iron : c);
@@ -163,6 +174,52 @@ window.StoryDoll = (() => {
     stroke(ctx, `belt-${view}`, [[F ? -bx : -4.2, -23], [bx, -23]], 1.7, INK);
     stroke(ctx, `belt2-${view}`, [[F ? -bx : -4.2, -23], [bx, -23]], 0.9, "#6b4426");
     if (F && !BK) { ctx.fillStyle = MAT.gold; ctx.fillRect(-1.2, -24.3, 2.4, 2.6); stroke(ctx, "buckle", [[-1.2, -24.3], [1.2, -24.3], [1.2, -21.7], [-1.2, -21.7], [-1.2, -24.3]], 0.4); }
+  }
+  // ---- 敵人家族用的小部件（2026-11-02 敵人外觀）：背物、腰掛、念珠、羽毛披肩 ----
+  // 背物（gear.back）：gourd 藥葫蘆、puppet_box 木偶箱。正面、側面畫在身體後面；背面畫在身體上。
+  function backItem(ctx, unit, view, front) {
+    const it = unit.gear.back; if (!it) return;
+    const BK = view === "back", S = view === "side";
+    if (front !== BK) return;
+    if (it.kind === "gourd") {
+      const c = it.color ?? "#c8843a";
+      const [x, y] = BK ? [2, -24] : S ? [-7, -25] : [-10.6, -37];
+      ink(ctx, `gourd-b-${view}`, ellPts(x, y, 4, 4.6, 14), c);
+      ink(ctx, `gourd-t-${view}`, ellPts(x, y - 6.4, 2.6, 2.8, 12), c);
+      stroke(ctx, `gourd-cord-${view}`, [[x - 2.4, y - 3.4], [x + 2.4, y - 3.4]], 0.9, "#c0392b");
+      dot(ctx, x, y - 9.4, 0.9, 0.9, "#6a4224");
+    } else if (it.kind === "puppet_box") {
+      const c = it.color ?? MAT.wood;
+      const pts = BK ? [[-8, -40], [8, -40], [8, -16], [-8, -16]] : S ? [[-13, -45], [-4, -45], [-4, -17], [-13, -17]] : [[-9.4, -50], [9.4, -50], [9.4, -30], [-9.4, -30]];
+      ink(ctx, `pbox-${view}`, pts, c, { sharp: true });
+      const [x0, y0] = pts[0], [x1, , ] = pts[1], y1 = pts[2][1];
+      stroke(ctx, `pbox-band-${view}`, [[x0, (y0 + y1) / 2], [x1, (y0 + y1) / 2]], 0.6);
+      if (!S) dot(ctx, (x0 + x1) / 2, (y0 + y1) / 2, 1.1, 1.1, MAT.gold);
+    }
+  }
+  // 腰掛（gear.waist）：talismans 黃符三張
+  function waist(ctx, unit, view) {
+    const it = unit.gear.waist; if (!it || it.kind !== "talismans" || view === "back") return;
+    const xs = view === "side" ? [1.6, 3.6] : [-5, -2.4, 4];
+    xs.forEach((x, i) => {
+      ink(ctx, `tal-${view}-${i}`, [[x - 1.1, -22.4], [x + 1.1, -22.4], [x + 1.3, -15.6], [x - 0.9, -15.4]], it.color ?? "#e8c84a", { shade: false, w: 0.45, sharp: true });
+      stroke(ctx, `tal-m-${view}-${i}`, [[x - 0.3, -21], [x + 0.4, -19.4], [x - 0.3, -17.8]], 0.4, "#c0392b");
+    });
+  }
+  // 念珠（gear.neck kind beads）
+  function beads(ctx, unit, view) {
+    const it = unit.gear.neck; if (!it || it.kind !== "beads" || view === "back") return;
+    const c = it.color ?? "#6a3a1e";
+    const pts = view === "side" ? [[-1, -33], [0.4, -30.6], [1.8, -28.4], [3, -26.6]] : [[-5, -33], [-4.4, -30.6], [-3, -28.6], [-1.4, -27.4], [0, -27], [1.4, -27.4], [3, -28.6], [4.4, -30.6], [5, -33]];
+    for (const [x, y] of pts) { dot(ctx, x, y, 1.05, 1.05, INK); dot(ctx, x - 0.15, y - 0.15, 0.75, 0.75, c); }
+  }
+  // 羽毛披肩（cloak form feather）：肩上一圈白羽，畫在身體前面
+  function mantle(ctx, unit, view) {
+    const it = unit.gear.cloak; if (!it || it.form !== "feather") return;
+    const c = it.color ?? "#f2f0ea";
+    const pts = view === "side" ? [[-5, -34], [4, -34], [5.6, -28], [2, -29], [-1.6, -27.4], [-5.6, -28.6]] : [[-9, -34], [9, -34], [10.6, -28], [7, -29.4], [3.6, -27.6], [0, -29], [-3.6, -27.6], [-7, -29.4], [-10.6, -28]];
+    ink(ctx, `mantle-${view}`, pts, c, { w: 0.7 });
+    if (view !== "side") for (const x of [-6, -2, 2, 6]) stroke(ctx, `mantle-f${x}`, [[x, -33], [x + 0.6, -29.6]], 0.4, "#b8b4aa");
   }
   function cloak(ctx, unit, view) {
     const it = unit.gear.cloak; if (!it) return;
@@ -187,6 +244,24 @@ window.StoryDoll = (() => {
         ctx.rotate(tilt);
         ink(ctx, `${key}-blade`, [[-1.1, -2], [-1, -L + 1.6], [0, -L], [1, -L + 1.6], [1.1, -2]], metal, { shade: false, w: 0.7 });
         ink(ctx, `${key}-guard`, [[-3.4, -3.2], [3.4, -3.2], [3.4, -1.6], [-3.4, -1.6]], MAT.gold, { shade: false, w: 0.6 });
+        // 劍穗（劍陣弟子：同色劍穗）
+        if (it.tassel) { stroke(ctx, `${key}-tassel`, [[0, 0.6], [0.8, 4], [0.2, 7]], 1.6, INK); stroke(ctx, `${key}-tassel2`, [[0, 0.6], [0.8, 4], [0.2, 7]], 1, it.tassel); }
+        break;
+      }
+      case "whisk": { // 拂塵
+        ctx.rotate(tilt);
+        ink(ctx, `${key}-handle`, [[-0.8, 4], [0.8, 4], [0.8, -10], [-0.8, -10]], MAT.wood, { shade: false, w: 0.6 });
+        ink(ctx, `${key}-hair`, [[-1.4, -10], [1.4, -10], [3.6, -16], [2.4, -22], [0, -19], [-2, -23], [-3.4, -16]], "#f4f0e6", { w: 0.6 });
+        break;
+      }
+      case "talisman": { // 符紙
+        ink(ctx, `${key}-paper`, [[-2, -2], [2, -2], [2.4, -11], [-1.6, -11.4]], "#e8c84a", { shade: false, w: 0.5, sharp: true });
+        stroke(ctx, `${key}-mark`, [[0, -10], [0.8, -8], [-0.6, -6.4], [0.6, -4]], 0.5, "#c0392b");
+        break;
+      }
+      case "puppet_cross": { // 傀儡線（十字木架＋三條線）
+        ink(ctx, `${key}-bar`, [[-4.4, -1], [4.4, -1], [4.4, 0.6], [-4.4, 0.6]], MAT.wood, { shade: false, w: 0.5, sharp: true });
+        for (const x of [-4, 0, 4]) stroke(ctx, `${key}-str${x}`, [[x, 0.6], [x * 0.6, 11]], 0.3, "#e8e0d0");
         break;
       }
       case "axe": {
@@ -296,6 +371,14 @@ window.StoryDoll = (() => {
     if (look.hair === "none" || !look.hair) return;
     if (cover.top) return; // 帽子蓋住頭頂：只留後髮（hairBack）
     const c = look.hairColor ?? "#6a3a1e";
+    if (look.hair === "bun") { // 髮髻：短髮＋頭頂一顆髻＋髮帶
+      if (view === "front") ink(ctx, "hair-bun-f", [[-9.6, -42], [-10, -48], [-5, -52.5], [5, -52.5], [10, -48], [9.6, -42], [6, -46.4], [0, -47.4], [-6, -46.4]], c);
+      else ink(ctx, "hair-bun-s", [[-9.2, -38], [-9.4, -47], [-4, -52.5], [3, -52.6], [8.6, -48.5], [7, -46.4], [2, -46], [-1.4, -43], [-3, -38], [-6, -36]], c);
+      const [bx, by] = view === "front" ? [0, -55.4] : [-2.6, -55];
+      ink(ctx, `bun-${view}`, ellPts(bx, by, 3.4, 3, 12), c);
+      stroke(ctx, `bun-band-${view}`, [[bx - 2.6, by + 2.2], [bx + 2.6, by + 2.2]], 1, look.bunBand ?? "#c0392b");
+      return;
+    }
     if (view === "front") ink(ctx, "hair-f", [[-9.6, -41], [-10, -48], [-5, -52.5], [2, -52.5], [8, -49.5], [10, -42], [8, -45], [5, -45.5], [2, -44], [-1, -46], [-4, -44.8], [-7, -45.5]], c);
     else ink(ctx, "hair-s", [[-9.2, -38], [-9.4, -47], [-4, -52.5], [3, -52.6], [8.6, -48.5], [9.4, -44.6], [6, -46], [3, -45.5], [1, -43], [-1.4, -41], [-2.6, -37], [-6, -35.4]], c);
   }
@@ -313,10 +396,20 @@ window.StoryDoll = (() => {
     else { one("horn-far", 1, true); ctx.save(); ctx.translate(2.2, 0.6); one("horn-near", 1, false); ctx.restore(); }
   }
   // 頭部裝備；回傳遮蓋範圍（同 raceArt.js 的 COVERS）
-  const COVERS = { helmet: { top: true, side: true }, hood: { top: true, side: true }, wizard_hat: { top: true } };
+  const COVERS = { helmet: { top: true, side: true }, hood: { top: true, side: true }, veil: { top: true, side: true }, wizard_hat: { top: true } };
   function headgear(ctx, it, view) {
     if (!it) return;
     const F = view !== "side", BK = view === "back", c = colorOf(it, "#7a5a3a");
+    if (it.kind === "veil") { // 霧行者：半透明白紗兜帽＋面罩
+      const vc = it.color ?? "#f2f2f0";
+      ctx.save(); ctx.globalAlpha = 0.7;
+      if (BK) ink(ctx, "veil-b", [[-11, -36], [-11.4, -48], [-5, -55], [5, -55], [11.4, -48], [11, -30], [0, -27], [-11, -30]], vc);
+      else if (F) ink(ctx, "veil", [[-11, -32], [-11.4, -48], [-5, -55], [5, -55], [11.4, -48], [11, -32], [7.6, -36.6], [8.4, -45], [0, -48], [-8.4, -45], [-7.6, -36.6]], vc);
+      else ink(ctx, "veil-s", [[-12, -30], [-11.4, -46], [-5, -55], [4, -54.4], [9.6, -48.6], [9.4, -45], [4, -46.6], [0.6, -42], [-1.6, -36], [-7, -30]], vc);
+      ctx.restore();
+      if (!BK) ink(ctx, `mask-${view}`, F ? [[-8, -40], [8, -40], [6.6, -34.6], [-6.6, -34.6]] : [[2.4, -40], [9.6, -40], [8, -34.8], [2.4, -34.8]], it.mask ?? "#d8dcdc", { w: 0.6 });
+      return;
+    }
     if (it.kind === "helmet") {
       const m = colorOf(it, MAT.steel);
       if (F) {
@@ -345,8 +438,9 @@ window.StoryDoll = (() => {
   }
 
   // ============================== 組合 ==============================
+  const armColor = (unit) => unit.gear.body?.kind === "plate" ? MAT.steel : unit.gear.body?.kind === "bare" ? (unit.look?.skin ?? "#eab48a") : colorOf(unit.gear.body, "#4f7fbf");
   function armFront(ctx, unit, sx) {
-    const c = unit.gear.body?.kind === "plate" ? MAT.steel : colorOf(unit.gear.body, "#4f7fbf");
+    const c = armColor(unit);
     ink(ctx, `arm-${sx}`, sx < 0 ? [[-7, -31.5], [-4.8, -31], [-7.4, -22.5], [-9.8, -23.5]] : [[7, -31.5], [4.8, -31], [7.4, -22.5], [9.8, -23.5]], c);
   }
   function hand(ctx, look, x, y, key) { ink(ctx, key, ellPts(x, y, 1.8, 1.8, 10), look.skin ?? "#eab48a", { shade: false, w: 0.6 }); }
@@ -363,6 +457,7 @@ window.StoryDoll = (() => {
     armFront(ctx, unit, -1); armFront(ctx, unit, 1);
     hand(ctx, look, -9, -23.2, "hand-bl"); hand(ctx, look, 9, -23.2, "hand-br");
     cloak(ctx, unit, V);
+    backItem(ctx, unit, V, true);
     tail(ctx, look, V);
     if (shield) {
       ink(ctx, "shield-b", ellPts(8.6, -21, 6.6, 7, 20), MAT.wood, { w: 1 });
@@ -374,6 +469,7 @@ window.StoryDoll = (() => {
       const c = look.hairColor ?? "#6a3a1e";
       ink(ctx, "hair-b", look.hair === "long" ? [[-9.8, -44], [-6, -51.8], [6, -51.8], [9.8, -44], [9.6, -30], [0, -28.6], [-9.6, -30]] : [[-9.6, -42], [-6, -51.8], [6, -51.8], [9.6, -42], [8, -36], [0, -34.4], [-8, -36]], c);
     }
+    if (look.hair === "bun" && !cover.top) { ink(ctx, "bun-b", ellPts(0, -55.4, 3.4, 3, 12), look.hairColor ?? "#6a3a1e"); stroke(ctx, "bun-band-b", [[-2.6, -53.2], [2.6, -53.2]], 1, look.bunBand ?? "#c0392b"); }
     if (!cover.top) ears(ctx, look, V, "top");
     headgear(ctx, gear.head, V);
     horns(ctx, look, V);
@@ -389,9 +485,11 @@ window.StoryDoll = (() => {
     cloak(ctx, unit, view);
     tail(ctx, look, view);
     hairBack(ctx, look, view);
+    backItem(ctx, unit, view, false);
     if (!F) offhand(ctx, gear.off_hand, view, true);
     legs(ctx, unit, view);
     body(ctx, unit, view);
+    waist(ctx, unit, view); beads(ctx, unit, view); mantle(ctx, unit, view);
     if (F) { armFront(ctx, unit, 1); offhand(ctx, gear.off_hand, view, false); if (gear.off_hand && gear.off_hand.kind !== "shield_round") hand(ctx, look, 9, -23.2, "hand-r"); else if (!gear.off_hand) hand(ctx, look, 9, -23.2, "hand-r"); }
     else offhand(ctx, gear.off_hand, view, false);
     if (!cover.side) ears(ctx, look, view, "under");
@@ -409,7 +507,7 @@ window.StoryDoll = (() => {
       weapon(ctx, gear.main_hand, "main", view, [-9, -23.2]);
       hand(ctx, look, -9, -23.2, "hand-l");
     } else {
-      const c = gear.body?.kind === "plate" ? MAT.steel : colorOf(gear.body, "#4f7fbf");
+      const c = armColor(unit);
       ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], c);
       weapon(ctx, gear.main_hand, "main-s", view, [4.6, -24]);
       hand(ctx, look, 4.6, -24, "hand-s");
