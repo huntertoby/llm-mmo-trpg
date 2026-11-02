@@ -60,16 +60,25 @@ def _digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+# skills show 全部技能太慢，依技能 ID 排序後平均分成 SHOW_SHARDS 片，每片一個快照鍵。
+SHOW_SHARDS = 16
+SHOW_PREFIX = "skills_show_all/"
+SHOW_KEYS = [f"{SHOW_PREFIX}{i:02d}" for i in range(SHOW_SHARDS)]
+
+
 def _digest_for(key: str, capsys: pytest.CaptureFixture[str]) -> str:
     if key == "skills_list":
         return _digest(_capture(["skills", "list"], capsys))
-    if key == "skills_show_all":
-        shown = "".join(_capture(["skills", "show", sid], capsys) for sid in _skill_ids(capsys))
-        return _digest(shown)
+    if key.startswith(SHOW_PREFIX):
+        ids = _skill_ids(capsys)
+        size = -(-len(ids) // SHOW_SHARDS)
+        index = int(key.removeprefix(SHOW_PREFIX))
+        shard = ids[index * size : (index + 1) * size]
+        return _digest("".join(_capture(["skills", "show", sid], capsys) for sid in shard))
     return _digest(_capture(BATTLES[key], capsys))
 
 
-SNAPSHOT_KEYS = ["skills_list", "skills_show_all", *BATTLES]
+SNAPSHOT_KEYS = ["skills_list", *SHOW_KEYS, *BATTLES]
 
 
 def _recorded() -> dict[str, str]:
@@ -85,6 +94,7 @@ def test_cli_output_matches_the_recorded_snapshot(
     current = _digest_for(key, capsys)
     if os.environ.get("UPDATE_CLI_SNAPSHOTS") == "1":
         merged = _recorded() if SNAPSHOT_FILE.exists() else {}
+        merged.pop("skills_show_all", None)  # 舊的單一鍵已由分片鍵取代
         merged[key] = current
         SNAPSHOT_FILE.write_text(
             json.dumps(merged, indent=2, sort_keys=True) + "\n",
