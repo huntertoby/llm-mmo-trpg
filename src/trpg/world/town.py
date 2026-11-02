@@ -3,7 +3,7 @@
 - **撤退**（09 9.6.6）：看了陣容不打，退回出發地點；不開戰、不扣任何東西、不擲骰。
 - **休息**（9.6.7 #2、#11）：只在城鎮；HP、法力、耐力回滿，補給補到至少初值（代決 5A4-11）。
 - **換技能**（07 7.6）：城鎮或營火（``camped_at`` 是目前地點）；只能裝擁有的技能、欄位上限照
-  roguelite 的 ``equip_problems``。
+  roguelite 的 ``set_loadout``（5A-6 起生成技能——閃現、升階重配後的技能——也能換）。
 - **傳送**（9.6.2「城鎮之間用傳送點」）：從城鎮到去過的其他區小鎮，或從傳送點到它通往的區域
   （代決 5A4-12）。
 """
@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from trpg.content.library import ContentLibrary
-from trpg.roguelite.offers import equip_problems
 from trpg.world.actions import (
     LoadoutAction,
     LoadoutChangedEvent,
@@ -23,7 +22,8 @@ from trpg.world.actions import (
 )
 from trpg.world.common import here, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.errors import WorldActionError, WorldError
-from trpg.world.state import CharacterState, LocationRef
+from trpg.world.growth import at_service, loadout_skills
+from trpg.world.state import CharacterState
 
 __all__ = ["loadout", "rest", "retreat", "teleport", "with_visited_town"]
 
@@ -78,26 +78,10 @@ def loadout(
     library: ContentLibrary, char: CharacterState, action: LoadoutAction
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
     _no_encounter(char, "換技能")
-    at_camp = char.camped_at == LocationRef(region=char.region, location=char.location)
-    if here(library, char).kind != "town" and not at_camp:
+    if not at_service(library, char):
         raise WorldActionError("只有城鎮與營火能換技能")
-    skills = action.skills
-    owned = (*char.hero.skills, *char.bench)
-    unknown = sorted(set(skills) - set(owned))
-    if unknown:
-        raise WorldActionError(f"不能裝備沒有的技能：{', '.join(unknown)}")
-    if len(set(skills)) != len(skills):
-        raise WorldActionError("技能不可重複裝備")
-    missing = sorted(s for s in skills if s not in library.skills)
-    if missing:
-        raise WorldActionError(f"內容庫沒有這些技能：{', '.join(missing)}")
-    problems = equip_problems(library, [library.skills[s] for s in skills])
-    if problems:
-        raise WorldActionError("；".join(problems))
-    bench = tuple(sorted(set(owned) - set(skills)))
-    hero = char.hero.model_copy(update={"skills": tuple(skills)})
-    char = char.model_copy(update={"hero": hero, "bench": bench})
-    return char, (LoadoutChangedEvent(skills=tuple(skills), bench=bench),)
+    char = loadout_skills(library, char, tuple(action.skills))
+    return char, (LoadoutChangedEvent(skills=char.hero.skills, bench=char.bench),)
 
 
 def teleport(

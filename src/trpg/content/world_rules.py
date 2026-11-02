@@ -7,6 +7,8 @@
 
 Phase 5A-4 加上 ``battle``（遇敵戰鬥的回寫：經驗、疲憊、已清空與重生）與 ``enemy_growth``（敵人依
 地點建議等級成長）；兩者都有預設值，舊的精簡 content 照常載入。
+
+Phase 5A-6 加上 ``hero_growth``（主角的技能階級表、每級靈感點、精英首殺靈感、等級上限）；有預設值。
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ __all__ = [
     "EncounterRates",
     "EnemyGrowthRules",
     "HastenRules",
+    "HeroGrowthRules",
     "PerceptionRules",
     "RegionWeather",
     "SupplyRules",
@@ -155,6 +158,34 @@ class EnemyGrowthRules(ContentModel):
         return table[min(max(level, 1), len(table)) - 1]
 
 
+class HeroGrowthRules(ContentModel):
+    """主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。經驗門檻沿用原型
+    ``level_thresholds``。"""
+
+    skill_tier_by_level: tuple[int, ...] = Field(
+        default=(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), min_length=1
+    )
+    """角色等級 → 角色階級（07 7.6：1～3 級 1 階、4～7 級 2 階、8～10 級 3 階；玩法 PM 定）；
+    超出表的等級用最後一格。原型的 ``offer_tier_by_level`` 只留給 roguelite。"""
+    insight_per_level: int = Field(default=2, ge=0)
+    """每升 1 級給的靈感點（06 6.34.2 大世界）。"""
+    insight_per_elite_kind: int = Field(default=1, ge=0)
+    """每種精英首殺給的靈感點（06 6.34.2）。"""
+    level_cap: int = Field(default=10, ge=1)
+    """等級上限（07 7.8、09 9.7 第一季 10 級）；到頂後經驗照累積、不換算（換算比例待定）。"""
+
+    @model_validator(mode="after")
+    def _tiers(self) -> HeroGrowthRules:
+        tiers = self.skill_tier_by_level
+        if any(t < 1 for t in tiers) or list(tiers) != sorted(tiers):
+            raise ValueError("hero_growth.skill_tier_by_level 必須 ≥ 1 且不遞減")
+        return self
+
+    def tier_for(self, level: int) -> int:
+        table = self.skill_tier_by_level
+        return table[min(max(level, 1), len(table)) - 1]
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
@@ -168,6 +199,7 @@ class WorldRules(ContentModel):
     weather: tuple[RegionWeather, ...] = ()
     battle: BattleRules = BattleRules()
     enemy_growth: EnemyGrowthRules = EnemyGrowthRules()
+    hero_growth: HeroGrowthRules = HeroGrowthRules()
 
     @model_validator(mode="after")
     def _unique_regions(self) -> WorldRules:

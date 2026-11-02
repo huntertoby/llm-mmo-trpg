@@ -14,6 +14,11 @@
 3. 一般營地（``camp``）而且陣容沒有精英：``randint(0, 999) < camp_elite_permille`` 時，從可以套用
    本區某個詞綴的成員中均勻抽 1 名，再從可以套用的詞綴中均勻抽 1 個，把它升級成精英——不增加
    人數、不加等級（「強度以建議等級為準、一場最多 1 名」）。其他地點種類不混精英。
+
+**增援**（Phase 5A-6，:func:`reinforce_lineup`；玩法 PM 定，18.4 補充「危險度 3 的增援」）：情境判定
+給的每一筆 ``reinforce``，從同地點遭遇表各陣容出現過的非精英單位（去重、依 ID 排序；已到遠程上限時
+不抽遠程）用 ``Rng(fnv1a64(f"{battle_seed}:reinforce"))`` 均勻抽 1 名排在陣容最後；陣容已滿
+4 名（或沒有可抽的單位）時改成「敵人先手」（代決 5A6-3）。等級照地點，由開戰時一起成長。
 """
 
 from __future__ import annotations
@@ -22,7 +27,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.library import ContentLibrary
-from trpg.content.world_encounters import EncounterGroupDef, EncounterTable, LocationEncounters
+from trpg.content.world_encounters import (
+    MAX_GROUP_SIZE,
+    EncounterGroupDef,
+    EncounterTable,
+    LocationEncounters,
+)
 from trpg.content.world_enemies import EnemyCatalog
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.world.errors import WorldError
@@ -31,8 +41,11 @@ from trpg.world.state import EncounterResult
 __all__ = [
     "EncounterLineup",
     "LineupMember",
+    "Reinforcement",
+    "elite_kinds",
     "lineup_rng",
     "lineup_templates",
+    "reinforce_lineup",
     "roll_lineup",
 ]
 
@@ -103,6 +116,60 @@ def lineup_templates(library: ContentLibrary, lineup: EncounterLineup) -> tuple[
             template = catalog.with_affix(template, member.affix)
         result.append(template)
     return tuple(result)
+
+
+class Reinforcement(BaseModel):
+    """增援的結果：加了增援的陣容、加了幾名、是否改成敵人先手。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    lineup: EncounterLineup
+    added: int = 0
+    enemy_first: bool = False
+
+
+def reinforce_lineup(
+    library: ContentLibrary, encounter: EncounterResult, lineup: EncounterLineup, count: int
+) -> Reinforcement:
+    """情境判定的增援（見模組說明）；``count`` 是 ``reinforce`` 的筆數，0 時原樣。"""
+    if count <= 0:
+        return Reinforcement(lineup=lineup)
+    table = library.world_encounters[encounter.region]
+    entry = table.location_by_id()[encounter.location]
+    catalog = library.enemy_catalog()
+    groups = table.group_by_id()
+    names = sorted({u for g in entry.groups for u in groups[g.group].units})
+    pool = [n for n in names if not catalog.is_elite(catalog.template(n))]
+    members = list(lineup.members)
+    ranged = sum(1 for t in lineup_templates(library, lineup) if catalog.is_ranged(t))
+    rng = Rng(fnv1a64(f"{encounter.battle_seed}:reinforce".encode()))
+    added = 0
+    enemy_first = False
+    for _ in range(count):
+        ranged_ok = ranged < table.ranged_cap
+        options = [n for n in pool if ranged_ok or not catalog.is_ranged(catalog.template(n))]
+        if len(members) >= MAX_GROUP_SIZE or not options:
+            enemy_first = True
+            continue
+        name = options[rng.randint(0, len(options) - 1)]
+        members.append(LineupMember(unit=name))
+        ranged += catalog.is_ranged(catalog.template(name))
+        added += 1
+    grown = lineup.model_copy(update={"members": tuple(members)})
+    return Reinforcement(lineup=grown, added=added, enemy_first=enemy_first)
+
+
+def elite_kinds(library: ContentLibrary, lineup: EncounterLineup) -> tuple[str, ...]:
+    """陣容裡的精英種類（06 6.34.2 精英首殺；代決 5A6-7）：精英範本（``elite`` 標籤）以單位 ID 算，
+    一般單位套詞綴的以 ``<單位>+<詞綴>`` 算。排序、不重複。"""
+    catalog = library.enemy_catalog()
+    kinds: set[str] = set()
+    for member in lineup.members:
+        if catalog.is_elite(catalog.template(member.unit)):
+            kinds.add(member.unit)
+        elif member.affix is not None:
+            kinds.add(f"{member.unit}+{member.affix}")
+    return tuple(sorted(kinds))
 
 
 def _pick_group(rng: Rng, table: EncounterTable, entry: LocationEncounters) -> EncounterGroupDef:
