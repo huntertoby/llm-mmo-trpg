@@ -180,6 +180,11 @@ export const api = {
     request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
   worldBattle: (characterId: string) =>
     request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`),
+  /** 大世界的閃現與配點預覽（5A-7；同一輪的預覽，不扣點）。 */
+  worldFlashPreview: (characterId: string, skill: string, slot: number | null) =>
+    request<FlashPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/flash-preview`, { skill, slot }),
+  worldAllocationPreview: (characterId: string, attributes: Record<string, number>) =>
+    request<AllocationPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/allocation-preview`, { attributes }),
   decide: (
     id: string,
     accept: boolean,

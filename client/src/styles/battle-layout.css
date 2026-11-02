@@ -613,6 +613,14 @@
   border-color: #ffc83d;
 }
 
+.battle-banner-note {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: #ffe9a8;
+}
+
 .battle-banner-goal {
   margin-top: 6px;
   font-size: 20px;

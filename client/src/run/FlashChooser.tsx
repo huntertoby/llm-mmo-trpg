@@ -1,6 +1,6 @@
 // 閃現／重閃的出題前畫面（Phase 3W-6）：先說清楚會扣點、一定要選一個，再選「不指定」或「指定類別」。
 // 類別按鈕顯示每類目前的合法變化數量（例「連段（2）」），0 個的不能選；數量由後端 `flash-preview` 提供。
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { FlashPreview, RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
@@ -16,8 +16,13 @@ import {
   type FlashMode,
 } from "./flash";
 
+/** 閃現預覽的來源（大世界 5A-7 用自己的端點；省略時用一輪的 `flash-preview`）。 */
+export type FlashPreviewLoader = (skill: string, slot: number | null) => Promise<FlashPreview>;
+
 interface Props {
   runId: string;
+  /** 預覽的來源；省略 ＝ 一輪的 `api.flashPreview(runId, …)`。 */
+  previewFlash?: FlashPreviewLoader;
   hero: RunHero;
   skillId: string;
   skillName: string;
@@ -31,14 +36,17 @@ interface Props {
 }
 
 export function FlashChooser(props: Props) {
-  const { runId, skillId, slot } = props;
+  const { runId, skillId, slot, previewFlash } = props;
   const [preview, setPreview] = useState<FlashPreview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const loader = useRef(previewFlash);
+  loader.current = previewFlash;
   useEffect(() => {
     let cancelled = false;
     setPreview(null);
     setLoadError(null);
-    api.flashPreview(runId, skillId, slot).then(
+    const load = loader.current ?? ((skill: string, s: number | null) => api.flashPreview(runId, skill, s));
+    load(skillId, slot).then(
       (out) => {
         if (!cancelled) setPreview(out);
       },
@@ -53,7 +61,7 @@ export function FlashChooser(props: Props) {
   return <FlashChooserView {...props} preview={preview} loadError={loadError} />;
 }
 
-type ViewProps = Omit<Props, "runId"> & { preview: FlashPreview | null; loadError: string | null; initialCategory?: string | null };
+type ViewProps = Omit<Props, "runId" | "previewFlash"> & { preview: FlashPreview | null; loadError: string | null; initialCategory?: string | null };
 
 /** 出題前畫面本體（預覽由外面載入；方便單元測試直接給預覽）。 */
 export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, busy, onChoose, onCancel, preview, loadError, initialCategory = null }: ViewProps) {
