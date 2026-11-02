@@ -24,6 +24,7 @@ from trpg.content.library import Ruleset
 from trpg.content.maps import MapEvent, Objective
 from trpg.content.rules import CoreRules
 from trpg.engine.gear.state import GearState
+from trpg.engine.oaths import OathTracker
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
@@ -678,6 +679,8 @@ class BattleState:
     """地圖標籤（Phase 3R-2，例如 ``forest``；種族的環境被動「林間視野」讀取）。"""
     normal_turn_order: tuple[UnitId, ...] = ()
     """正常的先攻順序（Phase 5A-6b）：先手改過第 1 輪順序時才有值，第 2 輪開始時還原並清空。"""
+    oath: OathTracker | None = None
+    """誓約的進度（Phase 5C-3，``BattleSetup.oath``；不可變，改變時換新的）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -725,6 +728,7 @@ class BattleState:
             look=self.look,
             map_tags=self.map_tags,
             normal_turn_order=self.normal_turn_order,
+            oath=self.oath,
         )
 
     # ------------------------------------------------------------------

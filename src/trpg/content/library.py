@@ -131,7 +131,7 @@ from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies
 from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
-from trpg.content.world_oaths import OathTable
+from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
@@ -857,7 +857,13 @@ def load_library(  # noqa: PLR0915
     map_warnings = _apply_map_themes(maps, regions)
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
-    world_oaths = _load_optional(root / WORLD_OATHS_FILE, OathTable, files)
+    world_oaths = _load_world_oaths(
+        root / WORLD_OATHS_FILE,
+        files,
+        status_ids=set(statuses.by_id()),
+        tag_ids={t.id for t in skill_tags.tags},
+        element_ids={str(e.id) for e in elements.elements},
+    )
     world_mercenaries = _load_world_mercenaries(
         root / WORLD_MERCENARIES_FILE, builds, ai_profiles, files
     )
@@ -992,6 +998,55 @@ def _load_world_mercenaries(
     if problems:
         raise ContentError(path, "；".join(problems))
     return table
+
+
+def _load_world_oaths(
+    path: Path,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    status_ids: set[str],
+    tag_ids: set[str],
+    element_ids: set[str],
+) -> OathTable | None:
+    """誓約模板（5C-3）：每個模板要有判定、參數要有中文名（``choice`` 的每個值也要）；加成與破誓
+    狀態、判定引用的標籤、元素與狀態參數的值都要存在。"""
+    table = _load_optional(path, OathTable, files)
+    if table is None:
+        return None
+    problems = [
+        f"缺少難度 {d} 的加成" for d in ("easy", "medium", "hard") if d not in table.bonuses
+    ]
+    statuses = [*table.bonuses.values(), *([table.penalty_status] if table.penalty_status else [])]
+    problems += [f"未知的狀態 {s}" for s in statuses if s not in status_ids]
+    for template in table.templates:
+        problems += [f"{template.id}：{p}" for p in _oath_template_problems(template, tag_ids)]
+        for param in template.params:
+            field = template.bind.get(param.id)
+            known = {"element": element_ids, "status": status_ids}.get(field or "")
+            if known is not None:
+                problems += [
+                    f"{template.id}：參數 {param.id} 的值 {v} 不存在"
+                    for v in param.choices
+                    if v not in known
+                ]
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    return table
+
+
+def _oath_template_problems(template: OathTemplateDef, tag_ids: set[str]) -> list[str]:
+    problems: list[str] = []
+    if template.check is None:
+        problems.append("沒有判定（check）")
+    else:
+        problems += [f"未知的技能標籤 {t}" for t in template.check.tags if t not in tag_ids]
+    for param in template.params:
+        if not param.name_zh:
+            problems.append(f"參數 {param.id} 沒有中文名")
+        missing = [c for c in param.choices if c not in param.choice_names_zh]
+        if missing:
+            problems.append(f"參數 {param.id} 的值沒有中文名：{', '.join(missing)}")
+    return problems
 
 
 def _load_optional[M: ContentModel](

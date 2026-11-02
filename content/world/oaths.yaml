@@ -1,0 +1,148 @@
+# 誓約模板（Phase 5C-3；docs/phases/Phase5計畫.md 24.4；schema：src/trpg/content/world_oaths.py）。
+# 18 18.6（全遊戲共用，15 種）；06 6.26（#27）：佔一格被動欄位、加成依難度 3 檔由引擎查表、
+# 違反＝本場加成移除＋debuff 2 回合、下一場恢復；09 9.6.10 #106：主城、小鎮、營火立誓，同時 1 個，
+# 一直有效到自己解除，解除後現實 1 天內不能再立。ID 由開發 PM 取。
+# check.kind 是引擎判定得了的條件（trpg.engine.oaths）；bind 把參數填進判定的欄位。
+# min_melee_kills、min_status_applied 只能在戰鬥結束時判定（只記錄，代決 5C3-11），其他都在戰鬥中判定。
+cooldown_seconds: 86400          # #106 現實 1 天（代決 5A6-10）
+bonuses:                         # 難度 → 加成狀態（content/statuses.yaml；數值初值，代決 5C3-6）
+  easy: oath_bonus_easy
+  medium: oath_bonus_medium
+  hard: oath_bonus_hard
+penalty_status: oath_broken      # #27 debuff 2 回合
+penalty_rounds: 2
+templates:
+  - id: oath_no_heal
+    name_zh: 不使用帶「治療」標籤的技能
+    description_zh: 這場戰鬥裡，你不使用任何帶「治療」標籤的技能。
+    difficulty: medium
+    check: {kind: forbid_skill_tag, tags: [heal]}
+
+  - id: oath_no_retreat
+    name_zh: 不朝遠離最近敵人的方向移動
+    description_zh: 你主動移動的每一步，都不能讓自己離最近的敵人更遠（被推開、傳送不算）。
+    difficulty: medium
+    check: {kind: no_retreat}
+
+  - id: oath_attack_each_turn
+    name_zh: 每回合至少攻擊一次
+    description_zh: 你的每個回合結束前，至少要普攻或用技能攻擊一次。
+    difficulty: easy
+    check: {kind: attack_each_turn}
+
+  - id: oath_hold_high_ground
+    name_zh: 不離開高處
+    description_zh: 你的每個回合結束時，都要站在高處（高度 1 以上的格子）。
+    difficulty: hard
+    check: {kind: end_turn_high}
+
+  - id: oath_no_category
+    name_zh: 不使用某一類技能
+    description_zh: 這場戰鬥裡，你不使用指定類別的技能。
+    difficulty: medium
+    params:
+      - id: category
+        name_zh: 技能類別
+        kind: choice
+        choices: [spell, weapon]
+        choice_names_zh: {spell: 法術, weapon: 武器技}
+    check: {kind: forbid_skill_category}
+    bind: {category: category}
+
+  - id: oath_melee_kills
+    name_zh: 每場至少用近戰擊殺 N 名敵人
+    description_zh: 每場戰鬥結束前，你要用近戰武器的攻擊親手擊倒指定人數的敵人（戰鬥結束時判定）。
+    difficulty: easy
+    difficulty_by: {param: n, levels: {"1": easy, "2": medium}}   # 18.6「易／中」（代決 5C3-7）
+    params:
+      - {id: n, name_zh: 人數, kind: int, min: 1, max: 2}
+    check: {kind: min_melee_kills}
+    bind: {n: count}
+
+  - id: oath_no_items
+    name_zh: 不使用道具
+    description_zh: 這場戰鬥裡，你不使用道具（目前是裝備給的技能；代決 5C3-8）。
+    difficulty: easy
+    check: {kind: forbid_skill_tag, tags: [gear]}
+
+  - id: oath_no_reactions
+    name_zh: 不使用反應
+    description_zh: 這場戰鬥裡，你不發動任何反應（格擋與反應技）。
+    difficulty: medium
+    check: {kind: forbid_reaction}
+
+  - id: oath_one_element
+    name_zh: 只用某一種元素的技能造成傷害
+    description_zh: 你造成的傷害只能是指定的元素（墜落、撞擊、推倒造成的不算）。
+    difficulty: hard
+    params:
+      - id: element
+        name_zh: 元素
+        kind: choice
+        choices: [physical, fire, ice, lightning, poison, wind, earth, holy, shadow]
+        choice_names_zh:
+          physical: 物理
+          fire: 火焰
+          ice: 冰霜
+          lightning: 雷電
+          poison: 毒素
+          wind: 風
+          earth: 大地
+          holy: 神聖
+          shadow: 暗影
+    check: {kind: damage_element_only}
+    bind: {element: element}
+
+  - id: oath_protect_allies
+    name_zh: 不讓隊友倒下
+    description_zh: 這場戰鬥裡，你的隊友一個都不能倒下（召喚物不算）。
+    difficulty: hard
+    check: {kind: protect_allies}
+
+  - id: oath_still_first_turn
+    name_zh: 第一回合不移動
+    description_zh: 你的第一個回合不主動移動（原地應戰）。
+    difficulty: easy
+    check: {kind: no_move_first_turn}
+
+  - id: oath_apply_status
+    name_zh: 每場至少施加 N 次某種狀態
+    description_zh: 每場戰鬥結束前，你要施加指定的狀態達到指定次數（戰鬥結束時判定）。
+    difficulty: medium
+    params:
+      - id: status
+        name_zh: 狀態
+        kind: choice
+        choices: [burning, poison, bleed, slow, root, weaken, vulnerable, marked, stun, frozen]
+        choice_names_zh:
+          burning: 燃燒
+          poison: 中毒
+          bleed: 流血
+          slow: 緩速
+          root: 定身
+          weaken: 虛弱
+          vulnerable: 易傷
+          marked: 被標記
+          stun: 暈眩
+          frozen: 冰凍
+      - {id: n, name_zh: 次數, kind: int, min: 2, max: 4}
+    check: {kind: min_status_applied}
+    bind: {status: status, n: count}
+
+  - id: oath_no_early_defense
+    name_zh: HP 低於一半前不使用防禦技能
+    description_zh: 你的 HP 還在一半以上時，不使用帶「防禦」「護盾」「守護」標籤的技能（代決 5C3-9）。
+    difficulty: medium
+    check: {kind: forbid_skill_tag_until_hp, tags: [defense, shield, guard], hp_permille: 500}
+
+  - id: oath_no_surface
+    name_zh: 不站在任何表面上結束回合
+    description_zh: 你的每個回合結束時，腳下都不能有任何表面（火、水、油、冰……）。
+    difficulty: medium
+    check: {kind: end_turn_off_surface}
+
+  - id: oath_solo
+    name_zh: 單獨作戰
+    description_zh: 不帶任何隊友出戰（傭兵、影子、劇情夥伴都算隊友；召喚物不算）。開場有隊友就違反。
+    difficulty: hard
+    check: {kind: solo}

@@ -19,6 +19,7 @@ from trpg.content.equipment import Loadout
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.maps import MapDef, Objective, SpawnUnitsEvent
 from trpg.content.rules import CoreRules
+from trpg.engine.oaths import OathSetup
 from trpg.engine.state import SpawnTemplate
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
@@ -98,6 +99,8 @@ class BattleSetup(BaseModel):
     first_team: Team | None = None
     """先手的陣營（Phase 5A-6）：設定時該陣營的單位依先攻排在行動順序最前面、其他單位依先攻接在
     後面（行動順序整場固定）；``None`` ＝ 照先攻。"""
+    oath: OathSetup | None = None
+    """帶著誓約開戰的單位與判定（Phase 5C-3，:mod:`trpg.engine.oaths`）；``None``＝沒有誓約。"""
 
     @property
     def effective_objective(self) -> Objective:

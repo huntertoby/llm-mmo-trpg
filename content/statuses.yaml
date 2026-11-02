@@ -1257,3 +1257,38 @@ statuses:
     absorbs_damage: true
     shield_break_status: marked
     budget_points: 2
+  # 5C-3 誓約（06 6.26、#27；docs/phases/Phase5計畫.md 24.5，數值初值、開發 PM 定）：加成依難度 3 檔，
+  # 開戰時由引擎掛上、整場不倒數、不能被驅散或奪取；違反時移除並改掛「破誓」2 回合。只由誓約施加（無 budget_points）。
+  - id: oath_bonus_easy
+    polarity: neutral
+    beneficial: true
+    name_zh: 誓約之力・易
+    description_zh: 守著誓約（易）：自己造成的攻擊傷害提高（易檔）。違反誓約時移除。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1050
+  - id: oath_bonus_medium
+    polarity: neutral
+    beneficial: true
+    name_zh: 誓約之力・中
+    description_zh: 守著誓約（中）：自己造成的攻擊傷害提高（中檔）。違反誓約時移除。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1100
+  - id: oath_bonus_hard
+    polarity: neutral
+    beneficial: true
+    name_zh: 誓約之力・難
+    description_zh: 守著誓約（難）：自己造成的攻擊傷害提高（難檔）。違反誓約時移除。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1150
+  - id: oath_broken
+    polarity: debuff
+    name_zh: 破誓
+    description_zh: 違反了誓約：自己造成的攻擊傷害降低、受到的傷害提高。下一場恢復誓約的加成。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    damage_dealt_permille: 900
+    damage_taken_permille: 1100

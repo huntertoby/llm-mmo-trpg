@@ -19,7 +19,14 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 
-__all__ = ["MERCENARY_ROLES", "MIN_PER_ROLE", "MercenaryDef", "MercenaryRole", "MercenaryTable"]
+__all__ = [
+    "MERCENARY_ROLES",
+    "MIN_PER_ROLE",
+    "CompanionDef",
+    "MercenaryDef",
+    "MercenaryRole",
+    "MercenaryTable",
+]
 
 type MercenaryRole = Literal["damage", "guardian", "support", "control"]
 """定位（9.6.8：輸出、守護、輔助、控制）。"""
@@ -49,6 +56,25 @@ class MercenaryDef(ContentModel):
     """底稿：``content/sim/builds.yaml`` 的 build ID。"""
 
 
+class CompanionDef(ContentModel):
+    """劇情夥伴（5C-3；09 9.6.9 #97：主線或任務鏈給的 NPC，只在對應任務裡跟著，佔一個隊友位）。
+
+    戰鬥單位＝底稿 build 的英雄範本換成夥伴的 ID 與名字（同傭兵）；哪些任務帶他寫在任務的
+    ``companion``（``content/world/quests/``）。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    npc: str = Field(pattern=ID_PATTERN)
+    """人設卡（``content/world/npcs/``）的 NPC ID；好感度記在這個 NPC 上。"""
+    name_zh: str = Field(min_length=1)
+    title_zh: str = Field(min_length=1)
+    build: str = Field(pattern=ID_PATTERN)
+    """底稿：``content/sim/builds.yaml`` 的 build ID。"""
+    affinity_per_win: int = Field(default=0, ge=0, le=100)
+    """帶他打贏一場給的好感度（18.7.6：阿岳 +2）。"""
+    affinity_daily_cap: int = Field(default=0, ge=0, le=100)
+    """同一天（6 點刷新）這種好感度最多加多少（18.7.6：阿岳每天最多 +6）。"""
+
+
 class MercenaryTable(ContentModel):
     """``content/world/mercenaries.yaml``。"""
 
@@ -62,6 +88,10 @@ class MercenaryTable(ContentModel):
     """影子每天第一次被借用給主人的任務幣（5C-2，#102；初值）。"""
     shadow_reports_kept: int = Field(default=20, ge=1)
     """影子紀錄保留的戰報則數（5C-2）。"""
+    default_party: tuple[str, ...] = ()
+    """新角色一開始帶的傭兵（依出場順序；5C-3，9.6.11 5C-2 代決：鐵壁＋回春）。空＝獨行。"""
+    companions: tuple[CompanionDef, ...] = ()
+    """劇情夥伴（5C-3，#97：只在對應任務裡跟著，佔一個隊友位）。"""
 
     @model_validator(mode="after")
     def _check(self) -> MercenaryTable:
@@ -74,7 +104,24 @@ class MercenaryTable(ContentModel):
             raise ValueError(f"每種定位至少 {MIN_PER_ROLE} 名（9.6.8），不足：{'、'.join(short)}")
         if len(set(self.ai_choices)) != len(self.ai_choices):
             raise ValueError("ai_choices 不能重複")
+        self._check_defaults()
         return self
+
+    def _check_defaults(self) -> None:
+        known = {m.id for m in self.mercenaries}
+        party = self.default_party
+        if len(set(party)) != len(party) or len(party) > self.max_hired:
+            raise ValueError(f"default_party 不能重複、最多 {self.max_hired} 名")
+        unknown = [m for m in party if m not in known]
+        if unknown:
+            raise ValueError(f"default_party 有不在名單的傭兵：{', '.join(unknown)}")
+        ids = [c.id for c in self.companions]
+        clash = sorted({i for i in ids if ids.count(i) > 1} | (set(ids) & known))
+        if clash:
+            raise ValueError(f"劇情夥伴 ID 重複或和傭兵相撞：{', '.join(clash)}")
+
+    def companion_by_id(self) -> dict[str, CompanionDef]:
+        return {c.id: c for c in self.companions}
 
     def by_id(self) -> dict[str, MercenaryDef]:
         return {m.id: m for m in self.mercenaries}
