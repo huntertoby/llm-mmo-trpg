@@ -12,6 +12,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
+from trpg.content.skills import SkillDef
 from trpg.shared.rng import MASK64
 from trpg.world.clock import DayPhase
 
@@ -247,6 +248,18 @@ class CharacterState(_Model):
         if any(v < 0 for v in counters.values()):
             raise ValueError("rng_counters 不可為負")
         return dict(sorted(counters.items()))
+
+    generated_skills: tuple[SkillDef, ...] = ()
+    """不在內容庫的技能（創角的組合器起始技能等；依 ID 排序，同 ``RunState.generated_skills``；
+    5A-5）。開戰時併進該場規則包、換技能認得它們。"""
+
+    @field_validator("generated_skills")
+    @classmethod
+    def _generated_sorted(cls, skills: tuple[SkillDef, ...]) -> tuple[SkillDef, ...]:
+        ids = [s.id for s in skills]
+        if ids != sorted(set(ids)):
+            raise ValueError("generated_skills 必須依 ID 排序且不重複")
+        return skills
 
     @field_validator("threads")
     @classmethod

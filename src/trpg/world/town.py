@@ -88,10 +88,11 @@ def loadout(
         raise WorldActionError(f"不能裝備沒有的技能：{', '.join(unknown)}")
     if len(set(skills)) != len(skills):
         raise WorldActionError("技能不可重複裝備")
-    missing = sorted(s for s in skills if s not in library.skills)
+    defs = {**library.skills, **{s.id: s for s in char.generated_skills}}
+    missing = sorted(s for s in skills if s not in defs)
     if missing:
         raise WorldActionError(f"內容庫沒有這些技能：{', '.join(missing)}")
-    problems = equip_problems(library, [library.skills[s] for s in skills])
+    problems = equip_problems(library, [defs[s] for s in skills])
     if problems:
         raise WorldActionError("；".join(problems))
     bench = tuple(sorted(set(owned) - set(skills)))
