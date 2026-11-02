@@ -31,6 +31,7 @@ from trpg.world.actions import (
     PerceptionCheckEvent,
     RestAction,
     RetreatAction,
+    SituationAction,
     TeleportAction,
     TravelAction,
     TraveledEvent,
@@ -45,6 +46,7 @@ from trpg.world.common import world_map_of as _world_map
 from trpg.world.errors import WorldActionError
 from trpg.world.events import roll_event
 from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
+from trpg.world.situations import resolve_situation
 from trpg.world.state import (
     CharacterState,
     EncounterResult,
@@ -142,6 +144,9 @@ def world_step(
         if char.pending_encounter is None:
             raise WorldActionError("目前沒有遭遇")
         world, char, events = fight(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
+    if isinstance(action, SituationAction):
+        world, char, events = resolve_situation(library, world, char, action, now)
         return StepResult(world=world, char=char, events=events)
     return _service(library, world, char, action)
 

@@ -855,7 +855,15 @@ def load_library(  # noqa: PLR0915
         unit_check,
         files,
     )
-    world_event_content = load_world_event_content(root, world_maps, weather_map, files)
+    world_event_content = load_world_event_content(
+        root,
+        world_maps,
+        weather_map,
+        files,
+        status_ids=statuses.by_id(),
+        keyword_ids={k.id for k in keywords.keywords},
+        race_ids=None if races is None else races.by_id(),
+    )
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
