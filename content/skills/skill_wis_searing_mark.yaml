@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：標記目標並讓它燃燒（感知＋火焰）
+id: skill_wis_searing_mark
+schema_version: 1
+name_zh: 灼痕印記
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 5}
+effects:
+  - {type: apply_status, status: marked, duration: 2}
+  - {type: apply_status, status: burning, duration: 2}
+condition: null
+cost: {mana: 4, cooldown: 1}
+tags: [fire, spell, mark]
+narrative:
+  concept: 在敵人身上烙下一枚燃燒的印記，讓同伴看得見，也讓它一直痛著
+  cast_flavor: 你指尖劃過空中，一枚火紅的印記烙上目標，邊緣冒出細小的火舌
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：聖光審判並把目標封進冰裡（感知＋冰凍）
+id: skill_wis_glacial_judgment
+schema_version: 1
+name_zh: 冰獄審判
+tier: 2
+rank: 1
+rarity: epic
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 3d8, element: holy}
+  - {type: apply_status, status: frozen, duration: 1}
+condition: null
+cost: {mana: 9, cooldown: 4}
+tags: [holy, ice, spell, control]
+narrative:
+  concept: 審判的光落下時，罪人連同影子一起被凍住
+  cast_flavor: 你高舉聖徽宣判，一道冷白的光柱罩住目標，光裡的一切瞬間結上厚冰
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

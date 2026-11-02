@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：聖光帶著雷鳴在敵人之間連跳（感知＋雷電、連鎖）
+id: skill_wis_chain_radiance
+schema_version: 1
+name_zh: 連鎖聖光
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: chain, range: 4, jumps: 2, jump_range: 2}
+effects:
+  - {type: damage, dice: 1d8, element: holy}
+  - {type: damage, dice: 1d4, element: lightning}
+condition: null
+cost: {mana: 7, cooldown: 2}
+tags: [holy, lightning, spell, chain]
+narrative:
+  concept: 一束聖光帶著雷鳴，從一個敵人跳到下一個
+  cast_flavor: 你張開手掌，白光夾著雷鳴射出，在敵人之間連跳兩次才散去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

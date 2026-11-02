@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：十字範圍聖光震地，讓敵人倒地（感知＋倒地）
+id: skill_wis_sanctified_quake
+schema_version: 1
+name_zh: 聖鐘震地
+tier: 2
+rank: 1
+rarity: epic
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: cross, range: 3}
+effects:
+  - {type: damage, dice: 2d6, element: holy}
+  - {type: knock_prone}
+condition: null
+cost: {mana: 9, cooldown: 3}
+tags: [holy, spell, control, area]
+narrative:
+  concept: 像敲響一口看不見的聖鐘，聲波把周圍的敵人震倒
+  cast_flavor: 你以聖徽擊地，一聲鐘鳴沿著十字往外盪開，敵人一個個站不穩
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

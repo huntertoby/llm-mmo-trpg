@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：替友方加護盾並把他拉向自己（感知＋撞擊）
+id: skill_wis_rescue_tether
+schema_version: 1
+name_zh: 救援牽引
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: shield, dice: 1d6, affects: allies}
+  - {type: pull, distance: 2, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [spell, shield, support]
+narrative:
+  concept: 一條發光的繩索，把陷入危險的同伴拉回身邊
+  cast_flavor: 你甩出一道光索纏住同伴的腰，一邊替他擋下攻擊，一邊把他拽回來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

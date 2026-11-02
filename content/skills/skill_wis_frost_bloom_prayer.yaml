@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：十字聖光灼傷敵人，落點結成冰面（感知＋冰霜）
+id: skill_wis_frost_bloom_prayer
+schema_version: 1
+name_zh: 霜華祝禱
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: cross, range: 4}
+effects:
+  - {type: damage, dice: 1d8, element: holy}
+  - {type: create_surface, surface: ice, duration: 2}
+condition: null
+cost: {mana: 7, cooldown: 2}
+tags: [holy, ice, spell, area]
+narrative:
+  concept: 一陣帶著霜花的祝禱，聖光落處結滿薄冰，敵人站都站不穩
+  cast_flavor: 你低聲祝禱，十字形的霜花在空中綻開，落地時灼出白光，石板上隨即結了一層冰
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
