@@ -187,18 +187,24 @@ def nondeterminism_violations(tree: ast.AST, location: str) -> list[Violation]:
                         out.append(Violation(where, f"禁止使用 {dotted}"))
                         break
         elif isinstance(node, ast.Call):
-            # __import__("random")、importlib.import_module("random")
-            func = _dotted_name(node.func)
-            if func in BANNED_BUILTIN_CALLS:
-                out.append(Violation(where, f"禁止呼叫內建 {func}()"))
-            if (
-                func in {"__import__", "importlib.import_module", "import_module"}
-                and node.args
-                and isinstance(node.args[0], ast.Constant)
-                and isinstance(node.args[0].value, str)
-                and node.args[0].value.split(".")[0] in BANNED_MODULES
-            ):
-                out.append(Violation(where, f"禁止動態匯入 {node.args[0].value}"))
+            out += _call_violations(node, where)
+    return out
+
+
+def _call_violations(node: ast.Call, where: str) -> list[Violation]:
+    """禁止的呼叫：內建 ``hash()``、動態匯入 ``random``（``__import__``、``import_module``）。"""
+    out: list[Violation] = []
+    func = _dotted_name(node.func)
+    if func in BANNED_BUILTIN_CALLS:
+        out.append(Violation(where, f"禁止呼叫內建 {func}()"))
+    if (
+        func in {"__import__", "importlib.import_module", "import_module"}
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+        and node.args[0].value.split(".")[0] in BANNED_MODULES
+    ):
+        out.append(Violation(where, f"禁止動態匯入 {node.args[0].value}"))
     return out
 
 
