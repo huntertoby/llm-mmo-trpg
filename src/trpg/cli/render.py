@@ -126,7 +126,7 @@ def render_map(map_def: MapDef, ruleset: Ruleset) -> str:
 
 def _objective_text(map_def: MapDef) -> str:
     o = map_def.objective
-    text = _OBJECTIVES[o.kind]
+    text = "打倒頭目（護衛會撤退）" if o.leader_retreat else _OBJECTIVES[o.kind]
     if o.kind != "eliminate":
         tiles = "、".join(f"({x}, {y})" for x, y in o.tiles)
         text += f"（{o.rounds} 輪內，格子 {tiles}）"

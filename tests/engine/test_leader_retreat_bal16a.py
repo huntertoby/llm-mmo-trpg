@@ -8,10 +8,11 @@ from tests.engine.helpers import library, make_map, make_state, no_reactions, sp
 from trpg.content.maps import Objective
 from trpg.engine import BattleState, build_setup, start_battle
 from trpg.engine.effects import DamageEffect, run_effects
-from trpg.engine.events import BattleEnded, UnitDowned
+from trpg.engine.events import BattleEnded, GuardsRetreated, UnitDowned
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.runner import replay, run_battle
 from trpg.engine.state import state_to_json
+from trpg.narrative.events import describe_event
 from trpg.shared.types import Team, UnitId
 
 HERO, BOSS, GUARD, BOSS2 = (UnitId(f"unit_000{i}") for i in range(1, 5))
@@ -47,6 +48,13 @@ def test_leader_down_ends_the_battle_with_a_victory() -> None:
     assert not any(isinstance(e, UnitDowned) and e.unit_id == GUARD for e in events)
     ended = [e for e in events if isinstance(e, BattleEnded)]
     assert len(ended) == 1 and ended[0].reason == "leader_defeated"
+    # BAL-16b2：獨立的撤退事件，緊接在 battle_ended 之前
+    (retreat,) = [e for e in events if isinstance(e, GuardsRetreated)]
+    assert retreat.leader_ids == (BOSS,) and retreat.unit_ids == (GUARD,)
+    assert events.index(retreat) + 1 == events.index(ended[0])
+    line = describe_event(retreat, s)
+    assert line is not None and line.startswith("  頭目倒下，") and line.endswith(" 撤退了")
+    assert s.units[GUARD].name_zh in line
 
 
 def test_without_the_flag_the_guards_keep_fighting() -> None:

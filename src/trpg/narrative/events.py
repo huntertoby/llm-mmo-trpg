@@ -44,6 +44,7 @@ from trpg.engine.events import (
     GearHpLost,
     GearTriggered,
     GuardSet,
+    GuardsRetreated,
     Healed,
     InfusedSkillCast,
     InfusionFizzled,
@@ -355,6 +356,12 @@ def _turn_ended(e: TurnEnded, v: _View) -> str:
 @_handles(TurnSkipped)
 def _turn_skipped(e: TurnSkipped, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 受到「{v.statuses[e.status_id]}」影響，跳過這個回合"
+
+
+@_handles(GuardsRetreated)
+def _guards_retreated(e: GuardsRetreated, v: _View) -> str:
+    guards = "、".join(v.name.get(u, u) for u in e.unit_ids)
+    return f"  頭目倒下，{guards} 撤退了"
 
 
 @_handles(BattleEnded)

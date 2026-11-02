@@ -57,6 +57,7 @@ __all__ = [
     "GearHpLost",
     "GearTriggered",
     "GuardSet",
+    "GuardsRetreated",
     "Healed",
     "InfusedSkillCast",
     "InfusionFizzled",
@@ -275,6 +276,16 @@ type EndReason = Literal[
 """``eliminate``：一方全滅；``escaped``：我方全員撤離；``escape_failed``：撤離超時；
 ``defended``：守點成功；``point_lost``：守點被占領；``round_limit``：輪數上限（平手）；
 ``leader_defeated``：Boss 戰頭目倒下、護衛撤退（我方勝，BAL-16a）。"""
+
+
+class GuardsRetreated(EventBase):
+    """Boss 戰頭目倒下（``leader_retreat``，BAL-16a／16b2，#86）：``leader_ids`` 的頭目全部倒下，
+    ``unit_ids`` 的其餘敵人撤退（不算倒下、不給擊殺、不掉落）；緊接著是 ``battle_ended``
+    （``leader_defeated``）。"""
+
+    type: Literal["guards_retreated"] = "guards_retreated"
+    leader_ids: tuple[UnitId, ...]
+    unit_ids: tuple[UnitId, ...]
 
 
 class BattleEnded(EventBase):
@@ -1866,6 +1877,7 @@ type Event = Annotated[
     | RoundEnded
     | TurnStarted
     | TurnEnded
+    | GuardsRetreated
     | BattleEnded
     | UnitMoved
     | UnitStoodUp
