@@ -2566,6 +2566,113 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5C1-9 | 傭兵出場順序 | 依 `hire` 的清單順序 |
 
 
-## 23. 之後各段規格
+## 23. 5C-2 詳細規格：朋友的影子（併入 5C-1 待決的玩法 PM 決定）
+
+> 給實作 agent。只動 `content/world/mercenaries.yaml`、`src/trpg/content/world_mercenaries.py`、`src/trpg/content/library.py`（檢查，小改）、`src/trpg/world/`（`shadows.py` 新；`party.py`、`state.py`、`actions.py`、`step.py`、`battle.py` 改）、`src/trpg/api/`（`world_party_*`、`world_presenter.py`、`world_schemas.py`）、`client/`（雇用面板的「影子」分頁、隊伍面板、我的影子戰報、API 型別）、`client/openapi.json`、`tests/world/`、`tests/api/`、`tests/content/`、vitest。另一個 agent 在改 `trpg.skillgen`（PERF-2）：本段不動它。不改 `trpg.engine`、`trpg.roguelite`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
+> 依據：09 9.6.7 #13（第一季先只做帶朋友的影子）與「人少時世界不空」（朋友的影子當 AI 隊友，沿用隊友 AI）、9.6.8 #87（賽季 Boss 只准系統傭兵；**影子強度上限照招募者：等級、技能階級、裝備物品等級都不超過招募者；影子不獨佔，大家可以同時借同一個影子**）、9.6.9 #97（一隊 3 人、隊友來源含朋友的影子；出城前選好）、#100（一帳號 2～3 角色；**自己的其他角色可以當影子**，強度上限照招募者，賽季 Boss 照樣不能帶）、9.6.10 #102（**朋友最後一次在城鎮整備時自動存成影子；朋友設定的 AI 打法是影子的預設，借用的人出城前可以改；每天第一次被借用給少量任務幣，加一則戰報**）；`docs/專案計畫.md` 3.1（一帳號 2～3 角色）；本檔 22（5C-1）。
+> **玩法 PM 定（2026-11-03，5C-1 待決，開發 PM 轉達，併進本段）**：① 傭兵「青鋒」保留稱號，底稿換成近戰力量型的劍士 build（輸出位要有一名近戰）；② 傭兵技能照欄位上限挑：主動 6、被動 3、反應 1（07 7.6，#87 強度和主角相同）；影子同樣照角色本身的欄位；③ 大世界雇 0 名＝獨行（只帶主角，#97「可以少帶人」），雇 1 名就是 2 人隊；標準隊友只留在 roguelite 原型；④ 在城鎮替每名傭兵選 AI 打法（用現有的 AI 行為設定），存在角色上；影子的打法（#102）用同一套。
+
+### 23.1 目標
+
+角色在城鎮整備時自動把目前的 build 存成影子（共享世界裡每個角色一份）；別的角色（含自己的其他角色）在城鎮把影子借進隊伍，和傭兵共用 2 個隊友位，開戰時強度壓到招募者的上限；影子主人每天第一次被借用時記任務幣與一則戰報。同時套用玩法 PM 對 5C-1 的四項決定。全部是世界動作（寫進日誌、可重播）。
+
+### 23.2 玩法 PM 定的 5C-1 修改
+
+| # | 內容 | 做法 |
+|---|---|---|
+| ① | 青鋒的底稿 | `mercenaries.yaml`：`merc_qingfeng` 的 `build` 改 `build_charger`（單手劍、力量 16 的近戰衝陣 build）；稱號「近戰劍客」不變 |
+| ② | 傭兵技能照欄位上限 | 傭兵出場時依底稿技能順序挑，每種欄位（`core.yaml` 的 `skill_slots`：主動 6、被動 3、反應 1、姿態 1）滿了就跳過，同時遵守專精互斥、規則改變型傳說最多 1 個（同 `skill_slot_problems`）；被跳過的反應技能，範本的 `reactions` 規則一併拿掉。名單的技能概要也只列挑中的。影子帶的是角色裝備中的技能（已受欄位上限） |
+| ③ | 雇 0 名＝獨行 | `prepare_battle` 的我方＝主角＋隊伍成員（傭兵、影子）；沒有成員時只有主角。大世界不再用標準隊友（roguelite 不變）。遇敵面板「主角（開場 HP 40）・獨行」；`party_changed` 空清單「隊伍：獨行（只帶主角）」 |
+| ④ | 傭兵與影子的 AI 打法 | `mercenaries.yaml` 新增 `ai_choices`（可選的行為模式，ID 必須在 `ai_profiles.yaml`）；`hire` 動作帶 `ai`（成員 → 行為模式），存在 `CharacterState.party_ai`；開戰時覆寫該成員範本的 `ai_profile`。沒選＝預設（傭兵：底稿的 `ai_profile`；影子：主人設定的 `shadow_ai`，沒設定＝主角範本的 `ai_profile`）。主人在城鎮用 `shadow_ai` 動作設定自己影子的預設打法 |
+
+### 23.3 影子資料（`trpg.world.state`；全部有預設值）
+
+- `ShadowSnapshot`：`owner`（角色 ID）、`hero`（`UnitTemplate`：名稱、屬性、武器、裝備中的技能與反應規則、基礎 HP、種族）、`level`、`skill_tier`、`attribute_points`（未分配）、`attribute_spent`、`skills`（裝備中、不在內容庫的技能定義，依 ID 排序）、`ai_profile`（主人設定的預設打法，`None`＝範本的）、`gear: tuple[str, ...] = ()`（**裝備欄位預留**，5D 接物品等級）、`region`／`location`（存的地點）、`saved_at`（UTC 秒）。
+- `ShadowReport`：`day`（`refresh_day`）、`at`、`borrower`（角色 ID）、`borrower_name`、`region`、`location`、`won`、`foes`（敵方單位 ID，依陣容順序）、`coins`。
+- `ShadowRecord`（`WorldState.shadows`，依主人 ID 排序、每人一筆）：`snapshot`、`coins`（被借用累計的任務幣，**5D 任務幣做好後轉入角色**）、`reward_day`（最後一次給獎的日子）、`reports`（最近 `shadow_reports_kept` 則，新的在後）。
+- `CharacterState.shadows: tuple[ShadowSnapshot, ...] = ()`：隊伍裡借來的影子（借用當下的複本，依選擇順序）；`CharacterState.party_ai: dict[str, str] = {}`（成員 ID → 行為模式，依鍵排序）；`CharacterState.shadow_ai: str | None = None`（自己影子的預設打法）。
+
+### 23.4 世界動作與規則
+
+1. **自動存成影子**（#102）：以下動作成功後，角色在城鎮（地點 `kind == "town"`）、沒有遭遇、沒有待選的閃現或三選一時，把目前狀態存成影子（同一主人覆寫，`reports`／`coins`／`reward_day` 保留）：`rest`、`loadout`、`hire`、`shadow_ai`、成長動作（`allocate`、`respec`、`flash`、`flash_pick`、`dissolve`、`inherit`、`swear_oath`、`release_oath`）。事件 `shadow_saved`（`level`）。
+2. **`hire` 擴充**：`mercenaries`（不變）＋`shadows: tuple[str, ...] = ()`（影子主人的角色 ID）＋`ai: dict[str, str] = {}`。條件（另加於 22.3）：傭兵＋影子合計 ≤ `max_hired`；影子主人在 `WorldState.shadows` 裡、不是自己、不重複；`ai` 的鍵必須是這次的成員（傭兵 ID 或影子主人 ID）、值在 `ai_choices`。整組替換：影子存的是 **借用當下的複本**（主人之後再整備，已借的不變，重新 `hire` 才更新）。出場順序：傭兵（依清單）→ 影子（依清單）。
+3. **不獨佔**（#87）：借用不改主人的任何狀態，多人可以同時借同一個影子。
+4. **`shadow_ai`**（`profile: str | None`）：城鎮、沒有遭遇；值在 `ai_choices` 或 `None`（＝範本預設）。事件 `shadow_ai_changed`。
+5. **事件**：`party_changed` 加 `shadows`、`ai`（預設空）；`battle_started` 加 `shadows: tuple[str, ...] = ()`。
+
+### 23.5 強度上限（#87：照招募者；開戰時算，`trpg.world.shadows.shadow_spawn`）
+
+- 等級 `L = min(影子等級, 招募者等級)`；影子等級 ≤ 招募者時照原樣。
+- 屬性：多出的等級 `D = 影子等級 − L`，扣掉 `D × attribute_points_per_level` 點：先扣未分配點，再從 `attribute_spent` 最多的屬性逐點扣（同分照 str、dex、con、int、wis、wil 順序），扣到分配點用完為止。
+- HP：範本基礎 HP＋`level_hp_bonus(基礎 HP, L)`（同主角出場）；`level` 欄位＝`L`；每場滿 HP、法力、耐力（同傭兵，代決 5C1-5）。
+- 技能階級：上限 `hero_tier(L)`；技能階級高於上限的照 `at_run_tier` 重配到上限（往下配）；不高於上限的不動。
+- 不在內容庫的技能（生成、重配後）一律改名 `<原 ID>_<主人 ID>` 再加進該場規則包（反應規則一併改），避免和招募者或別的影子的同名生成技能相撞。
+- 物品等級：5D 接（`gear` 欄位預留，目前影子不帶裝備）。
+- 戰鬥單位：`id`＝`shadow_<主人 ID>`、`name_zh`＝主人角色名、陣營我方、由效用 AI＋隊友指令操作（同傭兵）。
+
+### 23.6 被借用的獎勵與戰報（#102）
+
+- 招募者帶著影子打完一場（`fight` 結算，勝負都算），對每個影子：主人這一天（`refresh_day`）還沒被借用給過獎 → `coins += shadow_daily_coins`、`reward_day = 今天`、加一則 `ShadowReport`（保留最近 `shadow_reports_kept` 則）；事件 `shadow_lent`（`owner`、`coins`）。同一天之後的借用不再給獎、不加戰報。
+- 任務幣與戰報記在世界快照的影子紀錄上（`world_step` 只回傳出手的角色，不能改主人的角色檔；5D 任務幣做好後轉進主人角色）。
+- 自己的其他角色借用也算（#100；帳號在 5E，目前「朋友」＝同一伺服器上的其他角色）。
+
+### 23.7 賽季 Boss（#87、#100）
+
+`trpg.world.party.season_boss_problem(char)`：隊伍裡有影子 →「賽季 Boss 只准系統傭兵」；5F-3 開 Boss 戰時呼叫。`PartyView.season_boss_ok` 給前端顯示。
+
+### 23.8 API（`trpg.api`）
+
+- `WorldActionRequest` 含 `hire`（擴充）與 `shadow_ai`。
+- `PartyView` 加：`shadows`（`ShadowView` 清單：主人 ID、名字、等級、定位（武器・種族）、技能概要、借用時的等級與技能階級、`capped` 與 `cap_zh`（例「借用時壓到 Lv 1・技能 1 階（你的上限）」）、`hired`、`own`（自己的其他角色））、`ai_choices`（ID、名稱、說明）、`ai`（目前每名成員的打法）、`season_boss_ok`；成員加 `shadow`（主人 ID）、`ai_zh`。
+- `WorldView.my_shadow`（`MyShadowView`）：有沒有存、等級、存的地點、預設打法、累計任務幣、戰報句子（新的在前；例「第 3 天：你的影子幫小美在竹林小徑打倒了霧狼 ×3（+1 任務幣）」）。
+- 事件句子：`shadow_saved`「已把目前的配置存成影子（Lv 3）。」；`party_changed`「隊伍：青鋒、阿霧的影子」／「隊伍：獨行（只帶主角）」；`shadow_ai_changed`；`shadow_lent` 不顯示給招募者。
+- 重產 OpenAPI（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）。
+
+### 23.9 前端（`client/src/world/`）
+
+- 雇用面板分兩頁「傭兵」「影子」（分頁鈕；面板內切換，不是新的彈出層），兩頁共用 2 個隊友位；影子列＝勾選框、名字、等級、定位、技能概要、「自己的角色」標記；被壓上限的列顯示 `cap_zh`；沒有影子時顯示「還沒有可借的影子（其他角色在城鎮整備後就會出現）」。已勾的成員各有一個「打法」下拉（`ai_choices`；第一項「預設」）。按「確定」送 `hire`（`mercenaries`、`shadows`、`ai`）。
+- 隊伍面板：成員顯示打法；隊伍有影子時加一行「賽季 Boss 只准系統傭兵」。
+- 右側「我的影子」：等級、存的地點、預設打法下拉（城鎮可改，送 `shadow_ai`）、累計任務幣、被借用的戰報（最多 5 則，其餘用共用 `<Hint>`／面板內捲動）。
+- 浮動卡規則（6.5.1）：瀏覽器實測從 Hint 觸發元素滑進卡片 → 卡內捲動 → 釘住 → 關閉（1600×900、800×600）。
+
+### 23.10 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_mercenaries.py` | 青鋒＝`build_charger`；`ai_choices` 都在 `ai_profiles.yaml`、未知 ID 錯誤 |
+| `tests/world/test_party.py`（改） | 雇 0 名＝獨行（我方只有主角）、雇 1 名＝2 人；傭兵技能照欄位上限（每種不超過 `skill_slots`）；AI 打法覆寫與預設；`ai` 鍵不是成員、值不在選單 → 錯誤 |
+| `tests/world/test_shadows.py`（新） | 整備自動存影子（各動作；野外、遭遇中不存）；覆寫保留戰報；借別人／自己的其他角色、不能借自己、不存在、超過 2 名合計；不獨佔（兩人同時借）；借用當下的複本；強度上限（等級、屬性、HP、技能階級往下配、改名）；影子等級較低時原樣；每天第一次給任務幣與戰報、同一天第二次不給、隔天再給；`season_boss_problem`；日誌重播兩次相同 |
+| `tests/api/test_world_party_api.py`（改）、`tests/api/test_world_shadow_api.py`（新） | 兩個角色：A 休息存影子 → B 的 `party.shadows` 看得到 A → B 借用、開戰的單位有 A 的名字與壓過的等級 → 打完 → A 的 `my_shadow` 有戰報與任務幣 |
+| vitest | 影子分頁（合計上限、送出的動作含 `shadows` 與 `ai`）、我的影子戰報 |
+
+### 23.11 驗收
+
+`uv run pytest -q tests/world tests/content tests/api -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。瀏覽器（後端、前端不用 8000／8001／8010 埠；LLM 降級）：建兩個角色 → 角色 A 在城鎮整備產生影子 → 角色 B 借 A 的影子出戰 → A 看到戰報。
+
+### 23.12 不做的事
+
+- 多人同場（#13 之後）、影子在世界事件中出現（9.6.3「或在世界事件中遇到它」，之後）、影子循環賽（5F-4）、賽季 Boss 的禁用檢查本身（5F-3，只留函式）。
+- 任務幣本身與商店（5D）；物品等級的上限（5D）；帳號與「朋友」名單（5E）。
+- 酒館看朋友足跡、地點留言（之後）。
+
+### 23.13 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5C2-1 | 「朋友」是誰 | 帳號（5E）還沒做：同一伺服器上的 **所有其他角色** 都可以借（含自己的其他角色，#100）；5E 再限制成朋友＋自己的角色 |
+| 5C2-2 | 哪些動作算「城鎮整備」 | 23.4 第 1 點的清單（休息、換技能、雇用、影子打法、成長動作），動作後人在城鎮且沒有待處理的事 |
+| 5C2-3 | 影子存在哪 | `WorldState.shadows`（共享世界）；借用時複製進招募者的角色（重播只看自己的角色檔就能重建戰鬥設定） |
+| 5C2-4 | 已借的影子會不會跟著更新 | 不會；重新 `hire` 才換成最新的影子 |
+| 5C2-5 | 任務幣與戰報記在哪 | 世界快照的影子紀錄（`coins`、`reports`）；任務幣還沒做，5D 轉入主人角色 |
+| 5C2-6 | 「每天第一次被借用」的時點 | 帶影子打完一場（勝負都算）時；只雇不打不算 |
+| 5C2-7 | 每天給多少 | `mercenaries.yaml` 的 `shadow_daily_coins: 1`（初值）；戰報保留 `shadow_reports_kept: 20` 則 |
+| 5C2-8 | 強度上限的屬性怎麼扣 | 23.5（先扣未分配點，再從分配最多的屬性逐點扣） |
+| 5C2-9 | 影子的定位 | 玩家 build 沒有固定定位：顯示「武器・種族」 |
+| 5C2-10 | 影子出場順序 | 傭兵在前、影子在後（各依清單） |
+| 5C2-11 | AI 打法選單 | `ai_choices`：莽夫、夾擊者、刺客、弓手、狡猾、守衛、支援（不含靶場的「原地不動」與平衡用的「預言者」） |
+| 5C2-12 | 影子開場狀態 | 每場滿 HP、法力、耐力（同傭兵） |
+
+
+## 24. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
