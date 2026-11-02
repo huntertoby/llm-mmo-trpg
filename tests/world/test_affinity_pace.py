@@ -108,6 +108,20 @@ def test_xiaolian_gains_on_main_steps_2_and_3(library: ContentLibrary) -> None:
     assert curve[1] - curve[0] == 10 + 20 + 3  # 第 2 天：主線 ②、迷路的道童（5B-4e：+20）、聊天
 
 
+def test_xiaolian_event_sources_5b4e(library: ContentLibrary) -> None:
+    """5B-4e（18.7.6「5B-4d 代決」）：骨架 2 成功 +20、骨架 6 成功 +10；照進度表（兩個事件都成功）
+    第 5 天到信賴（目標第 6 天；報告另列依成功率的平均）。"""
+    rows = {
+        (r.skeleton, r.outcome): r.delta
+        for r in library.world_quests.social[REGION].event_affinity
+        if r.npc == "acolyte_xiaolian"
+    }
+    assert rows[("lost_acolyte", "success")] == 20
+    assert rows[("monks_dispute", "success")] == 10
+    day, _ = trust_days(library)["acolyte_xiaolian"]
+    assert day is not None and day <= 6
+
+
 if __name__ == "__main__":  # pragma: no cover — 報告用
     for npc, (day, curve) in trust_days(load_library()).items():
         print(f"{npc:18} 信賴：第 {day} 天" if day else f"{npc:18} 信賴：—", curve)
