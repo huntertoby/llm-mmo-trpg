@@ -17,6 +17,8 @@
   ``overwatch``，見 :func:`enemy_moves_in_range_reactions`）。
   Phase 3I-1 新增內建反應 ``counter_attack``（反擊，拳套的武器特性 ``counter``）：事件
   ``hit_by_melee``，相鄰敵人的近戰攻擊命中、傷害之後，對攻擊者普攻一次（見 :func:`hit_reactions`）。
+  Phase 5A-M1 新增內建反應 ``kin_ward``（同門相護，``shield_ally``）：事件 ``kin_hit_in_range``，
+  範圍內的同門被敵人的攻擊命中、傷害之前，替他加一層護盾（見 :func:`kin_ward_reactions`）。
   反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.casting.use_reaction_skill`）。
 
 普攻的結算（:func:`perform_unit_attack`）也放在這裡，因為格擋會在命中後、傷害前介入，
@@ -34,7 +36,7 @@ from trpg.engine import modifiers
 from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import DamageEffect, RemoveStatusEffect
+from trpg.engine.effects.models import DamageEffect, RemoveStatusEffect, ShieldEffect
 from trpg.engine.events import (
     AttackIntercepted,
     AttackRolled,
@@ -59,6 +61,7 @@ from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
+    blocks_spells,
     effective_attribute,
     skip_turn_status,
     weapon_attribute,
@@ -96,6 +99,7 @@ __all__ = [
     "enemy_moves_in_range_reactions",
     "hit_reactions",
     "is_melee_attack",
+    "kin_ward_reactions",
     "opportunity_attacks",
     "perform_unit_attack",
     "spell_hit_reactions",
@@ -349,6 +353,61 @@ def block_multiplier(
         rules = ctx.state.ruleset
         reduction += offhand.block_extra_permille(lambda a: effective_attribute(rules, target, a))
     return max(0, PERMILLE - reduction)
+
+
+def kin_ward_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
+    """``attacker`` 的攻擊（普攻或技能）命中 ``target``、傷害之前（Phase 5A-M1，18.2.1
+    「同門相護」）：
+    ``target`` 的友方（不含自己，依單位 ID）中第一個能用 ``shield_ally`` 反應的——``target`` 在他的
+    ``range`` 格內、兩人都帶 ``kin_tag``、沒被沉默（``blocked_by_silence``）——替 ``target`` 加一層
+    護盾（佔本輪反應）。一次攻擊最多一層。"""
+    if attacker.team is target.team or not target.alive:
+        return
+    state = ctx.state
+    for guardian in state.units_sorted():
+        if guardian.id == target.id or guardian.team is not target.team or not guardian.alive:
+            continue
+        definition = _kin_ward_def(ctx, guardian, target)
+        if definition is None:
+            continue
+        picked = _react(ctx, guardian, ("kin_hit_in_range",), attacker, effect="shield_ally")
+        if not isinstance(picked, ReactionDef):
+            continue
+        execute(
+            ctx,
+            [
+                ShieldEffect(
+                    source_id=guardian.id,
+                    target_id=target.id,
+                    dice=picked.shield_dice,
+                    flat=picked.shield_flat,
+                )
+            ],
+        )
+        return
+
+
+def _kin_ward_def(ctx: Ctx, guardian: UnitState, target: UnitState) -> ReactionDef | None:
+    """``guardian`` 的「同門相護」規則能不能護到 ``target``（距離、同門標籤、沉默；次數與暈眩由
+    :func:`_react` 檢查）。"""
+    for rule in guardian.reactions:
+        if (
+            rule.mode == "off"
+            or rule.when.event != "kin_hit_in_range"
+            or rule.reaction in guardian.skills
+        ):
+            continue
+        definition = ctx.rules.reaction_def(rule.reaction)
+        if definition.effect != "shield_ally" or definition.kin_tag is None:
+            continue
+        if manhattan(guardian.xy, target.xy) > (definition.range or 0):
+            continue
+        if not (guardian.has_tag(definition.kin_tag) and target.has_tag(definition.kin_tag)):
+            continue
+        if definition.blocked_by_silence and blocks_spells(ctx.rules, guardian):
+            continue
+        return definition
+    return None
 
 
 def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bool) -> None:
@@ -732,6 +791,7 @@ def _attack_once(
     subject = Subject(target, target.xy)
     bonus_permille = modifiers.damage_permille(state, attacker, use, subject)
     modifiers.spend_attack_limits(state, attacker, use, subject)  # 每回合 1 次的加傷（3-31）
+    kin_ward_reactions(ctx, attacker, target)  # 同門相護：命中後、傷害前（Phase 5A-M1）
     block = block_multiplier(ctx, attacker, target)
     multiplier = block * bonus_permille // PERMILLE
     multiplier = (

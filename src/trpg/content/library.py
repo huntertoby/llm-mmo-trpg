@@ -1569,6 +1569,9 @@ def _check_summon_traits(path: Path, template: UnitTemplate, ruleset: Ruleset) -
     for rule in template.hit_rules:
         if rule.status is not None and rule.status not in status_ids:
             raise ContentError(path, f"命中特性引用了未知的狀態：{rule.status}")
+    for opening in template.opening_statuses:  # Phase 5A-M1
+        if opening.status not in status_ids:
+            raise ContentError(path, f"開場狀態引用了未知的狀態：{opening.status}")
 
 
 def _check_builds(

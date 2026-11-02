@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import ReactionRule, UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_enemies import (
     EliteAffixDef,
@@ -131,18 +131,36 @@ def test_apply_affix(library: ContentLibrary) -> None:
 
 
 def test_apply_affix_expands_default_reactions(library: ContentLibrary) -> None:
-    catalog = library.enemy_catalog()
+    rule = ReactionRule.model_validate(
+        {"reaction": "skill_rx_slip_away", "when": {"event": "hit_by_attack"}}
+    )
+    affix = EliteAffixDef(
+        id="slippery",
+        name_zh="滑溜的",
+        add_skills=("skill_rx_slip_away",),
+        add_reactions=(rule,),
+    )
     wolf = library.units["mist_wolf"]
     assert wolf.reactions is None
-    veiled = catalog.with_affix(wolf, "mist_veiled")
     defaults = library.ruleset.reactions.default_rules
-    assert veiled.reactions is not None
-    assert veiled.reactions[: len(defaults)] == defaults
-    assert veiled.reactions[-1].reaction == "skill_rx_slip_away"
+    slippery = apply_affix(wolf, affix, defaults)
+    assert slippery.reactions is not None
+    assert slippery.reactions[: len(defaults)] == defaults
+    assert slippery.reactions[-1].reaction == "skill_rx_slip_away"
+    catalog = library.enemy_catalog()
     walker = library.units["sect_mist_walker"]
     assert walker.reactions is not None
     regen = catalog.with_affix(walker, "regenerating")
     assert regen.reactions == walker.reactions
+
+
+def test_mist_veiled_is_opening_concealment(library: ContentLibrary) -> None:
+    """5A-M1：霧隱的＝開場隱蔽 1 回合，不加技能與反應。"""
+    wolf = library.units["mist_wolf"]
+    veiled = library.enemy_catalog().with_affix(wolf, "mist_veiled")
+    assert veiled.reactions is None
+    assert veiled.skills == wolf.skills
+    assert [(o.status, o.duration) for o in veiled.opening_statuses] == [("concealed", 1)]
 
 
 def test_apply_affix_hp_floor() -> None:
@@ -165,10 +183,9 @@ def test_affix_problem(library: ContentLibrary) -> None:
     assert catalog.affix_problem(archer, "berserk") is not None  # 限近戰
     assert catalog.affix_problem(library.units["sect_steward"], "regenerating") is not None
     assert catalog.affix_problem(library.units["sect_array_stone"], "regenerating") is not None
-    # 霧行者已經裝備滑步脫身
-    assert catalog.affix_problem(library.units["sect_mist_walker"], "mist_veiled") is not None
-    # 持劍弟子的反應欄已滿（挺身而出）
-    assert catalog.affix_problem(library.units["sect_swordsman"], "mist_veiled") is not None
+    # 5A-M1：霧隱的只加開場隱蔽，霧行者、持劍弟子都能套
+    assert catalog.affix_problem(library.units["sect_mist_walker"], "mist_veiled") is None
+    assert catalog.affix_problem(library.units["sect_swordsman"], "mist_veiled") is None
     assert catalog.affix_problem(library.units["mist_wolf"], "berserk") is None
     assert catalog.applicable_affixes(archer, AFFIXES) == [
         "regenerating",

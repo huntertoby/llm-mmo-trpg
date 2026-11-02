@@ -44,8 +44,11 @@ def test_level_five_growth(library: ContentLibrary) -> None:
         else:
             assert new == old
     assert all(s.tier == 2 for s in extra)
+    # 反應技跟著改名（持劍弟子在 5A-M1 拿掉挺身而出，改看護法武僧）
+    monk = library.units["sect_warrior_monk"]
+    grown, _ = grow_enemy(library, monk, 5)
     assert grown.reactions is not None
-    assert template.reactions is not None
+    assert monk.reactions is not None
     reactions = {r.reaction for r in grown.reactions}
     assert "skill_stand_firm_t2" in reactions
     assert "skill_stand_firm" not in reactions

@@ -1214,9 +1214,10 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
         if e.cause == "clear":
             return f"  {xy_text(e.pos)} 的{before}被清除了"
         return f"  {xy_text(e.pos)} 的{before}消失了"
+    why = "（倒下時留下的）" if e.cause == "death_surface" else ""  # Phase 5A-M1
     if e.before is Surface.NONE:
-        return f"  {xy_text(e.pos)} 出現了{after}"
-    return f"  {xy_text(e.pos)} 的{before}變成了{after}"
+        return f"  {xy_text(e.pos)} 出現了{after}{why}"
+    return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
 
 
 @_handles(SurfaceBlown)

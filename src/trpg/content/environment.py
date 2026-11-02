@@ -522,12 +522,16 @@ class ReactionDef(ContentModel):
 
     ``requires_status``（Phase 3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉之後移除該狀態
     （監視射擊 ``overwatch_shot`` 用 ``overwatch``）。
+
+    - ``shield_ally``（Phase 5A-M1，18.2.1「同門相護」）：``kin_hit_in_range`` 時，``range`` 格內
+      帶 ``kin_tag`` 標籤的友方（不含自己）被敵人的攻擊命中、傷害之前，給他一層護盾
+      （``shield_dice`` ＋ ``shield_flat``）；``blocked_by_silence`` 時持有者被沉默就不能用。
     """
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
-    effect: Literal["reduce_damage", "basic_attack", "redirect_damage"]
+    effect: Literal["reduce_damage", "basic_attack", "redirect_damage", "shield_ally"]
     events: tuple[
         Literal[
             "targeted_by_melee",
@@ -536,9 +540,17 @@ class ReactionDef(ContentModel):
             "enemy_moves_in_range",
             "ally_hit_in_range",
             "hit_by_melee",
+            "kin_hit_in_range",
         ],
         ...,
     ]
+    range: int | None = Field(default=None, ge=1, le=4)
+    """``shield_ally`` 的範圍（曼哈頓格數，Phase 5A-M1）。"""
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``shield_ally`` 的同門標籤（持有者與受擊者都要帶，Phase 5A-M1）。"""
+    shield_dice: Dice | None = None
+    shield_flat: int = Field(default=0, ge=0, le=20)
+    blocked_by_silence: bool = False
     stamina_cost: int = Field(default=0, ge=0)
     damage_reduction_permille: int = Field(default=0, ge=0, le=1000)
     requires_melee_weapon: bool = False
@@ -546,6 +558,19 @@ class ReactionDef(ContentModel):
     requires_counter_weapon: bool = False
     """Phase 3I-1：持有者手上的武器必須有 ``counter``（拳套的反擊）才能反應；持有這種武器的單位由
     引擎自動加上一條 ``auto`` 規則。"""
+
+    @model_validator(mode="after")
+    def _check_shield_ally(self) -> ReactionDef:
+        shielding = self.effect == "shield_ally"
+        if shielding != ("kin_hit_in_range" in self.events):
+            raise ValueError(f"反應 {self.id}：shield_ally 與事件 kin_hit_in_range 要一起使用")
+        if shielding and (
+            self.range is None
+            or self.kin_tag is None
+            or (self.shield_dice is None and self.shield_flat == 0)
+        ):
+            raise ValueError(f"反應 {self.id}：shield_ally 必須填 range、kin_tag 與護盾量")
+        return self
 
 
 class ReactionEventDef(ContentModel):
@@ -749,6 +774,12 @@ class RewriteAiRules(ContentModel):
     - ``delayed_enemy_points``：延遲段（Phase 3F-4b）預計範圍內（以施放者目前的位置推算）每個
       敵人的價值（範圍內的友方扣同樣的分數）；``delayed_attacked_permille``：被攻擊才釋放的延遲段
       再乘這個千分比（可能沒人來打）。
+    - ``delayed_heal_points``（Phase 5A-M1）：第二段是治療的延遲段（九轉回天），預計範圍內每個
+      受傷的友方（含自己）的價值。
+    - ``priority_kill_points``（Phase 5A-M1，18.2.1「先打補師」）：擊倒帶「同門相護」反應
+      （``shield_ally``）的敵人額外的價值。
+    - ``interrupt_points``（Phase 5A-M1，05 5.7 強招預告）：擊倒、或使其跳過回合（暈眩、冰凍）
+      正在蓄力（``charging``）的敵人額外的價值。
     """
 
     ap_points: int = Field(default=6, ge=0)
@@ -773,6 +804,9 @@ class RewriteAiRules(ContentModel):
     activation_battle_rounds: int = Field(default=4, ge=1)
     delayed_enemy_points: int = Field(default=5, ge=0)
     delayed_attacked_permille: int = Field(default=600, ge=0, le=1000)
+    delayed_heal_points: int = Field(default=5, ge=0)
+    priority_kill_points: int = Field(default=10, ge=0)
+    interrupt_points: int = Field(default=12, ge=0)
 
 
 class GambleAiRules(ContentModel):

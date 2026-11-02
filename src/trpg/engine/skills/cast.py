@@ -71,6 +71,7 @@ from trpg.engine.reactions import (
     enemy_enters_adjacent_reactions,
     enemy_moves_in_range_reactions,
     hit_reactions,
+    kin_ward_reactions,
     opportunity_attacks,
     spell_hit_reactions,
     take_decoy,
@@ -314,6 +315,8 @@ class Cast:
                 unit = guardian
         if roll.hit and self.skill.category == "spell" and unit.team is not self.caster.team:
             spell_hit_reactions(ctx, self.caster, unit)  # 被法術命中、傷害之前（3D-3）
+        if roll.hit and unit.team is not self.caster.team:
+            kin_ward_reactions(ctx, self.caster, unit)  # 同門相護：命中後、傷害前（Phase 5A-M1）
         if roll.hit and (force_block or self._affected_by_damage(unit)):
             self.blocks[unit.id] = block_multiplier(
                 ctx, self.caster, unit, melee=self.profile.height_limited
