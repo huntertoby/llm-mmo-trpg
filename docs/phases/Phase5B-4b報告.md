@@ -77,4 +77,8 @@
 
 ## 7. 檢查
 
-見交件訊息（最後一次檢查的數字）。
+- 已 `git merge main`（cc80b854，含 5B-5）；計畫文件衝突：5B-5 為第 18 節、本段改第 19 節、之後各段第 20 節。
+- `uv run pytest -q tests/world tests/content tests/skillgen tests/roguelite -n 8 --timeout=1800`：6217 passed、14 skipped（skillgen／roguelite 行為快照不變，沒有重產）。
+- `uv run pytest -q tests/cli tests/test_architecture.py tests/api/test_world_events_api.py tests/api/test_world_story.py tests/api/test_world_api.py tests/api/test_world_growth_api.py -m "slow or not slow" -n 8 --timeout=3000`：230 passed、2 failed → `test_world_story.py` 祕密文字的期望改成新文字（「欲言又止」，不再含暗門）後 9 passed；`test_world_growth_api.py::test_win_writes_back_xp_level_and_last_battle` 單獨重跑通過（該檔用真實時鐘 `Clock()`，天氣／日夜隨跑的時間變，換種子打贏的那場可能不同，屬既有的不穩定，不是本段造成；建議之後把它的時鐘固定）。
+- `ruff check .`、`ruff format --check .`、`mypy`（1052 檔）、`lint-imports`（9 kept）通過。
+- 新增的 `# noqa`：`solutions._parley`、`solutions._combat` 的 `PLR0917`（一個解法的完整結算要的參數）；`step._dispatch` 原有的 `PLR0911` 照舊。
