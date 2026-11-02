@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from tests.world.helpers import NOON, hero, make_world
+from trpg.api.world_presenter import event_lines
 from trpg.api.world_story import (
     chat_story,
     event_story,
@@ -22,7 +23,7 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_situations import default_proposal
 from trpg.llm import LLMUnavailable, MockLLMClient
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION
-from trpg.world.actions import NarratedEvent, SituationAction
+from trpg.world.actions import NarratedEvent, OpportunityHintEvent, SituationAction
 from trpg.world.situations import situation_rules, situation_template
 from trpg.world.state import CharacterState, EventTrigger
 from trpg.world.step import new_character, world_step
@@ -103,6 +104,13 @@ def test_guaranteed_opportunity_uses_dedicated_text(library: ContentLibrary) -> 
         update={"pending_event": trigger.model_copy(update={"guaranteed": False})}
     )
     assert event_story(library, world, plain, None, NOON).story.text_zh != GUARANTEE_TEXT
+
+
+def test_opportunity_hint_line(library: ContentLibrary) -> None:
+    """5B-4e：機遇提示的事件在動作紀錄裡顯示內容庫的整句。"""
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    hint = OpportunityHintEvent(location="mist_ferry", text_zh="古松那邊最近不太平。")
+    assert event_lines(library, "cloud_ridge", (hint,), char) == ("古松那邊最近不太平。",)
 
 
 def test_event_story_invalid_falls_back(library: ContentLibrary) -> None:
