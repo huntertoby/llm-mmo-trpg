@@ -418,11 +418,11 @@ def load_world_event_content(
         raise ContentError(dup[0], dup[1])
 
     for region in sorted(npcs):
-        path, table = npcs[region]
-        problems = npc_card_problems(table, world_map=world_maps.get(region))
+        npc_path, npc_table = npcs[region]
+        problems = npc_card_problems(npc_table, world_map=world_maps.get(region))
         if problems:
-            raise ContentError(path, "；".join(problems))
-        files.append((path, table))
+            raise ContentError(npc_path, "；".join(problems))
+        files.append((npc_path, npc_table))
 
     all_threads = [t for _, table in events.values() for t in table.thread_ids()]
     for region in sorted(events):

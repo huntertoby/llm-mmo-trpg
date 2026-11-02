@@ -638,10 +638,12 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
    ]
    ThreadScope = Literal["personal", "world"]  # 9.6.7 #6
 
+
    class SolutionDef(ContentModel):
        kind: SolutionKind
        attributes: tuple[Attribute, ...] = ()  # 只有 situation 可填，且必填 1～3 個、不重複
        note_zh: str = ""  # 18.4 括號裡的說明（「找安全路」「護送戰」「付錢」）
+
 
    class ThreadDef(ContentModel):
        id: str
@@ -650,6 +652,7 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
        npc: str | None = None  # 相關 NPC 人設卡
        hints_location: str | None = None  # 指向的隱藏地點（必須 hidden 且 reveal 含 quest_clue）
        on_expire_zh: str = ""  # 到期結局（18.4 表下兩例；空＝淡出）
+
 
    class EventSkeletonDef(ContentModel):
        id: str
@@ -666,9 +669,11 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
        threads: tuple[ThreadDef, ...] = ()  # 事件結果可能留下的線頭
        follows: tuple[str, ...] = ()  # 能接的線頭 ID（9.6.7 #6「優先接線頭」；雲嶺先空）
 
+
    class EventSkeletonTable(ContentModel):  # content/world/events/<region>.yaml
        region: str
        skeletons: tuple[EventSkeletonDef, ...]
+
 
    class NpcCardDef(ContentModel):
        id: str
@@ -680,9 +685,11 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
        secret_zh: str  # 只給說書人用，不直接顯示給玩家
        hooks_zh: str  # 18.5「和線頭／任務的關係」
 
+
    class NpcCardTable(ContentModel):  # content/world/npcs/<region>.yaml
        region: str
        npcs: tuple[NpcCardDef, ...]
+
 
    class EventRules(ContentModel):  # content/world/event_rules.yaml
        frequency: EventFrequency  # per_step_permille、max_permille（0～1000）
