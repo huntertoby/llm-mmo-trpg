@@ -11,6 +11,7 @@ from trpg.content.environment import SurfaceDef
 from trpg.content.library import Ruleset
 from trpg.content.skill_rules import MECHANIC_TAGS
 from trpg.content.skills import Affects, EffectSpec, SkillDef, default_affects
+from trpg.skillgen.memo import by_id
 
 __all__ = ["affect_set", "mechanic_tags", "resolved_affects"]
 
@@ -39,7 +40,7 @@ def resolved_affects(rules: Ruleset, effect: EffectSpec) -> Affects:
     """效果的實際對象（省略 ``affects`` 時用原語的預設值）。"""
     if effect.affects is not None:
         return effect.affects
-    return default_affects(rules.primitives.by_id()[effect.type])
+    return default_affects(by_id(rules.primitives)[effect.type])
 
 
 def affect_set(affects: Affects) -> frozenset[str]:
@@ -51,7 +52,7 @@ def affect_set(affects: Affects) -> frozenset[str]:
 
 def mechanic_tags(skill: SkillDef, rules: Ruleset) -> tuple[str, ...]:
     """技能的機制標籤（依 ``MECHANIC_TAGS`` 的順序）。"""
-    statuses = rules.statuses.by_id()
+    statuses = by_id(rules.statuses)
     found: set[str] = set()
     if skill.shape.type not in _SINGLE_TARGET_SHAPES or (
         skill.trap is not None and skill.trap.shape != "single"
