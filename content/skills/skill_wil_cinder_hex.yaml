@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶火焰；數值為初值，未經模擬
+id: skill_wil_cinder_hex
+schema_version: 1
+name_zh: 燼咒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d8, element: shadow}
+  - {type: apply_status, status: burning, duration: 1}
+condition: null
+cost: {mana: 3}
+tags: [shadow, spell, curse, fire]
+narrative:
+  concept: 在目標身上烙下一道悶燒的詛咒，暗影咬過之後，傷口跟著冒出火來
+  cast_flavor: 黑色的咒紋爬上對手的皮膚，紋路的邊緣開始發紅、起火
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶雷電；數值為初值，未經模擬
+id: skill_wil_static_silence
+schema_version: 1
+name_zh: 靜電噤聲
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 4}
+effects:
+  - {type: apply_status, status: silenced, duration: 1}
+  - {type: damage, dice: 1d4, element: lightning}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [shadow, spell, silence, lightning]
+narrative:
+  concept: 一道帶電的暗影封住對手的喉嚨，他一開口就被電得說不出話
+  cast_flavor: 劈啪作響的黑影捂住了目標的嘴，咒語碎成一陣火花
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

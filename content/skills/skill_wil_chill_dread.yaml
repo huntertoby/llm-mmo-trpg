@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶冰霜；數值為初值，未經模擬
+id: skill_wil_chill_dread
+schema_version: 1
+name_zh: 寒懼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 4}
+effects:
+  - {type: apply_status, status: feared, duration: 2}
+  - {type: damage, dice: 1d4, element: ice}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [shadow, spell, fear, ice]
+narrative:
+  concept: 讓對手感到一股從骨子裡冒出來的寒意，冷到他只想往後退
+  cast_flavor: 你吐出一口白霧，對手的背脊瞬間結了霜，腳步不由自主地往後縮
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
