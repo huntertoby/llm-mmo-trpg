@@ -86,6 +86,6 @@ SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ───�
 交件前已 `git merge main`（含 5A-4、18.4 補充、07 7.8）：`actions.py`、`step.py` 衝突保留兩邊（`WorldAction` 聯集同時有 5A-4 的動作與 `SituationAction`；`world_step` 在 `FightAction` 之後分派 `SituationAction`）；計畫文件 5A-4 為第 9 節、本段改第 10 節、之後各段改第 11 節。
 
 - `uv run pytest -q tests/world tests/llm/test_situation_propose.py tests/content/test_world_situations.py tests/content/test_world_events.py tests/content/test_world_map.py tests/content/test_loader.py tests/test_architecture.py -n 8 --timeout=1800`：**355 passed**。
-- `uv run pytest -q tests/cli -m "slow or not slow" -n 8 --timeout=3000`：見下方結果。
+- `uv run pytest -q tests/cli -m "slow or not slow" -n 8 --timeout=3000`：**180 passed**（快照沒變，不需重產）。
 - `ruff check .`：通過；`ruff format --check .`：全部已格式化；`mypy`（strict，998 檔）：Success；`lint-imports`：9 個契約全部 KEPT。
 - 沒動戰鬥，不需戰鬥重播；沒跑全量 `scripts/check.py`。
