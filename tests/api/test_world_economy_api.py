@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -20,7 +21,13 @@ from trpg.content.library import ContentLibrary
 
 @pytest.fixture(scope="module")
 def ambush(library: ContentLibrary) -> ContentLibrary:
-    return with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
+    lib = with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
+    economy = lib.world_economy
+    assert economy.rules is not None
+    # 一場就買得起解毒草（25）：測試把一般戰鬥金幣調成 30
+    gold = economy.rules.battle_gold.model_copy(update={"battle": 30})
+    rules = economy.rules.model_copy(update={"battle_gold": gold})
+    return dataclasses.replace(lib, world_economy=dataclasses.replace(economy, rules=rules))
 
 
 @pytest.fixture
@@ -52,7 +59,7 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     shop = view["shop"]
     assert shop["name_zh"] == "柳記雜貨" and shop["npc_name_zh"] == "柳掌櫃"
     pill = _shop_item(view, "item_antidote_herb")
-    assert pill["price"] == 15 and pill["can_buy"] is False and "金幣不夠" in pill["problem_zh"]
+    assert pill["price"] == 25 and pill["can_buy"] is False and "金幣不夠" in pill["problem_zh"]
     mist = _shop_item(view, "item_mist_flask")
     assert mist["locked"] is True and mist["lock_zh"] == "柳掌櫃好感度到友善才賣"
     bamboo = _shop_item(view, "item_green_bamboo")
@@ -67,14 +74,14 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
         if after["wallet"]["gold"] > 0:
             break
         assert not any("金幣" in e for e in after["events"])  # 輸了不給
-    assert after["wallet"]["gold"] == 15
-    assert any("獲得 15 金幣" in e for e in after["events"])
+    assert after["wallet"]["gold"] == 30
+    assert any("獲得 30 金幣" in e for e in after["events"])
     assert after["shop"] is None  # 野外沒有店
 
     home = _act(client, cid, kind="travel", to="mist_ferry")
     assert home["shop"] is not None and _shop_item(home, "item_antidote_herb")["can_buy"] is True
     bought = _act(client, cid, kind="buy", shop="shop_liu", item="item_antidote_herb")
-    assert bought["wallet"]["gold"] == 0
+    assert bought["wallet"]["gold"] == 5
     assert [(b["item"], b["count"]) for b in bought["inventory"]["bag"]] == [
         ("item_antidote_herb", 1)
     ]
@@ -92,7 +99,7 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     emptied = _act(client, cid, kind="pouch", items={})
     sold = _act(client, cid, kind="sell", shop="shop_liu", item="item_antidote_herb")
     assert emptied["inventory"]["pouch"] == []
-    assert sold["wallet"]["gold"] == 7 and sold["inventory"]["bag"] == []
+    assert sold["wallet"]["gold"] == 17 and sold["inventory"]["bag"] == []
 
 
 def test_bad_economy_actions_are_rejected(client: TestClient) -> None:
