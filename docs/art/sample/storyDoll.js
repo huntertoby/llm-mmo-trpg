@@ -583,5 +583,7 @@ window.StoryDoll = (() => {
   function stampForm(ctx, id, spec, cx, cy, k = 1, west = false) {
     ctx.save(); ctx.translate(cx, cy); ctx.scale(west ? -k : k, k); const ok = drawForm(ctx, id, spec); ctx.restore(); return ok;
   }
-  return { draw, stamp, stampForm, FORMS, COVERS };
+  // 畫法層給其他樣張共用（enemyArt.js）；setShade(-1) ＝ 側面朝東的暗面方向
+  const H = { ink, stroke, limb, dot, ellPts, shadow, mix, dark, light, INK, setShade: (s) => { SHADE = s; } };
+  return { draw, stamp, stampForm, FORMS, COVERS, H };
 })();

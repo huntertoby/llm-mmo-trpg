@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>敵人外觀：人形家族（正式紙娃娃畫法）</title>
+<style>
+  body { margin: 0; padding: 12px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; font-size: 13px; }
+  h2 { font-size: 15px; margin: 14px 0 4px; }
+  .note { color: #a9adb6; margin-bottom: 6px; }
+  canvas { display: block; margin: 4px 0 10px; }
+</style>
+</head>
+<body>
+<!-- 美術 PM 樣張：經 client-check-5183（vite.artpm-check.mjs）開 /@fs/<這個檔案的絕對路徑>。
+     人形敵人「完全不加新畫法」：只用正式紙娃娃已認得的裝備 kind／form／material／color 與種族欄位組合（docs/art/敵人外觀.md）。 -->
+<h2>山中修士（雲嶺）：月白、竹青、墨灰、朱紅；補師一律「竹青長袍＋斗笠＋法器珠」</h2>
+<div class="note">每欄一種敵人；上排正面（朝南）、中排側面（朝東）、下排背面（朝北）；2 倍。</div>
+<canvas id="monk"></canvas>
+<h2>盜賊（中立，已在遊戲中）：皮甲、紅頭巾；精英與頭目加鐵件與披風</h2>
+<canvas id="bandit"></canvas>
+<h2>戰場實際大小（52px 格、1 倍）：上排修士、下排盜賊，朝南</h2>
+<canvas id="field"></canvas>
+<script type="module">
+const P = await import("/src/render/paperdoll.ts");
+
+// 雲嶺修士色票（碎界五區比較：青石、墨灰、竹青、點一點朱紅）
+const C = { moon: "#dfe4e2", bamboo: "#4f8a6a", ink: "#3c4248", red: "#c0392b", slate: "#5f7f86", straw: "#c8b07a", jade: "#6fd1a0" };
+const skinA = "#f1c9a5", skinB = "#d9a47a";
+const it = (kind, material, extra = {}) => ({ kind, material, ...extra });
+
+const MONKS = [
+  { zh: "劍修", role: "近戰", look: { skin: skinA, hair: "long", hairColor: "#1c1c22" },
+    gear: { head: it("wide_hat", "cloth", { color: C.straw }), body: it("robe", "cloth", { color: C.moon, form: "short" }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("sword", "steel", { form: "straight" }) } },
+  { zh: "槍修", role: "近戰（長柄）", look: { skin: skinB, hair: "short", hairColor: "#1c1c22" },
+    gear: { head: it("bandana", "cloth", { color: C.ink }), body: it("robe", "cloth", { color: C.red, form: "short" }), feet: it("boots", "leather"), main_hand: it("spear", "steel", { form: "spear" }) } },
+  { zh: "杖僧", role: "近戰（坦）", look: { skin: skinB, hair: "none", build: "stout" },
+    gear: { body: it("robe", "cloth", { color: C.ink, form: "short" }), hands: it("bracers", "leather"), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("staff", "wood", { form: "long" }) } },
+  { zh: "藥師", role: "補師（先打）", look: { skin: skinA, hair: "long", hairColor: "#2a2a30" },
+    gear: { head: it("wide_hat", "cloth", { color: C.straw }), body: it("robe", "cloth", { color: C.bamboo, trim: C.moon }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("staff", "wood", { form: "wand" }), off_hand: it("orb", "crystal", { color: C.jade }) } },
+  { zh: "護法", role: "加盾", look: { skin: skinB, hair: "short", hairColor: "#1c1c22" },
+    gear: { head: it("helmet", "iron"), body: it("mail", "iron"), cloak: it("cape", "cloth", { color: C.bamboo }), feet: it("greaves", "steel"), main_hand: it("sword", "iron", { form: "straight" }), off_hand: it("shield_kite", "iron", { color: C.bamboo }) } },
+  { zh: "符修", role: "遠程法術", look: { skin: skinA, hair: "long", hairColor: "#1c1c22" },
+    gear: { head: it("hood", "cloth", { color: C.slate }), body: it("robe", "cloth", { color: C.slate, trim: C.red }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("staff", "wood", { form: "wand" }), off_hand: it("tome", "cloth", { color: C.red, form: "scroll" }) } },
+  { zh: "弩修", role: "遠程", look: { skin: skinB, hair: "short", hairColor: "#1c1c22" },
+    gear: { head: it("cap", "leather"), body: it("leather", "leather", { form: "hunter" }), feet: it("boots", "leather"), main_hand: it("crossbow", "wood", { form: "light" }) } },
+  { zh: "雷修", role: "遠程（雷）", look: { skin: skinA, hair: "long", hairColor: "#c8c0b0" },
+    gear: { head: it("crown", "steel"), body: it("robe", "cloth", { color: C.ink, trim: "#fff36b" }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("staff", "wood", { form: "long", element: "lightning" }) } },
+  { zh: "霜修", role: "控場（冰）", look: { skin: skinA, hair: "long", hairColor: "#e8eef2" },
+    gear: { head: it("hood", "cloth", { color: C.moon }), body: it("robe", "cloth", { color: C.moon, trim: "#8fe3ff" }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("staff", "crystal", { form: "long", element: "ice" }) } },
+  { zh: "狐族劍修", role: "（種族變體）", look: { skin: skinA, hair: "long", hairColor: "#d8762a", ears: "beast", tail: "fox" },
+    gear: { body: it("robe", "cloth", { color: C.moon, form: "short" }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("sword", "steel", { form: "curved" }) } },
+  { zh: "霧中劍客", role: "精英", look: { skin: skinA, hair: "long", hairColor: "#1c1c22" },
+    gear: { head: it("wide_hat", "cloth", { color: C.ink }), body: it("robe", "cloth", { color: C.ink, trim: C.red, form: "short" }), cloak: it("cape", "cloth", { color: C.red }), feet: it("boots", "leather"), main_hand: it("sword", "steel", { form: "curved" }) } },
+  { zh: "雲嶺長老", role: "頭目", rarity: "legendary", look: { skin: skinB, hair: "long", hairColor: "#eeeeee", beard: true },
+    gear: { head: it("crown", "gold"), body: it("robe", "cloth", { color: C.moon, trim: "#e8bb48" }), cloak: it("cape", "cloth", { color: C.bamboo }), feet: it("shoes", "cloth", { color: C.ink }), main_hand: it("staff", "gold", { form: "scepter" }) } },
+];
+
+const BANDITS = [
+  { zh: "盜賊", role: "近戰", look: { skin: "#a8724c", hair: "short", hairColor: "#2a1c14" },
+    gear: { body: it("leather", "leather"), feet: it("boots", "leather"), head: it("bandana", "cloth", { color: "#b33a3a" }), main_hand: it("dagger", "iron") } },
+  { zh: "盜賊弓手", role: "遠程", look: { skin: "#d9a47a", hair: "short", hairColor: "#3a2414" },
+    gear: { body: it("leather", "leather", { form: "hunter" }), feet: it("boots", "leather"), head: it("hood", "cloth", { color: "#6a4a2a" }), main_hand: it("bow", "wood") } },
+  { zh: "盜賊盾兵", role: "坦", look: { skin: "#a8724c", hair: "short", hairColor: "#2a1c14" },
+    gear: { body: it("leather", "leather"), feet: it("boots", "leather"), head: it("bandana", "cloth", { color: "#b33a3a" }), main_hand: it("axe", "iron", { form: "hand" }), off_hand: it("shield_round", "wood") } },
+  { zh: "盜賊火槍手", role: "遠程（新）", look: { skin: "#7a4e32", hair: "short", hairColor: "#1c1410" },
+    gear: { body: it("coat", "leather", { color: "#5a3a22" }), feet: it("boots", "leather"), head: it("wide_hat", "leather", { color: "#3a2a1e" }), main_hand: it("longgun", "iron", { form: "flintlock" }) } },
+  { zh: "盜賊隊長", role: "精英", look: { skin: "#a8724c", hair: "short", hairColor: "#1c1410" },
+    gear: { body: it("leather", "iron"), feet: it("boots", "leather"), head: it("bandana", "cloth", { color: "#a32a2a" }), cloak: it("cape", "cloth", { color: "#a32a2a" }), main_hand: it("sword", "iron", { form: "broad" }) } },
+  { zh: "盜賊頭目", role: "頭目", rarity: "epic", look: { skin: "#a8724c", hair: "short", hairColor: "#1c1410" },
+    gear: { body: it("mail", "iron"), feet: it("greaves", "steel"), hands: it("gauntlets", "steel"), head: it("horned_helm", "iron"), cloak: it("cape", "cloth", { color: "#a32a2a" }), main_hand: it("axe", "iron", { form: "battle" }) } },
+];
+
+function sheet(id, list, scale) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1;
+  const CW = 64 * scale, RH = 70 * scale, top = 34;
+  c.width = CW * list.length * dpr; c.height = (top + RH * 3) * dpr;
+  c.style.width = `${CW * list.length}px`; c.style.height = `${top + RH * 3}px`;
+  const x = c.getContext("2d"); x.scale(dpr, dpr);
+  list.forEach((u, q) => {
+    x.fillStyle = q % 2 ? "#22262e" : "#262b33"; x.fillRect(q * CW, 0, CW, top + RH * 3);
+    x.fillStyle = "#e8e8ea"; x.font = "bold 13px 'Microsoft JhengHei'"; x.textAlign = "center";
+    x.fillText(u.zh, q * CW + CW / 2, 14);
+    x.fillStyle = "#a9adb6"; x.font = "11px 'Microsoft JhengHei'"; x.fillText(u.role, q * CW + CW / 2, 28);
+    ["south", "east", "north"].forEach((f, r) => {
+      const spec = { look: u.look, gear: u.gear, ...(u.rarity ? { rarity: u.rarity } : {}) };
+      const fc = P.renderFigureCanvas(spec, f, false, scale * dpr);
+      const k = scale * 0.92;
+      x.drawImage(fc, q * CW + CW / 2 - (P.DOLL_W / 2) * k, top + r * RH + RH - 4 - P.DOLL_FOOT_Y * k, P.DOLL_W * k, P.DOLL_H * k);
+    });
+  });
+}
+sheet("monk", MONKS, 1.6);
+sheet("bandit", BANDITS, 1.6);
+
+// 戰場大小
+{
+  const c = document.getElementById("field"), dpr = window.devicePixelRatio || 1, T = 52;
+  const rows = [MONKS, BANDITS], cols = Math.max(MONKS.length, BANDITS.length);
+  c.width = T * cols * dpr; c.height = T * 2 * dpr; c.style.width = `${T * cols}px`; c.style.height = `${T * 2}px`;
+  const x = c.getContext("2d"); x.scale(dpr, dpr);
+  rows.forEach((list, r) => list.forEach((u, q) => {
+    x.fillStyle = (r + q) % 2 ? "#8a8a84" : "#7d8a7a"; x.fillRect(q * T, r * T, T, T);
+    const fc = P.renderFigureCanvas({ look: u.look, gear: u.gear, ...(u.rarity ? { rarity: u.rarity } : {}) }, "south", false, 3);
+    const k = P.DOLL_SCALE;
+    x.drawImage(fc, q * T + T / 2 - (P.DOLL_W / 2) * k, r * T + T * 0.88 - P.DOLL_FOOT_Y * k, P.DOLL_W * k, P.DOLL_H * k);
+  }));
+}
+document.title += " ✓";
+</script>
+</body>
+</html>
