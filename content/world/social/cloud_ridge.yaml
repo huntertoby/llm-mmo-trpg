@@ -8,7 +8,8 @@ talk:
   # 渡婆婆（鎮長）
   - {id: granny_du_rumor, npc: granny_du, rank: neutral, kind: rumor, text_zh: 夜裡鎮上有燈籠隊在找失蹤的人，失蹤的都往山裡去了}
   # 信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（18.7.7）；暗門的線頭只由那個事件的結果給（#85）
-  - {id: granny_du_secret, npc: granny_du, rank: trusted, kind: secret, unlocks_skeleton: granny_past, text_zh: 她年輕時是斷崖幫的人，提到斷崖幫的舊帳就欲言又止}
+  # 5B-4e（18.7.6「5B-4d 代決」）：還沒解決時，每天第一次聊天可以再觸發一次（retrigger_daily；當天失敗過的不觸發）
+  - {id: granny_du_secret, npc: granny_du, rank: trusted, kind: secret, unlocks_skeleton: granny_past, retrigger_daily: true, text_zh: 她年輕時是斷崖幫的人，提到斷崖幫的舊帳就欲言又止}
   # 柳掌櫃（商人）
   - {id: liu_rumor, npc: shopkeeper_liu, rank: neutral, kind: rumor, text_zh: 雷雨夜的古松祭壇不太平，聽說有人在那兒撿到怪東西}
   - {id: liu_cave_entry, npc: shopkeeper_liu, rank: friendly, kind: quest_entry, quest: hidden_elixir_cave, text_zh: 藥師谷的谷底似乎還有一處洞窟，沒人敢進去，他想知道裡面還有沒有丹砂}
@@ -34,10 +35,12 @@ talk:
 
 # 事件結果 → 好感度（開發 PM 定初值，代決 5B4-3）。看事件的結果（event_resolved：情境判定、交涉、戰鬥解法；5B-4b）。
 event_affinity:
-  - {skeleton: lost_acolyte, outcome: success, npc: acolyte_xiaolian, delta: 10}  # 18.4 #2 賭注「修士的好感度」
+  # 5B-4e（18.7.6「5B-4d 代決」）：小蓮＝骨架 2 成功 +20（取代原本的 +10）、骨架 6 成功 +10；目標第 6 天到信賴
+  - {skeleton: lost_acolyte, outcome: success, npc: acolyte_xiaolian, delta: 20}  # 18.4 #2 賭注「修士的好感度」
   - {skeleton: lost_acolyte, outcome: failure, npc: acolyte_xiaolian, delta: -5}
   - {skeleton: gang_toll, outcome: success, npc: scarface, delta: -10}  # 威嚇了斷崖幫的人
   - {skeleton: monks_dispute, outcome: success, npc: daoist_qingya, delta: 10}
+  - {skeleton: monks_dispute, outcome: success, npc: acolyte_xiaolian, delta: 10}
   - {skeleton: fox_traveler, outcome: success, npc: frost_chime, delta: 10}  # 18.4 #18 賭注「狐族的好感度」
   - {skeleton: ayue_request, outcome: success, npc: hunter_ayue, delta: 10}
 
@@ -49,3 +52,12 @@ rumors:
   - {id: rumor_north_slope, location: north_slope, text_zh: 北坡獵場出了一頭狼王，眼睛紅得像火}
   - {id: rumor_bear_den, skeleton: bear_den, text_zh: 冬湖邊的熊巢底下會發光，獵戶都不敢靠近}
   - {id: rumor_crystal_rift, location: crystal_rift, text_zh: 源晶裂痕這陣子霧特別濃，常有霧魅從裡面爬出來}
+
+# 5B-4e（18.7.6「5B-4d 代決」，機遇保底綁在古松祭壇）：賽季第 4 天起本週傳聞一定含祭壇那條
+# （沒抽到時換掉本週最後抽到的那條；代決 5B4e-2）。
+pinned_rumors:
+  - {rumor: rumor_storm_altar, from_day: 4}
+
+# 5B-4e：賽季第 6 天起，還沒遇過機遇的角色抵達霧渡鎮、或在霧渡鎮的酒館時，說書人順口提一句（代決 5B4e-3）。
+opportunity_hints:
+  - {location: mist_ferry, from_day: 6, text_zh: 酒館的說書人順口提了一句：「古松那邊最近不太平。」}

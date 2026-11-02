@@ -218,6 +218,42 @@ def test_granny_past_failure_retries_next_day(library: ContentLibrary, make_char
     assert done.failed_skeletons == {}
 
 
+def _talk_granny(
+    library: ContentLibrary, char: CharacterState, now: int
+) -> tuple[CharacterState, bool]:
+    result = world_step(library, make_world(), char, TalkAction(npc="granny_du"), now)
+    return result.char, any(isinstance(e, EventTriggeredEvent) for e in result.events)
+
+
+def test_trusted_granny_chat_retriggers_daily(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5B-4e（18.7.6「5B-4d 代決」）：渡婆婆信賴時，聊天每天（6 點刷新）可以再觸發骨架 22 一次；
+    失敗當天不觸發、解決後不觸發。"""
+    failed = _granny_result(library, make_char, "failure")
+    char = failed.model_copy(update={"affinity": {"granny_du": 70}})
+    # 失敗當天（同一天第一次聊）不觸發
+    char, triggered = _talk_granny(library, char, NOON + 600)
+    assert not triggered and char.pending_event is None
+    # 隔天第一次聊天：再觸發；同一天第二次不再觸發
+    refresh = next_refresh_at(NOON)
+    char, triggered = _talk_granny(library, char, refresh + 60)
+    assert triggered
+    assert char.pending_event is not None and char.pending_event.skeleton == "granny_past"
+    cleared = char.model_copy(update={"pending_event": None})
+    _, again = _talk_granny(library, cleared, refresh + 120)
+    assert not again
+    # 再隔一天（放棄也算沒解決）照樣再觸發
+    _, next_day = _talk_granny(library, cleared, next_refresh_at(refresh) + 60)
+    assert next_day
+    # 解決之後不再觸發
+    done = cleared.model_copy(update={"finished_skeletons": ("granny_past",)})
+    _, finished = _talk_granny(library, done, next_refresh_at(refresh) + 60)
+    assert not finished
+    # 不是信賴（說不出祕密）不觸發
+    cold = cleared.model_copy(update={"affinity": {"granny_du": 30}})
+    _, not_trusted = _talk_granny(library, cold, next_refresh_at(refresh) + 60)
+    assert not not_trusted
+
+
 def test_abandoning_is_not_resolving(library: ContentLibrary, make_char: MakeChar) -> None:
     """放棄不算解決（代決 5B4c-9）：之後照一般擲骰還會出現；失敗只記失敗那天（5B-4d）。"""
     char = make_char(unlocked_skeletons=("granny_past",))
