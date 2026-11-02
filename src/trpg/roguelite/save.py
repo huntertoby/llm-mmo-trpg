@@ -78,6 +78,7 @@ __all__ = [
     "convert_raw_run",
     "default_save_dir",
     "dumps_save",
+    "fill_resource_base",
     "load_save",
     "load_save_noted",
     "loads_save",
@@ -213,13 +214,39 @@ def loads_save_noted(text: str) -> tuple[RunSave, str | None]:
 
 
 def upgrade_save(library: ContentLibrary, save: RunSave) -> RunSave:
-    """舊存檔轉換（Phase 3W-9）：``run.skill_tier`` 為空（``/10`` 以前）而且不在戰鬥中時，主角的
-    每招技能照角色目前的階級重配（:func:`trpg.roguelite.retier.sync_skill_tier`；手寫技能變成
-    ``<原 ID>_t<階級>`` 的生成技能）。戰鬥中的存檔不動（重播要用存檔當時的技能），那場打完後的下一個
-    節點再重配。已經是新格式時原樣回傳。"""
-    if save.run.skill_tier is not None or save.battle is not None:
-        return save
-    return save.model_copy(update={"run": sync_skill_tier(library, save.run)})
+    """舊存檔轉換。
+
+    - Phase 3W-9：``run.skill_tier`` 為空（``/10`` 以前）而且不在戰鬥中時，主角的每招技能照角色目前
+      的階級重配（:func:`trpg.roguelite.retier.sync_skill_tier`；手寫技能變成 ``<原 ID>_t<階級>``
+      的生成技能）。戰鬥中的存檔不動（重播要用存檔當時的技能），那場打完後的下一個節點再重配。
+    - BAL-15c：主角範本沒寫法力／耐力基礎（BAL-15b 以前的 build 開局存檔）時，依武器大類補上
+      （:func:`fill_resource_base`），讓一輪狀態的上限和戰鬥中一致。戰鬥中的存檔也補：戰鬥中的單位
+      本來就依武器大類，補上同樣的值不影響重播。
+
+    已經是新格式時原樣回傳。"""
+    run = fill_resource_base(library, save.run)
+    if run.skill_tier is None and save.battle is None:
+        run = sync_skill_tier(library, run)
+    return save if run is save.run else save.model_copy(update={"run": run})
+
+
+def fill_resource_base(library: ContentLibrary, run: RunState) -> RunState:
+    """主角範本沒寫 ``max_mana``／``stamina`` 時，依武器大類補上基礎（BAL-15c；和戰鬥中的單位同一個
+    來源 :meth:`~trpg.content.rules.CoreRules.template_base_resource`）。目前耐力、法力不動
+    （戰鬥開場本來就會降到戰鬥中的上限，見 :func:`trpg.engine.battle.begin_battle`）。
+    都有寫時原樣回傳。"""
+    hero = run.hero
+    if hero.max_mana is not None and hero.stamina is not None:
+        return run
+    core = library.ruleset.core
+    wclass = library.weapons[hero.weapon].weapon_class
+    hero = hero.model_copy(
+        update={
+            "max_mana": core.template_base_resource("mana", hero, wclass),
+            "stamina": core.template_base_resource("stamina", hero, wclass),
+        }
+    )
+    return run.model_copy(update={"hero": hero})
 
 
 def save_path(save_dir: Path, run_id: str) -> Path:

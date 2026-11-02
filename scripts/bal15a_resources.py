@@ -20,6 +20,11 @@
 - ``b14=<enemy|companion|summon|all，逗號>``：該類單位改用主角的上限公式（範本 ``scaled_resources`` ＝ 真，
   上限含屬性加成與法力 ×mcap，耐力每回合 +sreg）；
 - ``b14cap=<同上>``：只改上限（公式算出的固定值，沒有耐力回復），用來分開「上限」與「回復」兩個效果。
+- ``blockon``（BAL-15c）：裝了反應技的 build 英雄改寫明預設反應規則（格擋照舊自動），重現 #83 之前的行為；
+- ``riposte``（BAL-15c）：近戰武器的 build 英雄帶「還擊」（``skill_riposte``，取代原本的反應技），量還擊的觸發次數。
+
+每個樣本另記英雄的反應（BAL-15c）：``hero_block``（格擋）、``hero_counter``（還擊類：``hit_by_melee``／
+``hit_by_attack``／``hit_by_spell`` 的反應技與拳套反擊）、``hero_react_skill``（所有反應技）。
 
 BAL-15b 起 content 已是敵我同一套公式（引擎不再看 ``scaled_resources``），``b14``／``b14cap``／``classbase``
 的覆寫不再有作用，只保留讓 BAL-15a 的指令能照跑。
@@ -42,7 +47,7 @@ from typing import Any
 
 from trpg.cli.sim import default_sim_maps
 from trpg.content.library import ContentLibrary, load_library
-from trpg.engine.events import SkillTriggered, SkillUsed, TurnStarted
+from trpg.engine.events import ReactionTriggered, SkillTriggered, SkillUsed, TurnStarted
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import run_battle
 from trpg.engine.setup import BattleSetup, build_setup
@@ -59,6 +64,9 @@ BOSS_MAP = "bandit_lair"
 CASTERS_EXTRA = ("build_summon_swarm", "build_summon_elite")
 _MANA = "法力不足"
 _STAMINA = "耐力不足"
+_LATE = ("b14", "b14cap", "riposte", "blockon")
+"""最後處理的覆寫（b14 要用到改完的公式；blockon 要看到 riposte 加上的技能）。"""
+_COUNTER_EVENTS = frozenset({"hit_by_melee", "hit_by_attack", "hit_by_spell"})
 
 
 # --------------------------------------------------------------------------- 覆寫
@@ -117,6 +125,33 @@ def _class_bases(library: ContentLibrary, units: dict[str, Any]) -> None:
         units[b.id] = units[b.id].model_copy(update={"max_mana": h.max_mana, "stamina": h.stamina})
 
 
+def _add_riposte(library: ContentLibrary, units: dict[str, Any]) -> None:
+    rules = library.ruleset
+    for b in library.builds.builds:
+        hero = units[b.id]
+        if not library.weapons[b.hero.weapon].is_melee or "skill_riposte" in hero.skills:
+            continue
+        # 反應技欄位上限 1：換掉原本的反應技
+        kept = tuple(s for s in hero.skills if rules.skill_def(s).kind != "reaction")
+        units[b.id] = hero.model_copy(update={"skills": (*kept, "skill_riposte")})
+
+
+def _reaction_variants(library: ContentLibrary, units: dict[str, Any], parts: list[str]) -> None:
+    if "riposte" in parts:
+        _add_riposte(library, units)
+    if "blockon" in parts:  # 在 riposte 之後（要看到加上的技能）
+        _block_on(library, units)
+
+
+def _block_on(library: ContentLibrary, units: dict[str, Any]) -> None:
+    rules = library.ruleset
+    for b in library.builds.builds:
+        hero = units[b.id]
+        has = any(rules.skill_def(s).kind == "reaction" for s in hero.skills)
+        if has and hero.reactions is None and not library.weapons[hero.weapon].counter:
+            units[b.id] = hero.model_copy(update={"reactions": rules.reactions.default_rules})
+
+
 def apply_variant(library: ContentLibrary, spec: str) -> ContentLibrary:
     """套用一組覆寫（``+`` 串接）；``base`` ＝ 原物件。"""
     if spec == "base":
@@ -145,7 +180,7 @@ def apply_variant(library: ContentLibrary, spec: str) -> ContentLibrary:
             skills_changed = True
         elif key == "classbase":
             _class_bases(library, units)
-        elif key not in ("b14", "b14cap"):  # b14 最後處理（要用到上面改完的公式）
+        elif key not in _LATE:  # b14 最後處理（要用到上面改完的公式）
             raise ValueError(f"未知覆寫：{part}")
     new_res = res.model_copy(update=res_up) if res_up else res
     new_core = core.model_copy(update={**core_up, "resources": new_res})
@@ -156,6 +191,7 @@ def apply_variant(library: ContentLibrary, spec: str) -> ContentLibrary:
         )
         new_ruleset = new_ruleset.model_copy(update={"skills": table})
     new_ruleset.model_post_init(None)
+    _reaction_variants(library, units, spec.split("+"))
     lib = dataclasses.replace(library, skills=skills, ruleset=new_ruleset, units=units)
     for part in spec.split("+"):
         key, _, val = part.partition("=")
@@ -193,6 +229,9 @@ class Sample:
     stam_max: int = 0
     hp_left_pm: int = 0
     enemy_skill_uses: int = 0
+    hero_block: int = 0
+    hero_counter: int = 0
+    hero_react_skill: int = 0
 
 
 def _hero(state: BattleState, build: str) -> UnitState | None:
@@ -219,6 +258,8 @@ class Tracker:
             self.s.stam_spent += max(0, self.prev_stam - hero.stamina)
         self.prev_mana, self.prev_stam = hero.mana, hero.stamina
         for event in result.events:
+            if isinstance(event, ReactionTriggered) and event.unit_id == hero.id:
+                self._reaction(state, event.reaction)
             if isinstance(event, SkillUsed | SkillTriggered):
                 unit = state.units.get(event.unit_id)
                 if unit is not None and unit.team is Team.ENEMY and not unit.is_summon:
@@ -228,6 +269,21 @@ class Tracker:
                     continue
                 self.seen.add(state.round)
                 self._turn(state, hero)
+
+    def _reaction(self, state: BattleState, reaction: str) -> None:
+        if reaction == "block":
+            self.s.hero_block += 1
+            return
+        if reaction == "counter_attack":
+            self.s.hero_counter += 1
+            return
+        try:
+            skill = state.ruleset.skill_def(reaction)
+        except KeyError:  # 其他內建反應（藉機攻擊、監視射擊、替隊友承受）
+            return
+        if skill.kind == "reaction" and skill.reaction is not None:
+            self.s.hero_react_skill += 1
+            self.s.hero_counter += skill.reaction.event in _COUNTER_EVENTS
 
     def _turn(self, state: BattleState, hero: UnitState) -> None:
         mana_any = stam_any = False

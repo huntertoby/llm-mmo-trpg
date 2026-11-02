@@ -9,7 +9,6 @@ weapon: bow
 resist: {}
 element_mods: {}
 tags: [hero]
-max_mana: 24
 skills: [skill_overwatch, skill_piercing_shot, skill_grapple_arrow]
 equipment:
   head: item_g3b_sniper_helm

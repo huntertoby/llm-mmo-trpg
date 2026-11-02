@@ -81,3 +81,64 @@ ruff check、ruff format --check、mypy、lint-imports 通過；相關 pytest：
 4. **原型數值**：召喚物的基礎依「召喚物自己武器」的大類（靈類是法器 → 耐力基礎 20，比原本固定 30 低）；要不要改依施放者的武器大類。召喚物目前沒有技能，只影響格擋。
 5. **相容**：舊的 build 開局存檔（主角範本沒寫耐力）在一輪狀態裡仍以 `default_stamina` 30 當基礎，戰鬥中則依武器大類；只影響舊存檔，未做遷移（存檔版本不變）。
 6. 欄位改名 `ally_mana_cost_permille` → `mana_cost_permille`（content 與 `CoreRules`）；`scripts/bal15a_resources.py` 的 `mcost`／`b14`／`classbase` 覆寫在新 content 下無作用或已是現況（腳本仍可跑）。
+
+## BAL-15c｜BAL-15b 收尾（玩法決定 #83、#84）
+
+規格：`docs/phases/PhaseBAL計畫.md` 第 10 節「BAL-15c」「BAL-15c 追加」。設計：05 5.2.1（#83）、07 7.2（#80、#84）。
+
+### 做了什麼
+
+1. **AI 單位帶反應技不放預設格擋**、4. **玩家角色也一樣（#83）**：`engine/lifecycle.py` 的 `make_unit`——範本沒寫反應規則（用預設規則）而裝了反應技（`kind: reaction`）時，預設格擋改成 `off`（新函式 `default_block_off`、`has_reaction_skill`；拳套反擊的既有做法改呼叫同一個函式）。敵人、隊友、召喚物、主角一律適用。範本有手寫反應規則的（盜賊盾衛等）不動。`sim_duelist` 拿掉 BAL-15b 手寫的反應規則，改回預設規則由引擎處理（結果相同）。
+   - 玩家改回格擋優先：既有的反應設定面板（`client/src/ui/ReactionPanel.tsx`）每條規則已有「自動／詢問／關閉」，格擋規則仍列在面板上（模式為關閉），切回「自動」即可；格擋在傷害前結算，所以切回後就是格擋優先。**前端不需改動**（未改 client，未跑 vitest／build）。新增測試 `tests/engine/test_reaction_defaults_bal15c.py` 驗證切回後格擋先用掉反應、還擊不觸發。
+2. **示範／測試單位法力依武器大類**：`hero_archer`、`hero_fighter`、`hero_mage`、`hero_stormcaller`、`variant_slinger`／`tidecaller`／`vanguard`、`gear_tester`、`_g2`、`_g3a`、`_g3b`、`_g3b_sentinel`、`sim_duelist` 刪掉 `max_mana`（耐力本來就沒寫）。實際數值只有弓類（`hero_archer`、`variant_slinger`、`gear_tester_g3b_sentinel`）基礎 24 → 20，其他和大類相同。需要特定法力的測試原本就在 fixture 寫 `max_mana=99` 等覆寫，不需新增。`training_dummy` 的耐力 0 是木樁特性，保留。
+3. **一輪狀態的耐力基礎對齊**：新的一輪（build 開局、武器＋關鍵字開局）本來就把基礎寫進主角範本；只有 BAL-15b 以前的 build 開局存檔沒寫。`roguelite/save.py` 新增 `fill_resource_base`，`upgrade_save`（API 與 CLI 讀檔時都會呼叫）依武器大類補上法力／耐力基礎，一輪狀態的上限從此和戰鬥中一致。存檔結構沒變，**存檔版本不變**（`trpg-run/13`）；目前法力／耐力值不動（戰鬥開場本來就會降到戰鬥中的上限）。
+5. **#84 確認**：程式與 07 7.2 一致——敵人、隊友、召喚物由 `make_unit` 建立時法力＝上限；只有主角的出場設定帶一輪的目前法力。加回歸測試（`tests/roguelite/test_resources_bal15c.py`：主角法力 0 開戰仍是 0，其他單位全滿；`test_reaction_defaults_bal15c.py`：召喚物開場滿）。行為未改。
+
+另：`scripts/bal15a_resources.py` 每個樣本多記英雄的格擋、還擊類（`hit_by_melee`／`hit_by_attack`／`hit_by_spell` 的反應技與拳套反擊）、反應技次數；新覆寫 `blockon`（重現 #83 之前）與 `riposte`（近戰 build 英雄的反應技換成「還擊」）。
+
+### 量測（`measure --builds named --chain-seeds 0 --jobs 6`）
+
+**現況 vs. 改動前**（`--variants base,blockon --normal-seeds 6 --boss-seeds 30`，535 秒；27 build，一般 n=1620、Boss n=810）
+
+| 指標 | 改動前（blockon） | BAL-15c |
+|---|---|---|
+| 27 build 一般戰勝率／輪數 | 61.9%／5.14 | 60.4%／5.12 |
+| 27 build Boss 勝率／輪數 | 35.7%／7.67 | 35.8%／7.58 |
+| 帶反應技的 8 build 一般戰勝率（n=480） | 52.1% | 47.7% |
+| 帶反應技的 8 build Boss 勝率（n=240） | 15.8% | 16.2% |
+| 8 build 英雄格擋／場（一般） | 1.06 | 0 |
+| 8 build 反應技觸發／場（一般／Boss） | 0.69／0.69 | 0.84／0.84 |
+| 還擊類觸發總數（一般／Boss；只有 `build_support` 的反射護幕） | 122／58 | 184／82 |
+
+（改動前一欄與 BAL-15b 報告的 61.9%／35.7% 相同，量測可重現。）整體勝率在雜訊內（一般 ±2.4、Boss ±3.4 點）；帶反應技的 build 一般戰 −4.4 點，約 1.9 個標準誤，接近但未超出雜訊。
+
+**還擊**（`--variants riposte,riposte+blockon --normal-seeds 3 --boss-seeds 10`，241 秒；7 個近戰 build 換上「還擊」）
+
+| 指標 | 格擋優先（舊預設） | 反應技優先（BAL-15c） |
+|---|---|---|
+| 「還擊」觸發／場（一般，n≈235） | 0.46 | **1.51** |
+| 「還擊」觸發／場（Boss，n=79） | 0.59 | **1.51** |
+| 近戰 build 一般戰勝率 | 41.3% | 45.8% |
+| 近戰 build Boss 勝率 | 20.3% | 12.7% |
+
+還擊有觸發（每場約 1.5 次，是舊預設的 2.5～3 倍）。Boss 戰近戰 build 勝率下降 7.6 點（n=79，約 1.6 個標準誤）。
+
+### 快照、版本與測試變動
+
+- **`LOG_FORMAT` `/95` → `/96`**：`runner.py` 文件字串、`docs/phases/戰鬥紀錄格式變更.md` 加一條、所有測試字面值（含 `tests/roguelite/fixtures/flash_history_3wr1.json`、`endswith("/95")` 三處）。
+- **存檔版本不變**（`trpg-run/13`）。
+- **CLI 輸出快照**：9 筆中 3 筆重產（`battle_bridge_guardian_11`、`battle_default_flat_42`、`battle_frozen_lake_push_3`）。
+- **行為快照 `refactor_3wr2.json`、client fixture**：沒有變。
+- **重挑種子**（斷言不改）：`test_displace_ai` 虛空互換 18 → 17；`test_gamble` 30 → 20；`test_reaction_events_3d3` build_tank／swamp 0 → 1；`test_scene_ai` 推倒石柱 1 → 2；`test_skill_shaping` build_tank 0 → 1（參數化多加種子欄，build_healer 仍為 0）。
+
+### 檢查
+
+ruff check、ruff format --check、mypy、lint-imports 通過；相關 pytest：`tests/engine`、`tests/content`、`tests/roguelite`、`tests/test_architecture.py`、`tests/sim`、`tests/api`、`tests/narrative`、`tests/skillgen`、`tests/cli`（含 slow）全部通過；重播 `trpg battle --map swamp --seed 7` → `battle replay` 驗證通過。未跑完整 `scripts/check.py`。
+
+### 待 PM 決定
+
+1. **規則範圍（#83）**：目前「反應技」指所有 `kind: reaction` 的技能（包括不和格擋搶時機的斷後斬、迎頭痛擊、悲憤、掩護射擊、挺身而出等）；照字面做。若只想針對「被打時」的還擊類（`hit_by_*`），需玩法 PM 決定。
+2. **手寫反應規則的單位**：範本有寫反應規則（如盜賊盾衛）時不套用 #83（最保守）；目前沒有這種單位帶反應技。
+3. **平衡**：還擊在 Boss 戰的近戰 build 勝率 20.3% → 12.7%（樣本小，n=79）；帶反應技的 8 build 一般戰 52.1% → 47.7%。是否需要補償（例如格擋與反應技分開計次）待玩法 PM。
+4. **反應設定不跨場保存**：玩家改回格擋優先只在當場有效（和拳套反擊既有行為相同），下一場又回到反應技優先；要不要存進一輪狀態待決（會改存檔結構）。
+5. **舊存檔目前資源值**：`fill_resource_base` 只補基礎，不調整存檔裡的目前法力／耐力（戰鬥開場會降到上限；法器主角的耐力上限變低、近戰變高，營火回滿後一致）。
