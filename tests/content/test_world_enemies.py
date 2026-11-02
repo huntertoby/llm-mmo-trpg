@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_enemies import (
     EliteAffixDef,
@@ -89,8 +90,6 @@ def test_apply_variant(library: ContentLibrary) -> None:
 
 
 def test_apply_variant_swaps_reaction_rule() -> None:
-    from trpg.content.battle import UnitTemplate
-
     base = UnitTemplate.model_validate(
         {
             "id": "base_unit",
@@ -146,8 +145,6 @@ def test_apply_affix_expands_default_reactions(library: ContentLibrary) -> None:
 
 
 def test_apply_affix_hp_floor() -> None:
-    from trpg.content.battle import UnitTemplate
-
     tiny = UnitTemplate.model_validate(
         {
             "id": "tiny",
@@ -302,7 +299,7 @@ def test_variant_breaking_unit_rules_is_rejected(tmp_path: Path, library: Conten
         "weapon: lightning_staff\n    skill_swaps: {skill_frost_shackle: skill_high_ground_shot}",
     )
     path.write_text(text, encoding="utf-8", newline="\n")
-    with pytest.raises(ContentError, match="enemies.yaml"):
+    with pytest.raises(ContentError, match=r"enemies\.yaml"):
         load_library(content)
 
 
