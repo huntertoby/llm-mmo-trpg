@@ -11,11 +11,12 @@ from trpg.roguelite import RunState, auto_play, new_run
 
 __all__ = ["VICTORY", "full_library", "full_run", "library"]
 
-VICTORY = ("build_fire", 2)
+VICTORY = ("build_fire", 1)
 """AI 代打會打完整輪（含兩次營火與 Boss）的 build 與種子（目前內容與數值下）。
 
 3-33e1 技能池多了 6 招召喚技，原種子 1 不再勝利，改 6。3W-5 改成靈感點與閃現後種子 6 輸掉 Boss 戰，
-改 2（種子 0～11 中勝利的有 1、2、7）。
+改 2（種子 0～11 中勝利的有 1、2、7）。BAL-17 雙屬性武器改了候選的偏離判定與取法後，種子 2 輸掉，
+改 1（種子 0～11 中勝利的有 0、1、3、4、6、10）。
 """
 
 

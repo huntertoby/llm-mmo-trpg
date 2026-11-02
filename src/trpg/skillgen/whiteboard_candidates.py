@@ -201,23 +201,24 @@ def generate_whiteboard_candidates(
     found: list[Candidate | None] = []
 
     rng = Rng(request.seed).fork("deepen")
-    hit = _first(maker, rng, "deepen", held) if held else None
-    if hit is None:
-        hit = _first(maker, rng, "deepen", _weighted_order(rng, unheld, behavior))
-        found.append(None if hit is None else Candidate("deepen", (hit[0],), hit[1], hit[2], True))
-    else:
-        found.append(Candidate("deepen", (hit[0],), hit[1], hit[2], hit[0] != held[0]))
+    # BAL-17：持有的與還沒有的關鍵字合成一串，先換關鍵字找同路線的，都沒有才放寬屬性
+    hit = _first(maker, rng, "deepen", [*held, *_weighted_order(rng, unheld, behavior)])
+    found.append(
+        None
+        if hit is None
+        else Candidate("deepen", (hit[0],), hit[1], hit[2], not held or hit[0] != held[0])
+    )
     deepened = () if found[0] is None else found[0].keywords
 
     rng = Rng(request.seed).fork("bridge")
     others = [k for k in held if k not in deepened]
-    hit = _first(maker, rng, "bridge", others)
     outward = [k for k in _weighted_order(rng, unheld, behavior) if k not in deepened]
-    if hit is not None:
-        found.append(Candidate("bridge", (hit[0],), hit[1], hit[2]))
-    else:
-        hit = _first(maker, rng, "bridge", outward)
-        found.append(None if hit is None else Candidate("bridge", (hit[0],), hit[1], hit[2], True))
+    hit = _first(maker, rng, "bridge", [*others, *outward])
+    found.append(
+        None
+        if hit is None
+        else Candidate("bridge", (hit[0],), hit[1], hit[2], hit[0] not in others)
+    )
     taken_keywords = set(deepened) | (set() if found[1] is None else set(found[1].keywords))
 
     found.append(
