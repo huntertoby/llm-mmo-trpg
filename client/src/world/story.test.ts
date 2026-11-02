@@ -14,8 +14,10 @@ import {
   lengthLabel,
   PLAYER_TEXT_MAX,
   questBadge,
+  solutionClick,
   solutionHint,
   solutionLabel,
+  waiveLabel,
   sortQuests,
   stepMark,
   toggleCite,
@@ -31,6 +33,10 @@ function solution(over: Partial<WorldEventSolution> = {}): WorldEventSolution {
     template: "peddler_safe_path",
     available: true,
     unavailable_zh: null,
+    cost_supplies: 0,
+    can_pay: true,
+    waive_thread: null,
+    waive_zh: null,
     ...over,
   };
 }
@@ -80,6 +86,21 @@ describe("解法按鈕", () => {
     const later = solution({ kind: "combat", kind_zh: "戰鬥", note_zh: "", attributes_zh: "", template: null, available: false, unavailable_zh: "之後開放" });
     expect(solutionLabel(later)).toBe("戰鬥");
     expect(solutionHint(later)).toBe("之後開放");
+    const parley = solution({ kind: "parley", kind_zh: "交涉", note_zh: "付錢", attributes_zh: "", template: null, cost_supplies: 2 });
+    expect(solutionLabel(parley)).toBe("交涉：付錢（付出 2 補給）");
+    expect(solutionHint(parley)).toContain("一定成功");
+    expect(solutionHint(solution({ kind: "combat", template: null }))).toContain("一般戰鬥");
+    expect(solutionHint(solution({ kind: "abandon", template: null }))).toContain("不留懲罰");
+  });
+
+  it("解法按鈕送什麼、用線頭抵的按鈕", () => {
+    expect(solutionClick(solution())).toEqual({ kind: "open", template: "peddler_safe_path" });
+    expect(solutionClick(solution({ kind: "parley", index: 2, template: null }))).toEqual({ kind: "solve", solution: 2 });
+    expect(solutionClick(solution({ kind: "combat", index: 0, template: null }))).toEqual({ kind: "solve", solution: 0 });
+    expect(solutionClick(solution({ kind: "abandon", index: 3, template: null }))).toEqual({ kind: "solve", solution: 3 });
+    expect(solutionClick(solution({ kind: "opportunity", template: null }))).toBeNull();
+    expect(waiveLabel(solution())).toBeNull();
+    expect(waiveLabel(solution({ kind: "parley", waive_thread: "peddler_owes_you", waive_zh: "商人欠你人情" }))).toBe("用〔商人欠你人情〕抵");
   });
 });
 

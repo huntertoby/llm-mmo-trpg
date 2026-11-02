@@ -22,12 +22,13 @@ from trpg.world.save import loads_char, loads_log, loads_world
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = NOON
+class FixedClock:
+    """永遠回傳同一個時間：不隨呼叫次數前進，結果只由賽季種子與動作決定（5B-5b）。"""
+
+    def __init__(self, now: int = NOON) -> None:
+        self.now = now
 
     def __call__(self) -> int:
-        self.now += 7
         return self.now
 
 
@@ -47,7 +48,7 @@ def _client(library: ContentLibrary, saves: Path) -> TestClient:
     app = create_app(library, save_dir=saves)
     store = app.state.world
     assert isinstance(store, WorldStore)
-    store.clock = Clock()
+    store.clock = FixedClock()
     return TestClient(app)
 
 

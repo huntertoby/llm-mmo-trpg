@@ -5584,6 +5584,38 @@
               }
             ],
             "title": "Unavailable Zh"
+          },
+          "cost_supplies": {
+            "type": "integer",
+            "title": "Cost Supplies",
+            "default": 0
+          },
+          "can_pay": {
+            "type": "boolean",
+            "title": "Can Pay",
+            "default": true
+          },
+          "waive_thread": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waive Thread"
+          },
+          "waive_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waive Zh"
           }
         },
         "additionalProperties": false,
@@ -5598,6 +5630,40 @@
           "available"
         ],
         "title": "EventSolutionView"
+      },
+      "EventSolveAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "event_solve",
+            "title": "Kind",
+            "default": "event_solve"
+          },
+          "solution": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Solution"
+          },
+          "use_thread": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Thread"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "solution"
+        ],
+        "title": "EventSolveAction",
+        "description": "用放棄、交涉或戰鬥解法處理身上的事件（Phase 5B-4b；9.6.7 #6）。``solution`` 是骨架\n``solutions`` 的索引；``use_thread`` 是交涉時拿來抵掉付出的線頭（例：用人情代替青竹節）。"
       },
       "EventView": {
         "properties": {
@@ -16261,6 +16327,9 @@
           },
           {
             "$ref": "#/components/schemas/TavernAction"
+          },
+          {
+            "$ref": "#/components/schemas/EventSolveAction"
           }
         ],
         "discriminator": {
@@ -16270,6 +16339,7 @@
             "allocate": "#/components/schemas/AllocateAction",
             "camp": "#/components/schemas/CampAction",
             "dissolve": "#/components/schemas/DissolveAction",
+            "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
             "inherit": "#/components/schemas/InheritAction",

@@ -30,7 +30,7 @@ from trpg.api.world_story_schemas import (
     ThreadView,
 )
 from trpg.content.library import ContentLibrary
-from trpg.content.world_events import EventSkeletonDef, ThreadDef
+from trpg.content.world_events import EventSkeletonDef, SolutionDef, ThreadDef
 from trpg.content.world_narration import StoryText, mask_text
 from trpg.content.world_quests import AffinityRank, QuestDef
 from trpg.content.world_situations import Outcome, SituationTemplateDef
@@ -57,7 +57,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.affinity import affinity_of, affinity_rules, rank_of, social_of
-from trpg.world.common import world_map_of
+from trpg.world.common import here, world_map_of
 from trpg.world.growth import as_run, at_service, skill_seed, world_library
 from trpg.world.narration import region_npcs, region_skeletons, story_masks
 from trpg.world.quests import condition_holds, quest_table
@@ -184,10 +184,56 @@ def _busy_zh(char: CharacterState) -> str | None:
     return None
 
 
+def _can_fight_here(library: ContentLibrary, char: CharacterState) -> bool:
+    """所在地點能開一般遭遇（同 ``trpg.world.solutions`` 戰鬥解法的前提）。"""
+    place = here(library, char)
+    table = library.world_encounters.get(char.region)
+    return place.level_max is not None and table is not None and place.id in table.location_by_id()
+
+
+def _held_thread(char: CharacterState, thread: str | None, now: int) -> ThreadState | None:
+    if thread is None:
+        return None
+    return next((t for t in char.threads if t.thread == thread and t.expires_at > now), None)
+
+
+def _solution_problem(
+    library: ContentLibrary,
+    char: CharacterState,
+    solution: SolutionDef,
+    *,
+    has_template: bool,
+    busy: str | None,
+    waivable: bool,
+) -> str | None:
+    if solution.kind == "situation":
+        return busy if has_template else LATER_ZH
+    if solution.kind == "opportunity":
+        return LATER_ZH
+    if busy is not None:
+        return busy
+    if solution.kind == "combat" and not _can_fight_here(library, char):
+        return "這裡打不起來"
+    if solution.kind == "parley" and not waivable and char.supplies < solution.cost_supplies:
+        return f"補給不足（要 {solution.cost_supplies}）"
+    return None
+
+
 def _solutions(
-    library: ContentLibrary, char: CharacterState, skeleton: EventSkeletonDef, *, in_battle: bool
+    library: ContentLibrary,
+    char: CharacterState,
+    skeleton: EventSkeletonDef,
+    *,
+    in_battle: bool,
+    now: int,
+    masks: Mapping[str, str],
 ) -> tuple[EventSolutionView, ...]:
-    busy = "戰鬥進行中" if in_battle else _busy_zh(char)
+    pending = char.pending_event
+    if in_battle or (pending is not None and pending.combat_solution is not None):
+        busy: str | None = "戰鬥中"
+    else:
+        busy = _busy_zh(char)
+    defs = _thread_defs(library)
     out: list[EventSolutionView] = []
     for index, solution in enumerate(skeleton.solutions):
         template = (
@@ -195,10 +241,18 @@ def _solutions(
             if solution.kind == "situation"
             else None
         )
-        if template is None:
-            problem: str | None = LATER_ZH
-        else:
-            problem = busy
+        held = _held_thread(char, solution.waive_thread, now) if solution.kind == "parley" else None
+        waive_def = (
+            defs.get(solution.waive_thread) if held is not None and solution.waive_thread else None
+        )
+        problem = _solution_problem(
+            library,
+            char,
+            solution,
+            has_template=template is not None,
+            busy=busy,
+            waivable=held is not None,
+        )
         attributes = template.attributes if template is not None else solution.attributes
         out.append(
             EventSolutionView(
@@ -210,6 +264,10 @@ def _solutions(
                 template=template.id if template is not None else None,
                 available=problem is None,
                 unavailable_zh=problem,
+                cost_supplies=solution.cost_supplies,
+                waive_thread=solution.waive_thread if held is not None else None,
+                waive_zh=(mask_text(waive_def.text_zh, masks) if waive_def is not None else None),
+                can_pay=char.supplies >= solution.cost_supplies,
             )
         )
     return tuple(out)
@@ -299,7 +357,7 @@ def event_view(
         obstacle_zh=mask_text(skeleton.obstacle_zh, masks),
         stakes_zh=mask_text(skeleton.stakes_zh, masks),
         follows_zh=follows,
-        solutions=_solutions(library, char, skeleton, in_battle=in_battle),
+        solutions=_solutions(library, char, skeleton, in_battle=in_battle, now=now, masks=masks),
         leave_zh=LEAVE_ZH,
         situation=(
             _situation_view(library, world, char, now=now, narration=situation, masks=masks)

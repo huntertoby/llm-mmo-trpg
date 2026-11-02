@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.test_world_api import Clock, _act, _create, _finish_battle, _ok
+from tests.api.test_world_api import FixedClock, _act, _create, _finish_battle, _ok
 from tests.world.helpers import NOON, with_rules
 from tests.world.test_oath import SAMPLE
 from trpg.api.app import create_app
@@ -42,7 +42,7 @@ def _client(library: ContentLibrary, saves: Path) -> TestClient:
     app = create_app(library, save_dir=saves)
     store = app.state.world
     assert isinstance(store, WorldStore)
-    store.clock = Clock()
+    store.clock = FixedClock()
     # 固定賽季種子，讓這個檔案的結果確定
     world = WorldState(season_id="s1", season_seed=SEASON_SEED, season_start=NOON)
     write_atomic(saves / "world" / "world.json", dumps_world(world))

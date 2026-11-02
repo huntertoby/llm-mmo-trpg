@@ -118,6 +118,14 @@ class EventSolutionView(_ApiModel):
     """情境判定的模板；其他解法為 ``None``。"""
     available: bool
     unavailable_zh: str | None = None
+    cost_supplies: int = 0
+    """交涉付出的補給（5B-5b）；其他解法為 0。"""
+    can_pay: bool = True
+    """補給付得起交涉（持有線頭時不付補給也能用）。"""
+    waive_thread: str | None = None
+    """持有且沒過期、可以抵掉付出的線頭 ID；沒有時為 ``None``。"""
+    waive_zh: str | None = None
+    """上述線頭的文字。"""
 
 
 class CiteFactView(_ApiModel):

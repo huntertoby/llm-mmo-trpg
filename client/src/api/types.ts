@@ -251,7 +251,9 @@ export type WorldAction =
   | Schemas["AcceptQuestAction"]
   | (Omit<Schemas["OfferPickAction"], "pick" | "replace"> & { pick?: number | null; replace?: string | null })
   | Schemas["TalkAction"]
-  | Schemas["TavernAction"];
+  | Schemas["TavernAction"]
+  // 5B-5b：放棄、交涉、戰鬥解法
+  | (Omit<Schemas["EventSolveAction"], "use_thread"> & { use_thread?: string | null });
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
