@@ -435,8 +435,24 @@ def _cell(a: dict[str, float]) -> str:
     return f"短缺{_pct(a['mshort'], a['turns'])}／勝{_pct(a['win'], a['n'])}／{a['rounds'] / a['n']:.1f}輪"
 
 
+def _beyond_chain(r: dict[str, Any], limit: int) -> bool:
+    kind = r["kind"]
+    if kind == "chain":
+        return bool(r["seed"] >= limit)
+    if kind.startswith("chain"):
+        return bool(r["seed"] - 1000 - (int(kind[5:]) - 1) >= limit)
+    return False
+
+
 def report(args: argparse.Namespace) -> int:
-    rows = json.loads(Path(args.inp).read_text(encoding="utf-8"))
+    rows = []
+    for inp in args.inp.split(","):
+        rows += json.loads(Path(inp).read_text(encoding="utf-8"))
+    if args.builds:
+        keep = set(args.builds.split(","))
+        rows = [r for r in rows if r["build"] in keep]
+    if args.chain_max:  # 只留前 N 條連戰（種子 < N），讓不同規模的檔案可比
+        rows = [r for r in rows if not _beyond_chain(r, args.chain_max)]
     by: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for r in rows:
         by[(r["variant"], r["build"], r["kind"])].append(r)
@@ -539,7 +555,9 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--out", required=True)
     m.set_defaults(fn=measure)
     r = sub.add_parser("report")
-    r.add_argument("--inp", required=True)
+    r.add_argument("--inp", required=True, help="逗號分隔多個 json，依序合併")
+    r.add_argument("--builds", default="", help="只列這些 build（逗號）")
+    r.add_argument("--chain-max", type=int, default=0, help="連戰只計前 N 條")
     r.add_argument("--out", default="")
     r.set_defaults(fn=report)
     s = sub.add_parser("static")
