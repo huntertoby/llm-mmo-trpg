@@ -41,7 +41,7 @@ DAY = 86_400
 WEEK = 7 * DAY
 LIU = "shopkeeper_liu"
 SHOP = "shop_liu"
-PILL = "item_spring_pill"
+PILL = "item_hp_potion_small"
 
 
 def _act(library: ContentLibrary, char: CharacterState, action: object, now: int = NOON):  # type: ignore[no-untyped-def]
@@ -63,17 +63,17 @@ def test_new_character_starts_with_rules_gold(make_char: MakeChar) -> None:
 
 
 def test_buy_spends_gold_and_fills_bag(library: ContentLibrary, make_char: MakeChar) -> None:
-    result = _act(library, _rich(make_char, 40), BuyAction(shop=SHOP, item=PILL, count=2))
+    result = _act(library, _rich(make_char, 50), BuyAction(shop=SHOP, item=PILL, count=2))
     char = result.char
     assert char.gold == 10 and char.bag == {PILL: 2}
     bought = next(e for e in result.events if isinstance(e, ItemBoughtEvent))
-    assert bought == ItemBoughtEvent(shop=SHOP, item=PILL, count=2, gold_spent=30, gold=10)
+    assert bought == ItemBoughtEvent(shop=SHOP, item=PILL, count=2, gold_spent=40, gold=10)
 
 
 def test_buy_problems(library: ContentLibrary, make_char: MakeChar) -> None:
     rich = _rich(make_char)
     with pytest.raises(WorldActionError, match="金幣不夠"):
-        _act(library, make_char(gold=14), BuyAction(shop=SHOP, item=PILL))
+        _act(library, make_char(gold=19), BuyAction(shop=SHOP, item=PILL))
     with pytest.raises(WorldActionError, match="不在這裡"):
         _act(
             library,
@@ -109,7 +109,7 @@ def test_friendly_gate(library: ContentLibrary, make_char: MakeChar) -> None:
 def test_weekly_specialty(library: ContentLibrary, make_char: MakeChar) -> None:
     world = make_world()
     limit = weekly_limit(library, world, "cloud_ridge", SHOP, "item_green_bamboo", now=NOON)
-    assert 2 <= limit <= 4
+    assert limit == 5  # 20.1：每週限購 5
     # 同一週任何時間相同、和角色無關
     assert (
         weekly_limit(library, world, "cloud_ridge", SHOP, "item_green_bamboo", now=NOON + 3 * DAY)
@@ -133,6 +133,23 @@ def test_weekly_specialty(library: ContentLibrary, make_char: MakeChar) -> None:
     # 其他角色同一週各自算
     other = _rich(make_char, 1000, character_id="bob")
     assert weekly_left(library, world, other, SHOP, "item_green_bamboo", now=NOON) == limit
+
+
+def test_neutral_gate(library: ContentLibrary, make_char: MakeChar) -> None:
+    cold = _rich(make_char, affinity={LIU: -10})  # 冷淡：中立門檻的中回復藥、青竹節不賣（20.1）
+    for item in ("item_hp_potion_medium", "item_green_bamboo"):
+        with pytest.raises(WorldActionError, match="中立才賣"):
+            _act(library, cold, BuyAction(shop=SHOP, item=item))
+    neutral = _act(library, _rich(make_char), BuyAction(shop=SHOP, item="item_hp_potion_medium"))
+    assert neutral.char.bag == {"item_hp_potion_medium": 1}
+
+
+def test_buy_supplies(library: ContentLibrary, make_char: MakeChar) -> None:
+    char = _rich(make_char, 100, supplies=5)
+    result = _act(library, char, BuyAction(shop=SHOP, item="item_supplies", count=3))
+    assert result.char.supplies == 8 and result.char.gold == 70 and result.char.bag == {}
+    with pytest.raises(WorldActionError, match="補給最多 10"):
+        _act(library, result.char, BuyAction(shop=SHOP, item="item_supplies", count=3))
 
 
 # ---------------------------------------------------------------------------
@@ -169,10 +186,10 @@ def test_shop_affinity_daily_cap(library: ContentLibrary, make_char: MakeChar) -
 def test_sell(library: ContentLibrary, make_char: MakeChar) -> None:
     char = make_char(bag={PILL: 3, "item_coarse_material": 1})
     result = _act(library, char, SellAction(shop=SHOP, item=PILL, count=2))
-    assert result.char.gold == 14 and result.char.bag == {PILL: 1, "item_coarse_material": 1}
-    assert any(isinstance(e, ItemSoldEvent) and e.gold_gained == 14 for e in result.events)
-    coarse = _act(library, char, SellAction(shop=SHOP, item="item_coarse_material")).char
-    assert coarse.gold == 2  # 5 × 50% 捨去
+    assert result.char.gold == 20 and result.char.bag == {PILL: 1, "item_coarse_material": 1}
+    assert any(isinstance(e, ItemSoldEvent) and e.gold_gained == 20 for e in result.events)
+    with pytest.raises(WorldActionError, match="不能賣"):  # 20.1：材料不能賣
+        _act(library, char, SellAction(shop=SHOP, item="item_coarse_material"))
     with pytest.raises(WorldActionError, match="只有"):
         _act(library, char, SellAction(shop=SHOP, item=PILL, count=4))
     pouch_only = make_char(pouch={PILL: 1})
@@ -208,20 +225,20 @@ def test_pouch(library: ContentLibrary, make_char: MakeChar) -> None:
 
 
 def test_use_item_in_field(library: ContentLibrary, make_char: MakeChar) -> None:
-    char = make_char(bag={PILL: 1, "item_focus_pill": 1}, pouch={PILL: 1})
+    char = make_char(bag={PILL: 1, "item_mana_potion": 1}, pouch={PILL: 1})
     top = max_hp(library, char)
     hurt = char.model_copy(update={"hp": 1, "location": "ferry_steps"})
     result = _act(library, hurt, UseItemAction(item=PILL))
-    assert result.char.hp == min(top, 1 + top * 300 // 1000)
-    assert result.char.bag == {"item_focus_pill": 1} and result.char.pouch == {PILL: 1}
+    assert result.char.hp == min(top, 1 + top * 200 // 1000)
+    assert result.char.bag == {"item_mana_potion": 1} and result.char.pouch == {PILL: 1}
     assert isinstance(result.events[0], ItemUsedEvent)
     again = _act(library, result.char, UseItemAction(item=PILL)).char
     assert again.pouch == {}  # 背包沒有就用腰包的
     with pytest.raises(WorldActionError, match="沒有效果"):
-        _act(library, char, UseItemAction(item="item_focus_pill"))  # 法力已滿
+        _act(library, char, UseItemAction(item="item_mana_potion"))  # 法力已滿
     low_mana = char.model_copy(update={"mana": 0})
-    used = _act(library, low_mana, UseItemAction(item="item_focus_pill")).char
-    assert used.mana == max(1, max_mana(library, char) * 300 // 1000)
+    used = _act(library, low_mana, UseItemAction(item="item_mana_potion")).char
+    assert used.mana == max(1, max_mana(library, char) * 250 // 1000)
     with pytest.raises(WorldActionError, match="不能在野外使用"):
         _act(
             library,

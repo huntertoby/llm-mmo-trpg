@@ -51,7 +51,7 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     assert view["inventory"]["slots_max"] == 30 and view["inventory"]["pouch_max"] == 3
     shop = view["shop"]
     assert shop["name_zh"] == "柳記雜貨" and shop["npc_name_zh"] == "柳掌櫃"
-    pill = _shop_item(view, "item_spring_pill")
+    pill = _shop_item(view, "item_antidote_herb")
     assert pill["price"] == 15 and pill["can_buy"] is False and "金幣不夠" in pill["problem_zh"]
     mist = _shop_item(view, "item_mist_flask")
     assert mist["locked"] is True and mist["lock_zh"] == "柳掌櫃好感度到友善才賣"
@@ -68,25 +68,25 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     assert after["shop"] is None  # 野外沒有店
 
     home = _act(client, cid, kind="travel", to="mist_ferry")
-    assert home["shop"] is not None and _shop_item(home, "item_spring_pill")["can_buy"] is True
-    bought = _act(client, cid, kind="buy", shop="shop_liu", item="item_spring_pill")
+    assert home["shop"] is not None and _shop_item(home, "item_antidote_herb")["can_buy"] is True
+    bought = _act(client, cid, kind="buy", shop="shop_liu", item="item_antidote_herb")
     assert bought["wallet"]["gold"] == 0
     assert [(b["item"], b["count"]) for b in bought["inventory"]["bag"]] == [
-        ("item_spring_pill", 1)
+        ("item_antidote_herb", 1)
     ]
     assert bought["inventory"]["slots_used"] == 1
-    assert any("買了回春丹 ×1" in e for e in bought["events"])
+    assert any("買了解毒草 ×1" in e for e in bought["events"])
     assert any("柳掌櫃的好感度" in e for e in bought["events"]), bought["events"]
     assert "今天還能 +2" in bought["shop"]["affinity_zh"]
 
-    pouched = _act(client, cid, kind="pouch", items={"item_spring_pill": 1})
+    pouched = _act(client, cid, kind="pouch", items={"item_antidote_herb": 1})
     inventory = pouched["inventory"]
     assert inventory["bag"] == [] and inventory["pouch_count"] == 1
     assert inventory["pouch"][0]["battle_zh"].startswith("放進腰包")
-    assert any("腰包：回春丹 ×1" in e for e in pouched["events"])
+    assert any("腰包：解毒草 ×1" in e for e in pouched["events"])
 
     emptied = _act(client, cid, kind="pouch", items={})
-    sold = _act(client, cid, kind="sell", shop="shop_liu", item="item_spring_pill")
+    sold = _act(client, cid, kind="sell", shop="shop_liu", item="item_antidote_herb")
     assert emptied["inventory"]["pouch"] == []
     assert sold["wallet"]["gold"] == 7 and sold["inventory"]["bag"] == []
 
@@ -96,6 +96,6 @@ def test_bad_economy_actions_are_rejected(client: TestClient) -> None:
     cid = view["character"]["character_id"]
     reply = client.post(
         f"/api/world/characters/{cid}/actions",
-        json={"kind": "buy", "shop": "shop_liu", "item": "item_spring_pill"},
+        json={"kind": "buy", "shop": "shop_liu", "item": "item_hp_potion_small"},
     )
     assert reply.status_code in (400, 409, 422) and "金幣不夠" in reply.text

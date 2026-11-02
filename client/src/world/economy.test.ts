@@ -14,6 +14,7 @@ function bag(item: string, name_zh: string, count: number, field = false): World
     count,
     description_zh: `${name_zh}的說明`,
     sell_price: 7,
+    sellable: true,
     field_usable: field,
     use_zh: field ? "HP +30%" : null,
     battle_zh: "放進腰包：戰鬥中花 1 AP 使用，每個用一次（不佔技能欄位）",
@@ -22,15 +23,15 @@ function bag(item: string, name_zh: string, count: number, field = false): World
 
 function inventory(overrides: Partial<WorldInventory> = {}): WorldInventory {
   return {
-    bag: [bag("item_spring_pill", "回春丹", 2, true)],
+    bag: [bag("item_hp_potion_small", "小回復藥", 2, true)],
     slots_used: 1,
     slots_max: 30,
-    pouch: [bag("item_oil_flask", "燈油瓶", 1)],
+    pouch: [bag("item_oil_flask", "油瓶", 1)],
     pouch_count: 1,
     pouch_max: 3,
     can_pouch: true,
     pouch_problem_zh: null,
-    consumables: [bag("item_oil_flask", "燈油瓶", 1), bag("item_spring_pill", "回春丹", 2, true)],
+    consumables: [bag("item_oil_flask", "油瓶", 1), bag("item_hp_potion_small", "小回復藥", 2, true)],
     ...overrides,
   };
 }
@@ -46,8 +47,8 @@ const SHOP: WorldShop = {
   trade_problem_zh: null,
   items: [
     {
-      item: "item_spring_pill",
-      name_zh: "回春丹",
+      item: "item_hp_potion_small",
+      name_zh: "小回復藥",
       kind_zh: "消耗品",
       description_zh: "回 HP",
       price: 15,
@@ -56,7 +57,7 @@ const SHOP: WorldShop = {
       locked: false,
       lock_zh: null,
       can_buy: false,
-      problem_zh: "金幣不夠（要 15，有 0）",
+      problem_zh: "金幣不夠（要 20，有 0）",
     },
     {
       item: "item_mist_flask",
@@ -102,15 +103,15 @@ describe("pouch draft", () => {
     const draft = pouchDraft(inv);
     expect(draft).toEqual({ item_oil_flask: 1 });
     expect(samePouch(draft, inv)).toBe(true);
-    const more = setDraft(draft, inv, "item_spring_pill", 5);
-    expect(more).toEqual({ item_oil_flask: 1, item_spring_pill: 2 }); // 只有 2 顆
+    const more = setDraft(draft, inv, "item_hp_potion_small", 5);
+    expect(more).toEqual({ item_oil_flask: 1, item_hp_potion_small: 2 }); // 只有 2 顆
     expect(draftCount(more)).toBe(3);
-    expect(setDraft(more, inv, "item_oil_flask", 3)).toEqual({ item_oil_flask: 1, item_spring_pill: 2 }); // 上限 3
-    expect(setDraft(more, inv, "item_oil_flask", 0)).toEqual({ item_spring_pill: 2 });
+    expect(setDraft(more, inv, "item_oil_flask", 3)).toEqual({ item_oil_flask: 1, item_hp_potion_small: 2 }); // 上限 3
+    expect(setDraft(more, inv, "item_oil_flask", 0)).toEqual({ item_hp_potion_small: 2 });
     expect(samePouch(more, inv)).toBe(false);
-    expect(pouchAction({ item_spring_pill: 2, item_oil_flask: 1 })).toEqual({
+    expect(pouchAction({ item_hp_potion_small: 2, item_oil_flask: 1 })).toEqual({
       kind: "pouch",
-      items: { item_oil_flask: 1, item_spring_pill: 2 },
+      items: { item_oil_flask: 1, item_hp_potion_small: 2 },
     });
   });
 });
@@ -123,9 +124,9 @@ describe("ShopPanel", () => {
     expect(html).toContain("本週剩 3 個");
     expect(html).toContain("柳掌櫃好感度到友善才賣");
     expect(html).toContain("今天還能 +4");
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*data-testid="world-buy-item_spring_pill"/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*data-testid="world-buy-item_hp_potion_small"/);
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*data-testid="world-buy-item_green_bamboo"/);
-    expect(html).toContain('data-testid="world-sell-item_spring_pill"'); // 背包裡的可以賣
+    expect(html).toContain('data-testid="world-sell-item_hp_potion_small"'); // 背包裡的可以賣
     expect(html).not.toContain("title="); // 說明用共用 Hint，不用原生 title
   });
 });
@@ -135,7 +136,7 @@ describe("InventoryPanel", () => {
     const html = renderToStaticMarkup(createElement(InventoryPanel, { inventory: inventory(), busy: false, onAct: noop, canUse: true }));
     expect(html).toContain("1／30 格");
     expect(html).toContain("1／3 個");
-    expect(html).toContain('data-testid="world-use-item_spring_pill"');
+    expect(html).toContain('data-testid="world-use-item_hp_potion_small"');
     expect(html).not.toContain('data-testid="world-use-item_oil_flask"'); // 投擲瓶野外不能用
     expect(html).toContain('data-testid="world-pouch-toggle"');
   });

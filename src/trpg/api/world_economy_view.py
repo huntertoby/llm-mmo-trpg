@@ -1,4 +1,4 @@
-"""大世界經濟的顯示資料（Phase 5D-1；``docs/phases/Phase5計畫.md`` 25.5）：金幣與任務幣、背包與
+"""大世界經濟的顯示資料（Phase 5D-1；``docs/phases/Phase5計畫.md`` 26.5）：金幣與任務幣、背包與
 腰包、這裡的店、事件句子。規則一律呼叫 :mod:`trpg.world.economy`，這裡只組裝文字。"""
 
 from __future__ import annotations
@@ -80,6 +80,7 @@ def _bag_item(library: ContentLibrary, item_id: str, count: int) -> BagItemView:
             count=count,
             description_zh="",
             sell_price=0,
+            sellable=False,
             field_usable=False,
         )
     return BagItemView(
@@ -88,7 +89,8 @@ def _bag_item(library: ContentLibrary, item_id: str, count: int) -> BagItemView:
         kind_zh=ITEM_KINDS[found.kind],
         count=count,
         description_zh=found.description_zh,
-        sell_price=rules.sell_price(found.price),
+        sell_price=rules.sell_price(found.price) if rules.sellable(found.kind) else 0,
+        sellable=rules.sellable(found.kind),
         field_usable=found.field_usable,
         use_zh=_use_zh(found),
         battle_zh=_battle_zh(found),
@@ -159,7 +161,7 @@ def shop_view(
     current = rank_of(library, char, shop.npc)
     items: list[ShopItemView] = []
     entries = [(s.item, s.rank, False) for s in shop.stock]
-    entries += [(w.item, None, True) for w in shop.weekly]
+    entries += [(w.item, w.rank, True) for w in shop.weekly]
     for item_id, rank, weekly in entries:
         found = _item(library, item_id)
         if found is None:

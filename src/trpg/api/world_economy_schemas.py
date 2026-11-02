@@ -1,4 +1,4 @@
-"""大世界經濟的 API 格式（Phase 5D-1；``docs/phases/Phase5計畫.md`` 25.5）。
+"""大世界經濟的 API 格式（Phase 5D-1；``docs/phases/Phase5計畫.md`` 26.5）。
 
 全部由後端算好（前端不寫規則）：金幣與任務幣、背包與腰包、這裡的店（價格、限量剩餘、門檻、能不能買
 與原因）。
@@ -35,7 +35,9 @@ class BagItemView(_ApiModel):
     count: int
     description_zh: str
     sell_price: int
-    """賣給商店一個的金幣（腰包裡的要先拿出來才能賣）。"""
+    """賣給商店一個的金幣（腰包裡的要先拿出來才能賣；不能賣為 0）。"""
+    sellable: bool = True
+    """商店收不收（20.1「材料不能賣」）。"""
     field_usable: bool
     """野外可以使用（藥水）。"""
     use_zh: str | None = None

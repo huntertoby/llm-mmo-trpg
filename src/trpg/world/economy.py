@@ -1,4 +1,4 @@
-"""貨幣、背包、腰包與商店（Phase 5D-1；``docs/phases/Phase5計畫.md`` 25.4）。
+"""貨幣、背包、腰包與商店（Phase 5D-1；``docs/phases/Phase5計畫.md`` 26.4）。
 
 - **金幣**（08 8.15）：打贏戰鬥（:func:`battle_gold`）、賣東西；買消耗品、粗料、染料。
 - **任務幣**：完成任務（:func:`after_step`）；朋友借用自己的影子時暫記在世界快照的影子紀錄，主人自己
@@ -20,7 +20,7 @@ from collections.abc import Iterable, Mapping
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.world_economy import EconomyRules, ShopDef, WorldItemDef
+from trpg.content.world_economy import ITEM_KINDS, EconomyRules, ShopDef, WorldItemDef
 from trpg.content.world_quests import AFFINITY_RANKS
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng, fnv1a64
@@ -214,27 +214,52 @@ def buy_problem(
     now: int,
 ) -> str | None:
     """不能買的原因（地點與遭遇另外檢查）；可以買時為 ``None``。"""
+    problem = _stock_problem(library, world, char, shop, item, count=count, now=now)
+    if problem is not None:
+        return problem
+    found = item_def(library, item)
+    cost = found.price * count
+    if char.gold < cost:
+        return f"金幣不夠（要 {cost}，有 {char.gold}）"
+    return _room_problem(library, char, found, count)
+
+
+def _stock_problem(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    shop: ShopDef,
+    item: str,
+    *,
+    count: int,
+    now: int,
+) -> str | None:
+    """店有沒有賣、好感度門檻（常駐與限購都看 ``rank``）、本週限購剩餘。"""
     stock = shop.stock_of(item)
     weekly = shop.weekly_of(item)
     if stock is None and weekly is None:
         return f"{shop.name_zh}不賣這個"
-    if (
-        stock is not None
-        and stock.rank is not None
-        and not rank_at_least(rank_of(library, char, shop.npc), stock.rank)
-    ):
-        name = affinity_rules(library).ranks[AFFINITY_RANKS.index(stock.rank)].name_zh
+    rank = stock.rank if stock is not None else weekly.rank if weekly is not None else None
+    if rank is not None and not rank_at_least(rank_of(library, char, shop.npc), rank):
+        name = affinity_rules(library).ranks[AFFINITY_RANKS.index(rank)].name_zh
         return f"店主好感度到{name}才賣"
     if weekly is not None:
         left = weekly_left(library, world, char, shop.id, item, now=now)
         if left < count:
             return "本週已經賣完了" if left == 0 else f"本週只剩 {left} 個"
-    found = item_def(library, item)
-    cost = found.price * count
-    if char.gold < cost:
-        return f"金幣不夠（要 {cost}，有 {char.gold}）"
-    bag = _with(char.bag, item, count)
-    used = bag_slots_used(library, bag)
+    return None
+
+
+def _room_problem(
+    library: ContentLibrary, char: CharacterState, item: WorldItemDef, count: int
+) -> str | None:
+    """放不放得下：補給看補給上限（20.1：直接加補給、不進背包），其他看背包格數。"""
+    if item.kind == "supply":
+        cap = library.world_rules.supplies.max if library.world_rules is not None else 0
+        if char.supplies + item.supplies * count > cap:
+            return f"補給最多 {cap}（現在 {char.supplies}）"
+        return None
+    used = bag_slots_used(library, _with(char.bag, item.id, count))
     if used > _rules(library).bag_slots:
         return "背包放不下"
     return None
@@ -273,11 +298,13 @@ def _buy(
     problem = buy_problem(library, world, char, shop, action.item, count=action.count, now=now)
     if problem is not None:
         raise WorldActionError(problem)
-    cost = item_def(library, action.item).price * action.count
-    update: dict[str, object] = {
-        "gold": char.gold - cost,
-        "bag": _with(char.bag, action.item, action.count),
-    }
+    found = item_def(library, action.item)
+    cost = found.price * action.count
+    update: dict[str, object] = {"gold": char.gold - cost}
+    if found.kind == "supply":  # 20.1：補給直接加在角色上（代決 5D1-7）
+        update["supplies"] = char.supplies + found.supplies * action.count
+    else:
+        update["bag"] = _with(char.bag, action.item, action.count)
     if shop.weekly_of(action.item) is not None:
         week = week_of(library, world, now)
         bought = _bought_this_week(char, shop.id, action.item, week) + action.count
@@ -310,7 +337,11 @@ def _sell(
     have = char.bag.get(action.item, 0)
     if have < action.count:
         raise WorldActionError(f"背包裡只有 {have} 個（腰包裡的要先拿出來）")
-    gained = _rules(library).sell_price(item_def(library, action.item).price) * action.count
+    found = item_def(library, action.item)
+    rules = _rules(library)
+    if not rules.sellable(found.kind):
+        raise WorldActionError(f"{found.name_zh}不能賣（{ITEM_KINDS[found.kind]}不收）")
+    gained = rules.sell_price(found.price) * action.count
     char = char.model_copy(
         update={"gold": char.gold + gained, "bag": _with(char.bag, action.item, -action.count)}
     )

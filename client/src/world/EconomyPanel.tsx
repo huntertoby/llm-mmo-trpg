@@ -16,7 +16,7 @@ function itemHint(item: { description_zh: string; battle_zh?: string | null }): 
 }
 
 export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: WorldShop; inventory: WorldInventory | null | undefined }) {
-  const sellable = inventory?.bag ?? [];
+  const sellable = (inventory?.bag ?? []).filter((item) => item.sellable !== false);
   return (
     <div className="world-shop" data-testid="world-shop">
       <div className="section-title small">
@@ -52,7 +52,7 @@ export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: W
       </ul>
       {sellable.length > 0 && (
         <>
-          <div className="section-title small">賣東西（腰包裡的要先拿出來）</div>
+          <div className="section-title small">賣東西（腰包裡的要先拿出來；材料不收）</div>
           <ul className="world-shop-list small">
             {sellable.map((item) => (
               <li key={item.item}>

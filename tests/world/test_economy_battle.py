@@ -24,7 +24,7 @@ from trpg.world.state import CharacterState, OathState
 from trpg.world.step import StepResult, world_step
 
 MakeChar = Callable[..., CharacterState]
-POUCH = {"item_spring_pill": 2, "item_oil_flask": 1}
+POUCH = {"item_hp_potion_small": 2, "item_oil_flask": 1}
 
 
 def _ready(make_char: MakeChar, seed: int, **updates: object) -> CharacterState:
@@ -57,13 +57,13 @@ def test_pouch_items_join_hero_skills(library: ContentLibrary, make_char: MakeCh
     char = _ready(make_char, 0)
     prepared = prepare_battle(library, char)
     hero = prepared.setup.units[0].template
-    assert hero.skills[-2:] == ("skill_item_oil_flask", "skill_item_spring_pill")
+    assert hero.skills[-2:] == ("skill_item_hp_potion_small", "skill_item_oil_flask")
     assert hero.skills[:-2] == char.hero.skills  # 裝備的技能照舊
-    pill = prepared.setup.ruleset.skill_def("skill_item_spring_pill")
+    pill = prepared.setup.ruleset.skill_def("skill_item_hp_potion_small")
     assert pill.cost.uses_per_battle == 2 and pill.ap_cost == 1  # 次數＝個數
     defs = [prepared.setup.ruleset.skill_def(s) for s in hero.skills]
     assert skill_slot_problems(defs, library.ruleset.core.skill_slots) == []  # 不佔欄位
-    assert "skill_item_spring_pill" not in char.hero.skills
+    assert "skill_item_hp_potion_small" not in char.hero.skills
 
 
 def test_no_pouch_keeps_skills(library: ContentLibrary, make_char: MakeChar) -> None:
@@ -78,7 +78,7 @@ def test_used_items_leave_pouch(library: ContentLibrary, make_char: MakeChar) ->
     for item, n in used.items.items():
         assert result.char.pouch.get(item, 0) == POUCH[item] - n
     assert result.char.bag == char.bag  # 背包不動
-    assert "skill_item_spring_pill" not in result.char.skill_usage  # 用法統計只看裝備的技能
+    assert "skill_item_hp_potion_small" not in result.char.skill_usage  # 用法統計只看裝備的技能
 
 
 def test_win_gives_gold(library: ContentLibrary, make_char: MakeChar) -> None:
@@ -111,8 +111,8 @@ def test_oath_no_items_breaks(library: ContentLibrary, make_char: MakeChar) -> N
 def test_replay_shop_pouch_fight(library: ContentLibrary, make_char: MakeChar) -> None:
     world = make_world()
     shop: list[object] = [
-        BuyAction(shop="shop_liu", item="item_spring_pill", count=2),
-        PouchAction(items={"item_spring_pill": 2}),
+        BuyAction(shop="shop_liu", item="item_hp_potion_small", count=2),
+        PouchAction(items={"item_hp_potion_small": 2}),
     ]
     entries = [
         WorldLogEntry(seq=n, now=NOON, character_id="alice", action=a)  # type: ignore[arg-type]
@@ -123,7 +123,7 @@ def test_replay_shop_pouch_fight(library: ContentLibrary, make_char: MakeChar) -
     second = replay(library, world, {"alice": start}, entries)
     done = first.characters["alice"]
     assert dumps_char(done) == dumps_char(second.characters["alice"])
-    assert done.pouch == {"item_spring_pill": 2} and done.gold == 70
+    assert done.pouch == {"item_hp_potion_small": 2} and done.gold == 60
     assert done.affinity["shopkeeper_liu"] == 2
     # 帶腰包打一場：重播兩次逐字相同
     char, _ = _used_seed(library, make_char)

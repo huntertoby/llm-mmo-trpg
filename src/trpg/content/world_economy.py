@@ -1,4 +1,4 @@
-"""大世界的經濟：貨幣規則、物品與商店（Phase 5D-1；``docs/phases/Phase5計畫.md`` 25.2）。
+"""大世界的經濟：貨幣規則、物品與商店（Phase 5D-1；``docs/phases/Phase5計畫.md`` 26.2）。
 
 - ``content/world/economy.yaml``（:class:`EconomyRules`）：背包 30 格、腰包 3 個（08 8.17）、一格疊
   幾個、賣價比例、打贏戰鬥給的金幣、完成任務給的任務幣（8.15；數值是開發 PM 定的初值）。
@@ -55,8 +55,13 @@ ECONOMY_FILE: Final = "world/economy.yaml"
 ITEMS_FILE: Final = "world/items.yaml"
 SHOPS_DIR: Final = "world/shops"
 
-type ItemKind = Literal["consumable", "material", "dye"]
-ITEM_KINDS: Final[dict[str, str]] = {"consumable": "消耗品", "material": "材料", "dye": "染料"}
+type ItemKind = Literal["consumable", "material", "dye", "supply"]
+ITEM_KINDS: Final[dict[str, str]] = {
+    "consumable": "消耗品",
+    "material": "材料",
+    "dye": "染料",
+    "supply": "補給",
+}
 """物品種類 → 中文。"""
 
 COARSE_MATERIAL: Final = "item_coarse_material"
@@ -64,7 +69,7 @@ COARSE_MATERIAL: Final = "item_coarse_material"
 
 
 _ITEM_ID = r"^item_[a-z0-9_]+$"
-_STACKS: Final[dict[ItemKind, int]] = {"consumable": 10, "material": 20, "dye": 10}
+_STACKS: Final[dict[ItemKind, int]] = {"consumable": 10, "material": 20, "dye": 10, "supply": 1}
 _COLOR = r"^#[0-9A-Fa-f]{6}$"
 
 
@@ -105,12 +110,14 @@ class QuestCoins(ContentModel):
 
 
 class EconomyRules(ContentModel):
-    """``content/world/economy.yaml``（25.2 第 1 點）。"""
+    """``content/world/economy.yaml``（26.2 第 1 點）。"""
 
     bag_slots: int = Field(default=30, ge=1, le=200)
     pouch_slots: int = Field(default=3, ge=0, le=10)
     stack_max: dict[ItemKind, int] = Field(default_factory=lambda: dict(_STACKS))
     sell_permille: int = Field(default=500, ge=0, le=1000)
+    unsellable_kinds: tuple[ItemKind, ...] = ()
+    """不能賣的種類（20.1「材料不能賣」）。"""
     start_gold: int = Field(default=0, ge=0)
     battle_gold: BattleGold = Field(default_factory=BattleGold)
     quest_coins: QuestCoins = Field(default_factory=QuestCoins)
@@ -122,12 +129,15 @@ class EconomyRules(ContentModel):
             raise ValueError(f"stack_max 缺少或小於 1：{missing}")
         return self
 
+    def sellable(self, kind: ItemKind) -> bool:
+        return kind not in self.unsellable_kinds
+
     def sell_price(self, price: int) -> int:
         return max(1, price * self.sell_permille // 1000)
 
 
 class WorldItemDef(ContentModel):
-    """一種物品（25.2 第 2 點）。"""
+    """一種物品（26.2 第 2 點）。"""
 
     id: str = Field(pattern=_ITEM_ID)
     name_zh: str = Field(min_length=1)
@@ -143,6 +153,8 @@ class WorldItemDef(ContentModel):
     """野外使用回最大 HP 的 ‰（09 9.6.11 #113「靠藥水」）。"""
     field_mana_permille: int = Field(default=0, ge=0, le=1000)
     color: str | None = Field(default=None, pattern=_COLOR)
+    supplies: int = Field(default=0, ge=0, le=10)
+    """補給（``kind: supply``）買一個加幾點補給；不進背包（20.1）。"""
     """染料的顏色（只顯示）。"""
 
     @property
@@ -155,6 +167,8 @@ class WorldItemDef(ContentModel):
             raise ValueError(f"物品 {self.id}：只有消耗品有 skill，而且消耗品必須有")
         if self.kind != "consumable" and self.field_usable:
             raise ValueError(f"物品 {self.id}：只有消耗品能在野外使用")
+        if (self.kind == "supply") != (self.supplies > 0):
+            raise ValueError(f"物品 {self.id}：只有補給有 supplies，而且補給必須有")
         if (self.kind == "dye") != (self.color is not None):
             raise ValueError(f"物品 {self.id}：只有染料有 color，而且染料必須有")
         skill = self.skill
@@ -198,9 +212,11 @@ class ShopStock(ContentModel):
 
 
 class WeeklyStock(ContentModel):
-    """每週限量的區域特產（8.26.1）：每週 ``min``～``max`` 個（由賽季種子決定）。"""
+    """每週限量的區域特產（8.26.1）：每週 ``min``～``max`` 個（不同時由賽季種子決定）；
+    ``rank``＝門檻。"""
 
     item: str = Field(pattern=_ITEM_ID)
+    rank: AffinityRank | None = None
     min: int = Field(ge=0, le=99)
     max: int = Field(ge=0, le=99)
 
@@ -278,7 +294,7 @@ def shop_problems(
     has_region: bool,
     npcs: Collection[str] | None,
 ) -> list[str]:
-    """一個區域的商店檔的跨檔案問題（25.2 第 3 點；依店、商品順序）。``npcs`` 為 ``None``＝該區沒有
+    """一個區域的商店檔的跨檔案問題（26.2 第 3 點；依店、商品順序）。``npcs`` 為 ``None``＝該區沒有
     人設卡（不檢查店主，舊內容資料夾照常載入）。"""
     problems: list[str] = []
     if not has_region:

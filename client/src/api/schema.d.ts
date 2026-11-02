@@ -1240,6 +1240,11 @@ export interface components {
             description_zh: string;
             /** Sell Price */
             sell_price: number;
+            /**
+             * Sellable
+             * @default true
+             */
+            sellable: boolean;
             /** Field Usable */
             field_usable: boolean;
             /** Use Zh */

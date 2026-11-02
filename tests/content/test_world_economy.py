@@ -42,14 +42,14 @@ def test_cloud_ridge_economy(library: ContentLibrary) -> None:
     assert shop.affinity is not None
     assert (shop.affinity.per_purchase, shop.affinity.daily_max) == (2, 4)  # 18.7.6
     kinds = {economy.items[s.item].kind for s in shop.stock}
-    assert kinds == {"consumable", "material", "dye"}  # 8.26.1
+    assert kinds == {"consumable", "material", "dye", "supply"}  # 8.26.1、20.1
     assert [s.item for s in shop.stock if economy.items[s.item].kind == "material"] == [
         COARSE_MATERIAL
     ]
     mist = shop.stock_of("item_mist_flask")
     assert mist is not None and mist.rank == "friendly"  # 8.26.1 例
     weekly = shop.weekly_of("item_green_bamboo")
-    assert weekly is not None and (weekly.min, weekly.max) == (2, 4)
+    assert weekly is not None and (weekly.min, weekly.max, weekly.rank) == (5, 5, "neutral")
     assert economy.items["item_green_bamboo"].region == "cloud_ridge"  # 18.2.4 雲嶺特產
     # 道具技能：1 AP、每個用一次、帶 item 標籤、不進技能池
     for item in economy.items.values():
@@ -110,7 +110,7 @@ def test_missing_files_are_empty(tmp_path: Path) -> None:
             "不是 cloud_ridge 的特產",
         ),
         (lambda s: s["shops"][0]["weekly"][0].update(min=5, max=2), "min 不可大於 max"),
-        (lambda s: s["shops"][0]["stock"].append({"item": "item_spring_pill"}), "商品重複"),
+        (lambda s: s["shops"][0]["stock"].append({"item": "item_hp_potion_small"}), "商品重複"),
         (lambda s: s.update(region="frost_tide"), "檔名必須與 region 相同"),
     ],
 )
@@ -136,7 +136,7 @@ def _item(**updates: Any) -> dict[str, Any]:
 
 
 def test_item_rules(library: ContentLibrary) -> None:
-    pill = library.world_economy.items["item_spring_pill"]
+    pill = library.world_economy.items["item_hp_potion_small"]
     assert pill.skill is not None
     skill = pill.skill.model_dump()
     with pytest.raises(ValidationError, match="只有消耗品有 skill"):
@@ -157,6 +157,7 @@ def test_item_rules(library: ContentLibrary) -> None:
         WorldItemTable.model_validate({"items": [_item(), _item()]})
     with pytest.raises(ValidationError, match="未知的任務種類"):
         EconomyRules.model_validate({"quest_coins": {"by_kind": {"boss": 1}}})
+    assert not library.world_economy.rules.sellable("material")  # type: ignore[union-attr]
     assert EconomyRules().sell_price(5) == 2 and EconomyRules().sell_price(1) == 1
 
 

@@ -3030,6 +3030,11 @@
             "type": "integer",
             "title": "Sell Price"
           },
+          "sellable": {
+            "type": "boolean",
+            "title": "Sellable",
+            "default": true
+          },
           "field_usable": {
             "type": "boolean",
             "title": "Field Usable"
