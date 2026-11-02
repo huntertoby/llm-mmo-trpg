@@ -538,3 +538,29 @@
 .world-hire-skills {
   padding-left: 22px;
 }
+
+/* 朋友的影子（Phase 5C-2） */
+.world-hire-tabs {
+  margin: 4px 0;
+}
+
+.world-hire-cap {
+  padding-left: 22px;
+  color: #ffd04a;
+}
+
+.world-hire-ai {
+  margin: 2px 0;
+}
+
+.world-hire-ai select,
+.world-my-shadow select {
+  margin-left: 4px;
+}
+
+.world-shadow-reports {
+  margin: 4px 0;
+  padding-left: 18px;
+  max-height: 9em;
+  overflow-y: auto;
+}

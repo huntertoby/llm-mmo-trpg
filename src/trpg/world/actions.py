@@ -83,6 +83,10 @@ __all__ = [
     "RetreatAction",
     "RetreatedEvent",
     "RumorsHeardEvent",
+    "ShadowAiAction",
+    "ShadowAiChangedEvent",
+    "ShadowLentEvent",
+    "ShadowSavedEvent",
     "SituationAction",
     "SituationCheckEvent",
     "SituationResultEvent",
@@ -318,6 +322,17 @@ class HireAction(_Model):
 
     kind: Literal["hire"] = "hire"
     mercenaries: tuple[str, ...] = Field(default=(), max_length=8)
+    shadows: tuple[str, ...] = Field(default=(), max_length=8)
+    """借用的影子（影子主人的角色 ID；Phase 5C-2）。和傭兵合計不超過 ``max_hired``。"""
+    ai: dict[str, str] = Field(default_factory=dict, max_length=8)
+    """成員（傭兵 ID 或影子主人 ID）→ AI 打法（``ai_choices``；沒有＝預設；5C-2 玩法 PM 定 ④）。"""
+
+
+class ShadowAiAction(_Model):
+    """在城鎮設定自己影子的預設打法（Phase 5C-2；#102）；``None``＝範本的預設。"""
+
+    kind: Literal["shadow_ai"] = "shadow_ai"
+    profile: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
 type WorldAction = Annotated[
@@ -343,7 +358,8 @@ type WorldAction = Annotated[
     | TalkAction
     | TavernAction
     | EventSolveAction
-    | HireAction,
+    | HireAction
+    | ShadowAiAction,
     Field(discriminator="kind"),
 ]
 
@@ -587,7 +603,9 @@ class BattleStartedEvent(_Model):
     hero_statuses: tuple[str, ...] = ()
     """開場掛在主角身上的狀態（5A-6：情境判定給的 buff／debuff）。"""
     mercenaries: tuple[str, ...] = ()
-    """這場帶的系統傭兵（5C-1；空＝標準隊友）。"""
+    """這場帶的系統傭兵（5C-1）。"""
+    shadows: tuple[str, ...] = ()
+    """這場帶的影子（主人的角色 ID；5C-2）。傭兵與影子都沒有＝獨行。"""
 
 
 class BattleEndedEvent(_Model):
@@ -820,6 +838,33 @@ class PartyChangedEvent(_Model):
 
     kind: Literal["party_changed"] = "party_changed"
     mercenaries: tuple[str, ...]
+    shadows: tuple[str, ...] = ()
+    """借用的影子（主人的角色 ID；5C-2）。"""
+    shadow_names: tuple[str, ...] = ()
+    """影子的名字（同 ``shadows`` 順序；顯示用）。"""
+    ai: dict[str, str] = Field(default_factory=dict)
+
+
+class ShadowSavedEvent(_Model):
+    """在城鎮整備，自動存成影子（5C-2；#102）。"""
+
+    kind: Literal["shadow_saved"] = "shadow_saved"
+    level: int
+
+
+class ShadowAiChangedEvent(_Model):
+    """自己影子的預設打法換了（5C-2）。"""
+
+    kind: Literal["shadow_ai_changed"] = "shadow_ai_changed"
+    profile: str | None
+
+
+class ShadowLentEvent(_Model):
+    """借來的影子今天第一次被借用：主人得到任務幣與一則戰報（5C-2；#102）。"""
+
+    kind: Literal["shadow_lent"] = "shadow_lent"
+    owner: str
+    coins: int
 
 
 type WorldEvent = Annotated[
@@ -871,6 +916,9 @@ type WorldEvent = Annotated[
     | ThreadExpiredEvent
     | StoryFlagClearedEvent
     | SkeletonUnlockedEvent
-    | PartyChangedEvent,
+    | PartyChangedEvent
+    | ShadowSavedEvent
+    | ShadowAiChangedEvent
+    | ShadowLentEvent,
     Field(discriminator="kind"),
 ]

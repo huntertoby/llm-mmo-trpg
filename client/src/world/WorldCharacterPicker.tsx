@@ -95,7 +95,7 @@ export function WorldCharacterPicker({ onEnter, onHome }: Props) {
         <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
         <StartPickerView picker={picker} disabled={busy} />
         <div className="muted small">
-          屬性點照預設（全部點在起始技能最常用的屬性）；角色從雲嶺的霧渡鎮出發。隊友：預設 2 名標準隊友，可以在城鎮免費雇用系統傭兵（最多 2 名）。
+          屬性點照預設（全部點在起始技能最常用的屬性）；角色從雲嶺的霧渡鎮出發。隊友：一開始獨行（只帶主角），可以在城鎮免費雇用系統傭兵或借朋友的影子（最多 2 名）。
         </div>
         <div className="run-actions">
           <button type="submit" className="primary" disabled={busy || !ready}>

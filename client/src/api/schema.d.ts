@@ -1040,6 +1040,18 @@ export interface components {
             duplicate_of?: string | null;
         };
         /**
+         * AiChoiceView
+         * @description 一種可選的 AI 打法（``ai_profiles.yaml``；5C-2 玩法 PM 定 ④）。
+         */
+        AiChoiceView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+        };
+        /**
          * Aim
          * @description 瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；
          *     不疊加，回合結束或用掉即失效。
@@ -3525,6 +3537,15 @@ export interface components {
              * @default []
              */
             mercenaries: string[];
+            /**
+             * Shadows
+             * @default []
+             */
+            shadows: string[];
+            /** Ai */
+            ai?: {
+                [key: string]: string;
+            };
         };
         /**
          * HistoryStepOut
@@ -4017,6 +4038,40 @@ export interface components {
             path: components["schemas"]["XY"][];
         };
         /**
+         * MyShadowView
+         * @description 自己的影子（5C-2；#102）。
+         */
+        MyShadowView: {
+            /** Saved */
+            saved: boolean;
+            /** Level */
+            level?: number | null;
+            /** Saved Zh */
+            saved_zh?: string | null;
+            /** Ai */
+            ai?: string | null;
+            /**
+             * Ai Zh
+             * @default 預設
+             */
+            ai_zh: string;
+            /**
+             * Can Set Ai
+             * @default false
+             */
+            can_set_ai: boolean;
+            /**
+             * Coins
+             * @default 0
+             */
+            coins: number;
+            /**
+             * Reports Zh
+             * @default []
+             */
+            reports_zh: string[];
+        };
+        /**
          * NodeOut
          * @description 目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
          *     ``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，
@@ -4327,6 +4382,10 @@ export interface components {
             level: number;
             /** Mercenary */
             mercenary?: string | null;
+            /** Shadow */
+            shadow?: string | null;
+            /** Ai Zh */
+            ai_zh?: string | null;
         };
         /**
          * PartyView
@@ -4346,6 +4405,30 @@ export interface components {
              * @default []
              */
             mercenaries: components["schemas"]["MercenaryView"][];
+            /**
+             * Shadows
+             * @default []
+             */
+            shadows: components["schemas"]["ShadowView"][];
+            /**
+             * Ai Choices
+             * @default []
+             */
+            ai_choices: components["schemas"]["AiChoiceView"][];
+            /**
+             * Ai
+             * @default {}
+             */
+            ai: {
+                [key: string]: string;
+            };
+            /**
+             * Season Boss Ok
+             * @default true
+             */
+            season_boss_ok: boolean;
+            /** Season Boss Zh */
+            season_boss_zh?: string | null;
         };
         /**
          * Pending
@@ -5196,6 +5279,52 @@ export interface components {
             mode: components["schemas"]["SummonMode"];
             /** Target Id */
             target_id?: string | null;
+        };
+        /**
+         * ShadowAiAction
+         * @description 在城鎮設定自己影子的預設打法（Phase 5C-2；#102）；``None``＝範本的預設。
+         */
+        ShadowAiAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "shadow_ai";
+            /** Profile */
+            profile?: string | null;
+        };
+        /**
+         * ShadowView
+         * @description 一個可以借的影子（5C-2；其他角色在城鎮整備時存的）。
+         */
+        ShadowView: {
+            /** Owner */
+            owner: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level */
+            level: number;
+            /** Role Zh */
+            role_zh: string;
+            /** Skills Zh */
+            skills_zh: string[];
+            /** Borrowed Level */
+            borrowed_level: number;
+            /** Borrowed Tier */
+            borrowed_tier: number;
+            /** Capped */
+            capped: boolean;
+            /** Cap Zh */
+            cap_zh?: string | null;
+            /** Hired */
+            hired: boolean;
+            /**
+             * Own
+             * @default false
+             */
+            own: boolean;
+            /** Saved Zh */
+            saved_zh: string;
         };
         /**
          * Shove
@@ -6786,7 +6915,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -6989,6 +7118,7 @@ export interface components {
              */
             rumors: string[];
             party?: components["schemas"]["PartyView"] | null;
+            my_shadow?: components["schemas"]["MyShadowView"] | null;
         };
         XY: [
             number,

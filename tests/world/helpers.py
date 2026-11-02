@@ -12,6 +12,9 @@ from trpg.shared.types import Attribute
 from trpg.world.state import EncounterResult, WorldState
 
 NOON = 1_793_592_000
+
+PARTY = ("merc_tiebi", "merc_huichun")
+"""打得贏的測試隊伍（5C-2 起雇 0 名＝獨行；需要打贏的測試帶這兩名傭兵）。"""
 """2026-11-02 12:00 台北（UTC 04:00）；遊戲日的前半（白天）。"""
 
 

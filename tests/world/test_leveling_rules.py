@@ -48,7 +48,11 @@ def test_allies_grow_with_hero_level(
     library: ContentLibrary, make_char: Callable[..., CharacterState]
 ) -> None:
     char = make_char().model_copy(
-        update={"pending_encounter": _encounter("cliff_gang_fort", 3), "level": 5}
+        update={
+            "pending_encounter": _encounter("cliff_gang_fort", 3),
+            "level": 5,
+            "mercenaries": ("merc_tiebi", "merc_huichun"),
+        }
     )
     prepared = prepare_battle(library, char)
     allies = [u for u in prepared.setup.units[1:] if u.team.name == "ALLY"]

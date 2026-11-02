@@ -858,7 +858,9 @@ def load_library(  # noqa: PLR0915
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     world_oaths = _load_optional(root / WORLD_OATHS_FILE, OathTable, files)
-    world_mercenaries = _load_world_mercenaries(root / WORLD_MERCENARIES_FILE, builds, files)
+    world_mercenaries = _load_world_mercenaries(
+        root / WORLD_MERCENARIES_FILE, builds, ai_profiles, files
+    )
     unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
     world_encounters = _load_world_encounters(
@@ -967,9 +969,13 @@ WORLD_MERCENARIES_FILE = "world/mercenaries.yaml"
 
 
 def _load_world_mercenaries(
-    path: Path, builds: BuildTable, files: list[tuple[Path, ContentModel]]
+    path: Path,
+    builds: BuildTable,
+    ai_profiles: AiProfileTable,
+    files: list[tuple[Path, ContentModel]],
 ) -> MercenaryTable | None:
-    """系統傭兵名單：底稿必須是 ``builds.yaml`` 裡的一般 build（不是白板或對照組）。"""
+    """系統傭兵名單：底稿必須是 ``builds.yaml`` 裡的一般 build（不是白板或對照組）；AI 打法選單
+    （5C-2）必須在 ``ai_profiles.yaml``。"""
     table = _load_optional(path, MercenaryTable, files)
     if table is None:
         return None
@@ -981,6 +987,8 @@ def _load_world_mercenaries(
         for m in table.mercenaries
         if m.build not in known or known[m.build].blank or known[m.build].reference
     ]
+    profiles = ai_profiles.by_id()
+    problems += [f"AI 打法 {p} 不在 ai_profiles" for p in table.ai_choices if p not in profiles]
     if problems:
         raise ContentError(path, "；".join(problems))
     return table

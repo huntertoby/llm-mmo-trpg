@@ -7,7 +7,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-__all__ = ["MercenaryView", "PartyMemberView", "PartyView"]
+__all__ = [
+    "AiChoiceView",
+    "MercenaryView",
+    "MyShadowView",
+    "PartyMemberView",
+    "PartyView",
+    "ShadowView",
+]
 
 
 class _ApiModel(BaseModel):
@@ -23,7 +30,11 @@ class PartyMemberView(_ApiModel):
     level: int
     """開戰時的等級（傭兵與標準隊友照主角等級成長，5A-SIM2）。"""
     mercenary: str | None = None
-    """傭兵 ID（主角與標準隊友為 ``None``）。"""
+    """傭兵 ID（主角與影子為 ``None``）。"""
+    shadow: str | None = None
+    """影子主人的角色 ID（5C-2；不是影子為 ``None``）。"""
+    ai_zh: str | None = None
+    """打法（例「守衛」、「預設（守衛）」）；主角為 ``None``。"""
 
 
 class MercenaryView(_ApiModel):
@@ -41,6 +52,42 @@ class MercenaryView(_ApiModel):
     hired: bool
 
 
+class ShadowView(_ApiModel):
+    """一個可以借的影子（5C-2；其他角色在城鎮整備時存的）。"""
+
+    owner: str
+    """影子主人的角色 ID（``hire`` 的 ``shadows`` 送這個）。"""
+    name_zh: str
+    level: int
+    """影子本身的等級。"""
+    role_zh: str
+    """定位：玩家 build 沒有固定定位，顯示「武器・種族」（代決 5C2-9）。"""
+    skills_zh: tuple[str, ...]
+    """技能概要：裝備中的技能中文名（依裝備順序）。"""
+    borrowed_level: int
+    """借用時的等級（不超過招募者，#87）。"""
+    borrowed_tier: int
+    """借用時的技能階級上限。"""
+    capped: bool
+    """借用時會被壓到招募者的上限。"""
+    cap_zh: str | None = None
+    """例「借用時壓到 Lv 1・技能 1 階（你的上限）」；沒被壓時 ``None``。"""
+    hired: bool
+    """目前在隊伍裡（借用當下的複本）。"""
+    own: bool = False
+    """保留給 5E（自己帳號的其他角色）；帳號還沒做，目前一律 ``False``。"""
+    saved_zh: str
+    """存的地點（例「霧渡鎮」）。"""
+
+
+class AiChoiceView(_ApiModel):
+    """一種可選的 AI 打法（``ai_profiles.yaml``；5C-2 玩法 PM 定 ④）。"""
+
+    id: str
+    name_zh: str
+    description_zh: str
+
+
 class PartyView(_ApiModel):
     """目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"""
 
@@ -48,6 +95,31 @@ class PartyView(_ApiModel):
     max_hired: int
     can_hire: bool
     hire_problem_zh: str | None
-    """不能換傭兵的理由（例「出城前在城鎮選好，野外不能換」）；可以時為 ``None``。"""
+    """不能換隊友的理由（例「出城前在城鎮選好，野外不能換」）；可以時為 ``None``。"""
     mercenaries: tuple[MercenaryView, ...] = ()
     """傭兵名單（名單順序）。"""
+    shadows: tuple[ShadowView, ...] = ()
+    """可以借的影子（不含自己；依主人 ID）。"""
+    ai_choices: tuple[AiChoiceView, ...] = ()
+    ai: dict[str, str] = {}
+    """目前每名成員選的打法（傭兵 ID 或影子主人 ID → 打法 ID；沒有＝預設）。"""
+    season_boss_ok: bool = True
+    """隊伍能不能打賽季 Boss（有影子＝不能，#87）。"""
+    season_boss_zh: str | None = None
+
+
+class MyShadowView(_ApiModel):
+    """自己的影子（5C-2；#102）。"""
+
+    saved: bool
+    level: int | None = None
+    saved_zh: str | None = None
+    """存的地點與等級（例「霧渡鎮・Lv 3」）。"""
+    ai: str | None = None
+    """預設打法（``None``＝範本的預設）。"""
+    ai_zh: str = "預設"
+    can_set_ai: bool = False
+    coins: int = 0
+    """被借用累計的任務幣（5D 轉入角色）。"""
+    reports_zh: tuple[str, ...] = ()
+    """被借用的戰報（新的在前）。"""
