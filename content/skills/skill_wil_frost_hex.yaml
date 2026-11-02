@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶冰霜；數值為初值，未經模擬
+id: skill_wil_frost_hex
+schema_version: 1
+name_zh: 霜咒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wil
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 1d8, element: shadow}
+  - {type: apply_status, status: frozen, duration: 1}
+condition: null
+cost: {mana: 6, cooldown: 4}
+tags: [shadow, spell, curse, ice]
+narrative:
+  concept: 一道冰冷的詛咒從腳底爬上來，凍住的不只是身體，還有逃跑的念頭
+  cast_flavor: 暗影纏上對手的雙腿，所到之處結出一層灰白的霜
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
