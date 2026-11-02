@@ -88,10 +88,11 @@ def test_win_writes_back(library: ContentLibrary, win: tuple[CharacterState, Ste
     ended = _ended(result)
     kinds = [e.kind for e in result.events]
     assert kinds[:2] == ["battle_started", "battle_ended"]
-    assert "leveled_up" in kinds  # 原型門檻：100 經驗升 2 級
-    assert char.xp == start.xp + 100
-    assert char.level == 2
-    assert char.attribute_points == library.roguelite.attribute_points_per_level
+    assert library.world_rules is not None
+    share = library.world_rules.xp.share_xp(1)  # 渡口石階 1 級地點：1 份（一般戰鬥）
+    assert ended.xp_gained == share
+    assert char.xp == start.xp + share
+    assert char.level == 1  # 世界門檻 950，打一場不會升級
     assert char.pending_encounter is None
     assert char.stamina is None  # 耐力戰後回滿（#113）
     assert char.mana == ended.mana  # 法力不回

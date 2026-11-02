@@ -72,8 +72,12 @@ def sim_library() -> ContentLibrary:
     global _LIB  # noqa: PLW0603
     if _LIB is None:
         library = load_library()
-        roguelite = library.roguelite.model_copy(update={"level_thresholds": SIM_THRESHOLDS})
-        _LIB = dataclasses.replace(library, roguelite=roguelite)
+        rules = library.world_rules
+        assert rules is not None
+        growth = rules.hero_growth.model_copy(update={"level_thresholds": SIM_THRESHOLDS})
+        _LIB = dataclasses.replace(
+            library, world_rules=rules.model_copy(update={"hero_growth": growth})
+        )
     return _LIB
 
 
@@ -221,8 +225,6 @@ def run_job(job: Job) -> list[Row]:
         start = char.model_copy(update={"pending_encounter": encounter})
         prepared = world_battle.prepare_battle(library, start)
         setup = prepared.setup
-        if job.grow_companions:
-            setup = with_grown_companions(library, setup, job.hero_level)
         opening = begin_battle(setup, prepared.seed)
         state, _, _ = advance(opening.state, opening.pending, policy)
         result = battle_result(state)
@@ -276,10 +278,13 @@ def make_jobs(
     gaps: Sequence[int],
     *,
     grow_companions: bool,
+    only: Sequence[str] = (),
 ) -> list[Job]:
     jobs = []
     for variant in variants:
         for loc, level, _ in encounter_locations(library):
+            if only and loc not in only:
+                continue
             for gap in gaps:
                 hero_level = level - gap
                 if hero_level < 1:
@@ -367,7 +372,13 @@ def cmd_encounter(args: argparse.Namespace) -> int:
     variants = parse_variants(args.variants)
     gaps = [int(g) for g in args.gaps.split(",")]
     jobs = make_jobs(
-        library, variants, builds, args.seeds, gaps, grow_companions=args.grow_companions
+        library,
+        variants,
+        builds,
+        args.seeds,
+        gaps,
+        grow_companions=args.grow_companions,
+        only=args.locations.split(",") if args.locations else (),
     )
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -566,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
     enc.add_argument("--variants", default="2:50")
     enc.add_argument("--gaps", default="0,2", help="主角比地點低幾級（逗號分隔）")
     enc.add_argument("--name", default="encounter")
+    enc.add_argument("--locations", default="", help="只量這些地點（逗號分隔）")
     enc.add_argument(
         "--grow-companions", action="store_true", help="標準隊友照主角等級成長（基準規則）"
     )

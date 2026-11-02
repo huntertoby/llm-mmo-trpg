@@ -12,7 +12,7 @@ from trpg.shared.types import Attribute
 from trpg.world.errors import WorldError
 from trpg.world.state import CharacterState
 
-__all__ = ["here", "max_hp", "max_mana", "rules_of", "world_map_of"]
+__all__ = ["here", "location_level", "max_hp", "max_mana", "rules_of", "world_map_of"]
 
 
 def rules_of(library: ContentLibrary) -> WorldRules:
@@ -31,6 +31,14 @@ def world_map_of(library: ContentLibrary, region: str) -> LocationMapDef:
 def here(library: ContentLibrary, char: CharacterState) -> LocationDef:
     """角色目前所在的地點。"""
     return world_map_of(library, char.region).location_by_id()[char.location]
+
+
+def location_level(library: ContentLibrary, region: str, location: str, default: int = 1) -> int:
+    """地點的建議等級下限（``level_min``）；沒有地點或沒標等級時用 ``default``。"""
+    found = world_map_of(library, region).location_by_id().get(location)
+    if found is None or found.level_min is None:
+        return default
+    return found.level_min
 
 
 def max_hp(library: ContentLibrary, char: CharacterState) -> int:

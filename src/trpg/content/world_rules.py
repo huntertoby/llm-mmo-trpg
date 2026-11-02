@@ -120,8 +120,6 @@ class BattleRules(ContentModel):
     """遇敵戰鬥與勝負回寫（5A-4；``docs/phases/Phase5計畫.md`` 9.4）。"""
 
     max_rounds: int = Field(default=30, ge=1)
-    xp_per_battle: int = Field(default=100, ge=0)
-    """打贏一場的經驗（Q8 初值；等級門檻沿用原型 ``roguelite.yaml`` 的 ``level_thresholds``）。"""
     fatigue_hp_permille: int = Field(default=800, ge=1, le=1000)
     """疲憊：全滅後下一場開場 HP 上限（最大 HP 的 ‰；9.6.9 #98）。"""
     clear_kinds: tuple[ClearKind, ...] = ("camp",)
@@ -158,9 +156,58 @@ class EnemyGrowthRules(ContentModel):
         return table[min(max(level, 1), len(table)) - 1]
 
 
+DEFAULT_SHARES = {
+    "battle": 1000,
+    "elite": 3000,
+    "situation_success": 500,
+    "situation_partial": 250,
+    "quest_chain_step": 3000,
+    "main_step": 5000,
+    "bounty": 4000,
+    "hidden_location": 2000,
+}
+XP_SOURCES = tuple(DEFAULT_SHARES)
+"""經驗來源（``xp.shares_permille`` 的鍵）。"""
+
+
+class XpRules(ContentModel):
+    """經驗來源與份數（5A-SIM2；07 7.8 方案 B）。
+
+    1 份經驗＝``base`` ×（1000 ＋ ``level_permille`` ×（地點建議等級 − 1））÷ 1000；各來源給幾份寫在
+    ``shares_permille``（1000‰＝1 份）。任務鏈、主線、懸賞、隱藏地點的份數先寫在這裡，等那些功能做好
+    時接上。"""
+
+    base: int = Field(default=100, ge=0)
+    level_permille: int = Field(default=100, ge=0)
+    shares_permille: dict[str, int] = Field(default_factory=lambda: dict(DEFAULT_SHARES))
+
+    @model_validator(mode="after")
+    def _shares(self) -> XpRules:
+        missing = [k for k in XP_SOURCES if k not in self.shares_permille]
+        extra = sorted(set(self.shares_permille) - set(XP_SOURCES))
+        if missing or extra:
+            raise ValueError(f"xp.shares_permille 缺 {missing}、多 {extra}")
+        if any(v < 0 for v in self.shares_permille.values()):
+            raise ValueError("xp.shares_permille 不可為負")
+        return self
+
+    def share_xp(self, location_level: int) -> int:
+        """地點建議等級 ``location_level`` 的 1 份經驗。"""
+        level = max(1, location_level)
+        return self.base * (1000 + self.level_permille * (level - 1)) // 1000
+
+    def xp_for(self, source: str, location_level: int) -> int:
+        """``source`` 在地點建議等級 ``location_level`` 給的經驗。"""
+        return self.share_xp(location_level) * self.shares_permille[source] // 1000
+
+
 class HeroGrowthRules(ContentModel):
-    """主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。經驗門檻沿用原型
-    ``level_thresholds``。"""
+    """主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。"""
+
+    level_thresholds: tuple[int, ...] = Field(
+        default=(950, 3800, 8600, 14350, 20200, 26050, 31950, 37800, 43650), min_length=1
+    )
+    """升到第 2、3、… 級需要的 **累計** 經驗（嚴格遞增；5A-SIM2 方案 B）。"""
 
     skill_tier_by_level: tuple[int, ...] = Field(
         default=(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), min_length=1
@@ -176,6 +223,8 @@ class HeroGrowthRules(ContentModel):
 
     @model_validator(mode="after")
     def _tiers(self) -> HeroGrowthRules:
+        if list(self.level_thresholds) != sorted(set(self.level_thresholds)):
+            raise ValueError("hero_growth.level_thresholds 必須嚴格遞增")
         tiers = self.skill_tier_by_level
         if any(t < 1 for t in tiers) or list(tiers) != sorted(tiers):
             raise ValueError("hero_growth.skill_tier_by_level 必須 ≥ 1 且不遞減")
@@ -200,6 +249,7 @@ class WorldRules(ContentModel):
     battle: BattleRules = BattleRules()
     enemy_growth: EnemyGrowthRules = EnemyGrowthRules()
     hero_growth: HeroGrowthRules = HeroGrowthRules()
+    xp: XpRules = XpRules()
 
     @model_validator(mode="after")
     def _unique_regions(self) -> WorldRules:

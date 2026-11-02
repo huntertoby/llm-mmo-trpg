@@ -136,7 +136,7 @@ class SituationBudget(ContentModel):
     """獎勵預算（9.6.7 #6「獎勵照地點建議等級的預算表」；07 7.8 經驗來源比例）。"""
 
     xp_battle_permille: int = Field(ge=0, le=1000)
-    """xp 預算＝打贏一場的經驗（``world/rules.yaml`` 的 ``battle.xp_per_battle``）× 這個 ‰
+    """xp 預算＝打贏一場的經驗（``world/rules.yaml`` 的 ``xp``：1 份，隨地點建議等級）× 這個 ‰
     （07 7.8：情境判定成功＝一般戰鬥的 0.5 份）。"""
     supplies_max: int = Field(ge=0)
     threads_max: int = Field(ge=0, le=2)

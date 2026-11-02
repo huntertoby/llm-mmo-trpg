@@ -100,23 +100,26 @@ def _post(client: TestClient, cid: str, **action: Any) -> Any:
 def won(ambush: ContentLibrary, tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     """打贏一場的角色（換種子直到打贏；賽季種子固定所以結果確定）。"""
     saves = tmp_path_factory.mktemp("won") / "saves"
+    assert ambush.world_rules is not None
+    first_xp = ambush.world_rules.hero_growth.level_thresholds[0]
     with _client(ambush, saves) as client:
         for seed in range(8):
             cid = _create(client, seed=seed)["character"]["character_id"]
+            _patch(client, cid, xp=first_xp - 1)  # 差 1 點升 2 級
             _act(client, cid, kind="travel", to="ferry_steps")
             opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
             _finish_battle(client, opened["battle"], ambush)
             first = _ok(client.get(f"/api/world/characters/{cid}"))
             if any("打贏" in e for e in first["events"]):
                 again = _ok(client.get(f"/api/world/characters/{cid}"))
-                return {"first": first, "again": again}
+                return {"first": first, "again": again, "first_xp": first_xp}
     raise AssertionError("8 個角色都沒打贏")  # pragma: no cover
 
 
 def test_win_writes_back_xp_level_and_last_battle(won: dict[str, Any]) -> None:
     first, again = won["first"], won["again"]
     char = first["character"]
-    assert char["xp"] == 100 and char["level"] == 2
+    assert char["xp"] == won["first_xp"] - 1 + 100 and char["level"] == 2
     assert char["attribute_points"] == 2 and char["insight"] == 2
     assert first["growth"]["insight"] == 2
     assert first["hero"]["insight"] == 2

@@ -27,6 +27,11 @@ from trpg.world.step import max_hp, new_character, world_step
 MakeChar = Callable[..., CharacterState]
 
 
+def _thresholds(library: ContentLibrary) -> tuple[int, ...]:
+    assert library.world_rules is not None
+    return library.world_rules.hero_growth.level_thresholds
+
+
 def test_hero_tier_follows_07_7_6(library: ContentLibrary) -> None:
     assert [hero_tier(library, lv) for lv in range(1, 11)] == [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]
     assert hero_tier(library, 12) == 3
@@ -51,9 +56,10 @@ def test_gain_xp_levels_up_with_points_insight_and_hp(
 ) -> None:
     char = make_char()
     per_level = library.roguelite.attribute_points_per_level
-    up, events = gain_xp(library, make_world(), char, 200)  # 門檻 100、200 → 3 級
+    xp = _thresholds(library)[1]  # 第 2 道門檻 → 3 級
+    up, events = gain_xp(library, make_world(), char, xp)
     assert up.level == 3
-    assert up.xp == 200
+    assert up.xp == xp
     assert up.attribute_points == 2 * per_level
     assert up.insight == 4  # 每級 2 點（06 6.34.2）
     assert up.hp == char.hp + max_hp(library, up) - max_hp(library, char)
@@ -65,7 +71,7 @@ def test_gain_xp_levels_up_with_points_insight_and_hp(
 
 def test_reaching_level_4_retiers_skills(library: ContentLibrary, make_char: MakeChar) -> None:
     char = make_char()
-    up, events = gain_xp(library, make_world(), char, 350)
+    up, events = gain_xp(library, make_world(), char, _thresholds(library)[2])
     assert up.level == 4
     assert up.skill_tier == 2
     changed = next(e for e in events if isinstance(e, SkillTierChangedEvent))
@@ -86,7 +92,7 @@ def test_old_character_without_tier_syncs_once(
     library: ContentLibrary, make_char: MakeChar
 ) -> None:
     old = make_char(skill_tier=None)
-    up, events = gain_xp(library, make_world(), old, 100)
+    up, events = gain_xp(library, make_world(), old, _thresholds(library)[0])
     assert up.skill_tier == 1
     changed = next(e for e in events if isinstance(e, SkillTierChangedEvent))
     assert changed.from_tier is None
@@ -100,7 +106,9 @@ def test_no_level_no_events(library: ContentLibrary, make_char: MakeChar) -> Non
 
 def test_battle_xp_levels_up_immediately(library: ContentLibrary) -> None:
     char = new_character(library, "alice", hero(library), region="cloud_ridge")
-    char = char.model_copy(update={"location": "ferry_steps"})
+    char = char.model_copy(
+        update={"location": "ferry_steps", "xp": _thresholds(library)[0] - 1}
+    )  # 差 1 點升 2 級
     for seed in range(16):
         start = char.model_copy(
             update={
@@ -124,9 +132,9 @@ def test_battle_xp_levels_up_immediately(library: ContentLibrary) -> None:
 
 def test_situation_xp_levels_up_immediately(library: ContentLibrary, make_char: MakeChar) -> None:
     lib = sure(library, "peddler_safe_path", "success")
-    char = at_event(make_char(xp=99), "wounded_peddler", strong=True)
+    char = at_event(make_char(xp=_thresholds(library)[0] - 1), "wounded_peddler", strong=True)
     result = world_step(lib, make_world(), char, peddler(), NOON)
-    assert result.char.xp > 99
+    assert result.char.xp >= _thresholds(library)[0]
     assert result.char.level == 2
     leveled = [e for e in result.events if isinstance(e, LeveledUpEvent)]
     assert [e.level for e in leveled] == [2]

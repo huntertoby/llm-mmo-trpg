@@ -30,6 +30,7 @@ from trpg.world.actions import (
     ThreadPushedOutEvent,
     TravelAction,
 )
+from trpg.world.common import location_level
 from trpg.world.errors import WorldActionError
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.rng import STREAM_CHECK, derive_seed
@@ -280,8 +281,11 @@ def test_three_outcomes(library: ContentLibrary, make_char: MakeChar) -> None:
     char = at_event(make_char(), "wounded_peddler", strong=True)
     budget = situation_rules(library).budget
     assert library.world_rules is not None
-    full = budget.xp_for(library.world_rules.battle.xp_per_battle)
-    assert full == 50  # 07 7.8：情境判定成功＝一般戰鬥 0.5 份（部分成功 0.25）
+    level = location_level(library, char.region, char.location)
+    full = budget.xp_for(library.world_rules.xp.share_xp(level))
+    assert (
+        full == 50 * (10 + level - 1) // 10
+    )  # 07 7.8：情境判定成功＝一般戰鬥 0.5 份（部分成功 0.25）
 
     ok = world_step(
         sure(library, "peddler_safe_path", "success"), make_world(), char, peddler(), NOON
