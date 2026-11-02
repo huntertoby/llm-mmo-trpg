@@ -85,6 +85,7 @@ __all__ = [
     "follows_attr",
     "generate_candidates",
     "keyword_distribution",
+    "region_first",
     "route_rank",
     "skill_has_keywords",
 ]
@@ -141,6 +142,14 @@ class CandidateRequest:
     held: Mapping[str, str] = field(default_factory=dict)
     """主角手上的主手武器與副手（ID → 中文名；Phase 3I-5）：限定武器的招牌技只在拿著那種武器時
     才會出現在候選裡；隨機組合器的武器親和條件也只挑拿著的那一種。空 ＝ 不給限定武器的技能。"""
+    region_keywords: tuple[str, ...] = ()
+    """區域偏向（Phase 5B-4b，07 7.6「區域任務鏈偏向該區的關鍵字」）：「新方向」挑關鍵字時，玩家
+    還沒有的區域關鍵字排在前面（:func:`region_first`）。空 ＝ 不偏向（原型 roguelite）。"""
+    mix: tuple[int, int, int] = (1, 1, 1)
+    """白板三選一的組成（加深、橋接、新方向各幾張；Phase 5B-4b，07 7.6 新手鏈 1／0／2）。只有白板版
+    產生器（:mod:`trpg.skillgen.whiteboard_candidates`）看；預設 1／1／1 ＝ 原行為。"""
+    min_passive: int = 0
+    """白板三選一至少幾張被動（Phase 5B-4b，07 7.6 新手鏈「至少 1 招被動」）。0 ＝ 原行為。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -505,12 +514,19 @@ def _bridge(
     return Candidate("bridge", hit[0], hit[1], hit[2], fallback=hit[0] not in pairs)
 
 
+def region_first(keywords: Sequence[str], region: Sequence[str]) -> list[str]:
+    """區域偏向（Phase 5B-4b）：``keywords`` 裡屬於 ``region`` 的排前面，其餘照原順序在後。"""
+    wanted = set(region)
+    return [k for k in keywords if k in wanted] + [k for k in keywords if k not in wanted]
+
+
 def _new(
     search: _Search, unheld: list[str], held: list[str], behavior: Mapping[str, int]
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("new")
     search.kind = "new"
-    fresh = [(k,) for k in _weighted_order(rng, unheld, behavior)]
+    order = region_first(_weighted_order(rng, unheld, behavior), search.request.region_keywords)
+    fresh = [(k,) for k in order]
     # 每個關鍵字都有了（或還沒有的都找不到技能）：退回持有最少的關鍵字（BAL-17：合成一串，先換
     # 關鍵字找偏離路線的，都沒有才放寬屬性）
     hit = _first(search, rng, [*fresh, *((k,) for k in reversed(held))], "other")
