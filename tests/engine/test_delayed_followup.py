@@ -67,10 +67,11 @@ def arena(
     caster: tuple[int, int] = (3, 3),
     foes: Sequence[tuple[int, int]] = ((4, 3),),
     caster_hp: int | None = None,
+    base: str = "hero_fighter",
 ) -> BattleState:
     m = make_map(FLAT, None, ally=[caster], enemy=list(foes))
     extra: dict[str, Any] = {} if caster_hp is None else {"max_hp": caster_hp}
-    spawns = [spawn(Team.ALLY, caster, caster_template([skill_id], base="hero_fighter", **extra))]
+    spawns = [spawn(Team.ALLY, caster, caster_template([skill_id], base=base, **extra))]
     spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200, speed=3)) for xy in foes]
     return give_turn(make_state(m, spawns), U1)
 
@@ -381,3 +382,29 @@ def test_a_battle_with_a_charge_replays_exactly() -> None:
     assert state_to_json(again.state) == state_to_json(run.state)
     log = BattleLog.model_validate_json(run.to_log().model_dump_json())
     assert state_to_json(replay(setup, 4, log.actions).state) == state_to_json(run.state)
+
+
+# ---------------------------------------------------------------------------
+# 5A-M1b：沉默打斷法術型蓄力（武器技型不吃沉默）
+# ---------------------------------------------------------------------------
+
+NINE_TURNS = "skill_nine_turns_revival"
+
+
+def test_silence_cancels_a_spell_charge() -> None:
+    state = cast(arena(NINE_TURNS, base="hero_mage"), NINE_TURNS).state
+    assert state.units[U1].has_status(CHARGING)
+    ctx = Ctx(state)
+    execute(ctx, [ApplyStatusEffect(target_id=U1, status_id="silenced")])
+    cancelled = of(ctx.events, FollowupCancelled)
+    assert [e.reason for e in cancelled] == ["silenced"]
+    assert not state.units[U1].has_status(CHARGING)
+    assert "沉默" in (describe_event(cancelled[0], state) or "")
+
+
+def test_silence_does_not_cancel_a_weapon_charge() -> None:
+    state = _charged(CLEAVE)
+    ctx = Ctx(state)
+    execute(ctx, [ApplyStatusEffect(target_id=U1, status_id="silenced")])
+    assert of(ctx.events, FollowupCancelled) == []
+    assert state.units[U1].has_status(CHARGING)

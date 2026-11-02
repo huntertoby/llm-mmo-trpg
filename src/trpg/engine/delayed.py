@@ -10,7 +10,9 @@
   施放者下回合開始之前被敵人攻擊（``attack_rolled``，不論是否命中）時，等那次攻擊結算完（同被動
   觸發，:mod:`trpg.engine.skill_triggers`）才結算——到下回合開始都沒被攻擊就失效（``expired``）。
 - **取消**：施放者倒下（``unit_downed``）、被施加 ``skip_turn`` 的狀態（暈眩、冰凍）時立即取消
-  （``followup_cancelled``）；施放另一個延遲段時舊的取消（``replaced``）。
+  （``followup_cancelled``）；**法術型**（``category: spell``）的蓄力被沉默（``blocks_spells``）也
+  取消（``silenced``，Phase 5A-M1b；武器技型與定向蓄力不吃沉默）；施放另一個延遲段時舊的取消
+  （``replaced``）。
 - 第二段的結算由 :func:`trpg.engine.skills.casting.run_delayed` 處理（命中、傷害照常；不付
   代價，代價在施放時已付）。
 - ``charging`` 是中性、有益的狀態：不會被淨化、驅散或奪取。
@@ -42,7 +44,7 @@ from trpg.engine.events import (
     StatusApplied,
     UnitDowned,
 )
-from trpg.engine.rules.forms import breath_of
+from trpg.engine.rules.forms import breath_of, is_spell_for_silence
 from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skills.casting import run_delayed
 from trpg.engine.skills.targeting import SkillArea, checked_area
@@ -162,7 +164,7 @@ def _drop(
     ctx: Ctx,
     unit: UnitState,
     status: StatusInstance,
-    reason: Literal["downed", "controlled", "expired", "replaced", "form_left"],
+    reason: Literal["downed", "controlled", "silenced", "expired", "replaced", "form_left"],
     skill: SkillDef | None = None,
 ) -> None:
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
@@ -277,6 +279,14 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
     return tuple(found)
 
 
+def silence_breaks_charge(state: BattleState, unit: UnitState) -> bool:
+    """``unit`` 正在蓄力的是法術型招式（沉默會打斷）；武器技型與定向蓄力（吐息）不吃沉默。"""
+    charged = _charged_skill(state, unit)
+    if charged is None or charged[0].direction is not None:
+        return False
+    return is_spell_for_silence(state.ruleset, charged[1])
+
+
 @register_effect("cancel_charge")
 def _cancel_charge(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, CancelChargeEffect)
@@ -303,6 +313,9 @@ def _cancel_on_control(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBas
     unit = ctx.state.units.get(event.target_id)
     if unit is None or not unit.has_status(CHARGING):
         return []
-    if not ctx.rules.status_def(event.status_id).skip_turn:
-        return []
-    return [CancelChargeEffect(depth=depth, unit_id=unit.id, reason="controlled")]
+    definition = ctx.rules.status_def(event.status_id)
+    if definition.skip_turn:
+        return [CancelChargeEffect(depth=depth, unit_id=unit.id, reason="controlled")]
+    if definition.blocks_spells and silence_breaks_charge(ctx.state, unit):
+        return [CancelChargeEffect(depth=depth, unit_id=unit.id, reason="silenced")]
+    return []

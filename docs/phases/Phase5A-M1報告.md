@@ -86,3 +86,11 @@
 - 前端：`npx vitest run` 124 個檔、1198 passed（新增狀態 `shard_burst` 的圖樣：只用既有的星形與水滴筆畫，`client/src/render/statusIcon.ts`）；`npm run build` 通過。
 - `ruff check .`、`ruff format --check .`（1571 files）、`mypy`（strict，1018 檔）：通過；`lint-imports`：9 個契約全部 KEPT。
 - 重播：`trpg battle --map swamp --seed 7 --log-json` ＋ `trpg battle replay`：重播驗證通過（88 個動作、313 個事件）。
+
+## 5A-M1b 收尾（玩法 PM 代決 2026-11-03）
+
+**1. 沉默打斷法術型蓄力**：`trpg.engine.delayed` 的 `status_applied` 觸發新增判斷——沉默（`blocks_spells`）施加到正在蓄力的單位，而且蓄力的技能是法術型（`is_spell_for_silence`）時取消蓄力（`followup_cancelled`，`reason: silenced`，紀錄文字「法術被沉默打斷」）。武器技型延遲段與定向蓄力（吐息）照舊只吃倒下、暈眩、冰凍。AI 的「打斷蓄力」加分（`ai/priority.py`）同樣算沉默（只對法術型蓄力）。`LOG_FORMAT` `/102` → **`/103`**（`戰鬥紀錄格式變更.md` 已加條目，`/102` 紀錄無法重播）。測試：`tests/engine/test_delayed_followup.py`（法術型被沉默取消、武器型不取消）。
+
+**2. 單位卡「特性」欄（#82）**：新 `trpg.narrative.unit_traits`（依單位範本；變體與 `<範本>_<詞綴>` 的精英範本會解析）產生中文句：精英詞綴、被動技能、非預設反應（同門相護等）、開場狀態（碎晶、隱蔽）；`UnitView.traits_zh`（預設空）由 `api/presenter.traits_view` 填入（主角不列；每步視圖同樣填）。前端 `UnitInfo` 加「特性」列（`traitRows`，沿用現有表格與 `RuleText`，沒有新的浮動卡）。OpenAPI 與 `schema.d.ts` 已重產。測試：`tests/narrative/test_unit_traits.py`、`tests/api/test_unit_traits_api.py`、`client/src/ui/unitInfoTraits.test.ts`。
+
+**備註（待 PM 決定）**：特性欄只看範本，戰鬥中才加上的狀態不算；開場狀態是範本資料，倒數結束後欄位仍列出（描述「這一族出什麼題」）。未在瀏覽器實測畫面（只有 vitest 與 build）。
