@@ -23,6 +23,8 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
+        "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
+        "heart_link": "只由詞綴連心的 add_opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "race_stonewall": "只由矮人種族技「穩若磐石」施加（3R-2），沒有技能施加",
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",
         "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",

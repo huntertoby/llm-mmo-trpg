@@ -156,7 +156,7 @@ statuses:
   - id: sword_formation
     polarity: neutral
     name_zh: 劍陣
-    description_zh: 3 格內每有一名其他劍陣弟子，攻擊傷害 +20%（最多算 2 名）；身邊沒有劍陣弟子時攻擊傷害 ×0.8。不能被淨化、驅散或奪取。
+    description_zh: 與其他劍陣弟子站得越近、人越多，劍勢越盛；落單時威力減弱。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
     formation: {kin_tag: sword_array, range: 3, per_ally_permille: 200, max_allies: 2, alone_permille: 800}
@@ -165,7 +165,7 @@ statuses:
   - id: heart_link
     polarity: neutral
     name_zh: 連心
-    description_zh: 受到的傷害有 30% 平分給相鄰的同伴（直接扣血，不經護盾）；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。
+    description_zh: 受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
     share_damage: {range: 1, permille: 300}

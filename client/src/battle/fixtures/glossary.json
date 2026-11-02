@@ -614,6 +614,42 @@
    "rules_zh": []
   },
   {
+   "id": "sword_formation",
+   "name_zh": "劍陣",
+   "description_zh": "與其他劍陣弟子站得越近、人越多，劍勢越盛；落單時威力減弱。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "陣法：3 格內每有一名帶「sword_array」標籤的友方，攻擊傷害 +20%（最多算 2 名）；範圍內沒有時攻擊傷害 ×80%"
+   ]
+  },
+  {
+   "id": "heart_link",
+   "name_zh": "連心",
+   "description_zh": "受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "分傷：受到的傷害（護盾之後）有 30% 平分給相鄰的友方（直接扣血，不經護盾）"
+   ]
+  },
+  {
    "id": "slow",
    "name_zh": "緩速",
    "description_zh": "回合開始時的移動點數減少。",

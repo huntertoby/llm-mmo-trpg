@@ -217,7 +217,9 @@ def test_sword_array_disciple_traits_and_no_stopgap() -> None:
     assert "skill_shoulder_strike" not in disciple.skills
     assert "sword_array" in disciple.tags
     lines = unit_trait_lines(lib, "sect_array_disciple")
-    assert any(line.startswith("陣法「劍陣」") and "+20%" in line for line in lines)
+    assert any(
+        line.startswith("陣法「劍陣」") and "+20%" in line and "×80%" in line for line in lines
+    )
 
 
 # ---------------------------------------------------------------------------

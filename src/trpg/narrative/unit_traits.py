@@ -10,6 +10,7 @@ from __future__ import annotations
 from trpg.content.battle import StatusDef, UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.world_enemies import apply_affix
+from trpg.narrative.status_info import formation_rules
 
 __all__ = ["resolve_template", "trait_lines_for", "unit_trait_lines"]
 
@@ -65,9 +66,9 @@ def trait_lines_for(
     for opening in template.opening_statuses:
         status = library.ruleset.status_def(opening.status)
         turns = f"，開場 {opening.duration} 回合" if opening.duration is not None else ""
-        lines.append(
-            f"{_opening_label(status)}「{status.name_zh}」{turns}：{status.description_zh}"
-        )
+        rules = "".join(f"（{r}）" for r in formation_rules(status))  # 數字由欄位產生（5A-M2）
+        label = _opening_label(status)
+        lines.append(f"{label}「{status.name_zh}」{turns}：{status.description_zh}{rules}")
     return lines
 
 
