@@ -9,6 +9,7 @@ import pytest
 from tests.world.helpers import NOON, make_world, with_rules
 from tests.world.test_situations import at_event
 from trpg.content.library import ContentLibrary
+from trpg.skillgen.candidates import skill_has_keywords
 from trpg.world.actions import (
     EventResolvedEvent,
     EventSolveAction,
@@ -27,7 +28,7 @@ from trpg.world.events import (
     roll_event,
     season_day,
 )
-from trpg.world.growth import hero_tier
+from trpg.world.growth import hero_tier, world_library
 from trpg.world.solutions import opportunity_tier_bonus
 from trpg.world.state import CharacterState
 from trpg.world.step import world_step
@@ -66,6 +67,10 @@ def test_opportunity_gives_complete_offer(library: ContentLibrary, make_char: Ma
     assert (pending.source, pending.quest, pending.step) == ("opportunity", ALTAR, "opportunity")
     assert pending.offer.reason == "complete"  # 機遇給完整技能（07 7.6）
     assert len(pending.offer.candidates) == 3
+    # 5B-4d：三張都帶觸發情境的關鍵字（07 7.6；雷擊點 → 帶電）
+    assert all(t.keywords[:1] == ("charged",) for t in pending.offer.tags)
+    lib = world_library(library)
+    assert all(skill_has_keywords(s, ("charged",), lib) for s in pending.offer.candidates)
     assert after.offers_made == char.offers_made + 1
     kinds = [type(e) for e in result.events]
     assert kinds[:3] == [EventSolvedEvent, SkillOfferedEvent, EventResolvedEvent]

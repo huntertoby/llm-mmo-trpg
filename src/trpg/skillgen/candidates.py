@@ -48,6 +48,12 @@
 （單一關鍵字，``fallback`` 為真）。指定關鍵字的組合不抽傳說
 （:mod:`trpg.skillgen.random_composer`）。
 
+**指定關鍵字**（Phase 5B-4d，07 7.6 機遇「關鍵字由觸發情境決定」）：
+``CandidateRequest.pinned_keyword``
+有值時三張都帶它——加深＝只帶它；橋接＝它＋另一個持有的關鍵字；新方向＝它＋一個還沒有的關鍵字
+（區域偏向排前）；多關鍵字找不到時退回只帶它（``fallback``）。橋接、新方向的多關鍵字選項各自受
+``bridge_variant_cap`` 管；不從通用池抽。``None`` ＝ 原行為（逐字不變）。
+
 **LLM 來源**（Phase 4-L6，``docs/phases/Phase4計畫.md`` 3F 節）：呼叫端傳入 ``llm``
 （:data:`~trpg.skillgen.proposal_topic.LlmProposer`）時，每個候選種類先以
 ``llm_share_permille`` 的機率
@@ -169,6 +175,9 @@ class CandidateRequest:
     產生器（:mod:`trpg.skillgen.whiteboard_candidates`）看；預設 1／1／1 ＝ 原行為。"""
     min_passive: int = 0
     """白板三選一至少幾張被動（Phase 5B-4b，07 7.6 新手鏈「至少 1 招被動」）。0 ＝ 原行為。"""
+    pinned_keyword: str | None = None
+    """指定關鍵字（Phase 5B-4d，07 7.6 機遇「關鍵字由觸發情境決定」）：三張候選都帶它（見模組
+    說明）。只有完整版產生器看；``None`` ＝ 原行為。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -285,14 +294,30 @@ class _Search:
     traces: dict[str, LlmTrace] = field(default_factory=dict)
     bridge_used: int = 0
     """橋接多關鍵字搜尋已用掉的組合器變體數（PERF-3）。"""
+    pinned_new_used: int = 0
+    """指定關鍵字模式（5B-4d）新方向的多關鍵字搜尋已用掉的組合器變體數（和橋接各自計）。"""
 
     def capped(self, keywords: Sequence[str]) -> bool:
-        """這次搜尋受橋接上限管（PERF-3）：橋接、兩個以上的關鍵字、有設上限。"""
-        return self.kind == "bridge" and len(keywords) > 1 and self.rules.bridge_variant_cap > 0
+        """這次搜尋受變體上限管（PERF-3）：兩個以上的關鍵字、有設上限，而且是橋接（或指定關鍵字
+        模式的新方向，5B-4d）。"""
+        if len(keywords) <= 1 or self.rules.bridge_variant_cap <= 0:
+            return False
+        return self.kind == "bridge" or (
+            self.kind == "new" and self.request.pinned_keyword is not None
+        )
+
+    def used(self) -> int:
+        return self.bridge_used if self.kind == "bridge" else self.pinned_new_used
+
+    def spend(self, variants: int) -> None:
+        if self.kind == "bridge":
+            self.bridge_used += variants
+        else:
+            self.pinned_new_used += variants
 
     def exhausted(self, keywords: Sequence[str]) -> bool:
-        """橋接上限已用完（PERF-3）：剩下的多關鍵字選項跳過，照 6.27.4 ③ 放寬關鍵字。"""
-        return self.capped(keywords) and self.bridge_used >= self.rules.bridge_variant_cap
+        """變體上限已用完（PERF-3）：剩下的多關鍵字選項跳過，照 6.27.4 ③ 放寬關鍵字。"""
+        return self.capped(keywords) and self.used() >= self.rules.bridge_variant_cap
 
     def from_llm(
         self, keywords: Sequence[str], want: AttrWant | None
@@ -394,7 +419,7 @@ class _Search:
             if self.exhausted(keywords):  # PERF-3：橋接上限用完
                 break
             seed = rng.next_u32()
-            left = self.rules.bridge_variant_cap - self.bridge_used if capped else KEYWORD_TRIES
+            left = self.rules.bridge_variant_cap - self.used() if capped else KEYWORD_TRIES
             try:
                 found = compose_with_stats(
                     seed,
@@ -409,11 +434,11 @@ class _Search:
                     skip_legendary=True,  # PERF-3：指定關鍵字的組合不抽傳說（傳說不當候選）
                 )
             except KeywordExhaustedError as exc:
-                self.bridge_used += exc.variants if capped else 0
+                self.spend(exc.variants if capped else 0)
                 continue
             except ComposeError:
                 continue
-            self.bridge_used += found.variants if capped else 0
+            self.spend(found.variants if capped else 0)
             skill = found.skill
             if self.usable(skill) and skill_has_keywords(skill, keywords, self.library):
                 grade = self._grade(skill, want)
@@ -577,6 +602,35 @@ def _new(
     return Candidate("new", hit[0], hit[1], hit[2], fallback=hit[0] not in fresh)
 
 
+def _pinned(
+    search: _Search, held: list[str], unheld: list[str], behavior: Mapping[str, int]
+) -> list[Candidate | None]:
+    """指定關鍵字模式（Phase 5B-4d，見模組說明）：三張都帶 ``pinned_keyword``。亂數照一般模式各
+    種類一條 ``fork``。"""
+    pin = search.request.pinned_keyword
+    assert pin is not None
+    others = [k for k in held if k != pin]
+    fresh = [k for k in unheld if k != pin]
+    seed = search.request.seed
+
+    search.kind = "deepen"
+    hit = _first(search, Rng(seed).fork("deepen"), [(pin,)], "same")
+    deepen = None if hit is None else Candidate("deepen", *hit, fallback=pin not in held)
+
+    search.kind = "bridge"
+    pairs: list[tuple[str, ...]] = [(pin, k) for k in others]
+    hit = _first(search, Rng(seed).fork("bridge"), [*pairs, (pin,)], "same")
+    bridge = None if hit is None else Candidate("bridge", *hit, fallback=hit[0] not in pairs)
+
+    search.kind = "new"
+    rng = Rng(seed).fork("new")
+    order = region_first(_weighted_order(rng, fresh, behavior), search.request.region_keywords)
+    outward: list[tuple[str, ...]] = [(pin, k) for k in order]
+    hit = _first(search, rng, [*outward, (pin,)], "other")
+    new = None if hit is None else Candidate("new", *hit, fallback=hit[0] not in outward)
+    return [deepen, bridge, new]
+
+
 def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
     """通用池：階級相符、非傳說、**沒有任何關鍵字**（含通用歸類）的手寫技能＝基礎技能（06 6.27.1，
     玩法 PM 2026-10-24 選 B：通用池與「基礎技能」同一個範圍）。"""
@@ -623,19 +677,24 @@ def generate_candidates(
         raise ValueError(f"未知的關鍵字：{', '.join(unknown)}")
     behavior = behavior_weights(library, request.behavior)
     held = _ranked_held(request.keyword_counts, order, behavior)
+    if request.pinned_keyword is not None and request.pinned_keyword not in order:
+        raise ValueError(f"未知的指定關鍵字：{request.pinned_keyword}")
     search = _Search(library, request, rules, _pool(library, request.tier), set(), llm)
     found: list[Candidate | None] = []
     # 依「加深 → 橋接 → 新方向」的順序產生；退回到「還沒有的關鍵字」的候選用掉的關鍵字，不再給
     # 下一個候選（盡量讓三個候選不同），已被前一個候選用掉的技能也不會重複。
     unheld = [k for k in order if k not in held]
-    deepen = _deepen(search, held, unheld, behavior)
-    found.append(deepen)
-    bridge = _bridge(search, held, _without(unheld, deepen), behavior)
-    found.append(bridge)
-    new = _general(search) or _new(
-        search, _without(_without(unheld, deepen), bridge), held, behavior
-    )
-    found.append(new)
+    if request.pinned_keyword is not None:  # 指定關鍵字（5B-4d）
+        found = _pinned(search, held, unheld, behavior)
+    else:
+        deepen = _deepen(search, held, unheld, behavior)
+        found.append(deepen)
+        bridge = _bridge(search, held, _without(unheld, deepen), behavior)
+        found.append(bridge)
+        new = _general(search) or _new(
+            search, _without(_without(unheld, deepen), bridge), held, behavior
+        )
+        found.append(new)
     return tuple(
         replace(c, llm=search.traces.get(c.kind)) if c.kind in search.traces else c
         for c in found

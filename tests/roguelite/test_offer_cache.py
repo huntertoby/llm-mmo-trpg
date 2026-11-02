@@ -55,9 +55,10 @@ def test_key_covers_inputs() -> None:
         offer_key(lib, run, "complete", region_keywords=("wet",)),
         offer_key(lib, run.model_copy(update={"offers_made": 3}), "complete"),
         offer_key(lib, _run(seed=2), "complete"),
+        offer_key(lib, run, "complete", pinned_keyword="charged"),  # 5B-4d
     }
     assert base not in others
-    assert len(others) == 5
+    assert len(others) == 6
     # 不影響候選的欄位（經驗、生命）不進鍵
     assert offer_key(lib, run.model_copy(update={"xp": run.xp + 5}), "complete") == base
 
