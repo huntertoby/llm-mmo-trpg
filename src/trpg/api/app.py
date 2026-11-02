@@ -103,6 +103,7 @@ def create_app(
     provider = llm if llm is not None else LocalLlmProvider()
     app.state.runs = RunStore(lib, app.state.store, saves, llm=provider)
     app.state.world = WorldStore(lib, app.state.store, saves / "world")  # 大世界（5A-5）
+    app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
     app.state.world_llm = WorldLlm(provider)  # 大世界自己的 LLM 開關（5B-5）
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))

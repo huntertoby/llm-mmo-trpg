@@ -33,15 +33,28 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 不再刻意湊一個）；武器技看主角手上武器的縮放屬性（3H-7）。
 ``roguelite.yaml`` 的 ``offer_size``、``off_route_per_offer``、
 ``offer_max_attempts`` 從 3-24b2 起不再使用（保留欄位，見報告待決）。
+
+結果快取（PERF-3）：呼叫端用 :func:`using_offer_cache` 裝上 :class:`OfferCache` 時，
+:func:`make_offer` 先以 :func:`offer_key`（候選產生器的完整輸入＋三選一種類與第幾組的摘要）查表，
+命中就回傳同一組候選；沒命中照常計算再存入。同一把鍵另一個執行緒正在算時等它算完（結果相同）。
+API 層在背景先算好大世界的三選一（``trpg.api.offer_prefetch``）；沒裝快取時行為與以往逐字相同。
+LLM 來源開著（``run.llm``）或裝了觀察者（:func:`observe_complete`）時不用快取。
 """
 
 from __future__ import annotations
 
+import dataclasses
+import hashlib
+import json
 import re
+import threading
+from collections import OrderedDict
 from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import Future
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import replace
+from typing import Any
 
 from trpg.content.battle import WeaponDef
 from trpg.content.equipment import Loadout, loadout_held, resolve_loadout
@@ -71,6 +84,7 @@ _TIER_ID = re.compile(r"^(skill_[a-z0-9_]+?)_t(\d+)$")
 __all__ = [
     "COMPLETE_SUFFIX",
     "CompleteObserver",
+    "OfferCache",
     "as_complete",
     "at_run_tier",
     "candidate_request",
@@ -78,9 +92,11 @@ __all__ = [
     "library_base",
     "make_offer",
     "observe_complete",
+    "offer_key",
     "offer_updates",
     "skill_defs",
     "take_candidate",
+    "using_offer_cache",
 ]
 
 
@@ -182,6 +198,158 @@ def as_complete(library: ContentLibrary, skill: SkillDef) -> SkillDef:
     return result
 
 
+class OfferCache:
+    """:func:`make_offer` 的結果快取（PERF-3；執行緒安全）。每筆是「鍵 →（內容庫, ``Future``）」：
+    算完的直接回傳，正在算的等它算完；內容庫以物件身分確認（存的是物件本身，身分不會被重用）。
+    最多 ``limit`` 筆，滿了丟掉最舊的。只影響速度：同一把鍵的結果與直接計算逐字相同。"""
+
+    def __init__(self, limit: int = 64) -> None:
+        self.limit = limit
+        self._lock = threading.Lock()
+        self._items: OrderedDict[str, tuple[ContentLibrary, Future[SkillOffer]]] = OrderedDict()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._items)
+
+    def _future(self, library: ContentLibrary, key: str) -> Future[SkillOffer] | None:
+        with self._lock:
+            found = self._items.get(key)
+        if found is None or found[0] is not library:
+            return None
+        return found[1]
+
+    def has(self, library: ContentLibrary, key: str) -> bool:
+        """已經算好或正在算。"""
+        return self._future(library, key) is not None
+
+    def done(self, library: ContentLibrary, key: str) -> bool:
+        """已經算好（不用等）。"""
+        future = self._future(library, key)
+        return future is not None and future.done() and future.exception() is None
+
+    def get(self, library: ContentLibrary, key: str) -> SkillOffer | None:
+        """算好的結果；正在算時等它算完；沒有或算失敗時 ``None``。"""
+        future = self._future(library, key)
+        if future is None:
+            return None
+        try:
+            return future.result()
+        except Exception:  # 算失敗：呼叫端照常自己算（同樣的錯誤會在那裡拋出）
+            return None
+
+    def reserve(self, library: ContentLibrary, key: str) -> Future[SkillOffer] | None:
+        """登記「我要算這把鍵」：還沒有人登記時回傳新的 ``Future``（呼叫端負責
+        :meth:`finish`），否則 ``None``。"""
+        future: Future[SkillOffer] = Future()
+        with self._lock:
+            found = self._items.get(key)
+            if found is not None and found[0] is library:
+                return None
+            self._items[key] = (library, future)
+            while len(self._items) > self.limit:
+                self._items.popitem(last=False)
+        return future
+
+    def finish(
+        self,
+        key: str,
+        future: Future[SkillOffer],
+        offer: SkillOffer | None,
+        error: BaseException | None = None,
+    ) -> None:
+        """把 :meth:`reserve` 的結果填進去；失敗時移除這筆（之後的人重算）。"""
+        if offer is not None:
+            future.set_result(offer)
+            return
+        with self._lock:
+            found = self._items.get(key)
+            if found is not None and found[1] is future:
+                del self._items[key]
+        future.set_exception(error if error is not None else RuntimeError("沒有結果"))
+
+
+_OFFER_CACHE: ContextVar[OfferCache | None] = ContextVar("trpg_offer_cache", default=None)
+
+
+@contextmanager
+def using_offer_cache(cache: OfferCache | None) -> Iterator[None]:
+    """在 ``with`` 區塊內，:func:`make_offer` 使用 ``cache``（PERF-3；離開時還原）。"""
+    token = _OFFER_CACHE.set(cache)
+    try:
+        yield
+    finally:
+        _OFFER_CACHE.reset(token)
+
+
+def _offer_request(
+    library: ContentLibrary,
+    run: RunState,
+    complete: bool,
+    *,
+    region_keywords: tuple[str, ...],
+    mix: tuple[int, int, int] | None,
+    min_passive: int,
+    tier_bonus: int,
+) -> CandidateRequest:
+    request = candidate_request(library, run)
+    if tier_bonus:
+        request = replace(request, tier=request.tier + tier_bonus)
+    if region_keywords or mix is not None or min_passive:
+        request = replace(
+            request,
+            region_keywords=region_keywords,
+            mix=mix if mix is not None and not complete else request.mix,
+            min_passive=0 if complete else min_passive,
+        )
+    return request
+
+
+def _jsonable(value: object) -> Any:
+    if isinstance(value, frozenset | set):
+        return sorted(value)
+    raise TypeError(f"不能放進三選一快取鍵：{type(value).__name__}")
+
+
+def _request_key(run: RunState, complete: bool, request: CandidateRequest) -> str:
+    """候選產生器的完整輸入＋三選一種類、第幾組（標籤用）、主角最高屬性的摘要（BLAKE2b；不用
+    內建 ``hash()``）。"""
+    data = {
+        "complete": complete,
+        "offers_made": run.offers_made,
+        "top": top_attribute(run.hero.attributes),
+        "request": dataclasses.asdict(request),
+    }
+    text = json.dumps(data, sort_keys=True, ensure_ascii=False, default=_jsonable)
+    return hashlib.blake2b(text.encode("utf-8"), digest_size=20).hexdigest()
+
+
+def offer_key(
+    library: ContentLibrary,
+    run: RunState,
+    reason: str,
+    *,
+    region_keywords: tuple[str, ...] = (),
+    mix: tuple[int, int, int] | None = None,
+    min_passive: int = 0,
+    tier_bonus: int = 0,
+) -> str | None:
+    """:func:`make_offer` 同樣參數的快取鍵（PERF-3）；LLM 來源開著時 ``None``（不快取）。"""
+    if run.llm:
+        return None
+    complete = reason == "complete"
+    request = _offer_request(
+        library,
+        run,
+        complete,
+        region_keywords=region_keywords,
+        mix=mix,
+        min_passive=min_passive,
+        tier_bonus=tier_bonus,
+    )
+    return _request_key(run, complete, request)
+
+
 def make_offer(
     library: ContentLibrary,
     run: RunState,
@@ -198,19 +366,43 @@ def make_offer(
     大世界任務（Phase 5B-4b）另傳 ``region_keywords``（新方向的區域偏向）、``mix``（白板的加深／
     橋接／新方向張數）、``min_passive``（白板至少幾張被動）；預設值＝原型的原行為。完整技能三選一
     只看 ``region_keywords``。``tier_bonus``（Phase 5B-4c 大世界機遇，07 7.6「15% 機率高 1 階」）：
-    候選比角色階級高幾階（照該階預算）；預設 0＝原行為。"""
-    settings = library.roguelite.candidates
-    request = candidate_request(library, run)
-    if tier_bonus:
-        request = replace(request, tier=request.tier + tier_bonus)
+    候選比角色階級高幾階（照該階預算）；預設 0＝原行為。
+
+    裝了 :class:`OfferCache`（:func:`using_offer_cache`）時先查快取（PERF-3，見模組說明）。"""
     complete = reason == "complete"
-    if region_keywords or mix is not None or min_passive:
-        request = replace(
-            request,
-            region_keywords=region_keywords,
-            mix=mix if mix is not None and not complete else request.mix,
-            min_passive=0 if complete else min_passive,
-        )
+    request = _offer_request(
+        library,
+        run,
+        complete,
+        region_keywords=region_keywords,
+        mix=mix,
+        min_passive=min_passive,
+        tier_bonus=tier_bonus,
+    )
+    cache = _OFFER_CACHE.get()
+    if cache is None or run.llm or _COMPLETE_OBSERVER.get() is not None:
+        return _compute_offer(library, run, complete, request)
+    key = _request_key(run, complete, request)
+    found = cache.get(library, key)
+    if found is not None:
+        return found
+    future = cache.reserve(library, key)
+    if future is None:  # 另一個執行緒剛登記：等它（它失敗時自己算）
+        found = cache.get(library, key)
+        return found if found is not None else _compute_offer(library, run, complete, request)
+    try:
+        offer = _compute_offer(library, run, complete, request)
+    except BaseException as error:
+        cache.finish(key, future, None, error)
+        raise
+    cache.finish(key, future, offer)
+    return offer
+
+
+def _compute_offer(
+    library: ContentLibrary, run: RunState, complete: bool, request: CandidateRequest
+) -> SkillOffer:
+    settings = library.roguelite.candidates
     if settings.whiteboard and not complete:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
         found = generate_whiteboard_candidates(library, request, settings.composer_tries)
         tier = request.tier
