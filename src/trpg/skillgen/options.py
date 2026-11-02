@@ -1025,6 +1025,8 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
     elif name in ("grant_pierce", "allow_self_target"):
         value = FieldSpec(**base, type="bool")
     else:
+        if name == "summon_limit_delta":  # BAL-14c：選單只留 +1
+            low = max(low or 1, 1)
         value = FieldSpec(**base, type="int", min=low, max=high)
     return value
 
