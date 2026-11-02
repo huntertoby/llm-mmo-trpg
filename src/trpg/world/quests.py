@@ -18,6 +18,7 @@ LLM。不合法的動作拋 :class:`WorldActionError`，狀態不變。
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
@@ -92,6 +93,7 @@ __all__ = [
     "offer_bias",
     "quest_def",
     "quest_table",
+    "store_offer",
     "take_offer",
 ]
 
@@ -474,7 +476,7 @@ def _offer(
         mix=None if offer.mix is None else offer.mix.as_tuple(),
         min_passive=offer.min_passive,
     )
-    return _store_offer(char, quest, step, made)
+    return store_offer(char, quest.id, step.id, made)
 
 
 def offer_bias(
@@ -490,10 +492,16 @@ def offer_bias(
     return table.region_keywords
 
 
-def _store_offer(
-    char: CharacterState, quest: QuestDef, step: QuestStepDef, offer: SkillOffer
+def store_offer(
+    char: CharacterState,
+    quest: str,
+    step: str,
+    offer: SkillOffer,
+    *,
+    source: Literal["quest", "opportunity"] = "quest",
 ) -> tuple[CharacterState, WorldEvent]:
-    pending = PendingOffer(quest=quest.id, step=step.id, offer=offer)
+    """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務與機遇（5B-4c）共用。"""
+    pending = PendingOffer(quest=quest, step=step, offer=offer, source=source)
     char = char.model_copy(
         update={
             "pending_offers": (*char.pending_offers, pending),
@@ -501,10 +509,11 @@ def _store_offer(
         }
     )
     event = SkillOfferedEvent(
-        quest=quest.id,
-        step=step.id,
+        quest=quest,
+        step=step,
         reason=offer.reason,
         candidates=tuple(s.id for s in offer.candidates),
+        source=source,
     )
     return char, event
 
@@ -521,7 +530,11 @@ def take_offer(
         if action.replace is not None:
             raise WorldActionError("沒有選候選時不能指定要替換的技能")
         event = SkillOfferTakenEvent(
-            quest=pending.quest, step=pending.step, skill=None, placed="skipped"
+            quest=pending.quest,
+            step=pending.step,
+            skill=None,
+            placed="skipped",
+            source=pending.source,
         )
         return char.model_copy(update={"pending_offers": rest}), (event,)
     if not 0 <= action.pick < len(offer.candidates):
@@ -551,6 +564,7 @@ def take_offer(
         step=pending.step,
         skill=skill_id,
         placed="equipped" if placed == "equipped" else "bench",
+        source=pending.source,
     )
     return char, (event,)
 

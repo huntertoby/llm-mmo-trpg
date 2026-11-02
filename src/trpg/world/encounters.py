@@ -20,6 +20,10 @@
 不抽遠程）用 ``Rng(fnv1a64(f"{battle_seed}:reinforce"))`` 均勻抽 1 名排在陣容最後；陣容已滿
 4 名（或沒有可抽的單位）時改成「敵人先手」（代決 5A6-3）。等級照地點，由開戰時一起成長。
 
+**遭遇加人**（Phase 5B-4c，世界級線頭到期結局）：遇敵當下的世界旗標
+（``EncounterResult.world_flags``）符合遭遇表 ``surges`` 的旗標、地點種類、時段時，一般抽到的陣容在
+敵方最後多 1 名（混精英之後；滿 4 名不加；遭遇變化不加）。不消耗亂數。
+
 **第三方**（Phase 5B-M3 三方混戰）：陣容的 ``third`` 照順序放進 :attr:`EncounterLineup.third`（套用
 等級門檻）；營地混精英、固定精英、增援只作用在敵方 ``members``（代決 5BM3-9）。不消耗亂數。
 """
@@ -127,6 +131,7 @@ def roll_lineup(
         members.insert(0, LineupMember(unit=entry.elite.unit, affix=entry.elite.affix))
     elif kind == "camp":
         members = _maybe_mix_elite(rng, table, catalog, members)
+    members = _surge(table, encounter, kind, members)
     return EncounterLineup(
         region=encounter.region,
         location=encounter.location,
@@ -204,6 +209,23 @@ def elite_kinds(library: ContentLibrary, lineup: EncounterLineup) -> tuple[str, 
         elif member.affix is not None:
             kinds.add(f"{member.unit}+{member.affix}")
     return tuple(sorted(kinds))
+
+
+def _surge(
+    table: EncounterTable, encounter: EncounterResult, kind: str, members: list[LineupMember]
+) -> list[LineupMember]:
+    """世界旗標有效時的遭遇加人（5B-4c；遭遇表 ``surges``）：符合旗標、地點種類、時段的每一筆在
+    敵方最後加 1 名（滿 4 名不加；代決 5B4c-10）。不耗亂數。"""
+    out = list(members)
+    for surge in table.surges:
+        if (
+            surge.flag in encounter.world_flags
+            and kind in surge.kinds
+            and (surge.day_phase is None or surge.day_phase == encounter.day_phase)
+            and len(out) < MAX_GROUP_SIZE
+        ):
+            out.append(LineupMember(unit=surge.unit))
+    return out
 
 
 def _gated(unit: str, entry: LocationEncounters, level: int) -> str:

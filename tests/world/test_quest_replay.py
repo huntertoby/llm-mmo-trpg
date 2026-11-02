@@ -124,3 +124,42 @@ def test_5b4b_log_replays_identically(calm: ContentLibrary, make_char: MakeChar)
     assert dumps_char(second.characters["alice"]) == dumps_char(char)
     assert first.events == second.events
     assert loads_char(dumps_char(char)) == char
+
+
+def test_5b4c_log_replays_identically(ambush: ContentLibrary, make_char: MakeChar) -> None:
+    """5B-4c：世界級線頭到期（限時旗標）→ 機遇三選一 → 選技能 → 移動遇敵（記下世界旗標）→ 戰鬥，
+    重播逐字相同。"""
+    old = NOON - 400_000
+    start_world = make_world(threads=(thread("wraiths_from_rift", "possessed_hunter", old),))
+    base = at_event(make_char(), "storm_altar", "old_pine_altar")
+    skills = ("skill_chain_lightning", *base.hero.skills[1:])
+    start = base.model_copy(update={"hero": base.hero.model_copy(update={"skills": skills})})
+    char, world = start, start_world
+    entries: list[WorldLogEntry] = []
+    now = NOON
+
+    def step(action: WorldAction) -> None:
+        nonlocal char, world, now
+        now += 300
+        result = world_step(ambush, world, char, action, now)
+        char, world = result.char, result.world
+        entries.append(
+            WorldLogEntry(seq=len(entries) + 1, now=now, character_id="alice", action=action)
+        )
+
+    step(EventSolveAction(solution=0))  # 機遇
+    assert world.active_flags(now) == ("wraiths_surge",)
+    assert char.pending_offers and char.pending_offers[0].source == "opportunity"
+    step(OfferPickAction(pick=0))
+    step(TravelAction(to="cloud_sea_bridge"))
+    assert char.pending_encounter is not None
+    assert char.pending_encounter.world_flags == ("wraiths_surge",)
+    step(FightAction(steps=auto_steps(ambush, char)))
+
+    restored = loads_log(dumps_log(entries))
+    first = replay(ambush, start_world, {"alice": start}, entries)
+    second = replay(ambush, start_world, {"alice": start}, restored)
+    assert dumps_char(first.characters["alice"]) == dumps_char(char)
+    assert dumps_char(second.characters["alice"]) == dumps_char(char)
+    assert dumps_world(first.world) == dumps_world(world)
+    assert first.events == second.events

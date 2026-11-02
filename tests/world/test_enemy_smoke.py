@@ -90,9 +90,12 @@ def _assert_battle_ends(
 def test_three_way_groups(library: ContentLibrary) -> None:
     three_way = sorted(label for label, _m, _e, third in _cases(library) if third)
     assert three_way == [
+        "crane_cliff/crane_cliff_bear",  # 5B-4c：野獸改三方（玩法 PM 定）
+        "crane_cliff/crane_nest",
         "crystal_rift/rift_scavengers",
         "crystal_rift/rift_wraiths",
         "rain_terraces/terrace_clash",
+        "winter_lake/lake_bears",
     ]
 
 

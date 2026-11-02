@@ -59,7 +59,7 @@ from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
-from trpg.world.events import roll_event
+from trpg.world.events import mark_finished, roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -170,6 +170,7 @@ def world_step(
         library, result.world, before, result.char, result.events, now=now
     )
     events = (*ended, *result.events, *settled)
+    char = mark_finished(library, char, events)  # 只出一次的骨架（5B-4c）
     char, extra = advance_quests(library, world, char, events, now)
     if not ended and not settled and not extra and char is result.char:
         return result

@@ -49,6 +49,8 @@ export function solutionHint(s: WorldEventSolution): string {
       return s.cost_supplies > 0 ? `不擲骰、一定成功；付出 ${s.cost_supplies} 補給` : "不擲骰、一定成功";
     case "combat":
       return "在這裡開一場一般戰鬥；打贏才算解決，輸了或撤退事件就作罷";
+    case "opportunity":
+      return "得到一次機遇技能三選一（完整技能）；同一個機遇只能拿一次";
     default:
       return "看看處境，再寫你打算怎麼做（送出前可以換別的解法）";
   }
@@ -60,12 +62,13 @@ export function waiveLabel(s: WorldEventSolution): string | null {
   return `用〔${s.waive_zh ?? s.waive_thread}〕抵`;
 }
 
-/** 這個解法按下去要送什麼：情境判定開情境（`open`），其他送 `event_solve`（`solve`）。 */
+/** 這個解法按下去要送什麼：情境判定開情境（`open`），其他（含機遇，5B-4c）送 `event_solve`（`solve`）。 */
 export function solutionClick(
   s: WorldEventSolution,
 ): { kind: "open"; template: string } | { kind: "solve"; solution: number } | null {
   if (s.kind === "situation") return s.template != null ? { kind: "open", template: s.template } : null;
-  if (s.kind === "abandon" || s.kind === "parley" || s.kind === "combat") return { kind: "solve", solution: s.index };
+  if (s.kind === "abandon" || s.kind === "parley" || s.kind === "combat" || s.kind === "opportunity")
+    return { kind: "solve", solution: s.index };
   return null;
 }
 

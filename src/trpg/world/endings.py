@@ -6,6 +6,10 @@
 
 沒有 ``on_expire_flag`` 的線頭照舊（留著、無效、不佔上限）。``world_step`` 在分派動作之前呼叫，
 所以到期後的第一個動作就看得到結局。純函式：不讀時間、不耗亂數。
+
+**限時的世界旗標**（Phase 5B-4c，18.4 補充「霧魅從裂痕湧出 → 之後 2 天…」）：世界級線頭定義了
+``on_expire_seconds`` 時，旗標寫進 ``timed_flags``（到 ``線頭到期時間 ＋ on_expire_seconds`` 失效，
+不看哪個角色的動作觸發，全服一致），不寫進永久的 ``flags``。效果寫在資料（遭遇表的 ``surges``）。
 """
 
 from __future__ import annotations
@@ -13,7 +17,7 @@ from __future__ import annotations
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import ThreadDef
 from trpg.world.actions import ThreadExpiredEvent, WorldEvent
-from trpg.world.state import CharacterState, ThreadState, WorldState
+from trpg.world.state import CharacterState, ThreadState, TimedFlag, WorldState
 
 __all__ = ["expire_threads"]
 
@@ -56,7 +60,24 @@ def expire_threads(
         events += [ThreadExpiredEvent(thread=t.thread, scope="personal", flag=f) for t, f in ended]
     kept, ended = _split(world.threads, defs, now)
     if ended:
-        flags = tuple(sorted({*world.flags, *(f for _, f in ended)}))
-        world = world.model_copy(update={"threads": kept, "flags": flags})
-        events += [ThreadExpiredEvent(thread=t.thread, scope="world", flag=f) for t, f in ended]
+        timed = {f.flag: f.until for f in world.timed_flags}
+        permanent = set(world.flags)
+        for thread, flag in ended:
+            seconds = defs[thread.thread].on_expire_seconds
+            if seconds is None:
+                permanent.add(flag)
+                until = None
+            else:
+                until = max(timed.get(flag, 0), thread.expires_at + seconds)
+                timed[flag] = until
+            events.append(
+                ThreadExpiredEvent(thread=thread.thread, scope="world", flag=flag, until=until)
+            )
+        world = world.model_copy(
+            update={
+                "threads": kept,
+                "flags": tuple(sorted(permanent)),
+                "timed_flags": tuple(TimedFlag(flag=f, until=timed[f]) for f in sorted(timed)),
+            }
+        )
     return world, char, events

@@ -26,7 +26,8 @@ from trpg.world.battle import auto_steps, prepare_battle
 from trpg.world.encounters import roll_lineup
 from trpg.world.errors import WorldActionError
 from trpg.world.quests import advance_quests
-from trpg.world.state import CharacterState
+from trpg.world.solutions import make_encounter as open_encounter
+from trpg.world.state import CharacterState, EncounterResult, TimedFlag
 from trpg.world.step import world_step
 
 MakeChar = Callable[..., CharacterState]
@@ -151,7 +152,7 @@ def test_mentor_chain_steps(library: ContentLibrary, make_char: MakeChar) -> Non
     assert [e.step for e in events if isinstance(e, QuestStepDoneEvent)] == ["observe_flash"]
     assert char.insight == 1
     assert [(e.npc, e.delta) for e in events if isinstance(e, AffinityChangedEvent)] == [
-        ("daoist_qingya", 15)
+        ("daoist_qingya", 10)
     ]
     for weather, skills in (("clear", ("skill_bear_trap",)), ("fog", ())):
         _, none = advance_quests(library, world, char, _battle(weather, skills), NOON)
@@ -165,5 +166,93 @@ def test_mentor_chain_steps(library: ContentLibrary, make_char: MakeChar) -> Non
     assert state is not None and state.done
     assert "title_qingya_disciple" in char.story_flags
     assert char.insight == 3
-    assert char.affinity["daoist_qingya"] == 45
+    assert char.affinity["daoist_qingya"] == 30
     assert char.xp == 0 and char.pending_offers == ()  # 不給經驗、不給技能
+
+
+# ---------------------------------------------------------------------------
+# 世界級線頭的到期結局（Phase 5B-4c；Phase5計畫 21.7）
+# ---------------------------------------------------------------------------
+
+TWO_DAYS = 172_800
+
+
+def test_world_thread_ending_gives_timed_flag(library: ContentLibrary, make_char: MakeChar) -> None:
+    world = make_world(threads=(thread("wraiths_from_rift", "possessed_hunter", OLD),))
+    result = world_step(library, world, make_char(), TavernAction(), NOON)
+    expired = [e for e in result.events if isinstance(e, ThreadExpiredEvent)]
+    until = OLD + 259_200 + TWO_DAYS  # 從線頭到期起算 2 天
+    assert [(e.thread, e.scope, e.flag, e.until) for e in expired] == [
+        ("wraiths_from_rift", "world", "wraiths_surge", until)
+    ]
+    assert result.world.threads == ()
+    assert result.world.flags == ()  # 限時旗標不進永久旗標
+    assert result.world.timed_flags == (TimedFlag(flag="wraiths_surge", until=until),)
+    assert result.world.active_flags(NOON) == ("wraiths_surge",)
+    assert result.world.active_flags(until) == ()
+
+
+def test_shards_ending_is_permanent_world_flag(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world = make_world(threads=(thread("shards_to_ashen", "shard_convoy", OLD),))
+    result = world_step(library, world, make_char(), TavernAction(), NOON)
+    expired = next(e for e in result.events if isinstance(e, ThreadExpiredEvent))
+    assert (expired.flag, expired.until) == ("ashen_heart_hardened", None)
+    assert result.world.flags == ("ashen_heart_hardened",)
+    assert result.world.timed_flags == ()
+
+
+def test_timed_flag_takes_later_until(library: ContentLibrary, make_char: MakeChar) -> None:
+    late = NOON + 10 * TWO_DAYS
+    world = make_world(
+        threads=(thread("wraiths_from_rift", "possessed_hunter", OLD),),
+        timed_flags=(TimedFlag(flag="wraiths_surge", until=late),),
+    )
+    result = world_step(library, world, make_char(), TavernAction(), NOON)
+    assert result.world.timed_flags == (TimedFlag(flag="wraiths_surge", until=late),)
+
+
+def _night(location: str, flags: tuple[str, ...], seed: int = 3) -> EncounterResult:
+    return make_encounter(location, seed=seed).model_copy(
+        update={"day_phase": "night", "world_flags": flags}
+    )
+
+
+def test_wraith_surge_adds_one_at_night_camps(library: ContentLibrary) -> None:
+    for seed in range(6):
+        plain = roll_lineup(library, _night("ferry_steps", (), seed))
+        surged = roll_lineup(library, _night("ferry_steps", ("wraiths_surge",), seed))
+        assert surged.members[: len(plain.members)] == plain.members  # 亂數不變
+        assert [m.unit for m in surged.members[len(plain.members) :]] == ["mist_wraith"]
+        assert surged.members[-1].affix is None
+    day = make_encounter("ferry_steps", seed=3).model_copy(
+        update={"world_flags": ("wraiths_surge",)}
+    )
+    assert roll_lineup(library, day) == roll_lineup(library, make_encounter("ferry_steps", seed=3))
+    rift = roll_lineup(library, _night("crystal_rift", ("wraiths_surge",)))
+    assert rift == roll_lineup(library, _night("crystal_rift", ()))  # 不是營地
+
+
+def test_wraith_surge_skips_full_and_variant(library: ContentLibrary) -> None:
+    for seed in range(8):
+        plain = roll_lineup(library, _night("cliff_gang_fort", (), seed))
+        surged = roll_lineup(library, _night("cliff_gang_fort", ("wraiths_surge",), seed))
+        if len(plain.members) >= 4:
+            assert surged == plain  # 滿 4 名不加
+    risen = roll_lineup(
+        library,
+        _night("cliff_gang_fort", ("wraiths_surge",)),
+        ("scarface_rises",),
+    )
+    assert "mist_wraith" not in [m.unit for m in risen.members]  # 遭遇變化不加
+
+
+def test_encounter_records_active_world_flags(library: ContentLibrary, make_char: MakeChar) -> None:
+    until = NOON + TWO_DAYS
+    world = make_world(timed_flags=(TimedFlag(flag="wraiths_surge", until=until),))
+    place = library.world_maps["cloud_ridge"].location_by_id()["ferry_steps"]
+    during, _ = open_encounter(library, world, make_char(), place, NOON)
+    assert during.world_flags == ("wraiths_surge",)
+    after, _ = open_encounter(library, world, make_char(), place, until)
+    assert after.world_flags == ()

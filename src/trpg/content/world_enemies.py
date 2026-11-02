@@ -179,8 +179,11 @@ def apply_affix(
 ) -> UnitTemplate:
     """把精英詞綴套到範本：ID＝``<範本>_<詞綴>``、名字＝詞綴名＋範本名、加 ``elite`` 標籤、
     HP × ``hp_permille``（捨去，至少 1）、加技能、反應規則與開場狀態。不檢查能不能套（見
-    :meth:`EnemyCatalog.affix_problem`）。"""
+    :meth:`EnemyCatalog.affix_problem`）。
+
+    本身已是精英的範本（Phase 5B-4c：資料指定的懸賞詞綴）HP 不再乘（代決 5B4c-3）。"""
     reactions = template.reactions
+    already_elite = ELITE_TAG in template.tags
     if affix.add_reactions:
         base_rules = default_rules if reactions is None else reactions
         reactions = (*base_rules, *affix.add_reactions)
@@ -188,7 +191,11 @@ def apply_affix(
         update={
             "id": f"{template.id}_{affix.id}",
             "name_zh": f"{affix.name_zh}{template.name_zh}",
-            "max_hp": max(1, template.max_hp * affix.hp_permille // 1000),
+            "max_hp": (
+                template.max_hp
+                if already_elite
+                else max(1, template.max_hp * affix.hp_permille // 1000)
+            ),
             "skills": (*template.skills, *affix.add_skills),
             "reactions": reactions,
             "opening_statuses": (*template.opening_statuses, *affix.add_opening_statuses),
@@ -240,11 +247,15 @@ class EnemyCatalog:
             raise KeyError(affix_id)
         return affix
 
-    def affix_problem(self, template: UnitTemplate, affix_id: str) -> str | None:
-        """詞綴不能套到這個範本的原因（繁體中文）；``None``＝可以。"""
+    def affix_problem(
+        self, template: UnitTemplate, affix_id: str, *, allow_elite: bool = False
+    ) -> str | None:
+        """詞綴不能套到這個範本的原因（繁體中文）；``None``＝可以。``allow_elite``：資料指定的
+        精英（遭遇表的固定精英；Phase 5B-4c 懸賞的指定詞綴）可以套在本身已是精英的範本上；營地
+        隨機混精英不行。"""
         affix = self.affix(affix_id)
         weapon = self.weapons[template.weapon]
-        if self.is_elite(template):
+        if self.is_elite(template) and not allow_elite:
             return f"{template.name_zh}已經是精英"
         if template.speed == 0 or "immovable" in template.tags:
             return f"{template.name_zh}是物件型單位"

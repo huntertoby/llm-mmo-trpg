@@ -22,7 +22,7 @@ from trpg.world.actions import (
     ThreadSpentEvent,
     TravelAction,
 )
-from trpg.world.battle import auto_steps
+from trpg.world.battle import auto_steps, prepare_battle
 from trpg.world.errors import WorldActionError
 from trpg.world.quests import advance_quests
 from trpg.world.solutions import settle_event_combat
@@ -185,3 +185,54 @@ def test_event_affinity_follows_event_resolved(
     abandoned = resolved.model_copy(update={"outcome": "abandoned"})
     _, none = advance_quests(library, make_world(), make_char(), (abandoned,), NOON)
     assert none == []
+
+
+# ---------------------------------------------------------------------------
+# 戰鬥解法的勝利條件（Phase 5B-4c；Phase5計畫 21.5）
+# ---------------------------------------------------------------------------
+
+
+def _combat_index(library: ContentLibrary, skeleton: str) -> int:
+    table = library.world_event_content.events["cloud_ridge"].skeleton_by_id()[skeleton]
+    return next(i for i, s in enumerate(table.solutions) if s.kind == "combat")
+
+
+@pytest.mark.parametrize(
+    ("skeleton", "location", "kind"),
+    [
+        ("lost_acolyte", "rain_terraces", "escape"),  # 骨架 2 護送＝撤離
+        ("lost_acolyte", "old_pine_altar", "escape"),  # 沒有固定地圖：從地圖池挑支援撤離的
+        ("gang_deserter", "cliff_gang_fort", "defend"),  # 骨架 7 擋追兵＝守點
+        ("gang_deserter", "herb_valley", "defend"),
+        ("possessed_hunter", "crystal_rift", "defend"),  # 骨架 8 不殺獵人＝守點（代決 5B4c-7）
+        ("possessed_hunter", "north_slope", "defend"),
+        ("shard_convoy", "crystal_rift", "escape"),  # 骨架 14 押送隊＝撤離
+        ("shard_convoy", "sword_tomb", "eliminate"),  # 劍冢的地圖沒有撤離資料 → 全滅（代決 5B4c-8）
+        ("wounded_peddler", "ferry_steps", "eliminate"),  # 沒指定：地圖預設
+    ],
+)
+def test_combat_solution_objective(
+    library: ContentLibrary, make_char: MakeChar, skeleton: str, location: str, kind: str
+) -> None:
+    char = at_event(make_char(), skeleton, location)
+    action = EventSolveAction(solution=_combat_index(library, skeleton))
+    result = world_step(library, make_world(), char, action, NOON)
+    encounter = result.char.pending_encounter
+    assert encounter is not None
+    solution = library.world_event_content.events["cloud_ridge"].skeleton_by_id()[skeleton]
+    assert encounter.objective == solution.solutions[action.solution].objective
+    setup = prepare_battle(library, result.char).setup
+    assert setup.effective_objective.kind == kind
+
+
+def test_escape_solution_fight_settles(library: ContentLibrary, make_char: MakeChar) -> None:
+    """撤離的戰鬥解法照常打完並結算（勝＝我方全員撤離或敵人全倒）。"""
+    char = at_event(make_char(), "lost_acolyte", strong=True)
+    world = make_world()
+    action = EventSolveAction(solution=_combat_index(library, "lost_acolyte"))
+    opened = world_step(library, world, char, action, NOON)
+    steps = auto_steps(library, opened.char)
+    fought = world_step(library, world, opened.char, FightAction(steps=steps), NOON + 60)
+    assert fought.char.pending_event is None
+    won = fought.char.last_battle is not None and fought.char.last_battle.won
+    assert _resolved(fought.events).outcome == ("success" if won else "failure")

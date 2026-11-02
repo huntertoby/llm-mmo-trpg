@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Collection
+from typing import Literal
 
 from pydantic import Field, model_validator
 
@@ -24,6 +25,7 @@ __all__ = [
     "MIN_GROUP_SIZE",
     "NO_ENCOUNTER_KINDS",
     "EncounterGroupDef",
+    "EncounterSurge",
     "EncounterTable",
     "EncounterVariant",
     "FixedElite",
@@ -72,7 +74,8 @@ class GroupWeight(ContentModel):
 
 
 class FixedElite(ContentModel):
-    """精英巢穴固定的精英（9.6.6「精英巢穴、懸賞固定有」）：單位＋詞綴。"""
+    """精英巢穴固定的精英（9.6.6「精英巢穴、懸賞固定有」）：單位＋詞綴。資料指定，所以本身已是
+    精英的範本也可以套（Phase 5B-4c，18.7.4 懸賞的指定詞綴；HP 不再乘）。"""
 
     unit: str = Field(pattern=ID_PATTERN)
     affix: str = Field(pattern=ID_PATTERN)
@@ -94,6 +97,17 @@ class EncounterVariant(ContentModel):
     flag: str = Field(pattern=ID_PATTERN)
     group: str = Field(pattern=ID_PATTERN)
     elite: FixedElite | None = None
+
+
+class EncounterSurge(ContentModel):
+    """世界旗標有效時的遭遇加人（Phase 5B-4c；18.4 補充「霧魅從裂痕湧出 → 之後 2 天雲嶺夜晚營地
+    遭遇多 1 名霧魅」）：遇敵當下有世界旗標 ``flag``、地點種類在 ``kinds``、時段符合 ``day_phase``
+    （``None``＝不限）時，一般抽到的陣容在敵方最後多 1 名 ``unit``（滿 4 名不加）。"""
+
+    flag: str = Field(pattern=ID_PATTERN)
+    unit: str = Field(pattern=ID_PATTERN)
+    kinds: tuple[str, ...] = Field(default=("camp",), min_length=1)
+    day_phase: Literal["day", "night"] | None = None
 
 
 class LocationEncounters(ContentModel):
@@ -133,6 +147,8 @@ class EncounterTable(ContentModel):
     """本區常見的精英詞綴（``world/enemies.yaml`` 的 ID）。"""
     groups: tuple[EncounterGroupDef, ...] = Field(min_length=1)
     locations: tuple[LocationEncounters, ...] = Field(min_length=1)
+    surges: tuple[EncounterSurge, ...] = ()
+    """世界旗標有效時的遭遇加人（Phase 5B-4c）。"""
 
     @model_validator(mode="after")
     def _check(self) -> EncounterTable:
@@ -191,7 +207,20 @@ def encounter_table_problems(
     problems += _affix_problems(table, catalog)
     problems += _group_problems(table, catalog)
     problems += _location_problems(table, world_map, catalog)
+    problems += _surge_problems(table, catalog)
     return sorted(problems)
+
+
+def _surge_problems(table: EncounterTable, catalog: EnemyCatalog) -> list[str]:
+    """遭遇加人（5B-4c）：單位存在、不是精英。"""
+    problems: list[str] = []
+    for surge in table.surges:
+        where = f"遭遇加人 {surge.flag}"
+        if not catalog.has(surge.unit):
+            problems.append(f"{where}：未知的單位 {surge.unit}")
+        elif catalog.is_elite(catalog.template(surge.unit)):
+            problems.append(f"{where}：不能加精英（{surge.unit}）")
+    return problems
 
 
 def _affix_problems(table: EncounterTable, catalog: EnemyCatalog) -> list[str]:
@@ -298,7 +327,9 @@ def _elite_problems(
     if not catalog.has(loc.elite.unit):
         return [f"{where}：未知的固定精英 {loc.elite.unit}"]
     try:
-        reason = catalog.affix_problem(catalog.template(loc.elite.unit), loc.elite.affix)
+        reason = catalog.affix_problem(
+            catalog.template(loc.elite.unit), loc.elite.affix, allow_elite=True
+        )
     except KeyError:
         return [f"{where}：未知的詞綴 {loc.elite.affix}"]
     if reason is not None:
@@ -332,7 +363,9 @@ def _variant_problems(
                 problems.append(f"{where} {variant.flag}：未知的固定精英 {elite.unit}")
                 continue
             try:
-                reason = catalog.affix_problem(catalog.template(elite.unit), elite.affix)
+                reason = catalog.affix_problem(
+                    catalog.template(elite.unit), elite.affix, allow_elite=True
+                )
             except KeyError:
                 problems.append(f"{where} {variant.flag}：未知的詞綴 {elite.affix}")
                 continue

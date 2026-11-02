@@ -190,15 +190,19 @@ def make_offer(
     region_keywords: tuple[str, ...] = (),
     mix: tuple[int, int, int] | None = None,
     min_passive: int = 0,
+    tier_bonus: int = 0,
 ) -> SkillOffer:
     """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。``reason`` 為 ``level_up``（白板
     三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。
 
     大世界任務（Phase 5B-4b）另傳 ``region_keywords``（新方向的區域偏向）、``mix``（白板的加深／
     橋接／新方向張數）、``min_passive``（白板至少幾張被動）；預設值＝原型的原行為。完整技能三選一
-    只看 ``region_keywords``。"""
+    只看 ``region_keywords``。``tier_bonus``（Phase 5B-4c 大世界機遇，07 7.6「15% 機率高 1 階」）：
+    候選比角色階級高幾階（照該階預算）；預設 0＝原行為。"""
     settings = library.roguelite.candidates
     request = candidate_request(library, run)
+    if tier_bonus:
+        request = replace(request, tier=request.tier + tier_bonus)
     complete = reason == "complete"
     if region_keywords or mix is not None or min_passive:
         request = replace(
