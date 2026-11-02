@@ -2126,10 +2126,253 @@
           }
         }
       }
+    },
+    "/api/world/characters/{character_id}/situation": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Situation",
+        "description": "打開目前事件的某個情境判定解法：說書人寫情境敘述（還沒送出前可以換別的解法）。",
+        "operationId": "post_situation_api_world_characters__character_id__situation_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SituationOpenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/situation/answer": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Situation Answer",
+        "description": "送出情境判定的回答（**第一次送出即定案**，09 9.6.4）：玩家文字只放進 LLM 的\n``<player_input>``；引用的事實由引擎核對。回應的 ``situation_result`` 是判定明細與結果敘述。",
+        "operationId": "post_situation_answer_api_world_characters__character_id__situation_answer_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SituationAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/chat": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Chat",
+        "description": "和所在地點的 NPC 自由聊天（只換資訊，不改狀態）；回話在 ``dialog``。",
+        "operationId": "post_chat_api_world_characters__character_id__chat_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/llm": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get World Llm",
+        "description": "大世界的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）。",
+        "operationId": "get_world_llm_api_world_llm_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldLlmView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post World Llm",
+        "description": "改大世界的 LLM 開關：打開時先探測，連不到維持關閉並回提示；``null`` 回到伺服器設定。",
+        "operationId": "post_world_llm_api_world_llm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorldLlmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldLlmView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcceptQuestAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "accept_quest",
+            "title": "Kind",
+            "default": "accept_quest"
+          },
+          "quest": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Quest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "quest"
+        ],
+        "title": "AcceptQuestAction",
+        "description": "接任務（Phase 5B-4；09 9.6.3）：在給任務的 NPC 所在地點、``start`` 條件成立。"
+      },
       "Action": {
         "oneOf": [
           {
@@ -3672,6 +3915,35 @@
         "title": "CampAction",
         "description": "在目前地點紮營＝營火（09 9.6.11 #114）。"
       },
+      "CareLineView": {
+        "properties": {
+          "item_zh": {
+            "type": "string",
+            "title": "Item Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "counted": {
+            "type": "boolean",
+            "title": "Counted"
+          },
+          "reason_zh": {
+            "type": "string",
+            "title": "Reason Zh",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_zh",
+          "text_zh",
+          "counted"
+        ],
+        "title": "CareLineView"
+      },
       "ChargeOut": {
         "properties": {
           "unit_id": {
@@ -3795,6 +4067,29 @@
         "title": "ChargeView",
         "description": "裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。\n\n``stacks``／``max_stacks``：目前層數與裝備版上限；``cost_stacks``／``cost_ap``：啟動花費；\n``needs_target``：啟動要選一個敵方目標（否則作用在自己）；``ready``：層數足夠（AP 與目標\n另外看 ``legal_actions``）。"
       },
+      "ChatRequest": {
+        "properties": {
+          "npc": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Npc"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "npc",
+          "text"
+        ],
+        "title": "ChatRequest",
+        "description": "和所在地點的 NPC 自由聊天（9.6.7 #3：只換資訊）。``text`` 只放進 LLM 的\n``<player_input>``。"
+      },
       "Choice": {
         "properties": {
           "value": {
@@ -3853,6 +4148,41 @@
         ],
         "title": "Choice",
         "description": "一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀\n``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的\n最低稀有度、附帶效果上限）。"
+      },
+      "CiteFactView": {
+        "properties": {
+          "fact": {
+            "type": "string",
+            "title": "Fact"
+          },
+          "item": {
+            "type": "string",
+            "enum": [
+              "clue",
+              "npc_bond",
+              "exchange"
+            ],
+            "title": "Item"
+          },
+          "item_zh": {
+            "type": "string",
+            "title": "Item Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fact",
+          "item",
+          "item_zh",
+          "text_zh"
+        ],
+        "title": "CiteFactView",
+        "description": "可以點選引用的事實（9.6.4：持有的線索、和 NPC 的往來、拿得出來的交換條件）。"
       },
       "CollisionOut": {
         "properties": {
@@ -4540,6 +4870,71 @@
         "title": "DevPackOut",
         "description": "開發者起始包（Phase 3-24b2，開發用；只在開發者選單顯示）。"
       },
+      "DialogLineView": {
+        "properties": {
+          "npc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Npc"
+          },
+          "speaker_zh": {
+            "type": "string",
+            "title": "Speaker Zh"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rumor",
+              "quest_entry",
+              "secret",
+              "chat",
+              "nothing",
+              "tavern"
+            ],
+            "title": "Kind"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "more_zh": {
+            "type": "string",
+            "title": "More Zh",
+            "default": ""
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "llm",
+                  "fallback"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "npc",
+          "speaker_zh",
+          "kind",
+          "text_zh"
+        ],
+        "title": "DialogLineView",
+        "description": "這次請求的 NPC 回話或聊到的內容。"
+      },
       "Direction": {
         "type": "string",
         "enum": [
@@ -5136,6 +5531,163 @@
         ],
         "title": "EquipmentSlotView",
         "description": "一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"
+      },
+      "EventSolutionView": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          },
+          "attributes_zh": {
+            "type": "string",
+            "title": "Attributes Zh"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "unavailable_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "kind_zh",
+          "note_zh",
+          "attributes_zh",
+          "template",
+          "available"
+        ],
+        "title": "EventSolutionView"
+      },
+      "EventView": {
+        "properties": {
+          "skeleton": {
+            "type": "string",
+            "title": "Skeleton"
+          },
+          "location_name_zh": {
+            "type": "string",
+            "title": "Location Name Zh"
+          },
+          "actor_zh": {
+            "type": "string",
+            "title": "Actor Zh"
+          },
+          "motive_zh": {
+            "type": "string",
+            "title": "Motive Zh"
+          },
+          "story": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoryView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "who_zh": {
+            "type": "string",
+            "title": "Who Zh"
+          },
+          "want_zh": {
+            "type": "string",
+            "title": "Want Zh"
+          },
+          "obstacle_zh": {
+            "type": "string",
+            "title": "Obstacle Zh"
+          },
+          "stakes_zh": {
+            "type": "string",
+            "title": "Stakes Zh"
+          },
+          "follows_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Zh"
+          },
+          "solutions": {
+            "items": {
+              "$ref": "#/components/schemas/EventSolutionView"
+            },
+            "type": "array",
+            "title": "Solutions"
+          },
+          "leave_zh": {
+            "type": "string",
+            "title": "Leave Zh"
+          },
+          "situation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SituationView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skeleton",
+          "location_name_zh",
+          "actor_zh",
+          "motive_zh",
+          "story",
+          "who_zh",
+          "want_zh",
+          "obstacle_zh",
+          "stakes_zh",
+          "solutions",
+          "leave_zh"
+        ],
+        "title": "EventView",
+        "description": "事件卡（9.6.7 #6、#7）。"
       },
       "Facing": {
         "type": "string",
@@ -7399,6 +7951,11 @@
           "camp_cost": {
             "type": "integer",
             "title": "Camp Cost"
+          },
+          "can_tavern": {
+            "type": "boolean",
+            "title": "Can Tavern",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -8991,6 +9548,55 @@
         "title": "NodeOut",
         "description": "目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、\n``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，\n``after_battle``、``offer``；Phase 3W-5）、``campfire``（``after_battle``）、\n``ended``（``victory``）。"
       },
+      "NpcHereView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "role_zh": {
+            "type": "string",
+            "title": "Role Zh"
+          },
+          "affinity": {
+            "type": "integer",
+            "title": "Affinity"
+          },
+          "rank": {
+            "type": "string",
+            "title": "Rank"
+          },
+          "rank_zh": {
+            "type": "string",
+            "title": "Rank Zh"
+          },
+          "range_zh": {
+            "type": "string",
+            "title": "Range Zh"
+          },
+          "talk_zh": {
+            "type": "string",
+            "title": "Talk Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "role_zh",
+          "affinity",
+          "rank",
+          "rank_zh",
+          "range_zh",
+          "talk_zh"
+        ],
+        "title": "NpcHereView"
+      },
       "OathCurrentView": {
         "properties": {
           "template": {
@@ -9397,6 +10003,43 @@
         ],
         "title": "OfferOut"
       },
+      "OfferPickAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "offer_pick",
+            "title": "Kind",
+            "default": "offer_pick"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "replace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replace"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "OfferPickAction",
+        "description": "選任務給的技能三選一（07 7.6）：``pick`` 為 ``None`` ＝ 跳過；``replace`` 是要換掉的技能\n（只在城鎮與營火）。"
+      },
       "OfferTagOut": {
         "properties": {
           "kind": {
@@ -9717,6 +10360,40 @@
         ],
         "title": "PendingFlashOut",
         "description": "已付點、還沒選的閃現選項（Phase 3W-5）；選之前不能做別的事。"
+      },
+      "PendingOfferView": {
+        "properties": {
+          "quest_name_zh": {
+            "type": "string",
+            "title": "Quest Name Zh"
+          },
+          "step_zh": {
+            "type": "string",
+            "title": "Step Zh"
+          },
+          "offer": {
+            "$ref": "#/components/schemas/OfferOut"
+          },
+          "can_replace": {
+            "type": "boolean",
+            "title": "Can Replace"
+          },
+          "place_zh": {
+            "type": "string",
+            "title": "Place Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "quest_name_zh",
+          "step_zh",
+          "offer",
+          "can_replace",
+          "place_zh"
+        ],
+        "title": "PendingOfferView",
+        "description": "任務給的技能三選一（07 7.6）。"
       },
       "PendingView": {
         "properties": {
@@ -10277,6 +10954,142 @@
         ],
         "title": "Protect",
         "description": "保護指定友方。"
+      },
+      "QuestHereView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          },
+          "giver_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Giver Zh"
+          },
+          "can_accept": {
+            "type": "boolean",
+            "title": "Can Accept"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "kind_zh",
+          "summary_zh",
+          "giver_zh",
+          "can_accept"
+        ],
+        "title": "QuestHereView",
+        "description": "在這裡可以接的任務。"
+      },
+      "QuestLogView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          },
+          "giver_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Giver Zh"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/QuestStepView"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "kind_zh",
+          "summary_zh",
+          "giver_zh",
+          "steps",
+          "done"
+        ],
+        "title": "QuestLogView"
+      },
+      "QuestStepView": {
+        "properties": {
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text_zh",
+          "done",
+          "current"
+        ],
+        "title": "QuestStepView"
       },
       "RaceLook": {
         "properties": {
@@ -11449,6 +12262,247 @@
         ],
         "title": "Shove",
         "description": "推擊（技巧動作）：相鄰敵人，力量對抗；成功時沿「行動者 → 目標」方向推 1 格。"
+      },
+      "SituationAnswerRequest": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Template"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Text",
+            "default": ""
+          },
+          "cite": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Cite",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "SituationAnswerRequest",
+        "description": "送出情境判定的回答（**第一次送出即定案**，9.6.4）。``text`` 只放進 LLM 的\n``<player_input>``；``cite`` 是玩家點選引用的事實編號（``CiteFactView.fact``）。"
+      },
+      "SituationOpenRequest": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Template"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "SituationOpenRequest",
+        "description": "打開事件的某個情境判定解法（說書人寫情境敘述）。"
+      },
+      "SituationResultView": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          },
+          "attribute_zh": {
+            "type": "string",
+            "title": "Attribute Zh"
+          },
+          "method_zh": {
+            "type": "string",
+            "title": "Method Zh"
+          },
+          "dice": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Dice"
+          },
+          "mode_zh": {
+            "type": "string",
+            "title": "Mode Zh"
+          },
+          "roll": {
+            "type": "integer",
+            "title": "Roll"
+          },
+          "attribute_mod": {
+            "type": "integer",
+            "title": "Attribute Mod"
+          },
+          "care": {
+            "items": {
+              "$ref": "#/components/schemas/CareLineView"
+            },
+            "type": "array",
+            "title": "Care"
+          },
+          "care_bonus": {
+            "type": "integer",
+            "title": "Care Bonus"
+          },
+          "race_bonus": {
+            "type": "integer",
+            "title": "Race Bonus"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "base_dc": {
+            "type": "integer",
+            "title": "Base Dc"
+          },
+          "dc_shift": {
+            "type": "integer",
+            "title": "Dc Shift"
+          },
+          "dc": {
+            "type": "integer",
+            "title": "Dc"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "partial",
+              "failure"
+            ],
+            "title": "Outcome"
+          },
+          "outcome_zh": {
+            "type": "string",
+            "title": "Outcome Zh"
+          },
+          "effects_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Effects Zh"
+          },
+          "story": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoryView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "fallback"
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template",
+          "note_zh",
+          "attribute_zh",
+          "method_zh",
+          "dice",
+          "mode_zh",
+          "roll",
+          "attribute_mod",
+          "care",
+          "care_bonus",
+          "race_bonus",
+          "total",
+          "base_dc",
+          "dc_shift",
+          "dc",
+          "outcome",
+          "outcome_zh",
+          "effects_zh",
+          "source"
+        ],
+        "title": "SituationResultView",
+        "description": "這次請求的情境判定明細與結果敘述。"
+      },
+      "SituationView": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          },
+          "attributes_zh": {
+            "type": "string",
+            "title": "Attributes Zh"
+          },
+          "methods_zh": {
+            "type": "string",
+            "title": "Methods Zh"
+          },
+          "base_dc": {
+            "type": "integer",
+            "title": "Base Dc"
+          },
+          "story": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoryView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/CiteFactView"
+            },
+            "type": "array",
+            "title": "Facts",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template",
+          "note_zh",
+          "attributes_zh",
+          "methods_zh",
+          "base_dc",
+          "story"
+        ],
+        "title": "SituationView",
+        "description": "最近一次打開的情境判定（還沒送出）。"
       },
       "SkillCard": {
         "properties": {
@@ -12811,6 +13865,35 @@
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
       },
+      "StoryView": {
+        "properties": {
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "more_zh": {
+            "type": "string",
+            "title": "More Zh",
+            "default": ""
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "fallback"
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text_zh",
+          "source"
+        ],
+        "title": "StoryView",
+        "description": "一段說書人的文字（旁白、情境、結果、回話）。"
+      },
       "SummonInfoCard": {
         "properties": {
           "id": {
@@ -13140,6 +14223,28 @@
           }
         }
       },
+      "TalkAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "talk",
+            "title": "Kind",
+            "default": "talk"
+          },
+          "npc": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Npc"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "npc"
+        ],
+        "title": "TalkAction",
+        "description": "和所在地點的 NPC 說話（9.6.7 #3）：引擎依好感度列出能給的內容（只換資訊）。"
+      },
       "TargetOut": {
         "properties": {
           "unit_id": {
@@ -13199,6 +14304,20 @@
           "status_chances"
         ],
         "title": "TargetOut"
+      },
+      "TavernAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "tavern",
+            "title": "Kind",
+            "default": "tavern"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TavernAction",
+        "description": "在城鎮的酒館聽本週傳聞（9.6.7 #1）。"
       },
       "Team": {
         "type": "string",
@@ -13403,6 +14522,66 @@
           "name_zh"
         ],
         "title": "TeleportOption"
+      },
+      "ThreadView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "world"
+            ],
+            "title": "Scope"
+          },
+          "scope_zh": {
+            "type": "string",
+            "title": "Scope Zh"
+          },
+          "expires_zh": {
+            "type": "string",
+            "title": "Expires Zh"
+          },
+          "npc_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Npc Zh"
+          },
+          "location_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text_zh",
+          "scope",
+          "scope_zh",
+          "expires_zh"
+        ],
+        "title": "ThreadView"
       },
       "TileView": {
         "properties": {
@@ -15064,11 +16243,24 @@
           },
           {
             "$ref": "#/components/schemas/ReleaseOathAction"
+          },
+          {
+            "$ref": "#/components/schemas/AcceptQuestAction"
+          },
+          {
+            "$ref": "#/components/schemas/OfferPickAction"
+          },
+          {
+            "$ref": "#/components/schemas/TalkAction"
+          },
+          {
+            "$ref": "#/components/schemas/TavernAction"
           }
         ],
         "discriminator": {
           "propertyName": "kind",
           "mapping": {
+            "accept_quest": "#/components/schemas/AcceptQuestAction",
             "allocate": "#/components/schemas/AllocateAction",
             "camp": "#/components/schemas/CampAction",
             "dissolve": "#/components/schemas/DissolveAction",
@@ -15076,11 +16268,14 @@
             "flash_pick": "#/components/schemas/FlashPickAction",
             "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
+            "offer_pick": "#/components/schemas/OfferPickAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
             "respec": "#/components/schemas/RespecAction",
             "rest": "#/components/schemas/RestAction",
             "retreat": "#/components/schemas/RetreatAction",
             "swear_oath": "#/components/schemas/SwearOathAction",
+            "talk": "#/components/schemas/TalkAction",
+            "tavern": "#/components/schemas/TavernAction",
             "teleport": "#/components/schemas/TeleportAction",
             "travel": "#/components/schemas/TravelAction"
           }
@@ -15299,6 +16494,60 @@
         ],
         "title": "WorldClockView"
       },
+      "WorldLlmRequest": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorldLlmRequest",
+        "description": "大世界的 LLM 開關：``true`` 打開（先探測，連不到維持關閉）、``false`` 關閉、``null`` 回到\n伺服器設定（18.2）。"
+      },
+      "WorldLlmView": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "default": {
+            "type": "boolean",
+            "title": "Default"
+          },
+          "overridden": {
+            "type": "boolean",
+            "title": "Overridden"
+          },
+          "notice_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled",
+          "default",
+          "overridden"
+        ],
+        "title": "WorldLlmView"
+      },
       "WorldLocationView": {
         "properties": {
           "id": {
@@ -15516,6 +16765,84 @@
               }
             ],
             "title": "Last Battle Zh"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "situation_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SituationResultView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "npcs_here": {
+            "items": {
+              "$ref": "#/components/schemas/NpcHereView"
+            },
+            "type": "array",
+            "title": "Npcs Here",
+            "default": []
+          },
+          "dialog": {
+            "items": {
+              "$ref": "#/components/schemas/DialogLineView"
+            },
+            "type": "array",
+            "title": "Dialog",
+            "default": []
+          },
+          "quests": {
+            "items": {
+              "$ref": "#/components/schemas/QuestLogView"
+            },
+            "type": "array",
+            "title": "Quests",
+            "default": []
+          },
+          "quests_here": {
+            "items": {
+              "$ref": "#/components/schemas/QuestHereView"
+            },
+            "type": "array",
+            "title": "Quests Here",
+            "default": []
+          },
+          "pending_offer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingOfferView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threads": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadView"
+            },
+            "type": "array",
+            "title": "Threads",
+            "default": []
+          },
+          "rumors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rumors",
+            "default": []
           }
         },
         "additionalProperties": false,

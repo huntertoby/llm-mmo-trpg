@@ -256,3 +256,223 @@
 .world-oath-form input[type="number"] {
   width: 5em;
 }
+
+/* Phase 5B-5：事件卡、情境判定、判定結果、這裡的人、任務與線頭、酒館、LLM 開關。全部是一般面板（不是彈出層）。 */
+
+.world-event {
+  border-color: #6a8fd0;
+}
+
+.world-event-actor {
+  margin: 2px 0 4px;
+}
+
+.world-story p {
+  margin: 4px 0;
+  line-height: 1.55;
+}
+
+.world-story-more {
+  color: #c8c6d4;
+}
+
+.world-more-btn {
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.world-story-src {
+  margin-left: 6px;
+}
+
+.world-event-solutions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+
+.world-situation {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--panel-border);
+}
+
+.world-cites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.world-cites > .small {
+  flex-basis: 100%;
+}
+
+.world-cite {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.world-cite.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.world-answer,
+.world-chat-input textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+  background: #12131a;
+  color: inherit;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.world-answer-label {
+  display: block;
+  margin-top: 6px;
+}
+
+.world-result.outcome-success {
+  border-color: #5fae6e;
+}
+
+.world-result.outcome-partial {
+  border-color: #c9a64a;
+}
+
+.world-result.outcome-failure {
+  border-color: #c0575a;
+}
+
+.world-care,
+.world-effects,
+.world-threads,
+.world-quest-steps,
+.world-chat-log,
+.world-rumors ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.world-care .missed {
+  color: var(--muted);
+}
+
+.world-npc {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--panel-border);
+}
+
+.world-npc:last-of-type {
+  border-bottom: none;
+}
+
+.world-npc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.world-rank {
+  font-size: 12px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+}
+
+.world-rank.rank-hostile {
+  color: #e07070;
+}
+
+.world-rank.rank-cold {
+  color: #9fb3d8;
+}
+
+.world-rank.rank-friendly {
+  color: #8fd19e;
+}
+
+.world-rank.rank-trusted {
+  color: var(--accent);
+}
+
+.world-chat-log {
+  list-style: none;
+  padding-left: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.world-chat-log li {
+  margin: 2px 0;
+}
+
+.world-chat-log li.mine {
+  color: #c8c6d4;
+}
+
+.world-quest-offer {
+  margin: 4px 0;
+}
+
+.world-quest-log .section-title {
+  margin-top: 10px;
+}
+
+.world-quest {
+  margin: 6px 0;
+}
+
+.world-quest.done {
+  opacity: 0.65;
+}
+
+.world-quest-steps {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.world-quest-steps li.done {
+  color: var(--muted);
+}
+
+.world-quest-steps li.current {
+  color: var(--accent);
+}
+
+.world-step-mark {
+  display: inline-block;
+  width: 1.2em;
+}
+
+.world-llm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+}
+
+.world-llm-notice {
+  margin: 4px 0;
+}
+
+.world-quest-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.world-quest-head h2 {
+  margin: 0;
+}

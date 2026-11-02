@@ -157,8 +157,8 @@ def world_step(
     if (
         char.pending_flash is None
         and char.pending_offers
-        and not isinstance(action, OfferPickAction)
-    ):
+        and not isinstance(action, OfferPickAction | NarrateAction)
+    ):  # 敘述不改數值（只有事件敘述換骨架），三選一待選時也能寫進日誌（5B-5）
         raise WorldActionError("還有任務給的技能三選一沒有選（offer_pick）")
     result = _dispatch(library, world, char, action, now)
     char, extra = advance_quests(library, result.world, result.char, result.events, now)

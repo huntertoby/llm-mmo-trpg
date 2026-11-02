@@ -19,7 +19,13 @@ from collections.abc import Mapping
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EventSkeletonDef, NpcCardDef
-from trpg.content.world_narration import StoryAllowed, StoryScene, allowed_problems
+from trpg.content.world_narration import (
+    HIDDEN_HINT_DEFAULT,
+    SECRET_MASK,
+    StoryAllowed,
+    StoryScene,
+    allowed_problems,
+)
 from trpg.world.actions import NarrateAction, NarratedEvent, WorldEvent
 from trpg.world.affinity import trusted_npcs
 from trpg.world.common import world_map_of
@@ -33,6 +39,7 @@ __all__ = [
     "region_npcs",
     "region_skeletons",
     "story_choices",
+    "story_masks",
 ]
 
 
@@ -57,26 +64,34 @@ def _here_npcs(cards: Mapping[str, NpcCardDef], location: str) -> set[str]:
     return {n.id for n in cards.values() if n.location == location}
 
 
-def _common(
-    library: ContentLibrary, world: WorldState, char: CharacterState, now: int
-) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """（看得到的地點、持有的線頭、禁止文字）。"""
+def story_masks(library: ContentLibrary, char: CharacterState) -> dict[str, str]:
+    """禁止字串 → 代替文字（Phase 5B-5；玩法 PM 2026-11-03）：本區未發現的隱藏地點名 → 地點的
+    提示語（``hint_zh``；沒填用 :data:`HIDDEN_HINT_DEFAULT`）；不是信賴級 NPC 的祕密原文 →
+    :data:`SECRET_MASK`。揭露後名稱可以公開，不在這裡。"""
     world_map = world_map_of(library, char.region)
-    visible: list[str] = []
-    hidden_names: set[str] = set()
+    masks: dict[str, str] = {}
     for loc in world_map.locations:
         if loc.hidden and not char.has_revealed(char.region, loc.id):
-            hidden_names.add(loc.name_zh)
-        else:
-            visible.append(loc.id)
+            masks[loc.name_zh] = loc.hint_zh or HIDDEN_HINT_DEFAULT
     trusted = trusted_npcs(library, char)  # 5B-4：信賴級 NPC 的祕密可以說（玩法 PM 定）
-    secrets = {
-        n.secret_zh
-        for n in region_npcs(library, char.region).values()
-        if n.secret_zh and n.id not in trusted
-    }
-    forbidden = tuple(sorted(s for s in hidden_names | secrets if s.strip()))
-    return tuple(sorted(visible)), held_threads(world, char, now), forbidden
+    for card in region_npcs(library, char.region).values():
+        if card.secret_zh.strip() and card.id not in trusted:
+            masks.setdefault(card.secret_zh, SECRET_MASK)
+    return {k: masks[k] for k in sorted(masks) if k.strip()}
+
+
+def _common(
+    library: ContentLibrary, world: WorldState, char: CharacterState, now: int
+) -> tuple[tuple[str, ...], tuple[str, ...], dict[str, str]]:
+    """（看得到的地點、持有的線頭、禁止字串 → 代替文字）。"""
+    world_map = world_map_of(library, char.region)
+    visible = [
+        loc.id
+        for loc in world_map.locations
+        if not loc.hidden or char.has_revealed(char.region, loc.id)
+    ]
+    masks = story_masks(library, char)
+    return tuple(sorted(visible)), held_threads(world, char, now), masks
 
 
 def _event_skeletons(
@@ -130,7 +145,8 @@ def story_choices(
 ) -> StoryAllowed:
     """``scene`` 的允許清單；前提不成立拋 :class:`WorldActionError`（15.3）。"""
     _check_fields(scene, template=template, outcome=outcome, npc=npc, player_text=player_text)
-    locations, held, forbidden = _common(library, world, char, now)
+    locations, held, masks = _common(library, world, char, now)
+    forbidden = tuple(masks)
     cards = region_npcs(library, char.region)
     here = _here_npcs(cards, char.location)
     if scene == "event":
@@ -152,6 +168,7 @@ def story_choices(
             locations=locations,
             threads=held,
             forbidden=forbidden,
+            masks=masks,
         )
     if scene == "chat":
         if char.pending_encounter is not None:
@@ -167,6 +184,7 @@ def story_choices(
             locations=locations,
             threads=held,
             forbidden=forbidden,
+            masks=masks,
         )
     assert template is not None
     defn = situation_template(library, char.region, template)
@@ -182,6 +200,7 @@ def story_choices(
         locations=locations,
         threads=held,
         forbidden=forbidden,
+        masks=masks,
     )
 
 

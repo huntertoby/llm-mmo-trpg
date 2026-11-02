@@ -2057,23 +2057,120 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5AM2-9 | 戰鬥紀錄版號 | `/104` |
 
 
-## 18. 5B-4b 詳細規格：5B-4 收尾（好感度取得、祕密事件、區域偏向、新手鏈保底、解法結算、線頭到期、導師任務鏈）
+## 18. 5B-5 詳細規格：事件與任務的前端與路由
+
+> 給實作 agent。只動 `src/trpg/api/`（新增 `world_flow.py`（說書人與 LLM 開關的流程）、`world_story_view.py`（事件卡、情境、NPC、任務、線頭的顯示資料與事件句子）、`world_story_schemas.py`；`world.py`、`world_schemas.py`、`world_presenter.py`、`routes/world.py`、`llm_source.py`、`app.py` 小改）、`src/trpg/content/world_map.py`（`LocationDef.hint_zh`）、`content/world/maps/cloud_ridge.yaml`（兩個隱藏地點的提示語）、`src/trpg/content/world_narration.py`（`StoryAllowed.masks`、`mask_text`）、`src/trpg/world/narration.py`（算提示語對照，一處）、`src/trpg/world/step.py`（三選一待選時也收 `narrate`，一行；代決 5B5-11）、`src/trpg/narrative/storyteller.py`（降級文字用提示語、資料區給提示語）、`src/trpg/llm/prompts/storyteller.py`（`storyteller/2`）、`tests/api/`、`tests/narrative/`、`tests/content/`、`tests/world/`（只加或改相關測試）、`client/`（事件卡、情境判定、NPC 對話、任務日誌、線頭、酒館、三選一、LLM 開關、API 型別）、`client/openapi.json`。**不做** 放棄／交涉／戰鬥解法與機遇的結算、線頭到期結局（之後）；三方混戰（5B-M3）；說書人記憶（9.6.7 #8）；帳號（5E-1）。不動 `trpg.engine`、戰鬥紀錄文字、單位特性（5A-M2 同時在改）、`trpg.roguelite`。
+> 依據：09 9.6.4（情境來自模板、LLM 只寫敘述；玩家文字放 `<player_input>`、**第一次送出即定案**；介面列出持有的線索與和 NPC 的往來、**可點選引用**；LLM 只負責敘述結果）、9.6.7 #1（酒館傳聞）、#3（聊天只換資訊）、#5（好感度玩家看得到）、#6（事件骨架＋線頭、LLM 挑骨架與寫故事）、#7（旁白 1～3 句＋多講一點）；`docs/專案計畫.md` 3.1（模型不可用時降級）；本檔 11（5A-5）、13（5A-7）、10（5B-2）、15（5B-3）、16（5B-4）；`Phase5B-3報告.md` 待決（路由建議、世界 LLM 開關、骨架 15 寫到隱藏地點名）；玩法 PM 2026-11-03：**大世界自己的 LLM 開關，預設跟著伺服器設定；隱藏地點揭露後名稱可公開，揭露前說書與骨架文字用提示語（例：「谷底似乎還有一條路」），不再寫「某處」**；`docs/開發PM交接.md` 6.5.1。
+
+### 18.1 目標
+
+5B-1～5B-4 的事件、情境判定、說書人、任務、好感度在瀏覽器玩得到：**走到會出事件的地點 → 事件卡（旁白、多講一點、解法）→ 選情境判定 → 看情境敘述、列出持有線索可點選引用 → 輸入怎麼做（第一次送出即定案）→ 判定明細與結果敘述 → 和 NPC 說話與自由聊天（看得到好感度級距）→ 接任務、推進、三選一 → 任務日誌、線頭列表、酒館傳聞**。規則全部照 `trpg.world`；LLM 只經 `trpg.api.world_story`／`trpg.llm.situation` 提議，模型關閉或連不上時一律降級，遊戲照常。
+
+### 18.2 大世界的 LLM 開關（玩法 PM 2026-11-03）
+
+- `LlmProvider` 加兩個方法：`generate_default() -> bool`（伺服器設定：`config/llm.toml` 的 `generate`／環境變數 `TRPG_LLM_GENERATE`；設定壞掉＝`False`）、`story_client() -> LLMClient | None`（大世界說書人與情境提議用的 client；設定壞掉＝`None`）。`MockLlmProvider` 加 `generate`、`story_responses`（依序回應的 `MockLLMClient`，用完＝`LLMUnavailable` → 降級）。
+- `WorldLlm`（`trpg.api.world_flow`）：伺服器層級、只存記憶體（重開伺服器回到預設）；`enabled`＝玩家設定過就照設定，否則照 `generate_default()`。打開時先 `probe()`，連不到就維持關閉並回提示（同一輪的開關）。client 建一次重用。
+- 端點：`GET /api/world/llm`、`POST /api/world/llm`（`{enabled: bool | null}`；`null`＝回到伺服器設定）→ `WorldLlmView`（`enabled`、`default`、`notice_zh`）。
+- 關閉時說書人與情境提議都傳 `client=None`＝直接降級（模板文字、`default_proposal`）。
+
+### 18.3 路由與流程（`trpg.api.world_flow`，全部在世界的寫入鎖裡依序做）
+
+| 方法與路徑 | 內容 |
+|---|---|
+| `POST …/actions` | 加 `accept_quest`、`offer_pick`、`talk`、`tavern`（欄位同 `trpg.world.actions`）。**動作之後角色有沒敘述過的 `pending_event`、沒有遭遇時，自動送一次 `event_story` → `narrate`**（5B-3 待決建議）；兩段事件一起回。`situation`、`narrate` 不從這裡收（只能經下面的端點，由伺服器組提議）。 |
+| `POST …/situation` | `{template}`：打開某個情境判定解法 → `situation_story` → `narrate`（scene `situation`）。可以換別的解法再開（還沒送出前不算判定）。 |
+| `POST …/situation/answer` | `{template, text, cite}`：`text`（≤ 500 字）是玩家怎麼做，**只放進 LLM 的 `<player_input>`**（`wrap_player_input`）；`cite` 是玩家點選引用的事實編號（只能是 `situation_facts` 的 `clue`／`npc_bond`／`exchange`）。流程：`propose_situation`（模型關閉＝`default_proposal`）→ 引用的事實併進提議的用心清單（代決 5B5-4）→ `SituationAction` → `world_step`（**第一次送出即定案**：引擎結算後清掉事件，再送被拒 422）→ `outcome_story` → `narrate`（scene `outcome`）。LLM 的提議被引擎拒絕時改用降級提議重送一次。 |
+| `POST …/chat` | `{npc, text}`：和所在地點的 NPC 自由聊天 → `chat_story`（`text` 只在 `<player_input>`）→ `narrate`（scene `chat`）；不改任何狀態。 |
+| `GET／POST /api/world/llm` | 18.2 |
+
+- 錯誤：同 5A-5（404／409／422）；聊天、判定在戰鬥中 409。
+- 敘述一律先經 `narration_problems`，不過就降級（5B-3）；`narrate` 被引擎拒絕（不該發生）時略過敘述，不擋住動作。
+- **LLM 在鎖裡呼叫**（代決 5B5-2）：5～10 人、說書一次約 4～13 秒，先簡單依序；之後人多再改成鎖外組請求、鎖內核對。
+
+### 18.4 `WorldView` 新增（全部由後端算好；文字一律先套提示語，18.5）
+
+- `event`（`EventView | None`；有 `pending_event` 時）：地點、骨架、登場角色與動機（敘述過才有；沒有時用骨架的「誰」「想要」）、旁白 `text_zh`、多講一點 `more_zh`、來源（`llm`／`fallback`／沒敘述＝`None`）、骨架的誰／想要／阻礙／賭注、接的線頭文字、`solutions`（索引、種類與中文、說明、屬性中文、`template`、`available`、`unavailable_zh`：情境判定可用；戰鬥、交涉、放棄、機遇「之後開放」；有遭遇時「先處理眼前的遭遇」）、`leave_zh`（「走到別的地點＝這件事作罷」）、`situation`（最近一次打開的情境：模板、做法、允許的屬性與方法、基準難度、情境敘述、**可引用的事實**（編號、種類中文、文字））。旁白與情境敘述從世界動作日誌讀（這個事件觸發之後的 `narrate`），重新整理也看得到。
+- `situation_result`（這次請求的判定）：屬性、方法、骰子與模式、屬性修正、用心清單逐筆（算或不算與原因）、種族加值、總值、DC、結果中文、獎懲句子、結果敘述。
+- `npcs_here`：所在地點的 NPC（ID、名稱、身分、好感度值、級別 ID 與中文、**級距**（例「中立（−9～19）」）、這一級聊得到什麼的說明）。
+- `dialog`（這次請求）：`talk` 的內容（傳聞、任務入口、祕密，各一行）、`chat` 的回話（含多講一點）；前端自己保留對話紀錄。
+- `quests`（任務日誌，依任務 ID）：名稱、種類中文、說明、給的人、步驟（文字、已完成、目前）、完成與否；`quests_here`：在這裡可以接的任務（給的人在這裡或沒有給的人；隱藏任務只在開始條件成立時列出）、`can_accept`、`problem_zh`。
+- `pending_offer`：任務給的三選一（任務名、步驟、候選技能卡、能不能替換（城鎮與營火））；有待選時其他動作停用（後端已擋）。
+- `threads`：持有的有效線頭（個人＋世界）：文字、範圍中文、剩多久、相關 NPC、指向的地點（未發現的隱藏地點用提示語）。
+- `rumors`（這次請求的酒館傳聞）、`here.can_tavern`。
+- `events`：新事件的句子：遇到事件、事件作罷、情境判定、獎懲、留下線頭、線頭被擠掉、接任務、完成一步（經驗、靈感）、完成任務、三選一、選了技能、劇情技能、好感度變化（含級別）、說話、酒館。
+
+### 18.5 隱藏地點的提示語（玩法 PM 2026-11-03）
+
+- `LocationDef.hint_zh: str = ""`（只有 `hidden` 可填）：揭露前代替名稱的提示語；沒填時用內建「一條還沒發現的路」。雲嶺：丹爐洞「谷底一處隱密的洞窟」、鶴歸崖「霧裡一座沒見過的山崖」（開發 PM 定；名詞片語，放進句子裡讀得通）。
+- `StoryAllowed.masks: Mapping[str, str]`（禁止字串 → 代替文字）：未發現的隱藏地點名 → 提示語；其他禁止字串（NPC 祕密原文）→「……」。`mask_text(text, masks)` 放 `trpg.content.world_narration`，narrative 降級與 API 顯示共用。
+- 說書人：降級文字照 `masks` 換（不再寫「某處」）；給 LLM 的骨架、線頭文字先換成提示語，`<allowed>` 加 `hints`（提示語清單），系統指令加一句「要提到還沒發現的地方時用 hints 的提示語」→ `STORY_PROMPT_VERSION = "storyteller/2"`（快照雜湊新增一筆）。檢查不變：文字出現未發現的地點名仍不合法。
+- **揭露後**：名稱不再是禁止字串、不換提示語（5B-3 已是如此），說書與畫面直接用名稱。
+- API 顯示的骨架、線頭、任務、聊天內容、傳聞文字也套同一份 `masks`（「揭露前一律用提示語」）。
+
+### 18.6 前端（`client/src/world/`）
+
+- **事件卡**（右側最上方，遭遇面板之後；一般面板，不是浮動卡）：標題「事件：〔地點〕」、登場角色、旁白、「多講一點」（展開／收起）、解法按鈕（不可用的停用並寫原因）、「離開＝作罷」說明。
+- **情境判定**（事件卡裡展開）：情境敘述、允許的屬性與方法、基準難度；**持有的線索與往來**列成可點選的晶片（點一下引用、再點取消）；文字輸入（≤ 500 字，顯示字數）；「送出（送出後就定案，不能重來）」→ 送出中整張停用；送完顯示判定明細與結果敘述（`situation_result`）。
+- **NPC**：右側「這裡的人」：每位 NPC 一列（名稱、身分、好感度級別與級距、值）；「說話」（`talk`）、對話框：對話紀錄（前端保留）、文字輸入 →「說」（`chat`）；可以接的任務在同一區列出「接任務」。
+- **任務日誌**、**線頭**：右側加「任務與線頭」按鈕切換左欄（地點圖 ↔ 任務日誌）；任務日誌列出進行中與完成的任務、步驟勾選；線頭列文字、剩多久、指向。
+- **三選一**：有 `pending_offer` 時左欄固定顯示（同閃現待選，閃現優先）：三張技能卡、「學這招」（城鎮與營火可選要替換的技能）、「跳過」。
+- **酒館**：城鎮的服務按鈕「酒館」→ 右側列出本週傳聞。
+- **LLM 開關**：標頭「說書人用本機模型」勾選（顯示伺服器預設與連不到的提示）。
+- 浮動卡一律用共用元件（6.5.1）；不加新美術；沿用現有樣式（`panel`、`section-title`、`run-actions`）。
+
+### 18.7 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/api/test_world_events_api.py`（新） | 走到觸發事件 → 回應自帶 `event`（已敘述、降級文字、解法、情境可用其他之後開放）→ `GET` 仍看得到旁白；Mock LLM 開啟時旁白來源 `llm`；打開情境 → 情境敘述、可引用事實；送答案（引用線頭）→ `situation_result`、結果敘述、`event` 消失；**再送被拒 422**；玩家文字含 `</player_input>` 注入 → 只出現在 `<player_input>` 且被跳脫、系統訊息沒有；引用不在事實裡 → 422；聊天（降級、Mock、NPC 不在這裡 422、不改狀態）；`talk` → `dialog`、好感度級距；接任務 → `quests`、`quests_here`；打贏一場 → 新手鏈步驟完成、三選一 → `offer_pick`；酒館；`situation`／`narrate` 不能從 `actions` 送；LLM 開關（預設跟伺服器、打開連不到維持關閉＋提示、`null` 回預設）；日誌重播與快照相同 |
+| `tests/narrative/test_storyteller.py`（改） | 降級用提示語（不再有「某處」）、`hints` 在資料區、版本 `storyteller/2` 快照 |
+| `tests/content/test_world_map.py`（加） | `hint_zh` 只有隱藏地點可填 |
+| `client/src/world/*.test.ts` | 引用切換、字數、解法可用與停用、好感度級距文字、任務步驟顯示、左欄切換（三選一優先） |
+
+### 18.8 驗收
+
+- `uv run pytest -q tests/api tests/world tests/narrative tests/content/test_world_map.py tests/content/test_world_narration.py -n 8 --timeout=3000`；`tests/cli -m "slow or not slow" --timeout=3000`；`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；OpenAPI 快照重產（`scripts/export_openapi.py` ＋ `gen:api`）。
+- 瀏覽器實際走一遍（後端、前端用 8000／8001／8010 以外的埠；LLM 用降級或 Mock，不連 8001）：走到會出事件的地點 → 事件卡 → 情境判定一次 → 和 NPC 聊天 → 接任務並推進一步 → 任務日誌；截圖或 `read_page` 記錄寫進報告；浮動卡 6.5.1 抽查。
+
+### 18.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5B5-1 | 大世界 LLM 開關存哪 | 伺服器層級、只存記憶體；預設照 `generate`；打開先探測，連不到維持關閉（同一輪開關的做法） |
+| 5B5-2 | LLM 在哪裡呼叫 | 寫入鎖裡依序（簡單、不會和其他動作交錯）；人多再改 |
+| 5B5-3 | 自動事件旁白 | 任何 `actions` 之後有沒敘述的事件就送一次（實際只有 `travel` 會觸發） |
+| 5B5-4 | 點選引用的事實 | 引用的 `clue`／`npc_bond`／`exchange` 併進提議的用心清單（排在前面、同一事實不重複、共 ≤ 4 筆），引擎照常逐筆核對、上限 +2；弱點不能引用（要方法相符，由 LLM 判斷）。模型關閉時引用照樣算（玩家玩出來、核對得到的事實，9.6.4） |
+| 5B5-5 | `<player_input>` | 前端送純文字欄位；後端 `wrap_player_input` 包 `<player_input>` 並跳脫（前端不自己包，避免被跳脫兩次） |
+| 5B5-6 | 情境敘述與旁白的來源 | 從世界動作日誌讀（事件觸發之後的 `narrate`），不另存 |
+| 5B5-7 | 戰鬥、交涉、放棄、機遇解法 | 事件卡列出但停用（「之後開放」）；離開地點＝作罷（5B-1 既有規則） |
+| 5B5-8 | 對話紀錄 | 只在前端保留（這次開著頁面期間）；伺服器只存 `narrate`／`talk` 動作 |
+| 5B5-9 | 提示語 | 名詞片語、寫在地點資料（`hint_zh`）；所有給玩家看的內容文字（骨架、線頭、任務、聊天、傳聞）揭露前都換 |
+| 5B5-11 | 三選一待選時的敘述 | 情境判定或戰鬥完成任務步驟後馬上有三選一待選，結果敘述仍要寫進日誌：`world_step` 在有待選時也收 `narrate`（敘述不改數值） |
+| 5B5-10 | 任務日誌位置 | 左欄切換（地點圖 ↔ 任務與線頭），同成長畫面；三選一待選時左欄固定顯示選項 |
+
+### 18.10 不做的事
+
+- 戰鬥、交涉、放棄、機遇解法的結算；線頭到期結局；說書人記憶；聊天給線頭或揭露地點（5B-4 待決 4）。
+- 朋友足跡與戰報（酒館只有傳聞）；多人同時在線顯示；串流輸出；真模型評估（不連 8001）。
+
+
+## 19. 5B-4b 詳細規格：5B-4 收尾（好感度取得、祕密事件、區域偏向、新手鏈保底、解法結算、線頭到期、導師任務鏈）
 
 > 給實作 agent。主要動 `src/trpg/world/`（新增 `solutions.py`、`endings.py`；`quests.py`、`social.py`、`affinity.py`、`events.py`、`encounters.py`、`battle.py`、`growth.py`（閃現事件一欄）、`state.py`、`actions.py`、`step.py`、`situations.py` 小改）、`src/trpg/content/`（`world_quests.py`、`world_events.py`、`world_situations.py`、`world_encounters.py` 加欄位與檢查）、`src/trpg/skillgen/candidates.py`、`whiteboard_candidates.py`（區域偏向、組成、被動保底；新輸入都有預設值）、`src/trpg/roguelite/offers.py`（`make_offer` 加 keyword-only 參數，預設值＝原行為）、`content/world/`（`quests/`、`social/`、`events/`、`situations/`、`encounters/`、`affinity.yaml`）、`tests/world/`、`tests/content/`、`tests/skillgen/`。**不做** 前端與 API 路由（另一個 agent 在做 5B-5 的 `client/`、`src/trpg/api/` 路由）；外層只可能動 `src/trpg/api/world_story.py` 的資料提供。不動引擎、`content/skills/`、戰鬥紀錄文字。
 > 依據：玩法 PM 2026-11-03（本檔第 1 節 5B 表「5B-4b」列；`effc88a7`）；18 18.4（骨架、解法、線頭到期例、補充）、18.7.3（區域鏈偏向潮濕、帶電、隱蔽）、18.7.5（導師任務鏈）、18.7.6（好感度取得）、18.7.7（信賴後的祕密事件、骨架 22）、18.7.4（疤面＝盜賊隊長精英，連心的，帶霧狼）；07 7.6（新手鏈至少 1 招被動、加深／橋接／新方向 1／0／2；區域鏈偏向該區關鍵字、1／1／1）；09 9.6.7 #5（好感度不影響數值）、#6（線頭只能由事件結果產生、到期也是一種結局）；`Phase5B-4報告.md` 第 7 節待決 1、2、4、5、6；`Phase5B-2報告.md` 第 7 節（放棄／交涉／戰鬥解法的結算留給 5B-4）。
 
-### 18.1 目標
+### 19.1 目標
 
 把 5B-4 留下的七件事做完，全部是 **資料驅動的世界動作**：寫進世界動作日誌、由「日誌＋內容庫＋賽季種子」重播逐字相同；不呼叫 LLM、不讀時間。原型 roguelite 的候選產生 **不變**（新輸入都有預設值＝原行為；roguelite 行為快照不變）。
 
-### 18.2 好感度的新取得方式（18.7.6）
+### 19.2 好感度的新取得方式（18.7.6）
 
 - `content/world/affinity.yaml` 加 `quest_step_delta: 15`、`daily_talk_delta: 3`（schema 預設 0＝不加；`DEFAULT_AFFINITY_RULES` 也是 0）。
 - **任務步驟**：`QuestStepDef.npcs: tuple[NPC, ...] = ()`＝和這一步有關的 NPC（資料逐步填；不自動算 giver）。完成這一步時每位有關的 NPC 好感度 `+quest_step_delta`，再加上 `reward.affinity`（同一 NPC 合併成一筆 `affinity_changed`，來源 `quest:<任務>`；依 NPC ID 排序）。跨檔案檢查：NPC 在該區人設卡。
 - **每天第一次聊天**：`CharacterState.talk_days: dict[NPC, int]`（最後一次 `talk` 的 `refresh_day`，依 NPC 排序）。`talk` 時若今天（6 點刷新的日子）還沒和這位 NPC 說過話 → 好感度 `+daily_talk_delta`（來源 `talk:daily`），先加再算這次能給的聊天內容；`talk` 因此會改角色狀態。
 - 雲嶺的「有關的 NPC」（開發 PM 定，16.3 的 `reward.affinity` 改成這個規則，數值統一 +15）：新手鏈 3 步＝渡婆婆；主線 ① 渡婆婆、② 青崖道長、③ 小蓮與青崖道長、④ 阿岳（18.5「主線第 1 章同行」）、⑤ 無；區域鏈 3 步＝青崖道長；丹爐之謎 2 步＝柳掌櫃；霜音的謎＝霜音；導師任務鏈 3 步＝青崖道長。原本的 `affinity`（小蓮 +10、青崖 +20、霜音 +10）拿掉。
 
-### 18.3 信賴的祕密解鎖骨架 22「渡婆婆的往事」（18.7.7，#85）
+### 19.3 信賴的祕密解鎖骨架 22「渡婆婆的往事」（18.7.7，#85）
 
 - **資料**：
   - `EventSkeletonDef.unlock_only: bool = False`：只有角色解鎖後才會出現在候選（`event_candidates` 多一個 `unlocked` 參數，預設空；沒解鎖的骨架在擲骰前就濾掉，所以舊角色的亂數消耗與挑選不變）。
@@ -2085,19 +2182,19 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - **聊天**：渡婆婆的祕密 `granny_du_secret` 加 `unlocks_skeleton: granny_past`；文字改成「年輕時是斷崖幫的人，提到斷崖幫的舊帳就欲言又止」（只是文字，不給線頭）。
 - **規則**（`talk`）：這次 `talk` 給的內容裡有 `unlocks_skeleton`、而且還沒解鎖 → 加進 `unlocked_skeletons`、發 `skeleton_unlocked`；角色沒有 `pending_event`、骨架的地點含所在地點時 **立刻觸發** 該事件（`EventTrigger`，候選只有它、`follows_thread` 空、天氣與日夜照當下），發 `event_triggered`。之後照一般骨架：離開就作罷，在霧渡鎮移動擲到時可再出現。線頭只由事件結果（情境判定）產生。
 
-### 18.4 skillgen 區域偏向（07 7.6、18.7.3）
+### 19.4 skillgen 區域偏向（07 7.6、18.7.3）
 
 - `CandidateRequest.region_keywords: tuple[str, ...] = ()`（`trpg.skillgen.candidates`）：**新方向** 的關鍵字順序改成「玩家還沒有的區域關鍵字（照原本的加權順序）在前，其他還沒有的在後」；玩家全部都有（或空）＝原順序。完整版（`generate_candidates`）與白板版（`generate_whiteboard_candidates`）都套用；通用池擲骰（#55）照舊。
 - 資料：`QuestTable.region_keywords`（`content/world/quests/cloud_ridge.yaml`：`[wet, charged, concealed]`＝潮濕、帶電、隱蔽，18.7.3）；跨檔案檢查在 `skill_keywords.yaml`。用在 **區域任務鏈**（`kind: chain`）給的三選一；`SkillOfferReward.bias_keywords` 有填時改用它（覆寫）。新手鏈、主線不偏向（7.6「共用關鍵字池」）。
 - `roguelite.offers.make_offer(..., *, region_keywords=(), mix=None, min_passive=0)`：keyword-only、預設＝原行為；roguelite 的呼叫端不變。
 
-### 18.5 新手鏈保底（07 7.6）
+### 19.5 新手鏈保底（07 7.6）
 
 - `SkillOfferReward.mix: OfferMix | None`（`deepen`、`bridge`、`new` 各 ≥ 0、`deepen`／`bridge` ≤ 1、合計 3；省略＝1／1／1）與 `min_passive: int = 0`（0～3）。只用在白板（`whiteboard`）；完整技能三選一不支援（schema 拒絕）。
 - 白板產生器（`CandidateRequest.mix`、`min_passive`，預設 (1,1,1)、0＝原行為）：依序做 `deepen` 張加深、`bridge` 張橋接、`new` 張新方向；第 2 張新方向用 `fork("new/1")`、不擲通用池、關鍵字避開前面候選用過的。做完後被動不足 `min_passive` 時，從最後一張往前把候選換成 **同種類的被動白板**（同一個關鍵字先試；沒有被動配方就換下一個符合該候選定義的關鍵字；亂數 `fork("passive/<索引>")`）；都做不出來就保持原樣（極少）。
 - 雲嶺新手鏈 3 步：`mix: {deepen: 1, bridge: 0, new: 2}`、`min_passive: 1`（每一組三選一至少有 1 張被動，讓玩家每一步都選得到被動；開發 PM 定）。
 
-### 18.6 放棄、交涉、戰鬥解法的結算（9.6.7 #6；5B-2 留下的）
+### 19.6 放棄、交涉、戰鬥解法的結算（9.6.7 #6；5B-2 留下的）
 
 - **資料**（`SolutionDef`）：`threads: tuple[線頭, ...] = ()`（只有 `combat`、`parley`；成功時留下，本骨架或 `shared_threads` 的線頭，≤ 2 條）、`cost_supplies: int = 0`（只有 `parley`；交涉付出的補給）、`waive_thread: str | None`（只有 `parley`；持有這條個人線頭可以拿它抵掉付出，線頭用掉）。
 - **動作** `event_solve`（`EventSolveAction`：`solution: int`＝骨架 `solutions` 的索引、`use_thread: str | None`）：要有 `pending_event`、沒有遭遇；`situation` 解法要用 `situation` 動作、`opportunity`（機遇）本段不結算，都拒絕。
@@ -2108,7 +2205,7 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - **骨架 9「用人情代替青竹節」**（18.4 補充）：渡船夫的交涉 `cost_supplies: 2`（沒有道具系統，青竹節用補給代替；開發 PM 定）、`waive_thread: peddler_owes_you`、`threads: [ferryman_daughter]`。
 - 雲嶺解法的線頭（開發 PM 定：照同骨架情境判定成功時的線頭）：#1 戰鬥 商人欠你人情＋狼群是被趕下山的；#2 護送戰 道童提到觀裡在吵架；#3 戰鬥 二當家記恨你、付錢 `cost_supplies: 1`、不留線頭；#7 擋追兵 暗門；#8 不殺獵人 霧魅從裂痕湧出；#10 戰鬥 熊巢下有源晶碎片；#14 撤離（先用一般勝利）碎片被送往灰燼荒原；#17 戰鬥 失蹤的人都去過裂痕；#18 交涉（換補給）`cost_supplies: 1` 狐火在霧裡指路；#19 戰鬥 阿岳提起父親的遺物。
 
-### 18.7 線頭到期的結局（18.4「線頭到期例」）
+### 19.7 線頭到期的結局（18.4「線頭到期例」）
 
 - **資料**：`ThreadDef.on_expire_flag: str | None`（到期時給的旗標）；`LocationEncounters.variants: tuple[EncounterVariant, ...]`（`flag`、`group`、`elite: FixedElite | None`）：角色有這個劇情旗標時，這個地點的遭遇 **改用** 該陣容（第一個符合的；不再抽陣容、不混營地精英；精英排最前面）。`EncounterLineup.variant`（用了哪個旗標，預設 `None`）。
 - **規則**（`trpg.world.endings`）：`world_step` 在分派動作 **之前**，把已到期、定義了 `on_expire_flag` 的線頭結算掉：個人線頭 → 從角色線頭移除、加進 `story_flags`；世界級 → 從世界線頭移除、加進世界 `flags`；發 `thread_expired`（線頭、範圍、旗標）。沒有 `on_expire_flag` 的線頭照舊（留著、無效、不佔上限）。`prepare_battle` 用角色的 `story_flags` 挑變化；打贏變化陣容的那場 → 移除該旗標、發 `story_flag_cleared`（變化結束）。
@@ -2117,27 +2214,27 @@ chat_text: '{name}看了你一眼，沒有多說。'
   - 「觀內有人私通盜賊」到期 → 旗標 `temple_traitor_strikes`；青霧觀山門的遭遇改成「叛徒戰」：精英 青霧執事（霧隱的）＋盜賊、盜賊、修士劍客；主線第 ③ 步多一條路：在山門打贏「叛徒戰」陣容（`win_battle` 新欄位 `group`）。
 - 世界級線頭目前沒有到期結局（資料沒填）。
 
-### 18.8 導師任務鏈「青崖的試煉」（18.7.5，#95）
+### 19.8 導師任務鏈「青崖的試煉」（18.7.5，#95）
 
 - 新條件：狀態型 `flag`（角色有劇情旗標）；事件型 `growth`（`ops`：`flash` 閃現選定、`reflash` 重閃選定、`dissolve` 溶掉、`inherit` 傳承；看這個動作的 `flash_picked`〔新欄位 `slot`，`None`＝閃現〕、`skill_dissolved`、`skill_inherited`）；`win_battle` 加 `location` 可省略（任何地點）、`weather`（空＝不限，看 `battle_started.weather`）、`skill_keywords`（空＝不限；這場主角用過的技能中任一招帶其中一個關鍵字，看 `battle_ended` 新欄位 `skills_used`）、`group`（陣容 ID）。
 - 任務 `mentor_qingya_trial`（`kind: chain`、giver 青崖道長、`start: [{kind: flag, flag: mentor_qingya}]`）：
   1. 觀摩：一次閃現（`growth: [flash]`；閃現本來就只能在城鎮與營火）。獎勵 靈感 +1。
   2. 以霧為師：在霧天（`fog`）打贏一場，且用過帶「隱蔽」或「帶電」的技能。獎勵 靈感 +1。
   3. 取捨：一次重閃、溶掉或傳承。獎勵 靈感 +1、劇情旗標 `title_qingya_disciple`（稱號「青崖門下」，只是名稱）。
-  - 每步 `npcs: [daoist_qingya]` → 好感度 +15（18.2）。不給技能、不給經驗（18.7.5 沒寫經驗；開發 PM 定）。
+  - 每步 `npcs: [daoist_qingya]` → 好感度 +15（19.2）。不給技能、不給經驗（18.7.5 沒寫經驗；開發 PM 定）。
 
-### 18.9 新事件、動作與欄位（全部有預設值；`trpg-char/1`、`trpg-world/1`、`trpg-wlog/1` 不升版號）
+### 19.9 新事件、動作與欄位（全部有預設值；`trpg-char/1`、`trpg-world/1`、`trpg-wlog/1` 不升版號）
 
 - 動作：`event_solve`。
 - 事件：`event_solved`（骨架、解法索引、種類、付的補給、用掉的線頭）、`thread_spent`、`thread_expired`、`story_flag_cleared`、`skeleton_unlocked`；`event_resolved.outcome` 多 `abandoned`；`flash_picked.slot`、`battle_ended.skills_used`。
 - 角色：`talk_days`、`unlocked_skeletons`；`EventTrigger.combat_solution`；`EncounterLineup.variant`。
 
-### 18.10 驗收
+### 19.10 驗收
 
 - `uv run pytest -q tests/world tests/content tests/skillgen tests/roguelite -n 8 --timeout=1800`（只跑相關檔）通過；roguelite 與 skillgen 的行為快照不變（若變，用 `uv run python -m tests.skillgen.test_refactor_3wr2` 重產並在報告列出）。交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）與 `tests/test_architecture.py`。
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
 
-### 18.11 測試
+### 19.11 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -2151,15 +2248,15 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/content/`（改） | 新欄位的單檔與跨檔案檢查（`unlocks_skeleton`、`shared_threads`、解法欄位、`on_expire_flag`、遭遇變化、`region_keywords`、`mix`、`npcs`、`flag`／`growth` 條件）；雲嶺載入數量 |
 | `tests/world/test_quest_replay.py`（加） | 聊天解鎖 → 判定 → 交涉 → 戰鬥解法 → 到期 的日誌重播兩次逐字相同 |
 
-### 18.12 不做的事
+### 19.12 不做的事
 
 - 前端與 API 路由（5B-5）；懸賞本身（5F-1）；三方混戰（5B-M3）；Boss 階段（5F-2）；機遇解法的結算（入口、技能；另排）；道具系統（青竹節）；撤離勝利條件；LLM 換劇情技能名稱；許願池與機遇的候選偏向。
 
-### 18.13 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 19.13 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
-| 5B4b-1 | 「和該 NPC 有關的任務步驟」 | 每一步在資料寫 `npcs`（不自動算 giver）；雲嶺照 18.2 的表；原本的單筆好感度獎勵改成這個規則（統一 +15） |
+| 5B4b-1 | 「和該 NPC 有關的任務步驟」 | 每一步在資料寫 `npcs`（不自動算 giver）；雲嶺照 19.2 的表；原本的單筆好感度獎勵改成這個規則（統一 +15） |
 | 5B4b-2 | 每天第一次聊天 | 照 6 點刷新的日子；先加 +3 再決定這次能說什麼 |
 | 5B4b-3 | 祕密解鎖的事件何時出現 | 說出祕密的那次聊天立刻觸發（候選只有它）；之後在霧渡鎮照一般事件擲骰也會出現 |
 | 5B4b-4 | 骨架 22 的模板 | DC 8、危險度 1；成功給暗門＋0.5 份經驗、部分成功只給一半經驗、失敗無 |
@@ -2168,11 +2265,17 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5B4b-7 | 交涉的付出 | 沒有金幣與道具：付錢、青竹節、換補給都用補給代替（1／2／1）；交涉不擲骰、一定成功 |
 | 5B4b-8 | 人情抵用 | 玩家選擇用線頭抵掉付出時才用掉（`use_thread`）；只能用個人線頭 |
 | 5B4b-9 | 戰鬥解法 | 在所在地點開一般遭遇（同遇敵）；打贏＝成功留線頭，輸或撤退＝失敗；經驗只有戰鬥本身 |
-| 5B4b-10 | 解法留的線頭 | 照同骨架情境判定成功時的線頭（18.6 列表） |
+| 5B4b-10 | 解法留的線頭 | 照同骨架情境判定成功時的線頭（19.6 列表） |
 | 5B4b-11 | 到期結局的表現 | 到期給劇情旗標 → 地點遭遇改成變化陣容；打贏那一場結束；叛徒戰也能完成主線第 ③ 步 |
 | 5B4b-12 | 導師任務鏈 | `kind: chain`、只給靈感 +1 與好感度、不給經驗；稱號只是劇情旗標 |
 
 
-## 19. 之後各段規格
+### 19.14 玩法 PM 追加（2026-11-03，併進本段；**玩法 PM 定**）
 
-（5B-4 驗收後補上之後各段。）
+- **(a) 任務入口不例外**：隱藏地點的名稱照樣等揭露才公開；任務說明（`summary_zh`、步驟 `text_zh`）與聊天的入口文字要 **指向已知的鄰近地點**，例：「丹爐之謎」寫「藥師谷的谷底似乎還有一處洞窟」。雲嶺所有任務說明照這個原則改（丹爐之謎、霜音的謎、柳掌櫃的入口）。
+- **(b) 城鎮是安全區，只出非戰鬥事件**：規則「有戰鬥解法的骨架不在城鎮出現」做成 **載入檢查**（`world_event_problems`：骨架有 `combat` 解法、`locations` 含城鎮 → 載入失敗；測試）。「夜裡的燈籠隊」（骨架 17）移到渡口石階與竹林小徑（夜晚）；霧渡鎮只留骨架 16（酒館說書人）、22（渡婆婆的往事）。
+- **API 接點**：5B-5 的事件卡已列出戰鬥、交涉、放棄、機遇解法但停用；本段做好結算後在報告寫明接點（世界動作 `event_solve`），下一段把前端打開（本段不動路由與前端）。
+
+## 20. 之後各段規格
+
+（5B-5 驗收後補上之後各段。）

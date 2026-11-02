@@ -7,12 +7,15 @@
 - :class:`LocalLlmProvider`：讀 ``config/llm.toml``，連線檢查有逾時（``probe_timeout_s``），
   不會卡住開局。
 - :class:`MockLlmProvider`：測試與離線預覽用（``MockLLMClient``，不連任何位址）。
+- 大世界（Phase 5B-5）：:meth:`LlmProvider.generate_default` 是伺服器設定（``generate``），大世界的
+  LLM 開關預設跟著它；:meth:`LlmProvider.story_client` 是說書人與情境提議用的 client。
 
 LLM 只提議；數值一律來自預算器（守則 3）。
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
 
@@ -21,6 +24,7 @@ import httpx
 from trpg.content.library import ContentLibrary
 from trpg.llm import LLMConfig, LLMConfigError, OpenAICompatClient, load_llm_config
 from trpg.llm.candidate_source import make_proposer, mock_proposer
+from trpg.llm.client import LLMClient, MockLLMClient
 from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
 from trpg.roguelite.llm_hook import FlashSourceFactory
 from trpg.skillgen.proposal_topic import LlmProposer
@@ -56,6 +60,14 @@ class LlmProvider(Protocol):
 
     def alert_permille(self) -> int:
         """退回率提醒線（千分比）。"""
+        ...
+
+    def generate_default(self) -> bool:
+        """伺服器設定的 LLM 生成開關（``config/llm.toml`` 的 ``generate``；5B-5 大世界的預設）。"""
+        ...
+
+    def story_client(self) -> LLMClient | None:
+        """大世界說書人與情境提議用的 client（5B-5）；設定壞掉時 ``None``（一律降級）。"""
         ...
 
 
@@ -110,16 +122,32 @@ class LocalLlmProvider:
         config = self._config()
         return DEFAULT_ALERT_PERMILLE if config is None else config.fallback_alert_permille
 
+    def generate_default(self) -> bool:
+        config = self._config()
+        return config is not None and config.generate
+
+    def story_client(self) -> LLMClient | None:
+        config = self._config()
+        return None if config is None else OpenAICompatClient(config, transport=self._transport)
+
 
 class MockLlmProvider:
     """測試用：``reachable`` 為假時模擬「本機模型未啟動」；為真時用 Mock 提議器（不連網路）。"""
 
     def __init__(
-        self, *, reachable: bool = True, alert_permille: int = DEFAULT_ALERT_PERMILLE
+        self,
+        *,
+        reachable: bool = True,
+        alert_permille: int = DEFAULT_ALERT_PERMILLE,
+        generate: bool = False,
+        story_responses: Sequence[str | Exception] = (),
     ) -> None:
         self.reachable = reachable
         self._alert = alert_permille
         self.probes = 0
+        self.generate = generate
+        self.story = MockLLMClient(story_responses)
+        """大世界說書人與情境提議共用的 Mock（依序回應；用完拋 ``LLMUnavailable`` → 降級）。"""
 
     def probe(self) -> str | None:
         self.probes += 1
@@ -133,3 +161,9 @@ class MockLlmProvider:
 
     def alert_permille(self) -> int:
         return self._alert
+
+    def generate_default(self) -> bool:
+        return self.generate
+
+    def story_client(self) -> LLMClient | None:
+        return self.story
