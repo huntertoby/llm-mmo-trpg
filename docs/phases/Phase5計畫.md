@@ -2800,6 +2800,133 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5C3-13 | 被動欄位 | 立誓時被動已滿就拒絕；有誓約時所有裝技能的地方照被動欄位 −1 |
 | 5C3-14 | `solo` 的判定 | 開場時有其他我方非召喚單位就違反（召喚物不算隊友） |
 
-## 25. 之後各段規格
+## 25. 5D-1 詳細規格：貨幣、背包、腰包與商店
+
+> 給實作 agent。只動 `content/world/economy.yaml`、`content/world/items.yaml`、`content/world/shops/`（新）、`content/world/oaths.yaml`（「不使用道具」多判一個標籤）、`src/trpg/content/world_economy.py`（新：schema 與載入）、`src/trpg/content/library.py`（一個欄位、一行呼叫）、`src/trpg/world/`（`economy.py` 新；`state.py`、`actions.py`、`step.py`、`battle.py` 小改）、`src/trpg/api/`（`world_economy_view.py`、`world_economy_schemas.py` 新；`world_schemas.py`、`world_presenter.py` 小改）、`client/`（小鎮的「商店」、背包與腰包面板、右側金幣與任務幣、API 型別）、`client/openapi.json`、`tests/content/`、`tests/world/`、`tests/api/`、vitest。另一個 agent（5B-4d）同時在改 `trpg.world` 的事件、機遇與 `trpg.skillgen`：共用檔改動要小。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
+> 依據：08 8.15（金幣：戰鬥、出售物品 → 買消耗品、打造手續費、重骰與強化；任務幣：任務、懸賞、世界事件、bug 回報 → 許願池、特殊商人、高階打造）、8.16（第一季不交易）、8.17（藥水、投擲瓶第一季做，卷軸正式季；**戰鬥中物品欄另外放、使用花 1 AP、不算進基本動作 10 個**；**腰包每場最多帶 3 個，背包 30 格、不算重量**；取得：商人（金幣）、掉落）、8.26.1（貨幣 2 種；好感度不是貨幣、只當商店解鎖門檻，例「友善才賣霧系投擲瓶」；**商店只賣消耗品、粗料、外觀染料；區域商人每週限量賣少量該區特產**；不賣有詞條的裝備、技能、靈感點）；09 9.6.7 #2、#11（城鎮休息回滿、補給回城補）、9.6.10 #102（影子每天第一次被借用給少量任務幣）、9.6.11 #113（HP 野外不自動回；**靠藥水**、治療技能、營火或城鎮）、#116（好感度級名當門檻）；18 18.1（霧渡鎮：區域商人）、18.2.4（青竹節＝雲嶺特產）、18.5（柳掌櫃：霧渡鎮商人）、18.7.6（**柳掌櫃＝在他店裡消費一次 +2、每天最多 +4**，5B-4d 留給 5D）；本檔 9（5A-4 休息與補給）、16（5B-4 任務、好感度）、23（5C-2：影子任務幣暫記在世界快照的影子紀錄，5D 轉進主人角色）、24.12 代決 5C3-8（「不使用道具」等 5D 道具接上後只改 content）。
+
+### 25.1 目標
+
+角色有金幣與任務幣；打贏戰鬥拿金幣、完成任務拿任務幣、影子被借用的任務幣轉進主人角色；背包 30 格、腰包 3 個；霧渡鎮柳掌櫃的店賣消耗品、粗料、染料，雲嶺特產（青竹節）每週限量（數量由賽季種子決定），部分商品要柳掌櫃好感度門檻，在店裡消費一次柳掌櫃好感度 +2（每天最多 +4）；腰包裡的消耗品在戰鬥中當「道具」用（1 AP、每個用一次），野外也能喝藥水回 HP、法力。全部是世界動作（寫進日誌、可重播）；LLM 不碰數值與物品。
+
+### 25.2 內容（`content/world/`；schema `src/trpg/content/world_economy.py`，`ContentModel`、ID 用 `ID_PATTERN`、錯誤訊息繁中並指出 ID）
+
+1. **`economy.yaml`**（`EconomyRules`，數值初值、開發 PM 定）：
+
+   ```yaml
+   bag_slots: 30                # 8.17
+   pouch_slots: 3               # 8.17：每場最多帶 3 個（個數，不是種類）
+   stack_max: {consumable: 10, material: 20, dye: 10}   # 一格疊幾個（代決 5D1-2）
+   sell_permille: 500           # 賣價＝買價 × 500‰（捨去、至少 1；代決 5D1-5）
+   start_gold: 0
+   battle_gold:                 # 打贏一場（8.15「戰鬥」；代決 5D1-3）
+     battle: 15                 # 一般陣容
+     elite: 45                  # 陣容含精英
+     level_step_permille: 100   # 每高 1 級建議等級 +10%（同 5A-SIM2 經驗份數的換算）
+   quest_coins:                 # 完成任務（8.15「任務」；代決 5D1-4）
+     by_kind: {starter: 2, main: 3, chain: 3, hidden: 2}
+     by_quest: {}               # 個別任務覆寫（任務 ID → 數量）
+   ```
+
+2. **`items.yaml`**（`WorldItemTable.items: tuple[WorldItemDef, ...]`）：`id`（`item_` 開頭）、`name_zh`、`kind: consumable | material | dye`、`description_zh`、`price: int ≥ 1`（金幣；商店照它賣）、`region: str | None`（區域特產）；消耗品另有 `skill: SkillDef`（戰鬥中的用法：`ap_cost: 1`、`cost.uses_per_battle: 1`、`mana: 0`、標籤含 `item`；過技能的引用與費用檢查，同 `content/skills/`，**不進技能池**）、`field_hp_permille`／`field_mana_permille`（野外使用回最大值的 ‰；兩者都 0＝野外不能用）；染料另有 `color`（`#RRGGBB`，只顯示；染色在之後的段）。檢查：ID 與技能 ID 不重複、只有消耗品有 `skill` 而且必有、`region` 存在。5D-2 的材料加在同一個檔。
+
+3. **`shops/<region>.yaml`**（`ShopTable`：`region`、`shops`）：`ShopDef`＝`id`、`name_zh`、`npc`（人設卡 ID，店在他的地點）、`stock: tuple[ShopStock, ...]`（`item`、`rank: AffinityRank | None`＝門檻級別，至少到這級才賣）、`weekly: tuple[WeeklyStock, ...]`（`item`、`min`、`max`：每週限量 min～max 個）、`affinity: ShopAffinity | None`（`per_purchase`、`daily_max`）。檢查：檔名＝`region`、區域有地點圖、NPC 在該區人設卡、商品在 `items.yaml`、**只能賣消耗品、粗料（`item_coarse_material`）、染料，以及 `weekly` 裡的本區特產**（8.26.1）、同一家店商品不重複、`min ≤ max`。
+
+4. **雲嶺內容**（開發 PM 定名稱與數值；18 只寫「區域商人」「柳掌櫃」「青竹節＝雲嶺特產」）：
+
+   | 商品 `id` | 名稱 | 種類 | 價格 | 戰鬥中（1 AP，腰包每個用一次） | 野外 | 門檻 |
+   |---|---|---|---|---|---|---|
+   | `item_spring_pill` | 回春丹 | 消耗品（藥水） | 15 | 自己回 2d6 HP | HP +30% | — |
+   | `item_focus_pill` | 凝神丹 | 消耗品（藥水） | 15 | 自己回 10 法力 | 法力 +30% | — |
+   | `item_oil_flask` | 燈油瓶 | 消耗品（投擲瓶） | 10 | 3 格內十字範圍鋪油 3 回合 | — | — |
+   | `item_fire_flask` | 火油瓶 | 消耗品（投擲瓶） | 20 | 3 格內單格周圍 3×3 起火 2 回合 | — | — |
+   | `item_frost_flask` | 寒冰瓶 | 消耗品（投擲瓶） | 20 | 3 格內 3×3 結冰 2 回合 | — | — |
+   | `item_mist_flask` | 霧瓶 | 消耗品（投擲瓶） | 25 | 3 格內 3×3 煙霧 2 回合 | — | 柳掌櫃 **友善**（8.26.1 例「友善才賣霧系投擲瓶」） |
+   | `item_coarse_material` | 粗料 | 材料 | 5 | — | — | — |
+   | `item_dye_indigo`／`item_dye_cinnabar`／`item_dye_ink` | 靛青／朱砂／墨色染料 | 染料 | 20 | — | — | — |
+   | `item_green_bamboo` | 青竹節 | 材料（雲嶺特產） | 30 | — | — | **每週限量 2～4 個**（種子決定） |
+
+   店：`shop_liu`「柳記雜貨」、`npc: shopkeeper_liu`（霧渡鎮）、`affinity: {per_purchase: 2, daily_max: 4}`（18.7.6）。
+
+5. **`oaths.yaml`**：`oath_no_items` 的判定標籤加 `item`（`tags: [gear, item]`），說明改成「不使用道具（腰包的消耗品與裝備給的技能）」（代決 5C3-8「5D 道具接上後只改 content」）。
+
+### 25.3 狀態（全部有預設值；格式字串不變）
+
+- `CharacterState`：`gold: int = 0`、`quest_coins: int = 0`、`bag: dict[str, int] = {}`（物品 → 個數，依 ID 排序、> 0）、`pouch: dict[str, int] = {}`（同；只有消耗品、合計 ≤ `pouch_slots`）、`shop_week: tuple[ShopPurchase, ...] = ()`（`shop`、`item`、`week`、`bought`；本週買過的限量商品，依店、物品排序；換週時舊的不再算）、`shop_affinity: dict[str, CompanionAffinity] = {}`（NPC → 今天在店裡加過的好感度，沿用 5C-3 的 `day`／`gained`）。
+- 背包的格數＝每種物品 `ceil(個數 ÷ stack_max[種類])` 加總，≤ `bag_slots`；腰包不佔背包格。
+- `ShadowRecord.coins_claimed: int = 0`：已轉進主人角色的任務幣（`coins` 保留為累計，畫面照舊顯示）。
+
+### 25.4 世界動作（`trpg.world.economy`；加進 `WorldAction` 聯集；不合法拋 `WorldActionError`、狀態不變）
+
+| 動作 | 欄位 | 條件與效果 |
+|---|---|---|
+| `buy` | `shop`、`item`、`count: 1～10 = 1` | 角色所在區有這家店、角色在店主 NPC 的地點、沒有遭遇；商品在 `stock`（好感度級別 ≥ `rank`）或 `weekly`（本週剩餘 ≥ `count`）；金幣 ≥ 價格 × 個數；放得進背包。金幣扣掉、背包加上、限量的記進 `shop_week`。事件 `item_bought`（店、物品、個數、花的金幣、剩下的金幣）。**每次 `buy` 算消費一次**：店有 `affinity` 且店主 NPC 今天加過的 < `daily_max` → `change_affinity(+min(per_purchase, 剩餘額度))`，來源 `shop:<店>`（事件 `affinity_changed`，好感度上限照 5B-4） |
+| `sell` | `shop`、`item`、`count: 1～99 = 1` | 同店與地點條件；背包有那麼多（腰包裡的不賣）；金幣 ＋ 賣價 × 個數。事件 `item_sold`。不算消費（好感度不變） |
+| `pouch` | `items: dict[str, int]` | 整組換掉腰包：在城鎮或營火（同換技能的地點 `at_service`）、沒有遭遇；只能放消耗品、合計 ≤ `pouch_slots`；先把舊腰包放回背包，再從背包拿（背包要有、放回時要放得下）。事件 `pouch_changed`（腰包內容） |
+| `use_item` | `item` | 野外或城鎮、沒有遭遇（戰鬥中走戰鬥步驟）；物品有野外效果；先從背包拿，背包沒有再從腰包；HP／法力 ＋ 最大值 × ‰（捨去、至少 1、不超過最大值）。事件 `item_used`（物品、HP、法力） |
+
+- **戰鬥中的道具**（`battle.prepare_battle`）：腰包每種消耗品的 `skill` 照個數改 `cost.uses_per_battle`，加在主角技能的最後（依物品 ID 排序）並加進該場規則包；**不算技能欄位**（裝備的技能照舊）。效用 AI（`auto_steps`）照一般技能使用。`fight` 結算時讀主角在戰鬥結束狀態的 `skill_uses`，用掉的從腰包扣（勝負都扣）；事件 `pouch_used`（物品 → 個數，沒用就不發）。用法統計、閃現只看裝備的技能（道具不算）。
+- **金幣**（`fight` 打贏）：`battle_gold`（陣容含精英用 `elite`，否則 `battle`）× (1000 ＋ `level_step_permille` ×（敵人等級 − 1））÷ 1000；事件 `currency_gained`（`currency: gold`、數量、總額、來源 `battle`）。輸了不給。
+- **任務幣**（每個動作之後、`advance_quests` 之後）：這個動作的 `quest_completed` 每個任務給 `by_quest` 或 `by_kind` 的數量；事件 `currency_gained`（`quest_coins`、來源 `quest:<任務>`）。
+- **影子的任務幣轉入**（每個動作的最後）：世界快照有自己的影子紀錄而且 `coins > coins_claimed` → 差額加進 `quest_coins`、`coins_claimed = coins`；事件 `currency_gained`（`quest_coins`、來源 `shadow`）。只有主人自己動作時轉（`world_step` 只回傳出手的角色）。
+- **補給**：維持 5A-4（城鎮休息免費補到初值、紮營花 1）；商店 **不賣補給**、補給不進背包（代決 5D1-7）。
+- **本週限量**：週次照 `week_of`（同酒館傳聞，賽季開始以來每 `week_days` 天一週）；數量＝`Rng(fnv1a64(f"{season_seed}:{region}:shop:{shop}:{week}:{item}"))` 在 min～max 均勻抽；**每個角色各自算**（代決 5D1-6），同一週大家看到相同數量、不耗角色亂數。
+- **可重播**：新動作寫進 `trpg-wlog/1`；金幣、任務幣、背包、腰包、限量、好感度全部由「日誌＋內容庫＋賽季種子」決定；不呼叫 LLM。
+
+### 25.5 API（`trpg.api`）
+
+- `WorldActionRequest` 加 `buy`、`sell`、`pouch`、`use_item`。
+- `WorldView` 加 `wallet`（`gold`、`quest_coins`）、`inventory`（背包每種物品：ID、名稱、種類中文、個數、說明、賣價、野外可用、戰鬥中用法的一句話；已用格數／30；腰包內容與上限；`can_pouch` 與不能換的原因）、`shop`（角色在店主地點時：店名、店主、好感度級名、每個商品的價格、限量剩餘「本週剩 n 個」、門檻與鎖住的說明「柳掌櫃好感度到友善才賣」、能不能買與原因；好感度說明「每次消費柳掌櫃好感度 +2（每天最多 +4，今天已 +x）」）。
+- 事件句子：`item_bought`「在柳記雜貨買了回春丹 ×1（−15 金幣，剩 0）。」、`item_sold`、`pouch_changed`「腰包：回春丹 ×2、燈油瓶 ×1。」、`item_used`、`pouch_used`「這場用掉了：回春丹 ×1。」、`currency_gained`「獲得 15 金幣。」／「獲得 2 任務幣（完成任務）。」／「影子被借用的任務幣 +1。」。
+- OpenAPI 照既有方式重產（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）。
+
+### 25.6 前端（`client/src/world/`；最小可用，5D-4 再完整化）
+
+- 右側角色狀態加一行「金幣 n・任務幣 n」。
+- 小鎮有店時服務列加「商店」切換鈕（`aria-expanded`），面板內展開商品表：名稱、種類、價格、限量剩餘、門檻；買鈕（錢不夠、鎖住、限量賣完時停用，原因用共用 `<Hint>`）；下面列背包裡可賣的東西與賣鈕；好感度說明一行。
+- 「背包」面板（右側，常駐）：已用格數、物品列（名稱 ×個數，說明用 `<Hint>`）、野外可用的有「使用」鈕；腰包 3 格：在城鎮或營火時可以「整理腰包」（面板內每種消耗品的個數選單＋確定，送 `pouch`）。
+- 浮動卡照 6.5.1（只用共用 `<Hint>`，不新增彈出層）；瀏覽器實測滑進說明卡、釘住、關閉（1600×900 與 800×600）。
+
+### 25.7 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_economy.py` | 載入雲嶺：規則、物品、店；壞資料逐條：ID 重複、消耗品沒有技能、非消耗品有技能、未知物品／NPC／區域、店賣有詞條或不允許的種類、特產不是本區、`min > max`、檔名不等於 region；沒有資料夾＝`None`／空 |
+| `tests/world/test_economy.py` | 買（地點、遭遇中、錢不夠、背包滿、門檻、限量剩餘與換週）、賣、腰包（地點、上限、非消耗品、從背包拿與放回）、野外使用（HP、法力上限、沒效果的被拒）；柳掌櫃 +2、同一天第 3 次不加、隔天再加；打贏給金幣（一般、精英、等級）、輸了不給；任務完成給任務幣；影子任務幣轉進主人、不重複轉；限量數量同週相同、不耗角色亂數 |
+| `tests/world/test_economy_battle.py` | 腰包的道具出現在主角技能、次數＝個數、不佔欄位；用掉的從腰包扣；沒帶時技能不變；「不使用道具」誓約用道具算違反；日誌重播兩次逐字相同 |
+| `tests/api/test_world_economy_api.py` | 開戰打贏 → 金幣 → 回霧渡鎮 → `shop` 列商品 → 買 → `inventory` 看到 → 柳掌櫃好感度 +2；腰包；賣 |
+| vitest | 商店表（停用原因、限量）、背包與腰包的動作 |
+
+### 25.8 驗收
+
+- `uv run pytest -q tests/world tests/content tests/api -n 8 --timeout=1800` 通過；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`tests/test_architecture.py`、`npx vitest run`、`npm run build`。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。
+- 瀏覽器（後端 8100、前端 5260；LLM 降級）：打一場拿金幣 → 回霧渡鎮在柳掌櫃買一個消耗品 → 背包／腰包看到 → 柳掌櫃好感度 +2。
+
+### 25.9 不做的事
+
+- 材料掉落、打造、強化、重骰、附魔、配方（5D-2、5D-3）；許願池、特殊商人、種族重選（任務幣的用途，之後）；懸賞與世界事件的任務幣（5F）；染色（外觀，之後）；卷軸（正式季）；交易（8.16）。
+- 戰鬥畫面獨立的「物品欄」（8.17）：本段道具在戰鬥中先出現在技能列（標「道具」、用法照 8.17：1 AP、不佔技能欄位）；獨立物品欄在 5D-4（代決 5D1-8）。
+- 事件 3「斷崖幫哨兵」交涉付金幣、事件獎勵的金幣（骨架與解法在 5B，之後只改 content／solutions）。
+
+### 25.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5D1-1 | 商品、名稱、價格 | 25.2 表（初值）；之後用模擬或試玩調，只改 content |
+| 5D1-2 | 背包「30 格」怎麼算 | 一格一疊：消耗品 10、材料 20、染料 10 個一格；腰包不佔背包 |
+| 5D1-3 | 戰鬥給多少金幣 | 一般 15、精英 45，每高 1 級 +10%；輸了不給；新角色 0 金幣 |
+| 5D1-4 | 任務幣 | 任務完成時給：新手鏈 2、主線 3、區域鏈 3、隱藏 2（每步不給）；資料可個別覆寫 |
+| 5D1-5 | 出售 | 任何背包物品在商店賣，賣價＝價格 × 50%（捨去、至少 1）；不算消費 |
+| 5D1-6 | 特產每週限量 | 每個角色各自算（8.14「採集點每位玩家各自計算，不用搶」同精神）；數量由 `{season_seed}:{region}:shop:{店}:{週}:{物品}` 決定，同週大家相同 |
+| 5D1-7 | 補給和商店的關係 | 不變：補給不是物品、不賣；城鎮休息免費補到初值（5A4-11） |
+| 5D1-8 | 戰鬥中的物品欄 | 道具＝腰包產生的「道具技能」（1 AP、每個用一次、不佔欄位），先出現在技能列；獨立物品欄 5D-4 |
+| 5D1-9 | 道具的強度 | 戰鬥中照技能預算（回春丹 2d6、凝神丹 10 法力、投擲瓶照現有表面技能）；8.17 例「回 30% HP」用在野外使用 |
+| 5D1-10 | 腰包在哪裡整理 | 城鎮與營火（同換技能）；野外喝藥水可以（09 9.6.11 #113「靠藥水」） |
+| 5D1-11 | 消費一次的定義 | 一次 `buy` 動作（不論個數）＝一次；每天（6 點刷新）最多 +4；賣東西不算 |
+| 5D1-12 | 影子任務幣轉入時機 | 主人自己的下一個世界動作；累計數字保留顯示 |
+| 5D1-13 | 道具與沉默 | 道具技能是 `spell` 類型，沉默時不能用（引擎現行規則；要例外再改引擎） |
+
+## 26. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
