@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Collection
 
 from pydantic import Field, model_validator
 
@@ -23,6 +24,7 @@ __all__ = [
     "NO_ENCOUNTER_KINDS",
     "EncounterGroupDef",
     "EncounterTable",
+    "EncounterVariant",
     "FixedElite",
     "GroupWeight",
     "LocationEncounters",
@@ -73,6 +75,15 @@ class UnitMinLevel(ContentModel):
     otherwise: str = Field(pattern=ID_PATTERN)
 
 
+class EncounterVariant(ContentModel):
+    """線頭到期結局的遭遇變化（Phase 5B-4b，18.4「線頭到期例」）：角色有劇情旗標 ``flag`` 時，這個
+    地點的遭遇改用陣容 ``group``（＋固定精英 ``elite``，排最前面）；打贏那一場旗標就移除。"""
+
+    flag: str = Field(pattern=ID_PATTERN)
+    group: str = Field(pattern=ID_PATTERN)
+    elite: FixedElite | None = None
+
+
 class LocationEncounters(ContentModel):
     location: str = Field(pattern=ID_PATTERN)
     groups: tuple[GroupWeight, ...] = Field(min_length=1)
@@ -84,6 +95,11 @@ class LocationEncounters(ContentModel):
     ally_first_threads: tuple[str, ...] = ()
     """持有其中任一條有效線頭時，在這個地點的戰鬥我方先手（Phase 5A-6；18.4 補充「斷崖幫寨的
     暗門」）。"""
+    variants: tuple[EncounterVariant, ...] = ()
+    """線頭到期結局的遭遇變化（Phase 5B-4b；第一個符合的旗標生效）。"""
+
+    def variant_for(self, flags: Collection[str]) -> EncounterVariant | None:
+        return next((v for v in self.variants if v.flag in flags), None)
 
     @model_validator(mode="after")
     def _thread_ids(self) -> LocationEncounters:
@@ -217,6 +233,7 @@ def _location_problems(
         if any(not catalog.has(u) for m in members for u in m.units):
             continue  # 陣容的問題已經回報過
         problems += _gate_problems(loc, members, table, catalog)
+        problems += _variant_problems(loc, table, catalog)
         problems += _elite_problems(loc, place.kind, members, table, catalog)
     return problems
 
@@ -275,6 +292,41 @@ def _elite_problems(
         templates = [elite, *(catalog.template(u) for u in group.units)]
         lineup += _lineup_problems(f"{where} 的陣容 {group.id}", templates, table, catalog)
     return lineup
+
+
+def _variant_problems(
+    loc: LocationEncounters, table: EncounterTable, catalog: EnemyCatalog
+) -> list[str]:
+    """遭遇變化（5B-4b）：陣容存在、固定精英與詞綴合法、整場遠程與精英上限。"""
+    where = f"地點 {loc.location} 的變化"
+    groups = table.group_by_id()
+    problems: list[str] = []
+    for variant in loc.variants:
+        group = groups.get(variant.group)
+        if group is None:
+            problems.append(f"{where} {variant.flag}：未知的陣容 {variant.group}")
+            continue
+        if any(not catalog.has(u) for u in group.units):
+            continue  # 陣容的問題已經回報過
+        templates = [catalog.template(u) for u in group.units]
+        elite = variant.elite
+        if elite is not None:
+            if not catalog.has(elite.unit):
+                problems.append(f"{where} {variant.flag}：未知的固定精英 {elite.unit}")
+                continue
+            try:
+                reason = catalog.affix_problem(catalog.template(elite.unit), elite.affix)
+            except KeyError:
+                problems.append(f"{where} {variant.flag}：未知的詞綴 {elite.affix}")
+                continue
+            if reason is not None:
+                problems.append(f"{where} {variant.flag}：固定精英不能套用詞綴（{reason}）")
+                continue
+            templates.insert(0, catalog.with_affix(catalog.template(elite.unit), elite.affix))
+            if len(templates) > MAX_GROUP_SIZE:
+                problems.append(f"{where} {variant.flag}：加上精英超過 {MAX_GROUP_SIZE} 名")
+        problems += _lineup_problems(f"{where} {variant.flag}", templates, table, catalog)
+    return problems
 
 
 def _can_mix_elite(group: EncounterGroupDef, table: EncounterTable, catalog: EnemyCatalog) -> bool:

@@ -23,6 +23,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
@@ -69,6 +71,8 @@ class EncounterLineup(BaseModel):
     group: str
     """抽到的陣容 ID（遭遇表的 ``groups``）。"""
     members: tuple[LineupMember, ...] = Field(min_length=1)
+    variant: str | None = None
+    """用了哪個遭遇變化（劇情旗標；Phase 5B-4b 線頭到期結局）；``None``＝一般抽陣容。"""
 
     @property
     def has_elite_affix(self) -> bool:
@@ -80,8 +84,11 @@ def lineup_rng(battle_seed: int) -> Rng:
     return Rng(fnv1a64(f"{battle_seed}:lineup".encode()))
 
 
-def roll_lineup(library: ContentLibrary, encounter: EncounterResult) -> EncounterLineup:
-    """依遭遇表抽出 ``encounter`` 的敵方陣容（確定性；規則見模組說明）。"""
+def roll_lineup(
+    library: ContentLibrary, encounter: EncounterResult, flags: Collection[str] = ()
+) -> EncounterLineup:
+    """依遭遇表抽出 ``encounter`` 的敵方陣容（確定性；規則見模組說明）。``flags``＝角色的劇情旗標：
+    地點有對應的遭遇變化（Phase 5B-4b 線頭到期結局）時改用變化的陣容（不抽、不混營地精英）。"""
     table = library.world_encounters.get(encounter.region)
     if table is None:
         raise WorldError(f"區域 {encounter.region} 沒有遭遇表")
@@ -92,6 +99,19 @@ def roll_lineup(library: ContentLibrary, encounter: EncounterResult) -> Encounte
     place = world_map.location_by_id()[encounter.location]
     kind = place.kind
     gate_level = place.level_min if place.level_min is not None else encounter.level
+    variant = entry.variant_for(flags)
+    if variant is not None:
+        group = table.group_by_id()[variant.group]
+        members = [LineupMember(unit=_gated(u, entry, gate_level)) for u in group.units]
+        if variant.elite is not None:
+            members.insert(0, LineupMember(unit=variant.elite.unit, affix=variant.elite.affix))
+        return EncounterLineup(
+            region=encounter.region,
+            location=encounter.location,
+            group=group.id,
+            members=tuple(members),
+            variant=variant.flag,
+        )
     rng = lineup_rng(encounter.battle_seed)
     group = _pick_group(rng, table, entry)
     members = [LineupMember(unit=_gated(u, entry, gate_level)) for u in group.units]

@@ -38,6 +38,9 @@ groups:
   - {id: crane_nest, name_zh: 雷羽鷹巢, units: [thunder_hawk, thunder_hawk, thunder_hawk, sect_crane_archer]}
   - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk, stoneback_bear]}
   - {id: summit_patrol, name_zh: 雲頂巡邏, units: [sect_array_disciple, sect_array_disciple, sect_talisman_caster, sect_alchemist]}
+  # 線頭到期結局的變化陣容（5B-4b；18.4「線頭到期例」、18.7.4 疤面＝盜賊隊長精英，連心的，帶霧狼）
+  - {id: scarface_risen, name_zh: 坐大的疤面, units: [bandit_captain, bandit, mist_wolf, mist_wolf]}
+  - {id: temple_traitor, name_zh: 叛徒戰, units: [sect_steward, bandit, bandit, sect_swordsman]}
 
 locations:
   - location: ferry_steps
@@ -48,11 +51,15 @@ locations:
     groups: [{group: sect_patrol}, {group: terrace_clash}]
   - location: mist_temple_gate
     groups: [{group: temple_gate_guard}]
+    variants:  # 「觀內有人私通盜賊」到期 → 主線第 1 章的叛徒戰（打贏那一場結束）
+      - {flag: temple_traitor_strikes, group: temple_traitor}  # 叛徒＝青霧執事（精英）帶盜賊
   - location: hunter_hut
     groups: [{group: hunter_beasts}]
   - location: cliff_gang_fort
     groups: [{group: cliff_gang_core}, {group: cliff_gang_hounds}]
     ally_first_threads: [gang_fort_secret_door]  # 18.4 補充：持有暗門，在斷崖幫寨的戰鬥我方先手
+    variants:  # 「二當家記恨你」到期 → 二當家坐大（打贏那一場結束）
+      - {flag: scarface_rises, group: scarface_risen}  # 盜賊隊長本身就是精英，不能再套「連心的」
   - location: old_pine_altar
     groups: [{group: altar_wardens}]
   - location: cloud_sea_bridge

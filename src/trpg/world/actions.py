@@ -6,6 +6,7 @@
 5A-4 加上撤退、戰鬥（步驟寫進日誌，重播時重算勝負）、城鎮休息、換技能、傳送。
 5A-6 加上成長的動作：配點、重配、閃現、選閃現、溶掉、傳承、立誓、解除誓約。
 5B-4 加上任務與好感度：接任務、選任務給的技能、和 NPC 說話、在酒館聽傳聞。
+5B-4b 加上放棄、交涉、戰鬥解法（``event_solve``）。
 """
 
 from __future__ import annotations
@@ -49,6 +50,8 @@ __all__ = [
     "EventCheckEvent",
     "EventLeftEvent",
     "EventResolvedEvent",
+    "EventSolveAction",
+    "EventSolvedEvent",
     "EventTriggeredEvent",
     "FightAction",
     "FlashAction",
@@ -81,11 +84,13 @@ __all__ = [
     "SituationAction",
     "SituationCheckEvent",
     "SituationResultEvent",
+    "SkeletonUnlockedEvent",
     "SkillDissolvedEvent",
     "SkillInheritedEvent",
     "SkillOfferTakenEvent",
     "SkillOfferedEvent",
     "SkillTierChangedEvent",
+    "StoryFlagClearedEvent",
     "StorySkillGrantedEvent",
     "SwearOathAction",
     "TalkAction",
@@ -94,7 +99,9 @@ __all__ = [
     "TeleportAction",
     "TeleportedEvent",
     "ThreadAddedEvent",
+    "ThreadExpiredEvent",
     "ThreadPushedOutEvent",
+    "ThreadSpentEvent",
     "TravelAction",
     "TraveledEvent",
     "WorldAction",
@@ -294,6 +301,15 @@ class TavernAction(_Model):
     kind: Literal["tavern"] = "tavern"
 
 
+class EventSolveAction(_Model):
+    """用放棄、交涉或戰鬥解法處理身上的事件（Phase 5B-4b；9.6.7 #6）。``solution`` 是骨架
+    ``solutions`` 的索引；``use_thread`` 是交涉時拿來抵掉付出的線頭（例：用人情代替青竹節）。"""
+
+    kind: Literal["event_solve"] = "event_solve"
+    solution: int = Field(ge=0)
+    use_thread: str | None = Field(default=None, pattern=ID_PATTERN)
+
+
 type WorldAction = Annotated[
     TravelAction
     | CampAction
@@ -315,7 +331,8 @@ type WorldAction = Annotated[
     | AcceptQuestAction
     | OfferPickAction
     | TalkAction
-    | TavernAction,
+    | TavernAction
+    | EventSolveAction,
     Field(discriminator="kind"),
 ]
 
@@ -455,14 +472,57 @@ class ThreadPushedOutEvent(_Model):
 
 
 class EventResolvedEvent(_Model):
-    """事件以某個解法結束（Phase 5B-2：情境判定）。"""
+    """事件以某個解法結束（Phase 5B-2：情境判定；5B-4b：放棄＝``abandoned``、交涉、戰鬥）。"""
 
     kind: Literal["event_resolved"] = "event_resolved"
     skeleton: str
     location: str
     solution: int
     """骨架 ``solutions`` 的索引。"""
-    outcome: Outcome
+    outcome: Outcome | Literal["abandoned"]
+
+
+class EventSolvedEvent(_Model):
+    """選了放棄、交涉或戰鬥解法（Phase 5B-4b）：付了多少補給、用掉哪條線頭；戰鬥解法之後接
+    ``encounter``，打完才 ``event_resolved``。"""
+
+    kind: Literal["event_solved"] = "event_solved"
+    skeleton: str
+    solution: int
+    solution_kind: Literal["combat", "parley", "abandon"]
+    supplies_spent: int = 0
+    thread_spent: str | None = None
+
+
+class ThreadSpentEvent(_Model):
+    """線頭被用掉（Phase 5B-4b：交涉時拿人情抵付出）。"""
+
+    kind: Literal["thread_spent"] = "thread_spent"
+    thread: str
+
+
+class ThreadExpiredEvent(_Model):
+    """有到期結局的線頭到期（Phase 5B-4b；18.4「線頭到期例」）：給了旗標 ``flag``。"""
+
+    kind: Literal["thread_expired"] = "thread_expired"
+    thread: str
+    scope: ThreadScope
+    flag: str
+
+
+class StoryFlagClearedEvent(_Model):
+    """劇情旗標移除（Phase 5B-4b：打贏線頭到期結局的變化陣容）。"""
+
+    kind: Literal["story_flag_cleared"] = "story_flag_cleared"
+    flag: str
+
+
+class SkeletonUnlockedEvent(_Model):
+    """信賴的 NPC 說出祕密，解鎖一個事件骨架（Phase 5B-4b；18.7.7）。"""
+
+    kind: Literal["skeleton_unlocked"] = "skeleton_unlocked"
+    skeleton: str
+    npc: str
 
 
 class NarratedEvent(_Model):
@@ -522,6 +582,8 @@ class BattleEndedEvent(_Model):
     mana: int
     xp_gained: int
     level: int
+    skills_used: tuple[str, ...] = ()
+    """這場主角用過的技能 ID（排序；Phase 5B-4b 導師任務鏈的條件）。"""
 
 
 class LeveledUpEvent(_Model):
@@ -620,6 +682,8 @@ class FlashPickedEvent(_Model):
     """選之前的技能 ID。"""
     new_skill: str
     pick: int
+    slot: int | None = None
+    """重閃的欄位；``None``＝閃現（Phase 5B-4b 導師任務鏈分辨閃現與重閃）。"""
 
 
 class SkillDissolvedEvent(_Model):
@@ -774,6 +838,11 @@ type WorldEvent = Annotated[
     | StorySkillGrantedEvent
     | AffinityChangedEvent
     | TalkedEvent
-    | RumorsHeardEvent,
+    | RumorsHeardEvent
+    | EventSolvedEvent
+    | ThreadSpentEvent
+    | ThreadExpiredEvent
+    | StoryFlagClearedEvent
+    | SkeletonUnlockedEvent,
     Field(discriminator="kind"),
 ]

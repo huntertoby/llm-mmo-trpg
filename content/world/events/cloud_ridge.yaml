@@ -6,6 +6,10 @@
 # 開發 PM 自定（代決 5B1-1、5B1-5）：所有 ID；locations、day_phase、weather（18.4 沒寫出現地點，
 # 依 18.3「內容」欄與骨架文字推定）；線頭 scope 全部 personal；「雷雨」＝ rain ＋ night。
 # 屬性：str 力量、dex 敏捷、con 體質、int 智力、wis 感知、wil 意志。
+# 5B-4b（Phase5計畫 19.3、19.6、19.7、19.14）：戰鬥／交涉解法成功留下的線頭（threads；照同骨架情境判定成功時的線頭）、
+# 交涉付出的補給（cost_supplies；沒有金幣與道具，付錢、青竹節都用補給代替）、人情抵用（waive_thread）、線頭到期結局的
+# 旗標（on_expire_flag；遭遇表 variants 依它換陣容）、只能解鎖的骨架（unlock_only；信賴的祕密解鎖）。
+# 城鎮是安全區（玩法 PM 定）：有戰鬥解法的骨架不能出現在城鎮（載入檢查）；霧渡鎮只有骨架 16、22。
 region: cloud_ridge
 skeletons:
   - id: wounded_peddler
@@ -16,7 +20,7 @@ skeletons:
     stakes_zh: 他的貨與命
     locations: [ferry_steps, bamboo_path]
     solutions:
-      - {kind: combat}
+      - {kind: combat, threads: [peddler_owes_you, wolves_driven_down]}
       - {kind: situation, attributes: [wis], note_zh: 找安全路}
       - {kind: abandon}
     threads:
@@ -32,7 +36,7 @@ skeletons:
     npcs: [acolyte_xiaolian]
     solutions:
       - {kind: situation, attributes: [wis, int], note_zh: 認路}
-      - {kind: combat, note_zh: 帶他走（護送戰）}
+      - {kind: combat, note_zh: 帶他走（護送戰）, threads: [temple_quarrel]}
     threads:
       - {id: temple_quarrel, text_zh: 道童提到觀裡在吵架, npc: acolyte_xiaolian}
   - id: gang_toll
@@ -44,14 +48,15 @@ skeletons:
     locations: [rain_terraces, cliff_gang_fort]
     follows: [wolves_driven_down]
     solutions:
-      - {kind: combat}
+      - {kind: combat, threads: [scarface_grudge]}
       - {kind: situation, attributes: [wil], note_zh: 威嚇}
-      - {kind: parley, note_zh: 付錢}
+      - {kind: parley, note_zh: 付錢, cost_supplies: 1}
     threads:
       - id: scarface_grudge
         text_zh: 二當家記恨你
         npc: scarface
         on_expire_zh: 二當家坐大，變成精英懸賞
+        on_expire_flag: scarface_rises
   - id: pine_elder_go
     number: 4
     who_zh: 古松下的老人
@@ -92,6 +97,7 @@ skeletons:
       - id: temple_traitor
         text_zh: 觀內有人私通盜賊
         on_expire_zh: 主線第 1 章出現叛徒戰
+        on_expire_flag: temple_traitor_strikes
   - id: gang_deserter
     number: 7
     who_zh: 盜賊逃兵
@@ -101,7 +107,7 @@ skeletons:
     locations: [cliff_gang_fort, herb_valley]
     follows: [temple_traitor]
     solutions:
-      - {kind: combat, note_zh: 擋追兵}
+      - {kind: combat, note_zh: 擋追兵, threads: [gang_fort_secret_door]}
       - {kind: situation, attributes: [dex], note_zh: 帶他躲藏}
     threads:
       - {id: gang_fort_secret_door, text_zh: 斷崖幫寨的暗門（隱藏入口）}
@@ -114,7 +120,7 @@ skeletons:
     locations: [crystal_rift, north_slope]
     follows: [missing_went_to_rift]
     solutions:
-      - {kind: combat, note_zh: 不殺獵人}
+      - {kind: combat, note_zh: 不殺獵人, threads: [wraiths_from_rift]}
       - {kind: situation, attributes: [wil], note_zh: 喚醒}
     threads:
       - {id: wraiths_from_rift, scope: world, text_zh: 霧魅從裂痕湧出}
@@ -127,7 +133,7 @@ skeletons:
     locations: [ferry_steps]
     follows: [peddler_owes_you]
     solutions:
-      - {kind: parley, note_zh: 給青竹節}
+      - {kind: parley, note_zh: 給青竹節（可用人情代替）, cost_supplies: 2, waive_thread: peddler_owes_you, threads: [ferryman_daughter]}
       - {kind: situation, attributes: [int], note_zh: 修理}
     threads:
       - {id: ferryman_daughter, text_zh: 渡船夫的女兒在觀裡}
@@ -140,7 +146,7 @@ skeletons:
     locations: [winter_lake]
     follows: [wolves_driven_down]
     solutions:
-      - {kind: combat}
+      - {kind: combat, threads: [shards_under_den]}
       - {kind: situation, attributes: [wis], note_zh: 悄悄退出}
       - {kind: abandon}
     threads:
@@ -191,7 +197,7 @@ skeletons:
     locations: [crystal_rift, sword_tomb]
     follows: [scarface_grudge, temple_traitor, shards_under_den]
     solutions:
-      - {kind: combat, note_zh: 撤離勝利條件}
+      - {kind: combat, note_zh: 撤離勝利條件（先用一般勝利）, threads: [shards_to_ashen]}
       - {kind: situation, attributes: [dex], note_zh: 偷走}
     threads:
       - {id: shards_to_ashen, scope: world, text_zh: 碎片被送往灰燼荒原（接主線第 2 章）}
@@ -223,11 +229,11 @@ skeletons:
     want_zh: 找失蹤的鎮民
     obstacle_zh: 霧與霧行者
     stakes_zh: 鎮民性命
-    locations: [mist_ferry, ferry_steps, hunter_hut]
+    locations: [ferry_steps, bamboo_path]  # 玩法 PM 2026-11-03：城鎮是安全區，移到渡口石階與竹林小徑（夜晚）
     follows: [wraiths_from_rift]
     day_phase: night
     solutions:
-      - {kind: combat}
+      - {kind: combat, threads: [missing_went_to_rift]}
       - {kind: situation, attributes: [wis], note_zh: 追蹤}
     threads:
       - {id: missing_went_to_rift, text_zh: 失蹤的人都去過裂痕}
@@ -239,7 +245,7 @@ skeletons:
     stakes_zh: 狐族的好感度
     locations: [north_slope, winter_lake]
     solutions:
-      - {kind: parley}
+      - {kind: parley, note_zh: 換補給, cost_supplies: 1, threads: [foxfire_guide]}
       - {kind: situation, attributes: [wil], note_zh: 說服（狐族主角 +1，#89）}
     threads:
       - id: foxfire_guide
@@ -256,7 +262,7 @@ skeletons:
     npcs: [hunter_ayue]
     follows: [peddler_owes_you]
     solutions:
-      - {kind: combat}
+      - {kind: combat, threads: [ayue_father_relic]}
       - {kind: situation, attributes: [wis], note_zh: 追蹤}
     threads:
       - {id: ayue_father_relic, text_zh: 阿岳提起父親的遺物, npc: hunter_ayue}
@@ -284,3 +290,17 @@ skeletons:
       - {kind: situation, attributes: [int], note_zh: 學識}
     threads:
       - {id: frost_chime_we, text_zh: 霜音說裂痕裡有「我們」（接主線第 2～3 章碎晶之主的伏筆）, npc: frost_chime}
+  # 18.7.7 信賴後的祕密事件（5B-4b）：渡婆婆到信賴、說出祕密時解鎖；事件結果才給線頭（#85）
+  - id: granny_past
+    number: 22
+    who_zh: 渡婆婆
+    want_zh: 有人替她了結斷崖幫的舊帳
+    obstacle_zh: 她不肯明說
+    stakes_zh: 暗門的位置
+    locations: [mist_ferry]
+    npcs: [granny_du]
+    unlock_only: true
+    shared_threads: [gang_fort_secret_door]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 交涉}
+      - {kind: situation, attributes: [wis], note_zh: 察覺}
