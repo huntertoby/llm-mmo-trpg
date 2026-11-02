@@ -350,12 +350,11 @@ whiteboard:
     - {id: crash_bonus, keyword: collision, skeleton: passive, effect: {type: damage, element: physical, affects: enemies}, theme: physical, trigger_event: on_collision, name_zh: 撞擊加碼, concept_zh: 你推動的單位撞到東西時，多受一點傷害, flavor_zh: 對方撞上牆的瞬間，你補上的那一股勁讓他多挨了一下}
     - {id: scout_mark, keyword: marked, skeleton: passive, effect: {type: apply_status, status: marked, duration: 1, affects: enemies}, theme: physical, trigger_event: on_turn_start, skill: {trigger: {target: nearest_enemy, max_distance: 3}}, name_zh: 先機標記, concept_zh: 回合開始時標記 3 格內最近的一名敵人, flavor_zh: 回合一開始，你的目光就已經鎖住了附近的獵物}
     # --- BAL-19f（#110，06 6.27.4「被動、反應的觸發時機補到約 16 種，每種至少 2 個配方」）：補擊倒、受傷、撞擊各 1，新增暴擊、移動後、回合結束、
-    # 施加狀態後、敵人進入你的表面各 2（暴擊、移動後另多 1）。min_tier／max_tier：觸發係數低的時機（暴擊 250‰）在 1 階骰子最小也超過預算、
-    # 點數固定的狀態在 2 階起湊不到下限，只在做得出來的階級出 ---
+    # 施加狀態後、敵人進入你的表面各 2（移動後另多 1）。min_tier／max_tier：觸發係數低的時機（暴擊 250‰）在 1 階骰子最小也超過預算
+    # （暴擊白板 2 階起；1 階的燃燒版升階重配時比例跳太多、閃現也沒有選項，拿掉），點數固定的狀態 2 階起湊不到下限，只在做得出來的階級出 ---
     - {id: kill_mend, keyword: generic, skeleton: passive, effect: {type: heal, affects: self}, theme: holy, trigger_event: on_kill, skill: {trigger: {target: self}}, name_zh: 戰後回氣, concept_zh: 擊倒敵人時恢復一些生命, flavor_zh: 對手倒下的瞬間，你喘了口氣，傷口跟著鬆了些}
     - {id: pain_spark, keyword: charged, skeleton: passive, effect: {type: damage, element: lightning, affects: enemies}, trigger_event: on_damaged, name_zh: 逆電, concept_zh: 受到傷害時，電流沿著傷害竄回去, flavor_zh: 才挨了一下，身上的靜電就順著來處反咬回去}
     - {id: crash_ward, keyword: collision, skeleton: passive, effect: {type: shield, affects: self}, theme: holy, trigger_event: on_collision, skill: {trigger: {target: self}}, name_zh: 撞勢護身, concept_zh: 你推動的單位撞到東西時，你得到一層小護盾, flavor_zh: 對方撞上牆的那一下，你借著反震收住了架勢}
-    - {id: crit_ember, max_tier: 1, keyword: ignite, skeleton: passive, effect: {type: apply_status, status: burning, affects: enemies}, theme: fire, trigger_event: on_crit, name_zh: 爆燃, concept_zh: 暴擊時讓目標燒起來, flavor_zh: 那一擊正中要害，傷口竄起一團火}
     - {id: crit_ward, min_tier: 2, keyword: generic, skeleton: passive, effect: {type: shield, affects: self}, theme: holy, trigger_event: on_crit, skill: {trigger: {target: self}}, name_zh: 乘勝護身, concept_zh: 暴擊時在身上凝出一層小護盾, flavor_zh: 打出漂亮的一擊，你的氣勢跟著漲了起來}
     - {id: stride_mend, keyword: generic, skeleton: passive, effect: {type: heal, affects: self}, theme: holy, trigger_event: on_move, name_zh: 步步回春, concept_zh: 移動之後恢復少量生命, flavor_zh: 每走一段路，身上的傷就好了一點}
     - {id: crit_frost, min_tier: 2, keyword: frozen, skeleton: passive, effect: {type: damage, element: ice, affects: enemies}, trigger_event: on_crit, name_zh: 寒芒, concept_zh: 暴擊時多凍傷目標一下, flavor_zh: 刃口閃過一道寒光，傷口邊緣結起白霜}

@@ -537,6 +537,7 @@ statuses:
     stacking: refresh
     beneficial: true
     budget_points: 3
+    min_rarity: rare
     summon_damage_dealt_permille: 1250
   # --- 種族技（Phase 3R-2，content/races.yaml；只能由種族技施加，沒有 budget_points；polarity 用 neutral，不能被奪取或驅散）---
   - id: race_adapt

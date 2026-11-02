@@ -151,7 +151,12 @@ def test_light_at_ap1_gives_legal_options() -> None:
 
 def _summons() -> list[SkillDef]:
     return _builtin(
-        lambda s: s.kind == "active" and any(e.type == "summon" and e.duration for e in s.effects)
+        lambda s: (
+            s.kind == "active"
+            and any(e.type == "summon" and e.duration for e in s.effects)
+            # BAL-19f：附帶的狀態有持續時，延長先延長狀態（不是退回召喚）
+            and not any(e.type != "summon" and e.duration for e in s.effects)
+        )
     )
 
 

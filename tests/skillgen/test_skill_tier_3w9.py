@@ -151,7 +151,9 @@ def test_creation_whiteboard_is_exempt_but_offers_are_not() -> None:
     # 依關鍵字挑的召喚物（點燃 → 火靈）三選一仍 2 階起
     with pytest.raises(Exception, match="白板"):
         compose_whiteboard(1, keyword="ignite", tier=1, library=LIB, recipe_id="summon_fire")
-    assert compose_whiteboard(1, keyword="summon", tier=2, library=LIB).effects[0].type == "summon"
+    # BAL-19f 追加：召喚物關鍵字另有號令型武器技白板，法器只會拿到召喚白板
+    board = compose_whiteboard(1, keyword="summon", tier=2, library=LIB, weapon_class="focus")
+    assert board.effects[0].type == "summon"
 
 
 def test_basic_summons_open_tier_one_offers() -> None:
@@ -163,7 +165,9 @@ def test_basic_summons_open_tier_one_offers() -> None:
     )
     units = set()
     for seed in range(12):
-        board = compose_whiteboard(seed, keyword="summon", tier=1, library=LIB)
+        board = compose_whiteboard(  # BAL-19f 追加：號令型武器技白板不給法器
+            seed, keyword="summon", tier=1, library=LIB, weapon_class="focus"
+        )
         assert board.provenance.origin == "level_up" and validate_skill(board, LIB) == []
         assert tier_violations(board, LIB) == [] and board.tier == 1
         units.add(board.effects[0].unit)

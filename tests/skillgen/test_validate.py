@@ -435,6 +435,7 @@ def test_beneficial_flags_in_content() -> None:
         "infused_fire",  # 3I-6：臨時附魔
         "infused_holy",
         "rallied",  # 3-33e1
+        "commanding",  # BAL-19f 追加：號令
         "hasted",
         "regenerating",
         "shielded",
