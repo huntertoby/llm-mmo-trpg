@@ -503,8 +503,8 @@ perception:  # #112：DC ＝ dc_base ＋ 建議等級 ÷ level_divisor（捨去�
   dc_base: 10
   level_divisor: 2
 weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 對應 day_phase
-  - {region: cloud_ridge, day: {clear: 2, rain: 3, fog: 3}, night: {night: 4, rain: 2, fog: 2}}
-  # 其他四區照 05 5.1 表的傾向（傾向權重 3、其他 1）
+  - {region: cloud_ridge, day: {clear: 1, rain: 3, fog: 3}, night: {night: 1, rain: 3, fog: 3}}
+  # 五區都照 05 5.1 表的傾向（傾向權重 3、其他 1；「夜」傾向只加在 night）
 ```
 
 驗證：數值非負、`start <= max`、權重 ≥ 0 且每組總和 > 0、區域不重複；跨檔案：天氣 ID 在 `weather.yaml`、區域在 `regions.yaml`。沒有列的區域用 `default_weather`（`day: {clear: 1}`、`night: {night: 1}`）。

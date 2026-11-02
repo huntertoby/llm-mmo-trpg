@@ -1,0 +1,158 @@
+"""大世界規則的數值（``content/world/rules.yaml``，Phase 5A-2）。
+
+``docs/phases/Phase5計畫.md`` 6.4：補給（9.6.7 #11）、紮營花費（9.6.11 #114）、趕路（9.6.7 #9）、
+遇敵機率（9.6.7 #9「越危險的區越高」）、隱藏地點感知判定的 DC（9.6.11 #112）、各區天氣權重
+（05 5.1「各區天氣傾向」、9.6.10 #104）。數值都是開發 PM 定的初值，之後用模擬定（9.6.10
+「數值類」）；改數值只改資料、不改程式（守則 4）。規則本身在 ``trpg.world``。
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+
+from pydantic import Field, model_validator
+
+from trpg.content.battle import ID_PATTERN
+from trpg.content.regions import RegionTable
+from trpg.content.schemas import ContentModel
+
+__all__ = [
+    "EncounterRates",
+    "HastenRules",
+    "PerceptionRules",
+    "RegionWeather",
+    "SupplyRules",
+    "WeatherWeights",
+    "WorldRules",
+    "world_rules_problems",
+]
+
+
+class SupplyRules(ContentModel):
+    """補給的上限與新角色帶的量（9.6.7 #11）。"""
+
+    max: int = Field(ge=0)
+    start: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _start_within_max(self) -> SupplyRules:
+        if self.start > self.max:
+            raise ValueError(f"supplies.start（{self.start}）不可超過 max（{self.max}）")
+        return self
+
+
+class HastenRules(ContentModel):
+    """趕路（9.6.7 #9）：花補給降低遇敵機率。"""
+
+    cost: int = Field(ge=0)
+    encounter_permille: int = Field(ge=0, le=1000)
+    """趕路時的遇敵機率倍率（‰）。"""
+
+
+class EncounterRates(ContentModel):
+    """每一步的遇敵機率（‰）＝ min(max, base ＋ per_level ×（建議等級 − 1））。"""
+
+    base_permille: int = Field(ge=0, le=1000)
+    per_level_permille: int = Field(ge=0, le=1000)
+    max_permille: int = Field(ge=0, le=1000)
+
+    def permille_for(self, level: int | None) -> int:
+        """建議等級 ``level`` 的遇敵機率；``None``（城鎮、傳送點）＝ 0。"""
+        if level is None:
+            return 0
+        raw = self.base_permille + self.per_level_permille * max(0, level - 1)
+        return min(self.max_permille, raw)
+
+
+class PerceptionRules(ContentModel):
+    """隱藏地點的感知判定 DC ＝ ``dc_base`` ＋ 建議等級 ÷ ``level_divisor``（捨去；#112）。"""
+
+    dc_base: int
+    level_divisor: int = Field(ge=1)
+
+    def dc_for(self, level: int) -> int:
+        return self.dc_base + level // self.level_divisor
+
+
+class WeatherWeights(ContentModel):
+    """半天的天氣權重：天氣 ID（``weather.yaml``）→ 權重（≥ 0，總和 > 0）。"""
+
+    day: dict[str, int]
+    night: dict[str, int]
+
+    @model_validator(mode="after")
+    def _weights(self) -> WeatherWeights:
+        for phase, weights in (("day", self.day), ("night", self.night)):
+            if any(w < 0 for w in weights.values()):
+                raise ValueError(f"天氣權重（{phase}）不可為負")
+            if sum(weights.values()) <= 0:
+                raise ValueError(f"天氣權重（{phase}）總和必須大於 0")
+        return self
+
+    def for_phase(self, phase: str) -> tuple[tuple[str, int], ...]:
+        """``phase``（``day``／``night``）的權重，依天氣 ID 排序（守則 2）。"""
+        weights = self.day if phase == "day" else self.night
+        return tuple(sorted(weights.items()))
+
+
+class RegionWeather(WeatherWeights):
+    """一個區域的天氣權重。"""
+
+    region: str = Field(pattern=ID_PATTERN)
+
+
+class WorldRules(ContentModel):
+    """``content/world/rules.yaml``。"""
+
+    supplies: SupplyRules
+    camp_cost: int = Field(ge=0)
+    hasten: HastenRules
+    encounter: EncounterRates
+    perception: PerceptionRules
+    default_weather: WeatherWeights = WeatherWeights(day={"clear": 1}, night={"night": 1})
+    """沒有列在 ``weather`` 的區域用這組。"""
+    weather: tuple[RegionWeather, ...] = ()
+
+    @model_validator(mode="after")
+    def _unique_regions(self) -> WorldRules:
+        seen: set[str] = set()
+        for entry in self.weather:
+            if entry.region in seen:
+                raise ValueError(f"天氣權重的區域重複：{entry.region}")
+            seen.add(entry.region)
+        return self
+
+    def weather_for(self, region: str) -> WeatherWeights:
+        for entry in self.weather:
+            if entry.region == region:
+                return entry
+        return self.default_weather
+
+    def summary(self) -> str:
+        return (
+            f"補給上限 {self.supplies.max}、紮營 {self.camp_cost}、"
+            f"遇敵 {self.encounter.base_permille}～{self.encounter.max_permille}‰、"
+            f"{len(self.weather)} 區天氣"
+        )
+
+
+def world_rules_problems(
+    rules: WorldRules, *, regions: RegionTable | None, weather_ids: Mapping[str, object]
+) -> list[str]:
+    """跨檔案檢查：天氣 ID 在 ``weather.yaml``、區域在 ``regions.yaml``。回傳排序過的問題。"""
+    problems: list[str] = []
+    groups: list[tuple[str, WeatherWeights]] = [("default_weather", rules.default_weather)]
+    groups += [(f"weather[{w.region}]", w) for w in rules.weather]
+    for label, weights in groups:
+        for weather_id in sorted({*weights.day, *weights.night}):
+            if weather_id not in weather_ids:
+                problems.append(f"{label}：未知的天氣 {weather_id}")
+    if rules.weather:
+        if regions is None:
+            problems.append("缺少 regions.yaml，無法檢查天氣權重的區域")
+        else:
+            known = {r.id for r in regions.regions}
+            problems += [
+                f"weather：未知的區域 {w.region}" for w in rules.weather if w.region not in known
+            ]
+    return sorted(problems)

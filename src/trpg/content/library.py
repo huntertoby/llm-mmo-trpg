@@ -127,6 +127,7 @@ from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.content.world_map import LocationMapDef, world_map_problems
+from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -575,6 +576,8 @@ class ContentLibrary:
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     world_maps: dict[str, LocationMapDef] = field(default_factory=dict)
     """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
+    world_rules: WorldRules | None = None
+    """大世界規則的數值（``world/rules.yaml``，Phase 5A-2）；沒有檔案時為 ``None``。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -825,6 +828,7 @@ def load_library(  # noqa: PLR0915
 
     map_warnings = _apply_map_themes(maps, regions)
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
+    world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
@@ -881,12 +885,34 @@ def load_library(  # noqa: PLR0915
         modifier_changes=modifier_changes,
         map_warnings=tuple(map_warnings),
         world_maps=world_maps,
+        world_rules=world_rules,
         files=files,
     )
 
 
 WORLD_MAPS_DIR = "world/maps"
 """大世界地點圖的資料夾（相對於內容資料夾；Phase 5A-1）。"""
+
+
+WORLD_RULES_FILE = "world/rules.yaml"
+"""大世界規則的數值（相對於內容資料夾；Phase 5A-2）。"""
+
+
+def _load_world_rules(
+    path: Path,
+    regions: RegionTable | None,
+    weather: Mapping[str, WeatherDef],
+    files: list[tuple[Path, ContentModel]],
+) -> WorldRules | None:
+    """載入 ``world/rules.yaml``（檔案不存在＝``None``）並做跨檔案檢查。"""
+    if not path.is_file():
+        return None
+    rules = load_content_file(path, WorldRules)
+    problems = world_rules_problems(rules, regions=regions, weather_ids=weather)
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    files.append((path, rules))
+    return rules
 
 
 def _load_world_maps(
