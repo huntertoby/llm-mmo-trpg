@@ -42,6 +42,7 @@ skeletons:
     obstacle_zh: 你
     stakes_zh: 金幣
     locations: [rain_terraces, cliff_gang_fort]
+    follows: [wolves_driven_down]
     solutions:
       - {kind: combat}
       - {kind: situation, attributes: [wil], note_zh: 威嚇}
@@ -82,6 +83,7 @@ skeletons:
     obstacle_zh: 彼此
     stakes_zh: 修士內部的分裂
     locations: [mist_temple_gate]
+    follows: [temple_quarrel, temple_pass, ferryman_daughter]
     npcs: [acolyte_xiaolian]
     solutions:
       - {kind: situation, attributes: [wil], note_zh: 說服一方}
@@ -97,6 +99,7 @@ skeletons:
     obstacle_zh: 追兵
     stakes_zh: 他的情報
     locations: [cliff_gang_fort, herb_valley]
+    follows: [temple_traitor]
     solutions:
       - {kind: combat, note_zh: 擋追兵}
       - {kind: situation, attributes: [dex], note_zh: 帶他躲藏}
@@ -109,11 +112,12 @@ skeletons:
     obstacle_zh: 霧魅
     stakes_zh: 獵人性命
     locations: [crystal_rift, north_slope]
+    follows: [missing_went_to_rift]
     solutions:
       - {kind: combat, note_zh: 不殺獵人}
       - {kind: situation, attributes: [wil], note_zh: 喚醒}
     threads:
-      - {id: wraiths_from_rift, text_zh: 霧魅從裂痕湧出}
+      - {id: wraiths_from_rift, scope: world, text_zh: 霧魅從裂痕湧出}
   - id: broken_ferry
     number: 9
     who_zh: 渡船夫
@@ -121,6 +125,7 @@ skeletons:
     obstacle_zh: 缺材料
     stakes_zh: 渡口通行
     locations: [ferry_steps]
+    follows: [peddler_owes_you]
     solutions:
       - {kind: parley, note_zh: 給青竹節}
       - {kind: situation, attributes: [int], note_zh: 修理}
@@ -133,6 +138,7 @@ skeletons:
     obstacle_zh: 你闖入
     stakes_zh: 熊的去留
     locations: [winter_lake]
+    follows: [wolves_driven_down]
     solutions:
       - {kind: combat}
       - {kind: situation, attributes: [wis], note_zh: 悄悄退出}
@@ -158,6 +164,7 @@ skeletons:
     obstacle_zh: 雷擊
     stakes_zh: 機遇
     locations: [old_pine_altar]
+    follows: [storm_night_fog]
     day_phase: night
     weather: [rain]
     solutions:
@@ -182,11 +189,12 @@ skeletons:
     obstacle_zh: 你
     stakes_zh: 碎片
     locations: [crystal_rift, sword_tomb]
+    follows: [scarface_grudge, temple_traitor, shards_under_den]
     solutions:
       - {kind: combat, note_zh: 撤離勝利條件}
       - {kind: situation, attributes: [dex], note_zh: 偷走}
     threads:
-      - {id: shards_to_ashen, text_zh: 碎片被送往灰燼荒原（接主線第 2 章）}
+      - {id: shards_to_ashen, scope: world, text_zh: 碎片被送往灰燼荒原（接主線第 2 章）}
   - id: poison_spring
     number: 15
     who_zh: 藥師谷的毒泉
@@ -194,6 +202,7 @@ skeletons:
     obstacle_zh: 毒霧
     stakes_zh: 通往丹爐洞
     locations: [herb_valley]
+    follows: [alchemist_owes_you]
     solutions:
       - {kind: situation, attributes: [con], note_zh: 憋氣}
       - {kind: situation, attributes: [int], note_zh: 配解藥}
@@ -215,6 +224,7 @@ skeletons:
     obstacle_zh: 霧與霧行者
     stakes_zh: 鎮民性命
     locations: [mist_ferry, ferry_steps, hunter_hut]
+    follows: [wraiths_from_rift]
     day_phase: night
     solutions:
       - {kind: combat}
@@ -235,3 +245,42 @@ skeletons:
       - id: foxfire_guide
         text_zh: 狐火在霧裡指路
         hints_location: crane_cliff
+  - id: ayue_request
+    number: 19
+    who_zh: 阿岳
+    want_zh: 一起打一頭山豹
+    obstacle_zh: 山豹躲在草叢
+    stakes_zh: 獵物（補給）
+    locations: [hunter_hut]
+    day_phase: day
+    npcs: [hunter_ayue]
+    follows: [peddler_owes_you]
+    solutions:
+      - {kind: combat}
+      - {kind: situation, attributes: [wis], note_zh: 追蹤}
+    threads:
+      - {id: ayue_father_relic, text_zh: 阿岳提起父親的遺物, npc: hunter_ayue}
+  - id: runaway_furnace
+    number: 20
+    who_zh: 失控的丹爐
+    want_zh: （遺跡）
+    obstacle_zh: 毒霧爆發
+    stakes_zh: 丹砂
+    locations: [elixir_cave]
+    solutions:
+      - {kind: situation, attributes: [con], note_zh: 耐力（憋氣）}
+      - {kind: situation, attributes: [int], note_zh: 學識（關火）}
+  - id: frost_chime_riddle
+    number: 21
+    who_zh: 白狐霜音
+    want_zh: 有人答出她的謎
+    obstacle_zh: 她只用問句說話
+    stakes_zh: 一條線索
+    locations: [crane_cliff]
+    npcs: [frost_chime]
+    follows: [foxfire_guide, ayue_father_relic]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 異象}
+      - {kind: situation, attributes: [int], note_zh: 學識}
+    threads:
+      - {id: frost_chime_we, text_zh: 霜音說裂痕裡有「我們」（接主線第 2～3 章碎晶之主的伏筆）, npc: frost_chime}

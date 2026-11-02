@@ -73,10 +73,10 @@ def _problems(library: ContentLibrary, table: dict[str, Any]) -> list[str]:
 
 
 def test_cloud_ridge_events_loaded(events: EventSkeletonTable) -> None:
-    assert len(events.skeletons) == 18
-    assert sorted(s.number for s in events.skeletons) == list(range(1, 19))
-    assert len(events.thread_ids()) == 17
-    assert "18 個事件骨架" in events.summary()
+    assert len(events.skeletons) == 21
+    assert sorted(s.number for s in events.skeletons) == list(range(1, 22))
+    assert len(events.thread_ids()) == 19
+    assert "21 個事件骨架" in events.summary()
 
 
 def test_cloud_ridge_npcs_loaded(npcs: NpcCardTable) -> None:
@@ -121,7 +121,8 @@ def test_cloud_ridge_details_follow_18_4(events: EventSkeletonTable) -> None:
     assert threads["scarface_grudge"].npc == "scarface"
     assert threads["scarface_grudge"].on_expire_zh
     assert threads["temple_traitor"].on_expire_zh
-    assert all(t.scope == "personal" for t in threads.values())
+    world = {t.id for t in threads.values() if t.scope == "world"}
+    assert world == {"wraiths_from_rift", "shards_to_ashen"}
     assert by_id["storm_altar"].day_phase == "night"
     assert by_id["storm_altar"].weather == ("rain",)
     assert by_id["lantern_patrol"].day_phase == "night"

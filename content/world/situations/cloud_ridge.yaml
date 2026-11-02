@@ -29,8 +29,8 @@ templates:
     skeleton: lost_acolyte
     solution: 0
     note_zh: 在濃霧裡認出回青霧觀的路
-    methods: [tracking, lore]
-    attributes: [wis, int]
+    methods: [tracking, lore, endurance]
+    attributes: [wis, int, con]
     base_dc: 11
     danger: 1
     weaknesses:
@@ -149,8 +149,8 @@ templates:
     skeleton: possessed_hunter
     solution: 1
     note_zh: 喚醒被霧魅附身的獵人
-    methods: [uncanny, lore]
-    attributes: [wil, int]
+    methods: [uncanny, lore, endurance]
+    attributes: [wil, int, con]
     base_dc: 14
     danger: 2
     weaknesses:
@@ -165,8 +165,8 @@ templates:
     skeleton: broken_ferry
     solution: 1
     note_zh: 修好被砸的渡船
-    methods: [mechanism, force]
-    attributes: [int, str]
+    methods: [mechanism, force, finesse]
+    attributes: [int, str, dex]
     base_dc: 12
     danger: 1
     weaknesses:
@@ -298,6 +298,7 @@ templates:
     attributes: [con, str]
     base_dc: 14
     danger: 2
+    advantage_threads: [alchemist_owes_you]
     weaknesses:
       - {id: spring_wind, text_zh: 風向一變，毒霧會散開一陣, methods: [endurance]}
     success: {rewards: {xp_permille: 1000, reveal: [elixir_cave]}}
@@ -364,4 +365,80 @@ templates:
       - {id: fox_trade, text_zh: 她缺的是補給，不是錢, methods: [parley]}
     success: {rewards: {xp_permille: 1000, supplies: 1, threads: [foxfire_guide]}}
     partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: ayue_track_leopard
+    skeleton: ayue_request
+    solution: 1
+    note_zh: 循著痕跡找出躲在草叢裡的山豹
+    methods: [tracking, stealth]
+    attributes: [wis, dex]
+    base_dc: 12
+    danger: 2
+    weaknesses:
+      - {id: leopard_paw_prints, text_zh: 草叢邊的泥地留著新鮮的爪印, methods: [tracking]}
+    success: {rewards: {xp_permille: 1000, supplies: 2, threads: [ayue_father_relic]}}
+    partial:
+      rewards: {xp_permille: 500, supplies: 1, threads: [ayue_father_relic]}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200}}
+
+  - id: furnace_hold_breath
+    skeleton: runaway_furnace
+    solution: 0
+    note_zh: 憋氣衝進毒霧，搶出爐裡的丹砂
+    methods: [endurance, force]
+    attributes: [con, str]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: furnace_vent, text_zh: 爐頂的氣孔每隔一陣會把毒霧吹散, methods: [endurance]}
+    success: {rewards: {xp_permille: 1000, supplies: 2}}
+    partial:
+      rewards: {xp_permille: 500, supplies: 1}
+      penalties: {hurt_permille: 150, debuffs: [poison]}
+    failure: {penalties: {hurt_permille: 250, debuffs: [poison]}}
+
+  - id: furnace_shut_down
+    skeleton: runaway_furnace
+    solution: 1
+    note_zh: 認出爐上的銘文，把失控的火關掉
+    methods: [lore, notice]
+    attributes: [int, wis]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: furnace_inscription, text_zh: 爐身刻著關火的口訣, methods: [lore]}
+    success: {rewards: {xp_permille: 1000, supplies: 2}}
+    partial:
+      rewards: {xp_permille: 500, supplies: 1}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 150, debuffs: [poison]}}
+
+  - id: chime_riddle_uncanny
+    skeleton: frost_chime_riddle
+    solution: 0
+    note_zh: 用問句回應白狐的謎，讓她相信你懂她說的異象
+    methods: [uncanny, notice]
+    attributes: [wil, wis]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: chime_foxfire, text_zh: 她的狐火會隨你的回答改變, methods: [uncanny, notice]}
+    success: {rewards: {xp_permille: 1000, threads: [frost_chime_we]}}
+    partial: {rewards: {xp_permille: 500, threads: [frost_chime_we]}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: chime_riddle_lore
+    skeleton: frost_chime_riddle
+    solution: 1
+    note_zh: 從傳說與典故裡推出白狐的謎底
+    methods: [lore, parley]
+    attributes: [int, wil]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: chime_old_tale, text_zh: 謎面出自一則關於裂痕的老傳說, methods: [lore]}
+    success: {rewards: {xp_permille: 1000, threads: [frost_chime_we]}}
+    partial: {rewards: {xp_permille: 500, threads: [frost_chime_we]}}
     failure: {penalties: {supplies: 1}}
