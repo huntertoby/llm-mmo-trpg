@@ -1198,6 +1198,7 @@ class TierNeed:
 
 _DAMAGE_TYPES = ("damage", "delayed_damage")
 _SECOND_ELEMENT = 2
+_SUMMON = "summon"
 
 
 def _damage_elements(skill: SkillDef) -> set[str]:
@@ -1249,16 +1250,21 @@ def tier_requirements(skill: SkillDef, library: ContentLibrary) -> list[TierNeed
     needs: list[TierNeed] = []
     if skill.kind in table.kinds:
         needs.append(TierNeed("kind", f"{skill.kind} 技能", table.kinds[skill.kind]))
-    if skill.skeleton in table.skeletons:
+    on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
+    follow = skill.followup.effects if skill.followup is not None else ()
+    every = (*skill.effects, *follow, *on_hit)
+    summons = [e for e in every if e.type == _SUMMON]
+    basic = bool(summons) and all(  # BAL-19c：只召喚 1 隻基本召喚物（1 階召喚白板，#110）
+        e.unit in table.basic_summon_units and e.count in (None, 1) for e in summons
+    )
+    if skill.skeleton in table.skeletons and not (basic and skill.skeleton == _SUMMON):
         needs.append(
             TierNeed("skeleton", f"骨架 {skill.skeleton}", table.skeletons[skill.skeleton])
         )
     needs += _shape_tier_needs(skill, library)
-    on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
-    follow = skill.followup.effects if skill.followup is not None else ()
-    for effect in (*skill.effects, *follow, *on_hit):
+    for effect in every:
         tier = table.primitives.get(effect.type)
-        if tier is not None:
+        if tier is not None and not (basic and effect.type == _SUMMON):
             needs.append(TierNeed("primitive", f"原語 {effect.type}", tier))
     if skill.followup is not None:
         needs.append(TierNeed("followup", "接續段", table.followup))

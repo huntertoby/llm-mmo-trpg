@@ -298,6 +298,8 @@ class CharacterTierRules(ContentModel):
     - ``second_element``：傷害帶兩種以上的元素（第二元素）。
     - ``dual_scaling``：雙屬性縮放。
     - ``terrain_area``：升降地形的影響格數（4～6 格 2 階、7 格以上 3 階，#58）。
+    - ``basic_summon_units``：基本召喚物（BAL-19c，#110 開放 1 階召喚白板）：技能的召喚效果全部
+      是一次召喚 1 隻這些單位時，召喚原語與召喚骨架不受上面的階級限制（1 階）。
     """
 
     kinds: dict[str, int] = Field(default_factory=dict)
@@ -310,6 +312,7 @@ class CharacterTierRules(ContentModel):
     second_element: int = Field(default=2, ge=1)
     dual_scaling: int = Field(default=3, ge=1)
     terrain_area: tuple[TerrainAreaTier, ...] = ()
+    basic_summon_units: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _check(self) -> CharacterTierRules:
