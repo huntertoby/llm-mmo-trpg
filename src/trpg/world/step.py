@@ -33,6 +33,7 @@ from trpg.world.actions import (
 )
 from trpg.world.clock import day_phase, refresh_day
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.events import roll_event
 from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.state import (
     CharacterState,
@@ -215,6 +216,9 @@ def _travel(
         result, char = _encounter(library, world, char, target, now)
         char = char.model_copy(update={"pending_encounter": result})
         events.append(EncounterEvent(result=result))
+    rolled = roll_event(library, world, char, encountered=encountered, now=now)
+    char = rolled.char
+    events += rolled.events
     char, found = _perceive(library, world, char, world_map, now)
     events += found
     return StepResult(world=world, char=char, events=tuple(events))

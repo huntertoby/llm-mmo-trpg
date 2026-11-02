@@ -41,7 +41,7 @@ def test_travel_to_neighbor(calm: ContentLibrary, make_char: MakeChar) -> None:
     assert isinstance(check, EncounterCheckEvent)
     assert check.chance_permille == 0
     assert not check.encountered
-    assert result.char.rng_counters == {"travel": 1}
+    assert result.char.rng_counters == {"event": 1, "travel": 1}
     assert result.char.pending_encounter is None
 
 
@@ -132,7 +132,7 @@ def test_encounter_result(ambush: ContentLibrary, make_char: MakeChar) -> None:
     assert encounter.day_phase == "day"
     assert encounter.at == NOON
     assert any(isinstance(e, EncounterEvent) and e.result == encounter for e in result.events)
-    assert result.char.rng_counters == {"battle": 1, "travel": 1}
+    assert result.char.rng_counters == {"battle": 1, "event": 1, "travel": 1}
 
 
 def test_encounter_without_battle_map(ambush: ContentLibrary, make_char: MakeChar) -> None:
