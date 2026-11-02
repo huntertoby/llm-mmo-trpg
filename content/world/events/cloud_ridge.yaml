@@ -302,6 +302,7 @@ skeletons:
     locations: [mist_ferry]
     npcs: [granny_du]
     unlock_only: true
+    once: true  # 5B-4c：每個角色只出現到解決為止（18.4 補充）
     shared_threads: [gang_fort_secret_door]
     solutions:
       - {kind: situation, attributes: [wil], note_zh: 交涉}

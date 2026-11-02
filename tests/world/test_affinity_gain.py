@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+import pytest
+
 from tests.world.helpers import NOON, make_world
 from tests.world.test_quests import _with_quest, _won
 from tests.world.test_situations import act, at_event, sure
@@ -11,13 +13,14 @@ from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
 from trpg.world.actions import (
     AffinityChangedEvent,
+    EventResolvedEvent,
     EventTriggeredEvent,
     SkeletonUnlockedEvent,
     TalkAction,
     TalkedEvent,
     ThreadAddedEvent,
 )
-from trpg.world.events import event_candidates
+from trpg.world.events import event_candidates, mark_finished
 from trpg.world.quests import advance_quests
 from trpg.world.state import CharacterState
 from trpg.world.step import world_step
@@ -152,3 +155,53 @@ def test_granny_past_success_gives_secret_door(
         NOON,
     )
     assert not any(isinstance(e, ThreadAddedEvent) for e in partial.events)
+
+
+# ---------------------------------------------------------------------------
+# 骨架 22 每個角色只出現到解決為止（Phase 5B-4c；Phase5計畫 21.6）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("outcome", ["success", "partial", "failure"])
+def test_granny_past_once_resolved(
+    library: ContentLibrary, make_char: MakeChar, outcome: str
+) -> None:
+    lib = sure(library, "granny_parley", outcome)
+    char = at_event(make_char(unlocked_skeletons=("granny_past",)), "granny_past", "mist_ferry")
+    char = at_event(char, "granny_past", "mist_ferry", strong=True)
+    action = act("granny_parley", attribute=Attribute.WIL, method="parley")
+    result = world_step(lib, make_world(), char, action, NOON)
+    assert result.char.finished_skeletons == ("granny_past",)
+    world = make_world()
+    candidates = event_candidates(
+        library,
+        world,
+        "cloud_ridge",
+        "mist_ferry",
+        NOON,
+        unlocked=result.char.unlocked_skeletons,
+        finished=result.char.finished_skeletons,
+    )
+    assert [s.id for s in candidates] == ["tavern_storyteller"]  # 不再出現
+    # 聊天也不再解鎖或觸發
+    talked = result.char.model_copy(update={"affinity": {"granny_du": 70}})
+    again = world_step(library, world, talked, TalkAction(npc="granny_du"), NOON + DAY)
+    assert not any(isinstance(e, SkeletonUnlockedEvent | EventTriggeredEvent) for e in again.events)
+
+
+def test_abandoning_is_not_resolving(library: ContentLibrary, make_char: MakeChar) -> None:
+    """放棄不算解決（代決 5B4c-9）：之後照一般擲骰還會出現。"""
+    char = make_char(unlocked_skeletons=("granny_past",))
+    abandoned = EventResolvedEvent(
+        skeleton="granny_past", location="mist_ferry", solution=0, outcome="abandoned"
+    )
+    assert mark_finished(library, char, (abandoned,)) is char
+    failed = abandoned.model_copy(update={"outcome": "failure"})
+    assert mark_finished(library, char, (failed,)).finished_skeletons == ("granny_past",)
+    other = failed.model_copy(update={"skeleton": "tavern_storyteller"})
+    assert mark_finished(library, char, (other,)) is char  # 不是 once 的骨架不記
+
+
+def test_other_skeletons_are_not_once(library: ContentLibrary) -> None:
+    table = library.world_event_content.events["cloud_ridge"]
+    assert [s.id for s in table.skeletons if s.once] == ["granny_past"]

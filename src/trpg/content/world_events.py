@@ -184,6 +184,8 @@ class EventSkeletonDef(ContentModel):
     """本骨架的結果可以給、但定義在別的骨架的線頭（Phase 5B-4b；線頭 ID 全區唯一）。"""
     unlock_only: bool = False
     """只有角色解鎖後才會出現（Phase 5B-4b，18.7.7：信賴的 NPC 說出祕密時解鎖）。"""
+    once: bool = False
+    """每個角色只出現到解決為止（Phase 5B-4c，18.4 補充「骨架 22」）：結果不是放棄就不再出現。"""
 
     def result_threads(self) -> frozenset[str]:
         """事件結果可以留下的線頭：本骨架的與 ``shared_threads``。"""
