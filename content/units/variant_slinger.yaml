@@ -10,5 +10,4 @@ weapon: bow
 resist: {}
 element_mods: {}
 tags: [hero]
-max_mana: 24
 skills: [skill_oil_spark_throw]
