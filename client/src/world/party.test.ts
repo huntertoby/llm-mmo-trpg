@@ -1,10 +1,27 @@
-// 隊伍與系統傭兵的純函式（Phase 5C-1）。
+// 隊伍、系統傭兵與影子的純函式（Phase 5C-1、5C-2）。
 import { describe, expect, it } from "vitest";
-import type { WorldMercenary, WorldPartyView } from "../api/types";
-import { groupByRole, hireLabel, hiredIds, sameParty, toggleMercenary } from "./party";
+import type { WorldMercenary, WorldPartyView, WorldShadow } from "../api/types";
+import { groupByRole, hireAction, hireLabel, hiredIds, hiredShadows, memberAi, sameParty, toggleMercenary } from "./party";
 
 function merc(id: string, role: string, role_zh: string, name_zh: string): WorldMercenary {
   return { id, name_zh, title_zh: "稱號", role, role_zh, theme_zh: "主題", skills_zh: ["技能"], hired: false };
+}
+
+function shadow(owner: string, name_zh: string): WorldShadow {
+  return {
+    owner,
+    name_zh,
+    level: 3,
+    role_zh: "火焰法杖・人類",
+    skills_zh: ["火球"],
+    borrowed_level: 1,
+    borrowed_tier: 1,
+    capped: true,
+    cap_zh: "借用時壓到 Lv 1・技能 1 階（你的上限）",
+    hired: false,
+    own: false,
+    saved_zh: "霧渡鎮",
+  };
 }
 
 const ROSTER = [
@@ -14,16 +31,23 @@ const ROSTER = [
   merc("merc_huichun", "support", "輔助", "回春"),
 ];
 
-function party(hired: string[]): WorldPartyView {
+const SHADOWS = [shadow("c1", "阿霧"), shadow("c2", "小美")];
+
+function party(hired: string[], shadows: string[] = [], ai: Record<string, string> = {}): WorldPartyView {
   return {
     members: [
       { name_zh: "阿霧", title_zh: "主角", level: 1, mercenary: null },
       ...hired.map((id) => ({ name_zh: id, title_zh: "x", level: 1, mercenary: id })),
+      ...shadows.map((id) => ({ name_zh: `${id}的影子`, title_zh: "影子", level: 1, mercenary: null, shadow: id })),
     ],
     max_hired: 2,
     can_hire: true,
     hire_problem_zh: null,
     mercenaries: ROSTER,
+    shadows: SHADOWS,
+    ai_choices: [],
+    ai,
+    season_boss_ok: shadows.length === 0,
   };
 }
 
@@ -35,19 +59,30 @@ describe("toggleMercenary", () => {
     expect(toggleMercenary(chosen, "merc_qingfeng", 2)).toEqual(["merc_tiebi", "merc_huichun"]);
     expect(toggleMercenary(chosen, "merc_tiebi", 2)).toEqual(["merc_huichun"]);
   });
+
+  it("shares the two slots between mercenaries and shadows", () => {
+    expect(toggleMercenary(["merc_tiebi"], "merc_huichun", 2, 1)).toEqual(["merc_tiebi"]);
+    expect(toggleMercenary([], "c1", 2, 1)).toEqual(["c1"]);
+    expect(toggleMercenary([], "c2", 2, 2)).toEqual([]);
+  });
 });
 
 describe("party helpers", () => {
-  it("reads hired ids from members in order", () => {
+  it("reads hired ids and shadows from members in order", () => {
     expect(hiredIds(party(["merc_huichun", "merc_tiebi"]))).toEqual(["merc_huichun", "merc_tiebi"]);
     expect(hiredIds(party([]))).toEqual([]);
+    expect(hiredShadows(party(["merc_tiebi"], ["c2"]))).toEqual(["c2"]);
   });
 
-  it("detects unchanged selection (order matters)", () => {
+  it("detects unchanged selection (order and ai matter)", () => {
     const p = party(["merc_tiebi", "merc_huichun"]);
     expect(sameParty(p, ["merc_tiebi", "merc_huichun"])).toBe(true);
     expect(sameParty(p, ["merc_huichun", "merc_tiebi"])).toBe(false);
     expect(sameParty(party([]), [])).toBe(true);
+    const withAi = party(["merc_tiebi"], ["c1"], { c1: "guard" });
+    expect(sameParty(withAi, ["merc_tiebi"], ["c1"], { c1: "guard" })).toBe(true);
+    expect(sameParty(withAi, ["merc_tiebi"], ["c1"], {})).toBe(false);
+    expect(sameParty(withAi, ["merc_tiebi"], [], { c1: "guard" })).toBe(false);
   });
 
   it("groups by role in roster order", () => {
@@ -56,8 +91,19 @@ describe("party helpers", () => {
     expect(groups[0]?.members.map((m) => m.name_zh)).toEqual(["青鋒", "穿雲"]);
   });
 
-  it("labels the apply button", () => {
-    expect(hireLabel([], ROSTER)).toBe("確定：不帶傭兵（用標準隊友）");
-    expect(hireLabel(["merc_tiebi", "merc_huichun"], ROSTER)).toBe("確定雇用：鐵壁、回春");
+  it("labels the apply button (zero = solo)", () => {
+    expect(hireLabel([], ROSTER)).toBe("確定：獨行（只帶主角）");
+    expect(hireLabel(["merc_tiebi", "merc_huichun"], ROSTER)).toBe("確定隊伍：鐵壁、回春");
+    expect(hireLabel(["merc_tiebi"], ROSTER, ["c2"], SHADOWS)).toBe("確定隊伍：鐵壁、小美的影子");
+  });
+
+  it("builds the hire action with ai only for members", () => {
+    expect(memberAi({ c1: "guard", merc_tiebi: "brute" }, ["c1"])).toEqual({ c1: "guard" });
+    expect(hireAction(["merc_tiebi"], ["c1"], { c1: "guard", merc_qingfeng: "brute" })).toEqual({
+      kind: "hire",
+      mercenaries: ["merc_tiebi"],
+      shadows: ["c1"],
+      ai: { c1: "guard" },
+    });
   });
 });
