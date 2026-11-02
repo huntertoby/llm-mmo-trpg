@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
+from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world_economy import ITEM_KINDS, EconomyRules, ShopDef, WorldItemDef
@@ -54,6 +55,7 @@ __all__ = [
     "battle_gold",
     "buy_problem",
     "economy_rules",
+    "gear_price",
     "item_def",
     "pouch_problem",
     "pouch_skills",
@@ -118,9 +120,9 @@ def _with(counts: Mapping[str, int], item: str, delta: int) -> dict[str, int]:
     return dict(sorted(updated.items()))
 
 
-def _check_bag(library: ContentLibrary, bag: Mapping[str, int]) -> None:
+def _check_bag(library: ContentLibrary, bag: Mapping[str, int], gear: int = 0) -> None:
     slots = _rules(library).bag_slots
-    used = bag_slots_used(library, bag)
+    used = bag_slots_used(library, bag) + gear  # 背包裡的裝備每件 1 格（5D-2）
     if used > slots:
         raise WorldActionError(f"背包放不下（需要 {used} 格，只有 {slots} 格）")
 
@@ -259,7 +261,7 @@ def _room_problem(
         if char.supplies + item.supplies * count > cap:
             return f"補給最多 {cap}（現在 {char.supplies}）"
         return None
-    used = bag_slots_used(library, _with(char.bag, item.id, count))
+    used = bag_slots_used(library, _with(char.bag, item.id, count)) + len(char.gear)
     if used > _rules(library).bag_slots:
         return "背包放不下"
     return None
@@ -334,6 +336,9 @@ def _sell(
     library: ContentLibrary, char: CharacterState, action: SellAction
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
     shop = _shop(library, char, action.shop)
+    piece = next((g for g in char.gear if g.id == action.item), None)
+    if piece is not None:  # 裝備回收（20.1；5D-2）
+        return _sell_gear(library, char, shop, piece, action.count)
     have = char.bag.get(action.item, 0)
     if have < action.count:
         raise WorldActionError(f"背包裡只有 {have} 個（腰包裡的要先拿出來）")
@@ -348,6 +353,27 @@ def _sell(
     event = ItemSoldEvent(
         shop=shop.id, item=action.item, count=action.count, gold_gained=gained, gold=char.gold
     )
+    return char, (event,)
+
+
+def gear_price(library: ContentLibrary, item: ItemDef) -> int | None:
+    """裝備回收價：物品等級 × 稀有度係數（``loot.yaml``，20.1）；不收為 ``None``（代決 5D2-8）。"""
+    rules = library.world_loot
+    return None if rules is None else rules.sell_price(item.rarity, item.item_level)
+
+
+def _sell_gear(
+    library: ContentLibrary, char: CharacterState, shop: ShopDef, piece: ItemDef, count: int
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    if count != 1:
+        raise WorldActionError("裝備一次賣一件")
+    price = gear_price(library, piece)
+    if price is None:
+        raise WorldActionError(f"{piece.name_zh}不能賣（初始裝備與傳說不收）")
+    rest = list(char.gear)
+    rest.remove(piece)
+    char = char.model_copy(update={"gold": char.gold + price, "gear": tuple(rest)})
+    event = ItemSoldEvent(shop=shop.id, item=piece.id, count=1, gold_gained=price, gold=char.gold)
     return char, (event,)
 
 
@@ -387,7 +413,7 @@ def _pouch(
                 f"{item_def(library, item).name_zh}不夠（有 {bag.get(item, 0)} 個）"
             )
         bag = _with(bag, item, -count)
-    _check_bag(library, bag)
+    _check_bag(library, bag, len(char.gear))
     char = char.model_copy(update={"bag": bag, "pouch": wanted})
     return char, (PouchChangedEvent(pouch=wanted),)
 

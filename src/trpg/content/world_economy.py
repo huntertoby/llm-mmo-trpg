@@ -38,6 +38,7 @@ __all__ = [
     "BattleGold",
     "EconomyRules",
     "ItemKind",
+    "MaterialGrade",
     "QuestCoins",
     "ShopAffinity",
     "ShopDef",
@@ -56,6 +57,7 @@ ITEMS_FILE: Final = "world/items.yaml"
 SHOPS_DIR: Final = "world/shops"
 
 type ItemKind = Literal["consumable", "material", "dye", "supply"]
+type MaterialGrade = Literal["coarse", "fine", "superior"]
 ITEM_KINDS: Final[dict[str, str]] = {
     "consumable": "消耗品",
     "material": "材料",
@@ -155,7 +157,10 @@ class WorldItemDef(ContentModel):
     color: str | None = Field(default=None, pattern=_COLOR)
     supplies: int = Field(default=0, ge=0, le=10)
     """補給（``kind: supply``）買一個加幾點補給；不進背包（20.1）。"""
-    """染料的顏色（只顯示）。"""
+    rare: bool = False
+    """稀有材料（20.2「精英必掉 1 份稀有或家族材料」；Phase 5D-2）。"""
+    grade: MaterialGrade | None = None
+    """通用料的階（粗、精、上；08 8.26.2 打造的物品等級上限 3／7／10 用，5D-3）。"""
 
     @property
     def field_usable(self) -> bool:
@@ -171,6 +176,8 @@ class WorldItemDef(ContentModel):
             raise ValueError(f"物品 {self.id}：只有補給有 supplies，而且補給必須有")
         if (self.kind == "dye") != (self.color is not None):
             raise ValueError(f"物品 {self.id}：只有染料有 color，而且染料必須有")
+        if self.kind != "material" and (self.rare or self.grade is not None):
+            raise ValueError(f"物品 {self.id}：只有材料有 rare／grade")
         skill = self.skill
         if skill is not None:
             problems = []

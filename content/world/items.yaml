@@ -275,6 +275,65 @@ items:
     kind: material
     description_zh: 通用的 1 階材料（打造、強化用；打造在之後的段）。
     price: 5
+    grade: coarse
+  # --- 5D-2 材料（18.2.4 雲嶺 8 種＋通用精料、上料；docs/phases/Phase5計畫.md 27.2）---
+  # 材料不能賣、店裡不賣（20.1）；price 只是名目價（代決 5D2-1）。傾向（M2）寫在說明，打造在 5D-3。
+  - id: item_fine_material
+    name_zh: 精料
+    kind: material
+    description_zh: 通用的 2 階材料（打造的物品等級上限 7；打造在之後的段）。4～7 級地點的敵人掉落。
+    price: 10
+    grade: fine
+  - id: item_superior_material
+    name_zh: 上料
+    kind: material
+    description_zh: 通用的 3 階材料（打造的物品等級上限 10；打造在之後的段）。8～10 級地點的敵人掉落。
+    price: 10
+    grade: superior
+  - id: item_mist_crystal
+    name_zh: 霧晶
+    kind: material
+    description_zh: 霧行者、霧魅身上凝結的霧氣結晶；打造時偏向隱蔽與閃避（打造在之後的段）。
+    price: 10
+    region: cloud_ridge
+  - id: item_talisman_ash
+    name_zh: 符紙灰
+    kind: material
+    description_zh: 符籙師燒剩的符紙灰；打造時偏向帶電與控制抵抗（打造在之後的段）。
+    price: 10
+    region: cloud_ridge
+  - id: item_cinnabar
+    name_zh: 丹砂
+    kind: material
+    description_zh: 煉丹師的丹砂；打造時偏向治療與中毒（打造在之後的段）。
+    price: 10
+    region: cloud_ridge
+  - id: item_wolf_fang
+    name_zh: 狼牙
+    kind: material
+    description_zh: 霧狼的牙；打造時偏向流血與包抄（側擊）（打造在之後的段）。
+    price: 10
+    region: cloud_ridge
+  - id: item_thunder_feather
+    name_zh: 雷羽
+    kind: material
+    description_zh: 雷羽鷹帶電的羽毛；打造時偏向帶電與高處（打造在之後的段）。
+    price: 10
+    region: cloud_ridge
+  - id: item_living_bone
+    name_zh: 活血骨
+    kind: material
+    description_zh: 稀有材料。「再生的」精英體內還在跳動的骨頭；打造時偏向受傷回血（打造在之後的段）。
+    price: 40
+    region: cloud_ridge
+    rare: true
+  - id: item_summit_mist_crystal
+    name_zh: 雲頂霧晶
+    kind: material
+    description_zh: 稀有材料。霧鎖真人身上的霧晶；獨特效果配方的關鍵材料（打造在之後的段）。
+    price: 40
+    region: cloud_ridge
+    rare: true
   - id: item_green_bamboo
     name_zh: 青竹節
     kind: material

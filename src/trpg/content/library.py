@@ -127,6 +127,7 @@ from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.content.world_economy import WorldEconomy, load_world_economy
+from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
@@ -603,6 +604,8 @@ class ContentLibrary:
     隊友）。"""
     world_economy: WorldEconomy = field(default_factory=WorldEconomy)
     """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
+    world_loot: LootRules | None = None
+    """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -905,6 +908,14 @@ def load_library(  # noqa: PLR0915
         npcs_by_region={r: {n.id for n in t.npcs} for r, t in world_event_content.npcs.items()},
         check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
     )
+    world_loot = load_world_loot(  # 5D-2
+        root,
+        files,
+        regions=set(world_maps),
+        units={*units, *(v.id for v in (world_enemies.variants if world_enemies else ()))},
+        affixes={a.id for a in (world_enemies.affixes if world_enemies else ())},
+        items=world_economy.items,
+    )
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -968,6 +979,7 @@ def load_library(  # noqa: PLR0915
         world_oaths=world_oaths,
         world_mercenaries=world_mercenaries,
         world_economy=world_economy,
+        world_loot=world_loot,
         files=files,
     )
 

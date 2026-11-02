@@ -35,6 +35,7 @@ from trpg.content.equipment import (
     AffixRoll,
     AttackAffix,
     ItemDef,
+    KeywordAffix,
     StatAffix,
     TriggerAffix,
     affix_slot_problems,
@@ -288,7 +289,9 @@ class _Context:
     """替後面每一條預留的點數：一般候選裡最便宜的一條（至少每條最低點數）。"""
 
 
-def _context(library: ContentLibrary, base: _Base, rule: RarityRule) -> _Context:
+def _context(
+    library: ContentLibrary, base: _Base, rule: RarityRule, keywords: Sequence[str] = ()
+) -> _Context:
     rules = _rules(library)
     probe = _probe(base)
     fits = [
@@ -298,6 +301,10 @@ def _context(library: ContentLibrary, base: _Base, rule: RarityRule) -> _Context
     ]
     pick = rules.required_picks.get(base.slot_type) if rule.required else None
     required = tuple(a for a in fits if pick is not None and pick.allows(a))
+    if keywords:  # 詞條偏向該區關鍵字（Phase 5D-2，20.2）：有符合的技能強化詞條就只從裡面挑
+        wanted = set(keywords)
+        leaning = tuple(a for a in required if isinstance(a, KeywordAffix) and a.keyword in wanted)
+        required = leaning or required
     pool = tuple(a for a in fits if a.category in rule.categories)
     costs = [_min_points(rules, a) for a in pool]
     reserve = max(Fraction(rules.min_affix_points), min(costs, default=Fraction(0)))
@@ -480,12 +487,14 @@ def generate_item(
     item_level: int,
     *,
     weapon_class: WeaponClass | None = None,
+    keywords: Sequence[str] = (),
 ) -> ItemDef:
     """產生一件物品（確定性：相同 ``rng`` 狀態與參數必得相同物品）。
 
     ``slot`` 可以是欄位（``main_hand``、``ring_1``……）或物品種類（``weapon``、``ring``……）；
     ``weapon_class`` 只對主手有效（主手只出同大類的武器，07 7.1）。傳說從現有傳說物品挑，沒有同部位
-    的就降為史詩。"""
+    的就降為史詩。``keywords``（Phase 5D-2 掉落的區域偏向、傭兵的 build 關鍵字）：稀有起的 build
+    詞條有關鍵字符合的技能強化詞條時只從裡面挑；空＝原本的行為（逐位元相同）。"""
     if item_level < 1:
         raise ItemGenError(f"物品等級至少 1（收到 {item_level}）")
     slot_type = _slot_type(slot)
@@ -497,7 +506,7 @@ def generate_item(
     rules = _rules(library)
     rule = rules.rarity(rarity)
     base = _base(library, rng, slot_type, weapon_class)
-    ctx = _context(library, base, rule)
+    ctx = _context(library, base, rule, keywords)
     budget = affix_budget(rules, item_level, slot_type)
     picks, bonus = _roll_affixes(ctx, rng, rule, budget, common=rarity == "common")
     item = ItemDef(

@@ -57,7 +57,13 @@ from trpg.world.actions import (
     TeleportAction,
     TravelAction,
 )
-from trpg.world.economy_actions import BuyAction, PouchAction, SellAction, UseItemAction
+from trpg.world.economy_actions import (
+    BuyAction,
+    EquipAction,
+    PouchAction,
+    SellAction,
+    UseItemAction,
+)
 
 __all__ = [
     "CreateWorldCharacterRequest",
@@ -113,7 +119,8 @@ type WorldActionRequest = Annotated[
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
-    | UseItemAction,
+    | UseItemAction
+    | EquipAction,  # 5D-2
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收

@@ -31,6 +31,7 @@ from trpg.world.actions import (
 )
 from trpg.world.common import here
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.gear import item_loadout, mercenary_equipment
 from trpg.world.shadows import shadow_spawn
 from trpg.world.state import CharacterState, WorldState
 
@@ -198,11 +199,12 @@ def party_spawns(library: ContentLibrary, char: CharacterState) -> tuple[UnitSpa
         if profile is not None:
             update["ai_profile"] = profile
         template = slot_capped(library, base).model_copy(update=update)
+        worn = mercenary_equipment(library, merc.id, base, char.level)  # 系統裝備（5D-2，20.5）
         spawns.append(
             UnitSpawn(
                 template=template,
                 weapon=library.weapon_of(template),
-                equipment=library.loadout_of(template),
+                equipment=item_loadout(library, worn),
                 team=Team.ALLY,
             )
         )

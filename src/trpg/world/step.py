@@ -61,6 +61,8 @@ from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
 from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
+from trpg.world.economy_actions import EquipAction
+from trpg.world.gear import apply_equip
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
@@ -219,6 +221,9 @@ def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
     if isinstance(action, ECONOMY_ACTIONS):  # 5D-1 買、賣、腰包、用道具
         char, events = apply_economy(library, world, char, action, now)
         return StepResult(world=world, char=char, events=events)
+    if isinstance(action, EquipAction):  # 5D-2 換裝備
+        char, equipped = apply_equip(library, char, action)
+        return StepResult(world=world, char=char, events=equipped)
     return _service(library, world, char, action)
 
 
