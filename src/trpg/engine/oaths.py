@@ -30,6 +30,7 @@ from trpg.engine.events import (
     DamageDealt,
     EventBase,
     OathBroken,
+    ReactionModeSet,
     ReactionTriggered,
     SkillUsed,
     StatusApplied,
@@ -49,6 +50,7 @@ __all__ = [
     "VOLUNTARY_MOVES",
     "OathSetup",
     "OathTracker",
+    "oath_warning",
     "observe_oath",
     "open_oath",
     "settle_oath",
@@ -77,6 +79,10 @@ class OathSetup(BaseModel):
     penalty_status: str | None = None
     """違反時施加的破誓狀態；``None``＝沒有懲罰狀態。"""
     penalty_rounds: int = Field(default=2, ge=1)
+    start_penalty_rounds: int = Field(default=0, ge=0)
+    """開場就帶著的破誓回合數（5C-3b：上一場戰鬥結束才判出的違反，破誓帶到這一場開場；加成照常）。"""
+    label_zh: str = ""
+    """誓約的中文名（給「會違反誓約」的警告用）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,12 +125,37 @@ def open_oath(ctx: Ctx, oath: OathSetup | None, unit_ids: list[UnitId]) -> None:
             ctx,
             [ApplyStatusEffect(target_id=holder, status_id=oath.bonus_status, source_id=holder)],
         )
+    if oath.start_penalty_rounds > 0 and oath.penalty_status is not None:  # 上一場的破誓（5C-3b）
+        execute(
+            ctx,
+            [
+                ApplyStatusEffect(
+                    target_id=holder,
+                    status_id=oath.penalty_status,
+                    source_id=holder,
+                    duration=oath.start_penalty_rounds,
+                )
+            ],
+        )
+    if oath.check.kind == "forbid_reaction":  # 立「不使用反應」：自動把反應設定關掉（5C-3b）
+        _turn_reactions_off(ctx, holder)
     if oath.check.kind == "solo":
         me = state.units[holder]
         if any(
             u.id != holder and u.team is me.team and not u.is_summon for u in state.units_sorted()
         ):
             _breach(state)
+
+
+def _turn_reactions_off(ctx: Ctx, holder: UnitId) -> None:
+    """把持有者所有反應規則關掉（玩家之後自己再打開而觸發，仍算違反）。"""
+    unit = ctx.state.units[holder]
+    for reaction in sorted({rule.reaction for rule in unit.reactions if rule.mode != "off"}):
+        unit.reactions = tuple(
+            rule.model_copy(update={"mode": "off"}) if rule.reaction == reaction else rule
+            for rule in unit.reactions
+        )
+        ctx.emit(ReactionModeSet, unit_id=holder, reaction=reaction, mode="off")
 
 
 def settle_oath(ctx: Ctx) -> None:
@@ -323,3 +354,61 @@ def _judge_at_end(ctx: Ctx, tracker: OathTracker) -> None:
         check=check.kind,
         at_end=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# 按下前的警告（5C-3b；06 6.26「會違反誓約的動作按下前先警告」）
+# ---------------------------------------------------------------------------
+
+BREACH_TEXT: dict[str, str] = {
+    "forbid_skill_tag": "這招的類型是誓約禁止的",
+    "forbid_skill_category": "這招的類別是誓約禁止的",
+    "forbid_skill_tag_until_hp": "HP 還沒低於門檻就用了誓約禁止的招式",
+    "no_retreat": "這個動作會讓你離最近的敵人更遠",
+    "attack_each_turn": "這個回合還沒有攻擊就結束回合",
+    "end_turn_high": "結束回合時不在高處",
+    "damage_element_only": "這個動作會造成誓約限定以外的元素傷害",
+    "forbid_reaction": "打開反應設定，之後觸發反應就違反",
+    "protect_allies": "這個動作會讓隊友倒下",
+    "no_move_first_turn": "第 1 個回合不能主動移動",
+    "end_turn_off_surface": "結束回合時站在地面效果上",
+}
+"""各判定種類的違反原因（沒列的種類，例如戰鬥結束才判的，不會在按下前警告）。"""
+
+
+def oath_warning(
+    before: BattleState, action: object, simulated: tuple[BattleState, ...]
+) -> str | None:
+    """``action`` 會違反誓約時的中文原因，否則 ``None``（由引擎判定，不靠前端猜）。
+
+    ``simulated`` 是預覽模擬（最少、最多後果）之後的戰鬥狀態：最少後果的模擬就違反＝「會違反」，
+    只有最多後果的模擬違反＝「可能會違反」。另外 ``forbid_reaction`` 的持有者打開反應設定
+    （``set_reaction_mode`` 不是 ``off``）也警告。
+    """
+    tracker = before.oath
+    if tracker is None or tracker.broken or tracker.pending:
+        return None
+    kind = tracker.setup.check.kind
+    reason = BREACH_TEXT.get(kind)
+    if reason is None:
+        return None
+    certain = any(_breached(s) for s in simulated[:1])
+    possible = any(_breached(s) for s in simulated[1:])
+    if (
+        kind == "forbid_reaction"
+        and getattr(action, "type", None) == "set_reaction_mode"
+        and getattr(action, "mode", "off") != "off"
+    ):
+        certain = True
+    if not certain and not possible:
+        return None
+    name = tracker.setup.label_zh or tracker.setup.template
+    lead = "會" if certain else "可能會"
+    return (
+        f"{lead}違反誓約「{name}」：{reason}。"
+        f"違反的後果：本場加成移除，並受到破誓 {tracker.setup.penalty_rounds} 回合。"
+    )
+
+
+def _breached(state: BattleState) -> bool:
+    return state.oath is not None and (state.oath.broken or state.oath.pending)

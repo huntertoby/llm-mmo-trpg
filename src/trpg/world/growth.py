@@ -420,7 +420,8 @@ def _oath(
         cooldown = default if table is None else table.cooldown_seconds
         until = now + cooldown
         released = OathReleasedEvent(template=char.oath.template, cooldown_until=until)
-        return char.model_copy(update={"oath": None, "oath_cooldown_until": until}), (released,)
+        cleared = {"oath": None, "oath_cooldown_until": until, "oath_broken_next": False}
+        return char.model_copy(update=cleared), (released,)
     _require_service(library, char, "立誓")
     if table is None:
         raise WorldActionError("內容庫沒有誓約模板（world/oaths.yaml）")
@@ -442,4 +443,5 @@ def _oath(
         difficulty=template.difficulty_for(params),
         sworn_at=now,
     )
-    return char.model_copy(update={"oath": oath}), (OathSwornEvent(oath=oath),)
+    sworn = char.model_copy(update={"oath": oath, "oath_broken_next": False})
+    return sworn, (OathSwornEvent(oath=oath),)

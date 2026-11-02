@@ -19,7 +19,7 @@ from trpg.engine.oaths import OathSetup
 from trpg.world.actions import OathBrokenEvent, OathKeptEvent, WorldEvent
 from trpg.world.state import CharacterState
 
-__all__ = ["oath_events", "oath_setup", "oath_template"]
+__all__ = ["oath_carries", "oath_events", "oath_setup", "oath_template"]
 
 
 def oath_template(library: ContentLibrary, char: CharacterState) -> OathTemplateDef | None:
@@ -46,6 +46,8 @@ def oath_setup(library: ContentLibrary, char: CharacterState) -> OathSetup | Non
         bonus_status=table.bonuses.get(char.oath.difficulty),
         penalty_status=table.penalty_status,
         penalty_rounds=table.penalty_rounds,
+        start_penalty_rounds=table.penalty_rounds if char.oath_broken_next else 0,
+        label_zh=template.name_zh,
     )
 
 
@@ -61,3 +63,10 @@ def oath_events(
         event = OathBrokenEvent(template=setup.template, check=first.check, at_end=first.at_end)
         return [event], True
     return [OathKeptEvent(template=setup.template)], False
+
+
+def oath_carries(setup: OathSetup | None, battle_events: Sequence[EventBase]) -> bool:
+    """這場戰鬥結束才判出違反（``oath_broken`` 的 ``at_end``）：破誓要帶到下一場開場（5C-3b）。"""
+    if setup is None:
+        return False
+    return any(isinstance(e, OathBroken) and e.at_end for e in battle_events)

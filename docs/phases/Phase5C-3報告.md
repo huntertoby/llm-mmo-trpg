@@ -96,3 +96,23 @@ Claude_Browser；`.scratch_5c3/serve.py` 在 **8090** 提供 API＋`client/dist`
 - `tests/world tests/content tests/api`、`tests/engine`、`tests/narrative`、`tests/skillgen/test_budget.py`、`tests/test_architecture.py` 通過；`tests/cli -m "slow or not slow" --timeout=3000` 見最後一次合併後的紀錄。
 - `npx vitest run`、`npm run build` 通過。
 - 既有測試照新規則改：新角色預設 2 名傭兵（`test_battle_setup`、`test_party`、`test_shadows`、`test_quests`、`test_world_party_api`、`test_world_events_api`）、真內容有誓約模板（`test_world_growth_api`、`test_oath`）、`/106` → `/107` 字串、狀態覆蓋允許清單與圖示數 101 → 105。
+
+
+## 5C-3b：誓約補完與阿岳打法（玩法 PM 2026-11-03 決定）
+
+`LOG_FORMAT` `/107` → `/108`（`docs/phases/戰鬥紀錄格式變更.md`）。
+
+| # | 項目 | 做法 | 主要檔案 |
+|---|---|---|---|
+| 1 | 戰後才判出的違反帶到下一場 | 戰鬥結束才判的違反（每場近戰擊殺、每場施加狀態）→ `CharacterState.oath_broken_next`；下一場 `OathSetup.start_penalty_rounds`＝2，開場施加破誓 2 回合，**加成照常**。每打完一場重新判定；解除、重新立誓也清掉 | `world/oaths.py`（`oath_carries`）、`world/battle.py`、`world/state.py`、`engine/oaths.py`（`open_oath`） |
+| 2 | 「不使用反應」自動關反應 | 開場把持有者所有反應規則設成 `off`（每條發 `reaction_mode_set`）；玩家自己再打開、之後觸發仍算違反（原判定不變）；模板說明加一句 | `engine/oaths.py`（`_turn_reactions_off`）、`content/world/oaths.yaml` |
+| 3 | 按下前的違反警告 | 引擎 `oath_warning`：預覽模擬後誓約變成違反＝「會違反」，只有最多後果的模擬違反＝「可能會違反」，附原因與後果；`forbid_reaction` 打開反應設定直接警告。`PreviewOut.oath_warning`、`BattleResponse.oath_active`。前端：有誓約未違反時，主角動作送出前先問預覽，有警告就跳 `OathWarningDialog`（共用 `DialogFrame`） | `engine/oaths.py`、`engine/preview.py`、`api/schemas.py`、`client/src/battle/oathWarning.ts`、`client/src/ui/OathWarningDialog.tsx`、`useBattleActions.ts` |
+| 4 | 阿岳遠程保持距離 | `companions` 新欄位 `ai_profile`，阿岳設 `archer`（弓手，`keep_distance`）；隊伍面板打法顯示弓手 | `content/world/mercenaries.yaml`、`world/companions.py`、`api/world_party_view.py` |
+
+### 測試與瀏覽器實測
+- `tests/engine/test_oaths.py`（開場破誓、自動關反應、重開後觸發才違反、警告與真實結算一致）、`tests/world/test_oath.py`、`tests/world/test_companions.py`、`tests/api/test_oath_warning.py`、vitest `oathWarning.test.ts`；OpenAPI 重產。
+- Claude_Browser，後端 8110、1600×900：立「每回合至少攻擊一次」，開戰，主角按「結束回合」跳出誓約警告；取消後仍是主角回合；再按並「仍要執行」才結束。使用既有 `DialogFrame`，未做 800×600 與釘住／捲動測試。已停掉自己的伺服器。
+
+### 待 PM 決定
+1. 警告只在主角自己的動作送出時問；複製技能／複合技能第二段選目標、反應詢問（`prompt`）接受反應都不問。
+2. 技能列按鈕上沒有預先標「會違反誓約」，只有按下後確認。

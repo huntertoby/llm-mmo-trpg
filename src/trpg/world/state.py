@@ -465,6 +465,9 @@ class CharacterState(_Model):
     """首殺過的精英種類（排序、不重複；06 6.34.2「每種精英的首殺各 1 點」）。"""
     oath: OathState | None = None
     """目前的誓約（同時 1 個，#106）。"""
+    oath_broken_next: bool = False
+    """上一場戰鬥結束才判出的違反（每場擊殺／施加狀態沒達到）：破誓 2 回合帶到下一場開場（5C-3b；
+    下一場的誓約加成照常）。下一場打完（勝負都算）重新判定，解除或換誓約也清掉。"""
     oath_cooldown_until: int = Field(default=0, ge=0)
     """解除誓約後，這個時間（UTC 秒）以前不能再立（#106「現實 1 天」）。"""
     last_battle: LastBattle | None = None

@@ -321,6 +321,7 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "followup_when",  # Phase 3F-4b
         "infusion",  # Phase 3-33d
         "variant",  # Phase 3-25b
+        "oath_warning",  # Phase 5C-3b
         "run_range",  # Phase 3-20
     }
     assert data["action"] == attack
