@@ -24,6 +24,16 @@ export function categoryLabel(card: Pick<SkillCard, "category_id" | "kind_id">):
   return pays ? "法術技・花法力" : "法術技";
 }
 
+/**
+ * 技能卡片標題的骨架字樣（UI-T1）：被動、姿態、修正、反應技的骨架名與種類字樣重複
+ * （「被動・被動」「反應・反應技」），與種類相同或以種類開頭時不顯示；空字串＝不顯示。
+ */
+export function skeletonLabel(card: Pick<SkillCard, "kind" | "skeleton_zh">): string {
+  const name = card.skeleton_zh ?? "";
+  if (name === "" || name.startsWith(card.kind)) return "";
+  return name;
+}
+
 /** 技能卡片標題的種類字樣：「主動」「被動」「反應」「姿態」；修正技能一併註明是「改造／修正」。 */
 export function kindLabel(card: Pick<SkillCard, "kind" | "kind_id" | "modifiers">): string {
   if (card.kind_id === "modifier") return `${card.kind}（改造／修正）`;
