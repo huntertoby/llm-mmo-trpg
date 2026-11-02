@@ -611,6 +611,134 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
 | 5A2-7 | 天氣衍生的角色段用 `@<region>`、計數用半天序號 | 2.4 只寫角色串流，天氣全區共用 |
 | 5A2-8 | 重播從「初始世界快照＋初始角色快照」開始，角色建立不進日誌 | 帳號與角色建立在 5E-1 |
 
-## 7. 之後各段規格
+## 7. 5A-3 詳細規格：雲嶺敵人內容與遭遇表
 
-（5A-2 驗收後補上 5A-3 起。）
+> 給實作 agent。只動 `content/units/`（新增檔，不改既有）、`content/world/enemies.yaml`（新）、`content/world/encounters/`（新）、`src/trpg/content/world_enemies.py`（新）、`src/trpg/content/world_encounters.py`（新）、`src/trpg/content/library.py`（載入）、`src/trpg/world/encounters.py`（新）、`tests/content/`、`tests/world/`、CLI 快照（`trpg content check` 變了才重產）。**不做** 開戰接線（5A-4）、前端與外觀（5A-ART；新範本不寫 `doll`）、Boss 霧鎖真人與階段機制（5F-2）。不動 `content/skills/` 既有技能、`src/trpg/skillgen/`、引擎、roguelite、既有單位範本與地圖。
+> 依據：18 18.2.1～18.2.2、18.3「內容」欄、18.7.4（懸賞「北坡狼王」）；09 9.6.6（家族、中立族群、變體與精英詞綴是 content 資料、混族、遠程上限、營地混精英：開戰前看得到、強度以建議等級為準、一場最多 1 名）；05 敵人範本與 AI 行為模式（`content/ai_profiles.yaml`）；本檔 0.2 Q5、2.4、6.4（`EncounterResult`）。
+
+### 7.1 目標
+
+雲嶺的敵人能被「查表 → 陣容 → 單位範本」產生：地點 → 遭遇表 → 陣容（含變體、營地混精英），陣容裡每個名字都解析得到合法的 `UnitTemplate`，能直接放進現有戰鬥引擎打完一場。全部用 **現有** 原語、技能、反應、標籤與 AI 行為模式；引擎沒有的招牌機制照最保守替代並列代決（7.6）。
+
+### 7.2 交付項目
+
+1. **敵人範本 `content/units/*.yaml`**（17 個新檔，格式同 `bandit*.yaml`；不寫 `doll`；屬性、HP、護甲是初值，不做平衡模擬）。對照表見 7.3。
+2. **精英詞綴與元素變體 `content/world/enemies.yaml`** ＋ schema `src/trpg/content/world_enemies.py`（`EnemyVariantDef`、`EliteAffixDef`、`WorldEnemies`）：
+   - **變體** `EnemyVariantDef`：`id`、`base`（單位範本 ID）、`name_zh`、`theme`（外觀用的元素標記：9 種元素＋`water`，5A-ART 用；純顯示）、`weapon: str | None`（換武器）、`skill_swaps: dict[str, str]`（舊技能 → 新技能，鍵必須在 base 的 `skills` 裡）。`apply_variant(base, variant) → UnitTemplate`：ID、名稱換掉，換武器與技能，其餘照 base。
+   - **精英詞綴** `EliteAffixDef`：`id`、`name_zh`（「再生的」）、`add_skills`（既有技能 ID）、`add_reactions`（反應規則；範本沒寫 `reactions` 時先展開成 `reactions.yaml` 的 `default_rules` 再加）、`hp_permille`（HP 倍率，初值 1500）、`weapon_classes`（空＝不限；例：狂暴的只限近戰）。`apply_affix(template, affix, default_rules) → UnitTemplate`：ID＝`<範本>_<詞綴>`、名稱＝`<詞綴名><範本名>`、加 `elite` 標籤、HP × 倍率（捨去，至少 1）、加技能與反應規則。`affix_problem(...) → str | None`：武器大類不符、範本已是精英、技能已裝備、加上後超過欄位上限（`unit_skill_problems`）時不可套用。
+   - 載入時：變體的 base、武器、技能存在；套用後的範本通過 `unit_skill_problems`；變體 ID 不可和單位範本 ID 撞；詞綴的技能與反應存在。
+3. **遭遇表 `content/world/encounters/cloud_ridge.yaml`** ＋ schema `src/trpg/content/world_encounters.py`（`EncounterTable`；一區一檔，檔名＝`region`）：
+
+   ```yaml
+   region: cloud_ridge
+   ranged_cap: 2              # 每場遠程敵人上限（18.2.1、9.6.6；Q5）
+   camp_elite_permille: 100   # 一般營地混進 1 名精英的機率（9.6.6；Q5 初值）
+   affixes: [regenerating, mist_veiled, heart_linked, berserk]   # 本區常見詞綴（18.2.1）
+   groups:                    # 陣容：單位範本 ID 或變體 ID，2～4 名（3 人隊伍；地圖敵方起始區 4 格）
+     - {id: sect_patrol, name_zh: 修士巡邏, units: [sect_acolyte, sect_acolyte, sect_swordsman, sect_alchemist]}
+   locations:
+     - location: rain_terraces
+       groups: [{group: sect_patrol, weight: 1}]
+     - location: north_slope
+       groups: [...]
+       elite: {unit: mist_wolf, affix: berserk}   # 精英巢穴固定的精英（懸賞「北坡狼王」）
+   ```
+
+   **單檔驗證**：`ranged_cap ≥ 0`、`0 ≤ camp_elite_permille ≤ 1000`；陣容 ID 不重複、2～4 名；地點不重複；每個地點至少 1 個陣容、權重 ≥ 1、陣容存在；有 `elite` 的地點，陣容＋固定精英 ≤ 4 名；`affixes` 不重複。
+   **跨檔案檢查** `encounter_table_problems(...)`：
+   - `region` 有地點圖；地點都在地點圖；**地點圖上遇敵機率 > 0 的地點（town、gate 以外）都要有表**（5A-2 對這些地點擲遇敵）。
+   - 陣容裡的名字是單位範本（非召喚物）或變體；`affixes` 在 `enemies.yaml`。
+   - **遠程上限**：每個陣容（含固定精英）的遠程數 ≤ `ranged_cap`。遠程＝武器大類 `ranged`，或範本帶 `ranged` 標籤（符籙師用法器，但 18.2.1 寫「都算遠程」）。
+   - **精英**：每個陣容最多 1 名 `elite` 標籤的單位；`elite` 欄只有 `elite_lair` 可填、`elite_lair` 必填，且它的陣容不可再含精英；固定精英的詞綴必須可套用到該單位。
+   - `camp` 地點的每個陣容至少有 1 名可以套用本區某個詞綴的成員，或陣容本身已有精英。
+4. **載入**（`library.py`）：`ContentLibrary.world_enemies: WorldEnemies | None`（檔案不存在＝`None`）、`world_encounters: dict[str, EncounterTable]`（資料夾不存在＝空，鍵＝`region`）；有問題 → `ContentError`（指出檔案）。`trpg content check` 會列出兩個新檔的摘要。
+5. **遭遇查詢 `src/trpg/world/encounters.py`**（純函式，可重播）：
+   - `EncounterLineup`（`region`、`location`、`group`、`members: tuple[LineupMember, ...]`；`LineupMember(unit, affix: str | None)`）。
+   - `roll_lineup(library, encounter: EncounterResult) -> EncounterLineup`：亂數 `Rng(fnv1a64(f"{battle_seed}:lineup"))`（`battle_seed` 已由世界 `battle` 串流衍生；不動角色計數）。① 依權重抽陣容；② `elite_lair`：固定精英放第一個；③ `camp` 且陣容沒有精英：擲 `randint(0, 999) < camp_elite_permille` → 從「可套用至少一個本區詞綴」的成員中均勻抽 1 名、再從可套用的詞綴中均勻抽 1 個（升級原成員，不增加人數、不加等級，9.6.6「強度以建議等級為準」）。其他地點種類不混精英。
+   - `lineup_templates(library, lineup) -> tuple[UnitTemplate, ...]`：解析變體、套用詞綴，回傳可直接放進 `UnitSpawn` 的範本（依陣容順序）。
+6. **測試**（7.5）與 **完成報告** `docs/phases/Phase5A-3報告.md`（交付、敵人精簡表、遭遇表摘要、smoke 結果、用了 18 的哪些內容、代決、待 PM 決定）。
+
+### 7.3 雲嶺敵人對照（18.2 → 範本；開發 PM 取 ID）
+
+標籤：修士一律 `[humanoid, sect]`、野獸 `[beast]`、源晶造物 `[construct]`；另列的標籤附加。技能都是 `content/skills/` 既有的。
+
+| 18.2 | `id` | 武器 | AI | 技能（概念對照） | 其他 |
+|---|---|---|---|---|---|
+| 青霧道童 | `sect_acolyte` | `totem_staff` | `support` | `skill_radiant_mend`（清心） | |
+| 持劍弟子 | `sect_swordsman` | `one_handed_sword` | `brute` | `skill_crossing_slash`（劍勢連斬）、`skill_stand_firm`（同門相護替代） | 反應：預設＋`stand_firm`（`ally_hit_adjacent`） |
+| 符籙師 | `sect_talisman_caster` | `totem_staff` | `archer` | `skill_frost_shackle`（定身符）、`skill_static_palm`（雷符） | `ranged` 標籤 |
+| 煉丹師 | `sect_alchemist` | `totem_staff` | `support` | `skill_sanctuary`（回春丹，群體治療）、`skill_poison_mist`（丹爆毒霧） | |
+| 護法武僧 | `sect_warrior_monk` | `fist` | `guard` | `skill_parry_riposte`（金剛身）、`skill_rampart_jeer`（嘲諷）、`skill_stand_firm` | 反應同持劍弟子；`steadfast` |
+| 劍陣弟子 | `sect_array_disciple` | `one_handed_sword` | `flanker` | `skill_shoulder_strike`（劍陣：相鄰同伴時加傷） | |
+| 霧行者 | `sect_mist_walker` | `dagger` | `assassin` | `skill_shadow_backstab`（霧襲）、`skill_rx_slip_away`（受擊隱蔽） | 反應：預設＋`rx_slip_away`（`hit_by_attack`） |
+| 雲鶴使 | `sect_crane_archer` | `bow` | `archer` | `skill_high_ground_shot`（高處射擊）、`skill_rng_hawkeye_mark`（鶴唳標記） | 遠程 |
+| 傀儡師 | `sect_puppeteer` | `totem_staff` | `cunning` | `skill_summon_bomb_puppet`（木傀儡，會爆裂） | |
+| 陣眼石靈 | `sect_array_stone` | `fist` | `idle` | — | 速度 0、`reactions: []`、`immovable` |
+| 青霧執事（精英） | `sect_steward` | `totem_staff` | `support` | `skill_sanctuary`、`skill_renewal`、`skill_steady_breath`（每回合結束回血） | `elite` |
+| 霧狼 | `mist_wolf` | `fangs` | `flanker` | `skill_twin_fang` | |
+| 山豹 | `mountain_leopard` | `talons` | `assassin` | `skill_tiger_charge`（撲擊） | |
+| 石背熊 | `stoneback_bear` | `talons` | `brute` | `skill_quake_topple`（震地擊倒） | `steadfast` |
+| 雷羽鷹 | `thunder_hawk` | `talons` | `flanker` | `skill_plunging_strike`（俯衝）、`skill_static_palm`（帶電） | `flying` |
+| 霧魅 | `mist_wraith` | `shade_blades` | `assassin` | `skill_blink`（隱蔽）、`skill_rx_dread_glare`（碰到就迷惑→恐懼） | 反應：預設＋`rx_dread_glare`（`enemy_enters_adjacent`） |
+| 碎晶傀儡 | `shard_golem` | `stone_fist` | `brute` | `skill_rock_smash` | 雷抗 |
+
+盜賊沿用既有 `bandit`、`bandit_archer`、`bandit_shieldbearer`、`bandit_captain`（雲嶺配色是 5A-ART）。實作時若某個技能與武器、欄位不相容（載入檢查），換成同概念的既有技能並在報告列出。
+
+**變體**（18.2.1）：`thunder_talisman_caster` 雷符師（`lightning_staff`；`frost_shackle → spark_chain`）、`frost_crane_archer` 冰鶴使（`rng_hawkeye_mark → annotated_frost`，命中緩速）、`water_alchemist` 水煉丹師（`poison_mist → splash_flask`，造水）。
+**詞綴**（18.2.1，`hp_permille: 1500`）：`regenerating` 再生的（＋`skill_steady_breath`）、`mist_veiled` 霧隱的（＋`skill_rx_slip_away` 與 `hit_by_attack` 反應）、`heart_linked` 連心的（＋`skill_soul_bond`）、`berserk` 狂暴的（＋`skill_berserker_rage`，限近戰）。
+
+### 7.4 雲嶺遭遇表（初值；依 18.3「內容」欄與 18.2 陣容例）
+
+| 地點 | 陣容 |
+|---|---|
+| 渡口石階（camp 1） | 盜賊 ×2＋盜賊弓手；盜賊 ×2＋盾衛 |
+| 竹林小徑（camp 1～2） | 霧狼 ×3；盜賊＋霧狼 ×2（混族例） |
+| 雨中梯田（camp 2） | 道童 ×2＋持劍弟子＋煉丹師（18 例）；盜賊 ×2＋持劍弟子＋道童（盜賊＋修士衝突，同一陣營） |
+| 青霧觀山門（village 2） | 道童＋持劍弟子 ×2 |
+| 獵戶小屋（village 2） | 霧狼 ×2＋山豹 |
+| 斷崖幫寨（camp 3） | 盜賊＋盾衛＋盜賊弓手＋隊長；盜賊 ×2＋盜賊弓手＋霧狼 |
+| 古松祭壇（altar 3） | 武僧＋符籙師＋霧行者（18 例） |
+| 雲海吊橋（camp 3～4） | 劍陣弟子 ×3＋陣眼石靈（18 例）；持劍弟子＋雲鶴使＋道童＋煉丹師 |
+| 藥師谷（ruin 4） | 煉丹師＋武僧＋傀儡師；山豹 ×2＋石背熊 |
+| 丹爐洞（secret 5） | 青霧執事＋持劍弟子＋武僧＋道童；水煉丹師＋持劍弟子 ×2＋霧行者 |
+| 北坡獵場（elite_lair 4～5） | 固定精英：狂暴的霧狼（北坡狼王）＋霧狼 ×3 |
+| 冬湖（camp 4） | 冰鶴使＋石背熊＋霧狼；石背熊 ×2＋冰鶴使 |
+| 劍冢（ruin 5） | 劍陣弟子 ×3＋霧行者；持劍弟子＋霧行者＋雷符師＋雲鶴使 |
+| 源晶裂痕（anomaly 5） | 霧魅 ×2＋碎晶傀儡；盜賊＋盜賊弓手＋霧魅＋碎晶傀儡 |
+| 鶴歸崖（secret 6） | 雷羽鷹 ×3＋雲鶴使；雷羽鷹 ×2＋石背熊 |
+| 雲頂觀（boss 6） | 一般巡邏：劍陣弟子 ×2＋符籙師＋煉丹師（Boss 戰本身是 5F-2） |
+
+權重一律 1（初值）；`camp_elite_permille: 100`。
+
+### 7.5 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_enemies.py` | 載入 17 個新範本、3 個變體、4 個詞綴；`apply_variant` 換武器與技能、ID 與名稱；`apply_affix` 的 ID、名稱、`elite` 標籤、HP 倍率、技能、反應（範本沒寫 `reactions` 時含 `default_rules`）；`affix_problem`（狂暴的不能套遠程、已是精英、已裝備）；壞資料（未知 base、swap 的鍵不在 base、未知技能、變體 ID 撞範本）→ 錯誤；沒有 `world/enemies.yaml` → `None` |
+| `tests/content/test_world_encounters.py` | 載入雲嶺表；遇敵機率 > 0 的地點都有表；每個陣容遠程 ≤ 2、精英 ≤ 1、人數 2～4；各條驗證（未知單位、遠程超量、非 elite_lair 填 `elite`、elite_lair 沒填、陣容含 2 名精英、地點缺表、未知地點、詞綴不可套用）→ 錯誤；沒有 `world/encounters/` → 空 |
+| `tests/world/test_encounters.py` | `roll_lineup` 確定性（同 `EncounterResult` 相同、不同種子會變）；陣容一定來自該地點的表；北坡獵場第一名是狂暴的霧狼；營地精英機率：`camp_elite_permille` 改 0 → 永不、1000 → 每場恰 1 名，且被升級的是原陣容成員、人數不變；非營地不混精英；`lineup_templates` 解析變體與詞綴、遠程 ≤ 2 |
+| `tests/world/test_enemy_smoke.py` | **smoke**：每個陣容（含變體）＋每個詞綴（套在一個可套用的雲嶺單位上）用該地點的戰鬥地圖（沒有地圖的地點用 `dark_forest`）、3 名既有主角範本（`hero_fighter`、`hero_archer`、`hero_stormcaller`）、`max_rounds: 8`，`run_battle` 跑到 `state.ended`；並斷言 17 個新範本與 3 個變體都至少出場一次 |
+
+### 7.6 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5A3-1 | 招牌反應「同門相護」（2 格內同門受擊時替他加護盾）：引擎沒有「替被攻擊的友方加護盾」的反應目標 | 前排（持劍弟子、護法武僧）帶既有反應技「挺身而出」（相鄰同門受擊時替他擋下＋自身護衛）；真正的同門相護待 PM 決定是否排引擎段 |
+| 5A3-2 | 陣眼石靈「存在時同門護盾 +、打碎才解除陣法」、劍陣「≤ 3 格」、青霧執事「九轉回天」蓄力強招、碎晶傀儡「死後帶電碎片」、霧魅「迷惑」 | 沒有對應機制：石靈只做不動的高護甲物件；劍陣用「並肩斬」（相鄰同伴加傷）；執事用群體治療＋再生；碎晶傀儡只是近戰；迷惑以「恐懼」替代。全部列待 PM 決定 |
+| 5A3-3 | 詞綴「霧隱的」（開場隱蔽 1 回合）、「連心的」（受傷分給相鄰同門）沒有對應機制 | 霧隱的＝受擊時隱蔽（`rx_slip_away`）；連心的＝「魂結」（方向相反：替同伴分擔）。列待 PM 決定 |
+| 5A3-4 | 混族同陣營：三方混戰（9.6.6 D）需要第三陣營 | 本段所有敵人同一陣營；三方混戰待之後的引擎段 |
+| 5A3-5 | 敵人強度不隨地點等級縮放（7.8「不縮放」），用陣容挑選區分強弱；精英＝原成員套詞綴（HP ×1.5），不加人數 | 數值是初值 |
+| 5A3-6 | 遭遇陣容的亂數由 `battle_seed` 衍生（`"{battle_seed}:lineup"`），不另開角色串流 | 不改 5A-2 的角色計數；重播照 `EncounterResult` |
+| 5A3-7 | 遠程的定義：武器大類 `ranged` 或範本帶 `ranged` 標籤 | 符籙師用法器，但 18 寫算遠程 |
+| 5A3-8 | 營地混精英只限 `camp` 種類；`elite_lair` 固定精英；其他種類不混 | 9.6.6「一般營地」 |
+| 5A3-9 | 一個陣容最多 4 名（地圖敵方起始區 4 格） | 3 人隊伍對 2～4 名 |
+
+### 7.7 驗收
+
+- `uv run pytest -q tests/content/test_world_enemies.py tests/content/test_world_encounters.py tests/world tests/content/test_loader.py tests/test_architecture.py -n 8 --timeout=1800` 通過。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；一場重播（`uv run trpg battle --map swamp --seed 7 --log-json …` ＋ `replay`）。
+- 交件前跑 `tests/cli`（`-m "slow or not slow"`）；`trpg content check` 的快照變了照指示重產。
+
+## 8. 之後各段規格
+
+（5A-3 驗收後補上 5A-4 起。）
