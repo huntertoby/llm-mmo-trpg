@@ -111,7 +111,11 @@
 
 ## 8. 檢查
 
-CHECKS
+- 合併 main（534e741e 修 5 個失敗測試）後：`uv run pytest -n 8 --timeout=3000 -m "slow or not slow" tests/content tests/skillgen tests/narrative tests/roguelite tests/api/test_client_fixtures.py tests/engine/test_reaction_skills.py tests/engine/test_summons.py`：6796 passed、14 skipped。
+- `tests/cli`（`-m "slow or not slow"`、`-n 8`）：CLI 雜湊重產後 178 passed，Mock 提議快照與 run 種子 2 個隨後修正並單獨重跑通過。
+- 再合併 main（82501cb9，世界地圖，不碰技能）後：`trpg content check` 373 個技能通過；`ruff check`、`ruff format --check`、`mypy`（947 檔）、`lint-imports`（7 契約）通過。
+- 重播：`trpg battle --map swamp --seed 7` → `battle replay`：88 個動作、313 個事件，一致。
+- 稽核：`scripts/skill_balance_audit.py --sections 3 --composer-samples 60`（前後見第 3、4 節）。
 
 ## 9. 待 PM 決定
 
