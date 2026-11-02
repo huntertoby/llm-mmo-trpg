@@ -65,6 +65,9 @@ class UnitSpawn(BaseModel):
     hp: int | None = Field(default=None, ge=1)
     mana: int | None = Field(default=None, ge=0)
     stamina: int | None = Field(default=None, ge=0)
+    opening_statuses: tuple[str, ...] = ()
+    """開場就掛在身上的狀態（Phase 5A-6：大世界情境判定給下一場的 buff／debuff）。在擲先攻前施加，
+    持續回合照狀態定義的預設、不擲抵抗；依序施加。"""
 
 
 def starting_source(spawn: UnitSpawn, core: CoreRules) -> int:
@@ -92,6 +95,9 @@ class BattleSetup(BaseModel):
     weather: WeatherDef | None = None
     objective: Objective | None = None
     spawn_templates: dict[str, SpawnTemplate] = Field(default_factory=dict)
+    first_team: Team | None = None
+    """先手的陣營（Phase 5A-6）：設定時該陣營的單位依先攻排在行動順序最前面、其他單位依先攻接在
+    後面（行動順序整場固定）；``None`` ＝ 照先攻。"""
 
     @property
     def effective_objective(self) -> Objective:

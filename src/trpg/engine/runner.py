@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/99"
-"""目前的戰鬥紀錄版本（``/99``，BAL-16b2：Boss 戰頭目倒下時新增 guards_retreated 事件，#86）。
+LOG_FORMAT = "trpg-battle-log/100"
+"""目前的戰鬥紀錄版本（``/100``，Phase 5A-6：設定新增 ``first_team`` 與 ``opening_statuses``）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000
