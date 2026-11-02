@@ -126,6 +126,7 @@ from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
+from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -572,6 +573,8 @@ class ContentLibrary:
     :mod:`trpg.content.skills` 由內建資料推導的常數）。"""
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
+    world_maps: dict[str, LocationMapDef] = field(default_factory=dict)
+    """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -821,6 +824,7 @@ def load_library(  # noqa: PLR0915
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
     map_warnings = _apply_map_themes(maps, regions)
+    world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
@@ -876,8 +880,40 @@ def load_library(  # noqa: PLR0915
         origins=origins,
         modifier_changes=modifier_changes,
         map_warnings=tuple(map_warnings),
+        world_maps=world_maps,
         files=files,
     )
+
+
+WORLD_MAPS_DIR = "world/maps"
+"""大世界地點圖的資料夾（相對於內容資料夾；Phase 5A-1）。"""
+
+
+def _load_world_maps(
+    directory: Path,
+    regions: RegionTable | None,
+    maps: Mapping[str, MapDef],
+    files: list[tuple[Path, ContentModel]],
+) -> dict[str, LocationMapDef]:
+    """載入 ``world/maps/*.yaml``（鍵＝``region``；資料夾不存在＝空）並做跨檔案檢查。
+
+    地點圖以 ``region`` 而不是 ``id`` 為鍵，所以不用 :func:`_load_dir`；檔名必須等於 ``region``。
+    """
+    if not directory.is_dir():
+        return {}
+    result: dict[str, LocationMapDef] = {}
+    for path in sorted(directory.glob("*.yaml")):
+        world_map = load_content_file(path, LocationMapDef)
+        if world_map.region in result:
+            raise ContentError(path, f"區域 {world_map.region} 已有另一份地點圖")
+        if world_map.region != path.stem:
+            raise ContentError(path, f"檔名必須與 region 相同（region 為 {world_map.region!r}）")
+        problems = world_map_problems(world_map, regions=regions, maps=maps)
+        if problems:
+            raise ContentError(path, "；".join(problems))
+        files.append((path, world_map))
+        result[world_map.region] = world_map
+    return result
 
 
 def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: BudgetRules) -> None:
