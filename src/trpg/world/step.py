@@ -36,6 +36,7 @@ from trpg.world.actions import (
     EventSolveAction,
     FightAction,
     FlashPickAction,
+    HireAction,
     LoadoutAction,
     LocationRevealedEvent,
     NarrateAction,
@@ -43,6 +44,7 @@ from trpg.world.actions import (
     PerceptionCheckEvent,
     RestAction,
     RetreatAction,
+    ShadowAiAction,
     SituationAction,
     TalkAction,
     TavernAction,
@@ -62,8 +64,10 @@ from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
+from trpg.world.party import hire, set_shadow_ai
 from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
+from trpg.world.shadows import save_after_prep
 from trpg.world.situations import resolve_situation
 from trpg.world.social import talk, tavern
 from trpg.world.solutions import make_encounter, settle_event_combat, solve_event
@@ -172,9 +176,10 @@ def world_step(
     events = (*ended, *result.events, *settled)
     char = mark_finished(library, char, events)  # 只出一次的骨架（5B-4c）
     char, extra = advance_quests(library, world, char, events, now)
-    if not ended and not settled and not extra and char is result.char:
+    world, saved = save_after_prep(library, world, char, action, now)  # 城鎮整備存影子（5C-2）
+    if not ended and not settled and not extra and not saved and char is result.char:
         return result
-    return StepResult(world=world, char=char, events=(*events, *extra))
+    return StepResult(world=world, char=char, events=(*events, *extra, *saved))
 
 
 def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
@@ -253,6 +258,10 @@ def _service(
         char, events = loadout(library, char, action)
     elif isinstance(action, TeleportAction):
         char, events = teleport(library, char, action)
+    elif isinstance(action, HireAction):
+        char, events = hire(library, world, char, action)  # 5C-1、5C-2（影子）
+    elif isinstance(action, ShadowAiAction):
+        char, events = set_shadow_ai(library, char, action)  # 5C-2
     else:
         raise WorldActionError(f"未知的世界動作：{action!r}")  # pragma: no cover
     return StepResult(world=world, char=char, events=events)

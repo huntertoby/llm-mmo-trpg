@@ -2603,6 +2603,31 @@
         "title": "AffixLineView",
         "description": "裝備上的一條詞條（Phase 3G-G1，唯讀）。``active``：遞減後仍生效（非數值類同 id 只生效 1 條；\n數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。\n\n``duplicate_of``（Phase 3-32a）：這條 **沒有生效** 的重複詞條，是和哪一條重複（生效的那條的\n「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。"
       },
+      "AiChoiceView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "description_zh"
+        ],
+        "title": "AiChoiceView",
+        "description": "一種可選的 AI 打法（``ai_profiles.yaml``；5C-2 玩法 PM 定 ④）。"
+      },
       "Aim": {
         "properties": {
           "unit_id": {
@@ -5399,6 +5424,11 @@
             "type": "array",
             "title": "Opening Zh",
             "default": []
+          },
+          "allies_zh": {
+            "type": "string",
+            "title": "Allies Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -8421,6 +8451,46 @@
         "title": "HeroStatusView",
         "description": "開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。"
       },
+      "HireAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hire",
+            "title": "Kind",
+            "default": "hire"
+          },
+          "mercenaries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Mercenaries",
+            "default": []
+          },
+          "shadows": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Shadows",
+            "default": []
+          },
+          "ai": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 8,
+            "title": "Ai"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HireAction",
+        "description": "在城鎮雇用系統傭兵（Phase 5C-1；09 9.6.9 #97：免費、出城前選好、野外不能換）：整組換成\n``mercenaries``（依出場順序；空＝不帶傭兵）。"
+      },
       "HistoryStepOut": {
         "properties": {
           "events": {
@@ -9429,6 +9499,59 @@
         ],
         "title": "MapSummary"
       },
+      "MercenaryView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "role_zh": {
+            "type": "string",
+            "title": "Role Zh"
+          },
+          "theme_zh": {
+            "type": "string",
+            "title": "Theme Zh"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh"
+          },
+          "hired": {
+            "type": "boolean",
+            "title": "Hired"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "title_zh",
+          "role",
+          "role_zh",
+          "theme_zh",
+          "skills_zh",
+          "hired"
+        ],
+        "title": "MercenaryView",
+        "description": "名單上的一名系統傭兵（每個人都一樣，9.6.8）。"
+      },
       "Move": {
         "properties": {
           "unit_id": {
@@ -9498,6 +9621,77 @@
         ],
         "title": "MoveOut",
         "description": "預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／\nleap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與\n終點）。"
+      },
+      "MyShadowView": {
+        "properties": {
+          "saved": {
+            "type": "boolean",
+            "title": "Saved"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "saved_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved Zh"
+          },
+          "ai": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai"
+          },
+          "ai_zh": {
+            "type": "string",
+            "title": "Ai Zh",
+            "default": "預設"
+          },
+          "can_set_ai": {
+            "type": "boolean",
+            "title": "Can Set Ai",
+            "default": false
+          },
+          "coins": {
+            "type": "integer",
+            "title": "Coins",
+            "default": 0
+          },
+          "reports_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reports Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "saved"
+        ],
+        "title": "MyShadowView",
+        "description": "自己的影子（5C-2；#102）。"
       },
       "NodeOut": {
         "properties": {
@@ -10280,6 +10474,152 @@
           "detail"
         ],
         "title": "OutcomeOut"
+      },
+      "PartyMemberView": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "mercenary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mercenary"
+          },
+          "shadow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadow"
+          },
+          "ai_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh",
+          "title_zh",
+          "level"
+        ],
+        "title": "PartyMemberView",
+        "description": "隊伍的一名成員（主角、傭兵或標準隊友）。"
+      },
+      "PartyView": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/PartyMemberView"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "max_hired": {
+            "type": "integer",
+            "title": "Max Hired"
+          },
+          "can_hire": {
+            "type": "boolean",
+            "title": "Can Hire"
+          },
+          "hire_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hire Problem Zh"
+          },
+          "mercenaries": {
+            "items": {
+              "$ref": "#/components/schemas/MercenaryView"
+            },
+            "type": "array",
+            "title": "Mercenaries",
+            "default": []
+          },
+          "shadows": {
+            "items": {
+              "$ref": "#/components/schemas/ShadowView"
+            },
+            "type": "array",
+            "title": "Shadows",
+            "default": []
+          },
+          "ai_choices": {
+            "items": {
+              "$ref": "#/components/schemas/AiChoiceView"
+            },
+            "type": "array",
+            "title": "Ai Choices",
+            "default": []
+          },
+          "ai": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Ai",
+            "default": {}
+          },
+          "season_boss_ok": {
+            "type": "boolean",
+            "title": "Season Boss Ok",
+            "default": true
+          },
+          "season_boss_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season Boss Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "members",
+          "max_hired",
+          "can_hire",
+          "hire_problem_zh"
+        ],
+        "title": "PartyView",
+        "description": "目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"
       },
       "Pending": {
         "properties": {
@@ -12307,6 +12647,111 @@
         ],
         "title": "SetSummonMode",
         "description": "切換自己一隻召喚物的模式（Phase 3-33c，6.29.2；**0 AP**、不結束回合，只能在自己的回合）：\n``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、\n``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**\n``legal_actions``（同 :class:`SetReactionMode`），由\n:func:`trpg.engine.summons.control.mode_problem` 判斷合法。"
+      },
+      "ShadowAiAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "shadow_ai",
+            "title": "Kind",
+            "default": "shadow_ai"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ShadowAiAction",
+        "description": "在城鎮設定自己影子的預設打法（Phase 5C-2；#102）；``None``＝範本的預設。"
+      },
+      "ShadowView": {
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "role_zh": {
+            "type": "string",
+            "title": "Role Zh"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh"
+          },
+          "borrowed_level": {
+            "type": "integer",
+            "title": "Borrowed Level"
+          },
+          "borrowed_tier": {
+            "type": "integer",
+            "title": "Borrowed Tier"
+          },
+          "capped": {
+            "type": "boolean",
+            "title": "Capped"
+          },
+          "cap_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Zh"
+          },
+          "hired": {
+            "type": "boolean",
+            "title": "Hired"
+          },
+          "own": {
+            "type": "boolean",
+            "title": "Own",
+            "default": false
+          },
+          "saved_zh": {
+            "type": "string",
+            "title": "Saved Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner",
+          "name_zh",
+          "level",
+          "role_zh",
+          "skills_zh",
+          "borrowed_level",
+          "borrowed_tier",
+          "capped",
+          "hired",
+          "saved_zh"
+        ],
+        "title": "ShadowView",
+        "description": "一個可以借的影子（5C-2；其他角色在城鎮整備時存的）。"
       },
       "Shove": {
         "properties": {
@@ -16330,6 +16775,12 @@
           },
           {
             "$ref": "#/components/schemas/EventSolveAction"
+          },
+          {
+            "$ref": "#/components/schemas/HireAction"
+          },
+          {
+            "$ref": "#/components/schemas/ShadowAiAction"
           }
         ],
         "discriminator": {
@@ -16342,6 +16793,7 @@
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
+            "hire": "#/components/schemas/HireAction",
             "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
@@ -16349,6 +16801,7 @@
             "respec": "#/components/schemas/RespecAction",
             "rest": "#/components/schemas/RestAction",
             "retreat": "#/components/schemas/RetreatAction",
+            "shadow_ai": "#/components/schemas/ShadowAiAction",
             "swear_oath": "#/components/schemas/SwearOathAction",
             "talk": "#/components/schemas/TalkAction",
             "tavern": "#/components/schemas/TavernAction",
@@ -16919,6 +17372,26 @@
             "type": "array",
             "title": "Rumors",
             "default": []
+          },
+          "party": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartyView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "my_shadow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MyShadowView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

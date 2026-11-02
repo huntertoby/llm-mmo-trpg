@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
+from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
     EventView,
@@ -40,6 +41,7 @@ from trpg.world.actions import (
     EventSolveAction,
     FlashAction,
     FlashPickAction,
+    HireAction,
     InheritAction,
     LoadoutAction,
     OfferPickAction,
@@ -47,6 +49,7 @@ from trpg.world.actions import (
     RespecAction,
     RestAction,
     RetreatAction,
+    ShadowAiAction,
     SwearOathAction,
     TalkAction,
     TavernAction,
@@ -102,7 +105,9 @@ type WorldActionRequest = Annotated[
     | OfferPickAction
     | TalkAction
     | TavernAction
-    | EventSolveAction,
+    | EventSolveAction
+    | HireAction
+    | ShadowAiAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -260,6 +265,8 @@ class EncounterView(_ApiModel):
     hero_statuses: tuple[HeroStatusView, ...] = ()
     opening_zh: tuple[str, ...] = ()
     """開場說明（先手、開場狀態、增援）的句子；戰鬥畫面開場也顯示（5A-7）。"""
+    allies_zh: str = ""
+    """我方的說明（例「主角（開場 HP 30）＋青鋒、回春」；5C-1）。"""
 
 
 class WorldClockView(_ApiModel):
@@ -364,6 +371,10 @@ class WorldView(_ApiModel):
     threads: tuple[ThreadView, ...] = ()
     rumors: tuple[str, ...] = ()
     """這次請求在酒館聽到的本週傳聞。"""
+    party: PartyView | None = None
+    """隊伍與系統傭兵（5C-1）、可借的影子（5C-2）。"""
+    my_shadow: MyShadowView | None = None
+    """自己的影子與被借用的戰報（5C-2）。"""
 
 
 class WorldBattleResponse(_ApiModel):

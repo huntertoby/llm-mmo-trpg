@@ -2,8 +2,8 @@
 
 - :func:`prepare_battle`：由角色身上的遭遇（:class:`~trpg.world.state.EncounterResult`）組出原型戰鬥
   引擎的設定——地點的地圖（沒有時從區域地圖池抽）並換皮成遭遇的區域、遭遇的天氣、主角（目前 HP、
-  法力、耐力；疲憊時開場 HP 打折）＋原型的標準隊友、依地點建議等級成長的敵方陣容。API 開戰與「看
-  陣容」直接用它（5A-5）。
+  法力、耐力；疲憊時開場 HP 打折）＋隊伍的傭兵（5C-1）與借來的影子（5C-2；沒有隊友＝獨行）、依地點
+  建議等級成長的敵方陣容。API 開戰與「看陣容」直接用它（5A-5）。
 - :func:`fight`：``fight`` 動作——用同一份設定與 ``battle_seed`` 開戰、依序套用日誌裡的步驟，戰鬥
   結束後回寫角色與世界（經驗、耐力、已清空、全滅回小鎮＋疲憊）。重播照同樣的步驟重算，結果逐位元
   相同（第 2.4 節）。
@@ -70,6 +70,8 @@ from trpg.world.encounters import (
 )
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import as_run, gain_xp, world_library
+from trpg.world.party import party_spawns, shadow_spawns
+from trpg.world.shadows import record_lent
 from trpg.world.state import (
     CharacterState,
     ClearedLocation,
@@ -336,14 +338,17 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     base = build_setup(
         library,
         map_def.id,
-        library.roguelite.companions,  # 5C-1 前用原型的標準隊友（代決 5A4-4）
+        library.roguelite.companions,  # 只借用設定的骨架；我方在下面整組換掉
         (),
         max_rounds=rules_of(library).battle.max_rounds,
         weather=encounter.weather,
     )
     objective = battle_objective(map_def, encounter)
-    allies, ally_skills = grow_allies(library, base.units, char.level)
+    # 我方＝主角＋傭兵（5C-1）＋影子（5C-2）；沒有隊友＝獨行（5C-2 玩法 PM 定 ③）
+    allies, ally_skills = grow_allies(library, party_spawns(library, char), char.level)
     extra.update((s.id, s) for s in ally_skills)
+    shadow_units, shadow_skills = shadow_spawns(library, char)
+    extra.update((s.id, s) for s in shadow_skills)
     extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
     hp = hero_start_hp(library, char)
     ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
@@ -352,7 +357,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         update={
             "map": map_def,
             "ruleset": ruleset,
-            "units": (_hero_spawn(library, char, hp), *allies, *enemies),
+            "units": (_hero_spawn(library, char, hp), *allies, *shadow_units, *enemies),
             "first_team": first,
             "objective": objective,
         }
@@ -434,6 +439,8 @@ def fight(
             reinforcements=prepared.reinforcements,
             first_team=prepared.first_team,
             hero_statuses=prepared.hero_statuses,
+            mercenaries=char.mercenaries,
+            shadows=tuple(s.owner for s in char.shadows),
         )
     ]
     result = battle_result(state)
@@ -457,6 +464,10 @@ def fight(
         )
     else:
         char, more = _lost(library, char, hero.mana)
+    world, lent = record_lent(  # 影子主人每天第一次被借用（5C-2，#102）
+        library, world, char, encounter, prepared.lineup, won=won, now=now
+    )
+    more += lent
     xp_gained = battle_xp(library, encounter, prepared.lineup) if won else 0
     ended = BattleEndedEvent(
         won=won,

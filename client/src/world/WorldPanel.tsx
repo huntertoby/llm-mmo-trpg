@@ -4,11 +4,13 @@
 // 城鎮與營火限制的說明；閃現待選時服務按鈕停用（後端已關掉）。
 // 5B-5：事件卡與判定結果（`eventSlot`，遭遇面板之後）、這裡的人（`peopleSlot`）、城鎮的「酒館」與本週傳聞、
 // 「任務與線頭」切換左欄。
+// 5C-1：小鎮的「雇用傭兵」（面板內展開）、「隊伍」面板、遇敵面板的我方改用後端的 `allies_zh`。5C-2：雇用分傭兵／影子兩頁、「我的影子」面板。
 import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { growthBadge } from "./growth";
+import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { questBadge } from "./story";
 import { statusLine } from "./mapView";
 
@@ -50,8 +52,8 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           </li>
         ))}
       </ul>
-      <div className="muted small">
-        我方：主角（開場 HP {e.hero_hp}{e.fatigued ? "，疲憊" : ""}）＋ 2 名標準隊友
+      <div className="muted small" data-testid="world-encounter-allies">
+        我方：{e.allies_zh !== undefined && e.allies_zh !== "" ? e.allies_zh : `主角（開場 HP ${e.hero_hp}${e.fatigued ? "，疲憊" : ""}）`}
       </div>
       {(e.opening_zh ?? []).length > 0 && (
         <ul className="world-opening small" data-testid="world-opening">
@@ -90,6 +92,7 @@ function HerePanel({
 }: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth" | "questsOpen" | "onQuests" | "rumors">) {
   const here = view.here;
   const [editing, setEditing] = useState(false);
+  const hiring = useHireToggle(view.party);
   const free = view.encounter === null && view.battle_id === null;
   return (
     <div className="panel world-here" data-testid="world-here">
@@ -116,6 +119,13 @@ function HerePanel({
           <button type="button" aria-expanded={editing} disabled={busy} onClick={() => setEditing((v) => !v)} data-testid="world-loadout">
             {editing ? "收起換技能" : "換技能"}
           </button>
+        )}
+        {hiring.can && (
+          <Hint text="免費帶 0～2 名隊友：系統傭兵或朋友的影子（出城前選好，野外不能換；不帶＝獨行）">
+            <button type="button" aria-expanded={hiring.open} disabled={busy} onClick={hiring.toggle} data-testid="world-hire-toggle">
+              {hiring.open ? "收起雇用隊友" : "雇用隊友"}
+            </button>
+          </Hint>
         )}
         {here.can_tavern === true && (
           <Hint text="聽聽本週的傳聞（同一週大家聽到的都一樣；只是消息，不給東西）">
@@ -170,6 +180,7 @@ function HerePanel({
           </ul>
         </div>
       )}
+      {hiring.open && view.party != null && <HireEditor party={view.party} busy={busy} onAct={onAct} />}
       {here.can_loadout && editing && (
         <LoadoutEditor
           key={view.character.skills.map((s) => s.id).join(",")}
@@ -226,6 +237,10 @@ export function WorldPanel(props: Props) {
           </div>
         )}
       </div>
+      {view.party != null && <PartyPanel party={view.party} />}
+      {view.my_shadow != null && (
+        <MyShadowPanel shadow={view.my_shadow} choices={view.party?.ai_choices ?? []} busy={props.busy} onAct={props.onAct} />
+      )}
       <HerePanel {...props} />
       {props.peopleSlot}
       <div className="panel world-log" data-testid="world-log">

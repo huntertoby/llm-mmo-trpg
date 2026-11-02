@@ -1,0 +1,20 @@
+# 系統傭兵名單（Phase 5C-1；docs/phases/Phase5計畫.md 22.2）。schema：src/trpg/content/world_mercenaries.py。
+# 9.6.11 #117（玩法 PM 代決）：9 名、暫名、底稿取自 content/sim/builds.yaml；ID 由開發 PM 取。
+# 9.6.8 #87：輸出、守護、輔助、控制各至少 2 種固定 build，事先公布、每個人都一樣；等級與技能階級照主角（5A-SIM2）。
+# 9.6.9 #97：一隊 3 人＝主角＋最多 2 名；雇用免費，出城前在城鎮選好，野外不能換。
+max_hired: 2
+# 5C-2（玩法 PM 定 ④）：在城鎮替傭兵與影子選的 AI 打法（ai_profiles.yaml 的 ID；不含靶場的 idle 與平衡用的 seer）
+ai_choices: [brute, flanker, assassin, archer, cunning, guard, support]
+# 5C-2（#102）：影子每天第一次被借用給主人的任務幣（初值，5D 接任務幣）與保留的戰報則數
+shadow_daily_coins: 1
+shadow_reports_kept: 20
+mercenaries:
+  - {id: merc_qingfeng, name_zh: 青鋒, title_zh: 近戰劍客, role: damage, build: build_charger}  # 5C-2 玩法 PM 定 ①：近戰力量型劍士
+  - {id: merc_chuanyun, name_zh: 穿雲, title_zh: 弓手, role: damage, build: build_ranged}
+  - {id: merc_chiyan, name_zh: 赤焰, title_zh: 火術士, role: damage, build: build_fire}
+  - {id: merc_tiebi, name_zh: 鐵壁, title_zh: 盾衛, role: guardian, build: build_tank}
+  - {id: merc_panshi, name_zh: 磐石, title_zh: 守護者, role: guardian, build: build_guardian}
+  - {id: merc_huichun, name_zh: 回春, title_zh: 醫者, role: support, build: build_healer}
+  - {id: merc_qingyin, name_zh: 清音, title_zh: 祝禱師, role: support, build: build_support}
+  - {id: merc_jinglei, name_zh: 驚雷, title_zh: 雷水術士, role: control, build: build_storm}
+  - {id: merc_fuying, name_zh: 伏影, title_zh: 陷阱師, role: control, build: build_trapper}
