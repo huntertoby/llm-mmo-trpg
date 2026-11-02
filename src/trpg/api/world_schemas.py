@@ -1,7 +1,11 @@
-"""大世界的 API 格式（Phase 5A-5；``/api/world``，``docs/phases/Phase5計畫.md`` 10.3）。
+"""大世界的 API 格式（Phase 5A-5；``/api/world``，``docs/phases/Phase5計畫.md`` 11.3）。
 
 ``WorldView`` 是地點圖畫面的整份資料，全部由後端算好（前端不寫規則）。未發現的隱藏地點與連到它的
 連線不放進回應。
+
+Phase 5A-7（13.2）：成長的世界動作（配點、重配、閃現、選閃現、溶掉、傳承、立誓、解除誓約）；
+``WorldView`` 加上一輪格式的主角面板（``hero``，前端重用配點與閃現元件）、待選閃現、成長與誓約的
+可用狀態、下一場修正、開場說明、最近一次戰鬥結果。
 """
 
 from __future__ import annotations
@@ -10,14 +14,24 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
 from trpg.narrative.skills import SkillCard
 from trpg.shared.rng import MASK64
+from trpg.shared.types import Team
 from trpg.world.actions import (
+    AllocateAction,
     CampAction,
+    DissolveAction,
+    FlashAction,
+    FlashPickAction,
+    InheritAction,
     LoadoutAction,
+    ReleaseOathAction,
+    RespecAction,
     RestAction,
     RetreatAction,
+    SwearOathAction,
     TeleportAction,
     TravelAction,
 )
@@ -26,7 +40,13 @@ __all__ = [
     "CreateWorldCharacterRequest",
     "EncounterEnemyView",
     "EncounterView",
+    "GrowthView",
     "HereView",
+    "HeroStatusView",
+    "OathCurrentView",
+    "OathParamView",
+    "OathTemplateView",
+    "OathView",
     "TeleportOption",
     "WorldActionRequest",
     "WorldBattleResponse",
@@ -46,10 +66,24 @@ class _ApiModel(BaseModel):
 
 
 type WorldActionRequest = Annotated[
-    TravelAction | CampAction | RetreatAction | RestAction | LoadoutAction | TeleportAction,
+    TravelAction
+    | CampAction
+    | RetreatAction
+    | RestAction
+    | LoadoutAction
+    | TeleportAction
+    | AllocateAction
+    | RespecAction
+    | FlashAction
+    | FlashPickAction
+    | DissolveAction
+    | InheritAction
+    | SwearOathAction
+    | ReleaseOathAction,
     Field(discriminator="kind"),
 ]
-"""``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點）。"""
+"""``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
+``source: "menu"``，代決 5A7-4）。"""
 
 
 class CreateWorldCharacterRequest(_ApiModel):
@@ -104,6 +138,10 @@ class WorldCharacterView(_ApiModel):
     """備用技能（擁有但沒裝上）。"""
     slots_zh: str
     """技能欄位上限的說明。"""
+    insight: int = 0
+    """還沒花的靈感點（5A-7）。"""
+    skill_tier: int = 1
+    """角色階級（07 7.6；5A-7）。"""
 
 
 class WorldLocationView(_ApiModel):
@@ -156,6 +194,17 @@ class HereView(_ApiModel):
     camp_cost: int
 
 
+class HeroStatusView(_ApiModel):
+    """開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。"""
+
+    id: str
+    name_zh: str
+    description_zh: str
+    beneficial: bool
+    rounds: int | None
+    """持續回合（``None`` ＝ 不倒數）。"""
+
+
 class EncounterEnemyView(_ApiModel):
     name_zh: str
     elite: bool
@@ -176,6 +225,13 @@ class EncounterView(_ApiModel):
     hero_hp: int
     """主角開場 HP。"""
     in_battle: bool
+    reinforcements: int = 0
+    """這場的增援人數（已在 ``enemies`` 裡，排在最後；5A-6）。"""
+    first_team: Team | None = None
+    """先手的陣營（只影響第 1 輪，5A-6b）；``None`` ＝ 照先攻。"""
+    hero_statuses: tuple[HeroStatusView, ...] = ()
+    opening_zh: tuple[str, ...] = ()
+    """開場說明（先手、開場狀態、增援）的句子；戰鬥畫面開場也顯示（5A-7）。"""
 
 
 class WorldClockView(_ApiModel):
@@ -184,6 +240,67 @@ class WorldClockView(_ApiModel):
     day_phase: Literal["day", "night"]
     day_phase_zh: str
     weather_zh: str
+
+
+class GrowthView(_ApiModel):
+    """成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。"""
+
+    insight: int
+    skill_tier: int
+    at_service: bool
+    """在城鎮或營火（閃現、重閃、溶掉、傳承、重配、立誓的地點）。"""
+    service_zh: str
+    """地點限制的說明。"""
+    can_allocate: bool
+    """可以分配屬性點（有點數、沒有遭遇、不在戰鬥、沒有待選閃現）。"""
+    can_spend: bool
+    """可以花靈感與重配（城鎮或營火、沒有遭遇、不在戰鬥、沒有待選閃現）。"""
+    blocked_zh: str | None
+    """不能花點的原因；可以時為 ``None``。"""
+    pending: bool
+    """有待選的閃現（選之前其他動作都不行）。"""
+
+
+class OathParamView(_ApiModel):
+    id: str
+    kind: Literal["choice", "int"]
+    choices: tuple[str, ...] = ()
+    min: int = 0
+    max: int = 0
+
+
+class OathTemplateView(_ApiModel):
+    id: str
+    name_zh: str
+    difficulty: Literal["easy", "medium", "hard"]
+    difficulty_zh: str
+    params: tuple[OathParamView, ...] = ()
+
+
+class OathCurrentView(_ApiModel):
+    template: str
+    name_zh: str
+    difficulty_zh: str
+    params_zh: str
+    """參數的文字（例「元素＝火」）；沒有參數時空字串。"""
+    sworn_at: int
+
+
+class OathView(_ApiModel):
+    """誓約（06 6.26、09 9.6.10 #106；模板內容在 5C-3）。"""
+
+    available: bool
+    """內容庫有誓約模板（``world/oaths.yaml``）。"""
+    unavailable_zh: str | None
+    """沒有模板時的說明（「尚未開放」）。"""
+    current: OathCurrentView | None
+    cooldown_until: int
+    cooldown_zh: str | None
+    """解除後還要多久才能再立；沒有冷卻時為 ``None``。"""
+    can_swear: bool
+    swear_problem_zh: str | None
+    can_release: bool
+    templates: tuple[OathTemplateView, ...] = ()
 
 
 class WorldView(_ApiModel):
@@ -195,6 +312,16 @@ class WorldView(_ApiModel):
     events: tuple[str, ...]
     """這次請求的世界事件（中文句子）。"""
     battle_id: str | None
+    hero: HeroOut
+    """一輪格式的主角面板（屬性、靈感、每招的閃現狀態；5A-7，前端重用配點與閃現元件）。"""
+    pending_flash: PendingFlashOut | None = None
+    """待選閃現（5A-7）。"""
+    growth: GrowthView
+    oath: OathView
+    next_battle_zh: tuple[str, ...] = ()
+    """角色身上的下一場修正（每筆一句；5A-7）。"""
+    last_battle_zh: str | None = None
+    """最近一次戰鬥結果的一句話（5A-5 待決 1；沒打過為 ``None``）。"""
 
 
 class WorldBattleResponse(_ApiModel):

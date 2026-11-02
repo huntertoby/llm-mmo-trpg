@@ -418,6 +418,7 @@ def fight(
         level=char.level,
     )
     last = LastBattle(
+        region=encounter.region,
         location=encounter.location,
         won=won,
         end_reason=result.end_reason,

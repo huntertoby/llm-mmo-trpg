@@ -1,11 +1,25 @@
-"""大世界的顯示資料（Phase 5A-5；``docs/phases/Phase5計畫.md`` 10.3）：角色、地點圖、目前地點的
-服務、遭遇陣容、時刻與天氣、事件句子。規則一律呼叫 ``trpg.world``，這裡只組裝文字。"""
+"""大世界的顯示資料（Phase 5A-5；``docs/phases/Phase5計畫.md`` 11.3）：角色、地點圖、目前地點的
+服務、遭遇陣容、時刻與天氣、事件句子。規則一律呼叫 ``trpg.world``，這裡只組裝文字。
+
+Phase 5A-7（13.2）：成長、誓約、下一場修正、開場說明、最近一次戰鬥
+（:mod:`trpg.api.world_growth_view`）。"""
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Final
 
+from trpg.api.world_growth_view import (
+    growth_event_line,
+    growth_view,
+    hero_panel,
+    hero_status_views,
+    last_battle_line,
+    next_battle_lines,
+    oath_view,
+    opening_lines,
+    skill_names,
+)
 from trpg.api.world_schemas import (
     EncounterEnemyView,
     EncounterView,
@@ -28,7 +42,6 @@ from trpg.world.actions import (
     CampedEvent,
     DefeatedEvent,
     EncounterEvent,
-    LeveledUpEvent,
     LoadoutChangedEvent,
     LocationClearedEvent,
     LocationRevealedEvent,
@@ -42,6 +55,7 @@ from trpg.world.actions import (
 from trpg.world.battle import prepare_battle
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
+from trpg.world.growth import hero_tier
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
 from trpg.world.weather import weather_at
@@ -139,6 +153,8 @@ def _character_view(library: ContentLibrary, char: CharacterState) -> WorldChara
         skills=_cards(library, char, char.hero.skills),
         bench=_cards(library, char, char.bench),
         slots_zh=_slots_zh(library),
+        insight=char.insight,
+        skill_tier=char.skill_tier or hero_tier(library, char.level),
     )
 
 
@@ -168,6 +184,8 @@ def _blocked(
         return "戰鬥進行中"
     if char.pending_encounter is not None:
         return "先處理眼前的遭遇"
+    if char.pending_flash is not None:
+        return "先選完閃現的變化"
     if loc.unlock_flag is not None and not world.has_flag(loc.unlock_flag):
         return "還沒開放"
     return None
@@ -209,7 +227,7 @@ def _map_view(
 
 
 def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) -> list[str]:
-    if char.pending_encounter is not None:
+    if char.pending_encounter is not None or char.pending_flash is not None:
         return []
     if loc.kind == "town":
         targets = [r for r in char.visited_towns if r != char.region]
@@ -220,12 +238,20 @@ def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) 
     return [r for r in targets if r in library.world_maps]
 
 
+def _camp_problem(char: CharacterState, problem: str | None, *, in_battle: bool) -> str | None:
+    if in_battle:
+        return "戰鬥進行中"
+    if char.pending_flash is not None:
+        return "先選完閃現的變化"
+    return problem
+
+
 def _here_view(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int, in_battle: bool
 ) -> HereView:
     loc = world_map_of(library, char.region).location_by_id()[char.location]
     rules = rules_of(library)
-    free = char.pending_encounter is None and not in_battle
+    free = char.pending_encounter is None and char.pending_flash is None and not in_battle
     camped = char.camped_at == LocationRef(region=char.region, location=char.location)
     problem = camp_problem(library, world, char, now)
     return HereView(
@@ -235,7 +261,7 @@ def _here_view(
         description_zh=loc.description_zh,
         can_rest=free and loc.kind == "town",
         can_loadout=free and (loc.kind == "town" or camped),
-        camp_problem_zh="戰鬥進行中" if in_battle else problem,
+        camp_problem_zh=_camp_problem(char, problem, in_battle=in_battle),
         camped=camped,
         teleports=tuple(
             TeleportOption(region=r, name_zh=_region_name(library, r))
@@ -282,6 +308,15 @@ def _encounter_view(
         fatigued=char.fatigued,
         hero_hp=prepared.hero_hp,
         in_battle=in_battle,
+        reinforcements=prepared.reinforcements,
+        first_team=prepared.first_team,
+        hero_statuses=hero_status_views(library, prepared.hero_statuses),
+        opening_zh=opening_lines(
+            library,
+            first_team=prepared.first_team,
+            hero_statuses=prepared.hero_statuses,
+            reinforcements=prepared.reinforcements,
+        ),
     )
 
 
@@ -334,8 +369,6 @@ def _battle_line(library: ContentLibrary, region: str, event: WorldEvent) -> str
             return f"打贏了（{event.rounds} 輪），獲得 {event.xp_gained} 經驗。"
         reason = _END_REASON_ZH.get(event.end_reason or "", "全滅")
         return f"戰鬥失敗（{reason}）。"
-    if isinstance(event, LeveledUpEvent):
-        return f"升到 {event.level} 級！（未分配屬性點 {event.attribute_points}）"
     if isinstance(event, DefeatedEvent):
         town = _location_name(library, region, event.location)
         return f"被抬回{town}，HP 回滿；下一場戰鬥帶「疲憊」。"
@@ -363,18 +396,28 @@ _LINES = (_move_line, _battle_line, _service_line)
 
 
 def event_lines(
-    library: ContentLibrary, region: str, events: Iterable[WorldEvent]
+    library: ContentLibrary,
+    region: str,
+    events: Iterable[WorldEvent],
+    char: CharacterState | None = None,
 ) -> tuple[str, ...]:
-    """世界事件 → 中文句子（``region`` 是事件發生前的區域；傳送後的地點名照事件本身）。"""
+    """世界事件 → 中文句子（``region`` 是事件發生前的區域；傳送後的地點名照事件本身）。``char``
+    是事件之後的角色（技能名用；省略時只用內容庫的技能名）。"""
+    names = skill_names(library, char) if char is not None else {}
+    if char is None:
+        names = {k: s.name_zh for k, s in library.skills.items()}
     lines: list[str] = []
     for event in events:
         if isinstance(event, TeleportedEvent):
             region = event.region
-        for make in _LINES:
-            line = make(library, region, event)
-            if line is not None:
-                lines.append(line)
-                break
+        line = next(
+            (made for make in _LINES if (made := make(library, region, event)) is not None),
+            None,
+        )
+        if line is None:
+            line = growth_event_line(library, event, names)
+        if line is not None:
+            lines.append(line)
     return tuple(lines)
 
 
@@ -393,6 +436,7 @@ def world_view(
     battle_id: str | None = None,
 ) -> WorldView:
     in_battle = battle_id is not None
+    hero, pending = hero_panel(library, world, char)
     return WorldView(
         character=_character_view(library, char),
         map=_map_view(library, world, char, now, in_battle),
@@ -401,4 +445,13 @@ def world_view(
         clock=_clock_view(library, world, char.region, now),
         events=events,
         battle_id=battle_id,
+        hero=hero,
+        pending_flash=pending,
+        growth=growth_view(library, char, in_battle=in_battle),
+        oath=oath_view(library, char, now, in_battle=in_battle),
+        next_battle_zh=next_battle_lines(library, char.next_battle),
+        last_battle_zh=last_battle_line(
+            char.last_battle,
+            lambda region, loc: _location_name(library, region, loc),
+        ),
     )

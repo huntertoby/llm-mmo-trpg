@@ -25,9 +25,11 @@ from typing import Final
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
+from trpg.roguelite.state import RunState
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
+from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
     dumps_char,
@@ -169,6 +171,13 @@ class WorldStore:
             char = loads_char(path.read_text(encoding="utf-8"))
             self._chars[character_id] = char
             return char
+
+    def growth_run(self, character_id: str) -> tuple[ContentLibrary, RunState]:
+        """閃現與配點預覽用：大世界的內容庫視圖與角色轉成的 ``RunState``（帶角色技能種子）。"""
+        with self._lock:
+            char = self.character(character_id)
+            run = as_run(char, seed=skill_seed(self.world(), char))
+            return world_library(self.library), run
 
     def battle_of(self, character_id: str) -> BattleSession | None:
         with self._lock:

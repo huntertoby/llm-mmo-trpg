@@ -152,6 +152,7 @@ class LastBattle(_Model):
     """最近一次戰鬥的結果（Phase 5A-7；5A-5 待決 1）：``fight`` 結算時寫入（勝負都算），讓重新整理的
     畫面仍看得到輸贏。由日誌決定，可重播。"""
 
+    region: str = Field(pattern=ID_PATTERN)
     location: str = Field(pattern=ID_PATTERN)
     won: bool
     end_reason: str | None = None
