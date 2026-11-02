@@ -414,6 +414,8 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
             continue
         if rarity_rank(status.min_rarity) > ctx.rank or status.stance:
             continue  # 姿態狀態只有姿態技能（build_stance_effects）會施加
+        if status.id in ctx.rules.whiteboard.command_statuses:
+            continue  # 號令只給號令型白板（BAL-19f 追加），完整模式不抽，既有種子的輸出不變
         if not _theme_allows(ctx, status.id, status=True):
             continue  # 石膚只有大地主題（3-54d）
         if status.control_group == "hard" and ctx.shape != "single":

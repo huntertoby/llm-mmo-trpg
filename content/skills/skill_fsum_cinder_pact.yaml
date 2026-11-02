@@ -1,0 +1,25 @@
+# BAL-19f 追加（玩法 PM 2026-11-02，06 6.10 組合主題、6.27.4）：火杖用的「主效果召喚＋附帶元素」法術，元素＋意志主題看智力或意志（提示填智力）；
+# 召喚火靈，自己獲得火焰附魔；數值為初值，未經模擬
+id: skill_fsum_cinder_pact
+schema_version: 1
+name_zh: 焰契火靈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_fire_spirit, duration: 3}
+  - {type: apply_status, status: infused_fire, duration: 3, affects: self}
+condition: null
+cost: {mana: 12, cooldown: 4}
+tags: [fire, spell, summon]
+narrative:
+  concept: 與火靈立下契約：牠替你在遠處噴火，你的攻擊也帶上牠的火
+  cast_flavor: 杖尖燃起一團火，火團一分為二，一半落地成靈，一半留在你手上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

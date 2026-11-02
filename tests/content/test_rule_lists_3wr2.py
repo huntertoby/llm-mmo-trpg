@@ -31,7 +31,12 @@ def test_values_match_the_former_constants() -> None:
     """搬到資料前寫在程式裡的值（行為不變）。"""
     lib = library()
     board = lib.composer.whiteboard
-    assert set(board.simple_shapes) == {"self", "single", "ground_tile", "cross", "square3"}
+    assert set(board.simple_shapes) == {"self", "single", "ground_tile", "cross", "square3"} | {
+        "line",
+        "cone",
+        "ring",
+        "chain",
+    }  # BAL-19f（#110）：白板加直線、錐形、環形、連鎖
     assert set(board.self_move_effects) == {"teleport", "swap", "leap"}
     assert set(board.displace_effects) == {"teleport", "swap", "leap", "push", "pull"}
     assert set(board.terrain_effects) == {"raise_terrain", "lower_terrain"}

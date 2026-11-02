@@ -527,6 +527,18 @@ statuses:
     min_rarity: rare
     budget_points: 6
     attack_element: holy
+  # --- BAL-19f 追加（玩法 PM 2026-11-02）：號令型武器技白板的「號令」；數值為初值，未經模擬 ---
+  # summon_damage_dealt_permille：帶有者的召喚物造成的攻擊傷害（cause: attack）倍率；持續到帶有者下回合開始（召喚物緊接在召喚者之後行動）
+  - id: commanding
+    polarity: buff
+    name_zh: 號令
+    description_zh: 你的召喚物造成的攻擊傷害提高，持續到你的下回合開始。
+    expires: own_turn_start
+    stacking: refresh
+    beneficial: true
+    budget_points: 3
+    min_rarity: rare
+    summon_damage_dealt_permille: 1250
   # --- 種族技（Phase 3R-2，content/races.yaml；只能由種族技施加，沒有 budget_points；polarity 用 neutral，不能被奪取或驅散）---
   - id: race_adapt
     polarity: neutral

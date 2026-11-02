@@ -121,6 +121,7 @@ def _pick_recipe(
         for r in rules.recipes(kind, tier, creation=creation)
         if (keyword is None or r.keyword == keyword)
         and (recipe_id is None or r.id == recipe_id)
+        and (r.starter or not creation)
         and _category_options(r, weapon_class)
     ]
     if not options:
@@ -236,6 +237,9 @@ def _attempt_active(
     rules = _rules(library)
     category = _pick_category(rng, library, recipe, weapon_class)
     req, scaling = _weapon_req(rng, library, category, weapon_class)
+    fixed = recipe.skill.get("weapon_req")  # 號令型（BAL-19f 追加）：配方指定近戰或遠程
+    if category == "weapon" and fixed in ("melee", "ranged"):
+        req, scaling = fixed, ("str" if fixed == "melee" else "dex")
     skeleton = library.skeletons[recipe.skeleton]
     ap = int(recipe.skill.get("ap_cost", rules.ap_cost))
     ctx = Ctx(library, rng, skeleton, "epic", tier, category, ap, _theme(recipe))

@@ -1278,6 +1278,26 @@
    "rules_zh": []
   },
   {
+   "id": "commanding",
+   "name_zh": "號令",
+   "description_zh": "你的召喚物造成的攻擊傷害提高，持續到你的下回合開始。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "你的召喚物造成的攻擊傷害 ×125%"
+   ]
+  },
+  {
    "id": "race_adapt",
    "name_zh": "應變",
    "description_zh": "人類種族技。到自己的下回合開始前，移動不觸發藉機攻擊。",
