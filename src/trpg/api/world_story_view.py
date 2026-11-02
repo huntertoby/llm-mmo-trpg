@@ -594,17 +594,25 @@ def pending_offer_view(
     if not char.pending_offers:
         return None
     pending = char.pending_offers[0]
-    table = quest_table(library, char.region)
-    defn = table.quest_by_id().get(pending.quest) if table is not None else None
     masks = story_masks(library, char)
-    step = next((s for s in defn.steps if s.id == pending.step), None) if defn else None
+    if pending.source == "opportunity":  # 機遇（5B-4c）：quest＝骨架 ID
+        events = library.world_event_content.events.get(char.region)
+        skeleton = events.skeleton_by_id().get(pending.quest) if events is not None else None
+        name_zh = mask_text(skeleton.who_zh, masks) if skeleton is not None else pending.quest
+        step_zh = "機遇"
+    else:
+        table = quest_table(library, char.region)
+        defn = table.quest_by_id().get(pending.quest) if table is not None else None
+        step = next((s for s in defn.steps if s.id == pending.step), None) if defn else None
+        name_zh = mask_text(defn.name_zh, masks) if defn is not None else pending.quest
+        step_zh = mask_text(step.text_zh, masks) if step is not None else pending.step
     run = as_run(char, seed=skill_seed(world, char))
     offer = offer_out(world_library(library), run, pending.offer)
     assert offer is not None
     service = char.pending_encounter is None and at_service(library, char)
     return PendingOfferView(
-        quest_name_zh=mask_text(defn.name_zh, masks) if defn is not None else pending.quest,
-        step_zh=mask_text(step.text_zh, masks) if step is not None else pending.step,
+        quest_name_zh=name_zh,
+        step_zh=step_zh,
         offer=offer,
         can_replace=service,
         place_zh=(
@@ -736,10 +744,13 @@ def _quest_story_line(
 
 def _skill_story_line(event: WorldEvent, names: Mapping[str, str]) -> str | None:
     if isinstance(event, SkillOfferedEvent):
-        return "任務給了技能三選一：先選一招（或跳過）。"
+        source = "機遇" if event.source == "opportunity" else "任務"
+        return f"{source}給了技能三選一：先選一招（或跳過）。"
     if isinstance(event, SkillOfferTakenEvent):
         if event.skill is None:
-            return "跳過了任務給的技能。"
+            return (
+                "跳過了機遇給的技能。" if event.source == "opportunity" else "跳過了任務給的技能。"
+            )
         where = "裝上" if event.placed == "equipped" else "放進備用"
         return f"學會「{names.get(event.skill, event.skill)}」，{where}。"
     if isinstance(event, StorySkillGrantedEvent):

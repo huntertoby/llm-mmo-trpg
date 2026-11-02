@@ -28,6 +28,7 @@ __all__ = [
     "EnemyGrowthRules",
     "HastenRules",
     "HeroGrowthRules",
+    "OpportunityRules",
     "PerceptionRules",
     "RegionWeather",
     "SupplyRules",
@@ -235,6 +236,16 @@ class HeroGrowthRules(ContentModel):
         return table[min(max(level, 1), len(table)) - 1]
 
 
+class OpportunityRules(ContentModel):
+    """機遇給的技能三選一（Phase 5B-4c；07 7.6「通常同階，15% 機率高 1 階，每人每季最多
+    1 次」）。"""
+
+    tier_up_permille: int = Field(default=150, ge=0, le=1000)
+    """這組候選高 1 階的機率 ‰（確定性種子擲）。"""
+    tier_up_per_season: int = Field(default=1, ge=0)
+    """每個角色（一季一份）最多幾次高 1 階。"""
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
@@ -250,6 +261,7 @@ class WorldRules(ContentModel):
     enemy_growth: EnemyGrowthRules = EnemyGrowthRules()
     hero_growth: HeroGrowthRules = HeroGrowthRules()
     xp: XpRules = XpRules()
+    opportunity: OpportunityRules = OpportunityRules()
 
     @model_validator(mode="after")
     def _unique_regions(self) -> WorldRules:

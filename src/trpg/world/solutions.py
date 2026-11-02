@@ -8,9 +8,14 @@
 - **戰鬥**：在所在地點開一般遭遇（同移動遇敵，``battle`` 串流），事件記下 ``combat_solution``；遭遇
   結束的那個動作（:func:`settle_event_combat`，``world_step`` 後段）結算：打贏＝成功（留線頭），
   輸或撤退＝失敗。經驗只有戰鬥本身。
-- **機遇** 本段不結算（拒絕）。
+- **機遇**（Phase 5B-4c，07 7.6）：條件（裝備的技能帶 ``requires_keyword``）成立、這個骨架的機遇
+  還沒拿過 → 給一組完整技能三選一（``region_keywords``＝觸發的關鍵字）；用
+  ``fnv1a64("{技能種子}:opportunity:{骨架}")`` 擲 ``tier_up_permille``，中了而且本季還有次數時高
+  1 階。結果一定成功。
+- **戰鬥解法的勝利條件**（Phase 5B-4c）：解法的 ``objective``（撤離、守點）記在遭遇上，地圖優先挑
+  支援它的（開戰時地圖不支援就全滅，:mod:`trpg.world.battle`）。
 
-純函式：不讀時間、亂數只用角色的 ``battle`` 串流（戰鬥解法開遭遇時）。
+純函式：不讀時間、亂數只用角色的 ``battle`` 串流（戰鬥解法開遭遇時）與技能種子衍生的機遇種子。
 """
 
 from __future__ import annotations
@@ -20,6 +25,8 @@ from collections.abc import Sequence
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EventSkeletonDef, SolutionDef
 from trpg.content.world_map import LocationDef
+from trpg.roguelite.offers import make_offer
+from trpg.shared.rng import Rng, fnv1a64
 from trpg.world.actions import (
     BattleEndedEvent,
     EncounterEvent,
@@ -30,10 +37,12 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.clock import day_phase
-from trpg.world.common import here
+from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.growth import as_run, hero_tier, skill_seed, world_library
+from trpg.world.quests import store_offer
 from trpg.world.rng import STREAM_BATTLE, draw
-from trpg.world.situations import grant_threads
+from trpg.world.situations import grant_threads, opportunity_available
 from trpg.world.state import CharacterState, EncounterResult, EventTrigger, WorldState
 from trpg.world.weather import weather_at
 
@@ -99,7 +108,10 @@ def _check(
     if solution.kind == "situation":
         raise WorldActionError("情境判定請用 situation 動作")
     if solution.kind == "opportunity":
-        raise WorldActionError("機遇的結算還沒開放")
+        if not opportunity_available(library, char, solution):
+            raise WorldActionError("機遇的條件不成立（裝備的技能沒有需要的關鍵字）")
+        if trigger.skeleton in char.opportunities:
+            raise WorldActionError("這個機遇已經拿過了")
     if action.use_thread is not None and solution.kind != "parley":
         raise WorldActionError("只有交涉可以拿線頭抵掉付出")
     return trigger, solution
@@ -122,7 +134,65 @@ def solve_event(
         return world, char, (solved, _resolved(trigger, action.solution, "abandoned"))
     if solution.kind == "parley":
         return _parley(library, world, char, action, trigger, solution, now)
+    if solution.kind == "opportunity":
+        return _opportunity(library, world, char, action, trigger, solution)
     return _combat(library, world, char, action, trigger, now)
+
+
+MAX_SKILL_TIER = 5
+"""技能階級上限（``SkillDef.tier``）。"""
+
+
+def opportunity_tier_bonus(
+    library: ContentLibrary, world: WorldState, char: CharacterState, skeleton: str
+) -> int:
+    """機遇三選一高幾階（07 7.6）：``fnv1a64("{技能種子}:opportunity:{骨架}")`` 擲
+    ``randint(0, 999) < tier_up_permille``，且本角色高 1 階的次數還沒到 ``tier_up_per_season``、
+    角色階級 +1 不超過上限 → 1；否則 0。不動角色的亂數計數。"""
+    rules = rules_of(library).opportunity
+    if char.opportunity_tier_ups >= rules.tier_up_per_season:
+        return 0
+    if hero_tier(library, char.level) + 1 > MAX_SKILL_TIER:
+        return 0
+    rng = Rng(fnv1a64(f"{skill_seed(world, char)}:opportunity:{skeleton}".encode()))
+    return 1 if rng.randint(0, 999) < rules.tier_up_permille else 0
+
+
+def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: EventSolveAction,
+    trigger: EventTrigger,
+    solution: SolutionDef,
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+    bonus = opportunity_tier_bonus(library, world, char, trigger.skeleton)
+    run = as_run(char, seed=skill_seed(world, char)).model_copy(
+        update={"offers_made": char.offers_made}
+    )
+    keyword = solution.requires_keyword
+    made = make_offer(
+        world_library(library),
+        run,
+        "complete",
+        region_keywords=() if keyword is None else (keyword,),
+        tier_bonus=bonus,
+    )
+    solved = EventSolvedEvent(
+        skeleton=trigger.skeleton,
+        solution=action.solution,
+        solution_kind="opportunity",
+        tier_bonus=bonus,
+    )
+    char = char.model_copy(
+        update={
+            "pending_event": None,
+            "opportunities": tuple(sorted({*char.opportunities, trigger.skeleton})),
+            "opportunity_tier_ups": char.opportunity_tier_ups + bonus,
+        }
+    )
+    char, offered = store_offer(char, trigger.skeleton, "opportunity", made, source="opportunity")
+    return world, char, (solved, offered, _resolved(trigger, action.solution, "success"))
 
 
 def _parley(  # noqa: PLR0917 — 一個解法的完整結算

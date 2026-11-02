@@ -483,15 +483,17 @@ class EventResolvedEvent(_Model):
 
 
 class EventSolvedEvent(_Model):
-    """選了放棄、交涉或戰鬥解法（Phase 5B-4b）：付了多少補給、用掉哪條線頭；戰鬥解法之後接
-    ``encounter``，打完才 ``event_resolved``。"""
+    """選了放棄、交涉、戰鬥或機遇解法（Phase 5B-4b、5B-4c）：付了多少補給、用掉哪條線頭；戰鬥解法
+    之後接 ``encounter``，打完才 ``event_resolved``；機遇之後接 ``skill_offered``（``tier_bonus``＝
+    這組候選高幾階，07 7.6）。"""
 
     kind: Literal["event_solved"] = "event_solved"
     skeleton: str
     solution: int
-    solution_kind: Literal["combat", "parley", "abandon"]
+    solution_kind: Literal["combat", "parley", "abandon", "opportunity"]
     supplies_spent: int = 0
     thread_spent: str | None = None
+    tier_bonus: int = 0
 
 
 class ThreadSpentEvent(_Model):
@@ -508,6 +510,8 @@ class ThreadExpiredEvent(_Model):
     thread: str
     scope: ThreadScope
     flag: str
+    until: int | None = None
+    """限時的世界旗標到這個時間失效（Phase 5B-4c）；``None``＝永久。"""
 
 
 class StoryFlagClearedEvent(_Model):
@@ -736,13 +740,15 @@ class QuestCompletedEvent(_Model):
 
 
 class SkillOfferedEvent(_Model):
-    """任務給的技能三選一（候選存在角色的 ``pending_offers``）。"""
+    """任務或機遇給的技能三選一（候選存在角色的 ``pending_offers``；``source`` 見
+    :class:`~trpg.world.state.PendingOffer`）。"""
 
     kind: Literal["skill_offered"] = "skill_offered"
     quest: str
     step: str
     reason: Literal["level_up", "complete"]
     candidates: tuple[str, ...]
+    source: Literal["quest", "opportunity"] = "quest"
 
 
 class SkillOfferTakenEvent(_Model):
@@ -753,6 +759,7 @@ class SkillOfferTakenEvent(_Model):
     step: str
     skill: str | None
     placed: Literal["equipped", "bench", "skipped"]
+    source: Literal["quest", "opportunity"] = "quest"
 
 
 class StorySkillGrantedEvent(_Model):
