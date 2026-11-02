@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary
@@ -28,9 +29,16 @@ def event_chance(frequency: EventFrequency, steps: int) -> int:
 
 
 def event_candidates(
-    library: ContentLibrary, world: WorldState, region: str, location: str, now: int
+    library: ContentLibrary,
+    world: WorldState,
+    region: str,
+    location: str,
+    now: int,
+    *,
+    unlocked: Collection[str] = (),
 ) -> tuple[EventSkeletonDef, ...]:
-    """``region`` 的 ``location`` 在 ``now`` 合格的事件骨架（地點、時段、天氣），依 ID 排序。"""
+    """``region`` 的 ``location`` 在 ``now`` 合格的事件骨架（地點、時段、天氣），依 ID 排序。
+    ``unlock_only`` 的骨架只有在 ``unlocked``（角色解鎖的骨架）裡才算（5B-4b）。"""
     table = library.world_event_content.events.get(region)
     if table is None:
         return ()
@@ -39,6 +47,8 @@ def event_candidates(
     out: list[EventSkeletonDef] = []
     for skeleton in sorted(table.skeletons, key=lambda s: s.id):
         if location not in skeleton.locations:
+            continue
+        if skeleton.unlock_only and skeleton.id not in unlocked:
             continue
         if skeleton.day_phase is not None and skeleton.day_phase != phase:
             continue
@@ -90,7 +100,9 @@ def roll_event(
     chance = event_chance(rules.frequency, steps)
     rng, char = draw(world.season_seed, char, STREAM_EVENT)
     roll = rng.randint(0, 999)
-    candidates = event_candidates(library, world, region, char.location, now)
+    candidates = event_candidates(
+        library, world, region, char.location, now, unlocked=char.unlocked_skeletons
+    )
     triggered = roll < chance and not encountered and bool(candidates)
     events.append(
         EventCheckEvent(

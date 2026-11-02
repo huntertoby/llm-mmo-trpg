@@ -92,7 +92,7 @@
 | 5A-M1 | 引擎機制①（玩法 PM 2026-11-02，5A-3 待決）：蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護；做好後把雲嶺替代品換成正式機制（只改 content） | 5A-4 | 1.5 h | 可與 5A-ART 平行 |
 | 5A-M1b | 5A-M1 收尾（玩法 PM 代決 2026-11-03）：沉默可打斷法術型蓄力強招（武器技型照舊只吃倒下、暈眩、冰凍）；單位卡加「特性」欄（招牌被動、反應、精英詞綴，#82）。不做帶電表面、九轉回天維持 3×3 | 5A-M1 | 0.75 h | 可與 5B-3 平行 |
 | 5A-M2 | 引擎機制②（玩法 PM 2026-11-02）：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門；雲嶺劍陣弟子、詞綴連心的換正式機制（第 17 節） | 5A-M1 | 1 h | — |
-| 5A-M2b | 5A-M2 收尾（玩法 PM 2026-11-03）：陣眼石靈存在時，3 格內同門（sect）受到的傷害 −20%，打碎後立刻解除（霧鎖真人陣眼 −50% 放 5F-2）；劍陣弟子補一招現有的直線 2 格刺擊類技能（不做新技能）。劍陣只算劍陣弟子、連心分給任何相鄰友方照現狀 | 5A-M2 | 0.5 h | 可與 5B-4b 平行 |
+| 5A-M2b | 5A-M2 收尾（玩法 PM 2026-11-03）：陣眼石靈存在時，3 格內同門（sect）受到的傷害 −20%，打碎後立刻解除（霧鎖真人陣眼 −50% 放 5F-2）；劍陣弟子補一招現有的直線 2 格刺擊類技能（不做新技能）——現有技能沒有近戰直線 2 格，玩法 PM 改選新增「穿陣刺」（近戰直線 2 格、武器技、吃武器屬性、照現有預算、放進手寫池），排 5A-M2c。劍陣只算劍陣弟子、連心分給任何相鄰友方照現狀 | 5A-M2 | 0.5 h | 可與 5B-4b 平行 |
 | 5B-M3 | 引擎機制③：三方混戰（排在 5B 主線第 1 章之前） | 5A-M1 | 1 h | — |
 | 5A-ART1 | 敵人外觀移植①：異形畫法（`docs/art/敵人外觀.md` 第 3 節；美術代決待使用者確認，未確認時照代決先做，改名與配色只動資料） | 5A-3 | 1 h | 可與 5A-4 平行（只動 `client/`） |
 | 5A-ART2 | 敵人外觀移植②：精英與頭目記號 | 5A-ART1 | 0.5 h | 可與 5A-5 平行 |
@@ -108,6 +108,7 @@
 | 5B-3 | 說書人接線（`trpg.narrative`）：挑骨架、填角色與動機、短旁白（1～3 句＋多講一點）、情境敘述、NPC 自由聊天只換資訊；全部經 `LLMClient`、有 Mock、玩家輸入包 `<player_input>`；模型不可用時用模板文字降級（3.1） | 5B-2 | 1.5 h | 否 |
 | 5B-4 | 任務狀態機：新手任務鏈、主線第 1 章、區域任務鏈「青霧觀的分裂」（18.7）、隱藏任務、劇情技能與三選一接到現有候選產生器（7.6）；NPC 好感度（9.6.7 #5）；酒館傳聞 | 5B-2 | 1.5 h | 可與 5B-3 平行（不碰 `narrative`） |
 | 5B-4b | 5B-4 收尾（玩法 PM 2026-11-03，18 18.7.5～18.7.7，`effc88a7`）：好感度加取得方式（完成該 NPC 相關任務步驟 +15、每天第一次聊天 +3；目標第 5 天 1～2 名 NPC 到信賴）；信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（交涉／察覺、DC 8，結果給「斷崖幫寨的暗門」，霧渡鎮），不直接給線頭（#85）；skillgen 區域偏向（新方向那張，玩家沒有該區關鍵字時優先，雲嶺：潮濕、帶電、隱蔽）；新手鏈保底（至少 1 招被動、加深／橋接／新方向 1／0／2）；放棄／交涉／戰鬥解法結算；線頭到期結局（叛徒戰、二當家坐大）；導師任務鏈 3 步（18.7.5） | 5B-4 | 1.5 h | 可與 5B-5 平行（不碰前端） |
+| 5B-4c | 5B-4b 收尾（玩法 PM 2026-11-03）：任務步驟好感度 +15 → +10（每天聊天 +3、主線 ① 加成保留），重量目標第 4～5 天到信賴；懸賞精英帶 1 個資料指定詞綴（疤面＝連心的、北坡狼王＝狂暴的、霧中劍客＝霧隱的，18.7.4）；機遇解法結算＝條件成立時給一次機遇技能三選一（07 7.6：通常同階、15% 高一階、每人每季最多 1 次高一階；首例古松祭壇：雷雨夜＋帶電技能）；戰鬥解法用現有勝利條件（骨架 2、14＝撤離，7＝守點，8＝獵人倒下即失敗，沒有保護目標時先用守點）；骨架 22 每角色解決一次後不再出現；世界級線頭到期結局（霧魅：之後 2 天雲嶺夜晚營地遭遇多 1 名霧魅，全服；碎片：灰燼之心第 1 階段護甲 +1，全服，荒原骨架 13 攔截可抵銷，19.4） | 5B-4b | 1.25 h | 可與 5B-M3 平行 |
 | 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表；路由接說書人（travel 觸發事件後送 `event_story`、聊天端點）；大世界自己的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）；隱藏地點揭露後名稱可公開，揭露前用提示語而非「某處」（玩法 PM 2026-11-03） | 5B-3、5B-4 | 1.5 h | 否 |
 
 ### 5C｜組隊、影子與傭兵（3 段）
@@ -2154,16 +2155,139 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - 朋友足跡與戰報（酒館只有傳聞）；多人同時在線顯示；串流輸出；真模型評估（不連 8001）。
 
 
-## 19. 5B-M3 詳細規格：引擎機制③（三方混戰）
+## 19. 5B-4b 詳細規格：5B-4 收尾（好感度取得、祕密事件、區域偏向、新手鏈保底、解法結算、線頭到期、導師任務鏈）
+
+> 給實作 agent。主要動 `src/trpg/world/`（新增 `solutions.py`、`endings.py`；`quests.py`、`social.py`、`affinity.py`、`events.py`、`encounters.py`、`battle.py`、`growth.py`（閃現事件一欄）、`state.py`、`actions.py`、`step.py`、`situations.py` 小改）、`src/trpg/content/`（`world_quests.py`、`world_events.py`、`world_situations.py`、`world_encounters.py` 加欄位與檢查）、`src/trpg/skillgen/candidates.py`、`whiteboard_candidates.py`（區域偏向、組成、被動保底；新輸入都有預設值）、`src/trpg/roguelite/offers.py`（`make_offer` 加 keyword-only 參數，預設值＝原行為）、`content/world/`（`quests/`、`social/`、`events/`、`situations/`、`encounters/`、`affinity.yaml`）、`tests/world/`、`tests/content/`、`tests/skillgen/`。**不做** 前端與 API 路由（另一個 agent 在做 5B-5 的 `client/`、`src/trpg/api/` 路由）；外層只可能動 `src/trpg/api/world_story.py` 的資料提供。不動引擎、`content/skills/`、戰鬥紀錄文字。
+> 依據：玩法 PM 2026-11-03（本檔第 1 節 5B 表「5B-4b」列；`effc88a7`）；18 18.4（骨架、解法、線頭到期例、補充）、18.7.3（區域鏈偏向潮濕、帶電、隱蔽）、18.7.5（導師任務鏈）、18.7.6（好感度取得）、18.7.7（信賴後的祕密事件、骨架 22）、18.7.4（疤面＝盜賊隊長精英，連心的，帶霧狼）；07 7.6（新手鏈至少 1 招被動、加深／橋接／新方向 1／0／2；區域鏈偏向該區關鍵字、1／1／1）；09 9.6.7 #5（好感度不影響數值）、#6（線頭只能由事件結果產生、到期也是一種結局）；`Phase5B-4報告.md` 第 7 節待決 1、2、4、5、6；`Phase5B-2報告.md` 第 7 節（放棄／交涉／戰鬥解法的結算留給 5B-4）。
+
+### 19.1 目標
+
+把 5B-4 留下的七件事做完，全部是 **資料驅動的世界動作**：寫進世界動作日誌、由「日誌＋內容庫＋賽季種子」重播逐字相同；不呼叫 LLM、不讀時間。原型 roguelite 的候選產生 **不變**（新輸入都有預設值＝原行為；roguelite 行為快照不變）。
+
+### 19.2 好感度的新取得方式（18.7.6）
+
+- `content/world/affinity.yaml` 加 `quest_step_delta: 15`、`daily_talk_delta: 3`（schema 預設 0＝不加；`DEFAULT_AFFINITY_RULES` 也是 0）。
+- **任務步驟**：`QuestStepDef.npcs: tuple[NPC, ...] = ()`＝和這一步有關的 NPC（資料逐步填；不自動算 giver）。完成這一步時每位有關的 NPC 好感度 `+quest_step_delta`，再加上 `reward.affinity`（同一 NPC 合併成一筆 `affinity_changed`，來源 `quest:<任務>`；依 NPC ID 排序）。跨檔案檢查：NPC 在該區人設卡。
+- **每天第一次聊天**：`CharacterState.talk_days: dict[NPC, int]`（最後一次 `talk` 的 `refresh_day`，依 NPC 排序）。`talk` 時若今天（6 點刷新的日子）還沒和這位 NPC 說過話 → 好感度 `+daily_talk_delta`（來源 `talk:daily`），先加再算這次能給的聊天內容；`talk` 因此會改角色狀態。
+- 雲嶺的「有關的 NPC」（開發 PM 定，16.3 的 `reward.affinity` 改成這個規則，數值統一 +15）：新手鏈 3 步＝渡婆婆；主線 ① 渡婆婆、② 青崖道長、③ 小蓮與青崖道長、④ 阿岳（18.5「主線第 1 章同行」）、⑤ 無；區域鏈 3 步＝青崖道長；丹爐之謎 2 步＝柳掌櫃；霜音的謎＝霜音；導師任務鏈 3 步＝青崖道長。原本的 `affinity`（小蓮 +10、青崖 +20、霜音 +10）拿掉。
+
+### 19.3 信賴的祕密解鎖骨架 22「渡婆婆的往事」（18.7.7，#85）
+
+- **資料**：
+  - `EventSkeletonDef.unlock_only: bool = False`：只有角色解鎖後才會出現在候選（`event_candidates` 多一個 `unlocked` 參數，預設空；沒解鎖的骨架在擲骰前就濾掉，所以舊角色的亂數消耗與挑選不變）。
+  - `EventSkeletonDef.shared_threads: tuple[線頭, ...] = ()`：本骨架結果可以給、但定義在別的骨架的線頭（線頭 ID 全區唯一）。情境模板、解法的 `threads` 可以填本骨架的線頭或 `shared_threads`。
+  - `TalkEntry.unlocks_skeleton: str | None`：只有 `secret` 可填；必須是本區 `unlock_only` 的骨架。
+  - `CharacterState.unlocked_skeletons: tuple[str, ...]`（排序、不重複）。
+- **骨架 22** `granny_past`（`content/world/events/cloud_ridge.yaml`，number 22）：誰＝渡婆婆／想要＝有人替她了結斷崖幫的舊帳／阻礙＝她不肯明說／賭注＝暗門的位置；地點 `mist_ferry`；`npcs: [granny_du]`；`unlock_only: true`；`shared_threads: [gang_fort_secret_door]`；解法＝情境判定（意志，交涉）、情境判定（感知，察覺）。
+- **情境模板**（`content/world/situations/cloud_ridge.yaml`，DC 8、危險度 1）：`granny_parley`（交涉：方法 parley／lore，屬性 意志／智力）、`granny_notice`（察覺：方法 notice／lore，屬性 感知／智力）；成功：xp 1000‰＋線頭「斷崖幫寨的暗門」；部分成功：xp 500‰；失敗：無（開發 PM 定）。
+- **聊天**：渡婆婆的祕密 `granny_du_secret` 加 `unlocks_skeleton: granny_past`；文字改成「年輕時是斷崖幫的人，提到斷崖幫的舊帳就欲言又止」（只是文字，不給線頭）。
+- **規則**（`talk`）：這次 `talk` 給的內容裡有 `unlocks_skeleton`、而且還沒解鎖 → 加進 `unlocked_skeletons`、發 `skeleton_unlocked`；角色沒有 `pending_event`、骨架的地點含所在地點時 **立刻觸發** 該事件（`EventTrigger`，候選只有它、`follows_thread` 空、天氣與日夜照當下），發 `event_triggered`。之後照一般骨架：離開就作罷，在霧渡鎮移動擲到時可再出現。線頭只由事件結果（情境判定）產生。
+
+### 19.4 skillgen 區域偏向（07 7.6、18.7.3）
+
+- `CandidateRequest.region_keywords: tuple[str, ...] = ()`（`trpg.skillgen.candidates`）：**新方向** 的關鍵字順序改成「玩家還沒有的區域關鍵字（照原本的加權順序）在前，其他還沒有的在後」；玩家全部都有（或空）＝原順序。完整版（`generate_candidates`）與白板版（`generate_whiteboard_candidates`）都套用；通用池擲骰（#55）照舊。
+- 資料：`QuestTable.region_keywords`（`content/world/quests/cloud_ridge.yaml`：`[wet, charged, concealed]`＝潮濕、帶電、隱蔽，18.7.3）；跨檔案檢查在 `skill_keywords.yaml`。用在 **區域任務鏈**（`kind: chain`）給的三選一；`SkillOfferReward.bias_keywords` 有填時改用它（覆寫）。新手鏈、主線不偏向（7.6「共用關鍵字池」）。
+- `roguelite.offers.make_offer(..., *, region_keywords=(), mix=None, min_passive=0)`：keyword-only、預設＝原行為；roguelite 的呼叫端不變。
+
+### 19.5 新手鏈保底（07 7.6）
+
+- `SkillOfferReward.mix: OfferMix | None`（`deepen`、`bridge`、`new` 各 ≥ 0、`deepen`／`bridge` ≤ 1、合計 3；省略＝1／1／1）與 `min_passive: int = 0`（0～3）。只用在白板（`whiteboard`）；完整技能三選一不支援（schema 拒絕）。
+- 白板產生器（`CandidateRequest.mix`、`min_passive`，預設 (1,1,1)、0＝原行為）：依序做 `deepen` 張加深、`bridge` 張橋接、`new` 張新方向；第 2 張新方向用 `fork("new/1")`、不擲通用池、關鍵字避開前面候選用過的。做完後被動不足 `min_passive` 時，從最後一張往前把候選換成 **同種類的被動白板**（同一個關鍵字先試；沒有被動配方就換下一個符合該候選定義的關鍵字；亂數 `fork("passive/<索引>")`）；都做不出來就保持原樣（極少）。
+- 雲嶺新手鏈 3 步：`mix: {deepen: 1, bridge: 0, new: 2}`、`min_passive: 1`（每一組三選一至少有 1 張被動，讓玩家每一步都選得到被動；開發 PM 定）。
+
+### 19.6 放棄、交涉、戰鬥解法的結算（9.6.7 #6；5B-2 留下的）
+
+- **資料**（`SolutionDef`）：`threads: tuple[線頭, ...] = ()`（只有 `combat`、`parley`；成功時留下，本骨架或 `shared_threads` 的線頭，≤ 2 條）、`cost_supplies: int = 0`（只有 `parley`；交涉付出的補給）、`waive_thread: str | None`（只有 `parley`；持有這條個人線頭可以拿它抵掉付出，線頭用掉）。
+- **動作** `event_solve`（`EventSolveAction`：`solution: int`＝骨架 `solutions` 的索引、`use_thread: str | None`）：要有 `pending_event`、沒有遭遇；`situation` 解法要用 `situation` 動作、`opportunity`（機遇）本段不結算，都拒絕。
+  - **放棄**：清掉事件，沒有獎懲（18.4 補充「離開地點就算放棄，不留懲罰」）；發 `event_solved`、`event_resolved`（`outcome: abandoned`）。
+  - **交涉**：不擲骰。`use_thread` 有填 → 必須等於 `waive_thread` 且是持有的有效個人線頭 → 從角色線頭移除、發 `thread_spent`；否則付 `cost_supplies` 補給（不夠拒絕）。成功：留 `threads`；發 `event_solved`、`thread_added`…、`event_resolved`（`success`）。
+  - **戰鬥**：所在地點要有遭遇表（城鎮等不能遇敵的地點拒絕）。照移動遇敵的同一個函式（`battle` 串流）在 **所在地點** 產生遭遇（`from_location`＝所在地點，撤退留在原地），事件標記 `combat_solution`（`EventTrigger` 新欄位）；發 `event_solved`、`encounter`。之後照一般 `fight`／`retreat`；**遭遇結束的那個動作**（`world_step` 的後段）結算事件：打贏＝`success`（留 `threads`）、輸或撤退＝`failure`；清掉事件、發 `event_resolved`。經驗照戰鬥本身，不另給。
+- **事件好感度**（16.4 的 `event_affinity`）改看 `event_resolved`（骨架＋結果；情境判定也一定會發，結果相同），所以交涉、戰鬥解法的結果也算；`abandoned` 不會對到。
+- **骨架 9「用人情代替青竹節」**（18.4 補充）：渡船夫的交涉 `cost_supplies: 2`（沒有道具系統，青竹節用補給代替；開發 PM 定）、`waive_thread: peddler_owes_you`、`threads: [ferryman_daughter]`。
+- 雲嶺解法的線頭（開發 PM 定：照同骨架情境判定成功時的線頭）：#1 戰鬥 商人欠你人情＋狼群是被趕下山的；#2 護送戰 道童提到觀裡在吵架；#3 戰鬥 二當家記恨你、付錢 `cost_supplies: 1`、不留線頭；#7 擋追兵 暗門；#8 不殺獵人 霧魅從裂痕湧出；#10 戰鬥 熊巢下有源晶碎片；#14 撤離（先用一般勝利）碎片被送往灰燼荒原；#17 戰鬥 失蹤的人都去過裂痕；#18 交涉（換補給）`cost_supplies: 1` 狐火在霧裡指路；#19 戰鬥 阿岳提起父親的遺物。
+
+### 19.7 線頭到期的結局（18.4「線頭到期例」）
+
+- **資料**：`ThreadDef.on_expire_flag: str | None`（到期時給的旗標）；`LocationEncounters.variants: tuple[EncounterVariant, ...]`（`flag`、`group`、`elite: FixedElite | None`）：角色有這個劇情旗標時，這個地點的遭遇 **改用** 該陣容（第一個符合的；不再抽陣容、不混營地精英；精英排最前面）。`EncounterLineup.variant`（用了哪個旗標，預設 `None`）。
+- **規則**（`trpg.world.endings`）：`world_step` 在分派動作 **之前**，把已到期、定義了 `on_expire_flag` 的線頭結算掉：個人線頭 → 從角色線頭移除、加進 `story_flags`；世界級 → 從世界線頭移除、加進世界 `flags`；發 `thread_expired`（線頭、範圍、旗標）。沒有 `on_expire_flag` 的線頭照舊（留著、無效、不佔上限）。`prepare_battle` 用角色的 `story_flags` 挑變化；打贏變化陣容的那場 → 移除該旗標、發 `story_flag_cleared`（變化結束）。
+- **雲嶺**：
+  - 「二當家記恨你」到期 → 旗標 `scarface_rises`；斷崖幫寨的遭遇改成「坐大的疤面」：精英 盜賊隊長（連心的）＋盜賊、霧狼、霧狼（18.7.4；精英懸賞本身在 5F-1）。
+  - 「觀內有人私通盜賊」到期 → 旗標 `temple_traitor_strikes`；青霧觀山門的遭遇改成「叛徒戰」：精英 青霧執事（霧隱的）＋盜賊、盜賊、修士劍客；主線第 ③ 步多一條路：在山門打贏「叛徒戰」陣容（`win_battle` 新欄位 `group`）。
+- 世界級線頭目前沒有到期結局（資料沒填）。
+
+### 19.8 導師任務鏈「青崖的試煉」（18.7.5，#95）
+
+- 新條件：狀態型 `flag`（角色有劇情旗標）；事件型 `growth`（`ops`：`flash` 閃現選定、`reflash` 重閃選定、`dissolve` 溶掉、`inherit` 傳承；看這個動作的 `flash_picked`〔新欄位 `slot`，`None`＝閃現〕、`skill_dissolved`、`skill_inherited`）；`win_battle` 加 `location` 可省略（任何地點）、`weather`（空＝不限，看 `battle_started.weather`）、`skill_keywords`（空＝不限；這場主角用過的技能中任一招帶其中一個關鍵字，看 `battle_ended` 新欄位 `skills_used`）、`group`（陣容 ID）。
+- 任務 `mentor_qingya_trial`（`kind: chain`、giver 青崖道長、`start: [{kind: flag, flag: mentor_qingya}]`）：
+  1. 觀摩：一次閃現（`growth: [flash]`；閃現本來就只能在城鎮與營火）。獎勵 靈感 +1。
+  2. 以霧為師：在霧天（`fog`）打贏一場，且用過帶「隱蔽」或「帶電」的技能。獎勵 靈感 +1。
+  3. 取捨：一次重閃、溶掉或傳承。獎勵 靈感 +1、劇情旗標 `title_qingya_disciple`（稱號「青崖門下」，只是名稱）。
+  - 每步 `npcs: [daoist_qingya]` → 好感度 +15（19.2）。不給技能、不給經驗（18.7.5 沒寫經驗；開發 PM 定）。
+
+### 19.9 新事件、動作與欄位（全部有預設值；`trpg-char/1`、`trpg-world/1`、`trpg-wlog/1` 不升版號）
+
+- 動作：`event_solve`。
+- 事件：`event_solved`（骨架、解法索引、種類、付的補給、用掉的線頭）、`thread_spent`、`thread_expired`、`story_flag_cleared`、`skeleton_unlocked`；`event_resolved.outcome` 多 `abandoned`；`flash_picked.slot`、`battle_ended.skills_used`。
+- 角色：`talk_days`、`unlocked_skeletons`；`EventTrigger.combat_solution`；`EncounterLineup.variant`。
+
+### 19.10 驗收
+
+- `uv run pytest -q tests/world tests/content tests/skillgen tests/roguelite -n 8 --timeout=1800`（只跑相關檔）通過；roguelite 與 skillgen 的行為快照不變（若變，用 `uv run python -m tests.skillgen.test_refactor_3wr2` 重產並在報告列出）。交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）與 `tests/test_architecture.py`。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 19.11 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/world/test_affinity_gain.py` | 任務步驟 +15（有關的 NPC、合併成一筆）；每天第一次聊天 +3、同一天第二次不加、隔天（6 點）再加；聊天加到信賴時同一次就給祕密 |
+| `tests/world/test_secret_event.py` | 信賴說出祕密 → 解鎖並立刻觸發骨架 22；沒解鎖不會出現在候選；判定成功給暗門、部分成功不給；舊角色擲骰不變 |
+| `tests/world/test_event_solutions.py` | 放棄、交涉（付補給、補給不足被拒、用人情抵用並用掉、沒持有被拒）、戰鬥（遭遇、打贏留線頭、輸／撤退失敗、不能遇敵的地點被拒）、情境與機遇解法被拒、事件好感度看 `event_resolved` |
+| `tests/world/test_thread_endings.py` | 到期結局：旗標、移除、事件；沒有結局的線頭不動；變化陣容（疤面、叛徒戰）；打贏後旗標移除；主線第 ③ 步可由叛徒戰完成 |
+| `tests/world/test_mentor_chain.py` | 旗標開始條件；閃現、霧天＋關鍵字技能打贏、重閃／溶掉／傳承；靈感、好感度、稱號旗標 |
+| `tests/world/test_quests.py`（改） | 新手鏈每組三選一 1／0／2 且至少 1 張被動；區域鏈新方向偏向潮濕、帶電、隱蔽 |
+| `tests/skillgen/test_region_bias.py` | 區域偏向（新方向優先挑沒有的區域關鍵字、全有時原樣、空＝原樣、完整版也套用）；組成 1／0／2；被動保底；預設輸入＝原候選逐字相同 |
+| `tests/content/`（改） | 新欄位的單檔與跨檔案檢查（`unlocks_skeleton`、`shared_threads`、解法欄位、`on_expire_flag`、遭遇變化、`region_keywords`、`mix`、`npcs`、`flag`／`growth` 條件）；雲嶺載入數量 |
+| `tests/world/test_quest_replay.py`（加） | 聊天解鎖 → 判定 → 交涉 → 戰鬥解法 → 到期 的日誌重播兩次逐字相同 |
+
+### 19.12 不做的事
+
+- 前端與 API 路由（5B-5）；懸賞本身（5F-1）；三方混戰（5B-M3）；Boss 階段（5F-2）；機遇解法的結算（入口、技能；另排）；道具系統（青竹節）；撤離勝利條件；LLM 換劇情技能名稱；許願池與機遇的候選偏向。
+
+### 19.13 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5B4b-1 | 「和該 NPC 有關的任務步驟」 | 每一步在資料寫 `npcs`（不自動算 giver）；雲嶺照 19.2 的表；原本的單筆好感度獎勵改成這個規則（統一 +15） |
+| 5B4b-2 | 每天第一次聊天 | 照 6 點刷新的日子；先加 +3 再決定這次能說什麼 |
+| 5B4b-3 | 祕密解鎖的事件何時出現 | 說出祕密的那次聊天立刻觸發（候選只有它）；之後在霧渡鎮照一般事件擲骰也會出現 |
+| 5B4b-4 | 骨架 22 的模板 | DC 8、危險度 1；成功給暗門＋0.5 份經驗、部分成功只給一半經驗、失敗無 |
+| 5B4b-5 | 區域偏向用在哪 | 只用在區域任務鏈（`kind: chain`）的三選一的新方向；新手鏈、主線不偏向；通用池擲骰照舊 |
+| 5B4b-6 | 新手鏈「至少 1 招被動」 | 每一組三選一至少 1 張被動（玩家每步都選得到；不強迫選） |
+| 5B4b-7 | 交涉的付出 | 沒有金幣與道具：付錢、青竹節、換補給都用補給代替（1／2／1）；交涉不擲骰、一定成功 |
+| 5B4b-8 | 人情抵用 | 玩家選擇用線頭抵掉付出時才用掉（`use_thread`）；只能用個人線頭 |
+| 5B4b-9 | 戰鬥解法 | 在所在地點開一般遭遇（同遇敵）；打贏＝成功留線頭，輸或撤退＝失敗；經驗只有戰鬥本身 |
+| 5B4b-10 | 解法留的線頭 | 照同骨架情境判定成功時的線頭（19.6 列表） |
+| 5B4b-11 | 到期結局的表現 | 到期給劇情旗標 → 地點遭遇改成變化陣容；打贏那一場結束；叛徒戰也能完成主線第 ③ 步 |
+| 5B4b-12 | 導師任務鏈 | `kind: chain`、只給靈感 +1 與好感度、不給經驗；稱號只是劇情旗標 |
+
+
+### 19.14 玩法 PM 追加（2026-11-03，併進本段；**玩法 PM 定**）
+
+- **(a) 任務入口不例外**：隱藏地點的名稱照樣等揭露才公開；任務說明（`summary_zh`、步驟 `text_zh`）與聊天的入口文字要 **指向已知的鄰近地點**，例：「丹爐之謎」寫「藥師谷的谷底似乎還有一處洞窟」。雲嶺所有任務說明照這個原則改（丹爐之謎、霜音的謎、柳掌櫃的入口）。
+- **(b) 城鎮是安全區，只出非戰鬥事件**：規則「有戰鬥解法的骨架不在城鎮出現」做成 **載入檢查**（`world_event_problems`：骨架有 `combat` 解法、`locations` 含城鎮 → 載入失敗；測試）。「夜裡的燈籠隊」（骨架 17）移到渡口石階與竹林小徑（夜晚）；霧渡鎮只留骨架 16（酒館說書人）、22（渡婆婆的往事）。
+- **API 接點**：5B-5 的事件卡已列出戰鬥、交涉、放棄、機遇解法但停用；本段做好結算後在報告寫明接點（世界動作 `event_solve`），下一段把前端打開（本段不動路由與前端）。
+
+
+## 20. 5B-M3 詳細規格：引擎機制③（三方混戰）
 
 > 給實作 agent。主要動 `src/trpg/shared/types.py`（`Team.THIRD`）、`src/trpg/engine/`（`battle.py` 起始位置、`objectives.py` 勝負、`effects/handlers.py` 敵人傷害倍率、`ai/objective.py`、`runner.py` `LOG_FORMAT`）、`src/trpg/content/`（`maps.py` 起始區、`world_encounters.py` 陣容的第三方）、`src/trpg/world/`（`encounters.py`、`battle.py` 第三方出場，小改）、`src/trpg/narrative/`（陣營名稱）、`src/trpg/api/`（遭遇預覽列出第三方）、`client/`（第三方的顏色與標籤，沿用既有元件）、`content/world/encounters/cloud_ridge.yaml`、`docs/phases/戰鬥紀錄格式變更.md`、受影響的測試、快照、OpenAPI。另一個 agent 在做 5B-4b（`trpg.world`、`content/world/`）：`trpg.world` 只改出場與陣容兩處，內容只改遭遇表與任務檔的註解。
 > 依據：09 9.6.6（混族遭遇：「也可以三方混戰（兩方敵人互相敵對）」）；18 18.2.2（野獸會和修士、盜賊互相攻擊（三方混戰，#82 D）；混族例「修士與盜賊在源晶裂痕前交戰（玩家可以等兩邊打完再收尾）」）、18.7.1 ③（雨中梯田：盜賊和修士打起來）、18.7.2 ④（源晶裂痕：霧魅湧出、盜賊搶碎片、修士守陣（三方混戰））；05 5.8（勝利條件、失敗條件：我方全滅）、5.9（敵人 AI 效用評分）；本檔 7.6 代決 5A3-4（混族同陣營，三方混戰待引擎段）、16 代決 5B4-8（主線第 ④ 步先用一般戰鬥替代，5B-M3 後只改 content）。
 
-### 19.1 目標
+### 20.1 目標
 
 戰鬥可以有 **第三陣營**：第三方和我方、敵方都敵對，敵方和第三方會互相攻擊，我方可以等兩邊打完再收尾。陣營是 **資料**（`UnitSpawn.team`、遭遇表的 `third` 陣容）；所有「敵我」判斷沿用「同陣營＝友方、不同陣營＝敵對」，所以 AI 選目標、範圍技、反應、召喚物歸屬不需要另一套規則。主線第 1 章第 ④ 步（源晶裂痕）換成正式的三方混戰（只改 content）。
 
-### 19.2 陣營模型
+### 20.2 陣營模型
 
 1. `Team` 加 `THIRD = "third"`（中文「第三方」）。敵對關係：**不同陣營彼此敵對、同陣營友好**（`Team.hostile_to(other)` ＝ `self is not other`；引擎既有的 `team == / !=` 判斷就是這條規則）。`Team.opponent` 保留給地圖連通性檢查：我方↔敵方，第三方的對手算我方。
 2. 起始位置：`MapDef.start_zones` 的 `third` **可省略**（地圖驗證只要求 `ally`、`enemy`）；有 `third` 時照格子順序放、並檢查走得到我方起始區。沒有 `third` 時，第三方自動排在 **離敵方起始區最近** 的空格（可站、不致命、不在任何起始區；依「到敵方起始區最近格的曼哈頓距離, y, x」排序）——「修士與盜賊在裂痕前交戰」。手動 `position` 照舊優先。
@@ -2173,24 +2297,24 @@ chat_text: '{name}看了你一眼，沒有多說。'
 6. 源力（源泉、擊倒精英 +1）只有我方（既有）；第三方和敵方一樣開場 0 源力。
 7. 難度倍率（`enemy_damage_permille`、Boss 倍率）：來源 **不是我方**、目標 **是我方** 時才乘（敵方和第三方互打不乘；兩陣營時與現狀相同）。
 
-### 19.3 勝負（`trpg.engine.objectives`）
+### 20.3 勝負（`trpg.engine.objectives`）
 
 - 「敵人」＝ 和我方敵對的單位（敵方＋第三方，不含召喚物）。
 - 全滅：我方還有人、敵人全部倒下（或撤離）→ 勝（`eliminate`）；我方全滅（沒人撤離）→ 敗，勝方記 `enemy`（代決 5BM3-4）。敵方被第三方打光、第三方還在 → 繼續打。
 - 撤離：不變（只看我方）。守點：任何 **敵人**（敵方或第三方）在某輪結束時站在守點上 → 失守。
 - Boss 戰（`leader_retreat`）：敵方頭目全倒 → 其餘敵人（敵方＋第三方）撤退，勝（`leader_defeated`）；Boss 戰不排第三方（代決 5BM3-6）。
 
-### 19.4 AI
+### 20.4 AI
 
 - 效用 AI 的「敵人」本來就是 `team != unit.team`：敵方會攻擊第三方、第三方會攻擊敵方與我方，範圍技的敵我估值、走位威脅、包夾、反應預判都照同一條規則。不加新權重（「玩家可以等兩邊打完」是自然結果）。
 - 勝利條件的位置價值（`ai.objective`）：第三方不追求勝利條件（守點、撤離的位置分 0）；我方守點時「敵人逼近」算敵方＋第三方。
 - 我方隊友（效用 AI）的「敵人」也包含第三方。
 
-### 19.5 反應
+### 20.5 反應
 
 格擋、還擊、借機攻擊、替隊友擋、同門相護、陣法、分傷、陣眼護陣都已是「同陣營／不同陣營」判斷：第三方的同門相護只護第三方的同門；敵方攻擊第三方會觸發第三方的還擊與格擋。測試逐一確認，不改規則。
 
-### 19.6 大世界與內容
+### 20.6 大世界與內容
 
 1. 遭遇表：`EncounterGroupDef.third: tuple[str, ...] = ()`（0～3 名，單位範本或變體 ID）＝這個陣容裡的第三方。檢查：未知單位、遠程上限（**敵方＋第三方合計**，玩家面對的遠程都算）、精英（第三方不得有精英）。
 2. 抽陣容：`EncounterLineup.third: tuple[LineupMember, ...] = ()`（照陣容順序；套用 `unit_min_levels` 門檻）。營地混精英、固定精英、增援只作用在敵方 `members`（增援池也只從敵方 `units` 抽）。舊存檔沒有 `third` ＝ 空（加欄位有預設值，世界存檔與 wlog 版號不變）。
@@ -2204,13 +2328,13 @@ chat_text: '{name}看了你一眼，沒有多說。'
    源晶裂痕兩種陣容都是三方 → 主線第 ④ 步（`win_battle crystal_rift`）一定是三方混戰；任務檔只改註解（5B4-8 的替代說明）。
 5. API：遭遇預覽（`EncounterView`）的陣容加第三方成員（`EncounterEnemyView.third: bool`，中文「第三方」標籤）；戰鬥畫面的 `UnitView.team` 可以是 `third`。
 
-### 19.7 戰鬥紀錄、前端與版號
+### 20.7 戰鬥紀錄、前端與版號
 
 - 戰鬥紀錄文字：`battle_ended` 的勝方照 `Team.display_name`；單位名稱不加陣營前綴（同現狀）。
 - 前端：`Team` 型別加 `third`；單位底圈、符文顏色加第三方色（沿用既有顏色系統，挑一個和我方、敵方、召喚物都分得開的顏色）；單位卡標籤「第三方」；戰鬥紀錄的 `team-third` 樣式；外觀預設同敵方。不做新美術。
 - `Team` 新值、勝負判定與難度倍率規則改寫 → `LOG_FORMAT` `/105` → `/106`（`戰鬥紀錄格式變更.md`）。沒有第三方的戰鬥結算與 `/105` 相同。
 
-### 19.8 測試
+### 20.8 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -2219,17 +2343,17 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/world/` | 源晶裂痕陣容有第三方、開戰的單位陣營；主線第 ④ 步：在源晶裂痕打贏三方混戰推進到第 ⑤ 步；增援不加到第三方 |
 | `tests/api/`、`client/` | 遭遇預覽列出第三方；`team: third` 的單位顏色與標籤 |
 
-### 19.9 驗收
+### 20.9 驗收
 
 `uv run pytest -q tests/engine/test_third_team.py tests/content tests/world tests/narrative -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`tests/api`、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播。
 
-### 19.10 不做的事
+### 20.10 不做的事
 
 - 可設定的陣營關係表（例如第三方只敵視敵方、對我方中立）；第三方離場（撤退）條件；第三方接受戰術指令；四方以上。
 - 其他混族陣容改三方（冬湖獵手、雷羽鷹巢等野獸＋修士的組合，見代決 5BM3-8）。
 - 新美術、地圖上畫陣營範圍。
 
-### 19.11 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 20.11 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -2245,6 +2369,6 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5BM3-10 | 戰鬥紀錄版號 | `/106` |
 
 
-## 20. 之後各段規格
+## 21. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

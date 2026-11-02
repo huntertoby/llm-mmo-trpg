@@ -1,4 +1,4 @@
-"""遭遇預覽列出三方混戰的第三方（Phase 5B-M3；``docs/phases/Phase5計畫.md`` 19.6 第 5 項）。"""
+"""遭遇預覽列出三方混戰的第三方（Phase 5B-M3；``docs/phases/Phase5計畫.md`` 20.6 第 5 項）。"""
 
 from __future__ import annotations
 

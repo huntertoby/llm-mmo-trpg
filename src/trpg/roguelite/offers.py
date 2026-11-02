@@ -41,6 +41,7 @@ import re
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import replace
 
 from trpg.content.battle import WeaponDef
 from trpg.content.equipment import Loadout, loadout_held, resolve_loadout
@@ -181,12 +182,31 @@ def as_complete(library: ContentLibrary, skill: SkillDef) -> SkillDef:
     return result
 
 
-def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffer:
+def make_offer(
+    library: ContentLibrary,
+    run: RunState,
+    reason: str,
+    *,
+    region_keywords: tuple[str, ...] = (),
+    mix: tuple[int, int, int] | None = None,
+    min_passive: int = 0,
+) -> SkillOffer:
     """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。``reason`` 為 ``level_up``（白板
-    三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。"""
+    三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。
+
+    大世界任務（Phase 5B-4b）另傳 ``region_keywords``（新方向的區域偏向）、``mix``（白板的加深／
+    橋接／新方向張數）、``min_passive``（白板至少幾張被動）；預設值＝原型的原行為。完整技能三選一
+    只看 ``region_keywords``。"""
     settings = library.roguelite.candidates
     request = candidate_request(library, run)
     complete = reason == "complete"
+    if region_keywords or mix is not None or min_passive:
+        request = replace(
+            request,
+            region_keywords=region_keywords,
+            mix=mix if mix is not None and not complete else request.mix,
+            min_passive=0 if complete else min_passive,
+        )
     if settings.whiteboard and not complete:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
         found = generate_whiteboard_candidates(library, request, settings.composer_tries)
         tier = request.tier

@@ -25,6 +25,8 @@ from trpg.content.world_quests import (
     AffinityAtLeast,
     AnyOf,
     AtLocation,
+    GrowthDone,
+    HasFlag,
     HoldThread,
     LeafCondition,
     QuestCondition,
@@ -33,6 +35,7 @@ from trpg.content.world_quests import (
     QuestStepReached,
     QuestTable,
     SituationDone,
+    SkillOfferReward,
     Talked,
     WinBattle,
 )
@@ -40,24 +43,34 @@ from trpg.roguelite.errors import ChoiceError, RunError
 from trpg.roguelite.flashes import owned_skills, with_acquired
 from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.offers import as_complete, at_run_tier, make_offer, skill_defs, take_candidate
-from trpg.roguelite.state import RunState
+from trpg.roguelite.state import RunState, SkillOffer
 from trpg.world.actions import (
     AcceptQuestAction,
     BattleEndedEvent,
     BattleStartedEvent,
+    EventResolvedEvent,
+    FlashPickedEvent,
     InsightGainedEvent,
     OfferPickAction,
     QuestCompletedEvent,
     QuestStartedEvent,
     QuestStepDoneEvent,
     SituationCheckEvent,
+    SkillDissolvedEvent,
+    SkillInheritedEvent,
     SkillOfferedEvent,
     SkillOfferTakenEvent,
     StorySkillGrantedEvent,
     TalkedEvent,
     WorldEvent,
 )
-from trpg.world.affinity import change_affinity, rank_at_least, rank_of, social_of
+from trpg.world.affinity import (
+    affinity_rules,
+    change_affinity,
+    rank_at_least,
+    rank_of,
+    social_of,
+)
 from trpg.world.common import rules_of
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import (
@@ -76,6 +89,7 @@ __all__ = [
     "accept_quest",
     "advance_quests",
     "condition_holds",
+    "offer_bias",
     "quest_def",
     "quest_table",
     "take_offer",
@@ -106,10 +120,46 @@ def _npc_location(library: ContentLibrary, region: str, npc: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def _won_at(events: Sequence[WorldEvent], location: str) -> bool:
-    started = [e for e in events if isinstance(e, BattleStartedEvent)]
-    ended = [e for e in events if isinstance(e, BattleEndedEvent)]
-    return any(s.location == location for s in started) and any(e.won for e in ended)
+def _skill_keywords(library: ContentLibrary, char: CharacterState, skill_id: str) -> frozenset[str]:
+    skill = library.skills.get(skill_id)
+    if skill is None:
+        skill = next((s for s in char.generated_skills if s.id == skill_id), None)
+    if skill is None:
+        return frozenset()
+    return frozenset(library.ruleset.skill_keywords(skill).all())
+
+
+def _won(
+    library: ContentLibrary, char: CharacterState, events: Sequence[WorldEvent], leaf: WinBattle
+) -> bool:
+    """這個動作打贏的那一場符合 ``leaf``（地點、陣容、天氣、用過的技能關鍵字；5B-4b）。"""
+    started = next((e for e in events if isinstance(e, BattleStartedEvent)), None)
+    ended = next((e for e in events if isinstance(e, BattleEndedEvent)), None)
+    if started is None or ended is None or not ended.won:
+        return False
+    if leaf.location is not None and started.location != leaf.location:
+        return False
+    if leaf.group is not None and started.lineup.group != leaf.group:
+        return False
+    if leaf.weather and started.weather not in leaf.weather:
+        return False
+    if leaf.skill_keywords:
+        wanted = set(leaf.skill_keywords)
+        return any(wanted & _skill_keywords(library, char, s) for s in ended.skills_used)
+    return True
+
+
+def _growth_ops(events: Sequence[WorldEvent]) -> set[str]:
+    """這個動作完成的成長動作（5B-4b 導師任務鏈）。"""
+    ops: set[str] = set()
+    for event in events:
+        if isinstance(event, FlashPickedEvent):
+            ops.add("flash" if event.slot is None else "reflash")
+        elif isinstance(event, SkillDissolvedEvent):
+            ops.add("dissolve")
+        elif isinstance(event, SkillInheritedEvent):
+            ops.add("inherit")
+    return ops
 
 
 def _leaf_holds(  # noqa: PLR0911 — 每種條件一個分支，拆開反而難讀
@@ -131,7 +181,11 @@ def _leaf_holds(  # noqa: PLR0911 — 每種條件一個分支，拆開反而難
         state = char.quest_state(leaf.quest)
         return state is not None and state.steps_done >= leaf.step
     if isinstance(leaf, WinBattle):
-        return _won_at(events, leaf.location)
+        return _won(library, char, events, leaf)
+    if isinstance(leaf, HasFlag):
+        return leaf.flag in char.story_flags
+    if isinstance(leaf, GrowthDone):
+        return bool(_growth_ops(events).intersection(leaf.ops))
     if isinstance(leaf, SituationDone):
         return any(
             isinstance(e, SituationCheckEvent)
@@ -246,7 +300,7 @@ def _event_affinity(
     if table is None or not table.event_affinity:
         return char, out
     for event in events:
-        if not isinstance(event, SituationCheckEvent):
+        if not isinstance(event, EventResolvedEvent):  # 情境判定、交涉、戰鬥解法（5B-4b）
             continue
         for row in table.event_affinity:
             if row.skeleton == event.skeleton and row.outcome == event.outcome:
@@ -281,6 +335,16 @@ def _advance_one(
         used_event = used_event or step.has_event_condition()
         char, done = _complete_step(library, world, char, quest, step=step, state=state, now=now)
         out += done
+
+
+def _step_affinity(library: ContentLibrary, step: QuestStepDef) -> dict[str, int]:
+    """完成這一步的好感度：有關的 NPC 各 +``quest_step_delta``（18.7.6），再加上 ``reward.affinity``
+    （同一 NPC 合併；0 不發事件）。"""
+    bonus = affinity_rules(library).quest_step_delta
+    total = dict(step.reward.affinity)
+    for npc in step.npcs:
+        total[npc] = total.get(npc, 0) + bonus
+    return {npc: delta for npc, delta in total.items() if delta}
 
 
 def _with_state(char: CharacterState, state: QuestState) -> CharacterState:
@@ -334,7 +398,7 @@ def _complete_step(
                 source=f"quest:{quest.id}", amount=reward.insight, insight=char.insight
             )
         )
-    for npc, delta in sorted(reward.affinity.items()):
+    for npc, delta in sorted(_step_affinity(library, step).items()):
         char, changed = change_affinity(library, char, npc, delta, f"quest:{quest.id}")
         out.append(changed)
     if reward.flags:
@@ -344,7 +408,7 @@ def _complete_step(
         char, granted = _grant_story_skill(library, char, quest, step, reward.story_skill)
         out += granted
     if reward.offer is not None:
-        char, offered = _offer(library, world, char, quest, step=step, kind=reward.offer.kind)
+        char, offered = _offer(library, world, char, quest, step=step, offer=reward.offer)
         out.append(offered)
     if finished:
         out.append(QuestCompletedEvent(quest=quest.id))
@@ -396,13 +460,39 @@ def _offer(
     quest: QuestDef,
     *,
     step: QuestStepDef,
-    kind: str,
+    offer: SkillOfferReward,
 ) -> tuple[CharacterState, WorldEvent]:
     run = as_run(char, seed=skill_seed(world, char)).model_copy(
         update={"offers_made": char.offers_made}
     )
-    reason = "complete" if kind == "complete" else "level_up"
-    offer = make_offer(world_library(library), run, reason)
+    reason = "complete" if offer.kind == "complete" else "level_up"
+    made = make_offer(
+        world_library(library),
+        run,
+        reason,
+        region_keywords=offer_bias(library, char.region, quest, offer),
+        mix=None if offer.mix is None else offer.mix.as_tuple(),
+        min_passive=offer.min_passive,
+    )
+    return _store_offer(char, quest, step, made)
+
+
+def offer_bias(
+    library: ContentLibrary, region: str, quest: QuestDef, offer: SkillOfferReward
+) -> tuple[str, ...]:
+    """三選一新方向的偏向關鍵字（5B-4b，07 7.6）：``bias_keywords`` 有填就用它；否則區域任務鏈
+    （``chain``）用本區的 ``region_keywords``；其他任務不偏向。"""
+    if offer.bias_keywords:
+        return offer.bias_keywords
+    table = quest_table(library, region)
+    if quest.kind != "chain" or table is None:
+        return ()
+    return table.region_keywords
+
+
+def _store_offer(
+    char: CharacterState, quest: QuestDef, step: QuestStepDef, offer: SkillOffer
+) -> tuple[CharacterState, WorldEvent]:
     pending = PendingOffer(quest=quest.id, step=step.id, offer=offer)
     char = char.model_copy(
         update={

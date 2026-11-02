@@ -214,7 +214,7 @@ class SituationRewards(ContentModel):
     """乘上地點的等級 xp 預算。"""
     supplies: int = Field(default=0, ge=0)
     threads: tuple[_Id, ...] = ()
-    """留下的線頭（必須是本骨架的線頭）。"""
+    """留下的線頭（必須是本骨架的線頭，或骨架 ``shared_threads`` 列的線頭；5B-4b）。"""
     reveal: tuple[_Id, ...] = ()
     """揭露的隱藏地點（本區、``reveal`` 含 ``situation``）。"""
     buffs: tuple[_Id, ...] = ()
@@ -432,7 +432,7 @@ def _template_shape_problems(
         out.append(f"{label}：骨架 {skeleton.id} 的第 {template.solution} 個解法不是情境判定")
     elif template.attributes[: len(solution.attributes)] != solution.attributes:
         out.append(f"{label}：模板屬性的開頭必須是骨架解法的屬性")
-    own_threads = {t.id for t in skeleton.threads}
+    own_threads = {t.id for t in skeleton.threads} | set(skeleton.shared_threads)
     for outcome in OUTCOMES:
         out += [
             f"{label}：{outcome} 的線頭 {t} 不是骨架 {skeleton.id} 的線頭"

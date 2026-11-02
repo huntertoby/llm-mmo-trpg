@@ -15,6 +15,8 @@
 - **5B-4**：接任務、選任務給的技能、和 NPC 說話、酒館（:mod:`trpg.world.quests`、
   :mod:`trpg.world.social`）；**每個動作之後** 依事件結果調好感度、推進進行中的任務
   （:func:`~trpg.world.quests.advance_quests`）。有任務給的三選一還沒選時，只能送 ``offer_pick``。
+- **5B-4b**：放棄、交涉、戰鬥解法（``event_solve``，:mod:`trpg.world.solutions`；戰鬥解法的遭遇
+  結束時在動作後段結算事件）；**每個動作之前** 結算到期、有結局的線頭（:mod:`trpg.world.endings`）。
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from trpg.world.actions import (
     CampedEvent,
     EncounterCheckEvent,
     EncounterEvent,
+    EventSolveAction,
     FightAction,
     FlashPickAction,
     LoadoutAction,
@@ -50,27 +53,27 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.battle import fight
-from trpg.world.clock import day_phase, refresh_day
+from trpg.world.clock import refresh_day
 from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
+from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
 from trpg.world.quests import accept_quest, advance_quests, take_offer
-from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
+from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.situations import resolve_situation
 from trpg.world.social import talk, tavern
+from trpg.world.solutions import make_encounter, settle_event_combat, solve_event
 from trpg.world.state import (
     CharacterState,
-    EncounterResult,
     LocationRef,
     PerceptionMark,
     WorldState,
 )
 from trpg.world.town import loadout, rest, retreat, teleport, with_visited_town
-from trpg.world.weather import weather_at
 
 __all__ = [
     "NO_CAMP_KINDS",
@@ -160,11 +163,17 @@ def world_step(
         and not isinstance(action, OfferPickAction | NarrateAction)
     ):  # 敘述不改數值（只有事件敘述換骨架），三選一待選時也能寫進日誌（5B-5）
         raise WorldActionError("還有任務給的技能三選一沒有選（offer_pick）")
+    world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
+    before = char
     result = _dispatch(library, world, char, action, now)
-    char, extra = advance_quests(library, result.world, result.char, result.events, now)
-    if not extra and char is result.char:
+    world, char, settled = settle_event_combat(
+        library, result.world, before, result.char, result.events, now=now
+    )
+    events = (*ended, *result.events, *settled)
+    char, extra = advance_quests(library, world, char, events, now)
+    if not ended and not settled and not extra and char is result.char:
         return result
-    return StepResult(world=result.world, char=char, events=(*result.events, *extra))
+    return StepResult(world=world, char=char, events=(*events, *extra))
 
 
 def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
@@ -190,6 +199,9 @@ def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
         return _story(library, world, char, action, now)
     if isinstance(action, AcceptQuestAction | OfferPickAction | TalkAction | TavernAction):
         return _social(library, world, char, action, now)
+    if isinstance(action, EventSolveAction):
+        world, char, events = solve_event(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
     return _service(library, world, char, action)
 
 
@@ -207,7 +219,7 @@ def _social(
     elif isinstance(action, OfferPickAction):
         char, events = take_offer(library, char, action)
     elif isinstance(action, TalkAction):
-        events = talk(library, char, action)
+        char, events = talk(library, world, char, action, now)
     else:
         events = tavern(library, world, char, now)
     return StepResult(world=world, char=char, events=events)
@@ -309,7 +321,7 @@ def _travel(
         )
     )
     if encountered and target.level_max is not None:
-        result, char = _encounter(library, world, char, target, now)
+        result, char = make_encounter(library, world, char, target, now)
         result = result.model_copy(update={"from_location": from_location})
         char = char.model_copy(update={"pending_encounter": result})
         events.append(EncounterEvent(result=result))
@@ -319,30 +331,6 @@ def _travel(
     char, found = _perceive(library, world, char, world_map, now)
     events += found
     return StepResult(world=world, char=char, events=tuple(events))
-
-
-def _encounter(
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    target: LocationDef,
-    now: int,
-) -> tuple[EncounterResult, CharacterState]:
-    rng, char = draw(world.season_seed, char, STREAM_BATTLE)
-    battle_map = rng.choice(target.battle_maps) if target.battle_maps else None
-    seed = rng.next_u32()
-    assert target.level_max is not None
-    result = EncounterResult(
-        region=char.region,
-        location=target.id,
-        level=target.level_max,
-        battle_map=battle_map,
-        battle_seed=seed,
-        weather=weather_at(library, world, char.region, now),
-        day_phase=day_phase(now),
-        at=now,
-    )
-    return result, char
 
 
 def _perceive(

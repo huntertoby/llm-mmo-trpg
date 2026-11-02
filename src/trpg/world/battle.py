@@ -57,6 +57,7 @@ from trpg.world.actions import (
     FightAction,
     InsightGainedEvent,
     LocationClearedEvent,
+    StoryFlagClearedEvent,
     WorldEvent,
 )
 from trpg.world.common import max_hp, rules_of, world_map_of
@@ -294,7 +295,8 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         raise WorldActionError("目前沒有遭遇")
     map_def = encounter_map(library, encounter)
     reinforce = sum(1 for m in char.next_battle if m.kind == "reinforce")
-    reinforced = reinforce_lineup(library, encounter, roll_lineup(library, encounter), reinforce)
+    lineup = roll_lineup(library, encounter, char.story_flags)  # 線頭到期結局的變化（5B-4b）
+    reinforced = reinforce_lineup(library, encounter, lineup, reinforce)
     lineup = reinforced.lineup
     level = enemy_level(library, encounter)
     enemies: list[UnitSpawn] = []
@@ -423,7 +425,7 @@ def fight(
     assert hero is not None
     won = result.winner is Team.ALLY
     level_before = char.level
-    char = _after_battle_skills(library, char, prepared, action.steps, hero_id, won=won)
+    char, used = _after_battle_skills(library, char, prepared, action.steps, hero_id, won=won)
     char = char.model_copy(update={"next_battle": ()})  # 下一場修正打完一場就消耗（5A-6）
     if won:
         world, char, more = _won(
@@ -447,7 +449,13 @@ def fight(
         mana=char.mana,
         xp_gained=xp_gained,
         level=char.level,
+        skills_used=used,
     )
+    if won and prepared.lineup.variant is not None:  # 線頭到期結局的變化打贏就結束（5B-4b）
+        flag = prepared.lineup.variant
+        flags = tuple(f for f in char.story_flags if f != flag)
+        char = char.model_copy(update={"story_flags": flags})
+        more.append(StoryFlagClearedEvent(flag=flag))
     last = LastBattle(
         region=encounter.region,
         location=encounter.location,
@@ -471,9 +479,10 @@ def _after_battle_skills(
     hero_id: UnitId,
     *,
     won: bool,
-) -> CharacterState:
+) -> tuple[CharacterState, tuple[str, ...]]:
     """戰後：主角裝備的技能照這場的用法統計記「先上場用過」並累加用法統計（roguelite
-    ``after_battle_flash``；06 6.34.2 大世界一般戰鬥 **不給** 靈感，所以丟掉它算的靈感點）。"""
+    ``after_battle_flash``；06 6.34.2 大世界一般戰鬥 **不給** 靈感，所以丟掉它算的靈感點）。
+    另外回傳這場用過的技能 ID（排序；5B-4b 導師任務鏈的條件）。"""
     usage = collect_usage(
         prepared.setup, prepared.seed, steps, hero_id, library.keywords, only=char.hero.skills
     )
@@ -481,7 +490,9 @@ def _after_battle_skills(
         world_library(library), as_run(char), usage, won=won
     )
     flashed.pop("insight", None)
-    return char.model_copy(update={**flashed, "skill_usage": merge_usage(char.skill_usage, usage)})
+    used = tuple(sorted(k for k, u in usage.items() if u.uses > 0))
+    merged = merge_usage(char.skill_usage, usage)
+    return char.model_copy(update={**flashed, "skill_usage": merged}), used
 
 
 def _elite_first_kills(

@@ -47,6 +47,7 @@ from trpg.skillgen.candidates import (
     _ranked_held,
     _weighted_order,
     behavior_weights,
+    region_first,
     route_rank,
 )
 from trpg.skillgen.keywords import derive_keywords
@@ -113,6 +114,24 @@ class _Maker:
             return None
         return min(made, key=lambda m: self.grade(m[0], want))  # 同等級取先找到的
 
+    def make_kind(
+        self, rng: Rng, keyword: str, want: AttrWant, board_kind: WhiteboardKind
+    ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
+        """指定種類（被動保底用，Phase 5B-4b）的白板：組合器有該種類的配方先用，沒有再找手寫池同種類
+        的技能；都沒有回傳 ``None``。"""
+        made: list[tuple[SkillDef, Literal["pool", "composer"]]] = []
+        if keyword in whiteboard_keywords(self.library, board_kind, self.request.tier):
+            skill = self._compose(rng, board_kind, keyword, want)
+            if skill is not None:
+                made.append((skill, "composer"))
+        if not made or self.grade(made[0][0], want) == _SPARE:
+            pooled = self._from_pool(rng, keyword, want, kind=board_kind)
+            if pooled is not None:
+                made.append((pooled, "pool"))
+        if not made:
+            return None
+        return min(made, key=lambda m: self.grade(m[0], want))
+
     def _compose(self, rng: Rng, board_kind: str, keyword: str, want: AttrWant) -> SkillDef | None:
         """白板最多試 ``tries`` 個種子：優先取縮放屬性符合偏好的（加深與橋接＝主角最高屬性，新方向
         ＝不同的屬性；3H-3；BAL-19g：主路線優先，其次雙屬性），湊不到就放寬取第一張。"""
@@ -165,7 +184,9 @@ class _Maker:
             return None
         return skill
 
-    def _from_pool(self, rng: Rng, keyword: str, want: AttrWant) -> SkillDef | None:
+    def _from_pool(
+        self, rng: Rng, keyword: str, want: AttrWant, *, kind: WhiteboardKind | None = None
+    ) -> SkillDef | None:
         """手寫技能池的 1 階技能（階級與白板一致）：依偏好的等級（主路線、雙屬性、備選；BAL-19g）
         分組，取最好的一組；組內優先選符合白板定義的。"""
         request = self.request
@@ -178,6 +199,7 @@ class _Maker:
             and skill.rarity != "legendary"
             and skill.form_id is None
             and skill.kind in WHITEBOARD_KINDS
+            and (kind is None or skill.kind == kind)
             and skill.id not in self.taken
             and skill.id not in request.exclude
             and keyword in derive_keywords(skill, self.library.keywords, exclusive_only=True).all()
@@ -216,7 +238,8 @@ def _first(
 def generate_whiteboard_candidates(
     library: ContentLibrary, request: CandidateRequest, tries: int = 8
 ) -> tuple[Candidate, ...]:
-    """加深、橋接、新方向各一張白板（依序；找不到的種類略過）。見模組說明。"""
+    """加深、橋接、新方向白板（依序；張數照 ``request.mix``，預設各一張；找不到的略過），再照
+    ``request.min_passive`` 補被動（Phase 5B-4b）。見模組說明。"""
     order = library.keywords.ids()
     unknown = sorted(set(request.keyword_counts) - set(order))
     if unknown:
@@ -225,31 +248,23 @@ def generate_whiteboard_candidates(
     held = _ranked_held(request.keyword_counts, order, behavior)
     unheld = [k for k in order if k not in held]
     maker = _Maker(library, request, tries)
+    deepen_count, bridge_count, new_count = request.mix
     found: list[Candidate | None] = []
 
-    rng = Rng(request.seed).fork("deepen")
-    # BAL-17：持有的與還沒有的關鍵字合成一串，先換關鍵字找同路線的，都沒有才放寬屬性
-    hit = _first(maker, rng, "deepen", [*held, *_weighted_order(rng, unheld, behavior)])
-    found.append(
-        None
-        if hit is None
-        else Candidate("deepen", (hit[0],), hit[1], hit[2], not held or hit[0] != held[0])
-    )
-    deepened = () if found[0] is None else found[0].keywords
+    deepened: tuple[str, ...] = ()
+    if deepen_count:
+        deepen = _deepen(maker, request, held, unheld, behavior)
+        found.append(deepen)
+        deepened = () if deepen is None else deepen.keywords
 
-    rng = Rng(request.seed).fork("bridge")
-    others = [k for k in held if k not in deepened]
-    outward = [k for k in _weighted_order(rng, unheld, behavior) if k not in deepened]
-    hit = _first(maker, rng, "bridge", [*others, *outward])
-    found.append(
-        None
-        if hit is None
-        else Candidate("bridge", (hit[0],), hit[1], hit[2], hit[0] not in others)
-    )
-    taken_keywords = set(deepened) | (set() if found[1] is None else set(found[1].keywords))
+    taken_keywords = set(deepened)
+    if bridge_count:
+        bridge = _bridge(maker, request, held, unheld, behavior, deepened=deepened)
+        found.append(bridge)
+        taken_keywords |= set() if bridge is None else set(bridge.keywords)
 
-    found.append(
-        _new_direction(
+    for index in range(new_count):
+        new = _new_direction(
             library,
             request,
             maker,
@@ -257,9 +272,47 @@ def generate_whiteboard_candidates(
             unheld=unheld,
             behavior=behavior,
             taken_keywords=taken_keywords,
+            index=index,
         )
-    )
-    return tuple(c for c in found if c is not None)
+        found.append(new)
+        taken_keywords |= set() if new is None else set(new.keywords)
+    result = [c for c in found if c is not None]
+    if request.min_passive:
+        result = _ensure_passive(maker, result, held=held, unheld=unheld)
+    return tuple(result)
+
+
+def _deepen(
+    maker: _Maker,
+    request: CandidateRequest,
+    held: Sequence[str],
+    unheld: Sequence[str],
+    behavior: Mapping[str, int],
+) -> Candidate | None:
+    rng = Rng(request.seed).fork("deepen")
+    # BAL-17：持有的與還沒有的關鍵字合成一串，先換關鍵字找同路線的，都沒有才放寬屬性
+    hit = _first(maker, rng, "deepen", [*held, *_weighted_order(rng, unheld, behavior)])
+    if hit is None:
+        return None
+    return Candidate("deepen", (hit[0],), hit[1], hit[2], not held or hit[0] != held[0])
+
+
+def _bridge(
+    maker: _Maker,
+    request: CandidateRequest,
+    held: Sequence[str],
+    unheld: Sequence[str],
+    behavior: Mapping[str, int],
+    *,
+    deepened: tuple[str, ...],
+) -> Candidate | None:
+    rng = Rng(request.seed).fork("bridge")
+    others = [k for k in held if k not in deepened]
+    outward = [k for k in _weighted_order(rng, unheld, behavior) if k not in deepened]
+    hit = _first(maker, rng, "bridge", [*others, *outward])
+    if hit is None:
+        return None
+    return Candidate("bridge", (hit[0],), hit[1], hit[2], hit[0] not in others)
 
 
 def _general_board(
@@ -283,15 +336,62 @@ def _new_direction(
     unheld: Sequence[str],
     behavior: Mapping[str, int],
     taken_keywords: set[str],
+    index: int = 0,
 ) -> Candidate | None:
-    general = _general_board(library, request, maker)
-    if general is not None:
-        return general
-    rng = Rng(request.seed).fork("new")
-    fresh = [k for k in _weighted_order(rng, unheld, behavior) if k not in taken_keywords]
+    """第 ``index`` 張新方向（0 起）。第 1 張同原本（通用池擲骰、``fork("new")``）；之後的
+    （Phase 5B-4b 新手鏈 2 張新方向）用 ``fork("new/<index>")``、不擲通用池、避開用過的關鍵字。
+    還沒有的關鍵字裡，區域關鍵字（``request.region_keywords``）排前面。"""
+    if index == 0:
+        general = _general_board(library, request, maker)
+        if general is not None:
+            return general
+    rng = Rng(request.seed).fork("new" if index == 0 else f"new/{index}")
+    order = region_first(_weighted_order(rng, unheld, behavior), request.region_keywords)
+    fresh = [k for k in order if k not in taken_keywords]
     hit = _first(maker, rng, "new", fresh, want="other")
     if hit is not None:
         return Candidate("new", (hit[0],), hit[1], hit[2])
     # 每個關鍵字都有了（或還沒有的都做不出來）：退回持有最少的關鍵字
-    hit = _first(maker, rng, "new", list(reversed(held)), want="other")
+    least = list(reversed(held))
+    if index:
+        least = [k for k in least if k not in taken_keywords] or least
+    hit = _first(maker, rng, "new", least, want="other")
     return None if hit is None else Candidate("new", (hit[0],), hit[1], hit[2], True)
+
+
+def _passive_keywords(
+    candidate: Candidate, held: Sequence[str], unheld: Sequence[str], used: set[str]
+) -> list[str]:
+    """把候選換成被動時要試的關鍵字：原本的關鍵字，再來是符合該候選定義（新方向＝還沒有的優先；
+    加深、橋接＝持有的優先）、別的候選沒用到的。"""
+    own = list(candidate.keywords)
+    rest = [*unheld, *reversed(held)] if candidate.kind == "new" else [*held, *unheld]
+    return [*own, *(k for k in rest if k not in used and k not in own)]
+
+
+def _ensure_passive(
+    maker: _Maker, found: list[Candidate], *, held: Sequence[str], unheld: Sequence[str]
+) -> list[Candidate]:
+    """被動保底（Phase 5B-4b，07 7.6 新手鏈「至少 1 招被動」）：被動不足 ``min_passive`` 張時，從
+    最後一張往前換成同種類的被動白板（亂數 ``fork("passive/<索引>")``）；做不出來就保持原樣。"""
+    need = maker.request.min_passive - sum(1 for c in found if c.skill.kind == "passive")
+    result = list(found)
+    for index in reversed(range(len(result))):
+        if need <= 0:
+            break
+        candidate = result[index]
+        if candidate.skill.kind == "passive":
+            continue
+        used = {k for i, c in enumerate(result) if i != index for k in c.keywords}
+        want: AttrWant = "other" if candidate.kind == "new" else "same"
+        rng = Rng(maker.request.seed).fork(f"passive/{index}")
+        for keyword in _passive_keywords(candidate, held, unheld, used):
+            made = maker.make_kind(rng, keyword, want, "passive")
+            if made is None:
+                continue
+            maker.taken.add(made[0].id)
+            fallback = candidate.fallback or keyword not in candidate.keywords
+            result[index] = Candidate(candidate.kind, (keyword,), made[0], made[1], fallback)
+            need -= 1
+            break
+    return result

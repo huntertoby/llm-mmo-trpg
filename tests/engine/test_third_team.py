@@ -1,4 +1,4 @@
-"""Phase 5B-M3：三方混戰（``docs/phases/Phase5計畫.md`` 第 19 節）。
+"""Phase 5B-M3：三方混戰（``docs/phases/Phase5計畫.md`` 第 20 節）。
 
 第三陣營 ``Team.THIRD`` 和我方、敵方都敵對：起始位置、勝負、AI 選目標、範圍技的敵我、反應、召喚物
 歸屬、難度倍率與確定性。

@@ -1,4 +1,4 @@
-"""三方混戰在大世界（Phase 5B-M3；``docs/phases/Phase5計畫.md`` 第 19 節）。
+"""三方混戰在大世界（Phase 5B-M3；``docs/phases/Phase5計畫.md`` 第 20 節）。
 
 遭遇表的 ``third`` → 陣容的第三方 → 開戰時 ``Team.THIRD``；源晶裂痕的陣容都是三方，主線第 ④ 步
 （打贏源晶裂痕）因此一定是三方混戰。

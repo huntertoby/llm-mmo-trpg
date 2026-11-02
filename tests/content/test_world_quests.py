@@ -74,13 +74,13 @@ def _quest_problems(library: ContentLibrary, *quests: dict[str, Any], **extra: A
 
 def test_cloud_ridge_quests_loaded(quests: QuestTable) -> None:
     kinds = sorted(q.kind for q in quests.quests)
-    assert kinds == ["chain", "hidden", "hidden", "main", "starter"]
+    assert kinds == ["chain", "chain", "hidden", "hidden", "main", "starter"]  # 5B-4b 導師任務鏈
     by_id = quests.quest_by_id()
     assert len(by_id["starter_ferry"].steps) == 3
     assert len(by_id["main_mist_rift"].steps) == 5
     assert 3 <= len(by_id["chain_temple_split"].steps) <= 6  # 9.6.3「3～6 步」
     assert [s.id for s in quests.story_skills] == ["skill_mist_breaker"]
-    assert "5 個任務" in quests.summary()
+    assert "6 個任務" in quests.summary()
 
 
 def test_story_skill_not_in_skill_pool(library: ContentLibrary, quests: QuestTable) -> None:
@@ -104,10 +104,12 @@ def test_social_loaded(social: SocialTable, library: ContentLibrary) -> None:
     assert "6 條酒館傳聞" in social.summary()
 
 
-def test_granny_secret_mentions_secret_door(social: SocialTable) -> None:
+def test_granny_secret_unlocks_secret_door_event(social: SocialTable) -> None:
     secret = next(t for t in social.talk if t.id == "granny_du_secret")
     assert secret.rank == "trusted"
-    assert "暗門" in secret.text_zh  # 18.5「好感度高才說出暗門」
+    # 5B-4b（18.7.7）：說出祕密時解鎖骨架 22，暗門的線頭由事件結果給，祕密本身不提暗門
+    assert secret.unlocks_skeleton == "granny_past"
+    assert "暗門" not in secret.text_zh
 
 
 def test_affinity_rules(library: ContentLibrary) -> None:

@@ -116,6 +116,8 @@ class EventTrigger(_Model):
     at: int = Field(ge=0)
     narrated: bool = False
     """說書人已經敘述過這個事件（Phase 5B-3；每個事件只能敘述、換骨架 1 次）。"""
+    combat_solution: int | None = Field(default=None, ge=0)
+    """選了戰鬥解法（Phase 5B-4b）：骨架 ``solutions`` 的索引；遭遇結束時結算事件。"""
 
     @field_validator("candidates")
     @classmethod
@@ -342,6 +344,24 @@ class CharacterState(_Model):
     """產生過幾組技能候選（候選種子的計數，同 ``RunState.offers_made``）。"""
     story_flags: tuple[str, ...] = ()
     """劇情旗標（排序、不重複；例：解鎖導師任務鏈）。"""
+
+    # --- 5B-4b 好感度取得、祕密事件 ---
+    talk_days: dict[str, int] = Field(default_factory=dict)
+    """NPC → 最後一次 ``talk`` 的日子（``refresh_day``；每天第一次聊天加好感度，18.7.6）。"""
+    unlocked_skeletons: tuple[str, ...] = ()
+    """解鎖的 ``unlock_only`` 事件骨架（排序、不重複；信賴的 NPC 說出祕密時，18.7.7）。"""
+
+    @field_validator("talk_days")
+    @classmethod
+    def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(days.items()))
+
+    @field_validator("unlocked_skeletons")
+    @classmethod
+    def _sorted_unlocked(cls, ids: tuple[str, ...]) -> tuple[str, ...]:
+        if list(ids) != sorted(set(ids)):
+            raise ValueError("unlocked_skeletons 必須排序且不重複")
+        return ids
 
     @field_validator("quests")
     @classmethod

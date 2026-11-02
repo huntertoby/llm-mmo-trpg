@@ -142,9 +142,10 @@ def test_chat_leaking_secret_falls_back(library: ContentLibrary) -> None:
 @pytest.mark.parametrize(
     ("value", "shown", "hidden"),
     [
-        (0, ("燈籠隊",), ("暗門",)),  # 中立：一般傳聞
-        (60, ("燈籠隊", "暗門"), ()),  # 信賴：祕密（渡婆婆說出暗門）
-        (-30, (), ("燈籠隊", "暗門")),  # 冷淡：什麼都不給
+        (0, ("燈籠隊",), ("欲言又止",)),  # 中立：一般傳聞
+        # 信賴：祕密（5B-4b：只說到斷崖幫的舊帳，暗門由解鎖的事件結果給）
+        (60, ("燈籠隊", "欲言又止"), ("暗門",)),
+        (-30, (), ("燈籠隊", "欲言又止")),  # 冷淡：什麼都不給
     ],
 )
 def test_chat_hooks_filtered_by_affinity(

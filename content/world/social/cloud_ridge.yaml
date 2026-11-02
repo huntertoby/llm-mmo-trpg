@@ -7,10 +7,11 @@ region: cloud_ridge
 talk:
   # 渡婆婆（鎮長）
   - {id: granny_du_rumor, npc: granny_du, rank: neutral, kind: rumor, text_zh: 夜裡鎮上有燈籠隊在找失蹤的人，失蹤的都往山裡去了}
-  - {id: granny_du_secret, npc: granny_du, rank: trusted, kind: secret, text_zh: 她年輕時是斷崖幫的人，知道斷崖幫寨後山有一道暗門}
+  # 信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（18.7.7）；暗門的線頭只由那個事件的結果給（#85）
+  - {id: granny_du_secret, npc: granny_du, rank: trusted, kind: secret, unlocks_skeleton: granny_past, text_zh: 她年輕時是斷崖幫的人，提到斷崖幫的舊帳就欲言又止}
   # 柳掌櫃（商人）
   - {id: liu_rumor, npc: shopkeeper_liu, rank: neutral, kind: rumor, text_zh: 雷雨夜的古松祭壇不太平，聽說有人在那兒撿到怪東西}
-  - {id: liu_cave_entry, npc: shopkeeper_liu, rank: friendly, kind: quest_entry, quest: hidden_elixir_cave, text_zh: 藥師谷深處有座沒人敢進的丹爐洞，他想知道裡面還有沒有丹砂}
+  - {id: liu_cave_entry, npc: shopkeeper_liu, rank: friendly, kind: quest_entry, quest: hidden_elixir_cave, text_zh: 藥師谷的谷底似乎還有一處洞窟，沒人敢進去，他想知道裡面還有沒有丹砂}
   - {id: liu_secret, npc: shopkeeper_liu, rank: trusted, kind: secret, text_zh: 他一直偷偷收購源晶碎片，連斷崖幫都和他做過買賣}
   # 青崖道長（技能導師）
   - {id: qingya_rumor, npc: daoist_qingya, rank: neutral, kind: rumor, text_zh: 觀裡為了源晶要不要交給官府，吵了好幾天}
@@ -31,7 +32,7 @@ talk:
   - {id: frost_chime_rumor, npc: frost_chime, rank: neutral, kind: rumor, text_zh: 狐火在霧裡會指路，跟著走的人不一定回得來}
   - {id: frost_chime_secret, npc: frost_chime, rank: trusted, kind: secret, text_zh: 她親眼見過裂痕裡的異象，說那裡面有「我們」}
 
-# 事件結果 → 好感度（開發 PM 定初值，代決 5B4-3）。只看情境判定的骨架與結果。
+# 事件結果 → 好感度（開發 PM 定初值，代決 5B4-3）。看事件的結果（event_resolved：情境判定、交涉、戰鬥解法；5B-4b）。
 event_affinity:
   - {skeleton: lost_acolyte, outcome: success, npc: acolyte_xiaolian, delta: 10}  # 18.4 #2 賭注「修士的好感度」
   - {skeleton: lost_acolyte, outcome: failure, npc: acolyte_xiaolian, delta: -5}
