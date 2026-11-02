@@ -1820,6 +1820,206 @@
           }
         }
       }
+    },
+    "/api/world/characters": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "List Characters",
+        "operationId": "list_characters_api_world_characters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorldCharacterSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Characters Api World Characters Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Create Character",
+        "operationId": "create_character_api_world_characters_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldCharacterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Character",
+        "operationId": "get_character_api_world_characters__character_id__get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/actions": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Action",
+        "operationId": "post_action_api_world_characters__character_id__actions_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorldActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/battle": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Battle",
+        "operationId": "post_battle_api_world_characters__character_id__battle_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldBattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3325,6 +3525,20 @@
         ],
         "title": "BurningOut"
       },
+      "CampAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "camp",
+            "title": "Kind",
+            "default": "camp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CampAction",
+        "description": "在目前地點紮營＝營火（09 9.6.11 #114）。"
+      },
       "ChargeOut": {
         "properties": {
           "unit_id": {
@@ -3949,6 +4163,71 @@
         "title": "CreateRunRequest",
         "description": "開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``（一般開局），或 ``dev_pack``（開發者\n起始包），或 ``build``（回歸範本，開發與測試用）——三者擇一；種子；開局配點（省略時全部點在\n武器的縮放屬性，以 build 開局時為技能最常用的縮放屬性）。"
       },
+      "CreateWorldCharacterRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "race": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1.8446744073709552e+19,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "weapon",
+          "keywords"
+        ],
+        "title": "CreateWorldCharacterRequest",
+        "description": "建立大世界角色（07 7.6 創角）。選項沿用 ``GET /api/runs/start-options``。"
+      },
       "DamageOut": {
         "properties": {
           "minimum": {
@@ -4455,6 +4734,104 @@
         ],
         "title": "Element",
         "description": "傷害與效果的元素（9 種，見 ``docs/專案計畫.md`` 5.1.1）。水不是元素，只是表面。"
+      },
+      "EncounterEnemyView": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "elite": {
+            "type": "boolean",
+            "title": "Elite"
+          },
+          "affix_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affix Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh",
+          "elite",
+          "affix_zh"
+        ],
+        "title": "EncounterEnemyView"
+      },
+      "EncounterView": {
+        "properties": {
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "location_name_zh": {
+            "type": "string",
+            "title": "Location Name Zh"
+          },
+          "enemy_level": {
+            "type": "integer",
+            "title": "Enemy Level"
+          },
+          "map_name_zh": {
+            "type": "string",
+            "title": "Map Name Zh"
+          },
+          "weather_zh": {
+            "type": "string",
+            "title": "Weather Zh"
+          },
+          "day_phase_zh": {
+            "type": "string",
+            "title": "Day Phase Zh"
+          },
+          "enemies": {
+            "items": {
+              "$ref": "#/components/schemas/EncounterEnemyView"
+            },
+            "type": "array",
+            "title": "Enemies"
+          },
+          "retreat_to_zh": {
+            "type": "string",
+            "title": "Retreat To Zh"
+          },
+          "fatigued": {
+            "type": "boolean",
+            "title": "Fatigued"
+          },
+          "hero_hp": {
+            "type": "integer",
+            "title": "Hero Hp"
+          },
+          "in_battle": {
+            "type": "boolean",
+            "title": "In Battle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "location",
+          "location_name_zh",
+          "enemy_level",
+          "map_name_zh",
+          "weather_zh",
+          "day_phase_zh",
+          "enemies",
+          "retreat_to_zh",
+          "fatigued",
+          "hero_hp",
+          "in_battle"
+        ],
+        "title": "EncounterView"
       },
       "EndStance": {
         "properties": {
@@ -6648,6 +7025,80 @@
         ],
         "title": "HealOut"
       },
+      "HereView": {
+        "properties": {
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "can_rest": {
+            "type": "boolean",
+            "title": "Can Rest"
+          },
+          "can_loadout": {
+            "type": "boolean",
+            "title": "Can Loadout"
+          },
+          "camp_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Camp Problem Zh"
+          },
+          "camped": {
+            "type": "boolean",
+            "title": "Camped"
+          },
+          "teleports": {
+            "items": {
+              "$ref": "#/components/schemas/TeleportOption"
+            },
+            "type": "array",
+            "title": "Teleports"
+          },
+          "hasten_cost": {
+            "type": "integer",
+            "title": "Hasten Cost"
+          },
+          "camp_cost": {
+            "type": "integer",
+            "title": "Camp Cost"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "location",
+          "name_zh",
+          "kind_zh",
+          "description_zh",
+          "can_rest",
+          "can_loadout",
+          "camp_problem_zh",
+          "camped",
+          "teleports",
+          "hasten_cost",
+          "camp_cost"
+        ],
+        "title": "HereView"
+      },
       "HeroCards": {
         "properties": {
           "cards": {
@@ -7870,6 +8321,30 @@
           "run_id"
         ],
         "title": "LoadRunRequest"
+      },
+      "LoadoutAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "loadout",
+            "title": "Kind",
+            "default": "loadout"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skills"
+        ],
+        "title": "LoadoutAction",
+        "description": "換技能（城鎮或營火；07 7.6）：新的裝備清單，沒裝上的進備用。"
       },
       "LoadoutChoice": {
         "properties": {
@@ -9648,6 +10123,34 @@
         "type": "object",
         "title": "RespecAttributesChoice",
         "description": "營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用\n``allocate`` 重新分配。免費、不推進節點。"
+      },
+      "RestAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "rest",
+            "title": "Kind",
+            "default": "rest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RestAction",
+        "description": "在城鎮休息：HP、法力、耐力回滿，補給補到初值（09 9.6.7 #2、#11）。"
+      },
+      "RetreatAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "retreat",
+            "title": "Kind",
+            "default": "retreat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RetreatAction",
+        "description": "看了陣容不打，退回出發地點（09 9.6.6：不開戰、不扣任何東西）。"
       },
       "RetreatTo": {
         "properties": {
@@ -12156,6 +12659,47 @@
         "title": "TelegraphOut",
         "description": "下一次環境回合（本輪結束時）將發生的變化（Phase 3-4b）。以我方看得見的狀態模擬，\n不含隱藏陷阱與亂數狀態。"
       },
+      "TeleportAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "teleport",
+            "title": "Kind",
+            "default": "teleport"
+          },
+          "region": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Region"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region"
+        ],
+        "title": "TeleportAction",
+        "description": "傳送到另一區的小鎮（09 9.6.2「城鎮之間用傳送點」）：從城鎮到去過的小鎮，或從傳送點到它通往\n的區域。"
+      },
+      "TeleportOption": {
+        "properties": {
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region",
+          "name_zh"
+        ],
+        "title": "TeleportOption"
+      },
       "TileView": {
         "properties": {
           "x": {
@@ -12317,6 +12861,33 @@
           "remaining"
         ],
         "title": "TrapView"
+      },
+      "TravelAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "travel",
+            "title": "Kind",
+            "default": "travel"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "To"
+          },
+          "hasten": {
+            "type": "boolean",
+            "title": "Hasten",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "to"
+        ],
+        "title": "TravelAction",
+        "description": "走到相鄰地點（09 9.6.7 #9）；``hasten``＝花補給趕路，降低遇敵機率。"
       },
       "Trip": {
         "properties": {
@@ -13737,6 +14308,436 @@
         ],
         "title": "WorkshopWeapon",
         "description": "預覽武器下拉的一個選項（Phase 3-54d，06 6.10）：玩家手上會出現的武器（不含召喚物專用）。"
+      },
+      "WorldActionRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TravelAction"
+          },
+          {
+            "$ref": "#/components/schemas/CampAction"
+          },
+          {
+            "$ref": "#/components/schemas/RetreatAction"
+          },
+          {
+            "$ref": "#/components/schemas/RestAction"
+          },
+          {
+            "$ref": "#/components/schemas/LoadoutAction"
+          },
+          {
+            "$ref": "#/components/schemas/TeleportAction"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "camp": "#/components/schemas/CampAction",
+            "loadout": "#/components/schemas/LoadoutAction",
+            "rest": "#/components/schemas/RestAction",
+            "retreat": "#/components/schemas/RetreatAction",
+            "teleport": "#/components/schemas/TeleportAction",
+            "travel": "#/components/schemas/TravelAction"
+          }
+        }
+      },
+      "WorldBattleResponse": {
+        "properties": {
+          "world": {
+            "$ref": "#/components/schemas/WorldView"
+          },
+          "battle": {
+            "$ref": "#/components/schemas/BattleResponse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "world",
+          "battle"
+        ],
+        "title": "WorldBattleResponse"
+      },
+      "WorldCharacterSummary": {
+        "properties": {
+          "character_id": {
+            "type": "string",
+            "title": "Character Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "region_name_zh": {
+            "type": "string",
+            "title": "Region Name Zh"
+          },
+          "location_name_zh": {
+            "type": "string",
+            "title": "Location Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character_id",
+          "name",
+          "level",
+          "region_name_zh",
+          "location_name_zh"
+        ],
+        "title": "WorldCharacterSummary"
+      },
+      "WorldCharacterView": {
+        "properties": {
+          "character_id": {
+            "type": "string",
+            "title": "Character Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "xp": {
+            "type": "integer",
+            "title": "Xp"
+          },
+          "xp_next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xp Next"
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "max_hp": {
+            "type": "integer",
+            "title": "Max Hp"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          },
+          "max_mana": {
+            "type": "integer",
+            "title": "Max Mana"
+          },
+          "supplies": {
+            "type": "integer",
+            "title": "Supplies"
+          },
+          "max_supplies": {
+            "type": "integer",
+            "title": "Max Supplies"
+          },
+          "fatigued": {
+            "type": "boolean",
+            "title": "Fatigued"
+          },
+          "attribute_points": {
+            "type": "integer",
+            "title": "Attribute Points"
+          },
+          "weapon_name_zh": {
+            "type": "string",
+            "title": "Weapon Name Zh"
+          },
+          "race_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Name Zh"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillCard"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "bench": {
+            "items": {
+              "$ref": "#/components/schemas/SkillCard"
+            },
+            "type": "array",
+            "title": "Bench"
+          },
+          "slots_zh": {
+            "type": "string",
+            "title": "Slots Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character_id",
+          "name",
+          "level",
+          "xp",
+          "xp_next",
+          "hp",
+          "max_hp",
+          "mana",
+          "max_mana",
+          "supplies",
+          "max_supplies",
+          "fatigued",
+          "attribute_points",
+          "weapon_name_zh",
+          "race_name_zh",
+          "skills",
+          "bench",
+          "slots_zh"
+        ],
+        "title": "WorldCharacterView"
+      },
+      "WorldClockView": {
+        "properties": {
+          "time_zh": {
+            "type": "string",
+            "title": "Time Zh"
+          },
+          "day_phase": {
+            "type": "string",
+            "enum": [
+              "day",
+              "night"
+            ],
+            "title": "Day Phase"
+          },
+          "day_phase_zh": {
+            "type": "string",
+            "title": "Day Phase Zh"
+          },
+          "weather_zh": {
+            "type": "string",
+            "title": "Weather Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time_zh",
+          "day_phase",
+          "day_phase_zh",
+          "weather_zh"
+        ],
+        "title": "WorldClockView"
+      },
+      "WorldLocationView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "level_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "adjacent": {
+            "type": "boolean",
+            "title": "Adjacent"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
+          },
+          "cleared": {
+            "type": "boolean",
+            "title": "Cleared"
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "kind",
+          "kind_zh",
+          "level_zh",
+          "description_zh",
+          "x",
+          "y",
+          "current",
+          "adjacent",
+          "blocked_zh",
+          "cleared",
+          "hidden"
+        ],
+        "title": "WorldLocationView"
+      },
+      "WorldMapView": {
+        "properties": {
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "level_zh": {
+            "type": "string",
+            "title": "Level Zh"
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/WorldLocationView"
+            },
+            "type": "array",
+            "title": "Locations"
+          },
+          "edges": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region",
+          "name_zh",
+          "level_zh",
+          "locations",
+          "edges"
+        ],
+        "title": "WorldMapView"
+      },
+      "WorldView": {
+        "properties": {
+          "character": {
+            "$ref": "#/components/schemas/WorldCharacterView"
+          },
+          "map": {
+            "$ref": "#/components/schemas/WorldMapView"
+          },
+          "here": {
+            "$ref": "#/components/schemas/HereView"
+          },
+          "encounter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EncounterView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clock": {
+            "$ref": "#/components/schemas/WorldClockView"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "battle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character",
+          "map",
+          "here",
+          "encounter",
+          "clock",
+          "events",
+          "battle_id"
+        ],
+        "title": "WorldView"
       },
       "XY": {
         "prefixItems": [
