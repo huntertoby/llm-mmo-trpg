@@ -39,6 +39,11 @@ import type {
   WorkshopWeapon,
   WorkshopRandom,
   WorkshopRandomRequest,
+  CreateWorldCharacterRequest,
+  WorldAction,
+  WorldBattleResponse,
+  WorldCharacterSummary,
+  WorldView,
 } from "./types";
 
 export class ApiError extends Error {
@@ -167,6 +172,14 @@ export const api = {
     request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/choice`, choice),
   saveRun: (runId: string) =>
     request<RunSaveOut>("POST", `/runs/${encodeURIComponent(runId)}/save`),
+  /** 大世界（Phase 5A-5）：角色列表、建立、地點圖畫面、世界動作、開戰。 */
+  worldCharacters: () => request<WorldCharacterSummary[]>("GET", "/world/characters"),
+  createWorldCharacter: (body: CreateWorldCharacterRequest) => request<WorldView>("POST", "/world/characters", body),
+  world: (characterId: string) => request<WorldView>("GET", `/world/characters/${encodeURIComponent(characterId)}`),
+  worldAct: (characterId: string, action: WorldAction) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
+  worldBattle: (characterId: string) =>
+    request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`),
   decide: (
     id: string,
     accept: boolean,

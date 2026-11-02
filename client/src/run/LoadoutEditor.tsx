@@ -1,12 +1,11 @@
 // 營火換裝（Phase 3-26a）：卸下的技能進備用（等級保留），備用技能可以換回來（欄位上限同升級）。
 import { useState } from "react";
-import type { RunHero } from "../api/types";
 import { SLOT_LABELS, SLOT_LIMITS, type SlotKind } from "./flow";
-import { canEquip, loadoutChanged, loadoutUsage, ownedCards } from "./loadout";
+import { canEquip, loadoutChanged, loadoutUsage, ownedCards, type LoadoutHero } from "./loadout";
 import { Hint } from "../ui/Hint";
 
 interface Props {
-  hero: RunHero;
+  hero: LoadoutHero;
   disabled?: boolean;
   /** 套用換裝：新的裝備清單（技能 ID，順序即技能列順序）。 */
   onApply(ids: readonly string[]): void;

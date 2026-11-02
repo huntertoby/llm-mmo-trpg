@@ -1,0 +1,214 @@
+/* 大世界（測試）地點圖（Phase 5A-5）：程式繪製的地點圖、右側狀態與服務、遇敵陣容。 */
+
+.world-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .world-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.world-map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 360px;
+  background:
+    radial-gradient(ellipse at 30% 70%, rgba(90, 140, 120, 0.18), transparent 60%),
+    radial-gradient(ellipse at 70% 20%, rgba(150, 160, 200, 0.16), transparent 55%),
+    #15171f;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.world-map-area {
+  position: absolute;
+  inset: 5% 7%;
+}
+
+.world-map-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.world-map-lines line {
+  stroke: #4a4e66;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+}
+
+.world-map-lines line.near {
+  stroke: #c9b46a;
+  stroke-dasharray: none;
+}
+
+/* 地點座標 0～100 ＝ `.world-map-area` 的百分比（和連線同一個座標系） */
+.world-loc {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  line-height: 1.2;
+  cursor: default;
+}
+
+.world-loc-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7d8296;
+  border: 2px solid #20222c;
+  box-shadow: 0 0 0 1px #4a4e66;
+}
+
+.world-loc-name {
+  font-size: 12px;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+}
+
+.world-loc-badge {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.world-loc.kind-town .world-loc-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #5c8fd6;
+}
+
+.world-loc.kind-gate .world-loc-dot {
+  background: #9a7ad6;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.world-loc.kind-danger .world-loc-dot {
+  background: #c0604a;
+}
+
+.world-loc.kind-elite .world-loc-dot {
+  background: #e08a2a;
+  box-shadow: 0 0 0 2px #ffd04a;
+}
+
+.world-loc.kind-boss .world-loc-dot {
+  width: 20px;
+  height: 20px;
+  background: #b02a3a;
+  box-shadow: 0 0 0 2px #ff7a7a;
+}
+
+.world-loc.kind-secret .world-loc-dot {
+  background: #3aa58a;
+}
+
+.world-loc.kind-site .world-loc-dot {
+  background: #8f9a6a;
+}
+
+.world-loc.reachable {
+  cursor: pointer;
+}
+
+.world-loc.reachable .world-loc-dot {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 10px rgba(255, 210, 63, 0.6);
+}
+
+.world-loc.reachable:hover .world-loc-name,
+.world-loc.reachable:focus-visible .world-loc-name {
+  color: var(--accent);
+}
+
+.world-loc.far {
+  opacity: 0.6;
+}
+
+.world-loc.current .world-loc-dot {
+  box-shadow: 0 0 0 3px #ffffff, 0 0 12px rgba(255, 255, 255, 0.7);
+}
+
+.world-loc.current .world-loc-name {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.world-loc.cleared .world-loc-badge {
+  color: #7ddc9a;
+}
+
+.world-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.world-encounter {
+  border-color: var(--enemy);
+  background: #2a1a1f;
+}
+
+.world-enemies {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.world-enemies li.elite {
+  color: #ffb45a;
+}
+
+.world-elite-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #ffd04a;
+}
+
+.world-fatigue {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #ffb45a;
+  border: 1px solid #ffb45a;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.world-skills {
+  margin: 4px 0;
+}
+
+.world-hasten {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.world-log ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.start-world {
+  margin-top: 12px;
+}

@@ -1,4 +1,4 @@
-// 畫面切換：開始畫面、戰鬥畫面、技能工坊、roguelite 一輪。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
+// 畫面切換：開始畫面、戰鬥畫面、技能工坊、roguelite 一輪、大世界（測試，5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api/client";
 import type { BattleResponse, RunResponse } from "./api/types";
@@ -11,6 +11,7 @@ import { isDevMode } from "./run/startFlow";
 import { createDevRun, DEV_ENTER_EVENT, devScreenParam } from "./dev/devScreens";
 import { RunNewScreen } from "./screens/RunNewScreen";
 import { RunScreen } from "./screens/RunScreen";
+import { WorldScreen } from "./screens/WorldScreen";
 import { ErrorBanner } from "./ui/ErrorBanner";
 
 /** 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不丟步驟）；伺服器沒有（重啟過）才讀存檔。 */
@@ -26,7 +27,7 @@ function resume(runId: string): Promise<RunResponse> {
 export function App() {
   const [battle, setBattle] = useState<BattleResponse | null>(null);
   // 戰鬥結束或離開後回到哪裡：從技能工坊進來的戰鬥回到工坊（草稿存在瀏覽器，不會遺失）。
-  const [screen, setScreen] = useState<"start" | "workshop" | "run_new">("start");
+  const [screen, setScreen] = useState<"start" | "workshop" | "run_new" | "world">("start");
   /** 進行中的一輪；`auto` ＝ 存檔在戰鬥中時直接進入該場戰鬥。 */
   const [run, setRun] = useState<{ data: RunResponse; auto: boolean } | null>(null);
   const [resuming, setResuming] = useState(true);
@@ -120,6 +121,9 @@ export function App() {
     if (screen === "run_new") {
       return <RunNewScreen onCreated={(data) => enterRun(data, false)} onHome={() => setScreen("start")} />;
     }
+    if (screen === "world") {
+      return <WorldScreen onHome={() => setScreen("start")} />;
+    }
     if (screen === "workshop") {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
     }
@@ -128,6 +132,7 @@ export function App() {
         onStart={setBattle}
         onWorkshop={() => setScreen("workshop")}
         onNewRun={() => setScreen("run_new")}
+        onWorld={() => setScreen("world")}
         onLoadRun={(data) => enterRun(data, true)}
         notice={notice}
         onCloseNotice={() => setNotice(null)}

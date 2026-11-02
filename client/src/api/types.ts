@@ -220,3 +220,21 @@ export type GearCheck = Schemas["GearCheck"];
 export type GearCheckRequest = Schemas["GearCheckRequest"];
 /** 英雄面板的一行裝備加成（實際值、截斷前的值、每條詞條的貢獻）。 */
 export type GearTotalView = Schemas["GearTotalView"];
+// 大世界（Phase 5A-5）
+export type WorldView = Schemas["WorldView"];
+export type WorldCharacterView = Schemas["WorldCharacterView"];
+export type WorldCharacterSummary = Schemas["WorldCharacterSummary"];
+export type WorldLocationView = Schemas["WorldLocationView"];
+export type WorldMapView = Schemas["WorldMapView"];
+export type WorldEncounterView = Schemas["EncounterView"];
+export type WorldHereView = Schemas["HereView"];
+export type WorldBattleResponse = Schemas["WorldBattleResponse"];
+export type CreateWorldCharacterRequest = Schemas["CreateWorldCharacterRequest"];
+/** 世界動作（`fight` 走開戰端點）；`hasten` 省略 ＝ 不趕路。 */
+export type WorldAction =
+  | (Omit<Schemas["TravelAction"], "hasten"> & { hasten?: boolean })
+  | Schemas["CampAction"]
+  | Schemas["RetreatAction"]
+  | Schemas["RestAction"]
+  | Schemas["LoadoutAction"]
+  | Schemas["TeleportAction"];
