@@ -480,7 +480,7 @@ class RunState(_Model):
     def max_mana_in(self, core: CoreRules) -> int:
         """法力上限 ＝ 基礎（``hero.max_mana``，依武器大類）＋ 屬性加成（Phase 3H-2，
         ``core.yaml`` 的 ``resources``；不含裝備詞條，戰鬥中的上限另含裝備的屬性）。"""
-        return core.resources.max_for("mana", self.hero.max_mana, self.hero.attributes)
+        return core.resources.max_for("mana", core.template_mana(self.hero), self.hero.attributes)
 
     def max_stamina_in(self, core: CoreRules) -> int:
         """耐力上限 ＝ 基礎（``hero.stamina``，省略時 ``default_stamina``）＋ 屬性加成

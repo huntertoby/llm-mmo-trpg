@@ -390,6 +390,7 @@ def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:
         name=summon.template.name_zh,
         rules=state.ruleset,
         facing=owner.facing,
+        resource_attributes=owner.attributes,  # 資源上限的屬性由施放者推得（BAL-15b，6.29）
     )
     unit.owner_id = owner.id
     unit.level = owner.level

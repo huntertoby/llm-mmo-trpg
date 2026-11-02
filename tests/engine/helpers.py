@@ -198,8 +198,8 @@ def with_rolls(state: BattleState, rolls: Sequence[tuple[int, int]]) -> BattleSt
 
 
 def ally_mana(raw: int) -> int:
-    """我方施放者實際付的法力（BAL-4c：``ally_mana_cost_permille`` 依施放者陣營打折）。"""
-    return library().ruleset.core.ally_mana(raw)
+    """我方施放者實際付的法力（BAL-4c：``mana_cost_permille`` 依施放者陣營打折）。"""
+    return library().ruleset.core.mana_cost(raw)
 
 
 def no_reactions(base: str = "bandit", **overrides: object) -> UnitTemplate:

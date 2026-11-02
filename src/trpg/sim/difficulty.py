@@ -10,8 +10,9 @@ BAL-4b 起，採用的數值（敵人 HP ×1.2、敵人與護衛傷害 ×1.2、�
   「Boss」＝ 有 ``boss`` 標籤的敵方範本；「護衛」＝ 有 ``boss_escort`` 標籤的（Boss 戰護衛與援軍，
   ``*_guard``）；其餘敵方範本（一輪與地圖的陣容與援軍，不含召喚物）為「敵人」。
 - 敵人傷害／Boss 傷害／護衛傷害：``CoreRules.enemy_damage_permille`` 等欄位 ＝ content 值 × 旋鈕。
-- 技能法力費用：``CoreRules.ally_mana_cost_permille`` ＝ content 值 × 旋鈕（BAL-4c 起引擎依施放者
-  陣營、從原始費用一次縮放，只有一次四捨五入；BAL-4b 時是規則包內技能先縮放再乘旋鈕，
+- 技能法力費用：``CoreRules.mana_cost_permille`` ＝ content 值 × 旋鈕（BAL-4c 起引擎
+  從原始費用一次縮放，BAL-15b 起敵我都套用，只有一次四捨五入；
+  BAL-4b 時是規則包內技能先縮放再乘旋鈕，
   兩次四捨五入）。
 - 法力上限：``ResourceRules.mana_cap_permille`` ＝ content 值 × 旋鈕。
 
@@ -110,7 +111,7 @@ def with_difficulty(library: ContentLibrary, d: Difficulty) -> ContentLibrary:
             "boss_escort_damage_permille": scale_int(
                 old.boss_escort_damage_permille, d.escort_damage
             ),
-            "ally_mana_cost_permille": scale_int(old.ally_mana_cost_permille, d.mana_cost),
+            "mana_cost_permille": scale_int(old.mana_cost_permille, d.mana_cost),
             "resources": old.resources.model_copy(
                 update={"mana_cap_permille": scale_int(old.resources.mana_cap_permille, d.mana_cap)}
             ),

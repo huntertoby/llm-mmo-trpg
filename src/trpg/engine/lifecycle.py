@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, WeaponDef
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
@@ -29,7 +31,7 @@ from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import Facing, UnitState
 from trpg.engine.traps import remove_traps_of
 from trpg.engine.zones import remove_caster_zones_of
-from trpg.shared.types import Pos, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 __all__ = [
     "default_ai_profile",
@@ -321,15 +323,20 @@ def make_unit(
     rules: Ruleset,
     facing: Facing | None = None,
     equipment: Loadout | None = None,
+    resource_attributes: Mapping[Attribute, int] | None = None,
 ) -> UnitState:
     """由範本建立戰鬥中的單位（開場與戰鬥中產生的單位共用）。``facing`` 省略時我方朝東、敵方
     朝西（Phase 3D-8d）。``equipment``（Phase 3G-G1）：裝備快照；數值類詞條併進範本的屬性、
-    最大 HP、抗性與速度（:func:`~trpg.engine.gear.core.geared_template`）。"""
+    最大 HP、抗性與速度（:func:`~trpg.engine.gear.core.geared_template`）。
+
+    法力與耐力（BAL-15b，玩法決定 #80）：敵我同一套公式（:meth:`CoreRules.template_max_resource`），
+    基礎依範本或武器大類；``resource_attributes``（召喚物傳施放者的屬性，6.29）省略時用範本的。"""
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
-    stamina = rules.core.template_max_resource("stamina", template)  # 主角依屬性（3H-2）
-    max_mana = rules.core.template_max_resource("mana", template)
+    wclass = weapon.weapon_class
+    stamina = rules.core.template_max_resource("stamina", template, wclass, resource_attributes)
+    max_mana = rules.core.template_max_resource("mana", template, wclass, resource_attributes)
     reactions = (
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )

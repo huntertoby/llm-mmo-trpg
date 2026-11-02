@@ -46,12 +46,13 @@ def _scene(
     """U1 是裝備真正技能的施放者（有 ``base`` 的 AI 行為模式），之後是友方、敵方（無反應）。"""
     m = make_map(heights, ally=[caster, *allies], enemy=list(foes), objects=objects)
     unit = caster_template(list(skills), base=base)
-    if max_mana is not None:
-        unit = unit.model_copy(update={"max_mana": max_mana})
     spawns = [spawn(Team.ALLY, caster, unit)]
     spawns += [spawn(Team.ALLY, xy, no_reactions("hero_archer")) for xy in allies]
     spawns += [spawn(Team.ENEMY, xy, no_reactions()) for xy in foes]
-    return give_turn(make_state(m, spawns), U1)
+    state = make_state(m, spawns)
+    if max_mana is not None:  # 上限由公式算出（BAL-15b）：情境要的是「目前剛好有這麼多法力」
+        state.units[U1].mana = state.units[U1].max_mana = max_mana
+    return give_turn(state, U1)
 
 
 # ---------------------------------------------------------------------------
@@ -260,7 +261,7 @@ def test_only_the_boss_the_archer_and_the_shieldbearer_have_skills() -> None:
     assert not lib.unit("bandit").skills
     for template_id in ("bandit_boss", "bandit_archer", "bandit_shieldbearer"):
         t = lib.unit(template_id)
-        assert 1 <= len(t.skills) <= 2 and t.max_mana > 0
+        assert 1 <= len(t.skills) <= 2  # 法力由公式算出（BAL-15b），範本不寫
 
 
 @pytest.mark.slow

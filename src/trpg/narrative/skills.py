@@ -1288,12 +1288,13 @@ def cost_parts(
     library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True, ally: bool = False
 ) -> list[str]:
     """代價的各段文字（AP、法力、耐力、HP、施放後狀態、冷卻、每場次數）。``ally`` 時法力顯示我方
-    實際會扣的費用（``ally_mana_cost_permille`` 打折後，BAL-4c）；否則為技能資料的原始費用。"""
+    實際會扣的費用（``mana_cost_permille`` 打折後，BAL-4c；BAL-15b 起敵我都打折）；否則為技能
+    資料的原始費用。"""
     cost = skill.cost
     ap = skill_ap(library, skill)
     parts = [f"AP {ap}"] if with_ap and ap is not None else []
     if cost.mana:
-        mana = library.ruleset.core.ally_mana(cost.mana) if ally else cost.mana
+        mana = library.ruleset.core.mana_cost(cost.mana) if ally else cost.mana
         parts.append(f"法力 {mana}")
     if cost.stamina:
         parts.append(f"耐力 {cost.stamina}")
@@ -1700,8 +1701,8 @@ def skill_card(
 ) -> SkillCard:
     """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`；``owner`` 見
     :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。
-    ``ally``（預設，卡片是給玩家看的）時代價的法力是我方實際會扣的費用（BAL-4c）；敵方單位的
-    卡片傳 ``False`` 顯示原價。"""
+    ``ally``（預設）時代價的法力是戰鬥中實際會扣的費用（BAL-4c；BAL-15b 起敵我同一套，敵方單位的
+    卡片也一樣）；``False`` 顯示技能資料的原價。"""
     token = _CARD_WEAPON.set(None if owner is None else owner.weapon)
     try:
         return _build_card(library, skill, mastery_active, owner, ally=ally)

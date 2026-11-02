@@ -88,7 +88,7 @@ from trpg.engine.skills.revive import revive_candidates, revive_target_problem
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, UnitId
 
 __all__ = [
     "DamageParameters",
@@ -331,11 +331,12 @@ class PaidCost:
 
 
 def skill_mana_cost(core: CoreRules, unit: UnitState, skill: SkillDef) -> int:
-    """``unit`` 施放 ``skill`` 實際要付的法力（BAL-4c）：我方單位（含我方召喚物）乘
-    ``core.ally_mana_cost_permille``（:meth:`CoreRules.ally_mana`），其他陣營照原價。
+    """``unit`` 施放 ``skill`` 實際要付的法力：乘 ``core.mana_cost_permille``
+    （:meth:`CoreRules.mana_cost`）。BAL-4c 時只有我方打折；BAL-15b（玩法決定 #80）起敵我同一套，
+    不看陣營。姿態與形態的維持費不經過這裡（#67，不打折）。
     扣費、施放檢查、反應詢問、卡片與 AI 估價都用這一個函式。"""
-    mana = skill.cost.mana
-    return core.ally_mana(mana) if unit.team is Team.ALLY else mana
+    del unit  # 敵我同一套（BAL-15b）；保留參數讓呼叫端不必改
+    return core.mana_cost(skill.cost.mana)
 
 
 def pay_skill_cost(core: CoreRules, caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCost:

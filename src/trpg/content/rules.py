@@ -93,6 +93,9 @@ class PerkLine:
 ResourceKind = Literal["mana", "stamina"]
 """可依屬性決定上限的資源（Phase 3H-2）：法力（法術技）與耐力（武器技、格擋）。"""
 
+type WeaponClass = Literal["melee", "ranged", "focus"]
+"""武器大類（``WeaponDef.weapon_class``）；資源基礎依它（BAL-15b）。"""
+
 
 class ResourcePool(ContentModel):
     """一種資源的上限加成：``attrs`` 裡最高的屬性每高於基準 1 點，上限 + ``per_point``。"""
@@ -101,14 +104,32 @@ class ResourcePool(ContentModel):
     per_point: int = Field(ge=0)
 
 
+class ClassResourceBase(ContentModel):
+    """一個武器大類的法力與耐力基礎值（07 7.2：近戰 20／40、遠程 20／30、法器 40／20）。"""
+
+    mana: int = Field(ge=0)
+    stamina: int = Field(ge=0)
+
+
+def _default_class_base() -> dict[WeaponClass, ClassResourceBase]:
+    return {
+        "melee": ClassResourceBase(mana=20, stamina=40),
+        "ranged": ClassResourceBase(mana=20, stamina=30),
+        "focus": ClassResourceBase(mana=40, stamina=20),
+    }
+
+
 class ResourceRules(ContentModel):
     """法力與耐力上限（Phase 3H-2，``docs/design/07-角色成長.md`` 7.2；初值，平衡待辦）::
 
         上限 ＝ 基礎 ＋（attrs 最高者 − base）× per_point（至少 0）
 
-    基礎是範本的 ``max_mana``／``stamina``（主角依武器大類，``roguelite.yaml`` 的
-    ``start.heroes``）。只套用在 ``scaled_resources`` 的範本（主角）；敵人、隊友與召喚物照範本的
-    固定值。"""
+    BAL-15b（玩法決定 #80）起 **敵我同一套**：所有單位（主角、敵人、隊友、召喚物）都照這個式子。
+    基礎是範本的 ``max_mana``／``stamina``；範本沒寫時依武器大類取 ``class_base``（和
+    ``roguelite.yaml`` 的 ``start.heroes`` 同值）。召喚物的屬性加成用施放者的屬性（6.29）。"""
+
+    class_base: dict[WeaponClass, ClassResourceBase] = Field(default_factory=_default_class_base)
+    """武器大類的法力／耐力基礎（BAL-15b）：範本沒寫 ``max_mana``／``stamina`` 時用。"""
 
     base: int = Field(default=10, ge=0)
     mana: ResourcePool = ResourcePool(
@@ -118,8 +139,8 @@ class ResourceRules(ContentModel):
         attrs=(Attribute.STR, Attribute.DEX, Attribute.CON), per_point=2
     )
     stamina_regen: int = Field(default=5, ge=0)
-    """耐力每回合開始回復的點數（Phase 3H-5，07 7.2；初值，平衡待辦 B15）。只套用在
-    ``scaled_resources`` 的範本（主角）；不超過上限。戰後回滿見 ``roguelite.yaml`` 的
+    """耐力每回合開始回復的點數（Phase 3H-5，07 7.2；初值，平衡待辦 B15）。BAL-15b 起所有
+    單位都有（敵我同公式）；不超過上限。戰後回滿見 ``roguelite.yaml`` 的
     ``refill_after_battle``。"""
 
     def pool(self, kind: ResourceKind) -> ResourcePool:
@@ -133,7 +154,7 @@ class ResourceRules(ContentModel):
 
     mana_cap_permille: int = Field(default=1000, ge=100, le=5000)
     """法力上限倍率（‰；BAL-4b，**原型專用**難度數值）：
-    套用在依屬性算上限的角色（主角與 build 英雄）。
+    BAL-15b 起套用在所有單位（敵我同公式）。
     欄位預設 1000；``content/rules/core.yaml`` 寫 1400。進序列化與規則包雜湊。"""
 
     def max_for(self, kind: ResourceKind, base: int, attributes: Mapping[Attribute, int]) -> int:
@@ -517,10 +538,11 @@ class CoreRules(ContentModel):
     """Boss 戰護衛與援軍（``boss_escort`` 標籤）造成的傷害倍率（‰；BAL-4b，原型專用）：
     與一般敵人分開調，
     ``content/rules/core.yaml`` 預設與 ``enemy_damage_permille`` 相同（行為與一般敵人一致）。"""
-    ally_mana_cost_permille: int = Field(default=1000, ge=100, le=5000)
-    """我方技能法力費用倍率（‰；BAL-4b，原型專用）。BAL-4c 起依**施放者陣營**套用：我方單位
-    （含我方召喚物）施放、灌注、觸發技能時付 :meth:`ally_mana` 的費用，敵方照原價；技能資料
-    （內容檔、規則包、生成技能）一律保持原始費用，預算、閃現、組合器都以原始費用計算。"""
+    mana_cost_permille: int = Field(default=1000, ge=100, le=5000)
+    """技能法力費用倍率（‰；BAL-4b，原型專用）。BAL-15b（玩法決定 #80）起 **敵我同一套**：
+    任何單位施放、灌注、觸發技能時付 :meth:`mana_cost` 的費用（BAL-4c 時只有我方打折）；姿態與
+    形態的維持費不打折（#67）。技能資料（內容檔、規則包、生成技能）一律保持原始費用，預算、
+    閃現、組合器都以原始費用計算。"""
     summon_command_ap_cost: int = Field(default=1, ge=0, le=3)
     """指揮召喚物（Phase 3-33c）的 AP 花費（切換模式免費）。"""
     summon_infuse_ap_cost: int = Field(default=1, ge=0, le=3)
@@ -581,10 +603,10 @@ class CoreRules(ContentModel):
             raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
         return self
 
-    def ally_mana(self, mana: int) -> int:
-        """我方施放者實際付的法力（BAL-4c）：``mana × ally_mana_cost_permille‰``，四捨五入（半數
-        進位）、原本有費用者至少 1；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
-        permille = self.ally_mana_cost_permille
+    def mana_cost(self, mana: int) -> int:
+        """施放者實際付的法力（BAL-4c；BAL-15b 起敵我都適用）：``mana × mana_cost_permille‰``，
+        四捨五入（半數進位）、原本有費用者至少 1；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
+        permille = self.mana_cost_permille
         if mana == 0 or permille == _PERMILLE:
             return mana
         return max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
@@ -598,20 +620,44 @@ class CoreRules(ContentModel):
         return self.max_hp_for(template.max_hp, template.attributes[Attribute.CON])
 
     def template_stamina(self, template: UnitTemplate) -> int:
-        """範本的基礎耐力：``stamina``，省略時 ``default_stamina``。"""
+        """範本的基礎耐力：``stamina``，省略時 ``default_stamina``（一輪主角的範本一律有寫；
+        戰鬥中的單位改用 :meth:`template_base_resource`，依武器大類）。"""
         return self.default_stamina if template.stamina is None else template.stamina
 
-    def template_max_resource(self, kind: ResourceKind, template: UnitTemplate) -> int:
-        """範本建立出的單位的法力／耐力上限：``scaled_resources`` 的範本（主角）依屬性加成
-        （:class:`ResourceRules`），其他照範本的固定值。"""
-        base = template.max_mana if kind == "mana" else self.template_stamina(template)
-        if not template.scaled_resources:
-            return base
-        return self.resources.max_for(kind, base, template.attributes)
+    def template_mana(self, template: UnitTemplate) -> int:
+        """範本的基礎法力：``max_mana``，省略時 0（一輪主角的範本一律有寫）。"""
+        return template.max_mana or 0
+
+    def template_base_resource(
+        self, kind: ResourceKind, template: UnitTemplate, weapon_class: WeaponClass
+    ) -> int:
+        """範本的法力／耐力基礎（BAL-15b）：範本有寫 ``max_mana``／``stamina`` 時用它，否則依武器
+        大類取 ``resources.class_base``。"""
+        explicit = template.max_mana if kind == "mana" else template.stamina
+        if explicit is not None:
+            return explicit
+        base = self.resources.class_base[weapon_class]
+        return base.mana if kind == "mana" else base.stamina
+
+    def template_max_resource(
+        self,
+        kind: ResourceKind,
+        template: UnitTemplate,
+        weapon_class: WeaponClass,
+        attributes: Mapping[Attribute, int] | None = None,
+    ) -> int:
+        """範本建立出的單位的法力／耐力上限（BAL-15b 起敵我同公式，玩法決定 #80）：
+        :meth:`template_base_resource` ＋ 屬性加成（:class:`ResourceRules`；法力再 ×
+        ``mana_cap_permille``）。``attributes`` 省略時用範本的屬性；召喚物傳施放者的屬性
+        （6.29）。"""
+        base = self.template_base_resource(kind, template, weapon_class)
+        attrs = template.attributes if attributes is None else attributes
+        return self.resources.max_for(kind, base, attrs)
 
     def template_stamina_regen(self, template: UnitTemplate) -> int:
-        """範本建立出的單位每回合開始回復的耐力：主角（``scaled_resources``）才有（3H-5）。"""
-        return self.resources.stamina_regen if template.scaled_resources else 0
+        """範本建立出的單位每回合開始回復的耐力（3H-5；BAL-15b 起所有單位都有）。"""
+        del template
+        return self.resources.stamina_regen
 
     def run_max_hp(self, base_hp: int, con: int, level: int) -> int:
         """roguelite 主角的最大 HP：``max_hp_for(基礎 HP ＋ 等級加成, 體質)``。戰鬥中的主角單位

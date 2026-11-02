@@ -123,7 +123,7 @@ def hero_resources(core: CoreRules, hero: UnitTemplate) -> StartResources:
     attrs = hero.attributes
     return StartResources(
         hp=core.run_max_hp(hero.max_hp, attrs[Attribute.CON], 1),
-        mana=core.resources.max_for("mana", hero.max_mana, attrs),
+        mana=core.resources.max_for("mana", core.template_mana(hero), attrs),
         stamina=core.resources.max_for("stamina", core.template_stamina(hero), attrs),
     )
 
@@ -250,9 +250,15 @@ def new_run(
     # 範本的基礎 HP ＝ build 英雄在「體質 10」時的 HP（亦即 build 英雄以自己的體質算出的最終 HP），
     # 開局配點加體質之後才額外增加（Phase 3-7）
     authored_hp = core.template_max_hp(build.hero)
-    hero = apply_allocation(
-        build.hero.model_copy(update={"attributes": base, "max_hp": authored_hp}), allocation
-    )
+    wclass = library.weapons[build.hero.weapon].weapon_class
+    # 法力／耐力基礎寫進範本（BAL-15b：build 英雄沒寫時依武器大類，和戰鬥中的單位同一個來源）
+    update = {
+        "attributes": base,
+        "max_hp": authored_hp,
+        "max_mana": core.template_base_resource("mana", build.hero, wclass),
+        "stamina": core.template_base_resource("stamina", build.hero, wclass),
+    }
+    hero = apply_allocation(build.hero.model_copy(update=update), allocation)
     start = hero_resources(core, hero)
     return RunState(
         seed=seed,
