@@ -23,14 +23,14 @@ groups:
   - {id: cliff_gang_hounds, name_zh: 斷崖幫與獵犬, units: [bandit, bandit, bandit_archer, mist_wolf]}
   - {id: altar_wardens, name_zh: 祭壇護法, units: [sect_warrior_monk, sect_talisman_caster, sect_mist_walker]}
   - {id: sword_array, name_zh: 劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_array_stone]}
-  - {id: bridge_patrol, name_zh: 吊橋巡邏, units: [sect_swordsman, sect_crane_archer, sect_acolyte, sect_alchemist]}
+  - {id: bridge_patrol, name_zh: 吊橋巡邏, units: [sect_swordsman, sect_crane_archer, sect_acolyte]}
   - {id: valley_keepers, name_zh: 藥谷守人, units: [sect_alchemist, sect_warrior_monk, sect_puppeteer]}
   - {id: valley_beasts, name_zh: 藥谷野獸, units: [mountain_leopard, mountain_leopard, stoneback_bear]}
   - {id: furnace_steward, name_zh: 丹爐執事, units: [sect_steward, sect_swordsman, sect_warrior_monk, sect_acolyte]}
   - {id: furnace_tide, name_zh: 丹爐水房, units: [water_alchemist, sect_swordsman, sect_swordsman, sect_mist_walker]}
   - {id: north_slope_pack, name_zh: 狼王的狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: lake_hunters, name_zh: 冬湖獵手, units: [frost_crane_archer, stoneback_bear, mist_wolf]}
-  - {id: lake_bears, name_zh: 冬湖石背熊, units: [stoneback_bear, stoneback_bear, frost_crane_archer]}
+  - {id: lake_bears, name_zh: 冬湖石背熊, units: [stoneback_bear, mist_wolf, frost_crane_archer]}
   - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}
   - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_swordsman, sect_mist_walker, thunder_talisman_caster, sect_crane_archer]}
   - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem]}

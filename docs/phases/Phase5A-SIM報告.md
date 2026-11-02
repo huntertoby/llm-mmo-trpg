@@ -204,3 +204,42 @@ uv run python scripts/world_leveling_sim.py encounter --seeds 4 --jobs 6 --varia
 uv run python scripts/world_leveling_sim.py encounter --seeds 3 --jobs 6 --variants 2:25,1:50 --grow-companions --name comp2
 uv run python scripts/world_leveling_sim.py curve
 ```
+
+## 5. 5A-SIM2 套用
+
+> 實作者：implementer agent（2026-11-03）。依 `docs/phases/Phase5計畫.md` 5A 表「5A-SIM2」列（玩法 PM 代決）。數值都在 `content/world/rules.yaml`，程式只讀取。
+
+### 5.1 改了什麼
+
+| 項目 | 做法 |
+|---|---|
+| 隊友成長 | `trpg.world.battle.grow_allies`：`prepare_battle` 把標準隊友照主角等級成長（同 `grow_enemy` 規則：+2 屬性、HP +5%／級、技能階級）；傭兵與影子之後走同一函式 |
+| 敵人成長 | 不改 |
+| 經驗 | `rules.yaml` 新 `xp`：`base 100`、`level_permille 100`、`shares_permille`（battle 1000、elite 3000、situation_success 500、situation_partial 250、quest_chain_step 3000、main_step 5000、bounty 4000、hidden_location 2000；後四項先寫進表，等功能做好接上）。1 份＝100×(1＋10%×(地點建議等級−1))；戰鬥用地點 `level_min`，陣容含精英給 `elite` 份。移除 `battle.xp_per_battle` |
+| 情境判定 | 預算改用「該地點 1 份」× 500‰，模板 1000／500‰ → 0.5／0.25 份 |
+| 門檻 | `hero_growth.level_thresholds`（950／3800／…／43650，上限 10）；`gain_xp` 與 `world_presenter` 改讀它，不再讀原型 `roguelite.yaml` |
+| 遭遇表 | schema 新增地點層的 `ranged_cap`、`unit_min_levels`（單位等級門檻，不夠則換成指定單位）；`cloud_sea_bridge`：`ranged_cap: 1`；`winter_lake`：石背熊 4 級以上才出現、否則霧狼 |
+| 腳本 | `world_leveling_sim.py`：門檻覆寫改到 `hero_growth`、隊友成長改由 `prepare_battle` 做（`--grow-companions` 不再有作用）、新增 `--locations` |
+
+### 5.2 重量（`--seeds 4 --jobs 6`，23 build，2,484 場、約 5 分鐘）
+
+僅套用上述規則時，雲海吊橋 70%、寒湖 70%（未達 75%）；因此**另外調了兩個陣容**（需 PM 確認）：吊橋巡邏拿掉藥師（剩 劍士、雲鶴使、學徒，3 名、1 名遠程）；寒湖「冬湖石背熊」由 2 熊＋冰鶴使改為 1 熊＋霧狼＋冰鶴使。
+
+| 指標 | 結果 | 目標 |
+|---|---|---|
+| 同等級整體 | 84%（含 1 級 地點；2 級以上 82%） | 約 80% |
+| 高 2 級 | 58% | 約一半 |
+| 雲海吊橋同等級 | 84%（高 2 級 73%） | ≥ 75% |
+| 寒湖同等級 | 70%（4 種子）；8 種子重量 78%，合計約 75% | ≥ 75% |
+| 到達時間（`curve`，方案 B） | 5 級第 3.00 天、8 級第 5.82 天、10 級第 7.75 天 | 約 3／6／7～8 天 |
+
+### 5.3 待 PM 決定
+
+1. 兩處陣容調整（上述）是我加的，規格只寫「最多 1 名遠程、石背熊 4 級以上」；寒湖本身就是 4 級地點，單靠門檻不會變容易。吊橋現在偏易（84%），可改回 4 名陣容再調。
+2. 寒湖 4 種子樣本偏低（70%），建議正式啟用前多種子再量一次。
+3. 到達時間是 `curve` 的行為假設推算，不是實際遊玩。
+4. `xp.shares_permille` 的任務鏈、主線、懸賞、隱藏地點尚無程式讀取。
+
+### 5.4 檢查
+
+`ruff check`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`tests/world`、`tests/content`、`tests/roguelite`、`tests/api`、`tests/cli`（slow）全部通過（api 一個寫死 100 經驗升 2 級的測試已改讀 content）。
