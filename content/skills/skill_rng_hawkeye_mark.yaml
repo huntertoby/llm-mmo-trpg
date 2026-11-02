@@ -1,0 +1,28 @@
+# BAL-19d（玩法決定 #110，06 6.27.4 補內容：遠程武器技；數值為初值，未經模擬）：鷹眼標記，居高臨下時多補一箭（敏捷＋高處＋標記）
+id: skill_rng_hawkeye_mark
+schema_version: 1
+name_zh: 鷹眼標記
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 700}
+  # 站得比目標高時看清要害，多補一箭
+  - type: damage
+    multiplier_permille: 600
+    condition: {type: height_advantage}
+  - {type: apply_status, status: marked, duration: 2}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, ranged, height, mark]
+narrative:
+  concept: 從高處看清獵物的破綻，射中後替同伴指出要害
+  cast_flavor: 你從高處俯瞰，一箭釘在目標的要害旁，箭羽在風中標出它的位置
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
