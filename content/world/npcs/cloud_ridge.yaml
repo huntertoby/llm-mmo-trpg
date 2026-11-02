@@ -1,0 +1,70 @@
+# 雲嶺 NPC 人設卡（Phase 5B-1；docs/phases/Phase5計畫.md 8.4）。schema：src/trpg/content/world_events.py。
+# 來源：docs/design/18-雲嶺內容.md 18.5（#107；#111 玩法 PM 代決、待使用者確認）。
+# 開發 PM 自定：ID；location 對到地點圖（18.5「青霧觀」＝青霧觀山門 mist_temple_gate）。
+# secret_zh 只給說書人參考，不直接顯示給玩家；人設卡只影響對話與劇情，不影響數值（9.6.7 #3、#5）。
+region: cloud_ridge
+npcs:
+  - id: granny_du
+    name_zh: 渡婆婆
+    role_zh: 鎮長
+    location: mist_ferry
+    personality_zh: 精明、護短
+    speech_zh: 短句，愛用渡船比喻
+    secret_zh: 年輕時是斷崖幫的人
+    hooks_zh: 區域任務鏈；好感度高才說出暗門
+  - id: shopkeeper_liu
+    name_zh: 柳掌櫃
+    role_zh: 商人
+    location: mist_ferry
+    personality_zh: 圓滑、愛八卦
+    speech_zh: 客氣，句尾常加「呢」
+    secret_zh: 偷偷收購源晶碎片
+    hooks_zh: 傳聞來源；隱藏配方的材料
+  - id: daoist_qingya
+    name_zh: 青崖道長
+    role_zh: 技能導師
+    location: mist_temple_gate
+    personality_zh: 嚴肅、慢熱
+    speech_zh: 古風、文言，稱人「施主」
+    secret_zh: 想離開道觀
+    hooks_zh: 導師任務鏈（#95）
+  - id: hunter_ayue
+    name_zh: 阿岳
+    role_zh: 獵戶，劇情夥伴
+    location: hunter_hut
+    personality_zh: 直爽、話少
+    speech_zh: 口語、粗短
+    secret_zh: 父親死在源晶裂痕
+    hooks_zh: 新手任務鏈的劇情夥伴（#97）；主線第 1 章同行
+  - id: acolyte_xiaolian
+    name_zh: 小蓮
+    role_zh: 道童
+    location: mist_temple_gate
+    personality_zh: 好奇、膽小
+    speech_zh: 叫人「哥哥／姐姐」
+    secret_zh: 偷看過觀主修煉
+    hooks_zh: 事件 2、6；主線線索
+  - id: mistlock_master
+    name_zh: 霧鎖真人
+    role_zh: 青霧觀觀主、區域 Boss
+    location: cloud_summit
+    personality_zh: 自負、執著
+    speech_zh: 慢條斯理，愛講道理
+    secret_zh: 想用源晶飛升
+    hooks_zh: 主線第 1 章 Boss
+  - id: scarface
+    name_zh: 疤面
+    role_zh: 斷崖幫二當家
+    location: cliff_gang_fort
+    personality_zh: 狠、記仇
+    speech_zh: 粗話少、威脅多
+    secret_zh: 和柳掌櫃有交易
+    hooks_zh: 懸賞、線頭「二當家記恨你」
+  - id: frost_chime
+    name_zh: 霜音
+    role_zh: 白狐
+    location: crane_cliff
+    personality_zh: 神祕、愛捉弄人
+    speech_zh: 只用問句回答
+    secret_zh: 是裂痕異象的見證者
+    hooks_zh: 隱藏地點；狐族主角有專屬對話

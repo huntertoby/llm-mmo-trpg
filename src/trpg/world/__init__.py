@@ -16,7 +16,9 @@
 - :mod:`trpg.world.actions`：世界動作與事件。
 - :mod:`trpg.world.weather`：各區天氣。
 - :mod:`trpg.world.encounters`：遭遇的敵方陣容（遭遇表、營地混精英，5A-3）。
-- :mod:`trpg.world.step`：:func:`world_step`（移動＋遇敵、感知判定、紮營）。
+- :mod:`trpg.world.step`：:func:`world_step`（移動＋遇敵、事件擲骰、感知判定、紮營）。
+- :mod:`trpg.world.events`：事件出現擲骰（依步數與種子，5B-1）。
+- :mod:`trpg.world.threads`：線頭的有效、到期與上限（5B-1）。
 - :mod:`trpg.world.replay`：世界動作日誌與重播。
 - :mod:`trpg.world.save`：存檔格式與原子寫檔。
 """

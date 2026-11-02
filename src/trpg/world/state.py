@@ -21,8 +21,10 @@ __all__ = [
     "CharacterState",
     "ClearedLocation",
     "EncounterResult",
+    "EventTrigger",
     "LocationRef",
     "PerceptionMark",
+    "ThreadState",
     "WorldState",
 ]
 
@@ -78,6 +80,54 @@ class EncounterResult(_Model):
     """遇敵的時間（UTC 秒）。"""
 
 
+class EventTrigger(_Model):
+    """觸發的事件（Phase 5B-1；只是「哪個骨架」的資料，解法與結果在 5B-2～5B-4）。
+
+    ``skeleton`` 是引擎挑的預設骨架；``candidates`` 是當下所有合格的骨架（依 ID 排序），說書人
+    （5B-3）只能從這裡換，不能自己多生事件（09 9.6.7 #6）。
+    """
+
+    region: str
+    location: str
+    skeleton: str
+    candidates: tuple[str, ...]
+    follows_thread: str | None = None
+    """被接上的有效線頭（骨架的 ``follows`` 命中時）。"""
+    weather: str
+    day_phase: DayPhase
+    at: int = Field(ge=0)
+
+    @field_validator("candidates")
+    @classmethod
+    def _candidates_sorted(cls, candidates: tuple[str, ...]) -> tuple[str, ...]:
+        if list(candidates) != sorted(set(candidates)):
+            raise ValueError("candidates 必須排序且不重複")
+        return candidates
+
+
+class ThreadState(_Model):
+    """一條進行中的線頭（09 9.6.7 #6；``expires_at``（UTC 秒）起到期）。"""
+
+    thread: str = Field(pattern=ID_PATTERN)
+    """線頭 ID（事件骨架 ``threads`` 裡的 ``id``）。"""
+    skeleton: str = Field(pattern=ID_PATTERN)
+    """留下這條線頭的事件骨架。"""
+    region: str = Field(pattern=ID_PATTERN)
+    created_at: int = Field(ge=0)
+    expires_at: int = Field(ge=0)
+
+    def key(self) -> tuple[int, str]:
+        return (self.created_at, self.thread)
+
+
+def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
+    keys = [t.key() for t in threads]
+    ids = [t.thread for t in threads]
+    if keys != sorted(keys) or len(set(ids)) != len(ids):
+        raise ValueError("threads 必須依建立時間、ID 排序且同一線頭不重複")
+    return threads
+
+
 class WorldState(_Model):
     """共享的世界快照（``trpg-world/1``）。世界的變化由世界動作日誌重播得到，快照只是快取。"""
 
@@ -90,6 +140,8 @@ class WorldState(_Model):
     """世界旗標（排序、不重複）；地點的 ``unlock_flag`` 成立與否看這裡。"""
     cleared: tuple[ClearedLocation, ...] = ()
     """已清空的地點（依區域、地點排序；每個地點最多一筆）。寫入在 5A-4／5F-1。"""
+    threads: tuple[ThreadState, ...] = ()
+    """世界級線頭（所有人的世界都看得到；5B-1 起）。"""
 
     @field_validator("flags")
     @classmethod
@@ -105,6 +157,11 @@ class WorldState(_Model):
         if keys != sorted(set(keys)):
             raise ValueError("cleared 必須依區域、地點排序且不重複")
         return cleared
+
+    @field_validator("threads")
+    @classmethod
+    def _world_threads(cls, threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
+        return _check_threads(threads)
 
     def has_flag(self, flag: str) -> bool:
         return flag in self.flags
@@ -143,6 +200,12 @@ class CharacterState(_Model):
     """還沒處理的遭遇；有它時不能移動或紮營（5A-4 開戰後清掉）。"""
     camped_at: LocationRef | None = None
     """目前紮營中的地點（營火；移動就清掉）。"""
+    event_steps: int = Field(default=0, ge=0)
+    """距離上次事件走了幾步（事件出現機率用；5B-1）。"""
+    pending_event: EventTrigger | None = None
+    """觸發了、還沒處理的事件（5B-1；不擋移動，離開地點就作罷）。"""
+    threads: tuple[ThreadState, ...] = ()
+    """個人線頭（只屬於自己；5B-1 起）。"""
 
     @field_validator("revealed")
     @classmethod
@@ -166,6 +229,11 @@ class CharacterState(_Model):
         if any(v < 0 for v in counters.values()):
             raise ValueError("rng_counters 不可為負")
         return dict(sorted(counters.items()))
+
+    @field_validator("threads")
+    @classmethod
+    def _char_threads(cls, threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
+        return _check_threads(threads)
 
     def has_revealed(self, region: str, location: str) -> bool:
         return any(r.region == region and r.location == location for r in self.revealed)

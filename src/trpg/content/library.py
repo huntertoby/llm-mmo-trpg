@@ -128,6 +128,7 @@ from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
+from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
@@ -585,6 +586,9 @@ class ContentLibrary:
     ``None``。"""
     world_encounters: dict[str, EncounterTable] = field(default_factory=dict)
     """大世界遭遇表（``world/encounters/*.yaml``，Phase 5A-3）；鍵＝區域 ID。沒有資料夾時為空。"""
+    world_event_content: WorldEventContent = field(default_factory=WorldEventContent)
+    """事件骨架、NPC 人設卡、事件規則（``world/events/``、``world/npcs/``、
+    ``world/event_rules.yaml``，Phase 5B-1）；沒有資料時為空。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -851,6 +855,7 @@ def load_library(  # noqa: PLR0915
         unit_check,
         files,
     )
+    world_event_content = load_world_event_content(root, world_maps, weather_map, files)
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
@@ -910,6 +915,7 @@ def load_library(  # noqa: PLR0915
         world_rules=world_rules,
         world_enemies=world_enemies,
         world_encounters=world_encounters,
+        world_event_content=world_event_content,
         files=files,
     )
 
