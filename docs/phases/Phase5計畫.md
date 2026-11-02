@@ -263,51 +263,56 @@ trpg.shared ← trpg.content ← trpg.engine ← trpg.roguelite ← trpg.world �
 
    ```python
    LocationKind = Literal[
-       "town",        # 區域小鎮（9.6.1）
-       "camp",        # 營地（9.6.2）
-       "ruin",        # 遺跡
-       "altar",       # 祭壇
-       "anomaly",     # 異象
-       "caravan",     # 商隊
-       "village",     # 村落
-       "secret",      # 秘境（隱藏）
+       "town",  # 區域小鎮（9.6.1）
+       "camp",  # 營地（9.6.2）
+       "ruin",  # 遺跡
+       "altar",  # 祭壇
+       "anomaly",  # 異象
+       "caravan",  # 商隊
+       "village",  # 村落
+       "secret",  # 秘境（隱藏）
        "elite_lair",  # 精英巢穴
-       "boss",        # 區域 Boss 據點（18.3；Q16）
-       "gate",        # 通往其他區域的傳送點（18.3；Q16）
+       "boss",  # 區域 Boss 據點（18.3；Q16）
+       "gate",  # 通往其他區域的傳送點（18.3；Q16）
    ]
    RevealMethod = Literal[
        "perception_nearby",  # 靠近時感知判定（9.6.7 #10）
-       "situation",          # 情境判定成功
-       "quest_clue",         # 任務線索
-       "friend_footprint",   # 朋友的足跡
+       "situation",  # 情境判定成功
+       "quest_clue",  # 任務線索
+       "friend_footprint",  # 朋友的足跡
    ]
 
+
    class MapPos(ContentModel):
-       x: int = Field(ge=0, le=100)   # 前端畫地點圖用的相對座標（純顯示）
+       x: int = Field(ge=0, le=100)  # 前端畫地點圖用的相對座標（純顯示）
        y: int = Field(ge=0, le=100)
 
+
    class LocationDef(ContentModel):
-       id: str                         # ID_PATTERN
-       name_zh: str                    # min_length=1
+       id: str  # ID_PATTERN
+       name_zh: str  # min_length=1
        kind: LocationKind
-       level_min: int | None = None    # 建議等級（9.6.2）；town、gate 必須是 None，其餘必填
-       level_max: int | None = None    # 省略＝同 level_min；必須 >= level_min
-       battle_maps: tuple[str, ...] = ()   # content/maps 的地圖 ID（遇敵展開格子用，9.6.2）
-       hidden: bool = False            # 要探索才會出現（9.6.2）
+       level_min: int | None = None  # 建議等級（9.6.2）；town、gate 必須是 None，其餘必填
+       level_max: int | None = None  # 省略＝同 level_min；必須 >= level_min
+       battle_maps: tuple[str, ...] = ()  # content/maps 的地圖 ID（遇敵展開格子用，9.6.2）
+       hidden: bool = False  # 要探索才會出現（9.6.2）
        reveal: tuple[RevealMethod, ...] = ()  # hidden=True 時必填、不可重複
-       gate_to: str | None = None      # 只有 gate 可填：通往的區域 ID
-       unlock_flag: str | None = None  # 世界旗標 ID（ID_PATTERN）；有值＝旗標成立前不能進入（只存資料，5A-2 才判定）
-       description_zh: str = ""        # 地點說明（18.3「內容」欄；純顯示）
+       gate_to: str | None = None  # 只有 gate 可填：通往的區域 ID
+       unlock_flag: str | None = (
+           None  # 世界旗標 ID（ID_PATTERN）；有值＝旗標成立前不能進入（只存資料，5A-2 才判定）
+       )
+       description_zh: str = ""  # 地點說明（18.3「內容」欄；純顯示）
        pos: MapPos
 
+
    class LocationMapDef(ContentModel):
-       region: str                     # regions.yaml 的區域 ID；一區一檔
+       region: str  # regions.yaml 的區域 ID；一區一檔
        name_zh: str
-       level_min: int = Field(ge=1)    # 區域等級範圍（7.8）
+       level_min: int = Field(ge=1)  # 區域等級範圍（7.8）
        level_max: int
-       town: str                       # 本區小鎮的地點 ID
+       town: str  # 本區小鎮的地點 ID
        locations: tuple[LocationDef, ...]
-       edges: tuple[tuple[str, str], ...]   # 無向連線
+       edges: tuple[tuple[str, str], ...]  # 無向連線
    ```
 
    **單檔驗證（`model_validator`，錯誤訊息用繁體中文，指出地點 ID）**：
