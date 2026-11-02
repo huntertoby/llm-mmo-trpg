@@ -61,7 +61,7 @@ from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
-from trpg.world.events import mark_finished, roll_event
+from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
 from trpg.world.party import hire, set_shadow_ai
@@ -174,7 +174,8 @@ def world_step(
         library, result.world, before, result.char, result.events, now=now
     )
     events = (*ended, *result.events, *settled)
-    char = mark_finished(library, char, events)  # 只出一次的骨架（5B-4c）
+    char = mark_finished(library, char, events, now=now)  # 只出一次的骨架（5B-4c、5B-4d）
+    char = mark_met_opportunities(library, char, events)  # 機遇保底（5B-4d）
     char, extra = advance_quests(library, world, char, events, now)
     world, saved = save_after_prep(library, world, char, action, now)  # 城鎮整備存影子（5C-2）
     if not ended and not settled and not extra and not saved and char is result.char:

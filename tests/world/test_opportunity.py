@@ -6,18 +6,27 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.world.helpers import NOON, make_world
+from tests.world.helpers import NOON, make_world, with_rules
 from tests.world.test_situations import at_event
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import (
     EventResolvedEvent,
     EventSolveAction,
     EventSolvedEvent,
+    EventTriggeredEvent,
     OfferPickAction,
     SkillOfferedEvent,
     SkillOfferTakenEvent,
+    TalkAction,
+    WorldEvent,
 )
 from trpg.world.errors import WorldActionError
+from trpg.world.events import (
+    guaranteed_opportunity,
+    mark_met_opportunities,
+    roll_event,
+    season_day,
+)
 from trpg.world.growth import hero_tier
 from trpg.world.solutions import opportunity_tier_bonus
 from trpg.world.state import CharacterState
@@ -102,3 +111,70 @@ def test_tier_up_chance_and_season_cap(library: ContentLibrary, make_char: MakeC
     assert result.char.pending_offers[0].offer.tier == hero_tier(library, lucky.level) + 1
     solved = next(e for e in result.events if isinstance(e, EventSolvedEvent))
     assert solved.tier_bonus == 1
+
+
+# ---------------------------------------------------------------------------
+# 第 7 天前保底 1 次（Phase 5B-4d；Phase5計畫 24.4；07 7.6）
+# ---------------------------------------------------------------------------
+
+DAY = 86_400
+DAY6 = NOON + 5 * DAY  # 賽季第 6 天的中午（白天：骨架 12 本來只在雷雨夜）
+
+
+def _arrive(
+    library: ContentLibrary, char: CharacterState, now: int, *, encountered: bool = False
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    rolled = roll_event(
+        library,
+        make_world(),
+        char.model_copy(update={"location": "old_pine_altar"}),
+        encountered=encountered,
+        now=now,
+    )
+    return rolled.char, rolled.events
+
+
+def test_guarantee_from_day_6(library: ContentLibrary, make_char: MakeChar) -> None:
+    world = make_world()
+    assert season_day(world, NOON) == 1
+    assert season_day(world, DAY6) == 6
+    at_altar = make_char(location="old_pine_altar")
+    assert guaranteed_opportunity(library, world, at_altar, DAY6 - DAY) is None  # 第 5 天
+    assert guaranteed_opportunity(library, world, at_altar, DAY6) is not None
+    char, events = _arrive(library, make_char(), DAY6)
+    trigger = char.pending_event
+    assert trigger is not None
+    assert (trigger.skeleton, trigger.candidates, trigger.guaranteed) == (ALTAR, (ALTAR,), True)
+    assert trigger.day_phase == "day"  # 不看時段
+    assert any(isinstance(e, EventTriggeredEvent) for e in events)
+    # 擲骰照舊消耗：亂數計數和沒保底時相同
+    plain, _ = _arrive(library, make_char(), DAY6 - DAY)
+    assert char.rng_counters == plain.rng_counters
+    # 第 7 天以後還沒遇過的照樣保底（代決 5B4d-4）
+    assert guaranteed_opportunity(library, world, at_altar, DAY6 + 5 * DAY) is not None
+
+
+def test_no_guarantee_when_met_taken_or_fighting(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world = make_world()
+    met = make_char(location="old_pine_altar", met_opportunities=(ALTAR,))
+    assert guaranteed_opportunity(library, world, met, DAY6) is None
+    taken = make_char(location="old_pine_altar", opportunities=(ALTAR,))
+    assert guaranteed_opportunity(library, world, taken, DAY6) is None
+    elsewhere = make_char(location="rain_terraces")
+    assert guaranteed_opportunity(library, world, elsewhere, DAY6) is None
+    char, _ = _arrive(library, make_char(), DAY6, encountered=True)  # 遇敵那步不出事件
+    assert char.pending_event is None
+    off = with_rules(library, opportunity={"guarantee_from_day": 0})
+    assert guaranteed_opportunity(off, world, make_char(location="old_pine_altar"), DAY6) is None
+
+
+def test_met_opportunities_recorded(library: ContentLibrary, make_char: MakeChar) -> None:
+    char, events = _arrive(library, make_char(), DAY6)
+    marked = mark_met_opportunities(library, char, events)
+    assert marked.met_opportunities == (ALTAR,)
+    assert mark_met_opportunities(library, marked, events) is marked
+    # 沒有機遇事件的動作不記
+    talked = world_step(library, make_world(), make_char(), TalkAction(npc="granny_du"), NOON)
+    assert talked.char.met_opportunities == ()

@@ -99,7 +99,7 @@ def test_one_or_two_npcs_trusted_by_day_5(library: ContentLibrary) -> None:
 
 
 def test_xiaolian_gains_on_main_steps_2_and_3(library: ContentLibrary) -> None:
-    """5B-4d（18.7.6 個別來源）：小蓮＝主線第 ②、③ 步各 +10（代決 5B4d-1：通用的任務步驟好感度）。"""
+    """5B-4d（18.7.6 個別來源）：小蓮＝主線第 ②、③ 步各 +10（代決 5B4d-1：照任務步驟好感度）。"""
     steps = library.world_quests.quests[REGION].quest_by_id()["main_mist_rift"].steps
     with_xiaolian = [i + 1 for i, s in enumerate(steps) if "acolyte_xiaolian" in s.npcs]
     assert with_xiaolian == [2, 3]
