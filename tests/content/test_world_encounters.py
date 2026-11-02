@@ -39,6 +39,18 @@ def test_cloud_ridge_table_loaded(library: ContentLibrary, table: EncounterTable
     assert "world/encounters/cloud_ridge.yaml" in rel
 
 
+def test_ally_first_threads_exist(library: ContentLibrary, table: EncounterTable) -> None:
+    """5A-6：遭遇表的 ``ally_first_threads``（18.4 補充：暗門）都是事件骨架的線頭。"""
+    threads = {
+        t for table_ in library.world_event_content.events.values() for t in table_.thread_ids()
+    }
+    wanted = {t for loc in table.locations for t in loc.ally_first_threads}
+    assert wanted == {"gang_fort_secret_door"}
+    assert wanted <= threads
+    fort = table.location_by_id()["cliff_gang_fort"]
+    assert fort.ally_first_threads == ("gang_fort_secret_door",)
+
+
 def test_every_encounter_location_has_a_table(
     library: ContentLibrary, table: EncounterTable
 ) -> None:
