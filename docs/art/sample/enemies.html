@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>敵人外觀：各家族、精英、頭目（C 畫風）</title>
+<style>
+  body { margin: 0; padding: 12px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; font-size: 13px; }
+  h2 { font-size: 15px; margin: 14px 0 4px; }
+  .note { color: #a9adb6; margin-bottom: 6px; }
+  .ok { color: #7ddc3a; } .bad { color: #ff6a6a; }
+  canvas { display: block; margin: 4px 0 10px; }
+</style>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+</head>
+<body>
+<!-- 名單依玩法 PM 的敵人清單（docs/design/18-雲嶺內容.md 18.2、19 灰燼荒原 19.2、共用筆記「玩法PM-敵人清單.md」，#111 代決草稿）。 -->
+<div id="selftest" class="note"></div>
+<h2>山中修士（青霧觀，雲嶺）：每欄上＝正面、中＝側面、下＝背面</h2>
+<div class="note">人形用紙娃娃＋新部件（髮髻、黃符、背葫蘆、圍裙、赤膊念珠、劍穗、白紗面罩、白羽披肩、木偶箱、傀儡線、拂塵）；木傀儡、陣眼石靈用異形畫法。</div>
+<canvas id="monks"></canvas>
+<h2>熔岩獸群（灰燼荒原）・野獸・源晶失控造物</h2>
+<canvas id="families"></canvas>
+<h2>精英詞綴（同一隻霧狼；人形疊同一套）</h2>
+<canvas id="affixes"></canvas>
+<h2>規則：身形 × 材質（每欄一種身形；毛皮／熔岩／源晶／青石／木／霧）</h2>
+<canvas id="matrix"></canvas>
+<h2>戰場實際大小（52px 格、1 倍）</h2>
+<canvas id="field"></canvas>
+<script>
+const E = window.EnemyArt, S = window.StoryDoll;
+function sheet(id, cols, cellW, cellH, rows) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1;
+  c.width = cols * cellW * dpr; c.height = rows * cellH * dpr; c.style.width = `${cols * cellW}px`; c.style.height = `${rows * cellH}px`;
+  const x = c.getContext("2d"); x.scale(dpr, dpr); return x;
+}
+function cell(x, X, Y, W, H, title, sub, shade) {
+  x.fillStyle = shade ? "#22262e" : "#262b33"; x.fillRect(X, Y, W, H);
+  x.textAlign = "center"; x.fillStyle = "#e8e8ea"; x.font = "bold 12px 'Microsoft JhengHei'"; x.fillText(title, X + W / 2, Y + 14);
+  if (sub) { x.fillStyle = "#a9adb6"; x.font = "11px 'Microsoft JhengHei'"; x.fillText(sub, X + W / 2, Y + 27); }
+}
+// 頭目外光（同 renderFigureCanvas：剪影染色往 12 方向錯開 2.6px、50%）
+function withGlow(ctx, color, cx, cy, paint) {
+  if (!color) { paint(ctx, cx, cy); return; }
+  const W = 150, H = 150, dpr = 2, off = document.createElement("canvas"); off.width = W * dpr; off.height = H * dpr;
+  const o = off.getContext("2d"); o.scale(dpr, dpr); paint(o, W / 2, H - 16);
+  const g = document.createElement("canvas"); g.width = off.width; g.height = off.height;
+  const gc = g.getContext("2d"); gc.drawImage(off, 0, 0); gc.globalCompositeOperation = "source-in"; gc.fillStyle = color; gc.fillRect(0, 0, g.width, g.height);
+  ctx.save(); ctx.globalAlpha = 0.5;
+  for (let a = 0; a < 12; a++) { const t = (a / 12) * Math.PI * 2; ctx.drawImage(g, cx - W / 2 + Math.cos(t) * 2.6, cy - (H - 16) + Math.sin(t) * 2.6, W, H); }
+  ctx.restore(); ctx.drawImage(off, cx - W / 2, cy - (H - 16), W, H);
+}
+
+// ---- 修士色票：青灰、青、月白、墨灰、朱紅、竹青 ----
+const C = { gray: "#8a9aa0", qing: "#5f8f8a", moon: "#dfe4e2", ink: "#3c4248", red: "#c0392b", bamboo: "#4f8a6a" };
+const skin = "#f1c9a5", skin2 = "#d9a47a";
+const MONKS = [
+  ["青霧道童", "補師（小）", { look: { skin, hair: "bun", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: C.gray, trim: C.moon }, main_hand: { kind: "staff", glow: "#b6f0a0" } } }, { k: 0.9 }],
+  ["持劍弟子", "近戰", { look: { skin: skin2, hair: "bun", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: C.qing, trim: C.moon }, main_hand: { kind: "sword" } } }],
+  ["符籙師", "控制（雷）", { look: { skin, hair: "long", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: C.qing, trim: C.red }, waist: { kind: "talismans" }, main_hand: { kind: "talisman" } } }],
+  ["煉丹師", "補師（先打）", { look: { skin: skin2, hair: "bun", hairColor: "#2a2a30" }, gear: { body: { kind: "robe", color: C.bamboo, trim: C.moon, apron: "#e8dcc0" }, back: { kind: "gourd" }, main_hand: { kind: "whisk" } } }],
+  ["護法武僧", "坦", { look: { skin: "#c08050", hair: "none", build: "stout", pants: "#d8a030" }, gear: { body: { kind: "bare", color: "#d8a030" }, neck: { kind: "beads" } } }],
+  ["劍陣弟子", "近戰（三人一組）", { look: { skin, hair: "bun", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: C.moon, trim: C.qing }, main_hand: { kind: "sword", tassel: C.red } } }],
+  ["霧行者", "刺客", { look: { skin, hair: "short" }, gear: { body: { kind: "robe", color: "#e8ecee", trim: "#b8c4cc" }, head: { kind: "veil" }, main_hand: { kind: "dagger" } } }],
+  ["雲鶴使", "遠程", { look: { skin: skin2, hair: "bun", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: C.moon, trim: C.ink }, cloak: { kind: "cape", form: "feather", color: "#f2f0ea" }, main_hand: { kind: "bow" } } }],
+  ["傀儡師", "召喚", { look: { skin, hair: "long", hairColor: "#3a2a20" }, gear: { body: { kind: "robe", color: C.ink, trim: C.red }, back: { kind: "puppet_box" }, main_hand: { kind: "puppet_cross" } } }],
+  ["木傀儡", "傀儡師召喚", { creature: { body: "golem", material: "wood", size: "small" } }],
+  ["陣眼石靈", "物件", { creature: { body: "pylon", material: "stone" } }],
+  ["青霧執事", "精英（補師）", { look: { skin: skin2, hair: "bun", hairColor: "#2a2a30", beard: true }, gear: { body: { kind: "robe", color: C.bamboo, trim: "#e8bb48", apron: "#f2e8c8" }, back: { kind: "gourd", color: "#e8bb48" }, main_hand: { kind: "whisk" } } }, { elite: true, affixes: ["regen"] }],
+  ["霧鎖真人", "頭目", { look: { skin, hair: "long", hairColor: "#f0f0f0", beard: true }, gear: { body: { kind: "robe", color: C.moon, trim: "#e8bb48" }, cloak: { kind: "cape", color: C.qing }, main_hand: { kind: "whisk" }, off_hand: { kind: "sword" } } }, { glow: "#ffbf3a", traits: ["mist"] }],
+  ["雷符師", "變體（雷）", { look: { skin, hair: "long", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: C.ink, trim: "#fff36b" }, waist: { kind: "talismans", color: "#fff7c0" }, main_hand: { kind: "talisman" } } }, { traits: ["sparks"] }],
+  ["冰鶴使", "變體（冰）", { look: { skin: skin2, hair: "bun", hairColor: "#1c1c22" }, gear: { body: { kind: "robe", color: "#bfe4f2", trim: C.moon }, cloak: { kind: "cape", form: "feather", color: "#d8f6ff" }, main_hand: { kind: "bow" } } }],
+  ["水煉丹師", "變體（水）", { look: { skin: skin2, hair: "bun", hairColor: "#2a2a30" }, gear: { body: { kind: "robe", color: "#3a6ab0", trim: C.moon, apron: "#d8e8f4" }, back: { kind: "gourd", color: "#4a9af0" }, main_hand: { kind: "whisk" } } }],
+];
+function drawMonk(ctx, spec, opt, view, cx, cy, k) {
+  if (spec.creature) {
+    if (view === "back") return;
+    E.stamp(ctx, spec.creature, cx, cy, k);
+    return;
+  }
+  const kk = k * (opt.k ?? 1) * (opt.elite ? 1.15 : 1);
+  E.ringAt(ctx, cx, cy, kk, !!opt.elite || !!opt.glow);
+  withGlow(ctx, opt.glow, cx, cy, (c, x, y) => {
+    if ((opt.traits ?? []).includes("mist")) { c.save(); c.translate(x, y); c.scale(kk, kk); E.TRAITS.mist.draw(c, { head: [2, -44], top: -55, len: 12, sp: [] }); c.restore(); }
+    S.stamp(c, spec, view === "side" ? "side" : view, x, y, kk);
+    if ((opt.traits ?? []).includes("sparks")) { c.save(); c.translate(x, y); c.scale(kk, kk); E.TRAITS.sparks.draw(c, { head: [2, -44], top: -55, len: 12, sp: [] }); c.restore(); }
+  });
+  E.overlay(ctx, opt.affixes, cx, cy, kk);
+}
+{
+  const W = 92, H = 96, top = 34, cols = MONKS.length;
+  const x = sheet("monks", cols, W, top + H * 3, 1);
+  MONKS.forEach(([zh, role, spec, opt = {}], q) => {
+    cell(x, q * W, 0, W, top + H * 3, zh, role, q % 2);
+    ["front", "side", "back"].forEach((v, r) => drawMonk(x, spec, opt, v, q * W + W / 2, top + r * H + H - 10, 1.25));
+  });
+}
+
+// ---- 異形家族 ----
+const FAM = [
+  ["熔岩獸群（灰燼荒原）", [
+    ["餘燼蜥", "近戰（群）", { body: "lizard", material: "magma", size: "small" }],
+    ["熔岩甲蟲", "坦", { body: "crawler", variant: "beetle", material: "magma" }],
+    ["火塵蝠", "遠程（飛行）", { body: "flyer", variant: "bat", material: "magma" }],
+    ["灰燼犬", "近戰（包抄）", { body: "hound", material: "magma" }],
+    ["熔核蛞蝓", "控制", { body: "ooze", material: "magma", traits: ["core"] }],
+    ["噴岩龜", "遠程（拋射）", { body: "shell", material: "magma", traits: ["volcano"] }],
+    ["焦岩巨像", "坦（慢）", { body: "golem", material: "stone", tint: "#5a4e48", element: "fire", traits: ["core"] }],
+    ["熔爐母獸", "召喚", { body: "lizard", material: "magma", size: "large", traits: ["brood", "core"] }],
+    ["硫煙獸", "控制（毒）", { body: "boar", material: "fur", tint: "#8a7a3a", element: "poison", traits: ["smoke"] }],
+    ["寒燼蜥", "變體（冰）", { body: "lizard", material: "magma", element: "ice", size: "small" }],
+    ["雷殼甲蟲", "變體（雷）", { body: "crawler", variant: "beetle", material: "magma", element: "lightning" }],
+    ["熔核領主", "精英・硬殼的", { body: "crawler", variant: "beetle", material: "magma", size: "large", elite: true, traits: ["lava_pool"], affixes: ["hardshell"] }],
+    ["灰燼之心", "頭目（示意）", { body: "wisp", material: "crystal", element: "fire", size: "huge", glow: "#ffbf3a", traits: ["core"] }],
+  ]],
+  ["野獸（中立）", [
+    ["霧狼", "近戰（群）", { body: "hound", material: "fur", tint: "#c8ccd0", traits: ["mist"] }],
+    ["山豹", "刺客", { body: "feline", material: "fur", traits: ["spots"] }],
+    ["石背熊", "坦（土）", { body: "bear", material: "fur", element: "earth", traits: ["stone_back"] }],
+    ["雷羽鷹", "遠程（雷）", { body: "flyer", variant: "bird", material: "fur", tint: "#c8d8f0", element: "lightning", traits: ["sparks"] }],
+    ["北坡狼王", "精英・狂暴的", { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", elite: true, traits: ["mist", "scar"], affixes: ["berserk"] }],
+  ]],
+  ["源晶失控造物（中立）", [
+    ["霧魅", "控制（暗）", { body: "wraith", material: "mist", element: "shadow" }],
+    ["熔晶魅", "控制（火）", { body: "wraith", material: "mist", element: "fire" }],
+    ["碎晶傀儡", "近戰（雷）", { body: "golem", material: "crystal", element: "lightning" }],
+    ["碎晶之主", "賽季頭目", { body: "golem", material: "crystal", size: "huge", glow: "#ffbf3a", traits: ["core"] }],
+    ["源晶柱・霧", "頭目身旁", { body: "pylon", material: "crystal", element: "wind" }],
+    ["源晶柱・雷", "頭目身旁", { body: "pylon", material: "crystal", element: "lightning" }],
+    ["源晶柱・火", "頭目身旁", { body: "pylon", material: "crystal", element: "fire" }],
+  ]],
+];
+{
+  const W = 104, H = 124, cols = Math.max(...FAM.map((f) => f[1].length));
+  const x = sheet("families", cols, W, H + 22, FAM.length);
+  FAM.forEach(([title, list], r) => {
+    const y0 = r * (H + 22);
+    x.textAlign = "left"; x.fillStyle = "#ffd78a"; x.font = "bold 13px 'Microsoft JhengHei'"; x.fillText(title, 4, y0 + 15);
+    list.forEach(([zh, role, spec], q) => {
+      cell(x, q * W, y0 + 22, W, H, zh, role, q % 2);
+      x.save(); x.beginPath(); x.rect(q * W, y0 + 22, W, H); x.clip();
+      E.stamp(x, spec, q * W + W / 2 - 2, y0 + 22 + H - 12, spec.size === "huge" ? 1 : 1.3);
+      x.restore();
+    });
+  });
+}
+
+// ---- 詞綴 ----
+{
+  const list = [[], ["regen"], ["mist_hidden"], ["linked"], ["berserk"], ["blazing"], ["hardshell"], ["armored"], ["swift"], ["mirror"], ["elemental"], ["unknown_affix"]];
+  const W = 104, H = 112, x = sheet("affixes", list.length, W, H, 1);
+  list.forEach((a, q) => {
+    const zh = a.length === 0 ? "一般（無環）" : (E.AFFIX_ZH[a[0]] ?? "不認得→只有金環");
+    const area = { regen: "雲嶺", mist_hidden: "雲嶺", linked: "雲嶺", berserk: "通用", blazing: "荒原", hardshell: "荒原" }[a[0]] ?? (a[0] === "unknown_affix" ? "unknown" : a[0] ? "備用" : "");
+    cell(x, q * W, 0, W, H, zh, area, q % 2);
+    E.stamp(x, { body: "hound", material: "fur", tint: "#c8ccd0", elite: a.length > 0, affixes: a, element: a[0] === "elemental" ? "fire" : undefined }, q * W + W / 2, H - 12, 1.25);
+  });
+}
+
+// ---- 身形 × 材質 ----
+{
+  const bodies = [["hound"], ["boar"], ["bear"], ["feline"], ["flyer", "bird"], ["flyer", "bat"], ["crawler", "beetle"], ["crawler", "spider"], ["lizard"], ["serpent"], ["shell"], ["ooze"], ["golem"], ["wraith"], ["wisp"], ["pylon"]];
+  const mats = ["fur", "magma", "crystal", "stone", "wood", "mist"], W = 84, H = 92;
+  const x = sheet("matrix", bodies.length, W, H, mats.length);
+  bodies.forEach(([b, v], q) => mats.forEach((m, r) => {
+    cell(x, q * W, r * H, W, H, v ? { bird: "鳥", bat: "蝠", beetle: "甲蟲", spider: "蜘蛛" }[v] : E.BODIES[b].zh, { fur: "毛皮", magma: "熔岩", crystal: "源晶", stone: "青石", wood: "木", mist: "霧" }[m], (q + r) % 2);
+    E.stamp(x, { body: b, variant: v, material: m }, q * W + W / 2 - 2, r * H + H - 10, 1.05);
+  }));
+}
+
+// ---- 戰場大小 ----
+{
+  const all = [...MONKS.map(([, , spec, opt = {}]) => ({ monk: spec, opt })), ...FAM.flatMap((f) => f[1].map(([, , spec]) => ({ spec })))];
+  const T = 52, cols = 16, rows = Math.ceil(all.length / cols);
+  const x = sheet("field", cols, T, T, rows);
+  all.forEach((_, i) => { const q = i % cols, r = Math.floor(i / cols); x.fillStyle = (q + r) % 2 ? "#8a8a84" : "#7d8a7a"; x.fillRect(q * T, r * T, T, T); });
+  all.forEach((u, i) => {
+    const q = i % cols, r = Math.floor(i / cols), cx = q * T + T / 2, cy = r * T + T * 0.88;
+    if (u.monk) drawMonk(x, u.monk, u.opt, "front", cx, cy, 0.92 * 0.78);
+    else E.stamp(x, u.spec, cx, cy, 0.92 * (u.spec.size === "huge" ? 0.7 : 0.78));
+  });
+}
+
+// ---- 全組合自測 ----
+{
+  const c = document.createElement("canvas"); c.width = 200; c.height = 200; const x = c.getContext("2d");
+  const bodies = [...Object.keys(E.BODIES), "dragon_unknown", undefined], mats = [...E.MATERIALS, "lava_unknown", undefined];
+  const els = [undefined, ...Object.keys(E.ELEM), "void_unknown"], sizes = [...Object.keys(E.SIZES), "giant_unknown"];
+  const affs = [[], ["berserk", "regen", "armored", "swift", "mirror", "elemental", "mist_hidden", "linked", "blazing", "hardshell"], ["nope"]];
+  const traits = [[], Object.keys(E.TRAITS), ["nope"]], vars = [undefined, "bat", "spider", "?"];
+  let n = 0, fail = 0;
+  for (const b of bodies) for (const m of mats) for (const e of els) for (const a of affs) {
+    const s = sizes[n % sizes.length], v = vars[n % vars.length], t = traits[n % traits.length];
+    try { E.stamp(x, { body: b, material: m, element: e, size: s, affixes: a, traits: t, variant: v, elite: a.length > 0 }, 100, 150, 1); } catch (err) { fail++; console.error(err); }
+    n++;
+  }
+  // 人形新部件：不認得的 kind 不畫、不出錯
+  const odd = { look: { skin, hair: "weird" }, gear: { body: { kind: "zzz" }, back: { kind: "zzz" }, waist: { kind: "zzz" }, neck: { kind: "zzz" }, head: { kind: "zzz" }, cloak: { kind: "cape", form: "zzz" }, main_hand: { kind: "zzz" } } };
+  for (const v of ["front", "side", "back"]) for (const m of [...MONKS.map((r) => r[2]).filter((s) => !s.creature), odd]) { try { S.stamp(x, m, v, 100, 150, 1); } catch (err) { fail++; console.error(err); } n++; }
+  document.getElementById("selftest").innerHTML = `全組合自測：${n} 種組合（異形＋人形新部件），<span class="${fail ? "bad" : "ok"}">${fail} 個出錯</span>`;
+}
+document.title += " ✓";
+</script>
+</body>
+</html>

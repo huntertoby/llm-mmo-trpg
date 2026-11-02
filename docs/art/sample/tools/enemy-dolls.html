@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>敵人外觀：盜賊三套配色（正式紙娃娃畫法）</title>
+<style>
+  body { margin: 0; padding: 12px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; font-size: 13px; }
+  h2 { font-size: 15px; margin: 14px 0 4px; }
+  .note { color: #a9adb6; margin-bottom: 6px; }
+  canvas { display: block; margin: 4px 0 10px; }
+</style>
+</head>
+<body>
+<!-- 美術 PM 樣張：經 client-check-5183（vite.artpm-check.mjs）開 /@fs/<這個檔案的絕對路徑>。
+     盜賊各區只換配色：只用正式紙娃娃已認得的裝備 kind／form／material／color（docs/art/敵人外觀.md）。 -->
+<div class="note">每欄一種盜賊；上排正面（朝南）、中排側面（朝東）、下排背面（朝北）；1.6 倍。最下面是 52px 格、1 倍。</div>
+<h2>盜賊（原版，中立）：皮甲、紅頭巾</h2>
+<canvas id="base"></canvas>
+<h2>斷崖幫（雲嶺）：斗笠、麻布</h2>
+<canvas id="cliff"></canvas>
+<h2>荒原盜賊（灰燼荒原）：舊鐵護甲、破布、舊槍</h2>
+<canvas id="ash"></canvas>
+<h2>戰場實際大小</h2>
+<canvas id="field"></canvas>
+<script type="module">
+const P = await import("/src/render/paperdoll.ts");
+const it = (kind, material, extra = {}) => ({ kind, material, ...extra });
+const ROLES = [["盜賊", "近戰"], ["盜賊弓手", "遠程"], ["盾衛", "坦"], ["隊長", "精英"], ["頭目", "頭目"]];
+
+const BASE = [
+  { look: { skin: "#a8724c", hair: "short", hairColor: "#2a1c14" }, gear: { body: it("leather", "leather"), feet: it("boots", "leather"), head: it("bandana", "cloth", { color: "#b33a3a" }), main_hand: it("dagger", "iron") } },
+  { look: { skin: "#d9a47a", hair: "short", hairColor: "#3a2414" }, gear: { body: it("leather", "leather", { form: "hunter" }), feet: it("boots", "leather"), head: it("hood", "cloth", { color: "#6a4a2a" }), main_hand: it("bow", "wood") } },
+  { look: { skin: "#a8724c", hair: "short", hairColor: "#2a1c14" }, gear: { body: it("leather", "leather"), feet: it("boots", "leather"), head: it("bandana", "cloth", { color: "#b33a3a" }), main_hand: it("axe", "iron", { form: "hand" }), off_hand: it("shield_round", "wood") } },
+  { look: { skin: "#a8724c", hair: "short", hairColor: "#1c1410" }, gear: { body: it("leather", "iron"), feet: it("boots", "leather"), head: it("bandana", "cloth", { color: "#a32a2a" }), cloak: it("cape", "cloth", { color: "#a32a2a" }), main_hand: it("sword", "iron", { form: "broad" }) } },
+  { rarity: "epic", look: { skin: "#a8724c", hair: "short", hairColor: "#1c1410" }, gear: { body: it("mail", "iron"), feet: it("greaves", "steel"), hands: it("gauntlets", "steel"), head: it("horned_helm", "iron"), cloak: it("cape", "cloth", { color: "#a32a2a" }), main_hand: it("axe", "iron", { form: "battle" }) } },
+];
+// 斷崖幫：斗笠（草色）、麻布外套（米灰）、綁腿布鞋；隊長、頭目用墨灰與朱紅
+const STRAW = "#c8b07a", HEMP = "#b8ab90", HEMP_D = "#8a7e66";
+const CLIFF = [
+  { look: { skin: "#d9a47a", hair: "short", hairColor: "#1c1c22" }, gear: { head: it("wide_hat", "cloth", { color: STRAW }), body: it("coat", "cloth", { color: HEMP }), feet: it("shoes", "cloth", { color: HEMP_D, form: "wrapped" }), main_hand: it("dagger", "iron") } },
+  { look: { skin: "#d9a47a", hair: "short", hairColor: "#1c1c22" }, gear: { head: it("wide_hat", "cloth", { color: STRAW }), body: it("coat", "cloth", { color: HEMP_D }), feet: it("shoes", "cloth", { color: HEMP_D, form: "wrapped" }), main_hand: it("bow", "wood") } },
+  { look: { skin: "#a8724c", hair: "short", hairColor: "#1c1c22" }, gear: { head: it("wide_hat", "cloth", { color: STRAW }), body: it("leather", "leather"), feet: it("shoes", "cloth", { color: HEMP_D, form: "wrapped" }), main_hand: it("axe", "iron", { form: "hand" }), off_hand: it("shield_round", "wood") } },
+  { look: { skin: "#a8724c", hair: "long", hairColor: "#1c1c22" }, gear: { head: it("wide_hat", "cloth", { color: "#3c4248" }), body: it("coat", "cloth", { color: "#3c4248" }), cloak: it("cape", "cloth", { color: "#c0392b" }), feet: it("boots", "leather"), main_hand: it("sword", "steel", { form: "curved" }) } },
+  { rarity: "epic", look: { skin: "#a8724c", hair: "short", hairColor: "#1c1c22" }, gear: { head: it("wide_hat", "cloth", { color: "#3c4248" }), body: it("mail", "iron"), hands: it("bracers", "leather"), cloak: it("cape", "cloth", { color: "#c0392b" }), feet: it("boots", "leather"), main_hand: it("greatsword", "steel", { form: "zhanma" }) } },
+];
+// 荒原盜賊：舊鐵（鏽色鐵件）、破布兜帽、頭巾＋火斧、舊手槍
+const RUST = "#8a6a52";
+const ASH = [
+  { look: { skin: "#7a4e32", hair: "short", hairColor: "#1c1410" }, gear: { head: it("bandana", "cloth", { color: "#5a4a3e" }), body: it("leather", "leather", { color: "#5a4030" }), feet: it("boots", "leather"), main_hand: it("axe", "iron", { form: "hand", element: "fire" }) } },
+  { look: { skin: "#a8724c", hair: "short", hairColor: "#1c1410" }, gear: { head: it("hood", "cloth", { color: "#6a5a4a" }), body: it("coat", "leather", { color: "#5a4030" }), feet: it("boots", "leather"), main_hand: it("pistol", "iron", { form: "flintlock" }) } },
+  { look: { skin: "#7a4e32", hair: "short", hairColor: "#1c1410" }, gear: { head: it("helmet", "iron", { color: RUST }), body: it("mail", "iron", { color: RUST }), feet: it("iron_boots", "iron", { color: RUST }), main_hand: it("hammer", "iron", { form: "mace" }), off_hand: it("shield_round", "iron", { color: RUST }) } },
+  { look: { skin: "#a8724c", hair: "short", hairColor: "#1c1410" }, gear: { head: it("bandana", "cloth", { color: "#ff6a1a" }), body: it("mail", "iron", { color: RUST }), cloak: it("cape", "cloth", { color: "#5a4a3e" }), feet: it("boots", "leather"), main_hand: it("shotgun", "iron", { form: "blunderbuss" }) } },
+  { rarity: "epic", look: { skin: "#7a4e32", hair: "none" }, gear: { head: it("greathelm", "iron", { color: RUST }), body: it("plate", "iron", { color: RUST }), hands: it("gauntlets", "iron", { color: RUST }), cloak: it("cape", "cloth", { color: "#ff6a1a" }), feet: it("iron_boots", "iron", { color: RUST }), main_hand: it("axe", "iron", { form: "battle", element: "fire" }) } },
+];
+
+function sheet(id, list, scale) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1;
+  const CW = 64 * scale, RH = 70 * scale, top = 34;
+  c.width = CW * list.length * dpr; c.height = (top + RH * 3) * dpr;
+  c.style.width = `${CW * list.length}px`; c.style.height = `${top + RH * 3}px`;
+  const x = c.getContext("2d"); x.scale(dpr, dpr);
+  list.forEach((u, q) => {
+    x.fillStyle = q % 2 ? "#22262e" : "#262b33"; x.fillRect(q * CW, 0, CW, top + RH * 3);
+    x.fillStyle = "#e8e8ea"; x.font = "bold 13px 'Microsoft JhengHei'"; x.textAlign = "center";
+    x.fillText(ROLES[q][0], q * CW + CW / 2, 14);
+    x.fillStyle = "#a9adb6"; x.font = "11px 'Microsoft JhengHei'"; x.fillText(ROLES[q][1], q * CW + CW / 2, 28);
+    ["south", "east", "north"].forEach((f, r) => {
+      const fc = P.renderFigureCanvas(u, f, false, scale * dpr);
+      const k = scale * 0.92;
+      x.drawImage(fc, q * CW + CW / 2 - (P.DOLL_W / 2) * k, top + r * RH + RH - 4 - P.DOLL_FOOT_Y * k, P.DOLL_W * k, P.DOLL_H * k);
+    });
+  });
+}
+sheet("base", BASE, 1.6); sheet("cliff", CLIFF, 1.6); sheet("ash", ASH, 1.6);
+{
+  const c = document.getElementById("field"), dpr = window.devicePixelRatio || 1, T = 52, rows = [BASE, CLIFF, ASH];
+  c.width = T * 5 * dpr; c.height = T * 3 * dpr; c.style.width = `${T * 5}px`; c.style.height = `${T * 3}px`;
+  const x = c.getContext("2d"); x.scale(dpr, dpr);
+  rows.forEach((list, r) => list.forEach((u, q) => {
+    x.fillStyle = (r + q) % 2 ? "#8a8a84" : "#7d8a7a"; x.fillRect(q * T, r * T, T, T);
+    const fc = P.renderFigureCanvas(u, "south", false, 3), k = P.DOLL_SCALE;
+    x.drawImage(fc, q * T + T / 2 - (P.DOLL_W / 2) * k, r * T + T * 0.88 - P.DOLL_FOOT_Y * k, P.DOLL_W * k, P.DOLL_H * k);
+  }));
+}
+document.title += " ✓";
+</script>
+</body>
+</html>
