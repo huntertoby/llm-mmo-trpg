@@ -218,14 +218,30 @@ def _place_units(setup: BattleSetup, state: BattleState) -> list[XY]:
         if spawn.position is not None:
             result.append(spawn.position)
             continue
-        free = [
-            c for c in setup.map.start_zones[spawn.team] if c not in used and is_standable(state, c)
-        ]
+        free = [c for c in _zone_of(setup, state, spawn.team) if c not in used]
+        free = [c for c in free if is_standable(state, c)]
         if not free:
             raise BattleSetupError(f"{spawn.team.display_name}起始區的格子不足")
         used.add(free[0])
         result.append(free[0])
     return result
+
+
+def _zone_of(setup: BattleSetup, state: BattleState, team: Team) -> list[XY]:
+    """陣營的起始格（依順序）。第三方（Phase 5B-M3）沒有起始區時：地圖上可站、不致命、不在任何
+    起始區的格子，依「到敵方起始區最近格的曼哈頓距離, y, x」排序（代決 5BM3-2：兩方在交戰）。"""
+    zones = setup.map.start_zones
+    if team in zones:
+        return list(zones[team])
+    taken = {c for cells in zones.values() for c in cells}
+    enemy = zones[Team.ENEMY]
+    cells = [
+        (x, y)
+        for y in range(state.height)
+        for x in range(state.width)
+        if (x, y) not in taken and is_standable(state, (x, y)) and not is_deadly(state, (x, y))
+    ]
+    return sorted(cells, key=lambda c: (min(manhattan(c, e) for e in enemy), c[1], c[0]))
 
 
 def _initial_board(setup: BattleSetup) -> tuple[list[Tile], dict[ObjectId, ObjectState]]:
@@ -286,7 +302,7 @@ def _check_loadouts(setup: BattleSetup) -> None:
 def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     """建立初始狀態：放置物件與單位、擲先攻、開始第 1 輪與第一位的回合。回傳狀態與開場事件。"""
     teams = {spawn.team for spawn in setup.units}
-    if teams != set(Team):
+    if not {Team.ALLY, Team.ENEMY} <= teams:  # 第三方可有可無（Phase 5B-M3）
         raise BattleSetupError("雙方都至少要有一個單位")
     map_def = setup.map
     _check_loadouts(setup)

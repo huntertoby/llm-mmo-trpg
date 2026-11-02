@@ -246,7 +246,8 @@ def _difficulty_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> i
     ):
         return PERMILLE
     source = ctx.state.units.get(effect.source_id)
-    if source is None or source.team is not Team.ENEMY or target.team is Team.ENEMY:
+    # 非我方打我方才乘（第三方同敵方；敵方與第三方互打不乘，Phase 5B-M3 代決 5BM3-5）
+    if source is None or source.team is Team.ALLY or target.team is not Team.ALLY:
         return PERMILLE
     if source.has_tag(BOSS_TAG):
         return core.boss_damage_permille
