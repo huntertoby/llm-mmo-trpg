@@ -62,10 +62,10 @@ from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
 from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
 from trpg.world.economy_actions import EquipAction
-from trpg.world.gear import apply_equip
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
+from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai

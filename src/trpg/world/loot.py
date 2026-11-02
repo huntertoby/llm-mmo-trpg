@@ -248,14 +248,14 @@ def add_loot(
     taken = {g.id for g in gear} | {g.id for g in char.equipment.values()}
     got_gear: list[ItemDef] = []
     lost_gear: list[str] = []
-    for piece in roll.gear:
+    for dropped in roll.gear:
         if bag_slots_used(library, bag) + len(gear) + 1 <= slots:
-            piece = _unique_id(piece, taken)
+            piece = _unique_id(dropped, taken)
             taken.add(piece.id)
             gear.append(piece)
             got_gear.append(piece)
         else:
-            lost_gear.append(piece.name_zh)
+            lost_gear.append(dropped.name_zh)
     char = char.model_copy(update={"bag": dict(sorted(bag.items())), "gear": tuple(gear)})
     summary = LootSummary(
         materials=got,

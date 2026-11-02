@@ -17,11 +17,11 @@ __all__ = [
     "BuyAction",
     "CurrencyGainedEvent",
     "EquipAction",
-    "ItemEquippedEvent",
-    "LootGainedEvent",
     "ItemBoughtEvent",
+    "ItemEquippedEvent",
     "ItemSoldEvent",
     "ItemUsedEvent",
+    "LootGainedEvent",
     "PouchAction",
     "PouchChangedEvent",
     "PouchUsedEvent",
@@ -137,7 +137,7 @@ class CurrencyGainedEvent(_Model):
 
 
 class LootGainedEvent(_Model):
-    """打贏一場撿到的東西（Phase 5D-2）：材料（物品 → 個數）、裝備（名稱）；背包滿了沒撿到的另列。"""
+    """打贏一場撿到的東西（Phase 5D-2）：材料（物品 → 個數）、裝備；背包滿了沒撿到的另列。"""
 
     kind: Literal["loot_gained"] = "loot_gained"
     materials: dict[str, int] = Field(default_factory=dict)

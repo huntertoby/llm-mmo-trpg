@@ -127,10 +127,10 @@ from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.content.world_economy import WorldEconomy, load_world_economy
-from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
+from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
 from trpg.content.world_oaths import OathTable, OathTemplateDef

@@ -1,4 +1,4 @@
-"""大世界的裝備：主角換裝、裝備回收、傭兵與影子的裝備（Phase 5D-2；``docs/phases/Phase5計畫.md`` 27.4）。
+"""大世界的裝備：主角換裝、傭兵與影子的裝備（Phase 5D-2；``docs/phases/Phase5計畫.md`` 27.4）。
 
 - **主角**：``CharacterState.equipment``（空＝範本的裝備）；背包裡的裝備在 ``CharacterState.gear``。
   ``equip`` 動作在城鎮或營火（同換技能）照 roguelite 的 :func:`~trpg.roguelite.gear.equip` 換上
@@ -166,9 +166,7 @@ def mercenary_equipment(
     return {**extra, **base}
 
 
-def shadow_equipment(
-    equipment: Mapping[str, ItemDef], recruiter_level: int
-) -> dict[str, ItemDef]:
+def shadow_equipment(equipment: Mapping[str, ItemDef], recruiter_level: int) -> dict[str, ItemDef]:
     """影子借用時穿的裝備：物品等級超過招募者等級的那件不穿（代決 5D2-10）。"""
     return {
         slot: item
