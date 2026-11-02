@@ -39,7 +39,7 @@ def test_roster_matches_design(library: ContentLibrary) -> None:
     assert table is not None
     assert table.max_hired == 2  # #97
     assert {m.id: (m.name_zh, m.role, m.build) for m in table.mercenaries} == ROSTER
-    counts = Counter(m.role for m in table.mercenaries)
+    counts: Counter[str] = Counter(m.role for m in table.mercenaries)
     assert all(counts[r] >= 2 for r in MERCENARY_ROLES)  # 9.6.8
     builds = library.builds.by_id()
     for merc in table.mercenaries:
