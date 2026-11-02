@@ -1224,6 +1224,30 @@ export interface components {
             reason_zh: string;
         };
         /**
+         * BagItemView
+         * @description 背包或腰包裡的一種物品。
+         */
+        BagItemView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Count */
+            count: number;
+            /** Description Zh */
+            description_zh: string;
+            /** Sell Price */
+            sell_price: number;
+            /** Field Usable */
+            field_usable: boolean;
+            /** Use Zh */
+            use_zh?: string | null;
+            /** Battle Zh */
+            battle_zh?: string | null;
+        };
+        /**
          * BattleHistory
          * @description 到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。
          */
@@ -1586,6 +1610,26 @@ export interface components {
             remaining: number;
             /** Text */
             text: string;
+        };
+        /**
+         * BuyAction
+         * @description 在店主所在的地點向他買東西（08 8.26.1）；一次 ``buy`` 算消費一次（代決 5D1-11）。
+         */
+        BuyAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "buy";
+            /** Shop */
+            shop: string;
+            /** Item */
+            item: string;
+            /**
+             * Count
+             * @default 1
+             */
+            count: number;
         };
         /**
          * CampAction
@@ -3834,6 +3878,30 @@ export interface components {
             reason: string | null;
             to_pos: components["schemas"]["Pos"] | null;
         };
+        /** InventoryView */
+        InventoryView: {
+            /** Bag */
+            bag: components["schemas"]["BagItemView"][];
+            /** Slots Used */
+            slots_used: number;
+            /** Slots Max */
+            slots_max: number;
+            /** Pouch */
+            pouch: components["schemas"]["BagItemView"][];
+            /** Pouch Count */
+            pouch_count: number;
+            /** Pouch Max */
+            pouch_max: number;
+            /** Can Pouch */
+            can_pouch: boolean;
+            /** Pouch Problem Zh */
+            pouch_problem_zh: string | null;
+            /**
+             * Consumables
+             * @default []
+             */
+            consumables: components["schemas"]["BagItemView"][];
+        };
         JsonValue: unknown;
         /**
          * KeywordHint
@@ -4628,6 +4696,21 @@ export interface components {
             y: number;
         };
         /**
+         * PouchAction
+         * @description 整理腰包（城鎮或營火）：整組換成 ``items``（消耗品 → 個數，合計最多 3 個，8.17）。
+         */
+        PouchAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "pouch";
+            /** Items */
+            items?: {
+                [key: string]: number;
+            };
+        };
+        /**
          * PreviewOut
          * @description :class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。
          */
@@ -5293,6 +5376,26 @@ export interface components {
             range_text: string;
         };
         /**
+         * SellAction
+         * @description 把背包裡的東西賣給商店（8.15「出售物品」得金幣；腰包裡的不賣）。
+         */
+        SellAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "sell";
+            /** Shop */
+            shop: string;
+            /** Item */
+            item: string;
+            /**
+             * Count
+             * @default 1
+             */
+            count: number;
+        };
+        /**
          * SetReactionMode
          * @description 設定自己身上某條反應規則的模式（Phase 3-4b）：``auto`` 自動、``prompt`` 詢問、``off`` 關閉。
          *
@@ -5383,6 +5486,57 @@ export interface components {
             own: boolean;
             /** Saved Zh */
             saved_zh: string;
+        };
+        /** ShopItemView */
+        ShopItemView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Price */
+            price: number;
+            /** Weekly */
+            weekly: boolean;
+            /** Stock Zh */
+            stock_zh: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Lock Zh */
+            lock_zh: string | null;
+            /** Can Buy */
+            can_buy: boolean;
+            /** Problem Zh */
+            problem_zh: string | null;
+            /** Battle Zh */
+            battle_zh?: string | null;
+        };
+        /**
+         * ShopView
+         * @description 角色所在地點的店（8.26.1）。
+         */
+        ShopView: {
+            /** Shop */
+            shop: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Npc */
+            npc: string;
+            /** Npc Name Zh */
+            npc_name_zh: string;
+            /** Rank Zh */
+            rank_zh: string;
+            /** Affinity Zh */
+            affinity_zh: string | null;
+            /** Items */
+            items: components["schemas"]["ShopItemView"][];
+            /** Can Trade */
+            can_trade: boolean;
+            /** Trade Problem Zh */
+            trade_problem_zh: string | null;
         };
         /**
          * Shove
@@ -6603,6 +6757,19 @@ export interface components {
             kind: "use_environment";
         };
         /**
+         * UseItemAction
+         * @description 野外或城鎮使用消耗品（09 9.6.11 #113「HP 靠藥水」）；先用背包裡的，背包沒有再用腰包的。
+         */
+        UseItemAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "use_item";
+            /** Item */
+            item: string;
+        };
+        /**
          * UseRaceSkill
          * @description 使用種族技（Phase 3R-2，``docs/design/07-角色成長.md`` 7.7）：種族技由單位的種族決定
          *     （``content/races.yaml``），所以不帶技能 ID；1 AP、每場限用 1～2 次、不佔技能欄。依種族技的
@@ -6796,6 +6963,13 @@ export interface components {
             type: "vault";
             dest: components["schemas"]["Pos"];
         };
+        /** WalletView */
+        WalletView: {
+            /** Gold */
+            gold: number;
+            /** Quest Coins */
+            quest_coins: number;
+        };
         /**
          * WeaponLook
          * @description 武器的預設外觀（Phase 3E-2e，純顯示資料）：紙娃娃主手與武器小圖示畫哪一種造型。
@@ -6973,7 +7147,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -7177,6 +7351,9 @@ export interface components {
             rumors: string[];
             party?: components["schemas"]["PartyView"] | null;
             my_shadow?: components["schemas"]["MyShadowView"] | null;
+            wallet?: components["schemas"]["WalletView"] | null;
+            inventory?: components["schemas"]["InventoryView"] | null;
+            shop?: components["schemas"]["ShopView"] | null;
         };
         XY: [
             number,

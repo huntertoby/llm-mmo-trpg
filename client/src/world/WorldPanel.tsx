@@ -5,11 +5,14 @@
 // 5B-5：事件卡與判定結果（`eventSlot`，遭遇面板之後）、這裡的人（`peopleSlot`）、城鎮的「酒館」與本週傳聞、
 // 「任務與線頭」切換左欄。
 // 5C-1：小鎮的「雇用傭兵」（面板內展開）、「隊伍」面板、遇敵面板的我方改用後端的 `allies_zh`。5C-2：雇用分傭兵／影子兩頁、「我的影子」面板。
+// 5D-1：角色狀態加金幣與任務幣；有店的地點加「商店」（面板內展開）；右側「背包」面板（腰包整理、野外用藥）。
 import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { growthBadge } from "./growth";
+import { InventoryPanel, ShopPanel } from "./EconomyPanel";
+import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { questBadge } from "./story";
 import { statusLine } from "./mapView";
@@ -92,6 +95,7 @@ function HerePanel({
 }: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth" | "questsOpen" | "onQuests" | "rumors">) {
   const here = view.here;
   const [editing, setEditing] = useState(false);
+  const [shopping, setShopping] = useState(false);
   const hiring = useHireToggle(view.party);
   const free = view.encounter === null && view.battle_id === null;
   return (
@@ -124,6 +128,13 @@ function HerePanel({
           <Hint text="免費帶 0～2 名隊友：系統傭兵或朋友的影子（出城前選好，野外不能換；不帶＝獨行）">
             <button type="button" aria-expanded={hiring.open} disabled={busy} onClick={hiring.toggle} data-testid="world-hire-toggle">
               {hiring.open ? "收起雇用隊友" : "雇用隊友"}
+            </button>
+          </Hint>
+        )}
+        {view.shop != null && (
+          <Hint text={`${view.shop.name_zh}：消耗品、粗料、染料；特產每週限量`}>
+            <button type="button" aria-expanded={shopping} disabled={busy} onClick={() => setShopping((v) => !v)} data-testid="world-shop-toggle">
+              {shopping ? "收起商店" : "商店"}
             </button>
           </Hint>
         )}
@@ -181,6 +192,7 @@ function HerePanel({
         </div>
       )}
       {hiring.open && view.party != null && <HireEditor party={view.party} busy={busy} onAct={onAct} />}
+      {shopping && view.shop != null && <ShopPanel shop={view.shop} inventory={view.inventory} busy={busy} onAct={onAct} />}
       {here.can_loadout && editing && (
         <LoadoutEditor
           key={view.character.skills.map((s) => s.id).join(",")}
@@ -215,6 +227,11 @@ export function WorldPanel(props: Props) {
           )}
         </div>
         <div className="small">{statusLine(c)}</div>
+        {view.wallet != null && (
+          <div className="small world-wallet" data-testid="world-wallet">
+            {walletLine(view.wallet)}
+          </div>
+        )}
         <div className="small" data-testid="world-growth-line">
           角色階級 {c.skill_tier ?? 1}・靈感點 {c.insight ?? 0}
           {c.attribute_points > 0 && <span className="world-points">・未分配屬性點 {c.attribute_points}</span>}
@@ -240,6 +257,14 @@ export function WorldPanel(props: Props) {
       {view.party != null && <PartyPanel party={view.party} />}
       {view.my_shadow != null && (
         <MyShadowPanel shadow={view.my_shadow} choices={view.party?.ai_choices ?? []} busy={props.busy} onAct={props.onAct} />
+      )}
+      {view.inventory != null && (
+        <InventoryPanel
+          inventory={view.inventory}
+          busy={props.busy}
+          onAct={props.onAct}
+          canUse={view.encounter === null && view.battle_id === null}
+        />
       )}
       <HerePanel {...props} />
       {props.peopleSlot}
