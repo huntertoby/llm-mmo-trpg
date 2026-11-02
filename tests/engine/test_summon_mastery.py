@@ -144,7 +144,7 @@ def test_elite_drops_the_limit_to_one() -> None:
 
 def elite_change(name: str) -> int:
     """精英召喚在 content 寫的修正值（BAL-14b 起數值改讀 content）。"""
-    values = [getattr(m.change, name) for m in real(ELITE).modifiers]
+    values: list[int | None] = [getattr(m.change, name) for m in real(ELITE).modifiers]
     return next(v for v in values if v is not None)
 
 

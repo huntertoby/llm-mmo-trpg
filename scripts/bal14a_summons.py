@@ -166,6 +166,16 @@ def _summoner_skills(
     return dataclasses.replace(lib, builds=lib.builds.model_copy(update={"builds": tuple(builds)}))
 
 
+def _with_mod(skill: SkillDef, change: str, value: Any) -> SkillDef:
+    mods = tuple(
+        m.model_copy(update={"change": m.change.model_copy(update={change: value})})
+        if getattr(m.change, change) is not None
+        else m
+        for m in skill.modifiers
+    )
+    return skill.model_copy(update={"modifiers": mods})
+
+
 def _apply_token(lib: ContentLibrary, token: str) -> ContentLibrary:  # noqa: PLR0911, PLR0912
     if token == "base":
         return lib
@@ -190,6 +200,9 @@ def _apply_token(lib: ContentLibrary, token: str) -> ContentLibrary:  # noqa: PL
         return _summons(lib, sub, weapon_def=weapon)
     if head == "dur":
         return _skills(lib, _duration(int(raw), lib.ruleset.core.summon_max_duration))
+    if head == "mod":  # mod.<技能>.<修正欄位>=<值>：改修正型技能的那一條修正
+        skill_id, _, change = sub.partition(".")
+        return _skills(lib, lambda s: _with_mod(s, change, _value(raw)) if s.id == skill_id else s)
     if head == "durfit":  # 每招召喚技的持續改成目前預算下（比 ≤ 1.0）最長的輪數
         fits = {sid: _longest_fit(lib, lib.skills[sid]) for sid in _summon_skill_ids(lib)}
         return _skills(lib, lambda s: _set_duration(s, fits[s.id]) if fits.get(s.id) else s)
@@ -255,7 +268,7 @@ def cmd_flow(args: argparse.Namespace) -> int:
     ]
     started = time.perf_counter()
     for name, lib in libs.items():
-        only = builds if name == "base" else (SUMMONER,)
+        only = builds if name == "base" or args.builds != ",".join(FLOW_BUILDS) else (SUMMONER,)
         samples = run_attack_flow(
             lib,
             scenarios=scenarios,
@@ -508,7 +521,10 @@ def cmd_matrix(args: argparse.Namespace) -> int:
     maps = default_sim_maps(base)
     all_specs: list[tuple[str, str, Any]] = []
     for name, lib in libs.items():
-        all_specs += [(name, m, spec) for _, m, spec in matrix_specs(lib, [SUMMONER], maps, seeds)]
+        for b in args.builds.split(","):
+            all_specs += [
+                (f"{b}／{name}", m, spec) for _, m, spec in matrix_specs(lib, [b], maps, seeds)
+            ]
     started = time.perf_counter()
     reports = run_batches([s for _, _, s in all_specs], jobs=args.jobs)
     print(f"[{time.perf_counter() - started:7.1f}s] {len(all_specs)} 格", file=sys.stderr)
@@ -519,7 +535,7 @@ def cmd_matrix(args: argparse.Namespace) -> int:
         a[1] += rep.completed
         a[2] += rep.rounds_mean * rep.completed
     lines = [
-        f"build_summoner × {len(maps)} 圖 × {len(seeds)} 種子（同種子；BAL-13d 基準 74.3%）",
+        f"{args.builds} × {len(maps)} 圖 × {len(seeds)} 種子（同種子；BAL-13d build_summoner 基準 74.3%）",
         "",
         "| 覆寫 | 勝率 | 95% CI | 平均輪數 |",
         "|---|---|---|---|",
@@ -613,6 +629,7 @@ def main(argv: list[str]) -> int:
     m = sub.add_parser("matrix")
     m.add_argument("--variants", default="base")
     m.add_argument("--seeds", type=int, default=30)
+    m.add_argument("--builds", default=SUMMONER)
     m.set_defaults(func=cmd_matrix)
     bo = sub.add_parser("boss")
     bo.add_argument("--variants", default="base")
