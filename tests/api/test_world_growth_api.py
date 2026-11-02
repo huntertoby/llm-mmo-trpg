@@ -87,6 +87,13 @@ def oath_client(sworn: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
         yield c
 
 
+@pytest.fixture
+def no_oath_client(calm: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
+    """沒有 ``world/oaths.yaml`` 的內容庫（5C-3 起內容資料夾有誓約模板）。"""
+    with _client(dataclasses.replace(calm, world_oaths=None), tmp_path / "saves") as c:
+        yield c
+
+
 def _post(client: TestClient, cid: str, **action: Any) -> Any:
     return client.post(f"/api/world/characters/{cid}/actions", json=action)
 
@@ -238,7 +245,8 @@ def test_dissolve_refunds(calm_client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_oath_unavailable_without_templates(calm_client: TestClient) -> None:
+def test_oath_unavailable_without_templates(no_oath_client: TestClient) -> None:
+    calm_client = no_oath_client
     view = _create(calm_client)
     cid = view["character"]["character_id"]
     oath = view["oath"]
@@ -266,6 +274,8 @@ def test_oath_swear_release_and_cooldown(oath_client: TestClient) -> None:
         "choices": [],
         "min": 1,
         "max": 2,
+        "name_zh": "",
+        "choice_names_zh": {},
     }
     llm = _post(
         oath_client,
@@ -288,7 +298,7 @@ def test_oath_swear_release_and_cooldown(oath_client: TestClient) -> None:
     )
     current = sworn["oath"]["current"]
     assert current["name_zh"] == "只用某一種元素的技能造成傷害"
-    assert current["difficulty_zh"] == "難" and current["params_zh"] == "element＝fire"
+    assert current["difficulty_zh"] == "難" and current["params_zh"] == "element：fire"
     assert sworn["oath"]["can_swear"] is False and sworn["oath"]["can_release"] is True
     assert any(e.startswith("立誓：") for e in sworn["events"])
     released = _act(oath_client, cid, kind="release_oath")

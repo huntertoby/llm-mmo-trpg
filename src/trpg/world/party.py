@@ -36,6 +36,7 @@ from trpg.world.state import CharacterState, WorldState
 
 __all__ = [
     "SEASON_BOSS_PROBLEM",
+    "default_party",
     "hire",
     "hire_problem",
     "mercenary_table",
@@ -74,8 +75,10 @@ def _check_members(
 ) -> None:
     chosen, shadows = action.mercenaries, action.shadows
     total = len(chosen) + len(shadows)
-    if total > table.max_hired:
-        raise WorldActionError(f"最多帶 {table.max_hired} 名隊友（收到 {total} 名）")
+    limit = table.max_hired - len(char.companions)  # 劇情夥伴佔隊友位（5C-3，#97）
+    if total > limit:
+        extra = "（劇情夥伴佔了隊友位）" if char.companions else ""
+        raise WorldActionError(f"最多帶 {limit} 名隊友{extra}（收到 {total} 名）")
     if len(set(chosen)) != len(chosen):
         raise WorldActionError("同一名傭兵不能雇兩次")
     if len(set(shadows)) != len(shadows):
@@ -118,6 +121,7 @@ def hire(
             "mercenaries": action.mercenaries,
             "shadows": tuple(snapshots),
             "party_ai": ai,
+            "companion_bench": (),  # 自己換過隊伍：夥伴離隊時不再還原（5C-3）
         }
     )
     event = PartyChangedEvent(
@@ -175,6 +179,12 @@ def slot_capped(library: ContentLibrary, template: UnitTemplate) -> UnitTemplate
     if template.reactions is not None:
         update["reactions"] = tuple(r for r in template.reactions if r.reaction in chosen)
     return template.model_copy(update=update)
+
+
+def default_party(library: ContentLibrary) -> tuple[str, ...]:
+    """新角色一開始帶的傭兵（``default_party``；沒有名單＝獨行）。"""
+    table = library.world_mercenaries
+    return () if table is None else table.default_party
 
 
 def party_spawns(library: ContentLibrary, char: CharacterState) -> tuple[UnitSpawn, ...]:

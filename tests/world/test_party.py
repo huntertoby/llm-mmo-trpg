@@ -51,7 +51,7 @@ def test_hire_in_town(library: ContentLibrary, make_char: MakeChar) -> None:
         ShadowSavedEvent(level=1),  # 城鎮整備存成影子（5C-2）
     )
     # 免費：其他欄位不變
-    assert result.char.model_copy(update={"mercenaries": ()}) == char
+    assert result.char.model_copy(update={"mercenaries": char.mercenaries}) == char
 
 
 @pytest.mark.parametrize(
@@ -132,7 +132,7 @@ def test_one_mercenary_means_party_of_two(library: ContentLibrary, make_char: Ma
 def test_no_mercenaries_means_solo(library: ContentLibrary, make_char: MakeChar) -> None:
     """雇 0 名＝獨行（5C-2 玩法 PM 定 ③）：我方只有主角，標準隊友只留在 roguelite。"""
     encounter = make_encounter("ferry_steps", seed=3, battle_map="cliff_outpost")
-    char = make_char(location="ferry_steps", pending_encounter=encounter)
+    char = make_char(location="ferry_steps", pending_encounter=encounter, mercenaries=())
     allies = [u for u in prepare_battle(library, char).setup.units if u.team is Team.ALLY]
     assert [u.template.id for u in allies] == [char.hero.id]
 

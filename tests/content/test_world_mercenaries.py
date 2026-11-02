@@ -123,3 +123,50 @@ def test_loader_checks_builds(tmp_path: Path, library: ContentLibrary) -> None:
         load_library(root)
     (root / "world" / "mercenaries.yaml").unlink()
     assert load_library(root).world_mercenaries is None
+
+
+# ---------------------------------------------------------------------------
+# 5C-3：預設傭兵與劇情夥伴
+# ---------------------------------------------------------------------------
+
+
+def test_default_party_and_companion(library: ContentLibrary) -> None:
+    table = library.world_mercenaries
+    assert table is not None
+    assert table.default_party == ("merc_tiebi", "merc_huichun")  # 9.6.11：鐵壁＋回春
+    ayue = table.companion_by_id()["companion_ayue"]
+    assert (ayue.name_zh, ayue.npc, ayue.build) == ("阿岳", "hunter_ayue", "build_ranged")
+    assert (ayue.affinity_per_win, ayue.affinity_daily_cap) == (2, 6)  # 18.7.6
+    quests = library.world_quests.quests["cloud_ridge"].quests
+    linked = sorted(q.id for q in quests if q.companion == "companion_ayue")
+    assert linked == ["main_mist_rift", "starter_ferry"]  # 18.5（代決 5C3-3）
+
+
+def test_schema_rejects_bad_default_party_and_companions() -> None:
+    with pytest.raises(ValidationError, match="default_party"):
+        MercenaryTable.model_validate(_table(default_party=["merc_nobody"]))
+    with pytest.raises(ValidationError, match="default_party"):
+        MercenaryTable.model_validate(_table(default_party=["merc_tiebi", "merc_tiebi"]))
+    clash = {"id": "merc_tiebi", "npc": "x", "name_zh": "x", "title_zh": "x", "build": "b"}
+    with pytest.raises(ValidationError, match="劇情夥伴"):
+        MercenaryTable.model_validate(_table(companions=[clash]))
+
+
+def test_loader_checks_companions(tmp_path: Path, library: ContentLibrary) -> None:
+    root = _copy_content(tmp_path, library)
+    companion = {
+        "id": "companion_ayue",
+        "npc": "hunter_ayue",
+        "name_zh": "阿岳",
+        "title_zh": "獵戶",
+        "build": "build_ranged",
+    }
+    _write(root, _table(companions=[{**companion, "npc": "nobody_npc"}]))
+    with pytest.raises(ContentError, match="nobody_npc"):
+        load_library(root)
+    _write(root, _table(companions=[{**companion, "build": "build_nobody"}]))
+    with pytest.raises(ContentError, match="build_nobody"):
+        load_library(root)
+    _write(root, _table())  # 任務引用的夥伴不在名單
+    with pytest.raises(ContentError, match="companion_ayue"):
+        load_library(root)

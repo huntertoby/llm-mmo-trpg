@@ -47,7 +47,8 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert party["can_hire"] is True
     assert party["hire_problem_zh"] is None
     assert party["max_hired"] == 2
-    assert [m["title_zh"] for m in party["members"]] == ["主角"]  # 雇 0 名＝獨行（5C-2）
+    # 新角色預設帶鐵壁＋回春（5C-3，9.6.11）
+    assert [m["title_zh"] for m in party["members"]] == ["主角", "盾衛・守護", "醫者・輔助"]
     roster = party["mercenaries"]
     assert len(roster) == 9
     tiebi = next(m for m in roster if m["id"] == "merc_tiebi")
@@ -55,7 +56,7 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert tiebi["role_zh"] == "守護"
     assert tiebi["theme_zh"]
     assert "挑釁怒吼" in tiebi["skills_zh"]
-    assert tiebi["hired"] is False
+    assert tiebi["hired"] is True  # 預設隊伍（5C-3）
 
 
 def test_hire_and_fight_with_mercenaries(client: TestClient, tmp_path: Path) -> None:

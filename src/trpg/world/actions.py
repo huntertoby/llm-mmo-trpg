@@ -43,6 +43,8 @@ __all__ = [
     "CampAction",
     "CampedEvent",
     "CareResult",
+    "CompanionJoinedEvent",
+    "CompanionLeftEvent",
     "DefeatedEvent",
     "DissolveAction",
     "EncounterCheckEvent",
@@ -68,6 +70,8 @@ __all__ = [
     "LocationRevealedEvent",
     "NarrateAction",
     "NarratedEvent",
+    "OathBrokenEvent",
+    "OathKeptEvent",
     "OathReleasedEvent",
     "OathSwornEvent",
     "OfferPickAction",
@@ -606,6 +610,10 @@ class BattleStartedEvent(_Model):
     """這場帶的系統傭兵（5C-1）。"""
     shadows: tuple[str, ...] = ()
     """這場帶的影子（主人的角色 ID；5C-2）。傭兵與影子都沒有＝獨行。"""
+    companions: tuple[str, ...] = ()
+    """這場帶的劇情夥伴（5C-3）。"""
+    oath: str | None = None
+    """這場帶的誓約模板（5C-3；``None``＝沒有誓約）。"""
 
 
 class BattleEndedEvent(_Model):
@@ -867,6 +875,42 @@ class ShadowLentEvent(_Model):
     coins: int
 
 
+class OathBrokenEvent(_Model):
+    """這場戰鬥違反了誓約（5C-3；06 6.26）：``at_end`` 為假＝戰鬥中違反（加成移除、破誓 2 回合）；
+    真＝戰鬥結束時才判定沒達到（只記錄）。``check`` 是判定種類。誓約本身不解除，下一場恢復。"""
+
+    kind: Literal["oath_broken"] = "oath_broken"
+    template: str
+    check: str
+    at_end: bool = False
+
+
+class OathKeptEvent(_Model):
+    """這場戰鬥守住了誓約（5C-3）。"""
+
+    kind: Literal["oath_kept"] = "oath_kept"
+    template: str
+
+
+class CompanionJoinedEvent(_Model):
+    """劇情夥伴加入隊伍（5C-3，#97）；``replaced``：替下的成員（傭兵或影子主人 ID）。"""
+
+    kind: Literal["companion_joined"] = "companion_joined"
+    companion: str
+    quest: str
+    replaced: str | None = None
+    replaced_name: str | None = None
+
+
+class CompanionLeftEvent(_Model):
+    """劇情夥伴離隊（任務結束，5C-3）；``restored``：還原回隊伍的成員，沒有＝不還原。"""
+
+    kind: Literal["companion_left"] = "companion_left"
+    companion: str
+    restored: str | None = None
+    restored_name: str | None = None
+
+
 type WorldEvent = Annotated[
     TraveledEvent
     | EncounterCheckEvent
@@ -919,6 +963,10 @@ type WorldEvent = Annotated[
     | PartyChangedEvent
     | ShadowSavedEvent
     | ShadowAiChangedEvent
-    | ShadowLentEvent,
+    | ShadowLentEvent
+    | OathBrokenEvent
+    | OathKeptEvent
+    | CompanionJoinedEvent
+    | CompanionLeftEvent,
     Field(discriminator="kind"),
 ]

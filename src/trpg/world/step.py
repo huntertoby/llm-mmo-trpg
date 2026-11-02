@@ -59,12 +59,13 @@ from trpg.world.clock import refresh_day
 from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
+from trpg.world.companions import sync_companions
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
-from trpg.world.party import hire, set_shadow_ai
+from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.shadows import save_after_prep
@@ -141,6 +142,7 @@ def new_character(
             "supplies": _rules(library).supplies.start,
             "visited_towns": (region,),
             "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
+            "mercenaries": default_party(library),  # 預設鐵壁＋回春（9.6.11，5C-3）
         }
     )
     return char.model_copy(update={"hp": max_hp(library, char), "mana": max_mana(library, char)})
@@ -176,6 +178,8 @@ def world_step(
     events = (*ended, *result.events, *settled)
     char = mark_finished(library, char, events)  # 只出一次的骨架（5B-4c）
     char, extra = advance_quests(library, world, char, events, now)
+    char, joined = sync_companions(library, char)  # 劇情夥伴加入／離隊（5C-3）
+    extra = [*extra, *joined]
     world, saved = save_after_prep(library, world, char, action, now)  # 城鎮整備存影子（5C-2）
     if not ended and not settled and not extra and not saved and char is result.char:
         return result

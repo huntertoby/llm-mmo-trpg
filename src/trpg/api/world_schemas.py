@@ -302,6 +302,10 @@ class OathParamView(_ApiModel):
     choices: tuple[str, ...] = ()
     min: int = 0
     max: int = 0
+    name_zh: str = ""
+    """參數的中文名（例「元素」；5C-3）。"""
+    choice_names_zh: dict[str, str] = {}
+    """``choice`` 每個值的中文名（5C-3）。"""
 
 
 class OathTemplateView(_ApiModel):
@@ -310,6 +314,11 @@ class OathTemplateView(_ApiModel):
     difficulty: Literal["easy", "medium", "hard"]
     difficulty_zh: str
     params: tuple[OathParamView, ...] = ()
+    description_zh: str = ""
+    bonus_zh: str = ""
+    """加成（例「〔誓約之力・中〕：造成的攻擊傷害 +10%」；有 ``difficulty_by`` 時列出各檔）。"""
+    judge_zh: str = ""
+    """判定時機（「戰鬥中判定：違反時立刻移除加成」／「戰鬥結束時判定」）。"""
 
 
 class OathCurrentView(_ApiModel):
@@ -317,8 +326,11 @@ class OathCurrentView(_ApiModel):
     name_zh: str
     difficulty_zh: str
     params_zh: str
-    """參數的文字（例「元素＝火」）；沒有參數時空字串。"""
+    """參數的文字（例「元素：火焰」）；沒有參數時空字串。"""
     sworn_at: int
+    bonus_zh: str = ""
+    """這個誓約的加成（5C-3）。"""
+    judge_zh: str = ""
 
 
 class OathView(_ApiModel):
@@ -336,6 +348,10 @@ class OathView(_ApiModel):
     swear_problem_zh: str | None
     can_release: bool
     templates: tuple[OathTemplateView, ...] = ()
+    penalty_zh: str = ""
+    """違反的後果（#27；例「違反：本場加成移除＋〔破誓〕2 回合，下一場恢復」）。"""
+    slot_zh: str = ""
+    """「誓約佔 1 格被動欄位」（06 6.26）。"""
 
 
 class WorldView(_ApiModel):

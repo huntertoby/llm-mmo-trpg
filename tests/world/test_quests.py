@@ -14,6 +14,7 @@ from trpg.world.actions import (
     AcceptQuestAction,
     BattleEndedEvent,
     BattleStartedEvent,
+    CompanionJoinedEvent,
     FightAction,
     InsightGainedEvent,
     OfferPickAction,
@@ -88,7 +89,16 @@ def test_accept_starter_in_town(library: ContentLibrary, make_char: MakeChar) ->
     char = make_char()
     assert char.location == "mist_ferry"
     result = world_step(library, make_world(), char, AcceptQuestAction(quest="starter_ferry"), NOON)
-    assert result.events == (QuestStartedEvent(quest="starter_ferry", quest_kind="starter"),)
+    assert result.events == (
+        QuestStartedEvent(quest="starter_ferry", quest_kind="starter"),
+        # 劇情夥伴阿岳加入，替掉預設隊伍的第 2 名（5C-3）
+        CompanionJoinedEvent(
+            companion="companion_ayue",
+            quest="starter_ferry",
+            replaced="merc_huichun",
+            replaced_name="回春",
+        ),
+    )
     state = result.char.quest_state("starter_ferry")
     assert state == QuestState(quest="starter_ferry", started_at=NOON)
 

@@ -894,6 +894,7 @@ def load_library(  # noqa: PLR0915
         keyword_ids={k.id for k in keywords.keywords},
     )
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
+    _check_companions(root, world_mercenaries, builds, world_event_content, world_quests)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -998,6 +999,39 @@ def _load_world_mercenaries(
     if problems:
         raise ContentError(path, "；".join(problems))
     return table
+
+
+def _check_companions(
+    root: Path,
+    table: MercenaryTable | None,
+    builds: BuildTable,
+    events: WorldEventContent,
+    quests: WorldQuestContent,
+) -> None:
+    """劇情夥伴（5C-3）：底稿是一般 build、NPC 在人設卡（有人設卡時）；任務的 ``companion`` 在名單裡
+    （沒有傭兵名單時不檢查：舊內容資料夾照常載入，夥伴不會加入）。"""
+    if table is None:
+        return
+    known = table.companion_by_id()
+    npcs = {n.id for t in events.npcs.values() for n in t.npcs}
+    build_map = builds.by_id()
+    problems: list[str] = []
+    for c in known.values():
+        build = build_map.get(c.build)
+        if build is None or build.blank or build.reference:
+            problems.append(f"劇情夥伴 {c.id} 的底稿 {c.build} 不是 sim/builds.yaml 的一般 build")
+        if npcs and c.npc not in npcs:
+            problems.append(f"劇情夥伴 {c.id} 的 NPC {c.npc} 不在人設卡")
+    if problems:
+        raise ContentError(root / WORLD_MERCENARIES_FILE, "；".join(problems))
+    for region in sorted(quests.quests):
+        bad = [
+            f"任務 {q.id} 的劇情夥伴 {q.companion} 不在 world/mercenaries.yaml"
+            for q in quests.quests[region].quests
+            if q.companion is not None and q.companion not in known
+        ]
+        if bad:
+            raise ContentError(root / "world" / "quests" / f"{region}.yaml", "；".join(bad))
 
 
 def _load_world_oaths(
