@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Collection
+from typing import Literal
 
 from pydantic import Field, model_validator
 
@@ -24,6 +25,7 @@ __all__ = [
     "MIN_GROUP_SIZE",
     "NO_ENCOUNTER_KINDS",
     "EncounterGroupDef",
+    "EncounterSurge",
     "EncounterTable",
     "EncounterVariant",
     "FixedElite",
@@ -97,6 +99,17 @@ class EncounterVariant(ContentModel):
     elite: FixedElite | None = None
 
 
+class EncounterSurge(ContentModel):
+    """世界旗標有效時的遭遇加人（Phase 5B-4c；18.4 補充「霧魅從裂痕湧出 → 之後 2 天雲嶺夜晚營地
+    遭遇多 1 名霧魅」）：遇敵當下有世界旗標 ``flag``、地點種類在 ``kinds``、時段符合 ``day_phase``
+    （``None``＝不限）時，一般抽到的陣容在敵方最後多 1 名 ``unit``（滿 4 名不加）。"""
+
+    flag: str = Field(pattern=ID_PATTERN)
+    unit: str = Field(pattern=ID_PATTERN)
+    kinds: tuple[str, ...] = Field(default=("camp",), min_length=1)
+    day_phase: Literal["day", "night"] | None = None
+
+
 class LocationEncounters(ContentModel):
     location: str = Field(pattern=ID_PATTERN)
     groups: tuple[GroupWeight, ...] = Field(min_length=1)
@@ -134,6 +147,8 @@ class EncounterTable(ContentModel):
     """本區常見的精英詞綴（``world/enemies.yaml`` 的 ID）。"""
     groups: tuple[EncounterGroupDef, ...] = Field(min_length=1)
     locations: tuple[LocationEncounters, ...] = Field(min_length=1)
+    surges: tuple[EncounterSurge, ...] = ()
+    """世界旗標有效時的遭遇加人（Phase 5B-4c）。"""
 
     @model_validator(mode="after")
     def _check(self) -> EncounterTable:
@@ -192,7 +207,20 @@ def encounter_table_problems(
     problems += _affix_problems(table, catalog)
     problems += _group_problems(table, catalog)
     problems += _location_problems(table, world_map, catalog)
+    problems += _surge_problems(table, catalog)
     return sorted(problems)
+
+
+def _surge_problems(table: EncounterTable, catalog: EnemyCatalog) -> list[str]:
+    """遭遇加人（5B-4c）：單位存在、不是精英。"""
+    problems: list[str] = []
+    for surge in table.surges:
+        where = f"遭遇加人 {surge.flag}"
+        if not catalog.has(surge.unit):
+            problems.append(f"{where}：未知的單位 {surge.unit}")
+        elif catalog.is_elite(catalog.template(surge.unit)):
+            problems.append(f"{where}：不能加精英（{surge.unit}）")
+    return problems
 
 
 def _affix_problems(table: EncounterTable, catalog: EnemyCatalog) -> list[str]:

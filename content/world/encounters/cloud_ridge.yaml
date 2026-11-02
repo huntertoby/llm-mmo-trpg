@@ -87,3 +87,8 @@ locations:
     groups: [{group: crane_nest}, {group: crane_cliff_bear}]
   - location: cloud_summit
     groups: [{group: summit_patrol}]   # 一般遇敵；Boss 戰本身是 5F-2
+
+# 世界旗標有效時的遭遇加人（5B-4c；18.4 補充：「霧魅從裂痕湧出」到期 → 之後 2 天雲嶺夜晚營地的遭遇多 1 名霧魅，全服）。
+# 加在一般抽到的陣容敵方最後（混精英之後；滿 4 名不加；遭遇變化不加）。
+surges:
+  - {flag: wraiths_surge, unit: mist_wraith, kinds: [camp], day_phase: night}

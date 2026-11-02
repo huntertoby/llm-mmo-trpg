@@ -125,7 +125,12 @@ skeletons:
       - {kind: combat, note_zh: 不殺獵人, objective: defend, threads: [wraiths_from_rift]}  # 5B-4c：引擎沒有保護目標，先用守點
       - {kind: situation, attributes: [wil], note_zh: 喚醒}
     threads:
-      - {id: wraiths_from_rift, scope: world, text_zh: 霧魅從裂痕湧出}
+      - id: wraiths_from_rift
+        scope: world
+        text_zh: 霧魅從裂痕湧出
+        on_expire_zh: 之後 2 天雲嶺夜晚營地的遭遇多 1 名霧魅（全服）
+        on_expire_flag: wraiths_surge   # 5B-4c：遭遇表 surges 依它加人
+        on_expire_seconds: 172800       # 2 天（現實時間，同線頭到期）
   - id: broken_ferry
     number: 9
     who_zh: 渡船夫
@@ -202,7 +207,11 @@ skeletons:
       - {kind: combat, note_zh: 搶下碎片帶到出口（撤離）, objective: escape, threads: [shards_to_ashen]}  # 5B-4c：撤離
       - {kind: situation, attributes: [dex], note_zh: 偷走}
     threads:
-      - {id: shards_to_ashen, scope: world, text_zh: 碎片被送往灰燼荒原（接主線第 2 章）}
+      - id: shards_to_ashen
+        scope: world
+        text_zh: 碎片被送往灰燼荒原（接主線第 2 章）
+        on_expire_zh: 灰燼之心第 1 階段護甲 +1（全服；荒原骨架 13 的個人攔截可抵銷）
+        on_expire_flag: ashen_heart_hardened   # 5B-4c：永久世界旗標；灰燼之心與荒原骨架 13 在 5F 接上
   - id: poison_spring
     number: 15
     who_zh: 藥師谷的毒泉

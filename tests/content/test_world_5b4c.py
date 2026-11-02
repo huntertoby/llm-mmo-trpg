@@ -7,8 +7,9 @@ from pydantic import ValidationError
 
 from tests.world.helpers import make_encounter
 from trpg.content.library import ContentLibrary, load_library
+from trpg.content.world_encounters import EncounterSurge, encounter_table_problems
 from trpg.content.world_enemies import ELITE_TAG
-from trpg.content.world_events import SolutionDef
+from trpg.content.world_events import SolutionDef, ThreadDef
 from trpg.world.encounters import elite_kinds, lineup_templates, roll_lineup
 
 
@@ -82,3 +83,50 @@ def test_cloud_ridge_combat_objectives(library: ContentLibrary) -> None:
         if o.kind == "combat" and o.objective is not None
     }
     assert found == {2: "escape", 7: "defend", 8: "defend", 14: "escape"}
+
+
+# ---------------------------------------------------------------------------
+# 只出一次的骨架、世界級線頭到期（21.6、21.7）
+# ---------------------------------------------------------------------------
+
+
+def test_on_expire_seconds_rules() -> None:
+    ok = ThreadDef(id="t", text_zh="x", scope="world", on_expire_flag="f", on_expire_seconds=60)
+    assert ok.on_expire_seconds == 60
+    with pytest.raises(ValidationError, match="搭配 on_expire_flag"):
+        ThreadDef(id="t", text_zh="x", scope="world", on_expire_seconds=60)
+    with pytest.raises(ValidationError, match="只有世界級"):
+        ThreadDef(id="t", text_zh="x", on_expire_flag="f", on_expire_seconds=60)
+
+
+def test_cloud_ridge_world_thread_endings(library: ContentLibrary) -> None:
+    threads = library.world_event_content.events["cloud_ridge"].thread_by_id()
+    wraiths = threads["wraiths_from_rift"]
+    assert (wraiths.on_expire_flag, wraiths.on_expire_seconds) == ("wraiths_surge", 172_800)
+    shards = threads["shards_to_ashen"]
+    assert (shards.on_expire_flag, shards.on_expire_seconds) == ("ashen_heart_hardened", None)
+    table = library.world_encounters["cloud_ridge"]
+    assert table.surges == (
+        EncounterSurge(
+            flag="wraiths_surge", unit="mist_wraith", kinds=("camp",), day_phase="night"
+        ),
+    )
+    granny = library.world_event_content.events["cloud_ridge"].skeleton_by_id()["granny_past"]
+    assert granny.once
+
+
+def test_surge_problems(library: ContentLibrary) -> None:
+    table = library.world_encounters["cloud_ridge"]
+    bad = table.model_copy(
+        update={
+            "surges": (
+                EncounterSurge(flag="a", unit="nobody"),
+                EncounterSurge(flag="b", unit="bandit_captain"),
+            )
+        }
+    )
+    problems = encounter_table_problems(
+        bad, world_map=library.world_maps["cloud_ridge"], catalog=library.enemy_catalog()
+    )
+    assert any("未知的單位 nobody" in p for p in problems)
+    assert any("不能加精英" in p for p in problems)

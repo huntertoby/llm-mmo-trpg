@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from tests.world.conftest import hero
-from tests.world.helpers import make_world
+from tests.world.helpers import hero, make_world
 from trpg.api.world_story_view import pending_offer_view
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import make_offer

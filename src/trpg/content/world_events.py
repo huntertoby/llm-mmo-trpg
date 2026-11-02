@@ -156,6 +156,18 @@ class ThreadDef(ContentModel):
     on_expire_flag: str | None = Field(default=None, pattern=ID_PATTERN)
     """到期結局的旗標（Phase 5B-4b）：個人線頭給角色的劇情旗標、世界級給世界旗標；遭遇表的
     ``variants`` 依它換陣容。``None``＝淡出（留著、無效）。"""
+    on_expire_seconds: int | None = Field(default=None, ge=1)
+    """世界級到期結局旗標的有效時間（Phase 5B-4c，18.4 補充「之後 2 天」）：從線頭到期起算；
+    ``None``＝永久。只有世界級、要有 ``on_expire_flag``。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> ThreadDef:
+        if self.on_expire_seconds is not None:
+            if self.on_expire_flag is None:
+                raise ValueError(f"線頭 {self.id}：on_expire_seconds 要搭配 on_expire_flag")
+            if self.scope != "world":
+                raise ValueError(f"線頭 {self.id}：只有世界級線頭可填 on_expire_seconds")
+        return self
 
 
 class EventSkeletonDef(ContentModel):
