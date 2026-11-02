@@ -128,9 +128,7 @@ class ResourceRules(ContentModel):
     基礎是範本的 ``max_mana``／``stamina``；範本沒寫時依武器大類取 ``class_base``（和
     ``roguelite.yaml`` 的 ``start.heroes`` 同值）。召喚物的屬性加成用施放者的屬性（6.29）。"""
 
-    class_base: dict[WeaponClass, ClassResourceBase] = Field(
-        default_factory=_default_class_base
-    )
+    class_base: dict[WeaponClass, ClassResourceBase] = Field(default_factory=_default_class_base)
     """武器大類的法力／耐力基礎（BAL-15b）：範本沒寫 ``max_mana``／``stamina`` 時用。"""
 
     base: int = Field(default=10, ge=0)
