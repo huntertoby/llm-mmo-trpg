@@ -161,7 +161,7 @@ skeletons:
     day_phase: night
     weather: [rain]
     solutions:
-      - {kind: opportunity, note_zh: 帶「帶電」技能靠近}
+      - {kind: opportunity, note_zh: 帶「帶電」技能靠近, requires_keyword: charged}  # 18.4 補充：裝備技能任一招帶「帶電」（5B-2）
       - {kind: situation, attributes: [con], note_zh: 硬撐}
   - id: tomb_sword
     number: 13
