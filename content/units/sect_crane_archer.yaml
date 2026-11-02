@@ -1,0 +1,15 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）是 5A-ART 的事，這裡不寫。
+# 山中修士・遠程：從高處射擊；「鶴唳」標記。
+id: sect_crane_archer
+name_zh: 雲鶴使
+attributes: {str: 10, dex: 14, con: 10, int: 8, wis: 12, wil: 8}
+max_hp: 26
+speed: 5
+armor_bonus: 1
+weapon: bow
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [humanoid, sect]
+skills: [skill_high_ground_shot, skill_rng_hawkeye_mark]
