@@ -58,6 +58,7 @@ __all__ = [
     "FlashOfferedEvent",
     "FlashPickAction",
     "FlashPickedEvent",
+    "HireAction",
     "InheritAction",
     "InsightGainedEvent",
     "LeveledUpEvent",
@@ -70,6 +71,7 @@ __all__ = [
     "OathReleasedEvent",
     "OathSwornEvent",
     "OfferPickAction",
+    "PartyChangedEvent",
     "PerceptionCheckEvent",
     "QuestCompletedEvent",
     "QuestStartedEvent",
@@ -310,6 +312,14 @@ class EventSolveAction(_Model):
     use_thread: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
+class HireAction(_Model):
+    """在城鎮雇用系統傭兵（Phase 5C-1；09 9.6.9 #97：免費、出城前選好、野外不能換）：整組換成
+    ``mercenaries``（依出場順序；空＝不帶傭兵）。"""
+
+    kind: Literal["hire"] = "hire"
+    mercenaries: tuple[str, ...] = Field(default=(), max_length=8)
+
+
 type WorldAction = Annotated[
     TravelAction
     | CampAction
@@ -332,7 +342,8 @@ type WorldAction = Annotated[
     | OfferPickAction
     | TalkAction
     | TavernAction
-    | EventSolveAction,
+    | EventSolveAction
+    | HireAction,
     Field(discriminator="kind"),
 ]
 
@@ -571,6 +582,8 @@ class BattleStartedEvent(_Model):
     """先手的陣營（5A-6：暗門我方先手、增援滿 4 名敵人先手；``None`` ＝ 照先攻）。"""
     hero_statuses: tuple[str, ...] = ()
     """開場掛在主角身上的狀態（5A-6：情境判定給的 buff／debuff）。"""
+    mercenaries: tuple[str, ...] = ()
+    """這場帶的系統傭兵（5C-1；空＝標準隊友）。"""
 
 
 class BattleEndedEvent(_Model):
@@ -795,6 +808,13 @@ class RumorsHeardEvent(_Model):
     rumors: tuple[str, ...]
 
 
+class PartyChangedEvent(_Model):
+    """隊伍的傭兵換了（5C-1）。"""
+
+    kind: Literal["party_changed"] = "party_changed"
+    mercenaries: tuple[str, ...]
+
+
 type WorldEvent = Annotated[
     TraveledEvent
     | EncounterCheckEvent
@@ -843,6 +863,7 @@ type WorldEvent = Annotated[
     | ThreadSpentEvent
     | ThreadExpiredEvent
     | StoryFlagClearedEvent
-    | SkeletonUnlockedEvent,
+    | SkeletonUnlockedEvent
+    | PartyChangedEvent,
     Field(discriminator="kind"),
 ]

@@ -351,6 +351,10 @@ class CharacterState(_Model):
     unlocked_skeletons: tuple[str, ...] = ()
     """解鎖的 ``unlock_only`` 事件骨架（排序、不重複；信賴的 NPC 說出祕密時，18.7.7）。"""
 
+    # --- 5C-1 隊伍（邏輯在 trpg.world.party） ---
+    mercenaries: tuple[str, ...] = ()
+    """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複；空＝開戰用標準隊友，代決 5C1-2）。"""
+
     @field_validator("talk_days")
     @classmethod
     def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:
