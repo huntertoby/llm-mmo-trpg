@@ -26,6 +26,7 @@ from trpg.world.actions import (
     EncounterEvent,
     LocationRevealedEvent,
     PerceptionCheckEvent,
+    SituationAction,
     TravelAction,
     TraveledEvent,
     WorldAction,
@@ -35,6 +36,7 @@ from trpg.world.clock import day_phase, refresh_day
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.events import roll_event
 from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
+from trpg.world.situations import resolve_situation
 from trpg.world.state import (
     CharacterState,
     EncounterResult,
@@ -151,6 +153,9 @@ def world_step(
         return _travel(library, world, char, action, now)
     if isinstance(action, CampAction):
         return _camp(library, world, char, now)
+    if isinstance(action, SituationAction):
+        world, char, events = resolve_situation(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
     raise WorldActionError(f"未知的世界動作：{action!r}")  # pragma: no cover
 
 

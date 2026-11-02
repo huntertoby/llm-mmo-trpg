@@ -11,19 +11,34 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
-from trpg.world.state import EncounterResult, EventTrigger
+from trpg.content.world_situations import (
+    PLAYER_TEXT_LIMIT,
+    CareItem,
+    Outcome,
+    SituationProposal,
+)
+from trpg.shared.types import Attribute
+from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod
 
 __all__ = [
     "CampAction",
     "CampedEvent",
+    "CareResult",
     "EncounterCheckEvent",
     "EncounterEvent",
     "EventCheckEvent",
     "EventLeftEvent",
+    "EventResolvedEvent",
     "EventTriggeredEvent",
     "LocationRevealedEvent",
     "PerceptionCheckEvent",
+    "SituationAction",
+    "SituationCheckEvent",
+    "SituationResultEvent",
+    "ThreadAddedEvent",
+    "ThreadPushedOutEvent",
     "TravelAction",
     "TraveledEvent",
     "WorldAction",
@@ -54,7 +69,26 @@ class CampAction(_Model):
     kind: Literal["camp"] = "camp"
 
 
-type WorldAction = Annotated[TravelAction | CampAction, Field(discriminator="kind")]
+class SituationAction(_Model):
+    """對目前的事件做情境判定（Phase 5B-2；09 9.6.4）。
+
+    ``proposal`` 是 LLM（或降級）提議、已經過 pydantic 驗證；引擎另外檢查合法性。提議、來源、
+    prompt 版本與玩家原文都隨動作進世界動作日誌，重播照紀錄、不再呼叫 LLM（10 第 10 節）。
+    ``player_text`` 只是紀錄（引擎不讀內容；給 LLM 時包在 ``<player_input>``）。
+    """
+
+    kind: Literal["situation"] = "situation"
+    template: str = Field(pattern=ID_PATTERN)
+    player_text: str = Field(default="", max_length=PLAYER_TEXT_LIMIT)
+    proposal: SituationProposal
+    source: Literal["llm", "fallback"] = "fallback"
+    """``llm``＝LLM 的提議；``fallback``＝模型不可用或提議一直不合法時的降級提議。"""
+    prompt_version: str | None = Field(default=None, max_length=64)
+
+
+type WorldAction = Annotated[
+    TravelAction | CampAction | SituationAction, Field(discriminator="kind")
+]
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +161,81 @@ class EventLeftEvent(_Model):
     location: str
 
 
+class CareResult(_Model):
+    """用心清單一筆的核對結果（核對不到「不算」，不是錯誤）。"""
+
+    item: CareItem
+    fact: str
+    counted: bool
+    reason_zh: str = ""
+    """不算的原因（算的時候空字串）。"""
+
+
+class SituationCheckEvent(_Model):
+    """情境判定的擲骰明細（Phase 5B-2）。總值 ＝ ``roll`` ＋ 屬性修正 ＋ 用心加值 ＋ 種族加值。"""
+
+    kind: Literal["situation_check"] = "situation_check"
+    template: str
+    skeleton: str
+    attribute: Attribute
+    method: str
+    base_dc: int
+    dc_shift: int
+    dc: int
+    dice: tuple[int, int]
+    """一律擲兩顆 d20（亂數消耗固定）。"""
+    mode: Literal["normal", "advantage", "disadvantage"]
+    roll: int
+    """採用的骰值（一般＝第一顆、優勢取高、劣勢取低）。"""
+    attribute_mod: int
+    care: tuple[CareResult, ...]
+    care_bonus: int
+    race_bonus: int
+    total: int
+    outcome: Outcome
+    source: Literal["llm", "fallback"]
+
+
+class SituationResultEvent(_Model):
+    """情境判定的獎懲（照模板的表與預算；Phase 5B-2）。"""
+
+    kind: Literal["situation_result"] = "situation_result"
+    template: str
+    outcome: Outcome
+    xp: int
+    supplies_delta: int
+    """補給的淨變化（含用心清單 ③ 拿出來的補給）。"""
+    hp_lost: int
+    next_battle: tuple[NextBattleMod, ...]
+    """這次新增的下一場戰鬥修正。"""
+
+
+class ThreadAddedEvent(_Model):
+    kind: Literal["thread_added"] = "thread_added"
+    thread: str
+    scope: ThreadScope
+    expires_at: int
+
+
+class ThreadPushedOutEvent(_Model):
+    """線頭滿了，最舊的被擠掉（提前結束）。"""
+
+    kind: Literal["thread_pushed_out"] = "thread_pushed_out"
+    thread: str
+    scope: ThreadScope
+
+
+class EventResolvedEvent(_Model):
+    """事件以某個解法結束（Phase 5B-2：情境判定）。"""
+
+    kind: Literal["event_resolved"] = "event_resolved"
+    skeleton: str
+    location: str
+    solution: int
+    """骨架 ``solutions`` 的索引。"""
+    outcome: Outcome
+
+
 class CampedEvent(_Model):
     kind: Literal["camped"] = "camped"
     location: str
@@ -144,6 +253,11 @@ type WorldEvent = Annotated[
     | CampedEvent
     | EventCheckEvent
     | EventTriggeredEvent
-    | EventLeftEvent,
+    | EventLeftEvent
+    | SituationCheckEvent
+    | SituationResultEvent
+    | ThreadAddedEvent
+    | ThreadPushedOutEvent
+    | EventResolvedEvent,
     Field(discriminator="kind"),
 ]
