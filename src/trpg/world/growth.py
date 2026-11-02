@@ -335,7 +335,10 @@ def _flash(
             raise WorldActionError("沒有待選的閃現選項")
         after = pick_flash(lib, run, FlashPickChoice(pick=action.pick, unequip=action.unequip))
         event = FlashPickedEvent(
-            skill=pending.skill, new_skill=_new_skill(run, after, pending.skill), pick=action.pick
+            skill=pending.skill,
+            new_skill=_new_skill(run, after, pending.skill),
+            pick=action.pick,
+            slot=pending.offer.slot,
         )
         return from_run(char, after), (event,)
     if isinstance(action, FlashAction):

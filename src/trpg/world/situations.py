@@ -58,6 +58,7 @@ from trpg.world.threads import active_threads, add_thread
 __all__ = [
     "CheckRoll",
     "attribute_modifier",
+    "grant_threads",
     "held_threads",
     "opportunity_available",
     "resolve_situation",
@@ -333,6 +334,21 @@ def _add_threads(
             state.events.append(
                 ThreadAddedEvent(thread=thread_id, scope=scope, expires_at=added.expires_at)
             )
+
+
+def grant_threads(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    thread_ids: tuple[str, ...],
+    *,
+    skeleton: str,
+    now: int,
+) -> tuple[WorldState, CharacterState, list[WorldEvent]]:
+    """事件結果留下線頭（依 scope 放角色或世界，上限擠掉最舊；5B-4b 交涉、戰鬥解法共用）。"""
+    state = _Apply(world=world, char=char, events=[])
+    _add_threads(library, state, thread_ids, skeleton, now)
+    return state.world, state.char, state.events
 
 
 def _apply_outcome(

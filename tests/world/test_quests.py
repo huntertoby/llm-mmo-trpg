@@ -25,6 +25,7 @@ from trpg.world.actions import (
     SkillOfferTakenEvent,
     StorySkillGrantedEvent,
     TalkAction,
+    TalkedEvent,
     TravelAction,
     WorldEvent,
 )
@@ -68,6 +69,10 @@ def _with_quest(char: CharacterState, quest: str, steps_done: int = 0) -> Charac
         key=lambda q: q.quest,
     )
     return char.model_copy(update={"quests": tuple(states)})
+
+
+def _talked(events: tuple[WorldEvent, ...]) -> TalkedEvent:
+    return next(e for e in events if isinstance(e, TalkedEvent))
 
 
 def _share(library: ContentLibrary, source: str, level: int) -> int:
@@ -312,8 +317,8 @@ def test_main_temple_split_by_situation(library: ContentLibrary, make_char: Make
     result = world_step(lib, make_world(), char, action, NOON)
     done = [e.step for e in result.events if isinstance(e, QuestStepDoneEvent)]
     assert done == ["temple_split"]
-    assert result.char.affinity["acolyte_xiaolian"] == 10
-    assert result.char.affinity["daoist_qingya"] == 10  # 事件好感度（骨架 6 成功）
+    assert result.char.affinity["acolyte_xiaolian"] == 15  # 5B-4b：有關的 NPC +15
+    assert result.char.affinity["daoist_qingya"] == 25  # 事件好感度（骨架 6 成功）＋15
 
 
 def test_main_rift_battle_substitutes_three_way(
@@ -344,7 +349,7 @@ def test_chain_flow(library: ContentLibrary, make_char: MakeChar) -> None:
     assert any(isinstance(e, QuestCompletedEvent) for e in events)
     assert len(char.pending_offers) == 1  # 結尾三選一
     assert char.story_flags == ("mentor_qingya",)
-    assert char.affinity["daoist_qingya"] == 20
+    assert char.affinity["daoist_qingya"] == 45  # 5B-4b：每步 +15
     assert char.insight >= 3
 
 
@@ -355,7 +360,7 @@ def test_hidden_quest_from_talk(library: ContentLibrary, make_char: MakeChar) ->
         world_step(library, world, char, AcceptQuestAction(quest="hidden_elixir_cave"), NOON)
     friendly = char.model_copy(update={"affinity": {"shopkeeper_liu": 25}})
     talked = world_step(library, world, friendly, TalkAction(npc="shopkeeper_liu"), NOON)
-    assert talked.events[0].quests_available == ("hidden_elixir_cave",)  # type: ignore[union-attr]
+    assert _talked(talked.events).quests_available == ("hidden_elixir_cave",)
     accepted = world_step(
         library, world, friendly, AcceptQuestAction(quest="hidden_elixir_cave"), NOON
     )
@@ -370,7 +375,7 @@ def test_hidden_quest_from_talk(library: ContentLibrary, make_char: MakeChar) ->
         TalkAction(npc="shopkeeper_liu"),
         NOON,
     )
-    assert talked.events[0].quests_available == ()  # type: ignore[union-attr]
+    assert _talked(talked.events).quests_available == ()
 
 
 def test_frost_riddle_starts_from_clue(library: ContentLibrary, make_char: MakeChar) -> None:
@@ -389,3 +394,38 @@ def test_no_quests_no_extra_events(library: ContentLibrary, make_char: MakeChar)
     assert all(not isinstance(e, QuestStepDoneEvent) for e in result.events)
     after, events = advance_quests(library, make_world(), char, _won("ferry_steps"), NOON)
     assert events == [] and after == char
+
+
+# ---------------------------------------------------------------------------
+# 5B-4b：新手鏈保底、區域任務鏈偏向（Phase5計畫 19.4、19.5）
+# ---------------------------------------------------------------------------
+
+REGION_KEYWORDS = ("wet", "charged", "concealed")
+
+
+def test_starter_offer_is_one_deepen_two_new_with_passive(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    for name in ("alice", "bob", "carol", "dave"):
+        char = _with_quest(make_char(name, location="ferry_steps"), "starter_ferry")
+        char, _ = advance_quests(library, make_world(), char, _won("ferry_steps"), NOON)
+        offer = char.pending_offers[0].offer
+        assert [t.kind for t in offer.tags] == ["deepen", "new", "new"], name
+        assert any(s.kind == "passive" for s in offer.candidates), name
+
+
+def test_chain_offer_new_direction_prefers_region_keywords(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    hits = 0
+    for name in ("alice", "bob", "carol", "dave", "erin", "frank"):
+        char = _with_quest(make_char(name), "chain_temple_split", steps_done=1)
+        char = char.model_copy(update={"threads": (thread("temple_traitor", "monks_dispute"),)})
+        char, _ = advance_quests(library, make_world(), char, (), NOON)
+        offer = char.pending_offers[0].offer
+        assert [t.kind for t in offer.tags] == ["deepen", "bridge", "new"]
+        new = offer.tags[2]
+        if new.keywords:  # 通用池白板（#55）照舊
+            assert new.keywords[0] in REGION_KEYWORDS, name
+            hits += 1
+    assert hits >= 3

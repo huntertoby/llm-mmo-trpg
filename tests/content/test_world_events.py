@@ -73,10 +73,10 @@ def _problems(library: ContentLibrary, table: dict[str, Any]) -> list[str]:
 
 
 def test_cloud_ridge_events_loaded(events: EventSkeletonTable) -> None:
-    assert len(events.skeletons) == 21
-    assert sorted(s.number for s in events.skeletons) == list(range(1, 22))
-    assert len(events.thread_ids()) == 19
-    assert "21 個事件骨架" in events.summary()
+    assert len(events.skeletons) == 22  # 5B-4b：骨架 22「渡婆婆的往事」
+    assert sorted(s.number for s in events.skeletons) == list(range(1, 23))
+    assert len(events.thread_ids()) == 19  # 骨架 22 的暗門是別的骨架的線頭（shared_threads）
+    assert "22 個事件骨架" in events.summary()
 
 
 def test_cloud_ridge_npcs_loaded(npcs: NpcCardTable) -> None:

@@ -27,6 +27,7 @@ from trpg.world.affinity import (
     rank_of,
     talk_entries,
 )
+from trpg.world.clock import refresh_day
 from trpg.world.errors import WorldActionError
 from trpg.world.narration import narration_problems
 from trpg.world.social import week_rumors
@@ -102,8 +103,10 @@ def test_situation_without_table_row_no_affinity(
 
 
 def _talk(library: ContentLibrary, char: CharacterState, npc: str) -> TalkedEvent:
+    # 今天已經聊過（5B-4b 每天第一次聊天 +3 另測，見 test_affinity_gain.py）
+    char = char.model_copy(update={"talk_days": {npc: refresh_day(NOON)}})
     result = world_step(library, make_world(), char, TalkAction(npc=npc), NOON)
-    assert result.char == char  # 聊天不改狀態
+    assert result.char == char  # 今天聊過了：聊天不改狀態
     event = result.events[0]
     assert isinstance(event, TalkedEvent)
     return event
@@ -134,10 +137,13 @@ def test_talk_filters_by_rank(
 def test_granny_tells_secret_door_only_when_trusted(
     library: ContentLibrary, make_char: MakeChar
 ) -> None:
+    # 5B-4b：祕密只說到「年輕時是斷崖幫的人」，暗門要由解鎖的事件結果給（18.7.7）
     neutral = talk_entries(library, make_char(), "granny_du")
-    assert all("暗門" not in e.text_zh for e in neutral)
+    assert all(e.kind != "secret" for e in neutral)
     trusted = talk_entries(library, make_char(affinity={"granny_du": 60}), "granny_du")
-    assert any("暗門" in e.text_zh for e in trusted)
+    secret = next(e for e in trusted if e.kind == "secret")
+    assert "斷崖幫" in secret.text_zh and "暗門" not in secret.text_zh
+    assert secret.unlocks_skeleton == "granny_past"
 
 
 def test_talk_rejections(library: ContentLibrary, make_char: MakeChar) -> None:
