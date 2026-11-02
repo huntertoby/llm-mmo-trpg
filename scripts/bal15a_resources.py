@@ -21,7 +21,7 @@
   上限含屬性加成與法力 ×mcap，耐力每回合 +sreg）；
 - ``b14cap=<同上>``：只改上限（公式算出的固定值，沒有耐力回復），用來分開「上限」與「回復」兩個效果。
 - ``blockon``（BAL-15c）：裝了反應技的 build 英雄改寫明預設反應規則（格擋照舊自動），重現 #83 之前的行為；
-- ``riposte``（BAL-15c）：近戰武器的 build 英雄多帶「還擊」（``skill_riposte``），量還擊的觸發次數。
+- ``riposte``（BAL-15c）：近戰武器的 build 英雄帶「還擊」（``skill_riposte``，取代原本的反應技），量還擊的觸發次數。
 
 每個樣本另記英雄的反應（BAL-15c）：``hero_block``（格擋）、``hero_counter``（還擊類：``hit_by_melee``／
 ``hit_by_attack``／``hit_by_spell`` 的反應技與拳套反擊）、``hero_react_skill``（所有反應技）。
@@ -126,11 +126,14 @@ def _class_bases(library: ContentLibrary, units: dict[str, Any]) -> None:
 
 
 def _add_riposte(library: ContentLibrary, units: dict[str, Any]) -> None:
+    rules = library.ruleset
     for b in library.builds.builds:
-        if library.weapons[b.hero.weapon].is_melee and "skill_riposte" not in units[b.id].skills:
-            units[b.id] = units[b.id].model_copy(
-                update={"skills": (*units[b.id].skills, "skill_riposte")}
-            )
+        hero = units[b.id]
+        if not library.weapons[b.hero.weapon].is_melee or "skill_riposte" in hero.skills:
+            continue
+        # 反應技欄位上限 1：換掉原本的反應技
+        kept = tuple(s for s in hero.skills if rules.skill_def(s).kind != "reaction")
+        units[b.id] = hero.model_copy(update={"skills": (*kept, "skill_riposte")})
 
 
 def _reaction_variants(library: ContentLibrary, units: dict[str, Any], parts: list[str]) -> None:
