@@ -2158,6 +2158,11 @@ export interface components {
             elite: boolean;
             /** Affix Zh */
             affix_zh: string | null;
+            /**
+             * Third
+             * @default false
+             */
+            third: boolean;
         };
         /** EncounterView */
         EncounterView: {
@@ -5922,9 +5927,12 @@ export interface components {
         /**
          * Team
          * @description 戰鬥中的陣營。地圖起始區以此為鍵。
+         *
+         *     ``THIRD``（Phase 5B-M3，三方混戰）：和我方、敵方都敵對。陣營關係一律是「不同陣營彼此敵對、
+         *     同陣營友好」（:meth:`hostile_to`；代決 5BM3-1）。
          * @enum {string}
          */
-        Team: "ally" | "enemy";
+        Team: "ally" | "enemy" | "third";
         /**
          * TelegraphChangeOut
          * @description 預告的一項變化（:class:`trpg.engine.environment.TelegraphChange` ＋ 中文 ``text``）。

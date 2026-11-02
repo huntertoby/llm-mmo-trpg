@@ -151,9 +151,9 @@ function skeletonLook(): Appearance {
   };
 }
 
-/** 陣營預設：我方 ＝ 布衣＋靴；敵方 ＝ 皮甲＋頭巾＋靴。 */
+/** 陣營預設：我方 ＝ 布衣＋靴；敵方與第三方 ＝ 皮甲＋頭巾＋靴。 */
 function factionDefault(team: string): Appearance {
-  if (team === "enemy") {
+  if (team === "enemy" || team === "third") {
     return {
       look: { skin: SKIN[2], hair: "short", hairColor: "#2a1c14" },
       gear: { body: { kind: "leather", material: "leather" }, feet: { kind: "boots", material: "leather" }, head: { kind: "bandana", material: "cloth", color: "#b33a3a" } },
