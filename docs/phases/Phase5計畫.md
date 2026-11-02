@@ -2369,6 +2369,108 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5BM3-10 | 戰鬥紀錄版號 | `/106` |
 
 
-## 21. 之後各段規格
+## 21. 5C-1 詳細規格：隊伍與系統傭兵
+
+> 給實作 agent。只動 `content/world/mercenaries.yaml`（新）、`src/trpg/content/world_mercenaries.py`（新）、`src/trpg/content/library.py`（載入與檢查，小改）、`src/trpg/world/`（`party.py` 新；`actions.py`、`state.py`、`step.py`、`battle.py` 小改）、`src/trpg/api/`（`world_schemas.py`、`world_presenter.py`）、`client/`（小鎮選單「雇用傭兵」、右側「隊伍」、遇敵面板的我方說明、API 型別）、`client/openapi.json`、`tests/world/`、`tests/api/`、`tests/content/`、vitest。另一個 agent 在做 5B-4c（`trpg.world`、`content/world/`）：共用檔只加不改。不改 `trpg.engine`、`trpg.roguelite`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
+> 依據：09 9.6.9 #97（一隊 3 人：主角＋最多 2 名隊友，可以少帶人；隊友來源含系統傭兵；**傭兵雇用免費；出城前在主城或小鎮選好，野外不能換**）、9.6.8 #87（系統傭兵：輸出、守護、輔助、控制各至少 2 種固定 build，事先公布、每個人都一樣；**等級、技能階級、裝備預算和主角相同**；**可以設定 AI 行為（和一般隊友同一套選項）**；隊伍人數照一般規則）、9.6.11 #117（傭兵 9 名、暫名與底稿 `content/sim/builds.yaml`；技能由開發 PM 依階級對照）；本檔 5A-SIM2（隊友照主角等級成長，`grow_allies`）、9.3 第 5 點與代決 5A4-4（5C-1 前用 2 名標準隊友）、2.4（確定性）、2.6（內容即資料）。
+
+### 21.1 目標
+
+在城鎮免費雇用 0～2 名系統傭兵組成 3 人隊伍；開戰時用選好的傭兵取代標準隊友，傭兵照主角等級成長、AI 與指令和一般隊友相同。雇用是世界動作（寫進日誌、可重播）；野外不能換。
+
+### 21.2 傭兵名單（`content/world/mercenaries.yaml`，9.6.11 #117；ID 由開發 PM 取）
+
+| ID | 暫名 | 稱號 | 定位 | 底稿 |
+|---|---|---|---|---|
+| `merc_qingfeng` | 青鋒 | 近戰劍客 | 輸出 `damage` | `build_striker` |
+| `merc_chuanyun` | 穿雲 | 弓手 | 輸出 `damage` | `build_ranged` |
+| `merc_chiyan` | 赤焰 | 火術士 | 輸出 `damage` | `build_fire` |
+| `merc_tiebi` | 鐵壁 | 盾衛 | 守護 `guardian` | `build_tank` |
+| `merc_panshi` | 磐石 | 守護者 | 守護 `guardian` | `build_guardian` |
+| `merc_huichun` | 回春 | 醫者 | 輔助 `support` | `build_healer` |
+| `merc_qingyin` | 清音 | 祝禱師 | 輔助 `support` | `build_support` |
+| `merc_jinglei` | 驚雷 | 雷水術士 | 控制 `control` | `build_storm` |
+| `merc_fuying` | 伏影 | 陷阱師 | 控制 `control` | `build_trapper` |
+
+- schema `MercenaryTable`：`max_hired: int = 2`（#97「最多 2 名隊友」）、`mercenaries: tuple[MercenaryDef, ...]`；`MercenaryDef`：`id`、`name_zh`、`title_zh`、`role`（`damage`／`guardian`／`support`／`control`）、`build`。
+- 載入檢查：ID 不重複、`build` 存在於 `builds.yaml` 且不是白板或對照組；四種定位各至少 2 名（9.6.8）。沒有檔案時為 `None`（舊內容資料夾照常載入，開戰照舊用標準隊友）。
+- 傭兵的戰鬥單位＝底稿的英雄範本，`id` 換成傭兵 ID、`name_zh` 換成暫名（代決 5C1-6）；屬性、HP、武器、技能、`ai_profile` 照底稿。
+
+### 21.3 世界動作與狀態
+
+1. `CharacterState.mercenaries: tuple[str, ...] = ()`：目前隊伍裡的傭兵（**依選擇順序**，即出場順序；不重複）。
+2. 動作 `hire`（`HireAction`，`mercenaries: tuple[str, ...]`）：**整組換成** 這份清單（空＝不帶傭兵）。條件（不合法拋 `WorldActionError`、狀態不變）：
+   - 在城鎮（地點 `kind == "town"`）；沒有遭遇（09 9.6.9「出城前選好、野外不能換」）。
+   - 每個 ID 都在名單裡、不重複、數量 ≤ `max_hired`。
+   - 內容庫沒有傭兵名單 → 錯誤。
+   - 免費（不扣補給或貨幣）、不擲骰。
+3. 事件 `party_changed`（`mercenaries`：新的清單）。
+4. 傭兵跟著角色移動、傳送、全滅回小鎮都 **保留**（只有 `hire` 會改）。
+
+### 21.4 開戰（`prepare_battle` 的我方）
+
+- 我方＝主角＋**隊伍的傭兵**（依 `mercenaries` 順序）；沒有傭兵時照舊用 2 名標準隊友（代決 5C1-2）。
+- 傭兵照主角等級成長：和標準隊友同一個 `grow_allies`（5A-SIM2：每級屬性 +2 加在最高屬性、HP +5%、技能階級照 `skill_tier_by_level`，重配技能加進規則包）。
+- 傭兵每場滿狀態開場（HP、法力、耐力；同標準隊友；代決 5C1-5）。
+- AI：傭兵是非主角的我方單位，戰鬥工作階段照舊由效用 AI 操作、接受同一套隊友指令（9.6.8「和一般隊友同一套選項」）；底稿的 `ai_profile` 保留（代決 5C1-4）。
+- `battle_started` 事件加 `mercenaries: tuple[str, ...] = ()`（這場帶的傭兵；舊日誌沒有＝空）。
+- 經驗、戰後回寫只看主角（傭兵不累積經驗、不留狀態）。
+
+### 21.5 重播與確定性
+
+`hire` 寫進世界動作日誌；重播「建角 → hire → 移動 → 遇敵 → fight」兩次逐字相同；戰鬥設定由角色快照（含 `mercenaries`）重建，種子不變。`trpg.world` 內不讀時間、不用 `random`／`uuid4`／`hash()`。
+
+### 21.6 API（`trpg.api`）
+
+- `WorldActionRequest` 自動含 `hire`（動作聯集）。
+- `WorldView.party`（`PartyView`）：`members`（主角＋傭兵或標準隊友：名稱、稱號／定位、等級、是不是標準隊友）、`max_hired`、`can_hire`（在城鎮且沒有遭遇）、`hire_problem_zh`（不能雇用時的理由，例「出城前在城鎮選好，野外不能換」）。
+- `WorldView.mercenaries`（`MercenaryView` 清單，名單順序）：ID、暫名、稱號、定位（中文）、底稿主題說明（`builds.yaml` 的 `theme_zh`）、技能概要（底稿技能的中文名，依底稿順序）、`hired`。
+- 遇敵面板的我方說明改由後端給 `EncounterView.allies_zh`（例「主角（開場 HP 30）＋青鋒、回春」；沒有傭兵時「＋ 2 名標準隊友」）。
+- 事件文字：`party_changed` →「隊伍：青鋒、回春」／「隊伍：不帶傭兵（開戰用標準隊友）」。
+- 改了 API 型別：照既有方式重產 OpenAPI（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）。
+
+### 21.7 前端（`client/src/world/`）
+
+- 小鎮的地點面板加按鈕「雇用傭兵」（`aria-expanded`，展開成面板內的清單，不是新的彈出層）：9 名傭兵依定位分組，每列＝勾選框、暫名、稱號、定位、技能概要；主題說明用共用 `<Hint>`（浮動卡規則，6.5.1）；最多勾 2 名（勾滿時其他停用）；按「確定」送 `hire`（可以全不勾＝不帶傭兵）。野外不顯示按鈕。
+- 右側面板加「隊伍」：主角＋傭兵（或「2 名標準隊友」），野外顯示「出城前在城鎮選好，野外不能換」。
+- 遇敵面板的我方改用 `allies_zh`。
+- 浮動卡規則：瀏覽器實測從 Hint 觸發元素滑進卡片 → 卡內捲動 → 釘住 → 關閉（1600×900、800×600），寫進報告。
+
+### 21.8 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_mercenaries.py` | 名單 9 名、四種定位各 ≥ 2、底稿存在且非白板；重複 ID、未知 build、`max_hired` 範圍的錯誤 |
+| `tests/world/test_party.py` | 城鎮雇用 0／1／2 名、整組替換；野外、有遭遇、超過 2 名、重複、未知 ID → 錯誤且狀態不變；移動、傳送、全滅後保留；開戰：我方＝主角＋傭兵（名稱、順序、照主角等級成長的屬性與技能階級）、沒雇用時＝標準隊友；`battle_started.mercenaries`；`hire`＋戰鬥的日誌重播兩次相同 |
+| `tests/api/test_world_party_api.py` | `WorldView.party`／`mercenaries`；`hire` 動作；野外 422；開戰的戰鬥單位有傭兵名；`allies_zh` |
+| vitest | 雇用清單（勾選上限、送出的動作）、隊伍面板文字 |
+
+### 21.9 驗收
+
+`uv run pytest -q tests/world tests/content tests/api -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。瀏覽器（後端、前端不用 8000／8001／8010 埠；LLM 降級）：霧渡鎮雇 2 名傭兵 → 出城打一場 → 戰鬥裡看到這兩名傭兵。
+
+### 21.10 不做的事
+
+- 朋友的影子（5C-2）、劇情夥伴與誓約（5C-3）；賽季 Boss 只准傭兵的檢查（5F-3）。
+- 傭兵的裝備預算（9.6.8「裝備預算和主角相同」；裝備與物品等級在 5D，見待 PM 決定）。
+- 戰鬥外的隊友 AI 預設設定（目前隊友指令在戰鬥中下，沒有戰鬥外的存檔設定）。
+- 傭兵改技能、改名、外觀；上線前用傭兵打賽季 Boss 的模擬（5F）。
+
+### 21.11 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5C1-1 | 隊伍上限放哪 | `mercenaries.yaml` 的 `max_hired: 2`（#97） |
+| 5C1-2 | 沒雇傭兵時的隊友 | 照舊用原型 2 名標準隊友（不讓沒雇的人變成單人隊）；雇 1 名時只帶那 1 名（#97「可以少帶人」），不補標準隊友 |
+| 5C1-3 | 能雇用的地點 | 任何 `town` 種類的地點（第一季只有各區小鎮；主城之後）；每個城鎮名單相同（9.6.8「每個人都一樣」） |
+| 5C1-4 | 傭兵的 AI | 效用 AI＋戰鬥中的隊友指令（同標準隊友）；保留底稿的 `ai_profile`（定位對應的行為模式） |
+| 5C1-5 | 傭兵開場狀態 | 每場滿 HP、法力、耐力（同標準隊友；不追蹤傭兵的傷） |
+| 5C1-6 | 戰鬥單位名稱 | 單位範本 `id`＝傭兵 ID、`name_zh`＝暫名；其他照底稿 |
+| 5C1-7 | 技能「依階級對照」 | 底稿技能照 `grow_allies`（`at_run_tier` 重配到主角等級對應的階級），不另寫對照表 |
+| 5C1-8 | 雇用的時機限制 | 城鎮且沒有遭遇；事件卡、任務三選一、閃現待選照既有的全域限制 |
+| 5C1-9 | 傭兵出場順序 | 依 `hire` 的清單順序 |
+
+
+## 22. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
