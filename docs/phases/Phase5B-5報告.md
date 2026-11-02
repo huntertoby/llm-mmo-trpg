@@ -90,3 +90,9 @@
   - `ruff check .`、`ruff format --check .`、`mypy`（1045 檔）、`lint-imports`（9 kept）：全部通過。
 - OpenAPI：`scripts/export_openapi.py` ＋ `gen:api` 重產，`test_openapi_snapshot` 通過。
 - 新增的 `# noqa`：只有測試一處 `SLF001`（`test_player_text_only_in_player_input` 依題目補 Mock 回應）。沒動戰鬥，不需戰鬥重播；沒跑全量 `scripts/check.py`。
+
+## 8. 5B-5b（事件卡打開放棄、交涉、戰鬥解法；穿陣刺；固定時鐘）
+
+1. **`event_solve` 接上 API 與事件卡**：`WorldActionRequest`（`world_schemas.py`）加入 `EventSolveAction`，走既有 `POST …/actions`；`EventSolutionView` 新增 `cost_supplies`、`can_pay`、`waive_thread`、`waive_zh`（持有且沒過期的可抵線頭）。可用條件寫在 `world_story_view._solution_problem`：放棄隨時可用；交涉補給不足且沒線頭時停用「補給不足（要 N）」，持有 `waive_thread` 時事件卡多一顆「用〔線頭〕抵」；戰鬥在不能遇敵的地點停用「這裡打不起來」，選了戰鬥解法後（`pending_event.combat_solution`）整張卡顯示「戰鬥中」；機遇仍「之後開放」。戰鬥解法開一般遭遇，沿用遭遇面板的 `fight`／`retreat`，打完那次由 `settle_event_combat` 結算。前端：`EventCard` 新增 `onSolve`，`story.ts` 新增 `solutionClick`／`waiveLabel`，提示語依解法種類。OpenAPI 與 `schema.d.ts` 已重產。測試：`tests/api/test_world_events_api.py` 新增放棄、交涉（補給不足／足夠）、線頭抵用、戰鬥解法打完結算共 5 項；vitest 補 `story.test.ts`。瀏覽器實測（後端 8060、前端 5220，降級模式）：交涉用人情線頭抵用（線頭用掉、留下「渡船夫的女兒」）與放棄皆成功、事件卡消失。
+2. **新技能「穿陣刺」**（`skill_formation_pierce`）：近戰武器技、`line` 2 格、傷害 1400‰、耐力 8、冷卻 2、`scaling_attr: str`，預算 75.0% 合格。加給 `sect_array_disciple`；另外是 1 階普通、無關鍵字的手寫技能，自動進通用池。內建技能數 374 → 375；`refactor_3wr2.json`、`skill_icons.json` 已重產。
+3. **固定時鐘**：`tests/api/test_world_api.py` 的 `Clock`（每呼叫一次 +7 秒，結果隨呼叫次數變）換成 `FixedClock`（永遠 `NOON`），`test_world_api.py`、`test_world_events_api.py`、`test_world_growth_api.py` 三個檔案全部改用；全過。`tests/api/test_world_story.py` 沒有用時鐘。
