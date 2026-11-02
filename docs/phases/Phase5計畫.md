@@ -2673,6 +2673,132 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5C2-12 | 影子開場狀態 | 每場滿 HP、法力、耐力（同傭兵） |
 
 
-## 24. 之後各段規格
+## 24. 5C-3 詳細規格：預設傭兵、劇情夥伴阿岳與誓約
+
+> 給實作 agent。只動 `content/world/mercenaries.yaml`、`content/world/oaths.yaml`（新）、`content/world/quests/cloud_ridge.yaml`（兩個任務各一行 `companion`）、`content/statuses.yaml`（誓約加成與破誓 4 個狀態）、`src/trpg/content/`（`world_mercenaries.py`、`world_oaths.py`、`world_quests.py`、`library.py` 檢查）、`src/trpg/engine/`（`oaths.py` 新；`setup.py`、`state.py`、`battle.py`、`turns.py`、`context.py`、`events.py` 小改；`runner.py` `LOG_FORMAT`）、`docs/phases/戰鬥紀錄格式變更.md`、`src/trpg/world/`（`companions.py`、`oaths.py` 新；`state.py`、`actions.py`、`step.py`、`battle.py`、`party.py`、`growth.py`、`quests.py` 小改）、`src/trpg/api/`（world 的 presenter、schemas、growth view）、`client/`（成長畫面的誓約區、隊伍面板、API 型別）、`client/openapi.json`、`tests/engine/`、`tests/world/`、`tests/content/`、`tests/api/`、vitest、受影響的既有測試（預設傭兵、版號字串）。不改 `trpg.roguelite`、`trpg.skillgen`、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
+> 依據：06 6.26（誓約：被動、白名單模板、加成依難度 3 檔由引擎查表、**違反＝本場加成移除＋debuff 2 回合、下一場恢復**、**佔一格被動欄位**、同時 1 個、判定靠事件日誌、LLM 只提議模板與參數且要玩家確認）；09 9.6.9 #97（劇情夥伴：主線或任務鏈給的 NPC，**只在對應任務裡跟著，佔一個隊友位**）、9.6.10 #106（主城、小鎮、營火立誓，同時 1 個，一直有效到自己解除，解除後現實 1 天內不能再立）、9.6.11（**新角色預設帶 2 名傭兵（鐵壁＋回春），可自己改成獨行；劇情夥伴加入時自動替掉一名，任務結束還原**，5C-2 代決）；18 18.5（阿岳：獵戶小屋、新手任務鏈的劇情夥伴、主線第 1 章同行）、18.6（誓約模板 15 種，全遊戲共用）、18.7.1（新手鏈第 1 步「劇情夥伴阿岳加入」）、18.7.6（阿岳＝帶他打贏一場 +2、每天最多 +6，5B-4d 的一部分）；本檔 12（5A-6 誓約接點）、13（5A-7 立誓畫面）、16（5B-4 任務）、22、23（5C-1、5C-2）。
+
+### 24.1 目標
+
+1. 新角色一建立就帶鐵壁＋回春（可以在城鎮 `hire` 改成獨行或別人）。
+2. 劇情夥伴阿岳：接下新手鏈（或主線第 1 章）時加入隊伍，隊伍已滿就替掉第 2 名；任務結束（兩個任務都結束）時離隊、還原被替掉的成員；帶阿岳打贏一場給阿岳好感度 +2（每天最多 +6）。
+3. 誓約：18.6 的 15 種模板進 `content/world/oaths.yaml`；在城鎮、營火立誓（選單，`source: "menu"`），佔 1 格被動欄位；開戰時主角帶誓約加成，戰鬥中違反（事件判定）立刻移除加成並上 2 回合「破誓」；只能在戰鬥結束時判定的模板在戰鬥結束時記錄違反；前端「立誓」打開。
+
+### 24.2 預設傭兵（9.6.11 5C-2 代決）
+
+- `mercenaries.yaml` 加 `default_party: [merc_tiebi, merc_huichun]`（schema `MercenaryTable.default_party`，預設空；ID 必須在名單、不重複、數量 ≤ `max_hired`）。
+- `new_character`：內容庫有傭兵名單時 `mercenaries`＝`default_party`；沒有名單＝空（舊內容資料夾照舊獨行）。
+- 既有測試依賴「新角色＝獨行」的，照新規則更新（要獨行的測試先 `hire` 空清單或直接把 `mercenaries` 設成空）。
+
+### 24.3 劇情夥伴（`trpg.world.companions`）
+
+- **資料**：`mercenaries.yaml` 加 `companions`（`CompanionDef`：`id`、`npc`（人設卡 ID）、`name_zh`、`title_zh`、`build`（`builds.yaml`）、`affinity_per_win: int = 0`、`affinity_daily_cap: int = 0`）；`QuestDef.companion: str | None`（夥伴 ID）。跨檔案檢查：夥伴 ID 不重複、不和傭兵 ID 相撞；`build` 存在且不是白板／對照組；`npc` 在任一區人設卡；任務的 `companion` 在名單。
+- **雲嶺**：`companion_ayue`（阿岳、獵戶、`hunter_ayue`、底稿 `build_ranged`、+2／每天 +6）；`starter_ferry` 與 `main_mist_rift` 都寫 `companion: companion_ayue`（18.5「新手任務鏈的劇情夥伴；主線第 1 章同行」）。
+- **加入與離隊**（每個世界動作之後，在 `advance_quests` 之後跑 `sync_companions`；純函式、不擲骰）：
+  - 該在隊的夥伴＝進行中（已接、未完成）任務的 `companion`（去重、依任務 ID 排序）。
+  - 要加入、還不在隊：隊友（傭兵＋影子）數 < `max_hired` → 直接加入；已滿 → **替掉第 2 名**（出場順序的第 2 名：傭兵依清單、再影子），把被替掉的成員（傭兵 ID 或影子複本、它的打法）記在 `CharacterState.companion_bench`。事件 `companion_joined`（夥伴、替掉的成員名稱或 `None`）。
+  - 要離隊（任務都結束）：從隊伍拿掉；`companion_bench` 有記錄、而且隊伍有空位 → 還原到原本的位置（第 2 名），事件 `companion_left`（夥伴、還原的成員名稱或 `None`）。
+  - 夥伴在隊時 `hire` 只能選 `max_hired − 夥伴數` 名；`hire` 成功就清掉 `companion_bench`（玩家自己換了隊伍，任務結束時不再還原）。
+- **出場**：夥伴的戰鬥單位＝底稿英雄範本、`id`＝夥伴 ID、`name_zh`＝夥伴名，技能照欄位上限（`slot_capped`）、照主角等級成長（`grow_allies`），每場滿狀態；排在傭兵、影子之後。`battle_started` 加 `companions`。
+- **好感度**（18.7.6，5B-4d 的阿岳部分）：打贏一場、隊伍有夥伴 → 對夥伴的 `npc` 加 `affinity_per_win`，同一天（`refresh_day`）累計不超過 `affinity_daily_cap`；`CharacterState.companion_affinity`（夥伴 → `[日子, 今天已加]`）；發 `affinity_changed`（來源 `companion_win`）。
+
+### 24.4 誓約模板（`content/world/oaths.yaml`；18.6 → 資料，ID 由開發 PM 取）
+
+| # | ID | 名稱 | 參數（中文名） | 難度 | 判定 | 判定時機 |
+|---|---|---|---|---|---|---|
+| 1 | `oath_no_heal` | 不使用帶「治療」標籤的技能 | — | 中 | `forbid_skill_tag` [heal] | 戰鬥中（施放時） |
+| 2 | `oath_no_retreat` | 不朝遠離最近敵人的方向移動 | — | 中 | `no_retreat` | 戰鬥中（主動移動的每一步） |
+| 3 | `oath_attack_each_turn` | 每回合至少攻擊一次 | — | 易 | `attack_each_turn` | 戰鬥中（自己的回合結束時） |
+| 4 | `oath_hold_high_ground` | 不離開高處（回合結束時要在高處） | — | 難 | `end_turn_high` | 戰鬥中（回合結束時） |
+| 5 | `oath_no_category` | 不使用某一類技能 | 技能類別：法術／武器技 | 中 | `forbid_skill_category` | 戰鬥中（施放時） |
+| 6 | `oath_melee_kills` | 每場至少用近戰擊殺 N 名敵人 | 人數 N：1～2 | 易（N＝1）／中（N＝2） | `min_melee_kills` | **戰鬥結束時** |
+| 7 | `oath_no_items` | 不使用道具 | — | 易 | `forbid_skill_tag` [gear] | 戰鬥中（施放時；目前只有裝備給的技能，5D 道具接上後一併判） |
+| 8 | `oath_no_reactions` | 不使用反應（格擋與反應技） | — | 中 | `forbid_reaction` | 戰鬥中（反應發動時） |
+| 9 | `oath_one_element` | 只用某一種元素的技能造成傷害 | 元素：物理、火焰、冰霜…（9 種） | 難 | `damage_element_only` | 戰鬥中（造成傷害時） |
+| 10 | `oath_protect_allies` | 不讓隊友倒下 | — | 難 | `protect_allies` | 戰鬥中（隊友倒下時；召喚物不算） |
+| 11 | `oath_still_first_turn` | 第一回合不移動 | — | 易 | `no_move_first_turn` | 戰鬥中（第 1 個回合主動移動時） |
+| 12 | `oath_apply_status` | 每場至少施加 N 次某種狀態 | 狀態（10 種負面狀態）、次數 N：2～4 | 中 | `min_status_applied` | **戰鬥結束時** |
+| 13 | `oath_no_early_defense` | HP 低於一半前不使用防禦技能 | — | 中 | `forbid_skill_tag_until_hp` [defense, shield, guard]、500‰ | 戰鬥中（施放時） |
+| 14 | `oath_no_surface` | 不站在任何表面上結束回合 | — | 中 | `end_turn_off_surface` | 戰鬥中（回合結束時） |
+| 15 | `oath_solo` | 單獨作戰（不帶隊友） | — | 難 | `solo` | 戰鬥中（開場時：有隊友＝開場就違反） |
+
+- **schema**（`trpg.content.world_oaths`，延伸 5A-6）：`OathParamDef` 加 `name_zh`（必填）、`choice_names_zh`（`choice` 的每個值的中文名，鍵＝`choices`）；`OathTemplateDef` 加 `description_zh`、`check: OathCheck`、`bind: dict[參數, 判定欄位]`（參數填進判定的哪一欄）、`difficulty_by: OathDifficultyBy | None`（依參數值決定難度，模板 6）；`OathTable` 加 `bonuses: dict[難度, 狀態 ID]`、`penalty_status`、`penalty_rounds: int = 2`。`OathCheck`（`kind` 15 種之一＋`tags`、`category`、`element`、`status`、`count`、`hp_permille`）放在 content，引擎與世界共用；`resolve_check(template, params)` 把參數填進去。
+- **跨檔案檢查**（`library.py`）：加成、破誓狀態存在；`tags` 在 `skill_tags.yaml`；元素參數的值在 `elements.yaml`；狀態參數的值在 `statuses.yaml`；`bind` 的欄位與判定種類相符。
+
+### 24.5 加成與破誓（引擎查表；`content/statuses.yaml`，數值初值、開發 PM 定）
+
+| 狀態 | 名稱 | 效果 | 性質 |
+|---|---|---|---|
+| `oath_bonus_easy` | 誓約之力・易 | 造成的攻擊傷害 +5% | neutral、不倒數（不能被驅散、奪取） |
+| `oath_bonus_medium` | 誓約之力・中 | 造成的攻擊傷害 +10% | 同上 |
+| `oath_bonus_hard` | 誓約之力・難 | 造成的攻擊傷害 +15% | 同上 |
+| `oath_broken` | 破誓 | 造成的攻擊傷害 −10%、受到的傷害 +10%，2 回合 | debuff |
+
+### 24.6 引擎（`trpg.engine.oaths`）
+
+- `BattleSetup.oath: OathSetup | None = None`（`unit`＝帶誓約的單位在 `units` 的索引、`template`、`check`（已填參數的 `OathCheck`）、`bonus_status`、`penalty_status`、`penalty_rounds`）。`BattleState.oath: OathTracker | None`（帶誓約的單位 ID、判定、是否已違反、這回合有沒有攻擊、第幾個回合、近戰擊殺數、施加次數；不可變，換新的）。
+- **開場**（`begin_battle`，開場狀態之後、擲先攻之前）：帶誓約的單位掛上加成狀態；`solo` 模板若有其他我方非召喚單位 → 立刻違反。
+- **戰鬥中**（`Ctx.emit` 的掛鉤看事件；違反只記下，等這次結算收尾 `finish_resolution` 再執行）：移除加成狀態、施加破誓（`penalty_rounds` 回合、不擲抵抗），發事件 `oath_broken`（`unit_id`、`template`、`reason`、`at_end=False`）。同一場只違反一次（之後不再判定）。
+- **戰鬥結束時**（`battle_ended`）：`min_melee_kills`、`min_status_applied` 沒達到 → 發 `oath_broken`（`at_end=True`，沒有效果）。
+- 規則細節：「攻擊」＝`attack_rolled`（攻擊者是自己）或自己造成 `cause: attack` 的傷害；「主動移動」＝`unit_moved` 的 `walk`／`dash`／`leap`／`shadowstep`；「高處」＝格子高度 ≥ 1；「近戰擊殺」＝自己 `cause: attack` 的傷害讓敵人 HP 歸零、且自己的武器是近戰（同 `is_melee_attack`）；元素判定看自己造成、數值 > 0 的傷害，不算墜落、撞擊、推倒、致命地形、反噬。
+- 沒有誓約時結算與 `/106` 完全相同；`BattleSetup` 新欄位與新事件進紀錄 → `LOG_FORMAT` `/106` → `/107`（`docs/phases/戰鬥紀錄格式變更.md`）。
+
+### 24.7 世界（`trpg.world.oaths`、`growth.py`、`battle.py`）
+
+- **立誓**（延伸 5A-6）：另外檢查被動欄位——主角已裝滿 `skill_slots.passive` 招被動時拒絕（「誓約佔一格被動欄位，先卸下一招被動」）。有誓約時，換技能、任務三選一裝上、閃現換裝、傳承等一律照「被動欄位 −1」（`world_library` 的視圖把 `skill_slots.passive` 減 1），放不下的照既有規則進備用或被拒。
+- **開戰**（`prepare_battle`）：有誓約 → `BattleSetup.oath`（主角索引 0、`resolve_check`、難度 → 加成狀態）；`PreparedBattle.oath` 給 API 顯示。
+- **打完**（`fight`）：從戰鬥事件取 `oath_broken` → 世界事件 `oath_broken`（模板、原因、`at_end`）；`LastBattle.oath_broken`。不違反時發 `oath_kept`。誓約本身不因違反而解除（06 6.26「下一場恢復」）。
+- **事後判定的後果**：戰鬥結束時才判的違反只記錄（加成已在本場用過），不另給懲罰（待 PM 決定）。
+
+### 24.8 API 與前端
+
+- `OathParamView` 加 `name_zh`、`choice_names_zh`；`OathTemplateView` 加 `description_zh`、`bonus_zh`（例「造成的攻擊傷害 +10%」）、`judge_zh`（「戰鬥中判定」／「戰鬥結束時判定」）；`OathCurrentView.params_zh` 用參數中文名與值的中文名；`OathView` 加 `penalty_zh`（「違反：本場加成移除＋破誓 2 回合（造成傷害 −10%、受到傷害 +10%），下一場恢復」）、`slot_zh`（「誓約佔 1 格被動欄位」）。
+- `PartyView` 成員加 `companion: bool`、`companion_note_zh`（「劇情夥伴：任務結束後離隊」）；`PartyView.companion_zh`（夥伴在隊時「阿岳跟著你（新手任務），佔 1 個隊友位」）。`EncounterView.opening_zh` 有誓約時加一句「誓約〔名稱〕：主角帶〔誓約之力・中〕」。
+- 事件句子：`companion_joined`「阿岳加入隊伍（替下回春）。」、`companion_left`「阿岳離開隊伍，回春回到隊上。」、`oath_broken`「違反誓約「…」：加成移除、破誓 2 回合。」／「戰鬥結束：沒有守住誓約「…」。」、`oath_kept`「守住了誓約「…」。」。
+- 前端：成長畫面的誓約區照 5A-7（選模板、填參數用中文名與值的中文名、顯示加成、判定時機、違反後果、佔被動欄位）；雇用面板在夥伴在隊時上限少 1、列出夥伴（不可勾）；隊伍面板顯示夥伴。浮動卡照 6.5.1。
+- 重產 OpenAPI。
+
+### 24.9 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_oaths.py` | 15 種模板、參數都有中文名、choice 都有中文名、難度、`difficulty_by`；壞資料：未知狀態／標籤／元素、`bind` 欄位不符、缺中文名 |
+| `tests/content/test_world_mercenaries.py`（加） | `default_party`、`companions` 與任務 `companion` 的檢查 |
+| `tests/engine/test_oaths.py` | 每種戰鬥中判定的模板：守住時加成整場在身上、違反時加成移除＋破誓 2 回合＋`oath_broken`、只違反一次；兩種戰鬥結束判定；`solo` 開場違反；沒有誓約時和原本相同 |
+| `tests/world/test_companions.py` | 新角色預設鐵壁＋回春；接新手鏈 → 阿岳替掉回春；任務結束 → 阿岳離隊、回春回來；中途 `hire` 後不還原；獨行時阿岳直接加入；帶阿岳打贏 +2、每天最多 +6；日誌重播兩次相同 |
+| `tests/world/test_oath.py`（加） | 模板內容立誓、被動欄位滿時拒絕、有誓約時被動欄位 −1；開戰帶加成；違反與守住的世界事件；重播相同 |
+| `tests/api/test_world_growth_api.py`、`test_world_party_api.py`（加） | 誓約模板的中文、立誓後出戰 `opening_zh` 有加成；夥伴在隊伍面板 |
+| vitest | 誓約參數的中文選單、送出的動作；隊伍面板的夥伴 |
+
+### 24.10 驗收
+
+`uv run pytest -q tests/world tests/content tests/api tests/engine/test_oaths.py -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`tests/test_architecture.py`、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播（`/107`）。瀏覽器（後端、前端不用 8000／8001／8010 埠；LLM 降級）：新角色看到預設 2 名傭兵 → 接新手鏈第 1 步、阿岳加入替掉一名 → 在城鎮立一個誓、出戰看到加成。
+
+### 24.11 不做的事
+
+- LLM 把玩家誓詞轉成模板（06 6.26 安全流程；API 照 5A-7 只收 `source: "menu"`，列待辦）；「會違反誓約的動作在按下前先警告」（戰鬥畫面，列待辦）；越守越強的誓約等級（6.26「之後再加」）。
+- 劇情夥伴的 AI 打法設定、夥伴改技能；其他區的劇情夥伴；5B-4d 的其他好感度來源（柳掌櫃、小蓮）。
+- 道具本身（5D）。
+
+### 24.12 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5C3-1 | 預設傭兵放哪 | `mercenaries.yaml` 的 `default_party`（9.6.11 5C-2 代決：鐵壁＋回春） |
+| 5C3-2 | 阿岳的 build | 18 只寫「獵戶」：最接近的 sim build＝`build_ranged`（弓） |
+| 5C3-3 | 阿岳跟哪些任務 | 新手任務鏈與主線第 1 章（18.5「新手任務鏈的劇情夥伴；主線第 1 章同行」）；接任務時加入（18.7.1 第 1 步「阿岳加入」），兩個任務都結束才離隊 |
+| 5C3-4 | 替掉誰、怎麼還原 | 隊伍滿時替掉出場順序第 2 名；離隊時隊伍有空位才還原；中途 `hire` 就不還原 |
+| 5C3-5 | 阿岳的好感度上限怎麼算 | 每天（6 點刷新）累計 +6；只看打贏、隊伍有阿岳 |
+| 5C3-6 | 加成與破誓的數值 | 24.5 表（初值）；加成是不倒數、不能被驅散的狀態 |
+| 5C3-7 | 模板 6 的難度 | N＝1 易、N＝2 中（18.6「易／中」） |
+| 5C3-8 | 「道具」 | 目前戰鬥中沒有道具，先判「裝備給的技能」（`gear` 標籤）；5D 道具接上後只改 content |
+| 5C3-9 | 「防禦技能」 | 帶 `defense`、`shield`、`guard` 標籤的技能 |
+| 5C3-10 | 「反應」 | 自己發動任何反應（`reaction_triggered`）就違反；不自動關掉反應設定 |
+| 5C3-11 | 戰鬥結束才判的模板 | 只記錄違反（世界事件、最近一次戰鬥），不另給懲罰 |
+| 5C3-12 | 違反後誓約 | 不解除、下一場照樣帶加成（6.26「下一場恢復」）；同一場只違反一次 |
+| 5C3-13 | 被動欄位 | 立誓時被動已滿就拒絕；有誓約時所有裝技能的地方照被動欄位 −1 |
+| 5C3-14 | `solo` 的判定 | 開場時有其他我方非召喚單位就違反（召喚物不算隊友） |
+
+## 25. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
