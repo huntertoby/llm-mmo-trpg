@@ -43,7 +43,9 @@ def test_budget_shows_conditions_and_synergies(capsys: pytest.CaptureFixture[str
 def test_budget_all_lists_every_skill(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["skills", "budget", "--all"], capsys)
     assert code == 0
-    assert "技能預算總表（共 301 個" in out and "通過 301 個，違規 0 個。" in out
+    known = len(library().budget.known_budget_exceptions)  # BAL-14b 起清單改讀 content
+    tail = f"，已知例外 {known} 個" if known else "。"
+    assert "技能預算總表（共 301 個" in out and f"通過 {301 - known} 個，違規 0 個{tail}" in out
     for skill_id in sorted(p.stem for p in (PROJECT_ROOT / "content/skills").glob("*.yaml")):
         assert skill_id in out
 

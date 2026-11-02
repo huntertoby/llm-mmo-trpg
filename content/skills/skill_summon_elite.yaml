@@ -1,5 +1,5 @@
 # 精英召喚——召喚專精（取捨型修正型被動，Phase 3-33f1，06 6.29.4；數值為初值，未經模擬）：
-# 召喚物 HP 與傷害 +50%、持續 +2 輪；代價：同時上限 2 → 1 隻。
+# 召喚物 HP +50%、傷害 +25%、持續 +1 輪（BAL-14b：原傷害 +50%、持續 +2）；代價：同時上限 2 → 1 隻。
 # 與普攻精通、群召互斥（exclusive_group: mastery，裝備時由 skill_slot_problems 擋）。
 id: skill_summon_elite
 schema_version: 1
@@ -19,9 +19,9 @@ modifiers:
   - applies_to: {skill_tags: [summon]}
     change: {summon_hp_permille: 500}
   - applies_to: {skill_tags: [summon]}
-    change: {summon_damage_permille: 500}
+    change: {summon_damage_permille: 250}   # BAL-14b：500 → 250（BAL-14a 精英單體 DPR 為普攻流 127%）
   - applies_to: {skill_tags: [summon]}
-    change: {summon_duration_delta: 2}
+    change: {summon_duration_delta: 1}   # BAL-14b：2 → 1
   - applies_to: {skill_tags: [summon]}
     change: {summon_limit_delta: -1}
 condition: null

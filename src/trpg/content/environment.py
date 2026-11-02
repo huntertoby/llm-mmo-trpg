@@ -844,10 +844,6 @@ class SummonAiRules(ContentModel):
       排序）。
     - ``totem_ally_points``：圖騰光環的價值：每個範圍內友方 × 狀態在 ``ally_status_values`` 的價值
       （沒列出的用這個值）× 持續輪數 × ``support`` 權重 × 折合（沿用 ``hit_permille``）。
-    - ``boss_blocker_points`` / ``boss_blocker_slack``（Phase 3-33b）：Boss 優先清擋路的召喚物——
-      召喚物與 Boss 的距離加上它與某個非召喚物敵人的距離，不超過 Boss 到該敵人的距離再加
-      ``boss_blocker_slack`` 時算「擋在路徑上」；Boss 的動作會打到這樣的召喚物時，每隻加
-      ``boss_blocker_points`` 分（× 命中折合）。0 ＝ 不加分。
     - 模式（Phase 3-33c）：``follow_radius`` 跟隨時待在召喚者幾格內（軟性：超出每格扣
       ``orders.hold_weight`` 分，仍會主動攻擊）；``guard_radius`` 守護我時只走到召喚者幾格內；
       ``guard_threat_range`` 守護我時，敵人與召喚者的距離不超過（敵人武器射程 ＋ 速度 ＋ 此值）
@@ -868,8 +864,6 @@ class SummonAiRules(ContentModel):
     hit_permille: int = Field(default=500, ge=0, le=1000)
     distance_cost_permille: int = Field(default=100, ge=0)
     totem_ally_points: int = Field(default=3, ge=0)
-    boss_blocker_points: int = Field(default=0, ge=0)
-    boss_blocker_slack: int = Field(default=1, ge=0, le=4)
     follow_radius: int = Field(default=3, ge=0, le=3)
     guard_radius: int = Field(default=2, ge=0, le=3)
     guard_threat_range: int = Field(default=1, ge=0, le=4)

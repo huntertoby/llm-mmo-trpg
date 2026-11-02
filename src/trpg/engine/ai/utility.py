@@ -115,7 +115,6 @@ from trpg.engine.ai.self_costs import self_cost_gate
 from trpg.engine.ai.stance import stance_cancel, stance_entry_blocked
 from trpg.engine.ai.summon import (
     auto_mode_action,
-    blocker_gains,
     filter_by_mode,
     has_summon,
     mode_orders,
@@ -1074,8 +1073,6 @@ def _gains(
     f = _gain_frame(state, actor, p, profile, only)
     gains = _damage_gains(f) + _ally_gains(f) + _kill_gains(f) + _push_gains(f)
     gains += _surface_gains(f) + _displace_gains(f)
-    if only is None:  # Boss 優先清擋路的召喚物（3-33b）
-        gains += blocker_gains(state, actor, [*p.min_events, *p.max_events], profile, f.hit)
     if f.w.expose or f.w.cover_damage:
         gains += _cover_gains(state, actor, p, f.w, f.hit, only)
     if only is None and isinstance(p.action, UseSkill):  # 純地形技能（3T-5）

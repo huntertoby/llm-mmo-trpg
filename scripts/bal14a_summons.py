@@ -51,7 +51,7 @@ from trpg.engine.events import SkillInfused, TurnEnded
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import run_battle
 from trpg.shared.types import Team
-from trpg.sim.attack_flow_report import SCENARIOS, run_attack_flow
+from trpg.sim.attack_flow_report import SCENARIOS, Scenario, run_attack_flow
 from trpg.sim.attrition import PLAIN_PACKS, SUMMON_PACKS
 from trpg.sim.batch import run_batches
 from trpg.sim.matrix import matrix_specs
@@ -66,6 +66,24 @@ from trpg.skillgen.usage import SkillUsage
 ROOT = Path(__file__).resolve().parents[1]
 SUMMONER = "build_summoner"
 FLOW_BUILDS = ("build_attack_archer", "build_skill_archer", SUMMONER)
+LONG_TARGET = "bal14_long_target"
+LONG_HP_PERMILLE = 20000
+"""BAL-14b 長戰情境：``std_enemy_t5`` 的複本，範本 HP ×20（10 輪內打不死），戰鬥上限 10 輪。"""
+LONG = Scenario("long", "長戰單體（10 輪，會反擊）", "open_plain", False, (LONG_TARGET,))
+LONG_IDLE = Scenario(
+    "long_idle", "長戰單體（10 輪，不反擊）", "open_plain", False, (LONG_TARGET + "_idle",)
+)
+"""不反擊版：同一個目標改用 ``idle`` 行為模式、速度 0（防禦屬性與護甲不變）。"""
+LONG_ROUNDS = 10
+
+
+def with_long_target(lib: ContentLibrary) -> ContentLibrary:
+    tpl = lib.units["std_enemy_t5"]
+    hp = tpl.max_hp * LONG_HP_PERMILLE // 1000
+    target = tpl.model_copy(update={"id": LONG_TARGET, "max_hp": hp})
+    idle = target.model_copy(update={"id": LONG_TARGET + "_idle", "ai_profile": "idle", "speed": 0})
+    units = {**lib.units, LONG_TARGET: target, idle.id: idle}
+    return dataclasses.replace(lib, units=units)
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +166,16 @@ def _summoner_skills(
     return dataclasses.replace(lib, builds=lib.builds.model_copy(update={"builds": tuple(builds)}))
 
 
+def _with_mod(skill: SkillDef, change: str, value: Any) -> SkillDef:
+    mods = tuple(
+        m.model_copy(update={"change": m.change.model_copy(update={change: value})})
+        if getattr(m.change, change) is not None
+        else m
+        for m in skill.modifiers
+    )
+    return skill.model_copy(update={"modifiers": mods})
+
+
 def _apply_token(lib: ContentLibrary, token: str) -> ContentLibrary:  # noqa: PLR0911, PLR0912
     if token == "base":
         return lib
@@ -172,6 +200,9 @@ def _apply_token(lib: ContentLibrary, token: str) -> ContentLibrary:  # noqa: PL
         return _summons(lib, sub, weapon_def=weapon)
     if head == "dur":
         return _skills(lib, _duration(int(raw), lib.ruleset.core.summon_max_duration))
+    if head == "mod":  # mod.<技能>.<修正欄位>=<值>：改修正型技能的那一條修正
+        skill_id, _, change = sub.partition(".")
+        return _skills(lib, lambda s: _with_mod(s, change, _value(raw)) if s.id == skill_id else s)
     if head == "durfit":  # 每招召喚技的持續改成目前預算下（比 ≤ 1.0）最長的輪數
         fits = {sid: _longest_fit(lib, lib.skills[sid]) for sid in _summon_skill_ids(lib)}
         return _skills(lib, lambda s: _set_duration(s, fits[s.id]) if fits.get(s.id) else s)
@@ -222,8 +253,12 @@ def _write(lines: list[str], out: Path | None) -> None:
 
 def cmd_flow(args: argparse.Namespace) -> int:
     base = load_library(ROOT / "content")
+    if args.long:
+        base = with_long_target(base)
     libs = _variants(base, args.variants)
     builds = tuple(args.builds.split(","))
+    scenarios = (LONG, LONG_IDLE) if args.long else SCENARIOS
+    rounds = LONG_ROUNDS if args.long else 30
     lines = [
         f"每格 {args.seeds} 場（種子 0–{args.seeds - 1}）；我方 DPR ＝ 我方總傷害（含召喚物、隊友）÷ 輪數，每場平均；"
         "召喚占比 ＝ 召喚物傷害 ÷ 我方總傷害（合計）",
@@ -233,9 +268,14 @@ def cmd_flow(args: argparse.Namespace) -> int:
     ]
     started = time.perf_counter()
     for name, lib in libs.items():
-        only = builds if name == "base" else (SUMMONER,)
+        only = builds if name == "base" or args.builds != ",".join(FLOW_BUILDS) else (SUMMONER,)
         samples = run_attack_flow(
-            lib, scenarios=SCENARIOS, builds=only, seeds=args.seeds, jobs=args.jobs
+            lib,
+            scenarios=scenarios,
+            builds=only,
+            seeds=args.seeds,
+            jobs=args.jobs,
+            max_rounds=rounds,
         )
         cells: dict[tuple[str, str], list[Any]] = defaultdict(list)
         for s in samples:
@@ -481,7 +521,10 @@ def cmd_matrix(args: argparse.Namespace) -> int:
     maps = default_sim_maps(base)
     all_specs: list[tuple[str, str, Any]] = []
     for name, lib in libs.items():
-        all_specs += [(name, m, spec) for _, m, spec in matrix_specs(lib, [SUMMONER], maps, seeds)]
+        for b in args.builds.split(","):
+            all_specs += [
+                (f"{b}／{name}", m, spec) for _, m, spec in matrix_specs(lib, [b], maps, seeds)
+            ]
     started = time.perf_counter()
     reports = run_batches([s for _, _, s in all_specs], jobs=args.jobs)
     print(f"[{time.perf_counter() - started:7.1f}s] {len(all_specs)} 格", file=sys.stderr)
@@ -492,7 +535,7 @@ def cmd_matrix(args: argparse.Namespace) -> int:
         a[1] += rep.completed
         a[2] += rep.rounds_mean * rep.completed
     lines = [
-        f"build_summoner × {len(maps)} 圖 × {len(seeds)} 種子（同種子；BAL-13d 基準 74.3%）",
+        f"{args.builds} × {len(maps)} 圖 × {len(seeds)} 種子（同種子；BAL-13d build_summoner 基準 74.3%）",
         "",
         "| 覆寫 | 勝率 | 95% CI | 平均輪數 |",
         "|---|---|---|---|",
@@ -571,6 +614,7 @@ def main(argv: list[str]) -> int:
     f.add_argument("--variants", default="base")
     f.add_argument("--builds", default=",".join(FLOW_BUILDS))
     f.add_argument("--seeds", type=int, default=30)
+    f.add_argument("--long", action="store_true", help="BAL-14b 長戰單體：高 HP 目標、上限 10 輪")
     f.set_defaults(func=cmd_flow)
     p = sub.add_parser("packs")
     p.add_argument("--packs", required=True)
@@ -585,6 +629,7 @@ def main(argv: list[str]) -> int:
     m = sub.add_parser("matrix")
     m.add_argument("--variants", default="base")
     m.add_argument("--seeds", type=int, default=30)
+    m.add_argument("--builds", default=SUMMONER)
     m.set_defaults(func=cmd_matrix)
     bo = sub.add_parser("boss")
     bo.add_argument("--variants", default="base")
