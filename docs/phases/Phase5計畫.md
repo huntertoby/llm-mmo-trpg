@@ -110,6 +110,7 @@
 | 5B-4b | 5B-4 收尾（玩法 PM 2026-11-03，18 18.7.5～18.7.7，`effc88a7`）：好感度加取得方式（完成該 NPC 相關任務步驟 +15、每天第一次聊天 +3；目標第 5 天 1～2 名 NPC 到信賴）；信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（交涉／察覺、DC 8，結果給「斷崖幫寨的暗門」，霧渡鎮），不直接給線頭（#85）；skillgen 區域偏向（新方向那張，玩家沒有該區關鍵字時優先，雲嶺：潮濕、帶電、隱蔽）；新手鏈保底（至少 1 招被動、加深／橋接／新方向 1／0／2）；放棄／交涉／戰鬥解法結算；線頭到期結局（叛徒戰、二當家坐大）；導師任務鏈 3 步（18.7.5） | 5B-4 | 1.5 h | 可與 5B-5 平行（不碰前端） |
 | 5B-4c | 5B-4b 收尾（玩法 PM 2026-11-03）：任務步驟好感度 +15 → +10（每天聊天 +3、主線 ① 加成保留），重量目標第 4～5 天到信賴；懸賞精英帶 1 個資料指定詞綴（疤面＝連心的、北坡狼王＝狂暴的、霧中劍客＝霧隱的，18.7.4）；機遇解法結算＝條件成立時給一次機遇技能三選一（07 7.6：通常同階、15% 高一階、每人每季最多 1 次高一階；首例古松祭壇：雷雨夜＋帶電技能）；戰鬥解法用現有勝利條件（骨架 2、14＝撤離，7＝守點，8＝獵人倒下即失敗，沒有保護目標時先用守點）；骨架 22 每角色解決一次後不再出現；世界級線頭到期結局（霧魅：之後 2 天雲嶺夜晚營地遭遇多 1 名霧魅，全服；碎片：灰燼之心第 1 階段護甲 +1，全服，荒原骨架 13 攔截可抵銷，19.4） | 5B-4b | 1.25 h | 可與 5B-M3 平行 |
 | 5B-4d | 5B-4c 收尾（玩法 PM 2026-11-03）：個別好感度來源（小蓮＝主線第 ②、③ 步各 +10；柳掌櫃＝在他店裡消費一次 +2、每天最多 +4，接 5D 商店；阿岳＝帶他打贏一場 +2、每天最多 +6，接 5C-3 劇情夥伴），目標第 4～6 天柳掌櫃到友善、阿岳與小蓮到信賴；骨架 22 只有成功／部分成功才算解決，失敗隔天（6 點）可再試；第 7 天前保底 1 次機遇（07 7.6）；skillgen「指定關鍵字」模式（機遇三張都帶觸發情境的關鍵字，例：雷擊點 → 帶電） | 5B-4c | 1 h | 可與 5C 平行；柳掌櫃、阿岳兩項在 5D／5C-3 做好後接 |
+| 5B-4e | 5B-4d 收尾（玩法 PM 2026-11-03）：骨架 2 成功給小蓮 +20、骨架 6 成功給小蓮 +10（目標第 6 天到信賴，量完回報）；第 4 天起酒館每週傳聞一定含 rumor_storm_altar，第 6 天起還沒遇過機遇的角色在霧渡鎮說書人順口提「古松那邊最近不太平」；保底機遇用專用文字（「古松樹皮上的焦痕還在發燙。你伸手一碰，一道細細的電流竄過掌心——像是有什麼在等你。」），保底時不檢查需要帶電技能、三張照樣帶帶電；渡婆婆信賴時聊天每天可再觸發骨架 22 一次 | 5B-4d | 0.75 h | 可與 5D 平行 |
 | 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表；路由接說書人（travel 觸發事件後送 `event_story`、聊天端點）；大世界自己的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）；隱藏地點揭露後名稱可公開，揭露前用提示語而非「某處」（玩法 PM 2026-11-03） | 5B-3、5B-4 | 1.5 h | 否 |
 
 ### 5C｜組隊、影子與傭兵（3 段）
@@ -125,6 +126,8 @@
 | 段 | 範圍 | 依賴 | 預估 | 可平行 |
 |---|---|---|---|---|
 | PERF-3 | 完整技能三選一再加速（玩法 PM 2026-11-03）：機遇與劇情步驟出現時在背景預先算好三選一；指定關鍵字的組合不抽傳說；橋接搜尋設變體數上限（照最壞約 3 秒定），到上限還沒找到就照 6.27.4 退回「放寬關鍵字」（③），不能少一張；結果仍由種子決定、可重播 | PERF-2 | 1 h | 可與 5C-3 平行（只動 skillgen 與 api 背景計算） |
+| 5C-3b | 5C-3 收尾（玩法 PM 2026-11-03）：戰後才判出的違反，「破誓」2 回合帶到下一場開場（下一場加成照常，#27）；立「不使用反應」誓約時自動關掉反應設定（玩家自己再打開而觸發仍算違反）；戰鬥中會違反誓約的動作按下前先警告（06 6.26）；阿岳用遠程保持距離的 AI 打法 | 5C-3 | 1 h | 可與 5D-1 平行 |
+| 5C-3c | LLM 把玩家誓詞轉成誓約模板（#27；接 5B-3 說書人的 LLM 管線，輸出過 pydantic 與模板檢查，模型關閉時退回選單）；優先度低 | 5C-3、5B-3 | 1 h | — |
 | 5D-1 | 貨幣（金幣、任務幣，8.15）、背包 30 格與腰包 3 個（8.17）、商店（只賣消耗品、粗料、染料；區域特產每週限量；好感度門檻，8.26.1）、霧渡鎮柳掌櫃 | 5A-4 | 1.5 h | 可與 5B 各段平行（不碰事件與 narrative） |
 | 5D-2 | 材料：雲嶺 8 種（18.2.4）＋通用粗／精／上料、敵人家族掉材料（M1；被我方擊倒的第三方照常掉材料，玩法 PM 2026-11-03）、掉落物品等級＝地點建議等級（8.26.2）、精英掉史詩；沿用 3G／3K 物品產生器 | 5D-1、5A-3 | 1.5 h | 否 |
 | 5D-3 | 鐵匠與附魔台：打造（指定部位＋1 條關鍵字詞條、其餘傾向由材料決定 M2、物品等級規則）、強化、重骰、精華指定詞條、配方碼與首位發現者（8.20、M6）、隱藏配方（M7，18 的「驚雷霧袍」）；2 件共鳴（M3） | 5D-2 | 1.5 h | 否 |
@@ -2800,26 +2803,109 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5C3-13 | 被動欄位 | 立誓時被動已滿就拒絕；有誓約時所有裝技能的地方照被動欄位 −1 |
 | 5C3-14 | `solo` 的判定 | 開場時有其他我方非召喚單位就違反（召喚物不算隊友） |
 
-## 25. 5D-1 詳細規格：貨幣、背包、腰包與商店
+## 25. 5B-4d 詳細規格：5B-4c 收尾（小蓮好感度、骨架 22 失敗可再試、機遇保底、skillgen 指定關鍵字）
 
-> 給實作 agent。只動 `content/world/economy.yaml`、`content/world/items.yaml`、`content/world/shops/`（新）、`content/world/oaths.yaml`（「不使用道具」多判一個標籤）、`src/trpg/content/world_economy.py`（新：schema 與載入）、`src/trpg/content/library.py`（一個欄位、一行呼叫）、`src/trpg/world/`（`economy.py` 新；`state.py`、`actions.py`、`step.py`、`battle.py` 小改）、`src/trpg/api/`（`world_economy_view.py`、`world_economy_schemas.py` 新；`world_schemas.py`、`world_presenter.py` 小改）、`client/`（小鎮的「商店」、背包與腰包面板、右側金幣與任務幣、API 型別）、`client/openapi.json`、`tests/content/`、`tests/world/`、`tests/api/`、vitest。另一個 agent（5B-4d）同時在改 `trpg.world` 的事件、機遇與 `trpg.skillgen`：共用檔改動要小。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
-> 依據：08 8.15（金幣：戰鬥、出售物品 → 買消耗品、打造手續費、重骰與強化；任務幣：任務、懸賞、世界事件、bug 回報 → 許願池、特殊商人、高階打造）、8.16（第一季不交易）、8.17（藥水、投擲瓶第一季做，卷軸正式季；**戰鬥中物品欄另外放、使用花 1 AP、不算進基本動作 10 個**；**腰包每場最多帶 3 個，背包 30 格、不算重量**；取得：商人（金幣）、掉落）、8.26.1（貨幣 2 種；好感度不是貨幣、只當商店解鎖門檻，例「友善才賣霧系投擲瓶」；**商店只賣消耗品、粗料、外觀染料；區域商人每週限量賣少量該區特產**；不賣有詞條的裝備、技能、靈感點）；09 9.6.7 #2、#11（城鎮休息回滿、補給回城補）、9.6.10 #102（影子每天第一次被借用給少量任務幣）、9.6.11 #113（HP 野外不自動回；**靠藥水**、治療技能、營火或城鎮）、#116（好感度級名當門檻）；18 18.1（霧渡鎮：區域商人）、18.2.4（青竹節＝雲嶺特產）、18.5（柳掌櫃：霧渡鎮商人）、18.7.6（**柳掌櫃＝在他店裡消費一次 +2、每天最多 +4**，5B-4d 留給 5D）；本檔 9（5A-4 休息與補給）、16（5B-4 任務、好感度）、23（5C-2：影子任務幣暫記在世界快照的影子紀錄，5D 轉進主人角色）、24.12 代決 5C3-8（「不使用道具」等 5D 道具接上後只改 content）。
+> 給實作 agent。主要動 `content/world/quests/cloud_ridge.yaml`（主線第 ② 步 `npcs` 一行）、`content/world/rules.yaml`（`opportunity.guarantee_from_day`）、`src/trpg/content/world_rules.py`（`OpportunityRules` 加欄位）、`src/trpg/world/`（`events.py`、`step.py`、`solutions.py`、`state.py` 小改）、`src/trpg/skillgen/candidates.py`（`CandidateRequest.pinned_keyword` 與指定關鍵字模式）、`src/trpg/roguelite/offers.py`（`make_offer`／`offer_key` 加 keyword-only `pinned_keyword`，預設 `None`＝原行為）、`src/trpg/api/offer_prefetch.py`（機遇的預測帶同樣參數）、`tests/world/`、`tests/skillgen/`、`tests/roguelite/`、受影響的 `tests/api/`。**不做** 柳掌櫃的店內消費（5D）、阿岳的打贏加成（5C-3，另一個 agent 同時在改 `trpg.world` 的隊伍、阿岳、誓約與 `content/world/`：共用檔改動要小）。不動引擎、`content/skills/`、戰鬥紀錄格式；`trpg-char/1`、`trpg-world/1`、`trpg-wlog/1` 不升版號（新欄位都有預設值）。
+> 依據：玩法 PM 2026-11-03（本檔第 1 節 5B 表「5B-4d」列）；18 18.7.6（個別來源：小蓮＝主線第 ②、③ 步各 +10；骨架 22 只有成功或部分成功才算解決、失敗隔天可再試；機遇三張都帶「帶電」、第 7 天前保底 1 次）；07 7.6（機遇：關鍵字由觸發情境決定、第 7 天前保底 1 次、0／1／2）；06 6.27.4（加深、橋接、新方向）；`Phase5B-4c報告.md` 第 7 節待決 2、3、7、8；`PERF-3報告.md`（`skip_legendary`、`BRIDGE_VARIANT_CAP`、`offer_prefetch` 快取鍵）。
 
 ### 25.1 目標
 
+把 5B-4c 留下的四件事做完，全部是 **資料驅動的世界動作**：寫進世界動作日誌、由「日誌＋內容庫＋賽季種子」重播逐字相同；不呼叫 LLM、不讀時間。原型 roguelite 與一般三選一不變（新參數預設＝原行為；`tests/skillgen/fixtures/refactor_3wr2.json` 不應變）。
+
+### 25.2 小蓮的好感度（18.7.6 個別來源）
+
+- 主線「霧中裂痕」第 ② 步 `enter_temple` 的 `npcs` 加 `acolyte_xiaolian`（第 ③ 步 `temple_split` 已列小蓮）→ 完成 ②、③ 各 +10（照 `quest_step_delta`；代決 5B4d-1）。
+- **重量**：`tests/world/test_affinity_pace.py` 照 21.2 的進度表重算；報告寫小蓮第幾天到信賴（目標第 4～6 天，18.7.6）。原有驗收（第 5 天前 1～2 名、第 3 天前沒有）不變；小蓮沒到目標時不改數值，寫進待決。
+
+### 25.3 骨架 22 只有成功／部分成功才算解決（18.7.6）
+
+- `mark_finished`：`once` 骨架的 `event_resolved` 結果是 `success`、`partial` → 加進 `finished_skeletons`（取代 5B4c-9）；`failure` → 記 `CharacterState.failed_skeletons[骨架] = refresh_day(now)`（依骨架排序）；`abandoned` 照舊不記。
+- `event_candidates`：`once` 骨架在 `failed_skeletons` 裡、而且 `refresh_day(now)` 還是失敗那天 → 不進候選；隔天（台北 6 點刷新後）回到候選，可以再試（之後成功才記 `finished_skeletons`）。
+- 再試的入口：照現有的移動擲骰（霧渡鎮抵達時）；聊天只在第一次解鎖時立刻觸發，失敗後不再由聊天觸發（代決 5B4d-2）。
+
+### 25.4 第 7 天前保底 1 次機遇（07 7.6）
+
+- **資料**：`OpportunityRules.guarantee_from_day: int = 0`（0＝不保底）；雲嶺 `rules.yaml` `opportunity.guarantee_from_day: 6`。
+- **狀態**：`CharacterState.met_opportunities: tuple[str, ...]`（排序）：觸發過的 **機遇骨架**（骨架有 `opportunity` 解法；`world_step` 在動作後看 `event_triggered` 記下，移動擲骰、聊天解鎖都算）。
+- **規則**（移動抵達的事件擲骰，`roll_event`）：賽季第 N 天（`refresh_day(now) − refresh_day(season_start) + 1`）≥ `guarantee_from_day`、角色 `met_opportunities` 與 `opportunities` 都是空的、這一步沒有遇敵 → 所在地點若有機遇骨架（`locations` 含所在地點；`unlock_only` 要已解鎖、`once` 要沒解決），**不看天氣、時段與事件機率** 直接觸發它（多個時取 ID 最小者；`EventTrigger.guaranteed = true`、`candidates`＝只有它）。擲骰照舊消耗（亂數計數不變），`event_check.triggered` 為真。之後照一般事件處理（機遇解法的條件 `requires_keyword` 不放寬）。
+- 雲嶺：古松祭壇（骨架 12）從第 6 天起，沒遇過機遇的角色走到古松祭壇就一定出現（不必雷雨夜）；第 7 天之後還沒遇過的照樣保底（代決 5B4d-3、5B4d-4）。
+
+### 25.5 skillgen「指定關鍵字」模式（07 7.6「關鍵字由觸發情境決定」）
+
+- **資料**：`CandidateRequest.pinned_keyword: str | None = None`（`None`＝原行為）；`make_offer(..., pinned_keyword=None)`、`offer_key(...)` 同名參數（PERF-3 快取鍵取自 `CandidateRequest` 全欄位，所以自動含新參數）。未知關鍵字 → `ValueError`。
+- **完整版產生器**（`generate_candidates`）的指定模式：三張都帶 `pinned_keyword`（同 6.27.4 的種類與找法，關鍵字組改成）：
+  - 加深：只帶指定關鍵字（角色沒持有它時 `fallback`）。
+  - 橋接：指定關鍵字＋另一個持有的關鍵字（依持有數排序）；都找不到 → 只帶指定關鍵字（`fallback`）。
+  - 新方向：指定關鍵字＋一個還沒有的關鍵字（行為權重抽順序、`region_keywords` 排前）；都找不到 → 只帶指定關鍵字（`fallback`）。不從通用池抽（通用技能沒有關鍵字）。
+  - 多關鍵字選項的組合器變體上限：橋接、新方向 **各自** `bridge_variant_cap`（400；PERF-3 的橋接上限照舊只管橋接，一般模式結果逐字不變）；組合器照舊 `skip_legendary=True`。
+  - 已持有該關鍵字的角色，等於拿到「加深＋兩張往外橋接」（玩法 PM 2026-11-03 的說明）。
+- 白板版產生器不看 `pinned_keyword`（目前只有完整技能的機遇會用；代決 5B4d-6）。
+- **機遇**：`solutions._opportunity` 與 `api.offer_prefetch` 的機遇預測都傳 `pinned_keyword=requires_keyword`（`region_keywords` 照舊）；一般三選一（任務、主線、許願池）不傳。
+
+### 25.6 新欄位、事件（全部有預設值）
+
+- 內容：`OpportunityRules.guarantee_from_day`；主線第 ② 步 `npcs`。
+- 狀態：角色 `failed_skeletons`（骨架 → 失敗那天）、`met_opportunities`；`EventTrigger.guaranteed`。
+- 函式：`make_offer`／`offer_key` 的 `pinned_keyword`；`CandidateRequest.pinned_keyword`；`world.events.mark_finished(..., now=)`、`mark_met_opportunities`。
+
+### 25.7 驗收
+
+- `uv run pytest -q tests/world tests/skillgen tests/roguelite tests/api -n 8 --timeout=1800`（受影響的）通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。行為快照 `refactor_3wr2.json` 若變，用 `uv run python -m tests.skillgen.test_refactor_3wr2` 重產並在報告列出。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 25.8 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/world/test_affinity_pace.py`（改） | 小蓮：主線 ②、③ 各 +10；重量印出 |
+| `tests/world/test_secret_event.py`（加） | 骨架 22 失敗：當天不再出現、隔天 6 點後回到候選；部分成功算解決；放棄照舊 |
+| `tests/world/test_opportunity.py`（加） | 保底：第 6 天前不保底；第 6 天起沒遇過的角色走到祭壇不看天氣直接觸發（`guaranteed`）；遇過（含聊天、一般觸發）或拿過就不保底；遇敵那步不觸發；機遇三張都帶「帶電」 |
+| `tests/skillgen/test_pinned_keyword.py`（新） | 三張都帶指定關鍵字；已持有時加深＋橋接；沒持有時 fallback；未知關鍵字錯；同輸入逐字相同；`None`＝原行為；上限各自計 |
+| `tests/roguelite/test_offer_cache.py`（加） | 快取鍵含 `pinned_keyword` |
+| `tests/api/test_offer_prefetch.py`（加） | 機遇預測帶 `pinned_keyword`，命中結果與同步計算逐字相同 |
+| `tests/world/test_quest_replay.py`（加） | 骨架 22 失敗 → 隔天再試 → 保底機遇 → 選技能 的日誌重播兩次逐字相同 |
+
+### 25.9 不做的事
+
+- 柳掌櫃的店內消費 +2（5D 商店）、阿岳的打贏加成 +2（5C-3 劇情夥伴）；其他機遇來源（擊殺稀有精英、隱藏祭壇）；保底機遇的說書提示（酒館傳聞、事件卡說明）；機遇高一階之後的升階拉平（5B-4c 待決 1）。
+
+### 25.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5B4d-1 | 小蓮「主線第 ②、③ 步各 +10」 | 當成通用的任務步驟好感度（`quest_step_delta`）：② 的 `npcs` 加小蓮，③ 原本就有；不另加第二份 +10 |
+| 5B4d-2 | 骨架 22 失敗後怎麼再試 | 失敗當天不進候選，隔天回到移動擲骰的候選；聊天不再立刻觸發 |
+| 5B4d-3 | 保底的觸發點 | 第 6 天起、沒遇過機遇的角色，走到有機遇骨架的地點（雲嶺＝古松祭壇）就直接觸發，不看天氣、時段、機率；遇敵那步照舊不出事件；不在別的地點硬生機遇 |
+| 5B4d-4 | 「觸發過機遇」與過了第 7 天 | 機遇骨架的事件出現過就算（拿不拿都算）；第 7 天後還沒遇過的照樣保底到遇過一次為止 |
+| 5B4d-5 | 保底時的條件 | 機遇解法的 `requires_keyword` 不放寬：沒有帶電技能的角色遇到保底事件只能選其他解法 |
+| 5B4d-6 | 指定關鍵字的範圍 | 只有完整版產生器（機遇用）；白板版忽略；一般三選一不傳 |
+| 5B4d-7 | 指定模式的搜尋上限 | 橋接、新方向的多關鍵字選項各自 400 個變體；找不到退回只帶指定關鍵字 |
+| 5B4d-8 | 07 7.6 的「0／1／2」 | 指定模式照「加深／橋接／新方向」各一張（三張都帶指定關鍵字；新方向＝指定＋新關鍵字），不另做 0／1／2 |
+
+
+## 26. 5D-1 詳細規格：貨幣、背包、腰包與商店
+
+> 給實作 agent。只動 `content/world/economy.yaml`、`content/world/items.yaml`、`content/world/shops/`（新）、`content/world/oaths.yaml`（「不使用道具」多判一個標籤）、`src/trpg/content/world_economy.py`（新：schema 與載入）、`src/trpg/content/library.py`（一個欄位、一行呼叫）、`src/trpg/content/skills/queries.py`（帶 `item` 標籤的道具技能不佔欄位，8.17）、`content/skill_tags.yaml`（`item` 標籤）、`src/trpg/world/`（`economy.py` 新；`state.py`、`actions.py`、`step.py`、`battle.py` 小改）、`src/trpg/api/`（`world_economy_view.py`、`world_economy_schemas.py` 新；`world_schemas.py`、`world_presenter.py` 小改）、`client/`（小鎮的「商店」、背包與腰包面板、右側金幣與任務幣、API 型別）、`client/openapi.json`、`tests/content/`、`tests/world/`、`tests/api/`、vitest。另一個 agent（5B-4d）同時在改 `trpg.world` 的事件、機遇與 `trpg.skillgen`：共用檔改動要小。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
+> 依據：08 8.15（金幣：戰鬥、出售物品 → 買消耗品、打造手續費、重骰與強化；任務幣：任務、懸賞、世界事件、bug 回報 → 許願池、特殊商人、高階打造）、8.16（第一季不交易）、8.17（藥水、投擲瓶第一季做，卷軸正式季；**戰鬥中物品欄另外放、使用花 1 AP、不算進基本動作 10 個**；**腰包每場最多帶 3 個，背包 30 格、不算重量**；取得：商人（金幣）、掉落）、8.26.1（貨幣 2 種；好感度不是貨幣、只當商店解鎖門檻，例「友善才賣霧系投擲瓶」；**商店只賣消耗品、粗料、外觀染料；區域商人每週限量賣少量該區特產**；不賣有詞條的裝備、技能、靈感點）；09 9.6.7 #2、#11（城鎮休息回滿、補給回城補）、9.6.10 #102（影子每天第一次被借用給少量任務幣）、9.6.11 #113（HP 野外不自動回；**靠藥水**、治療技能、營火或城鎮）、#116（好感度級名當門檻）；18 18.1（霧渡鎮：區域商人）、18.2.4（青竹節＝雲嶺特產）、18.5（柳掌櫃：霧渡鎮商人）、18.7.6（**柳掌櫃＝在他店裡消費一次 +2、每天最多 +4**，5B-4d 留給 5D）；本檔 9（5A-4 休息與補給）、16（5B-4 任務、好感度）、23（5C-2：影子任務幣暫記在世界快照的影子紀錄，5D 轉進主人角色）、24.12 代決 5C3-8（「不使用道具」等 5D 道具接上後只改 content）。
+
+### 26.1 目標
+
 角色有金幣與任務幣；打贏戰鬥拿金幣、完成任務拿任務幣、影子被借用的任務幣轉進主人角色；背包 30 格、腰包 3 個；霧渡鎮柳掌櫃的店賣消耗品、粗料、染料，雲嶺特產（青竹節）每週限量（數量由賽季種子決定），部分商品要柳掌櫃好感度門檻，在店裡消費一次柳掌櫃好感度 +2（每天最多 +4）；腰包裡的消耗品在戰鬥中當「道具」用（1 AP、每個用一次），野外也能喝藥水回 HP、法力。全部是世界動作（寫進日誌、可重播）；LLM 不碰數值與物品。
 
-### 25.2 內容（`content/world/`；schema `src/trpg/content/world_economy.py`，`ContentModel`、ID 用 `ID_PATTERN`、錯誤訊息繁中並指出 ID）
+### 26.2 內容（`content/world/`；schema `src/trpg/content/world_economy.py`，`ContentModel`、ID 用 `ID_PATTERN`、錯誤訊息繁中並指出 ID）
 
-1. **`economy.yaml`**（`EconomyRules`，數值初值、開發 PM 定）：
+> **商店內容依 `docs/design/20-第一季商店與裝備內容.md` 20.1**（玩法 PM 2026-11-03，#119 代決）：商品、價格、好感度門檻、特產每週限購都照它；數值一律放 content，被改時只動資料。20.1 的餘燼集（鐵娘）等灰燼荒原內容到位後只加 `shops/ashen_waste.yaml`。
+
+1. **`economy.yaml`**（`EconomyRules`，數值初值）：
 
    ```yaml
    bag_slots: 30                # 8.17
    pouch_slots: 3               # 8.17：每場最多帶 3 個（個數，不是種類）
-   stack_max: {consumable: 10, material: 20, dye: 10}   # 一格疊幾個（代決 5D1-2）
+   stack_max: {consumable: 10, material: 20, dye: 10, supply: 1}   # 一格疊幾個（代決 5D1-2；補給不進背包）
    sell_permille: 500           # 賣價＝買價 × 500‰（捨去、至少 1；代決 5D1-5）
+   unsellable_kinds: [material, supply]   # 20.1「材料不能賣」
    start_gold: 0
-   battle_gold:                 # 打贏一場（8.15「戰鬥」；代決 5D1-3）
+   battle_gold:                 # 打贏一場（8.15「戰鬥」；20.1「約 2～3 場買一瓶中藥水」；代決 5D1-3）
      battle: 15                 # 一般陣容
      elite: 45                  # 陣容含精英
      level_step_permille: 100   # 每高 1 級建議等級 +10%（同 5A-SIM2 經驗份數的換算）
@@ -2828,40 +2914,42 @@ chat_text: '{name}看了你一眼，沒有多說。'
      by_quest: {}               # 個別任務覆寫（任務 ID → 數量）
    ```
 
-2. **`items.yaml`**（`WorldItemTable.items: tuple[WorldItemDef, ...]`）：`id`（`item_` 開頭）、`name_zh`、`kind: consumable | material | dye`、`description_zh`、`price: int ≥ 1`（金幣；商店照它賣）、`region: str | None`（區域特產）；消耗品另有 `skill: SkillDef`（戰鬥中的用法：`ap_cost: 1`、`cost.uses_per_battle: 1`、`mana: 0`、標籤含 `item`；過技能的引用與費用檢查，同 `content/skills/`，**不進技能池**）、`field_hp_permille`／`field_mana_permille`（野外使用回最大值的 ‰；兩者都 0＝野外不能用）；染料另有 `color`（`#RRGGBB`，只顯示；染色在之後的段）。檢查：ID 與技能 ID 不重複、只有消耗品有 `skill` 而且必有、`region` 存在。5D-2 的材料加在同一個檔。
+2. **`items.yaml`**（`WorldItemTable.items: tuple[WorldItemDef, ...]`）：`id`（`item_` 開頭）、`name_zh`、`kind: consumable | material | dye | supply`、`description_zh`、`price: int ≥ 1`（金幣；商店照它賣）、`region: str | None`（區域特產）；消耗品另有 `skill: SkillDef`（戰鬥中的用法：`ap_cost: 1`、`cost.uses_per_battle: 1`、`mana: 0`、標籤含 `item`；過技能的引用與費用檢查，同 `content/skills/`，**不進技能池**）、`field_hp_permille`／`field_mana_permille`（野外使用回最大值的 ‰；兩者都 0＝野外不能用）；染料另有 `color`（`#RRGGBB`，只顯示；染色在之後的段）；補給另有 `supplies`（買一個加幾點補給，不進背包）。檢查：ID 與技能 ID 不重複、只有消耗品有 `skill` 而且必有、只有補給有 `supplies`、`region` 存在。5D-2 的材料加在同一個檔。
 
-3. **`shops/<region>.yaml`**（`ShopTable`：`region`、`shops`）：`ShopDef`＝`id`、`name_zh`、`npc`（人設卡 ID，店在他的地點）、`stock: tuple[ShopStock, ...]`（`item`、`rank: AffinityRank | None`＝門檻級別，至少到這級才賣）、`weekly: tuple[WeeklyStock, ...]`（`item`、`min`、`max`：每週限量 min～max 個）、`affinity: ShopAffinity | None`（`per_purchase`、`daily_max`）。檢查：檔名＝`region`、區域有地點圖、NPC 在該區人設卡、商品在 `items.yaml`、**只能賣消耗品、粗料（`item_coarse_material`）、染料，以及 `weekly` 裡的本區特產**（8.26.1）、同一家店商品不重複、`min ≤ max`。
+3. **`shops/<region>.yaml`**（`ShopTable`：`region`、`shops`）：`ShopDef`＝`id`、`name_zh`、`npc`（人設卡 ID，店在他的地點）、`stock: tuple[ShopStock, ...]`（`item`、`rank: AffinityRank | None`＝門檻級別，店主好感度至少到這級才賣）、`weekly: tuple[WeeklyStock, ...]`（`item`、`min`、`max`：每週限購 min～max 個、`rank`）、`affinity: ShopAffinity | None`（`per_purchase`、`daily_max`）。檢查：檔名＝`region`、區域有地點圖、NPC 在該區人設卡、商品在 `items.yaml`、**只能賣消耗品、粗料（`item_coarse_material`）、染料、補給（20.1），以及 `weekly` 裡的本區特產**（8.26.1）、同一家店商品不重複、`min ≤ max`。
 
-4. **雲嶺內容**（開發 PM 定名稱與數值；18 只寫「區域商人」「柳掌櫃」「青竹節＝雲嶺特產」）：
+4. **雲嶺內容**（20.1 霧渡鎮欄；ID 與戰鬥中的骰子由開發 PM 定）：
 
-   | 商品 `id` | 名稱 | 種類 | 價格 | 戰鬥中（1 AP，腰包每個用一次） | 野外 | 門檻 |
+   | 商品 `id` | 名稱（20.1） | 種類 | 價格 | 戰鬥中（1 AP，腰包每個用一次） | 野外 | 門檻 |
    |---|---|---|---|---|---|---|
-   | `item_spring_pill` | 回春丹 | 消耗品（藥水） | 15 | 自己回 2d6 HP | HP +30% | — |
-   | `item_focus_pill` | 凝神丹 | 消耗品（藥水） | 15 | 自己回 10 法力 | 法力 +30% | — |
-   | `item_oil_flask` | 燈油瓶 | 消耗品（投擲瓶） | 10 | 3 格內十字範圍鋪油 3 回合 | — | — |
-   | `item_fire_flask` | 火油瓶 | 消耗品（投擲瓶） | 20 | 3 格內單格周圍 3×3 起火 2 回合 | — | — |
-   | `item_frost_flask` | 寒冰瓶 | 消耗品（投擲瓶） | 20 | 3 格內 3×3 結冰 2 回合 | — | — |
-   | `item_mist_flask` | 霧瓶 | 消耗品（投擲瓶） | 25 | 3 格內 3×3 煙霧 2 回合 | — | 柳掌櫃 **友善**（8.26.1 例「友善才賣霧系投擲瓶」） |
+   | `item_hp_potion_small` | 小回復藥 | 消耗品 | 20 | 自己回 2d6 HP | HP +20% | — |
+   | `item_hp_potion_medium` | 中回復藥 | 消耗品 | 45 | 自己回 4d6 HP | HP +35% | 中立 |
+   | `item_mana_potion` | 回魔藥 | 消耗品 | 40 | 自己回 15 法力 | 法力 +25% | — |
+   | `item_antidote_herb` | 解毒草 | 消耗品 | 15 | 自己淨化（移除負面狀態，含中毒、流血） | — | — |
+   | `item_water_flask` | 水瓶（投擲） | 消耗品 | 25 | 3 格內 3×3 造水 | — | — |
+   | `item_oil_flask` | 油瓶（投擲） | 消耗品 | 25 | 3 格內 3×3 造油 3 回合 | — | — |
+   | `item_mist_flask` | 霧瓶（投擲） | 消耗品 | 30 | 3 格內 3×3 煙霧 2 回合 | — | 友善（柳掌櫃） |
+   | `item_supplies` | 補給 | 補給 | 10 | — | 紮營、趕路用（直接加補給，不超過上限） | — |
    | `item_coarse_material` | 粗料 | 材料 | 5 | — | — | — |
-   | `item_dye_indigo`／`item_dye_cinnabar`／`item_dye_ink` | 靛青／朱砂／墨色染料 | 染料 | 20 | — | — | — |
-   | `item_green_bamboo` | 青竹節 | 材料（雲嶺特產） | 30 | — | — | **每週限量 2～4 個**（種子決定） |
+   | `item_dye_*` ×6 | 染料（靛青、朱砂、墨色、翠綠、赭黃、雪白） | 染料 | 15 | — | — | — |
+   | `item_green_bamboo` | 青竹節（雲嶺特產） | 材料 | 20 | — | — | 中立；**每週限購 5** |
 
-   店：`shop_liu`「柳記雜貨」、`npc: shopkeeper_liu`（霧渡鎮）、`affinity: {per_purchase: 2, daily_max: 4}`（18.7.6）。
+   另定義 `item_frost_flask` 冰瓶、`item_fire_flask` 火瓶（30，20.1 餘燼集賣；霧渡鎮不賣）。店：`shop_liu`「柳記雜貨」、`npc: shopkeeper_liu`（霧渡鎮）、`affinity: {per_purchase: 2, daily_max: 4}`（18.7.6）。
 
 5. **`oaths.yaml`**：`oath_no_items` 的判定標籤加 `item`（`tags: [gear, item]`），說明改成「不使用道具（腰包的消耗品與裝備給的技能）」（代決 5C3-8「5D 道具接上後只改 content」）。
 
-### 25.3 狀態（全部有預設值；格式字串不變）
+### 26.3 狀態（全部有預設值；格式字串不變）
 
 - `CharacterState`：`gold: int = 0`、`quest_coins: int = 0`、`bag: dict[str, int] = {}`（物品 → 個數，依 ID 排序、> 0）、`pouch: dict[str, int] = {}`（同；只有消耗品、合計 ≤ `pouch_slots`）、`shop_week: tuple[ShopPurchase, ...] = ()`（`shop`、`item`、`week`、`bought`；本週買過的限量商品，依店、物品排序；換週時舊的不再算）、`shop_affinity: dict[str, CompanionAffinity] = {}`（NPC → 今天在店裡加過的好感度，沿用 5C-3 的 `day`／`gained`）。
 - 背包的格數＝每種物品 `ceil(個數 ÷ stack_max[種類])` 加總，≤ `bag_slots`；腰包不佔背包格。
 - `ShadowRecord.coins_claimed: int = 0`：已轉進主人角色的任務幣（`coins` 保留為累計，畫面照舊顯示）。
 
-### 25.4 世界動作（`trpg.world.economy`；加進 `WorldAction` 聯集；不合法拋 `WorldActionError`、狀態不變）
+### 26.4 世界動作（`trpg.world.economy`；加進 `WorldAction` 聯集；不合法拋 `WorldActionError`、狀態不變）
 
 | 動作 | 欄位 | 條件與效果 |
 |---|---|---|
-| `buy` | `shop`、`item`、`count: 1～10 = 1` | 角色所在區有這家店、角色在店主 NPC 的地點、沒有遭遇；商品在 `stock`（好感度級別 ≥ `rank`）或 `weekly`（本週剩餘 ≥ `count`）；金幣 ≥ 價格 × 個數；放得進背包。金幣扣掉、背包加上、限量的記進 `shop_week`。事件 `item_bought`（店、物品、個數、花的金幣、剩下的金幣）。**每次 `buy` 算消費一次**：店有 `affinity` 且店主 NPC 今天加過的 < `daily_max` → `change_affinity(+min(per_purchase, 剩餘額度))`，來源 `shop:<店>`（事件 `affinity_changed`，好感度上限照 5B-4） |
-| `sell` | `shop`、`item`、`count: 1～99 = 1` | 同店與地點條件；背包有那麼多（腰包裡的不賣）；金幣 ＋ 賣價 × 個數。事件 `item_sold`。不算消費（好感度不變） |
+| `buy` | `shop`、`item`、`count: 1～10 = 1` | 角色所在區有這家店、角色在店主 NPC 的地點、沒有遭遇；商品在 `stock`（好感度級別 ≥ `rank`）或 `weekly`（本週剩餘 ≥ `count`）；金幣 ≥ 價格 × 個數；放得進背包。金幣扣掉、背包加上、限量的記進 `shop_week`。事件 `item_bought`（店、物品、個數、花的金幣、剩下的金幣）。**每次 `buy` 算消費一次**（補給照扣金幣、加補給，不進背包）：店有 `affinity` 且店主 NPC 今天加過的 < `daily_max` → `change_affinity(+min(per_purchase, 剩餘額度))`，來源 `shop:<店>`（事件 `affinity_changed`，好感度上限照 5B-4） |
+| `sell` | `shop`、`item`、`count: 1～99 = 1` | 同店與地點條件；背包有那麼多（腰包裡的不賣）；`unsellable_kinds`（材料）不能賣；金幣 ＋ 賣價 × 個數。事件 `item_sold`。不算消費（好感度不變） |
 | `pouch` | `items: dict[str, int]` | 整組換掉腰包：在城鎮或營火（同換技能的地點 `at_service`）、沒有遭遇；只能放消耗品、合計 ≤ `pouch_slots`；先把舊腰包放回背包，再從背包拿（背包要有、放回時要放得下）。事件 `pouch_changed`（腰包內容） |
 | `use_item` | `item` | 野外或城鎮、沒有遭遇（戰鬥中走戰鬥步驟）；物品有野外效果；先從背包拿，背包沒有再從腰包；HP／法力 ＋ 最大值 × ‰（捨去、至少 1、不超過最大值）。事件 `item_used`（物品、HP、法力） |
 
@@ -2869,25 +2957,25 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - **金幣**（`fight` 打贏）：`battle_gold`（陣容含精英用 `elite`，否則 `battle`）× (1000 ＋ `level_step_permille` ×（敵人等級 − 1））÷ 1000；事件 `currency_gained`（`currency: gold`、數量、總額、來源 `battle`）。輸了不給。
 - **任務幣**（每個動作之後、`advance_quests` 之後）：這個動作的 `quest_completed` 每個任務給 `by_quest` 或 `by_kind` 的數量；事件 `currency_gained`（`quest_coins`、來源 `quest:<任務>`）。
 - **影子的任務幣轉入**（每個動作的最後）：世界快照有自己的影子紀錄而且 `coins > coins_claimed` → 差額加進 `quest_coins`、`coins_claimed = coins`；事件 `currency_gained`（`quest_coins`、來源 `shadow`）。只有主人自己動作時轉（`world_step` 只回傳出手的角色）。
-- **補給**：維持 5A-4（城鎮休息免費補到初值、紮營花 1）；商店 **不賣補給**、補給不進背包（代決 5D1-7）。
+- **補給**：城鎮休息照舊免費補到初值、紮營花 1（5A-4）；商店也賣補給（20.1），買了直接加、不超過上限（代決 5D1-7）。
 - **本週限量**：週次照 `week_of`（同酒館傳聞，賽季開始以來每 `week_days` 天一週）；數量＝`Rng(fnv1a64(f"{season_seed}:{region}:shop:{shop}:{week}:{item}"))` 在 min～max 均勻抽；**每個角色各自算**（代決 5D1-6），同一週大家看到相同數量、不耗角色亂數。
 - **可重播**：新動作寫進 `trpg-wlog/1`；金幣、任務幣、背包、腰包、限量、好感度全部由「日誌＋內容庫＋賽季種子」決定；不呼叫 LLM。
 
-### 25.5 API（`trpg.api`）
+### 26.5 API（`trpg.api`）
 
 - `WorldActionRequest` 加 `buy`、`sell`、`pouch`、`use_item`。
 - `WorldView` 加 `wallet`（`gold`、`quest_coins`）、`inventory`（背包每種物品：ID、名稱、種類中文、個數、說明、賣價、野外可用、戰鬥中用法的一句話；已用格數／30；腰包內容與上限；`can_pouch` 與不能換的原因）、`shop`（角色在店主地點時：店名、店主、好感度級名、每個商品的價格、限量剩餘「本週剩 n 個」、門檻與鎖住的說明「柳掌櫃好感度到友善才賣」、能不能買與原因；好感度說明「每次消費柳掌櫃好感度 +2（每天最多 +4，今天已 +x）」）。
 - 事件句子：`item_bought`「在柳記雜貨買了回春丹 ×1（−15 金幣，剩 0）。」、`item_sold`、`pouch_changed`「腰包：回春丹 ×2、燈油瓶 ×1。」、`item_used`、`pouch_used`「這場用掉了：回春丹 ×1。」、`currency_gained`「獲得 15 金幣。」／「獲得 2 任務幣（完成任務）。」／「影子被借用的任務幣 +1。」。
 - OpenAPI 照既有方式重產（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）。
 
-### 25.6 前端（`client/src/world/`；最小可用，5D-4 再完整化）
+### 26.6 前端（`client/src/world/`；最小可用，5D-4 再完整化）
 
 - 右側角色狀態加一行「金幣 n・任務幣 n」。
 - 小鎮有店時服務列加「商店」切換鈕（`aria-expanded`），面板內展開商品表：名稱、種類、價格、限量剩餘、門檻；買鈕（錢不夠、鎖住、限量賣完時停用，原因用共用 `<Hint>`）；下面列背包裡可賣的東西與賣鈕；好感度說明一行。
 - 「背包」面板（右側，常駐）：已用格數、物品列（名稱 ×個數，說明用 `<Hint>`）、野外可用的有「使用」鈕；腰包 3 格：在城鎮或營火時可以「整理腰包」（面板內每種消耗品的個數選單＋確定，送 `pouch`）。
 - 浮動卡照 6.5.1（只用共用 `<Hint>`，不新增彈出層）；瀏覽器實測滑進說明卡、釘住、關閉（1600×900 與 800×600）。
 
-### 25.7 測試
+### 26.7 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -2897,36 +2985,36 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/api/test_world_economy_api.py` | 開戰打贏 → 金幣 → 回霧渡鎮 → `shop` 列商品 → 買 → `inventory` 看到 → 柳掌櫃好感度 +2；腰包；賣 |
 | vitest | 商店表（停用原因、限量）、背包與腰包的動作 |
 
-### 25.8 驗收
+### 26.8 驗收
 
 - `uv run pytest -q tests/world tests/content tests/api -n 8 --timeout=1800` 通過；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`tests/test_architecture.py`、`npx vitest run`、`npm run build`。
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。
 - 瀏覽器（後端 8100、前端 5260；LLM 降級）：打一場拿金幣 → 回霧渡鎮在柳掌櫃買一個消耗品 → 背包／腰包看到 → 柳掌櫃好感度 +2。
 
-### 25.9 不做的事
+### 26.9 不做的事
 
 - 材料掉落、打造、強化、重骰、附魔、配方（5D-2、5D-3）；許願池、特殊商人、種族重選（任務幣的用途，之後）；懸賞與世界事件的任務幣（5F）；染色（外觀，之後）；卷軸（正式季）；交易（8.16）。
 - 戰鬥畫面獨立的「物品欄」（8.17）：本段道具在戰鬥中先出現在技能列（標「道具」、用法照 8.17：1 AP、不佔技能欄位）；獨立物品欄在 5D-4（代決 5D1-8）。
 - 事件 3「斷崖幫哨兵」交涉付金幣、事件獎勵的金幣（骨架與解法在 5B，之後只改 content／solutions）。
 
-### 25.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 26.10 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
-| 5D1-1 | 商品、名稱、價格 | 25.2 表（初值）；之後用模擬或試玩調，只改 content |
+| 5D1-1 | 商品、名稱、價格、門檻、限購 | **依 20 號文件** 20.1（霧渡鎮欄）；ID 與戰鬥中的骰子開發 PM 定；只改 content |
 | 5D1-2 | 背包「30 格」怎麼算 | 一格一疊：消耗品 10、材料 20、染料 10 個一格；腰包不佔背包 |
 | 5D1-3 | 戰鬥給多少金幣 | 一般 15、精英 45，每高 1 級 +10%；輸了不給；新角色 0 金幣 |
 | 5D1-4 | 任務幣 | 任務完成時給：新手鏈 2、主線 3、區域鏈 3、隱藏 2（每步不給）；資料可個別覆寫 |
-| 5D1-5 | 出售 | 任何背包物品在商店賣，賣價＝價格 × 50%（捨去、至少 1）；不算消費 |
-| 5D1-6 | 特產每週限量 | 每個角色各自算（8.14「採集點每位玩家各自計算，不用搶」同精神）；數量由 `{season_seed}:{region}:shop:{店}:{週}:{物品}` 決定，同週大家相同 |
-| 5D1-7 | 補給和商店的關係 | 不變：補給不是物品、不賣；城鎮休息免費補到初值（5A4-11） |
+| 5D1-5 | 出售 | 消耗品、染料在商店賣，賣價＝價格 × 50%（捨去、至少 1）；**材料不能賣（依 20 號文件 20.1）**；裝備回收等 5D-2 有裝備掉落再做；不算消費 |
+| 5D1-6 | 特產每週限量 | 青竹節每週限購 5（**依 20 號文件**）；每個角色各自算（8.14「採集點每位玩家各自計算」同精神）；資料是 min～max，不同時由 `{season_seed}:{region}:shop:{店}:{週}:{物品}` 抽，同週大家相同 |
+| 5D1-7 | 補給和商店的關係 | 商店賣補給 10 金幣（**依 20 號文件**），買了直接加補給（不超過上限、不進背包、不能賣）；城鎮休息照舊免費補到初值（5A4-11） |
 | 5D1-8 | 戰鬥中的物品欄 | 道具＝腰包產生的「道具技能」（1 AP、每個用一次、不佔欄位），先出現在技能列；獨立物品欄 5D-4 |
-| 5D1-9 | 道具的強度 | 戰鬥中照技能預算（回春丹 2d6、凝神丹 10 法力、投擲瓶照現有表面技能）；8.17 例「回 30% HP」用在野外使用 |
+| 5D1-9 | 道具的強度 | 20.1 的百分比用在野外使用；戰鬥中引擎的治療是骰子：小回復藥 2d6、中回復藥 4d6、回魔藥 15 法力；解毒草用現有「淨化」（移除所有負面狀態，比 20.1 的「中毒、流血」寬） |
 | 5D1-10 | 腰包在哪裡整理 | 城鎮與營火（同換技能）；野外喝藥水可以（09 9.6.11 #113「靠藥水」） |
 | 5D1-11 | 消費一次的定義 | 一次 `buy` 動作（不論個數）＝一次；每天（6 點刷新）最多 +4；賣東西不算 |
 | 5D1-12 | 影子任務幣轉入時機 | 主人自己的下一個世界動作；累計數字保留顯示 |
 | 5D1-13 | 道具與沉默 | 道具技能是 `spell` 類型，沉默時不能用（引擎現行規則；要例外再改引擎） |
 
-## 26. 之後各段規格
+## 27. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

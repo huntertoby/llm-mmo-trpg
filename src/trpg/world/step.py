@@ -63,7 +63,7 @@ from trpg.world.companions import sync_companions
 from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
-from trpg.world.events import mark_finished, roll_event
+from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
@@ -178,7 +178,8 @@ def world_step(
         library, result.world, before, result.char, result.events, now=now
     )
     events = (*ended, *result.events, *settled)
-    char = mark_finished(library, char, events)  # 只出一次的骨架（5B-4c）
+    char = mark_finished(library, char, events, now=now)  # 只出一次的骨架（5B-4c、5B-4d）
+    char = mark_met_opportunities(library, char, events)  # 機遇保底（5B-4d）
     char, extra = advance_quests(library, world, char, events, now)
     char, joined = sync_companions(library, char)  # 劇情夥伴加入／離隊（5C-3）
     extra = [*extra, *joined]
