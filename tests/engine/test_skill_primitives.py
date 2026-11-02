@@ -45,18 +45,20 @@ def test_spell_damage_uses_dice_plus_attribute_and_the_hit_roll() -> None:
     assert dmg.amount == (7 * 1000 + mage_int * 500) // 1000  # 骰值 + 智力 × 0.5
     assert result.state.units[U2].hp == state.units[U2].hp - dmg.amount
     caster = result.state.units[U1]
-    paid = ally_mana(7)  # 我方付打折後的費用（BAL-4c）
-    assert (caster.ap, caster.mana) == (state.units[U1].ap - 1, 99 - paid)
+    paid = ally_mana(7)  # 打折後的費用（BAL-4c；BAL-15b 起敵我同一套）
+    start = state.units[U1].mana  # 上限由公式算出（BAL-15b）
+    assert (caster.ap, caster.mana) == (state.units[U1].ap - 1, start - paid)
     (used,) = of(result, SkillUsed)
-    assert (used.skill_id, used.ap, used.mana, used.mana_after) == (SID, 1, paid, 99 - paid)
+    assert (used.skill_id, used.ap, used.mana, used.mana_after) == (SID, 1, paid, start - paid)
 
 
 def test_a_miss_deals_no_damage_but_still_costs() -> None:
     skill = make_skill(SID, SINGLE5, [FIRE], cost={"mana": 7})
-    result = cast(with_rolls(battle(skill, [(5, 3)]), [(20, 1)]), target_id=U2)
+    state = with_rolls(battle(skill, [(5, 3)]), [(20, 1)])
+    result = cast(state, target_id=U2)
     assert not of(result, AttackRolled)[0].hit
     assert not of(result, DamageDealt)
-    assert result.state.units[U1].mana == 99 - ally_mana(7)
+    assert result.state.units[U1].mana == state.units[U1].mana - ally_mana(7)
 
 
 def test_critical_hit_doubles_the_dice_count() -> None:

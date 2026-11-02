@@ -116,7 +116,7 @@ def test_block_halves_melee_damage_and_costs_stamina() -> None:
     assert enemy == 1200
     assert damage.multiplier_permille == 500 * enemy // 1000
     assert damage.amount == 4
-    assert result.state.units[U1].stamina == 20
+    assert result.state.units[U1].stamina == s.units[U1].stamina - 10  # 上限由公式算出（BAL-15b）
 
 
 def test_block_unless_stamina_below_threshold() -> None:
@@ -129,6 +129,7 @@ def test_block_unless_stamina_below_threshold() -> None:
         ],
     )
     s = with_rolls(give_turn(state, "unit_0002"), [(20, 15), (4, 4)])
+    s.units[U1].stamina = 9  # 上限由公式算出（BAL-15b），直接把目前耐力壓到門檻 10 以下
     events = resolve(s, Attack(unit_id=U2, target_id=U1)).events
     assert not any(isinstance(e, ReactionTriggered) for e in events)
 

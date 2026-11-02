@@ -21,6 +21,9 @@
   上限含屬性加成與法力 ×mcap，耐力每回合 +sreg）；
 - ``b14cap=<同上>``：只改上限（公式算出的固定值，沒有耐力回復），用來分開「上限」與「回復」兩個效果。
 
+BAL-15b 起 content 已是敵我同一套公式（引擎不再看 ``scaled_resources``），``b14``／``b14cap``／``classbase``
+的覆寫不再有作用，只保留讓 BAL-15a 的指令能照跑。
+
 情境：``normal``（每張示範地圖的預設陣容、英雄＋標準隊友）、``boss``（bandit_lair 預設陣容）、
 ``chain``（3 張地圖連打，英雄 HP 與法力帶入下一場、耐力每場回滿，輸了就中斷）。
 """
@@ -80,7 +83,7 @@ def _scaled_templates(
 
     def convert(t: Any) -> Any:
         if cap_only:
-            mana = core.resources.max_for("mana", t.max_mana, t.attributes)
+            mana = core.resources.max_for("mana", core.template_mana(t), t.attributes)
             stam = core.resources.max_for("stamina", core.template_stamina(t), t.attributes)
             return t.model_copy(update={"max_mana": mana, "stamina": stam})
         return t.model_copy(update={"scaled_resources": True})
@@ -131,7 +134,7 @@ def apply_variant(library: ContentLibrary, spec: str) -> ContentLibrary:
         if key == "mcap":
             res_up["mana_cap_permille"] = int(val)
         elif key == "mcost":
-            core_up["ally_mana_cost_permille"] = int(val)
+            core_up["mana_cost_permille"] = int(val)
         elif key in ("mpp", "spp"):
             kind = "mana" if key == "mpp" else "stamina"
             res_up[kind] = _pool(res, kind, int(val))
@@ -505,7 +508,7 @@ def static(args: argparse.Namespace) -> int:
     lines = [
         "## 各 build 資源上限與技能費用（現況）",
         "",
-        f"法力 ×{res.mana_cap_permille / 1000}、我方費用 ×{core.ally_mana_cost_permille / 1000}、耐力回復 {res.stamina_regen}／回合",
+        f"法力 ×{res.mana_cap_permille / 1000}、我方費用 ×{core.mana_cost_permille / 1000}、耐力回復 {res.stamina_regen}／回合",
         "",
         "| build | 武器 | 法力基礎 | 耐力基礎 | 法力屬性 | 耐力屬性 | 法力上限 | 耐力上限 | 主動技 | 法力技（打折後費用） | 耐力技（費用） | 法力技可連放次數 |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|",
@@ -514,13 +517,14 @@ def static(args: argparse.Namespace) -> int:
         if b.id.startswith("build_form"):
             continue
         h = b.hero
-        mcap = core.template_max_resource("mana", h)
-        scap = core.template_max_resource("stamina", h)
+        wclass = lib.weapons[h.weapon].weapon_class
+        mcap = core.template_max_resource("mana", h, wclass)
+        scap = core.template_max_resource("stamina", h, wclass)
         act = [lib.skills[s] for s in h.skills if lib.skills[s].kind == "active"]
         mc = [
             (
                 s.id.removeprefix("skill_"),
-                (s.cost.mana * core.ally_mana_cost_permille + 500) // 1000,
+                (s.cost.mana * core.mana_cost_permille + 500) // 1000,
             )
             for s in act
             if s.cost.mana

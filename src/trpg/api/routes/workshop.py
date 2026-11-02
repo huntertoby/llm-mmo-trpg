@@ -61,7 +61,7 @@ def _check(
             held = None  # 大類不符（例如遠程技能配近戰武器）：不拿它當持有者
         owner = None if held is None else CardOwner(weapon=held)
         card = skill_card(library, built, owner=owner)
-        battle_mana = library.ruleset.core.ally_mana(built.cost.mana)
+        battle_mana = library.ruleset.core.mana_cost(built.cost.mana)
     return WorkshopCheck(
         **result.model_dump(),
         card=card,

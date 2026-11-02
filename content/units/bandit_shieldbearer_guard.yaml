@@ -8,7 +8,6 @@ max_hp: 24   # Boss 戰護衛／援軍專用（BAL-4b）：預設與 bandit_shie
 speed: 4
 armor_bonus: 6
 weapon: one_handed_sword
-stamina: 30
 ai_profile: guard
 reactions:
   - reaction: block
@@ -19,7 +18,6 @@ reactions:
 resist: {physical: 100}
 element_mods: {}
 tags: [humanoid, shield, boss_escort]
-max_mana: 8
 skills: [skill_shield_bash]
 # 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
 doll: {skin: '#7a4e32', hair: short, hair_color: '#1c1410', main_material: iron, main_color: '#9a8a76', gear: {body: {kind: mail, material: iron}, feet: {kind: boots, material: leather}, head: {kind: helmet, material: iron}, off_hand: {kind: shield_kite, material: wood, color: '#8a5a32'}}}

@@ -90,17 +90,22 @@ ability_mod_divisor: 2
 
 # --- 反應（Phase 1B）---
 reactions_per_round: 1        # 每輪反應次數
-default_stamina: 30           # 單位範本未指定耐力時的預設值
+default_stamina: 30           # 一輪主角範本未指定耐力時的退路（戰鬥中的單位依武器大類，見 resources.class_base）
 
 # --- 資源上限（Phase 3H-2，docs/design/07-角色成長.md 7.2；初值，平衡階段調整）---
-# 主角（範本 scaled_resources: true）：上限 ＝ 基礎 ＋（attrs 最高者 − base）× per_point（至少 0）；
-# 基礎是範本的 max_mana／stamina（一輪的主角依武器大類，roguelite.yaml 的 start.heroes）。敵人與隊友照範本的固定值。
+# BAL-15b（玩法決定 #80）起敵我同一套：所有單位（主角、敵人、隊友、召喚物）上限 ＝ 基礎 ＋（attrs 最高者 − base）× per_point
+# （至少 0），法力再 × mana_cap_permille；耐力每回合回 stamina_regen。基礎是範本的 max_mana／stamina，範本沒寫時依武器大類
+# 取 class_base（和 roguelite.yaml 的 start.heroes 同值）。召喚物的屬性加成用施放者的屬性（6.29）。
 resources:
+  class_base:
+    melee:  {mana: 20, stamina: 40}
+    ranged: {mana: 20, stamina: 30}
+    focus:  {mana: 40, stamina: 20}
   base: 10
   mana:    {attrs: [int, wis, wil], per_point: 2}   # 法力：法術技
   stamina: {attrs: [str, dex, con], per_point: 2}   # 耐力：武器技、格擋（反應）共用同一個池
-  mana_cap_permille: 1400   # 法力上限 ×1.4（BAL-4b，原型專用；套用在依屬性算上限的角色）
-  stamina_regen: 5          # 耐力每回合開始回復（3H-5，初值；只套用主角，不超過上限；戰後回滿見 roguelite.yaml）
+  mana_cap_permille: 1400   # 法力上限 ×1.4（BAL-4b，原型專用；BAL-15b 起敵我都適用）
+  stamina_regen: 5          # 耐力每回合開始回復（3H-5，初值；BAL-15b 起所有單位，不超過上限；戰後回滿見 roguelite.yaml）
 
 # --- 視線與隱蔽（Phase 1B）---
 base_sight_range: 24          # 基準視線距離（曼哈頓）；濃霧等天氣以倍率縮短
@@ -161,7 +166,7 @@ boss_summon_damage_permille: 2000   # Boss（boss 標籤）對召喚物的傷害
 enemy_damage_permille: 1200         # 一般敵方傷害 ×1.2
 boss_damage_permille: 1000          # Boss 本人傷害不動
 boss_escort_damage_permille: 1200   # Boss 戰護衛與援軍（boss_escort 標籤）傷害；預設同一般敵方，可獨立調
-ally_mana_cost_permille: 800        # 我方技能法力費用 ×0.8（載入時縮放，見 scale_mana_cost）
+mana_cost_permille: 800        # 技能法力費用 ×0.8（BAL-15b／#80 起敵我同一套；姿態、形態維持費不打折 #67）
 summon_command_ap_cost: 1     # 指揮召喚物（Phase 3-33c，6.29.2）的 AP；切換模式（集火／守護我／跟隨／待命）免費
 summon_infuse_ap_cost: 1      # 灌注技能（Phase 3-33d，6.29.3）：施放者花的 AP（法力、冷卻照技能，灌注當下付）
 summon_infused_cast_ap_cost: 1  # 召喚物在自己回合開始時施放灌注的技能，佔用牠自己的 AP（取代一次普攻；初值）

@@ -17,7 +17,8 @@ def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str,
 
 
 def test_battle_prints_new_orders_each_round(capsys: pytest.CaptureFixture[str]) -> None:
-    argv = ["battle", "--map", "swamp", "--seed", "3", "--enemy-commander", "focus_lowest_hp"]
+    # BAL-15b：敵我同一套資源公式後戰局改變，種子 3 → 0
+    argv = ["battle", "--map", "swamp", "--seed", "0", "--enemy-commander", "focus_lowest_hp"]
     code, out, _ = _run(argv, capsys)
     assert code == 0
     lines = [line for line in out.splitlines() if line.startswith("敵方指令：")]

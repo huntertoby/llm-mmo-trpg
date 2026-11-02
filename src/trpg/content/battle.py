@@ -1201,7 +1201,8 @@ class UnitTemplate(ContentModel):
 
     - ``resist``：4 組抗性（‰），未列出的分組為 0；可為負值表示易傷。
     - ``element_mods``：個別元素的弱點（正值）或抗性（負值），‰。
-    - ``stamina``：耐力（格擋等反應消耗）；省略時用 ``rules/core.yaml`` 的 ``default_stamina``。
+    - ``stamina``：耐力基礎（武器技、格擋等反應消耗）；省略時依武器大類（``rules/core.yaml`` 的
+      ``resources.class_base``，BAL-15b），上限再加屬性加成。
     - ``reactions``：反應規則；省略時用 ``reactions.yaml`` 的 ``default_rules``；
       ``[]`` 表示沒有反應。
     - ``ai_profile``：效用 AI 的行為模式（``ai_profiles.yaml``）；省略時遠程武器用 ``archer``、
@@ -1209,7 +1210,8 @@ class UnitTemplate(ContentModel):
     - ``skills``：裝備的技能 ID（``content/skills/``，順序即 ``legal_actions`` 的順序）；數量上限依
       ``core.yaml`` 的 ``skill_slots``，``weapon_req`` 必須與武器的 ``weapon_class`` 相容
       （載入時檢查）。
-    - ``max_mana``：法力上限（戰鬥開始時為滿，Phase 2A 不回復）。
+    - ``max_mana``：法力基礎（戰鬥開始時為滿，只在營火回滿）；省略時依武器大類（BAL-15b），上限
+      再加屬性加成並 × ``mana_cap_permille``。
     - ``summon``：召喚物範本（Phase 3D-4a；放在 ``content/units/summons/``，只能由 ``summon``
       原語產生，不能直接參戰）。
     - ``totem``：圖騰（Phase 3D-4b；不移動、不攻擊，只提供光環）。
@@ -1233,11 +1235,11 @@ class UnitTemplate(ContentModel):
     reactions: tuple[ReactionRule, ...] | None = None
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     skills: tuple[str, ...] = Field(default=(), max_length=32)
-    max_mana: int = Field(default=0, ge=0)
+    max_mana: int | None = Field(default=None, ge=0)
     scaled_resources: bool = False
-    """法力與耐力上限依屬性（Phase 3H-2，07 7.2；主角）：``max_mana``／``stamina`` 是基礎值，引擎依
-    ``core.yaml`` 的 ``resources`` 加上屬性加成。一輪的主角與 build 英雄為 ``True``，其他單位照
-    固定值。"""
+    """舊旗標（Phase 3H-2：只有主角的法力與耐力上限依屬性）。BAL-15b（玩法決定 #80）起敵我同一套
+    公式，引擎不再看這個旗標；保留欄位讓舊存檔與舊資料照常載入。``max_mana``／``stamina`` 是基礎
+    值（省略時依武器大類，``core.yaml`` 的 ``resources.class_base``），引擎再加屬性加成。"""
     summon: bool = False
     totem: TotemSpec | None = None
     """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""

@@ -82,7 +82,9 @@ def test_builds_report_max_mana(client: TestClient, library: Any) -> None:
     builds = {b["id"]: b for b in client.get("/api/builds").json()}
     assert builds
     for built in library.builds.builds:
-        assert builds[built.id]["max_mana"] == built.hero.max_mana
+        wclass = library.weapons[built.hero.weapon].weapon_class  # 基礎依武器大類（BAL-15b）
+        base = library.ruleset.core.template_base_resource("mana", built.hero, wclass)
+        assert builds[built.id]["max_mana"] == base
     assert any(b["max_mana"] > 0 for b in builds.values())
 
 

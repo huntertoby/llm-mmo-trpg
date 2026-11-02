@@ -293,6 +293,7 @@ def test_hp_cost_must_leave_the_caster_standing() -> None:
 
 def test_cooldown_two_skips_exactly_one_own_turn() -> None:
     state = battle(_bolt(mana=1, cooldown=2), [(5, 3)])
+    start = state.units[U1].mana  # 上限由公式算出（BAL-15b）
     state = resolve(state, UseSkill(unit_id=U1, skill_id=SID, target_id=U2)).state
     assert state.units[U1].cooldowns == {SID: 2}
     action = UseSkill(unit_id=U1, skill_id=SID, target_id=U2)
@@ -310,7 +311,7 @@ def test_cooldown_two_skips_exactly_one_own_turn() -> None:
             state = give_turn(state, U1)  # 保持 AP，不改冷卻
     assert seen == [(2, False), (3, True)]  # 第 1 輪用、第 2 輪不可用、第 3 輪可用
     assert cooldown_events == [1, 0]
-    assert state.units[U1].mana == 98  # 法力不回復
+    assert state.units[U1].mana == start - 1  # 法力不回復
 
 
 def test_loadout_incompatible_with_the_weapon_is_rejected_at_battle_start() -> None:

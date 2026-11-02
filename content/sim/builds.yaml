@@ -53,6 +53,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3H-1：內建法術依心智三分改縮放屬性（召喚、獻祭、詛咒、暗影＝意志；治療、護盾、輔助、偵測與標記＝感知）後，
 # build_warlock（主屬性改意志）、build_seer（改感知）、build_summoner（改意志、智力次之）的配點跟著調整，
 # 屬性總和不變；其餘 build 的主屬性本來就對得上招式。
+# BAL-15b：英雄的法力／耐力基礎不再各自寫死，對齊一輪主角依武器大類（rules/core.yaml 的 resources.class_base：
+# 近戰 20／40、遠程 20／30、法器 40／20），上限再依屬性加成（敵我同一套，玩法決定 #80）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -67,7 +69,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: [skill_gale_kick, skill_leap_slam, skill_charged_cleave, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark, skill_quake_topple]
 
   - id: build_fire
@@ -84,7 +85,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward, skill_gravity_burst]
 
   - id: build_storm
@@ -101,7 +101,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike, skill_deep_freeze, skill_tide_snare, skill_arc_follow_up]
 
   - id: build_tank
@@ -118,7 +117,6 @@ builds:
       ai_profile: guard
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills:
         [skill_encircled_sweep, skill_parry_riposte, skill_taunting_roar, skill_guardian_aegis, skill_sunder_strike, skill_armor_breaker, skill_thunder_hand, skill_grief_rage, skill_lingering_roar]
 
@@ -134,7 +132,6 @@ builds:
       armor_bonus: 2
       weapon: bow
       tags: [hero, sim]
-      max_mana: 24
       skills: [skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot, skill_overwatch, skill_lucky_break, skill_time_surge, skill_armor_piercing_arrow, skill_timber_piercer, skill_covering_fire]
 
   - id: build_assassin
@@ -150,7 +147,6 @@ builds:
       weapon: dagger
       ai_profile: assassin   # BAL-12d：夾擊／背刺位置＋打完退出敵人堆（原為 flanker）
       tags: [hero, sim]
-      max_mana: 20
       skills: [skill_shadow_ambush, skill_retreating_slash, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_shadow_backstab, skill_ambush_stab]
 
   - id: build_support
@@ -167,7 +163,6 @@ builds:
       ai_profile: support
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry, skill_mirror_cast, skill_life_drain]
 
   - id: build_healer
@@ -184,7 +179,6 @@ builds:
       ai_profile: support
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_resurrection, skill_beam_of_mercy, skill_self_mending, skill_holy_burst]
 
   - id: build_warlock
@@ -201,7 +195,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills:
         [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark, skill_venom_cloud, skill_mark_detonation, skill_creeping_blight, skill_blessing_thief]
 
@@ -219,7 +212,6 @@ builds:
       ai_profile: guard
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin, skill_soul_bond, skill_vigil_call, skill_charging_strike, skill_shoulder_strike, skill_mountain_mover]
 
   - id: build_striker
@@ -236,7 +228,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_static_palm, skill_thunder_finisher, skill_overcurrent, skill_ember_brand, skill_cluster_bolt, skill_bloodwake_stride, skill_armor_break_combo]
 
   - id: build_trapper
@@ -253,7 +244,6 @@ builds:
       ai_profile: archer
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot, skill_raise_skeleton, skill_afterimage_vow]
 
   - id: build_charger
@@ -269,7 +259,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 24
       skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_shadow_whirl, skill_bull_rush, skill_war_avatar]
 
   - id: build_banisher
@@ -286,7 +275,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_banish, skill_void_swap, skill_fire_bolt, skill_hex_bolt, skill_shatter_blast, skill_blink, skill_counterspell]
 
   - id: build_summoner
@@ -303,7 +291,6 @@ builds:
       ai_profile: archer
       resist: {elemental: 100}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_summon_spirit, skill_raise_skeleton, skill_plant_totem, skill_frost_shackle, skill_fire_wall, skill_kindred_flame]
 
   - id: build_gambler
@@ -319,7 +306,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 24
       # BAL-13e：狂怒姿態 → 天賜好運（帶「luck」標籤的防守被動：擲出自然 20 時得 1d4 護盾；狂怒姿態本身不改）
       skills: [skill_blood_sacrifice, skill_all_in, skill_wild_blade, skill_berserker_rage, skill_reckless_lunge, skill_lucky_break, skill_bloodlust, skill_grief_rage, skill_first_strike]
 
@@ -337,7 +323,6 @@ builds:
       ai_profile: seer   # BAL-13d：狡猾＋不重視自我回復（原為 cunning）
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_dispel_magic, skill_flare_sight, skill_blessing_thief, skill_focus_surge, skill_quicken_tide, skill_hex_bolt]
 
   - id: build_bomber
@@ -354,7 +339,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_time_bomb_rune, skill_ash_harvest, skill_frost_shackle, skill_blink, skill_undying_oath, skill_ember_brand, skill_death_spiral]
 
   - id: build_winged
@@ -369,7 +353,6 @@ builds:
       armor_bonus: 2
       weapon: bow
       tags: [hero, sim]
-      max_mana: 30
       skills: [skill_wing_spread, skill_wing_gift, skill_raise_perch, skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot]
 
   - id: build_telekinesis
@@ -386,7 +369,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_telekinetic_hurl, skill_blazing_hurl, skill_psychic_topple, skill_shatter_blast, skill_frost_shackle, skill_blink, skill_ember_ward]
 
   - id: build_wallburn
@@ -402,7 +384,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 24
       skills: [skill_gale_kick, skill_battering_ram, skill_shield_bash, skill_oil_flask, skill_rupture, skill_blink, skill_heavy_stomp, skill_burning_shove, skill_fracture_mark, skill_parting_slash]
 
   - id: build_detonator
@@ -419,7 +400,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_fire_bolt, skill_venom_cloud, skill_hex_bolt, skill_detonate_burning, skill_toxin_burst, skill_dread_gaze, skill_creeping_blight, skill_mark_detonation, skill_ember_brand]
 
   - id: build_runeweaver
@@ -436,7 +416,6 @@ builds:
       ai_profile: cunning
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_thunder_sigil, skill_ember_trail, skill_hunt_sigil, skill_rune_thunderbolt, skill_rune_burst, skill_rune_resonance, skill_rune_snare, skill_rune_ward]
 
   # 使用者要求（2026-10-20）：沒有任何技能的白板主角，從一輪的升級裡長出技能。屬性全 10（一輪開局再配 4 點）。
@@ -455,7 +434,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_mage
@@ -472,7 +450,6 @@ builds:
       weapon: fire_staff
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: []
 
   # Phase 3-24a1：武器擴充第一批的白板主角（沒有任何技能，讓新武器能在網頁試玩；屬性、HP 比照白板戰士與白板法師）。
@@ -491,7 +468,6 @@ builds:
       weapon: axe
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_hammer
@@ -508,7 +484,6 @@ builds:
       weapon: hammer
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_spear
@@ -525,7 +500,6 @@ builds:
       weapon: spear
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_priest
@@ -542,7 +516,6 @@ builds:
       weapon: scepter
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: []
 
   - id: build_blank_totemist
@@ -559,7 +532,6 @@ builds:
       weapon: totem_staff
       resist: {elemental: 150}
       tags: [hero, sim]
-      max_mana: 40
       skills: []
 
   # Phase 3-24a2：武器擴充第一批的遠程白板主角（弩、火槍；屬性比照白板戰士，敏捷是縮放屬性所以配 4 點時偏敏捷）。
@@ -578,7 +550,6 @@ builds:
       weapon: crossbow
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_longgun
@@ -595,7 +566,6 @@ builds:
       weapon: longgun
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   # Phase 3I-1：補平六屬性的第二批主武器的白板主角（沒有任何技能；屬性、HP 比照白板戰士，供模擬量測與網頁試玩）。
@@ -614,7 +584,6 @@ builds:
       weapon: fist
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_scythe
@@ -631,7 +600,6 @@ builds:
       weapon: scythe
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_whip
@@ -648,7 +616,6 @@ builds:
       weapon: whip
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   # Phase 3I-3：魔導劍的白板主角（力量／智力取平均；單手，沒有特性）。
@@ -666,7 +633,6 @@ builds:
       weapon: arcane_blade
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   # Phase 3I-4：第二批其他武器的白板主角（雙匕首、霰彈槍、手槍、雙手槍；遠程的血量與防禦比照白板槍手）。
@@ -684,7 +650,6 @@ builds:
       weapon: dual_dagger
       resist: {physical: 100}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_shotgun
@@ -701,7 +666,6 @@ builds:
       weapon: shotgun
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_pistol
@@ -718,7 +682,6 @@ builds:
       weapon: pistol
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_blank_dual_pistol
@@ -735,7 +698,6 @@ builds:
       weapon: dual_pistol
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 20
       skills: []
 
   - id: build_attack_archer
@@ -751,7 +713,6 @@ builds:
       armor_bonus: 2
       weapon: bow
       tags: [hero, sim]
-      max_mana: 24
       skills: [skill_attack_mastery, skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot]
       equipment:
         main_hand: item_sim_attack_bow
@@ -769,7 +730,6 @@ builds:
       armor_bonus: 2
       weapon: bow
       tags: [hero, sim]
-      max_mana: 24
       skills: [skill_piercing_shot, skill_thunder_clap, skill_bear_trap, skill_sniper_shot]
       equipment:
         main_hand: item_test_bow
@@ -790,7 +750,6 @@ builds:
       ai_profile: archer
       resist: {elemental: 100}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_summon_swarm, skill_summon_spirit, skill_raise_skeleton, skill_frost_shackle, skill_fire_wall]
 
   - id: build_summon_elite
@@ -808,7 +767,6 @@ builds:
       ai_profile: archer
       resist: {elemental: 100}
       tags: [hero, sim]
-      max_mana: 40
       skills: [skill_summon_elite, skill_summon_spirit, skill_raise_skeleton, skill_frost_shackle, skill_fire_wall]
 
   # Phase 3J-1a：形態核心規則的對照組（不列入矩陣與隨機抽選）；5 招測試用「化身為〇」，正式形態技能在 3J-4
@@ -826,7 +784,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 30
       skills: [skill_form_bear, skill_form_cat, skill_form_roc, skill_form_elemental, skill_form_werewolf]
 
   # Phase 3J-3：化形專精（06 6.30）的對照組（不列入矩陣與隨機抽選）；專精＋三種形態
@@ -844,7 +801,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 30
       skills: [skill_form_mastery, skill_form_bear, skill_form_cat, skill_form_dragon]
 
   # Phase 3J-1b：形態測試的第二組（其餘 5 種形態；一組最多 6 個主動技能欄位）。正式形態技能在 3J-4
@@ -862,7 +818,6 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 30
       skills: [skill_form_demon, skill_form_giant, skill_form_shadow, skill_form_treant, skill_form_dragon]
 
   # Phase 3J-4：形態利用者（06 6.30「形態池名單」）的對照組：熊、狼人兩種物理形態，加化形撲擊、野性怒吼、化形回春。
@@ -880,5 +835,4 @@ builds:
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
-      max_mana: 30
       skills: [skill_form_bear, skill_form_werewolf, skill_form_pounce, skill_wild_roar, skill_form_renewal, skill_form_release_burst]
