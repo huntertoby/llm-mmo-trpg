@@ -18,6 +18,7 @@ from trpg.skillgen.evolution import cost_attempts
 from trpg.skillgen.flash_derive import at_role_tier
 from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import Variation
+from trpg.skillgen.options import _modifier_step
 from trpg.skillgen.proposal import CLOSED_SKELETONS, build_proposal_models
 from trpg.skillgen.validate import validate_skill
 
@@ -183,8 +184,13 @@ def test_llm_proposal_has_no_modifier_rules_and_modifier_skeleton_is_closed() ->
     assert "modifiers" not in str(models.json_schema())
 
 
-def test_workshop_option_list_still_offers_the_change_but_validation_blocks_it() -> None:
-    """白板（玩家工坊）的修正規則選單列出所有 ``MODIFIER_CHANGES``；擋在驗證器，不改選單。"""
+def test_workshop_option_list_only_offers_plus_one_summon_limit() -> None:
+    """工坊的修正規則選單：「召喚物同時上限」只留 +1（−1 不能當代價；驗證器是第二道防線）。"""
+    lib = library()
+    step = _modifier_step({"kind": "modifier", "category": "spell"}, lib)
+    change = next(f for f in step.fields[0].fields if f.field == "change")
+    field = next(f for f in change.fields if f.field == "summon_limit_delta")
+    assert (field.min, field.max) == (1, 1)
     assert "summon_limit_delta" in MODIFIER_CHANGES
 
 

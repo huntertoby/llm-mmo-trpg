@@ -77,3 +77,5 @@ ruff check、ruff format --check（src／tests／scripts）、mypy（927 檔）�
 **保守處理／待 PM 決定**
 1. 工坊選單仍列出「召喚物同時上限 ±1」（−1 選了在驗證時被擋，訊息會說明）。要不要把 −1 從選單拿掉屬玩家介面調整，沒有做。
 2. 「來源是內建或有 parents」是粗判：`Provenance.origin` 預設值是 `builtin`，若某條新路徑忘了寫 provenance 就會被當內建而放行；目前組合器、白板、LLM、閃現、進化都有明確寫 origin（`level_up`／`workshop` 等）。有 parents 者不檢查父技能真有這個代價（升階、閃現鏈的父技能可能是執行中產生的，查不到）。
+
+BAL-14c 後續（開發 PM 決定）：工坊修正規則選單的「召喚物同時上限」只留 +1（`options.py` `_change_field`，−1 不出現），驗證器 `modifier.summon_limit_cost` 保留當第二道防線；`test_every_shipped_skill_fits_the_options` 略過帶 −1 的內建召喚專精。待決 2（來源粗判）照接受。
