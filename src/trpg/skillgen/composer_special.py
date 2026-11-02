@@ -22,6 +22,7 @@ from trpg.content.skills import SHAPE_TO_VALUES, SkillDef
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
+from trpg.skillgen.memo import draft_key, library_memo
 from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.validate import validate_skill
 
@@ -89,20 +90,48 @@ def _pick(rng: Rng, library: ContentLibrary, candidates: list[dict[str, Any]]) -
     """候選中預算合格（比例落在驗證器的合格區間）、且通過驗證的，隨機挑一個。
 
     固定點數的結構（規則改變、改寫規則型原語）沒有旋鈕可以調進組合器收窄的 0.75–0.95 區間，
-    所以這裡用完整的合格區間（0.70–1.00），與手寫的傳說一致。"""
-    fits: list[SkillDef] = []
+    所以這裡用完整的合格區間（0.70–1.00），與手寫的傳說一致。
+
+    PERF-2：「預算合格」與「通過驗證」以草稿內容快取（:mod:`trpg.skillgen.memo`；洗牌只看合格的
+    張數），挑中的技能照原本的流程重新建出。"""
+    memo = library_memo(library, "special.pick")
+    fits: list[dict[str, Any]] = []
     for data in candidates:
-        try:
-            skill = fit_scaling(SkillDef.model_validate(data), library)  # 3H-7
-            report = skill_budget(skill, library)
-        except (ValidationError, BudgetError):
-            continue
-        if report.ok:
-            fits.append(skill)
-    for skill in rng.shuffled(fits):
-        if not validate_skill(skill, library):
-            return skill
+        if _fits(library, memo, data):
+            fits.append(data)
+    for data in rng.shuffled(fits):
+        if _valid(library, memo, data):
+            return _build(library, data)
     return None
+
+
+def _build(library: ContentLibrary, data: dict[str, Any]) -> SkillDef:
+    return fit_scaling(SkillDef.model_validate(data), library)  # 3H-7
+
+
+def _fits(library: ContentLibrary, memo: dict[str, Any], data: dict[str, Any]) -> bool:
+    """草稿通過 schema 驗證、預算計算得出、且比例在合格區間內。"""
+    key = draft_key(data)
+    found = None if key is None else memo.get(f"fits:{key}")
+    if found is None:
+        try:
+            found = skill_budget(_build(library, data), library).ok
+        except (ValidationError, BudgetError):
+            found = False
+        if key is not None:
+            memo[f"fits:{key}"] = found
+    return bool(found)
+
+
+def _valid(library: ContentLibrary, memo: dict[str, Any], data: dict[str, Any]) -> bool:
+    """（已知預算合格的）草稿通過驗證器（:func:`validate_skill` 沒有違規）。"""
+    key = draft_key(data)
+    found = None if key is None else memo.get(f"valid:{key}")
+    if found is None:
+        found = not validate_skill(_build(library, data), library)
+        if key is not None:
+            memo[f"valid:{key}"] = found
+    return bool(found)
 
 
 # ---------------------------------------------------------------------------
