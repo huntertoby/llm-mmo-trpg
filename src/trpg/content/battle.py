@@ -827,6 +827,8 @@ class StatusDef(ContentModel):
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)
     damage_taken_permille: int = Field(default=1000, ge=0, le=10000)
     physical_taken_permille: int = Field(default=1000, ge=0, le=10000)
+    summon_damage_dealt_permille: int = Field(default=1000, ge=1000, le=3000)
+    """號令（BAL-19f 追加）：帶有者的召喚物造成的攻擊傷害（``cause: attack``）倍率。"""
     element_dealt: Element | None = None
     """元素傷害加成（Phase 3W-2b，元素姿態）：帶有者造成這個元素的攻擊傷害再 ×
     ``element_dealt_permille``。"""

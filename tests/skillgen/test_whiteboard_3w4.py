@@ -76,7 +76,8 @@ def test_active_whiteboards_use_the_default_cost() -> None:
             assert skill.cost.self_status is None
             assert skill.condition is None
             seen_shapes.add(skill.shape.type)
-    assert seen_shapes <= {"single", "ground_tile", "cross", "square3"}
+    # BAL-19f（#110）：白板加直線、錐形、環形（連鎖 3 階）
+    assert seen_shapes <= {"single", "ground_tile", "cross", "square3", "line", "cone", "ring"}
     assert {"single", "cross"} <= seen_shapes
 
 
@@ -176,8 +177,8 @@ def test_validator_rejects_each_part_of_the_definition() -> None:
     assert "冷卻最多 2" in _problems(board.model_copy(update={"cost": cost}))
     cost = board.cost.model_copy(update={"uses_per_battle": 1})
     assert "不能有每場次數" in _problems(board.model_copy(update={"cost": cost}))
-    ring = board.shape.model_copy(update={"type": "ring"})
-    assert "形狀必須簡單" in _problems(board.model_copy(update={"shape": ring}))
+    wide = board.shape.model_copy(update={"type": "allies_in_radius"})  # BAL-19f：環形算簡單
+    assert "形狀必須簡單" in _problems(board.model_copy(update={"shape": wide}))
     two = board.model_copy(update={"effects": (*board.effects, *board.effects)})
     assert "只能有 1 個核心效果" in _problems(two)
 

@@ -68,6 +68,7 @@ from trpg.engine.rules.statuses import (
     prevents_concealment,
     shield_amount,
     stance_status_ids,
+    summon_damage_dealt_permille,
 )
 from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
@@ -288,11 +289,16 @@ def _cap_backlash(ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int) 
 
 
 def _dealt_permille(ctx: Ctx, effect: DamageEffect, target: UnitState) -> int:
-    """攻擊者造成傷害的狀態倍率（‰，虛弱）；不是攻擊或沒有來源時 1000。"""
+    """攻擊者造成傷害的狀態倍率（‰，虛弱）；召喚物再乘召喚者的號令（BAL-19f 追加）；不是攻擊或
+    沒有來源時 1000。"""
     source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
     if effect.cause == "attack" and source is not None:
         on_water = ctx.state.tile(target.pos.x, target.pos.y).surface is Surface.WATER
-        return damage_dealt_permille(ctx.rules, source, effect.element, on_water=on_water)
+        own = damage_dealt_permille(ctx.rules, source, effect.element, on_water=on_water)
+        owner = None if source.owner_id is None else ctx.state.units.get(source.owner_id)
+        if owner is not None:  # 召喚者的號令（BAL-19f 追加）
+            own = own * summon_damage_dealt_permille(ctx.rules, owner) // PERMILLE
+        return own
     return PERMILLE
 
 

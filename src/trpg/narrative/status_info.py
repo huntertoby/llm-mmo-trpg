@@ -62,6 +62,7 @@ NEUTRAL_PERMILLE = 1000
 
 _PERMILLE_FIELDS = (
     ("damage_dealt_permille", "自己造成的攻擊傷害"),
+    ("summon_damage_dealt_permille", "你的召喚物造成的攻擊傷害"),
     ("damage_taken_permille", "受到的骰值傷害（不含墜落、致命地形等百分比傷害）"),
     ("physical_taken_permille", "受到的物理骰值傷害"),
     ("healing_received_permille", "受到的治療"),

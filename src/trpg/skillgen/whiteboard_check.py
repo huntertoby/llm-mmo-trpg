@@ -93,13 +93,23 @@ def _core_types(skill: SkillDef) -> list[str]:
     return [e.type for e in skill.effects if e.type != "place_trap"]
 
 
-def _rider_ok(types: list[str], keywords: tuple[str, ...], rules: WhiteboardRules) -> bool:
+def _rider_ok(
+    skill: SkillDef, types: list[str], keywords: tuple[str, ...], rules: WhiteboardRules
+) -> bool:
     """兩個效果的例外：位移類加小補強，或例外關鍵字的「弱核心效果＋製造該關鍵字」（核心是傷害，
-    或 3W-2b 的小護盾：潮濕被動「被攻擊後得小護盾並在腳下造水」）。"""
+    或 3W-2b 的小護盾：潮濕被動「被攻擊後得小護盾並在腳下造水」），或號令型（BAL-19f 追加：
+    傷害＋對自己施加號令狀態）。"""
     if len(types) != _PAIR:
         return False
     displace = rules.displace_effects
     if types[0] in displace and types[1] not in displace:
+        return True
+    second = skill.effects[-1]
+    if (
+        types == ["damage", "apply_status"]
+        and second.status in rules.command_statuses
+        and second.affects == "self"
+    ):
         return True
     maker = bool(set(keywords) & set(rules.exception_keywords))
     return maker and types[0] in ("damage", "shield") and types[1] != types[0]
@@ -114,7 +124,9 @@ def _structure_problems(
     if skill.kind == "modifier":
         if len(skill.modifiers) != 1 or skill.effects:
             problems.append("修正型白板只能有 1 條修正規則、沒有效果")
-    elif len(skill.effects) != nested or not (len(types) == 1 or _rider_ok(types, keywords, rules)):
+    elif len(skill.effects) != nested or not (
+        len(types) == 1 or _rider_ok(skill, types, keywords, rules)
+    ):
         problems.append(f"白板只能有 1 個核心效果（沒有附帶效果），收到 {nested} 個")
     exploit = bool(set(keywords) & set(rules.exception_keywords))
     if skill.condition is not None or (

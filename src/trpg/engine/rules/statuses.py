@@ -47,6 +47,7 @@ __all__ = [
     "stance_status_ids",
     "status_attack_bonus",
     "status_duration_bonus",
+    "summon_damage_dealt_permille",
     "weapon_attribute",
 ]
 
@@ -206,6 +207,12 @@ def damage_dealt_permille(
         )
         elemental = elemental * wet // PERMILLE
     return combined * elemental // PERMILLE
+
+
+def summon_damage_dealt_permille(rules: Ruleset, owner: UnitState) -> int:
+    """召喚者身上的「號令」類狀態給自己召喚物的攻擊傷害倍率（‰；``summon_damage_dealt_permille``
+    相乘，BAL-19f 追加）。"""
+    return _combined(rules, owner, lambda d: d.summon_damage_dealt_permille)
 
 
 def status_duration_bonus(rules: Ruleset, unit: UnitState, status_id: str) -> int:

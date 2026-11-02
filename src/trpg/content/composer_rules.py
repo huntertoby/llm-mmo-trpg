@@ -457,6 +457,9 @@ class WhiteboardRecipe(ContentModel):
     """``SkillDef`` 欄位的覆寫（種類、AP、形狀、陷阱、修正規則、第二縮放屬性、武器需求……）。"""
     vary: tuple[dict[str, Any], ...] = ()
     """強度調整前可選的數值變化（深度合併進技能字典；``effect0``／``effect1`` 合併進效果）。"""
+    starter: bool = True
+    """創角的起始技能可以用這個配方（BAL-19f 追加：號令型武器技只出在三選一，創角選「召喚物」
+    照 6.34.1 給召喚白板）。"""
 
 
 class WhiteboardRules(ContentModel):
@@ -487,13 +490,16 @@ class WhiteboardRules(ContentModel):
     self_ap_cost: int = Field(default=1, ge=1, le=3)
     """自身位移、互換與自身增益白板的 AP（單一效果的點數固定，AP 2 湊不到預算下限）。"""
     simple_shapes: tuple[str, ...] = ("self", "single", "ground_tile", "cross", "square3")
-    """白板允許的形狀（3W-R2 從程式移到資料）：自身、單體、單格、十字與 3×3（小範圍）。"""
+    """白板允許的形狀（3W-R2 從程式移到資料）：自身、單體、單格、十字與 3×3（小範圍）；BAL-19f 起
+    另有直線、錐形、環形、連鎖（資料檔）。"""
     self_move_effects: tuple[str, ...] = ("teleport", "swap", "leap")
     """自身位移或互換的原語（6.34.9 的「位移類」，不含推拉別人）：主動白板用 ``self_ap_cost``。"""
     displace_effects: tuple[str, ...] = ("teleport", "swap", "leap", "push", "pull")
     """位移類核心效果的原語：可以帶一個小補強（單一位移的點數追不上預算下限）。"""
     terrain_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain")
     """升降地形的原語：單格的升降地形白板用 ``self_ap_cost``（3W-9）。"""
+    command_statuses: tuple[str, ...] = ()
+    """號令型白板（BAL-19f 追加）的狀態：「傷害＋對自己施加這些狀態」算一個核心效果加號令附帶。"""
     active: tuple[WhiteboardRecipe, ...] = ()
     passive: tuple[WhiteboardRecipe, ...] = ()
     reaction: tuple[WhiteboardRecipe, ...] = ()
