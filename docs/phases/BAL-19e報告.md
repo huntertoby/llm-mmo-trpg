@@ -107,3 +107,18 @@
 6. **滑步脫身原本設計成「向後滑兩格」**：反應的自身推擊（`push` 對自己、形狀 self）在引擎裡沒有方向，會直接失效，改成隱蔽＋加速。白板反應配方 `step_back`（撤步護體，`push` 對自己）可能有同樣的問題，未查證，建議另查。
 7. **不屈心志（防守姿態）歸意志**：加了一條 scaling override；姿態的縮放屬性只是顯示提示。
 8. 數值是初值；新反應、姿態沒有跑模擬。
+
+## 合併後修正
+
+BAL-19a～19e 合併後全量有 5 個測試失敗（各段只跑相關測試時漏掉）。修正如下，沒有放寬任何斷言。
+
+| 測試 | 原因 | 修法 |
+|---|---|---|
+| `test_budget_all_lists_every_skill`、`test_content_check_passes_with_the_shipped_skills` | 寫死「301 個」，技能已 370 | 改讀 `len(library().skills)`，斷言意義不變 |
+| `test_mock_n3_snapshot` | 技能池變動，Mock 洗牌後選到不同的手寫技能（例：「暗影・打擊」→「暗影・控場」）；`引擎修補` 多了 `budget.weak` | 以 `UPDATE_CLI_SNAPSHOTS=1` 重產。`budget.weak` 查過：第 1 題的原技能是 `skill_dispel_magic`（既有技能，非新技能），第 2 題的 `skill_sum_whistle_arrow` 最低角色階級 2，Mock 以 2 階出題時預算變大，引擎照常補強——是預期的修補行為，不是內容過弱 |
+| `test_run_auto_reaches_a_major_flash_...[4]` | 技能池變了，種子 4 走不到第 3 次大變化 | 掃種子 1～15，改用 6（與 7 並列）；斷言不變 |
+| `test_every_option_passes_the_validator_...` | `skill_sum_storm_arrow`（雷鳴箭靈）與 `skill_sum_vanguard_spirit`（號令先鋒）標史詩，但結構算出只有稀有；召喚進化（`summon_evolution`）沿用父技能的稀有度，進化後仍標史詩，與 `structural_rarity` 不符 | 內容標錯：稀有度只管複雜度（6.12），兩招改成 `rarity: rare`。預算比例不變（98.4%、93.7%）。進化程式沒改（一般進化會重算稀有度，召喚進化沿用；內容標對後兩者一致；若日後再有「標得比結構高」的召喚技，召喚進化會再踩到，列為待決） |
+
+連帶重產：`tests/skillgen/fixtures/refactor_3wr2.json`（兩招的完整技能強度雜湊）、`tests/cli/snapshots/cli_output_hashes.json`（`skills_show_all`）。
+
+待決：BAL-19c 報告把這兩招列為史詩（較強的兩招），結構上只有稀有，已照 6.12 改標稀有；若玩法 PM 想讓它們是史詩，需要在結構上加複雜度，而不是只改標記。

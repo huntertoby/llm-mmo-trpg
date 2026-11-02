@@ -45,7 +45,9 @@ def test_budget_all_lists_every_skill(capsys: pytest.CaptureFixture[str]) -> Non
     assert code == 0
     known = len(library().budget.known_budget_exceptions)  # BAL-14b 起清單改讀 content
     tail = f"，已知例外 {known} 個" if known else "。"
-    assert "技能預算總表（共 301 個" in out and f"通過 {301 - known} 個，違規 0 個{tail}" in out
+    total = len(library().skills)
+    assert f"技能預算總表（共 {total} 個" in out
+    assert f"通過 {total - known} 個，違規 0 個{tail}" in out
     for skill_id in sorted(p.stem for p in (PROJECT_ROOT / "content/skills").glob("*.yaml")):
         assert skill_id in out
 
@@ -59,7 +61,7 @@ def test_budget_needs_an_id_or_all(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_content_check_passes_with_the_shipped_skills(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["content", "check"], capsys)
-    assert code == 0 and "301 個技能通過預算與結構驗證" in out
+    assert code == 0 and f"{len(library().skills)} 個技能通過預算與結構驗證" in out
 
 
 def test_content_check_fails_on_a_skill_that_breaks_the_rules(
