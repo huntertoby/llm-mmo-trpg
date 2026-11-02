@@ -112,6 +112,8 @@ class EventTrigger(_Model):
     weather: str
     day_phase: DayPhase
     at: int = Field(ge=0)
+    narrated: bool = False
+    """說書人已經敘述過這個事件（Phase 5B-3；每個事件只能敘述、換骨架 1 次）。"""
 
     @field_validator("candidates")
     @classmethod
