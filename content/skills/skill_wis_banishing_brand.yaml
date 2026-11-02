@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：標記目標並把它推開（感知＋撞擊）
+id: skill_wis_banishing_brand
+schema_version: 1
+name_zh: 放逐烙印
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 3}
+effects:
+  - {type: push, distance: 2}
+  - {type: apply_status, status: marked, duration: 2}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [spell, mark, control]
+narrative:
+  concept: 烙印落下的瞬間迸出一股斥力，把目標推離你身邊
+  cast_flavor: 印記在目標胸口一亮，一股看不見的力量把它往後推去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

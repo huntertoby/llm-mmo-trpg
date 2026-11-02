@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：以霜痕標記目標（感知＋冰霜）
+id: skill_wis_rime_mark
+schema_version: 1
+name_zh: 霜痕標記
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 5}
+effects:
+  - {type: apply_status, status: marked, duration: 2}
+  - {type: damage, dice: 1d4, element: ice}
+condition: null
+cost: {mana: 3, cooldown: 1}
+tags: [ice, spell, mark]
+narrative:
+  concept: 在敵人身上留下一道結霜的記號，寒氣讓它無處可藏
+  cast_flavor: 你朝目標吹出一口白氣，它的甲冑上浮現一道發亮的霜痕
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
