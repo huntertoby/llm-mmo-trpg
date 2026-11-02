@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.skills import SkillDef
 from trpg.content.world_oaths import OathDifficulty
-from trpg.roguelite.state import PendingFlash
+from trpg.roguelite.state import PendingFlash, SkillOffer
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_state import SkillFlash
@@ -37,7 +37,9 @@ __all__ = [
     "LocationRef",
     "NextBattleMod",
     "OathState",
+    "PendingOffer",
     "PerceptionMark",
+    "QuestState",
     "ThreadState",
     "WorldState",
 ]
@@ -180,6 +182,24 @@ class ThreadState(_Model):
         return (self.created_at, self.thread)
 
 
+class QuestState(_Model):
+    """一個接過的任務（Phase 5B-4）：完成了幾步、是否已完成。"""
+
+    quest: str = Field(pattern=ID_PATTERN)
+    steps_done: int = Field(default=0, ge=0)
+    done: bool = False
+    started_at: int = Field(ge=0)
+    completed_at: int | None = Field(default=None, ge=0)
+
+
+class PendingOffer(_Model):
+    """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。"""
+
+    quest: str = Field(pattern=ID_PATTERN)
+    step: str = Field(pattern=ID_PATTERN)
+    offer: SkillOffer
+
+
 def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
     keys = [t.key() for t in threads]
     ids = [t.thread for t in threads]
@@ -310,6 +330,41 @@ class CharacterState(_Model):
     """解除誓約後，這個時間（UTC 秒）以前不能再立（#106「現實 1 天」）。"""
     last_battle: LastBattle | None = None
     """最近一次戰鬥的結果（Phase 5A-7；``fight`` 寫入，其他動作不清除）。"""
+
+    # --- 5B-4 任務與好感度（邏輯在 trpg.world.quests、trpg.world.affinity） ---
+    quests: tuple[QuestState, ...] = ()
+    """接過的任務（依任務 ID 排序、不重複）。"""
+    affinity: dict[str, int] = Field(default_factory=dict)
+    """NPC → 好感度（依 NPC 排序；沒有的 NPC＝0，9.6.11 #116）。"""
+    pending_offers: tuple[PendingOffer, ...] = ()
+    """任務給的、還沒選的技能三選一（依產生順序）；有它時只能送 ``offer_pick``。"""
+    offers_made: int = Field(default=0, ge=0)
+    """產生過幾組技能候選（候選種子的計數，同 ``RunState.offers_made``）。"""
+    story_flags: tuple[str, ...] = ()
+    """劇情旗標（排序、不重複；例：解鎖導師任務鏈）。"""
+
+    @field_validator("quests")
+    @classmethod
+    def _sorted_quests(cls, quests: tuple[QuestState, ...]) -> tuple[QuestState, ...]:
+        ids = [q.quest for q in quests]
+        if ids != sorted(set(ids)):
+            raise ValueError("quests 必須依任務 ID 排序且不重複")
+        return quests
+
+    @field_validator("affinity")
+    @classmethod
+    def _sorted_affinity(cls, affinity: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(affinity.items()))
+
+    @field_validator("story_flags")
+    @classmethod
+    def _sorted_flags(cls, flags: tuple[str, ...]) -> tuple[str, ...]:
+        if list(flags) != sorted(set(flags)):
+            raise ValueError("story_flags 必須排序且不重複")
+        return flags
+
+    def quest_state(self, quest: str) -> QuestState | None:
+        return next((q for q in self.quests if q.quest == quest), None)
 
     @field_validator("elite_kills")
     @classmethod

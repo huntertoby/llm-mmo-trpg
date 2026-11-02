@@ -12,6 +12,9 @@
   （:mod:`trpg.world.town`）；移動到「已清空」的地點不遇敵（擲骰照擲）。
 - **5A-6**：成長的動作（配點、重配、閃現、溶掉、傳承、立誓；:mod:`trpg.world.growth`）。有已付點、
   還沒選的閃現選項時，只能送 ``flash_pick``。
+- **5B-4**：接任務、選任務給的技能、和 NPC 說話、酒館（:mod:`trpg.world.quests`、
+  :mod:`trpg.world.social`）；**每個動作之後** 依事件結果調好感度、推進進行中的任務
+  （:func:`~trpg.world.quests.advance_quests`）。有任務給的三選一還沒選時，只能送 ``offer_pick``。
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.shared.types import Attribute
 from trpg.world.actions import (
+    AcceptQuestAction,
     CampAction,
     CampedEvent,
     EncounterCheckEvent,
@@ -32,10 +36,13 @@ from trpg.world.actions import (
     LoadoutAction,
     LocationRevealedEvent,
     NarrateAction,
+    OfferPickAction,
     PerceptionCheckEvent,
     RestAction,
     RetreatAction,
     SituationAction,
+    TalkAction,
+    TavernAction,
     TeleportAction,
     TravelAction,
     TraveledEvent,
@@ -51,8 +58,10 @@ from trpg.world.errors import WorldActionError
 from trpg.world.events import roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
+from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.situations import resolve_situation
+from trpg.world.social import talk, tavern
 from trpg.world.state import (
     CharacterState,
     EncounterResult,
@@ -142,9 +151,29 @@ def world_step(
     action: WorldAction,
     now: int,
 ) -> StepResult:
-    """套用一個世界動作；不合法拋 :class:`WorldActionError`。"""
+    """套用一個世界動作；不合法拋 :class:`WorldActionError`。動作之後推進任務（5B-4）。"""
     if char.pending_flash is not None and not isinstance(action, FlashPickAction):
         raise WorldActionError("還有閃現的選項沒有選（flash_pick）")
+    if (
+        char.pending_flash is None
+        and char.pending_offers
+        and not isinstance(action, OfferPickAction)
+    ):
+        raise WorldActionError("還有任務給的技能三選一沒有選（offer_pick）")
+    result = _dispatch(library, world, char, action, now)
+    char, extra = advance_quests(library, result.world, result.char, result.events, now)
+    if not extra and char is result.char:
+        return result
+    return StepResult(world=result.world, char=char, events=(*result.events, *extra))
+
+
+def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: WorldAction,
+    now: int,
+) -> StepResult:
     if isinstance(action, GROWTH_ACTIONS):
         char, events = apply_growth(library, world, char, action, now)
         return StepResult(world=world, char=char, events=events)
@@ -159,7 +188,29 @@ def world_step(
         return StepResult(world=world, char=char, events=events)
     if isinstance(action, SituationAction | NarrateAction):
         return _story(library, world, char, action, now)
+    if isinstance(action, AcceptQuestAction | OfferPickAction | TalkAction | TavernAction):
+        return _social(library, world, char, action, now)
     return _service(library, world, char, action)
+
+
+def _social(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: AcceptQuestAction | OfferPickAction | TalkAction | TavernAction,
+    now: int,
+) -> StepResult:
+    """任務與聊天（5B-4，:mod:`trpg.world.quests`、:mod:`trpg.world.social`）：不動世界快照。"""
+    events: tuple[WorldEvent, ...]
+    if isinstance(action, AcceptQuestAction):
+        char, events = accept_quest(library, world, char, action, now)
+    elif isinstance(action, OfferPickAction):
+        char, events = take_offer(library, char, action)
+    elif isinstance(action, TalkAction):
+        events = talk(library, char, action)
+    else:
+        events = tavern(library, world, char, now)
+    return StepResult(world=world, char=char, events=events)
 
 
 def _story(
