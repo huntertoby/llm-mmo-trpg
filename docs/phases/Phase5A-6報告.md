@@ -109,3 +109,11 @@
 | 世界日誌重播（`test_replay_with_growth`、`test_replay_with_battle_and_town`、5B-2 的重播） | 通過 |
 
 沒有跑全量 `scripts/check.py`（PM 合併時跑）。
+
+## 7. 5A-6b（玩法 PM 代決 2026-11-03）
+
+- **先手只影響第 1 輪**：`begin_battle` 照 5A-6 把 `first_team` 陣營排在最前，並把正常先攻順序記進 `BattleState.normal_turn_order`；`turns._end_round` 在第 2 輪開始時還原（發 `turn_order_set`；第 1 輪中途離場的略過、中途加入的召喚物與復活單位接在後面）。我方與敵人先手同時成立仍互相抵銷。
+- **開場 debuff 持續最多 2 回合**：`opening_statuses` 照舊不擲抵抗，施加時 `duration = min(狀態預設, 2)`（`OPENING_STATUS_MAX_DURATION`；預設不倒數的狀態維持原樣）。例：中毒預設 3 → 2。
+- **`LOG_FORMAT` 遞增為 `/101`**（`BattleState` 新增欄位、第 2 輪順序結算改變）；`/100` 紀錄不能重播；`docs/phases/戰鬥紀錄格式變更.md` 已補條目；測試裡的字面值已改。
+- 測試：`tests/engine/test_first_team.py` 新增「開場狀態上限 2」「先手只影響第 1 輪、第 2 輪恢復」。
+- 待 PM 決定：第 5 節第 7、8 點已依此解決。

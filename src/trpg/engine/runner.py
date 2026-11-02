@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/100"
-"""目前的戰鬥紀錄版本（``/100``，Phase 5A-6：設定新增 ``first_team`` 與 ``opening_statuses``）。
+LOG_FORMAT = "trpg-battle-log/101"
+"""目前的戰鬥紀錄版本（``/101``，Phase 5A-6b：先手只影響第 1 輪、開場狀態最多 2 回合）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

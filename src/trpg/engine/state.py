@@ -676,6 +676,8 @@ class BattleState:
     """外觀覆寫（鍵排序；Phase 3-37a；只影響外觀）。"""
     map_tags: tuple[str, ...] = ()
     """地圖標籤（Phase 3R-2，例如 ``forest``；種族的環境被動「林間視野」讀取）。"""
+    normal_turn_order: tuple[UnitId, ...] = ()
+    """正常的先攻順序（Phase 5A-6b）：先手改過第 1 輪順序時才有值，第 2 輪開始時還原並清空。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -722,6 +724,7 @@ class BattleState:
             region=self.region,
             look=self.look,
             map_tags=self.map_tags,
+            normal_turn_order=self.normal_turn_order,
         )
 
     # ------------------------------------------------------------------

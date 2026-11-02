@@ -357,24 +357,42 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         ctx.emit(
             InitiativeRolled, unit_id=unit.id, roll=roll, modifier=modifier, total=unit.initiative
         )
-    state.turn_order = _first_team_order(state, _initiative_order(ctx), setup.first_team)
+    normal_order = _initiative_order(ctx)
+    state.turn_order = _first_team_order(state, normal_order, setup.first_team)
+    if state.turn_order != normal_order:
+        state.normal_turn_order = tuple(normal_order)
     ctx.emit(TurnOrderSet, order=tuple(state.turn_order))
     ctx.emit(RoundStarted)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
 
 
+OPENING_STATUS_MAX_DURATION = 2
+"""開場狀態（``opening_statuses``）的持續回合上限（Phase 5A-6b）。"""
+
+
 def _apply_opening_statuses(ctx: Ctx, opening: list[tuple[UnitId, tuple[str, ...]]]) -> None:
     """開場就掛上的狀態（Phase 5A-6，``UnitSpawn.opening_statuses``）：依單位、清單順序施加，
-    持續回合照狀態定義的預設，不擲抵抗。"""
+    不擲抵抗；持續回合照狀態定義的預設，但最多 ``OPENING_STATUS_MAX_DURATION``（2）回合
+    （Phase 5A-6b；預設不倒數的狀態維持原樣）。"""
     for uid, statuses in opening:
         for status_id in statuses:
-            execute(ctx, [ApplyStatusEffect(target_id=uid, status_id=status_id, source_id=uid)])
+            default = ctx.rules.status_def(status_id).duration
+            duration = None if default is None else min(default, OPENING_STATUS_MAX_DURATION)
+            execute(
+                ctx,
+                [
+                    ApplyStatusEffect(
+                        target_id=uid, status_id=status_id, source_id=uid, duration=duration
+                    )
+                ],
+            )
 
 
 def _first_team_order(state: BattleState, order: list[UnitId], first: Team | None) -> list[UnitId]:
     """先手（Phase 5A-6，``BattleSetup.first_team``）：``first`` 陣營的單位照原本的先攻順序排在
-    最前面，其他單位照原本的順序接在後面；``None`` 時原樣。"""
+    最前面，其他單位照原本的順序接在後面；``None`` 時原樣。只影響第 1 輪（Phase 5A-6b）：
+    第 2 輪起由 ``turns`` 還原成 ``state.normal_turn_order``。"""
     if first is None:
         return order
     leading = [uid for uid in order if state.units[uid].team is first]
