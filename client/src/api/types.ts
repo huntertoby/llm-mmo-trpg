@@ -253,7 +253,9 @@ export type WorldAction =
   | Schemas["TalkAction"]
   | Schemas["TavernAction"]
   // 5B-5b：放棄、交涉、戰鬥解法
-  | (Omit<Schemas["EventSolveAction"], "use_thread"> & { use_thread?: string | null });
+  | (Omit<Schemas["EventSolveAction"], "use_thread"> & { use_thread?: string | null })
+  // 5C-1：雇用系統傭兵（整組換掉）
+  | Schemas["HireAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -271,3 +273,7 @@ export type WorldQuestHere = Schemas["QuestHereView"];
 export type WorldPendingOffer = Schemas["PendingOfferView"];
 export type WorldThread = Schemas["ThreadView"];
 export type WorldLlmView = Schemas["WorldLlmView"];
+// 隊伍與系統傭兵（Phase 5C-1）
+export type WorldPartyView = Schemas["PartyView"];
+export type WorldPartyMember = Schemas["PartyMemberView"];
+export type WorldMercenary = Schemas["MercenaryView"];

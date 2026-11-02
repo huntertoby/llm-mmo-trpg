@@ -2204,6 +2204,11 @@ export interface components {
              * @default []
              */
             opening_zh: string[];
+            /**
+             * Allies Zh
+             * @default
+             */
+            allies_zh: string;
         };
         /**
          * EndStance
@@ -3505,6 +3510,23 @@ export interface components {
             rounds: number | null;
         };
         /**
+         * HireAction
+         * @description 在城鎮雇用系統傭兵（Phase 5C-1；09 9.6.9 #97：免費、出城前選好、野外不能換）：整組換成
+         *     ``mercenaries``（依出場順序；空＝不帶傭兵）。
+         */
+        HireAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hire";
+            /**
+             * Mercenaries
+             * @default []
+             */
+            mercenaries: string[];
+        };
+        /**
          * HistoryStepOut
          * @description 戰鬥紀錄的一步：只有事件（含中文 ``text``），不含戰場視圖。
          */
@@ -3939,6 +3961,28 @@ export interface components {
             height: number;
         };
         /**
+         * MercenaryView
+         * @description 名單上的一名系統傭兵（每個人都一樣，9.6.8）。
+         */
+        MercenaryView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Title Zh */
+            title_zh: string;
+            /** Role */
+            role: string;
+            /** Role Zh */
+            role_zh: string;
+            /** Theme Zh */
+            theme_zh: string;
+            /** Skills Zh */
+            skills_zh: string[];
+            /** Hired */
+            hired: boolean;
+        };
+        /**
          * Move
          * @description 沿 ``path`` 移動（不花 AP）。``path[0]`` 必須是目前位置，之後每一步都相鄰。
          *
@@ -4269,6 +4313,39 @@ export interface components {
             pos: components["schemas"]["XY"] | null;
             /** Detail */
             detail: string | null;
+        };
+        /**
+         * PartyMemberView
+         * @description 隊伍的一名成員（主角、傭兵或標準隊友）。
+         */
+        PartyMemberView: {
+            /** Name Zh */
+            name_zh: string;
+            /** Title Zh */
+            title_zh: string;
+            /** Level */
+            level: number;
+            /** Mercenary */
+            mercenary?: string | null;
+        };
+        /**
+         * PartyView
+         * @description 目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。
+         */
+        PartyView: {
+            /** Members */
+            members: components["schemas"]["PartyMemberView"][];
+            /** Max Hired */
+            max_hired: number;
+            /** Can Hire */
+            can_hire: boolean;
+            /** Hire Problem Zh */
+            hire_problem_zh: string | null;
+            /**
+             * Mercenaries
+             * @default []
+             */
+            mercenaries: components["schemas"]["MercenaryView"][];
         };
         /**
          * Pending
@@ -6709,7 +6786,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -6911,6 +6988,7 @@ export interface components {
              * @default []
              */
             rumors: string[];
+            party?: components["schemas"]["PartyView"] | null;
         };
         XY: [
             number,

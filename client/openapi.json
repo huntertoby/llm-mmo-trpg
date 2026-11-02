@@ -5399,6 +5399,11 @@
             "type": "array",
             "title": "Opening Zh",
             "default": []
+          },
+          "allies_zh": {
+            "type": "string",
+            "title": "Allies Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -8421,6 +8426,29 @@
         "title": "HeroStatusView",
         "description": "開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。"
       },
+      "HireAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hire",
+            "title": "Kind",
+            "default": "hire"
+          },
+          "mercenaries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Mercenaries",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HireAction",
+        "description": "在城鎮雇用系統傭兵（Phase 5C-1；09 9.6.9 #97：免費、出城前選好、野外不能換）：整組換成\n``mercenaries``（依出場順序；空＝不帶傭兵）。"
+      },
       "HistoryStepOut": {
         "properties": {
           "events": {
@@ -9429,6 +9457,59 @@
         ],
         "title": "MapSummary"
       },
+      "MercenaryView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "role_zh": {
+            "type": "string",
+            "title": "Role Zh"
+          },
+          "theme_zh": {
+            "type": "string",
+            "title": "Theme Zh"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh"
+          },
+          "hired": {
+            "type": "boolean",
+            "title": "Hired"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "title_zh",
+          "role",
+          "role_zh",
+          "theme_zh",
+          "skills_zh",
+          "hired"
+        ],
+        "title": "MercenaryView",
+        "description": "名單上的一名系統傭兵（每個人都一樣，9.6.8）。"
+      },
       "Move": {
         "properties": {
           "unit_id": {
@@ -10280,6 +10361,90 @@
           "detail"
         ],
         "title": "OutcomeOut"
+      },
+      "PartyMemberView": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "mercenary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mercenary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh",
+          "title_zh",
+          "level"
+        ],
+        "title": "PartyMemberView",
+        "description": "隊伍的一名成員（主角、傭兵或標準隊友）。"
+      },
+      "PartyView": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/PartyMemberView"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "max_hired": {
+            "type": "integer",
+            "title": "Max Hired"
+          },
+          "can_hire": {
+            "type": "boolean",
+            "title": "Can Hire"
+          },
+          "hire_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hire Problem Zh"
+          },
+          "mercenaries": {
+            "items": {
+              "$ref": "#/components/schemas/MercenaryView"
+            },
+            "type": "array",
+            "title": "Mercenaries",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "members",
+          "max_hired",
+          "can_hire",
+          "hire_problem_zh"
+        ],
+        "title": "PartyView",
+        "description": "目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"
       },
       "Pending": {
         "properties": {
@@ -16330,6 +16495,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSolveAction"
+          },
+          {
+            "$ref": "#/components/schemas/HireAction"
           }
         ],
         "discriminator": {
@@ -16342,6 +16510,7 @@
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
+            "hire": "#/components/schemas/HireAction",
             "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
@@ -16919,6 +17088,16 @@
             "type": "array",
             "title": "Rumors",
             "default": []
+          },
+          "party": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartyView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
