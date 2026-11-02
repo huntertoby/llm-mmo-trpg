@@ -58,6 +58,8 @@ source_wells: [[5, 5], [6, 4]]
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
   enemies: [bandit_warlord, bandit_guard, bandit_archer_guard, bandit_shieldbearer_guard]
+# 勝利條件（BAL-16a，05 5.8，#86）：頭目（boss 標籤）倒下時其餘護衛撤退，戰鬥直接勝利。
+objective: {kind: eliminate, leader_retreat: true}
 events:
   - kind: spawn_units
     round: 3

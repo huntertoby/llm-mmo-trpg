@@ -3432,6 +3432,9 @@ export interface components {
          *     - ``defend``：守住 ``tiles``（守點格）``rounds`` 輪；某輪結束時有敵方單位站在守點格上即敗。
          *
          *     任何模式下，我方全滅即敗；敵方全滅即勝。
+         *
+         *     ``leader_retreat``（BAL-16a，05 5.8，#86；只用在 ``eliminate``）：Boss 戰——敵方頭目（``boss``
+         *     標籤）全部倒下時，其餘敵人撤退，我方直接勝利（``leader_defeated``）。
          */
         Objective: {
             /**
@@ -3450,6 +3453,11 @@ export interface components {
                 number,
                 number
             ][];
+            /**
+             * Leader Retreat
+             * @default false
+             */
+            leader_retreat: boolean;
         };
         /** OfferOut */
         OfferOut: {

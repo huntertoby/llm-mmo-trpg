@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/96"
-"""目前的戰鬥紀錄版本（``/96``，BAL-15c：裝了反應技時預設格擋關閉，#83）。
+LOG_FORMAT = "trpg-battle-log/97"
+"""目前的戰鬥紀錄版本（``/97``，BAL-16a：Boss 戰頭目倒下、護衛撤退即勝，#86）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

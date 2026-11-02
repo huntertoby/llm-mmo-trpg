@@ -264,10 +264,17 @@ class TurnEnded(EventBase):
 
 
 type EndReason = Literal[
-    "eliminate", "round_limit", "escaped", "escape_failed", "defended", "point_lost"
+    "eliminate",
+    "round_limit",
+    "escaped",
+    "escape_failed",
+    "defended",
+    "point_lost",
+    "leader_defeated",
 ]
 """``eliminate``：一方全滅；``escaped``：我方全員撤離；``escape_failed``：撤離超時；
-``defended``：守點成功；``point_lost``：守點被占領；``round_limit``：輪數上限（平手）。"""
+``defended``：守點成功；``point_lost``：守點被占領；``round_limit``：輪數上限（平手）；
+``leader_defeated``：Boss 戰頭目倒下、護衛撤退（我方勝，BAL-16a）。"""
 
 
 class BattleEnded(EventBase):

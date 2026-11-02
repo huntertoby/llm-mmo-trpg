@@ -179,6 +179,7 @@ _END_REASONS = {
     "defended": "守住守點",
     "point_lost": "守點失守",
     "round_limit": "輪數上限",
+    "leader_defeated": "頭目倒下，護衛撤退",
 }
 
 _DESTROY_CAUSES = {

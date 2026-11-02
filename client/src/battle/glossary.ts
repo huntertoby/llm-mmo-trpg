@@ -191,6 +191,7 @@ export const END_REASONS: Readonly<Record<string, string>> = {
   defended: "守住守點",
   point_lost: "守點失守",
   round_limit: "輪數上限",
+  leader_defeated: "頭目倒下",
 };
 
 export const DIRECTIONS: Readonly<Record<string, string>> = {

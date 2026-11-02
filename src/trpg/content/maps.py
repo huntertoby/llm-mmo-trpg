@@ -109,14 +109,20 @@ class Objective(ContentModel):
     - ``defend``：守住 ``tiles``（守點格）``rounds`` 輪；某輪結束時有敵方單位站在守點格上即敗。
 
     任何模式下，我方全滅即敗；敵方全滅即勝。
+
+    ``leader_retreat``（BAL-16a，05 5.8，#86；只用在 ``eliminate``）：Boss 戰——敵方頭目（``boss``
+    標籤）全部倒下時，其餘敵人撤退，我方直接勝利（``leader_defeated``）。
     """
 
     kind: Literal["eliminate", "escape", "defend"] = "eliminate"
     rounds: int | None = Field(default=None, ge=1)
     tiles: tuple[tuple[int, int], ...] = ()
+    leader_retreat: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> Objective:
+        if self.leader_retreat and self.kind != "eliminate":
+            raise ValueError("leader_retreat 只能用在 eliminate")
         if self.kind == "eliminate":
             if self.rounds is not None or self.tiles:
                 raise ValueError("eliminate 不需要 rounds 與 tiles")
@@ -263,8 +269,8 @@ class MapDef(ContentModel):
 
     def objective_for(self, kind: str) -> Objective:
         """本地圖在 ``kind`` 勝利條件下的 :class:`Objective`（沒有資料時拋出 ``ValueError``）。"""
-        if kind == "eliminate":
-            return Objective()
+        if kind == "eliminate":  # 地圖本身的全滅條件（Boss 地圖帶 leader_retreat，BAL-16a）
+            return self.objective if self.objective.kind == "eliminate" else Objective()
         if kind not in ("escape", "defend") or not self.supports_objective(kind):
             raise ValueError(f"地圖 {self.id} 沒有 {kind} 的勝利條件資料")
         assert self.alt_objectives is not None
