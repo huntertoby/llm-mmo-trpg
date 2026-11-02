@@ -300,7 +300,23 @@
   "skill_wild_roar": "7452e87a6fb417ae",
   "skill_wind_blade": "d65885b13069c297",
   "skill_wing_gift": "1bff98658bfe4fe4",
-  "skill_wing_spread": "4b80c4dd51ba5128"
+  "skill_wing_spread": "4b80c4dd51ba5128",
+  "skill_wis_banishing_brand": "bcb69551f023d57f",
+  "skill_wis_chain_radiance": "dd2c36a331258c59",
+  "skill_wis_frost_bloom_prayer": "c2aada81d9134808",
+  "skill_wis_glacial_judgment": "8005a76fc273b807",
+  "skill_wis_humbling_mark": "aa2474a7d373efe8",
+  "skill_wis_miasma_sight": "1d05d58d0ef9b4b8",
+  "skill_wis_repelling_light": "f3193d3f48ad7c18",
+  "skill_wis_rescue_tether": "9af9e9168691ff70",
+  "skill_wis_rime_mark": "8b2583f5b72203bc",
+  "skill_wis_sacred_pyre": "0422dbd002fbfc54",
+  "skill_wis_sanctified_quake": "8118312a0d817944",
+  "skill_wis_searing_mark": "51caa4393a861f75",
+  "skill_wis_smite_down": "f47736d1db925845",
+  "skill_wis_storm_aegis": "41b21c8aa2d73860",
+  "skill_wis_thunder_brand": "092c3f2ee8dab4b9",
+  "skill_wis_venom_mark": "9d8dd439d088eaa2"
  },
  "flash": {
   "skill_afterimage_vow@11@1": "b7251eb8b3e8a384/f4b3f02327854808/819a330144f71151",
@@ -431,7 +447,16 @@
   "skill_venom_detonation@5@2": "f89b2e7bcb17e5e1/5e769fb309a6635b/2b3b4dbdc0fb9eff",
   "skill_whip_crack@11@1": "7f7b1dcf12d12db2/adbac20f0313415c/5051c2e84e86632c",
   "skill_whip_crack@3@1": "a27314da0153df34/84578e73fdbd5bef/6153d0ec66f162e9",
-  "skill_whip_crack@5@2": "7447cef7e36c30d4/c325a1bd4739de5c/436dfb6fc54fe922"
+  "skill_whip_crack@5@2": "7447cef7e36c30d4/c325a1bd4739de5c/436dfb6fc54fe922",
+  "skill_wis_banishing_brand@11@1": "f49ae6cb185f5344/29228434a8459427/0462f18136590517",
+  "skill_wis_banishing_brand@3@1": "a7f6348e8ef3214a/b4faff368a79946d/f6cca69779f1bb3f",
+  "skill_wis_banishing_brand@5@2": "f12ab9e0ce15f47c/e0b6910490589570/012bea6c94b1837d",
+  "skill_wis_rescue_tether@11@1": "f4cb56a2e3b20239/d7d3bba32133a686/69a494e933127aa2",
+  "skill_wis_rescue_tether@3@1": "22d9423260c4fa15/1431835984b439f9/e252e5836855ecfa",
+  "skill_wis_rescue_tether@5@2": "41a644f18b885361/e115aa155ae66104/b46b9ae626714b27",
+  "skill_wis_thunder_brand@11@1": "ade6c192f1836e19/552bd140cc88dc84/b686711b86893757",
+  "skill_wis_thunder_brand@3@1": "23dbe3cf49678755/6c3e2112ab4760dc/b0f6321034db725e",
+  "skill_wis_thunder_brand@5@2": "6b80ea09ed0c9db6/5f3f32e9669bfbe2/f04bce923a6dab72"
  },
  "retier": {
   "skill_afterimage_vow": "74a9edfc6f06b287/43f709cdc49bd0c5",
@@ -734,6 +759,22 @@
   "skill_wild_roar": "e7f544d91160aaa0/9563e72fa89e05cc",
   "skill_wind_blade": "ccff841290d026f2/843cc216fdbe6441",
   "skill_wing_gift": "cc319cf459e7f3c5/cd4c3ec9c321e9fb",
-  "skill_wing_spread": "5f3d1f9bdf15faa8/65edca4a36a04964"
+  "skill_wing_spread": "5f3d1f9bdf15faa8/65edca4a36a04964",
+  "skill_wis_banishing_brand": "bb6b5b06102eda08/382f37ab032bb6e9",
+  "skill_wis_chain_radiance": "76990dab140c167a/06ccc7aff35335d6",
+  "skill_wis_frost_bloom_prayer": "b9c0c6ffa2b9a64e/2b206491ceae7c7c",
+  "skill_wis_glacial_judgment": "33fd69d51f8ac1d3/9e29ae5774f53403",
+  "skill_wis_humbling_mark": "e9253bbfe0b211c9/cab6bd6deb879146",
+  "skill_wis_miasma_sight": "de1bae1599e0ad19/51de25aa43d0884c",
+  "skill_wis_repelling_light": "0d89e047a9268284/2950de19ada9ae0a",
+  "skill_wis_rescue_tether": "06c9d7917d48926a/f82da6b20590babe",
+  "skill_wis_rime_mark": "ab663d92a893add5/7774d14415a8bb04",
+  "skill_wis_sacred_pyre": "597b47221aca6a1b/77b3dcf48d8252a7",
+  "skill_wis_sanctified_quake": "3aa16479f9cdad8a/32ca3efbb2065334",
+  "skill_wis_searing_mark": "db347df21a38647f/f86af62c8dca6995",
+  "skill_wis_smite_down": "26adabcc85c1c781/bebd36ffe770841b",
+  "skill_wis_storm_aegis": "f49dea151a6724a6/4f906f63658ee29c",
+  "skill_wis_thunder_brand": "f3b3727bdb9f3b2a/88128aaee3c735e3",
+  "skill_wis_venom_mark": "2b257169f0f0522d/f261740d697d97a5"
  }
 }
