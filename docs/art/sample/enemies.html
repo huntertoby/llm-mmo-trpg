@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>敵人外觀：異形家族（C 畫風）</title>
+<style>
+  body { margin: 0; padding: 12px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; font-size: 13px; }
+  h2 { font-size: 15px; margin: 14px 0 4px; }
+  .note { color: #a9adb6; margin-bottom: 6px; }
+  .ok { color: #7ddc3a; } .bad { color: #ff6a6a; }
+  canvas { display: block; margin: 4px 0 10px; }
+</style>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+</head>
+<body>
+<div id="selftest" class="note"></div>
+<h2>規則：身形 × 材質（每列一種身形；毛皮／熔岩／源晶；元素另外疊色）</h2>
+<canvas id="matrix"></canvas>
+<h2>家族名單（精英：金色外環＋前方金菱形＋詞綴；頭目：金環＋身體外光）</h2>
+<canvas id="families"></canvas>
+<h2>精英詞綴（同一隻灰狼，人形敵人也疊同一套）</h2>
+<canvas id="affixes"></canvas>
+<h2>戰場實際大小（52px 格、1 倍；朝東，最後一格朝西）</h2>
+<canvas id="field"></canvas>
+<script>
+const E = window.EnemyArt;
+function sheet(id, cols, cellW, cellH, rows, label = true) {
+  const c = document.getElementById(id), dpr = window.devicePixelRatio || 1;
+  c.width = cols * cellW * dpr; c.height = rows * cellH * dpr; c.style.width = `${cols * cellW}px`; c.style.height = `${rows * cellH}px`;
+  const x = c.getContext("2d"); x.scale(dpr, dpr); return x;
+}
+function cell(x, q, r, W, H, title, sub, shade) {
+  x.fillStyle = shade ? "#22262e" : "#262b33"; x.fillRect(q * W, r * H, W, H);
+  x.textAlign = "center"; x.fillStyle = "#e8e8ea"; x.font = "bold 12px 'Microsoft JhengHei'"; x.fillText(title, q * W + W / 2, r * H + 14);
+  if (sub) { x.fillStyle = "#a9adb6"; x.font = "11px 'Microsoft JhengHei'"; x.fillText(sub, q * W + W / 2, r * H + 27); }
+}
+
+// ---- 1. 身形 × 材質 ----
+{
+  const bodies = [["hound"], ["boar"], ["bear"], ["flyer", "bird"], ["flyer", "bat"], ["crawler", "beetle"], ["crawler", "spider"], ["lizard"], ["serpent"], ["shell"], ["ooze"], ["golem"], ["wisp"], ["pylon"]];
+  const mats = ["fur", "magma", "crystal"], W = 112, H = 118;
+  const x = sheet("matrix", bodies.length, W, H, mats.length);
+  bodies.forEach(([b, v], q) => mats.forEach((m, r) => {
+    cell(x, q, r, W, H, v ? { bird: "飛禽・鳥", bat: "飛禽・蝠", beetle: "爬蟲・甲蟲", spider: "爬蟲・蜘蛛" }[v] : E.BODIES[b].zh, { fur: "毛皮", magma: "熔岩", crystal: "源晶" }[m], (q + r) % 2);
+    E.stamp(x, { body: b, variant: v, material: m }, q * W + W / 2 - 2, r * H + H - 12, 1.45);
+  }));
+}
+
+// ---- 2. 家族名單 ----
+const FAM = [
+  ["野獸（中立，4～6 種）", [
+    ["灰狼", "近戰", { body: "hound", material: "fur" }],
+    ["野豬", "衝撞", { body: "boar", material: "fur" }],
+    ["山熊", "坦", { body: "bear", material: "fur" }],
+    ["岩鷹", "飛行", { body: "flyer", variant: "bird", material: "fur" }],
+    ["洞穴蛛", "控場", { body: "crawler", variant: "spider", material: "fur" }],
+    ["毒蛇", "毒", { body: "serpent", material: "fur", element: "poison" }],
+    ["北坡狼王", "精英・狂暴的", { body: "hound", material: "fur", tint: "#c8ccd2", size: "large", elite: true, affixes: ["berserk"] }],
+  ]],
+  ["熔岩獸群（灰燼荒原，8～10 種）", [
+    ["熔岩犬", "近戰", { body: "hound", material: "magma" }],
+    ["灰燼野豬", "衝撞", { body: "boar", material: "magma" }],
+    ["燼甲蟲", "坦", { body: "crawler", variant: "beetle", material: "magma" }],
+    ["熔岩蜥", "噴火", { body: "lizard", material: "magma" }],
+    ["渣殼龜", "坦", { body: "shell", material: "magma" }],
+    ["火蝠", "飛行", { body: "flyer", variant: "bat", material: "magma" }],
+    ["熔漿團", "死後留火地", { body: "ooze", material: "magma", size: "small" }],
+    ["熔岩蛇", "遠程", { body: "serpent", material: "magma" }],
+    ["爐心傀儡", "重擊", { body: "golem", material: "magma" }],
+    ["渣殼龜王", "精英・堅甲的", { body: "shell", material: "magma", size: "large", elite: true, affixes: ["armored"] }],
+    ["熔岩巨像", "頭目", { body: "golem", material: "magma", size: "large", glow: "#ffbf3a" }],
+  ]],
+  ["源晶失控造物（中立，4～6 種）", [
+    ["晶傀", "坦", { body: "golem", material: "crystal" }],
+    ["晶靈", "遠程法術", { body: "wisp", material: "crystal" }],
+    ["晶蛛", "控場", { body: "crawler", variant: "spider", material: "crystal" }],
+    ["晶塔", "遠程（不動）", { body: "pylon", material: "crystal" }],
+    ["晶蝕狼", "近戰", { body: "hound", material: "crystal" }],
+    ["共鳴晶核", "精英・元素的（雷）", { body: "wisp", material: "crystal", element: "lightning", size: "large", elite: true, affixes: ["elemental"] }],
+    ["碎晶之主", "賽季頭目（示意）", { body: "golem", material: "crystal", size: "huge", glow: "#ffbf3a" }],
+  ]],
+];
+{
+  const W = 112, H = 128, cols = Math.max(...FAM.map((f) => f[1].length));
+  const x = sheet("families", cols, W, H + 22, FAM.length);
+  FAM.forEach(([title, list], r) => {
+    x.textAlign = "left"; x.fillStyle = "#ffd78a"; x.font = "bold 13px 'Microsoft JhengHei'"; x.fillText(title, 4, r * (H + 22) + 15);
+    list.forEach(([zh, role, spec], q) => {
+      const y0 = r * (H + 22) + 22;
+      x.save(); x.translate(0, y0); cell(x, q, 0, W, H, zh, role, q % 2); x.restore();
+      x.save(); x.beginPath(); x.rect(q * W, y0, W, H); x.clip();
+      E.stamp(x, spec, q * W + W / 2 - 2, y0 + H - 12, spec.size === "huge" ? 1.05 : 1.35);
+      x.restore();
+    });
+  });
+}
+
+// ---- 3. 詞綴 ----
+{
+  const list = [[], ["berserk"], ["regen"], ["armored"], ["swift"], ["mirror"], ["elemental"], ["unknown_affix"]];
+  const W = 112, H = 112, x = sheet("affixes", list.length, W, H, 1);
+  list.forEach((a, q) => {
+    const zh = a.length === 0 ? "一般（無環）" : (E.AFFIX_ZH[a[0]] ?? "不認得→只有金環");
+    cell(x, q, 0, W, H, zh, a[0] === "elemental" ? "（火）" : a[0] ?? "", q % 2);
+    E.stamp(x, { body: "hound", material: "fur", elite: a.length > 0, affixes: a, element: a[0] === "elemental" ? "fire" : undefined }, q * W + W / 2, H - 12, 1.35);
+  });
+}
+
+// ---- 4. 戰場大小 ----
+{
+  const all = FAM.flatMap((f) => f[1]), T = 52, cols = 13, rows = Math.ceil(all.length / cols);
+  const x = sheet("field", cols, T, T, rows);
+  all.forEach(([, , spec], i) => {
+    const q = i % cols, r = Math.floor(i / cols);
+    x.fillStyle = (q + r) % 2 ? "#8a8a84" : "#7d8a7a"; x.fillRect(q * T, r * T, T, T);
+  });
+  all.forEach(([, , spec], i) => {
+    const q = i % cols, r = Math.floor(i / cols);
+    E.stamp(x, spec, q * T + T / 2, r * T + T * 0.88, 0.92 * (spec.size === "huge" ? 0.85 : 0.78), i === all.length - 1);
+  });
+}
+
+// ---- 全組合自測：所有身形 × 材質 × 元素 × 大小 × 詞綴，加上不認得的值，一律畫得出來、不丟錯 ----
+{
+  const c = document.createElement("canvas"); c.width = 200; c.height = 200; const x = c.getContext("2d");
+  const bodies = [...Object.keys(E.BODIES), "dragon_unknown", undefined], mats = [...E.MATERIALS, "lava_unknown", undefined];
+  const els = [undefined, ...Object.keys(E.ELEM), "void_unknown"], sizes = [...Object.keys(E.SIZES), "giant_unknown"];
+  const affs = [[], ["berserk", "regen", "armored", "swift", "mirror", "elemental"], ["nope"]];
+  let n = 0, fail = 0;
+  const vars = [undefined, "bat", "spider", "?"];
+  for (const b of bodies) for (const m of mats) for (const e of els) for (const a of affs) {
+    const s = sizes[n % sizes.length], v = vars[n % vars.length];
+    try { E.stamp(x, { body: b, material: m, element: e, size: s, affixes: a, variant: v, elite: a.length > 0 }, 100, 150, 1); n++; } catch (err) { fail++; n++; console.error(err); }
+  }
+  n -= fail;
+  const glowOk = (() => { try { E.stamp(x, { body: "golem", glow: "#ffbf3a" }, 100, 150, 1); return true; } catch { return false; } })();
+  document.getElementById("selftest").innerHTML = `全組合自測：${n + fail} 種組合，<span class="${fail ? "bad" : "ok"}">${fail} 個出錯</span>；頭目外光 <span class="${glowOk ? "ok" : "bad"}">${glowOk ? "OK" : "出錯"}</span>`;
+}
+document.title += " ✓";
+</script>
+</body>
+</html>
