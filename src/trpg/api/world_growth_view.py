@@ -68,7 +68,7 @@ SERVICE_ZH: Final = "閃現、重閃、溶掉、傳承、重配屬性、立誓�
 UNAVAILABLE_ZH: Final = "尚未開放"
 SLOT_ZH: Final = "誓約佔 1 格被動欄位（立誓後被動技能最多裝 2 招）"
 JUDGE_IN_BATTLE_ZH: Final = "戰鬥中判定：違反時立刻移除加成"
-JUDGE_AT_END_ZH: Final = "戰鬥結束時判定（只記錄）"
+JUDGE_AT_END_ZH: Final = "戰鬥結束時判定（沒達到：破誓帶到下一場開場）"
 PERMILLE_ONE: Final = 1000
 DIFFICULTY_ZH: Final[dict[str, str]] = {"easy": "易", "medium": "中", "hard": "難"}
 _END_REASON_ZH: Final[dict[str, str]] = {"max_rounds": "輪數用完"}
@@ -222,7 +222,7 @@ def _penalty_zh(library: ContentLibrary, table: OathTable | None) -> str:
     effect = _permille_zh(status.damage_dealt_permille, status.damage_taken_permille)
     return (
         f"違反：本場加成移除＋〔{status.name_zh}〕{table.penalty_rounds} 回合{effect}；"
-        "下一場恢復（戰鬥結束時才判定的誓約只記錄）"
+        "下一場恢復（戰鬥結束時才判定的誓約，破誓帶到下一場開場）"
     )
 
 
@@ -500,7 +500,10 @@ def _oath_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str]
         return f"解除誓約「{oath_name(event.template)}」：現實 1 天內不能再立誓。"
     if isinstance(event, OathBrokenEvent):
         if event.at_end:
-            return f"戰鬥結束：沒有守住誓約「{oath_name(event.template)}」（只記錄）。"
+            return (
+                f"戰鬥結束：沒有守住誓約「{oath_name(event.template)}」，"
+                "破誓 2 回合帶到下一場開場（下一場的誓約加成照常）。"
+            )
         return f"違反誓約「{oath_name(event.template)}」：加成移除、陷入破誓；下一場恢復。"
     if isinstance(event, OathKeptEvent):
         return f"守住了誓約「{oath_name(event.template)}」。"

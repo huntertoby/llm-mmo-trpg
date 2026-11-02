@@ -1007,6 +1007,11 @@ def _load_world_mercenaries(
     ]
     profiles = ai_profiles.by_id()
     problems += [f"AI 打法 {p} 不在 ai_profiles" for p in table.ai_choices if p not in profiles]
+    problems += [
+        f"夥伴 {c.id} 的 AI 打法 {c.ai_profile} 不在 ai_profiles"
+        for c in table.companions
+        if c.ai_profile is not None and c.ai_profile not in profiles
+    ]
     if problems:
         raise ContentError(path, "；".join(problems))
     return table

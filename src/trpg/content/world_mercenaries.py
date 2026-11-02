@@ -69,6 +69,8 @@ class CompanionDef(ContentModel):
     title_zh: str = Field(min_length=1)
     build: str = Field(pattern=ID_PATTERN)
     """底稿：``content/sim/builds.yaml`` 的 build ID。"""
+    ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
+    """夥伴的打法（``ai_profiles.yaml``；5C-3b：阿岳＝弓手，保持距離遠程射擊）；``None``＝底稿預設。"""
     affinity_per_win: int = Field(default=0, ge=0, le=100)
     """帶他打贏一場給的好感度（18.7.6：阿岳 +2）。"""
     affinity_daily_cap: int = Field(default=0, ge=0, le=100)

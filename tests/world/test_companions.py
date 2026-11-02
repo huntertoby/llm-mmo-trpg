@@ -177,3 +177,15 @@ def test_fight_with_ayue_and_replay(calm: ContentLibrary, make_char: MakeChar) -
     assert first.characters[who].quest_state("starter_ferry") == QuestState(
         quest="starter_ferry", started_at=NOON
     )
+
+
+def test_ayue_keeps_distance_with_archer_profile(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    char = _accept(library, make_char())
+    encounter = make_encounter("ferry_steps", seed=3, battle_map="cliff_outpost")
+    ready = char.model_copy(update={"location": "ferry_steps", "pending_encounter": encounter})
+    allies = [u for u in prepare_battle(library, ready).setup.units if u.team is Team.ALLY]
+    ayue = next(u for u in allies if u.template.id == AYUE)
+    assert ayue.template.ai_profile == "archer"  # 5C-3b：遠程保持距離的打法（弓手）
+    assert library.ai_profiles.by_id()["archer"].weights.keep_distance > 0

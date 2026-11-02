@@ -198,7 +198,9 @@ def companion_spawns(library: ContentLibrary, char: CharacterState) -> tuple[Uni
     spawns: list[UnitSpawn] = []
     for companion in companion_defs(library, char):
         base = builds[companion.build].hero
-        update = {"id": companion.id, "name_zh": companion.name_zh}
+        update: dict[str, object] = {"id": companion.id, "name_zh": companion.name_zh}
+        if companion.ai_profile is not None:  # 打法（阿岳＝弓手，遠程保持距離；5C-3b）
+            update["ai_profile"] = companion.ai_profile
         template = slot_capped(library, base).model_copy(update=update)
         spawns.append(
             UnitSpawn(

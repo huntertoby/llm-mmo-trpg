@@ -1085,7 +1085,7 @@ def _rule_change_triggered(e: RuleChangeTriggered, v: _View) -> str:
 def _oath_broken(e: OathBroken, v: _View) -> str:
     who = v.name[e.unit_id]
     if e.at_end:
-        return f"  ✦ 戰鬥結束：{who} 沒有守住誓約"
+        return f"  ✦ 戰鬥結束：{who} 沒有守住誓約，破誓會帶到下一場開場"
     return f"  ✦ {who} 違反了誓約：誓約之力消失，陷入破誓"
 
 

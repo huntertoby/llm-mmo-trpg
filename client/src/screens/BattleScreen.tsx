@@ -393,6 +393,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         liveNames={data.liveNames}
         focusTile={data.focusTile}
         model={data.model}
+        oathWarning={actions.oathPending?.warning ?? null}
+        onConfirmOath={actions.confirmOath}
+        onCancelOath={actions.cancelOath}
         infusionPick={actions.infusionPick}
         infusionOptions={actions.infusionOptions}
         onCancelInfusion={closeInfusion}

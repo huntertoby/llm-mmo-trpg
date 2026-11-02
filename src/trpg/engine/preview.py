@@ -93,6 +93,7 @@ from trpg.engine.events import (
 from trpg.engine.gear.charge import find_charge
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.maneuvers import contest_chance
+from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
 from trpg.engine.race.skills import race_skill_of
 from trpg.engine.results import ResolveResult
@@ -458,6 +459,9 @@ class Preview:
     """複合技能：第二段的影響格（``affected_tiles`` 已含兩段）。"""
     infusion: InfusionInfo | None = None
     """灌注技能（Phase 3-33d）：召喚物會從自己的位置施放的範圍；其他動作為 ``None``。"""
+    oath_warning: str | None = None
+    """動作會（或可能會）違反誓約時的中文原因（Phase 5C-3b；引擎的 ``oath_warning`` 判定）；
+    沒有誓約或不違反為 ``None``。"""
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁依此寫說明）；其他動作為 ``None``。
     延遲段的 ``landing``／``followup_tiles`` 是施放後以施放者位置推算的預計範圍。"""
@@ -1384,6 +1388,9 @@ def preview(state: BattleState, action: Action) -> Preview:
     stripped = strip_hidden_traps(state, actor.team)
     low, high = simulate_preview(stripped, action)
     base = _build(state, action, actor, low, high)
+    warning = oath_warning(state, action, (low.state, high.state))
+    if warning is not None:
+        base = replace(base, oath_warning=warning)
     spec = _gamble_spec(state, actor, action)
     if spec is None or spec.chance_permille is None:
         return base

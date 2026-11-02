@@ -238,6 +238,7 @@ def battle_response(
         variant_states=variant_states(state, session.hero_id, legal)
         if awaiting == "action"
         else (),
+        oath_active=state.oath is not None and not state.oath.broken and not state.oath.pending,
         pending=pending,
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),

@@ -3340,6 +3340,11 @@
             "title": "Variant States",
             "default": []
           },
+          "oath_active": {
+            "type": "boolean",
+            "title": "Oath Active",
+            "default": false
+          },
           "followup_options": {
             "items": {
               "$ref": "#/components/schemas/FollowupOptionOut"
@@ -11557,6 +11562,17 @@
                 "type": "null"
               }
             ]
+          },
+          "oath_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oath Warning"
           },
           "variant": {
             "anyOf": [

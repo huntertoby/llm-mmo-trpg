@@ -3,7 +3,7 @@
 # 違反＝本場加成移除＋debuff 2 回合、下一場恢復；09 9.6.10 #106：主城、小鎮、營火立誓，同時 1 個，
 # 一直有效到自己解除，解除後現實 1 天內不能再立。ID 由開發 PM 取。
 # check.kind 是引擎判定得了的條件（trpg.engine.oaths）；bind 把參數填進判定的欄位。
-# min_melee_kills、min_status_applied 只能在戰鬥結束時判定（只記錄，代決 5C3-11），其他都在戰鬥中判定。
+# min_melee_kills、min_status_applied 只能在戰鬥結束時判定（沒達到：破誓 2 回合帶到下一場開場，5C-3b），其他都在戰鬥中判定。
 cooldown_seconds: 86400          # #106 現實 1 天（代決 5A6-10）
 bonuses:                         # 難度 → 加成狀態（content/statuses.yaml；數值初值，代決 5C3-6）
   easy: oath_bonus_easy
@@ -67,7 +67,7 @@ templates:
 
   - id: oath_no_reactions
     name_zh: 不使用反應
-    description_zh: 這場戰鬥裡，你不發動任何反應（格擋與反應技）。
+    description_zh: 這場戰鬥裡，你不發動任何反應（格擋與反應技）。立誓後開戰時會自動把反應設定關掉；自己再打開而發動，仍算違反。
     difficulty: medium
     check: {kind: forbid_reaction}
 

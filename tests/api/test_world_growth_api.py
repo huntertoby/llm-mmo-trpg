@@ -362,7 +362,7 @@ def test_real_oath_templates_and_opening(ambush: ContentLibrary, tmp_path: Path)
         assert element["judge_zh"] == "戰鬥中判定：違反時立刻移除加成"
         melee = by_id["oath_melee_kills"]
         assert melee["difficulty_zh"] == "易／中"
-        assert melee["judge_zh"] == "戰鬥結束時判定（只記錄）"
+        assert melee["judge_zh"] == "戰鬥結束時判定（沒達到：破誓帶到下一場開場）"
         sworn = _act(
             client,
             cid,

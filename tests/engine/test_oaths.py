@@ -14,13 +14,14 @@ import pytest
 from tests.engine.helpers import DEMO_ALLIES, DEMO_ENEMIES, library
 from trpg.content.world_oaths import OathCheck
 from trpg.engine import EndTurn, build_setup, resolve
-from trpg.engine.actions import Move
+from trpg.engine.actions import Action, Move, SetReactionMode
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.battle import begin_battle, legal_actions
 from trpg.engine.events import (
     DamageDealt,
     EventBase,
     OathBroken,
+    ReactionModeSet,
     ReactionTriggered,
     SkillUsed,
     StatusApplied,
@@ -28,6 +29,7 @@ from trpg.engine.events import (
     UnitDowned,
 )
 from trpg.engine.oaths import ELEMENT_EXEMPT_CAUSES, OathSetup
+from trpg.engine.preview import preview
 from trpg.engine.runner import run_battle
 from trpg.engine.setup import BattleSetup
 from trpg.engine.state import BattleState
@@ -209,10 +211,6 @@ def _element_oracle(state: BattleState, holder: UnitId, event: EventBase) -> boo
     )
 
 
-def _reaction_oracle(state: BattleState, holder: UnitId, event: EventBase) -> bool:
-    return isinstance(event, ReactionTriggered) and event.unit_id == holder
-
-
 def _ally_oracle(state: BattleState, holder: UnitId, event: EventBase) -> bool:
     if not isinstance(event, UnitDowned) or event.unit_id == holder:
         return False
@@ -245,7 +243,6 @@ CASES: list[tuple[OathCheck, int, Oracle]] = [
         _skill_oracle(lambda _t, c: c == "weapon"),
     ),
     (OathCheck(kind="damage_element_only", element="fire"), 0, _element_oracle),
-    (OathCheck(kind="forbid_reaction"), 0, _reaction_oracle),
     (OathCheck(kind="protect_allies"), 0, _ally_oracle),
 ]
 
@@ -271,3 +268,92 @@ def test_auto_battle_breaks_after_first_violation(
     assert not broken[0].at_end
     again = run_battle(setup, seed, policy)  # 確定性
     assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]
+
+
+# ---------------------------------------------------------------------------
+# 5C-3b：帶到下一場的破誓、不使用反應自動關閉、按下前警告
+# ---------------------------------------------------------------------------
+
+
+def _with(check: OathCheck, **update: object) -> BattleSetup:
+    setup = _setup(check)
+    assert setup.oath is not None
+    return setup.model_copy(update={"oath": setup.oath.model_copy(update=update)})
+
+
+def test_start_penalty_applies_at_open_and_bonus_stays() -> None:
+    opened = begin_battle(_with(OathCheck(kind="attack_each_turn"), start_penalty_rounds=2), 1)
+    holder = opened.state.units[_holder(opened.state)]
+    assert holder.has_status(BONUS)  # 下一場的誓約加成照常
+    penalty = holder.get_status(PENALTY)
+    assert penalty is not None and penalty.remaining == 2
+    assert not _broken(opened.events)  # 開場帶的破誓不是這場的違反
+    assert opened.state.oath is not None and not opened.state.oath.broken
+
+
+def test_no_reactions_oath_turns_reactions_off_at_open() -> None:
+    plain = begin_battle(_setup(None), 1).state
+    assert any(r.mode != "off" for u in plain.units_sorted() for r in u.reactions)
+    opened = begin_battle(_setup(OathCheck(kind="forbid_reaction")), 1)
+    holder = opened.state.units[_holder(opened.state)]
+    assert holder.reactions and all(r.mode == "off" for r in holder.reactions)
+    assert any(isinstance(e, ReactionModeSet) for e in opened.events)
+    others = [u for u in opened.state.units_sorted() if u.id != holder.id]
+    assert any(r.mode != "off" for u in others for r in u.reactions)  # 只關持有者
+
+
+def test_turning_reactions_back_on_warns_and_setting_itself_is_not_a_breach() -> None:
+    state = _to_holder_turn(begin_battle(_setup(OathCheck(kind="forbid_reaction")), 1).state)
+    holder = state.units[_holder(state)]
+    action = SetReactionMode(unit_id=holder.id, reaction=holder.reactions[0].reaction, mode="auto")
+    warning = preview(state, action).oath_warning
+    assert warning is not None and warning.startswith("會違反誓約")
+    assert preview(state, EndTurn(unit_id=holder.id)).oath_warning is None
+    reopened = resolve(state, action).state
+    assert reopened.oath is not None and not reopened.oath.broken
+
+
+def test_preview_warns_before_the_violation_and_matches_the_real_result() -> None:
+    state = _to_holder_turn(begin_battle(_setup(OathCheck(kind="attack_each_turn")), 2).state)
+    end = EndTurn(unit_id=_holder(state))
+    warning = preview(state, end).oath_warning
+    assert warning is not None and warning.startswith("會違反誓約「oath_test」")
+    assert _broken(resolve(state, end).events)  # 引擎的警告與真正結算一致
+    quiet = begin_battle(_setup(None), 2).state
+    assert quiet.active_unit is not None
+    assert preview(quiet, EndTurn(unit_id=quiet.active_unit)).oath_warning is None
+    broken = resolve(state, end).state  # 已經違反：不再警告
+    assert preview(_to_holder_turn(broken), end).oath_warning is None
+
+
+def test_reactions_stay_off_in_auto_battle_and_reopening_then_triggering_breaks() -> None:
+    inner = UtilityAI(library().ai_profiles)
+    triggered = 0
+    for seed in range(6):
+        setup = _setup(OathCheck(kind="forbid_reaction"))
+        quiet = run_battle(setup, seed, inner)
+        assert not _broken(quiet.events)  # 反應設定被關掉，不會觸發
+        holder = _holder(quiet.state)
+        assert not any(
+            isinstance(e, ReactionTriggered) and e.unit_id == holder for e in quiet.events
+        )
+
+        def reopen(state: BattleState, holder: UnitId = holder) -> Action:
+            unit = state.units[holder]
+            for rule in unit.reactions:
+                if rule.mode == "off":
+                    return SetReactionMode(unit_id=holder, reaction=rule.reaction, mode="auto")
+            return inner(state)
+
+        run = run_battle(setup, seed, inner, controllers={holder: reopen})
+        first = next(
+            (e for e in run.events if isinstance(e, ReactionTriggered) and e.unit_id == holder),
+            None,
+        )
+        broken = _broken(run.events)
+        if first is None:
+            assert not broken
+            continue
+        triggered += 1
+        assert len(broken) == 1 and broken[0].seq > first.seq
+    assert triggered > 0, "這組測試要真的有觸發反應的情形"
