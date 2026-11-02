@@ -738,6 +738,8 @@ def _damage(e: DamageDealt, v: _View) -> str:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     if e.formation_permille != _PERMILLE:  # 已包含在狀態倍率裡（Phase 5A-M2）
         mod += f"（陣法 ×{e.formation_permille / _PERMILLE:g}）"
+    if e.ward_permille != _PERMILLE:  # 已包含在狀態倍率裡（Phase 5A-M2b）
+        mod += f"（護陣 ×{e.ward_permille / _PERMILLE:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
     linked = f"（{e.redirected} 點轉給連結者）" if e.redirected else ""
     linked += f"（{e.shared} 點分給同門）" if e.shared else ""

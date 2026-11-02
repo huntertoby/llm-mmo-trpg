@@ -6,6 +6,8 @@
 
 - ``formation``（:class:`~trpg.content.battle.FormationSpec`）：持有者造成的攻擊傷害 × 陣法倍率
   （:func:`formation_permille`；傷害結算的 ``damage_dealt`` 那一步乘上）。
+- ``ward``（:class:`~trpg.content.battle.WardSpec`，Phase 5A-M2b「陣眼石靈」）：持有者還在場時，
+  範圍內的同門（不含持有者）受到的骰值傷害 × 護陣倍率（:func:`ward_permille`）；持有者倒下即解除。
 - ``share_damage``（:class:`~trpg.content.battle.ShareDamageSpec`）：持有者受到的傷害分一部分給
   範圍內的同門（:func:`share_split`；傷害結算在護盾與靈魂連結之後套用）。
 
@@ -15,7 +17,7 @@
 
 from __future__ import annotations
 
-from trpg.content.battle import FormationSpec, ShareDamageSpec
+from trpg.content.battle import FormationSpec, ShareDamageSpec, WardSpec
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.state import BattleState, StatusInstance, UnitState
@@ -27,6 +29,8 @@ __all__ = [
     "kin_in_range",
     "share_spec",
     "share_split",
+    "ward_holders",
+    "ward_permille",
 ]
 
 
@@ -95,3 +99,29 @@ def share_split(
     each, extra = divmod(total, len(kin))
     shares = [(u, each + (1 if i < extra else 0)) for i, u in enumerate(kin)]
     return [(u, n) for u, n in shares if n > 0]
+
+
+def ward_holders(state: BattleState, unit: UnitState) -> list[tuple[UnitState, WardSpec]]:
+    """護住 ``unit`` 的護陣（Phase 5A-M2b）：同陣營、存活、不是 ``unit`` 自己的護陣持有者，
+    ``unit`` 帶 ``kin_tag`` 且在持有者 ``range`` 格內；依持有者 ID、狀態順序。"""
+    found: list[tuple[UnitState, WardSpec]] = []
+    for holder in state.living_units():
+        if holder.id == unit.id or holder.team is not unit.team:
+            continue
+        for status in holder.statuses:
+            spec = state.ruleset.status_def(status.status_id).ward
+            if (
+                spec is not None
+                and (spec.kin_tag is None or unit.has_tag(spec.kin_tag))
+                and manhattan(holder.xy, unit.xy) <= spec.range
+            ):
+                found.append((holder, spec))
+    return found
+
+
+def ward_permille(state: BattleState, unit: UnitState) -> int:
+    """``unit`` 受到的護陣倍率（‰；沒有護陣時 1000）。多個護陣依序相乘、逐步捨去。"""
+    total = PERMILLE
+    for _, spec in ward_holders(state, unit):
+        total = total * spec.taken_permille // PERMILLE
+    return total

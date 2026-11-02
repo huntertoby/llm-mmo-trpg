@@ -43,7 +43,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
-from trpg.engine.formation import formation_permille, share_spec, share_split
+from trpg.engine.formation import formation_permille, share_spec, share_split, ward_permille
 from trpg.engine.forms import leave_form
 from trpg.engine.ids import (
     BOSS_ESCORT_TAG,
@@ -130,11 +130,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     base_amount: int | None = None
     status_ppm = PPM
     absorbed = 0
-    formation = (  # 陣法（Phase 5A-M2）：只對骰值傷害
-        PERMILLE
-        if effect.mode in ("lethal", "percent_max_hp")
-        else _formation_permille(ctx, effect)
-    )
+    formation, ward = _formation_and_ward(ctx, effect, unit)
     events: list[EventBase] = []
     if effect.mode == "lethal":
         amount = unit.hp
@@ -148,9 +144,9 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
         dealt = _dealt_permille(ctx, effect, unit) * formation // PERMILLE  # 虛弱、陣法
-        status_ppm = dealt * damage_taken_permille(
-            ctx.rules, unit, effect.element
-        )  # 易傷、石膚；千分比 × 千分比
+        status_ppm = (  # 易傷、石膚（千分比 × 千分比）再乘護陣
+            dealt * damage_taken_permille(ctx.rules, unit, effect.element) * ward // PERMILLE
+        )
         multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
         multiplier //= PERMILLE
         multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
@@ -206,6 +202,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             redirected=redirected,
             shared=shared,
             formation_permille=formation,
+            ward_permille=ward,
             exploded=exploded,
             block_permille=effect.block_permille,
             flat=effect.flat,
@@ -309,6 +306,14 @@ def _dealt_permille(ctx: Ctx, effect: DamageEffect, target: UnitState) -> int:
             own = own * summon_damage_dealt_permille(ctx.rules, owner) // PERMILLE
         return own
     return PERMILLE
+
+
+def _formation_and_ward(ctx: Ctx, effect: DamageEffect, unit: UnitState) -> tuple[int, int]:
+    """（陣法倍率, 護陣倍率），‰：只對骰值傷害（Phase 5A-M2／5A-M2b）；致命與最大 HP 比例傷害為
+    1000。"""
+    if effect.mode in ("lethal", "percent_max_hp"):
+        return PERMILLE, PERMILLE
+    return _formation_permille(ctx, effect), ward_permille(ctx.state, unit)
 
 
 def _formation_permille(ctx: Ctx, effect: DamageEffect) -> int:
