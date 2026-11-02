@@ -80,4 +80,9 @@
 
 ## 8. 檢查
 
-（見第 9 節，交件前填）
+- 已 `git merge main` 兩次（5B-5b `1c2ea681`、玩法 PM 文件 `4fec52dd`；後者只改設計文件與交接，和本段一致）。計畫文件：本段第 21 節、之後各段第 22 節。
+- 開發中：`uv run pytest -q tests/world tests/content tests/api tests/roguelite/test_offers.py -n 8 --timeout=1800`：2737 passed。
+- 合併 5B-5b 後：`uv run pytest -q tests/cli tests/test_architecture.py tests/world tests/content tests/api tests/roguelite/test_offers.py -m "slow or not slow" -n 8 --timeout=3000`：**2934 passed**（CLI 快照不用重產）。
+- 前端：`npx vitest run` 127 檔、1214 passed；`npm run build` 通過（只有既有的 chunk 大小警告）。依賴用 `corepack pnpm -C client install --frozen-lockfile` 裝在 worktree。
+- `ruff check .`、`ruff format --check .`、`mypy`（1060 檔）、`lint-imports`（9 kept）通過。
+- 新增的 `# noqa`：`solutions._opportunity` 的 `PLR0917`（同 5B-4b 的 `_parley`、`_combat`：一個解法的完整結算要的參數）。沒動引擎，不需戰鬥重播；沒跑全量 `scripts/check.py`。
