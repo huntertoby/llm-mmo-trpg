@@ -1,0 +1,15 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）是 5A-ART 的事，這裡不寫。
+# 源晶失控造物：近戰；死後帶電碎片沒有對應機制（代決 5A3-2）。
+id: shard_golem
+name_zh: 碎晶傀儡
+attributes: {str: 14, dex: 8, con: 14, int: 4, wis: 8, wil: 10}
+max_hp: 36
+speed: 4
+armor_bonus: 3
+weapon: stone_fist
+ai_profile: brute
+resist: {}
+element_mods: {lightning: -500}
+tags: [construct]
+skills: [skill_rock_smash]

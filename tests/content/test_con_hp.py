@@ -83,6 +83,23 @@ OLD_HP = {
     "summon_plateau_totem": 18,  # 3-33e2b 新增
     "summon_water_sprite": 12,
     "training_dummy": 300,
+    "sect_acolyte": 22,  # 5A-3 新增（雲嶺）
+    "sect_swordsman": 36,  # 5A-3 新增（雲嶺）
+    "sect_talisman_caster": 24,  # 5A-3 新增（雲嶺）
+    "sect_alchemist": 32,  # 5A-3 新增（雲嶺）
+    "sect_warrior_monk": 58,  # 5A-3 新增（雲嶺）
+    "sect_array_disciple": 26,  # 5A-3 新增（雲嶺）
+    "sect_mist_walker": 24,  # 5A-3 新增（雲嶺）
+    "sect_crane_archer": 26,  # 5A-3 新增（雲嶺）
+    "sect_puppeteer": 24,  # 5A-3 新增（雲嶺）
+    "sect_array_stone": 48,  # 5A-3 新增（雲嶺）
+    "sect_steward": 62,  # 5A-3 新增（雲嶺）
+    "mist_wolf": 22,  # 5A-3 新增（雲嶺）
+    "mountain_leopard": 26,  # 5A-3 新增（雲嶺）
+    "stoneback_bear": 62,  # 5A-3 新增（雲嶺）
+    "thunder_hawk": 14,  # 5A-3 新增（雲嶺）
+    "mist_wraith": 22,  # 5A-3 新增（雲嶺）
+    "shard_golem": 48,  # 5A-3 新增（雲嶺）
 }
 
 

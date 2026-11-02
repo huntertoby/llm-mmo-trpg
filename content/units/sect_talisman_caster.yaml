@@ -1,0 +1,15 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）是 5A-ART 的事，這裡不寫。
+# 山中修士・控制：「定身符」（定身）、「雷符」（帶電）。用法器但算遠程（ranged 標籤，代決 5A3-7）。
+id: sect_talisman_caster
+name_zh: 符籙師
+attributes: {str: 8, dex: 12, con: 10, int: 14, wis: 12, wil: 10}
+max_hp: 24
+speed: 5
+armor_bonus: 1
+weapon: totem_staff
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [humanoid, ranged, sect]
+skills: [skill_frost_shackle, skill_static_palm]

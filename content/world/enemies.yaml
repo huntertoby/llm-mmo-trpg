@@ -1,0 +1,51 @@
+# 大世界敵人的元素變體與精英詞綴（Phase 5A-3；schema：src/trpg/content/world_enemies.py）。
+# 規則：docs/design/09-世界與敘事.md 9.6.6（#82：變體換元素或武器、精英帶詞綴，都是 content 資料）。
+# 內容：docs/design/18-雲嶺內容.md 18.2.1（#111，玩法 PM 代決、待使用者確認）。
+# 只用既有技能與反應；引擎沒有的機制照最保守替代（docs/phases/Phase5計畫.md 7.6 代決 5A3-3）。
+# 數值（hp_permille）是開發 PM 的初值，未經模擬。
+
+# 變體：以 base 範本為底，換名字、武器與技能；theme 是外觀用的元素標記（5A-ART）。
+variants:
+  - id: thunder_talisman_caster
+    base: sect_talisman_caster
+    name_zh: 雷符師
+    theme: lightning
+    weapon: lightning_staff
+    skill_swaps: {skill_frost_shackle: skill_spark_chain}
+  - id: frost_crane_archer
+    base: sect_crane_archer
+    name_zh: 冰鶴使
+    theme: ice
+    skill_swaps: {skill_rng_hawkeye_mark: skill_annotated_frost}   # 命中緩速
+  - id: water_alchemist
+    base: sect_alchemist
+    name_zh: 水煉丹師
+    theme: water
+    skill_swaps: {skill_poison_mist: skill_splash_flask}   # 丹爆改成造水
+
+# 精英詞綴：套上的單位加 elite 標籤、HP × hp_permille、加技能與反應規則。
+affixes:
+  - id: regenerating
+    name_zh: 再生的
+    description_zh: 每回合結束回血。
+    add_skills: [skill_steady_breath]
+    hp_permille: 1500
+  - id: mist_veiled
+    name_zh: 霧隱的
+    description_zh: 受到攻擊時隱入霧中（原設計「開場隱蔽 1 回合」沒有對應機制，代決 5A3-3）。
+    add_skills: [skill_rx_slip_away]
+    add_reactions:
+      - reaction: skill_rx_slip_away
+        when: {event: hit_by_attack}
+    hp_permille: 1500
+  - id: heart_linked
+    name_zh: 連心的
+    description_zh: 以魂結連起同伴、分擔傷害（原設計是把自己受的傷分給相鄰同門，方向相反，代決 5A3-3）。
+    add_skills: [skill_soul_bond]
+    hp_permille: 1500
+  - id: berserk
+    name_zh: 狂暴的
+    description_zh: 傷得越重砍得越狠（近戰限定）。
+    add_skills: [skill_berserker_rage]
+    hp_permille: 1500
+    weapon_classes: [melee]

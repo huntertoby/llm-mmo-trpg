@@ -1,0 +1,16 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）是 5A-ART 的事，這裡不寫。
+# 山中修士・物件型：不行動、不會被推動；陣法加成沒有對應機制，只是高護甲物件（代決 5A3-2）。
+id: sect_array_stone
+name_zh: 陣眼石靈
+attributes: {str: 10, dex: 6, con: 16, int: 6, wis: 10, wil: 10}
+max_hp: 30
+speed: 0
+armor_bonus: 4
+weapon: fist
+ai_profile: idle
+resist: {}
+element_mods: {}
+tags: [immovable, sect]
+stamina: 0
+reactions: []
