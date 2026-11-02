@@ -442,6 +442,173 @@ north_slope – crystal_rift        sword_tomb – crystal_rift        crystal_r
 
 ---
 
-## 6. 之後各段規格
+## 6. 5A-2 詳細規格：`trpg.world` 套件骨架
 
-（5A-1 驗收後補上 5A-2。）
+> 給實作 agent。只動 `src/trpg/world/`（新）、`src/trpg/content/`（新增世界規則 schema 與載入）、`content/world/rules.yaml`（新）、`tests/world/`（新）、`tests/content/`、`tests/test_architecture.py`、`pyproject.toml`（import-linter 契約）。**不做** API、前端、敵人與遭遇表（5A-3）、開戰與戰後回寫（5A-4）。不動 `content/skills/`、`src/trpg/skillgen/`、`trpg.roguelite`、`trpg.engine`。
+> 依據：09 9.6.2、9.6.7 #9～#11、#15、#16、9.6.9「時間」、9.6.10 #104、9.6.11 #112（隱藏地點感知）、#113（回復）、#114（營火＝紮營）；`docs/專案計畫.md` 3.1（一天＝現實 30 分鐘、Asia/Taipei 6 點刷新）；05 5.1「各區天氣傾向」、5.7 天氣 4 種；本檔第 2 節。
+
+### 6.1 目標
+
+大世界的確定性規則核心：角色在地點圖上走動、每一步擲遇敵、走到隱藏地點旁自動感知判定、非戰鬥地點紮營；世界時鐘與各區天氣。全部是純函式：`world_step(library, world, char, action, now) → StepResult(world, char, events)`，時間 `now`（UTC 秒數整數）由呼叫端傳入；「初始快照＋世界動作日誌」可重播出相同快照。遇敵只產生 **遭遇結果** 資料（不開戰）。
+
+### 6.2 交付項目
+
+1. **世界規則 content**：`content/world/rules.yaml` ＋ schema `src/trpg/content/world_rules.py`（`WorldRules`），`ContentLibrary.world_rules: WorldRules | None`（檔案不存在＝`None`，讓舊測試的精簡 content 照常載入）。跨檔案檢查：天氣 ID 必須在 `weather.yaml`、區域 ID 必須在 `regions.yaml`。
+2. **`trpg.world` 套件**（新）：
+   - `clock.py`：時鐘純函式。
+   - `rng.py`：世界亂數衍生。
+   - `state.py`：`WorldState`（`trpg-world/1`）、`CharacterState`（`trpg-char/1`）與子模型。
+   - `actions.py`：世界動作（pydantic 判別聯集）、事件、`EncounterResult`。
+   - `step.py`：`world_step`（移動＋遇敵、感知判定、紮營）與 `WorldActionError`。
+   - `replay.py`：世界動作日誌（`trpg-wlog/1`）與重播。
+   - `save.py`：三種格式的序列化／讀取（拒絕未知 `format`）與原子寫檔。
+3. **import-linter 契約**（第 2.3 節）與 `tests/test_architecture.py` 對應更新；確定性掃描延伸到 `world`，並新增禁止內建 `hash()` 呼叫（第 3 節「確定性驗收」）。
+4. **測試** `tests/world/`（見 6.6）。
+5. **完成報告** `docs/phases/Phase5A-2報告.md`：交付、模組結構、確定性與重播測試、代決清單、待 PM 決定。
+
+### 6.3 時鐘（`trpg.world.clock`，數值是使用者已定的事，寫成常數）
+
+| 常數 | 值 | 依據 |
+|---|---|---|
+| `GAME_DAY_SECONDS` | 1800（現實 30 分鐘＝遊戲 1 天） | 3.1、9.6.9 |
+| `WEATHER_PERIOD_SECONDS` | 900（半天換一次天氣） | 9.6.10 #104 |
+| `UTC_OFFSET_SECONDS` | 8 × 3600（Asia/Taipei 固定位移，不讀系統時區） | 2.1 |
+| `REFRESH_HOUR` | 6（現實早上 6 點刷新） | 3.1、9.6.9 |
+
+函式（全部只吃 `now: int`，負數拋 `ValueError`）：
+
+- `game_day_index(now) = now // 1800`；`half_day_index(now) = now // 900`。遊戲日以 Unix 紀元對齊：台北 06:00（UTC 22:00）是 1800 的倍數，所以每天的刷新點一定是遊戲日的開頭。
+- `day_phase(now) -> "day" | "night"`：遊戲日前半（前 15 分鐘）＝白天、後半＝夜晚。
+- `game_clock(now) -> (hour, minute)`：遊戲內時刻，遊戲日從 06:00 開始（白天 06:00～18:00、夜晚 18:00～06:00）。
+- `refresh_day(now) = (now + 8h − 6h) // 86400`：「哪一天」（以台北早上 6 點為界）；每日一次的判定用它。
+- `next_refresh_at(now)`：下一次 6 點刷新的 UTC 秒數。
+
+### 6.4 資料結構
+
+**`content/world/rules.yaml`（`WorldRules`；初值，開發 PM 定、之後模擬定，9.6.10「數值類」）**
+
+```yaml
+supplies:
+  max: 10  # 補給上限（9.6.7 #11）
+  start: 5  # 新角色帶的補給
+camp_cost: 1  # 紮營花的補給（#114）
+hasten:
+  cost: 1  # 趕路花的補給（9.6.7 #9）
+  encounter_permille: 500  # 趕路時遇敵機率 × 500‰
+encounter:  # 遇敵機率（‰）＝ min(max, base + per_level ×（建議等級 − 1））；town、gate 為 0
+  base_permille: 150
+  per_level_permille: 30
+  max_permille: 500
+perception:  # #112：DC ＝ dc_base ＋ 建議等級 ÷ level_divisor（捨去）
+  dc_base: 10
+  level_divisor: 2
+weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 對應 day_phase
+  - {region: cloud_ridge, day: {clear: 2, rain: 3, fog: 3}, night: {night: 4, rain: 2, fog: 2}}
+  # 其他四區照 05 5.1 表的傾向（傾向權重 3、其他 1）
+```
+
+驗證：數值非負、`start <= max`、權重 ≥ 0 且每組總和 > 0、區域不重複；跨檔案：天氣 ID 在 `weather.yaml`、區域在 `regions.yaml`。沒有列的區域用 `default_weather`（`day: {clear: 1}`、`night: {night: 1}`）。
+
+**`WorldState`（`trpg-world/1`）**
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `format` | `Literal["trpg-world/1"]` | |
+| `season_id` | `str`（ID_PATTERN） | |
+| `season_seed` | `int`（0～2⁶⁴−1） | 第 2.4 節 |
+| `season_start` | `int`（UTC 秒） | 5F-1 用；本段只存 |
+| `flags` | `tuple[str, ...]`（排序、不重複） | 世界旗標；地點的 `unlock_flag` 判定用 |
+| `cleared` | `tuple[ClearedLocation, ...]`（`region`、`location`、`respawn_at`；依區域與地點排序） | 共享「已清空」（9.6.7 #15）；本段只讀（紮營判定），寫入在 5A-4／5F-1 |
+
+**`CharacterState`（`trpg-char/1`）**——欄位盡量和 `RunState` 同名同型別（2.2）
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `format` | `Literal["trpg-char/1"]` | |
+| `character_id` | `str`（ID_PATTERN） | 亂數衍生的「角色」段 |
+| `hero` | `UnitTemplate` | 感知修正、HP／法力上限從這裡算 |
+| `origin` | `str \| None` | |
+| `level`、`xp` | `int` | 同 `RunState` |
+| `hp`、`mana` | `int`（≥ 0） | 目前值 |
+| `stamina` | `int \| None` | `None`＝滿（同 `RunState`） |
+| `region`、`location` | `str` | 目前位置 |
+| `supplies` | `int`（≥ 0） | |
+| `revealed` | `tuple[LocationRef, ...]`（排序、不重複） | 這個角色發現的隱藏地點 |
+| `perception_marks` | `tuple[PerceptionMark, ...]` | 每個隱藏地點最後一次感知判定的 `refresh_day`（#112 每天 1 次） |
+| `rng_counters` | `dict[str, int]`（依鍵排序） | 每個亂數串流已用的次數 |
+| `pending_encounter` | `EncounterResult \| None` | 還沒處理的遭遇（5A-4 開戰後清掉） |
+| `camped_at` | `LocationRef \| None` | 目前紮營中的地點（離開就清掉；5A-4 換技能等服務用） |
+
+建立：`new_character(library, character_id, hero, *, region, origin=None) -> CharacterState`（等級 1、HP／法力滿、補給 `start`、站在該區小鎮）。
+
+**動作（`WorldAction`，`kind` 判別）**：`TravelAction(kind="travel", to, hasten=False)`、`CampAction(kind="camp")`。
+
+**事件（`WorldEvent`，`kind` 判別）**：`traveled`（from、to、hasten、supplies_spent）、`encounter_check`（location、chance_permille、roll、encountered）、`encounter`（`EncounterResult`）、`perception_check`（location、roll、modifier、dc、success）、`location_revealed`（location、method）、`camped`（location、supplies_left、hp、mana）。
+
+**`EncounterResult`**：`region`、`location`、`level`（建議等級，`level_max`）、`battle_map: str | None`（從目的地 `battle_maps` 抽一張；空＝`None`，由 5A-4 從區域地圖池挑）、`battle_seed: int`（32 位元）、`weather`、`day_phase`、`at`（`now`）。不含敵人陣容（5A-3／5A-4）。
+
+**世界動作日誌（`trpg-wlog/1`）**：第一行 `{"format": "trpg-wlog/1"}`，之後每行一筆 `WorldLogEntry(seq, now, character_id, action)`。`replay(library, world, characters, entries)` 依序套用；`seq` 必須嚴格遞增、`now` 不可倒退，否則拋 `WorldReplayError`。
+
+### 6.5 規則
+
+**亂數衍生（2.4）**：`Rng(fnv1a64(f"{season_seed}:{character_id}:{stream}:{counter}".encode()))`；每用一次該串流 `counter` +1（存在 `rng_counters`）。串流：`travel`（遇敵擲骰）、`battle`（遭遇的地圖與戰鬥種子）、`reveal`（感知判定）。**天氣** 是全區共用（#104「同一區所有人看到相同的天氣」），角色段改成 `@<region>`、計數用 `half_day_index(now)`：`f"{season_seed}:@{region}:weather:{half_day_index}"`，依 `rules` 權重抽（純函式 `weather_at(library, world, region, now)`，不存狀態）。不用內建 `hash()`。
+
+**移動（`travel`）**——不合法一律拋 `WorldActionError`（中文訊息），狀態不變：
+1. 有 `pending_encounter` 時不能移動。
+2. `to` 必須是目前地點的鄰居（`LocationMapDef.neighbors`）；隱藏地點必須已在 `revealed`；有 `unlock_flag` 的地點旗標要在 `world.flags`。
+3. `hasten=True` 時補給必須 ≥ `hasten.cost`，扣掉。
+4. 遇敵：目的地建議等級（`level_max`）查 `encounter` 公式得機率（town、gate＝0；趕路再 × `hasten.encounter_permille`‰，整數捨去），`travel` 串流 `randint(0, 999) < 機率` 即遇敵（機率 0 也照擲，讓亂數消耗固定）。
+5. 角色移到目的地、清掉 `camped_at`。遇敵時用 `battle` 串流抽地圖與種子，寫入 `pending_encounter` 並發 `encounter` 事件。
+6. **感知判定**（#112）：對目的地的每個鄰居（ID 排序），若是隱藏地點、`reveal` 含 `perception_nearby`、這個角色還沒發現、今天（`refresh_day(now)`）還沒判定過：`reveal` 串流擲 d20＋感知修正（`(wis − ability_mod_base) // ability_mod_divisor`，同引擎的 `ability_modifier`）≥ DC（`dc_base`＋隱藏地點 `level_min` ÷ `level_divisor`）即發現；記錄 `perception_marks`。失敗沒有懲罰。
+
+**紮營（`camp`）**（#114）：
+1. 有 `pending_encounter` 時不能紮營。
+2. 不能紮營的地點：`town`（城鎮直接休息，5A-4）、`elite_lair`、`boss`；`camp` 種類要 `world.cleared` 裡有這個地點且 `now < respawn_at`（敵人還在＝不能）。其他種類（村落、祭壇、遺跡、異象、商隊、秘境、傳送點）可以。
+3. 補給 ≥ `camp_cost`，扣掉；HP 回到 `run_max_hp`、法力回到上限、耐力設為 `None`（滿）；`camped_at` 設為目前地點。
+
+### 6.6 測試（`tests/world/`）
+
+| 檔案 | 內容 |
+|---|---|
+| `test_clock.py` | 一天 1800 秒、半天 900 秒；台北 06:00 是遊戲日開頭；`day_phase` 前半白天後半夜晚；`game_clock` 從 06:00 起；`refresh_day` 在台北 05:59:59 與 06:00:00 之間切換；`next_refresh_at`；負數拒絕 |
+| `test_rules_content.py` | 載入 `world_rules`；未知天氣、未知區域、權重總和 0、`start > max` → 錯誤；沒有 `world/rules.yaml` → `None` |
+| `test_travel.py` | 走到鄰居；非鄰居、未發現的隱藏地點、未解鎖的旗標地點、補給不足的趕路、有未處理遭遇 → `WorldActionError` 且狀態不變；回小鎮遇敵機率 0；趕路扣補給、機率減半；遇敵產生 `EncounterResult`（地圖在目的地 `battle_maps` 內，沒有地圖的目的地為 `None`）；計數器遞增 |
+| `test_perception.py` | 走到鶴歸崖的鄰居（北坡獵場）時判定、DC＝13；成功後可走進鶴歸崖；同一天不重判、隔天（6 點後）再判；丹爐洞（只有 `situation`）不判；感知高（必成功）／低（必失敗）的角色 |
+| `test_camp.py` | 村落可紮營、HP 法力回滿、扣補給、`camped_at`；town、`elite_lair`、`boss`、未清空的營地、補給 0 → 錯誤；已清空且未重生的營地可紮營、過了 `respawn_at` 不行；移動後 `camped_at` 清掉 |
+| `test_rng.py` | 衍生字串格式固定（測試向量）；不同角色、串流、計數得到不同結果；天氣同區同半天所有角色相同、權重 0 的天氣抽不到 |
+| `test_replay.py` | 同初始快照＋同日誌重播兩次，快照（JSON）完全相同；日誌寫出再讀回重播結果相同；`seq` 不遞增、`now` 倒退 → `WorldReplayError`；hypothesis：隨機合法動作序列重播一致 |
+| `test_save.py` | `trpg-world/1`、`trpg-char/1`、`trpg-wlog/1` 序列化往返相等；未知 `format` 拒絕；原子寫檔 |
+
+`tests/test_architecture.py`：`trpg.world` 在原始碼樹內；world 不得匯入 api、cli、sim、llm、narrative；engine、content、shared、roguelite、skillgen、narrative 不得匯入 world；`world` 列入確定性套件；掃描器偵測 `hash(...)`。
+
+### 6.7 驗收
+
+- `uv run pytest -q tests/world tests/content tests/test_architecture.py -n 8 --timeout=1800` 通過。
+- `ruff check .`、`ruff format --check .`、`mypy`（strict）、`lint-imports` 通過；`C901` ≤ 15。
+- `uv run trpg content check` 列出 `world/rules.yaml` 的摘要。
+- 不跑全量 `scripts/check.py`（PM 合併時跑）；沒動戰鬥，不需戰鬥重播。
+
+### 6.8 不做的事
+
+- 不開戰、不寫戰後回寫（經驗、全滅回小鎮、疲憊、清空與重生的寫入）、不做城鎮休息、換技能、傳送點跨區（5A-4）。
+- 不做敵人、遭遇表、日夜與天氣對敵人的影響（5A-3）；遭遇結果只帶天氣與日夜資料。
+- 不做事件出現擲骰、線頭（5B-1）、情境判定（5B-2）、朋友足跡與任務線索揭露（5B／5C）。
+- 不做 API、前端、CLI、帳號、角色建立流程（5A-5、5E-1）；角色建立不進日誌（重播從初始快照開始）。
+- 不改 `trpg-run` 格式、roguelite、引擎。
+
+### 6.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5A2-1 | 時鐘常數寫在程式（使用者已定的值），不放 content | 改值要回使用者 |
+| 5A2-2 | 遊戲日對齊 Unix 紀元（因此對齊台北 6 點），遊戲日 06:00 開始、前半白天後半夜晚 | 9.6.9／#104 沒寫起點 |
+| 5A2-3 | 遇敵率、趕路、補給上限與初值、各區天氣權重 | 6.4 初值，content 可改；之後模擬定 |
+| 5A2-4 | 遇敵用目的地的建議等級上限；town、gate 為 0；遇敵後仍抵達目的地，遭遇擱在角色上、處理前不能移動或紮營 | 9.6.2「路上可能遇敵」沒寫細節 |
+| 5A2-5 | 感知 DC 的「建議等級」用隱藏地點的 `level_min` | 雲嶺兩個隱藏地點都只有單一等級，不影響 |
+| 5A2-6 | 傳送點可以紮營；紮營不含城鎮（城鎮休息是 5A-4 的服務） | #114 列舉「城鎮以外…等」 |
+| 5A2-7 | 天氣衍生的角色段用 `@<region>`、計數用半天序號 | 2.4 只寫角色串流，天氣全區共用 |
+| 5A2-8 | 重播從「初始世界快照＋初始角色快照」開始，角色建立不進日誌 | 帳號與角色建立在 5E-1 |
+
+## 7. 之後各段規格
+
+（5A-2 驗收後補上 5A-3 起。）
