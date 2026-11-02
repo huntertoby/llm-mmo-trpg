@@ -940,6 +940,257 @@ threads:
 | 5B1-7 | 情境判定解法的屬性照 18.4 填 1～2 個（9.6.4 模板「2～3 種」是 5B-2 情境模板的事） | 5B-2 再定骨架解法和情境模板的對應 |
 | 5B1-8 | 新欄位有預設值、存檔格式版本不升 | 2.5；加欄位不破壞舊檔 |
 
-## 9. 之後各段規格
+## 9. 5B-2 詳細規格：情境判定引擎
+
+> 給實作 agent。只動 `content/world/situations/`（新）、`content/world/situation_rules.yaml`（新）、`content/world/events/cloud_ridge.yaml`（#12 機遇條件一行）、`src/trpg/content/world_situations.py`（新）、`src/trpg/content/world_events.py`（`SolutionDef.requires_keyword`、載入時一併載入情境模板）、`src/trpg/content/library.py`（多傳狀態、關鍵字、種族 ID，一行）、`src/trpg/world/`（新增 `situations.py`；`state.py`、`actions.py`、`rng.py`、`step.py` 小改）、`src/trpg/llm/situation.py`（新：提議 prompt、schema、提議流程）、`tests/content/`、`tests/world/`、`tests/llm/`、CLI 快照（`trpg content check` 變了才重產）。**不做** 說書人敘述與骨架挑選（5B-3）、放棄／交涉／戰鬥解法與任務（5B-4）、機遇的獎勵、API、前端（5B-5）、戰鬥套用下一場 buff／debuff（5A-4 之後）。不動 `content/skills/`、`src/trpg/skillgen/`、引擎、roguelite。
+> 依據：09 9.6.4（模板、`<player_input>`、第一次送出即定案、LLM 提議 ±2、劣勢、d20、三段結果、獎懲有預算上限、用心清單最多 +2、種族 +1、公平原則、寫入事件日誌）、9.6.7 #3～#6（線頭由事件結果產生、獎勵照地點建議等級的預算表）、9.6.11 #115（方法 12 類、10 族 +1）；10 第 10、11 節（結構化輸出、pydantic、prompt 版本、LLM 輸出寫進事件日誌、重播不呼叫 LLM、玩家輸入當資料）；18 18.4（解法屬性；表末「補充」：機遇「帶電技能」、「斷崖幫寨的暗門」給骨架 14 偷竊優勢、模板第 2 種屬性的補法）；本檔 2.1、2.3、2.4、第 8 節。
+
+### 9.1 目標
+
+骨架的「情境判定」解法變成可以結算的資料：**情境模板**（content）＋ **LLM 提議**（pydantic 驗證）＋ **引擎判定**（`trpg.world`，純函式、可重播）。
+
+```
+外層（之後的 trpg.api／narrative）        trpg.llm.situation                       trpg.world.situations
+pending_event ＋ 模板 ───────────────▶  messages（資料區＋<player_input>）
+situation_facts(...)（引擎算的事實）──▶  LLMClient.complete(json_schema)
+                                        clean → JSON → SituationProposal（pydantic）
+                                        proposal_problems（靜態）→ 有錯帶 <errors> 重試
+                                        連不上／用盡 → default_proposal（降級）
+SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ─────────────────────▶ world_step
+                                                                               合法性檢查（不合法拋錯、狀態不變）
+                                                                               逐筆核對用心清單（核對不到不算）
+                                                                               d20（優勢／劣勢）＋修正 vs DC
+                                                                               三段結果 → 獎懲（預算內）、線頭
+                                                                               清掉 pending_event、寫事件
+```
+
+`trpg.world` 不匯入 `trpg.llm`：提議 schema（`SituationProposal`）與靜態檢查放在 `trpg.content.world_situations`（純資料），`trpg.llm` 和 `trpg.world` 都從那裡匯入（2.3）。提議隨動作寫進世界動作日誌（`trpg-wlog/1`），**重播照紀錄、不再呼叫 LLM**（10 第 10 節、2.1）。
+
+### 9.2 交付項目
+
+1. **schema `src/trpg/content/world_situations.py`**（`__all__` 明列、`ContentModel`、ID 用 `ID_PATTERN`、錯誤訊息繁中）：
+
+   ```python
+   class MethodDef(ContentModel):  # 9.6.11 方法 12 類
+       id: str; name_zh: str; attributes: tuple[Attribute, ...]  # 常見屬性（1～2）
+
+   class CheckRules(ContentModel):
+       dc_shift_max: int  # 9.6.4「±2」（只能 0～2，不可放寬）
+       partial_margin: int  # 總值 ≥ DC − partial_margin＝部分成功
+       care_max: int  # 9.6.4「最多 +2」（只能 0～2）
+       race_bonus: int  # 9.6.4「+1」（只能 0～1）
+
+   class SituationBudget(ContentModel):  # 獎勵預算（依地點建議等級）
+       xp_base: int; xp_per_level: int  # 等級預算 xp ＝ xp_base ＋ xp_per_level × 等級
+       supplies_max: int; threads_max: int  # 線頭 ≤ 2（9.6.7 #6「0～2 條」）
+       buffs_max: int; reveals_max: int
+
+   class DangerDef(ContentModel):  # 危險度 → 允許的懲罰（9.6.4「依情境危險度分級」）
+       level: int  # 1～3
+       penalties: tuple[PenaltyKind, ...]  # supplies／debuff／hurt／reinforce
+       hurt_max_permille: int
+
+   class SituationRules(ContentModel):  # content/world/situation_rules.yaml
+       methods: tuple[MethodDef, ...]
+       race_methods: dict[str, str]  # 種族 → 方法（9.6.11 #115）
+       check: CheckRules
+       budget: SituationBudget
+       dangers: tuple[DangerDef, ...]
+       exchange_supplies: int  # 用心清單「交換條件」拿補給出來時花掉的量
+
+   class SituationRewards(ContentModel):
+       xp_permille: int = 0  # 0～1000，乘地點的等級預算 xp
+       supplies: int = 0
+       threads: tuple[str, ...] = ()  # 必須是本骨架的線頭
+       reveal: tuple[str, ...] = ()  # 本區的隱藏地點（reveal 含 situation）
+       buffs: tuple[str, ...] = ()  # statuses.yaml；下一場戰鬥帶（短期 buff）
+
+   class SituationPenalties(ContentModel):
+       supplies: int = 0
+       hurt_permille: int = 0  # 最大 HP 的 ‰，最少留 1 HP
+       debuffs: tuple[str, ...] = ()  # statuses.yaml；下一場戰鬥帶
+       reinforce: bool = False  # 下一場戰鬥敵人增援
+
+   class SituationOutcomeDef(ContentModel):
+       rewards: SituationRewards; penalties: SituationPenalties  # 都有預設（空）
+
+   class WeaknessDef(ContentModel):  # 用心清單 ④「方法針對情境弱點」
+       id: str; text_zh: str; methods: tuple[str, ...]
+
+   class SituationTemplateDef(ContentModel):
+       id: str
+       skeleton: str  # 本區骨架
+       solution: int  # 骨架 solutions 的索引（0 起），必須是 situation
+       note_zh: str
+       methods: tuple[str, ...]  # 允許的方法（1～3）
+       attributes: tuple[Attribute, ...]  # 2～3 種，開頭＝骨架解法的屬性
+       base_dc: int  # 5～30
+       danger: int  # 1～3
+       weaknesses: tuple[WeaknessDef, ...] = ()
+       advantage_threads: tuple[str, ...] = ()  # 持有其一＝優勢（18.4 補充：暗門）
+       success: SituationOutcomeDef; partial: SituationOutcomeDef; failure: SituationOutcomeDef
+
+   class SituationTemplateTable(ContentModel):  # content/world/situations/<region>.yaml
+       region: str; templates: tuple[SituationTemplateDef, ...]
+
+   # LLM 提議（pydantic；trpg.llm 與 trpg.world 共用）
+   CareItem = Literal["clue", "npc_bond", "exchange", "weakness"]  # 9.6.4 用心清單 ①～④
+   class CareClaim(_Strict): item: CareItem; fact: str  # fact＝引擎給的事實編號
+   class SituationProposal(_Strict):
+       attribute: Attribute; method: str; dc_shift: int  # −2～+2
+       disadvantage: bool = False; care: tuple[CareClaim, ...] = ()  # 最多 4 筆
+   class SituationFact(_Strict): item: CareItem; fact: str; text_zh: str
+
+   def proposal_problems(template, rules, proposal) -> list[str]  # 靜態合法性
+   def default_proposal(template, rules) -> SituationProposal  # 降級提議
+   ```
+
+   **單檔驗證**：方法 ID、模板 ID、弱點 ID 不重複；`attributes` 2～3 個不重複；每個模板屬性都至少有一個模板方法能用、每個模板方法至少有一個常見屬性在模板屬性裡；弱點的方法在模板方法裡；危險度 1～3 各一筆；`check` 不可超過 9.6.4（±2、+2、+1）。
+   **跨檔案** `situation_problems(...)`（排序）：骨架存在且同區；`solution` 指到 `situation` 解法，解法屬性＝模板屬性的開頭；方法在 `rules`；獎勵線頭是本骨架的線頭；`reveal` 是本區 `hidden` 且 `reveal` 含 `situation` 的地點；buff／debuff 在 `statuses.yaml`；`advantage_threads` 存在（任一區）；獎勵在預算內（補給、線頭、buff、揭露）；懲罰種類在該危險度允許的清單、`hurt_permille` ≤ 上限；`race_methods` 的種族在 `races.yaml`、方法在 `methods`。
+
+2. **`SolutionDef.requires_keyword: str | None`**（只有 `opportunity` 可填；必須是 `skill_keywords.yaml` 的關鍵字）：18.4 補充「帶電技能＝裝備中的技能有任何一招帶『帶電』關鍵字」，雲嶺 #12 填 `charged`。引擎 `opportunity_available(library, char, solution)`：英雄裝備的技能中任何一招推導出的關鍵字（製造或利用）含該關鍵字。機遇的結算（入口、技能）不在本段。
+
+3. **載入**：情境模板與規則在 `load_world_event_content` 裡一起載（`WorldEventContent` 加 `situations`、`situation_rules`），`library.py` 只改那一行呼叫。不存在＝空／`None`。模板 ID 跨區不重複。
+
+4. **雲嶺內容**：`content/world/situation_rules.yaml`（9.4）、`content/world/situations/cloud_ridge.yaml`（9.3；18.4 每個情境判定解法一個模板，共 23 個）。
+
+5. **`trpg.world`**：
+   - `rng.py`：新串流 `STREAM_CHECK = "check"`。
+   - `state.py`：`NextBattleMod`（`kind: buff|debuff|reinforce`、`status`、`source`＝模板 ID）；`CharacterState.next_battle: tuple[NextBattleMod, ...] = ()`（之後的戰鬥接線消耗；本段只寫入）。有預設值、不升格式版本。
+   - `actions.py`：動作 `SituationAction`（`kind="situation"`、`template`、`player_text`（≤ 500 字）、`proposal`、`source: "llm"|"fallback"`、`prompt_version`）；事件 `situation_check`（模板、屬性、方法、基準 DC、調整、DC、兩顆骰、優勢／劣勢、採用的骰、屬性修正、用心清單逐筆明細、用心加值、種族加值、總值、結果）、`situation_result`（xp、補給增減、HP 損失、下一場戰鬥修正）、`thread_added`、`thread_pushed_out`、`event_resolved`；揭露地點沿用 `location_revealed`（method＝`situation`）。
+   - `situations.py`：`situation_template`、`situation_facts`（給外層餵 LLM）、`resolve_situation`（9.5）、`opportunity_available`。
+   - `step.py`：`world_step` 多一個分派。
+
+6. **`trpg.llm.situation`**（新）：`SITUATION_PROMPT_VERSION`、`situation_schema(template, rules, facts)`（屬性、方法、事實編號都是列舉，`dc_shift` −2～2）、`build_situation_messages(...)`（系統指令＋資料區；玩家文字只出現在 `<player_input>`，其餘資料經 `escape_text`）、`propose_situation(client, ...) -> SituationProposalOutcome`。只用 `LLMClient` 介面；測試用 `MockLLMClient`。
+
+7. **測試**（9.7）與 **完成報告** `docs/phases/Phase5B-2報告.md`：交付、判定流程、注入防護與合法性檢查、可重播證明、代決、待 PM 決定。
+
+### 9.3 雲嶺情境模板（18.4 → 資料；第 2 種屬性照 18.4 補充：同一類方法的常見屬性，不夠再補主題不同的屬性）
+
+| 骨架 | 模板 `id` | 解法 | 方法 | 屬性 | DC | 危險 |
+|---|---|---|---|---|---|---|
+| 1 | `peddler_safe_path` | 感知（找安全路） | 追蹤、力取 | wis、str | 12 | 2 |
+| 2 | `acolyte_find_way` | 感知／智力（認路） | 追蹤、學識 | wis、int | 11 | 1 |
+| 3 | `toll_intimidate` | 意志（威嚇） | 威嚇 | wil、str | 13 | 2 |
+| 4 | `elder_go_game` | 智力（下棋） | 學識、察覺 | int、wis | 13 | 1 |
+| 4 | `elder_patience` | 意志（耐心） | 交涉、學識 | wil、int | 12 | 1 |
+| 5 | `lingzhi_climb` | 力量／敏捷（攀爬） | 攀爬跳躍 | str、dex | 14 | 2 |
+| 6 | `monks_persuade` | 意志（說服一方） | 交涉、學識 | wil、int | 13 | 1 |
+| 6 | `monks_see_lie` | 感知（看穿誰在說謊） | 察覺、學識 | wis、int | 13 | 1 |
+| 7 | `deserter_hide` | 敏捷（帶他躲藏） | 潛行、耐力 | dex、con | 14 | 3 |
+| 8 | `hunter_awaken` | 意志（喚醒） | 異象、學識 | wil、int | 14 | 2 |
+| 9 | `ferry_repair` | 智力（修理） | 機關、力取 | int、str | 12 | 1 |
+| 10 | `bear_slip_away` | 感知（悄悄退出） | 察覺、潛行 | wis、dex | 13 | 3 |
+| 11 | `envoy_persuade` | 意志（說服） | 交涉、察覺 | wil、wis | 13 | 2 |
+| 11 | `envoy_take_cover` | 敏捷（躲到掩體） | 攀爬跳躍 | dex、str | 13 | 2 |
+| 12 | `altar_endure` | 體質（硬撐） | 耐力、異象 | con、wil | 15 | 2 |
+| 13 | `sword_pull` | 力量（拔劍） | 力取、耐力 | str、con | 15 | 2 |
+| 13 | `sword_array` | 智力（解陣） | 機關、靈巧 | int、dex | 15 | 2 |
+| 14 | `convoy_steal` | 敏捷（偷走；持有「暗門」優勢） | 靈巧、察覺 | dex、wis | 15 | 3 |
+| 15 | `spring_hold_breath` | 體質（憋氣） | 耐力、力取 | con、str | 14 | 2 |
+| 15 | `spring_antidote` | 智力（配解藥） | 學識、耐力 | int、con | 14 | 2 |
+| 16 | `storyteller_tale` | 意志（文字回答＋用心清單） | 交涉、學識 | wil、int | 12 | 1 |
+| 17 | `patrol_track` | 感知（追蹤） | 追蹤、耐力 | wis、con | 13 | 2 |
+| 18 | `fox_persuade` | 意志（說服；狐族交涉 +1） | 交涉、察覺 | wil、wis | 12 | 1 |
+
+- DC 初值＝10＋骨架地點建議等級的一半上下（開發 PM 定）。獎懲：成功 xp 1000‰＋本骨架的線頭（≤ 2）、部分成功 xp 500‰＋輕懲罰、失敗依危險度懲罰；哪個結果留哪條線頭照骨架文字推定（開發 PM 定，之後模擬與玩法 PM 調）。
+- 弱點（用心清單 ④）每個模板 1～2 個，照骨架的阻礙推定（例：霧狼怕火→ 不適用；行商說得出狼群走向 → 追蹤）。
+
+### 9.4 規則數值初值（`content/world/situation_rules.yaml`；方法與種族照 9.6.11，其他開發 PM 定、之後模擬定）
+
+```yaml
+methods:  # 9.6.11 #115
+  - {id: force, name_zh: 力取, attributes: [str]}
+  - {id: climb, name_zh: 攀爬跳躍, attributes: [str, dex]}
+  - {id: stealth, name_zh: 潛行, attributes: [dex]}
+  - {id: finesse, name_zh: 靈巧, attributes: [dex]}
+  - {id: endurance, name_zh: 耐力, attributes: [con]}
+  - {id: lore, name_zh: 學識, attributes: [int]}
+  - {id: mechanism, name_zh: 機關, attributes: [int]}
+  - {id: notice, name_zh: 察覺, attributes: [wis]}
+  - {id: tracking, name_zh: 追蹤, attributes: [wis]}
+  - {id: parley, name_zh: 交涉, attributes: [wil]}
+  - {id: intimidate, name_zh: 威嚇, attributes: [wil, str]}
+  - {id: uncanny, name_zh: 異象, attributes: [wil]}
+race_methods: {human: lore, elf: notice, fox: parley, dragonkin: intimidate, dwarf: mechanism,
+               cyborg: finesse, orc: force, fiend: uncanny, scalefolk: stealth, seafolk: endurance}
+check: {dc_shift_max: 2, partial_margin: 5, care_max: 2, race_bonus: 1}
+budget: {xp_base: 20, xp_per_level: 10, supplies_max: 2, threads_max: 2, buffs_max: 1, reveals_max: 1}
+dangers:
+  - {level: 1, penalties: [supplies, debuff], hurt_max_permille: 0}
+  - {level: 2, penalties: [supplies, debuff, hurt], hurt_max_permille: 250}
+  - {level: 3, penalties: [supplies, debuff, hurt, reinforce], hurt_max_permille: 400}
+exchange_supplies: 1
+```
+
+### 9.5 規則（`resolve_situation`，純函式）
+
+**合法性檢查**（任一不過拋 `WorldActionError`、狀態不變；外層可以重新提議或用降級提議）：
+1. 角色有 `pending_event`、沒有 `pending_encounter`；模板存在於角色所在區、`template.skeleton == pending_event.skeleton`。
+2. `player_text` ≤ 500 字（只存紀錄，引擎不讀內容）。
+3. `proposal_problems`：屬性在模板 `attributes`、方法在模板 `methods`、屬性是該方法的常見屬性、`|dc_shift| ≤ dc_shift_max`、用心清單 ≤ 4 筆。
+4. **第一次送出即定案**：結算後 `pending_event` 清掉，同一個事件不能再判定（再送＝沒有事件可判定而被拒）。
+
+**用心清單**（逐筆核對引擎狀態，不信 LLM 文字；核對不到「不算」、不是錯誤，寫進事件明細）：
+- 事實集合＝`situation_facts`：① `clue` → `thread:<id>`：角色持有的有效個人線頭與世界線頭；② `npc_bond` → `npc:<id>`：骨架 `npcs` 中、角色持有以該 NPC 為 `npc` 的有效線頭（過去互動的紀錄；好感度在 5B-4 後再加）；③ `exchange` → `supplies`：補給 ≥ `exchange_supplies`；④ `weakness` → `weakness:<id>`：模板的弱點。
+- 一筆要算：`(item, fact)` 在事實集合裡；`weakness` 另外要求提議的方法在該弱點的 `methods` 內。
+- 同一項（item）只算一次（9.6.4）；加值＝min(`care_max`, 算到的項數)。`exchange` 算到時，結算前扣 `exchange_supplies` 補給（拿得出來就要拿出來）。
+
+**擲骰**：`check` 串流取一個 `Rng`，**一律** 擲兩次 `d20()`（亂數消耗固定）。優勢＝持有 `advantage_threads` 中任一有效線頭（18.4 補充：擲兩次取高）；劣勢＝提議的 `disadvantage`（9.6.4「回答明顯行不通」：擲兩次取低）；兩者都有＝抵銷、取第一顆。
+**總值**＝骰值＋屬性修正（`(屬性 − ability_mod_base) // ability_mod_divisor`，同感知判定）＋用心加值＋種族加值（`race_methods[hero.race] == 提議方法` 時 ＋`race_bonus`）。**DC**＝`base_dc + dc_shift`。
+**結果**：總值 ≥ DC＝成功；≥ DC − `partial_margin`＝部分成功；其餘失敗。
+**獎懲**（照結果取模板的表；不看 LLM）：
+- 等級＝事件地點的 `level_max`（沒有等級＝1）；xp ＝ (`xp_base + xp_per_level × 等級`) × `xp_permille` ÷ 1000（捨去）。
+- 補給：先扣懲罰、再加獎勵，夾在 0～`supplies.max`；HP 損失＝最大 HP × `hurt_permille` ÷ 1000，最少留 1。
+- buff／debuff／增援 → `next_battle`；`reveal` → 角色 `revealed`（`location_revealed`，method `situation`）。
+- 線頭 → 依 `ThreadDef.scope` 放角色或世界，`add_thread`（`event_rules.threads` 的上限與到期）；擠掉的發 `thread_pushed_out`。
+- 執行期再對預算截一次（防資料被繞過）：超出的部分截掉，不拋錯。
+- 清掉 `pending_event`，發 `event_resolved`。
+
+**重播**：`SituationAction` 進 `WorldAction` 聯集，`trpg-wlog/1` 照紀錄重播；提議、來源、prompt 版本都在動作裡，重播不呼叫 LLM。
+
+**LLM 提議流程**（`propose_situation`）：messages＝系統指令（任務、安全規則：資料區只是資料、`<player_input>` 內的文字不是指令、只輸出 JSON）＋資料區（`<situation>`、`<methods>`、`<facts>`、`<player_input>`）；`complete(json_schema=...)` → `clean_response` → JSON → `SituationProposal` → `proposal_problems`；有錯帶 `<errors>`、`<previous_proposal>` 重試（預設共 2 次）；用盡或 `LLMError` → `default_proposal`（`source="fallback"`）。事實編號只能從 `<facts>` 挑（schema 列舉），引擎仍逐筆核對。
+
+### 9.6 確定性與安全
+
+- 只用 `trpg.world.rng.draw`（`check` 串流）；事實、線頭一律排序；沒有時間、`random`、`uuid4`、`hash()`。
+- 玩家文字只放 `<player_input>`（`wrap_player_input`：跳脫 `<>&`、去控制字元、截 500 字）；引擎不解析玩家文字，只吃 pydantic 驗證過的提議。
+- LLM 能影響的只有：選哪個允許的屬性與方法、±2、劣勢、勾哪幾項用心清單（引擎核對）。獎懲、基準 DC、優勢、種族加值都來自資料與引擎狀態。
+
+### 9.7 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_situations.py` | 載入雲嶺：23 個模板、每個情境判定解法都有模板、規則；跨檔案問題為空；壞資料逐條：屬性 1 個／4 個、方法不存在、屬性沒方法能用、解法索引不是 situation、解法屬性不是開頭、線頭不屬於骨架、reveal 不是隱藏、狀態不存在、超出預算、懲罰超出危險度、`check` 放寬；`proposal_problems` 各情況；`default_proposal`；`requires_keyword` 只有機遇可填、未知關鍵字 |
+| `tests/world/test_situations.py` | 沒事件／骨架不符／屬性不在清單／方法不允許／±3 被拒且狀態不變；送出後不能再送；成功／部分／失敗三段；用心清單：持有線頭算、沒持有不算、重複項只算一次、上限 2、弱點方法不符不算、交換扣補給；優勢（暗門）取高、劣勢取低、抵銷；種族 +1 只對對應方法；獎懲：xp 照等級預算、補給夾上限、HP 最少 1、線頭加入與擠出、世界級線頭、下一場修正、揭露；重播：日誌（移動→觸發→判定）重播出逐字相同的快照；機遇條件 |
+| `tests/llm/test_situation_propose.py` | schema 列舉；玩家文字只在 `<player_input>`、注入字串被跳脫；Mock 回合法 JSON → `llm` 來源；壞 JSON／越界（±3、屬性不在清單）→ 帶錯誤重試 → 成功或降級；`LLMUnavailable` → 降級；端到端（Mock 提議 → 動作 → 判定） |
+
+### 9.8 驗收
+
+- `uv run pytest -q tests/world tests/llm/test_situation_propose.py tests/content/test_world_situations.py tests/content/test_world_events.py tests/test_architecture.py -n 8 --timeout=1800` 通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`）。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 9.9 不做的事
+
+- 不做說書人挑骨架、情境敘述與結果敘述（5B-3）；不做放棄、交涉、戰鬥解法的結算、任務、好感度、線頭到期結局（5B-4）；不做機遇的獎勵；不做 API、前端。
+- 不把下一場戰鬥修正接到戰鬥；不做任務幣（5D-1 才有貨幣）。
+- 不補 18.4 補充的 follows 對照、新骨架 19～21、世界級線頭（另排 5B-1b）；「在斷崖幫寨的戰鬥我方先手」屬戰鬥接線，記在報告待辦。
+
+### 9.10 代決
+
+| # | 事項 | 代決 | 誰定 |
+|---|---|---|---|
+| 5B2-1 | 模板第 2 種屬性：解法屬性為主，從 9.6.11 方法表同一類補，不夠再補主題不同的屬性 | 9.3 表 | **玩法 PM 定**（18.4 補充） |
+| 5B2-2 | 「帶電技能」＝裝備技能任何一招推導出 `charged` 關鍵字；「暗門」＝骨架 14 偷竊優勢（擲兩次取高） | `requires_keyword`、`advantage_threads` | **玩法 PM 定**（18.4 補充） |
+| 5B2-3 | 一個情境判定解法一個模板；模板以骨架解法索引對應 | 9.2 | 開發 PM 定 |
+| 5B2-4 | 部分成功＝總值 ≥ DC − 5；優勢與劣勢抵銷；亂數一律擲兩顆 | 9.5 | 開發 PM 定 |
+| 5B2-5 | 預算：等級 xp ＝ 20 ＋ 10 × 地點建議等級（一場戰鬥 100 的 1/3～4/5）、補給 ≤ 2、線頭 ≤ 2、buff ≤ 1、揭露 ≤ 1；危險度 1～3 的懲罰種類與受傷上限 | 9.4 | 開發 PM 定（初值） |
+| 5B2-6 | 用心清單的事實：① 有效線頭；② 骨架 NPC＋持有該 NPC 的線頭（好感度在 5B-4）；③ 補給（算到就扣）；④ 模板弱點＋方法相符；影子專長（9.6.4）等 5C-2 | 9.5 | 開發 PM 定 |
+| 5B2-7 | 劣勢只由 LLM 提議；優勢只由資料（線頭）給，LLM 不能提議優勢 | 9.6.4 只寫劣勢 | 開發 PM 定 |
+| 5B2-8 | 獎勵沒有任務幣（5D-1 才有貨幣）；buff／debuff／增援存在角色 `next_battle`，戰鬥接線之後做 | 9.2 | 開發 PM 定 |
+| 5B2-9 | DC 初值、各模板的獎懲、弱點與哪個結果留哪條線頭 | 9.3 | 開發 PM 定（初值，之後模擬） |
+| 5B2-10 | LLM 提議共試 2 次，用盡或連不上 → 降級提議（第一個屬性、±0、不勾清單） | 9.5、3.1 | 開發 PM 定 |
+
+## 10. 之後各段規格
 
 （5A-3 驗收後補上 5A-4 起。）
