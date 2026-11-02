@@ -271,6 +271,8 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
                 f"{pad(sub[0], 8)}{pad(sub[1], 8)}{pad(sub[3], 11)}{pad(sub[2], 8)}",
                 file=out,
             )
-    tail = f"，已知例外 {known} 個（射程係數，見 Phase3-49報告）" if known else ""
+    tail = (
+        f"，已知例外 {known} 個（見 skill_budget.yaml 的 known_budget_exceptions）" if known else ""
+    )
     print(f"通過 {len(skills) - bad - known} 個，違規 {bad} 個{tail}。", file=out)
     return 1 if bad else 0

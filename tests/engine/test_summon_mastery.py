@@ -142,12 +142,22 @@ def test_elite_drops_the_limit_to_one() -> None:
     assert len(made) == 2 and alive_summons(state) == [made[1]]
 
 
-def test_elite_gives_hp_damage_and_two_extra_rounds() -> None:
+def elite_change(name: str) -> int:
+    """精英召喚在 content 寫的修正值（BAL-14b 起數值改讀 content）。"""
+    values = [getattr(m.change, name) for m in real(ELITE).modifiers]
+    return next(v for v in values if v is not None)
+
+
+def test_elite_gives_hp_damage_and_extra_rounds() -> None:
     plain, [a] = cast(arena(None), 1)
     elite, [b] = cast(arena(ELITE), 1)
-    assert elite.units[b].max_hp == role_hp(elite) * 3 // 2
-    assert elite.units[b].summon_bonus_permille == plain.units[a].summon_bonus_permille + 500
-    assert elite.units[b].summon_expires_round == (plain.units[a].summon_expires_round or 0) + 2
+    hp = elite_change("summon_hp_permille")
+    assert elite.units[b].max_hp == role_hp(elite) * (1000 + hp) // 1000
+    bonus = plain.units[a].summon_bonus_permille + elite_change("summon_damage_permille")
+    assert elite.units[b].summon_bonus_permille == bonus
+    extra = elite_change("summon_duration_delta")
+    assert extra > 0
+    assert elite.units[b].summon_expires_round == (plain.units[a].summon_expires_round or 0) + extra
 
 
 def test_duration_bonus_is_added_after_the_max_duration_cap() -> None:
@@ -155,7 +165,8 @@ def test_duration_bonus_is_added_after_the_max_duration_cap() -> None:
     elite, [b] = cast(arena(ELITE, duration=4), 1)
     cap = plain.ruleset.core.summon_max_duration
     assert plain.units[a].summon_expires_round == plain.round + cap
-    assert elite.units[b].summon_expires_round == elite.round + cap + 2
+    extra = elite_change("summon_duration_delta")
+    assert elite.units[b].summon_expires_round == elite.round + cap + extra
 
 
 # ---------------------------------------------------------------------------
