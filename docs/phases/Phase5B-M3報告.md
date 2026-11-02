@@ -69,4 +69,10 @@
 
 ## 7. 檢查紀錄
 
-（見交件訊息；完成後補上。）
+- 開發中：`tests/engine tests/shared tests/content tests/world tests/narrative -n 8`：2 failed → 都是預期變化，已修（`Team` 列舉值多了 `third`；`test_first_team` 只對我方／敵方跑先手）；另 3 個 `LOG_FORMAT.endswith("/105")`。
+- 合併 main（`ed79b605`，5B-4b；衝突：`Phase5計畫.md` 節號、`world/encounters.py` 的 `third`／`variant` 兩個欄位、任務檔註解）後：`tests/engine tests/shared tests/content tests/world tests/narrative tests/api tests/sim tests/roguelite -n 8 --timeout=1800`：**7458 passed**。
+- `tests/cli -m "slow or not slow" -n 8 --timeout=3000`：**180 passed**（CLI 雜湊、行為快照沒有變，不需重產）。client fixture 沒變（`tests/api/test_client_fixtures.py` 通過）；OpenAPI 與 `schema.d.ts` 重產（`EncounterEnemyView.third`、`Team` 加 `third`）。
+- 前端：`npx vitest run` **127 個檔、1213 passed**；`npm run build` 通過（只有既有的 chunk 大小警告）。
+- `ruff check .`、`ruff format --check .`、`mypy`（strict，1056 檔）通過；`lint-imports` 9 個契約 KEPT。
+- 重播：`trpg battle --map swamp --seed 7 --log-json` ＋ `trpg battle replay`：重播驗證通過（88 個動作、313 個事件，和 `/105` 相同）。
+- 新測試：`tests/engine/test_third_team.py`（19 個：陣營關係、起始區可省略與自動位置、手動位置、只有第三方不能開戰、朝向、勝負〔敵方光了繼續、敵人全倒才勝、全滅記 enemy、守點被第三方占〕、AI〔敵方打第三方、第三方打雙方、我方打第三方〕、範圍技〔我方與敵方施放各一〕、格擋、同門相護只護同陣營、召喚物歸屬、難度倍率、整場確定性與重播）；`tests/world/test_three_way.py`（11 個：源晶裂痕陣容、舊陣容資料、開戰陣營與成長、增援不加到第三方、遭遇表檢查、**主線第 ④ 步實際打贏三方混戰推進**）；`tests/world/test_enemy_smoke.py` 三方陣容連第三方一起打完；`tests/api/test_world_three_way.py`；`client/src/battle/thirdTeam.test.ts`。
