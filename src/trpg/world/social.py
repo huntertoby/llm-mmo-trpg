@@ -9,10 +9,11 @@
 from __future__ import annotations
 
 from trpg.content.library import ContentLibrary
-from trpg.content.world_quests import RumorDef
+from trpg.content.world_quests import RumorDef, SocialTable
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.world.actions import (
     EventTriggeredEvent,
+    OpportunityHintEvent,
     RumorsHeardEvent,
     SkeletonUnlockedEvent,
     TalkAction,
@@ -30,10 +31,11 @@ from trpg.world.affinity import (
 from trpg.world.clock import day_phase, refresh_day
 from trpg.world.common import here
 from trpg.world.errors import WorldActionError
+from trpg.world.events import season_day
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.weather import weather_at
 
-__all__ = ["talk", "tavern", "week_of", "week_rumors"]
+__all__ = ["opportunity_hint", "talk", "tavern", "week_of", "week_rumors"]
 
 
 def talk(
@@ -131,7 +133,10 @@ def week_rumors(
     library: ContentLibrary, world: WorldState, region: str, now: int
 ) -> tuple[int, tuple[RumorDef, ...]]:
     """本週傳聞（週次、依 ID 排序）：傳聞池依 ID 排序後用
-    ``{season_seed}:{region}:rumors:{week}`` 的種子洗牌，取前 ``rumors_per_week`` 條。"""
+    ``{season_seed}:{region}:rumors:{week}`` 的種子洗牌，取前 ``rumors_per_week`` 條。
+
+    5B-4e：賽季第 ``from_day`` 天起的必出傳聞（``pinned_rumors``，依 ID）沒抽到時，換掉最後抽到的
+    非必出那條（代決 5B4e-2；同一天所有人相同）。"""
     week = week_of(library, world, now)
     table = social_of(library, region)
     if table is None or not table.rumors:
@@ -142,7 +147,45 @@ def week_rumors(
     count = min(affinity_rules(library).rumors_per_week, len(pool))
     for _ in range(count):
         picked.append(pool.pop(rng.randint(0, len(pool) - 1)))
-    return week, tuple(sorted(picked, key=lambda r: r.id))
+    return week, tuple(
+        sorted(_pin_rumors(table, picked, season_day(world, now)), key=lambda r: r.id)
+    )
+
+
+def _pin_rumors(table: SocialTable, picked: list[RumorDef], day: int) -> list[RumorDef]:
+    rumors = table.rumor_by_id()
+    pins = sorted(p.rumor for p in table.pinned_rumors if day >= p.from_day)
+    out = list(picked)
+    for rumor_id in pins:
+        if any(r.id == rumor_id for r in out):
+            continue
+        swap = next((i for i in reversed(range(len(out))) if out[i].id not in pins), None)
+        if swap is None:
+            out.append(rumors[rumor_id])
+        else:
+            out[swap] = rumors[rumor_id]
+    return out
+
+
+def opportunity_hint(
+    library: ContentLibrary, world: WorldState, char: CharacterState, now: int
+) -> str | None:
+    """還沒遇過也沒拿過機遇的角色，在提示地點聽到的一句（5B-4e；``opportunity_hints``）；沒有時
+    ``None``。多條符合時取第一條（資料順序）。"""
+    if char.met_opportunities or char.opportunities:
+        return None
+    table = social_of(library, char.region)
+    if table is None:
+        return None
+    day = season_day(world, now)
+    return next(
+        (
+            h.text_zh
+            for h in table.opportunity_hints
+            if h.location == char.location and day >= h.from_day
+        ),
+        None,
+    )
 
 
 def tavern(
@@ -154,4 +197,8 @@ def tavern(
     if char.pending_encounter is not None:
         raise WorldActionError("還有沒處理的遭遇，不能去酒館")
     week, rumors = week_rumors(library, world, char.region, now)
-    return (RumorsHeardEvent(week=week, rumors=tuple(r.id for r in rumors)),)
+    events: list[WorldEvent] = [RumorsHeardEvent(week=week, rumors=tuple(r.id for r in rumors))]
+    hint = opportunity_hint(library, world, char, now)
+    if hint is not None:  # 5B-4e：還沒遇過機遇的角色在提示地點的酒館（說書人順口提）
+        events.append(OpportunityHintEvent(location=char.location, text_zh=hint))
+    return tuple(events)

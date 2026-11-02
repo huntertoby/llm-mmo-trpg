@@ -42,6 +42,7 @@ from trpg.world.actions import (
     LocationRevealedEvent,
     NarrateAction,
     NarratedEvent,
+    OpportunityHintEvent,
     QuestCompletedEvent,
     QuestStartedEvent,
     QuestStepDoneEvent,
@@ -845,6 +846,8 @@ def _social_line(library: ContentLibrary, char: CharacterState, event: WorldEven
         return f"和{name}說話（{rank_zh}）。"
     if isinstance(event, RumorsHeardEvent):
         return f"在酒館聽到 {len(event.rumors)} 則本週傳聞。"
+    if isinstance(event, OpportunityHintEvent):
+        return event.text_zh  # 5B-4e：機遇提示（內容庫的整句）
     return None
 
 

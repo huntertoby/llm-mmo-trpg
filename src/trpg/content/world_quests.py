@@ -520,6 +520,23 @@ class RumorDef(ContentModel):
         return self
 
 
+class PinnedRumor(ContentModel):
+    """賽季第 ``from_day`` 天起，本週傳聞一定含 ``rumor``（Phase 5B-4e；18.7.6「5B-4d 代決」：
+    第 4 天起酒館傳聞必有古松祭壇）。"""
+
+    rumor: _Id
+    from_day: int = Field(ge=1)
+
+
+class OpportunityHint(ContentModel):
+    """還沒遇過機遇的角色在 ``location`` 聽到的提示（Phase 5B-4e；18.7.6「5B-4d 代決」：第 6 天起
+    說書人在霧渡鎮提示）。賽季第 ``from_day`` 天起，抵達該地點或在那裡的酒館時出現 ``text_zh``。"""
+
+    location: _Id
+    from_day: int = Field(ge=1)
+    text_zh: str = Field(min_length=1)
+
+
 class SocialTable(ContentModel):
     """``content/world/social/<region>.yaml``。"""
 
@@ -527,16 +544,25 @@ class SocialTable(ContentModel):
     talk: tuple[TalkEntry, ...] = ()
     event_affinity: tuple[EventAffinity, ...] = ()
     rumors: tuple[RumorDef, ...] = ()
+    pinned_rumors: tuple[PinnedRumor, ...] = ()
+    """一定出現的傳聞（5B-4e）。"""
+    opportunity_hints: tuple[OpportunityHint, ...] = ()
+    """機遇提示（5B-4e）。"""
 
     @model_validator(mode="after")
     def _check(self) -> SocialTable:
         for label, ids in (
             ("聊天內容", [t.id for t in self.talk]),
             ("傳聞", [r.id for r in self.rumors]),
+            ("必出傳聞", [p.rumor for p in self.pinned_rumors]),
         ):
             dup = _duplicates(ids)
             if dup:
                 raise ValueError(f"{label} ID 重複：{dup}")
+        known = {r.id for r in self.rumors}
+        for pinned in self.pinned_rumors:
+            if pinned.rumor not in known:
+                raise ValueError(f"必出傳聞 {pinned.rumor}：傳聞池沒有這條")
         return self
 
     def rumor_by_id(self) -> dict[str, RumorDef]:
@@ -686,6 +712,9 @@ def social_problems(table: SocialTable, refs: _Refs, quests: QuestTable | None) 
             problems.append(f"傳聞 {rumor.id}：未知地點 {rumor.location}")
         if rumor.skeleton is not None and rumor.skeleton not in refs.skeletons:
             problems.append(f"傳聞 {rumor.id}：本區沒有骨架 {rumor.skeleton}")
+    for hint in table.opportunity_hints:
+        if hint.location not in locations:
+            problems.append(f"機遇提示：未知地點 {hint.location}")
     return sorted(problems)
 
 

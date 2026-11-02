@@ -51,3 +51,12 @@ rumors:
   - {id: rumor_north_slope, location: north_slope, text_zh: 北坡獵場出了一頭狼王，眼睛紅得像火}
   - {id: rumor_bear_den, skeleton: bear_den, text_zh: 冬湖邊的熊巢底下會發光，獵戶都不敢靠近}
   - {id: rumor_crystal_rift, location: crystal_rift, text_zh: 源晶裂痕這陣子霧特別濃，常有霧魅從裡面爬出來}
+
+# 5B-4e（18.7.6「5B-4d 代決」，機遇保底綁在古松祭壇）：賽季第 4 天起本週傳聞一定含祭壇那條
+# （沒抽到時換掉本週最後抽到的那條；代決 5B4e-2）。
+pinned_rumors:
+  - {rumor: rumor_storm_altar, from_day: 4}
+
+# 5B-4e：賽季第 6 天起，還沒遇過機遇的角色抵達霧渡鎮、或在霧渡鎮的酒館時，說書人順口提一句（代決 5B4e-3）。
+opportunity_hints:
+  - {location: mist_ferry, from_day: 6, text_zh: 酒館的說書人順口提了一句：「古松那邊最近不太平。」}
