@@ -9,7 +9,7 @@ import { CampfireSkillCare } from "../run/CampfireSkillCare";
 import { FlashSection } from "../run/FlashSection";
 import { FlashPendingPanel } from "../screens/RunFlashPending";
 import { Hint } from "../ui/Hint";
-import { defaultParams, oathButton, spendLock, swearAction } from "./growth";
+import { choiceLabel, defaultParams, oathButton, paramLabel, spendLock, swearAction } from "./growth";
 
 interface Props {
   view: WorldView;
@@ -92,10 +92,17 @@ function OathSection({ view, busy, onAct }: Pick<Props, "view" | "busy" | "onAct
     <div className="panel world-oath" data-testid="world-oath">
       <div className="section-title">誓約</div>
       <p className="small muted">在城鎮或營火立誓，同時 1 個，一直有效到自己解除；解除後現實 1 天內不能再立。</p>
+      {oath.available && (
+        <p className="small muted" data-testid="world-oath-rules">
+          {[oath.slot_zh, oath.penalty_zh].filter((s) => s !== undefined && s !== "").join("。")}
+        </p>
+      )}
       {oath.current != null ? (
         <div className="small" data-testid="world-oath-current">
           目前的誓約：<b>{oath.current.name_zh}</b>（難度 {oath.current.difficulty_zh}
           {oath.current.params_zh !== "" ? `・${oath.current.params_zh}` : ""}）
+          {(oath.current.bonus_zh ?? "") !== "" && <div className="small">加成：{oath.current.bonus_zh}</div>}
+          {(oath.current.judge_zh ?? "") !== "" && <div className="small muted">{oath.current.judge_zh}</div>}
           <div className="run-actions">
             {!confirmRelease ? (
               <button type="button" disabled={busy || !oath.can_release} onClick={() => setConfirmRelease(true)} data-testid="world-oath-release">
@@ -143,14 +150,21 @@ function OathSection({ view, busy, onAct }: Pick<Props, "view" | "busy" | "onAct
               ))}
             </select>
           </label>
+          {template !== undefined && (
+            <div className="small world-oath-detail" data-testid="world-oath-detail">
+              {(template.description_zh ?? "") !== "" && <div>{template.description_zh}</div>}
+              {(template.bonus_zh ?? "") !== "" && <div>加成：{template.bonus_zh}</div>}
+              {(template.judge_zh ?? "") !== "" && <div className="muted">{template.judge_zh}</div>}
+            </div>
+          )}
           {(template?.params ?? []).map((p) => (
             <label key={p.id} className="small">
-              {p.id}：
+              {paramLabel(p)}：
               {p.kind === "choice" ? (
                 <select value={String(params[p.id] ?? "")} disabled={busy} onChange={(e) => setParams({ ...params, [p.id]: e.target.value })}>
                   {(p.choices ?? []).map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {choiceLabel(p, c)}
                     </option>
                   ))}
                 </select>

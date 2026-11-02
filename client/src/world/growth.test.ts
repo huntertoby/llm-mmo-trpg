@@ -1,7 +1,7 @@
 // 大世界成長畫面的純函式（Phase 5A-7）。
 import { describe, expect, it } from "vitest";
 import type { WorldView } from "../api/types";
-import { defaultParams, growthBadge, leftPane, oathButton, spendLock, swearAction, worldActionOf } from "./growth";
+import { choiceLabel, defaultParams, growthBadge, leftPane, oathButton, paramLabel, spendLock, swearAction, worldActionOf } from "./growth";
 
 type Over = {
   growth?: Partial<WorldView["growth"]>;
@@ -96,15 +96,55 @@ describe("誓約", () => {
       difficulty: "medium" as const,
       difficulty_zh: "中",
       params: [
-        { id: "n", kind: "int" as const, choices: [], min: 1, max: 2 },
-        { id: "element", kind: "choice" as const, choices: ["fire", "ice"], min: 0, max: 0 },
+        { id: "n", kind: "int" as const, choices: [], min: 1, max: 2, name_zh: "", choice_names_zh: {} },
+        { id: "element", kind: "choice" as const, choices: ["fire", "ice"], min: 0, max: 0, name_zh: "", choice_names_zh: {} },
       ],
+      description_zh: "",
+      bonus_zh: "",
+      judge_zh: "",
     };
     expect(defaultParams(template)).toEqual({ n: 1, element: "fire" });
     expect(swearAction("melee_kills", { n: 2 }, "  我絕不後退 ")).toEqual({
       kind: "swear_oath",
       proposal: { template: "melee_kills", params: { n: 2 } },
       player_text: "我絕不後退",
+    });
+  });
+});
+
+describe("誓約參數的中文（5C-3）", () => {
+  const element = {
+    id: "element",
+    kind: "choice" as const,
+    choices: ["fire", "ice"],
+    min: 0,
+    max: 0,
+    name_zh: "元素",
+    choice_names_zh: { fire: "火焰", ice: "冰霜" },
+  };
+
+  it("參數名與選項用中文，沒有時退回 ID", () => {
+    expect(paramLabel(element)).toBe("元素");
+    expect(choiceLabel(element, "fire")).toBe("火焰");
+    expect(paramLabel({ id: "n", kind: "int", choices: [], min: 1, max: 2, name_zh: "", choice_names_zh: {} })).toBe("n");
+    expect(choiceLabel({ ...element, choice_names_zh: {} }, "ice")).toBe("ice");
+  });
+
+  it("送出的動作仍用原本的值", () => {
+    const template = {
+      id: "oath_one_element",
+      name_zh: "只用某一種元素",
+      difficulty: "hard" as const,
+      difficulty_zh: "難",
+      params: [element],
+      description_zh: "",
+      bonus_zh: "",
+      judge_zh: "",
+    };
+    expect(swearAction(template.id, defaultParams(template), "")).toEqual({
+      kind: "swear_oath",
+      proposal: { template: "oath_one_element", params: { element: "fire" } },
+      player_text: "",
     });
   });
 });

@@ -9,6 +9,11 @@ export function toggleMercenary(chosen: readonly string[], id: string, max: numb
   return [...chosen, id];
 }
 
+/** 這次最多能選幾名（傭兵＋影子）：劇情夥伴佔了隊友位時比 `max_hired` 少（5C-3）。 */
+export function hireLimit(party: WorldPartyView): number {
+  return Math.min(party.max_hired, party.free_slots ?? party.max_hired);
+}
+
 /** 目前已雇用的傭兵 ID（名單順序沒有出場順序，所以從隊伍成員取）。 */
 export function hiredIds(party: WorldPartyView): string[] {
   return party.members.flatMap((m) => (m.mercenary != null ? [m.mercenary] : []));
