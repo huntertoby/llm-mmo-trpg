@@ -436,6 +436,9 @@ def test_beneficial_flags_in_content() -> None:
         "infused_holy",
         "rallied",  # 3-33e1
         "commanding",  # BAL-19f 追加：號令
+        "oath_bonus_easy",  # 5C-3：誓約之力
+        "oath_bonus_medium",
+        "oath_bonus_hard",
         "hasted",
         "regenerating",
         "shielded",
