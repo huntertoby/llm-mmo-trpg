@@ -94,8 +94,8 @@ def test_one_or_two_npcs_trusted_by_day_5(library: ContentLibrary) -> None:
     reached = sorted(d for d, _ in days.values() if d is not None)
     assert reached, days
     assert reached[0] in (4, 5), days  # 第 4～5 天第一位到信賴（玩法 PM 2026-11-03）
-    assert 1 <= sum(1 for d in reached if d <= 5) <= 2, days  # noqa: PLR2004
-    assert all(d > 3 for d in reached), days  # noqa: PLR2004
+    assert 1 <= sum(1 for d in reached if d <= 5) <= 2, days
+    assert all(d > 3 for d in reached), days
 
 
 if __name__ == "__main__":  # pragma: no cover — 報告用

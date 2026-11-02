@@ -72,7 +72,8 @@ class GroupWeight(ContentModel):
 
 
 class FixedElite(ContentModel):
-    """精英巢穴固定的精英（9.6.6「精英巢穴、懸賞固定有」）：單位＋詞綴。"""
+    """精英巢穴固定的精英（9.6.6「精英巢穴、懸賞固定有」）：單位＋詞綴。資料指定，所以本身已是
+    精英的範本也可以套（Phase 5B-4c，18.7.4 懸賞的指定詞綴；HP 不再乘）。"""
 
     unit: str = Field(pattern=ID_PATTERN)
     affix: str = Field(pattern=ID_PATTERN)
@@ -298,7 +299,9 @@ def _elite_problems(
     if not catalog.has(loc.elite.unit):
         return [f"{where}：未知的固定精英 {loc.elite.unit}"]
     try:
-        reason = catalog.affix_problem(catalog.template(loc.elite.unit), loc.elite.affix)
+        reason = catalog.affix_problem(
+            catalog.template(loc.elite.unit), loc.elite.affix, allow_elite=True
+        )
     except KeyError:
         return [f"{where}：未知的詞綴 {loc.elite.affix}"]
     if reason is not None:
@@ -332,7 +335,9 @@ def _variant_problems(
                 problems.append(f"{where} {variant.flag}：未知的固定精英 {elite.unit}")
                 continue
             try:
-                reason = catalog.affix_problem(catalog.template(elite.unit), elite.affix)
+                reason = catalog.affix_problem(
+                    catalog.template(elite.unit), elite.affix, allow_elite=True
+                )
             except KeyError:
                 problems.append(f"{where} {variant.flag}：未知的詞綴 {elite.affix}")
                 continue
