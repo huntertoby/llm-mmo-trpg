@@ -106,7 +106,7 @@
 | 5B-2 | 情境判定引擎（9.6.4）：模板、LLM 提議的 pydantic schema 與合法性檢查（屬性在允許清單、難度 ±2、劣勢）、d20＋修正、三段結果、用心清單逐筆核對事實、種族 +1、獎懲照預算表；寫入事件日誌、可重播 | 5B-1 | 1.5 h | 否 |
 | 5B-3 | 說書人接線（`trpg.narrative`）：挑骨架、填角色與動機、短旁白（1～3 句＋多講一點）、情境敘述、NPC 自由聊天只換資訊；全部經 `LLMClient`、有 Mock、玩家輸入包 `<player_input>`；模型不可用時用模板文字降級（3.1） | 5B-2 | 1.5 h | 否 |
 | 5B-4 | 任務狀態機：新手任務鏈、主線第 1 章、區域任務鏈「青霧觀的分裂」（18.7）、隱藏任務、劇情技能與三選一接到現有候選產生器（7.6）；NPC 好感度（9.6.7 #5）；酒館傳聞 | 5B-2 | 1.5 h | 可與 5B-3 平行（不碰 `narrative`） |
-| 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表 | 5B-3、5B-4 | 1.5 h | 否 |
+| 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表；路由接說書人（travel 觸發事件後送 `event_story`、聊天端點）；大世界自己的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）；隱藏地點揭露後名稱可公開，揭露前用提示語而非「某處」（玩法 PM 2026-11-03） | 5B-3、5B-4 | 1.5 h | 否 |
 
 ### 5C｜組隊、影子與傭兵（3 段）
 
@@ -1656,7 +1656,162 @@ exchange_supplies: 1
 | 5AM1-9 | 九轉回天數值 | 第二段自己為中心 3×3 的友方治療 `4d8`（延遲段第二段只能是十字／方陣／環形，`2d8` 低於預算下限；實作時改）、`wis` 加成；冷卻 4、法力 12（初值） |
 | 5AM1-10 | 戰鬥紀錄版號 | `/102` |
 
+## 15. 5B-3 詳細規格：說書人接線
 
-## 15. 之後各段規格
+> 給實作 agent。只動 `content/world/narration.yaml`（新）、`src/trpg/content/world_narration.py`（新）、`src/trpg/content/world_events.py`（載入時一併載入說書模板）、`src/trpg/world/`（新增 `narration.py`；`state.py`、`actions.py`、`step.py` 小改）、`src/trpg/llm/prompts/storyteller.py`（新：prompt 文字與版本）、`src/trpg/narrative/storyteller.py`（新：組 prompt、呼叫 `LLMClient`、驗證、重試、降級）、`src/trpg/api/world_story.py`（新：外層組裝，從世界狀態取資料 → 說書人 → 世界動作；**不接路由**）、`tests/content/`、`tests/world/`、`tests/narrative/`、`tests/llm/`、`tests/api/`（只加測試）、CLI 快照（`trpg content check` 變了才重產）。**不做** 前端與 API 路由（5B-5）、任務狀態機、好感度、酒館傳聞內容（5B-4）、真模型評估（不連 8001）。不動 `trpg.engine`、`trpg.roguelite`、`narrative/events.py` 等戰鬥紀錄文字、`content/units/`。
+> 依據：09 9.1（說書人分層；NPC 代理只帶人設、記憶與當下情境）、9.5（context 依序：固定系統提示 → 世界資料 → 當前場景狀態（從引擎讀，不從聊天推斷）→ 相關記憶；輸出經 canon 驗證器，違反則重新生成）、9.6.4 第 1、6 點（LLM 只依模板與世界狀態寫情境敘述、只負責敘述結果）、9.6.7 #3（自由聊天只換資訊：線索、隱藏任務入口、傳聞；不換道具、經驗、戰力）、#6（LLM 依世界狀態挑骨架、填角色與動機；引擎驗證合法性：角色存在、地點對；LLM 不能自己多生事件；線頭只能由事件結果產生）、#7（旁白約 1～3 句，可點「多講一點」）、9.6.10 #107（旁白簡潔具體、短句少形容詞；雲嶺古風；NPC 依人設卡當場說）；10 第 10 節（結構化輸出、pydantic、prompt 版本化放 `src/trpg/llm/prompts/`、LLM 輸出寫進事件日誌、重播不呼叫 LLM）、第 11 節（`<player_input>`、物品經驗資源只能由引擎產生）；`docs/專案計畫.md` 3.1（模型不可用時遊戲要能降級）；18 18.4、18.5；本檔 2.1、2.3、8.6（5B1-3）、10。
 
-（5A-M1 驗收後補上之後各段。）
+### 15.1 目標
+
+說書人接上 5B-1／5B-2：事件觸發後 **挑骨架（只能從候選挑）＋填角色與動機＋短旁白**；情境判定前寫 **情境敘述**、判定後寫 **結果敘述**；在 NPC 所在地點可以 **自由聊天（只換資訊）**。四種敘述都經 `LLMClient`（測試用 `MockLLMClient`），輸出先過 pydantic 與靜態檢查，不合法帶錯誤重試，用盡或連不上模型時用 **content 裡的模板文字** 降級；外層把結果包成世界動作 `narrate`，由 `trpg.world` 再核對一次引用（NPC、地點、線頭存在且角色看得到），通過才寫進世界動作日誌。**重播照紀錄、不呼叫 LLM。** 敘述不改任何數值、不產生物品、經驗、補給、線頭；唯一的狀態變化是事件敘述換骨架（候選內）。
+
+```
+trpg.api.world_story（外層）          trpg.narrative.storyteller              trpg.world.narration
+世界＋角色＋內容庫 → 請求（純資料）──▶ messages（資料區＋<player_input>）
+  允許的骨架／NPC／地點／線頭             complete(json_schema) → clean → JSON
+                                        → StoryText（pydantic）→ story_problems（靜態＋請求內引用）
+                                        有錯帶 <errors> 重試（共 2 次）；用盡／連不上 → 模板降級
+NarrateAction(scene, story, 來源, prompt 版本) ── narration_problems 不過 → 改用降級 ──▶ world_step
+                                                                         引用核對（不過拋錯、狀態不變）
+                                                                         事件敘述：換骨架、標記已敘述
+                                                                         發 narrated 事件
+```
+
+依賴（2.3）：`trpg.world` 不匯入 `narrative`／`llm`；`trpg.narrative` 不匯入 `world`（只吃 `trpg.content` 的定義與純資料）；敘述的 pydantic 模型與靜態檢查放 `trpg.content.world_narration`，三方共用；組裝在 `trpg.api`。
+
+### 15.2 交付項目
+
+1. **schema `src/trpg/content/world_narration.py`**（`__all__` 明列、`ContentModel`、錯誤訊息繁中）：
+
+   ```python
+   StoryScene = Literal["event", "situation", "outcome", "chat"]
+   # event＝事件開場（挑骨架＋角色＋動機＋旁白）；situation＝情境判定前的情境敘述；
+   # outcome＝情境判定的結果敘述；chat＝NPC 自由聊天的回話
+
+   class StoryText(_Strict):  # LLM 輸出（也是降級輸出）；extra="forbid"
+       skeleton: str | None = None  # 只有 event：從允許的候選挑
+       actor_zh: str = ""  # 只有 event：填角色（≤ 24 字）
+       motive_zh: str = ""  # 只有 event：動機（≤ 60 字）
+       text_zh: str  # 短旁白／回話：1～3 句、≤ 150 字（9.6.7 #7）
+       more_zh: str = ""  # 「多講一點」（≤ 400 字；可空）
+       npcs: tuple[str, ...] = ()  # 提到的 NPC（人設卡 ID，≤ 4、不重複）
+       locations: tuple[str, ...] = ()  # 提到的地點（≤ 4、不重複）
+       threads: tuple[str, ...] = ()  # 提到的線頭（≤ 4、不重複）
+
+   def sentence_count(text: str) -> int  # 以 。！？!? 結尾的句數（沒有句號＝1 句）
+   def story_problems(scene, story) -> list[str]  # 靜態：event 必須有 skeleton／角色／動機，其他場景不可有
+
+   class StoryTemplates(ContentModel):  # content/world/narration.yaml（降級文字，內容即資料）
+       tones: dict[str, str]  # 區域 → 語氣（9.6.10 #107；雲嶺古風）
+       event_text: str; event_more: str; event_more_no_obstacle: str
+       situation_text: str; situation_more: str
+       outcome_text: dict[Outcome, str]  # success／partial／failure
+       chat_text: str
+       # 佔位符只能用規定的名稱（{who}、{want}、{obstacle}、{stakes}、{location}、{approach}、{name}），
+       # 載入時檢查；格式化後必須通過 StoryText 的長度與句數限制
+   ```
+
+2. **載入**：`load_world_event_content` 一併載入 `world/narration.yaml`（`WorldEventContent.story: StoryTemplates | None`）；不存在＝`None`（降級時用程式內建的最小句子）。`tones` 的區域要有地點圖。加進 `library.files`，`trpg content check` 多一行摘要。
+
+3. **雲嶺內容** `content/world/narration.yaml`（15.4）。
+
+4. **`trpg.world`**：
+   - `state.py`：`EventTrigger.narrated: bool = False`（有預設值、不升格式版本）。
+   - `actions.py`：動作 `NarrateAction`（`kind="narrate"`、`scene`、`template`（situation／outcome）、`outcome`（outcome）、`npc`（chat）、`player_text`（chat，≤ 500 字，只存紀錄）、`story: StoryText`、`source: "llm"|"fallback"`、`prompt_version`）；事件 `narrated`（場景、最後的骨架、模板、NPC、`story`、來源）。
+   - `narration.py`：`story_choices(library, world, char, scene, ...) -> StoryChoices`（允許的骨架、NPC、地點、線頭、禁止出現的文字；給外層餵 LLM、給引擎核對，兩邊同一個函式）、`narration_problems(...)`、`apply_narration(...)`（15.5）。
+   - `step.py`：`world_step` 多一個分派。
+
+5. **`src/trpg/llm/prompts/storyteller.py`**：`STORY_PROMPT_VERSION = "storyteller/1"`、系統指令（任務、風格、安全規則）四種場景各一段。
+
+6. **`src/trpg/narrative/storyteller.py`**：請求資料類別（`StoryRequest`：場景、區域名稱與語氣、地點、骨架（event 為允許的候選）、模板、結果摘要、NPC 卡、持有線頭、允許的 ID、禁止文字、玩家文字）、`story_schema(request)`（ID 欄位都是列舉）、`build_story_messages(...)`、`tell_story(client, request, *, attempts=2, templates) -> StoryOutcome`（`story`、`source`、`attempts`、`errors`、`prompt_version`）、`fallback_story(request, templates)`。
+
+7. **`src/trpg/api/world_story.py`**（外層，不接路由）：`event_story`、`situation_story`、`outcome_story`、`chat_story`：從世界狀態組請求 → `tell_story` → `NarrateAction`；組好的動作先用 `narration_problems` 核對，不過就改用降級（降級只引用允許清單內的東西，一定通過）。`client=None`＝直接降級（模型關閉）。
+
+8. **測試**（15.7）與 **完成報告** `docs/phases/Phase5B-3報告.md`：交付、提示結構與注入防護、降級做法、可重播、代決、待 PM 決定。
+
+### 15.3 四種場景
+
+| 場景 | 前提（引擎檢查） | LLM 可以做的 | 允許的引用 | 狀態變化 |
+|---|---|---|---|---|
+| `event` | 有 `pending_event`、還沒敘述過、沒有 `pending_encounter` | 從允許的骨架挑一個（9.6.7 #6）、寫角色（`actor_zh`）與動機（`motive_zh`）、1～3 句旁白＋多講一點 | 骨架：`pending_event.candidates`；若其中有接得上有效線頭的骨架，只能從那些挑（「優先接線頭」，同 5B-1 8.6 第 6 點）。NPC：挑的骨架的 `npcs` ＋ 所在地點的 NPC。地點、線頭見下 | `pending_event.skeleton` 換成挑的骨架、`follows_thread` 依新骨架重算、`narrated=True` |
+| `situation` | 有 `pending_event`、模板在本區且屬於該骨架、沒有 `pending_encounter` | 依模板寫情境敘述（9.6.4 第 1 點） | NPC：骨架 `npcs` ＋ 所在地點的 NPC | 無 |
+| `outcome` | 模板在本區、`outcome` 是三段之一 | 敘述結果（9.6.4 第 6 點；結果與獎懲由外層從判定事件帶入，LLM 不能改） | 同上 | 無 |
+| `chat` | NPC 在本區、人設卡地點＝角色所在地點、沒有 `pending_encounter` | 依人設卡回話（9.6.7 #3：只換資訊） | NPC：本區所有人設卡 | 無（不給物品、經驗、補給、線頭、好感度） |
+
+共同：
+- **地點**＝本區地點中角色看得到的（不是隱藏，或已發現）；**線頭**＝角色持有的有效線頭（個人＋世界，`expires_at > now`）。說書人只能提到已經存在、角色看得到的東西（9.6.7 #6「引擎驗證合法性」）；新線頭、揭露地點只能由事件結果產生（5B-2／5B-4）。
+- **禁止文字**（9.5 canon 驗證的規則部分）：所有文字欄位不可含本區 **未發現的隱藏地點名稱**、本區 NPC 的 **祕密原文**（`secret_zh` 只給說書人參考，18.5）。
+- 長度與句數照 `StoryText`；所有 ID 欄位在 JSON schema 是列舉，pydantic 驗證後再由 `story_problems` 與請求內的允許清單檢查。
+
+### 15.4 雲嶺降級模板（`content/world/narration.yaml`；開發 PM 定、之後可改）
+
+```yaml
+tones:
+  cloud_ridge: 古風：短句、少形容詞，帶一點文言；修士稱人「施主」
+event_text: 在{location}，{who}擋在你面前。
+event_more: '{who}想要{want}。擋在中間的是{obstacle}。賭上的是{stakes}。'
+event_more_no_obstacle: '{who}想要{want}。賭上的是{stakes}。'
+situation_text: '{who}的事還沒了結。你打算{approach}。'
+situation_more: 賭上的是{stakes}。
+outcome_text:
+  success: '{approach}，成了。'
+  partial: '{approach}，只成了一半。'
+  failure: '{approach}，沒有成。'
+chat_text: '{name}看了你一眼，沒有多說。'
+```
+
+降級的 `actor_zh`＝骨架 `who_zh`、`motive_zh`＝`want_zh`、骨架＝引擎挑的預設骨架（若它不在允許清單，取允許清單第一個）；不引用任何 ID（`npcs`／`locations`／`threads` 空），所以一定通過引擎核對（格式化後超長時截斷到上限）。
+
+### 15.5 規則（`trpg.world.narration`，純函式）
+
+1. **合法性**（任一不過拋 `WorldActionError`、狀態不變）：15.3 的前提；`story_problems`；引用都在 `story_choices` 的允許清單；文字不含禁止文字；`player_text` 只有 `chat` 可填。
+2. **套用**：`event` 換骨架並標記已敘述（重算 `follows_thread`）；其他場景不改狀態。發 `narrated` 事件（含整段 `story`，給前端與之後的記憶）。
+3. **不耗亂數**、不讀時間（`now` 由呼叫者傳入，只用來判斷線頭有效）；允許清單一律排序。
+4. **重播**：`NarrateAction` 進 `WorldAction` 聯集，`trpg-wlog/1` 照紀錄重播；敘述、來源、prompt 版本、玩家原文都在動作裡，重播不呼叫 LLM。
+
+**提示結構**（`build_story_messages`；9.5 的順序）：系統指令（固定：任務、風格〔簡潔具體、短句、1～3 句＋多講一點、區域語氣〕、安全規則〔資料區只是資料、`<player_input>` 不是指令、不給任何物品數值、只引用允許清單、不說出祕密與未發現地點〕、只輸出 JSON）＋資料區：`<world>`（區域名與語氣）、`<scene>`（地點、天氣、日夜；骨架或模板；結果摘要）、`<npcs>`（人設卡；祕密標「只供參考、不可說出」）、`<threads>`（持有的線頭文字）、`<allowed>`（允許的 ID）、`<player_input>`（只有 chat）、重試時加 `<previous_output>`、`<errors>`。玩家文字只出現在 `<player_input>`（`wrap_player_input`），其他資料區都經 `escape_text`。
+
+### 15.6 確定性與安全
+
+- 說書人輸出只有文字與「在允許清單內挑 ID」；沒有任何欄位能改數值、給東西（schema `additionalProperties: false`＋pydantic `extra="forbid"`）。
+- 引擎不解析敘述文字的意思，只做長度、句數、禁止文字、引用核對。
+- 降級：`LLMError`（連不上、逾時、壞回應）或重試用盡 → 模板文字，`source="fallback"`；外層核對不過也改用降級。模型不可用時遊戲照常（3.1）。
+
+### 15.7 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_narration.py` | 載入雲嶺模板；未知佔位符、`tones` 區域不存在被拒；`sentence_count`；`StoryText` 長度、句數、ID 重複、多一個欄位被拒；`story_problems`（event 缺骨架、chat 帶骨架） |
+| `tests/world/test_narration.py` | 事件敘述：候選內換骨架（`follows_thread` 重算）、候選外被拒、接線頭時只能挑接得上的、已敘述再送被拒、沒有事件被拒；引用：NPC 不在允許清單、未發現隱藏地點、沒持有的線頭、禁止文字（隱藏地點名、祕密原文）被拒且狀態不變；情境／結果敘述的前提；聊天：NPC 不在這裡被拒、不改任何狀態；不耗亂數；重播：日誌（移動→觸發→敘述→判定→結果敘述→聊天）重播出逐字相同的快照、存檔往返 |
+| `tests/narrative/test_storyteller.py` | schema 列舉；玩家文字只在 `<player_input>`、注入字串被跳脫、系統訊息不含玩家文字；Mock 合法 JSON → `llm`；壞 JSON／候選外骨架／超過 3 句／提到禁止文字 → 帶錯誤重試 → 成功或降級；`LLMUnavailable` → 降級；降級文字照模板、沒有模板檔時用內建句子；prompt 版本、四個場景的系統指令都含安全規則 |
+| `tests/api/test_world_story.py` | 外層組裝：事件、情境、結果、聊天四種動作都能 `world_step`；Mock 回候選外骨架 → 降級仍可套用；`client=None` → 降級 |
+
+### 15.8 驗收
+
+- `uv run pytest -q tests/world tests/narrative/test_storyteller.py tests/api/test_world_story.py tests/content/test_world_narration.py tests/content/test_world_events.py tests/llm tests/test_architecture.py -n 8 --timeout=1800 -m "not llm"` 通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 15.9 不做的事
+
+- 不接 API 路由、不做前端（事件卡、NPC 對話畫面在 5B-5）；不做好感度、任務、酒館傳聞、線頭到期結局（5B-4）；不做說書人記憶（9.6.7 #8：之後用 `narrated` 事件與日誌做）、canon 驗證的小模型部分（只做規則）。
+- 不讓聊天產生線頭、揭露地點或任何狀態變化（「隱藏任務入口、傳聞」的發放在 5B-4 的任務與傳聞資料裡做）。
+- 不做真模型評估（不連 8001）；不做串流。
+
+### 15.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5B3-1 | 敘述怎麼進日誌 | 新世界動作 `narrate`（外層送），引擎核對後發 `narrated` 事件；不另開敘事日誌 |
+| 5B3-2 | 事件敘述可以換骨架幾次 | 每個事件 1 次（`narrated` 旗標）；有接得上線頭的候選時只能在那些裡挑 |
+| 5B3-3 | 允許引用的範圍 | 地點＝角色看得到的本區地點；線頭＝持有的有效線頭；NPC：事件／情境／結果＝骨架 NPC＋所在地點的 NPC，聊天＝本區全部人設卡 |
+| 5B3-4 | canon 檢查（9.5）先做哪些 | 規則：未發現隱藏地點名、NPC 祕密原文、引用 ID、長度、句數；小模型檢查之後 |
+| 5B3-5 | 聊天的限制 | NPC 要在角色所在地點；不改任何狀態；玩家文字 ≤ 500 字，只放 `<player_input>` |
+| 5B3-6 | 旁白長度 | `text_zh` 1～3 句、≤ 150 字；「多講一點」≤ 400 字；角色 ≤ 24 字、動機 ≤ 60 字 |
+| 5B3-7 | 重試與降級 | 共試 2 次（同 5B2-10）；用盡、連不上、外層核對不過 → content 模板文字；沒有模板檔 → 程式內建的最小句子 |
+| 5B3-8 | 結果敘述的核對 | 引擎只核對模板與引用（判定結果不存在狀態裡）；結果與獎懲由外層從判定事件帶進請求，LLM 不能改 |
+| 5B3-9 | 組裝放哪 | `trpg.api.world_story`（world 與 narrative 互不匯入）；路由與畫面在 5B-5 |
+
+
+## 16. 之後各段規格
+
+（5A-M1、5B-3 驗收後補上之後各段。）
