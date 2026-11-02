@@ -86,3 +86,8 @@ overrides:
   - {skill: skill_thorn_wall, attrs: [wis], reason_zh: 荊棘牆是自然系的屏障（毒只是荊棘的附帶），歸感知}
   # BAL-19e（#110 意志姿態）：不屈心志是以心志撐住肉身的防守姿態（姿態沒有命中與傷害，縮放屬性只是顯示提示），歸意志路線
   - {skill: skill_st_unbroken_will, attrs: [wil], reason_zh: 不屈心志是以意志硬撐的防守姿態（縮放屬性只是顯示提示），歸意志路線}
+  # BAL-19f 追加（玩法 PM 2026-11-02，06 6.10 組合主題「可看智力」）：火杖用的召喚＋附帶元素法術。召喚原語的其餘效果只能作用在施放者自己，
+  # 附帶的元素是自身附魔或帶電護盾，主題推導（只看元素傷害、表面、燃燒等狀態）抓不到元素主題，所以逐招列為元素＋意志的組合主題
+  - {skill: skill_fsum_ember_herald, attrs: [int, wil], reason_zh: 燼火喚靈是召喚＋火焰附魔的組合主題（元素＋意志），看智力或意志}
+  - {skill: skill_fsum_cinder_pact, attrs: [int, wil], reason_zh: 焰契火靈是召喚＋火焰附魔的組合主題（元素＋意志），看智力或意志}
+  - {skill: skill_fsum_storm_pact, attrs: [int, wil], reason_zh: 雷契喚靈是召喚＋帶電護盾的組合主題（元素＋意志），看智力或意志}
