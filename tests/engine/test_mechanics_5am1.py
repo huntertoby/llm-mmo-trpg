@@ -1,4 +1,4 @@
-"""Phase 5A-M1：引擎機制①（``docs/phases/Phase5計畫.md`` 第 13 節）。
+"""Phase 5A-M1：引擎機制①（``docs/phases/Phase5計畫.md`` 第 14 節）。
 
 開場隱蔽（範本 ``opening_statuses``、詞綴 ``add_opening_statuses``）、死亡時留下表面（狀態
 ``on_death_surface``）、同門相護（內建反應 ``kin_ward``）、蓄力強招「九轉回天」與 AI 的估值。

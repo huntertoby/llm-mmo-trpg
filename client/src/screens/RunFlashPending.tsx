@@ -1,7 +1,7 @@
 // 閃現選項畫面（Phase 3W-6）：點數已經扣了，一定要選一個。每個選項顯示類別標籤、變化說明、與原本比較的數字，
 // 以及套用後的技能卡；轉型保底列在最後並標「轉型」。轉型換到已滿的欄位時，要先選卸下哪一招。
 import { useState } from "react";
-import type { RunChoice, RunResponse } from "../api/types";
+import type { PendingFlash, RunChoice, RunHero, RunResponse } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { ownedCards } from "../run/loadout";
 import { cardDiff, flashOf, optionTag, pendingTitle, pickChoice, pickReady, sortedOptions } from "../run/flash";
@@ -14,10 +14,22 @@ type Props = {
 
 export function RunFlashPending({ run, busy, onChoose }: Props) {
   const pending = run.pending_flash;
+  if (pending === null || pending === undefined) return null;
+  return <FlashPendingPanel pending={pending} hero={run.hero} busy={busy} onChoose={onChoose} />;
+}
+
+type PanelProps = {
+  pending: PendingFlash;
+  hero: RunHero;
+  busy: boolean;
+  onChoose(choice: RunChoice): Promise<number | null>;
+};
+
+/** 待選閃現的選項畫面本體（一輪與大世界共用；5A-7）。 */
+export function FlashPendingPanel({ pending, hero, busy, onChoose }: PanelProps) {
   const [pick, setPick] = useState<number | null>(null);
   const [unequip, setUnequip] = useState<string | null>(null);
-  if (pending === null || pending === undefined) return null;
-  const before = ownedCards(run.hero).get(pending.skill_id);
+  const before = ownedCards(hero).get(pending.skill_id);
   const options = sortedOptions(pending.options);
   const picked = options.find((o) => o.index === pick);
   return (
@@ -28,7 +40,7 @@ export function RunFlashPending({ run, busy, onChoose }: Props) {
       {before !== undefined && (
         <details className="flash-before">
           <summary className="small">看原本的技能</summary>
-          <SkillCardView card={before} flash={flashOf(run.hero, before.id)} flashRules={run.hero.flash_rules} />
+          <SkillCardView card={before} flash={flashOf(hero, before.id)} flashRules={hero.flash_rules} />
         </details>
       )}
       <div className="run-offer-cards flash-options">
@@ -82,7 +94,7 @@ export function RunFlashPending({ run, busy, onChoose }: Props) {
                 disabled={busy}
                 onClick={() => setUnequip(id)}
               >
-                卸下「{ownedCards(run.hero).get(id)?.name_zh ?? id}」
+                卸下「{ownedCards(hero).get(id)?.name_zh ?? id}」
               </button>
             ))}
           </div>

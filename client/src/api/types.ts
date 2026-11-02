@@ -237,4 +237,16 @@ export type WorldAction =
   | Schemas["RetreatAction"]
   | Schemas["RestAction"]
   | Schemas["LoadoutAction"]
-  | Schemas["TeleportAction"];
+  | Schemas["TeleportAction"]
+  // 5A-7：成長的世界動作
+  | Schemas["AllocateAction"]
+  | Schemas["RespecAction"]
+  | Schemas["FlashAction"]
+  | Schemas["FlashPickAction"]
+  | Schemas["DissolveAction"]
+  | Schemas["InheritAction"]
+  | (Omit<Schemas["SwearOathAction"], "source" | "prompt_version" | "player_text"> & { player_text?: string })
+  | Schemas["ReleaseOathAction"];
+export type WorldGrowthView = Schemas["GrowthView"];
+export type WorldOathView = Schemas["OathView"];
+export type WorldOathTemplate = Schemas["OathTemplateView"];

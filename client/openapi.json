@@ -2020,6 +2020,112 @@
           }
         }
       }
+    },
+    "/api/world/characters/{character_id}/flash-preview": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Flash Preview",
+        "description": "閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（5A-7）：不扣點、不寫日誌。點數與地點\n另外看（``WorldView.growth``）。",
+        "operationId": "post_flash_preview_api_world_characters__character_id__flash_preview_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlashPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlashPreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/allocation-preview": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Allocation Preview",
+        "description": "配點後的最大 HP、法力、耐力與變化文字（5A-7；同一輪的預覽）。",
+        "operationId": "post_allocation_preview_api_world_characters__character_id__allocation_preview_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationPreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2274,6 +2380,33 @@
         ],
         "title": "Aim",
         "description": "瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；\n不疊加，回合結束或用掉即失效。"
+      },
+      "AllocateAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "allocate",
+            "title": "Kind",
+            "default": "allocate"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attributes"
+        ],
+        "title": "AllocateAction",
+        "description": "分配未分配的屬性點（07 7.2；5A-6）：屬性 → 加幾點，總數 ≤ ``attribute_points``。"
       },
       "AllocateChoice": {
         "properties": {
@@ -4446,6 +4579,27 @@
         "title": "DisplaceCheckOut",
         "description": "預覽中的位移抵抗判定（Phase 3D-2b）：敵方 ``unit_id`` 被移動的成功率（千分比）；\n``resist_bonus`` 是目標的抵抗加成，``lethal`` 為落點是致命地形。"
       },
+      "DissolveAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "dissolve",
+            "title": "Kind",
+            "default": "dissolve"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill"
+        ],
+        "title": "DissolveAction",
+        "description": "溶掉一招（06 6.34.3 #71；城鎮與營火）：退回花在它身上的點的一半。"
+      },
       "DissolveChoice": {
         "properties": {
           "kind": {
@@ -4814,6 +4968,37 @@
           "in_battle": {
             "type": "boolean",
             "title": "In Battle"
+          },
+          "reinforcements": {
+            "type": "integer",
+            "title": "Reinforcements",
+            "default": 0
+          },
+          "first_team": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Team"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hero_statuses": {
+            "items": {
+              "$ref": "#/components/schemas/HeroStatusView"
+            },
+            "type": "array",
+            "title": "Hero Statuses",
+            "default": []
+          },
+          "opening_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Opening Zh",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -5164,6 +5349,50 @@
           "variants"
         ]
       },
+      "FlashAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "flash",
+            "title": "Kind",
+            "default": "flash"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill"
+        ],
+        "title": "FlashAction",
+        "description": "閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``\n為 ``None`` ＝ 閃現下一次，否則重閃第 ``slot`` 次；``category`` 指定類別（多花 1 點）。"
+      },
       "FlashCategoryOut": {
         "properties": {
           "id": {
@@ -5294,6 +5523,39 @@
         ],
         "title": "FlashOptionOut",
         "description": "待選閃現的一個選項：變化與套用後的技能卡。"
+      },
+      "FlashPickAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "flash_pick",
+            "title": "Kind",
+            "default": "flash_pick"
+          },
+          "pick": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pick"
+          },
+          "unequip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unequip"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pick"
+        ],
+        "title": "FlashPickAction",
+        "description": "選閃現的第 ``pick`` 個選項（同 roguelite ``FlashPickChoice``）。"
       },
       "FlashPickChoice": {
         "properties": {
@@ -6988,6 +7250,63 @@
         "title": "GrantedSkillView",
         "description": "暫時獲得的技能（Phase 3D-8c，``grant_skill``）：技能與剩餘輪數（在持有者每個回合結束時 −1，\n歸零消失）。只有自己陣營的單位會列出。"
       },
+      "GrowthView": {
+        "properties": {
+          "insight": {
+            "type": "integer",
+            "title": "Insight"
+          },
+          "skill_tier": {
+            "type": "integer",
+            "title": "Skill Tier"
+          },
+          "at_service": {
+            "type": "boolean",
+            "title": "At Service"
+          },
+          "service_zh": {
+            "type": "string",
+            "title": "Service Zh"
+          },
+          "can_allocate": {
+            "type": "boolean",
+            "title": "Can Allocate"
+          },
+          "can_spend": {
+            "type": "boolean",
+            "title": "Can Spend"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "insight",
+          "skill_tier",
+          "at_service",
+          "service_zh",
+          "can_allocate",
+          "can_spend",
+          "blocked_zh",
+          "pending"
+        ],
+        "title": "GrowthView",
+        "description": "成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -7431,6 +7750,48 @@
           "skills"
         ],
         "title": "HeroOut"
+      },
+      "HeroStatusView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "beneficial": {
+            "type": "boolean",
+            "title": "Beneficial"
+          },
+          "rounds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "description_zh",
+          "beneficial",
+          "rounds"
+        ],
+        "title": "HeroStatusView",
+        "description": "開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。"
       },
       "HistoryStepOut": {
         "properties": {
@@ -7949,6 +8310,42 @@
         ],
         "title": "InfusionPreviewOut",
         "description": "灌注技能的預覽（Phase 3-33d）：召喚物 ``summon_id`` 以目前位置 ``origin`` 與目前模式會選的\n目標與範圍（``tiles``／``units``）；``no_target`` 為真時選不到目標（下回合會放棄，法力與冷卻\n不退）。實際在召喚物的回合開始時才選，位置或戰況改變時可能不同。"
+      },
+      "InheritAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "inherit",
+            "title": "Kind",
+            "default": "inherit"
+          },
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "records": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Records"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill",
+          "source",
+          "records"
+        ],
+        "title": "InheritAction",
+        "description": "傳承（06 6.34.9 第 4 點；城鎮與營火）：同 roguelite ``InheritChoice``。"
       },
       "InheritChoice": {
         "properties": {
@@ -8593,6 +8990,238 @@
         ],
         "title": "NodeOut",
         "description": "目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、\n``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，\n``after_battle``、``offer``；Phase 3W-5）、``campfire``（``after_battle``）、\n``ended``（``victory``）。"
+      },
+      "OathCurrentView": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "difficulty_zh": {
+            "type": "string",
+            "title": "Difficulty Zh"
+          },
+          "params_zh": {
+            "type": "string",
+            "title": "Params Zh"
+          },
+          "sworn_at": {
+            "type": "integer",
+            "title": "Sworn At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template",
+          "name_zh",
+          "difficulty_zh",
+          "params_zh",
+          "sworn_at"
+        ],
+        "title": "OathCurrentView"
+      },
+      "OathParamView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "choice",
+              "int"
+            ],
+            "title": "Kind"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices",
+            "default": []
+          },
+          "min": {
+            "type": "integer",
+            "title": "Min",
+            "default": 0
+          },
+          "max": {
+            "type": "integer",
+            "title": "Max",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "OathParamView"
+      },
+      "OathProposal": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Template"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "OathProposal",
+        "description": "立誓的提議：模板與參數（LLM 只能從白名單模板挑、從允許值填，06 6.26 安全流程第 2 步）。"
+      },
+      "OathTemplateView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ],
+            "title": "Difficulty"
+          },
+          "difficulty_zh": {
+            "type": "string",
+            "title": "Difficulty Zh"
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/OathParamView"
+            },
+            "type": "array",
+            "title": "Params",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "difficulty",
+          "difficulty_zh"
+        ],
+        "title": "OathTemplateView"
+      },
+      "OathView": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "unavailable_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Zh"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OathCurrentView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cooldown_until": {
+            "type": "integer",
+            "title": "Cooldown Until"
+          },
+          "cooldown_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooldown Zh"
+          },
+          "can_swear": {
+            "type": "boolean",
+            "title": "Can Swear"
+          },
+          "swear_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swear Problem Zh"
+          },
+          "can_release": {
+            "type": "boolean",
+            "title": "Can Release"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/OathTemplateView"
+            },
+            "type": "array",
+            "title": "Templates",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "available",
+          "unavailable_zh",
+          "current",
+          "cooldown_until",
+          "cooldown_zh",
+          "can_swear",
+          "swear_problem_zh",
+          "can_release"
+        ],
+        "title": "OathView",
+        "description": "誓約（06 6.26、09 9.6.10 #106；模板內容在 5C-3）。"
       },
       "ObjectView": {
         "properties": {
@@ -10089,6 +10718,20 @@
         "title": "ReflashSlotOut",
         "description": "可以重閃的一欄（3W-R2：前端不自己推規則）。"
       },
+      "ReleaseOathAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "release_oath",
+            "title": "Kind",
+            "default": "release_oath"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReleaseOathAction",
+        "description": "解除誓約（#106：解除後現實 1 天內不能再立）。"
+      },
       "Reload": {
         "properties": {
           "unit_id": {
@@ -10109,6 +10752,20 @@
         ],
         "title": "Reload",
         "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
+      },
+      "RespecAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "respec",
+            "title": "Kind",
+            "default": "respec"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RespecAction",
+        "description": "免費重配屬性點（07 7.2「營火可以免費重配」；城鎮與營火；5A-6）。"
       },
       "RespecAttributesChoice": {
         "properties": {
@@ -12407,6 +13064,53 @@
         "title": "Swap",
         "description": "換位（Phase 3-21a）：與相鄰的我方單位（含召喚物）互換位置；朝向不變，不觸發藉機攻擊。"
       },
+      "SwearOathAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "swear_oath",
+            "title": "Kind",
+            "default": "swear_oath"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/OathProposal"
+          },
+          "player_text": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Player Text",
+            "default": ""
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "menu"
+            ],
+            "title": "Source",
+            "default": "menu"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proposal"
+        ],
+        "title": "SwearOathAction",
+        "description": "立誓（06 6.26、09 9.6.10 #106；城鎮與營火，同時 1 個）。``proposal`` 是 LLM 或選單提議、\n已經過 pydantic 驗證的模板與參數；引擎另外檢查合法性。誓言原文只是紀錄（給 LLM 時包在\n``<player_input>``），重播照紀錄、不呼叫 LLM。"
+      },
       "TacticalOrder": {
         "oneOf": [
           {
@@ -14328,15 +15032,47 @@
           },
           {
             "$ref": "#/components/schemas/TeleportAction"
+          },
+          {
+            "$ref": "#/components/schemas/AllocateAction"
+          },
+          {
+            "$ref": "#/components/schemas/RespecAction"
+          },
+          {
+            "$ref": "#/components/schemas/FlashAction"
+          },
+          {
+            "$ref": "#/components/schemas/FlashPickAction"
+          },
+          {
+            "$ref": "#/components/schemas/DissolveAction"
+          },
+          {
+            "$ref": "#/components/schemas/InheritAction"
+          },
+          {
+            "$ref": "#/components/schemas/SwearOathAction"
+          },
+          {
+            "$ref": "#/components/schemas/ReleaseOathAction"
           }
         ],
         "discriminator": {
           "propertyName": "kind",
           "mapping": {
+            "allocate": "#/components/schemas/AllocateAction",
             "camp": "#/components/schemas/CampAction",
+            "dissolve": "#/components/schemas/DissolveAction",
+            "flash": "#/components/schemas/FlashAction",
+            "flash_pick": "#/components/schemas/FlashPickAction",
+            "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
+            "release_oath": "#/components/schemas/ReleaseOathAction",
+            "respec": "#/components/schemas/RespecAction",
             "rest": "#/components/schemas/RestAction",
             "retreat": "#/components/schemas/RetreatAction",
+            "swear_oath": "#/components/schemas/SwearOathAction",
             "teleport": "#/components/schemas/TeleportAction",
             "travel": "#/components/schemas/TravelAction"
           }
@@ -14486,6 +15222,16 @@
           "slots_zh": {
             "type": "string",
             "title": "Slots Zh"
+          },
+          "insight": {
+            "type": "integer",
+            "title": "Insight",
+            "default": 0
+          },
+          "skill_tier": {
+            "type": "integer",
+            "title": "Skill Tier",
+            "default": 1
           }
         },
         "additionalProperties": false,
@@ -14724,6 +15470,44 @@
               }
             ],
             "title": "Battle Id"
+          },
+          "hero": {
+            "$ref": "#/components/schemas/HeroOut"
+          },
+          "pending_flash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingFlashOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "growth": {
+            "$ref": "#/components/schemas/GrowthView"
+          },
+          "oath": {
+            "$ref": "#/components/schemas/OathView"
+          },
+          "next_battle_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Next Battle Zh",
+            "default": []
+          },
+          "last_battle_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Battle Zh"
           }
         },
         "additionalProperties": false,
@@ -14735,7 +15519,10 @@
           "encounter",
           "clock",
           "events",
-          "battle_id"
+          "battle_id",
+          "hero",
+          "growth",
+          "oath"
         ],
         "title": "WorldView"
       },

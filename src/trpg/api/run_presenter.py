@@ -72,7 +72,16 @@ from trpg.skillgen.flash_state import (
     slot_is_major,
 )
 
-__all__ = ["flash_preview", "keyword_refs", "run_response", "save_summary", "start_label"]
+__all__ = [
+    "allocation_preview",
+    "flash_preview",
+    "hero_out",
+    "keyword_refs",
+    "pending_flash_out",
+    "run_response",
+    "save_summary",
+    "start_label",
+]
 
 _TAG_LABELS = {"deepen": "加深", "bridge": "橋接", "new": "新方向"}
 
@@ -426,6 +435,16 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         ),
         backpack=tuple(_candidate(library, run, i) for i in run.backpack),
     )
+
+
+def hero_out(library: ContentLibrary, run: RunState) -> HeroOut:
+    """主角面板（一輪的 ``hero``；大世界 5A-7 也用它，前端重用配點與閃現元件）。"""
+    return _hero(library, run)
+
+
+def pending_flash_out(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
+    """待選閃現（一輪的 ``pending_flash``；大世界 5A-7 也用它）。"""
+    return _pending(library, run)
 
 
 def resource_rule_text(library: ContentLibrary, *, test_mode: bool) -> str:

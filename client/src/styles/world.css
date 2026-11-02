@@ -213,3 +213,46 @@
 .start-world {
   margin-top: 12px;
 }
+
+/* 5A-7：成長與技能、閃現待選、開場說明、最近一次戰鬥 */
+.world-growth {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.world-growth-lock {
+  color: #e8b45a;
+}
+
+.world-opening,
+.world-next {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: #e8d9a8;
+}
+
+.world-last-battle {
+  margin-top: 4px;
+  color: #cfe3c8;
+}
+
+.world-points {
+  color: #ffd04a;
+}
+
+.world-oath-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 6px 0;
+}
+
+.world-oath-form input[type="text"] {
+  width: 16em;
+}
+
+.world-oath-form input[type="number"] {
+  width: 5em;
+}

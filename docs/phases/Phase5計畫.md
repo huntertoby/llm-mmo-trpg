@@ -88,6 +88,7 @@
 | 5A-6b | 5A-6 收尾（玩法 PM 代決 2026-11-03）：先手只影響第 1 輪（先手方單位第 1 輪全部排最前，第 2 輪起照正常先攻；敵人先手同）；開場 debuff 不擲抵抗、持續最多 2 回合（引擎，`LOG_FORMAT` 照慣例） | 5A-6 | 0.5 h | 可與 5A-SIM 平行 |
 | 5A-7 | 新世界動作的 API 與前端：配點、重配、閃現（待選）、溶掉、傳承、立誓、`first_team`／`hero_statuses`／新事件的中文呈現；最近一次戰鬥結果留在角色上（5A-5 待決 1） | 5A-6 | 1.5 h | 可與 5A-SIM 平行 |
 | 5A-SIM | 練等手感與經驗曲線模擬（代決初值）：同等級主角＋2 隊友打該地點遭遇勝率 ≥ 85%、結束剩 40～70% HP，高 2 級約一半；經驗來源比例 一般 1／精英 3／任務鏈一步 3／主線一步 5／情境成功 0.5（部分 0.25）／隱藏地點 2／懸賞 4；每天約 3 小時，第 3 天 5 級、第 6 天 8 級、第 7～8 天 10 級；精英首殺 +1 靈感。差太多再調敵人成長倍率 | 5A-4 | 1 h | 可與 5A-5 平行 |
+| 5A-SIM2 | 5A-SIM 套用（玩法 PM 代決 2026-11-03）：隊友（標準隊友、傭兵、影子）照主角等級成長；敵人成長維持（HP +5%／級、屬性 +2）；經驗門檻方案 B（1 份＝100×(1＋10%×(地點建議等級−1))；2～10 級累計 950／3800／8600／14350／20200／26050／31950／37800／43650）；戰鬥依一般／精英給、情境判定 0.5／0.25 份；雲海吊橋陣容最多 1 名遠程、寒湖石背熊只出現在 4 級以上陣容（其他換霧狼），兩處同等級約 75% 以上；套用後重量 | 5A-SIM | 1 h | 可與 5A-M1 平行 |
 | 5A-M1 | 引擎機制①（玩法 PM 2026-11-02，5A-3 待決）：蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護；做好後把雲嶺替代品換成正式機制（只改 content） | 5A-4 | 1.5 h | 可與 5A-ART 平行 |
 | 5A-M2 | 引擎機制②：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門 | 5A-M1 | 1 h | — |
 | 5B-M3 | 引擎機制③：三方混戰（排在 5B 主線第 1 章之前） | 5A-M1 | 1 h | — |
@@ -1511,32 +1512,101 @@ exchange_supplies: 1
 | 5A6-11 | 角色技能種子 | `fnv1a64("{season_seed}:{character_id}:skills")`（閃現選項、傳承、重配的種子；不佔世界亂數串流） | 開發 PM 定 |
 | 5A6-12 | 戰鬥紀錄版號 | `BattleSetup.first_team`、`UnitSpawn.opening_statuses` 進紀錄 → `/100` | 開發 PM 定 |
 
-## 13. 5A-M1 詳細規格：引擎機制①（蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護）
+## 13. 5A-7 詳細規格：新世界動作的 API 與前端
+
+> 給實作 agent。只動 `src/trpg/api/`（`world_schemas.py`、`world_presenter.py`、`routes/world.py`、`world.py`；`run_presenter.py` 把既有的主角與待選閃現組裝函式公開，不改輸出）、`src/trpg/world/` 的 **小改**（`state.py` 加 1 個欄位 `last_battle`、`battle.py` 打完時寫它，見 13.4）、`tests/api/`、`tests/world/`（只加測試）、`client/`（大世界畫面、重用 `client/src/run/` 的配點與閃現元件、`BattleScreen` 開場說明、API 型別）、`client/openapi.json`。**不做** 誓約模板內容與戰鬥中的加成、違反判定（5C-3）；經驗曲線（5A-SIM）；事件卡與情境判定畫面（5B-5）；LLM 閃現提議與 LLM 立誓轉換。不改 `trpg.engine`、`trpg.roguelite`、戰鬥紀錄格式（`LOG_FORMAT` 不變）。
+> 依據：06 6.34.2（大世界靈感：花在主城、小鎮、營火，和換技能同地點；一般戰鬥不給）、6.34.3（閃現流程、出題就扣點一定要選、重閃、溶掉退一半）、6.34.9（階級屬於角色、升階重配、傳承）、6.26（誓約）；07 7.2（配點、營火免費重配）、7.6、7.8；09 9.6.10 #106（大世界立誓：主城、小鎮、營火，同時 1 個，解除後現實 1 天不能再立）、9.6.11 #114（營火可換技能、閃現、重閃、溶掉、傳承、立誓）；本檔 11（5A-5）、12（5A-6，含 5A-6b：先手只影響第 1 輪、開場狀態不擲抵抗且最多 2 回合）；`Phase5A-5報告.md` 待決 1；`docs/開發PM交接.md` 6.5.1。
+
+### 13.1 目標
+
+5A-6 的成長接點在瀏覽器玩得到：**建角 → 打贏一場（經驗、升級、靈感）→ 配點 → 回小鎮閃現（待選時只能選）→ 重閃、溶掉、傳承、重配 → 立誓／解除（沒有誓約內容時「尚未開放」）**；下一場的 buff／debuff、增援、先手與開場狀態在遇敵陣容與戰鬥開場用中文說清楚；重新整理頁面仍看得到最近一次戰鬥的輸贏。規則全部照 `trpg.world`（API 不寫規則，前端不寫規則）。
+
+### 13.2 API
+
+| 方法與路徑 | 內容 |
+|---|---|
+| `POST /api/world/characters/{id}/actions` | `WorldActionRequest` 加上 5A-6 的 `allocate`、`respec`、`flash`、`flash_pick`、`dissolve`、`inherit`、`swear_oath`、`release_oath`（欄位同 `trpg.world.actions`）。`swear_oath` 從 API 只收 `source: "menu"`（LLM 轉換之後才接；代決 5A7-4）。不合法 422（`WorldActionError` 的中文訊息），戰鬥中 409（同 5A-5）。 |
+| `POST /api/world/characters/{id}/flash-preview` | 閃現或重閃之前的預覽（同一輪的 `flash-preview`，用大世界的內容庫視圖與角色技能種子）：`{skill, slot}` → `FlashPreviewOut`；不扣點、不寫日誌。 |
+| `POST /api/world/characters/{id}/allocation-preview` | 配點後的最大 HP、法力、耐力（同一輪的 `allocation-preview`）：`{attributes}` → `AllocationPreviewOut`。 |
+
+**`WorldView` 新增**（全部由後端算好）：
+- `hero`：一輪的主角格式 `HeroOut`（由 `as_run(char)` 經 `world_library` 組裝；屬性、已分配點、屬性影響、靈感、閃現規則、每招的閃現狀態、備用技能）——前端直接重用一輪的配點與閃現元件。
+- `pending_flash`：待選閃現（一輪的 `PendingFlashOut`；沒有＝`None`）。
+- `growth`：`insight`、`skill_tier`、`at_service`（在城鎮或營火）、`service_zh`（地點限制說明，例「閃現、重閃、溶掉、傳承、重配屬性、立誓只在城鎮與營火」）、`can_allocate`、`can_spend`（城鎮或營火、沒有遭遇、不在戰鬥、沒有待選）、`blocked_zh`（不能花點的原因；可以時 `None`）。
+- `oath`：`available`（內容庫有 `world/oaths.yaml`）、`unavailable_zh`（沒有時「尚未開放」）、`current`（模板名、難度中文、參數文字、立誓時間）、`cooldown_until`、`cooldown_zh`（剩多久能再立）、`can_swear`／`swear_problem_zh`、`can_release`、`templates`（ID、名稱、難度中文、參數：`choice` 的允許值或 `int` 的範圍）。
+- `next_battle`：角色身上的下一場修正，每筆一句中文（「下一場開場：〔狀態名〕（狀態說明，最多 2 回合）」「下一場增援 1 名敵人」）。
+- `encounter` 加：`reinforcements`、`first_team`（`ally`／`enemy`／`None`）、`hero_statuses`（狀態 ID、名稱、說明、回合）、`opening_zh`（開場說明句子，例「我方先手：第 1 輪我方全部先動，第 2 輪起照先攻」「開場狀態：主角帶〔中毒〕2 回合（不擲抵抗）」「增援 1 名」）。
+- `last_battle_zh`：最近一次戰鬥結果的一句話（地點、輸贏、輪數、經驗、升到幾級；沒有打過＝`None`），由角色快照算，重新整理也看得到（5A-5 待決 1）。
+- `events`：新事件的中文句子：開戰（增援、先手、開場狀態）、升級（含靈感、角色階級）、升階重配、得到靈感（精英首殺）、配點、重配、閃現出題、選閃現、溶掉、傳承、立誓、解除誓約。
+
+### 13.3 前端
+
+- **右側狀態**：等級、經驗、靈感點、未分配屬性點、角色階級；有下一場修正時列出；最近一次戰鬥結果（`last_battle_zh`）。
+- **「成長與技能」**：右側按鈕切換左欄（地點圖 ↔ 成長畫面）；成長畫面重用 `client/src/run/` 的元件：配點（`AttributeRespecSection`，重配按鈕只在城鎮與營火）、閃現（`FlashSection`）、重閃與溶掉／傳承（`CampfireSkillCare`）；前端把一輪的選擇轉成世界動作（`respec_attributes` → `respec`，其他同名同欄位）。不在城鎮或營火時，閃現、重閃、溶掉、傳承、重配、立誓的按鈕停用，畫面上方顯示 `growth.service_zh` 與 `blocked_zh`；配點任何沒有遭遇的時候都可以。
+- **閃現待選**：有 `pending_flash` 時左欄固定顯示選項畫面（重用一輪的選項畫面），地點圖、服務按鈕、遇敵按鈕全部停用，並顯示「先選完閃現的變化」。
+- **誓約**：成長畫面裡的「誓約」區：沒有誓約內容時「立誓（尚未開放）」停用；有內容時：選模板、填參數（選單或數字）、誓言文字選填 → 立誓；已有誓約時顯示內容與「解除誓約」（解除前確認，說明 1 天冷卻）；冷卻中顯示剩多久。
+- **戰鬥開場**：遇敵陣容面板顯示 `opening_zh`；戰鬥畫面開場橫幅下加同樣的句子（`BattleScreen` 新增選填的 `openingNotes`）。
+- 浮動卡一律用共用元件（6.5.1）；不加新美術。
+
+### 13.4 `trpg.world` 的小改（最近一次戰鬥結果）
+
+`CharacterState` 加 `last_battle: LastBattle | None = None`（`location`、`won`、`end_reason`、`rounds`、`xp_gained`、`level_before`、`level`、`at`；有預設值，`trpg-char/1` 不升版號，舊檔照讀）。`fight` 結算時寫入（勝負都算），其他動作不清除。重播得到相同的值（由日誌決定）。
+
+### 13.5 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/api/test_world_growth_api.py` | 打贏一場（AI 代打）→ `GET` 有經驗、升級、靈感、`last_battle_zh`；再 `GET` 一次句子還在；配點（成功、點數不足 422）；野外閃現 422、小鎮閃現 → `pending_flash` → 其他動作 422 → `flash_pick` → 技能換新 ID；`flash-preview`、`allocation-preview`；溶掉退點；重配（野外 422、小鎮可以）；沒有誓約內容時立誓 422、`oath.available` 為假、「尚未開放」；有樣本內容時立誓、解除、冷卻；`source: "llm"` 被拒；遇敵陣容的 `opening_zh`（先手、開場狀態、增援）；新事件句子 |
+| `tests/world/test_last_battle.py` | 打贏、打輸都寫 `last_battle`；舊格式（沒有欄位）照讀；日誌重播相同 |
+| `client/src/world/*.test.ts` | 一輪選擇轉世界動作、成長畫面可用與停用的判斷、待選時擋其他動作 |
+
+### 13.6 驗收
+
+- `uv run pytest -q tests/api tests/world -n 8 --timeout=3000`；`tests/cli -m "slow or not slow" --timeout=3000`；`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；OpenAPI 快照重產（`scripts/export_openapi.py` ＋ `gen:api`）。
+- 瀏覽器實際走一遍（後端、前端用 8000／8001／8010 以外的埠）：建角 → **在畫面上點完一場並打贏**（勝利回寫、經驗、升級）→ 配點 → 回小鎮閃現一次（待選時其他動作停用 → 選）；截圖或 `read_page` 記錄寫進報告；浮動卡 6.5.1 抽查。
+
+### 13.7 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5A7-1 | 最近一次戰鬥結果放哪 | `CharacterState.last_battle`（由 `fight` 寫入，可重播）；畫面一句話，不另存事件 |
+| 5A7-2 | 成長畫面的位置 | 左欄切換（地點圖 ↔ 成長），閃現待選時固定顯示選項；右側只放摘要與按鈕 |
+| 5A7-3 | 重用一輪元件 | `WorldView.hero` 用一輪的 `HeroOut` 格式；元件加選填的預覽函式與地點文字參數，一輪的行為不變 |
+| 5A7-4 | 立誓的來源 | API 只收 `menu`（玩家從模板選單選）；LLM 轉換（6.26 安全流程）之後的段再接 |
+| 5A7-5 | 解除誓約的地點 | 照 5A-6：有誓約就能解除（不限地點）；畫面先確認 |
+| 5A7-6 | 開場說明的文字 | 先手：「第 1 輪〔我方／敵方〕全部先動，第 2 輪起照先攻」（5A-6b）；開場狀態：狀態名＋說明＋「最多 2 回合、不擲抵抗」（5A-6b）；增援：「增援 N 名（已在陣容裡）」 |
+
+### 13.8 不做的事
+
+- 誓約模板內容（18.6）、戰鬥中的加成與違反判定、佔被動欄位（5C-3）；LLM 立誓轉換與 LLM 閃現提議。
+- 事件卡、情境判定畫面（5B-5）；新的技能來源（任務、劇情、許願池）；經驗曲線（5A-SIM）；戰鬥中途存檔（5A-5 待決 2）。
+
+## 14. 5A-M1 詳細規格：引擎機制①（蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護）
 
 > 給實作 agent。主要動 `src/trpg/engine/`（`battle.py` 開場狀態、`reactions.py`／`skills/cast.py` 受擊鉤子、新模組 `death_surfaces.py`、`kin_ward.py`、`ai/utility.py`）、`src/trpg/content/`（`battle.py` 單位範本與狀態欄位、`environment.py` 反應與 AI 欄位、`world_enemies.py` 詞綴欄位）、`src/trpg/narrative/`（戰鬥紀錄文字）、`content/`（`statuses.yaml`、`reactions.yaml`、`ai_profiles.yaml`、新技能、雲嶺範本與 `world/enemies.yaml`）、`src/trpg/engine/runner.py`（`LOG_FORMAT`）、`docs/phases/戰鬥紀錄格式變更.md`、受影響的測試與快照。共用檔（`trpg.world`、`trpg.api`、`client/`）只在必要時小改；另一個 agent 在做 5A-7（API、前端大世界）。
 > 依據：18 18.2.1（招牌「同門相護」：2 格內的同門受到攻擊時替他加一層小護盾、每輪 1 次，沉默／擊殺補師／拉開距離破解；青霧執事蓄力強招「九轉回天」提前一輪預告；詞綴「霧隱的」開場隱蔽 1 回合）、18.2.2（碎晶傀儡死後爆出源晶碎片＝帶電表面）；19（熔岩獸「熔核爆裂」死亡時在原地留下 2 回合火焰表面、寒燼蜥死後留冰面；熔核領主、Boss 的蓄力強招預告）；05 5.7（環境預告、強招預告：只有精英與 Boss 的蓄力型強招提前一輪在地圖上標出範圍，沿用環境預告的顯示方式；一般敵人意圖不顯示）；06 6.23 #5（延遲段：施放後帶「蓄力」、下回合開始釋放，倒下、暈眩、冰凍取消）；玩法 PM 2026-11-02（5A-M1 四個機制，做好後雲嶺替代品只改 content）；本檔 7.6 代決 5A3-1～5A3-3、12.4（`opening_statuses` 最多 2 回合）。
 
-### 13.1 目標
+### 14.1 目標
 
 四個機制都是 **資料設定** 的引擎機制，雲嶺的替代品（Phase5A-3 報告 5A3-1～5A3-3）換成正式機制只改 content。每個機制：pydantic schema、引擎實作（純函式、確定性）、戰鬥紀錄中文、AI 不會無視、測試。
 
-### 13.2 機制與資料格式
+### 14.2 機制與資料格式
 
 1. **蓄力強招預告**（沿用 6.23 #5 延遲段，不另做一套）：
    - 強招＝`followup.when: delayed`、`release: next_turn` 的技能；施放時施放者帶 `charging`、發 `followup_charged`（預計範圍）；下回合開始以當下位置結算第二段；倒下、暈眩、冰凍取消。網頁的蓄力預告（`telegraph` 的 `charges`）、戰鬥紀錄文字已經有，不新增前端畫法。
    - 引擎補：延遲段第二段是 **治療／友方** 效果時（九轉回天：全隊回大量 HP），AI 估值改看預計範圍內 **受傷的友方**（`rewrite.delayed_heal_points` × 受傷友方數，含自己），不再只數敵人。
    - 「花一回合蓄力」：強招的 `ap_cost` ＝ `ap_per_turn`（3），蓄力那回合不能再做別的（content）。
-   - 新技能 `skill_nine_turns_revival`「九轉回天」（青霧執事）：第一段 `self` 小護盾、第二段 `allies_in_radius` 半徑 3 治療（數值初值）。
+   - 新技能 `skill_nine_turns_revival`「九轉回天」（青霧執事）：第一段 `self` 小護盾、第二段自己為中心 3×3 的友方治療（數值初值，見 5AM1-9）。
 2. **死亡時留下表面**（狀態資料）：`StatusDef.on_death_surface: DeathSurfaceSpec | None`（`surface`：既有表面、`radius`：0～2 曼哈頓、`duration`：省略＝表面預設）。帶這個狀態的單位倒下（`unit_downed`）時，在倒下的位置（＋半徑內可站的格子）產生表面（`create_surface`，`cause: death_surface`；依 (y, x) 排序）。狀態是 `polarity: neutral`、`expires: never`（不會被淨化、驅散或奪取）；由範本的 `opening_statuses` 開場掛上（見 3）。
 3. **開場隱蔽**（範本資料）：`UnitTemplate.opening_statuses: tuple[OpeningStatus, ...]`（`status`、`duration: 1～2 | None`，`None`＝狀態預設）。開戰時和 `UnitSpawn.opening_statuses`（5A-6 下一場 buff）一起在擲先攻前施加、不擲抵抗；有限持續回合照 5A-6b 最多 2。精英詞綴加 `EliteAffixDef.add_opening_statuses`（同格式）。霧隱＝`{status: concealed, duration: 1}`。
 4. **同門相護**（內建反應）：`reactions.yaml` 新反應 `kin_ward`（`effect: shield_ally`、新事件 `kin_hit_in_range`）；`ReactionDef` 加 `range`（曼哈頓格數）、`kin_tag`（同門標籤）、`shield_dice`／`shield_flat`、`blocked_by_silence`。持有者（範本 `reactions` 寫一條 `kin_ward` 規則）在 `range` 格內、帶 `kin_tag` 的友方（不含自己）被敵人的攻擊（普攻或技能）**命中、傷害之前**，給他一層護盾（`shield` 效果，已有護盾時照護盾規則取大值）。佔本輪反應（`reactions_per_round`＝1，即「每輪 1 次」）；被沉默（`blocks_spells`）、暈眩時不能用；`auto`／`prompt`／`off` 照一般反應規則。多名持有者時依單位 ID 第一個能用的出手（一次攻擊只觸發 1 層）。
 
-### 13.3 AI（`trpg.engine.ai.utility`；數值在 `ai_profiles.yaml` 的 `rewrite:`，初值）
+### 14.3 AI（`trpg.engine.ai.utility`；數值在 `ai_profiles.yaml` 的 `rewrite:`，初值）
 
 - 預覽本來就會結算反應、延遲段與倒下觸發：同門護盾讓預估傷害變小、殺死碎晶傀儡的預覽有表面事件（`surface` 權重）、隱蔽讓命中率變低。
 - **優先處理**：擊倒帶 `kin_ward` 反應規則的敵人（同門的護盾來源）× `priority_kill_points`；擊倒或使其 `skip_turn`（暈眩、冰凍）正在蓄力的敵人 × `interrupt_points`（打斷強招）。只在目標有這些特性時才加分，其他戰鬥分數不變。
 
-### 13.4 雲嶺換正式機制（只改 content）
+### 14.4 雲嶺換正式機制（只改 content）
 
 | 敵人／詞綴 | 原替代品 | 正式機制 |
 |---|---|---|
@@ -1548,12 +1618,12 @@ exchange_supplies: 1
 
 護法武僧的挺身而出是 18.2.1「嘲諷／守護」本身，不動。陣法（陣眼石靈）、劍陣 ≤ 3 格、連心的（傷害分給同門）是 5A-M2，不在本段。
 
-### 13.5 戰鬥紀錄與版號
+### 14.5 戰鬥紀錄與版號
 
 - 文字：同門相護走 `reaction_triggered`（反應名「同門相護」）＋`shield_gained`；死亡表面走 `surface_created`（`cause: death_surface` 的說明：「X 倒下，留下…」）；開場狀態走 `status_applied`；蓄力走既有 `followup_charged`。
 - `UnitTemplate`、`StatusDef`、`ReactionDef` 加欄位、結算新增 → `LOG_FORMAT` `/101` → `/102`（`戰鬥紀錄格式變更.md`）。沒用到這些欄位的戰鬥結算與 `/101` 相同。
 
-### 13.6 測試
+### 14.6 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -1561,16 +1631,16 @@ exchange_supplies: 1
 | `tests/content/`（受影響） | schema 驗證（半徑、持續上限、反應欄位必填）；雲嶺範本與詞綴載入 |
 | `tests/world/test_enemy_smoke.py`（既有） | 換機制後雲嶺陣容照樣打完 |
 
-### 13.7 驗收
+### 14.7 驗收
 
 `uv run pytest -q tests/engine/test_mechanics_5am1.py tests/content tests/world -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播。
 
-### 13.8 不做的事
+### 14.8 不做的事
 
 - 陣法範圍加成、陣眼石靈、劍陣、傷害分給同門（5A-M2）；三方混戰（5B-M3）；Boss 階段與「霧鎖千山」（5F-2）；新表面種類與新美術。
 - 單位卡上的「特性」欄（要改 API 與前端；目前開場狀態與反應規則已經顯示在單位卡的狀態與反應欄）。
 
-### 13.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 14.9 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -1582,10 +1652,10 @@ exchange_supplies: 1
 | 5AM1-6 | 碎晶傀儡的「帶電表面」 | 引擎沒有帶電表面、新表面要新美術 → 留下 **水**（半徑 1，水會導電：雷電打上去沿水擴散）；要真正的帶電表面待 PM 決定 |
 | 5AM1-7 | 死亡表面的實作方式 | 狀態 `on_death_surface`（同定時炸彈「倒下時」的做法），由範本 `opening_statuses` 掛上；狀態中性、不倒數 |
 | 5AM1-8 | 開場隱蔽的回合數 | `duration: 1`（在自己第 1 回合結束時移除）；範本開場狀態也受 5A-6b 的 2 回合上限 |
-| 5AM1-9 | 九轉回天數值 | 第二段半徑 3 友方治療 `2d8`、`wis` 加成；冷卻 4、法力 12（初值） |
+| 5AM1-9 | 九轉回天數值 | 第二段自己為中心 3×3 的友方治療 `4d8`（延遲段第二段只能是十字／方陣／環形，`2d8` 低於預算下限；實作時改）、`wis` 加成；冷卻 4、法力 12（初值） |
 | 5AM1-10 | 戰鬥紀錄版號 | `/102` |
 
 
-## 14. 之後各段規格
+## 15. 之後各段規格
 
 （5A-M1 驗收後補上之後各段。）
