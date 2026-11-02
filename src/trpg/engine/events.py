@@ -67,6 +67,7 @@ __all__ = [
     "MapEventTriggered",
     "MoveBlocked",
     "MoveMode",
+    "OathBroken",
     "ObjectAttacked",
     "ObjectCreated",
     "ObjectDamaged",
@@ -1879,6 +1880,17 @@ class RuleChangeTriggered(EventBase):
     """``element_heals_allies``：被轉為治療的原本傷害。"""
 
 
+class OathBroken(EventBase):
+    """違反誓約（Phase 5C-3，06 6.26）：``at_end`` 為 ``False``（戰鬥中）時之後移除加成、施加破誓；
+    ``True`` 時是戰鬥結束時判定「每場至少……」沒達到（沒有效果）。``check`` 是判定種類。"""
+
+    type: Literal["oath_broken"] = "oath_broken"
+    unit_id: UnitId
+    template: str
+    check: str
+    at_end: bool = False
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -2004,7 +2016,8 @@ type Event = Annotated[
     | OverloadTriggered
     | GearHpLost
     | GearTriggered
-    | ChargeActivated,
+    | ChargeActivated
+    | OathBroken,
     Field(discriminator="type"),
 ]
 

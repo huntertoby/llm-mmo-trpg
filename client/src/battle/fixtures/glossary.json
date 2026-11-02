@@ -2458,6 +2458,85 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "oath_bonus_easy",
+   "name_zh": "誓約之力・易",
+   "description_zh": "守著誓約（易）：自己造成的攻擊傷害提高（易檔）。違反誓約時移除。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×105%"
+   ]
+  },
+  {
+   "id": "oath_bonus_medium",
+   "name_zh": "誓約之力・中",
+   "description_zh": "守著誓約（中）：自己造成的攻擊傷害提高（中檔）。違反誓約時移除。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×110%"
+   ]
+  },
+  {
+   "id": "oath_bonus_hard",
+   "name_zh": "誓約之力・難",
+   "description_zh": "守著誓約（難）：自己造成的攻擊傷害提高（難檔）。違反誓約時移除。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×115%"
+   ]
+  },
+  {
+   "id": "oath_broken",
+   "name_zh": "破誓",
+   "description_zh": "違反了誓約：自己造成的攻擊傷害降低、受到的傷害提高。下一場恢復誓約的加成。",
+   "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×90%",
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×110%"
+   ]
   }
  ],
  "stacks": [

@@ -39,6 +39,8 @@ from trpg.engine.actions import Step
 from trpg.engine.ai.commanded import CommandedAI
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.battle import begin_battle
+from trpg.engine.events import EventBase
+from trpg.engine.oaths import OathSetup
 from trpg.engine.results import battle_result
 from trpg.engine.runner import advance, apply_step
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
@@ -61,6 +63,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.common import max_hp, rules_of, world_map_of
+from trpg.world.companions import companion_spawns, companion_win_affinity
 from trpg.world.encounters import (
     EncounterLineup,
     elite_kinds,
@@ -70,6 +73,7 @@ from trpg.world.encounters import (
 )
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import as_run, gain_xp, world_library
+from trpg.world.oaths import oath_events, oath_setup
 from trpg.world.party import party_spawns, shadow_spawns
 from trpg.world.shadows import record_lent
 from trpg.world.state import (
@@ -112,6 +116,8 @@ class PreparedBattle:
     reinforcements: int = 0
     first_team: Team | None = None
     hero_statuses: tuple[str, ...] = ()
+    oath: OathSetup | None = None
+    """這場帶的誓約（5C-3；``None``＝沒有誓約）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -349,17 +355,23 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     extra.update((s.id, s) for s in ally_skills)
     shadow_units, shadow_skills = shadow_spawns(library, char)
     extra.update((s.id, s) for s in shadow_skills)
+    # 劇情夥伴（5C-3）：排在傭兵、影子之後，同樣照主角等級成長
+    companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
+    extra.update((s.id, s) for s in companion_skills)
     extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
     hp = hero_start_hp(library, char)
     ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
     first = first_team(library, char, encounter, reinforced.enemy_first)
+    oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
+    hero = _hero_spawn(library, char, hp)
     setup = base.model_copy(
         update={
             "map": map_def,
             "ruleset": ruleset,
-            "units": (_hero_spawn(library, char, hp), *allies, *shadow_units, *enemies),
+            "units": (hero, *allies, *shadow_units, *companions, *enemies),
             "first_team": first,
             "objective": objective,
+            "oath": oath,
         }
     )
     return PreparedBattle(
@@ -371,6 +383,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         reinforcements=reinforced.added,
         first_team=first,
         hero_statuses=hero_statuses(char),
+        oath=oath,
     )
 
 
@@ -394,16 +407,20 @@ def auto_steps(library: ContentLibrary, char: CharacterState) -> tuple[Step, ...
 # ---------------------------------------------------------------------------
 
 
-def _run(prepared: PreparedBattle, steps: Sequence[Step]) -> BattleState:
-    state = begin_battle(prepared.setup, prepared.seed).state
+def _run(prepared: PreparedBattle, steps: Sequence[Step]) -> tuple[BattleState, list[EventBase]]:
+    opening = begin_battle(prepared.setup, prepared.seed)
+    state = opening.state
+    events: list[EventBase] = list(opening.events)
     for number, step in enumerate(steps, start=1):
         try:
-            state = apply_step(state, step).state
+            result = apply_step(state, step)
         except TrpgError as exc:
             raise WorldActionError(f"戰鬥的第 {number} 步無法套用：{exc}") from exc
+        state = result.state
+        events.extend(result.events)
     if not state.ended:
         raise WorldActionError("戰鬥還沒結束")
-    return state
+    return state, events
 
 
 def with_cleared(world: WorldState, region: str, location: str, respawn_at: int) -> WorldState:
@@ -425,7 +442,7 @@ def fight(
     prepared = prepare_battle(library, char)
     encounter = char.pending_encounter
     assert encounter is not None
-    state = _run(prepared, action.steps)
+    state, battle_events = _run(prepared, action.steps)
     events: list[WorldEvent] = [
         BattleStartedEvent(
             location=encounter.location,
@@ -441,6 +458,8 @@ def fight(
             hero_statuses=prepared.hero_statuses,
             mercenaries=char.mercenaries,
             shadows=tuple(s.owner for s in char.shadows),
+            companions=char.companions,
+            oath=None if prepared.oath is None else prepared.oath.template,
         )
     ]
     result = battle_result(state)
@@ -462,8 +481,12 @@ def fight(
             mana=hero.mana,
             now=now,
         )
+        char, liked = companion_win_affinity(library, char, now)  # 帶夥伴打贏（18.7.6）
+        more += liked
     else:
         char, more = _lost(library, char, hero.mana)
+    oath_more, oath_broken = oath_events(prepared.oath, battle_events)  # 誓約（5C-3）
+    more += oath_more
     world, lent = record_lent(  # 影子主人每天第一次被借用（5C-2，#102）
         library, world, char, encounter, prepared.lineup, won=won, now=now
     )
@@ -494,6 +517,8 @@ def fight(
         level_before=level_before,
         level=char.level,
         at=now,
+        oath=None if prepared.oath is None else prepared.oath.template,
+        oath_broken=oath_broken,
     )
     char = char.model_copy(update={"last_battle": last})
     return world, char, (*events, ended, *more)

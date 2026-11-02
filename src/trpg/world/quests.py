@@ -77,6 +77,7 @@ from trpg.world.errors import WorldActionError
 from trpg.world.growth import (
     as_run,
     at_service,
+    char_library,
     from_run,
     gain_xp,
     hero_tier,
@@ -542,7 +543,7 @@ def take_offer(
     service = char.pending_encounter is None and at_service(library, char)
     if action.replace is not None and not service:
         raise WorldActionError("只有城鎮與營火能換技能；野外學到的技能會放進備用")
-    lib = world_library(library)
+    lib = char_library(library, char)  # 有誓約時被動欄位少 1 格（5C-3）
     run = as_run(char)
     placed: str = "bench"
     try:

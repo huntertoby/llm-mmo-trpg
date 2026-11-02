@@ -236,7 +236,7 @@ def test_weaker_shadow_kept_as_is(library: ContentLibrary, make_char: MakeChar) 
 def test_battle_has_capped_shadow(library: ContentLibrary, make_char: MakeChar) -> None:
     snap = _strong_snapshot(library, make_char)
     world = make_world()
-    bob = make_char("bob").model_copy(update={"shadows": (snap,)})
+    bob = make_char("bob").model_copy(update={"shadows": (snap,), "mercenaries": ()})
     encounter = make_encounter("ferry_steps", seed=3, battle_map="cliff_outpost")
     ready = bob.model_copy(update={"location": "ferry_steps", "pending_encounter": encounter})
     prepared = prepare_battle(library, ready)

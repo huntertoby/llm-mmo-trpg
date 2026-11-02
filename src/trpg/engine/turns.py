@@ -41,6 +41,7 @@ from trpg.engine.forms import pay_stance_upkeep, pay_upkeep, tick_form_cooldowns
 from trpg.engine.gear.core import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.ids import BURNING
+from trpg.engine.oaths import settle_oath
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
@@ -377,6 +378,7 @@ def advance_turn(ctx: Ctx) -> None:
 def finish_resolution(ctx: Ctx) -> ResolveResult:
     """一次結算的收尾：（尚未結算的）被動觸發、勝負判定、行動者離場時換下一位、寫回亂數狀態。"""
     settle(ctx)
+    settle_oath(ctx)  # 剛違反的誓約：移除加成、施加破誓（Phase 5C-3）
     if not check_battle_end(ctx) and ctx.state.active_unit is None:
         advance_turn(ctx)
     ctx.finish_rng()

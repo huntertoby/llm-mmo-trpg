@@ -31,6 +31,8 @@ __all__ = [
     "WORLD_FORMAT",
     "CharacterState",
     "ClearedLocation",
+    "CompanionAffinity",
+    "CompanionBench",
     "EncounterResult",
     "EventTrigger",
     "LastBattle",
@@ -177,6 +179,34 @@ class LastBattle(_Model):
     level_before: int = Field(ge=1)
     level: int = Field(ge=1)
     at: int = Field(ge=0)
+    oath: str | None = None
+    """這場帶的誓約模板（5C-3；``None``＝沒有誓約）。"""
+    oath_broken: bool = False
+    """這場違反了誓約（戰鬥中或戰鬥結束時判定，5C-3）。"""
+
+
+class CompanionBench(_Model):
+    """劇情夥伴加入時替下的隊伍成員（5C-3；任務結束時還原）：傭兵 ID 或影子複本，與它的打法。"""
+
+    mercenary: str | None = Field(default=None, pattern=ID_PATTERN)
+    shadow: ShadowSnapshot | None = None
+    ai: str | None = Field(default=None, pattern=ID_PATTERN)
+    position: int = Field(default=1, ge=0)
+    """原本在隊伍出場順序的第幾名（0 起算；5C-3 替掉第 2 名＝1）。"""
+
+    @property
+    def member_id(self) -> str:
+        if self.mercenary is not None:
+            return self.mercenary
+        assert self.shadow is not None
+        return self.shadow.owner
+
+
+class CompanionAffinity(_Model):
+    """劇情夥伴今天已經因為「帶他打贏」加了多少好感度（18.7.6：阿岳每天最多 +6）。"""
+
+    day: int = Field(ge=0)
+    gained: int = Field(ge=0)
 
 
 class ThreadState(_Model):
@@ -484,6 +514,14 @@ class CharacterState(_Model):
     """隊伍成員（傭兵 ID 或影子主人 ID）→ 選的 AI 打法（依鍵排序；沒有＝預設）。"""
     shadow_ai: str | None = Field(default=None, pattern=ID_PATTERN)
     """自己影子的預設打法（#102；``None``＝範本的）。"""
+
+    # --- 5C-3 劇情夥伴（邏輯在 trpg.world.companions） ---
+    companions: tuple[str, ...] = ()
+    """隊伍裡的劇情夥伴（只在對應任務裡跟著，佔一個隊友位；#97）。依加入順序，排在傭兵、影子之後出場。"""
+    companion_bench: tuple[CompanionBench, ...] = ()
+    """夥伴加入時替下的成員（任務結束時還原；玩家自己 ``hire`` 就清掉）。"""
+    companion_affinity: dict[str, CompanionAffinity] = Field(default_factory=dict)
+    """夥伴 → 今天「帶他打贏」加過的好感度（每天上限，18.7.6）。"""
 
     @field_validator("party_ai")
     @classmethod

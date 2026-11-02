@@ -1,7 +1,7 @@
 // 隊伍、系統傭兵與影子的純函式（Phase 5C-1、5C-2）。
 import { describe, expect, it } from "vitest";
 import type { WorldMercenary, WorldPartyView, WorldShadow } from "../api/types";
-import { groupByRole, hireAction, hireLabel, hiredIds, hiredShadows, memberAi, sameParty, toggleMercenary } from "./party";
+import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, memberAi, sameParty, toggleMercenary } from "./party";
 
 function merc(id: string, role: string, role_zh: string, name_zh: string): WorldMercenary {
   return { id, name_zh, title_zh: "稱號", role, role_zh, theme_zh: "主題", skills_zh: ["技能"], hired: false };
@@ -48,6 +48,7 @@ function party(hired: string[], shadows: string[] = [], ai: Record<string, strin
     ai_choices: [],
     ai,
     season_boss_ok: shadows.length === 0,
+    free_slots: 2,
   };
 }
 
@@ -105,5 +106,17 @@ describe("party helpers", () => {
       shadows: ["c1"],
       ai: { c1: "guard" },
     });
+  });
+});
+
+describe("hireLimit（劇情夥伴佔隊友位，5C-3）", () => {
+  it("沒有夥伴時＝max_hired、夥伴在隊時少 1", () => {
+    expect(hireLimit(party([]))).toBe(2);
+    expect(hireLimit({ ...party(["merc_tiebi"]), free_slots: 1, companion_zh: "阿岳跟著你" })).toBe(1);
+  });
+
+  it("夥伴在隊時勾 1 名就滿", () => {
+    const limit = hireLimit({ ...party(["merc_tiebi"]), free_slots: 1 });
+    expect(toggleMercenary(["merc_tiebi"], "merc_huichun", limit)).toEqual(["merc_tiebi"]);
   });
 });

@@ -1,6 +1,6 @@
 # Phase 5B-4d 完成報告：5B-4c 收尾（小蓮好感度、骨架 22 失敗可再試、機遇保底、skillgen 指定關鍵字）
 
-> 實作者：implementer agent（2026-11-03）。規格：`docs/phases/Phase5計畫.md` 第 24 節（先寫規格、commit `25f021c9` 後實作；原「之後各段規格」改第 25 節）。
+> 實作者：implementer agent（2026-11-03）。規格：`docs/phases/Phase5計畫.md` 第 25 節（先寫規格、commit `25f021c9` 後實作；原「之後各段規格」改第 26 節）。
 > 柳掌櫃的店內消費（5D）、阿岳的打贏加成（5C-3）不在本段。
 
 ## 1. 各項做了什麼
@@ -52,7 +52,7 @@
 - `tests/world/test_quest_replay.py::test_5b4d_log_replays_identically`：骨架 22 失敗 → 走到古松祭壇（第 6 天保底，白天也出現）→ 機遇三選一（三張帶「帶電」）→ 選技能，重播兩次逐字相同。
 - 原型 roguelite、一般三選一：`pinned_keyword` 預設 `None`，產生器走原路徑；`tests/skillgen/fixtures/refactor_3wr2.json` SNAPSHOT_PLACEHOLDER
 
-## 6. 代決（規格 24.10；最保守預設）
+## 6. 代決（規格 25.10；最保守預設）
 
 | # | 事項 | 代決 |
 |---|---|---|

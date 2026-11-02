@@ -353,6 +353,8 @@ def _encounter_view(
             first_team=prepared.first_team,
             hero_statuses=prepared.hero_statuses,
             reinforcements=prepared.reinforcements,
+            oath=None if prepared.oath is None else prepared.oath.template,
+            oath_bonus=None if prepared.oath is None else prepared.oath.bonus_status,
         ),
         allies_zh=allies_line(library, char, prepared.hero_hp),
     )

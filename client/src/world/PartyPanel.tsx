@@ -4,7 +4,7 @@
 import { useState } from "react";
 import type { WorldAction, WorldAiChoice, WorldMyShadow, WorldPartyView } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { groupByRole, hireAction, hireLabel, hiredIds, hiredShadows, sameParty, toggleMercenary } from "./party";
+import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, sameParty, toggleMercenary } from "./party";
 
 export function PartyPanel({ party }: { party: WorldPartyView }) {
   return (
@@ -16,9 +16,15 @@ export function PartyPanel({ party }: { party: WorldPartyView }) {
         {party.members.map((m, i) => (
           <li key={i}>
             {m.name_zh}　<span className="muted">{m.title_zh}・{m.level} 級{m.ai_zh != null ? `・打法 ${m.ai_zh}` : ""}</span>
+            {m.note_zh != null && <span className="muted">（{m.note_zh}）</span>}
           </li>
         ))}
       </ul>
+      {party.companion_zh != null && (
+        <div className="muted small" data-testid="world-party-companion">
+          {party.companion_zh}
+        </div>
+      )}
       {party.members.length === 1 && <div className="muted small">獨行：只帶主角（可以在城鎮雇傭兵或借影子）</div>}
       {party.season_boss_zh != null && <div className="muted small" data-testid="world-party-boss">{party.season_boss_zh}</div>}
       {!party.can_hire && party.hire_problem_zh !== null && <div className="muted small">換隊友：{party.hire_problem_zh}</div>}
@@ -82,7 +88,8 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
   const roster = party.mercenaries ?? [];
   const shadowList = party.shadows ?? [];
   const choices = party.ai_choices ?? [];
-  const full = chosen.length + shadows.length >= party.max_hired;
+  const limit = hireLimit(party);
+  const full = chosen.length + shadows.length >= limit;
   const setMemberAi = (id: string, value: string | undefined) =>
     setAi((cur) => {
       const next = { ...cur };
@@ -95,8 +102,9 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
   return (
     <div className="world-hire" data-testid="world-hire">
       <div className="muted small">
-        免費；最多 {party.max_hired} 名隊友（傭兵與影子合計），勾選順序＝出場順序；全不勾＝獨行。出城後就不能換。
+        免費；最多 {limit} 名隊友（傭兵與影子合計），勾選順序＝出場順序；全不勾＝獨行。出城後就不能換。
       </div>
+      {party.companion_zh != null && <div className="muted small">{party.companion_zh}（不能換掉）</div>}
       <div className="run-actions world-hire-tabs" role="tablist">
         <button
           type="button"
@@ -133,7 +141,7 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                         type="checkbox"
                         checked={on}
                         disabled={busy || (!on && full)}
-                        onChange={() => setChosen((cur) => toggleMercenary(cur, m.id, party.max_hired, shadows.length))}
+                        onChange={() => setChosen((cur) => toggleMercenary(cur, m.id, limit, shadows.length))}
                         data-testid={`world-hire-${m.id}`}
                       />
                       <Hint text={m.theme_zh}>
@@ -165,7 +173,7 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                         type="checkbox"
                         checked={on}
                         disabled={busy || (!on && full)}
-                        onChange={() => setShadows((cur) => toggleMercenary(cur, s.owner, party.max_hired, chosen.length))}
+                        onChange={() => setShadows((cur) => toggleMercenary(cur, s.owner, limit, chosen.length))}
                         data-testid={`world-hire-shadow-${s.owner}`}
                       />
                       <Hint text={`存在${s.saved_zh}・技能：${s.skills_zh.join("、") || "（無）"}`}>

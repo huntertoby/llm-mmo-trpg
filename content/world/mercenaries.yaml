@@ -18,3 +18,9 @@ mercenaries:
   - {id: merc_qingyin, name_zh: 清音, title_zh: 祝禱師, role: support, build: build_support}
   - {id: merc_jinglei, name_zh: 驚雷, title_zh: 雷水術士, role: control, build: build_storm}
   - {id: merc_fuying, name_zh: 伏影, title_zh: 陷阱師, role: control, build: build_trapper}
+# 5C-3（9.6.11 5C-2 代決）：新角色預設帶 2 名傭兵（鐵壁＋回春），可以在城鎮改成獨行或別人
+default_party: [merc_tiebi, merc_huichun]
+# 5C-3（#97）：劇情夥伴——只在對應任務裡跟著（任務的 companion），佔一個隊友位；隊伍滿時替掉第 2 名、任務結束還原
+# 阿岳（18.5 獵戶）：底稿取最接近的 sim build＝弓手（代決 5C3-2）；帶他打贏一場 +2、每天最多 +6（18.7.6）
+companions:
+  - {id: companion_ayue, npc: hunter_ayue, name_zh: 阿岳, title_zh: 獵戶, build: build_ranged, affinity_per_win: 2, affinity_daily_cap: 6}

@@ -61,6 +61,18 @@ export function defaultParams(template: WorldOathTemplate): Record<string, strin
   return out;
 }
 
+type OathParam = NonNullable<WorldOathTemplate["params"]>[number];
+
+/** 參數的中文名（5C-3；沒有時退回 ID）。 */
+export function paramLabel(param: OathParam): string {
+  return param.name_zh !== undefined && param.name_zh !== "" ? param.name_zh : param.id;
+}
+
+/** 選單值的中文名（5C-3；沒有時退回原值）。 */
+export function choiceLabel(param: OathParam, value: string): string {
+  return param.choice_names_zh?.[value] ?? value;
+}
+
 /** 立誓的世界動作（來源一律是模板選單，代決 5A7-4）。 */
 export function swearAction(template: string, params: Record<string, string | number>, text: string): WorldAction {
   return { kind: "swear_oath", proposal: { template, params }, player_text: text.trim() };

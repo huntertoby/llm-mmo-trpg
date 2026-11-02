@@ -4132,6 +4132,16 @@ export interface components {
             params_zh: string;
             /** Sworn At */
             sworn_at: number;
+            /**
+             * Bonus Zh
+             * @default
+             */
+            bonus_zh: string;
+            /**
+             * Judge Zh
+             * @default
+             */
+            judge_zh: string;
         };
         /** OathParamView */
         OathParamView: {
@@ -4157,6 +4167,18 @@ export interface components {
              * @default 0
              */
             max: number;
+            /**
+             * Name Zh
+             * @default
+             */
+            name_zh: string;
+            /**
+             * Choice Names Zh
+             * @default {}
+             */
+            choice_names_zh: {
+                [key: string]: string;
+            };
         };
         /**
          * OathProposal
@@ -4188,6 +4210,21 @@ export interface components {
              * @default []
              */
             params: components["schemas"]["OathParamView"][];
+            /**
+             * Description Zh
+             * @default
+             */
+            description_zh: string;
+            /**
+             * Bonus Zh
+             * @default
+             */
+            bonus_zh: string;
+            /**
+             * Judge Zh
+             * @default
+             */
+            judge_zh: string;
         };
         /**
          * OathView
@@ -4214,6 +4251,16 @@ export interface components {
              * @default []
              */
             templates: components["schemas"]["OathTemplateView"][];
+            /**
+             * Penalty Zh
+             * @default
+             */
+            penalty_zh: string;
+            /**
+             * Slot Zh
+             * @default
+             */
+            slot_zh: string;
         };
         /** ObjectView */
         ObjectView: {
@@ -4386,6 +4433,10 @@ export interface components {
             shadow?: string | null;
             /** Ai Zh */
             ai_zh?: string | null;
+            /** Companion */
+            companion?: string | null;
+            /** Note Zh */
+            note_zh?: string | null;
         };
         /**
          * PartyView
@@ -4429,6 +4480,13 @@ export interface components {
             season_boss_ok: boolean;
             /** Season Boss Zh */
             season_boss_zh?: string | null;
+            /**
+             * Free Slots
+             * @default 2
+             */
+            free_slots: number;
+            /** Companion Zh */
+            companion_zh?: string | null;
         };
         /**
          * Pending

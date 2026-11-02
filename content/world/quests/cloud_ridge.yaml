@@ -15,6 +15,7 @@ quests:
     name_zh: 霧渡新手路
     summary_zh: 渡婆婆要你先把渡口到梯田這一路走通。
     giver: granny_du
+    companion: companion_ayue   # 5C-3：18.7.1 第 1 步「劇情夥伴阿岳加入」（接任務時加入，代決 5C3-3）
     steps:
       - id: ferry_bandits
         text_zh: 渡口石階：趕走搶渡船的盜賊
@@ -49,6 +50,7 @@ quests:
     name_zh: 霧中裂痕
     summary_zh: 霧渡鎮接連有人失蹤，線索指向山裡的源晶裂痕。
     giver: granny_du
+    companion: companion_ayue   # 5C-3：18.5「主線第 1 章同行」（代決 5C3-3）
     steps:
       - id: missing_townsfolk
         text_zh: 查霧渡鎮的失蹤案（夜裡的燈籠隊）

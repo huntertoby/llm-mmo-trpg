@@ -1,4 +1,4 @@
-"""skillgen「指定關鍵字」模式（Phase 5B-4d；Phase5計畫 24.5；07 7.6「關鍵字由觸發情境決定」）。"""
+"""skillgen「指定關鍵字」模式（Phase 5B-4d；Phase5計畫 25.5；07 7.6「關鍵字由觸發情境決定」）。"""
 
 from __future__ import annotations
 
