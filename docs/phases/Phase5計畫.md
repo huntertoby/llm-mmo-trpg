@@ -692,7 +692,7 @@ weather:  # 各區天氣權重（05 5.1 傾向、5.7 的 4 種）；day／night 
    **單檔驗證**：骨架 ID、編號不重複；線頭 ID 檔內不重複；`follows` 不可含自己的線頭；NPC ID 不重複。
    **跨檔案** `world_event_problems(events, *, world_map, npcs, weather_ids, thread_ids) -> list[str]`、`npc_card_problems(npcs, *, world_map)`（排序）：`region` 要有地點圖；`locations`、NPC 的 `location`、`hints_location` 在該區地點圖；`hints_location` 是 `hidden` 且 `reveal` 含 `quest_clue`；`weather` 在 `weather.yaml`；`npcs`、線頭的 `npc` 在同區人設卡；`follows` 的線頭存在（任一區）。
 
-2. **載入**（載入函式放 `world_events.py`，`library.py` 只加欄位與呼叫）：`ContentLibrary.world_events: dict[str, EventSkeletonTable]`、`world_npcs: dict[str, NpcCardTable]`（鍵＝區域、檔名必須等於 `region`）、`event_rules: EventRules | None`。資料夾或檔案不存在＝空／`None`（舊測試的精簡 content 照常載入）。骨架 ID、線頭 ID、NPC ID **跨區也不可重複**。檔案加進 `library.files`。
+2. **載入**（載入函式放 `world_events.py`，`library.py` 只加一個欄位與一行呼叫，減少和 5A-3 的衝突）：`ContentLibrary.world_event_content: WorldEventContent`，內含 `events: dict[str, EventSkeletonTable]`、`npcs: dict[str, NpcCardTable]`（鍵＝區域、檔名必須等於 `region`）、`rules: EventRules | None`。資料夾或檔案不存在＝空／`None`（舊測試的精簡 content 照常載入）。骨架 ID、線頭 ID、NPC ID **跨區也不可重複**。檔案加進 `library.files`。
 3. **雲嶺內容**：`content/world/events/cloud_ridge.yaml`（8.3）、`content/world/npcs/cloud_ridge.yaml`（8.4）、`content/world/event_rules.yaml`（8.5）。檔頭註解來源（18.4、18.5，#111 待使用者確認）與開發 PM 自定的部分（ID、地點、時段、線頭範圍）。
 4. **`trpg.world`**：
    - `state.py`：`EventTrigger`（`region`、`location`、`skeleton`、`candidates`（排序）、`follows_thread: str | None`、`weather`、`day_phase`、`at`）、`ThreadState`（`thread`、`skeleton`、`region`、`created_at`、`expires_at`）；`CharacterState` 加 `event_steps: int = 0`、`pending_event: EventTrigger | None = None`、`threads: tuple[ThreadState, ...] = ()`；`WorldState` 加 `threads: tuple[ThreadState, ...] = ()`。新欄位都有預設值，舊存檔照讀、格式版本不變。線頭依 `(created_at, thread)` 排序、同一線頭不重複。

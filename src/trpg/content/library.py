@@ -126,6 +126,7 @@ from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
+from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
@@ -578,6 +579,9 @@ class ContentLibrary:
     """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
     world_rules: WorldRules | None = None
     """大世界規則的數值（``world/rules.yaml``，Phase 5A-2）；沒有檔案時為 ``None``。"""
+    world_event_content: WorldEventContent = field(default_factory=WorldEventContent)
+    """事件骨架、NPC 人設卡、事件規則（``world/events/``、``world/npcs/``、
+    ``world/event_rules.yaml``，Phase 5B-1）；沒有資料時為空。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -829,6 +833,7 @@ def load_library(  # noqa: PLR0915
     map_warnings = _apply_map_themes(maps, regions)
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
+    world_event_content = load_world_event_content(root, world_maps, weather_map, files)
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
@@ -886,6 +891,7 @@ def load_library(  # noqa: PLR0915
         map_warnings=tuple(map_warnings),
         world_maps=world_maps,
         world_rules=world_rules,
+        world_event_content=world_event_content,
         files=files,
     )
 

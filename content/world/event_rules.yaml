@@ -1,0 +1,13 @@
+# 事件出現頻率與線頭規則的數值（Phase 5B-1；docs/phases/Phase5計畫.md 8.5、8.6）。
+# schema：src/trpg/content/world_events.py；規則在 trpg.world.events、trpg.world.threads。
+# 全部是開發 PM 定的初值（Q11、D10），之後用模擬定（docs/design/09-世界與敘事.md 9.6.10「數值類」）。
+# - frequency：每次移動抵達後擲事件；機率 ‰ ＝ min(max_permille, per_step_permille × 距離上次事件的步數)
+#   （9.6.7 #6「事件出現頻率由引擎依移動步數與種子決定」）。遇敵的那一步不出事件。
+# - threads：線頭上限（個人、世界級）與到期秒數（現實時間；9.6.7 #6「每人約 5 條、約 3 天到期」）。
+frequency:
+  per_step_permille: 150
+  max_permille: 600
+threads:
+  personal_limit: 5
+  world_limit: 5
+  expire_seconds: 259200
