@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from tests.world.helpers import make_encounter
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_enemies import ELITE_TAG
+from trpg.content.world_events import SolutionDef
 from trpg.world.encounters import elite_kinds, lineup_templates, roll_lineup
 
 
@@ -58,3 +60,25 @@ def test_bounty_elites_in_cloud_ridge(library: ContentLibrary) -> None:
     slope = library.world_encounters["cloud_ridge"].location_by_id()["north_slope"]
     assert slope.elite is not None
     assert (slope.elite.unit, slope.elite.affix) == ("mist_wolf", "berserk")  # 北坡狼王＝狂暴的
+
+
+# ---------------------------------------------------------------------------
+# 戰鬥解法的勝利條件（21.5）
+# ---------------------------------------------------------------------------
+
+
+def test_objective_only_on_combat() -> None:
+    assert SolutionDef(kind="combat", objective="escape").objective == "escape"
+    with pytest.raises(ValidationError, match="objective"):
+        SolutionDef(kind="parley", objective="defend")
+
+
+def test_cloud_ridge_combat_objectives(library: ContentLibrary) -> None:
+    table = library.world_event_content.events["cloud_ridge"]
+    found = {
+        s.number: o.objective
+        for s in table.skeletons
+        for o in s.solutions
+        if o.kind == "combat" and o.objective is not None
+    }
+    assert found == {2: "escape", 7: "defend", 8: "defend", 14: "escape"}

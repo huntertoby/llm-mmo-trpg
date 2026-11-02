@@ -115,6 +115,9 @@ class SolutionDef(ContentModel):
     waive_thread: str | None = Field(default=None, pattern=ID_PATTERN)
     """持有這條個人線頭時可以拿它抵掉付出（用掉；Phase 5B-4b，18.4 補充「用人情代替青竹節」）。
     只有 ``parley``。"""
+    objective: Literal["escape", "defend"] | None = None
+    """戰鬥解法的勝利條件（Phase 5B-4c，18.4 補充：護送、押送隊＝撤離；擋追兵、不殺獵人＝守點）；
+    只有 ``combat``。``None``＝一般勝利。地圖沒有該勝利條件的資料時也是一般勝利。"""
 
     @model_validator(mode="after")
     def _check(self) -> SolutionDef:
@@ -122,6 +125,8 @@ class SolutionDef(ContentModel):
             raise ValueError(f"{self.kind} 解法不可填 requires_keyword（只有 opportunity 可以）")
         if self.threads and self.kind not in ("combat", "parley"):
             raise ValueError(f"{self.kind} 解法不可填 threads（只有 combat、parley 可以）")
+        if self.objective is not None and self.kind != "combat":
+            raise ValueError(f"{self.kind} 解法不可填 objective（只有 combat）")
         if (self.cost_supplies or self.waive_thread is not None) and self.kind != "parley":
             raise ValueError(f"{self.kind} 解法不可填 cost_supplies／waive_thread（只有 parley）")
         if len(set(self.threads)) != len(self.threads):

@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EventSkeletonDef, SolutionDef
@@ -55,10 +56,18 @@ def make_encounter(
     char: CharacterState,
     target: LocationDef,
     now: int,
+    *,
+    objective: Literal["escape", "defend"] | None = None,
 ) -> tuple[EncounterResult, CharacterState]:
-    """在 ``target`` 產生遭遇（``battle`` 串流：地圖、戰鬥種子）；移動遇敵與戰鬥解法共用。"""
+    """在 ``target`` 產生遭遇（``battle`` 串流：地圖、戰鬥種子）；移動遇敵與戰鬥解法共用。
+
+    ``objective``（Phase 5B-4c 戰鬥解法的勝利條件）：地點的 ``battle_maps`` 裡有支援它的地圖時只從
+    那些挑（亂數消耗相同）。遇敵當下有效的世界旗標記進 ``world_flags``（世界級線頭到期結局）。"""
     rng, char = draw(world.season_seed, char, STREAM_BATTLE)
-    battle_map = rng.choice(target.battle_maps) if target.battle_maps else None
+    maps = target.battle_maps
+    if objective is not None:
+        maps = tuple(m for m in maps if library.map(m).supports_objective(objective)) or maps
+    battle_map = rng.choice(maps) if maps else None
     seed = rng.next_u32()
     assert target.level_max is not None
     result = EncounterResult(
@@ -70,6 +79,8 @@ def make_encounter(
         weather=weather_at(library, world, char.region, now),
         day_phase=day_phase(now),
         at=now,
+        objective=objective,
+        world_flags=world.active_flags(now),
     )
     return result, char
 
@@ -136,7 +147,7 @@ def solve_event(
         return _parley(library, world, char, action, trigger, solution, now)
     if solution.kind == "opportunity":
         return _opportunity(library, world, char, action, trigger, solution)
-    return _combat(library, world, char, action, trigger, now)
+    return _combat(library, world, char, action, trigger, solution, now)
 
 
 MAX_SKILL_TIER = 5
@@ -245,6 +256,7 @@ def _combat(  # noqa: PLR0917 — 一個解法的完整結算
     char: CharacterState,
     action: EventSolveAction,
     trigger: EventTrigger,
+    solution: SolutionDef,
     now: int,
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
     place = here(library, char)
@@ -252,7 +264,7 @@ def _combat(  # noqa: PLR0917 — 一個解法的完整結算
     listed = table is not None and place.id in table.location_by_id()
     if place.level_max is None or not listed:
         raise WorldActionError(f"{place.name_zh}打不起來（這裡沒有敵人）")
-    result, char = make_encounter(library, world, char, place, now)
+    result, char = make_encounter(library, world, char, place, now, objective=solution.objective)
     result = result.model_copy(update={"from_location": char.location})  # 撤退留在原地
     marked = trigger.model_copy(update={"combat_solution": action.solution})
     char = char.model_copy(update={"pending_encounter": result, "pending_event": marked})

@@ -10,6 +10,8 @@
 # 交涉付出的補給（cost_supplies；沒有金幣與道具，付錢、青竹節都用補給代替）、人情抵用（waive_thread）、線頭到期結局的
 # 旗標（on_expire_flag；遭遇表 variants 依它換陣容）、只能解鎖的骨架（unlock_only；信賴的祕密解鎖）。
 # 城鎮是安全區（玩法 PM 定）：有戰鬥解法的骨架不能出現在城鎮（載入檢查）；霧渡鎮只有骨架 16、22。
+# 5B-4c（Phase5計畫 21.4～21.7）：戰鬥解法的勝利條件（objective：escape 撤離、defend 守點）、機遇的結算、只出一次的骨架
+# （once）、世界級線頭的到期結局（on_expire_flag＋on_expire_seconds：限時的世界旗標）。
 region: cloud_ridge
 skeletons:
   - id: wounded_peddler
@@ -36,7 +38,7 @@ skeletons:
     npcs: [acolyte_xiaolian]
     solutions:
       - {kind: situation, attributes: [wis, int], note_zh: 認路}
-      - {kind: combat, note_zh: 帶他走（護送戰）, threads: [temple_quarrel]}
+      - {kind: combat, note_zh: 帶他走（護送戰）, objective: escape, threads: [temple_quarrel]}  # 5B-4c：撤離
     threads:
       - {id: temple_quarrel, text_zh: 道童提到觀裡在吵架, npc: acolyte_xiaolian}
   - id: gang_toll
@@ -107,7 +109,7 @@ skeletons:
     locations: [cliff_gang_fort, herb_valley]
     follows: [temple_traitor]
     solutions:
-      - {kind: combat, note_zh: 擋追兵, threads: [gang_fort_secret_door]}
+      - {kind: combat, note_zh: 擋追兵, objective: defend, threads: [gang_fort_secret_door]}  # 5B-4c：守點
       - {kind: situation, attributes: [dex], note_zh: 帶他躲藏}
     threads:
       - {id: gang_fort_secret_door, text_zh: 斷崖幫寨的暗門（隱藏入口）}
@@ -120,7 +122,7 @@ skeletons:
     locations: [crystal_rift, north_slope]
     follows: [missing_went_to_rift]
     solutions:
-      - {kind: combat, note_zh: 不殺獵人, threads: [wraiths_from_rift]}
+      - {kind: combat, note_zh: 不殺獵人, objective: defend, threads: [wraiths_from_rift]}  # 5B-4c：引擎沒有保護目標，先用守點
       - {kind: situation, attributes: [wil], note_zh: 喚醒}
     threads:
       - {id: wraiths_from_rift, scope: world, text_zh: 霧魅從裂痕湧出}
@@ -197,7 +199,7 @@ skeletons:
     locations: [crystal_rift, sword_tomb]
     follows: [scarface_grudge, temple_traitor, shards_under_den]
     solutions:
-      - {kind: combat, note_zh: 撤離勝利條件（先用一般勝利）, threads: [shards_to_ashen]}
+      - {kind: combat, note_zh: 搶下碎片帶到出口（撤離）, objective: escape, threads: [shards_to_ashen]}  # 5B-4c：撤離
       - {kind: situation, attributes: [dex], note_zh: 偷走}
     threads:
       - {id: shards_to_ashen, scope: world, text_zh: 碎片被送往灰燼荒原（接主線第 2 章）}
