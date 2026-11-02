@@ -38,7 +38,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "shielded_mending": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
         "shielded_wet": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
         "shielded_marking": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
-        "shielded_charged": "只由閃現的護盾類大變化施加（3W-2c），沒有手寫技能",
     },
     "stack": {},
 }
@@ -216,6 +215,10 @@ _SEEDS_54C = frozenset(
     }
 )
 
+# BAL-19（玩法決定 #110）：補內容的技能由關鍵字池給出（候選產生器），沒有放進任何 build 或單位；
+# 依 ID 前綴算進來（19a 感知組合主題法術 ``skill_wis_*``）。
+_BAL19_PREFIXES = ("skill_wis_",)
+
 
 def _skills() -> list[SkillDef]:
     return list(library().skills.values())
@@ -227,6 +230,7 @@ def _equipped() -> set[str]:
     ids |= {s for unit in lib.units.values() for s in unit.skills}
     ids |= _POOL_ONLY
     ids |= _SEEDS_54C
+    ids |= {s for s in lib.skills if s.startswith(_BAL19_PREFIXES)}
     # 3G-G3b：裝備的授予動作詞條授予的常駐技能也算被裝備
     ids |= {a.skill for a in lib.affixes.values() if a.category == "action"}
     # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備

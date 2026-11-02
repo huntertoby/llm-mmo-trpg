@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：聖光重擊並讓目標倒地（感知＋倒地）
+id: skill_wis_smite_down
+schema_version: 1
+name_zh: 聖光擊倒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 5}
+effects:
+  - {type: knock_prone}
+  - {type: damage, dice: 1d4, element: holy}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [holy, spell, control]
+narrative:
+  concept: 一記從天而降的聖光，壓得敵人跪倒在地
+  cast_flavor: 一道光柱從天而降砸在目標肩上，把它整個壓趴在地
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

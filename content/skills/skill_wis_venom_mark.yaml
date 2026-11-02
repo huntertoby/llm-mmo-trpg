@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：標記目標並讓它中毒（感知＋毒）
+id: skill_wis_venom_mark
+schema_version: 1
+name_zh: 蛇印
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 5}
+effects:
+  - {type: apply_status, status: marked, duration: 2}
+  - {type: apply_status, status: poison, duration: 3}
+condition: null
+cost: {mana: 4, cooldown: 1}
+tags: [poison, spell, mark]
+narrative:
+  concept: 一枚蛇形的印記，讓同伴看得見獵物，也讓毒慢慢滲進去
+  cast_flavor: 你指尖輕點，一條綠色的蛇形印記纏上目標的手臂，沿著血管往裡鑽
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
