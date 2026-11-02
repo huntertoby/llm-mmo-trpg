@@ -136,3 +136,28 @@ def test_chat_leaking_secret_falls_back(library: ContentLibrary) -> None:
     )
     assert action.source == "fallback"
     assert "斷崖幫" not in action.story.text_zh
+
+
+@pytest.mark.parametrize(
+    ("value", "shown", "hidden"),
+    [
+        (0, ("燈籠隊",), ("暗門",)),  # 中立：一般傳聞
+        (60, ("燈籠隊", "暗門"), ()),  # 信賴：祕密（渡婆婆說出暗門）
+        (-30, (), ("燈籠隊", "暗門")),  # 冷淡：什麼都不給
+    ],
+)
+def test_chat_hooks_filtered_by_affinity(
+    library: ContentLibrary, value: int, shown: tuple[str, ...], hidden: tuple[str, ...]
+) -> None:
+    """5B-4：給說書人的 ``hooks_zh`` 只含 NPC 依好感度能給的內容（玩法 PM 定）。"""
+    world = make_world()
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    char = char.model_copy(update={"affinity": {"granny_du": value}})
+    client = MockLLMClient([_json(text_zh="渡船慢慢走。", npcs=["granny_du"])])
+    chat_story(library, world, char, client, NOON, npc="granny_du", player_text="最近如何？")
+    _, user = client.calls[0]
+    assert "區域任務鏈" not in user["content"]  # 原始 hooks_zh 不再直接給
+    for text in shown:
+        assert text in user["content"]
+    for text in hidden:
+        assert text not in user["content"]

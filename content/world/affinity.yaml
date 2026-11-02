@@ -1,0 +1,13 @@
+# 好感度規則（Phase 5B-4；docs/phases/Phase5計畫.md 16.2）。schema：src/trpg/content/world_quests.py。
+# 級距照 09 9.6.11 #116（玩法 PM 代決）：≤ −50 敵視、−49～−10 冷淡、−9～19 中立、20～59 友善、≥ 60 信賴。
+# 只影響對話內容與任務分支，不影響數值（9.6.7 #5）。酒館每週傳聞數：開發 PM 定（代決 5B4-13）。
+min_value: -100
+max_value: 100
+ranks:
+  - {id: hostile, name_zh: 敵視, min: -100}
+  - {id: cold, name_zh: 冷淡, min: -49}
+  - {id: neutral, name_zh: 中立, min: -9}
+  - {id: friendly, name_zh: 友善, min: 20}
+  - {id: trusted, name_zh: 信賴, min: 60}
+rumors_per_week: 3
+week_days: 7

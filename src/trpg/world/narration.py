@@ -21,6 +21,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EventSkeletonDef, NpcCardDef
 from trpg.content.world_narration import StoryAllowed, StoryScene, allowed_problems
 from trpg.world.actions import NarrateAction, NarratedEvent, WorldEvent
+from trpg.world.affinity import trusted_npcs
 from trpg.world.common import world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.situations import held_threads, situation_template
@@ -68,7 +69,12 @@ def _common(
             hidden_names.add(loc.name_zh)
         else:
             visible.append(loc.id)
-    secrets = {n.secret_zh for n in region_npcs(library, char.region).values() if n.secret_zh}
+    trusted = trusted_npcs(library, char)  # 5B-4：信賴級 NPC 的祕密可以說（玩法 PM 定）
+    secrets = {
+        n.secret_zh
+        for n in region_npcs(library, char.region).values()
+        if n.secret_zh and n.id not in trusted
+    }
     forbidden = tuple(sorted(s for s in hidden_names | secrets if s.strip()))
     return tuple(sorted(visible)), held_threads(world, char, now), forbidden
 
