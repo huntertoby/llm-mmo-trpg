@@ -620,7 +620,8 @@ class CoreRules(ContentModel):
         return self.max_hp_for(template.max_hp, template.attributes[Attribute.CON])
 
     def template_stamina(self, template: UnitTemplate) -> int:
-        """範本的基礎耐力：``stamina``，省略時 ``default_stamina``（一輪主角的範本一律有寫；
+        """範本的基礎耐力：``stamina``，省略時 ``default_stamina``（一輪主角的範本一律有寫，
+        舊存檔讀入時由 ``trpg.roguelite.save.fill_resource_base`` 依武器大類補上，BAL-15c；
         戰鬥中的單位改用 :meth:`template_base_resource`，依武器大類）。"""
         return self.default_stamina if template.stamina is None else template.stamina
 
