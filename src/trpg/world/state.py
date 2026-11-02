@@ -3,6 +3,11 @@
 ``docs/phases/Phase5計畫.md`` 2.4、2.5、6.4。所有集合型欄位都以排序後的 tuple 存放（守則 2），
 同樣的動作序列一定得到逐字相同的 JSON。角色欄位盡量和 :class:`trpg.roguelite.state.RunState`
 同名同型別（2.2；``hero``、``origin``、``level``、``xp``、``hp``、``mana``、``stamina``）。
+
+Phase 5A-6 加上成長欄位（靈感點、閃現狀態、生成技能、用法統計、技能階級、配點、精英首殺、誓約），
+和 ``RunState`` 同名同型別，讓 :mod:`trpg.world.growth` 轉成 ``RunState`` 呼叫 roguelite 的成長
+函式。
+全部有預設值，``trpg-char/1`` 不升版號。
 """
 
 from __future__ import annotations
@@ -13,7 +18,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.skills import SkillDef
+from trpg.content.world_oaths import OathDifficulty
+from trpg.roguelite.state import PendingFlash
 from trpg.shared.rng import MASK64
+from trpg.shared.types import Attribute
+from trpg.skillgen.flash_state import SkillFlash
+from trpg.skillgen.usage import SkillUsage
 from trpg.world.clock import DayPhase
 
 __all__ = [
@@ -25,6 +35,7 @@ __all__ = [
     "EventTrigger",
     "LocationRef",
     "NextBattleMod",
+    "OathState",
     "PerceptionMark",
     "ThreadState",
     "WorldState",
@@ -119,6 +130,21 @@ class NextBattleMod(_Model):
     status: str | None = None
     """buff／debuff 的狀態（``statuses.yaml``）；增援為 ``None``。"""
     source: str = Field(pattern=ID_PATTERN)
+
+
+class OathState(_Model):
+    """目前的誓約（Phase 5A-6 接點；06 6.26、09 9.6.10 #106）：一直有效到自己解除。加成與違反判定在
+    5C-3。"""
+
+    template: str = Field(pattern=ID_PATTERN)
+    params: dict[str, str | int] = Field(default_factory=dict)
+    difficulty: OathDifficulty
+    sworn_at: int = Field(ge=0)
+
+    @field_validator("params")
+    @classmethod
+    def _sorted_params(cls, params: dict[str, str | int]) -> dict[str, str | int]:
+        return dict(sorted(params.items()))
 
 
 class ThreadState(_Model):
@@ -239,7 +265,38 @@ class CharacterState(_Model):
     threads: tuple[ThreadState, ...] = ()
     """個人線頭（只屬於自己；5B-1 起）。"""
     next_battle: tuple[NextBattleMod, ...] = ()
-    """下一場戰鬥帶的修正（情境判定的獎懲，5B-2 起；依產生順序）。"""
+    """下一場戰鬥帶的修正（情境判定的獎懲，5B-2 起；依產生順序）。5A-6 起開戰時套用，打完一場
+    （勝負都算）清空。"""
+
+    # --- 5A-6 成長（和 RunState 同名同型別；邏輯在 trpg.world.growth） ---
+    insight: int = Field(default=0, ge=0)
+    """還沒花掉的靈感點（06 6.34.2 大世界：每升 1 級、每種精英首殺…；一般戰鬥不給）。"""
+    flash: dict[str, SkillFlash] = Field(default_factory=dict)
+    """每招學會的技能的閃現狀態（目前的技能 ID → 狀態；依 ID 排序）。"""
+    flash_bases: tuple[SkillDef, ...] = ()
+    """閃現過的生成技能的原本定義（依 ID 排序）。"""
+    pending_flash: PendingFlash | None = None
+    """已付點、還沒選的閃現選項；有它時只能送 ``flash_pick``。"""
+    skill_usage: dict[str, SkillUsage] = Field(default_factory=dict)
+    """每招技能的用法統計（閃現選項依它排序；依 ID 排序）。"""
+    skill_tier: int | None = Field(default=None, ge=1)
+    """主角技能目前照哪一階的預算配數值（07 7.6 的角色階級；``None`` ＝ 5A-6 以前的角色，下次升級時
+    照角色階級重配一次）。"""
+    attribute_spent: dict[Attribute, int] = Field(default_factory=dict)
+    """分配出去（重配時退回）的屬性點（同 ``RunState``；新角色開局的點數不在內）。"""
+    elite_kills: tuple[str, ...] = ()
+    """首殺過的精英種類（排序、不重複；06 6.34.2「每種精英的首殺各 1 點」）。"""
+    oath: OathState | None = None
+    """目前的誓約（同時 1 個，#106）。"""
+    oath_cooldown_until: int = Field(default=0, ge=0)
+    """解除誓約後，這個時間（UTC 秒）以前不能再立（#106「現實 1 天」）。"""
+
+    @field_validator("elite_kills")
+    @classmethod
+    def _sorted_kills(cls, kills: tuple[str, ...]) -> tuple[str, ...]:
+        if list(kills) != sorted(set(kills)):
+            raise ValueError("elite_kills 必須排序且不重複")
+        return kills
 
     @field_validator("revealed")
     @classmethod
@@ -266,7 +323,7 @@ class CharacterState(_Model):
 
     generated_skills: tuple[SkillDef, ...] = ()
     """不在內容庫的技能（創角的組合器起始技能等；依 ID 排序，同 ``RunState.generated_skills``；
-    5A-5）。開戰時併進該場規則包、換技能認得它們。"""
+    5A-5；5A-6 起也含閃現、升階重配後的技能）。開戰時併進該場規則包、換技能認得它們。"""
 
     @field_validator("generated_skills")
     @classmethod

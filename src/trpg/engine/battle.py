@@ -319,8 +319,11 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     names = _unit_names(setup)
     ids = IdAllocator("unit")
     facings = _opening_facings(setup, positions)
+    opening: list[tuple[UnitId, tuple[str, ...]]] = []
     for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
         uid = UnitId(ids.next())
+        if spawn.opening_statuses:
+            opening.append((uid, spawn.opening_statuses))
         state.units[uid] = make_unit(
             uid,
             template=spawn.template,
@@ -344,6 +347,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     ctx = Ctx(state)
     core = ctx.core
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)
+    _apply_opening_statuses(ctx, opening)
     for unit in state.units_sorted():
         roll = ctx.rng.d20()
         modifier = (base_attribute(unit, Attribute.DEX) - core.initiative_attr_base) // (
@@ -353,11 +357,28 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         ctx.emit(
             InitiativeRolled, unit_id=unit.id, roll=roll, modifier=modifier, total=unit.initiative
         )
-    state.turn_order = _initiative_order(ctx)
+    state.turn_order = _first_team_order(state, _initiative_order(ctx), setup.first_team)
     ctx.emit(TurnOrderSet, order=tuple(state.turn_order))
     ctx.emit(RoundStarted)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
+
+
+def _apply_opening_statuses(ctx: Ctx, opening: list[tuple[UnitId, tuple[str, ...]]]) -> None:
+    """開場就掛上的狀態（Phase 5A-6，``UnitSpawn.opening_statuses``）：依單位、清單順序施加，
+    持續回合照狀態定義的預設，不擲抵抗。"""
+    for uid, statuses in opening:
+        for status_id in statuses:
+            execute(ctx, [ApplyStatusEffect(target_id=uid, status_id=status_id, source_id=uid)])
+
+
+def _first_team_order(state: BattleState, order: list[UnitId], first: Team | None) -> list[UnitId]:
+    """先手（Phase 5A-6，``BattleSetup.first_team``）：``first`` 陣營的單位照原本的先攻順序排在
+    最前面，其他單位照原本的順序接在後面；``None`` 時原樣。"""
+    if first is None:
+        return order
+    leading = [uid for uid in order if state.units[uid].team is first]
+    return leading + [uid for uid in order if state.units[uid].team is not first]
 
 
 def _opening_facings(setup: BattleSetup, positions: list[XY]) -> dict[Team, Facing]:

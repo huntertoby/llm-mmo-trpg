@@ -61,3 +61,9 @@ battle:
 enemy_growth:
   attribute_points_per_level: 2
   skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]
+# 主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。經驗門檻沿用原型 level_thresholds（5A-SIM 再定）。
+hero_growth:
+  skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]   # 07 7.6（玩法 PM 定）
+  insight_per_level: 2        # 每升 1 級 2 點靈感
+  insight_per_elite_kind: 1   # 每種精英首殺 1 點
+  level_cap: 10               # 第一季等級上限（09 9.7）

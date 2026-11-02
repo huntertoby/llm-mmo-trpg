@@ -43,6 +43,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.growth import gain_xp
 from trpg.world.rng import STREAM_CHECK, draw
 from trpg.world.state import (
     CharacterState,
@@ -369,7 +370,6 @@ def _apply_outcome(
     state.char = char.model_copy(
         update={
             "supplies": supplies,
-            "xp": char.xp + xp,
             "hp": char.hp - hp_lost,
             "next_battle": (*char.next_battle, *mods),
         }
@@ -384,6 +384,8 @@ def _apply_outcome(
             next_battle=tuple(mods),
         )
     )
+    state.char, leveled = gain_xp(library, state.world, state.char, xp)  # 當下升級（5A-6）
+    state.events += leveled
     for location in rew.reveal[: budget.reveals_max]:
         if not state.char.has_revealed(state.char.region, location):
             state.char = _reveal(state.char, location)

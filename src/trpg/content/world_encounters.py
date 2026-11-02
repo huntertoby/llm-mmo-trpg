@@ -67,6 +67,16 @@ class LocationEncounters(ContentModel):
     location: str = Field(pattern=ID_PATTERN)
     groups: tuple[GroupWeight, ...] = Field(min_length=1)
     elite: FixedElite | None = None
+    ally_first_threads: tuple[str, ...] = ()
+    """持有其中任一條有效線頭時，在這個地點的戰鬥我方先手（Phase 5A-6；18.4 補充「斷崖幫寨的
+    暗門」）。"""
+
+    @model_validator(mode="after")
+    def _thread_ids(self) -> LocationEncounters:
+        bad = [t for t in self.ally_first_threads if re.match(ID_PATTERN, t) is None]
+        if bad:
+            raise ValueError(f"地點 {self.location}：線頭 ID 格式錯誤 {', '.join(bad)}")
+        return self
 
 
 class EncounterTable(ContentModel):

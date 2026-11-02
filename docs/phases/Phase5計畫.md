@@ -1395,6 +1395,120 @@ exchange_supplies: 1
 
 - 帳號、登入、一帳號 2～3 角色的上限（5E-1）；事件卡、情境判定、NPC 對話（5B-5）；屬性點分配、閃現、重閃（5A-6 之後）；傭兵與影子（5C）；商店與背包（5D）；朋友足跡、多人同時在線的顯示。
 
-## 12. 之後各段規格
+## 12. 5A-6 詳細規格：大世界成長接點
 
-（5A-5 驗收後補上 5A-6 起。）
+> 給實作 agent。只動 `src/trpg/world/`、`src/trpg/content/world_rules.py`、`src/trpg/content/world_encounters.py`（一個欄位）、`src/trpg/content/world_oaths.py`（新）、`src/trpg/content/library.py`（載入誓約，一行）、`content/world/rules.yaml`（末尾加 `hero_growth`）、`content/world/encounters/cloud_ridge.yaml`（斷崖幫寨一行）、`src/trpg/engine/setup.py`、`src/trpg/engine/battle.py`（開場狀態與先手，見 12.5）、`src/trpg/engine/runner.py`（`LOG_FORMAT` 遞增）、`docs/phases/戰鬥紀錄格式變更.md`、`tests/world/`、受影響的 `tests/content/`、`tests/engine/`、`tests/cli/`（只改版號字串）。**不做** API、前端（5A-5 另一個 agent 在做 `src/trpg/api/`、`client/`）；不做經驗曲線與遭遇強度（5A-SIM）；不改 `trpg.roguelite` 的函式簽名與原型行為（`offer_tier_by_level` 只留 roguelite）。
+> 依據：07 7.2（配點、營火免費重配、HP 隨體質）、7.6（技能階級 1～3 級 1 階、4～7 級 2 階、8～10 級 3 階；換裝地點）、7.8（每級屬性 +2、HP +5%、2 點靈感、4、8 級升階；經驗來源；上限 10）；06 6.26（誓約）、6.34.2（大世界靈感：每升 1 級 2 點、任務鏈段落／世界事件／每種精英首殺各 1 點、一般戰鬥不給；花在主城、小鎮、營火）、6.34.3（閃現、重閃、溶掉）、6.34.9（階級屬於角色、升階重配、傳承）；09 9.6.7、9.6.10 #106（大世界立誓：主城、小鎮、營火，同時 1 個，解除後現實 1 天不能再立）、9.6.11 #114（營火可換技能、閃現、重閃、溶掉、傳承、立誓）；18 18.4「補充」（暗門：在斷崖幫寨的戰鬥我方先手；**危險度 3 的增援**：從同地點遭遇表用種子抽 1 名非精英敵人、照地點等級，陣容已滿 4 名改成敵人先手——玩法 PM 定，main `5cbda759`）、18.6（誓約模板，內容在 5C-3）；本檔 2.2（重用 roguelite，不搬家）、9、10。
+
+### 12.1 目標
+
+大世界角色有完整的成長接點，全部是 **世界動作**（寫進 `trpg-wlog/1`、可重播）或戰鬥／判定的回寫：
+
+- 任何來源加經驗後立刻判定升級（戰鬥、情境判定，之後的任務也呼叫同一個函式）；升級給屬性點、靈感點，跨過 4、8 級時主角技能照 07 7.6 的角色階級重配。
+- 配點、重配、閃現、重閃、溶掉、傳承、立誓、解除誓約。
+- 5B-2 的 `next_battle` 在開戰時套用並消耗；增援照玩法 PM 定；斷崖幫寨持有暗門時我方先手。
+
+### 12.2 交付項目
+
+1. **規則 content**（`content/world/rules.yaml` 末尾、`WorldRules.hero_growth`，有預設值）：
+
+   ```yaml
+   hero_growth:                                          # 5A-6
+     skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]  # 07 7.6（玩法 PM 定）
+     insight_per_level: 2                                # 06 6.34.2 大世界
+     insight_per_elite_kind: 1                           # 06 6.34.2「每種精英的首殺各 1 點」
+     level_cap: 10                                       # 7.8、09 9.7 第一季上限
+   ```
+   經驗門檻仍沿用原型 `roguelite.yaml` 的 `level_thresholds`（Q8，5A-SIM 再定）。
+
+2. **`trpg.world.growth`**（新）：
+   - `world_library(library)`：給 roguelite 成長函式用的內容庫視圖——只把 `roguelite.offer_tier_by_level` 換成 `hero_growth.skill_tier_by_level`（`dataclasses.replace`，同 `trpg.sim` 的做法），所以 roguelite 的閃現出題、傳承、升階重配在大世界用 07 7.6 的階級；原型不受影響。
+   - `hero_tier(library, level)`、`as_run(library, world, char) -> RunState`／`from_run(char, run)`：把角色轉成 roguelite 的 `RunState`（`seed`＝角色技能種子 `fnv1a64("{season_seed}:{character_id}:skills")`、`plan=()`、`node=CampfireNode`、`source=0`、`llm=False`），呼叫 roguelite 的純函式後把成長欄位寫回角色。roguelite 的 `ChoiceError` 轉成 `WorldActionError`。
+   - `gain_xp(library, char, xp) -> (char, events)`：**共用的加經驗＋升級**。等級 ＝ min(`level_for(xp)`, `level_cap`)；每升 1 級：`attribute_points` ＋`roguelite.attribute_points_per_level`、`insight` ＋`insight_per_level`、最大 HP／法力增加量加到目前值（同 5A-4）；全部升完後若角色階級變了，主角技能照新階級重配（roguelite `sync_skill_tier`）。每級發 `leveled_up`（新增 `insight`、`skill_tier` 欄位）。
+   - `elite_first_kills(...)`：打贏時，陣容裡每種還沒擊殺過的精英 ＋`insight_per_elite_kind`（記進 `elite_kills`），發 `insight_gained`。
+3. **狀態欄位**（`CharacterState`，全部有預設值，`trpg-char/1` 不升版號，同 5A-4／5B-2 的慣例）：`insight`、`flash`、`flash_bases`、`pending_flash`、`generated_skills`、`skill_usage`、`skill_tier`、`attribute_spent`、`elite_kills`、`oath`、`oath_cooldown_until`。型別與意義同 `RunState`（`trpg.roguelite.state`）。`new_character` 記 `skill_tier`＝1 級的階級（開局不重配，同 6.34.9「開局保持原樣，第一次升階才重配」）。
+4. **世界動作**（加進 `WorldAction`）：
+
+   | 動作 | 欄位 | 地點與條件（不合法拋 `WorldActionError`，狀態不變） | 重用 |
+   |---|---|---|---|
+   | `allocate` | `attributes` | 沒有遭遇；點數 ≤ `attribute_points` | roguelite `allocate_attributes`；HP／法力上限同步 |
+   | `respec` | — | 城鎮或營火、沒有遭遇（7.2 營火免費重配；城鎮比照換裝地點） | `respec_attributes` |
+   | `flash` | `skill`、`slot`、`category` | 城鎮或營火、沒有遭遇（6.34.2 大世界花點地點）；閃現要「先上場用過」 | `open_flash` |
+   | `flash_pick` | `pick`、`unequip` | 有 `pending_flash` | `pick_flash` |
+   | `dissolve` | `skill` | 城鎮或營火 | `dissolve` |
+   | `inherit` | `skill`、`source`、`records` | 城鎮或營火 | `inherit` |
+   | `swear_oath` | `template`、`params`、`player_text`、`source`、`prompt_version` | 城鎮或營火、沒有誓約、`now ≥ oath_cooldown_until`；模板存在、參數合法 | — |
+   | `release_oath` | — | 有誓約；`oath_cooldown_until = now + cooldown_seconds`（#106 現實 1 天） | — |
+
+   有 `pending_flash` 時，除了 `flash_pick` 以外的動作一律拒絕（6.34.3「出題就扣點、一定要選」）。
+   換技能（5A-4 的 `loadout`）改用 roguelite `set_loadout`，生成技能（閃現後的技能）也能換。
+5. **事件**：`attributes_allocated`、`attributes_respecced`、`flash_offered`（技能、重閃欄、類別、花費、選項數）、`flash_picked`（舊 ID → 新 ID）、`skill_dissolved`（退回點數）、`skill_inherited`、`insight_gained`（來源、點數）、`skill_tier_changed`（舊階、新階、改名）、`oath_sworn`、`oath_released`；`battle_started` 加 `reinforcements`、`first_team`、`hero_statuses`。
+6. **戰鬥接線**（`trpg.world.battle`）：
+   - 規則包加入主角的 `generated_skills`（閃現、重配後的技能）。
+   - 打完（勝負都算）：主角裝備的技能照這場的用法統計記「先上場用過」與 `skill_usage`（roguelite `after_battle_flash`，**不給** 每勝靈感，6.34.2「一般戰鬥不給」）。
+   - 打贏的經驗與升級改呼叫 `gain_xp`；精英首殺給靈感。
+   - **`next_battle`**（12.4）：buff／debuff 開場掛在主角身上；增援；打完（勝負都算）清空，撤退不消耗。
+   - **先手**（12.4）。
+7. **情境判定**（`trpg.world.situations`）：給的 xp 改呼叫 `gain_xp`，當下升級。
+8. **誓約接點**：schema `trpg.content.world_oaths`（`OathTable`：`cooldown_seconds`、`templates`；`OathTemplateDef`：`id`、`name_zh`、`difficulty: easy|medium|hard`、`params`；參數 `choice`（允許值）或 `int`（範圍））；`ContentLibrary.world_oaths`（`world/oaths.yaml` 不存在＝`None`）。18.6 的 15 種模板與戰鬥中的加成、違反判定在 **5C-3**；本段只有接點與測試裡的最小樣本（代決 5A6-9）。
+9. **測試**（12.6）與 **完成報告** `docs/phases/Phase5A-6報告.md`：交付、各接點的世界動作、可重播證明、代決、待 PM 決定。
+
+### 12.3 角色階級與重配（6.34.9、07 7.6）
+
+- 主角的角色階級 ＝ `hero_growth.skill_tier_by_level[等級]`；閃現出題、傳承、升階重配一律用 `world_library` 的視圖呼叫 roguelite，原型的 `offer_tier_by_level`（[1,1,2,2,3,3]）只留給 roguelite。
+- 升階的當下（`gain_xp` 結束時，戰鬥之間）呼叫 `sync_skill_tier`：手寫技能重配成 `<原 ID>_t<階級>`，閃過的技能照新階級重推歷程；裝備、備用、閃現狀態、用法統計跟著改 ID。
+
+### 12.4 下一場修正、增援與先手
+
+- **buff／debuff**：`next_battle` 裡的狀態（依產生順序、同一狀態只掛一次）在開戰時掛到主角身上，持續回合照 `statuses.yaml` 的預設（引擎 `UnitSpawn.opening_statuses`，在擲先攻前施加，不擲抵抗）。
+- **增援**（玩法 PM 定，18.4 補充）：每一筆 `reinforce`，從 **同地點遭遇表** 各陣容出現過的單位中去掉精英（`elite` 標籤），依 ID 排序後用 `Rng(fnv1a64("{battle_seed}:reinforce"))` 均勻抽 1 名加入敵方（照地點等級成長，同 5A-4 追加 A）；敵方已有 4 名時改成「敵人先手」。增援併進 `PreparedBattle.lineup`，看陣容時就看得到。
+- **先手**：`BattleSetup.first_team`（新，預設 `None`）：設定時該陣營的單位依先攻排在最前面、另一陣營依先攻排在後面（引擎的行動順序整場固定）。斷崖幫寨：遭遇地點的遭遇表列了 `ally_first_threads`（雲嶺：`cliff_gang_fort` → `gang_fort_secret_door`），且角色持有其中一條有效個人線頭（以遭遇時間 `at` 判定到期）→ 我方先手。我方先手與敵人先手同時成立時抵銷（照先攻）。
+- 引擎新欄位會出現在戰鬥紀錄的 `setup` → `LOG_FORMAT` `/99` → `/100`（`docs/phases/戰鬥紀錄格式變更.md` 1.1；舊紀錄不能重播，照慣例）。沒設定時結算與 `/99` 完全相同。
+
+### 12.5 可重播
+
+- 所有新動作進 `WorldAction` 聯集、寫進 `trpg-wlog/1`；閃現選項由角色技能種子衍生（roguelite 標籤 `flash/<技能>/<第幾次>/<重閃次數>`），`pending_flash` 存在角色快照裡，選擇時不重抽。重播照紀錄，不呼叫 LLM（本段 LLM 閃現提議不接，`llm=False`）。
+- 戰鬥設定只由「角色快照＋遭遇＋內容庫」決定（`next_battle`、線頭、生成技能都在角色快照裡），重播逐位元相同。
+
+### 12.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/world/test_growth.py` | 階級表 1～3／4～7／8～10；`world_library` 不改原型；`gain_xp`：升級屬性點、靈感 +2、HP／法力同步、上限 10、升到 4 級重配技能（`_t2`）；戰鬥與情境判定給的經驗當下升級；精英首殺靈感只給一次 |
+| `tests/world/test_flash_world.py` | 打完一場記「先上場用過」、一般戰鬥不給靈感；閃現（城鎮、營火可以，野外不行；點數不足；沒用過）→ 選 → 技能換新 ID、裝備跟著換、規則包有新技能能開戰；有待選時其他動作被拒；重閃、溶掉退一半、傳承；配點與重配（地點） |
+| `tests/world/test_next_battle.py` | buff／debuff 開場掛在主角身上並消耗；撤退不消耗；增援 +1 名非精英、照地點等級、確定性；已滿 4 名改敵人先手；暗門在斷崖幫寨我方先手、別處不先手、線頭到期不先手、抵銷 |
+| `tests/world/test_oath.py` | 立誓（地點、參數、同時 1 個）、解除後 1 天冷卻、沒有模板的內容庫拒絕 |
+| `tests/engine/test_first_team.py` | `first_team` 的行動順序；`opening_statuses` 掛上；預設值時和原本相同 |
+| `tests/world/test_replay.py`（加） | 戰鬥升級 → 配點 → 閃現 → 選 → 溶掉 → 立誓的日誌重播兩次逐字相同、寫出讀回相同 |
+
+### 12.7 驗收
+
+- `uv run pytest -q tests/world tests/roguelite tests/content tests/engine/test_first_team.py tests/test_architecture.py -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播（`trpg battle --map swamp --seed 7 --log-json` ＋ `replay`）；世界日誌重播測試。
+
+### 12.8 不做的事
+
+- API、前端（5A-5）；經驗曲線、各來源經驗量、遭遇強度（5A-SIM）；到頂後經驗換靈感或材料（7.8「換算比例待定」）。
+- 任務鏈段落、世界事件的靈感（5B-4、5F）；完整技能三選一與白板三選一在大世界的來源（任務、劇情、機遇、許願池；5B-4 之後）；LLM 閃現提議接線（外層，之後）。
+- 誓約的 15 種模板內容、戰鬥中的加成與違反判定、佔被動欄位（5C-3）。
+
+### 12.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 | 誰定 |
+|---|---|---|---|
+| 5A6-1 | 主角階級表 | 07 7.6（寫在 `hero_growth`，和 `enemy_growth` 同表） | **玩法 PM 定** |
+| 5A6-2 | 增援 | 18.4 補充（同地點遭遇表、種子、非精英、照地點等級；滿 4 名改敵人先手） | **玩法 PM 定** |
+| 5A6-3 | 增援的抽法 | 同地點各陣容出現過的非精英單位（去重、依 ID 排序）均勻抽；多筆增援各抽 1 名，滿 4 名後每筆改成敵人先手（一次就成立） | 開發 PM 定 |
+| 5A6-4 | 「先手」的引擎意思 | 該陣營依先攻排在最前、另一陣營接在後面（引擎行動順序整場固定）；我方與敵人先手同時成立時抵銷 | 開發 PM 定 |
+| 5A6-5 | 等級上限與到頂 | 上限 10；超過的經驗照累積，不換算（7.8「換算比例待定」） | 開發 PM 定 |
+| 5A6-6 | 花靈感的地點 | 閃現、重閃、溶掉、傳承都只在城鎮與營火（6.34.2 大世界表）；配點任何沒有遭遇的時候（同原型「戰前都可以」）；重配在城鎮與營火 | 開發 PM 定 |
+| 5A6-7 | 精英「每種」 | 精英範本（`elite` 標籤）以單位 ID 算一種；一般單位套詞綴的精英以「單位＋詞綴」算一種 | 開發 PM 定 |
+| 5A6-8 | `next_battle` 的消耗 | 下一場戰鬥（勝負都算）全部消耗；撤退不消耗；同一個狀態只掛一次、持續回合照狀態預設 | 開發 PM 定 |
+| 5A6-9 | 誓約模板 | 內容（18.6 的 15 種）與戰鬥判定在 5C-3；本段只有 schema、動作與測試樣本；`world/oaths.yaml` 不存在時立誓被拒 | 開發 PM 定 |
+| 5A6-10 | 誓約冷卻 | 解除後 86400 秒（現實 1 天，#106）；數值在 content | 開發 PM 定 |
+| 5A6-11 | 角色技能種子 | `fnv1a64("{season_seed}:{character_id}:skills")`（閃現選項、傳承、重配的種子；不佔世界亂數串流） | 開發 PM 定 |
+| 5A6-12 | 戰鬥紀錄版號 | `BattleSetup.first_team`、`UnitSpawn.opening_statuses` 進紀錄 → `/100` | 開發 PM 定 |
+
+## 13. 之後各段規格
+
+（5A-6 驗收後補上之後各段。）

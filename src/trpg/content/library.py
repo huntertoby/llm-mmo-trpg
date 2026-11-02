@@ -130,6 +130,7 @@ from trpg.content.world_encounters import EncounterTable, encounter_table_proble
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_map import LocationMapDef, world_map_problems
+from trpg.content.world_oaths import OathTable
 from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
@@ -589,6 +590,8 @@ class ContentLibrary:
     world_event_content: WorldEventContent = field(default_factory=WorldEventContent)
     """事件骨架、NPC 人設卡、事件規則（``world/events/``、``world/npcs/``、
     ``world/event_rules.yaml``，Phase 5B-1）；沒有資料時為空。"""
+    world_oaths: OathTable | None = None
+    """誓約模板（``world/oaths.yaml``，Phase 5A-6 接點；內容在 5C-3）；沒有檔案時為 ``None``。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -846,6 +849,7 @@ def load_library(  # noqa: PLR0915
     map_warnings = _apply_map_themes(maps, regions)
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
+    world_oaths = _load_optional(root / WORLD_OATHS_FILE, OathTable, files)
     unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
     world_encounters = _load_world_encounters(
@@ -924,6 +928,7 @@ def load_library(  # noqa: PLR0915
         world_enemies=world_enemies,
         world_encounters=world_encounters,
         world_event_content=world_event_content,
+        world_oaths=world_oaths,
         files=files,
     )
 
@@ -934,6 +939,19 @@ WORLD_MAPS_DIR = "world/maps"
 
 WORLD_RULES_FILE = "world/rules.yaml"
 """大世界規則的數值（相對於內容資料夾；Phase 5A-2）。"""
+WORLD_OATHS_FILE = "world/oaths.yaml"
+"""誓約模板（相對於內容資料夾；Phase 5A-6 接點，內容在 5C-3）。"""
+
+
+def _load_optional[M: ContentModel](
+    path: Path, model: type[M], files: list[tuple[Path, ContentModel]]
+) -> M | None:
+    """載入沒有跨檔案檢查的選用資料檔（檔案不存在＝``None``）。"""
+    if not path.is_file():
+        return None
+    loaded = load_content_file(path, model)
+    files.append((path, loaded))
+    return loaded
 
 
 def _load_world_rules(

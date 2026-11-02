@@ -10,14 +10,25 @@
 - :func:`grow_enemy`：敵人依等級成長（追加 A：和主角同樣，每級屬性 +2、HP +5%，技能階級照 07 7.6；
   範本＝1 級基準）。
 
+5A-6 接上成長與下一場修正：
+
+- 規則包加入主角的生成技能（閃現、升階重配後的技能）。
+- ``next_battle``（5B-2 情境判定）：buff／debuff 開場掛在主角身上；增援（:func:`~trpg.world.
+  encounters.reinforce_lineup`，玩法 PM 定）；打完一場（勝負都算）清空，撤退不消耗（代決 5A6-8）。
+- 先手：遭遇地點的 ``ally_first_threads``（斷崖幫寨的暗門）→ 我方先手；增援時陣容已滿 → 敵人
+  先手；兩者同時成立時抵銷（代決 5A6-4）。
+- 戰後：主角裝備的技能記「先上場用過」與用法統計（一般戰鬥不給靈感，06 6.34.2）；打贏的經驗走
+  :func:`~trpg.world.growth.gain_xp`（當下升級、升階重配），每種精英首殺給靈感。
+
 確定性：亂數只來自 ``battle_seed``（地圖 ``"{battle_seed}:map"``、陣容 ``"{battle_seed}:lineup"``、
-戰鬥本身）；不讀時間、不呼叫 LLM。
+增援 ``"{battle_seed}:reinforce"``、戰鬥本身）；不讀時間、不呼叫 LLM。
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
@@ -32,23 +43,32 @@ from trpg.engine.results import battle_result
 from trpg.engine.runner import advance, apply_step
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState
+from trpg.roguelite.flashes import after_battle_flash
 from trpg.roguelite.offers import at_run_tier
-from trpg.roguelite.progress import hero_unit_id, level_for
+from trpg.roguelite.progress import hero_unit_id
 from trpg.shared.errors import TrpgError
 from trpg.shared.rng import Rng, fnv1a64
-from trpg.shared.types import Attribute, Team
+from trpg.shared.types import Attribute, Team, UnitId
+from trpg.skillgen.usage import collect_usage, merge_usage
 from trpg.world.actions import (
     BattleEndedEvent,
     BattleStartedEvent,
     DefeatedEvent,
     FightAction,
-    LeveledUpEvent,
+    InsightGainedEvent,
     LocationClearedEvent,
     WorldEvent,
 )
-from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
-from trpg.world.encounters import EncounterLineup, lineup_templates, roll_lineup
+from trpg.world.common import max_hp, rules_of, world_map_of
+from trpg.world.encounters import (
+    EncounterLineup,
+    elite_kinds,
+    lineup_templates,
+    reinforce_lineup,
+    roll_lineup,
+)
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.growth import as_run, gain_xp, world_library
 from trpg.world.state import CharacterState, ClearedLocation, EncounterResult, WorldState
 
 __all__ = [
@@ -57,8 +77,10 @@ __all__ = [
     "encounter_map",
     "enemy_level",
     "fight",
+    "first_team",
     "grow_enemy",
     "hero_start_hp",
+    "hero_statuses",
     "prepare_battle",
     "reskin",
     "with_cleared",
@@ -67,13 +89,17 @@ __all__ = [
 
 @dataclass(frozen=True)
 class PreparedBattle:
-    """一場遭遇的戰鬥：引擎設定、種子、敵方陣容與等級、主角開場 HP。"""
+    """一場遭遇的戰鬥：引擎設定、種子、敵方陣容（含增援）與等級、主角開場 HP、增援人數、先手、
+    主角開場狀態（5A-6）。"""
 
     setup: BattleSetup
     seed: int
     lineup: EncounterLineup
     enemy_level: int
     hero_hp: int
+    reinforcements: int = 0
+    first_team: Team | None = None
+    hero_statuses: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +212,29 @@ def hero_start_hp(library: ContentLibrary, char: CharacterState) -> int:
     return hp
 
 
+def hero_statuses(char: CharacterState) -> tuple[str, ...]:
+    """``next_battle`` 的 buff／debuff 狀態（依產生順序、同一狀態只掛一次；代決 5A6-8）。"""
+    seen: list[str] = []
+    for mod in char.next_battle:
+        if mod.status is not None and mod.status not in seen:
+            seen.append(mod.status)
+    return tuple(seen)
+
+
+def first_team(
+    library: ContentLibrary, char: CharacterState, encounter: EncounterResult, enemy_first: bool
+) -> Team | None:
+    """先手的陣營：遭遇地點列了 ``ally_first_threads`` 且角色持有其中一條有效個人線頭（以遭遇時間
+    判定到期）→ 我方；增援時陣容已滿 → 敵方；兩者都成立時抵銷（``None``）。"""
+    table = library.world_encounters.get(encounter.region)
+    entry = None if table is None else table.location_by_id().get(encounter.location)
+    wanted = () if entry is None else entry.ally_first_threads
+    ally_first = any(t.thread in wanted and t.expires_at > encounter.at for t in char.threads)
+    if ally_first == enemy_first:
+        return None
+    return Team.ALLY if ally_first else Team.ENEMY
+
+
 def _hero_spawn(library: ContentLibrary, char: CharacterState, hp: int) -> UnitSpawn:
     """主角的出場設定（同 roguelite ``hero_spawn``：等級加成併入基礎 HP，體質由引擎加）。"""
     core = library.ruleset.core
@@ -205,6 +254,7 @@ def _hero_spawn(library: ContentLibrary, char: CharacterState, hp: int) -> UnitS
         hp=hp,
         mana=char.mana,
         stamina=char.stamina,
+        opening_statuses=hero_statuses(char),
     )
 
 
@@ -214,7 +264,9 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     if encounter is None:
         raise WorldActionError("目前沒有遭遇")
     map_def = encounter_map(library, encounter)
-    lineup = roll_lineup(library, encounter)
+    reinforce = sum(1 for m in char.next_battle if m.kind == "reinforce")
+    reinforced = reinforce_lineup(library, encounter, roll_lineup(library, encounter), reinforce)
+    lineup = reinforced.lineup
     level = enemy_level(library, encounter)
     enemies: list[UnitSpawn] = []
     extra: dict[str, SkillDef] = {}
@@ -237,19 +289,27 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         max_rounds=rules_of(library).battle.max_rounds,
         weather=encounter.weather,
     )
+    extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
     hp = hero_start_hp(library, char)
-    ruleset = library.ruleset.with_skills(
-        [*char.generated_skills, *(extra[k] for k in sorted(extra))]
-    )
+    ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
+    first = first_team(library, char, encounter, reinforced.enemy_first)
     setup = base.model_copy(
         update={
             "map": map_def,
             "ruleset": ruleset,
             "units": (_hero_spawn(library, char, hp), *base.units, *enemies),
+            "first_team": first,
         }
     )
     return PreparedBattle(
-        setup=setup, seed=encounter.battle_seed, lineup=lineup, enemy_level=level, hero_hp=hp
+        setup=setup,
+        seed=encounter.battle_seed,
+        lineup=lineup,
+        enemy_level=level,
+        hero_hp=hp,
+        reinforcements=reinforced.added,
+        first_team=first,
+        hero_statuses=hero_statuses(char),
     )
 
 
@@ -315,14 +375,28 @@ def fight(
             weather=encounter.weather,
             hero_hp=prepared.hero_hp,
             fatigued=char.fatigued,
+            reinforcements=prepared.reinforcements,
+            first_team=prepared.first_team,
+            hero_statuses=prepared.hero_statuses,
         )
     ]
     result = battle_result(state)
-    hero = result.ally(hero_unit_id(state))
+    hero_id = hero_unit_id(state)
+    hero = result.ally(hero_id)
     assert hero is not None
-    if result.winner is Team.ALLY:
+    won = result.winner is Team.ALLY
+    char = _after_battle_skills(library, char, prepared, action.steps, hero_id, won=won)
+    char = char.model_copy(update={"next_battle": ()})  # 下一場修正打完一場就消耗（5A-6）
+    if won:
         world, char, more = _won(
-            library, world, char, encounter, hp=hero.hp, mana=hero.mana, now=now
+            library,
+            world,
+            char,
+            encounter,
+            prepared.lineup,
+            hp=hero.hp,
+            mana=hero.mana,
+            now=now,
         )
     else:
         char, more = _lost(library, char, hero.mana)
@@ -338,47 +412,71 @@ def fight(
     return world, char, (*events, ended, *more)
 
 
+def _after_battle_skills(
+    library: ContentLibrary,
+    char: CharacterState,
+    prepared: PreparedBattle,
+    steps: Sequence[Step],
+    hero_id: UnitId,
+    *,
+    won: bool,
+) -> CharacterState:
+    """戰後：主角裝備的技能照這場的用法統計記「先上場用過」並累加用法統計（roguelite
+    ``after_battle_flash``；06 6.34.2 大世界一般戰鬥 **不給** 靈感，所以丟掉它算的靈感點）。"""
+    usage = collect_usage(
+        prepared.setup, prepared.seed, steps, hero_id, library.keywords, only=char.hero.skills
+    )
+    flashed: dict[str, Any] = after_battle_flash(
+        world_library(library), as_run(char), usage, won=won
+    )
+    flashed.pop("insight", None)
+    return char.model_copy(update={**flashed, "skill_usage": merge_usage(char.skill_usage, usage)})
+
+
+def _elite_first_kills(
+    library: ContentLibrary, char: CharacterState, lineup: EncounterLineup
+) -> tuple[CharacterState, list[WorldEvent]]:
+    """每種精英的首殺各給 ``insight_per_elite_kind`` 點靈感（06 6.34.2；代決 5A6-7）。"""
+    amount = rules_of(library).hero_growth.insight_per_elite_kind
+    events: list[WorldEvent] = []
+    kills = set(char.elite_kills)
+    for kind in elite_kinds(library, lineup):
+        if kind in kills:
+            continue
+        kills.add(kind)
+        char = char.model_copy(update={"insight": char.insight + amount})
+        events.append(
+            InsightGainedEvent(source=f"elite:{kind}", amount=amount, insight=char.insight)
+        )
+    return char.model_copy(update={"elite_kills": tuple(sorted(kills))}), events
+
+
 def _won(
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
     encounter: EncounterResult,
+    lineup: EncounterLineup,
     *,
     hp: int,
     mana: int,
     now: int,
 ) -> tuple[WorldState, CharacterState, list[WorldEvent]]:
-    """打贏：HP 照戰後（倒下以 1 HP 繼續）、法力不回、耐力回滿（#113）；經驗與升級；已清空。"""
+    """打贏：HP 照戰後（倒下以 1 HP 繼續）、法力不回、耐力回滿（#113）；經驗與升級（共用的
+    :func:`~trpg.world.growth.gain_xp`）；精英首殺靈感；已清空。"""
     rules = rules_of(library).battle
-    events: list[WorldEvent] = []
-    xp = char.xp + rules.xp_per_battle
     char = char.model_copy(
         update={
             "hp": max(1, hp),
             "mana": mana,
             "stamina": None,
-            "xp": xp,
             "fatigued": False,
             "pending_encounter": None,
         }
     )
-    target = level_for(library, xp)
-    while char.level < target:
-        before_hp, before_mana = max_hp(library, char), max_mana(library, char)
-        leveled = char.model_copy(
-            update={
-                "level": char.level + 1,
-                "attribute_points": char.attribute_points
-                + library.roguelite.attribute_points_per_level,
-            }
-        )
-        char = leveled.model_copy(
-            update={
-                "hp": max(1, leveled.hp + max_hp(library, leveled) - before_hp),
-                "mana": max(0, leveled.mana + max_mana(library, leveled) - before_mana),
-            }
-        )
-        events.append(LeveledUpEvent(level=char.level, attribute_points=char.attribute_points))
+    char, events = gain_xp(library, world, char, rules.xp_per_battle)
+    char, insight = _elite_first_kills(library, char, lineup)
+    events += insight
     kind = world_map_of(library, encounter.region).location_by_id()[encounter.location].kind
     if kind in rules.clear_kinds:
         respawn_at = now + rules.respawn_seconds

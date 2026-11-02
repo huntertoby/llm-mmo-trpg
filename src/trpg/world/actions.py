@@ -4,6 +4,7 @@
 套用動作時產生的結果（給 API、說書人與前端看），可由日誌重播得到，不另外存。
 
 5A-4 加上撤退、戰鬥（步驟寫進日誌，重播時重算勝負）、城鎮休息、換技能、傳送。
+5A-6 加上成長的動作：配點、重配、閃現、選閃現、溶掉、傳承、立誓、解除誓約。
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.content.battle import ID_PATTERN
 from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
+from trpg.content.world_oaths import OATH_TEXT_LIMIT, OathProposal
 from trpg.content.world_situations import (
     PLAYER_TEXT_LIMIT,
     CareItem,
@@ -22,17 +24,21 @@ from trpg.content.world_situations import (
     SituationProposal,
 )
 from trpg.engine.actions import Step
-from trpg.shared.types import Attribute
+from trpg.shared.types import Attribute, Team
 from trpg.world.encounters import EncounterLineup
-from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod
+from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
 
 __all__ = [
+    "AllocateAction",
+    "AttributesAllocatedEvent",
+    "AttributesRespeccedEvent",
     "BattleEndedEvent",
     "BattleStartedEvent",
     "CampAction",
     "CampedEvent",
     "CareResult",
     "DefeatedEvent",
+    "DissolveAction",
     "EncounterCheckEvent",
     "EncounterEvent",
     "EventCheckEvent",
@@ -40,12 +46,22 @@ __all__ = [
     "EventResolvedEvent",
     "EventTriggeredEvent",
     "FightAction",
+    "FlashAction",
+    "FlashOfferedEvent",
+    "FlashPickAction",
+    "FlashPickedEvent",
+    "InheritAction",
+    "InsightGainedEvent",
     "LeveledUpEvent",
     "LoadoutAction",
     "LoadoutChangedEvent",
     "LocationClearedEvent",
     "LocationRevealedEvent",
+    "OathReleasedEvent",
+    "OathSwornEvent",
     "PerceptionCheckEvent",
+    "ReleaseOathAction",
+    "RespecAction",
     "RestAction",
     "RestedEvent",
     "RetreatAction",
@@ -53,6 +69,10 @@ __all__ = [
     "SituationAction",
     "SituationCheckEvent",
     "SituationResultEvent",
+    "SkillDissolvedEvent",
+    "SkillInheritedEvent",
+    "SkillTierChangedEvent",
+    "SwearOathAction",
     "TeleportAction",
     "TeleportedEvent",
     "ThreadAddedEvent",
@@ -139,6 +159,71 @@ class SituationAction(_Model):
     prompt_version: str | None = Field(default=None, max_length=64)
 
 
+class AllocateAction(_Model):
+    """分配未分配的屬性點（07 7.2；5A-6）：屬性 → 加幾點，總數 ≤ ``attribute_points``。"""
+
+    kind: Literal["allocate"] = "allocate"
+    attributes: dict[Attribute, int]
+
+
+class RespecAction(_Model):
+    """免費重配屬性點（07 7.2「營火可以免費重配」；城鎮與營火；5A-6）。"""
+
+    kind: Literal["respec"] = "respec"
+
+
+class FlashAction(_Model):
+    """閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``
+    為 ``None`` ＝ 閃現下一次，否則重閃第 ``slot`` 次；``category`` 指定類別（多花 1 點）。"""
+
+    kind: Literal["flash"] = "flash"
+    skill: str
+    slot: int | None = Field(default=None, ge=0)
+    category: str | None = None
+
+
+class FlashPickAction(_Model):
+    """選閃現的第 ``pick`` 個選項（同 roguelite ``FlashPickChoice``）。"""
+
+    kind: Literal["flash_pick"] = "flash_pick"
+    pick: int = Field(ge=0)
+    unequip: str | None = None
+
+
+class DissolveAction(_Model):
+    """溶掉一招（06 6.34.3 #71；城鎮與營火）：退回花在它身上的點的一半。"""
+
+    kind: Literal["dissolve"] = "dissolve"
+    skill: str
+
+
+class InheritAction(_Model):
+    """傳承（06 6.34.9 第 4 點；城鎮與營火）：同 roguelite ``InheritChoice``。"""
+
+    kind: Literal["inherit"] = "inherit"
+    skill: str
+    source: str
+    records: tuple[int, ...] = Field(min_length=1, max_length=2)
+
+
+class SwearOathAction(_Model):
+    """立誓（06 6.26、09 9.6.10 #106；城鎮與營火，同時 1 個）。``proposal`` 是 LLM 或選單提議、
+    已經過 pydantic 驗證的模板與參數；引擎另外檢查合法性。誓言原文只是紀錄（給 LLM 時包在
+    ``<player_input>``），重播照紀錄、不呼叫 LLM。"""
+
+    kind: Literal["swear_oath"] = "swear_oath"
+    proposal: OathProposal
+    player_text: str = Field(default="", max_length=OATH_TEXT_LIMIT)
+    source: Literal["llm", "menu"] = "menu"
+    prompt_version: str | None = Field(default=None, max_length=64)
+
+
+class ReleaseOathAction(_Model):
+    """解除誓約（#106：解除後現實 1 天內不能再立）。"""
+
+    kind: Literal["release_oath"] = "release_oath"
+
+
 type WorldAction = Annotated[
     TravelAction
     | CampAction
@@ -147,7 +232,15 @@ type WorldAction = Annotated[
     | RestAction
     | LoadoutAction
     | TeleportAction
-    | SituationAction,
+    | SituationAction
+    | AllocateAction
+    | RespecAction
+    | FlashAction
+    | FlashPickAction
+    | DissolveAction
+    | InheritAction
+    | SwearOathAction
+    | ReleaseOathAction,
     Field(discriminator="kind"),
 ]
 
@@ -319,10 +412,17 @@ class BattleStartedEvent(_Model):
     battle_map: str
     region: str
     lineup: EncounterLineup
+    """敵方陣容（5A-6 起含情境判定的增援，增援排在最後）。"""
     enemy_level: int
     weather: str
     hero_hp: int
     fatigued: bool
+    reinforcements: int = 0
+    """這場的增援人數（5A-6）。"""
+    first_team: Team | None = None
+    """先手的陣營（5A-6：暗門我方先手、增援滿 4 名敵人先手；``None`` ＝ 照先攻）。"""
+    hero_statuses: tuple[str, ...] = ()
+    """開場掛在主角身上的狀態（5A-6：情境判定給的 buff／debuff）。"""
 
 
 class BattleEndedEvent(_Model):
@@ -341,6 +441,10 @@ class LeveledUpEvent(_Model):
     level: int
     attribute_points: int
     """升到這級後未分配的屬性點總數。"""
+    insight: int = 0
+    """升到這級後未花的靈感點總數（5A-6）。"""
+    skill_tier: int = 1
+    """這個等級的角色階級（07 7.6；5A-6）。"""
 
 
 class DefeatedEvent(_Model):
@@ -377,6 +481,85 @@ class TeleportedEvent(_Model):
     location: str
 
 
+class InsightGainedEvent(_Model):
+    """得到靈感點（06 6.34.2；5A-6）：``source`` 例 ``elite:<種類>``。升級給的寫在
+    ``leveled_up``。"""
+
+    kind: Literal["insight_gained"] = "insight_gained"
+    source: str
+    amount: int
+    insight: int
+
+
+class SkillTierChangedEvent(_Model):
+    """角色升階，主角技能照新階級重配（06 6.34.9；5A-6）。"""
+
+    kind: Literal["skill_tier_changed"] = "skill_tier_changed"
+    from_tier: int | None
+    to_tier: int
+    skills: tuple[str, ...]
+    bench: tuple[str, ...]
+
+
+class AttributesAllocatedEvent(_Model):
+    kind: Literal["attributes_allocated"] = "attributes_allocated"
+    attributes: dict[Attribute, int]
+    attribute_points: int
+    """分配後還剩的點數。"""
+
+
+class AttributesRespeccedEvent(_Model):
+    kind: Literal["attributes_respecced"] = "attributes_respecced"
+    attribute_points: int
+    """退回後未分配的點數。"""
+
+
+class FlashOfferedEvent(_Model):
+    """閃現或重閃出題（點數已付）。"""
+
+    kind: Literal["flash_offered"] = "flash_offered"
+    skill: str
+    slot: int | None
+    category: str | None
+    cost: int
+    options: int
+    insight: int
+
+
+class FlashPickedEvent(_Model):
+    kind: Literal["flash_picked"] = "flash_picked"
+    skill: str
+    """選之前的技能 ID。"""
+    new_skill: str
+    pick: int
+
+
+class SkillDissolvedEvent(_Model):
+    kind: Literal["skill_dissolved"] = "skill_dissolved"
+    skill: str
+    refund: int
+    insight: int
+
+
+class SkillInheritedEvent(_Model):
+    kind: Literal["skill_inherited"] = "skill_inherited"
+    skill: str
+    source: str
+    records: tuple[int, ...]
+    new_skill: str
+
+
+class OathSwornEvent(_Model):
+    kind: Literal["oath_sworn"] = "oath_sworn"
+    oath: OathState
+
+
+class OathReleasedEvent(_Model):
+    kind: Literal["oath_released"] = "oath_released"
+    template: str
+    cooldown_until: int
+
+
 type WorldEvent = Annotated[
     TraveledEvent
     | EncounterCheckEvent
@@ -400,6 +583,16 @@ type WorldEvent = Annotated[
     | SituationResultEvent
     | ThreadAddedEvent
     | ThreadPushedOutEvent
-    | EventResolvedEvent,
+    | EventResolvedEvent
+    | InsightGainedEvent
+    | SkillTierChangedEvent
+    | AttributesAllocatedEvent
+    | AttributesRespeccedEvent
+    | FlashOfferedEvent
+    | FlashPickedEvent
+    | SkillDissolvedEvent
+    | SkillInheritedEvent
+    | OathSwornEvent
+    | OathReleasedEvent,
     Field(discriminator="kind"),
 ]

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 
 import pytest
@@ -13,12 +14,21 @@ from hypothesis import strategies as st
 
 from tests.world.helpers import NOON, make_world, with_rules
 from trpg.content.library import ContentLibrary
+from trpg.content.world_oaths import OathProposal, OathTable
+from trpg.shared.types import Attribute
+from trpg.skillgen.flash_state import acquire
 from trpg.world.actions import (
+    AllocateAction,
     CampAction,
+    DissolveAction,
     FightAction,
+    FlashAction,
+    FlashPickAction,
     LoadoutAction,
+    ReleaseOathAction,
     RestAction,
     RetreatAction,
+    SwearOathAction,
     TravelAction,
     WorldAction,
 )
@@ -207,3 +217,61 @@ def test_replay_with_battle_and_town(library: ContentLibrary, make_char: MakeCha
     assert _snapshot(first.world, first.characters) == _snapshot(second.world, second.characters)
     assert first.events == second.events
     assert any(e.kind == "battle_ended" for _, e in first.events)
+
+
+def test_replay_with_growth(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5A-6：配點 → 閃現 → 選 → 立誓 → 戰鬥（升級）→ 溶掉 → 解除誓約；重播逐字相同。"""
+    lib = dataclasses.replace(
+        with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000}),
+        world_oaths=OathTable.model_validate(
+            {"templates": [{"id": "no_items", "name_zh": "不使用道具", "difficulty": "easy"}]}
+        ),
+    )
+    skill = "skill_war_hymn"
+    base = make_char("alice")
+    start = {
+        "alice": base.model_copy(
+            update={
+                "xp": 90,
+                "insight": 3,
+                "attribute_points": 2,
+                "flash": {skill: acquire(skill).model_copy(update={"used": True})},
+            }
+        )
+    }
+    world = make_world()
+    chars = dict(start)
+    entries: list[WorldLogEntry] = []
+    now = NOON
+
+    def act(action: WorldAction) -> None:
+        nonlocal world, now
+        now += 30
+        result = world_step(lib, world, chars["alice"], action, now)
+        world = result.world
+        chars["alice"] = result.char
+        entries.append(
+            WorldLogEntry(seq=len(entries) + 1, now=now, character_id="alice", action=action)
+        )
+
+    act(AllocateAction(attributes={Attribute.CON: 2}))
+    act(FlashAction(skill=skill))
+    act(FlashPickAction(pick=0))
+    act(SwearOathAction(proposal=OathProposal(template="no_items")))
+    act(TravelAction(to="ferry_steps"))
+    act(FightAction(steps=auto_steps(lib, chars["alice"])))
+    if chars["alice"].location != "mist_ferry":
+        act(TravelAction(to="mist_ferry"))
+    flashed = next(s for s in chars["alice"].hero.skills if s.startswith(skill))
+    act(DissolveAction(skill=flashed))
+    act(ReleaseOathAction())
+
+    restored = loads_log(dumps_log(entries))
+    assert restored == tuple(entries)
+    first = replay(lib, make_world(), start, entries)
+    second = replay(lib, make_world(), start, restored)
+    assert _snapshot(first.world, first.characters) == _snapshot(world, chars)
+    assert _snapshot(first.world, first.characters) == _snapshot(second.world, second.characters)
+    assert first.events == second.events
+    kinds = {e.kind for _, e in first.events}
+    assert {"flash_offered", "flash_picked", "oath_sworn", "skill_dissolved"} <= kinds

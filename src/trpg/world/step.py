@@ -10,6 +10,8 @@
 - **紮營**（#114）：非戰鬥狀態的地點花補給，HP、法力、耐力回滿＝營火。
 - **5A-4**：撤退、戰鬥（:mod:`trpg.world.battle`）、城鎮休息、換技能、傳送
   （:mod:`trpg.world.town`）；移動到「已清空」的地點不遇敵（擲骰照擲）。
+- **5A-6**：成長的動作（配點、重配、閃現、溶掉、傳承、立誓；:mod:`trpg.world.growth`）。有已付點、
+  還沒選的閃現選項時，只能送 ``flash_pick``。
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from trpg.world.actions import (
     EncounterCheckEvent,
     EncounterEvent,
     FightAction,
+    FlashPickAction,
     LoadoutAction,
     LocationRevealedEvent,
     PerceptionCheckEvent,
@@ -45,6 +48,7 @@ from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.errors import WorldActionError
 from trpg.world.events import roll_event
+from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.situations import resolve_situation
 from trpg.world.state import (
@@ -118,6 +122,7 @@ def new_character(
             "location": world_map.town,
             "supplies": _rules(library).supplies.start,
             "visited_towns": (region,),
+            "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
         }
     )
     return char.model_copy(update={"hp": max_hp(library, char), "mana": max_mana(library, char)})
@@ -136,6 +141,11 @@ def world_step(
     now: int,
 ) -> StepResult:
     """套用一個世界動作；不合法拋 :class:`WorldActionError`。"""
+    if char.pending_flash is not None and not isinstance(action, FlashPickAction):
+        raise WorldActionError("還有閃現的選項沒有選（flash_pick）")
+    if isinstance(action, GROWTH_ACTIONS):
+        char, events = apply_growth(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
     if isinstance(action, TravelAction):
         return _travel(library, world, char, action, now)
     if isinstance(action, CampAction):
