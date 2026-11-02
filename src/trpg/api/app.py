@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from trpg import __version__
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
-from trpg.api.routes import battles, content, gear, runs, workshop
+from trpg.api.routes import battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
     AutoAdvanceLimitError,
@@ -27,6 +27,7 @@ from trpg.api.sessions import (
     SessionStore,
 )
 from trpg.api.workshop import WorkshopRequestError
+from trpg.api.world import WorldCharacterNotFoundError, WorldConflictError, WorldStore
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.primitive_coverage import check_primitive_coverage
@@ -35,6 +36,7 @@ from trpg.roguelite.save import default_save_dir
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
+from trpg.world.errors import WorldActionError, WorldError, WorldSaveFormatError
 
 __all__ = ["ERROR_STATUS", "create_app"]
 
@@ -52,6 +54,11 @@ ERROR_STATUS: dict[type[Exception], int] = {
     GearRequestError: 422,
     ComposeError: 422,
     DraftError: 422,
+    WorldCharacterNotFoundError: 404,
+    WorldConflictError: 409,
+    WorldActionError: 422,
+    WorldSaveFormatError: 422,
+    WorldError: 422,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
@@ -80,7 +87,8 @@ def create_app(
     （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
-    ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）。
+    ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）；
+    大世界存在它底下的 ``world/``（5A-5）。
     ``llm`` 是網頁版 LLM 開關的模型來源（4-L6b；省略時讀 ``config/llm.toml`` 連本機模型，連不到就
     把那一輪當作關閉）；測試傳 :class:`~trpg.api.llm_source.MockLlmProvider`。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
@@ -90,12 +98,14 @@ def create_app(
     lib = library if library is not None else load_library()
     check_primitive_coverage(lib)
     app.state.store = SessionStore(lib, max_auto_steps=max_auto_steps)
+    saves = save_dir if save_dir is not None else default_save_dir()
     app.state.runs = RunStore(
         lib,
         app.state.store,
-        save_dir if save_dir is not None else default_save_dir(),
+        saves,
         llm=llm if llm is not None else LocalLlmProvider(),
     )
+    app.state.world = WorldStore(lib, app.state.store, saves / "world")  # 大世界（5A-5）
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)
@@ -103,6 +113,7 @@ def create_app(
     app.include_router(runs.router)
     app.include_router(workshop.router)
     app.include_router(gear.router)
+    app.include_router(world.router)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

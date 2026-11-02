@@ -238,7 +238,9 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         weather=encounter.weather,
     )
     hp = hero_start_hp(library, char)
-    ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
+    ruleset = library.ruleset.with_skills(
+        [*char.generated_skills, *(extra[k] for k in sorted(extra))]
+    )
     setup = base.model_copy(
         update={
             "map": map_def,

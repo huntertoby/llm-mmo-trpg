@@ -760,6 +760,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Characters */
+        get: operations["list_characters_api_world_characters_get"];
+        put?: never;
+        /** Create Character */
+        post: operations["create_character_api_world_characters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Character */
+        get: operations["get_character_api_world_characters__character_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Action */
+        post: operations["post_action_api_world_characters__character_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/battle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Battle */
+        post: operations["post_battle_api_world_characters__character_id__battle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1353,6 +1422,17 @@ export interface components {
             text: string;
         };
         /**
+         * CampAction
+         * @description 在目前地點紮營＝營火（09 9.6.11 #114）。
+         */
+        CampAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "camp";
+        };
+        /**
          * ChargeOut
          * @description 等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。
          */
@@ -1622,6 +1702,24 @@ export interface components {
              */
             llm: boolean;
         };
+        /**
+         * CreateWorldCharacterRequest
+         * @description 建立大世界角色（07 7.6 創角）。選項沿用 ``GET /api/runs/start-options``。
+         */
+        CreateWorldCharacterRequest: {
+            /** Name */
+            name: string;
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
+            /** Race */
+            race?: string | null;
+            /** Origin */
+            origin?: string | null;
+            /** Seed */
+            seed?: number | null;
+        };
         /** DamageOut */
         DamageOut: {
             /** Minimum */
@@ -1819,6 +1917,40 @@ export interface components {
          * @enum {string}
          */
         Element: "physical" | "fire" | "ice" | "lightning" | "poison" | "wind" | "earth" | "holy" | "shadow";
+        /** EncounterEnemyView */
+        EncounterEnemyView: {
+            /** Name Zh */
+            name_zh: string;
+            /** Elite */
+            elite: boolean;
+            /** Affix Zh */
+            affix_zh: string | null;
+        };
+        /** EncounterView */
+        EncounterView: {
+            /** Location */
+            location: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+            /** Enemy Level */
+            enemy_level: number;
+            /** Map Name Zh */
+            map_name_zh: string;
+            /** Weather Zh */
+            weather_zh: string;
+            /** Day Phase Zh */
+            day_phase_zh: string;
+            /** Enemies */
+            enemies: components["schemas"]["EncounterEnemyView"][];
+            /** Retreat To Zh */
+            retreat_to_zh: string;
+            /** Fatigued */
+            fatigued: boolean;
+            /** Hero Hp */
+            hero_hp: number;
+            /** In Battle */
+            in_battle: boolean;
+        };
         /**
          * EndStance
          * @description 取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。
@@ -2774,6 +2906,31 @@ export interface components {
             /** Maximum */
             maximum: number;
         };
+        /** HereView */
+        HereView: {
+            /** Location */
+            location: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Can Rest */
+            can_rest: boolean;
+            /** Can Loadout */
+            can_loadout: boolean;
+            /** Camp Problem Zh */
+            camp_problem_zh: string | null;
+            /** Camped */
+            camped: boolean;
+            /** Teleports */
+            teleports: components["schemas"]["TeleportOption"][];
+            /** Hasten Cost */
+            hasten_cost: number;
+            /** Camp Cost */
+            camp_cost: number;
+        };
         /**
          * HeroCards
          * @description 戰鬥中主角的技能卡（3-41c）：附施放者當下的實際值（傷害算法的「目前」加成、召喚物資訊）。
@@ -3314,6 +3471,19 @@ export interface components {
         LoadRunRequest: {
             /** Run Id */
             run_id: string;
+        };
+        /**
+         * LoadoutAction
+         * @description 換技能（城鎮或營火；07 7.6）：新的裝備清單，沒裝上的進備用。
+         */
+        LoadoutAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "loadout";
+            /** Skills */
+            skills: string[];
         };
         /**
          * LoadoutChoice
@@ -4017,6 +4187,28 @@ export interface components {
              * @enum {string}
              */
             kind: "respec_attributes";
+        };
+        /**
+         * RestAction
+         * @description 在城鎮休息：HP、法力、耐力回滿，補給補到初值（09 9.6.7 #2、#11）。
+         */
+        RestAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "rest";
+        };
+        /**
+         * RetreatAction
+         * @description 看了陣容不打，退回出發地點（09 9.6.6：不開戰、不扣任何東西）。
+         */
+        RetreatAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "retreat";
         };
         /**
          * RetreatTo
@@ -5008,6 +5200,27 @@ export interface components {
              */
             charges: components["schemas"]["ChargeOut"][];
         };
+        /**
+         * TeleportAction
+         * @description 傳送到另一區的小鎮（09 9.6.2「城鎮之間用傳送點」）：從城鎮到去過的小鎮，或從傳送點到它通往
+         *     的區域。
+         */
+        TeleportAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "teleport";
+            /** Region */
+            region: string;
+        };
+        /** TeleportOption */
+        TeleportOption: {
+            /** Region */
+            region: string;
+            /** Name Zh */
+            name_zh: string;
+        };
         /** TileView */
         TileView: {
             /** X */
@@ -5052,6 +5265,24 @@ export interface components {
             skill_id: string;
             /** Remaining */
             remaining: number;
+        };
+        /**
+         * TravelAction
+         * @description 走到相鄰地點（09 9.6.7 #9）；``hasten``＝花補給趕路，降低遇敵機率。
+         */
+        TravelAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "travel";
+            /** To */
+            to: string;
+            /**
+             * Hasten
+             * @default false
+             */
+            hasten: boolean;
         };
         /**
          * Trip
@@ -5638,6 +5869,135 @@ export interface components {
             weapon_class: string;
             /** Class Zh */
             class_zh: string;
+        };
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"];
+        /** WorldBattleResponse */
+        WorldBattleResponse: {
+            world: components["schemas"]["WorldView"];
+            battle: components["schemas"]["BattleResponse"];
+        };
+        /** WorldCharacterSummary */
+        WorldCharacterSummary: {
+            /** Character Id */
+            character_id: string;
+            /** Name */
+            name: string;
+            /** Level */
+            level: number;
+            /** Region Name Zh */
+            region_name_zh: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+        };
+        /** WorldCharacterView */
+        WorldCharacterView: {
+            /** Character Id */
+            character_id: string;
+            /** Name */
+            name: string;
+            /** Level */
+            level: number;
+            /** Xp */
+            xp: number;
+            /** Xp Next */
+            xp_next: number | null;
+            /** Hp */
+            hp: number;
+            /** Max Hp */
+            max_hp: number;
+            /** Mana */
+            mana: number;
+            /** Max Mana */
+            max_mana: number;
+            /** Supplies */
+            supplies: number;
+            /** Max Supplies */
+            max_supplies: number;
+            /** Fatigued */
+            fatigued: boolean;
+            /** Attribute Points */
+            attribute_points: number;
+            /** Weapon Name Zh */
+            weapon_name_zh: string;
+            /** Race Name Zh */
+            race_name_zh: string | null;
+            /** Skills */
+            skills: components["schemas"]["SkillCard"][];
+            /** Bench */
+            bench: components["schemas"]["SkillCard"][];
+            /** Slots Zh */
+            slots_zh: string;
+        };
+        /** WorldClockView */
+        WorldClockView: {
+            /** Time Zh */
+            time_zh: string;
+            /**
+             * Day Phase
+             * @enum {string}
+             */
+            day_phase: "day" | "night";
+            /** Day Phase Zh */
+            day_phase_zh: string;
+            /** Weather Zh */
+            weather_zh: string;
+        };
+        /** WorldLocationView */
+        WorldLocationView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind */
+            kind: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Level Zh */
+            level_zh: string | null;
+            /** Description Zh */
+            description_zh: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Current */
+            current: boolean;
+            /** Adjacent */
+            adjacent: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** Cleared */
+            cleared: boolean;
+            /** Hidden */
+            hidden: boolean;
+        };
+        /** WorldMapView */
+        WorldMapView: {
+            /** Region */
+            region: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level Zh */
+            level_zh: string;
+            /** Locations */
+            locations: components["schemas"]["WorldLocationView"][];
+            /** Edges */
+            edges: [
+                string,
+                string
+            ][];
+        };
+        /** WorldView */
+        WorldView: {
+            character: components["schemas"]["WorldCharacterView"];
+            map: components["schemas"]["WorldMapView"];
+            here: components["schemas"]["HereView"];
+            encounter: components["schemas"]["EncounterView"] | null;
+            clock: components["schemas"]["WorldClockView"];
+            /** Events */
+            events: string[];
+            /** Battle Id */
+            battle_id: string | null;
         };
         XY: [
             number,
@@ -6841,6 +7201,156 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GearCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_characters_api_world_characters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldCharacterSummary"][];
+                };
+            };
+        };
+    };
+    create_character_api_world_characters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorldCharacterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_character_api_world_characters__character_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_action_api_world_characters__character_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorldActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_battle_api_world_characters__character_id__battle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldBattleResponse"];
                 };
             };
             /** @description Validation Error */
