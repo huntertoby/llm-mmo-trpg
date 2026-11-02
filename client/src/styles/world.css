@@ -18,6 +18,7 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   min-height: 360px;
+  max-height: calc(100vh - 110px); /* 地圖整張留在畫面內（座標是百分比，壓扁也照樣對齊） */
   background:
     radial-gradient(ellipse at 30% 70%, rgba(90, 140, 120, 0.18), transparent 60%),
     radial-gradient(ellipse at 70% 20%, rgba(150, 160, 200, 0.16), transparent 55%),
