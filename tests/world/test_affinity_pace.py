@@ -105,7 +105,7 @@ def test_xiaolian_gains_on_main_steps_2_and_3(library: ContentLibrary) -> None:
     assert with_xiaolian == [2, 3]
     assert affinity_rules(library).quest_step_delta == 10
     _, curve = trust_days(library)["acolyte_xiaolian"]
-    assert curve[1] - curve[0] == 10 + 10 + 3  # 第 2 天：主線 ②、迷路的道童、聊天
+    assert curve[1] - curve[0] == 10 + 20 + 3  # 第 2 天：主線 ②、迷路的道童（5B-4e：+20）、聊天
 
 
 if __name__ == "__main__":  # pragma: no cover — 報告用
