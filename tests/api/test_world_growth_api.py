@@ -106,6 +106,7 @@ def won(ambush: ContentLibrary, tmp_path_factory: pytest.TempPathFactory) -> dic
         for seed in range(8):
             cid = _create(client, seed=seed)["character"]["character_id"]
             _patch(client, cid, xp=first_xp - 1)  # 差 1 點升 2 級
+            _act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"])  # 5C-2 起雇 0 名＝獨行
             _act(client, cid, kind="travel", to="ferry_steps")
             opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
             _finish_battle(client, opened["battle"], ambush)

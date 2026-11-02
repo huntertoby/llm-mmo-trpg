@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from tests.world.helpers import NOON, hero, make_encounter, make_world
+from tests.world.helpers import NOON, PARTY, hero, make_encounter, make_world
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import BattleEndedEvent, FightAction, RestAction
 from trpg.world.battle import auto_steps
@@ -18,7 +18,7 @@ from trpg.world.step import new_character, world_step
 
 def _start(library: ContentLibrary, location: str, **updates: object) -> CharacterState:
     char = new_character(library, "alice", hero(library), region="cloud_ridge")
-    return char.model_copy(update={"location": location, **updates})
+    return char.model_copy(update={"location": location, "mercenaries": PARTY, **updates})
 
 
 def _find(

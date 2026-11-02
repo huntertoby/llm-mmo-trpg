@@ -40,6 +40,9 @@ __all__ = [
     "PendingOffer",
     "PerceptionMark",
     "QuestState",
+    "ShadowRecord",
+    "ShadowReport",
+    "ShadowSnapshot",
     "ThreadState",
     "TimedFlag",
     "WorldState",
@@ -226,6 +229,64 @@ class TimedFlag(_Model):
     until: int = Field(ge=0)
 
 
+class ShadowSnapshot(_Model):
+    """一個角色最後一次在城鎮整備時存下的影子（Phase 5C-2；09 9.6.10 #102）。
+
+    借用時整份複製進招募者的角色（:attr:`CharacterState.shadows`），開戰時再照招募者壓強度上限
+    （:mod:`trpg.world.shadows`，#87）。"""
+
+    owner: str = Field(pattern=ID_PATTERN)
+    """影子主人的角色 ID。"""
+    hero: UnitTemplate
+    """主角範本：名稱、屬性、武器、裝備中的技能與反應規則、基礎 HP。"""
+    level: int = Field(ge=1)
+    skill_tier: int | None = Field(default=None, ge=1)
+    attribute_points: int = Field(default=0, ge=0)
+    """還沒分配的屬性點（強度上限先扣這些）。"""
+    attribute_spent: dict[Attribute, int] = Field(default_factory=dict)
+    skills: tuple[SkillDef, ...] = ()
+    """裝備中、不在內容庫的技能定義（依 ID 排序）。"""
+    ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
+    """主人設定的預設打法（#102）；``None``＝範本的 ``ai_profile``。"""
+    gear: tuple[str, ...] = ()
+    """裝備欄位預留（5D 接物品等級；目前影子不帶裝備）。"""
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    saved_at: int = Field(ge=0)
+
+    @field_validator("attribute_spent")
+    @classmethod
+    def _sorted_spent(cls, spent: dict[Attribute, int]) -> dict[Attribute, int]:
+        return dict(sorted(spent.items()))
+
+
+class ShadowReport(_Model):
+    """影子被借用的戰報（#102；每天第一次）。"""
+
+    day: int = Field(ge=0)
+    at: int = Field(ge=0)
+    borrower: str = Field(pattern=ID_PATTERN)
+    borrower_name: str
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    won: bool
+    foes: tuple[str, ...] = ()
+    """敵方單位（範本或變體 ID，依陣容順序）。"""
+    coins: int = Field(default=0, ge=0)
+
+
+class ShadowRecord(_Model):
+    """世界上一個角色的影子與被借用的紀錄（5C-2）。"""
+
+    snapshot: ShadowSnapshot
+    coins: int = Field(default=0, ge=0)
+    """被借用累計的任務幣（5D 任務幣做好後轉入主人角色）。"""
+    reward_day: int | None = Field(default=None, ge=0)
+    """最後一次給獎的日子（``refresh_day``）。"""
+    reports: tuple[ShadowReport, ...] = ()
+    """最近的戰報（新的在後）。"""
+
+
 class WorldState(_Model):
     """共享的世界快照（``trpg-world/1``）。世界的變化由世界動作日誌重播得到，快照只是快取。"""
 
@@ -242,6 +303,19 @@ class WorldState(_Model):
     """世界級線頭（所有人的世界都看得到；5B-1 起）。"""
     timed_flags: tuple[TimedFlag, ...] = ()
     """限時的世界旗標（依旗標排序、不重複；Phase 5B-4c 世界級線頭的到期結局，例：之後 2 天）。"""
+    shadows: tuple[ShadowRecord, ...] = ()
+    """每個角色的影子（依主人 ID 排序、每人一筆；Phase 5C-2）。"""
+
+    @field_validator("shadows")
+    @classmethod
+    def _shadows_sorted(cls, shadows: tuple[ShadowRecord, ...]) -> tuple[ShadowRecord, ...]:
+        owners = [s.snapshot.owner for s in shadows]
+        if owners != sorted(set(owners)):
+            raise ValueError("shadows 必須依主人 ID 排序且每人一筆")
+        return shadows
+
+    def shadow_of(self, owner: str) -> ShadowRecord | None:
+        return next((s for s in self.shadows if s.snapshot.owner == owner), None)
 
     @field_validator("timed_flags")
     @classmethod
@@ -392,7 +466,20 @@ class CharacterState(_Model):
 
     # --- 5C-1 隊伍（邏輯在 trpg.world.party） ---
     mercenaries: tuple[str, ...] = ()
-    """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複；空＝開戰用標準隊友，代決 5C1-2）。"""
+    """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複）。5C-2 起沒有隊友＝獨行（玩法 PM 定 ③）。"""
+
+    # --- 5C-2 影子與打法（邏輯在 trpg.world.party、trpg.world.shadows） ---
+    shadows: tuple[ShadowSnapshot, ...] = ()
+    """隊伍裡借來的影子（借用當下的複本，依選擇順序；排在傭兵之後出場）。"""
+    party_ai: dict[str, str] = Field(default_factory=dict)
+    """隊伍成員（傭兵 ID 或影子主人 ID）→ 選的 AI 打法（依鍵排序；沒有＝預設）。"""
+    shadow_ai: str | None = Field(default=None, pattern=ID_PATTERN)
+    """自己影子的預設打法（#102；``None``＝範本的）。"""
+
+    @field_validator("party_ai")
+    @classmethod
+    def _sorted_party_ai(cls, ai: dict[str, str]) -> dict[str, str]:
+        return dict(sorted(ai.items()))
 
     @field_validator("talk_days")
     @classmethod

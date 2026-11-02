@@ -7,7 +7,7 @@ from collections.abc import Callable
 import pytest
 from pydantic import ValidationError
 
-from tests.world.helpers import NOON, hero, make_encounter, make_world, with_rules
+from tests.world.helpers import NOON, PARTY, hero, make_encounter, make_world, with_rules
 from tests.world.test_situations import at_event, peddler, sure
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import HeroGrowthRules
@@ -107,7 +107,11 @@ def test_no_level_no_events(library: ContentLibrary, make_char: MakeChar) -> Non
 def test_battle_xp_levels_up_immediately(library: ContentLibrary) -> None:
     char = new_character(library, "alice", hero(library), region="cloud_ridge")
     char = char.model_copy(
-        update={"location": "ferry_steps", "xp": _thresholds(library)[0] - 1}
+        update={
+            "location": "ferry_steps",
+            "xp": _thresholds(library)[0] - 1,
+            "mercenaries": PARTY,
+        }
     )  # 差 1 點升 2 級
     for seed in range(16):
         start = char.model_copy(

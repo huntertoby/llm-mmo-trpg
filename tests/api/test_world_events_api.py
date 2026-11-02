@@ -292,6 +292,7 @@ def test_quest_step_offer_pick(ambush: ContentLibrary, tmp_path: Path) -> None:
         for seed in range(8):
             cid = _create(client, seed=seed)["character"]["character_id"]
             _act(client, cid, kind="accept_quest", quest="starter_ferry")
+            _act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"])  # 5C-2 起雇 0 名＝獨行
             _act(client, cid, kind="travel", to="ferry_steps")
             opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
             _finish_battle(client, opened["battle"], ambush)

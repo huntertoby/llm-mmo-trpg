@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
-from trpg.api.world_party_schemas import PartyView
+from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
     EventView,
@@ -49,6 +49,7 @@ from trpg.world.actions import (
     RespecAction,
     RestAction,
     RetreatAction,
+    ShadowAiAction,
     SwearOathAction,
     TalkAction,
     TavernAction,
@@ -105,7 +106,8 @@ type WorldActionRequest = Annotated[
     | TalkAction
     | TavernAction
     | EventSolveAction
-    | HireAction,
+    | HireAction
+    | ShadowAiAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -370,7 +372,9 @@ class WorldView(_ApiModel):
     rumors: tuple[str, ...] = ()
     """這次請求在酒館聽到的本週傳聞。"""
     party: PartyView | None = None
-    """隊伍與系統傭兵（5C-1）。"""
+    """隊伍與系統傭兵（5C-1）、可借的影子（5C-2）。"""
+    my_shadow: MyShadowView | None = None
+    """自己的影子與被借用的戰報（5C-2）。"""
 
 
 class WorldBattleResponse(_ApiModel):

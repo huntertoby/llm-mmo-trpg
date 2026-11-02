@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.world.helpers import NOON, make_encounter, make_world
+from tests.world.helpers import NOON, PARTY, make_encounter, make_world
 from tests.world.test_situations import act, at_event, sure, thread
 from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
@@ -179,7 +179,7 @@ def test_starter_completes_after_three_steps(library: ContentLibrary, make_char:
 
 
 def test_real_fight_advances_starter(library: ContentLibrary, make_char: MakeChar) -> None:
-    char = _with_quest(make_char(location="ferry_steps"), "starter_ferry")
+    char = _with_quest(make_char(location="ferry_steps", mercenaries=PARTY), "starter_ferry")
     for seed in range(16):
         start = char.model_copy(
             update={

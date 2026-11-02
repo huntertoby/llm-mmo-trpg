@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.world.helpers import NOON, hero, make_encounter, make_world
+from tests.world.helpers import NOON, PARTY, hero, make_encounter, make_world
 from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_state import SkillFlash, acquire
@@ -59,7 +59,7 @@ def _flashed(library: ContentLibrary, char: CharacterState) -> CharacterState:
 @pytest.fixture(scope="module")
 def after_win(library: ContentLibrary) -> tuple[CharacterState, CharacterState]:
     char = new_character(library, "alice", hero(library), region="cloud_ridge")
-    char = char.model_copy(update={"location": "ferry_steps"})
+    char = char.model_copy(update={"location": "ferry_steps", "mercenaries": PARTY})
     for seed in range(16):
         start = char.model_copy(
             update={

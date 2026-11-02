@@ -16,7 +16,7 @@ from trpg.content.world_mercenaries import MERCENARY_ROLES, MercenaryTable
 from trpg.shared.errors import ContentError
 
 ROSTER = {
-    "merc_qingfeng": ("青鋒", "damage", "build_striker"),
+    "merc_qingfeng": ("青鋒", "damage", "build_charger"),  # 5C-2 玩法 PM 定 ①：近戰劍士
     "merc_chuanyun": ("穿雲", "damage", "build_ranged"),
     "merc_chiyan": ("赤焰", "damage", "build_fire"),
     "merc_tiebi": ("鐵壁", "guardian", "build_tank"),
@@ -26,7 +26,7 @@ ROSTER = {
     "merc_jinglei": ("驚雷", "control", "build_storm"),
     "merc_fuying": ("伏影", "control", "build_trapper"),
 }
-"""9.6.11 #117 的名單（暫名、定位、底稿）。"""
+"""9.6.11 #117 的名單（暫名、定位、底稿）；青鋒的底稿 5C-2 改成近戰力量型劍士。"""
 
 
 @pytest.fixture(scope="module")
@@ -46,6 +46,25 @@ def test_roster_matches_design(library: ContentLibrary) -> None:
         build = builds[merc.build]
         assert not build.blank
         assert not build.reference
+
+
+def test_qingfeng_is_melee_strength(library: ContentLibrary) -> None:
+    """輸出位要有一名近戰（5C-2 玩法 PM 定 ①）：青鋒的底稿拿劍、力量最高。"""
+    table = library.world_mercenaries
+    assert table is not None
+    hero = library.builds.by_id()[table.by_id()["merc_qingfeng"].build].hero
+    assert hero.weapon == "one_handed_sword"
+    assert max(hero.attributes, key=lambda a: hero.attributes[a]) == "str"
+
+
+def test_ai_choices_exist(library: ContentLibrary) -> None:
+    table = library.world_mercenaries
+    assert table is not None
+    profiles = library.ai_profiles.by_id()
+    assert table.ai_choices
+    assert all(p in profiles for p in table.ai_choices)
+    assert "idle" not in table.ai_choices
+    assert table.shadow_daily_coins >= 1
 
 
 def _table(**updates: Any) -> dict[str, Any]:
@@ -97,6 +116,10 @@ def test_loader_checks_builds(tmp_path: Path, library: ContentLibrary) -> None:
     data["mercenaries"][0]["build"] = blank
     _write(root, data)
     with pytest.raises(ContentError, match="白板"):
+        load_library(root)
+    data = _table(ai_choices=["brute", "nobody_profile"])
+    _write(root, data)
+    with pytest.raises(ContentError, match="nobody_profile"):
         load_library(root)
     (root / "world" / "mercenaries.yaml").unlink()
     assert load_library(root).world_mercenaries is None

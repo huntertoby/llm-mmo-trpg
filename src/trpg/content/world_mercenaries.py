@@ -55,6 +55,13 @@ class MercenaryTable(ContentModel):
     max_hired: int = Field(default=2, ge=1, le=2)
     """一次最多帶幾名（#97：主角＋最多 2 名隊友）。"""
     mercenaries: tuple[MercenaryDef, ...] = Field(min_length=1)
+    ai_choices: tuple[str, ...] = ()
+    """在城鎮替傭兵與影子選的 AI 打法（``ai_profiles.yaml`` 的 ID；5C-2，玩法 PM 定 ④）。空＝只能用
+    預設。"""
+    shadow_daily_coins: int = Field(default=1, ge=0)
+    """影子每天第一次被借用給主人的任務幣（5C-2，#102；初值）。"""
+    shadow_reports_kept: int = Field(default=20, ge=1)
+    """影子紀錄保留的戰報則數（5C-2）。"""
 
     @model_validator(mode="after")
     def _check(self) -> MercenaryTable:
@@ -65,6 +72,8 @@ class MercenaryTable(ContentModel):
         short = [MERCENARY_ROLES[r] for r in MERCENARY_ROLES if counts[r] < MIN_PER_ROLE]
         if short:
             raise ValueError(f"每種定位至少 {MIN_PER_ROLE} 名（9.6.8），不足：{'、'.join(short)}")
+        if len(set(self.ai_choices)) != len(self.ai_choices):
+            raise ValueError("ai_choices 不能重複")
         return self
 
     def by_id(self) -> dict[str, MercenaryDef]:

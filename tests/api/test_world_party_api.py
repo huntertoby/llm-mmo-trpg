@@ -47,7 +47,7 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert party["can_hire"] is True
     assert party["hire_problem_zh"] is None
     assert party["max_hired"] == 2
-    assert [m["title_zh"] for m in party["members"]] == ["主角", "標準隊友", "標準隊友"]
+    assert [m["title_zh"] for m in party["members"]] == ["主角"]  # 雇 0 名＝獨行（5C-2）
     roster = party["mercenaries"]
     assert len(roster) == 9
     tiebi = next(m for m in roster if m["id"] == "merc_tiebi")
@@ -95,4 +95,4 @@ def test_hire_rejected_in_the_field(client: TestClient) -> None:
     )
     assert too_many.status_code == 422
     none = _ok(_act(client, cid, kind="hire", mercenaries=[]))
-    assert any("不帶傭兵" in e for e in none["events"])
+    assert any("獨行" in e for e in none["events"])

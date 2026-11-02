@@ -67,7 +67,7 @@ def test_setup_units_weather_and_seed(library: ContentLibrary, make_char: MakeCh
     assert setup.units[0].template.id == char.hero.id
     assert setup.units[0].hp == 17
     assert setup.units[0].mana == 3
-    assert [u.template.id for u in allies[1:]] == list(library.roguelite.companions)
+    assert len(allies) == 1  # 雇 0 名＝獨行（5C-2 玩法 PM 定 ③）
     lineup = roll_lineup(library, encounter)
     assert prepared.lineup == lineup
     assert len(enemies) == len(lineup.members)

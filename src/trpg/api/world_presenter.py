@@ -23,7 +23,12 @@ from trpg.api.world_growth_view import (
     opening_lines,
     skill_names,
 )
-from trpg.api.world_party_view import allies_line, party_event_line, party_view
+from trpg.api.world_party_view import (
+    allies_line,
+    my_shadow_view,
+    party_event_line,
+    party_view,
+)
 from trpg.api.world_schemas import (
     EncounterEnemyView,
     EncounterView,
@@ -503,5 +508,6 @@ def world_view(
         pending_offer=pending_offer_view(library, world, char),
         threads=thread_views(library, world, char, now),
         rumors=rumor_lines(library, char, raw_events),
-        party=party_view(library, char, in_battle=in_battle),
+        party=party_view(library, world, char, in_battle=in_battle),
+        my_shadow=my_shadow_view(library, world, char, in_battle=in_battle),
     )

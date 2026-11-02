@@ -10,7 +10,7 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.world.helpers import NOON, hero, make_encounter, make_world, with_rules
+from tests.world.helpers import NOON, PARTY, hero, make_encounter, make_world, with_rules
 from trpg.content.library import ContentLibrary
 from trpg.engine.battle import begin_battle
 from trpg.engine.results import battle_result
@@ -57,7 +57,7 @@ def _find(
 @pytest.fixture(scope="module")
 def win(library: ContentLibrary) -> tuple[CharacterState, StepResult]:
     char = new_character(library, "alice", hero(library), region="cloud_ridge")
-    char = char.model_copy(update={"location": "ferry_steps"})
+    char = char.model_copy(update={"location": "ferry_steps", "mercenaries": PARTY})
     return _find(
         library,
         char,
@@ -104,7 +104,7 @@ def test_win_writes_back(library: ContentLibrary, win: tuple[CharacterState, Ste
 
 def test_win_does_not_heal(library: ContentLibrary, make_char: MakeChar) -> None:
     """HP 不自動回：打贏後的 HP ＝ 引擎戰鬥結束時主角的 HP ＋ 升級多出的最大 HP（不回滿）。"""
-    char = make_char(location="ferry_steps", hp=20)
+    char = make_char(location="ferry_steps", hp=20, mercenaries=PARTY)
     for seed in range(8):
         start = char.model_copy(
             update={
