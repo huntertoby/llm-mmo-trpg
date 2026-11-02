@@ -198,6 +198,9 @@ class EventSkeletonDef(ContentModel):
     """只有角色解鎖後才會出現（Phase 5B-4b，18.7.7：信賴的 NPC 說出祕密時解鎖）。"""
     once: bool = False
     """每個角色只出現到解決為止（Phase 5B-4c，18.4 補充「骨架 22」）：結果不是放棄就不再出現。"""
+    guarantee_text_zh: str | None = Field(default=None, min_length=1, max_length=150)
+    """機遇保底觸發時的專用旁白（Phase 5B-4e；不看天氣也通的文字，不經說書人）；``None``＝照一般
+    事件敘述。上限同說書人旁白（``TEXT_MAX_CHARS``）。"""
 
     def result_threads(self) -> frozenset[str]:
         """事件結果可以留下的線頭：本骨架的與 ``shared_threads``。"""

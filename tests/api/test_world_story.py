@@ -73,6 +73,38 @@ def test_event_story_llm_swaps_skeleton(library: ContentLibrary) -> None:
     assert isinstance(result.events[0], NarratedEvent)
 
 
+GUARANTEE_TEXT = "古松樹皮上的焦痕還在發燙。你伸手一碰，一道細細的電流竄過掌心——像是有什麼在等你。"
+
+
+def test_guaranteed_opportunity_uses_dedicated_text(library: ContentLibrary) -> None:
+    """5B-4e：機遇保底的事件開場用骨架的專用文字（不經說書人、晴天白天也通）。"""
+    world = make_world()
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    trigger = EventTrigger(
+        region="cloud_ridge",
+        location="old_pine_altar",
+        skeleton="storm_altar",
+        candidates=("storm_altar",),
+        weather="clear",
+        day_phase="day",
+        at=NOON,
+        guaranteed=True,
+    )
+    char = char.model_copy(update={"location": "old_pine_altar", "pending_event": trigger})
+    client = MockLLMClient([])
+    action = event_story(library, world, char, client, NOON)
+    assert not client.calls
+    assert action.source == "fallback"
+    assert action.story.text_zh == GUARANTEE_TEXT and action.story.skeleton == "storm_altar"
+    result = world_step(library, world, char, action, NOON)
+    assert isinstance(result.events[0], NarratedEvent)
+    # 一般觸發照舊經說書人（模型關閉時降級模板，不用專用文字）
+    plain = char.model_copy(
+        update={"pending_event": trigger.model_copy(update={"guaranteed": False})}
+    )
+    assert event_story(library, world, plain, None, NOON).story.text_zh != GUARANTEE_TEXT
+
+
 def test_event_story_invalid_falls_back(library: ContentLibrary) -> None:
     world, char = make_world(), _char(library)
     bad = _json(skeleton="bear_den", actor_zh="熊", motive_zh="守巢", text_zh="熊吼。")

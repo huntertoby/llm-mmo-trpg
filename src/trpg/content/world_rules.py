@@ -247,6 +247,8 @@ class OpportunityRules(ContentModel):
     guarantee_from_day: int = Field(default=0, ge=0)
     """機遇保底（Phase 5B-4d，07 7.6「第 7 天前保底 1 次」）：賽季第幾天起，還沒遇過機遇的角色
     走到機遇骨架的地點就一定觸發（不看天氣、時段與機率）；0 ＝ 不保底。"""
+    guarantee_waives_keyword: bool = False
+    """保底觸發的機遇不檢查 ``requires_keyword``（Phase 5B-4e；三選一照樣指定該關鍵字）。"""
 
 
 class WorldRules(ContentModel):

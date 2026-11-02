@@ -183,3 +183,26 @@ def test_met_opportunities_recorded(library: ContentLibrary, make_char: MakeChar
     # 沒有機遇事件的動作不記
     talked = world_step(library, make_world(), make_char(), TalkAction(npc="granny_du"), NOON)
     assert talked.char.met_opportunities == ()
+
+
+def test_guarantee_waives_keyword_5b4e(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5B-4e：保底觸發的機遇不檢查「需要帶電技能」，三張照樣帶帶電；一般觸發照舊要檢查。"""
+    char, _ = _arrive(library, make_char(), DAY6)  # 沒有帶電技能
+    trigger = char.pending_event
+    assert trigger is not None and trigger.guaranteed
+    result = world_step(library, make_world(), char, EventSolveAction(solution=OPPORTUNITY), DAY6)
+    pending = result.char.pending_offers[0]
+    assert pending.source == "opportunity"
+    assert all(t.keywords[:1] == ("charged",) for t in pending.offer.tags)
+    lib = world_library(library)
+    assert all(skill_has_keywords(s, ("charged",), lib) for s in pending.offer.candidates)
+    # 資料關掉時照 5B-4d（代決 5B4d-5）
+    strict = with_rules(library, opportunity={"guarantee_waives_keyword": False})
+    with pytest.raises(WorldActionError, match="條件不成立"):
+        world_step(strict, make_world(), char, EventSolveAction(solution=OPPORTUNITY), DAY6)
+    # 一般觸發（不是保底）照舊要帶電技能
+    plain = char.model_copy(
+        update={"pending_event": trigger.model_copy(update={"guaranteed": False})}
+    )
+    with pytest.raises(WorldActionError, match="條件不成立"):
+        world_step(library, make_world(), plain, EventSolveAction(solution=OPPORTUNITY), DAY6)
