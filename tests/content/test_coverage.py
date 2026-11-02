@@ -57,8 +57,8 @@ _UNCOVERED["status"].update(
     }
 )
 # BAL-19e：感知姿態「晨禱架勢」、意志姿態「幽影架勢」用元素姿態階梯的第 1 級（手寫技能）
-for _used in ("stance_holy_1", "stance_shadow_1"):
-    _UNCOVERED["status"].pop(_used)
+for _status in ("stance_holy_1", "stance_shadow_1"):
+    _UNCOVERED["status"].pop(_status)
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。
 # prone 由 knock_prone 原語產生、shielded 由 shield 原語產生、undying 由 cheat_death 原語產生
