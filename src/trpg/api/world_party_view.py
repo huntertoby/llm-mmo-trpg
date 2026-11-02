@@ -24,6 +24,7 @@ from trpg.world.actions import (
     ShadowSavedEvent,
     WorldEvent,
 )
+from trpg.world.clock import refresh_day
 from trpg.world.common import world_map_of
 from trpg.world.errors import WorldError
 from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
@@ -200,8 +201,10 @@ def _foes_zh(library: ContentLibrary, foes: tuple[str, ...]) -> str:
     return "、".join(n if counts[n] == 1 else f"{n} ×{counts[n]}" for n in ordered)
 
 
-def report_line(library: ContentLibrary, report: ShadowReport) -> str:
-    """一則戰報（例「第 3 天：你的影子幫小美在竹林小徑打倒了霧狼 ×3（+1 任務幣）」）。"""
+def report_line(library: ContentLibrary, report: ShadowReport, season_start: int) -> str:
+    """一則戰報（例「第 3 天：你的影子幫小美在竹林小徑打倒了霧狼 ×3（+1 任務幣）」；天數從賽季開始
+    那天算第 1 天，早上 6 點刷新）。"""
+    day = max(1, report.day - refresh_day(season_start) + 1)
     where = _location_name(library, report.region, report.location)
     coins = f"（+{report.coins} 任務幣）" if report.coins else ""
     if report.won:
@@ -209,7 +212,7 @@ def report_line(library: ContentLibrary, report: ShadowReport) -> str:
         what = f"幫{report.borrower_name}在{where}打倒了{foes}"
     else:
         what = f"陪{report.borrower_name}在{where}奮戰，可惜落敗"
-    return f"第 {report.day} 天：你的影子{what}{coins}"
+    return f"第 {day} 天：你的影子{what}{coins}"
 
 
 def my_shadow_view(
@@ -222,7 +225,7 @@ def my_shadow_view(
     if record is None:
         return MyShadowView(saved=False, ai=char.shadow_ai, ai_zh=ai_zh, can_set_ai=can_set)
     snap = record.snapshot
-    reports = tuple(report_line(library, r) for r in reversed(record.reports))
+    reports = tuple(report_line(library, r, world.season_start) for r in reversed(record.reports))
     return MyShadowView(
         saved=True,
         level=snap.level,

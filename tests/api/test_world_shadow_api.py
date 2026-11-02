@@ -87,6 +87,7 @@ def test_borrow_shadow_and_owner_sees_report(client: TestClient, ambush: Content
     assert owner["coins"] == 1
     assert len(owner["reports_zh"]) == 1
     assert "你的影子" in owner["reports_zh"][0] and "小美" in owner["reports_zh"][0]
+    assert owner["reports_zh"][0].startswith("第 1 天：")  # 從賽季開始那天算
 
 
 def test_shadow_rules_over_api(client: TestClient) -> None:
