@@ -166,6 +166,7 @@ boss_summon_damage_permille: 2000   # Boss（boss 標籤）對召喚物的傷害
 enemy_damage_permille: 1200         # 一般敵方傷害 ×1.2
 boss_damage_permille: 1000          # Boss 本人傷害不動
 boss_escort_damage_permille: 1200   # Boss 戰護衛與援軍（boss_escort 標籤）傷害；預設同一般敵方，可獨立調
+wet_heal_permille: 1200       # 潮濕 × 治療（BAL-16b，#93）：站在水上的目標受到的治療 +20%（不含護盾）
 mana_cost_permille: 800        # 技能法力費用 ×0.8（BAL-15b／#80 起敵我同一套；姿態、形態維持費不打折 #67）
 summon_command_ap_cost: 1     # 指揮召喚物（Phase 3-33c，6.29.2）的 AP；切換模式（集火／守護我／跟隨／待命）免費
 summon_infuse_ap_cost: 1      # 灌注技能（Phase 3-33d，6.29.3）：施放者花的 AP（法力、冷卻照技能，灌注當下付）

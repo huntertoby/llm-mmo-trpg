@@ -535,6 +535,9 @@ class CoreRules(ContentModel):
     boss_damage_permille: int = Field(default=1000, ge=100, le=5000)
     """Boss（``boss`` 標籤）造成的傷害倍率（‰；BAL-4b，原型專用）。"""
     boss_escort_damage_permille: int = Field(default=1000, ge=100, le=5000)
+    wet_heal_permille: int = Field(default=1000, ge=0, le=5000)
+    """潮濕 × 治療（BAL-16b，玩法決定 #93，05 互動表下方）：站在水上的目標受到的治療倍率（‰；只放大
+    治療，不含護盾）。欄位預設 1000；``content/rules/core.yaml`` 寫 1200。"""
     """Boss 戰護衛與援軍（``boss_escort`` 標籤）造成的傷害倍率（‰；BAL-4b，原型專用）：
     與一般敵人分開調，
     ``content/rules/core.yaml`` 預設與 ``enemy_damage_permille`` 相同（行為與一般敵人一致）。"""

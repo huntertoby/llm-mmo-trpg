@@ -552,7 +552,7 @@ class Healed(EventBase):
     hp_before: int
     hp_after: int
     received_permille: int = 1000
-    """目標的狀態治療倍率（‰，中毒 500）。"""
+    """目標受到的治療倍率（‰）：狀態（中毒 500）× 站在水上（``wet_heal_permille``，BAL-16b）。"""
     cause: Literal["heal", "lifesteal"] = "heal"
     """``lifesteal``：吸血（Phase 3D-8a），施放者回復自己造成傷害的一部分。"""
 

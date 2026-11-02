@@ -311,7 +311,7 @@ def _mend_ally(
     if change is None or change.rule.element is not effect.element:
         return None
     permille = change.rule.permille or PERMILLE
-    received = healing_received_permille(ctx.rules, unit)
+    received = _received_permille(ctx, unit)
     heal = amount * permille * received // (PERMILLE * PERMILLE)
     hp_before = unit.hp
     unit.hp = min(unit.max_hp, unit.hp + heal)
@@ -486,6 +486,14 @@ def _absorb(
     return absorbed
 
 
+def _received_permille(ctx: Ctx, unit: UnitState) -> int:
+    """受到的治療倍率（‰）：狀態（中毒 500）× 潮濕（BAL-16b，#93：站在水上 ×wet_heal_permille）。"""
+    received = healing_received_permille(ctx.rules, unit)
+    if ctx.state.tile(unit.pos.x, unit.pos.y).surface is Surface.WATER:
+        return received * ctx.rules.core.wet_heal_permille // PERMILLE
+    return received
+
+
 @register_effect("heal")
 def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, HealEffect)
@@ -497,7 +505,7 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         rolls = effect.preset_rolls
     elif effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
-    received = healing_received_permille(ctx.rules, unit)  # 中毒
+    received = _received_permille(ctx, unit)  # 中毒、潮濕
     amount = max(
         0,
         ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille)
