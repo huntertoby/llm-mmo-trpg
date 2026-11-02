@@ -56,3 +56,24 @@ ruff check、ruff format --check（src／tests／scripts）、mypy（927 檔）�
 2. **（原型數值）** 精英召喚降了以後矩陣仍有 86%、群召 88%（召喚師 74% 已接受）。長戰會反擊時兩者 DPR 是普攻流的約 1.5 倍（來自存活）。要不要再調，或一起接受。
 3. **（原型數值）** 鷹隼 Boss 戰被打倒仍有 74%（每包只有 10 場）。規格決定 Boss 對召喚物 ×2 不改，所以這項只記錄。
 4. **（規則）** `docs/design/06-技能.md` 823 行還寫「Boss 的 AI 會優先清掉擋路的召喚物」，程式已經刪了這個加分。設計文件要由玩法 PM 改。
+
+## BAL-14c｜「同時召喚上限 −1」不得當一般代價折抵（玩法 PM 2026-11-02）
+
+唯一帶這個代價的是修正規則的 `summon_limit_delta`（`content/modifier_changes.yaml`，預算 `summon_limit` 3500 點、`signed: true`，−1 算成 −3500 的代價）；召喚上限本身（`summon_limit_per_owner`）是核心規則，不是技能代價。逐路徑檢查結果：
+
+| 路徑 | 會／不會 | 證據 |
+|---|---|---|
+| 組合器（史詩修正技能、傳說修正核心） | 不會 | `composer_special._LADDERS`／`_CHANGE_KINDS` 沒有任何 `summon_*`（`composer_special.py:32-46`）；`test_composer_modifier_ladders_never_offer_summon_changes`、`test_composed_modifier_and_legendary_skills_never_carry_the_drawback`（60 種子） |
+| 閃現小變化 `mod_cost` | 不會 | `_op_mod_cost` 只動傷害／治療／命中的負值，其他 `continue`（`flash_ops.py:1001-1030`）；`test_mod_cost_never_touches_summon_limit`、既有 `test_flash_bal10b.py::test_mod_cost_never_removes_a_one_step_drawback` |
+| 閃現其他小變化（含收回 `focus_mod_*`／`modifier_gain`、重調旋鈕） | 不會 | `rules.modifier_knobs` 沒有 `summon_limit_delta`（`flash_templates.yaml:25`），旋鈕只往上調既有欄位（`flash_ops._modifier_knobs`）；`test_flash_ops_never_add_the_drawback_to_modifier_skills`（全部閃現模板 × 全部修正技能）、`test_reclaim_gain_knobs_never_move_summon_limit`、`test_flash_modifier_knobs_do_not_include_summon_limit` |
+| 閃現大變化（轉修正型 `_to_modifier`） | 不會 | 只造 `damage_permille` 或 `on_hit_effects`（`flash_major.py:325-355`），召喚技直接略過；`test_major_transform_to_modifier_only_builds_damage_or_status_rules` |
+| 大變化／進化的代價折抵 `cost_attempts` | 不會 | 只改 `cost.cooldown`（`evolution.py:391-402`），不碰修正規則；`test_cost_attempts_only_change_the_cooldown`（全部內建技能） |
+| 升階重配（`at_role_tier`／retier） | 不會 | 沿用原規則、不新增；`test_retier_keeps_the_drawback_count_of_the_parent` |
+| LLM 提議（schema、`proposal.py`） | 不會 | `PROPOSAL_KINDS` 不含 modifier、`CLOSED_SKELETONS` 含 `modifier`（`proposal.py:139-143`），提議模型沒有 `modifiers` 欄位；`test_llm_proposal_has_no_modifier_rules_and_modifier_skeleton_is_closed` |
+| 工坊（玩家技能工坊的修正規則選單）——規格沒列，順查 | **會** | 修正規則選單列出所有 `MODIFIER_CHANGES`（`options.py:1071`，`_change_field`），玩家可選 `summon_limit_delta: −1` 當代價換預算 |
+
+**擋法**：只擋會的那一條，且擋在最後一關的驗證器，這樣組合器、白板、LLM、YAML 匯入、將來新增的路徑全部一起適用——`validate.py` 修正技能檢查加 `modifier.summon_limit_cost`（`_summon_limit_cost_violations`）：規則帶 `summon_limit_delta < 0` 時，技能必須是 `provenance.origin: builtin`（手寫內建的召喚專精）或有 `parents`（由內建衍生：閃現、升階沿用既有規則）。其餘（`+1`、其他召喚修正）不受影響。內建精英召喚照常通過（`test_builtin_elite_mastery_still_carries_the_drawback_and_passes_the_rule`）。工坊草稿沒寫 `provenance` 時 schema 預設是 builtin，會繞過這條，所以 `draft_check.check_draft` 沒寫來源的草稿當成 `workshop` 檢查（工坊匯出本來就設 `workshop`）。測試：`tests/skillgen/test_summon_limit_cost_bal14c.py`（15 條）。未動召喚預算計價、內建技能數值；行為快照 `refactor_3wr2.json` 不變（未重產）。
+
+**保守處理／待 PM 決定**
+1. 工坊選單仍列出「召喚物同時上限 ±1」（−1 選了在驗證時被擋，訊息會說明）。要不要把 −1 從選單拿掉屬玩家介面調整，沒有做。
+2. 「來源是內建或有 parents」是粗判：`Provenance.origin` 預設值是 `builtin`，若某條新路徑忘了寫 provenance 就會被當內建而放行；目前組合器、白板、LLM、閃現、進化都有明確寫 origin（`level_up`／`workshop` 等）。有 parents 者不檢查父技能真有這個代價（升階、閃現鏈的父技能可能是執行中產生的，查不到）。

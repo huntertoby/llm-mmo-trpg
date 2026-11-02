@@ -768,9 +768,29 @@ def _modifier_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
                 f"收到 {skill.shape.type}",
             )
         )
+    out += _summon_limit_cost_violations(skill)
     out += _rarity_violations(skill, library) + tier_violations(skill, library)
     _, budget_out = _budget_violations(skill, library)
     return out + budget_out
+
+
+def _summon_limit_cost_violations(skill: SkillDef) -> list[Violation]:
+    """``modifier.summon_limit_cost``（BAL-14c）：「召喚物同時上限 −1」只有手寫的召喚專精被動
+    （``provenance.origin: builtin``）和由它們衍生的技能（有 ``parents``，閃現、升階沿用既有規則）
+    可以帶；組合器、工坊白板、LLM 提議等新做出來的技能不得把它當一般代價（約 3500 點）去換預算。"""
+    provenance = skill.provenance
+    if provenance.origin == "builtin" or provenance.parents:
+        return []
+    return [
+        Violation(
+            skill.id,
+            "modifier.summon_limit_cost",
+            f"modifiers[{index}]：召喚物同時上限 −1 只有召喚專精的內建被動可以帶，"
+            "不能當一般代價換預算",
+        )
+        for index, rule in enumerate(skill.modifiers)
+        if (rule.change.summon_limit_delta or 0) < 0
+    ]
 
 
 def _skeleton_violations(

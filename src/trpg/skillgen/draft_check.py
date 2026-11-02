@@ -308,6 +308,8 @@ def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
             rarity_reasons=(),
             skill=None,
         )
+    if "provenance" not in draft:  # BAL-14c：沒寫來源的工坊草稿不能當成內建（schema 預設 builtin）
+        draft = {**draft, "provenance": {"origin": "workshop"}}
     try:
         skill = build_skill(draft)
     except DraftError as exc:
