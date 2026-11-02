@@ -1,0 +1,75 @@
+# 雲嶺遭遇表（Phase 5A-3；schema：src/trpg/content/world_encounters.py）。
+# 來源：docs/design/18-雲嶺內容.md 18.2（敵人、陣容例、遠程上限 2）、18.3「內容」欄（各地點出現誰）、
+# 18.7.4（懸賞「北坡狼王」＝霧狼精英，狂暴的）；#111 玩法 PM 代決、待使用者確認。
+# 規則：09 9.6.6（混族、每場遠程上限、一般營地有機率混進 1 名精英、精英巢穴固定有精英）。
+# 陣容、權重與機率是開發 PM 的初值（docs/phases/Phase5計畫.md 0.2 Q5、7.4），未經模擬。
+# 陣容 2～4 名（3 人隊伍；地圖敵方起始區 4 格）；名字是 content/units 的範本 ID 或 world/enemies.yaml 的變體 ID。
+# 混族的敵人都在同一陣營（三方混戰待之後，代決 5A3-4）。
+region: cloud_ridge
+ranged_cap: 2
+camp_elite_permille: 100
+affixes: [regenerating, mist_veiled, heart_linked, berserk]
+
+groups:
+  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit, bandit, bandit_archer]}
+  - {id: bandit_shield_line, name_zh: 盜賊盾陣, units: [bandit, bandit, bandit_shieldbearer]}
+  - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
+  - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf, mist_wolf]}
+  - {id: sect_patrol, name_zh: 修士巡邏, units: [sect_acolyte, sect_acolyte, sect_swordsman, sect_alchemist]}
+  - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit, bandit, sect_swordsman, sect_acolyte]}
+  - {id: temple_gate_guard, name_zh: 山門守衛, units: [sect_acolyte, sect_swordsman, sect_swordsman]}
+  - {id: hunter_beasts, name_zh: 下山的野獸, units: [mist_wolf, mist_wolf, mountain_leopard]}
+  - {id: cliff_gang_core, name_zh: 斷崖幫主力, units: [bandit, bandit_shieldbearer, bandit_archer, bandit_captain]}
+  - {id: cliff_gang_hounds, name_zh: 斷崖幫與獵犬, units: [bandit, bandit, bandit_archer, mist_wolf]}
+  - {id: altar_wardens, name_zh: 祭壇護法, units: [sect_warrior_monk, sect_talisman_caster, sect_mist_walker]}
+  - {id: sword_array, name_zh: 劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_array_stone]}
+  - {id: bridge_patrol, name_zh: 吊橋巡邏, units: [sect_swordsman, sect_crane_archer, sect_acolyte, sect_alchemist]}
+  - {id: valley_keepers, name_zh: 藥谷守人, units: [sect_alchemist, sect_warrior_monk, sect_puppeteer]}
+  - {id: valley_beasts, name_zh: 藥谷野獸, units: [mountain_leopard, mountain_leopard, stoneback_bear]}
+  - {id: furnace_steward, name_zh: 丹爐執事, units: [sect_steward, sect_swordsman, sect_warrior_monk, sect_acolyte]}
+  - {id: furnace_tide, name_zh: 丹爐水房, units: [water_alchemist, sect_swordsman, sect_swordsman, sect_mist_walker]}
+  - {id: north_slope_pack, name_zh: 狼王的狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
+  - {id: lake_hunters, name_zh: 冬湖獵手, units: [frost_crane_archer, stoneback_bear, mist_wolf]}
+  - {id: lake_bears, name_zh: 冬湖石背熊, units: [stoneback_bear, stoneback_bear, frost_crane_archer]}
+  - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}
+  - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_swordsman, sect_mist_walker, thunder_talisman_caster, sect_crane_archer]}
+  - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem]}
+  - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, mist_wraith, shard_golem]}
+  - {id: crane_nest, name_zh: 雷羽鷹巢, units: [thunder_hawk, thunder_hawk, thunder_hawk, sect_crane_archer]}
+  - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk, stoneback_bear]}
+  - {id: summit_patrol, name_zh: 雲頂巡邏, units: [sect_array_disciple, sect_array_disciple, sect_talisman_caster, sect_alchemist]}
+
+locations:
+  - location: ferry_steps
+    groups: [{group: bandit_raiders}, {group: bandit_shield_line}]
+  - location: bamboo_path
+    groups: [{group: mist_wolf_pack}, {group: bandit_wolf_handler}]
+  - location: rain_terraces
+    groups: [{group: sect_patrol}, {group: terrace_clash}]
+  - location: mist_temple_gate
+    groups: [{group: temple_gate_guard}]
+  - location: hunter_hut
+    groups: [{group: hunter_beasts}]
+  - location: cliff_gang_fort
+    groups: [{group: cliff_gang_core}, {group: cliff_gang_hounds}]
+  - location: old_pine_altar
+    groups: [{group: altar_wardens}]
+  - location: cloud_sea_bridge
+    groups: [{group: sword_array}, {group: bridge_patrol}]
+  - location: herb_valley
+    groups: [{group: valley_keepers}, {group: valley_beasts}]
+  - location: elixir_cave
+    groups: [{group: furnace_steward}, {group: furnace_tide}]
+  - location: north_slope
+    groups: [{group: north_slope_pack}]
+    elite: {unit: mist_wolf, affix: berserk}   # 懸賞「北坡狼王」（18.7.4）
+  - location: winter_lake
+    groups: [{group: lake_hunters}, {group: lake_bears}]
+  - location: sword_tomb
+    groups: [{group: tomb_array}, {group: tomb_swordsmen}]
+  - location: crystal_rift
+    groups: [{group: rift_wraiths}, {group: rift_scavengers}]
+  - location: crane_cliff
+    groups: [{group: crane_nest}, {group: crane_cliff_bear}]
+  - location: cloud_summit
+    groups: [{group: summit_patrol}]   # 一般遇敵；Boss 戰本身是 5F-2

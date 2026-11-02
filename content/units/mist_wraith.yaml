@@ -1,0 +1,23 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）是 5A-ART 的事，這裡不寫。
+# 源晶失控造物：隱蔽；碰到就迷惑（以「恐懼」替代，代決 5A3-2）。
+id: mist_wraith
+name_zh: 霧魅
+attributes: {str: 8, dex: 14, con: 10, int: 10, wis: 12, wil: 14}
+max_hp: 22
+speed: 5
+armor_bonus: 1
+weapon: shade_blades
+ai_profile: assassin
+resist: {}
+element_mods: {}
+tags: [construct]
+skills: [skill_blink, skill_rx_dread_glare]
+reactions:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+  - reaction: skill_rx_dread_glare
+    when: {event: enemy_enters_adjacent}

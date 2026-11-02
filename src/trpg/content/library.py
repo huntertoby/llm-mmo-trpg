@@ -126,6 +126,8 @@ from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
+from trpg.content.world_encounters import EncounterTable, encounter_table_problems
+from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
@@ -578,6 +580,11 @@ class ContentLibrary:
     """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
     world_rules: WorldRules | None = None
     """大世界規則的數值（``world/rules.yaml``，Phase 5A-2）；沒有檔案時為 ``None``。"""
+    world_enemies: WorldEnemies | None = None
+    """大世界敵人的元素變體與精英詞綴（``world/enemies.yaml``，Phase 5A-3）；沒有檔案時為
+    ``None``。"""
+    world_encounters: dict[str, EncounterTable] = field(default_factory=dict)
+    """大世界遭遇表（``world/encounters/*.yaml``，Phase 5A-3）；鍵＝區域 ID。沒有資料夾時為空。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -592,6 +599,12 @@ class ContentLibrary:
         if not template.equipment:
             return Loadout()
         return resolve_loadout(template.equipment, self.items, self.affixes)
+
+    def enemy_catalog(self) -> EnemyCatalog:
+        """解析大世界敵人名字（範本或變體）與套用精英詞綴（Phase 5A-3）。"""
+        return _enemy_catalog(
+            self.units, self.world_enemies, self.weapons, self.skills, self.ruleset
+        )
 
     def unit(self, template_id: str) -> UnitTemplate:
         try:
@@ -829,6 +842,15 @@ def load_library(  # noqa: PLR0915
     map_warnings = _apply_map_themes(maps, regions)
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
+    unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
+    world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
+    world_encounters = _load_world_encounters(
+        root / WORLD_ENCOUNTERS_DIR,
+        world_maps,
+        _enemy_catalog(units, world_enemies, weapon_map, skills, ruleset),
+        unit_check,
+        files,
+    )
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
@@ -886,6 +908,8 @@ def load_library(  # noqa: PLR0915
         map_warnings=tuple(map_warnings),
         world_maps=world_maps,
         world_rules=world_rules,
+        world_enemies=world_enemies,
+        world_encounters=world_encounters,
         files=files,
     )
 
@@ -939,6 +963,110 @@ def _load_world_maps(
             raise ContentError(path, "；".join(problems))
         files.append((path, world_map))
         result[world_map.region] = world_map
+    return result
+
+
+WORLD_ENEMIES_FILE = "world/enemies.yaml"
+"""大世界敵人的元素變體與精英詞綴（相對於內容資料夾；Phase 5A-3）。"""
+
+
+WORLD_ENCOUNTERS_DIR = "world/encounters"
+"""大世界遭遇表的資料夾（相對於內容資料夾；Phase 5A-3）。"""
+
+
+@dataclass(frozen=True)
+class _UnitCheck:
+    """對「載入後才產生的範本」（變體、套詞綴）跑和 ``units/`` 相同的單位檢查。"""
+
+    root: Path
+    weapons: dict[str, WeaponDef]
+    skills: dict[str, SkillDef]
+    ruleset: Ruleset
+    ai_profiles: AiProfileTable
+
+    def __call__(self, path: Path, template: UnitTemplate) -> None:
+        _check_units(
+            self.root,
+            {template.id: template},
+            weapons=self.weapons,
+            skills=self.skills,
+            ruleset=self.ruleset,
+            ai_profiles=self.ai_profiles,
+            source=path,
+        )
+
+
+def _enemy_catalog(
+    units: Mapping[str, UnitTemplate],
+    enemies: WorldEnemies | None,
+    weapons: Mapping[str, WeaponDef],
+    skills: Mapping[str, SkillDef],
+    ruleset: Ruleset,
+) -> EnemyCatalog:
+    return EnemyCatalog(
+        units=units,
+        enemies=enemies,
+        weapons=weapons,
+        skills=skills,
+        slots=ruleset.core.skill_slots,
+        default_rules=ruleset.reactions.default_rules,
+    )
+
+
+def _load_world_enemies(
+    path: Path,
+    units: dict[str, UnitTemplate],
+    unit_check: _UnitCheck,
+    files: list[tuple[Path, ContentModel]],
+) -> WorldEnemies | None:
+    """載入 ``world/enemies.yaml``（檔案不存在＝``None``）；變體套用後要通過單位檢查。"""
+    if not path.is_file():
+        return None
+    enemies = load_content_file(path, WorldEnemies)
+    problems = world_enemies_problems(
+        enemies, units=units, weapons=unit_check.weapons, skills=unit_check.skills
+    )
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    catalog = _enemy_catalog(
+        units, enemies, unit_check.weapons, unit_check.skills, unit_check.ruleset
+    )
+    for variant in enemies.variants:
+        unit_check(path, catalog.template(variant.id))
+    files.append((path, enemies))
+    return enemies
+
+
+def _load_world_encounters(
+    directory: Path,
+    world_maps: Mapping[str, LocationMapDef],
+    catalog: EnemyCatalog,
+    unit_check: _UnitCheck,
+    files: list[tuple[Path, ContentModel]],
+) -> dict[str, EncounterTable]:
+    """載入 ``world/encounters/*.yaml``（鍵＝``region``，檔名必須相同；資料夾不存在＝空）。
+
+    除了 :func:`encounter_table_problems`，表裡每個單位套上每個可以套的本區詞綴後，也要通過單位
+    檢查（反應規則、欄位上限）。"""
+    if not directory.is_dir():
+        return {}
+    result: dict[str, EncounterTable] = {}
+    for path in sorted(directory.glob("*.yaml")):
+        table = load_content_file(path, EncounterTable)
+        if table.region != path.stem:
+            raise ContentError(path, f"檔名必須與 region 相同（region 為 {table.region!r}）")
+        problems = encounter_table_problems(
+            table, world_map=world_maps.get(table.region), catalog=catalog
+        )
+        if problems:
+            raise ContentError(path, "；".join(problems))
+        names = sorted({u for g in table.groups for u in g.units})
+        for name in names:
+            template = catalog.template(name)
+            for affix in catalog.applicable_affixes(template, table.affixes):
+                unit_check(path, catalog.with_affix(template, affix))
+        files.append((path, table))
+        result[table.region] = table
     return result
 
 

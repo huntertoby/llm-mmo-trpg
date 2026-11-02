@@ -1,0 +1,23 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）是 5A-ART 的事，這裡不寫。
+# 山中修士・前排：「劍勢」連斬；同門相護以既有反應技「挺身而出」替代（代決 5A3-1）。
+id: sect_swordsman
+name_zh: 持劍弟子
+attributes: {str: 14, dex: 12, con: 12, int: 8, wis: 10, wil: 10}
+max_hp: 30
+speed: 5
+armor_bonus: 2
+weapon: one_handed_sword
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [humanoid, sect]
+skills: [skill_first_strike, skill_stand_firm]
+reactions:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+  - reaction: skill_stand_firm
+    when: {event: ally_hit_adjacent}
