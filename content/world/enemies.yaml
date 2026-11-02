@@ -38,8 +38,9 @@ affixes:
     hp_permille: 1500
   - id: heart_linked
     name_zh: 連心的
-    description_zh: 以魂結連起同伴、分擔傷害（原設計是把自己受的傷分給相鄰同門，方向相反，代決 5A3-3）。
-    add_skills: [skill_soul_bond]
+    description_zh: 受到的傷害有一部分分給相鄰的同門（Phase 5A-M2，開場狀態「連心」）。
+    add_opening_statuses:
+      - {status: heart_link}
     hp_permille: 1500
   - id: berserk
     name_zh: 狂暴的

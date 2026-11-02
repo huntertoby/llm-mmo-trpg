@@ -151,6 +151,24 @@ statuses:
     expires: never
     stacking: refresh
     on_death_surface: {surface: water, radius: 1}
+  # 5A-M2：劍陣弟子「劍陣」（18.2.1：與另一名劍陣弟子相隔 ≤ 3 格時傷害 +；落單時弱；三人一組）。同門標籤 sword_array 只有劍陣弟子
+  # （代決 5AM2-1）；數值初值（5AM2-2，未經模擬）。
+  - id: sword_formation
+    polarity: neutral
+    name_zh: 劍陣
+    description_zh: 與其他劍陣弟子站得越近、人越多，劍勢越盛；落單時威力減弱。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    formation: {kin_tag: sword_array, range: 3, per_ally_permille: 200, max_allies: 2, alone_permille: 800}
+  # 5A-M2：詞綴「連心的」（18.2.1：受到的傷害分一部分給相鄰同門）。詞綴池含野獸、盜賊，所以不限標籤（相鄰友方都算）；
+  # 數值初值（代決 5AM2-5，未經模擬）。
+  - id: heart_link
+    polarity: neutral
+    name_zh: 連心
+    description_zh: 受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    share_damage: {range: 1, permille: 300}
   - id: slow
     polarity: debuff
     name_zh: 緩速

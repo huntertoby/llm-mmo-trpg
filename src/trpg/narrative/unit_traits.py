@@ -2,14 +2,15 @@
 
 資料來自單位範本（變體與精英詞綴會先解析、套用），文字用內容檔裡的中文名稱與說明，所以和規則同一個
 來源；只讀內容，不看戰鬥狀態（戰鬥中才加上的狀態不算特性）。順序：精英詞綴、被動技能、反應、
-開場狀態。找不到範本（例如測試用的臨時單位）時為空。
+開場狀態（陣法、分傷的開場狀態另有標題，Phase 5A-M2）。找不到範本（例如測試用的臨時單位）時為空。
 """
 
 from __future__ import annotations
 
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import StatusDef, UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.world_enemies import apply_affix
+from trpg.narrative.status_info import formation_rules
 
 __all__ = ["resolve_template", "trait_lines_for", "unit_trait_lines"]
 
@@ -65,8 +66,19 @@ def trait_lines_for(
     for opening in template.opening_statuses:
         status = library.ruleset.status_def(opening.status)
         turns = f"，開場 {opening.duration} 回合" if opening.duration is not None else ""
-        lines.append(f"開場狀態「{status.name_zh}」{turns}：{status.description_zh}")
+        rules = "".join(f"（{r}）" for r in formation_rules(status))  # 數字由欄位產生（5A-M2）
+        label = _opening_label(status)
+        lines.append(f"{label}「{status.name_zh}」{turns}：{status.description_zh}{rules}")
     return lines
+
+
+def _opening_label(status: StatusDef) -> str:
+    """開場狀態的標題：陣法範圍加成「陣法」、分傷「分傷」（Phase 5A-M2），其他「開場狀態」。"""
+    if status.formation is not None:
+        return "陣法"
+    if status.share_damage is not None:
+        return "分傷"
+    return "開場狀態"
 
 
 def unit_trait_lines(library: ContentLibrary, template_id: str) -> tuple[str, ...]:

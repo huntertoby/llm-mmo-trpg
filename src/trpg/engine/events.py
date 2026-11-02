@@ -538,10 +538,16 @@ class DamageDealt(EventBase):
     × 目標的 ``damage_taken_permille``（易傷、護衛，骰值傷害）。"""
     absorbed: int = 0
     """被護盾吸收的點數（Phase 2D-1）。``amount`` 是所有倍率之後、護盾之前的傷害；實際扣血為
-    ``amount − absorbed − redirected``（即 ``hp_before − hp_after``，致命以上的過量不算在內）。"""
+    ``amount − absorbed − redirected − shared``（即 ``hp_before − hp_after``，致命以上的過量
+    不算在內）。"""
     redirected: int = 0
     """轉給連結者（``redirect_damage`` 的狀態，Phase 3C-4b）的點數；轉移本身是緊接著的
     ``damage_redirected`` 事件。"""
+    shared: int = 0
+    """分給同門（``share_damage`` 的狀態，Phase 5A-M2「連心」）的總點數；實際扣血為
+    ``amount − absorbed − redirected − shared``。每名同門各一個緊接著的 ``damage_redirected``。"""
+    formation_permille: int = 1000
+    """攻擊者的陣法倍率（‰，Phase 5A-M2「劍陣」；已包含在 ``status_ppm`` 裡，供紀錄分開顯示）。"""
     exploded: int = 0
     """爆骰（Phase 3D-7b）多擲的骰子數（``rolls`` 已包含它們）。"""
     flat: int = 0
@@ -1291,7 +1297,9 @@ class DeathCheated(EventBase):
 
 
 class DamageRedirected(EventBase):
-    """``redirect_damage`` 的連結：``from_id`` 受到的傷害有 ``amount`` 點轉給 ``to_id``（施放者）。
+    """``redirect_damage`` 的連結：``from_id`` 受到的傷害有 ``amount`` 點轉給 ``to_id``（施放者）；
+    或分傷（``share_damage``，Phase 5A-M2「連心」）：``from_id`` 的傷害分 ``amount`` 點給同門
+    ``to_id``。
     ``to_id`` 直接扣 HP（不經護盾、抗性與元素修正）；免死狀態照常生效。"""
 
     type: Literal["damage_redirected"] = "damage_redirected"

@@ -7,6 +7,10 @@
   或沉默（只對法術型蓄力，5A-M1b），額外 ``rewrite.interrupt_points``。
 - **治療型延遲段**（九轉回天）：開始蓄力時，預計範圍內每個受傷的友方（含自己）
   ``rewrite.delayed_heal_points``。
+- **打散陣型**（Phase 5A-M2，18.2.1「劍陣」）：動作後對方存活的陣法持有者的倍率總和下降量
+  ÷ 1000 × ``rewrite.formation_break_points``（擊倒、推開、拉走同門都算）。
+- **連心**（Phase 5A-M2，詞綴「連心的」）：預覽中對方分傷持有者分給同門的傷害（min／max 平均 ×
+  命中率）× ``rewrite.share_discount_permille`` ÷ 1000，從傷害收益扣掉——集火持有者的效益下降。
 
 點數是「等值傷害點數」，收益 ＝ 行為模式的 ``damage`` 權重 × 點數；擊倒照 :func:`_kill_gains`
 的機率（確定 × 命中率、只是可能 × 命中率 ÷ 4）。只有目標帶這些特性時才有分數，其他戰鬥不受影響。
@@ -19,11 +23,24 @@ from fractions import Fraction
 from trpg.content.environment import RewriteAiRules
 from trpg.content.skills import CHARGING
 from trpg.engine.delayed import silence_breaks_charge
-from trpg.engine.events import EventBase, FollowupCharged, StatusApplied, UnitDowned
+from trpg.engine.events import (
+    DamageRedirected,
+    EventBase,
+    FollowupCharged,
+    StatusApplied,
+    UnitDowned,
+)
+from trpg.engine.formation import formation_permille, formation_specs
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import UnitId
 
-__all__ = ["delayed_heal_points", "is_kin_warden", "priority_points"]
+__all__ = [
+    "delayed_heal_points",
+    "formation_break",
+    "is_kin_warden",
+    "priority_points",
+    "share_discount",
+]
 
 _POSSIBLE_DIVISOR = 4
 """只在最多結果裡發生的擊倒 ÷ 這個數（同 ``utility._POSSIBLE_KILL_DIVISOR``）。"""
@@ -103,3 +120,60 @@ def delayed_heal_points(
         if u.team is actor.team and u.xy in tiles and u.hp < u.max_hp
     ]
     return Fraction(len(hurt) * rules.delayed_heal_points)
+
+
+def _formation_total(state: BattleState, team: object) -> int:
+    """``team`` 以外的陣營中，存活的陣法持有者的倍率（‰）總和。"""
+    return sum(
+        formation_permille(state, u)
+        for u in state.living_units()
+        if u.team is not team and formation_specs(state, u)
+    )
+
+
+def formation_break(
+    state: BattleState, after: BattleState, actor: UnitState, rules: RewriteAiRules
+) -> Fraction:
+    """打散陣型（見模組說明）：只計動作前後都還存活的對方陣法持有者（擊倒持有者本身由擊倒計分）；
+    倍率總和下降才有分，上升（例如把同門推進範圍）不扣分。"""
+    if not rules.formation_break_points:
+        return Fraction(0)
+    holders = [
+        u.id for u in state.living_units() if u.team is not actor.team and formation_specs(state, u)
+    ]
+    survivors = [uid for uid in holders if uid in after.units and after.units[uid].alive]
+    if not survivors:
+        return Fraction(0)
+    before = sum(formation_permille(state, state.units[uid]) for uid in survivors)
+    now = sum(formation_permille(after, after.units[uid]) for uid in survivors)
+    drop = before - now
+    if drop <= 0:
+        return Fraction(0)
+    return Fraction(drop * rules.formation_break_points, 1000)
+
+
+def share_discount(  # noqa: PLR0917
+    state: BattleState,
+    actor: UnitState,
+    min_events: tuple[EventBase, ...],
+    max_events: tuple[EventBase, ...],
+    hit: Fraction,
+    rules: RewriteAiRules,
+    only: UnitId | None = None,
+) -> Fraction:
+    """連心（見模組說明）：對方分傷持有者分給同門的傷害 × 折扣的等值點數（要扣掉的）。靈魂連結
+    （``redirect_damage``）不算。"""
+    if not rules.share_discount_permille:
+        return Fraction(0)
+    total = Fraction(0)
+    for events in (min_events, max_events):
+        for e in events:
+            if not isinstance(e, DamageRedirected) or (only is not None and e.from_id != only):
+                continue
+            holder = state.units.get(e.from_id)
+            if holder is None or holder.team is actor.team:
+                continue
+            if state.ruleset.status_def(e.status_id).share_damage is None:
+                continue
+            total += e.amount
+    return total / 2 * hit * rules.share_discount_permille / 1000

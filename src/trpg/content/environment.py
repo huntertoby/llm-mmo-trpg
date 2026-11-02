@@ -690,6 +690,9 @@ class AiWeights(ContentModel):
     ``approach`` 上；有集火指令時不套用；預設 0 ＝ 不套用，非 Boss 戰完全不變）。表格層級的
     ``weapon_ai`` 填入每個行為模式。"""
     multi_target: int = 0
+    formation: int = 0
+    """（Phase 5A-M2）帶陣法狀態的單位：位置價值 ＋ 這個值 ×（站在該格時的陣法倍率 − 1000）÷ 100
+    （偏好待在同門的範圍內，落單扣分）。表格層級的 ``formation_ai`` 填入每個行為模式。"""
     """（BAL-5 B1）範圍技每多打到一名敵人（預期，乘命中率）的加分（技能分數；敵人數 ≥ 2 才有）。表格
     層級的 ``skill_ai`` 填入每個行為模式。"""
     line_up: int = 0
@@ -780,6 +783,10 @@ class RewriteAiRules(ContentModel):
       （``shield_ally``）的敵人額外的價值。
     - ``interrupt_points``（Phase 5A-M1，05 5.7 強招預告）：擊倒、或使其跳過回合（暈眩、冰凍）
       正在蓄力（``charging``）的敵人額外的價值。
+    - ``formation_break_points``（Phase 5A-M2，18.2.1「劍陣」）：動作讓對方陣法持有者的倍率總和
+      每下降 1000‰（擊倒、推開或拉走同門）的價值。
+    - ``share_discount_permille``（Phase 5A-M2，詞綴「連心的」）：打在分傷持有者身上、被分給同門的
+      傷害打這個折扣（‰，扣在傷害收益上）——集火持有者的效益下降。
     """
 
     ap_points: int = Field(default=6, ge=0)
@@ -807,6 +814,8 @@ class RewriteAiRules(ContentModel):
     delayed_heal_points: int = Field(default=5, ge=0)
     priority_kill_points: int = Field(default=10, ge=0)
     interrupt_points: int = Field(default=12, ge=0)
+    formation_break_points: int = Field(default=10, ge=0)
+    share_discount_permille: int = Field(default=500, ge=0, le=1000)
 
 
 class GambleAiRules(ContentModel):
@@ -1154,6 +1163,9 @@ class AiProfileTable(ContentModel):
     weapon_ai: dict[str, int] = Field(default_factory=dict)
     """武器站位的位置權重（BAL-5 B19；``close_range``）：敵我同一套，填入每個行為模式的 ``weights``
     （行為模式自己列出的優先）。"""
+    formation_ai: dict[str, int] = Field(default_factory=dict)
+    """陣法站位的位置權重（Phase 5A-M2；``formation``）：敵我同一套，填入每個行為模式的
+    ``weights``（行為模式自己列出的優先）。"""
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
@@ -1185,7 +1197,7 @@ class AiProfileTable(ContentModel):
             if key in data
         }
         facing = data.get("facing")
-        for extra_key in ("objective_ai", "weapon_ai", "skill_ai"):
+        for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai"):
             extra = data.get(extra_key)
             if isinstance(extra, dict):
                 facing = {**(facing if isinstance(facing, dict) else {}), **extra}
