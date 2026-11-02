@@ -5676,6 +5676,11 @@ export interface components {
              */
             offhand_traits_zh: string[];
             /**
+             * Traits Zh
+             * @default []
+             */
+            traits_zh: string[];
+            /**
              * Ammo
              * @default 0
              */

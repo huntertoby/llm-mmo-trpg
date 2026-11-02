@@ -943,6 +943,7 @@ _RELEASE_TEXT = {"next_turn": "下回合開始時釋放", "attacked": "下回合
 _CANCEL_TEXT = {
     "downed": "倒下了",
     "controlled": "被控制（暈眩或冰凍）",
+    "silenced": "法術被沉默打斷",
     "expired": "到下回合開始都沒被攻擊",
     "replaced": "改為蓄力另一招",
     "form_left": "形態解除了",

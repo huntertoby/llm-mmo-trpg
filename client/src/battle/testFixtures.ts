@@ -40,6 +40,7 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     weapon_traits_zh: [],
     offhand_name_zh: "",
     offhand_traits_zh: [],
+    traits_zh: [],
     ammo: 0,
     magazine: 0,
     tags: [],

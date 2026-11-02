@@ -3,7 +3,8 @@
 - **先打補師**（``docs/design/18-雲嶺內容.md`` 18.2.1）：擊倒帶「同門相護」反應（``shield_ally``）
   的敵人，額外 ``rewrite.priority_kill_points``。
 - **打斷強招**（05 5.7 強招預告、06 6.23 #5）：擊倒正在蓄力（``charging``）的敵人、或讓它帶上
-  跳過回合的狀態（暈眩、冰凍；蓄力會被取消），額外 ``rewrite.interrupt_points``。
+  跳過回合的狀態（暈眩、冰凍；蓄力會被取消）、
+  或沉默（只對法術型蓄力，5A-M1b），額外 ``rewrite.interrupt_points``。
 - **治療型延遲段**（九轉回天）：開始蓄力時，預計範圍內每個受傷的友方（含自己）
   ``rewrite.delayed_heal_points``。
 
@@ -17,6 +18,7 @@ from fractions import Fraction
 
 from trpg.content.environment import RewriteAiRules
 from trpg.content.skills import CHARGING
+from trpg.engine.delayed import silence_breaks_charge
 from trpg.engine.events import EventBase, FollowupCharged, StatusApplied, UnitDowned
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import UnitId
@@ -71,9 +73,12 @@ def priority_points(  # noqa: PLR0917
         target = state.units.get(e.target_id)
         if target is None or target.team is actor.team or not target.has_status(CHARGING):
             continue
-        if (only is not None and target.id != only) or not state.ruleset.status_def(
-            e.status_id
-        ).skip_turn:
+        definition = state.ruleset.status_def(e.status_id)
+        if only is not None and target.id != only:
+            continue
+        if not definition.skip_turn and not (
+            definition.blocks_spells and silence_breaks_charge(state, target)
+        ):
             continue
         controlled.add(target.id)
         points += hit * rules.interrupt_points

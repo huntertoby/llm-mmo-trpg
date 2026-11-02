@@ -364,6 +364,10 @@ class UnitView(_ViewModel):
     """副手（圓盾、塔盾、法書、法器珠；Phase 3I-2）的中文名；沒有副手特性時為空字串。"""
     offhand_traits_zh: tuple[str, ...] = ()
     """副手特性的說明，每個特性一行（Phase 3I-2；取自副手資料，圓盾附目前的格擋強化）。"""
+    traits_zh: tuple[str, ...] = ()
+    """單位卡的「特性」欄（Phase 5A-M1b）：招牌被動、反應、開場狀態與精英詞綴，
+    每項一行。引擎投影不產生，
+    由 API（``trpg.narrative.unit_traits``）依單位範本填入；沒有時為空。"""
     ammo: int = 0
     """彈匣裡的子彈數（Phase 3-24a2；HUD 顯示用，沒有彈匣的武器為 0）。"""
     magazine: int = 0
