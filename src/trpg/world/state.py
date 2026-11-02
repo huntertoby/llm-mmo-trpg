@@ -33,6 +33,7 @@ __all__ = [
     "ClearedLocation",
     "EncounterResult",
     "EventTrigger",
+    "LastBattle",
     "LocationRef",
     "NextBattleMod",
     "OathState",
@@ -145,6 +146,20 @@ class OathState(_Model):
     @classmethod
     def _sorted_params(cls, params: dict[str, str | int]) -> dict[str, str | int]:
         return dict(sorted(params.items()))
+
+
+class LastBattle(_Model):
+    """最近一次戰鬥的結果（Phase 5A-7；5A-5 待決 1）：``fight`` 結算時寫入（勝負都算），讓重新整理的
+    畫面仍看得到輸贏。由日誌決定，可重播。"""
+
+    location: str = Field(pattern=ID_PATTERN)
+    won: bool
+    end_reason: str | None = None
+    rounds: int = Field(ge=0)
+    xp_gained: int = Field(ge=0)
+    level_before: int = Field(ge=1)
+    level: int = Field(ge=1)
+    at: int = Field(ge=0)
 
 
 class ThreadState(_Model):
@@ -290,6 +305,8 @@ class CharacterState(_Model):
     """目前的誓約（同時 1 個，#106）。"""
     oath_cooldown_until: int = Field(default=0, ge=0)
     """解除誓約後，這個時間（UTC 秒）以前不能再立（#106「現實 1 天」）。"""
+    last_battle: LastBattle | None = None
+    """最近一次戰鬥的結果（Phase 5A-7；``fight`` 寫入，其他動作不清除）。"""
 
     @field_validator("elite_kills")
     @classmethod

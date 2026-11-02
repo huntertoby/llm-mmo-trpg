@@ -69,7 +69,13 @@ from trpg.world.encounters import (
 )
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import as_run, gain_xp, world_library
-from trpg.world.state import CharacterState, ClearedLocation, EncounterResult, WorldState
+from trpg.world.state import (
+    CharacterState,
+    ClearedLocation,
+    EncounterResult,
+    LastBattle,
+    WorldState,
+)
 
 __all__ = [
     "PreparedBattle",
@@ -385,6 +391,7 @@ def fight(
     hero = result.ally(hero_id)
     assert hero is not None
     won = result.winner is Team.ALLY
+    level_before = char.level
     char = _after_battle_skills(library, char, prepared, action.steps, hero_id, won=won)
     char = char.model_copy(update={"next_battle": ()})  # 下一場修正打完一場就消耗（5A-6）
     if won:
@@ -400,15 +407,27 @@ def fight(
         )
     else:
         char, more = _lost(library, char, hero.mana)
+    xp_gained = rules_of(library).battle.xp_per_battle if won else 0
     ended = BattleEndedEvent(
-        won=result.winner is Team.ALLY,
+        won=won,
         end_reason=result.end_reason,
         rounds=result.round,
         hp=char.hp,
         mana=char.mana,
-        xp_gained=rules_of(library).battle.xp_per_battle if result.winner is Team.ALLY else 0,
+        xp_gained=xp_gained,
         level=char.level,
     )
+    last = LastBattle(
+        location=encounter.location,
+        won=won,
+        end_reason=result.end_reason,
+        rounds=result.round,
+        xp_gained=xp_gained,
+        level_before=level_before,
+        level=char.level,
+        at=now,
+    )
+    char = char.model_copy(update={"last_battle": last})
     return world, char, (*events, ended, *more)
 
 
