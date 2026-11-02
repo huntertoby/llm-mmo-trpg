@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from functools import cache
@@ -11,7 +12,7 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, Dice
-from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.loader import CONTENT_DIR_ENV, default_content_dir, load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
@@ -236,6 +237,20 @@ class EffectSpec(ContentModel):
         return {n: getattr(self, n) for n in EFFECT_PARAM_FIELDS if getattr(self, n) is not None}
 
 
+def _primitives_file() -> Path:
+    """目前內容資料夾的 ``skill_primitives.yaml``。同一個資料夾重用同一個 ``Path`` 物件（PERF-2）：
+    ``EffectSpec`` 每次建構都會查範圍表，每次新建 ``Path`` 再拿去查快取時，Windows 上的雜湊
+    （大小寫正規化）占了技能驗證將近一半的時間；``Path`` 物件會記住自己的雜湊。"""
+    return _primitives_file_of(os.environ.get(CONTENT_DIR_ENV) or "")
+
+
+@cache
+def _primitives_file_of(override: str) -> Path:
+    """``override`` 是 ``TRPG_CONTENT_DIR`` 的值（只當快取鍵；實際位置照
+    :func:`~trpg.content.loader.default_content_dir`）。"""
+    return default_content_dir() / "skill_primitives.yaml"
+
+
 @cache
 def _ranged_params_of(path: Path) -> dict[str, dict[str, PrimitiveParam]]:
     if not path.is_file():  # 沒有這個檔的內容資料夾由載入器自己報錯
@@ -256,7 +271,7 @@ def _ranged_params_of(path: Path) -> dict[str, dict[str, PrimitiveParam]]:
 def _yaml_ranged_params() -> dict[str, dict[str, PrimitiveParam]]:
     """各原語「範圍只在 YAML」的整數參數（內容資料夾見
     :func:`~trpg.content.loader.default_content_dir`，每個路徑只讀一次）。"""
-    return _ranged_params_of(default_content_dir() / "skill_primitives.yaml")
+    return _ranged_params_of(_primitives_file())
 
 
 @dataclass(frozen=True, slots=True)
@@ -299,7 +314,7 @@ def _composition_of(path: Path) -> dict[str, CompositionRule]:
 
 def composition_rules() -> dict[str, CompositionRule]:
     """各原語的組合規則（``skill_primitives.yaml``，唯一來源；每個路徑只讀一次）。"""
-    return _composition_of(default_content_dir() / "skill_primitives.yaml")
+    return _composition_of(_primitives_file())
 
 
 @cache
@@ -313,7 +328,7 @@ def _true_only_of(path: Path) -> dict[str, frozenset[str]]:
 
 def true_only_params() -> dict[str, frozenset[str]]:
     """原語 ID → 只能填 ``true`` 的參數名稱（``skill_primitives.yaml`` 的 ``true_only``）。"""
-    return _true_only_of(default_content_dir() / "skill_primitives.yaml")
+    return _true_only_of(_primitives_file())
 
 
 def composition_shapes(primitive: str) -> tuple[str, ...]:
