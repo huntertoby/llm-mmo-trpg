@@ -181,6 +181,11 @@
   margin: 4px 0;
 }
 
+.run-route-hint {
+  color: #f0c060;
+  margin: 4px 0;
+}
+
 .run-alloc-star {
   display: block;
   color: #f0c36a;

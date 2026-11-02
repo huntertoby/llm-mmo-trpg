@@ -9697,6 +9697,38 @@
         "title": "ReviveOut",
         "description": "預覽中的復活（Phase 3D-8b）：站起來的單位、HP 與站的格子（``from_pos`` 是倒下的位置）。"
       },
+      "RouteHintOut": {
+        "properties": {
+          "lean": {
+            "type": "string",
+            "enum": [
+              "spell",
+              "weapon"
+            ],
+            "title": "Lean"
+          },
+          "fits": {
+            "items": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "array",
+            "title": "Fits"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lean",
+          "fits",
+          "text_zh"
+        ],
+        "title": "RouteHintOut",
+        "description": "關鍵字與屬性不搭的提示（BAL-19g，06 6.27.3，#110）：配點後的最高屬性不在 ``fits`` 時，\n前端顯示 ``text_zh``（只提示、不擋）。``lean``：選的關鍵字前期的技能多半是法術（``spell``）或\n武器技（``weapon``）。"
+      },
       "Run": {
         "properties": {
           "unit_id": {
@@ -11092,6 +11124,16 @@
             "type": "array",
             "title": "Attribute Affects",
             "default": []
+          },
+          "route_hint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RouteHintOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

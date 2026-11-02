@@ -179,6 +179,8 @@ export type AttributeId = Schemas["Attribute"];
 // 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）
 export type AttributeAffects = Schemas["AttributeAffectsOut"];
 export type AttributeSuggestion = Schemas["AttributeSuggestionOut"];
+/** 創角時關鍵字與屬性不搭的提示（BAL-19g）。 */
+export type RouteHint = Schemas["RouteHintOut"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
 export type RunChoice =
   | Schemas["LevelUpChoice"]

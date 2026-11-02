@@ -9,6 +9,7 @@ import { RaceOriginPicker } from "../run/RaceOriginPicker";
 import { raceOriginBody, raceOriginDone, type RaceOriginChoice } from "../run/raceOrigin";
 import { allocationComplete, baseAttributes, cleanAllocation, type Allocation } from "../run/flow";
 import { resourceText, useStartResources } from "../run/startResources";
+import { routeHintText } from "../run/routeHint";
 import { isDevMode } from "../run/startFlow";
 import { TestModePanel } from "../run/TestModePanel";
 import { withTestMode } from "../run/testMode";
@@ -54,6 +55,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const resources = useStartResources(weapon, alloc);
   const points = rules?.start_points ?? 0;
   const complete = rules !== null && allocationComplete(alloc, points);
+  const routeHint = rules === null ? null : routeHintText(picker.routeHint, baseAttributes(rules.base_attribute), alloc);
   const ready = seed !== null && picker.body !== null && gearLegal && raceOriginDone(picker.options, raceOrigin);
 
   async function create(auto: boolean) {
@@ -106,6 +108,11 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
               六項屬性起始都是 {rules.base_attribute}；另有 {rules.start_points} 點自由分配。
             </div>
             <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} suggestion={picker.suggestion} affects={picker.attributeAffects} />
+            {routeHint !== null && (
+              <div className="small run-route-hint" role="note" data-testid="route-hint">
+                提示：{routeHint}（只是建議，不影響開始）
+              </div>
+            )}
           </>
         )}
         <TestModePanel
