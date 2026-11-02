@@ -43,6 +43,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
+from trpg.engine.formation import formation_permille, share_spec, share_split
 from trpg.engine.forms import leave_form
 from trpg.engine.ids import (
     BOSS_ESCORT_TAG,
@@ -129,6 +130,11 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     base_amount: int | None = None
     status_ppm = PPM
     absorbed = 0
+    formation = (  # 陣法（Phase 5A-M2）：只對骰值傷害
+        PERMILLE
+        if effect.mode in ("lethal", "percent_max_hp")
+        else _formation_permille(ctx, effect)
+    )
     events: list[EventBase] = []
     if effect.mode == "lethal":
         amount = unit.hp
@@ -141,7 +147,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
-        dealt = _dealt_permille(ctx, effect, unit)  # 虛弱
+        dealt = _dealt_permille(ctx, effect, unit) * formation // PERMILLE  # 虛弱、陣法
         status_ppm = dealt * damage_taken_permille(
             ctx.rules, unit, effect.element
         )  # 易傷、石膚；千分比 × 千分比
@@ -170,10 +176,9 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             return mended
         amount = _cap_backlash(ctx, unit, effect, amount)
         absorbed = _absorb(ctx, unit, amount, events, effect)  # 護盾：所有倍率之後、扣 HP 之前
-    link = redirect_link(ctx, unit, effect)
-    redirected = 0 if link is None else (amount - absorbed) * (link[0].amount or 0) // PERMILLE
+    link, redirected, shares, shared = _transfers(ctx, unit, effect, amount - absorbed)
     hp_before = unit.hp
-    unit.hp = max(0, unit.hp - (amount - absorbed - redirected))
+    unit.hp = max(0, unit.hp - (amount - absorbed - redirected - shared))
     cheated = _undying_status(ctx, unit, effect)
     if cheated is not None:
         unit.hp = 1
@@ -199,6 +204,8 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             status_ppm=status_ppm,
             absorbed=absorbed,
             redirected=redirected,
+            shared=shared,
+            formation_permille=formation,
             exploded=exploded,
             block_permille=effect.block_permille,
             flat=effect.flat,
@@ -206,9 +213,11 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             scale_attr=effect.scale_attr,
         )
     ]
-    events += _redirect(ctx, unit, link, redirected, effect)
+    events += _redirect(ctx, unit, link, redirected, effect) + _share(ctx, unit, shares, effect)
     if cheated is not None:
-        events += _cheat_death(ctx, unit, cheated, amount - absorbed - redirected - (hp_before - 1))
+        events += _cheat_death(
+            ctx, unit, cheated, amount - absorbed - redirected - shared - (hp_before - 1)
+        )
     if amount > 0:
         events.extend(_thaw(ctx, unit, effect.element))
     if unit.hp <= 0:
@@ -300,6 +309,81 @@ def _dealt_permille(ctx: Ctx, effect: DamageEffect, target: UnitState) -> int:
             own = own * summon_damage_dealt_permille(ctx.rules, owner) // PERMILLE
         return own
     return PERMILLE
+
+
+def _formation_permille(ctx: Ctx, effect: DamageEffect) -> int:
+    """攻擊者的陣法倍率（‰，Phase 5A-M2）：只對攻擊傷害（``cause: attack``）、以出手當下的位置計算；
+    不是攻擊或沒有來源時 1000。"""
+    if effect.cause != "attack" or effect.source_id is None:
+        return PERMILLE
+    source = ctx.state.units.get(effect.source_id)
+    return PERMILLE if source is None else formation_permille(ctx.state, source)
+
+
+_NO_SHARES: tuple[str, list[tuple[UnitState, int]]] = ("", [])
+
+
+def _transfers(
+    ctx: Ctx, unit: UnitState, effect: DamageEffect, remaining: int
+) -> tuple[
+    tuple[StatusInstance, UnitState] | None, int, tuple[str, list[tuple[UnitState, int]]], int
+]:
+    """護盾之後剩下的 ``remaining`` 點傷害中轉走的部分：（靈魂連結, 轉給連結者的點數, 分給同門的
+    明細, 分給同門的總點數）。靈魂連結先算，分傷（連心，Phase 5A-M2）用連結之後剩下的。"""
+    link = redirect_link(ctx, unit, effect)
+    redirected = 0 if link is None else remaining * (link[0].amount or 0) // PERMILLE
+    shares = _kin_shares(ctx, unit, effect, remaining - redirected)
+    return link, redirected, shares, sum(n for _, n in shares[1])
+
+
+def _kin_shares(
+    ctx: Ctx, unit: UnitState, effect: DamageEffect, remaining: int
+) -> tuple[str, list[tuple[UnitState, int]]]:
+    """把傷害分給同門（Phase 5A-M2，``share_damage`` 狀態）：（狀態 ID, [(同門, 點數)]）。墜落、致命
+    地形與 ``lethal`` 不分（同靈魂連結）。"""
+    if effect.mode == "lethal" or effect.cause in _UNPREVENTABLE_CAUSES:
+        return _NO_SHARES
+    found = share_spec(ctx.state, unit)
+    if found is None:
+        return _NO_SHARES
+    status, spec = found
+    return status.status_id, share_split(ctx.state, unit, spec, remaining)
+
+
+def _share(
+    ctx: Ctx,
+    unit: UnitState,
+    shares: tuple[str, list[tuple[UnitState, int]]],
+    effect: DamageEffect,
+) -> list[EventBase]:
+    """同門各自直接扣 HP（不經護盾、抗性與元素修正，不再往外分）；免死照常，HP 歸零則倒下。
+    每名發一個 ``damage_redirected``（``status_id`` 為分傷狀態）。"""
+    status_id, split = shares
+    events: list[EventBase] = []
+    for kin, amount in split:
+        if not kin.alive:
+            continue
+        hp_before = kin.hp
+        kin.hp = max(0, kin.hp - amount)
+        cheated = _undying_status(ctx, kin, effect)
+        if cheated is not None:
+            kin.hp = 1
+        events.append(
+            ctx.emit(
+                DamageRedirected,
+                from_id=unit.id,
+                to_id=kin.id,
+                status_id=status_id,
+                amount=amount,
+                hp_before=hp_before,
+                hp_after=kin.hp,
+            )
+        )
+        if cheated is not None:
+            events += _cheat_death(ctx, kin, cheated, amount - (hp_before - 1))
+        if kin.hp <= 0:
+            events.extend(down_unit(ctx, kin))
+    return events
 
 
 def _mend_ally(

@@ -108,7 +108,12 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
-from trpg.engine.ai.priority import delayed_heal_points, priority_points
+from trpg.engine.ai.priority import (
+    delayed_heal_points,
+    formation_break,
+    priority_points,
+    share_discount,
+)
 from trpg.engine.ai.race import race_ai_action
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
@@ -158,6 +163,7 @@ from trpg.engine.events import (
     UnitMoved,
     UnitRevived,
 )
+from trpg.engine.formation import formation_permille
 from trpg.engine.grants import granted_remaining
 from trpg.engine.ids import BOSS_TAG, OVERDRAWN, PRONE
 from trpg.engine.infusion import preferred_infusion, template_of
@@ -224,6 +230,8 @@ __all__ = [
 _DEFEND_RADIUS = 6
 _KEEP_DISTANCE = 2
 _PERMILLE_AI = 1000
+_FORMATION_STEP = 100
+"""陣法站位：倍率每 100‰ 算 1 單位的 ``formation`` 權重（Phase 5A-M2）。"""
 _POSSIBLE_KILL_DIVISOR = 4
 _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
@@ -603,6 +611,8 @@ def _unit_position_value(
         value -= _order_penalty(scene.orders, xy)
     if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
         value -= w.hazard  # 有害表面，或敵方會傷害自己的持續區域（Phase 3D-5）
+    if w.formation:  # 陣法（Phase 5A-M2）：待在同門範圍內，落單扣分
+        value += w.formation * (formation_permille(state, unit) - _PERMILLE_AI) // _FORMATION_STEP
     return Fraction(value)
 
 
@@ -1075,6 +1085,11 @@ def _gains(
     gains = _damage_gains(f) + _ally_gains(f) + _kill_gains(f) + _push_gains(f)
     gains += _surface_gains(f) + _displace_gains(f)
     gains += f.w.damage * priority_points(  # 先打補師、打斷強招（Phase 5A-M1）
+        state, actor, p.min_events, p.max_events, f.hit, profile.rewrite, only
+    )
+    if only is None:  # 打散陣型（Phase 5A-M2）
+        gains += f.w.damage * f.hit * formation_break(state, p.min_state, actor, profile.rewrite)
+    gains -= f.w.damage * share_discount(  # 連心：分給同門的傷害打折（Phase 5A-M2）
         state, actor, p.min_events, p.max_events, f.hit, profile.rewrite, only
     )
     if f.w.expose or f.w.cover_damage:

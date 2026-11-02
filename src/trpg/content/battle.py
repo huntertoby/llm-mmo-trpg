@@ -33,6 +33,7 @@ __all__ = [
     "DollGear",
     "DollLook",
     "Entangle",
+    "FormationSpec",
     "HitCondition",
     "OffhandDef",
     "OffhandTable",
@@ -41,6 +42,7 @@ __all__ = [
     "ReactionUnless",
     "ReactionWhen",
     "Reap",
+    "ShareDamageSpec",
     "StatusDef",
     "StatusTable",
     "StatusTickDamage",
@@ -718,6 +720,34 @@ class DeathSurfaceSpec(ContentModel):
     duration: int | None = Field(default=None, ge=1, le=6)
 
 
+class FormationSpec(ContentModel):
+    """陣法範圍加成（Phase 5A-M2，18.2.1 劍陣弟子「劍陣」）。
+
+    「同門」＝與持有者同陣營、存活、在場、不是自己、帶 ``kin_tag``、曼哈頓距離 ≤ ``range`` 的單位。
+    倍率：有同門時 ``1000 + per_ally_permille × min(人數, max_allies)``，沒有時 ``alone_permille``；
+    乘在持有者造成的攻擊傷害（``cause: attack``）上（``applies_to`` 目前只有 ``damage``）。"""
+
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """同門標籤；省略＝任何友方都算。"""
+    range: int = Field(default=3, ge=1, le=5)
+    per_ally_permille: int = Field(ge=1, le=1000)
+    max_allies: int = Field(ge=1, le=5)
+    alone_permille: int = Field(default=1000, ge=100, le=1000)
+    applies_to: Literal["damage"] = "damage"
+
+
+class ShareDamageSpec(ContentModel):
+    """把傷害分給同門（Phase 5A-M2，18.2.1 詞綴「連心的」）。
+
+    持有者受到傷害時，護盾與靈魂連結之後剩下的量有 ``permille``‰（捨去）平分給 ``range`` 格內帶
+    ``kin_tag`` 的友方（依單位 ID，餘數從 ID 小的開始各多 1 點）；沒有這樣的友方時不分。"""
+
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """同門標籤；省略＝任何友方都算。"""
+    range: int = Field(default=1, ge=1, le=2)
+    permille: int = Field(ge=1, le=900)
+
+
 class StatusDef(ContentModel):
     """一種狀態。
 
@@ -874,16 +904,26 @@ class StatusDef(ContentModel):
     on_death_surface: DeathSurfaceSpec | None = None
     """（Phase 5A-M1）帶有者倒下時在原地留下表面（:class:`DeathSurfaceSpec`）。只能用在
     ``polarity: neutral``、``expires: never`` 的狀態（不被淨化、驅散、奪取，整場都在）。"""
+    formation: FormationSpec | None = None
+    """（Phase 5A-M2）陣法範圍加成（:class:`FormationSpec`）。限制同 ``on_death_surface``。"""
+    share_damage: ShareDamageSpec | None = None
+    """（Phase 5A-M2）受到的傷害分給同門（:class:`ShareDamageSpec`）。限制同
+    ``on_death_surface``。"""
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
-        if self.on_death_surface is not None and (
-            self.polarity != "neutral" or self.expires != "never" or self.duration is not None
+        for name, spec in (
+            ("on_death_surface", self.on_death_surface),
+            ("formation", self.formation),
+            ("share_damage", self.share_damage),
         ):
-            raise ValueError(
-                f"狀態 {self.id}：on_death_surface 只能用在 polarity: neutral、expires: never、"
-                "不設 duration 的狀態"
-            )
+            if spec is not None and (
+                self.polarity != "neutral" or self.expires != "never" or self.duration is not None
+            ):
+                raise ValueError(
+                    f"狀態 {self.id}：{name} 只能用在 polarity: neutral、expires: never、"
+                    "不設 duration 的狀態"
+                )
         if self.polarity == "buff" and not self.beneficial:
             raise ValueError(f"狀態 {self.id}：polarity: buff 必須 beneficial: true")
         if self.polarity == "debuff" and self.beneficial:
