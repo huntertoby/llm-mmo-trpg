@@ -277,8 +277,6 @@ class CharacterState(_Model):
     """閃現過的生成技能的原本定義（依 ID 排序）。"""
     pending_flash: PendingFlash | None = None
     """已付點、還沒選的閃現選項；有它時只能送 ``flash_pick``。"""
-    generated_skills: tuple[SkillDef, ...] = ()
-    """主角裝備與備用的生成技能定義（閃現、升階重配後的技能；開戰時加進規則包）。"""
     skill_usage: dict[str, SkillUsage] = Field(default_factory=dict)
     """每招技能的用法統計（閃現選項依它排序；依 ID 排序）。"""
     skill_tier: int | None = Field(default=None, ge=1)
@@ -322,6 +320,18 @@ class CharacterState(_Model):
         if any(v < 0 for v in counters.values()):
             raise ValueError("rng_counters 不可為負")
         return dict(sorted(counters.items()))
+
+    generated_skills: tuple[SkillDef, ...] = ()
+    """不在內容庫的技能（創角的組合器起始技能等；依 ID 排序，同 ``RunState.generated_skills``；
+    5A-5；5A-6 起也含閃現、升階重配後的技能）。開戰時併進該場規則包、換技能認得它們。"""
+
+    @field_validator("generated_skills")
+    @classmethod
+    def _generated_sorted(cls, skills: tuple[SkillDef, ...]) -> tuple[SkillDef, ...]:
+        ids = [s.id for s in skills]
+        if ids != sorted(set(ids)):
+            raise ValueError("generated_skills 必須依 ID 排序且不重複")
+        return skills
 
     @field_validator("threads")
     @classmethod

@@ -52,7 +52,7 @@
 | Q7 | 「營火」在地點圖上是什麼：固定地點，還是任何地點花補給紮營（9.6.7 #11「野外紮營要用」）？ | 規則 | 玩法 PM 代決 | 任何非戰鬥中的地點都能花補給紮營＝營火 | 5A-4 |
 | Q8 | 經驗曲線、各來源給多少經驗（7.8 約第 7～8 天到 10 級） | 數值 | 開發 PM 定初值 → 模擬定 | 寫在 content；先沿用原型曲線 | 5A-4 |
 | Q9 | 第 2 區 **灰燼荒原** 的內容（敵人家族、地點圖、事件、主線第 2 章）與 **主線第 3 章／賽季 Boss「碎晶之主」**（9.7 只有大綱） | 內容 | 玩法 PM 寫（同 18 的方式） | 程式先做通用，內容等玩法 PM；不擋 5A～5E | 5F 之前 |
-| Q10 | 用心清單、種族加值的「方法分類」清單（9.6.4 只給例子；各族清單「大世界開發時定」#89） | 規則 | 玩法 PM 代決 | 只用 9.6.4 表列出的方法；種族加值先只做狐族說服、欺騙（18 事件 18 用到） | 5B-1b | 5B-1 補資料（玩法 PM 2026-11-02，18 18.4 末段「補充」，`6f66287b`）：12 個骨架的 follows 對照表、世界級線頭（霧魅從裂痕湧出、碎片被送往灰燼荒原）、新骨架 19～21（阿岳的請託、失控的丹爐、霜音的謎） | 5B-1 | 0.5 h | 可與 5A-M1 平行 |
+| Q10 | 用心清單、種族加值的「方法分類」清單（9.6.4 只給例子；各族清單「大世界開發時定」#89） | 規則 | 玩法 PM 代決 | 只用 9.6.4 表列出的方法；種族加值先只做狐族說服、欺騙（18 事件 18 用到） | 5B-1b | 5B-1 補資料（玩法 PM 2026-11-02，18 18.4 末段「補充」，`6f66287b`）：12 個骨架的 follows 對照表、世界級線頭（霧魅從裂痕湧出、碎片被送往灰燼荒原）、新骨架 19～21（阿岳的請託、失控的丹爐、霜音的謎）；19～21 的情境模板（19 感知／敏捷 DC 12、20 體質／智力 DC 13、21 意志／智力 DC 13）與既有模板加敏捷、體質（骨架 9、10、13、19 加敏捷；2、8、17 加體質；`5cbda759`） | 5B-1 | 0.5 h | 可與 5A-M1 平行 |
 | 5B-2 |
 | Q11 | 線頭上限與到期（9.6.7 #6「每人約 5 條、約 3 天」「數值待大世界開發定」） | 數值 | 開發 PM 定初值 | 5 條、遊戲外 3 天（現實時間），寫 content | 5B-1 |
 | Q12 | 系統傭兵的 **固定 build 名單**（9.6.8：輸出、守護、輔助、控制各至少 2 種） | 內容 | 玩法 PM 寫 | 暫用 `content/sim/builds.yaml` 的模擬範本挑 8 個 | 5C-1 |
@@ -1310,12 +1310,97 @@ exchange_supplies: 1
 | 5B2-9 | DC 初值、各模板的獎懲、弱點與哪個結果留哪條線頭 | 10.3 | 開發 PM 定（初值，之後模擬） |
 | 5B2-10 | LLM 提議共試 2 次，用盡或連不上 → 降級提議（第一個屬性、±0、不勾清單） | 10.5、3.1 | 開發 PM 定 |
 
-## 11. 5A-6 詳細規格：大世界成長接點
+## 11. 5A-5 詳細規格：API 與前端地點圖畫面
 
-> 給實作 agent。只動 `src/trpg/world/`、`src/trpg/content/world_rules.py`、`src/trpg/content/world_encounters.py`（一個欄位）、`src/trpg/content/world_oaths.py`（新）、`src/trpg/content/library.py`（載入誓約，一行）、`content/world/rules.yaml`（末尾加 `hero_growth`）、`content/world/encounters/cloud_ridge.yaml`（斷崖幫寨一行）、`src/trpg/engine/setup.py`、`src/trpg/engine/battle.py`（開場狀態與先手，見 11.5）、`src/trpg/engine/runner.py`（`LOG_FORMAT` 遞增）、`docs/phases/戰鬥紀錄格式變更.md`、`tests/world/`、受影響的 `tests/content/`、`tests/engine/`、`tests/cli/`（只改版號字串）。**不做** API、前端（5A-5 另一個 agent 在做 `src/trpg/api/`、`client/`）；不做經驗曲線與遭遇強度（5A-SIM）；不改 `trpg.roguelite` 的函式簽名與原型行為（`offer_tier_by_level` 只留 roguelite）。
-> 依據：07 7.2（配點、營火免費重配、HP 隨體質）、7.6（技能階級 1～3 級 1 階、4～7 級 2 階、8～10 級 3 階；換裝地點）、7.8（每級屬性 +2、HP +5%、2 點靈感、4、8 級升階；經驗來源；上限 10）；06 6.26（誓約）、6.34.2（大世界靈感：每升 1 級 2 點、任務鏈段落／世界事件／每種精英首殺各 1 點、一般戰鬥不給；花在主城、小鎮、營火）、6.34.3（閃現、重閃、溶掉）、6.34.9（階級屬於角色、升階重配、傳承）；09 9.6.7、9.6.10 #106（大世界立誓：主城、小鎮、營火，同時 1 個，解除後現實 1 天不能再立）、9.6.11 #114（營火可換技能、閃現、重閃、溶掉、傳承、立誓）；18 18.4「補充」（暗門：在斷崖幫寨的戰鬥我方先手；**危險度 3 的增援**：從同地點遭遇表用種子抽 1 名非精英敵人、照地點等級，陣容已滿 4 名改成敵人先手——玩法 PM 定，main `5cbda759`）、18.6（誓約模板，內容在 5C-3）；本檔 2.2（重用 roguelite，不搬家）、9、10。
+> 給實作 agent。只動 `src/trpg/api/`（新增 `world.py`、`world_schemas.py`、`world_presenter.py`、`routes/world.py`；`app.py`、`state.py` 小改）、`src/trpg/world/` 的 **小改**（`state.py` 加 1 個欄位、`battle.py` 與 `town.py` 認得生成技能，見 11.4）、`tests/api/`、`tests/world/`（只加測試）、`client/`（新畫面、首頁入口、API 型別）、`client/openapi.json`。**不做** 帳號與登入（5E-1）、事件卡與情境判定（5B-5）、屬性點分配與閃現等成長服務（5A-6）、傭兵（5C-1）。不改 `trpg.engine`、`trpg.roguelite`、`trpg-run` 與戰鬥紀錄格式。
+> 依據：09 9.6.2（點哪裡就走過去、路上可能遇敵、隱藏地點要探索才出現、建議等級、城鎮之間用傳送點）、9.6.6（開戰前看得到陣容、可撤退）、9.6.7 #2（城鎮與營火完全回復、換技能）、#9（點相鄰地點移動、趕路）、#11（補給）、#15（已清空）、#16（日夜與天氣）、9.6.9 #98（全滅回小鎮、疲憊）、9.6.11 #114（營火＝紮營）；07 7.6「創角：自選起始武器＋選 2 個關鍵字」、7.7（種族與出身）；本檔 2.1～2.5、6、9；`docs/開發PM交接.md` 6.5.1（浮動卡規則）。
 
 ### 11.1 目標
+
+使用者能在瀏覽器玩大世界的第一個可試玩里程碑（第 3 節「試玩」）：**首頁「大世界（測試）」→ 建立角色 → 雲嶺地點圖點相鄰地點移動 → 遇敵看陣容（撤退或開戰）→ 用現有戰鬥畫面打完 → 回到地點圖（勝負已回寫）→ 回霧渡鎮休息、換技能、傳送；野外紮營**。所有世界規則照 `trpg.world`（5A-2～5A-4），API 只負責存取、時鐘與組裝顯示資料。
+
+### 11.2 存檔與工作階段（`trpg.api.world`）
+
+- **位置**：一輪存檔資料夾（`create_app(save_dir=…)`，預設 `saves/`）底下的 `world/`：`world.json`（`trpg-world/1`）、`chars/<character_id>.json`（`trpg-char/1`）、`log.jsonl`（`trpg-wlog/1`，一行一筆、append）。寫檔用 5A-2 的 `write_atomic`（日誌：讀全部＋新行原子重寫；5～10 人量足夠）。
+- **世界**：第一次用到時建立（`season_id = "s1"`、`season_seed` 由伺服器 `secrets.randbits(64)`、`season_start = now`）；之後從 `world.json` 讀。
+- **時間**：API 層讀 `int(time.time())` 傳給 `world_step`（2.1）；`WorldStore` 接受注入的時鐘（測試用固定時間）。
+- **單一寫入佇列**（2.4）：一把全域鎖；每個成功的世界動作依序取 `seq`（日誌最後一筆 ＋1）寫進日誌，再寫角色與世界快照。動作不合法（`WorldActionError`）→ 422、什麼都不寫。
+- **戰鬥**：`POST …/battle` 用 `prepare_battle(library, char)` 的 `setup`／`seed` 在現有戰鬥工作階段表開一場（`SessionStore.open`，和一輪相同），之後用既有 `/api/battles/{id}/…` 操作；戰鬥結束後，任何讀取該角色的請求先 **同步**：把這場的步驟送 `fight` 世界動作（`world_step`），寫日誌與快照，戰鬥工作階段脫鉤。戰鬥中途伺服器重啟：遭遇還在，重新開戰從頭打（同一個種子；代決 5A5-5）。戰鬥中不能做其他世界動作（409）。
+- **角色**（帳號是 5E-1）：不做登入；角色以伺服器產生的簡單 ID（`c` ＋ 8 個十六進位字元）存取，可以有多個；前端記住最後使用的角色 ID（瀏覽器 `localStorage`），首頁入口列出既有角色（代決 5A5-1）。
+
+### 11.3 API（`/api/world`，`trpg.api.routes.world`）
+
+| 方法與路徑 | 內容 |
+|---|---|
+| `GET /api/world/characters` | 角色列表（ID、名稱、等級、區域、所在地點名） |
+| `POST /api/world/characters` | 建立角色（201）：`name`（1～12 字）、`weapon`、`keywords`（2 個）、`race`、`origin`（選填）、`seed`（選填，起始技能；省略由伺服器亂數）；主角照 07 7.6 創角，用一輪開局的同一套函式（`new_keyword_run` ＋ `with_race`／`with_origin`，開局配點照預設），站在雲嶺霧渡鎮（`new_character`）。武器、關鍵字、種族、出身的選項沿用 `GET /api/runs/start-options`。|
+| `GET /api/world/characters/{id}` | 地點圖畫面的整份資料（`WorldView`，見下）；先同步已結束的戰鬥 |
+| `POST /api/world/characters/{id}/actions` | 一個世界動作：`travel`（`to`、`hasten`）、`camp`、`retreat`、`rest`、`loadout`（`skills`）、`teleport`（`region`）；`fight` 不從這裡送（戰鬥走下一列）。回傳 `WorldView`（含這個動作的事件文字） |
+| `POST /api/world/characters/{id}/battle` | 有遭遇時開戰或接續進行中的戰鬥：`{world: WorldView, battle: BattleResponse}` |
+
+錯誤：角色不存在 404；動作不合法、內容不合法 422；戰鬥中做其他動作、沒有遭遇卻開戰 409。
+
+**`WorldView`**（全部由後端算好，前端不寫規則）：
+- `character`：ID、名稱、等級、經驗（目前／下一級門檻；到頂為 `None`）、HP／最大 HP、法力／上限、補給／上限、疲憊、未分配屬性點、武器名、種族名、裝備的技能卡（`SkillCard`）、備用技能卡、技能欄位上限。
+- `map`：區域 ID 與名稱、等級範圍、地點列表（ID、名稱、種類與中文種類、建議等級文字、說明、座標、`current`、`adjacent`（可以走過去）、`blocked`（相鄰但不能走的原因，例：還沒開放）、`cleared`、`camped`）、連線列表。**未發現的隱藏地點與連到它的連線不出現在回應裡**（不是只在前端藏起來）。
+- `here`：目前地點的服務——`can_rest`、`can_camp`／`camp_problem`、`can_loadout`、`teleports`（可傳送的區域與名稱；沒有地點圖的區域不列）、`supplies_cost`（趕路、紮營）。
+- `encounter`：沒有時 `None`；有時：地點名、敵人等級、戰鬥地圖名、天氣、日夜、陣容（每名敵人：名稱、是否精英、詞綴名）、撤退會回到哪裡、`in_battle`（已開戰未結束）。
+- `clock`：遊戲內時刻（`HH:MM`）、日夜、這一區現在的天氣名稱。
+- `events`：這次請求的世界事件轉成的中文句子（移動、遇敵、感知判定、發現地點、戰鬥結果、升級、全滅、清空、休息、紮營、換技能、傳送）；`GET` 時只帶剛同步的戰鬥結果。
+- `battle_id`：進行中戰鬥的 ID（沒有＝`None`）。
+
+### 11.4 `trpg.world` 的小改（生成技能）
+
+07 7.6 的創角從關鍵字池給起始技能，可能是組合器生成的技能（不在內容庫）。`CharacterState` 加 `generated_skills: tuple[SkillDef, ...] = ()`（同 `RunState.generated_skills`，依 ID 排序；舊檔照讀、格式字串不變）；`prepare_battle` 把它併進該場規則包；`loadout` 認得它。不改其他規則。
+
+### 11.5 前端（`client/src/world/`、`client/src/screens/World*.tsx`）
+
+- **首頁入口**：開始畫面加「大世界（測試）」按鈕。
+- **角色畫面**：列出既有角色（點了進入）；建立新角色：名稱、起始武器、2 個關鍵字（沿用一輪開局的選擇元件與 `start-options`）、種族與出身選填。
+- **地點圖畫面**：
+  - 左：程式繪製的地點圖（SVG；座標用內容的 `pos`）：地點圓點（依種類不同形狀或顏色）、名稱、建議等級；連線；目前位置醒目標示；可以走的相鄰地點可點（滑過有建議等級與說明的浮動卡，用共用浮動卡元件 6.5.1）；不相鄰的地點不可點；已清空標「已清空」；未發現的隱藏地點不畫。
+  - 右：角色狀態（HP、法力、補給、等級與經驗、疲憊）、時刻與天氣、目前地點與服務按鈕（城鎮：休息、換技能、傳送；野外：紮營；營火中：換技能）、「趕路」切換（花補給降低遇敵機率）、最近事件紀錄。
+  - **遇敵**：右側最上方出現陣容面板（敵人名單、等級、地圖、天氣；不是浮動卡）：「開戰」或「撤退」；有遭遇時地點圖不可點。
+  - **換技能**：城鎮或營火才有；勾選裝備的技能（擁有＝裝備＋備用），送出前檢查欄位上限由後端回錯誤。
+- **戰鬥**：沿用 `BattleScreen`（`exitLabel="回到地點圖"`）；結束或離開回到地點圖（重新讀 `WorldView`，勝負已回寫）。進行中的戰鬥離開後地點圖顯示「繼續戰鬥」。
+- 美術：只用程式繪製的元件與現有樣式（不加新美術）。
+
+### 11.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/api/test_world_api.py` | 建立角色（站在霧渡鎮、技能卡、補給）；列表；名稱或關鍵字不合法 → 422；不存在 → 404；地點圖不含未發現的隱藏地點與它的連線、發現後出現；移動到相鄰地點、非相鄰 → 422；遇敵後看陣容、撤退回出發地點；開戰 → 戰鬥工作階段 → AI 代打到結束 → `GET` 同步（經驗或全滅回小鎮）、日誌有 `fight`；戰鬥中移動 → 409；城鎮休息、換技能、紮營（村落）、傳送選項；存檔：新的 app 讀同一資料夾得到相同角色；日誌重播（`replay`）得到與快照相同的角色 |
+| `tests/world/test_generated_skills.py` | 角色帶生成技能：開戰規則包含它、換技能認得它；舊格式（沒有欄位）照讀 |
+| `client/src/world/*.test.ts` | 地點圖顯示資料的純函式（地點樣式、可點與不可點、已清空文字、事件文字）、角色建立表單的驗證 |
+
+### 11.7 驗收
+
+- `uv run pytest -q tests/api tests/world -n 8 --timeout=3000`；`tests/cli -m "slow or not slow" --timeout=3000`；`npx vitest run`、`npm run build`（`client/`）；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；OpenAPI 快照重產（`scripts/export_openapi.py` ＋ `gen:api`）。
+- 瀏覽器實際走一遍（後端、前端用 8000／8001／8010 以外的埠）：建立角色 → 雲嶺移動 → 遇敵 → 看陣容 → 開戰打完 → 回地點圖 → 回小鎮休息；浮動卡 6.5.1 實測（1600×900、800×600）；截圖或 `read_page` 記錄寫進報告。
+
+### 11.8 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5A5-1 | 帳號還沒做（5E-1） | 不登入；角色用伺服器產生的 ID，可多個；前端記最後一個；5E-1 改成依帳號存取 |
+| 5A5-2 | 世界與賽季的建立 | 第一次用到時自動建立 `s1`，伺服器亂數種子、開始時間＝當下 |
+| 5A5-3 | 創角的配點、名稱 | 配點照一輪開局的預設（全點主屬性）；名稱只顯示用（1～12 字），不影響規則 |
+| 5A5-4 | 日誌寫法 | 讀全部＋新行原子重寫（不做 append 模式）；5～10 人量足夠 |
+| 5A5-5 | 戰鬥中途的進度 | 不存檔；伺服器重啟後遭遇還在、從頭開戰（同種子） |
+| 5A5-6 | 戰鬥畫面 | 沿用現有戰鬥畫面與 API；回到地點圖時才把步驟送 `fight` 回寫 |
+| 5A5-7 | 地點圖畫法 | SVG＋內容的 `pos`；地點種類用不同顏色與形狀；不加新美術 |
+| 5A5-8 | 生成技能 | `CharacterState.generated_skills`（同 `RunState`），11.4 |
+
+### 11.9 不做的事
+
+- 帳號、登入、一帳號 2～3 角色的上限（5E-1）；事件卡、情境判定、NPC 對話（5B-5）；屬性點分配、閃現、重閃（5A-6 之後）；傭兵與影子（5C）；商店與背包（5D）；朋友足跡、多人同時在線的顯示。
+
+## 12. 5A-6 詳細規格：大世界成長接點
+
+> 給實作 agent。只動 `src/trpg/world/`、`src/trpg/content/world_rules.py`、`src/trpg/content/world_encounters.py`（一個欄位）、`src/trpg/content/world_oaths.py`（新）、`src/trpg/content/library.py`（載入誓約，一行）、`content/world/rules.yaml`（末尾加 `hero_growth`）、`content/world/encounters/cloud_ridge.yaml`（斷崖幫寨一行）、`src/trpg/engine/setup.py`、`src/trpg/engine/battle.py`（開場狀態與先手，見 12.5）、`src/trpg/engine/runner.py`（`LOG_FORMAT` 遞增）、`docs/phases/戰鬥紀錄格式變更.md`、`tests/world/`、受影響的 `tests/content/`、`tests/engine/`、`tests/cli/`（只改版號字串）。**不做** API、前端（5A-5 另一個 agent 在做 `src/trpg/api/`、`client/`）；不做經驗曲線與遭遇強度（5A-SIM）；不改 `trpg.roguelite` 的函式簽名與原型行為（`offer_tier_by_level` 只留 roguelite）。
+> 依據：07 7.2（配點、營火免費重配、HP 隨體質）、7.6（技能階級 1～3 級 1 階、4～7 級 2 階、8～10 級 3 階；換裝地點）、7.8（每級屬性 +2、HP +5%、2 點靈感、4、8 級升階；經驗來源；上限 10）；06 6.26（誓約）、6.34.2（大世界靈感：每升 1 級 2 點、任務鏈段落／世界事件／每種精英首殺各 1 點、一般戰鬥不給；花在主城、小鎮、營火）、6.34.3（閃現、重閃、溶掉）、6.34.9（階級屬於角色、升階重配、傳承）；09 9.6.7、9.6.10 #106（大世界立誓：主城、小鎮、營火，同時 1 個，解除後現實 1 天不能再立）、9.6.11 #114（營火可換技能、閃現、重閃、溶掉、傳承、立誓）；18 18.4「補充」（暗門：在斷崖幫寨的戰鬥我方先手；**危險度 3 的增援**：從同地點遭遇表用種子抽 1 名非精英敵人、照地點等級，陣容已滿 4 名改成敵人先手——玩法 PM 定，main `5cbda759`）、18.6（誓約模板，內容在 5C-3）；本檔 2.2（重用 roguelite，不搬家）、9、10。
+
+### 12.1 目標
 
 大世界角色有完整的成長接點，全部是 **世界動作**（寫進 `trpg-wlog/1`、可重播）或戰鬥／判定的回寫：
 
@@ -1323,7 +1408,7 @@ exchange_supplies: 1
 - 配點、重配、閃現、重閃、溶掉、傳承、立誓、解除誓約。
 - 5B-2 的 `next_battle` 在開戰時套用並消耗；增援照玩法 PM 定；斷崖幫寨持有暗門時我方先手。
 
-### 11.2 交付項目
+### 12.2 交付項目
 
 1. **規則 content**（`content/world/rules.yaml` 末尾、`WorldRules.hero_growth`，有預設值）：
 
@@ -1362,30 +1447,30 @@ exchange_supplies: 1
    - 規則包加入主角的 `generated_skills`（閃現、重配後的技能）。
    - 打完（勝負都算）：主角裝備的技能照這場的用法統計記「先上場用過」與 `skill_usage`（roguelite `after_battle_flash`，**不給** 每勝靈感，6.34.2「一般戰鬥不給」）。
    - 打贏的經驗與升級改呼叫 `gain_xp`；精英首殺給靈感。
-   - **`next_battle`**（11.4）：buff／debuff 開場掛在主角身上；增援；打完（勝負都算）清空，撤退不消耗。
-   - **先手**（11.4）。
+   - **`next_battle`**（12.4）：buff／debuff 開場掛在主角身上；增援；打完（勝負都算）清空，撤退不消耗。
+   - **先手**（12.4）。
 7. **情境判定**（`trpg.world.situations`）：給的 xp 改呼叫 `gain_xp`，當下升級。
 8. **誓約接點**：schema `trpg.content.world_oaths`（`OathTable`：`cooldown_seconds`、`templates`；`OathTemplateDef`：`id`、`name_zh`、`difficulty: easy|medium|hard`、`params`；參數 `choice`（允許值）或 `int`（範圍））；`ContentLibrary.world_oaths`（`world/oaths.yaml` 不存在＝`None`）。18.6 的 15 種模板與戰鬥中的加成、違反判定在 **5C-3**；本段只有接點與測試裡的最小樣本（代決 5A6-9）。
-9. **測試**（11.6）與 **完成報告** `docs/phases/Phase5A-6報告.md`：交付、各接點的世界動作、可重播證明、代決、待 PM 決定。
+9. **測試**（12.6）與 **完成報告** `docs/phases/Phase5A-6報告.md`：交付、各接點的世界動作、可重播證明、代決、待 PM 決定。
 
-### 11.3 角色階級與重配（6.34.9、07 7.6）
+### 12.3 角色階級與重配（6.34.9、07 7.6）
 
 - 主角的角色階級 ＝ `hero_growth.skill_tier_by_level[等級]`；閃現出題、傳承、升階重配一律用 `world_library` 的視圖呼叫 roguelite，原型的 `offer_tier_by_level`（[1,1,2,2,3,3]）只留給 roguelite。
 - 升階的當下（`gain_xp` 結束時，戰鬥之間）呼叫 `sync_skill_tier`：手寫技能重配成 `<原 ID>_t<階級>`，閃過的技能照新階級重推歷程；裝備、備用、閃現狀態、用法統計跟著改 ID。
 
-### 11.4 下一場修正、增援與先手
+### 12.4 下一場修正、增援與先手
 
 - **buff／debuff**：`next_battle` 裡的狀態（依產生順序、同一狀態只掛一次）在開戰時掛到主角身上，持續回合照 `statuses.yaml` 的預設（引擎 `UnitSpawn.opening_statuses`，在擲先攻前施加，不擲抵抗）。
 - **增援**（玩法 PM 定，18.4 補充）：每一筆 `reinforce`，從 **同地點遭遇表** 各陣容出現過的單位中去掉精英（`elite` 標籤），依 ID 排序後用 `Rng(fnv1a64("{battle_seed}:reinforce"))` 均勻抽 1 名加入敵方（照地點等級成長，同 5A-4 追加 A）；敵方已有 4 名時改成「敵人先手」。增援併進 `PreparedBattle.lineup`，看陣容時就看得到。
 - **先手**：`BattleSetup.first_team`（新，預設 `None`）：設定時該陣營的單位依先攻排在最前面、另一陣營依先攻排在後面（引擎的行動順序整場固定）。斷崖幫寨：遭遇地點的遭遇表列了 `ally_first_threads`（雲嶺：`cliff_gang_fort` → `gang_fort_secret_door`），且角色持有其中一條有效個人線頭（以遭遇時間 `at` 判定到期）→ 我方先手。我方先手與敵人先手同時成立時抵銷（照先攻）。
 - 引擎新欄位會出現在戰鬥紀錄的 `setup` → `LOG_FORMAT` `/99` → `/100`（`docs/phases/戰鬥紀錄格式變更.md` 1.1；舊紀錄不能重播，照慣例）。沒設定時結算與 `/99` 完全相同。
 
-### 11.5 可重播
+### 12.5 可重播
 
 - 所有新動作進 `WorldAction` 聯集、寫進 `trpg-wlog/1`；閃現選項由角色技能種子衍生（roguelite 標籤 `flash/<技能>/<第幾次>/<重閃次數>`），`pending_flash` 存在角色快照裡，選擇時不重抽。重播照紀錄，不呼叫 LLM（本段 LLM 閃現提議不接，`llm=False`）。
 - 戰鬥設定只由「角色快照＋遭遇＋內容庫」決定（`next_battle`、線頭、生成技能都在角色快照裡），重播逐位元相同。
 
-### 11.6 測試
+### 12.6 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -1396,18 +1481,18 @@ exchange_supplies: 1
 | `tests/engine/test_first_team.py` | `first_team` 的行動順序；`opening_statuses` 掛上；預設值時和原本相同 |
 | `tests/world/test_replay.py`（加） | 戰鬥升級 → 配點 → 閃現 → 選 → 溶掉 → 立誓的日誌重播兩次逐字相同、寫出讀回相同 |
 
-### 11.7 驗收
+### 12.7 驗收
 
 - `uv run pytest -q tests/world tests/roguelite tests/content tests/engine/test_first_team.py tests/test_architecture.py -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播（`trpg battle --map swamp --seed 7 --log-json` ＋ `replay`）；世界日誌重播測試。
 
-### 11.8 不做的事
+### 12.8 不做的事
 
 - API、前端（5A-5）；經驗曲線、各來源經驗量、遭遇強度（5A-SIM）；到頂後經驗換靈感或材料（7.8「換算比例待定」）。
 - 任務鏈段落、世界事件的靈感（5B-4、5F）；完整技能三選一與白板三選一在大世界的來源（任務、劇情、機遇、許願池；5B-4 之後）；LLM 閃現提議接線（外層，之後）。
 - 誓約的 15 種模板內容、戰鬥中的加成與違反判定、佔被動欄位（5C-3）。
 
-### 11.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 12.9 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 | 誰定 |
 |---|---|---|---|
@@ -1424,6 +1509,6 @@ exchange_supplies: 1
 | 5A6-11 | 角色技能種子 | `fnv1a64("{season_seed}:{character_id}:skills")`（閃現選項、傳承、重配的種子；不佔世界亂數串流） | 開發 PM 定 |
 | 5A6-12 | 戰鬥紀錄版號 | `BattleSetup.first_team`、`UnitSpawn.opening_statuses` 進紀錄 → `/100` | 開發 PM 定 |
 
-## 12. 之後各段規格
+## 13. 之後各段規格
 
-（5A-4 驗收後補上 5A-5 起。）
+（5A-6 驗收後補上之後各段。）
