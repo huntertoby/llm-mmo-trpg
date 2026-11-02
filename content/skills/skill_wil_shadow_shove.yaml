@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶撞擊；數值為初值，未經模擬
+id: skill_wil_shadow_shove
+schema_version: 1
+name_zh: 影推
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 1d6, element: shadow}
+  - {type: push, distance: 2}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [shadow, spell, curse, push]
+narrative:
+  concept: 一團暗影猛地撞上對手，把他推出去；撞上牆或同伴時更痛
+  cast_flavor: 黑影像一頭看不見的野獸撞了過去，對手整個人被掀飛
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

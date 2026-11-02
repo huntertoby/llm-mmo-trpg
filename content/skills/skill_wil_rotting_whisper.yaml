@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶毒素；數值為初值，未經模擬
+id: skill_wil_rotting_whisper
+schema_version: 1
+name_zh: 腐語
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 4}
+effects:
+  - {type: apply_status, status: silenced, duration: 1}
+  - {type: apply_status, status: poison, duration: 2}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [shadow, spell, silence, poison]
+narrative:
+  concept: 在對手耳邊說一句腐爛的話，毒從耳朵流進喉嚨，讓他再也唸不出咒語
+  cast_flavor: 你的低語帶著腐臭，對手摀住喉嚨，咳出一口黑綠色的血
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

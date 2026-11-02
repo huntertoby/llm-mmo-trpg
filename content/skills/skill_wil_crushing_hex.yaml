@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶倒地；數值為初值，未經模擬
+id: skill_wil_crushing_hex
+schema_version: 1
+name_zh: 壓頂咒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 1d4, element: shadow}
+  - {type: knock_prone}
+condition: null
+cost: {mana: 4}
+tags: [shadow, spell, curse, knockdown]
+narrative:
+  concept: 一隻看不見的暗影之手壓在對手的肩上，把他按倒在地
+  cast_flavor: 對手頭上的影子忽然變得沉重，壓得他雙膝一軟
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
