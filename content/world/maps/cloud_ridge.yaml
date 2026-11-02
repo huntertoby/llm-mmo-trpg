@@ -84,6 +84,7 @@ locations:
     battle_maps: [narrow_halls]
     hidden: true
     reveal: [situation]
+    hint_zh: 谷底一處隱密的洞窟
     description_zh: 青霧執事；丹砂、活血骨
     pos: {x: 90, y: 70}
   - id: north_slope
@@ -122,6 +123,7 @@ locations:
     battle_maps: [cliff_outpost]
     hidden: true
     reveal: [perception_nearby, quest_clue, friend_footprint]
+    hint_zh: 霧裡一座沒見過的山崖
     description_zh: 雷羽鷹巢；感知判定或朋友足跡才會出現
     pos: {x: 30, y: 8}
   - id: cloud_summit

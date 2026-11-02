@@ -27,8 +27,10 @@ from trpg.shared.errors import ContentError
 
 __all__ = [
     "ACTOR_MAX_CHARS",
+    "HIDDEN_HINT_DEFAULT",
     "MORE_MAX_CHARS",
     "MOTIVE_MAX_CHARS",
+    "SECRET_MASK",
     "STORY_REFS_MAX",
     "STORY_SCENES",
     "STORY_SENTENCES_MAX",
@@ -42,12 +44,29 @@ __all__ = [
     "allowed_problems",
     "fill_template",
     "load_story_templates",
+    "mask_text",
     "sentence_count",
     "story_problems",
     "story_template_problems",
 ]
 
 STORY_TEMPLATES_FILE: Final = "world/narration.yaml"
+
+HIDDEN_HINT_DEFAULT: Final = "一條還沒發現的路"
+"""隱藏地點沒填 ``hint_zh`` 時的提示語（Phase 5B-5；玩法 PM 2026-11-03：揭露前用提示語、
+不寫「某處」）。"""
+SECRET_MASK: Final = "……"
+"""NPC 祕密原文的代替文字。"""
+
+
+def mask_text(text: str, masks: Mapping[str, str]) -> str:
+    """把 ``masks`` 的每個字串換成代替文字（長的先換，避免短字串先吃掉長字串的一部分）。說書人的降級
+    文字與 API 的顯示文字共用（Phase 5B-5）。"""
+    for word in sorted(masks, key=lambda w: (-len(w), w)):
+        if word:
+            text = text.replace(word, masks[word])
+    return text
+
 
 StoryScene = Literal["event", "situation", "outcome", "chat"]
 """``event``＝事件開場（挑骨架＋角色＋動機＋旁白）；``situation``＝情境判定前的情境敘述；
@@ -165,6 +184,12 @@ class StoryAllowed:
     """角色持有的有效線頭。"""
     forbidden: tuple[str, ...] = ()
     """不可出現在文字裡的字串（未發現的隱藏地點名、NPC 祕密原文）。"""
+    masks: Mapping[str, str] = field(default_factory=dict)
+    """禁止字串 → 代替文字（未發現的隱藏地點名 → 提示語；祕密 → :data:`SECRET_MASK`；5B-5）。"""
+
+    def hints(self) -> tuple[str, ...]:
+        """隱藏地點的提示語（給說書人：要提到還沒發現的地方時用這些）。"""
+        return tuple(sorted({v for v in self.masks.values() if v != SECRET_MASK}))
 
     def npcs_for(self, skeleton: str | None) -> tuple[str, ...]:
         extra = self.skeleton_npcs.get(skeleton, ()) if skeleton is not None else ()

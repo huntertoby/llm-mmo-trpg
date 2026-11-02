@@ -101,6 +101,9 @@ class LocationDef(ContentModel):
     """世界旗標 ID；有值＝旗標成立前不能進入（只存資料，判定在 5A-2 之後）。"""
     description_zh: str = ""
     """地點說明（純顯示）。"""
+    hint_zh: str = Field(default="", max_length=24)
+    """只有 ``hidden`` 可填：揭露前代替名稱的提示語（名詞片語，例「谷底一處隱密的洞窟」；
+    玩法 PM 2026-11-03：揭露前說書與畫面用提示語，不寫「某處」；Phase 5B-5）。"""
     pos: MapPos
 
     @model_validator(mode="before")
@@ -155,6 +158,8 @@ class LocationDef(ContentModel):
             out.append("隱藏地點必須填 reveal（出現方式）")
         if len(set(self.reveal)) != len(self.reveal):
             out.append("reveal 有重複")
+        if self.hint_zh and not self.hidden:
+            out.append("只有隱藏地點可以填提示語 hint_zh")
         return out
 
     def _gate_problems(self) -> list[str]:

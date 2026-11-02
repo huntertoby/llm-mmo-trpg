@@ -221,6 +221,16 @@ def test_hidden_rules() -> None:
     LocationMapDef.model_validate(leaf)
 
 
+def test_hint_only_for_hidden(cloud: LocationMapDef) -> None:
+    """提示語只有隱藏地點可填（5B-5）；雲嶺兩個隱藏地點都有提示語。"""
+    _bad(_with_location(_small_map(), 14, hint_zh="一條小路"), "hint_zh")
+    hinted = _with_location(
+        _small_map(), 14, kind="secret", hidden=True, reveal=["situation"], hint_zh="一條小路"
+    )
+    LocationMapDef.model_validate(hinted)
+    assert all(loc.hint_zh for loc in cloud.locations if loc.hidden)
+
+
 def test_gate_rules() -> None:
     gate: dict[str, Any] = {"kind": "gate", "level_min": None, "battle_maps": []}
     _bad(_with_location(_small_map(), 14, **gate), "gate_to")

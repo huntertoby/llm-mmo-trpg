@@ -21,6 +21,7 @@ from trpg.api.world_story import (
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_situations import default_proposal
 from trpg.llm import LLMUnavailable, MockLLMClient
+from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION
 from trpg.world.actions import NarratedEvent, SituationAction
 from trpg.world.situations import situation_rules, situation_template
 from trpg.world.state import CharacterState, EventTrigger
@@ -63,7 +64,7 @@ def test_event_story_llm_swaps_skeleton(library: ContentLibrary) -> None:
     )
     client = MockLLMClient([reply])
     action = event_story(library, world, char, client, NOON)
-    assert action.source == "llm" and action.prompt_version == "storyteller/1"
+    assert action.source == "llm" and action.prompt_version == STORY_PROMPT_VERSION
     user = client.calls[0][1]["content"]
     assert "雨中梯田" in user and "迷路的道童" in user and "斷崖幫哨兵" in user
     result = world_step(library, world, char, action, NOON)
