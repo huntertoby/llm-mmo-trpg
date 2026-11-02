@@ -59,10 +59,14 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     assert bamboo["weekly"] is True and bamboo["stock_zh"].startswith("本週剩 ")
     assert "每次消費柳掌櫃好感度 +2" in shop["affinity_zh"]
 
-    _act(client, cid, kind="travel", to="ferry_steps")
-    opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
-    _finish_battle(client, opened["battle"], ambush)
-    after = _ok(client.get(f"/api/world/characters/{cid}"))
+    for _ in range(4):  # 效用 AI 代打不保證贏：輸了（回霧渡鎮、不給金幣）就再打一場
+        _act(client, cid, kind="travel", to="ferry_steps")
+        opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
+        _finish_battle(client, opened["battle"], ambush)
+        after = _ok(client.get(f"/api/world/characters/{cid}"))
+        if after["wallet"]["gold"] > 0:
+            break
+        assert not any("金幣" in e for e in after["events"])  # 輸了不給
     assert after["wallet"]["gold"] == 15
     assert any("獲得 15 金幣" in e for e in after["events"])
     assert after["shop"] is None  # 野外沒有店
