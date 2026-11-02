@@ -1,0 +1,24 @@
+# 雲嶺的區域商人（Phase 5D-1；docs/phases/Phase5計畫.md 25.2）。schema：src/trpg/content/world_economy.py。
+# 18 18.1「霧渡鎮：區域商人」、18.5 柳掌櫃（霧渡鎮商人）。08 8.26.1：只賣消耗品、粗料、外觀染料；
+# 區域特產每週限量（青竹節＝雲嶺特產，18.2.4；數量由賽季種子決定，每個角色各自算，代決 5D1-6）；
+# 好感度門檻用級名（8.26.1 例「友善才賣霧系投擲瓶」）。
+# affinity：在店裡消費一次柳掌櫃好感度 +2、每天最多 +4（18.7.6，5B-4d 留給 5D）。
+region: cloud_ridge
+shops:
+  - id: shop_liu
+    name_zh: 柳記雜貨
+    npc: shopkeeper_liu
+    stock:
+      - {item: item_spring_pill}
+      - {item: item_focus_pill}
+      - {item: item_oil_flask}
+      - {item: item_fire_flask}
+      - {item: item_frost_flask}
+      - {item: item_mist_flask, rank: friendly}
+      - {item: item_coarse_material}
+      - {item: item_dye_indigo}
+      - {item: item_dye_cinnabar}
+      - {item: item_dye_ink}
+    weekly:
+      - {item: item_green_bamboo, min: 2, max: 4}
+    affinity: {per_purchase: 2, daily_max: 4}

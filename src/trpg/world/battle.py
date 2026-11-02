@@ -64,6 +64,7 @@ from trpg.world.actions import (
 )
 from trpg.world.common import max_hp, rules_of, world_map_of
 from trpg.world.companions import companion_spawns, companion_win_affinity
+from trpg.world.economy import battle_gold, pouch_skills, spend_pouch
 from trpg.world.encounters import (
     EncounterLineup,
     elite_kinds,
@@ -278,8 +279,11 @@ def first_team(
     return Team.ALLY if ally_first else Team.ENEMY
 
 
-def _hero_spawn(library: ContentLibrary, char: CharacterState, hp: int) -> UnitSpawn:
-    """主角的出場設定（同 roguelite ``hero_spawn``：等級加成併入基礎 HP，體質由引擎加）。"""
+def _hero_spawn(
+    library: ContentLibrary, char: CharacterState, hp: int, items: tuple[str, ...] = ()
+) -> UnitSpawn:
+    """主角的出場設定（同 roguelite ``hero_spawn``：等級加成併入基礎 HP，體質由引擎加）；
+    ``items`` 是腰包的道具技能（5D-1，接在技能最後）。"""
     core = library.ruleset.core
     hero = char.hero
     leveled = hero.model_copy(
@@ -287,6 +291,7 @@ def _hero_spawn(library: ContentLibrary, char: CharacterState, hp: int) -> UnitS
             "max_hp": hero.max_hp + core.level_hp_bonus(hero.max_hp, char.level),
             "scaled_resources": True,
             "level": char.level,
+            "skills": (*hero.skills, *items),
         }
     )
     return UnitSpawn(
@@ -359,11 +364,13 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
     extra.update((s.id, s) for s in companion_skills)
     extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
+    items = pouch_skills(library, char)  # 腰包的道具（5D-1：1 AP、次數＝個數、不佔欄位）
+    extra.update((s.id, s) for s in items)
     hp = hero_start_hp(library, char)
     ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
     first = first_team(library, char, encounter, reinforced.enemy_first)
     oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
-    hero = _hero_spawn(library, char, hp)
+    hero = _hero_spawn(library, char, hp, tuple(s.id for s in items))
     setup = base.model_copy(
         update={
             "map": map_def,
@@ -470,6 +477,7 @@ def fight(
     level_before = char.level
     char, used = _after_battle_skills(library, char, prepared, action.steps, hero_id, won=won)
     char = char.model_copy(update={"next_battle": ()})  # 下一場修正打完一場就消耗（5A-6）
+    char, pouch_used = spend_pouch(library, char, state, hero_id)  # 腰包用掉的道具（5D-1）
     if won:
         world, char, more = _won(
             library,
@@ -483,6 +491,9 @@ def fight(
         )
         char, liked = companion_win_affinity(library, char, now)  # 帶夥伴打贏（18.7.6）
         more += liked
+        elite = bool(elite_kinds(library, prepared.lineup))
+        char, gold = battle_gold(library, char, elite=elite, level=prepared.enemy_level)  # 5D-1
+        more += gold
     else:
         char, more = _lost(library, char, hero.mana)
     oath_more, oath_broken = oath_events(prepared.oath, battle_events)  # 誓約（5C-3）
@@ -521,7 +532,7 @@ def fight(
         oath_broken=oath_broken,
     )
     char = char.model_copy(update={"last_battle": last})
-    return world, char, (*events, ended, *more)
+    return world, char, (*events, ended, *pouch_used, *more)
 
 
 def _after_battle_skills(

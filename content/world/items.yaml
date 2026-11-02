@@ -1,0 +1,207 @@
+# 大世界的物品（Phase 5D-1；docs/phases/Phase5計畫.md 25.2）。schema：src/trpg/content/world_economy.py。
+# 名稱與數值是開發 PM 定的初值（代決 5D1-1、5D1-9）；5D-2 的材料加在這個檔。
+# - 消耗品（08 8.17：藥水、投擲瓶；卷軸正式季）：skill 是戰鬥中的用法（「道具技能」：1 AP、每個用一次、
+#   不佔技能欄位、標籤含 item；和 content/skills/ 同一套檢查、不進技能池）。field_*_permille 是野外使用
+#   回最大值的 ‰（09 9.6.11 #113「HP 靠藥水」；8.17 例「回 30% HP」）。
+# - 材料：粗料（08 8.14 通用 1 階）、青竹節（雲嶺特產，18.2.4）。
+# - 染料：只買得到、存在背包（染色在之後的段）。
+items:
+  - id: item_spring_pill
+    name_zh: 回春丹
+    kind: consumable
+    description_zh: 雲嶺藥舖的常備丹藥。戰鬥中回 2d6 HP；野外吃一顆回 30% HP。
+    price: 15
+    field_hp_permille: 300
+    skill:
+      id: skill_item_spring_pill
+      schema_version: 1
+      name_zh: 回春丹（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: aura
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: con
+      shape: {type: self}
+      effects:
+        - {type: heal, dice: 2d6, affects: self}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, support]
+      narrative:
+        concept: 腰包裡的回春丹，嚼下去傷口就不那麼疼了
+        cast_flavor: 你把一顆回春丹丟進嘴裡，苦味過後一股暖意散開
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_focus_pill
+    name_zh: 凝神丹
+    kind: consumable
+    description_zh: 安神醒腦的丹藥。戰鬥中回 10 法力；野外吃一顆回 30% 法力。
+    price: 15
+    field_mana_permille: 300
+    skill:
+      id: skill_item_focus_pill
+      schema_version: 1
+      name_zh: 凝神丹（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: aura
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: wis
+      shape: {type: self}
+      effects:
+        - {type: restore_resource, resource: mana, amount: 10, affects: self}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, support, mana]
+      narrative:
+        concept: 腰包裡的凝神丹，讓亂掉的氣息重新聚攏
+        cast_flavor: 你含住一顆凝神丹，紛亂的念頭慢慢沉澱下來
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_oil_flask
+    name_zh: 燈油瓶
+    kind: consumable
+    description_zh: 一瓶燈油。戰鬥中丟到 3 格內，十字範圍鋪一灘油 3 回合，碰到火就燒。
+    price: 10
+    skill:
+      id: skill_item_oil_flask
+      schema_version: 1
+      name_zh: 燈油瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: cross, range: 3}
+      effects:
+        - {type: create_surface, surface: oil, duration: 3}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, oil]
+      narrative:
+        concept: 柳記雜貨賣的燈油，砸在地上就是一灘等著被點燃的油
+        cast_flavor: 陶瓶在敵人腳邊碎裂，濃稠的燈油迅速漫開
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_fire_flask
+    name_zh: 火油瓶
+    kind: consumable
+    description_zh: 點著引信的火油。戰鬥中丟到 3 格內，3×3 起火 2 回合。
+    price: 20
+    skill:
+      id: skill_item_fire_flask
+      schema_version: 1
+      name_zh: 火油瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: fire, duration: 2}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, fire]
+      narrative:
+        concept: 塞了布條的火油瓶，丟出去就是一片火
+        cast_flavor: 你點著布條把瓶子甩出去，火舌在落點轟地竄起
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_frost_flask
+    name_zh: 寒冰瓶
+    kind: consumable
+    description_zh: 封著冬湖寒氣的瓷瓶。戰鬥中丟到 3 格內，3×3 結冰 2 回合。
+    price: 20
+    skill:
+      id: skill_item_frost_flask
+      schema_version: 1
+      name_zh: 寒冰瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: ice, duration: 2}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, ice]
+      narrative:
+        concept: 冬湖邊打來的寒氣封在瓷瓶裡，一砸就結出一片冰
+        cast_flavor: 瓷瓶碎開，白色的寒氣貼著地面鋪出一層薄冰
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_mist_flask
+    name_zh: 霧瓶
+    kind: consumable
+    description_zh: 雲嶺修士煉的霧系投擲瓶。戰鬥中丟到 3 格內，3×3 起煙霧 2 回合。柳掌櫃好感度到友善才賣。
+    price: 25
+    skill:
+      id: skill_item_mist_flask
+      schema_version: 1
+      name_zh: 霧瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: control
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: smoke, duration: 2}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, utility, smoke]
+      narrative:
+        concept: 修士煉的霧瓶，砸開就是一團遮住視線的濃霧
+        cast_flavor: 你把霧瓶往地上一摔，白霧翻湧著吞沒了那一片
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_coarse_material
+    name_zh: 粗料
+    kind: material
+    description_zh: 通用的 1 階材料（打造、強化用；打造在之後的段）。
+    price: 5
+  - id: item_green_bamboo
+    name_zh: 青竹節
+    kind: material
+    description_zh: 雲嶺竹林的特產，打造時偏向敏捷與移動（打造在之後的段）。柳掌櫃每週只進少量。
+    price: 30
+    region: cloud_ridge
+  - id: item_dye_indigo
+    name_zh: 靛青染料
+    kind: dye
+    description_zh: 外觀染料（染色在之後的段）。
+    price: 20
+    color: "#2E4A7D"
+  - id: item_dye_cinnabar
+    name_zh: 朱砂染料
+    kind: dye
+    description_zh: 外觀染料（染色在之後的段）。
+    price: 20
+    color: "#B23A2E"
+  - id: item_dye_ink
+    name_zh: 墨色染料
+    kind: dye
+    description_zh: 外觀染料（染色在之後的段）。
+    price: 20
+    color: "#2B2B2B"

@@ -45,6 +45,7 @@ __all__ = [
     "ShadowRecord",
     "ShadowReport",
     "ShadowSnapshot",
+    "ShopPurchase",
     "ThreadState",
     "TimedFlag",
     "WorldState",
@@ -252,6 +253,21 @@ def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
     return threads
 
 
+class ShopPurchase(_Model):
+    """本週在某家店買過的限量商品個數（Phase 5D-1；8.26.1 區域特產每週限量）。"""
+
+    shop: str = Field(pattern=ID_PATTERN)
+    item: str = Field(pattern=ID_PATTERN)
+    week: int = Field(ge=0)
+    bought: int = Field(ge=1)
+
+
+def _check_counts(counts: dict[str, int]) -> dict[str, int]:
+    if any(v < 1 for v in counts.values()):
+        raise ValueError("物品個數必須至少 1（用完就拿掉）")
+    return dict(sorted(counts.items()))
+
+
 class TimedFlag(_Model):
     """限時的世界旗標（Phase 5B-4c）：``until``（UTC 秒）以前有效。"""
 
@@ -315,6 +331,8 @@ class ShadowRecord(_Model):
     """最後一次給獎的日子（``refresh_day``）。"""
     reports: tuple[ShadowReport, ...] = ()
     """最近的戰報（新的在後）。"""
+    coins_claimed: int = Field(default=0, ge=0)
+    """已轉進主人角色的任務幣（Phase 5D-1；``coins`` 保留為累計）。"""
 
 
 class WorldState(_Model):
@@ -513,6 +531,40 @@ class CharacterState(_Model):
     """夥伴加入時替下的成員（任務結束時還原；玩家自己 ``hire`` 就清掉）。"""
     companion_affinity: dict[str, CompanionAffinity] = Field(default_factory=dict)
     """夥伴 → 今天「帶他打贏」加過的好感度（每天上限，18.7.6）。"""
+
+    # --- 5D-1 貨幣、背包、腰包、商店（邏輯在 trpg.world.economy） ---
+    gold: int = Field(default=0, ge=0)
+    """金幣（08 8.15：戰鬥、出售物品 → 買消耗品…）。"""
+    quest_coins: int = Field(default=0, ge=0)
+    """任務幣（8.15：任務、懸賞、世界事件；影子被借用的任務幣也轉進來）。"""
+    bag: dict[str, int] = Field(default_factory=dict)
+    """背包：物品 → 個數（依 ID 排序；30 格照每種物品的疊數算，8.17）。"""
+    pouch: dict[str, int] = Field(default_factory=dict)
+    """腰包：消耗品 → 個數（依 ID 排序；合計最多 3 個，戰鬥中當道具用，8.17）。"""
+    shop_week: tuple[ShopPurchase, ...] = ()
+    """本週買過的限量商品（依店、物品排序）。"""
+    shop_affinity: dict[str, CompanionAffinity] = Field(default_factory=dict)
+    """店主 NPC → 今天在店裡消費加過的好感度（18.7.6：柳掌櫃每天最多 +4）。"""
+
+    @field_validator("bag", "pouch")
+    @classmethod
+    def _sorted_counts(cls, counts: dict[str, int]) -> dict[str, int]:
+        return _check_counts(counts)
+
+    @field_validator("shop_week")
+    @classmethod
+    def _sorted_shop_week(cls, rows: tuple[ShopPurchase, ...]) -> tuple[ShopPurchase, ...]:
+        keys = [(r.shop, r.item) for r in rows]
+        if keys != sorted(set(keys)):
+            raise ValueError("shop_week 必須依店、物品排序且不重複")
+        return rows
+
+    @field_validator("shop_affinity")
+    @classmethod
+    def _sorted_shop_affinity(
+        cls, rows: dict[str, CompanionAffinity]
+    ) -> dict[str, CompanionAffinity]:
+        return dict(sorted(rows.items()))
 
     @field_validator("party_ai")
     @classmethod

@@ -1,0 +1,19 @@
+# 大世界的經濟（Phase 5D-1；docs/phases/Phase5計畫.md 25.2）。schema：src/trpg/content/world_economy.py。
+# 全部是開發 PM 定的初值（代決 5D1-1～5D1-5），之後用模擬或試玩調，只改這裡。
+# - bag_slots／pouch_slots：背包 30 格、腰包每場最多帶 3 個（08 8.17）。
+# - stack_max：一格疊幾個（代決 5D1-2）。
+# - sell_permille：賣價＝買價 × 500‰（捨去、至少 1；代決 5D1-5）。
+# - battle_gold：打贏一場的金幣（8.15「戰鬥」）；陣容含精英用 elite；每高 1 級建議等級 +10%（代決 5D1-3）。
+# - quest_coins：完成任務給的任務幣（8.15「任務」；每步不給，代決 5D1-4）；by_quest 可個別覆寫。
+bag_slots: 30
+pouch_slots: 3
+stack_max: {consumable: 10, material: 20, dye: 10}
+sell_permille: 500
+start_gold: 0
+battle_gold:
+  battle: 15
+  elite: 45
+  level_step_permille: 100
+quest_coins:
+  by_kind: {starter: 2, main: 3, chain: 3, hidden: 2}
+  by_quest: {}
