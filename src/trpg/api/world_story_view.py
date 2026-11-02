@@ -61,7 +61,7 @@ from trpg.world.common import here, world_map_of
 from trpg.world.growth import as_run, at_service, skill_seed, world_library
 from trpg.world.narration import region_npcs, region_skeletons, story_masks
 from trpg.world.quests import condition_holds, quest_table
-from trpg.world.situations import situation_facts, situation_rules
+from trpg.world.situations import opportunity_available, situation_facts, situation_rules
 from trpg.world.state import CharacterState, ThreadState, WorldState
 from trpg.world.threads import active_threads
 
@@ -197,6 +197,20 @@ def _held_thread(char: CharacterState, thread: str | None, now: int) -> ThreadSt
     return next((t for t in char.threads if t.thread == thread and t.expires_at > now), None)
 
 
+def _opportunity_problem(
+    library: ContentLibrary, char: CharacterState, solution: SolutionDef
+) -> str | None:
+    """機遇（5B-4c，同 ``trpg.world.solutions`` 的檢查）：條件不成立、這個機遇拿過了。"""
+    pending = char.pending_event
+    if pending is not None and pending.skeleton in char.opportunities:
+        return "這個機遇已經拿過了"
+    if not opportunity_available(library, char, solution):
+        keyword = solution.requires_keyword or ""
+        found = library.keywords.by_id().get(keyword)
+        return f"要裝備帶「{found.name_zh if found is not None else keyword}」的技能"
+    return None
+
+
 def _solution_problem(
     library: ContentLibrary,
     char: CharacterState,
@@ -208,10 +222,10 @@ def _solution_problem(
 ) -> str | None:
     if solution.kind == "situation":
         return busy if has_template else LATER_ZH
-    if solution.kind == "opportunity":
-        return LATER_ZH
     if busy is not None:
         return busy
+    if solution.kind == "opportunity":
+        return _opportunity_problem(library, char, solution)
     if solution.kind == "combat" and not _can_fight_here(library, char):
         return "這裡打不起來"
     if solution.kind == "parley" and not waivable and char.supplies < solution.cost_supplies:

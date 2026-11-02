@@ -114,9 +114,9 @@ def test_travel_narrates_event_and_reload_keeps_it(client: TestClient) -> None:
     assert kinds["situation"]["available"] is True
     assert kinds["situation"]["template"] is not None
     for kind, solution in kinds.items():
-        if kind == "opportunity":  # 機遇的結算還沒做（5B-5b 仍停用）
+        if kind == "opportunity":  # 5B-4c：沒裝備需要的關鍵字技能時停用
             assert solution["available"] is False
-            assert solution["unavailable_zh"] == "之後開放"
+            assert solution["unavailable_zh"].startswith("要裝備帶")
     again = _ok(client.get(f"/api/world/characters/{cid}"))
     assert again["event"]["story"] == event["story"]
     log = _store(client).entries()
