@@ -26,6 +26,11 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.world_map import LocationMapDef
+from trpg.content.world_narration import (
+    STORY_TEMPLATES_FILE,
+    StoryTemplates,
+    load_story_templates,
+)
 from trpg.content.world_situations import SituationContent, load_situation_content
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute
@@ -381,6 +386,8 @@ class WorldEventContent:
     rules: EventRules | None = None
     situations: SituationContent = field(default_factory=SituationContent)
     """情境模板與情境規則（Phase 5B-2；``trpg.content.world_situations``）。"""
+    story: StoryTemplates | None = None
+    """說書人的降級模板與各區語氣（Phase 5B-3；``trpg.content.world_narration``）。"""
 
 
 def _load_region_dir[M: EventSkeletonTable | NpcCardTable](
@@ -475,9 +482,15 @@ def load_world_event_content(
         race_ids=race_ids,
         files=files,
     )
+    story_path = root / STORY_TEMPLATES_FILE
+    story: StoryTemplates | None = None
+    if story_path.is_file():
+        story = load_story_templates(story_path, regions=world_maps.keys())
+        files.append((story_path, story))
     return WorldEventContent(
         events=event_tables,
         npcs={r: t for r, (_, t) in sorted(npcs.items())},
         rules=rules,
         situations=situations,
+        story=story,
     )

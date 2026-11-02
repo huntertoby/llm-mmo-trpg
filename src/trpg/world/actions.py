@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.content.battle import ID_PATTERN
 from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
+from trpg.content.world_narration import StoryScene, StoryText
 from trpg.content.world_oaths import OATH_TEXT_LIMIT, OathProposal
 from trpg.content.world_situations import (
     PLAYER_TEXT_LIMIT,
@@ -57,6 +58,8 @@ __all__ = [
     "LoadoutChangedEvent",
     "LocationClearedEvent",
     "LocationRevealedEvent",
+    "NarrateAction",
+    "NarratedEvent",
     "OathReleasedEvent",
     "OathSwornEvent",
     "PerceptionCheckEvent",
@@ -159,6 +162,29 @@ class SituationAction(_Model):
     prompt_version: str | None = Field(default=None, max_length=64)
 
 
+class NarrateAction(_Model):
+    """說書人的一段敘述（Phase 5B-3；09 9.6.7 #3、#6、#7）。
+
+    ``story`` 是 LLM（或降級模板）的輸出、已經過 pydantic 驗證；引擎另外核對引用（NPC、地點、線頭
+    存在且角色看得到）與禁止文字。敘述、來源、prompt 版本與玩家原文都隨動作進世界動作日誌，重播照
+    紀錄、不呼叫 LLM（10 第 10 節）。只有 ``event`` 會改狀態（在候選內換骨架）。
+    """
+
+    kind: Literal["narrate"] = "narrate"
+    scene: StoryScene
+    template: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``situation``／``outcome``：情境模板。"""
+    outcome: Outcome | None = None
+    """``outcome``：判定結果（外層從 ``situation_check`` 事件帶入）。"""
+    npc: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``chat``：聊天的 NPC。"""
+    player_text: str = Field(default="", max_length=PLAYER_TEXT_LIMIT)
+    """``chat``：玩家說的話（只是紀錄；給 LLM 時包在 ``<player_input>``）。"""
+    story: StoryText
+    source: Literal["llm", "fallback"] = "fallback"
+    prompt_version: str | None = Field(default=None, max_length=64)
+
+
 class AllocateAction(_Model):
     """分配未分配的屬性點（07 7.2；5A-6）：屬性 → 加幾點，總數 ≤ ``attribute_points``。"""
 
@@ -233,6 +259,7 @@ type WorldAction = Annotated[
     | LoadoutAction
     | TeleportAction
     | SituationAction
+    | NarrateAction
     | AllocateAction
     | RespecAction
     | FlashAction
@@ -388,6 +415,19 @@ class EventResolvedEvent(_Model):
     solution: int
     """骨架 ``solutions`` 的索引。"""
     outcome: Outcome
+
+
+class NarratedEvent(_Model):
+    """說書人的敘述（Phase 5B-3）：給前端顯示與之後的記憶。``skeleton`` 是敘述後的骨架。"""
+
+    kind: Literal["narrated"] = "narrated"
+    scene: StoryScene
+    skeleton: str | None = None
+    template: str | None = None
+    outcome: Outcome | None = None
+    npc: str | None = None
+    story: StoryText
+    source: Literal["llm", "fallback"]
 
 
 class CampedEvent(_Model):
@@ -584,6 +624,7 @@ type WorldEvent = Annotated[
     | ThreadAddedEvent
     | ThreadPushedOutEvent
     | EventResolvedEvent
+    | NarratedEvent
     | InsightGainedEvent
     | SkillTierChangedEvent
     | AttributesAllocatedEvent

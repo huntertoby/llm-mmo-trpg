@@ -1,0 +1,17 @@
+# 說書人的降級模板與各區語氣（Phase 5B-3；docs/phases/Phase5計畫.md 14.4）。schema：src/trpg/content/world_narration.py。
+# 用途：本機模型不可用、或說書人的輸出一直不合法時，用這裡的模板文字代替（docs/專案計畫.md 3.1「模型不可用時遊戲要能降級」）。
+# tones：給說書人的區域語氣（docs/design/09-世界與敘事.md 9.6.10 #107：旁白簡潔具體、短句少形容詞；雲嶺古風）。
+# 佔位符：{who} 骨架的誰、{want} 想要、{obstacle} 阻礙、{stakes} 賭注、{location} 地點名、{approach} 情境模板的說明、{name} NPC 名。
+# 開發 PM 定（代決 5B3-7），之後可改；改了只動這個檔。
+tones:
+  cloud_ridge: 古風：短句、少形容詞，帶一點文言；修士稱人「施主」
+event_text: 在{location}，{who}擋在你面前。
+event_more: '{who}想要{want}。擋在中間的是{obstacle}。賭上的是{stakes}。'
+event_more_no_obstacle: '{who}想要{want}。賭上的是{stakes}。'
+situation_text: '{who}的事還沒了結。你打算{approach}。'
+situation_more: 賭上的是{stakes}。
+outcome_text:
+  success: '{approach}，成了。'
+  partial: '{approach}，只成了一半。'
+  failure: '{approach}，沒有成。'
+chat_text: '{name}看了你一眼，沒有多說。'

@@ -31,6 +31,7 @@ from trpg.world.actions import (
     FlashPickAction,
     LoadoutAction,
     LocationRevealedEvent,
+    NarrateAction,
     PerceptionCheckEvent,
     RestAction,
     RetreatAction,
@@ -49,6 +50,7 @@ from trpg.world.common import world_map_of as _world_map
 from trpg.world.errors import WorldActionError
 from trpg.world.events import roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
+from trpg.world.narration import apply_narration
 from trpg.world.rng import STREAM_BATTLE, STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.situations import resolve_situation
 from trpg.world.state import (
@@ -155,10 +157,24 @@ def world_step(
             raise WorldActionError("目前沒有遭遇")
         world, char, events = fight(library, world, char, action, now)
         return StepResult(world=world, char=char, events=events)
+    if isinstance(action, SituationAction | NarrateAction):
+        return _story(library, world, char, action, now)
+    return _service(library, world, char, action)
+
+
+def _story(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: SituationAction | NarrateAction,
+    now: int,
+) -> StepResult:
+    """事件的情境判定（5B-2）與說書人敘述（5B-3，:mod:`trpg.world.narration`）。"""
     if isinstance(action, SituationAction):
         world, char, events = resolve_situation(library, world, char, action, now)
-        return StepResult(world=world, char=char, events=events)
-    return _service(library, world, char, action)
+    else:
+        char, events = apply_narration(library, world, char, action, now)
+    return StepResult(world=world, char=char, events=events)
 
 
 def _service(
