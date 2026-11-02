@@ -1,4 +1,4 @@
-"""情境判定的模板、規則與 LLM 提議的 schema（Phase 5B-2；``docs/phases/Phase5計畫.md`` 第 9 節）。
+"""情境判定的模板、規則與 LLM 提議的 schema（Phase 5B-2；``docs/phases/Phase5計畫.md`` 第 10 節）。
 
 - 情境模板（``content/world/situations/<region>.yaml``）：事件骨架「情境判定」解法的可結算資料
   （``docs/design/09-世界與敘事.md`` 9.6.4）：允許的方法與屬性（2～3 種）、基準 DC、危險度、
@@ -133,19 +133,20 @@ class CheckRules(ContentModel):
 
 
 class SituationBudget(ContentModel):
-    """獎勵預算（9.6.7 #6「獎勵照地點建議等級的預算表」）。"""
+    """獎勵預算（9.6.7 #6「獎勵照地點建議等級的預算表」；07 7.8 經驗來源比例）。"""
 
-    xp_base: int = Field(ge=0)
-    xp_per_level: int = Field(ge=0)
+    xp_battle_permille: int = Field(ge=0, le=1000)
+    """xp 預算＝打贏一場的經驗（``world/rules.yaml`` 的 ``battle.xp_per_battle``）× 這個 ‰
+    （07 7.8：情境判定成功＝一般戰鬥的 0.5 份）。"""
     supplies_max: int = Field(ge=0)
     threads_max: int = Field(ge=0, le=2)
     """一次事件結果最多留 2 條線頭（9.6.7 #6「0～2 條」）。"""
     buffs_max: int = Field(ge=0)
     reveals_max: int = Field(ge=0)
 
-    def xp_for(self, level: int) -> int:
-        """該等級地點的 xp 預算。"""
-        return self.xp_base + self.xp_per_level * level
+    def xp_for(self, xp_per_battle: int) -> int:
+        """xp 預算（打贏一場給 ``xp_per_battle`` 時）。"""
+        return xp_per_battle * self.xp_battle_permille // 1000
 
 
 class DangerDef(ContentModel):

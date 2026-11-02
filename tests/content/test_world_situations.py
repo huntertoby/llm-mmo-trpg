@@ -1,4 +1,4 @@
-"""情境模板、情境規則與提議 schema（Phase 5B-2；``docs/phases/Phase5計畫.md`` 9.7）。"""
+"""情境模板、情境規則與提議 schema（Phase 5B-2；``docs/phases/Phase5計畫.md`` 10.7）。"""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""情境判定的引擎半（Phase 5B-2；``docs/phases/Phase5計畫.md`` 第 9 節；09 9.6.4）。
+"""情境判定的引擎半（Phase 5B-2；``docs/phases/Phase5計畫.md`` 第 10 節；09 9.6.4）。
 
 純函式：吃「已經過 pydantic 驗證的提議」
 （:class:`~trpg.content.world_situations.SituationProposal`），不呼叫 LLM、不讀玩家文字。流程：
@@ -279,13 +279,6 @@ def _check_action(
     return trigger, template
 
 
-def _location_level(library: ContentLibrary, region: str, location: str) -> int:
-    loc = library.world_maps[region].location_by_id().get(location)
-    if loc is None or loc.level_max is None:
-        return 1
-    return loc.level_max
-
-
 @dataclass
 class _Apply:
     """結算中的可變暫存（只在 :func:`resolve_situation` 內部使用）。"""
@@ -346,7 +339,6 @@ def _apply_outcome(
     template: SituationTemplateDef,
     outcome: Outcome,
     *,
-    level: int,
     exchange_spent: int,
     now: int,
 ) -> None:
@@ -360,7 +352,8 @@ def _apply_outcome(
     supplies_cap = library.world_rules.supplies.max if library.world_rules is not None else 0
     supplies = max(0, char.supplies - pen.supplies)
     supplies = min(supplies_cap, supplies + min(rew.supplies, budget.supplies_max))
-    xp = budget.xp_for(level) * rew.xp_permille // 1000
+    battle_xp = library.world_rules.battle.xp_per_battle if library.world_rules is not None else 0
+    xp = budget.xp_for(battle_xp) * rew.xp_permille // 1000
     hp_lost = 0
     if pen.hurt_permille:
         hp_lost = max(0, min(char.hp - 1, _max_hp(library, char) * pen.hurt_permille // 1000))
@@ -448,10 +441,7 @@ def resolve_situation(
             source=action.source,
         )
     )
-    level = _location_level(library, trigger.region, trigger.location)
-    _apply_outcome(
-        library, state, template, outcome, level=level, exchange_spent=exchange_spent, now=now
-    )
+    _apply_outcome(library, state, template, outcome, exchange_spent=exchange_spent, now=now)
     state.char = state.char.model_copy(update={"pending_event": None})
     state.events.append(
         EventResolvedEvent(

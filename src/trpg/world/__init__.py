@@ -19,6 +19,9 @@
 - :mod:`trpg.world.step`：:func:`world_step`（移動＋遇敵、事件擲骰、感知判定、紮營）。
 - :mod:`trpg.world.events`：事件出現擲骰（依步數與種子，5B-1）。
 - :mod:`trpg.world.threads`：線頭的有效、到期與上限（5B-1）。
+- :mod:`trpg.world.battle`：遇敵開戰設定（地圖換皮、敵人依等級成長）與勝負回寫（5A-4）。
+- :mod:`trpg.world.town`：撤退、城鎮休息、換技能、傳送（5A-4）。
+- :mod:`trpg.world.common`：共用的內容與角色數值小工具（5A-4）。
 - :mod:`trpg.world.replay`：世界動作日誌與重播。
 - :mod:`trpg.world.save`：存檔格式與原子寫檔。
 """

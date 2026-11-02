@@ -1,4 +1,4 @@
-"""情境判定的引擎半（Phase 5B-2；``docs/phases/Phase5計畫.md`` 9.5、9.7）。"""
+"""情境判定的引擎半（Phase 5B-2；``docs/phases/Phase5計畫.md`` 10.5、10.7）。"""
 
 from __future__ import annotations
 
@@ -279,9 +279,9 @@ def test_total_formula_and_outcome(library: ContentLibrary, make_char: MakeChar)
 def test_three_outcomes(library: ContentLibrary, make_char: MakeChar) -> None:
     char = at_event(make_char(), "wounded_peddler", strong=True)
     budget = situation_rules(library).budget
-    level = library.world_maps["cloud_ridge"].location_by_id()["ferry_steps"].level_max
-    assert level is not None
-    full = budget.xp_for(level)
+    assert library.world_rules is not None
+    full = budget.xp_for(library.world_rules.battle.xp_per_battle)
+    assert full == 50  # 07 7.8：情境判定成功＝一般戰鬥 0.5 份（部分成功 0.25）
 
     ok = world_step(
         sure(library, "peddler_safe_path", "success"), make_world(), char, peddler(), NOON

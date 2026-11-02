@@ -1,4 +1,4 @@
-"""情境判定的 LLM 提議（Phase 5B-2；``docs/phases/Phase5計畫.md`` 9.5、9.7）；全部用 Mock。"""
+"""情境判定的 LLM 提議（Phase 5B-2；``docs/phases/Phase5計畫.md`` 10.5、10.7）；全部用 Mock。"""
 
 from __future__ import annotations
 

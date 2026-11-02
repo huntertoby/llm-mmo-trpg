@@ -11,9 +11,18 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from tests.world.helpers import NOON, make_world
+from tests.world.helpers import NOON, make_world, with_rules
 from trpg.content.library import ContentLibrary
-from trpg.world.actions import CampAction, TravelAction, WorldAction
+from trpg.world.actions import (
+    CampAction,
+    FightAction,
+    LoadoutAction,
+    RestAction,
+    RetreatAction,
+    TravelAction,
+    WorldAction,
+)
+from trpg.world.battle import auto_steps
 from trpg.world.errors import WorldActionError, WorldReplayError
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, dumps_world, loads_log
@@ -158,3 +167,43 @@ def test_replay_is_deterministic(
     entries = _play(library, world, live, picks)
     result = replay(library, world, start, entries)
     assert _snapshot(result.world, result.characters) == _snapshot(world, live)
+
+
+def test_replay_with_battle_and_town(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5A-4：移動 → 遇敵 → 撤退 → 再遇敵 → 戰鬥（步驟在日誌裡）→ 回小鎮休息、換技能；
+    重播逐字相同。"""
+    ambush = with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000})
+    world = make_world()
+    start = {"alice": make_char("alice")}
+    chars = dict(start)
+    entries: list[WorldLogEntry] = []
+    now = NOON
+
+    def act(action: WorldAction) -> None:
+        nonlocal world, now
+        now += 30
+        result = world_step(ambush, world, chars["alice"], action, now)
+        world = result.world
+        chars["alice"] = result.char
+        entries.append(
+            WorldLogEntry(seq=len(entries) + 1, now=now, character_id="alice", action=action)
+        )
+
+    act(TravelAction(to="ferry_steps"))
+    act(RetreatAction())
+    act(TravelAction(to="ferry_steps"))
+    act(FightAction(steps=auto_steps(ambush, chars["alice"])))
+    if chars["alice"].location != "mist_ferry":
+        act(TravelAction(to="mist_ferry"))
+    act(RestAction())
+    act(LoadoutAction(skills=chars["alice"].hero.skills[1:]))
+    assert any(isinstance(e.action, FightAction) for e in entries)
+
+    restored = loads_log(dumps_log(entries))
+    assert restored == tuple(entries)
+    first = replay(ambush, make_world(), start, entries)
+    second = replay(ambush, make_world(), start, restored)
+    assert _snapshot(first.world, first.characters) == _snapshot(world, chars)
+    assert _snapshot(first.world, first.characters) == _snapshot(second.world, second.characters)
+    assert first.events == second.events
+    assert any(e.kind == "battle_ended" for _, e in first.events)

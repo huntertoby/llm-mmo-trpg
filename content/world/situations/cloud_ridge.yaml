@@ -1,4 +1,4 @@
-# 雲嶺情境模板（Phase 5B-2；docs/phases/Phase5計畫.md 9.3）。schema：src/trpg/content/world_situations.py。
+# 雲嶺情境模板（Phase 5B-2；docs/phases/Phase5計畫.md 10.3）。schema：src/trpg/content/world_situations.py。
 # 來源：docs/design/18-雲嶺內容.md 18.4 每個「情境判定」解法一個模板（skeleton＋solution＝骨架與解法索引，0 起）。
 # - attributes：開頭＝18.4 解法的屬性；第 2 種照 18.4「補充」（玩法 PM 定）：從 09 9.6.11 方法表同一類的
 #   常見屬性補，不夠再補一個主題不同的屬性。methods：每個屬性都有一個方法能用（9.6.11 #115）。

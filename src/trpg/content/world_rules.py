@@ -4,11 +4,15 @@
 遇敵機率（9.6.7 #9「越危險的區越高」）、隱藏地點感知判定的 DC（9.6.11 #112）、各區天氣權重
 （05 5.1「各區天氣傾向」、9.6.10 #104）。數值都是開發 PM 定的初值，之後用模擬定（9.6.10
 「數值類」）；改數值只改資料、不改程式（守則 4）。規則本身在 ``trpg.world``。
+
+Phase 5A-4 加上 ``battle``（遇敵戰鬥的回寫：經驗、疲憊、已清空與重生）與 ``enemy_growth``（敵人依
+地點建議等級成長）；兩者都有預設值，舊的精簡 content 照常載入。
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Literal
 
 from pydantic import Field, model_validator
 
@@ -17,7 +21,9 @@ from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 
 __all__ = [
+    "BattleRules",
     "EncounterRates",
+    "EnemyGrowthRules",
     "HastenRules",
     "PerceptionRules",
     "RegionWeather",
@@ -101,6 +107,54 @@ class RegionWeather(WeatherWeights):
     region: str = Field(pattern=ID_PATTERN)
 
 
+ClearKind = Literal[
+    "camp", "ruin", "altar", "anomaly", "caravan", "village", "secret", "elite_lair", "boss"
+]
+"""打贏後可以寫「已清空」的地點種類（城鎮、傳送點不會遇敵，不在內）。"""
+
+
+class BattleRules(ContentModel):
+    """遇敵戰鬥與勝負回寫（5A-4；``docs/phases/Phase5計畫.md`` 9.4）。"""
+
+    max_rounds: int = Field(default=30, ge=1)
+    xp_per_battle: int = Field(default=100, ge=0)
+    """打贏一場的經驗（Q8 初值；等級門檻沿用原型 ``roguelite.yaml`` 的 ``level_thresholds``）。"""
+    fatigue_hp_permille: int = Field(default=800, ge=1, le=1000)
+    """疲憊：全滅後下一場開場 HP 上限（最大 HP 的 ‰；9.6.9 #98）。"""
+    clear_kinds: tuple[ClearKind, ...] = ("camp",)
+    """打贏後寫「已清空」的地點種類（9.6.7 #15）。"""
+    respawn_seconds: int = Field(default=1800, ge=0)
+    """已清空到重生的秒數（遊戲內 1 天＝1800 秒）。"""
+
+    @model_validator(mode="after")
+    def _unique_kinds(self) -> BattleRules:
+        if len(set(self.clear_kinds)) != len(self.clear_kinds):
+            raise ValueError("battle.clear_kinds 不可重複")
+        return self
+
+
+class EnemyGrowthRules(ContentModel):
+    """敵人依地點建議等級成長（5A-4 追加 A；和主角同樣的成長，範本＝1 級基準）。"""
+
+    attribute_points_per_level: int = Field(default=2, ge=0)
+    skill_tier_by_level: tuple[int, ...] = Field(
+        default=(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), min_length=1
+    )
+    """等級 → 技能階級（07 7.6：1～3 級 1 階、4～7 級 2 階、8～10 級 3 階）；
+    超出表的等級用最後一格。"""
+
+    @model_validator(mode="after")
+    def _tiers(self) -> EnemyGrowthRules:
+        tiers = self.skill_tier_by_level
+        if any(t < 1 for t in tiers) or list(tiers) != sorted(tiers):
+            raise ValueError("enemy_growth.skill_tier_by_level 必須 ≥ 1 且不遞減")
+        return self
+
+    def tier_for(self, level: int) -> int:
+        table = self.skill_tier_by_level
+        return table[min(max(level, 1), len(table)) - 1]
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
@@ -112,6 +166,8 @@ class WorldRules(ContentModel):
     default_weather: WeatherWeights = WeatherWeights(day={"clear": 1}, night={"night": 1})
     """沒有列在 ``weather`` 的區域用這組。"""
     weather: tuple[RegionWeather, ...] = ()
+    battle: BattleRules = BattleRules()
+    enemy_growth: EnemyGrowthRules = EnemyGrowthRules()
 
     @model_validator(mode="after")
     def _unique_regions(self) -> WorldRules:

@@ -80,7 +80,8 @@ def test_apply_variant(library: ContentLibrary) -> None:
     assert thunder.id == "thunder_talisman_caster"
     assert thunder.name_zh == "雷符師"
     assert thunder.weapon == "lightning_staff"
-    assert thunder.skills == ("skill_spark_chain", "skill_static_palm")
+    assert thunder.skills == ("skill_frost_shackle", "skill_static_palm")
+    assert base.skills == ("skill_frost_shackle", "skill_hush")  # 5A-4 追加 B：純控制
     assert thunder.max_hp == base.max_hp
     assert thunder.tags == base.tags
     frost = catalog.template("frost_crane_archer")
@@ -295,8 +296,8 @@ def test_variant_breaking_unit_rules_is_rejected(tmp_path: Path, library: Conten
     path = content / "world" / "enemies.yaml"
     # 弓的技能換到法杖上：套用後的範本武器不相容
     text = path.read_text(encoding="utf-8").replace(
-        "weapon: lightning_staff\n    skill_swaps: {skill_frost_shackle: skill_spark_chain}",
-        "weapon: lightning_staff\n    skill_swaps: {skill_frost_shackle: skill_high_ground_shot}",
+        "weapon: lightning_staff\n    skill_swaps: {skill_hush: skill_static_palm}",
+        "weapon: lightning_staff\n    skill_swaps: {skill_hush: skill_high_ground_shot}",
     )
     path.write_text(text, encoding="utf-8", newline="\n")
     with pytest.raises(ContentError, match=r"enemies\.yaml"):

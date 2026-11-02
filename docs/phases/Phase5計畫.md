@@ -52,7 +52,8 @@
 | Q7 | 「營火」在地點圖上是什麼：固定地點，還是任何地點花補給紮營（9.6.7 #11「野外紮營要用」）？ | 規則 | 玩法 PM 代決 | 任何非戰鬥中的地點都能花補給紮營＝營火 | 5A-4 |
 | Q8 | 經驗曲線、各來源給多少經驗（7.8 約第 7～8 天到 10 級） | 數值 | 開發 PM 定初值 → 模擬定 | 寫在 content；先沿用原型曲線 | 5A-4 |
 | Q9 | 第 2 區 **灰燼荒原** 的內容（敵人家族、地點圖、事件、主線第 2 章）與 **主線第 3 章／賽季 Boss「碎晶之主」**（9.7 只有大綱） | 內容 | 玩法 PM 寫（同 18 的方式） | 程式先做通用，內容等玩法 PM；不擋 5A～5E | 5F 之前 |
-| Q10 | 用心清單、種族加值的「方法分類」清單（9.6.4 只給例子；各族清單「大世界開發時定」#89） | 規則 | 玩法 PM 代決 | 只用 9.6.4 表列出的方法；種族加值先只做狐族說服、欺騙（18 事件 18 用到） | 5B-2 |
+| Q10 | 用心清單、種族加值的「方法分類」清單（9.6.4 只給例子；各族清單「大世界開發時定」#89） | 規則 | 玩法 PM 代決 | 只用 9.6.4 表列出的方法；種族加值先只做狐族說服、欺騙（18 事件 18 用到） | 5B-1b | 5B-1 補資料（玩法 PM 2026-11-02，18 18.4 末段「補充」，`6f66287b`）：12 個骨架的 follows 對照表、世界級線頭（霧魅從裂痕湧出、碎片被送往灰燼荒原）、新骨架 19～21（阿岳的請託、失控的丹爐、霜音的謎） | 5B-1 | 0.5 h | 可與 5A-M1 平行 |
+| 5B-2 |
 | Q11 | 線頭上限與到期（9.6.7 #6「每人約 5 條、約 3 天」「數值待大世界開發定」） | 數值 | 開發 PM 定初值 | 5 條、遊戲外 3 天（現實時間），寫 content | 5B-1 |
 | Q12 | 系統傭兵的 **固定 build 名單**（9.6.8：輸出、守護、輔助、控制各至少 2 種） | 內容 | 玩法 PM 寫 | 暫用 `content/sim/builds.yaml` 的模擬範本挑 8 個 | 5C-1 |
 | Q13 | 好感度的級距與名稱（8.26.1 例「友善」） | 規則 | 玩法 PM 代決 | 5 級：敵視／冷淡／中立／友善／信賴，數值 −100～100 | 5B-4 |
@@ -83,6 +84,8 @@
 | 5A-3 | 雲嶺敵人內容：山中修士 10 種、中立野獸 4 種、源晶失控造物 2 種（18.2）；精英詞綴與元素變體的 schema（9.6.6）；地點 → 遭遇表（含遠程上限、營地混精英） | 5A-1 | 1.5 h | 可與 5A-2 平行（只碰 `content/units/`、`content/world/encounters/`、詞綴 schema） |
 | 5A-4 | 遇敵展開戰鬥與城鎮服務：用地點的地圖模板開戰（沿用原型戰鬥、`region` 換皮）、戰前看陣容可撤退（9.6.6）、勝負回寫（經驗、全滅回小鎮＋疲憊 #98）、小鎮休息與換技能（9.6.7 #2、7.6）、傳送點、紮營 | 5A-2、5A-3 | 1.5 h | 否 |
 | 5A-5 | API 與前端地點圖畫面：地點圖（點相鄰地點移動、建議等級、隱藏地點、已清空）、小鎮選單、從地點進戰鬥再回來；本機單一開發帳號 | 5A-4 | 1.5 h | 否 |
+| 5A-6 | 大世界成長接點（玩法 PM 2026-11-02）：主角技能階級照 07 7.6（1～3 級 1 階、4～7 級 2 階、8～10 級 3 階；原型 `offer_tier_by_level` 只留 roguelite）、配點、靈感與閃現、重閃、溶掉、傳承、立誓的引擎接點 | 5A-4 | 1.5 h | 可與 5A-5 平行 |
+| 5A-SIM | 練等手感與經驗曲線模擬（代決初值）：同等級主角＋2 隊友打該地點遭遇勝率 ≥ 85%、結束剩 40～70% HP，高 2 級約一半；經驗來源比例 一般 1／精英 3／任務鏈一步 3／主線一步 5／情境成功 0.5（部分 0.25）／隱藏地點 2／懸賞 4；每天約 3 小時，第 3 天 5 級、第 6 天 8 級、第 7～8 天 10 級；精英首殺 +1 靈感。差太多再調敵人成長倍率 | 5A-4 | 1 h | 可與 5A-5 平行 |
 | 5A-M1 | 引擎機制①（玩法 PM 2026-11-02，5A-3 待決）：蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護；做好後把雲嶺替代品換成正式機制（只改 content） | 5A-4 | 1.5 h | 可與 5A-ART 平行 |
 | 5A-M2 | 引擎機制②：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門 | 5A-M1 | 1 h | — |
 | 5B-M3 | 引擎機制③：三方混戰（排在 5B 主線第 1 章之前） | 5A-M1 | 1 h | — |
@@ -940,12 +943,128 @@ threads:
 | 5B1-7 | 情境判定解法的屬性照 18.4 填 1～2 個（9.6.4 模板「2～3 種」是 5B-2 情境模板的事） | 5B-2 再定骨架解法和情境模板的對應 |
 | 5B1-8 | 新欄位有預設值、存檔格式版本不升 | 2.5；加欄位不破壞舊檔 |
 
-## 9. 5B-2 詳細規格：情境判定引擎
+## 9. 5A-4 詳細規格：遇敵展開戰鬥與城鎮服務
+
+> 給實作 agent。只動 `src/trpg/world/`、`src/trpg/content/world_rules.py`、`content/world/rules.yaml`（末尾加區塊，改動小）、`content/units/sect_talisman_caster.yaml` 與 `content/world/enemies.yaml` 的雷符師（追加 B）、`tests/world/`、受影響的 `tests/content/`。**不做** API、前端（5A-5）；不改 `trpg.engine`、`trpg.roguelite`（只匯入重用）、`trpg-run` 格式與戰鬥紀錄格式。
+> 依據：09 9.6.2（遇敵展開的格子取自地點的地圖模板）、9.6.6（開戰前看得到陣容、可撤退、不扣任何東西；精英強度以建議等級為準）、9.6.7 #2（只有城鎮與營火完全回復、換技能）、#11（補給用完只能回城補）、#15（已清空、一段時間後重生）、9.6.2「城鎮之間用傳送點」、9.6.9 #98（野外全滅：回小鎮、HP 回滿、沒有戰利品、經驗不扣、下一場「疲憊」開場 HP 80%、打完一場就消失）、9.6.11 #113（耐力戰後回滿、法力只在營火與城鎮回滿、HP 不自動回）、#114（營火＝紮營，可換技能）；05 5.1「區域地圖池」（機制不動、只換 `region` 外觀）；07 7.6（換裝地點：主城、區域小鎮、營火；裝備欄上限；技能階級 1～3／4～7／8～10）、7.8（經驗、敵人不跟著玩家縮放、地點標建議等級）；本檔 2.1～2.4、6.4、7.2。
+> **追加（開發 PM 轉玩法 PM 2026-11-02，#81 練等前提）**：A. 敵人範本照地點建議等級成長（和主角同樣的成長；範本＝1 級基準）；B. 符籙師改成純控制（定身符＋封符），雷符師保留雷符＋定身符。
+
+### 9.1 目標
+
+大世界一場遭遇從頭到尾可玩、可重播：**移動 → 遇敵 → 看陣容（可撤退）→ 戰鬥 → 勝負回寫**；城鎮可休息、換技能、傳送；營火（5A-2 的紮營）可換技能。戰鬥本身沿用原型引擎（`trpg.engine`）與 roguelite 的主角出場算法，戰鬥的步驟寫進世界動作日誌，重播時用同一份設定與種子重算勝負（第 2.4 節）。
+
+### 9.2 交付項目
+
+1. **世界動作**（`trpg.world.actions`，加進 `WorldAction` 判別聯集）：
+
+   | 動作 | 欄位 | 條件（不合法拋 `WorldActionError`，狀態不變） |
+   |---|---|---|
+   | `retreat` | — | 有 `pending_encounter`；回到出發地點（`EncounterResult.from_location`；舊資料沒有時回本區小鎮），清掉遭遇；不扣補給、不擲骰（9.6.6「不扣任何東西」） |
+   | `fight` | `steps: tuple[Step, ...]` | 有 `pending_encounter`；以 9.3 的設定與 `battle_seed` 開戰，依序套用 `steps`（引擎 `apply_step`），套用後戰鬥必須已結束；回寫見 9.4 |
+   | `rest` | — | 在城鎮（`kind == "town"`）、沒有遭遇；HP、法力回滿、耐力滿、補給補到至少 `supplies.start`（9.6.7 #11「回城補」；代決 5A4-11）；免費 |
+   | `loadout` | `skills: tuple[str, ...]` | 在城鎮或營火（`camped_at` 是目前地點）、沒有遭遇；只能裝擁有的技能（裝備＋`bench`）、不重複、欄位上限（roguelite `equip_problems`）；沒裝上的進 `bench`（排序） |
+   | `teleport` | `region` | 沒有遭遇；在城鎮 → 目的區域的小鎮必須在 `visited_towns`；或在傳送點（`gate`）且 `gate_to == region`；目的區域要有地點圖；抵達目的區域的小鎮、記入 `visited_towns` |
+
+2. **事件**：`retreated`（from、to）、`battle_started`（地圖、`region`、陣容、敵人等級、天氣、我方開場 HP、`fatigued`）、`battle_ended`（won、end_reason、rounds、hp、mana、xp_gained、level）、`leveled_up`（level、attribute_points）、`defeated`（回到的地點、HP）、`location_cleared`（location、respawn_at）、`rested`、`loadout_changed`、`teleported`（region、location）。
+
+3. **狀態欄位**（全部有預設值，舊的 `trpg-char/1`／`trpg-world/1` 照樣讀得進來，格式字串不變）：
+   - `EncounterResult.from_location: str | None = None`（5A-2 的移動填入出發地點）。
+   - `CharacterState.bench: tuple[str, ...] = ()`（備用技能，同 `RunState.bench`，排序）、`fatigued: bool = False`、`attribute_points: int = 0`（升級給的未分配屬性點；分配介面在 5A-5 以後）、`visited_towns: tuple[str, ...] = ()`（到過的區域小鎮，記區域 ID，排序；`new_character` 記起始區）。
+
+4. **開戰設定** `trpg.world.battle`（新）：
+   - `encounter_setup(library, char) -> BattleSetup` 與 `encounter_lineup(library, char)`：5A-5 的 API 開戰與「看陣容」直接用；
+   - `fight_battle(library, world, char, steps)`／`auto_steps(library, char)`（效用 AI 代打，測試與 smoke 用）。
+
+5. **規則數值**（`content/world/rules.yaml` 末尾加，`WorldRules` 新欄位都有預設值）：
+
+   ```yaml
+   battle:                      # 5A-4（代決 5A4-*）
+     max_rounds: 30             # 同原型
+     xp_per_battle: 100         # Q8 初值；等級門檻沿用原型曲線（roguelite.yaml level_thresholds）
+     fatigue_hp_permille: 800   # #98「開場 HP 80%」
+     clear_kinds: [camp]        # 打贏後寫「已清空」的地點種類（9.6.7 #15「清掉的營地」）
+     respawn_seconds: 1800      # 已清空到重生：遊戲內 1 天（現實 30 分鐘）
+   enemy_growth:                # 追加 A
+     attribute_points_per_level: 2
+     skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]   # 07 7.6
+   ```
+
+6. **追加 B（只改 content）**：`sect_talisman_caster` 技能改為 `skill_frost_shackle`（定身符）＋`skill_hush`（噤聲：沉默 1 回合，現成技能＝封符）；雷符師變體改 `skill_swaps: {skill_hush: skill_static_palm}`（＝定身符＋雷符；武器 `lightning_staff` 不變）。
+
+7. **測試** `tests/world/`（9.6）與 **完成報告** `docs/phases/Phase5A-4報告.md`。
+
+### 9.3 開戰（`encounter_setup`）
+
+1. **地圖**：`EncounterResult.battle_map`；為 `None`（地點沒有戰鬥地圖：祭壇、遺跡、異象、Boss 據點）時，從該區 `map_pool` 的 archetype 裡的地圖（排除 `boss` archetype、依地圖 ID 排序）以 `Rng(fnv1a64(f"{battle_seed}:map"))` 均勻抽一張（代決 5A4-1）。
+2. **換皮**：地圖的 `region` 不是遭遇的區域時，改成遭遇的區域，`look` 換成該區 `regions.yaml` 的預設外觀（機制不動，05 5.1；代決 5A4-2）。
+3. **勝利條件**：地圖預設（全滅）；營地的勝利條件輪替之後再做（代決 5A4-3）。
+4. **天氣**：`EncounterResult.weather`。
+5. **我方**：主角（等級 HP 加成、`scaled_resources`、`level`，目前 HP／法力／耐力；疲憊時開場 HP ＝ min(目前, 最大 HP × 800‰)，至少 1）＋原型的 2 名標準隊友（`roguelite.yaml` 的 `companions`，滿狀態；5C-1 換成傭兵與影子；代決 5A4-4）。
+6. **敵方**：`roll_lineup` → `lineup_templates` → **依等級成長**（追加 A）：
+   - 等級 ＝ 地點的 `level_min`（代決 5A4-5）；1 級＝範本原樣。
+   - 屬性：每級 +2，全部加在範本最高的屬性（同分取屬性順序 str、dex、con、int、wis、wil 的第一個；代決 5A4-6）。
+   - HP：基礎 HP ＋ `level_hp_bonus`（同主角：每級 +5% 基礎 HP，`core.yaml` 的 `level_hp_permille`）。
+   - 技能階級：`enemy_growth.skill_tier_by_level[等級]`；技能目前階級較低時用 roguelite 的 `at_run_tier` 重配成 `<原 ID>_t<階級>`（只升不降），反應規則引用的技能 ID 一併改名；重配的技能以 `Ruleset.with_skills` 加進本場規則包。
+   - 範本的 `level` 欄位設為等級（召喚物依施放者等級成長）。
+7. **種子**：`EncounterResult.battle_seed`。
+
+### 9.4 勝負回寫（`fight`）
+
+- **打贏**（`winner == ally`）：HP ＝ 主角戰後 HP（倒下但勝利以 1 HP 繼續，同原型）；法力照戰後（不回）；耐力回滿（#113）；經驗 ＋`xp_per_battle`，等級照原型門檻；升級時最大 HP／法力上限增加的量加到目前值（同 roguelite `with_hp_change`），每級 `attribute_points` ＋ `roguelite.attribute_points_per_level`；地點種類在 `clear_kinds` 時寫 `ClearedLocation(respawn_at = now + respawn_seconds)`（已有就更新）；清掉遭遇；疲憊消失。
+- **沒打贏**（全滅或輪數上限，一律當全滅；代決 5A4-7）：回本區小鎮（代決 5A4-8：「最近的小鎮或營火」先只做小鎮）、HP 回滿、法力照戰後、耐力回滿；不給經驗、不扣經驗、背包裝備不掉；`fatigued = True`；清掉遭遇與 `camped_at`。
+- 戰利品、精英獎勵、靈感點：5D／之後（待 PM 決定）。
+- **已清空的營地**：移動到已清空且未重生的地點時遇敵機率為 0（擲骰照擲，亂數消耗不變；代決 5A4-9）。
+
+### 9.5 重播與確定性
+
+- `fight` 的 `steps` 寫在世界動作日誌（`trpg-wlog/1` 不變，多一種動作）；重播時由「角色快照＋遭遇＋內容庫」重建同一份設定、同一個種子、套用同樣的步驟，得到逐位元相同的戰鬥結果與回寫。戰鬥沒結束或步驟不合法 → `WorldActionError`。
+- `trpg.world` 內不讀時間、不用 `random`、`uuid4`、`hash()`；亂數只來自 `battle_seed` 與世界串流。
+
+### 9.6 測試（`tests/world/`）
+
+| 檔案 | 內容 |
+|---|---|
+| `test_battle_setup.py` | 有地圖的地點用遭遇的地圖、沒有地圖的地點從區域地圖池抽（確定性、archetype 在池內）、換皮成 `cloud_ridge`；天氣；我方＝主角＋2 名隊友；疲憊開場 HP 80% |
+| `test_enemy_growth.py` | 1 級不變；5 級：最高屬性 +8、HP ＋20%、技能升到 2 階（ID `_t2`、反應改名）、`level`；`level_min` 取值；規則包含重配技能 |
+| `test_fight.py` | 打贏：經驗、升級、耐力滿、HP 不回、法力不回、清掉遭遇、營地已清空與重生、已清空不遇敵；輸：回小鎮、HP 滿、疲憊、下一場開場 80% 後消失；沒結束、沒遭遇、步驟不合法 → 錯誤 |
+| `test_town.py` | 撤退回出發地點且不扣東西；休息（只在城鎮）；換技能（城鎮、營火可以，野外不行；不能裝沒有的、超過欄位）；傳送（城鎮到去過的小鎮、傳送點到 `gate_to`、沒地點圖或沒去過 → 錯誤） |
+| `test_replay.py`（加） | 移動 → 遇敵 → 戰鬥 → 回寫 → 休息的日誌重播兩次逐字相同；寫出再讀回相同 |
+
+### 9.7 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5A4-1 | 沒有戰鬥地圖的地點遇敵用哪張圖 | 區域地圖池（非 Boss）以 `{battle_seed}:map` 均勻抽 |
+| 5A4-2 | 換皮時地圖原本的單張 `look` 覆寫 | 換成該區預設外觀（原覆寫是給原區的） |
+| 5A4-3 | 營地的勝利條件輪替（9.6.2） | 先用地圖預設（全滅） |
+| 5A4-4 | 3 人隊伍的隊友（#97） | 5C-1 前用原型的 2 名標準隊友 |
+| 5A4-5 | 敵人等級取地點等級範圍的哪一點（追加 A） | `level_min` |
+| 5A4-6 | 敵人每級 +2 屬性加在哪 | 全部加在範本最高的屬性 |
+| 5A4-7 | 輪數上限沒打完 | 當全滅處理 |
+| 5A4-8 | 全滅「回最近的小鎮或營火」 | 先只回本區小鎮 |
+| 5A4-9 | 已清空的地點遇敵 | 機率 0（擲骰照擲） |
+| 5A4-10 | 已清空寫入與重生（9.6.7 #15「一段時間」） | 只有 `camp` 種類；遊戲內 1 天（1800 秒）後重生；數值在 `rules.yaml` |
+| 5A4-11 | 城鎮休息的費用與補給 | 免費；補給補到至少 `supplies.start` |
+| 5A4-12 | 傳送點 | 城鎮到「去過的」其他區小鎮；傳送點（gate）到 `gate_to` 區的小鎮 |
+| 5A4-13 | 經驗與等級 | 每場 100、沿用原型門檻（Q8）；升級屬性點先累積在 `attribute_points` |
+| 5A4-14 | 符籙師的「封符」（追加 B） | 現成的 `skill_hush`（噤聲：沉默 1 回合） |
+
+### 9.8 驗收
+
+- `uv run pytest -q tests/world tests/content tests/test_architecture.py -n 8 --timeout=1800` 通過；交件前 `tests/cli`（`-m "slow or not slow"`）。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；一場原型重播（`trpg battle --map swamp --seed 7 --log-json` ＋ `replay`）；一段世界日誌重播測試。
+
+### 9.9 不做的事
+
+- API、前端、地點圖畫面（5A-5）；傭兵與影子（5C）；戰利品、材料、精英獎勵（5D）；屬性點分配、閃現、重閃、溶掉、傳承、立誓、主角升階重配（之後的段，見報告待 PM 決定）。
+- 不改 `trpg-run`、戰鬥紀錄（`LOG_FORMAT`）格式；不改引擎與 roguelite。
+
+## 10. 5B-2 詳細規格：情境判定引擎
 
 > 給實作 agent。只動 `content/world/situations/`（新）、`content/world/situation_rules.yaml`（新）、`content/world/events/cloud_ridge.yaml`（#12 機遇條件一行）、`src/trpg/content/world_situations.py`（新）、`src/trpg/content/world_events.py`（`SolutionDef.requires_keyword`、載入時一併載入情境模板）、`src/trpg/content/library.py`（多傳狀態、關鍵字、種族 ID，一行）、`src/trpg/world/`（新增 `situations.py`；`state.py`、`actions.py`、`rng.py`、`step.py` 小改）、`src/trpg/llm/situation.py`（新：提議 prompt、schema、提議流程）、`tests/content/`、`tests/world/`、`tests/llm/`、CLI 快照（`trpg content check` 變了才重產）。**不做** 說書人敘述與骨架挑選（5B-3）、放棄／交涉／戰鬥解法與任務（5B-4）、機遇的獎勵、API、前端（5B-5）、戰鬥套用下一場 buff／debuff（5A-4 之後）。不動 `content/skills/`、`src/trpg/skillgen/`、引擎、roguelite。
 > 依據：09 9.6.4（模板、`<player_input>`、第一次送出即定案、LLM 提議 ±2、劣勢、d20、三段結果、獎懲有預算上限、用心清單最多 +2、種族 +1、公平原則、寫入事件日誌）、9.6.7 #3～#6（線頭由事件結果產生、獎勵照地點建議等級的預算表）、9.6.11 #115（方法 12 類、10 族 +1）；10 第 10、11 節（結構化輸出、pydantic、prompt 版本、LLM 輸出寫進事件日誌、重播不呼叫 LLM、玩家輸入當資料）；18 18.4（解法屬性；表末「補充」：機遇「帶電技能」、「斷崖幫寨的暗門」給骨架 14 偷竊優勢、模板第 2 種屬性的補法）；本檔 2.1、2.3、2.4、第 8 節。
 
-### 9.1 目標
+### 10.1 目標
 
 骨架的「情境判定」解法變成可以結算的資料：**情境模板**（content）＋ **LLM 提議**（pydantic 驗證）＋ **引擎判定**（`trpg.world`，純函式、可重播）。
 
@@ -966,7 +1085,7 @@ SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ───�
 
 `trpg.world` 不匯入 `trpg.llm`：提議 schema（`SituationProposal`）與靜態檢查放在 `trpg.content.world_situations`（純資料），`trpg.llm` 和 `trpg.world` 都從那裡匯入（2.3）。提議隨動作寫進世界動作日誌（`trpg-wlog/1`），**重播照紀錄、不再呼叫 LLM**（10 第 10 節、2.1）。
 
-### 9.2 交付項目
+### 10.2 交付項目
 
 1. **schema `src/trpg/content/world_situations.py`**（`__all__` 明列、`ContentModel`、ID 用 `ID_PATTERN`、錯誤訊息繁中）：
 
@@ -981,7 +1100,7 @@ SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ───�
        race_bonus: int  # 9.6.4「+1」（只能 0～1）
 
    class SituationBudget(ContentModel):  # 獎勵預算（依地點建議等級）
-       xp_base: int; xp_per_level: int  # 等級預算 xp ＝ xp_base ＋ xp_per_level × 等級
+       xp_battle_permille: int  # xp 預算 ＝ 打贏一場的經驗（battle.xp_per_battle）× ‰（07 7.8：0.5 份）
        supplies_max: int; threads_max: int  # 線頭 ≤ 2（9.6.7 #6「0～2 條」）
        buffs_max: int; reveals_max: int
 
@@ -1052,20 +1171,20 @@ SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ───�
 
 3. **載入**：情境模板與規則在 `load_world_event_content` 裡一起載（`WorldEventContent` 加 `situations`、`situation_rules`），`library.py` 只改那一行呼叫。不存在＝空／`None`。模板 ID 跨區不重複。
 
-4. **雲嶺內容**：`content/world/situation_rules.yaml`（9.4）、`content/world/situations/cloud_ridge.yaml`（9.3；18.4 每個情境判定解法一個模板，共 23 個）。
+4. **雲嶺內容**：`content/world/situation_rules.yaml`（10.4）、`content/world/situations/cloud_ridge.yaml`（10.3；18.4 每個情境判定解法一個模板，共 23 個）。
 
 5. **`trpg.world`**：
    - `rng.py`：新串流 `STREAM_CHECK = "check"`。
    - `state.py`：`NextBattleMod`（`kind: buff|debuff|reinforce`、`status`、`source`＝模板 ID）；`CharacterState.next_battle: tuple[NextBattleMod, ...] = ()`（之後的戰鬥接線消耗；本段只寫入）。有預設值、不升格式版本。
    - `actions.py`：動作 `SituationAction`（`kind="situation"`、`template`、`player_text`（≤ 500 字）、`proposal`、`source: "llm"|"fallback"`、`prompt_version`）；事件 `situation_check`（模板、屬性、方法、基準 DC、調整、DC、兩顆骰、優勢／劣勢、採用的骰、屬性修正、用心清單逐筆明細、用心加值、種族加值、總值、結果）、`situation_result`（xp、補給增減、HP 損失、下一場戰鬥修正）、`thread_added`、`thread_pushed_out`、`event_resolved`；揭露地點沿用 `location_revealed`（method＝`situation`）。
-   - `situations.py`：`situation_template`、`situation_facts`（給外層餵 LLM）、`resolve_situation`（9.5）、`opportunity_available`。
+   - `situations.py`：`situation_template`、`situation_facts`（給外層餵 LLM）、`resolve_situation`（10.5）、`opportunity_available`。
    - `step.py`：`world_step` 多一個分派。
 
 6. **`trpg.llm.situation`**（新）：`SITUATION_PROMPT_VERSION`、`situation_schema(template, rules, facts)`（屬性、方法、事實編號都是列舉，`dc_shift` −2～2）、`build_situation_messages(...)`（系統指令＋資料區；玩家文字只出現在 `<player_input>`，其餘資料經 `escape_text`）、`propose_situation(client, ...) -> SituationProposalOutcome`。只用 `LLMClient` 介面；測試用 `MockLLMClient`。
 
-7. **測試**（9.7）與 **完成報告** `docs/phases/Phase5B-2報告.md`：交付、判定流程、注入防護與合法性檢查、可重播證明、代決、待 PM 決定。
+7. **測試**（10.7）與 **完成報告** `docs/phases/Phase5B-2報告.md`：交付、判定流程、注入防護與合法性檢查、可重播證明、代決、待 PM 決定。
 
-### 9.3 雲嶺情境模板（18.4 → 資料；第 2 種屬性照 18.4 補充：同一類方法的常見屬性，不夠再補主題不同的屬性）
+### 10.3 雲嶺情境模板（18.4 → 資料；第 2 種屬性照 18.4 補充：同一類方法的常見屬性，不夠再補主題不同的屬性）
 
 | 骨架 | 模板 `id` | 解法 | 方法 | 屬性 | DC | 危險 |
 |---|---|---|---|---|---|---|
@@ -1096,7 +1215,7 @@ SituationAction(模板, 玩家文字, 提議, 來源, prompt 版本) ───�
 - DC 初值＝10＋骨架地點建議等級的一半上下（開發 PM 定）。獎懲：成功 xp 1000‰＋本骨架的線頭（≤ 2）、部分成功 xp 500‰＋輕懲罰、失敗依危險度懲罰；哪個結果留哪條線頭照骨架文字推定（開發 PM 定，之後模擬與玩法 PM 調）。
 - 弱點（用心清單 ④）每個模板 1～2 個，照骨架的阻礙推定（例：霧狼怕火→ 不適用；行商說得出狼群走向 → 追蹤）。
 
-### 9.4 規則數值初值（`content/world/situation_rules.yaml`；方法與種族照 9.6.11，其他開發 PM 定、之後模擬定）
+### 10.4 規則數值初值（`content/world/situation_rules.yaml`；方法與種族照 9.6.11，其他開發 PM 定、之後模擬定）
 
 ```yaml
 methods:  # 9.6.11 #115
@@ -1115,7 +1234,7 @@ methods:  # 9.6.11 #115
 race_methods: {human: lore, elf: notice, fox: parley, dragonkin: intimidate, dwarf: mechanism,
                cyborg: finesse, orc: force, fiend: uncanny, scalefolk: stealth, seafolk: endurance}
 check: {dc_shift_max: 2, partial_margin: 5, care_max: 2, race_bonus: 1}
-budget: {xp_base: 20, xp_per_level: 10, supplies_max: 2, threads_max: 2, buffs_max: 1, reveals_max: 1}
+budget: {xp_battle_permille: 500, supplies_max: 2, threads_max: 2, buffs_max: 1, reveals_max: 1}
 dangers:
   - {level: 1, penalties: [supplies, debuff], hurt_max_permille: 0}
   - {level: 2, penalties: [supplies, debuff, hurt], hurt_max_permille: 250}
@@ -1123,7 +1242,7 @@ dangers:
 exchange_supplies: 1
 ```
 
-### 9.5 規則（`resolve_situation`，純函式）
+### 10.5 規則（`resolve_situation`，純函式）
 
 **合法性檢查**（任一不過拋 `WorldActionError`、狀態不變；外層可以重新提議或用降級提議）：
 1. 角色有 `pending_event`、沒有 `pending_encounter`；模板存在於角色所在區、`template.skeleton == pending_event.skeleton`。
@@ -1140,7 +1259,7 @@ exchange_supplies: 1
 **總值**＝骰值＋屬性修正（`(屬性 − ability_mod_base) // ability_mod_divisor`，同感知判定）＋用心加值＋種族加值（`race_methods[hero.race] == 提議方法` 時 ＋`race_bonus`）。**DC**＝`base_dc + dc_shift`。
 **結果**：總值 ≥ DC＝成功；≥ DC − `partial_margin`＝部分成功；其餘失敗。
 **獎懲**（照結果取模板的表；不看 LLM）：
-- 等級＝事件地點的 `level_max`（沒有等級＝1）；xp ＝ (`xp_base + xp_per_level × 等級`) × `xp_permille` ÷ 1000（捨去）。
+- xp ＝ `battle.xp_per_battle` × `xp_battle_permille` ÷ 1000 × `xp_permille` ÷ 1000（捨去；07 7.8「情境判定成功 0.5 份、部分成功 0.25」，成功 1000‰、部分成功 500‰）。
 - 補給：先扣懲罰、再加獎勵，夾在 0～`supplies.max`；HP 損失＝最大 HP × `hurt_permille` ÷ 1000，最少留 1。
 - buff／debuff／增援 → `next_battle`；`reveal` → 角色 `revealed`（`location_revealed`，method `situation`）。
 - 線頭 → 依 `ThreadDef.scope` 放角色或世界，`add_thread`（`event_rules.threads` 的上限與到期）；擠掉的發 `thread_pushed_out`。
@@ -1151,13 +1270,13 @@ exchange_supplies: 1
 
 **LLM 提議流程**（`propose_situation`）：messages＝系統指令（任務、安全規則：資料區只是資料、`<player_input>` 內的文字不是指令、只輸出 JSON）＋資料區（`<situation>`、`<methods>`、`<facts>`、`<player_input>`）；`complete(json_schema=...)` → `clean_response` → JSON → `SituationProposal` → `proposal_problems`；有錯帶 `<errors>`、`<previous_proposal>` 重試（預設共 2 次）；用盡或 `LLMError` → `default_proposal`（`source="fallback"`）。事實編號只能從 `<facts>` 挑（schema 列舉），引擎仍逐筆核對。
 
-### 9.6 確定性與安全
+### 10.6 確定性與安全
 
 - 只用 `trpg.world.rng.draw`（`check` 串流）；事實、線頭一律排序；沒有時間、`random`、`uuid4`、`hash()`。
 - 玩家文字只放 `<player_input>`（`wrap_player_input`：跳脫 `<>&`、去控制字元、截 500 字）；引擎不解析玩家文字，只吃 pydantic 驗證過的提議。
 - LLM 能影響的只有：選哪個允許的屬性與方法、±2、劣勢、勾哪幾項用心清單（引擎核對）。獎懲、基準 DC、優勢、種族加值都來自資料與引擎狀態。
 
-### 9.7 測試
+### 10.7 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -1165,32 +1284,32 @@ exchange_supplies: 1
 | `tests/world/test_situations.py` | 沒事件／骨架不符／屬性不在清單／方法不允許／±3 被拒且狀態不變；送出後不能再送；成功／部分／失敗三段；用心清單：持有線頭算、沒持有不算、重複項只算一次、上限 2、弱點方法不符不算、交換扣補給；優勢（暗門）取高、劣勢取低、抵銷；種族 +1 只對對應方法；獎懲：xp 照等級預算、補給夾上限、HP 最少 1、線頭加入與擠出、世界級線頭、下一場修正、揭露；重播：日誌（移動→觸發→判定）重播出逐字相同的快照；機遇條件 |
 | `tests/llm/test_situation_propose.py` | schema 列舉；玩家文字只在 `<player_input>`、注入字串被跳脫；Mock 回合法 JSON → `llm` 來源；壞 JSON／越界（±3、屬性不在清單）→ 帶錯誤重試 → 成功或降級；`LLMUnavailable` → 降級；端到端（Mock 提議 → 動作 → 判定） |
 
-### 9.8 驗收
+### 10.8 驗收
 
 - `uv run pytest -q tests/world tests/llm/test_situation_propose.py tests/content/test_world_situations.py tests/content/test_world_events.py tests/test_architecture.py -n 8 --timeout=1800` 通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`）。
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
 
-### 9.9 不做的事
+### 10.9 不做的事
 
 - 不做說書人挑骨架、情境敘述與結果敘述（5B-3）；不做放棄、交涉、戰鬥解法的結算、任務、好感度、線頭到期結局（5B-4）；不做機遇的獎勵；不做 API、前端。
 - 不把下一場戰鬥修正接到戰鬥；不做任務幣（5D-1 才有貨幣）。
 - 不補 18.4 補充的 follows 對照、新骨架 19～21、世界級線頭（另排 5B-1b）；「在斷崖幫寨的戰鬥我方先手」屬戰鬥接線，記在報告待辦。
 
-### 9.10 代決
+### 10.10 代決
 
 | # | 事項 | 代決 | 誰定 |
 |---|---|---|---|
-| 5B2-1 | 模板第 2 種屬性：解法屬性為主，從 9.6.11 方法表同一類補，不夠再補主題不同的屬性 | 9.3 表 | **玩法 PM 定**（18.4 補充） |
+| 5B2-1 | 模板第 2 種屬性：解法屬性為主，從 9.6.11 方法表同一類補，不夠再補主題不同的屬性 | 10.3 表 | **玩法 PM 定**（18.4 補充） |
 | 5B2-2 | 「帶電技能」＝裝備技能任何一招推導出 `charged` 關鍵字；「暗門」＝骨架 14 偷竊優勢（擲兩次取高） | `requires_keyword`、`advantage_threads` | **玩法 PM 定**（18.4 補充） |
-| 5B2-3 | 一個情境判定解法一個模板；模板以骨架解法索引對應 | 9.2 | 開發 PM 定 |
-| 5B2-4 | 部分成功＝總值 ≥ DC − 5；優勢與劣勢抵銷；亂數一律擲兩顆 | 9.5 | 開發 PM 定 |
-| 5B2-5 | 預算：等級 xp ＝ 20 ＋ 10 × 地點建議等級（一場戰鬥 100 的 1/3～4/5）、補給 ≤ 2、線頭 ≤ 2、buff ≤ 1、揭露 ≤ 1；危險度 1～3 的懲罰種類與受傷上限 | 9.4 | 開發 PM 定（初值） |
-| 5B2-6 | 用心清單的事實：① 有效線頭；② 骨架 NPC＋持有該 NPC 的線頭（好感度在 5B-4）；③ 補給（算到就扣）；④ 模板弱點＋方法相符；影子專長（9.6.4）等 5C-2 | 9.5 | 開發 PM 定 |
+| 5B2-3 | 一個情境判定解法一個模板；模板以骨架解法索引對應 | 10.2 | 開發 PM 定 |
+| 5B2-4 | 部分成功＝總值 ≥ DC − 5；優勢與劣勢抵銷；亂數一律擲兩顆 | 10.5 | 開發 PM 定 |
+| 5B2-5 | 預算：xp ＝ 一場戰鬥經驗的 500‰（照 07 7.8 經驗來源比例，不依地點等級；戰鬥經驗本身也不依等級）、補給 ≤ 2、線頭 ≤ 2、buff ≤ 1、揭露 ≤ 1；危險度 1～3 的懲罰種類與受傷上限 | 10.4 | 開發 PM 定（初值） |
+| 5B2-6 | 用心清單的事實：① 有效線頭；② 骨架 NPC＋持有該 NPC 的線頭（好感度在 5B-4）；③ 補給（算到就扣）；④ 模板弱點＋方法相符；影子專長（9.6.4）等 5C-2 | 10.5 | 開發 PM 定 |
 | 5B2-7 | 劣勢只由 LLM 提議；優勢只由資料（線頭）給，LLM 不能提議優勢 | 9.6.4 只寫劣勢 | 開發 PM 定 |
-| 5B2-8 | 獎勵沒有任務幣（5D-1 才有貨幣）；buff／debuff／增援存在角色 `next_battle`，戰鬥接線之後做 | 9.2 | 開發 PM 定 |
-| 5B2-9 | DC 初值、各模板的獎懲、弱點與哪個結果留哪條線頭 | 9.3 | 開發 PM 定（初值，之後模擬） |
-| 5B2-10 | LLM 提議共試 2 次，用盡或連不上 → 降級提議（第一個屬性、±0、不勾清單） | 9.5、3.1 | 開發 PM 定 |
+| 5B2-8 | 獎勵沒有任務幣（5D-1 才有貨幣）；buff／debuff／增援存在角色 `next_battle`，戰鬥接線之後做 | 10.2 | 開發 PM 定 |
+| 5B2-9 | DC 初值、各模板的獎懲、弱點與哪個結果留哪條線頭 | 10.3 | 開發 PM 定（初值，之後模擬） |
+| 5B2-10 | LLM 提議共試 2 次，用盡或連不上 → 降級提議（第一個屬性、±0、不勾清單） | 10.5、3.1 | 開發 PM 定 |
 
-## 10. 之後各段規格
+## 11. 之後各段規格
 
-（5A-3 驗收後補上 5A-4 起。）
+（5A-4 驗收後補上 5A-5 起。）

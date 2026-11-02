@@ -1,4 +1,4 @@
-"""情境判定的 LLM 提議（Phase 5B-2；``docs/phases/Phase5計畫.md`` 9.5；09 9.6.4）。
+"""情境判定的 LLM 提議（Phase 5B-2；``docs/phases/Phase5計畫.md`` 10.5；09 9.6.4）。
 
 LLM 讀情境模板、骨架、引擎給的事實與玩家的回答，**只提議**：從允許的屬性與方法中選一個、難度
 ±2、要不要劣勢、勾用心清單（每項附 ``<facts>`` 裡的事實編號）。輸出先經 JSON schema 約束與 pydantic
