@@ -17,6 +17,7 @@ import {
   stagePixels,
   tileLift,
   topReserve,
+  UNIT_HEADROOM,
   type HeightGrid,
 } from "./elevation";
 import { cardPlacement, clientToTile, fitScale, scaledSize } from "./stageLayout";
@@ -44,11 +45,17 @@ describe("tileLift", () => {
       [1, 0],
     ]);
     expect(maxHeight(g)).toBe(3);
-    expect(topReserve(g)).toBe(tileLift(3));
-    expect(stagePixels(g)).toEqual({ width: 2 * T, height: 2 * T + 18 });
+    // 預留＝最上排高格的抬高 18 ＋ 單位頭頂（UI-T1）
+    expect(topReserve(g)).toBe(tileLift(3) + UNIT_HEADROOM);
+    expect(stagePixels(g)).toEqual({ width: 2 * T, height: 2 * T + 18 + UNIT_HEADROOM });
     expect(liftedOrigin({ x: 1, y: 0 }, 3)).toEqual({ x: T, y: -18 });
     expect(liftedCenter({ x: 0, y: 1 }, 1)).toEqual({ x: T / 2, y: T + T / 2 - 6 });
-    expect(topReserve({ width: 3, height: 3 })).toBe(0); // 沒有高度資料：平地
+    expect(topReserve({ width: 3, height: 3 })).toBe(0); // 沒有格子資料：純幾何，不留頭頂
+    expect(topReserve(grid([[0, 0], [0, 0]]))).toBe(UNIT_HEADROOM); // 平地：最上排留單位頭頂
+    // 第 2 排高 12（抬 72）：沿用「最高格的抬高量」，已經蓋過那排單位頭頂（72 ＋ 28 − 96）
+    expect(topReserve(grid([[0], [0], [12]]))).toBe(tileLift(12));
+    // 第 1 排高 6（抬 36）：那排單位頭頂 36 ＋ 28 − 48 ＝ 16 < 平地第 0 排的 28
+    expect(topReserve(grid([[0], [6]]))).toBe(Math.max(tileLift(6), UNIT_HEADROOM));
     expect(heightAt(g, { x: 5, y: 0 })).toBe(0);
   });
 });
@@ -128,18 +135,21 @@ describe("clientToTile（含預留與縮放）", () => {
     expect(at(T + 5, 2 * T - 13)).toEqual({ x: 1, y: 1 });
     expect(at(T + 5, -17)).toEqual({ x: 1, y: 0 }); // 抬到預留區的頂面
     expect(at(5, -1)).toBeNull(); // 沒抬高的格子上方是空的
+    expect(at(5, -reserve - 1)).toBeNull(); // 畫布外
   });
 
   it("畫布大小、縮放都含上方預留", () => {
-    expect(scaledSize(g, 1)).toEqual({ width: 3 * T, height: 3 * T + 18 });
-    expect(fitScale({ width: 10000, height: 3 * T + 18 }, g, T, 0.1, 5)).toBeCloseTo(1);
+    const reserve = 18 + UNIT_HEADROOM;
+    expect(scaledSize(g, 1)).toEqual({ width: 3 * T, height: 3 * T + reserve });
+    expect(fitScale({ width: 10000, height: 3 * T + reserve }, g, T, 0.1, 5)).toBeCloseTo(1);
   });
 
   it("浮動卡頂端對齊抬高後的頂面", () => {
+    const reserve = 18 + UNIT_HEADROOM;
     const top = cardPlacement({ x: 1, y: 0 }, g, 2);
-    expect(top.top).toBe(Math.round((18 - 18) * 2)); // 預留 18 − 抬高 18
+    expect(top.top).toBe(Math.round((reserve - 18) * 2)); // 預留 − 抬高 18
     const flat = cardPlacement({ x: 0, y: 0 }, g, 2);
-    expect(flat.top).toBe(36);
+    expect(flat.top).toBe(reserve * 2);
   });
 });
 
