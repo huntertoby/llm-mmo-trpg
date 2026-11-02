@@ -968,7 +968,7 @@ export class BattleRenderer {
     t.style.stroke = { color: 0x000000, width: 4 };
     node.addChild(t);
     const baseY = c.y - T * 0.3 - item.slot * 22;
-    node.position.set(c.x + (isStatus ? T * 0.12 : 0), baseY);
+    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), t.width / 2), baseY);
     node.alpha = 0;
     if (isStatus) {
       // 狀態：格子先閃一圈光環
@@ -986,6 +986,13 @@ export class BattleRenderer {
         node.scale.set(pop);
       },
     };
+  }
+
+  /** 浮動文字的水平位置往內推，不超出地圖左右邊緣（UI-T1：邊緣格的「跑步 移動＋N」被切掉）。 */
+  private clampFloatX(x: number, half: number): number {
+    const width = (this.model?.width ?? 0) * T;
+    if (width <= 0 || half * 2 >= width) return x;
+    return Math.min(Math.max(x, half + 2), width - half - 2);
   }
 
   private lineEffect(from: Pos, to: Pos, now: number, durationMs: number): Effect {

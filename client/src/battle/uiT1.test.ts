@@ -1,6 +1,15 @@
 // UI-T1 試玩小修的回歸測試。
 import { describe, expect, it } from "vitest";
+import { feedbackFor } from "./feedback";
 import { skeletonLabel } from "./source";
+import { smallView } from "./testFixtures";
+
+describe("跑步的地圖回饋字樣", () => {
+  it("unit_ran 在跑的人頭上跳「跑步 移動＋N」", () => {
+    const items = feedbackFor([{ type: "unit_ran", unit_id: "unit_0001", bonus: 3, move_points: 6 }], smallView());
+    expect(items).toEqual([{ kind: "float", pos: { x: 0, y: 0 }, text: "跑步 移動＋3", tone: "good", big: false, slot: 0 }]);
+  });
+});
 
 describe("skeletonLabel（技能卡標題不重複種類字樣）", () => {
   it("骨架名與種類相同或以種類開頭時不顯示", () => {
