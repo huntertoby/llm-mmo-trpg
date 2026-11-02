@@ -10,6 +10,9 @@
   端點操作）；結束後下一次讀取該角色時把步驟送 ``fight`` 回寫（:meth:`WorldStore.sync`）。
 - 鎖的順序：世界的鎖 → 戰鬥的鎖。
 - 帳號是 5E-1：角色以伺服器產生的 ID 存取，不登入（代決 5A5-1）。
+- 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
+  三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
+  :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
 """
 
 from __future__ import annotations
@@ -22,8 +25,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
+from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
 from trpg.shared.errors import TrpgError
@@ -97,8 +102,11 @@ class WorldStore:
         *,
         clock: Callable[[], int] = _now,
         new_id: Callable[[], str] = _new_char_id,
+        prefetch: bool = True,
     ) -> None:
         self.library = library
+        self.offers = OfferPrefetcher(library, enabled=prefetch)
+        """三選一的背景預先計算與快取（PERF-3）。"""
         self.battles = battles
         self.root = root
         self.clock = clock
@@ -170,6 +178,7 @@ class WorldStore:
                 raise WorldCharacterNotFoundError(f"找不到角色 {character_id}")
             char = loads_char(path.read_text(encoding="utf-8"))
             self._chars[character_id] = char
+            self.offers.prefetch(self.world(), char)  # PERF-3：讀檔時已有的機遇、劇情步驟
             return char
 
     def growth_run(self, character_id: str) -> tuple[ContentLibrary, RunState]:
@@ -280,7 +289,8 @@ class WorldStore:
 
     def _apply(self, char: CharacterState, action: WorldAction, now: int) -> WorldOutcome:
         world = self.world()
-        result = world_step(self.library, world, char, action, now)
+        with using_offer_cache(self.offers.cache):  # PERF-3：背景算好的三選一
+            result = world_step(self.library, world, char, action, now)
         entries = self.entries()
         seq = entries[-1].seq + 1 if entries else 1
         entry = WorldLogEntry(seq=seq, now=now, character_id=char.character_id, action=action)
@@ -290,6 +300,7 @@ class WorldStore:
         if result.world != world:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world
+        self.offers.prefetch(result.world, result.char)  # PERF-3：新出現的機遇、劇情步驟
         return WorldOutcome(result.world, result.char, result.events, now, None)
 
     def _save_char(self, char: CharacterState) -> None:

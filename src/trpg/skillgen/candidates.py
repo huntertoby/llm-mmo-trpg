@@ -43,6 +43,11 @@
 的）；偏好湊不到時放寬（取同來源的備選），所以候選數量不變。最高屬性同分依六屬性順序
 （:func:`trpg.shared.types.top_attribute`）。
 
+**橋接搜尋上限**（PERF-3，玩法 PM 2026-11-03）：橋接的多關鍵字選項共用
+``bridge_variant_cap`` 個組合器種子變體；用完還沒找到就跳過剩下的多關鍵字選項，照 ③ 放寬關鍵字
+（單一關鍵字，``fallback`` 為真）。指定關鍵字的組合不抽傳說
+（:mod:`trpg.skillgen.random_composer`）。
+
 **LLM 來源**（Phase 4-L6，``docs/phases/Phase4計畫.md`` 3F 節）：呼叫端傳入 ``llm``
 （:data:`~trpg.skillgen.proposal_topic.LlmProposer`）時，每個候選種類先以
 ``llm_share_permille`` 的機率
@@ -68,10 +73,16 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.proposal_topic import LlmProposer, TopicRequest, make_topic
-from trpg.skillgen.random_composer import ComposeError, compose_random_skill
+from trpg.skillgen.random_composer import (
+    KEYWORD_TRIES,
+    ComposeError,
+    KeywordExhaustedError,
+    compose_with_stats,
+)
 from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
+    "BRIDGE_VARIANT_CAP",
     "CANDIDATE_KINDS",
     "ROUTE_DUAL",
     "ROUTE_MAIN",
@@ -100,6 +111,12 @@ type _Graded = list[SkillDef | None]
 CANDIDATE_KINDS: tuple[CandidateKind, ...] = ("deepen", "bridge", "new")
 
 
+BRIDGE_VARIANT_CAP = 400
+"""橋接搜尋的種子變體數上限（PERF-3，玩法 PM 2026-11-03：照「最壞約 3 秒」定；見
+``docs/phases/PERF-3報告.md``）。橋接的多關鍵字選項（兩個持有的關鍵字、往外一步）共用這個上限；
+到上限還沒找到就照 06 6.27.4 ③ 放寬關鍵字（改試單一關鍵字），所以候選不會少。0 ＝ 不設上限。"""
+
+
 @dataclass(frozen=True, slots=True)
 class CandidateRules:
     """產生器的參數（roguelite 取自 ``roguelite.yaml`` 的 ``candidates``）。"""
@@ -114,6 +131,8 @@ class CandidateRules:
     """LLM 題目帶主題詞的機率（‰；Phase 4-L6）。"""
     llm_reaction_permille: int = 0
     """LLM 題目出反應技的機率（‰；Phase 4-L8b）；0 ＝ 一律主動技能。"""
+    bridge_variant_cap: int = BRIDGE_VARIANT_CAP
+    """橋接多關鍵字搜尋的組合器變體數上限（PERF-3，:data:`BRIDGE_VARIANT_CAP`）；0 ＝ 不設。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,6 +283,16 @@ class _Search:
     """目前正在找的候選種類（LLM 來源每種最多請一次）。"""
     llm_done: set[str] = field(default_factory=set)
     traces: dict[str, LlmTrace] = field(default_factory=dict)
+    bridge_used: int = 0
+    """橋接多關鍵字搜尋已用掉的組合器變體數（PERF-3）。"""
+
+    def capped(self, keywords: Sequence[str]) -> bool:
+        """這次搜尋受橋接上限管（PERF-3）：橋接、兩個以上的關鍵字、有設上限。"""
+        return self.kind == "bridge" and len(keywords) > 1 and self.rules.bridge_variant_cap > 0
+
+    def exhausted(self, keywords: Sequence[str]) -> bool:
+        """橋接上限已用完（PERF-3）：剩下的多關鍵字選項跳過，照 6.27.4 ③ 放寬關鍵字。"""
+        return self.capped(keywords) and self.bridge_used >= self.rules.bridge_variant_cap
 
     def from_llm(
         self, keywords: Sequence[str], want: AttrWant | None
@@ -360,10 +389,14 @@ class _Search:
         hint = "spell" if self.request.weapon_class == "focus" else None
         attrs = self.request.hero_attributes or None
         avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
+        capped = self.capped(keywords)
         for _ in range(self.rules.composer_tries):
+            if self.exhausted(keywords):  # PERF-3：橋接上限用完
+                break
             seed = rng.next_u32()
+            left = self.rules.bridge_variant_cap - self.bridge_used if capped else KEYWORD_TRIES
             try:
-                skill = compose_random_skill(
+                found = compose_with_stats(
                     seed,
                     tier=self.request.tier,
                     category=hint,
@@ -372,9 +405,16 @@ class _Search:
                     hero_attributes=attrs,
                     avoid_attr=avoid,
                     held=self.request.held or None,
+                    keyword_tries=left,
+                    skip_legendary=True,  # PERF-3：指定關鍵字的組合不抽傳說（傳說不當候選）
                 )
+            except KeywordExhaustedError as exc:
+                self.bridge_used += exc.variants if capped else 0
+                continue
             except ComposeError:
                 continue
+            self.bridge_used += found.variants if capped else 0
+            skill = found.skill
             if self.usable(skill) and skill_has_keywords(skill, keywords, self.library):
                 grade = self._grade(skill, want)
                 if grade == 0:
@@ -469,6 +509,8 @@ def _first(
     關鍵字、再放寬屬性）。"""
     spare: tuple[tuple[str, ...], SkillDef, Literal["pool", "composer", "llm"]] | None = None
     for keywords in options:
+        if search.exhausted(keywords):  # PERF-3：橋接上限用完，跳到單一關鍵字（6.27.4 ③）
+            continue
         found = search.find(rng, keywords, want)
         if found is None:
             continue
