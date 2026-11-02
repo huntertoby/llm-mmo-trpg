@@ -390,6 +390,10 @@ class CharacterState(_Model):
     finished_skeletons: tuple[str, ...] = ()
     """解決過的 ``once`` 骨架（排序、不重複；18.4 補充「骨架 22 每個角色只出現到解決為止」）。"""
 
+    # --- 5C-1 隊伍（邏輯在 trpg.world.party） ---
+    mercenaries: tuple[str, ...] = ()
+    """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複；空＝開戰用標準隊友，代決 5C1-2）。"""
+
     @field_validator("talk_days")
     @classmethod
     def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:

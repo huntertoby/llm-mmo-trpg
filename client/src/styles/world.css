@@ -493,3 +493,48 @@
 .world-quest-head h2 {
   margin: 0;
 }
+
+/* 隊伍與系統傭兵（Phase 5C-1） */
+.world-party-members {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.world-hire {
+  margin-top: 6px;
+}
+
+.world-hire-list {
+  list-style: none;
+  margin: 2px 0 6px;
+  padding: 0;
+}
+
+.world-hire-list li {
+  padding: 3px 4px;
+  border-radius: 4px;
+}
+
+.world-hire-list li.chosen {
+  background: rgba(255, 208, 74, 0.1);
+}
+
+.world-hire-list label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.world-hire-name {
+  font-weight: 700;
+}
+
+.world-hire-order {
+  margin-left: auto;
+  color: #ffd04a;
+}
+
+.world-hire-skills {
+  padding-left: 22px;
+}

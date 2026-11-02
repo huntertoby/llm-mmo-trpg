@@ -130,6 +130,7 @@ from trpg.content.world_encounters import EncounterTable, encounter_table_proble
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_map import LocationMapDef, world_map_problems
+from trpg.content.world_mercenaries import MercenaryTable
 from trpg.content.world_oaths import OathTable
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
@@ -596,6 +597,9 @@ class ContentLibrary:
     ``world/affinity.yaml``，Phase 5B-4）；沒有資料時為空。"""
     world_oaths: OathTable | None = None
     """誓約模板（``world/oaths.yaml``，Phase 5A-6 接點；內容在 5C-3）；沒有檔案時為 ``None``。"""
+    world_mercenaries: MercenaryTable | None = None
+    """系統傭兵名單（``world/mercenaries.yaml``，Phase 5C-1）；沒有檔案時為 ``None``（開戰用標準
+    隊友）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -854,6 +858,7 @@ def load_library(  # noqa: PLR0915
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     world_oaths = _load_optional(root / WORLD_OATHS_FILE, OathTable, files)
+    world_mercenaries = _load_world_mercenaries(root / WORLD_MERCENARIES_FILE, builds, files)
     unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
     world_encounters = _load_world_encounters(
@@ -942,6 +947,7 @@ def load_library(  # noqa: PLR0915
         world_event_content=world_event_content,
         world_quests=world_quests,
         world_oaths=world_oaths,
+        world_mercenaries=world_mercenaries,
         files=files,
     )
 
@@ -954,6 +960,30 @@ WORLD_RULES_FILE = "world/rules.yaml"
 """大世界規則的數值（相對於內容資料夾；Phase 5A-2）。"""
 WORLD_OATHS_FILE = "world/oaths.yaml"
 """誓約模板（相對於內容資料夾；Phase 5A-6 接點，內容在 5C-3）。"""
+
+
+WORLD_MERCENARIES_FILE = "world/mercenaries.yaml"
+"""系統傭兵名單（相對於內容資料夾；Phase 5C-1）。"""
+
+
+def _load_world_mercenaries(
+    path: Path, builds: BuildTable, files: list[tuple[Path, ContentModel]]
+) -> MercenaryTable | None:
+    """系統傭兵名單：底稿必須是 ``builds.yaml`` 裡的一般 build（不是白板或對照組）。"""
+    table = _load_optional(path, MercenaryTable, files)
+    if table is None:
+        return None
+    known = builds.by_id()
+    problems = [
+        f"傭兵 {m.id} 的底稿 {m.build} 不在 sim/builds.yaml"
+        if m.build not in known
+        else f"傭兵 {m.id} 的底稿 {m.build} 是白板或對照組"
+        for m in table.mercenaries
+        if m.build not in known or known[m.build].blank or known[m.build].reference
+    ]
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    return table
 
 
 def _load_optional[M: ContentModel](

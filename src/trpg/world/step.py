@@ -36,6 +36,7 @@ from trpg.world.actions import (
     EventSolveAction,
     FightAction,
     FlashPickAction,
+    HireAction,
     LoadoutAction,
     LocationRevealedEvent,
     NarrateAction,
@@ -62,6 +63,7 @@ from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, roll_event
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.narration import apply_narration
+from trpg.world.party import hire
 from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.situations import resolve_situation
@@ -253,6 +255,8 @@ def _service(
         char, events = loadout(library, char, action)
     elif isinstance(action, TeleportAction):
         char, events = teleport(library, char, action)
+    elif isinstance(action, HireAction):
+        char, events = hire(library, char, action)  # 5C-1
     else:
         raise WorldActionError(f"未知的世界動作：{action!r}")  # pragma: no cover
     return StepResult(world=world, char=char, events=events)
