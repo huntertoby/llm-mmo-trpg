@@ -186,7 +186,13 @@ def behavior_weights(library: ContentLibrary, behavior: Mapping[str, int]) -> di
 
 def follows_attr(skill: SkillDef, attr: Attribute, weapon_attrs: Sequence[Attribute] = ()) -> bool:
     """技能實際吃 ``attr``：武器技看手上武器的縮放屬性（``weapon_attrs``，含第二屬性；3H-6、
-    3H-7），空時與法術技一樣看技能的 ``scaling_attr``。"""
+    3H-7），空時與法術技一樣看技能的 ``scaling_attr``。
+
+    BAL-17：手上是雙屬性武器（``weapon_attrs`` 有兩個）、且 ``attr`` 是其中之一時，「跟主屬性」
+    改看武器的兩個屬性，法術也一樣（魔導劍：力量最高時，吃力量或智力的技能都算同路線）。"""
+    if len(set(weapon_attrs)) > 1 and attr in weapon_attrs and skill.category != "weapon":
+        scaling = {skill.scaling_attr, skill.secondary_scaling_attr}
+        return bool(scaling & set(weapon_attrs))
     if skill.category == "weapon" and weapon_attrs:
         return attr in weapon_attrs or attr == skill.secondary_scaling_attr  # 3I-3：心智第二屬性
     return skill.scaling_attr == attr
@@ -330,16 +336,19 @@ class _Search:
 
     def find(
         self, rng: Rng, keywords: Sequence[str], want: AttrWant | None = None
-    ) -> tuple[SkillDef, Literal["pool", "composer", "llm"]] | None:
+    ) -> tuple[SkillDef, Literal["pool", "composer", "llm"], bool] | None:
+        """（技能, 來源, 是否符合屬性偏好）；不符合偏好的是備選，呼叫端決定要不要用（BAL-17：先換
+        關鍵字找符合的，都沒有才用第一個備選）。找到的技能由呼叫端 :meth:`accept` 登記（LLM 來源
+        已登記）。"""
         want = want if self.request.hero_attributes else None
         from_llm = self.from_llm(keywords, want)
         if from_llm is not None:
-            return from_llm
+            return from_llm[0], from_llm[1], True
         composer_first = rng.chance_permille(self.rules.composer_share_permille)
         order: tuple[Literal["pool", "composer"], ...] = (
             ("composer", "pool") if composer_first else ("pool", "composer")
         )
-        spares: list[tuple[SkillDef, Literal["pool", "composer"]]] = []
+        spares: list[tuple[SkillDef, Literal["pool", "composer", "llm"], bool]] = []
         for source in order:
             skill, spare = (
                 self.from_composer(rng, keywords, want)
@@ -347,14 +356,13 @@ class _Search:
                 else self.from_pool(rng, keywords, want)
             )
             if skill is not None:
-                self.taken.add(skill.id)
-                return skill, source
+                return skill, source, True
             if spare is not None:
-                spares.append((spare, source))
-        if spares:  # 偏好的屬性湊不到：放寬，仍取第一個來源的備選
-            self.taken.add(spares[0][0].id)
-            return spares[0]
-        return None
+                spares.append((spare, source, False))
+        return spares[0] if spares else None  # 偏好的屬性湊不到：備選取第一個來源的
+
+    def accept(self, skill: SkillDef) -> None:
+        self.taken.add(skill.id)
 
 
 def _pool(library: ContentLibrary, tier: int) -> tuple[tuple[SkillDef, tuple[str, ...]], ...]:
@@ -401,11 +409,20 @@ def _weighted_order(rng: Rng, keywords: Sequence[str], behavior: Mapping[str, in
 def _first(
     search: _Search, rng: Rng, options: Iterable[tuple[str, ...]], want: AttrWant | None = None
 ) -> tuple[tuple[str, ...], SkillDef, Literal["pool", "composer", "llm"]] | None:
+    """依序試 ``options``：第一個符合屬性偏好的；都沒有才放寬屬性，取第一個備選（BAL-17：先放寬
+    關鍵字、再放寬屬性）。"""
+    spare: tuple[tuple[str, ...], SkillDef, Literal["pool", "composer", "llm"]] | None = None
     for keywords in options:
         found = search.find(rng, keywords, want)
-        if found is not None:
+        if found is None:
+            continue
+        if found[2]:
+            search.accept(found[0])
             return keywords, found[0], found[1]
-    return None
+        spare = spare if spare is not None else (keywords, found[0], found[1])
+    if spare is not None:
+        search.accept(spare[1])
+    return spare
 
 
 def _deepen(
@@ -413,12 +430,12 @@ def _deepen(
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("deepen")
     search.kind = "deepen"
-    if held:
-        hit = _first(search, rng, ((k,) for k in held), "same")
-        if hit is not None:
-            return Candidate("deepen", hit[0], hit[1], hit[2], fallback=hit[0][0] != held[0])
-    hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "same")
-    return None if hit is None else Candidate("deepen", hit[0], hit[1], hit[2], fallback=True)
+    # BAL-17：持有的關鍵字與還沒有的關鍵字合成一串，先換關鍵字找同路線的，都沒有才放寬屬性
+    options = [*((k,) for k in held), *((k,) for k in _weighted_order(rng, unheld, behavior))]
+    hit = _first(search, rng, options, "same")
+    if hit is None:
+        return None
+    return Candidate("deepen", hit[0], hit[1], hit[2], fallback=not held or hit[0][0] != held[0])
 
 
 def _bridge(
@@ -427,15 +444,18 @@ def _bridge(
     rng = Rng(search.request.seed).fork("bridge")
     search.kind = "bridge"
     pairs = [tuple(sorted(p, key=held.index)) for p in combinations(held, 2)]
-    hit = _first(search, rng, rng.shuffled(pairs), "same")
-    if hit is not None:
-        return Candidate("bridge", hit[0], hit[1], hit[2])
+    shuffled = rng.shuffled(pairs)
+    weighted = _weighted_order(rng, unheld, behavior)
     if held:
-        outward = [(k, n) for k in held for n in _weighted_order(rng, unheld, behavior)]
-        hit = _first(search, rng, [*outward, *((k,) for k in held)], "same")
+        outward = [(k, n) for k in held for n in weighted]
+        rest: list[tuple[str, ...]] = [*outward, *((k,) for k in held)]
     else:
-        hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "same")
-    return None if hit is None else Candidate("bridge", hit[0], hit[1], hit[2], fallback=True)
+        rest = [(k,) for k in weighted]
+    # BAL-17：配對、往外一步、單一關鍵字合成一串，先換關鍵字找同路線的，都沒有才放寬屬性
+    hit = _first(search, rng, [*shuffled, *rest], "same")
+    if hit is None:
+        return None
+    return Candidate("bridge", hit[0], hit[1], hit[2], fallback=hit[0] not in pairs)
 
 
 def _new(
@@ -443,12 +463,13 @@ def _new(
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("new")
     search.kind = "new"
-    hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "other")
-    if hit is not None:
-        return Candidate("new", hit[0], hit[1], hit[2])
-    # 每個關鍵字都有了（或還沒有的都找不到技能）：退回持有最少的關鍵字
-    hit = _first(search, rng, ((k,) for k in reversed(held)), "other")
-    return None if hit is None else Candidate("new", hit[0], hit[1], hit[2], fallback=True)
+    fresh = [(k,) for k in _weighted_order(rng, unheld, behavior)]
+    # 每個關鍵字都有了（或還沒有的都找不到技能）：退回持有最少的關鍵字（BAL-17：合成一串，先換
+    # 關鍵字找偏離路線的，都沒有才放寬屬性）
+    hit = _first(search, rng, [*fresh, *((k,) for k in reversed(held))], "other")
+    if hit is None:
+        return None
+    return Candidate("new", hit[0], hit[1], hit[2], fallback=hit[0] not in fresh)
 
 
 def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
