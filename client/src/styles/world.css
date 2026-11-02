@@ -295,6 +295,12 @@
   margin: 6px 0 4px;
 }
 
+.world-solution-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .world-situation {
   margin-top: 8px;
   padding-top: 8px;

@@ -5,7 +5,7 @@
 import { useState } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { canSubmitAnswer, checkFormula, lengthLabel, PLAYER_TEXT_MAX, solutionHint, solutionLabel, toggleCite } from "./story";
+import { canSubmitAnswer, checkFormula, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
 
 function StoryBlock({ story, testId }: { story: WorldStory; testId: string }) {
   const [more, setMore] = useState(false);
@@ -29,10 +29,12 @@ interface EventProps {
   event: WorldEventView;
   busy: boolean;
   onOpen(template: string): void;
+  /** 放棄、交涉、戰鬥解法（`event_solve`）；交涉可帶線頭抵掉付出。 */
+  onSolve(solution: number, useThread: string | null): void;
   onAnswer(template: string, text: string, cite: string[]): void;
 }
 
-export function EventCard({ event, busy, onOpen, onAnswer }: EventProps) {
+export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps) {
   const situation = event.situation ?? null;
   return (
     <div className="panel world-event" data-testid="world-event" role="region" aria-label="事件">
@@ -44,20 +46,42 @@ export function EventCard({ event, busy, onOpen, onAnswer }: EventProps) {
       {event.story != null && <StoryBlock story={event.story} testId="world-event-story" />}
       {event.follows_zh != null && <div className="muted small">接著線頭：{event.follows_zh}</div>}
       <div className="world-event-solutions">
-        {event.solutions.map((s) => (
-          <Hint key={s.index} text={solutionHint(s)}>
-            <button
-              type="button"
-              className={situation?.template === s.template && s.template !== null ? "primary" : ""}
-              disabled={busy || !s.available || s.template === null}
-              onClick={() => s.template !== null && onOpen(s.template)}
-              data-testid="world-solution"
-            >
-              {solutionLabel(s)}
-              {!s.available && <span className="small muted">（{s.unavailable_zh ?? "不能用"}）</span>}
-            </button>
-          </Hint>
-        ))}
+        {event.solutions.map((s) => {
+          const click = solutionClick(s);
+          const waive = waiveLabel(s);
+          return (
+            <span key={s.index} className="world-solution-group">
+              <Hint text={solutionHint(s)}>
+                <button
+                  type="button"
+                  className={click?.kind === "open" && situation?.template === click.template ? "primary" : ""}
+                  disabled={busy || !s.available || click === null}
+                  onClick={() => {
+                    if (click?.kind === "open") onOpen(click.template);
+                    else if (click?.kind === "solve") onSolve(click.solution, null);
+                  }}
+                  data-testid="world-solution"
+                  data-kind={s.kind}
+                >
+                  {solutionLabel(s)}
+                  {!s.available && <span className="small muted">（{s.unavailable_zh ?? "不能用"}）</span>}
+                </button>
+              </Hint>
+              {waive !== null && (
+                <Hint text="用掉這條線頭代替付出補給（線頭用掉就沒了）">
+                  <button
+                    type="button"
+                    disabled={busy || s.waive_thread == null}
+                    onClick={() => onSolve(s.index, s.waive_thread ?? null)}
+                    data-testid="world-solution-waive"
+                  >
+                    {waive}
+                  </button>
+                </Hint>
+              )}
+            </span>
+          );
+        })}
       </div>
       <div className="muted small">{event.leave_zh}</div>
       {situation !== null && (
