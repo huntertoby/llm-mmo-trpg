@@ -31,17 +31,42 @@ export function canSendChat(text: string, busy: boolean): boolean {
   return !busy && n > 0 && n <= PLAYER_TEXT_MAX;
 }
 
-/** 解法按鈕的文字：「情境判定：找安全路（感知、力量）」。 */
+/** 解法按鈕的文字：「情境判定：找安全路（感知、力量）」；交涉多顯示付出的補給。 */
 export function solutionLabel(s: WorldEventSolution): string {
   const note = s.note_zh !== "" ? `：${s.note_zh}` : "";
   const attrs = s.attributes_zh !== "" ? `（${s.attributes_zh}）` : "";
-  return `${s.kind_zh}${note}${attrs}`;
+  const cost = s.kind === "parley" && s.cost_supplies > 0 ? `（付出 ${s.cost_supplies} 補給）` : "";
+  return `${s.kind_zh}${note}${attrs}${cost}`;
 }
 
 /** 解法按鈕的說明卡：可以用時的說明、不能用時的原因。 */
 export function solutionHint(s: WorldEventSolution): string {
-  if (s.available) return "看看處境，再寫你打算怎麼做（送出前可以換別的解法）";
-  return s.unavailable_zh ?? "現在不能用";
+  if (!s.available) return s.unavailable_zh ?? "現在不能用";
+  switch (s.kind) {
+    case "abandon":
+      return "不管這件事，不留懲罰，事件就此結束";
+    case "parley":
+      return s.cost_supplies > 0 ? `不擲骰、一定成功；付出 ${s.cost_supplies} 補給` : "不擲骰、一定成功";
+    case "combat":
+      return "在這裡開一場一般戰鬥；打贏才算解決，輸了或撤退事件就作罷";
+    default:
+      return "看看處境，再寫你打算怎麼做（送出前可以換別的解法）";
+  }
+}
+
+/** 持有線頭、可以抵掉交涉付出時的按鈕文字：「用〔商人欠你人情〕抵」。 */
+export function waiveLabel(s: WorldEventSolution): string | null {
+  if (s.kind !== "parley" || s.waive_thread == null) return null;
+  return `用〔${s.waive_zh ?? s.waive_thread}〕抵`;
+}
+
+/** 這個解法按下去要送什麼：情境判定開情境（`open`），其他送 `event_solve`（`solve`）。 */
+export function solutionClick(
+  s: WorldEventSolution,
+): { kind: "open"; template: string } | { kind: "solve"; solution: number } | null {
+  if (s.kind === "situation") return s.template != null ? { kind: "open", template: s.template } : null;
+  if (s.kind === "abandon" || s.kind === "parley" || s.kind === "combat") return { kind: "solve", solution: s.index };
+  return null;
 }
 
 /** 任務步驟前的記號：已完成 ✔、目前 ▶、還沒到 ・。 */

@@ -137,6 +137,9 @@ export function WorldScreen({ onHome }: Props) {
       if (charId !== null) show(await api.worldSituation(charId, template));
     });
 
+  const solve = (solution: number, useThread: string | null) =>
+    act({ kind: "event_solve", solution, use_thread: useThread });
+
   const answer = (template: string, text: string, cite: string[]) =>
     void run(async () => {
       if (charId !== null) show(await api.worldAnswer(charId, template, text, cite));
@@ -274,7 +277,7 @@ export function WorldScreen({ onHome }: Props) {
             eventSlot={
               <>
                 {result !== null && <SituationResultCard result={result} onClose={() => setResult(null)} />}
-                {view.event != null && <EventCard event={view.event} busy={busy} onOpen={openSituation} onAnswer={answer} />}
+                {view.event != null && <EventCard event={view.event} busy={busy} onOpen={openSituation} onSolve={solve} onAnswer={answer} />}
               </>
             }
             peopleSlot={<NpcPanel view={view} busy={busy} chats={chats} onAct={act} onChat={chat} />}

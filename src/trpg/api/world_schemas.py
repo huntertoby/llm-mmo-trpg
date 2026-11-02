@@ -37,6 +37,7 @@ from trpg.world.actions import (
     AllocateAction,
     CampAction,
     DissolveAction,
+    EventSolveAction,
     FlashAction,
     FlashPickAction,
     InheritAction,
@@ -100,12 +101,13 @@ type WorldActionRequest = Annotated[
     | AcceptQuestAction
     | OfferPickAction
     | TalkAction
-    | TavernAction,
+    | TavernAction
+    | EventSolveAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
 ``source: "menu"``，代決 5A7-4；情境判定與敘述只能經 ``/situation``、``/chat`` 由伺服器組提議，
-5B-5）。"""
+5B-5；``event_solve`` 是放棄、交涉、戰鬥解法，5B-5b）。"""
 
 
 class CreateWorldCharacterRequest(_ApiModel):
@@ -215,7 +217,7 @@ class HereView(_ApiModel):
     hasten_cost: int
     camp_cost: int
     can_tavern: bool = False
-    """城鎮的酒館（本週傳聞，9.6.7 #1；5B-5）。"""
+    """城鎮的酒館（本週傳聞，9.6.7 #1；5B-5；``event_solve`` 是放棄、交涉、戰鬥解法，5B-5b）。"""
 
 
 class HeroStatusView(_ApiModel):
@@ -349,7 +351,7 @@ class WorldView(_ApiModel):
     last_battle_zh: str | None = None
     """最近一次戰鬥結果的一句話（5A-5 待決 1；沒打過為 ``None``）。"""
     event: EventView | None = None
-    """事件卡（5B-5）。"""
+    """事件卡（5B-5；``event_solve`` 是放棄、交涉、戰鬥解法，5B-5b）。"""
     situation_result: SituationResultView | None = None
     """這次請求的情境判定明細與結果敘述。"""
     npcs_here: tuple[NpcHereView, ...] = ()

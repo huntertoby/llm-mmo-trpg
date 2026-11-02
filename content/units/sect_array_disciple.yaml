@@ -13,6 +13,6 @@ ai_profile: flanker
 resist: {}
 element_mods: {}
 tags: [humanoid, sect, sword_array]
-skills: []
+skills: [skill_formation_pierce]
 opening_statuses:
   - {status: sword_formation}
