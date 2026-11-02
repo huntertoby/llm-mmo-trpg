@@ -23,6 +23,7 @@ from trpg.api.world_growth_view import (
     opening_lines,
     skill_names,
 )
+from trpg.api.world_party_view import allies_line, party_event_line, party_view
 from trpg.api.world_schemas import (
     EncounterEnemyView,
     EncounterView,
@@ -348,6 +349,7 @@ def _encounter_view(
             hero_statuses=prepared.hero_statuses,
             reinforcements=prepared.reinforcements,
         ),
+        allies_zh=allies_line(library, char, prepared.hero_hp),
     )
 
 
@@ -423,7 +425,7 @@ def _service_line(library: ContentLibrary, region: str, event: WorldEvent) -> st
     return None
 
 
-_LINES = (_move_line, _battle_line, _service_line)
+_LINES = (_move_line, _battle_line, _service_line, party_event_line)
 
 
 def event_lines(
@@ -501,4 +503,5 @@ def world_view(
         pending_offer=pending_offer_view(library, world, char),
         threads=thread_views(library, world, char, now),
         rumors=rumor_lines(library, char, raw_events),
+        party=party_view(library, char, in_battle=in_battle),
     )
