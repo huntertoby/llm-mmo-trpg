@@ -23,6 +23,7 @@ from trpg.content.keyword_derive import (
     modifier_effects,
     skill_condition_specs,
     skill_effect_specs,
+    skill_facts,
     walk_effect,
 )
 from trpg.content.library import ContentLibrary
@@ -36,12 +37,14 @@ from trpg.content.skills import (
     SkillDef,
     TriggerSpec,
 )
+from trpg.skillgen.memo import derived
 
 __all__ = [
     "SkillKeywords",
     "derive_draft_keywords",
     "derive_keywords",
     "draft_facts",
+    "has_keyword",
     "is_form_maker",
     "is_starter_skill",
     "keyword_pools",
@@ -64,6 +67,22 @@ def _parsed[T: BaseModel](model: type[T], raw: object) -> T | None:
 def _parsed_list[T: BaseModel](model: type[T], raw: object) -> list[T]:
     items = raw if isinstance(raw, list | tuple) else ()
     return [found for item in items if (found := _parsed(model, item)) is not None]
+
+
+def has_keyword(skill: SkillDef, keyword: str, table: KeywordTable) -> bool:
+    """``keyword in derive_keywords(skill, table).all()`` 的快速版（PERF-2）：只看這個關鍵字自己的
+    推導規則（基礎型態與每個戰場變奏型態，與 :func:`derive_keywords` 相同的範圍）；其他關鍵字的
+    規則不影響這個關鍵字成不成立，所以結果相同。"""
+    single = derived(table, f"keyword:{keyword}", lambda: _single_keyword(table, keyword))
+    if single is None:
+        return False
+    return any(derive_from_facts(facts, single).all() for facts in skill_facts(skill))
+
+
+def _single_keyword(table: KeywordTable, keyword: str) -> KeywordTable | None:
+    """只留 ``keyword`` 一個關鍵字的推導表（沒有這個關鍵字時 ``None``）。"""
+    found = tuple(k for k in table.keywords if k.id == keyword)
+    return table.model_copy(update={"keywords": found}) if found else None
 
 
 def derive_draft_keywords(draft: Mapping[str, Any], table: KeywordTable) -> SkillKeywords:

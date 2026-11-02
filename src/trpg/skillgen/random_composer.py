@@ -45,8 +45,9 @@ from trpg.skillgen.composer_parts import (
 )
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
-from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.keywords import has_keyword
 from trpg.skillgen.mechanics import mechanic_tags
+from trpg.skillgen.memo import draft_key, library_memo
 from trpg.skillgen.scaling import retarget_scaling
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.variant_gen import variant_specs
@@ -365,10 +366,18 @@ def _with_scaling_extras(
 
 
 def _tags(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> list[str]:
-    """組合器技能的標籤：主題元素、骨架與機制標籤（:func:`mechanic_tags`）。"""
-    draft = SkillDef.model_validate({**base, "effects": ctx.effects})
+    """組合器技能的標籤：主題元素、骨架與機制標籤（:func:`mechanic_tags`）。機制標籤以草稿內容
+    快取（PERF-2：同一次組合常對同樣的草稿算好幾次）。"""
+    data = {**base, "effects": ctx.effects}
+    key = draft_key(data)
+    memo = library_memo(library, "composer.mechanic_tags")
+    found: tuple[str, ...] | None = None if key is None else memo.get(key)
+    if found is None:
+        found = tuple(mechanic_tags(SkillDef.model_validate(data), library.ruleset))
+        if key is not None:
+            memo[key] = found
     tags: list[str] = [ctx.theme.value, ctx.skeleton.id]
-    return tags + [t for t in mechanic_tags(draft, library.ruleset) if t not in tags]
+    return tags + [t for t in found if t not in tags]
 
 
 def _range(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> tuple[Attribute, ...]:
@@ -656,7 +665,7 @@ def _compose_with_keyword(
             found = compose_with_stats(variant, library=lib, **kwargs)
         except ComposeError:
             continue
-        if keyword in derive_keywords(found.skill, lib.keywords).all():
+        if has_keyword(found.skill, keyword, lib.keywords):  # PERF-2：只看這個關鍵字的規則
             skill = found.skill if index == 0 else _relabel(found.skill, variant, seed)
             return ComposeResult(skill, found.attempts)
     raise ComposeError(f"種子 {seed}：{KEYWORD_TRIES} 次嘗試都做不出帶有關鍵字 {keyword} 的技能")

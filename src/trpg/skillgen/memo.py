@@ -22,13 +22,13 @@ from __future__ import annotations
 import hashlib
 import json
 import weakref
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from trpg.content.library import ContentLibrary
 
-__all__ = ["MEMO_LIMIT", "by_id", "draft_key", "library_memo"]
+__all__ = ["MEMO_LIMIT", "by_id", "clear_memos", "derived", "draft_key", "library_memo"]
 
 MEMO_LIMIT = 200_000
 """每張快取表的上限（筆）：滿了就清空。"""
@@ -50,6 +50,12 @@ def _forget(key: int, ref: weakref.ReferenceType[ContentLibrary]) -> None:
     memo = _MEMOS.get(key)
     if memo is not None and memo.ref is ref:
         del _MEMOS[key]
+
+
+def clear_memos() -> None:
+    """清空所有草稿結果快取與 ID 對照（量測最壞情況與測試用；不影響結果）。"""
+    _MEMOS.clear()
+    _INDEXES.clear()
 
 
 def library_memo(library: ContentLibrary, table: str) -> dict[str, Any]:
@@ -75,21 +81,28 @@ class _Indexed[T](Protocol):
 
 
 _INDEX_LIMIT = 256
-_INDEXES: dict[int, tuple[object, dict[str, Any]]] = {}
+_INDEXES: dict[tuple[int, str], tuple[object, Any]] = {}
+
+
+def derived[T](owner: object, name: str, build: Callable[[], T]) -> T:
+    """``owner``（凍結的內容 model）上名為 ``name`` 的衍生值，同一個物件只建一次（以物件身分對應，
+    並持有該物件確保身分不會被重用）。**回傳值是共用的，呼叫者不可修改。**"""
+    key = (id(owner), name)
+    found = _INDEXES.get(key)
+    if found is not None and found[0] is owner:
+        value: T = found[1]
+        return value
+    if len(_INDEXES) >= _INDEX_LIMIT:
+        _INDEXES.clear()
+    built = build()
+    _INDEXES[key] = (owner, built)
+    return built
 
 
 def by_id[T](table: _Indexed[T]) -> dict[str, T]:
-    """``table.by_id()`` 的快取版：內容表是凍結的 model，同一張表的 ID 對照只建一次（以物件身分
-    對應，並持有該表確保身分不會被重用）。**回傳的字典是共用的，呼叫者不可修改。**"""
-    key = id(table)
-    found = _INDEXES.get(key)
-    if found is not None and found[0] is table:
-        return found[1]
-    if len(_INDEXES) >= _INDEX_LIMIT:
-        _INDEXES.clear()
-    built = table.by_id()
-    _INDEXES[key] = (table, built)
-    return built
+    """``table.by_id()`` 的快取版（:func:`derived`）：內容表是凍結的 model，同一張表的 ID 對照只建
+    一次。**回傳的字典是共用的，呼叫者不可修改。**"""
+    return derived(table, "by_id", table.by_id)
 
 
 def draft_key(data: Mapping[str, Any]) -> str | None:
