@@ -253,7 +253,7 @@ whiteboard:
   command_statuses: [commanding]
   active:
     - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
-    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 烈焰爆, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
+    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 火焰爆, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
     - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
     - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
     - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}

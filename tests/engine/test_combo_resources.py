@@ -480,6 +480,7 @@ def test_every_status_has_a_polarity_consistent_with_beneficial() -> None:
         "infused_fire",  # 3I-6：臨時附魔
         "infused_holy",
         "stoneskin",  # 3-54b：石膚（大地）
+        "commanding",  # BAL-19f：號令（召喚物傷害 +25%）
     }
 
 
