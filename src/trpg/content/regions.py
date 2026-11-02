@@ -9,10 +9,18 @@ from __future__ import annotations
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
-from trpg.content.maps import MapDef
+from trpg.content.maps import (
+    BOSS_ARCHETYPE,
+    TEST_ARCHETYPE,
+    TRAINING_ARCHETYPE,
+    Archetype,
+    MapDef,
+)
 from trpg.content.schemas import ContentModel
 
 __all__ = ["LookKeyDef", "RegionDef", "RegionTable", "sanitize_map_theme"]
+
+_POOL_BANNED = frozenset({TEST_ARCHETYPE, TRAINING_ARCHETYPE, BOSS_ARCHETYPE})
 
 
 class RegionDef(ContentModel):
@@ -20,6 +28,18 @@ class RegionDef(ContentModel):
     name_zh: str = Field(min_length=1)
     look: dict[str, str] = Field(default_factory=dict)
     """該區的預設覆寫（地圖檔的 ``look`` 會蓋過它）。"""
+    map_pool: tuple[Archetype, ...] = ()
+    """該區的戰場地圖池（``docs/design/05-戰鬥.md`` 5.1「區域地圖池」，#43；Phase 5A-1）。
+    空＝不檢查；地點圖的戰鬥地圖類型必須在池內（見 :mod:`trpg.content.world_map`）。"""
+
+    @model_validator(mode="after")
+    def _check_pool(self) -> RegionDef:
+        if len(set(self.map_pool)) != len(self.map_pool):
+            raise ValueError(f"區域 {self.id} 的 map_pool 有重複的地圖類型")
+        banned = sorted(set(self.map_pool) & _POOL_BANNED)
+        if banned:
+            raise ValueError(f"區域 {self.id} 的 map_pool 不可含 {', '.join(banned)}")
+        return self
 
 
 class LookKeyDef(ContentModel):
