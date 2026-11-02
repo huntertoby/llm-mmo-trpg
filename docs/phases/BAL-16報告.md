@@ -83,3 +83,38 @@ ruff check、ruff format --check、mypy（371 檔）、lint-imports（7 契約�
 6. **治療範圍**：+20% 套用在所有治療（技能治療、再生、吸血、形態治療、元素治療隊友），只排除護盾；若只想放大「治療技能」需再定。
 7. **#93 的實際效果近乎零**（3.5% 治療落在水上、勝率不變）；是否需要 AI 偏好把隊友帶到水上治療。
 8. **還擊數值**：還擊每次傷害高於格擋每次省下，依規則不必調還擊；但 Boss 戰近戰 build 勝率在還擊優先下較低（17.1% → 8.6%，n=70），是否另處理交玩法 PM。
+
+## BAL-16b2｜BAL-16 收尾（玩法 PM 2026-11-02）
+
+規格：`docs/phases/PhaseBAL計畫.md` 最末段「BAL-16b2」。
+
+### 做了什麼
+
+1. **下雨＝潮濕**：引擎沒有「下雨＝潮濕」的判定（`rain` 只有元素傷害增減與每輪水窪 `puddles_per_round`），照規格 **不新增**，記為待辦。#93 目前只看「站在水面格」（下雨產生的水窪是水面格，站上去照樣 +20%）。
+2. **治療 AI 計入潮濕**：效用 AI 的治療收益本來就取自預覽（`preview` 跑引擎結算的 `healed`），已含 +20%，程式不需改。補回歸測試 `test_heal_ai_counts_the_wet_bonus_when_picking_a_target`：兩名同樣重傷的隊友，水上那位預估治療 ×1.2、評分較高。區域技能（zone）的便宜估計仍用骰面平均（不看格子表面），影響小，未改。
+3. **Boss 戰 HUD 與撤退事件**：
+   - 新事件 `guards_retreated`（`leader_ids`、`unit_ids`＝撤退的非召喚物敵人，依 ID 排序），緊接在 `battle_ended`（`leader_defeated`）之前；戰鬥紀錄一行「頭目倒下，{護衛名稱、…} 撤退了」。
+   - 勝利條件顯示：說明表新增 `leader` 條目（打倒頭目；頭目倒下時，剩下的護衛撤退，直接勝利；規則 3 行），「全滅」條目移除 BAL-16a 加的 Boss 那一行。前端 `objective.ts` 依 `leader_retreat` 顯示「⚔ 打倒頭目（護衛會撤退）」（HUD、選路畫面、Boss 戰開場橫幅、說明提示都經同一組函式）；CLI 標頭的勝利條件同樣改字。前端撤退淡出 **不做**。
+   - `LOG_FORMAT` `/98` → `/99`（新事件）；格式變更文件加一條。存檔版本不變（`trpg-run/13`）。
+4. **近戰 build Boss 戰重量**（`bal16_block_riposte.py --normal-seeds 0 --boss-seeds 26`，7 build × 26 種子，每組 n=182；表在 `BAL-16/block_riposte_boss.md`）：
+
+| Boss（n=182） | 格擋／場 | 格擋每次省下 | 格擋每輪省下 | 還擊／場 | 還擊每次傷害 | 還擊每輪傷害 | 勝率 |
+|---|---|---|---|---|---|---|---|
+| 格擋優先 | 1.91 | 5.14 | 1.56 | — | — | — | **17.6%**（32/182） |
+| 還擊優先（現行） | — | — | — | 1.18 | 6.86 | 1.49 | **12.1%**（22/182） |
+
+差 5.5 點，約 1.5 個標準誤（95% 信賴區間重疊），方向與 BAL-15c、BAL-16 一致但仍不顯著。每次比較還擊（6.86）高於格擋（5.14）；每輪兩者接近（1.49 vs 1.56），因為 Boss 戰還擊觸發次數（1.18／場）少於格擋（1.91／場）——護衛多為遠程。逐 build：push 23.1% → 3.8% 落差最大，tank 反而 11.5% → 15.4%。
+
+### 快照與測試變動
+
+- `client/src/battle/fixtures/glossary.json` 重產（`leader` 條目、全滅規則）；`openapi.json`、`schema.d.ts` 沒變（事件不在 API 結構裡）；CLI 輸出快照、行為快照沒變。
+- 測試：`test_leader_retreat_bal16a.py` 加斷言（撤退事件、順序、紀錄句）；`test_wet_heal_bal16b.py` 加 AI 測試；`objective.test.ts` 加 Boss 戰顯示斷言。LOG_FORMAT 字面值同步。
+
+### 檢查
+
+ruff check、ruff format --check、mypy、lint-imports 通過；pytest（`-m "(slow or not slow) and not llm"`，`-n 6`）：`tests/engine`＋`content`＋`narrative`＋`api`＋`skillgen`＋`test_architecture.py` 10133 passed；`tests/roguelite`＋`sim`＋`cli` 545 passed；vitest 1176 passed、`pnpm build` 通過；swamp 種子 7 重播通過（88 動作、313 事件）。
+
+### 待 PM 決定
+
+1. **下雨＝潮濕**：要不要新增成規則（目前只有水面格算潮濕）。
+2. Boss 戰還擊優先 vs 格擋優先勝率差（17.6% vs 12.1%，不顯著）是否需要處理。

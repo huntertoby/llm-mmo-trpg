@@ -241,7 +241,8 @@ def action_texts(core: CoreRules, refill_after_battle: Sequence[str] = ()) -> tu
 
 
 def objective_texts() -> tuple[InfoText, ...]:
-    """三種勝利條件、兩種目標格與五種結算原因的說明（對照 ``engine/objectives.py`` 的判定）。
+    """四種勝利條件（全滅、打倒頭目、撤離、守點）、兩種目標格與五種結算原因的說明（對照
+    ``engine/objectives.py`` 的判定）。
 
     ``{rounds}`` 是限時輪數的佔位。判定規則本身沒有可調數值，所以文字固定；測試用引擎的判定
     逐項驗證（倒下的隊友不用撤、召喚物不計、只在每輪結束判定）。
@@ -255,7 +256,16 @@ def objective_texts() -> tuple[InfoText, ...]:
             (
                 "擊倒所有敵人即勝；我方全部倒下即敗",
                 "召喚物不計入（不用打倒敵方召喚物，我方召喚物倒下也不算全滅）",
+            ),
+        ),
+        InfoText(
+            "leader",
+            "打倒頭目",
+            "頭目倒下時，剩下的護衛撤退，直接勝利",
+            (
                 "Boss 戰：頭目倒下時，剩下的護衛撤退，直接勝利",
+                "也可以擊倒所有敵人取勝；我方全部倒下即敗",
+                "撤退的護衛不算擊倒（不給擊殺、不掉落），獎勵照完整勝利",
             ),
         ),
         InfoText(

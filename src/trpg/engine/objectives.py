@@ -18,10 +18,10 @@
 from __future__ import annotations
 
 from trpg.engine.context import Ctx
-from trpg.engine.events import BattleEnded, EndReason
+from trpg.engine.events import BattleEnded, EndReason, GuardsRetreated
 from trpg.engine.forms import leave_all_forms
 from trpg.engine.ids import BOSS_TAG
-from trpg.engine.state import BattleState
+from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Team
 
 __all__ = ["check_battle_end", "check_round_end", "end_battle"]
@@ -47,7 +47,13 @@ def check_battle_end(ctx: Ctx) -> bool:
     enemies = [u for u in living if u.team is Team.ENEMY]
     escaped = any(u.escaped for u in state.units.values() if u.team is Team.ALLY)
     if allies and enemies:
-        if _leader_defeated(state):
+        leaders = _fallen_leaders(state)
+        if leaders:
+            ctx.emit(
+                GuardsRetreated,
+                leader_ids=tuple(u.id for u in leaders),
+                unit_ids=tuple(u.id for u in sorted(enemies, key=lambda u: u.id)),
+            )
             end_battle(ctx, Team.ALLY, "leader_defeated")
             return True
         return False
@@ -62,16 +68,16 @@ def check_battle_end(ctx: Ctx) -> bool:
     return True
 
 
-def _leader_defeated(state: BattleState) -> bool:
-    """Boss 戰（``leader_retreat``）：場上曾有敵方頭目，且全部已倒下。"""
+def _fallen_leaders(state: BattleState) -> list[UnitState]:
+    """Boss 戰（``leader_retreat``）：場上曾有敵方頭目且全部已倒下時，回傳這些頭目；否則空列表。"""
     if not state.objective.leader_retreat:
-        return False
+        return []
     leaders = [
         u
         for u in state.units_sorted()
         if u.team is Team.ENEMY and not u.is_summon and u.has_tag(BOSS_TAG)
     ]
-    return bool(leaders) and not any(u.alive for u in leaders)
+    return [] if any(u.alive for u in leaders) else leaders
 
 
 def check_round_end(ctx: Ctx) -> bool:

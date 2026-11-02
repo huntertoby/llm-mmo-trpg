@@ -32,6 +32,11 @@ describe("勝利條件文字", () => {
     expect(objectiveBadge(ESCAPE)).toBe("➜ 撤離");
     expect(objectiveBadge(DEFEND)).toBe("◎ 守點");
     expect(objectiveBadge(ELIMINATE)).toBe("⚔ 全滅");
+    // Boss 戰（BAL-16b2）：HUD 與選路畫面顯示「打倒頭目（護衛會撤退）」
+    const boss = { ...ELIMINATE, leader_retreat: true };
+    expect(objectiveBadge(boss)).toBe("⚔ 打倒頭目（護衛會撤退）");
+    expect(objectiveHud(boss, 1)).toBe("⚔ 打倒頭目（護衛會撤退）");
+    expect(objectiveLine(boss)).toBe("打倒頭目：頭目倒下時，剩下的護衛撤退，直接勝利");
   });
 });
 
