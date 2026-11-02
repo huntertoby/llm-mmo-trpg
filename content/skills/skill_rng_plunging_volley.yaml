@@ -1,0 +1,27 @@
+# BAL-19d（玩法決定 #110，06 6.27.4 補內容：遠程武器技；數值為初值，未經模擬）：俯射箭雨，居高臨下時更密（敏捷＋高處）
+id: skill_rng_plunging_volley
+schema_version: 1
+name_zh: 俯射箭雨
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: cross, range: 5}
+effects:
+  - {type: damage, multiplier_permille: 600}
+  # 從高處往下射，箭雨更密
+  - type: damage
+    multiplier_permille: 500
+    condition: {type: height_advantage}
+condition: null
+cost: {stamina: 10, cooldown: 3}
+tags: [physical, ranged, aoe, height]
+narrative:
+  concept: 從高處把箭雨往下潑，站得越高越密
+  cast_flavor: 你站在高處拉滿弓連射，箭雨斜斜落進下方的敵群
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
