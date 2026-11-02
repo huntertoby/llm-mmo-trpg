@@ -11,8 +11,11 @@
    - ``trpg.skillgen`` 不得匯入 ``trpg.llm``（Phase 4-L4：skillgen 不呼叫 LLM；大小估算放 shared）。
    - ``trpg.roguelite`` 不得匯入 api、cli、sim、llm、narrative（Phase 3-5a：只用 engine、content、
      skillgen）。
-2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite`` 內
-   不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式等。
+   - ``trpg.world`` 不得匯入 api、cli、sim、llm、narrative；engine、content、shared、roguelite、
+     skillgen、narrative 不得匯入 ``trpg.world``（Phase 5A-2，``docs/phases/Phase5計畫.md`` 2.3）。
+2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite``、``world`` 內
+   不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式、內建 ``hash()``
+   等。
 """
 
 from __future__ import annotations
@@ -32,17 +35,27 @@ ENGINE_FORBIDDEN = (
     "trpg.sim",
     "trpg.skillgen",
     "trpg.cli",
+    "trpg.world",
 )
 
-CONTENT_FORBIDDEN = ("trpg.skillgen",)
+CONTENT_FORBIDDEN = ("trpg.skillgen", "trpg.world")
 
-NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim")
+NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim", "trpg.world")
 
 API_FORBIDDEN = ("trpg.cli",)
 
-SKILLGEN_FORBIDDEN = ("trpg.llm",)
+SKILLGEN_FORBIDDEN = ("trpg.llm", "trpg.world")
 
-ROGUELITE_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.sim", "trpg.llm", "trpg.narrative")
+ROGUELITE_FORBIDDEN = (
+    "trpg.api",
+    "trpg.cli",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.world",
+)
+
+WORLD_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.sim", "trpg.llm", "trpg.narrative")
 
 FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.engine": ENGINE_FORBIDDEN,
@@ -51,9 +64,13 @@ FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.api": API_FORBIDDEN,
     "trpg.roguelite": ROGUELITE_FORBIDDEN,
     "trpg.skillgen": SKILLGEN_FORBIDDEN,
+    "trpg.world": WORLD_FORBIDDEN,
 }
 
-DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite")
+DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite", "world")
+
+# 禁止呼叫的內建函式（字串的 ``hash()`` 每次執行不同，守則 2；Phase 5A-2 起）。
+BANNED_BUILTIN_CALLS = frozenset({"hash"})
 
 # 整個模組禁止匯入。
 BANNED_MODULES = ("random", "secrets")
@@ -172,6 +189,8 @@ def nondeterminism_violations(tree: ast.AST, location: str) -> list[Violation]:
         elif isinstance(node, ast.Call):
             # __import__("random")、importlib.import_module("random")
             func = _dotted_name(node.func)
+            if func in BANNED_BUILTIN_CALLS:
+                out.append(Violation(where, f"禁止呼叫內建 {func}()"))
             if (
                 func in {"__import__", "importlib.import_module", "import_module"}
                 and node.args
@@ -226,7 +245,7 @@ def test_source_tree_is_found() -> None:
     modules = {module_name_for(p) for p in files}
     for sub in ("shared", "engine", "content", "skillgen", "sim", "llm", "narrative"):
         assert f"trpg.{sub}" in modules
-    for sub in ("roguelite", "api", "cli"):
+    for sub in ("roguelite", "api", "cli", "world"):
         assert f"trpg.{sub}" in modules
 
 
@@ -275,6 +294,7 @@ def test_scanner_detects_banned_imports_and_calls() -> None:
         "import os\nos.urandom(4)",
         "__import__('random')",
         "import importlib\nimportlib.import_module('random')",
+        "x = hash('abc')",
     ]
     for snippet in bad_snippets:
         assert _nd(snippet), f"應偵測到違規：{snippet!r}"
@@ -286,6 +306,8 @@ def test_scanner_allows_safe_code() -> None:
         "import time\ntime.sleep",  # 只引用 sleep 不算讀取時間
         "import datetime\ndatetime.timedelta(days=1)",
         "x = {'random': 1}",
+        "class A:\n    def __hash__(self) -> int:\n        return 1",
+        "from trpg.shared.rng import fnv1a64\nfnv1a64(b'x')",
     ]
     for snippet in ok_snippets:
         assert not _nd(snippet), f"不應判為違規：{snippet!r}"
@@ -309,6 +331,16 @@ def test_scanner_detects_dependency_violations() -> None:
         ("trpg.api.app", False, "from trpg.cli.main import main"),
         ("trpg.api.routes.battles", False, "import trpg.cli.battle"),
         ("trpg.api", True, "from ..cli import render"),
+        ("trpg.world.step", False, "from trpg.api.app import create_app"),
+        ("trpg.world.step", False, "from trpg.narrative.events import describe_event"),
+        ("trpg.world", True, "from ..llm import client"),
+        ("trpg.world.clock", False, "import trpg.sim.matrix"),
+        ("trpg.engine.grid", False, "from trpg.world.step import world_step"),
+        ("trpg.content.library", False, "import trpg.world.state"),
+        ("trpg.shared.rng", False, "from trpg.world import clock"),
+        ("trpg.roguelite.progress", False, "from trpg.world.state import CharacterState"),
+        ("trpg.skillgen.validate", False, "from ..world import step"),
+        ("trpg.narrative.events", False, "from trpg.world.actions import TravelAction"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
@@ -329,6 +361,10 @@ def test_scanner_allows_legal_dependencies() -> None:
         ("trpg.api.sessions", False, "from trpg.sim.lineup import build_allies"),
         ("trpg.api.app", False, "from trpg.narrative.events import describe_event"),
         ("trpg.cli.main", False, "from trpg.api.app import create_app"),
+        ("trpg.world.step", False, "from trpg.roguelite.state import RunState"),
+        ("trpg.world.step", False, "from trpg.engine.runner import LOG_FORMAT"),
+        ("trpg.world.step", False, "from trpg.content.library import ContentLibrary"),
+        ("trpg.api.world", False, "from trpg.world.step import world_step"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
