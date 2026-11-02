@@ -7,6 +7,7 @@ from typing import Any, Literal
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
 from trpg.engine.events import EventBase
+from trpg.engine.oaths import observe_oath
 from trpg.engine.skill_triggers import Fired, PassiveIndex, observe
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
@@ -127,6 +128,7 @@ class Ctx:
         self.state.next_event_seq += 1
         self.events.append(event)
         observe(self, event)
+        observe_oath(self, event)  # 誓約的違反判定（Phase 5C-3）
         return event
 
     def finish_rng(self) -> None:

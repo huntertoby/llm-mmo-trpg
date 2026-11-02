@@ -406,6 +406,9 @@ class QuestDef(ContentModel):
     start: tuple[QuestCondition, ...] = ()
     """接任務的條件（只能用狀態型條件）。"""
     steps: tuple[QuestStepDef, ...] = Field(min_length=1)
+    companion: str | None = Field(default=None, pattern=ID_PATTERN)
+    """跟著這個任務的劇情夥伴（``world/mercenaries.yaml`` 的 ``companions``；5C-3，#97：接任務時
+    加入、任務結束時離隊）。"""
 
     @model_validator(mode="after")
     def _check(self) -> QuestDef:

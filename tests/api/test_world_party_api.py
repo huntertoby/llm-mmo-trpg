@@ -47,7 +47,8 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert party["can_hire"] is True
     assert party["hire_problem_zh"] is None
     assert party["max_hired"] == 2
-    assert [m["title_zh"] for m in party["members"]] == ["主角"]  # 雇 0 名＝獨行（5C-2）
+    # 新角色預設帶鐵壁＋回春（5C-3，9.6.11）
+    assert [m["title_zh"] for m in party["members"]] == ["主角", "盾衛・守護", "醫者・輔助"]
     roster = party["mercenaries"]
     assert len(roster) == 9
     tiebi = next(m for m in roster if m["id"] == "merc_tiebi")
@@ -55,7 +56,7 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert tiebi["role_zh"] == "守護"
     assert tiebi["theme_zh"]
     assert "挑釁怒吼" in tiebi["skills_zh"]
-    assert tiebi["hired"] is False
+    assert tiebi["hired"] is True  # 預設隊伍（5C-3）
 
 
 def test_hire_and_fight_with_mercenaries(client: TestClient, tmp_path: Path) -> None:
@@ -96,3 +97,27 @@ def test_hire_rejected_in_the_field(client: TestClient) -> None:
     assert too_many.status_code == 422
     none = _ok(_act(client, cid, kind="hire", mercenaries=[]))
     assert any("獨行" in e for e in none["events"])
+
+
+# ---------------------------------------------------------------------------
+# 5C-3：劇情夥伴
+# ---------------------------------------------------------------------------
+
+
+def test_companion_in_party_view(client: TestClient) -> None:
+    cid, view = _create(client)
+    assert view["party"]["free_slots"] == 2 and view["party"]["companion_zh"] is None
+    accepted = _ok(_act(client, cid, kind="accept_quest", quest="starter_ferry"))
+    party = accepted["party"]
+    assert [m["name_zh"] for m in party["members"][1:]] == ["鐵壁", "阿岳"]
+    ayue = party["members"][2]
+    assert ayue["companion"] == "companion_ayue" and ayue["title_zh"] == "獵戶・劇情夥伴"
+    assert ayue["note_zh"] == "劇情夥伴：任務結束後離隊"
+    assert party["free_slots"] == 1
+    assert party["companion_zh"] == "阿岳（霧渡新手路）跟著你，佔 1 個隊友位；任務結束後離隊"
+    assert any(e.startswith("阿岳加入隊伍（替下回春）") for e in accepted["events"])
+    assert {m["id"] for m in party["mercenaries"] if m["hired"]} == {"merc_tiebi"}
+    too_many = _act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"])
+    assert too_many.status_code == 422 and "劇情夥伴" in too_many.json()["detail"]
+    met = _ok(_act(client, cid, kind="travel", to="ferry_steps"))
+    assert met["encounter"]["allies_zh"].endswith("＋鐵壁、阿岳")

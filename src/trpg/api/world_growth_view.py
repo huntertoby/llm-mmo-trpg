@@ -18,7 +18,7 @@ from trpg.api.world_schemas import (
     OathView,
 )
 from trpg.content.library import ContentLibrary
-from trpg.content.world_oaths import OathTable
+from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.engine.battle import OPENING_STATUS_MAX_DURATION
 from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
@@ -29,6 +29,8 @@ from trpg.world.actions import (
     FlashPickedEvent,
     InsightGainedEvent,
     LeveledUpEvent,
+    OathBrokenEvent,
+    OathKeptEvent,
     OathReleasedEvent,
     OathSwornEvent,
     SkillDissolvedEvent,
@@ -36,7 +38,15 @@ from trpg.world.actions import (
     SkillTierChangedEvent,
     WorldEvent,
 )
-from trpg.world.growth import as_run, at_service, hero_tier, skill_seed, world_library
+from trpg.world.growth import (
+    OATH_PASSIVE_SLOTS,
+    as_run,
+    at_service,
+    hero_tier,
+    passive_count,
+    skill_seed,
+    world_library,
+)
 from trpg.world.state import CharacterState, LastBattle, NextBattleMod, WorldState
 
 __all__ = [
@@ -56,6 +66,10 @@ __all__ = [
 
 SERVICE_ZH: Final = "閃現、重閃、溶掉、傳承、重配屬性、立誓只在城鎮與營火（和換技能同一處）"
 UNAVAILABLE_ZH: Final = "尚未開放"
+SLOT_ZH: Final = "誓約佔 1 格被動欄位（立誓後被動技能最多裝 2 招）"
+JUDGE_IN_BATTLE_ZH: Final = "戰鬥中判定：違反時立刻移除加成"
+JUDGE_AT_END_ZH: Final = "戰鬥結束時判定（只記錄）"
+PERMILLE_ONE: Final = 1000
 DIFFICULTY_ZH: Final[dict[str, str]] = {"easy": "易", "medium": "中", "hard": "難"}
 _END_REASON_ZH: Final[dict[str, str]] = {"max_rounds": "輪數用完"}
 
@@ -120,19 +134,95 @@ def _duration_zh(seconds: int) -> str:
     return f"{hours} 小時" if minutes == 0 else f"{hours} 小時 {minutes} 分鐘"
 
 
-def _templates(table: OathTable) -> tuple[OathTemplateView, ...]:
+def _bonus_zh(library: ContentLibrary, table: OathTable, difficulty: str) -> str:
+    """難度檔的加成：〔狀態名〕＋造成／受到的傷害百分比（從狀態的數值算，不寫死）。"""
+    status_id = table.bonuses.get(difficulty)  # type: ignore[call-overload]
+    if status_id is None:
+        return "沒有加成"
+    status = library.ruleset.status_def(status_id)
+    effect = _permille_zh(status.damage_dealt_permille, status.damage_taken_permille)
+    return f"〔{status.name_zh}〕{effect}"
+
+
+def _permille_zh(dealt: int, taken: int) -> str:
+    parts: list[str] = []
+    if dealt != PERMILLE_ONE:
+        parts.append(f"造成的攻擊傷害 {_signed_percent(dealt)}")
+    if taken != PERMILLE_ONE:
+        parts.append(f"受到的傷害 {_signed_percent(taken)}")
+    return "：" + "、".join(parts) if parts else ""
+
+
+def _signed_percent(permille: int) -> str:
+    delta = permille - PERMILLE_ONE
+    sign = "+" if delta > 0 else "−"
+    whole, rest = divmod(abs(delta), 10)
+    return f"{sign}{whole}%" if rest == 0 else f"{sign}{abs(delta) / 10:g}%"
+
+
+def _template_bonus_zh(library: ContentLibrary, table: OathTable, template: OathTemplateDef) -> str:
+    by = template.difficulty_by
+    if by is None:
+        return _bonus_zh(library, table, template.difficulty)
+    param = template.param_by_id()[by.param]
+    return "；".join(
+        f"{param.name_zh or param.id} {value}：{_bonus_zh(library, table, level)}"
+        for value, level in by.levels.items()
+    )
+
+
+def _judge_zh(template: OathTemplateDef) -> str:
+    if template.check is None:
+        return ""
+    if template.check.at_end:
+        return JUDGE_AT_END_ZH
+    if template.check.kind == "solo":
+        return "開場判定：帶著隊友出戰就違反"
+    return JUDGE_IN_BATTLE_ZH
+
+
+def _templates(library: ContentLibrary, table: OathTable) -> tuple[OathTemplateView, ...]:
     return tuple(
         OathTemplateView(
             id=t.id,
             name_zh=t.name_zh,
             difficulty=t.difficulty,
-            difficulty_zh=DIFFICULTY_ZH[t.difficulty],
+            difficulty_zh=_difficulty_label(t),
             params=tuple(
-                OathParamView(id=p.id, kind=p.kind, choices=p.choices, min=p.min, max=p.max)
+                OathParamView(
+                    id=p.id,
+                    kind=p.kind,
+                    choices=p.choices,
+                    min=p.min,
+                    max=p.max,
+                    name_zh=p.name_zh,
+                    choice_names_zh=dict(p.choice_names_zh),
+                )
                 for p in t.params
             ),
+            description_zh=t.description_zh,
+            bonus_zh=_template_bonus_zh(library, table, t),
+            judge_zh=_judge_zh(t),
         )
         for t in table.templates
+    )
+
+
+def _difficulty_label(template: OathTemplateDef) -> str:
+    by = template.difficulty_by
+    if by is None:
+        return DIFFICULTY_ZH[template.difficulty]
+    return "／".join(dict.fromkeys(DIFFICULTY_ZH[level] for level in by.levels.values()))
+
+
+def _penalty_zh(library: ContentLibrary, table: OathTable | None) -> str:
+    if table is None or table.penalty_status is None:
+        return ""
+    status = library.ruleset.status_def(table.penalty_status)
+    effect = _permille_zh(status.damage_dealt_permille, status.damage_taken_permille)
+    return (
+        f"違反：本場加成移除＋〔{status.name_zh}〕{table.penalty_rounds} 回合{effect}；"
+        "下一場恢復（戰鬥結束時才判定的誓約只記錄）"
     )
 
 
@@ -148,6 +238,11 @@ def _swear_problem(
         (not at_service(library, char), "只有城鎮與營火能立誓"),
         (char.oath is not None, "同時只能有 1 個誓約，請先解除目前的誓約"),
         (now < char.oath_cooldown_until, "解除誓約後 1 天內不能再立誓"),
+        (
+            passive_count(library, char) + OATH_PASSIVE_SLOTS
+            > library.ruleset.core.skill_slots.passive,
+            "誓約佔一格被動欄位，先卸下一招被動",
+        ),
     )
     return next((text for failed, text in checks if failed), None)
 
@@ -159,12 +254,19 @@ def oath_view(
     current = None
     if char.oath is not None:
         template = None if table is None else table.template_by_id().get(char.oath.template)
+        params = char.oath.params
         current = OathCurrentView(
             template=char.oath.template,
             name_zh=template.name_zh if template is not None else char.oath.template,
             difficulty_zh=DIFFICULTY_ZH[char.oath.difficulty],
-            params_zh="、".join(f"{k}＝{v}" for k, v in char.oath.params.items()),
+            params_zh=(
+                template.params_zh(params)
+                if template is not None
+                else "、".join(f"{k}＝{v}" for k, v in params.items())
+            ),
             sworn_at=char.oath.sworn_at,
+            bonus_zh="" if table is None else _bonus_zh(library, table, char.oath.difficulty),
+            judge_zh="" if template is None else _judge_zh(template),
         )
     cooling = now < char.oath_cooldown_until
     problem = _swear_problem(library, char, now, in_battle=in_battle)
@@ -177,7 +279,9 @@ def oath_view(
         can_swear=problem is None,
         swear_problem_zh=problem,
         can_release=char.oath is not None and not in_battle and char.pending_flash is None,
-        templates=() if table is None else _templates(table),
+        templates=() if table is None else _templates(library, table),
+        penalty_zh=_penalty_zh(library, table),
+        slot_zh=SLOT_ZH if table is not None else "",
     )
 
 
@@ -236,6 +340,8 @@ def opening_lines(
     first_team: Team | None,
     hero_statuses: tuple[str, ...],
     reinforcements: int,
+    oath: str | None = None,
+    oath_bonus: str | None = None,
 ) -> tuple[str, ...]:
     """開場說明（5A-6b：先手只影響第 1 輪；開場狀態不擲抵抗、最多 2 回合；代決 5A7-6）。"""
     lines: list[str] = []
@@ -250,7 +356,26 @@ def opening_lines(
         )
     if reinforcements > 0:
         lines.append(f"敵人增援 {reinforcements} 名（已在陣容裡）。")
+    line = _oath_opening(library, oath, oath_bonus)
+    if line is not None:
+        lines.append(line)
     return tuple(lines)
+
+
+def _oath_opening(
+    library: ContentLibrary, template_id: str | None, bonus: str | None
+) -> str | None:
+    """「誓約「名稱」：主角帶〔誓約之力・中〕：…，違反就移除。」；沒有誓約時 ``None``（5C-3）。"""
+    table = library.world_oaths
+    if template_id is None or table is None:
+        return None
+    template = table.template_by_id().get(template_id)
+    name = template.name_zh if template is not None else template_id
+    if bonus is None:
+        return f"誓約「{name}」：主角開場帶誓約之力，違反就移除。"
+    status = library.ruleset.status_def(bonus)
+    effect = _permille_zh(status.damage_dealt_permille, status.damage_taken_permille)
+    return f"誓約「{name}」：主角帶〔{status.name_zh}〕{effect}，違反就移除。"
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +427,7 @@ def _battle_started_line(library: ContentLibrary, event: BattleStartedEvent) -> 
         first_team=event.first_team,
         hero_statuses=event.hero_statuses,
         reinforcements=event.reinforcements,
+        oath=event.oath,
     )
     return "開戰：" + "".join(lines) if lines else None
 
@@ -372,6 +498,12 @@ def _oath_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str]
         return f"立誓：「{oath_name(event.oath.template)}」（難度 {level}）。"
     if isinstance(event, OathReleasedEvent):
         return f"解除誓約「{oath_name(event.template)}」：現實 1 天內不能再立誓。"
+    if isinstance(event, OathBrokenEvent):
+        if event.at_end:
+            return f"戰鬥結束：沒有守住誓約「{oath_name(event.template)}」（只記錄）。"
+        return f"違反誓約「{oath_name(event.template)}」：加成移除、陷入破誓；下一場恢復。"
+    if isinstance(event, OathKeptEvent):
+        return f"守住了誓約「{oath_name(event.template)}」。"
     return None
 
 

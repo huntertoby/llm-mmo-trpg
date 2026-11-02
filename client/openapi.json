@@ -9883,6 +9883,16 @@
           "sworn_at": {
             "type": "integer",
             "title": "Sworn At"
+          },
+          "bonus_zh": {
+            "type": "string",
+            "title": "Bonus Zh",
+            "default": ""
+          },
+          "judge_zh": {
+            "type": "string",
+            "title": "Judge Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -9927,6 +9937,19 @@
             "type": "integer",
             "title": "Max",
             "default": 0
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh",
+            "default": ""
+          },
+          "choice_names_zh": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Choice Names Zh",
+            "default": {}
           }
         },
         "additionalProperties": false,
@@ -9997,6 +10020,21 @@
             "type": "array",
             "title": "Params",
             "default": []
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh",
+            "default": ""
+          },
+          "bonus_zh": {
+            "type": "string",
+            "title": "Bonus Zh",
+            "default": ""
+          },
+          "judge_zh": {
+            "type": "string",
+            "title": "Judge Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -10077,6 +10115,16 @@
             "type": "array",
             "title": "Templates",
             "default": []
+          },
+          "penalty_zh": {
+            "type": "string",
+            "title": "Penalty Zh",
+            "default": ""
+          },
+          "slot_zh": {
+            "type": "string",
+            "title": "Slot Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -10521,6 +10569,28 @@
               }
             ],
             "title": "Ai Zh"
+          },
+          "companion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companion"
+          },
+          "note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Zh"
           }
         },
         "additionalProperties": false,
@@ -10608,6 +10678,22 @@
               }
             ],
             "title": "Season Boss Zh"
+          },
+          "free_slots": {
+            "type": "integer",
+            "title": "Free Slots",
+            "default": 2
+          },
+          "companion_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companion Zh"
           }
         },
         "additionalProperties": false,

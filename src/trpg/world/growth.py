@@ -72,10 +72,12 @@ __all__ = [
     "apply_growth",
     "as_run",
     "at_service",
+    "char_library",
     "from_run",
     "gain_xp",
     "hero_tier",
     "loadout_skills",
+    "passive_count",
     "skill_seed",
     "sync_tier",
     "world_level_for",
@@ -103,8 +105,11 @@ GROWTH_ACTIONS: Final = (
     ReleaseOathAction,
 )
 
+OATH_PASSIVE_SLOTS: Final = 1
+"""誓約佔的被動欄位數（06 6.26「佔一格被動欄位」）。"""
+
 _VIEW_CACHE_LIMIT = 8
-_views: dict[int, tuple[ContentLibrary, ContentLibrary]] = {}
+_views: dict[tuple[int, bool], tuple[ContentLibrary, ContentLibrary]] = {}
 """內容庫 → 大世界視圖的快取（只為了沿用視圖上的重配快取；存著原內容庫本身，``id`` 不會被重用）。"""
 
 
@@ -113,19 +118,41 @@ _views: dict[int, tuple[ContentLibrary, ContentLibrary]] = {}
 # ---------------------------------------------------------------------------
 
 
-def world_library(library: ContentLibrary) -> ContentLibrary:
+def world_library(library: ContentLibrary, *, oath: bool = False) -> ContentLibrary:
     """roguelite 成長函式在大世界用的內容庫：只把 ``offer_tier_by_level`` 換成 07 7.6 的主角
-    階級表。"""
-    cached = _views.get(id(library))
+    階級表。``oath``：角色有誓約時被動欄位少 1 格（06 6.26「佔一格被動欄位」，5C-3）。"""
+    key = (id(library), oath)
+    cached = _views.get(key)
     if cached is not None and cached[0] is library:
         return cached[1]
     table = rules_of(library).hero_growth.skill_tier_by_level
     roguelite = library.roguelite.model_copy(update={"offer_tier_by_level": table})
     view = dataclasses.replace(library, roguelite=roguelite)
+    if oath:
+        core = library.ruleset.core
+        slots = core.skill_slots.model_copy(
+            update={"passive": max(0, core.skill_slots.passive - OATH_PASSIVE_SLOTS)}
+        )
+        ruleset = library.ruleset.model_copy(
+            update={"core": core.model_copy(update={"skill_slots": slots})}
+        )
+        view = dataclasses.replace(view, ruleset=ruleset)
     if len(_views) >= _VIEW_CACHE_LIMIT:
         _views.clear()
-    _views[id(library)] = (library, view)
+    _views[key] = (library, view)
     return view
+
+
+def char_library(library: ContentLibrary, char: CharacterState) -> ContentLibrary:
+    """這個角色裝技能時用的內容庫視圖（有誓約時被動欄位少 1 格）。"""
+    return world_library(library, oath=char.oath is not None)
+
+
+def passive_count(library: ContentLibrary, char: CharacterState) -> int:
+    """主角裝備中的被動技能數（含生成技能）。"""
+    generated = {s.id: s for s in char.generated_skills}
+    defs = [generated.get(s) or library.skills.get(s) for s in char.hero.skills]
+    return sum(1 for d in defs if d is not None and d.kind == "passive")
 
 
 def hero_tier(library: ContentLibrary, level: int) -> int:
@@ -273,7 +300,7 @@ def loadout_skills(
 ) -> CharacterState:
     """新的裝備清單（roguelite ``set_loadout``：擁有的、不重複、欄位上限；沒裝上的進備用）。"""
     try:
-        return from_run(char, set_loadout(library, as_run(char), skills))
+        return from_run(char, set_loadout(char_library(library, char), as_run(char), skills))
     except RunError as exc:
         raise WorldActionError(str(exc)) from exc
 
@@ -326,7 +353,7 @@ def _flash(
     char: CharacterState,
     action: FlashAction | FlashPickAction | DissolveAction | InheritAction,
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
-    lib = world_library(library)
+    lib = char_library(library, char)
     run = as_run(char, seed=skill_seed(world, char))
     event: WorldEvent
     if isinstance(action, FlashPickAction):
@@ -404,11 +431,15 @@ def _oath(
     problems = oath_problems(table, action.proposal)
     if problems:
         raise WorldActionError("；".join(problems))
+    slots = library.ruleset.core.skill_slots.passive
+    if passive_count(library, char) + OATH_PASSIVE_SLOTS > slots:
+        raise WorldActionError("誓約佔一格被動欄位，先卸下一招被動")
     template = table.template_by_id()[action.proposal.template]
+    params = dict(action.proposal.params)
     oath = OathState(
         template=template.id,
-        params=dict(action.proposal.params),
-        difficulty=template.difficulty,
+        params=params,
+        difficulty=template.difficulty_for(params),
         sworn_at=now,
     )
     return char.model_copy(update={"oath": oath}), (OathSwornEvent(oath=oath),)

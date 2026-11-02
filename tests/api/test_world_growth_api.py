@@ -87,6 +87,13 @@ def oath_client(sworn: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
         yield c
 
 
+@pytest.fixture
+def no_oath_client(calm: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
+    """沒有 ``world/oaths.yaml`` 的內容庫（5C-3 起內容資料夾有誓約模板）。"""
+    with _client(dataclasses.replace(calm, world_oaths=None), tmp_path / "saves") as c:
+        yield c
+
+
 def _post(client: TestClient, cid: str, **action: Any) -> Any:
     return client.post(f"/api/world/characters/{cid}/actions", json=action)
 
@@ -241,7 +248,8 @@ def test_dissolve_refunds(calm_client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_oath_unavailable_without_templates(calm_client: TestClient) -> None:
+def test_oath_unavailable_without_templates(no_oath_client: TestClient) -> None:
+    calm_client = no_oath_client
     view = _create(calm_client)
     cid = view["character"]["character_id"]
     oath = view["oath"]
@@ -269,6 +277,8 @@ def test_oath_swear_release_and_cooldown(oath_client: TestClient) -> None:
         "choices": [],
         "min": 1,
         "max": 2,
+        "name_zh": "",
+        "choice_names_zh": {},
     }
     llm = _post(
         oath_client,
@@ -291,7 +301,7 @@ def test_oath_swear_release_and_cooldown(oath_client: TestClient) -> None:
     )
     current = sworn["oath"]["current"]
     assert current["name_zh"] == "只用某一種元素的技能造成傷害"
-    assert current["difficulty_zh"] == "難" and current["params_zh"] == "element＝fire"
+    assert current["difficulty_zh"] == "難" and current["params_zh"] == "element：fire"
     assert sworn["oath"]["can_swear"] is False and sworn["oath"]["can_release"] is True
     assert any(e.startswith("立誓：") for e in sworn["events"])
     released = _act(oath_client, cid, kind="release_oath")
@@ -329,3 +339,42 @@ def test_next_battle_and_opening_lines(ambush: ContentLibrary, tmp_path: Path) -
             assert any("增援" in s for s in opening)
         if encounter["first_team"] == "enemy":
             assert any(s.startswith("敵方先手") for s in opening)
+
+
+# ---------------------------------------------------------------------------
+# 5C-3：18.6 的誓約模板
+# ---------------------------------------------------------------------------
+
+
+def test_real_oath_templates_and_opening(ambush: ContentLibrary, tmp_path: Path) -> None:
+    with _client(ambush, tmp_path / "saves") as client:
+        view = _create(client)
+        cid = view["character"]["character_id"]
+        oath = view["oath"]
+        assert oath["available"] is True and len(oath["templates"]) == 15
+        assert oath["slot_zh"].startswith("誓約佔 1 格被動欄位")
+        assert "破誓" in oath["penalty_zh"] and "2 回合" in oath["penalty_zh"]
+        by_id = {t["id"]: t for t in oath["templates"]}
+        element = by_id["oath_one_element"]
+        assert element["params"][0]["name_zh"] == "元素"
+        assert element["params"][0]["choice_names_zh"]["fire"] == "火焰"
+        assert element["bonus_zh"] == "〔誓約之力・難〕：造成的攻擊傷害 +15%"
+        assert element["judge_zh"] == "戰鬥中判定：違反時立刻移除加成"
+        melee = by_id["oath_melee_kills"]
+        assert melee["difficulty_zh"] == "易／中"
+        assert melee["judge_zh"] == "戰鬥結束時判定（只記錄）"
+        sworn = _act(
+            client,
+            cid,
+            kind="swear_oath",
+            proposal={"template": "oath_one_element", "params": {"element": "fire"}},
+        )
+        current = sworn["oath"]["current"]
+        assert current["params_zh"] == "元素：火焰" and current["difficulty_zh"] == "難"
+        assert current["bonus_zh"] == "〔誓約之力・難〕：造成的攻擊傷害 +15%"
+        met = _act(client, cid, kind="travel", to="ferry_steps")
+        opening = met["encounter"]["opening_zh"]
+        assert any(
+            s.startswith("誓約「只用某一種元素的技能造成傷害」：主角帶〔誓約之力・難〕")
+            for s in opening
+        )

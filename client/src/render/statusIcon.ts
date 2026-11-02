@@ -322,6 +322,25 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     circle(c, 0, 0, 8.5);
     circle(c, 0, 0, 3, true);
   },
+  // 誓約之力（Phase 5C-3，依難度 1～3 個點）：一顆星＋下方的點，只用既有筆畫
+  oath_bonus_easy: (c) => {
+    star(c, 0, -2, 6);
+    circle(c, 0, 8, 1.5, true);
+  },
+  oath_bonus_medium: (c) => {
+    star(c, 0, -2, 6);
+    circle(c, -3, 8, 1.5, true);
+    circle(c, 3, 8, 1.5, true);
+  },
+  oath_bonus_hard: (c) => {
+    star(c, 0, -2, 6);
+    for (const x of [-5, 0, 5]) circle(c, x, 8, 1.5, true);
+  },
+  // 破誓（Phase 5C-3，違反誓約）：一顆星被斜線劃掉
+  oath_broken: (c) => {
+    star(c, 0, 0, 6);
+    line(c, [[-8, 8], [8, -8]]);
+  },
   // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
   heart_link: (c) => {
     circle(c, -5, 0, 4);

@@ -53,6 +53,7 @@ from trpg.engine.events import (
     ManeuverRolled,
     MapEventTriggered,
     MoveBlocked,
+    OathBroken,
     ObjectAttacked,
     ObjectCreated,
     ObjectDamaged,
@@ -1078,6 +1079,14 @@ def _rule_change_triggered(e: RuleChangeTriggered, v: _View) -> str:
     if e.kind == "pass_through_apply":
         return f"    ✦ {who} 的「{skill}」：掠過 {v.name[e.other_id or '']} 身邊"
     return f"  ✦ {who} 的「{skill}」：倒下的地方留下了分身"
+
+
+@_handles(OathBroken)
+def _oath_broken(e: OathBroken, v: _View) -> str:
+    who = v.name[e.unit_id]
+    if e.at_end:
+        return f"  ✦ 戰鬥結束：{who} 沒有守住誓約"
+    return f"  ✦ {who} 違反了誓約：誓約之力消失，陷入破誓"
 
 
 @_handles(DeathCheated)

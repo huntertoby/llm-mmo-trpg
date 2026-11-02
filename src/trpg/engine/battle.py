@@ -88,6 +88,7 @@ from trpg.engine.gear.charge import charge_actions, do_activate_charge
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
+from trpg.engine.oaths import open_oath
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
@@ -336,8 +337,10 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     ids = IdAllocator("unit")
     facings = _opening_facings(setup, positions)
     opening: list[tuple[UnitId, tuple[tuple[str, int | None], ...]]] = []
+    unit_ids: list[UnitId] = []
     for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
         uid = UnitId(ids.next())
+        unit_ids.append(uid)
         wanted = _opening_of(spawn)
         if wanted:
             opening.append((uid, wanted))
@@ -365,6 +368,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     core = ctx.core
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)
     _apply_opening_statuses(ctx, opening)
+    open_oath(ctx, setup.oath, unit_ids)  # 誓約的加成（Phase 5C-3）
     for unit in state.units_sorted():
         roll = ctx.rng.d20()
         modifier = (base_attribute(unit, Attribute.DEX) - core.initiative_attr_base) // (

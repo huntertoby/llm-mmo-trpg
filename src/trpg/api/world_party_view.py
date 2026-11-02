@@ -19,6 +19,8 @@ from trpg.api.world_party_schemas import (
 from trpg.content.library import ContentLibrary
 from trpg.content.world_mercenaries import MERCENARY_ROLES, MercenaryDef
 from trpg.world.actions import (
+    CompanionJoinedEvent,
+    CompanionLeftEvent,
     PartyChangedEvent,
     ShadowAiChangedEvent,
     ShadowSavedEvent,
@@ -26,6 +28,7 @@ from trpg.world.actions import (
 )
 from trpg.world.clock import refresh_day
 from trpg.world.common import world_map_of
+from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
 from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
 from trpg.world.shadows import shadow_level, shadow_tier
@@ -34,6 +37,7 @@ from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, World
 __all__ = ["allies_line", "my_shadow_view", "party_event_line", "party_view"]
 
 SOLO_ZH = "獨行"
+COMPANION_NOTE_ZH = "劇情夥伴：任務結束後離隊"
 DEFAULT_AI_ZH = "預設"
 REPORTS_SHOWN = 20
 
@@ -149,7 +153,40 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
         )
         for s in char.shadows
     ]
+    members += [
+        PartyMemberView(
+            name_zh=c.name_zh,
+            title_zh=f"{c.title_zh}・劇情夥伴",
+            level=char.level,
+            companion=c.id,
+            ai_zh=_ai_zh(library, None, builds[c.build].hero.ai_profile),
+            note_zh=COMPANION_NOTE_ZH,
+        )
+        for c in companion_defs(library, char)
+    ]
     return members
+
+
+def companion_line(library: ContentLibrary, char: CharacterState) -> str | None:
+    """夥伴在隊時的說明（見 ``PartyView.companion_zh``）；沒有夥伴時 ``None``。"""
+    if not char.companions:
+        return None
+    quests = dict(wanted_companions(library, char))
+    names: list[str] = []
+    for c in companion_defs(library, char):
+        quest = quests.get(c.id)
+        found = None if quest is None else _quest_name(library, quest)
+        names.append(c.name_zh if found is None else f"{c.name_zh}（{found}）")
+    count = len(names)
+    return f"{'、'.join(names)}跟著你，佔 {count} 個隊友位；任務結束後離隊"
+
+
+def _quest_name(library: ContentLibrary, quest: str) -> str | None:
+    for table in library.world_quests.quests.values():
+        for q in table.quests:
+            if q.id == quest:
+                return q.name_zh
+    return None
 
 
 def party_view(
@@ -185,6 +222,8 @@ def party_view(
         ai=dict(char.party_ai),
         season_boss_ok=boss is None,
         season_boss_zh=boss,
+        free_slots=free_slots(library, char),
+        companion_zh=companion_line(library, char),
     )
 
 
@@ -243,13 +282,29 @@ def allies_line(library: ContentLibrary, char: CharacterState, hero_hp: int) -> 
     hero = f"主角（開場 HP {hero_hp}{'，疲憊' if char.fatigued else ''}）"
     names = [m.name_zh for m in party_mercenaries(library, char)]
     names += [f"{s.hero.name_zh}的影子" for s in char.shadows]
+    names += [c.name_zh for c in companion_defs(library, char)]
     if names:
         return f"{hero}＋{'、'.join(names)}"
     return f"{hero}・{SOLO_ZH}"
 
 
+def _companion_event_line(
+    library: ContentLibrary, event: CompanionJoinedEvent | CompanionLeftEvent
+) -> str:
+    table = library.world_mercenaries
+    known = {} if table is None else table.companion_by_id()
+    name = known[event.companion].name_zh if event.companion in known else event.companion
+    if isinstance(event, CompanionJoinedEvent):
+        swap = f"（替下{event.replaced_name}）" if event.replaced_name else ""
+        return f"{name}加入隊伍{swap}：劇情夥伴，任務結束後離隊。"
+    back = f"，{event.restored_name}回到隊上" if event.restored_name else ""
+    return f"{name}離開隊伍{back}。"
+
+
 def party_event_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str | None:
-    """``party_changed``、``shadow_saved``、``shadow_ai_changed`` 的句子。"""
+    """``party_changed``、``shadow_saved``、``shadow_ai_changed``、夥伴加入與離隊的句子。"""
+    if isinstance(event, CompanionJoinedEvent | CompanionLeftEvent):
+        return _companion_event_line(library, event)
     if isinstance(event, ShadowSavedEvent):
         return f"已把目前的配置存成影子（Lv {event.level}）。"
     if isinstance(event, ShadowAiChangedEvent):
