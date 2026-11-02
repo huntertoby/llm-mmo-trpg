@@ -291,10 +291,13 @@ def _offer_request(
     mix: tuple[int, int, int] | None,
     min_passive: int,
     tier_bonus: int,
+    pinned_keyword: str | None = None,
 ) -> CandidateRequest:
     request = candidate_request(library, run)
     if tier_bonus:
         request = replace(request, tier=request.tier + tier_bonus)
+    if pinned_keyword is not None:
+        request = replace(request, pinned_keyword=pinned_keyword)
     if region_keywords or mix is not None or min_passive:
         request = replace(
             request,
@@ -333,8 +336,10 @@ def offer_key(
     mix: tuple[int, int, int] | None = None,
     min_passive: int = 0,
     tier_bonus: int = 0,
+    pinned_keyword: str | None = None,
 ) -> str | None:
-    """:func:`make_offer` 同樣參數的快取鍵（PERF-3）；LLM 來源開著時 ``None``（不快取）。"""
+    """:func:`make_offer` 同樣參數的快取鍵（PERF-3）；LLM 來源開著時 ``None``（不快取）。鍵取自
+    ``CandidateRequest`` 全欄位，所以含 ``pinned_keyword``（5B-4d）。"""
     if run.llm:
         return None
     complete = reason == "complete"
@@ -346,6 +351,7 @@ def offer_key(
         mix=mix,
         min_passive=min_passive,
         tier_bonus=tier_bonus,
+        pinned_keyword=pinned_keyword,
     )
     return _request_key(run, complete, request)
 
@@ -359,6 +365,7 @@ def make_offer(
     mix: tuple[int, int, int] | None = None,
     min_passive: int = 0,
     tier_bonus: int = 0,
+    pinned_keyword: str | None = None,
 ) -> SkillOffer:
     """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。``reason`` 為 ``level_up``（白板
     三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。
@@ -366,7 +373,8 @@ def make_offer(
     大世界任務（Phase 5B-4b）另傳 ``region_keywords``（新方向的區域偏向）、``mix``（白板的加深／
     橋接／新方向張數）、``min_passive``（白板至少幾張被動）；預設值＝原型的原行為。完整技能三選一
     只看 ``region_keywords``。``tier_bonus``（Phase 5B-4c 大世界機遇，07 7.6「15% 機率高 1 階」）：
-    候選比角色階級高幾階（照該階預算）；預設 0＝原行為。
+    候選比角色階級高幾階（照該階預算）；預設 0＝原行為。``pinned_keyword``（Phase 5B-4d 機遇，
+    07 7.6「關鍵字由觸發情境決定」）：三張都帶這個關鍵字（只有完整技能三選一看）；預設 ``None``。
 
     裝了 :class:`OfferCache`（:func:`using_offer_cache`）時先查快取（PERF-3，見模組說明）。"""
     complete = reason == "complete"
@@ -378,6 +386,7 @@ def make_offer(
         mix=mix,
         min_passive=min_passive,
         tier_bonus=tier_bonus,
+        pinned_keyword=pinned_keyword,
     )
     cache = _OFFER_CACHE.get()
     if cache is None or run.llm or _COMPLETE_OBSERVER.get() is not None:

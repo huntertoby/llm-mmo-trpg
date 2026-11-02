@@ -58,6 +58,8 @@ def test_opportunity_prefetched_matches_sync(
     try:
         submitted = prefetcher.prefetch(world, char)
         assert len(submitted) == 1
+        # 5B-4d：機遇的預測帶指定關鍵字（快取鍵含它，所以要和 solutions._opportunity 一致）
+        assert [j.pinned_keyword for j in predicted_offers(library, world, char)] == ["charged"]
         prefetcher.wait(timeout=600)
         assert prefetcher.prefetch(world, char) == []  # 已經算好的不再丟
         monkeypatch.setattr(offers, "_compute_offer", _boom)

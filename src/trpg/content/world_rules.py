@@ -244,6 +244,9 @@ class OpportunityRules(ContentModel):
     """這組候選高 1 階的機率 ‰（確定性種子擲）。"""
     tier_up_per_season: int = Field(default=1, ge=0)
     """每個角色（一季一份）最多幾次高 1 階。"""
+    guarantee_from_day: int = Field(default=0, ge=0)
+    """機遇保底（Phase 5B-4d，07 7.6「第 7 天前保底 1 次」）：賽季第幾天起，還沒遇過機遇的角色
+    走到機遇骨架的地點就一定觸發（不看天氣、時段與機率）；0 ＝ 不保底。"""
 
 
 class WorldRules(ContentModel):

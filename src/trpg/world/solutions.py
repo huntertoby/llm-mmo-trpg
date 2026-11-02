@@ -9,7 +9,7 @@
   結束的那個動作（:func:`settle_event_combat`，``world_step`` 後段）結算：打贏＝成功（留線頭），
   輸或撤退＝失敗。經驗只有戰鬥本身。
 - **機遇**（Phase 5B-4c，07 7.6）：條件（裝備的技能帶 ``requires_keyword``）成立、這個骨架的機遇
-  還沒拿過 → 給一組完整技能三選一（``region_keywords``＝觸發的關鍵字）；用
+  還沒拿過 → 給一組完整技能三選一（``pinned_keyword``＝觸發的關鍵字，三張都帶它；5B-4d）；用
   ``fnv1a64("{技能種子}:opportunity:{骨架}")`` 擲 ``tier_up_permille``，中了而且本季還有次數時高
   1 階。結果一定成功。
 - **戰鬥解法的勝利條件**（Phase 5B-4c）：解法的 ``objective``（撤離、守點）記在遭遇上，地圖優先挑
@@ -188,6 +188,7 @@ def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
         "complete",
         region_keywords=() if keyword is None else (keyword,),
         tier_bonus=bonus,
+        pinned_keyword=keyword,  # 5B-4d：三張都帶觸發情境的關鍵字（07 7.6）
     )
     solved = EventSolvedEvent(
         skeleton=trigger.skeleton,

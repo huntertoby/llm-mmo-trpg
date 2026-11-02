@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
-from tests.world.helpers import NOON, make_world
-from tests.world.test_situations import act, at_event, thread
+from tests.world.helpers import NOON, make_world, with_rules
+from tests.world.test_situations import act, at_event, sure, thread
 from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
 from trpg.world.actions import (
@@ -159,6 +159,50 @@ def test_5b4c_log_replays_identically(ambush: ContentLibrary, make_char: MakeCha
     restored = loads_log(dumps_log(entries))
     first = replay(ambush, start_world, {"alice": start}, entries)
     second = replay(ambush, start_world, {"alice": start}, restored)
+    assert dumps_char(first.characters["alice"]) == dumps_char(char)
+    assert dumps_char(second.characters["alice"]) == dumps_char(char)
+    assert dumps_world(first.world) == dumps_world(world)
+    assert first.events == second.events
+
+
+def test_5b4d_log_replays_identically(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5B-4d：骨架 22 判定失敗（記失敗那天）→ 走到古松祭壇（第 6 天機遇保底，不看天氣）→ 機遇
+    三選一（三張都帶「帶電」）→ 選技能，重播逐字相同。"""
+    calm = with_rules(library, encounter={"base_permille": 0, "per_level_permille": 0})
+    lib = sure(calm, "granny_parley", "failure")
+    base = at_event(
+        make_char(unlocked_skeletons=("granny_past",)), "granny_past", "mist_ferry", strong=True
+    )
+    skills = ("skill_chain_lightning", *base.hero.skills[1:])
+    start = base.model_copy(update={"hero": base.hero.model_copy(update={"skills": skills})})
+    start_world = make_world()
+    char, world = start, start_world
+    entries: list[WorldLogEntry] = []
+    now = NOON + 5 * 86_400  # 賽季第 6 天
+
+    def step(action: WorldAction) -> None:
+        nonlocal char, world, now
+        now += 300
+        result = world_step(lib, world, char, action, now)
+        char, world = result.char, result.world
+        entries.append(
+            WorldLogEntry(seq=len(entries) + 1, now=now, character_id="alice", action=action)
+        )
+
+    step(act("granny_parley", attribute=Attribute.WIL, method="parley"))
+    assert char.failed_skeletons and not char.finished_skeletons
+    for place in ("ferry_steps", "bamboo_path", "rain_terraces", "old_pine_altar"):
+        step(TravelAction(to=place))
+    assert char.pending_event is not None and char.pending_event.guaranteed
+    assert char.met_opportunities == ("storm_altar",)
+    step(EventSolveAction(solution=0))  # 機遇
+    assert char.pending_offers and char.pending_offers[0].source == "opportunity"
+    assert all(t.keywords[:1] == ("charged",) for t in char.pending_offers[0].offer.tags)
+    step(OfferPickAction(pick=0))
+
+    restored = loads_log(dumps_log(entries))
+    first = replay(lib, start_world, {"alice": start}, entries)
+    second = replay(lib, start_world, {"alice": start}, restored)
     assert dumps_char(first.characters["alice"]) == dumps_char(char)
     assert dumps_char(second.characters["alice"]) == dumps_char(char)
     assert dumps_world(first.world) == dumps_world(world)
