@@ -86,6 +86,7 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
     knob.pos = start + 1
     _apply(knob, ev.targets)
     one = ev.ratio()
+    one_shares = ev.shares
     if one is None or one > ev.high or ev.shares > shares:
         knob.pos = start
         _apply(knob, ev.targets)
@@ -101,9 +102,10 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
             far = ev.ratio()
             if far is not None and far <= ev.high and ev.shares <= shares:
                 return far, True
+            # 退回一格：旋鈕與違規數回到 ``one`` 那時（同樣的草稿必得同樣的結果，PERF-2 不再重算）
             knob.pos = start + 1
             _apply(knob, ev.targets)
-            ev.ratio()
+            ev.shares = one_shares
     return one, True
 
 

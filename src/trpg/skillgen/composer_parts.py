@@ -30,6 +30,7 @@ from trpg.content.skills import (
 )
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Surface
+from trpg.skillgen.memo import by_id
 
 __all__ = [
     "KNOB_LADDERS",
@@ -133,7 +134,7 @@ class Ctx:
         return rarity_rank(self.rarity)
 
     def primitive(self, primitive_id: str) -> PrimitiveDef:
-        return self.library.ruleset.primitives.by_id()[primitive_id]
+        return by_id(self.library.ruleset.primitives)[primitive_id]
 
     def chance(self, permille: int) -> bool:
         return self.rng.chance_permille(permille)
@@ -187,7 +188,7 @@ def _status_ladder(
     library: ContentLibrary, _knob: PrimitiveKnob, _param: PrimitiveParam, effect: Mapping[str, Any]
 ) -> tuple[Any, ...]:
     """狀態的持續回合（依狀態的預設持續與控制類別；只有一階時不算旋鈕）。"""
-    status = library.ruleset.statuses.by_id().get(str(effect.get("status")))
+    status = by_id(library.ruleset.statuses).get(str(effect.get("status")))
     if status is None:
         return ()
     values = _duration_values(status.duration, status.control_group, library.composer.duration)
@@ -349,7 +350,7 @@ def _has_status(ctx: Ctx, beneficial: bool) -> bool:
 def build_shape(ctx: Ctx, core: list[str], only: tuple[str, ...] | None = None) -> None:
     """形狀（骨架允許、稀有度夠、角色階級已開放、核心原語接受；``only`` 再限縮），再依形狀的參數
     範圍隨機填值。"""
-    shapes = ctx.library.ruleset.shapes.by_id()
+    shapes = by_id(ctx.library.ruleset.shapes)
     tiers = ctx.library.budget.min_character_tier.shapes
     allowed = [
         s
@@ -607,7 +608,7 @@ def _secondary_pool(ctx: Ctx) -> list[str]:
     rules = ctx.skeleton.secondary
     fallback = ctx.rules.structure.fallback_secondary
     pool = list(rules.primitives) if rules.primitives is not None else list(fallback)
-    primitives = ctx.library.ruleset.primitives.by_id()
+    primitives = by_id(ctx.library.ruleset.primitives)
     kept: list[str] = []
     for name in sorted(pool):
         primitive = primitives[name]
@@ -945,7 +946,7 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
     rules = ctx.rules.cost
     if not ctx.chance(rules.self_status_permille):
         return None
-    statuses = ctx.library.ruleset.statuses.by_id()
+    statuses = by_id(ctx.library.ruleset.statuses)
     allowance = ctx.library.budget.allowance.self_status
     options = sorted(
         status_id
