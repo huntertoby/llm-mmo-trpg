@@ -1,0 +1,24 @@
+# BAL-19d（玩法決定 #110，06 6.27.4 補內容：遠程武器技；數值為初值，未經模擬）：毒霧箭射進一片地面，留下毒池（敏捷＋中毒）
+id: skill_rng_toxic_volley
+schema_version: 1
+name_zh: 毒霧箭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: cross, range: 5}
+effects:
+  - {type: damage, multiplier_permille: 600, element: poison}
+  - {type: create_surface, surface: poison, duration: 2}
+condition: null
+cost: {stamina: 10, cooldown: 3}
+tags: [poison, ranged, area]
+narrative:
+  concept: 箭桿綁著毒囊，落地炸開成一片毒霧
+  cast_flavor: 箭矢插進地面，毒囊破裂，綠霧沿著地面向四方漫開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

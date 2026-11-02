@@ -217,7 +217,7 @@ _SEEDS_54C = frozenset(
 
 # BAL-19（玩法決定 #110）：補內容的技能由關鍵字池給出（候選產生器），沒有放進任何 build 或單位；
 # 依 ID 前綴算進來（19a 感知組合主題法術 ``skill_wis_*``、19b 意志組合主題法術 ``skill_wil_*``）。
-_BAL19_PREFIXES = ("skill_wis_", "skill_wil_")
+_BAL19_PREFIXES = ("skill_wis_", "skill_wil_", "skill_rng_")
 
 
 def _skills() -> list[SkillDef]:
