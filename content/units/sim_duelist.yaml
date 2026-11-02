@@ -11,3 +11,8 @@ element_mods: {}
 tags: [sim]
 max_mana: 20
 skills: [skill_riposte]
+# BAL-15b：敵我同一套資源公式後耐力上限 52、每回合 +5，預設的格擋（耐力 20 以下才停）幾乎每次都先用掉本輪唯一的
+# 反應，還擊永遠輪不到；示範用的反擊者不寫格擋（同拳套的反擊把預設格擋關掉，lifecycle.weapon_reaction_rules）。
+reactions:
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
