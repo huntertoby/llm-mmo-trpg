@@ -246,7 +246,26 @@ export type WorldAction =
   | Schemas["DissolveAction"]
   | Schemas["InheritAction"]
   | (Omit<Schemas["SwearOathAction"], "source" | "prompt_version" | "player_text"> & { player_text?: string })
-  | Schemas["ReleaseOathAction"];
+  | Schemas["ReleaseOathAction"]
+  // 5B-5：任務、三選一、說話、酒館（情境判定與聊天走自己的端點）
+  | Schemas["AcceptQuestAction"]
+  | (Omit<Schemas["OfferPickAction"], "pick" | "replace"> & { pick?: number | null; replace?: string | null })
+  | Schemas["TalkAction"]
+  | Schemas["TavernAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
+// 大世界事件與任務（Phase 5B-5）
+export type WorldEventView = Schemas["EventView"];
+export type WorldEventSolution = Schemas["EventSolutionView"];
+export type WorldSituationView = Schemas["SituationView"];
+export type WorldCiteFact = Schemas["CiteFactView"];
+export type WorldSituationResult = Schemas["SituationResultView"];
+export type WorldStory = Schemas["StoryView"];
+export type WorldNpcHere = Schemas["NpcHereView"];
+export type WorldDialogLine = Schemas["DialogLineView"];
+export type WorldQuestLog = Schemas["QuestLogView"];
+export type WorldQuestHere = Schemas["QuestHereView"];
+export type WorldPendingOffer = Schemas["PendingOfferView"];
+export type WorldThread = Schemas["ThreadView"];
+export type WorldLlmView = Schemas["WorldLlmView"];

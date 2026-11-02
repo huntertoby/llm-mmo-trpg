@@ -43,6 +43,7 @@ import type {
   WorldAction,
   WorldBattleResponse,
   WorldCharacterSummary,
+  WorldLlmView,
   WorldView,
 } from "./types";
 
@@ -185,6 +186,16 @@ export const api = {
     request<FlashPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/flash-preview`, { skill, slot }),
   worldAllocationPreview: (characterId: string, attributes: Record<string, number>) =>
     request<AllocationPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/allocation-preview`, { attributes }),
+  /** 大世界事件（5B-5）：打開情境判定、送出回答（第一次送出即定案；文字是純資料，後端包進 <player_input>）、和 NPC 聊天。 */
+  worldSituation: (characterId: string, template: string) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/situation`, { template }),
+  worldAnswer: (characterId: string, template: string, text: string, cite: string[]) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/situation/answer`, { template, text, cite }),
+  worldChat: (characterId: string, npc: string, text: string) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/chat`, { npc, text }),
+  /** 大世界自己的 LLM 開關（預設跟著伺服器設定；`null` 回到預設）。 */
+  worldLlm: () => request<WorldLlmView>("GET", "/world/llm"),
+  setWorldLlm: (enabled: boolean | null) => request<WorldLlmView>("POST", "/world/llm", { enabled }),
   decide: (
     id: string,
     accept: boolean,

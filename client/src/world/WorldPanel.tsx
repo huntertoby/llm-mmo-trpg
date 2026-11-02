@@ -2,11 +2,14 @@
 // （城鎮：休息、換技能、傳送；野外：紮營；營火：換技能，9.6.7 #2、#114）、趕路切換、最近事件。
 // 5A-7：靈感與角色階級、下一場修正、最近一次戰鬥、開場說明（先手、開場狀態、增援）、「成長與技能」切換、
 // 城鎮與營火限制的說明；閃現待選時服務按鈕停用（後端已關掉）。
-import { useState } from "react";
+// 5B-5：事件卡與判定結果（`eventSlot`，遭遇面板之後）、這裡的人（`peopleSlot`）、城鎮的「酒館」與本週傳聞、
+// 「任務與線頭」切換左欄。
+import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { growthBadge } from "./growth";
+import { questBadge } from "./story";
 import { statusLine } from "./mapView";
 
 interface Props {
@@ -20,6 +23,13 @@ interface Props {
   /** 左欄正在顯示成長畫面（或閃現選項）。 */
   growthOpen?: boolean;
   onGrowth?(): void;
+  /** 左欄正在顯示任務與線頭（5B-5）。 */
+  questsOpen?: boolean;
+  onQuests?(): void;
+  /** 這次在酒館聽到的傳聞（前端保留到換地點）。 */
+  rumors?: readonly string[];
+  eventSlot?: ReactNode;
+  peopleSlot?: ReactNode;
 }
 
 export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "view" | "busy" | "onAct" | "onBattle">) {
@@ -73,7 +83,10 @@ function HerePanel({
   onAct,
   growthOpen = false,
   onGrowth,
-}: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth">) {
+  questsOpen = false,
+  onQuests,
+  rumors = [],
+}: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth" | "questsOpen" | "onQuests" | "rumors">) {
   const here = view.here;
   const [editing, setEditing] = useState(false);
   const free = view.encounter === null && view.battle_id === null;
@@ -103,6 +116,13 @@ function HerePanel({
             {editing ? "收起換技能" : "換技能"}
           </button>
         )}
+        {here.can_tavern === true && (
+          <Hint text="聽聽本週的傳聞（同一週大家聽到的都一樣；只是消息，不給東西）">
+            <button type="button" disabled={busy} onClick={() => onAct({ kind: "tavern" })} data-testid="world-tavern">
+              酒館
+            </button>
+          </Hint>
+        )}
         {here.teleports.map((t) => (
           <button key={t.region} type="button" disabled={busy} onClick={() => onAct({ kind: "teleport", region: t.region })}>
             傳送到{t.name_zh}
@@ -125,6 +145,28 @@ function HerePanel({
             {growthOpen ? "回到地點圖" : "成長與技能"}
             {!growthOpen && growthBadge(view) !== "" && <span className="small">（{growthBadge(view)}）</span>}
           </button>
+          {onQuests !== undefined && (
+            <button
+              type="button"
+              className={questsOpen ? "primary" : ""}
+              disabled={view.pending_flash != null || view.pending_offer != null}
+              onClick={onQuests}
+              data-testid="world-quests-toggle"
+            >
+              {questsOpen ? "回到地點圖" : "任務與線頭"}
+              {!questsOpen && questBadge(view) !== "" && <span className="small">（{questBadge(view)}）</span>}
+            </button>
+          )}
+        </div>
+      )}
+      {rumors.length > 0 && (
+        <div className="world-rumors" data-testid="world-rumors">
+          <div className="section-title small">酒館：本週傳聞</div>
+          <ul className="small">
+            {rumors.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
         </div>
       )}
       {here.can_loadout && editing && (
@@ -150,6 +192,7 @@ export function WorldPanel(props: Props) {
   return (
     <div className="world-side">
       <EncounterPanel {...props} />
+      {props.eventSlot}
       <div className="panel world-status" data-testid="world-status">
         <div className="section-title">
           {c.name}　<span className="muted small">{c.weapon_name_zh}{c.race_name_zh !== null ? `・${c.race_name_zh}` : ""}</span>
@@ -183,6 +226,7 @@ export function WorldPanel(props: Props) {
         )}
       </div>
       <HerePanel {...props} />
+      {props.peopleSlot}
       <div className="panel world-log" data-testid="world-log">
         <div className="section-title">最近發生的事</div>
         {log.length === 0 ? (
