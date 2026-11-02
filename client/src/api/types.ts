@@ -256,7 +256,12 @@ export type WorldAction =
   | (Omit<Schemas["EventSolveAction"], "use_thread"> & { use_thread?: string | null })
   // 5C-1：雇用系統傭兵（整組換掉）；5C-2：借影子、打法、自己影子的預設打法
   | (Omit<Schemas["HireAction"], "shadows" | "ai"> & { shadows?: string[]; ai?: Record<string, string> })
-  | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null });
+  | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null })
+  // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
+  | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
+  | (Omit<Schemas["SellAction"], "count"> & { count?: number })
+  | (Omit<Schemas["PouchAction"], "items"> & { items: Record<string, number> })
+  | Schemas["UseItemAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -282,3 +287,9 @@ export type WorldMercenary = Schemas["MercenaryView"];
 export type WorldShadow = Schemas["ShadowView"];
 export type WorldAiChoice = Schemas["AiChoiceView"];
 export type WorldMyShadow = Schemas["MyShadowView"];
+// 貨幣、背包、腰包與商店（Phase 5D-1）
+export type WorldWallet = Schemas["WalletView"];
+export type WorldInventory = Schemas["InventoryView"];
+export type WorldBagItem = Schemas["BagItemView"];
+export type WorldShop = Schemas["ShopView"];
+export type WorldShopItem = Schemas["ShopItemView"];

@@ -1,0 +1,319 @@
+# 大世界的物品（Phase 5D-1；docs/phases/Phase5計畫.md 26.2）。schema：src/trpg/content/world_economy.py。
+# 名稱、內容、價格依 docs/design/20-第一季商店與裝備內容.md 20.1（玩法 PM 代決 #119）；ID 與戰鬥中的骰子由開發 PM 定
+# （代決 5D1-9）；5D-2 的材料加在這個檔。
+# - 消耗品（08 8.17：藥水、投擲瓶；卷軸正式季）：skill 是戰鬥中的用法（「道具技能」：1 AP、每個用一次、
+#   不佔技能欄位、標籤含 item；和 content/skills/ 同一套檢查、不進技能池）。field_*_permille 是野外使用
+#   回最大值的 ‰（20.1 的百分比；09 9.6.11 #113「HP 靠藥水」）。
+# - 補給（kind: supply）：買了直接加補給，不進背包、不能賣（20.1；代決 5D1-7）。
+# - 材料：粗料（08 8.14 通用 1 階）、青竹節（雲嶺特產，18.2.4）；材料不能賣（20.1）。
+# - 染料 6 色：只買得到、存在背包（染色在之後的段）。
+# - 冰瓶、火瓶：20.1 由餘燼集（灰燼荒原）賣，霧渡鎮不賣；先定義好，荒原內容到位後只加店。
+items:
+  - id: item_hp_potion_small
+    name_zh: 小回復藥
+    kind: consumable
+    description_zh: 戰鬥中回 2d6 HP；野外喝一瓶回 20% HP。
+    price: 20
+    field_hp_permille: 200
+    skill:
+      id: skill_item_hp_potion_small
+      schema_version: 1
+      name_zh: 小回復藥（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: aura
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: con
+      shape: {type: self}
+      effects:
+        - {type: heal, dice: 2d6, affects: self}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, support]
+      narrative:
+        concept: 腰包裡的小瓶回復藥
+        cast_flavor: 你仰頭灌下一小瓶藥，傷口的疼痛緩了下來
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_hp_potion_medium
+    name_zh: 中回復藥
+    kind: consumable
+    description_zh: 戰鬥中回 4d6 HP；野外喝一瓶回 35% HP。柳掌櫃好感度中立以上才賣。
+    price: 45
+    field_hp_permille: 350
+    skill:
+      id: skill_item_hp_potion_medium
+      schema_version: 1
+      name_zh: 中回復藥（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: aura
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: con
+      shape: {type: self}
+      effects:
+        - {type: heal, dice: 4d6, affects: self}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, support]
+      narrative:
+        concept: 藥性更強的回復藥
+        cast_flavor: 濃稠的藥汁下肚，一股熱流在全身散開
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_mana_potion
+    name_zh: 回魔藥
+    kind: consumable
+    description_zh: 戰鬥中回 10 法力；野外喝一瓶回 25% 法力。
+    price: 30
+    field_mana_permille: 250
+    skill:
+      id: skill_item_mana_potion
+      schema_version: 1
+      name_zh: 回魔藥（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: aura
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: wis
+      shape: {type: self}
+      effects:
+        - {type: restore_resource, resource: mana, amount: 10, affects: self}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, support, mana]
+      narrative:
+        concept: 讓氣息重新聚攏的藥
+        cast_flavor: 你喝下回魔藥，紛亂的氣息慢慢沉澱下來
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_antidote_herb
+    name_zh: 解毒草
+    kind: consumable
+    description_zh: 戰鬥中嚼下去，移除自己身上的負面狀態（淨化）。
+    price: 25
+    skill:
+      id: skill_item_antidote_herb
+      schema_version: 1
+      name_zh: 解毒草（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: aura
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: con
+      shape: {type: self}
+      effects:
+        - {type: cleanse, affects: self}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, support]
+      narrative:
+        concept: 苦澀的解毒草
+        cast_flavor: 你把解毒草嚼碎吞下，身上的不適一掃而空
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_water_flask
+    name_zh: 水瓶
+    kind: consumable
+    description_zh: 投擲：戰鬥中丟到 3 格內，3×3 造水。
+    price: 25
+    skill:
+      id: skill_item_water_flask
+      schema_version: 1
+      name_zh: 水瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: water}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, water]
+      narrative:
+        concept: 裝滿清水的陶瓶，砸開就是一片濕地
+        cast_flavor: 陶瓶碎裂，清水在地上迅速漫開
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_oil_flask
+    name_zh: 油瓶
+    kind: consumable
+    description_zh: 投擲：戰鬥中丟到 3 格內，3×3 造油 3 回合，碰到火就燒。
+    price: 25
+    skill:
+      id: skill_item_oil_flask
+      schema_version: 1
+      name_zh: 油瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: oil, duration: 3}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, oil]
+      narrative:
+        concept: 一瓶燈油，砸在地上就是一灘等著被點燃的油
+        cast_flavor: 陶瓶在敵人腳邊碎裂，濃稠的燈油迅速漫開
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_mist_flask
+    name_zh: 霧瓶
+    kind: consumable
+    description_zh: 投擲：戰鬥中丟到 3 格內，3×3 煙霧 2 回合。柳掌櫃好感度到友善才賣。
+    price: 30
+    skill:
+      id: skill_item_mist_flask
+      schema_version: 1
+      name_zh: 霧瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: control
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: smoke, duration: 2}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, utility, smoke]
+      narrative:
+        concept: 修士煉的霧瓶，砸開就是一團遮住視線的濃霧
+        cast_flavor: 你把霧瓶往地上一摔，白霧翻湧著吞沒了那一片
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_frost_flask
+    name_zh: 冰瓶
+    kind: consumable
+    description_zh: 投擲：戰鬥中丟到 3 格內，3×3 冰面 2 回合。
+    price: 30
+    skill:
+      id: skill_item_frost_flask
+      schema_version: 1
+      name_zh: 冰瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: ice, duration: 2}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, ice]
+      narrative:
+        concept: 封著寒氣的瓷瓶，一砸就結出一片冰
+        cast_flavor: 瓷瓶碎開，白色的寒氣貼著地面鋪出一層薄冰
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_fire_flask
+    name_zh: 火瓶
+    kind: consumable
+    description_zh: 投擲：戰鬥中丟到 3 格內，3×3 點燃 2 回合。
+    price: 30
+    skill:
+      id: skill_item_fire_flask
+      schema_version: 1
+      name_zh: 火瓶（道具）
+      tier: 1
+      rank: 1
+      rarity: common
+      kind: active
+      skeleton: area
+      category: spell
+      weapon_req: any
+      ap_cost: 1
+      scaling_attr: dex
+      shape: {type: square3, range: 3}
+      effects:
+        - {type: create_surface, surface: fire, duration: 2}
+      condition: null
+      cost: {mana: 0, uses_per_battle: 1}
+      tags: [item, area, fire]
+      narrative:
+        concept: 塞了布條的火油瓶，丟出去就是一片火
+        cast_flavor: 你點著布條把瓶子甩出去，火舌在落點轟地竄起
+      provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
+  - id: item_supplies
+    name_zh: 補給
+    kind: supply
+    description_zh: 紮營、趕路用。買了直接加 1 點補給（不超過上限，不進背包）。
+    price: 10
+    supplies: 1
+  - id: item_coarse_material
+    name_zh: 粗料
+    kind: material
+    description_zh: 通用的 1 階材料（打造、強化用；打造在之後的段）。
+    price: 5
+  - id: item_green_bamboo
+    name_zh: 青竹節
+    kind: material
+    description_zh: 雲嶺竹林的特產，打造時偏向敏捷與移動（打造在之後的段）。每週限購 5 個。
+    price: 20
+    region: cloud_ridge
+  - id: item_dye_indigo
+    name_zh: 靛青染料
+    kind: dye
+    description_zh: 外觀染料，不影響數值（染色在之後的段）。
+    price: 15
+    color: "#2E4A7D"
+  - id: item_dye_cinnabar
+    name_zh: 朱砂染料
+    kind: dye
+    description_zh: 外觀染料，不影響數值（染色在之後的段）。
+    price: 15
+    color: "#B23A2E"
+  - id: item_dye_ink
+    name_zh: 墨色染料
+    kind: dye
+    description_zh: 外觀染料，不影響數值（染色在之後的段）。
+    price: 15
+    color: "#2B2B2B"
+  - id: item_dye_jade
+    name_zh: 翠綠染料
+    kind: dye
+    description_zh: 外觀染料，不影響數值（染色在之後的段）。
+    price: 15
+    color: "#3E8E6A"
+  - id: item_dye_ochre
+    name_zh: 赭黃染料
+    kind: dye
+    description_zh: 外觀染料，不影響數值（染色在之後的段）。
+    price: 15
+    color: "#C08A3E"
+  - id: item_dye_snow
+    name_zh: 雪白染料
+    kind: dye
+    description_zh: 外觀染料，不影響數值（染色在之後的段）。
+    price: 15
+    color: "#E8E8E8"

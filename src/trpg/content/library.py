@@ -126,6 +126,7 @@ from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
+from trpg.content.world_economy import WorldEconomy, load_world_economy
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
@@ -600,6 +601,8 @@ class ContentLibrary:
     world_mercenaries: MercenaryTable | None = None
     """系統傭兵名單（``world/mercenaries.yaml``，Phase 5C-1）；沒有檔案時為 ``None``（開戰用標準
     隊友）。"""
+    world_economy: WorldEconomy = field(default_factory=WorldEconomy)
+    """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -895,6 +898,13 @@ def load_library(  # noqa: PLR0915
     )
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
     _check_companions(root, world_mercenaries, builds, world_event_content, world_quests)
+    world_economy = load_world_economy(  # 5D-1
+        root,
+        files,
+        regions=set(world_maps),
+        npcs_by_region={r: {n.id for n in t.npcs} for r, t in world_event_content.npcs.items()},
+        check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
+    )
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -957,6 +967,7 @@ def load_library(  # noqa: PLR0915
         world_quests=world_quests,
         world_oaths=world_oaths,
         world_mercenaries=world_mercenaries,
+        world_economy=world_economy,
         files=files,
     )
 

@@ -61,6 +61,7 @@ from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
+from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
@@ -144,6 +145,7 @@ def new_character(
             "visited_towns": (region,),
             "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
             "mercenaries": default_party(library),  # 預設鐵壁＋回春（9.6.11，5C-3）
+            "gold": 0 if (economy := library.world_economy.rules) is None else economy.start_gold,
         }
     )
     return char.model_copy(update={"hp": max_hp(library, char), "mana": max_mana(library, char)})
@@ -183,9 +185,10 @@ def world_step(
     char, joined = sync_companions(library, char)  # 劇情夥伴加入／離隊（5C-3）
     extra = [*extra, *joined]
     world, saved = save_after_prep(library, world, char, action, now)  # 城鎮整備存影子（5C-2）
-    if not ended and not settled and not extra and not saved and char is result.char:
+    world, char, paid = after_step(library, world, char, (*events, *extra))  # 任務幣（5D-1）
+    if not ended and not settled and not extra and not saved and not paid and char is result.char:
         return result
-    return StepResult(world=world, char=char, events=(*events, *extra, *saved))
+    return StepResult(world=world, char=char, events=(*events, *extra, *saved, *paid))
 
 
 def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
@@ -213,6 +216,9 @@ def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
         return _social(library, world, char, action, now)
     if isinstance(action, EventSolveAction):
         world, char, events = solve_event(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
+    if isinstance(action, ECONOMY_ACTIONS):  # 5D-1 買、賣、腰包、用道具
+        char, events = apply_economy(library, world, char, action, now)
         return StepResult(world=world, char=char, events=events)
     return _service(library, world, char, action)
 

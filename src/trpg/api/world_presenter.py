@@ -12,6 +12,12 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Final
 
+from trpg.api.world_economy_view import (
+    economy_event_line,
+    inventory_view,
+    shop_view,
+    wallet_view,
+)
 from trpg.api.world_growth_view import (
     growth_event_line,
     growth_view,
@@ -432,7 +438,7 @@ def _service_line(library: ContentLibrary, region: str, event: WorldEvent) -> st
     return None
 
 
-_LINES = (_move_line, _battle_line, _service_line, party_event_line)
+_LINES = (_move_line, _battle_line, _service_line, party_event_line, economy_event_line)
 
 
 def event_lines(
@@ -512,4 +518,7 @@ def world_view(
         rumors=rumor_lines(library, char, raw_events),
         party=party_view(library, world, char, in_battle=in_battle),
         my_shadow=my_shadow_view(library, world, char, in_battle=in_battle),
+        wallet=wallet_view(library, char),
+        inventory=inventory_view(library, char, in_battle=in_battle),
+        shop=shop_view(library, world, char, now, in_battle=in_battle),
     )

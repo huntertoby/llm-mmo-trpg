@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
+from trpg.api.world_economy_schemas import InventoryView, ShopView, WalletView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -56,6 +57,7 @@ from trpg.world.actions import (
     TeleportAction,
     TravelAction,
 )
+from trpg.world.economy_actions import BuyAction, PouchAction, SellAction, UseItemAction
 
 __all__ = [
     "CreateWorldCharacterRequest",
@@ -107,7 +109,11 @@ type WorldActionRequest = Annotated[
     | TavernAction
     | EventSolveAction
     | HireAction
-    | ShadowAiAction,
+    | ShadowAiAction
+    | BuyAction  # 5D-1
+    | SellAction
+    | PouchAction
+    | UseItemAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -391,6 +397,12 @@ class WorldView(_ApiModel):
     """隊伍與系統傭兵（5C-1）、可借的影子（5C-2）。"""
     my_shadow: MyShadowView | None = None
     """自己的影子與被借用的戰報（5C-2）。"""
+    wallet: WalletView | None = None
+    """金幣與任務幣（5D-1；沒有經濟資料時為 ``None``）。"""
+    inventory: InventoryView | None = None
+    """背包與腰包（5D-1）。"""
+    shop: ShopView | None = None
+    """角色所在地點的店（5D-1；沒有店為 ``None``）。"""
 
 
 class WorldBattleResponse(_ApiModel):
