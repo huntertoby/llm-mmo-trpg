@@ -632,6 +632,24 @@
    ]
   },
   {
+   "id": "array_ward",
+   "name_zh": "護陣",
+   "description_zh": "陣眼還在時，附近的同門受到的傷害減少；陣眼被打碎就失效。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "護陣：持有者還在場時，3 格內的帶「sect」標籤的友方（不含自己）受到的傷害 ×80%；持有者倒下後立刻解除"
+   ]
+  },
+  {
    "id": "heart_link",
    "name_zh": "連心",
    "description_zh": "受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。",

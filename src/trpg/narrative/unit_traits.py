@@ -76,6 +76,8 @@ def _opening_label(status: StatusDef) -> str:
     """開場狀態的標題：陣法範圍加成「陣法」、分傷「分傷」（Phase 5A-M2），其他「開場狀態」。"""
     if status.formation is not None:
         return "陣法"
+    if status.ward is not None:
+        return "護陣"
     if status.share_damage is not None:
         return "分傷"
     return "開場狀態"

@@ -61,6 +61,7 @@ __all__ = [
     "TerrainTable",
     "TotemSpec",
     "UnitTemplate",
+    "WardSpec",
     "WeaponDef",
     "WeaponLook",
     "WeaponTable",
@@ -736,6 +737,17 @@ class FormationSpec(ContentModel):
     applies_to: Literal["damage"] = "damage"
 
 
+class WardSpec(ContentModel):
+    """護陣（Phase 5A-M2b，18.2 陣眼石靈）：持有者還在場時，``range`` 格內帶 ``kin_tag`` 的友方
+    （不含持有者自己）受到的骰值傷害 × ``taken_permille``‰；持有者倒下後立刻解除。多個護陣依
+    單位 ID 順序相乘、逐步捨去。"""
+
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """被護住的同門標籤；省略＝任何友方都算。"""
+    range: int = Field(default=3, ge=1, le=5)
+    taken_permille: int = Field(ge=100, le=999)
+
+
 class ShareDamageSpec(ContentModel):
     """把傷害分給同門（Phase 5A-M2，18.2.1 詞綴「連心的」）。
 
@@ -906,6 +918,8 @@ class StatusDef(ContentModel):
     ``polarity: neutral``、``expires: never`` 的狀態（不被淨化、驅散、奪取，整場都在）。"""
     formation: FormationSpec | None = None
     """（Phase 5A-M2）陣法範圍加成（:class:`FormationSpec`）。限制同 ``on_death_surface``。"""
+    ward: WardSpec | None = None
+    """（Phase 5A-M2b）護陣（:class:`WardSpec`）。限制同 ``on_death_surface``。"""
     share_damage: ShareDamageSpec | None = None
     """（Phase 5A-M2）受到的傷害分給同門（:class:`ShareDamageSpec`）。限制同
     ``on_death_surface``。"""
@@ -916,6 +930,7 @@ class StatusDef(ContentModel):
             ("on_death_surface", self.on_death_surface),
             ("formation", self.formation),
             ("share_damage", self.share_damage),
+            ("ward", self.ward),
         ):
             if spec is not None and (
                 self.polarity != "neutral" or self.expires != "never" or self.duration is not None
