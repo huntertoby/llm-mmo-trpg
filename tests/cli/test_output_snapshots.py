@@ -3,6 +3,10 @@
 快照存 SHA-256（戰鬥紀錄很長，逐字比對用雜湊即可）；刻意改變輸出時以
 ``UPDATE_CLI_SNAPSHOTS=1 uv run pytest tests/cli/test_output_snapshots.py`` 重新產生，
 並在報告中說明原因。
+
+每個快照鍵一個參數化測試（PERF-1），讓 xdist 能分給多個 worker。重產模式
+（``UPDATE_CLI_SNAPSHOTS=1``）時每個測試只把自己的鍵合併寫回快照檔，因此重產時
+**不要加 ``-n``**（單程序依序執行，沒有多 worker 同時寫檔的問題）。
 """
 
 from __future__ import annotations
@@ -56,21 +60,49 @@ def _digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _current(capsys: pytest.CaptureFixture[str]) -> dict[str, str]:
-    result: dict[str, str] = {}
-    listing = _capture(["skills", "list"], capsys)
-    result["skills_list"] = _digest(listing)
-    shown = "".join(_capture(["skills", "show", sid], capsys) for sid in _skill_ids(capsys))
-    result["skills_show_all"] = _digest(shown)
-    for name, argv in BATTLES.items():
-        result[name] = _digest(_capture(argv, capsys))
-    return result
+# skills show 全部技能太慢，依技能 ID 排序後平均分成 SHOW_SHARDS 片，每片一個快照鍵。
+SHOW_SHARDS = 16
+SHOW_PREFIX = "skills_show_all/"
+SHOW_KEYS = [f"{SHOW_PREFIX}{i:02d}" for i in range(SHOW_SHARDS)]
+
+
+def _digest_for(key: str, capsys: pytest.CaptureFixture[str]) -> str:
+    if key == "skills_list":
+        return _digest(_capture(["skills", "list"], capsys))
+    if key.startswith(SHOW_PREFIX):
+        ids = _skill_ids(capsys)
+        size = -(-len(ids) // SHOW_SHARDS)
+        index = int(key.removeprefix(SHOW_PREFIX))
+        shard = ids[index * size : (index + 1) * size]
+        return _digest("".join(_capture(["skills", "show", sid], capsys) for sid in shard))
+    return _digest(_capture(BATTLES[key], capsys))
+
+
+SNAPSHOT_KEYS = ["skills_list", *SHOW_KEYS, *BATTLES]
+
+
+def _recorded() -> dict[str, str]:
+    data: dict[str, str] = json.loads(SNAPSHOT_FILE.read_text())
+    return data
 
 
 @pytest.mark.slow
-def test_cli_output_matches_the_recorded_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
-    current = _current(capsys)
+@pytest.mark.parametrize("key", SNAPSHOT_KEYS)
+def test_cli_output_matches_the_recorded_snapshot(
+    key: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    current = _digest_for(key, capsys)
     if os.environ.get("UPDATE_CLI_SNAPSHOTS") == "1":
-        SNAPSHOT_FILE.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n")
-    recorded = json.loads(SNAPSHOT_FILE.read_text())
-    assert current == recorded
+        merged = _recorded() if SNAPSHOT_FILE.exists() else {}
+        merged.pop("skills_show_all", None)  # 舊的單一鍵已由分片鍵取代
+        merged[key] = current
+        SNAPSHOT_FILE.write_text(
+            json.dumps(merged, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    assert current == _recorded()[key]
+
+
+def test_snapshot_file_keys_match_the_command_list() -> None:
+    assert sorted(_recorded()) == sorted(SNAPSHOT_KEYS)
