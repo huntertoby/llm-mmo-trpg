@@ -5304,6 +5304,11 @@
               }
             ],
             "title": "Affix Zh"
+          },
+          "third": {
+            "type": "boolean",
+            "title": "Third",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -14323,10 +14328,11 @@
         "type": "string",
         "enum": [
           "ally",
-          "enemy"
+          "enemy",
+          "third"
         ],
         "title": "Team",
-        "description": "戰鬥中的陣營。地圖起始區以此為鍵。"
+        "description": "戰鬥中的陣營。地圖起始區以此為鍵。\n\n``THIRD``（Phase 5B-M3，三方混戰）：和我方、敵方都敵對。陣營關係一律是「不同陣營彼此敵對、\n同陣營友好」（:meth:`hostile_to`；代決 5BM3-1）。"
       },
       "TelegraphChangeOut": {
         "properties": {

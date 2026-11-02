@@ -19,6 +19,9 @@
 給的每一筆 ``reinforce``，從同地點遭遇表各陣容出現過的非精英單位（去重、依 ID 排序；已到遠程上限時
 不抽遠程）用 ``Rng(fnv1a64(f"{battle_seed}:reinforce"))`` 均勻抽 1 名排在陣容最後；陣容已滿
 4 名（或沒有可抽的單位）時改成「敵人先手」（代決 5A6-3）。等級照地點，由開戰時一起成長。
+
+**第三方**（Phase 5B-M3 三方混戰）：陣容的 ``third`` 照順序放進 :attr:`EncounterLineup.third`（套用
+等級門檻）；營地混精英、固定精英、增援只作用在敵方 ``members``（代決 5BM3-9）。不消耗亂數。
 """
 
 from __future__ import annotations
@@ -71,6 +74,8 @@ class EncounterLineup(BaseModel):
     group: str
     """抽到的陣容 ID（遭遇表的 ``groups``）。"""
     members: tuple[LineupMember, ...] = Field(min_length=1)
+    third: tuple[LineupMember, ...] = ()
+    """第三方（Phase 5B-M3 三方混戰：和我方、敵方都敵對）；舊資料沒有＝空。"""
     variant: str | None = None
     """用了哪個遭遇變化（劇情旗標；Phase 5B-4b 線頭到期結局）；``None``＝一般抽陣容。"""
 
@@ -110,11 +115,13 @@ def roll_lineup(
             location=encounter.location,
             group=group.id,
             members=tuple(members),
+            third=tuple(LineupMember(unit=_gated(u, entry, gate_level)) for u in group.third),
             variant=variant.flag,
         )
     rng = lineup_rng(encounter.battle_seed)
     group = _pick_group(rng, table, entry)
     members = [LineupMember(unit=_gated(u, entry, gate_level)) for u in group.units]
+    third = tuple(LineupMember(unit=_gated(u, entry, gate_level)) for u in group.third)
     catalog = library.enemy_catalog()
     if entry.elite is not None:
         members.insert(0, LineupMember(unit=entry.elite.unit, affix=entry.elite.affix))
@@ -125,14 +132,17 @@ def roll_lineup(
         location=encounter.location,
         group=group.id,
         members=tuple(members),
+        third=third,
     )
 
 
-def lineup_templates(library: ContentLibrary, lineup: EncounterLineup) -> tuple[UnitTemplate, ...]:
-    """把陣容解析成單位範本（變體已套用、精英詞綴已套用），依陣容順序。"""
+def lineup_templates(
+    library: ContentLibrary, lineup: EncounterLineup, *, third: bool = False
+) -> tuple[UnitTemplate, ...]:
+    """把陣容解析成單位範本（變體已套用、精英詞綴已套用），依陣容順序；``third`` 時解析第三方。"""
     catalog = library.enemy_catalog()
     result: list[UnitTemplate] = []
-    for member in lineup.members:
+    for member in lineup.third if third else lineup.members:
         template = catalog.template(member.unit)
         if member.affix is not None:
             template = catalog.with_affix(template, member.affix)

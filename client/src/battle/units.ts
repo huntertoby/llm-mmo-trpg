@@ -1,13 +1,14 @@
 // 單位的代號與名稱（同 CLI：我方 A、B、C……，敵方 a、b、c……，依單位 ID 排序；召喚物不分陣營，
-// 一律用數字 1–9，超過 9 個後循環）。
+// 一律用數字 1–9，超過 9 個後循環；第三方（Phase 5B-M3）用小寫字母倒過來：z、y、x……）。
 import type { BattleView, Team, UnitView } from "../api/types";
 
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
+const REVERSED = [...LOWER].reverse().join("");
 
 export function unitMarkers(units: readonly UnitView[]): Map<string, string> {
   const sorted = [...units].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  const counters = { ally: 0, enemy: 0 };
+  const counters = { ally: 0, enemy: 0, third: 0 };
   const markers = new Map<string, string>();
   let summons = 0;
   for (const u of sorted) {
@@ -16,7 +17,7 @@ export function unitMarkers(units: readonly UnitView[]): Map<string, string> {
       continue;
     }
     const i = counters[u.team]++;
-    const letters = u.team === "ally" ? UPPER : LOWER;
+    const letters = u.team === "ally" ? UPPER : u.team === "third" ? REVERSED : LOWER;
     markers.set(u.id, letters[i % 26] ?? "?");
   }
   return markers;

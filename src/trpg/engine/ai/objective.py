@@ -28,8 +28,8 @@ def _nearest(unit: UnitState, tiles: tuple[tuple[int, int], ...]) -> int:
 def objective_cost(state: BattleState, unit: UnitState, w: AiWeights) -> int:
     """位置價值中與勝利條件有關的扣分（越小越好；``unit`` 可以是虛擬複本）。"""
     objective = state.objective
-    if objective.kind == "eliminate" or not objective.tiles:
-        return 0
+    if objective.kind == "eliminate" or not objective.tiles or unit.team is Team.THIRD:
+        return 0  # 第三方不追求勝利條件（Phase 5B-M3，代決 5BM3-7）
     dist = _nearest(unit, objective.tiles)
     cost = 0
     if objective.kind == "escape":
@@ -52,6 +52,6 @@ def hold_guard_bonus(state: BattleState, unit: UnitState, w: AiWeights) -> int:
     threatened = any(
         manhattan(unit.xy, e.xy) <= _THREAT_RADIUS
         for e in state.living_units()
-        if e.team is Team.ENEMY and not e.is_summon
+        if e.team is not Team.ALLY and not e.is_summon  # 敵方＋第三方（5B-M3）
     )
     return w.hold_guard if threatened else 0

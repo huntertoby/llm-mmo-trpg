@@ -30,7 +30,7 @@ def test_default_is_unchanged() -> None:
 def test_first_team_leads_turn_order_keeping_initiative() -> None:
     for seed in range(8):
         base = begin_battle(_setup(), seed).state
-        for first in Team:
+        for first in (Team.ALLY, Team.ENEMY):
             teams = _teams(_setup(first_team=first), seed)
             count = sum(1 for t in teams if t is first)
             assert teams[:count] == [first] * count
@@ -82,7 +82,7 @@ def _round_orders(setup: BattleSetup, seed: int) -> tuple[list[Team], list[Team]
 def test_first_team_only_affects_round_one() -> None:
     for seed in range(6):
         plain = _round_orders(_setup(), seed)[1]
-        for first in Team:
+        for first in (Team.ALLY, Team.ENEMY):
             round1, round2 = _round_orders(_setup(first_team=first), seed)
             count = sum(1 for t in round1 if t is first)
             assert round1[:count] == [first] * count

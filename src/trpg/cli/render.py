@@ -70,12 +70,13 @@ def _surface_glyphs(ruleset: Ruleset) -> dict[Surface, str]:
 def render_map(map_def: MapDef, ruleset: Ruleset) -> str:
     """``trpg map show``：每格顯示「高度 ＋ 地形或物件字元 ＋ 表面字元」。
 
-    起始區以 ``a``（我方）／``e``（敵方）標示。
+    起始區以 ``a``（我方）／``e``（敵方）／``t``（第三方，可省略）標示。
     """
     terrain = ruleset.terrain.by_id()
     objects = ruleset.objects.by_id()
     zones = {cell: "a" for cell in map_def.start_zones[Team.ALLY]}
     zones.update({cell: "e" for cell in map_def.start_zones[Team.ENEMY]})
+    zones.update({cell: "t" for cell in map_def.start_zones.get(Team.THIRD, ())})
     placed = {o.at: objects[o.kind].glyph for o in map_def.objects}
     placed.update({at: WELL_GLYPH for at in map_def.source_wells})
     surf_glyph = _surface_glyphs(ruleset)
@@ -135,10 +136,15 @@ def _objective_text(map_def: MapDef) -> str:
 
 def unit_markers(state: BattleState) -> dict[str, str]:
     """單位在網格上的代號：我方 A、B、C……，敵方 a、b、c……（依單位 ID）；召喚物（Phase 3D-4b）
-    不分陣營，一律用數字 1–9（依單位 ID，超過 9 個後循環），單位表標明召喚者與到期輪。"""
+    不分陣營，一律用數字 1–9（依單位 ID，超過 9 個後循環），單位表標明召喚者與到期輪。第三方
+    （Phase 5B-M3）用小寫字母倒過來：z、y、x……"""
     markers: dict[str, str] = {}
-    counters = {Team.ALLY: 0, Team.ENEMY: 0}
-    letters = {Team.ALLY: string.ascii_uppercase, Team.ENEMY: string.ascii_lowercase}
+    counters = dict.fromkeys(Team, 0)
+    letters = {
+        Team.ALLY: string.ascii_uppercase,
+        Team.ENEMY: string.ascii_lowercase,
+        Team.THIRD: string.ascii_lowercase[::-1],
+    }
     summons = 0
     for unit in state.units_sorted():
         if unit.is_summon:

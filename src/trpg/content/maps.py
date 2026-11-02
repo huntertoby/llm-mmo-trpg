@@ -160,6 +160,10 @@ class AltObjectives(ContentModel):
         return self
 
 
+REQUIRED_ZONE_TEAMS: tuple[Team, ...] = (Team.ALLY, Team.ENEMY)
+"""地圖必須有起始區的陣營（第三方可省略，Phase 5B-M3）。"""
+
+
 class Encounter(ContentModel):
     """地圖的預設陣容（單位範本 ID）。"""
 
@@ -233,6 +237,8 @@ class MapDef(ContentModel):
     objects: tuple[MapObjectPlacement, ...] = ()
     surfaces: tuple[MapSurfacePlacement, ...] = ()
     start_zones: dict[Team, tuple[tuple[int, int], ...]]
+    """各陣營的起始區。``ally``、``enemy`` 必填；``third``（Phase 5B-M3 三方混戰）可省略，
+    省略時第三方自動排在敵方起始區附近（:mod:`trpg.engine.battle`）。"""
     objective: Objective = Field(default_factory=Objective)
     alt_objectives: AltObjectives | None = None
     """可替換的勝利條件（Phase 3-22）：roguelite 抽到撤離或守點時，用這裡的格子與輪數取代
@@ -344,7 +350,7 @@ class MapDef(ContentModel):
     def _zone_problems(self) -> list[str]:
         problems = [
             f"start_zones 缺少 {team.value}"
-            for team in Team
+            for team in REQUIRED_ZONE_TEAMS
             if team not in self.start_zones or not self.start_zones[team]
         ]
         seen: set[XY] = set()

@@ -43,9 +43,10 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
       </div>
       <ul className="world-enemies">
         {e.enemies.map((x, i) => (
-          <li key={i} className={x.elite ? "elite" : undefined}>
+          <li key={i} className={x.elite ? "elite" : x.third === true ? "third" : undefined}>
             {x.name_zh}
             {x.elite && <span className="world-elite-tag">精英{x.affix_zh !== null ? `・${x.affix_zh}` : ""}</span>}
+            {x.third === true && <span className="world-third-tag">第三方</span>}
           </li>
         ))}
       </ul>

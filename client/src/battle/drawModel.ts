@@ -90,7 +90,7 @@ export interface UnitDraw {
   /** 單位範本 ID（美術對照用）。 */
   template: string;
   name: string;
-  team: "ally" | "enemy";
+  team: "ally" | "enemy" | "third";
   fill: number;
   hpRatio: number;
   shieldRatio: number;

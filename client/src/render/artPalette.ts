@@ -45,6 +45,7 @@ export const PAL = {
 export const RING = {
   ally: { fill: 0x2f6fd0, stroke: 0xa9ccff },
   enemy: { fill: 0xc63b3b, stroke: 0xffb3a8 },
+  third: { fill: 0x8e44c9, stroke: 0xdcb3ff }, // 第三方（Phase 5B-M3）
   summon: { fill: 0x1f9e8f, stroke: 0x8ff0e2 },
 } as const;
 
