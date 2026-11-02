@@ -72,3 +72,28 @@
 - `ruff check .`、`ruff format --check .`（1597 files）、`mypy`（strict，1041 檔）：通過；`lint-imports`：9 個契約全部 KEPT。
 - 重播：`trpg battle --map swamp --seed 7 --log-json` ＋ `trpg battle replay`：重播驗證通過（88 個動作、313 個事件）。
 - 新測試 `tests/engine/test_mechanics_5am2.py`（19 個）：陣法 0～3 名同門的倍率與上限、超出範圍／敵方／倒下不算、只加攻擊傷害、紀錄文字、schema 限制；分傷的比例與平分餘數、只分相鄰、護盾之後、可擊倒同門、墜落不分、詞綴與特性欄；AI 站位偏好陣型、打散陣型有分、集火分傷持有者扣分；確定性。
+
+## 7. 5A-M2b（玩法 PM 2026-11-03）：陣眼石靈護陣
+
+### 做了什麼
+
+- **護陣（`StatusDef.ward`，`WardSpec`）**：持有者還在場時，`range` 格內帶 `kin_tag` 的友方（不含持有者自己）受到的骰值傷害 × `taken_permille`‰；持有者倒下後 `living_units()` 不再計入，立刻解除。限制同 `formation`／`share_damage`（中性、不倒數）。多個護陣依單位 ID 相乘。`trpg.engine.formation` 新增 `ward_holders`、`ward_permille`。
+- **結算**：`damage` 處理器把護陣倍率乘進 `status_ppm`（致命與最大 HP 比例傷害不受影響）；`DamageDealt` 新增 `ward_permille`（已含在 `status_ppm` 裡，供紀錄分開顯示）。
+- **內容**：狀態 `array_ward`（`kin_tag: sect`、`range: 3`、`taken_permille: 800`）；`sect_array_stone` 的 `opening_statuses` 掛上。
+- **中文**：戰鬥紀錄「（護陣 ×0.8）」；狀態說明加「護陣：…」規則句；單位卡特性欄標題「護陣」。
+- **AI**：`RewriteAiRules.ward_kill_points`（預設 12）：擊倒帶護陣的敵人額外加分（`priority.py`，同「先打補師」）。
+- **前端**：`array_ward` 狀態圖樣（外框圓＋實心圓，既有筆畫）；`glossary.json` 重產。
+- **LOG_FORMAT** `/104` → `/105`（`戰鬥紀錄格式變更.md`、`runner.py`、測試字面值）。
+- 測試 `tests/engine/test_mechanics_5am2b.py`（5 個）：範圍內／外、石靈自己不算、石靈倒下即解除、異陣營／非同門不算、schema 與特性句、AI 加分。
+
+### 代決
+
+1. **5AM2b-1** 數值：`sect` 標籤、3 格、×0.8（−20%）；石靈自己不吃護陣（規格寫「同門」，持有者不算）；陣法／護陣只對骰值傷害，與 `damage_taken` 狀態相乘。
+2. **5AM2b-2** AI 加分初值 `ward_kill_points` = 12（略高於「先打補師」的 10），未經模擬。
+3. **5AM2b-3**（待 PM 決定）**劍陣弟子的主動技沒有補**：`content/skills/` 裡沒有「近戰直線 2 格」的現成技能（直線形狀只有法術與弓箭：風刃、穿透射擊、震地波等；近戰全是 `single`／`cone`／`ring`）。規格說「不做新技能」，所以保守不加。選項：(a) 新增一個 `weapon_req: melee`、`shape: {type: line, size: 2}` 的技能檔（純內容，劍陣弟子 `skills` 加一行）；(b) 維持只有普攻。
+
+### 檢查紀錄（5A-M2b）
+
+- `tests/engine tests/content tests/narrative tests/world tests/api tests/skillgen tests/test_architecture.py tests/sim tests/roguelite -n 8`：10991 passed；5 failed → 4 個是 `LOG_FORMAT` 字面值與 `skill_icons.json` 產生檔（已修）、1 個是既有的 `test_world_growth_api` 偶發（單獨跑 8 passed）。`tests/cli -m "slow or not slow" -n 8`：180 passed（CLI 雜湊沒有變）。
+- 前端：`npx vitest run` 126 檔、1211 passed（狀態數 100 → 101，`statusIcon.test.ts` 更新）；`npm run build` 通過。
+- `ruff check`、`ruff format --check`、`mypy`、`lint-imports`：通過；重播 `trpg battle --map swamp --seed 7`：88 個動作、313 個事件一致。
