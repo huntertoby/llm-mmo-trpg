@@ -18,7 +18,7 @@ from trpg.engine import resolve
 from trpg.engine.actions import UseSkill
 from trpg.engine.battle import legal_actions
 from trpg.engine.events import UnitSummoned
-from trpg.shared.types import Attribute, Team
+from trpg.shared.types import Attribute, Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.validate import minimum_tier, validate_skill
@@ -62,6 +62,6 @@ def test_fire_staff_summons_cast_in_the_engine(sid: str) -> None:
     action = next(a for a in legal_actions(state) if isinstance(a, UseSkill) and a.skill_id == sid)
     result = resolve(state, action)
     assert any(isinstance(e, UnitSummoned) for e in result.events)
-    caster = result.state.units["unit_0001"]
+    caster = result.state.units[UnitId("unit_0001")]
     rider = skill.effects[1]
     assert caster.has_status(rider.status or "")
