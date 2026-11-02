@@ -73,7 +73,7 @@ from trpg.world.encounters import (
 )
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import as_run, gain_xp, world_library
-from trpg.world.oaths import oath_events, oath_setup
+from trpg.world.oaths import oath_carries, oath_events, oath_setup
 from trpg.world.party import party_spawns, shadow_spawns
 from trpg.world.shadows import record_lent
 from trpg.world.state import (
@@ -487,6 +487,7 @@ def fight(
         char, more = _lost(library, char, hero.mana)
     oath_more, oath_broken = oath_events(prepared.oath, battle_events)  # 誓約（5C-3）
     more += oath_more
+    char = char.model_copy(update={"oath_broken_next": oath_carries(prepared.oath, battle_events)})
     world, lent = record_lent(  # 影子主人每天第一次被借用（5C-2，#102）
         library, world, char, encounter, prepared.lineup, won=won, now=now
     )

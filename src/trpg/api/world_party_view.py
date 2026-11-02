@@ -159,7 +159,7 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
             title_zh=f"{c.title_zh}・劇情夥伴",
             level=char.level,
             companion=c.id,
-            ai_zh=_ai_zh(library, None, builds[c.build].hero.ai_profile),
+            ai_zh=_ai_zh(library, None, c.ai_profile or builds[c.build].hero.ai_profile),
             note_zh=COMPANION_NOTE_ZH,
         )
         for c in companion_defs(library, char)

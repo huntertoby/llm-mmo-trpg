@@ -440,6 +440,8 @@ class BattleResponse(_ApiModel):
     """輪到主角時，跑步是否合法與原因（Phase 3-20）；其他時候 ``None``。"""
     variant_states: tuple[VariantStateOut, ...] = ()
     """主角每一招帶戰場變奏的技能目前會生效的型態（Phase 3-25b）；輪到主角時才有。"""
+    oath_active: bool = False
+    """戰鬥有誓約、而且還沒違反（Phase 5C-3b；網頁只在這時才為每個動作問預覽的誓約警告）。"""
     followup_options: tuple[FollowupOptionOut, ...] = ()
     """``pending.kind == "followup"``（Phase 3F-4a）時，複合技能（``pending.skill_id``）第二段
     從施放者目前位置所有合法的選取；其他時候為空。"""
@@ -761,6 +763,8 @@ class PreviewOut(_ApiModel):
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b）；其他動作為 ``None``。"""
     infusion: InfusionPreviewOut | None = None
     """灌注技能（Phase 3-33d）：召喚物會從自己位置施放的範圍；其他動作為 ``None``。"""
+    oath_warning: str | None = None
+    """動作會（或可能會）違反誓約時的中文原因（Phase 5C-3b；引擎判定）；否則 ``None``。"""
     variant: PreviewVariantOut | None = None
     """這個目標點會生效的戰場變奏型態（Phase 3-25b）；沒有變奏成立為 ``None``（傷害、範圍等已是
     該型態的結果）。"""
@@ -956,6 +960,7 @@ def preview_out(
         landing=p.landing,
         followup_tiles=p.followup_tiles,
         followup_when=p.followup_when,
+        oath_warning=p.oath_warning,
         infusion=None
         if p.infusion is None
         else InfusionPreviewOut(

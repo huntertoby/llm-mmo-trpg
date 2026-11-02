@@ -1317,6 +1317,11 @@ export interface components {
              */
             variant_states: components["schemas"]["VariantStateOut"][];
             /**
+             * Oath Active
+             * @default false
+             */
+            oath_active: boolean;
+            /**
              * Followup Options
              * @default []
              */
@@ -4738,6 +4743,8 @@ export interface components {
             /** Followup When */
             followup_when?: string | null;
             infusion?: components["schemas"]["InfusionPreviewOut"] | null;
+            /** Oath Warning */
+            oath_warning?: string | null;
             variant?: components["schemas"]["PreviewVariantOut"] | null;
         };
         /**

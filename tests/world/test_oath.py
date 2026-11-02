@@ -204,3 +204,35 @@ def test_oath_battle_replays(calm: ContentLibrary, make_char: MakeChar) -> None:
     assert dumps_char(first.characters[who]) == dumps_char(second.characters[who])
     oath = first.characters[who].oath
     assert oath is not None and oath.template == "oath_attack_each_turn"
+
+
+def test_end_of_battle_breach_carries_penalty_to_next_battle(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world = make_world()
+    sworn = world_step(library, world, make_char(), _swear("oath_melee_kills", n=2), NOON).char
+    ready = _ready(sworn)
+    before = prepare_battle(library, ready).setup.oath
+    assert before is not None and before.start_penalty_rounds == 0
+    fought = world_step(library, world, ready, FightAction(steps=auto_steps(library, ready)), NOON)
+    broken = [e for e in fought.events if isinstance(e, OathBrokenEvent)]
+    assert broken and broken[0].at_end  # 近戰擊殺 2 名：戰鬥結束時才判出違反
+    assert fought.char.oath_broken_next
+    nxt = prepare_battle(library, _ready(fought.char)).setup.oath
+    assert nxt is not None
+    assert (nxt.start_penalty_rounds, nxt.bonus_status) == (2, "oath_bonus_medium")
+    assert nxt.label_zh == "每場至少用近戰擊殺 N 名敵人"
+    released = world_step(library, world, fought.char, ReleaseOathAction(), NOON).char
+    assert not released.oath_broken_next  # 解除誓約就清掉
+
+
+def test_carried_penalty_is_consumed_by_the_next_battle(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world = make_world()
+    sworn = world_step(library, world, make_char(), _swear("oath_attack_each_turn"), NOON).char
+    ready = _ready(sworn.model_copy(update={"oath_broken_next": True}))
+    carried = prepare_battle(library, ready).setup.oath
+    assert carried is not None and carried.start_penalty_rounds == 2
+    fought = world_step(library, world, ready, FightAction(steps=auto_steps(library, ready)), NOON)
+    assert not fought.char.oath_broken_next  # 打完一場就重新判定（這場不是戰鬥結束才判的）

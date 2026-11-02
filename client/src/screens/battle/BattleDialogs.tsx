@@ -11,6 +11,7 @@ import { CopyDialog } from "../../ui/CopyDialog";
 import { DecisionDialog } from "../../ui/DecisionDialog";
 import { FollowupDialog } from "../../ui/FollowupDialog";
 import { InfusionDialog } from "../../ui/InfusionDialog";
+import { OathWarningDialog } from "../../ui/OathWarningDialog";
 
 interface Props {
   response: BattleResponse;
@@ -24,6 +25,10 @@ interface Props {
   liveNames: UnitNames;
   focusTile: Pos | null;
   model: DrawModel;
+  /** 會違反誓約的動作（5C-3b）：引擎判定的警告文字；沒有時 `null`。 */
+  oathWarning: string | null;
+  onConfirmOath(): void;
+  onCancelOath(): void;
   infusionPick: Action | null;
   infusionOptions: ReturnType<typeof infusionChoices>;
   onCancelInfusion(): void;
@@ -38,6 +43,9 @@ export function BattleDialogs(p: Props) {
   const { infusionPick } = p;
   return (
     <>
+      {p.oathWarning !== null && !busy && (
+        <OathWarningDialog warning={p.oathWarning} enabled={!busy} onConfirm={p.onConfirmOath} onCancel={p.onCancelOath} />
+      )}
       {p.followPaused && response.pending !== null && (
         <FollowupDialog
           skillName={p.copyName}
