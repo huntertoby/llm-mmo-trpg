@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Literal
@@ -26,6 +26,7 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.world_map import LocationMapDef
+from trpg.content.world_situations import SituationContent, load_situation_content
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute
 
@@ -62,7 +63,7 @@ SolutionKind = Literal[
     "situation",  # 情境判定（09 9.6.4）；attributes 是允許的屬性
     "parley",  # 交涉（付錢、給材料、換物）
     "abandon",  # 放棄
-    "opportunity",  # 機遇（18.4 #12：帶特定技能靠近；條件先寫在 note_zh）
+    "opportunity",  # 機遇（18.4 #12：帶特定技能靠近；條件見 requires_keyword）
 ]
 ThreadScope = Literal[
     "personal",  # 個人線頭：只屬於自己（9.6.7 #6「欠你的人情」）
@@ -98,9 +99,14 @@ class SolutionDef(ContentModel):
     """情境判定允許的屬性（只有 ``situation`` 可填，且必填 1～3 個）。"""
     note_zh: str = ""
     """18.4 括號裡的說明（例：「找安全路」「護送戰」「付錢」）。"""
+    requires_keyword: str | None = Field(default=None, pattern=ID_PATTERN)
+    """機遇的條件（Phase 5B-2；18.4 補充）：裝備的技能中任何一招帶這個關鍵字
+    （``skill_keywords.yaml``）。只有 ``opportunity`` 可填。"""
 
     @model_validator(mode="after")
     def _check(self) -> SolutionDef:
+        if self.requires_keyword is not None and self.kind != "opportunity":
+            raise ValueError(f"{self.kind} 解法不可填 requires_keyword（只有 opportunity 可以）")
         if self.kind == "situation":
             if not 1 <= len(self.attributes) <= _MAX_SITUATION_ATTRIBUTES:
                 raise ValueError("情境判定解法必須有 1～3 個允許的屬性")
@@ -318,10 +324,12 @@ def world_event_problems(
     npcs: NpcCardTable | None,
     weather_ids: Mapping[str, object],
     thread_ids: Iterable[str],
+    keyword_ids: Collection[str] | None = None,
 ) -> list[str]:
-    """事件骨架的跨檔案檢查（地點、天氣、NPC、線頭）。回傳排序過的問題清單。
+    """事件骨架的跨檔案檢查（地點、天氣、NPC、線頭、機遇關鍵字）。回傳排序過的問題清單。
 
-    ``thread_ids`` 是所有區域的線頭 ID（``follows`` 可以接別區的線頭）。
+    ``thread_ids`` 是所有區域的線頭 ID（``follows`` 可以接別區的線頭）；``keyword_ids`` 為
+    ``None`` 時不檢查機遇的關鍵字。
     """
     region = events.region
     problems: list[str] = []
@@ -340,6 +348,12 @@ def world_event_problems(
         ]
         for thread in skeleton.threads:
             problems += _thread_problems(thread, world_map, npc_ids, region)
+        if keyword_ids is not None:
+            problems += [
+                f"{label}：未知的關鍵字 {s.requires_keyword}"
+                for s in skeleton.solutions
+                if s.requires_keyword is not None and s.requires_keyword not in keyword_ids
+            ]
     return sorted(problems)
 
 
@@ -365,6 +379,8 @@ class WorldEventContent:
     events: dict[str, EventSkeletonTable] = field(default_factory=dict)
     npcs: dict[str, NpcCardTable] = field(default_factory=dict)
     rules: EventRules | None = None
+    situations: SituationContent = field(default_factory=SituationContent)
+    """情境模板與情境規則（Phase 5B-2；``trpg.content.world_situations``）。"""
 
 
 def _load_region_dir[M: EventSkeletonTable | NpcCardTable](
@@ -400,8 +416,13 @@ def load_world_event_content(
     world_maps: Mapping[str, LocationMapDef],
     weather_ids: Mapping[str, object],
     files: list[tuple[Path, ContentModel]],
+    *,
+    status_ids: Collection[str] = (),
+    keyword_ids: Collection[str] | None = None,
+    race_ids: Collection[str] | None = None,
 ) -> WorldEventContent:
-    """載入 ``world/events/``、``world/npcs/``、``world/event_rules.yaml``（不存在＝空／``None``）。
+    """載入 ``world/events/``、``world/npcs/``、``world/event_rules.yaml``，以及情境模板與規則
+    （``world/situations/``、``world/situation_rules.yaml``；5B-2）。不存在＝空／``None``。
 
     跨檔案有問題丟 :class:`~trpg.shared.errors.ContentError`（指出檔案）；載入的檔案加進 ``files``。
     """
@@ -433,6 +454,7 @@ def load_world_event_content(
             npcs=npcs[region][1] if region in npcs else None,
             weather_ids=weather_ids,
             thread_ids=all_threads,
+            keyword_ids=keyword_ids,
         )
         if problems:
             raise ContentError(path, "；".join(problems))
@@ -444,8 +466,18 @@ def load_world_event_content(
         rules = load_content_file(rules_path, EventRules)
         files.append((rules_path, rules))
 
+    event_tables = {r: t for r, (_, t) in sorted(events.items())}
+    situations = load_situation_content(
+        root,
+        events=event_tables,
+        world_maps=world_maps,
+        status_ids=status_ids,
+        race_ids=race_ids,
+        files=files,
+    )
     return WorldEventContent(
-        events={r: t for r, (_, t) in sorted(events.items())},
+        events=event_tables,
         npcs={r: t for r, (_, t) in sorted(npcs.items())},
         rules=rules,
+        situations=situations,
     )

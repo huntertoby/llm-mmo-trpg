@@ -24,6 +24,7 @@ __all__ = [
     "EncounterResult",
     "EventTrigger",
     "LocationRef",
+    "NextBattleMod",
     "PerceptionMark",
     "ThreadState",
     "WorldState",
@@ -106,6 +107,18 @@ class EventTrigger(_Model):
         if list(candidates) != sorted(set(candidates)):
             raise ValueError("candidates 必須排序且不重複")
         return candidates
+
+
+class NextBattleMod(_Model):
+    """下一場戰鬥帶的修正（Phase 5B-2：情境判定的短期 buff、debuff、敵人增援；09 9.6.4）。
+
+    只記錄；之後的戰鬥接線開戰時套用並清掉。``source`` 是產生它的情境模板。
+    """
+
+    kind: Literal["buff", "debuff", "reinforce"]
+    status: str | None = None
+    """buff／debuff 的狀態（``statuses.yaml``）；增援為 ``None``。"""
+    source: str = Field(pattern=ID_PATTERN)
 
 
 class ThreadState(_Model):
@@ -225,6 +238,8 @@ class CharacterState(_Model):
     """觸發了、還沒處理的事件（5B-1；不擋移動，離開地點就作罷）。"""
     threads: tuple[ThreadState, ...] = ()
     """個人線頭（只屬於自己；5B-1 起）。"""
+    next_battle: tuple[NextBattleMod, ...] = ()
+    """下一場戰鬥帶的修正（情境判定的獎懲，5B-2 起；依產生順序）。"""
 
     @field_validator("revealed")
     @classmethod

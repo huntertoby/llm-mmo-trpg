@@ -1,0 +1,367 @@
+# 雲嶺情境模板（Phase 5B-2；docs/phases/Phase5計畫.md 10.3）。schema：src/trpg/content/world_situations.py。
+# 來源：docs/design/18-雲嶺內容.md 18.4 每個「情境判定」解法一個模板（skeleton＋solution＝骨架與解法索引，0 起）。
+# - attributes：開頭＝18.4 解法的屬性；第 2 種照 18.4「補充」（玩法 PM 定）：從 09 9.6.11 方法表同一類的
+#   常見屬性補，不夠再補一個主題不同的屬性。methods：每個屬性都有一個方法能用（9.6.11 #115）。
+# - 開發 PM 定的初值（代決 5B2-9，之後模擬定）：base_dc（約 10＋地點建議等級的一半）、danger、weaknesses
+#   （用心清單 ④，照骨架的阻礙推定）、三段獎懲、哪個結果留哪條線頭。
+# - 獎懲必須在 situation_rules.yaml 的預算與危險度內（載入時檢查）；xp_permille 乘地點的等級 xp 預算。
+# - advantage_threads：18.4 補充「斷崖幫寨的暗門」持有時，骨架 14 的偷走得到優勢（玩法 PM 定）。
+# 狀態 ID：buff empowered／guarded／rallied；debuff weaken／poison／bleed（statuses.yaml）。
+region: cloud_ridge
+templates:
+  - id: peddler_safe_path
+    skeleton: wounded_peddler
+    solution: 1
+    note_zh: 找一條避開霧狼的安全路
+    methods: [tracking, force]
+    attributes: [wis, str]
+    base_dc: 12
+    danger: 2
+    weaknesses:
+      - {id: wolf_trail, text_zh: 行商看得出狼群從哪邊來, methods: [tracking]}
+    success: {rewards: {xp_permille: 1000, threads: [peddler_owes_you, wolves_driven_down]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [peddler_owes_you]}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 150, supplies: 1}}
+
+  - id: acolyte_find_way
+    skeleton: lost_acolyte
+    solution: 0
+    note_zh: 在濃霧裡認出回青霧觀的路
+    methods: [tracking, lore]
+    attributes: [wis, int]
+    base_dc: 11
+    danger: 1
+    weaknesses:
+      - {id: temple_bell, text_zh: 道童認得觀裡的鐘聲, methods: [tracking]}
+    success: {rewards: {xp_permille: 1000, threads: [temple_quarrel]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [temple_quarrel]}
+      penalties: {supplies: 1}
+    failure: {penalties: {supplies: 1}}
+
+  - id: toll_intimidate
+    skeleton: gang_toll
+    solution: 1
+    note_zh: 威嚇哨兵讓路
+    methods: [intimidate]
+    attributes: [wil, str]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: sentry_alone, text_zh: 哨兵只有一個人，援兵還遠, methods: [intimidate]}
+    success: {rewards: {xp_permille: 1000, threads: [scarface_grudge]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [scarface_grudge]}
+      penalties: {supplies: 1}
+    failure: {penalties: {supplies: 1, debuffs: [weaken]}}
+
+  - id: elder_go_game
+    skeleton: pine_elder_go
+    solution: 0
+    note_zh: 陪老人下一盤棋
+    methods: [lore, notice]
+    attributes: [int, wis]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: elder_opening, text_zh: 老人總是用同一個開局, methods: [lore, notice]}
+    success: {rewards: {xp_permille: 1000, threads: [storm_night_fog]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {}
+
+  - id: elder_patience
+    skeleton: pine_elder_go
+    solution: 1
+    note_zh: 耐著性子聽完老人的啞謎
+    methods: [parley, lore]
+    attributes: [wil, int]
+    base_dc: 12
+    danger: 1
+    weaknesses:
+      - {id: elder_lonely, text_zh: 老人只是想有人陪, methods: [parley]}
+    success: {rewards: {xp_permille: 1000, threads: [storm_night_fog]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {}
+
+  - id: lingzhi_climb
+    skeleton: cliff_lingzhi
+    solution: 0
+    note_zh: 攀上峭壁採靈芝
+    methods: [climb]
+    attributes: [str, dex]
+    base_dc: 14
+    danger: 2
+    weaknesses:
+      - {id: vine_holds, text_zh: 崖上的老藤夠結實, methods: [climb]}
+    success: {rewards: {xp_permille: 1000, supplies: 2, threads: [alchemist_owes_you]}}
+    partial:
+      rewards: {xp_permille: 500, supplies: 1}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 250}}
+
+  - id: monks_persuade
+    skeleton: monks_dispute
+    solution: 0
+    note_zh: 說服其中一名修士
+    methods: [parley, lore]
+    attributes: [wil, int]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: monk_fear, text_zh: 主張交給官府的修士其實怕觀主, methods: [parley]}
+    success: {rewards: {xp_permille: 1000, threads: [temple_traitor]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: monks_see_lie
+    skeleton: monks_dispute
+    solution: 1
+    note_zh: 看穿哪一名修士在說謊
+    methods: [notice, lore]
+    attributes: [wis, int]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: monk_story_gap, text_zh: 其中一人的說法前後矛盾, methods: [notice]}
+    success: {rewards: {xp_permille: 1000, threads: [temple_traitor]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: deserter_hide
+    skeleton: gang_deserter
+    solution: 1
+    note_zh: 帶盜賊逃兵躲過追兵
+    methods: [stealth, endurance]
+    attributes: [dex, con]
+    base_dc: 14
+    danger: 3
+    weaknesses:
+      - {id: pursuers_lost_in_fog, text_zh: 追兵不熟霧裡的小路, methods: [stealth]}
+    success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [gang_fort_secret_door]}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 200, reinforce: true}}
+
+  - id: hunter_awaken
+    skeleton: possessed_hunter
+    solution: 1
+    note_zh: 喚醒被霧魅附身的獵人
+    methods: [uncanny, lore]
+    attributes: [wil, int]
+    base_dc: 14
+    danger: 2
+    weaknesses:
+      - {id: hunter_name, text_zh: 喊出獵人的名字能喚回他, methods: [uncanny]}
+    success: {rewards: {xp_permille: 1000, threads: [wraiths_from_rift], buffs: [rallied]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [wraiths_from_rift]}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200, debuffs: [weaken]}}
+
+  - id: ferry_repair
+    skeleton: broken_ferry
+    solution: 1
+    note_zh: 修好被砸的渡船
+    methods: [mechanism, force]
+    attributes: [int, str]
+    base_dc: 12
+    danger: 1
+    weaknesses:
+      - {id: ferry_spare_parts, text_zh: 渡口邊堆著舊船的木料, methods: [mechanism]}
+    success: {rewards: {xp_permille: 1000, threads: [ferryman_daughter]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {supplies: 1}
+    failure: {penalties: {supplies: 1}}
+
+  - id: bear_slip_away
+    skeleton: bear_den
+    solution: 1
+    note_zh: 悄悄退出熊巢
+    methods: [notice, stealth]
+    attributes: [wis, dex]
+    base_dc: 13
+    danger: 3
+    weaknesses:
+      - {id: bear_cubs_sleep, text_zh: 小熊在睡，母熊不想離巢, methods: [notice, stealth]}
+    success: {rewards: {xp_permille: 1000, threads: [shards_under_den]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 300, reinforce: true}}
+
+  - id: envoy_persuade
+    skeleton: crane_envoy
+    solution: 0
+    note_zh: 說服雲鶴使你不是盜賊
+    methods: [parley, notice]
+    attributes: [wil, wis]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: envoy_duty, text_zh: 雲鶴使只想確認身分, methods: [parley]}
+    success: {rewards: {xp_permille: 1000, threads: [temple_pass]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {hurt_permille: 150}}
+
+  - id: envoy_take_cover
+    skeleton: crane_envoy
+    solution: 1
+    note_zh: 躲到雲鶴使射不到的掩體
+    methods: [climb]
+    attributes: [dex, str]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: envoy_rocks, text_zh: 橋頭有幾塊大石可以躲, methods: [climb]}
+    success: {rewards: {xp_permille: 1000, buffs: [guarded]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 250}}
+
+  - id: altar_endure
+    skeleton: storm_altar
+    solution: 1
+    note_zh: 在雷擊中硬撐到祭壇
+    methods: [endurance, uncanny]
+    attributes: [con, wil]
+    base_dc: 15
+    danger: 2
+    weaknesses:
+      - {id: altar_pine_roots, text_zh: 古松的根會把雷導進地裡, methods: [endurance, uncanny]}
+    success: {rewards: {xp_permille: 1000, buffs: [empowered]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 150}
+    failure: {penalties: {hurt_permille: 250}}
+
+  - id: sword_pull
+    skeleton: tomb_sword
+    solution: 0
+    note_zh: 把殘劍從劍冢裡拔出來
+    methods: [force, endurance]
+    attributes: [str, con]
+    base_dc: 15
+    danger: 2
+    weaknesses:
+      - {id: sword_loosened, text_zh: 劍身已被雨水鏽鬆, methods: [force]}
+    success: {rewards: {xp_permille: 1000, threads: [swordsman_seeks_blade]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 250, debuffs: [bleed]}}
+
+  - id: sword_array
+    skeleton: tomb_sword
+    solution: 1
+    note_zh: 解開劍陣殘留
+    methods: [mechanism, finesse]
+    attributes: [int, dex]
+    base_dc: 15
+    danger: 2
+    weaknesses:
+      - {id: array_eye, text_zh: 劍陣只有一個陣眼, methods: [mechanism, finesse]}
+    success: {rewards: {xp_permille: 1000, threads: [swordsman_seeks_blade]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200}}
+
+  - id: convoy_steal
+    skeleton: shard_convoy
+    solution: 1
+    note_zh: 從押送隊手上偷走源晶碎片
+    methods: [finesse, notice]
+    attributes: [dex, wis]
+    base_dc: 15
+    danger: 3
+    weaknesses:
+      - {id: convoy_night_watch, text_zh: 押送隊輪班換哨時有空檔, methods: [finesse, notice]}
+    advantage_threads: [gang_fort_secret_door]
+    success: {rewards: {xp_permille: 1000, supplies: 1}}
+    partial:
+      rewards: {xp_permille: 500, threads: [shards_to_ashen]}
+      penalties: {hurt_permille: 100}
+    failure:
+      rewards: {threads: [shards_to_ashen]}
+      penalties: {hurt_permille: 200, reinforce: true}
+
+  - id: spring_hold_breath
+    skeleton: poison_spring
+    solution: 0
+    note_zh: 憋氣穿過毒霧
+    methods: [endurance, force]
+    attributes: [con, str]
+    base_dc: 14
+    danger: 2
+    weaknesses:
+      - {id: spring_wind, text_zh: 風向一變，毒霧會散開一陣, methods: [endurance]}
+    success: {rewards: {xp_permille: 1000, reveal: [elixir_cave]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 150, debuffs: [poison]}
+    failure: {penalties: {hurt_permille: 250, debuffs: [poison]}}
+
+  - id: spring_antidote
+    skeleton: poison_spring
+    solution: 1
+    note_zh: 用谷裡的藥草配出解藥
+    methods: [lore, endurance]
+    attributes: [int, con]
+    base_dc: 14
+    danger: 2
+    weaknesses:
+      - {id: spring_herbs, text_zh: 谷裡長著解毒的草, methods: [lore]}
+    success: {rewards: {xp_permille: 1000, reveal: [elixir_cave]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 150, debuffs: [poison]}}
+
+  - id: storyteller_tale
+    skeleton: tavern_storyteller
+    solution: 0
+    note_zh: 給說書人講一段新故事
+    methods: [parley, lore]
+    attributes: [wil, int]
+    base_dc: 12
+    danger: 1
+    weaknesses:
+      - {id: storyteller_likes_mist, text_zh: 說書人愛聽霧裡的怪事, methods: [parley, lore]}
+    success: {rewards: {xp_permille: 1000, threads: [tavern_rumor]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {}
+
+  - id: patrol_track
+    skeleton: lantern_patrol
+    solution: 1
+    note_zh: 追蹤失蹤鎮民的足跡
+    methods: [tracking, endurance]
+    attributes: [wis, con]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: lantern_footprints, text_zh: 泥地上留著新的腳印, methods: [tracking]}
+    success: {rewards: {xp_permille: 1000, threads: [missing_went_to_rift]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 150}}
+
+  - id: fox_persuade
+    skeleton: fox_traveler
+    solution: 1
+    note_zh: 說服不信任人類的狐族旅人
+    methods: [parley, notice]
+    attributes: [wil, wis]
+    base_dc: 12
+    danger: 1
+    weaknesses:
+      - {id: fox_trade, text_zh: 她缺的是補給，不是錢, methods: [parley]}
+    success: {rewards: {xp_permille: 1000, supplies: 1, threads: [foxfire_guide]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 1}}

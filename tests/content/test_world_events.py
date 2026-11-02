@@ -334,6 +334,7 @@ def test_without_world_event_files(tmp_path: Path, library: ContentLibrary) -> N
     shutil.rmtree(content / "world" / "events")
     shutil.rmtree(content / "world" / "npcs")
     (content / "world" / "event_rules.yaml").unlink()
+    shutil.rmtree(content / "world" / "situations")  # 5B-2：情境模板要有骨架
     lib = load_library(content)
     assert lib.world_event_content.events == {}
     assert lib.world_event_content.npcs == {}
