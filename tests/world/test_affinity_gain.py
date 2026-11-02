@@ -32,18 +32,18 @@ def _changes(events: Sequence[object]) -> list[AffinityChangedEvent]:
 
 
 # ---------------------------------------------------------------------------
-# 任務步驟 +15
+# 任務步驟 +10（5B-4c 從 +15 下修）
 # ---------------------------------------------------------------------------
 
 
-def test_quest_step_gives_related_npcs_15(library: ContentLibrary, make_char: MakeChar) -> None:
+def test_quest_step_gives_related_npcs_10(library: ContentLibrary, make_char: MakeChar) -> None:
     char = _with_quest(make_char(location="ferry_steps"), "starter_ferry")
     char, events = advance_quests(library, make_world(), char, _won("ferry_steps"), NOON)
     changes = _changes(events)
     assert [(e.npc, e.delta, e.source) for e in changes] == [
-        ("granny_du", 15, "quest:starter_ferry")
+        ("granny_du", 10, "quest:starter_ferry")
     ]
-    assert char.affinity["granny_du"] == 15
+    assert char.affinity["granny_du"] == 10
 
 
 def test_quest_step_with_two_npcs(library: ContentLibrary, make_char: MakeChar) -> None:
@@ -55,8 +55,8 @@ def test_quest_step_with_two_npcs(library: ContentLibrary, make_char: MakeChar) 
     )
     char, out = advance_quests(library, make_world(), char, (traitor, events[1]), NOON)
     assert sorted((e.npc, e.delta) for e in _changes(out)) == [
-        ("acolyte_xiaolian", 15),
-        ("daoist_qingya", 15),
+        ("acolyte_xiaolian", 10),
+        ("daoist_qingya", 10),
     ]
 
 

@@ -151,7 +151,7 @@ def test_mentor_chain_steps(library: ContentLibrary, make_char: MakeChar) -> Non
     assert [e.step for e in events if isinstance(e, QuestStepDoneEvent)] == ["observe_flash"]
     assert char.insight == 1
     assert [(e.npc, e.delta) for e in events if isinstance(e, AffinityChangedEvent)] == [
-        ("daoist_qingya", 15)
+        ("daoist_qingya", 10)
     ]
     for weather, skills in (("clear", ("skill_bear_trap",)), ("fog", ())):
         _, none = advance_quests(library, world, char, _battle(weather, skills), NOON)
@@ -165,5 +165,5 @@ def test_mentor_chain_steps(library: ContentLibrary, make_char: MakeChar) -> Non
     assert state is not None and state.done
     assert "title_qingya_disciple" in char.story_flags
     assert char.insight == 3
-    assert char.affinity["daoist_qingya"] == 45
+    assert char.affinity["daoist_qingya"] == 30
     assert char.xp == 0 and char.pending_offers == ()  # 不給經驗、不給技能
