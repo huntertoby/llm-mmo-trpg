@@ -8,6 +8,8 @@
 # 列出第三方（0～3 名，和我方、敵方都敵對；遠程上限敵方＋第三方合計；第三方不混精英、不吃增援）。
 # 改成三方的只有設計直接寫到兩方互打的（代決 5BM3-8）：源晶裂痕（18.7.2 ④ 霧魅湧出、盜賊搶碎片、修士守陣；
 # 18.2.2 混族例「修士與盜賊在源晶裂痕前交戰」）、雨中梯田「梯田上的衝突」（18.7.1 ③ 盜賊和修士打起來）。
+# 5B-4c（玩法 PM 定，2026-11-03）：冬湖石背熊、崖上石背熊、雷羽鷹巢也改三方（野獸放 third，和修士互打，18.2.2）；
+# 冬湖獵手維持同陣營。敵方至少 2 名，所以冬湖石背熊、雷羽鷹巢補 1 名同地點的修士；強度之後再量。
 region: cloud_ridge
 ranged_cap: 2
 camp_elite_permille: 100
@@ -33,13 +35,13 @@ groups:
   - {id: furnace_tide, name_zh: 丹爐水房, units: [water_alchemist, sect_swordsman, sect_swordsman, sect_mist_walker]}
   - {id: north_slope_pack, name_zh: 狼王的狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: lake_hunters, name_zh: 冬湖獵手, units: [frost_crane_archer, stoneback_bear, mist_wolf]}
-  - {id: lake_bears, name_zh: 冬湖石背熊, units: [stoneback_bear, mist_wolf, frost_crane_archer]}
+  - {id: lake_bears, name_zh: 冬湖石背熊, units: [frost_crane_archer, frost_crane_archer], third: [stoneback_bear, mist_wolf]}  # 5B-4c 三方：野獸和修士互打
   - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}
   - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_swordsman, sect_mist_walker, thunder_talisman_caster, sect_crane_archer]}
   - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
   - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
-  - {id: crane_nest, name_zh: 雷羽鷹巢, units: [thunder_hawk, thunder_hawk, thunder_hawk, sect_crane_archer]}
-  - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk, stoneback_bear]}
+  - {id: crane_nest, name_zh: 雷羽鷹巢, units: [sect_crane_archer, sect_crane_archer], third: [thunder_hawk, thunder_hawk, thunder_hawk]}  # 5B-4c 三方
+  - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk], third: [stoneback_bear]}  # 5B-4c 三方：沒有修士，鷹巢被熊闖入（代決 5B4c-11）
   - {id: summit_patrol, name_zh: 雲頂巡邏, units: [sect_array_disciple, sect_array_disciple, sect_talisman_caster, sect_alchemist]}
   # 線頭到期結局的變化陣容（5B-4b；18.4「線頭到期例」、18.7.4 疤面＝盜賊隊長精英，連心的，帶霧狼）
   # 精英由地點的 variants 指定（資料指定詞綴，5B-4c；已是精英的範本 HP 不再乘）

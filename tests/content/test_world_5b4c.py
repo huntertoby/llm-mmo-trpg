@@ -130,3 +130,21 @@ def test_surge_problems(library: ContentLibrary) -> None:
     )
     assert any("未知的單位 nobody" in p for p in problems)
     assert any("不能加精英" in p for p in problems)
+
+
+# ---------------------------------------------------------------------------
+# 野獸改三方（21.8；玩法 PM 定，2026-11-03）
+# ---------------------------------------------------------------------------
+
+BEASTS = frozenset({"mist_wolf", "mountain_leopard", "stoneback_bear", "thunder_hawk"})
+
+
+def test_beast_groups_are_three_way(library: ContentLibrary) -> None:
+    groups = library.world_encounters["cloud_ridge"].group_by_id()
+    for group_id in ("lake_bears", "crane_cliff_bear", "crane_nest"):
+        group = groups[group_id]
+        assert group.third, group_id
+        assert set(group.third) <= BEASTS, group_id  # 野獸放在第三方
+    assert set(groups["lake_bears"].units) == {"frost_crane_archer"}
+    assert set(groups["crane_nest"].units) == {"sect_crane_archer"}
+    assert groups["lake_hunters"].third == ()  # 冬湖獵手維持同陣營
