@@ -5,7 +5,7 @@ schema_version: 1
 name_zh: 號令先鋒
 tier: 1
 rank: 1
-rarity: epic
+rarity: rare
 kind: active
 skeleton: summon
 category: weapon
