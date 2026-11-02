@@ -538,7 +538,8 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         boss_burst = "Boss 在第 1 輪被擊倒"
     elif boss_burst_hits:
         boss_burst = boss_burst_hits[0]
-    result: ResultName = "draw" if winner is None else winner.value
+    # 勝方只會是我方或敵方（三方混戰敗北也記 enemy，Phase 5B-M3 代決 5BM3-4）
+    result: ResultName = "draw" if winner is None else "ally" if winner is Team.ALLY else "enemy"
     return BattleMetrics(
         seed=seed,
         result=result,

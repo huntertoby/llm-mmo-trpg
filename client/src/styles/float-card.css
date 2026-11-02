@@ -26,6 +26,10 @@
   background: var(--enemy);
 }
 
+.unit-badge.third {
+  background: var(--third);
+}
+
 .unit-stats th {
   text-align: left;
   color: var(--muted);

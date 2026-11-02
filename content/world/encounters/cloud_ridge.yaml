@@ -4,7 +4,10 @@
 # 規則：09 9.6.6（混族、每場遠程上限、一般營地有機率混進 1 名精英、精英巢穴固定有精英）。
 # 陣容、權重與機率是開發 PM 的初值（docs/phases/Phase5計畫.md 0.2 Q5、7.4），未經模擬。
 # 陣容 2～4 名（3 人隊伍；地圖敵方起始區 4 格）；名字是 content/units 的範本 ID 或 world/enemies.yaml 的變體 ID。
-# 混族的敵人都在同一陣營（三方混戰待之後，代決 5A3-4）。
+# 混族的敵人預設都在同一陣營（代決 5A3-4）；三方混戰（5B-M3，09 9.6.6「兩方敵人互相敵對」）用陣容的 third
+# 列出第三方（0～3 名，和我方、敵方都敵對；遠程上限敵方＋第三方合計；第三方不混精英、不吃增援）。
+# 改成三方的只有設計直接寫到兩方互打的（代決 5BM3-8）：源晶裂痕（18.7.2 ④ 霧魅湧出、盜賊搶碎片、修士守陣；
+# 18.2.2 混族例「修士與盜賊在源晶裂痕前交戰」）、雨中梯田「梯田上的衝突」（18.7.1 ③ 盜賊和修士打起來）。
 region: cloud_ridge
 ranged_cap: 2
 camp_elite_permille: 100
@@ -16,7 +19,7 @@ groups:
   - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf, mist_wolf]}
   - {id: sect_patrol, name_zh: 修士巡邏, units: [sect_acolyte, sect_acolyte, sect_swordsman, sect_alchemist]}
-  - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit, bandit, sect_swordsman, sect_acolyte]}
+  - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit, bandit], third: [sect_swordsman, sect_acolyte]}
   - {id: temple_gate_guard, name_zh: 山門守衛, units: [sect_acolyte, sect_swordsman, sect_swordsman]}
   - {id: hunter_beasts, name_zh: 下山的野獸, units: [mist_wolf, mist_wolf, mountain_leopard]}
   - {id: cliff_gang_core, name_zh: 斷崖幫主力, units: [bandit, bandit_shieldbearer, bandit_archer, bandit_captain]}
@@ -33,8 +36,8 @@ groups:
   - {id: lake_bears, name_zh: 冬湖石背熊, units: [stoneback_bear, mist_wolf, frost_crane_archer]}
   - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}
   - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_swordsman, sect_mist_walker, thunder_talisman_caster, sect_crane_archer]}
-  - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem]}
-  - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, mist_wraith, shard_golem]}
+  - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
+  - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
   - {id: crane_nest, name_zh: 雷羽鷹巢, units: [thunder_hawk, thunder_hawk, thunder_hawk, sect_crane_archer]}
   - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk, stoneback_bear]}
   - {id: summit_patrol, name_zh: 雲頂巡邏, units: [sect_array_disciple, sect_array_disciple, sect_talisman_caster, sect_alchemist]}

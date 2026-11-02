@@ -1,0 +1,78 @@
+# Phase 5B-M3 完成報告：引擎機制③（三方混戰）
+
+> 實作者：implementer agent（2026-11-03）。規格：`docs/phases/Phase5計畫.md` 第 20 節（先寫規格、commit `4422db46` 後實作；當時是第 19 節，合併 main 的 5B-4b 規格〔第 19 節〕後改為第 20 節，「之後各段規格」改第 21 節，測試裡的節號同步改）。
+> 動到：`src/trpg/shared/types.py`（`Team.THIRD`）、`src/trpg/engine/`（`battle.py` 起始位置與「雙方都要有人」檢查、`objectives.py` 勝負、`effects/handlers.py` 難度倍率、`ai/objective.py`、`runner.py`）、`src/trpg/content/`（`maps.py` 起始區、`world_encounters.py` 陣容的 `third`）、`src/trpg/world/`（`encounters.py` 陣容、`battle.py` 第三方出場，各一處）、`src/trpg/sim/metrics.py`（勝方對照）、`src/trpg/cli/render.py`（代號、起始區字元）、`src/trpg/api/`（遭遇預覽）、`client/`（型別、顏色、標籤）、`content/world/encounters/cloud_ridge.yaml`（3 個陣容）、`content/world/quests/cloud_ridge.yaml`（只改註解）、`docs/phases/戰鬥紀錄格式變更.md`、測試。
+
+## 1. 陣營模型
+
+- `Team` 加 `THIRD = "third"`（中文「第三方」）。敵對關係固定一條規則：**不同陣營彼此敵對、同陣營友好**（`Team.hostile_to(other)`）。引擎原本所有敵我判斷都是 `team == / !=`，所以 AI 選目標、範圍技（`affects: enemies／allies`）、反應（格擋、還擊、借機攻擊、替隊友擋、同門相護、陣法、分傷、陣眼護陣）、召喚物／陷阱／符文／區域的歸屬都不需要改，測試逐一確認。
+- `Team.opponent`（只剩地圖連通性檢查用）：我方↔敵方，第三方算我方。
+- **哪個單位是第三方是資料**：`UnitSpawn.team: third`；大世界由遭遇表陣容的 `third` 決定。
+- **起始位置**：`MapDef.start_zones.third` 可省略（地圖驗證只要求 `ally`、`enemy`；有填時檢查走得到我方起始區）。沒填時第三方排在離敵方起始區最近的空格（可站、不致命、不在任何起始區；依「到敵方起始區最近格的距離, y, x」排序）——兩方在裂痕前交戰。手動 `position` 照舊優先。現有地圖都沒有加 `third` 區。
+- **開戰檢查**：原本要求「所有陣營都有人」，改成「我方、敵方都要有人」（第三方可有可無）。
+- **開場朝向**：沿用「面向其他陣營的重心」；**先攻**所有單位一起擲；`first_team` 只用我方／敵方。
+- **控制者**：第三方一律效用 AI；戰術指令只有我方、敵方。
+- **源力**只有我方（既有）；第三方開場 0。
+- **難度倍率**（`enemy_damage_permille`、Boss 倍率）：改為「來源不是我方、目標是我方」才乘；敵方與第三方互打不乘。兩陣營時與原本相同。
+
+## 2. AI 與勝利條件
+
+- **AI**：效用 AI 與簡易 AI 的「敵人」本來就是不同陣營 → 敵方打第三方、第三方打雙方、我方隊友也打第三方；範圍技估值、威脅、包夾、反應預判照同一規則。沒有新權重（「玩家可以等兩邊打完再收尾」是自然結果）。
+- `ai.objective`：第三方不追求勝利條件（守點、撤離的位置分 0）；我方守點時「敵人逼近」算敵方＋第三方。
+- **勝負**（`trpg.engine.objectives`）：「敵人」＝敵方＋第三方（非召喚物）。
+  - 全滅：我方還有人且敵人全倒 → 勝；敵方被第三方打光、第三方還在 → 繼續打；我方全滅 → 敗，勝方記 `enemy`。
+  - 撤離：不變。守點：任何敵人（含第三方）某輪結束站在守點上 → 失守。
+  - Boss 戰頭目倒下 → 其餘敵人（含第三方）撤退、勝利（Boss 戰不排第三方）。
+- `trpg.sim.metrics` 的勝方對照改成「我方／其他＝enemy」（避免 `third` 字串進到只認 `ally／enemy／draw` 的欄位；實際上勝方不會是 `third`）。
+
+## 3. 大世界與內容
+
+- 遭遇表：`EncounterGroupDef.third`（0～3 名，`MAX_THIRD_SIZE`）；跨檔檢查把 `units + third` 一起算未知單位與遠程上限（敵方＋第三方合計）、第三方不得有精英。
+- `EncounterLineup.third`（舊資料沒有＝空；加欄位有預設值，世界存檔、wlog 版號不變）。抽陣容照 `third` 順序放、套用等級門檻、不消耗亂數；營地混精英、固定精英、增援只作用在敵方 `members`。5B-4b 的「遭遇變化」（`variant`）路徑也帶 `third`。
+- 開戰：第三方照地點敵人等級成長，`team: third`，排在敵方之後。經驗照陣容（只看敵方的一般／精英）。
+- 雲嶺（`content/world/encounters/cloud_ridge.yaml`）：
+
+| 陣容 | 敵方 | 第三方 | 依據 |
+|---|---|---|---|
+| `rift_wraiths` 裂痕異物（源晶裂痕） | 霧魅 ×2、碎晶傀儡 | 持劍弟子、青霧道童 | 18.7.2 ④ 修士守陣 |
+| `rift_scavengers` 搶碎片的盜賊（源晶裂痕） | 盜賊、盜賊弓手、霧魅、碎晶傀儡 | 持劍弟子、青霧道童 | 18.7.2 ④、18.2.2 混族例 |
+| `terrace_clash` 梯田上的衝突（雨中梯田） | 盜賊 ×2 | 持劍弟子、青霧道童 | 18.7.1 ③ 盜賊和修士打起來 |
+
+- 源晶裂痕兩種陣容都是三方 → **主線第 ④ 步（`win_battle crystal_rift`）一定是三方混戰**；任務檔只改註解（5B4-8 替代說明）。測試實際用效用 AI 在源晶裂痕打贏一場三方混戰、確認推進 `rift_battle`。
+- API：`EncounterEnemyView.third`（遭遇預覽列出第三方，排在敵方之後，標「第三方」）；`UnitView.team` 可以是 `third`；OpenAPI 與 `schema.d.ts` 重產。
+- 前端（沿用既有元件，不做新美術）：第三方色紫（`TEAM_COLORS.third`、`RING.third`、CSS `--third`：單位底圈、先攻條、單位卡徽章、戰鬥紀錄 `team-third`）；單位卡標籤「第三方」；代號用小寫字母倒過來（z、y、x…，CLI 同）；外觀預設同敵方；大世界遭遇預覽的「第三方」小標。CLI `trpg map show` 的第三方起始區字元 `t`。
+
+## 4. 戰鬥紀錄版號
+
+`LOG_FORMAT` `/105` → **`/106`**（`戰鬥紀錄格式變更.md`、`runner.py` 文件字串、9 個測試字面值、3 個 `endswith("/105")`）。沒有第三方的戰鬥結算與 `/105` 相同：`trpg battle --map swamp --seed 7` 仍是 88 個動作、313 個事件（同 5A-M2 報告）。
+
+## 5. 代決（規格 20.11）
+
+1. **5BM3-1** 第三方對我方、敵方都敵對；關係由「是否同陣營」決定，不做關係表。
+2. **5BM3-2** 地圖可選填 `third` 起始區；沒填時排在離敵方起始區最近的空格。現有地圖都沒加。
+3. **5BM3-3** 勝利＝擊倒所有和我方敵對的單位（敵方＋第三方）；撤離不變；守點被第三方占也失守。
+4. **5BM3-4** 敗北時勝方一律記 `enemy`。
+5. **5BM3-5** 難度倍率只在「非我方打我方」時乘。
+6. **5BM3-6** Boss 戰頭目倒下 → 所有敵人（含第三方）撤退；Boss 戰不排第三方。
+7. **5BM3-7** 第三方用一般效用 AI、不接戰術指令、不追求勝利條件。
+8. **5BM3-8** 只改設計直接寫到兩方互打的陣容：源晶裂痕兩種、雨中梯田「梯田上的衝突」。
+9. **5BM3-9** 第三方 0～3 名；遠程上限敵方＋第三方合計；第三方不得有精英、不混精英、不吃增援、不另給經驗。
+10. **5BM3-10** 戰鬥紀錄版號 `/106`。
+
+## 6. 待 PM 決定
+
+- **其他混族陣容要不要改三方**（5BM3-8）：18.2.2 說野獸「會和修士、盜賊互相攻擊」，但冬湖獵手（霜鶴弓手＋石背熊＋霧狼）、冬湖石背熊、雷羽鷹巢（雷羽鷹 ×3＋雲鶴使）、崖上石背熊的名稱看不出是互打還是同夥，維持同陣營。要改只動遭遇表的 `third`（注意冬湖是 5A-SIM2 調過的 75% 勝率）。
+- **新手鏈第 ③ 步（雨中梯田）改成三方後的難度**：盜賊 ×2 與修士 ×2 會先互打，對 2 級玩家變簡單；是否保留由玩法 PM 定。
+- **源晶裂痕陣容的強度**：敵方 3～4 名＋第三方 2 名，對 3 人隊伍；第三方的修士與敵方互耗，未經模擬。
+- **第三方的勝負細節**：第三方是否可以「離場」（撤退）而不必擊倒；第三方是否給經驗或掉落；勝方是否要記 `third`。
+- **可設定的陣營關係表**（例如第三方只敵視敵方、對我方中立）：本段沒做。
+
+## 7. 檢查紀錄
+
+- 開發中：`tests/engine tests/shared tests/content tests/world tests/narrative -n 8`：2 failed → 都是預期變化，已修（`Team` 列舉值多了 `third`；`test_first_team` 只對我方／敵方跑先手）；另 3 個 `LOG_FORMAT.endswith("/105")`。
+- 合併 main（`ed79b605`，5B-4b；衝突：`Phase5計畫.md` 節號、`world/encounters.py` 的 `third`／`variant` 兩個欄位、任務檔註解）後：`tests/engine tests/shared tests/content tests/world tests/narrative tests/api tests/sim tests/roguelite -n 8 --timeout=1800`：**7458 passed**。
+- `tests/cli -m "slow or not slow" -n 8 --timeout=3000`：**180 passed**（CLI 雜湊、行為快照沒有變，不需重產）。client fixture 沒變（`tests/api/test_client_fixtures.py` 通過）；OpenAPI 與 `schema.d.ts` 重產（`EncounterEnemyView.third`、`Team` 加 `third`）。
+- 前端：`npx vitest run` **127 個檔、1213 passed**；`npm run build` 通過（只有既有的 chunk 大小警告）。
+- `ruff check .`、`ruff format --check .`、`mypy`（strict，1056 檔）通過；`lint-imports` 9 個契約 KEPT。
+- 重播：`trpg battle --map swamp --seed 7 --log-json` ＋ `trpg battle replay`：重播驗證通過（88 個動作、313 個事件，和 `/105` 相同）。
+- 新測試：`tests/engine/test_third_team.py`（19 個：陣營關係、起始區可省略與自動位置、手動位置、只有第三方不能開戰、朝向、勝負〔敵方光了繼續、敵人全倒才勝、全滅記 enemy、守點被第三方占〕、AI〔敵方打第三方、第三方打雙方、我方打第三方〕、範圍技〔我方與敵方施放各一〕、格擋、同門相護只護同陣營、召喚物歸屬、難度倍率、整場確定性與重播）；`tests/world/test_three_way.py`（11 個：源晶裂痕陣容、舊陣容資料、開戰陣營與成長、增援不加到第三方、遭遇表檢查、**主線第 ④ 步實際打贏三方混戰推進**）；`tests/world/test_enemy_smoke.py` 三方陣容連第三方一起打完；`tests/api/test_world_three_way.py`；`client/src/battle/thirdTeam.test.ts`。

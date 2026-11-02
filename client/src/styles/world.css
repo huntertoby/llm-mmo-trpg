@@ -181,6 +181,17 @@
   color: #ffd04a;
 }
 
+/* 三方混戰的第三方（Phase 5B-M3）：和我方、敵方都敵對 */
+.world-enemies li.third {
+  color: #d6b3ff;
+}
+
+.world-third-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #c08bff;
+}
+
 .world-fatigue {
   margin-left: 8px;
   font-size: 12px;

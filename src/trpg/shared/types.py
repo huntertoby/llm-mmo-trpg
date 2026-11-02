@@ -132,10 +132,14 @@ class Surface(StrEnum):
 
 
 class Team(StrEnum):
-    """戰鬥中的陣營。地圖起始區以此為鍵。"""
+    """戰鬥中的陣營。地圖起始區以此為鍵。
+
+    ``THIRD``（Phase 5B-M3，三方混戰）：和我方、敵方都敵對。陣營關係一律是「不同陣營彼此敵對、
+    同陣營友好」（:meth:`hostile_to`；代決 5BM3-1）。"""
 
     ALLY = "ally"
     ENEMY = "enemy"
+    THIRD = "third"
 
     @property
     def display_name(self) -> str:
@@ -143,7 +147,12 @@ class Team(StrEnum):
 
     @property
     def opponent(self) -> Team:
-        return Team.ENEMY if self is Team.ALLY else Team.ALLY
+        """地圖連通性檢查用的「對手」：我方↔敵方；第三方的對手算我方。"""
+        return Team.ALLY if self is not Team.ALLY else Team.ENEMY
+
+    def hostile_to(self, other: Team) -> bool:
+        """兩個陣營是否敵對（不同陣營＝敵對）。"""
+        return self is not other
 
 
 class Attribute(StrEnum):
@@ -255,6 +264,7 @@ _RESIST_GROUP_NAMES: dict[ResistGroup, str] = {
 _TEAM_NAMES: dict[Team, str] = {
     Team.ALLY: "我方",
     Team.ENEMY: "敵方",
+    Team.THIRD: "第三方",
 }
 
 _SURFACE_NAMES: dict[Surface, str] = {

@@ -20,6 +20,7 @@ from trpg.content.world_map import LocationMapDef
 
 __all__ = [
     "MAX_GROUP_SIZE",
+    "MAX_THIRD_SIZE",
     "MIN_GROUP_SIZE",
     "NO_ENCOUNTER_KINDS",
     "EncounterGroupDef",
@@ -35,20 +36,31 @@ __all__ = [
 MIN_GROUP_SIZE = 2
 MAX_GROUP_SIZE = 4
 """一場敵人最多 4 名（地圖敵方起始區 4 格；3 人隊伍對 2～4 名，代決 5A3-9）。"""
+MAX_THIRD_SIZE = 3
+"""三方混戰的第三方最多 3 名（Phase 5B-M3，代決 5BM3-9）。"""
 NO_ENCOUNTER_KINDS = frozenset({"town", "gate"})
 """遇敵機率為 0 的地點種類（5A-2：城鎮、傳送點），不需要遭遇表。"""
 
 
 class EncounterGroupDef(ContentModel):
-    """一種陣容：單位範本 ID 或變體 ID，2～4 名（可重複）。"""
+    """一種陣容：單位範本 ID 或變體 ID，2～4 名（可重複）。
+
+    ``third``（Phase 5B-M3 三方混戰，09 9.6.6「兩方敵人互相敵對」）：同場的第三方，0～3 名；和我方、
+    敵方都敵對。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     units: tuple[str, ...] = Field(min_length=MIN_GROUP_SIZE, max_length=MAX_GROUP_SIZE)
+    third: tuple[str, ...] = Field(default=(), max_length=MAX_THIRD_SIZE)
+
+    @property
+    def all_units(self) -> tuple[str, ...]:
+        """敵方加第三方（玩家面對的全部單位）。"""
+        return self.units + self.third
 
     @model_validator(mode="after")
     def _ids(self) -> EncounterGroupDef:
-        bad = [u for u in self.units if re.match(ID_PATTERN, u) is None]
+        bad = [u for u in self.all_units if re.match(ID_PATTERN, u) is None]
         if bad:
             raise ValueError(f"陣容 {self.id}：單位 ID 格式錯誤 {', '.join(bad)}")
         return self
@@ -190,12 +202,17 @@ def _affix_problems(table: EncounterTable, catalog: EnemyCatalog) -> list[str]:
 def _group_problems(table: EncounterTable, catalog: EnemyCatalog) -> list[str]:
     problems: list[str] = []
     for group in table.groups:
-        unknown = sorted({u for u in group.units if not catalog.has(u)})
+        unknown = sorted({u for u in group.all_units if not catalog.has(u)})
         if unknown:
             problems.append(f"陣容 {group.id}：未知的單位 {', '.join(unknown)}")
             continue
-        templates = [catalog.template(u) for u in group.units]
+        templates = [catalog.template(u) for u in group.all_units]  # 遠程上限敵方＋第三方合計
         problems += _lineup_problems(f"陣容 {group.id}", templates, table, catalog)
+        problems += [
+            f"陣容 {group.id}：第三方不能有精英（{u}）"
+            for u in group.third
+            if catalog.is_elite(catalog.template(u))
+        ]
     return problems
 
 
@@ -230,7 +247,7 @@ def _location_problems(
         if place.kind in NO_ENCOUNTER_KINDS:
             problems.append(f"地點 {loc_id}（{place.kind}）不會遇敵，不該有遭遇表")
         members = [groups[g.group] for g in loc.groups if g.group in groups]
-        if any(not catalog.has(u) for m in members for u in m.units):
+        if any(not catalog.has(u) for m in members for u in m.all_units):
             continue  # 陣容的問題已經回報過
         problems += _gate_problems(loc, members, table, catalog)
         problems += _variant_problems(loc, table, catalog)
@@ -253,7 +270,7 @@ def _gate_problems(
     ]
     cap = table.ranged_cap if loc.ranged_cap is None else loc.ranged_cap
     for group in members:
-        ranged = sum(1 for u in group.units if catalog.is_ranged(catalog.template(u)))
+        ranged = sum(1 for u in group.all_units if catalog.is_ranged(catalog.template(u)))
         if ranged > cap:
             problems.append(f"{where}：陣容 {group.id} 遠程 {ranged} 名，超過地點上限 {cap}")
     return problems
@@ -289,7 +306,7 @@ def _elite_problems(
     elite = catalog.with_affix(catalog.template(loc.elite.unit), loc.elite.affix)
     lineup: list[str] = []
     for group in members:
-        templates = [elite, *(catalog.template(u) for u in group.units)]
+        templates = [elite, *(catalog.template(u) for u in group.all_units)]
         lineup += _lineup_problems(f"{where} 的陣容 {group.id}", templates, table, catalog)
     return lineup
 

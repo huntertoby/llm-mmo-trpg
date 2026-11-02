@@ -16,7 +16,7 @@ export function tile(x: number, y: number, over: Partial<TileView> = {}): TileVi
   };
 }
 
-export function unit(id: string, team: "ally" | "enemy", x: number, y: number, over: Partial<UnitView> = {}): UnitView {
+export function unit(id: string, team: "ally" | "enemy" | "third", x: number, y: number, over: Partial<UnitView> = {}): UnitView {
   return {
     id,
     template_id: "t",

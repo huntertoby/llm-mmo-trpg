@@ -235,6 +235,8 @@ class EncounterEnemyView(_ApiModel):
     name_zh: str
     elite: bool
     affix_zh: str | None
+    third: bool = False
+    """第三方（Phase 5B-M3 三方混戰：和我方、敵方都敵對）。"""
 
 
 class EncounterView(_ApiModel):

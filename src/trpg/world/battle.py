@@ -301,17 +301,23 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     level = enemy_level(library, encounter)
     enemies: list[UnitSpawn] = []
     extra: dict[str, SkillDef] = {}
-    for template in lineup_templates(library, lineup):
-        grown, skills = grow_enemy(library, template, level)
-        extra.update((s.id, s) for s in skills)
-        enemies.append(
-            UnitSpawn(
-                template=grown,
-                weapon=library.weapon_of(grown),
-                equipment=library.loadout_of(grown),
-                team=Team.ENEMY,
+    # 第三方（5B-M3 三方混戰）照同一等級成長，排在敵方之後
+    sides = (
+        (Team.ENEMY, lineup_templates(library, lineup)),
+        (Team.THIRD, lineup_templates(library, lineup, third=True)),
+    )
+    for team, templates in sides:
+        for template in templates:
+            grown, skills = grow_enemy(library, template, level)
+            extra.update((s.id, s) for s in skills)
+            enemies.append(
+                UnitSpawn(
+                    template=grown,
+                    weapon=library.weapon_of(grown),
+                    equipment=library.loadout_of(grown),
+                    team=team,
+                )
             )
-        )
     base = build_setup(
         library,
         map_def.id,

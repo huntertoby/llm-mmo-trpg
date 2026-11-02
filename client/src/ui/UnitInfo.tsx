@@ -81,7 +81,7 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
   }
-  const team = unit.team === "ally" ? "我方" : "敵方";
+  const team = unit.team === "ally" ? "我方" : unit.team === "third" ? "第三方" : "敵方";
   const kind = summonKind(unit);
   const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
   const stacks = Object.entries(unit.stacks);

@@ -314,15 +314,17 @@ def _encounter_view(
         return None
     prepared = prepare_battle(library, char)
     catalog = library.enemy_catalog()
-    enemies = [u.template for u in prepared.setup.units if u.team is Team.ENEMY]
-    affixes = [m.affix for m in prepared.lineup.members]
+    # 敵方在前、第三方（5B-M3）在後；第三方沒有詞綴
+    foes = [u for u in prepared.setup.units if u.team is not Team.ALLY]
+    affixes = [m.affix for m in prepared.lineup.members] + [None] * len(prepared.lineup.third)
     views = tuple(
         EncounterEnemyView(
-            name_zh=template.name_zh,
-            elite=affix is not None or catalog.is_elite(template),
+            name_zh=spawn.template.name_zh,
+            elite=affix is not None or catalog.is_elite(spawn.template),
             affix_zh=catalog.affix(affix).name_zh if affix is not None else None,
+            third=spawn.team is Team.THIRD,
         )
-        for template, affix in zip(enemies, affixes, strict=True)
+        for spawn, affix in zip(foes, affixes, strict=True)
     )
     retreat_to = encounter.from_location or world_map_of(library, encounter.region).town
     return EncounterView(
