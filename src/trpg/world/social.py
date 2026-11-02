@@ -60,7 +60,8 @@ def talk(
         raise WorldActionError("還有沒處理的遭遇，不能聊天")
     events: list[WorldEvent] = []
     today = refresh_day(now)
-    if char.talk_days.get(action.npc) != today:
+    first_today = char.talk_days.get(action.npc) != today
+    if first_today:
         delta = affinity_rules(library).daily_talk_delta
         if delta:
             char, changed = change_affinity(library, char, action.npc, delta, "talk:daily")
@@ -85,11 +86,23 @@ def talk(
     )
     for entry in entries:
         skeleton = entry.unlocks_skeleton
-        if skeleton is None or skeleton in char.unlocked_skeletons:
+        if skeleton is None:
             continue
-        char, unlocked = _unlock(library, world, char, skeleton, npc=action.npc, now=now)
-        events += unlocked
+        if skeleton not in char.unlocked_skeletons:
+            char, unlocked = _unlock(library, world, char, skeleton, npc=action.npc, now=now)
+            events += unlocked
+        elif entry.retrigger_daily and first_today and _retriggerable(char, skeleton, now):
+            char, again = _trigger_here(library, world, char, skeleton, now=now)
+            events += again
     return char, tuple(events)
+
+
+def _retriggerable(char: CharacterState, skeleton_id: str, now: int) -> bool:
+    """5B-4e：已解鎖的骨架還沒解決、今天沒失敗過（``retrigger_daily`` 的聊天再觸發）。"""
+    if skeleton_id in char.finished_skeletons:
+        return False
+    failed = char.failed_skeletons.get(skeleton_id)
+    return failed is None or refresh_day(now) > failed
 
 
 def _unlock(
@@ -105,11 +118,25 @@ def _unlock(
     unlocked = tuple(sorted({*char.unlocked_skeletons, skeleton_id}))
     char = char.model_copy(update={"unlocked_skeletons": unlocked})
     events: list[WorldEvent] = [SkeletonUnlockedEvent(skeleton=skeleton_id, npc=npc)]
+    char, triggered = _trigger_here(library, world, char, skeleton_id, now=now)
+    return char, [*events, *triggered]
+
+
+def _trigger_here(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    skeleton_id: str,
+    *,
+    now: int,
+) -> tuple[CharacterState, list[WorldEvent]]:
+    """角色沒有事件在身上、骨架的地點含所在地點時立刻觸發（候選只有它）；否則什麼都不做。"""
     events_table = library.world_event_content.events.get(char.region)
     skeleton = None if events_table is None else events_table.skeleton_by_id().get(skeleton_id)
     here_ok = skeleton is not None and char.location in skeleton.locations
     if not here_ok or char.pending_event is not None:
-        return char, events
+        return char, []
+    events: list[WorldEvent] = []
     trigger = EventTrigger(
         region=char.region,
         location=char.location,

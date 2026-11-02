@@ -475,11 +475,16 @@ class TalkEntry(ContentModel):
     """``quest_entry``：入口指向的隱藏任務。"""
     unlocks_skeleton: str | None = Field(default=None, pattern=ID_PATTERN)
     """``secret``：說出祕密時解鎖的事件骨架（5B-4b，18.7.7；本區 ``unlock_only`` 的骨架）。"""
+    retrigger_daily: bool = False
+    """5B-4e（18.7.6「5B-4d 代決」）：已解鎖、還沒解決的骨架，每天（6 點刷新）第一次聊天時再觸發
+    一次（當天失敗過的不觸發）；只能和 ``unlocks_skeleton`` 一起用。"""
 
     @model_validator(mode="after")
     def _check(self) -> TalkEntry:
         if self.unlocks_skeleton is not None and self.kind != "secret":
             raise ValueError(f"聊天內容 {self.id}：只有 secret 可以填 unlocks_skeleton")
+        if self.retrigger_daily and self.unlocks_skeleton is None:
+            raise ValueError(f"聊天內容 {self.id}：retrigger_daily 要和 unlocks_skeleton 一起用")
         need = _TALK_MIN_RANK[self.kind]
         if self.kind == "secret" and self.rank != "trusted":
             raise ValueError(f"聊天內容 {self.id}：祕密只能是信賴（trusted）")
