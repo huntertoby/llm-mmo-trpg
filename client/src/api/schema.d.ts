@@ -829,6 +829,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/flash-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Flash Preview
+         * @description 閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（5A-7）：不扣點、不寫日誌。點數與地點
+         *     另外看（``WorldView.growth``）。
+         */
+        post: operations["post_flash_preview_api_world_characters__character_id__flash_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/allocation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Allocation Preview
+         * @description 配點後的最大 HP、法力、耐力與變化文字（5A-7；同一輪的預覽）。
+         */
+        post: operations["post_allocation_preview_api_world_characters__character_id__allocation_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -913,6 +954,21 @@ export interface components {
              * @enum {string}
              */
             type: "aim";
+        };
+        /**
+         * AllocateAction
+         * @description 分配未分配的屬性點（07 7.2；5A-6）：屬性 → 加幾點，總數 ≤ ``attribute_points``。
+         */
+        AllocateAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "allocate";
+            /** Attributes */
+            attributes: {
+                [key: string]: number;
+            };
         };
         /**
          * AllocateChoice
@@ -1813,6 +1869,19 @@ export interface components {
             lethal: boolean;
         };
         /**
+         * DissolveAction
+         * @description 溶掉一招（06 6.34.3 #71；城鎮與營火）：退回花在它身上的點的一半。
+         */
+        DissolveAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "dissolve";
+            /** Skill */
+            skill: string;
+        };
+        /**
          * DissolveChoice
          * @description 溶掉一招學會的技能（Phase 3W-5，#71）：技能消失，退回花在它身上的靈感點的一半（無條件捨去）。
          *     只在營火；欄位空出（可以用 ``loadout`` 從備用補上）。不推進節點。
@@ -1950,6 +2019,22 @@ export interface components {
             hero_hp: number;
             /** In Battle */
             in_battle: boolean;
+            /**
+             * Reinforcements
+             * @default 0
+             */
+            reinforcements: number;
+            first_team?: components["schemas"]["Team"] | null;
+            /**
+             * Hero Statuses
+             * @default []
+             */
+            hero_statuses: components["schemas"]["HeroStatusView"][];
+            /**
+             * Opening Zh
+             * @default []
+             */
+            opening_zh: string[];
         };
         /**
          * EndStance
@@ -2120,6 +2205,24 @@ export interface components {
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
         /**
+         * FlashAction
+         * @description 閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``
+         *     為 ``None`` ＝ 閃現下一次，否則重閃第 ``slot`` 次；``category`` 指定類別（多花 1 點）。
+         */
+        FlashAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flash";
+            /** Skill */
+            skill: string;
+            /** Slot */
+            slot?: number | null;
+            /** Category */
+            category?: string | null;
+        };
+        /**
          * FlashCategoryOut
          * @description 可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。
          */
@@ -2183,6 +2286,21 @@ export interface components {
              * @default []
              */
             unequip_candidates: string[];
+        };
+        /**
+         * FlashPickAction
+         * @description 選閃現的第 ``pick`` 個選項（同 roguelite ``FlashPickChoice``）。
+         */
+        FlashPickAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flash_pick";
+            /** Pick */
+            pick: number;
+            /** Unequip */
+            unequip?: string | null;
         };
         /**
          * FlashPickChoice
@@ -2892,6 +3010,28 @@ export interface components {
             /** Remaining */
             remaining: number;
         };
+        /**
+         * GrowthView
+         * @description 成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。
+         */
+        GrowthView: {
+            /** Insight */
+            insight: number;
+            /** Skill Tier */
+            skill_tier: number;
+            /** At Service */
+            at_service: boolean;
+            /** Service Zh */
+            service_zh: string;
+            /** Can Allocate */
+            can_allocate: boolean;
+            /** Can Spend */
+            can_spend: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** Pending */
+            pending: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3096,6 +3236,22 @@ export interface components {
             backpack: components["schemas"]["GearCandidateOut"][];
         };
         /**
+         * HeroStatusView
+         * @description 開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。
+         */
+        HeroStatusView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Beneficial */
+            beneficial: boolean;
+            /** Rounds */
+            rounds: number | null;
+        };
+        /**
          * HistoryStepOut
          * @description 戰鬥紀錄的一步：只有事件（含中文 ``text``），不含戰場視圖。
          */
@@ -3296,6 +3452,23 @@ export interface components {
             units: string[];
             /** No Target */
             no_target: boolean;
+        };
+        /**
+         * InheritAction
+         * @description 傳承（06 6.34.9 第 4 點；城鎮與營火）：同 roguelite ``InheritChoice``。
+         */
+        InheritAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "inherit";
+            /** Skill */
+            skill: string;
+            /** Source */
+            source: string;
+            /** Records */
+            records: number[];
         };
         /**
          * InheritChoice
@@ -3575,6 +3748,101 @@ export interface components {
             /** Victory */
             victory?: boolean | null;
             gear?: components["schemas"]["GearOfferOut"] | null;
+        };
+        /** OathCurrentView */
+        OathCurrentView: {
+            /** Template */
+            template: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Difficulty Zh */
+            difficulty_zh: string;
+            /** Params Zh */
+            params_zh: string;
+            /** Sworn At */
+            sworn_at: number;
+        };
+        /** OathParamView */
+        OathParamView: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "choice" | "int";
+            /**
+             * Choices
+             * @default []
+             */
+            choices: string[];
+            /**
+             * Min
+             * @default 0
+             */
+            min: number;
+            /**
+             * Max
+             * @default 0
+             */
+            max: number;
+        };
+        /**
+         * OathProposal
+         * @description 立誓的提議：模板與參數（LLM 只能從白名單模板挑、從允許值填，06 6.26 安全流程第 2 步）。
+         */
+        OathProposal: {
+            /** Template */
+            template: string;
+            /** Params */
+            params?: {
+                [key: string]: string | number;
+            };
+        };
+        /** OathTemplateView */
+        OathTemplateView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Difficulty
+             * @enum {string}
+             */
+            difficulty: "easy" | "medium" | "hard";
+            /** Difficulty Zh */
+            difficulty_zh: string;
+            /**
+             * Params
+             * @default []
+             */
+            params: components["schemas"]["OathParamView"][];
+        };
+        /**
+         * OathView
+         * @description 誓約（06 6.26、09 9.6.10 #106；模板內容在 5C-3）。
+         */
+        OathView: {
+            /** Available */
+            available: boolean;
+            /** Unavailable Zh */
+            unavailable_zh: string | null;
+            current: components["schemas"]["OathCurrentView"] | null;
+            /** Cooldown Until */
+            cooldown_until: number;
+            /** Cooldown Zh */
+            cooldown_zh: string | null;
+            /** Can Swear */
+            can_swear: boolean;
+            /** Swear Problem Zh */
+            swear_problem_zh: string | null;
+            /** Can Release */
+            can_release: boolean;
+            /**
+             * Templates
+             * @default []
+             */
+            templates: components["schemas"]["OathTemplateView"][];
         };
         /** ObjectView */
         ObjectView: {
@@ -4163,6 +4431,17 @@ export interface components {
             transform_hint: boolean;
         };
         /**
+         * ReleaseOathAction
+         * @description 解除誓約（#106：解除後現實 1 天內不能再立）。
+         */
+        ReleaseOathAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "release_oath";
+        };
+        /**
          * Reload
          * @description 裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個
          *     上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。
@@ -4175,6 +4454,17 @@ export interface components {
              * @enum {string}
              */
             type: "reload";
+        };
+        /**
+         * RespecAction
+         * @description 免費重配屬性點（07 7.2「營火可以免費重配」；城鎮與營火；5A-6）。
+         */
+        RespecAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "respec";
         };
         /**
          * RespecAttributesChoice
@@ -5126,6 +5416,33 @@ export interface components {
             /** Target Id */
             target_id: string;
         };
+        /**
+         * SwearOathAction
+         * @description 立誓（06 6.26、09 9.6.10 #106；城鎮與營火，同時 1 個）。``proposal`` 是 LLM 或選單提議、
+         *     已經過 pydantic 驗證的模板與參數；引擎另外檢查合法性。誓言原文只是紀錄（給 LLM 時包在
+         *     ``<player_input>``），重播照紀錄、不呼叫 LLM。
+         */
+        SwearOathAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "swear_oath";
+            proposal: components["schemas"]["OathProposal"];
+            /**
+             * Player Text
+             * @default
+             */
+            player_text: string;
+            /**
+             * Source
+             * @default menu
+             * @enum {string}
+             */
+            source: "llm" | "menu";
+            /** Prompt Version */
+            prompt_version?: string | null;
+        };
         TacticalOrder: components["schemas"]["FocusTarget"] | components["schemas"]["HoldPosition"] | components["schemas"]["RetreatTo"] | components["schemas"]["Protect"] | components["schemas"]["UseEnvironment"];
         /** TargetOut */
         TargetOut: {
@@ -5870,7 +6187,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -5927,6 +6244,16 @@ export interface components {
             bench: components["schemas"]["SkillCard"][];
             /** Slots Zh */
             slots_zh: string;
+            /**
+             * Insight
+             * @default 0
+             */
+            insight: number;
+            /**
+             * Skill Tier
+             * @default 1
+             */
+            skill_tier: number;
         };
         /** WorldClockView */
         WorldClockView: {
@@ -5998,6 +6325,17 @@ export interface components {
             events: string[];
             /** Battle Id */
             battle_id: string | null;
+            hero: components["schemas"]["HeroOut"];
+            pending_flash?: components["schemas"]["PendingFlashOut"] | null;
+            growth: components["schemas"]["GrowthView"];
+            oath: components["schemas"]["OathView"];
+            /**
+             * Next Battle Zh
+             * @default []
+             */
+            next_battle_zh: string[];
+            /** Last Battle Zh */
+            last_battle_zh?: string | null;
         };
         XY: [
             number,
@@ -7351,6 +7689,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorldBattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_flash_preview_api_world_characters__character_id__flash_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlashPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlashPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_allocation_preview_api_world_characters__character_id__allocation_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationPreviewOut"];
                 };
             };
             /** @description Validation Error */

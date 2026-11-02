@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { SkillCardView } from "../ui/SkillCardView";
-import { FlashChooser } from "./FlashChooser";
+import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import { ownedSkills, rulesOf, showCanFlash, flashCountText, CAN_FLASH_TEXT } from "./flash";
 
 interface Props {
@@ -12,9 +12,13 @@ interface Props {
   hero: RunHero;
   busy: boolean;
   onChoose(choice: RunChoice): Promise<number | null>;
+  /** 閃現預覽的來源（大世界）；省略 ＝ 一輪的端點。 */
+  previewFlash?: FlashPreviewLoader;
+  /** 不能花點時的原因（大世界：不在城鎮或營火）；有值時閃現按鈕停用並以它為說明。 */
+  lockedReason?: string | null;
 }
 
-export function FlashSection({ runId, hero, busy, onChoose }: Props) {
+export function FlashSection({ runId, hero, busy, onChoose, previewFlash, lockedReason = null }: Props) {
   const [target, setTarget] = useState<string | null>(null);
   const rules = rulesOf(hero.flash_rules);
   const insight = hero.insight ?? 0;
@@ -33,6 +37,7 @@ export function FlashSection({ runId, hero, busy, onChoose }: Props) {
         <FlashChooser
           key={chosen.card.id}
           runId={runId}
+          previewFlash={previewFlash}
           hero={hero}
           skillId={chosen.card.id}
           skillName={chosen.card.name_zh}
@@ -48,10 +53,10 @@ export function FlashSection({ runId, hero, busy, onChoose }: Props) {
       )}
       <ul className="flash-skill-list" data-testid="flash-skill-list">
         {skills.map(({ card, flash, equipped }) => {
-          const can = showCanFlash(flash) && insight >= rules.open_cost;
-          const reason = flash?.complete
+          const can = showCanFlash(flash) && insight >= rules.open_cost && lockedReason === null;
+          const reason = lockedReason ?? (flash?.complete
             ? "完整技能不能再閃現"
-            : (flash?.flash_problem_zh ?? (insight < rules.open_cost ? "靈感點不足" : undefined));
+            : (flash?.flash_problem_zh ?? (insight < rules.open_cost ? "靈感點不足" : undefined)));
           return (
             <li key={card.id} className="flash-skill-row">
               <details>

@@ -3,8 +3,11 @@
 - ``GET /api/world/characters``：角色列表。
 - ``POST /api/world/characters``：建立角色（07 7.6 創角；選項沿用 ``/api/runs/start-options``）。
 - ``GET /api/world/characters/{id}``：地點圖畫面的整份資料（先同步已結束的戰鬥）。
-- ``POST /api/world/characters/{id}/actions``：移動、紮營、撤退、休息、換技能、傳送。
+- ``POST /api/world/characters/{id}/actions``：移動、紮營、撤退、休息、換技能、傳送；5A-7 加上配點、
+  重配、閃現、選閃現、溶掉、傳承、立誓、解除誓約。
 - ``POST /api/world/characters/{id}/battle``：開戰或接續進行中的戰鬥（之後用 ``/api/battles``）。
+- ``POST /api/world/characters/{id}/flash-preview``、``…/allocation-preview``：閃現與配點的預覽
+  （5A-7；同一輪的預覽，不扣點、不寫日誌）。
 
 錯誤：角色不存在 404；動作或內容不合法 422；戰鬥中做其他動作、沒有遭遇卻開戰 409。
 """
@@ -16,6 +19,13 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Request
 
 from trpg.api.presenter import battle_response
+from trpg.api.run_presenter import allocation_preview, flash_preview
+from trpg.api.run_schemas import (
+    AllocationPreviewOut,
+    AllocationPreviewRequest,
+    FlashPreviewOut,
+    FlashPreviewRequest,
+)
 from trpg.api.state import world_of
 from trpg.api.world import WorldOutcome, WorldStore
 from trpg.api.world_presenter import character_summary, event_lines, world_view
@@ -26,6 +36,8 @@ from trpg.api.world_schemas import (
     WorldCharacterSummary,
     WorldView,
 )
+from trpg.world.actions import SwearOathAction
+from trpg.world.errors import WorldActionError
 
 __all__ = ["router"]
 
@@ -39,7 +51,7 @@ def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
         outcome.world,
         outcome.char,
         outcome.now,
-        events=event_lines(store.library, region, outcome.events),
+        events=event_lines(store.library, region, outcome.events, outcome.char),
         battle_id=battle.battle_id if battle is not None else None,
     )
 
@@ -79,6 +91,10 @@ def get_character(character_id: str, request: Request) -> WorldView:
 def post_action(
     character_id: str, request: Request, action: Annotated[WorldActionRequest, Body()]
 ) -> WorldView:
+    if isinstance(action, SwearOathAction) and (
+        action.source != "menu" or action.prompt_version is not None
+    ):
+        raise WorldActionError("立誓目前只能從模板選單選（LLM 轉換之後再開放）")
     store = world_of(request)
     with store.lock:
         region = store.character(character_id).region
@@ -95,3 +111,26 @@ def post_battle(character_id: str, request: Request) -> WorldBattleResponse:
         with battle.lock:
             battle_out = battle_response(battle, records)
         return WorldBattleResponse(world=view, battle=battle_out)
+
+
+@router.post("/characters/{character_id}/flash-preview")
+def post_flash_preview(
+    character_id: str, body: FlashPreviewRequest, request: Request
+) -> FlashPreviewOut:
+    """閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（5A-7）：不扣點、不寫日誌。點數與地點
+    另外看（``WorldView.growth``）。"""
+    store = world_of(request)
+    with store.lock:
+        library, run = store.growth_run(character_id)
+        return flash_preview(library, run, body.skill, body.slot)
+
+
+@router.post("/characters/{character_id}/allocation-preview")
+def post_allocation_preview(
+    character_id: str, body: AllocationPreviewRequest, request: Request
+) -> AllocationPreviewOut:
+    """配點後的最大 HP、法力、耐力與變化文字（5A-7；同一輪的預覽）。"""
+    store = world_of(request)
+    with store.lock:
+        library, run = store.growth_run(character_id)
+        return allocation_preview(library, run, body.attributes)

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { AttributeAllocator } from "./AttributeAllocator";
-import { useAllocationPreview } from "./allocationPreview";
+import { useAllocationPreview, type AllocationPreviewLoader } from "./allocationPreview";
 import { allocationTotal, cleanAllocation, type Allocation } from "./flow";
 
 interface Props {
@@ -15,11 +15,26 @@ interface Props {
   campfire?: boolean;
   /** 這一輪的編號（配點預覽用；省略時不顯示預覽）。 */
   runId?: string;
+  /** 配點預覽的來源（大世界；`runId` 當快取鍵）。 */
+  previewAllocation?: AllocationPreviewLoader;
+  /** 重配按鈕停用的原因（大世界：不在城鎮或營火）；有值時重配停用並顯示它。 */
+  respecLocked?: string | null;
+  /** 分配按鈕旁的說明；省略 ＝ 一輪的說明。 */
+  allocateNote?: string;
 }
 
-export function AttributeRespecSection({ hero, busy, onChoose, campfire = false, runId }: Props) {
+export function AttributeRespecSection({
+  hero,
+  busy,
+  onChoose,
+  campfire = false,
+  runId,
+  previewAllocation,
+  respecLocked = null,
+  allocateNote = "還沒分配的點數可以之後再分（營火或下一場戰鬥前）。",
+}: Props) {
   const [alloc, setAlloc] = useState<Allocation>({});
-  const preview = useAllocationPreview(runId, alloc);
+  const preview = useAllocationPreview(runId, alloc, previewAllocation);
   const points = hero.attribute_points ?? 0;
   const spent = Object.values(hero.attribute_spent ?? {}).reduce((a, b) => a + (b ?? 0), 0);
   if (points <= 0 && !(campfire && spent > 0)) return null;
@@ -35,7 +50,7 @@ export function AttributeRespecSection({ hero, busy, onChoose, campfire = false,
         <div className="run-actions">
           <button
             type="button"
-            disabled={busy || spent <= 0}
+            disabled={busy || spent <= 0 || respecLocked !== null}
             data-testid="attr-respec-button"
             onClick={() => {
               setAlloc({});
@@ -44,7 +59,7 @@ export function AttributeRespecSection({ hero, busy, onChoose, campfire = false,
           >
             免費重配屬性點（退回 {spent} 點）
           </button>
-          <span className="muted small">分配出去的屬性點全部退回，再重新分配；不花任何東西。</span>
+          <span className="muted small">{respecLocked ?? "分配出去的屬性點全部退回，再重新分配；不花任何東西。"}</span>
         </div>
       )}
       {points > 0 && (
@@ -69,7 +84,7 @@ export function AttributeRespecSection({ hero, busy, onChoose, campfire = false,
             >
               確認分配屬性點
             </button>
-            <span className="muted small">還沒分配的點數可以之後再分（營火或下一場戰鬥前）。</span>
+            <span className="muted small">{allocateNote}</span>
           </div>
         </>
       )}

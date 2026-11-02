@@ -1,9 +1,12 @@
 // 地點圖右側（Phase 5A-5）：遇敵陣容（開戰／撤退，9.6.6）、角色狀態、時刻與天氣、目前地點的服務
 // （城鎮：休息、換技能、傳送；野外：紮營；營火：換技能，9.6.7 #2、#114）、趕路切換、最近事件。
+// 5A-7：靈感與角色階級、下一場修正、最近一次戰鬥、開場說明（先手、開場狀態、增援）、「成長與技能」切換、
+// 城鎮與營火限制的說明；閃現待選時服務按鈕停用（後端已關掉）。
 import { useState } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
+import { growthBadge } from "./growth";
 import { statusLine } from "./mapView";
 
 interface Props {
@@ -14,6 +17,9 @@ interface Props {
   onAct(action: WorldAction): void;
   onBattle(): void;
   log: readonly string[];
+  /** 左欄正在顯示成長畫面（或閃現選項）。 */
+  growthOpen?: boolean;
+  onGrowth?(): void;
 }
 
 export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "view" | "busy" | "onAct" | "onBattle">) {
@@ -36,6 +42,13 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
       <div className="muted small">
         我方：主角（開場 HP {e.hero_hp}{e.fatigued ? "，疲憊" : ""}）＋ 2 名標準隊友
       </div>
+      {(e.opening_zh ?? []).length > 0 && (
+        <ul className="world-opening small" data-testid="world-opening">
+          {(e.opening_zh ?? []).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
       <div className="run-actions">
         <button type="button" className="primary" disabled={busy} onClick={onBattle} data-testid="world-fight">
           {e.in_battle ? "繼續戰鬥" : "開戰"}
@@ -52,7 +65,15 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   );
 }
 
-function HerePanel({ view, busy, hasten, onHasten, onAct }: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct">) {
+function HerePanel({
+  view,
+  busy,
+  hasten,
+  onHasten,
+  onAct,
+  growthOpen = false,
+  onGrowth,
+}: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth">) {
   const here = view.here;
   const [editing, setEditing] = useState(false);
   const free = view.encounter === null && view.battle_id === null;
@@ -89,6 +110,23 @@ function HerePanel({ view, busy, hasten, onHasten, onAct }: Pick<Props, "view" |
         ))}
       </div>
       {free && here.camp_problem_zh !== null && !here.can_rest && <div className="muted small">紮營：{here.camp_problem_zh}</div>}
+      <div className={`small ${view.growth.at_service ? "muted" : "world-growth-lock"}`} data-testid="world-here-service">
+        {view.growth.at_service ? "這裡可以閃現、重閃、溶掉、傳承、重配屬性、立誓。" : "這裡不能閃現、重閃、溶掉、傳承、重配屬性、立誓（只在城鎮與營火）。"}
+      </div>
+      {onGrowth !== undefined && (
+        <div className="run-actions">
+          <button
+            type="button"
+            className={growthOpen ? "primary" : ""}
+            disabled={view.pending_flash != null}
+            onClick={onGrowth}
+            data-testid="world-growth-toggle"
+          >
+            {growthOpen ? "回到地點圖" : "成長與技能"}
+            {!growthOpen && growthBadge(view) !== "" && <span className="small">（{growthBadge(view)}）</span>}
+          </button>
+        </div>
+      )}
       {here.can_loadout && editing && (
         <LoadoutEditor
           key={view.character.skills.map((s) => s.id).join(",")}
@@ -122,11 +160,27 @@ export function WorldPanel(props: Props) {
           )}
         </div>
         <div className="small">{statusLine(c)}</div>
-        {c.attribute_points > 0 && <div className="muted small">未分配屬性點 {c.attribute_points}（分配之後的段開放）</div>}
+        <div className="small" data-testid="world-growth-line">
+          角色階級 {c.skill_tier ?? 1}・靈感點 {c.insight ?? 0}
+          {c.attribute_points > 0 && <span className="world-points">・未分配屬性點 {c.attribute_points}</span>}
+        </div>
         <div className="small world-skills">技能：{c.skills.map((s) => s.name_zh).join("、") || "（無）"}</div>
         <div className="muted small">
           {view.map.name_zh}・{view.clock.time_zh}（{view.clock.day_phase_zh}）・{view.clock.weather_zh}
         </div>
+        {view.oath.current != null && <div className="small">誓約：{view.oath.current.name_zh}</div>}
+        {(view.next_battle_zh ?? []).length > 0 && (
+          <ul className="world-next small" data-testid="world-next-battle">
+            {(view.next_battle_zh ?? []).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {view.last_battle_zh != null && (
+          <div className="small world-last-battle" data-testid="world-last-battle">
+            {view.last_battle_zh}
+          </div>
+        )}
       </div>
       <HerePanel {...props} />
       <div className="panel world-log" data-testid="world-log">
