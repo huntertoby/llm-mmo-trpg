@@ -1,0 +1,16 @@
+# PERF-1 報告：CLI 輸出快照拆成可平行的小測試
+
+## 改法
+- `tests/cli/test_output_snapshots.py`：原本單一測試依序跑所有指令，改為對快照檔每個鍵（`skills_list`、`skills_show_all`、7 個 `battle_*`，共 9 個）各一個參數化測試，各自只算自己的雜湊並與快照比對。未使用 xdist group，`--dist loadgroup` 下可自由分給 worker。
+- 新增 `test_snapshot_file_keys_match_the_command_list`：快照檔的鍵集合必須等於指令清單（涵蓋「快照有、清單沒有」與反向）。
+- 重產：`UPDATE_CLI_SNAPSHOTS=1`，每個測試只把自己的鍵合併寫回快照檔；**重產時不要加 `-n`**（檔頭註解已說明），避免多 worker 同時寫檔。
+- 快照檔格式、鍵、雜湊完全不變；未動產品程式。
+
+## 結果（共 10 個測試）
+- 前：單一測試 579 秒（全量 -n 14 中）。
+- 後：`-n 14` 跑本檔總時間 328 秒；最慢單項 `skills_show_all` 314 秒；其餘單項皆 <= 2.8 秒（其中最慢的 battle 為 2.79 秒）。
+- 重產驗證：`UPDATE_CLI_SNAPSHOTS=1` 不加 `-n` 跑 10 個全過（317 秒），`git diff --stat` 只有測試檔，快照檔無變動。
+
+## 觀察 / 待 PM 決定
+- 剩餘瓶頸是 `skills_show_all`（對每個技能執行 `skills show` 後把輸出串接再雜湊，314 秒），因快照鍵與雜湊不得改，無法在不改格式下再拆；若要再縮短，需另開項目（例如加速 `skills show` 本身，或把該鍵拆成每技能一個鍵並由使用者同意更新快照）。
+- 未跑全量；-n 14 量測期間 BAL-18 可能同時在跑，時間僅供參考。
