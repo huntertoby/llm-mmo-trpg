@@ -442,3 +442,32 @@ templates:
     success: {rewards: {xp_permille: 1000, threads: [frost_chime_we]}}
     partial: {rewards: {xp_permille: 500, threads: [frost_chime_we]}}
     failure: {penalties: {supplies: 1}}
+
+  # 5B-4b：骨架 22「渡婆婆的往事」（18.7.7：交涉（意志）、察覺（感知），DC 8；結果給「斷崖幫寨的暗門」）
+  - id: granny_parley
+    skeleton: granny_past
+    solution: 0
+    note_zh: 陪渡婆婆把斷崖幫的舊帳說開
+    methods: [parley, lore]
+    attributes: [wil, int]
+    base_dc: 8
+    danger: 1
+    weaknesses:
+      - {id: granny_ferry_talk, text_zh: 渡婆婆愛用渡船打比方, methods: [parley]}
+    success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {}
+
+  - id: granny_notice
+    skeleton: granny_past
+    solution: 1
+    note_zh: 從渡婆婆的話裡聽出暗門在哪
+    methods: [notice, lore]
+    attributes: [wis, int]
+    base_dc: 8
+    danger: 1
+    weaknesses:
+      - {id: granny_slip, text_zh: 渡婆婆說到後山就停頓, methods: [notice]}
+    success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {}

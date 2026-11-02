@@ -107,11 +107,25 @@ class SolutionDef(ContentModel):
     requires_keyword: str | None = Field(default=None, pattern=ID_PATTERN)
     """機遇的條件（Phase 5B-2；18.4 補充）：裝備的技能中任何一招帶這個關鍵字
     （``skill_keywords.yaml``）。只有 ``opportunity`` 可填。"""
+    threads: tuple[_Id, ...] = Field(default=(), max_length=2)
+    """成功時留下的線頭（Phase 5B-4b；只有 ``combat``、``parley`` 可填；本骨架的線頭或
+    ``shared_threads``；9.6.7 #6「0～2 條」）。"""
+    cost_supplies: int = Field(default=0, ge=0)
+    """交涉付出的補給（Phase 5B-4b；只有 ``parley``；沒有金幣與道具，付錢、給材料都用補給代替）。"""
+    waive_thread: str | None = Field(default=None, pattern=ID_PATTERN)
+    """持有這條個人線頭時可以拿它抵掉付出（用掉；Phase 5B-4b，18.4 補充「用人情代替青竹節」）。
+    只有 ``parley``。"""
 
     @model_validator(mode="after")
     def _check(self) -> SolutionDef:
         if self.requires_keyword is not None and self.kind != "opportunity":
             raise ValueError(f"{self.kind} 解法不可填 requires_keyword（只有 opportunity 可以）")
+        if self.threads and self.kind not in ("combat", "parley"):
+            raise ValueError(f"{self.kind} 解法不可填 threads（只有 combat、parley 可以）")
+        if (self.cost_supplies or self.waive_thread is not None) and self.kind != "parley":
+            raise ValueError(f"{self.kind} 解法不可填 cost_supplies／waive_thread（只有 parley）")
+        if len(set(self.threads)) != len(self.threads):
+            raise ValueError("解法的 threads 不可重複")
         if self.kind == "situation":
             if not 1 <= len(self.attributes) <= _MAX_SITUATION_ATTRIBUTES:
                 raise ValueError("情境判定解法必須有 1～3 個允許的屬性")
@@ -134,6 +148,9 @@ class ThreadDef(ContentModel):
     """線頭指向的隱藏地點（任務線索；必須是 ``reveal`` 含 ``quest_clue`` 的隱藏地點）。"""
     on_expire_zh: str = ""
     """到期結局（約 3 天到期「也是一種結局」）；空＝淡出。"""
+    on_expire_flag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """到期結局的旗標（Phase 5B-4b）：個人線頭給角色的劇情旗標、世界級給世界旗標；遭遇表的
+    ``variants`` 依它換陣容。``None``＝淡出（留著、無效）。"""
 
 
 class EventSkeletonDef(ContentModel):
@@ -158,6 +175,17 @@ class EventSkeletonDef(ContentModel):
     threads: tuple[ThreadDef, ...] = ()
     follows: tuple[_Id, ...] = ()
     """這個骨架能接的線頭 ID（9.6.7 #6「產生下一個事件時優先接線頭」）。"""
+    shared_threads: tuple[_Id, ...] = ()
+    """本骨架的結果可以給、但定義在別的骨架的線頭（Phase 5B-4b；線頭 ID 全區唯一）。"""
+    unlock_only: bool = False
+    """只有角色解鎖後才會出現（Phase 5B-4b，18.7.7：信賴的 NPC 說出祕密時解鎖）。"""
+
+    def result_threads(self) -> frozenset[str]:
+        """事件結果可以留下的線頭：本骨架的與 ``shared_threads``。"""
+        return frozenset({*(t.id for t in self.threads), *self.shared_threads})
+
+    def has_combat(self) -> bool:
+        return any(s.kind == "combat" for s in self.solutions)
 
     @model_validator(mode="after")
     def _check(self) -> EventSkeletonDef:
@@ -172,6 +200,17 @@ class EventSkeletonDef(ContentModel):
                 problems.append(f"{label} 重複：{dup}")
         own = {t.id for t in self.threads}
         problems += [f"follows 不可接自己的線頭 {t}" for t in self.follows if t in own]
+        problems += [
+            f"shared_threads 不可列自己的線頭 {t}" for t in self.shared_threads if t in own
+        ]
+        problems += [f"shared_threads 重複：{d}" for d in _duplicates(self.shared_threads)]
+        allowed = own | set(self.shared_threads)
+        for index, solution in enumerate(self.solutions):
+            problems += [
+                f"第 {index} 個解法的線頭 {t} 不是本骨架的線頭"
+                for t in solution.threads
+                if t not in allowed
+            ]
         if problems:
             raise ValueError(f"事件骨架 {self.id}：{'；'.join(problems)}")
         return self
@@ -351,6 +390,17 @@ def world_event_problems(
         problems += [
             f"{label}：follows 是未知的線頭 {t}" for t in skeleton.follows if t not in known_threads
         ]
+        problems += [
+            f"{label}：shared_threads 是未知的線頭 {t}"
+            for t in skeleton.shared_threads
+            if t not in known_threads
+        ]
+        problems += [
+            f"{label}：waive_thread 是未知的線頭 {s.waive_thread}"
+            for s in skeleton.solutions
+            if s.waive_thread is not None and s.waive_thread not in known_threads
+        ]
+        problems += _town_problems(label, skeleton, world_map)
         for thread in skeleton.threads:
             problems += _thread_problems(thread, world_map, npc_ids, region)
         if keyword_ids is not None:
@@ -360,6 +410,20 @@ def world_event_problems(
                 if s.requires_keyword is not None and s.requires_keyword not in keyword_ids
             ]
     return sorted(problems)
+
+
+def _town_problems(
+    label: str, skeleton: EventSkeletonDef, world_map: LocationMapDef | None
+) -> list[str]:
+    """城鎮是安全區（玩法 PM 定，5B-4b）：有戰鬥解法的骨架不在城鎮出現。"""
+    if world_map is None or not skeleton.has_combat():
+        return []
+    places = world_map.location_by_id()
+    return [
+        f"{label}：有戰鬥解法，不能出現在城鎮 {loc}"
+        for loc in skeleton.locations
+        if loc in places and places[loc].kind == "town"
+    ]
 
 
 def npc_card_problems(npcs: NpcCardTable, *, world_map: LocationMapDef | None) -> list[str]:

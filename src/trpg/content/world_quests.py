@@ -37,6 +37,7 @@ __all__ = [
     "AFFINITY_FILE",
     "AFFINITY_RANKS",
     "EVENT_CONDITION_KINDS",
+    "OFFER_SIZE",
     "WORLD_QUESTS_DIR",
     "WORLD_SOCIAL_DIR",
     "AffinityAtLeast",
@@ -46,8 +47,12 @@ __all__ = [
     "AnyOf",
     "AtLocation",
     "EventAffinity",
+    "GrowthDone",
+    "GrowthOp",
+    "HasFlag",
     "HoldThread",
     "LeafCondition",
+    "OfferMix",
     "QuestCondition",
     "QuestDef",
     "QuestKind",
@@ -95,6 +100,8 @@ _TALK_MIN_RANK: Final[dict[TalkKind, AffinityRank]] = {
 
 _MAX_LEVEL = 10
 _MAX_DELTA = 100
+OFFER_SIZE: Final = 3
+"""三選一的張數。"""
 
 _Id = Annotated[str, Field(pattern=ID_PATTERN)]
 
@@ -133,6 +140,10 @@ class AffinityRules(ContentModel):
     ranks: tuple[AffinityRankDef, ...]
     rumors_per_week: int = Field(default=3, ge=1)
     week_days: int = Field(default=7, ge=1)
+    quest_step_delta: int = Field(default=0, ge=0, le=_MAX_DELTA)
+    """完成和該 NPC 有關的任務步驟（``QuestStepDef.npcs``）的好感度（5B-4b，18.7.6：+15）。"""
+    daily_talk_delta: int = Field(default=0, ge=0, le=_MAX_DELTA)
+    """每天（6 點刷新）第一次和該 NPC 聊天的好感度（5B-4b，18.7.6：+3）。"""
 
     @model_validator(mode="after")
     def _check(self) -> AffinityRules:
@@ -204,10 +215,15 @@ class QuestStepReached(ContentModel):
 
 
 class WinBattle(ContentModel):
-    """事件：這個動作在 ``location`` 打贏一場戰鬥。"""
+    """事件：這個動作在 ``location``（``None``＝任何地點）打贏一場戰鬥。5B-4b 加：``group``（敵方
+    陣容 ID）、``weather``（天氣，空＝不限）、``skill_keywords``（這場主角用過的技能中任一招帶其中
+    一個關鍵字，空＝不限）。"""
 
     kind: Literal["win_battle"] = "win_battle"
-    location: _Id
+    location: str | None = Field(default=None, pattern=ID_PATTERN)
+    group: str | None = Field(default=None, pattern=ID_PATTERN)
+    weather: tuple[_Id, ...] = ()
+    skill_keywords: tuple[_Id, ...] = ()
 
 
 class SituationDone(ContentModel):
@@ -233,6 +249,24 @@ class Talked(ContentModel):
     npc: _Id
 
 
+class HasFlag(ContentModel):
+    """狀態：角色有劇情旗標 ``flag``（5B-4b）。"""
+
+    kind: Literal["flag"] = "flag"
+    flag: _Id
+
+
+GrowthOp = Literal["flash", "reflash", "dissolve", "inherit"]
+"""成長動作（5B-4b 導師任務鏈）：閃現選定、重閃選定、溶掉、傳承。"""
+
+
+class GrowthDone(ContentModel):
+    """事件：這個動作完成了 ``ops`` 其中一種成長動作（5B-4b，18.7.5）。"""
+
+    kind: Literal["growth"] = "growth"
+    ops: tuple[GrowthOp, ...] = Field(min_length=1)
+
+
 type LeafCondition = Annotated[
     AtLocation
     | HoldThread
@@ -240,11 +274,13 @@ type LeafCondition = Annotated[
     | QuestStepReached
     | WinBattle
     | SituationDone
-    | Talked,
+    | Talked
+    | HasFlag
+    | GrowthDone,
     Field(discriminator="kind"),
 ]
 
-EVENT_CONDITION_KINDS: Final = frozenset({"win_battle", "situation", "talk"})
+EVENT_CONDITION_KINDS: Final = frozenset({"win_battle", "situation", "talk", "growth"})
 """事件型條件（只看這個動作產生的事件）；其他是狀態型。"""
 
 
@@ -263,6 +299,8 @@ type QuestCondition = Annotated[
     | WinBattle
     | SituationDone
     | Talked
+    | HasFlag
+    | GrowthDone
     | AnyOf,
     Field(discriminator="kind"),
 ]
@@ -283,12 +321,39 @@ def _has_event(condition: QuestCondition) -> bool:
 # ---------------------------------------------------------------------------
 
 
+class OfferMix(ContentModel):
+    """白板三選一的組成（07 7.6：新手鏈 加深／橋接／新方向 1／0／2）。"""
+
+    deepen: int = Field(default=1, ge=0, le=1)
+    bridge: int = Field(default=1, ge=0, le=1)
+    new: int = Field(default=1, ge=0, le=3)
+
+    @model_validator(mode="after")
+    def _check(self) -> OfferMix:
+        if self.deepen + self.bridge + self.new != OFFER_SIZE:
+            raise ValueError(f"三選一的組成合計必須是 {OFFER_SIZE}")
+        return self
+
+    def as_tuple(self) -> tuple[int, int, int]:
+        return (self.deepen, self.bridge, self.new)
+
+
 class SkillOfferReward(ContentModel):
-    """技能三選一（07 7.6：新手鏈與區域任務鏈出白板）。``bias_keywords`` 只是記錄（候選產生器
-    沒有關鍵字偏向的輸入，見 5B-4 待決）。"""
+    """技能三選一（07 7.6：新手鏈與區域任務鏈出白板）。
+
+    5B-4b：``bias_keywords``＝新方向的偏向關鍵字（有填時覆寫區域任務鏈預設的
+    ``QuestTable.region_keywords``）；``mix``、``min_passive`` 只用在白板（新手鏈保底）。"""
 
     kind: Literal["whiteboard", "complete"]
     bias_keywords: tuple[_Id, ...] = ()
+    mix: OfferMix | None = None
+    min_passive: int = Field(default=0, ge=0, le=OFFER_SIZE)
+
+    @model_validator(mode="after")
+    def _check(self) -> SkillOfferReward:
+        if self.kind == "complete" and (self.mix is not None or self.min_passive):
+            raise ValueError("完整技能三選一不能填 mix／min_passive（只有白板）")
+        return self
 
 
 class StepReward(ContentModel):
@@ -324,6 +389,8 @@ class QuestStepDef(ContentModel):
     when: tuple[QuestCondition, ...] = Field(min_length=1)
     """全部成立才完成這一步。"""
     reward: StepReward = Field(default_factory=StepReward)
+    npcs: tuple[_Id, ...] = ()
+    """和這一步有關的 NPC（5B-4b，18.7.6：完成時每位 +``quest_step_delta`` 好感度）。"""
 
     def has_event_condition(self) -> bool:
         return any(_has_event(c) for c in self.when)
@@ -357,6 +424,9 @@ class QuestTable(ContentModel):
     quests: tuple[QuestDef, ...] = ()
     story_skills: tuple[SkillDef, ...] = ()
     """劇情技能（07 7.6；不進技能池，只由任務給）。"""
+    region_keywords: tuple[_Id, ...] = ()
+    """本區的關鍵字（5B-4b，07 7.6「區域任務鏈偏向該區的關鍵字」；雲嶺：潮濕、帶電、隱蔽）。
+    區域任務鏈（``chain``）給的三選一，新方向優先挑玩家還沒有的這些關鍵字。"""
 
     @model_validator(mode="after")
     def _check(self) -> QuestTable:
@@ -400,9 +470,13 @@ class TalkEntry(ContentModel):
     text_zh: str = Field(min_length=1)
     quest: str | None = Field(default=None, pattern=ID_PATTERN)
     """``quest_entry``：入口指向的隱藏任務。"""
+    unlocks_skeleton: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``secret``：說出祕密時解鎖的事件骨架（5B-4b，18.7.7；本區 ``unlock_only`` 的骨架）。"""
 
     @model_validator(mode="after")
     def _check(self) -> TalkEntry:
+        if self.unlocks_skeleton is not None and self.kind != "secret":
+            raise ValueError(f"聊天內容 {self.id}：只有 secret 可以填 unlocks_skeleton")
         need = _TALK_MIN_RANK[self.kind]
         if self.kind == "secret" and self.rank != "trusted":
             raise ValueError(f"聊天內容 {self.id}：祕密只能是信賴（trusted）")
@@ -487,13 +561,22 @@ class _Refs:
     """本區骨架 → 屬於它的情境模板。"""
     threads: Collection[str]
     keywords: Collection[str] | None
+    unlock_only: Collection[str] = ()
+    """本區 ``unlock_only`` 的骨架（5B-4b）。"""
 
 
 def _leaf_problems(where: str, leaf: LeafCondition, refs: _Refs, table: QuestTable) -> list[str]:
     problems: list[str] = []
     locations = set() if refs.world_map is None else set(refs.world_map.location_by_id())
-    if isinstance(leaf, AtLocation | WinBattle) and leaf.location not in locations:
+    if isinstance(leaf, AtLocation) and leaf.location not in locations:
         problems.append(f"{where}：未知地點 {leaf.location}")
+    elif isinstance(leaf, WinBattle):
+        if leaf.location is not None and leaf.location not in locations:
+            problems.append(f"{where}：未知地點 {leaf.location}")
+        if refs.keywords is not None:
+            problems += [
+                f"{where}：未知關鍵字 {k}" for k in leaf.skill_keywords if k not in refs.keywords
+            ]
     elif isinstance(leaf, HoldThread) and leaf.thread not in refs.threads:
         problems.append(f"{where}：未知線頭 {leaf.thread}")
     elif isinstance(leaf, AffinityAtLeast | Talked) and leaf.npc not in refs.npcs:
@@ -546,6 +629,12 @@ def quest_problems(table: QuestTable, refs: _Refs) -> list[str]:
     problems: list[str] = []
     if refs.world_map is None:
         problems.append(f"區域 {table.region} 沒有地點圖")
+    if refs.keywords is not None:
+        problems += [
+            f"region_keywords：未知關鍵字 {k}"
+            for k in table.region_keywords
+            if k not in refs.keywords
+        ]
     for quest in table.quests:
         if quest.giver is not None and quest.giver not in refs.npcs:
             problems.append(f"任務 {quest.id}：未知 NPC {quest.giver}")
@@ -554,7 +643,25 @@ def quest_problems(table: QuestTable, refs: _Refs) -> list[str]:
             where = f"任務 {quest.id} 步驟 {step.id}"
             problems += _condition_problems(where, step.when, refs, table)
             problems += _reward_problems(where, step.reward, refs, table)
+            problems += [f"{where}：未知 NPC {n}" for n in step.npcs if n not in refs.npcs]
     return sorted(problems)
+
+
+def _talk_problems(entry: TalkEntry, refs: _Refs, quest_map: Mapping[str, QuestDef]) -> list[str]:
+    problems: list[str] = []
+    where = f"聊天內容 {entry.id}"
+    if entry.npc not in refs.npcs:
+        problems.append(f"{where}：未知 NPC {entry.npc}")
+    if entry.quest is not None:
+        quest = quest_map.get(entry.quest)
+        if quest is None or quest.kind != "hidden":
+            problems.append(f"{where}：{entry.quest} 不是本區的隱藏任務")
+        elif quest.giver != entry.npc:
+            problems.append(f"{where}：隱藏任務 {quest.id} 的 giver 不是 {entry.npc}")
+    skeleton = entry.unlocks_skeleton
+    if skeleton is not None and skeleton not in refs.unlock_only:
+        problems.append(f"{where}：{skeleton} 不是本區只能解鎖（unlock_only）的骨架")
+    return problems
 
 
 def social_problems(table: SocialTable, refs: _Refs, quests: QuestTable | None) -> list[str]:
@@ -565,16 +672,7 @@ def social_problems(table: SocialTable, refs: _Refs, quests: QuestTable | None) 
     locations = set() if refs.world_map is None else set(refs.world_map.location_by_id())
     quest_map = {} if quests is None else quests.quest_by_id()
     for entry in table.talk:
-        if entry.npc not in refs.npcs:
-            problems.append(f"聊天內容 {entry.id}：未知 NPC {entry.npc}")
-        if entry.quest is not None:
-            quest = quest_map.get(entry.quest)
-            if quest is None or quest.kind != "hidden":
-                problems.append(f"聊天內容 {entry.id}：{entry.quest} 不是本區的隱藏任務")
-            elif quest.giver != entry.npc:
-                problems.append(
-                    f"聊天內容 {entry.id}：隱藏任務 {quest.id} 的 giver 不是 {entry.npc}"
-                )
+        problems += _talk_problems(entry, refs, quest_map)
     for row in table.event_affinity:
         if row.skeleton not in refs.skeletons:
             problems.append(f"事件好感度：本區沒有骨架 {row.skeleton}")
@@ -650,6 +748,9 @@ def quest_refs(
         skeletons=skeletons,
         threads=threads,
         keywords=keyword_ids,
+        unlock_only=set()
+        if event_table is None
+        else {s.id for s in event_table.skeletons if s.unlock_only},
     )
 
 
