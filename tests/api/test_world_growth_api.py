@@ -121,11 +121,14 @@ def won(ambush: ContentLibrary, tmp_path_factory: pytest.TempPathFactory) -> dic
 def test_win_writes_back_xp_level_and_last_battle(won: dict[str, Any]) -> None:
     first, again = won["first"], won["again"]
     char = first["character"]
-    assert char["xp"] == won["first_xp"] - 1 + 100 and char["level"] == 2
-    assert char["attribute_points"] == 2 and char["insight"] == 2
-    assert first["growth"]["insight"] == 2
-    assert first["hero"]["insight"] == 2
-    assert any(e.startswith("升到 2 級") and "靈感點 2" in e for e in first["events"])
+    # 一般戰 1 份（100）；遇到精英是 3 份（300），精英首殺另給 1 點靈感（5A-6、5A-SIM2）
+    gained = char["xp"] - (won["first_xp"] - 1)
+    assert gained in (100, 300) and char["level"] == 2
+    insight = 2 if gained == 100 else 3
+    assert char["attribute_points"] == 2 and char["insight"] == insight
+    assert first["growth"]["insight"] == insight
+    assert first["hero"]["insight"] == insight
+    assert any(e.startswith("升到 2 級") for e in first["events"])
     line = first["last_battle_zh"]
     assert line is not None and "打贏了" in line and "升到 2 級" in line
     # 重新整理：事件句子只給第一次，最近一次戰鬥還在
