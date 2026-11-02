@@ -81,3 +81,7 @@ xp:
     main_step: 5000
     bounty: 4000
     hidden_location: 2000
+# 機遇給的技能三選一（5B-4c；07 7.6「通常同階，15% 機率高 1 階，每人每季最多 1 次」；機率用確定性種子）。
+opportunity:
+  tier_up_permille: 150
+  tier_up_per_season: 1

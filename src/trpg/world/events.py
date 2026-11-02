@@ -13,14 +13,20 @@ from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import EventFrequency, EventSkeletonDef
-from trpg.world.actions import EventCheckEvent, EventLeftEvent, EventTriggeredEvent, WorldEvent
+from trpg.world.actions import (
+    EventCheckEvent,
+    EventLeftEvent,
+    EventResolvedEvent,
+    EventTriggeredEvent,
+    WorldEvent,
+)
 from trpg.world.clock import day_phase
 from trpg.world.rng import STREAM_EVENT, draw
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.threads import active_threads
 from trpg.world.weather import weather_at
 
-__all__ = ["EventRoll", "event_candidates", "event_chance", "roll_event"]
+__all__ = ["EventRoll", "event_candidates", "event_chance", "mark_finished", "roll_event"]
 
 
 def event_chance(frequency: EventFrequency, steps: int) -> int:
@@ -36,9 +42,11 @@ def event_candidates(
     now: int,
     *,
     unlocked: Collection[str] = (),
+    finished: Collection[str] = (),
 ) -> tuple[EventSkeletonDef, ...]:
     """``region`` 的 ``location`` 在 ``now`` 合格的事件骨架（地點、時段、天氣），依 ID 排序。
-    ``unlock_only`` 的骨架只有在 ``unlocked``（角色解鎖的骨架）裡才算（5B-4b）。"""
+    ``unlock_only`` 的骨架只有在 ``unlocked``（角色解鎖的骨架）裡才算（5B-4b）；``once`` 的骨架在
+    ``finished``（角色解決過的）裡就不算（5B-4c）。"""
     table = library.world_event_content.events.get(region)
     if table is None:
         return ()
@@ -49,6 +57,8 @@ def event_candidates(
         if location not in skeleton.locations:
             continue
         if skeleton.unlock_only and skeleton.id not in unlocked:
+            continue
+        if skeleton.once and skeleton.id in finished:
             continue
         if skeleton.day_phase is not None and skeleton.day_phase != phase:
             continue
@@ -101,7 +111,13 @@ def roll_event(
     rng, char = draw(world.season_seed, char, STREAM_EVENT)
     roll = rng.randint(0, 999)
     candidates = event_candidates(
-        library, world, region, char.location, now, unlocked=char.unlocked_skeletons
+        library,
+        world,
+        region,
+        char.location,
+        now,
+        unlocked=char.unlocked_skeletons,
+        finished=char.finished_skeletons,
     )
     triggered = roll < chance and not encountered and bool(candidates)
     events.append(
@@ -132,3 +148,27 @@ def roll_event(
     events.append(EventTriggeredEvent(trigger=trigger))
     char = char.model_copy(update={"event_steps": 0, "pending_event": trigger})
     return EventRoll(char=char, events=tuple(events))
+
+
+def mark_finished(
+    library: ContentLibrary, char: CharacterState, events: Collection[WorldEvent]
+) -> CharacterState:
+    """這個動作解決了 ``once`` 的骨架（``event_resolved`` 的結果不是放棄；代決 5B4c-9）→ 記進
+    ``finished_skeletons``（5B-4c，18.4 補充「骨架 22 每個角色只出現到解決為止」）。"""
+    table = library.world_event_content.events.get(char.region)
+    if table is None:
+        return char
+    defs = table.skeleton_by_id()
+    done = {
+        e.skeleton
+        for e in events
+        if isinstance(e, EventResolvedEvent)
+        and e.outcome != "abandoned"
+        and (d := defs.get(e.skeleton)) is not None
+        and d.once
+    }
+    if done <= set(char.finished_skeletons):
+        return char
+    return char.model_copy(
+        update={"finished_skeletons": tuple(sorted({*char.finished_skeletons, *done}))}
+    )

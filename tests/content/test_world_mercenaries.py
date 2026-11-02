@@ -1,4 +1,4 @@
-"""系統傭兵名單（Phase 5C-1；``docs/phases/Phase5計畫.md`` 21.2）。"""
+"""系統傭兵名單（Phase 5C-1；``docs/phases/Phase5計畫.md`` 22.2）。"""
 
 from __future__ import annotations
 

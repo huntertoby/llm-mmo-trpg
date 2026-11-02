@@ -1,4 +1,4 @@
-// 隊伍與系統傭兵（Phase 5C-1；docs/phases/Phase5計畫.md 21.7）：右側「隊伍」面板、小鎮的「雇用傭兵」清單
+// 隊伍與系統傭兵（Phase 5C-1；docs/phases/Phase5計畫.md 22.7）：右側「隊伍」面板、小鎮的「雇用傭兵」清單
 // （面板內展開，不是新的彈出層；主題說明用共用 <Hint>，浮動卡規則 6.5.1）。
 import { useState } from "react";
 import type { WorldAction, WorldPartyView } from "../api/types";

@@ -1,13 +1,13 @@
 # Phase 5C-1 報告：隊伍與系統傭兵
 
-> 實作者：implementer agent（2026-11-03）。依 `docs/phases/Phase5計畫.md` 第 21 節（本段新增的詳細規格，`9d50a4ae`）。
+> 實作者：implementer agent（2026-11-03）。依 `docs/phases/Phase5計畫.md` 第 22 節（本段新增的詳細規格，`9d50a4ae`）。
 > 依據：09 9.6.9 #97（3 人隊伍、傭兵免費、出城前選好、野外不能換）、9.6.8 #87（固定 build、強度同主角、AI 同隊友）、9.6.11 #117（9 名傭兵暫名與底稿）、5A-SIM2（隊友照主角等級成長）。
 
 ## 1. 交付
 
 | 項目 | 內容 |
 |---|---|
-| 規格 | `Phase5計畫.md` 第 21 節「5C-1 詳細規格」（原「之後各段規格」改為第 22 節） |
+| 規格 | `Phase5計畫.md` 第 22 節「5C-1 詳細規格」（合併 main 後，5B-4c 佔第 21 節；「之後各段規格」改為第 23 節） |
 | 內容 | `content/world/mercenaries.yaml`（9 名＋`max_hired: 2`）；schema `src/trpg/content/world_mercenaries.py`（ID 不重複、四種定位各 ≥ 2）；`library.py` 載入 `world_mercenaries`，檢查底稿存在且不是白板／對照組；沒有檔案時為 `None` |
 | 世界 | `src/trpg/world/party.py`（新）：`hire`、`hire_problem`、`party_spawns`；`CharacterState.mercenaries`（預設空、依出場順序）；動作 `hire`（整組替換）、事件 `party_changed`；`battle_started.mercenaries`；`prepare_battle` 有傭兵時用傭兵取代標準隊友，同一個 `grow_allies` 照主角等級成長。存檔版號不變 |
 | API | `WorldView.party`（`PartyView`：成員、`max_hired`、`can_hire`、`hire_problem_zh`、名單含定位／主題／技能概要／已雇用）；`EncounterView.allies_zh`；`WorldActionRequest` 加 `hire`；`party_changed` 事件句子。新檔 `world_party_schemas.py`、`world_party_view.py`；OpenAPI 與 `schema.d.ts` 已重產 |
@@ -38,7 +38,7 @@
 4. 浮動卡（傭兵名的主題 `<Hint>`）：1600×900 滑過 → 卡片貼齊上方（底緣＝觸發元素頂緣）→ 滑進卡片不關 → 內容不需捲動（`scrollHeight == clientHeight`、`max-height` 892px）→ 點一下釘住、滑鼠離開仍在 → Esc 關閉。800×600：最後一名（伏影）的卡片往內推到 x=4、貼齊上方，同樣釘住與 Esc 正常；文件沒有水平捲動。
 5. 結束時只停了自己開的伺服器（`TaskStop`，8070 已無回應），關閉自己開的分頁。
 
-## 4. 代決（開發 PM 定，最保守預設；規格 21.11）
+## 4. 代決（開發 PM 定，最保守預設；規格 22.11）
 
 | # | 事項 | 代決 |
 |---|---|---|

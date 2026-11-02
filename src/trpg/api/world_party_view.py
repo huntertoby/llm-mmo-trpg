@@ -1,4 +1,4 @@
-"""大世界隊伍與系統傭兵的顯示資料（Phase 5C-1；``docs/phases/Phase5計畫.md`` 21.6）。
+"""大世界隊伍與系統傭兵的顯示資料（Phase 5C-1；``docs/phases/Phase5計畫.md`` 22.6）。
 
 規則一律呼叫 :mod:`trpg.world.party`，這裡只組裝文字。
 """

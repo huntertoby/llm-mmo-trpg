@@ -1,4 +1,4 @@
-"""``/api/world`` 的隊伍與系統傭兵（Phase 5C-1；``docs/phases/Phase5計畫.md`` 21.6）。"""
+"""``/api/world`` 的隊伍與系統傭兵（Phase 5C-1；``docs/phases/Phase5計畫.md`` 22.6）。"""
 
 from __future__ import annotations
 

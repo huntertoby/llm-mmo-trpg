@@ -41,6 +41,7 @@ __all__ = [
     "PerceptionMark",
     "QuestState",
     "ThreadState",
+    "TimedFlag",
     "WorldState",
 ]
 
@@ -96,6 +97,10 @@ class EncounterResult(_Model):
     """遇敵的時間（UTC 秒）。"""
     from_location: str | None = None
     """出發地點（撤退回這裡，5A-4）；5A-4 以前的資料沒有，撤退時回本區小鎮。"""
+    objective: Literal["escape", "defend"] | None = None
+    """戰鬥解法指定的勝利條件（Phase 5B-4c；地圖支援時用它，否則全滅）；``None``＝地圖預設。"""
+    world_flags: tuple[str, ...] = ()
+    """遇敵當下有效的世界旗標（排序；Phase 5B-4c 世界級線頭到期結局的遭遇加人）。"""
 
 
 class EventTrigger(_Model):
@@ -195,11 +200,15 @@ class QuestState(_Model):
 
 
 class PendingOffer(_Model):
-    """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。"""
+    """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。
+
+    ``source``（Phase 5B-4c）：``quest``＝任務（``quest``、``step`` 是任務與步驟）；
+    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）。"""
 
     quest: str = Field(pattern=ID_PATTERN)
     step: str = Field(pattern=ID_PATTERN)
     offer: SkillOffer
+    source: Literal["quest", "opportunity"] = "quest"
 
 
 def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
@@ -208,6 +217,13 @@ def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
     if keys != sorted(keys) or len(set(ids)) != len(ids):
         raise ValueError("threads 必須依建立時間、ID 排序且同一線頭不重複")
     return threads
+
+
+class TimedFlag(_Model):
+    """限時的世界旗標（Phase 5B-4c）：``until``（UTC 秒）以前有效。"""
+
+    flag: str = Field(pattern=ID_PATTERN)
+    until: int = Field(ge=0)
 
 
 class WorldState(_Model):
@@ -224,6 +240,21 @@ class WorldState(_Model):
     """已清空的地點（依區域、地點排序；每個地點最多一筆）。寫入在 5A-4／5F-1。"""
     threads: tuple[ThreadState, ...] = ()
     """世界級線頭（所有人的世界都看得到；5B-1 起）。"""
+    timed_flags: tuple[TimedFlag, ...] = ()
+    """限時的世界旗標（依旗標排序、不重複；Phase 5B-4c 世界級線頭的到期結局，例：之後 2 天）。"""
+
+    @field_validator("timed_flags")
+    @classmethod
+    def _timed_sorted(cls, flags: tuple[TimedFlag, ...]) -> tuple[TimedFlag, ...]:
+        names = [f.flag for f in flags]
+        if names != sorted(set(names)):
+            raise ValueError("timed_flags 必須依旗標排序且不重複")
+        return flags
+
+    def active_flags(self, now: int) -> tuple[str, ...]:
+        """``now`` 有效的世界旗標：``flags`` 加上還沒過期的 ``timed_flags``（排序）。"""
+        timed = (f.flag for f in self.timed_flags if f.until > now)
+        return tuple(sorted({*self.flags, *timed}))
 
     @field_validator("flags")
     @classmethod
@@ -351,6 +382,14 @@ class CharacterState(_Model):
     unlocked_skeletons: tuple[str, ...] = ()
     """解鎖的 ``unlock_only`` 事件骨架（排序、不重複；信賴的 NPC 說出祕密時，18.7.7）。"""
 
+    # --- 5B-4c 機遇、只出一次的骨架 ---
+    opportunities: tuple[str, ...] = ()
+    """拿過機遇技能的骨架（排序、不重複；同一個機遇每個角色只能拿一次，代決 5B4c-5）。"""
+    opportunity_tier_ups: int = Field(default=0, ge=0)
+    """機遇給過幾次高 1 階的三選一（07 7.6：每人每季最多 1 次；角色一季一份）。"""
+    finished_skeletons: tuple[str, ...] = ()
+    """解決過的 ``once`` 骨架（排序、不重複；18.4 補充「骨架 22 每個角色只出現到解決為止」）。"""
+
     # --- 5C-1 隊伍（邏輯在 trpg.world.party） ---
     mercenaries: tuple[str, ...] = ()
     """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複；空＝開戰用標準隊友，代決 5C1-2）。"""
@@ -360,11 +399,11 @@ class CharacterState(_Model):
     def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:
         return dict(sorted(days.items()))
 
-    @field_validator("unlocked_skeletons")
+    @field_validator("unlocked_skeletons", "opportunities", "finished_skeletons")
     @classmethod
     def _sorted_unlocked(cls, ids: tuple[str, ...]) -> tuple[str, ...]:
         if list(ids) != sorted(set(ids)):
-            raise ValueError("unlocked_skeletons 必須排序且不重複")
+            raise ValueError("骨架清單必須排序且不重複")
         return ids
 
     @field_validator("quests")

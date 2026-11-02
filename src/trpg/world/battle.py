@@ -33,7 +33,7 @@ from typing import Any
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import MapDef
+from trpg.content.maps import MapDef, Objective
 from trpg.content.regions import RegionDef
 from trpg.content.skills import SkillDef
 from trpg.engine.actions import Step
@@ -83,6 +83,7 @@ from trpg.world.state import (
 __all__ = [
     "PreparedBattle",
     "auto_steps",
+    "battle_objective",
     "battle_xp",
     "encounter_map",
     "enemy_level",
@@ -120,12 +121,16 @@ class PreparedBattle:
 
 def encounter_map(library: ContentLibrary, encounter: EncounterResult) -> MapDef:
     """遭遇的戰鬥地圖（已換皮成遭遇的區域）。``battle_map`` 為 ``None`` 時從該區 ``map_pool`` 的
-    類型裡（不含 Boss）依地圖 ID 排序、以 ``"{battle_seed}:map"`` 均勻抽一張（代決 5A4-1）。"""
+    類型裡（不含 Boss）依地圖 ID 排序、以 ``"{battle_seed}:map"`` 均勻抽一張（代決 5A4-1）；遭遇指定
+    勝利條件時（5B-4c）只從支援它的地圖抽（都不支援時照原樣）。"""
     if encounter.battle_map is not None:
         map_def = library.map(encounter.battle_map)
     else:
         pool = set(_region_def(library, encounter.region).map_pool) - {"boss"}
         options = sorted(m for m, d in library.maps.items() if d.archetype in pool)
+        if encounter.objective is not None:  # 戰鬥解法的勝利條件（5B-4c）：優先挑支援它的地圖
+            kind = encounter.objective
+            options = [m for m in options if library.maps[m].supports_objective(kind)] or options
         if not options:
             raise WorldError(f"區域 {encounter.region} 的地圖池沒有地圖")
         rng = Rng(fnv1a64(f"{encounter.battle_seed}:map".encode()))
@@ -290,6 +295,16 @@ def _hero_spawn(library: ContentLibrary, char: CharacterState, hp: int) -> UnitS
     )
 
 
+def battle_objective(map_def: MapDef, encounter: EncounterResult) -> Objective | None:
+    """遭遇的勝利條件（5B-4c 戰鬥解法）：指定了撤離或守點而且地圖有資料 → 該條件；地圖沒有資料
+    → 一般勝利（全滅，代決 5B4c-8）；沒指定 → ``None``（地圖預設）。"""
+    if encounter.objective is None:
+        return None
+    if map_def.supports_objective(encounter.objective):
+        return map_def.objective_for(encounter.objective)
+    return map_def.objective_for("eliminate")
+
+
 def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBattle:
     """角色身上遭遇的戰鬥設定（見模組說明）；沒有遭遇時拋 :class:`WorldActionError`。"""
     encounter = char.pending_encounter
@@ -329,6 +344,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         max_rounds=rules_of(library).battle.max_rounds,
         weather=encounter.weather,
     )
+    objective = battle_objective(map_def, encounter)
     allies, ally_skills = grow_allies(library, hired or base.units, char.level)
     extra.update((s.id, s) for s in ally_skills)
     extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
@@ -341,6 +357,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
             "ruleset": ruleset,
             "units": (_hero_spawn(library, char, hp), *allies, *enemies),
             "first_team": first,
+            "objective": objective,
         }
     )
     return PreparedBattle(

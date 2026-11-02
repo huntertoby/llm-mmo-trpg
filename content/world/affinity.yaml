@@ -11,6 +11,6 @@ ranks:
   - {id: trusted, name_zh: 信賴, min: 60}
 rumors_per_week: 3
 week_days: 7
-# 好感度取得（5B-4b，18.7.6）：完成和該 NPC 有關的任務步驟（步驟的 npcs）+15、每天（6 點刷新）第一次聊天 +3。
-quest_step_delta: 15
+# 好感度取得（5B-4b，18.7.6）：完成和該 NPC 有關的任務步驟（步驟的 npcs）+10（5B-4c 從 +15 下修，18.7.6）、每天（6 點刷新）第一次聊天 +3。
+quest_step_delta: 10
 daily_talk_delta: 3

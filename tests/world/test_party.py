@@ -1,4 +1,4 @@
-"""隊伍與系統傭兵（Phase 5C-1；``docs/phases/Phase5計畫.md`` 21）。"""
+"""隊伍與系統傭兵（Phase 5C-1；``docs/phases/Phase5計畫.md`` 22）。"""
 
 from __future__ import annotations
 

@@ -109,6 +109,7 @@
 | 5B-4 | 任務狀態機：新手任務鏈、主線第 1 章、區域任務鏈「青霧觀的分裂」（18.7）、隱藏任務、劇情技能與三選一接到現有候選產生器（7.6）；NPC 好感度（9.6.7 #5）；酒館傳聞 | 5B-2 | 1.5 h | 可與 5B-3 平行（不碰 `narrative`） |
 | 5B-4b | 5B-4 收尾（玩法 PM 2026-11-03，18 18.7.5～18.7.7，`effc88a7`）：好感度加取得方式（完成該 NPC 相關任務步驟 +15、每天第一次聊天 +3；目標第 5 天 1～2 名 NPC 到信賴）；信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（交涉／察覺、DC 8，結果給「斷崖幫寨的暗門」，霧渡鎮），不直接給線頭（#85）；skillgen 區域偏向（新方向那張，玩家沒有該區關鍵字時優先，雲嶺：潮濕、帶電、隱蔽）；新手鏈保底（至少 1 招被動、加深／橋接／新方向 1／0／2）；放棄／交涉／戰鬥解法結算；線頭到期結局（叛徒戰、二當家坐大）；導師任務鏈 3 步（18.7.5） | 5B-4 | 1.5 h | 可與 5B-5 平行（不碰前端） |
 | 5B-4c | 5B-4b 收尾（玩法 PM 2026-11-03）：任務步驟好感度 +15 → +10（每天聊天 +3、主線 ① 加成保留），重量目標第 4～5 天到信賴；懸賞精英帶 1 個資料指定詞綴（疤面＝連心的、北坡狼王＝狂暴的、霧中劍客＝霧隱的，18.7.4）；機遇解法結算＝條件成立時給一次機遇技能三選一（07 7.6：通常同階、15% 高一階、每人每季最多 1 次高一階；首例古松祭壇：雷雨夜＋帶電技能）；戰鬥解法用現有勝利條件（骨架 2、14＝撤離，7＝守點，8＝獵人倒下即失敗，沒有保護目標時先用守點）；骨架 22 每角色解決一次後不再出現；世界級線頭到期結局（霧魅：之後 2 天雲嶺夜晚營地遭遇多 1 名霧魅，全服；碎片：灰燼之心第 1 階段護甲 +1，全服，荒原骨架 13 攔截可抵銷，19.4） | 5B-4b | 1.25 h | 可與 5B-M3 平行 |
+| 5B-4d | 5B-4c 收尾（玩法 PM 2026-11-03）：個別好感度來源（小蓮＝主線第 ②、③ 步各 +10；柳掌櫃＝在他店裡消費一次 +2、每天最多 +4，接 5D 商店；阿岳＝帶他打贏一場 +2、每天最多 +6，接 5C-3 劇情夥伴），目標第 4～6 天柳掌櫃到友善、阿岳與小蓮到信賴；骨架 22 只有成功／部分成功才算解決，失敗隔天（6 點）可再試；第 7 天前保底 1 次機遇（07 7.6）；skillgen「指定關鍵字」模式（機遇三張都帶觸發情境的關鍵字，例：雷擊點 → 帶電） | 5B-4c | 1 h | 可與 5C 平行；柳掌櫃、阿岳兩項在 5D／5C-3 做好後接 |
 | 5B-5 | 前端：事件卡、情境判定輸入（第一次送出即定案、列出持有線索可點選引用）、NPC 對話、任務日誌、線頭列表；路由接說書人（travel 觸發事件後送 `event_story`、聊天端點）；大世界自己的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）；隱藏地點揭露後名稱可公開，揭露前用提示語而非「某處」（玩法 PM 2026-11-03） | 5B-3、5B-4 | 1.5 h | 否 |
 
 ### 5C｜組隊、影子與傭兵（3 段）
@@ -2369,16 +2370,110 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5BM3-10 | 戰鬥紀錄版號 | `/106` |
 
 
-## 21. 5C-1 詳細規格：隊伍與系統傭兵
+## 21. 5B-4c 詳細規格：5B-4b 收尾（好感度下修、懸賞精英詞綴、機遇解法、戰鬥解法的勝利條件、骨架 22 只出一次、世界級線頭到期、野獸三方）
+
+> 給實作 agent。主要動 `src/trpg/world/`（`solutions.py`、`endings.py`、`encounters.py`、`battle.py`、`events.py`、`social.py`、`quests.py`、`state.py`、`actions.py`、`step.py` 小改）、`src/trpg/content/`（`world_events.py`、`world_encounters.py`、`world_enemies.py`、`world_rules.py` 加欄位與檢查）、`src/trpg/roguelite/offers.py`（`make_offer` 加 keyword-only `tier_bonus`，預設 0＝原行為）、`src/trpg/api/world_story_view.py`（待選三選一的來源名稱，一處）、`content/world/`（`affinity.yaml`、`events/`、`encounters/`、`rules.yaml`）、`tests/world/`、`tests/content/`、受影響的 `tests/api/`。**不做** 事件卡前端與 `world_schemas.py`（5B-5b 同時在改）；懸賞本身（5F-1）；灰燼荒原內容與賽季 Boss（5F）。不動引擎、`content/skills/`、戰鬥紀錄文字。
+> 依據：玩法 PM 2026-11-03（本檔第 1 節 5B 表「5B-4c」列）；18 18.4 補充（戰鬥解法的勝利條件、骨架 22 只出現到解決為止、世界級線頭到期、懸賞精英的指定詞綴、好感度 +10）、18.7.4、18.7.6；19 19.2.3、19.4 #13；07 7.6（機遇：完整技能、通常同階、15% 高 1 階、每人每季最多 1 次、關鍵字由觸發情境決定）；05 5.8（撤離、守點）；`Phase5B-4b報告.md` 第 6 節待決 1～6；5B-M3 代決 5BM3-8 的追加（玩法 PM 定，2026-11-03）。
+
+### 21.1 目標
+
+把 5B-4b 留下的待決做完，全部是 **資料驅動的世界動作**：寫進世界動作日誌、由「日誌＋內容庫＋賽季種子」重播逐字相同；不呼叫 LLM、不讀時間。原型 roguelite 不變（`make_offer` 新參數預設＝原行為）。新欄位全有預設；`trpg-char/1`、`trpg-world/1`、`trpg-wlog/1` 不升版號。
+
+### 21.2 好感度下修（18.7.6）
+
+- `content/world/affinity.yaml` `quest_step_delta: 15 → 10`；每天聊天 +3、主線第 ① 步的 `npcs`（渡婆婆）保留。
+- **重量**：`tests/world/test_affinity_pace.py` 用內容庫的任務步驟 `npcs`、`quest_step_delta`、`daily_talk_delta` 與事件好感度表，照一份「認真玩的進度表」（新手鏈第 1～2 天、主線 ①～④ 約第 2～4 天、區域鏈第 4～6 天、導師鏈第 5～7 天、每天和常去的 NPC 各聊 1 次、相關事件成功）算每位 NPC 到信賴（60）的天數；驗收：第 5 天前（含）有 1～2 名、第 3 天前沒有。結果寫進報告。
+
+### 21.3 懸賞精英的指定詞綴（18.7.4、18.4 補充）
+
+- **規則**：遭遇表 **資料指定** 的精英（`FixedElite`：精英巢穴的 `elite`、遭遇變化的 `elite`）可以套在本身已是精英的範本上（`EnemyCatalog.affix_problem(..., allow_elite=True)`；其他限制照舊：物件型、武器大類、技能欄位）。營地隨機混精英照舊 **不** 套在精英上。
+- 已是精英的範本套詞綴：加技能、反應、開場狀態、名字與 ID 照舊，**HP 不再乘** `hp_permille`（本來就是精英的血量；代決 5B4c-3）。精英首殺的種類照舊算範本 ID。
+- **雲嶺**：疤面＝`scarface_risen` 變化改成 `elite: {unit: bandit_captain, affix: heart_linked}`＋盜賊、霧狼、霧狼（盜賊隊長移出 `units`）；北坡狼王＝`mist_wolf`＋`berserk`（已是）；霧中劍客＝修士精英＋霧隱的——懸賞本身與劍冢的懸賞陣容在 5F-1，本段不加陣容（待辦）；19.7 原本要的「叛徒戰：青霧執事（霧隱的）」改成 `elite: {unit: sect_steward, affix: mist_veiled}`（同一個機制，照 19.7 原文）。
+
+### 21.4 機遇解法的結算（07 7.6；18.4 #12）
+
+- **動作**：`event_solve` 選 `opportunity` 解法：條件（`opportunity_available`：裝備的技能任一招帶 `requires_keyword`）不成立 → 拒絕；這個骨架的機遇本角色已經拿過 → 拒絕（`CharacterState.opportunities`，骨架 ID 排序；代決 5B4c-5）。
+- **結算**：給一組 **完整技能三選一**（同任務的 `pending_offers`、`offer_pick`、`skill_offered`；`PendingOffer.source = "opportunity"`、`quest`＝骨架 ID、`step`＝`opportunity`），新方向偏向觸發的關鍵字（`region_keywords = (requires_keyword,)`；07 7.6「關鍵字由觸發情境決定」）。結果 `success`：清掉事件、發 `event_solved`（`solution_kind: opportunity`）、`skill_offered`、`event_resolved`。
+- **高一階**：`Rng(fnv1a64("{技能種子}:opportunity:{骨架}"))` 擲 `randint(0, 999) < tier_up_permille`（`content/world/rules.yaml` `opportunity.tier_up_permille: 150`）且本角色高一階次數 `< tier_up_per_season`（1）且角色階級 +1 ≤ 5 → 這組候選高一階（`make_offer(..., tier_bonus=1)`，照該階預算）；`CharacterState.opportunity_tier_ups` +1；`event_solved.tier_bonus`。角色存檔一季一份，所以「每季」＝角色的計數。
+- 首例：古松祭壇（骨架 12，雷雨夜＝`rain`＋`night`，帶「帶電」技能）。
+
+### 21.5 戰鬥解法的勝利條件（05 5.8；18.4 補充）
+
+- **資料**：`SolutionDef.objective: Literal["escape", "defend"] | None`（只有 `combat`）。雲嶺：骨架 2（帶他走）＝`escape`、7（擋追兵）＝`defend`、14（押送隊）＝`escape`、8（不殺獵人）＝`defend`（引擎沒有「保護目標」，先用守點；代決 5B4c-7）。
+- **規則**：戰鬥解法的遭遇記 `EncounterResult.objective`；選地圖時（地點的 `battle_maps`，或沒有時的區域地圖池）只從 **支援該勝利條件**（`alt_objectives`）的地圖挑，都不支援就照原本挑。開戰時地圖支援 → `BattleSetup.objective = map.objective_for(...)`；不支援 → 一般勝利（全滅；代決 5B4c-8，例：劍冢的 `ruined_fort` 沒有撤離資料）。勝負與結算照 5B-4b（打贏＝成功留線頭）。
+- 一般遇敵與其他骨架不變。
+
+### 21.6 骨架 22 每個角色只出現到解決為止（18.4 補充）
+
+- `EventSkeletonDef.once: bool = False`；`CharacterState.finished_skeletons: tuple[str, ...]`（排序）。`event_resolved` 的結果不是 `abandoned`（成功、部分成功、失敗都算解決；代決 5B4c-9）且骨架 `once` → 加進去。之後不再進候選（擲骰前濾掉）、聊天也不再解鎖或立刻觸發。雲嶺：`granny_past` `once: true`。
+
+### 21.7 世界級線頭的到期結局（18.4 補充；19.4 #13）
+
+- **資料**：`ThreadDef.on_expire_seconds: int | None`（只有世界級、要有 `on_expire_flag`）：旗標的有效時間；`None`＝永久。`WorldState.timed_flags: tuple[TimedFlag, ...]`（`flag`、`until`；依旗標排序；同旗標再到期時取較晚的 `until`）。到期時間從線頭的 `expires_at` 起算（不看哪個角色的動作觸發，全服一致）。`thread_expired.until`。
+- **遭遇加人**：`EncounterTable.surges: tuple[EncounterSurge, ...]`（`flag`、`unit`、`kinds`〔地點種類，預設 `camp`〕、`day_phase`）：遇敵時把當下有效的世界旗標（`flags`＋未過期的 `timed_flags`）記進 `EncounterResult.world_flags`；抽陣容（一般抽法，不含遭遇變化）時符合旗標、地點種類、日夜的每一筆在敵方最後加 1 名 `unit`（混精英之後加；陣容已滿 4 名就不加；代決 5B4c-10）。檢查：未知單位、不能是精英。
+- **雲嶺**：「霧魅從裂痕湧出」`on_expire_flag: wraiths_surge`、`on_expire_seconds: 172800`（2 天）→ 遭遇表 `surges: [{flag: wraiths_surge, unit: mist_wraith, kinds: [camp], day_phase: night}]`。「碎片被送往灰燼荒原」`on_expire_flag: ashen_heart_hardened`（永久世界旗標）；灰燼之心第 1 階段護甲 +1、荒原骨架 13 攔截抵銷是荒原內容與賽季 Boss（5F），本段只做旗標與資料（待辦）。
+
+### 21.8 野獸改三方（玩法 PM 定，2026-11-03，5BM3-8 的決定）
+
+- 遭遇表 `lake_bears`（冬湖石背熊）、`crane_cliff_bear`（崖上石背熊）、`crane_nest`（雷羽鷹巢）：野獸放在 `third`，和修士互相攻擊；`lake_hunters`（冬湖獵手）維持同陣營。陣容敵方至少 2 名（schema），所以：`lake_bears` 敵方 冰鶴使 ×2、第三方 石背熊＋霧狼；`crane_nest` 敵方 雲鶴使 ×2、第三方 雷羽鷹 ×3；`crane_cliff_bear` 沒有修士 → 敵方 雷羽鷹 ×2、第三方 石背熊（鷹巢被熊闖入；代決 5B4c-11）。強度之後再量。第三方的掉落屬 5D-2。
+
+### 21.9 新事件、動作與欄位（全部有預設值）
+
+- 內容：`SolutionDef.objective`；`EventSkeletonDef.once`；`ThreadDef.on_expire_seconds`；`EncounterTable.surges`；`WorldRules.opportunity`（`tier_up_permille`、`tier_up_per_season`）；`affinity.yaml` `quest_step_delta: 10`。
+- 狀態：角色 `opportunities`、`opportunity_tier_ups`、`finished_skeletons`；世界 `timed_flags`；`EncounterResult.objective`、`world_flags`；`PendingOffer.source`。
+- 事件：`event_solved.tier_bonus`、`solution_kind` 多 `opportunity`；`skill_offered.source`、`skill_offer_taken.source`；`thread_expired.until`。
+- API 接點（給 5B-5b）：機遇＝`{"kind": "event_solve", "solution": <索引>}`；條件不成立或已拿過時拒絕（事件卡可用 `opportunity_available` 與 `char.opportunities` 判斷停用）。待選三選一沿用既有的 `pending_offer`（來源名稱改成骨架的「誰」）。
+
+### 21.10 驗收
+
+- `uv run pytest -q tests/world tests/content -n 8 --timeout=1800` 與受影響的 `tests/api` 通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）與 `tests/test_architecture.py`。
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
+
+### 21.11 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/world/test_affinity_pace.py` | 好感度重量（21.2） |
+| `tests/world/test_affinity_gain.py`（改） | 任務步驟 +10 |
+| `tests/content/`（加） | 已是精英的固定精英可套詞綴、HP 不再乘；營地混精英仍不套精英；疤面、叛徒戰的精英；`surges`、`objective`、`once`、`on_expire_seconds` 檢查；野獸三方陣容 |
+| `tests/world/test_opportunity.py` | 條件不成立被拒、給完整技能三選一、偏向帶電、高一階機率與每季上限、同骨架只拿一次、選了學到 |
+| `tests/world/test_event_solutions.py`（加） | 骨架 2、14 撤離，7、8 守點；地圖不支援時全滅 |
+| `tests/world/test_secret_event.py`（加） | 骨架 22 解決後不再出現（擲骰、聊天）；放棄不算解決 |
+| `tests/world/test_thread_endings.py`（加） | 世界級到期：限時旗標、夜晚營地多 1 名霧魅、白天與非營地不加、2 天後失效；碎片的永久旗標 |
+| `tests/world/test_quest_replay.py`（加） | 機遇 → 選技能 → 世界級到期 → 遇敵 的日誌重播兩次逐字相同 |
+
+### 21.12 不做的事
+
+- 事件卡前端（5B-5b）；懸賞本身與霧中劍客的陣容、分身（5F-1）；灰燼荒原與灰燼之心（5F）；機遇的「第 7 天前保底 1 次」與其他機遇來源（擊殺稀有精英、隱藏祭壇）；第三方掉落（5D-2）；保護目標勝利條件（引擎）。
+
+### 21.13 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5B4c-1 | 好感度重量的「認真玩」 | 照 21.2 的進度表；只算任務步驟、每天聊天、事件好感度 |
+| 5B4c-2 | 資料指定詞綴的範圍 | 只有遭遇表的固定精英（巢穴、變化）；營地混精英照舊不套精英 |
+| 5B4c-3 | 精英再套詞綴的 HP | 不再乘 `hp_permille`（避免精英 HP ×1.5 兩次） |
+| 5B4c-4 | 霧中劍客 | 懸賞陣容在 5F-1；本段只讓機制可用，叛徒戰的青霧執事照 19.7 套霧隱的 |
+| 5B4c-5 | 機遇的次數 | 同一個機遇骨架每個角色只能拿一次技能（其他解法不受限） |
+| 5B4c-6 | 機遇的組成 | 完整技能三選一（同主線、許願池）；新方向偏向觸發關鍵字；完整技能產生器不支援 0／1／2 組成，照原本組成 |
+| 5B4c-7 | 骨架 8「獵人倒下即失敗」 | 引擎沒有保護目標，先用守點 |
+| 5B4c-8 | 地圖沒有該勝利條件 | 優先挑支援的地圖；都不支援時用一般勝利 |
+| 5B4c-9 | 「解決」 | 情境判定或解法有結果（成功、部分成功、失敗）；放棄不算 |
+| 5B4c-10 | 霧魅加人 | 只加在一般抽陣容的敵方最後、混精英之後；滿 4 名不加；遭遇變化不加 |
+| 5B4c-11 | 崖上石背熊沒有修士 | 鷹 ×2 為敵方、熊為第三方 |
+| 5B4c-12 | 高一階技能之後 | 角色下次升階時照角色階級重配（之後和其他技能同階） |
+
+
+## 22. 5C-1 詳細規格：隊伍與系統傭兵
 
 > 給實作 agent。只動 `content/world/mercenaries.yaml`（新）、`src/trpg/content/world_mercenaries.py`（新）、`src/trpg/content/library.py`（載入與檢查，小改）、`src/trpg/world/`（`party.py` 新；`actions.py`、`state.py`、`step.py`、`battle.py` 小改）、`src/trpg/api/`（`world_schemas.py`、`world_presenter.py`）、`client/`（小鎮選單「雇用傭兵」、右側「隊伍」、遇敵面板的我方說明、API 型別）、`client/openapi.json`、`tests/world/`、`tests/api/`、`tests/content/`、vitest。另一個 agent 在做 5B-4c（`trpg.world`、`content/world/`）：共用檔只加不改。不改 `trpg.engine`、`trpg.roguelite`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。
 > 依據：09 9.6.9 #97（一隊 3 人：主角＋最多 2 名隊友，可以少帶人；隊友來源含系統傭兵；**傭兵雇用免費；出城前在主城或小鎮選好，野外不能換**）、9.6.8 #87（系統傭兵：輸出、守護、輔助、控制各至少 2 種固定 build，事先公布、每個人都一樣；**等級、技能階級、裝備預算和主角相同**；**可以設定 AI 行為（和一般隊友同一套選項）**；隊伍人數照一般規則）、9.6.11 #117（傭兵 9 名、暫名與底稿 `content/sim/builds.yaml`；技能由開發 PM 依階級對照）；本檔 5A-SIM2（隊友照主角等級成長，`grow_allies`）、9.3 第 5 點與代決 5A4-4（5C-1 前用 2 名標準隊友）、2.4（確定性）、2.6（內容即資料）。
 
-### 21.1 目標
+### 22.1 目標
 
 在城鎮免費雇用 0～2 名系統傭兵組成 3 人隊伍；開戰時用選好的傭兵取代標準隊友，傭兵照主角等級成長、AI 與指令和一般隊友相同。雇用是世界動作（寫進日誌、可重播）；野外不能換。
 
-### 21.2 傭兵名單（`content/world/mercenaries.yaml`，9.6.11 #117；ID 由開發 PM 取）
+### 22.2 傭兵名單（`content/world/mercenaries.yaml`，9.6.11 #117；ID 由開發 PM 取）
 
 | ID | 暫名 | 稱號 | 定位 | 底稿 |
 |---|---|---|---|---|
@@ -2396,7 +2491,7 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - 載入檢查：ID 不重複、`build` 存在於 `builds.yaml` 且不是白板或對照組；四種定位各至少 2 名（9.6.8）。沒有檔案時為 `None`（舊內容資料夾照常載入，開戰照舊用標準隊友）。
 - 傭兵的戰鬥單位＝底稿的英雄範本，`id` 換成傭兵 ID、`name_zh` 換成暫名（代決 5C1-6）；屬性、HP、武器、技能、`ai_profile` 照底稿。
 
-### 21.3 世界動作與狀態
+### 22.3 世界動作與狀態
 
 1. `CharacterState.mercenaries: tuple[str, ...] = ()`：目前隊伍裡的傭兵（**依選擇順序**，即出場順序；不重複）。
 2. 動作 `hire`（`HireAction`，`mercenaries: tuple[str, ...]`）：**整組換成** 這份清單（空＝不帶傭兵）。條件（不合法拋 `WorldActionError`、狀態不變）：
@@ -2407,7 +2502,7 @@ chat_text: '{name}看了你一眼，沒有多說。'
 3. 事件 `party_changed`（`mercenaries`：新的清單）。
 4. 傭兵跟著角色移動、傳送、全滅回小鎮都 **保留**（只有 `hire` 會改）。
 
-### 21.4 開戰（`prepare_battle` 的我方）
+### 22.4 開戰（`prepare_battle` 的我方）
 
 - 我方＝主角＋**隊伍的傭兵**（依 `mercenaries` 順序）；沒有傭兵時照舊用 2 名標準隊友（代決 5C1-2）。
 - 傭兵照主角等級成長：和標準隊友同一個 `grow_allies`（5A-SIM2：每級屬性 +2 加在最高屬性、HP +5%、技能階級照 `skill_tier_by_level`，重配技能加進規則包）。
@@ -2416,11 +2511,11 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - `battle_started` 事件加 `mercenaries: tuple[str, ...] = ()`（這場帶的傭兵；舊日誌沒有＝空）。
 - 經驗、戰後回寫只看主角（傭兵不累積經驗、不留狀態）。
 
-### 21.5 重播與確定性
+### 22.5 重播與確定性
 
 `hire` 寫進世界動作日誌；重播「建角 → hire → 移動 → 遇敵 → fight」兩次逐字相同；戰鬥設定由角色快照（含 `mercenaries`）重建，種子不變。`trpg.world` 內不讀時間、不用 `random`／`uuid4`／`hash()`。
 
-### 21.6 API（`trpg.api`）
+### 22.6 API（`trpg.api`）
 
 - `WorldActionRequest` 自動含 `hire`（動作聯集）。
 - `WorldView.party`（`PartyView`）：`members`（主角＋傭兵或標準隊友：名稱、稱號／定位、等級、是不是標準隊友）、`max_hired`、`can_hire`（在城鎮且沒有遭遇）、`hire_problem_zh`（不能雇用時的理由，例「出城前在城鎮選好，野外不能換」）。
@@ -2429,14 +2524,14 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - 事件文字：`party_changed` →「隊伍：青鋒、回春」／「隊伍：不帶傭兵（開戰用標準隊友）」。
 - 改了 API 型別：照既有方式重產 OpenAPI（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）。
 
-### 21.7 前端（`client/src/world/`）
+### 22.7 前端（`client/src/world/`）
 
 - 小鎮的地點面板加按鈕「雇用傭兵」（`aria-expanded`，展開成面板內的清單，不是新的彈出層）：9 名傭兵依定位分組，每列＝勾選框、暫名、稱號、定位、技能概要；主題說明用共用 `<Hint>`（浮動卡規則，6.5.1）；最多勾 2 名（勾滿時其他停用）；按「確定」送 `hire`（可以全不勾＝不帶傭兵）。野外不顯示按鈕。
 - 右側面板加「隊伍」：主角＋傭兵（或「2 名標準隊友」），野外顯示「出城前在城鎮選好，野外不能換」。
 - 遇敵面板的我方改用 `allies_zh`。
 - 浮動卡規則：瀏覽器實測從 Hint 觸發元素滑進卡片 → 卡內捲動 → 釘住 → 關閉（1600×900、800×600），寫進報告。
 
-### 21.8 測試
+### 22.8 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -2445,18 +2540,18 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/api/test_world_party_api.py` | `WorldView.party`／`mercenaries`；`hire` 動作；野外 422；開戰的戰鬥單位有傭兵名；`allies_zh` |
 | vitest | 雇用清單（勾選上限、送出的動作）、隊伍面板文字 |
 
-### 21.9 驗收
+### 22.9 驗收
 
 `uv run pytest -q tests/world tests/content tests/api -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。瀏覽器（後端、前端不用 8000／8001／8010 埠；LLM 降級）：霧渡鎮雇 2 名傭兵 → 出城打一場 → 戰鬥裡看到這兩名傭兵。
 
-### 21.10 不做的事
+### 22.10 不做的事
 
 - 朋友的影子（5C-2）、劇情夥伴與誓約（5C-3）；賽季 Boss 只准傭兵的檢查（5F-3）。
 - 傭兵的裝備預算（9.6.8「裝備預算和主角相同」；裝備與物品等級在 5D，見待 PM 決定）。
 - 戰鬥外的隊友 AI 預設設定（目前隊友指令在戰鬥中下，沒有戰鬥外的存檔設定）。
 - 傭兵改技能、改名、外觀；上線前用傭兵打賽季 Boss 的模擬（5F）。
 
-### 21.11 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 22.11 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -2471,6 +2566,6 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5C1-9 | 傭兵出場順序 | 依 `hire` 的清單順序 |
 
 
-## 22. 之後各段規格
+## 23. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

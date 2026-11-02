@@ -115,6 +115,9 @@ class SolutionDef(ContentModel):
     waive_thread: str | None = Field(default=None, pattern=ID_PATTERN)
     """持有這條個人線頭時可以拿它抵掉付出（用掉；Phase 5B-4b，18.4 補充「用人情代替青竹節」）。
     只有 ``parley``。"""
+    objective: Literal["escape", "defend"] | None = None
+    """戰鬥解法的勝利條件（Phase 5B-4c，18.4 補充：護送、押送隊＝撤離；擋追兵、不殺獵人＝守點）；
+    只有 ``combat``。``None``＝一般勝利。地圖沒有該勝利條件的資料時也是一般勝利。"""
 
     @model_validator(mode="after")
     def _check(self) -> SolutionDef:
@@ -122,6 +125,8 @@ class SolutionDef(ContentModel):
             raise ValueError(f"{self.kind} 解法不可填 requires_keyword（只有 opportunity 可以）")
         if self.threads and self.kind not in ("combat", "parley"):
             raise ValueError(f"{self.kind} 解法不可填 threads（只有 combat、parley 可以）")
+        if self.objective is not None and self.kind != "combat":
+            raise ValueError(f"{self.kind} 解法不可填 objective（只有 combat）")
         if (self.cost_supplies or self.waive_thread is not None) and self.kind != "parley":
             raise ValueError(f"{self.kind} 解法不可填 cost_supplies／waive_thread（只有 parley）")
         if len(set(self.threads)) != len(self.threads):
@@ -151,6 +156,18 @@ class ThreadDef(ContentModel):
     on_expire_flag: str | None = Field(default=None, pattern=ID_PATTERN)
     """到期結局的旗標（Phase 5B-4b）：個人線頭給角色的劇情旗標、世界級給世界旗標；遭遇表的
     ``variants`` 依它換陣容。``None``＝淡出（留著、無效）。"""
+    on_expire_seconds: int | None = Field(default=None, ge=1)
+    """世界級到期結局旗標的有效時間（Phase 5B-4c，18.4 補充「之後 2 天」）：從線頭到期起算；
+    ``None``＝永久。只有世界級、要有 ``on_expire_flag``。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> ThreadDef:
+        if self.on_expire_seconds is not None:
+            if self.on_expire_flag is None:
+                raise ValueError(f"線頭 {self.id}：on_expire_seconds 要搭配 on_expire_flag")
+            if self.scope != "world":
+                raise ValueError(f"線頭 {self.id}：只有世界級線頭可填 on_expire_seconds")
+        return self
 
 
 class EventSkeletonDef(ContentModel):
@@ -179,6 +196,8 @@ class EventSkeletonDef(ContentModel):
     """本骨架的結果可以給、但定義在別的骨架的線頭（Phase 5B-4b；線頭 ID 全區唯一）。"""
     unlock_only: bool = False
     """只有角色解鎖後才會出現（Phase 5B-4b，18.7.7：信賴的 NPC 說出祕密時解鎖）。"""
+    once: bool = False
+    """每個角色只出現到解決為止（Phase 5B-4c，18.4 補充「骨架 22」）：結果不是放棄就不再出現。"""
 
     def result_threads(self) -> frozenset[str]:
         """事件結果可以留下的線頭：本骨架的與 ``shared_threads``。"""

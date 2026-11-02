@@ -98,7 +98,8 @@ describe("解法按鈕", () => {
     expect(solutionClick(solution({ kind: "parley", index: 2, template: null }))).toEqual({ kind: "solve", solution: 2 });
     expect(solutionClick(solution({ kind: "combat", index: 0, template: null }))).toEqual({ kind: "solve", solution: 0 });
     expect(solutionClick(solution({ kind: "abandon", index: 3, template: null }))).toEqual({ kind: "solve", solution: 3 });
-    expect(solutionClick(solution({ kind: "opportunity", template: null }))).toBeNull();
+    expect(solutionClick(solution({ kind: "opportunity", index: 0, template: null }))).toEqual({ kind: "solve", solution: 0 });
+    expect(solutionHint(solution({ kind: "opportunity", template: null }))).toContain("機遇技能三選一");
     expect(waiveLabel(solution())).toBeNull();
     expect(waiveLabel(solution({ kind: "parley", waive_thread: "peddler_owes_you", waive_zh: "商人欠你人情" }))).toBe("用〔商人欠你人情〕抵");
   });

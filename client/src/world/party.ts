@@ -1,4 +1,4 @@
-// 隊伍與系統傭兵的純函式（Phase 5C-1；docs/phases/Phase5計畫.md 21.7）。規則在後端，這裡只處理勾選與文字。
+// 隊伍與系統傭兵的純函式（Phase 5C-1；docs/phases/Phase5計畫.md 22.7）。規則在後端，這裡只處理勾選與文字。
 import type { WorldMercenary, WorldPartyView } from "../api/types";
 
 /** 勾選或取消一名傭兵：保持勾選順序（＝出場順序）；已滿 `max` 時不再加。 */

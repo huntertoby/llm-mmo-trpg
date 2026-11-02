@@ -90,11 +90,11 @@ def test_quest_content_5b4b(library: ContentLibrary) -> None:
     mentor = quests["mentor_qingya_trial"]
     assert mentor.kind == "chain" and len(mentor.steps) == 3
     assert all(s.reward.offer is None and s.reward.xp_source is None for s in mentor.steps)
-    for quest in quests.values():  # 不再用單筆好感度獎勵（改成 npcs ＋15）
+    for quest in quests.values():  # 不再用單筆好感度獎勵（改成 npcs ＋10）
         assert all(not s.reward.affinity for s in quest.steps)
     rules = library.world_quests.affinity
     assert rules is not None
-    assert (rules.quest_step_delta, rules.daily_talk_delta) == (15, 3)
+    assert (rules.quest_step_delta, rules.daily_talk_delta) == (10, 3)
 
 
 def test_quest_texts_hide_unrevealed_places(library: ContentLibrary) -> None:

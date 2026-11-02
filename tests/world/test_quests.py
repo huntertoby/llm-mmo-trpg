@@ -317,8 +317,8 @@ def test_main_temple_split_by_situation(library: ContentLibrary, make_char: Make
     result = world_step(lib, make_world(), char, action, NOON)
     done = [e.step for e in result.events if isinstance(e, QuestStepDoneEvent)]
     assert done == ["temple_split"]
-    assert result.char.affinity["acolyte_xiaolian"] == 15  # 5B-4b：有關的 NPC +15
-    assert result.char.affinity["daoist_qingya"] == 25  # 事件好感度（骨架 6 成功）＋15
+    assert result.char.affinity["acolyte_xiaolian"] == 10  # 5B-4c：有關的 NPC +10
+    assert result.char.affinity["daoist_qingya"] == 20  # 事件好感度（骨架 6 成功）＋10
 
 
 def test_main_rift_battle_substitutes_three_way(
@@ -349,7 +349,7 @@ def test_chain_flow(library: ContentLibrary, make_char: MakeChar) -> None:
     assert any(isinstance(e, QuestCompletedEvent) for e in events)
     assert len(char.pending_offers) == 1  # 結尾三選一
     assert char.story_flags == ("mentor_qingya",)
-    assert char.affinity["daoist_qingya"] == 45  # 5B-4b：每步 +15
+    assert char.affinity["daoist_qingya"] == 30  # 5B-4c：每步 +10
     assert char.insight >= 3
 
 
