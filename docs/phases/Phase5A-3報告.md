@@ -10,7 +10,7 @@
 | 1 | 5A-3 詳細規格（計畫第 7 節） | `docs/phases/Phase5計畫.md` | `1809a6ee` |
 | 2 | 17 個敵人範本、變體與詞綴、雲嶺遭遇表、schema、載入、content 測試 | `content/units/`、`content/world/`、`src/trpg/content/world_*.py`、`library.py`、`tests/content/` | `dc5aafa4` |
 | 3 | 遭遇陣容查詢（純函式）、world 測試、smoke 測試 | `src/trpg/world/encounters.py`、`tests/world/` | `63e28636` |
-| 4 | 本報告 | `docs/phases/Phase5A-3報告.md` | |
+| 4 | 本報告 | `docs/phases/Phase5A-3報告.md` | `fcf6fd25`＋最後一筆 |
 
 ### 1.1 敵人精簡表（`content/units/`；HP＝含體質的最終 HP，初值）
 
@@ -90,4 +90,9 @@
 
 ## 6. 檢查紀錄
 
-（見下方，交件前補上。）
+- `uv run pytest -q tests/content tests/world tests/test_architecture.py tests/sim/test_difficulty.py tests/llm/test_simplified.py tests/api -n 8 --timeout=1800`：2242 passed、1 failed——`tests/api/test_run_start_api.py::test_dev_packs_endpoint_and_start`（開局包回應出現流派名），是 BAL-19f 另一個 agent 在修的既有失敗，和本段無關。
+- 合併 main（`d828e0c4`）後重跑 `tests/world`、`tests/content/test_world_enemies.py`、`test_world_encounters.py`、`test_con_hp.py`、`tests/test_architecture.py`：173 passed。
+- `tests/cli -m "slow or not slow" -n 8 --timeout=3000`：180 passed（CLI 快照沒有變，不需重產）。
+- `ruff check .`：通過；`ruff format --check .`：1523 files already formatted；`mypy`（strict，979 檔）：Success；`lint-imports`：9 個契約全部 KEPT。
+- `uv run trpg content check`：通過，列出 `world/enemies.yaml`（3 種元素變體、4 種精英詞綴）與 `world/encounters/cloud_ridge.yaml`（16 個地點、27 種陣容、遠程上限 2、營地精英 100‰）。
+- 重播：`uv run trpg battle --map swamp --seed 7 --log-json …` ＋ `trpg battle replay`：重播驗證通過（88 個動作、313 個事件）。
