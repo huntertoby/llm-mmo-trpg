@@ -1,0 +1,177 @@
+"""大世界的狀態：世界快照（``trpg-world/1``）與角色（``trpg-char/1``）（Phase 5A-2）。
+
+``docs/phases/Phase5計畫.md`` 2.4、2.5、6.4。所有集合型欄位都以排序後的 tuple 存放（守則 2），
+同樣的動作序列一定得到逐字相同的 JSON。角色欄位盡量和 :class:`trpg.roguelite.state.RunState`
+同名同型別（2.2；``hero``、``origin``、``level``、``xp``、``hp``、``mana``、``stamina``）。
+"""
+
+from __future__ import annotations
+
+from typing import Final, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from trpg.content.battle import ID_PATTERN, UnitTemplate
+from trpg.shared.rng import MASK64
+from trpg.world.clock import DayPhase
+
+__all__ = [
+    "CHAR_FORMAT",
+    "WORLD_FORMAT",
+    "CharacterState",
+    "ClearedLocation",
+    "EncounterResult",
+    "LocationRef",
+    "PerceptionMark",
+    "WorldState",
+]
+
+WORLD_FORMAT: Final = "trpg-world/1"
+CHAR_FORMAT: Final = "trpg-char/1"
+
+
+class _Model(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class LocationRef(_Model):
+    """某區的某個地點。"""
+
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+
+    def key(self) -> tuple[str, str]:
+        return (self.region, self.location)
+
+
+class ClearedLocation(_Model):
+    """所有人看到「已清空」的地點（09 9.6.7 #15）；``respawn_at``（UTC 秒）起敵人重生。"""
+
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    respawn_at: int = Field(ge=0)
+
+
+class PerceptionMark(_Model):
+    """角色最後一次對某個隱藏地點做感知判定的日子（``refresh_day``；#112 每天 1 次）。"""
+
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    day: int = Field(ge=0)
+
+
+class EncounterResult(_Model):
+    """遇敵的結果（只是資料，不開戰；開戰在 5A-4，敵人陣容在 5A-3）。"""
+
+    region: str
+    location: str
+    """遇敵的地點（移動的目的地）。"""
+    level: int = Field(ge=1)
+    """該地點的建議等級（``level_max``）。"""
+    battle_map: str | None
+    """從目的地 ``battle_maps`` 抽的地圖；目的地沒有戰鬥地圖時為 ``None``
+    （5A-4 從區域地圖池挑）。"""
+    battle_seed: int = Field(ge=0, le=0xFFFFFFFF)
+    weather: str
+    day_phase: DayPhase
+    at: int = Field(ge=0)
+    """遇敵的時間（UTC 秒）。"""
+
+
+class WorldState(_Model):
+    """共享的世界快照（``trpg-world/1``）。世界的變化由世界動作日誌重播得到，快照只是快取。"""
+
+    format: Literal["trpg-world/1"] = WORLD_FORMAT
+    season_id: str = Field(pattern=ID_PATTERN)
+    season_seed: int = Field(ge=0, le=MASK64)
+    season_start: int = Field(ge=0)
+    """賽季開始的 UTC 秒數（5F-1 的日程用；本段只存）。"""
+    flags: tuple[str, ...] = ()
+    """世界旗標（排序、不重複）；地點的 ``unlock_flag`` 成立與否看這裡。"""
+    cleared: tuple[ClearedLocation, ...] = ()
+    """已清空的地點（依區域、地點排序；每個地點最多一筆）。寫入在 5A-4／5F-1。"""
+
+    @field_validator("flags")
+    @classmethod
+    def _flags_sorted(cls, flags: tuple[str, ...]) -> tuple[str, ...]:
+        if list(flags) != sorted(set(flags)):
+            raise ValueError("flags 必須排序且不重複")
+        return flags
+
+    @field_validator("cleared")
+    @classmethod
+    def _cleared_sorted(cls, cleared: tuple[ClearedLocation, ...]) -> tuple[ClearedLocation, ...]:
+        keys = [(c.region, c.location) for c in cleared]
+        if keys != sorted(set(keys)):
+            raise ValueError("cleared 必須依區域、地點排序且不重複")
+        return cleared
+
+    def has_flag(self, flag: str) -> bool:
+        return flag in self.flags
+
+    def is_cleared(self, region: str, location: str, now: int) -> bool:
+        """``location`` 現在是否「已清空」（還沒到重生時間）。"""
+        return any(
+            c.region == region and c.location == location and now < c.respawn_at
+            for c in self.cleared
+        )
+
+
+class CharacterState(_Model):
+    """一個角色在大世界的狀態（``trpg-char/1``）。"""
+
+    format: Literal["trpg-char/1"] = CHAR_FORMAT
+    character_id: str = Field(pattern=ID_PATTERN)
+    hero: UnitTemplate
+    origin: str | None = None
+    level: int = Field(ge=1)
+    xp: int = Field(ge=0)
+    hp: int = Field(ge=0)
+    mana: int = Field(ge=0)
+    stamina: int | None = Field(default=None, ge=0)
+    """目前耐力；``None``＝滿（同 ``RunState``）。"""
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    supplies: int = Field(ge=0)
+    revealed: tuple[LocationRef, ...] = ()
+    """這個角色發現的隱藏地點（依區域、地點排序、不重複）。"""
+    perception_marks: tuple[PerceptionMark, ...] = ()
+    """每個隱藏地點最後一次感知判定的日子（依區域、地點排序、每地點一筆）。"""
+    rng_counters: dict[str, int] = Field(default_factory=dict)
+    """亂數串流 → 已用次數（依鍵排序；2.4 的 ``counter``）。"""
+    pending_encounter: EncounterResult | None = None
+    """還沒處理的遭遇；有它時不能移動或紮營（5A-4 開戰後清掉）。"""
+    camped_at: LocationRef | None = None
+    """目前紮營中的地點（營火；移動就清掉）。"""
+
+    @field_validator("revealed")
+    @classmethod
+    def _revealed_sorted(cls, refs: tuple[LocationRef, ...]) -> tuple[LocationRef, ...]:
+        keys = [r.key() for r in refs]
+        if keys != sorted(set(keys)):
+            raise ValueError("revealed 必須依區域、地點排序且不重複")
+        return refs
+
+    @field_validator("perception_marks")
+    @classmethod
+    def _marks_sorted(cls, marks: tuple[PerceptionMark, ...]) -> tuple[PerceptionMark, ...]:
+        keys = [(m.region, m.location) for m in marks]
+        if keys != sorted(set(keys)):
+            raise ValueError("perception_marks 必須依區域、地點排序且每地點一筆")
+        return marks
+
+    @field_validator("rng_counters")
+    @classmethod
+    def _counters(cls, counters: dict[str, int]) -> dict[str, int]:
+        if any(v < 0 for v in counters.values()):
+            raise ValueError("rng_counters 不可為負")
+        return dict(sorted(counters.items()))
+
+    def has_revealed(self, region: str, location: str) -> bool:
+        return any(r.region == region and r.location == location for r in self.revealed)
+
+    def perception_day(self, region: str, location: str) -> int | None:
+        for mark in self.perception_marks:
+            if mark.region == region and mark.location == location:
+                return mark.day
+        return None
