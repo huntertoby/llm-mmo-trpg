@@ -43,6 +43,8 @@
 ``mod_cooldown``   命中後冷卻 −1 → −2（修正型被動，BAL-10b）
 ``mod_cost``       代價減輕（修正型被動：負的幅度減輕一格，不讓代價消失，BAL-10b／10c）
 ``stance_enter_light``  進入代價 −1（姿態：進入時的冷卻、法力、耐力 −1，維持費不動，BAL-10b／10c）
+``stance_enter_heavy``  進入代價 +1（姿態：進入時的法力或耐力 +1、本體提高一級，BAL-19e）
+``self_rider``     附帶護身（姿態進入時、反應觸發時多一個作用於自己的效果，BAL-19e）
 =================  ============================================================
 
 輔助類（6.34.4）沒有獨立的改法：效果 + 用 ``potency``、範圍 +1 用 ``area``、附帶關鍵字用
@@ -760,7 +762,10 @@ def _op_potency(
 def _op_trigger_range(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """觸發範圍 +delta（預設 1）：``trigger.max_distance`` 加 delta；沒有距離上限時看形狀的大小。"""
+    """觸發範圍 +delta（預設 1）：``trigger.max_distance`` 加 delta；沒有距離上限時看形狀的大小。
+
+    BAL-19e：反應技的單體形狀沒有大小可加，改加射程（固定射程，不超過形狀上限；武器射程不適用）——
+    反應的觸發者要在射程內才打得到（6.34.4「觸發範圍 +1」）。"""
     if skill.kind not in ("passive", "reaction"):
         return []
     step = template.delta or 1
@@ -769,12 +774,30 @@ def _op_trigger_range(
     if trigger is not None and trigger.max_distance is not None:
         base["trigger"] = {**base["trigger"], "max_distance": trigger.max_distance + step}
         return [(base, effects)]
+    if skill.kind == "reaction" and skill.shape.type == "single":
+        return _reaction_reach(skill, step, library)
     if skill.shape.type == "self":
         return []
     grown = grow_shape(library.ruleset, skill.shape, step)
     if grown == skill.shape:
         return []
     base["shape"] = grown.model_dump(mode="json", exclude_none=True)
+    return [(base, effects)]
+
+
+def _reaction_reach(skill: SkillDef, step: int, library: ContentLibrary) -> list[Draft]:
+    """反應技單體形狀的射程 +``step``（BAL-19e）：固定射程才加，不超過形狀上限。"""
+    shape = skill.shape
+    param = library.ruleset.shape_def(shape.type).params.get("range")
+    if param is None or not isinstance(shape.range, int) or shape.range < 1:
+        return []
+    value = min(shape.range + step, param.max)
+    if value == shape.range:
+        return []
+    base, effects = base_draft(skill)
+    base["shape"] = shape.model_copy(update={"range": value}).model_dump(
+        mode="json", exclude_none=True
+    )
     return [(base, effects)]
 
 
@@ -1189,6 +1212,78 @@ def _op_stance_enter_light(
     return drafts
 
 
+def _op_stance_enter_heavy(
+    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """沉勢（姿態，BAL-19e）：進入代價（``template.cost_fields`` 依序，法力、耐力）+1，姿態本體提高
+    一級（元素姿態換到較高的級別、其他姿態狀態的姿態幅度提高）；維持費不動（#67）。
+
+    ``stance_enter_light`` 的反向。變身姿態不出（BAL-10c：變身姿態只出修正類）；進入冷卻不算代價
+    （BAL-10c），模板不列。"""
+    family = _stance_family(skill, library)
+    if family not in ("status", "ladder"):
+        return []
+    drafts: list[Draft] = []
+    for field in template.cost_fields:
+        cost = _entry_cost(skill, field, 1)
+        if cost is None:
+            continue
+        for base, effects in _stronger_body(skill, library):
+            base["cost"] = cost
+            drafts.append((base, effects))
+    return drafts
+
+
+def _stronger_body(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """姿態本體往上一級的草稿（維持費不變）：元素姿態換到較高級別、其他姿態狀態的幅度提高。"""
+    if _stance_family(skill, library) == "status":
+        return _magnitude_drafts(skill, library, skill.stance_upkeep, down=False)
+    rung = _stance_rung(skill, library)
+    if rung is None:
+        return []
+    ladder, position, index = rung
+    return _stance_drafts(skill, ladder[position + 1 :], skill.stance_upkeep, ladder, index)
+
+
+def _weaker_body(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """姿態本體往下一級的草稿（維持費不變；由近到遠）：附帶效果放不進預算時用。"""
+    if _stance_family(skill, library) == "status":
+        return _magnitude_drafts(skill, library, skill.stance_upkeep, down=True)
+    rung = _stance_rung(skill, library)
+    if rung is None:
+        return []
+    ladder, position, index = rung
+    return _stance_drafts(skill, ladder[:position][::-1], skill.stance_upkeep, ladder, index)
+
+
+def _op_self_rider(
+    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """附帶護身（BAL-19e）：多一個作用於自己的效果（``template.rider``：護盾、治療、回復資源、淨化）。
+
+    - 姿態（06 6.34.4 姿態的「修正」類）：進入姿態時生效。只給只有姿態本體一個效果的姿態（骨架的附帶
+      效果最多 1 個；變身姿態的 ``enter_form`` 必須是唯一效果，不出）。先試姿態本體不變（附帶的骰子
+      由預算器重調），放不進預算時再試本體降一級換附帶。
+    - 反應（「觸發」類的效果 +）：反應觸發時順便生效。只給只有一個效果、而且沒有同種效果的反應
+      （附帶效果最多 1 個；擋攻擊 ``intercept`` 的不出）；主要效果由預算器一起重調。
+    強度下限照 6.34.3（預算分數不低於閃現前）。"""
+    rider = template.rider
+    if rider is None or len(skill.effects) != 1:
+        return []
+    extra = rider.model_dump(mode="json", exclude_none=True)
+    base, effects = base_draft(skill)
+    if skill.kind == "reaction":
+        if skill.effects[0].type in (rider.type, "intercept"):
+            return []
+        return [(base, [*effects, extra])]
+    if _stance_family(skill, library) not in ("status", "ladder"):
+        return []
+    drafts: list[Draft] = [(base, [*effects, copy.deepcopy(extra)])]
+    for lowered, lowered_effects in _weaker_body(skill, library):
+        drafts.append((lowered, [*lowered_effects, copy.deepcopy(extra)]))
+    return drafts
+
+
 def _stance_family(skill: SkillDef, library: ContentLibrary) -> str | None:
     """姿態屬於哪一族（BAL-2b）：``ladder`` 元素姿態階梯、``form`` 變身姿態（BAL-2c）、``status``
     其他姿態狀態的姿態（白板姿態：狂怒、堅壁…）；不是姿態或做不了時 ``None``。BAL-10b：多效果姿態
@@ -1277,6 +1372,9 @@ FLASH_OPS: dict[str, FlashOp] = {
     "mod_cooldown": _op_mod_cooldown,
     "mod_cost": _op_mod_cost,
     "stance_enter_light": _op_stance_enter_light,
+    # BAL-19e
+    "stance_enter_heavy": _op_stance_enter_heavy,
+    "self_rider": _op_self_rider,
 }
 """小變化的改法登錄表（``op`` → 草稿）。資料裡 ``op`` 沒有登錄的模板不會出現
 （:func:`trpg.skillgen.flash_derive.unimplemented_ops` 列出）。"""

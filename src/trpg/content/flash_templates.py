@@ -29,7 +29,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
+from trpg.content.skills import EffectSpec, ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
 from trpg.content.skills.modifiers import ModifierChange
 
 __all__ = [
@@ -317,9 +317,16 @@ class FlashTemplate(ContentModel):
     skeletons: tuple[str, ...] = ()
     """收束（BAL-10d）：新形狀不在原骨架允許的形狀內時，依序改試的骨架（例：範圍骨架收成單體 →
     打擊、連擊）；只取允許新形狀的。空 ＝ 只用原骨架。"""
+    rider: EffectSpec | None = None
+    """附帶護身（``self_rider``，BAL-19e）：姿態進入時、反應觸發時多一個作用於自己的效果（護盾、
+    治療、回復資源、淨化）。數值只是起點，套用後由預算器重調。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
+        if (self.op == "self_rider") != (self.rider is not None):
+            raise ValueError(f"模板 {self.id}：rider 只給 self_rider 用，而且 self_rider 必須填")
+        if self.rider is not None and self.rider.affects != "self":
+            raise ValueError(f"模板 {self.id}：附帶護身的效果只能作用於自己（affects: self）")
         if self.op in ("area", "range") and not self.delta:
             raise ValueError(f"模板 {self.id}：{self.op} 必須填非 0 的 delta")
         if self.op == "terrain_area" and (not self.shapes or self.min_cells is None):

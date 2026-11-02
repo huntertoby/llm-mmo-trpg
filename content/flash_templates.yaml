@@ -351,6 +351,15 @@ minor:
     cost_fields: [ap_cost, cooldown, mana, stamina]
     prefix_zh: 俐落
     summary_zh: 進入代價 −1：進入姿態的冷卻、法力或耐力 −1（最少留 1；維持費不變，效果不變）
+  # BAL-19e（#110「閃現的姿態變化模板補到約 10 種」）：進入代價 +1 的反向——進入時的法力或耐力 +1，姿態本體提高一級；
+  # 維持費不動（#67）；變身姿態不出（BAL-10c）；進入冷卻不算代價（BAL-10c），不列
+  - id: stance_enter_heavy
+    category: cost
+    op: stance_enter_heavy
+    kinds: [stance]
+    cost_fields: [mana, stamina]
+    prefix_zh: 沉勢
+    summary_zh: 進入代價 +1：進入姿態的法力或耐力 +1，姿態效果提高一級（維持費不變）
   # ---- 輔助（治療、護盾、增益） ----
   - id: support_potency
     category: support
@@ -406,6 +415,25 @@ minor:
     kinds: [passive]
     prefix_zh: 連發
     summary_zh: 每回合觸發次數上限 +1（效果依預算調整，不超過 6.6）
+  # 附帶護身（BAL-19e，#110「閃現的反應變化模板補到約 10 種」；觸發類的「效果 +」）：反應觸發時順便給自己護盾或回氣（冷卻 −1；治療會碰到「傷害與友方治療不並存」）
+  # （trpg.skillgen.flash_ops 的 self_rider）。只給只有一個效果、沒有同種效果的反應（擋攻擊的不出）；主要效果由預算器
+  # 一起重調。BAL-19e 同時讓「觸發範圍 +1／+2」用在反應的單體射程（原本只看觸發距離與形狀大小，反應套不上）
+  - id: reaction_ward
+    category: trigger
+    usage_base: 1
+    op: self_rider
+    kinds: [reaction]
+    rider: {type: shield, dice: 1d4, affects: self}
+    prefix_zh: 護身
+    summary_zh: 附帶護盾：反應觸發時，自己也得到一層護盾（強度依預算重新分配）
+  - id: reaction_refocus
+    category: trigger
+    usage_base: 1
+    op: self_rider
+    kinds: [reaction]
+    rider: {type: restore_resource, resource: cooldown, amount: 1, affects: self}
+    prefix_zh: 回氣
+    summary_zh: 附帶回氣：反應觸發時，自己所有技能的冷卻 −1（強度依預算重新分配）
   # 專注（BAL-10e，#75；06 6.34.4「收回家族」）：觸發範圍收回一級，或觸發條件收緊一級，換成觸發效果的威力
   - id: focus_range
     category: trigger
@@ -447,6 +475,49 @@ minor:
     generic: true
     prefix_zh: 強效
     summary_zh: 姿態效果 +（元素傷害加成與小特色提高一級，維持費不變）
+  # 姿態附帶（BAL-19e，#110「閃現的姿態變化模板補到約 10 種」；06 6.34.4 姿態的「修正」類）：進入姿態時多一個作用於
+  # 自己的效果（trpg.skillgen.flash_ops 的 self_rider）。只給只有姿態本體一個效果的姿態（骨架附帶最多 1 個；變身姿態
+  # 的進入形態必須是唯一效果，不出）。姿態技能只能施加姿態狀態，所以附帶不用狀態（加速、隱蔽不行）。rider 的數值只是起點：先試本體不變、由預算器重調附帶的骰子，放不進預算時本體降一級
+  - id: stance_ward
+    category: modifier
+    usage_base: 1
+    op: self_rider
+    kinds: [stance]
+    rider: {type: shield, dice: 1d4, affects: self}
+    prefix_zh: 護體
+    summary_zh: 姿態附帶護盾：進入姿態時得到一層護盾（護盾量依預算）
+  - id: stance_mend
+    category: modifier
+    usage_base: 1
+    op: self_rider
+    kinds: [stance]
+    rider: {type: heal, dice: 1d4, affects: self}
+    prefix_zh: 調息
+    summary_zh: 姿態附帶治療：進入姿態時回復生命（治療量依預算）
+  - id: stance_refocus
+    category: modifier
+    usage_base: 1
+    op: self_rider
+    kinds: [stance]
+    rider: {type: restore_resource, resource: cooldown, amount: 1, affects: self}
+    prefix_zh: 凝神
+    summary_zh: 姿態附帶回氣：進入姿態時自己所有技能的冷卻 −1（必要時姿態效果降一級）
+  - id: stance_channel
+    category: modifier
+    usage_base: 1
+    op: self_rider
+    kinds: [stance]
+    rider: {type: restore_resource, resource: mana, amount: 2, affects: self}
+    prefix_zh: 蓄能
+    summary_zh: 姿態附帶回魔：進入姿態時回復法力（回復量依預算）
+  - id: stance_cleanse
+    category: modifier
+    usage_base: 1
+    op: self_rider
+    kinds: [stance]
+    rider: {type: cleanse, affects: self}
+    prefix_zh: 澄心
+    summary_zh: 姿態附帶淨化：進入姿態時移除自己身上的減益（必要時姿態效果降一級）
   - id: mod_relax
     category: modifier
     usage_base: 1

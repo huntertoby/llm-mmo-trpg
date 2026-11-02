@@ -27,8 +27,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
         "overdrawn": "只由 cost.overdraft 施加（3-50，竭力一擊），不是效果原語",
-        "stance_guard": "只由白板姿態配方施加（3W-4b，skill_composer.yaml），沒有手寫技能",
-        "stance_ironwall": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_flame": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_blaze": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_frost": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
@@ -58,6 +56,9 @@ _UNCOVERED["status"].update(
         for level in range(1, 6)
     }
 )
+# BAL-19e：感知姿態「晨禱架勢」、意志姿態「幽影架勢」用元素姿態階梯的第 1 級（手寫技能）
+for _status in ("stance_holy_1", "stance_shadow_1"):
+    _UNCOVERED["status"].pop(_status)
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。
 # prone 由 knock_prone 原語產生、shielded 由 shield 原語產生、undying 由 cheat_death 原語產生
@@ -217,8 +218,16 @@ _SEEDS_54C = frozenset(
 
 # BAL-19（玩法決定 #110）：補內容的技能由關鍵字池給出（候選產生器），沒有放進任何 build 或單位；
 # 依 ID 前綴算進來（19a 感知組合主題法術 ``skill_wis_*``、19b 意志組合主題法術 ``skill_wil_*``、
-# 19c 召喚武器技 ``skill_sum_*``、19d 遠程武器技 ``skill_rng_*``）。
-_BAL19_PREFIXES = ("skill_wis_", "skill_wil_", "skill_sum_", "skill_rng_")
+# 19c 召喚武器技 ``skill_sum_*``、19d 遠程武器技 ``skill_rng_*``、19e 反應 ``skill_rx_*``、姿態
+# ``skill_st_*``）。
+_BAL19_PREFIXES = (
+    "skill_wis_",
+    "skill_wil_",
+    "skill_sum_",
+    "skill_rng_",
+    "skill_rx_",
+    "skill_st_",
+)
 
 
 def _skills() -> list[SkillDef]:

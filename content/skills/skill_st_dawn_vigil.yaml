@@ -1,0 +1,23 @@
+# BAL-19e（玩法決定 #110，06 6.27.4）：感知姿態，進入聖光架勢（神聖傷害提高、施加的標記多 1 回合）；花 1 AP 進入，持續到取消；數值為初值，未經模擬
+id: skill_st_dawn_vigil
+schema_version: 1
+name_zh: 晨禱架勢
+tier: 2
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: apply_status, status: stance_holy_1, affects: self}
+condition: null
+cost: {}
+tags: [stance, holy, support]
+narrative:
+  concept: 低聲禱告，讓聖光沿著呼吸流進每一次出手
+  cast_flavor: 你默念晨禱，周身泛起一圈淡金色的光
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

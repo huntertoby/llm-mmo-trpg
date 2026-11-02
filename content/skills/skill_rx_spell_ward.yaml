@@ -1,0 +1,25 @@
+# BAL-19e（玩法決定 #110，06 6.27.4）：反應技，被法術擊中、傷害結算之前為自己張開聖光護盾；數值為初值，未經模擬
+id: skill_rx_spell_ward
+schema_version: 1
+name_zh: 驅咒聖盾
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: spell
+weapon_req: focus
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 2d6, affects: self}
+condition: null
+trigger: null
+reaction: {event: hit_by_spell}
+cost: {mana: 3, cooldown: 1}
+tags: [holy, reaction, shield, spell]
+narrative:
+  concept: 咒語落下的前一刻，一層聖光擋在你和魔力之間
+  cast_flavor: 你察覺到魔力的流向，掌心一翻，聖光護幕已在身前成形
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

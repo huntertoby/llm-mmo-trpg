@@ -1,0 +1,26 @@
+# BAL-19e（玩法決定 #110，06 6.27.4）：反應技，被攻擊命中後順勢隱入暗處，下回合腳步加快（敏捷：身法，不需武器）；數值為初值，未經模擬
+id: skill_rx_slip_away
+schema_version: 1
+name_zh: 滑步脫身
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: apply_status, status: concealed, duration: 2, affects: self}
+  - {type: apply_status, status: hasted, duration: 3, affects: self}
+condition: null
+trigger: null
+reaction: {event: hit_by_attack}
+cost: {cooldown: 1}
+tags: [physical, reaction, stealth]
+narrative:
+  concept: 挨了一下不硬扛，順著力道隱進暗處，再一眼已經找不到你
+  cast_flavor: 你順著那一擊的力道一側身，身形沒入陰影，腳下也輕了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
