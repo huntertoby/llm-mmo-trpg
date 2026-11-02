@@ -27,7 +27,7 @@ import os
 
 from fastapi import APIRouter, HTTPException, Request
 
-from trpg.api.attribute_text import attribute_affects, attribute_suggestion
+from trpg.api.attribute_text import attribute_affects, attribute_suggestion, route_hint
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import (
     allocation_preview,
@@ -215,6 +215,7 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         options=tuple(options),
         suggestion=attribute_suggestion(picked, weapon),
         attribute_affects=attribute_affects(picked, weapon),
+        route_hint=route_hint(library, weapon, tuple(chosen)),
     )
 
 

@@ -4043,6 +4043,23 @@ export interface components {
             from_pos: components["schemas"]["XY"];
         };
         /**
+         * RouteHintOut
+         * @description 關鍵字與屬性不搭的提示（BAL-19g，06 6.27.3，#110）：配點後的最高屬性不在 ``fits`` 時，
+         *     前端顯示 ``text_zh``（只提示、不擋）。``lean``：選的關鍵字前期的技能多半是法術（``spell``）或
+         *     武器技（``weapon``）。
+         */
+        RouteHintOut: {
+            /**
+             * Lean
+             * @enum {string}
+             */
+            lean: "spell" | "weapon";
+            /** Fits */
+            fits: components["schemas"]["Attribute"][];
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
          * Run
          * @description 跑步（基本動作，Phase 3-20）：花 ``run_ap_cost`` AP，本回合移動點數 ``+run_move_bonus`` 格；
          *     每回合限 1 次，定身時不合法。跑步本身不移動。
@@ -4629,6 +4646,7 @@ export interface components {
              * @default []
              */
             attribute_affects: components["schemas"]["AttributeAffectsOut"][];
+            route_hint?: components["schemas"]["RouteHintOut"] | null;
         };
         /**
          * StartPreviewRequest

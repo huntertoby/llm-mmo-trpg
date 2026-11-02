@@ -32,6 +32,11 @@
 **行為紀錄**：關鍵字的 ``actions``（``skill_keywords.yaml``，例如攀跳 → 高處）與玩家用過的動作次數
 相乘當權重：加深在持有數並列時偏向行為相符的關鍵字；新方向抽關鍵字時，行為相符的權重較高。
 
+**同路線找法**（BAL-19g，06 6.27.4，玩法決定 #110）：加深、橋接依序找 ① 帶同關鍵字、縮放屬性跟
+主路線的技能（武器技看武器）→ ② 帶同關鍵字的雙屬性技能（第二縮放屬性跟上主路線，6.10）→ ③ 放寬
+關鍵字（換下一個關鍵字，再照 ①②）→ ④ 最後才給不跟主屬性的技能（三選一標偏離）。判定見
+:func:`route_rank`，三選一的 ``off_route`` 用同一個判定（:func:`follows_attr`）。
+
 **跟主屬性**（Phase 3H-3，07 7.2）：``CandidateRequest.hero_attributes`` 有值時，加深與橋接優先取
 縮放屬性＝主角最高屬性的技能（技能池只看 ``scaling_attr``；隨機組合器的技能縮放屬性直接跟著最高
 屬性，限在 ``skill_scaling.yaml`` 允許範圍內），**新方向保留給不同屬性**（組合器取允許範圍內次高
@@ -68,6 +73,9 @@ from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
     "CANDIDATE_KINDS",
+    "ROUTE_DUAL",
+    "ROUTE_MAIN",
+    "ROUTE_OFF",
     "Candidate",
     "CandidateKind",
     "CandidateRequest",
@@ -77,6 +85,7 @@ __all__ = [
     "follows_attr",
     "generate_candidates",
     "keyword_distribution",
+    "route_rank",
     "skill_has_keywords",
 ]
 
@@ -85,6 +94,8 @@ type AttrWant = Literal["same", "other"]
 屬性（新方向）。"""
 
 type CandidateKind = Literal["deepen", "bridge", "new"]
+type _Graded = list[SkillDef | None]
+"""依好壞（:meth:`_Search._grade`）分的三格：完全符合、雙屬性、備選；各格最多一招。"""
 CANDIDATE_KINDS: tuple[CandidateKind, ...] = ("deepen", "bridge", "new")
 
 
@@ -184,18 +195,40 @@ def behavior_weights(library: ContentLibrary, behavior: Mapping[str, int]) -> di
     }
 
 
-def follows_attr(skill: SkillDef, attr: Attribute, weapon_attrs: Sequence[Attribute] = ()) -> bool:
-    """技能實際吃 ``attr``：武器技看手上武器的縮放屬性（``weapon_attrs``，含第二屬性；3H-6、
-    3H-7），空時與法術技一樣看技能的 ``scaling_attr``。
+ROUTE_MAIN = 0
+"""同路線找法 ①：縮放屬性跟主路線（武器技看手上武器；BAL-19g，06 6.27.4）。"""
+ROUTE_DUAL = 1
+"""同路線找法 ②：雙屬性技能，靠第二縮放屬性跟上主路線（6.10，武器屬性＋心智屬性）。"""
+ROUTE_OFF = 2
+"""偏離：不跟主屬性（④，三選一標偏離）。"""
 
-    BAL-17：手上是雙屬性武器（``weapon_attrs`` 有兩個）、且 ``attr`` 是其中之一時，「跟主屬性」
-    改看武器的兩個屬性，法術也一樣（魔導劍：力量最高時，吃力量或智力的技能都算同路線）。"""
-    if len(set(weapon_attrs)) > 1 and attr in weapon_attrs and skill.category != "weapon":
-        scaling = {skill.scaling_attr, skill.secondary_scaling_attr}
-        return bool(scaling & set(weapon_attrs))
+
+def route_rank(skill: SkillDef, attr: Attribute, weapon_attrs: Sequence[Attribute] = ()) -> int:
+    """技能對主路線 ``attr`` 的等級（BAL-19g，06 6.27.4 同路線找法）：:data:`ROUTE_MAIN`、
+    :data:`ROUTE_DUAL` 或 :data:`ROUTE_OFF`。
+
+    - 武器技看手上武器的縮放屬性（``weapon_attrs``，含第二屬性；3H-6、3H-7）；武器屬性不合、但
+      技能的心智第二屬性是 ``attr``（3I-3）算雙屬性。
+    - 法術技看技能的 ``scaling_attr``；第二縮放屬性是 ``attr`` 的雙屬性法術算雙屬性。
+    - BAL-17：手上是雙屬性武器（``weapon_attrs`` 有兩個）、且 ``attr`` 是其中之一時，武器的兩個
+      屬性都算主路線，法術也一樣（魔導劍：力量最高時，吃力量或智力的技能都算同路線）。"""
+    weapon_set = set(weapon_attrs)
+    if len(weapon_set) > 1 and attr in weapon_set and skill.category != "weapon":
+        if skill.scaling_attr in weapon_set:
+            return ROUTE_MAIN
+        return ROUTE_DUAL if skill.secondary_scaling_attr in weapon_set else ROUTE_OFF
     if skill.category == "weapon" and weapon_attrs:
-        return attr in weapon_attrs or attr == skill.secondary_scaling_attr  # 3I-3：心智第二屬性
-    return skill.scaling_attr == attr
+        if attr in weapon_set:
+            return ROUTE_MAIN
+    elif skill.scaling_attr == attr:
+        return ROUTE_MAIN
+    return ROUTE_DUAL if skill.secondary_scaling_attr == attr else ROUTE_OFF
+
+
+def follows_attr(skill: SkillDef, attr: Attribute, weapon_attrs: Sequence[Attribute] = ()) -> bool:
+    """技能跟主路線 ``attr``（:func:`route_rank` 不是偏離；主路線或雙屬性都算）。候選產生器
+    （完整版、白板版）與三選一的偏離標示（``roguelite.offers`` 的 ``off_route``）共用。"""
+    return route_rank(skill, attr, weapon_attrs) != ROUTE_OFF
 
 
 def skill_has_keywords(skill: SkillDef, keywords: Sequence[str], library: ContentLibrary) -> bool:
@@ -285,34 +318,39 @@ class _Search:
         )
 
     def _want_ok(self, skill: SkillDef, want: AttrWant | None) -> bool:
-        if want is None:
-            return True
-        top = top_attribute(self.request.hero_attributes)
-        return follows_attr(skill, top, self.request.weapon_attrs) == (want == "same")
+        return self._grade(skill, want) == 0
 
-    def from_pool(
-        self, rng: Rng, keywords: Sequence[str], want: AttrWant | None
-    ) -> tuple[SkillDef | None, SkillDef | None]:
-        """（符合屬性偏好的技能，偏好放寬後的備選）；沒有偏好時只有第一個。"""
+    def _grade(self, skill: SkillDef, want: AttrWant | None) -> int:
+        """候選的好壞（小者優先）：0 ＝ 完全符合偏好、1 ＝ 雙屬性技能靠第二屬性跟上主路線（只在
+        ``same``；BAL-19g 同路線找法 ②，仍算符合）、2 ＝ 不符合（備選）。"""
+        if want is None:
+            return 0
+        top = top_attribute(self.request.hero_attributes)
+        rank = route_rank(skill, top, self.request.weapon_attrs)
+        if want == "other":
+            return 0 if rank == ROUTE_OFF else 2
+        return rank
+
+    def from_pool(self, rng: Rng, keywords: Sequence[str], want: AttrWant | None) -> _Graded:
+        """依好壞分組：有完全符合的就從中抽（不再看其他組），否則抽雙屬性的，再否則抽備選。"""
         options = [
             s for s, found in self.pool if all(k in found for k in keywords) and self.usable(s)
         ]
-        if not options:
-            return None, None
-        liked = [s for s in options if self._want_ok(s, want)]
-        if liked:
-            return rng.choice(liked), None
-        return None, rng.choice(options)
+        graded: _Graded = [None, None, None]
+        for grade in range(3):
+            group = [s for s in options if self._grade(s, want) == grade]
+            if group:
+                graded[grade] = rng.choice(group)
+                break
+        return graded
 
-    def from_composer(
-        self, rng: Rng, keywords: Sequence[str], want: AttrWant | None
-    ) -> tuple[SkillDef | None, SkillDef | None]:
+    def from_composer(self, rng: Rng, keywords: Sequence[str], want: AttrWant | None) -> _Graded:
+        graded: _Graded = [None, None, None]
         if not keywords:
-            return None, None
+            return graded
         hint = "spell" if self.request.weapon_class == "focus" else None
         attrs = self.request.hero_attributes or None
         avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
-        spare: SkillDef | None = None
         for _ in range(self.rules.composer_tries):
             seed = rng.next_u32()
             try:
@@ -329,16 +367,20 @@ class _Search:
             except ComposeError:
                 continue
             if self.usable(skill) and skill_has_keywords(skill, keywords, self.library):
-                if self._want_ok(skill, want):
-                    return skill, None
-                spare = spare if spare is not None else skill
-        return None, spare
+                grade = self._grade(skill, want)
+                if grade == 0:
+                    graded[0] = skill
+                    return graded
+                if graded[grade] is None:
+                    graded[grade] = skill
+        return graded
 
     def find(
         self, rng: Rng, keywords: Sequence[str], want: AttrWant | None = None
     ) -> tuple[SkillDef, Literal["pool", "composer", "llm"], bool] | None:
         """（技能, 來源, 是否符合屬性偏好）；不符合偏好的是備選，呼叫端決定要不要用（BAL-17：先換
-        關鍵字找符合的，都沒有才用第一個備選）。找到的技能由呼叫端 :meth:`accept` 登記（LLM 來源
+        關鍵字找符合的，都沒有才用第一個備選）。BAL-19g：同一組關鍵字先找主路線（①），兩個來源
+        都沒有才取雙屬性技能（②，仍算符合）。找到的技能由呼叫端 :meth:`accept` 登記（LLM 來源
         已登記）。"""
         want = want if self.request.hero_attributes else None
         from_llm = self.from_llm(keywords, want)
@@ -348,17 +390,22 @@ class _Search:
         order: tuple[Literal["pool", "composer"], ...] = (
             ("composer", "pool") if composer_first else ("pool", "composer")
         )
+        seconds: list[tuple[SkillDef, Literal["pool", "composer", "llm"], bool]] = []
         spares: list[tuple[SkillDef, Literal["pool", "composer", "llm"], bool]] = []
         for source in order:
-            skill, spare = (
+            best, dual, spare = (
                 self.from_composer(rng, keywords, want)
                 if source == "composer"
                 else self.from_pool(rng, keywords, want)
             )
-            if skill is not None:
-                return skill, source, True
+            if best is not None:
+                return best, source, True
+            if dual is not None:
+                seconds.append((dual, source, True))
             if spare is not None:
                 spares.append((spare, source, False))
+        if seconds:  # ② 雙屬性技能
+            return seconds[0]
         return spares[0] if spares else None  # 偏好的屬性湊不到：備選取第一個來源的
 
     def accept(self, skill: SkillDef) -> None:

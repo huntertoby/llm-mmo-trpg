@@ -216,6 +216,16 @@ class AttributeSuggestionOut(_ApiModel):
     reason_zh: str
 
 
+class RouteHintOut(_ApiModel):
+    """關鍵字與屬性不搭的提示（BAL-19g，06 6.27.3，#110）：配點後的最高屬性不在 ``fits`` 時，
+    前端顯示 ``text_zh``（只提示、不擋）。``lean``：選的關鍵字前期的技能多半是法術（``spell``）或
+    武器技（``weapon``）。"""
+
+    lean: Literal["spell", "weapon"]
+    fits: tuple[Attribute, ...]
+    text_zh: str
+
+
 class StartPreview(_ApiModel):
     weapon: str
     seed: int
@@ -224,6 +234,8 @@ class StartPreview(_ApiModel):
     """建議的主屬性（Phase 3H-3；依武器＋已選的關鍵字給的起始技能）。"""
     attribute_affects: tuple[AttributeAffectsOut, ...] = ()
     """每個屬性影響你的哪些招（Phase 3H-3；起始技能與武器）。"""
+    route_hint: RouteHintOut | None = None
+    """關鍵字與屬性不搭的提示（BAL-19g；依武器＋已選的關鍵字）。"""
 
 
 class DevPackOut(_ApiModel):

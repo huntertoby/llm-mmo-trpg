@@ -20,6 +20,9 @@
 白板定義的）。**LLM 來源在白板模式下關閉**（LLM 整招提議保留給之後的完整技能三選一，
 3W-7 另做「變化提議」）。
 
+**同路線找法**（BAL-19g，06 6.27.4）：與完整版相同，加深、橋接依序 ① 同關鍵字、跟主路線 → ② 同
+關鍵字的雙屬性白板 → ③ 換關鍵字 → ④ 才放寬屬性（偏離）；手寫池的退回也照同樣的偏好。
+
 **階級**：白板用角色目前階級的預算與形狀（``request.tier``，6.34.9）；手寫池的退回也只取該階級
 以下的技能。創角的起始技能不走這裡（一律 1 階）。
 
@@ -36,6 +39,7 @@ from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import top_attribute
 from trpg.skillgen.candidates import (
+    ROUTE_OFF,
     AttrWant,
     Candidate,
     CandidateKind,
@@ -43,7 +47,7 @@ from trpg.skillgen.candidates import (
     _ranked_held,
     _weighted_order,
     behavior_weights,
-    follows_attr,
+    route_rank,
 )
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.random_composer import ComposeError
@@ -57,6 +61,9 @@ from trpg.skillgen.whiteboard import (
 )
 
 __all__ = ["generate_whiteboard_candidates", "pick_whiteboard_kind"]
+
+_SPARE = 2
+"""不符合偏好的等級（:meth:`_Maker.grade`）。"""
 
 
 def pick_whiteboard_kind(library: ContentLibrary, rng: Rng) -> WhiteboardKind:
@@ -83,41 +90,58 @@ class _Maker:
     def make(
         self, rng: Rng, kind: CandidateKind, keyword: str, want: AttrWant
     ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
-        """關鍵字 ``keyword`` 的白板；做不出來回傳 ``None``（呼叫端換關鍵字）。"""
+        """關鍵字 ``keyword`` 的白板；做不出來回傳 ``None``（呼叫端換關鍵字）。同一個關鍵字依序找
+        主路線（①）、雙屬性（②），都沒有才回傳不符合偏好的備選（BAL-19g，06 6.27.4）。"""
         board_kind = pick_whiteboard_kind(self.library, rng.fork(f"kind/{keyword}"))
+        made: list[tuple[SkillDef, Literal["pool", "composer"]]] = []
         if keyword in self.active_keywords:
             if keyword not in whiteboard_keywords(self.library, board_kind, self.request.tier):
                 board_kind = "active"
-            made = self._compose(rng, board_kind, keyword, want)
-            if made is not None:
-                return made, "composer"
-            if board_kind != "active":
-                made = self._compose(rng, "active", keyword, want)
-                if made is not None:
-                    return made, "composer"
-        pooled = self._from_pool(rng, keyword)
-        return None if pooled is None else (pooled, "pool")
+            kinds = [board_kind] if board_kind == "active" else [board_kind, "active"]
+            for board in kinds:
+                skill = self._compose(rng, board, keyword, want)
+                if skill is None:
+                    continue
+                made.append((skill, "composer"))
+                if self.grade(skill, want) == 0:
+                    break
+        if not made or min(self.grade(m[0], want) for m in made) == _SPARE:
+            pooled = self._from_pool(rng, keyword, want)
+            if pooled is not None:
+                made.append((pooled, "pool"))
+        if not made:
+            return None
+        return min(made, key=lambda m: self.grade(m[0], want))  # 同等級取先找到的
 
     def _compose(self, rng: Rng, board_kind: str, keyword: str, want: AttrWant) -> SkillDef | None:
         """白板最多試 ``tries`` 個種子：優先取縮放屬性符合偏好的（加深與橋接＝主角最高屬性，新方向
-        ＝不同的屬性；3H-3），湊不到就放寬取第一張。"""
-        spare: SkillDef | None = None
+        ＝不同的屬性；3H-3；BAL-19g：主路線優先，其次雙屬性），湊不到就放寬取第一張。"""
+        found: list[SkillDef | None] = [None, None, None]
         for _ in range(max(1, self.tries)):
             skill = self._one(rng, board_kind, keyword, want)
             if skill is None:
                 continue
-            if self.liked(skill, want):
+            grade = self.grade(skill, want)
+            if grade == 0:
                 return skill
-            spare = spare if spare is not None else skill
-        return spare
+            if found[grade] is None:
+                found[grade] = skill
+        return found[1] if found[1] is not None else found[2]
 
     def liked(self, skill: SkillDef, want: AttrWant) -> bool:
-        """縮放屬性符合偏好（沒有主角屬性時一律符合）。"""
+        """縮放屬性符合偏好（沒有主角屬性時一律符合；``same`` 含雙屬性技能）。"""
+        return self.grade(skill, want) < _SPARE
+
+    def grade(self, skill: SkillDef, want: AttrWant) -> int:
+        """0 ＝ 完全符合偏好、1 ＝ 雙屬性技能靠第二屬性跟上主路線（只在 ``same``，仍算符合）、
+        2 ＝ 不符合（備選）。"""
         request = self.request
         if not request.hero_attributes:
-            return True
-        top = top_attribute(request.hero_attributes)
-        return follows_attr(skill, top, request.weapon_attrs) == (want == "same")
+            return 0
+        rank = route_rank(skill, top_attribute(request.hero_attributes), request.weapon_attrs)
+        if want == "other":
+            return 0 if rank == ROUTE_OFF else _SPARE
+        return rank
 
     def _one(self, rng: Rng, board_kind: str, keyword: str, want: AttrWant) -> SkillDef | None:
         request = self.request
@@ -141,8 +165,9 @@ class _Maker:
             return None
         return skill
 
-    def _from_pool(self, rng: Rng, keyword: str) -> SkillDef | None:
-        """手寫技能池的 1 階技能（優先選符合白板定義的；階級與白板一致）。"""
+    def _from_pool(self, rng: Rng, keyword: str, want: AttrWant) -> SkillDef | None:
+        """手寫技能池的 1 階技能（階級與白板一致）：依偏好的等級（主路線、雙屬性、備選；BAL-19g）
+        分組，取最好的一組；組內優先選符合白板定義的。"""
         request = self.request
         tier = request.tier
         options = [
@@ -160,6 +185,8 @@ class _Maker:
         ]
         if not options:
             return None
+        best = min(self.grade(s, want) for s in options)
+        options = [s for s in options if self.grade(s, want) == best]
         boards = [s for s in options if is_whiteboard(s, self.library, s.tier)]
         return rng.choice(boards or options)
 

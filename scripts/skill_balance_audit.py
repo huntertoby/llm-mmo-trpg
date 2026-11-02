@@ -5,7 +5,8 @@
 1. 手寫技能、種子技能（完整組合器抽樣）、技能模板（白板配方實際組出的結果、閃現模板）依縮放屬性 ×
    技能種類（武器技、法術技、被動、反應、姿態、召喚）的分布。
 2. 12 個關鍵字 × 縮放屬性 × 類別（武器技／法術技）、元素 × 縮放屬性 × 類別的交叉表；列出空格與少於
-   3 招的組合。
+   3 招的組合。少於 3 招的清單與 BAL-19 的達標（2t）以 **關鍵字表** 為準（BAL-19g，玩法 PM
+   定）；元素欄只算傷害元素，僅供參考。
 3. 稀有度、觸發時機、形狀的分布。
 4. 依武器大類（近戰、遠程、法器、雙屬性）看每類能拿到各關鍵字技能的數量（含「同路線」）。
 5. 實際候選偏離率：12 種開局 × 數十個種子的白板三選一（第 1、2 次升級）偏離張數分布。
@@ -420,7 +421,7 @@ def cross_table(
 
 def section2(
     lib: ContentLibrary, hand: list[Rec], reach: list[Draw]
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     keywords = [*lib.keywords.ids(), GENERIC]
     elements = sorted(
         {e for r in hand for e in r.elements} | {e for d in reach for e in d.rec.elements}
@@ -433,14 +434,17 @@ def section2(
         "法術技看主題（智力＝元素、感知＝輔助、意志＝召喚暗影）。",
         "",
     ]
-    all_gaps: list[str] = []
+    keyword_gaps: list[str] = []
+    element_gaps: list[str] = []
     for key, dims in (("keyword", keywords), ("element", elements)):
         label = "關鍵字" if key == "keyword" else "元素"
         for cls in ("武器技", "法術技"):
             out += [f"### 2 {label} × 屬性：{cls}", ""]
             tbl, gaps = cross_table(dims, hand, reach, key, cls)
             out += tbl
-            all_gaps += [f"[{label}] {g}" for g in gaps]
+            (keyword_gaps if key == "keyword" else element_gaps).extend(
+                f"[{label}] {g}" for g in gaps
+            )
     out += ["### 2g. 非武器／法術的種類（被動、反應、姿態、召喚）× 關鍵字（手寫招數）", ""]
     cnt: Counter[tuple[str, str]] = Counter()
     for r in hand:
@@ -450,7 +454,73 @@ def section2(
         ["關鍵字", *CLASSES],
         [[k, *[cnt[(k, c)] for c in CLASSES]] for k in keywords],
     )
-    return out, all_gaps
+    return out, keyword_gaps, element_gaps
+
+
+# BAL-19 的補內容目標（06 6.27.4，#110）：達標以關鍵字表為準（BAL-19g，玩法 PM 定；元素欄只算
+# 傷害元素，施加燃燒、冰凍、中毒這類狀態不會算進火、冰、毒）。
+TARGETS: tuple[tuple[str, str, tuple[A, ...]], ...] = (
+    *(
+        (k, "法術技", (a,))
+        for a in (A.WIS, A.WIL)
+        for k in ("ignite", "charged", "frozen", "poisoned", "prone", "collision")
+    ),
+    *((k, "武器技", (A.DEX,)) for k in ("prone", "high_ground", "charged", "poisoned")),
+)
+# 元素武器技的目標以近戰＋遠程合計算（風、聖各 3 招，#110「近戰、遠程都有」），列為已知、不算殘留。
+ELEMENT_TARGETS: tuple[str, ...] = ("wind", "holy")
+KNOWN_ZERO = (
+    "summon × 感知 × 法術技：權杖召喚 0 招（召喚維持意志，6.10；玩法 PM 接受 0，靠創角提示）",
+)
+
+
+def target_rows(hand: list[Rec], reach: list[Draw]) -> tuple[list[list[object]], list[str]]:
+    """BAL-19 目標格子的達標表（關鍵字表）與殘留（少於 3 招）的清單。"""
+    h, t = cell_counts(hand, reach, "keyword")
+    rows: list[list[object]] = []
+    residual: list[str] = []
+    for keyword, cls, attrs in TARGETS:
+        for a in attrs:
+            hh, tt = h[(keyword, a.value, cls)], t[(keyword, a.value, cls)]
+            ok = hh + tt >= FEW
+            rows.append([keyword, a.display_name, cls, f"{hh}+{tt}", "達標" if ok else "**未達**"])
+            if not ok:
+                residual.append(
+                    f"{keyword} × {a.display_name} × {cls}：{hh + tt} 招（手寫 {hh}＋模板 {tt}）"
+                )
+    return rows, residual
+
+
+def element_weapon_rows(hand: list[Rec], reach: list[Draw]) -> list[list[object]]:
+    """風、聖元素武器技（近戰力量＋遠程敏捷合計）。"""
+    h, t = cell_counts(hand, reach, "element")
+    rows: list[list[object]] = []
+    for e in ELEMENT_TARGETS:
+        parts = [(h[(e, a.value, "武器技")], t[(e, a.value, "武器技")]) for a in (A.STR, A.DEX)]
+        total = sum(x + y for x, y in parts)
+        detail = "、".join(
+            f"{a.display_name} {x}+{y}" for a, (x, y) in zip((A.STR, A.DEX), parts, strict=True)
+        )
+        rows.append([e, detail, total, "達標（已知）" if total >= FEW else "**未達**"])
+    return rows
+
+
+def section_targets(hand: list[Rec], reach: list[Draw]) -> tuple[list[str], list[str]]:
+    rows, residual = target_rows(hand, reach)
+    out = [
+        "## 2t. BAL-19 補內容目標（關鍵字表；06 6.27.4，#110）",
+        "",
+        "格子：手寫＋模板配方數，達標線 3。達標以**關鍵字表**為準（元素欄只算傷害元素）。",
+        "",
+    ]
+    out += table(["關鍵字", "屬性", "類別", "手寫+模板", "結果"], rows)
+    out += ["風、聖元素武器技（近戰＋遠程合計 3 招；列為已知）：", ""]
+    out += table(["元素", "力量／敏捷", "合計", "結果"], element_weapon_rows(hand, reach))
+    out += ["已知：", "", *[f"- {k}" for k in KNOWN_ZERO], ""]
+    out += ["殘留（目標格子少於 3 招）：", ""]
+    out += [f"- {r}" for r in residual] if residual else ["- 無"]
+    out.append("")
+    return out, residual
 
 
 # ---------------------------------------------------------------------------
@@ -645,7 +715,7 @@ def section5(seeds: int, jobs: int) -> list[str]:
         f"12 種開局 × 種子 0～{seeds - 1}（白板模式；完整技能模式一組要數秒到數十秒，不在本量測內）。"  # noqa: E501
         "`lv1`＝BAL-17 的做法（等級 1，兩次都用 1 階）；`real`＝實際升級（等級 2、3＝第 1、2 次升級，"  # noqa: E501
         "階級 1、2）。偏離張數＝`SkillOffer.off_route` 的長度（縮放屬性不在主角最高屬性 ／ 雙屬性武器"  # noqa: E501
-        "的兩個屬性內）。",
+        "的兩個屬性內，且不是靠第二屬性跟上的雙屬性技能；BAL-19g `route_rank`）。",
         "",
     ]
     for mode, _ in MODES:
@@ -750,7 +820,6 @@ def main() -> None:
     lib = default_library()
     hand = handwritten(lib)
     out: list[str] = ["# 技能模板不均衡分析（BAL-18）", ""]
-    gaps: list[str] = []
     need_reach = want & {"1", "2", "3"}
     comp, comp_failed = composer_sample(lib, args.composer_samples) if need_reach else ([], 0)
     reach = reach_draws(lib, args.reach_seeds) if need_reach else []
@@ -759,13 +828,20 @@ def main() -> None:
         out.append(f"（組合器抽樣 {args.composer_samples} 個種子，失敗 {comp_failed}。）")
         out.append("")
     if "2" in want:
-        lines, gaps = section2(lib, hand, reach)
+        lines, gaps, element_gaps = section2(lib, hand, reach)
         out += lines
         out += [
-            "### 2h. 少於 3 招的組合（主要格：武器技＝力量／敏捷，法術技＝智力／感知／意志）",
+            "### 2h. 少於 3 招的組合（關鍵字表；主要格：武器技＝力量／敏捷，法術技＝智力／感知／"
+            "意志）",
             "",
         ]
         out += [f"- {g}" for g in gaps] + [""]
+        out += [
+            "### 2h'. 元素欄少於 3 招（只算傷害元素，僅供參考，不算達標）",
+            "",
+        ]
+        out += [f"- {g}" for g in element_gaps] + [""]
+        out += section_targets(hand, reach)[0]
     if "3" in want:
         out += section3(hand, comp, reach)
     if "4" in want:
