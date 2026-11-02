@@ -81,7 +81,7 @@ def _problems(library: ContentLibrary, rules: SituationRules, **updates: Any) ->
 
 
 def test_cloud_ridge_loads(library: ContentLibrary, table: SituationTemplateTable) -> None:
-    assert len(table.templates) == 23
+    assert len(table.templates) == 28
     events = library.world_event_content.events["cloud_ridge"]
     covered = {(t.skeleton, t.solution) for t in table.templates}
     wanted = {

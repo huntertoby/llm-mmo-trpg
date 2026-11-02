@@ -134,8 +134,14 @@ def test_weather_skeleton(always: ContentLibrary, weather: str, expected: bool) 
 
 
 def test_no_candidates_no_event(always: ContentLibrary, make_char: MakeChar) -> None:
-    # 獵戶小屋白天沒有骨架（只有夜裡的燈籠隊）
-    result = world_step(always, make_world(), make_char(), TravelAction(to="hunter_hut"), NOON)
+    # 雲頂觀是 Boss 地點，不設事件
+    result = world_step(
+        always,
+        make_world(),
+        make_char(location="crystal_rift"),
+        TravelAction(to="cloud_summit"),
+        NOON,
+    )
     assert result.char.pending_event is None
     (check,) = _of(result.events, EventCheckEvent)
     assert not check.triggered
@@ -201,10 +207,10 @@ def test_follows_thread_preferred(always: ContentLibrary, make_char: MakeChar) -
         stakes_zh="一份謝禮",
         locations=["ferry_steps"],
         solutions=[{"kind": "parley"}],
-        follows=["peddler_owes_you"],
+        follows=["wolves_driven_down"],
     )
     thread = ThreadState(
-        thread="peddler_owes_you",
+        thread="wolves_driven_down",
         skeleton="wounded_peddler",
         region="cloud_ridge",
         created_at=NOON - 10,
@@ -216,7 +222,7 @@ def test_follows_thread_preferred(always: ContentLibrary, make_char: MakeChar) -
         trigger = result.char.pending_event
         assert trigger is not None
         assert trigger.skeleton == "peddler_returns"
-        assert trigger.follows_thread == "peddler_owes_you"
+        assert trigger.follows_thread == "wolves_driven_down"
         assert "peddler_returns" in trigger.candidates
 
 
@@ -303,3 +309,39 @@ def test_trigger_candidates_must_be_sorted() -> None:
             day_phase="day",
             at=0,
         )
+
+
+@pytest.mark.parametrize(
+    ("start", "location", "thread", "expected"),
+    [
+        ("sword_tomb", "crystal_rift", "scarface_grudge", "shard_convoy"),
+        ("sword_tomb", "crystal_rift", "temple_traitor", "shard_convoy"),
+        ("sword_tomb", "crystal_rift", "shards_under_den", "shard_convoy"),
+        ("bamboo_path", "rain_terraces", "wolves_driven_down", "gang_toll"),
+    ],
+)
+def test_cloud_ridge_follows_picks_following_skeleton(
+    always: ContentLibrary,
+    *,
+    make_char: MakeChar,
+    start: str,
+    location: str,
+    thread: str,
+    expected: str,
+) -> None:
+    """18.4 補充的 follows 對照：持有該線頭時，接它的骨架被優先選中（用雲嶺真實資料）。"""
+    held = ThreadState(
+        thread=thread,
+        skeleton="x",
+        region="cloud_ridge",
+        created_at=NOON - 10,
+        expires_at=NOON + 1000,
+    )
+    for counter in range(8):
+        char = make_char(location=start, threads=(held,), rng_counters={"event": counter})
+        result = world_step(always, make_world(), char, TravelAction(to=location), NOON)
+        trigger = result.char.pending_event
+        assert trigger is not None
+        assert trigger.skeleton == expected
+        assert trigger.follows_thread == thread
+        assert len(trigger.candidates) >= 2  # 沒有線頭時還有別的骨架可選
