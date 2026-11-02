@@ -217,6 +217,33 @@ _SEEDS_54C = frozenset(
 )
 
 
+# BAL-19b（玩法決定 #110，06 6.27.4）：意志縮放的組合主題法術
+# （暗影、詛咒、恐懼、沉默＋附帶元素或倒地、撞擊）。補同路線供給，由關鍵字池給出；
+# 沒有放進任何 build 或單位（避免改動模擬與快照）。
+_SEEDS_BAL19B = frozenset(
+    {
+        "skill_wil_ashen_curse",
+        "skill_wil_chill_dread",
+        "skill_wil_cinder_hex",
+        "skill_wil_crushing_hex",
+        "skill_wil_dread_kneel",
+        "skill_wil_dread_pyre",
+        "skill_wil_dread_recoil",
+        "skill_wil_frost_hex",
+        "skill_wil_grave_frost",
+        "skill_wil_plague_shade",
+        "skill_wil_rotting_whisper",
+        "skill_wil_shadow_shove",
+        "skill_wil_shadow_snare",
+        "skill_wil_static_silence",
+        "skill_wil_storm_hex",
+        "skill_wil_thunder_dread",
+        "skill_wil_venom_hex",
+        "skill_wil_void_pull",
+    }
+)
+
+
 def _skills() -> list[SkillDef]:
     return list(library().skills.values())
 
@@ -227,6 +254,7 @@ def _equipped() -> set[str]:
     ids |= {s for unit in lib.units.values() for s in unit.skills}
     ids |= _POOL_ONLY
     ids |= _SEEDS_54C
+    ids |= _SEEDS_BAL19B
     # 3G-G3b：裝備的授予動作詞條授予的常駐技能也算被裝備
     ids |= {a.skill for a in lib.affixes.values() if a.category == "action"}
     # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備
