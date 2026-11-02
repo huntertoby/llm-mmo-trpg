@@ -39,6 +39,7 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.battle import begin_battle
 from trpg.engine.results import battle_result
 from trpg.engine.runner import advance
+from trpg.engine.setup import BattleSetup
 from trpg.roguelite.offers import at_run_tier
 from trpg.roguelite.progress import hero_unit_id
 from trpg.roguelite.start import new_run
@@ -190,6 +191,7 @@ class Job(NamedTuple):
     loc_level: int
     hero_level: int
     seeds: tuple[int, ...]
+    grow_companions: bool = False
 
 
 class Row(NamedTuple):
@@ -218,7 +220,10 @@ def run_job(job: Job) -> list[Row]:
         encounter = make_encounter(library, job.location, job.loc_level, seed)
         start = char.model_copy(update={"pending_encounter": encounter})
         prepared = world_battle.prepare_battle(library, start)
-        opening = begin_battle(prepared.setup, prepared.seed)
+        setup = prepared.setup
+        if job.grow_companions:
+            setup = with_grown_companions(library, setup, job.hero_level)
+        opening = begin_battle(setup, prepared.seed)
         state, _, _ = advance(opening.state, opening.pending, policy)
         result = battle_result(state)
         hero = result.ally(hero_unit_id(state))
@@ -246,12 +251,31 @@ def run_job(job: Job) -> list[Row]:
     return rows
 
 
+def with_grown_companions(library: ContentLibrary, setup: BattleSetup, level: int) -> BattleSetup:
+    """標準隊友照主角等級成長（同敵人基準：每級 +2 屬性加最高項、HP +5%、07 7.6 階級）。"""
+    if level <= 1:
+        return setup
+    grow = grow_variant(*BASE_VARIANT)
+    units = list(setup.units)
+    extra: dict[str, SkillDef] = {}
+    for index, unit in enumerate(units):
+        if index == 0 or unit.team is not Team.ALLY:
+            continue
+        grown, skills = grow(library, unit.template, level)
+        extra.update((k.id, k) for k in skills)
+        units[index] = unit.model_copy(update={"template": grown})
+    ruleset = setup.ruleset.with_skills(extra[k] for k in sorted(extra))
+    return setup.model_copy(update={"units": tuple(units), "ruleset": ruleset})
+
+
 def make_jobs(
     library: ContentLibrary,
     variants: Sequence[tuple[int, int]],
     builds: Sequence[str],
     seeds: int,
     gaps: Sequence[int],
+    *,
+    grow_companions: bool,
 ) -> list[Job]:
     jobs = []
     for variant in variants:
@@ -261,7 +285,17 @@ def make_jobs(
                 if hero_level < 1:
                     continue
                 for build in builds:
-                    jobs.append(Job(variant, build, loc, level, hero_level, tuple(range(seeds))))
+                    jobs.append(
+                        Job(
+                            variant,
+                            build,
+                            loc,
+                            level,
+                            hero_level,
+                            tuple(range(seeds)),
+                            grow_companions,
+                        )
+                    )
     return jobs
 
 
@@ -332,7 +366,9 @@ def cmd_encounter(args: argparse.Namespace) -> int:
     builds = args.builds.split(",") if args.builds else [b.id for b in library.builds.sim_builds()]
     variants = parse_variants(args.variants)
     gaps = [int(g) for g in args.gaps.split(",")]
-    jobs = make_jobs(library, variants, builds, args.seeds, gaps)
+    jobs = make_jobs(
+        library, variants, builds, args.seeds, gaps, grow_companions=args.grow_companions
+    )
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
@@ -530,6 +566,9 @@ def main(argv: list[str] | None = None) -> int:
     enc.add_argument("--variants", default="2:50")
     enc.add_argument("--gaps", default="0,2", help="主角比地點低幾級（逗號分隔）")
     enc.add_argument("--name", default="encounter")
+    enc.add_argument(
+        "--grow-companions", action="store_true", help="標準隊友照主角等級成長（基準規則）"
+    )
     enc.add_argument("--out", default=".scratch_5asim")
     rep = sub.add_parser("report")
     rep.add_argument("csv", nargs="+")
