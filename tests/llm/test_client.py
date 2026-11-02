@@ -142,6 +142,21 @@ def test_enable_thinking_in_request_and_env() -> None:
     assert load_llm_config(DEFAULT_CONFIG_PATH, env=env).enable_thinking is True
 
 
+def test_reasoning_effort_only_sent_when_set() -> None:
+    bodies: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=ok_body())
+
+    client_with(handler).complete(MSGS, json_schema=SCHEMA)
+    client_with(handler, reasoning_effort="none").complete(MSGS, json_schema=SCHEMA)
+    assert "reasoning_effort" not in bodies[0]
+    assert bodies[1]["reasoning_effort"] == "none"
+    env = {"TRPG_LLM_REASONING_EFFORT": "none"}
+    assert load_llm_config(DEFAULT_CONFIG_PATH, env=env).reasoning_effort == "none"
+
+
 def test_length_with_empty_content_is_bad_response() -> None:
     def body(content: str | None) -> dict[str, Any]:
         return {"choices": [{"finish_reason": "length", "message": {"content": content}}]}

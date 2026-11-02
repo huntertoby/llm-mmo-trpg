@@ -27,6 +27,7 @@ _ENV_OVERRIDES = (
     ("timeout_s", "TRPG_LLM_TIMEOUT_S"),
     ("api_key", "TRPG_LLM_API_KEY"),
     ("enable_thinking", "TRPG_LLM_ENABLE_THINKING"),
+    ("reasoning_effort", "TRPG_LLM_REASONING_EFFORT"),
     ("generate", "TRPG_LLM_GENERATE"),
 )
 
@@ -54,6 +55,9 @@ class LLMConfig(BaseModel):
     enable_thinking: bool = False
     """Qwen3 等模型預設會先「思考」而把 ``max_tokens`` 用光；請求一律帶
     ``chat_template_kwargs: {"enable_thinking": …}``（Phase 4-L5 實測）。"""
+    reasoning_effort: str | None = None
+    """有值時請求多帶 ``reasoning_effort``；LM Studio 上的 Gemma 不認 ``chat_template_kwargs``，
+    要 ``"none"`` 才不思考（2026-11-03 實測）。預設不送（vLLM 不一定接受 ``none``）。"""
 
 
 def load_llm_config(path: Path | None = None, env: Mapping[str, str] | None = None) -> LLMConfig:
