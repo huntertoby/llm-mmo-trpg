@@ -59,6 +59,24 @@ export function formRows(unit: UnitView): [string, ReactNode][] {
   return rows;
 }
 
+/** 單位的「特性」欄（Phase 5A-M1b，玩法決定 #82）：招牌被動、反應、開場狀態與精英詞綴，一項一行；沒有時不列。 */
+export function traitRows(unit: UnitView): [string, ReactNode][] {
+  const lines = unit.traits_zh ?? [];
+  if (lines.length === 0) return [];
+  return [
+    [
+      "特性",
+      <div key="traits" className="unit-traits">
+        {lines.map((line) => (
+          <div key={line}>
+            <RuleText text={line} />
+          </div>
+        ))}
+      </div>,
+    ],
+  ];
+}
+
 export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
@@ -81,6 +99,7 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
     ...(unit.race == null
       ? []
       : [["種族", `${unit.race.name_zh}（種族技：${unit.race.skill_name_zh}；被動：${unit.race.passive_name_zh}）`] as [string, ReactNode]]),
+    ...traitRows(unit),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],
   ];

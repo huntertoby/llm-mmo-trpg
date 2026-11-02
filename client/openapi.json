@@ -13718,6 +13718,14 @@
             "title": "Offhand Traits Zh",
             "default": []
           },
+          "traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Traits Zh",
+            "default": []
+          },
           "ammo": {
             "type": "integer",
             "title": "Ammo",
