@@ -131,6 +131,7 @@ from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies
 from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_oaths import OathTable
+from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
@@ -590,6 +591,9 @@ class ContentLibrary:
     world_event_content: WorldEventContent = field(default_factory=WorldEventContent)
     """事件骨架、NPC 人設卡、事件規則（``world/events/``、``world/npcs/``、
     ``world/event_rules.yaml``，Phase 5B-1）；沒有資料時為空。"""
+    world_quests: WorldQuestContent = field(default_factory=WorldQuestContent)
+    """任務、聊天內容、事件好感度、酒館傳聞與好感度規則（``world/quests/``、``world/social/``、
+    ``world/affinity.yaml``，Phase 5B-4）；沒有資料時為空。"""
     world_oaths: OathTable | None = None
     """誓約模板（``world/oaths.yaml``，Phase 5A-6 接點；內容在 5C-3）；沒有檔案時為 ``None``。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
@@ -868,6 +872,14 @@ def load_library(  # noqa: PLR0915
         keyword_ids={k.id for k in keywords.keywords},
         race_ids=None if races is None else races.by_id(),
     )
+    world_quests = load_world_quest_content(
+        root,
+        world_maps,
+        world_event_content,
+        files,
+        check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
+        keyword_ids={k.id for k in keywords.keywords},
+    )
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
@@ -928,6 +940,7 @@ def load_library(  # noqa: PLR0915
         world_enemies=world_enemies,
         world_encounters=world_encounters,
         world_event_content=world_event_content,
+        world_quests=world_quests,
         world_oaths=world_oaths,
         files=files,
     )
@@ -1416,6 +1429,16 @@ def _check_skills(
             problems.append(cost)
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
+
+
+def _story_skill_problems(
+    skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef], budget: BudgetRules
+) -> list[str]:
+    """劇情技能（``world/quests/`` 的 ``story_skills``，Phase 5B-4）的引用與費用檢查（同
+    ``content/skills/``；不進技能池）。"""
+    problems = skill_reference_problems(skill, ruleset, skills)
+    cost = budget.cost_problem(skill.category, skill.cost)
+    return problems if cost is None else [*problems, cost]
 
 
 def _keyword_rule_problems(
