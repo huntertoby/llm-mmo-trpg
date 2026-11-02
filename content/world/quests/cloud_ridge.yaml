@@ -64,7 +64,7 @@ quests:
               - {kind: affinity, npc: acolyte_xiaolian, rank: friendly}
               - {kind: affinity, npc: daoist_qingya, rank: friendly}
               - {kind: hold_thread, thread: temple_pass}
-        npcs: [daoist_qingya]
+        npcs: [acolyte_xiaolian, daoist_qingya]  # 5B-4d：小蓮＝主線第 ②、③ 步各 +10（18.7.6）
         reward: {xp_source: main_step, xp_level: 2, story_skill: skill_mist_breaker}
       - id: temple_split
         text_zh: 觀內分裂：弄清楚誰在私通斷崖幫

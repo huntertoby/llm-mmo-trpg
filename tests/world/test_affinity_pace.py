@@ -98,6 +98,16 @@ def test_one_or_two_npcs_trusted_by_day_5(library: ContentLibrary) -> None:
     assert all(d > 3 for d in reached), days
 
 
+def test_xiaolian_gains_on_main_steps_2_and_3(library: ContentLibrary) -> None:
+    """5B-4d（18.7.6 個別來源）：小蓮＝主線第 ②、③ 步各 +10（代決 5B4d-1：通用的任務步驟好感度）。"""
+    steps = library.world_quests.quests[REGION].quest_by_id()["main_mist_rift"].steps
+    with_xiaolian = [i + 1 for i, s in enumerate(steps) if "acolyte_xiaolian" in s.npcs]
+    assert with_xiaolian == [2, 3]
+    assert affinity_rules(library).quest_step_delta == 10
+    _, curve = trust_days(library)["acolyte_xiaolian"]
+    assert curve[1] - curve[0] == 10 + 10 + 3  # 第 2 天：主線 ②、迷路的道童、聊天
+
+
 if __name__ == "__main__":  # pragma: no cover — 報告用
     for npc, (day, curve) in trust_days(load_library()).items():
         print(f"{npc:18} 信賴：第 {day} 天" if day else f"{npc:18} 信賴：—", curve)
