@@ -72,8 +72,12 @@ def sim_library() -> ContentLibrary:
     global _LIB  # noqa: PLW0603
     if _LIB is None:
         library = load_library()
-        roguelite = library.roguelite.model_copy(update={"level_thresholds": SIM_THRESHOLDS})
-        _LIB = dataclasses.replace(library, roguelite=roguelite)
+        rules = library.world_rules
+        assert rules is not None
+        growth = rules.hero_growth.model_copy(update={"level_thresholds": SIM_THRESHOLDS})
+        _LIB = dataclasses.replace(
+            library, world_rules=rules.model_copy(update={"hero_growth": growth})
+        )
     return _LIB
 
 
@@ -221,8 +225,6 @@ def run_job(job: Job) -> list[Row]:
         start = char.model_copy(update={"pending_encounter": encounter})
         prepared = world_battle.prepare_battle(library, start)
         setup = prepared.setup
-        if job.grow_companions:
-            setup = with_grown_companions(library, setup, job.hero_level)
         opening = begin_battle(setup, prepared.seed)
         state, _, _ = advance(opening.state, opening.pending, policy)
         result = battle_result(state)

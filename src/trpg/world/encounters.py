@@ -89,10 +89,12 @@ def roll_lineup(library: ContentLibrary, encounter: EncounterResult) -> Encounte
     if entry is None:
         raise WorldError(f"地點 {encounter.location} 沒有遭遇表")
     world_map = library.world_maps[encounter.region]
-    kind = world_map.location_by_id()[encounter.location].kind
+    place = world_map.location_by_id()[encounter.location]
+    kind = place.kind
+    gate_level = place.level_min if place.level_min is not None else encounter.level
     rng = lineup_rng(encounter.battle_seed)
     group = _pick_group(rng, table, entry)
-    members = [LineupMember(unit=u) for u in group.units]
+    members = [LineupMember(unit=_gated(u, entry, gate_level)) for u in group.units]
     catalog = library.enemy_catalog()
     if entry.elite is not None:
         members.insert(0, LineupMember(unit=entry.elite.unit, affix=entry.elite.affix))
@@ -138,7 +140,9 @@ def reinforce_lineup(
     entry = table.location_by_id()[encounter.location]
     catalog = library.enemy_catalog()
     groups = table.group_by_id()
-    names = sorted({u for g in entry.groups for u in groups[g.group].units})
+    place = library.world_maps[encounter.region].location_by_id()[encounter.location]
+    level = place.level_min if place.level_min is not None else encounter.level
+    names = sorted({_gated(u, entry, level) for g in entry.groups for u in groups[g.group].units})
     pool = [n for n in names if not catalog.is_elite(catalog.template(n))]
     members = list(lineup.members)
     ranged = sum(1 for t in lineup_templates(library, lineup) if catalog.is_ranged(t))
@@ -146,7 +150,7 @@ def reinforce_lineup(
     added = 0
     enemy_first = False
     for _ in range(count):
-        ranged_ok = ranged < table.ranged_cap
+        ranged_ok = ranged < (table.ranged_cap if entry.ranged_cap is None else entry.ranged_cap)
         options = [n for n in pool if ranged_ok or not catalog.is_ranged(catalog.template(n))]
         if len(members) >= MAX_GROUP_SIZE or not options:
             enemy_first = True
@@ -170,6 +174,14 @@ def elite_kinds(library: ContentLibrary, lineup: EncounterLineup) -> tuple[str, 
         elif member.affix is not None:
             kinds.add(f"{member.unit}+{member.affix}")
     return tuple(sorted(kinds))
+
+
+def _gated(unit: str, entry: LocationEncounters, level: int) -> str:
+    """單位的等級門檻（``unit_min_levels``）：等級不夠時換成指定的單位。"""
+    for gate in entry.unit_min_levels:
+        if gate.unit == unit and level < gate.min_level:
+            return gate.otherwise
+    return unit
 
 
 def _pick_group(rng: Rng, table: EncounterTable, entry: LocationEncounters) -> EncounterGroupDef:

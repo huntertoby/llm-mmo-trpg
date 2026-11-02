@@ -30,7 +30,7 @@ from trpg.roguelite.attributes import allocate_attributes, respec_attributes
 from trpg.roguelite.errors import RunError
 from trpg.roguelite.flashes import dissolve, inherit, open_flash, owned_skills, pick_flash
 from trpg.roguelite.growth import set_loadout
-from trpg.roguelite.progress import level_for, with_hp_change
+from trpg.roguelite.progress import with_hp_change
 from trpg.roguelite.retier import sync_skill_tier
 from trpg.roguelite.state import (
     CampfireNode,
@@ -78,6 +78,7 @@ __all__ = [
     "loadout_skills",
     "skill_seed",
     "sync_tier",
+    "world_level_for",
     "world_library",
 ]
 
@@ -206,14 +207,19 @@ def _require_service(library: ContentLibrary, char: CharacterState, what: str) -
 # ---------------------------------------------------------------------------
 
 
+def world_level_for(library: ContentLibrary, xp: int) -> int:
+    """累計經驗 ``xp`` 對應的等級（``hero_growth.level_thresholds``，5A-SIM2；不套上限）。"""
+    return 1 + sum(1 for t in rules_of(library).hero_growth.level_thresholds if xp >= t)
+
+
 def gain_xp(
     library: ContentLibrary, world: WorldState, char: CharacterState, xp: int
 ) -> tuple[CharacterState, list[WorldEvent]]:
-    """加經驗並立刻判定升級（所有經驗來源共用）。等級照原型門檻、不超過 ``level_cap``；每級屬性點、
+    """加經驗並立刻判定升級（所有經驗來源共用）。等級照世界門檻、不超過 ``level_cap``；每級屬性點、
     靈感點、HP／法力上限同步（同 roguelite ``with_hp_change``）；升完後角色階級變了就重配技能。"""
     growth = rules_of(library).hero_growth
     char = char.model_copy(update={"xp": char.xp + xp})
-    target = min(level_for(library, char.xp), growth.level_cap)
+    target = min(world_level_for(library, char.xp), growth.level_cap)
     events: list[WorldEvent] = []
     while char.level < target:
         before = as_run(char)

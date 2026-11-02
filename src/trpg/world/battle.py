@@ -80,10 +80,12 @@ from trpg.world.state import (
 __all__ = [
     "PreparedBattle",
     "auto_steps",
+    "battle_xp",
     "encounter_map",
     "enemy_level",
     "fight",
     "first_team",
+    "grow_allies",
     "grow_enemy",
     "hero_start_hp",
     "hero_statuses",
@@ -149,6 +151,27 @@ def reskin(library: ContentLibrary, map_def: MapDef, region: str) -> MapDef:
 # ---------------------------------------------------------------------------
 # 敵人成長（追加 A）
 # ---------------------------------------------------------------------------
+
+
+def battle_xp(library: ContentLibrary, encounter: EncounterResult, lineup: EncounterLineup) -> int:
+    """打贏一場給的經驗（5A-SIM2 方案 B）：1 份隨地點建議等級；陣容含精英給 ``elite`` 份，否則
+    ``battle`` 份。"""
+    source = "elite" if elite_kinds(library, lineup) else "battle"
+    return rules_of(library).xp.xp_for(source, enemy_level(library, encounter))
+
+
+def grow_allies(
+    library: ContentLibrary, units: Sequence[UnitSpawn], level: int
+) -> tuple[tuple[UnitSpawn, ...], tuple[SkillDef, ...]]:
+    """標準隊友（之後的傭兵、影子同一條）照主角等級 ``level`` 成長（5A-SIM2：同 :func:`grow_enemy`
+    的規則）；回傳成長後的單位與要加進規則包的重配技能。"""
+    grown: list[UnitSpawn] = []
+    extra: dict[str, SkillDef] = {}
+    for unit in units:
+        template, skills = grow_enemy(library, unit.template, level)
+        extra.update((s.id, s) for s in skills)
+        grown.append(unit.model_copy(update={"template": template}))
+    return tuple(grown), tuple(extra[k] for k in sorted(extra))
 
 
 def enemy_level(library: ContentLibrary, encounter: EncounterResult) -> int:
@@ -295,6 +318,8 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         max_rounds=rules_of(library).battle.max_rounds,
         weather=encounter.weather,
     )
+    allies, ally_skills = grow_allies(library, base.units, char.level)
+    extra.update((s.id, s) for s in ally_skills)
     extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
     hp = hero_start_hp(library, char)
     ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
@@ -303,7 +328,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         update={
             "map": map_def,
             "ruleset": ruleset,
-            "units": (_hero_spawn(library, char, hp), *base.units, *enemies),
+            "units": (_hero_spawn(library, char, hp), *allies, *enemies),
             "first_team": first,
         }
     )
@@ -407,7 +432,7 @@ def fight(
         )
     else:
         char, more = _lost(library, char, hero.mana)
-    xp_gained = rules_of(library).battle.xp_per_battle if won else 0
+    xp_gained = battle_xp(library, encounter, prepared.lineup) if won else 0
     ended = BattleEndedEvent(
         won=won,
         end_reason=result.end_reason,
@@ -494,7 +519,7 @@ def _won(
             "pending_encounter": None,
         }
     )
-    char, events = gain_xp(library, world, char, rules.xp_per_battle)
+    char, events = gain_xp(library, world, char, battle_xp(library, encounter, lineup))
     char, insight = _elite_first_kills(library, char, lineup)
     events += insight
     kind = world_map_of(library, encounter.region).location_by_id()[encounter.location].kind

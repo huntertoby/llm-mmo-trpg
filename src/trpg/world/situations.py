@@ -42,6 +42,7 @@ from trpg.world.actions import (
     ThreadPushedOutEvent,
     WorldEvent,
 )
+from trpg.world.common import location_level
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import gain_xp
 from trpg.world.rng import STREAM_CHECK, draw
@@ -353,7 +354,11 @@ def _apply_outcome(
     supplies_cap = library.world_rules.supplies.max if library.world_rules is not None else 0
     supplies = max(0, char.supplies - pen.supplies)
     supplies = min(supplies_cap, supplies + min(rew.supplies, budget.supplies_max))
-    battle_xp = library.world_rules.battle.xp_per_battle if library.world_rules is not None else 0
+    battle_xp = (
+        library.world_rules.xp.share_xp(location_level(library, char.region, char.location))
+        if library.world_rules is not None
+        else 0
+    )
     xp = budget.xp_for(battle_xp) * rew.xp_permille // 1000
     hp_lost = 0
     if pen.hurt_permille:

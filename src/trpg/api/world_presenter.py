@@ -132,8 +132,8 @@ def _slots_zh(library: ContentLibrary) -> str:
 
 
 def _character_view(library: ContentLibrary, char: CharacterState) -> WorldCharacterView:
-    thresholds = library.roguelite.level_thresholds
     rules = rules_of(library)
+    thresholds = rules.hero_growth.level_thresholds
     return WorldCharacterView(
         character_id=char.character_id,
         name=char.hero.name_zh,

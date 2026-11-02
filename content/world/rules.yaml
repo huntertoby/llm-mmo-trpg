@@ -48,12 +48,10 @@ weather:
     day: {clear: 1, rain: 3, fog: 3}
     night: {night: 1, rain: 3, fog: 3}
 # 遇敵戰鬥與勝負回寫（Phase 5A-4；docs/phases/Phase5計畫.md 8.4，代決 5A4-7～5A4-13）。
-# - xp_per_battle：打贏一場的經驗（Q8 初值）；等級門檻沿用原型（roguelite.yaml level_thresholds）。
 # - fatigue_hp_permille：全滅後下一場「疲憊」開場 HP 上限（9.6.9 #98「開場 HP 80%」）。
 # - clear_kinds／respawn_seconds：打贏後寫「已清空」的地點種類與重生秒數（9.6.7 #15；遊戲內 1 天）。
 battle:
   max_rounds: 30
-  xp_per_battle: 100
   fatigue_hp_permille: 800
   clear_kinds: [camp]
   respawn_seconds: 1800
@@ -61,9 +59,25 @@ battle:
 enemy_growth:
   attribute_points_per_level: 2
   skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]
-# 主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。經驗門檻沿用原型 level_thresholds（5A-SIM 再定）。
+# 主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。level_thresholds：2～10 級累計經驗（5A-SIM2 方案 B）。
 hero_growth:
+  level_thresholds: [950, 3800, 8600, 14350, 20200, 26050, 31950, 37800, 43650]
   skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]   # 07 7.6（玩法 PM 定）
   insight_per_level: 2        # 每升 1 級 2 點靈感
   insight_per_elite_kind: 1   # 每種精英首殺 1 點
   level_cap: 10               # 第一季等級上限（09 9.7）
+# 經驗（5A-SIM2，玩法 PM 代決 2026-11-03；07 7.8 方案 B）：1 份＝base ×（1 ＋ level_permille‰ ×（地點建議等級 − 1））。
+# shares_permille：各來源給幾份（1000＝1 份）。battle 一般戰鬥、elite 陣容含精英；situation_* 情境判定；
+# quest_chain_step／main_step／bounty／hidden_location 等那些功能做好時接上。
+xp:
+  base: 100
+  level_permille: 100
+  shares_permille:
+    battle: 1000
+    elite: 3000
+    situation_success: 500
+    situation_partial: 250
+    quest_chain_step: 3000
+    main_step: 5000
+    bounty: 4000
+    hidden_location: 2000

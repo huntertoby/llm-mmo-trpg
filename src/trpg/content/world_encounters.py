@@ -26,6 +26,7 @@ __all__ = [
     "FixedElite",
     "GroupWeight",
     "LocationEncounters",
+    "UnitMinLevel",
     "encounter_table_problems",
 ]
 
@@ -63,9 +64,22 @@ class FixedElite(ContentModel):
     affix: str = Field(pattern=ID_PATTERN)
 
 
+class UnitMinLevel(ContentModel):
+    """單位的等級門檻（5A-SIM2）：地點的敵人等級低於 ``min_level`` 時，陣容裡的 ``unit`` 換成
+    ``otherwise``。"""
+
+    unit: str = Field(pattern=ID_PATTERN)
+    min_level: int = Field(ge=1)
+    otherwise: str = Field(pattern=ID_PATTERN)
+
+
 class LocationEncounters(ContentModel):
     location: str = Field(pattern=ID_PATTERN)
     groups: tuple[GroupWeight, ...] = Field(min_length=1)
+    ranged_cap: int | None = Field(default=None, ge=0)
+    """這個地點每場遠程敵人的上限；省略＝用整區的 ``ranged_cap``（5A-SIM2：雲海吊橋 1）。"""
+    unit_min_levels: tuple[UnitMinLevel, ...] = ()
+    """單位的等級門檻（5A-SIM2：寒湖的石背熊 4 級以上才出現，其他換霧狼）。"""
     elite: FixedElite | None = None
     ally_first_threads: tuple[str, ...] = ()
     """持有其中任一條有效線頭時，在這個地點的戰鬥我方先手（Phase 5A-6；18.4 補充「斷崖幫寨的
@@ -202,7 +216,29 @@ def _location_problems(
         members = [groups[g.group] for g in loc.groups if g.group in groups]
         if any(not catalog.has(u) for m in members for u in m.units):
             continue  # 陣容的問題已經回報過
+        problems += _gate_problems(loc, members, table, catalog)
         problems += _elite_problems(loc, place.kind, members, table, catalog)
+    return problems
+
+
+def _gate_problems(
+    loc: LocationEncounters,
+    members: list[EncounterGroupDef],
+    table: EncounterTable,
+    catalog: EnemyCatalog,
+) -> list[str]:
+    where = f"地點 {loc.location}"
+    problems = [
+        f"{where}：單位門檻用了未知的單位 {u}"
+        for gate in loc.unit_min_levels
+        for u in (gate.unit, gate.otherwise)
+        if not catalog.has(u)
+    ]
+    cap = table.ranged_cap if loc.ranged_cap is None else loc.ranged_cap
+    for group in members:
+        ranged = sum(1 for u in group.units if catalog.is_ranged(catalog.template(u)))
+        if ranged > cap:
+            problems.append(f"{where}：陣容 {group.id} 遠程 {ranged} 名，超過地點上限 {cap}")
     return problems
 
 

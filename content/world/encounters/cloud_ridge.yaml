@@ -57,6 +57,7 @@ locations:
     groups: [{group: altar_wardens}]
   - location: cloud_sea_bridge
     groups: [{group: sword_array}, {group: bridge_patrol}]
+    ranged_cap: 1   # 5A-SIM2：雲海吊橋每個陣容最多 1 名遠程（高處只留雲鶴使，沒有符籙師）
   - location: herb_valley
     groups: [{group: valley_keepers}, {group: valley_beasts}]
   - location: elixir_cave
@@ -66,6 +67,7 @@ locations:
     elite: {unit: mist_wolf, affix: berserk}   # 懸賞「北坡狼王」（18.7.4）
   - location: winter_lake
     groups: [{group: lake_hunters}, {group: lake_bears}]
+    unit_min_levels: [{unit: stoneback_bear, min_level: 4, otherwise: mist_wolf}]   # 5A-SIM2：石背熊 4 級以上才出現
   - location: sword_tomb
     groups: [{group: tomb_array}, {group: tomb_swordsmen}]
   - location: crystal_rift
