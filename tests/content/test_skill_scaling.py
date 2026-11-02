@@ -37,7 +37,8 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ 3-54c 的 14 招風毒聖種子 ＋ 3-54d 的 2 招大地種子 ＋ 3-54e 的 2 招大地種子
     # ＋ 3J-1a 的 5 招測試用形態 ＋ 3J-1b 的 5 招 ＋ 3J-3 的化形專精 ＋ 3J-4 的 3 招形態利用者
     # ＋ 3J-4c 的解形爆發 ＋ BAL-19a 的 16 招感知、BAL-19b 的 18 招意志組合主題法術
-    assert len(BUILTIN) == 335
+    # ＋ BAL-19c 的 9 招召喚武器技
+    assert len(BUILTIN) == 344
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

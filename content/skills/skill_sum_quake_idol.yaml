@@ -1,0 +1,24 @@
+# BAL-19c（玩法決定 #110，06 6.27.4；數值為初值，未經模擬）：召喚物關鍵字的武器技——近戰召喚石像（固有撞擊）。
+# 武器技看手上武器的屬性（3H-6），召喚物的 HP 與傷害跟著武器屬性成長（6.29.1）；召喚法術仍看意志（6.10 不改）。
+id: skill_sum_quake_idol
+schema_version: 1
+name_zh: 撼地立像
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: ground_tile, range: 2}
+effects:
+  - {type: summon, unit: summon_golem, duration: 2}
+condition: null
+cost: {stamina: 8, cooldown: 4}
+tags: [earth, melee, summon]
+narrative:
+  concept: 用武器重重砸地，震出一尊石像替你頂住前線、把敵人撞開
+  cast_flavor: 一記重擊砸進地面，碎石隨震波隆起，拼成一尊沉默的巨影
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
