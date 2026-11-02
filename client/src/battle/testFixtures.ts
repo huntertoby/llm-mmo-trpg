@@ -117,7 +117,7 @@ export function smallView(over: Partial<BattleView> = {}): BattleView {
     max_rounds: 30,
     weather_id: null,
     weather_name_zh: null,
-    objective: { kind: "eliminate", tiles: [], rounds: null },
+    objective: { kind: "eliminate", tiles: [], rounds: null, leader_retreat: false },
     ended: false,
     winner: null,
     end_reason: null,

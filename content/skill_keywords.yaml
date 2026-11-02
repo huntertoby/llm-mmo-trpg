@@ -62,6 +62,8 @@ keywords:
       - {condition: target_on_surface, surface: water}
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
+      - {effect: heal, grade: general, reason_zh: 站在水上的目標受到的治療 +20%}   # 通用：潮濕 × 治療（BAL-16b，玩法決定 #93；core.yaml wet_heal_permille；不含護盾）
+      - {change: heal_permille, grade: general, reason_zh: 治療類修正：站在水上的目標受到的治療 +20%}   # 通用：同上
   - id: charged
     name_zh: 帶電
     description_zh: 雷電沿水與連鎖擴散，靜電可以累積成更強的一擊。

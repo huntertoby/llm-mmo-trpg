@@ -3748,7 +3748,8 @@
    "status_look": null,
    "rules_zh": [
     "擊倒所有敵人即勝；我方全部倒下即敗",
-    "召喚物不計入（不用打倒敵方召喚物，我方召喚物倒下也不算全滅）"
+    "召喚物不計入（不用打倒敵方召喚物，我方召喚物倒下也不算全滅）",
+    "Boss 戰：頭目倒下時，剩下的護衛撤退，直接勝利"
    ]
   },
   {
@@ -3825,6 +3826,14 @@
    "id": "result_point_lost",
    "name_zh": "守點失守",
    "description_zh": "守點失守：敵人占領了守點。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "result_leader_defeated",
+   "name_zh": "頭目倒下",
+   "description_zh": "頭目倒下：剩下的護衛撤退，戰鬥勝利。",
    "tags": [],
    "status_look": null,
    "rules_zh": []
