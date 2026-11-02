@@ -335,6 +335,12 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[-8, 0], [0, -8], [8, 0]]); // 雙箭頭↑（全屬性提升）
     line(c, [[-8, 8], [0, 0], [8, 8]]);
   },
+  commanding: (c) => {
+    line(c, [[-9, 9], [-1, -1]]); // 號令（BAL-19f）：指揮棒＋召喚物（小圓）＋↑（召喚物傷害提高）
+    circle(c, -3, -5, 2.4, true);
+    circle(c, 3, 5, 3.5);
+    arrow(c, 8, -3, true);
+  },
   infused_fire: (c) => {
     sword(c); // 臨時附魔（3I-6）：劍＋火星
     circle(c, 7, -7, 2.8, true);

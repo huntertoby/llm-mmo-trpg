@@ -125,3 +125,14 @@
 4. **觸發「每種 ≥ 2」以配方總數算**：暴擊白板 1 階 0 個（2 階起 2 個）；watch_mark 只到 2 階；毒霧只有 1 階（錐形狀態在高階湊不到下限）。
 5. **形狀上限**：錐形深度 2～4（最多 16 格）、環形半徑 1～2 照組合器既有範圍出，沒有另外限「小範圍」；預算會把傷害壓低。
 6. 新增配方、號令、火杖召喚的數值都是初值，沒有跑模擬。
+
+## 合併後修正
+
+合併進 main 後，19f 沒跑到的 5 個測試失敗，原因與修法：
+
+1. `test_every_status_has_a_polarity_consistent_with_beneficial`：新狀態 `commanding`（buff、beneficial）不在測試的增益清單。把它加進清單，斷言不變。
+2. `test_dev_packs_endpoint_and_start`：玩家介面的回應不得出現流派名；新配方改變了隨機抽到的技能，抽到的技能名「烈焰爆」（`fire_burst`）含開局包「烈焰」。把配方名改成「火焰爆」（`content/skill_composer.yaml`）；測試不動。
+3. `test_small_sampling_runs_and_reports`：同上，報表文字含「烈焰爆」，同一個修法。
+4. `skillIcon.test.ts`、5. `statusIcon.test.ts`：`commanding` 缺圖樣。在 `client/src/render/statusIcon.ts` 的 `GLYPH` 加 `commanding`（指揮棒＋召喚物小圓＋向上箭頭，走 buff 極性色）；技能部件庫由 `GLYPH` 衍生，不用另外補。狀態數量斷言改為 97。`glossary.json` 重新匯出後內容未變（19f 已匯出）。
+
+注意：歷史錄製 fixture（`client/src/run/fixtures/run_complete_offer.json` 等）裡還有舊名「烈焰爆」，沒有重產，測試不受影響。
