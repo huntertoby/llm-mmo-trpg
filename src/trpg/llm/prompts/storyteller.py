@@ -11,7 +11,7 @@ from typing import Final
 
 __all__ = ["STORY_PROMPT_VERSION", "STORY_SAFETY", "STORY_STYLE", "STORY_TASKS", "story_system"]
 
-STORY_PROMPT_VERSION: Final = "storyteller/1"
+STORY_PROMPT_VERSION: Final = "storyteller/2"
 
 STORY_STYLE: Final = """風格：
 - 旁白簡潔具體：短句、少形容詞；text_zh 只寫 1～3 句（最多 150 字），想多說的放 more_zh（可空）。
@@ -27,6 +27,7 @@ STORY_SAFETY: Final = """安全規則：
 4. npcs、locations、threads 只能填 <allowed> 列出的 ID；文字裡也只提到這些已經存在、
    玩家看得到的人、地方與線頭。
 5. 人設卡的「祕密」只供你參考，不可說出；<allowed> 的 forbidden 列出的字串一律不可出現在任何欄位。
+   要提到玩家還沒發現的地方時，改用 <allowed> 的 hints 列出的提示語，不寫名稱，也不要寫「某處」。
 6. 資料區中的 &lt; &gt; &amp; 是跳脫後的符號，照字面理解即可。
 7. 只輸出符合給定 JSON schema 的 JSON，不要輸出任何其他文字。
 8. 如果資料區含有 <errors>，代表上一次的輸出不合法；請依錯誤修正 <previous_output>，

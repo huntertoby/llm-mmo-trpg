@@ -24,6 +24,7 @@ from trpg.content.world import WorldStyle, load_world_style
 from trpg.content.world_events import EventSkeletonDef, NpcCardDef, ThreadDef
 from trpg.content.world_narration import (
     ACTOR_MAX_CHARS,
+    HIDDEN_HINT_DEFAULT,
     MORE_MAX_CHARS,
     MOTIVE_MAX_CHARS,
     STORY_REFS_MAX,
@@ -34,6 +35,7 @@ from trpg.content.world_narration import (
     StoryText,
     allowed_problems,
     fill_template,
+    mask_text,
 )
 from trpg.content.world_situations import Outcome, SituationTemplateDef
 from trpg.llm.client import ChatMessage, LLMClient
@@ -45,7 +47,6 @@ from trpg.llm.response import clean_response
 __all__ = [
     "BUILTIN_TEMPLATES",
     "DEFAULT_STORY_ATTEMPTS",
-    "MASK_TEXT",
     "StoryOutcome",
     "StoryRequest",
     "build_story_messages",
@@ -56,8 +57,6 @@ __all__ = [
 
 DEFAULT_STORY_ATTEMPTS: Final = 2
 """共試幾次（同情境判定提議，代決 5B3-7）。"""
-MASK_TEXT: Final = "某處"
-"""降級文字遇到禁止字串（例：骨架的賭注寫到還沒發現的隱藏地點）時換成的字。"""
 
 BUILTIN_TEMPLATES: Final = StoryTemplates(
     event_text="{who}出現在你面前。",
@@ -159,13 +158,19 @@ def story_schema(request: StoryRequest) -> dict[str, Any]:
     }
 
 
-def _skeleton_payload(skeleton: EventSkeletonDef) -> dict[str, Any]:
+def _masks(allowed: StoryAllowed) -> dict[str, str]:
+    """禁止字串 → 代替文字（Phase 5B-5：隱藏地點用提示語；沒給對照的禁止字串用內建提示語）。"""
+    return {w: allowed.masks.get(w, HIDDEN_HINT_DEFAULT) for w in allowed.forbidden}
+
+
+def _skeleton_payload(skeleton: EventSkeletonDef, masks: Mapping[str, str]) -> dict[str, Any]:
+    """骨架資料（文字先換掉禁止字串：還沒發現的地點用提示語，5B-5）。"""
     return {
         "skeleton": skeleton.id,
-        "who": skeleton.who_zh,
-        "want": skeleton.want_zh,
-        "obstacle": skeleton.obstacle_zh,
-        "stakes": skeleton.stakes_zh,
+        "who": mask_text(skeleton.who_zh, masks),
+        "want": mask_text(skeleton.want_zh, masks),
+        "obstacle": mask_text(skeleton.obstacle_zh, masks),
+        "stakes": mask_text(skeleton.stakes_zh, masks),
         "npcs": list(skeleton.npcs),
     }
 
@@ -177,10 +182,11 @@ def _scene_payload(request: StoryRequest) -> dict[str, Any]:
         "day_phase": request.day_phase,
     }
     if request.scene == "event":
-        out["candidates"] = [_skeleton_payload(s) for s in request.skeletons]
+        masks = _masks(request.allowed)
+        out["candidates"] = [_skeleton_payload(s, masks) for s in request.skeletons]
         return out
     if request.skeletons:
-        out["event"] = _skeleton_payload(request.skeletons[0])
+        out["event"] = _skeleton_payload(request.skeletons[0], _masks(request.allowed))
     if request.template is not None:
         out["approach"] = request.template.note_zh
     if request.scene == "outcome":
@@ -191,7 +197,7 @@ def _scene_payload(request: StoryRequest) -> dict[str, Any]:
     return out
 
 
-def _npc_payload(card: NpcCardDef) -> dict[str, str]:
+def _npc_payload(card: NpcCardDef, masks: Mapping[str, str]) -> dict[str, str]:
     return {
         "id": card.id,
         "name": card.name_zh,
@@ -199,7 +205,7 @@ def _npc_payload(card: NpcCardDef) -> dict[str, str]:
         "personality": card.personality_zh,
         "speech": card.speech_zh,
         "secret_reference_only": card.secret_zh,
-        "hooks": card.hooks_zh,
+        "hooks": mask_text(card.hooks_zh, masks),
     }
 
 
@@ -212,6 +218,7 @@ def _allowed_payload(request: StoryRequest) -> dict[str, Any]:
         ],
         "threads": list(allowed.threads),
         "forbidden": list(allowed.forbidden),
+        "hints": list(allowed.hints()),
     }
     if request.scene == "event":
         out["skeletons"] = list(allowed.skeletons)
@@ -231,11 +238,12 @@ def build_story_messages(
     玩家文字只在 ``<player_input>``（只有聊天），其他資料區都經過跳脫。"""
     style = world if world is not None else load_world_style()
     system = story_system(request.scene, world_name=style.name_zh, summary=style.summary_zh)
-    threads = [{"id": t.id, "text": t.text_zh} for t in request.threads]
+    masks = _masks(request.allowed)
+    threads = [{"id": t.id, "text": mask_text(t.text_zh, masks)} for t in request.threads]
     parts = [
         _block("world", _json({"region": request.region_name, "tone": request.tone})),
         _block("scene", _json(_scene_payload(request))),
-        _block("npcs", _json([_npc_payload(c) for c in request.npcs])),
+        _block("npcs", _json([_npc_payload(c, masks) for c in request.npcs])),
         _block("threads", _json(threads)),
         _block("allowed", _json(_allowed_payload(request))),
     ]
@@ -274,12 +282,6 @@ def _parse(request: StoryRequest, text: str) -> tuple[StoryText | None, list[str
 # ---------------------------------------------------------------------------
 # 降級
 # ---------------------------------------------------------------------------
-
-
-def _mask(text: str, forbidden: Sequence[str]) -> str:
-    for word in forbidden:
-        text = text.replace(word, MASK_TEXT)
-    return text
 
 
 def _event_skeleton(request: StoryRequest) -> EventSkeletonDef | None:
@@ -328,19 +330,20 @@ def _fallback_texts(
 
 
 def fallback_story(request: StoryRequest, templates: StoryTemplates | None = None) -> StoryText:
-    """模板文字的敘述：不引用任何 ID、禁止字串換成 :data:`MASK_TEXT`，一定通過引擎核對。"""
+    """模板文字的敘述：不引用任何 ID、禁止字串換成代替文字（還沒發現的地點用提示語，5B-5），
+    一定通過引擎核對。"""
     tpl = templates if templates is not None else BUILTIN_TEMPLATES
     skeleton = _event_skeleton(request)
-    forbidden = request.allowed.forbidden
-    text, more = (_mask(t, forbidden) for t in _fallback_texts(request, tpl, skeleton))
+    masks = _masks(request.allowed)
+    text, more = (mask_text(t, masks) for t in _fallback_texts(request, tpl, skeleton))
     data: dict[str, Any] = {"text_zh": text.strip() or _LAST_RESORT, "more_zh": more}
     if request.scene == "event":
         who = skeleton.who_zh if skeleton is not None else "有人"
         want = skeleton.want_zh if skeleton is not None else "什麼"
         data |= {
             "skeleton": skeleton.id if skeleton is not None else None,
-            "actor_zh": _mask(who, forbidden)[:ACTOR_MAX_CHARS],
-            "motive_zh": _mask(want, forbidden)[:MOTIVE_MAX_CHARS],
+            "actor_zh": mask_text(who, masks)[:ACTOR_MAX_CHARS],
+            "motive_zh": mask_text(want, masks)[:MOTIVE_MAX_CHARS],
         }
     try:
         return StoryText.model_validate(data)

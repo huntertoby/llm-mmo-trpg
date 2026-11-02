@@ -77,6 +77,7 @@ __all__ = [
     "flash_preview",
     "hero_out",
     "keyword_refs",
+    "offer_out",
     "pending_flash_out",
     "run_response",
     "save_summary",
@@ -269,7 +270,8 @@ def flash_preview(
     )
 
 
-def _offer(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> OfferOut | None:
+def offer_out(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> OfferOut | None:
+    """技能三選一的候選卡（一輪與大世界任務三選一共用；5B-5 公開，輸出不變）。"""
     if offer is None:
         return None
     return OfferOut(
@@ -307,7 +309,7 @@ def _candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCan
     )
 
 
-def _gear_offer(library: ContentLibrary, run: RunState, node: GearOfferNode) -> GearOfferOut:
+def _gearoffer_out(library: ContentLibrary, run: RunState, node: GearOfferNode) -> GearOfferOut:
     return GearOfferOut(
         after_battle=node.after_battle,
         candidates=tuple(_candidate(library, run, i) for i in node.candidates),
@@ -319,20 +321,20 @@ def _node(library: ContentLibrary, run: RunState) -> NodeOut:
     if isinstance(node, BattleNode):
         return NodeOut(kind="battle", battle_index=node.index, boss=run.plan_of(node.index).boss)
     if isinstance(node, GearOfferNode):
-        return NodeOut(kind="gear_offer", gear=_gear_offer(library, run, node))
+        return NodeOut(kind="gear_offer", gear=_gearoffer_out(library, run, node))
     if isinstance(node, LevelUpNode):
         return NodeOut(
             kind="level_up",
             level=node.level,
             points=node.points,
             tier_up=node.tier_up,
-            offer=_offer(library, run, node.offer),
+            offer=offer_out(library, run, node.offer),
         )
     if isinstance(node, CompleteOfferNode):
         return NodeOut(
             kind="complete_offer",
             after_battle=node.after_battle,
-            offer=_offer(library, run, node.offer),
+            offer=offer_out(library, run, node.offer),
         )
     if isinstance(node, CampfireNode):
         return NodeOut(kind="campfire", after_battle=node.after_battle)

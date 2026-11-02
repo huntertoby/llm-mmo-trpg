@@ -265,7 +265,7 @@ def test_battle_writes_back_to_world(
     lost = any("戰鬥失敗" in e for e in after["events"])
     assert won != lost
     if won:
-        assert after["character"]["xp"] == 100
+        assert after["character"]["xp"] in (100, 300)  # 一般 1 份、精英 3 份（種子隨機）
         assert after["here"]["location"] == "ferry_steps"
     else:
         assert after["here"]["location"] == "mist_ferry"
@@ -286,4 +286,6 @@ def test_reload_from_disk(calm: ContentLibrary, saves: Path) -> None:
         assert view["here"]["location"] == "hunter_hut"
         _act(second, cid, kind="travel", to="mist_ferry")
     log = loads_log((saves / "world" / "log.jsonl").read_text(encoding="utf-8"))
-    assert [e.seq for e in log] == [1, 2]
+    # 走到觸發事件時會多一筆說書人旁白（narrate，5B-5）
+    assert [e.seq for e in log] == list(range(1, len(log) + 1))
+    assert [e.action.kind for e in log if e.action.kind != "narrate"] == ["travel", "travel"]

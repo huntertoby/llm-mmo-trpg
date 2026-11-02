@@ -27,7 +27,7 @@ from trpg.content.library import ContentLibrary
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
 from trpg.shared.errors import TrpgError
-from trpg.world.actions import FightAction, WorldAction, WorldEvent
+from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
 from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.replay import WorldLogEntry
@@ -178,6 +178,19 @@ class WorldStore:
             char = self.character(character_id)
             run = as_run(char, seed=skill_seed(self.world(), char))
             return world_library(self.library), run
+
+    def narrations(self, character_id: str, since: int) -> list[NarrateAction]:
+        """這個角色在 ``since``（含）之後的說書人敘述（日誌順序；5B-5 事件卡從這裡讀旁白與情境敘述，
+        代決 5B5-6）。從日誌尾端往回找，碰到更早的紀錄就停。"""
+        with self._lock:
+            found: list[NarrateAction] = []
+            for entry in reversed(self.entries()):
+                if entry.now < since:
+                    break
+                if entry.character_id == character_id and isinstance(entry.action, NarrateAction):
+                    found.append(entry.action)
+            found.reverse()
+            return found
 
     def battle_of(self, character_id: str) -> BattleSession | None:
         with self._lock:

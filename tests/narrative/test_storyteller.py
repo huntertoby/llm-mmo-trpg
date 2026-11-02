@@ -9,13 +9,17 @@ from typing import Any
 import pytest
 
 from trpg.content.library import ContentLibrary, load_library
-from trpg.content.world_narration import STORY_SCENES, StoryAllowed, StoryTemplates
+from trpg.content.world_narration import (
+    HIDDEN_HINT_DEFAULT,
+    STORY_SCENES,
+    StoryAllowed,
+    StoryTemplates,
+)
 from trpg.content.world_situations import Outcome
 from trpg.llm import LLMTimeout, LLMUnavailable, MockLLMClient
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION, STORY_SAFETY, story_system
 from trpg.narrative.storyteller import (
     BUILTIN_TEMPLATES,
-    MASK_TEXT,
     StoryRequest,
     build_story_messages,
     fallback_story,
@@ -141,6 +145,7 @@ def test_data_blocks_are_escaped(library: ContentLibrary) -> None:
 # （同 tests/llm/test_prompts.py）。
 STORY_SNAPSHOTS = {
     "storyteller/1": "90dd515c3ca11745ba7abceda3d73ca5e84694b8eac3b5db9af725363b2e62e6",
+    "storyteller/2": "db0ef3fabe77841740b3ed892862e93950e135580e1b4fafb9733a475cb9c10e",
 }
 
 
@@ -159,7 +164,7 @@ def test_system_prompts_carry_safety(scene: str) -> None:
     system = story_system(scene, world_name="碎界", summary="摘要")
     assert STORY_SAFETY in system
     assert "<player_input>" in system
-    assert STORY_PROMPT_VERSION == "storyteller/1"
+    assert STORY_PROMPT_VERSION == "storyteller/2"
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +238,25 @@ def test_no_client_falls_back(library: ContentLibrary) -> None:
 
 
 def test_fallback_masks_forbidden_text(library: ContentLibrary) -> None:
-    """骨架 15 的賭注寫到還沒發現的丹爐洞：降級文字換成「某處」。"""
+    """骨架 15 的賭注寫到還沒發現的丹爐洞：降級文字換成提示語，不寫「某處」（5B-5，玩法 PM）。"""
+    spring = _skeleton(library, "poison_spring")
+    request = event_request(
+        library,
+        skeletons=(spring,),
+        default_skeleton="poison_spring",
+        allowed=StoryAllowed(
+            skeletons=("poison_spring",),
+            forbidden=("丹爐洞",),
+            masks={"丹爐洞": "谷底一處隱密的洞窟"},
+        ),
+    )
+    story = fallback_story(request, _templates(library))
+    assert "丹爐洞" not in story.more_zh
+    assert "某處" not in story.more_zh
+    assert "通往谷底一處隱密的洞窟" in story.more_zh
+
+
+def test_fallback_mask_without_hint_uses_default(library: ContentLibrary) -> None:
     spring = _skeleton(library, "poison_spring")
     request = event_request(
         library,
@@ -242,8 +265,27 @@ def test_fallback_masks_forbidden_text(library: ContentLibrary) -> None:
         allowed=StoryAllowed(skeletons=("poison_spring",), forbidden=("丹爐洞",)),
     )
     story = fallback_story(request, _templates(library))
-    assert "丹爐洞" not in story.more_zh
-    assert MASK_TEXT in story.more_zh
+    assert HIDDEN_HINT_DEFAULT in story.more_zh
+
+
+def test_hints_and_masked_data_in_messages(library: ContentLibrary) -> None:
+    """給 LLM 的骨架文字先換成提示語，<allowed> 帶 hints（5B-5）。"""
+    spring = _skeleton(library, "poison_spring")
+    request = event_request(
+        library,
+        skeletons=(spring,),
+        default_skeleton="poison_spring",
+        allowed=StoryAllowed(
+            skeletons=("poison_spring",),
+            forbidden=("丹爐洞",),
+            masks={"丹爐洞": "谷底一處隱密的洞窟"},
+        ),
+    )
+    data = build_story_messages(request)[1]["content"]
+    scene = data.split("<scene>")[1].split("</scene>")[0]
+    assert "丹爐洞" not in scene and "谷底一處隱密的洞窟" in scene
+    allowed = data.split("<allowed>")[1].split("</allowed>")[0]
+    assert "hints" in allowed and "谷底一處隱密的洞窟" in allowed
 
 
 def test_fallback_default_not_allowed_uses_first(library: ContentLibrary) -> None:

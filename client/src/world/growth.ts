@@ -22,12 +22,16 @@ export function worldActionOf(choice: RunChoice): WorldAction | null {
   }
 }
 
-/** 左欄顯示：閃現待選時固定是選項畫面；否則照玩家切換（地點圖或成長）。 */
-export type LeftPane = "map" | "growth" | "pending";
+/** 左欄顯示：閃現待選時固定是選項畫面、任務三選一待選時固定是三選一（閃現優先，5B-5）；
+ * 否則照玩家切換（地點圖、成長、任務與線頭）。`want` 給布林時＝舊的「成長／地點圖」切換。 */
+export type LeftPane = "map" | "growth" | "pending" | "offer" | "quests";
+export type WantPane = "map" | "growth" | "quests";
 
-export function leftPane(view: WorldView, wantGrowth: boolean): LeftPane {
+export function leftPane(view: WorldView, want: boolean | WantPane): LeftPane {
   if (view.pending_flash != null) return "pending";
-  return wantGrowth ? "growth" : "map";
+  if (view.pending_offer != null) return "offer";
+  if (typeof want === "boolean") return want ? "growth" : "map";
+  return want;
 }
 
 /** 「成長與技能」按鈕上的小字：有可用的點數時提醒。 */

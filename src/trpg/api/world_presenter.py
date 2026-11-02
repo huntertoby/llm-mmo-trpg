@@ -2,11 +2,14 @@
 服務、遭遇陣容、時刻與天氣、事件句子。規則一律呼叫 ``trpg.world``，這裡只組裝文字。
 
 Phase 5A-7（13.2）：成長、誓約、下一場修正、開場說明、最近一次戰鬥
-（:mod:`trpg.api.world_growth_view`）。"""
+（:mod:`trpg.api.world_growth_view`）。
+
+Phase 5B-5（18.4、18.5）：事件卡、情境判定結果、NPC、對話、任務、三選一、線頭、酒館
+（:mod:`trpg.api.world_story_view`）；地點說明在隱藏地點揭露前用提示語。"""
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Final
 
 from trpg.api.world_growth_view import (
@@ -32,9 +35,22 @@ from trpg.api.world_schemas import (
     WorldMapView,
     WorldView,
 )
+from trpg.api.world_story_view import (
+    dialog_lines,
+    event_view,
+    npcs_here,
+    pending_offer_view,
+    quest_log,
+    quests_here,
+    rumor_lines,
+    situation_result_view,
+    story_event_line,
+    thread_views,
+)
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world_map import LocationDef, LocationMapDef
+from trpg.content.world_narration import mask_text
 from trpg.narrative.skills import SkillCard, skill_card
 from trpg.shared.types import Team
 from trpg.world.actions import (
@@ -45,6 +61,7 @@ from trpg.world.actions import (
     LoadoutChangedEvent,
     LocationClearedEvent,
     LocationRevealedEvent,
+    NarrateAction,
     PerceptionCheckEvent,
     RestedEvent,
     RetreatedEvent,
@@ -56,6 +73,7 @@ from trpg.world.battle import prepare_battle
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.growth import hero_tier
+from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState, LocationRef, WorldState
 from trpg.world.step import camp_problem
 from trpg.world.weather import weather_at
@@ -186,6 +204,8 @@ def _blocked(
         return "先處理眼前的遭遇"
     if char.pending_flash is not None:
         return "先選完閃現的變化"
+    if char.pending_offers:
+        return "先選完任務給的技能"
     if loc.unlock_flag is not None and not world.has_flag(loc.unlock_flag):
         return "還沒開放"
     return None
@@ -198,6 +218,7 @@ def _map_view(
     neighbors = set(world_map.neighbors(char.location))
     shown = [loc for loc in world_map.locations if _visible(char, world_map, loc)]
     ids = {loc.id for loc in shown}
+    masks = story_masks(library, char)  # 說明文字提到還沒發現的地點時用提示語（5B-5）
     locations = tuple(
         WorldLocationView(
             id=loc.id,
@@ -205,7 +226,7 @@ def _map_view(
             kind=loc.kind,
             kind_zh=KIND_ZH.get(loc.kind, loc.kind),
             level_zh=_level_zh(loc.level_min, loc.level_max),
-            description_zh=loc.description_zh,
+            description_zh=mask_text(loc.description_zh, masks),
             x=loc.pos.x,
             y=loc.pos.y,
             current=loc.id == char.location,
@@ -227,7 +248,7 @@ def _map_view(
 
 
 def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) -> list[str]:
-    if char.pending_encounter is not None or char.pending_flash is not None:
+    if char.pending_encounter is not None or char.pending_flash is not None or char.pending_offers:
         return []
     if loc.kind == "town":
         targets = [r for r in char.visited_towns if r != char.region]
@@ -243,6 +264,8 @@ def _camp_problem(char: CharacterState, problem: str | None, *, in_battle: bool)
         return "戰鬥進行中"
     if char.pending_flash is not None:
         return "先選完閃現的變化"
+    if char.pending_offers:
+        return "先選完任務給的技能"
     return problem
 
 
@@ -251,14 +274,19 @@ def _here_view(
 ) -> HereView:
     loc = world_map_of(library, char.region).location_by_id()[char.location]
     rules = rules_of(library)
-    free = char.pending_encounter is None and char.pending_flash is None and not in_battle
+    free = (
+        char.pending_encounter is None
+        and char.pending_flash is None
+        and not char.pending_offers
+        and not in_battle
+    )
     camped = char.camped_at == LocationRef(region=char.region, location=char.location)
     problem = camp_problem(library, world, char, now)
     return HereView(
         location=loc.id,
         name_zh=loc.name_zh,
         kind_zh=KIND_ZH.get(loc.kind, loc.kind),
-        description_zh=loc.description_zh,
+        description_zh=mask_text(loc.description_zh, story_masks(library, char)),
         can_rest=free and loc.kind == "town",
         can_loadout=free and (loc.kind == "town" or camped),
         camp_problem_zh=_camp_problem(char, problem, in_battle=in_battle),
@@ -269,6 +297,7 @@ def _here_view(
         ),
         hasten_cost=rules.hasten.cost,
         camp_cost=rules.camp_cost,
+        can_tavern=free and loc.kind == "town",
     )
 
 
@@ -416,6 +445,8 @@ def event_lines(
         )
         if line is None:
             line = growth_event_line(library, event, names)
+        if line is None and char is not None:
+            line = story_event_line(library, char, event, names)
         if line is not None:
             lines.append(line)
     return tuple(lines)
@@ -434,7 +465,12 @@ def world_view(
     *,
     events: tuple[str, ...] = (),
     battle_id: str | None = None,
+    raw_events: Sequence[WorldEvent] = (),
+    narrations: Sequence[NarrateAction] = (),
 ) -> WorldView:
+    """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
+    觸發之後
+    的說書人敘述（事件卡用，5B-5）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
@@ -454,4 +490,13 @@ def world_view(
             char.last_battle,
             lambda region, loc: _location_name(library, region, loc),
         ),
+        event=event_view(library, world, char, now, narrations, in_battle=in_battle),
+        situation_result=situation_result_view(library, char, raw_events),
+        npcs_here=npcs_here(library, char),
+        dialog=dialog_lines(library, char, raw_events),
+        quests=quest_log(library, char),
+        quests_here=quests_here(library, world, char, now),
+        pending_offer=pending_offer_view(library, world, char),
+        threads=thread_views(library, world, char, now),
+        rumors=rumor_lines(library, char, raw_events),
     )
