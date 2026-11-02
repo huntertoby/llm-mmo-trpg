@@ -1,5 +1,5 @@
 """``/api/world`` 的事件、情境判定、聊天、任務、酒館、LLM 開關（Phase 5B-5；
-``docs/phases/Phase5計畫.md`` 17.3～17.7）。全部用降級或 ``MockLlmProvider``，不連任何模型。"""
+``docs/phases/Phase5計畫.md`` 18.3～18.7）。全部用降級或 ``MockLlmProvider``，不連任何模型。"""
 
 from __future__ import annotations
 

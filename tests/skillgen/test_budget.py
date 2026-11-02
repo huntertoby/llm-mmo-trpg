@@ -329,6 +329,8 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "shielded_charged": 2,
         "commanding": 3,  # BAL-19f 追加：號令（你的召喚物傷害提高）
         "shard_burst": None,  # 5A-M1：碎晶（倒下時留下表面），只由範本開場掛上
+        "sword_formation": None,  # 5A-M2：劍陣（陣法範圍加成），只由範本開場掛上
+        "heart_link": None,  # 5A-M2：連心（分傷），只由詞綴開場掛上
         # 3W-2b：元素姿態階梯（每個元素 5 級）
         **{
             f"stance_{e}_{n}": points

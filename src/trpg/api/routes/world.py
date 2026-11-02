@@ -8,7 +8,7 @@
 - ``POST /api/world/characters/{id}/battle``：開戰或接續進行中的戰鬥（之後用 ``/api/battles``）。
 - ``POST /api/world/characters/{id}/flash-preview``、``…/allocation-preview``：閃現與配點的預覽
   （5A-7；同一輪的預覽，不扣點、不寫日誌）。
-- 5B-5（``docs/phases/Phase5計畫.md`` 17.3）：``actions`` 加接任務、選三選一、說話、酒館，動作之後有
+- 5B-5（``docs/phases/Phase5計畫.md`` 18.3）：``actions`` 加接任務、選三選一、說話、酒館，動作之後有
   沒敘述的事件就自動送說書人旁白；``…/situation``（打開情境判定）、``…/situation/answer``（送出回答，
   第一次送出即定案）、``…/chat``（和 NPC 自由聊天）；``GET／POST /api/world/llm``（大世界的
   LLM 開關）。

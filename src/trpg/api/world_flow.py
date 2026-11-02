@@ -1,4 +1,4 @@
-"""大世界說書人與情境判定的流程（Phase 5B-5；``docs/phases/Phase5計畫.md`` 17.2、17.3）。
+"""大世界說書人與情境判定的流程（Phase 5B-5；``docs/phases/Phase5計畫.md`` 18.2、18.3）。
 
 - :class:`WorldLlm`：大世界自己的 LLM 開關（玩法 PM 2026-11-03：預設跟著伺服器設定）。伺服器層級、
   只存記憶體；打開時先探測，連不到維持關閉並回提示（代決 5B5-1）。
@@ -51,7 +51,7 @@ CITABLE_ITEMS: Final = frozenset({"clue", "npc_bond", "exchange"})
 
 
 class WorldLlm:
-    """大世界的 LLM 開關（17.2）。``enabled``＝改過就照改的，否則照伺服器設定（``generate``）。"""
+    """大世界的 LLM 開關（18.2）。``enabled``＝改過就照改的，否則照伺服器設定（``generate``）。"""
 
     def __init__(self, provider: LlmProvider | None) -> None:
         self._provider = provider
@@ -109,7 +109,7 @@ type _Builder = Callable[[WorldState, CharacterState, int], NarrateAction]
 
 
 def _narrate(store: WorldStore, character_id: str, build: _Builder) -> WorldOutcome | None:
-    """組一段敘述並寫進日誌；前提不成立或被引擎拒絕（不該發生）時略過，不擋住動作（17.3）。"""
+    """組一段敘述並寫進日誌；前提不成立或被引擎拒絕（不該發生）時略過，不擋住動作（18.3）。"""
     world, char = store.world(), store.character(character_id)
     try:
         action = build(world, char, store.clock())

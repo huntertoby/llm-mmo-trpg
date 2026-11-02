@@ -4,7 +4,7 @@
 Phase 5A-7（13.2）：成長、誓約、下一場修正、開場說明、最近一次戰鬥
 （:mod:`trpg.api.world_growth_view`）。
 
-Phase 5B-5（17.4、17.5）：事件卡、情境判定結果、NPC、對話、任務、三選一、線頭、酒館
+Phase 5B-5（18.4、18.5）：事件卡、情境判定結果、NPC、對話、任務、三選一、線頭、酒館
 （:mod:`trpg.api.world_story_view`）；地點說明在隱藏地點揭露前用提示語。"""
 
 from __future__ import annotations

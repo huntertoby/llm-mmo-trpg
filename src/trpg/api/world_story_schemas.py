@@ -1,7 +1,7 @@
 """大世界事件、情境判定、NPC、任務、線頭的 API 格式（Phase 5B-5；
-``docs/phases/Phase5計畫.md`` 17.3、17.4）。
+``docs/phases/Phase5計畫.md`` 18.3、18.4）。
 
-全部由後端算好（前端不寫規則）；文字已經套過隱藏地點的提示語（17.5：揭露前不出現名稱）。
+全部由後端算好（前端不寫規則）；文字已經套過隱藏地點的提示語（18.5：揭露前不出現名稱）。
 玩家輸入（情境判定的回答、聊天）是純文字欄位，後端只把它放進 LLM 的 ``<player_input>``
 （``wrap_player_input``，代決 5B5-5）。
 """
@@ -54,7 +54,7 @@ class _ApiModel(BaseModel):
 
 class WorldLlmRequest(_ApiModel):
     """大世界的 LLM 開關：``true`` 打開（先探測，連不到維持關閉）、``false`` 關閉、``null`` 回到
-    伺服器設定（17.2）。"""
+    伺服器設定（18.2）。"""
 
     enabled: bool | None = None
 

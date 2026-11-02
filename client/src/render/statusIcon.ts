@@ -310,6 +310,19 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     star(c, 5, -2, 3);
     drop(c, 0, 5, 5);
   },
+  // 劍陣（Phase 5A-M2，陣法範圍加成）：三把並排的劍，只用既有筆畫
+  sword_formation: (c) => {
+    for (const x of [-6, 0, 6]) {
+      line(c, [[x, -9], [x, 6]]);
+      line(c, [[x - 2.5, 3], [x + 2.5, 3]]);
+    }
+  },
+  // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
+  heart_link: (c) => {
+    circle(c, -5, 0, 4);
+    circle(c, 5, 0, 4);
+    line(c, [[-1, 0], [1, 0]]);
+  },
   slow: (c) => {
     circle(c, 0, 0, 8.5);
     line(c, [[0, 0], [0, -6]]);

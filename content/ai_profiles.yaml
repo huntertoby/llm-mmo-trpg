@@ -201,6 +201,10 @@ weapon_ai: {close_range: 40, boss_approach: 10}
 #   multi_target  範圍技每多打到一名敵人（預期，乘命中率；只要命中判定的敵人算命中率、不用判定的算 1）的加分；
 #                 只打到 1 名時 0。目的：有 ≥ 2 名敵人可打時優先用範圍技（3-32d 的選用率 40% → ≥ 70%）
 skill_ai: {multi_target: 24}
+# formation_ai（Phase 5A-M2；初值未經模擬）：陣法站位的位置權重，敵我同一套，填入每個行為模式的 weights。
+#   formation  帶陣法狀態（statuses.yaml 的 formation，劍陣）的單位：位置價值 ＋ 這個值 ×（站在該格時的陣法倍率 − 1000）÷ 100；
+#              沒有陣法狀態的單位不受影響
+formation_ai: {formation: 3}
 # objective_ai（Phase 3-22，玩法 #23；初值未經模擬，平衡階段再調）：撤離與守點戰的 AI 權重，敵我同一套，填入每個行為模式的 weights
 # （模式自己列出的優先）。只在撤離或守點的戰鬥生效，其他戰鬥完全不變：
 #   rush_exit    撤離戰，我方：離最近出口每一格的位置價值額外扣分（疊加在 objective 上）→ 朝出口
