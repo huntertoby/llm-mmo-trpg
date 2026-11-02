@@ -870,10 +870,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/situation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Situation
+         * @description 打開目前事件的某個情境判定解法：說書人寫情境敘述（還沒送出前可以換別的解法）。
+         */
+        post: operations["post_situation_api_world_characters__character_id__situation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/situation/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Situation Answer
+         * @description 送出情境判定的回答（**第一次送出即定案**，09 9.6.4）：玩家文字只放進 LLM 的
+         *     ``<player_input>``；引用的事實由引擎核對。回應的 ``situation_result`` 是判定明細與結果敘述。
+         */
+        post: operations["post_situation_answer_api_world_characters__character_id__situation_answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Chat
+         * @description 和所在地點的 NPC 自由聊天（只換資訊，不改狀態）；回話在 ``dialog``。
+         */
+        post: operations["post_chat_api_world_characters__character_id__chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/llm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get World Llm
+         * @description 大世界的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）。
+         */
+        get: operations["get_world_llm_api_world_llm_get"];
+        put?: never;
+        /**
+         * Post World Llm
+         * @description 改大世界的 LLM 開關：打開時先探測，連不到維持關閉並回提示；``null`` 回到伺服器設定。
+         */
+        post: operations["post_world_llm_api_world_llm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcceptQuestAction
+         * @description 接任務（Phase 5B-4；09 9.6.3）：在給任務的 NPC 所在地點、``start`` 條件成立。
+         */
+        AcceptQuestAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "accept_quest";
+            /** Quest */
+            quest: string;
+        };
         Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
         /**
          * ActivateCharge
@@ -1488,6 +1586,20 @@ export interface components {
              */
             kind: "camp";
         };
+        /** CareLineView */
+        CareLineView: {
+            /** Item Zh */
+            item_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Counted */
+            counted: boolean;
+            /**
+             * Reason Zh
+             * @default
+             */
+            reason_zh: string;
+        };
         /**
          * ChargeOut
          * @description 等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。
@@ -1542,6 +1654,17 @@ export interface components {
             ready: boolean;
         };
         /**
+         * ChatRequest
+         * @description 和所在地點的 NPC 自由聊天（9.6.7 #3：只換資訊）。``text`` 只放進 LLM 的
+         *     ``<player_input>``。
+         */
+        ChatRequest: {
+            /** Npc */
+            npc: string;
+            /** Text */
+            text: string;
+        };
+        /**
          * Choice
          * @description 一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀
          *     ``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的
@@ -1579,6 +1702,23 @@ export interface components {
             info: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * CiteFactView
+         * @description 可以點選引用的事實（9.6.4：持有的線索、和 NPC 的往來、拿得出來的交換條件）。
+         */
+        CiteFactView: {
+            /** Fact */
+            fact: string;
+            /**
+             * Item
+             * @enum {string}
+             */
+            item: "clue" | "npc_bond" | "exchange";
+            /** Item Zh */
+            item_zh: string;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * CollisionOut
@@ -1851,6 +1991,30 @@ export interface components {
             /** Keywords */
             keywords: components["schemas"]["KeywordRef"][];
         };
+        /**
+         * DialogLineView
+         * @description 這次請求的 NPC 回話或聊到的內容。
+         */
+        DialogLineView: {
+            /** Npc */
+            npc: string | null;
+            /** Speaker Zh */
+            speaker_zh: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "rumor" | "quest_entry" | "secret" | "chat" | "nothing" | "tavern";
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * More Zh
+             * @default
+             */
+            more_zh: string;
+            /** Source */
+            source?: ("llm" | "fallback") | null;
+        };
         /** @enum {string} */
         Direction: "north" | "east" | "south" | "west";
         /**
@@ -2103,6 +2267,55 @@ export interface components {
              *     }
              */
             appearance: components["schemas"]["AppearanceView"];
+        };
+        /** EventSolutionView */
+        EventSolutionView: {
+            /** Index */
+            index: number;
+            /** Kind */
+            kind: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Attributes Zh */
+            attributes_zh: string;
+            /** Template */
+            template: string | null;
+            /** Available */
+            available: boolean;
+            /** Unavailable Zh */
+            unavailable_zh?: string | null;
+        };
+        /**
+         * EventView
+         * @description 事件卡（9.6.7 #6、#7）。
+         */
+        EventView: {
+            /** Skeleton */
+            skeleton: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+            /** Actor Zh */
+            actor_zh: string;
+            /** Motive Zh */
+            motive_zh: string;
+            story: components["schemas"]["StoryView"] | null;
+            /** Who Zh */
+            who_zh: string;
+            /** Want Zh */
+            want_zh: string;
+            /** Obstacle Zh */
+            obstacle_zh: string;
+            /** Stakes Zh */
+            stakes_zh: string;
+            /** Follows Zh */
+            follows_zh?: string | null;
+            /** Solutions */
+            solutions: components["schemas"]["EventSolutionView"][];
+            /** Leave Zh */
+            leave_zh: string;
+            situation?: components["schemas"]["SituationView"] | null;
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
@@ -3070,6 +3283,11 @@ export interface components {
             hasten_cost: number;
             /** Camp Cost */
             camp_cost: number;
+            /**
+             * Can Tavern
+             * @default false
+             */
+            can_tavern: boolean;
         };
         /**
          * HeroCards
@@ -3749,6 +3967,25 @@ export interface components {
             victory?: boolean | null;
             gear?: components["schemas"]["GearOfferOut"] | null;
         };
+        /** NpcHereView */
+        NpcHereView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Role Zh */
+            role_zh: string;
+            /** Affinity */
+            affinity: number;
+            /** Rank */
+            rank: string;
+            /** Rank Zh */
+            rank_zh: string;
+            /** Range Zh */
+            range_zh: string;
+            /** Talk Zh */
+            talk_zh: string;
+        };
         /** OathCurrentView */
         OathCurrentView: {
             /** Template */
@@ -3918,6 +4155,22 @@ export interface components {
             tags: components["schemas"]["OfferTagOut"][];
         };
         /**
+         * OfferPickAction
+         * @description 選任務給的技能三選一（07 7.6）：``pick`` 為 ``None`` ＝ 跳過；``replace`` 是要換掉的技能
+         *     （只在城鎮與營火）。
+         */
+        OfferPickAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "offer_pick";
+            /** Pick */
+            pick?: number | null;
+            /** Replace */
+            replace?: string | null;
+        };
+        /**
          * OfferTagOut
          * @description 候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。
          */
@@ -4047,6 +4300,21 @@ export interface components {
             cost: number;
             /** Options */
             options: components["schemas"]["FlashOptionOut"][];
+        };
+        /**
+         * PendingOfferView
+         * @description 任務給的技能三選一（07 7.6）。
+         */
+        PendingOfferView: {
+            /** Quest Name Zh */
+            quest_name_zh: string;
+            /** Step Zh */
+            step_zh: string;
+            offer: components["schemas"]["OfferOut"];
+            /** Can Replace */
+            can_replace: boolean;
+            /** Place Zh */
+            place_zh: string;
         };
         /**
          * PendingView
@@ -4252,6 +4520,52 @@ export interface components {
             kind: "protect";
             /** Ward */
             ward: string;
+        };
+        /**
+         * QuestHereView
+         * @description 在這裡可以接的任務。
+         */
+        QuestHereView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Giver Zh */
+            giver_zh: string | null;
+            /** Can Accept */
+            can_accept: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /** QuestLogView */
+        QuestLogView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Giver Zh */
+            giver_zh: string | null;
+            /** Steps */
+            steps: components["schemas"]["QuestStepView"][];
+            /** Done */
+            done: boolean;
+        };
+        /** QuestStepView */
+        QuestStepView: {
+            /** Text Zh */
+            text_zh: string;
+            /** Done */
+            done: boolean;
+            /** Current */
+            current: boolean;
         };
         /**
          * RaceLook
@@ -4787,6 +5101,109 @@ export interface components {
             target_id: string;
         };
         /**
+         * SituationAnswerRequest
+         * @description 送出情境判定的回答（**第一次送出即定案**，9.6.4）。``text`` 只放進 LLM 的
+         *     ``<player_input>``；``cite`` 是玩家點選引用的事實編號（``CiteFactView.fact``）。
+         */
+        SituationAnswerRequest: {
+            /** Template */
+            template: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Cite
+             * @default []
+             */
+            cite: string[];
+        };
+        /**
+         * SituationOpenRequest
+         * @description 打開事件的某個情境判定解法（說書人寫情境敘述）。
+         */
+        SituationOpenRequest: {
+            /** Template */
+            template: string;
+        };
+        /**
+         * SituationResultView
+         * @description 這次請求的情境判定明細與結果敘述。
+         */
+        SituationResultView: {
+            /** Template */
+            template: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Attribute Zh */
+            attribute_zh: string;
+            /** Method Zh */
+            method_zh: string;
+            /** Dice */
+            dice: [
+                number,
+                number
+            ];
+            /** Mode Zh */
+            mode_zh: string;
+            /** Roll */
+            roll: number;
+            /** Attribute Mod */
+            attribute_mod: number;
+            /** Care */
+            care: components["schemas"]["CareLineView"][];
+            /** Care Bonus */
+            care_bonus: number;
+            /** Race Bonus */
+            race_bonus: number;
+            /** Total */
+            total: number;
+            /** Base Dc */
+            base_dc: number;
+            /** Dc Shift */
+            dc_shift: number;
+            /** Dc */
+            dc: number;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "success" | "partial" | "failure";
+            /** Outcome Zh */
+            outcome_zh: string;
+            /** Effects Zh */
+            effects_zh: string[];
+            story?: components["schemas"]["StoryView"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "llm" | "fallback";
+        };
+        /**
+         * SituationView
+         * @description 最近一次打開的情境判定（還沒送出）。
+         */
+        SituationView: {
+            /** Template */
+            template: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Attributes Zh */
+            attributes_zh: string;
+            /** Methods Zh */
+            methods_zh: string;
+            /** Base Dc */
+            base_dc: number;
+            story: components["schemas"]["StoryView"] | null;
+            /**
+             * Facts
+             * @default []
+             */
+            facts: components["schemas"]["CiteFactView"][];
+        };
+        /**
          * SkillCard
          * @description 一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。
          *
@@ -5303,6 +5720,24 @@ export interface components {
             view: components["schemas"]["BattleView"];
         };
         /**
+         * StoryView
+         * @description 一段說書人的文字（旁白、情境、結果、回話）。
+         */
+        StoryView: {
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * More Zh
+             * @default
+             */
+            more_zh: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "llm" | "fallback";
+        };
+        /**
          * SummonInfoCard
          * @description 技能卡可展開的「召喚物資訊」（清單 1.8）：全部由範本與規則產生的文字。
          */
@@ -5444,6 +5879,19 @@ export interface components {
             prompt_version?: string | null;
         };
         TacticalOrder: components["schemas"]["FocusTarget"] | components["schemas"]["HoldPosition"] | components["schemas"]["RetreatTo"] | components["schemas"]["Protect"] | components["schemas"]["UseEnvironment"];
+        /**
+         * TalkAction
+         * @description 和所在地點的 NPC 說話（9.6.7 #3）：引擎依好感度列出能給的內容（只換資訊）。
+         */
+        TalkAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "talk";
+            /** Npc */
+            npc: string;
+        };
         /** TargetOut */
         TargetOut: {
             /** Unit Id */
@@ -5459,6 +5907,17 @@ export interface components {
             knock_permille: number | null;
             /** Status Chances */
             status_chances: components["schemas"]["StatusChanceOut"][];
+        };
+        /**
+         * TavernAction
+         * @description 在城鎮的酒館聽本週傳聞（9.6.7 #1）。
+         */
+        TavernAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "tavern";
         };
         /**
          * Team
@@ -5537,6 +5996,26 @@ export interface components {
             region: string;
             /** Name Zh */
             name_zh: string;
+        };
+        /** ThreadView */
+        ThreadView: {
+            /** Id */
+            id: string;
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "personal" | "world";
+            /** Scope Zh */
+            scope_zh: string;
+            /** Expires Zh */
+            expires_zh: string;
+            /** Npc Zh */
+            npc_zh?: string | null;
+            /** Location Zh */
+            location_zh?: string | null;
         };
         /** TileView */
         TileView: {
@@ -6192,7 +6671,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -6274,6 +6753,26 @@ export interface components {
             /** Weather Zh */
             weather_zh: string;
         };
+        /**
+         * WorldLlmRequest
+         * @description 大世界的 LLM 開關：``true`` 打開（先探測，連不到維持關閉）、``false`` 關閉、``null`` 回到
+         *     伺服器設定（17.2）。
+         */
+        WorldLlmRequest: {
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** WorldLlmView */
+        WorldLlmView: {
+            /** Enabled */
+            enabled: boolean;
+            /** Default */
+            default: boolean;
+            /** Overridden */
+            overridden: boolean;
+            /** Notice Zh */
+            notice_zh?: string | null;
+        };
         /** WorldLocationView */
         WorldLocationView: {
             /** Id */
@@ -6341,6 +6840,39 @@ export interface components {
             next_battle_zh: string[];
             /** Last Battle Zh */
             last_battle_zh?: string | null;
+            event?: components["schemas"]["EventView"] | null;
+            situation_result?: components["schemas"]["SituationResultView"] | null;
+            /**
+             * Npcs Here
+             * @default []
+             */
+            npcs_here: components["schemas"]["NpcHereView"][];
+            /**
+             * Dialog
+             * @default []
+             */
+            dialog: components["schemas"]["DialogLineView"][];
+            /**
+             * Quests
+             * @default []
+             */
+            quests: components["schemas"]["QuestLogView"][];
+            /**
+             * Quests Here
+             * @default []
+             */
+            quests_here: components["schemas"]["QuestHereView"][];
+            pending_offer?: components["schemas"]["PendingOfferView"] | null;
+            /**
+             * Threads
+             * @default []
+             */
+            threads: components["schemas"]["ThreadView"][];
+            /**
+             * Rumors
+             * @default []
+             */
+            rumors: string[];
         };
         XY: [
             number,
@@ -7764,6 +8296,164 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AllocationPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_situation_api_world_characters__character_id__situation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SituationOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_situation_answer_api_world_characters__character_id__situation_answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SituationAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_chat_api_world_characters__character_id__chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_world_llm_api_world_llm_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldLlmView"];
+                };
+            };
+        };
+    };
+    post_world_llm_api_world_llm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorldLlmRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldLlmView"];
                 };
             };
             /** @description Validation Error */

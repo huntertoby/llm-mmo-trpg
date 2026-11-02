@@ -3,6 +3,9 @@
 ``WorldView`` 是地點圖畫面的整份資料，全部由後端算好（前端不寫規則）。未發現的隱藏地點與連到它的
 連線不放進回應。
 
+Phase 5B-5（17.4）：事件卡、情境判定結果、這裡的 NPC、對話、任務日誌、可接的任務、技能三選一、線頭、
+酒館傳聞（:mod:`trpg.api.world_story_schemas`）；動作加接任務、選三選一、說話、酒館。
+
 Phase 5A-7（13.2）：成長的世界動作（配點、重配、閃現、選閃現、溶掉、傳承、立誓、解除誓約）；
 ``WorldView`` 加上一輪格式的主角面板（``hero``，前端重用配點與閃現元件）、待選閃現、成長與誓約的
 可用狀態、下一場修正、開場說明、最近一次戰鬥結果。
@@ -16,10 +19,21 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
+from trpg.api.world_story_schemas import (
+    DialogLineView,
+    EventView,
+    NpcHereView,
+    PendingOfferView,
+    QuestHereView,
+    QuestLogView,
+    SituationResultView,
+    ThreadView,
+)
 from trpg.narrative.skills import SkillCard
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Team
 from trpg.world.actions import (
+    AcceptQuestAction,
     AllocateAction,
     CampAction,
     DissolveAction,
@@ -27,11 +41,14 @@ from trpg.world.actions import (
     FlashPickAction,
     InheritAction,
     LoadoutAction,
+    OfferPickAction,
     ReleaseOathAction,
     RespecAction,
     RestAction,
     RetreatAction,
     SwearOathAction,
+    TalkAction,
+    TavernAction,
     TeleportAction,
     TravelAction,
 )
@@ -79,11 +96,16 @@ type WorldActionRequest = Annotated[
     | DissolveAction
     | InheritAction
     | SwearOathAction
-    | ReleaseOathAction,
+    | ReleaseOathAction
+    | AcceptQuestAction
+    | OfferPickAction
+    | TalkAction
+    | TavernAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
-``source: "menu"``，代決 5A7-4）。"""
+``source: "menu"``，代決 5A7-4；情境判定與敘述只能經 ``/situation``、``/chat`` 由伺服器組提議，
+5B-5）。"""
 
 
 class CreateWorldCharacterRequest(_ApiModel):
@@ -192,6 +214,8 @@ class HereView(_ApiModel):
     teleports: tuple[TeleportOption, ...]
     hasten_cost: int
     camp_cost: int
+    can_tavern: bool = False
+    """城鎮的酒館（本週傳聞，9.6.7 #1；5B-5）。"""
 
 
 class HeroStatusView(_ApiModel):
@@ -322,6 +346,20 @@ class WorldView(_ApiModel):
     """角色身上的下一場修正（每筆一句；5A-7）。"""
     last_battle_zh: str | None = None
     """最近一次戰鬥結果的一句話（5A-5 待決 1；沒打過為 ``None``）。"""
+    event: EventView | None = None
+    """事件卡（5B-5）。"""
+    situation_result: SituationResultView | None = None
+    """這次請求的情境判定明細與結果敘述。"""
+    npcs_here: tuple[NpcHereView, ...] = ()
+    dialog: tuple[DialogLineView, ...] = ()
+    """這次請求的 NPC 回話與聊到的內容（前端自己保留紀錄，代決 5B5-8）。"""
+    quests: tuple[QuestLogView, ...] = ()
+    """任務日誌。"""
+    quests_here: tuple[QuestHereView, ...] = ()
+    pending_offer: PendingOfferView | None = None
+    threads: tuple[ThreadView, ...] = ()
+    rumors: tuple[str, ...] = ()
+    """這次請求在酒館聽到的本週傳聞。"""
 
 
 class WorldBattleResponse(_ApiModel):

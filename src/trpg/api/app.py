@@ -28,6 +28,7 @@ from trpg.api.sessions import (
 )
 from trpg.api.workshop import WorkshopRequestError
 from trpg.api.world import WorldCharacterNotFoundError, WorldConflictError, WorldStore
+from trpg.api.world_flow import WorldLlm
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.primitive_coverage import check_primitive_coverage
@@ -99,13 +100,10 @@ def create_app(
     check_primitive_coverage(lib)
     app.state.store = SessionStore(lib, max_auto_steps=max_auto_steps)
     saves = save_dir if save_dir is not None else default_save_dir()
-    app.state.runs = RunStore(
-        lib,
-        app.state.store,
-        saves,
-        llm=llm if llm is not None else LocalLlmProvider(),
-    )
+    provider = llm if llm is not None else LocalLlmProvider()
+    app.state.runs = RunStore(lib, app.state.store, saves, llm=provider)
     app.state.world = WorldStore(lib, app.state.store, saves / "world")  # 大世界（5A-5）
+    app.state.world_llm = WorldLlm(provider)  # 大世界自己的 LLM 開關（5B-5）
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)

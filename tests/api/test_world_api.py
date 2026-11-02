@@ -286,4 +286,6 @@ def test_reload_from_disk(calm: ContentLibrary, saves: Path) -> None:
         assert view["here"]["location"] == "hunter_hut"
         _act(second, cid, kind="travel", to="mist_ferry")
     log = loads_log((saves / "world" / "log.jsonl").read_text(encoding="utf-8"))
-    assert [e.seq for e in log] == [1, 2]
+    # 走到觸發事件時會多一筆說書人旁白（narrate，5B-5）
+    assert [e.seq for e in log] == list(range(1, len(log) + 1))
+    assert [e.action.kind for e in log if e.action.kind != "narrate"] == ["travel", "travel"]
