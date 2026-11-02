@@ -1,4 +1,4 @@
-# 說書人的降級模板與各區語氣（Phase 5B-3；docs/phases/Phase5計畫.md 14.4）。schema：src/trpg/content/world_narration.py。
+# 說書人的降級模板與各區語氣（Phase 5B-3；docs/phases/Phase5計畫.md 15.4）。schema：src/trpg/content/world_narration.py。
 # 用途：本機模型不可用、或說書人的輸出一直不合法時，用這裡的模板文字代替（docs/專案計畫.md 3.1「模型不可用時遊戲要能降級」）。
 # tones：給說書人的區域語氣（docs/design/09-世界與敘事.md 9.6.10 #107：旁白簡潔具體、短句少形容詞；雲嶺古風）。
 # 佔位符：{who} 骨架的誰、{want} 想要、{obstacle} 阻礙、{stakes} 賭注、{location} 地點名、{approach} 情境模板的說明、{name} NPC 名。

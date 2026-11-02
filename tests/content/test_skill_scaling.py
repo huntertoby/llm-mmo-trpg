@@ -39,7 +39,8 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ 3J-4c 的解形爆發 ＋ BAL-19a 的 16 招感知、BAL-19b 的 18 招意志組合主題法術
     # ＋ BAL-19c 的 9 招召喚武器技 ＋ BAL-19d 的 14 招遠程（風、聖）武器技
     # ＋ BAL-19e 的 8 招反應、4 招姿態 ＋ BAL-19f 的 3 招火杖召喚法術
-    assert len(BUILTIN) == 373
+    # ＋ 5A-M1 的九轉回天
+    assert len(BUILTIN) == 374
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

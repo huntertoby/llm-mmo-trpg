@@ -1,4 +1,4 @@
-"""說書人（Phase 5B-3；``docs/phases/Phase5計畫.md`` 第 14 節；09 9.6.7 #3、#6、#7）。
+"""說書人（Phase 5B-3；``docs/phases/Phase5計畫.md`` 第 15 節；09 9.6.7 #3、#6、#7）。
 
 四種敘述：事件開場（從候選挑骨架、填角色與動機、短旁白）、情境敘述、結果敘述、NPC 自由聊天（只換
 資訊）。一律經 :class:`~trpg.llm.client.LLMClient`；輸出先經 JSON schema（ID 欄位都是列舉）與

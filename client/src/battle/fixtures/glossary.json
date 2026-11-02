@@ -598,6 +598,22 @@
    "rules_zh": []
   },
   {
+   "id": "shard_burst",
+   "name_zh": "碎晶",
+   "description_zh": "倒下時碎成源晶碎片，在原地與相鄰格留下一灘會導電的晶液（水；雷電會沿水擴散）。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
    "id": "slow",
    "name_zh": "緩速",
    "description_zh": "回合開始時的移動點數減少。",
@@ -2570,6 +2586,14 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "kin_ward",
+   "name_zh": "同門相護",
+   "description_zh": "2 格內的同門被敵人攻擊命中時（傷害之前），替他加一層小護盾（每輪 1 次；被沉默時不能用）。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "elements": [
@@ -3571,6 +3595,14 @@
    "id": "ally_hit_in_range",
    "name_zh": "範圍內隊友受擊時",
    "description_zh": "範圍內的友方被敵人單體攻擊命中、傷害結算之前。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "kin_hit_in_range",
+   "name_zh": "同門受擊時",
+   "description_zh": "範圍內帶同門標籤的友方被敵人的攻擊命中、傷害結算之前。",
    "tags": [],
    "status_look": null,
    "rules_zh": []

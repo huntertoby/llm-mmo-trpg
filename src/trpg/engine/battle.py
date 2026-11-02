@@ -122,7 +122,7 @@ from trpg.engine.rules.statuses import (
     stance_status_ids,
     weapon_attribute,
 )
-from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
+from trpg.engine.setup import BattleSetup, BattleSetupError, UnitSpawn, starting_source
 from trpg.engine.skill_infusion import do_infuse_skill
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.conditions import Subject
@@ -319,11 +319,12 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     names = _unit_names(setup)
     ids = IdAllocator("unit")
     facings = _opening_facings(setup, positions)
-    opening: list[tuple[UnitId, tuple[str, ...]]] = []
+    opening: list[tuple[UnitId, tuple[tuple[str, int | None], ...]]] = []
     for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
         uid = UnitId(ids.next())
-        if spawn.opening_statuses:
-            opening.append((uid, spawn.opening_statuses))
+        wanted = _opening_of(spawn)
+        if wanted:
+            opening.append((uid, wanted))
         state.units[uid] = make_unit(
             uid,
             template=spawn.template,
@@ -371,14 +372,27 @@ OPENING_STATUS_MAX_DURATION = 2
 """開場狀態（``opening_statuses``）的持續回合上限（Phase 5A-6b）。"""
 
 
-def _apply_opening_statuses(ctx: Ctx, opening: list[tuple[UnitId, tuple[str, ...]]]) -> None:
-    """開場就掛上的狀態（Phase 5A-6，``UnitSpawn.opening_statuses``）：依單位、清單順序施加，
-    不擲抵抗；持續回合照狀態定義的預設，但最多 ``OPENING_STATUS_MAX_DURATION``（2）回合
-    （Phase 5A-6b；預設不倒數的狀態維持原樣）。"""
+def _opening_of(spawn: UnitSpawn) -> tuple[tuple[str, int | None], ...]:
+    """單位開場要掛的狀態與指定的持續回合（``None``＝狀態預設）：先範本的
+    ``opening_statuses``（Phase 5A-M1：霧隱、死後碎片），再 ``UnitSpawn.opening_statuses``
+    （Phase 5A-6：下一場 buff／debuff）。"""
+    return (
+        *((o.status, o.duration) for o in spawn.template.opening_statuses),
+        *((status_id, None) for status_id in spawn.opening_statuses),
+    )
+
+
+def _apply_opening_statuses(
+    ctx: Ctx, opening: list[tuple[UnitId, tuple[tuple[str, int | None], ...]]]
+) -> None:
+    """開場就掛上的狀態（Phase 5A-6，``UnitSpawn.opening_statuses``；Phase 5A-M1 範本的
+    ``opening_statuses``）：依單位、清單順序施加，不擲抵抗；持續回合照指定值或狀態定義的預設，
+    但最多 ``OPENING_STATUS_MAX_DURATION``（2）回合（Phase 5A-6b；不倒數的狀態維持原樣）。"""
     for uid, statuses in opening:
-        for status_id in statuses:
+        for status_id, wanted in statuses:
             default = ctx.rules.status_def(status_id).duration
-            duration = None if default is None else min(default, OPENING_STATUS_MAX_DURATION)
+            base = wanted if wanted is not None else default
+            duration = None if base is None else min(base, OPENING_STATUS_MAX_DURATION)
             execute(
                 ctx,
                 [

@@ -1,4 +1,4 @@
-"""說書人的外層組裝（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.2 第 7 點、14.7）。
+"""說書人的外層組裝（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.2 第 7 點、15.7）。
 
 全部用 ``MockLLMClient``，不連網路。
 """

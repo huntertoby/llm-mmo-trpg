@@ -70,6 +70,9 @@
 #   attack_element  攻擊元素：帶有者的普攻與沒有自己元素的武器技，物理傷害改成這個元素（優先順序見
 #                   trpg.engine.attack_element：附魔 ＞ 普攻附加詞條 ＞ 武器元素詞條 ＞ 武器本身元素 ＞ 物理）。
 #                   同時只會有一個附魔狀態：施加新的會先移除舊的（StatusRemoved 原因 replaced）；外觀顯示該元素色
+# 5A-M1（死亡時留下表面）：
+#   on_death_surface  {surface, radius, duration}：帶有者倒下時在倒下的格子與曼哈頓 radius 內的格子產生表面（cause: death_surface）。
+#                     只能用在 polarity: neutral、expires: never 的狀態（不被淨化、驅散、奪取）；由單位範本的 opening_statuses 掛上
 # control_group 新增 mental（心智：恐懼、沉默；2026-10-23 加嘲諷）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -139,6 +142,15 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
+  # 5A-M1：碎晶傀儡（docs/design/18-雲嶺內容.md 18.2.2「死後爆出源晶碎片＝帶電表面」）。引擎沒有帶電表面、新表面要新美術，
+  # 先留下會導電的水（代決 5AM1-6；初值，未經模擬）。
+  - id: shard_burst
+    polarity: neutral
+    name_zh: 碎晶
+    description_zh: 倒下時碎成源晶碎片，在原地與相鄰格留下一灘會導電的晶液（水；雷電會沿水擴散）。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_death_surface: {surface: water, radius: 1}
   - id: slow
     polarity: debuff
     name_zh: 緩速

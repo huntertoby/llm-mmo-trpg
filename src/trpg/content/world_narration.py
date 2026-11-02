@@ -1,4 +1,4 @@
-"""說書人敘述的 schema 與降級模板（Phase 5B-3；``docs/phases/Phase5計畫.md`` 第 14 節）。
+"""說書人敘述的 schema 與降級模板（Phase 5B-3；``docs/phases/Phase5計畫.md`` 第 15 節）。
 
 - :class:`StoryText`：說書人（LLM 或降級模板）的輸出，純資料。``trpg.narrative`` 產生、
   ``trpg.world`` 核對（2.3：world 不匯入 narrative／llm，兩邊都從這裡匯入）。只有文字與
@@ -177,7 +177,7 @@ class StoryAllowed:
 
 
 def allowed_problems(scene: StoryScene, story: StoryText, allowed: StoryAllowed) -> list[str]:
-    """:func:`story_problems`＋引用都在允許清單＋文字不含禁止字串（14.3、14.5）。"""
+    """:func:`story_problems`＋引用都在允許清單＋文字不含禁止字串（15.3、15.5）。"""
     problems = story_problems(scene, story)
     if scene == "event" and story.skeleton not in allowed.skeletons:
         problems.append(f"骨架 {story.skeleton} 不在可挑的候選裡（{'、'.join(allowed.skeletons)}）")

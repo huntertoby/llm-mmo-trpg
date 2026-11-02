@@ -1,4 +1,4 @@
-"""說書人（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.7）。全部用 ``MockLLMClient``。"""
+"""說書人（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.7）。全部用 ``MockLLMClient``。"""
 
 from __future__ import annotations
 

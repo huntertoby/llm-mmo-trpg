@@ -90,6 +90,7 @@
 | 5A-SIM | 練等手感與經驗曲線模擬（代決初值）：同等級主角＋2 隊友打該地點遭遇勝率 ≥ 85%、結束剩 40～70% HP，高 2 級約一半；經驗來源比例 一般 1／精英 3／任務鏈一步 3／主線一步 5／情境成功 0.5（部分 0.25）／隱藏地點 2／懸賞 4；每天約 3 小時，第 3 天 5 級、第 6 天 8 級、第 7～8 天 10 級；精英首殺 +1 靈感。差太多再調敵人成長倍率 | 5A-4 | 1 h | 可與 5A-5 平行 |
 | 5A-SIM2 | 5A-SIM 套用（玩法 PM 代決 2026-11-03）：隊友（標準隊友、傭兵、影子）照主角等級成長；敵人成長維持（HP +5%／級、屬性 +2）；經驗門檻方案 B（1 份＝100×(1＋10%×(地點建議等級−1))；2～10 級累計 950／3800／8600／14350／20200／26050／31950／37800／43650）；戰鬥依一般／精英給、情境判定 0.5／0.25 份；雲海吊橋陣容最多 1 名遠程、寒湖石背熊只出現在 4 級以上陣容（其他換霧狼），兩處同等級約 75% 以上；套用後重量 | 5A-SIM | 1 h | 可與 5A-M1 平行 |
 | 5A-M1 | 引擎機制①（玩法 PM 2026-11-02，5A-3 待決）：蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護；做好後把雲嶺替代品換成正式機制（只改 content） | 5A-4 | 1.5 h | 可與 5A-ART 平行 |
+| 5A-M1b | 5A-M1 收尾（玩法 PM 代決 2026-11-03）：沉默可打斷法術型蓄力強招（武器技型照舊只吃倒下、暈眩、冰凍）；單位卡加「特性」欄（招牌被動、反應、精英詞綴，#82）。不做帶電表面、九轉回天維持 3×3 | 5A-M1 | 0.75 h | 可與 5B-3 平行 |
 | 5A-M2 | 引擎機制②：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門 | 5A-M1 | 1 h | — |
 | 5B-M3 | 引擎機制③：三方混戰（排在 5B 主線第 1 章之前） | 5A-M1 | 1 h | — |
 | 5A-ART1 | 敵人外觀移植①：異形畫法（`docs/art/敵人外觀.md` 第 3 節；美術代決待使用者確認，未確認時照代決先做，改名與配色只動資料） | 5A-3 | 1 h | 可與 5A-4 平行（只動 `client/`） |
@@ -1581,12 +1582,86 @@ exchange_supplies: 1
 - 誓約模板內容（18.6）、戰鬥中的加成與違反判定、佔被動欄位（5C-3）；LLM 立誓轉換與 LLM 閃現提議。
 - 事件卡、情境判定畫面（5B-5）；新的技能來源（任務、劇情、許願池）；經驗曲線（5A-SIM）；戰鬥中途存檔（5A-5 待決 2）。
 
-## 14. 5B-3 詳細規格：說書人接線
+## 14. 5A-M1 詳細規格：引擎機制①（蓄力強招預告、死亡時留下表面、開場隱蔽、同門相護）
+
+> 給實作 agent。主要動 `src/trpg/engine/`（`battle.py` 開場狀態、`reactions.py`／`skills/cast.py` 受擊鉤子、新模組 `death_surfaces.py`、`kin_ward.py`、`ai/utility.py`）、`src/trpg/content/`（`battle.py` 單位範本與狀態欄位、`environment.py` 反應與 AI 欄位、`world_enemies.py` 詞綴欄位）、`src/trpg/narrative/`（戰鬥紀錄文字）、`content/`（`statuses.yaml`、`reactions.yaml`、`ai_profiles.yaml`、新技能、雲嶺範本與 `world/enemies.yaml`）、`src/trpg/engine/runner.py`（`LOG_FORMAT`）、`docs/phases/戰鬥紀錄格式變更.md`、受影響的測試與快照。共用檔（`trpg.world`、`trpg.api`、`client/`）只在必要時小改；另一個 agent 在做 5A-7（API、前端大世界）。
+> 依據：18 18.2.1（招牌「同門相護」：2 格內的同門受到攻擊時替他加一層小護盾、每輪 1 次，沉默／擊殺補師／拉開距離破解；青霧執事蓄力強招「九轉回天」提前一輪預告；詞綴「霧隱的」開場隱蔽 1 回合）、18.2.2（碎晶傀儡死後爆出源晶碎片＝帶電表面）；19（熔岩獸「熔核爆裂」死亡時在原地留下 2 回合火焰表面、寒燼蜥死後留冰面；熔核領主、Boss 的蓄力強招預告）；05 5.7（環境預告、強招預告：只有精英與 Boss 的蓄力型強招提前一輪在地圖上標出範圍，沿用環境預告的顯示方式；一般敵人意圖不顯示）；06 6.23 #5（延遲段：施放後帶「蓄力」、下回合開始釋放，倒下、暈眩、冰凍取消）；玩法 PM 2026-11-02（5A-M1 四個機制，做好後雲嶺替代品只改 content）；本檔 7.6 代決 5A3-1～5A3-3、12.4（`opening_statuses` 最多 2 回合）。
+
+### 14.1 目標
+
+四個機制都是 **資料設定** 的引擎機制，雲嶺的替代品（Phase5A-3 報告 5A3-1～5A3-3）換成正式機制只改 content。每個機制：pydantic schema、引擎實作（純函式、確定性）、戰鬥紀錄中文、AI 不會無視、測試。
+
+### 14.2 機制與資料格式
+
+1. **蓄力強招預告**（沿用 6.23 #5 延遲段，不另做一套）：
+   - 強招＝`followup.when: delayed`、`release: next_turn` 的技能；施放時施放者帶 `charging`、發 `followup_charged`（預計範圍）；下回合開始以當下位置結算第二段；倒下、暈眩、冰凍取消。網頁的蓄力預告（`telegraph` 的 `charges`）、戰鬥紀錄文字已經有，不新增前端畫法。
+   - 引擎補：延遲段第二段是 **治療／友方** 效果時（九轉回天：全隊回大量 HP），AI 估值改看預計範圍內 **受傷的友方**（`rewrite.delayed_heal_points` × 受傷友方數，含自己），不再只數敵人。
+   - 「花一回合蓄力」：強招的 `ap_cost` ＝ `ap_per_turn`（3），蓄力那回合不能再做別的（content）。
+   - 新技能 `skill_nine_turns_revival`「九轉回天」（青霧執事）：第一段 `self` 小護盾、第二段自己為中心 3×3 的友方治療（數值初值，見 5AM1-9）。
+2. **死亡時留下表面**（狀態資料）：`StatusDef.on_death_surface: DeathSurfaceSpec | None`（`surface`：既有表面、`radius`：0～2 曼哈頓、`duration`：省略＝表面預設）。帶這個狀態的單位倒下（`unit_downed`）時，在倒下的位置（＋半徑內可站的格子）產生表面（`create_surface`，`cause: death_surface`；依 (y, x) 排序）。狀態是 `polarity: neutral`、`expires: never`（不會被淨化、驅散或奪取）；由範本的 `opening_statuses` 開場掛上（見 3）。
+3. **開場隱蔽**（範本資料）：`UnitTemplate.opening_statuses: tuple[OpeningStatus, ...]`（`status`、`duration: 1～2 | None`，`None`＝狀態預設）。開戰時和 `UnitSpawn.opening_statuses`（5A-6 下一場 buff）一起在擲先攻前施加、不擲抵抗；有限持續回合照 5A-6b 最多 2。精英詞綴加 `EliteAffixDef.add_opening_statuses`（同格式）。霧隱＝`{status: concealed, duration: 1}`。
+4. **同門相護**（內建反應）：`reactions.yaml` 新反應 `kin_ward`（`effect: shield_ally`、新事件 `kin_hit_in_range`）；`ReactionDef` 加 `range`（曼哈頓格數）、`kin_tag`（同門標籤）、`shield_dice`／`shield_flat`、`blocked_by_silence`。持有者（範本 `reactions` 寫一條 `kin_ward` 規則）在 `range` 格內、帶 `kin_tag` 的友方（不含自己）被敵人的攻擊（普攻或技能）**命中、傷害之前**，給他一層護盾（`shield` 效果，已有護盾時照護盾規則取大值）。佔本輪反應（`reactions_per_round`＝1，即「每輪 1 次」）；被沉默（`blocks_spells`）、暈眩時不能用；`auto`／`prompt`／`off` 照一般反應規則。多名持有者時依單位 ID 第一個能用的出手（一次攻擊只觸發 1 層）。
+
+### 14.3 AI（`trpg.engine.ai.utility`；數值在 `ai_profiles.yaml` 的 `rewrite:`，初值）
+
+- 預覽本來就會結算反應、延遲段與倒下觸發：同門護盾讓預估傷害變小、殺死碎晶傀儡的預覽有表面事件（`surface` 權重）、隱蔽讓命中率變低。
+- **優先處理**：擊倒帶 `kin_ward` 反應規則的敵人（同門的護盾來源）× `priority_kill_points`；擊倒或使其 `skip_turn`（暈眩、冰凍）正在蓄力的敵人 × `interrupt_points`（打斷強招）。只在目標有這些特性時才加分，其他戰鬥分數不變。
+
+### 14.4 雲嶺換正式機制（只改 content）
+
+| 敵人／詞綴 | 原替代品 | 正式機制 |
+|---|---|---|
+| 青霧道童、煉丹師、水煉丹師、青霧執事 | — | 反應 `kin_ward`（2 格、`sect`） |
+| 持劍弟子 | 挺身而出（5A3-1） | 拿掉挺身而出（被相護的前排） |
+| 青霧執事 | 聖域＋回春＋調息（5A3-2） | 加「九轉回天」（蓄力強招），保留聖域、調息 |
+| 碎晶傀儡 | 沒有（5A3-2） | 開場狀態 `shard_burst`（倒下時留表面） |
+| 詞綴 霧隱的 | 受擊隱蔽（5A3-3） | 開場隱蔽 1 回合 |
+
+護法武僧的挺身而出是 18.2.1「嘲諷／守護」本身，不動。陣法（陣眼石靈）、劍陣 ≤ 3 格、連心的（傷害分給同門）是 5A-M2，不在本段。
+
+### 14.5 戰鬥紀錄與版號
+
+- 文字：同門相護走 `reaction_triggered`（反應名「同門相護」）＋`shield_gained`；死亡表面走 `surface_created`（`cause: death_surface` 的說明：「X 倒下，留下…」）；開場狀態走 `status_applied`；蓄力走既有 `followup_charged`。
+- `UnitTemplate`、`StatusDef`、`ReactionDef` 加欄位、結算新增 → `LOG_FORMAT` `/101` → `/102`（`戰鬥紀錄格式變更.md`）。沒用到這些欄位的戰鬥結算與 `/101` 相同。
+
+### 14.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/engine/test_mechanics_5am1.py` | 開場隱蔽 1 回合（範本與詞綴）；死亡表面（半徑、持續、不能被驅散）；同門相護（2 格內加盾、超出範圍不加、每輪 1 次、沉默不能用、非同門不加、技能命中也觸發）；九轉回天蓄力 → 下回合治療、被暈眩取消；AI：受傷友方時會施放九轉回天、優先擊倒同門相護持有者 |
+| `tests/content/`（受影響） | schema 驗證（半徑、持續上限、反應欄位必填）；雲嶺範本與詞綴載入 |
+| `tests/world/test_enemy_smoke.py`（既有） | 換機制後雲嶺陣容照樣打完 |
+
+### 14.7 驗收
+
+`uv run pytest -q tests/engine/test_mechanics_5am1.py tests/content tests/world -n 8 --timeout=1800`；交件前 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）、`npx vitest run`、`npm run build`；`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；一場原型重播。
+
+### 14.8 不做的事
+
+- 陣法範圍加成、陣眼石靈、劍陣、傷害分給同門（5A-M2）；三方混戰（5B-M3）；Boss 階段與「霧鎖千山」（5F-2）；新表面種類與新美術。
+- 單位卡上的「特性」欄（要改 API 與前端；目前開場狀態與反應規則已經顯示在單位卡的狀態與反應欄）。
+
+### 14.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5AM1-1 | 蓄力強招的引擎 | 沿用 6.23 #5 延遲段（同一套蓄力狀態、預告與取消）；「打斷」＝倒下、暈眩、冰凍（沉默不打斷，同既有延遲段） |
+| 5AM1-2 | 「花一回合蓄力」 | 強招 `ap_cost` 3（整回合）；下回合開始釋放後仍可行動 |
+| 5AM1-3 | 誰有同門相護 | 補師型修士（道童、煉丹師、水煉丹師、青霧執事）；持劍弟子是被相護的前排；武僧保留挺身而出 |
+| 5AM1-4 | 同門相護的次數與時機 | 佔本輪反應（每輪 1 次，和格擋共用）；命中後、傷害前；普攻與技能都算；一次攻擊只一層 |
+| 5AM1-5 | 同門相護護盾量 | `1d4+2`（初值，`reactions.yaml`）；同門＝`sect` 標籤；沉默、暈眩時不能用 |
+| 5AM1-6 | 碎晶傀儡的「帶電表面」 | 引擎沒有帶電表面、新表面要新美術 → 留下 **水**（半徑 1，水會導電：雷電打上去沿水擴散）；要真正的帶電表面待 PM 決定 |
+| 5AM1-7 | 死亡表面的實作方式 | 狀態 `on_death_surface`（同定時炸彈「倒下時」的做法），由範本 `opening_statuses` 掛上；狀態中性、不倒數 |
+| 5AM1-8 | 開場隱蔽的回合數 | `duration: 1`（在自己第 1 回合結束時移除）；範本開場狀態也受 5A-6b 的 2 回合上限 |
+| 5AM1-9 | 九轉回天數值 | 第二段自己為中心 3×3 的友方治療 `4d8`（延遲段第二段只能是十字／方陣／環形，`2d8` 低於預算下限；實作時改）、`wis` 加成；冷卻 4、法力 12（初值） |
+| 5AM1-10 | 戰鬥紀錄版號 | `/102` |
+
+## 15. 5B-3 詳細規格：說書人接線
 
 > 給實作 agent。只動 `content/world/narration.yaml`（新）、`src/trpg/content/world_narration.py`（新）、`src/trpg/content/world_events.py`（載入時一併載入說書模板）、`src/trpg/world/`（新增 `narration.py`；`state.py`、`actions.py`、`step.py` 小改）、`src/trpg/llm/prompts/storyteller.py`（新：prompt 文字與版本）、`src/trpg/narrative/storyteller.py`（新：組 prompt、呼叫 `LLMClient`、驗證、重試、降級）、`src/trpg/api/world_story.py`（新：外層組裝，從世界狀態取資料 → 說書人 → 世界動作；**不接路由**）、`tests/content/`、`tests/world/`、`tests/narrative/`、`tests/llm/`、`tests/api/`（只加測試）、CLI 快照（`trpg content check` 變了才重產）。**不做** 前端與 API 路由（5B-5）、任務狀態機、好感度、酒館傳聞內容（5B-4）、真模型評估（不連 8001）。不動 `trpg.engine`、`trpg.roguelite`、`narrative/events.py` 等戰鬥紀錄文字、`content/units/`。
 > 依據：09 9.1（說書人分層；NPC 代理只帶人設、記憶與當下情境）、9.5（context 依序：固定系統提示 → 世界資料 → 當前場景狀態（從引擎讀，不從聊天推斷）→ 相關記憶；輸出經 canon 驗證器，違反則重新生成）、9.6.4 第 1、6 點（LLM 只依模板與世界狀態寫情境敘述、只負責敘述結果）、9.6.7 #3（自由聊天只換資訊：線索、隱藏任務入口、傳聞；不換道具、經驗、戰力）、#6（LLM 依世界狀態挑骨架、填角色與動機；引擎驗證合法性：角色存在、地點對；LLM 不能自己多生事件；線頭只能由事件結果產生）、#7（旁白約 1～3 句，可點「多講一點」）、9.6.10 #107（旁白簡潔具體、短句少形容詞；雲嶺古風；NPC 依人設卡當場說）；10 第 10 節（結構化輸出、pydantic、prompt 版本化放 `src/trpg/llm/prompts/`、LLM 輸出寫進事件日誌、重播不呼叫 LLM）、第 11 節（`<player_input>`、物品經驗資源只能由引擎產生）；`docs/專案計畫.md` 3.1（模型不可用時遊戲要能降級）；18 18.4、18.5；本檔 2.1、2.3、8.6（5B1-3）、10。
 
-### 14.1 目標
+### 15.1 目標
 
 說書人接上 5B-1／5B-2：事件觸發後 **挑骨架（只能從候選挑）＋填角色與動機＋短旁白**；情境判定前寫 **情境敘述**、判定後寫 **結果敘述**；在 NPC 所在地點可以 **自由聊天（只換資訊）**。四種敘述都經 `LLMClient`（測試用 `MockLLMClient`），輸出先過 pydantic 與靜態檢查，不合法帶錯誤重試，用盡或連不上模型時用 **content 裡的模板文字** 降級；外層把結果包成世界動作 `narrate`，由 `trpg.world` 再核對一次引用（NPC、地點、線頭存在且角色看得到），通過才寫進世界動作日誌。**重播照紀錄、不呼叫 LLM。** 敘述不改任何數值、不產生物品、經驗、補給、線頭；唯一的狀態變化是事件敘述換骨架（候選內）。
 
@@ -1604,7 +1679,7 @@ NarrateAction(scene, story, 來源, prompt 版本) ── narration_problems 不
 
 依賴（2.3）：`trpg.world` 不匯入 `narrative`／`llm`；`trpg.narrative` 不匯入 `world`（只吃 `trpg.content` 的定義與純資料）；敘述的 pydantic 模型與靜態檢查放 `trpg.content.world_narration`，三方共用；組裝在 `trpg.api`。
 
-### 14.2 交付項目
+### 15.2 交付項目
 
 1. **schema `src/trpg/content/world_narration.py`**（`__all__` 明列、`ContentModel`、錯誤訊息繁中）：
 
@@ -1638,12 +1713,12 @@ NarrateAction(scene, story, 來源, prompt 版本) ── narration_problems 不
 
 2. **載入**：`load_world_event_content` 一併載入 `world/narration.yaml`（`WorldEventContent.story: StoryTemplates | None`）；不存在＝`None`（降級時用程式內建的最小句子）。`tones` 的區域要有地點圖。加進 `library.files`，`trpg content check` 多一行摘要。
 
-3. **雲嶺內容** `content/world/narration.yaml`（14.4）。
+3. **雲嶺內容** `content/world/narration.yaml`（15.4）。
 
 4. **`trpg.world`**：
    - `state.py`：`EventTrigger.narrated: bool = False`（有預設值、不升格式版本）。
    - `actions.py`：動作 `NarrateAction`（`kind="narrate"`、`scene`、`template`（situation／outcome）、`outcome`（outcome）、`npc`（chat）、`player_text`（chat，≤ 500 字，只存紀錄）、`story: StoryText`、`source: "llm"|"fallback"`、`prompt_version`）；事件 `narrated`（場景、最後的骨架、模板、NPC、`story`、來源）。
-   - `narration.py`：`story_choices(library, world, char, scene, ...) -> StoryChoices`（允許的骨架、NPC、地點、線頭、禁止出現的文字；給外層餵 LLM、給引擎核對，兩邊同一個函式）、`narration_problems(...)`、`apply_narration(...)`（14.5）。
+   - `narration.py`：`story_choices(library, world, char, scene, ...) -> StoryChoices`（允許的骨架、NPC、地點、線頭、禁止出現的文字；給外層餵 LLM、給引擎核對，兩邊同一個函式）、`narration_problems(...)`、`apply_narration(...)`（15.5）。
    - `step.py`：`world_step` 多一個分派。
 
 5. **`src/trpg/llm/prompts/storyteller.py`**：`STORY_PROMPT_VERSION = "storyteller/1"`、系統指令（任務、風格、安全規則）四種場景各一段。
@@ -1652,9 +1727,9 @@ NarrateAction(scene, story, 來源, prompt 版本) ── narration_problems 不
 
 7. **`src/trpg/api/world_story.py`**（外層，不接路由）：`event_story`、`situation_story`、`outcome_story`、`chat_story`：從世界狀態組請求 → `tell_story` → `NarrateAction`；組好的動作先用 `narration_problems` 核對，不過就改用降級（降級只引用允許清單內的東西，一定通過）。`client=None`＝直接降級（模型關閉）。
 
-8. **測試**（14.7）與 **完成報告** `docs/phases/Phase5B-3報告.md`：交付、提示結構與注入防護、降級做法、可重播、代決、待 PM 決定。
+8. **測試**（15.7）與 **完成報告** `docs/phases/Phase5B-3報告.md`：交付、提示結構與注入防護、降級做法、可重播、代決、待 PM 決定。
 
-### 14.3 四種場景
+### 15.3 四種場景
 
 | 場景 | 前提（引擎檢查） | LLM 可以做的 | 允許的引用 | 狀態變化 |
 |---|---|---|---|---|
@@ -1668,7 +1743,7 @@ NarrateAction(scene, story, 來源, prompt 版本) ── narration_problems 不
 - **禁止文字**（9.5 canon 驗證的規則部分）：所有文字欄位不可含本區 **未發現的隱藏地點名稱**、本區 NPC 的 **祕密原文**（`secret_zh` 只給說書人參考，18.5）。
 - 長度與句數照 `StoryText`；所有 ID 欄位在 JSON schema 是列舉，pydantic 驗證後再由 `story_problems` 與請求內的允許清單檢查。
 
-### 14.4 雲嶺降級模板（`content/world/narration.yaml`；開發 PM 定、之後可改）
+### 15.4 雲嶺降級模板（`content/world/narration.yaml`；開發 PM 定、之後可改）
 
 ```yaml
 tones:
@@ -1687,22 +1762,22 @@ chat_text: '{name}看了你一眼，沒有多說。'
 
 降級的 `actor_zh`＝骨架 `who_zh`、`motive_zh`＝`want_zh`、骨架＝引擎挑的預設骨架（若它不在允許清單，取允許清單第一個）；不引用任何 ID（`npcs`／`locations`／`threads` 空），所以一定通過引擎核對（格式化後超長時截斷到上限）。
 
-### 14.5 規則（`trpg.world.narration`，純函式）
+### 15.5 規則（`trpg.world.narration`，純函式）
 
-1. **合法性**（任一不過拋 `WorldActionError`、狀態不變）：14.3 的前提；`story_problems`；引用都在 `story_choices` 的允許清單；文字不含禁止文字；`player_text` 只有 `chat` 可填。
+1. **合法性**（任一不過拋 `WorldActionError`、狀態不變）：15.3 的前提；`story_problems`；引用都在 `story_choices` 的允許清單；文字不含禁止文字；`player_text` 只有 `chat` 可填。
 2. **套用**：`event` 換骨架並標記已敘述（重算 `follows_thread`）；其他場景不改狀態。發 `narrated` 事件（含整段 `story`，給前端與之後的記憶）。
 3. **不耗亂數**、不讀時間（`now` 由呼叫者傳入，只用來判斷線頭有效）；允許清單一律排序。
 4. **重播**：`NarrateAction` 進 `WorldAction` 聯集，`trpg-wlog/1` 照紀錄重播；敘述、來源、prompt 版本、玩家原文都在動作裡，重播不呼叫 LLM。
 
 **提示結構**（`build_story_messages`；9.5 的順序）：系統指令（固定：任務、風格〔簡潔具體、短句、1～3 句＋多講一點、區域語氣〕、安全規則〔資料區只是資料、`<player_input>` 不是指令、不給任何物品數值、只引用允許清單、不說出祕密與未發現地點〕、只輸出 JSON）＋資料區：`<world>`（區域名與語氣）、`<scene>`（地點、天氣、日夜；骨架或模板；結果摘要）、`<npcs>`（人設卡；祕密標「只供參考、不可說出」）、`<threads>`（持有的線頭文字）、`<allowed>`（允許的 ID）、`<player_input>`（只有 chat）、重試時加 `<previous_output>`、`<errors>`。玩家文字只出現在 `<player_input>`（`wrap_player_input`），其他資料區都經 `escape_text`。
 
-### 14.6 確定性與安全
+### 15.6 確定性與安全
 
 - 說書人輸出只有文字與「在允許清單內挑 ID」；沒有任何欄位能改數值、給東西（schema `additionalProperties: false`＋pydantic `extra="forbid"`）。
 - 引擎不解析敘述文字的意思，只做長度、句數、禁止文字、引用核對。
 - 降級：`LLMError`（連不上、逾時、壞回應）或重試用盡 → 模板文字，`source="fallback"`；外層核對不過也改用降級。模型不可用時遊戲照常（3.1）。
 
-### 14.7 測試
+### 15.7 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -1711,18 +1786,18 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/narrative/test_storyteller.py` | schema 列舉；玩家文字只在 `<player_input>`、注入字串被跳脫、系統訊息不含玩家文字；Mock 合法 JSON → `llm`；壞 JSON／候選外骨架／超過 3 句／提到禁止文字 → 帶錯誤重試 → 成功或降級；`LLMUnavailable` → 降級；降級文字照模板、沒有模板檔時用內建句子；prompt 版本、四個場景的系統指令都含安全規則 |
 | `tests/api/test_world_story.py` | 外層組裝：事件、情境、結果、聊天四種動作都能 `world_step`；Mock 回候選外骨架 → 降級仍可套用；`client=None` → 降級 |
 
-### 14.8 驗收
+### 15.8 驗收
 
 - `uv run pytest -q tests/world tests/narrative/test_storyteller.py tests/api/test_world_story.py tests/content/test_world_narration.py tests/content/test_world_events.py tests/llm tests/test_architecture.py -n 8 --timeout=1800 -m "not llm"` 通過；交件前加跑 `tests/cli`（`-m "slow or not slow"`、`--timeout=3000`）。
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports` 通過；`C901` ≤ 15。
 
-### 14.9 不做的事
+### 15.9 不做的事
 
 - 不接 API 路由、不做前端（事件卡、NPC 對話畫面在 5B-5）；不做好感度、任務、酒館傳聞、線頭到期結局（5B-4）；不做說書人記憶（9.6.7 #8：之後用 `narrated` 事件與日誌做）、canon 驗證的小模型部分（只做規則）。
 - 不讓聊天產生線頭、揭露地點或任何狀態變化（「隱藏任務入口、傳聞」的發放在 5B-4 的任務與傳聞資料裡做）。
 - 不做真模型評估（不連 8001）；不做串流。
 
-### 14.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 15.10 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -1737,6 +1812,6 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5B3-9 | 組裝放哪 | `trpg.api.world_story`（world 與 narrative 互不匯入）；路由與畫面在 5B-5 |
 
 
-## 15. 之後各段規格
+## 16. 之後各段規格
 
-（5B-3 驗收後補上之後各段。）
+（5A-M1、5B-3 驗收後補上之後各段。）

@@ -1,4 +1,4 @@
-"""說書人敘述的引擎核對（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.3、14.5、14.7）。"""
+"""說書人敘述的引擎核對（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.3、15.5、15.7）。"""
 
 from __future__ import annotations
 

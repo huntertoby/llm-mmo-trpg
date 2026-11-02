@@ -1,4 +1,4 @@
-"""說書人的外層組裝（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.1、14.2 第 7 點）。
+"""說書人的外層組裝（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.1、15.2 第 7 點）。
 
 ``trpg.world`` 不匯入 narrative／llm、``trpg.narrative`` 不匯入 world（2.3），所以由這裡把兩邊
 接起來：從世界狀態與內容庫組出說書人的請求（允許清單用

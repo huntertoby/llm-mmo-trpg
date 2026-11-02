@@ -1,4 +1,4 @@
-"""說書人敘述的引擎核對（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.3、14.5）。
+"""說書人敘述的引擎核對（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.3、15.5）。
 
 說書人（``trpg.narrative.storyteller``，由外層呼叫）只提議文字與「從允許清單挑 ID」；本模組決定
 允許清單（:func:`story_choices`，外層餵 LLM 與引擎核對用同一個函式），並在 :func:`apply_narration`
@@ -122,7 +122,7 @@ def story_choices(
     npc: str | None = None,
     player_text: str = "",
 ) -> StoryAllowed:
-    """``scene`` 的允許清單；前提不成立拋 :class:`WorldActionError`（14.3）。"""
+    """``scene`` 的允許清單；前提不成立拋 :class:`WorldActionError`（15.3）。"""
     _check_fields(scene, template=template, outcome=outcome, npc=npc, player_text=player_text)
     locations, held, forbidden = _common(library, world, char, now)
     cards = region_npcs(library, char.region)

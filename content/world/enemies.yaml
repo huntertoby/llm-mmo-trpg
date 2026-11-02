@@ -1,7 +1,7 @@
 # 大世界敵人的元素變體與精英詞綴（Phase 5A-3；schema：src/trpg/content/world_enemies.py）。
 # 規則：docs/design/09-世界與敘事.md 9.6.6（#82：變體換元素或武器、精英帶詞綴，都是 content 資料）。
 # 內容：docs/design/18-雲嶺內容.md 18.2.1（#111，玩法 PM 代決、待使用者確認）。
-# 只用既有技能與反應；引擎沒有的機制照最保守替代（docs/phases/Phase5計畫.md 7.6 代決 5A3-3）。
+# 只用既有技能、反應與開場狀態；引擎沒有的機制照最保守替代（docs/phases/Phase5計畫.md 7.6 代決 5A3-3；霧隱的在 5A-M1 換成開場隱蔽）。
 # 數值（hp_permille）是開發 PM 的初值，未經模擬。
 
 # 變體：以 base 範本為底，換名字、武器與技能；theme 是外觀用的元素標記（5A-ART）。
@@ -32,11 +32,9 @@ affixes:
     hp_permille: 1500
   - id: mist_veiled
     name_zh: 霧隱的
-    description_zh: 受到攻擊時隱入霧中（原設計「開場隱蔽 1 回合」沒有對應機制，代決 5A3-3）。
-    add_skills: [skill_rx_slip_away]
-    add_reactions:
-      - reaction: skill_rx_slip_away
-        when: {event: hit_by_attack}
+    description_zh: 開戰時隱身在霧中 1 回合。
+    add_opening_statuses:
+      - {status: concealed, duration: 1}   # 開場隱蔽 1 回合（18.2.1；5A-M1）
     hp_permille: 1500
   - id: heart_linked
     name_zh: 連心的

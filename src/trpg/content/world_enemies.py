@@ -16,7 +16,7 @@ from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
-from trpg.content.battle import ID_PATTERN, ReactionRule, UnitTemplate, WeaponDef
+from trpg.content.battle import ID_PATTERN, OpeningStatus, ReactionRule, UnitTemplate, WeaponDef
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import SkillDef, held_gear, skill_slot_problems, weapon_problem
@@ -92,6 +92,8 @@ class EliteAffixDef(ContentModel):
     add_skills: tuple[str, ...] = ()
     add_reactions: tuple[ReactionRule, ...] = ()
     """加上的反應規則；範本沒寫 ``reactions`` 時先展開成 ``reactions.yaml`` 的預設規則再加。"""
+    add_opening_statuses: tuple[OpeningStatus, ...] = ()
+    """開場就帶著的狀態（Phase 5A-M1：霧隱的＝開場隱蔽 1 回合），接在範本自己的後面。"""
     hp_permille: int = Field(default=1000, ge=1000, le=5000)
     weapon_classes: tuple[WeaponClass, ...] = ()
     """限定的武器大類；空＝不限。"""
@@ -176,7 +178,7 @@ def apply_affix(
     template: UnitTemplate, affix: EliteAffixDef, default_rules: tuple[ReactionRule, ...]
 ) -> UnitTemplate:
     """把精英詞綴套到範本：ID＝``<範本>_<詞綴>``、名字＝詞綴名＋範本名、加 ``elite`` 標籤、
-    HP × ``hp_permille``（捨去，至少 1）、加技能與反應規則。不檢查能不能套（見
+    HP × ``hp_permille``（捨去，至少 1）、加技能、反應規則與開場狀態。不檢查能不能套（見
     :meth:`EnemyCatalog.affix_problem`）。"""
     reactions = template.reactions
     if affix.add_reactions:
@@ -189,6 +191,7 @@ def apply_affix(
             "max_hp": max(1, template.max_hp * affix.hp_permille // 1000),
             "skills": (*template.skills, *affix.add_skills),
             "reactions": reactions,
+            "opening_statuses": (*template.opening_statuses, *affix.add_opening_statuses),
             "tags": tuple(sorted({*template.tags, ELITE_TAG})),
         }
     )

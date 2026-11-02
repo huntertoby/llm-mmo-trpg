@@ -108,6 +108,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
+from trpg.engine.ai.priority import delayed_heal_points, priority_points
 from trpg.engine.ai.race import race_ai_action
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
@@ -1073,6 +1074,9 @@ def _gains(
     f = _gain_frame(state, actor, p, profile, only)
     gains = _damage_gains(f) + _ally_gains(f) + _kill_gains(f) + _push_gains(f)
     gains += _surface_gains(f) + _displace_gains(f)
+    gains += f.w.damage * priority_points(  # 先打補師、打斷強招（Phase 5A-M1）
+        state, actor, p.min_events, p.max_events, f.hit, profile.rewrite, only
+    )
     if f.w.expose or f.w.cover_damage:
         gains += _cover_gains(state, actor, p, f.w, f.hit, only)
     if only is None and isinstance(p.action, UseSkill):  # 純地形技能（3T-5）
@@ -1407,11 +1411,15 @@ def _delayed_points(
     state: BattleState, actor: UnitState, p: Preview, rules: RewriteAiRules
 ) -> Fraction:
     """延遲段（3F-4b）的收益：預覽中開始蓄力（``followup_charged``）時，預計範圍內的（敵人數 −
-    友方數）× ``delayed_enemy_points``；被攻擊才釋放的再 × ``delayed_attacked_permille``。範圍以
+    友方數）× ``delayed_enemy_points``（第二段是治療時改看受傷的友方，5A-M1）；被攻擊才釋放的
+    再 × ``delayed_attacked_permille``。範圍以
     目前的位置推算（敵人會移動，所以只是近似）。"""
     for e in p.min_events:
         if not (isinstance(e, FollowupCharged) and e.unit_id == actor.id):
             continue
+        healing = delayed_heal_points(state, actor, e, rules)  # 治療型強招（Phase 5A-M1）
+        if healing is not None:
+            return healing
         tiles = {(t.x, t.y) for t in e.tiles}
         near = [u for u in state.living_units() if u.xy in tiles and u.id != actor.id]
         enemies = sum(1 for u in near if u.team is not actor.team)

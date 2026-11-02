@@ -1,4 +1,4 @@
-"""說書人敘述的 schema 與降級模板（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.2、14.7）。"""
+"""說書人敘述的 schema 與降級模板（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.2、15.7）。"""
 
 from __future__ import annotations
 

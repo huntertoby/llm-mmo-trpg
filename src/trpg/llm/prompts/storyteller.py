@@ -1,4 +1,4 @@
-"""說書人的系統指令（Phase 5B-3；``docs/phases/Phase5計畫.md`` 14.5；10 第 10 節：prompt 版本化）。
+"""說書人的系統指令（Phase 5B-3；``docs/phases/Phase5計畫.md`` 15.5；10 第 10 節：prompt 版本化）。
 
 四種場景（事件開場、情境敘述、結果敘述、NPC 聊天）共用同一段風格與安全規則，任務各一段。
 改動任何文字或區塊格式時必須同步改 :data:`STORY_PROMPT_VERSION`（隨敘述寫進世界動作日誌）。
