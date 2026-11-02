@@ -785,6 +785,8 @@ class RewriteAiRules(ContentModel):
       正在蓄力（``charging``）的敵人額外的價值。
     - ``formation_break_points``（Phase 5A-M2，18.2.1「劍陣」）：動作讓對方陣法持有者的倍率總和
       每下降 1000‰（擊倒、推開或拉走同門）的價值。
+    - ``ward_kill_points``（Phase 5A-M2b，18.2 陣眼石靈）：擊倒帶護陣（``ward``）的敵人額外的價值
+      （打碎陣眼讓同門失去減傷，AI 會優先打；初值，代決 5AM2b-2）。
     - ``share_discount_permille``（Phase 5A-M2，詞綴「連心的」）：打在分傷持有者身上、被分給同門的
       傷害打這個折扣（‰，扣在傷害收益上）——集火持有者的效益下降。
     """
@@ -815,6 +817,7 @@ class RewriteAiRules(ContentModel):
     priority_kill_points: int = Field(default=10, ge=0)
     interrupt_points: int = Field(default=12, ge=0)
     formation_break_points: int = Field(default=10, ge=0)
+    ward_kill_points: int = Field(default=12, ge=0)
     share_discount_permille: int = Field(default=500, ge=0, le=1000)
 
 

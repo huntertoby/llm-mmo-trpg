@@ -185,6 +185,13 @@ def formation_rules(status: StatusDef) -> list[str]:
         if spec.alone_permille != NEUTRAL_PERMILLE:
             line += f"；範圍內沒有時攻擊傷害 ×{spec.alone_permille / 10:g}%"
         lines.append(line)
+    ward = status.ward
+    if ward is not None:
+        lines.append(
+            f"護陣：持有者還在場時，{ward.range} 格內的{_kin_text(ward.kin_tag)}"
+            "（不含自己）受到的傷害 "
+            f"×{ward.taken_permille / 10:g}%；持有者倒下後立刻解除"
+        )
     share = status.share_damage
     if share is not None:
         where = "相鄰" if share.range == 1 else f"{share.range} 格內"

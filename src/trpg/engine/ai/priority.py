@@ -7,6 +7,8 @@
   或沉默（只對法術型蓄力，5A-M1b），額外 ``rewrite.interrupt_points``。
 - **治療型延遲段**（九轉回天）：開始蓄力時，預計範圍內每個受傷的友方（含自己）
   ``rewrite.delayed_heal_points``。
+- **打碎陣眼**（Phase 5A-M2b，18.2 陣眼石靈）：擊倒帶護陣（``ward``）的敵人，額外
+  ``rewrite.ward_kill_points``。
 - **打散陣型**（Phase 5A-M2，18.2.1「劍陣」）：動作後對方存活的陣法持有者的倍率總和下降量
   ÷ 1000 × ``rewrite.formation_break_points``（擊倒、推開、拉走同門都算）。
 - **連心**（Phase 5A-M2，詞綴「連心的」）：預覽中對方分傷持有者分給同門的傷害（min／max 平均 ×
@@ -56,8 +58,15 @@ def is_kin_warden(state: BattleState, unit: UnitState) -> bool:
     return False
 
 
+def _is_ward_holder(state: BattleState, unit: UnitState) -> bool:
+    """``unit`` 身上有護陣狀態（陣眼石靈）。"""
+    return any(state.ruleset.status_def(s.status_id).ward is not None for s in unit.statuses)
+
+
 def _kill_value(state: BattleState, unit: UnitState, rules: RewriteAiRules) -> int:
     value = rules.priority_kill_points if is_kin_warden(state, unit) else 0
+    if _is_ward_holder(state, unit):
+        value += rules.ward_kill_points
     if unit.has_status(CHARGING):
         value += rules.interrupt_points
     return value

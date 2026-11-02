@@ -160,6 +160,15 @@ statuses:
     expires: never
     stacking: refresh
     formation: {kin_tag: sword_array, range: 3, per_ally_permille: 200, max_allies: 2, alone_permille: 800}
+  # 5A-M2b：陣眼石靈「護陣」（18.2：陣眼石靈存在時，3 格內的同門受到的傷害 −20%，打碎後立刻解除）。同門標籤 sect
+  # （石靈自己不算）；數值初值（代決 5AM2b-1，未經模擬）。
+  - id: array_ward
+    polarity: neutral
+    name_zh: 護陣
+    description_zh: 陣眼還在時，附近的同門受到的傷害減少；陣眼被打碎就失效。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    ward: {kin_tag: sect, range: 3, taken_permille: 800}
   # 5A-M2：詞綴「連心的」（18.2.1：受到的傷害分一部分給相鄰同門）。詞綴池含野獸、盜賊，所以不限標籤（相鄰友方都算）；
   # 數值初值（代決 5AM2-5，未經模擬）。
   - id: heart_link

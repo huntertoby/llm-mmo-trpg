@@ -548,6 +548,8 @@ class DamageDealt(EventBase):
     ``amount − absorbed − redirected − shared``。每名同門各一個緊接著的 ``damage_redirected``。"""
     formation_permille: int = 1000
     """攻擊者的陣法倍率（‰，Phase 5A-M2「劍陣」；已包含在 ``status_ppm`` 裡，供紀錄分開顯示）。"""
+    ward_permille: int = 1000
+    """目標受到的護陣倍率（‰，Phase 5A-M2b；已包含在 ``status_ppm`` 裡，供紀錄分開顯示）。"""
     exploded: int = 0
     """爆骰（Phase 3D-7b）多擲的骰子數（``rolls`` 已包含它們）。"""
     flat: int = 0

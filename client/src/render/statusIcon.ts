@@ -317,6 +317,11 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
       line(c, [[x - 2.5, 3], [x + 2.5, 3]]);
     }
   },
+  // 護陣（Phase 5A-M2b，陣眼石靈：附近同門減傷）：一圈外框裡一個實心圓，只用既有筆畫
+  array_ward: (c) => {
+    circle(c, 0, 0, 8.5);
+    circle(c, 0, 0, 3, true);
+  },
   // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
   heart_link: (c) => {
     circle(c, -5, 0, 4);
