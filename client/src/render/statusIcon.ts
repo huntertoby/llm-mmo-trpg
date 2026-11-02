@@ -304,6 +304,12 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     circle(c, 0, 0, 8);
     circle(c, 0, 0, 3.5, true);
   },
+  // 碎晶（Phase 5A-M1，碎晶傀儡倒下時留下導電的水）：碎片＋水滴，只用既有筆畫
+  shard_burst: (c) => {
+    star(c, -4, -4, 4);
+    star(c, 5, -2, 3);
+    drop(c, 0, 5, 5);
+  },
   slow: (c) => {
     circle(c, 0, 0, 8.5);
     line(c, [[0, 0], [0, -6]]);

@@ -28,6 +28,7 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "BlockBonus",
+    "DeathSurfaceSpec",
     "Dice",
     "DollGear",
     "DollLook",
@@ -35,6 +36,7 @@ __all__ = [
     "HitCondition",
     "OffhandDef",
     "OffhandTable",
+    "OpeningStatus",
     "ReactionRule",
     "ReactionUnless",
     "ReactionWhen",
@@ -705,6 +707,17 @@ _NEUTRAL_PERMILLE = 1000
 _MAX_DURATION_BONUS = 2
 
 
+class DeathSurfaceSpec(ContentModel):
+    """倒下時留下的表面（Phase 5A-M1，18.2.2 碎晶傀儡、19 熔岩獸「熔核爆裂」）。
+
+    帶有這個狀態的單位倒下時，在倒下的格子與曼哈頓距離 ``radius`` 以內可以有表面的格子產生
+    ``surface``；``duration`` 省略＝表面的預設持續回合。"""
+
+    surface: Surface
+    radius: int = Field(default=0, ge=0, le=2)
+    duration: int | None = Field(default=None, ge=1, le=6)
+
+
 class StatusDef(ContentModel):
     """一種狀態。
 
@@ -858,9 +871,19 @@ class StatusDef(ContentModel):
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
     beneficial: bool = False
     polarity: Literal["buff", "debuff", "neutral"]
+    on_death_surface: DeathSurfaceSpec | None = None
+    """（Phase 5A-M1）帶有者倒下時在原地留下表面（:class:`DeathSurfaceSpec`）。只能用在
+    ``polarity: neutral``、``expires: never`` 的狀態（不被淨化、驅散、奪取，整場都在）。"""
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
+        if self.on_death_surface is not None and (
+            self.polarity != "neutral" or self.expires != "never" or self.duration is not None
+        ):
+            raise ValueError(
+                f"狀態 {self.id}：on_death_surface 只能用在 polarity: neutral、expires: never、"
+                "不設 duration 的狀態"
+            )
         if self.polarity == "buff" and not self.beneficial:
             raise ValueError(f"狀態 {self.id}：polarity: buff 必須 beneficial: true")
         if self.polarity == "debuff" and self.beneficial:
@@ -974,7 +997,10 @@ class ReactionWhen(ContentModel):
         "ally_targeted",
         "enemy_moves_in_range",
         "ally_hit_in_range",
+        "kin_hit_in_range",
     ]
+    """``kin_hit_in_range``（Phase 5A-M1）：內建反應「同門相護」的事件——範圍內帶同門標籤的友方
+    被敵人的攻擊（普攻或技能）命中、傷害之前。"""
 
 
 class ReactionUnless(ContentModel):
@@ -1198,6 +1224,16 @@ SUMMON_ROLES: tuple[str, ...] = (
 type SummonRole = Literal["melee", "ranged", "support", "totem", "scout", "assassin", "bomber"]
 
 
+class OpeningStatus(ContentModel):
+    """範本開場就帶著的狀態（Phase 5A-M1：霧隱的開場隱蔽 1 回合、碎晶傀儡的死後碎片）。
+
+    ``duration`` 省略＝狀態定義的預設；有限的持續回合在開戰時最多 2（5A-6b，
+    ``OPENING_STATUS_MAX_DURATION``）。"""
+
+    status: str = Field(pattern=ID_PATTERN)
+    duration: int | None = Field(default=None, ge=1, le=2)
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -1281,6 +1317,9 @@ class UnitTemplate(ContentModel):
     level: int = Field(default=1, ge=1, le=99)
     """角色等級（Phase 3-33b）：召喚物的 HP 與傷害依施放者的等級成長；一輪的主角帶入目前等級，
     其他單位為 1。"""
+    opening_statuses: tuple[OpeningStatus, ...] = ()
+    """開場就帶著的狀態（Phase 5A-M1）：開戰時在擲先攻前施加、不擲抵抗（同
+    ``UnitSpawn.opening_statuses``，先施加範本的）。"""
 
     @model_validator(mode="after")
     def _check_totem(self) -> UnitTemplate:

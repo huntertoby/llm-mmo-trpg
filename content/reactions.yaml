@@ -15,6 +15,8 @@
 #                                    （強制位移、傳送、跳躍、互換不算）。監視射擊 overwatch_shot 用它
 #   ally_hit_in_range（3G-G3b）      射程內（距離由裝備詞條決定）的友方被敵人單體攻擊命中、傷害之前；另一方是攻擊者。
 #                                    redirect_damage 用它（只由裝備詞條授予，不在 default_rules）
+#   kin_hit_in_range（5A-M1）        range 格內帶 kin_tag 的友方被敵人的攻擊（普攻或技能）命中、傷害之前；另一方是攻擊者。
+#                                    shield_ally 用它（同門相護：替他加 shield_dice + shield_flat 的護盾）
 # redirect_damage：改由持有者承受這次攻擊（同 intercept，不重擲命中、不花耐力）。
 # requires_status（3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉（普攻結算完）之後移除該狀態
 # 監視射擊沒有出現在 default_rules：單位裝備了施加 overwatch 狀態的技能時，由引擎自動加上一條 auto 規則
@@ -55,6 +57,18 @@ reactions:
     description_zh: 範圍內的隊友被敵人單體攻擊命中時，改由你承受這次攻擊（來自裝備，每輪最多一次）。
     effect: redirect_damage
     events: [ally_hit_in_range]
+  # Phase 5A-M1：雲嶺山中修士的招牌「同門相護」（docs/design/18-雲嶺內容.md 18.2.1；數值初值，未經模擬）。
+  # 不在 default_rules：範本的 reactions 明寫一條 kin_ward 規則才有。佔本輪反應（每輪 1 次）；被沉默時不能用。
+  - id: kin_ward
+    name_zh: 同門相護
+    description_zh: 2 格內的同門被敵人攻擊命中時（傷害之前），替他加一層小護盾（每輪 1 次；被沉默時不能用）。
+    effect: shield_ally
+    events: [kin_hit_in_range]
+    range: 2
+    kin_tag: sect
+    shield_dice: 1d4
+    shield_flat: 2
+    blocked_by_silence: true
 # events（Phase 3E-2e）：反應事件的中文名與說明，ReactionWhen.event 的每個值都要有一列（schema 與測試檢查）；
 # 技能卡的「反應時機」部件與 glossary API 用，前端不再手寫。
 events:
@@ -70,6 +84,7 @@ events:
   - {id: ally_targeted, name_zh: 隊友被瞄準時, description_zh: 相鄰友方被敵人的單體技能或普攻選為目標、命中判定之前。}
   - {id: enemy_moves_in_range, name_zh: 敵人在射程內移動時, description_zh: 敵人主動移動一步後，位置在你的武器射程與視線內。}
   - {id: ally_hit_in_range, name_zh: 範圍內隊友受擊時, description_zh: 範圍內的友方被敵人單體攻擊命中、傷害結算之前。}
+  - {id: kin_hit_in_range, name_zh: 同門受擊時, description_zh: 範圍內帶同門標籤的友方被敵人的攻擊命中、傷害結算之前。}
 default_rules:
   - reaction: block
     when: {event: targeted_by_melee}
