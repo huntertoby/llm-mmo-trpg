@@ -1,0 +1,24 @@
+# BAL-19c（玩法決定 #110，06 6.27.4；數值為初值，未經模擬）：召喚物關鍵字的武器技——近戰召喚戰狼（固有倒地）。
+# 武器技看手上武器的屬性（3H-6），召喚物的 HP 與傷害跟著武器屬性成長（6.29.1）；召喚法術仍看意志（6.10 不改）。
+id: skill_sum_war_howl
+schema_version: 1
+name_zh: 戰嚎喚狼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: summon, unit: summon_war_wolf, duration: 2}
+condition: null
+cost: {stamina: 6, cooldown: 3}
+tags: [physical, melee, summon]
+narrative:
+  concept: 舉起武器發出戰嚎，喚來一頭戰狼和你並肩衝鋒、撲倒獵物
+  cast_flavor: 你的吼聲還在迴盪，一道灰影已經從你身側竄了出去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

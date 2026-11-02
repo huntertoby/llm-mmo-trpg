@@ -62,7 +62,7 @@ TABLE = {
     "skill_chain_lightning": 3,
     "skill_earth_collapse": 3,
     # 2 階：召喚、陷阱、姿態、自身位移或互換、3×3、接續段、4～6 格地形
-    "skill_summon_spirit": 2,
+    "skill_summon_war_wolf": 2,  # BAL-19c：基本召喚物（元素之靈、骷髏）1 階，見下面的測試
     "skill_cinder_mine": 2,
     "skill_bulwark_stance": 2,
     "skill_blink": 2,
@@ -120,7 +120,7 @@ def test_the_table_lives_in_content() -> None:
 
 
 def test_the_validator_gates_fresh_skills_by_their_tier() -> None:
-    summon = LIB.skills["skill_summon_spirit"]
+    summon = LIB.skills["skill_summon_war_wolf"]
     assert validate_skill(summon, LIB) == []  # 手寫內容保留原本的階級與內容
     fresh = _fresh(summon)
     assert {v.rule for v in tier_violations(fresh, LIB)} == {"tier.skeleton", "tier.primitive"}
@@ -138,7 +138,7 @@ def test_the_validator_gates_fresh_skills_by_their_tier() -> None:
 
 def test_rarity_is_only_a_marker() -> None:
     """稀有度不擋（普通的召喚技在 2 階也合法），標記由結構自動算。"""
-    summon = _fresh(LIB.skills["skill_summon_spirit"], rarity="common")
+    summon = _fresh(LIB.skills["skill_summon_war_wolf"], rarity="common")
     assert not [v for v in tier_violations(summon, LIB, 2) if v.rule.startswith("rarity")]
     assert not any(v.rule.startswith("rarity") for v in validate_skill(summon, LIB))
     assert structural_rarity(summon, LIB) == "rare"
@@ -148,9 +148,42 @@ def test_rarity_is_only_a_marker() -> None:
 def test_creation_whiteboard_is_exempt_but_offers_are_not() -> None:
     board = compose_whiteboard(1, keyword="summon", tier=1, library=LIB, starter=True)
     assert board.provenance.origin == "starter" and validate_skill(board, LIB) == []
+    # 依關鍵字挑的召喚物（點燃 → 火靈）三選一仍 2 階起
     with pytest.raises(Exception, match="白板"):
-        compose_whiteboard(1, keyword="summon", tier=1, library=LIB)
+        compose_whiteboard(1, keyword="ignite", tier=1, library=LIB, recipe_id="summon_fire")
     assert compose_whiteboard(1, keyword="summon", tier=2, library=LIB).effects[0].type == "summon"
+
+
+def test_basic_summons_open_tier_one_offers() -> None:
+    """BAL-19c（#110，06 6.27.4「開放 1 階召喚白板」）：只召喚 1 隻基本召喚物（元素之靈、骷髏戰士）
+    時召喚原語與骨架 1 階；其他召喚物、一次 2 隻的仍 2 階。"""
+    assert LIB.budget.min_character_tier.basic_summon_units == (
+        "summon_elemental_spirit",
+        "summon_skeleton_warrior",
+    )
+    units = set()
+    for seed in range(12):
+        board = compose_whiteboard(seed, keyword="summon", tier=1, library=LIB)
+        assert board.provenance.origin == "level_up" and validate_skill(board, LIB) == []
+        assert tier_violations(board, LIB) == [] and board.tier == 1
+        units.add(board.effects[0].unit)
+    assert units == {"summon_elemental_spirit"}  # 骷髏也推導成倒地，選「召喚物」時給元素之靈
+    skeleton = compose_whiteboard(3, tier=1, library=LIB, recipe_id="summon_skeleton")
+    assert (
+        skeleton.effects[0].unit == "summon_skeleton_warrior"
+        and validate_skill(skeleton, LIB) == []
+    )
+    spirit = _fresh(LIB.skills["skill_summon_spirit"])
+    assert minimum_tier(spirit, LIB) == 1 and tier_violations(spirit, LIB) == []
+    effect = spirit.effects[0]
+    pair = spirit.model_copy(
+        update={"effects": (effect.model_copy(update={"count": 2, "power_permille": 600}),)}
+    )
+    assert minimum_tier(pair, LIB) == 2
+    wolf = spirit.model_copy(
+        update={"effects": (effect.model_copy(update={"unit": "summon_war_wolf"}),)}
+    )
+    assert {v.rule for v in tier_violations(wolf, LIB)} == {"tier.skeleton", "tier.primitive"}
 
 
 # ---------------------------------------------------------------------------
