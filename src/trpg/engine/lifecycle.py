@@ -304,12 +304,23 @@ def weapon_reaction_rules(
     ]
     if not defaults:
         return (*auto, *written)
+    return (*auto, *default_block_off(written, rules))
+
+
+def default_block_off(
+    reactions: tuple[ReactionRule, ...], rules: Ruleset
+) -> tuple[ReactionRule, ...]:
+    """把格擋（``reduce_damage``）規則改成 ``off``，其他規則不動（只用在預設規則上）。"""
     block = {d.id for d in rules.reactions.reactions if d.effect == "reduce_damage"}
-    kept = tuple(
+    return tuple(
         rule.model_copy(update={"mode": "off"}) if rule.reaction in block else rule
-        for rule in written
+        for rule in reactions
     )
-    return (*auto, *kept)
+
+
+def has_reaction_skill(template: UnitTemplate, rules: Ruleset) -> bool:
+    """範本裝了反應技（``kind: reaction``）。"""
+    return any(rules.skill_def(sid).kind == "reaction" for sid in sorted(template.skills))
 
 
 def make_unit(
@@ -344,6 +355,10 @@ def make_unit(
     reactions = weapon_reaction_rules(
         weapon, rules, tuple(reactions), defaults=template.reactions is None
     )
+    if template.reactions is None and has_reaction_skill(template, rules):
+        # BAL-15c（玩法決定 #83，05 5.2.1）：裝了反應技時預設先用反應技、不自動格擋（敵我同樣）；
+        # 玩家可以在反應設定把格擋改回自動（格擋在傷害前結算，改回後就是格擋優先）。
+        reactions = default_block_off(tuple(reactions), rules)
     reactions = (*reactions, *gear_reaction_rules(gear, rules, tuple(reactions)))  # 3G-G3b
     max_hp = rules.core.template_max_hp(template)
     return UnitState(
