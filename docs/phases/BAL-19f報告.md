@@ -105,7 +105,7 @@
 
 - `tests/skillgen/fixtures/refactor_3wr2.json`：重產。complete／retier 只新增 3 招（fsum），既有條目不變；flash 抽樣依技能排序，換了 90 筆（同 19c，既有同 key 的值不變）。
 - `client/src/render/fixtures/skill_icons.json`：重產，只新增條目。
-- CLI 雜湊：CLI_SNAPSHOT
+- CLI 雜湊：合併 main（534e741e，修 5 個失敗測試）後重產（不加 -n），只有 `skills_list`、`skills_show_all/04～15` 改變。
 - 計數：`_BAL19_PREFIXES` 加 `skill_fsum_`；`tests/content/test_skill_scaling.py` 370 → 373；`test_coverage.py` 的 `_UNCOVERED` 加 `commanding`。
 - 既有測試隨規格更新：`test_rule_lists_3wr2`（白板形狀清單）、`test_whiteboard_3w4`（主動白板形狀集合、「形狀必須簡單」改用 allies_in_radius）。
 
@@ -121,4 +121,3 @@ CHECKS
 4. **觸發「每種 ≥ 2」以配方總數算**：暴擊白板 1 階 0 個（2 階起 2 個）；watch_mark 只到 2 階；毒霧只有 1 階（錐形狀態在高階湊不到下限）。
 5. **形狀上限**：錐形深度 2～4（最多 16 格）、環形半徑 1～2 照組合器既有範圍出，沒有另外限「小範圍」；預算會把傷害壓低。
 6. 新增配方、號令、火杖召喚的數值都是初值，沒有跑模擬。
-7. **既有的 slow 測試失敗（不是本段造成）**：`tests/skillgen/test_evolution.py::test_every_option_passes_the_validator_within_the_same_tier_budget`——BAL-19c 的手寫史詩召喚武器技（號令先鋒、雷鳴箭靈）進化後只剩召喚效果，結構稀有度算成稀有，卡片仍標史詩。可能和另一個 agent 在修的「雷鳴箭靈稀有度」同源，本段沒動。
