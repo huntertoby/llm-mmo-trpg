@@ -47,6 +47,7 @@ from trpg.server.accounts import (
     AccountStore,
     AuthError,
 )
+from trpg.server.league import LeagueError, LeagueMatchNotFoundError
 from trpg.server.notes import NoteError, NoteNotFoundError
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
@@ -84,6 +85,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     AdminRequiredError: 403,
     NoteNotFoundError: 404,
     NoteError: 422,
+    LeagueError: 409,  # 5F-4 循環賽還不能開跑
+    LeagueMatchNotFoundError: 404,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
@@ -142,6 +145,7 @@ def create_app(
         season_start=None if start_date is None else season_start_at(lib, start_date),
     )
     app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
+    app.router.on_shutdown.append(app.state.world.league_runner.shutdown)  # 5F-4 循環賽
     app.state.server_settings = network  # 網路與健康檢查（5E-3）
     health = LlmHealth(provider, interval_s=network.llm_health_interval_s)
     world_llm = WorldLlm(provider, health)  # 大世界自己的 LLM 開關（5B-5）
