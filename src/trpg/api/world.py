@@ -266,7 +266,8 @@ class WorldStore:
             char = new_character(
                 self.library, character_id, hero, region=START_REGION, origin=run.origin
             )
-            char = char.model_copy(update={"generated_skills": run.generated_skills})
+            update = {"generated_skills": run.generated_skills, "news_seen_at": self.clock()}
+            char = char.model_copy(update=update)  # 新角色：建立之前的消息不算「你不在的時候」
             self._save_char(char)
             return char
 

@@ -44,7 +44,7 @@ from trpg.world.actions import (
     TalkedEvent,
     WorldEvent,
 )
-from trpg.world.calendar import day_of, season_day
+from trpg.world.calendar import day_of, day_start, season_day
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.economy_actions import CurrencyGainedEvent
 from trpg.world.encounters import elite_kinds
@@ -107,11 +107,18 @@ def _apply_effect(world: WorldState, effect: WorldEventEffect) -> WorldState:
 
 
 def _resolve(
-    world: WorldState, event: WorldEventDef, state: WorldEventState, day: int, *, success: bool
+    world: WorldState,
+    event: WorldEventDef,
+    state: WorldEventState,
+    day: int,
+    at: int,
+    *,
+    success: bool,
 ) -> tuple[WorldState, WorldEvent]:
     effect = event.on_success if success else event.on_failure
     outcome: Literal["succeeded", "failed"] = "succeeded" if success else "failed"
-    state = state.model_copy(update={"status": outcome, "resolved_day": day})
+    update = {"status": outcome, "resolved_day": day, "resolved_at": at}
+    state = state.model_copy(update=update)
     world = _apply_effect(_with_event(world, state), effect)
     resolved = WorldEventResolvedEvent(
         event=event.id,
@@ -125,16 +132,16 @@ def _resolve(
 
 
 def _roll_day(
-    season: SeasonContent, world: WorldState, day: int, start_day: int
+    season: SeasonContent, world: WorldState, day: int, start_day: int, at: int
 ) -> tuple[WorldState, list[WorldEvent]]:
-    """刷新日 ``day``（賽季第 ``day − start_day + 1`` 天）的換日。"""
+    """刷新日 ``day``（賽季第 ``day − start_day + 1`` 天，從 UTC 秒 ``at`` 開始）的換日。"""
     sday = day - start_day + 1
     players = None if sday <= 1 else (players_on(world, day - 1) or None)  # 沒有紀錄＝None
     events: list[WorldEvent] = []
     for event in season.world_events:
         state = world.world_event(event.id)
         if state is not None and state.status == "active" and event.days[1] < sday:
-            world, resolved = _resolve(world, event, state, day, success=False)
+            world, resolved = _resolve(world, event, state, day, at, success=False)
             events.append(resolved)
             continue
         if not event.days[0] <= sday <= event.days[1]:
@@ -155,7 +162,7 @@ def _roll_day(
                 WorldEventTargetEvent(event=event.id, day=day, players=players, target=target)
             )
         if state.status == "active" and state.progress >= state.target:
-            world, resolved = _resolve(world, event, state, day, success=True)
+            world, resolved = _resolve(world, event, state, day, at, success=True)
             events.append(resolved)
     return world, events
 
@@ -175,7 +182,7 @@ def roll_season(
     last = min(today, start_day + season.days)  # 季末之後沒有要處理的（多處理結束隔天的失敗）
     events: list[WorldEvent] = []
     for day in range(first, last + 1):
-        world, more = _roll_day(season, world, day, start_day)
+        world, more = _roll_day(season, world, day, start_day, day_start(library, day))
         events += more
     return world.model_copy(update={"rolled_day": today}), tuple(events)
 
@@ -285,7 +292,7 @@ def _advance_events(
             )
         )
         if state.progress >= state.target:
-            world, resolved = _resolve(world, event, state, today, success=True)
+            world, resolved = _resolve(world, event, state, today, now, success=True)
             out.append(resolved)
     return world, out
 

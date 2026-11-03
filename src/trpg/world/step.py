@@ -42,6 +42,7 @@ from trpg.world.actions import (
     LoadoutAction,
     LocationRevealedEvent,
     NarrateAction,
+    NewsSeenAction,
     OfferPickAction,
     PerceptionCheckEvent,
     RestAction,
@@ -257,6 +258,16 @@ def _changes_world(fn: _WorldFn) -> _Handler:
     return run
 
 
+def _news_seen(
+    char: CharacterState, action: NewsSeenAction, now: int
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """看過「你不在的時候」摘要（5F-1b）：只往後、不超過現在。"""
+    until = max(min(action.until, now), char.news_seen_at or 0)
+    if until == char.news_seen_at:
+        return char, ()
+    return char.model_copy(update={"news_seen_at": until}), ()
+
+
 def _fight(
     library: ContentLibrary, world: WorldState, char: CharacterState, action: FightAction, now: int
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
@@ -297,6 +308,9 @@ def _handlers() -> dict[type, _Handler]:
         ),
         ShadowAiAction: _keeps_world(
             lambda lib, _w, char, action, _n: set_shadow_ai(lib, char, action)
+        ),
+        NewsSeenAction: _keeps_world(
+            lambda _l, _w, char, action, now: _news_seen(char, action, now)
         ),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1

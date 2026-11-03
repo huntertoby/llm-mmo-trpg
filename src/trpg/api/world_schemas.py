@@ -51,6 +51,7 @@ from trpg.world.actions import (
     HireAction,
     InheritAction,
     LoadoutAction,
+    NewsSeenAction,
     OfferPickAction,
     ReleaseOathAction,
     RespecAction,
@@ -130,6 +131,7 @@ type WorldActionRequest = Annotated[
     | EventSolveAction
     | HireAction
     | ShadowAiAction
+    | NewsSeenAction  # 5F-1b
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction

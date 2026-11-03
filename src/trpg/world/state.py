@@ -533,6 +533,9 @@ class WorldEventState(_Model):
     """門檻的調整紀錄（依日期）。"""
     resolved_day: int | None = None
     """成功或失敗的刷新日。"""
+    resolved_at: int | None = None
+    """成功或失敗的 UTC 秒數（換日時判定的＝該刷新日開始；5F-1b「你不在的時候」用；舊存檔
+    ``None``＝用 ``resolved_day`` 的開始）。"""
 
 
 class BountyClaim(_Model):
@@ -881,6 +884,9 @@ class CharacterState(_Model):
     """今天的今日目標進度（``None``＝還沒有；跨日歸零）。"""
     bounty_days: dict[str, int] = Field(default_factory=dict)
     """懸賞 → 最後一次打懸賞陣容的刷新日（5F-1b：每個角色每天在該地點的第一場遭遇才是懸賞陣容）。"""
+    news_seen_at: int | None = None
+    """「你不在的時候」摘要看到哪個時刻為止（UTC 秒；``news_seen`` 動作寫入，5F-1b）。新角色＝建立
+    當下；``None``＝舊存檔（從開賽算起）。"""
 
     @field_validator("gear_mods")
     @classmethod

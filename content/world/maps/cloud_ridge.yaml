@@ -137,8 +137,8 @@ locations:
     name_zh: 往灰燼荒原的渡口
     kind: gate
     gate_to: ashen_waste
-    unlock_flag: mist_tide_success
-    description_zh: 世界事件 #1「霧潮入侵」成功後開放
+    unlock_flag: ashen_waste_open   # 霧潮入侵成功或失敗都開放（19.9；5F-1b 修正：原本的 mist_tide_success 沒有事件會設）
+    description_zh: 世界事件 #1「霧潮入侵」結束後開放（失敗時荒原建議等級 +1）
     pos: {x: 5, y: 95}
 edges:
   - [mist_ferry, ferry_steps]
