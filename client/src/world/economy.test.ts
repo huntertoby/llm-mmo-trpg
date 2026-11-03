@@ -51,6 +51,7 @@ const SHOP: WorldShop = {
   affinity_zh: "每次消費柳掌櫃好感度 +2（每天最多 +4，今天還能 +4）",
   can_trade: true,
   trade_problem_zh: null,
+  price_notes_zh: [],
   items: [
     {
       item: "item_hp_potion_small",
