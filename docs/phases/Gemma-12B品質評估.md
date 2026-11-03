@@ -1,5 +1,7 @@
 # Gemma 4 12B 品質評估（2026-11-03）
 
+> 同 commit 的 Gemma 與 27B 並排比較見 `LLM品質評估-同commit比較.md`（2026-11-04），以那份為準；本文件的 27B 對照不是同場跑的。
+
 只比品質（正確率、JSON 合格率、退回率），**不量速度**（使用者：「等等測試只能測試聰明程度喔 因為現在是在windows 實際上 mac的 速度 能不能跑是一回事」）。在 Windows 的 LM Studio 上跑，數字不代表 Mac mini。
 
 - 端點：LM Studio `http://127.0.0.1:1234/v1`，模型 `gemma-4-12b-it`，context 8192；用環境變數指定，`config/llm.toml` 沒改。
