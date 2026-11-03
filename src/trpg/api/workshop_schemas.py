@@ -11,10 +11,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.schemas import MapSummary
+from trpg.api.skill_cards import SkillCard
 from trpg.content.skills import SkillRarity
 from trpg.narrative.keyword_hints import KeywordHint
 from trpg.narrative.skill_icon import SkillIcon
-from trpg.narrative.skills import SkillCard, SkillCardKeywords
+from trpg.narrative.skills import SkillCardKeywords
 from trpg.shared.rng import MASK64
 from trpg.skillgen.draft_check import DraftCheck
 

@@ -64,10 +64,10 @@ from trpg.api.run_schemas import (
     StartWeaponOption,
 )
 from trpg.api.runs import RunSession, RunStore
+from trpg.api.skill_cards import skill_card
 from trpg.api.state import runs_of
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.narrative.skills import skill_card
 from trpg.roguelite.auto import auto_play
 from trpg.roguelite.flashes import owned_skills, state_of
 from trpg.roguelite.start import (

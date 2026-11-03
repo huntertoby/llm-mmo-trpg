@@ -14,6 +14,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.gear_schemas import GearChoice
+from trpg.api.skill_cards import SkillCard
 from trpg.content.battle import WeaponLook
 from trpg.engine.actions import Action, FollowupTarget, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
@@ -33,7 +34,6 @@ from trpg.engine.preview import (
 )
 from trpg.engine.results import Pending
 from trpg.engine.view import BattleView
-from trpg.narrative.skills import SkillCard
 from trpg.shared.rng import MASK64
 from trpg.shared.types import ObjectId, Pos, Team, UnitId
 

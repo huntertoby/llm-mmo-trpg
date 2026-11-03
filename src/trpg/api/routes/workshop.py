@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 from trpg.api.player_text import player_options
 from trpg.api.schemas import MapSummary
 from trpg.api.sessions import playable_maps
+from trpg.api.skill_cards import skill_card
 from trpg.api.state import store_of
 from trpg.api.workshop_schemas import (
     ArenaOpponents,
@@ -32,7 +33,7 @@ from trpg.api.workshop_schemas import (
 from trpg.content.library import ContentLibrary
 from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
-from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords, skill_card
+from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords
 from trpg.skillgen.draft import build_skill
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import DraftOptions

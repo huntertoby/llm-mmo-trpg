@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException, Request
 from trpg.api.glossary import build_glossary
 from trpg.api.schemas import BuildSummary, Glossary, MapSummary
 from trpg.api.sessions import playable_maps
+from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.api.state import runs_of, store_of
-from trpg.narrative.skills import SkillCard, skill_card
 
 __all__ = ["router"]
 
