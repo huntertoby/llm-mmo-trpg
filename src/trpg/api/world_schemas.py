@@ -313,6 +313,8 @@ class AtlasView(_ApiModel):
     teleport_problem_zh: str | None = None
     art_url: str | None = None
     """大世界圖插畫（還沒有＝``None``，畫面用程式畫的浮島）。"""
+    maps: tuple[WorldMapView, ...] = ()
+    """已開放、但不是所在區的區域圖（點大世界圖上的那一區進去看；只能看）。"""
 
 
 class TeleportOption(_ApiModel):

@@ -348,7 +348,7 @@ export function WorldHud(props: WorldHudProps) {
         <div className="world-hud-clock">
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
-          <IconButton icon={{ bar: "M" }} size={30} hint={`區域圖（M）：${props.mapOpen === true ? "再按一次關閉" : "看地點、任務標記與傳送石"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
+          <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
           <IconButton icon="gear" size={30} hint="設定：尚未開放" item="settings" onClick={props.onSettings} />
         </div>
       </Block>

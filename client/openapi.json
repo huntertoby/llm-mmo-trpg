@@ -3776,6 +3776,14 @@
               }
             ],
             "title": "Art Url"
+          },
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/WorldMapView"
+            },
+            "type": "array",
+            "title": "Maps",
+            "default": []
           }
         },
         "additionalProperties": false,

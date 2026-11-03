@@ -1603,6 +1603,11 @@ export interface components {
             teleport_problem_zh?: string | null;
             /** Art Url */
             art_url?: string | null;
+            /**
+             * Maps
+             * @default []
+             */
+            maps: components["schemas"]["WorldMapView"][];
         };
         /**
          * Attack

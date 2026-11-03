@@ -402,6 +402,8 @@ def test_atlas_view_in_capital(calm: ContentLibrary) -> None:
     atlas = view.atlas
     assert atlas is not None and atlas.can_teleport and atlas.art_url is None
     assert atlas.capital.current and not atlas.capital.can_teleport
+    assert [m.region for m in atlas.maps] == ["cloud_ridge"]  # 點進去看的區域圖
+    assert not any(loc.current for m in atlas.maps for loc in m.locations)
     by = {r.region: r for r in atlas.regions}
     assert by["cloud_ridge"].can_teleport and by["cloud_ridge"].town_name_zh == "霧渡鎮"
     assert not by["ashen_waste"].can_teleport and by["ashen_waste"].status == "locked"

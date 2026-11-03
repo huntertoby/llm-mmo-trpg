@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
-from trpg.api.world_schemas import AtlasRegionView, AtlasView
+from collections.abc import Callable
+
+from trpg.api.world_schemas import AtlasRegionView, AtlasView, WorldMapView
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.world.atlas import RegionState, atlas_regions, region_state
@@ -47,12 +49,26 @@ def _one(state: RegionState, char: CharacterState, *, can: bool) -> AtlasRegionV
 
 
 def atlas_view(
-    library: ContentLibrary, world: WorldState, char: CharacterState, *, in_battle: bool = False
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    *,
+    in_battle: bool = False,
+    region_map: Callable[[str], WorldMapView] | None = None,
 ) -> AtlasView:
+    """``region_map``：畫別區的區域圖（點大世界圖上已開放的區進去看；省略＝不給）。"""
     problem = _problem(library, char, in_battle)
     can = problem is None
-    regions = tuple(_one(s, char, can=can) for s in atlas_regions(library, world, char))
+    states = atlas_regions(library, world, char)
+    regions = tuple(_one(s, char, can=can) for s in states)
     capital = _one(region_state(library, world, char, CAPITAL_REGION), char, can=can)
+    maps: tuple[WorldMapView, ...] = ()
+    if region_map is not None:
+        maps = tuple(
+            region_map(s.region)
+            for s in states
+            if s.status == "open" and s.region != char.region and s.region in library.world_maps
+        )
     return AtlasView(
-        regions=regions, capital=capital, can_teleport=can, teleport_problem_zh=problem
+        regions=regions, capital=capital, can_teleport=can, teleport_problem_zh=problem, maps=maps
     )

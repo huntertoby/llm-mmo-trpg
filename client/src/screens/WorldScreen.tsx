@@ -29,6 +29,9 @@ import { mapPaneKind, PLACE_NAME_MS, placeBanner, type FieldTarget } from "../wo
 import { EncounterPanel, HerePanel, WorldPanel } from "../world/WorldPanel";
 import { WorldHud } from "../world/WorldHud";
 import { RegionMap } from "../world/RegionMap";
+import { AtlasMap } from "../world/AtlasMap";
+import { atlasMapOf, capitalPanel, nextMapLayer, steleRegion } from "../world/atlasModel";
+import { PavilionPanel, SteleMenu } from "../world/CapitalPanels";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
   addToasts,
@@ -74,6 +77,9 @@ import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
 import { worldPlaceName } from "../battle/placeName";
+
+/** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
+type MapLayer = "region" | "atlas";
 
 interface Props {
   onHome(): void;
@@ -138,13 +144,19 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
   /** `npc`／`friend` 面板的對象（NPC ID 或影子主人的角色 ID；6B-4）。 */
   const [hudWho, setHudWho] = useState<string | null>(null);
-  /** 區域圖（M，6C-6）：浮動全畫面面板，和 HUD 面板分開（關掉區域圖不動面板）。 */
-  const [regionOpen, setRegionState] = useState(false);
-  const regionRef = useRef(false); // 同步的開關（連按 Esc、M 時不等重新繪製）
-  const setRegionOpen = useCallback((open: boolean) => {
-    regionRef.current = open;
-    setRegionState(open);
+  /** 地圖（M）：區域圖（6C-6）或大世界圖（6D-5）的浮動全畫面面板，和 HUD 面板分開（關掉地圖不動面板）。
+   * M 依序：區域圖 → 大世界圖 → 關閉（在主城裡直接開大世界圖）。 */
+  const [mapLayer, setMapLayerState] = useState<MapLayer | null>(null);
+  const regionRef = useRef<MapLayer | null>(null); // 同步的開關（連按 Esc、M 時不等重新繪製）
+  /** 從大世界圖點進去看的別區（`null`＝所在區）。 */
+  const [mapRegion, setMapRegion] = useState<string | null>(null);
+  const setMapLayer = useCallback((layer: MapLayer | null, region: string | null = null) => {
+    regionRef.current = layer;
+    setMapLayerState(layer);
+    setMapRegion(region);
   }, []);
+  const regionOpen = mapLayer !== null;
+  const setRegionOpen = useCallback((open: boolean) => setMapLayer(open ? "region" : null), [setMapLayer]);
   const [toasts, setToasts] = useState<HudToast[]>([]);
   const toastSeq = useRef(0);
   /** 這次進入角色後已經到過的地點（第一次進入有限制的地點時跳紅框提示）。 */
@@ -387,8 +399,18 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       return;
     }
     if (target.kind === "object") {
-      setHudWho(target.id);
-      setHudPanel("object");
+      // 6D-5 主城：橋頭石碑開該區的傳送選單；功能型 NPC 與攤位開既有面板（其他照舊開說明卡）
+      const stele = view?.field?.region === "capital" ? steleRegion(target.id) : null;
+      const panel = view?.field?.region === "capital" ? capitalPanel(target.id) : null;
+      if (stele !== null) {
+        setHudWho(stele);
+        setHudPanel("stele");
+      } else if (panel !== null) {
+        setHudPanel(panel);
+      } else {
+        setHudWho(target.id);
+        setHudPanel("object");
+      }
       return;
     }
     if (target.kind === "note_stone") {
@@ -522,7 +544,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     locked: panelLocked,
     button: hudButton,
     close: closeHud,
-    map: () => setRegionOpen(!regionRef.current),
+    map: () => {
+      if (view === null) return;
+      setMapLayer(nextMapLayer(regionRef.current, view.map));
+    },
     closeRegion: () => setRegionOpen(false),
   };
   useEffect(() => {
@@ -593,6 +618,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         return hudWho === null ? null : <FriendCard key={hudWho} view={v} owner={hudWho} />;
       case "object":
         return hudWho === null ? null : <FieldObjectCard key={hudWho} view={v} object={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
+      case "stele":
+        return hudWho === null ? null : <SteleMenu key={hudWho} view={v} region={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
+      case "pavilion":
+        return <PavilionPanel view={v} busy={busy} onAct={act} onPanel={(p) => setHudPanel(p)} />;
       case "shop":
         return <WorldShopScreen view={v} busy={busy} onAct={act} onClose={closeHud} />;
       case "smithy":
@@ -660,13 +689,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             ) : null
           }
         />
-        {regionOpen && (
+        {mapLayer === "region" && (
           <RegionMap
-            map={v.map}
+            map={(mapRegion !== null && v.atlas != null ? atlasMapOf(v.atlas, v.map, mapRegion) : null) ?? v.map}
             busy={busy}
             onTeleport={(to) => {
               setRegionOpen(false);
               act({ kind: "use_teleport_stone", to });
+            }}
+            onAtlas={v.atlas != null ? () => setMapLayer("atlas") : undefined}
+            onClose={() => setRegionOpen(false)}
+          />
+        )}
+        {mapLayer === "atlas" && v.atlas != null && (
+          <AtlasMap
+            atlas={v.atlas}
+            map={v.map}
+            busy={busy}
+            onOpenRegion={(r) => setMapLayer("region", r === v.map.region ? null : r)}
+            onTeleport={(region) => {
+              setRegionOpen(false);
+              act({ kind: "teleport", region });
             }}
             onClose={() => setRegionOpen(false)}
           />

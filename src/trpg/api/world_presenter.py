@@ -253,9 +253,13 @@ def _map_view(  # noqa: PLR0917 - 地點圖要世界、角色、時間、戰鬥�
     now: int,
     in_battle: bool,
     social: FieldSocial | None = None,
+    region: str | None = None,
 ) -> WorldMapView:
-    world_map = world_map_of(library, char.region)
-    neighbors = set(world_map.neighbors(char.location))
+    """所在區的地點圖；``region`` 是別區時（6D-5 大世界圖點進去看）：沒有目前位置與相鄰。"""
+    region = char.region if region is None else region
+    world_map = world_map_of(library, region)
+    here = region == char.region
+    neighbors = set(world_map.neighbors(char.location)) if here else set()
     shown = [loc for loc in world_map.locations if _visible(char, world_map, loc)]
     ids = {loc.id for loc in shown}
     masks = story_masks(library, char)  # 說明文字提到還沒發現的地點時用提示語（5B-5）
@@ -269,10 +273,10 @@ def _map_view(  # noqa: PLR0917 - 地點圖要世界、角色、時間、戰鬥�
             description_zh=mask_text(loc.description_zh, masks),
             x=loc.pos.x,
             y=loc.pos.y,
-            current=loc.id == char.location,
+            current=here and loc.id == char.location,
             adjacent=loc.id in neighbors,
             blocked_zh=_blocked(world, char, loc, in_battle) if loc.id in neighbors else None,
-            cleared=world.is_cleared(char.region, loc.id, now),
+            cleared=world.is_cleared(region, loc.id, now),
             hidden=loc.hidden,
         )
         for loc in shown
@@ -587,7 +591,13 @@ def world_view(
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
         field=field_view(library, char, world=world, now=now, social=social),
-        atlas=atlas_view(library, world, char, in_battle=in_battle),
+        atlas=atlas_view(
+            library,
+            world,
+            char,
+            in_battle=in_battle,
+            region_map=lambda r: _map_view(library, world, char, now, in_battle, social, r),
+        ),
     )
 
 

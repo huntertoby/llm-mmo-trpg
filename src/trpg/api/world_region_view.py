@@ -18,6 +18,7 @@ from trpg.api.world_schemas import RegionStoneView, WorldLocationView, WorldMapV
 from trpg.content.library import ContentLibrary
 from trpg.content.world_narration import mask_text
 from trpg.content.world_quests import AnyOf, AtLocation, QuestCondition, WinBattle
+from trpg.world.atlas import unlocked_stones
 from trpg.world.field import placed, teleport_origin
 from trpg.world.narration import story_masks
 from trpg.world.quests import quest_table
@@ -103,7 +104,8 @@ def _stones(
 ) -> tuple[list[RegionStoneView], str | None]:
     """這一區看得到的傳送石（依 ID）與現在出發的那一顆。"""
     here = placed(library, char)
-    origin = teleport_origin(library, here) if here.region == region else None
+    origin = teleport_origin(library, here)  # 6D-5：從大世界圖點進別區看時，也能點那一區的傳送石
+    unlocked = unlocked_stones(library, char)  # 主城的傳送石一開始就解鎖（6D-5）
     stones: list[RegionStoneView] = []
     for map_id in sorted(library.field_maps):
         found = library.field_maps[map_id]
@@ -114,7 +116,7 @@ def _stones(
             RegionStoneView(
                 id=s.id,
                 location=loc,
-                unlocked=s.id in char.teleport_stones,
+                unlocked=s.id in unlocked,
                 here=s.id == origin,
             )
             for s in found.teleport_stones
