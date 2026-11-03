@@ -233,9 +233,9 @@ export const api = {
   /** 「你不在的時候」摘要（5F-1b）：只讀；看過送 `news_seen` 動作（`until` ＝ `as_of`）。 */
   worldAbsence: (characterId: string) =>
     request<AbsenceView>("GET", `/world/characters/${encodeURIComponent(characterId)}/absence`),
-  /** 影子循環賽（5F-4）：報名狀態、排行榜、場次。 */
-  worldLeague: (characterId: string) =>
-    request<LeagueView>("GET", `/world/characters/${encodeURIComponent(characterId)}/league`),
+  /** 影子循環賽（5F-4）：報名狀態、排行榜、場次（5F-4b 分頁，`page` 從 1 起）。 */
+  worldLeague: (characterId: string, page = 1) =>
+    request<LeagueView>("GET", `/world/characters/${encodeURIComponent(characterId)}/league?page=${page}`),
   /** 某一場循環賽的重播（從開場播到結束；既有戰鬥畫面）。 */
   worldLeagueReplay: (characterId: string, matchId: string) =>
     request<LeagueReplayResponse>(

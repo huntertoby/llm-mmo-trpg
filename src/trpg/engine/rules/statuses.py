@@ -48,6 +48,7 @@ __all__ = [
     "status_attack_bonus",
     "status_duration_bonus",
     "summon_damage_dealt_permille",
+    "under_truce",
     "weapon_attribute",
 ]
 
@@ -351,6 +352,11 @@ def grants_advantage_against(rules: Ruleset, unit: UnitState) -> bool:
 def prevents_concealment(rules: Ruleset, unit: UnitState) -> bool:
     """是否帶有 ``prevents_concealment`` 的狀態（被揭露，Phase 3D-8a）：不算隱蔽、不能再隱蔽。"""
     return any(rules.status_def(s.status_id).prevents_concealment for s in unit.statuses)
+
+
+def under_truce(rules: Ruleset, unit: UnitState) -> bool:
+    """是否帶有 ``truce`` 的狀態（休戰，Phase 5F-4b）：不受、也不造成任何傷害。"""
+    return any(rules.status_def(s.status_id).truce for s in unit.statuses)
 
 
 def has_attack_disadvantage_status(rules: Ruleset, unit: UnitState) -> bool:

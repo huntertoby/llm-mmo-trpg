@@ -332,6 +332,27 @@ def _restore_normal_order(ctx: Ctx) -> None:
         ctx.emit(TurnOrderSet, order=tuple(restored))
 
 
+def _expire_round_end_statuses(ctx: Ctx) -> None:
+    """``expires: round_end`` 的狀態（Phase 5F-4b）：每一輪結束時（環境回合之後）−1，歸零移除。
+    單位依 ID 排序、狀態照清單順序，順序確定。"""
+    for unit in ctx.state.units_sorted():
+        kept: list[StatusInstance] = []
+        expired: list[str] = []
+        for status in unit.statuses:
+            definition = ctx.rules.status_def(status.status_id)
+            if definition.expires != "round_end" or status.remaining is None:
+                kept.append(status)
+            elif status.remaining <= 1:
+                expired.append(status.status_id)
+            else:
+                kept.append(dataclasses.replace(status, remaining=status.remaining - 1))
+        if not expired:
+            continue
+        unit.statuses = kept
+        for status_id in expired:
+            ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="expired")
+
+
 def _end_round(ctx: Ctx) -> bool:
     """一輪結束：環境回合與每輪勝負判定。回傳戰鬥是否已結束。"""
     state = ctx.state
@@ -342,6 +363,7 @@ def _end_round(ctx: Ctx) -> bool:
     if state.max_rounds is not None and state.round >= state.max_rounds:
         end_battle(ctx, None, "round_limit")
         return True
+    _expire_round_end_statuses(ctx)
     state.round += 1
     _restore_normal_order(ctx)
     for unit in state.units.values():

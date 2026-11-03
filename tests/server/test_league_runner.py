@@ -137,7 +137,9 @@ def test_standings_order_and_ties() -> None:
             "entered_at": at,
         }
 
-    def match(n: int, a: str, b: str, winner: str | None) -> LeagueMatch:
+    def match(
+        n: int, a: str, b: str, winner: str | None, *, hp: tuple[int, int] = (0, 0), rounds: int = 0
+    ) -> LeagueMatch:
         return LeagueMatch(
             id=f"m{n:04d}",
             a=a,
@@ -148,6 +150,9 @@ def test_standings_order_and_ties() -> None:
             ally=a,
             status="done",
             winner=winner,
+            ally_hp_permille=hp[0],
+            enemy_hp_permille=hp[1],
+            rounds=rounds,
         )
 
     record = LeagueRecord.model_validate(
@@ -163,12 +168,98 @@ def test_standings_order_and_ties() -> None:
         }
     )
     table = standings(record)
-    # z 1 勝 0 負 1 和、x 1 勝 1 負、y 0 勝 1 負 1 和
-    assert [(r.account, r.rank, r.wins, r.losses, r.draws) for r in table] == [
-        ("z", 1, 1, 0, 1),
-        ("x", 2, 1, 1, 0),
-        ("y", 3, 0, 1, 1),
+    # z 1 勝 0 負 1 和、x 1 勝 1 負、y 0 勝 1 負 1 和；z、x 同勝場，HP 比例與輪數都是 0 → 同名次
+    # （5F-4b：勝場 → HP 比例合計 → 總輪數，不比負場；同名次依報名先後）
+    assert [(r.account, r.rank, r.wins, r.losses, r.draws, r.tied) for r in table] == [
+        ("z", 1, 1, 0, 1, True),
+        ("x", 1, 1, 1, 0, True),
+        ("y", 3, 0, 1, 1, False),
     ]
-    # 三人都 1 勝 1 負：同名次第 1，依報名先後排（代決 5F4-8）
+    # 三人都 1 勝 1 負：同名次第 1，依報名先後排
     tied = record.with_match(match(3, "y", "z", "y"))
     assert [(r.account, r.rank) for r in standings(tied)] == [("y", 1), ("z", 1), ("x", 1)]
+    # 同勝場比所有場次己方剩餘 HP 比例合計（6.8 BAL-12a）：x 贏時剩 900‰
+    by_hp = tied.with_match(match(1, "x", "y", "x", hp=(900, 0)))
+    assert [(r.account, r.rank, r.hp_permille_total) for r in standings(by_hp)] == [
+        ("x", 1, 900),
+        ("y", 2, 0),
+        ("z", 2, 0),
+    ]
+    # HP 也一樣再比總輪數（少的勝）
+    by_rounds = tied.with_match(match(2, "x", "z", "z", rounds=4))
+    assert [(r.account, r.rank, r.rounds_total) for r in standings(by_rounds)] == [
+        ("y", 1, 0),
+        ("z", 2, 4),
+        ("x", 2, 4),
+    ]
+    assert all(r.tied for r in standings(by_rounds)[1:])
+
+
+# ---------------------------------------------------------------------------
+# 5F-4b：編年史、規則改了就整個重跑
+# ---------------------------------------------------------------------------
+
+
+def test_chronicle_written_when_finished(small: ContentLibrary, tmp_path: Path) -> None:
+    world = _world(small, ("build_support", "build_charger"))
+    store = LeagueStore(small, tmp_path, clock=lambda: AFTER + 60)
+    store.start(world, AFTER)
+    runner = LeagueRunner(store)
+    runner.run_pending(limit=1)
+    assert store.chronicle.season("s1") is None  # 還沒跑完不寫
+    runner.run_pending()
+    record = store.record()
+    assert record is not None and record.finished
+    assert all(m.status == "done" for m in record.matches)
+    for match in record.matches:  # 剩餘 HP 比例：贏的一方 > 0、輸的一方 0
+        if match.winner is not None:
+            loser = match.enemy if match.winner == match.ally else match.ally
+            assert match.hp_permille_of(match.winner) > 0
+            assert match.hp_permille_of(loser) == 0
+    season = store.chronicle.season("s1")
+    assert season is not None and season.finished_at == AFTER + 60
+    table = standings(record)
+    names = {e.account: e.name for e in record.entries}
+    assert [(r.rank, r.name) for r in season.ranks] == [(t.rank, names[t.account]) for t in table]
+    assert all(r.build_zh for r in season.ranks)  # 武器・種族
+    # 另開一個 store 從檔案讀（編年史和賽程分開存，季末清掉賽程的報名也還在）
+    assert LeagueStore(small, tmp_path).chronicle.season("s1") == season
+
+
+def test_rules_change_reruns_whole_schedule(small: ContentLibrary, tmp_path: Path) -> None:
+    world = _world(small, ("build_support", "build_charger"))
+    store = LeagueStore(small, tmp_path)
+    record = store.start(world, AFTER)
+    assert record.rules_key == store.rules_key() and record.reruns == 0
+    LeagueRunner(store).run_pending(limit=1)
+    # 模擬規則改了（內容或引擎版號變了）：舊賽程的規則鍵不同
+    played = store.record()
+    assert played is not None
+    store._save(played.model_copy(update={"rules_key": "old"}))
+    stale = store.record()
+    assert stale is not None and store.stale(stale)
+    assert LeagueRunner(store).run_pending() == 0  # 不接續跑舊規則的賽程
+    rerun = store.start(world.model_copy(update={"league_entries": ()}), AFTER + 5)
+    assert rerun.reruns == 1 and rerun.rules_key == store.rules_key()
+    assert rerun.entries == record.entries  # 沿用凍結的報名
+    assert [m.id for m in rerun.matches] == [m.id for m in record.matches]
+    assert all(m.status == "pending" for m in rerun.matches)
+    (archived,) = store.archived()
+    assert archived.stale_zh == "規則已變、不能重播" and archived.rules_key == "old"
+    assert archived.done == 1
+    LeagueRunner(store).run_pending()
+    final = store.record()
+    assert final is not None and final.finished and not store.stale(final)
+    for match in final.matches:
+        assert log_replay_problem(store.log(match.id)) is None
+
+
+def test_old_record_without_rules_key_is_stale(small: ContentLibrary, tmp_path: Path) -> None:
+    """5F-4 的舊賽程沒有規則鍵：視為規則已變（不能重播、再開跑整個重跑）。"""
+    world = _world(small, ("build_support", "build_charger"))
+    store = LeagueStore(small, tmp_path)
+    record = store.start(world, AFTER)
+    store._save(record.model_copy(update={"rules_key": None}))
+    old = store.record()
+    assert old is not None and store.stale(old)
+    assert store.start(world, AFTER).reruns == 1

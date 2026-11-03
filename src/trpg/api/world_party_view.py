@@ -32,7 +32,7 @@ from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
 from trpg.world.narration import location_name_for
 from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
-from trpg.world.shadows import shadow_level, shadow_tier
+from trpg.world.shadows import shadow_level, shadow_role_zh, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
 
 __all__ = [
@@ -114,23 +114,8 @@ def _location_name(library: ContentLibrary, region: str, location: str) -> str:
     return found.name_zh if found is not None else location
 
 
-def _race_name(library: ContentLibrary, race: str | None) -> str | None:
-    table = library.ruleset.races
-    if race is None or table is None:
-        return None
-    return next((r.name_zh for r in table.races if r.id == race), race)
-
-
-def _role_zh(library: ContentLibrary, snapshot: ShadowSnapshot) -> str:
-    """影子的定位：武器・種族（代決 5C2-9）。"""
-    hero = snapshot.hero
-    weapon = library.weapons[hero.weapon].name_zh if hero.weapon in library.weapons else hero.weapon
-    race = _race_name(library, hero.race)
-    return weapon if race is None else f"{weapon}・{race}"
-
-
-shadow_role_zh = _role_zh
-"""影子的定位（循環賽排行榜也用，5F-4）。"""
+_role_zh = shadow_role_zh
+"""影子的定位（5F-4b 搬到 :func:`trpg.world.shadows.shadow_role_zh`，編年史也用）。"""
 
 
 def _shadow_skill_names(library: ContentLibrary, snapshot: ShadowSnapshot) -> tuple[str, ...]:

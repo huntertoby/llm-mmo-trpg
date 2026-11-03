@@ -53,11 +53,26 @@ __all__ = [
     "record_lent",
     "save_after_prep",
     "shadow_level",
+    "shadow_role_zh",
     "shadow_snapshot",
     "shadow_spawn",
     "shadow_tier",
     "with_shadow",
 ]
+
+
+def shadow_role_zh(library: ContentLibrary, snapshot: ShadowSnapshot) -> str:
+    """影子的定位：武器・種族（代決 5C2-9；循環賽排行榜與編年史的 build 名也用，5F-4／5F-4b）。"""
+    hero = snapshot.hero
+    weapon = library.weapons[hero.weapon].name_zh if hero.weapon in library.weapons else hero.weapon
+    table = library.ruleset.races
+    race = (
+        None
+        if hero.race is None or table is None
+        else next((r.name_zh for r in table.races if r.id == hero.race), hero.race)
+    )
+    return weapon if race is None else f"{weapon}・{race}"
+
 
 PREP_ACTIONS: Final = (
     RestAction,

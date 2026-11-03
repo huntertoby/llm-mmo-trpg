@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import ID_PATTERN
+from trpg.shared.types import Attribute
 
 __all__ = [
     "LeagueEnterAction",
@@ -30,6 +31,10 @@ class LeagueEnterAction(_Model):
 
     kind: Literal["league_enter"] = "league_enter"
     ai: str | None = Field(default=None, pattern=ID_PATTERN)
+    allocation: dict[Attribute, int] | None = None
+    """（5F-4b，#32）循環賽用的屬性點重新分配：拉到等級上限後「全部可配的點」（已分配的＋未分配的
+    ＋升到上限多出的）怎麼配，總和必須剛好等於可配點數；``None``＝照開局自動配點補新增的點。
+    只影響循環賽，不改角色本身。"""
 
 
 class LeagueWithdrawAction(_Model):

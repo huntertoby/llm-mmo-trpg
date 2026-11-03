@@ -1,10 +1,12 @@
 // 影子循環賽（Phase 5F-4；09 9.7「季末保底」、#100、#101）：報名（每個帳號 1 個角色、第 13 天截止）、
 // 勝場排行榜（報名地點已套隱藏地點的提示語）、場次列表與重播入口（既有戰鬥畫面）。全部由後端算好；左欄切換，
-// 樣式沿用公告板。
+// 樣式沿用公告板。5F-4b：報名時可以免費重新配點（既有的配點元件）、場次分頁、規則已變的提示。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { LeagueView, WorldAction, WorldView } from "../api/types";
-import { progressLabel, rankLabel, recordLabel, signupNote } from "./league";
+import { AttributeAllocator } from "../run/AttributeAllocator";
+import { allocationTotal, type Allocation } from "../run/flow";
+import { allocationToSend, pageLabel, progressLabel, rankLabel, recordLabel, signupNote, tiebreakLabel } from "./league";
 
 interface Props {
   characterId: string;
@@ -16,30 +18,43 @@ interface Props {
   onClose(): void;
 }
 
-/** 場次列表一次顯示幾場（其餘在面板內捲動）。 */
-const MATCH_LIMIT = 60;
+/** 報名時預設的配點：自己這個角色已經配過就用那份，否則照自動配點。 */
+function initialAllocation(l: LeagueView): Allocation {
+  if (l.entry?.this_character === true && l.entry.allocation != null) return l.entry.allocation;
+  return l.allocation?.auto ?? {};
+}
 
 export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose }: Props) {
   const [league, setLeague] = useState<LeagueView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ai, setAi] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [alloc, setAlloc] = useState<Allocation>({});
 
   useEffect(() => {
     let alive = true;
     api
-      .worldLeague(characterId)
+      .worldLeague(characterId, page)
       .then((l) => {
         if (!alive) return;
         setLeague(l);
         setAi(l.entry?.this_character === true ? (l.entry.ai ?? "") : "");
+        setAlloc(initialAllocation(l));
       })
       .catch((e: unknown) => alive && setError(e instanceof ApiError ? e.message : String(e)));
     return () => {
       alive = false;
     };
-  }, [characterId, view]);
+  }, [characterId, view, page]);
 
-  const enter = () => onAct({ kind: "league_enter", ai: ai === "" ? null : ai });
+  const pool = league?.allocation ?? null;
+  const allocReady = pool === null || allocationTotal(alloc) === pool.points;
+  const enter = () =>
+    onAct({
+      kind: "league_enter",
+      ai: ai === "" ? null : ai,
+      allocation: pool === null ? null : allocationToSend(alloc, pool.auto),
+    });
   const mine = league?.entry?.this_character === true;
 
   return (
@@ -67,35 +82,64 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
               地圖：{league.maps_zh.join("、")}（每對組合 {league.per_pair} 場）
             </div>
           )}
+          {league.stale_zh != null && (
+            <div className="error small" data-testid="world-league-stale">
+              {league.stale_zh}
+            </div>
+          )}
 
           <div className="section-title">報名</div>
           <div className="small" data-testid="world-league-signup">
             {signupNote(league)}
           </div>
           {(league.can_enter || league.can_withdraw) && (
-            <div className="run-actions">
-              <label className="small">
-                打法{" "}
-                <select value={ai} disabled={busy} onChange={(e) => setAi(e.target.value)} data-testid="world-league-ai">
-                  <option value="">預設（影子的打法）</option>
-                  {league.ai_choices.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name_zh}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {league.can_enter && (
-                <button type="button" className="primary" disabled={busy} onClick={enter} data-testid="world-league-enter">
-                  {mine ? "用目前的配置更新報名" : "用目前的配置報名"}
-                </button>
+            <>
+              {league.can_enter && pool !== null && (
+                <div data-testid="world-league-alloc">
+                  <AttributeAllocator
+                    heading="循環賽配點（拉到等級上限後，全部的點免費重新分配；不改角色本身）"
+                    base={pool.base}
+                    points={pool.points}
+                    alloc={alloc}
+                    onChange={setAlloc}
+                    disabled={busy}
+                  />
+                  <button type="button" disabled={busy} onClick={() => setAlloc(pool.auto)} data-testid="world-league-alloc-auto">
+                    照自動配點
+                  </button>
+                </div>
               )}
-              {league.can_withdraw && (
-                <button type="button" disabled={busy} onClick={() => onAct({ kind: "league_withdraw" })} data-testid="world-league-withdraw">
-                  取消報名
-                </button>
-              )}
-            </div>
+              <div className="run-actions">
+                <label className="small">
+                  打法{" "}
+                  <select value={ai} disabled={busy} onChange={(e) => setAi(e.target.value)} data-testid="world-league-ai">
+                    <option value="">預設（影子的打法）</option>
+                    {league.ai_choices.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name_zh}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {league.can_enter && (
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={busy || !allocReady}
+                    onClick={enter}
+                    data-testid="world-league-enter"
+                  >
+                    {mine ? "用目前的配置更新報名" : "用目前的配置報名"}
+                  </button>
+                )}
+                {league.can_withdraw && (
+                  <button type="button" disabled={busy} onClick={() => onAct({ kind: "league_withdraw" })} data-testid="world-league-withdraw">
+                    取消報名
+                  </button>
+                )}
+              </div>
+              {!allocReady && <div className="muted small">配點要剛好用完才能報名。</div>}
+            </>
           )}
 
           <div className="section-title">
@@ -130,7 +174,10 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
                     </td>
                     <td>{r.role_zh}</td>
                     <td>{r.place_zh}</td>
-                    <td>{recordLabel(r)}</td>
+                    <td>
+                      {recordLabel(r)}
+                      {tiebreakLabel(r) !== null && <div className="muted">{tiebreakLabel(r)}</div>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -139,9 +186,12 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
 
           {league.matches.length > 0 && (
             <>
-              <div className="section-title">場次</div>
+              <div className="section-title">
+                場次
+                {pageLabel(league) !== null && <span className="muted small">　{pageLabel(league)}（自己的場次在前）</span>}
+              </div>
               <ul className="world-threads small world-league-matches" data-testid="world-league-matches">
-                {league.matches.slice(0, MATCH_LIMIT).map((m) => (
+                {league.matches.map((m) => (
                   <li key={m.id} className={m.mine ? "" : "muted"}>
                     <span className="muted">{m.id}　</span>
                     {m.ally_name}（先手） vs {m.enemy_name}
@@ -152,11 +202,20 @@ export function LeaguePanel({ characterId, view, busy, onAct, onReplay, onClose 
                         重播
                       </button>
                     )}
+                    {m.replay_problem_zh != null && <span className="muted">　（{m.replay_problem_zh}）</span>}
                   </li>
                 ))}
               </ul>
-              {league.matches.length > MATCH_LIMIT && (
-                <div className="muted small">只列前 {MATCH_LIMIT} 場（自己的場次在前）。</div>
+              {league.pages > 1 && (
+                <div className="run-actions" data-testid="world-league-pages">
+                  <button type="button" disabled={league.page <= 1} onClick={() => setPage(league.page - 1)}>
+                    上一頁
+                  </button>
+                  <span className="small">{pageLabel(league)}</span>
+                  <button type="button" disabled={league.page >= league.pages} onClick={() => setPage(league.page + 1)}>
+                    下一頁
+                  </button>
+                </div>
               )}
             </>
           )}

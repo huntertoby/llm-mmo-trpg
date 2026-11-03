@@ -982,7 +982,8 @@ export interface paths {
         };
         /**
          * Get League
-         * @description 影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次與進度。
+         * @description 影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次（分頁，5F-4b）與進度。
+         *     第 14 天換日後、還沒有人首殺賽季 Boss 時，第一次看到這裡就自動開跑（5F-4b）。
          */
         get: operations["get_league_api_world_characters__character_id__league_get"];
         put?: never;
@@ -4688,6 +4689,23 @@ export interface components {
             reason_zh?: string | null;
         };
         /**
+         * LeagueAllocationView
+         * @description （5F-4b，#32）報名時的免費重新配點：拉到等級上限後全部可配的點（已分配的＋未分配的＋升到
+         *     上限多出的）。前端用既有的配點元件；不配＝照 ``auto``。
+         */
+        LeagueAllocationView: {
+            /** Base */
+            base: {
+                [key: string]: number;
+            };
+            /** Points */
+            points: number;
+            /** Auto */
+            auto: {
+                [key: string]: number;
+            };
+        };
+        /**
          * LeagueEnterAction
          * @description 在城鎮用目前的 build 報名影子循環賽（9.7；每個帳號 1 個角色，#100）；同一個角色再送＝更新。
          *     ``ai`` 是 AI 打法（``ai_choices``；``None``＝自己影子的預設打法）。
@@ -4700,6 +4718,10 @@ export interface components {
             kind: "league_enter";
             /** Ai */
             ai?: string | null;
+            /** Allocation */
+            allocation?: {
+                [key: string]: number;
+            } | null;
         };
         /**
          * LeagueEntryView
@@ -4716,6 +4738,10 @@ export interface components {
             ai_zh: string;
             /** This Character */
             this_character: boolean;
+            /** Allocation */
+            allocation?: {
+                [key: string]: number;
+            } | null;
         };
         /** LeagueMatchView */
         LeagueMatchView: {
@@ -4740,6 +4766,8 @@ export interface components {
             mine: boolean;
             /** Replayable */
             replayable: boolean;
+            /** Replay Problem Zh */
+            replay_problem_zh?: string | null;
         };
         /**
          * LeagueReplayResponse
@@ -4751,6 +4779,8 @@ export interface components {
             battle: components["schemas"]["BattleResponse"];
             /** Verified */
             verified: boolean;
+            /** Outcome Zh */
+            outcome_zh: string;
         };
         /**
          * LeagueRunView
@@ -4789,6 +4819,21 @@ export interface components {
             played: number;
             /** Mine */
             mine: boolean;
+            /**
+             * Hp Permille Total
+             * @default 0
+             */
+            hp_permille_total: number;
+            /**
+             * Rounds Total
+             * @default 0
+             */
+            rounds_total: number;
+            /**
+             * Tied
+             * @default false
+             */
+            tied: boolean;
         };
         /** @enum {string} */
         LeagueStatus: "none" | "signup" | "closed" | "running" | "done";
@@ -4831,6 +4876,29 @@ export interface components {
             total: number;
             /** Champion Zh */
             champion_zh: string | null;
+            /**
+             * Page
+             * @default 1
+             */
+            page: number;
+            /**
+             * Pages
+             * @default 1
+             */
+            pages: number;
+            /**
+             * Page Size
+             * @default 20
+             */
+            page_size: number;
+            allocation?: components["schemas"]["LeagueAllocationView"] | null;
+            /** Stale Zh */
+            stale_zh?: string | null;
+            /**
+             * Reruns
+             * @default 0
+             */
+            reruns: number;
         };
         /**
          * LeagueWithdrawAction
@@ -10118,7 +10186,10 @@ export interface operations {
     };
     get_league_api_world_characters__character_id__league_get: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
             header?: never;
             path: {
                 character_id: string;

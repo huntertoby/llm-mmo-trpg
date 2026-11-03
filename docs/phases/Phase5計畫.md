@@ -4282,7 +4282,24 @@ world_events:
 - 灰燼荒原地點、灰燼之心、主線第 2～3 章、事件 #2 的資料（5F-5）；季末重置流程（5F-5）；影子循環賽（5F-4）。
 - 首殺獎金發放（現實獎勵，使用者處理）；稱號系統（只記在評分榜）；Boss 立繪、柱子外觀與新美術。
 
+## 38. 5F-4b 詳細規格：影子循環賽收尾（本段開工時由實作者補上，依玩法 PM 2026-11-03 代決）
 
-## 38. 之後各段規格
+> 依據：本檔第 1 節 5F-4b 列、`Phase5F-4報告.md` 待 PM 決定 1～8、09 9.6.10（5F-4 代決初值）。完成報告：`Phase5F-4b報告.md`。
+
+| 項目 | 規則 | 位置 |
+|---|---|---|
+| 平衡 | 開場最大 HP ×2（`league.hp_permille: 2000`）＋雙方開場掛 `league_truce`（休戰：不受、也不造成任何傷害，含召喚物；`expires: round_end`，第 1 輪結束時移除）。只套在循環賽（`trpg.world.league.league_unit`）。候選表用 `scripts/league_balance.py` 量（每組 ≥ 40 場） | `content/world/season.yaml`、`content/statuses.yaml`、`StatusDef.truce`、`expires: round_end`（`engine/turns.py`、`effects/handlers.py`） |
+| 同分 | 勝場多 → 所有場次己方剩餘 HP 比例（‰）合計多 → 總輪數少；三項都同＝同名次、平分獎金 | `server/league.py` `standings` |
+| 編年史 | 全部跑完時寫 `<世界>/chronicle/league.json`（名次、名字、build 名〔武器・種族〕＋同分比較數字）；紀念類；凍結的報名照樣數值類 | `server/chronicle.py`、`season_policy.py` |
+| 自動開跑 | 第 `signup_close_day + 1` 天刷新後、這一季沒有 `season_boss` 首殺紀錄時，在世界動作與看循環賽畫面時自動開跑（被動換日）；管理者 `POST /api/world/league/run` 留著 | `api/world.py` `auto_start_league` |
+| 重新配點 | `league_enter.allocation`：拉到上限後全部可配的點（已分配＋未分配＋升級多出的）總和必須剛好；`None`＝自動配點。不改角色 | `world/league.py`、`league_actions.py`、`LeagueEntry.allocation`；前端重用 `AttributeAllocator` |
+| 重播結束面板 | 「某某 勝」／「和局」（`LeagueReplayResponse.outcome_zh` → `EndPanel` 的 `heading`） | `api/league_view.py`、`client/src/ui/EndPanel.tsx` |
+| 規則改了 | 賽程記規則鍵（`LOG_FORMAT`＋規則包雜湊＋循環賽規則雜湊）；不同＝「規則已變、不能重播」、不接續；再開跑＝舊賽程與紀錄搬 `league/archive/`、同一份報名整個重跑 | `server/league.py` |
+| 分頁 | `GET …/league?page=&page_size=`（預設 20、最多 100；自己的場次在前） | `api/routes/world.py`、`LeaguePanel.tsx` |
+
+存檔：新欄位都有預設值，不升版；`LOG_FORMAT` 不變（新的 `StatusDef` 欄位有預設值、舊內容結算不變，照 `戰鬥紀錄格式變更.md` 1.2；規則包雜湊變了，5F-4 的舊循環賽紀錄由規則鍵標示不能重播）。
+
+
+## 39. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

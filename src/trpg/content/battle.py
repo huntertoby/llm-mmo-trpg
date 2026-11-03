@@ -802,7 +802,8 @@ class StatusDef(ContentModel):
 
     - ``duration``：預設持續回合；``None`` 表示不倒數（直到被移除或到期條件成立）。
     - ``expires``：``turn_end`` 每次在帶有者的回合結束時 −1，歸零移除；
-      ``own_turn_start`` 在帶有者的下個回合開始時移除；``never`` 只能由效果或動作移除。
+      ``own_turn_start`` 在帶有者的下個回合開始時移除；``round_end``（Phase 5F-4b）每一輪結束時
+      （環境回合之後）−1，歸零移除；``never`` 只能由效果或動作移除。
     - ``stacking``：重複施加時的規則；目前只有 ``refresh``（刷新持續時間，不疊加）。
 
     Phase 2B-1 的數值效果欄位（千分比一律 ‰，1000 = ×1；多個狀態的同一欄位依序相乘、逐步
@@ -892,7 +893,7 @@ class StatusDef(ContentModel):
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     duration: int | None = Field(default=None, ge=1)
-    expires: Literal["turn_end", "own_turn_start", "never"]
+    expires: Literal["turn_end", "own_turn_start", "round_end", "never"]
     stacking: Literal["refresh"] = "refresh"
     on_turn_start_damage: StatusTickDamage | None = None
     on_turn_start_heal: StatusTickHeal | None = None
@@ -960,6 +961,11 @@ class StatusDef(ContentModel):
     share_damage: ShareDamageSpec | None = None
     """（Phase 5A-M2）受到的傷害分給同門（:class:`ShareDamageSpec`）。限制同
     ``on_death_surface``。"""
+    truce: bool = False
+    """（Phase 5F-4b）休戰：帶有者不會受到任何傷害（含墜落、致命地形、最大 HP 比例），帶有者（或
+    帶有者的召喚物）也不會對任何單位造成傷害；傷害直接略過、不發事件。只能用在 ``polarity:
+    neutral`` 的狀態（不被淨化、驅散、奪取）。循環賽第 1 輪用（``league_truce``，
+    ``expires: round_end``）。"""
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
@@ -983,6 +989,8 @@ class StatusDef(ContentModel):
         if self.stance and (self.expires != "never" or self.duration is not None):
             raise ValueError(f"狀態 {self.id}：姿態（stance）必須 expires: never 且不設 duration")
         self._check_elemental_stance()
+        if self.truce and self.polarity != "neutral":
+            raise ValueError(f"狀態 {self.id}：truce 只能用在 polarity: neutral 的狀態")
         riders = (
             self.shield_reflect
             or self.shield_end_heal
@@ -998,8 +1006,8 @@ class StatusDef(ContentModel):
             raise ValueError(f"狀態 {self.id}：attack_element 不能是 physical")
         if self.control_group is not None and self.save_attr is None:
             raise ValueError(f"狀態 {self.id}：有 control_group 的狀態必須設定 save_attr")
-        if self.expires == "turn_end" and self.duration is None:
-            raise ValueError(f"狀態 {self.id}：expires 為 turn_end 時必須設定 duration")
+        if self.expires in ("turn_end", "round_end") and self.duration is None:
+            raise ValueError(f"狀態 {self.id}：expires 為 {self.expires} 時必須設定 duration")
         return self
 
     @property
