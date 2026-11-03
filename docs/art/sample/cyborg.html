@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>晶能義體人辨識記號</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1260px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 16px 0 6px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  figure { margin: 0; text-align: center; }
+  figcaption { font-size: 12px; color: #d8ccb8; margin-top: 3px; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; }
+  .rec { color: #ffd23a; }
+</style>
+</head>
+<body>
+<h1>晶能義體人：辨識記號（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。問題（3R-3c 驗收時記下）：戰場大小下，晶能義體人只有臉上一小段晶路，和人類幾乎分不出來。這裡比較三種記號，每種都看四個方向、戰場大小（一格 48）和放大 3 倍，最後一列是混在人群裡（含頭盔、兜帽）能不能一眼找到。全部程式繪製，用遊戲的 C 畫風紙娃娃。</p>
+<div id="root"></div>
+<script src="storyDoll.js"></script>
+<script>
+  const SD = StoryDoll, TAU = Math.PI * 2, CYAN = "#4ae0d0", METAL = "#8d969f";
+  const base = (gear = {}) => ({ look: { skin: "#e6c4a4", hair: "short", hairColor: "#2a2a34", pattern: "circuit" }, gear: { body: { kind: "shirt", color: "#4a4238" }, feet: { kind: "boots", material: "leather" }, main_hand: { kind: "sword", material: "steel" }, ...gear } });
+  const human = (skin, hair, color, gear = {}) => ({ look: { skin, hair: "short", hairColor: hair }, gear: { body: { kind: "shirt", color }, feet: { kind: "boots", material: "leather" }, main_hand: { kind: "sword", material: "steel" }, ...gear } });
+  function glowDot(ctx, x, y, r, a = 0.9) { const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, `rgba(74,224,208,${a})`); g.addColorStop(1, "rgba(74,224,208,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, TAU); ctx.fill(); ctx.fillStyle = "#e8fffb"; ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, TAU); ctx.fill(); }
+  function plate(ctx, x, y, r) { ctx.fillStyle = METAL; ctx.strokeStyle = "#2b1e16"; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke(); }
+  /** 記號（畫在紙娃娃座標上，腳底 0、往上 -y）。opt：eye（義眼）、ear（耳側晶片）、nape（頸後接口）、band（臉頰金屬片） */
+  const MARK = {
+    A: { zh: "A．發光義眼（單眼）", eye: true, band: true },
+    B: { zh: "B．耳側晶能耳機片", ear: true },
+    C: { zh: "C．義眼＋耳機片＋頸後接口（推薦）", eye: true, ear: true, nape: true },
+  };
+  function mark(ctx, view, m) {
+    if (view === "front") {
+      if (m.band) { ctx.fillStyle = METAL; ctx.beginPath(); ctx.moveTo(1.6, -44.6); ctx.lineTo(6.6, -44.2); ctx.lineTo(7.8, -38.6); ctx.lineTo(4.4, -37.8); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#2b1e16"; ctx.lineWidth = 0.5; ctx.stroke(); }
+      if (m.eye) { plate(ctx, 3.2, -41, 1.9); glowDot(ctx, 3.2, -41, 1.5); }
+      if (m.ear) { plate(ctx, 9.4, -41.5, 2.3); glowDot(ctx, 9.4, -41.5, 1.1); plate(ctx, -9.4, -41.5, 2.3); glowDot(ctx, -9.4, -41.5, 1.1); }
+    } else if (view === "side") {
+      if (m.band) { ctx.fillStyle = METAL; ctx.beginPath(); ctx.moveTo(2.4, -44.4); ctx.lineTo(7.4, -44); ctx.lineTo(7.2, -39); ctx.lineTo(3.4, -38.6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#2b1e16"; ctx.lineWidth = 0.5; ctx.stroke(); }
+      if (m.eye) { plate(ctx, 4.4, -41, 1.9); glowDot(ctx, 4.4, -41, 1.5); }
+      if (m.ear) { plate(ctx, -2.6, -40.4, 2.6); glowDot(ctx, -2.6, -40.4, 1.2); ctx.strokeStyle = CYAN; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-2.6, -42.8); ctx.lineTo(-1.2, -47); ctx.stroke(); }
+      if (m.nape) { glowDot(ctx, -6.6, -35.6, 0.8, 0.8); }
+    } else { // back
+      if (m.ear) { plate(ctx, 9.4, -41.5, 2.3); glowDot(ctx, 9.4, -41.5, 1.1); plate(ctx, -9.4, -41.5, 2.3); glowDot(ctx, -9.4, -41.5, 1.1); }
+      if (m.nape) { ctx.fillStyle = METAL; ctx.fillRect(-2.2, -36.6, 4.4, 3.4); ctx.strokeStyle = "#2b1e16"; ctx.lineWidth = 0.5; ctx.strokeRect(-2.2, -36.6, 4.4, 3.4); glowDot(ctx, -0.9, -35, 0.6); glowDot(ctx, 0.9, -35, 0.6); }
+    }
+  }
+  const DIRS = [["south", "front", false, "正面"], ["north", "back", false, "背面"], ["east", "side", false, "側面（東）"], ["west", "side", true, "側面（西）"]];
+  function stamp(ctx, unit, view, west, x, y, k, m) {
+    SD.stamp(ctx, unit, view, x, y, k, west);
+    if (m) { ctx.save(); ctx.translate(x, y); ctx.scale(west ? -k : k, k); mark(ctx, view, m); ctx.restore(); }
+  }
+  function tile(ctx, x, y, s = 48) { ctx.fillStyle = "#6a9a6a"; ctx.fillRect(x, y, s, s); ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1); }
+  function canvas(w, h) { const c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2; c.style.width = w + "px"; c.style.height = h + "px"; const ctx = c.getContext("2d"); ctx.scale(2, 2); return [c, ctx]; }
+  function fig(parent, c, label) { const f = document.createElement("figure"); f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = label; f.appendChild(cap); parent.appendChild(f); }
+  const root = document.getElementById("root");
+  for (const [key, m] of Object.entries(MARK)) {
+    const h = document.createElement("h2"); h.innerHTML = m.zh.replace("（推薦）", '<span class="rec">（推薦）</span>'); root.appendChild(h);
+    const row = document.createElement("div"); row.className = "row"; root.appendChild(row);
+    // 戰場大小：一格 48，紙娃娃縮放 0.9
+    const [c1, x1] = canvas(4 * 60, 70); x1.fillStyle = "#1b1714"; x1.fillRect(0, 0, 240, 70);
+    DIRS.forEach(([dir, view, west], i) => { tile(x1, 6 + i * 60, 10); stamp(x1, base(), view, west, 30 + i * 60, 10 + 48 * 0.95, 0.9, m); });
+    fig(row, c1, "戰場大小（一格 48）：正、背、東、西");
+    // 放大 3 倍：正面、側面、背面
+    const [c2, x2] = canvas(330, 200); x2.fillStyle = "#6a9a6a"; x2.fillRect(0, 0, 330, 200);
+    [["front", false], ["side", false], ["back", false]].forEach(([view, west], i) => stamp(x2, base(), view, west, 58 + i * 108, 192, 3, m));
+    fig(row, c2, "放大 3 倍：正面、側面、背面");
+    // 戴頭盔時
+    const [c3, x3] = canvas(220, 200); x3.fillStyle = "#6a9a6a"; x3.fillRect(0, 0, 220, 200);
+    [["front", false], ["side", false]].forEach(([view, west], i) => stamp(x3, base({ head: { kind: "helmet", material: "steel" } }), view, west, 58 + i * 108, 192, 3, m));
+    fig(row, c3, "戴頭盔（3 倍）");
+  }
+  // 混在人群裡
+  const h = document.createElement("h2"); h.innerHTML = "混在人群裡（戰場大小）<small>每列 6 人，其中 1 人是晶能義體人（含頭盔、兜帽）；記號：A／B／C</small>"; root.appendChild(h);
+  const row = document.createElement("div"); row.className = "row"; root.appendChild(row);
+  const crowd = [
+    human("#f1c9a5", "#6a3d1e", "#2f5a5a"), human("#d9a47a", "#1a1a1a", "#8a2f20", { head: { kind: "helmet", material: "steel" } }), human("#a8724c", "#2a1a10", "#5a3a9a"),
+    human("#f1c9a5", "#c8c0b0", "#3a5ad0", { head: { kind: "hood", color: "#6a5a4a" } }), human("#e8b890", "#a8481e", "#6a5a3a"),
+  ];
+  for (const [key, m] of Object.entries(MARK)) {
+    const [c, ctx] = canvas(6 * 52 + 10, 80); ctx.fillStyle = "#1b1714"; ctx.fillRect(0, 0, 400, 80);
+    const pos = { A: 2, B: 4, C: 1 }[key];
+    for (let i = 0; i < 6; i++) {
+      tile(ctx, 5 + i * 52, 14);
+      const dirs = ["front", "side", "front", "side", "back", "front"], view = dirs[i];
+      if (i === pos) stamp(ctx, base(i % 2 ? { head: { kind: "helmet", material: "steel" } } : {}), view, false, 29 + i * 52, 14 + 46, 0.9, m);
+      else stamp(ctx, crowd[i > pos ? i - 1 : i], view, false, 29 + i * 52, 14 + 46, 0.9, null);
+    }
+    fig(row, c, `記號 ${key}：義體人在第 ${pos + 1} 個`);
+  }
+</script>
+</body>
+</html>
