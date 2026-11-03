@@ -76,10 +76,8 @@ export function BoardPanel({ characterId, view, onClose }: Props) {
               {board.bounties.map((b) => (
                 <li key={b.bounty} className={b.open ? "" : "muted"}>
                   <b>{b.name_zh}</b>
-                  <span className="muted">
-                    　{b.location_zh}・建議 Lv {b.level}・任務幣 {b.coins}
-                  </span>
-                  　<span className={b.open ? "world-board-open" : ""}>{b.status_zh}</span>
+                  <span className="muted">{`　${b.location_zh}・建議 Lv ${b.level}・任務幣 ${b.coins}　`}</span>
+                  <span className={b.open ? "world-board-open" : ""}>{b.status_zh}</span>
                 </li>
               ))}
             </ul>
