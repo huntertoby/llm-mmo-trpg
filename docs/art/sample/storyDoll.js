@@ -14,6 +14,15 @@ window.StoryDoll = (() => {
   const dark = (c, t = 0.3) => mix(c, "#000000", t);
   const light = (c, t = 0.3) => mix(c, "#ffffff", t);
 
+  // ---- 骨架姿勢鉤子（動畫樣張 anim.js，2026-11-04）----
+  // POSE＝null 時一律不轉，畫出來和原本完全一樣。角度是畫布的旋轉（順時針為正，弧度）；
+  // 部件仍是原本的部件，只是在關節（髖、膝、肩、腕）外面包一層旋轉——這就是「把現有部件掛到骨架上」。
+  let POSE = null;
+  const pz = (k) => (POSE && typeof POSE[k] === "number" ? POSE[k] : 0);
+  function rotAt(ctx, x, y, a) { if (!a) return; ctx.translate(x, y); ctx.rotate(a); ctx.translate(-x, -y); }
+  /** 額外的武器畫法（anim.js 註冊）：一律「握把在原點、作用端（刃尖、槍口、杖頭、箭的方向）朝區域 -y」。 */
+  const EXTRA = {};
+
   // ---- 畫法層 ----
   function seedOf(s) { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; }
   function rng(seed) { let s = seed >>> 0; return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296); }
@@ -108,14 +117,25 @@ window.StoryDoll = (() => {
     const greave = heavy ? MAT.steel : boot;
     if (view !== "side") {
       for (const sx of [-1, 1]) {
+        const up = pz(sx < 0 ? "liftL" : "liftR");
+        ctx.save(); ctx.translate(0, -up * 0.45);
         ink(ctx, `leg-${sx}`, [[sx * 0.8, -15], [sx * 4.6, -15], [sx * 4.4, -6], [sx * 1, -6]], heavy ? MAT.iron : pants);
+        ctx.translate(0, -up * 0.55);
         ink(ctx, `boot-${sx}`, [[sx * 0.6, heavy ? -9 : -7], [sx * 4.8, heavy ? -9 : -7], [sx * 5.6, -0.8], [sx * 0.4, -0.4]], greave);
+        ctx.restore();
       }
     } else {
+      ctx.save(); rotAt(ctx, 0, -15, -pz("lean"));
+      ctx.save(); rotAt(ctx, -1.2, -15, -pz("hipF"));
       ink(ctx, "leg-far", [[-3, -15], [0.6, -15], [-0.6, -6], [-3.8, -6]], dark(heavy ? MAT.iron : pants, 0.25));
+      rotAt(ctx, -2.2, -6.5, pz("kneeF"));
       ink(ctx, "boot-far", [[-4.2, heavy ? -9 : -7], [-0.4, heavy ? -9 : -7], [1, -0.6], [-4.4, -0.4]], dark(greave, 0.25));
+      ctx.restore();
+      ctx.save(); rotAt(ctx, 1.3, -15, -pz("hipN"));
       ink(ctx, "leg-near", [[-0.6, -15], [3.2, -15], [3.8, -6], [0.6, -6]], heavy ? MAT.iron : pants);
+      rotAt(ctx, 2.2, -6.5, pz("kneeN"));
       ink(ctx, "boot-near", [[0.4, heavy ? -9 : -7], [4, heavy ? -9 : -7], [7.4, -0.8], [0.4, -0.4]], greave);
+      ctx.restore(); ctx.restore();
     }
   }
   const TORSO = {
@@ -232,6 +252,16 @@ window.StoryDoll = (() => {
   // 主手：正面在畫面左手 (-9,-23.2)；側面在近側手 (4.6,-24)。
   function weapon(ctx, it, key, view, hand) {
     if (!it) return;
+    if (EXTRA[it.kind]) {
+      const W = EXTRA[it.kind], side = view === "side";
+      ctx.save(); ctx.translate(hand[0], hand[1]);
+      const a = side && POSE && typeof POSE.wpn === "number" ? POSE.wpn : W.hold[side ? "side" : "front"];
+      ctx.rotate(a);
+      W.draw(ctx, key, it, view);
+      if (POSE && POSE.probe && key.startsWith("main")) { const m = ctx.getTransform(); POSE.probe(it.kind, m.transformPoint(new DOMPoint(0, 0)), m.transformPoint(new DOMPoint(0, -W.len)), view); }
+      ctx.restore();
+      return;
+    }
     const [hx, hy] = hand, F = view !== "side";
     const metal = colorOf(it.material === "wood" ? null : it, MAT.steel);
     ctx.save(); ctx.translate(hx, hy);
@@ -449,7 +479,10 @@ window.StoryDoll = (() => {
     const look = unit.look ?? {}, gear = unit.gear ?? {}, V = "back";
     const cover = COVERS[gear.head?.kind] ?? (gear.head ? { top: true } : {});
     ctx.scale(-1, 1);
+    if (POSE) ctx.translate(0, pz("bob"));
+    ctx.save(); ctx.translate(0, pz("armL"));
     weapon(ctx, gear.main_hand, "main-b", V, [-9, -23.2]);
+    ctx.restore();
     const off = gear.off_hand, shield = off && off.kind.startsWith("shield");
     if (off && !shield) { ctx.save(); ctx.scale(-1, 1); weapon(ctx, off, "off-b", V, [-9, -23.2]); ctx.restore(); }
     legs(ctx, unit, V);
@@ -481,6 +514,7 @@ window.StoryDoll = (() => {
     ctx.save();
     if (look.build === "stout") ctx.scale(1.12, 0.88); else if (look.build === "tall") ctx.scale(0.96, 1.1);
     shadow(ctx);
+    if (POSE) { ctx.translate(0, pz("bob")); if (!F) rotAt(ctx, 0, -15, pz("lean")); }
     const cover = COVERS[gear.head?.kind] ?? (gear.head ? { top: true } : {});
     cloak(ctx, unit, view);
     tail(ctx, look, view);
@@ -490,7 +524,7 @@ window.StoryDoll = (() => {
     legs(ctx, unit, view);
     body(ctx, unit, view);
     waist(ctx, unit, view); beads(ctx, unit, view); mantle(ctx, unit, view);
-    if (F) { armFront(ctx, unit, 1); offhand(ctx, gear.off_hand, view, false); if (gear.off_hand && gear.off_hand.kind !== "shield_round") hand(ctx, look, 9, -23.2, "hand-r"); else if (!gear.off_hand) hand(ctx, look, 9, -23.2, "hand-r"); }
+    if (F) { ctx.save(); ctx.translate(0, pz("armR")); armFront(ctx, unit, 1); ctx.restore(); offhand(ctx, gear.off_hand, view, false); if (gear.off_hand && gear.off_hand.kind !== "shield_round") hand(ctx, look, 9, -23.2, "hand-r"); else if (!gear.off_hand) hand(ctx, look, 9, -23.2, "hand-r"); }
     else offhand(ctx, gear.off_hand, view, false);
     if (!cover.side) ears(ctx, look, view, "under");
     ink(ctx, `head-${view}`, F ? ellPts(0, -42, 9.2, 8.6) : HEAD_SIDE, look.skin ?? "#eab48a", { w: 1 });
@@ -503,14 +537,18 @@ window.StoryDoll = (() => {
     horns(ctx, look, view);
     // 主手手臂＋武器
     if (F) {
+      ctx.save(); ctx.translate(0, pz("armL"));
       armFront(ctx, unit, -1);
       weapon(ctx, gear.main_hand, "main", view, [-9, -23.2]);
       hand(ctx, look, -9, -23.2, "hand-l");
+      ctx.restore();
     } else {
       const c = armColor(unit);
+      ctx.save(); rotAt(ctx, 0, -31.6, pz("arm"));
       ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], c);
       weapon(ctx, gear.main_hand, "main-s", view, [4.6, -24]);
       hand(ctx, look, 4.6, -24, "hand-s");
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -683,5 +721,5 @@ window.StoryDoll = (() => {
   }
   // 畫法層給其他樣張共用（enemyArt.js）；setShade(-1) ＝ 側面朝東的暗面方向
   const H = { ink, stroke, limb, dot, ellPts, shadow, mix, dark, light, INK, setShade: (s) => { SHADE = s; } };
-  return { draw, stamp, stampForm, FORMS, COVERS, H };
+  return { draw, stamp, stampForm, FORMS, COVERS, H, setPose: (p) => { POSE = p; }, registerWeapon: (kind, w) => { EXTRA[kind] = w; } };
 })();
