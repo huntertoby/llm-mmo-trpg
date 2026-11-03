@@ -39,6 +39,7 @@ window.Battle = (() => {
     GROUND.forEach((row, gy) => [...row].forEach((ch, gx) => E.ground(ctx, ch, gx, gy)));
     E.dock(ctx, 12, 8, 3, 1); E.boat(ctx, 15, 9);
     E.campfire(ctx, 2, 6);
+    surfaces(ctx);
     if (opt.under) opt.under(ctx);
     for (let gy = 0; gy < ROWS; gy++) {
       for (const [x, y, k] of PROPS) if (y === gy) Realms.OBJ[k](ctx, x * T, y * T);
@@ -96,6 +97,80 @@ window.Battle = (() => {
       front = next;
     }
     return out;
+  }
+
+  // ---------------- 地表（待機時也要看得出邊界：用地表自己的形狀與邊緣，不畫格子框）----------------
+  const SURF = {
+    ice: [[10, 6], [11, 6], [10, 7], [11, 5]],
+    oil: [[6, 4], [7, 4], [7, 5]],
+    fire: [[16, 7], [16, 8]],
+  };
+  const TRAPS = [[11, 7]];
+  const R0 = (x, y) => ((x * 7 + y * 13) % 5) / 5;
+  /** 把幾格併成一塊有機形狀：先畫放大的邊緣色，再畫填色；相鄰格之間用橋接補滿。 */
+  function blob(ctx, cells, fill, edge) {
+    const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+    const shape = (pad, col) => {
+      ctx.fillStyle = col;
+      for (const [x, y] of cells) {
+        const r = R0(x, y);
+        rr(ctx, x * T + 5 - pad - r * 3, y * T + 5 - pad - r * 2, T - 10 + 2 * pad + r * 4, T - 10 + 2 * pad + r * 3, 16 + pad); ctx.fill();
+        if (set.has(`${x + 1},${y}`)) ctx.fillRect(x * T + T / 2, y * T + 9 - pad, T, T - 18 + 2 * pad);
+        if (set.has(`${x},${y + 1}`)) ctx.fillRect(x * T + 9 - pad, y * T + T / 2, T - 18 + 2 * pad, T);
+      }
+    };
+    shape(2.5, edge); shape(0, fill);
+  }
+  function surfaces(ctx) {
+    // 冰面：淡藍、白色邊、反光斜線、細裂紋
+    blob(ctx, SURF.ice, "rgba(205,238,255,0.92)", "#ffffff");
+    ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2;
+    for (const [x, y] of SURF.ice) { ctx.beginPath(); ctx.moveTo(x * T + 14, y * T + 20); ctx.lineTo(x * T + 24, y * T + 12); ctx.moveTo(x * T + 20, y * T + 26); ctx.lineTo(x * T + 34, y * T + 14); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(90,138,168,0.6)"; ctx.lineWidth = 1;
+    for (const [x, y] of SURF.ice) { ctx.beginPath(); ctx.moveTo(x * T + 30, y * T + 30); ctx.lineTo(x * T + 38, y * T + 40); ctx.lineTo(x * T + 44, y * T + 36); ctx.stroke(); }
+    ctx.restore();
+    // 油：深褐亮面，邊緣是油光
+    blob(ctx, SURF.oil, "rgba(40,30,18,0.88)", "rgba(200,170,90,0.85)");
+    for (const [x, y] of SURF.oil) { ctx.fillStyle = "rgba(160,120,255,0.35)"; ctx.beginPath(); ctx.ellipse(x * T + 20, y * T + 20, 10, 4, -0.4, 0, TAU); ctx.fill(); ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.beginPath(); ctx.ellipse(x * T + 30, y * T + 30, 6, 2.5, -0.4, 0, TAU); ctx.fill(); }
+    // 火：焦黑底＋火苗＋光暈
+    blob(ctx, SURF.fire, "rgba(60,24,10,0.85)", "rgba(255,120,40,0.9)");
+    for (const [x, y] of SURF.fire) {
+      const g = ctx.createRadialGradient(x * T + T / 2, y * T + T / 2, 3, x * T + T / 2, y * T + T / 2, T * 0.6); g.addColorStop(0, "rgba(255,170,60,0.5)"); g.addColorStop(1, "rgba(255,120,40,0)");
+      ctx.fillStyle = g; ctx.fillRect(x * T - 6, y * T - 6, T + 12, T + 12);
+      for (const [dx, dy, sz] of [[16, 30, 14], [30, 34, 18], [38, 24, 11]]) { ctx.save(); ctx.shadowColor = "#ff8a2a"; ctx.shadowBlur = 6; E.ICON.rest(ctx, x * T + dx, y * T + dy, sz); ctx.restore(); }
+    }
+    // 陷阱（已發現）：捕獸夾，鐵齒＋淡紅虛線圈
+    for (const [x, y] of TRAPS) trap(ctx, x * T + T / 2, y * T + T / 2);
+  }
+  function trap(ctx, cx, cy) {
+    ctx.save();
+    ctx.fillStyle = "rgba(224,72,58,0.22)"; ctx.beginPath(); ctx.ellipse(cx, cy + 4, 20, 13, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "rgba(224,72,58,0.8)"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = "#1c1712"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(cx, cy + 3, 13, 8, 0, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = "#9aa0a8"; ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.fillStyle = "#c8ccd0"; ctx.strokeStyle = "#1c1712"; ctx.lineWidth = 1;
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU, x = cx + Math.cos(a) * 13, y = cy + 3 + Math.sin(a) * 8; ctx.beginPath(); ctx.moveTo(x - 2, y); ctx.lineTo(cx + Math.cos(a) * 8, cy + 3 + Math.sin(a) * 4.5); ctx.lineTo(x + 2, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    box(ctx, cx - 3, cy, 6, 6, "#6a6e74", "#1c1712", 1, 1);
+    ctx.restore();
+  }
+  /** 沿格子的路徑：直線段＋圓角接點；每格中心一個點，看得出經過哪幾格。colorAt(i) 回傳第 i 段的 {color, dash}。 */
+  function gridPath(ctx, cells, colorAt) {
+    const pts = cells.map(([x, y]) => [x * T + T / 2, y * T + T * 0.62]);
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1], [bx, by] = pts[i], st = colorAt(i);
+      ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(0,0,0,0.45)"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.strokeStyle = st.color; ctx.lineWidth = 4; if (st.dash) ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.restore();
+    }
+    pts.forEach(([x, y], i) => { if (i > 0) { dot(ctx, x, y, 5.5, "rgba(0,0,0,0.5)"); dot(ctx, x, y, 3.8, colorAt(i).color); } });
+    return pts;
+  }
+  function tag(ctx, x, y, icon, label, color) { // 路徑旁的預估結果小牌
+    ctx.font = "bold 12px 'Microsoft JhengHei', sans-serif"; const w = ctx.measureText(label).width + 34;
+    box(ctx, x, y, w, 24, "rgba(24,20,16,0.9)", color, 2, 12);
+    icon(ctx, x + 13, y + 12); H.text(ctx, label, x + 25, y + 12.5, 12);
+    return w;
   }
 
   // ---------------- 戰鬥 HUD（版面 A 的戰鬥版）----------------
@@ -195,11 +270,9 @@ window.Battle = (() => {
     const cells = reach(8, 6, 3);
     world(ctx, { under: (c) => softCells(c, cells, "rgba(110,170,255,0.2)", "rgba(200,225,255,0.35)", "rgba(150,200,255,0.9)"), skip: ["A"] });
     zoneVignette(ctx);
-    // 路徑：平滑曲線＋殘影（表示沿路徑走過去，不是一格一格跳）
-    const path = [[8, 6], [9, 6], [10, 6], [10, 5]].map(([x, y]) => [x * T + T / 2, y * T + T * 0.7]);
-    ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3; ctx.setLineDash([2, 7]); ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(...path[0]); ctx.quadraticCurveTo(path[2][0], path[2][1], path[3][0], path[3][1]); ctx.stroke(); ctx.restore();
-    for (const [k, a] of [[0.35, 0.25], [0.7, 0.45]]) { ctx.save(); ctx.globalAlpha = a; PaperDoll.stamp(ctx, { look: HERO[0], gear: HERO[1] }, "east", 8 * T + T / 2 + (2 * T) * k, 6 * T + T * 0.82 - T * k * k, 0.78, { dpr: 3 }); ctx.restore(); }
+    // 路徑：沿格子走（直線段＋圓角），每格一個點；殘影表示一格一格平滑走過去
+    gridPath(ctx, [[8, 6], [8, 5], [9, 5], [10, 5]], () => ({ color: "#ffffff" }));
+    for (const [gx, gy, al] of [[8, 5, 0.3], [9, 5, 0.5]]) { ctx.save(); ctx.globalAlpha = al; PaperDoll.stamp(ctx, { look: HERO[0], gear: HERO[1] }, "east", gx * T + T / 2, gy * T + T * 0.82, 0.78, { dpr: 3 }); ctx.restore(); }
     unit(ctx, ["A", 10, 5, HERO, ALLY, 0.82, "east"], {});
     ctx.save(); ctx.strokeStyle = "#ffd23a"; ctx.lineWidth = 2.5; rr(ctx, 10 * T + 4, 5 * T + 4, T - 8, T - 8, 9); ctx.stroke(); ctx.restore();
     H.chip(ctx, 10 * T - 6, 5 * T - 70, "boots", "−3", 58);
@@ -254,5 +327,30 @@ window.Battle = (() => {
     battleHud(ctx, { unitCard: true });
   }
 
-  return { current, dIdle, dMove, dArea, iso };
+  // ======================= 5. D 版：選移動，路徑經過冰面與陷阱 =======================
+  function dHazard(ctx) {
+    const cells = reach(8, 6, 4);
+    world(ctx, { under: (c) => softCells(c, cells, "rgba(110,170,255,0.16)", "rgba(200,225,255,0.3)", "rgba(150,200,255,0.8)"), skip: ["A"] });
+    zoneVignette(ctx);
+    // 會經過的特殊格：警示色外框（不蓋掉地表本身）
+    softCells(ctx, [[10, 6], [11, 6]], "rgba(120,220,255,0.15)", "rgba(120,220,255,0.95)", null);
+    softCells(ctx, [[11, 7]], "rgba(255,90,60,0.2)", "rgba(255,110,80,0.95)", null);
+    // 原定的終點：虛線框＋淡影
+    ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 2; rr(ctx, 12 * T + 5, 7 * T + 5, T - 10, T - 10, 9); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = 0.25; PaperDoll.stamp(ctx, { look: HERO[0], gear: HERO[1] }, "east", 12 * T + T / 2, 7 * T + T * 0.82, 0.78, { dpr: 3 }); ctx.restore();
+    // 路徑：白（一般）→ 青虛線（冰上滑行）→ 紅（踩到陷阱）；到不了的後半段變灰虛線
+    const path = [[8, 6], [9, 6], [10, 6], [11, 6], [11, 7], [12, 7]];
+    gridPath(ctx, path, (i) => (i <= 2 ? { color: "#ffffff" } : i === 3 ? { color: "#1e78d0", dash: true } : i === 4 ? { color: "#ff6a50" } : { color: "rgba(200,200,200,0.6)", dash: true }));
+    for (const [gx, gy, al] of [[9, 6, 0.3], [10, 6, 0.42], [11, 6, 0.55]]) { ctx.save(); ctx.globalAlpha = al; PaperDoll.stamp(ctx, { look: HERO[0], gear: HERO[1] }, "east", gx * T + T / 2, gy * T + T * 0.82, 0.78, { dpr: 3 }); ctx.restore(); }
+    unit(ctx, ["A", 11, 7, HERO, ALLY, 0.82, "south"], {});
+    const ice = (c, x, y) => { c.fillStyle = "#cdeeff"; c.beginPath(); c.moveTo(x, y - 7); c.lineTo(x + 6, y); c.lineTo(x, y + 7); c.lineTo(x - 6, y); c.closePath(); c.fill(); c.lineWidth = 1.4; c.strokeStyle = OUT; c.stroke(); };
+    const jaws = (c, x, y) => { c.strokeStyle = "#9aa0a8"; c.lineWidth = 2.4; c.beginPath(); c.ellipse(x, y, 7, 5, 0, 0, TAU); c.stroke(); c.fillStyle = "#c8ccd0"; for (let k = 0; k < 6; k++) { const a = (k / 6) * TAU; c.fillRect(x + Math.cos(a) * 5 - 1, y + Math.sin(a) * 3.5 - 1, 2, 2); } };
+    tag(ctx, 10 * T - 4, 5 * T - 6, ice, "滑 1 格", "#1e78d0");
+    tag(ctx, 11 * T + 30, 7 * T + 8, jaws, "陷阱 −8・定身", "#ff6a50");
+    E.bubble(ctx, 11 * T + T / 2, 7 * T - 34, "bang", "danger");
+    H.chip(ctx, 12 * T + 2, 8 * T + 6, "boots", "到不了", 70);
+    battleHud(ctx, { ap: 3 });
+  }
+
+  return { current, dIdle, dMove, dArea, dHazard, iso };
 })();
