@@ -120,13 +120,23 @@ async function request<T>(method: string, path: string, body?: unknown, quiet = 
   return data as T;
 }
 
-/** 實地地圖的靜態地形（6C-R3；`fieldTiles.ts` 依雜湊快取）。 */
-const fetchFieldTiles = (mapId: string, hash: string) =>
-  request<FieldTilesView>("GET", `/world/fields/${encodeURIComponent(mapId)}?h=${encodeURIComponent(hash)}`);
+/** 實地地圖的靜態地形（6C-R3；`fieldTiles.ts` 依雜湊快取）。6D-R1：經角色取（只給看得到的圖）。 */
+const fetchFieldTiles = (characterId: string, mapId: string, hash: string) =>
+  request<FieldTilesView>(
+    "GET",
+    `/world/characters/${encodeURIComponent(characterId)}/fields/${encodeURIComponent(mapId)}?h=${encodeURIComponent(hash)}`,
+  );
+
+/** 取不到靜態地形時的退路：請伺服器直接帶地形（6D-R1）。 */
+const fetchWorldWithTiles = (characterId: string) =>
+  request<WorldView>("GET", `/world/characters/${encodeURIComponent(characterId)}?with_tiles=1`);
+
+/** 世界畫面補上地形（6C-R3）。 */
+const hydrate = (view: WorldView) => hydrateField(view, fetchFieldTiles, fetchWorldWithTiles);
 
 /** 回傳世界畫面的請求：`field` 沒帶地形時補上（6C-R3）。 */
 async function worldRequest(method: string, path: string, body?: unknown): Promise<WorldView> {
-  return hydrateField(await request<WorldView>(method, path, body), fetchFieldTiles);
+  return hydrate(await request<WorldView>(method, path, body));
 }
 
 export const api = {
@@ -221,7 +231,7 @@ export const api = {
     worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
   worldBattle: (characterId: string) =>
     request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`).then(
-      async (r) => ({ ...r, world: await hydrateField(r.world, fetchFieldTiles) }),
+      async (r) => ({ ...r, world: await hydrate(r.world) }),
     ),
   /** 大世界的閃現與配點預覽（5A-7；同一輪的預覽，不扣點）。 */
   worldFlashPreview: (characterId: string, skill: string, slot: number | null) =>
