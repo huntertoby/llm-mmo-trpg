@@ -84,9 +84,9 @@ const DOWNED_DX = 27;
 const DOWNED_DY = 11;
 
 /** 倒地姿勢：整個小人橫躺（頭朝右），腳底仍在原點附近。 */
-export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed: boolean): void {
+export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed: boolean, ground = true): void {
   if (!downed || spec.totem === true) {
-    drawFigure(ctx, spec, facing);
+    drawFigure(ctx, spec, facing, ground);
     return;
   }
   ctx.save();
@@ -100,7 +100,7 @@ export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed:
  * 產生一張離屏 canvas（`dpr` 倍解析度；沒有 DOM 時回傳 `null`）。腳底在 (DOLL_W/2, DOLL_FOOT_Y)。
  * C 畫風沒有黑色剪影外框（墨線取代它）；史詩、傳說（頭目）保留外光，是唯一的身體外光。
  */
-export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number): HTMLCanvasElement | null {
+export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number, ground = true): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const make = (): HTMLCanvasElement => {
     const c = document.createElement("canvas");
@@ -113,7 +113,7 @@ export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boole
   if (o === null) return null;
   o.scale(dpr, dpr);
   o.translate(DOLL_W / 2, DOLL_FOOT_Y);
-  drawFigurePose(o, spec, facing, downed);
+  drawFigurePose(o, spec, facing, downed, ground);
   const glowColor = spec.rarity !== undefined ? RARITY_GLOW[spec.rarity] : undefined;
   if (glowColor === undefined) return off;
   const glow = make();

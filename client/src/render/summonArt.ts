@@ -9,7 +9,7 @@ import { mix } from "./color";
 import { KEYWORD_COLOR } from "./palette";
 import { FORM_AURA_NEUTRAL, drawFormAura } from "./inkForm";
 import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, type Pt } from "./inkStyle";
-import { DOLL_H, DOLL_W, renderFigureCanvas, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_W, renderFigureCanvas, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
 
 
 /** 後端 `SummonLookView`／前端 `UnitDraw` 的外觀欄位（字串都可能是前端不認得的新值）。 */
@@ -40,7 +40,7 @@ export const SIZE_SCALE: Readonly<Record<SummonSize, number>> = { small: 0.8, me
 
 const BODIES: readonly SummonBody[] = ["humanoid", "spirit", "construct", "beast", "plant", "totem"];
 const VARIANTS: Readonly<Record<SummonBody, readonly string[]>> = {
-  humanoid: ["skeleton", "shade", "afterimage", "guardian"],
+  humanoid: ["skeleton", "shade", "afterimage", "guardian", "mist_shade"],
   spirit: [""],
   construct: ["golem", "bomb", "wall"],
   beast: ["wolf", "bird"],
@@ -64,9 +64,14 @@ export function hasNoRing(look: ResolvedLook): boolean {
   return look.body === "construct" && look.variant === "wall";
 }
 
-/** 貼圖快取鍵（外觀＋朝向；殘影另加召喚者外觀鍵）。 */
+/** 這個人形款式複製召喚者的紙娃娃：殘影（afterimage）與霧影（mist_shade，5F-ART1）。 */
+export function copiesOwner(variant: string | null | undefined): boolean {
+  return variant === "afterimage" || variant === "mist_shade";
+}
+
+/** 貼圖快取鍵（外觀＋朝向；殘影與霧影另加召喚者外觀鍵）。 */
 export function summonKey(look: ResolvedLook, facing: Facing, ownerKey = ""): string {
-  const copy = look.variant === "afterimage" ? ownerKey : "";
+  const copy = copiesOwner(look.variant) ? ownerKey : "";
   return [look.body, look.variant, look.element ?? "", look.size, look.trait ?? "", facing, copy].join("|");
 }
 
@@ -353,23 +358,39 @@ export function humanoidSpec(look: ResolvedLook, skeleton: DollSpec, owner: Doll
     };
   }
   if (look.variant === "afterimage") return owner ?? skeleton;
+  if (look.variant === "mist_shade") {
+    // 霧影不帶本體的外光（外光只代表頭目，docs/art/霧影外觀.md 第 5 點）
+    const { rarity: _glow, ...plain } = owner ?? skeleton;
+    return plain;
+  }
   if (look.trait === "shield") {
     return { ...skeleton, gear: { ...skeleton.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } };
   }
   return skeleton;
 }
 
-interface HumanoidStyle {
+export interface HumanoidStyle {
   alpha: number;
   glow?: string;
   tint?: string;
+  /** 腳下散成霧：從腳底往上這麼多單位，不透明度由 0 漸變到 1（霧影）。 */
+  fade?: number;
+  /** `false`：不畫紙娃娃自己的地面影子（霧影）。 */
+  ground?: boolean;
 }
 
 const HUMANOID_STYLE: Readonly<Record<string, HumanoidStyle>> = {
   shade: { alpha: 0.72, glow: "#7a4ab0" },
   guardian: { alpha: 0.8, glow: "#ffe9a8" },
   afterimage: { alpha: 0.5, tint: "#8fc8ff", glow: "#8fc8ff" },
+  // 5F-ART1（docs/art/霧影外觀.md）：月白、0.55、不發光、腳下往上 14 單位散成霧、沒有影子
+  mist_shade: { alpha: 0.55, tint: "#dfe4e2", fade: 14, ground: false },
 };
+
+/** 人形款式的合成方式；沒有特別合成的款式（骷髏）為 `undefined`。 */
+export function humanoidStyle(variant: string): HumanoidStyle | undefined {
+  return HUMANOID_STYLE[variant];
+}
 
 /** 人形召喚物用紙娃娃的畫布大小（DOLL_*，C 骨架）；其他體型沿用舊的 64×64（SUMMON_*）。 */
 function makeCanvas(dpr: number, humanoid = false): HTMLCanvasElement {
@@ -380,9 +401,9 @@ function makeCanvas(dpr: number, humanoid = false): HTMLCanvasElement {
 }
 
 function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr: number): HTMLCanvasElement | null {
-  const fig = renderFigureCanvas(spec, facing, false, dpr);
-  if (fig === null) return null;
   const style = HUMANOID_STYLE[look.variant];
+  const fig = renderFigureCanvas(spec, facing, false, dpr, style?.ground ?? true);
+  if (fig === null) return null;
   if (style === undefined) return fig;
   const out = makeCanvas(dpr, true);
   const ctx = out.getContext("2d");
@@ -406,6 +427,18 @@ function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr:
   }
   ctx.globalAlpha = style.alpha;
   ctx.drawImage(src, 0, 0);
+  if (style.fade !== undefined) {
+    // 腳下散成霧：destination-in 疊直向漸層（腳底 0 → 往上 fade 單位 1，以上全部 1）
+    const foot = DOLL_FOOT_Y * dpr;
+    const g = ctx.createLinearGradient(0, foot, 0, foot - style.fade * dpr);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,1)");
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.globalCompositeOperation = "source-over";
+  }
   return out;
 }
 

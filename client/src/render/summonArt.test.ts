@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Facing } from "../api/types";
 import { resolveDollT } from "./testDolls";
+import { DOLL_FOOT_Y } from "./paperdoll";
 import {
+  copiesOwner,
   drawSummonBody,
   drawSummonGround,
   hasNoRing,
   humanoidSpec,
+  humanoidStyle,
   SUMMON_KEYWORDS,
   renderSummonCanvas,
   resolveSummonLook,
@@ -217,6 +220,66 @@ describe("召喚物外觀渲染器", () => {
     expect(humanoidSpec(resolveSummonLook({ body: "humanoid", variant: "afterimage" }), skeleton, null)).toBe(skeleton);
     expect(spec({ body: "humanoid", variant: "skeleton", trait: "shield" }).gear.off_hand?.kind).toBe("shield_round");
     expect(spec({ body: "humanoid", variant: "skeleton" })).toBe(skeleton);
+  });
+
+  it("霧影（mist_shade，5F-ART1）：人形款式、複製召喚者、去掉外光；不認得的款式仍退回骷髏", () => {
+    const shade = resolveSummonLook({ body: "humanoid", variant: "mist_shade" });
+    expect(shade.variant).toBe("mist_shade");
+    expect(resolveSummonLook({ body: "humanoid", variant: "mist_shadow_typo" }).variant).toBe("skeleton");
+    expect(copiesOwner("mist_shade")).toBe(true);
+    expect(copiesOwner("afterimage")).toBe(true);
+    expect(copiesOwner("shade")).toBe(false);
+    expect(copiesOwner(undefined)).toBe(false);
+    expect(summonKey(shade, "south", "x")).not.toBe(summonKey(shade, "south", "y"));
+    const skeleton = resolveDollT({ template: "summon_skeleton_warrior", team: "ally", summon: true });
+    const owner = { ...resolveDollT({ template: "hero_mage", team: "enemy", summon: false }), rarity: "legendary" as const };
+    const spec = humanoidSpec(shade, skeleton, owner);
+    expect(spec.rarity).toBeUndefined();
+    expect(spec.gear).toBe(owner.gear);
+    expect(spec.look).toBe(owner.look);
+    expect(humanoidSpec(shade, skeleton, null).look).toBe(skeleton.look);
+  });
+
+  it("霧影樣式：月白 #dfe4e2、0.55、不發光、腳下 14 單位漸隱、不畫影子；殘影不變", () => {
+    expect(humanoidStyle("mist_shade")).toEqual({ alpha: 0.55, tint: "#dfe4e2", fade: 14, ground: false });
+    expect(humanoidStyle("mist_shade")?.glow).toBeUndefined();
+    expect(humanoidStyle("afterimage")).toEqual({ alpha: 0.5, tint: "#8fc8ff", glow: "#8fc8ff" });
+  });
+
+  it("霧影貼圖：destination-in 漸層從腳底往上 14 單位，沒有外光與影子；殘影仍有藍色外光與影子", () => {
+    const render = (variant: string) => {
+      const canvases: string[][] = [];
+      const fakeDoc = {
+        createElement: () => {
+          const { ctx, calls } = mockCtx();
+          canvases.push(calls);
+          return { width: 0, height: 0, getContext: () => ctx };
+        },
+      };
+      const g = globalThis as { document?: unknown };
+      const prev = g.document;
+      g.document = fakeDoc;
+      try {
+        const look = resolveSummonLook({ body: "humanoid", variant });
+        const owner = resolveDollT({ template: "hero_mage", team: "enemy", summon: false });
+        renderSummonCanvas(look, "south", humanoidSpec(look, owner, owner), 2);
+      } finally {
+        g.document = prev;
+      }
+      return canvases.flat();
+    };
+    const SHADOW = "strokeStyle=rgba(43,30,22,0.5)";
+    const mist = render("mist_shade");
+    expect(mist).toContain("globalCompositeOperation=destination-in");
+    expect(mist).toContain(`createLinearGradient(0.00,${(DOLL_FOOT_Y * 2).toFixed(2)},0.00,${((DOLL_FOOT_Y - 14) * 2).toFixed(2)})`);
+    expect(mist).toContain("globalAlpha=0.55");
+    expect(mist.some((c) => c.startsWith("shadowBlur="))).toBe(false);
+    expect(mist).not.toContain(SHADOW);
+    expect(mist).toContain("fillStyle=#dfe4e288");
+    const ghost = render("afterimage");
+    expect(ghost).toContain("shadowColor=#8fc8ff");
+    expect(ghost).toContain(SHADOW);
+    expect(ghost).not.toContain("globalCompositeOperation=destination-in");
   });
 
   it("沒有 DOM 時貼圖產生器回傳 null（不丟例外）", () => {
