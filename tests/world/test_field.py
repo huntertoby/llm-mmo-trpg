@@ -513,6 +513,7 @@ def test_old_world_log_is_stale() -> None:
                 )
             ]
         ).splitlines()[1]
+        + "\n"  # 6D-R1：沒有換行結尾的最後一行算寫到一半，會被略過
     )
     log = read_log(old)
     assert log.stale_through == 3

@@ -1,4 +1,7 @@
-"""主城的抵達與安全區、荒原首次走過才亮起、大世界圖的三種狀態（Phase 6D-5；21.1、21.9）。"""
+"""主城的抵達與安全區、荒原首次走過才亮起、大世界圖的三種狀態（Phase 6D-5；21.1、21.9）。
+
+座標一律從內容推（6D-R1：傳送石、``entry``、出口、門的格子），不寫死正式地圖的座標；霧渡鎮是測試專用
+的凍結複本（:func:`tests.world.helpers.with_test_fields`），照舊寫死。"""
 
 from __future__ import annotations
 
@@ -34,8 +37,7 @@ from trpg.world.state import CharacterState, FieldPos, LocationRef, WorldState
 from trpg.world.step import new_character, world_step
 
 OPEN = ("ashen_waste_open",)
-FERRY_START = FieldPos(map="ashen_ferry", x=16, y=2)
-"""雲嶺「往灰燼荒原的渡口」的 ``entry``。"""
+XY = tuple[int, int]
 
 
 @pytest.fixture(scope="module")
@@ -44,6 +46,33 @@ def calm(field_library: ContentLibrary) -> ContentLibrary:
     lib = with_rules(field_library, encounter={"base_permille": 0, "per_level_permille": 0})
     maps = {k: m.model_copy(update={"spawns": ()}) for k, m in lib.field_maps.items()}
     return dataclasses.replace(lib, field_maps=maps)
+
+
+def _entry(library: ContentLibrary, map_id: str) -> FieldPos:
+    found = library.field_maps[map_id]
+    return FieldPos(map=map_id, x=found.entry[0], y=found.entry[1])
+
+
+def _stone(library: ContentLibrary, map_id: str) -> FieldPos:
+    """``map_id`` 上第一顆傳送石的格子。"""
+    x, y = library.field_maps[map_id].teleport_stones[0].at
+    return FieldPos(map=map_id, x=x, y=y)
+
+
+def _off_stone(library: ContentLibrary, map_id: str) -> FieldPos:
+    """``map_id`` 上不在傳送石上的格子（``entry``）。"""
+    pos = _entry(library, map_id)
+    assert all(s.at != (pos.x, pos.y) for s in library.field_maps[map_id].teleport_stones)
+    return pos
+
+
+def _exit_cell(library: ContentLibrary, map_id: str, to: str) -> XY:
+    """``map_id`` 往 ``to`` 的出口的第一格。"""
+    return next(e.at[0] for e in library.field_maps[map_id].exits if e.to == to)
+
+
+def _door_cell(library: ContentLibrary, map_id: str, to: str) -> XY:
+    return next(d.at for d in library.field_maps[map_id].doors if d.to == to)
 
 
 def _char(library: ContentLibrary, **updates: Any) -> CharacterState:
@@ -100,8 +129,38 @@ def _path(
     return tuple(reversed(out))
 
 
+def _near(library: ContentLibrary, char: CharacterState, steps: int) -> tuple[XY, ...]:
+    """從目前位置走 ``steps`` 格、不碰出口、門、傳送石的一條路（BFS 第一個距離剛好的格子）。"""
+    assert char.field is not None
+    found = field_map(library, char.field.map)
+    assert found is not None
+    grid = field_grid(library, char, found)
+    portals = {c for e in found.exits for c in e.at} | {d.at for d in found.doors}
+    portals |= {s.at for s in found.teleport_stones}
+    climb = library.ruleset.core.max_climb_height
+    start = (char.field.x, char.field.y)
+    paths: dict[XY, tuple[XY, ...]] = {start: ()}
+    queue = deque([start])
+    while queue:
+        cell = queue.popleft()
+        if len(paths[cell]) == steps:
+            return paths[cell]
+        for dx, dy in ((0, 1), (0, -1), (-1, 0), (1, 0)):
+            nxt = (cell[0] + dx, cell[1] + dy)
+            if nxt not in paths and nxt not in portals and grid.can_step(cell, nxt, climb):
+                paths[nxt] = (*paths[cell], nxt)
+                queue.append(nxt)
+    raise AssertionError(f"走不到 {steps} 格外")
+
+
 def _at_ferry(library: ContentLibrary) -> CharacterState:
-    return _char(library, location="ashen_ferry", field=FERRY_START)
+    """站在雲嶺「往灰燼荒原的渡口」的 ``entry``。"""
+    return _char(library, location="ashen_ferry", field=_entry(library, "ashen_ferry"))
+
+
+def _cross_path(library: ContentLibrary, char: CharacterState) -> tuple[XY, ...]:
+    """渡口走到尾端往灰渡口（跨區）的出口。"""
+    return _path(library, char, _exit_cell(library, "ashen_ferry", "ash_ferry"))
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +184,7 @@ def test_capital_stone_is_unlocked_from_the_start(calm: ContentLibrary) -> None:
             "野外傳送石→主城",
             {
                 "location": "rain_terraces",
-                "field": FieldPos(map="rain_terraces", x=17, y=6),
+                "field": "stone:rain_terraces",
                 "teleport_stones": ("stone_rain_terraces",),
             },
             UseTeleportStoneAction(to="stone_capital"),
@@ -134,7 +193,7 @@ def test_capital_stone_is_unlocked_from_the_start(calm: ContentLibrary) -> None:
             "野外傳送石→主城（城鎮傳送）",
             {
                 "location": "rain_terraces",
-                "field": FieldPos(map="rain_terraces", x=17, y=6),
+                "field": "stone:rain_terraces",
                 "teleport_stones": ("stone_rain_terraces",),
             },
             TeleportAction(region="capital"),
@@ -144,6 +203,9 @@ def test_capital_stone_is_unlocked_from_the_start(calm: ContentLibrary) -> None:
 def test_teleport_to_capital(
     calm: ContentLibrary, name: str, updates: dict[str, Any], action: WorldAction
 ) -> None:
+    field = updates.get("field")
+    if isinstance(field, str):  # 傳送石的格子從內容推
+        updates = {**updates, "field": _stone(calm, field.removeprefix("stone:"))}
     char = _char(calm, **updates)
     _, moved, _ = _step(calm, char, action)
     assert (moved.region, moved.location) == ("capital", "capital"), name
@@ -152,7 +214,7 @@ def test_teleport_to_capital(
 
 
 def test_capital_needs_a_town_or_stone(calm: ContentLibrary) -> None:
-    char = _char(calm, location="rain_terraces", field=FieldPos(map="rain_terraces", x=3, y=3))
+    char = _char(calm, location="rain_terraces", field=_off_stone(calm, "rain_terraces"))
     for action in (UseTeleportStoneAction(to="stone_capital"), TeleportAction(region="capital")):
         with pytest.raises(WorldActionError, match=r"傳送石|城鎮"):
             _step(calm, char, action)
@@ -160,7 +222,7 @@ def test_capital_needs_a_town_or_stone(calm: ContentLibrary) -> None:
 
 def test_leave_capital(calm: ContentLibrary) -> None:
     char = _in_capital(calm)
-    assert char.field == FieldPos(map="capital", x=15, y=11)
+    assert char.field == _stone(calm, "capital")
     _, home, _ = _step(calm, char, TeleportAction(region="cloud_ridge"))
     assert (home.region, home.location) == ("cloud_ridge", "mist_ferry")
     stoned = char.model_copy(update={"teleport_stones": ("stone_rain_terraces",)})
@@ -209,9 +271,8 @@ def test_capital_loadout(calm: ContentLibrary) -> None:
 def test_walking_in_capital_costs_nothing(calm: ContentLibrary) -> None:
     """走城裡、進出室內：不擲骰、不推進事件步數、不花補給、沒有遭遇（21.10 第 2、5 條）。"""
     char = _in_capital(calm)
-    walked = char
-    for goal in ((15, 5), (15, 4)):  # 走到導師殿的門
-        _, walked, _ = _step(calm, walked, WalkAction(path=_path(calm, walked, goal)))
+    door = _door_cell(calm, "capital", "capital_mentor_hall")
+    _, walked, _ = _step(calm, char, WalkAction(path=_path(calm, char, door)))  # 走到導師殿的門
     assert walked.field is not None and walked.field.map == "capital_mentor_hall"
     assert walked.pending_encounter is None and walked.pending_event is None
     assert walked.field_event is None
@@ -241,7 +302,7 @@ def test_wipe_never_returns_to_capital(calm: ContentLibrary) -> None:
 
 def _cross(library: ContentLibrary, world: WorldState) -> tuple[CharacterState, list[Any]]:
     char = _at_ferry(library)
-    _, moved, events = _step(library, char, WalkAction(path=_path(library, char, (0, 5))), world)
+    _, moved, events = _step(library, char, WalkAction(path=_cross_path(library, char)), world)
     return moved, events
 
 
@@ -364,7 +425,7 @@ def test_capital_trip_replays(calm: ContentLibrary) -> None:
     start = _char(calm)
     actions: list[WorldAction] = [
         UseTeleportStoneAction(to="stone_capital"),
-        WalkAction(path=((15, 10), (14, 10))),
+        WalkAction(path=_near(calm, _in_capital(calm), 2)),
         RestAction(),
         TeleportAction(region="cloud_ridge"),
         TeleportAction(region="capital"),
@@ -383,7 +444,7 @@ def test_ferry_counts_as_steps_and_replays(calm: ContentLibrary) -> None:
     to_ferry = WalkAction(path=((3, 17),))  # 霧渡鎮西南的碼頭 → 往灰燼荒原的渡口
     _, at_ferry, first = _step(calm, start, to_ferry, world)
     assert at_ferry.location == "ashen_ferry"
-    cross = WalkAction(path=_path(calm, at_ferry, (0, 5)))
+    cross = WalkAction(path=_cross_path(calm, at_ferry))
     _, across, second = _step(calm, at_ferry, cross, world)
     assert (across.region, across.location) == ("ashen_waste", "ash_ferry")
     for events, to in ((first, "ashen_ferry"), (second, "ash_ferry")):
@@ -402,11 +463,13 @@ def test_ferry_crossing_replays(calm: ContentLibrary) -> None:
     """走過渡口 → 回雲嶺的城鎮（傳送）→ 主城 → 從主城傳到餘燼集；重播兩次結果一樣。"""
     world = make_world(flags=OPEN)
     start = _at_ferry(calm)
-    cross = WalkAction(path=_path(calm, start, (0, 5)))
+    cross = WalkAction(path=_cross_path(calm, start))
     _, across, _ = _play(calm, world, start, [cross])
-    back = WalkAction(path=_path(calm, across, (0, 8)))  # 灰渡口的出口回雲嶺的渡口
+    back_cell = _exit_cell(calm, "ash_ferry", "ashen_ferry")  # 灰渡口的出口回雲嶺的渡口
+    back = WalkAction(path=_path(calm, across, back_cell))
     _, returned, _ = _play(calm, world, across, [back])
-    home = WalkAction(path=_path(calm, returned, (16, 0)))  # 渡口回霧渡鎮
+    home_cell = _exit_cell(calm, "ashen_ferry", "mist_ferry")  # 渡口回霧渡鎮
+    home = WalkAction(path=_path(calm, returned, home_cell))
     actions: list[WorldAction] = [
         cross,
         back,
@@ -440,7 +503,7 @@ def test_atlas_view_in_capital(calm: ContentLibrary) -> None:
 
 
 def test_atlas_view_away_from_town(calm: ContentLibrary) -> None:
-    char = _char(calm, location="rain_terraces", field=FieldPos(map="rain_terraces", x=3, y=3))
+    char = _char(calm, location="rain_terraces", field=_off_stone(calm, "rain_terraces"))
     atlas = world_view(calm, make_world(), char, NOON).atlas
     assert atlas is not None and not atlas.can_teleport
     assert atlas.teleport_problem_zh is not None and "傳送石" in atlas.teleport_problem_zh
