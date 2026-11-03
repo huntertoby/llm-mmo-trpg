@@ -1,4 +1,4 @@
-"""雲嶺敵人的 smoke 測試（Phase 5A-3；``docs/phases/Phase5計畫.md`` 7.5）。
+"""雲嶺與灰燼荒原（5F-5a）敵人的 smoke 測試（Phase 5A-3；``docs/phases/Phase5計畫.md`` 7.5）。
 
 每個陣容（含變體）與每個精英詞綴都在現有戰鬥引擎裡生成並打完一場：用該地點的戰鬥地圖（沒有地圖
 的地點用 ``dark_forest``）、3 名既有主角範本、效用 AI（同 ``trpg battle --ai utility``）、
@@ -55,10 +55,10 @@ def _setup(
 Case = tuple[str, str, list[UnitTemplate], list[UnitTemplate]]
 
 
-def _cases(library: ContentLibrary) -> list[Case]:
+def _cases(library: ContentLibrary, region: str = "cloud_ridge") -> list[Case]:
     """(說明, 地圖, 敵方範本, 第三方範本)：每個地點的每個陣容。"""
-    table = library.world_encounters["cloud_ridge"]
-    places = library.world_maps["cloud_ridge"].location_by_id()
+    table = library.world_encounters[region]
+    places = library.world_maps[region].location_by_id()
     catalog = library.enemy_catalog()
     groups = table.group_by_id()
     cases: list[Case] = []
@@ -100,8 +100,9 @@ def test_three_way_groups(library: ContentLibrary) -> None:
     ]
 
 
-def test_every_group_fights_to_the_end(library: ContentLibrary) -> None:
-    for label, map_id, enemies, third in _cases(library):
+@pytest.mark.parametrize("region", ["cloud_ridge", "ashen_waste"])
+def test_every_group_fights_to_the_end(library: ContentLibrary, region: str) -> None:
+    for label, map_id, enemies, third in _cases(library, region):
         try:
             _assert_battle_ends(library, map_id, enemies, third)
         except Exception as exc:  # 加上是哪個陣容，方便定位
@@ -109,16 +110,26 @@ def test_every_group_fights_to_the_end(library: ContentLibrary) -> None:
 
 
 def test_groups_cover_every_new_enemy(library: ContentLibrary) -> None:
-    fielded = {t.id for _l, _m, enemies, third in _cases(library) for t in enemies + third}
+    fielded = {
+        t.id
+        for region in ("cloud_ridge", "ashen_waste")
+        for _l, _m, enemies, third in _cases(library, region)
+        for t in enemies + third
+    }
     fielded.add("sect_mist_swordsman")  # 只在懸賞陣容：tests/world/test_mist_shade.py 打完整場
+    fielded.add("forge_scar")  # 5F-5a：只當督工營的固定精英（套詞綴後 ID 帶詞綴）
     new = {u for u, t in library.units.items() if {"sect", "beast", "construct"} & set(t.tags)}
-    assert len(new) == 20  # 5F-2：霧鎖真人、雲頂觀陣眼石靈；5F-1b：霧中劍客
+    # 5F-2：霧鎖真人、雲頂觀陣眼石靈；5F-1b：霧中劍客
+    # 5F-5a：灰燼荒原 12 種（熔岩獸群 9、熔核領主、寒燼蜥、熔晶魅）
+    assert len(new) == 32
     assert library.world_enemies is not None
     variants = {v.id for v in library.world_enemies.variants}
     assert new | variants <= fielded
 
 
-@pytest.mark.parametrize("affix", ["regenerating", "mist_veiled", "heart_linked", "berserk"])
+@pytest.mark.parametrize(
+    "affix", ["regenerating", "mist_veiled", "heart_linked", "berserk", "blazing", "hard_shelled"]
+)
 def test_every_affix_fights_to_the_end(library: ContentLibrary, affix: str) -> None:
     catalog = library.enemy_catalog()
     candidates = ("mist_wolf", "sect_acolyte", "sect_crane_archer")
