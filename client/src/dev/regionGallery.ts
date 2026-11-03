@@ -2,6 +2,7 @@
 // 開 `client/region-gallery.html`（pnpm dev 後 /region-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫。
 // 正式地圖只有 bridge_chasm（雲海吊橋）與 dark_forest（竹林）標了 region；其他類型與兩種 look 覆寫在這裡擺場景驗證。
 // 5A-ART6 加上灰燼荒原（7 地形＋9 物件、岩漿渡橋、熔心坑）與晶冠城邦（含沒標區域的對照）場景，對照 docs/art/regions4.png。
+// 5A-ART7 加上魔導樞市、霜潮海境的 7 地形＋9 物件場景。
 import type { BattleView, Glossary, ObjectView, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel } from "../battle/drawModel";
@@ -296,6 +297,24 @@ SCENES.push(
   },
   {
     title: "晶冠城邦（同上，沒標區域＝預設畫法，對照用）",
+    rows: ALL_KINDS,
+    units: [["ally", 2, 2], ["enemy", 8, 4]],
+  },
+);
+
+// ---- 5A-ART7：魔導樞市、霜潮海境（docs/art/四區移植需求.md 第 4、5 節，對照 docs/art/regions4.png）----
+// 兩區還沒有地點圖，只用這裡的場景驗收。
+
+SCENES.push(
+  {
+    title: "魔導樞市：7 地形＋9 物件（晶能線約 1/3 格、冷卻槽黃銅邊、沙包矮牆細欄杆）",
+    region: "arcane_hub",
+    rows: ALL_KINDS,
+    units: [["ally", 2, 2], ["enemy", 8, 4]],
+  },
+  {
+    title: "霜潮海境：7 地形＋9 物件（物件與冰崖 2px 深色外框、薄冰同預設）",
+    region: "frost_tide",
     rows: ALL_KINDS,
     units: [["ally", 2, 2], ["enemy", 8, 4]],
   },
