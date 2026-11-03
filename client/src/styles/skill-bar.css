@@ -409,3 +409,151 @@
 .skill-card-formula {
   color: var(--muted);
 }
+
+/* ---- 技能卡常駐 3 行（Phase 6A-1，去文字化②；照 docs/art/textless.png 第 1 組）---- */
+
+/* 稀有度看外框顏色（標題列不再寫字）：稀有藍、史詩紫、傳說金（傳說的金框沿用上面 3C-6a） */
+.skill-card.rarity-rare {
+  border-color: #6fb4ff;
+}
+
+.skill-card.rarity-epic {
+  border-color: #c58cff;
+}
+
+.skill-card {
+  position: relative;
+}
+
+.skill-card-title {
+  font-size: 15px;
+  line-height: 1.3;
+  padding-right: 20px;
+}
+
+.skill-card-chips,
+.skill-card-effline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px 1px 4px;
+  background: #1a1410;
+  border: 1px solid #5a4a38;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  cursor: help;
+}
+
+.skill-pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffd23a;
+  border: 1.5px solid #1c1712;
+}
+
+.skill-eff {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 6px;
+  font-size: 14px;
+  cursor: help;
+}
+
+.skill-eff-num {
+  font-weight: 700;
+}
+
+.skill-eff-tag {
+  color: #a89c88;
+  font-size: 11px;
+}
+
+.skill-attr-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e8a070;
+  color: #1c1712;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.skill-eff-fallback {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.skill-card-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a7e6c;
+  background: transparent;
+  border: none;
+}
+
+.skill-card-pin.pinned {
+  color: #ff6a8a;
+}
+
+.skill-card-detail {
+  margin-top: 6px;
+  border-top: 1px dashed #4a4038;
+}
+
+.skill-card-more {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 4px;
+  color: #9a8e7c;
+  cursor: pointer;
+  list-style: none;
+}
+
+.skill-card-more::-webkit-details-marker {
+  display: none;
+}
+
+.skill-card-more > span:first-child::before {
+  content: "▸ ";
+}
+
+.skill-card-detail[open] > .skill-card-more > span:first-child::before {
+  content: "▾ ";
+}
+
+.skill-card-kind {
+  margin-top: 4px;
+}
+
+/* 長按看說明的按鈕：擋掉手機長按的文字選取與系統選單 */
+.skill-slot,
+.skill-mini-wrap,
+.basic-button {
+  -webkit-touch-callout: none;
+  user-select: none;
+}

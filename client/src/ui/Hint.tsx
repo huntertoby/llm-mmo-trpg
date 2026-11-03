@@ -1,6 +1,7 @@
 // 一句話說明（Phase 3-32b）：取代原生 `title=` 的共用浮動卡。包住任何一個元素（按鈕、標籤、晶片……），
 // 滑過／取得鍵盤焦點時顯示一張只有文字的浮動卡，規則與技能卡、部件說明框相同（`useFloatCard`：延遲、橋接、Esc 關閉、貼齊、不出畫面、
 // 超高時卡內捲動、portal 到 body）。按鈕本身有動作，所以滑鼠不做「點一下釘住」；觸控沒有滑過，改成點一下開關（`pinOn: "touch"`，同 `PartTip` 的 `pin={false}`；3T-4）。
+// 6A-1：子元素是 `<button>`（有動作）時觸控改成長按約 0.4 秒開說明、點一下只執行動作（`pinOn: "hold"`）。
 //
 //   <Hint text="縮小（Ctrl＋滾輪）"><button …>－</button></Hint>
 //
@@ -16,7 +17,25 @@ interface Props {
 }
 
 type Handler = (e: never) => void;
-const HANDLERS = ["onPointerEnter", "onPointerLeave", "onPointerDown", "onClick", "onFocus", "onBlur", "onKeyDown"] as const;
+const HANDLERS = [
+  "onPointerEnter",
+  "onPointerLeave",
+  "onPointerDown",
+  "onPointerMove",
+  "onPointerUp",
+  "onPointerCancel",
+  "onClick",
+  "onClickCapture",
+  "onContextMenu",
+  "onFocus",
+  "onBlur",
+  "onKeyDown",
+] as const;
+
+/** 子元素本身有動作（`<button>`）：觸控改成長按看說明、點一下只執行動作（6A-1，`pinOn: "hold"`）。 */
+export function hintPinMode(child: ReactElement<Record<string, unknown>> | null): "hold" | "touch" {
+  return child !== null && child.type === "button" ? "hold" : "touch";
+}
 
 /** 唯一的子元素；不是單一 DOM 元素就丟出清楚的開發錯誤。 */
 export function hintChild(children: ReactNode): ReactElement<Record<string, unknown>> {
@@ -35,9 +54,9 @@ export function isExpanded(props: Record<string, unknown>): boolean {
 }
 
 export function Hint({ text, children }: Props) {
-  const f = useFloatCard({ pinOn: "touch" });
   const empty = text === null || text === undefined || text === "";
   const child = empty ? null : hintChild(children);
+  const f = useFloatCard({ pinOn: hintPinMode(child) });
   // 觸發元素自己的選單開著時不顯示說明卡，開著的也立刻關，免得蓋住選單
   // （使用者：「彈出的視窗會沒有辦法按裝填」；規則見 docs/開發PM交接.md 6.5.1）
   const expanded = child !== null && isExpanded(child.props);

@@ -8,9 +8,9 @@ from trpg.api.auth import check_owner, optional_account, settings_of
 from trpg.api.glossary import build_glossary
 from trpg.api.schemas import BuildSummary, Glossary, MapSummary
 from trpg.api.sessions import BattleNotFoundError, playable_maps
+from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.api.state import runs_of, store_of
 from trpg.content.skills import SkillDef
-from trpg.narrative.skills import SkillCard, skill_card
 
 __all__ = ["router"]
 

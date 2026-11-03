@@ -243,7 +243,7 @@ export function CheckPanel({
       {check?.card != null && (
         <div style={pending ? { opacity: 0.45 } : undefined} data-stale={pending ? "true" : undefined}>
           <div className="section-title">技能卡片預覽</div>
-          <SkillCardView card={check.card} hideConcept={!dev && check.concept_provisional === true} />
+          <SkillCardView card={check.card} hideConcept={!dev && check.concept_provisional === true} detailOpen />
         </div>
       )}
     </div>

@@ -8,8 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.api.gear_schemas import GearItemInfo
 from trpg.api.schemas import BattleResponse
+from trpg.api.skill_cards import SkillCard
 from trpg.content.maps import Objective
-from trpg.narrative.skills import KeywordRef, SkillCard
+from trpg.narrative.skills import KeywordRef
 from trpg.roguelite.save import RUN_ID_PATTERN
 from trpg.roguelite.state import BattleRecord
 from trpg.shared.rng import MASK64

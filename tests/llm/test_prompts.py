@@ -145,6 +145,8 @@ SNAPSHOTS = {
     "skill-proposal/4": "e50d5d59de8e5f4c0223c42c91ead65f8e69cdbb8f0424ebb86dba187dc5e4fb",
     # 4-L10a：系統指令加「代價、變奏、條件是選填，沒要求就不要填」
     "skill-proposal/5": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
+    # 6S-2：系統指令不變；題目區加 budget_note_zh、keyword_note_zh，keywords 加 ways
+    "skill-proposal/6": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
 }
 
 

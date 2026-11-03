@@ -7,6 +7,7 @@ import { raceLookToLook } from "../render/inkRace";
 import raceLooks from "../render/fixtures/raceLooks.json";
 import type { DollEquipment } from "../render/dollGear";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W, drawFigurePose } from "../render/paperdoll";
+import { REST_POSE, type InkPose } from "../render/inkPose";
 
 const SCALE = 3;
 
@@ -38,7 +39,7 @@ function figureOf(spec: DollSpec, facing: Facing, label: string, downed = false)
 const ONLY = decodeURIComponent(location.hash.slice(1)); // 例：#② 只顯示該段（截圖用）
 
 function section(title: string, cells: HTMLElement[]): void {
-  if (ONLY !== "" && !title.startsWith(ONLY)) return;
+  if (ONLY !== "" && !ONLY.split("|").some((p) => title.startsWith(p))) return; // 多段用 | 分開
   const h = document.createElement("h2");
   h.textContent = title;
   const row = document.createElement("div");
@@ -249,3 +250,71 @@ conflict("獸人獠牙＋頭部裝備", [["沒戴", {}], ["頭盔", { head: HELM
 conflict("晶能義體人晶路", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }]], "cyborg", ["south", "east"]);
 conflict("海民刺青", [["沒戴", {}], ["頭盔", { head: HELM("helmet") }]], "seafolk", ["south", "east"]);
 conflict("鱗族鱗片", [["沒戴", {}]], "scalefolk", ["south", "east"]);
+
+// ⑬ 6M-1・骨架姿勢鉤子（docs/art/動畫移植需求.md 第 1 節）：同一套外觀擺不同姿勢；第一格＝沒設姿勢（和之前逐像素相同）。
+// 走路、跑步、潛行的循環只是照樣張 anim.js 的公式抽樣示範，正式片段在 6M-3。截圖：#⑬
+const POSE_CELL = Math.min(6, Math.max(1, Number(new URLSearchParams(location.search).get("s") ?? "2") || 2)); // ?s=3 放大
+function posedCell(spec: DollSpec, facing: Facing, label: string, pose: InkPose | null): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "cell";
+  box.style.width = `${DOLL_W * POSE_CELL}px`;
+  const c = document.createElement("canvas");
+  c.width = DOLL_W * POSE_CELL;
+  c.height = DOLL_H * POSE_CELL;
+  c.style.width = `${c.width}px`;
+  c.style.height = `${c.height}px`;
+  const ctx = c.getContext("2d");
+  if (ctx !== null) {
+    ctx.fillStyle = "#2b2f38";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.scale(POSE_CELL, POSE_CELL);
+    ctx.translate(DOLL_W / 2, DOLL_FOOT_Y);
+    drawFigurePose(ctx, spec, facing, false, true, pose);
+  }
+  const t = document.createElement("div");
+  t.textContent = label;
+  box.append(c, t);
+  return box;
+}
+/** 樣張 anim.js 的 walkPose（示範用，6M-3 再正式做）。 */
+function demoWalk(phase: number, kind: "walk" | "run" | "sneak"): InkPose {
+  const amp = kind === "run" ? 0.75 : kind === "sneak" ? 0.35 : 0.5;
+  const sn = Math.sin(phase);
+  const p: InkPose = {
+    hipN: amp * sn,
+    hipF: -amp * sn,
+    kneeN: 0.9 * Math.max(0, -Math.sin(phase + 0.9)),
+    kneeF: 0.9 * Math.max(0, Math.sin(phase + 0.9)),
+    arm: -0.35 * sn,
+    armF: 0.35 * sn,
+    bob: -Math.abs(Math.cos(phase)) * (kind === "run" ? 2.2 : 1.2),
+    liftL: 3.2 * Math.max(0, sn),
+    liftR: 3.2 * Math.max(0, -sn),
+    armL: 1.6 * sn,
+    armR: -1.6 * sn,
+  };
+  if (kind === "run") return { ...p, lean: 0.2, arm: -0.6 * sn - 0.3, elbow: -0.9, armF: 0.6 * sn - 0.3, elbowF: -0.9 };
+  if (kind === "sneak") return { ...p, lean: 0.3, bob: (p.bob ?? 0) + 2.5, kneeN: (p.kneeN ?? 0) + 0.5, kneeF: (p.kneeF ?? 0) + 0.5, arm: -0.6, elbow: -0.5 };
+  return p;
+}
+const POSE_DEMO: Array<[string, InkPose | null]> = [
+  ["沒設姿勢", null],
+  ["REST（全 0）", REST_POSE],
+  ["前傾 0.35", { lean: 0.35 }],
+  ["跨步", { hipN: 0.55, hipF: -0.45, kneeF: 0.6 }],
+  ["屈膝蹲低", { bob: 3, lean: 0.25, hipN: 0.6, kneeN: 1.1, hipF: 0.4, kneeF: 1.2 }],
+  ["舉起主手", { arm: -2.4 }],
+  ["彎手肘", { arm: -0.6, elbow: -1.4 }],
+  ["兩手前伸", { arm: -1.1, elbow: -0.3, armF: -1, elbowF: -0.3 }],
+  ["揮下（wpn）", { arm: 0.4, wpn: 0.9, lean: 0.15, hipN: 0.4, hipF: -0.3 }],
+];
+const POSE_SETS: Array<[string, DollSpec]> = [
+  ["騎士", withGear({ head: C_HEADS[0]!, body: { kind: "plate", material: "steel" }, main_hand: W("sword"), off_hand: undefined, cloak: { kind: "cape", color: "#7a2a3a" } })],
+  ["雙匕首・狐族", raceSpec("fox", { main_hand: W("dagger"), off_hand: W("dagger"), head: undefined })],
+];
+for (const [n, s] of POSE_SETS) section(`⑬ 6M-1・姿勢示範・側面（${n}）`, POSE_DEMO.map(([l, p]) => posedCell(s, "east", l, p)));
+const FB_DEMO: Array<[string, InkPose | null]> = [["沒設姿勢", null], ["抬左腳＋擺手", { liftL: 3.2, armL: 1.6, armR: -1.6 }], ["抬右腳＋擺手", { liftR: 3.2, armL: -1.6, armR: 1.6 }], ["起伏 -2", { bob: -2 }]];
+section("⑬ 6M-1・姿勢示範・正面、背面（騎士）", (["south", "north"] as const).flatMap((f) => FB_DEMO.map(([l, p]) => posedCell(POSE_SETS[0]![1], f, `${f}・${l}`, p))));
+for (const kind of ["walk", "run", "sneak"] as const) {
+  section(`⑬ 6M-1・循環抽樣（${kind}，示範；正式片段在 6M-3）`, [0, 1, 2, 3, 4, 5].map((i) => posedCell(POSE_SETS[0]![1], "east", `${kind} ${i}/6`, demoWalk((i / 6) * Math.PI * 2, kind))));
+}

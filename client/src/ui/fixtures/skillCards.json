@@ -1,0 +1,1017 @@
+{
+ "skill_ash_harvest": {
+  "id": "skill_ash_harvest",
+  "name_zh": "灰燼收割",
+  "skeleton": "strike",
+  "tier": 1,
+  "rank": 1,
+  "rarity": "稀有",
+  "kind": "主動",
+  "category": "法術技",
+  "weapon_req": "法器",
+  "weapon_only": null,
+  "scaling": "智力",
+  "ap_cost": 2,
+  "cost": [
+   "AP 2",
+   "法力 4",
+   "冷卻 2 回合"
+  ],
+  "source_cost": null,
+  "shape": "單體（射程 5）",
+  "condition": null,
+  "effects": [
+   "3d6＋智力加成的火焰傷害（敵方），若這一招讓敵人倒下：返還 1 AP、本技能冷卻歸零"
+  ],
+  "modifiers": [],
+  "activation": null,
+  "activation_id": null,
+  "mastery": null,
+  "tags": [
+   "fire",
+   "spell",
+   "finisher"
+  ],
+  "element": "火焰",
+  "element_id": "fire",
+  "concept": "火焰收走一條性命的同時，也把你的力氣還給你",
+  "cast_flavor": "敵人在火光中倒下，你吸進一口帶著餘燼的空氣，指尖又重新熱了起來",
+  "rarity_id": "rare",
+  "kind_id": "active",
+  "category_id": "spell",
+  "weapon_req_id": "focus",
+  "scaling_attrs": [
+   "int"
+  ],
+  "mastery_id": null,
+  "timing": null,
+  "effect_ids": [
+   "damage"
+  ],
+  "followup": null,
+  "followup_when": null,
+  "icon": {
+   "kind": "active",
+   "rarity": "rare",
+   "elements": [
+    "fire"
+   ],
+   "weapon_req": "focus",
+   "segments": [
+    {
+     "skeleton": "strike",
+     "shape_id": "single",
+     "range": 5,
+     "arm": null,
+     "elements": [
+      "fire"
+     ],
+     "effects": [
+      {
+       "type": "damage",
+       "status": null,
+       "surface": null,
+       "condition": null
+      }
+     ]
+    }
+   ],
+   "link": null,
+   "condition": null,
+   "costs": [],
+   "cost_values": {},
+   "trigger": null,
+   "modifier": null,
+   "partial": false,
+   "trap_trigger": null,
+   "zone_element": null
+  },
+  "keywords": {
+   "makes": [
+    {
+     "id": "ignite",
+     "name_zh": "點燃",
+     "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
+     "variant": false,
+     "general": false,
+     "reason_zh": null
+    }
+   ],
+   "uses": [],
+   "basic": false
+  },
+  "variants": [],
+  "summons": [],
+  "skeleton_zh": "打擊",
+  "formula_lines": [
+   "傷害算法：骰值＋智力 × 0.5"
+  ],
+  "stacks": [],
+  "stats": {
+   "ap": 2,
+   "cooldown": 2,
+   "range": 5,
+   "range_weapon": false,
+   "radius": null,
+   "size": null,
+   "timing": null,
+   "costs": [
+    {
+     "index": 0,
+     "kind": "ap",
+     "value": 2,
+     "unit": "AP",
+     "label": "2"
+    },
+    {
+     "index": 1,
+     "kind": "mana",
+     "value": 4,
+     "unit": "法力",
+     "label": "4"
+    },
+    {
+     "index": 2,
+     "kind": "cooldown",
+     "value": 2,
+     "unit": "回合",
+     "label": "2"
+    }
+   ],
+   "effects": [
+    {
+     "index": 0,
+     "type": "damage",
+     "category": "damage",
+     "label": "3d6",
+     "unit": null,
+     "dice": "3d6",
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": null,
+     "element": "fire",
+     "element_zh": "火焰",
+     "name_zh": null,
+     "affects": null
+    }
+   ],
+   "scaling_attrs": [
+    "int"
+   ]
+  }
+ },
+ "skill_gale_kick": {
+  "id": "skill_gale_kick",
+  "name_zh": "颶風踢",
+  "skeleton": "displace",
+  "tier": 1,
+  "rank": 1,
+  "rarity": "稀有",
+  "kind": "主動",
+  "category": "武器技",
+  "weapon_req": "近戰武器",
+  "weapon_only": null,
+  "scaling": "手上武器的屬性",
+  "ap_cost": 1,
+  "cost": [
+   "AP 1",
+   "耐力 6",
+   "冷卻 2 回合"
+  ],
+  "source_cost": null,
+  "shape": "單體（射程 武器射程）",
+  "condition": null,
+  "effects": [
+   "武器傷害 ×0.4（敵方）",
+   "推開 2 格（敵方）"
+  ],
+  "modifiers": [],
+  "activation": null,
+  "activation_id": null,
+  "mastery": null,
+  "tags": [
+   "physical",
+   "melee",
+   "push"
+  ],
+  "element": null,
+  "element_id": null,
+  "concept": "一腳把敵人踢出掩護，甚至踢下懸崖",
+  "cast_flavor": "你側身蹬出一腳，勁風把對手整個人掀飛",
+  "rarity_id": "rare",
+  "kind_id": "active",
+  "category_id": "weapon",
+  "weapon_req_id": "melee",
+  "scaling_attrs": [
+   "str"
+  ],
+  "mastery_id": null,
+  "timing": null,
+  "effect_ids": [
+   "damage",
+   "push"
+  ],
+  "followup": null,
+  "followup_when": null,
+  "icon": {
+   "kind": "active",
+   "rarity": "rare",
+   "elements": [
+    "physical"
+   ],
+   "weapon_req": "melee",
+   "segments": [
+    {
+     "skeleton": "displace",
+     "shape_id": "single",
+     "range": null,
+     "arm": null,
+     "elements": [],
+     "effects": [
+      {
+       "type": "damage",
+       "status": null,
+       "surface": null,
+       "condition": null
+      },
+      {
+       "type": "push",
+       "status": null,
+       "surface": null,
+       "condition": null
+      }
+     ]
+    }
+   ],
+   "link": null,
+   "condition": null,
+   "costs": [],
+   "cost_values": {},
+   "trigger": null,
+   "modifier": null,
+   "partial": false,
+   "trap_trigger": null,
+   "zone_element": null
+  },
+  "keywords": {
+   "makes": [
+    {
+     "id": "collision",
+     "name_zh": "撞擊",
+     "description_zh": "推擊把人撞上牆或同伴，造成撞擊傷害；撞擊時可以觸發更多效果。",
+     "variant": false,
+     "general": false,
+     "reason_zh": null
+    }
+   ],
+   "uses": [],
+   "basic": false
+  },
+  "variants": [],
+  "summons": [],
+  "skeleton_zh": "位移",
+  "formula_lines": [
+   "傷害算法：武器骰＋武器屬性 × 0.3",
+   "武器屬性看手上的武器：斧、雙手劍等＝力量；魔導劍＝力量／智力（取平均）；匕首＝敏捷／力量（取較高）；雙匕首＝敏捷；拳套＝體質／敏捷（取較高）…"
+  ],
+  "stacks": [],
+  "stats": {
+   "ap": 1,
+   "cooldown": 2,
+   "range": null,
+   "range_weapon": true,
+   "radius": null,
+   "size": null,
+   "timing": null,
+   "costs": [
+    {
+     "index": 0,
+     "kind": "ap",
+     "value": 1,
+     "unit": "AP",
+     "label": "1"
+    },
+    {
+     "index": 1,
+     "kind": "stamina",
+     "value": 6,
+     "unit": "耐力",
+     "label": "6"
+    },
+    {
+     "index": 2,
+     "kind": "cooldown",
+     "value": 2,
+     "unit": "回合",
+     "label": "2"
+    }
+   ],
+   "effects": [
+    {
+     "index": 0,
+     "type": "damage",
+     "category": "damage",
+     "label": "×0.4",
+     "unit": null,
+     "dice": null,
+     "multiplier_permille": 400,
+     "weapon": true,
+     "amount": null,
+     "element": null,
+     "element_zh": null,
+     "name_zh": null,
+     "affects": null
+    },
+    {
+     "index": 1,
+     "type": "push",
+     "category": "move",
+     "label": "2",
+     "unit": "格",
+     "dice": null,
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": 2,
+     "element": null,
+     "element_zh": null,
+     "name_zh": null,
+     "affects": null
+    }
+   ],
+   "scaling_attrs": [
+    "str"
+   ]
+  }
+ },
+ "skill_counterspell": {
+  "id": "skill_counterspell",
+  "name_zh": "反咒",
+  "skeleton": "reaction",
+  "tier": 1,
+  "rank": 1,
+  "rarity": "稀有",
+  "kind": "反應",
+  "category": "法術技",
+  "weapon_req": "法器",
+  "weapon_only": null,
+  "scaling": "意志",
+  "ap_cost": null,
+  "cost": [
+   "法力 3",
+   "冷卻 1 回合"
+  ],
+  "source_cost": null,
+  "shape": "單體（射程 6）",
+  "condition": null,
+  "effects": [
+   "2d6＋意志加成的暗影傷害（敵方）"
+  ],
+  "modifiers": [],
+  "activation": null,
+  "activation_id": null,
+  "mastery": null,
+  "tags": [
+   "counter",
+   "reaction",
+   "spell",
+   "shadow"
+  ],
+  "element": "暗影",
+  "element_id": "shadow",
+  "concept": "對方的咒語還沒落到身上，你已經循著魔力的來路把它反彈了回去",
+  "cast_flavor": "咒語擦過指尖的瞬間，你反手一撥，一道暗影循著魔力的軌跡射向施法者",
+  "rarity_id": "rare",
+  "kind_id": "reaction",
+  "category_id": "spell",
+  "weapon_req_id": "focus",
+  "scaling_attrs": [
+   "wil"
+  ],
+  "mastery_id": null,
+  "timing": "反應時機：被法術命中時（傷害結算之前）",
+  "effect_ids": [
+   "damage"
+  ],
+  "followup": null,
+  "followup_when": null,
+  "icon": {
+   "kind": "reaction",
+   "rarity": "rare",
+   "elements": [
+    "shadow"
+   ],
+   "weapon_req": "focus",
+   "segments": [
+    {
+     "skeleton": "reaction",
+     "shape_id": "single",
+     "range": 6,
+     "arm": null,
+     "elements": [
+      "shadow"
+     ],
+     "effects": [
+      {
+       "type": "damage",
+       "status": null,
+       "surface": null,
+       "condition": null
+      }
+     ]
+    }
+   ],
+   "link": null,
+   "condition": null,
+   "costs": [],
+   "cost_values": {},
+   "trigger": "hit_by_spell",
+   "modifier": null,
+   "partial": false,
+   "trap_trigger": null,
+   "zone_element": null
+  },
+  "keywords": {
+   "makes": [
+    {
+     "id": "concealed",
+     "name_zh": "隱蔽",
+     "description_zh": "煙霧、黑暗與暗影讓你隱蔽；隱蔽中的偷襲與伏擊更致命。",
+     "variant": false,
+     "general": false,
+     "reason_zh": null
+    }
+   ],
+   "uses": [],
+   "basic": false
+  },
+  "variants": [],
+  "summons": [],
+  "skeleton_zh": "反應技",
+  "formula_lines": [
+   "傷害算法：骰值＋意志 × 0.5"
+  ],
+  "stacks": [],
+  "stats": {
+   "ap": null,
+   "cooldown": 1,
+   "range": 6,
+   "range_weapon": false,
+   "radius": null,
+   "size": null,
+   "timing": "reaction",
+   "costs": [
+    {
+     "index": 0,
+     "kind": "mana",
+     "value": 3,
+     "unit": "法力",
+     "label": "3"
+    },
+    {
+     "index": 1,
+     "kind": "cooldown",
+     "value": 1,
+     "unit": "回合",
+     "label": "1"
+    }
+   ],
+   "effects": [
+    {
+     "index": 0,
+     "type": "damage",
+     "category": "damage",
+     "label": "2d6",
+     "unit": null,
+     "dice": "2d6",
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": null,
+     "element": "shadow",
+     "element_zh": "暗影",
+     "name_zh": null,
+     "affects": null
+    }
+   ],
+   "scaling_attrs": [
+    "wil"
+   ]
+  }
+ },
+ "skill_twin_fang": {
+  "id": "skill_twin_fang",
+  "name_zh": "雙牙",
+  "skeleton": "combo",
+  "tier": 1,
+  "rank": 1,
+  "rarity": "稀有",
+  "kind": "主動",
+  "category": "武器技",
+  "weapon_req": "近戰武器",
+  "weapon_only": null,
+  "scaling": "手上武器的屬性",
+  "ap_cost": 2,
+  "cost": [
+   "AP 2",
+   "耐力 8",
+   "冷卻 2 回合"
+  ],
+  "source_cost": null,
+  "shape": "單體（射程 武器射程）",
+  "condition": null,
+  "effects": [
+   "武器傷害 ×1.15（敵方）",
+   "武器傷害 ×1（敵方），若手持雙匕首時，這把武器吃敏捷"
+  ],
+  "modifiers": [],
+  "activation": null,
+  "activation_id": null,
+  "mastery": null,
+  "tags": [
+   "physical",
+   "melee",
+   "combo"
+  ],
+  "element": null,
+  "element_id": null,
+  "concept": "成對的匕首總是兩下一起來",
+  "cast_flavor": "兩把匕首一前一後，像蛇的雙牙",
+  "rarity_id": "rare",
+  "kind_id": "active",
+  "category_id": "weapon",
+  "weapon_req_id": "melee",
+  "scaling_attrs": [
+   "str"
+  ],
+  "mastery_id": null,
+  "timing": null,
+  "effect_ids": [
+   "damage",
+   "damage"
+  ],
+  "followup": null,
+  "followup_when": null,
+  "icon": {
+   "kind": "active",
+   "rarity": "rare",
+   "elements": [
+    "physical"
+   ],
+   "weapon_req": "melee",
+   "segments": [
+    {
+     "skeleton": "combo",
+     "shape_id": "single",
+     "range": null,
+     "arm": null,
+     "elements": [],
+     "effects": [
+      {
+       "type": "damage",
+       "status": null,
+       "surface": null,
+       "condition": null
+      },
+      {
+       "type": "damage",
+       "status": null,
+       "surface": null,
+       "condition": "wielding_weapon"
+      }
+     ]
+    }
+   ],
+   "link": null,
+   "condition": {
+    "id": "wielding_weapon",
+    "status": null
+   },
+   "costs": [],
+   "cost_values": {},
+   "trigger": null,
+   "modifier": null,
+   "partial": false,
+   "trap_trigger": null,
+   "zone_element": null
+  },
+  "keywords": {
+   "makes": [],
+   "uses": [
+    {
+     "id": "prone",
+     "name_zh": "倒地",
+     "description_zh": "絆倒、推倒、撞擊讓目標倒地；倒地的目標更容易被近戰命中與處決。",
+     "variant": false,
+     "general": true,
+     "reason_zh": "近戰攻擊倒地的目標有優勢"
+    }
+   ],
+   "basic": false
+  },
+  "variants": [],
+  "summons": [],
+  "skeleton_zh": "連段",
+  "formula_lines": [
+   "傷害算法：武器骰＋武器屬性 × 0.3",
+   "武器屬性看手上的武器：斧、雙手劍等＝力量；魔導劍＝力量／智力（取平均）；匕首＝敏捷／力量（取較高）；雙匕首＝敏捷；拳套＝體質／敏捷（取較高）…"
+  ],
+  "stacks": [],
+  "stats": {
+   "ap": 2,
+   "cooldown": 2,
+   "range": null,
+   "range_weapon": true,
+   "radius": null,
+   "size": null,
+   "timing": null,
+   "costs": [
+    {
+     "index": 0,
+     "kind": "ap",
+     "value": 2,
+     "unit": "AP",
+     "label": "2"
+    },
+    {
+     "index": 1,
+     "kind": "stamina",
+     "value": 8,
+     "unit": "耐力",
+     "label": "8"
+    },
+    {
+     "index": 2,
+     "kind": "cooldown",
+     "value": 2,
+     "unit": "回合",
+     "label": "2"
+    }
+   ],
+   "effects": [
+    {
+     "index": 0,
+     "type": "damage",
+     "category": "damage",
+     "label": "×1.15",
+     "unit": null,
+     "dice": null,
+     "multiplier_permille": 1150,
+     "weapon": true,
+     "amount": null,
+     "element": null,
+     "element_zh": null,
+     "name_zh": null,
+     "affects": null
+    },
+    {
+     "index": 1,
+     "type": "damage",
+     "category": "damage",
+     "label": "×1",
+     "unit": null,
+     "dice": null,
+     "multiplier_permille": 1000,
+     "weapon": true,
+     "amount": null,
+     "element": null,
+     "element_zh": null,
+     "name_zh": null,
+     "affects": null
+    }
+   ],
+   "scaling_attrs": [
+    "str"
+   ]
+  }
+ },
+ "skill_afterimage_vow": {
+  "id": "skill_afterimage_vow",
+  "name_zh": "殘影之誓",
+  "skeleton": "aura",
+  "tier": 1,
+  "rank": 1,
+  "rarity": "傳說",
+  "kind": "主動",
+  "category": "法術技",
+  "weapon_req": "任何武器",
+  "weapon_only": null,
+  "scaling": "意志",
+  "ap_cost": 1,
+  "cost": [
+   "AP 1",
+   "源力 1"
+  ],
+  "source_cost": 1,
+  "shape": "自身",
+  "condition": null,
+  "effects": [
+   "規則改變「殘影」：你倒下時，在原地留下殘影分身（接替你的行動順序），持續 2 輪"
+  ],
+  "modifiers": [],
+  "activation": "整場：花 AP 1 ＋ 源力 1 啟動，本場剩餘時間有效",
+  "activation_id": "battle",
+  "mastery": null,
+  "tags": [
+   "arcane",
+   "summon",
+   "legendary"
+  ],
+  "element": null,
+  "element_id": null,
+  "concept": "你把一部分的自己存進源力裡，倒下的那一刻，它會替你站著",
+  "cast_flavor": "你的輪廓短暫地重疊成兩層，又慢慢合而為一",
+  "rarity_id": "legendary",
+  "kind_id": "active",
+  "category_id": "spell",
+  "weapon_req_id": "any",
+  "scaling_attrs": [
+   "wil"
+  ],
+  "mastery_id": null,
+  "timing": null,
+  "effect_ids": [
+   "rule_change"
+  ],
+  "followup": null,
+  "followup_when": null,
+  "icon": {
+   "kind": "active",
+   "rarity": "legendary",
+   "elements": [],
+   "weapon_req": "any",
+   "segments": [
+    {
+     "skeleton": "aura",
+     "shape_id": "self",
+     "range": null,
+     "arm": null,
+     "elements": [],
+     "effects": [
+      {
+       "type": "rule_change",
+       "status": null,
+       "surface": null,
+       "condition": null
+      }
+     ]
+    }
+   ],
+   "link": null,
+   "condition": null,
+   "costs": [
+    "source",
+    "once"
+   ],
+   "cost_values": {
+    "source": 1
+   },
+   "trigger": null,
+   "modifier": null,
+   "partial": false,
+   "trap_trigger": null,
+   "zone_element": null
+  },
+  "keywords": {
+   "makes": [
+    {
+     "id": "summon",
+     "name_zh": "召喚物",
+     "description_zh": "召喚與圖騰讓場上多出幫手；你可以獻祭自己的召喚物，在它所在的位置爆炸或治療。",
+     "variant": false,
+     "general": false,
+     "reason_zh": null
+    }
+   ],
+   "uses": [],
+   "basic": false
+  },
+  "variants": [],
+  "summons": [],
+  "skeleton_zh": "光環",
+  "formula_lines": [],
+  "stacks": [],
+  "stats": {
+   "ap": 1,
+   "cooldown": null,
+   "range": null,
+   "range_weapon": false,
+   "radius": null,
+   "size": null,
+   "timing": "activation",
+   "costs": [
+    {
+     "index": 0,
+     "kind": "ap",
+     "value": 1,
+     "unit": "AP",
+     "label": "1"
+    },
+    {
+     "index": 1,
+     "kind": "source",
+     "value": 1,
+     "unit": "源力",
+     "label": "1"
+    }
+   ],
+   "effects": [
+    {
+     "index": 0,
+     "type": "rule_change",
+     "category": "other",
+     "label": null,
+     "unit": null,
+     "dice": null,
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": null,
+     "element": null,
+     "element_zh": null,
+     "name_zh": null,
+     "affects": "self"
+    }
+   ],
+   "scaling_attrs": [
+    "wil"
+   ]
+  }
+ },
+ "skill_downpour": {
+  "id": "skill_downpour",
+  "name_zh": "驟雨",
+  "skeleton": "control",
+  "tier": 1,
+  "rank": 1,
+  "rarity": "稀有",
+  "kind": "主動",
+  "category": "法術技",
+  "weapon_req": "法器",
+  "weapon_only": null,
+  "scaling": "智力",
+  "ap_cost": 1,
+  "cost": [
+   "AP 1",
+   "法力 5",
+   "冷卻 2 回合"
+  ],
+  "source_cost": null,
+  "shape": "方陣（射程 4）",
+  "condition": null,
+  "effects": [
+   "生成「水」表面（影響的格子）",
+   "狀態「緩速」 1 回合（敵方）"
+  ],
+  "modifiers": [],
+  "activation": null,
+  "activation_id": null,
+  "mastery": null,
+  "tags": [
+   "water",
+   "spell",
+   "area",
+   "utility"
+  ],
+  "element": null,
+  "element_id": null,
+  "concept": "一朵烏雲憑空聚在頭頂，雨水把整片地面澆得濕透",
+  "cast_flavor": "雲層在你的杖尖上方翻滾，豆大的雨點嘩啦啦地砸下來",
+  "rarity_id": "rare",
+  "kind_id": "active",
+  "category_id": "spell",
+  "weapon_req_id": "focus",
+  "scaling_attrs": [
+   "int"
+  ],
+  "mastery_id": null,
+  "timing": null,
+  "effect_ids": [
+   "create_surface",
+   "apply_status"
+  ],
+  "followup": null,
+  "followup_when": null,
+  "icon": {
+   "kind": "active",
+   "rarity": "rare",
+   "elements": [],
+   "weapon_req": "focus",
+   "segments": [
+    {
+     "skeleton": "control",
+     "shape_id": "square3",
+     "range": 4,
+     "arm": null,
+     "elements": [],
+     "effects": [
+      {
+       "type": "create_surface",
+       "status": null,
+       "surface": "water",
+       "condition": null
+      },
+      {
+       "type": "apply_status",
+       "status": "slow",
+       "surface": null,
+       "condition": null
+      }
+     ]
+    }
+   ],
+   "link": null,
+   "condition": null,
+   "costs": [],
+   "cost_values": {},
+   "trigger": null,
+   "modifier": null,
+   "partial": false,
+   "trap_trigger": null,
+   "zone_element": null
+  },
+  "keywords": {
+   "makes": [
+    {
+     "id": "wet",
+     "name_zh": "潮濕",
+     "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
+     "variant": false,
+     "general": false,
+     "reason_zh": null
+    }
+   ],
+   "uses": [],
+   "basic": false
+  },
+  "variants": [],
+  "summons": [],
+  "skeleton_zh": "控場",
+  "formula_lines": [],
+  "stacks": [],
+  "stats": {
+   "ap": 1,
+   "cooldown": 2,
+   "range": 4,
+   "range_weapon": false,
+   "radius": null,
+   "size": null,
+   "timing": null,
+   "costs": [
+    {
+     "index": 0,
+     "kind": "ap",
+     "value": 1,
+     "unit": "AP",
+     "label": "1"
+    },
+    {
+     "index": 1,
+     "kind": "mana",
+     "value": 5,
+     "unit": "法力",
+     "label": "5"
+    },
+    {
+     "index": 2,
+     "kind": "cooldown",
+     "value": 2,
+     "unit": "回合",
+     "label": "2"
+    }
+   ],
+   "effects": [
+    {
+     "index": 0,
+     "type": "create_surface",
+     "category": "surface",
+     "label": null,
+     "unit": null,
+     "dice": null,
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": null,
+     "element": null,
+     "element_zh": null,
+     "name_zh": "水",
+     "affects": null
+    },
+    {
+     "index": 1,
+     "type": "apply_status",
+     "category": "status",
+     "label": "1",
+     "unit": "回合",
+     "dice": null,
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": 1,
+     "element": null,
+     "element_zh": null,
+     "name_zh": "緩速",
+     "affects": null
+    }
+   ],
+   "scaling_attrs": [
+    "int"
+   ]
+  }
+ }
+}

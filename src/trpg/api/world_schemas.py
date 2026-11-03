@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
+from trpg.api.skill_cards import SkillCard
 from trpg.api.world_crafting_schemas import CraftingView
 from trpg.api.world_economy_schemas import (
     InventoryView,
@@ -37,7 +38,6 @@ from trpg.api.world_story_schemas import (
     SituationResultView,
     ThreadView,
 )
-from trpg.narrative.skills import SkillCard
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Team
 from trpg.world.actions import (

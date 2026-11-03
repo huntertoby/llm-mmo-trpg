@@ -9,12 +9,13 @@
 from __future__ import annotations
 
 from trpg.api.schemas import HeroCards
+from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons.core import SummonStats, summon_stats
-from trpg.narrative.skills import CardOwner, SkillCard, skill_card
+from trpg.narrative.skills import CardOwner
 from trpg.shared.types import Attribute, UnitId
 
 __all__ = ["hero_cards", "unit_card_owner"]

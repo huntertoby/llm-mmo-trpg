@@ -25,7 +25,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { FloatController, floatPlacement, type Align, type Holdable, type PinMode, type Side } from "./floatCard";
+import { FloatController, LongPress, floatPlacement, type Align, type Holdable, type PinMode, type Side } from "./floatCard";
 
 /** 卡片內容的上層控制器：卡片裡的部件說明框開著時，用它讓外面的卡片不關閉。 */
 export const ParentFloat = createContext<Holdable | null>(null);
@@ -52,14 +52,31 @@ export interface FloatApi {
   /** 展開在觸發元素上（`<span {...f.triggerProps}>`）。 */
   triggerProps: Pick<
     HTMLAttributes<HTMLElement>,
-    "onPointerEnter" | "onPointerLeave" | "onPointerDown" | "onClick" | "onFocus" | "onBlur" | "onKeyDown"
+    | "onPointerEnter"
+    | "onPointerLeave"
+    | "onPointerDown"
+    | "onPointerMove"
+    | "onPointerUp"
+    | "onPointerCancel"
+    | "onClick"
+    | "onClickCapture"
+    | "onContextMenu"
+    | "onFocus"
+    | "onBlur"
+    | "onKeyDown"
   > & { ref: RefObject<never> };
   /** 事件是不是從卡片裡面冒上來的（卡片在觸發元素的 React 子樹裡）。 */
   inCard(target: EventTarget): boolean;
   focusTrigger(): void;
 }
 
-export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): FloatApi {
+export interface FloatOptions {
+  pinOn?: PinMode;
+  /** 卡片開著時按 Shift 就固定（釘住）；技能卡用（6A-1）。 */
+  shiftPin?: boolean;
+}
+
+export function useFloatCard({ pinOn = "always", shiftPin = false }: FloatOptions = {}): FloatApi {
   const parent = useContext(ParentFloat);
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const ref = useRef<FloatController | null>(null);
@@ -68,6 +85,9 @@ export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): Fl
   const triggerRef = useRef<HTMLElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const pointer = useRef("mouse");
+  const press = useRef<LongPress | null>(null);
+  if (press.current === null) press.current = new LongPress(() => ctl.click(false));
+  const lp = press.current;
   const open = ctl.visible;
 
   useEffect(() => {
@@ -75,8 +95,9 @@ export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): Fl
     return () => {
       ctl.onChange = () => undefined;
       ctl.dispose();
+      lp.dispose();
     };
-  }, [ctl]);
+  }, [ctl, lp]);
 
   // 巢狀的部件說明框開著，外面的卡片就不能關
   useEffect(() => {
@@ -89,6 +110,10 @@ export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): Fl
   useEffect(() => {
     if (!open) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
+      if (shiftPin && e.key === "Shift" && !e.repeat && !ctl.nested && !ctl.pinned) {
+        ctl.click(false); // 6A-1：Shift 固定技能卡
+        return;
+      }
       if (e.key !== "Escape") return;
       e.stopPropagation(); // 卡片處理了這次 Esc：BattleScreen 的 window 監聽不再取消瞄準
       ctl.dismiss();
@@ -107,7 +132,7 @@ export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): Fl
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
     };
-  }, [open, ctl]);
+  }, [open, ctl, shiftPin]);
 
   const focusTrigger = () => {
     const t = triggerRef.current;
@@ -127,6 +152,23 @@ export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): Fl
     },
     onPointerDown: (e: PointerEvent<HTMLElement>) => {
       pointer.current = e.pointerType;
+      if (pinOn === "hold" && e.pointerType === "touch" && !inCard(e.target)) lp.down(e.clientX, e.clientY);
+    },
+    onPointerMove: (e: PointerEvent<HTMLElement>) => {
+      if (e.pointerType === "touch") lp.move(e.clientX, e.clientY);
+    },
+    onPointerUp: () => lp.up(),
+    onPointerCancel: () => lp.cancel(),
+    onClickCapture: (e: MouseEvent<HTMLElement>) => {
+      // 長按開了說明：這次放開的 click 不執行按鈕的動作（6A-1）
+      if (pinOn === "hold" && lp.consumeClick()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    },
+    onContextMenu: (e: MouseEvent<HTMLElement>) => {
+      // 手機長按會叫出系統選單：長按說明的按鈕擋掉它
+      if (pinOn === "hold" && pointer.current === "touch") e.preventDefault();
     },
     onClick: (e: MouseEvent<HTMLElement>) => {
       if (inCard(e.target)) return; // 卡片在觸發元素的 React 子樹裡（portal），卡片上的點擊由卡片自己處理
