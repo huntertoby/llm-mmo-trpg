@@ -739,18 +739,23 @@ def _drop_fixed(
     budget: Fraction,
 ) -> tuple[AffixRoll, ...]:
     """每條都取下限仍超過 ``budget`` 時，從點數最高的固定點數詞條開始拿掉（同點數先拿後面的），
-    直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。"""
+    直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。
+    **build 詞條（關鍵字的技能強化）最後才拿**：先拿其他固定點數詞條，只剩 build 詞條仍超出預算
+    才拿它（5C-3f 玩法 PM 代決）。"""
     kept = list(affixes)
 
     def floor(roll: AffixRoll) -> Fraction:
         d = library.affixes[roll.affix]
         return affix_points(rules, d, None if d.value is None else d.value.min)
 
+    def is_build(roll: AffixRoll) -> bool:
+        return isinstance(library.affixes[roll.affix], KeywordAffix)
+
     while sum((floor(r) for r in kept), Fraction(0)) > budget:
         fixed = [i for i, r in enumerate(kept) if _fixed_points(rules, library.affixes[r.affix])]
         if not fixed:
             break
-        drop = max(fixed, key=lambda i: (floor(kept[i]), i))
+        drop = max(fixed, key=lambda i: (not is_build(kept[i]), floor(kept[i]), i))
         del kept[drop]
     return tuple(kept)
 

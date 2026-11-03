@@ -9,7 +9,7 @@ from fractions import Fraction
 import pytest
 
 from tests.world.helpers import NOON, PARTY, make_encounter, make_world
-from trpg.content.equipment import ItemDef
+from trpg.content.equipment import AffixRoll, ItemDef
 from trpg.content.item_budget import affix_points, base_bonus_points, item_budget
 from trpg.content.item_gen import downscale_item, generate_item
 from trpg.content.library import ContentLibrary
@@ -261,3 +261,21 @@ def test_downscale_drops_highest_fixed_affix_until_it_fits(library: ContentLibra
         # 拿掉的都是固定點數詞條（範圍詞條只縮數值）
         assert all(_is_fixed(library, a) for a in dropped)
     assert found > 0
+
+
+def test_downscale_keeps_build_affix_until_only_it_is_left(library: ContentLibrary) -> None:
+    """5C-3f（玩法 PM 代決）：build 詞條（關鍵字的技能強化）最後才拿；先拿其他固定點數詞條，即使
+    那條點數比較低。戒指：帶電利用 8 點＋血祭 4 點＝12；Lv 5 預算 8 → 拿掉血祭、留帶電利用。"""
+    build, other = "affix_kw_shock_damage", "affix_cost_blood"
+    assert _is_fixed(library, build) and _is_fixed(library, other)
+    assert _min_points(library, build) > _min_points(library, other)
+    rolls = tuple(
+        AffixRoll(affix=a, value=None if (v := library.affixes[a].value) is None else v.min)
+        for a in (build, other)
+    )
+    ring = generate_item(library, Rng(1), "ring", "rare", 10).model_copy(
+        update={"affixes": rolls, "base_bonus_permille": 0}
+    )
+    assert [r.affix for r in downscale_item(library, ring, 5).affixes] == [build]
+    # 只剩 build 詞條仍超出預算（Lv 1 預算 4）才拿它
+    assert downscale_item(library, ring, 1).affixes == ()
