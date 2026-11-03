@@ -215,6 +215,14 @@ export const api = {
     request<LocationBoard>("GET", `/world/characters/${encodeURIComponent(characterId)}/notes`),
   postWorldNote: (characterId: string, text: string) =>
     request<LocationBoard>("POST", `/world/characters/${encodeURIComponent(characterId)}/notes`, { text }),
+  /** 作者刪自己的留言（5E-3b）；回更新後的留言板。 */
+  deleteOwnWorldNote: (characterId: string, noteId: string) =>
+    request<LocationBoard>(
+      "DELETE",
+      `/world/characters/${encodeURIComponent(characterId)}/notes/${encodeURIComponent(noteId)}`,
+    ),
+  /** 管理者刪任何一則留言（5E-3；回 204）。 */
+  adminDeleteWorldNote: (noteId: string) => request<null>("DELETE", `/world/notes/${encodeURIComponent(noteId)}`),
   decide: (
     id: string,
     accept: boolean,

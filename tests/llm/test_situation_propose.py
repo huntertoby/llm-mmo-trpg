@@ -150,7 +150,7 @@ def test_unavailable_falls_back(library: ContentLibrary, error: Exception) -> No
 
 
 def test_end_to_end_care_still_verified(library: ContentLibrary) -> None:
-    """LLM 宣稱的用心清單照樣由引擎核對：沒持有的線頭不算。"""
+    """LLM 宣稱的用心清單照樣由引擎核對：沒持有的線頭不算；原文沒提到弱點也不算（5C-3d）。"""
     reply = _reply(
         care=[
             {"item": "clue", "fact": "thread:wolves_driven_down"},  # 角色沒有這條
@@ -168,6 +168,7 @@ def test_end_to_end_care_still_verified(library: ContentLibrary) -> None:
     )
     result = world_step(library, make_world(), _char(library), action, NOON)
     check = next(e for e in result.events if isinstance(e, SituationCheckEvent))
-    assert [c.counted for c in check.care] == [False, True]
-    assert check.care_bonus == 1 and check.source == "llm"
+    assert [c.counted for c in check.care] == [False, False]
+    assert check.dropped == ("weakness:wolf_trail",)
+    assert check.care_bonus == 0 and check.source == "llm"
     assert check.dc == request.template.base_dc - 1

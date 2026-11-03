@@ -146,6 +146,7 @@
 | 5E-3b | 5E-3 收尾（玩法 PM 2026-11-03 代決）：精英首殺公告只說「誰打倒了什麼」、不說地點（9.6.10）；作者可刪自己的留言；管理者登入時每則留言旁一個刪除鍵（#105）；本機模型不可用時畫面角落小標示「說書人休息中（使用固定文字）」，不擋操作 | 5E-3 | 0.5 h | 可與 5D 平行 |
 | 5E-2b | 真實 Discord adapter（使用者 2026-11-03 同意加相依，原話「裝」）：`uv add discord.py`（只加它本身與必要相依，鎖版本、更新 uv.lock）；實作 `DiscordGateway` 的真實版，fake 留給測試，測試不需網路與 token；token／身分組／頻道 ID 只從 `config/bot.local.toml` 讀；不嘗試真的連線，列使用者步驟。**token 從 `.env` 讀**（使用者：「到時候我會放.env然後 放token」）：順序 環境變數／`.env` → `bot.local.toml`；自寫小解析器、不加 python-dotenv；repo 放只有變數名的 `.env.example`（`.gitignore` 加 `!.env.example`），變數名寫進部署說明 | 5E-3 | 1 h | 可與 5F 平行 |
 | 5C-3d | 情境判定「用心清單」引擎端驗證（Gemma 評估：注入回答 13/30 被誤勾；專案 PM 2026-11-03 要求，5F 前插入）：玩法 PM 代決：每筆勾選的事實，玩家原文要找得到它的關鍵詞（事實名稱、線頭、NPC 名字、弱點 text_zh，加 content 別名），找不到就不給這筆，不交 LLM 判斷同義詞；只拿掉沒過的那筆、其餘照算、不退回重試（#31 第一次送出定案）；「針對弱點」要原文提到弱點關鍵詞或別名且方法在弱點 methods 內才給，模型關閉時照舊不能引用弱點（收緊 #85，9.6.4） | 5B-2 | 0.5 h | 可與 5D 平行 |
+| 5C-3e | 5C-3d／5E-3b 收尾（玩法 PM 2026-11-03 代決）：別名照玩法 PM 清單改（peddler_owes_you、alchemist_owes_you、ferryman_daughter、shards_under_den、碎片往荒原、tavern_rumor、frost_chime_we、NPC 阿岳／石師傅、monk_story_gap、hunter_name、pursuers_lost_in_fog、envoy_duty；逐字見 `docs/phases/Phase5C-3e代決.md`）；「NPC 往來」也認該 NPC 相關線頭（有 npc 欄位）的文字與別名；prompt 寫明「勾選的事實玩家原文要提到」並升 prompt 版本；首殺足跡保留，隱藏地點對未發現者用提示語顯示（同 5B-3） | 5C-3d | 0.5 h | 可與 5D-4 平行 |
 | 5E-4 | 部署彈性（暫定，未寫入決定）：使用者原話「伺服器和模型 都放在 Mac mini是代訂計畫 但是有可能」（M4 16GB、Gemma 4 12B Q4、context 8192、約 10～15 tok/s、一次一個請求）。①Windows／macOS 都能跑：路徑用 `pathlib`、啟動腳本 `.ps1`＋`.sh`、Tunnel 指令兩邊各一份，機器相關值全放設定檔；②LLM 請求單一佇列（同時 1 個），佇列上限與逾時為 `config/llm.toml` 參數，超過退回模板、玩家不卡；③每日 6 點刷新前預產當天事件文字與酒館傳聞，戰鬥旁白維持模板；④換模型或改雲端只改 `config/llm.toml` | 5E-3 | 1 h | 否 |
 
 ### 5F｜賽季與 Boss（5 段）
@@ -3579,16 +3580,110 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 
 - 真實 Discord adapter（5E2-1）；預產公告文字（5E-4）；今日目標與世界事件的資料（5F-1）；賽季 Boss 首殺（5F）；Tunnel 的安裝與登入（使用者自己做）；留言的過濾、檢舉、封鎖（#105）；前端的管理者刪除按鈕。
 
-## 32. 5D-4 詳細規格：經濟的完整畫面、戰鬥道具欄、5D-2b 代決收尾
+## 32. 5E-2b 詳細規格：真實 Discord adapter
+
+> 給實作 agent。只動 `src/trpg/bot/`（新增 `envfile.py`、`commands.py`、`discord_adapter.py`；`config.py`、`gateway.py` 小改）、`scripts/discord_bot.py`、`scripts/deploy.py`（只改讀 Bot 設定的那一行）、`config/bot.example.toml`（註解）、`.env.example`（新）、`.gitignore`、`pyproject.toml`（相依、mypy override）、`uv.lock`、`docs/部署說明.md`、`tests/bot/`、`tests/test_architecture.py`。**不連線 Discord、不建立或使用任何 token**；不碰 `trpg.world`、`trpg.engine`、前端。另一個 agent 在做 5D-4（前端），撞到以 main 為準。
+> 依據：本檔第 1 節 5E-2b 列；29（5E-2 介面與 Bot 行為）、31.6（公告）；使用者 2026-11-03 同意加 discord.py（原話「裝」）；token 的放法（原話「到時候我會放.env然後 放token」）。
+
+### 32.1 目標
+
+把 29.4 的 `DiscordGateway` 接上真的 Discord（discord.py）：斜線指令「領帳號」「重設密碼」（回覆只有本人看得到、密碼走私訊）、成員身分組變更與離開伺服器、每日公告與首殺公告（`Announcer.tick` 每分鐘一次）。`FakeDiscordGateway` 照舊給測試用；所有測試不需要網路與 token。
+
+### 32.2 相依
+
+- `uv add discord.py`（PyPI；只加它本身與 uv 解出來的必要相依，`pyproject.toml` 寫下限、`uv.lock` 鎖版本）。**不加** python-dotenv、語音相關（`PyNaCl`）或其他套件。
+- discord.py **只能** 在 `trpg.bot` 匯入（`tests/test_architecture.py` 掃 `src/trpg` 與 `scripts`；`scripts/discord_bot.py` 只透過 `trpg.bot` 用它）。`trpg.bot` 原本的 import-linter 契約不變。
+- 型別：discord.py 型別不全時，mypy override 只限 `trpg.bot.discord_adapter` 這一個模組。
+
+### 32.3 設定與讀取順序
+
+- 環境變數名稱（`.env` 用同一組名稱）：
+
+| 欄位 | 變數 | 說明 |
+|---|---|---|
+| `token` | `TRPG_DISCORD_TOKEN` | Bot token |
+| `guild_id` | `TRPG_DISCORD_GUILD_ID` | 伺服器 ID |
+| `role_id` | `TRPG_DISCORD_ROLE_ID` | 能領帳號的身分組 ID |
+| `announce_channel_id` | `TRPG_DISCORD_ANNOUNCE_CHANNEL_ID` | 公告頻道 ID |
+
+- 每個欄位各自照順序取第一個有值的：① 程序環境變數 → ② repo 根目錄的 `.env` → ③ `config/bot.local.toml`（或 `TRPG_BOT_CONFIG` 指的檔）的 `[discord]`。5E-2 的舊名 `TRPG_BOT_TOKEN` 等仍可用，但排在同一來源的新名之後（相容；文件只寫新名）。
+- `.env` 只在「讀真的環境」時讀（`load_bot_settings(env=None)`）；呼叫端自己給 `env` 時（測試）不讀，除非明確給 `env_file`。這樣使用者主資料夾的 `.env` 不會影響測試。
+- `.env` 解析器（`trpg.bot.envfile`，自寫）：一行一個 `KEY=VALUE`；`#` 開頭的行與空行略過；`KEY` 是 `[A-Za-z_][A-Za-z0-9_]*`、前後空白去掉；值前後空白去掉，可包在成對的 `"` 或 `'` 裡（去掉引號、不處理跳脫）；沒引號的值遇到「空白＋`#`」之後當註解；同名後面的蓋前面；檔頭 BOM 略過。不合法的行 → `BotConfigError`，**只報行號，不印那行內容**（可能含 token）。不支援 `export`、多行值、變數展開。
+- `.env.example`（進版控，`.gitignore` 加 `!.env.example`）：四個變數名，值全空。`.env` 本身照舊被忽略（測試用 `git check-ignore` 檢查兩者）。
+- 缺值的錯誤訊息列出：欄位、環境變數名、`.env`、設定檔欄位；不印 token。
+
+### 32.4 斜線指令（`trpg.bot.commands`，不匯入 discord.py）
+
+| 指令 | 對應 `BotCommand` | 選項 | 說明（顯示在 Discord） |
+|---|---|---|---|
+| `/register` | `register` | `username`（選填） | 領大世界帳號（密碼用私訊傳給你） |
+| `/reset_password` | `reset_password` | 無 | 重設大世界密碼（新密碼用私訊傳給你） |
+
+- 指令名稱用英文（代決 5E2b-1：各平台輸入法都打得出、不需要在地化設定；說明用繁中）。只註冊在設定的伺服器（guild 指令，同步立即生效），不註冊全域、不開放私訊裡用。
+- 事件轉換是純函式：`command_event`、`member_update_event`、`member_remove_event` 把 ID 一律轉成字串；不在伺服器內（`guild_id` 為空）的指令轉成 `guild_id=""`（`BotService` 回「請在指定的伺服器使用」）。
+- `CommandEvent` 加 `interaction_id: str | None = None`（有預設值，fake 與舊測試不變）：真實 adapter 用它找回要回覆的那次互動。
+
+### 32.5 真實 adapter（`trpg.bot.discord_adapter`）
+
+- `build_intents()`：`guilds`、`members`（特權 intent，要在 Developer Portal 開）；**不開** `message_content`、`presences`。
+- `DiscordPyGateway(client, loop)`：實作 `DiscordGateway`。方法在工作執行緒被呼叫，用 `asyncio.run_coroutine_threadsafe(...).result(timeout)` 回到 Bot 的事件迴圈：
+  - `member_roles`：`guild.fetch_member`（每次都向 Discord 重查）；不在伺服器 → `None`；身分組 ID 轉字串，去掉 `@everyone`。
+  - `send_dm`：`fetch_user` → `send`；`Forbidden`／`HTTPException`／逾時 → `False`。
+  - `reply`：用 `interaction_id` 找回已 `defer(ephemeral=True)` 的互動，`followup.send(ephemeral=True)`；找不到就略過（寫 log，不含內容）。
+  - `send_channel`：`get_channel` 或 `fetch_channel` → `send`，`allowed_mentions` 全關；失敗 → `False`（`Announcer` 下次重試）。
+- `TrpgBotClient`（`discord.Client` 子類別）：
+  - 所有 `BotService`／`Announcer` 的呼叫都排進 **同一條** 工作執行緒（`ThreadPoolExecutor(max_workers=1)`），帳號存檔不會被兩個事件同時改；事件迴圈不被 scrypt 卡住。
+  - 指令：先 `defer(ephemeral=True, thinking=True)`（3 秒內回應 Discord），再交給 `BotService.handle_command`。
+  - `on_member_update` → `MemberUpdateEvent`；`on_raw_member_remove`（不靠快取）→ `MemberRemoveEvent`。
+  - `setup_hook`（登入後、連 gateway 前）：建 gateway／服務／公告，同步指令到設定的伺服器（沒有 `applications.commands` 權限 → `BotConfigError`）。
+  - 第一次 `on_ready`：`reconcile()`（停用的帳號名寫 log）→ 開始公告迴圈（每 60 秒 `Announcer.tick(int(time.time()))`；例外寫 log、迴圈不停）。重連時不重複做。
+- `run_bot(settings, service_factory, announcer_factory)`：建 client 並 `run`；token 錯（`LoginFailure`）或 members intent 沒開（`PrivilegedIntentsRequired`）→ `BotConfigError`，訊息說明怎麼修，不印 token。
+
+### 32.6 啟動腳本（`scripts/discord_bot.py run`）
+
+- 先做 `check`（缺值 exit 2，訊息照 32.3）；齊了就照 `config/server.toml` 開帳號存檔、建 `AnnouncementSource`（同 `preview`）與 `Announcer`（狀態檔 `default_bot_state_path()`、`[announce]` 時間），呼叫 `run_bot`。`run_bot` 的 `BotConfigError` → exit 2。
+- 測試把 `run_bot` 換成假的（不連線），只檢查組裝與 exit code。`EXIT_NO_ADAPTER` 不再使用。
+- `scripts/deploy.py check` 讀 Bot 設定時也照 32.3 讀 `.env`。
+
+### 32.7 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/bot/test_envfile.py` | `KEY=VALUE`、註解、空行、引號、行內註解、BOM、同名覆寫、不合法行只報行號 |
+| `tests/bot/test_config.py` | 新變數名；三層順序（環境 → `.env` → 設定檔，逐欄）；舊名相容；`env` 給了就不讀 `.env`；`.env.example` 只有變數名、沒有值；`.env` 被忽略、`.env.example` 不被忽略 |
+| `tests/bot/test_discord_adapter.py` | intents；指令註冊表（名稱、選項、guild 限定）；事件轉換；`DiscordPyGateway` 對假 client（背景執行緒跑事件迴圈，不連網）：重查身分組、私訊失敗回 `False`、回覆找回互動、頻道貼文關掉提及 |
+| `tests/bot/test_script.py` | `run` 缺 token exit 2；齊全時把設定、服務、公告交給（假的）`run_bot`；`run_bot` 的設定錯誤 exit 2 |
+| `tests/test_architecture.py` | `discord` 只在 `trpg.bot` 匯入（掃 `src/trpg` 與 `scripts`），含掃描器自我測試 |
+
+### 32.8 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/bot`、`tests/api`、`tests/test_architecture.py`；swamp 種子 7 重播。不跑全量、不跑大型模擬。
+
+### 32.9 代決（最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5E2b-1 | 指令名稱 | 英文 `/register`、`/reset_password`，說明繁中；之後要中文名再加在地化 |
+| 5E2b-2 | 指令範圍 | 只註冊在設定的伺服器；不註冊全域、私訊裡不能用 |
+| 5E2b-3 | 身分組查詢 | 每次都 `fetch_member`（多一次 API 呼叫，換不信任快取） |
+| 5E2b-4 | 同時處理 | 單一工作執行緒依序處理所有事件與公告 |
+| 5E2b-5 | 舊環境變數名 | `TRPG_BOT_*` 仍可用（排在新名之後），文件只寫 `TRPG_DISCORD_*` |
+| 5E2b-6 | `.env` 位置 | 只讀 repo 根目錄的 `.env`；不往上層找、不支援 `export`／多行 |
+
+### 32.10 不做的事
+
+- 真的連線測試；指令中文在地化；管理者的 Bot 指令（停用、恢復、刪留言）；全域指令；語音；自動重啟／常駐服務（使用者自己用工作排程器或 launchd）。
+
+## 33. 5D-4 詳細規格：經濟的完整畫面、戰鬥道具欄、5D-2b 代決收尾
 
 > 給實作 agent。動 `client/`（大世界左欄的背包、商店、鐵匠畫面；戰鬥技能列的道具欄；事件卡的模板標示；API 型別）、`client/openapi.json`、`src/trpg/api/`（`world_economy_schemas.py`、`world_economy_view.py`、`world_crafting_view.py`、`world_story_schemas.py`、`world_story_view.py`、`run_presenter.py` 一個公開函式）、`src/trpg/world/`（`crafting.py`、`state.py`；`gear.py` 只加查詢）、`src/trpg/content/item_gen.py`（`downscale_item`）、`content/affixes.yaml`、`tests/`。**不改** `trpg.engine`、`trpg.roguelite` 的規則、`LOG_FORMAT`、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。另一個 agent 在做 5C-3d、5E-3b，撞到以 main 為準。
 > 依據：本檔 26（背包、腰包、商店）、27（掉落、換裝）、30（鐵匠、附魔台）；`Phase5D-1報告.md` 待決 5（戰鬥中獨立道具欄，8.17）；`Phase5B-4e報告.md` #4（保底文字不標模板）；`Phase5D-2b報告.md` 待決 3、5、6（玩法 PM 2026-11-03 代決）；`Phase5D-3b報告.md` 待決 2（玩法 PM 2026-11-03 代決：配方表每件裝備只列最新一筆）；`docs/art/` 的共用元件（浮動卡、`<Hint>`、`GearCardView`）。
 
-### 32.1 目標
+### 33.1 目標
 
 前幾段的經濟面板都是「面板內展開的最小版」。這段整理成大世界左欄的完整畫面（同「成長與技能」「任務與線頭」的切換方式），重用一輪已有的裝備卡（`GearCardView`：部位、稀有度、物品等級、詞條、和目前裝備比較）；戰鬥技能列把腰包道具分成獨立的「道具」欄；並收掉 5D-2b、5D-3b 的代決。
 
-### 32.2 前端：左欄三個畫面（`WantPane` 加 `bag`、`shop`、`smithy`）
+### 33.2 前端：左欄三個畫面（`WantPane` 加 `bag`、`shop`、`smithy`）
 
 - **背包與裝備**（右側背包面板的「打開背包」）：
   - 穿戴中：9 個欄位都列（空欄位標「空」），每欄是物品圖示＋名稱＋稀有度・物品等級，滑過看詞條（共用浮動卡 `PartTip`）。
@@ -3603,24 +3698,24 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
   - 停用原因一律 `<Hint>`；費用、候選、能不能做都由後端算。
 - 右側的背包面板縮成摘要（格數、腰包）＋「打開背包」；服務列的「商店」「鐵匠」改成切換左欄（不再面板內展開）。
 
-### 32.3 API（全部有預設值）
+### 33.3 API（全部有預設值）
 
 - `InventoryView.equipment: tuple[HeroGearSlotOut, ...]`（9 欄，沿用一輪的格式）、`InventoryView.gear_cards: tuple[GearCandidateOut, ...]`（背包裡每件裝備＋目前裝備比較，沿用一輪的 `_candidate`，改成公開函式 `gear_candidate`）。
 - `StoryView.source` 加 `"authored"`：保底機遇的專用旁白（骨架 `guarantee_text_zh`，5B-4e）不是 LLM 也不是降級；前端只在 `"fallback"` 標「（模板文字）」。日誌的 `NarrateAction.source` 不變（仍記 `fallback`），由 view 依觸發的 `guaranteed` 與文字是否為專用旁白判斷。
 
-### 32.4 戰鬥道具欄（5D-1 待決 5，8.17）
+### 33.4 戰鬥道具欄（5D-1 待決 5，8.17）
 
 - 技能卡 `tags` 有 `item` 的技能（腰包道具）從主動技能列拿出來，放在技能列的獨立「道具」群組（同種族技的群組樣式；不佔技能欄位，後端本來就不算）。按鈕：名稱、花費、停用原因；浮動卡同技能。
 - 沉默時能不能用照引擎現行規則（5D1-13，不改）。
 
-### 32.5 5D-2b／5D-3b 代決收尾（玩法 PM 2026-11-03）
+### 33.5 5D-2b／5D-3b 代決收尾（玩法 PM 2026-11-03）
 
 1. **帶電的利用詞條**：`content/affixes.yaml` 加 `affix_kw_shock_damage`（利用帶電的技能傷害 +N，60～150‰，主手／副手／項鍊／戒指；同 5D2b-2 的利用方向）。元素篩選（「雷電傷害」）要引擎新的 change，照 5D2b-1 用最接近的現成效果。
 2. **影子裝備降級仍超出預算**（#87）：`downscale_item` 先算「每條取下限」的總點數；超過新預算時，從點數最高的**固定點數詞條**（數值不影響點數：沒有範圍或上下限點數相同）開始拿掉，直到下限總點數放得進（點數相同先拿後面的）；之後照原本的規則縮數值。全部固定點數詞條都拿掉仍放不進就照穿（範圍詞條在下限）。
 3. **沒撿的戰利品**：確認現行實作＝`pending_loot` 留到下一場**打贏**結算掉落前，之後留在原地（`LootAbandonedEvent`）；輸掉的那場不動。不改規則，補測試鎖住。
 4. **配方表每件裝備只列最新一筆**（5D-3b 待決 2）：`RecipeRecord.listed: bool = True`。裝備重骰或指定後產生新配方碼時，那件裝備前一個配方碼（`variant`，沒有就是基礎配方 `recipe`）的紀錄改成 `listed=False`；有人用某個碼打造出一件新裝備時，那個碼改回 `listed=True`（那件裝備的最新一筆就是它）。配方表（`CraftingView.recipes`）只列 `listed`；舊碼照樣有效（`craft{code}` 查全部紀錄），首位發現者不變。強化不進配方（維持 5D3b-2）。
 
-### 32.6 測試
+### 33.6 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -3631,12 +3726,12 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 | `tests/api/` | `InventoryView.equipment`／`gear_cards`；配方表只列最新；保底旁白 `source=authored` |
 | vitest | 背包、商店、鐵匠畫面靜態輸出；道具欄分組；事件卡只在 fallback 標模板；配方碼輸入正規化 |
 
-### 32.7 驗收
+### 33.7 驗收
 
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/world`、`tests/api`、`tests/content`（`-n 8`）、`tests/skillgen`／`tests/engine` 中詞條與裝備相關；vitest、build；swamp 種子 7 重播；OpenAPI 重產。
 - 瀏覽器（埠 8140，自己的分頁）：打一場 → 撿東西 → 背包滿選丟哪件 → 買東西 → 打造 → 重骰 → 用配方碼復刻 → 換裝；800×600 與 1600×900；浮動卡滑進、捲到底、釘住、Esc 關閉；`__layoutSmoke.scan()` 回空清單。
 
-### 32.8 代決（最保守預設；寫進完成報告）
+### 33.8 代決（最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -3646,10 +3741,10 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 | 5D4-4 | 帶電利用詞條 | 只加 1 條傷害；元素篩選要引擎改動，留 PM |
 | 5D4-5 | 拿掉固定詞條的順序 | 點數高的先拿；同點數先拿後面的（保留第 1 條 build 詞條的機會較大） |
 
-### 32.9 不做的事
+### 33.9 不做的事
 
 - 卸下裝備（換上即替換）、裝備外觀與紙娃娃、物品排序與篩選、LLM 命名；荒原的設施；戰鬥中道具「剩幾個」（引擎的檢視不改，用完時按鈕停用）。
 
-## 33. 之後各段規格
+## 34. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

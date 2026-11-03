@@ -15,6 +15,8 @@
      skillgen、narrative 不得匯入 ``trpg.world``（Phase 5A-2，``docs/phases/Phase5計畫.md`` 2.3）。
    - ``trpg.bot`` 只直接匯入 ``trpg.api`` 服務層與 ``trpg.shared``；engine、world、api、shared、
      content、roguelite 不得匯入 ``trpg.bot``（Phase 5E-2，計畫 29.2）。
+   - 外部套件 ``discord``（discord.py）只能在 ``trpg.bot`` 匯入；``scripts/`` 只透過
+     ``trpg.bot`` 用它（Phase 5E-2b，計畫 32.2）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite``、``world`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式、內建 ``hash()``
    等。
@@ -83,6 +85,10 @@ FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.world": WORLD_FORBIDDEN,
     "trpg.bot": BOT_FORBIDDEN,
 }
+
+# 外部套件 → 唯一可以匯入它的 trpg 子套件（Phase 5E-2b：discord.py 只在 trpg.bot）。
+EXTERNAL_ONLY_IN: dict[str, str] = {"discord": "trpg.bot"}
+SCRIPTS_ROOT = SRC_ROOT.parent / "scripts"
 
 DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite", "world")
 
@@ -249,6 +255,24 @@ def dependency_violations(
     return out
 
 
+def external_import_violations(tree: ast.AST, current: str, location: str) -> list[Violation]:
+    """外部套件只能在指定的子套件匯入（``current`` 是腳本時用 ``scripts.<名稱>``）。"""
+    out: list[Violation] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [(node.lineno, alias.name) for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names = [(node.lineno, node.module)]
+        else:
+            continue
+        for lineno, name in names:
+            top = name.split(".")[0]
+            owner = EXTERNAL_ONLY_IN.get(top)
+            if owner is not None and not _is_within(current, owner):
+                out.append(Violation(f"{location}:{lineno}", f"{top} 只能在 {owner} 匯入"))
+    return out
+
+
 def _source_files() -> list[Path]:
     return sorted(PACKAGE_ROOT.rglob("*.py"))
 
@@ -281,6 +305,37 @@ def test_dependency_direction() -> None:
             tree, current, path.name == "__init__.py", str(path.relative_to(SRC_ROOT))
         )
     assert not violations, "依賴方向違規：\n" + "\n".join(map(str, violations))
+
+
+def test_external_packages_only_in_owner() -> None:
+    violations: list[Violation] = []
+    for path in _source_files():
+        violations += external_import_violations(
+            _parse(path), module_name_for(path), str(path.relative_to(SRC_ROOT))
+        )
+    for path in sorted(SCRIPTS_ROOT.rglob("*.py")):
+        violations += external_import_violations(
+            _parse(path), f"scripts.{path.stem}", str(path.relative_to(SCRIPTS_ROOT.parent))
+        )
+    assert not violations, "外部套件匯入違規：\n" + "\n".join(map(str, violations))
+
+
+def test_scanner_detects_external_import_violations() -> None:
+    bad = [
+        ("trpg.api.app", "import discord"),
+        ("trpg.world.step", "from discord import app_commands"),
+        ("scripts.discord_bot", "import discord.ext.commands"),
+    ]
+    for current, source in bad:
+        assert external_import_violations(ast.parse(source), current, "<snippet>"), source
+    ok = [
+        ("trpg.bot.discord_adapter", "import discord"),
+        ("trpg.bot.discord_adapter", "from discord import app_commands"),
+        ("trpg.api.app", "import discordant"),
+        ("scripts.discord_bot", "from trpg.bot.discord_adapter import run_bot"),
+    ]
+    for current, source in ok:
+        assert not external_import_violations(ast.parse(source), current, "<snippet>"), source
 
 
 def test_no_nondeterministic_apis_in_deterministic_packages() -> None:

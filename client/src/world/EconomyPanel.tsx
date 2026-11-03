@@ -1,7 +1,7 @@
 // 商店、背包與腰包（Phase 5D-1；docs/phases/Phase5計畫.md 25.6）。
 // 說明一律用共用 <Hint>（浮動卡規則 6.5.1）；能不能買、價格、限量、門檻都由後端算好。
 // 5D-2：背包也列掉落的裝備（「裝上」在城鎮或營火）與穿戴中的裝備。
-// 5D-4（32.2）：右側改成摘要（`InventorySummary`）＋「打開背包」；`InventoryPanel` 是左欄背包畫面的物品與
+// 5D-4（33.2）：右側改成摘要（`InventorySummary`）＋「打開背包」；`InventoryPanel` 是左欄背包畫面的物品與
 // 腰包區（裝備在背包畫面用裝備卡另列，`hideGear`）；`ShopPanel` 放在左欄的商店畫面。
 import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldShop } from "../api/types";

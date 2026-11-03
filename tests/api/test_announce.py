@@ -15,6 +15,8 @@ from trpg.api.announce import (
     WorldEventProgress,
     daily_digest,
     load_templates,
+    location_name,
+    region_name,
     safe_text,
 )
 from trpg.api.first_kills import FirstKillError, FirstKillRegistry, load_first_kills
@@ -179,4 +181,14 @@ def test_first_kill_text(library: ContentLibrary, tmp_path: Path) -> None:
     (kill,) = source.first_kills()
     text = source.first_kill_text(kill)
     assert "首殺" in text and kill.target_name_zh in text and "@everyone" not in text
-    assert "雲" in text  # 區域中文名
+    # 不說地點（5E-3b）：區域名、地點名都不在公告裡
+    assert region_name(library, kill.region) not in text
+    assert location_name(library, kill.region, kill.location) not in text
+
+
+def test_first_kill_template_rejects_location() -> None:
+    bad = load_templates().model_dump()
+    for variable in ("$location", "$region"):
+        bad["first_kill"] = f"$name 在 {variable} 打倒了 $target"
+        with pytest.raises(ValueError, match=variable.removeprefix("$")):
+            AnnouncementTemplates.model_validate(bad)

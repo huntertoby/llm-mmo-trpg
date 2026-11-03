@@ -3,7 +3,7 @@
 // 5A-7（13.3）：左欄可切換到「成長與技能」（配點、閃現、重閃、溶掉、傳承、誓約）；閃現待選時左欄固定顯示選項。
 // 5B-5（18.6）：事件卡（旁白、多講一點、解法）、情境判定（引用線索、第一次送出即定案）、判定結果、這裡的人（好感度、
 // 說話、聊天、接任務）、酒館傳聞、任務與線頭（左欄）、任務三選一（左欄固定）、說書人的 LLM 開關（標頭）。
-// 5D-4（32.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
+// 5D-4（33.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BattleResponse, RunChoice, WorldAction, WorldLlmView, WorldSituationResult, WorldView } from "../api/types";
@@ -21,7 +21,7 @@ import { EventCard, SituationResultCard } from "../world/EventCard";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
-import { appendChat, dialogByNpc, dialogEntries, type ChatEntry } from "../world/story";
+import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
 
@@ -34,6 +34,8 @@ interface Props {
 }
 
 const LOG_MAX = 12;
+/** 重讀大世界 LLM 開關與健康檢查結果的間隔（同伺服器健康檢查的預設 60 秒；5E-3b）。 */
+const LLM_REFRESH_MS = 60_000;
 
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -74,12 +76,17 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    api.worldLlm().then(
-      (v) => !cancelled && setLlm(v),
-      () => undefined,
-    );
+    const load = () =>
+      api.worldLlm().then(
+        (v) => !cancelled && setLlm(v),
+        () => undefined,
+      );
+    void load();
+    // 健康檢查每 60 秒一次（伺服器端）；這裡跟著重讀，讓「說書人休息中」標示出現／消失（5E-3b）
+    const timer = window.setInterval(() => void load(), LLM_REFRESH_MS);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -242,6 +249,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
         </h1>
         <div className="run-header-buttons">
+          {narratorResting(llm) && (
+            <span className="world-narrator-rest small" role="status" data-testid="world-narrator-rest">
+              說書人休息中（使用固定文字）
+            </span>
+          )}
           {llm !== null && (
             <label className="world-llm small" data-testid="world-llm">
               <input type="checkbox" checked={llm.enabled} disabled={busy} onChange={(e) => toggleLlm(e.target.checked)} />
@@ -259,6 +271,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
+
       {view === null ? (
         <div className="muted">載入中……</div>
       ) : (

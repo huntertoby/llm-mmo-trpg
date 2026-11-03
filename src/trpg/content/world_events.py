@@ -32,7 +32,7 @@ from trpg.content.world_narration import (
     StoryTemplates,
     load_story_templates,
 )
-from trpg.content.world_situations import SituationContent, load_situation_content
+from trpg.content.world_situations import AliasesZh, SituationContent, load_situation_content
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute
 
@@ -150,6 +150,8 @@ class ThreadDef(ContentModel):
     scope: ThreadScope = "personal"
     npc: str | None = Field(default=None, pattern=ID_PATTERN)
     """相關 NPC 人設卡。"""
+    aliases_zh: AliasesZh = ()
+    """用心清單 ① 的關鍵詞別名（``text_zh`` 之外；Phase 5C-3d）。"""
     hints_location: str | None = Field(default=None, pattern=ID_PATTERN)
     """線頭指向的隱藏地點（任務線索；必須是 ``reveal`` 含 ``quest_clue`` 的隱藏地點）。"""
     on_expire_zh: str = ""
@@ -289,6 +291,8 @@ class NpcCardDef(ContentModel):
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
+    aliases_zh: AliasesZh = ()
+    """用心清單 ② 的關鍵詞別名（``name_zh`` 之外，例：稱謂；Phase 5C-3d）。"""
     role_zh: str = ""
     location: str = Field(pattern=ID_PATTERN)
     """所在地點（本區地點圖的 ID）。"""

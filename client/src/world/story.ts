@@ -1,6 +1,6 @@
 // 大世界事件與任務畫面的純函式（Phase 5B-5；docs/phases/Phase5計畫.md 18.6）。規則與可用狀態都由後端
 // `WorldView` 下發（事件卡、可引用的事實、好感度級距、任務步驟），這裡只決定畫面顯示什麼、表單驗證、對話紀錄怎麼累積。
-import type { WorldDialogLine, WorldEventSolution, WorldQuestLog, WorldView } from "../api/types";
+import type { WorldDialogLine, WorldEventSolution, WorldLlmView, WorldQuestLog, WorldView } from "../api/types";
 
 /** 情境判定回答與聊天的長度上限（同後端 PLAYER_TEXT_LIMIT）。 */
 export const PLAYER_TEXT_MAX = 500;
@@ -12,6 +12,25 @@ export function toggleCite(cited: readonly string[], fact: string): string[] {
   if (cited.includes(fact)) return cited.filter((f) => f !== fact);
   if (cited.length >= CITE_MAX) return [...cited];
   return [...cited, fact];
+}
+
+/**
+ * 點選引用時把事實的關鍵詞插進回答（5C-3d：引擎要在原文找到關鍵詞才算這筆）。
+ * 已經含有、沒有可插的文字、或插了會超過字數上限時不動。
+ */
+export function insertCite(text: string, insert: string | null | undefined): string {
+  if (insert == null || insert === "" || text.includes(insert)) return text;
+  const trimmed = text.replace(/\s+$/u, "");
+  const next = trimmed === "" ? insert : `${trimmed}，${insert}`;
+  return [...next].length > PLAYER_TEXT_MAX ? text : next;
+}
+
+/**
+ * 畫面角落的「說書人休息中」小標示（5E-3b）：開關開著、但健康檢查說本機模型不可用時顯示
+ * （說書人、情境、聊天都改用固定文字；不擋操作）。開關關著是刻意不用，不顯示。
+ */
+export function narratorResting(llm: Pick<WorldLlmView, "enabled" | "model_available"> | null): boolean {
+  return llm !== null && llm.enabled && llm.model_available === false;
 }
 
 /** 輸入框下方的字數（例：「12／500」）；超過時加「（太長）」。 */

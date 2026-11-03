@@ -1,4 +1,4 @@
-// 背包畫面與鐵匠畫面的純函式（Phase 5D-4；docs/phases/Phase5計畫.md 32.2）。
+// 背包畫面與鐵匠畫面的純函式（Phase 5D-4；docs/phases/Phase5計畫.md 33.2）。
 // 規則都在後端（能不能換上、比較、能不能打造都由後端算好）；這裡只整理顯示與送出的動作。
 import type { GearCandidate, WorldAction, WorldBagItem, WorldInventory } from "../api/types";
 

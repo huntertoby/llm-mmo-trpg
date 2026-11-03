@@ -1,4 +1,4 @@
-// 商店（Phase 5D-4；docs/phases/Phase5計畫.md 32.2）：大世界左欄的完整畫面。內容沿用 5D-1 的 `ShopPanel`
+// 商店（Phase 5D-4；docs/phases/Phase5計畫.md 33.2）：大世界左欄的完整畫面。內容沿用 5D-1 的 `ShopPanel`
 // （價格、限量、門檻、買、賣）；上方加金幣與背包格數，方便邊買邊看。
 import type { WorldAction, WorldView } from "../api/types";
 import { bagSummary } from "./bagView";

@@ -139,7 +139,8 @@ def problems(settings: DeploySettings, env: Mapping[str, str]) -> tuple[list[str
             "前端還沒建置：corepack pnpm -C client install 後 corepack pnpm -C client build"
         )
     try:
-        load_bot_settings(env=env)
+        # 讀真的環境時（env 是 os.environ）也讀 repo 根目錄的 .env（5E-2b 32.3）
+        load_bot_settings(env=None if env is os.environ else env)
     except BotConfigError as exc:
         found.append(f"Bot 設定不完整（不影響伺服器）：{exc}")
     return found, info

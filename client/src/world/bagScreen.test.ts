@@ -1,4 +1,4 @@
-// 背包、商店畫面與戰鬥道具欄（Phase 5D-4；docs/phases/Phase5計畫.md 32.2、32.4）：純函式與靜態輸出。
+// 背包、商店畫面與戰鬥道具欄（Phase 5D-4；docs/phases/Phase5計畫.md 33.2、33.4）：純函式與靜態輸出。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
