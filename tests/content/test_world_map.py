@@ -106,7 +106,7 @@ def test_cloud_ridge_locations_follow_18_3(cloud: LocationMapDef) -> None:
     assert (gate.kind, gate.gate_to, gate.unlock_flag) == (
         "gate",
         "ashen_waste",
-        "mist_tide_success",
+        "ashen_waste_open",
     )
     assert by_id["elixir_cave"].reveal == ("situation",)
     assert by_id["crane_cliff"].reveal == ("perception_nearby", "quest_clue", "friend_footprint")

@@ -18,6 +18,7 @@
 - 5E-3b：``DELETE …/characters/{id}/notes/{note_id}``（作者刪自己的留言）；留言板回 ``admin``。
 
 - 5F-1（``docs/phases/Phase5計畫.md`` 35.7）：``GET …/board``（城鎮公告板）。
+- 5F-1b：``GET …/absence``（「你不在的時候」摘要；看過送 ``news_seen`` 動作）。
 - 5F-4（``docs/phases/Phase5計畫.md`` 36.7）：``GET …/league``（影子循環賽：報名狀態、排行榜、
   場次）、``POST …/league/matches/{match_id}/replay``（某一場從開場播到結束＋重播驗證）、
   ``GET /api/world/league/matches/{match_id}/log``（原始戰鬥紀錄）、``POST /api/world/league/run``
@@ -38,6 +39,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Request, Response
 
+from trpg.api.absence_view import AbsenceView, absence_summary
 from trpg.api.auth import (
     accounts_of,
     require_admin,
@@ -243,6 +245,17 @@ def get_board(character_id: str, request: Request) -> SeasonBoardView:
         char = store.character(character_id)
         now = store.clock()
         return season_board(store.library, store.season_world(now), char, now)
+
+
+@router.get("/characters/{character_id}/absence")
+def get_absence(character_id: str, request: Request) -> AbsenceView:
+    """「你不在的時候」摘要（5F-1b）：上次看過之後的世界事件成敗、懸賞歸屬、新開放的區域。看過時送
+    ``news_seen`` 動作（``until``＝``as_of``）。只讀，用換日後的世界算。"""
+    store = world_of(request)
+    with store.lock:
+        char = store.character(character_id)
+        now = store.clock()
+        return absence_summary(store.library, store.season_world(now), char, now)
 
 
 @router.get("/characters/{character_id}/league")

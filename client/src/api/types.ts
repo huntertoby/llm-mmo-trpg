@@ -261,6 +261,7 @@ export type WorldAction =
   // 5C-1：雇用系統傭兵（整組換掉）；5C-2：借影子、打法、自己影子的預設打法
   | (Omit<Schemas["HireAction"], "shadows" | "ai"> & { shadows?: string[]; ai?: Record<string, string> })
   | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null })
+  | Schemas["NewsSeenAction"]
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
@@ -303,6 +304,9 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 「你不在的時候」摘要（5F-1b）：上次看過之後的世界事件成敗、懸賞歸屬、新開放的區域。 */
+export type AbsenceView = Schemas["AbsenceView"];
+export type AbsenceItemView = Schemas["AbsenceItemView"];
 /** 影子循環賽（5F-4）：報名、排行榜、場次與重播。 */
 export type LeagueView = Schemas["LeagueView"];
 export type LeagueStandingView = Schemas["LeagueStandingView"];

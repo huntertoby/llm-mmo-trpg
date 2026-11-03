@@ -117,6 +117,8 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "crafts",
     "generated_skills",
     "daily_goals",  # 5F-1 今日目標
+    "bounty_days",  # 5F-1b 每天第一場懸賞遭遇
+    "news_seen_at",  # 5F-1b「你不在的時候」看過的時刻
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(

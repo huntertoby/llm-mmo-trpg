@@ -114,6 +114,7 @@ __all__ = [
     "LocationRevealedEvent",
     "NarrateAction",
     "NarratedEvent",
+    "NewsSeenAction",
     "OathBrokenEvent",
     "OathKeptEvent",
     "OathReleasedEvent",
@@ -385,6 +386,14 @@ class ShadowAiAction(_Model):
     profile: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
+class NewsSeenAction(_Model):
+    """看過「你不在的時候」摘要（Phase 5F-1b）：``until`` 是摘要算到的時刻（``GET …/absence`` 的
+    ``as_of``），寫進 ``CharacterState.news_seen_at``（只往後、不超過現在）；任何地點都能做。"""
+
+    kind: Literal["news_seen"] = "news_seen"
+    until: int = Field(ge=0)
+
+
 type WorldAction = Annotated[
     TravelAction
     | CampAction
@@ -410,6 +419,7 @@ type WorldAction = Annotated[
     | EventSolveAction
     | HireAction
     | ShadowAiAction
+    | NewsSeenAction  # 5F-1b
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction

@@ -70,7 +70,7 @@ def test_board_lists_season_goals_bounties_events(calm: ContentLibrary, tmp_path
     (event,) = board["world_events"]
     assert event["name_zh"] == "霧潮入侵" and event["status"] == "active"
     assert event["target"] == 30 and event["permille"] == 0
-    assert event["target_note_zh"] == "第 1 天用原門檻"
+    assert event["target_note_zh"] == "沒有前一天的上線紀錄，用原門檻"
     # 公告板只算、不寫世界存檔
     world = loads_world((tmp_path / "saves" / "world" / "world.json").read_text(encoding="utf-8"))
     assert world.rolled_day is None

@@ -69,7 +69,7 @@ def test_illegal_travel(
 
 
 def test_unlock_flag_opens_gate(library: ContentLibrary, make_char: MakeChar) -> None:
-    world = make_world(flags=("mist_tide_success",))
+    world = make_world(flags=("ashen_waste_open",))
     result = world_step(library, world, make_char(), TravelAction(to="ashen_ferry"), NOON)
     assert result.char.location == "ashen_ferry"
 
