@@ -111,14 +111,14 @@ window.Battle = (() => {
   function battleHud(c, opt = {}) {
     const W = COLS * T, Hh = ROWS * T;
     // 左上：主角卡（同探索版 A，多了 AP 圓點、反應、源力）
-    box(c, 8, 8, 250, 74, H.PANEL, H.GOLD, 1.5, 10);
+    box(c, 8, 8, 250, 92, H.PANEL, H.GOLD, 1.5, 10);
     H.portrait(c, 46, 45, 62, 0); H.badge(c, 70, 72, "Lv 4", "#3a5ad0");
-    H.bar(c, 84, 16, 164, 15, 0.82, H.HP, "HP 41 / 50"); H.bar(c, 84, 35, 164, 13, 0.6, H.MP, "法力 18 / 30");
-    for (let k = 0; k < 3; k++) { dot(c, 92 + k * 15, 61, 5.5, k < (opt.ap ?? 3) ? "#ffd23a" : "#3a3028"); c.lineWidth = 1.5; c.strokeStyle = OUT; c.beginPath(); c.arc(92 + k * 15, 61, 5.5, 0, TAU); c.stroke(); }
-    H.I.boots(c, 152, 61, 14); H.text(c, "3", 162, 62, 12);
-    c.strokeStyle = "#5ad06a"; c.lineWidth = 2.5; c.beginPath(); c.arc(190, 61, 6, 0.4, TAU - 0.4); c.stroke();
-    for (let k = 0; k < 3; k++) dot(c, 212 + k * 11, 61, 4, k < 1 ? "#c8bcff" : "#3a3028");
-    [[1, 0.6], [0, 1]].forEach(([idx, hp], i) => { const y = 92 + i * 40; box(c, 8, y, 130, 34, H.PANEL, "rgba(200,168,104,0.6)", 1.2, 17); H.portrait(c, 25, y + 17, 28, idx, "#8fb0d0"); H.bar(c, 44, y + 12, 86, 9, hp, "#5ad06a"); });
+    H.bar(c, 84, 14, 164, 14, 0.82, H.HP, "HP 41 / 50"); H.bar(c, 84, 31, 164, 14, 0.6, H.MP, "法力 18 / 30"); H.bar(c, 84, 48, 164, 14, 0.75, "#c8a030", "耐力 6 / 8");
+    for (let k = 0; k < 3; k++) { dot(c, 92 + k * 15, 80, 5.5, k < (opt.ap ?? 3) ? "#ffd23a" : "#3a3028"); c.lineWidth = 1.5; c.strokeStyle = OUT; c.beginPath(); c.arc(92 + k * 15, 80, 5.5, 0, TAU); c.stroke(); }
+    H.I.boots(c, 152, 80, 14); H.text(c, "3", 162, 81, 12);
+    c.strokeStyle = "#5ad06a"; c.lineWidth = 2.5; c.beginPath(); c.arc(190, 80, 6, 0.4, TAU - 0.4); c.stroke();
+    for (let k = 0; k < 3; k++) dot(c, 212 + k * 11, 80, 4, k < 1 ? "#c8bcff" : "#3a3028");
+    [[1, 0.6], [0, 1]].forEach(([idx, hp], i) => { const y = 108 + i * 40; box(c, 8, y, 130, 34, H.PANEL, "rgba(200,168,104,0.6)", 1.2, 17); H.portrait(c, 25, y + 17, 28, idx, "#8fb0d0"); H.bar(c, 44, y + 12, 86, 9, hp, "#5ad06a"); });
     // 上方中央：行動順序
     const order = [["A", ALLY], ["D", FOE], ["B", ALLY], ["F", FOE], ["C", ALLY], ["E", FOE]];
     const ox = W / 2 - order.length * 21;
@@ -145,13 +145,13 @@ window.Battle = (() => {
   }
   /** 去文字化後的單位資訊小卡（同 textless.png 第 2 組）。 */
   function unitCard(c, x, y) {
-    box(c, x, y, 226, 104, "rgba(24,20,16,0.9)", "#e0483a", 1.8, 10);
+    box(c, x, y, 226, 120, "rgba(24,20,16,0.9)", "#e0483a", 1.8, 10);
     H.text(c, "D 斷崖幫刀手", x + 10, y + 15, 13);
     box(c, x + 160, y + 6, 58, 18, "#2a2014", "#e8bb48", 1.5, 9); H.text(c, "◆ 狂暴", x + 189, y + 15.5, 11, "#ffd23a", "center");
-    H.bar(c, x + 10, y + 30, 206, 13, 0.7, H.HP, "30 / 42");
-    H.chip(c, x + 10, y + 50, "rank", "5", 48); H.chip(c, x + 62, y + 50, "boots", "3", 48); H.chip(c, x + 114, y + 50, "sword", "雙手", 64);
-    box(c, x + 10, y + 77, 22, 22, "#5a2a14", OUT, 1.2, 5); H.I.rest(c, x + 21, y + 88, 14); H.badge(c, x + 32, y + 97, "2", "#1c1712");
-    H.text(c, "▸ 詳細", x + 150, y + 89, 11, H.DIM);
+    H.bar(c, x + 10, y + 28, 206, 13, 0.7, H.HP, "HP 30 / 42"); H.bar(c, x + 10, y + 44, 206, 13, 0.75, "#c8a030", "耐力 6 / 8");
+    H.chip(c, x + 10, y + 64, "rank", "5", 48); H.chip(c, x + 62, y + 64, "boots", "3", 48); H.chip(c, x + 114, y + 64, "sword", "雙手", 64);
+    box(c, x + 10, y + 92, 22, 22, "#5a2a14", OUT, 1.2, 5); H.I.rest(c, x + 21, y + 103, 14); H.badge(c, x + 32, y + 112, "2", "#1c1712");
+    H.text(c, "▸ 詳細", x + 150, y + 104, 11, H.DIM);
   }
   /** 去文字化後的技能卡（同 textless.png 第 1 組）。 */
   function skillCard(c, x, y) {
