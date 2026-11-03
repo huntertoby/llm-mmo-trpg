@@ -1,0 +1,872 @@
+{
+ "quests": [
+  {
+   "companion": "companion_ayue",
+   "giver": "granny_du",
+   "id": "starter_ferry",
+   "kind": "starter",
+   "name_zh": "霧渡新手路",
+   "start": [],
+   "steps": [
+    {
+     "id": "ferry_bandits",
+     "npcs": [
+      "granny_du"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": {
+       "bias_keywords": [],
+       "kind": "whiteboard",
+       "min_passive": 1,
+       "mix": {
+        "bridge": 0,
+        "deepen": 1,
+        "new": 2
+       }
+      },
+      "story_skill": null,
+      "xp_level": 1,
+      "xp_source": "quest_chain_step"
+     },
+     "text_zh": "渡口石階：趕走搶渡船的盜賊",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": "ferry_steps",
+       "skill_keywords": [],
+       "weather": []
+      }
+     ]
+    },
+    {
+     "id": "bamboo_wolves",
+     "npcs": [
+      "granny_du"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": {
+       "bias_keywords": [],
+       "kind": "whiteboard",
+       "min_passive": 1,
+       "mix": {
+        "bridge": 0,
+        "deepen": 1,
+        "new": 2
+       }
+      },
+      "story_skill": null,
+      "xp_level": 1,
+      "xp_source": "quest_chain_step"
+     },
+     "text_zh": "竹林小徑：突破雨裡包圍的霧狼",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": "bamboo_path",
+       "skill_keywords": [],
+       "weather": []
+      }
+     ]
+    },
+    {
+     "id": "terrace_clash",
+     "npcs": [
+      "granny_du"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": {
+       "bias_keywords": [],
+       "kind": "whiteboard",
+       "min_passive": 1,
+       "mix": {
+        "bridge": 0,
+        "deepen": 1,
+        "new": 2
+       }
+      },
+      "story_skill": null,
+      "xp_level": 2,
+      "xp_source": "quest_chain_step"
+     },
+     "text_zh": "雨中梯田：平息盜賊和修士的衝突",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": "rain_terraces",
+       "skill_keywords": [],
+       "weather": []
+      }
+     ]
+    }
+   ],
+   "summary_zh": "渡婆婆要你先把渡口到梯田這一路走通。"
+  },
+  {
+   "companion": "companion_ayue",
+   "giver": "granny_du",
+   "id": "main_mist_rift",
+   "kind": "main",
+   "name_zh": "霧中裂痕",
+   "start": [],
+   "steps": [
+    {
+     "id": "missing_townsfolk",
+     "npcs": [
+      "granny_du"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 1,
+      "xp_source": "main_step"
+     },
+     "text_zh": "查霧渡鎮的失蹤案（夜裡的燈籠隊）",
+     "when": [
+      {
+       "kind": "hold_thread",
+       "thread": "missing_went_to_rift"
+      }
+     ]
+    },
+    {
+     "id": "enter_temple",
+     "npcs": [
+      "acolyte_xiaolian",
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": "skill_mist_breaker",
+      "xp_level": 2,
+      "xp_source": "main_step"
+     },
+     "text_zh": "進青霧觀山門（靠修士的信任或通行令）",
+     "when": [
+      {
+       "kind": "at_location",
+       "location": "mist_temple_gate"
+      },
+      {
+       "conditions": [
+        {
+         "kind": "affinity",
+         "npc": "acolyte_xiaolian",
+         "rank": "friendly"
+        },
+        {
+         "kind": "affinity",
+         "npc": "daoist_qingya",
+         "rank": "friendly"
+        },
+        {
+         "kind": "hold_thread",
+         "thread": "temple_pass"
+        }
+       ],
+       "kind": "any_of"
+      }
+     ]
+    },
+    {
+     "id": "temple_split",
+     "npcs": [
+      "acolyte_xiaolian",
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 2,
+      "xp_source": "main_step"
+     },
+     "text_zh": "觀內分裂：弄清楚誰在私通斷崖幫",
+     "when": [
+      {
+       "conditions": [
+        {
+         "kind": "situation",
+         "outcomes": [
+          "success",
+          "partial"
+         ],
+         "skeleton": "monks_dispute",
+         "templates": []
+        },
+        {
+         "kind": "hold_thread",
+         "thread": "temple_traitor"
+        },
+        {
+         "group": "temple_traitor",
+         "kind": "win_battle",
+         "location": "mist_temple_gate",
+         "skill_keywords": [],
+         "weather": []
+        }
+       ],
+       "kind": "any_of"
+      }
+     ]
+    },
+    {
+     "id": "rift_battle",
+     "npcs": [
+      "hunter_ayue"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 5,
+      "xp_source": "main_step"
+     },
+     "text_zh": "源晶裂痕：霧魅湧出、盜賊搶碎片、修士守陣",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": "crystal_rift",
+       "skill_keywords": [],
+       "weather": []
+      }
+     ]
+    },
+    {
+     "id": "summit_boss",
+     "npcs": [],
+     "reward": {
+      "affinity": {},
+      "flags": [
+       "mist_rift_done"
+      ],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 6,
+      "xp_source": "main_step"
+     },
+     "text_zh": "雲頂觀：阻止霧鎖真人用碎片飛升",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": "cloud_summit",
+       "skill_keywords": [],
+       "weather": []
+      }
+     ]
+    }
+   ],
+   "summary_zh": "霧渡鎮接連有人失蹤，線索指向山裡的源晶裂痕。"
+  },
+  {
+   "companion": null,
+   "giver": "daoist_qingya",
+   "id": "chain_temple_split",
+   "kind": "chain",
+   "name_zh": "青霧觀的分裂",
+   "start": [
+    {
+     "kind": "quest_step",
+     "quest": "main_mist_rift",
+     "step": 2
+    }
+   ],
+   "steps": [
+    {
+     "id": "deliver_letter",
+     "npcs": [
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 4,
+      "xp_source": "quest_chain_step"
+     },
+     "text_zh": "替青崖道長送信到藥師谷",
+     "when": [
+      {
+       "kind": "at_location",
+       "location": "herb_valley"
+      }
+     ]
+    },
+    {
+     "id": "find_traitor",
+     "npcs": [
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": {
+       "bias_keywords": [],
+       "kind": "whiteboard",
+       "min_passive": 0,
+       "mix": null
+      },
+      "story_skill": null,
+      "xp_level": 2,
+      "xp_source": "quest_chain_step"
+     },
+     "text_zh": "查出私通盜賊的人（看穿誰在說謊）",
+     "when": [
+      {
+       "conditions": [
+        {
+         "kind": "situation",
+         "outcomes": [
+          "success"
+         ],
+         "skeleton": "monks_dispute",
+         "templates": [
+          "monks_see_lie"
+         ]
+        },
+        {
+         "kind": "hold_thread",
+         "thread": "temple_traitor"
+        }
+       ],
+       "kind": "any_of"
+      }
+     ]
+    },
+    {
+     "id": "night_raid",
+     "npcs": [
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [
+       "mentor_qingya"
+      ],
+      "insight": 1,
+      "offer": {
+       "bias_keywords": [],
+       "kind": "whiteboard",
+       "min_passive": 0,
+       "mix": null
+      },
+      "story_skill": null,
+      "xp_level": 3,
+      "xp_source": "quest_chain_step"
+     },
+     "text_zh": "斷崖幫寨夜襲（撤離勝利條件先用一般勝利）",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": "cliff_gang_fort",
+       "skill_keywords": [],
+       "weather": []
+      }
+     ]
+    }
+   ],
+   "summary_zh": "青崖道長察覺觀裡有人私通盜賊，請你幫忙。"
+  },
+  {
+   "companion": null,
+   "giver": "daoist_qingya",
+   "id": "mentor_qingya_trial",
+   "kind": "chain",
+   "name_zh": "青崖的試煉",
+   "start": [
+    {
+     "flag": "mentor_qingya",
+     "kind": "flag"
+    }
+   ],
+   "steps": [
+    {
+     "id": "observe_flash",
+     "npcs": [
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 1,
+      "xp_source": null
+     },
+     "text_zh": "觀摩：在營火或城鎮完成一次閃現",
+     "when": [
+      {
+       "kind": "growth",
+       "ops": [
+        "flash"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "learn_from_mist",
+     "npcs": [
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 1,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 1,
+      "xp_source": null
+     },
+     "text_zh": "以霧為師：在霧天打贏一場，而且用過帶「隱蔽」或「帶電」的招式",
+     "when": [
+      {
+       "group": null,
+       "kind": "win_battle",
+       "location": null,
+       "skill_keywords": [
+        "concealed",
+        "charged"
+       ],
+       "weather": [
+        "fog"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "choose_path",
+     "npcs": [
+      "daoist_qingya"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [
+       "title_qingya_disciple"
+      ],
+      "insight": 1,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 1,
+      "xp_source": null
+     },
+     "text_zh": "取捨：完成一次重閃、溶掉或傳承",
+     "when": [
+      {
+       "kind": "growth",
+       "ops": [
+        "reflash",
+        "dissolve",
+        "inherit"
+       ]
+      }
+     ]
+    }
+   ],
+   "summary_zh": "青崖道長要看你怎麼磨自己的招式。"
+  },
+  {
+   "companion": null,
+   "giver": "shopkeeper_liu",
+   "id": "hidden_elixir_cave",
+   "kind": "hidden",
+   "name_zh": "丹爐之謎",
+   "start": [
+    {
+     "kind": "affinity",
+     "npc": "shopkeeper_liu",
+     "rank": "friendly"
+    }
+   ],
+   "steps": [
+    {
+     "id": "reach_cave",
+     "npcs": [
+      "shopkeeper_liu"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 5,
+      "xp_source": "hidden_location"
+     },
+     "text_zh": "找到藥師谷谷底的那處洞窟",
+     "when": [
+      {
+       "kind": "at_location",
+       "location": "elixir_cave"
+      }
+     ]
+    },
+    {
+     "id": "tame_furnace",
+     "npcs": [
+      "shopkeeper_liu"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 5,
+      "xp_source": "hidden_location"
+     },
+     "text_zh": "處理洞裡失控的丹爐",
+     "when": [
+      {
+       "kind": "situation",
+       "outcomes": [
+        "success",
+        "partial"
+       ],
+       "skeleton": "runaway_furnace",
+       "templates": []
+      }
+     ]
+    }
+   ],
+   "summary_zh": "柳掌櫃說藥師谷的谷底似乎還有一處洞窟，沒人敢進去。"
+  },
+  {
+   "companion": null,
+   "giver": null,
+   "id": "hidden_frost_riddle",
+   "kind": "hidden",
+   "name_zh": "霜音的謎",
+   "start": [
+    {
+     "kind": "hold_thread",
+     "thread": "foxfire_guide"
+    },
+    {
+     "kind": "at_location",
+     "location": "crane_cliff"
+    }
+   ],
+   "steps": [
+    {
+     "id": "answer_riddle",
+     "npcs": [
+      "frost_chime"
+     ],
+     "reward": {
+      "affinity": {},
+      "flags": [],
+      "insight": 0,
+      "offer": null,
+      "story_skill": null,
+      "xp_level": 6,
+      "xp_source": "hidden_location"
+     },
+     "text_zh": "答出白狐的謎",
+     "when": [
+      {
+       "kind": "situation",
+       "outcomes": [
+        "success",
+        "partial"
+       ],
+       "skeleton": "frost_chime_riddle",
+       "templates": []
+      }
+     ]
+    }
+   ],
+   "summary_zh": "狐火在北坡獵場的霧裡指向一座山崖，好像有誰在那裡等人答謎。"
+  }
+ ],
+ "region": "cloud_ridge",
+ "region_keywords": [
+  "wet",
+  "charged",
+  "concealed"
+ ],
+ "story_skills": [
+  {
+   "activation": null,
+   "ap_cost": 2,
+   "budget_bonus_permille": null,
+   "category": "spell",
+   "condition": null,
+   "cost": {
+    "cooldown": 4,
+    "hp_percent": null,
+    "mana": 6,
+    "on_miss": [],
+    "overdraft": null,
+    "self_status": null,
+    "source": null,
+    "stacks": null,
+    "stamina": 0,
+    "uses_per_battle": null
+   },
+   "crit_range": null,
+   "damage_permille": null,
+   "description_zh": null,
+   "effects": [
+    {
+     "affects": null,
+     "amount": null,
+     "anchor": null,
+     "attr_permille": null,
+     "chance_permille": null,
+     "collision_dice": null,
+     "condition": null,
+     "count": null,
+     "damage_multiplier_permille": null,
+     "dice": null,
+     "distance": null,
+     "duration": 1,
+     "effects": null,
+     "element": null,
+     "explode": null,
+     "flat_bonus": null,
+     "form": null,
+     "form_bonus_permille": null,
+     "hp_permille": null,
+     "infusion": null,
+     "knock_prone": null,
+     "landing": null,
+     "lifesteal_permille": null,
+     "lose": null,
+     "magnitude_permille": null,
+     "max_hp_permille": null,
+     "multiplier_permille": null,
+     "object": null,
+     "on_hit": null,
+     "on_kill": null,
+     "per_stack_permille": null,
+     "permille": null,
+     "power_permille": null,
+     "radius": null,
+     "range": null,
+     "resource": null,
+     "rounds": null,
+     "rule": null,
+     "scale": null,
+     "scaling": null,
+     "scope": null,
+     "self_damage_permille_of_hit": null,
+     "skill": null,
+     "speed": null,
+     "splash": null,
+     "split_heal": null,
+     "spread": null,
+     "stack": null,
+     "status": null,
+     "surface": null,
+     "tag": null,
+     "then": null,
+     "trait": null,
+     "type": "reveal",
+     "unit": null,
+     "when": null,
+     "which": null,
+     "win": null
+    },
+    {
+     "affects": "tiles",
+     "amount": null,
+     "anchor": null,
+     "attr_permille": null,
+     "chance_permille": null,
+     "collision_dice": null,
+     "condition": null,
+     "count": null,
+     "damage_multiplier_permille": null,
+     "dice": null,
+     "distance": null,
+     "duration": null,
+     "effects": null,
+     "element": null,
+     "explode": null,
+     "flat_bonus": null,
+     "form": null,
+     "form_bonus_permille": null,
+     "hp_permille": null,
+     "infusion": null,
+     "knock_prone": null,
+     "landing": null,
+     "lifesteal_permille": null,
+     "lose": null,
+     "magnitude_permille": null,
+     "max_hp_permille": null,
+     "multiplier_permille": null,
+     "object": null,
+     "on_hit": null,
+     "on_kill": null,
+     "per_stack_permille": null,
+     "permille": null,
+     "power_permille": null,
+     "radius": null,
+     "range": null,
+     "resource": null,
+     "rounds": null,
+     "rule": null,
+     "scale": null,
+     "scaling": null,
+     "scope": null,
+     "self_damage_permille_of_hit": null,
+     "skill": null,
+     "speed": null,
+     "splash": null,
+     "split_heal": null,
+     "spread": null,
+     "stack": null,
+     "status": null,
+     "surface": null,
+     "tag": null,
+     "then": null,
+     "trait": null,
+     "type": "clear_surface",
+     "unit": null,
+     "when": null,
+     "which": null,
+     "win": null
+    },
+    {
+     "affects": null,
+     "amount": null,
+     "anchor": null,
+     "attr_permille": null,
+     "chance_permille": null,
+     "collision_dice": null,
+     "condition": null,
+     "count": null,
+     "damage_multiplier_permille": null,
+     "dice": "1d4",
+     "distance": null,
+     "duration": null,
+     "effects": null,
+     "element": "holy",
+     "explode": null,
+     "flat_bonus": null,
+     "form": null,
+     "form_bonus_permille": null,
+     "hp_permille": null,
+     "infusion": null,
+     "knock_prone": null,
+     "landing": null,
+     "lifesteal_permille": null,
+     "lose": null,
+     "magnitude_permille": null,
+     "max_hp_permille": null,
+     "multiplier_permille": null,
+     "object": null,
+     "on_hit": null,
+     "on_kill": null,
+     "per_stack_permille": null,
+     "permille": null,
+     "power_permille": null,
+     "radius": null,
+     "range": null,
+     "resource": null,
+     "rounds": null,
+     "rule": null,
+     "scale": null,
+     "scaling": null,
+     "scope": null,
+     "self_damage_permille_of_hit": null,
+     "skill": null,
+     "speed": null,
+     "splash": null,
+     "split_heal": null,
+     "spread": null,
+     "stack": null,
+     "status": null,
+     "surface": null,
+     "tag": null,
+     "then": null,
+     "trait": null,
+     "type": "damage",
+     "unit": null,
+     "when": null,
+     "which": null,
+     "win": null
+    }
+   ],
+   "element": null,
+   "exclusive_group": null,
+   "followup": null,
+   "id": "skill_mist_breaker",
+   "include_caster": false,
+   "kind": "active",
+   "mastery": null,
+   "modifiers": [],
+   "name_zh": "破霧",
+   "narrative": {
+    "cast_flavor": "你一掌推出，風從掌心炸開，濃霧被撕成碎片四散",
+    "concept": "一聲清嘯震開山霧，躲在霧裡的人與東西都無所遁形"
+   },
+   "pierce": false,
+   "provenance": {
+    "bound": true,
+    "created_by": null,
+    "origin": "builtin",
+    "owner_id": null,
+    "parents": [],
+    "tradeable": false
+   },
+   "rank": 1,
+   "rarity": "rare",
+   "reaction": null,
+   "scaling_attr": "wis",
+   "schema_version": 1,
+   "secondary_scaling_attr": null,
+   "shape": {
+    "jump_range": null,
+    "jumps": null,
+    "radius": null,
+    "range": 3,
+    "size": null,
+    "type": "square3"
+   },
+   "skeleton": "control",
+   "stance_upkeep": 0,
+   "tags": [
+    "wind",
+    "spell",
+    "reveal",
+    "area"
+   ],
+   "tier": 1,
+   "trap": null,
+   "trigger": null,
+   "variants": [],
+   "weapon_only": [],
+   "weapon_req": "any"
+  }
+ ]
+}

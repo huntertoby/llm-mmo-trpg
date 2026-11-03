@@ -1,0 +1,11 @@
+{
+ "frequency": {
+  "max_permille": 600,
+  "per_step_permille": 150
+ },
+ "threads": {
+  "expire_seconds": 259200,
+  "personal_limit": 5,
+  "world_limit": 5
+ }
+}

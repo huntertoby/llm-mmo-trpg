@@ -35,6 +35,7 @@ __all__ = [
     "FieldStoneTargetView",
     "FieldStoneView",
     "FieldTileView",
+    "FieldTilesView",
     "FieldView",
 ]
 
@@ -51,7 +52,22 @@ class FieldTileView(_ApiModel):
     surface: str = "none"
     """初始表面（``water``、``fire``…；沒有＝``none``）。"""
     walkable: bool = True
-    """角色站得上去（6B-3 前端算路徑用；同 ``field_grid``：地形、物件、NPC、隱藏門）。"""
+    """角色站得上去（6B-3 前端算路徑用；同 ``field_grid``：地形、物件、NPC、隱藏門）。靜態地形
+    （:class:`FieldTilesView`，6C-R3）把「發現才出現」的隱藏門一律當成還沒發現（不可站），這個角色
+    已發現的放在 ``FieldView.open_cells``。"""
+
+
+class FieldTilesView(_ApiModel):
+    """一張實地地圖的靜態地形（6C-R3；``GET /api/world/fields/{map_id}``）：只看內容，前端依
+    ``hash`` 快取。"""
+
+    map_id: str
+    hash: str
+    """地形內容的雜湊（排序鍵 JSON 的 SHA-256 前 16 碼；內容一樣就一樣）。"""
+    width: int
+    height: int
+    tiles: tuple[FieldTileView, ...]
+    """逐列（y 由上到下、x 由左到右）。"""
 
 
 class FieldObjectView(_ApiModel):
@@ -153,6 +169,9 @@ class FieldEnemyView(_ApiModel):
     units: tuple[FieldEnemyUnitView, ...] = ()
     sight: tuple[tuple[int, int], ...] = ()
     """看得到的格子（前方扇形 4 格、被牆與擋視線物遮住；走進去就開打、敵方先手）。"""
+    look: FieldHeroView | None = None
+    """帶頭單位（陣容第一名，沒有敵方時第三方第一名）的外觀（6C-R3；欄位同戰鬥 ``UnitView``：
+    ``doll_look`` 含異形的 ``creature``）；沒有陣容＝``None``。"""
 
 
 class FieldPositionView(_ApiModel):
@@ -251,8 +270,13 @@ class FieldView(_ApiModel):
     interior: bool
     width: int
     height: int
-    tiles: tuple[FieldTileView, ...]
-    """逐列（y 由上到下、x 由左到右）。"""
+    tiles: tuple[FieldTileView, ...] = ()
+    """逐列（y 由上到下、x 由左到右）。6C-R3 起世界畫面不帶（空），前端用 ``tiles_hash`` 向
+    ``GET /api/world/fields/{map_id}?h=…`` 取靜態地形並快取，再套上 ``open_cells``。"""
+    tiles_hash: str = ""
+    """靜態地形的雜湊（:class:`FieldTilesView` 的 ``hash``；6C-R3）。"""
+    open_cells: tuple[tuple[int, int], ...] = ()
+    """靜態地形標成不可站、但這個角色站得上去的格子（已發現的隱藏門；6C-R3）。"""
     objects: tuple[FieldObjectView, ...]
     exits: tuple[FieldExitView, ...]
     doors: tuple[FieldDoorView, ...]
@@ -289,3 +313,4 @@ class FieldView(_ApiModel):
 
 
 FieldNpcView.model_rebuild()
+FieldEnemyView.model_rebuild()

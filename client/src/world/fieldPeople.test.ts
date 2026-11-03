@@ -38,6 +38,8 @@ function town(over: Partial<FieldView> = {}): FieldView {
     width: 6,
     height: 4,
     tiles,
+    tiles_hash: "",
+    open_cells: [],
     objects: [],
     exits: [],
     doors: [],

@@ -41,19 +41,31 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 ``trpg-world/3``。``trpg-wlog/6`` 也是舊規則寫的（6C-R2 起地圖上每隊的陣容改由世界種子＋(區域, 地點,
 隊伍)＋重生世代衍生；6C-5b 起營火點的清空條件、新手固定戰照步驟消失、走路抵達格也感知；21.10 第 20
 條起走過渡口算一步），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/7``。
+
+**Phase 6C-R3**：``trpg-wlog/7`` 的標頭另記 ``rules_key``（:func:`log_rules_key`：
+``戰鬥紀錄版號|規則包雜湊|內容 digest``，比照 :func:`trpg.server.league.rules_key`）。讀檔的一方
+（:class:`trpg.api.world.WorldStore`）拿它和目前的規則鍵比，不一樣（或沒記）就把 ``stale_through``
+設成最後一筆，處理同上：規則已變、不能重播。之後內容或規則改了不必再手動升版號（版號只留給格式
+變更）。日誌改成只 append：每個動作附加一行（:func:`append_log_line`）；標頭只在 ``stale_through``
+或 ``rules_key`` 改變、格式升版時整份重寫（:func:`write_atomic`）。
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final
 
 from pydantic import BaseModel, ValidationError
 
+from trpg.content.library import ContentLibrary
+from trpg.engine.ruleset_hash import hash_ruleset
+from trpg.engine.runner import LOG_FORMAT
+from trpg.roguelite.save import ruleset_hash
 from trpg.world.errors import WorldSaveFormatError
 from trpg.world.replay import WorldLogEntry
 from trpg.world.state import (
@@ -70,13 +82,17 @@ __all__ = [
     "STALE_LOG_ZH",
     "WLOG_FORMAT",
     "WorldLog",
+    "append_log_line",
+    "content_digest",
     "dumps_char",
     "dumps_log",
     "dumps_log_entry",
+    "dumps_log_header",
     "dumps_world",
     "loads_char",
     "loads_log",
     "loads_world",
+    "log_rules_key",
     "read_log",
     "write_atomic",
 ]
@@ -96,6 +112,10 @@ class WorldLog:
     entries: tuple[WorldLogEntry, ...]
     stale_through: int | None = None
     """這個序號（含）以前的紀錄是舊規則寫的：規則已變、不能重播。``None``＝全部能重播。"""
+    rules_key: str | None = None
+    """標頭記的規則鍵（6C-R3，:func:`log_rules_key`）；``None``＝沒記（6C-R3 以前寫的、舊格式）。"""
+    header: str = field(default="", compare=False)
+    """標頭那一行的原文（判斷要不要重寫標頭用）。"""
 
     @property
     def stale_zh(self) -> str | None:
@@ -154,32 +174,80 @@ def dumps_log_entry(entry: WorldLogEntry) -> str:
     return _dumps(entry, indent=None)
 
 
-def dumps_log(entries: Iterable[WorldLogEntry], *, stale_through: int | None = None) -> str:
-    """整份日誌（標頭＋每筆一行，結尾換行）。``stale_through`` 有值時，標頭記下舊規則的紀錄
-    到哪一筆。"""
+def dumps_log_header(*, stale_through: int | None = None, rules_key: str | None = None) -> str:
+    """日誌的標頭（一行，不含換行）。鍵的順序固定：``format``、``rules_key``、``stale_through``、
+    ``stale_zh``。"""
     header: dict[str, object] = {"format": WLOG_FORMAT}
+    if rules_key is not None:
+        header["rules_key"] = rules_key
     if stale_through is not None:
         header |= {"stale_through": stale_through, "stale_zh": STALE_LOG_ZH}
-    lines = [json.dumps(header, ensure_ascii=False), *(dumps_log_entry(e) for e in entries)]
+    return json.dumps(header, ensure_ascii=False)
+
+
+def dumps_log(
+    entries: Iterable[WorldLogEntry],
+    *,
+    stale_through: int | None = None,
+    rules_key: str | None = None,
+) -> str:
+    """整份日誌（標頭＋每筆一行，結尾換行）。``stale_through`` 有值時，標頭記下舊規則的紀錄
+    到哪一筆；``rules_key`` 有值時記下寫入時的規則鍵（6C-R3）。"""
+    header = dumps_log_header(stale_through=stale_through, rules_key=rules_key)
+    lines = [header, *(dumps_log_entry(e) for e in entries)]
     return "\n".join(lines) + "\n"
 
 
-def _log_header(line: str) -> int | None:
-    """讀標頭，回傳 ``stale_through``（舊格式＝``-1``，表示「全部」，由 :func:`read_log` 換成
-    最後一筆的序號）。"""
+def append_log_line(path: Path, entry: WorldLogEntry) -> None:
+    """在已存在、以換行結尾的日誌檔尾端附加一筆（6C-R3）；結果和 :func:`dumps_log` 整份重寫的
+    內容逐字相同。"""
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(dumps_log_entry(entry) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def content_digest(library: ContentLibrary) -> str:
+    """內容的確定性 digest（6C-R3）：全部內容檔（:func:`~trpg.roguelite.save.ruleset_hash`，依相對
+    路徑排序、排序鍵 JSON）再加上內容庫裡的實地地圖（依地圖 ID）與大世界規則（測試用
+    ``dataclasses.replace`` 換掉、沒進 ``files`` 的也算到）。不用內建 ``hash()``。"""
+    maps = library.field_maps
+    fields = [[k, maps[k].model_dump(mode="json")] for k in sorted(maps)]
+    rules = None if library.world_rules is None else library.world_rules.model_dump(mode="json")
+    text = json.dumps(
+        [ruleset_hash(library), fields, rules],
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def log_rules_key(library: ContentLibrary) -> str:
+    """世界日誌的規則鍵（6C-R3）：``戰鬥紀錄版號|規則包雜湊|內容 digest``（比照
+    :func:`trpg.server.league.rules_key`）。和日誌標頭記的不同＝規則或內容改了，舊紀錄不能重播。"""
+    return f"{LOG_FORMAT}|{hash_ruleset(library.ruleset)}|{content_digest(library)[:16]}"
+
+
+def _log_header(line: str) -> tuple[int | None, str | None]:
+    """讀標頭，回傳 ``(stale_through, rules_key)``（舊格式的 ``stale_through``＝``-1``，表示
+    「全部」，由 :func:`read_log` 換成最後一筆的序號）。"""
     try:
         raw = json.loads(line)
     except json.JSONDecodeError as exc:
         raise WorldSaveFormatError(f"不是合法的 JSON：{exc}") from exc
     if isinstance(raw, dict) and raw.get("format") in LEGACY_WLOG_FORMATS:
-        return -1
+        return -1, None
     header = _parse_object(line, WLOG_FORMAT)
+    key = header.get("rules_key")
+    if key is not None and not isinstance(key, str):
+        raise WorldSaveFormatError(f"日誌標頭的 rules_key 不合法：{key!r}")
     stale = header.get("stale_through")
     if stale is None:
-        return None
+        return None, key
     if not isinstance(stale, int) or isinstance(stale, bool) or stale < 0:
         raise WorldSaveFormatError(f"日誌標頭的 stale_through 不合法：{stale!r}")
-    return stale
+    return stale, key
 
 
 def read_log(text: str) -> WorldLog:
@@ -187,11 +255,11 @@ def read_log(text: str) -> WorldLog:
     lines = [line for line in text.splitlines() if line.strip()]
     if not lines:
         raise WorldSaveFormatError("日誌是空的（缺少標頭）")
-    stale = _log_header(lines[0])
+    stale, key = _log_header(lines[0])
     entries = _log_entries(lines)
     if stale == -1:
         stale = entries[-1].seq if entries else None
-    return WorldLog(entries=entries, stale_through=stale)
+    return WorldLog(entries=entries, stale_through=stale, rules_key=key, header=lines[0])
 
 
 def loads_log(text: str) -> tuple[WorldLogEntry, ...]:

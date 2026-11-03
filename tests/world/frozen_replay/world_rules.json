@@ -1,0 +1,183 @@
+{
+ "battle": {
+  "clear_kinds": [
+   "camp",
+   "elite_lair",
+   "ruin",
+   "altar"
+  ],
+  "fatigue_hp_permille": 800,
+  "max_rounds": 30,
+  "respawn_seconds": 1800
+ },
+ "calendar": {
+  "refresh_hour": 6,
+  "utc_offset_minutes": 480
+ },
+ "camp_cost": 1,
+ "default_weather": {
+  "day": {
+   "clear": 1
+  },
+  "night": {
+   "night": 1
+  }
+ },
+ "encounter": {
+  "base_permille": 150,
+  "max_permille": 500,
+  "per_level_permille": 30
+ },
+ "enemy_growth": {
+  "attribute_points_per_level": 2,
+  "skill_tier_by_level": [
+   1,
+   1,
+   1,
+   2,
+   2,
+   2,
+   2,
+   3,
+   3,
+   3
+  ]
+ },
+ "field": {
+  "cut_size": 12,
+  "min_ally_cells": 3,
+  "min_enemy_cells": 4,
+  "perceive_range": 3,
+  "sight_range": 4,
+  "sneak_sight_divisor": 2,
+  "walk_max_steps": 30
+ },
+ "hasten": {
+  "cost": 1,
+  "encounter_permille": 500
+ },
+ "hero_growth": {
+  "insight_per_elite_kind": 1,
+  "insight_per_level": 2,
+  "level_cap": 10,
+  "level_thresholds": [
+   950,
+   3800,
+   8600,
+   14350,
+   20200,
+   26050,
+   31950,
+   37800,
+   43650
+  ],
+  "skill_tier_by_level": [
+   1,
+   1,
+   1,
+   2,
+   2,
+   2,
+   2,
+   3,
+   3,
+   3
+  ]
+ },
+ "opportunity": {
+  "guarantee_from_day": 6,
+  "guarantee_waives_keyword": true,
+  "tier_up_per_season": 1,
+  "tier_up_permille": 150
+ },
+ "perception": {
+  "dc_base": 10,
+  "level_divisor": 2
+ },
+ "supplies": {
+  "max": 10,
+  "start": 5
+ },
+ "weather": [
+  {
+   "day": {
+    "clear": 3,
+    "fog": 1,
+    "rain": 1
+   },
+   "night": {
+    "fog": 1,
+    "night": 3,
+    "rain": 1
+   },
+   "region": "crystal_crown"
+  },
+  {
+   "day": {
+    "clear": 1,
+    "fog": 3,
+    "rain": 3
+   },
+   "night": {
+    "fog": 3,
+    "night": 1,
+    "rain": 3
+   },
+   "region": "cloud_ridge"
+  },
+  {
+   "day": {
+    "clear": 1,
+    "fog": 1,
+    "rain": 3
+   },
+   "night": {
+    "fog": 1,
+    "night": 3,
+    "rain": 3
+   },
+   "region": "arcane_hub"
+  },
+  {
+   "day": {
+    "clear": 3,
+    "fog": 3,
+    "rain": 1
+   },
+   "night": {
+    "fog": 3,
+    "night": 1,
+    "rain": 1
+   },
+   "region": "ashen_waste"
+  },
+  {
+   "day": {
+    "clear": 1,
+    "fog": 3,
+    "rain": 3
+   },
+   "night": {
+    "fog": 3,
+    "night": 1,
+    "rain": 3
+   },
+   "region": "frost_tide"
+  }
+ ],
+ "week_days": 7,
+ "xp": {
+  "base": 100,
+  "level_permille": 100,
+  "shares_permille": {
+   "battle": 1000,
+   "bounty": 4000,
+   "elite": 3000,
+   "hidden_location": 2000,
+   "main_step": 5000,
+   "quest_chain_step": 3000,
+   "situation_partial": 250,
+   "situation_success": 500
+  }
+ }
+}
