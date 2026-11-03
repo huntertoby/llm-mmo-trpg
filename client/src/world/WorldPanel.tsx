@@ -13,6 +13,7 @@ import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { growthBadge } from "./growth";
 import { InventoryPanel, ShopPanel } from "./EconomyPanel";
+import { LootChoicePanel } from "./LootChoicePanel";
 import { SmithyPanel } from "./SmithyPanel";
 import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
@@ -268,6 +269,9 @@ export function WorldPanel(props: Props) {
           <div className="small world-last-battle" data-testid="world-last-loot">
             {view.last_loot_zh}
           </div>
+        )}
+        {view.pending_loot != null && (
+          <LootChoicePanel pending={view.pending_loot} inventory={view.inventory} busy={props.busy} onAct={props.onAct} />
         )}
       </div>
       {view.party != null && <PartyPanel party={view.party} />}

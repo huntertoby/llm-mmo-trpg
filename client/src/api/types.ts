@@ -267,6 +267,8 @@ export type WorldAction =
   | (Omit<Schemas["PouchAction"], "items"> & { items: Record<string, number> })
   | Schemas["UseItemAction"]
   | Schemas["EquipAction"]
+  // 5D-2b：背包滿了，戰後結算選要丟哪件
+  | (Omit<Schemas["LootChooseAction"], "drop_gear"> & { drop_gear?: string[] })
   // 5D-3：鐵匠（打造、強化、分解）與附魔台（重骰、指定）
   | (Pick<Schemas["CraftAction"], "kind" | "station"> & Partial<Omit<Schemas["CraftAction"], "kind" | "station">>)
   | Schemas["EnhanceAction"]
@@ -304,6 +306,7 @@ export type WorldInventory = Schemas["InventoryView"];
 export type WorldBagItem = Schemas["BagItemView"];
 export type WorldShop = Schemas["ShopView"];
 export type WorldShopItem = Schemas["ShopItemView"];
+export type WorldPendingLoot = Schemas["PendingLootView"];
 // 鐵匠與附魔台（Phase 5D-3）
 export type WorldCrafting = Schemas["CraftingView"];
 export type WorldCraftGear = Schemas["CraftGearView"];
