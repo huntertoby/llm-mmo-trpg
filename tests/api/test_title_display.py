@@ -42,8 +42,8 @@ def _title(character_id: str) -> AccountTitle:
     )
 
 
-def _titles(owner: str) -> tuple[str, ...]:
-    return (SLAYER,) if owner in {"char_a", "acc_a"} else ()
+def _titles(owner: str, season_id: str = "s1") -> tuple[str, ...]:
+    return (SLAYER,) if owner in {"char_a", "acc_a"} and season_id == "s1" else ()
 
 
 def test_account_store_titles_of(tmp_path: Path) -> None:
@@ -53,6 +53,9 @@ def test_account_store_titles_of(tmp_path: Path) -> None:
     store.grant_title(record.account_id, _title("char_a"))
     assert store.titles_of(record.account_id) == (SLAYER,)
     assert store.titles_of("missing") == ()
+    # 編年史各季只顯示當季拿到的稱號（玩法 PM 2026-11-03 代決）
+    assert store.titles_of(record.account_id, "s1") == (SLAYER,)
+    assert store.titles_of(record.account_id, "s2") == ()
 
 
 @pytest.fixture
@@ -183,3 +186,23 @@ def test_chronicle_shows_titles_next_to_names() -> None:
     assert s1.boss_board[0].titles == [SLAYER]
     (plain,) = chronicle_view("s2", (season,), (league,), (kill,), ()).seasons
     assert plain.heroes[0].titles == [] and plain.first_kills[0].titles == []
+
+
+def test_chronicle_shows_only_titles_won_that_season() -> None:
+    """舊季的列不帶後來才拿到的稱號：s1 的英雄在 s2 才拿到稱號，s1 的那列不顯示。"""
+    hero = ChronicleHero(character_id="char_x", account_id="acc_b", name="乙", text_zh="乙。")
+    season = SeasonChronicleEntry(
+        season_id="s1",
+        name_zh="第一季",
+        next_season_id="s2",
+        started_at=NOON,
+        reset_at=DAY10,
+        heroes=(hero,),
+    )
+
+    def only_s2(owner: str, season_id: str) -> tuple[str, ...]:
+        return ("碎晶的終結者（s2）",) if owner == "acc_b" and season_id == "s2" else ()
+
+    view = chronicle_view("s2", (season,), (), (), (), titles=ChronicleTitles(only_s2, only_s2))
+    (s1,) = [s for s in view.seasons if s.season_id == "s1"]
+    assert s1.heroes[0].titles == []

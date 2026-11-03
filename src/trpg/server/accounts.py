@@ -158,9 +158,14 @@ class AccountRecord(BaseModel):
     titles: tuple[AccountTitle, ...] = ()
     """紀念稱號（Phase 5F-3b；依取得順序）。有預設值，舊檔照讀、不升版。"""
 
-    def title_labels(self) -> tuple[str, ...]:
-        """顯示用的稱號（「碎晶的終結者（s1）」，依取得順序；5F-3b／5F-3c）。"""
-        return tuple(f"{t.name_zh}（{t.season_id}）" for t in self.titles)
+    def title_labels(self, season_id: str | None = None) -> tuple[str, ...]:
+        """顯示用的稱號（「碎晶的終結者（s1）」，依取得順序；5F-3b／5F-3c）。``season_id`` 有值時
+        只列那一季拿到的（編年史各季只顯示當季的稱號，玩法 PM 2026-11-03 代決）。"""
+        return tuple(
+            f"{t.name_zh}（{t.season_id}）"
+            for t in self.titles
+            if season_id is None or t.season_id == season_id
+        )
 
     def season_of(self, character_id: str) -> str:
         return self.character_seasons.get(character_id, FIRST_SEASON_ID)
@@ -390,11 +395,12 @@ class AccountStore:
                     return record.account_id
             return None
 
-    def titles_of(self, account_id: str) -> tuple[str, ...]:
-        """帳號的顯示用稱號（5F-3c：名片、評分榜、首殺、編年史）；沒有這個帳號＝空。"""
+    def titles_of(self, account_id: str, season_id: str | None = None) -> tuple[str, ...]:
+        """帳號的顯示用稱號（5F-3c：名片、評分榜、首殺、編年史）；沒有這個帳號＝空。
+        ``season_id`` 有值時只列那一季拿到的。"""
         with self._locked():
             record = self._loaded().get(account_id)
-            return () if record is None else record.title_labels()
+            return () if record is None else record.title_labels(season_id)
 
     # -- 帳號 -----------------------------------------------------------------
 

@@ -10,12 +10,12 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.content.library import ContentLibrary
 from trpg.server.chronicle import (
     ChronicleHero,
@@ -52,12 +52,21 @@ class _ApiModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+type SeasonTitlesOf = Callable[[str, str], tuple[str, ...]]
+"""（角色 ID 或帳號 ID, 季 ID）→ 那一季拿到的稱號（玩法 PM 2026-11-03：各季只顯示當季的）。"""
+
+
+def _no_season_titles(_who: str, _season_id: str) -> tuple[str, ...]:
+    return ()
+
+
 @dataclass(frozen=True)
 class ChronicleTitles:
-    """編年史名字旁的帳號稱號（5F-3c）：依角色 ID 或帳號 ID 查；預設不顯示（沒有帳號）。"""
+    """編年史名字旁的帳號稱號（5F-3c）：依角色 ID 或帳號 ID 加季 ID 查，只列那一季拿到的；
+    預設不顯示（沒有帳號）。"""
 
-    of_character: TitlesOf = no_titles
-    of_account: TitlesOf = no_titles
+    of_character: SeasonTitlesOf = _no_season_titles
+    of_account: SeasonTitlesOf = _no_season_titles
 
 
 _TITLES_DOC: Final = "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
@@ -182,9 +191,9 @@ def _season_view(
                 name=h.name,
                 text_zh=h.text_zh,
                 titles=list(
-                    titles.of_character(h.character_id)
+                    titles.of_character(h.character_id, season_id)
                     if h.account_id is None
-                    else titles.of_account(h.account_id)
+                    else titles.of_account(h.account_id, season_id)
                 ),
             )
             for h in entry.heroes
@@ -200,7 +209,7 @@ def _season_view(
                 kind=k.kind,
                 target_name_zh=k.target_name_zh,
                 name=k.name,
-                titles=list(titles.of_character(k.character_id)),
+                titles=list(titles.of_character(k.character_id, season_id)),
             )
             for k in kills
         ],
@@ -215,7 +224,7 @@ def _season_view(
                 losses=r.losses,
                 draws=r.draws,
                 tied=r.tied,
-                titles=list(titles.of_account(r.account)),
+                titles=list(titles.of_account(r.account, season_id)),
             )
             for r in league.ranks
         ],
@@ -225,7 +234,7 @@ def _season_view(
                 score=b.score,
                 rounds=b.rounds,
                 title_zh=b.title_zh,
-                titles=list(titles.of_character(b.character_id)),
+                titles=list(titles.of_character(b.character_id, season_id)),
             )
             for b in board[:BOARD_TOP]
         ],
