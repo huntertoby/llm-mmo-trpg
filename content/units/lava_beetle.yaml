@@ -1,0 +1,16 @@
+# 灰燼荒原敵人（Phase 5F-5a；19.2.1）。數值是初值（未經模擬）。
+# 熔岩甲蟲：坦、硬殼（高護甲）；翻滾撞擊。
+id: lava_beetle
+name_zh: 熔岩甲蟲
+attributes: {str: 14, dex: 8, con: 16, int: 3, wis: 8, wil: 10}
+max_hp: 38
+speed: 4
+armor_bonus: 4
+weapon: stone_fist
+ai_profile: brute
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [beast, lava_beast, steadfast]
+skills: [skill_battering_ram]
+opening_statuses:
+  - {status: molten_burst}

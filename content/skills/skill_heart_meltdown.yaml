@@ -1,0 +1,31 @@
+# 灰燼之心第 3 階段的蓄力強招「熔心爆」（Phase 5F-5a；19.2.3：預告十字 3 格範圍，大傷；05 5.7 強招預告）。
+# 十字臂長上限是 2（5F-2b），所以用臂長 2 近似（代決 5F5a-7）。整回合蓄力、下回合開始時爆發。只給敵人用；數值為初值，未經模擬。
+id: skill_heart_meltdown
+schema_version: 1
+name_zh: 熔心爆
+tier: 2
+rank: 2
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 3
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+followup:
+  when: delayed
+  release: next_turn
+  skeleton: area
+  shape: {type: cross, range: 0, arm: 2}
+  effects:
+    - {type: damage, dice: 3d8, element: fire}
+condition: null
+cost: {mana: 8, cooldown: 3}
+tags: [fire, spell, aoe]
+narrative:
+  concept: 核心把整座坑的熱都收進來，往四個方向一口氣炸開
+  cast_flavor: 核心亮得刺眼，四道熔流沿著地縫朝外爬了出去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,16 @@
+# 灰燼荒原的源晶失控造物（Phase 5F-5a；19.2.2）。數值是初值（未經模擬）。
+# 熔晶魅：霧魅的火版，碰到就點燃（命中時燃燒）；只在核心殘片附近（角魔古祭壇、熔心坑周邊）。
+id: molten_wraith
+name_zh: 熔晶魅
+attributes: {str: 8, dex: 14, con: 10, int: 10, wis: 12, wil: 14}
+max_hp: 22
+speed: 5
+armor_bonus: 1
+weapon: shade_blades
+ai_profile: assassin
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [construct]
+skills: [skill_blink, skill_ember_brand]
+opening_statuses:
+  - {status: molten_burst}

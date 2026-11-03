@@ -1,0 +1,25 @@
+# 硫煙獸（Phase 5F-5a；19.2.1：噴硫煙——煙霧＋中毒）。只給敵人用；數值為初值，未經模擬。
+id: skill_sulfur_breath
+schema_version: 1
+name_zh: 硫煙吐息
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: cone, size: 3}
+effects:
+  - {type: create_surface, surface: smoke}
+  - {type: damage, dice: 1d4, element: poison}
+  - {type: apply_status, status: poison, duration: 3}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [poison, spell, area, smoke]
+narrative:
+  concept: 一口黃濁的硫煙噴出來，嗆得人睜不開眼
+  cast_flavor: 硫煙獸的鼻孔一鼓，刺鼻的黃煙朝前方翻湧
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

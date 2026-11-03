@@ -1,0 +1,16 @@
+# 灰燼荒原敵人（Phase 5F-5a；19.2.1）。數值是初值（未經模擬）。
+# 硫煙獸：控制、噴硫煙（煙霧＋中毒）。
+id: sulfur_beast
+name_zh: 硫煙獸
+attributes: {str: 12, dex: 10, con: 14, int: 6, wis: 10, wil: 10}
+max_hp: 28
+speed: 4
+armor_bonus: 2
+weapon: fangs
+ai_profile: brute
+resist: {}
+element_mods: {poison: -500, ice: 500}
+tags: [beast, lava_beast]
+skills: [skill_sulfur_breath]
+opening_statuses:
+  - {status: molten_burst}

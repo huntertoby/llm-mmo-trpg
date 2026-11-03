@@ -21,6 +21,7 @@ looks:
   earth_wall:       {zh: 土牆,       body: construct, variant: wall,        element: collision,   size: medium, trait: no_ring}
   war_wolf:         {zh: 戰狼,       body: beast,     variant: wolf,        element: prone,       size: medium}
   hawk:             {zh: 鷹隼,       body: beast,     variant: bird,        element: marked,      size: small,  trait: flying}
+  ember_whelp:      {zh: 餘燼幼蜥,   body: beast,     variant: wolf,        element: ignite,      size: small}   # 5F-5a：熔爐母獸產下的幼蜥；先借戰狼的四足畫法，待美術 PM
   vine:             {zh: 藤蔓,       body: plant,     element: prone,       size: medium, trait: ground}
   war_totem:        {zh: 戰意圖騰,   body: totem,     variant: war,         element: summon,      size: medium, trait: aura}
   pull_totem:       {zh: 吸引圖騰,   body: totem,     variant: pull,        element: collision,   size: medium}

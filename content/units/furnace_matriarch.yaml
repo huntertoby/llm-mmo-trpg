@@ -1,0 +1,16 @@
+# 灰燼荒原敵人（Phase 5F-5a；19.2.1）。數值是初值（未經模擬）。
+# 熔爐母獸：召喚，每 2 回合產下 1 隻幼蜥（召喚原語，冷卻 2）。
+id: furnace_matriarch
+name_zh: 熔爐母獸
+attributes: {str: 12, dex: 8, con: 16, int: 8, wis: 12, wil: 12}
+max_hp: 38
+speed: 3
+armor_bonus: 2
+weapon: fangs
+ai_profile: support
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [beast, lava_beast]
+skills: [skill_summon_ember_whelp]
+opening_statuses:
+  - {status: molten_burst}

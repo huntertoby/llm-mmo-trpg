@@ -1,0 +1,16 @@
+# 灰燼荒原敵人（Phase 5F-5a；19.2.1）。數值是初值（未經模擬）。
+# 火塵蝠：遠程（飛行）、灑火塵點燃。遠程上限 2 名（火塵蝠、噴岩龜）。
+id: fire_dust_bat
+name_zh: 火塵蝠
+attributes: {str: 6, dex: 16, con: 8, int: 10, wis: 12, wil: 8}
+max_hp: 16
+speed: 6
+armor_bonus: 1
+weapon: fire_staff
+ai_profile: archer
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [beast, flying, lava_beast]
+skills: [skill_fire_bolt]
+opening_statuses:
+  - {status: molten_burst}
