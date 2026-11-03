@@ -215,6 +215,17 @@ affixes:
     change: damage_permille
     value: {min: 60, max: 150}
     value_unit: permille
+  # Phase 5D-4（玩法 PM 2026-11-03 代決）：帶電補「利用」方向。8.21.4.1 的「對潮濕或帶電中的目標雷電傷害增加」
+  # 要元素篩選（引擎新的 change），照 5D2b-1 用最接近的現成效果：利用帶電的技能傷害 +N（範圍照 5D2b-2）。
+  - id: affix_kw_shock_damage
+    category: keyword
+    name_zh: 利用帶電的技能傷害 +{n}
+    slots: [weapon, offhand, neck, ring]
+    keyword: charged
+    direction: exploit
+    change: damage_permille
+    value: {min: 60, max: 150}
+    value_unit: permille
 
   # --- 4 普攻附加（結算在 G2）---
   - id: affix_attack_lightning

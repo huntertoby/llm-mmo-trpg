@@ -36,6 +36,7 @@ from trpg.world.state import CharacterState
 __all__ = [
     "apply_equip",
     "equip_problem",
+    "gear_run",
     "hero_loadout",
     "item_loadout",
     "loot_rules",
@@ -62,6 +63,11 @@ def item_loadout(library: ContentLibrary, items: Mapping[str, ItemDef]) -> Loado
 def _run(char: CharacterState) -> RunState:
     update = {"equipment": dict(char.equipment), "backpack": char.gear}
     return as_run(char).model_copy(update=update)
+
+
+def gear_run(char: CharacterState) -> RunState:
+    """角色的裝備換成一輪的狀態（API 顯示裝備卡與比較用；5D-4）。"""
+    return _run(char)
 
 
 def worn_gear(library: ContentLibrary, char: CharacterState) -> dict[str, ItemDef]:

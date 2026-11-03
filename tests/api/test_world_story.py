@@ -149,6 +149,36 @@ def test_guaranteed_opportunity_has_own_who(library: ContentLibrary) -> None:
     assert card is not None and (card.who_zh, card.actor_zh) == (GUARANTEE_WHO, GUARANTEE_WHO)
 
 
+def test_guaranteed_story_is_authored_not_template(library: ContentLibrary) -> None:
+    """5D-4（5B-4e #4）：保底的專用旁白標 ``authored``（前端不標「模板文字」）；降級模板仍是
+    ``fallback``。"""
+    world = make_world()
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    trigger = EventTrigger(
+        region="cloud_ridge",
+        location="old_pine_altar",
+        skeleton="storm_altar",
+        candidates=("storm_altar",),
+        weather="clear",
+        day_phase="day",
+        at=NOON,
+        guaranteed=True,
+    )
+    char = char.model_copy(update={"location": "old_pine_altar", "pending_event": trigger})
+    action = event_story(library, world, char, None, NOON)
+    told = world_step(library, world, char, action, NOON).char
+    card = event_view(library, world, told, NOON, (action,))
+    assert card is not None and card.story is not None
+    assert card.story.source == "authored" and card.story.text_zh == GUARANTEE_TEXT
+    plain = char.model_copy(
+        update={"pending_event": trigger.model_copy(update={"guaranteed": False})}
+    )
+    fallback = event_story(library, world, plain, None, NOON)
+    told = world_step(library, world, plain, fallback, NOON).char
+    card = event_view(library, world, told, NOON, (fallback,))
+    assert card is not None and card.story is not None and card.story.source == "fallback"
+
+
 def test_opportunity_hint_line(library: ContentLibrary) -> None:
     """5B-4e：機遇提示的事件在動作紀錄裡顯示內容庫的整句。"""
     char = new_character(library, "alice", hero(library), region="cloud_ridge")

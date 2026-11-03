@@ -10,15 +10,25 @@ export function isMinorSkill(card: Pick<SkillCard, "kind_id"> | undefined): bool
   return card !== undefined && MINOR_KINDS.includes(card.kind_id);
 }
 
-/** 把技能按鈕分成主動（大格）與被動／反應／姿態（小圖示），各自保持原順序。 */
+/** 腰包的道具技能（Phase 5D-4，8.17：卡片標籤有 `item`）：不佔技能欄位，放在技能列的獨立「道具」欄。 */
+export function isItemSkill(card: Pick<SkillCard, "tags"> | undefined): boolean {
+  return card !== undefined && (card.tags ?? []).includes("item");
+}
+
+/** 把技能按鈕分成主動（大格）、道具（獨立的道具欄，5D-4）與被動／反應／姿態（小圖示），各自保持原順序。 */
 export function splitSkills(
   buttons: readonly SkillButton[],
   cards: SkillCards,
-): { main: SkillButton[]; minor: SkillButton[] } {
+): { main: SkillButton[]; minor: SkillButton[]; items: SkillButton[] } {
   const main: SkillButton[] = [];
   const minor: SkillButton[] = [];
-  for (const b of buttons) (isMinorSkill(cards[b.skillId]) ? minor : main).push(b);
-  return { main, minor };
+  const items: SkillButton[] = [];
+  for (const b of buttons) {
+    const card = cards[b.skillId];
+    if (isItemSkill(card)) items.push(b);
+    else (isMinorSkill(card) ? minor : main).push(b);
+  }
+  return { main, minor, items };
 }
 
 /** 小圖示上的字：技能名稱的第一個字（空字串時用「？」）。 */

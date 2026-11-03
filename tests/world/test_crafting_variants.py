@@ -15,6 +15,7 @@ from trpg.world.crafting import fingerprint, plan_craft, recipe_code, variant_pr
 from trpg.world.crafting_actions import (
     AffixChangedEvent,
     CraftAction,
+    EnhanceAction,
     GearCraftedEvent,
     ImbueAction,
     RerollAction,
@@ -190,3 +191,60 @@ def test_variant_missing_essence_keeps_state(library: ContentLibrary, make_char:
     poor = _rich(make_char, "bob").model_copy(update={"bag": {COARSE: 20, MIST: 5, ESSENCE: 1}})
     with pytest.raises(WorldActionError, match="材料不夠"):
         _step(library, world, poor, CraftAction(station=SMITHY, code=code))
+
+
+# ---------------------------------------------------------------------------
+# 配方表每件裝備只列最新一筆（5D-4，玩法 PM 2026-11-03 代決）
+# ---------------------------------------------------------------------------
+
+
+def _listed(world: WorldState) -> list[str]:
+    return [r.code for r in world.recipes if r.listed]
+
+
+def test_recipe_table_lists_only_latest_per_item(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world, char, events = _modded(library, make_char)
+    mod = char.gear_mods[char.gear[-1].id]
+    assert _listed(world) == [mod.variant]  # 基礎碼與中間兩步都不列
+    assert len(world.recipes) == 4  # 紀錄都還在
+    for record in world.recipes:  # 首位發現者不變
+        assert record.discoverer == "alice"
+    assert {e.code for e in events} | {mod.recipe} == {r.code for r in world.recipes}
+
+
+def test_unlisted_old_code_still_crafts_and_relists(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world, char, events = _modded(library, make_char)
+    old = events[0].code
+    assert old is not None and old not in _listed(world)
+    bob = _rich(make_char, "bob")
+    result = _step(library, world, bob, CraftAction(station=SMITHY, code=old.upper()))
+    assert not _crafted(result).discovered
+    assert old in _listed(result.world)  # bob 的那件現在是這個碼
+    record = result.world.recipe_of(old)
+    assert record is not None and record.discoverer == "alice"
+    # 基礎碼也照打
+    base = char.gear_mods[char.gear[-1].id].recipe
+    assert base is not None and base not in _listed(world)
+    again = _step(library, world, bob, CraftAction(station=SMITHY, code=base))
+    assert base in _listed(again.world)
+
+
+def test_enhance_does_not_touch_recipe_table(library: ContentLibrary, make_char: MakeChar) -> None:
+    world, char, _ = _modded(library, make_char)
+    item = char.gear[-1]
+    result = _step(library, world, char, EnhanceAction(station=SMITHY, item=item.id))
+    assert result.world.recipes == world.recipes
+
+
+def test_old_record_without_listed_reads_as_listed(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    world, _, _ = _modded(library, make_char)
+    data = world.model_dump(mode="json")
+    for record in data["recipes"]:
+        record.pop("listed")
+    assert all(r.listed for r in WorldState.model_validate(data).recipes)

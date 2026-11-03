@@ -490,12 +490,24 @@ def _craft(
 def _remember(world: WorldState, record: RecipeRecord) -> tuple[WorldState, RecipeRecord, bool]:
     """世界還沒有這個配方碼 → 記下（首位發現者寫在 ``record``，M6）。
 
+    已經有的碼：一件裝備現在是這個碼了，配方表重新列出它（5D-4，``listed``）；首位發現者不變。
     回傳（世界、世界裡的紀錄、這次是不是新發現）。"""
     known = world.recipe_of(record.code)
     if known is not None:
-        return world, known, False
+        return _set_listed(world, known.code, listed=True), known, False
     recipes = sorted((*world.recipes, record), key=lambda r: r.code)
     return world.model_copy(update={"recipes": tuple(recipes)}), record, True
+
+
+def _set_listed(world: WorldState, code: str, *, listed: bool) -> WorldState:
+    """配方表每件裝備只列最新一筆（5D-4，玩法 PM 2026-11-03 代決）：紀錄留著（舊碼照樣能打），
+    只改要不要列在配方表上。"""
+    if all(r.listed == listed for r in world.recipes if r.code == code):
+        return world
+    recipes = tuple(
+        r.model_copy(update={"listed": listed}) if r.code == code else r for r in world.recipes
+    )
+    return world.model_copy(update={"recipes": recipes})
 
 
 # ---------------------------------------------------------------------------
@@ -647,6 +659,9 @@ def _change(
         code = recipe_code(variant_print(mod.fingerprint, changed.steps))
         changed = changed.model_copy(update={"variant": code})
         base = world.recipe_of(mod.recipe)
+        previous = mod.variant or mod.recipe  # 這件裝備改之前的碼：不再是它的最新一筆（5D-4）
+        if previous != code:
+            world = _set_listed(world, previous, listed=False)
         if base is not None:
             world, _, discovered = _remember(
                 world,
@@ -659,6 +674,7 @@ def _change(
                         "discovered_at": now,
                         "base": base.code,
                         "steps": changed.steps,
+                        "listed": True,
                     }
                 ),
             )
