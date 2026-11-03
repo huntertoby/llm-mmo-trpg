@@ -10,6 +10,7 @@ import pytest
 import yaml
 
 from trpg.content.library import ContentLibrary, load_library
+from trpg.content.loader import load_content_file
 from trpg.content.world_crafting import (
     CRAFTING_FILE,
     RESONANCE_FILE,
@@ -18,6 +19,7 @@ from trpg.content.world_crafting import (
     crafting_problems,
     resonance_problems,
 )
+from trpg.content.world_events import NpcCardTable
 from trpg.shared.errors import ContentError
 
 
@@ -126,3 +128,32 @@ def test_bad_file_raises(tmp_path: Path, library: ContentLibrary) -> None:
     (root / CRAFTING_FILE).write_text(yaml.safe_dump(data, allow_unicode=True), "utf-8")
     with pytest.raises(ContentError, match="沒有地點圖"):
         load_library(root)
+
+
+# ---------------------------------------------------------------------------
+# 5D-3b：隱藏配方的提示（20.4）與荒原的待接人設卡（19.5）
+# ---------------------------------------------------------------------------
+
+
+def test_hidden_recipe_hints(library: ContentLibrary) -> None:
+    rules = library.world_crafting
+    assert rules is not None
+    tavern = rules.hints_at("ashen_waste", "ember_market", "tavern")
+    assert [(h.name_zh, t.text_zh) for h, t in tavern] == [("蒸汽護腕", "霧與火相遇之處")]
+    rumor = rules.hints_at("ashen_waste", source="rumor")
+    assert [(h.name_zh, t.text_zh) for h, t in rumor] == [("冰火雙生戒", "冰與火在同一隻蜥蜴身上")]
+    assert [h.name_zh for h, _ in rules.hints_at("cloud_ridge")] == ["驚雷霧袍"]
+    assert "ashen_waste" not in library.world_maps  # 荒原地點圖到位時，提示的地點會被檢查
+
+
+def test_hint_location_checked_when_map_exists(library: ContentLibrary) -> None:
+    data = _raw(library)
+    data["hidden"][0]["hints"][0]["location"] = "nowhere"
+    assert any("提示的地點 nowhere" in p for p in _problems(library, data))
+
+
+def test_pending_ashen_npc_card(library: ContentLibrary) -> None:
+    table = load_content_file(library.root / "world/pending/ashen_waste.yaml", NpcCardTable)
+    smith = table.npc_by_id()["smith_lu"]
+    assert smith.name_zh == "爐叔" and smith.role_zh == "鐵匠"
+    assert "ashen_waste" not in library.world_event_content.npcs  # 不接店、不載入

@@ -8,6 +8,7 @@ from collections.abc import Callable
 import pytest
 
 from tests.world.helpers import NOON, make_world
+from trpg.content.equipment import ItemDef
 from trpg.content.item_gen import affix_choices
 from trpg.content.library import ContentLibrary
 from trpg.world.crafting import fingerprint, plan_craft, recipe_code, variant_print
@@ -80,8 +81,8 @@ def _modded(
     return result.world, result.char, events
 
 
-def _same(a: object, b: object) -> bool:
-    return a.model_copy(update={"id": "x"}) == b.model_copy(update={"id": "x"})  # type: ignore[attr-defined]
+def _same(a: ItemDef, b: ItemDef) -> bool:
+    return a.model_copy(update={"id": "x"}) == b.model_copy(update={"id": "x"})
 
 
 def test_reroll_records_variant_and_discoverer(
@@ -142,7 +143,7 @@ def test_variant_further_reroll_new_discoverer(
     )
     event = _changed(again)
     assert event.discovered and event.code not in {code, None}
-    assert again.world.recipe_of(event.code).discoverer == "bob"  # type: ignore[arg-type,union-attr]
+    assert again.world.recipe_of(event.code).discoverer == "bob"  # type: ignore[union-attr]
     # 照第 4 步的序列再打一次（alice 打）→ 同一件
     third = _step(library, again.world, char, CraftAction(station=SMITHY, code=event.code))
     assert _same(third.char.gear[-1], again.char.gear[-1])
