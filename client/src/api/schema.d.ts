@@ -3432,6 +3432,76 @@ export interface components {
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
+        /** FieldDoorView */
+        FieldDoorView: {
+            /** Id */
+            id: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** To */
+            to: string;
+            /** To Name Zh */
+            to_name_zh: string;
+        };
+        /** FieldExitView */
+        FieldExitView: {
+            /** Id */
+            id: string;
+            /** Cells */
+            cells: [
+                number,
+                number
+            ][];
+            /** To */
+            to: string;
+            /** To Name Zh */
+            to_name_zh: string;
+        };
+        /** FieldFacilityView */
+        FieldFacilityView: {
+            /** Kind */
+            kind: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** FieldNpcView */
+        FieldNpcView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** FieldObjectView */
+        FieldObjectView: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** FieldPositionView */
+        FieldPositionView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Facing
+             * @enum {string}
+             */
+            facing: "n" | "e" | "s" | "w";
+        };
         /**
          * FieldSpec
          * @description 一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、
@@ -3528,8 +3598,67 @@ export interface components {
              */
             readonly object_choice: boolean;
         };
+        /** FieldStoneView */
+        FieldStoneView: {
+            /** Id */
+            id: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Unlocked */
+            unlocked: boolean;
+        };
+        /** FieldTileView */
+        FieldTileView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Height */
+            height: number;
+            /** Terrain */
+            terrain: string;
+            /**
+             * Surface
+             * @default none
+             */
+            surface: string;
+        };
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
+        /** FieldView */
+        FieldView: {
+            /** Map Id */
+            map_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Region */
+            region: string;
+            /** Location */
+            location: string;
+            /** Interior */
+            interior: boolean;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Tiles */
+            tiles: components["schemas"]["FieldTileView"][];
+            /** Objects */
+            objects: components["schemas"]["FieldObjectView"][];
+            /** Exits */
+            exits: components["schemas"]["FieldExitView"][];
+            /** Doors */
+            doors: components["schemas"]["FieldDoorView"][];
+            /** Stones */
+            stones: components["schemas"]["FieldStoneView"][];
+            /** Npcs */
+            npcs: components["schemas"]["FieldNpcView"][];
+            /** Facilities */
+            facilities: components["schemas"]["FieldFacilityView"][];
+            me: components["schemas"]["FieldPositionView"];
+        };
         /**
          * FlashAction
          * @description 閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``
@@ -8639,6 +8768,19 @@ export interface components {
             form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
+        /**
+         * UseTeleportStoneAction
+         * @description 站在傳送石上，傳到已解鎖的另一顆（``to`` 是傳送石 ID）。
+         */
+        UseTeleportStoneAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "use_teleport_stone";
+            /** To */
+            to: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -8707,6 +8849,20 @@ export interface components {
              */
             type: "vault";
             dest: components["schemas"]["Pos"];
+        };
+        /**
+         * WalkAction
+         * @description 沿 ``path`` 走：每一格都要和前一格（第一格和目前位置）四方向相鄰。日誌記整串路徑，重播逐格
+         *     重算。
+         */
+        WalkAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "walk";
+            /** Path */
+            path: components["schemas"]["XY"][];
         };
         /** WalletView */
         WalletView: {
@@ -8892,7 +9048,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -9105,6 +9261,7 @@ export interface components {
             inventory?: components["schemas"]["InventoryView"] | null;
             shop?: components["schemas"]["ShopView"] | null;
             crafting?: components["schemas"]["CraftingView"] | null;
+            field?: components["schemas"]["FieldView"] | null;
         };
         XY: [
             number,

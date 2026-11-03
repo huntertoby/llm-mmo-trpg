@@ -15,6 +15,14 @@ from trpg.content.library import ContentLibrary, load_library
 
 @pytest.fixture(scope="session")
 def library() -> ContentLibrary:
+    """沒有實地地圖的內容庫（Phase 6B-2：有實地地圖的地點不能 ``travel``；5A～5F 的世界 API 測試
+    照舊點地點移動）。實地地圖的測試用 ``field_library``。"""
+    return replace(load_library(), field_maps={})
+
+
+@pytest.fixture(scope="session")
+def field_library() -> ContentLibrary:
+    """完整的內容庫（含實地地圖；6B-2 起）。"""
     return load_library()
 
 
