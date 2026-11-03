@@ -14,6 +14,17 @@ export function toggleCite(cited: readonly string[], fact: string): string[] {
   return [...cited, fact];
 }
 
+/**
+ * 點選引用時把事實的關鍵詞插進回答（5C-3d：引擎要在原文找到關鍵詞才算這筆）。
+ * 已經含有、沒有可插的文字、或插了會超過字數上限時不動。
+ */
+export function insertCite(text: string, insert: string | null | undefined): string {
+  if (insert == null || insert === "" || text.includes(insert)) return text;
+  const trimmed = text.replace(/\s+$/u, "");
+  const next = trimmed === "" ? insert : `${trimmed}，${insert}`;
+  return [...next].length > PLAYER_TEXT_MAX ? text : next;
+}
+
 /** 輸入框下方的字數（例：「12／500」）；超過時加「（太長）」。 */
 export function lengthLabel(text: string): string {
   const n = [...text].length;

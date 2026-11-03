@@ -176,6 +176,31 @@ def test_situation_open_answer_is_final(client: TestClient) -> None:
     assert kinds == ["travel", "narrate", "narrate", "situation", "narrate"]
 
 
+def test_cite_insert_text_passes_keyword_check(client: TestClient) -> None:
+    """5C-3d：前端點選引用時插入的 ``insert_zh`` 一定過得了引擎的關鍵詞比對。"""
+    cid, view = _event_at_ferry(client)
+    template = _situation(view)
+    opened = _ok(_post(client, cid, "situation", {"template": template}))
+    fact = next(f for f in opened["event"]["situation"]["facts"] if f["fact"] == "supplies")
+    assert fact["insert_zh"] == "補給"
+    answer = {"template": template, "text": f"我把{fact['insert_zh']}拿出來", "cite": ["supplies"]}
+    result = _ok(_post(client, cid, "situation/answer", answer))["situation_result"]
+    assert result["care"][0]["counted"] is True
+
+
+def test_cite_without_keyword_is_dropped(client: TestClient) -> None:
+    """5C-3d：引用了但原文沒提到 → 這筆不算（不退回、照常判定）。"""
+    cid, view = _event_at_ferry(client)
+    template = _situation(view)
+    _ok(_post(client, cid, "situation", {"template": template}))
+    answer = {"template": template, "text": "我帶他繞路走", "cite": ["supplies"]}
+    done = _ok(_post(client, cid, "situation/answer", answer))
+    result = done["situation_result"]
+    assert result["care"][0]["counted"] is False and result["care_bonus"] == 0
+    assert result["care"][0]["reason_zh"] == "原文沒有提到這筆事實"
+    assert done["event"] is None
+
+
 def test_cite_must_be_held(client: TestClient) -> None:
     cid, view = _event_at_ferry(client)
     template = _situation(view)

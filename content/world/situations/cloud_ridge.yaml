@@ -18,7 +18,7 @@ templates:
     base_dc: 12
     danger: 2
     weaknesses:
-      - {id: wolf_trail, text_zh: 行商看得出狼群從哪邊來, methods: [tracking]}
+      - {id: wolf_trail, text_zh: 行商看得出狼群從哪邊來, methods: [tracking], aliases_zh: [狼群, 狼的足跡]}
     success: {rewards: {xp_permille: 1000, threads: [peddler_owes_you, wolves_driven_down]}}
     partial:
       rewards: {xp_permille: 500, threads: [peddler_owes_you]}
@@ -34,7 +34,7 @@ templates:
     base_dc: 11
     danger: 1
     weaknesses:
-      - {id: temple_bell, text_zh: 道童認得觀裡的鐘聲, methods: [tracking]}
+      - {id: temple_bell, text_zh: 道童認得觀裡的鐘聲, methods: [tracking], aliases_zh: [鐘聲]}
     success: {rewards: {xp_permille: 1000, threads: [temple_quarrel]}}
     partial:
       rewards: {xp_permille: 500, threads: [temple_quarrel]}
@@ -50,7 +50,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: sentry_alone, text_zh: 哨兵只有一個人，援兵還遠, methods: [intimidate]}
+      - {id: sentry_alone, text_zh: 哨兵只有一個人，援兵還遠, methods: [intimidate], aliases_zh: [只有一個人, 援兵]}
     success: {rewards: {xp_permille: 1000, threads: [scarface_grudge]}}
     partial:
       rewards: {xp_permille: 500, threads: [scarface_grudge]}
@@ -66,7 +66,7 @@ templates:
     base_dc: 13
     danger: 1
     weaknesses:
-      - {id: elder_opening, text_zh: 老人總是用同一個開局, methods: [lore, notice]}
+      - {id: elder_opening, text_zh: 老人總是用同一個開局, methods: [lore, notice], aliases_zh: [開局]}
     success: {rewards: {xp_permille: 1000, threads: [storm_night_fog]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {}
@@ -80,7 +80,7 @@ templates:
     base_dc: 12
     danger: 1
     weaknesses:
-      - {id: elder_lonely, text_zh: 老人只是想有人陪, methods: [parley]}
+      - {id: elder_lonely, text_zh: 老人只是想有人陪, methods: [parley], aliases_zh: [陪他, 有人陪]}
     success: {rewards: {xp_permille: 1000, threads: [storm_night_fog]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {}
@@ -94,7 +94,7 @@ templates:
     base_dc: 14
     danger: 2
     weaknesses:
-      - {id: vine_holds, text_zh: 崖上的老藤夠結實, methods: [climb]}
+      - {id: vine_holds, text_zh: 崖上的老藤夠結實, methods: [climb], aliases_zh: [老藤, 藤蔓]}
     success: {rewards: {xp_permille: 1000, supplies: 2, threads: [alchemist_owes_you]}}
     partial:
       rewards: {xp_permille: 500, supplies: 1}
@@ -110,7 +110,7 @@ templates:
     base_dc: 13
     danger: 1
     weaknesses:
-      - {id: monk_fear, text_zh: 主張交給官府的修士其實怕觀主, methods: [parley]}
+      - {id: monk_fear, text_zh: 主張交給官府的修士其實怕觀主, methods: [parley], aliases_zh: [怕觀主]}
     success: {rewards: {xp_permille: 1000, threads: [temple_traitor]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {penalties: {supplies: 1}}
@@ -124,7 +124,7 @@ templates:
     base_dc: 13
     danger: 1
     weaknesses:
-      - {id: monk_story_gap, text_zh: 其中一人的說法前後矛盾, methods: [notice]}
+      - {id: monk_story_gap, text_zh: 其中一人的說法前後矛盾, methods: [notice], aliases_zh: [前後矛盾, 矛盾]}
     success: {rewards: {xp_permille: 1000, threads: [temple_traitor]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {penalties: {supplies: 1}}
@@ -138,7 +138,7 @@ templates:
     base_dc: 14
     danger: 3
     weaknesses:
-      - {id: pursuers_lost_in_fog, text_zh: 追兵不熟霧裡的小路, methods: [stealth]}
+      - {id: pursuers_lost_in_fog, text_zh: 追兵不熟霧裡的小路, methods: [stealth], aliases_zh: [霧裡的小路, 小路]}
     success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
     partial:
       rewards: {xp_permille: 500, threads: [gang_fort_secret_door]}
@@ -154,7 +154,7 @@ templates:
     base_dc: 14
     danger: 2
     weaknesses:
-      - {id: hunter_name, text_zh: 喊出獵人的名字能喚回他, methods: [uncanny]}
+      - {id: hunter_name, text_zh: 喊出獵人的名字能喚回他, methods: [uncanny], aliases_zh: [名字, 阿岳]}
     success: {rewards: {xp_permille: 1000, threads: [wraiths_from_rift], buffs: [rallied]}}
     partial:
       rewards: {xp_permille: 500, threads: [wraiths_from_rift]}
@@ -170,7 +170,7 @@ templates:
     base_dc: 12
     danger: 1
     weaknesses:
-      - {id: ferry_spare_parts, text_zh: 渡口邊堆著舊船的木料, methods: [mechanism]}
+      - {id: ferry_spare_parts, text_zh: 渡口邊堆著舊船的木料, methods: [mechanism], aliases_zh: [木料, 舊船]}
     success: {rewards: {xp_permille: 1000, threads: [ferryman_daughter]}}
     partial:
       rewards: {xp_permille: 500}
@@ -186,7 +186,7 @@ templates:
     base_dc: 13
     danger: 3
     weaknesses:
-      - {id: bear_cubs_sleep, text_zh: 小熊在睡，母熊不想離巢, methods: [notice, stealth]}
+      - {id: bear_cubs_sleep, text_zh: 小熊在睡，母熊不想離巢, methods: [notice, stealth], aliases_zh: [小熊, 離巢]}
     success: {rewards: {xp_permille: 1000, threads: [shards_under_den]}}
     partial:
       rewards: {xp_permille: 500}
@@ -202,7 +202,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: envoy_duty, text_zh: 雲鶴使只想確認身分, methods: [parley]}
+      - {id: envoy_duty, text_zh: 雲鶴使只想確認身分, methods: [parley], aliases_zh: [確認身分, 身分]}
     success: {rewards: {xp_permille: 1000, threads: [temple_pass]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {penalties: {hurt_permille: 150}}
@@ -216,7 +216,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: envoy_rocks, text_zh: 橋頭有幾塊大石可以躲, methods: [climb]}
+      - {id: envoy_rocks, text_zh: 橋頭有幾塊大石可以躲, methods: [climb], aliases_zh: [大石, 石頭]}
     success: {rewards: {xp_permille: 1000, buffs: [guarded]}}
     partial:
       rewards: {xp_permille: 500}
@@ -232,7 +232,7 @@ templates:
     base_dc: 15
     danger: 2
     weaknesses:
-      - {id: altar_pine_roots, text_zh: 古松的根會把雷導進地裡, methods: [endurance, uncanny]}
+      - {id: altar_pine_roots, text_zh: 古松的根會把雷導進地裡, methods: [endurance, uncanny], aliases_zh: [古松的根, 松根]}
     success: {rewards: {xp_permille: 1000, buffs: [empowered]}}
     partial:
       rewards: {xp_permille: 500}
@@ -248,7 +248,7 @@ templates:
     base_dc: 15
     danger: 2
     weaknesses:
-      - {id: sword_loosened, text_zh: 劍身已被雨水鏽鬆, methods: [force]}
+      - {id: sword_loosened, text_zh: 劍身已被雨水鏽鬆, methods: [force], aliases_zh: [鏽鬆, 生鏽]}
     success: {rewards: {xp_permille: 1000, threads: [swordsman_seeks_blade]}}
     partial:
       rewards: {xp_permille: 500}
@@ -264,7 +264,7 @@ templates:
     base_dc: 15
     danger: 2
     weaknesses:
-      - {id: array_eye, text_zh: 劍陣只有一個陣眼, methods: [mechanism, finesse]}
+      - {id: array_eye, text_zh: 劍陣只有一個陣眼, methods: [mechanism, finesse], aliases_zh: [陣眼]}
     success: {rewards: {xp_permille: 1000, threads: [swordsman_seeks_blade]}}
     partial:
       rewards: {xp_permille: 500}
@@ -280,7 +280,7 @@ templates:
     base_dc: 15
     danger: 3
     weaknesses:
-      - {id: convoy_night_watch, text_zh: 押送隊輪班換哨時有空檔, methods: [finesse, notice]}
+      - {id: convoy_night_watch, text_zh: 押送隊輪班換哨時有空檔, methods: [finesse, notice], aliases_zh: [換哨, 輪班]}
     advantage_threads: [gang_fort_secret_door]
     success: {rewards: {xp_permille: 1000, supplies: 1}}
     partial:
@@ -300,7 +300,7 @@ templates:
     danger: 2
     advantage_threads: [alchemist_owes_you]
     weaknesses:
-      - {id: spring_wind, text_zh: 風向一變，毒霧會散開一陣, methods: [endurance]}
+      - {id: spring_wind, text_zh: 風向一變，毒霧會散開一陣, methods: [endurance], aliases_zh: [風向]}
     success: {rewards: {xp_permille: 1000, reveal: [elixir_cave]}}
     partial:
       rewards: {xp_permille: 500}
@@ -316,7 +316,7 @@ templates:
     base_dc: 14
     danger: 2
     weaknesses:
-      - {id: spring_herbs, text_zh: 谷裡長著解毒的草, methods: [lore]}
+      - {id: spring_herbs, text_zh: 谷裡長著解毒的草, methods: [lore], aliases_zh: [藥草, 解毒的草]}
     success: {rewards: {xp_permille: 1000, reveal: [elixir_cave]}}
     partial:
       rewards: {xp_permille: 500}
@@ -332,7 +332,7 @@ templates:
     base_dc: 12
     danger: 1
     weaknesses:
-      - {id: storyteller_likes_mist, text_zh: 說書人愛聽霧裡的怪事, methods: [parley, lore]}
+      - {id: storyteller_likes_mist, text_zh: 說書人愛聽霧裡的怪事, methods: [parley, lore], aliases_zh: [霧裡的怪事, 怪事]}
     success: {rewards: {xp_permille: 1000, threads: [tavern_rumor]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {}
@@ -346,7 +346,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: lantern_footprints, text_zh: 泥地上留著新的腳印, methods: [tracking]}
+      - {id: lantern_footprints, text_zh: 泥地上留著新的腳印, methods: [tracking], aliases_zh: [腳印]}
     success: {rewards: {xp_permille: 1000, threads: [missing_went_to_rift]}}
     partial:
       rewards: {xp_permille: 500}
@@ -362,7 +362,7 @@ templates:
     base_dc: 12
     danger: 1
     weaknesses:
-      - {id: fox_trade, text_zh: 她缺的是補給，不是錢, methods: [parley]}
+      - {id: fox_trade, text_zh: 她缺的是補給，不是錢, methods: [parley], aliases_zh: [補給]}
     success: {rewards: {xp_permille: 1000, supplies: 1, threads: [foxfire_guide]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {penalties: {supplies: 1}}
@@ -376,7 +376,7 @@ templates:
     base_dc: 12
     danger: 2
     weaknesses:
-      - {id: leopard_paw_prints, text_zh: 草叢邊的泥地留著新鮮的爪印, methods: [tracking]}
+      - {id: leopard_paw_prints, text_zh: 草叢邊的泥地留著新鮮的爪印, methods: [tracking], aliases_zh: [爪印]}
     success: {rewards: {xp_permille: 1000, supplies: 2, threads: [ayue_father_relic]}}
     partial:
       rewards: {xp_permille: 500, supplies: 1, threads: [ayue_father_relic]}
@@ -392,7 +392,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: furnace_vent, text_zh: 爐頂的氣孔每隔一陣會把毒霧吹散, methods: [endurance]}
+      - {id: furnace_vent, text_zh: 爐頂的氣孔每隔一陣會把毒霧吹散, methods: [endurance], aliases_zh: [氣孔]}
     success: {rewards: {xp_permille: 1000, supplies: 2}}
     partial:
       rewards: {xp_permille: 500, supplies: 1}
@@ -408,7 +408,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: furnace_inscription, text_zh: 爐身刻著關火的口訣, methods: [lore]}
+      - {id: furnace_inscription, text_zh: 爐身刻著關火的口訣, methods: [lore], aliases_zh: [口訣, 刻字]}
     success: {rewards: {xp_permille: 1000, supplies: 2}}
     partial:
       rewards: {xp_permille: 500, supplies: 1}
@@ -424,7 +424,7 @@ templates:
     base_dc: 13
     danger: 1
     weaknesses:
-      - {id: chime_foxfire, text_zh: 她的狐火會隨你的回答改變, methods: [uncanny, notice]}
+      - {id: chime_foxfire, text_zh: 她的狐火會隨你的回答改變, methods: [uncanny, notice], aliases_zh: [狐火]}
     success: {rewards: {xp_permille: 1000, threads: [frost_chime_we]}}
     partial: {rewards: {xp_permille: 500, threads: [frost_chime_we]}}
     failure: {penalties: {supplies: 1}}
@@ -438,7 +438,7 @@ templates:
     base_dc: 13
     danger: 1
     weaknesses:
-      - {id: chime_old_tale, text_zh: 謎面出自一則關於裂痕的老傳說, methods: [lore]}
+      - {id: chime_old_tale, text_zh: 謎面出自一則關於裂痕的老傳說, methods: [lore], aliases_zh: [老傳說, 傳說]}
     success: {rewards: {xp_permille: 1000, threads: [frost_chime_we]}}
     partial: {rewards: {xp_permille: 500, threads: [frost_chime_we]}}
     failure: {penalties: {supplies: 1}}
@@ -453,7 +453,7 @@ templates:
     base_dc: 8
     danger: 1
     weaknesses:
-      - {id: granny_ferry_talk, text_zh: 渡婆婆愛用渡船打比方, methods: [parley]}
+      - {id: granny_ferry_talk, text_zh: 渡婆婆愛用渡船打比方, methods: [parley], aliases_zh: [渡船, 打比方]}
     success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {}
@@ -467,7 +467,7 @@ templates:
     base_dc: 8
     danger: 1
     weaknesses:
-      - {id: granny_slip, text_zh: 渡婆婆說到後山就停頓, methods: [notice]}
+      - {id: granny_slip, text_zh: 渡婆婆說到後山就停頓, methods: [notice], aliases_zh: [後山]}
     success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {}

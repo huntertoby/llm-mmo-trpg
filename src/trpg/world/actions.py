@@ -209,7 +209,8 @@ class SituationAction(_Model):
 
     ``proposal`` 是 LLM（或降級）提議、已經過 pydantic 驗證；引擎另外檢查合法性。提議、來源、
     prompt 版本與玩家原文都隨動作進世界動作日誌，重播照紀錄、不再呼叫 LLM（10 第 10 節）。
-    ``player_text`` 只是紀錄（引擎不讀內容；給 LLM 時包在 ``<player_input>``）。
+    ``player_text``：給 LLM 時包在 ``<player_input>``；引擎只拿它核對用心清單的關鍵詞（完全字串
+    包含，5C-3d），不解讀內容。
     """
 
     kind: Literal["situation"] = "situation"
@@ -504,6 +505,8 @@ class SituationCheckEvent(_Model):
     attribute_mod: int
     care: tuple[CareResult, ...]
     care_bonus: int
+    dropped: tuple[str, ...] = ()
+    """因為玩家原文沒提到關鍵詞而拿掉的事實編號（5C-3d；也在 ``care`` 裡標「不算」）。"""
     race_bonus: int
     total: int
     outcome: Outcome

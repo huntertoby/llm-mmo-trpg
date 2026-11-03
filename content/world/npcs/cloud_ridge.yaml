@@ -5,6 +5,7 @@
 region: cloud_ridge
 npcs:
   - id: granny_du
+    aliases_zh: [婆婆]
     name_zh: 渡婆婆
     role_zh: 鎮長
     location: mist_ferry
@@ -13,6 +14,7 @@ npcs:
     secret_zh: 年輕時是斷崖幫的人
     hooks_zh: 區域任務鏈；好感度高才說出暗門
   - id: shopkeeper_liu
+    aliases_zh: [掌櫃]
     name_zh: 柳掌櫃
     role_zh: 商人
     location: mist_ferry
@@ -21,6 +23,7 @@ npcs:
     secret_zh: 偷偷收購源晶碎片
     hooks_zh: 傳聞來源；隱藏配方的材料
   - id: daoist_qingya
+    aliases_zh: [道長, 青崖]
     name_zh: 青崖道長
     role_zh: 技能導師
     location: mist_temple_gate
@@ -29,6 +32,7 @@ npcs:
     secret_zh: 想離開道觀
     hooks_zh: 導師任務鏈（#95）
   - id: hunter_ayue
+    aliases_zh: [獵人]
     name_zh: 阿岳
     role_zh: 獵戶，劇情夥伴
     location: hunter_hut
@@ -37,6 +41,7 @@ npcs:
     secret_zh: 父親死在源晶裂痕
     hooks_zh: 新手任務鏈的劇情夥伴（#97）；主線第 1 章同行
   - id: acolyte_xiaolian
+    aliases_zh: [道童]
     name_zh: 小蓮
     role_zh: 道童
     location: mist_temple_gate
@@ -45,6 +50,7 @@ npcs:
     secret_zh: 偷看過觀主修煉
     hooks_zh: 事件 2、6；主線線索
   - id: mistlock_master
+    aliases_zh: [真人, 觀主]
     name_zh: 霧鎖真人
     role_zh: 青霧觀觀主、區域 Boss
     location: cloud_summit
@@ -53,6 +59,7 @@ npcs:
     secret_zh: 想用源晶飛升
     hooks_zh: 主線第 1 章 Boss
   - id: scarface
+    aliases_zh: [二當家]
     name_zh: 疤面
     role_zh: 斷崖幫二當家
     location: cliff_gang_fort
@@ -70,6 +77,7 @@ npcs:
     hooks_zh: 隱藏地點；狐族主角有專屬對話
   # Phase 5D-3：18、20 沒寫鐵匠是誰，開發 PM 加的最小人設卡（代決 5D3-1，待玩法 PM 補完）。
   - id: smith_shi
+    aliases_zh: [師傅, 鐵匠]
     name_zh: 石師傅
     role_zh: 鐵匠
     location: mist_ferry

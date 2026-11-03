@@ -48,3 +48,5 @@ dangers:
   - {level: 2, penalties: [supplies, debuff, hurt], hurt_max_permille: 250}
   - {level: 3, penalties: [supplies, debuff, hurt, reinforce], hurt_max_permille: 400}
 exchange_supplies: 1
+# 5C-3d：用心清單 ③ 的關鍵詞（事實名稱「補給」之外的別名；玩家原文含其中一個才算）。
+exchange_aliases_zh: [乾糧, 糧食]

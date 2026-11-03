@@ -4592,6 +4592,17 @@
           "text_zh": {
             "type": "string",
             "title": "Text Zh"
+          },
+          "insert_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insert Zh"
           }
         },
         "additionalProperties": false,

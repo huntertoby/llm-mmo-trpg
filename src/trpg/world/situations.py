@@ -6,7 +6,8 @@
 1. **合法性**：角色身上有事件、模板屬於該事件的骨架、提議的屬性與方法在模板允許的清單、難度
    調整在 ±``dc_shift_max`` 內。不合法拋 :class:`~trpg.world.errors.WorldActionError`，狀態不變。
 2. **用心清單**：每一筆的事實編號都對照 :func:`situation_facts`（引擎狀態）逐筆核對，核對不到不算；
-   同一項只算一次；加值最多 ``care_max``。
+   玩家原文（``player_text``）要含這筆事實的關鍵詞（:func:`situation_fact_keywords`，完全字串包含，
+   5C-3d），不含就拿掉這筆、其餘照算；同一項只算一次；加值最多 ``care_max``。
 3. **擲骰**：``check`` 串流一律擲兩顆 d20；持有模板的 ``advantage_threads`` ＝優勢（取高）、提議的
    劣勢（取低）、兩者都有＝抵銷。總值＝骰值＋屬性修正＋用心加值＋種族加值，對 ``base_dc ± 調整``。
 4. **三段結果**：成功／部分成功（差 ``partial_margin`` 內）／失敗，照模板的表給獎懲（預算內）、
@@ -56,18 +57,23 @@ from trpg.world.state import (
 from trpg.world.threads import active_threads, add_thread
 
 __all__ = [
+    "REASON_NO_KEYWORD",
     "CheckRoll",
     "attribute_modifier",
     "grant_threads",
     "held_threads",
     "opportunity_available",
     "resolve_situation",
+    "situation_fact_keywords",
     "situation_facts",
     "situation_rules",
     "situation_template",
 ]
 
 _EXCHANGE_FACT = "supplies"
+_EXCHANGE_NAME = "補給"
+"""用心清單 ③ 的事實名稱（關鍵詞；別名在 ``situation_rules.yaml`` ``exchange_aliases_zh``）。"""
+REASON_NO_KEYWORD = "原文沒有提到這筆事實"
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +170,62 @@ def opportunity_available(
 # ---------------------------------------------------------------------------
 
 
+def _keywords(*groups: tuple[str, ...] | str) -> tuple[str, ...]:
+    """關鍵詞（保留順序、去空白與重複）。"""
+    out: list[str] = []
+    for group in groups:
+        for raw in (group,) if isinstance(group, str) else group:
+            word = raw.strip()
+            if word and word not in out:
+                out.append(word)
+    return tuple(out)
+
+
+def _fact_entries(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    template: SituationTemplateDef,
+    now: int,
+) -> list[tuple[SituationFact, tuple[str, ...]]]:
+    """（事實, 關鍵詞）依清單項目、事實編號排序；關鍵詞的第一個是事實本身的名稱。"""
+    rules = situation_rules(library)
+    defs = _thread_defs(library)
+    held = held_threads(world, char, now)
+    entries: list[tuple[SituationFact, tuple[str, ...]]] = []
+    for thread_id in held:
+        thread = defs.get(thread_id)
+        text = thread.text_zh if thread is not None else thread_id
+        words = _keywords(text, thread.aliases_zh if thread is not None else ())
+        fact = SituationFact(item="clue", fact=f"thread:{thread_id}", text_zh=text)
+        entries.append((fact, words))
+    skeleton = _skeleton(library, char.region, template.skeleton)
+    npc_table = library.world_event_content.npcs.get(char.region)
+    cards = {} if npc_table is None else npc_table.npc_by_id()
+    for npc_id in sorted(skeleton.npcs):
+        bonds = [defs[t] for t in held if t in defs and defs[t].npc == npc_id]
+        if bonds:
+            card = cards.get(npc_id)
+            name = card.name_zh if card is not None else npc_id
+            text = f"{name}（{'、'.join(b.text_zh for b in bonds)}）"
+            words = _keywords(name, card.aliases_zh if card is not None else ())
+            entries.append(
+                (SituationFact(item="npc_bond", fact=f"npc:{npc_id}", text_zh=text), words)
+            )
+    if char.supplies >= rules.exchange_supplies:
+        text = f"拿出 {rules.exchange_supplies} 份補給交換"
+        words = _keywords(_EXCHANGE_NAME, rules.exchange_aliases_zh)
+        entries.append((SituationFact(item="exchange", fact=_EXCHANGE_FACT, text_zh=text), words))
+    for weakness in template.weaknesses:
+        fact = SituationFact(
+            item="weakness", fact=f"weakness:{weakness.id}", text_zh=weakness.text_zh
+        )
+        entries.append((fact, _keywords(weakness.text_zh, weakness.aliases_zh)))
+    order = {item: i for i, item in enumerate(CARE_ITEMS)}
+    entries.sort(key=lambda e: (order[e[0].item], e[0].fact))
+    return entries
+
+
 def situation_facts(
     library: ContentLibrary,
     world: WorldState,
@@ -177,42 +239,39 @@ def situation_facts(
     角色持有以他為對象的線頭（過去互動的紀錄）；③ ``exchange`` ``supplies``：拿得出交換用的補給；
     ④ ``weakness`` ``weakness:<id>``：模板的情境弱點（還要方法相符才算）。
     """
-    rules = situation_rules(library)
-    defs = _thread_defs(library)
-    held = held_threads(world, char, now)
-    facts: list[SituationFact] = []
-    for thread_id in held:
-        thread = defs.get(thread_id)
-        text = thread.text_zh if thread is not None else thread_id
-        facts.append(SituationFact(item="clue", fact=f"thread:{thread_id}", text_zh=text))
-    skeleton = _skeleton(library, char.region, template.skeleton)
-    npc_table = library.world_event_content.npcs.get(char.region)
-    cards = {} if npc_table is None else npc_table.npc_by_id()
-    for npc_id in sorted(skeleton.npcs):
-        bonds = [defs[t] for t in held if t in defs and defs[t].npc == npc_id]
-        if bonds:
-            name = cards[npc_id].name_zh if npc_id in cards else npc_id
-            text = f"{name}（{'、'.join(b.text_zh for b in bonds)}）"
-            facts.append(SituationFact(item="npc_bond", fact=f"npc:{npc_id}", text_zh=text))
-    if char.supplies >= rules.exchange_supplies:
-        text = f"拿出 {rules.exchange_supplies} 份補給交換"
-        facts.append(SituationFact(item="exchange", fact=_EXCHANGE_FACT, text_zh=text))
-    for weakness in template.weaknesses:
-        fact = f"weakness:{weakness.id}"
-        facts.append(SituationFact(item="weakness", fact=fact, text_zh=weakness.text_zh))
-    order = {item: i for i, item in enumerate(CARE_ITEMS)}
-    facts.sort(key=lambda f: (order[f.item], f.fact))
-    return tuple(facts)
+    return tuple(fact for fact, _ in _fact_entries(library, world, char, template, now))
+
+
+def situation_fact_keywords(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    template: SituationTemplateDef,
+    now: int,
+) -> dict[str, tuple[str, ...]]:
+    """事實編號 → 關鍵詞（Phase 5C-3d）：玩家原文含其中任一個（完全字串包含）才算提到這筆。
+
+    ① 線頭的 ``text_zh``＋``aliases_zh``；② NPC 的 ``name_zh``＋``aliases_zh``；③「補給」＋
+    ``exchange_aliases_zh``；④ 弱點的 ``text_zh``＋``aliases_zh``。第一個是事實本身的名稱。
+    """
+    return {fact.fact: words for fact, words in _fact_entries(library, world, char, template, now)}
+
+
+def mentions(player_text: str, keywords: tuple[str, ...]) -> bool:
+    """玩家原文是否含任一個關鍵詞（完全字串包含，不做同義詞判斷）。"""
+    return any(word in player_text for word in keywords)
 
 
 def _verify_care(
     template: SituationTemplateDef,
     proposal: SituationProposal,
-    facts: tuple[SituationFact, ...],
+    entries: list[tuple[SituationFact, tuple[str, ...]]],
+    player_text: str,
     care_max: int,
 ) -> tuple[tuple[CareResult, ...], int]:
-    """逐筆核對用心清單；回傳（明細, 加值）。核對不到、同一項重複的都「不算」。"""
-    known = {(f.item, f.fact) for f in facts}
+    """逐筆核對用心清單；回傳（明細, 加值）。核對不到、原文沒提到、同一項重複的都「不算」。"""
+    known = {(f.item, f.fact) for f, _ in entries}
+    keywords = {f.fact: words for f, words in entries}
     weaknesses = template.weakness_by_id()
     counted: set[str] = set()
     results: list[CareResult] = []
@@ -222,6 +281,8 @@ def _verify_care(
             reason = "同一項只算一次"
         elif (claim.item, claim.fact) not in known:
             reason = "核對不到這筆事實"
+        elif not mentions(player_text, keywords[claim.fact]):
+            reason = REASON_NO_KEYWORD
         elif claim.item == "weakness":
             weakness = weaknesses[claim.fact.removeprefix("weakness:")]
             if proposal.method not in weakness.methods:
@@ -431,8 +492,10 @@ def resolve_situation(
     trigger, template = _check_action(library, char, action)
     rules = situation_rules(library)
     proposal = action.proposal
-    facts = situation_facts(library, world, char, template, now)
-    care, care_bonus = _verify_care(template, proposal, facts, rules.check.care_max)
+    entries = _fact_entries(library, world, char, template, now)
+    care, care_bonus = _verify_care(
+        template, proposal, entries, action.player_text, rules.check.care_max
+    )
     exchange_spent = 0
     if any(c.counted and c.item == "exchange" for c in care):
         exchange_spent = rules.exchange_supplies
@@ -464,6 +527,7 @@ def resolve_situation(
             attribute_mod=attribute_mod,
             care=care,
             care_bonus=care_bonus,
+            dropped=tuple(c.fact for c in care if c.reason_zh == REASON_NO_KEYWORD),
             race_bonus=race_bonus,
             total=total,
             outcome=outcome,

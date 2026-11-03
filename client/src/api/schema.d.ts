@@ -1914,6 +1914,8 @@ export interface components {
             item_zh: string;
             /** Text Zh */
             text_zh: string;
+            /** Insert Zh */
+            insert_zh?: string | null;
         };
         /**
          * CollisionOut
