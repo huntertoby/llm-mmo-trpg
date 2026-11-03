@@ -31,7 +31,7 @@ def _geometry(state: BattleState, shape_id: str, value: int) -> int:
     tiles: dict[str, Callable[[], tuple[XY, ...]]] = {
         "line": lambda: shapes.line_tiles(state, CENTER, "east", value),
         "cone": lambda: shapes.cone_tiles(state, CENTER, "east", value),
-        "cross": lambda: shapes.cross_tiles(state, CENTER),
+        "cross": lambda: shapes.cross_tiles(state, CENTER, max(value, 1)),
         "square3": lambda: shapes.square3_tiles(state, CENTER),
         "ring": lambda: shapes.ring_tiles(state, CENTER, value),
         "allies_in_radius": lambda: shapes.radius_tiles(state, CENTER, value),
@@ -70,6 +70,23 @@ def test_zone_cell_count_uses_the_shape_data() -> None:
     assert zone_cell_count(cone, lib) == 9
     ring = skill(shape={"type": "ring", "radius": 2})
     assert zone_cell_count(ring, lib) == 16
+    cross = skill(shape={"type": "cross", "range": 0})
+    assert zone_cell_count(cross, lib) == 5  # 臂長省略＝預設 1（5F-2b）
+    wide = skill(shape={"type": "cross", "range": 0, "arm": 2})
+    assert zone_cell_count(wide, lib) == 9
+
+
+def test_cross_arm_stops_at_walls() -> None:
+    """臂長 2 的十字：每一臂遇到牆壁就停（5F-2b）；臂長 1 與舊版的 5 格相同。"""
+    heights = chr(10).join(["00000"] * 5)
+    terrain = chr(10).join([".....", ".....", "..#..", ".....", "....."])
+    m = make_map(heights, terrain=terrain, ally=[(0, 0)], enemy=[(4, 4)])
+    spawns = [spawn(Team.ALLY, (0, 0), no_reactions()), spawn(Team.ENEMY, (4, 4), no_reactions())]
+    state = make_state(m, spawns)
+    assert set(shapes.cross_tiles(state, (2, 1))) == {(2, 0), (1, 1), (2, 1), (3, 1)}
+    wide = shapes.cross_tiles(state, (2, 1), 2)
+    assert (2, 3) not in wide  # 牆後面那格不在範圍內
+    assert set(wide) == {(2, 1), (2, 0), (1, 1), (0, 1), (3, 1), (4, 1)}
 
 
 def test_zone_cell_count_rejects_a_shape_without_a_cell_count() -> None:

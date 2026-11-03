@@ -181,6 +181,23 @@ def test_shape_parameter_out_of_range_rejected_at_load(tmp_path: Path) -> None:
     )
 
 
+def test_cross_arm_is_a_content_param(tmp_path: Path) -> None:
+    """5F-2b：十字的臂長 ``arm`` 是 ``content_params``（驗證器認得、範圍 1–2）；其他形狀不接受，
+    生成器看的 ``params`` 裡沒有它。"""
+    cross = library().ruleset.shape_def("cross")
+    assert "arm" not in cross.params and cross.content_params["arm"].default == 1
+    _rejects(
+        tmp_path,
+        "cross 的 arm 必須在 1–2，收到 3",
+        _skill(id="skill_t_arm", shape={"type": "cross", "range": 0, "arm": 3}),
+    )
+    _rejects(
+        tmp_path,
+        "不接受參數 arm",
+        _skill(id="skill_t_arm2", shape={"type": "square3", "range": 0, "arm": 2}),
+    )
+
+
 def test_primitive_parameter_problems_rejected_at_load(tmp_path: Path) -> None:
     surface = {"type": "create_surface", "surface": "fire", "distance": 1}
     _rejects(

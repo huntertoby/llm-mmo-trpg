@@ -1395,7 +1395,8 @@ class SkillTable(ContentModel):
 
 def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDef) -> list[str]:
     problems: list[str] = []
-    for name, spec in shape.params.items():
+    params = shape.all_params()
+    for name, spec in params.items():
         value = values.get(name)
         if value is None:
             if spec.required:
@@ -1411,6 +1412,6 @@ def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDe
                 f"{where}.{name}：{shape.id} 的 {name} 必須在 {spec.min}–{spec.max}，收到 {value}"
             )
     for name in values:
-        if name not in shape.params:
+        if name not in params:
             problems.append(f"{where}.{name}：{shape.id} 不接受參數 {name}")
     return problems

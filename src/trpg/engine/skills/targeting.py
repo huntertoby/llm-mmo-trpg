@@ -719,7 +719,7 @@ def _tile_area(
         problem = leap_problem(state, caster, center, reach)
         if problem is not None:
             raise IllegalActionError(problem)
-        return center_tiles(state, skill.shape.type, center), center
+        return center_tiles(state, skill.shape.type, center, arm=_arm(state, skill)), center
     problem = shapes.center_problem(state, caster.xy, center, reach)
     if problem is not None:
         raise IllegalActionError(problem)
@@ -734,7 +734,7 @@ def _tile_area(
     problem = _site_problem(state, skill, effects, center)
     if problem is not None:
         raise IllegalActionError(problem)
-    return center_tiles(state, skill.shape.type, center), center
+    return center_tiles(state, skill.shape.type, center, arm=_arm(state, skill)), center
 
 
 def _site_problem(
@@ -1019,9 +1019,20 @@ def checked_area(
     return area
 
 
-def center_tiles(state: BattleState, shape_type: str, center: XY) -> tuple[XY, ...]:
+def _arm(state: BattleState, skill: SkillDef) -> int:
+    """十字的臂長（``content_params`` 的 ``arm``，省略時用資料的預設值）；其他形狀回傳 1。"""
+    if skill.shape.type != "cross":
+        return 1
+    definition = state.ruleset.shape_def("cross")
+    return definition.param_or_default(skill.shape.param_values(), "arm")
+
+
+def center_tiles(
+    state: BattleState, shape_type: str, center: XY, *, arm: int = 1
+) -> tuple[XY, ...]:
+    """中心格型的影響格；``arm`` 是十字的臂長（陷阱的觸發範圍沒有參數，一律預設）。"""
     if shape_type == "cross":
-        return shapes.cross_tiles(state, center)
+        return shapes.cross_tiles(state, center, arm)
     if shape_type == "square3":
         return shapes.square3_tiles(state, center)
     return (center,)  # ground_tile

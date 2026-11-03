@@ -152,6 +152,7 @@ _FIELD_ZH: dict[str, str] = {
     "amount": "數量",
     "anchor": "錨點",
     "applies_to": "套用對象",
+    "arm": "臂長",
     "bound": "綁定",
     "by": "依據",
     "cap_permille": "上限",

@@ -292,6 +292,7 @@ def test_unknown_trigger_kind_rejected() -> None:
 
 
 def test_mist_lock_peaks_telegraphs_a_cross() -> None:
+    """5F-2b：十字每臂 2 格，共 9 格（``arm: 2``）。"""
     lib = library()
     master = lib.unit("sect_mist_lock_master").model_copy(
         update={"skills": ("skill_mist_lock_peaks",), "phases": ()}
@@ -305,7 +306,7 @@ def test_mist_lock_peaks_telegraphs_a_cross() -> None:
     charges = telegraph(result.state).charges
     assert [c.name_zh for c in charges] == ["霧鎖千山"]
     tiles = {(p.x, p.y) for p in charges[0].tiles}
-    assert tiles == {(2, 2), (1, 2), (3, 2), (2, 1), (2, 3)}
+    assert tiles == {(2, 2), (1, 2), (0, 2), (3, 2), (4, 2), (2, 1), (2, 0), (2, 3), (2, 4)}
     assert result.state.units[BOSS].ap == 0  # 整回合蓄力
 
 
@@ -332,7 +333,7 @@ def _summit_setup() -> BattleSetup:
     return build_setup(lib, "cloud_summit", m.encounter.allies, m.encounter.enemies, max_rounds=30)
 
 
-@pytest.mark.parametrize("seed", [1, 4])
+@pytest.mark.parametrize("seed", [3, 4])  # 5F-2b 加 HP 後種子 1 只到第 2 階段
 def test_summit_battle_runs_all_phases_and_replays(seed: int) -> None:
     setup = _summit_setup()
     assert sorted(setup.spawn_templates) == ["sect_mist_walker"]
