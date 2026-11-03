@@ -67,3 +67,7 @@ class DiscordGateway(Protocol):
     def reply(self, event: CommandEvent, text: str) -> None:
         """只有指令發送者看得到的回覆（ephemeral）。**絕不含密碼**。"""
         ...
+
+    def send_channel(self, channel_id: str, text: str) -> bool:
+        """貼到頻道（公告，5E-3）；送不出去（沒權限、斷線）→ ``False``，呼叫者下次重試。"""
+        ...

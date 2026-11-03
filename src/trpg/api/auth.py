@@ -15,6 +15,7 @@ from trpg.api.account_config import AccountSettings
 from trpg.api.account_schemas import AccountView
 from trpg.api.accounts import AccountDisabledError, AccountRecord, AccountStore, AuthError
 from trpg.api.login_limit import LoginLimiter
+from trpg.api.server_config import ServerSettings
 from trpg.api.world import WorldCharacterNotFoundError
 from trpg.shared.errors import TrpgError
 
@@ -26,7 +27,9 @@ __all__ = [
     "login_limiter_of",
     "optional_account",
     "require_admin",
+    "require_note_admin",
     "require_world_access",
+    "server_settings_of",
     "settings_of",
     "viewer",
 ]
@@ -45,6 +48,12 @@ def accounts_of(request: Request) -> AccountStore:
 def settings_of(request: Request) -> AccountSettings:
     settings = request.app.state.account_settings
     assert isinstance(settings, AccountSettings)
+    return settings
+
+
+def server_settings_of(request: Request) -> ServerSettings:
+    settings = request.app.state.server_settings
+    assert isinstance(settings, ServerSettings)
     return settings
 
 
@@ -92,12 +101,21 @@ def require_world_access(request: Request) -> None:
         raise WorldCharacterNotFoundError(f"找不到角色 {character_id}")
 
 
+def _check_admin(request: Request, message: str) -> None:
+    account = viewer(request)
+    if account is not None and not account.admin:
+        raise AdminRequiredError(message)
+
+
 def require_admin(request: Request) -> None:
     """伺服器全域設定（LLM 開關）：帶了 token 的非管理者 → 403；開發模式開、沒帶 token 照舊可改
     （代決 5E2-6）；開發模式關、沒 token → 401（:func:`viewer`）。"""
-    account = viewer(request)
-    if account is not None and not account.admin:
-        raise AdminRequiredError("只有管理者能改 LLM 開關")
+    _check_admin(request, "只有管理者能改 LLM 開關")
+
+
+def require_note_admin(request: Request) -> None:
+    """刪地點留言（5E-3，#105「使用者手動刪」）：規則同 :func:`require_admin`。"""
+    _check_admin(request, "只有管理者能刪留言")
 
 
 def account_view(store: AccountStore, record: AccountRecord) -> AccountView:

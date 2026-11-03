@@ -225,6 +225,27 @@
   margin-top: 12px;
 }
 
+/* 5E-3：地點留言與足跡（#105） */
+.world-note-list,
+.world-footprints {
+  margin: 4px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.world-note-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.world-note-form input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* 5A-7：成長與技能、閃現待選、開場說明、最近一次戰鬥 */
 .world-growth {
   display: flex;

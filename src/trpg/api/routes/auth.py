@@ -20,8 +20,10 @@ from trpg.api.auth import (
     bearer_token,
     login_limiter_of,
     optional_account,
+    server_settings_of,
     settings_of,
 )
+from trpg.api.client_ip import client_ip
 
 __all__ = ["router"]
 
@@ -42,7 +44,11 @@ def get_status(request: Request) -> AuthStatus:
 def post_login(body: LoginRequest, request: Request) -> LoginResponse:
     store = accounts_of(request)
     limiter = login_limiter_of(request)
-    ip = request.client.host if request.client is not None else None
+    ip = client_ip(  # 經 Tunnel 時只信任 trusted_proxies 來的轉發標頭（5E-3）
+        request.client.host if request.client is not None else None,
+        request.headers,
+        server_settings_of(request).proxy_networks(),
+    )
     limiter.check(body.username, ip)  # 失敗太多次：429，連密碼都不比對（5E-2）
     try:
         token, record = store.login(body.username, body.password)

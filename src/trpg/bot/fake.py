@@ -25,6 +25,10 @@ class FakeDiscordGateway:
     """關閉私訊的使用者 ID。"""
     dms: list[SentMessage] = field(default_factory=list)
     replies: list[SentMessage] = field(default_factory=list)
+    channel_posts: list[SentMessage] = field(default_factory=list)
+    """頻道貼文（``user_id`` 欄位放頻道 ID；5E-3 公告）。"""
+    channel_down: bool = False
+    """``True`` 時頻道貼文送不出去（測試重試）。"""
 
     def join(self, guild_id: str, user_id: str, *roles: str) -> None:
         self.members[(guild_id, user_id)] = frozenset(roles)
@@ -46,6 +50,15 @@ class FakeDiscordGateway:
 
     def reply(self, event: CommandEvent, text: str) -> None:
         self.replies.append(SentMessage(event.user_id, text))
+
+    def send_channel(self, channel_id: str, text: str) -> bool:
+        if self.channel_down:
+            return False
+        self.channel_posts.append(SentMessage(channel_id, text))
+        return True
+
+    def posts_to(self, channel_id: str) -> list[str]:
+        return [m.text for m in self.channel_posts if m.user_id == channel_id]
 
     def dms_to(self, user_id: str) -> list[str]:
         return [m.text for m in self.dms if m.user_id == user_id]

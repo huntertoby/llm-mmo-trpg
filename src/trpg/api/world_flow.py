@@ -18,6 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Final, Literal
 
+from trpg.api.llm_health import UNAVAILABLE_NOTICE, LlmHealth
 from trpg.api.llm_source import LLM_OFF_NOTICE, LlmProvider
 from trpg.api.world import WorldOutcome, WorldStore
 from trpg.api.world_story import chat_story, event_story, outcome_story, situation_story
@@ -53,11 +54,13 @@ CITABLE_ITEMS: Final = frozenset({"clue", "npc_bond", "exchange"})
 class WorldLlm:
     """大世界的 LLM 開關（18.2）。``enabled``＝改過就照改的，否則照伺服器設定（``generate``）。"""
 
-    def __init__(self, provider: LlmProvider | None) -> None:
+    def __init__(self, provider: LlmProvider | None, health: LlmHealth | None = None) -> None:
         self._provider = provider
         self._override: bool | None = None
         self._client: LLMClient | None = None
         self.notice: str | None = None
+        self.health = health
+        """本機模型的健康檢查（5E-3）：不可用時 :meth:`client` 回 ``None``（全部走模板）。"""
 
     @property
     def default(self) -> bool:
@@ -68,11 +71,16 @@ class WorldLlm:
         return self._override if self._override is not None else self.default
 
     def view(self) -> WorldLlmView:
+        available = self.health.available if self.health is not None else None
+        notice = self.notice
+        if notice is None and self.enabled and available is False:
+            notice = UNAVAILABLE_NOTICE
         return WorldLlmView(
             enabled=self.enabled,
             default=self.default,
             overridden=self._override is not None,
-            notice_zh=self.notice,
+            notice_zh=notice,
+            model_available=available,
         )
 
     def set(self, enabled: bool | None) -> WorldLlmView:
@@ -80,7 +88,7 @@ class WorldLlm:
         伺服器設定。"""
         self.notice = None
         if enabled is True:
-            notice = self._provider.probe() if self._provider is not None else LLM_OFF_NOTICE
+            notice = self._probe()
             if notice is not None:
                 self._override = False
                 self.notice = notice
@@ -88,9 +96,19 @@ class WorldLlm:
         self._override = enabled
         return self.view()
 
+    def _probe(self) -> str | None:
+        if self._provider is None:
+            return LLM_OFF_NOTICE
+        if self.health is not None:  # 打開時的探測也更新健康狀態（5E-3）
+            return None if self.health.check() else LLM_OFF_NOTICE
+        return self._provider.probe()
+
     def client(self) -> LLMClient | None:
-        """開著時的 client（建一次重用）；關閉時 ``None``（說書人與情境提議直接降級）。"""
+        """開著時的 client（建一次重用）；關閉、或健康檢查說模型不可用時 ``None``（說書人與情境
+        提議直接降級，5E-3）。"""
         if not self.enabled or self._provider is None:
+            return None
+        if self.health is not None and not self.health.usable:
             return None
         if self._client is None:
             self._client = self._provider.story_client()
