@@ -3,7 +3,8 @@
 - :func:`prepare_battle`：由角色身上的遭遇（:class:`~trpg.world.state.EncounterResult`）組出原型戰鬥
   引擎的設定——地點的地圖（沒有時從區域地圖池抽）並換皮成遭遇的區域、遭遇的天氣、主角（目前 HP、
   法力、耐力；疲憊時開場 HP 打折）＋隊伍的傭兵（5C-1）與借來的影子（5C-2；沒有隊友＝獨行）、依地點
-  建議等級成長的敵方陣容。API 開戰與「看陣容」直接用它（5A-5）。
+  建議等級成長的敵方陣容。API 開戰與「看陣容」直接用它（5A-5）。遭遇是賽季 Boss 時轉給
+  :func:`prepare_season_boss_battle`（5F-R2：兩者只共用主角與傭兵的出場設定）。
 - :func:`fight`：``fight`` 動作——用同一份設定與 ``battle_seed`` 開戰、依序套用日誌裡的步驟，戰鬥
   結束後回寫角色與世界（經驗、耐力、已清空、全滅回小鎮＋疲憊）。重播照同樣的步驟重算，結果逐位元
   相同（第 2.4 節）。
@@ -75,7 +76,6 @@ from trpg.world.economy import battle_gold, pouch_skills, spend_pouch
 from trpg.world.encounters import (
     EncounterLineup,
     LineupMember,
-    Reinforcement,
     elite_kinds,
     lineup_templates,
     reinforce_lineup,
@@ -114,6 +114,7 @@ __all__ = [
     "hero_start_hp",
     "hero_statuses",
     "prepare_battle",
+    "prepare_season_boss_battle",
     "reskin",
     "season_boss_lineup",
     "with_cleared",
@@ -145,9 +146,8 @@ class PreparedBattle:
 def encounter_map(library: ContentLibrary, encounter: EncounterResult) -> MapDef:
     """遭遇的戰鬥地圖（已換皮成遭遇的區域）。``battle_map`` 為 ``None`` 時從該區 ``map_pool`` 的
     類型裡（不含 Boss）依地圖 ID 排序、以 ``"{battle_seed}:map"`` 均勻抽一張（代決 5A4-1）；遭遇指定
-    勝利條件時（5B-4c）只從支援它的地圖抽（都不支援時照原樣）。"""
-    if encounter.season_boss is not None and encounter.battle_map is not None:
-        return library.map(encounter.battle_map)  # 賽季 Boss 的地圖在界域裡，不換皮（5F-3）
+    勝利條件時（5B-4c）只從支援它的地圖抽（都不支援時照原樣）。賽季 Boss 的地圖不經過這裡
+    （:func:`prepare_season_boss_battle`）。"""
     if encounter.battle_map is not None:
         map_def = library.map(encounter.battle_map)
     else:
@@ -209,9 +209,8 @@ def grow_allies(
 
 def enemy_level(library: ContentLibrary, encounter: EncounterResult) -> int:
     """敵人的等級：遭遇地點建議等級的 ``level_min``（代決 5A4-5）＋遇敵當下該區的建議等級加成
-    （Phase 5F-1，世界事件失敗 +1）。"""
-    if encounter.season_boss is not None:  # 賽季 Boss 依滿等設計（5F-3，season_boss.level）
-        return encounter.level
+    （Phase 5F-1，世界事件失敗 +1）。賽季 Boss 用遭遇的等級
+    （:func:`prepare_season_boss_battle`）。"""
     location = world_map_of(library, encounter.region).location_by_id().get(encounter.location)
     if location is None or location.level_min is None:
         return encounter.level + encounter.level_bonus
@@ -349,9 +348,7 @@ def armored(
 ) -> tuple[UnitTemplate, ...]:
     """遭遇表地點的護甲調整（Phase 5F-5a，``armor_mods``；灰燼之心）：陣容中該單位的護甲加上符合的
     總和（世界旗標看遇敵當下、線頭看遇敵時刻 ``at`` 還有效的個人線頭、劇情旗標看角色），結果不低於
-    0。賽季 Boss、沒有遭遇表或沒寫時原樣。不耗亂數。"""
-    if encounter.season_boss is not None:
-        return tuple(templates)
+    0。沒有遭遇表或沒寫時原樣（賽季 Boss 不經過這裡）。不耗亂數。"""
     table = library.world_encounters.get(encounter.region)
     entry = None if table is None else table.location_by_id().get(encounter.location)
     mods = None if entry is None else entry.armor_mods
@@ -395,28 +392,123 @@ def battle_objective(map_def: MapDef, encounter: EncounterResult) -> Objective |
     return map_def.objective_for("eliminate")
 
 
-def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBattle:
-    """角色身上遭遇的戰鬥設定（見模組說明）；沒有遭遇時拋 :class:`WorldActionError`。"""
+def _pending(char: CharacterState) -> EncounterResult:
     encounter = char.pending_encounter
     if encounter is None:
         raise WorldActionError("目前沒有遭遇")
+    return encounter
+
+
+def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBattle:
+    """角色身上遭遇的戰鬥設定（見模組說明）；沒有遭遇時拋 :class:`WorldActionError`。賽季 Boss
+    的遭遇轉給 :func:`prepare_season_boss_battle`。"""
+    encounter = _pending(char)
+    if encounter.season_boss is not None:
+        return prepare_season_boss_battle(library, char)
     map_def = encounter_map(library, encounter)
-    boss_fight = encounter.season_boss is not None  # 賽季 Boss（5F-3）：固定陣容、只准傭兵
-    if boss_fight:
-        reinforced = Reinforcement(lineup=season_boss_lineup(library, encounter))
-    else:
-        reinforce = sum(1 for m in char.next_battle if m.kind == "reinforce")
-        lineup = roll_lineup(library, encounter, char.story_flags)  # 線頭到期結局的變化（5B-4b）
-        reinforced = reinforce_lineup(library, encounter, lineup, reinforce)
+    reinforce = sum(1 for m in char.next_battle if m.kind == "reinforce")
+    rolled = roll_lineup(library, encounter, char.story_flags)  # 線頭到期結局的變化（5B-4b）
+    reinforced = reinforce_lineup(library, encounter, rolled, reinforce)
     lineup = reinforced.lineup
     level = enemy_level(library, encounter)
-    enemies: list[UnitSpawn] = []
     extra: dict[str, SkillDef] = {}
     # 第三方（5B-M3 三方混戰）照同一等級成長，排在敵方之後
-    sides = (
-        (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, lineup))),
-        (Team.THIRD, lineup_templates(library, lineup, third=True)),
+    enemies = _enemy_spawns(
+        library,
+        (
+            (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, lineup))),
+            (Team.THIRD, lineup_templates(library, lineup, third=True)),
+        ),
+        level,
+        extra,
     )
+    phase_spawns = _phase_spawns(library, enemies, level, extra)  # Boss 階段的召喚（5F-2）
+    # 我方＝主角＋傭兵（5C-1）＋影子（5C-2）；沒有隊友＝獨行（5C-2 玩法 PM 定 ③）
+    mercenaries = _mercenary_spawns(library, char, extra)
+    shadow_units, shadow_skills = shadow_spawns(library, char)
+    extra.update((s.id, s) for s in shadow_skills)
+    # 劇情夥伴（5C-3）：排在傭兵、影子之後，同樣照主角等級成長
+    companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
+    extra.update((s.id, s) for s in companion_skills)
+    statuses = hero_statuses(char)
+    hero, hp = _hero_with_items(library, char, extra, statuses)
+    first = first_team(library, char, encounter, reinforced.enemy_first)
+    oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
+    setup = _battle_setup(
+        library,
+        map_def,
+        encounter,
+        units=(hero, *mercenaries, *shadow_units, *companions, *enemies),
+        extra=extra,
+        phase_spawns=phase_spawns,
+        first=first,
+        oath=oath,
+    )
+    return PreparedBattle(
+        setup=setup,
+        seed=encounter.battle_seed,
+        lineup=lineup,
+        enemy_level=level,
+        hero_hp=hp,
+        reinforcements=reinforced.added,
+        first_team=first,
+        hero_statuses=statuses,
+        oath=oath,
+    )
+
+
+def prepare_season_boss_battle(library: ContentLibrary, char: CharacterState) -> PreparedBattle:
+    """賽季 Boss 的戰鬥設定（Phase 5F-3；5F-R2 從 :func:`prepare_battle` 拆出）：
+
+    - 地圖：遭遇指定的 Boss 地圖（在界域裡，不換皮）。
+    - 陣容：``season_boss.units`` 固定陣容，沒有增援、沒有第三方、不套護甲調整。
+    - 等級：遭遇的等級（依滿等設計，``season_boss.level``）。
+    - 我方：主角＋傭兵（#87 只准傭兵：沒有影子、劇情夥伴）。
+    - 不帶下一場修正（不套用、也不消耗，代決 5F3-4）、不看先手。誓約照帶。
+    """
+    encounter = _pending(char)
+    if encounter.battle_map is None:  # 挑戰時一定帶 Boss 地圖；保險起見照一般遭遇的抽法
+        map_def = encounter_map(library, encounter)
+    else:
+        map_def = library.map(encounter.battle_map)
+    lineup = season_boss_lineup(library, encounter)
+    level = encounter.level
+    extra: dict[str, SkillDef] = {}
+    enemies = _enemy_spawns(
+        library, ((Team.ENEMY, lineup_templates(library, lineup)),), level, extra
+    )
+    phase_spawns = _phase_spawns(library, enemies, level, extra)
+    mercenaries = _mercenary_spawns(library, char, extra)
+    hero, hp = _hero_with_items(library, char, extra, ())
+    oath = oath_setup(library, char)
+    setup = _battle_setup(
+        library,
+        map_def,
+        encounter,
+        units=(hero, *mercenaries, *enemies),
+        extra=extra,
+        phase_spawns=phase_spawns,
+        first=None,
+        oath=oath,
+    )
+    return PreparedBattle(
+        setup=setup,
+        seed=encounter.battle_seed,
+        lineup=lineup,
+        enemy_level=level,
+        hero_hp=hp,
+        oath=oath,
+    )
+
+
+def _enemy_spawns(
+    library: ContentLibrary,
+    sides: Sequence[tuple[Team, Sequence[UnitTemplate]]],
+    level: int,
+    extra: dict[str, SkillDef],
+) -> list[UnitSpawn]:
+    """敵方（與第三方）依序照 ``level`` 成長成出場設定；重配的技能加進 ``extra``。"""
+    enemies: list[UnitSpawn] = []
     for team, templates in sides:
         for template in templates:
             grown, skills = grow_enemy(library, template, level)
@@ -429,7 +521,47 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
                     team=team,
                 )
             )
-    phase_spawns = _phase_spawns(library, enemies, level, extra)  # Boss 階段的召喚（5F-2）
+    return enemies
+
+
+def _mercenary_spawns(
+    library: ContentLibrary, char: CharacterState, extra: dict[str, SkillDef]
+) -> tuple[UnitSpawn, ...]:
+    """隊伍的傭兵（5C-1），照主角等級成長；重配的技能加進 ``extra``（一般遭遇與賽季 Boss 共用）。"""
+    allies, skills = grow_allies(library, party_spawns(library, char), char.level)
+    extra.update((s.id, s) for s in skills)
+    return allies
+
+
+def _hero_with_items(
+    library: ContentLibrary,
+    char: CharacterState,
+    extra: dict[str, SkillDef],
+    statuses: tuple[str, ...],
+) -> tuple[UnitSpawn, int]:
+    """主角的出場設定與開場 HP（一般遭遇與賽季 Boss 共用）：生成技能（5A-6）與腰包的道具（5D-1：
+    1 AP、次數＝個數、不佔欄位）加進 ``extra``；``statuses`` 是開場狀態。"""
+    extra.update((s.id, s) for s in char.generated_skills)
+    items = pouch_skills(library, char)
+    extra.update((s.id, s) for s in items)
+    hp = hero_start_hp(library, char)
+    hero = _hero_spawn(library, char, hp, tuple(s.id for s in items), statuses=statuses)
+    return hero, hp
+
+
+def _battle_setup(
+    library: ContentLibrary,
+    map_def: MapDef,
+    encounter: EncounterResult,
+    *,
+    units: tuple[UnitSpawn, ...],
+    extra: dict[str, SkillDef],
+    phase_spawns: dict[str, SpawnTemplate],
+    first: Team | None,
+    oath: OathSetup | None,
+) -> BattleSetup:
+    """組出引擎設定：借 roguelite 設定的骨架，換上地圖、規則包（加 ``extra`` 技能）、單位、先手、
+    勝利條件、誓約與 Boss 階段的召喚和天氣（5F-2）。"""
     base = build_setup(
         library,
         map_def.id,
@@ -438,51 +570,18 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         max_rounds=rules_of(library).battle.max_rounds,
         weather=encounter.weather,
     )
-    objective = battle_objective(map_def, encounter)
-    # 我方＝主角＋傭兵（5C-1）＋影子（5C-2）；沒有隊友＝獨行（5C-2 玩法 PM 定 ③）
-    allies, ally_skills = grow_allies(library, party_spawns(library, char), char.level)
-    extra.update((s.id, s) for s in ally_skills)
-    shadow_units, shadow_skills = shadow_spawns(library, char)
-    extra.update((s.id, s) for s in shadow_skills)
-    # 劇情夥伴（5C-3）：排在傭兵、影子之後，同樣照主角等級成長；賽季 Boss 只准傭兵（#87，5F-3）
-    companion_units = () if boss_fight else companion_spawns(library, char)
-    companions, companion_skills = grow_allies(library, companion_units, char.level)
-    extra.update((s.id, s) for s in companion_skills)
-    if boss_fight:
-        shadow_units = ()  # 挑戰時已擋（season_boss_problem）；保險起見不出場
-    extra.update((s.id, s) for s in char.generated_skills)  # 主角的生成技能（5A-6）
-    items = pouch_skills(library, char)  # 腰包的道具（5D-1：1 AP、次數＝個數、不佔欄位）
-    extra.update((s.id, s) for s in items)
-    hp = hero_start_hp(library, char)
-    ruleset = library.ruleset.with_skills(extra[k] for k in sorted(extra))
-    first = None if boss_fight else first_team(library, char, encounter, reinforced.enemy_first)
-    oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
-    # 賽季 Boss 不帶下一場修正（不套用、也不消耗，代決 5F3-4）
-    statuses = () if boss_fight else hero_statuses(char)
-    hero = _hero_spawn(library, char, hp, tuple(s.id for s in items), statuses=statuses)
     setup = base.model_copy(
         update={
             "map": map_def,
-            "ruleset": ruleset,
-            "units": (hero, *allies, *shadow_units, *companions, *enemies),
+            "ruleset": library.ruleset.with_skills(extra[k] for k in sorted(extra)),
+            "units": units,
             "first_team": first,
-            "objective": objective,
+            "objective": battle_objective(map_def, encounter),
             "oath": oath,
             "spawn_templates": {**base.spawn_templates, **phase_spawns},
         }
     )
-    setup = with_phase_assets(library, setup)  # 階段會換成的天氣（5F-2）
-    return PreparedBattle(
-        setup=setup,
-        seed=encounter.battle_seed,
-        lineup=lineup,
-        enemy_level=level,
-        hero_hp=hp,
-        reinforcements=reinforced.added,
-        first_team=first,
-        hero_statuses=statuses,
-        oath=oath,
-    )
+    return with_phase_assets(library, setup)  # 階段會換成的天氣（5F-2）
 
 
 def _phase_spawns(
@@ -553,41 +652,53 @@ def fight(
     action: FightAction,
     now: int,
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
-    """``fight`` 動作（見模組說明）。"""
+    """``fight`` 動作（見模組說明）；賽季 Boss 的回寫轉給 :func:`_season_boss_fight`。"""
     prepared = prepare_battle(library, char)
-    encounter = char.pending_encounter
-    assert encounter is not None
-    state, battle_events = _run(prepared, action.steps)
-    events: list[WorldEvent] = [
-        BattleStartedEvent(
-            location=encounter.location,
-            battle_map=prepared.setup.map.id,
-            region=encounter.region,
-            lineup=prepared.lineup,
-            enemy_level=prepared.enemy_level,
-            weather=encounter.weather,
-            hero_hp=prepared.hero_hp,
-            fatigued=char.fatigued,
-            reinforcements=prepared.reinforcements,
-            first_team=prepared.first_team,
-            hero_statuses=prepared.hero_statuses,
-            mercenaries=char.mercenaries,
-            shadows=tuple(s.owner for s in char.shadows),
-            companions=char.companions,
-            oath=None if prepared.oath is None else prepared.oath.template,
-        )
-    ]
-    if encounter.season_boss is not None:  # 賽季 Boss（5F-3）
-        return _season_boss_fight(
-            library,
-            world,
-            char,
-            prepared,
-            action=action,
-            battle=(state, battle_events),
-            started=events[0],
-            now=now,
-        )
+    encounter = _pending(char)
+    battle = _run(prepared, action.steps)
+    started = _started_event(char, encounter, prepared)
+    finish = _season_boss_fight if encounter.season_boss is not None else _encounter_fight
+    return finish(
+        library, world, char, prepared, action=action, battle=battle, started=started, now=now
+    )
+
+
+def _started_event(
+    char: CharacterState, encounter: EncounterResult, prepared: PreparedBattle
+) -> BattleStartedEvent:
+    return BattleStartedEvent(
+        location=encounter.location,
+        battle_map=prepared.setup.map.id,
+        region=encounter.region,
+        lineup=prepared.lineup,
+        enemy_level=prepared.enemy_level,
+        weather=encounter.weather,
+        hero_hp=prepared.hero_hp,
+        fatigued=char.fatigued,
+        reinforcements=prepared.reinforcements,
+        first_team=prepared.first_team,
+        hero_statuses=prepared.hero_statuses,
+        mercenaries=char.mercenaries,
+        shadows=tuple(s.owner for s in char.shadows),
+        companions=char.companions,
+        oath=None if prepared.oath is None else prepared.oath.template,
+    )
+
+
+def _encounter_fight(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    prepared: PreparedBattle,
+    *,
+    action: FightAction,
+    battle: tuple[BattleState, list[EventBase]],
+    started: WorldEvent,
+    now: int,
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+    """一般遭遇的回寫（見模組說明）。"""
+    state, battle_events = battle
+    encounter = _pending(char)
     result = battle_result(state)
     hero_id = hero_unit_id(state)
     hero = result.ally(hero_id)
@@ -599,39 +710,9 @@ def fight(
     char, pouch_used = spend_pouch(library, char, state, hero_id)  # 腰包用掉的道具（5D-1）
     loot: LootSummary | None = None
     if won:
-        world, char, more = _won(
-            library,
-            world,
-            char,
-            encounter,
-            prepared.lineup,
-            hp=hero.hp,
-            mana=hero.mana,
-            now=now,
+        world, char, more, loot = _won_rewards(
+            library, world, char, prepared, battle=battle, hp=hero.hp, mana=hero.mana, now=now
         )
-        char, liked = companion_win_affinity(library, char, now)  # 帶夥伴打贏（18.7.6）
-        more += liked
-        elite = bool(elite_kinds(library, prepared.lineup))
-        char, gold = battle_gold(library, char, elite=elite, level=prepared.enemy_level)  # 5D-1
-        more += gold
-        today = day_of(library, now)
-        bonus = boss_bonus_units(library, char, prepared.lineup, today)  # 區域 Boss 保底（5F-3）
-        if bonus:
-            days = {**char.boss_drop_days, **dict.fromkeys(bonus, today)}
-            char = char.model_copy(update={"boss_drop_days": days})
-        roll = roll_loot(  # 掉落（5D-2）：材料、裝備進背包
-            library,
-            char,
-            setup=prepared.setup,
-            lineup=prepared.lineup,
-            state=state,
-            events=battle_events,
-            seed=prepared.seed,
-            level=prepared.enemy_level,
-            boss_bonus=bonus,
-        )
-        char, loot, loot_events = add_loot(library, char, roll)
-        more += loot_events
     else:
         char, more = _lost(library, char, hero.mana)
     oath_more, oath_broken = oath_events(prepared.oath, battle_events)  # 誓約（5C-3）
@@ -672,7 +753,51 @@ def fight(
         loot=loot,
     )
     char = char.model_copy(update={"last_battle": last})
-    return world, char, (*events, ended, *pouch_used, *more)
+    return world, char, (started, ended, *pouch_used, *more)
+
+
+def _won_rewards(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    prepared: PreparedBattle,
+    *,
+    battle: tuple[BattleState, list[EventBase]],
+    hp: int,
+    mana: int,
+    now: int,
+) -> tuple[WorldState, CharacterState, list[WorldEvent], LootSummary | None]:
+    """一般遭遇打贏的回寫：經驗與已清空（:func:`_won`）、夥伴好感（18.7.6）、金錢（5D-1）、
+    區域 Boss 保底（5F-3）與掉落（5D-2）。"""
+    state, battle_events = battle
+    encounter = _pending(char)
+    world, char, more = _won(
+        library, world, char, encounter, prepared.lineup, hp=hp, mana=mana, now=now
+    )
+    char, liked = companion_win_affinity(library, char, now)  # 帶夥伴打贏（18.7.6）
+    more += liked
+    elite = bool(elite_kinds(library, prepared.lineup))
+    char, gold = battle_gold(library, char, elite=elite, level=prepared.enemy_level)  # 5D-1
+    more += gold
+    today = day_of(library, now)
+    bonus = boss_bonus_units(library, char, prepared.lineup, today)  # 區域 Boss 保底（5F-3）
+    if bonus:
+        days = {**char.boss_drop_days, **dict.fromkeys(bonus, today)}
+        char = char.model_copy(update={"boss_drop_days": days})
+    roll = roll_loot(  # 掉落（5D-2）：材料、裝備進背包
+        library,
+        char,
+        setup=prepared.setup,
+        lineup=prepared.lineup,
+        state=state,
+        events=battle_events,
+        seed=prepared.seed,
+        level=prepared.enemy_level,
+        boss_bonus=bonus,
+    )
+    char, loot, loot_events = add_loot(library, char, roll)
+    more += loot_events
+    return world, char, more, loot
 
 
 def _season_boss_fight(
@@ -690,8 +815,7 @@ def _season_boss_fight(
     耐力照開戰前，不疲憊、不回小鎮（失敗只扣次數，#98）；下一場修正不消耗；腰包用掉的道具照扣、
     技能用法照記。打贏記通關與分數（:func:`~trpg.world.season_boss.boss_result`）。"""
     state, battle_events = battle
-    encounter = char.pending_encounter
-    assert encounter is not None
+    encounter = _pending(char)
     result = battle_result(state)
     hero_id = hero_unit_id(state)
     won = result.winner is Team.ALLY
