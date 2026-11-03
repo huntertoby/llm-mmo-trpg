@@ -59,6 +59,7 @@ node_modules/
 
 # roguelite 存檔（Phase 3-5a；trpg run、網頁 /api/runs）
 saves/
+saves-backups/
 
 # agent scratch folders (worktrees)
 .scratch_*/
