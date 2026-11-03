@@ -59,3 +59,27 @@ describe("fadedHudBlocks", () => {
     expect(FADE_BLOCKS).toContain("log");
   });
 });
+
+// 6C-8（docs/art/6A-4g與6C-5與6M-4與6C-7檢查.md 第 1 節待決 1）：上方行動順序列也鋪滿、套同一條半透明規則；底部列保留高度、不變淡。
+const nodeFs = "node:fs";
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
+const hudCss = readFileSync("src/styles/battle-hud.css", "utf-8");
+
+describe("6C-8：上方行動順序列鋪滿並套半透明規則", () => {
+  const scrollRule = /\.battle-screen\.hud-a \.board-scroll \{([^}]*)\}/.exec(hudCss)?.[1] ?? "";
+
+  it("地圖從畫面最上面開始（不再扣掉行動順序列），底部照舊扣掉底部列的高度", () => {
+    expect(scrollRule).toMatch(/inset:\s*0 0 calc\(var\(--hud-bottom, 160px\) \+ var\(--hud-gap\)\) 0;/);
+    expect(scrollRule).not.toContain("--hud-top");
+  });
+  it("行動順序列底下有單位：那一塊變半透明（0.38），沒有就不變", () => {
+    const blocks = { order: rect(300, 8, 220, 40), hero: rect(8, 8, 250, 100) };
+    expect(fadedHudBlocks(blocks, [rect(400, 20, 30, 30)])).toEqual(["order"]);
+    expect(fadedHudBlocks(blocks, [rect(400, 120, 30, 30)])).toEqual([]);
+    expect(hudCss).toMatch(/\[data-hud-faded~="order"\] \.bhud-top \.turn-bar,[\s\S]*?opacity: 0\.38;/);
+  });
+  it("底部列（技能列、回合操作）不在變淡的塊裡", () => {
+    expect(FADE_BLOCKS).toContain("order");
+    expect(FADE_BLOCKS.some((id) => /bottom|skill|turn/.test(id))).toBe(false);
+  });
+});

@@ -311,15 +311,16 @@ function lieDown(ctx: Ctx, art: FormArt): void {
 /**
  * 畫一個形態（原點 ＝ 腳底；單位 ＝ 樣張座標，由呼叫端先縮放）：影子＋形態本體。朝東與南看右、西與北鏡像（樣張只有側面）。
  * 光環另外畫（`drawFormAura`），因為不認得的形態也要有光環。不認得的 id 回傳 `false`、什麼都不畫。
+ * `ground` ＝ false 時不畫地上的影子（6C-8 受擊白閃用的身體）。
  */
-export function drawForm(ctx: Ctx, id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean): boolean {
+export function drawForm(ctx: Ctx, id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean, ground = true): boolean {
   const art = Object.hasOwn(FORM_ARTS, id) ? FORM_ARTS[id] : undefined;
   if (art === undefined) return false;
   withShadeDir(ctx, -1, () => {
     ctx.save();
     if (facing === "west" || facing === "north") ctx.scale(-1, 1);
     if (downed) lieDown(ctx, art);
-    else shadow(ctx, 14);
+    else if (ground) shadow(ctx, 14);
     art.draw(ctx, hero, element);
     ctx.restore();
   });
@@ -339,8 +340,8 @@ export function formKey(id: string, hero: string, element: string | null | undef
   return `${id}|${hero}|${elementOf(element) ?? "-"}|${facing}|${downed ? "down" : "up"}`;
 }
 
-/** 產生形態離屏 canvas（`dpr` 倍解析度；`dollScale` ＝ 小人縮放，畫面比例以它為基準）；沒有 DOM 或不認得的形態回傳 `null`。 */
-export function renderFormCanvas(id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean, dpr: number, dollScale: number): HTMLCanvasElement | null {
+/** 產生形態離屏 canvas（`dpr` 倍解析度；`dollScale` ＝ 小人縮放，畫面比例以它為基準）；沒有 DOM 或不認得的形態回傳 `null`。`ground` 同 `drawForm`。 */
+export function renderFormCanvas(id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean, dpr: number, dollScale: number, ground = true): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const art = Object.hasOwn(FORM_ARTS, id) ? FORM_ARTS[id] : undefined;
   if (art === undefined) return null;
@@ -353,7 +354,7 @@ export function renderFormCanvas(id: string, hero: string, element: string | nul
   ctx.translate(FORM_W / 2, FORM_FOOT_Y);
   const k = formScale(art) / dollScale;
   ctx.scale(k, k);
-  drawForm(ctx, id, hero, element, facing, downed);
+  drawForm(ctx, id, hero, element, facing, downed, ground);
   return c;
 }
 

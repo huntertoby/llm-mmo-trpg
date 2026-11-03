@@ -15,6 +15,7 @@ import { creatureKey, renderCreatureCanvas, type ResolvedCreature } from "./inkC
 import { creaturePoseKey, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { poseKey, quantizeFlash } from "./motionClips";
+import { whiteCanvas } from "./silhouetteFlash";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -167,6 +168,30 @@ export class ArtTextures {
   form(id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean): Texture | null {
     const res = this.figureRes(HUMAN_DISPLAY);
     return this.canvas(`g|${res}|${formKey(id, hero, element, facing, downed)}`, () => renderFormCanvas(id, hero, element, facing, downed, res, DOLL_SCALE));
+  }
+
+  /**
+   * 受擊白閃用的白色剪影（6C-8）：形態、召喚物、倒地的人沒有骨架，改把「同一張圖」不含地上影子再畫一次、
+   * 轉成白色剪影（等同 `brightness(0) invert(1)`，`whiteCanvas`），由戰場疊在小人上、用不透明度閃。
+   * 畫布大小、腳底錨點和本來的貼圖相同（疊上去像素對齊）。
+   */
+  formFlash(id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean): Texture | null {
+    const res = this.figureRes(HUMAN_DISPLAY);
+    return this.canvas(`wg|${res}|${formKey(id, hero, element, facing, downed)}`, () => whiteCanvas(renderFormCanvas(id, hero, element, facing, downed, res, DOLL_SCALE, false)));
+  }
+
+  /** 召喚物的白色剪影（6C-8，見 `formFlash`）：不含地上的影子、水窪、光環。 */
+  summonFlash(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null): Texture | null {
+    const owner = copiesOwner(look.variant) && humanoid !== null ? dollKey(humanoid, facing, false) : "";
+    const res = this.figureRes(look.body === "humanoid" ? HUMAN_DISPLAY : BEAST_DISPLAY);
+    return this.canvas(`ws|${res}|${summonKey(look, facing, owner)}`, () => whiteCanvas(renderSummonCanvas(look, facing, humanoid, res, false)));
+  }
+
+  /** 倒地的人（倒下、倒地狀態）的白色剪影（6C-8，見 `formFlash`）：不含地上的影子。 */
+  figureFlash(spec: DollSpec, facing: Facing, downed: boolean, pose: InkPose | null): Texture | null {
+    const res = this.figureRes(HUMAN_DISPLAY);
+    const key = `wf|${res}|${dollKey(spec, facing, downed)}${pose === null ? "" : `|p:${poseKey(pose)}`}`;
+    return this.canvas(key, () => whiteCanvas(renderFigureCanvas(spec, facing, downed, res, false, pose)));
   }
 
   /** 腳下的形態光環貼圖（鍵 ＝ 顏色＋半徑）。 */

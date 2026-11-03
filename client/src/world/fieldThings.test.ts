@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { FieldView, WorldLocationView, WorldMapView, WorldView } from "../api/types";
 import { FieldObjectCard, objectButtonText } from "./FieldThings";
-import { CAMPFIRE_ZH, EVENT_MARK_ZH, fieldHighlights, hoverText, interactTarget, objectText, targetAt, THING_COLOR, thingMarks } from "./fieldModel";
+import { CAMPFIRE_ZH, EVENT_MARK_ZH, fieldHighlights, hoverText, interactTarget, mapThings, objectText, targetAt, THING_COLOR, thingMarks } from "./fieldModel";
 import { buttonState, HUD_BUTTONS, hudButtonCard, sneakState } from "./hud";
 import { regionNodes } from "./regionModel";
 
@@ -53,26 +53,36 @@ function field(over: Partial<FieldView> = {}): FieldView {
 }
 
 describe("地圖上的東西的標記", () => {
-  it("「！」、物件、營火、石碑、腳印各有自己的字與顏色；和門同一格的不畫", () => {
+  it("情境物件照舊是淡色框；「！」、營火、石碑、腳印（6C-8）改照形狀畫、不進格子框；和門同一格的不畫", () => {
     const marks = thingMarks(field());
     const at = (x: number, y: number) => marks.find((m) => m.pos.x === x && m.pos.y === y);
-    expect(at(2, 0)).toMatchObject({ kind: "event", glyph: "！", color: THING_COLOR.event, texts: [EVENT_MARK_ZH] });
     expect(at(4, 1)).toMatchObject({ kind: "object", glyph: "◎", color: THING_COLOR.object });
     expect(at(0, 4)).toMatchObject({ kind: "object", color: THING_COLOR.note });
-    expect(at(3, 3)).toMatchObject({ kind: "campfire", glyph: "火", texts: [CAMPFIRE_ZH] });
-    expect(at(0, 0)).toMatchObject({ kind: "note_stone", glyph: "碑" });
-    expect(at(5, 0)).toMatchObject({ kind: "footprint", glyph: "足", texts: ["小白走過這裡"] });
-    expect(at(1, 2)).toBeUndefined();
-    expect(fieldHighlights(field(), null).telegraph.some((m) => m.kind === "event")).toBe(true);
+    expect(marks.map((m) => m.kind).every((k) => k === "object")).toBe(true);
+    const things = mapThings(field());
+    const thing = (x: number, y: number) => things.find((t) => t.pos.x === x && t.pos.y === y);
+    expect(thing(2, 0)).toMatchObject({ kind: "event" });
+    expect(thing(3, 3)).toMatchObject({ kind: "campfire", lit: true });
+    expect(thing(0, 0)).toMatchObject({ kind: "note_stone" });
+    expect(thing(5, 0)).toMatchObject({ kind: "footprint", facing: "e" });
+    expect(thing(1, 2)).toBeUndefined();
+    const h = fieldHighlights(field(), null);
+    expect(h.telegraph.some((m) => ["event", "campfire", "note_stone", "footprint"].includes(m.kind))).toBe(false);
+    expect(h.things).toEqual(things);
+    // 說明卡照舊
+    expect(hoverText(field(), { x: 2, y: 0 })).toBe(EVENT_MARK_ZH);
+    expect(hoverText(field(), { x: 3, y: 3 })).toBe(CAMPFIRE_ZH);
+    expect(hoverText(field(), { x: 5, y: 0 })).toBe("小白走過這裡");
   });
 
   it("同一格只畫一個（「！」優先）", () => {
-    const marks = thingMarks(field({ campfires: [{ id: "c", x: 2, y: 0 }] }));
-    expect(marks.filter((m) => m.pos.x === 2 && m.pos.y === 0).map((m) => m.kind)).toEqual(["event"]);
+    const things = mapThings(field({ campfires: [{ id: "c", x: 2, y: 0 }] }));
+    expect(things.filter((m) => m.pos.x === 2 && m.pos.y === 0).map((m) => m.kind)).toEqual(["event"]);
   });
 
   it("沒有東西的地圖沒有標記", () => {
     expect(thingMarks(field({ campfires: [], event_mark: null, situation_objects: [], footprints: [], note_stone: null }))).toEqual([]);
+    expect(mapThings(field({ campfires: [], event_mark: null, situation_objects: [], footprints: [], note_stone: null }))).toEqual([]);
   });
 });
 

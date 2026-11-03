@@ -8,7 +8,7 @@
   --hud-bg: rgb(24 20 16 / 84%);
   --hud-gold: #c8a868;
   --hud-gap: 8px;
-  /* 上方行動順序列佔的高度：地圖從這下面開始 */
+  /* 上方行動順序列佔的高度（6C-8 起地圖鋪到最上面、行動順序列疊在地圖上；只剩提示浮層用它讓開） */
   --hud-top: 52px;
   --hud-left-w: 252px;
   --hud-right-w: 224px;
@@ -25,10 +25,10 @@
   display: block;
 }
 
-/* 地圖可用區域（6A-4g 改回鋪滿）：只扣掉上方行動順序列與底部列，左右鋪滿，主角卡、戰況框疊在地圖上；
-   底下有單位或可點格子的 HUD 塊變半透明（`data-hud-faded`，`battle/hudFade.ts`），滑上去恢復。 */
+/* 地圖可用區域（6A-4g 改回鋪滿；6C-8 上方也鋪滿）：只扣掉底部列（主要操作區，保留高度、不變淡），上、左、右鋪滿，
+   主角卡、行動順序列、戰況框疊在地圖上；底下有單位或可點格子的 HUD 塊變半透明（`data-hud-faded`，`battle/hudFade.ts`），滑上去恢復。 */
 .battle-screen.hud-a .board-scroll {
-  inset: var(--hud-top) 0 calc(var(--hud-bottom, 160px) + var(--hud-gap)) 0;
+  inset: 0 0 calc(var(--hud-bottom, 160px) + var(--hud-gap)) 0;
 }
 
 .battle-screen.hud-a .bhud-hero,

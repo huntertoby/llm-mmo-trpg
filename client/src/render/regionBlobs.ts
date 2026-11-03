@@ -12,6 +12,48 @@ export interface RegionMark {
   fill?: number;
   /** 外緣不透明度（預設 0.8）。 */
   edge?: number;
+  /** 外緣顏色（預設同 `color`）。 */
+  edgeColor?: number;
+  /** 外緣虛線 [實線長, 空白長]（6C-8 實地地圖的敵人視野）；省略＝實線。 */
+  dash?: readonly [number, number];
+}
+
+type Pt = { x: number; y: number };
+
+/**
+ * 把一條折線切成虛線段（6C-8）：從起點開始「實線 `on`、空白 `off`」交替，跨過轉角時接著量；回傳每段實線的折線。
+ * `on`、`off` 不是正數時原樣回傳整條（實線）。
+ */
+export function dashRun(run: readonly Pt[], on: number, off: number): Pt[][] {
+  if (!(on > 0) || !(off > 0) || run.length < 2) return run.length >= 2 ? [run.map((p) => ({ ...p }))] : [];
+  const out: Pt[][] = [];
+  let cur: Pt[] | null = [{ ...run[0]! }];
+  let left = on; // 這一段（實線或空白）還剩多長
+  let drawing = true;
+  for (let i = 1; i < run.length; i++) {
+    let a = run[i - 1]!;
+    const b = run[i]!;
+    let len = Math.hypot(b.x - a.x, b.y - a.y);
+    while (len > 1e-9) {
+      const step = Math.min(left, len);
+      const t = step / len;
+      const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      if (drawing) cur!.push(p);
+      a = p;
+      len -= step;
+      left -= step;
+      if (left <= 1e-9) {
+        if (drawing) {
+          out.push(cur!);
+          cur = null;
+        } else cur = [{ ...p }];
+        drawing = !drawing;
+        left = drawing ? on : off;
+      }
+    }
+  }
+  if (drawing && cur !== null && cur.length >= 2) out.push(cur);
+  return out;
 }
 
 export interface RegionCell {
@@ -53,14 +95,16 @@ export function drawRegionBlobs(g: Graphics, regions: readonly RegionMark[], T: 
     g.beginPath();
     for (const { pos, shape } of shapes) {
       const o = origin(pos);
-      for (const run of blobEdges(shape)) {
-        const [first, ...rest] = run;
-        if (first === undefined) continue;
-        g.moveTo(o.x + first.x, o.y + first.y);
-        for (const p of rest) g.lineTo(o.x + p.x, o.y + p.y);
+      for (const edge of blobEdges(shape)) {
+        for (const run of r.dash === undefined ? [edge] : dashRun(edge, r.dash[0], r.dash[1])) {
+          const [first, ...rest] = run;
+          if (first === undefined) continue;
+          g.moveTo(o.x + first.x, o.y + first.y);
+          for (const p of rest) g.lineTo(o.x + p.x, o.y + p.y);
+        }
       }
     }
-    g.stroke({ width: 2, color: r.color, alpha: r.edge ?? 0.8 });
+    g.stroke({ width: 2, color: r.edgeColor ?? r.color, alpha: r.edge ?? 0.8, cap: r.dash === undefined ? "butt" : "round" });
     g.beginPath();
   }
 }
