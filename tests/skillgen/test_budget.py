@@ -337,7 +337,8 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "crystal_surge": None,  # 5F-3：晶能湧動，只由源晶柱的階段掛上
         "crystal_surge_2": None,
         "rift_collapse": None,  # 5F-3：界崩，只由碎晶之主的階段掛上
-        "league_truce": None,  # 5F-4b：循環賽休戰，只由循環賽開場掛上
+        "league_truce": None,
+        "rift_channel": None,  # 5F-3b：灌注源晶，只由碎晶之主開場掛上  # 5F-4b：循環賽休戰，只由循環賽開場掛上
         "heart_link": None,  # 5A-M2：連心（分傷），只由詞綴開場掛上
         "oath_bonus_easy": None,  # 5C-3：誓約之力，只由誓約開戰時掛上
         "oath_bonus_medium": None,
