@@ -24,6 +24,7 @@ from trpg.content.skills import SkillDef
 from trpg.content.world_season import LeagueRules
 from trpg.engine.ai.commanded import CommandedAI
 from trpg.engine.ai.utility import UtilityAI
+from trpg.engine.gear.core import build_gear, geared_template
 from trpg.engine.runner import BattleRun, run_battle
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup, with_phase_assets
 from trpg.engine.state import BattleState
@@ -53,6 +54,7 @@ __all__ = [
     "league_schedule",
     "league_spawns",
     "league_step",
+    "league_unit",
     "leveled_snapshot",
     "match_loser",
     "match_seed",
@@ -63,6 +65,8 @@ __all__ = [
     "signup_problem",
     "withdraw_league",
 ]
+
+PERMILLE = 1000
 
 # ---------------------------------------------------------------------------
 # 報名
@@ -345,13 +349,33 @@ def match_setup(
         update={
             "ruleset": library.ruleset.with_skills(extra[k] for k in sorted(extra)),
             "units": (
-                ally.model_copy(update={"team": Team.ALLY}),
-                enemy.model_copy(update={"team": Team.ENEMY}),
+                league_unit(library, rules, ally, Team.ALLY, first=True),
+                league_unit(library, rules, enemy, Team.ENEMY, first=False),
             ),
             "first_team": Team.ALLY,
         }
     )
     return with_phase_assets(library, setup)
+
+
+def league_unit(
+    library: ContentLibrary, rules: LeagueRules, spawn: UnitSpawn, team: Team, *, first: bool
+) -> UnitSpawn:
+    """循環賽的出場單位（5F-4b，只套在循環賽）：陣營、開場最大 HP 倍率（``hp_permille``；裝備與
+    體質算完之後的最大 HP 乘倍率，無條件捨去）、開場狀態（雙方的 ``opening_statuses``＋先手的
+    ``first_opening_statuses``，接在單位原有的開場狀態後面）。"""
+    update: dict[str, object] = {"team": team}
+    if rules.hp_permille != PERMILLE:
+        ruleset = library.ruleset
+        gear = build_gear(spawn.equipment, ruleset.equipment)
+        full = ruleset.core.template_max_hp(geared_template(spawn.template, gear, ruleset))
+        bonus = full * (rules.hp_permille - PERMILLE) // PERMILLE
+        template = spawn.template
+        update["template"] = template.model_copy(update={"max_hp": template.max_hp + bonus})
+    statuses = (*rules.opening_statuses, *(rules.first_opening_statuses if first else ()))
+    if statuses:
+        update["opening_statuses"] = (*spawn.opening_statuses, *statuses)
+    return spawn.model_copy(update=update)
 
 
 def play_match(library: ContentLibrary, setup: BattleSetup, seed: int) -> BattleRun:

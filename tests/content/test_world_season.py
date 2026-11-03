@@ -125,6 +125,7 @@ def _league_problems(library: ContentLibrary, season: SeasonContent) -> list[str
         region_ids={r.id for r in library.regions.regions},
         location_kinds=get_args(LocationKind.__value__),
         battle_maps={k: v.archetype for k, v in library.maps.items()},
+        status_ids={s.id for s in library.ruleset.statuses.statuses},
     )
 
 
@@ -141,6 +142,8 @@ def test_league_loaded(library: ContentLibrary, season: SeasonContent) -> None:
         ({"seeds": 9}, "less than or equal"),
         ({"maps": ["swamp", "swamp"]}, "地圖重複"),
         ({"signup_close_day": 15}, "league.signup_close_day"),
+        ({"hp_permille": 900}, "greater than or equal"),
+        ({"hp_permille": 6000}, "less than or equal"),
     ],
 )
 def test_league_schema_rejects(season: SeasonContent, patch: Any, message: str) -> None:
@@ -161,3 +164,10 @@ def test_league_map_problems(
     data["league"] = {**data["league"], "maps": [map_id]}
     problems = _league_problems(library, SeasonContent.model_validate(data))
     assert any(message in p for p in problems), problems
+
+
+def test_league_opening_status_must_exist(library: ContentLibrary, season: SeasonContent) -> None:
+    data = _data(season)
+    data["league"] = {**data["league"], "first_opening_statuses": ["no_such_status"]}
+    problems = _league_problems(library, SeasonContent.model_validate(data))
+    assert any("no_such_status" in p for p in problems), problems

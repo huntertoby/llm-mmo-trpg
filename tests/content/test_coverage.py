@@ -31,6 +31,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "oath_bonus_medium": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
         "oath_bonus_hard": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
         "oath_broken": "只在違反誓約時施加（5C-3），沒有技能施加",
+        "league_truce": "只由循環賽的 league.opening_statuses 開場掛上（5F-4b），沒有技能施加",
         "heart_link": "只由詞綴連心的 add_opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "race_stonewall": "只由矮人種族技「穩若磐石」施加（3R-2），沒有技能施加",
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",

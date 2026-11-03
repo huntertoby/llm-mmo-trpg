@@ -10,6 +10,8 @@ import pytest
 from tests.world.helpers import NOON, make_world
 from trpg.content.library import ContentLibrary
 from trpg.content.world_season import LeagueRules
+from trpg.engine.battle import begin_battle
+from trpg.engine.events import DamageDealt, StatusRemoved
 from trpg.engine.runner import log_replay_problem, replay
 from trpg.shared.types import Attribute, Team
 from trpg.world.actions import CampAction
@@ -240,4 +242,48 @@ def test_match_setup_and_replay(library: ContentLibrary, three: WorldState) -> N
     assert winner in (spec.a, spec.b, None)
     log = run.to_log()
     assert log_replay_problem(log) is None
+    assert replay(log.setup, log.seed, log.actions).state == run.state
+
+
+# ---------------------------------------------------------------------------
+# 5F-4b：循環賽的平衡規則（開場 HP ×2、第 1 輪休戰）
+# ---------------------------------------------------------------------------
+
+
+def test_balance_rules_only_in_league(library: ContentLibrary, three: WorldState) -> None:
+    """開場 HP ×2、雙方掛上休戰；不套在一般戰鬥（同一個影子 spawn 原樣）。"""
+    rules = _rules(library)
+    assert rules.hp_permille == 2000
+    assert rules.opening_statuses == ("league_truce",)
+    spawns = league_spawns(library, three.league_entries)
+    spec = league_schedule(rules, three.season_seed, three.league_entries)[0]
+    setup = match_setup(library, rules, spawns, spec)
+    plain_rules = rules.model_copy(update={"hp_permille": 1000, "opening_statuses": ()})
+    plain = match_setup(library, plain_rules, spawns, spec)
+    state = begin_battle(setup, spec.seed).state
+    base = begin_battle(plain, spec.seed).state
+    for uid, unit in state.units.items():
+        assert unit.max_hp == unit.hp == base.units[uid].max_hp * 2
+        assert "league_truce" in {s.status_id for s in unit.statuses}
+        assert "league_truce" not in {s.status_id for s in base.units[uid].statuses}
+    raw, _ = spawns[spec.ally]
+    assert "league_truce" not in raw.opening_statuses  # 影子本身的出場設定不變
+
+
+@pytest.mark.parametrize("index", [0, 1, 2, 3, 4, 5])
+def test_truce_blocks_round_one_damage(
+    library: ContentLibrary, three: WorldState, index: int
+) -> None:
+    """第 1 輪沒有任何傷害事件、休戰在第 1 輪結束時移除；第 2 輪起照常；重播一致。"""
+    rules = _rules(library)
+    spawns = league_spawns(library, three.league_entries)
+    spec = league_schedule(rules, three.season_seed, three.league_entries)[index]
+    run = play_match(library, match_setup(library, rules, spawns, spec), spec.seed)
+    first_round = [e for e in run.events if e.round == 1]
+    assert not [e for e in first_round if isinstance(e, DamageDealt)]
+    removed = [
+        e for e in first_round if isinstance(e, StatusRemoved) and e.status_id == "league_truce"
+    ]
+    assert len(removed) == 2  # 兩人都在第 1 輪結束時移除
+    log = run.to_log()
     assert replay(log.setup, log.seed, log.actions).state == run.state

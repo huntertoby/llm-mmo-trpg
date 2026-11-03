@@ -74,6 +74,9 @@
 #   on_death_surface  {surface, radius, duration}：帶有者倒下時在倒下的格子與曼哈頓 radius 內的格子產生表面（cause: death_surface）。
 #                     只能用在 polarity: neutral、expires: never 的狀態（不被淨化、驅散、奪取）；由單位範本的 opening_statuses 掛上
 # control_group 新增 mental（心智：恐懼、沉默；2026-10-23 加嘲諷）：適用控制遞減，不是 hard，對 Boss 不轉換。
+# 5F-4b（循環賽）：
+#   truce  休戰：帶有者不受、也不造成任何傷害（含召喚物、墜落、致命地形）；只能用在 polarity: neutral
+#   expires: round_end（5F-4b）每一輪結束時（環境回合之後）−1，歸零移除
 statuses:
   - id: defending
     polarity: buff
@@ -1310,3 +1313,12 @@ statuses:
     stacking: refresh
     damage_dealt_permille: 900
     damage_taken_permille: 1100
+  # 5F-4b（影子循環賽第 1 輪，玩法 PM 2026-11-03 代決）：只由 season.yaml 的 league.opening_statuses 掛上
+  - id: league_truce
+    polarity: neutral
+    name_zh: 開場休戰
+    description_zh: 循環賽第 1 輪：不會受到、也不會造成任何傷害（召喚物也一樣），只能移動、上增益、佈陣。第 1 輪結束時移除。
+    duration: 1
+    expires: round_end
+    stacking: refresh
+    truce: true
