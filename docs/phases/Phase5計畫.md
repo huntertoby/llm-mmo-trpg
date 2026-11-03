@@ -3579,6 +3579,99 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 
 - 真實 Discord adapter（5E2-1）；預產公告文字（5E-4）；今日目標與世界事件的資料（5F-1）；賽季 Boss 首殺（5F）；Tunnel 的安裝與登入（使用者自己做）；留言的過濾、檢舉、封鎖（#105）；前端的管理者刪除按鈕。
 
-## 32. 之後各段規格
+## 32. 5E-2b 詳細規格：真實 Discord adapter
+
+> 給實作 agent。只動 `src/trpg/bot/`（新增 `envfile.py`、`commands.py`、`discord_adapter.py`；`config.py`、`gateway.py` 小改）、`scripts/discord_bot.py`、`scripts/deploy.py`（只改讀 Bot 設定的那一行）、`config/bot.example.toml`（註解）、`.env.example`（新）、`.gitignore`、`pyproject.toml`（相依、mypy override）、`uv.lock`、`docs/部署說明.md`、`tests/bot/`、`tests/test_architecture.py`。**不連線 Discord、不建立或使用任何 token**；不碰 `trpg.world`、`trpg.engine`、前端。另一個 agent 在做 5D-4（前端），撞到以 main 為準。
+> 依據：本檔第 1 節 5E-2b 列；29（5E-2 介面與 Bot 行為）、31.6（公告）；使用者 2026-11-03 同意加 discord.py（原話「裝」）；token 的放法（原話「到時候我會放.env然後 放token」）。
+
+### 32.1 目標
+
+把 29.4 的 `DiscordGateway` 接上真的 Discord（discord.py）：斜線指令「領帳號」「重設密碼」（回覆只有本人看得到、密碼走私訊）、成員身分組變更與離開伺服器、每日公告與首殺公告（`Announcer.tick` 每分鐘一次）。`FakeDiscordGateway` 照舊給測試用；所有測試不需要網路與 token。
+
+### 32.2 相依
+
+- `uv add discord.py`（PyPI；只加它本身與 uv 解出來的必要相依，`pyproject.toml` 寫下限、`uv.lock` 鎖版本）。**不加** python-dotenv、語音相關（`PyNaCl`）或其他套件。
+- discord.py **只能** 在 `trpg.bot` 匯入（`tests/test_architecture.py` 掃 `src/trpg` 與 `scripts`；`scripts/discord_bot.py` 只透過 `trpg.bot` 用它）。`trpg.bot` 原本的 import-linter 契約不變。
+- 型別：discord.py 型別不全時，mypy override 只限 `trpg.bot.discord_adapter` 這一個模組。
+
+### 32.3 設定與讀取順序
+
+- 環境變數名稱（`.env` 用同一組名稱）：
+
+| 欄位 | 變數 | 說明 |
+|---|---|---|
+| `token` | `TRPG_DISCORD_TOKEN` | Bot token |
+| `guild_id` | `TRPG_DISCORD_GUILD_ID` | 伺服器 ID |
+| `role_id` | `TRPG_DISCORD_ROLE_ID` | 能領帳號的身分組 ID |
+| `announce_channel_id` | `TRPG_DISCORD_ANNOUNCE_CHANNEL_ID` | 公告頻道 ID |
+
+- 每個欄位各自照順序取第一個有值的：① 程序環境變數 → ② repo 根目錄的 `.env` → ③ `config/bot.local.toml`（或 `TRPG_BOT_CONFIG` 指的檔）的 `[discord]`。5E-2 的舊名 `TRPG_BOT_TOKEN` 等仍可用，但排在同一來源的新名之後（相容；文件只寫新名）。
+- `.env` 只在「讀真的環境」時讀（`load_bot_settings(env=None)`）；呼叫端自己給 `env` 時（測試）不讀，除非明確給 `env_file`。這樣使用者主資料夾的 `.env` 不會影響測試。
+- `.env` 解析器（`trpg.bot.envfile`，自寫）：一行一個 `KEY=VALUE`；`#` 開頭的行與空行略過；`KEY` 是 `[A-Za-z_][A-Za-z0-9_]*`、前後空白去掉；值前後空白去掉，可包在成對的 `"` 或 `'` 裡（去掉引號、不處理跳脫）；沒引號的值遇到「空白＋`#`」之後當註解；同名後面的蓋前面；檔頭 BOM 略過。不合法的行 → `BotConfigError`，**只報行號，不印那行內容**（可能含 token）。不支援 `export`、多行值、變數展開。
+- `.env.example`（進版控，`.gitignore` 加 `!.env.example`）：四個變數名，值全空。`.env` 本身照舊被忽略（測試用 `git check-ignore` 檢查兩者）。
+- 缺值的錯誤訊息列出：欄位、環境變數名、`.env`、設定檔欄位；不印 token。
+
+### 32.4 斜線指令（`trpg.bot.commands`，不匯入 discord.py）
+
+| 指令 | 對應 `BotCommand` | 選項 | 說明（顯示在 Discord） |
+|---|---|---|---|
+| `/register` | `register` | `username`（選填） | 領大世界帳號（密碼用私訊傳給你） |
+| `/reset_password` | `reset_password` | 無 | 重設大世界密碼（新密碼用私訊傳給你） |
+
+- 指令名稱用英文（代決 5E2b-1：各平台輸入法都打得出、不需要在地化設定；說明用繁中）。只註冊在設定的伺服器（guild 指令，同步立即生效），不註冊全域、不開放私訊裡用。
+- 事件轉換是純函式：`command_event`、`member_update_event`、`member_remove_event` 把 ID 一律轉成字串；不在伺服器內（`guild_id` 為空）的指令轉成 `guild_id=""`（`BotService` 回「請在指定的伺服器使用」）。
+- `CommandEvent` 加 `interaction_id: str | None = None`（有預設值，fake 與舊測試不變）：真實 adapter 用它找回要回覆的那次互動。
+
+### 32.5 真實 adapter（`trpg.bot.discord_adapter`）
+
+- `build_intents()`：`guilds`、`members`（特權 intent，要在 Developer Portal 開）；**不開** `message_content`、`presences`。
+- `DiscordPyGateway(client, loop)`：實作 `DiscordGateway`。方法在工作執行緒被呼叫，用 `asyncio.run_coroutine_threadsafe(...).result(timeout)` 回到 Bot 的事件迴圈：
+  - `member_roles`：`guild.fetch_member`（每次都向 Discord 重查）；不在伺服器 → `None`；身分組 ID 轉字串，去掉 `@everyone`。
+  - `send_dm`：`fetch_user` → `send`；`Forbidden`／`HTTPException`／逾時 → `False`。
+  - `reply`：用 `interaction_id` 找回已 `defer(ephemeral=True)` 的互動，`followup.send(ephemeral=True)`；找不到就略過（寫 log，不含內容）。
+  - `send_channel`：`get_channel` 或 `fetch_channel` → `send`，`allowed_mentions` 全關；失敗 → `False`（`Announcer` 下次重試）。
+- `TrpgBotClient`（`discord.Client` 子類別）：
+  - 所有 `BotService`／`Announcer` 的呼叫都排進 **同一條** 工作執行緒（`ThreadPoolExecutor(max_workers=1)`），帳號存檔不會被兩個事件同時改；事件迴圈不被 scrypt 卡住。
+  - 指令：先 `defer(ephemeral=True, thinking=True)`（3 秒內回應 Discord），再交給 `BotService.handle_command`。
+  - `on_member_update` → `MemberUpdateEvent`；`on_raw_member_remove`（不靠快取）→ `MemberRemoveEvent`。
+  - 第一次 `on_ready`：同步指令到設定的伺服器 → `reconcile()`（停用的帳號名寫 log）→ 開始公告迴圈（每 60 秒 `Announcer.tick(int(time.time()))`；例外寫 log、迴圈不停）。重連時不重複做。
+- `run_bot(settings, service_factory, announcer_factory)`：建 client 並 `run`；token 錯（`LoginFailure`）或 members intent 沒開（`PrivilegedIntentsRequired`）→ `BotConfigError`，訊息說明怎麼修，不印 token。
+
+### 32.6 啟動腳本（`scripts/discord_bot.py run`）
+
+- 先做 `check`（缺值 exit 2，訊息照 32.3）；齊了就照 `config/server.toml` 開帳號存檔、建 `AnnouncementSource`（同 `preview`）與 `Announcer`（狀態檔 `default_bot_state_path()`、`[announce]` 時間），呼叫 `run_bot`。`run_bot` 的 `BotConfigError` → exit 2。
+- 測試把 `run_bot` 換成假的（不連線），只檢查組裝與 exit code。`EXIT_NO_ADAPTER` 不再使用。
+- `scripts/deploy.py check` 讀 Bot 設定時也照 32.3 讀 `.env`。
+
+### 32.7 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/bot/test_envfile.py` | `KEY=VALUE`、註解、空行、引號、行內註解、BOM、同名覆寫、不合法行只報行號 |
+| `tests/bot/test_config.py` | 新變數名；三層順序（環境 → `.env` → 設定檔，逐欄）；舊名相容；`env` 給了就不讀 `.env`；`.env.example` 只有變數名、沒有值；`.env` 被忽略、`.env.example` 不被忽略 |
+| `tests/bot/test_discord_adapter.py` | intents；指令註冊表（名稱、選項、guild 限定）；事件轉換；`DiscordPyGateway` 對假 client（背景執行緒跑事件迴圈，不連網）：重查身分組、私訊失敗回 `False`、回覆找回互動、頻道貼文關掉提及 |
+| `tests/bot/test_script.py` | `run` 缺 token exit 2；齊全時把設定、服務、公告交給（假的）`run_bot`；`run_bot` 的設定錯誤 exit 2 |
+| `tests/test_architecture.py` | `discord` 只在 `trpg.bot` 匯入（掃 `src/trpg` 與 `scripts`），含掃描器自我測試 |
+
+### 32.8 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/bot`、`tests/api`、`tests/test_architecture.py`；swamp 種子 7 重播。不跑全量、不跑大型模擬。
+
+### 32.9 代決（最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5E2b-1 | 指令名稱 | 英文 `/register`、`/reset_password`，說明繁中；之後要中文名再加在地化 |
+| 5E2b-2 | 指令範圍 | 只註冊在設定的伺服器；不註冊全域、私訊裡不能用 |
+| 5E2b-3 | 身分組查詢 | 每次都 `fetch_member`（多一次 API 呼叫，換不信任快取） |
+| 5E2b-4 | 同時處理 | 單一工作執行緒依序處理所有事件與公告 |
+| 5E2b-5 | 舊環境變數名 | `TRPG_BOT_*` 仍可用（排在新名之後），文件只寫 `TRPG_DISCORD_*` |
+| 5E2b-6 | `.env` 位置 | 只讀 repo 根目錄的 `.env`；不往上層找、不支援 `export`／多行 |
+
+### 32.10 不做的事
+
+- 真的連線測試；指令中文在地化；管理者的 Bot 指令（停用、恢復、刪留言）；全域指令；語音；自動重啟／常駐服務（使用者自己用工作排程器或 launchd）。
+
+## 33. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
