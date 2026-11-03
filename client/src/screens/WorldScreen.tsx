@@ -6,7 +6,9 @@
 // 5D-4（33.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
 // 5F-1b：進入角色時讀「你不在的時候」摘要，有新消息就跳一則（DialogFrame）；按「知道了」送 `news_seen`。
 // 6B-3：所在地點有實地地圖（`view.field`）時，左欄改成可走動畫面（`WorldField`）；換地圖時上方只跳一行地名。
-import { useCallback, useEffect, useRef, useState } from "react";
+// 6B-5：有實地地圖時改用網遊式 HUD（版面 A，`WorldHud`）取代右側長條側欄：可走動畫面用滿整個舞台，
+// 各面板點圖示或按快捷鍵才打開（同時只開一個，再按、Esc 或點空白關閉）；沒有實地地圖的地點照舊用節點圖＋側欄。
+import { useCallback, useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, ApiError } from "../api/client";
 import type {
   AbsenceView,
@@ -23,7 +25,33 @@ import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
 import { WorldMap } from "../world/WorldMap";
 import { WorldField } from "../world/WorldField";
 import { mapPaneKind, PLACE_NAME_MS, placeBanner, type FieldTarget } from "../world/fieldModel";
-import { WorldPanel } from "../world/WorldPanel";
+import { EncounterPanel, HerePanel, WorldPanel } from "../world/WorldPanel";
+import { WorldHud } from "../world/WorldHud";
+import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
+import {
+  addToasts,
+  exitRects,
+  fadedBlocks,
+  fieldFitScale,
+  HUD_BUTTONS,
+  hudKey,
+  hudLayout,
+  isNarrow,
+  liveHudToasts,
+  mateCards,
+  nextHudToastChange,
+  NOT_OPEN_ZH,
+  panelAvailable,
+  readTrackerCollapsed,
+  restrictions,
+  shownPanel,
+  togglePanel,
+  writeTrackerCollapsed,
+  type HudButtonId,
+  type HudPanel,
+  type HudToast,
+} from "../world/hud";
+import { useHudStage } from "../world/useHudStage";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
 import { WorldBagScreen } from "../world/BagScreen";
@@ -65,6 +93,17 @@ function revealInPanel(selector: string): void {
   el.classList.add("world-flash");
 }
 
+function typingInto(target: EventTarget | null): boolean {
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+}
+
+/** 側欄的切換（商店、鐵匠、公告板……）→ HUD 面板；「回到地點圖」＝關掉。 */
+function wantToHud(p: WantPane): HudPanel | null {
+  return p === "map" ? null : p;
+}
+
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -90,6 +129,23 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const lastMap = useRef<string | null | undefined>(undefined);
   const [banner, setBanner] = useState<{ name: string; n: number } | null>(null);
 
+  // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
+  const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
+  const [toasts, setToasts] = useState<HudToast[]>([]);
+  const toastSeq = useRef(0);
+  /** 這次進入角色後已經到過的地點（第一次進入有限制的地點時跳紅框提示）。 */
+  const seenPlaces = useRef(new Set<string>());
+  const [trackerFolded, setTrackerFolded] = useState(() => readTrackerCollapsed());
+  /** 窄視窗時任務追蹤自動收合；玩家點開後這次先展開（不寫進本機）。 */
+  const [narrowOpen, setNarrowOpen] = useState(false);
+  const [, tick] = useReducer((n: number) => n + 1, 0);
+  const pushToast = useCallback((texts: readonly string[], warn: boolean) => {
+    if (texts.length === 0) return;
+    const seq = toastSeq.current;
+    toastSeq.current += texts.length;
+    setToasts((cur) => addToasts(cur, texts, warn, Date.now(), seq));
+  }, []);
+
   const show = useCallback((next: WorldView, mine: ChatEntry | null = null) => {
     for (const card of [...next.character.skills, ...next.character.bench]) primeSkillCard(card);
     setView(next);
@@ -97,6 +153,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     lastMap.current = next.field?.map_id ?? null;
     if (place !== null) setBanner((b) => ({ name: place, n: (b?.n ?? 0) + 1 }));
     if (next.events.length > 0) setLog((cur) => [...next.events, ...cur].slice(0, LOG_MAX));
+    if (next.events.length > 0) pushToast(next.events, false);
+    if (next.field != null && !seenPlaces.current.has(next.here.location)) {
+      seenPlaces.current.add(next.here.location);
+      const limits = restrictions(next);
+      if (limits.length > 0) pushToast([limits.join(" ")], true);
+    }
     if (next.situation_result != null) setResult(next.situation_result);
     if ((next.rumors ?? []).length > 0) setRumors({ at: next.here.location, lines: [...(next.rumors ?? [])] });
     const grouped = dialogByNpc(next.dialog ?? []);
@@ -110,7 +172,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         return out;
       });
     }
-  }, []);
+  }, [pushToast]);
 
   // 地名約 2 秒後淡出（21.7）
   useEffect(() => {
@@ -181,6 +243,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     lastMap.current = undefined;
     setBanner(null);
     setLog([]);
+    setToasts([]);
+    setHudPanel(null);
+    seenPlaces.current = new Set();
     setChats({});
     setResult(null);
     setRumors(null);
@@ -292,8 +357,34 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
+  /** HUD 版面：互動改成開對應的浮動面板；這裡的人、雇用在「這裡」面板裡，開了再捲到那張卡。 */
+  function interactHud(target: FieldTarget) {
+    const reveal = (selector: string) => {
+      setHudPanel("place");
+      window.setTimeout(() => revealInPanel(selector), 60);
+    };
+    if (target.kind === "npc") {
+      reveal(`[data-npc="${target.npc}"]`);
+      return;
+    }
+    const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth" };
+    const to = panel[target.facility];
+    if (to !== undefined) {
+      setHudPanel(to);
+      return;
+    }
+    if (target.facility === "tavern") {
+      act({ kind: "tavern" });
+      setHudPanel("place");
+    } else if (target.facility === "hire") reveal('[data-testid="world-hire-toggle"]');
+  }
+
   /** 走到設施或 NPC 旁邊互動：開原本的面板（6B-4 前的最小版）。 */
   function interact(target: FieldTarget) {
+    if (view !== null && mapPaneKind(view) === "field") {
+      interactHud(target);
+      return;
+    }
     if (target.kind === "npc") {
       revealInPanel(`[data-npc="${target.npc}"]`);
       return;
@@ -352,6 +443,162 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
+  // ---- HUD（6B-5） ----
+  const hudMode = battle === null && view !== null && mapPaneKind(view) === "field";
+  const stage = useHudStage(hudMode, `${error ?? ""}|${llm?.notice_zh ?? ""}|${view === null ? "" : "v"}`);
+  const narrow = isNarrow(stage.viewport);
+  const nowMs = Date.now();
+  const liveToasts = hudMode ? liveHudToasts(toasts, nowMs, narrow ? 1 : undefined) : [];
+  const toastWait = nextHudToastChange(liveToasts, nowMs);
+  useEffect(() => {
+    if (toastWait === null) return undefined;
+    const id = window.setTimeout(tick, toastWait + 16);
+    return () => window.clearTimeout(id);
+  });
+  const shown = view === null ? null : shownPanel(view, hudPanel);
+  const panelLocked = shown === "pending" || shown === "offer";
+
+  function hudButton(id: HudButtonId) {
+    const b = HUD_BUTTONS.find((x) => x.id === id);
+    if (b === undefined) return;
+    if (b.panel === null) {
+      pushToast([`${b.name}：${NOT_OPEN_ZH}`], false);
+      return;
+    }
+    if (view !== null && !panelAvailable(view, b.panel)) {
+      pushToast([`${b.name}：現在沒有資料`], false);
+      return;
+    }
+    const panel = b.panel;
+    setHudPanel((cur) => togglePanel(cur, panel));
+  }
+  const closeHud = () => setHudPanel(null);
+  const hudKeys = useRef({ active: false, locked: false, button: hudButton, close: closeHud, map: () => undefined as void });
+  hudKeys.current = {
+    active: hudMode,
+    locked: panelLocked,
+    button: hudButton,
+    close: closeHud,
+    map: () => pushToast([`大地圖：${NOT_OPEN_ZH}`], false),
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const h = hudKeys.current;
+      if (!h.active) return;
+      const k = hudKey(e, typingInto(e.target));
+      if (k === null) return;
+      if (k.kind === "escape") {
+        if (!h.locked) h.close();
+        return;
+      }
+      if (e.repeat) return;
+      e.preventDefault();
+      if (k.kind === "map") h.map();
+      else h.button(k.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  /** 現在要開的 HUD 面板內容（沿用原本側欄、左欄的元件）。 */
+  function hudPanelContent(v: WorldView): ReactNode {
+    switch (shown) {
+      case "pending":
+        return <WorldFlashPending view={v} busy={busy} onChoose={choose} />;
+      case "offer":
+        return <WorldOfferPending view={v} busy={busy} onAct={act} />;
+      case "bag":
+        return <WorldBagScreen view={v} busy={busy} onAct={act} onClose={closeHud} />;
+      case "skills":
+        return <HudSkillsPanel view={v} busy={busy} onAct={act} />;
+      case "growth":
+        return <WorldGrowth view={v} busy={busy} onChoose={choose} onAct={actStatus} onClose={closeHud} />;
+      case "quests":
+        return <QuestLog view={v} onClose={closeHud} />;
+      case "shadow":
+        return <HudShadowPanel view={v} busy={busy} onAct={act} />;
+      case "notes":
+        return (
+          <HudNotesPanel notes={charId !== null && <NotesPanel characterId={charId} location={v.here.location} busy={busy} />} log={log} />
+        );
+      case "place":
+        return (
+          <div className="world-hud-stack" data-testid="world-hud-place">
+            <HerePanel
+              view={v}
+              busy={busy}
+              hasten={false}
+              onHasten={() => undefined}
+              onAct={act}
+              rumors={rumors !== null && rumors.at === v.here.location ? rumors.lines : []}
+              onPane={(p) => setHudPanel(wantToHud(p))}
+              hideHasten
+            />
+            <NpcPanel view={v} busy={busy} chats={chats} onAct={act} onChat={chat} />
+          </div>
+        );
+      case "shop":
+        return <WorldShopScreen view={v} busy={busy} onAct={act} onClose={closeHud} />;
+      case "smithy":
+        return <WorldSmithyScreen view={v} busy={busy} onAct={act} onClose={closeHud} />;
+      case "board":
+        return charId === null ? null : <BoardPanel characterId={charId} view={v} busy={busy} onAct={act} onClose={closeHud} />;
+      case "league":
+        return charId === null ? null : (
+          <LeaguePanel characterId={charId} view={v} busy={busy} onAct={act} onReplay={watchReplay} onClose={closeHud} />
+        );
+      default:
+        return null;
+    }
+  }
+
+  function renderHud(v: WorldView) {
+    const field = v.field;
+    if (field == null) return null;
+    const folded = trackerFolded || (narrow && !narrowOpen);
+    const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
+    const fieldScale = fieldFitScale(stage, field);
+    const faded = fadedBlocks(layout, exitRects(field, stage, fieldScale));
+    const hasCenter = v.encounter !== null || result !== null || v.event != null;
+    const style = { height: stage.height, "--hud-s": layout.scale } as CSSProperties;
+    return (
+      <div className="world-hud-stage" ref={stage.ref} style={style} data-testid="world-hud-stage">
+        <WorldField view={v} busy={busy} send={sendField} commit={show} onInteract={interact} hudScale={fieldScale} />
+        <WorldHud
+          view={v}
+          layout={layout}
+          faded={faded}
+          toasts={liveToasts}
+          trackerCollapsed={folded}
+          onTracker={(c) => {
+            if (narrow) setNarrowOpen(!c);
+            else {
+              setTrackerFolded(c);
+              writeTrackerCollapsed(c);
+            }
+          }}
+          onButton={hudButton}
+          onMap={() => hudKeys.current.map()}
+          onSettings={() => pushToast([`設定：${NOT_OPEN_ZH}`], false)}
+          onPlace={() => setHudPanel((cur) => togglePanel(cur, "place"))}
+          openPanel={shown}
+          panel={shown === null ? null : hudPanelContent(v)}
+          panelLocked={panelLocked}
+          onClosePanel={closeHud}
+          center={
+            hasCenter ? (
+              <>
+                <EncounterPanel view={v} busy={busy} onAct={act} onBattle={fight} />
+                {result !== null && <SituationResultCard result={result} onClose={() => setResult(null)} />}
+                {v.event != null && <EventCard event={v.event} busy={busy} onOpen={openSituation} onSolve={solve} onAnswer={answer} />}
+              </>
+            ) : null
+          }
+        />
+      </div>
+    );
+  }
+
   if (battle !== null) {
     return (
       <BattleScreen
@@ -368,7 +615,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     return <WorldCharacterPicker onEnter={enter} onHome={onHome} onLogin={onLogin} onLogout={onLogout} />;
   }
   return (
-    <div className="run-screen world-screen">
+    <div className={`run-screen world-screen${hudMode ? " hud-mode" : ""}`}>
       <header className="run-header">
         <h1>
           大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
@@ -405,6 +652,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
       {view === null ? (
         <div className="muted">載入中……</div>
+      ) : hudMode ? (
+        renderHud(view)
       ) : (
         <div className="world-layout">
           {leftPane(view, want) === "pending" && <WorldFlashPending view={view} busy={busy} onChoose={choose} />}

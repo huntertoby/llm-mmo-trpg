@@ -1,0 +1,607 @@
+/* 網遊式 HUD 版面 A（Phase 6B-5；docs/art/HUD移植需求.md 第 2 節）：只在大世界有實地地圖時用。
+   面板半透明深底 rgba(24,20,16,0.84)＋金邊 #c8a868；HP #e04a3a、法力 #4a8ae0、經驗 #e8bb48。
+   位置由 hudLayout() 以 inline style 給（以 1040×624 為基準等比縮放），這裡只管外觀。
+   疊放（6.5.1，都在舞台內、低於 Hint 的 900）：畫布 0 < 說明列 6 < 背景遮罩 8 < HUD 10 < 中上方卡 12 < 面板 14。 */
+:root {
+  --hud-panel: rgba(24, 20, 16, 0.84);
+  --hud-gold: #c8a868;
+  --hud-hp: #e04a3a;
+  --hud-mana: #4a8ae0;
+  --hud-xp: #e8bb48;
+  --hud-text: #f0e6cc;
+}
+
+.world-screen.hud-mode {
+  max-width: none;
+  padding-bottom: 0;
+}
+
+.world-hud-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #14171a;
+}
+
+.world-field.hud {
+  position: absolute;
+  inset: 0;
+  gap: 0;
+}
+
+.world-field.hud .world-field-stage {
+  max-height: none;
+  height: 100%;
+  overflow: hidden;
+  align-items: center;
+}
+
+/* 說明列（滑過的格子、傳送石按鈕）：疊在功能列上方中央 */
+.world-field.hud .world-field-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--hud-s, 1) * 70px);
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: 46%;
+  min-height: 0;
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: rgba(24, 20, 16, 0.66);
+  justify-content: center;
+  text-align: center;
+}
+
+.world-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--hud-text);
+  z-index: 10;
+}
+
+.world-hud-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.world-hud-block {
+  position: absolute;
+  z-index: 10;
+  transition: opacity 0.2s ease;
+}
+
+.world-hud-block > .world-hud-inner {
+  transform-origin: top left;
+  pointer-events: auto;
+}
+
+/* 出口附近：半透明，出口標示看得到（滑上去恢復） */
+.world-hud-block.faded {
+  opacity: 0.38;
+}
+
+.world-hud-block.faded:hover,
+.world-hud-block.faded:focus-within {
+  opacity: 1;
+}
+
+.world-hud-at-mates > .world-hud-inner,
+.world-hud-at-toasts > .world-hud-inner {
+  pointer-events: none;
+}
+
+/* ---- 主角卡 ---- */
+.world-hud-hero {
+  position: relative;
+  width: 250px;
+  height: 74px;
+  box-sizing: border-box;
+  background: var(--hud-panel);
+  border: 1.5px solid var(--hud-gold);
+  border-radius: 10px;
+}
+
+.world-hud-face {
+  position: absolute;
+  left: 7px;
+  top: 5px;
+  display: block;
+  line-height: 0;
+}
+
+.world-hud-lv {
+  position: absolute;
+  left: 44px;
+  top: 56px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: #3a5ad0;
+  border: 1px solid var(--hud-gold);
+  border-radius: 7px;
+}
+
+.world-hud-rank {
+  position: absolute;
+  left: 2px;
+  top: 52px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.world-hud-fatigue {
+  position: absolute;
+  left: 58px;
+  top: 2px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #fff;
+  background: #8a3030;
+  border-radius: 4px;
+}
+
+.world-hud-bars {
+  position: absolute;
+  left: 78px;
+  top: 8px;
+  width: 164px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.world-hud-bar {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #1a1410;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+}
+
+.world-hud-bar > .fill {
+  height: 100%;
+}
+
+.world-hud-bar.hp > .fill {
+  background: var(--hud-hp);
+}
+
+.world-hud-bar.mana > .fill {
+  background: var(--hud-mana);
+}
+
+.world-hud-bar.xp > .fill {
+  background: var(--hud-xp);
+}
+
+.world-hud-bar > .text {
+  position: absolute;
+  inset: 0;
+  font-size: 10.5px;
+  line-height: 13px;
+  text-align: center;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 1px 1px #000;
+}
+
+.world-hud-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.world-hud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+  padding: 0 6px;
+  height: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(200, 168, 104, 0.5);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+/* ---- 隊友 ---- */
+.world-hud-mates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.world-hud-mate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 8px 0 3px;
+  box-sizing: border-box;
+  background: var(--hud-panel);
+  border: 1.2px solid rgba(200, 168, 104, 0.6);
+  border-radius: 18px;
+  pointer-events: auto;
+}
+
+.world-hud-mate-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.world-hud-mate .name {
+  font-size: 11px;
+  line-height: 12px;
+}
+
+/* ---- 圖示鈕 ---- */
+.world-hud-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  background: var(--hud-panel);
+  border: 1.5px solid rgba(200, 168, 104, 0.75);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--hud-text);
+}
+
+.world-hud-btn:hover,
+.world-hud-btn:focus-visible {
+  border-color: #ffd04a;
+}
+
+.world-hud-btn.active {
+  border-color: #ffd04a;
+  box-shadow: 0 0 0 2px rgba(255, 208, 74, 0.45);
+}
+
+.world-hud-btn > .key {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 9px;
+  line-height: 10px;
+  color: #d8c8a0;
+}
+
+.world-hud-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid #1a1410;
+}
+
+.world-hud-dot.red {
+  background: #e04a3a;
+}
+
+.world-hud-dot.purple {
+  background: #8a6ad0;
+}
+
+.world-hud-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  font-size: 10px;
+  line-height: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: #c03a2a;
+  border-radius: 8px;
+}
+
+/* ---- 右上 ---- */
+.world-hud-place {
+  display: flex;
+  align-items: center;
+  width: 170px;
+  height: 24px;
+  box-sizing: border-box;
+  background: var(--hud-panel);
+  border: 1.5px solid var(--hud-gold);
+  border-radius: 6px;
+}
+
+.world-hud-place-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  color: var(--hud-text);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.world-hud-place-name > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.world-hud-warn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  cursor: help;
+}
+
+.world-hud-minimap {
+  width: 170px;
+  height: 104px;
+  box-sizing: border-box;
+  padding: 3px;
+  background: var(--hud-panel);
+  border: 1.5px solid var(--hud-gold);
+  border-radius: 6px;
+}
+
+.world-hud-minimap-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.world-hud-minimap-svg .mini-npc {
+  fill: #ffd84a;
+  stroke: #3a2a00;
+  stroke-width: 0.15;
+}
+
+.world-hud-minimap-svg .mini-enemy {
+  fill: #e04a3a;
+}
+
+.world-hud-minimap-svg .mini-rest {
+  fill: #ff9a3a;
+}
+
+.world-hud-minimap-svg .mini-stone {
+  fill: #7fd8ff;
+}
+
+.world-hud-minimap-svg .mini-me {
+  fill: #3a8aff;
+  stroke: #fff;
+  stroke-width: 0.25;
+}
+
+.world-hud-clock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+}
+
+.world-hud-clock .world-hud-chip {
+  min-width: 0;
+  height: 26px;
+  background: var(--hud-panel);
+  border-color: var(--hud-gold);
+}
+
+.world-hud-wallet {
+  display: flex;
+  gap: 4px;
+}
+
+.world-hud-wallet .world-hud-chip {
+  flex: 1;
+  height: 24px;
+  background: var(--hud-panel);
+}
+
+/* ---- 任務追蹤 ---- */
+.world-hud-tracker {
+  width: 170px;
+  max-height: 112px;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  background: var(--hud-panel);
+  border: 1.5px solid var(--hud-gold);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.world-hud-tracker .head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #d8c8a0;
+}
+
+.world-hud-fold {
+  margin-left: auto;
+  width: 18px;
+  height: 16px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 14px;
+  background: transparent;
+  border: 1px solid rgba(200, 168, 104, 0.5);
+  border-radius: 4px;
+  color: var(--hud-text);
+  cursor: pointer;
+}
+
+.world-hud-track {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 4px;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--hud-text);
+  cursor: pointer;
+}
+
+.world-hud-track .name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffe0a0;
+}
+
+.world-hud-track .name,
+.world-hud-track .line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.world-hud-track .line {
+  font-size: 10.5px;
+  color: #c8c0b0;
+}
+
+.world-hud-tracker .empty {
+  font-size: 11px;
+  color: #9a9080;
+}
+
+/* ---- 功能列 ---- */
+.world-hud-funcs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: 56px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  background: rgba(24, 20, 16, 0.6);
+  border-radius: 12px;
+}
+
+/* ---- 左下浮動提示 ---- */
+.world-hud-toasts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.world-hud-toast {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font-size: 11.5px;
+  background: var(--hud-panel);
+  border: 1.2px solid var(--hud-gold);
+  border-radius: 12px;
+  transition: opacity 1s ease;
+}
+
+.world-hud-toast > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.world-hud-toast.warn {
+  border-color: #ff6a5a;
+}
+
+.world-hud-toast.fading {
+  opacity: 0;
+}
+
+/* ---- 中上方（遇敵、事件卡）與浮動面板 ---- */
+.world-hud-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, 46%);
+  min-width: 300px;
+  overflow: auto;
+  z-index: 12;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.world-hud-panel {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100% - 24px));
+  overflow: auto;
+  z-index: 14;
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: rgba(24, 20, 16, 0.93);
+  border: 2px solid var(--hud-gold);
+  border-radius: 10px;
+}
+
+.world-hud-panel-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 24px;
+  background: rgba(24, 20, 16, 0.9);
+  border: 1px solid var(--hud-gold);
+  border-radius: 6px;
+  color: var(--hud-text);
+  cursor: pointer;
+}
+
+.world-hud-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.world-hud-icon,
+.hud-icon {
+  flex: none;
+}
