@@ -10,9 +10,10 @@ from tests.world.helpers import NOON, PARTY, hero, make_encounter, make_world
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import BattleEndedEvent, FightAction, RestAction
 from trpg.world.battle import auto_steps
+from trpg.world.economy_actions import LootAbandonedEvent
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, loads_char
-from trpg.world.state import CharacterState, EncounterResult
+from trpg.world.state import CharacterState, EncounterResult, PendingLoot
 from trpg.world.step import new_character, world_step
 
 
@@ -84,6 +85,16 @@ def test_loss_is_recorded(library: ContentLibrary) -> None:
     last = result.char.last_battle
     assert last is not None
     assert not last.won and last.xp_gained == 0 and last.location == "elixir_cave"
+
+
+def test_loss_keeps_undecided_loot(library: ContentLibrary) -> None:
+    """5D-4（確認 5D2b-6）：沒決定的戰利品只在下一場「打贏」時留在原地；輸掉的那場不動。"""
+    pending = PendingLoot(materials={"item_wolf_fang": 1})
+    char = _start(library, "elixir_cave", hp=1, camped_at=None, pending_loot=pending)
+    start, action = _find(library, char, _loss_encounter, won=False)
+    result = world_step(library, make_world(), start, action, NOON)
+    assert result.char.pending_loot == pending
+    assert not any(isinstance(e, LootAbandonedEvent) for e in result.events)
 
 
 def test_old_snapshot_reads_without_field(library: ContentLibrary) -> None:
