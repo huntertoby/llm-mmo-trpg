@@ -2,7 +2,8 @@
 // 被動、反應、姿態、修正以小圖示放在同一列最右側，點開看卡片（可施放的姿態點了照樣選取）。
 // 5D-4：腰包的道具（卡片標籤 `item`，8.17）不佔技能欄位，放在獨立的「道具」群組（同種族技的群組樣式）。
 // 灰掉原因、滑過看卡片、選取提示照舊；卡片用共用的浮動卡規則（`useFloatCard`，Phase 3-30）：貼齊按鈕上方，滑過約 150ms 顯示，
-// 離開有 250ms 寬限可滑進卡片，點卡片釘住，Esc／點外面關閉。
+// 離開有 250ms 寬限可滑進卡片，點卡片或按 Shift 釘住，Esc／點外面關閉。
+// 6A-1（開發 PM 定案）：觸控點一下按鈕只執行動作；長按約 0.4 秒開技能卡（釘住），放開不執行——取代以前「點一下釘住技能卡」。
 import type { RaceView, SkillCard } from "../api/types";
 import { passiveLine, raceBattleCardLines, raceUsesText } from "../battle/race";
 import { minorGlyph, splitSkills } from "../battle/skillTray";
@@ -10,9 +11,9 @@ import type { ActionMode, SkillButton } from "../battle/targeting";
 import { gearSkillBadge } from "../battle/gearSkills";
 import { grantedBadge } from "../battle/granted";
 import { activeVariantCard, variantBadge } from "../battle/variants";
-import { SkillCardView } from "./SkillCardView";
+import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
-import { FloatCard, useFloatCard } from "./useFloatCard";
+import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
 import { Hint } from "./Hint";
 
 interface Props {
@@ -33,6 +34,11 @@ interface Props {
   onBlocked?(button: SkillButton): void;
   /** 點到灰色的基本動作（例如推不動的「推動物件」）：把原因交給訊息列。 */
   onBlockedMode?(reason: string): void;
+}
+
+/** 技能卡上的圖釘：釘住或取消（取消時卡片關閉）。 */
+function cardPin(f: FloatApi): CardPin {
+  return { pinned: f.pinned, toggle: () => (f.pinned ? f.ctl.dismiss() : f.ctl.click(false)) };
 }
 
 function costText(b: SkillButton): string {
@@ -57,8 +63,8 @@ function SkillSlot({
 }) {
   const blocked = !enabled || b.disabledReason !== null;
   const reasoned = b.disabledReason !== null;
-  // 點按鈕是施放／選取，所以滑鼠點擊不釘住卡片；觸控沒有滑過，點一下同時顯示卡片
-  const f = useFloatCard({ pinOn: "touch" });
+  // 點按鈕是施放／選取，所以點擊不釘住卡片；觸控長按才開卡片（6A-1）
+  const f = useFloatCard({ pinOn: "hold", shiftPin: true });
   const variant = b.variant ?? null;
   const form = activeVariantCard(card, variant);
   return (
@@ -95,7 +101,7 @@ function SkillSlot({
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
           {b.disabledReason !== null && <div className="skill-card-reason">現在不能用：{b.disabledReason}</div>}
-          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} />
+          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} />
         </FloatCard>
       )}
     </div>
@@ -118,7 +124,7 @@ function RaceSlot({
   onPick(m: ActionMode): void;
   onBlocked?(reason: string): void;
 }) {
-  const f = useFloatCard({ pinOn: "touch" });
+  const f = useFloatCard({ pinOn: "hold" });
   const reason = m.blockedReason;
   return (
     <div className="skill-slot race-slot" {...f.triggerProps}>
@@ -152,7 +158,7 @@ function RaceSlot({
   );
 }
 
-/** 被動、反應、姿態的小圖示：可施放的姿態點了選取，其他點一下釘住卡片。 */
+/** 被動、反應、姿態的小圖示：可施放的姿態點了選取（觸控長按看卡片），其他點一下釘住卡片。 */
 function MiniSlot({
   b,
   card,
@@ -167,7 +173,7 @@ function MiniSlot({
   onSelect(id: string): void;
 }) {
   const usable = enabled && b.disabledReason === null && b.actions.length > 0;
-  const f = useFloatCard({ pinOn: usable ? "touch" : "always" });
+  const f = useFloatCard({ pinOn: usable ? "hold" : "always", shiftPin: true });
   return (
     <span className="skill-mini-wrap" {...f.triggerProps}>
       <button
@@ -181,7 +187,7 @@ function MiniSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
-          <SkillCardView card={card} compact />
+          <SkillCardView card={card} compact pin={cardPin(f)} />
         </FloatCard>
       )}
     </span>

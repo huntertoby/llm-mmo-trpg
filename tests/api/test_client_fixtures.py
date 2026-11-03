@@ -6,6 +6,7 @@ from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.api.fixtures import (
     glossary_fixture_text,
     race_looks_fixture_text,
+    skill_cards_fixture_text,
     unit_dolls_fixture_text,
 )
 
@@ -30,4 +31,11 @@ def test_race_looks_fixture_is_up_to_date() -> None:
     path = PROJECT_ROOT / "client" / "src" / "render" / "fixtures" / "raceLooks.json"
     assert path.read_text(encoding="utf-8") == race_looks_fixture_text(library()), (
         f"raceLooks.json {_HINT}"
+    )
+
+
+def test_skill_cards_fixture_is_up_to_date() -> None:
+    path = PROJECT_ROOT / "client" / "src" / "ui" / "fixtures" / "skillCards.json"
+    assert path.read_text(encoding="utf-8") == skill_cards_fixture_text(library()), (
+        f"skillCards.json {_HINT}"
     )
