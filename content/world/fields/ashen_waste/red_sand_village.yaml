@@ -1,0 +1,115 @@
+# 赤沙村實地地圖（6D-2；玩法 PM 草稿第 6 張；三村落之一）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 村落 24×18，建議 6 級，營火：紅沙地上的小村，土牆圍著村子，村中央是水井。
+# 世界事件 #2「熔岩潰堤」要守的第一個村子，敵人最輕。
+# 唯一的出口在西北，回焦土外圍。村口是北面土牆的缺口 [10, 4]～[11, 4]。
+# 守點戰（21.9 第 20 條；草稿待確認 2、3）：守點目標是村中央的水井，記成情境物件 red_sand_well [12, 8]；
+#   駐守 village_raid_light 放在村口外 [11, 3]，離水井曼哈頓 6 格，切出的 12×12 同時包含接觸點和水井。
+# 土牆用 earth_wall 物件；村民的屋子只畫外牆（沒有室內）。水源：水井旁的水表面 2 格（區域題目「怕水」）。
+# NPC：草稿的村民、孩子沒有人設卡（world/npcs/ashen_waste.yaml），先不放。
+# 事件點：村口（lost_pup）。
+id: red_sand_village
+name_zh: 赤沙村
+region: ashen_waste
+location: red_sand_village
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,###,,,,,,,
+  ,,,,,,,,,,,,,,###,,,,,,,
+  ,,,,,,,,,,.....,,,,,,,,,
+  ,,,,,,,,,,.....,,,,,,,,,
+  ,,,,,,,,,,.....,,,,,,,,,
+  ,,,,,,,,##.....##,,,,,,,
+  ,,,,,,,,##,,,,,##,,,,,,,
+  ,,,,,,,,##,,,,,##,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+legend:
+  ",": dirt
+  ".": stone
+  "#": wall
+objects:
+  - {at: [7, 4], kind: earth_wall}   # 村子的土牆（北面缺口是村口）
+  - {at: [8, 4], kind: earth_wall}
+  - {at: [9, 4], kind: earth_wall}
+  - {at: [12, 4], kind: earth_wall}
+  - {at: [13, 4], kind: earth_wall}
+  - {at: [14, 4], kind: earth_wall}
+  - {at: [15, 4], kind: earth_wall}
+  - {at: [16, 4], kind: earth_wall}
+  - {at: [17, 4], kind: earth_wall}
+  - {at: [7, 14], kind: earth_wall}
+  - {at: [8, 14], kind: earth_wall}
+  - {at: [9, 14], kind: earth_wall}
+  - {at: [10, 14], kind: earth_wall}
+  - {at: [11, 14], kind: earth_wall}
+  - {at: [12, 14], kind: earth_wall}
+  - {at: [13, 14], kind: earth_wall}
+  - {at: [14, 14], kind: earth_wall}
+  - {at: [15, 14], kind: earth_wall}
+  - {at: [16, 14], kind: earth_wall}
+  - {at: [17, 14], kind: earth_wall}
+  - {at: [7, 5], kind: earth_wall}
+  - {at: [7, 6], kind: earth_wall}
+  - {at: [7, 7], kind: earth_wall}
+  - {at: [7, 8], kind: earth_wall}
+  - {at: [7, 9], kind: earth_wall}
+  - {at: [7, 10], kind: earth_wall}
+  - {at: [7, 11], kind: earth_wall}
+  - {at: [7, 12], kind: earth_wall}
+  - {at: [7, 13], kind: earth_wall}
+  - {at: [17, 5], kind: earth_wall}
+  - {at: [17, 6], kind: earth_wall}
+  - {at: [17, 7], kind: earth_wall}
+  - {at: [17, 8], kind: earth_wall}
+  - {at: [17, 9], kind: earth_wall}
+  - {at: [17, 10], kind: earth_wall}
+  - {at: [17, 11], kind: earth_wall}
+  - {at: [17, 12], kind: earth_wall}
+  - {at: [17, 13], kind: earth_wall}
+  - {at: [2, 10], kind: dead_tree}   # 枯樹
+  - {at: [20, 6], kind: dead_tree}
+  - {at: [21, 12], kind: dead_tree}
+  - {at: [20, 15], kind: rubble}   # 坍掉的土牆
+  - {at: [4, 14], kind: rubble}
+surfaces:
+  - {at: [13, 8], surface: water}   # 水井旁的水
+  - {at: [13, 9], surface: water}
+entry: [4, 2]
+exits:
+  - {id: to_scorched_outskirts, at: [[3, 0], [4, 0]], to: scorched_outskirts, arrive: to_red_sand_village}   # 西北：往焦土外圍
+spawns:
+  - {at: [11, 3], group: village_raid_light}   # 村口外（離水井 6 格）
+campfires:
+  - {at: [11, 11], id: campfire_red_sand_village}   # 井南的空地
+event_spots:
+  - {at: [13, 2], id: lost_pup}   # 村口
+situation_objects:
+  - {at: [12, 8], id: red_sand_well}   # 守點目標：村中央的水井
