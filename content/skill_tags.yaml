@@ -32,6 +32,7 @@ tags:
   - {id: defense, name_zh: 防禦}
   - {id: detonate, name_zh: 引爆}
   - {id: dispel, name_zh: 驅散}
+  - {id: dot, name_zh: 持續傷害}
   - {id: displace, name_zh: 位移}
   - {id: drain, name_zh: 吸取}
   - {id: earth, name_zh: 大地}

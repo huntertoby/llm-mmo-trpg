@@ -459,16 +459,29 @@ const GRID: Readonly<Record<string, readonly number[]>> = {
   ring: [1, 1, 1, 1, 0, 1, 1, 1, 1],
 };
 
-function grid(ctx: Ctx, el: string, p: ElementIcon, shape: string): void {
-  const cells = GRID[shape] ?? GRID["square3"] ?? [];
-  const cs = 19;
-  const gap = 3;
-  const o = 50 - (cs * 3 + gap * 2) / 2;
-  for (let i = 0; i < 9; i++) {
-    const x = o + (i % 3) * (cs + gap);
-    const y = o + Math.floor(i / 3) * (cs + gap);
+/** 5F-ART1（`docs/art/大十字圖示.md`）：臂長 ≥ 2 的十字畫 5×5（亮中心列與中心行 9 格）。 */
+const BIG_CROSS: readonly number[] = Array.from({ length: 25 }, (_, i) => (i % 5 === 2 || Math.floor(i / 5) === 2 ? 1 : 0));
+
+/** 臂長：不是 ≥ 1 的整數（缺欄位、0、負數、非整數）一律當 1。 */
+export function normalizeArm(arm: unknown): number {
+  return typeof arm === "number" && Number.isInteger(arm) && arm >= 1 ? arm : 1;
+}
+
+/** 形狀格子的版面：`n`×`n` 格、每格 `cs`、間距 `gap`、亮格表（3×3 與 5×5 的總寬都是 63）。 */
+export function gridLayout(shape: string, arm: number): { n: number; cs: number; gap: number; cells: readonly number[] } {
+  if (shape === "cross" && normalizeArm(arm) >= 2) return { n: 5, cs: 11, gap: 2, cells: BIG_CROSS };
+  return { n: 3, cs: 19, gap: 3, cells: GRID[shape] ?? GRID["square3"] ?? [] };
+}
+
+function grid(ctx: Ctx, el: string, p: ElementIcon, shape: string, arm: number): void {
+  const { n, cs, gap, cells } = gridLayout(shape, arm);
+  const big = n === 5;
+  const o = 50 - (cs * n + gap * (n - 1)) / 2;
+  for (let i = 0; i < n * n; i++) {
+    const x = o + (i % n) * (cs + gap);
+    const y = o + Math.floor(i / n) * (cs + gap);
     ctx.beginPath();
-    ctx.roundRect(x, y, cs, cs, 3);
+    ctx.roundRect(x, y, cs, cs, big ? 2 : 3);
     if (cells[i] === 1) {
       ctx.fillStyle = p.accent;
       ctx.globalAlpha = 0.85;
@@ -482,8 +495,9 @@ function grid(ctx: Ctx, el: string, p: ElementIcon, shape: string): void {
   }
   if (shape === "ring") figure(ctx, 50, 52, 0.62, "#ffffff");
   else {
-    outlined(ctx, () => starPath(ctx, 50, 50, 8, 17, 8), "#ffffff", 4);
-    elementGlyph(ctx, el, 50, 50, 0.9, p.dark);
+    const k = big ? 0.7 : 1;
+    outlined(ctx, () => starPath(ctx, 50, 50, 8 * k, 17 * k, 8), "#ffffff", 4);
+    elementGlyph(ctx, el, 50, 50, 0.9 * k, p.dark);
   }
 }
 
@@ -673,6 +687,8 @@ export interface MotifSpec {
   skeleton: string | null;
   /** 遠程（射程 ≥ 2，或武器射程且需要遠程武器）：單體畫飛行物，否則揮砍月牙。 */
   ranged: boolean;
+  /** 十字的臂長（5F-ART1）；省略或不合法當 1，≥ 2 的十字畫 5×5。 */
+  arm?: number;
 }
 
 /** 單體技能的遠近：有射程看射程；射程是武器（`null`）時看武器需求。 */
@@ -688,7 +704,7 @@ export function drawMotif(ctx: Ctx, spec: MotifSpec, el: string, p: ElementIcon)
   else if (shape === "single") (spec.ranged ? projectile : slash)(ctx, el, p);
   else if (shape === "line") beam(ctx, el, p);
   else if (shape === "cone") fan(ctx, el, p);
-  else if (shape !== null && GRID[shape] !== undefined) grid(ctx, el, p, shape);
+  else if (shape !== null && GRID[shape] !== undefined) grid(ctx, el, p, shape, normalizeArm(spec.arm));
   else if (shape === "chain") chain(ctx, el, p);
   else if (shape === "ground_tile") ground(ctx, el, p, spec.skeleton);
   else if (shape === "allies_in_radius") alliesRadius(ctx, el, p);

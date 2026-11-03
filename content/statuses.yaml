@@ -209,7 +209,7 @@ statuses:
   - id: rift_collapse
     polarity: neutral
     name_zh: 界崩
-    description_zh: 浮台開始崩塌：造成的傷害加倍。不能被淨化、驅散或奪取。
+    description_zh: 浮台開始崩塌：造成的傷害大幅提高。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
     damage_dealt_permille: 2000

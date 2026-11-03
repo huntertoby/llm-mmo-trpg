@@ -4389,6 +4389,8 @@ export interface components {
             shape_id: string | null;
             /** Range */
             range: number | null;
+            /** Arm */
+            arm?: number | null;
             /**
              * Elements
              * @default []
