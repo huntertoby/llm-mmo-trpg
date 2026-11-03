@@ -155,11 +155,12 @@ def loot_problems(
     rules: LootRules,
     *,
     regions: Collection[str],
-    units: Collection[str],
-    affixes: Collection[str],
+    units: Collection[str] | None,
+    affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
 ) -> list[str]:
-    """跨檔案問題（27.2；依區域、鍵排序）。"""
+    """跨檔案問題（27.2；依區域、鍵排序）。``units``／``affixes`` 為 ``None``＝沒有
+    ``world/enemies.yaml``（變體與詞綴不明），不檢查敵人與詞綴。"""
     problems: list[str] = []
 
     def material(item: str, where: str) -> None:
@@ -176,11 +177,11 @@ def loot_problems(
         if region not in regions:
             problems.append(f"{where}：沒有地點圖")
         for unit, item in sorted(loot.families.items()):
-            if unit not in units:
+            if units is not None and unit not in units:
                 problems.append(f"{where} 的 families：未知的敵人 {unit}")
             material(item, f"{where} 的 families.{unit}")
         for affix, item in sorted(loot.elite_affixes.items()):
-            if affix not in affixes:
+            if affixes is not None and affix not in affixes:
                 problems.append(f"{where} 的 elite_affixes：未知的精英詞綴 {affix}")
             material(item, f"{where} 的 elite_affixes.{affix}")
     return problems
@@ -191,8 +192,8 @@ def load_world_loot(
     files: list[tuple[Path, ContentModel]],
     *,
     regions: Collection[str],
-    units: Collection[str],
-    affixes: Collection[str],
+    units: Collection[str] | None,
+    affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
 ) -> LootRules | None:
     """載入 ``world/loot.yaml``；不存在＝``None``（掉落關閉）。``units`` 是單位範本與變體 ID。"""

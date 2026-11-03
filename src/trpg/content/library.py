@@ -912,8 +912,8 @@ def load_library(  # noqa: PLR0915
         root,
         files,
         regions=set(world_maps),
-        units={*units, *(v.id for v in (world_enemies.variants if world_enemies else ()))},
-        affixes={a.id for a in (world_enemies.affixes if world_enemies else ())},
+        units=None if world_enemies is None else {*units, *(v.id for v in world_enemies.variants)},
+        affixes=None if world_enemies is None else {a.id for a in world_enemies.affixes},
         items=world_economy.items,
     )
 
