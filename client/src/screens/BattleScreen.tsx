@@ -214,9 +214,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     issueOrders: actions.issueOrders,
     legend: hl.legend,
     layout,
-    limits: board.limits,
     scale,
-    narrow,
     onLayoutChange: board.patchLayout,
     onLayoutReset: board.resetLayout,
     shake: pb.shake,
@@ -237,7 +235,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   // 6A-4g：地圖鋪滿、HUD 疊在上面；HUD 塊底下有單位或可點的格子時那一塊變半透明（滑上去恢復）
   const hudFaded = useHudFade(boardRef, board.scrollRef, data.model, hl.highlights);
   return (
-    <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={{ ...board.layoutStyle, ...hudInsetStyle(bottomSize?.height ?? null) }}>
+    <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={hudInsetStyle(bottomSize?.height ?? null)}>
       <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded}>
         <div className={`board-scroll${board.panning ? " panning" : ""}`} ref={board.scrollRef} {...board.panHandlers}>
           <BattleCanvas

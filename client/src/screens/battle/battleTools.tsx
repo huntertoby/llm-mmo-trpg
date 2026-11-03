@@ -2,7 +2,7 @@
 // 純函式：吃目前狀態，回傳給 `BattleTopBar` 的 `tools` 陣列。
 
 import type { OrderSet, ReactionMode, UnitView } from "../../api/types";
-import type { LayoutPrefs, layoutLimits } from "../../battle/layoutPrefs";
+import type { LayoutPrefs } from "../../battle/layoutPrefs";
 import type { LegendEntry } from "../../battle/legend";
 import { EMPTY_ORDERS, hasOrders, withOrder, type OrderKind } from "../../battle/orders";
 import type { UnitNames } from "../../battle/units";
@@ -28,9 +28,7 @@ export interface ToolsInput {
   issueOrders(orders: OrderSet): void;
   legend: LegendEntry[];
   layout: LayoutPrefs;
-  limits: ReturnType<typeof layoutLimits>;
   scale: number;
-  narrow: boolean;
   onLayoutChange(patch: Partial<LayoutPrefs>): void;
   onLayoutReset(): void;
   shake: boolean;
@@ -78,16 +76,13 @@ export function battleTools(t: ToolsInput): ToolEntry[] {
       content: (
         <LayoutPanel
           prefs={t.layout}
-          limits={t.limits}
           scale={t.scale}
-          narrow={t.narrow}
           onChange={t.onLayoutChange}
           onReset={t.onLayoutReset}
           shake={t.shake}
           onShake={t.onShake}
           collapseTile={t.collapseTile}
           onCollapseTile={t.onCollapseTile}
-          hudA
         />
       ),
     },

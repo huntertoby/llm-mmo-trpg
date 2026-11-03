@@ -12,10 +12,6 @@ const good = (): LayoutSnapshot => ({
   speed: bx(1342, 871, 1592, 894),
   speedButtons: [1342, 1380, 1418, 1456, 1494, 1532].map((l) => bx(l, 871, l + 36, 894)),
   board: bx(8, 52, 1286, 722),
-  bottomHandle: null,
-  sideHandle: null,
-  hero: null,
-  heroHandle: null,
   tileCard: { float: bx(643, 344, 900, 480), bar: bx(643, 450, 900, 480), barAlpha: 0.96 },
   moreMenu: { open: true, tooltips: 0, hintBefore: 1 },
   hintWrappers: 0,
@@ -52,8 +48,7 @@ describe("排版煙霧檢查 evaluate", () => {
     expect(failedIds(wrapped)).toEqual(["speed-one-row"]);
   });
 
-  it("版面 A 出現拖曳線、HUD 塊重疊或出畫面 → FAIL（6A-4e）", () => {
-    expect(failedIds({ ...good(), sideHandle: bx(600, 52, 608, 722) })).toEqual(["no-handles"]);
+  it("版面 A 的 HUD 塊重疊或出畫面 → FAIL（6A-4e）", () => {
     expect(failedIds({ ...good(), hud: { ...good().hud, order: bx(200, 8, 520, 46) } })).toEqual(["hud-blocks"]);
     expect(failedIds({ ...good(), hud: { ...good().hud, turn: bx(1342, 740, 1620, 894) } })).toEqual(["hud-blocks"]);
   });
