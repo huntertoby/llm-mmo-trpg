@@ -669,6 +669,13 @@
   color: #e6c46a;
 }
 
+/* 5F-3c：帳號紀念稱號（名片、評分榜、首殺、編年史；戰鬥畫面不顯示） */
+.account-titles {
+  margin-left: 4px;
+  color: #c58cff;
+  overflow-wrap: anywhere;
+}
+
 /* 5F-1b：「你不在的時候」摘要（DialogFrame 內的清單） */
 .world-absence {
   margin: 6px 0 10px;

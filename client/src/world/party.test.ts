@@ -21,6 +21,7 @@ function shadow(owner: string, name_zh: string): WorldShadow {
     hired: false,
     own: false,
     saved_zh: "霧渡鎮",
+    titles: [],
   };
 }
 

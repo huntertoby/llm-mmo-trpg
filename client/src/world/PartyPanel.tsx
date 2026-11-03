@@ -3,6 +3,7 @@
 // <Hint>，浮動卡規則 6.5.1）。
 import { useState } from "react";
 import type { WorldAction, WorldAiChoice, WorldMyShadow, WorldPartyView } from "../api/types";
+import { AccountTitles } from "../ui/AccountTitles";
 import { Hint } from "../ui/Hint";
 import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, sameParty, toggleMercenary } from "./party";
 
@@ -179,6 +180,7 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                       <Hint text={`存在${s.saved_zh}・技能：${s.skills_zh.join("、") || "（無）"}`}>
                         <span className="world-hire-name">{s.name_zh}的影子</span>
                       </Hint>
+                      <AccountTitles titles={s.titles} testId={`world-hire-titles-${s.owner}`} />
                       <span className="muted small">
                         Lv {s.level}・{s.role_zh}
                         {s.own === true ? "・自己的角色" : ""}
