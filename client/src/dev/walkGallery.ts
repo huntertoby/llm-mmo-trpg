@@ -141,8 +141,52 @@ async function perf(r: BattleRenderer): Promise<void> {
   out.textContent = JSON.stringify({ grid: `${N}x${N}`, cell: CELL, dpr: window.devicePixelRatio, idle, walking4: moving, cacheSize: size });
 }
 
+/**
+ * 6M-4：待機的效能（`#idle`）：8 個人站著 20 秒（呼吸＋小動作），和關掉待機時比 FPS；
+ * 記下貼圖快取數量（開始、待機 20 秒後、重畫一次後）。
+ */
+async function idlePerf(r: BattleRenderer, v: BattleView): Promise<void> {
+  const out = document.createElement("div");
+  out.id = "perf";
+  document.body.appendChild(out);
+  const fps = (ms: number) =>
+    new Promise<{ fps: number; p95Ms: number }>((resolve) => {
+      const gaps: number[] = [];
+      let last = performance.now();
+      const t0 = last;
+      const tick = (now: number) => {
+        gaps.push(now - last);
+        last = now;
+        if (now - t0 < ms) {
+          requestAnimationFrame(tick);
+          return;
+        }
+        const sorted = [...gaps].sort((x, y) => x - y);
+        resolve({ fps: Number(((gaps.length * 1000) / (now - t0)).toFixed(1)), p95Ms: Number((sorted[Math.floor(sorted.length * 0.95)] ?? 0).toFixed(1)) });
+      };
+      requestAnimationFrame(tick);
+    });
+  r.setIdle(false);
+  await fps(1000);
+  const off = await fps(4000);
+  const before = r.textureCount();
+  r.setIdle(true);
+  const on = await fps(20000);
+  const after = r.textureCount();
+  r.draw(buildDrawModel(v, HERO));
+  const redrawn = r.textureCount();
+  out.textContent = JSON.stringify({ grid: `${N}x${N}`, cell: CELL, units: v.units.length, idleOff: off, idleOn20s: on, textures: { before, after20s: after, afterRedraw: redrawn } });
+}
+
 async function main(): Promise<void> {
-  const { r } = await show();
+  const { r, v } = await show();
+  if (MODE === "idle") {
+    caption("6M-4・待機（8 人站著 20 秒）FPS 與貼圖數");
+    await idlePerf(r, v);
+    window.__walkDone = true;
+    return;
+  }
+  r.setIdle(false); // 6M-3 的截圖與量測照舊不含待機
   const start = () => {
     window.__walkStart = performance.now();
   };

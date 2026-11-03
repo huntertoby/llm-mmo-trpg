@@ -27,9 +27,9 @@ export const FIDGET_IDS: readonly FidgetId[] = ["glance", "stretch"];
 /** 小動作的最大姿勢（側面欄位與正面、背面欄位都給；畫的時候照朝向取用）。 */
 export const FIDGETS: Readonly<Record<FidgetId, Readonly<InkPose>>> = {
   // 左右張望：重心換腳、手輕擺
-  glance: Object.freeze({ lean: -0.06, arm: 0.25, armF: -0.2, armL: 0.8, armR: -0.6, liftR: 0.8 }),
+  glance: Object.freeze({ lean: -0.06, arm: 0.25, armF: -0.2, armL: 1.2, armR: -1, liftR: 1.2 }),
   // 伸懶腰：雙手往上抬、身體往上拉
-  stretch: Object.freeze({ lean: -0.1, arm: -0.8, elbow: -0.5, armF: -0.6, elbowF: -0.4, bob: -0.4, armL: -2, armR: -2 }),
+  stretch: Object.freeze({ lean: -0.1, arm: -0.8, elbow: -0.5, armF: -0.6, elbowF: -0.4, bob: -0.6, armL: -3.5, armR: -3.5 }),
 };
 
 /** FNV-1a 32 位元雜湊（無號）；確定性，跨執行相同。 */

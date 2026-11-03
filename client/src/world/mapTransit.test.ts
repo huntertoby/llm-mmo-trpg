@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FieldView } from "../api/types";
 import { ARRIVE_MS, arriveFrame, DOOR_SHRINK, FADE_LEAD_MS, LEAVE_MS, leaveFrame, STAGE_FADE_MS, transitTotalMs } from "../render/doorClips";
 import { FIELD_HERO } from "./fieldModel";
-import { arriveFacing, arriveMap, leaveMap, mapTransit, stepFacing, type TransitRenderer } from "./mapTransit";
+import { arriveFacing, arriveKind, arriveMap, leaveMap, mapTransit, stepFacing, type TransitRenderer } from "./mapTransit";
 
 function field(over: Partial<FieldView>): FieldView {
   return { map_id: "m", me: { x: 2, y: 2, facing: "s" }, doors: [], exits: [], ...over } as unknown as FieldView;
@@ -66,6 +66,15 @@ describe("6M-4：換地圖播哪一段", () => {
     const after = field({ me: { x: 5, y: 5, facing: "e" } } as Partial<FieldView>);
     expect(arriveFacing({ kind: "edge", facing: "west" }, after)).toBe("west");
     expect(arriveFacing({ kind: "door", facing: "north" }, after)).toBe("east");
+  });
+
+  it("抵達的片段：進門＝從門裡出來；從室內出口走出來、站在外面的門上＝從門裡出來；其他＝走進來一步", () => {
+    const onDoor = field({ me: { x: 3, y: 5, facing: "s" }, doors: [{ id: "d", x: 3, y: 5, to: "inn", to_name_zh: "客棧" }] } as Partial<FieldView>);
+    const plain = field({ me: { x: 0, y: 4, facing: "e" } } as Partial<FieldView>);
+    expect(arriveKind({ kind: "door", facing: "north" }, plain)).toBe("door");
+    expect(arriveKind({ kind: "edge", facing: "south" }, onDoor)).toBe("door");
+    expect(arriveFacing({ kind: "edge", facing: "south" }, onDoor)).toBe("south");
+    expect(arriveKind({ kind: "edge", facing: "east" }, plain)).toBe("edge");
   });
 });
 

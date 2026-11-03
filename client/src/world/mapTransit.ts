@@ -17,9 +17,17 @@ export function fieldFacing(f: FieldView["me"]["facing"]): Facing {
   return FACING_OF[f];
 }
 
-/** 抵達新地圖時的朝向：邊緣入口照走進來的方向；出門照伺服器給的朝向（不轉身）。 */
+/**
+ * 抵達的片段：進門（進到室內）或抵達的格子是門（從室內走出來，站在外面的門口）＝從門裡出來；其他＝從對面入口走進來一步。
+ */
+export function arriveKind(t: MapTransit, after: FieldView): TransitKind {
+  if (t.kind === "door") return "door";
+  return after.doors.some((d) => d.x === after.me.x && d.y === after.me.y) ? "door" : "edge";
+}
+
+/** 抵達新地圖時的朝向：邊緣入口照走進來的方向；從門裡出來照伺服器給的朝向（不轉身）。 */
 export function arriveFacing(t: MapTransit, after: FieldView): Facing {
-  return t.kind === "edge" ? t.facing : fieldFacing(after.me.facing);
+  return arriveKind(t, after) === "edge" ? t.facing : fieldFacing(after.me.facing);
 }
 
 /** 從 `from` 走到相鄰的 `to` 的方向；不相鄰或同一格時 `null`。 */
@@ -55,7 +63,7 @@ export async function arriveMap(ref: { current: TransitRenderer | null }, t: Map
   const r = ref.current;
   if (r === null) return;
   await r.nextDraw(STAGE_FADE_MS);
-  await ref.current?.playArrive(FIELD_HERO, t.kind, arriveFacing(t, after), ARRIVE_MS, skip);
+  await ref.current?.playArrive(FIELD_HERO, arriveKind(t, after), arriveFacing(t, after), ARRIVE_MS, skip);
 }
 
 /**
