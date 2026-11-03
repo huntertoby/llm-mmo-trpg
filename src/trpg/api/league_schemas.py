@@ -153,3 +153,5 @@ class LeagueReplayResponse(_ApiModel):
     battle: BattleResponse
     verified: bool
     """依紀錄的步驟重播出的最終狀態和紀錄裡存的一致。"""
+    outcome_zh: str
+    """（5F-4b）結束面板的中性勝負文字：「某某 勝」或「和局」。"""

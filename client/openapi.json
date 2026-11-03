@@ -2378,7 +2378,7 @@
           "world"
         ],
         "summary": "Get League",
-        "description": "影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次與進度。",
+        "description": "影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次（分頁，5F-4b）與進度。\n第 14 天換日後、還沒有人首殺賽季 Boss 時，第一次看到這裡就自動開跑（5F-4b）。",
         "operationId": "get_league_api_world_characters__character_id__league_get",
         "parameters": [
           {
@@ -2388,6 +2388,29 @@
             "schema": {
               "type": "string",
               "title": "Character Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
             }
           }
         ],
@@ -11022,6 +11045,37 @@
         "title": "KeywordRef",
         "description": "技能卡上的一個關鍵字（Phase 3-24b1）：代碼、顯示名稱與一句話說明（給部件說明框）。"
       },
+      "LeagueAllocationView": {
+        "properties": {
+          "base": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Base"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "auto": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Auto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "base",
+          "points",
+          "auto"
+        ],
+        "title": "LeagueAllocationView",
+        "description": "（5F-4b，#32）報名時的免費重新配點：拉到等級上限後全部可配的點（已分配的＋未分配的＋升到\n上限多出的）。前端用既有的配點元件；不配＝照 ``auto``。"
+      },
       "LeagueEnterAction": {
         "properties": {
           "kind": {
@@ -11041,6 +11095,23 @@
               }
             ],
             "title": "Ai"
+          },
+          "allocation": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "propertyNames": {
+                  "$ref": "#/components/schemas/Attribute"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation"
           }
         },
         "additionalProperties": false,
@@ -11076,6 +11147,20 @@
           "this_character": {
             "type": "boolean",
             "title": "This Character"
+          },
+          "allocation": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation"
           }
         },
         "additionalProperties": false,
@@ -11132,6 +11217,17 @@
           "replayable": {
             "type": "boolean",
             "title": "Replayable"
+          },
+          "replay_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replay Problem Zh"
           }
         },
         "additionalProperties": false,
@@ -11161,6 +11257,10 @@
           "verified": {
             "type": "boolean",
             "title": "Verified"
+          },
+          "outcome_zh": {
+            "type": "string",
+            "title": "Outcome Zh"
           }
         },
         "additionalProperties": false,
@@ -11168,7 +11268,8 @@
         "required": [
           "title_zh",
           "battle",
-          "verified"
+          "verified",
+          "outcome_zh"
         ],
         "title": "LeagueReplayResponse",
         "description": "``POST …/league/matches/{match_id}/replay``：從開場播到結束的戰鬥（既有戰鬥畫面）。"
@@ -11246,6 +11347,21 @@
           "mine": {
             "type": "boolean",
             "title": "Mine"
+          },
+          "hp_permille_total": {
+            "type": "integer",
+            "title": "Hp Permille Total",
+            "default": 0
+          },
+          "rounds_total": {
+            "type": "integer",
+            "title": "Rounds Total",
+            "default": 0
+          },
+          "tied": {
+            "type": "boolean",
+            "title": "Tied",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -11379,6 +11495,47 @@
               }
             ],
             "title": "Champion Zh"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page",
+            "default": 1
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages",
+            "default": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size",
+            "default": 20
+          },
+          "allocation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeagueAllocationView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stale_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Zh"
+          },
+          "reruns": {
+            "type": "integer",
+            "title": "Reruns",
+            "default": 0
           }
         },
         "additionalProperties": false,

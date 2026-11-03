@@ -131,6 +131,7 @@ def test_league_flow(small: ContentLibrary, tmp_path: Path) -> None:
         match = mine[0]
         replay = _ok(client.post(f"/api/world/characters/{a}/league/matches/{match['id']}/replay"))
         assert replay["verified"] is True
+        assert replay["outcome_zh"] in {"和局", "阿霧 勝", "小美 勝"}  # 中性文字（5F-4b）
         assert replay["title_zh"].startswith(f"{match['id']}：")
         battle = replay["battle"]
         assert battle["awaiting"] == "ended" and battle["outcome"] is not None

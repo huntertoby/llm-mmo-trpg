@@ -38,7 +38,14 @@ from trpg.world.state import CharacterState, LeagueEntry, WorldState
 
 PERMILLE = 1000
 
-__all__ = ["PAGE_SIZE", "league_event_line", "league_view", "match_title", "result_zh"]
+__all__ = [
+    "PAGE_SIZE",
+    "league_event_line",
+    "league_view",
+    "match_outcome_zh",
+    "match_title",
+    "result_zh",
+]
 
 PAGE_SIZE = 20
 """場次列表每頁幾場（5F-4b）。"""
@@ -137,6 +144,14 @@ def result_zh(match: LeagueMatch, names: dict[str, str]) -> str:
     if match.winner is None:
         return f"和局（{match.rounds} 輪）"
     return f"{names.get(match.winner, match.winner)} 勝（{match.rounds} 輪）"
+
+
+def match_outcome_zh(record: LeagueRecord, match: LeagueMatch) -> str:
+    """重播結束面板的中性勝負文字（5F-4b）：「某某 勝」或「和局」（不從先手視角寫勝利／敗北）。"""
+    if match.winner is None:
+        return "和局"
+    names = {e.account: e.name for e in record.entries}
+    return f"{names.get(match.winner, match.winner)} 勝"
 
 
 def match_title(library: ContentLibrary, record: LeagueRecord, match: LeagueMatch) -> str:

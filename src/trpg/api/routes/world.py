@@ -49,7 +49,7 @@ from trpg.api.auth import (
     viewer,
 )
 from trpg.api.league_schemas import LeagueReplayResponse, LeagueRunView, LeagueView
-from trpg.api.league_view import PAGE_SIZE, league_view, match_title
+from trpg.api.league_view import PAGE_SIZE, league_view, match_outcome_zh, match_title
 from trpg.api.notes_schemas import LocationBoard, NoteRequest, location_board
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import allocation_preview, flash_preview
@@ -311,7 +311,10 @@ def post_league_replay(character_id: str, match_id: str, request: Request) -> Le
         verified = battle.state == log.final_state
         out = battle_response(battle, battle.history())
     return LeagueReplayResponse(
-        title_zh=match_title(store.library, record, match), battle=out, verified=verified
+        title_zh=match_title(store.library, record, match),
+        battle=out,
+        verified=verified,
+        outcome_zh=match_outcome_zh(record, match),
     )
 
 
