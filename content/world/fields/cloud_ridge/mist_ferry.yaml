@@ -1,7 +1,8 @@
-# 霧渡鎮實地地圖（Phase 6B-1 草稿；schema：src/trpg/content/fields.py）。
+# 霧渡鎮實地地圖（Phase 6B-1 草稿，6C-3 依玩法 PM 草稿補齊；schema：src/trpg/content/fields.py）。
 # 格式（Phase 6 計畫 2.2）：
 # - size、heights、terrain、legend、objects、surfaces：和戰鬥地圖（content/maps/）同寫法；
-#   地形 ID 在 content/terrain.yaml、物件 ID 在 content/objects.yaml。座標 (x, y)：x 向右、y 向下。
+#   地形 ID 在 content/terrain.yaml、物件 ID 在 content/objects.yaml、表面在 content/surfaces.yaml。
+#   座標 (x, y)：x 向右（東）、y 向下（南）。
 # - exits：邊緣出口（可佔好幾格）；to＝相鄰地點，arrive＝對面地圖上回來的出口 ID。
 #   出口 ID 慣例：to_<目的地點>，所以對面回來的出口一律叫 to_<本地點>。一條地點連線＝一對出口。
 #   跨區的渡口寫 region: <區域>（見 fields.py 模組說明）。
@@ -9,19 +10,26 @@
 # - teleport_stones：每區 2～3 個、城鎮 1 個。entry：預設入口（舊存檔、傳送、全滅回城）。
 # - npcs：world/npcs/<區域>.yaml 的人設卡；facilities：shop、smithy、tavern、mentor、
 #   notice_board、hire、enchanter（走到旁邊就開面板）。
-# - spawns（6C-1）、campfires、event_spots、situation_objects（6C-5）：這段只定義欄位。
+# - spawns（6C-1）：group＝world/encounters/<區域>.yaml 這個地點的陣容；patrol＝巡邏路線的轉折點
+#   （相鄰兩點在同一行或同一列，沿直線來回）；省略 patrol＝駐守。
+# - campfires、event_spots、situation_objects（6C-5）：event_spots 的 id＝world/events 的事件骨架
+#   （進入地圖時照種子決定有沒有事件、放在哪一個點）；campfires 的 id＝營火點 ID。
 #
-# 草稿說明：外觀在 6B-ART1 才到，先用現有地形拼。北路往獵戶小屋、東路口往渡口石階、
-# 南邊過霧河的木棧橋往「往灰燼荒原的渡口」（照 18.3 的 pos：渡口石階在東、獵戶小屋在北、
-# 渡口在西南）。牆（#）是建築：西北酒館、東北鐵匠鋪、西邊導師堂；霧河（=）用深淵代替。
+# 方向（玩法 PM 草稿 2026-11-04 第 1 張）：北邊柴門往獵戶小屋、東邊石階頂往渡口石階、
+# 西南角的碼頭往「往灰燼荒原的渡口」（荒原開放前用柵欄封住：開放條件是地點的 unlock_flag，
+# 由走路動作擋，地圖上不畫會擋路的物件）。城鎮是安全區，沒有敵人，只出非戰鬥事件（5B-5）。
+# 建築：西北酒館（有室內）、東北石師傅鐵鋪（有室內，含附魔台）、西邊導師堂、南巷渡婆的屋子
+# （只有門口）。外觀在 6B-ART1 才到，先用現有地形拼：牆（#）是建築，雲海（=）用深淵。
+# 6C-3 和 6B-1 草稿的差別：霧河改成西南角的雲海與碼頭棧橋（草稿「西南角是碼頭」）；渡婆移到
+# 自己家門口；加上渡婆的屋子與事件點。出口、門、傳送石、入口的格子沿用 6B-1。
 id: mist_ferry
 name_zh: 霧渡鎮
 region: cloud_ridge
 location: mist_ferry
 size: [24, 18]
 heights: |
-  111111111100000000000000
-  111111111100000000000000
+  000000000000000000000000
+  000000000000000000000000
   000000000000000000000000
   000000000000000000000000
   000000000000000000000000
@@ -39,24 +47,24 @@ heights: |
   000000000000000000000000
   000000000000000000000000
 terrain: |
-  """"""""""".."""""""""""
-  """"""""""".."""""""""""
-  "######"""".."""######""
-  "######"""".."""######""
-  "######"""".."""######""
-  "##.###"""".."""##.###""
+  """"""""""",,"""""""""""
+  """"""""""",,"""""""""""
+  "######"""",,"""######""
+  "######"""",,"""######""
+  "######"""",,"""######""
+  "##.###"""",,"""##.###""
   "......................"
   "......................"
   ".......................
   ".......................
-  ".####................."
-  ".####................."
-  ".####................."
-  "......................"
-  ,,,,,,,,,,,,,,,,,,,,,,,,
-  ========================
-  ========================
-  "",,,,""""""""""""""""""
+  "###....."""""""""""""""
+  "###....."""""""""""""""
+  "........"""""""""""""""
+  ===,,===,,,,,,,,,,,,,,,"
+  ===,,===="####""""""""""
+  ===,,===="####""""""""""
+  ===,,===="####""""""""""
+  ===,,===="""""""""""""""
 legend:
   ".": stone
   '"': grass
@@ -64,34 +72,35 @@ legend:
   "#": wall
   "=": chasm
 objects:
-  - {at: [3, 15], kind: wooden_bridge}   # 渡口的木棧橋
-  - {at: [4, 15], kind: wooden_bridge}
-  - {at: [3, 16], kind: wooden_bridge}
-  - {at: [4, 16], kind: wooden_bridge}
-  - {at: [8, 7], kind: stone_pillar}     # 懸賞板的石柱
-  - {at: [14, 11], kind: crate}          # 柳掌櫃的攤位
+  - {at: [8, 7], kind: stone_pillar}   # 懸賞板的石柱
+  - {at: [14, 11], kind: crate}   # 柳掌櫃的攤位
   - {at: [15, 11], kind: crate}
   - {at: [16, 11], kind: crate}
+  - {at: [6, 12], kind: crate}   # 碼頭的貨
+  - {at: [7, 12], kind: crate}
+  - {at: [8, 1], kind: dead_tree}
   - {at: [20, 12], kind: dead_tree}
-  - {at: [8, 14], kind: fallen_log}
-  - {at: [18, 14], kind: low_wall}
+  - {at: [21, 15], kind: dead_tree}
+  - {at: [18, 14], kind: low_wall}   # 南巷的矮牆
   - {at: [19, 14], kind: low_wall}
   - {at: [21, 1], kind: grass}
   - {at: [22, 1], kind: grass}
 entry: [11, 9]
 exits:
-  - {id: to_hunter_hut, at: [[11, 0], [12, 0]], to: hunter_hut, arrive: to_mist_ferry}
-  - {id: to_ferry_steps, at: [[23, 8], [23, 9]], to: ferry_steps, arrive: to_mist_ferry}
-  - {id: to_ashen_ferry, at: [[3, 17], [4, 17]], to: ashen_ferry, arrive: to_mist_ferry}
+  - {id: to_hunter_hut, at: [[11, 0], [12, 0]], to: hunter_hut, arrive: to_mist_ferry}   # 鎮北的柴門
+  - {id: to_ferry_steps, at: [[23, 8], [23, 9]], to: ferry_steps, arrive: to_mist_ferry}   # 東側石階頂
+  - {id: to_ashen_ferry, at: [[3, 17], [4, 17]], to: ashen_ferry, arrive: to_mist_ferry}   # 西南的碼頭
 doors:
   - {id: tavern_door, at: [3, 5], to: mist_ferry_tavern}
   - {id: smithy_door, at: [18, 5], to: mist_ferry_smithy}
 teleport_stones:
   - {id: stone_mist_ferry, at: [12, 8]}
 npcs:
-  - {at: [13, 7], id: granny_du}
+  - {at: [11, 13], id: granny_du}   # 渡婆站在自己家門口
   - {at: [15, 12], id: shopkeeper_liu}
 facilities:
   - {at: [15, 11], id: shop}
   - {at: [8, 7], id: notice_board}
-  - {at: [3, 12], id: mentor}
+  - {at: [2, 10], id: mentor}   # 導師堂（導師青崖的人設卡在青霧觀山門，這裡只放設施）
+event_spots:
+  - {at: [11, 13], id: granny_past}   # 渡婆家門口
