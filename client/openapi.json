@@ -879,6 +879,160 @@
         }
       }
     },
+    "/api/runs/dev-packs": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Dev Packs",
+        "description": "開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。",
+        "operationId": "list_dev_packs_api_runs_dev_packs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DevPackOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Dev Packs Api Runs Dev Packs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/saves": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Saves",
+        "operationId": "list_saves_api_runs_saves_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SaveSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Saves Api Runs Saves Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/load": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Load Run",
+        "operationId": "load_run_api_runs_load_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/dev-advance": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Dev Advance",
+        "description": "開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數\n``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。\n``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。",
+        "operationId": "dev_advance_api_runs__run_id__dev_advance_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "To"
+            }
+          },
+          {
+            "name": "insight",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Insight"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs": {
       "post": {
         "tags": [
@@ -1026,32 +1180,6 @@
         }
       }
     },
-    "/api/runs/dev-packs": {
-      "get": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "List Dev Packs",
-        "description": "開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。",
-        "operationId": "list_dev_packs_api_runs_dev_packs_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DevPackOut"
-                  },
-                  "type": "array",
-                  "title": "Response List Dev Packs Api Runs Dev Packs Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/runs/rules": {
       "get": {
         "tags": [
@@ -1067,72 +1195,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RunRules"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/runs/saves": {
-      "get": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "List Saves",
-        "operationId": "list_saves_api_runs_saves_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SaveSummary"
-                  },
-                  "type": "array",
-                  "title": "Response List Saves Api Runs Saves Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/runs/load": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Load Run",
-        "operationId": "load_run_api_runs_load_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoadRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1420,68 +1482,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FlashPreviewOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/runs/{run_id}/dev-advance": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Dev Advance",
-        "description": "開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數\n``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。\n``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。",
-        "operationId": "dev_advance_api_runs__run_id__dev_advance_post",
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "To"
-            }
-          },
-          {
-            "name": "insight",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "title": "Insight"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunResponse"
                 }
               }
             }
