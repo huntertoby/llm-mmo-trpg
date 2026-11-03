@@ -143,6 +143,7 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
         "radius": "半徑",
         "jumps": "跳躍",
         "jump_range": "跳躍距離",
+        "arm": "臂長",
     }
     parts: list[str] = []
     for key, value in shape.param_values().items():

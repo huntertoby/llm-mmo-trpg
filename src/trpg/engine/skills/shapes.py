@@ -81,11 +81,17 @@ def cone_tiles(state: BattleState, origin: XY, direction: str, size: int) -> tup
     return _sorted(cells)
 
 
-def cross_tiles(state: BattleState, center: XY) -> tuple[XY, ...]:
-    """十字：中心與四方向相鄰格。"""
-    x, y = center
-    cells = [(x, y), (x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
-    return _sorted([c for c in cells if in_play(state, c)])
+def cross_tiles(state: BattleState, center: XY, arm: int = 1) -> tuple[XY, ...]:
+    """十字：中心與四方向各 ``arm`` 格（臂長，Phase 5F-2b；預設 1＝相鄰格）。每一臂遇到牆壁或地圖
+    邊緣就停在它之前（臂長 1 時與舊版相同：只是不含那一格）。"""
+    cells = [center] if in_play(state, center) else []
+    for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+        for k in range(1, arm + 1):
+            cell = (center[0] + dx * k, center[1] + dy * k)
+            if not in_play(state, cell):
+                break
+            cells.append(cell)
+    return _sorted(cells)
 
 
 def square3_tiles(state: BattleState, center: XY) -> tuple[XY, ...]:

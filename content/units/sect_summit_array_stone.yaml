@@ -1,9 +1,9 @@
 # 雲頂觀的陣眼石靈（Phase 5F-2；docs/design/18-雲嶺內容.md 18.2.3 第 1 階段、20 20.6「高台前 1 格是陣眼石靈」）。
-# 同陣眼石靈（不行動、不會被推動、高護甲）；開場狀態「鎖霧大陣」：霧鎖真人受到的傷害 −50%，石靈被打碎後立刻解除。數值是初值。
+# 同陣眼石靈（不行動、不會被推動、高護甲）；開場狀態「鎖霧大陣」：霧鎖真人受到的傷害 −50%，石靈被打碎後立刻解除。數值是初值（HP 5F-2b 起 30 → 40）。
 id: sect_summit_array_stone
 name_zh: 陣眼石靈
 attributes: {str: 10, dex: 6, con: 16, int: 6, wis: 10, wil: 10}
-max_hp: 30
+max_hp: 40
 speed: 0
 armor_bonus: 4
 weapon: fist

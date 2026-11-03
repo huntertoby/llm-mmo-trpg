@@ -263,8 +263,10 @@ def test_terrain_area_sets_the_minimum_rarity(
 ) -> None:
     skill = _terrain(primitive, shape, tags=("earth",))
     needs = [n for n in rarity_requirements(skill, LIB) if n.rule == "terrain_area"]
-    shape_cells = LIB.ruleset.shapes.by_id()[shape["type"]].cell_count
-    assert shape_cells is not None and shape_cells.count_for(skill.shape.param_values()) == cells
+    definition = LIB.ruleset.shapes.by_id()[shape["type"]]
+    shape_cells = definition.cell_count
+    values = definition.with_defaults(skill.shape.param_values())  # 十字臂長省略＝1（5F-2b）
+    assert shape_cells is not None and shape_cells.count_for(values) == cells
     tiers = LIB.budget.terrain_area_rarity
     expected = next((t.rarity for t in reversed(tiers) if cells >= t.min_cells), None)
     assert [n.minimum for n in needs] == ([expected] if expected else [])
