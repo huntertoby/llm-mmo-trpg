@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>雲嶺實地圖庫</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1260px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 14px 0 6px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  figure { margin: 0; text-align: center; }
+  figcaption { font-size: 11.5px; color: #d8ccb8; margin-top: 3px; line-height: 1.35; max-width: 220px; }
+  figcaption b { color: #9a8e7c; font-weight: normal; display: block; font-size: 10.5px; }
+  canvas { display: block; border-radius: 4px; border: 1px solid #000; }
+</style>
+</head>
+<body>
+<h1>雲嶺實地地圖：地磚與地物圖庫（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。給 6C 的 18 張雲嶺實地地圖用，畫風同 explore.png（戰鬥格子的同一套畫法）。每格 52 單位、放大 1.5 倍；底下灰字是建議的 ID 與功能（實地地圖照戰鬥規則畫，所以會擋路、擋視線的東西都對到現有物件的功能）。全部程式繪製。</p>
+<div id="root"></div>
+<h2>示範：青霧觀山門（20×12）<small>用上面的圖庫拼一張實地地圖：高台（2 級）、石階、山門、竹林、石燈籠、亭子、祭壇、洞口、梯田、河岸與棧橋、傳送石、營火；右下角是迷霧三段（濃霧＝沒去過、淡霧＝去過但看不到）</small></h2>
+<canvas id="demo"></canvas>
+<script src="storyDoll.js"></script>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script src="cloudTiles.js"></script>
+<script>
+  const E = Explore, CT = CloudTiles, T = 52, S = 1.5;
+  function cv(w, h) { const c = document.createElement("canvas"); c.width = w * S * 2; c.height = h * S * 2; c.style.width = w * S + "px"; c.style.height = h * S + "px"; const ctx = c.getContext("2d"); ctx.scale(S * 2, S * 2); return [c, ctx]; }
+  function fig(parent, w, h, draw, name, id) { const [c, ctx] = cv(w, h); draw(ctx); const f = document.createElement("figure"); f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = `${name}<b>${id}</b>`; f.appendChild(cap); parent.appendChild(f); }
+  function grassBg(ctx, w, h) { for (let gy = 0; gy < h; gy++) for (let gx = 0; gx < w; gx++) E.ground(ctx, "g", gx, gy); }
+  function section(title, items) {
+    const h = document.createElement("h2"); h.innerHTML = title; document.getElementById("root").appendChild(h);
+    const row = document.createElement("div"); row.className = "row"; document.getElementById("root").appendChild(row);
+    for (const [w, h2, draw, name, id] of items) fig(row, w * T, h2 * T, draw, name, id);
+  }
+  section("1. 地面與自動接邊<small>石階、水岸會依相鄰格自動挑畫法，地圖檔不用另外標</small>", [
+    [2, 2, (c) => { E.ground(c, "s", 0, 0); E.ground(c, "s", 1, 0); CT.stairs(c, 0, T, 0, 1); CT.stairs(c, T, T, 1, 1); CT.cliffFace(c, 0, -CT.RAISE, 1); }, "石階（高低差 1 級的相鄰格）", "自動：stone＋高度差 1 → 石階"],
+    [2, 2, (c) => { CT.shore(c, 0, 0, 0, 0, ["s"]); CT.shore(c, T, 0, 1, 0, ["s", "e"]); CT.river(c, 0, T, 0, 1); CT.river(c, T, T, 1, 1); }, "水岸（陸地接水的邊：沙線、卵石、蘆葦）", "自動：grass 鄰接水 → 岸邊"],
+    [2, 1, (c) => { CT.river(c, 0, 0, 0, 0); CT.river(c, T, 0, 1, 0, true); }, "河水（淺／深）", "實地用水表面；深水＝不能走"],
+    [2, 1, (c) => { CT.paddy(c, 0, 0, 0, 0); CT.paddy(c, T, 0, 1, 0); }, "梯田（泥田＋秧苗＋田埂）", "look floor=paddy（3-37b 已有）"],
+    [2, 1, (c) => { CT.steppingPath(c, 0, 0, 0, 0); CT.steppingPath(c, T, 0, 1, 0); }, "石板小徑（草地上的踏石）", "新地面 path_stones（同 grass）"],
+    [2, 1, (c) => { CT.cloudSea(c, 0, 0, 0, 0); CT.cloudSea(c, T, 0, 1, 0); }, "雲海（深淵）", "chasm 的雲嶺外觀（3-37b 已有）"],
+    [2, 2, (c) => { E.ground(c, "s", 0, 0); E.ground(c, "s", 1, 0); CT.cliffFace(c, 0, 0, 2); CT.cliffFace(c, T, 0, 2); E.ground(c, "g", 0, 1.25); E.ground(c, "g", 1, 1.25); }, "崖壁立面（高台 2 級）", "高度差 ≥2：岩壁，不能走上去"],
+  ]);
+  section("2. 自然<small>大片竹林、古松、山石、花草</small>", [
+    [2, 2, (c) => { grassBg(c, 2, 2); CT.bambooGrove(c, 0, 0, 2, 2); }, "大片竹林（擋視線、可燃、不可推倒）", "新物件 bamboo_grove"],
+    [1, 1, (c) => { grassBg(c, 1, 1); CT.pine(c, 0, 0); }, "古松", "dead_tree 的雲嶺外觀（已有）"],
+    [1, 1, (c) => { grassBg(c, 1, 1); CT.boulder(c, 0, 0); }, "山石（擋路、半掩護）", "新物件 boulder（同 low_wall）"],
+    [2, 1, (c) => { E.ground(c, "g", 0, 0); E.ground(c, "g", 1, 0); CT.flowers(c, 0, 0, 0, 0); CT.flowers(c, T, 0, 1, 0); }, "花草（純裝飾）", "裝飾層 decor: flowers"],
+    [1, 1, (c) => { grassBg(c, 1, 1); CT.mistWisp(c, 0, 0, 500); }, "飄霧（純裝飾，不擋視線）", "裝飾層 decor: mist"],
+  ]);
+  section("3. 建築（多格）<small>山門、屋舍、亭子、竹籬</small>", [
+    [3, 2, (c) => { for (let gx = 0; gx < 3; gx++) for (let gy = 0; gy < 2; gy++) E.ground(c, "s", gx, gy); CT.mountainGate(c, 0, 0); }, "山門（3×2；中間是通道或出口）", "新建築 gate（柱＝牆、通道可走）"],
+    [3, 2, (c) => { for (let gx = 0; gx < 3; gx++) for (let gy = 0; gy < 2; gy++) E.ground(c, "g", gx, gy); E.house(c, 0, -1, 3, 3, { door: 1.5, windows: [0.6, 2.4], lanterns: [0.5, 2.5] }); }, "屋舍（白牆黛瓦，3×3；門口是入口格）", "建築 building＋doors（6B-ART1 同一套）"],
+    [2, 2, (c) => { for (let gx = 0; gx < 2; gx++) for (let gy = 0; gy < 2; gy++) E.ground(c, "s", gx, gy); CT.pavilion(c, 0, 0); }, "亭子（2×2；柱子擋視線，底下可站）", "新建築 pavilion（四角＝stone_pillar）"],
+    [2, 1, (c) => { E.ground(c, "g", 0, 0); E.ground(c, "g", 1, 0); CT.fence(c, 0, 0); CT.fence(c, T, 0); }, "竹籬（擋路、半掩護、可燃）", "新物件 fence（同 crate 的功能）"],
+  ]);
+  section("4. 地物<small>祭壇、石碑、石燈籠、洞口、吊橋、棧橋、渡船、營火、寶箱、傳送石</small>", [
+    [1, 1, (c) => { E.ground(c, "s", 0, 0); CT.altar(c, 0, 0); }, "祭壇（情境物件）", "situation_objects: altar"],
+    [1, 1, (c) => { E.ground(c, "g", 0, 0); E.stele(c, 0, 0); }, "石碑（事件、線索）", "event_spots: stele"],
+    [1, 1, (c) => { E.ground(c, "s", 0, 0); Realms.OBJ.stoneLantern(c, 0, 0); }, "石燈籠（擋路、半掩護）", "新物件 stone_lantern（同 low_wall）"],
+    [1, 2, (c) => { E.ground(c, "g", 0, 1); CT.caveMouth(c, 0, 0); }, "洞口（門、隱藏入口）", "doors（hidden_until: reveal）"],
+    [3, 1, (c) => { CT.cloudSea(c, 0, 0, 0, 0); CT.cloudSea(c, T, 0, 1, 0); CT.cloudSea(c, 2 * T, 0, 2, 0); CT.ropeBridge(c, 0, 0, 3); }, "吊橋（竹板＋繩索，下面是雲海）", "wooden_bridge 的雲嶺外觀（已有）"],
+    [2, 2, (c) => { CT.river(c, 0, 0, 0, 0); CT.river(c, T, 0, 1, 0); CT.river(c, 0, T, 0, 1); CT.river(c, T, T, 1, 1); E.dock(c, 0, 0, 1, 2); E.boat(c, 0.9, 0.5); }, "棧橋＋渡船", "wooden_bridge＋decor: boat"],
+    [1, 1, (c) => { E.ground(c, "g", 0, 0); E.campfire(c, 0, 0); }, "營火（休息點）", "campfires"],
+    [1, 1, (c) => { E.ground(c, "g", 0, 0); E.chest(c, 0, 0); }, "寶箱", "event_spots: chest"],
+    [1, 1, (c) => { E.ground(c, "s", 0, 0); CT.teleportStone(c, 0, 0); }, "傳送石", "teleport_stones"],
+  ]);
+  section("5. 迷霧三段（6C-6）<small>左：沒去過（濃霧）；中：去過但看不到（淡霧，看得到地形）；右：看得見</small>", [
+    [3, 1, (c) => { for (let gx = 0; gx < 3; gx++) E.ground(c, "g", gx, 0); CT.pine(c, 0, 0); CT.pine(c, T, 0); CT.pine(c, 2 * T, 0); CT.fogCell(c, 0, 0, 0, 0, 0); CT.fogCell(c, T, 0, 1, 1, 0); }, "迷霧三段", "fog: unexplored／explored／visible"],
+  ]);
+
+  // ---------------- 示範地圖：青霧觀山門 ----------------
+  const W = 20, H = 12;
+  const HEIGHTS = ["22222222222222222222", "22222222222222222222", "22222222222222222222", "22222222222222222222", "00000011112111000000", "00000000000000000000", "00000000000000000000", "00000000000000000000", "00000000000000000000", "00000000000000000000", "00000000000000000000", "00000000000000000000"].map((r) => [...r].map(Number));
+  HEIGHTS[4][10] = 1; HEIGHTS[4][9] = 1;
+  const GROUND = ["ssssssssssssssrrrrrr", "ssssssssssssssrrrrrr", "ssssssssssssssssssss", "ssssssssssssssssssss", "gggggg{{{{{{{{gggggg", "gggggggggppggggggggg", "gggggggggppggggggggg", "ggggQQQggppggggggggg", "ggggQQQggppggggggggg", "hhhhhhhhhppthhhhhhhh", "wwwwwwwwwwwwwwwwwwww", "WWWWWWWWWWWWWWWWWWWW"];
+  const [demo, dctx] = (() => { const c = document.getElementById("demo"); c.width = W * T * 1.2 * 2; c.height = (H * T + 20) * 1.2 * 2; c.style.width = W * T * 1.2 + "px"; c.style.height = (H * T + 20) * 1.2 + "px"; const x = c.getContext("2d"); x.scale(2.4, 2.4); x.translate(0, 20); return [c, x]; })();
+  const lift = (gx, gy) => HEIGHTS[gy][gx] * CT.RAISE;
+  for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++) {
+    const ch = GROUND[gy][gx], x = gx * T, y = gy * T - lift(gx, gy);
+    dctx.save(); dctx.translate(0, -lift(gx, gy));
+    if (ch === "s") E.ground(dctx, "s", gx, gy); else if (ch === "p") CT.steppingPath(dctx, x, y + lift(gx, gy), gx, gy);
+    else if (ch === "Q") CT.paddy(dctx, x, y + lift(gx, gy), gx, gy);
+    else if (ch === "w") CT.river(dctx, x, y + lift(gx, gy), gx, gy); else if (ch === "W") CT.river(dctx, x, y + lift(gx, gy), gx, gy, true);
+    else if (ch === "h") CT.shore(dctx, x, y + lift(gx, gy), gx, gy, ["s"]);
+    else if (ch === "t") { CT.shore(dctx, x, y + lift(gx, gy), gx, gy, ["s"]); }
+    else if (ch === "r") { dctx.fillStyle = "#4e4a44"; dctx.fillRect(x, y + lift(gx, gy), T, T); }
+    else if (ch === "{") E.ground(dctx, "s", gx, gy);
+    else E.ground(dctx, "g", gx, gy);
+    dctx.restore();
+    // 石階：高度和下一列差 1 的石板格
+    if (gy + 1 < H && HEIGHTS[gy][gx] - HEIGHTS[gy + 1][gx] === 1 && (ch === "s" || ch === "{") && (gx === 9 || gx === 10)) CT.stairs(dctx, x, y, gx, gy);
+    if (gy + 1 < H && HEIGHTS[gy][gx] > HEIGHTS[gy + 1][gx] && !((gx === 9 || gx === 10) && HEIGHTS[gy][gx] - HEIGHTS[gy + 1][gx] === 1)) CT.cliffFace(dctx, x, y, HEIGHTS[gy][gx] - HEIGHTS[gy + 1][gx]);
+  }
+  const L = (gx, gy) => [gx * T, gy * T - lift(gx, gy)];
+  const items = [
+    [0, () => CT.mountainGate(dctx, ...L(8, 0))],
+    [0, () => { for (const gx of [0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13]) { const [x, y] = L(gx, 0); dctx.fillStyle = "#e8e8e0"; dctx.fillRect(x, y + 18, T, 30); dctx.strokeStyle = "#1f2a28"; dctx.lineWidth = 1.5; dctx.strokeRect(x, y + 18, T, 30); dctx.fillStyle = "#3c4a48"; dctx.fillRect(x - 1, y + 8, T + 2, 12); } }],
+    [1, () => CT.caveMouth(dctx, ...L(16, 0))],
+    [2, () => CT.altar(dctx, ...L(4, 2))], [2, () => Realms.OBJ.stoneLantern(dctx, ...L(7, 2))], [2, () => Realms.OBJ.stoneLantern(dctx, ...L(12, 2))],
+    [2, () => CT.pine(dctx, ...L(1, 2))], [2, () => CT.teleportStone(dctx, ...L(14, 2))],
+    [5, () => CT.bambooGrove(dctx, ...L(0, 5), 3, 2)], [5, () => Realms.OBJ.stoneLantern(dctx, ...L(8, 5))], [5, () => Realms.OBJ.stoneLantern(dctx, ...L(11, 5))],
+    [5, () => CT.pine(dctx, ...L(17, 5))], [6, () => CT.pavilion(dctx, ...L(14, 6))], [7, () => CT.boulder(dctx, ...L(12, 7))],
+    [7, () => Realms.OBJ.stoneLantern(dctx, ...L(8, 7))], [7, () => Realms.OBJ.stoneLantern(dctx, ...L(11, 7))], [8, () => E.campfire(dctx, 7, 8)],
+    [8, () => { CT.fence(dctx, ...L(3, 8)); }], [6, () => CT.flowers(dctx, ...L(6, 6), 6, 6)], [8, () => CT.flowers(dctx, ...L(13, 8), 13, 8)],
+    [10, () => E.dock(dctx, 9, 10, 2, 2)], [9, () => E.chest(dctx, 17, 8)],
+  ];
+  items.sort((a, b) => a[0] - b[0]).forEach(([, f]) => f());
+  CT.mistWisp(dctx, ...L(5, 3), 300); CT.mistWisp(dctx, ...L(2, 9), 900);
+  for (let gy = 6; gy < H; gy++) for (let gx = 15; gx < W; gx++) CT.fogCell(dctx, gx * T, gy * T, gx >= 17 ? 0 : 1, gx, gy);
+  // 主角
+  E.person(dctx, 10, 8, ...E.PARTY[0], "north", "#5aa0ff");
+</script>
+</body>
+</html>

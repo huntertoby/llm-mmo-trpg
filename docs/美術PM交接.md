@@ -127,6 +127,7 @@
 | `battle.js`、`battle.html` | 戰鬥畫面現行格子版 vs D 版（待機、選移動、選範圍、路徑經過冰面和陷阱；`battle-d.png`、`戰鬥D版樣張.md`；2.5D 使用者不要，函式 `iso()` 留在檔案裡但不再顯示） |
 | `bossArt.js`、`bosses.html` | 灰燼之心、碎晶之主的專屬造型與各階段（`bosses.png`、`頭目造型.md`；11-04 樣張，待使用者看） |
 | `cyborg.html` | 晶能義體人辨識記號三方案（`cyborg.png`、`晶能義體人記號.md`；11-04 樣張，推薦 C） |
+| `cloudTiles.js`、`cloud-tiles.html` | 雲嶺實地地圖地磚與地物圖庫＋示範圖「青霧觀山門」（`cloud-tiles.png`、`雲嶺實地圖庫.md`；11-04 樣張，待使用者看） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
@@ -194,3 +195,7 @@
 | 29 | 三柱灌注光束的顏色 | 和三根源晶柱同色（火橘、霧青、雷紫） | 一律紫色 |
 | 30 | 頭目資料欄位 | `doll.boss_art`，前端不認得就退回 `creature` | 直接改 `creature.body` |
 | 31 | 晶能義體人的辨識記號 | **C**：義眼＋耳機片＋頸後接口（`晶能義體人記號.md`） | A 只有義眼／B 只有耳機片 |
+| 32 | 實地地圖的純裝飾 | 新的裝飾層 `decor`，不影響規則（`雲嶺實地圖庫.md`） | 裝飾也做成物件 |
+| 33 | 實地地圖的河 | 淺水＝水表面，深水＝`chasm` 換成深水外觀 | 新地形「深水」 |
+| 34 | 多格建築 | 新欄位 `buildings`，載入時展開成牆、柱、可走格 | 每格各自寫地形 |
+| 35 | 新物件 ID | `bamboo_grove`、`boulder`、`fence`、`stone_lantern`、地面 `path_stones`（功能照現有物件複製，需玩法 PM 同意） | 全部用現有 ID 換皮 |
