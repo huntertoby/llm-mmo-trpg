@@ -8,6 +8,9 @@
 - **分解**（鐵匠，8.14）：背包裡的裝備 → 精華。
 - **重骰**、**指定**（附魔台，8.20、8.26.1）：換掉一條詞條；重骰的亂數由「指紋＋位置＋n」決定，
   指定完全沒有隨機；越改越貴。
+- **配方＝基礎配方＋重骰序列**（5D-3b，8.20／#33）：打造品每重骰或指定一次，就得到一份帶序列的
+  配方（配方碼＝SHA-256(基礎指紋＋序列) 前 10 碼），世界照樣記首位發現者；用這個碼打造時先打基礎
+  配方，再照序列重骰與指定（亂數同原裝備），費用照付，結果和原裝備相同。
 
 純函式：不讀時間（``now`` 由呼叫者傳入）、不呼叫 LLM。
 """
@@ -44,7 +47,14 @@ from trpg.world.crafting_actions import (
 )
 from trpg.world.economy import bag_slots_used, economy_rules
 from trpg.world.errors import WorldActionError
-from trpg.world.state import CharacterState, CraftRecipe, GearMod, RecipeRecord, WorldState
+from trpg.world.state import (
+    CharacterState,
+    CraftRecipe,
+    GearMod,
+    RecipeRecord,
+    RecipeStep,
+    WorldState,
+)
 
 __all__ = [
     "CRAFTING_ACTIONS",
@@ -62,6 +72,7 @@ __all__ = [
     "recipe_code",
     "station_problem",
     "stations_here",
+    "variant_print",
 ]
 
 CRAFTING_ACTIONS = (CraftAction, EnhanceAction, RerollAction, ImbueAction, SalvageAction)
@@ -137,6 +148,20 @@ def fingerprint(recipe: CraftRecipe) -> str:
 def recipe_code(print_: str) -> str:
     """配方碼＝指紋前 10 碼（小寫存、顯示大寫）。"""
     return print_[:10]
+
+
+def variant_print(base_print: str, steps: tuple[RecipeStep, ...]) -> str:
+    """帶重骰序列的配方指紋（5D-3b）：``{"base": 基礎指紋, "steps": [...]}`` 正規化 JSON 的
+    SHA-256；
+    沒有序列時就是基礎指紋（舊配方碼不變）。"""
+    if not steps:
+        return base_print
+    data = json.dumps(
+        {"base": base_print, "steps": [s.model_dump(mode="json") for s in steps]},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def _item_print(item: ItemDef) -> str:
@@ -243,9 +268,9 @@ def _recipe_from_fields(
     return recipe, hidden
 
 
-def _recipe_from_code(
+def _record_from_code(
     library: ContentLibrary, world: WorldState, char: CharacterState, code: str
-) -> tuple[CraftRecipe, HiddenRecipe | None]:
+) -> tuple[RecipeRecord, HiddenRecipe | None]:
     record = world.recipe_of(code.lower())
     if record is None:
         raise WorldActionError(f"沒有這個配方碼：{code.upper()}")
@@ -255,12 +280,15 @@ def _recipe_from_code(
     if recipe.weapon_class is not None and recipe.weapon_class != _hero_weapon_class(library, char):
         raise WorldActionError("這份配方的武器和你的武器不是同一大類")
     hidden = _rules(library).hidden_for(recipe.slot_type, recipe.materials)
-    return recipe, hidden
+    return record, hidden
 
 
 @dataclass(frozen=True)
 class CraftPlan:
-    """打造前算好的配方與費用（API 也用來顯示）。"""
+    """打造前算好的配方與費用（API 也用來顯示）。
+
+    ``print_``／``base_code``＝基礎配方的指紋與配方碼（打造的亂數）；``code``＝這次打造的配方碼
+    （帶序列時是帶序列的碼）；``steps``＝打好後照順序重骰與指定（5D-3b）。"""
 
     recipe: CraftRecipe
     hidden: HiddenRecipe | None
@@ -269,6 +297,8 @@ class CraftPlan:
     spent: dict[str, int]
     gold: int
     quest_coins: int
+    base_code: str = ""
+    steps: tuple[RecipeStep, ...] = ()
 
 
 def plan_craft(
@@ -276,26 +306,41 @@ def plan_craft(
 ) -> CraftPlan:
     """配方與費用（不檢查地點與夠不夠）；配方不合法拋 :class:`WorldActionError`。"""
     rules = _rules(library)
+    steps: tuple[RecipeStep, ...] = ()
     if action.code is not None:
-        recipe, hidden = _recipe_from_code(library, world, char, action.code)
+        record, hidden = _record_from_code(library, world, char, action.code)
+        recipe, steps = record.recipe, record.steps
     else:
         recipe, hidden = _recipe_from_fields(library, char, action)
     print_ = fingerprint(recipe)
     spent = {recipe.grade: rules.craft.grade_amount[recipe.slot_type]}
     spent.update(dict.fromkeys(recipe.materials, 1))
     cost = rules.craft.rarities[recipe.rarity]
+    gold = cost.gold_per_level * recipe.item_level
+    essence = 0
+    for done, step in enumerate(steps):  # 照序列重骰與指定，費用照付（同原裝備當時的費用）
+        mod_cost = rules.reroll if step.affix is None else rules.imbue
+        gold += mod_cost.gold(done)
+        essence += mod_cost.essence
+    if essence:
+        spent[rules.essence] = spent.get(rules.essence, 0) + essence
     return CraftPlan(
         recipe=recipe,
         hidden=hidden,
         print_=print_,
-        code=recipe_code(print_),
+        code=recipe_code(variant_print(print_, steps)),
         spent=dict(sorted(spent.items())),
-        gold=cost.gold_per_level * recipe.item_level,
+        gold=gold,
         quest_coins=cost.quest_coins,
+        base_code=recipe_code(print_),
+        steps=steps,
     )
 
 
-def _make_item(library: ContentLibrary, plan: CraftPlan, serial: int) -> ItemDef:
+def _make_item(
+    library: ContentLibrary, plan: CraftPlan, serial: int, name_zh: str | None
+) -> tuple[ItemDef, GearMod]:
+    """打出基礎配方的裝備（``name_zh``＝配方第一次打造的名稱），再照序列重骰與指定（5D-3b）。"""
     rules = _rules(library)
     recipe = plan.recipe
     leanings = {
@@ -334,7 +379,18 @@ def _make_item(library: ContentLibrary, plan: CraftPlan, serial: int) -> ItemDef
     }
     if plan.hidden is not None:
         update["name_zh"] = plan.hidden.name_zh
-    return item.model_copy(update=update)
+    if name_zh is not None:
+        update["name_zh"] = name_zh  # 名稱綁定配方第一次打造（8.20）
+    item = item.model_copy(update=update)
+    mod = GearMod(fingerprint=plan.print_, recipe=plan.base_code)
+    for step in plan.steps:
+        try:
+            item, mod, _ = _apply_step(library, item, mod, step)
+        except WorldActionError as exc:
+            raise WorldActionError(f"這份配方的重骰序列在目前的內容下重現不了（{exc}）") from exc
+    if plan.steps:
+        mod = mod.model_copy(update={"variant": plan.code})
+    return item, mod
 
 
 def _spend(bag: Mapping[str, int], spent: Mapping[str, int]) -> dict[str, int]:
@@ -382,14 +438,16 @@ def _craft(
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
     station = _station(library, char, action.station, "smithy")
     plan = plan_craft(library, world, char, action)
+    if plan.steps and not any(s.kind == "enchanter" for s in stations_here(library, char)):
+        raise WorldActionError("這份配方帶重骰序列，要在有附魔台的地方打")
     bag = _spend(char.bag, plan.spent)
     wallet = _pay(char, plan.gold, plan.quest_coins)
-    item = _make_item(library, plan, char.crafts + 1)
+    known = world.recipe_of(plan.code)
+    item, mod = _make_item(library, plan, char.crafts + 1, None if known is None else known.name_zh)
     _check_room(library, bag, len(char.gear) + 1)
-    record = world.recipe_of(plan.code)
-    discovered = record is None
-    if record is None:
-        record = RecipeRecord(
+    world, record, discovered = _remember(
+        world,
+        RecipeRecord(
             code=plan.code,
             recipe=plan.recipe,
             name_zh=item.name_zh,
@@ -397,11 +455,11 @@ def _craft(
             discoverer_name=char.hero.name_zh,
             discovered_at=now,
             hidden=None if plan.hidden is None else plan.hidden.id,
-        )
-        recipes = sorted((*world.recipes, record), key=lambda r: r.code)
-        world = world.model_copy(update={"recipes": tuple(recipes)})
-    item = item.model_copy(update={"name_zh": record.name_zh})  # 名稱綁定配方第一次打造（8.20）
-    mods = {**char.gear_mods, item.id: GearMod(fingerprint=plan.print_, recipe=plan.code)}
+            base=plan.base_code if plan.steps else None,
+            steps=plan.steps,
+        ),
+    )
+    mods = {**char.gear_mods, item.id: mod}
     char = char.model_copy(
         update={
             **wallet,
@@ -427,6 +485,17 @@ def _craft(
         discoverer_name=record.discoverer_name,
     )
     return world, char, (event,)
+
+
+def _remember(world: WorldState, record: RecipeRecord) -> tuple[WorldState, RecipeRecord, bool]:
+    """世界還沒有這個配方碼 → 記下（首位發現者寫在 ``record``，M6）。
+
+    回傳（世界、世界裡的紀錄、這次是不是新發現）。"""
+    known = world.recipe_of(record.code)
+    if known is not None:
+        return world, known, False
+    recipes = sorted((*world.recipes, record), key=lambda r: r.code)
+    return world.model_copy(update={"recipes": tuple(recipes)}), record, True
 
 
 # ---------------------------------------------------------------------------
@@ -526,47 +595,90 @@ def _salvage(
     return char, (GearSalvagedEvent(item=item.id, name_zh=item.name_zh, essence=essence),)
 
 
+def _apply_step(
+    library: ContentLibrary, item: ItemDef, mod: GearMod, step: RecipeStep
+) -> tuple[ItemDef, GearMod, tuple[AffixDef, int | None]]:
+    """重骰（``step.affix`` 是 ``None``）或指定一條詞條，並把這一步記進改動紀錄。
+
+    重骰的亂數＝「指紋＋位置＋n」（n＝這個位置已重骰的次數，8.20）；打造時照配方序列重現也走這裡。"""
+    if step.index >= len(item.affixes):
+        raise WorldActionError(f"{item.name_zh}沒有第 {step.index + 1} 條詞條")
+    options = affix_choices(library, item, step.index)
+    if not options:
+        raise WorldActionError(f"{item.name_zh}的第 {step.index + 1} 條詞條不能換")
+    if step.affix is not None:
+        chosen = next((o for o in options if o[0].id == step.affix), None)
+        if chosen is None:
+            raise WorldActionError(f"這條不能指定成 {step.affix}")
+        update: dict[str, object] = {"imbues": mod.imbues + 1}
+    else:
+        n = mod.rerolls.count(step.index)
+        chosen = pick_affix(library, item, options, _rng(mod.fingerprint, step.index, n))
+        update = {"rerolls": (*mod.rerolls, step.index)}
+    update["steps"] = (*mod.steps, step)
+    new = replace_affix(item, step.index, chosen[0], chosen[1])
+    return new, mod.model_copy(update=update), chosen
+
+
 def _change(
-    library: ContentLibrary, char: CharacterState, action: RerollAction | ImbueAction
-) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: RerollAction | ImbueAction,
+    now: int,
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
     rules = _rules(library)
     _station(library, char, action.station, "enchanter")
     item = _gear_or_raise(char, action.item)
-    if action.index >= len(item.affixes):
-        raise WorldActionError(f"{item.name_zh}沒有第 {action.index + 1} 條詞條")
-    options = affix_choices(library, item, action.index)
-    if not options:
-        raise WorldActionError(f"{item.name_zh}的第 {action.index + 1} 條詞條不能換")
     mod = mod_of(char, item)
     imbue = isinstance(action, ImbueAction)
     cost = rules.imbue if imbue else rules.reroll
     gold = cost.gold(mod.changes)
+    step = RecipeStep(
+        index=action.index, affix=action.affix if isinstance(action, ImbueAction) else None
+    )
+    new, changed, chosen = _apply_step(library, item, mod, step)
     bag = _spend(char.bag, {rules.essence: cost.essence}) if cost.essence else dict(char.bag)
     wallet = _pay(char, gold)
-    if isinstance(action, ImbueAction):
-        chosen = next((o for o in options if o[0].id == action.affix), None)
-        if chosen is None:
-            raise WorldActionError(f"這條不能指定成 {action.affix}")
-        mod = mod.model_copy(update={"imbues": mod.imbues + 1})
-    else:
-        n = mod.rerolls.count(action.index)
-        chosen = pick_affix(library, item, options, _rng(mod.fingerprint, action.index, n))
-        mod = mod.model_copy(update={"rerolls": (*mod.rerolls, action.index)})
-    old = item.affixes[action.index].affix
-    new = replace_affix(item, action.index, chosen[0], chosen[1])
-    char = _replace(char.model_copy(update={**wallet, "bag": bag}), item, new, mod)
+    code: str | None = None
+    discovered = False
+    if mod.traceable:  # 打造品：配方＝基礎配方＋重骰序列（5D-3b）
+        assert mod.recipe is not None
+        code = recipe_code(variant_print(mod.fingerprint, changed.steps))
+        changed = changed.model_copy(update={"variant": code})
+        base = world.recipe_of(mod.recipe)
+        if base is not None:
+            world, _, discovered = _remember(
+                world,
+                base.model_copy(
+                    update={
+                        "code": code,
+                        "name_zh": item.name_zh,
+                        "discoverer": char.character_id,
+                        "discoverer_name": char.hero.name_zh,
+                        "discovered_at": now,
+                        "base": base.code,
+                        "steps": changed.steps,
+                    }
+                ),
+            )
+    elif mod.variant is not None:
+        changed = changed.model_copy(update={"variant": None})
+    char = _replace(char.model_copy(update={**wallet, "bag": bag}), item, new, changed)
     event = AffixChangedEvent(
         mode="imbue" if imbue else "reroll",
         item=item.id,
         name_zh=item.name_zh,
         index=action.index,
-        old=old,
+        old=item.affixes[action.index].affix,
         new=chosen[0].id,
         value=chosen[1],
         gold_spent=gold,
         essence_spent=cost.essence,
+        code=code,
+        discovered=discovered,
     )
-    return char, (event,)
+    return world, char, (event,)
 
 
 def apply_crafting(
@@ -584,5 +696,5 @@ def apply_crafting(
     elif isinstance(action, SalvageAction):
         char, events = _salvage(library, char, action)
     else:
-        char, events = _change(library, char, action)
+        return _change(library, world, char, action, now)
     return world, char, events

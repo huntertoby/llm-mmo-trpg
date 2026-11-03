@@ -48,6 +48,7 @@ __all__ = [
     "PerceptionMark",
     "QuestState",
     "RecipeRecord",
+    "RecipeStep",
     "ShadowRecord",
     "ShadowReport",
     "ShadowSnapshot",
@@ -307,6 +308,15 @@ class CraftRecipe(_Model):
         return ids
 
 
+class RecipeStep(_Model):
+    """配方的一步改動（Phase 5D-3b，8.20「配方＝基礎配方＋重骰序列」）：``affix`` 是 ``None``＝重骰
+    第 ``index`` 條（亂數由「指紋＋位置＋n」決定）；否則＝用精華把第 ``index`` 條
+    指定成 ``affix``。"""
+
+    index: int = Field(ge=0, le=7)
+    affix: str | None = Field(default=None, pattern=ID_PATTERN)
+
+
 class GearMod(_Model):
     """一件裝備被打造、強化、重骰、指定的紀錄（Phase 5D-3，8.20）。
 
@@ -318,11 +328,26 @@ class GearMod(_Model):
     enhance: int = Field(default=0, ge=0, le=10)
     rerolls: tuple[int, ...] = ()
     imbues: int = Field(default=0, ge=0)
+    steps: tuple[RecipeStep, ...] = ()
+    """依序的重骰與指定（5D-3b；配方的一部分）。5D-3 的舊紀錄沒有這欄：``len(steps) != changes``
+    ＝序列不完整，這件不能再產生配方碼（見 :attr:`traceable`）。"""
+    variant: str | None = Field(default=None, pattern=r"^[0-9a-f]{10}$")
+    """帶重骰序列的配方碼（5D-3b）；沒改過或不能追溯時為 ``None``（顯示 ``recipe``）。"""
 
     @property
     def changes(self) -> int:
         """重骰與指定合計幾次（費用越改越貴，8.14）。"""
         return len(self.rerolls) + self.imbues
+
+    @property
+    def traceable(self) -> bool:
+        """是打造品，且每一次重骰與指定都記在 ``steps``（能併進配方碼）。"""
+        return self.recipe is not None and len(self.steps) == self.changes
+
+    @property
+    def code(self) -> str | None:
+        """這件裝備目前的配方碼（帶序列的優先）；掉落品為 ``None``。"""
+        return self.variant or self.recipe
 
 
 class RecipeRecord(_Model):
@@ -336,6 +361,10 @@ class RecipeRecord(_Model):
     discovered_at: int = Field(ge=0)
     hidden: str | None = Field(default=None, pattern=ID_PATTERN)
     """隱藏配方的 ID（M7）；一般配方為 ``None``。"""
+    base: str | None = Field(default=None, pattern=r"^[0-9a-f]{10}$")
+    """帶重骰序列的配方（5D-3b）：基礎配方的配方碼；基礎配方本身為 ``None``。"""
+    steps: tuple[RecipeStep, ...] = ()
+    """重骰序列（5D-3b，8.20）：照順序在基礎配方打出的裝備上重骰或指定。"""
 
 
 class ShopPurchase(_Model):

@@ -84,6 +84,17 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     view = _act(client, cid, kind="reroll", station=ENCHANTER, item=first, index=0)
     assert any("重骰成" in e for e in view["events"])
     assert view["crafting"]["essence"] == 1
+    # 5D-3b：重骰後這件有帶序列的新配方碼，配方表列出它（重骰 1 次）
+    assert any("新的配方碼" in e and "首位發現者" in e for e in view["events"])
+    item = next(g for g in view["crafting"]["gear"] if g["item"] == first)
+    assert item["code"] != recipe["code"]
+    variant = next(r for r in view["crafting"]["recipes"] if r["code"] == item["code"])
+    assert "重骰 1 次" in variant["summary_zh"] and recipe["code"] in variant["summary_zh"]
+    assert variant["can_craft"], variant["problem_zh"]  # 剩 1 精華，夠付 1 次重骰
+    view = _act(client, cid, kind="craft", station=SMITHY, code=variant["code"])
+    copy = view["crafting"]["gear"][-1]
+    assert copy["code"] == item["code"] and copy["description_zh"] == item["description_zh"]
+    assert view["crafting"]["essence"] == 0
 
 
 def test_crafting_hidden_away_from_town(client: TestClient) -> None:
