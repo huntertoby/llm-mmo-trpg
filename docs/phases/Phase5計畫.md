@@ -173,6 +173,8 @@
 | 5F-5c | 5F-5 收尾（玩法 PM 2026-11-03 代決，9.7 與 3.5 已記，c341e3e1）：存檔資料夾另留**唯讀封存**（舊季世界日誌、循環賽與 Boss 戰重播），供確定性重播查證排行榜與 Boss 擊殺；編年史第一季用固定模板但列事實細節（等級、打過的精英與 Boss 含首殺、完成的事件與主線章節、首位發現的配方、循環賽名次），只寫日誌裡真的發生的事（LLM 傳記 7.11 後期）；外觀只有名字與紙娃娃，種族不算外觀：新季建角種族預設帶上季的、可免費改，紙娃娃裡不合新種族的部件改回預設；舊季循環賽重播頁列後期 | 5F-5 | 1 h | 可與 5F-5b 平行 |
 | 5F-R1 | 5F 審查整理①（2026-11-03 reviewer，正確性與資料完整）：`engine/turns.py:335` `_expire_round_end_statuses` 沒到期時不寫回遞減（duration ≥ 2 的 round_end 狀態永不到期）→ 有改就寫回、補 duration 2 表格測試；命令列季末重置與開著的伺服器沒有跨程序保護 → 世界資料夾加伺服器持有的鎖檔／心跳，腳本偵測到就拒絕（`--force` 才放行），或 WorldStore 寫入一起拿同一把鎖；`enemy_only` 補入口：`granted_skill_problems`（grant_skill 不可給 enemy_only）、載入時檢查玩家方範本（傭兵、dev_starters、sim/builds、劇情技能）不得引用 enemy_only 技能、enemy_only 狀態檢查從文字比對改成載入驗證；世界資料夾檔名抽成單一版面模組（`log.jsonl`、`world.json`、`chars`、`league.json`、`archive` 等），重置的 `WORLD_FILES` 從那裡取；封存中斷重跑改成併入既有資料夾（同名檔 sha256 一致略過、不一致報錯），備份排除 `archive/`；`season_policy.py` `_NOTE` 說明更新 | 5F 全部 | 1.5 h | 否 |
 | 5F-R2 | 5F 審查整理②（結構）：`world/battle.py` 賽季 Boss 特例拆出 `prepare_season_boss_battle`（`encounter_map`、`enemy_level` 由呼叫端分流）；`season.yaml` 支援依季 ID 覆寫（沒寫的沿用預設）、季名改 YAML 模板（取代 `_zh_number`）、Bot 的 `s1` 特例鍵格式統一；`load_library` 順手拆（PLR0915） | 5F-R1 | 1.5 h | 否 |
+| 5A-ART6 | 四區換皮①：灰燼荒原（地形 7、物件 9）＋晶冠城邦（3 樣點綴，只在 `region` 明確是 `crystal_crown` 時畫）。美術 PM 2026-11-04 `docs/art/四區移植需求.md` 第 1～3、7 節（c9c5e650）；使用者原話（專案 PM 轉達）「四區換皮 先做吧」。規格第 43.1 節 | 5A-ART5 | 1 h | 只動 `client/` |
+| 5A-ART7 | 四區換皮②：魔導樞市＋霜潮海境（各地形 7、物件 9）。同上第 1、4、5、7 節；規格第 43.2 節 | 5A-ART6 | 1.5 h | 只動 `client/` |
 | 5F 後待辦 | **（玩法 PM 2026-11-03：優先）** 碎晶之主兩條離 19.7 原文最遠的近似換回原文：「回合結束全場傷害」（目前是 AI 自選的環形技「碎界脈動」，約 24% 回合）與「晶傀儡每 3 回合召喚」（目前只在進第 2 階段召喚一次 2 隻）；需要引擎新增「回合結束效果」與「定期召喚」欄位（資料化）。其他列後期：舊季循環賽重播頁、LLM 傳記（7.11）、盜賊區域配色、Bot 斜線指令在地化；戰場縮放版面（美術 PM 2026-11-03 觀察：800×600 預設「自動 62%」時一格約 23px、單位很小） | 5F 全部 | — | — |
 
 > 合計 25 段，約 33 小時 agent 工時。
@@ -4564,6 +4566,32 @@ doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
 | ART-6 | 霧鎖真人的雙手 | 主手拂塵（`main_kind: whisk`）、副手長劍（副手格加認 `sword`） |
 | ART-7 | 道童杖頭綠光 | 杖頭光色沿用現有畫法（沒有新增欄位） |
 
-## 43. 之後各段規格
+## 43. 5A-ART6／ART7 詳細規格：其他四區換皮
 
-（5B-5 驗收後補上之後各段。）
+> 給實作 agent。**只動 `client/`**：`client/src/render/`（新 `ashenTerrain.ts`／`ashenObjects.ts`、`crystalTerrain.ts`／`crystalObjects.ts`，ART7 再加 `arcaneTerrain.ts`／`arcaneObjects.ts`、`frostTerrain.ts`／`frostObjects.ts`；`terrainArt.ts`、`objectArt.ts` 的 `REGION_TERRAIN_DRAW`／`REGION_OBJECT_DRAW` 各加一列）、`client/src/dev/regionGallery.ts`、對應的前端測試。`src/`、`content/` 一行不動（`reskin()` 已經會把大世界戰鬥的地圖換成遭遇所在區）。
+> 依據：第 1 節 5A-ART6／ART7 列；`docs/art/四區移植需求.md`（全文，色票、每格外觀與「必須保留」為主規格）、`docs/art/sample/regions4.js`（畫法與參數，可直接移植）、`docs/art/regions4.png`；寫法比照雲嶺（`cloudRidgeTerrain.ts`、`cloudRidgeObjects.ts`、3-37b）。完成報告：`Phase5A-ART6報告.md`、`Phase5A-ART7報告.md`。
+
+### 43.0 共同規則
+
+1. 每區一張地形表、一張物件表，ID 與功能不變；查不到的 ID 照現在的 `pickThemed` 退回預設畫法。
+2. 「必須保留」欄全部照做（牆比單位高、擋視線物畫到格頂、半掩護約 0.3 T、可燃看得出材質、油桶共用黃色三角危險記號、深淵北緣崖線、岩漿紅橘、冰窟深色水）。矮牆一律 `drawLowWall` 加各區 `LowWallPalette`，`extra` 不超過矮牆頂 6 單位。
+3. 裝飾光（裂縫熔岩光、晶光點、晶能線）亮度低於技能特效、導電提示、岩漿；位置用格子座標雜湊決定（沿用 `artRandom.ts`），同一張圖最多約 1/3 的格子有。不用 `Math.random`。
+4. 不換皮的照舊：所有表面（含熔心坑冷卻井的水）、技能產生的物件、圖示、元素色、稀有度外框；致命標記、可燃記號、受損裂痕由 objectArt／terrainArt 統一疊加。
+5. 不加區域裝飾層（薄霧、灰燼粒子、潮汐）。
+6. 快取鍵已含 region，不用改；`region` 是空字串或沒有時，畫面與現在完全相同（加測試鎖住：預設表的輸出不受新表影響）。
+7. 測試比照 `regionArt.test.ts`：每區 7 種地形、9 種物件都查得到畫法；空 `region` 走預設；`crystal_crown` 以外的 ID 退回預設。
+
+### 43.1 5A-ART6：灰燼荒原＋晶冠城邦
+
+- 灰燼：需求第 2 節全部 16 格。裂谷底部紅光透明度 ≤ 0.3 且只在格子下半；裂縫光 1.4 線寬、模糊 5，先畫 3 寬黑縫再疊；岩漿整格亮橘加 2～3 片黑色結殼。
+- 晶冠：需求第 3 節的 `stone`、`wall`、`chasm`、`stone_pillar` 4 格，其他退回預設。晶柱外光比頭目外光淡、不閃動，推倒後照預設。**法陣地板不做**。
+- 區域畫廊加灰燼、晶冠各一個場景（7 地形＋9 物件都要出現；灰燼要有裂谷與岩漿並排）。
+- 實戰截圖（附在報告）：灰燼荒原的焦土外圍（`open_plain`）、枯木林（`dark_forest`）、岩漿渡橋（`lava_crossing`）、熔心坑（`molten_heart_pit`，冷卻井是藍色的水）各一張。用自己 worktree 的伺服器、暫存存檔資料夾（不碰 `saves/`），埠避開 8000、8001、8010；開發模式的捷徑可以用。真的到不了某個地點時，用區域畫廊擺同一張地圖加 `region: ashen_waste`，並在報告寫明。
+- 交件：`ruff`／`mypy` 不用跑（沒動 Python）；跑 `corepack pnpm -C client exec vitest run`（相關檔）、`tsc`／`pnpm build`，前端快照有變時說明差異。
+
+### 43.2 5A-ART7：魔導樞市＋霜潮海境
+
+- 樞市：需求第 4 節 16 格。晶能線約 1/3 格、2 寬、模糊 6，比導電提示暗；冷卻槽 `#2a7a9a` 加黃銅邊；沙包矮牆的欄杆是細線，不能看起來變高。
+- 霜潮：需求第 5 節 16 格。物件與牆一律 2px 深色外框；`thin_ice` 同預設。
+- 兩區還沒有內容：只用區域畫廊驗收（各一個場景，7 地形＋9 物件）。不做實戰截圖。
+- 交件同 43.1。
