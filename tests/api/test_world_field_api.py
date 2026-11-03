@@ -53,13 +53,16 @@ def test_view_has_field(client: TestClient, field_library: ContentLibrary) -> No
     assert field["map_id"] == "mist_ferry"
     assert field["name_zh"] == found.name_zh
     assert (field["width"], field["height"]) == (found.width, found.height)
-    assert len(field["tiles"]) == found.width * found.height
+    assert field["tiles"] == []  # 6C-R3：地形另外取，依雜湊快取
+    static = _ok(client.get(f"/api/world/fields/mist_ferry?h={field['tiles_hash']}"))
+    assert static["hash"] == field["tiles_hash"]
+    assert len(static["tiles"]) == found.width * found.height
     grid = found.grid()
-    assert [(t["x"], t["y"], t["height"], t["terrain"]) for t in field["tiles"]] == [
+    assert [(t["x"], t["y"], t["height"], t["terrain"]) for t in static["tiles"]] == [
         (x, y, h, terrain) for y, row in enumerate(grid) for x, (h, terrain) in enumerate(row)
     ]
-    tiles = {(t["x"], t["y"]): t for t in field["tiles"]}
-    walls = [(t["x"], t["y"]) for t in field["tiles"] if t["terrain"] == "wall"]
+    tiles = {(t["x"], t["y"]): t for t in static["tiles"]}
+    walls = [(t["x"], t["y"]) for t in static["tiles"] if t["terrain"] == "wall"]
     assert walls and all(tiles[c]["walkable"] is False for c in walls)  # 牆（建築）
     assert all(tiles[npc.at]["walkable"] is False for npc in found.npcs)  # NPC 站的格子
     assert tiles[found.entry]["walkable"] is True

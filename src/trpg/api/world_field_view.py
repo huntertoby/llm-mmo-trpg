@@ -3,6 +3,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from typing import Final
+
 from trpg.api.world_field_people import ALERT_ZH, friends_here, look_of, npc_marks
 from trpg.api.world_field_schemas import (
     FieldDoorView,
@@ -16,12 +20,14 @@ from trpg.api.world_field_schemas import (
     FieldPositionView,
     FieldStoneTargetView,
     FieldStoneView,
+    FieldTilesView,
     FieldTileView,
     FieldView,
 )
 from trpg.api.world_field_things import FieldSocial, things_update
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.content.maps import passable_grid
 from trpg.world.actions import WorldEvent
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import FieldGrid, field_grid, field_map, hidden_door, placed
@@ -35,7 +41,7 @@ from trpg.world.gear import hero_loadout
 from trpg.world.narration import region_npcs
 from trpg.world.state import CharacterState, WorldState
 
-__all__ = ["field_line", "field_view"]
+__all__ = ["field_line", "field_tiles", "field_view"]
 
 
 def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str | None:
@@ -61,6 +67,58 @@ def _place_name(library: ContentLibrary, region: str, location: str) -> str:
 
 def _map_name(library: ContentLibrary, found: FieldMapDef) -> str:
     return found.name_zh or _place_name(library, found.region, found.place)
+
+
+def _static_grid(library: ContentLibrary, found: FieldMapDef) -> FieldGrid:
+    """只看內容的地形格（6C-R3）：同 :func:`~trpg.world.field.field_grid`，但「發現才出現」的隱藏門
+    一律當成還沒發現（不可站）。"""
+    rules = library.ruleset
+    passable = passable_grid(found, rules.terrain.by_id(), rules.objects.by_id())
+    blocked = {npc.at for npc in found.npcs}
+    blocked |= {d.at for d in found.doors if d.hidden_until == "reveal"}
+    return FieldGrid(
+        map=found,
+        heights=tuple(tuple(h for h, _ in row) for row in found.grid()),
+        open=tuple(
+            tuple(ok and (x, y) not in blocked for x, ok in enumerate(row))
+            for y, row in enumerate(passable)
+        ),
+    )
+
+
+_TILES: dict[tuple[int, str], tuple[ContentLibrary, FieldTilesView]] = {}
+"""（內容庫, 地圖 ID）→ 靜態地形（存著內容庫本身，``id`` 不會被重用）。"""
+_TILES_MAX: Final = 256
+
+
+def field_tiles(library: ContentLibrary, map_id: str) -> FieldTilesView | None:
+    """實地地圖的靜態地形與內容雜湊（6C-R3；沒有這張圖＝``None``）。同一個內容庫只算一次。"""
+    cached = _TILES.get((id(library), map_id))
+    if cached is not None and cached[0] is library:
+        return cached[1]
+    found = field_map(library, map_id)
+    if found is None:
+        return None
+    tiles = _tiles(found, _static_grid(library, found))
+    text = json.dumps(
+        [found.width, found.height, [t.model_dump(mode="json") for t in tiles]],
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+    view = FieldTilesView(
+        map_id=found.id, hash=digest, width=found.width, height=found.height, tiles=tiles
+    )
+    if len(_TILES) >= _TILES_MAX:
+        _TILES.clear()
+    _TILES[(id(library), map_id)] = (library, view)
+    return view
+
+
+def _open_cells(static: FieldTilesView, grid: FieldGrid) -> tuple[tuple[int, int], ...]:
+    """靜態地形不可站、這個角色站得上去的格子（已發現的隱藏門）。"""
+    return tuple((t.x, t.y) for t in static.tiles if not t.walkable and grid.standable((t.x, t.y)))
 
 
 def _tiles(found: FieldMapDef, grid: FieldGrid) -> tuple[FieldTileView, ...]:
@@ -148,6 +206,15 @@ def _stone_targets(
     return tuple(sorted(out, key=lambda t: t.id))
 
 
+def _leader_look(library: ContentLibrary, lineup: EncounterLineup) -> FieldHeroView | None:
+    """帶頭單位的外觀（6C-R3）：陣容第一名，沒有敵方時第三方第一名；同戰鬥的 ``UnitView``。"""
+    lead = next(iter((*lineup.members, *lineup.third)), None)
+    if lead is None:
+        return None
+    template = library.enemy_catalog().template(lead.unit)
+    return look_of(library, template, library.loadout_of(template))
+
+
 def _units(library: ContentLibrary, lineup: EncounterLineup) -> tuple[FieldEnemyUnitView, ...]:
     catalog = library.enemy_catalog()
 
@@ -185,6 +252,7 @@ def _enemy(
         elite=lineup is not None and bool(elite_kinds(library, lineup)),
         units=() if lineup is None else _units(library, lineup),
         sight=enemy.sight,
+        look=None if lineup is None else _leader_look(library, lineup),
     )
 
 
@@ -205,13 +273,16 @@ def field_view(
     world: WorldState | None = None,
     now: int = 0,
     social: FieldSocial | None = None,
+    inline_tiles: bool = True,
 ) -> FieldView | None:
     """目前的實地地圖；所在地點沒有實地地圖＝``None``。``world`` 給了才帶看得見的敵人（6C-1）與
-    情境物件（6C-5）；``social`` 給了才帶朋友的腳印與留言石碑（6C-5）。"""
+    情境物件（6C-5）；``social`` 給了才帶朋友的腳印與留言石碑（6C-5）。``inline_tiles`` 為假時不帶
+    ``tiles``（世界畫面，6C-R3：前端依 ``tiles_hash`` 另外取靜態地形，再套上 ``open_cells``）。"""
     char = placed(library, char)
     pos = char.field
     found = None if pos is None else field_map(library, pos.map)
-    if pos is None or found is None:
+    static = None if found is None else field_tiles(library, found.id)
+    if pos is None or found is None or static is None:
         return None
     grid = field_grid(library, char, found)
     view = FieldView(
@@ -222,7 +293,9 @@ def field_view(
         interior=found.is_interior,
         width=found.width,
         height=found.height,
-        tiles=_tiles(found, grid),
+        tiles=_tiles(found, grid) if inline_tiles else (),
+        tiles_hash=static.hash,
+        open_cells=_open_cells(static, grid),
         objects=tuple(
             FieldObjectView(id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1])
             for o in found.objects

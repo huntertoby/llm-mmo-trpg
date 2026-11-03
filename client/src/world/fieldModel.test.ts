@@ -51,6 +51,8 @@ function town(over: Partial<FieldView> = {}): FieldView {
     width: 6,
     height: 5,
     tiles,
+    tiles_hash: "",
+    open_cells: [],
     objects: [{ id: "o0_4", kind: "crate", x: 0, y: 4 }],
     exits: [{ id: "to_ferry_steps", cells: [[5, 2], [5, 3]], to: "ferry_steps", to_name_zh: "渡口石階" }],
     doors: [{ id: "tavern_door", x: 1, y: 2, to: "mist_ferry_tavern", to_name_zh: "霧渡鎮酒館" }],
@@ -305,6 +307,30 @@ describe("看得見的敵人（6C-1）", () => {
     const field = town({ enemies: [enemy] });
     expect(hoverText(field, { x: 4, y: 4 })).toBe("盜賊・精英・2 名・另有第三方 1 名・巡邏");
     expect(hoverText(field, { x: 2, y: 4 })).toBe("敵人的視野");
+  });
+
+  it("帶頭單位的外觀照戰鬥畫法（6C-R3）：異形帶 creature、人形帶紙娃娃與種族外觀", () => {
+    const wolf = {
+      template_id: "mist_wolf",
+      weapon_id: "wolf_fang",
+      weapon_class: "melee",
+      doll_look: { creature: { body: "quadruped", size: "medium" } },
+      race_look: null,
+      equipment: [],
+    } as unknown as NonNullable<FieldView["enemies"][number]["look"]>;
+    const view = fieldDrawModel(town({ enemies: [{ ...enemy, look: wolf }] }));
+    const unit = view.units.find((u) => u.id === "enemy_e0");
+    expect(unit?.dollLook?.creature).toEqual({ body: "quadruped", size: "medium" });
+    expect(unit?.team).toBe("enemy");
+    const human = { ...wolf, template_id: "bandit_blade", doll_look: { head: "hood" }, race_look: { ears: "long" } } as unknown as typeof wolf;
+    const drawn = fieldDrawModel(town({ enemies: [{ ...enemy, look: human }] })).units.find((u) => u.id === "enemy_e0");
+    expect(drawn?.dollLook?.creature ?? null).toBeNull();
+    expect(drawn?.raceLook).toEqual({ ears: "long" });
+  });
+
+  it("沒有外觀（舊伺服器）時照舊用陣容第一名的範本", () => {
+    const unit = fieldDrawModel(town({ enemies: [{ ...enemy, look: null }] })).units.find((u) => u.id === "enemy_e0");
+    expect(unit?.dollLook ?? null).toBeNull();
   });
 
   it("沒有敵人時不多畫東西", () => {

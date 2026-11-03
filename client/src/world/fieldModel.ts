@@ -372,10 +372,11 @@ export function enemyUnitId(enemy: FieldEnemy): string {
   return `enemy_${enemy.id}`;
 }
 
-/** 敵群 → 敵方單位（紙娃娃用陣容第一名的範本；朝向照伺服器）。 */
+/** 敵群 → 敵方單位（帶頭單位的外觀照戰鬥畫法：`doll_look`、異形 `creature`〔6C-R3〕；沒有外觀時用
+ * 陣容第一名的範本；朝向照伺服器）。 */
 function enemyUnit(enemy: FieldEnemy): UnitView {
   const lead = enemy.units.find((u) => !u.third) ?? enemy.units[0];
-  return {
+  const base = {
     ...unitBase(enemyUnitId(enemy), enemy.x, enemy.y),
     name_zh: enemy.name_zh,
     team: "enemy",
@@ -383,6 +384,7 @@ function enemyUnit(enemy: FieldEnemy): UnitView {
     facing: FACING[enemy.facing],
     tags: enemy.elite ? ["elite"] : [],
   } as UnitView;
+  return enemy.look == null ? base : withLook(base, enemy.look, base.template_id);
 }
 
 /** 格子上的敵群（站的那一格）；沒有為 `null`。 */
@@ -463,6 +465,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
     if (look != null) races.set(npcUnitId(n.id), look.race_look ?? null);
   }
   for (const f of field.friends ?? []) races.set(friendUnitId(f.owner), f.look.race_look ?? null);
+  for (const e of field.enemies ?? []) if (e.look != null) races.set(enemyUnitId(e), e.look.race_look ?? null);
   const barless = barlessIds(field);
   const units = model.units.map((u) => {
     let out = u;

@@ -103,8 +103,30 @@ class LocationNoteStore:
     def __init__(self, root: Path, *, new_id: Callable[[], str] = _new_id) -> None:
         self.path = root / NOTES_FILE
         self._new_id = new_id
+        self._cache: tuple[tuple[int, int] | None, tuple[LocationNote, ...]] | None = None
+        """記憶體快取（6C-R3）：（檔案的修改時間與大小, 留言）。讀過一次或寫入後就有；檔案被別的
+        程式改過（管理腳本 ``scripts/notes.py``）時重讀；:meth:`forget` 清掉。"""
+
+    def forget(self) -> None:
+        """丟掉記憶體快取，下次重讀留言檔。"""
+        self._cache = None
+
+    def _stamp(self) -> tuple[int, int] | None:
+        try:
+            info = self.path.stat()
+        except OSError:
+            return None
+        return info.st_mtime_ns, info.st_size
 
     def all(self) -> tuple[LocationNote, ...]:
+        stamp = self._stamp()
+        if self._cache is not None and self._cache[0] == stamp:
+            return self._cache[1]
+        notes = self._read()
+        self._cache = (stamp, notes)
+        return notes
+
+    def _read(self) -> tuple[LocationNote, ...]:
         if not self.path.is_file():
             return ()
         try:
@@ -123,6 +145,7 @@ class LocationNoteStore:
         data = _File(notes=tuple(notes))
         text = json.dumps(data.model_dump(mode="json"), ensure_ascii=False, indent=2)
         write_atomic(self.path, text + "\n")
+        self._cache = (self._stamp(), data.notes)
 
     def at(self, region: str, location: str, limit: int = BOARD_NOTES) -> list[LocationNote]:
         """這個地點的留言，新的在前。"""

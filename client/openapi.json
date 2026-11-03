@@ -1874,6 +1874,66 @@
         }
       }
     },
+    "/api/world/fields/{map_id}": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Field Tiles",
+        "description": "實地地圖的靜態地形（6C-R3）：只看內容。``h`` 等於目前的雜湊時允許瀏覽器快取（內容一樣\n就一樣）；不同或省略照樣回傳目前的地形（前端以回傳的 ``hash`` 為準）。",
+        "operationId": "get_field_tiles_api_world_fields__map_id__get",
+        "parameters": [
+          {
+            "name": "map_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Map Id"
+            }
+          },
+          {
+            "name": "h",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "H"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldTilesView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters": {
       "get": {
         "tags": [
@@ -8884,6 +8944,16 @@
             "type": "array",
             "title": "Sight",
             "default": []
+          },
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9688,6 +9758,44 @@
         ],
         "title": "FieldTileView"
       },
+      "FieldTilesView": {
+        "properties": {
+          "map_id": {
+            "type": "string",
+            "title": "Map Id"
+          },
+          "hash": {
+            "type": "string",
+            "title": "Hash"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/FieldTileView"
+            },
+            "type": "array",
+            "title": "Tiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "map_id",
+          "hash",
+          "width",
+          "height",
+          "tiles"
+        ],
+        "title": "FieldTilesView",
+        "description": "一張實地地圖的靜態地形（6C-R3；``GET /api/world/fields/{map_id}``）：只看內容，前端依\n``hash`` 快取。"
+      },
       "FieldType": {
         "type": "string",
         "enum": [
@@ -9740,7 +9848,31 @@
               "$ref": "#/components/schemas/FieldTileView"
             },
             "type": "array",
-            "title": "Tiles"
+            "title": "Tiles",
+            "default": []
+          },
+          "tiles_hash": {
+            "type": "string",
+            "title": "Tiles Hash",
+            "default": ""
+          },
+          "open_cells": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Open Cells",
+            "default": []
           },
           "objects": {
             "items": {
@@ -9902,7 +10034,6 @@
           "interior",
           "width",
           "height",
-          "tiles",
           "objects",
           "exits",
           "doors",

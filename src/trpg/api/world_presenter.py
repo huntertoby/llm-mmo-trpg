@@ -9,7 +9,7 @@ Phase 5B-5（18.4、18.5）：事件卡、情境判定結果、NPC、對話、�
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Final
 
 from trpg.api.account_schemas import TitlesOf, no_titles
@@ -101,7 +101,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.atlas import cross_gate, region_lit, region_name
-from trpg.world.battle import prepare_battle
+from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
@@ -357,13 +357,21 @@ def _here_view(
 # ---------------------------------------------------------------------------
 
 
+type PrepareBattle = Callable[[CharacterState], PreparedBattle]
+"""畫面用的 ``prepare_battle``（6C-R3：伺服器傳快取過的版本，
+:meth:`~trpg.api.world.WorldStore.prepared_battle`）。"""
+
+
 def _encounter_view(
-    library: ContentLibrary, char: CharacterState, in_battle: bool
+    library: ContentLibrary,
+    char: CharacterState,
+    in_battle: bool,
+    prepare: PrepareBattle | None = None,
 ) -> EncounterView | None:
     encounter = char.pending_encounter
     if encounter is None:
         return None
-    prepared = prepare_battle(library, char)
+    prepared = prepare_battle(library, char) if prepare is None else prepare(char)
     catalog = library.enemy_catalog()
     # 敵方在前、第三方（5B-M3）在後；第三方沒有詞綴
     foes = [u for u in prepared.setup.units if u.team is not Team.ALLY]
@@ -550,18 +558,22 @@ def world_view(
     narrations: Sequence[NarrateAction] = (),
     titles: TitlesOf = no_titles,
     social: FieldSocial | None = None,
+    prepare: PrepareBattle | None = None,
+    inline_tiles: bool = True,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
     的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）；``social`` 是
-    其他角色的足跡與地點留言數（6C-5；省略＝不畫）。"""
+    其他角色的足跡與地點留言數（6C-5；省略＝不畫）。``prepare`` 是遭遇面板用的 ``prepare_battle``
+    （6C-R3 伺服器傳快取版）；``inline_tiles`` 為假時實地地圖不帶地形（6C-R3，前端依雜湊另外
+    取）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
         character=_character_view(library, char),
         map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
         here=_here_view(library, world, char, now, in_battle),
-        encounter=_encounter_view(library, char, in_battle),
+        encounter=_encounter_view(library, char, in_battle, prepare),
         clock=_clock_view(library, world, char.region, now),
         events=events,
         battle_id=battle_id,
@@ -591,7 +603,9 @@ def world_view(
         inventory=_inventory(library, char, in_battle=in_battle),
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
-        field=field_view(library, char, world=world, now=now, social=social),
+        field=field_view(
+            library, char, world=world, now=now, social=social, inline_tiles=inline_tiles
+        ),
         atlas=atlas_view(
             library,
             world,

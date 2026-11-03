@@ -1,0 +1,449 @@
+{
+ "edges": [
+  [
+   "mist_ferry",
+   "ferry_steps"
+  ],
+  [
+   "mist_ferry",
+   "hunter_hut"
+  ],
+  [
+   "mist_ferry",
+   "ashen_ferry"
+  ],
+  [
+   "ferry_steps",
+   "bamboo_path"
+  ],
+  [
+   "bamboo_path",
+   "hunter_hut"
+  ],
+  [
+   "bamboo_path",
+   "rain_terraces"
+  ],
+  [
+   "rain_terraces",
+   "mist_temple_gate"
+  ],
+  [
+   "rain_terraces",
+   "cliff_gang_fort"
+  ],
+  [
+   "rain_terraces",
+   "old_pine_altar"
+  ],
+  [
+   "hunter_hut",
+   "winter_lake"
+  ],
+  [
+   "old_pine_altar",
+   "cloud_sea_bridge"
+  ],
+  [
+   "mist_temple_gate",
+   "cloud_sea_bridge"
+  ],
+  [
+   "cliff_gang_fort",
+   "herb_valley"
+  ],
+  [
+   "cloud_sea_bridge",
+   "herb_valley"
+  ],
+  [
+   "cloud_sea_bridge",
+   "sword_tomb"
+  ],
+  [
+   "herb_valley",
+   "elixir_cave"
+  ],
+  [
+   "winter_lake",
+   "north_slope"
+  ],
+  [
+   "north_slope",
+   "crane_cliff"
+  ],
+  [
+   "north_slope",
+   "crystal_rift"
+  ],
+  [
+   "sword_tomb",
+   "crystal_rift"
+  ],
+  [
+   "crystal_rift",
+   "cloud_summit"
+  ]
+ ],
+ "level_max": 6,
+ "level_min": 1,
+ "locations": [
+  {
+   "battle_maps": [],
+   "description_zh": "傳送點、商人、懸賞板、導師、酒館",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "mist_ferry",
+   "kind": "town",
+   "level_max": null,
+   "level_min": null,
+   "name_zh": "霧渡鎮",
+   "pos": {
+    "x": 10,
+    "y": 80
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "cliff_outpost"
+   ],
+   "description_zh": "新手任務 1（盜賊搶渡船）",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "ferry_steps",
+   "kind": "camp",
+   "level_max": 1,
+   "level_min": 1,
+   "name_zh": "渡口石階",
+   "pos": {
+    "x": 25,
+    "y": 85
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "dark_forest"
+   ],
+   "description_zh": "霧狼、新手任務 2",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "bamboo_path",
+   "kind": "camp",
+   "level_max": 2,
+   "level_min": 1,
+   "name_zh": "竹林小徑",
+   "pos": {
+    "x": 30,
+    "y": 65
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "swamp"
+   ],
+   "description_zh": "新手任務 3（盜賊＋修士衝突）",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "rain_terraces",
+   "kind": "camp",
+   "level_max": 2,
+   "level_min": 2,
+   "name_zh": "雨中梯田",
+   "pos": {
+    "x": 45,
+    "y": 70
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [],
+   "description_zh": "修士 NPC、區域任務鏈起點",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "mist_temple_gate",
+   "kind": "village",
+   "level_max": 2,
+   "level_min": 2,
+   "name_zh": "青霧觀山門",
+   "pos": {
+    "x": 50,
+    "y": 55
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [],
+   "description_zh": "劇情夥伴「獵戶阿岳」",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "hunter_hut",
+   "kind": "village",
+   "level_max": 2,
+   "level_min": 2,
+   "name_zh": "獵戶小屋",
+   "pos": {
+    "x": 15,
+    "y": 55
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "narrow_halls"
+   ],
+   "description_zh": "盜賊據點；懸賞「斷崖幫二當家」",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "cliff_gang_fort",
+   "kind": "camp",
+   "level_max": 3,
+   "level_min": 3,
+   "name_zh": "斷崖幫寨",
+   "pos": {
+    "x": 60,
+    "y": 80
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [],
+   "description_zh": "機遇：雷雨夜帶「帶電」技能來此",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "old_pine_altar",
+   "kind": "altar",
+   "level_max": 3,
+   "level_min": 3,
+   "name_zh": "古松祭壇",
+   "pos": {
+    "x": 35,
+    "y": 45
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "bridge_chasm"
+   ],
+   "description_zh": "吊橋深淵；修士巡邏",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "cloud_sea_bridge",
+   "kind": "camp",
+   "level_max": 4,
+   "level_min": 3,
+   "name_zh": "雲海吊橋",
+   "pos": {
+    "x": 60,
+    "y": 45
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [],
+   "description_zh": "情境判定（辨藥、解毒）；通往隱藏地點「丹爐洞」",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "herb_valley",
+   "kind": "ruin",
+   "level_max": 4,
+   "level_min": 4,
+   "name_zh": "藥師谷",
+   "pos": {
+    "x": 75,
+    "y": 65
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "narrow_halls"
+   ],
+   "description_zh": "青霧執事；丹砂、活血骨",
+   "gate_to": null,
+   "hidden": true,
+   "hint_zh": "谷底一處隱密的洞窟",
+   "id": "elixir_cave",
+   "kind": "secret",
+   "level_max": 5,
+   "level_min": 5,
+   "name_zh": "丹爐洞",
+   "pos": {
+    "x": 90,
+    "y": 70
+   },
+   "reveal": [
+    "situation"
+   ],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "open_plain"
+   ],
+   "description_zh": "懸賞「北坡狼王」（霧狼精英，狂暴的）",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "north_slope",
+   "kind": "elite_lair",
+   "level_max": 5,
+   "level_min": 4,
+   "name_zh": "北坡獵場",
+   "pos": {
+    "x": 25,
+    "y": 25
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "frozen_lake"
+   ],
+   "description_zh": "冰鶴使、石背熊",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "winter_lake",
+   "kind": "camp",
+   "level_max": 4,
+   "level_min": 4,
+   "name_zh": "冬湖",
+   "pos": {
+    "x": 15,
+    "y": 40
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "ruined_fort"
+   ],
+   "description_zh": "情境判定（解劍陣）；懸賞「霧中劍客」",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "sword_tomb",
+   "kind": "ruin",
+   "level_max": 5,
+   "level_min": 5,
+   "name_zh": "劍冢",
+   "pos": {
+    "x": 70,
+    "y": 30
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "open_plain"
+   ],
+   "description_zh": "霧魅、碎晶傀儡；主線第 1 章核心",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "crystal_rift",
+   "kind": "anomaly",
+   "level_max": 5,
+   "level_min": 5,
+   "name_zh": "源晶裂痕",
+   "pos": {
+    "x": 50,
+    "y": 20
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "cliff_outpost"
+   ],
+   "description_zh": "雷羽鷹巢；感知判定或朋友足跡才會出現",
+   "gate_to": null,
+   "hidden": true,
+   "hint_zh": "霧裡一座沒見過的山崖",
+   "id": "crane_cliff",
+   "kind": "secret",
+   "level_max": 6,
+   "level_min": 6,
+   "name_zh": "鶴歸崖",
+   "pos": {
+    "x": 30,
+    "y": 8
+   },
+   "reveal": [
+    "perception_nearby",
+    "quest_clue",
+    "friend_footprint"
+   ],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [
+    "cloud_summit"
+   ],
+   "description_zh": "霧鎖真人",
+   "gate_to": null,
+   "hidden": false,
+   "hint_zh": "",
+   "id": "cloud_summit",
+   "kind": "boss",
+   "level_max": 6,
+   "level_min": 6,
+   "name_zh": "雲頂觀",
+   "pos": {
+    "x": 75,
+    "y": 10
+   },
+   "reveal": [],
+   "unlock_flag": null
+  },
+  {
+   "battle_maps": [],
+   "description_zh": "世界事件",
+   "gate_to": "ashen_waste",
+   "hidden": false,
+   "hint_zh": "",
+   "id": "ashen_ferry",
+   "kind": "gate",
+   "level_max": null,
+   "level_min": null,
+   "name_zh": "往灰燼荒原的渡口",
+   "pos": {
+    "x": 5,
+    "y": 95
+   },
+   "reveal": [],
+   "unlock_flag": "ashen_waste_open"
+  }
+ ],
+ "name_zh": "雲嶺",
+ "region": "cloud_ridge",
+ "town": "mist_ferry"
+}

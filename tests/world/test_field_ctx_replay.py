@@ -7,16 +7,32 @@ SHA-256 要等於重構前（6C-R1 合併後的 ``680b2d38``）用同一支腳�
 例外：陣容種子（``lineup_seed``）6C-R2 改由世界種子衍生（另見
 ``tests/world/test_field_lineup_seed.py``），連同跟著升版的存檔版號（``format``）與重生世代
 （``wins``），比較前一律遮掉。
+
+**6C-R3**（6C-R2 待決 6）：不再綁正式內容。除了凍結的實地地圖，這串動作會讀到的大世界內容也換成
+``tests/world/frozen_replay/`` 的凍結複本（2026-11-04 正式內容的 JSON）：大世界規則、雲嶺的地點圖、
+遭遇表、事件骨架與事件規則、任務，以及主角範本。凍結時的雜湊和正式內容算出的相同（仍是
+``BEFORE_6CR2``）。還綁著正式內容的只剩戰鬥規則包（地形、物件、核心數值）與敵人範本（陣容名稱）。
 """
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
+from pathlib import Path
 from typing import Any
 
-from tests.world.helpers import NOON, hero, make_world
+import pytest
+from pydantic import BaseModel
+
+from tests.world.helpers import NOON, make_world, with_rules
+from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
+from trpg.content.world_encounters import EncounterTable
+from trpg.content.world_events import EventRules, EventSkeletonTable
+from trpg.content.world_map import LocationMapDef
+from trpg.content.world_quests import QuestTable
+from trpg.content.world_rules import WorldRules
 from trpg.world.actions import RetreatAction, WorldAction
 from trpg.world.errors import WorldActionError
 from trpg.world.field_actions import SneakAction, WalkAction
@@ -27,6 +43,45 @@ type XY = tuple[int, int]
 
 BEFORE_6CR2 = "d2aedac47c76eb039169e9ffeb022221631653004516091b65e2d83c5ec73144"
 """重構前（``680b2d38``）同一串動作的 SHA-256（遮掉 ``lineup_seed``）。"""
+
+FROZEN = Path(__file__).resolve().parent / "frozen_replay"
+REGION = "cloud_ridge"
+
+
+def _frozen[M: BaseModel](model: type[M], name: str) -> M:
+    return model.model_validate(json.loads((FROZEN / f"{name}.json").read_text(encoding="utf-8")))
+
+
+def frozen_hero() -> UnitTemplate:
+    return _frozen(UnitTemplate, "hero")
+
+
+def frozen_library(library: ContentLibrary) -> ContentLibrary:
+    """``library``（已換上凍結的實地地圖）再換上凍結的大世界內容片段（6C-R3）。"""
+    events = dataclasses.replace(
+        library.world_event_content,
+        events={REGION: _frozen(EventSkeletonTable, "events")},
+        rules=_frozen(EventRules, "event_rules"),
+    )
+    quests = dataclasses.replace(
+        library.world_quests, quests={REGION: _frozen(QuestTable, "quests")}
+    )
+    return dataclasses.replace(
+        library,
+        world_rules=_frozen(WorldRules, "world_rules"),
+        world_maps={**library.world_maps, REGION: _frozen(LocationMapDef, "world_map")},
+        world_encounters={
+            **library.world_encounters,
+            REGION: _frozen(EncounterTable, "encounters"),
+        },
+        world_event_content=events,
+        world_quests=quests,
+    )
+
+
+@pytest.fixture(scope="module")
+def replay_library(field_library: ContentLibrary) -> ContentLibrary:
+    return frozen_library(field_library)
 
 
 def _row(xs: range, y: int) -> list[XY]:
@@ -65,7 +120,7 @@ def _masked(data: Any) -> Any:
 def run(library: ContentLibrary) -> list[Any]:
     """照 :func:`script` 走一遍（不合法的動作記下錯誤訊息、狀態不變）。"""
     world: WorldState = make_world()
-    char: CharacterState = new_character(library, "alice", hero(library), region="cloud_ridge")
+    char: CharacterState = new_character(library, "alice", frozen_hero(), region=REGION)
     char = char.model_copy(update={"field": FieldPos(map="mist_ferry", x=11, y=9)})
     out: list[Any] = []
     for k, action in enumerate(script()):
@@ -90,13 +145,13 @@ def digest(library: ContentLibrary) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def test_field_ctx_refactor_keeps_replay(field_library: ContentLibrary) -> None:
-    assert digest(field_library) == BEFORE_6CR2
+def test_field_ctx_refactor_keeps_replay(replay_library: ContentLibrary) -> None:
+    assert digest(replay_library) == BEFORE_6CR2
 
 
-def test_script_covers_the_hooks(field_library: ContentLibrary) -> None:
+def test_script_covers_the_hooks(replay_library: ContentLibrary) -> None:
     """這串動作真的走過了門、出口、傳送石、潛行、碰敵與撤退（不是一路報錯）。"""
-    steps = run(field_library)
+    steps = run(replay_library)
     assert not any("error" in s for s in steps), [s.get("error") for s in steps]
     kinds = [e["kind"] for s in steps for e in s["events"]]
     for kind in ("field_entered", "teleport_stone_unlocked", "sneak_started", "traveled"):
@@ -106,3 +161,14 @@ def test_script_covers_the_hooks(field_library: ContentLibrary) -> None:
         for s in steps
         for e in s["events"]
     )
+
+
+def test_replay_ignores_official_world_content(field_library: ContentLibrary) -> None:
+    """正式內容的大世界規則、事件或遭遇表改了，這支比對不受影響（6C-R2 待決 6）。"""
+    changed = with_rules(field_library, encounter={"base_permille": 999})
+    changed = dataclasses.replace(
+        changed,
+        world_encounters={},
+        world_event_content=dataclasses.replace(changed.world_event_content, events={}),
+    )
+    assert digest(frozen_library(changed)) == BEFORE_6CR2
