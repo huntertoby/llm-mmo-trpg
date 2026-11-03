@@ -647,6 +647,9 @@ class WorldState(_Model):
     """懸賞被搶下的紀錄（依日期、懸賞排序；每天每張最多一筆）。"""
     level_bonus: dict[str, int] = Field(default_factory=dict)
     """區域 → 建議等級加成（世界事件失敗，9.6.7 #15；依鍵排序）。"""
+    shop_price: dict[str, int] = Field(default_factory=dict)
+    """商店 → 買價加成‰（世界事件失敗，Phase 5F-5b；19.9 #2「餘燼集商店價格 +20% 到季末」；
+    依鍵排序，季末重置清掉）。"""
 
     # --- 5F-3 賽季 Boss（邏輯在 trpg.world.season_boss） ---
     seal_keys: int = Field(default=0, ge=0)
@@ -677,7 +680,7 @@ class WorldState(_Model):
             raise ValueError("league_entries 的角色重複")
         return entries
 
-    @field_validator("level_bonus")
+    @field_validator("level_bonus", "shop_price")
     @classmethod
     def _sorted_bonus(cls, bonus: dict[str, int]) -> dict[str, int]:
         return dict(sorted(bonus.items()))

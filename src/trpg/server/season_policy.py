@@ -156,6 +156,7 @@ _WORLD: Final[dict[str, ResetKind]] = _all(
     "world_events",
     "bounty_claims",
     "level_bonus",
+    "shop_price",  # 5F-5b 世界事件失敗的商店價格加成（到季末）
     "seal_keys",  # 5F-3 賽季 Boss（世界狀態；紀念的首殺與評分榜在伺服器檔）
     "seal_full_at",
     "boss_attempts",

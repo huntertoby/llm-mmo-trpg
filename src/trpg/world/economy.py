@@ -62,8 +62,10 @@ __all__ = [
     "pouch_problem",
     "pouch_skills",
     "shop_affinity_left",
+    "shop_buy_price",
     "shop_here",
     "shop_location",
+    "shop_price_zh",
     "spend_pouch",
     "weekly_left",
     "weekly_limit",
@@ -113,6 +115,23 @@ def shop_here(library: ContentLibrary, char: CharacterState) -> ShopDef | None:
         if shop_location(library, char.region, shop) == char.location:
             return shop
     return None
+
+
+def shop_buy_price(world: WorldState, shop: str, price: int) -> int:
+    """商店 ``shop`` 一個定價 ``price`` 的物品現在的買價：世界事件失敗的價格加成（Phase 5F-5b；
+    19.9 #2「餘燼集商店價格 +20% 到季末」）照千分比加上去、無條件進位（加成後至少多 1 金幣）；
+    賣價照定價算、不受影響（代決 5F5b-3）。"""
+    bonus = world.shop_price.get(shop, 0)
+    return price if bonus == 0 else -(-price * (1000 + bonus) // 1000)
+
+
+def shop_price_zh(library: ContentLibrary, shop: str, permille: int, *, sep: str = "：") -> str:
+    """價格加成的一行說明（例「鐵娘的廢鐵攤：買價 +20%」；公告板的世界變化、離線摘要用）。"""
+    found = next(
+        (s for t in library.world_economy.shops.values() for s in t.shops if s.id == shop), None
+    )
+    name = shop if found is None else found.name_zh
+    return f"{name}{sep}買價 +{permille / 10:g}%"
 
 
 def _shop(library: ContentLibrary, char: CharacterState, shop_id: str) -> ShopDef:
@@ -190,7 +209,7 @@ def buy_problem(
     if problem is not None:
         return problem
     found = item_def(library, item)
-    cost = found.price * count
+    cost = shop_buy_price(world, shop.id, found.price) * count
     if char.gold < cost:
         return f"金幣不夠（要 {cost}，有 {char.gold}）"
     return _room_problem(library, char, found, count)
@@ -264,7 +283,7 @@ def _buy(
     if problem is not None:
         raise WorldActionError(problem)
     found = item_def(library, action.item)
-    cost = found.price * action.count
+    cost = shop_buy_price(world, shop.id, found.price) * action.count
     update: dict[str, object] = {"gold": char.gold - cost}
     if found.kind == "supply":  # 20.1：補給直接加在角色上（代決 5D1-7）
         update["supplies"] = char.supplies + found.supplies * action.count

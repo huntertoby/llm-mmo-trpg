@@ -74,6 +74,8 @@ class WorldEventResolvedEvent(_Model):
     flags: tuple[str, ...] = ()
     level_bonus: dict[str, int] = Field(default_factory=dict)
     """區域 → 這次加的建議等級。"""
+    shop_price: dict[str, int] = Field(default_factory=dict)
+    """商店 → 這次加的買價‰（Phase 5F-5b）。"""
 
 
 class BountyClaimedEvent(_Model):

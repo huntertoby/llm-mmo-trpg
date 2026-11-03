@@ -31,6 +31,7 @@ from trpg.world.economy import (
     gear_price,
     pouch_problem,
     shop_affinity_left,
+    shop_buy_price,
     shop_here,
     weekly_left,
 )
@@ -262,7 +263,7 @@ def shop_view(
                 name_zh=found.name_zh,
                 kind_zh=ITEM_KINDS[found.kind],
                 description_zh=found.description_zh,
-                price=found.price,
+                price=shop_buy_price(world, shop.id, found.price),
                 weekly=weekly,
                 stock_zh=stock_zh,
                 locked=locked,
