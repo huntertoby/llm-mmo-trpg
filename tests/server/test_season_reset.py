@@ -545,6 +545,21 @@ def test_backup_copies_whole_save_dir(library: ContentLibrary, tmp_path: Path) -
     assert copied == expected
 
 
+def test_backup_skips_read_only_archive(library: ContentLibrary, tmp_path: Path) -> None:
+    """5F-R1：存檔資料夾的 ``archive/``（舊季的唯讀封存）不備份；世界資料夾裡的
+    ``league/archive/`` 照樣備份。"""
+    season = _fake_season(library, tmp_path)
+    write_atomic(season.save_dir / "archive" / "s0" / "log.jsonl", '{"seq": 1}\n')
+    report = _reset(library, season)
+    assert report.backup is not None
+    backup = Path(report.backup)
+    assert not (backup / "archive").exists()
+    assert (backup / "world" / "league" / "archive" / "league-s1-1-0.json").is_file()
+    for p in (season.save_dir / "archive").rglob("*"):  # tmp_path 清理用：封存是唯讀的
+        if p.is_file():
+            os.chmod(p, 0o600)
+
+
 def test_backup_root_inside_saves_is_refused(library: ContentLibrary, tmp_path: Path) -> None:
     season = _fake_season(library, tmp_path)
     before = _tree(season.world_dir)

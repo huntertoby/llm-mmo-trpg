@@ -48,6 +48,7 @@ __all__ = [
     "ArchiveManifest",
     "ArchiveRecordNotFoundError",
     "ReplayCheck",
+    "SeasonArchiveError",
     "archive_season",
     "season_archive_dir",
     "verify_first_kill",
@@ -63,6 +64,10 @@ _READ_ONLY: Final = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 
 class ArchiveRecordNotFoundError(TrpgError):
     """要查證的首殺或循環賽場次不存在（404）。"""
+
+
+class SeasonArchiveError(TrpgError):
+    """封存寫不進去（5F-R1：中斷後重跑時封存裡已有內容不同的同名檔）。"""
 
 
 class _Model(BaseModel):
@@ -99,27 +104,58 @@ def _files(folder: Path) -> list[Path]:
     return sorted(p for p in folder.rglob("*") if p.is_file() and p.name != MANIFEST_FILE)
 
 
-def _free(target: Path) -> Path:
-    """``target`` 已存在（中斷後重跑）時用 ``<名字>-2`` 起的空位，不蓋掉已封存的。"""
-    if not target.exists():
-        return target
-    n = 2
-    while True:
-        found = target.with_name(f"{target.stem}-{n}{target.suffix}")
-        if not found.exists():
-            return found
-        n += 1
+def _moves(world_dir: Path, target: Path) -> list[tuple[Path, Path]]:
+    """:data:`ARCHIVED` 在世界資料夾裡的每個檔 → 封存裡的同一路徑（依路徑排序）。"""
+    found: list[tuple[Path, Path]] = []
+    for name in ARCHIVED:
+        source = world_dir / name
+        if source.is_file():
+            found.append((source, target / name))
+        elif source.is_dir():
+            found += [
+                (p, target / p.relative_to(world_dir))
+                for p in sorted(source.rglob("*"))
+                if p.is_file()
+            ]
+    return found
+
+
+def _merge(world_dir: Path, target: Path) -> None:
+    """5F-R1：把 :data:`ARCHIVED` 併入封存（中斷後重跑時封存裡可能已有一部分）。封存裡已有的同名檔
+    sha256 一致就略過（刪掉世界資料夾那份），不一致就拋 :class:`SeasonArchiveError`、什麼都不動。"""
+    moves = _moves(world_dir, target)
+    conflicts = [
+        dest.relative_to(target).as_posix()
+        for source, dest in moves
+        if dest.exists() and (not dest.is_file() or _sha256(dest) != _sha256(source))
+    ]
+    if conflicts:
+        raise SeasonArchiveError(
+            f"封存 {target} 裡已有內容不同的同名檔（{'、'.join(conflicts)}），請先人工比對再重跑"
+        )
+    for source, dest in moves:
+        if dest.exists():
+            source.unlink()  # 同一份已經封存過
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            source.rename(dest)
+    for name in ARCHIVED:  # 搬空的資料夾（由深到淺）
+        source = world_dir / name
+        if source.is_dir():
+            folders = sorted((p for p in source.rglob("*") if p.is_dir()), reverse=True)
+            for folder in [*folders, source]:
+                if not any(folder.iterdir()):
+                    folder.rmdir()
 
 
 def archive_season(save_dir: Path, world_dir: Path, season_id: str, now: int) -> Path:
     """季末重置用（唯一會寫封存的地方）：把 :data:`ARCHIVED` 從世界資料夾搬進
-    ``archive/<季>/``、寫 ``manifest.json``，再把封存裡每個檔設成唯讀。回傳封存資料夾。"""
+    ``archive/<季>/``、寫 ``manifest.json``，再把封存裡每個檔設成唯讀。回傳封存資料夾。
+
+    中斷後重跑（封存資料夾已存在）時併入既有的封存（:func:`_merge`）。"""
     target = season_archive_dir(save_dir, season_id)
     target.mkdir(parents=True, exist_ok=True)
-    for name in ARCHIVED:
-        source = world_dir / name
-        if source.exists():
-            source.rename(_free(target / name))
+    _merge(world_dir, target)
     manifest_path = target / MANIFEST_FILE
     if manifest_path.exists():  # 中斷後重跑：舊的清單是唯讀，先打開再重寫
         os.chmod(manifest_path, stat.S_IRUSR | stat.S_IWUSR)

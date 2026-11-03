@@ -45,7 +45,7 @@ from trpg.server.chronicle import (
 from trpg.server.first_kills import FirstKill, elite_kind_name, load_first_kills
 from trpg.server.league import LeagueMatch, LeagueRecord
 from trpg.server.notes import LocationNote, LocationNoteStore
-from trpg.server.season_archive import archive_season
+from trpg.server.season_archive import SeasonArchiveError, archive_season
 from trpg.server.season_boss_board import (
     BossBoardEntry,
     load_boss_board,
@@ -598,7 +598,14 @@ def _backup(save_dir: Path, accounts_dir: Path | None, root: Path, now: int, old
         target = target_root / f"{base}-{n}"
         n += 1
     ignore = shutil.ignore_patterns("*.lock")  # 鎖檔被持有時 Windows 讀不了；鎖檔本身沒有資料
-    shutil.copytree(save, target, ignore=ignore)
+
+    def ignore_save(directory: str, names: list[str]) -> set[str]:
+        skipped = set(ignore(directory, names))
+        if Path(directory) == save and ARCHIVE_DIR in names:
+            skipped.add(ARCHIVE_DIR)  # 5F-R1：存檔資料夾的 archive/ 本身就是唯讀封存，不再備份
+        return skipped
+
+    shutil.copytree(save, target, ignore=ignore_save)
     if accounts_dir is not None and accounts_dir.is_dir():
         accounts = accounts_dir.resolve()
         if save not in accounts.parents:
@@ -747,7 +754,10 @@ def _reset(
         backup = _backup(save_dir, accounts_dir, root, options.now, old)
         SeasonChronicleStore(world_dir).add(plan.entry)
         _clear_league_entries(world_dir)
-        archived = archive_season(save_dir, world_dir, old, options.now)
+        try:
+            archived = archive_season(save_dir, world_dir, old, options.now)
+        except SeasonArchiveError as exc:
+            raise SeasonResetError(str(exc)) from exc
         for name in (CHARS_DIR, NOTES_FILE):
             _remove(world_dir / name)
         fresh = WorldState(season_id=plan.new_id, season_seed=plan.seed, season_start=options.start)
