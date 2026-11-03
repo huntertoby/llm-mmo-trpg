@@ -22,6 +22,7 @@ from trpg.api.world_economy_view import (
     economy_event_line,
     inventory_view,
     last_loot_line,
+    pending_loot_view,
     shop_view,
     wallet_view,
 )
@@ -522,6 +523,7 @@ def world_view(
             lambda region, loc: _location_name(library, region, loc),
         ),
         last_loot_zh=last_loot_line(library, char.last_battle),
+        pending_loot=pending_loot_view(library, char),
         event=event_view(library, world, char, now, narrations, in_battle=in_battle),
         situation_result=situation_result_view(library, char, raw_events),
         npcs_here=npcs_here(library, char),

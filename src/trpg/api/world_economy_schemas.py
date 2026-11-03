@@ -69,6 +69,17 @@ class InventoryView(_ApiModel):
     """目前觸發的裝備共鳴（Phase 5D-3，M3；例「霧隱共鳴（隱蔽 2 件）：敏捷 +2」）。"""
 
 
+class PendingLootView(_ApiModel):
+    """背包滿了：戰後結算選要丟哪件（Phase 5D-2b）。``items`` 是新拿到、還沒放進背包的；
+    背包裡原本的看 ``InventoryView.bag``。用 ``loot_choose`` 動作送出要丟的
+    （``drop_items``、``drop_gear``）。"""
+
+    items: tuple[BagItemView, ...]
+    over_slots: int
+    """全部收下還差幾格（丟掉的要騰出這麼多格）。"""
+    hint_zh: str
+
+
 class ShopItemView(_ApiModel):
     item: str
     name_zh: str

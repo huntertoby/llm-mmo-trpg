@@ -20,7 +20,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
 from trpg.api.world_crafting_schemas import CraftingView
-from trpg.api.world_economy_schemas import InventoryView, ShopView, WalletView
+from trpg.api.world_economy_schemas import (
+    InventoryView,
+    PendingLootView,
+    ShopView,
+    WalletView,
+)
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -68,6 +73,7 @@ from trpg.world.crafting_actions import (
 from trpg.world.economy_actions import (
     BuyAction,
     EquipAction,
+    LootChooseAction,
     PouchAction,
     SellAction,
     UseItemAction,
@@ -129,6 +135,7 @@ type WorldActionRequest = Annotated[
     | PouchAction
     | UseItemAction
     | EquipAction  # 5D-2
+    | LootChooseAction  # 5D-2b
     | CraftAction  # 5D-3
     | EnhanceAction
     | RerollAction
@@ -400,6 +407,8 @@ class WorldView(_ApiModel):
     last_battle_zh: str | None = None
     last_loot_zh: str | None = None
     """最近一次戰鬥的掉落（Phase 5D-2，例「掉落：霧晶 ×1、稀有短劍（1 級）。」）。"""
+    pending_loot: PendingLootView | None = None
+    """背包滿了、等戰後結算選要丟哪件（Phase 5D-2b；沒有為 ``None``）。"""
     """最近一次戰鬥結果的一句話（5A-5 待決 1；沒打過為 ``None``）。"""
     event: EventView | None = None
     """事件卡（5B-5；``event_solve`` 是放棄、交涉、戰鬥解法，5B-5b）。"""

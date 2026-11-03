@@ -44,6 +44,7 @@ __all__ = [
     "LootSummary",
     "NextBattleMod",
     "OathState",
+    "PendingLoot",
     "PendingOffer",
     "PerceptionMark",
     "QuestState",
@@ -195,6 +196,25 @@ class LootSummary(_Model):
         return not (self.materials or self.gear or self.lost_materials or self.lost_gear)
 
 
+class PendingLoot(_Model):
+    """背包放不下、等玩家在戰後結算選要丟哪件的戰利品（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決：
+    不做暫存區）。只留最近一場：下一場打贏、結算掉落前還沒決定的就留在原地（``LootAbandonedEvent``）。"""
+
+    materials: dict[str, int] = Field(default_factory=dict)
+    """放不下的材料（物品 → 個數，依 ID 排序）。"""
+    gear: tuple[ItemDef, ...] = ()
+    """放不下的裝備（依掉落順序）。"""
+
+    @field_validator("materials")
+    @classmethod
+    def _sorted(cls, counts: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(counts.items()))
+
+    @property
+    def empty(self) -> bool:
+        return not self.materials and not self.gear
+
+
 class LastBattle(_Model):
     """最近一次戰鬥的結果（Phase 5A-7；5A-5 待決 1）：``fight`` 結算時寫入（勝負都算），讓重新整理的
     畫面仍看得到輸贏。由日誌決定，可重播。"""
@@ -269,12 +289,16 @@ class PendingOffer(_Model):
     """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。
 
     ``source``（Phase 5B-4c）：``quest``＝任務（``quest``、``step`` 是任務與步驟）；
-    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）。"""
+    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）。
+
+    ``guaranteed``（Phase 5D-2b）：機遇是保底觸發的那次（標題用骨架的保底「誰」）；預設 ``False``，
+    舊存檔照讀。"""
 
     quest: str = Field(pattern=ID_PATTERN)
     step: str = Field(pattern=ID_PATTERN)
     offer: SkillOffer
     source: Literal["quest", "opportunity"] = "quest"
+    guaranteed: bool = False
 
 
 def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
@@ -666,6 +690,8 @@ class CharacterState(_Model):
     """背包裡的裝備（依取得順序；每件佔背包 1 格，8.17）。"""
     equipment: dict[str, ItemDef] = Field(default_factory=dict)
     """穿戴中的裝備（欄位 → 物品；空＝主角範本的裝備，同 ``RunState.equipment``）。"""
+    pending_loot: PendingLoot | None = None
+    """背包滿了、等戰後結算選要丟哪件的戰利品（5D-2b；``None``＝沒有）。舊存檔沒有這個欄位照讀。"""
 
     # --- 5D-3 鐵匠與附魔台（邏輯在 trpg.world.crafting） ---
     gear_mods: dict[str, GearMod] = Field(default_factory=dict)

@@ -672,7 +672,11 @@ def pending_offer_view(
     if pending.source == "opportunity":  # 機遇（5B-4c）：quest＝骨架 ID
         events = library.world_event_content.events.get(char.region)
         skeleton = events.skeleton_by_id().get(pending.quest) if events is not None else None
-        name_zh = mask_text(skeleton.who_zh, masks) if skeleton is not None else pending.quest
+        name_zh = (  # 5D-2b：保底觸發的那次用保底的「誰」
+            mask_text(skeleton.who_for(guaranteed=pending.guaranteed), masks)
+            if skeleton is not None
+            else pending.quest
+        )
         step_zh = "機遇"
     else:
         table = quest_table(library, char.region)
@@ -772,7 +776,11 @@ def _event_story_line(
         return f"在{place}遇到一件事：{who}。"
     if isinstance(event, EventLeftEvent):
         found = skeletons.get(event.skeleton)
-        who = mask_text(found.who_zh, masks) if found is not None else event.skeleton
+        who = (  # 5D-2b：保底觸發的那次用保底的「誰」
+            mask_text(found.who_for(guaranteed=event.guaranteed), masks)
+            if found is not None
+            else event.skeleton
+        )
         return (
             f"離開了{_location_name(library, char.region, event.location)}，「{who}」的事就此作罷。"
         )

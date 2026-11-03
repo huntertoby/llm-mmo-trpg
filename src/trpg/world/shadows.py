@@ -229,10 +229,10 @@ def shadow_spawn(
 def _shadow_loadout(
     library: ContentLibrary, snapshot: ShadowSnapshot, recruiter_level: int
 ) -> Loadout:
-    """影子的裝備（5D-2，20.5）：存影子時穿的、物品等級不超過招募者等級的；沒存裝備時照範本。"""
+    """影子的裝備（5D-2，20.5）：存影子時穿的，物品等級壓到招募者等級（5D-2b）；沒存裝備時照範本。"""
     if not snapshot.equipment:
         return library.loadout_of(snapshot.hero)
-    return item_loadout(library, shadow_equipment(snapshot.equipment, recruiter_level))
+    return item_loadout(library, shadow_equipment(library, snapshot.equipment, recruiter_level))
 
 
 # ---------------------------------------------------------------------------
