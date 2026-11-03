@@ -164,6 +164,7 @@ __all__ = [
     "gear_class_problem",
     "gear_reference_problems",
     "load_library",
+    "player_template_enemy_only_problems",
     "skill_reference_problems",
     "unit_skill_problems",
 ]
@@ -948,7 +949,7 @@ def load_library(  # noqa: PLR0915
         units=set(units),
         maps=maps,
         battle_maps={k: v.archetype for k, v in maps.items()},
-        status_ids={s.id for s in statuses.statuses},
+        status_ids={s.id for s in statuses.statuses if not s.enemy_only},  # 5F-R1：影子是玩家這邊
     )
     world_event_content = load_world_event_content(
         root,
@@ -1536,6 +1537,9 @@ def _dev_starter_problems(
         bad = sorted(set(pack.keywords) - known)
         if bad:
             problems.append(f"起始包 {pack.id}：未知的關鍵字 {', '.join(bad)}")
+        enemy = sorted(s for s in pack.skills if s in skills and skills[s].enemy_only)
+        if enemy:
+            problems.append(f"起始包 {pack.id}：技能 {', '.join(enemy)} 只給敵人（enemy_only）")
         missing = sorted(s for s in pack.skills if s not in skills)
         if missing:
             problems.append(f"起始包 {pack.id}：未知的技能 {', '.join(missing)}")
@@ -1731,8 +1735,10 @@ def _story_skill_problems(
     skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef], budget: BudgetRules
 ) -> list[str]:
     """劇情技能（``world/quests/`` 的 ``story_skills``，Phase 5B-4）的引用與費用檢查（同
-    ``content/skills/``；不進技能池）。"""
+    ``content/skills/``；不進技能池）。劇情技能是給玩家的，不能標 ``enemy_only``（5F-R1）。"""
     problems = skill_reference_problems(skill, ruleset, skills)
+    if skill.enemy_only:
+        problems.append("劇情技能是給玩家的，不能標 enemy_only")
     cost = budget.cost_problem(skill.category, skill.cost)
     return problems if cost is None else [*problems, cost]
 
@@ -1913,6 +1919,14 @@ def _check_builds(
     if clash:
         raise ContentError(path, f"build ID 與單位範本重複：{', '.join(clash)}")
     heroes = {b.id: b.hero for b in builds.builds}
+    player_side = {**heroes, **{c: units[c] for c in sorted(builds.companions)}}
+    problems = [
+        p
+        for uid, template in sorted(player_side.items())
+        for p in player_template_enemy_only_problems(uid, template, skills, ruleset)
+    ]
+    if problems:
+        raise ContentError(path, "；".join(problems))
     _check_units(
         root,
         heroes,
@@ -1923,6 +1937,27 @@ def _check_builds(
         source=path,
         gear=gear,
     )
+
+
+def player_template_enemy_only_problems(
+    unit_id: str, template: UnitTemplate, skills: Mapping[str, SkillDef], ruleset: Ruleset
+) -> list[str]:
+    """玩家這一邊的範本（Phase 5F-R1；build 英雄＝主角、影子、傭兵、劇情夥伴的底稿，
+    與 build 的隊友）
+    不能裝 ``enemy_only`` 技能（技能欄與反應）、不能開場帶 ``enemy_only`` 狀態。"""
+    problems: list[str] = []
+    reactions = tuple(r.reaction for r in template.reactions or ())
+    for sid in (*template.skills, *reactions):
+        skill = skills.get(sid)
+        if skill is not None and skill.enemy_only:
+            problems.append(f"{unit_id}：技能 {sid} 只給敵人（enemy_only），玩家這一邊不能用")
+    enemy_statuses = ruleset.enemy_only_statuses()
+    for opening in template.opening_statuses:
+        if opening.status in enemy_statuses:
+            problems.append(
+                f"{unit_id}：開場狀態 {opening.status} 只給敵人（enemy_only），玩家這一邊不能帶"
+            )
+    return problems
 
 
 @dataclass(frozen=True)

@@ -605,7 +605,7 @@ def season_problems(
         problems += _league_problems(season.league, battle_maps)
     if season.league is not None and status_ids is not None:
         problems += [
-            f"循環賽的開場狀態 {s} 不在 statuses.yaml"
+            f"循環賽的開場狀態 {s} 不在 statuses.yaml（或只給敵人，enemy_only）"
             for s in (*season.league.opening_statuses, *season.league.first_opening_statuses)
             if s not in status_ids
         ]
