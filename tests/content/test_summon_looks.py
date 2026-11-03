@@ -28,7 +28,9 @@ def test_every_summon_template_resolves_its_look_from_the_table() -> None:
         entry = table[summon.id.removeprefix("summon_")]
         look = summon.template.look
         assert look is not None, summon.id
-        assert look == SummonLook.model_validate(entry.model_dump(exclude={"zh", "creature"})), summon.id
+        assert look == SummonLook.model_validate(entry.model_dump(exclude={"zh", "creature"})), (
+            summon.id
+        )
 
 
 def test_template_files_do_not_carry_their_own_look() -> None:

@@ -1227,9 +1227,7 @@ class CreatureLook(ContentModel):
     element: str | None = Field(default=None, pattern=ID_PATTERN)
     size: str | None = Field(default=None, pattern=ID_PATTERN)
     tint: str | None = Field(default=None, pattern=_HEX)
-    traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(
-        default=(), max_length=12
-    )
+    traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=12)
     status_traits: dict[
         Annotated[str, Field(pattern=ID_PATTERN)],
         tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...],
@@ -1267,12 +1265,8 @@ class DollLook(ContentModel):
     beard: bool = False
     build: Literal["stout", "tall"] | None = None
     creature: CreatureLook | None = None
-    affixes: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(
-        default=(), max_length=8
-    )
-    traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(
-        default=(), max_length=8
-    )
+    affixes: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
+    traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
     """人形也能帶的特徵（霧鎖真人的 ``mist`` 霧氣繞身、雷符師的 ``sparks`` 電光）；異形的特徵寫在
     ``creature.traits``。前端不認得的略過。"""
 
