@@ -26,7 +26,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import replay, run_battle
-from trpg.engine.setup import build_setup, with_phase_assets
+from trpg.engine.setup import BattleSetup, build_setup, with_phase_assets
 from trpg.engine.state import state_to_json
 from trpg.narrative.events import describe_event
 from trpg.shared.types import Surface, Team, UnitId
@@ -325,7 +325,7 @@ def test_nine_turns_revival_telegraphs_a_square() -> None:
     assert len(charges[0].tiles) == 9
 
 
-def _summit_setup():  # type: ignore[no-untyped-def]
+def _summit_setup() -> BattleSetup:
     lib = library()
     m = lib.map("cloud_summit")
     assert m.encounter is not None
