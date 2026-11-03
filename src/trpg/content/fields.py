@@ -168,12 +168,17 @@ class FieldFacility(ContentModel):
 
 
 class FieldSpawn(ContentModel):
-    """看得見的敵人（6C-1 用；這段只定義欄位與驗證，不接遭遇）。"""
+    """看得見的敵人（6C-1；``personal``、``day_phase`` 是 6C-1b）。"""
 
     at: XY
     group: str = Field(pattern=ID_PATTERN)
     patrol: tuple[XY, ...] = ()
     """巡邏路線（沿固定路線來回，21.10 第 3 條）；省略＝站著不動。"""
+    personal: bool = False
+    """個人的駐守（21.10 第 9 條）：打贏只對自己消失（記在角色的這一趟）、不算進共享的「已清空」，
+    下一趟回來（離開這個地點再進來）再出現。用在新手任務的固定戰與三村落的守點戰。"""
+    day_phase: Literal["day", "night"] | None = None
+    """只在這個時段出現（21.10 第 11 條，寫法同事件骨架的 ``day_phase``）；省略＝全天。"""
 
 
 class FieldSpot(ContentModel):

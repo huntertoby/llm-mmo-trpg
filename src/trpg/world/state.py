@@ -1,4 +1,4 @@
-"""大世界的狀態：世界快照（``trpg-world/1``）與角色（``trpg-char/1``）（Phase 5A-2）。
+"""大世界的狀態：世界快照（``trpg-world/2``）與角色（``trpg-char/3``）（Phase 5A-2）。
 
 ``docs/phases/Phase5計畫.md`` 2.4、2.5、6.4。所有集合型欄位都以排序後的 tuple 存放（守則 2），
 同樣的動作序列一定得到逐字相同的 JSON。角色欄位盡量和 :class:`trpg.roguelite.state.RunState`
@@ -38,6 +38,7 @@ from trpg.world.clock import DayPhase
 __all__ = [
     "CHAR_FORMAT",
     "LEGACY_CHAR_FORMATS",
+    "LEGACY_WORLD_FORMATS",
     "WORLD_FORMAT",
     "BossAttempt",
     "BossClear",
@@ -49,6 +50,7 @@ __all__ = [
     "CraftRecipe",
     "DailyActivity",
     "DailyGoalProgress",
+    "DefeatedSpawn",
     "EncounterResult",
     "EventTrigger",
     "FieldContact",
@@ -78,7 +80,9 @@ __all__ = [
     "WorldState",
 ]
 
-WORLD_FORMAT: Final = "trpg-world/1"
+WORLD_FORMAT: Final = "trpg-world/2"
+LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1"})
+"""照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``）。"""
 CHAR_FORMAT: Final = "trpg-char/3"
 LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2"})
 """照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2、6C-1：只多了選填欄位）。"""
@@ -104,6 +108,19 @@ class ClearedLocation(_Model):
     region: str = Field(pattern=ID_PATTERN)
     location: str = Field(pattern=ID_PATTERN)
     respawn_at: int = Field(ge=0)
+
+
+class DefeatedSpawn(_Model):
+    """實地地圖上被打贏的一隊（6C-1b，21.10 第 9 條）：所有人看得到它消失，``respawn_at``（UTC 秒）
+    起重生。``spawn`` 是地點室外圖 ``spawns`` 的索引。"""
+
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    spawn: int = Field(ge=0)
+    respawn_at: int = Field(ge=0)
+
+    def key(self) -> tuple[str, str, int]:
+        return (self.region, self.location, self.spawn)
 
 
 class PerceptionMark(_Model):
@@ -152,7 +169,7 @@ class FieldVisit(_Model):
 
     ``seed`` 由角色的 ``field`` 串流衍生（:mod:`trpg.world.rng`），決定每隊的陣容、巡邏起點與駐守
     朝向；``ticks``＝這一趟在室外圖走了幾格（巡邏你走一格它走一格）；``defeated``＝這一趟打贏的
-    隊伍（非營地的地點不寫「已清空」，打贏的隊伍到離開這個地點前不再出現）。"""
+    隊伍裡只對自己算的（``personal``、不共享清空的地點；離開這個地點前不再出現，6C-1b）。"""
 
     region: str = Field(pattern=ID_PATTERN)
     location: str = Field(pattern=ID_PATTERN)
@@ -687,9 +704,19 @@ class DailyGoalProgress(_Model):
 
 
 class WorldState(_Model):
-    """共享的世界快照（``trpg-world/1``）。世界的變化由世界動作日誌重播得到，快照只是快取。"""
+    """共享的世界快照（``trpg-world/2``；``/1`` 照讀）。世界的變化由世界動作日誌重播得到，
+    快照只是快取。"""
 
-    format: Literal["trpg-world/1"] = WORLD_FORMAT
+    format: Literal["trpg-world/2"] = WORLD_FORMAT
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_world(cls, data: object) -> object:
+        """``trpg-world/1`` → ``trpg-world/2``：只多了選填欄位（6C-1b），直接換版號。"""
+        if isinstance(data, dict) and data.get("format") in LEGACY_WORLD_FORMATS:
+            return {**data, "format": WORLD_FORMAT}
+        return data
+
     season_id: str = Field(pattern=ID_PATTERN)
     season_seed: int = Field(ge=0, le=MASK64)
     season_start: int = Field(ge=0)
@@ -698,6 +725,9 @@ class WorldState(_Model):
     """世界旗標（排序、不重複）；地點的 ``unlock_flag`` 成立與否看這裡。"""
     cleared: tuple[ClearedLocation, ...] = ()
     """已清空的地點（依區域、地點排序；每個地點最多一筆）。寫入在 5A-4／5F-1。"""
+    defeated_spawns: tuple[DefeatedSpawn, ...] = ()
+    """實地地圖上被打贏的隊伍（6C-1b，21.10 第 9 條；所有人看得到；依區域、地點、索引排序、
+    不重複）。"""
     threads: tuple[ThreadState, ...] = ()
     """世界級線頭（所有人的世界都看得到；5B-1 起）。"""
     timed_flags: tuple[TimedFlag, ...] = ()
@@ -844,6 +874,14 @@ class WorldState(_Model):
             raise ValueError("cleared 必須依區域、地點排序且不重複")
         return cleared
 
+    @field_validator("defeated_spawns")
+    @classmethod
+    def _spawns_sorted(cls, spawns: tuple[DefeatedSpawn, ...]) -> tuple[DefeatedSpawn, ...]:
+        keys = [s.key() for s in spawns]
+        if keys != sorted(set(keys)):
+            raise ValueError("defeated_spawns 必須依區域、地點、索引排序且不重複")
+        return spawns
+
     @field_validator("threads")
     @classmethod
     def _world_threads(cls, threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
@@ -857,6 +895,13 @@ class WorldState(_Model):
         return any(
             c.region == region and c.location == location and now < c.respawn_at
             for c in self.cleared
+        )
+
+    def spawn_defeated(self, region: str, location: str, spawn: int, now: int) -> bool:
+        """實地地圖上的第 ``spawn`` 隊現在是否被打贏、還沒重生（6C-1b）。"""
+        return any(
+            s.key() == (region, location, spawn) and now < s.respawn_at
+            for s in self.defeated_spawns
         )
 
 

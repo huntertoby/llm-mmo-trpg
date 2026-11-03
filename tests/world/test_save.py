@@ -1,4 +1,4 @@
-"""存檔格式 ``trpg-world/1``、``trpg-char/3``、``trpg-wlog/3``（5A-2；2.5；6B-2、6C-1 升版）。"""
+"""存檔格式 ``trpg-world/2``、``trpg-char/3``、``trpg-wlog/4``（5A-2；6B-2、6C-1、6C-1b 升版）。"""
 
 from __future__ import annotations
 
@@ -16,15 +16,18 @@ from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
     dumps_char,
     dumps_log,
+    dumps_log_entry,
     dumps_world,
     loads_char,
     loads_log,
     loads_world,
+    read_log,
     write_atomic,
 )
 from trpg.world.state import (
     CharacterState,
     ClearedLocation,
+    DefeatedSpawn,
     LocationRef,
     PerceptionMark,
     WorldState,
@@ -49,7 +52,7 @@ def test_world_roundtrip() -> None:
         cleared=(ClearedLocation(region="cloud_ridge", location="ferry_steps", respawn_at=9),),
     )
     text = dumps_world(world)
-    assert json.loads(text)["format"] == "trpg-world/1"
+    assert json.loads(text)["format"] == "trpg-world/2"
     assert loads_world(text) == world
     assert dumps_world(loads_world(text)) == text
 
@@ -71,7 +74,7 @@ def test_log_roundtrip() -> None:
     ]
     text = dumps_log(entries)
     lines = text.splitlines()
-    assert json.loads(lines[0]) == {"format": "trpg-wlog/3"}
+    assert json.loads(lines[0]) == {"format": "trpg-wlog/4"}
     assert len(lines) == 3
     assert loads_log(text) == tuple(entries)
 
@@ -79,16 +82,16 @@ def test_log_roundtrip() -> None:
 @pytest.mark.parametrize(
     ("loader", "text"),
     [
-        (loads_world, '{"format": "trpg-world/2"}'),
+        (loads_world, '{"format": "trpg-world/9"}'),
         (loads_world, '{"season_id": "s1"}'),
         (loads_char, '{"format": "trpg-world/1"}'),
         (loads_world, "[1, 2]"),
         (loads_world, "not json"),
         (loads_log, ""),
         (loads_log, '{"format": "trpg-wlog/9"}\n'),
-        (loads_log, '{"format": "trpg-wlog/3"}\n{"seq": 1}\n'),
-        (loads_log, '{"format": "trpg-wlog/3"}\n{oops\n'),
-        (loads_log, '{"format": "trpg-wlog/3", "stale_through": -1}\n'),
+        (loads_log, '{"format": "trpg-wlog/4"}\n{"seq": 1}\n'),
+        (loads_log, '{"format": "trpg-wlog/4"}\n{oops\n'),
+        (loads_log, '{"format": "trpg-wlog/4", "stale_through": -1}\n'),
         (loads_char, '{"format": "trpg-char/9"}'),
     ],
 )
@@ -134,3 +137,25 @@ def test_write_atomic(tmp_path: Path) -> None:
     assert loads_world(path.read_text(encoding="utf-8")).season_seed == 5
     assert sorted(p.name for p in path.parent.iterdir()) == ["world.json"]
     assert b"\r\n" not in path.read_bytes()
+
+
+def test_world_v1_upgrades_and_wlog_v3_is_stale() -> None:
+    """6C-1b：``trpg-world/1`` 照讀（只多了 ``defeated_spawns``）；``trpg-wlog/3`` 不能重播。"""
+    old = json.loads(dumps_world(make_world()))
+    old.pop("defeated_spawns")
+    old["format"] = "trpg-world/1"
+    loaded = loads_world(json.dumps(old))
+    assert loaded.format == "trpg-world/2" and loaded.defeated_spawns == ()
+    entry = WorldLogEntry(seq=4, now=NOON, character_id="alice", action=CampAction())
+    log = read_log('{"format": "trpg-wlog/3"}\n' + dumps_log_entry(entry) + "\n")
+    assert log.stale_through == 4 and log.stale_zh is not None
+
+
+def test_defeated_spawns_must_be_sorted() -> None:
+    a = DefeatedSpawn(region="cloud_ridge", location="ferry_steps", spawn=1, respawn_at=9)
+    b = DefeatedSpawn(region="cloud_ridge", location="ferry_steps", spawn=0, respawn_at=9)
+    with pytest.raises(ValueError, match="defeated_spawns"):
+        make_world(defeated_spawns=(a, b))
+    world = make_world(defeated_spawns=(b, a))
+    assert world.spawn_defeated("cloud_ridge", "ferry_steps", 1, 8)
+    assert not world.spawn_defeated("cloud_ridge", "ferry_steps", 1, 9)
