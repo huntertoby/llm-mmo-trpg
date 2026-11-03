@@ -345,7 +345,7 @@ class _Refs:
     def of(cls, library: ContentLibrary) -> _Refs:
         rules = library.ruleset
         return cls(
-            statuses=tuple(sorted(s.id for s in rules.statuses.statuses)),
+            statuses=tuple(sorted(s.id for s in rules.statuses.statuses if not s.enemy_only)),
             objects=tuple(sorted(o.id for o in rules.objects.objects)),
             stacks=tuple(sorted(rules.stacks.by_id())),
             summons=tuple(sorted(rules.summons.by_id())),
@@ -955,7 +955,11 @@ def rarity_statuses(library: ContentLibrary, rarity: SkillRarity) -> tuple[str, 
     """這個稀有度能施加的狀態 ID（排序；規則與驗證器的 ``rarity.status`` 相同）。"""
     rank = rarity_rank(rarity)
     return tuple(
-        sorted(s.id for s in library.ruleset.statuses.statuses if rarity_rank(s.min_rarity) <= rank)
+        sorted(
+            s.id
+            for s in library.ruleset.statuses.statuses
+            if rarity_rank(s.min_rarity) <= rank and not s.enemy_only  # 5F-5c
+        )
     )
 
 

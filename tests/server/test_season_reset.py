@@ -11,6 +11,7 @@ import dataclasses
 import importlib.util
 import io
 import json
+import os
 import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -36,6 +37,7 @@ from trpg.server.chronicle import (
 from trpg.server.first_kills import FirstKill
 from trpg.server.league import LeagueMatch, LeagueRecord, new_record
 from trpg.server.notes import LocationNote
+from trpg.server.season_archive import ArchiveManifest
 from trpg.server.season_boss_board import BossBoardEntry
 from trpg.server.season_policy import (
     CARRIED,
@@ -55,7 +57,14 @@ from trpg.server.season_reset import (
 from trpg.world.league import league_rules
 from trpg.world.league_actions import LeagueEnterAction
 from trpg.world.save import dumps_char, dumps_world, loads_world, write_atomic
-from trpg.world.state import CharacterState, CraftRecipe, RecipeRecord, WorldState
+from trpg.world.state import (
+    BossClear,
+    CharacterState,
+    CraftRecipe,
+    QuestState,
+    RecipeRecord,
+    WorldState,
+)
 from trpg.world.step import new_character, world_step
 
 NOON = 1_793_592_000
@@ -63,6 +72,7 @@ DAY = 24 * 3600
 ENDED = NOON + 15 * DAY  # 第 16 天：14 天的賽季已經結束
 NEXT_START = NOON + 20 * DAY
 ELITE = "bandit_boss"
+REGION_BOSS = "ashen_heart"
 SKELETON = "granny_past"
 DOLL = DollLook(skin="#a8724c", hair="short")
 
@@ -92,7 +102,14 @@ class Season:
     memorial_files: dict[str, bytes]
 
 
-def _char(library: ContentLibrary, cid: str, build: str, *, race: str | None) -> CharacterState:
+def _char(
+    library: ContentLibrary,
+    cid: str,
+    build: str,
+    *,
+    race: str | None,
+    elites: tuple[str, ...] = (ELITE,),
+) -> CharacterState:
     heroes = {b.id: b.hero for b in library.builds.builds}
     hero = heroes[build].model_copy(update={"name_zh": f"勇者{cid}", "race": race, "doll": DOLL})
     char = new_character(library, cid, hero, region="cloud_ridge")
@@ -102,8 +119,17 @@ def _char(library: ContentLibrary, cid: str, build: str, *, race: str | None) ->
             "xp": 123,
             "gold": 456,
             "quest_coins": 9,
-            "elite_kills": (ELITE,),
+            "elite_kills": elites,
             "finished_skeletons": (SKELETON,),
+            "quests": (  # 5F-5c：完成的主線章節寫進編年史
+                QuestState(
+                    quest="main_ashen_heart",
+                    steps_done=5,
+                    done=True,
+                    started_at=NOON,
+                    completed_at=NOON + DAY,
+                ),
+            ),
             "story_flags": ("met_ayue",),
         }
     )
@@ -143,6 +169,9 @@ def _world(library: ContentLibrary, chars: tuple[CharacterState, ...]) -> WorldS
             "recipes": (_recipe("0123456789", "霧鐵盔"), _recipe("abcdef0123", "灰燼盔")),
             "level_bonus": {"ashen_waste": 1},
             "shop_price": {"shop_iron_lady": 200},  # 5F-5b
+            "boss_clears": (  # 5F-5c：打倒賽季 Boss 寫進編年史
+                BossClear(character_id="c2", name="勇者c2", at=NOON + 9 * DAY, score=88, rounds=9),
+            ),
             "rolled_day": 5,
         }
     )
@@ -166,7 +195,7 @@ def _fake_season(library: ContentLibrary, root: Path) -> Season:
     bob = accounts.create("bobby", "password123")
     chars = (
         _char(library, "c1", "build_support", race="fox"),
-        _char(library, "c2", "build_charger", race=None),
+        _char(library, "c2", "build_charger", race=None, elites=(REGION_BOSS, ELITE)),
     )
     accounts.attach_character(alice.account_id, "c1")
     accounts.attach_character(bob.account_id, "c2")
@@ -246,7 +275,7 @@ def _fake_season(library: ContentLibrary, root: Path) -> Season:
             ranks=(
                 LeagueChronicleRank(
                     rank=1,
-                    account=alice.account_id,
+                    account="acc0",  # 循環賽的帳號＝報名時的 actor（_world 用 acc0、acc1）
                     name="勇者c1",
                     build_zh="法器・狐族",
                     wins=2,
@@ -322,10 +351,21 @@ def _check_character(season: Season) -> None:
             assert got == getattr(char.hero, name)
         assert hero.elites and ELITE not in hero.elites  # CARRIED：精英（換成中文名）
         assert all(e in hero.text_zh for e in hero.elites)
-        assert len(hero.elites) == len(char.elite_kills)
+        assert len(hero.elites) + len(hero.bosses) == len(char.elite_kills) + (
+            char.character_id == "c2"  # 賽季 Boss
+        )
         assert len(hero.events) == len(char.finished_skeletons)  # CARRIED：完成的事件
-        assert hero.text_zh.startswith("第一季：擊倒")
-        assert "渡婆婆" in hero.text_zh
+        assert hero.level == char.level and hero.chapters == ("灰燼之心",)  # 5F-5c
+    # 5F-5c：編年史列事實細節（模板在 world/season.yaml 的 chronicle）
+    assert heroes["c1"].text_zh == (
+        "第一季：到達 7 級；擊倒盜賊頭目；全服首殺盜賊頭目；完成主線「灰燼之心」；"
+        "完成事件「渡婆婆：有人替她了結斷崖幫的舊帳」；首位發現配方「霧鐵盔」、「灰燼盔」；"
+        "影子循環賽第 1 名"
+    )
+    c2 = heroes["c2"]
+    assert c2.bosses == ("灰燼之心", "碎晶之主") and c2.league_rank is None
+    assert c2.first_kills == () and c2.recipes == ()
+    assert "打倒 Boss 灰燼之心、碎晶之主" in c2.text_zh
 
 
 def _check_world(season: Season) -> None:
@@ -353,9 +393,17 @@ def _check_recipe(season: Season) -> None:
             assert name not in RecipeDiscovery.model_fields  # 數值類沒有留下來
 
 
+def _after(relative: str) -> str:
+    """重置後的位置：賽季 Boss 首殺的戰鬥紀錄搬進唯讀封存（5F-5c），內容不變。"""
+    moved = str(Path("world") / "season_boss") + os.sep
+    if relative.startswith(moved):
+        return str(Path("archive") / "s1" / "season_boss") + os.sep + relative[len(moved) :]
+    return relative
+
+
 def _check_unchanged(season: Season) -> None:
     for relative, content in season.memorial_files.items():
-        assert (season.save_dir / relative).read_bytes() == content, relative
+        assert (season.save_dir / _after(relative)).read_bytes() == content, relative
 
 
 def _check_note(season: Season) -> None:
@@ -363,7 +411,7 @@ def _check_note(season: Season) -> None:
 
 
 def _league_history(season: Season) -> Path:
-    return season.world_dir / "league_history" / "s1"
+    return season.save_dir / "archive" / "s1" / "league"  # 5F-5c：唯讀封存
 
 
 def _check_league(season: Season) -> None:
@@ -442,6 +490,21 @@ def test_every_policy_model_is_checked() -> None:
     assert set(CHECKS) == set(SEASON_POLICY)
 
 
+def _check_archive(season: Season) -> None:
+    """5F-5c：世界日誌、循環賽、賽季 Boss 首殺的戰鬥紀錄搬進存檔資料夾的唯讀封存。"""
+    folder = season.save_dir / "archive" / "s1"
+    assert (folder / "log.jsonl").read_text(encoding="utf-8") == '{"seq": 1}\n{"seq": 2}\n'
+    for name in ("log.jsonl", "league", "season_boss"):
+        assert not (season.world_dir / name).exists(), name
+    manifest = ArchiveManifest.model_validate_json(
+        (folder / "manifest.json").read_text(encoding="utf-8")
+    )
+    files = sorted(p for p in folder.rglob("*") if p.is_file() and p.name != "manifest.json")
+    assert [f.path for f in manifest.files] == [p.relative_to(folder).as_posix() for p in files]
+    for path in [*files, folder / "manifest.json"]:
+        assert not os.access(path, os.W_OK), path  # 唯讀
+
+
 def test_reset_clears_numeric_and_keeps_memorial(library: ContentLibrary, tmp_path: Path) -> None:
     season = _fake_season(library, tmp_path)
     report = _reset(library, season)
@@ -449,7 +512,9 @@ def test_reset_clears_numeric_and_keeps_memorial(library: ContentLibrary, tmp_pa
     for model, check in CHECKS.items():
         check(season)
         assert model in SEASON_POLICY
-    assert report.chronicle[0].startswith("勇者c1：第一季：擊倒")
+    _check_archive(season)
+    assert report.archive == str(season.save_dir / "archive" / "s1")
+    assert report.chronicle[0].startswith("勇者c1：第一季：到達 7 級；擊倒")
     cleared = {line.label_zh: line.count for line in report.cleared}
     assert cleared["角色"] == 2 and cleared["地點留言"] == 1 and cleared["配方表"] == 2
     assert cleared["世界日誌"] == 2 and cleared["循環賽報名快照"] == 2

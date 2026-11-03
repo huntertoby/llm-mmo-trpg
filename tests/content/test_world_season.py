@@ -9,7 +9,13 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_map import LocationKind
-from trpg.content.world_season import SeasonContent, season_problems, shop_price_problems
+from trpg.content.world_season import (
+    ChronicleFact,
+    ChronicleTemplates,
+    SeasonContent,
+    season_problems,
+    shop_price_problems,
+)
 
 
 @pytest.fixture(scope="module")
@@ -261,3 +267,15 @@ def test_league_opening_status_must_exist(library: ContentLibrary, season: Seaso
     data["league"] = {**data["league"], "first_opening_statuses": ["no_such_status"]}
     problems = _league_problems(library, SeasonContent.model_validate(data))
     assert any("no_such_status" in p for p in problems), problems
+
+
+def test_chronicle_templates_live_in_content(library: ContentLibrary) -> None:
+    """5F-5c：編年史的模板在 ``world/season.yaml``，佔位字只能用規定的。"""
+    season = library.world_season
+    assert season is not None and season.chronicle is not None
+    assert season.chronicle.line == "{season}：{facts}"
+    with pytest.raises(ValidationError, match="只能用"):
+        ChronicleFact(text="擊倒{names}")
+    data = season.chronicle.model_dump()
+    with pytest.raises(ValidationError, match="要用而且只能用"):
+        ChronicleTemplates.model_validate({**data, "level": "到達 {lv} 級"})

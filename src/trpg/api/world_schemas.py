@@ -167,8 +167,9 @@ class CreateWorldCharacterRequest(_ApiModel):
     seed: int | None = Field(default=None, ge=0, le=MASK64)
     """起始技能的種子；省略由伺服器亂數。"""
     legacy_character: str | None = Field(default=None, max_length=32)
-    """（5F-5）沿用這個上季角色（``GET /api/world/legacy``）的名字與外觀：名字、種族、紙娃娃取代
-    ``name``、``race``；等級、技能、裝備照新角色。不是自己帳號的 404。"""
+    """（5F-5）沿用這個上季角色（``GET /api/world/legacy``）的外觀：名字與紙娃娃（名字取代
+    ``name``）。種族不算外觀（5F-5c）：``race`` 省略＝帶上季的，給了就照新選；種族改了時
+    紙娃娃跟著種族的部件改回預設。等級、技能、裝備照新角色。不是自己帳號的 404。"""
 
     @field_validator("name")
     @classmethod

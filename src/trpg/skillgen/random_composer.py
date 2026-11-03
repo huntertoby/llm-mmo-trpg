@@ -475,7 +475,9 @@ def _trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, 
         return {"tag": rng.choice([e.value for e in _SPELL_ELEMENTS])}
     if event == "on_status_applied" and rng.chance_permille(_PARAM_PERMILLE):
         statuses = sorted(
-            s.id for s in library.ruleset.statuses.statuses if not s.beneficial and not s.stance
+            s.id
+            for s in library.ruleset.statuses.statuses
+            if not s.beneficial and not s.stance and not s.enemy_only  # 5F-5c
         )
         return {"status": rng.choice(statuses)}
     if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):

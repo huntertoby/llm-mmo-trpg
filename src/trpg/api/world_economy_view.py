@@ -33,6 +33,7 @@ from trpg.world.economy import (
     shop_affinity_left,
     shop_buy_price,
     shop_here,
+    shop_price_notes,
     weekly_left,
 )
 from trpg.world.economy_actions import (
@@ -292,6 +293,7 @@ def shop_view(
         items=tuple(items),
         can_trade=trade_problem is None,
         trade_problem_zh=trade_problem,
+        price_notes_zh=shop_price_notes(library, world, shop.id),
     )
 
 

@@ -966,9 +966,15 @@ class StatusDef(ContentModel):
     帶有者的召喚物）也不會對任何單位造成傷害；傷害直接略過、不發事件。只能用在 ``polarity:
     neutral`` 的狀態（不被淨化、驅散、奪取）。循環賽第 1 輪用（``league_truce``，
     ``expires: round_end``）。"""
+    enemy_only: bool = False
+    """（Phase 5F-5c，玩法 PM 2026-11-03 代決）只給敵人：只能由敵方單位範本的 ``opening_statuses``
+    掛上，不能給玩家、影子、傭兵，也不能進技能池（技能引用它＝引用錯誤，生成器、候選、閃現、
+    工坊、LLM 可選清單都排除）。必須沒有 ``budget_points``。"""
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
+        if self.enemy_only and self.budget_points is not None:
+            raise ValueError(f"狀態 {self.id}：enemy_only 的狀態不能有 budget_points")
         for name, spec in (
             ("on_death_surface", self.on_death_surface),
             ("formation", self.formation),

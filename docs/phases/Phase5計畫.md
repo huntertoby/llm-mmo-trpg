@@ -4464,6 +4464,21 @@ world_events:
 | 5F5-6 | 管理者權限 | 同 `require_admin`（開發模式沒登入可用），真的執行另外要輸入目前季 ID |
 | 5F5-7 | 同一個上季角色沿用幾次 | 不限（名字本來就不唯一） |
 
-## 41. 之後各段規格
+## 41. 5F-5c 詳細規格：季末重置收尾（本段開工時由實作者補上，依第 1 節 5F-5c 列的玩法 PM 2026-11-03 代決）
+
+> 依據：第 1 節 5F-5c 列；09 9.7「季末重置細節」；`Phase5F-5報告.md` 待 PM 決定 1～4。開發 PM 另外補兩項（玩法 PM 2026-11-03 代決）：熔核類狀態不外流、商店寫出加價原因。完成報告：`Phase5F-5c報告.md`。
+
+| # | 項目 | 做法 |
+|---|---|---|
+| 41.1 | 唯讀封存 | 季末重置把 `world/log.jsonl`、`world/league/`、`world/season_boss/` 搬進存檔資料夾的 `archive/<舊季>/`（同一相對路徑），寫 `manifest.json`（每個檔的 sha256），所有檔設成唯讀（`os.chmod`）。只有重置會寫（`server/season_archive.py`）；備份照舊 |
+| 41.2 | 重播查證 | `POST /api/world/season/verify`（管理者，`kind`＝`first_kill`＋`target` 或 `league_match`＋`match_id`）與 `scripts/season_verify.py`：舊季讀封存、目前這一季讀世界資料夾；首殺比對世界日誌序號＋（有戰鬥紀錄時）確定性重播＋我方勝；循環賽重播後比對勝方、輪數、結束原因；封存檔 sha256 不符要報出來。只讀 |
+| 41.3 | 編年史列事實 | 模板在 `content/world/season.yaml` 的 `chronicle`（`ChronicleTemplates`）；`ChronicleHero` 加 `level`、`bosses`、`first_kills`、`chapters`、`recipes`、`league_rank`（紀念類）；事實來自角色狀態、世界狀態（`boss_clears`、`recipes`、`league_entries`）、首殺紀錄與循環賽編年史 |
+| 41.4 | 種族不算外觀 | 沿用上季角色：名字＋紙娃娃；`race` 省略＝上季的、給了就照新選；種族改了時紙娃娃的膚色、髮型、髮色、眼睛、骷髏改回新角色範本的預設 |
+| 41.5 | 熔核類狀態只給敵人 | `StatusDef.enemy_only`（不能有 `budget_points`）；技能引用它＝引用錯誤；技能池的狀態清單都排除；資料檢查鎖住只在敵方單位範本 |
+| 41.6 | 商店加價原因 | `ShopPriceEffect.reason_zh`（content）；`ShopView.price_notes_zh`（例「熔岩潰堤失守：買價 +20%」）；前端商店標題下顯示 |
+
+不做：舊季循環賽的網頁重播頁、LLM 傳記（7.11）。
+
+## 42. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

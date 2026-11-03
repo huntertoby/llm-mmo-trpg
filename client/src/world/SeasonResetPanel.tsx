@@ -106,6 +106,9 @@ export function SeasonResetPanel({ onDone }: Props) {
             </>
           )}
           {shown.backup !== null && shown.backup !== undefined && <div className="muted">備份：{shown.backup}</div>}
+          {shown.archive !== null && shown.archive !== undefined && (
+            <div className="muted" data-testid="season-reset-archive">唯讀封存：{shown.archive}</div>
+          )}
         </div>
       )}
       {preview !== null && (

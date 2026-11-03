@@ -29,6 +29,8 @@
   ``GET /api/world/legacy``（自己帳號上季的角色）、``POST /api/world/season/reset``（管理者的季末
   重置，預設 dry-run）；建立角色加 ``legacy_character``（沿用上季角色的名字與外觀）。
 
+- 5F-5c：``POST /api/world/season/verify``（管理者；從舊季的唯讀封存重播查證首殺或循環賽場次）。
+
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
   依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
   歸到帳號。
@@ -58,6 +60,7 @@ from trpg.api.chronicle_schemas import (
     ChronicleView,
     LegacyHeroView,
     SeasonResetRequest,
+    SeasonVerifyRequest,
     chronicle_view,
     legacy_view,
 )
@@ -74,6 +77,7 @@ from trpg.api.run_schemas import (
 )
 from trpg.api.season_schemas import SeasonBoardView
 from trpg.api.season_view import season_board
+from trpg.api.sessions import InvalidRequestError
 from trpg.api.state import world_llm_of, world_of
 from trpg.api.world import WorldOutcome, WorldStore
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
@@ -94,6 +98,7 @@ from trpg.api.world_story_schemas import (
 )
 from trpg.engine.runner import log_replay_problem
 from trpg.server.league import STALE_ZH, LeagueError
+from trpg.server.season_archive import ReplayCheck
 from trpg.server.season_reset import SeasonResetReport
 from trpg.world.actions import SwearOathAction
 from trpg.world.calendar import season_start_at
@@ -390,6 +395,18 @@ def get_legacy(request: Request) -> list[LegacyHeroView]:
     with store.lock:
         found = store.legacy_heroes(None if account is None else account.account_id)
         return legacy_view(store.library, found)
+
+
+@router.post("/season/verify", dependencies=[Depends(require_season_admin)])
+def post_season_verify(body: SeasonVerifyRequest, request: Request) -> ReplayCheck:
+    """重播查證（管理者，5F-5c）：給一筆首殺（``target``）或一場循環賽（``match_id``），從唯讀封存
+    （目前這一季從世界資料夾）確定性重播，回報結果和保留下來的紀錄是否一致。只讀。找不到 404；
+    沒給對應的 ``target``／``match_id`` 422。"""
+    key = body.target if body.kind == "first_kill" else body.match_id
+    if key is None:
+        field = "target" if body.kind == "first_kill" else "match_id"
+        raise InvalidRequestError(f"{body.kind} 要給 {field}")
+    return world_of(request).verify_replay(body.kind, body.season_id, key)
 
 
 @router.post("/season/reset", dependencies=[Depends(require_season_admin)])
