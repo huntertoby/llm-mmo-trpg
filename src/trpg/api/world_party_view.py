@@ -35,7 +35,15 @@ from trpg.world.party import hire_problem, party_mercenaries, season_boss_proble
 from trpg.world.shadows import shadow_level, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
 
-__all__ = ["allies_line", "my_shadow_view", "party_event_line", "party_view"]
+__all__ = [
+    "ai_choice_views",
+    "ai_zh",
+    "allies_line",
+    "my_shadow_view",
+    "party_event_line",
+    "party_view",
+    "shadow_role_zh",
+]
 
 SOLO_ZH = "獨行"
 COMPANION_NOTE_ZH = "劇情夥伴：任務結束後離隊"
@@ -60,6 +68,26 @@ def _ai_zh(library: ContentLibrary, chosen: str | None, default: str | None) -> 
         return _ai_name(library, chosen) or chosen
     name = _ai_name(library, default)
     return DEFAULT_AI_ZH if name is None else f"{DEFAULT_AI_ZH}（{name}）"
+
+
+ai_zh = _ai_zh
+"""AI 打法的中文（循環賽的報名也用，5F-4）。"""
+
+
+def ai_choice_views(library: ContentLibrary) -> tuple[AiChoiceView, ...]:
+    """可選的 AI 打法（``mercenaries.yaml`` 的 ``ai_choices``）。"""
+    table = library.world_mercenaries
+    profiles = library.ai_profiles.by_id()
+    choices = () if table is None else table.ai_choices
+    return tuple(
+        AiChoiceView(
+            id=p,
+            name_zh=profiles[p].name_zh,
+            description_zh=profiles[p].player_description_zh,
+        )
+        for p in choices
+        if p in profiles
+    )
 
 
 def _mercenary_view(library: ContentLibrary, merc: MercenaryDef, hired: bool) -> MercenaryView:
@@ -99,6 +127,10 @@ def _role_zh(library: ContentLibrary, snapshot: ShadowSnapshot) -> str:
     weapon = library.weapons[hero.weapon].name_zh if hero.weapon in library.weapons else hero.weapon
     race = _race_name(library, hero.race)
     return weapon if race is None else f"{weapon}・{race}"
+
+
+shadow_role_zh = _role_zh
+"""影子的定位（循環賽排行榜也用，5F-4）。"""
 
 
 def _shadow_skill_names(library: ContentLibrary, snapshot: ShadowSnapshot) -> tuple[str, ...]:
@@ -198,8 +230,6 @@ def party_view(
     problem = "戰鬥中" if in_battle else hire_problem(library, char)
     table = library.world_mercenaries
     roster = () if table is None else table.mercenaries
-    profiles = library.ai_profiles.by_id()
-    choices = () if table is None else table.ai_choices
     boss = season_boss_problem(char)
     return PartyView(
         members=tuple(_members(library, char)),
@@ -212,15 +242,7 @@ def party_view(
             for s in world.shadows
             if s.snapshot.owner != char.character_id
         ),
-        ai_choices=tuple(
-            AiChoiceView(
-                id=p,
-                name_zh=profiles[p].name_zh,
-                description_zh=profiles[p].player_description_zh,
-            )
-            for p in choices
-            if p in profiles
-        ),
+        ai_choices=ai_choice_views(library),
         ai=dict(char.party_ai),
         season_boss_ok=boss is None,
         season_boss_zh=boss,
