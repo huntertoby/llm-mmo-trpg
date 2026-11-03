@@ -79,8 +79,8 @@ affixes:
   - id: blazing
     name_zh: 熾熱的
     description_zh: 渾身發燙，被它碰到就會燒起來。
-    # 19.2.1「相鄰的敵人每回合受到小火傷」：非召喚物沒有光環，用「命中時點燃」近似（代決 5F5a-7）
-    add_skills: [skill_ember_brand]
+    # 19.2.1「相鄰的敵人每回合受到小火傷」：非召喚物沒有光環，用近戰點燃「餘燼啃咬」近似（代決 5F5a-7）
+    add_skills: [skill_ember_bite]
     hp_permille: 1500
   - id: hard_shelled
     name_zh: 硬殼的

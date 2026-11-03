@@ -13,6 +13,6 @@ ai_profile: brute
 resist: {}
 element_mods: {fire: -500, ice: 500}
 tags: [beast, lava_beast]
-skills: [skill_ember_brand]
+skills: [skill_ember_bite]
 opening_statuses:
   - {status: molten_burst}

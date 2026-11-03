@@ -10,7 +10,6 @@ import pytest
 import yaml
 
 from trpg.content.library import ContentLibrary, load_library
-from trpg.content.loader import load_content_file
 from trpg.content.world_crafting import (
     CRAFTING_FILE,
     RESONANCE_FILE,
@@ -19,7 +18,6 @@ from trpg.content.world_crafting import (
     crafting_problems,
     resonance_problems,
 )
-from trpg.content.world_events import NpcCardTable
 from trpg.shared.errors import ContentError
 
 
@@ -131,7 +129,7 @@ def test_bad_file_raises(tmp_path: Path, library: ContentLibrary) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5D-3b：隱藏配方的提示（20.4）與荒原的待接人設卡（19.5）
+# 5D-3b：隱藏配方的提示（20.4）；5F-5a 接進荒原的傳聞、爐叔的卡搬進 world/npcs/
 # ---------------------------------------------------------------------------
 
 
@@ -143,7 +141,7 @@ def test_hidden_recipe_hints(library: ContentLibrary) -> None:
     rumor = rules.hints_at("ashen_waste", source="rumor")
     assert [(h.name_zh, t.text_zh) for h, t in rumor] == [("冰火雙生戒", "冰與火在同一隻蜥蜴身上")]
     assert [h.name_zh for h, _ in rules.hints_at("cloud_ridge")] == ["驚雷霧袍"]
-    assert "ashen_waste" not in library.world_maps  # 荒原地點圖到位時，提示的地點會被檢查
+    assert "ashen_waste" in library.world_maps  # 5F-5a：荒原地點圖到位，提示的地點會被檢查
 
 
 def test_hint_location_checked_when_map_exists(library: ContentLibrary) -> None:
@@ -152,8 +150,54 @@ def test_hint_location_checked_when_map_exists(library: ContentLibrary) -> None:
     assert any("提示的地點 nowhere" in p for p in _problems(library, data))
 
 
-def test_pending_ashen_npc_card(library: ContentLibrary) -> None:
-    table = load_content_file(library.root / "world/pending/ashen_waste.yaml", NpcCardTable)
-    smith = table.npc_by_id()["smith_lu"]
+def _hint_texts(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
+    social = library.world_quests.social
+    return {
+        region: (
+            *(r.text_zh for r in social[region].rumors),
+            *(t.text_zh for t in social[region].talk),
+        )
+        for region in social
+    }
+
+
+def test_ashen_hints_reach_the_rumors(library: ContentLibrary) -> None:
+    """5F-5a：20.4 的兩個提示接進餘燼集的酒館傳聞與爐叔的聊天傳聞（hints_at 接口）。"""
+    social = library.world_quests.social["ashen_waste"]
+    rumors = {r.text_zh for r in social.rumors}
+    talk = {t.text_zh: t for t in social.talk}
+    assert any("霧與火相遇之處" in r for r in rumors)
+    lu = [e for text, e in talk.items() if "冰與火在同一隻蜥蜴身上" in text]
+    assert [e.npc for e in lu] == ["smith_lu"]
+    cards = library.world_event_content.npcs["ashen_waste"].npc_by_id()
+    assert cards["smith_lu"].location == "ember_market"
+
+
+def test_hint_text_must_appear_in_rumors(library: ContentLibrary) -> None:
+    data = _raw(library)
+    data["hidden"][1]["hints"][0]["text_zh"] = "沒有人說過的話"
+    rules = CraftingRules.model_validate(data)
+    locations = {
+        r: {loc.id: loc.kind for loc in m.locations} for r, m in library.world_maps.items()
+    }
+    problems = crafting_problems(
+        rules,
+        locations=locations,
+        npcs={},
+        items=library.world_economy.items,
+        affixes=library.affixes,
+        keywords={k.id for k in library.keywords.keywords},
+        hint_texts=_hint_texts(library),
+    )
+    assert any("沒有出現在 ashen_waste 的傳聞裡" in p for p in problems)
+
+
+def test_ashen_npc_card_moved_from_pending(library: ContentLibrary) -> None:
+    """5F-5a：爐叔的卡由 world/pending/ 搬到 world/npcs/ashen_waste.yaml；餘燼集有鐵匠與附魔台。"""
+    assert not (library.root / "world/pending").exists()
+    smith = library.world_event_content.npcs["ashen_waste"].npc_by_id()["smith_lu"]
     assert smith.name_zh == "爐叔" and smith.role_zh == "鐵匠"
-    assert "ashen_waste" not in library.world_event_content.npcs  # 不接店、不載入
+    rules = library.world_crafting
+    assert rules is not None
+    at_market = {(s.kind, s.npc) for s in rules.stations if s.location == "ember_market"}
+    assert at_market == {("smithy", "smith_lu"), ("enchanter", None)}

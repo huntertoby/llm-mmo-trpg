@@ -318,9 +318,9 @@ def _hint_text_problems(
     problems: list[str] = []
     for hidden in rules.hidden:
         for hint in hidden.hints:
-            if hint.region not in locations:
+            if hint.region not in locations or hint.region not in hint_texts:
                 continue
-            texts = hint_texts.get(hint.region, ())
+            texts = hint_texts[hint.region]
             if not any(hint.text_zh in text for text in texts):
                 problems.append(
                     f"隱藏配方 {hidden.id}：提示「{hint.text_zh}」沒有出現在 {hint.region} 的傳聞裡"

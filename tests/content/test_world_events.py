@@ -347,7 +347,7 @@ def test_without_world_event_files(tmp_path: Path, library: ContentLibrary) -> N
 def test_events_without_npc_file(tmp_path: Path, library: ContentLibrary) -> None:
     content = _copy_content(tmp_path, library)
     shutil.rmtree(content / "world" / "npcs")
-    with pytest.raises(ContentError, match="未知的 NPC acolyte_xiaolian"):
+    with pytest.raises(ContentError, match="未知的 NPC"):  # 5F-5a：荒原骨架先報（檔名排序）
         load_library(content)
 
 

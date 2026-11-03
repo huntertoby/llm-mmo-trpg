@@ -109,6 +109,21 @@ OLD_HP = {
     "thunder_hawk": 14,  # 5A-3 新增（雲嶺）
     "mist_wraith": 22,  # 5A-3 新增（雲嶺）
     "shard_golem": 48,  # 5A-3 新增（雲嶺）
+    # 5F-5a 新增（灰燼荒原：熔岩獸群、精英熔核領主、寒燼蜥、熔晶魅、區域 Boss 灰燼之心、召喚物餘燼幼蜥）
+    "ember_lizard": 18,
+    "ash_hound": 22,
+    "lava_beetle": 56,
+    "fire_dust_bat": 16,
+    "lava_tortoise": 50,
+    "magma_slug": 48,
+    "sulfur_beast": 40,
+    "scorched_colossus": 70,
+    "furnace_matriarch": 56,
+    "molten_lord": 88,
+    "frost_ember_lizard": 20,
+    "molten_wraith": 22,
+    "ashen_heart": 178,
+    "summon_ember_whelp": 8,
 }
 
 

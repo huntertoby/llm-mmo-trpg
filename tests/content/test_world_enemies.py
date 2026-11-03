@@ -40,8 +40,18 @@ CLOUD_RIDGE_UNITS = (
     "mist_wraith",
     "shard_golem",
 )
-VARIANTS = ("thunder_talisman_caster", "frost_crane_archer", "water_alchemist")
-AFFIXES = ("regenerating", "mist_veiled", "heart_linked", "berserk")
+VARIANTS = (
+    "thunder_talisman_caster",
+    "frost_crane_archer",
+    "water_alchemist",
+    # 5F-5a：灰燼荒原
+    "thunder_shell_beetle",
+    "scorched_stoneback",
+    "ashen_gunner",
+    "forge_scar",
+    "horned_zealot",
+)
+AFFIXES = ("regenerating", "mist_veiled", "heart_linked", "berserk", "blazing", "hard_shelled")
 
 
 @pytest.fixture(scope="module")
@@ -68,7 +78,7 @@ def test_variants_and_affixes_loaded(library: ContentLibrary) -> None:
     assert enemies is not None
     assert tuple(v.id for v in enemies.variants) == VARIANTS
     assert tuple(a.id for a in enemies.affixes) == AFFIXES
-    assert enemies.summary() == "3 種元素變體、4 種精英詞綴"
+    assert enemies.summary() == "8 種元素變體、6 種精英詞綴"
     rel = [p.relative_to(library.root).as_posix() for p, _ in library.files]
     assert "world/enemies.yaml" in rel
 
@@ -191,6 +201,7 @@ def test_affix_problem(library: ContentLibrary) -> None:
         "regenerating",
         "mist_veiled",
         "heart_linked",
+        "hard_shelled",  # 5F-5a：硬殼的只加開場狀態（熾熱的加近戰技能，遠程不能套）
     ]
 
 

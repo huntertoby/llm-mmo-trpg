@@ -11,6 +11,6 @@ ai_profile: assassin
 resist: {}
 element_mods: {fire: -500, ice: 500}
 tags: [construct]
-skills: [skill_blink, skill_ember_brand]
+skills: [skill_blink, skill_ember_bite]
 opening_statuses:
   - {status: molten_burst}

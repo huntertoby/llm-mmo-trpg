@@ -2,7 +2,7 @@
 # 火塵蝠：遠程（飛行）、灑火塵點燃。遠程上限 2 名（火塵蝠、噴岩龜）。
 id: fire_dust_bat
 name_zh: 火塵蝠
-attributes: {str: 6, dex: 16, con: 8, int: 10, wis: 12, wil: 8}
+attributes: {str: 6, dex: 16, con: 10, int: 10, wis: 12, wil: 8}
 max_hp: 16
 speed: 6
 armor_bonus: 1

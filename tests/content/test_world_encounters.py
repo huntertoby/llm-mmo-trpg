@@ -80,7 +80,8 @@ def test_north_slope_fixed_elite(table: EncounterTable) -> None:
 
 
 def test_every_new_enemy_appears(library: ContentLibrary, table: EncounterTable) -> None:
-    used = {u for g in table.groups for u in g.units}
+    # 5F-5a：荒原的敵人在荒原的遭遇表（所有區域一起算；含第三方）
+    used = {u for t in library.world_encounters.values() for g in t.groups for u in g.all_units}
     season = library.world_season
     if season is not None:  # 懸賞的精英本體（5F-1b 霧中劍客）只出現在懸賞陣容
         used |= {b.elite.unit for b in season.bounties}
