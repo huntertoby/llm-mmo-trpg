@@ -338,14 +338,14 @@ window.Battle = (() => {
     // 原定的終點：虛線框＋淡影
     ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 2; rr(ctx, 12 * T + 5, 7 * T + 5, T - 10, T - 10, 9); ctx.stroke(); ctx.restore();
     ctx.save(); ctx.globalAlpha = 0.25; PaperDoll.stamp(ctx, { look: HERO[0], gear: HERO[1] }, "east", 12 * T + T / 2, 7 * T + T * 0.82, 0.78, { dpr: 3 }); ctx.restore();
-    // 路徑：白（一般）→ 青虛線（冰上滑行）→ 紅（踩到陷阱）；到不了的後半段變灰虛線
+    // 路徑：白（一般）→ 藍虛線（冰面，要過敏捷檢定，失敗就倒在那一格）→ 紅（踩到陷阱）；到不了的後半段變灰虛線
     const path = [[8, 6], [9, 6], [10, 6], [11, 6], [11, 7], [12, 7]];
     gridPath(ctx, path, (i) => (i <= 2 ? { color: "#ffffff" } : i === 3 ? { color: "#1e78d0", dash: true } : i === 4 ? { color: "#ff6a50" } : { color: "rgba(200,200,200,0.6)", dash: true }));
     for (const [gx, gy, al] of [[9, 6, 0.3], [10, 6, 0.42], [11, 6, 0.55]]) { ctx.save(); ctx.globalAlpha = al; PaperDoll.stamp(ctx, { look: HERO[0], gear: HERO[1] }, "east", gx * T + T / 2, gy * T + T * 0.82, 0.78, { dpr: 3 }); ctx.restore(); }
     unit(ctx, ["A", 11, 7, HERO, ALLY, 0.82, "south"], {});
     const ice = (c, x, y) => { c.fillStyle = "#cdeeff"; c.beginPath(); c.moveTo(x, y - 7); c.lineTo(x + 6, y); c.lineTo(x, y + 7); c.lineTo(x - 6, y); c.closePath(); c.fill(); c.lineWidth = 1.4; c.strokeStyle = OUT; c.stroke(); };
     const jaws = (c, x, y) => { c.strokeStyle = "#9aa0a8"; c.lineWidth = 2.4; c.beginPath(); c.ellipse(x, y, 7, 5, 0, 0, TAU); c.stroke(); c.fillStyle = "#c8ccd0"; for (let k = 0; k < 6; k++) { const a = (k / 6) * TAU; c.fillRect(x + Math.cos(a) * 5 - 1, y + Math.sin(a) * 3.5 - 1, 2, 2); } };
-    tag(ctx, 10 * T - 4, 5 * T - 6, ice, "滑 1 格", "#1e78d0");
+    tag(ctx, 10 * T - 4, 5 * T - 6, ice, "滑倒 40%・失敗停在這格", "#1e78d0");
     tag(ctx, 11 * T + 30, 7 * T + 8, jaws, "陷阱 −8・定身", "#ff6a50");
     E.bubble(ctx, 11 * T + T / 2, 7 * T - 34, "bang", "danger");
     H.chip(ctx, 12 * T + 2, 8 * T + 6, "boots", "到不了", 70);
