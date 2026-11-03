@@ -6,7 +6,7 @@ window.Anim = (() => {
   const OUT = "#1c1712";
   const LOOK = { skin: "#f1c9a5", hair: "#3a2414", tunic: "#2f5a5a", tunicDark: "#244646", pants: "#4a3a2a", boot: "#5a3a20", belt: "#8a6440" };
   const FOE = { skin: "#a8724c", hair: "#1a1a1a", tunic: "#7a6a4a", tunicDark: "#5e5038", pants: "#3a3028", boot: "#3a2a1a", belt: "#5a4030", hat: "#a08a5a" };
-  const ELEM = { fire: ["#ff7a2a", "#ffd23a"], ice: ["#7ad8ff", "#e8f8ff"], lightning: ["#c8a0ff", "#fff4a0"], physical: ["#e8eef4", "#ffffff"], holy: ["#ffe080", "#fffbe0"] };
+  const ELEM = { fire: ["#ff7a2a", "#ffd23a"], ice: ["#7ad8ff", "#e8f8ff"], lightning: ["#c8a0ff", "#fff4a0"], physical: ["#e8eef4", "#ffffff"], holy: ["#ffe080", "#fffbe0"], crit: ["#ffb020", "#fff6c0"] };
   const ease = { in: (t) => t * t, out: (t) => 1 - (1 - t) * (1 - t), inOut: (t) => (t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t)) };
   const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
   const mix = (a, b, t) => a + (b - a) * t;
@@ -102,7 +102,18 @@ window.Anim = (() => {
     windup: { dur: 260, pose: (t) => ({ ...REST, shF: mix(0.15, -2.4, ease.out(t)), elF: mix(0.35, 0.5, t), lean: -0.12 * t, hipF: 0.25 * t, hipB: -0.2 * t, wpn: 0.3 * t }) },
     slash: {
       dur: 220, pose: (t) => ({ ...REST, shF: mix(-2.4, 1.3, ease.in(t)), elF: mix(0.5, 0.05, t), lean: mix(-0.12, 0.2, t), hipF: 0.45, hipB: -0.3, wpn: mix(0.3, -0.2, t) }),
-      fx: (ctx, t, A, B, el) => arcTrail(ctx, A, mix(-2.4, 1.3, ease.in(t)), -2.4, el, 1 - Math.max(0, t - 0.8) * 5), hitAt: 0.65,
+      fx: (ctx, t, A, B, el, o) => arcTrail(ctx, A, mix(-2.4, 1.3, ease.in(t)), -2.4, el, 1 - Math.max(0, t - 0.8) * 5, 1, o.wk), hitAt: 0.65,
+    },
+    // ---- 揮砍的變體：同一個「揮砍」位置，播放時依事件雜湊挑一種（只影響畫面）----
+    windup_lo: { dur: 240, pose: (t) => ({ ...REST, shF: mix(0.15, -0.9, ease.out(t)), elF: mix(0.35, 0.2, t), lean: 0.1 * t, crouch: 0.6 * t, hipF: 0.35 * t, hipB: -0.25 * t, wpn: -0.6 * t }) },
+    slash_lo: {
+      dur: 220, pose: (t) => ({ ...REST, shF: mix(-0.9, 2.7, ease.in(t)), elF: mix(0.2, 0.1, t), lean: mix(0.1, -0.15, t), crouch: mix(0.6, 0, t), hipF: 0.4, hipB: -0.3, wpn: mix(-0.6, 0.2, t) }),
+      fx: (ctx, t, A, B, el, o) => arcTrail(ctx, A, mix(-0.9, 2.7, ease.in(t)), -0.9, el, 1 - Math.max(0, t - 0.8) * 5, 1, o.wk), hitAt: 0.6,
+    },
+    windup_side: { dur: 240, pose: (t) => ({ ...REST, shF: mix(0.15, -1.6, ease.out(t)), elF: mix(0.35, 0.05, t), lean: -0.05 * t, hipF: 0.3 * t, hipB: -0.2 * t, wpn: 1.2 * t }) },
+    slash_side: {
+      dur: 200, pose: (t) => ({ ...REST, shF: mix(-1.6, 1.7, ease.in(t)), elF: 0.05, lean: mix(-0.05, 0.18, t), hipF: 0.45, hipB: -0.3, wpn: mix(1.2, 1.5, t) }),
+      fx: (ctx, t, A, B, el, o) => arcTrail(ctx, A, mix(-1.6, 1.7, ease.in(t)), -1.6, el, 1 - Math.max(0, t - 0.8) * 5, 0.38, o.wk), hitAt: 0.6,
     },
     thrust: { dur: 200, pose: (t) => ({ ...REST, shF: mix(0.4, 1.5, ease.in(t)), elF: mix(1.4, 0.05, ease.in(t)), lean: 0.2 * t, hipF: 0.5 * t, hipB: -0.35 * t }), move: (t) => [8 * ease.out(t), 0, 0], hitAt: 0.7 },
     draw: { dur: 380, pose: (t) => ({ ...REST, shB: 1.57, elB: 0, shF: mix(0.3, 1.45, ease.out(t)), elF: mix(0.4, 2.2, ease.out(t)), wpn: 0, lean: -0.05 }), bow: true },
@@ -124,10 +135,11 @@ window.Anim = (() => {
     idle: { dur: 400, pose: (t) => ({ ...REST, bob: -0.6 * Math.sin(t * TAU) }) },
   };
   // ---------------- 特效 ----------------
-  function arcTrail(ctx, A, a1, a0, el, alpha) {
-    const [c1, c2] = ELEM[el]; const r = 30, cx = A.shoulder[0], cy = A.shoulder[1], sgn = A.dirSign;
+  function arcTrail(ctx, A, a1, a0, el, alpha, squash = 1, wk = 1) {
+    const [c1, c2] = ELEM[el]; const r = 30, cx = A.shoulder[0], cy = A.shoulder[1] + (squash < 1 ? 14 : 0), sgn = A.dirSign;
     ctx.save(); ctx.globalAlpha = clamp(alpha); ctx.lineCap = "round";
-    for (const [w, col] of [[10, c1], [4, c2]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let k = 0; k <= 16; k++) { const a = mix(a0, a1, k / 16); const px = cx + Math.sin(a) * r * sgn, py = cy + Math.cos(a) * r; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
+    if (wk > 1) { ctx.shadowColor = c2; ctx.shadowBlur = 16; }
+    for (const [w, col] of [[10 * wk, c1], [4 * wk, c2]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let k = 0; k <= 16; k++) { const a = mix(a0, a1, k / 16); const px = cx + Math.sin(a) * r * sgn, py = cy + Math.cos(a) * r * squash; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
     ctx.restore();
   }
   function projectile(ctx, from, to, t, el, kind) {
@@ -153,10 +165,11 @@ window.Anim = (() => {
     for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.strokeStyle = k % 2 ? c1 : c2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(p[0] + Math.cos(a) * 6 * t, p[1] + Math.sin(a) * 6 * t); ctx.lineTo(p[0] + Math.cos(a) * (8 + 18 * t), p[1] + Math.sin(a) * (8 + 18 * t)); ctx.stroke(); }
     ctx.restore();
   }
-  function damageNumber(ctx, p, t, n) {
+  function damageNumber(ctx, p, t, n, crit = false) {
     if (t <= 0 || t >= 1) return;
-    ctx.save(); ctx.globalAlpha = t > 0.7 ? (1 - t) / 0.3 : 1; ctx.font = `bold ${16 + 6 * Math.max(0, 1 - t * 4)}px 'Microsoft JhengHei', sans-serif`; ctx.textAlign = "center";
-    ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.strokeText(`−${n}`, p[0], p[1] - 22 * ease.out(t)); ctx.fillStyle = "#ff5a48"; ctx.fillText(`−${n}`, p[0], p[1] - 22 * ease.out(t));
+    const size = (crit ? 24 : 16) + (crit ? 14 : 6) * Math.max(0, 1 - t * 4), label = crit ? `暴擊 −${n}` : `−${n}`;
+    ctx.save(); ctx.globalAlpha = t > 0.7 ? (1 - t) / 0.3 : 1; ctx.font = `bold ${size}px 'Microsoft JhengHei', sans-serif`; ctx.textAlign = "center";
+    ctx.lineWidth = crit ? 5 : 4; ctx.strokeStyle = OUT; ctx.strokeText(label, p[0], p[1] - 22 * ease.out(t)); ctx.fillStyle = crit ? "#ffd23a" : "#ff5a48"; ctx.fillText(label, p[0], p[1] - 22 * ease.out(t));
     ctx.restore();
   }
 
@@ -165,14 +178,38 @@ window.Anim = (() => {
    * seq：[{clip, to?}]——to 給位移片段的終點 x（由引擎事件的落點決定，不是片段自己決定）。
    * 回傳在時間 ms 時要畫的狀態。這就是「同樣的片段、不同順序」：順序與方向全部來自技能結構與事件。
    */
-  function sequence(seq, startX, target, el, wpn) {
+  function sequence(seq, startX, target, el, wpn, opt = {}) {
     const parts = []; let t0 = 0, x = startX;
     for (const s of seq) { const c = CLIP[s.clip]; parts.push({ ...s, c, t0, x0: x, x1: s.to ?? x }); t0 += c.dur; if (s.to !== undefined) x = s.to; }
-    const total = t0;
+    const animTotal = t0;
+    let hitAt = -1;
+    for (const p of parts) if (p.c.hitAt !== undefined) hitAt = p.t0 + p.c.dur * p.c.hitAt;
+    // 暴擊的時間扭曲：命中前 SLOW_IN 毫秒放慢到 SLOW_K 倍，命中瞬間停 STOP 毫秒
+    const crit = !!opt.crit, SLOW_IN = 140, SLOW_K = 0.3, STOP = 110;
+    const slowReal = SLOW_IN / SLOW_K;
+    const warp = (r) => {
+      if (!crit || hitAt < 0) return r;
+      const a0 = hitAt - SLOW_IN;
+      if (r < a0) return r;
+      if (r < a0 + slowReal) return a0 + (r - a0) * SLOW_K;
+      if (r < a0 + slowReal + STOP) return hitAt;
+      return r - (slowReal - SLOW_IN) - STOP;
+    };
+    const total = crit && hitAt >= 0 ? animTotal + (slowReal - SLOW_IN) + STOP : animTotal;
+    const hitReal = crit && hitAt >= 0 ? hitAt - SLOW_IN + slowReal : hitAt;
     return {
       total,
-      draw(ctx, ms, groundY, dir = "east") {
-        const k = Math.min(ms, total);
+      draw(ctx, realMs, groundY, dir = "east") {
+        const ms = warp(Math.min(realMs, total));
+        ctx.save();
+        if (crit && realMs >= hitReal && realMs < hitReal + 260) { const k2 = 1 - (realMs - hitReal) / 260; ctx.translate(Math.sin(realMs * 0.9) * 4 * k2, Math.cos(realMs * 1.3) * 3 * k2); }
+        const r = this._draw(ctx, ms, groundY, dir);
+        ctx.restore();
+        if (crit && realMs >= hitReal && realMs < hitReal + 70) { ctx.save(); ctx.fillStyle = "rgba(255,250,230,0.35)"; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore(); }
+        return r;
+      },
+      _draw(ctx, ms, groundY, dir) {
+        const k = Math.min(ms, animTotal);
         let cur = parts[parts.length - 1], local = 1;
         for (const p of parts) if (k >= p.t0 && k < p.t0 + p.c.dur) { cur = p; local = (k - p.t0) / p.c.dur; break; }
         const P = cur.c.pose(local);
@@ -182,8 +219,7 @@ window.Anim = (() => {
         // 殘影（衝刺）
         if (cur.c.trail) for (let g = 1; g <= 3; g++) { ctx.save(); ctx.globalAlpha = 0.18; figure(ctx, mix(cur.x0, cur.x1, Math.max(0, m[0] - g * 0.12)), groundY, dir, P, { wpn }); ctx.restore(); }
         // 目標：命中後播受擊
-        let hitMs = -1;
-        for (const p of parts) if (p.c.hitAt !== undefined) hitMs = p.t0 + p.c.dur * p.c.hitAt;
+        const hitMs = hitAt;
         const tl = hitMs >= 0 && ms >= hitMs ? (ms - hitMs) / CLIP.hit.dur : -1;
         const TP = tl >= 0 && tl < 1 ? CLIP.hit.pose(tl) : CLIP.idle.pose((ms / 1600) % 1);
         const tdx = tl >= 0 && tl < 1 ? CLIP.hit.move(tl)[0] * -faceSign * -1 : 0;
@@ -191,8 +227,8 @@ window.Anim = (() => {
         const B = { chest: [target, groundY - 46] };
         const out = figure(ctx, ax, groundY, dir, P, { wpn: cur.c.bow ? "bow" : wpn, air: m[2] });
         const A = { hand: out?.hand ?? [ax, groundY - 40], back: out?.back ?? [ax, groundY - 40], foot: [ax, groundY], shoulder: [ax + 1.6 * Math.sin(P.lean) * 14 * faceSign, groundY - 1.6 * (20 + 14)], dirSign: faceSign };
-        if (cur.c.fx) cur.c.fx(ctx, local, A, B, el);
-        if (tl >= 0) { burst(ctx, B.chest, tl * 1.4, el); damageNumber(ctx, [target, groundY - 70], tl * 0.6, 12); }
+        if (cur.c.fx) cur.c.fx(ctx, local, A, B, crit ? "crit" : el, { wk: crit ? 1.7 : 1 });
+        if (tl >= 0) { burst(ctx, B.chest, tl * (crit ? 0.9 : 1.4), crit ? "crit" : el); if (crit) burst(ctx, B.chest, tl * 0.6, "crit"); damageNumber(ctx, [target, groundY - 70], tl * 0.6, crit ? 24 : 12, crit); }
         return { clip: cur.clip, parts };
       },
     };
@@ -211,5 +247,11 @@ window.Anim = (() => {
     figure(ctx, x, gy - Math.min(steps * sh, rise), "east", P, { wpn: "sword" });
   }
 
-  return { CLIP, ELEM, REST, figure, walkPose, sequence, stairs, ease, LOOK, FOE };
+  /** 同 client/src/render/inkStyle.ts 的 seedOf（FNV-1a）。 */
+  function seedOf(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ (ch.codePointAt(0) ?? 0), 16777619); return h >>> 0; }
+  /** 揮砍的變體表：[蓄力片段, 揮砍片段, 中文]。 */
+  const SLASH_VARIANTS = [["windup", "slash", "由上往下"], ["windup_lo", "slash_lo", "由下往上"], ["windup_side", "slash_side", "橫掃"]];
+  /** 挑變體：鍵＝戰鬥 ID、事件序號、施放者 ID（全部來自引擎事件），重播與觀戰看到的一樣。 */
+  function pickVariant(battleId, eventSeq, unitId, n) { return seedOf(`${battleId}:${eventSeq}:${unitId}:anim`) % n; }
+  return { CLIP, ELEM, REST, figure, walkPose, sequence, stairs, ease, LOOK, FOE, seedOf, pickVariant, SLASH_VARIANTS };
 })();
