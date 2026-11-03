@@ -180,8 +180,10 @@ def test_functional_npcs_stand_where_you_can_reach_them(library: ContentLibrary,
 def test_every_spot_is_reachable(library: ContentLibrary, map_id: str) -> None:
     field = library.field_maps[map_id]
     reach = _reach(library, field)
-    for spot in (*field.facilities, *field.situation_objects):
-        assert _near(spot.at, reach), (map_id, spot.id, spot.at)
+    spots: list[tuple[str, XY]] = [(f.id, f.at) for f in field.facilities]
+    spots += [(s.id, s.at) for s in field.situation_objects]
+    for spot_id, at in spots:
+        assert _near(at, reach), (map_id, spot_id, at)
 
 
 @pytest.mark.parametrize("region", FIVE_REGIONS)
