@@ -3880,6 +3880,148 @@ phases:
 - 賽季 Boss（封印鑰匙、只准傭兵、首殺、源晶柱解謎，5F-3）；灰燼之心與碎晶之主的內容（5F-5）；新的 `trigger` 種類（輪數、標籤全倒）、火地擴散、冷卻破甲等新規則。
 - Boss 掉落（5D-2 的規則照舊）、首殺公告；新物件與新美術（香爐、Boss 立繪）；HP 門檻的地圖預告（門檻轉換無法提前一輪預知，只在單位卡寫門檻）。
 
-## 35. 之後各段規格
+## 35. 5F-1 詳細規格：賽季時鐘與日程、今日目標、懸賞板、世界事件、共享地點狀態
+
+> 給實作 agent。主要動 `src/trpg/world/`（新模組 `calendar.py`〔日曆與賽季日〕、`season_board.py`〔換日、世界事件、懸賞、今日目標〕；`state.py`、`step.py`、`replay.py`、`solutions.py`、`encounters.py`、`battle.py` 與用到 `refresh_day` 的模組小改）、`src/trpg/content/`（新 `world_season.py`；`world_rules.py` 加 `calendar`；`library.py` 載入）、`content/world/`（新 `season.yaml`；`rules.yaml` 加 `calendar`；`encounters/cloud_ridge.yaml` 加懸賞陣容）、`src/trpg/api/`（`world.py` 傳 actor 與開賽日、新 `season_view.py`／`season_schemas.py`、`routes/world.py` 新端點、`announce.py` 接真資料、`server_config.py` 加 `[season]`）、`config/server.toml`、`client/`（城鎮的公告板面板、API 型別）、`client/openapi.json`。另一個 agent 在做 5D-R2（帳號、`trpg.server`、季末欄位分類），撞到以 main 為準；季末重置是 5F-5，不做。
+> 依據：本檔第 1 節 5F-1 列；09 9.7（14 天節奏、懸賞先搶先贏不設每日數量、世界事件每 3～4 天 1 個）、9.6.7 #15（清空與重生、世界事件失敗時該區建議等級 +1）、9.6.9 #99（今日目標 3 條、完成給少量任務幣、新手期偏教學）、#100（6 點刷新：懸賞、今日目標）、9.6.10 #103（全服進度條、門檻依前一天上線人數自動調整、公告板與 Bot 6 點貼進度）；18 18.7.4（雲嶺 3 個懸賞）；19 19.9（世界事件 #1～#3 的時段與成敗）、19.6（主線時間點）；`docs/專案計畫.md` 3.1（06:00 Asia/Taipei、1 遊戲日＝30 分鐘）；本檔 0.2 Q14、Q15；`Phase5E-3報告.md` 待 PM 決定 2；`Phase5D-R1報告.md` 第 5 項。
+
+### 35.1 目標
+
+① 賽季日曆：時區與刷新時刻放世界規則、開賽日放伺服器設定；所有「每天一次」共用同一個日曆。② 9.7 的 14 天日程資料化，API 回「第幾天、這段在做什麼、之後的時間點」。③ 今日目標 3 條（全服同一組，進度與完成算角色），完成自動給任務幣。④ 懸賞板：每天 6 點貼出、先打倒的人拿走、當天其他人只看到「已被搶先」。⑤ 世界事件：全服進度、門檻依前一天上線帳號數自動調整、成功／失敗寫回世界（旗標、建議等級 +1），調整過程留在世界狀態可查、可重播。⑥ 共享地點狀態（已清空、重生時間、區域建議等級加成）一起放進公告板畫面。⑦ 5E-3 公告的今日目標與世界事件接上真資料。
+
+### 35.2 決策影響盤點（既有功能）
+
+| 既有功能 | 位置 | 受影響？ | 處理 |
+|---|---|---|---|
+| 每日刷新（感知判定一天一次 #112、每天第一次聊天 +3、夥伴／店裡好感度每日上限、骨架 22 失敗隔天再試、機遇提示一天一次、影子每天第一次被借） | `step`、`social`、`companions`、`economy`、`events`、`shadows` | **是（只換日曆來源）** | 全部改用 `day_of(library, now)`（日曆來自世界規則 `calendar`，預設 +480 分、6 點＝現行常數）；預設值下行為逐位元相同。`clock.refresh_day(now)` 保留預設參數給舊呼叫與測試 |
+| 賽季第幾天（機遇保底 `guarantee_from_day`、影子戰報的「第幾天」、公告 `season_day`） | `events`、`world_party_view`、`announce` | **是（統一）** | 共用 `season_day(library, world, now)`；公式不變（開賽那個刷新日＝第 1 天） |
+| 商店每週限購、酒館每週傳聞（`week_of`） | `season.py` | **是（小）** | 週次改用同一個日曆；開賽日由設定給時，第 0 週從開賽日起算（以前是第一次建立世界的那個刷新日）。數值不變 |
+| 懸賞精英詞綴（5B-4c：北坡狼王＝狂暴的、疤面＝連心的、霧中劍客＝霧隱的） | `encounters/cloud_ridge.yaml`、`encounters.py` | **是** | 懸賞貼出且還沒被搶時，該地點的遭遇用懸賞陣容（`EncounterResult.bounty`，像遭遇變化：不抽、不混營地精英）；角色自己的劇情變化（`scarface_rises` 等）優先。北坡獵場原本的固定精英不變；霧中劍客補陣容（5A-3 留的「陣容在 5F-1」）；「會分身」沒有機制，先不做（待 PM） |
+| 疤面的線頭到期結局（`scarface_rises`，個人） | `endings`、遭遇變化 | 否 | 照舊；懸賞是另一條全服的路 |
+| 事件冷卻（線頭 3 天到期、`once` 骨架失敗隔天、事件頻率依步數） | `events`、`endings` | 否 | 線頭到期是現實秒數，不看刷新日；失敗隔天照新日曆（預設相同） |
+| 已清空與重生（5A-4，`cleared`、`respawn_seconds`） | `battle`、`state` | 否（重用） | 共享地點狀態直接用它；公告板列出「已清空、幾點重生」 |
+| 地點建議等級（`level_min`／`level_max`、敵人成長、經驗份數、遇敵機率） | `battle.enemy_level`、`solutions.make_encounter`、地圖畫面 | **是** | 世界事件失敗的區域加成 `WorldState.level_bonus`；遇敵時記進 `EncounterResult.level_bonus`（預設 0），敵人等級與經驗照「建議等級＋加成」；遇敵機率照原本等級（代決 5F1-9）；公告板顯示加成 |
+| 經驗份數 `xp.shares_permille.bounty: 4000` | `rules.yaml` | **是（接上）** | 搶下懸賞的那場經驗補到懸賞份數（不和戰鬥份數疊加，代決 5F1-6） |
+| 任務幣（8.15「任務、懸賞、世界事件」） | `economy` | **是** | 懸賞、今日目標給任務幣（`CurrencyGainedEvent`，source `bounty:<id>`／`daily_goal:<id>`）；世界事件成功的全服獎勵本段不給（19.9 沒寫，待 PM） |
+| 世界動作日誌、重播（單一寫入佇列） | `replay`、`api/world.py` | **是** | `WorldLogEntry.actor`（帳號 ID，選填、預設 `None`＝用角色 ID）；`world_step(..., actor=)`；換日、懸賞搶先、進度與門檻全部在 `world_step` 裡依序號決定，重播一致 |
+| 5E-3 公告的 `daily_digest`（昨天有動作的「角色」數） | `api/announce.py` | **是** | 昨天的上線人數改用世界狀態裡的帳號數（和門檻同一個數字；沒有紀錄時退回原本的日誌計算）；`goals`／`world_events` 接上真資料 |
+| 首殺紀錄（`first_kills.json`） | `api/first_kills.py` | 否 | 懸賞首殺給封印鑰匙是 5F-3 |
+| 存檔版號 | `state` | 否 | 新欄位都有預設值，`trpg-world/1`、`trpg-char/1`、`trpg-wlog/1` 不升版 |
+| roguelite、戰鬥引擎 | engine | 否 | 不動；`LOG_FORMAT` 不變 |
+
+### 35.3 日曆與開賽日
+
+- `content/world/rules.yaml` 加 `calendar: {utc_offset_minutes: 480, refresh_hour: 6}`（`WorldRules.calendar`，有預設值；分鐘 −720～840、時刻 0～23）。遊戲日長度（30 分鐘）與天氣週期是使用者定的常數，不進資料。
+- `trpg.world.calendar`：`day_of(library, now)`（刷新日）、`next_refresh(library, now)`、`season_day(library, world, now)`（≥ 1）、`season_start_at(library, date)`（某個當地日期刷新時刻的 UTC 秒數）。`clock.refresh_day`／`next_refresh_at` 加關鍵字參數 `utc_offset_minutes`、`refresh_hour`（預設＝現行常數）。
+- 開賽日：`config/server.toml` `[season] start_date = ""`（`YYYY-MM-DD`，當地日期；環境變數 `TRPG_SEASON_START` 覆寫）。空＝第一次建立世界的當下（同現行）。世界已存在時不改（已寫進 `world.json`）。
+- 賽季長度與日程在 `content/world/season.yaml`（35.4）。超過賽季天數 `status: ended`、開賽日之前 `status: upcoming`；世界動作照常可做（代決 5F1-2）。
+
+### 35.4 內容 `content/world/season.yaml`（schema `trpg.content.world_season`，`ContentModel`、錯誤訊息繁中並指出 ID）
+
+```yaml
+days: 14
+schedule:            # 9.7 節奏（顯示用）；天數 1 起、閉區間、依序不重疊、涵蓋 1～days
+  - {id: act1, days: [1, 3], name_zh: 主線第 1～2 章、雲嶺}
+  - …
+milestones:          # 時間點（顯示用；規則在各段）：主線劇情技能約第 2、6、10 天（9.7、19.6）、Boss 最早第 8 天、第 10 天強制、循環賽第 13 天截止、第 14 天對打賽
+  - {id: boss_earliest, day: 8, name_zh: …}
+daily_goals:
+  count: 3
+  coins: 1                 # 每條（「少量任務幣」；開發 PM 初值）
+  newbie_days: 2           # 第 1～2 天用固定的教學目標
+  newbie: [starter_steps, reveal_hidden, elite_once]
+  goals:                   # 第 3 天起每天從這裡抽 count 條（確定性）
+    - {id: starter_steps, text_zh: 完成新手任務 2 步, goal: {kind: quest_step, quest_kind: starter, count: 2}}
+    - …
+bounties:                  # 18.7.4（ID 由開發 PM 取）
+  - {id: north_wolf_king, name_zh: 北坡狼王, region: cloud_ridge, location: north_slope, level: 5,
+     group: north_slope_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, from_day: 1}
+world_events:              # 19.9（門檻依上線人數，Q14）
+  - id: mist_tide
+    name_zh: 霧潮入侵
+    days: [1, 3]
+    goal: {kind: battle_won, region: cloud_ridge, weather: [fog], count: 30}
+    base_players: 8
+    on_success: {flags: [ashen_waste_open]}
+    on_failure: {flags: [ashen_waste_open], level_bonus: [{region: ashen_waste, amount: 1}]}
+```
+
+- 目標種類（`goal.kind`，今日目標與世界事件共用、由這一步的世界事件判定）：`battle_won`（選填 `region`、`weather`〔清單〕、`elite: true`、`location_kinds`）、`quest_step`（選填 `quest_kind`、`quest`）、`location_revealed`、`situation_success`（只算成功）、`talked`、`camped`、`bounty_claimed`。
+- 載入檢查：區域、地點、天氣、陣容、單位、詞綴存在；懸賞地點要有遭遇表、陣容＋精英不超過 4 名；`newbie` 與 `goals` 的 ID 不重複、`newbie` 長度＝`count`、`goals` 至少 `count` 條；世界事件天數在賽季內；`level_bonus` 的區域在區域表（不要求有地點圖：灰燼荒原還沒有）。
+- 雲嶺懸賞（18.7.4）：
+
+| 懸賞 | ID | 地點 | 等級 | 陣容 |
+|---|---|---|---|---|
+| 北坡狼王 | `north_wolf_king` | `north_slope` | 5 | `north_slope_pack`＋霧狼（狂暴的） |
+| 霧中劍客 | `mist_swordsman` | `sword_tomb` | 5 | 新 `mist_swordsman_band`（霧行者、雲鶴使）＋修士劍客（霧隱的） |
+| 斷崖幫二當家「疤面」 | `scarface` | `cliff_gang_fort` | 4 | `scarface_risen`（盜賊、霧狼 ×2）＋盜賊隊長（連心的） |
+
+- 世界事件：本段資料只放 #1 霧潮入侵（雲嶺有霧天氣打贏的戰鬥）。#2 熔岩潰堤（荒原村落守點）與 #3 封印共鳴（封印鑰匙）的內容與來源在荒原／5F-3；schema 先擋得住（區域篩選、地點種類、旗標、建議等級加成），資料到位再加。
+
+### 35.5 狀態（全部有預設值；格式字串不變）
+
+- `WorldState`：`rolled_day: int | None`（最後一次換日處理到的刷新日）、`activity: tuple[DailyActivity, ...]`（`day`、`actors`〔排序、不重複〕；只留今天與昨天）、`world_events: tuple[WorldEventState, ...]`（`id`、`status: active|succeeded|failed`、`progress`、`target`、`adjustments: tuple[TargetAdjustment(day, players, target)]`、`resolved_day`；依 ID 排序）、`bounty_claims: tuple[BountyClaim, ...]`（`day`、`bounty`、`character_id`、`name`、`at`；依日、懸賞排序，每日每懸賞一筆）、`level_bonus: dict[str, int]`（區域 → 建議等級加成，依鍵排序）。
+- `CharacterState.daily_goals: DailyGoalProgress | None`（`day`、`progress: dict[str, int]`、`done: tuple[str, ...]`）。
+- `EncounterResult.level_bonus: int = 0`、`EncounterResult.bounty: str | None = None`；`EncounterLineup.bounty: str | None = None`。
+- `WorldLogEntry.actor: str | None = None`。
+
+### 35.6 規則（`trpg.world.season_board`，純函式；都在 `world_step` 裡，依日誌序號）
+
+- **換日**（每個動作之前、線頭到期結算之前）：從 `rolled_day + 1` 到今天，每個刷新日依序：① 前一天是結束日、還沒成功的事件判失敗並套 `on_failure`；② 該日開始的世界事件建立 `active`；③ 進行中的世界事件依「前一天的上線人數」重算門檻並記一筆 `TargetAdjustment`（第一天或數字變了才記）；門檻降到進度以下就成功。`rolled_day` 為 `None`（舊存檔或新世界）時從開賽日開始補。換日不消耗亂數、不碰角色。
+- **門檻**（Q14）：`max(1, count × max(上線人數, 1) ÷ base_players)`（整數除法捨去）。上線人數（Q15）＝前一天（刷新時刻到刷新時刻）有任何成功世界動作的帳號數（`actor`，沒有帳號時用角色 ID）。第 1 天沒有前一天的資料 → 用原本的 `count`（代決 5F1-4）。
+- **進度**：動作之後依這一步的事件累加（`battle_won` 看 `BattleStartedEvent` 的區域、天氣、陣容精英與 `BattleEndedEvent.won`；地點種類看地圖）。達到門檻立刻 `succeeded`、套 `on_success`；只算進行中的事件。
+- **成敗效果**：`flags` 加進 `WorldState.flags`；`level_bonus` 累加到區域。事件 `world_event_resolved`。
+- **懸賞**：刷新日 `d` 貼出 `from_day ≤ 賽季日` 的所有懸賞；`bounty_claims` 有 `(d, id)` 就是已被搶。遇敵（`make_encounter`）時目的地有貼出、未被搶的懸賞 → `EncounterResult.bounty`；陣容照懸賞（角色自己的遭遇變化優先）。打贏有 `bounty` 的那場：當天還沒被搶 → 記 `BountyClaim`、給 `coins` 任務幣、經驗補到懸賞份數（`bounty_claimed`）；已被別人搶（序號在前） → `bounty_missed`（只有一般戰鬥的獎勵）。遭遇跨過刷新時刻時以打贏當下的刷新日算。
+- **今日目標**：刷新日 `d` 的目標：賽季第 1～`newbie_days` 天用 `newbie`；之後 `Rng(fnv1a64(f"{season_seed}:daily_goals:{d}"))` 把 `goals`（依 ID 排序）洗牌取前 `count` 條。角色進度跨日自動歸零；達成時 `daily_goal_done`＋任務幣。
+- **上線紀錄**：每個成功的動作之後把 `actor` 加進今天的 `activity`。
+- 新事件（`trpg.world.actions`）：`world_event_started`、`world_event_target`、`world_event_progress`、`world_event_resolved`、`bounty_claimed`、`bounty_missed`、`daily_goal_done`；中文呈現進 `world_presenter.event_lines`。
+
+### 35.7 API 與前端
+
+- `GET /api/world/characters/{id}/board`（新，`SeasonBoardView`；只讀，用「換日後」的世界算，不寫檔）：`season`（第幾天／共幾天、`status`、這段日程、之後的時間點、下一次刷新的 UTC 秒）、`goals`（文字、目標數、這個角色的進度、完成）、`bounties`（名稱、地點名〔看的人還沒發現的隱藏地點用提示語，5C-3f〕、等級、任務幣、`open`／`claimed`＋搶下的人名）、`world_events`（名稱、進度、門檻、狀態、起訖日、最近一次門檻調整的上線人數）、`shared`（已清空的地點與重生時間、區域建議等級加成）。
+- 前端：左欄加「公告板」畫面（`client/src/world/BoardPanel.tsx`，重用 `NotesPanel`／`QuestLog` 的面板樣式與 `WorldPanel` 的切換；進度條用既有樣式）。浮動卡照 6.5.1（本段不新增浮動卡）。
+- 公告（`trpg.api.announce`）：`SeasonAnnouncements` 實作 `DailyGoalsSource`、`WorldEventSource`（讀世界存檔、換日後算）；`active_yesterday` 改用世界狀態的帳號數；`AnnouncementSource` 預設接上它。模板不改變數名。
+
+### 35.8 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_season.py` | schema 與載入檢查（日程涵蓋、懸賞陣容人數、未知地點／詞綴、newbie 長度、事件天數） |
+| `tests/world/test_calendar.py` | 預設日曆和常數相同；改時區、刷新時刻；開賽日轉 UTC；賽季第幾天與狀態 |
+| `tests/world/test_season_board.py` | 換日補多天、門檻依前一天帳號數（4 人 → 15）、第 1 天用原門檻、成功立刻套旗標、失敗套建議等級 +1、建議等級影響敵人等級與經驗；懸賞先搶先贏（兩個角色依序打贏：第一個拿、第二個 `bounty_missed`）、隔天重新貼出；今日目標第 1～2 天固定、之後確定性、完成給任務幣、跨日歸零；重播（初始快照＋日誌 → 相同快照） |
+| `tests/world/`（受影響） | 既有每日一次的測試照舊通過（預設日曆） |
+| `tests/api/test_world_board.py` | 端點欄位、隱藏地點提示語、帳號 actor 寫進日誌、開賽日設定 |
+| `tests/api/`、`tests/bot/` 公告 | 今日公告帶今日目標與世界事件進度 |
+| 前端 vitest | 公告板的顯示資料（進度百分比、懸賞狀態文字） |
+
+### 35.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5F1-1 | 時區與刷新時刻放哪 | 世界規則 `calendar`（預設 +8、6 點）；開賽日放 `config/server.toml` |
+| 5F1-2 | 開賽日之前／賽季天數之後 | 只顯示狀態，不擋世界動作（季末重置 5F-5） |
+| 5F1-3 | 今日目標全服同一組還是每人不同 | 全服同一組（公告板與 Bot 貼同一份），進度算角色（#100「算角色」） |
+| 5F1-4 | 第 1 天沒有「前一天」 | 用原門檻 `count` |
+| 5F1-5 | 門檻多久調一次 | 每天刷新時依前一天重算（只記變動），已達成的不再變 |
+| 5F1-6 | 懸賞經驗 | 那場經驗補到懸賞份數（4 份），不和精英 3 份疊加 |
+| 5F1-7 | 懸賞要不要先接 | 不用接；貼出期間在該地點遇敵就是懸賞陣容，先打贏的人拿 |
+| 5F1-8 | 雲嶺懸賞開放日 | 第 1 天起（9.7「第 4～7 天 懸賞」對應荒原懸賞 19.8 的等級 7～8；雲嶺懸賞等級 4～5 對應第 1～3 天） |
+| 5F1-9 | 建議等級 +1 影響什麼 | 敵人等級與經驗；遇敵機率不變 |
+| 5F1-10 | 「上線人數」的帳號 | 世界日誌的 `actor`（帳號 ID）；開發模式沒有帳號時用角色 ID |
+| 5F1-11 | 今日目標與懸賞的任務幣 | 每條目標 1、懸賞 3（初值，content） |
+| 5F1-12 | 世界事件成功的全服獎勵 | 本段只套 19.9 寫的效果（旗標、建議等級）；任務幣等獎勵待 PM |
+| 5F1-13 | 霧中劍客「會分身」 | 沒有召喚幻影的機制，先只有霧隱的詞綴（待 PM） |
+
+### 35.10 驗收
+
+`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/world`、`tests/api`、`tests/content`、`tests/bot`（`-n 8`）；改了前端跑 `npx vitest run`、`npm run build`；swamp 種子 7 重播；改了 API 型別重產 OpenAPI。不跑全量、不跑大型模擬。
+
+### 35.11 不做的事
+
+- 季末重置與 `season_id` 分類（5F-5、5D-R2）；賽季 Boss 解鎖、封印鑰匙、每日 3 次（5F-3）；影子循環賽報名（5F-4）。
+- 灰燼荒原內容（地點、懸賞 19.8、世界事件 #2 的村落）；世界事件 #3 的資料。
+- 懸賞首殺的封印鑰匙、LLM 預產公告文字（5E-4）。
+
+## 36. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
