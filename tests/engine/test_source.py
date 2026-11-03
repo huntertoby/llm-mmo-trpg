@@ -161,9 +161,10 @@ def test_only_the_boss_units_are_elites_in_content() -> None:
         "bandit_boss",
         "bandit_captain",
         "bandit_warlord",
+        "rift_shard_lord",
         "sect_mist_lock_master",
         "sect_steward",
-    ]  # BAL-6；5A-3 青霧執事；5F-2 霧鎖真人
+    ]  # BAL-6；5A-3 青霧執事；5F-2 霧鎖真人；5F-3 碎晶之主
 
 
 def _legend_state(source: int | None, skill: SkillDef | None = None) -> BattleState:

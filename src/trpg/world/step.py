@@ -42,6 +42,7 @@ from trpg.world.actions import (
     LoadoutAction,
     LocationRevealedEvent,
     NarrateAction,
+    NewsSeenAction,
     OfferPickAction,
     PerceptionCheckEvent,
     RestAction,
@@ -70,6 +71,8 @@ from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
+from trpg.world.league import league_step
+from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
@@ -190,9 +193,9 @@ def world_step(
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
     before = char
     actor_id = char.character_id if actor is None else actor
-    if isinstance(action, SeasonBossAction):  # 次數算帳號（#100，5F-3）：要知道是哪個帳號
-        boss_world, boss_char, boss_events = challenge(library, world, char, now, actor=actor_id)
-        result = StepResult(world=boss_world, char=boss_char, events=boss_events)
+    account = ACCOUNT_HANDLERS.get(type(action))
+    if account is not None:  # 算帳號的動作（5F-4 循環賽報名、5F-3 賽季 Boss 挑戰，#100）
+        result = account(library, world, char, action, now, actor_id)
     else:
         result = _dispatch(library, world, char, action, now)
     world, char, settled = settle_event_combat(
@@ -264,6 +267,16 @@ def _changes_world(fn: _WorldFn) -> _Handler:
     return run
 
 
+def _news_seen(
+    char: CharacterState, action: NewsSeenAction, now: int
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """看過「你不在的時候」摘要（5F-1b）：只往後、不超過現在。"""
+    until = max(min(action.until, now), char.news_seen_at or 0)
+    if until == char.news_seen_at:
+        return char, ()
+    return char.model_copy(update={"news_seen_at": until}), ()
+
+
 def _fight(
     library: ContentLibrary, world: WorldState, char: CharacterState, action: FightAction, now: int
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
@@ -305,11 +318,8 @@ def _handlers() -> dict[type, _Handler]:
         ShadowAiAction: _keeps_world(
             lambda lib, _w, char, action, _n: set_shadow_ai(lib, char, action)
         ),
-        # 賽季 Boss 挑戰（5F-3）：world_step 帶帳號呼叫；直接分派時用角色 ID 當帳號
-        SeasonBossAction: _changes_world(
-            lambda lib, world, char, _a, now: challenge(
-                lib, world, char, now, actor=char.character_id
-            )
+        NewsSeenAction: _keeps_world(
+            lambda _l, _w, char, action, now: _news_seen(char, action, now)
         ),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
@@ -508,6 +518,44 @@ def _camp(library: ContentLibrary, world: WorldState, char: CharacterState, now:
     )
     return StepResult(world=world, char=char, events=(event,))
 
+
+type _AccountHandler = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int, str], StepResult
+]
+"""算帳號的世界動作：多一個 ``actor``（帳號 ID；沒有帳號＝角色 ID）。"""
+
+
+def _league(  # noqa: PLR0917 - 和 _AccountHandler 同簽名（分派表的一格）
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: LeagueEnterAction | LeagueWithdrawAction,
+    now: int,
+    actor: str,
+) -> StepResult:
+    world, char, events = league_step(library, world, char, action, now, actor=actor)
+    return StepResult(world=world, char=char, events=events)
+
+
+def _season_boss(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    _action: SeasonBossAction,
+    now: int,
+    actor: str,
+) -> StepResult:
+    world, char, events = challenge(library, world, char, now, actor=actor)
+    return StepResult(world=world, char=char, events=events)
+
+
+ACCOUNT_HANDLERS: Final[dict[type, _AccountHandler]] = {
+    LeagueEnterAction: _league,
+    LeagueWithdrawAction: _league,
+    SeasonBossAction: _season_boss,  # 5F-3：每帳號每天 3 次
+}
+"""算帳號的世界動作 → 處理（5F-4 循環賽報名、5F-3 賽季 Boss 挑戰）；和 :data:`HANDLERS` 不重疊
+（測試檢查）。"""
 
 HANDLERS: Final = _handlers()
 """世界動作種類 → 處理（5D-R1 取代 ``isinstance`` 串）；每種世界動作恰好一個（測試檢查）。

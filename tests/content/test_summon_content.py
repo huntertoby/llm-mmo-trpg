@@ -61,6 +61,7 @@ def test_the_summon_templates_are_loaded_into_the_ruleset() -> None:
         "summon_guardian_spirit",
         "summon_pull_totem",
         "summon_plateau_totem",
+        "summon_mist_shade",  # 5F-1b：霧中劍客的霧影分身
     }
     spirit, skeleton = summons["summon_elemental_spirit"], summons["summon_skeleton_warrior"]
     assert spirit.template.summon and skeleton.template.summon

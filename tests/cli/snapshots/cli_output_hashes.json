@@ -6,7 +6,7 @@
   "battle_oil_depot_fire_7": "271234e06a2e284f9af18a091d3935b0d97a6736a48ac60af95aee5250744bc5",
   "battle_open_plain_trapper_7": "4e8bdf3ecd844e725f2560c8e7092d7adb31669e98fa031ec7cb1f69775b19c6",
   "battle_swamp_striker_5": "b256e47db0613384d26b87f6bd94b0c081d00ad859dd7ed3ddddcc4f9b4bda17",
-  "skills_list": "0f522215c9d2b9193054958fc3cb0301b94b25d0481c1ad26a73f6a4abfd652f",
+  "skills_list": "0c7b6221234483812a6f47d4074d7c7963fc59fc87dfb9eeb877dcc1d70d544f",
   "skills_show_all/00": "bef29b8f5e0da87d8243a245de4e89e4d2126ac0bacb902f02b9b42bbe4d45f4",
   "skills_show_all/01": "570ca7ddf131e80a3f19b4119fbaedaa36b7713858c62916d0fad2f2d7ab4dd3",
   "skills_show_all/02": "f6e7b49e4b0c48aed0d70f428e739de9cece5243abb6352334f8eee9580a1431",
@@ -19,8 +19,8 @@
   "skills_show_all/09": "dd03a21e380174caa27d5f8827069f708fb8ea24dff39163cea6c915c76d7b08",
   "skills_show_all/10": "f333dbdc51f8e2d8b2c72bedc5d80c0449cd81c1bcb2790e67b7171996630740",
   "skills_show_all/11": "13cab47756c479dfe57ff80ec748b68eed90df21582444b69e9644975cec82fa",
-  "skills_show_all/12": "a4720b33e73cc621fc004de21c16242f725e50a345e0d9c611063e33571ac136",
-  "skills_show_all/13": "11df4cf55c8a933f97dd643ba274320281bf805795665b02e030dcd4657cad70",
-  "skills_show_all/14": "c26c8177e77ef669573c9e39eb6262658b1947c2a971d9db9feac5c903ce6525",
-  "skills_show_all/15": "84c7af31b4dba6c05f1f3fc3af3627a22bb1941b3b3f0698ebd6772310ad24ed"
+  "skills_show_all/12": "8b387b9988c9b7d3a61f784b86f95d72f83a0d566b146df9e34a246ad5ec3f3c",
+  "skills_show_all/13": "428aba158a0ed35bda7530f8aba3df64cb5a3da8ce8f14317dfc455d2ad6fe5c",
+  "skills_show_all/14": "0927152ab80a48692bfdd103b833f5d61c5587b8d3dce680dd467f6edaee5eb3",
+  "skills_show_all/15": "93576c8003c1bfc3921aa68f3b18f0a4a43bd7e58380efc2ed7124c9efc5860d"
 }

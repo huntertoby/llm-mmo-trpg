@@ -104,6 +104,7 @@ def _bounties(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int
 ) -> tuple[BoardBountyView, ...]:
     views: list[BoardBountyView] = []
+    today = day_of(library, now)
     for posted in posted_bounties(library, world, now):
         bounty, claim = posted.bounty, posted.claim
         if claim is None:
@@ -112,6 +113,8 @@ def _bounties(
             status = "你搶下了"
         else:
             status = f"已被 {claim.name} 搶下"
+            if bounty.consolation_coins and char.bounty_days.get(bounty.id) != today:
+                status += f"（今天第一次交手打倒仍有小獎：任務幣 {bounty.consolation_coins}）"
         views.append(
             BoardBountyView(
                 bounty=bounty.id,
@@ -142,7 +145,7 @@ def _world_events(
         if state is not None and state.adjustments:
             last = state.adjustments[-1]
             note = (
-                "第 1 天用原門檻"
+                "沒有前一天的上線紀錄，用原門檻"
                 if last.players is None
                 else f"依前一天 {last.players} 位冒險者調整"
             )
@@ -228,7 +231,8 @@ def season_event_line(library: ContentLibrary, _region: str, event: WorldEvent) 
             line = f"搶下懸賞「{name}」（任務幣 +{event.coins}{extra}）！"
         case BountyMissedEvent():
             name = bounties[event.bounty].name_zh if event.bounty in bounties else event.bounty
-            line = f"懸賞「{name}」今天已經被 {event.claimed_by} 搶先了。"
+            small = f"拿到小獎（任務幣 +{event.coins}）" if event.coins else "沒有懸賞獎勵"
+            line = f"懸賞「{name}」今天已經被 {event.claimed_by} 搶先了，{small}。"
         case WorldEventProgressEvent():
             name = events[event.event].name_zh if event.event in events else event.event
             line = f"世界事件「{name}」進度 +{event.added}（{event.progress}／{event.target}）。"

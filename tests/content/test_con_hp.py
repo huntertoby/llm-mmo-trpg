@@ -82,6 +82,7 @@ OLD_HP = {
     "summon_pull_totem": 18,  # 3-33e2b 新增
     "summon_plateau_totem": 18,  # 3-33e2b 新增
     "summon_water_sprite": 12,
+    "summon_mist_shade": 6,  # 5F-1b 新增（霧中劍客的霧影分身）
     "training_dummy": 300,
     "sect_acolyte": 22,  # 5A-3 新增（雲嶺）
     "sect_swordsman": 36,  # 5A-3 新增（雲嶺）
@@ -94,8 +95,9 @@ OLD_HP = {
     "sect_puppeteer": 24,  # 5A-3 新增（雲嶺）
     "sect_array_stone": 48,  # 5A-3 新增（雲嶺）
     "sect_steward": 62,  # 5A-3 新增（雲嶺）
+    "sect_mist_swordsman": 36,  # 5F-1b 新增（雲嶺懸賞「霧中劍客」本體）
     "sect_mist_lock_master": 132,  # 5F-2 新增（雲嶺 Boss）；5F-2b HP 90 → 120
-    "sect_summit_array_stone": 58,  # 5F-2 新增（雲頂觀陣眼）；5F-2b HP 30 → 40
+    "sect_summit_array_stone": 48,  # 5F-2 新增（雲頂觀陣眼）；5F-2b HP 30 → 40 → 30（玩法 PM 代決）
     "rift_shard_lord": 392,  # 5F-3 新增（賽季 Boss 碎晶之主）
     "rift_pillar_mist": 60,  # 5F-3 新增（源晶柱）
     "rift_pillar_thunder": 60,

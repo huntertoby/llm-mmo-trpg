@@ -51,6 +51,7 @@ from trpg.world.actions import (
     HireAction,
     InheritAction,
     LoadoutAction,
+    NewsSeenAction,
     OfferPickAction,
     ReleaseOathAction,
     RespecAction,
@@ -78,6 +79,7 @@ from trpg.world.economy_actions import (
     SellAction,
     UseItemAction,
 )
+from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.season_events import SeasonBossAction
 
 __all__ = [
@@ -131,6 +133,7 @@ type WorldActionRequest = Annotated[
     | EventSolveAction
     | HireAction
     | ShadowAiAction
+    | NewsSeenAction  # 5F-1b
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
@@ -142,6 +145,8 @@ type WorldActionRequest = Annotated[
     | RerollAction
     | ImbueAction
     | SalvageAction
+    | LeagueEnterAction  # 5F-4
+    | LeagueWithdrawAction
     | SeasonBossAction,  # 5F-3
     Field(discriminator="kind"),
 ]

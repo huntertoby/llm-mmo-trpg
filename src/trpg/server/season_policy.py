@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 from trpg.server.accounts import AccountRecord
 from trpg.server.first_kills import FirstKill
+from trpg.server.league import LeagueMatch, LeagueRecord
 from trpg.server.notes import LocationNote
 from trpg.server.season_boss_board import BossBoardEntry
 from trpg.world.state import CharacterState, RecipeRecord, WorldState
@@ -119,6 +120,8 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "daily_goals",  # 5F-1 今日目標
     "seal_key_sources",  # 5F-3 封印鑰匙、區域 Boss 保底掉落
     "boss_drop_days",
+    "bounty_days",  # 5F-1b 每天第一場懸賞遭遇
+    "news_seen_at",  # 5F-1b「你不在的時候」看過的時刻
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(
@@ -142,6 +145,7 @@ _WORLD: Final[dict[str, ResetKind]] = _all(
     "seal_full_at",
     "boss_attempts",
     "boss_clears",
+    "league_entries",  # 5F-4 影子循環賽的報名
 )
 """世界狀態整個是數值類（#91「世界狀態」）；新的一季換新的 ``season_id``、種子與開始時間。"""
 
@@ -212,6 +216,30 @@ _NOTE: Final[dict[str, ResetKind]] = _all(
 )
 """地點留言（#105）：#91 沒提到；暫標數值類（待決）。"""
 
+_LEAGUE_RECORD: Final[dict[str, ResetKind]] = {
+    **_all(MEMORIAL, "format", "season_id", "started_at", "matches"),
+    "entries": NUMERIC,
+}
+"""循環賽（5F-4）：賽程、勝負是「排行榜」（#91 紀念類）；凍結的報名帶著 build 快照與打法（數值類，
+暫標；名字要不要留給排行榜待決）。"""
+
+_LEAGUE_MATCH: Final[dict[str, ResetKind]] = _all(
+    MEMORIAL,
+    "id",
+    "a",
+    "b",
+    "map",
+    "seed_index",
+    "seed",
+    "ally",
+    "status",
+    "winner",
+    "rounds",
+    "end_reason",
+    "error",
+)
+"""循環賽的一場（排行榜的依據，紀念類；戰鬥紀錄檔跟著保留，季末也能重播查證）。"""
+
 SEASON_POLICY: Final[Mapping[type[BaseModel], Mapping[str, ResetKind]]] = {
     CharacterState: _CHARACTER,
     WorldState: _WORLD,
@@ -220,11 +248,13 @@ SEASON_POLICY: Final[Mapping[type[BaseModel], Mapping[str, ResetKind]]] = {
     BossBoardEntry: _BOSS_BOARD,
     AccountRecord: _ACCOUNT,
     LocationNote: _NOTE,
+    LeagueRecord: _LEAGUE_RECORD,  # 5F-4
+    LeagueMatch: _LEAGUE_MATCH,
 }
 """存檔模型 → 欄位 → 數值類／紀念類。"""
 
 SAVED_MODELS: Final[tuple[type[BaseModel], ...]] = tuple(SEASON_POLICY)
-"""要分類的存檔模型（角色、世界、配方紀錄、首殺、賽季 Boss 評分榜、帳號、地點留言）。"""
+"""要分類的存檔模型（角色、世界、配方紀錄、首殺、賽季 Boss 評分榜、帳號、地點留言、循環賽）。"""
 
 PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset(
     {
@@ -244,6 +274,7 @@ PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset(
         ("LocationNote", "name"),
         ("LocationNote", "text"),
         ("LocationNote", "at"),
+        ("LeagueRecord", "entries"),
     }
 )
 """拿不準、暫標數值類的欄位（模型名, 欄位）。待使用者決定（5D-R2 報告「待 PM 決定」）：
@@ -252,6 +283,7 @@ PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset(
 - 角色的精英擊殺、完成的事件骨架是不是「編年史」（目前是角色進度；編年史可由世界日誌與首殺算）。
 - 角色名（``hero`` 裡）要不要留給編年史／排行榜（首殺已經存下當時的名字）。
 - 地點留言要不要跨季。
+- 循環賽凍結的報名（build 快照、打法、名字）要不要跨季（5F-4；賽程與勝負已是紀念類）。
 """
 
 

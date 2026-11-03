@@ -1,4 +1,4 @@
-"""賽季 Boss 的通關評分榜與首殺戰鬥紀錄（Phase 5F-3；``docs/phases/Phase5計畫.md`` 36.7）。
+"""賽季 Boss 的通關評分榜與首殺戰鬥紀錄（Phase 5F-3；``docs/phases/Phase5計畫.md`` 37.7）。
 
 - 評分榜（#87：輪數、全隊存活、有沒有人倒下；只給榮譽稱號）：``<世界資料夾>/season_boss_board.json``
   （``trpg-bossboard/1``）。每個角色每季只留最好的一次（分數高 → 輪數少 → 日誌序號小）。由世界日誌的

@@ -159,7 +159,7 @@ statuses:
     description_zh: 與其他劍陣弟子站得越近、人越多，劍勢越盛；落單時威力減弱。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
-    formation: {kin_tag: sword_array, range: 3, per_ally_permille: 200, max_allies: 2, alone_permille: 800}
+    formation: {kin_tag: sword_array, kin_name_zh: 劍陣, range: 3, per_ally_permille: 200, max_allies: 2, alone_permille: 800}
   # 5A-M2b：陣眼石靈「護陣」（18.2：陣眼石靈存在時，3 格內的同門受到的傷害 −20%，打碎後立刻解除）。同門標籤 sect
   # （石靈自己不算）；數值初值（代決 5AM2b-1，未經模擬）。
   - id: array_ward
@@ -168,7 +168,7 @@ statuses:
     description_zh: 陣眼還在時，附近的同門受到的傷害減少；陣眼被打碎就失效。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
-    ward: {kin_tag: sect, range: 3, taken_permille: 800}
+    ward: {kin_tag: sect, kin_name_zh: 同門, range: 3, taken_permille: 800}
   # 5F-2：雲頂觀的陣眼石靈（18.2.3 第 1 階段「打碎陣眼石靈才能傷到真人（受到的傷害 −50% 直到陣眼碎）」）。同門標籤 mist_lock_core（畫面顯示 kin_name_zh，5F-2b）
   # 只有霧鎖真人；範圍 12 格（Boss 地圖 12×12，真人會換位）。代決 5F2-5（初值，未經模擬）。
   - id: summit_array_ward

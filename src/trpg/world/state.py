@@ -45,6 +45,7 @@ __all__ = [
     "EventTrigger",
     "GearMod",
     "LastBattle",
+    "LeagueEntry",
     "LocationRef",
     "LootSummary",
     "NextBattleMod",
@@ -502,6 +503,22 @@ class ShadowRecord(_Model):
     """已轉進主人角色的任務幣（Phase 5D-1；``coins`` 保留為累計）。"""
 
 
+class LeagueEntry(_Model):
+    """影子循環賽的一筆報名（Phase 5F-4；09 9.7、#100 每個帳號 1 個角色）。快照是報名當下的 build
+    （:func:`~trpg.world.shadows.shadow_snapshot`），對戰時再拉到等級上限（:mod:`trpg.world.league`）。"""
+
+    account: str = Field(min_length=1, max_length=80)
+    """報名的帳號（世界日誌的 ``actor``；沒有帳號時＝角色 ID）。"""
+    character_id: str = Field(pattern=ID_PATTERN)
+    name: str
+    """報名時的角色名。"""
+    snapshot: ShadowSnapshot
+    ai: str | None = Field(default=None, pattern=ID_PATTERN)
+    """報名的 AI 打法（``None``＝快照的預設打法）。"""
+    entered_at: int = Field(ge=0)
+    """第一次報名的 UTC 秒（更新不改；排名同分時報名較早的在前）。"""
+
+
 class DailyActivity(_Model):
     """某個刷新日有成功世界動作的帳號（Phase 5F-1，Q15；世界事件門檻依前一天的人數調整）。"""
 
@@ -538,6 +555,9 @@ class WorldEventState(_Model):
     """門檻的調整紀錄（依日期）。"""
     resolved_day: int | None = None
     """成功或失敗的刷新日。"""
+    resolved_at: int | None = None
+    """成功或失敗的 UTC 秒數（換日時判定的＝該刷新日開始；5F-1b「你不在的時候」用；舊存檔
+    ``None``＝用 ``resolved_day`` 的開始）。"""
 
 
 class BountyClaim(_Model):
@@ -640,6 +660,20 @@ class WorldState(_Model):
         """``actor`` 在刷新日 ``day`` 已挑戰的次數。"""
         found = next((a for a in self.boss_attempts if a.day == day and a.actor == actor), None)
         return 0 if found is None else found.count
+
+    # --- 5F-4 影子循環賽（邏輯在 trpg.world.league） ---
+    league_entries: tuple[LeagueEntry, ...] = ()
+    """循環賽的報名（依帳號排序；帳號、角色都不重複）。"""
+
+    @field_validator("league_entries")
+    @classmethod
+    def _league_sorted(cls, entries: tuple[LeagueEntry, ...]) -> tuple[LeagueEntry, ...]:
+        accounts = [e.account for e in entries]
+        if accounts != sorted(set(accounts)):
+            raise ValueError("league_entries 必須依帳號排序且不重複")
+        if len({e.character_id for e in entries}) != len(entries):
+            raise ValueError("league_entries 的角色重複")
+        return entries
 
     @field_validator("level_bonus")
     @classmethod
@@ -919,6 +953,11 @@ class CharacterState(_Model):
     # --- 5F-1 今日目標（邏輯在 trpg.world.season_board） ---
     daily_goals: DailyGoalProgress | None = None
     """今天的今日目標進度（``None``＝還沒有；跨日歸零）。"""
+    bounty_days: dict[str, int] = Field(default_factory=dict)
+    """懸賞 → 最後一次打懸賞陣容的刷新日（5F-1b：每個角色每天在該地點的第一場遭遇才是懸賞陣容）。"""
+    news_seen_at: int | None = None
+    """「你不在的時候」摘要看到哪個時刻為止（UTC 秒；``news_seen`` 動作寫入，5F-1b）。新角色＝建立
+    當下；``None``＝舊存檔（從開賽算起）。"""
 
     # --- 5F-3 封印鑰匙、區域 Boss 的保底掉落 ---
     seal_key_sources: tuple[str, ...] = ()
@@ -969,7 +1008,7 @@ class CharacterState(_Model):
     def _sorted_party_ai(cls, ai: dict[str, str]) -> dict[str, str]:
         return dict(sorted(ai.items()))
 
-    @field_validator("talk_days", "failed_skeletons")
+    @field_validator("talk_days", "failed_skeletons", "bounty_days")
     @classmethod
     def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:
         return dict(sorted(days.items()))

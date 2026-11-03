@@ -1,4 +1,4 @@
-"""區域 Boss 的保底掉落與重複挑戰（Phase 5F-3；``docs/phases/Phase5計畫.md`` 36.2、5F3-15）。"""
+"""區域 Boss 的保底掉落與重複挑戰（Phase 5F-3；``docs/phases/Phase5計畫.md`` 37.2、5F3-15）。"""
 
 from __future__ import annotations
 

@@ -57,7 +57,10 @@ def test_target_formula(season: SeasonContent) -> None:
     event = season.event_by_id()["mist_tide"]
     assert event.target_for(None) == 30
     assert event.target_for(4) == 15
-    assert event.target_for(0) == 3  # max(0, 1) × 30 ÷ 8
+    assert event.target_for(0) == 30  # 沒有上線紀錄：原門檻（5F-1b）
+    assert event.target_for(1) == 8  # 30 ÷ 8 ＝ 3 → 下限 1/4 進位 ＝ 8
+    assert event.target_for(2) == 8
+    assert event.target_for(3) == 11
     assert event.target_for(8) == 30
     assert event.target_for(16) == 60
 
@@ -166,4 +169,58 @@ def test_season_boss_cross_file(
         units=set(library.units),
         maps=library.maps,
     )
+    assert any(message in p for p in problems), problems
+
+
+# ---------------------------------------------------------------------------
+# 影子循環賽（Phase 5F-4）
+# ---------------------------------------------------------------------------
+
+
+def _league_problems(library: ContentLibrary, season: SeasonContent) -> list[str]:
+    assert library.regions is not None
+    return season_problems(
+        season,
+        world_maps=library.world_maps,
+        encounters=library.world_encounters,
+        catalog=library.enemy_catalog(),
+        weather_ids=set(library.weather),
+        region_ids={r.id for r in library.regions.regions},
+        location_kinds=get_args(LocationKind.__value__),
+        battle_maps={k: v.archetype for k, v in library.maps.items()},
+    )
+
+
+def test_league_loaded(library: ContentLibrary, season: SeasonContent) -> None:
+    assert season.league is not None
+    assert season.league.signup_close_day == 13  # #101
+    assert _league_problems(library, season) == []
+
+
+@pytest.mark.parametrize(
+    ("patch", "message"),
+    [
+        ({"seeds": 0}, "greater than or equal"),
+        ({"seeds": 9}, "less than or equal"),
+        ({"maps": ["swamp", "swamp"]}, "地圖重複"),
+        ({"signup_close_day": 15}, "league.signup_close_day"),
+    ],
+)
+def test_league_schema_rejects(season: SeasonContent, patch: Any, message: str) -> None:
+    data = _data(season)
+    data["league"] = {**data["league"], **patch}
+    with pytest.raises(ValidationError, match=message):
+        SeasonContent.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    ("map_id", "message"),
+    [("no_such_map", "不存在"), ("cloud_summit", "boss"), ("training_range", "training")],
+)
+def test_league_map_problems(
+    library: ContentLibrary, season: SeasonContent, map_id: str, message: str
+) -> None:
+    data = _data(season)
+    data["league"] = {**data["league"], "maps": [map_id]}
+    problems = _league_problems(library, SeasonContent.model_validate(data))
     assert any(message in p for p in problems), problems

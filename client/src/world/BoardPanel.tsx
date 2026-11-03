@@ -146,7 +146,6 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
                   <button
                     type="button"
                     disabled={busy || !board.season_boss.can_challenge}
-                    title={board.season_boss.problem_zh ?? undefined}
                     data-testid="world-board-boss-challenge"
                     onClick={() => {
                       onAct({ kind: "season_boss" });

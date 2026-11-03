@@ -1,4 +1,4 @@
-"""賽季 Boss：封印鑰匙、解鎖時間、挑戰與通關（Phase 5F-3；``docs/phases/Phase5計畫.md`` 36.6）。
+"""賽季 Boss：封印鑰匙、解鎖時間、挑戰與通關（Phase 5F-3；``docs/phases/Phase5計畫.md`` 37.6）。
 
 全部在 :func:`~trpg.world.step.world_step` 裡、依世界動作日誌的序號套用，所以「每帳號每天 3 次」
 「首殺」都可以從日誌重播出相同結果。純函式：不讀時間、不呼叫 LLM；只有挑戰時從角色的 ``battle``

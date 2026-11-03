@@ -37,6 +37,7 @@ from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
+from trpg.server.league import LeagueRunner, LeagueStore
 from trpg.server.notes import LocationNoteStore
 from trpg.server.season_boss_board import SeasonBossBoard, first_kill_log_json
 from trpg.shared.errors import TrpgError
@@ -141,6 +142,10 @@ class WorldStore:
         """賽季 Boss 的通關評分榜與首殺戰鬥紀錄（5F-3）。"""
         self.notes = LocationNoteStore(root)
         """地點留言（5E-3，#105；不進日誌）。"""
+        self.league = LeagueStore(library, root)
+        """影子循環賽的賽果（5F-4；衍生資料，不進日誌）。"""
+        self.league_runner = LeagueRunner(self.league)
+        """循環賽的背景執行（5F-4；管理者開跑）。"""
 
     # -- 路徑 -----------------------------------------------------------------
 
@@ -239,6 +244,11 @@ class WorldStore:
             found.reverse()
             return found
 
+    def account_of(self, character_id: str) -> str:
+        """角色的帳號（世界日誌的 ``actor``；沒有帳號時＝角色 ID，同 Q15）。"""
+        found = None if self.actor_of is None else self.actor_of(character_id)
+        return character_id if found is None else found
+
     def battle_of(self, character_id: str) -> BattleSession | None:
         with self._lock:
             return self._battles.get(character_id)
@@ -270,7 +280,8 @@ class WorldStore:
             char = new_character(
                 self.library, character_id, hero, region=START_REGION, origin=run.origin
             )
-            char = char.model_copy(update={"generated_skills": run.generated_skills})
+            update = {"generated_skills": run.generated_skills, "news_seen_at": self.clock()}
+            char = char.model_copy(update=update)  # 新角色：建立之前的消息不算「你不在的時候」
             self._save_char(char)
             return char
 

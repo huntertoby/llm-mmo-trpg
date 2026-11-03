@@ -1,4 +1,4 @@
-"""賽季 Boss：封印鑰匙、解鎖時間、挑戰、通關（Phase 5F-3；``docs/phases/Phase5計畫.md`` 36.6）。"""
+"""賽季 Boss：封印鑰匙、解鎖時間、挑戰、通關（Phase 5F-3；``docs/phases/Phase5計畫.md`` 37.6）。"""
 
 from __future__ import annotations
 

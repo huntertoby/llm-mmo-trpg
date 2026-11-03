@@ -81,6 +81,9 @@ def test_north_slope_fixed_elite(table: EncounterTable) -> None:
 
 def test_every_new_enemy_appears(library: ContentLibrary, table: EncounterTable) -> None:
     used = {u for g in table.groups for u in g.units}
+    season = library.world_season
+    if season is not None:  # 懸賞的精英本體（5F-1b 霧中劍客）只出現在懸賞陣容
+        used |= {b.elite.unit for b in season.bounties}
     new = {u for u, t in library.units.items() if {"sect", "beast", "construct"} & set(t.tags)}
     assert library.world_enemies is not None
     variants = {v.id for v in library.world_enemies.variants}

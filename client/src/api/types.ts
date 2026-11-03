@@ -261,6 +261,7 @@ export type WorldAction =
   // 5C-1：雇用系統傭兵（整組換掉）；5C-2：借影子、打法、自己影子的預設打法
   | (Omit<Schemas["HireAction"], "shadows" | "ai"> & { shadows?: string[]; ai?: Record<string, string> })
   | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null })
+  | Schemas["NewsSeenAction"]
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
@@ -275,6 +276,9 @@ export type WorldAction =
   | Schemas["RerollAction"]
   | Schemas["ImbueAction"]
   | Schemas["SalvageAction"]
+  // 5F-4：影子循環賽的報名與取消
+  | (Omit<Schemas["LeagueEnterAction"], "ai"> & { ai?: string | null })
+  | Schemas["LeagueWithdrawAction"]
   // 5F-3：挑戰賽季 Boss（扣帳號今天的 1 次，之後照一般遭遇開戰）
   | Schemas["SeasonBossAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
@@ -305,6 +309,14 @@ export type BoardWorldEventView = Schemas["BoardWorldEventView"];
 /** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
 export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
 export type BoardBossEntryView = Schemas["BoardBossEntryView"];
+/** 「你不在的時候」摘要（5F-1b）：上次看過之後的世界事件成敗、懸賞歸屬、新開放的區域。 */
+export type AbsenceView = Schemas["AbsenceView"];
+export type AbsenceItemView = Schemas["AbsenceItemView"];
+/** 影子循環賽（5F-4）：報名、排行榜、場次與重播。 */
+export type LeagueView = Schemas["LeagueView"];
+export type LeagueStandingView = Schemas["LeagueStandingView"];
+export type LeagueMatchView = Schemas["LeagueMatchView"];
+export type LeagueReplayResponse = Schemas["LeagueReplayResponse"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];

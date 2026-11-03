@@ -1,5 +1,5 @@
 """賽季 Boss 的伺服器端：首殺紀錄、首殺戰鬥紀錄可重播、評分榜、公告板區塊（Phase 5F-3；
-``docs/phases/Phase5計畫.md`` 36.7）。"""
+``docs/phases/Phase5計畫.md`` 37.7）。"""
 
 from __future__ import annotations
 

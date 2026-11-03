@@ -33,6 +33,7 @@ __all__ = [
     "DailyGoalRules",
     "GoalKind",
     "GoalSpec",
+    "LeagueRules",
     "LevelBonusEffect",
     "Milestone",
     "SchedulePhase",
@@ -154,8 +155,8 @@ class DailyGoalRules(ContentModel):
 
 
 class BountyDef(ContentModel):
-    """一張懸賞（18.7.4）：貼出期間在 ``location`` 遇敵就是這個陣容（``group``＋精英 ``elite`` 排
-    最前），先打贏的人拿走當天的懸賞。"""
+    """一張懸賞（18.7.4）：貼出期間每個角色每天在 ``location`` 的第一場遭遇是這個陣容（``group``＋
+    精英 ``elite`` 排最前；5F-1b），先打贏的人拿走當天的懸賞（大獎），其他人打倒拿小獎（9.6.3）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -166,6 +167,9 @@ class BountyDef(ContentModel):
     group: str = Field(pattern=ID_PATTERN)
     elite: FixedElite
     coins: int = Field(default=0, ge=0)
+    """大獎：當天第一個打倒的人拿的任務幣（另補經驗到懸賞份數）。"""
+    consolation_coins: int = Field(default=0, ge=0)
+    """小獎：已被別人搶下後打倒的任務幣（9.6.3「其他人拿小獎」；5F-1b）。"""
     from_day: int = Field(default=1, ge=1)
     """賽季第幾天起每天貼出。"""
 
@@ -192,8 +196,9 @@ class WorldEventEffect(ContentModel):
 
 
 class WorldEventDef(ContentModel):
-    """一個世界事件（#103、19.9）：全服共用一條進度；門檻＝``goal.count`` × max(前一天上線人數, 1)
-    ÷ ``base_players``（最少 1，Q14）。"""
+    """一個世界事件（#103、19.9）：全服共用一條進度；門檻＝``goal.count`` × 前一天上線人數
+    ÷ ``base_players``（Q14），最少保留原門檻的 ``min_target_permille``（無條件進位）；前一天沒有
+    上線紀錄時用原門檻（5F-1b，玩法 PM 2026-11-03 代決）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -201,6 +206,8 @@ class WorldEventDef(ContentModel):
     days: DayRange
     goal: GoalSpec
     base_players: int = Field(default=8, ge=1)
+    min_target_permille: int = Field(default=250, ge=1, le=1000)
+    """門檻下限：原門檻的千分比（250＝1/4，30 → 最少 8；無條件進位）。"""
     on_success: WorldEventEffect = WorldEventEffect()
     on_failure: WorldEventEffect = WorldEventEffect()
 
@@ -209,12 +216,41 @@ class WorldEventDef(ContentModel):
         _check_range(self.days, f"世界事件 {self.id}")
         return self
 
+    def min_target(self) -> int:
+        """門檻下限（原門檻 × ``min_target_permille`` ‰，無條件進位、最少 1）。"""
+        return max(1, -(-self.goal.count * self.min_target_permille // 1000))
+
     def target_for(self, players: int | None) -> int:
-        """前一天上線 ``players`` 人時的門檻；``None``＝沒有前一天的資料（用原門檻，
-        代決 5F1-4）。"""
-        if players is None:
+        """前一天上線 ``players`` 人時的門檻；``None`` 或 0＝沒有前一天的上線紀錄（用原門檻，
+        代決 5F1-4、5F-1b）。"""
+        if not players:
             return self.goal.count
-        return max(1, self.goal.count * max(players, 1) // self.base_players)
+        return max(self.min_target(), self.goal.count * players // self.base_players)
+
+
+LEAGUE_EXCLUDED_ARCHETYPES: Final = frozenset({"boss", "training", "test"})
+"""循環賽不能用的地圖類型（Boss 專屬、靶場、測試圖；Phase 5F-4）。"""
+
+
+class LeagueRules(ContentModel):
+    """影子循環賽（Phase 5F-4；09 9.7「季末保底」、#101）。規則在 :mod:`trpg.world.league`。"""
+
+    signup_close_day: int = Field(default=13, ge=1)
+    """最後可以報名的賽季日（含；#101 第 13 天截止）。"""
+    maps: tuple[str, ...] = Field(min_length=1, max_length=8)
+    """事先公布的地圖（9.7：3 張）。"""
+    seeds: int = Field(default=2, ge=1, le=8)
+    """每對組合 × 每張地圖的種子數；每個種子交換先後手各打 1 場。"""
+    max_rounds: int = Field(default=30, ge=1)
+    """到輪數上限＝和局。"""
+    batch_size: int = Field(default=10, ge=1)
+    """背景每批幾場（批與批之間讓出執行緒）。"""
+
+    @model_validator(mode="after")
+    def _maps(self) -> LeagueRules:
+        if len(set(self.maps)) != len(self.maps):
+            raise ValueError("循環賽的地圖重複")
+        return self
 
 
 class SealKeySource(ContentModel):
@@ -303,6 +339,8 @@ class SeasonContent(ContentModel):
     world_events: tuple[WorldEventDef, ...] = ()
     seal_keys: SealKeyRules = SealKeyRules()
     season_boss: SeasonBossDef | None = None
+    league: LeagueRules | None = None
+    """影子循環賽（Phase 5F-4）；``None``＝這一季沒有循環賽。"""
 
     @model_validator(mode="after")
     def _season(self) -> SeasonContent:
@@ -327,6 +365,8 @@ class SeasonContent(ContentModel):
         boss = self.season_boss
         if boss is not None and boss.unlock.close_day > self.days:
             late.append(f"{boss.id}（close_day）")
+        if self.league is not None and self.league.signup_close_day > self.days:
+            late.append("league.signup_close_day")
         if late:
             raise ValueError(f"超過賽季天數 {self.days}：{', '.join(late)}")
         if boss is not None:
@@ -454,13 +494,17 @@ def season_problems(
     weather_ids: Collection[str],
     region_ids: Collection[str],
     location_kinds: Collection[str],
+    battle_maps: Mapping[str, str] | None = None,
     units: Collection[str] = (),
     maps: Mapping[str, MapDef] | None = None,
 ) -> list[str]:
-    """跨檔案檢查（繁體中文、排序；空＝通過）。``units``／``maps``（Phase 5F-3）：賽季 Boss 的陣容與
-    Boss 地圖、封印鑰匙來源的單位。``region_ids`` 是區域表的區域（世界事件的建議等級
-    加成可以指向還沒有地點圖的區域，例如灰燼荒原）。"""
+    """跨檔案檢查（繁體中文、排序；空＝通過）。``region_ids`` 是區域表的區域（世界事件的建議等級
+    加成可以指向還沒有地點圖的區域，例如灰燼荒原）。``battle_maps`` 是戰鬥地圖 ID → 地圖類型
+    （循環賽的地圖檢查，5F-4；``None``＝不檢查）。``units``／``maps``（Phase 5F-3）：賽季 Boss 的
+    陣容與 Boss 地圖、封印鑰匙來源的單位。"""
     problems: list[str] = _boss_problems(season, units=units, maps=maps, catalog=catalog)
+    if season.league is not None and battle_maps is not None:
+        problems += _league_problems(season.league, battle_maps)
     rules = season.daily_goals
     for goal_def in () if rules is None else rules.goals:
         problems += _goal_problems(
@@ -490,3 +534,14 @@ def season_problems(
                 if b.region not in region_ids
             ]
     return sorted(problems)
+
+
+def _league_problems(league: LeagueRules, battle_maps: Mapping[str, str]) -> list[str]:
+    problems: list[str] = []
+    for map_id in league.maps:
+        archetype = battle_maps.get(map_id)
+        if archetype is None:
+            problems.append(f"循環賽的地圖 {map_id} 不存在")
+        elif archetype in LEAGUE_EXCLUDED_ARCHETYPES:
+            problems.append(f"循環賽的地圖 {map_id} 是 {archetype} 類地圖，不能用")
+    return problems

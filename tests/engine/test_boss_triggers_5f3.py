@@ -1,4 +1,4 @@
-"""Boss 階段的新觸發種類與護陣 ×0（Phase 5F-3；``docs/phases/Phase5計畫.md`` 36.3）。
+"""Boss 階段的新觸發種類與護陣 ×0（Phase 5F-3；``docs/phases/Phase5計畫.md`` 37.3）。
 
 都實際跑引擎：``tag_down``（同陣營帶標籤的單位倒下 N 名）、``round_at``（第 N 輪起）、護陣倍率 0
 （持有者在場時同門不受骰值傷害）。
