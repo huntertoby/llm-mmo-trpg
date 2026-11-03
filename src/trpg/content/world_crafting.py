@@ -281,8 +281,11 @@ def crafting_problems(
     items: Mapping[str, WorldItemDef],
     affixes: Mapping[str, AffixDef],
     keywords: Collection[str],
+    hint_texts: Mapping[str, Collection[str]] | None = None,
 ) -> list[str]:
-    """跨檔案問題。``locations``：區域 → 地點 → 地點種類；``npcs``：區域 → NPC → 地點。"""
+    """跨檔案問題。``locations``：區域 → 地點 → 地點種類；``npcs``：區域 → NPC → 地點；
+    ``hint_texts``（5F-5a）：區域 → 玩家看得到的傳聞文字（酒館傳聞、聊天、線頭），有地點圖的區域的
+    隱藏配方提示要出現在其中一段裡（``None``＝不檢查）。"""
     problems: list[str] = []
     for station in rules.stations:
         where = f"設施 {station.id}"
@@ -299,7 +302,30 @@ def crafting_problems(
             elif at != station.location:
                 problems.append(f"{where}：{station.npc} 不在 {station.location}")
     problems += _material_problems(rules, items, affixes, keywords)
+    problems += _hint_text_problems(rules, locations, hint_texts)
     return problems + _hidden_problems(rules, locations, affixes)
+
+
+def _hint_text_problems(
+    rules: CraftingRules,
+    locations: Mapping[str, Mapping[str, str]],
+    hint_texts: Mapping[str, Collection[str]] | None,
+) -> list[str]:
+    """隱藏配方提示接到傳聞（5F-5a；``hints_at`` 接口）：有地點圖的區域，提示文字要是該區某段
+    傳聞文字的一部分。"""
+    if hint_texts is None:
+        return []
+    problems: list[str] = []
+    for hidden in rules.hidden:
+        for hint in hidden.hints:
+            if hint.region not in locations:
+                continue
+            texts = hint_texts.get(hint.region, ())
+            if not any(hint.text_zh in text for text in texts):
+                problems.append(
+                    f"隱藏配方 {hidden.id}：提示「{hint.text_zh}」沒有出現在 {hint.region} 的傳聞裡"
+                )
+    return problems
 
 
 def _hidden_problems(
@@ -358,6 +384,7 @@ def load_world_crafting(
     items: Mapping[str, WorldItemDef],
     affixes: Mapping[str, AffixDef],
     keywords: Collection[str],
+    hint_texts: Mapping[str, Collection[str]] | None = None,
 ) -> CraftingRules | None:
     """載入 ``world/crafting.yaml``；不存在＝``None``（鐵匠與附魔台關閉）。"""
     path = root / CRAFTING_FILE
@@ -365,7 +392,13 @@ def load_world_crafting(
         return None
     rules = load_content_file(path, CraftingRules)
     problems = crafting_problems(
-        rules, locations=locations, npcs=npcs, items=items, affixes=affixes, keywords=keywords
+        rules,
+        locations=locations,
+        npcs=npcs,
+        items=items,
+        affixes=affixes,
+        keywords=keywords,
+        hint_texts=hint_texts,
     )
     if problems:
         raise ContentError(path, "；".join(problems))

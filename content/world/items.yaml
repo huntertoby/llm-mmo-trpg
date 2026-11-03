@@ -382,12 +382,13 @@ items:
     kind: material
     description_zh: 在鐵匠分解裝備得到；附魔台重骰、指定詞條用。
     price: 10
-  # 灰燼荒原的材料（19.2.4；隱藏配方 20.4 用）。荒原還沒有地點圖，先不標區域；荒原的掉落在荒原內容段。
+  # 灰燼荒原的材料（19.2.4；隱藏配方 20.4 用）。5F-5a 起標區域；荒原的掉落在 world/loot.yaml。
   - id: item_lava_core
     name_zh: 熔岩核
     kind: material
-    description_zh: 熔岩甲蟲體內的熔核；打造時偏向燃燒。
+    description_zh: 熔岩甲蟲、焦岩巨像體內的熔核；打造時偏向燃燒。
     price: 10
+    region: ashen_waste
   # 5D-2b（玩法 PM 2026-11-03 代決；19.2.4、20.2）：盜賊在各區都掉焦鐵（loot.yaml 的 families）
   - id: item_scorched_iron
     name_zh: 焦鐵
@@ -399,10 +400,31 @@ items:
     kind: material
     description_zh: 稀有材料。冰變體的寒燼蜥身上冷卻的灰燼；冰與火並存。
     price: 40
+    region: ashen_waste
     rare: true
   - id: item_molten_heart
     name_zh: 熔心晶
     kind: material
     description_zh: 稀有材料。灰燼之心的結晶；獨特效果配方的關鍵材料。
     price: 40
+    region: ashen_waste
     rare: true
+  # 5F-5a：灰燼荒原的其他材料（19.2.4）。黑曜片是荒原特產（20.1：餘燼集每週限購 5）。
+  - id: item_ember_feather
+    name_zh: 餘燼羽
+    kind: material
+    description_zh: 火塵蝠翅膜上還透著火光的羽片；打造時偏向火與高處。
+    price: 10
+    region: ashen_waste
+  - id: item_sulfur_crystal
+    name_zh: 硫磺結晶
+    kind: material
+    description_zh: 硫煙獸身上凝出的黃色結晶；打造時偏向中毒與煙霧。
+    price: 10
+    region: ashen_waste
+  - id: item_obsidian_shard
+    name_zh: 黑曜片
+    kind: material
+    description_zh: 灰燼荒原的特產，枯木林與焦油坑邊撿得到的黑曜石片；打造時偏向爆擊與流血。每週限購 5 個。
+    price: 25
+    region: ashen_waste

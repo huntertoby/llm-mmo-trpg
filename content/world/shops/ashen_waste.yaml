@@ -1,0 +1,30 @@
+# 灰燼荒原的區域商人（Phase 5F-5a；schema：src/trpg/content/world_economy.py）。
+# 商品、價格（在 world/items.yaml）、好感度門檻、特產每週限購依 docs/design/20-第一季商店與裝備內容.md 20.1
+# 的「餘燼集（鐵娘）」欄（玩法 PM 代決 #119）：沒有霧瓶；冰瓶友善；火瓶；黑曜片每週限購 5（中立）。
+# 08 8.26.1：只賣消耗品、粗料、外觀染料；區域特產每週限量（每個角色各自算，代決 5D1-6）。
+# affinity：照柳記雜貨（消費一次鐵娘好感度 +2、每天最多 +4；開發 PM 定）。店名 20.1 沒寫，開發 PM 定。
+region: ashen_waste
+shops:
+  - id: shop_iron_lady
+    name_zh: 鐵娘的廢鐵攤
+    npc: iron_lady
+    stock:
+      - {item: item_hp_potion_small}
+      - {item: item_hp_potion_medium, rank: neutral}
+      - {item: item_mana_potion}
+      - {item: item_antidote_herb}
+      - {item: item_water_flask}
+      - {item: item_oil_flask}
+      - {item: item_frost_flask, rank: friendly}
+      - {item: item_fire_flask}
+      - {item: item_supplies}
+      - {item: item_coarse_material}
+      - {item: item_dye_indigo}
+      - {item: item_dye_cinnabar}
+      - {item: item_dye_ink}
+      - {item: item_dye_jade}
+      - {item: item_dye_ochre}
+      - {item: item_dye_snow}
+    weekly:
+      - {item: item_obsidian_shard, min: 5, max: 5, rank: neutral}
+    affinity: {per_purchase: 2, daily_max: 4}

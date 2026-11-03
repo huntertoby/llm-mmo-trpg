@@ -1,0 +1,62 @@
+# 灰燼荒原 NPC 人設卡（Phase 5F-5a；schema：src/trpg/content/world_events.py）。
+# 來源：docs/design/19-灰燼荒原與賽季主線.md 19.5（#118，玩法 PM 代決、待使用者確認）。
+# 開發 PM 自定：ID；location 對到地點圖。阿岳沿用雲嶺的卡（劇情夥伴跟著任務走）；碎晶之主在裂界門，
+# 裂界門不在地點圖上，所以不建卡（代決 5F5a-10）。
+# 爐叔的卡由 world/pending/ashen_waste.yaml 搬來（Phase 5D-3b，代決 5D3b-5；ID smith_lu、地點 ember_market）。
+# secret_zh 只給說書人參考，不直接顯示給玩家；人設卡只影響對話與劇情，不影響數值（9.6.7 #3、#5）。
+region: ashen_waste
+npcs:
+  - id: iron_lady
+    aliases_zh: [鐵娘, 主事]
+    name_zh: 鐵娘
+    role_zh: 餘燼集主事、商人
+    location: ember_market
+    personality_zh: 豪爽、強硬
+    speech_zh: 粗獷、愛罵人但心軟
+    secret_zh: 丈夫是斷崖幫荒原分隊長
+    hooks_zh: 區域任務鏈；餘燼集的商店（20.1）
+  - id: greybeard
+    aliases_zh: [灰鬚, 導師]
+    name_zh: 灰鬚
+    role_zh: 技能導師
+    location: ember_market
+    personality_zh: 冷淡、實際
+    speech_zh: 短句，只說重點
+    secret_zh: 曾是源晶研究者，碎界時在場
+    hooks_zh: 導師任務鏈；主線第 3 章揭露碎晶之主的來歷
+  - id: smith_lu
+    aliases_zh: [爐叔, 鐵匠]
+    name_zh: 爐叔
+    role_zh: 鐵匠
+    location: ember_market
+    personality_zh: 熱心、話多
+    speech_zh: 大嗓門、愛講當年
+    secret_zh: 和鐵爐村的鐵匠是師兄弟，吵翻了
+    hooks_zh: 鐵匠與附魔台；事件 8 的延伸
+  - id: scavenger_laotie
+    aliases_zh: [老鐵, 拾荒者]
+    name_zh: 老鐵
+    role_zh: 拾荒者
+    location: old_iron_post
+    personality_zh: 貪財、膽小
+    speech_zh: 嘮叨，句尾愛加「嘿」
+    secret_zh: 知道黑曜谷在哪
+    hooks_zh: 事件 1；隱藏地點黑曜谷
+  - id: priestess_helin
+    aliases_zh: [赫琳, 祭司]
+    name_zh: 赫琳
+    role_zh: 角魔祭司
+    location: horned_altar
+    personality_zh: 狂熱、驕傲
+    speech_zh: 莊重、宗教語氣
+    secret_zh: 想讓灰燼之心「覺醒」
+    hooks_zh: 主線第 2 章轉折（她是幫兇）
+  - id: overseer_scar
+    aliases_zh: [鍛疤, 督工]
+    name_zh: 鍛疤
+    role_zh: 熔爐督工
+    location: overseer_camp
+    personality_zh: 殘忍、精明
+    speech_zh: 命令句
+    secret_zh: 偷偷把碎片賣給柳掌櫃（雲嶺）
+    hooks_zh: 懸賞「熔爐督工」；串起兩區的盜賊線

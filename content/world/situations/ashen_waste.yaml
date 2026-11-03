@@ -1,0 +1,254 @@
+# 灰燼荒原情境模板（Phase 5F-5a；schema：src/trpg/content/world_situations.py）。
+# 來源：docs/design/19-灰燼荒原與賽季主線.md 19.4 每個「情境判定」解法一個模板（skeleton＋solution＝骨架與解法索引，0 起）。
+# 寫法同 situations/cloud_ridge.yaml：attributes 開頭＝19.4 解法的屬性，第 2 種從 09 9.6.11 方法表同一類的常見屬性補；
+# methods 每個屬性都有一個方法能用（9.6.11 #115）。開發 PM 定的初值（之後模擬定）：base_dc（約 10＋地點建議等級的一半）、
+# danger、weaknesses（用心清單 ④，照骨架的阻礙推定）、三段獎懲、哪個結果留哪條線頭。
+# 獎懲必須在 situation_rules.yaml 的預算與危險度內（載入時檢查）；xp_permille 乘地點的等級 xp 預算。
+# 狀態 ID：buff empowered／guarded／rallied；debuff weaken／poison／bleed（statuses.yaml）。
+region: ashen_waste
+templates:
+  - id: laotie_disarm
+    skeleton: laotie_dig
+    solution: 1
+    note_zh: 繞開蜥巢，把舊機械安全拆出來
+    methods: [mechanism, finesse]
+    attributes: [int, dex]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: lizards_sleep_in_heat, text_zh: 餘燼蜥白天熱的時候都窩在巢裡不動, methods: [mechanism, finesse], aliases_zh: [窩在巢裡, 蜥蜴在睡]}
+    success: {rewards: {xp_permille: 1000, supplies: 1, threads: [laotie_knows_valley]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [laotie_knows_valley]}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200, debuffs: [weaken]}}
+
+  - id: caravan_shortcut
+    skeleton: water_caravan
+    solution: 1
+    note_zh: 替運水隊找一條避開灰燼犬的捷徑
+    methods: [tracking, lore]
+    attributes: [wis, int]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: hounds_hate_mud, text_zh: 灰燼犬不肯踩進濕泥, methods: [tracking], aliases_zh: [濕泥, 泥地]}
+    success: {rewards: {xp_permille: 1000, threads: [ash_well_owes_you]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [ash_well_owes_you]}
+      penalties: {supplies: 1}
+    failure: {penalties: {supplies: 1, hurt_permille: 150}}
+
+  - id: deserter_sneak
+    skeleton: ashen_deserter
+    solution: 1
+    note_zh: 帶逃兵避開追兵，潛回往雲嶺的路
+    methods: [stealth, endurance]
+    attributes: [dex, con]
+    base_dc: 14
+    danger: 3
+    weaknesses:
+      - {id: smoke_from_deadwood, text_zh: 枯木林的焦煙能遮住人影, methods: [stealth], aliases_zh: [焦煙, 煙霧]}
+    success: {rewards: {xp_permille: 1000, threads: [convoy_timetable]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [convoy_timetable]}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 200, reinforce: true}}
+
+  - id: pilgrim_commune
+    skeleton: horned_pilgrim
+    solution: 1
+    note_zh: 對著聖火靜心，和火溝通
+    methods: [uncanny, lore]
+    attributes: [wil, int]
+    base_dc: 14
+    danger: 2
+    weaknesses:
+      - {id: fire_answers_calm, text_zh: 聖火只回應不怕它的人, methods: [uncanny], aliases_zh: [不怕火, 不怕它]}
+    success: {rewards: {xp_permille: 1000, threads: [altar_fire_guides], buffs: [empowered]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [altar_fire_guides]}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200}}
+
+  - id: bandit_bargain
+    skeleton: burned_bandit
+    solution: 1
+    note_zh: 跟燒傷的盜賊談條件，換他知道的情報
+    methods: [parley, intimidate]
+    attributes: [wil, str]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: bandit_afraid_to_die, text_zh: 他怕死，更怕被同伴丟下, methods: [parley, intimidate], aliases_zh: [怕死, 被丟下]}
+    success: {rewards: {xp_permille: 1000, threads: [bandit_wants_out]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: well_mechanism
+    skeleton: cooling_well_relic
+    solution: 0
+    note_zh: 修好古代的冷卻裝置
+    methods: [mechanism, force]
+    attributes: [int, str]
+    base_dc: 14
+    danger: 2
+    weaknesses:
+      - {id: well_valve_rusted, text_zh: 總閥只是被灰燼卡住了, methods: [mechanism, force], aliases_zh: [總閥, 卡住]}
+    success: {rewards: {xp_permille: 1000, threads: [well_flowing]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200}}
+
+  - id: well_lore
+    skeleton: cooling_well_relic
+    solution: 1
+    note_zh: 從井壁的古文找出啟動的方法
+    methods: [lore, notice]
+    attributes: [int, wis]
+    base_dc: 14
+    danger: 1
+    weaknesses:
+      - {id: well_carvings, text_zh: 井壁刻著水流的方向, methods: [lore, notice], aliases_zh: [井壁, 刻痕]}
+    success: {rewards: {xp_permille: 1000, threads: [well_flowing]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: brood_sneak
+    skeleton: furnace_brood
+    solution: 1
+    note_zh: 繞過產卵的熔爐母獸
+    methods: [stealth, notice]
+    attributes: [dex, wis]
+    base_dc: 14
+    danger: 3
+    weaknesses:
+      - {id: matriarch_watches_eggs, text_zh: 母獸只顧著盯著卵, methods: [stealth, notice], aliases_zh: [盯著卵, 顧著卵]}
+    success: {rewards: {xp_permille: 1000, threads: [brood_spreading]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [brood_spreading]}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 250, reinforce: true}}
+
+  - id: sandstorm_endure
+    skeleton: sandstorm
+    solution: 0
+    note_zh: 在沙暴裡硬撐著往前走
+    methods: [endurance, force]
+    attributes: [con, str]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: storm_lulls, text_zh: 沙暴每隔一陣會停一下, methods: [endurance], aliases_zh: [停一下, 停頓]}
+    success: {rewards: {xp_permille: 1000}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {supplies: 1}
+    failure: {penalties: {supplies: 1, hurt_permille: 150}}
+
+  - id: sandstorm_track
+    skeleton: sandstorm
+    solution: 1
+    note_zh: 在沙暴裡認出回去的路
+    methods: [tracking, lore]
+    attributes: [wis, int]
+    base_dc: 13
+    danger: 1
+    weaknesses:
+      - {id: storm_old_rails, text_zh: 舊鐵軌一路通往餘燼集, methods: [tracking, lore], aliases_zh: [舊鐵軌, 鐵軌]}
+    success: {rewards: {xp_permille: 1000}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {penalties: {supplies: 2}}
+
+  - id: stele_read
+    skeleton: fortress_stele
+    solution: 0
+    note_zh: 讀懂廢墟要塞石碑上的古文
+    methods: [lore, uncanny]
+    attributes: [int, wil]
+    base_dc: 15
+    danger: 1
+    weaknesses:
+      - {id: stele_core_glyph, text_zh: 碑上反覆出現同一個核心的符號, methods: [lore], aliases_zh: [同一個符號, 核心的符號]}
+    success: {rewards: {xp_permille: 1000, threads: [core_breathes]}}
+    partial: {rewards: {xp_permille: 500, threads: [core_breathes]}}
+    failure: {penalties: {supplies: 1}}
+
+  - id: stele_find_half
+    skeleton: fortress_stele
+    solution: 1
+    note_zh: 在要塞裡找出石碑的另一半
+    methods: [notice, force]
+    attributes: [wis, str]
+    base_dc: 15
+    danger: 2
+    weaknesses:
+      - {id: stele_under_rubble, text_zh: 另一半壓在倒塌的城牆下, methods: [notice, force], aliases_zh: [城牆下, 倒塌的城牆]}
+    success: {rewards: {xp_permille: 1000, threads: [core_breathes]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [core_breathes]}
+      penalties: {hurt_permille: 100}
+    failure: {penalties: {hurt_permille: 200}}
+
+  - id: pup_track
+    skeleton: lost_pup
+    solution: 0
+    note_zh: 循著小小的腳印找走失的幼犬
+    methods: [tracking, lore]
+    attributes: [wis, int]
+    base_dc: 13
+    danger: 2
+    weaknesses:
+      - {id: pup_whimpers, text_zh: 幼犬餓了會一直嗚嗚叫, methods: [tracking], aliases_zh: [嗚嗚叫, 叫聲]}
+    success: {rewards: {xp_permille: 1000, threads: [pup_follows]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {supplies: 1}
+    failure: {penalties: {hurt_permille: 150}}
+
+  - id: ashen_convoy_steal
+    skeleton: ashen_convoy
+    solution: 1
+    note_zh: 趁運輸隊換班，偷走一批碎片
+    methods: [finesse, stealth, notice]
+    attributes: [dex, wis]
+    base_dc: 15
+    danger: 3
+    weaknesses:
+      - {id: convoy_shift_change, text_zh: 時刻表上寫著換班的時間, methods: [finesse, stealth], aliases_zh: [換班, 時刻表]}
+    success: {rewards: {xp_permille: 1000, threads: [convoy_intercepted]}}
+    partial:
+      rewards: {xp_permille: 500, threads: [convoy_intercepted]}
+      penalties: {hurt_permille: 150}
+    failure: {penalties: {hurt_permille: 250, reinforce: true}}
+
+  - id: veteran_listen
+    skeleton: tavern_veteran
+    solution: 0
+    note_zh: 聽老兵講碎界那天的事，回他一段自己的故事
+    methods: [parley, lore]
+    attributes: [wil, int]
+    base_dc: 12
+    danger: 1
+    weaknesses:
+      - {id: veteran_lost_squad, text_zh: 老兵那天失去了整支小隊, methods: [parley], aliases_zh: [小隊, 戰友]}
+    success: {rewards: {xp_permille: 1000, threads: [rift_gate_rumor]}}
+    partial: {rewards: {xp_permille: 500}}
+    failure: {}
+
+  - id: noon_altar_endure
+    skeleton: noon_altar
+    solution: 1
+    note_zh: 頂著烈日走上滾燙的祭壇
+    methods: [endurance, uncanny]
+    attributes: [con, wil]
+    base_dc: 15
+    danger: 2
+    weaknesses:
+      - {id: altar_shadow_side, text_zh: 祭壇北側有一道陰影, methods: [endurance, uncanny], aliases_zh: [陰影, 北側]}
+    success: {rewards: {xp_permille: 1000, buffs: [empowered]}}
+    partial:
+      rewards: {xp_permille: 500}
+      penalties: {hurt_permille: 150}
+    failure: {penalties: {hurt_permille: 250}}

@@ -1,0 +1,47 @@
+# 灰燼荒原的聊天內容、事件好感度與酒館傳聞（Phase 5F-5a；schema：src/trpg/content/world_quests.py）。
+# 寫法同 social/cloud_ridge.yaml：級別（玩法 PM 定，2026-11-03，照 #85 2a）中立給一般傳聞、友善給隱藏任務入口、信賴才說人設卡的祕密。
+# 內容取自 19.4、19.5（#118 待使用者確認）；文字、事件好感度數值、傳聞池是開發 PM 定（代決 5F5a-*）。
+# 聊天與傳聞只是資訊：不給線頭、不揭露地點、不給道具經驗（9.6.7 #3、#6）。
+# 20.4 的兩個隱藏配方提示（只說材料的意象，不說配方；world/crafting.yaml 的 hints，載入時檢查文字有出現）：
+#   - 蒸汽護腕（霧晶＋熔岩核）：餘燼集酒館「霧與火相遇之處」＝酒館傳聞 rumor_mist_meets_fire。
+#   - 冰火雙生戒（寒燼＋熔心晶）：餘燼集傳聞「冰與火在同一隻蜥蜴身上」＝餘燼集爐叔的聊天傳聞 smith_lu_rumor。
+region: ashen_waste
+talk:
+  # 鐵娘（餘燼集主事、商人）
+  - {id: iron_lady_rumor, npc: iron_lady, rank: neutral, kind: rumor, text_zh: 斷崖幫的運輸隊最近天天走運輸道，車上的東西蓋得緊緊的，她罵了一句「準沒好事」}
+  - {id: iron_lady_secret, npc: iron_lady, rank: trusted, kind: secret, text_zh: 她的丈夫就是斷崖幫荒原分隊的隊長，她嘴上罵他，其實一直在等他回頭}
+  # 灰鬚（技能導師）
+  - {id: greybeard_rumor, npc: greybeard, rank: neutral, kind: rumor, text_zh: 他只說了一句：「熔心坑底下那東西，在呼吸。」}
+  - {id: greybeard_secret, npc: greybeard, rank: trusted, kind: secret, text_zh: 他曾是研究源晶的人，碎界那天就站在核心旁邊}
+  # 爐叔（鐵匠）。20.4「冰與火在同一隻蜥蜴身上」：只說材料的意象，不說配方
+  - {id: smith_lu_rumor, npc: smith_lu, rank: neutral, kind: rumor, text_zh: 他扯著嗓子說，這輩子見過最怪的東西，是冰與火在同一隻蜥蜴身上}
+  - {id: smith_lu_secret, npc: smith_lu, rank: trusted, kind: secret, text_zh: 他和鐵爐村的鐵匠是師兄弟，當年為了一份祖傳配方吵翻了，到現在都不說話}
+  # 老鐵（拾荒者）
+  - {id: laotie_rumor, npc: scavenger_laotie, rank: neutral, kind: rumor, text_zh: 灰裡埋著好多舊機械，挖得出來就是錢，嘿，就是餘燼蜥愛在上面做窩}
+  - {id: laotie_secret, npc: scavenger_laotie, rank: trusted, kind: secret, text_zh: 他知道焦油坑後面那道峽谷怎麼進去，只是怕得要命，嘿}
+  # 赫琳（角魔祭司）
+  - {id: helin_rumor, npc: priestess_helin, rank: neutral, kind: rumor, text_zh: 她說祭壇的聖火很久沒有這麼旺過了，那是「心」在甦醒的徵兆}
+  - {id: helin_secret, npc: priestess_helin, rank: trusted, kind: secret, text_zh: 她想讓灰燼之心完全覺醒，好讓角魔重新得到火的眷顧}
+  # 鍛疤（熔爐督工）
+  - {id: overseer_rumor, npc: overseer_scar, rank: neutral, kind: rumor, text_zh: 督工營裡有人用鐵鍊牽著熔岩甲蟲，說是要拿去撞開什麼東西}
+  - {id: overseer_secret, npc: overseer_scar, rank: trusted, kind: secret, text_zh: 他偷偷把一部分碎片賣給雲嶺的柳掌櫃，連斷崖幫自己人都不知道}
+
+# 事件結果 → 好感度（開發 PM 定初值，同雲嶺的級距）。
+event_affinity:
+  - {skeleton: horned_pilgrim, outcome: success, npc: priestess_helin, delta: 10}   # 19.4 #4 賭注「角魔的好感度」
+  - {skeleton: laotie_dig, outcome: success, npc: scavenger_laotie, delta: 10}      # 19.4 #1 替老鐵挖出舊機械
+  - {skeleton: burned_bandit, outcome: success, npc: iron_lady, delta: 10}          # 救了斷崖幫的人，鐵娘嘴硬心軟
+  - {skeleton: forge_smith, outcome: success, npc: smith_lu, delta: 10}             # 19.5 爐叔：事件 8 的延伸
+
+# 餘燼集酒館的傳聞池（9.6.7 #1：指向機遇或隱藏地點的線索）。只是文字。
+rumors:
+  - {id: rumor_noon_altar, skeleton: noon_altar, text_zh: 有人說晴天正午站在角魔古祭壇旁，帶著火的招式會跟著燒得更旺}
+  - {id: rumor_mist_meets_fire, text_zh: 老兵喝多了就唸叨：好東西都藏在霧與火相遇之處}   # 20.4 蒸汽護腕的提示
+  - {id: rumor_cooling_well, skeleton: cooling_well_relic, text_zh: 舊鐵哨站後面那口冷卻井據說還能出水，只是沒人會修}
+  - {id: rumor_lava_cave, location: lava_cave, text_zh: 熔岩洞窟裡有一隻背著熔岩池的大甲蟲，靠近的人都被燙傷了}
+  - {id: rumor_stele, skeleton: fortress_stele, text_zh: 廢墟要塞的石碑缺了一半，聽說另一半壓在倒塌的城牆底下}
+  - {id: rumor_convoy, skeleton: ashen_convoy, text_zh: 斷崖幫的運輸隊每隔幾天就往熔心坑送一批發光的碎片}
+
+# 賽季第 6 天起，還沒遇過機遇的角色抵達餘燼集、或在餘燼集的酒館時，說書人順口提一句（同雲嶺，代決 5B4e-3）。
+opportunity_hints:
+  - {location: ember_market, from_day: 6, text_zh: 酒館的老兵順口提了一句：「角魔那座祭壇，正午的時候燙得不得了。」}

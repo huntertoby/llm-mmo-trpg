@@ -58,9 +58,24 @@ regions:
       thunder_hawk: item_thunder_feather        # 雷羽鷹 → 雷羽
     elite_affixes:
       regenerating: item_living_bone            # 「再生的」精英 → 活血骨（稀有）
+  ashen_waste:
+    # 20.2：荒原的詞條偏向點燃、倒地、中毒（ID 照 skill_keywords.yaml）
+    keywords: [ignite, prone, poisoned]
+    # 19.2.4 的來源（5F-5a）；盜賊照上面各區共用的焦鐵，沒列的敵人掉通用料
+    families:
+      lava_beetle: item_lava_core               # 熔岩甲蟲 → 熔岩核
+      thunder_shell_beetle: item_lava_core      # 雷殼甲蟲（熔岩甲蟲的變體）→ 熔岩核
+      molten_lord: item_lava_core               # 熔核領主（巨型熔岩甲蟲）→ 熔岩核
+      scorched_colossus: item_lava_core         # 焦岩巨像 → 熔岩核
+      fire_dust_bat: item_ember_feather         # 火塵蝠 → 餘燼羽
+      sulfur_beast: item_sulfur_crystal         # 硫煙獸 → 硫磺結晶
+      frost_ember_lizard: item_frost_ember      # 寒燼蜥（冰變體）→ 寒燼（稀有）
+      ashen_gunner: item_scorched_iron          # 斷崖幫火槍手（盜賊弓手的變體）→ 焦鐵
+      forge_scar: item_scorched_iron            # 熔爐督工鍛疤（盜賊隊長的變體）→ 焦鐵
 
 # 區域 Boss 的保底掉落（Phase 5F-3；20.2「區域 Boss 必掉 1 件史詩」、18.2.3 霧鎖真人掉雲頂霧晶）。
 # 重複挑戰不限次數（Boss 地點不寫已清空）；保底只在每角色每個刷新日第一次打倒時（代決 5F3-15）：
 # 這名 Boss 的材料換成 material、裝備換成 gear_rarity；同一天之後照一般精英（必掉 1 件、史詩 50%）。
 bosses:
   sect_mist_lock_master: {material: item_summit_mist_crystal, gear_rarity: epic}
+  ashen_heart: {material: item_molten_heart, gear_rarity: epic}   # 5F-5a：灰燼之心 → 熔心晶（19.2.3、19.2.4）
