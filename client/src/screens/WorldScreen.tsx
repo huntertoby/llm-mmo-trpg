@@ -64,6 +64,7 @@ import { LeaguePanel } from "../world/LeaguePanel";
 import { replayNotes } from "../world/league";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
+import { FriendCard, HudHirePanel, HudNpcPanel } from "../world/FieldPanels";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
@@ -130,6 +131,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
+  /** `npc`／`friend` 面板的對象（NPC ID 或影子主人的角色 ID；6B-4）。 */
+  const [hudWho, setHudWho] = useState<string | null>(null);
   const [toasts, setToasts] = useState<HudToast[]>([]);
   const toastSeq = useRef(0);
   /** 這次進入角色後已經到過的地點（第一次進入有限制的地點時跳紅框提示）。 */
@@ -359,14 +362,16 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
-  /** HUD 版面：互動改成開對應的浮動面板；這裡的人、雇用在「這裡」面板裡，開了再捲到那張卡。 */
+  /** HUD 版面：互動改成開對應的浮動面板（同時只開一個）；NPC、雇用、朋友各有自己的面板（6B-4），不再捲動整頁。 */
   function interactHud(target: FieldTarget) {
-    const reveal = (selector: string) => {
-      setHudPanel("place");
-      window.setTimeout(() => revealInPanel(selector), 60);
-    };
     if (target.kind === "npc") {
-      reveal(`[data-npc="${target.npc}"]`);
+      setHudWho(target.npc);
+      setHudPanel("npc");
+      return;
+    }
+    if (target.kind === "friend") {
+      setHudWho(target.owner);
+      setHudPanel("friend");
       return;
     }
     const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth" };
@@ -378,7 +383,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     if (target.facility === "tavern") {
       act({ kind: "tavern" });
       setHudPanel("place");
-    } else if (target.facility === "hire") reveal('[data-testid="world-hire-toggle"]');
+    } else if (target.facility === "hire") setHudPanel("hire");
   }
 
   /** 走到設施或 NPC 旁邊互動：開原本的面板（6B-4 前的最小版）。 */
@@ -391,6 +396,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       revealInPanel(`[data-npc="${target.npc}"]`);
       return;
     }
+    if (target.kind === "friend") return; // 朋友只站在實地地圖（HUD 版面）上
     switch (target.facility) {
       case "shop":
         setWant("shop");
@@ -539,6 +545,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             <NpcPanel view={v} busy={busy} chats={chats} onAct={act} onChat={chat} />
           </div>
         );
+      case "npc":
+        return hudWho === null ? null : <HudNpcPanel key={hudWho} view={v} npc={hudWho} busy={busy} chats={chats} onAct={act} onChat={chat} />;
+      case "hire":
+        return <HudHirePanel view={v} busy={busy} onAct={act} />;
+      case "friend":
+        return hudWho === null ? null : <FriendCard key={hudWho} view={v} owner={hudWho} />;
       case "shop":
         return <WorldShopScreen view={v} busy={busy} onAct={act} onClose={closeHud} />;
       case "smithy":

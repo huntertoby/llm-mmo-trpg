@@ -12,8 +12,23 @@ import { growthBadge } from "./growth";
 // ---------------- 功能列、面板、快捷鍵 ----------------
 
 /** 浮動面板（同時只開一個）。前 6 個是功能列的；`place`＝點地名條開的「這裡」（服務、這裡的人）；
- * `shop`、`smithy`、`board`、`league` 是走到設施旁邊互動時開的現有畫面。 */
-export type HudPanel = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "place" | "shop" | "smithy" | "board" | "league";
+ * `shop`、`smithy`、`board`、`league` 是走到設施旁邊互動時開的現有畫面；`npc`（一位 NPC 的對話）、`hire`（雇用）、
+ * `friend`（朋友的名片）是 6B-4 走到人或櫃檯旁邊開的面板（對象另外記）。 */
+export type HudPanel =
+  | "bag"
+  | "skills"
+  | "growth"
+  | "quests"
+  | "shadow"
+  | "notes"
+  | "place"
+  | "shop"
+  | "smithy"
+  | "board"
+  | "league"
+  | "npc"
+  | "hire"
+  | "friend";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 
@@ -78,6 +93,8 @@ export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
       return view.crafting != null;
     case "shadow":
       return view.party != null || view.my_shadow != null;
+    case "hire":
+      return view.party != null;
     default:
       return true;
   }

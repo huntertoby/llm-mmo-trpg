@@ -76,6 +76,8 @@ class ChronicleHeroView(_ApiModel):
     name: str
     text_zh: str
     titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
+    character_id: str | None = None
+    """角色 ID（6B-4：城裡朋友的名片只列他的紀錄）。"""
 
 
 class ChronicleRecipeView(_ApiModel):
@@ -88,6 +90,7 @@ class ChronicleKillView(_ApiModel):
     target_name_zh: str
     name: str
     titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
+    character_id: str | None = None
 
 
 class ChronicleRankView(_ApiModel):
@@ -107,6 +110,7 @@ class ChronicleBoardView(_ApiModel):
     rounds: int
     title_zh: str
     titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
+    character_id: str | None = None
 
 
 class ChronicleSeasonView(_ApiModel):
@@ -191,6 +195,7 @@ def _season_view(
             ChronicleHeroView(
                 name=h.name,
                 text_zh=h.text_zh,
+                character_id=h.character_id,
                 titles=list(
                     titles.of_character(h.character_id, season_id)
                     if h.account_id is None
@@ -210,6 +215,7 @@ def _season_view(
                 kind=k.kind,
                 target_name_zh=k.target_name_zh,
                 name=k.name,
+                character_id=k.character_id,
                 titles=list(titles.of_character(k.character_id, season_id)),
             )
             for k in kills
@@ -232,6 +238,7 @@ def _season_view(
         boss_board=[
             ChronicleBoardView(
                 name=b.name,
+                character_id=b.character_id,
                 score=b.score,
                 rounds=b.rounds,
                 title_zh=b.title_zh,
