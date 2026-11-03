@@ -199,11 +199,12 @@ def grow_allies(
 
 
 def enemy_level(library: ContentLibrary, encounter: EncounterResult) -> int:
-    """敵人的等級：遭遇地點建議等級的 ``level_min``（代決 5A4-5）。"""
+    """敵人的等級：遭遇地點建議等級的 ``level_min``（代決 5A4-5）＋遇敵當下該區的建議等級加成
+    （Phase 5F-1，世界事件失敗 +1）。"""
     location = world_map_of(library, encounter.region).location_by_id().get(encounter.location)
     if location is None or location.level_min is None:
-        return encounter.level
-    return location.level_min
+        return encounter.level + encounter.level_bonus
+    return location.level_min + encounter.level_bonus
 
 
 def grow_enemy(

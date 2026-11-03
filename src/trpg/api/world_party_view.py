@@ -26,7 +26,7 @@ from trpg.world.actions import (
     ShadowSavedEvent,
     WorldEvent,
 )
-from trpg.world.clock import refresh_day
+from trpg.world.calendar import day_of
 from trpg.world.common import world_map_of
 from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
@@ -248,7 +248,7 @@ def report_line(
     """一則戰報（例「第 3 天：你的影子幫小美在竹林小徑打倒了霧狼 ×3（+1 任務幣）」；天數從賽季開始
     那天算第 1 天，早上 6 點刷新）。地點是朋友打的：看的人（影子主人 ``viewer``）還沒發現的隱藏地點
     用提示語（5C-3f）。"""
-    day = max(1, report.day - refresh_day(season_start) + 1)
+    day = max(1, report.day - day_of(library, season_start) + 1)
     where = location_name_for(library, viewer, report.region, report.location)
     coins = f"（+{report.coins} 任務幣）" if report.coins else ""
     if report.won:

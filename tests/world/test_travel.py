@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.world.helpers import NOON, make_world, with_rules
+from tests.world.helpers import NOON, make_world, with_rules, without_season
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import (
     EncounterCheckEvent,
@@ -35,7 +35,7 @@ def test_travel_to_neighbor(calm: ContentLibrary, make_char: MakeChar) -> None:
     char = make_char()
     result = world_step(calm, world, char, TravelAction(to="hunter_hut"), NOON)
     assert result.char.location == "hunter_hut"
-    assert result.world == world
+    assert without_season(result.world) == world
     assert isinstance(result.events[0], TraveledEvent)
     check = result.events[1]
     assert isinstance(check, EncounterCheckEvent)

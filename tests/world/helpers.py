@@ -44,6 +44,15 @@ def make_world(**updates: Any) -> WorldState:
     return WorldState.model_validate(data)
 
 
+SEASON_BOOKKEEPING: dict[str, Any] = {"rolled_day": None, "activity": (), "world_events": ()}
+"""5F-1 每個動作都會寫的賽季紀錄（換日、上線紀錄、世界事件）；比較「其他世界欄位不變」時拿掉。"""
+
+
+def without_season(world: WorldState) -> WorldState:
+    """拿掉換日與上線紀錄（見 :data:`SEASON_BOOKKEEPING`）。"""
+    return world.model_copy(update=SEASON_BOOKKEEPING)
+
+
 def make_encounter(
     location: str,
     *,

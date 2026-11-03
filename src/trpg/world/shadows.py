@@ -31,7 +31,7 @@ from trpg.world.actions import (
     WorldAction,
     WorldEvent,
 )
-from trpg.world.clock import refresh_day
+from trpg.world.calendar import day_of
 from trpg.world.common import here
 from trpg.world.economy_actions import EquipAction
 from trpg.world.encounters import EncounterLineup
@@ -254,7 +254,7 @@ def record_lent(
     table = library.world_mercenaries
     coins = 0 if table is None else table.shadow_daily_coins
     kept = 20 if table is None else table.shadow_reports_kept
-    day = refresh_day(now)
+    day = day_of(library, now)
     events: list[WorldEvent] = []
     for snapshot in borrower.shadows:
         record = world.shadow_of(snapshot.owner)

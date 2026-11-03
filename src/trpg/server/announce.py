@@ -1,8 +1,9 @@
 """Discord 公告的資料與文字（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.6）。
 
-- :func:`daily_digest`：讀世界存檔（**唯讀**）算出今日公告要的數字。今日目標、世界事件全服進度是
-  5F-1 的資料：這裡只留接口（:class:`DailyGoalsSource`、:class:`WorldEventSource`；
-  ``None``＝沒有資料，模板寫「尚未開放」；代決 5E3-2）。
+- :func:`daily_digest`：讀世界存檔（**唯讀**）算出今日公告要的數字。今日目標、世界事件全服進度走
+  接口（:class:`DailyGoalsSource`、:class:`WorldEventSource`；``None``＝沒有資料，模板寫「尚未
+  開放」；代決 5E3-2）；5F-1 的真資料是 :class:`SeasonAnnouncements`，``AnnouncementSource`` 有
+  內容庫時預設接上。
 - 文字一律走模板（``content/world/announcements.yaml``；5E-4 再預產 LLM 文字）。
 - 玩家文字（角色名）一律當資料：:func:`safe_text` 中和 Discord 提及、換行換空白、截長度。
 - :class:`AnnouncementSource`：Bot（另一個程序）用它取公告文字；只讀世界資料夾，不寫。
@@ -26,8 +27,11 @@ from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.roguelite.save import default_save_dir
 from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, load_first_kills
+from trpg.world.calendar import day_of
+from trpg.world.calendar import season_day as calendar_season_day
 from trpg.world.clock import refresh_day
 from trpg.world.save import loads_log, loads_world
+from trpg.world.season_board import daily_goals_for, players_on, roll_season
 from trpg.world.state import WorldState
 
 __all__ = [
@@ -37,6 +41,7 @@ __all__ = [
     "DailyDigest",
     "DailyGoal",
     "DailyGoalsSource",
+    "SeasonAnnouncements",
     "WorldEventProgress",
     "WorldEventSource",
     "daily_digest",
@@ -171,24 +176,62 @@ def _active_on(world_dir: Path, day: int) -> int:
     return len({e.character_id for e in loads_log(text) if refresh_day(e.now) == day})
 
 
+class SeasonAnnouncements:
+    """今日目標與世界事件進度的真資料（Phase 5F-1）：實作 :class:`DailyGoalsSource`、
+    :class:`WorldEventSource`。``world`` 要是換日後的世界（:func:`daily_digest` 會先換日）。"""
+
+    def __init__(self, library: ContentLibrary) -> None:
+        self.library = library
+
+    def daily_goals(self, world: WorldState, now: int) -> Sequence[DailyGoal]:
+        goals = daily_goals_for(self.library, world, day_of(self.library, now))
+        return [DailyGoal(g.text_zh) for g in goals]
+
+    def world_events(self, world: WorldState, now: int) -> Sequence[WorldEventProgress]:
+        del now
+        season = self.library.world_season
+        if season is None:
+            return []
+        found: list[WorldEventProgress] = []
+        for event in season.world_events:
+            state = world.world_event(event.id)
+            if state is None:
+                continue
+            suffix = {"succeeded": "（成功）", "failed": "（失敗）"}.get(state.status, "")
+            found.append(WorldEventProgress(event.name_zh + suffix, state.progress, state.target))
+        return found
+
+
 def daily_digest(
     world_dir: Path,
     now: int,
     *,
     goals: DailyGoalsSource | None = None,
     world_events: WorldEventSource | None = None,
+    library: ContentLibrary | None = None,
 ) -> DailyDigest | None:
-    """``now`` 這個刷新日的公告數字；世界還沒建立（沒有 ``world.json``）＝``None``。"""
+    """``now`` 這個刷新日的公告數字；世界還沒建立（沒有 ``world.json``）＝``None``。
+
+    ``library`` 有給時（5F-1）：日子照世界規則的日曆、世界先換日（只算不寫）、昨天的上線人數用
+    世界狀態裡的帳號數（和世界事件門檻同一個數字；沒有紀錄時退回日誌裡的角色數）。"""
     path = world_dir / "world.json"
     if not path.is_file():
         return None
     world = loads_world(path.read_text(encoding="utf-8"))
-    today = refresh_day(now)
-    season_day = max(1, today - refresh_day(world.season_start) + 1)
+    if library is None:
+        today = refresh_day(now)
+        season_day = max(1, today - refresh_day(world.season_start) + 1)
+        active = _active_on(world_dir, today - 1)
+    else:
+        world = roll_season(library, world, now)[0]
+        today = day_of(library, now)
+        season_day = calendar_season_day(library, world, now)
+        recorded = any(a.day == today - 1 for a in world.activity)
+        active = players_on(world, today - 1) if recorded else _active_on(world_dir, today - 1)
     return DailyDigest(
         date=_date_of(today),
         season_day=season_day,
-        active_yesterday=_active_on(world_dir, today - 1),
+        active_yesterday=active,
         threads=len(world.threads),
         cleared=sum(1 for c in world.cleared if now < c.respawn_at),
         first_kills=len(load_first_kills(world_dir / FIRST_KILLS_FILE)),
@@ -278,12 +321,19 @@ class AnnouncementSource:
         self.templates = templates if templates is not None else load_templates()
         self.library = library
         self.public_url = public_url
-        self.goals = goals
-        self.world_events = world_events
+        season = None if library is None else SeasonAnnouncements(library)  # 5F-1 預設接上
+        self.goals = goals if goals is not None else season
+        self.world_events = world_events if world_events is not None else season
 
     def daily_text(self, now: int) -> str | None:
         """今日公告；世界還沒建立＝``None``（不貼）。"""
-        digest = daily_digest(self.world_dir, now, goals=self.goals, world_events=self.world_events)
+        digest = daily_digest(
+            self.world_dir,
+            now,
+            goals=self.goals,
+            world_events=self.world_events,
+            library=self.library,
+        )
         if digest is None:
             return None
         return render_daily(self.templates, digest, public_url=self.public_url)

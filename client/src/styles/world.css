@@ -655,3 +655,16 @@
   justify-content: space-between;
   gap: 8px;
 }
+
+/* 城鎮公告板（5F-1）：世界事件進度條沿用一輪的 run-bar */
+.world-board-event {
+  margin: 6px 0;
+}
+
+.world-board-fill {
+  background: #7fb07a;
+}
+
+.world-board-open {
+  color: #e6c46a;
+}

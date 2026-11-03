@@ -24,6 +24,7 @@ from trpg.content.schemas import ContentModel
 
 __all__ = [
     "BattleRules",
+    "CalendarRules",
     "EncounterRates",
     "EnemyGrowthRules",
     "HastenRules",
@@ -255,11 +256,23 @@ DEFAULT_WEEK_DAYS: Final = 7
 """一週的預設天數（沒有世界規則時也用這個）。"""
 
 
+class CalendarRules(ContentModel):
+    """賽季日曆（Phase 5F-1）：每日刷新的時區與當地時刻（``docs/專案計畫.md`` 3.1：06:00
+    Asia/Taipei）。遊戲日長度（30 分鐘）與天氣週期是使用者定的常數，不在這裡。"""
+
+    utc_offset_minutes: int = Field(default=480, ge=-720, le=840)
+    """當地時間和 UTC 的差（分鐘；台北 +480，沒有日光節約時間）。"""
+    refresh_hour: int = Field(default=6, ge=0, le=23)
+    """每日刷新的當地時刻（懸賞、今日目標、每天一次的判定）。"""
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
     week_days: int = Field(default=DEFAULT_WEEK_DAYS, ge=1)
     """一週幾天（以早上 6 點刷新的日子算；酒館傳聞、商店每週限量，5D-R1）。"""
+    calendar: CalendarRules = CalendarRules()
+    """每日刷新的時區與時刻（Phase 5F-1）。"""
     supplies: SupplyRules
     camp_cost: int = Field(ge=0)
     hasten: HastenRules

@@ -295,6 +295,11 @@ export type WorldLlmView = Schemas["WorldLlmView"];
 /** 地點留言板（5E-3，#105）：所在地點的留言（最新 20 則）與其他角色的足跡。 */
 export type LocationBoard = Schemas["LocationBoard"];
 export type NoteView = Schemas["NoteView"];
+/** 城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。 */
+export type SeasonBoardView = Schemas["SeasonBoardView"];
+export type BoardGoalView = Schemas["BoardGoalView"];
+export type BoardBountyView = Schemas["BoardBountyView"];
+export type BoardWorldEventView = Schemas["BoardWorldEventView"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];

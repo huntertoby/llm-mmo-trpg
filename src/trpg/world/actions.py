@@ -59,6 +59,15 @@ from trpg.world.economy_actions import (
     UseItemAction,
 )
 from trpg.world.encounters import EncounterLineup
+from trpg.world.season_events import (
+    BountyClaimedEvent,
+    BountyMissedEvent,
+    DailyGoalDoneEvent,
+    WorldEventProgressEvent,
+    WorldEventResolvedEvent,
+    WorldEventStartedEvent,
+    WorldEventTargetEvent,
+)
 from trpg.world.state import EncounterResult, EventTrigger, NextBattleMod, OathState
 
 __all__ = [
@@ -1036,6 +1045,13 @@ type WorldEvent = Annotated[
     | GearCraftedEvent  # 5D-3
     | GearEnhancedEvent
     | AffixChangedEvent
-    | GearSalvagedEvent,
+    | GearSalvagedEvent
+    | WorldEventStartedEvent  # 5F-1
+    | WorldEventTargetEvent
+    | WorldEventProgressEvent
+    | WorldEventResolvedEvent
+    | BountyClaimedEvent
+    | BountyMissedEvent
+    | DailyGoalDoneEvent,
     Field(discriminator="kind"),
 ]

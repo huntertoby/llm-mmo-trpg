@@ -28,10 +28,10 @@ from trpg.world.affinity import (
     social_of,
     talk_entries,
 )
-from trpg.world.clock import day_phase, refresh_day
+from trpg.world.calendar import day_of, season_day
+from trpg.world.clock import day_phase
 from trpg.world.common import here
 from trpg.world.errors import WorldActionError
-from trpg.world.events import season_day
 from trpg.world.season import week_of
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.weather import weather_at
@@ -66,7 +66,7 @@ def talk(
     if char.pending_encounter is not None:
         raise WorldActionError("還有沒處理的遭遇，不能聊天")
     events: list[WorldEvent] = []
-    today = refresh_day(now)
+    today = day_of(library, now)
     first_today = char.talk_days.get(action.npc) != today
     if first_today:
         delta = affinity_rules(library).daily_talk_delta
@@ -98,18 +98,20 @@ def talk(
         if skeleton not in char.unlocked_skeletons:
             char, unlocked = _unlock(library, world, char, skeleton, npc=action.npc, now=now)
             events += unlocked
-        elif entry.retrigger_daily and first_today and _retriggerable(char, skeleton, now):
+        elif entry.retrigger_daily and first_today and _retriggerable(library, char, skeleton, now):
             char, again = _trigger_here(library, world, char, skeleton, now=now)
             events += again
     return char, tuple(events)
 
 
-def _retriggerable(char: CharacterState, skeleton_id: str, now: int) -> bool:
+def _retriggerable(
+    library: ContentLibrary, char: CharacterState, skeleton_id: str, now: int
+) -> bool:
     """5B-4e：已解鎖的骨架還沒解決、今天沒失敗過（``retrigger_daily`` 的聊天再觸發）。"""
     if skeleton_id in char.finished_skeletons:
         return False
     failed = char.failed_skeletons.get(skeleton_id)
-    return failed is None or refresh_day(now) > failed
+    return failed is None or day_of(library, now) > failed
 
 
 def _unlock(
@@ -176,7 +178,7 @@ def week_rumors(
     for _ in range(count):
         picked.append(pool.pop(rng.randint(0, len(pool) - 1)))
     return week, tuple(
-        sorted(_pin_rumors(table, picked, season_day(world, now)), key=lambda r: r.id)
+        sorted(_pin_rumors(table, picked, season_day(library, world, now)), key=lambda r: r.id)
     )
 
 
@@ -202,12 +204,12 @@ def opportunity_hint(
     ``None``。多條符合時取第一條（資料順序）。5B-4f：當天（6 點刷新為界）聽過就不再提。"""
     if char.met_opportunities or char.opportunities:
         return None
-    if char.opportunity_hint_day == refresh_day(now):
+    if char.opportunity_hint_day == day_of(library, now):
         return None
     table = social_of(library, char.region)
     if table is None:
         return None
-    day = season_day(world, now)
+    day = season_day(library, world, now)
     return next(
         (
             h.text_zh
@@ -226,7 +228,7 @@ def hear_opportunity_hint(
     hint = opportunity_hint(library, world, char, now)
     if hint is None:
         return char, ()
-    char = char.model_copy(update={"opportunity_hint_day": refresh_day(now)})
+    char = char.model_copy(update={"opportunity_hint_day": day_of(library, now)})
     return char, (OpportunityHintEvent(location=char.location, text_zh=hint),)
 
 

@@ -43,6 +43,7 @@ from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import as_run, hero_tier, skill_seed, world_library
 from trpg.world.quests import store_offer
 from trpg.world.rng import STREAM_BATTLE, draw
+from trpg.world.season_board import open_bounty_at
 from trpg.world.situations import grant_threads, opportunity_available
 from trpg.world.state import CharacterState, EncounterResult, EventTrigger, WorldState
 from trpg.world.weather import weather_at
@@ -81,6 +82,8 @@ def make_encounter(
         at=now,
         objective=objective,
         world_flags=world.active_flags(now),
+        level_bonus=world.level_bonus.get(char.region, 0),  # 世界事件失敗的建議等級加成（5F-1）
+        bounty=open_bounty_at(library, world, char.region, target.id, now),  # 懸賞（5F-1）
     )
     return result, char
 

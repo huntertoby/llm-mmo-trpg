@@ -29,3 +29,8 @@ trusted_proxies = []
 # 本機模型的健康檢查（Phase 5E-3）：啟動時 ping 一次，之後每 interval_s 秒 ping；0＝只在啟動時。
 # 只在大世界的 LLM 開關開著時 ping；不可用時大世界的敘述全部改用模板，伺服器視窗會印出警告。
 interval_s = 60
+
+[season]
+# 開賽日（Phase 5F-1）：當地日期 YYYY-MM-DD；那天的刷新時刻（世界規則 calendar，預設台北 06:00）是賽季第 1 天的開始。
+# 空字串＝第一次建立世界的當下。世界建立後改這裡不會生效（開賽時間已寫進存檔）。環境變數 TRPG_SEASON_START 可覆寫。
+start_date = ""

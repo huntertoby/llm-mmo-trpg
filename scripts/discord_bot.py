@@ -24,6 +24,7 @@ from trpg.bot.announcer import Announcer, kill_key, read_state
 from trpg.bot.config import BotConfigError, BotSettings, load_announce_settings, load_bot_settings
 from trpg.bot.gateway import DiscordGateway
 from trpg.bot.service import BotService
+from trpg.content.library import load_library
 from trpg.server.accounts import open_account_store
 from trpg.server.announce import AnnouncementSource, default_bot_state_path
 
@@ -51,7 +52,9 @@ def _preview(args: argparse.Namespace, out: TextIO, env: Mapping[str, str] | Non
     """不貼、不寫狀態：今日公告（不管今天貼過沒）＋還沒貼的首殺公告。"""
     schedule = load_announce_settings(args.config, env)
     server = load_server_settings(env=env)
-    source = AnnouncementSource(args.world_dir, public_url=server.public_url)
+    source = AnnouncementSource(
+        args.world_dir, public_url=server.public_url, library=load_library()
+    )
     now = args.now if args.now is not None else _clock()
     print(f"（每天 {schedule.hour} 點，{schedule.timezone}；時區 {schedule.tzinfo()}）", file=out)
     daily = source.daily_text(now)
@@ -88,7 +91,7 @@ def _run(
     schedule = load_announce_settings(args.config, env)
     server = load_server_settings(env=env)
     store = open_account_store()
-    source = AnnouncementSource(None, public_url=server.public_url)
+    source = AnnouncementSource(None, public_url=server.public_url, library=load_library())
     state_path = default_bot_state_path()
 
     def make_service(gateway: DiscordGateway) -> BotService:

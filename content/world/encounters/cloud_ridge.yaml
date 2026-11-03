@@ -38,6 +38,8 @@ groups:
   - {id: lake_bears, name_zh: 冬湖石背熊, units: [frost_crane_archer, frost_crane_archer], third: [stoneback_bear, mist_wolf]}  # 5B-4c 三方：野獸和修士互打
   - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}
   - {id: tomb_swordsmen, name_zh: 霧中劍客, units: [sect_swordsman, sect_mist_walker, thunder_talisman_caster, sect_crane_archer]}
+  # 懸賞「霧中劍客」（5F-1，18.7.4）：精英修士劍客（霧隱的）由 world/season.yaml 的懸賞排在最前
+  - {id: mist_swordsman_band, name_zh: 霧中劍客一行, units: [sect_mist_walker, sect_crane_archer]}
   - {id: rift_wraiths, name_zh: 裂痕異物, units: [mist_wraith, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
   - {id: rift_scavengers, name_zh: 搶碎片的盜賊, units: [bandit, bandit_archer, mist_wraith, shard_golem], third: [sect_swordsman, sect_acolyte]}
   - {id: crane_nest, name_zh: 雷羽鷹巢, units: [sect_crane_archer, sect_crane_archer], third: [thunder_hawk, thunder_hawk, thunder_hawk]}  # 5B-4c 三方
@@ -79,7 +81,7 @@ locations:
     groups: [{group: furnace_steward}, {group: furnace_tide}]
   - location: north_slope
     groups: [{group: north_slope_pack}]
-    elite: {unit: mist_wolf, affix: berserk}   # 懸賞「北坡狼王」（18.7.4，狂暴的）；霧中劍客（霧隱的）的陣容在 5F-1
+    elite: {unit: mist_wolf, affix: berserk}   # 懸賞「北坡狼王」（18.7.4，狂暴的）；懸賞板在 world/season.yaml（5F-1）
   - location: winter_lake
     groups: [{group: lake_hunters}, {group: lake_bears}]
     unit_min_levels: [{unit: stoneback_bear, min_level: 4, otherwise: mist_wolf}]   # 5A-SIM2：石背熊 4 級以上才出現

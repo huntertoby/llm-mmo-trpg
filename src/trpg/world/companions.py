@@ -22,7 +22,7 @@ from trpg.engine.setup import UnitSpawn
 from trpg.shared.types import Team
 from trpg.world.actions import CompanionJoinedEvent, CompanionLeftEvent, WorldEvent
 from trpg.world.affinity import change_affinity
-from trpg.world.clock import refresh_day
+from trpg.world.calendar import day_of
 from trpg.world.errors import WorldError
 from trpg.world.state import CharacterState, CompanionAffinity, CompanionBench
 
@@ -217,7 +217,7 @@ def companion_win_affinity(
     library: ContentLibrary, char: CharacterState, now: int
 ) -> tuple[CharacterState, list[WorldEvent]]:
     """帶夥伴打贏一場：夥伴的 NPC 好感度 +``affinity_per_win``（每天累計不超過上限，18.7.6）。"""
-    today = refresh_day(now)
+    today = day_of(library, now)
     events: list[WorldEvent] = []
     for companion in companion_defs(library, char):
         if companion.affinity_per_win <= 0:

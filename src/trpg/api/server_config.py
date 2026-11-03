@@ -5,12 +5,16 @@
 - ``trusted_proxies``：可信任的轉發來源（IP 或 CIDR）；空＝不信任任何轉發標頭（31.3）。
 - ``llm_health.interval_s``：定期 ping 本機模型的間隔（秒）；0＝只在啟動時 ping（31.4）。
 
-環境變數覆寫：``TRPG_PUBLIC_URL``、``TRPG_TRUSTED_PROXIES``（逗號分隔）。設定檔路徑和帳號設定相同
+Phase 5F-1：``[season] start_date``：開賽日（``YYYY-MM-DD``，當地日期；空＝第一次建立世界的當下）。
+世界已存在時不改（開賽時間已寫進 ``world.json``）。
+
+環境變數覆寫：``TRPG_PUBLIC_URL``、``TRPG_TRUSTED_PROXIES``（逗號分隔）、``TRPG_SEASON_START``。設定檔路徑和帳號設定相同
 （``TRPG_SERVER_CONFIG``，預設 ``config/server.toml``）。
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import ipaddress
 import os
 import tomllib
@@ -25,6 +29,7 @@ from trpg.shared.errors import TrpgError
 
 __all__ = [
     "PUBLIC_URL_ENV",
+    "SEASON_START_ENV",
     "TRUSTED_PROXIES_ENV",
     "IpNetwork",
     "ServerConfigError",
@@ -34,6 +39,7 @@ __all__ = [
 
 PUBLIC_URL_ENV: Final = "TRPG_PUBLIC_URL"
 TRUSTED_PROXIES_ENV: Final = "TRPG_TRUSTED_PROXIES"
+SEASON_START_ENV: Final = "TRPG_SEASON_START"
 DEFAULT_HEALTH_INTERVAL_S: Final = 60
 
 type IpNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
@@ -54,6 +60,13 @@ class ServerSettings(BaseModel):
     """可信任的轉發來源（IP 或 CIDR）。"""
     llm_health_interval_s: int = Field(default=DEFAULT_HEALTH_INTERVAL_S, ge=0)
     """定期 ping 本機模型的間隔（秒）；0＝只在啟動時 ping。"""
+    season_start_date: dt.date | None = None
+    """開賽日（當地日期，Phase 5F-1）；``None``＝第一次建立世界的當下。"""
+
+    @field_validator("season_start_date", mode="before")
+    @classmethod
+    def _empty_date(cls, value: object) -> object:
+        return None if value == "" else value
 
     @field_validator("trusted_proxies")
     @classmethod
@@ -92,8 +105,20 @@ def _read(path: Path) -> dict[str, object]:
     data: dict[str, object] = {}
     network = _section(raw, "network", path)
     health = _section(raw, "llm_health", path)
-    unknown = sorted({*(f"network.{k}" for k in network), *(f"llm_health.{k}" for k in health)})
-    known = {"network.public_url", "network.trusted_proxies", "llm_health.interval_s"}
+    season = _section(raw, "season", path)
+    unknown = sorted(
+        {
+            *(f"network.{k}" for k in network),
+            *(f"llm_health.{k}" for k in health),
+            *(f"season.{k}" for k in season),
+        }
+    )
+    known = {
+        "network.public_url",
+        "network.trusted_proxies",
+        "llm_health.interval_s",
+        "season.start_date",
+    }
     extra = [k for k in unknown if k not in known]
     if extra:
         raise ServerConfigError(f"伺服器設定檔 {path} 有不認得的欄位：{'、'.join(extra)}")
@@ -103,6 +128,8 @@ def _read(path: Path) -> dict[str, object]:
         data["trusted_proxies"] = network["trusted_proxies"]
     if "interval_s" in health:
         data["llm_health_interval_s"] = health["interval_s"]
+    if "start_date" in season:
+        data["season_start_date"] = season["start_date"]
     return data
 
 
@@ -125,6 +152,8 @@ def load_server_settings(
         data["trusted_proxies"] = [
             p.strip() for p in environ[TRUSTED_PROXIES_ENV].split(",") if p.strip()
         ]
+    if environ.get(SEASON_START_ENV):
+        data["season_start_date"] = environ[SEASON_START_ENV]
     try:
         return ServerSettings.model_validate(data)
     except ValidationError as exc:
