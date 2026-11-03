@@ -213,9 +213,9 @@ def test_bounties_posted_daily(library: ContentLibrary, make_char: MakeChar) -> 
     posted = posted_bounties(library, world, NOON)
     assert [p.bounty.id for p in posted] == ["north_wolf_king", "mist_swordsman", "scarface"]
     assert all(p.claim is None for p in posted)
-    found = open_bounty_at(library, world, char, "cloud_ridge", "north_slope", NOON)
+    found = open_bounty_at(library, world, char, "north_slope", NOON)
     assert found == "north_wolf_king"
-    assert open_bounty_at(library, world, char, "cloud_ridge", "ferry_steps", NOON) is None
+    assert open_bounty_at(library, world, char, "ferry_steps", NOON) is None
     assert posted_bounties(library, world, _day(15)) == ()  # 季末後不再貼
 
 
@@ -245,7 +245,7 @@ def test_first_come_first_served(library: ContentLibrary, make_char: MakeChar) -
     assert claimed.xp == xp - 100  # 補到懸賞份數（代決 5F1-6）
     assert alice.quest_coins >= 3
     # 已被搶下：bob 今天第一場仍是懸賞陣容（大家都打得到，5F-1b）
-    assert open_bounty_at(library, world, bob, "cloud_ridge", "north_slope", NOON) is not None
+    assert open_bounty_at(library, world, bob, "north_slope", NOON) is not None
     world, bob, second = after_season_step(library, world, bob, fight, now=NOON + 60, actor="b")
     missed = BountyMissedEvent(bounty="north_wolf_king", claimed_by=alice.hero.name_zh, coins=1)
     assert missed in second  # 小獎（9.6.3）
@@ -254,9 +254,9 @@ def test_first_come_first_served(library: ContentLibrary, make_char: MakeChar) -
     assert not any(isinstance(e, BountyClaimedEvent) for e in second)
     # 兩人今天的第一場都用掉了：之後照一般遭遇
     for char in (alice, bob):
-        assert open_bounty_at(library, world, char, "cloud_ridge", "north_slope", NOON) is None
+        assert open_bounty_at(library, world, char, "north_slope", NOON) is None
     # 隔天（6 點換日）重新貼出、重新算第一場
-    assert open_bounty_at(library, world, alice, "cloud_ridge", "north_slope", _day(2)) is not None
+    assert open_bounty_at(library, world, alice, "north_slope", _day(2)) is not None
 
 
 def test_first_bounty_encounter_per_day(library: ContentLibrary, make_char: MakeChar) -> None:

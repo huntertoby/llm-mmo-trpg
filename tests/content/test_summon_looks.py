@@ -14,7 +14,8 @@ CONTENT = PROJECT_ROOT / "content"
 
 def test_the_look_table_loads() -> None:
     table = load_summon_looks(CONTENT)
-    assert len(table.looks) == 20  # 17 種特色召喚物＋通用的元素之靈＋狐火誘餌（3R-2）＋霧影（5F-1b）
+    # 17 種特色召喚物＋通用的元素之靈＋狐火誘餌（3R-2）＋霧影（5F-1b）
+    assert len(table.looks) == 20
     bodies = {e.body for e in table.looks.values()}
     assert bodies == {"humanoid", "spirit", "construct", "beast", "plant", "totem"}
 

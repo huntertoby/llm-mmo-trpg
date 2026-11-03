@@ -83,7 +83,7 @@ def make_encounter(
         objective=objective,
         world_flags=world.active_flags(now),
         level_bonus=world.level_bonus.get(char.region, 0),  # 世界事件失敗的建議等級加成（5F-1）
-        bounty=open_bounty_at(library, world, char, char.region, target.id, now),  # 懸賞（5F-1b）
+        bounty=open_bounty_at(library, world, char, target.id, now),  # 懸賞（5F-1b）
     )
     return result, char
 

@@ -82,7 +82,8 @@ class BountyClaimedEvent(_Model):
 
 
 class BountyMissedEvent(_Model):
-    """打贏了懸賞陣容，但當天的懸賞已經被別人搶下：拿小獎（9.6.3；任務幣另有 ``currency_gained``）。"""
+    """打贏了懸賞陣容，但當天的懸賞已經被別人搶下：拿小獎（9.6.3；任務幣另有
+    ``currency_gained``）。"""
 
     kind: Literal["bounty_missed"] = "bounty_missed"
     bounty: str = Field(pattern=ID_PATTERN)
