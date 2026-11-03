@@ -14,7 +14,7 @@ from pathlib import Path
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import ID_PATTERN, SummonLook, UnitTemplate, WeaponDef
+from trpg.content.battle import ID_PATTERN, CreatureLook, SummonLook, UnitTemplate, WeaponDef
 from trpg.content.loader import load_content_file
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
@@ -105,9 +105,13 @@ def summon_dpr(summon: SummonDef, *, flat: int = 0, bonus_permille: int = 0) -> 
 
 
 class SummonLookEntry(SummonLook):
-    """外觀表的一列：外觀欄位加中文名。"""
+    """外觀表的一列：外觀欄位加中文名。
+
+    ``creature``（Phase 5A-ART1）：有值時前端改用異形畫法（優先於 ``body``／``variant``）；載入時
+    寫進召喚物範本的 ``doll.creature``（經 ``UnitView.doll_look`` 給前端）。"""
 
     zh: str = Field(min_length=1)
+    creature: CreatureLook | None = None
 
 
 class SummonLookTable(ContentModel):

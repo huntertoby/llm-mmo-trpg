@@ -18,6 +18,7 @@ from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
     BossPhase,
+    DollLook,
     OffhandDef,
     OffhandTable,
     StatusDef,
@@ -1559,8 +1560,11 @@ def _load_summons(
         entry = looks.get(summon_id.removeprefix("summon_"))
         if entry is None:
             raise ContentError(path, f"summon_looks.yaml 沒有 {summon_id} 的外觀")
-        look = SummonLook.model_validate(entry.model_dump(exclude={"zh"}))
-        template = template.model_copy(update={"look": look})
+        look = SummonLook.model_validate(entry.model_dump(exclude={"zh", "creature"}))
+        update: dict[str, object] = {"look": look}
+        if entry.creature is not None and template.doll is None:
+            update["doll"] = DollLook(creature=entry.creature)  # 5A-ART1：召喚物的異形外觀
+        template = template.model_copy(update=update)
         weapon = weapons.get(template.weapon)
         if weapon is None:
             raise ContentError(path, f"未知的武器：{template.weapon}")

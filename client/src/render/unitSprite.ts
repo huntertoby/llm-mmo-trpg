@@ -18,6 +18,7 @@ import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKe
 import { fontEpoch } from "./fontLoad";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
+import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 
 const T = TILE_SIZE;
@@ -128,6 +129,33 @@ function summonLookOf(u: UnitDraw): ResolvedLook | null {
   return u.summon && u.summonLook != null ? resolveSummonLook(u.summonLook) : null;
 }
 
+/** 異形外觀（Phase 5A-ART1）：`doll_look.creature` 有值時（含召喚物，優先於 `summon_look`）；沒有時 `null`。 */
+export function creatureOf(u: UnitDraw): ResolvedCreature | null {
+  const look = u.dollLook?.creature;
+  if (look == null) return null;
+  return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity });
+}
+
+/** 精英記號（Phase 5A-ART2）：`elite` 標籤或頭目外光（`rarity`）→ 金環＋金菱形；倒下不畫。 */
+export function hasEliteMark(u: UnitDraw): boolean {
+  return !u.downed && (u.elite === true || u.dollLook?.rarity != null);
+}
+
+/** 人形精英的大小倍率：精英 ×1.15、頭目（有外光）不放大（異形在 `resolveCreature` 裡乘）。 */
+export function humanoidEliteScale(u: UnitDraw): number {
+  return u.elite === true && u.dollLook?.rarity == null ? ELITE_SCALE : 1;
+}
+
+/** 人形敵人的詞綴（認得的特效 id）。 */
+function humanoidAffixes(u: UnitDraw): string[] {
+  return knownAffixes(u.dollLook?.affixes);
+}
+
+/** 單位有「連心的」詞綴（BattleRenderer 畫到相鄰同陣營單位的青色虛線）。 */
+export function isLinked(u: UnitDraw): boolean {
+  return !u.downed && knownAffixes(u.dollLook?.affixes).includes("linked");
+}
+
 /** 人形召喚物沿用的範本（骷髏）與殘影找不到召喚者時的預設（戰士）。 */
 const SKELETON_TEMPLATE = "summon_skeleton_warrior";
 const DEFAULT_OWNER_TEMPLATE = "hero_fighter";
@@ -198,6 +226,19 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   const form = formArtOfUnit(u, spec);
   const formSprite = form === null ? null : formDoll(art, u, look, feet, form);
   if (formSprite !== null) return formSprite;
+  const cr = creatureOf(u);
+  if (cr !== null) {
+    const tex = art.creature(cr, u.facing);
+    if (tex !== null) {
+      const sprite = new Sprite(tex);
+      const k = (T / 52) * DOLL_SCALE * (u.dollLook?.creature?.size === "huge" ? HUGE_FIELD_SCALE : 1);
+      sprite.anchor.set(0.5, CREATURE_FOOT_Y / CREATURE_H);
+      sprite.width = CREATURE_W * k;
+      sprite.height = CREATURE_H * k;
+      sprite.position.set(0, feet);
+      return applyLook(sprite, u, look);
+    }
+  }
   // 倒地的人形召喚物沿用紙娃娃的躺下姿勢；其他體型（圖騰、構造體、植物…）不躺下
   const useSummonArt = sl !== null && !(u.downed && sl.body === "humanoid");
   const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
@@ -205,13 +246,45 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   const sprite = new Sprite(texture);
   // C 骨架（人形與紙娃娃）：52px 格縮放 0.92（3U-2），人約 48px 高；非人形召喚物沿用舊的 64×64 畫布，縮放 1.15
   const humanoid = sl === null || sl.body === "humanoid";
-  const k = (T / 52) * (humanoid ? DOLL_SCALE : SUMMON_SCALE);
+  const k = (T / 52) * (humanoid ? DOLL_SCALE * humanoidEliteScale(u) : SUMMON_SCALE);
   const [w, h, footY] = humanoid ? [DOLL_W, DOLL_H, DOLL_FOOT_Y] : [SUMMON_W, SUMMON_H, SUMMON_FOOT_Y];
   sprite.anchor.set(0.5, footY / h);
   sprite.width = w * k;
   sprite.height = h * k;
   sprite.position.set(0, feet);
-  return applyLook(sprite, u, look);
+  applyLook(sprite, u, look);
+  if (sl === null && humanoidAffixes(u).includes("mist_hidden")) sprite.alpha *= 0.75; // 霧隱的：本體 75%
+  return sprite;
+}
+
+/** 人形敵人的詞綴特效與人形特徵（Phase 5A-ART2）：`under` ＝ 身體後面（霧氣繞身）。異形、形態、召喚物、倒下不畫。 */
+function humanoidFxSprite(art: ArtTextures, u: UnitDraw, feet: number, under: boolean): Sprite | null {
+  if (u.downed || u.summon || u.form != null || creatureOf(u) !== null) return null;
+  const affixes = under ? [] : humanoidAffixes(u);
+  const traits = [...(u.dollLook?.traits ?? [])];
+  if (affixes.length === 0 && traits.length === 0) return null;
+  const tex = art.dollFx(`${under ? "u" : "o"}|${affixes.join("+")}|${traits.join("+")}`, (ctx) => drawHumanoidFx(ctx, affixes, traits, under));
+  if (tex === null) return null;
+  const k = (T / 52) * DOLL_SCALE * humanoidEliteScale(u);
+  const s = new Sprite(tex);
+  s.anchor.set(0.5, DOLL_FOOT_Y / DOLL_H);
+  s.width = DOLL_W * k;
+  s.height = DOLL_H * k;
+  s.position.set(0, feet);
+  return s;
+}
+
+/** 精英金環（墨線底＋金線，在陣營環外）＋環前方金菱形（Phase 5A-ART2，`docs/art/敵人外觀.md` 3 第 2 段）。 */
+export const ELITE_GOLD = 0xffbf3a;
+const ELITE_INK = 0x2b1e16;
+function eliteRing(g: Graphics, cy: number, rx: number, ry: number): void {
+  const s = rx / 13; // 樣張的環半徑是 13
+  const gx = rx + 2.2 * s;
+  const gy = ry * (gx / rx);
+  g.ellipse(0, cy, gx, gy).stroke({ width: 2.2 * s, color: ELITE_INK });
+  g.ellipse(0, cy, gx, gy).stroke({ width: 1.2 * s, color: ELITE_GOLD });
+  const top = cy + gy + 0.2 * s;
+  g.poly([0, top, 2.4 * s, top + 2.4 * s, 0, top + 4.8 * s, -2.4 * s, top + 2.4 * s]).fill(ELITE_GOLD).stroke({ width: 0.6 * s, color: ELITE_INK });
 }
 
 function summonBadge(u: UnitDraw): Container {
@@ -375,6 +448,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   const noRing = sl !== null && hasNoRing(sl); // 土牆沒有底圈
   if (!noRing) g.ellipse(0, cy, rx, ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
   if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
+  if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry);
   c.addChild(g);
   if (look.dashed !== null) {
     const dashed = dashedEllipse(cy, T * 0.4, T * 0.18, look.dashed.color, 2.5);
@@ -390,7 +464,11 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     const under = effectSprite("under", effects, feet);
     if (under !== null) c.addChild(under);
   }
+  const fxUnder = humanoidFxSprite(art, u, feet, true);
+  if (fxUnder !== null) c.addChild(fxUnder);
   c.addChild(doll(art, u, look, feet, r));
+  const fxOver = humanoidFxSprite(art, u, feet, false);
+  if (fxOver !== null) c.addChild(fxOver);
   if (effects !== null && hasOverEffect(effects)) {
     const over = effectSprite("over", effects, feet);
     if (over !== null) c.addChild(over);

@@ -2773,6 +2773,37 @@ export interface components {
             /** Legacy Character */
             legacy_character?: string | null;
         };
+        /**
+         * CreatureLook
+         * @description 異形敵人的外觀（Phase 5A-ART1，``docs/art/敵人外觀.md`` 1.1；純顯示資料）。
+         *
+         *     身形 × 材質 × 元素 × 大小 × 特徵。值只檢查格式、**不檢查是否認得**：前端不認得時退回
+         *     （身形 → 軟泥、材質 → 毛皮、元素 → 無、大小 → 1、特徵 → 略過），讓 LLM 產生的新值也畫得出來。
+         *     ``status_traits``：單位身上有該狀態時才多畫的特徵（灰燼之心有「熔殼」時畫甲蟲殼堆）。
+         */
+        CreatureLook: {
+            /** Body */
+            body: string;
+            /** Variant */
+            variant?: string | null;
+            /** Material */
+            material?: string | null;
+            /** Element */
+            element?: string | null;
+            /** Size */
+            size?: string | null;
+            /** Tint */
+            tint?: string | null;
+            /**
+             * Traits
+             * @default []
+             */
+            traits: string[];
+            /** Status Traits */
+            status_traits?: {
+                [key: string]: string[];
+            };
+        };
         /** DamageOut */
         DamageOut: {
             /** Minimum */
@@ -2919,6 +2950,9 @@ export interface components {
         /**
          * DollGear
          * @description 範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
+         *
+         *     Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
+         *     ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。
          */
         DollGear: {
             /** Kind */
@@ -2927,6 +2961,12 @@ export interface components {
             material: string;
             /** Color */
             color?: string | null;
+            /** Form */
+            form?: string | null;
+            /** Trim */
+            trim?: string | null;
+            /** Apron */
+            apron?: string | null;
         };
         /**
          * DollLook
@@ -2935,12 +2975,21 @@ export interface components {
          *     頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的
          *     ``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，
          *     前端依陣營退回預設外觀。
+         *
+         *     Phase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；
+         *     ``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`
+         *     加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、
+         *     ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型。都經 ``UnitView.doll_look`` 給前端
+         *     （不改引擎）。
          */
         DollLook: {
-            /** Skin */
+            /**
+             * Skin
+             * @default #f1c9a5
+             */
             skin: string;
             /** Hair */
-            hair?: ("short" | "long" | "none") | null;
+            hair?: ("short" | "long" | "none" | "bun") | null;
             /** Hair Color */
             hair_color?: string | null;
             /** Pants */
@@ -2964,6 +3013,30 @@ export interface components {
             main_color?: string | null;
             /** Rarity */
             rarity?: ("epic" | "legendary") | null;
+            /** Main Kind */
+            main_kind?: string | null;
+            /** Main Tassel */
+            main_tassel?: string | null;
+            /** Bun Band */
+            bun_band?: string | null;
+            /**
+             * Beard
+             * @default false
+             */
+            beard: boolean;
+            /** Build */
+            build?: ("stout" | "tall") | null;
+            creature?: components["schemas"]["CreatureLook"] | null;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: string[];
+            /**
+             * Traits
+             * @default []
+             */
+            traits: string[];
         };
         /**
          * DraftOptions

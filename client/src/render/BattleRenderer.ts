@@ -41,7 +41,9 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { buildUnitSprite, Pulses } from "./unitSprite";
+import { buildUnitSprite, isLinked, Pulses } from "./unitSprite";
+import { LINK_COLOR } from "./inkCreature";
+import { linkPairs } from "./linkLines";
 
 export interface DirectionMark {
   pos: Pos;
@@ -343,6 +345,7 @@ export class BattleRenderer {
     }
     this.drawBadges(model);
     for (const trap of model.traps) this.drawTrap(trap);
+    this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
     this.drawVeils(model);
     this.drawMist(model);
@@ -355,6 +358,26 @@ export class BattleRenderer {
     for (const [key, st] of [...this.lifting]) {
       if (heightAt(model, st.pos) === st.to) this.rows.setLift(st.pos, tileLift(st.h));
       else this.lifting.delete(key);
+    }
+  }
+
+  /** 「連心的」精英到相鄰（曼哈頓 1）同陣營單位的青色虛線（Phase 5A-ART2），畫在腳邊、單位底下。 */
+  private drawLinks(model: DrawModel): void {
+    const color = parseInt(LINK_COLOR.slice(1), 16);
+    for (const [a, b] of linkPairs(model.units, isLinked)) {
+      const p = this.center(a);
+      const q = this.center(b);
+      const y0 = p.y + T * 0.2;
+      const y1 = q.y + T * 0.2;
+      const g = new Graphics();
+      const n = 9;
+      for (let i = 0; i < n; i += 2) {
+        const t0 = i / n;
+        const t1 = (i + 1) / n;
+        g.moveTo(p.x + (q.x - p.x) * t0, y0 + (y1 - y0) * t0).lineTo(p.x + (q.x - p.x) * t1, y0 + (y1 - y0) * t1);
+      }
+      g.stroke({ width: 2, color, alpha: 0.9 });
+      this.rows.row(Math.max(a.y, b.y)).deco.addChild(g);
     }
   }
 

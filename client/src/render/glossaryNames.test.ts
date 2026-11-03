@@ -47,7 +47,7 @@ describe("單位外觀讀 doll_look", () => {
       team: "enemy",
       summon: false,
       template: "anything",
-      dollLook: { skin: "#a8724c", skull: false, gear: { body: { kind: "plate", material: "steel" } }, rarity: "epic" },
+      dollLook: { skin: "#a8724c", skull: false, gear: { body: { kind: "plate", material: "steel" } }, rarity: "epic", beard: false, affixes: [], traits: [] },
       weaponId: "dagger",
     });
     expect(withLook.gear.body?.kind).toBe("plate");

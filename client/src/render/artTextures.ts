@@ -9,8 +9,9 @@ import type { Ctx } from "./artDraw";
 import type { Facing } from "../api/types";
 import { dollKey, type DollSpec } from "./appearance";
 import { formKey, renderAuraCanvas, renderFormCanvas } from "./inkForm";
-import { DOLL_SCALE, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
 import { copiesOwner, renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
+import { creatureKey, renderCreatureCanvas, type ResolvedCreature } from "./inkCreature";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -127,6 +128,29 @@ export class ArtTextures {
     const owner = copiesOwner(look.variant) && humanoid !== null ? dollKey(humanoid, facing, false) : "";
     const res = this.figureRes(look.body === "humanoid" ? HUMAN_DISPLAY : BEAST_DISPLAY);
     return this.canvas(`s|${res}|${summonKey(look, facing, owner)}`, () => renderSummonCanvas(look, facing, humanoid, res));
+  }
+
+  /** 異形貼圖（Phase 5A-ART1；鍵 ＝ 解析後的外觀＋朝向，依狀態的特徵已解進外觀）。 */
+  creature(r: ResolvedCreature, facing: Facing): Texture | null {
+    const res = this.figureRes(HUMAN_DISPLAY);
+    return this.canvas(`c|${res}|${creatureKey(r, facing)}`, () => renderCreatureCanvas(r, facing, res));
+  }
+
+  /** 人形敵人的詞綴特效／人形特徵貼圖（Phase 5A-ART2；與紙娃娃同畫布、同錨點）。`draw` 在腳底原點畫。 */
+  dollFx(key: string, draw: (ctx: Ctx) => void): Texture | null {
+    const res = this.figureRes(HUMAN_DISPLAY);
+    return this.canvas(`d|${res}|${key}`, () => {
+      if (typeof document === "undefined") return null;
+      const c = document.createElement("canvas");
+      c.width = DOLL_W * res;
+      c.height = DOLL_H * res;
+      const ctx = c.getContext("2d");
+      if (ctx === null) return null;
+      ctx.scale(res, res);
+      ctx.translate(DOLL_W / 2, DOLL_FOOT_Y);
+      draw(ctx);
+      return c;
+    });
   }
 
   /** 形態貼圖（Phase 3J-5；鍵 ＝ 畫法＋主色＋元素＋朝向＋姿勢）；不認得的畫法或沒有 DOM 時回傳 `null`。 */

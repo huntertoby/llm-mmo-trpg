@@ -117,6 +117,8 @@ export interface UnitDraw {
   facing: Facing;
   /** 紙娃娃外觀（Phase 3E-2e，單位視圖的 `doll_look`）；沒有時依陣營退回預設。 */
   dollLook?: DollLook | null;
+  /** 精英（Phase 5A-ART2，`elite` 標籤）：金環＋金菱形、小人 ×1.15（頭目只加金環）。 */
+  elite?: boolean;
   /** 種族預設外觀（Phase 3R-3b，`UnitView.race.look`）；沒有種族為 `null`。 */
   raceLook?: Readonly<Record<string, unknown>> | null;
   /** 武器 ID（紙娃娃主手外觀用）。 */
@@ -294,6 +296,7 @@ export function buildDrawModel(
       infused: u.infused_skill_id != null,
       facing: u.facing,
       dollLook: u.doll_look ?? null,
+      elite: (u.tags ?? []).includes("elite"),
       raceLook: u.race?.look ?? null,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,
