@@ -174,7 +174,8 @@ def test_the_drafts_pass_and_list_the_unpaired_ends_as_pending(library: ContentL
     assert "to_bamboo_path" in pending and "to_hunter_hut" in pending
     assert "to_ashen_ferry" in pending
     assert "to_ferry_steps" not in pending  # 霧渡鎮－渡口石階兩邊都畫了，已經配對
-    assert any("傳送石 1 個" in w for w in report.warnings)
+    # 四張底稿只有霧渡鎮的傳送石；城鎮那顆不算在每區 2～3 個裡（21.2），所以野外是 0 個
+    assert any("傳送石 0 個" in w for w in report.warnings)
 
 
 def test_progress_counts_outdoor_maps_per_region(library: ContentLibrary) -> None:

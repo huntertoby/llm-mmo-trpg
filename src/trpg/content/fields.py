@@ -118,7 +118,8 @@ FACILITY_KINDS: tuple[str, ...] = (
 )
 
 STONES_PER_REGION = (2, 3)
-"""每區的傳送石數（21.2）；不在範圍內只警告（地圖還沒畫完前先放行，6D-R 改錯誤）。"""
+"""每區野外的傳送石數（21.2「每區 2～3 個，城鎮各 1 個」：城鎮那顆不算在內）；不在範圍內只警告
+（地圖還沒畫完前先放行，6D-R 改錯誤）。"""
 
 
 class FieldExit(ContentModel):
@@ -821,7 +822,9 @@ def _stone_checks(ctx: _Ctx) -> None:
             if stone.id in seen:
                 ctx.errors.append(f"傳送石 ID {stone.id} 重複（{seen[stone.id]}、{field.id}）")
             seen[stone.id] = field.id
-            by_region.setdefault(field.region, []).append(stone.id)
+            loc = ctx.loc(field.region, field.place)
+            if loc is None or loc.kind != "town":  # 城鎮的 1 個另外算（_map_stone_checks）
+                by_region.setdefault(field.region, []).append(stone.id)
         _map_stone_checks(ctx, field)
     lo, hi = STONES_PER_REGION
     for region in sorted({f.region for f in fields}):
