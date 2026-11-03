@@ -41,9 +41,11 @@ __all__ = [
     "SealKeySource",
     "SeasonBossDef",
     "SeasonContent",
+    "ShopPriceEffect",
     "WorldEventDef",
     "WorldEventEffect",
     "season_problems",
+    "shop_price_problems",
 ]
 
 SEASON_FILE: Final = "world/season.yaml"
@@ -186,13 +188,22 @@ class LevelBonusEffect(ContentModel):
     amount: int = Field(ge=1)
 
 
+class ShopPriceEffect(ContentModel):
+    """商店價格加成（Phase 5F-5b；19.9 #2 失敗「餘燼集商店價格 +20% 到季末」）：``shop`` 的買價
+    加 ``permille``‰（整數千分比；200＝+20%），到季末重置才清掉。"""
+
+    shop: str = Field(pattern=ID_PATTERN)
+    permille: int = Field(ge=1, le=10_000)
+
+
 class WorldEventEffect(ContentModel):
     """世界事件成功或失敗寫回世界的效果：世界旗標、區域建議等級加成（9.6.7 #15）、全服封印鑰匙
-    （Phase 5F-3；19.9 #2「封印鑰匙 +5」）。"""
+    （Phase 5F-3；19.9 #2「封印鑰匙 +5」）、商店價格加成（Phase 5F-5b）。"""
 
     flags: tuple[str, ...] = ()
     level_bonus: tuple[LevelBonusEffect, ...] = ()
     seal_keys: int = Field(default=0, ge=0)
+    shop_price: tuple[ShopPriceEffect, ...] = ()
 
     @model_validator(mode="after")
     def _ids(self) -> WorldEventEffect:
@@ -566,6 +577,18 @@ def season_problems(
                 if b.region not in region_ids
             ]
     return sorted(problems)
+
+
+def shop_price_problems(season: SeasonContent, shop_ids: Collection[str]) -> list[str]:
+    """世界事件的商店價格加成指到的商店都要存在（Phase 5F-5b；商店在 ``world/shops/``，經濟比賽季
+    晚載入，所以另外檢查）。"""
+    return sorted(
+        f"世界事件 {event.id}：價格加成的商店 {row.shop} 不存在"
+        for event in season.world_events
+        for effect in (event.on_success, event.on_failure)
+        for row in effect.shop_price
+        if row.shop not in shop_ids
+    )
 
 
 def _league_problems(league: LeagueRules, battle_maps: Mapping[str, str]) -> list[str]:

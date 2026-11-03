@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_map import LocationKind
-from trpg.content.world_season import SeasonContent, season_problems
+from trpg.content.world_season import SeasonContent, season_problems, shop_price_problems
 
 
 @pytest.fixture(scope="module")
@@ -115,6 +115,25 @@ def test_cross_file_problems(
     patch(data)
     problems = _problems(library, SeasonContent.model_validate(data))
     assert any(message in p for p in problems), problems
+
+
+def test_lava_breach_failure_raises_ember_market_prices(season: SeasonContent) -> None:
+    """5F-5b（19.9 #2，玩法 PM 2026-11-03 代決）：失敗＝餘燼集商店買價 +20% 到季末＋荒原 +1 級。"""
+    failure = season.event_by_id()["lava_breach"].on_failure
+    assert [(p.shop, p.permille) for p in failure.shop_price] == [("shop_iron_lady", 200)]
+    assert [(b.region, b.amount) for b in failure.level_bonus] == [("ashen_waste", 1)]
+    assert season.event_by_id()["lava_breach"].on_success.shop_price == ()
+
+
+def test_shop_price_must_name_a_shop(season: SeasonContent) -> None:
+    assert shop_price_problems(season, {"shop_iron_lady"}) == []
+    assert shop_price_problems(season, {"shop_liu"}) == [
+        "世界事件 lava_breach：價格加成的商店 shop_iron_lady 不存在"
+    ]
+    data = _data(season)
+    data["world_events"][1]["on_failure"]["shop_price"][0]["permille"] = 0
+    with pytest.raises(ValidationError, match="greater than or equal to 1"):
+        SeasonContent.model_validate(data)
 
 
 # ---------------------------------------------------------------------------

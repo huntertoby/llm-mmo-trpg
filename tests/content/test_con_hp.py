@@ -111,6 +111,7 @@ OLD_HP = {
     "shard_golem": 48,  # 5A-3 新增（雲嶺）
     # 5F-5a 新增（灰燼荒原：熔岩獸群、熔核領主、寒燼蜥、熔晶魅、灰燼之心、餘燼幼蜥）
     "ember_lizard": 18,
+    "heart_ember_lizard": 18,  # 5F-5b：灰燼之心戰的殼縫餘燼蜥（同餘燼蜥）
     "ash_hound": 22,
     "lava_beetle": 56,
     "fire_dust_bat": 16,

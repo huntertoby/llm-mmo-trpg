@@ -106,7 +106,12 @@ def _apply_effect(world: WorldState, effect: WorldEventEffect) -> WorldState:
     for row in effect.level_bonus:
         bonus[row.region] = bonus.get(row.region, 0) + row.amount
     keys = world.seal_keys + effect.seal_keys  # 全服封印鑰匙（5F-3；19.9 #2）
-    return world.model_copy(update={"flags": flags, "level_bonus": bonus, "seal_keys": keys})
+    price = dict(world.shop_price)  # 商店價格加成（5F-5b；19.9 #2 失敗，到季末）
+    for price_row in effect.shop_price:
+        price[price_row.shop] = price.get(price_row.shop, 0) + price_row.permille
+    update: dict[str, object] = {"flags": flags, "level_bonus": bonus, "seal_keys": keys}
+    update["shop_price"] = dict(sorted(price.items()))
+    return world.model_copy(update=update)
 
 
 def _initial_progress(world: WorldState, event: WorldEventDef) -> int:
@@ -135,6 +140,7 @@ def _resolve(
         target=state.target,
         flags=effect.flags,
         level_bonus={b.region: b.amount for b in effect.level_bonus},
+        shop_price={p.shop: p.permille for p in effect.shop_price},
     )
     return world, resolved
 

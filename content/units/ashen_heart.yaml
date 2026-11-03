@@ -29,7 +29,7 @@ phases:
     text_zh: 外殼轟然裂開，裡面的核心一明一暗地呼吸著——殼縫裡爬出兩隻餘燼蜥。
     skills: [skill_heart_inhale, skill_heart_exhale, skill_fire_bolt]
     remove_statuses: [molten_shell]
-    spawns: [{template: ember_lizard, count: 2}]
+    spawns: [{template: heart_ember_lizard, count: 2}]  # 殼縫餘燼蜥（5F-5b）
   - id: meltdown
     name_zh: 熔毀
     trigger: {kind: hp_below, permille: 300}

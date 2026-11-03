@@ -16,6 +16,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world_season import WorldEventDef
 from trpg.server.announce import region_name
 from trpg.world.calendar import day_of, day_start
+from trpg.world.economy import shop_price_zh
 from trpg.world.narration import location_name_for
 from trpg.world.state import CharacterState, WorldEventState, WorldState
 
@@ -80,6 +81,7 @@ def _event_line(library: ContentLibrary, row: _Resolved) -> str:
     text = f"世界事件「{row.event.name_zh}」{'成功' if succeeded else '失敗'}"
     text += f"（{row.state.progress}／{row.state.target}）"
     bonus = [f"{region_name(library, b.region)}建議等級 +{b.amount}" for b in effect.level_bonus]
+    bonus += [shop_price_zh(library, p.shop, p.permille, sep="") for p in effect.shop_price]
     return text + ("，" + "、".join(bonus) if bonus else "") + "。"
 
 

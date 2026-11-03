@@ -142,6 +142,7 @@ def _world(library: ContentLibrary, chars: tuple[CharacterState, ...]) -> WorldS
             "seal_keys": 7,
             "recipes": (_recipe("0123456789", "霧鐵盔"), _recipe("abcdef0123", "灰燼盔")),
             "level_bonus": {"ashen_waste": 1},
+            "shop_price": {"shop_iron_lady": 200},  # 5F-5b
             "rolled_day": 5,
         }
     )

@@ -346,6 +346,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "league_truce": None,  # 5F-4b：循環賽開場休戰，只由 league.opening_statuses 掛上
         "molten_burst": None,  # 5F-5a：熔核爆裂（死後留火），只由熔岩獸群開場掛上
         "frost_ember_burst": None,  # 5F-5a：寒燼爆裂（死後留冰），只由寒燼蜥開場掛上
+        "heart_ember_burst": None,  # 5F-5b：殼縫熔核（死後留火），只由殼縫餘燼蜥開場掛上
         "molten_shell": None,  # 5F-5a：熔殼，只由灰燼之心開場掛上
         "hard_shell": None,  # 5F-5a：硬殼，只由詞綴硬殼的開場掛上
         # 3W-2b：元素姿態階梯（每個元素 5 級）
