@@ -52,7 +52,38 @@
 
 ## 檢查
 
-（交件前填）
+- `ruff check .`、`ruff format --check .`、`mypy`（1205 檔）、`lint-imports`（13 契約）通過。
+- `pytest -n 8 -m "slow or not slow" tests/engine tests/content tests/world tests/api tests/server tests/narrative tests/skillgen tests/sim/test_push_check.py tests/test_architecture.py`：12436 通過、14 略過、4 xpassed（含 slow 的 `test_con_hp`、`test_source`、`test_budget`、`test_refactor_3wr2`、`test_push_check`）。
+- `tests/cli`（`-m "slow or not slow" --timeout=3000`，不加 -n）：180 通過（快照重產後重跑一次）。
+- vitest 140 檔 1294 通過；`npm run build` 通過（只有既有的 chunk 大小警告）。
+- swamp 種子 7 重播：88 個動作、313 個事件，最終狀態一致。荒原戰鬥重播（`trpg battle --map molten_heart_pit --seed 7`，灰燼之心＋2 隻餘燼蜥）：106 個動作、504 個事件，最終狀態一致。
+- 合併 main：main 沒有新 commit（仍是 5f31706d），合併後已是最新。5F-3b 的 `enemy_only` 還沒進 main，所以沒有標（清單見下）。
+- 瀏覽器實測沒做（內容段，畫面元件沒改；狀態圖示有 vitest 檢查）。
+
+### 受影響的測試與快照（逐一說明原因）
+
+| 檔案 | 改了什麼 | 原因 |
+|---|---|---|
+| `tests/content/test_con_hp.py`（slow） | 加 14 個範本的最終 HP | 新單位與召喚物（體質換算後的 HP 表要列全部範本） |
+| `tests/engine/test_source.py`（slow） | 精英名單加 `ashen_heart`、`molten_lord` | 新的 `elite` 標籤範本 |
+| `tests/skillgen/test_budget.py`（slow） | 狀態點數表加 4 個新狀態（都是 `None`，不能由技能施加）＋`league_truce` | 新狀態；`league_truce` 是 5F-4b 漏補，main 上這條 slow 測試本來就會失敗 |
+| `tests/skillgen/fixtures/refactor_3wr2.json`（slow） | 重產 | 新增 8 招的完整強度與升階；閃現對照是「ID 排序後等距取約 40 招」，加了技能後取樣位置移動、換了一批樣本，既有項目的雜湊沒有任何一筆改變 |
+| `tests/skillgen/test_validate.py` | 有益狀態表加 `hard_shell` | 新狀態 |
+| `tests/sim/test_push_check.py` | 正式地圖 14 → 15 | 新 Boss 地圖熔心坑 |
+| CLI 快照 `skills_list`、`skills_show_all/00～15`；`llm_propose_mock.txt` | 重產 | 多了 8 招技能（ID 排序插在中間，每一頁都位移）；Mock 提議從內建技能池取樣，池子多了敵人技能，第 2、3 題換成別的技能（`enemy_only` 進來後應該會再變） |
+| `client/src/battle/fixtures/glossary.json`（`scripts/export_client_fixtures.py`） | 重產 | 新技能、狀態、單位 |
+| `client/src/render/fixtures/skill_icons.json` | 重產 | 新技能的圖示 |
+| `client/src/render/statusIcon.ts`／`.test.ts` | 4 個圖示、狀態 112 → 116 | 新狀態 |
+| `tests/content/test_coverage.py` | 允許清單加 4 個狀態 | 只由開場狀態掛上，沒有技能施加 |
+| `tests/content/test_skill_scaling.py` | 內建技能 384 → 392 | 新 8 招 |
+| `tests/content/test_summon_looks.py`、`test_summon_content.py` | 外觀 20 → 21、召喚物加餘燼幼蜥 | 新召喚物 |
+| `tests/content/test_world_enemies.py` | 變體 3 → 8、詞綴 4 → 6；遠程能套的詞綴加硬殼的 | 新變體與詞綴 |
+| `tests/content/test_world_encounters.py`、`tests/world/test_enemy_smoke.py` | 「每個新敵人都有出場」改成所有區域一起算；smoke 加荒原每個陣容與新詞綴；敵人數 20 → 32 | 荒原的敵人在荒原的遭遇表 |
+| `tests/content/test_world_season.py` | 懸賞 3 → 6、鑰匙來源加 `heart_pit_boss`；負面案例改指最後一個來源 | 荒原懸賞與鑰匙來源 |
+| `tests/content/test_world_economy.py` | 測試用區域加 `ashen_waste` | 荒原材料標了區域 |
+| `tests/content/test_world_events.py` | 錯誤訊息比對放寬成「未知的 NPC」 | 拿掉 NPC 檔時荒原骨架先報錯（檔名排序） |
+| `tests/content/test_world_crafting.py` | 待接人設卡的測試改成「已搬進 world/npcs」；加提示接到傳聞的測試 | pending 刪掉、提示接上 |
+| `tests/api/test_world_board.py` | 世界事件 2 → 3；懸賞提示語測試跳過第 4 天才貼的荒原懸賞 | 熔岩潰堤、荒原懸賞 |
 
 ## 代決（最保守預設；規格 39.6 之外的實作細節）
 
