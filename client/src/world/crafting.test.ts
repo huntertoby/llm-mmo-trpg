@@ -4,7 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { WorldCraftGear, WorldCrafting } from "../api/types";
 import { craftAction, draftProblem, initialDraft, toggleMaterial, withSlot } from "./crafting";
-import { SmithyPanel } from "./SmithyPanel";
+import { codeProblem, normalizeCode } from "./bagView";
+import { SmithyPanel, smithyTabs, type SmithyTab } from "./SmithyPanel";
 
 function gear(overrides: Partial<WorldCraftGear> = {}): WorldCraftGear {
   return {
@@ -86,22 +87,50 @@ describe("打造表單", () => {
 });
 
 describe("SmithyPanel", () => {
-  it("列出設施、表單、配方與裝備；停用的按鈕保留原因", () => {
+  const render = (tab: SmithyTab, overrides: Partial<WorldCrafting> = {}) =>
+    renderToStaticMarkup(createElement(SmithyPanel, { crafting: crafting(overrides), busy: false, onAct: () => undefined, initialTab: tab }));
+
+  it("分頁：預設是打造表單；四個分頁都在", () => {
     const html = renderToStaticMarkup(createElement(SmithyPanel, { crafting: crafting(), busy: false, onAct: () => undefined }));
     expect(html).toContain("石記鐵鋪（石師傅）");
     expect(html).toContain('data-testid="world-craft-form"');
-    expect(html).toContain("首位發現者 阿霧");
-    expect(html).toContain('data-testid="world-recipe-ABCDEF0123"');
-    expect(html).toContain('data-testid="world-reroll-item_craft_abc_1-0"');
-    expect(html).toContain("指定成…");
-    expect(html).toMatch(/data-testid="world-enhance-item_craft_abc_1"[^>]*disabled|disabled[^>]*data-testid="world-enhance-item_craft_abc_1"/);
+    for (const id of ["craft", "code", "gear", "enchant"]) expect(html).toContain(`data-testid="world-smithy-tab-${id}"`);
   });
 
-  it("不能用時顯示原因、沒有鐵匠就沒有表單", () => {
-    const html = renderToStaticMarkup(
-      createElement(SmithyPanel, { crafting: crafting({ can_use: false, problem_zh: "還有沒處理的遭遇", smithy: null }), busy: false, onAct: () => undefined }),
-    );
+  it("配方碼：輸入框與配方表（首位發現者）；空的輸入不能送", () => {
+    const html = render("code");
+    expect(html).toContain('data-testid="world-code-input"');
+    expect(html).toMatch(/disabled[^>]*data-testid="world-code-submit"/);
+    expect(html).toContain("首位發現者 阿霧");
+    expect(html).toContain('data-testid="world-recipe-ABCDEF0123"');
+    expect(html).toContain("每件裝備只列最新一筆");
+  });
+
+  it("強化與分解、附魔台：停用的按鈕保留原因", () => {
+    const gearTab = render("gear");
+    expect(gearTab).toMatch(/data-testid="world-enhance-item_craft_abc_1"[^>]*disabled|disabled[^>]*data-testid="world-enhance-item_craft_abc_1"/);
+    expect(gearTab).toContain('data-testid="world-salvage-item_craft_abc_1"');
+    const enchant = render("enchant");
+    expect(enchant).toContain('data-testid="world-reroll-item_craft_abc_1-0"');
+    expect(enchant).toContain("指定成…");
+    expect(enchant).not.toContain("title="); // 說明用共用 Hint
+  });
+
+  it("不能用時顯示原因、沒有鐵匠就沒有打造與配方碼分頁", () => {
+    const html = render("craft", { can_use: false, problem_zh: "還有沒處理的遭遇", smithy: null });
     expect(html).toContain("還有沒處理的遭遇");
     expect(html).not.toContain('data-testid="world-craft-form"');
+    expect(smithyTabs({ smithy: null, enchanter: "x" })).toEqual(["enchant"]);
+    expect(smithyTabs({ smithy: "s", enchanter: null })).toEqual(["craft", "code", "gear"]);
+  });
+});
+
+describe("配方碼輸入", () => {
+  it("去空白與連字號、轉大寫；長度與字元檢查", () => {
+    expect(normalizeCode(" abcde-f0123 ")).toBe("ABCDEF0123");
+    expect(codeProblem("")).toBe("輸入 10 碼的配方碼");
+    expect(codeProblem("abc")).toContain("10 碼");
+    expect(codeProblem("ABCDEFG123")).toContain("10 碼");
+    expect(codeProblem("abcdef0123")).toBeNull();
   });
 });

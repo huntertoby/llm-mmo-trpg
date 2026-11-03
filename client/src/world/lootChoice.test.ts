@@ -72,6 +72,8 @@ describe("LootChoicePanel", () => {
           consumables: [],
           equipped_zh: [],
           resonance_zh: [],
+          equipment: [],
+          gear_cards: [],
         },
         busy: false,
         onAct: () => undefined,

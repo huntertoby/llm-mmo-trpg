@@ -23,15 +23,24 @@ export function worldActionOf(choice: RunChoice): WorldAction | null {
 }
 
 /** 左欄顯示：閃現待選時固定是選項畫面、任務三選一待選時固定是三選一（閃現優先，5B-5）；
- * 否則照玩家切換（地點圖、成長、任務與線頭）。`want` 給布林時＝舊的「成長／地點圖」切換。 */
-export type LeftPane = "map" | "growth" | "pending" | "offer" | "quests";
-export type WantPane = "map" | "growth" | "quests";
+ * 否則照玩家切換（地點圖、成長、任務與線頭；5D-4 加背包、商店、鐵匠）。`want` 給布林時＝舊的「成長／地點圖」切換。
+ * 商店、鐵匠只在這裡有店或設施時才開得了（離開城鎮就回到地點圖）；背包要有經濟資料。 */
+export type LeftPane = "map" | "growth" | "pending" | "offer" | "quests" | "bag" | "shop" | "smithy";
+export type WantPane = "map" | "growth" | "quests" | "bag" | "shop" | "smithy";
 
 export function leftPane(view: WorldView, want: boolean | WantPane): LeftPane {
   if (view.pending_flash != null) return "pending";
   if (view.pending_offer != null) return "offer";
   if (typeof want === "boolean") return want ? "growth" : "map";
+  if (want === "shop" && view.shop == null) return "map";
+  if (want === "smithy" && view.crafting == null) return "map";
+  if (want === "bag" && view.inventory == null) return "map";
   return want;
+}
+
+/** 左欄切換鈕：再點同一個回到地點圖。 */
+export function togglePane(current: WantPane, clicked: WantPane): WantPane {
+  return current === clicked ? "map" : clicked;
 }
 
 /** 「成長與技能」按鈕上的小字：有可用的點數時提醒。 */
