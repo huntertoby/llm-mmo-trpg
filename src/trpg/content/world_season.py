@@ -1,9 +1,9 @@
 """賽季日程、今日目標、懸賞、世界事件（``content/world/season.yaml``，Phase 5F-1）。
 
-``docs/phases/Phase5計畫.md`` 35.4。依據：09 9.7（14 天節奏、懸賞先搶先贏、世界事件每 3～4 天 1 個）、
-9.6.9 #99（今日目標 3 條、新手期偏教學）、9.6.10 #103（全服進度、門檻依前一天上線人數調整）、
-18 18.7.4（雲嶺懸賞）、19 19.9（世界事件）。規則在 :mod:`trpg.world.season_board`；這裡只有資料與
-檢查（守則 4）。
+``docs/phases/Phase5計畫.md`` 35.4。依據：09 9.7（14 天節奏、懸賞先搶先贏、世界事件每 3～4 天
+1 個）、9.6.9 #99（今日目標 3 條、新手期偏教學）、9.6.10 #103（全服進度、門檻依前一天上線人數
+調整）、18 18.7.4（雲嶺懸賞）、19 19.9（世界事件）。規則在 :mod:`trpg.world.season_board`；
+這裡只有資料與檢查（守則 4）。
 
 跨檔案檢查（地點、遭遇表的陣容、詞綴、天氣、區域）在 :func:`season_problems`，由內容庫呼叫。
 """
@@ -200,7 +200,8 @@ class WorldEventDef(ContentModel):
         return self
 
     def target_for(self, players: int | None) -> int:
-        """前一天上線 ``players`` 人時的門檻；``None``＝沒有前一天的資料（用原門檻，代決 5F1-4）。"""
+        """前一天上線 ``players`` 人時的門檻；``None``＝沒有前一天的資料（用原門檻，
+        代決 5F1-4）。"""
         if players is None:
             return self.goal.count
         return max(1, self.goal.count * max(players, 1) // self.base_players)
@@ -221,7 +222,7 @@ class SeasonContent(ContentModel):
         expected = 1
         for phase in self.schedule:
             if phase.days[0] != expected:
-                raise ValueError(f"日程 {phase.id} 應從第 {expected} 天開始（依序、不重疊、不留空）")
+                raise ValueError(f"日程 {phase.id} 應從第 {expected} 天開始（依序、不重疊）")
             expected = phase.days[1] + 1
         if self.schedule and expected != self.days + 1:
             raise ValueError(f"日程要涵蓋第 1～{self.days} 天")
@@ -287,10 +288,12 @@ def _bounty_problems(
     group = table.group_by_id().get(bounty.group)
     if group is None:
         return [f"{where}：未知的陣容 {bounty.group}"]
-    if group.third:
-        return [f"{where}：懸賞陣容不能有第三方"]
-    if len(group.units) + 1 > MAX_GROUP_SIZE:
-        return [f"{where}：陣容加精英超過 {MAX_GROUP_SIZE} 名"]
+    if group.third or len(group.units) + 1 > MAX_GROUP_SIZE:
+        return [f"{where}：懸賞陣容不能有第三方，加精英也不能超過 {MAX_GROUP_SIZE} 名"]
+    return _bounty_elite_problems(where, bounty, catalog)
+
+
+def _bounty_elite_problems(where: str, bounty: BountyDef, catalog: EnemyCatalog) -> list[str]:
     if not catalog.has(bounty.elite.unit):
         return [f"{where}：未知的精英 {bounty.elite.unit}"]
     try:
