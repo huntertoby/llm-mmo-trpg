@@ -262,7 +262,13 @@ export type WorldAction =
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
   | (Omit<Schemas["PouchAction"], "items"> & { items: Record<string, number> })
   | Schemas["UseItemAction"]
-  | Schemas["EquipAction"];
+  | Schemas["EquipAction"]
+  // 5D-3：鐵匠（打造、強化、分解）與附魔台（重骰、指定）
+  | (Pick<Schemas["CraftAction"], "kind" | "station"> & Partial<Omit<Schemas["CraftAction"], "kind" | "station">>)
+  | Schemas["EnhanceAction"]
+  | Schemas["RerollAction"]
+  | Schemas["ImbueAction"]
+  | Schemas["SalvageAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -294,3 +300,8 @@ export type WorldInventory = Schemas["InventoryView"];
 export type WorldBagItem = Schemas["BagItemView"];
 export type WorldShop = Schemas["ShopView"];
 export type WorldShopItem = Schemas["ShopItemView"];
+// 鐵匠與附魔台（Phase 5D-3）
+export type WorldCrafting = Schemas["CraftingView"];
+export type WorldCraftGear = Schemas["CraftGearView"];
+export type WorldCraftMaterial = Schemas["CraftMaterialView"];
+export type WorldRecipe = Schemas["RecipeView"];

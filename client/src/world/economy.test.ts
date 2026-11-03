@@ -35,6 +35,7 @@ function inventory(overrides: Partial<WorldInventory> = {}): WorldInventory {
     pouch_problem_zh: null,
     consumables: [bag("item_oil_flask", "油瓶", 1), bag("item_hp_potion_small", "小回復藥", 2, true)],
     equipped_zh: [],
+    resonance_zh: [],
     ...overrides,
   };
 }
