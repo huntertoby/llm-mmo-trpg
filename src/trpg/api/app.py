@@ -24,8 +24,10 @@ from trpg.api.accounts import (
     AccountStore,
     AuthError,
 )
+from trpg.api.auth import AdminRequiredError
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
+from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
 from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
@@ -74,6 +76,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     AccountNotFoundError: 404,
     AccountLimitError: 409,
     AccountError: 422,
+    LoginRateLimitError: 429,
+    AdminRequiredError: 403,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
@@ -128,6 +132,11 @@ def create_app(
         settings.accounts_dir(saves),
         max_characters=settings.max_characters,
         session_ttl_s=settings.session_ttl_s,
+    )
+    app.state.login_limiter = LoginLimiter(  # 登入嘗試次數限制（5E-2）
+        max_failures=settings.login_max_failures,
+        ip_max_failures=settings.login_ip_max_failures,
+        window_s=settings.login_window_s,
     )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))

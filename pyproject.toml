@@ -209,6 +209,37 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
+name = "bot 只直接匯入 api 服務層與 shared（Phase 5E-2）"
+type = "forbidden"
+source_modules = ["trpg.bot"]
+forbidden_modules = [
+    "trpg.world",
+    "trpg.engine",
+    "trpg.roguelite",
+    "trpg.content",
+    "trpg.skillgen",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.cli",
+]
+# 服務層（trpg.api.accounts）自己用到 trpg.world.save 等不算；只限制 bot 的直接匯入。
+allow_indirect_imports = "True"
+
+[[tool.importlinter.contracts]]
+name = "下層模組不得匯入 bot（Phase 5E-2）"
+type = "forbidden"
+source_modules = [
+    "trpg.engine",
+    "trpg.world",
+    "trpg.api",
+    "trpg.shared",
+    "trpg.content",
+    "trpg.roguelite",
+]
+forbidden_modules = ["trpg.bot"]
+
+[[tool.importlinter.contracts]]
 name = "下層模組不得匯入 world（Phase 5A-2）"
 type = "forbidden"
 source_modules = [

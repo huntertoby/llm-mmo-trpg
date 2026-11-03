@@ -27,7 +27,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Request
 
-from trpg.api.auth import accounts_of, require_world_access, viewer
+from trpg.api.auth import accounts_of, require_admin, require_world_access, viewer
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import allocation_preview, flash_preview
 from trpg.api.run_schemas import (
@@ -218,7 +218,8 @@ def get_world_llm(request: Request) -> WorldLlmView:
         return world_llm_of(request).view()
 
 
-@router.post("/llm")
+# 伺服器全域開關：帶了 token 的非管理者 403（5E-2，計畫 29.8）。說明不放 docstring，OpenAPI 不變。
+@router.post("/llm", dependencies=[Depends(require_admin)])
 def post_world_llm(body: WorldLlmRequest, request: Request) -> WorldLlmView:
     """改大世界的 LLM 開關：打開時先探測，連不到維持關閉並回提示；``null`` 回到伺服器設定。"""
     store = world_of(request)

@@ -3249,6 +3249,126 @@ dir = ""                   # 帳號存檔資料夾；空字串＝<存檔資料�
 
 - Discord Bot、身分組、重設密碼的 Bot 指令（5E-2）；公告、部署（5E-3）；朋友名單與好友邀請；帳號刪除；角色刪除；密碼強度規則以外的帳號鎖定（嘗試次數限制）。
 
-## 29. 之後各段規格
+## 29. 5E-2 詳細規格：Discord Bot（假介面、不連網）
+
+> 給實作 agent。只動 `src/trpg/bot/`（新套件）、`src/trpg/api/`（`accounts.py`、`account_config.py`、`auth.py`、`routes/auth.py`、`routes/world.py`、`app.py` 小改；新增 `login_limit.py`）、`config/server.toml`（加欄位）、`config/bot.example.toml`（新）、`scripts/dev_account.py`、`scripts/discord_bot.py`（新）、`pyproject.toml`（只改 import-linter 契約）、`tests/bot/`（新）、`tests/api/`、`tests/test_architecture.py`。**不加** 任何 Discord 函式庫相依、不連網、不碰 `trpg.world`、`trpg.engine`、前端。另一個 agent 同時在做 5D-3，撞到以 main 為準。
+> 依據：`docs/專案計畫.md` 3.1（Bot 發帳號密碼、不用 OAuth；有指定身分組才能領；只存雜湊；一個 Discord 使用者 ID 一個帳號；Bot 可重設密碼；身分組被拔時停用）；本檔 2.x（`trpg.bot` 依賴規則）、28（5E-1 服務層）、`docs/phases/Phase5E-1報告.md` 待 PM 決定 3～5。
+
+### 29.1 目標
+
+`trpg.bot` 是一個 **只靠介面** 的 Discord Bot 核心：收到「領帳號」「重設密碼」指令、成員身分組變動、成員離開伺服器這三類事件，呼叫 5E-1 的帳號服務層（`trpg.api.accounts.AccountStore`）。Discord 的實際連線藏在 `DiscordGateway` protocol 後面；這一段只做 `FakeDiscordGateway`（測試用），**真實 adapter 不做**（只留介面與說明，列待決）。順手補 5E-1 的三個待決：登入嘗試次數限制、LLM 開關只給管理者改、`attach` 檢查角色檔。
+
+### 29.2 套件依賴
+
+- `trpg.bot` 直接匯入只限 `trpg.api`（服務層：`accounts`、`account_config`）、`trpg.shared` 與標準函式庫／pydantic；不直接匯入 `trpg.world`、`trpg.engine`、`trpg.roguelite`、`trpg.content`、`trpg.skillgen`、`trpg.sim`、`trpg.llm`、`trpg.narrative`、`trpg.cli`（import-linter 契約，`allow_indirect_imports`：服務層自己用到 `trpg.world.save.write_atomic` 不算）。
+- `trpg.engine`、`trpg.world`、`trpg.api`、`trpg.shared`、`trpg.content`、`trpg.roguelite` 不得匯入 `trpg.bot`（import-linter ＋ `tests/test_architecture.py`）。
+
+### 29.3 設定（`config/bot.example.toml` 進版控；真的值放 `config/bot.local.toml`（已被 `.gitignore` 的 `*.local.*` 排除）或環境變數）
+
+```toml
+[discord]
+token = ""                 # Bot token；建議只用環境變數 TRPG_BOT_TOKEN
+guild_id = ""              # Discord 伺服器 ID
+role_id = ""               # 能領帳號的身分組 ID
+announce_channel_id = ""   # 公告頻道 ID（5E-3 才用；這一段只檢查有填）
+```
+
+- 讀取順序：`TRPG_BOT_CONFIG`（設定檔路徑）→ `config/bot.local.toml`（不存在就略過）；環境變數 `TRPG_BOT_TOKEN`、`TRPG_BOT_GUILD_ID`、`TRPG_BOT_ROLE_ID`、`TRPG_BOT_ANNOUNCE_CHANNEL_ID` 覆寫。
+- 缺值或 ID 不是數字 → `BotConfigError`，訊息 **列出全部缺的欄位與對應的環境變數**，不印 token。token 用 `SecretStr`（`repr`、log 不會出現原文）。
+- Bot 是獨立程序：遊戲伺服器（`create_app`）**不讀** Bot 設定，Bot 設定缺值不影響伺服器啟動。
+- 帳號資料夾、角色上限照 `config/server.toml`（同一個服務層函式 `open_account_store()`，Bot 與開發腳本共用）。
+
+### 29.4 介面（`trpg.bot.gateway`）
+
+| 名稱 | 內容 |
+|---|---|
+| `CommandEvent` | `guild_id`、`user_id`、`user_name`、`command`（`register`／`reset_password`）、`username`（選填，`register` 指定帳號名稱） |
+| `MemberUpdateEvent` | `guild_id`、`user_id`、`before_roles`、`after_roles` |
+| `MemberRemoveEvent` | `guild_id`、`user_id`（離開或被踢出伺服器） |
+| `DiscordGateway.member_roles(guild_id, user_id)` | 目前的身分組 ID（不在伺服器＝`None`）；**每次指令都重查**，不信任事件附帶的資料 |
+| `DiscordGateway.send_dm(user_id, text)` | 私訊；對方關閉私訊 → 回 `False` |
+| `DiscordGateway.reply(event, text)` | 只有指令發送者看得到的回覆（ephemeral）；**絕不含密碼** |
+
+- 介面是同步的；真實 adapter（之後）在自己的事件迴圈裡用執行緒呼叫（scrypt 是 CPU 工作）。
+- `FakeDiscordGateway`：記憶體裡的成員與身分組表、記錄每則私訊與回覆、可設定某人關閉私訊。
+
+### 29.5 Bot 行為（`trpg.bot.service.BotService`）
+
+| 事件 | 行為 |
+|---|---|
+| 指令來自別的伺服器 | 回覆「請在指定的伺服器使用」，不動帳號 |
+| `register`：沒有指定身分組 | 回覆「需要指定的身分組才能領帳號」 |
+| `register`：這個 Discord ID 已有帳號 | 回覆「你已經有帳號了：<名稱>」（停用中則說明找管理者恢復）；不發新密碼 |
+| `register`：成功 | 產生密碼（`secrets.token_urlsafe(12)`）→ 建帳號（`discord_id` 綁定）→ **私訊** 帳號名稱與密碼（只此一次）→ 回覆「已私訊」 |
+| `register`／`reset_password`：私訊失敗 | 帳號照建立／密碼照換，但密碼沒送出（記憶體裡丟掉，沒人知道）；回覆「私訊失敗，請開啟私訊後用重設密碼」 |
+| `reset_password`：沒身分組／沒帳號／停用 | 各自回覆原因，不換密碼 |
+| `reset_password`：成功 | 換密碼（清掉全部 session）→ 私訊新密碼 → 回覆「已私訊」 |
+| `MemberUpdateEvent`：指定身分組被拔 | 該 Discord ID 的帳號停用（清 session） |
+| `MemberUpdateEvent`：身分組被加回 | **不自動恢復**（代決 5E2-2）；管理者用 `dev_account.py enable` |
+| `MemberRemoveEvent` | 同身分組被拔 |
+| `reconcile()`（Bot 啟動時） | 每個有 `discord_id` 的帳號重查身分組，沒有就停用（Bot 離線期間的變動） |
+
+- 帳號名稱：`register` 有指定就用（不合 5E1-8 規則或已被用 → 回覆原因）；沒指定就由 Discord 名稱轉成合法名稱（小寫、`.`／`-`→`_`、去掉其他字元、截到 20 字，不足 3 字補 `player`），撞名時加 `_` ＋ 4 個十六進位字元。
+- 密碼只出現在私訊文字；回覆、log、錯誤訊息都不帶。伺服器只存雜湊（5E-1）。
+
+### 29.6 帳號服務層小改
+
+- `AccountRecord.admin: bool = False`（新欄位、有預設值，舊檔照讀，格式仍是 `trpg-account/1`）；`AccountStore.set_admin(account_id, admin)`。
+- **跨程序**：Bot 與伺服器是兩個程序寫同一個帳號資料夾；`AccountStore` 的快取在資料夾內檔案（名稱、修改時間、大小）變了時重讀，所以 Bot 建的帳號、停用伺服器立刻看得到。兩邊同時改同一帳號仍可能後寫蓋前寫（列待決）。
+- `open_account_store(settings=None)`：照 `config/server.toml` 開帳號存檔（Bot、開發腳本共用）。
+
+### 29.7 登入嘗試次數限制（5E-1 待決 4）
+
+- `config/server.toml` `[accounts]` 加 `login_max_failures = 5`、`login_window_minutes = 15`、`login_ip_max_failures = 5`。
+- 只算 **失敗**（帳號或密碼錯）；同一帳號名稱（不分大小寫，帳號不存在也算，不透露存在）或同一 IP 在視窗內失敗達上限 → 429「登入嘗試次數過多，請稍後再試」，連密碼都不比對。成功登入清掉該帳號名稱的紀錄（IP 的不清）。
+- 記憶體計數（伺服器重啟歸零）；時鐘可注入。IP 取 `request.client.host`（Tunnel 之後的真實 IP 是 5E-3 的事，列待決）。
+
+### 29.8 LLM 開關只給管理者（5E-1 待決 3）
+
+- `POST /api/world/llm`：帶了 token 的非管理者 → 403「只有管理者能改 LLM 開關」；開發模式關時沒 token 照舊 401；開發模式開、沒帶 token 照舊可改（本機試玩）。`GET` 不變。
+- `dev_account.py create --admin`、`admin <username> on|off`；`list` 顯示「管理者」。
+
+### 29.9 `dev_account.py attach` 檢查角色檔（5E-1 待決 5）
+
+- 角色檔 `<世界資料夾>/chars/<character_id>.json` 不存在 → 錯誤、不歸屬。世界資料夾預設 `<存檔資料夾>/world`，可用 `--world-dir` 指定。
+
+### 29.10 啟動腳本（`scripts/discord_bot.py`）
+
+- `check`：讀設定，缺值印清楚的錯誤（exit 2）；齊了印「設定齊全」與遮住的 token（只露最後 4 字）。
+- `run`：先做 `check`；真實 adapter 還沒做 → 印說明（exit 3），不當掉、不碰遊戲伺服器。
+
+### 29.11 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/bot/test_config.py` | example 設定沒有 token；缺值列出欄位與環境變數；環境變數覆寫；ID 非數字；token 不出現在錯誤與 `repr`；`config/bot.local.toml` 被 gitignore |
+| `tests/bot/test_service.py` | 有身分組才能領；一個 Discord ID 一個帳號；密碼只在私訊、只一次、能登入、檔裡只有雜湊；私訊失敗；名稱轉換與撞名；重設密碼清 session；拔身分組／離開 → 停用、token 失效；加回不恢復；`reconcile`；別的伺服器 |
+| `tests/bot/test_script.py` | `discord_bot.py check`／`run` 的 exit code 與訊息；伺服器不讀 Bot 設定 |
+| `tests/api/test_login_limit.py` | 帳號與 IP 各自上限、429、視窗過後恢復、成功清帳號紀錄 |
+| `tests/api/test_auth_api.py`／`test_accounts.py` | LLM 開關只給管理者；`admin` 舊檔照讀；跨程序重讀；`attach` 角色檔不存在 |
+
+測試密碼與 token 一律用 `secrets` 當場產生。
+
+### 29.12 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/api`、`tests/world`、`tests/bot`、`tests/test_architecture.py`（`-n 8`）；swamp 種子 7 重播；API 型別有變就重產 OpenAPI。
+
+### 29.13 代決（最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5E2-1 | 真實 Discord adapter | **不做**：只留 `DiscordGateway` 與說明，不加 discord 函式庫相依 |
+| 5E2-2 | 身分組加回 | **不自動恢復**；管理者手動 `enable`（避免誤判、也不區分「誰停用的」） |
+| 5E2-3 | 私訊失敗 | 帳號照建立／密碼照換但不送出，提示開私訊後重設 |
+| 5E2-4 | 停用中的帳號重設密碼 | 拒絕（不能用重設密碼繞過停用） |
+| 5E2-5 | 嘗試次數限制 | 只算失敗；帳號 5 次、IP 5 次／15 分（設定檔）；記憶體計數 |
+| 5E2-6 | 開發模式下沒 token 改 LLM 開關 | 照舊可改（開發模式本來就不擋）；帶 token 才檢查管理者 |
+| 5E2-7 | 前端 | 不改（非管理者按 LLM 開關會看到 403 訊息） |
+
+### 29.14 不做的事
+
+- 真實 Discord 連線與 slash 指令註冊；公告（5E-3，這一段只讀設定）；Tunnel；朋友名單；帳號刪除；管理者的 Bot 指令。
+
+## 30. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

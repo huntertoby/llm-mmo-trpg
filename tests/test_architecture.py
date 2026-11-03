@@ -13,6 +13,8 @@
      skillgen）。
    - ``trpg.world`` 不得匯入 api、cli、sim、llm、narrative；engine、content、shared、roguelite、
      skillgen、narrative 不得匯入 ``trpg.world``（Phase 5A-2，``docs/phases/Phase5計畫.md`` 2.3）。
+   - ``trpg.bot`` 只直接匯入 ``trpg.api`` 服務層與 ``trpg.shared``；engine、world、api、shared、
+     content、roguelite 不得匯入 ``trpg.bot``（Phase 5E-2，計畫 29.2）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite``、``world`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式、內建 ``hash()``
    等。
@@ -36,13 +38,14 @@ ENGINE_FORBIDDEN = (
     "trpg.skillgen",
     "trpg.cli",
     "trpg.world",
+    "trpg.bot",
 )
 
-CONTENT_FORBIDDEN = ("trpg.skillgen", "trpg.world")
+CONTENT_FORBIDDEN = ("trpg.skillgen", "trpg.world", "trpg.bot")
 
 NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim", "trpg.world")
 
-API_FORBIDDEN = ("trpg.cli",)
+API_FORBIDDEN = ("trpg.cli", "trpg.bot")
 
 SKILLGEN_FORBIDDEN = ("trpg.llm", "trpg.world")
 
@@ -53,9 +56,22 @@ ROGUELITE_FORBIDDEN = (
     "trpg.llm",
     "trpg.narrative",
     "trpg.world",
+    "trpg.bot",
 )
 
-WORLD_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.sim", "trpg.llm", "trpg.narrative")
+WORLD_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.sim", "trpg.llm", "trpg.narrative", "trpg.bot")
+
+BOT_FORBIDDEN = (
+    "trpg.world",
+    "trpg.engine",
+    "trpg.roguelite",
+    "trpg.content",
+    "trpg.skillgen",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.cli",
+)
 
 FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.engine": ENGINE_FORBIDDEN,
@@ -65,6 +81,7 @@ FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.roguelite": ROGUELITE_FORBIDDEN,
     "trpg.skillgen": SKILLGEN_FORBIDDEN,
     "trpg.world": WORLD_FORBIDDEN,
+    "trpg.bot": BOT_FORBIDDEN,
 }
 
 DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite", "world")
@@ -347,6 +364,11 @@ def test_scanner_detects_dependency_violations() -> None:
         ("trpg.roguelite.progress", False, "from trpg.world.state import CharacterState"),
         ("trpg.skillgen.validate", False, "from ..world import step"),
         ("trpg.narrative.events", False, "from trpg.world.actions import TravelAction"),
+        ("trpg.bot.service", False, "from trpg.world.save import write_atomic"),
+        ("trpg.bot.service", False, "import trpg.engine.runner"),
+        ("trpg.world.step", False, "from trpg.bot.service import BotService"),
+        ("trpg.engine.grid", False, "import trpg.bot"),
+        ("trpg.api.app", False, "from trpg.bot.config import load_bot_settings"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
@@ -371,6 +393,8 @@ def test_scanner_allows_legal_dependencies() -> None:
         ("trpg.world.step", False, "from trpg.engine.runner import LOG_FORMAT"),
         ("trpg.world.step", False, "from trpg.content.library import ContentLibrary"),
         ("trpg.api.world", False, "from trpg.world.step import world_step"),
+        ("trpg.bot.service", False, "from trpg.api.accounts import AccountStore"),
+        ("trpg.bot.service", False, "from trpg.shared.errors import TrpgError"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
