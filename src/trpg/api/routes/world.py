@@ -57,6 +57,7 @@ from trpg.api.auth import (
     viewer,
 )
 from trpg.api.chronicle_schemas import (
+    ChronicleTitles,
     ChronicleView,
     LegacyHeroView,
     SeasonResetRequest,
@@ -126,6 +127,7 @@ def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
         battle_id=battle.battle_id if battle is not None else None,
         raw_events=outcome.events,
         narrations=narrations,
+        titles=store.titles_of_character,
     )
 
 
@@ -282,6 +284,7 @@ def get_board(character_id: str, request: Request) -> SeasonBoardView:
             now,
             actor=actor,
             boss_board=store.boss_board.top(world.season_id),
+            titles=store.titles_of_character,
         )
 
 
@@ -384,6 +387,7 @@ def get_chronicle(request: Request) -> ChronicleView:
             store.league.chronicle.load().seasons,
             store.first_kills.all(),
             store.boss_board.all(),
+            titles=ChronicleTitles(store.titles_of_character, store.titles_of_account),
         )
 
 

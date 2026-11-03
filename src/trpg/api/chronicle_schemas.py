@@ -10,10 +10,12 @@
 from __future__ import annotations
 
 import datetime as dt
+from dataclasses import dataclass
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.content.library import ContentLibrary
 from trpg.server.chronicle import (
     ChronicleHero,
@@ -33,6 +35,7 @@ __all__ = [
     "ChronicleRankView",
     "ChronicleRecipeView",
     "ChronicleSeasonView",
+    "ChronicleTitles",
     "ChronicleView",
     "LegacyHeroView",
     "SeasonResetRequest",
@@ -49,9 +52,21 @@ class _ApiModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+@dataclass(frozen=True)
+class ChronicleTitles:
+    """編年史名字旁的帳號稱號（5F-3c）：依角色 ID 或帳號 ID 查；預設不顯示（沒有帳號）。"""
+
+    of_character: TitlesOf = no_titles
+    of_account: TitlesOf = no_titles
+
+
+_TITLES_DOC: Final = "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
+
+
 class ChronicleHeroView(_ApiModel):
     name: str
     text_zh: str
+    titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
 
 
 class ChronicleRecipeView(_ApiModel):
@@ -63,6 +78,7 @@ class ChronicleKillView(_ApiModel):
     kind: str
     target_name_zh: str
     name: str
+    titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
 
 
 class ChronicleRankView(_ApiModel):
@@ -73,6 +89,7 @@ class ChronicleRankView(_ApiModel):
     losses: int
     draws: int
     tied: bool
+    titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
 
 
 class ChronicleBoardView(_ApiModel):
@@ -80,6 +97,7 @@ class ChronicleBoardView(_ApiModel):
     score: int
     rounds: int
     title_zh: str
+    titles: list[str] = Field(default_factory=list, description=_TITLES_DOC)
 
 
 class ChronicleSeasonView(_ApiModel):
@@ -149,6 +167,7 @@ def _season_view(
     league: LeagueChronicleSeason | None,
     kills: list[FirstKill],
     board: list[BossBoardEntry],
+    titles: ChronicleTitles,
 ) -> ChronicleSeasonView:
     return ChronicleSeasonView(
         season_id=season_id,
@@ -158,7 +177,18 @@ def _season_view(
         reset_at=None if entry is None else entry.reset_at,
         heroes=[]
         if entry is None
-        else [ChronicleHeroView(name=h.name, text_zh=h.text_zh) for h in entry.heroes],
+        else [
+            ChronicleHeroView(
+                name=h.name,
+                text_zh=h.text_zh,
+                titles=list(
+                    titles.of_character(h.character_id)
+                    if h.account_id is None
+                    else titles.of_account(h.account_id)
+                ),
+            )
+            for h in entry.heroes
+        ],
         recipes=[]
         if entry is None
         else [
@@ -166,7 +196,12 @@ def _season_view(
             for r in entry.recipes
         ],
         first_kills=[
-            ChronicleKillView(kind=k.kind, target_name_zh=k.target_name_zh, name=k.name)
+            ChronicleKillView(
+                kind=k.kind,
+                target_name_zh=k.target_name_zh,
+                name=k.name,
+                titles=list(titles.of_character(k.character_id)),
+            )
             for k in kills
         ],
         league=[]
@@ -180,11 +215,18 @@ def _season_view(
                 losses=r.losses,
                 draws=r.draws,
                 tied=r.tied,
+                titles=list(titles.of_account(r.account)),
             )
             for r in league.ranks
         ],
         boss_board=[
-            ChronicleBoardView(name=b.name, score=b.score, rounds=b.rounds, title_zh=b.title_zh)
+            ChronicleBoardView(
+                name=b.name,
+                score=b.score,
+                rounds=b.rounds,
+                title_zh=b.title_zh,
+                titles=list(titles.of_character(b.character_id)),
+            )
             for b in board[:BOARD_TOP]
         ],
     )
@@ -196,8 +238,12 @@ def chronicle_view(
     leagues: tuple[LeagueChronicleSeason, ...],
     kills: tuple[FirstKill, ...],
     board: tuple[BossBoardEntry, ...],
+    *,
+    titles: ChronicleTitles | None = None,
 ) -> ChronicleView:
-    """編年史：季末紀錄的季（依重置時間，新的在前），再加上還沒重置但已有紀錄的季（目前這一季）。"""
+    """編年史：季末紀錄的季（依重置時間，新的在前），再加上還沒重置但已有紀錄的季（目前這一季）。
+    ``titles``：名字旁的帳號稱號（5F-3c；省略＝不顯示）。"""
+    found = ChronicleTitles() if titles is None else titles
     entries = {s.season_id: s for s in seasons}
     league_by = {s.season_id: s for s in leagues}
     order = [s.season_id for s in sorted(seasons, key=lambda s: s.reset_at, reverse=True)]
@@ -214,6 +260,7 @@ def chronicle_view(
             league=league_by.get(sid),
             kills=[k for k in kills if k.season_id == sid],
             board=[b for b in board if b.season_id == sid],
+            titles=found,
         )
         for sid in ids
     ]

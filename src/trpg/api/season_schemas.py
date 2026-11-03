@@ -116,6 +116,8 @@ class BoardBossEntryView(_ApiModel):
     """出發挑戰的地點（看的人還沒發現的隱藏地點用提示語，5C-3f）。"""
     mine: bool
     at: int
+    titles: tuple[str, ...] = ()
+    """這名玩家帳號的紀念稱號（5F-3c；名字旁顯示）。"""
 
 
 class BoardSeasonBossView(_ApiModel):
@@ -143,6 +145,8 @@ class BoardSeasonBossView(_ApiModel):
     problem_zh: str | None = None
     """不能挑戰的原因。"""
     first_kill_zh: str | None = None
+    first_kill_titles: tuple[str, ...] = ()
+    """首殺玩家帳號的紀念稱號（5F-3c；沒有首殺＝空）。"""
     title_zh: str
     board: tuple[BoardBossEntryView, ...] = ()
     """通關評分榜（前 10 名）。"""

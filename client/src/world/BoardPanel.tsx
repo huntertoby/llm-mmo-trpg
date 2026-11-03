@@ -3,6 +3,7 @@
 // 首殺、評分榜、挑戰按鈕）。全部由後端算好（換日後的世界，只讀）；左欄切換，樣式沿用任務日誌與一輪的進度條。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { AccountTitles } from "../ui/AccountTitles";
 import type { SeasonBoardView, WorldAction, WorldView } from "../api/types";
 import {
   barWidth,
@@ -140,7 +141,12 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
               <div className="muted small">
                 {bossAttemptsLabel(board.season_boss)}；只准系統傭兵，失敗只扣次數。
               </div>
-              {board.season_boss.first_kill_zh != null && <div className="small">{board.season_boss.first_kill_zh}</div>}
+              {board.season_boss.first_kill_zh != null && (
+                <div className="small" data-testid="world-board-boss-first-kill">
+                  {board.season_boss.first_kill_zh}
+                  <AccountTitles titles={board.season_boss.first_kill_titles} />
+                </div>
+              )}
               {onAct !== undefined && board.season_boss.status === "open" && (
                 <div>
                   <button
@@ -167,6 +173,7 @@ export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: 
                   {board.season_boss.board.map((e) => (
                     <li key={`${e.rank}-${e.name}`} className={e.mine ? "world-board-open" : ""}>
                       {bossEntryLabel(e)}
+                      <AccountTitles titles={e.titles} />
                     </li>
                   ))}
                 </ul>

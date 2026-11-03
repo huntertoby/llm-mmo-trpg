@@ -21,6 +21,7 @@ const boss: BoardSeasonBossView = {
   can_challenge: false,
   problem_zh: "「碎晶之主」還在封印中",
   first_kill_zh: null,
+  first_kill_titles: [],
   title_zh: "碎晶的終結者",
   board: [],
 };
@@ -36,6 +37,7 @@ const entry: BoardBossEntryView = {
   location_zh: "霧渡鎮",
   mine: false,
   at: 0,
+  titles: [],
 };
 
 describe("賽季 Boss 區塊", () => {

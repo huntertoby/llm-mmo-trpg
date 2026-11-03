@@ -168,6 +168,7 @@ def create_app(
     )
     app.state.world.actor_of = app.state.accounts.owner_of  # 世界日誌記帳號（5F-1，Q15）
     app.state.world.grant_title = app.state.accounts.grant_title  # 紀念稱號（5F-3b）
+    app.state.world.account_titles = app.state.accounts.titles_of  # 稱號顯示（5F-3c）
     app.state.login_limiter = LoginLimiter(  # 登入嘗試次數限制（5E-2）
         max_failures=settings.login_max_failures,
         ip_max_failures=settings.login_ip_max_failures,

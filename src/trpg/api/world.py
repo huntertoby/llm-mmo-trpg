@@ -144,6 +144,9 @@ class WorldStore:
         self.grant_title: Callable[[str, AccountTitle], object] | None = None
         """帳號 ID ＋紀念稱號 → 記到帳號檔（5F-3b「碎晶的終結者」）；``None``＝不記。
         :func:`~trpg.api.app.create_app` 接上帳號的 ``grant_title``（帳號檔鎖，5D-R2）。"""
+        self.account_titles: Callable[[str], tuple[str, ...]] | None = None
+        """帳號 ID → 顯示用的紀念稱號（5F-3c：名片、評分榜、首殺、編年史）；``None``＝不顯示。
+        :func:`~trpg.api.app.create_app` 接上帳號的 ``titles_of``。"""
         self.library = library
         self.offers = OfferPrefetcher(library, enabled=prefetch)
         """三選一的背景預先計算與快取（PERF-3）。"""
@@ -271,6 +274,18 @@ class WorldStore:
         found = None if self.actor_of is None else self.actor_of(character_id)
         return character_id if found is None else found
 
+    def titles_of_account(self, account_id: str | None) -> tuple[str, ...]:
+        """帳號的紀念稱號（5F-3c；沒有帳號或沒接上帳號＝空）。"""
+        if account_id is None or self.account_titles is None:
+            return ()
+        return self.account_titles(account_id)
+
+    def titles_of_character(self, character_id: str) -> tuple[str, ...]:
+        """角色所屬帳號的紀念稱號（稱號是帳號層級，5F-3b；5F-3c 顯示在名字旁）。"""
+        if self.actor_of is None:
+            return ()
+        return self.titles_of_account(self.actor_of(character_id))
+
     def battle_of(self, character_id: str) -> BattleSession | None:
         with self._lock:
             return self._battles.get(character_id)
@@ -293,7 +308,8 @@ class WorldStore:
 
         ``legacy``（5F-5；5F-5c 玩法 PM 代決）：沿用上季角色的外觀＝名字與紙娃娃（取代 ``name``）。
         種族不算外觀：``race`` 省略＝帶上季的種族，給了就照新選（免費改）；紙娃娃裡跟著種族的部件
-        （:data:`~trpg.server.chronicle.RACE_DOLL_FIELDS`）在種族改了時改回新角色範本的預設。"""
+        （:data:`~trpg.server.chronicle.RACE_DOLL_FIELDS`）在種族改了時，目前的值新種族沒有才改回新角色範本的預設
+        （5F-3c 代決，:func:`~trpg.server.chronicle.legacy_doll`）。"""
         if legacy is not None:
             name = legacy.name
             race = legacy.race if race is None else race
@@ -302,8 +318,14 @@ class WorldStore:
         run = with_origin(self.library, with_race(self.library, run, race), origin)
         update: dict[str, object] = {"name_zh": name}
         if legacy is not None and legacy.doll is not None:
+            new_race = run.hero.race
+            race_look = None if new_race is None else self.library.ruleset.race_def(new_race).look
             update["doll"] = legacy_doll(
-                legacy.doll, legacy_race=legacy.race, race=run.hero.race, base=run.hero.doll
+                legacy.doll,
+                legacy_race=legacy.race,
+                race=new_race,
+                base=run.hero.doll,
+                race_look=race_look,
             )
         hero = run.hero.model_copy(update=update)
         with self._lock:

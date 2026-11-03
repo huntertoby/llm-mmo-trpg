@@ -1,8 +1,9 @@
 // 編年史（Phase 5F-5）：每季的季末紀錄（上季角色打過的精英、完成的事件）、首位發現的配方、循環賽最終排名、
 // 首殺與賽季 Boss 評分榜。所有人可看；角色名與配方名是玩家文字，只當資料顯示。
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { ChronicleSeasonView, ChronicleView } from "../api/types";
+import { AccountTitles } from "../ui/AccountTitles";
 import { seasonHasRecords, seasonTitle } from "./season";
 
 function SeasonBlock({ season }: { season: ChronicleSeasonView }) {
@@ -13,30 +14,48 @@ function SeasonBlock({ season }: { season: ChronicleSeasonView }) {
         <ul className="small">
           {season.heroes.map((h, i) => (
             <li key={`h${i}`}>
-              <b>{h.name}</b>　{h.text_zh}
+              <b>{h.name}</b>
+              <AccountTitles titles={h.titles} />　{h.text_zh}
             </li>
           ))}
         </ul>
       )}
       {season.first_kills.length > 0 && (
-        <div className="small">
+        <div className="small" data-testid="chronicle-first-kills">
           首殺：
-          {season.first_kills.map((k) => `${k.target_name_zh}（${k.name}）`).join("、")}
+          {season.first_kills.map((k, i) => (
+            <Fragment key={`k${i}`}>
+              {i > 0 && "、"}
+              {`${k.target_name_zh}（${k.name}`}
+              <AccountTitles titles={k.titles} />）
+            </Fragment>
+          ))}
         </div>
       )}
       {season.boss_board.length > 0 && (
-        <div className="small">
+        <div className="small" data-testid="chronicle-boss-board">
           賽季 Boss 評分榜：
-          {season.boss_board.map((b, i) => `${i + 1}. ${b.name} ${b.score} 分${b.title_zh ? `「${b.title_zh}」` : ""}`).join("　")}
+          {season.boss_board.map((b, i) => (
+            <Fragment key={`b${i}`}>
+              {i > 0 && "　"}
+              {`${i + 1}. ${b.name} ${b.score} 分`}
+              {/* 帳號有稱號就顯示帳號稱號（5F-3c）；舊資料沒有時退回這次通關的稱號 */}
+              {(b.titles ?? []).length > 0 ? <AccountTitles titles={b.titles} /> : b.title_zh ? `「${b.title_zh}」` : ""}
+            </Fragment>
+          ))}
         </div>
       )}
       {season.league.length > 0 && (
         <div className="small">
           影子循環賽：
-          {season.league
-            .slice(0, 5)
-            .map((r) => `${r.rank}. ${r.name}（${r.build_zh}）${r.wins} 勝 ${r.losses} 敗 ${r.draws} 和`)
-            .join("　")}
+          {season.league.slice(0, 5).map((r, i) => (
+            <Fragment key={`r${i}`}>
+              {i > 0 && "　"}
+              {`${r.rank}. ${r.name}`}
+              <AccountTitles titles={r.titles} />
+              {`（${r.build_zh}）${r.wins} 勝 ${r.losses} 敗 ${r.draws} 和`}
+            </Fragment>
+          ))}
         </div>
       )}
       {season.recipes.length > 0 && (
