@@ -696,3 +696,16 @@
   font-size: 10.5px;
   color: #8a7e6c;
 }
+
+/* 說明卡的外框：深底、金邊、圓角 10，寬約 250（沿用 Hint 浮動卡，只在功能列的卡換樣式） */
+.float-card.part-tip-box:has(.hud-bar-card) {
+  max-width: 256px;
+}
+
+.part-tip-box:has(.hud-bar-card) .float-card-body {
+  padding: 8px 10px;
+  background: rgba(30, 26, 22, 0.97);
+  border: 1.5px solid #c8a868;
+  border-radius: 10px;
+  overflow: hidden;
+}
