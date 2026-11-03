@@ -20,7 +20,8 @@ from trpg.world.actions import (
     EventTriggeredEvent,
     WorldEvent,
 )
-from trpg.world.clock import day_phase, refresh_day
+from trpg.world.calendar import day_of, season_day
+from trpg.world.clock import day_phase
 from trpg.world.rng import STREAM_EVENT, draw
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.threads import active_threads
@@ -72,7 +73,7 @@ def event_candidates(
             continue
         if skeleton.once and skeleton.id in finished:
             continue
-        if skeleton.once and _failed_today(failed, skeleton.id, now):
+        if skeleton.once and _failed_today(failed, skeleton.id, day_of(library, now)):
             continue
         if skeleton.day_phase is not None and skeleton.day_phase != phase:
             continue
@@ -85,19 +86,14 @@ def event_candidates(
     return tuple(out)
 
 
-def _failed_today(failed: Mapping[str, int] | None, skeleton: str, now: int) -> bool:
+def _failed_today(failed: Mapping[str, int] | None, skeleton: str, today: int) -> bool:
     day = None if failed is None else failed.get(skeleton)
-    return day is not None and refresh_day(now) <= day
+    return day is not None and today <= day
 
 
 def is_opportunity(skeleton: EventSkeletonDef) -> bool:
     """骨架有機遇解法（07 7.6；18.4 #12）。"""
     return any(s.kind == "opportunity" for s in skeleton.solutions)
-
-
-def season_day(world: WorldState, now: int) -> int:
-    """賽季第幾天（1 起；以台北 6 點刷新為界）。"""
-    return refresh_day(now) - refresh_day(world.season_start) + 1
 
 
 def guaranteed_opportunity(
@@ -108,7 +104,7 @@ def guaranteed_opportunity(
     ``unlock_only`` 要已解鎖、``once`` 要沒解決；多個時取 ID 最小者）；不保底時 ``None``。"""
     rules = library.world_rules
     start = 0 if rules is None else rules.opportunity.guarantee_from_day
-    if start <= 0 or season_day(world, now) < start:
+    if start <= 0 or season_day(library, world, now) < start:
         return None
     if char.met_opportunities or char.opportunities:
         return None
@@ -122,7 +118,7 @@ def guaranteed_opportunity(
             continue
         if skeleton.once and (
             skeleton.id in char.finished_skeletons
-            or _failed_today(char.failed_skeletons, skeleton.id, now)
+            or _failed_today(char.failed_skeletons, skeleton.id, day_of(library, now))
         ):
             continue
         return skeleton
@@ -245,7 +241,7 @@ def mark_finished(
     failed = dict(char.failed_skeletons)
     for event in ended:
         if event.outcome == "failure":
-            failed[event.skeleton] = refresh_day(now)
+            failed[event.skeleton] = day_of(library, now)
         else:
             finished.add(event.skeleton)
             failed.pop(event.skeleton, None)

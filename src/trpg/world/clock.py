@@ -22,6 +22,7 @@ __all__ = [
     "WEATHER_PERIOD_SECONDS",
     "DayPhase",
     "day_phase",
+    "day_start_at",
     "game_clock",
     "game_day_index",
     "half_day_index",
@@ -78,12 +79,31 @@ def game_clock(now: int) -> tuple[int, int]:
     return divmod(minute, 60)
 
 
-def refresh_day(now: int) -> int:
-    """以台北早上 6 點為界的「第幾天」（每日一次的判定、懸賞、今日目標用）。"""
-    return (_check(now) + UTC_OFFSET_SECONDS - REFRESH_HOUR * 3600) // REAL_DAY_SECONDS
+def _offset(utc_offset_minutes: int | None) -> int:
+    return UTC_OFFSET_SECONDS if utc_offset_minutes is None else utc_offset_minutes * 60
 
 
-def next_refresh_at(now: int) -> int:
-    """下一次每日刷新（台北 6 點）的 UTC 秒數（嚴格大於 ``now``）。"""
-    day = refresh_day(now) + 1
-    return day * REAL_DAY_SECONDS - UTC_OFFSET_SECONDS + REFRESH_HOUR * 3600
+def refresh_day(
+    now: int, *, utc_offset_minutes: int | None = None, refresh_hour: int = REFRESH_HOUR
+) -> int:
+    """以當地早上 6 點為界的「第幾天」（每日一次的判定、懸賞、今日目標用）。
+
+    時區與刷新時刻預設是台北 6 點；世界規則的 ``calendar`` 可以換（Phase 5F-1，
+    :mod:`trpg.world.calendar`）。"""
+    shifted = _check(now) + _offset(utc_offset_minutes) - refresh_hour * 3600
+    return shifted // REAL_DAY_SECONDS
+
+
+def day_start_at(
+    day: int, *, utc_offset_minutes: int | None = None, refresh_hour: int = REFRESH_HOUR
+) -> int:
+    """刷新日 ``day`` 開始（當地刷新時刻）的 UTC 秒數。"""
+    return day * REAL_DAY_SECONDS - _offset(utc_offset_minutes) + refresh_hour * 3600
+
+
+def next_refresh_at(
+    now: int, *, utc_offset_minutes: int | None = None, refresh_hour: int = REFRESH_HOUR
+) -> int:
+    """下一次每日刷新的 UTC 秒數（嚴格大於 ``now``）。"""
+    day = refresh_day(now, utc_offset_minutes=utc_offset_minutes, refresh_hour=refresh_hour)
+    return day_start_at(day + 1, utc_offset_minutes=utc_offset_minutes, refresh_hour=refresh_hour)

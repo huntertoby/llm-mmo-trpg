@@ -11,6 +11,11 @@
 #   day／night 是遊戲日的前半與後半）。天氣 ID 見 weather.yaml。沒列的區用 default_weather。
 # - week_days：一週幾天（以早上 6 點刷新的日子算；酒館傳聞、商店每週限量；5D-R1 從 affinity.yaml 移來）。
 week_days: 7
+# - calendar：每日刷新的時區（UTC 位移分鐘）與當地時刻（Phase 5F-1；docs/專案計畫.md 3.1「06:00 Asia/Taipei」）。
+#   開賽日在 config/server.toml 的 [season]；賽季天數與日程在 world/season.yaml。
+calendar:
+  utc_offset_minutes: 480
+  refresh_hour: 6
 supplies:
   max: 10
   start: 5

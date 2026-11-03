@@ -1,0 +1,72 @@
+# 第一季的日程、今日目標、懸賞、世界事件（Phase 5F-1；docs/phases/Phase5計畫.md 35.4）。
+# schema：src/trpg/content/world_season.py；規則：src/trpg/world/season_board.py。
+# 來源：docs/design/09-世界與敘事.md 9.7（14 天節奏、懸賞先搶先贏不設每日數量、世界事件每 3～4 天 1 個）、
+# 9.6.9 #99（今日目標 3 條、完成給少量任務幣、新手期偏教學）、9.6.10 #103（門檻依前一天上線人數自動調整）、
+# 18 18.7.4（雲嶺懸賞）、19 19.6（主線時間點）、19.9（世界事件）。
+# 時區與刷新時刻在 world/rules.yaml 的 calendar；開賽日在 config/server.toml 的 [season]。
+# 數值（任務幣、門檻比例、目標次數）是開發 PM 的初值（Phase 5 計畫 Q14、代決 5F1-11），未經模擬。
+days: 14
+
+# 9.7 節奏（顯示用；天數 1 起、閉區間、依序涵蓋整季）
+schedule:
+  - {id: act1, days: [1, 3], name_zh: 霧中裂痕, text_zh: 主線第 1～2 章、雲嶺；世界事件「霧潮入侵」}
+  - {id: act2, days: [4, 7], name_zh: 灰燼之心, text_zh: 灰燼荒原、懸賞；世界事件「熔岩潰堤」}
+  - {id: act3, days: [8, 10], name_zh: 封印, text_zh: 封印鑰匙集滿即解鎖 Boss（最早第 8 天、第 10 天強制）}
+  - {id: race, days: [11, 13], name_zh: Boss 競賽, text_zh: 首殺者得獎金；第 13 天截止影子循環賽報名}
+  - {id: finale, days: [14, 14], name_zh: 季末, text_zh: 無人首殺時舉行影子循環賽}
+
+# 時間點（顯示用；規則在各段：主線 5B-4／荒原、Boss 5F-3、循環賽 5F-4）
+milestones:
+  - {id: story_skill_1, day: 2, name_zh: 主線第 1 章的劇情技能}
+  - {id: story_skill_2, day: 6, name_zh: 主線第 2 章的劇情技能}
+  - {id: boss_earliest, day: 8, name_zh: 賽季 Boss 最早解鎖}
+  - {id: boss_forced, day: 10, name_zh: 賽季 Boss 強制解鎖；主線第 3 章的劇情技能}
+  - {id: league_signup_close, day: 13, name_zh: 影子循環賽截止報名}
+  - {id: league, day: 14, name_zh: 影子循環賽}
+
+# 今日目標（#99）：全服同一組、進度算角色（代決 5F1-3）；完成一條給 coins 任務幣。
+# 第 1～newbie_days 天用 newbie（教學）；之後每天從 goals 確定性抽 count 條。
+daily_goals:
+  count: 3
+  coins: 1
+  newbie_days: 2
+  newbie: [starter_steps, reveal_hidden, elite_once]
+  goals:
+    - {id: starter_steps, text_zh: 完成新手任務 2 步, goal: {kind: quest_step, quest_kind: starter, count: 2}}
+    - {id: reveal_hidden, text_zh: 發現 1 個隱藏地點, goal: {kind: location_revealed, count: 1}}
+    - {id: elite_once, text_zh: 打倒 1 隻精英, goal: {kind: battle_won, elite: true, count: 1}}
+    - {id: win_battles, text_zh: 打贏 3 場戰鬥, goal: {kind: battle_won, count: 3}}
+    - {id: fog_battle, text_zh: 在霧中打贏 1 場, goal: {kind: battle_won, weather: [fog], count: 1}}
+    - {id: rain_battle, text_zh: 在雨中打贏 1 場, goal: {kind: battle_won, weather: [rain], count: 1}}
+    - {id: quest_steps, text_zh: 推進任務 2 步, goal: {kind: quest_step, count: 2}}
+    - {id: situation_wins, text_zh: 情境判定成功 2 次, goal: {kind: situation_success, count: 2}}
+    - {id: talk_npcs, text_zh: 和 NPC 聊天 2 次, goal: {kind: talked, count: 2}}
+    - {id: camp_once, text_zh: 在野外紮營 1 次, goal: {kind: camped, count: 1}}
+    - {id: camp_fight, text_zh: 打贏 1 場營地的戰鬥, goal: {kind: battle_won, location_kinds: [camp], count: 1}}
+    - {id: bounty_once, text_zh: 搶下 1 張懸賞, goal: {kind: bounty_claimed, count: 1}}
+
+# 懸賞（18.7.4；09 9.7「先搶先贏，不設每日數量」）：每天刷新時貼出 from_day 起的全部懸賞；
+# 貼出期間在該地點遇敵就是懸賞陣容（group＋elite 排最前；角色自己的遭遇變化優先），先打贏的人拿走當天的懸賞。
+# 雲嶺懸賞第 1 天起（代決 5F1-8：9.7「第 4～7 天 懸賞」對應荒原懸賞 19.8 的等級 7～8）。
+bounties:
+  - {id: north_wolf_king, name_zh: 北坡狼王, region: cloud_ridge, location: north_slope, level: 5,
+     group: north_slope_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, from_day: 1}
+  # 「會分身（召喚 1 個幻影）」沒有機制，先只有霧隱的詞綴（代決 5F1-13，待 PM）
+  - {id: mist_swordsman, name_zh: 霧中劍客, region: cloud_ridge, location: sword_tomb, level: 5,
+     group: mist_swordsman_band, elite: {unit: sect_swordsman, affix: mist_veiled}, coins: 3, from_day: 1}
+  - {id: scarface, name_zh: 斷崖幫二當家「疤面」, region: cloud_ridge, location: cliff_gang_fort, level: 4,
+     group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}, coins: 3, from_day: 1}
+
+# 世界事件（19.9、#103）：全服一條進度；門檻＝goal.count × max(前一天上線帳號數, 1) ÷ base_players（最少 1，Q14）；
+# 第 1 天沒有前一天的資料用原門檻（代決 5F1-4）。達到門檻立刻成功；結束日過了還沒到就失敗。
+# #2 熔岩潰堤（荒原村落守點）、#3 封印共鳴（封印鑰匙）等荒原與 5F-3 的內容到位再加。
+world_events:
+  - id: mist_tide
+    name_zh: 霧潮入侵
+    text_zh: 全服在雲嶺的霧中打贏戰鬥；成功則開放灰燼荒原
+    days: [1, 3]
+    goal: {kind: battle_won, region: cloud_ridge, weather: [fog], count: 30}
+    base_players: 8
+    on_success: {flags: [ashen_waste_open]}
+    # 失敗：第 4 天仍開放，但荒原建議等級 +1（19.9；9.6.7 #15）
+    on_failure: {flags: [ashen_waste_open], level_bonus: [{region: ashen_waste, amount: 1}]}

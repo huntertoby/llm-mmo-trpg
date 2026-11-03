@@ -142,8 +142,8 @@ def _arrive(
 
 def test_guarantee_from_day_6(library: ContentLibrary, make_char: MakeChar) -> None:
     world = make_world()
-    assert season_day(world, NOON) == 1
-    assert season_day(world, DAY6) == 6
+    assert season_day(library, world, NOON) == 1
+    assert season_day(library, world, DAY6) == 6
     at_altar = make_char(location="old_pine_altar")
     assert guaranteed_opportunity(library, world, at_altar, DAY6 - DAY) is None  # 第 5 天
     assert guaranteed_opportunity(library, world, at_altar, DAY6) is not None

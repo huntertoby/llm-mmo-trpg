@@ -57,7 +57,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.battle import fight
-from trpg.world.clock import refresh_day
+from trpg.world.calendar import day_of
 from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
@@ -382,7 +382,7 @@ def _perceive(
     """抵達後對相鄰的隱藏地點自動感知判定（#112；鄰居依 ID 排序）。"""
     rules = _rules(library)
     locations = world_map.location_by_id()
-    today = refresh_day(now)
+    today = day_of(library, now)
     region = world_map.region
     events: list[WorldEvent] = []
     for neighbor_id in world_map.neighbors(char.location):

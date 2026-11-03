@@ -10,7 +10,7 @@ import logging
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 from pydantic import Field, PrivateAttr, model_validator
 
@@ -137,11 +137,12 @@ from trpg.content.world_encounters import EncounterTable, encounter_table_proble
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
 from trpg.content.world_loot import LootRules, load_world_loot
-from trpg.content.world_map import LocationMapDef, world_map_problems
+from trpg.content.world_map import LocationKind, LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
 from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
+from trpg.content.world_season import SEASON_FILE, SeasonContent, season_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -614,6 +615,9 @@ class ContentLibrary:
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
     world_crafting: CraftingRules | None = None
     """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
+    world_season: SeasonContent | None = None
+    """賽季日程、今日目標、懸賞、世界事件（``world/season.yaml``，Phase 5F-1）；沒有檔案時為
+    ``None``（這些功能關閉）。"""
     world_resonance: ResonanceRules | None = None
     """裝備共鳴（``world/resonance.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（沒有共鳴）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
@@ -902,12 +906,18 @@ def load_library(  # noqa: PLR0915
     )
     unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
+    catalog = _enemy_catalog(units, world_enemies, weapon_map, skills, ruleset)
     world_encounters = _load_world_encounters(
-        root / WORLD_ENCOUNTERS_DIR,
-        world_maps,
-        _enemy_catalog(units, world_enemies, weapon_map, skills, ruleset),
-        unit_check,
+        root / WORLD_ENCOUNTERS_DIR, world_maps, catalog, unit_check, files
+    )
+    world_season = _load_world_season(  # 5F-1
+        root / SEASON_FILE,
         files,
+        world_maps=world_maps,
+        encounters=world_encounters,
+        catalog=catalog,
+        weather_ids=set(weather_map),
+        region_ids=set() if regions is None else {r.id for r in regions.regions},
     )
     world_event_content = load_world_event_content(
         root,
@@ -1021,6 +1031,7 @@ def load_library(  # noqa: PLR0915
         world_loot=world_loot,
         world_crafting=world_crafting,
         world_resonance=world_resonance,
+        world_season=world_season,
         files=files,
     )
 
@@ -1161,6 +1172,35 @@ def _load_optional[M: ContentModel](
     loaded = load_content_file(path, model)
     files.append((path, loaded))
     return loaded
+
+
+def _load_world_season(
+    path: Path,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    world_maps: Mapping[str, LocationMapDef],
+    encounters: Mapping[str, EncounterTable],
+    catalog: EnemyCatalog,
+    weather_ids: set[str],
+    region_ids: set[str],
+) -> SeasonContent | None:
+    """載入 ``world/season.yaml``（檔案不存在＝``None``）並做跨檔案檢查（Phase 5F-1）。"""
+    if not path.is_file():
+        return None
+    season = load_content_file(path, SeasonContent)
+    problems = season_problems(
+        season,
+        world_maps=world_maps,
+        encounters=encounters,
+        catalog=catalog,
+        weather_ids=weather_ids,
+        region_ids=region_ids,
+        location_kinds=get_args(LocationKind.__value__),
+    )
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    files.append((path, season))
+    return season
 
 
 def _load_world_rules(
