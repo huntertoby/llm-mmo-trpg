@@ -84,14 +84,15 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
         if after["wallet"]["gold"] > 0:
             break
         assert not any("金幣" in e for e in after["events"])  # 輸了不給
-    assert after["wallet"]["gold"] == 30
-    assert any("獲得 30 金幣" in e for e in after["events"])
+    gold = after["wallet"]["gold"]
+    assert gold in (30, 45)  # 測試把一般戰鬥調成 30；角色 ID 隨機，遭遇偶爾是精英（45）
+    assert any(f"獲得 {gold} 金幣" in e for e in after["events"])
     assert after["shop"] is None  # 野外沒有店
 
     home = _act(client, cid, kind="travel", to="mist_ferry")
     assert home["shop"] is not None and _shop_item(home, "item_antidote_herb")["can_buy"] is True
     bought = _act(client, cid, kind="buy", shop="shop_liu", item="item_antidote_herb")
-    assert bought["wallet"]["gold"] == 5
+    assert bought["wallet"]["gold"] == gold - 25
     looted = len(_loot(home))  # 5D-2：打贏可能撿到材料、裝備
     assert [(b["item"], b["count"]) for b in _shelf(bought)] == [("item_antidote_herb", 1)]
     assert bought["inventory"]["slots_used"] == 1 + looted
@@ -108,7 +109,7 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     emptied = _act(client, cid, kind="pouch", items={})
     sold = _act(client, cid, kind="sell", shop="shop_liu", item="item_antidote_herb")
     assert emptied["inventory"]["pouch"] == []
-    assert sold["wallet"]["gold"] == 17 and _shelf(sold) == []
+    assert sold["wallet"]["gold"] == gold - 25 + 12 and _shelf(sold) == []
 
 
 def test_bad_economy_actions_are_rejected(client: TestClient) -> None:
