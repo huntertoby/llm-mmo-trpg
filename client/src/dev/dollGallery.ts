@@ -8,6 +8,8 @@ import raceLooks from "../render/fixtures/raceLooks.json";
 import type { DollEquipment } from "../render/dollGear";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W, drawFigurePose } from "../render/paperdoll";
 import { REST_POSE, type InkPose } from "../render/inkPose";
+import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, bodyTop, drawCreature, resolveCreature } from "../render/inkCreature";
+import { CREATURE_CLIP_IDS, CREATURE_CLIPS, creaturePoseAt, type CreaturePose } from "../render/creaturePose";
 
 const SCALE = 3;
 
@@ -306,7 +308,7 @@ const POSE_DEMO: Array<[string, InkPose | null]> = [
   ["舉起主手", { arm: -2.4 }],
   ["彎手肘", { arm: -0.6, elbow: -1.4 }],
   ["兩手前伸", { arm: -1.1, elbow: -0.3, armF: -1, elbowF: -0.3 }],
-  ["揮下（wpn）", { arm: 0.4, wpn: 0.9, lean: 0.15, hipN: 0.4, hipF: -0.3 }],
+  ["揮下（wpn）", { arm: 0.4, wpn: 1.65, lean: 0.15, hipN: 0.4, hipF: -0.3 }],
 ];
 const POSE_SETS: Array<[string, DollSpec]> = [
   ["騎士", withGear({ head: C_HEADS[0]!, body: { kind: "plate", material: "steel" }, main_hand: W("sword"), off_hand: undefined, cloak: { kind: "cape", color: "#7a2a3a" } })],
@@ -317,4 +319,71 @@ const FB_DEMO: Array<[string, InkPose | null]> = [["沒設姿勢", null], ["抬�
 section("⑬ 6M-1・姿勢示範・正面、背面（騎士）", (["south", "north"] as const).flatMap((f) => FB_DEMO.map(([l, p]) => posedCell(POSE_SETS[0]![1], f, `${f}・${l}`, p))));
 for (const kind of ["walk", "run", "sneak"] as const) {
   section(`⑬ 6M-1・循環抽樣（${kind}，示範；正式片段在 6M-3）`, [0, 1, 2, 3, 4, 5].map((i) => posedCell(POSE_SETS[0]![1], "east", `${kind} ${i}/6`, demoWalk((i / 6) * Math.PI * 2, kind))));
+}
+
+// ⑭ Phase 6M-2：武器統一座標（握把在原點、作用端朝 -y）。姿勢的 wpn ＝ 武器相對手的角度；照樣張 anim.js 的起手、命中瞬間
+const ATTACK_DEMO: Readonly<Record<string, readonly [InkPose, InkPose]>> = {
+  slash: [{ arm: -2.5, wpn: 1.7, lean: -0.1, hipN: 0.25, hipF: -0.2 }, { arm: 0.15, wpn: 1.85, lean: 0.18, hipN: 0.45, hipF: -0.3 }],
+  thrust: [{ arm: 0.5, wpn: 0.9, lean: -0.08 }, { arm: -1.0, wpn: 2.57, lean: 0.2, hipN: 0.5, hipF: -0.35 }],
+  shoot: [{ arm: -1.3, wpn: 2.87, pull: 6, lean: -0.05 }, { arm: -1.3, wpn: 2.87 }],
+  cast: [{ arm: -2.5, wpn: 2.7, lean: -0.06 }, { arm: -1.2, wpn: 2.4, lean: 0.12 }],
+};
+const ATTACK_OF: Readonly<Record<string, string>> = { spear: "thrust", fist: "thrust", bow: "shoot", crossbow: "shoot", pistol: "shoot", shotgun: "shoot", longgun: "shoot", staff: "cast", talisman: "cast", puppet_cross: "cast" };
+const attackPair = (w: GearItem): readonly [InkPose, InkPose] => ATTACK_DEMO[ATTACK_OF[w.kind] ?? "slash"]!;
+const attackCells = (ws: GearItem[], f: Facing, pair = false): HTMLElement[] =>
+  ws.flatMap((w) => {
+    const [wind, hit] = attackPair(w);
+    const s = withGear({ main_hand: w, off_hand: pair ? w : undefined });
+    const n = `${wlabel(w)}${pair ? "×2" : ""}`;
+    return [posedCell(s, f, `${n} 起手`, wind), posedCell(s, f, `${n} 命中`, hit)];
+  });
+const SECT: GearItem[] = [W("whisk"), W("talisman"), W("puppet_cross")];
+section("⑭ 6M-2・武器出招（近戰、拳套）", attackCells([...MELEE, W("sword", "curved"), W("dagger", "kris"), W("greatsword", "zhanma")], "east"));
+section("⑭ 6M-2・武器出招（長柄、鞭、弓、弩、法杖）", attackCells([...POLES, W("staff", "wand"), ...SECT], "east"));
+section("⑭ 6M-2・武器出招（槍）", attackCells(GUNS, "east"));
+section("⑭ 6M-2・武器出招（朝西）", attackCells([W("sword"), W("spear"), W("bow"), W("longgun", "sniper"), W("staff")], "west"));
+section("⑭ 6M-2・成對武器出招（主手 wpn、副手預設握法）", attackCells([W("dagger"), W("sword"), W("pistol", "revolver"), W("axe")], "east", true));
+const BOW_SPEC = withGear({ main_hand: W("bow"), off_hand: undefined });
+section("⑭ 6M-2・弓弦 pull（0、3、6；側面、正面、背面）", (["east", "south", "north"] as const).flatMap((f) => [0, 3, 6].map((p) => posedCell(BOW_SPEC, f, `${f}・pull ${p}`, { pull: p }))));
+
+// ⑮ Phase 6M-2：異形 4 個通用片段（走、撲、受擊、倒下），每個片段等分抽 6 格；白閃（flash）正式由戰場疊，這裡用半透明白示意
+function creatureCell(body: string, label: string, pose: CreaturePose | null): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "cell";
+  const k = 1.1;
+  const c = document.createElement("canvas");
+  c.width = CREATURE_W * k;
+  c.height = CREATURE_H * k;
+  c.style.width = `${c.width}px`;
+  c.style.height = `${c.height}px`;
+  box.style.width = `${c.width}px`;
+  const ctx = c.getContext("2d");
+  if (ctx !== null) {
+    ctx.fillStyle = "#2b2f38";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.scale(k, k);
+    ctx.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
+    const material = body === "golem" ? "stone" : body === "wisp" ? "magma" : "fur";
+    drawCreature(ctx, resolveCreature({ look: { body, material } }), pose);
+    const flash = pose?.flash ?? 0;
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${(flash * 0.35).toFixed(3)})`;
+      ctx.fillRect(-CREATURE_W / 2, -CREATURE_FOOT_Y, CREATURE_W, CREATURE_H);
+    }
+  }
+  const t = document.createElement("div");
+  t.textContent = label;
+  box.append(c, t);
+  return box;
+}
+const CREATURE_DEMO = ["hound", "boar", "golem", "crawler", "wisp"];
+for (const id of CREATURE_CLIP_IDS) {
+  const clip = CREATURE_CLIPS[id];
+  const cells = CREATURE_DEMO.flatMap((body) =>
+    [0, 1, 2, 3, 4, 5].map((i) => {
+      const ms = (clip.dur * i) / (clip.loop ? 6 : 5);
+      return creatureCell(body, `${body} ${Math.round(ms)}ms`, creaturePoseAt(id, ms, { hover: bodyTop(body).hover }));
+    }),
+  );
+  section(`⑮ 6M-2・異形片段 ${id}（${clip.dur} 毫秒${clip.loop ? "，循環" : ""}）`, [creatureCell(CREATURE_DEMO[0]!, "沒設姿勢", null), ...cells]);
 }
