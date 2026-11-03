@@ -20,6 +20,7 @@ __all__ = [
     "FieldEnemyView",
     "FieldExitView",
     "FieldFacilityView",
+    "FieldFriendView",
     "FieldGearLookView",
     "FieldHeroView",
     "FieldNpcView",
@@ -92,6 +93,17 @@ class FieldNpcView(_ApiModel):
     name_zh: str
     x: int
     y: int
+    rank: Literal["hostile", "cold", "neutral", "friendly", "trusted"] = "neutral"
+    """好感度級別（6B-4：頭上的表情圖示；21.5、21.7）。"""
+    rank_zh: str = ""
+    """級別名稱（例「中立」）。"""
+    alert: Literal["quest", "rumor"] | None = None
+    """頭上的「！」（6B-4）：``quest``＝有可接的任務（或聊得出任務入口）、``rumor``＝今天還沒聊、
+    有傳聞可聽；都沒有＝``None``。"""
+    alert_zh: str | None = None
+    """「！」的說明（例「有任務可以接」）。"""
+    look: FieldHeroView | None = None
+    """紙娃娃外觀；人設卡沒有外觀資料時為 ``None``（前端用預設外觀，6B-4）。"""
 
 
 class FieldFacilityView(_ApiModel):
@@ -156,6 +168,21 @@ class FieldHeroView(_ApiModel):
     equipment: tuple[FieldGearLookView, ...] = ()
 
 
+class FieldFriendView(_ApiModel):
+    """站在城裡的朋友（其他角色的影子，6B-4；21.5）：位置依角色 ID 雜湊決定（確定性），
+    點了看名片。"""
+
+    owner: str
+    """影子主人的角色 ID（對 ``PartyView.shadows`` 的 ``owner``）。"""
+    name_zh: str
+    level: int
+    x: int
+    y: int
+    facing: Literal["n", "e", "s", "w"] = "s"
+    look: FieldHeroView
+    """紙娃娃外觀（存影子時的主角範本與裝備）。"""
+
+
 class FieldView(_ApiModel):
     map_id: str
     name_zh: str
@@ -182,3 +209,8 @@ class FieldView(_ApiModel):
     """站在傳送石上時：其他已解鎖的傳送石（依 ID 排序；沒站在傳送石上＝空）。"""
     enemies: tuple[FieldEnemyView, ...] = ()
     """看得見的敵人（6C-1；依 ``spawns`` 順序；室內、已清空、打贏的不給）。"""
+    friends: tuple[FieldFriendView, ...] = ()
+    """站在城裡的朋友（6B-4；只在城鎮的主地圖、不含自己；依主人 ID，最多 8 位）。"""
+
+
+FieldNpcView.model_rebuild()

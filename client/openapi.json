@@ -5643,6 +5643,17 @@
             "type": "array",
             "title": "Titles",
             "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
+          },
+          "character_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Character Id"
           }
         },
         "additionalProperties": false,
@@ -5672,6 +5683,17 @@
             "type": "array",
             "title": "Titles",
             "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
+          },
+          "character_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Character Id"
           }
         },
         "additionalProperties": false,
@@ -5703,6 +5725,17 @@
             "type": "array",
             "title": "Titles",
             "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
+          },
+          "character_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Character Id"
           }
         },
         "additionalProperties": false,
@@ -8737,6 +8770,56 @@
         ],
         "title": "FieldFacilityView"
       },
+      "FieldFriendView": {
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "facing": {
+            "type": "string",
+            "enum": [
+              "n",
+              "e",
+              "s",
+              "w"
+            ],
+            "title": "Facing",
+            "default": "s"
+          },
+          "look": {
+            "$ref": "#/components/schemas/FieldHeroView"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner",
+          "name_zh",
+          "level",
+          "x",
+          "y",
+          "look"
+        ],
+        "title": "FieldFriendView",
+        "description": "站在城裡的朋友（其他角色的影子，6B-4；21.5）：位置依角色 ID 雜湊決定（確定性），\n點了看名片。"
+      },
       "FieldGearLookView": {
         "properties": {
           "slot": {
@@ -8828,6 +8911,59 @@
           "y": {
             "type": "integer",
             "title": "Y"
+          },
+          "rank": {
+            "type": "string",
+            "enum": [
+              "hostile",
+              "cold",
+              "neutral",
+              "friendly",
+              "trusted"
+            ],
+            "title": "Rank",
+            "default": "neutral"
+          },
+          "rank_zh": {
+            "type": "string",
+            "title": "Rank Zh",
+            "default": ""
+          },
+          "alert": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "quest",
+                  "rumor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert"
+          },
+          "alert_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Zh"
+          },
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9301,6 +9437,14 @@
             },
             "type": "array",
             "title": "Enemies",
+            "default": []
+          },
+          "friends": {
+            "items": {
+              "$ref": "#/components/schemas/FieldFriendView"
+            },
+            "type": "array",
+            "title": "Friends",
             "default": []
           }
         },

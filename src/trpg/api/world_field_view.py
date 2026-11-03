@@ -3,13 +3,13 @@
 
 from __future__ import annotations
 
+from trpg.api.world_field_people import ALERT_ZH, friends_here, look_of, npc_marks
 from trpg.api.world_field_schemas import (
     FieldDoorView,
     FieldEnemyUnitView,
     FieldEnemyView,
     FieldExitView,
     FieldFacilityView,
-    FieldGearLookView,
     FieldHeroView,
     FieldNpcView,
     FieldObjectView,
@@ -19,10 +19,8 @@ from trpg.api.world_field_schemas import (
     FieldTileView,
     FieldView,
 )
-from trpg.content.appearance import derive_keywords
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.engine.view import AppearanceView
 from trpg.world.actions import WorldEvent
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import FieldGrid, field_grid, field_map, hidden_door, placed
@@ -101,37 +99,35 @@ def _doors(
 
 def _hero(library: ContentLibrary, char: CharacterState) -> FieldHeroView:
     """主角外觀（同戰鬥 ``UnitView`` 的 ``doll_look``、武器、種族外觀與裝備外觀；純顯示）。"""
-    hero = char.hero
-    weapon = library.weapons.get(hero.weapon)
-    race = None
-    if hero.race is not None:
-        try:
-            race = library.ruleset.race_def(hero.race).look
-        except KeyError:
-            race = None
-    gear = tuple(
-        FieldGearLookView(
-            slot=e.slot,
-            appearance=AppearanceView(
-                kind=e.item.kind,
-                form=e.item.form,
-                material=e.item.material,
-                dye=e.item.dye,
-                style=e.item.style,
-                rarity=e.item.rarity or ("legendary" if e.item.legendary else "common"),
-                keywords=derive_keywords(a.affix for a in e.affixes),
-            ),
+    return look_of(library, char.hero, hero_loadout(library, char))
+
+
+def _npcs(
+    library: ContentLibrary,
+    world: WorldState | None,
+    char: CharacterState,
+    found: FieldMapDef,
+    now: int,
+) -> tuple[FieldNpcView, ...]:
+    """地圖上的 NPC：名稱、好感級別與頭上的「！」（6B-4）。人設卡沒有外觀資料，``look`` 留空。"""
+    cards = region_npcs(library, found.region)
+    marks = npc_marks(library, world, char, [n.id for n in found.npcs], now)
+    out: list[FieldNpcView] = []
+    for n in found.npcs:
+        mark = marks[n.id]
+        out.append(
+            FieldNpcView(
+                id=n.id,
+                name_zh=cards[n.id].name_zh if n.id in cards else n.id,
+                x=n.at[0],
+                y=n.at[1],
+                rank=mark.rank,
+                rank_zh=mark.rank_zh,
+                alert=mark.alert,
+                alert_zh=None if mark.alert is None else ALERT_ZH[mark.alert],
+            )
         )
-        for e in hero_loadout(library, char).items
-    )
-    return FieldHeroView(
-        template_id=hero.id,
-        doll_look=hero.doll,
-        weapon_id=hero.weapon,
-        weapon_class="melee" if weapon is None else weapon.weapon_class,
-        race_look=race,
-        equipment=gear,
-    )
+    return tuple(out)
 
 
 def _stone_targets(
@@ -213,7 +209,7 @@ def field_view(
     found = None if pos is None else field_map(library, pos.map)
     if pos is None or found is None:
         return None
-    cards = region_npcs(library, found.region)
+    grid = field_grid(library, char, found)
     return FieldView(
         map_id=found.id,
         name_zh=_map_name(library, found),
@@ -222,7 +218,7 @@ def field_view(
         interior=found.is_interior,
         width=found.width,
         height=found.height,
-        tiles=_tiles(found, field_grid(library, char, found)),
+        tiles=_tiles(found, grid),
         objects=tuple(
             FieldObjectView(id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1])
             for o in found.objects
@@ -241,15 +237,7 @@ def field_view(
             FieldStoneView(id=s.id, x=s.at[0], y=s.at[1], unlocked=s.id in char.teleport_stones)
             for s in found.teleport_stones
         ),
-        npcs=tuple(
-            FieldNpcView(
-                id=n.id,
-                name_zh=cards[n.id].name_zh if n.id in cards else n.id,
-                x=n.at[0],
-                y=n.at[1],
-            )
-            for n in found.npcs
-        ),
+        npcs=_npcs(library, world, char, found, now),
         facilities=tuple(
             FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1]) for f in found.facilities
         ),
@@ -258,4 +246,5 @@ def field_view(
         hero=_hero(library, char),
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
+        friends=friends_here(library, world, char, found, grid),
     )

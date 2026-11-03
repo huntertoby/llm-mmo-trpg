@@ -2387,6 +2387,8 @@ export interface components {
              * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
              */
             titles?: string[];
+            /** Character Id */
+            character_id?: string | null;
         };
         /** ChronicleHeroView */
         ChronicleHeroView: {
@@ -2399,6 +2401,8 @@ export interface components {
              * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
              */
             titles?: string[];
+            /** Character Id */
+            character_id?: string | null;
         };
         /** ChronicleKillView */
         ChronicleKillView: {
@@ -2413,6 +2417,8 @@ export interface components {
              * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
              */
             titles?: string[];
+            /** Character Id */
+            character_id?: string | null;
         };
         /** ChronicleRankView */
         ChronicleRankView: {
@@ -3548,6 +3554,30 @@ export interface components {
             /** Y */
             y: number;
         };
+        /**
+         * FieldFriendView
+         * @description 站在城裡的朋友（其他角色的影子，6B-4；21.5）：位置依角色 ID 雜湊決定（確定性），
+         *     點了看名片。
+         */
+        FieldFriendView: {
+            /** Owner */
+            owner: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level */
+            level: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Facing
+             * @default s
+             * @enum {string}
+             */
+            facing: "n" | "e" | "s" | "w";
+            look: components["schemas"]["FieldHeroView"];
+        };
         /** FieldGearLookView */
         FieldGearLookView: {
             /** Slot */
@@ -3589,6 +3619,22 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+            /**
+             * Rank
+             * @default neutral
+             * @enum {string}
+             */
+            rank: "hostile" | "cold" | "neutral" | "friendly" | "trusted";
+            /**
+             * Rank Zh
+             * @default
+             */
+            rank_zh: string;
+            /** Alert */
+            alert?: ("quest" | "rumor") | null;
+            /** Alert Zh */
+            alert_zh?: string | null;
+            look?: components["schemas"]["FieldHeroView"] | null;
         };
         /** FieldObjectView */
         FieldObjectView: {
@@ -3800,6 +3846,11 @@ export interface components {
              * @default []
              */
             enemies: components["schemas"]["FieldEnemyView"][];
+            /**
+             * Friends
+             * @default []
+             */
+            friends: components["schemas"]["FieldFriendView"][];
         };
         /**
          * FlashAction
