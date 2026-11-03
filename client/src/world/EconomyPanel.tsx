@@ -26,6 +26,9 @@ export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: W
         {shop.name_zh}　<span className="muted">店主 {shop.npc_name_zh}（{shop.rank_zh}）</span>
       </div>
       {shop.affinity_zh != null && <div className="muted small" data-testid="world-shop-affinity">{shop.affinity_zh}</div>}
+      {(shop.price_notes_zh ?? []).map((note) => (
+        <div key={note} className="muted small" data-testid="world-shop-price-note">{note}</div>
+      ))}
       {!shop.can_trade && shop.trade_problem_zh != null && <div className="muted small">買賣：{shop.trade_problem_zh}</div>}
       <ul className="world-shop-list small">
         {shop.items.map((item) => (

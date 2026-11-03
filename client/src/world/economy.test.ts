@@ -134,6 +134,14 @@ describe("ShopPanel", () => {
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*data-testid="world-buy-item_green_bamboo"/);
     expect(html).toContain('data-testid="world-sell-item_hp_potion_small"'); // 背包裡的可以賣
     expect(html).not.toContain("title="); // 說明用共用 Hint，不用原生 title
+    expect(html).not.toContain("world-shop-price-note");
+  });
+
+  it("explains a world event surcharge (5F-5c)", () => {
+    const shop = { ...SHOP, price_notes_zh: ["熔岩潰堤失守：買價 +20%"] };
+    const html = renderToStaticMarkup(createElement(ShopPanel, { shop, inventory: inventory(), busy: false, onAct: noop }));
+    expect(html).toContain('data-testid="world-shop-price-note"');
+    expect(html).toContain("熔岩潰堤失守：買價 +20%");
   });
 });
 

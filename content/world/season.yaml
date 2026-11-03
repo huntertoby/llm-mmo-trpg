@@ -96,7 +96,7 @@ world_events:
     on_failure:
       flags: [heart_pit_open]
       level_bonus: [{region: ashen_waste, amount: 1}]
-      shop_price: [{shop: shop_iron_lady, permille: 200}]
+      shop_price: [{shop: shop_iron_lady, permille: 200, reason_zh: 熔岩潰堤失守}]   # 5F-5c：reason_zh＝商店畫面寫的加價原因
   # #3 封印共鳴（19.9；Phase 5F-3）：全服累積封印鑰匙（目標種類 seal_key：事件開始時帶入之前的全服鑰匙數）。
   # 集滿 → 旗標 seal_resonance_full（season_boss.unlock.flag）：最早第 8 天、且至少 24 小時後解鎖碎晶之主；
   # 沒集滿時第 10 天強制解鎖，所以失敗沒有效果。門檻 12 是開發 PM 的初值（代決 5F3-7），照上線人數調整。

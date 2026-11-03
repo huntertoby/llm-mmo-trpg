@@ -122,3 +122,5 @@ class ShopView(_ApiModel):
     can_trade: bool
     """可以買賣（沒有遭遇、不在戰鬥）。"""
     trade_problem_zh: str | None
+    price_notes_zh: tuple[str, ...] = ()
+    """買價加成的原因（5F-5c；例「熔岩潰堤失守：買價 +20%」；文字在 ``world/season.yaml``）。"""

@@ -194,6 +194,9 @@ class ShopPriceEffect(ContentModel):
 
     shop: str = Field(pattern=ID_PATTERN)
     permille: int = Field(ge=1, le=10_000)
+    reason_zh: str = ""
+    """商店畫面寫的加價原因（Phase 5F-5c，例「熔岩潰堤失守」；畫面顯示「原因：買價 +20%」）。
+    空字串＝用世界事件的名字。"""
 
 
 class WorldEventEffect(ContentModel):
