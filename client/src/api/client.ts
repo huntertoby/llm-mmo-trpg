@@ -53,6 +53,10 @@ import type {
   LocationBoard,
   SeasonBoardView,
   AbsenceView,
+  ChronicleView,
+  LegacyHeroView,
+  SeasonResetRequest,
+  SeasonResetReport,
   WorldView,
 } from "./types";
 
@@ -242,6 +246,12 @@ export const api = {
       "POST",
       `/world/characters/${encodeURIComponent(characterId)}/league/matches/${encodeURIComponent(matchId)}/replay`,
     ),
+  /** 編年史（5F-5）：每季的季末紀錄、首位發現的配方、循環賽排名、首殺與評分榜；所有人可看。 */
+  worldChronicle: () => request<ChronicleView>("GET", "/world/chronicle"),
+  /** 自己帳號上季的角色（5F-5；建角時沿用名字與外觀）。 */
+  worldLegacy: () => request<LegacyHeroView[]>("GET", "/world/legacy"),
+  /** 季末重置（5F-5，管理者）：預設 dry-run；真的執行要帶 `confirm_season`。 */
+  seasonReset: (body: SeasonResetRequest) => request<SeasonResetReport>("POST", "/world/season/reset", body),
   /** 管理者刪任何一則留言（5E-3；回 204）。 */
   adminDeleteWorldNote: (noteId: string) => request<null>("DELETE", `/world/notes/${encodeURIComponent(noteId)}`),
   decide: (
