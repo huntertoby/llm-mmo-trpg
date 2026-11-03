@@ -102,15 +102,23 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
     [served, frozenList],
   );
   const blocked = view.encounter != null || view.battle_id != null;
-  // NPC 的對話泡泡（21.7）：這次請求說的話，約 6 秒後收起
+  // NPC 的對話泡泡（21.7）：這次請求說的話，約 6 秒後收起（之後沒有對話的畫面不清掉，只等時間到；換地圖就收起）
   const [bubbles, setBubbles] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const bubbleTimer = useRef<number | null>(null);
   useEffect(() => {
     const next = npcBubbles(view.dialog);
+    if (next.size === 0) return;
     setBubbles(next);
-    if (next.size === 0) return undefined;
-    const id = window.setTimeout(() => setBubbles(new Map()), BUBBLE_MS);
-    return () => window.clearTimeout(id);
+    if (bubbleTimer.current !== null) window.clearTimeout(bubbleTimer.current);
+    bubbleTimer.current = window.setTimeout(() => setBubbles(new Map()), BUBBLE_MS);
   }, [view.dialog]);
+  useEffect(() => setBubbles(new Map()), [served.map_id]);
+  useEffect(
+    () => () => {
+      if (bubbleTimer.current !== null) window.clearTimeout(bubbleTimer.current);
+    },
+    [],
+  );
   const marks = useMemo(() => headMarks(field, bubbles), [field, bubbles]);
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）
