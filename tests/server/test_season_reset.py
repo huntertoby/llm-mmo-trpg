@@ -8,9 +8,13 @@
 from __future__ import annotations
 
 import dataclasses
+import importlib.util
+import io
 import json
+import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 from pydantic import BaseModel
@@ -558,3 +562,41 @@ def test_rerun_after_interrupt_keeps_full_chronicle(
 def test_no_world_is_refused(library: ContentLibrary, tmp_path: Path) -> None:
     with pytest.raises(SeasonResetError, match="還沒有世界存檔"):
         season_reset(library, tmp_path, start=NEXT_START, now=ENDED)
+
+
+def _script() -> ModuleType:
+    path = Path(__file__).resolve().parents[2] / "scripts" / "season_reset.py"
+    spec = importlib.util.spec_from_file_location("season_reset_script", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["season_reset_script"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_script_dry_run_then_execute(library: ContentLibrary, tmp_path: Path) -> None:
+    season = _fake_season(library, tmp_path)
+    script = _script()
+    base = [
+        "--start-date",
+        "2027-01-01",
+        "--save-dir",
+        str(season.save_dir),
+        "--accounts-dir",
+        str(season.save_dir / "accounts"),
+        "--backup-root",
+        str(tmp_path / "backups"),
+    ]
+    before = _tree(season.save_dir)
+    out, err = io.StringIO(), io.StringIO()
+    if script.main(base, out, err) != 0:  # 真實時間：假賽季可能還沒結束
+        assert "還沒結束" in err.getvalue()
+        base.append("--force")
+        out = io.StringIO()
+        assert script.main(base, out, err) == 0
+    assert "dry-run" in out.getvalue() and "角色 2" in out.getvalue()
+    assert _tree(season.save_dir) == before
+    out = io.StringIO()
+    assert script.main([*base, "--execute"], out, err) == 0
+    assert "已重置：s1 → s2" in out.getvalue() and "備份：" in out.getvalue()
+    assert not (season.world_dir / "chars").exists()
