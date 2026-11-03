@@ -1,5 +1,5 @@
 // 走到人或設施旁邊開的浮動面板（Phase 6B-4；沿用 6B-5 的面板框，同時只開一個）：
-// - NPC：只有這一位的對話（說話、聊天、他給的任務），上方是頭像（好感表情）與名字（21.7「對話時顯示 NPC 頭像」）；
+// - NPC：只有這一位的對話（說話、聊天、他給的任務），上方是頭像（6C-7：照 `portrait` 畫的紙娃娃頭像，角落是好感表情）與名字（21.7「對話時顯示 NPC 頭像」）；
 // - 雇用：隊伍＋雇用清單（原本「這裡」面板裡的「雇用隊友」展開）；
 // - 朋友（影子）：名片＝build（等級、定位、技能、稱號、存的地點）與編年史裡他的紀錄（`GET /api/world/chronicle`）。
 import { useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import { AccountTitles } from "../ui/AccountTitles";
 import { RankFace } from "./FieldHeads";
 import { friendChronicle, rankOf } from "./fieldPeople";
 import { NpcPanel } from "./NpcPanel";
+import { Portrait } from "./StoryIcons";
 import { HireEditor, PartyPanel } from "./PartyPanel";
 import type { ChatEntry } from "./story";
 
@@ -26,10 +27,16 @@ export function HudNpcPanel({ view, npc, busy, chats, onAct, onChat }: NpcProps)
   const onMap = view.field?.npcs.find((n) => n.id === npc);
   const name = here?.name_zh ?? onMap?.name_zh ?? npc;
   const rank = rankOf(here?.rank ?? onMap?.rank);
+  const portrait = here?.portrait ?? onMap?.portrait ?? null;
   return (
     <div className="world-hud-stack" data-testid="world-hud-npc" data-npc={npc}>
       <div className="world-npc-portrait">
-        <RankFace rank={rank} size={36} />
+        <span className="world-npc-face" data-testid="world-npc-face">
+          <Portrait portrait={portrait} region={view.field?.region ?? null} size={48} label={name} />
+          <span className="world-npc-mood">
+            <RankFace rank={rank} size={18} />
+          </span>
+        </span>
         <div>
           <b>{name}</b>
           {here?.role_zh ? <span className="muted small">　{here.role_zh}</span> : null}

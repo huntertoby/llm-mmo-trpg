@@ -1,14 +1,25 @@
-// 事件卡（Phase 5B-5；09 9.6.7 #6、#7、9.6.4）：旁白（1～3 句，可「多講一點」）、解法按鈕、情境判定的輸入與結果。
-// 一般面板（不是浮動卡）；說明一律用共用 `Hint`（6.5.1）。規則全在後端：可用的解法、可引用的事實、判定明細都照 `WorldView`。
+// 事件卡（Phase 5B-5；09 9.6.7 #6、#7、9.6.4）：旁白、解法按鈕、情境判定的輸入與結果。
+// 6C-7 去文字化（21.7、docs/art/HUD版面.md 5.7）：
+// - 上方一張插圖（`art_url`；插圖還沒有時畫場景色塊＋圖示），地名一行；
+// - 說書人敘事改成對話框（頭像＋一段字），一次一段，按一下下一段，「多講一點」維持；
+// - 選項前面加圖示（戰鬥、說服、潛行、調查……），文字只留一行，原本的整句收進說明卡；
+// - 情境判定：DC 用骰子圖示＋數字、屬性用圖示，方法與加值來源收進說明；引用的事實收進「線索」圖示；
+// - 判定結果：兩顆骰的動畫＋成功失敗的顏色，算式與「兩顆骰：3、5」收進說明，結果敘述改成上方字幕；
+//   「（模型關閉：照預設提議）」改成角落的小圖示。
+// 說明一律用共用 `Hint`（6.5.1）。規則全在後端：可用的解法、可引用的事實、判定明細都照 `WorldView`。
 // 情境判定「第一次送出即定案」：送出後後端清掉事件，回來的是 `situation_result`；送出中整張停用。
 // 玩家文字是純資料欄位，後端把它包進 LLM 的 <player_input>（前端不自己包，代決 5B5-5）。
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
+import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
+import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, solutionLine, SOLUTION_ICON_ZH, type Outcome } from "./narration";
+import { DiceRoll, NarratorSubtitle, StoryDialog } from "./StoryParts";
+import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
 import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
 
-/** 一段旁白。「（模板文字）」只標 LLM 不可用時的降級文字（`fallback`）；保底機遇的專用旁白（`authored`，
- * 5D-4）與 LLM 的不標。 */
+/** 一段旁白（舊的整段顯示；「（模板文字）」只標 LLM 不可用時的降級文字 `fallback`，保底機遇的 `authored` 與 LLM 的不標）。 */
 export function StoryBlock({ story, testId = "world-story" }: { story: WorldStory; testId?: string }) {
   const [more, setMore] = useState(false);
   return (
@@ -27,6 +38,59 @@ export function StoryBlock({ story, testId = "world-story" }: { story: WorldStor
   );
 }
 
+/** 插圖還沒有時的場景色塊（依骨架 ID 固定挑一組，確定性）。 */
+const SCENES: readonly (readonly [string, string])[] = [
+  ["#3a5a4a", "#1e2e28"],
+  ["#5a4a3a", "#2a2018"],
+  ["#3a4a6a", "#1a2030"],
+  ["#6a3a2a", "#2a1810"],
+  ["#4a3a5a", "#201828"],
+];
+
+/** 字串的 FNV-1a 32 位雜湊（挑場景色用；不依賴內建 hash）。 */
+export function sceneIndex(id: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i += 1) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h % SCENES.length;
+}
+
+function EventArt({ event }: { event: WorldEventView }) {
+  const lead = event.solutions.find((s) => s.kind !== "abandon") ?? event.solutions[0];
+  const icon = lead !== undefined ? solutionIcon(lead) : "investigate";
+  const [top, bottom] = SCENES[sceneIndex(event.skeleton)]!;
+  const art = event.art_url ?? null;
+  const style: CSSProperties = art !== null ? { backgroundImage: `url(${art})` } : { background: `linear-gradient(180deg, ${top}, ${bottom})` };
+  return (
+    <div className="world-event-art" style={style} data-testid="world-event-art" data-art={art !== null ? "image" : "scene"}>
+      {art === null && (
+        <span className="world-event-art-icon" aria-hidden="true">
+          <SolutionGlyph icon={icon} size={44} />
+        </span>
+      )}
+      <div className="world-event-art-title">
+        <Hint text={`${event.actor_zh}：${event.motive_zh}`}>
+          <b tabIndex={0}>{event.location_name_zh}</b>
+        </Hint>
+        {event.follows_zh != null && (
+          <Hint text={`接著線頭：${event.follows_zh}`}>
+            <span className="world-event-thread" tabIndex={0} data-testid="world-event-thread">
+              <MiscGlyph icon="thread" size={14} />
+            </span>
+          </Hint>
+        )}
+        <Hint text={event.leave_zh}>
+          <span className="world-event-info" tabIndex={0} data-testid="world-event-leave">
+            <MiscGlyph icon="info" size={14} />
+          </span>
+        </Hint>
+      </div>
+    </div>
+  );
+}
+
 interface EventProps {
   event: WorldEventView;
   busy: boolean;
@@ -39,44 +103,39 @@ interface EventProps {
 export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps) {
   const situation = event.situation ?? null;
   return (
-    <div className="panel world-event" data-testid="world-event" role="region" aria-label="事件">
-      <div className="section-title">事件：{event.location_name_zh}</div>
-      <div className="small world-event-actor">
-        <b>{event.actor_zh}</b>
-        <span className="muted">　{event.motive_zh}</span>
-      </div>
-      {event.story != null && <StoryBlock story={event.story} testId="world-event-story" />}
-      {event.follows_zh != null && <div className="muted small">接著線頭：{event.follows_zh}</div>}
+    <div className="panel world-event" data-testid="world-event" role="region" aria-label={`事件：${event.location_name_zh}`}>
+      <EventArt event={event} />
+      {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
       <div className="world-event-solutions">
         {event.solutions.map((s) => {
           const click = solutionClick(s);
           const waive = waiveLabel(s);
+          const icon = solutionIcon(s);
+          const hint = `${solutionLabel(s)}\n${solutionHint(s)}`;
           return (
             <span key={s.index} className="world-solution-group">
-              <Hint text={solutionHint(s)}>
+              <Hint text={hint}>
                 <button
                   type="button"
-                  className={click?.kind === "open" && situation?.template === click.template ? "primary" : ""}
+                  className={`world-solution${click?.kind === "open" && situation?.template === click.template ? " primary" : ""}`}
                   disabled={busy || !s.available || click === null}
                   onClick={() => {
                     if (click?.kind === "open") onOpen(click.template);
                     else if (click?.kind === "solve") onSolve(click.solution, null);
                   }}
+                  aria-label={`${SOLUTION_ICON_ZH[icon]}：${solutionLine(s)}`}
                   data-testid="world-solution"
                   data-kind={s.kind}
+                  data-icon={icon}
                 >
-                  {solutionLabel(s)}
-                  {!s.available && <span className="small muted">（{s.unavailable_zh ?? "不能用"}）</span>}
+                  <SolutionGlyph icon={icon} />
+                  <span className="world-solution-line">{solutionLine(s)}</span>
+                  {s.kind === "parley" && s.cost_supplies > 0 && <span className="world-solution-cost small">−{s.cost_supplies} 補給</span>}
                 </button>
               </Hint>
               {waive !== null && (
                 <Hint text="用掉這條線頭代替付出補給（線頭用掉就沒了）">
-                  <button
-                    type="button"
-                    disabled={busy || s.waive_thread == null}
-                    onClick={() => onSolve(s.index, s.waive_thread ?? null)}
-                    data-testid="world-solution-waive"
-                  >
+                  <button type="button" disabled={busy || s.waive_thread == null} onClick={() => onSolve(s.index, s.waive_thread ?? null)} data-testid="world-solution-waive">
                     {waive}
                   </button>
                 </Hint>
@@ -85,11 +144,27 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
           );
         })}
       </div>
-      <div className="muted small">{event.leave_zh}</div>
-      {situation !== null && (
-        <SituationForm key={situation.template} event={event} busy={busy} onAnswer={onAnswer} />
-      )}
+      {situation !== null && <SituationForm key={situation.template} event={event} busy={busy} onAnswer={onAnswer} />}
     </div>
+  );
+}
+
+/** 屬性圖示一排（說明卡是屬性名）；不認得的屬性名直接寫字。 */
+function AttrRow({ text }: { text: string }) {
+  const names = text.split(/[、,，／/]/u).filter((n) => n.trim() !== "");
+  return (
+    <span className="world-attr-row" data-testid="world-attrs">
+      {names.map((n) => {
+        const key = attrKey(n);
+        return (
+          <Hint key={n} text={`可用屬性：${n}`}>
+            <span className="world-attr" tabIndex={0} data-attr={key ?? n}>
+              {key !== null ? <AttrIcon attr={key} /> : <span className="small">{n}</span>}
+            </span>
+          </Hint>
+        );
+      })}
+    </span>
   );
 }
 
@@ -97,17 +172,38 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   const situation = event.situation!;
   const [text, setText] = useState("");
   const [cited, setCited] = useState<string[]>([]);
+  const [cluesOpen, setCluesOpen] = useState(false);
   const facts = situation.facts ?? [];
+  const icon = solutionIcon({ kind: "situation", note_zh: situation.note_zh, attributes_zh: situation.attributes_zh });
   return (
     <div className="world-situation" data-testid="world-situation">
-      <div className="section-title small">情境判定：{situation.note_zh}</div>
-      {situation.story != null && <StoryBlock story={situation.story} testId="world-situation-story" />}
-      <div className="muted small">
-        可用屬性：{situation.attributes_zh}・方法：{situation.methods_zh}・基準難度 {situation.base_dc}
+      <div className="world-situation-head">
+        <SolutionGlyph icon={icon} />
+        <b className="world-situation-note">{situation.note_zh}</b>
+        <Hint text={`基準難度 ${situation.base_dc}（引用的線索、種族會調整）`}>
+          <span className="world-dc" tabIndex={0} data-testid="world-dc" data-dc={situation.base_dc}>
+            <D20 size={24} />
+            <b>{situation.base_dc}</b>
+          </span>
+        </Hint>
+        <AttrRow text={situation.attributes_zh} />
+        <Hint text={`方法：${situation.methods_zh}`}>
+          <span className="world-event-info" tabIndex={0} data-testid="world-methods">
+            <MiscGlyph icon="info" size={14} />
+          </span>
+        </Hint>
+        {facts.length > 0 && (
+          <Hint text={`線索：你持有的線索與往來 ${facts.length} 筆（點開來引用；回答裡要提到它，遊戲核對得到才 +1，最多 +2）`}>
+            <button type="button" className={`world-clue-btn${cluesOpen ? " on" : ""}`} aria-expanded={cluesOpen} onClick={() => setCluesOpen((v) => !v)} data-testid="world-clues">
+              <MiscGlyph icon="clue" size={16} />
+              <span className="small">{cited.length > 0 ? `${cited.length}／${facts.length}` : facts.length}</span>
+            </button>
+          </Hint>
+        )}
       </div>
-      {facts.length > 0 && (
+      {situation.story != null && <StoryDialog key={situation.story.text_zh} story={situation.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-situation-story" />}
+      {facts.length > 0 && cluesOpen && (
         <div className="world-cites" data-testid="world-cites">
-          <div className="small">你持有的線索與往來（點一下引用，再點取消）：</div>
           {facts.map((f) => (
             <Hint key={f.fact} text={`${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +2）`}>
               <button
@@ -128,9 +224,6 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
           ))}
         </div>
       )}
-      <label className="small world-answer-label" htmlFor="world-answer">
-        你打算怎麼做？
-      </label>
       <textarea
         id="world-answer"
         className="world-answer"
@@ -139,66 +232,95 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         value={text}
         disabled={busy}
         onChange={(e) => setText(e.target.value)}
-        placeholder="用自己的話寫：用什麼方法、怎麼做（文字不換強度，只決定用哪個屬性與方法）"
+        aria-label="你打算怎麼做？"
+        placeholder="你打算怎麼做？（文字不換強度，只決定用哪個屬性與方法）"
         data-testid="world-answer"
       />
-      <div className="muted small">
-        {lengthLabel(text)}
-        {cited.length > 0 && `・引用 ${cited.length} 筆`}
-      </div>
       <div className="run-actions">
-        <button
-          type="button"
-          className="primary"
-          disabled={!canSubmitAnswer(text, busy)}
-          onClick={() => onAnswer(situation.template, text, cited)}
-          data-testid="world-answer-submit"
-        >
-          送出（送出後就定案，不能重來）
-        </button>
+        <span className="muted small">{lengthLabel(text)}</span>
+        <Hint text="送出後就定案，不能重來">
+          <button type="button" className="primary" disabled={!canSubmitAnswer(text, busy)} onClick={() => onAnswer(situation.template, text, cited)} data-testid="world-answer-submit">
+            <D20 size={16} /> 擲骰
+          </button>
+        </Hint>
       </div>
     </div>
   );
 }
 
+/** 判定明細的說明卡：算式＋兩顆骰＋用心的明細。 */
+export function resultHint(result: WorldSituationResult): string {
+  const lines = [checkFormula(result), `兩顆骰：${result.dice.join("、")}（${result.mode_zh}）`, `屬性：${result.attribute_zh}・方法：${result.method_zh}`];
+  return lines.join("\n");
+}
+
 /** 判定結果（這次請求的 `situation_result`；前端保留到下一個動作）。 */
-export function SituationResultCard({ result, onClose }: { result: WorldSituationResult; onClose(): void }) {
+export function SituationResultCard({ result, onClose, diceElapsed }: { result: WorldSituationResult; onClose(): void; diceElapsed?: number }) {
+  const [storyOpen, setStoryOpen] = useState(false);
+  const outcome = result.outcome as Outcome;
+  const color = OUTCOME_COLOR[outcome] ?? OUTCOME_COLOR.failure;
+  const attrs = attrKeys(result.attribute_zh);
+  const counted = result.care.filter((c) => c.counted).length;
   return (
-    <div className={`panel world-result outcome-${result.outcome}`} data-testid="world-result" role="region" aria-label="判定結果">
-      <div className="section-title">
-        判定結果：{result.outcome_zh}　<span className="muted small">{result.note_zh}</span>
+    <>
+      {result.story != null && <NarratorSubtitle key={result.story.text_zh} story={result.story} testId="world-result-story" />}
+      <div className={`panel world-result outcome-${result.outcome}`} style={{ borderColor: color }} data-testid="world-result" role="region" aria-label={`判定結果：${result.outcome_zh}`}>
+        {result.source === "fallback" && (
+          <Hint text="模型關閉：照預設提議">
+            <span className="world-result-corner" tabIndex={0} data-testid="world-result-fallback">
+              <MiscGlyph icon="model_off" size={14} />
+            </span>
+          </Hint>
+        )}
+        <div className="world-result-head">
+          <b className="world-result-outcome" style={{ color }}>
+            {result.outcome_zh}
+          </b>
+          <span className="muted small world-situation-note">{result.note_zh}</span>
+        </div>
+        <DiceRoll dice={result.dice} roll={result.roll} outcome={outcome} elapsed={diceElapsed} />
+        <Hint text={resultHint(result)}>
+          <div className="world-result-sum" tabIndex={0} data-testid="world-result-formula" aria-label={checkFormula(result)}>
+            {attrs[0] !== undefined ? <AttrIcon attr={attrs[0]} size={18} /> : <span className="small">{result.attribute_zh}</span>}
+            <b style={{ color }}>{result.total}</b>
+            <span className="muted small">vs</span>
+            <D20 size={20} />
+            <b>{result.dc}</b>
+            <MiscGlyph icon="info" size={12} />
+          </div>
+        </Hint>
+        {result.care.length > 0 && (
+          <Hint text={result.care.map((c) => `${c.counted ? "✔" : "✘"} 〔${c.item_zh}〕${c.text_zh}${!c.counted && c.reason_zh !== "" ? `（${c.reason_zh}）` : ""}`).join("\n")}>
+            <span className="world-result-clues" tabIndex={0} data-testid="world-result-clues">
+              <MiscGlyph icon="clue" size={16} />
+              <span className="small">
+                {counted}／{result.care.length}
+              </span>
+            </span>
+          </Hint>
+        )}
+        {result.effects_zh.length > 0 && (
+          <ul className="small world-effects">
+            {result.effects_zh.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {storyOpen && result.story != null && <StoryDialog story={result.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-result-dialog" />}
+        <div className="run-actions">
+          {result.story != null && (
+            <Hint text="再看一次說書人的敘述">
+              <button type="button" aria-pressed={storyOpen} onClick={() => setStoryOpen((v) => !v)} data-testid="world-result-story-open">
+                <MiscGlyph icon="narrator" size={14} />
+              </button>
+            </Hint>
+          )}
+          <button type="button" onClick={onClose} data-testid="world-result-close">
+            知道了
+          </button>
+        </div>
       </div>
-      <div className="small">
-        {result.attribute_zh}・{result.method_zh}
-        {result.source === "fallback" && <span className="muted">（模型關閉：照預設提議）</span>}
-      </div>
-      <div className="small" data-testid="world-result-formula">
-        {checkFormula(result)}
-      </div>
-      <div className="muted small">兩顆骰：{result.dice.join("、")}</div>
-      {result.care.length > 0 && (
-        <ul className="small world-care">
-          {result.care.map((c, i) => (
-            <li key={i} className={c.counted ? "counted" : "missed"}>
-              {c.counted ? "✔" : "✘"} 〔{c.item_zh}〕{c.text_zh}
-              {!c.counted && c.reason_zh !== "" && <span className="muted">（{c.reason_zh}）</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-      {result.story != null && <StoryBlock story={result.story} testId="world-result-story" />}
-      {result.effects_zh.length > 0 && (
-        <ul className="small world-effects">
-          {result.effects_zh.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      )}
-      <div className="run-actions">
-        <button type="button" onClick={onClose} data-testid="world-result-close">
-          知道了
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
+
