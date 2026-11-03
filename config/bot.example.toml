@@ -1,10 +1,12 @@
 # Discord Bot 設定範本（Phase 5E-2）。此檔進版控，裡面「沒有」真的值。
 #
-# 用法（二選一，由使用者自己填，agent 不經手）：
-#   1. 複製成 config/bot.local.toml 再填值（*.local.* 已在 .gitignore，不會進版控）。
-#   2. 用環境變數（建議 token 只放這裡）：
-#        TRPG_BOT_TOKEN、TRPG_BOT_GUILD_ID、TRPG_BOT_ROLE_ID、TRPG_BOT_ANNOUNCE_CHANNEL_ID
-#      也可用 TRPG_BOT_CONFIG 指定別的設定檔路徑。環境變數優先於設定檔。
+# 用法（由使用者自己填，agent 不經手）。每個值各自照這個順序取第一個有填的（Phase 5E-2b）：
+#   1. 環境變數：TRPG_DISCORD_TOKEN、TRPG_DISCORD_GUILD_ID、TRPG_DISCORD_ROLE_ID、
+#      TRPG_DISCORD_ANNOUNCE_CHANNEL_ID
+#   2. repo 根目錄的 .env（同一組名稱；從 .env.example 複製；建議 token 放這裡）
+#   3. 這個檔複製成 config/bot.local.toml 再填值（*.local.* 已在 .gitignore，不會進版控）。
+#      也可用環境變數 TRPG_BOT_CONFIG 指定別的設定檔路徑。
+# [announce] 只從設定檔讀（沒有設定檔就用下面的預設值）。
 #
 # ID 的拿法：Discord「使用者設定 → 進階 → 開發者模式」打開後，在伺服器／身分組／頻道上右鍵「複製 ID」。
 # 檢查設定：uv run python scripts/discord_bot.py check

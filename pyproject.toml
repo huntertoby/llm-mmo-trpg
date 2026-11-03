@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.7",
     "pyyaml>=6",
     "uvicorn>=0.54.0",
+    "discord-py>=2.7.1",
 ]
 
 [project.scripts]
@@ -110,6 +111,8 @@ timeout_method = "thread"
 # starlette 1.9 建議改用 httpx2；規格（Phase 3-2 4.1）指定 httpx，功能相同，只略過這則提示。
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+    # discord.py 2.7 的語音模組在 Python 3.12 匯入 audioop（3.13 起改用 audioop-lts）；Bot 不用語音。
+    "ignore:'audioop' is deprecated:DeprecationWarning",
 ]
 markers = [
     "llm: 需要真的本機模型（先用 F:\\WSL\\start.bat 啟動）；預設與 --full 都不跑，用 `-m llm` 手動執行",
