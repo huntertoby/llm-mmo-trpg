@@ -447,3 +447,10 @@ def test_two_handed_weapon_cannot_be_paired() -> None:
     loadout = _loadout(main_hand="item_test_twin_daggers")
     problems = loadout_problems(loadout, lib.weapons["greatsword"], _rules())
     assert any("不能是成對武器" in p for p in problems)
+
+
+def test_shock_exploit_affix_card_says_damage() -> None:
+    """5C-3f（玩法 PM 代決）：帶電利用詞條是一般傷害加成（元素篩選要引擎新的 change），卡片寫
+    「傷害 +」，不寫「雷電傷害 +」。"""
+    name = library().affixes["affix_kw_shock_damage"].name_zh
+    assert "傷害 +" in name and "雷電" not in name
