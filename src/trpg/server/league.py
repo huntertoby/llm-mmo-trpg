@@ -43,6 +43,7 @@ from trpg.server.chronicle import LeagueChronicleRank, LeagueChronicleSeason, Le
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.world.calendar import season_day
+from trpg.world.layout import LEAGUE_ARCHIVE_DIR, LEAGUE_DIR, LEAGUE_FILE, LEAGUE_MATCHES_DIR
 from trpg.world.league import (
     LeagueMatchSpec,
     LeagueSpawn,
@@ -76,7 +77,6 @@ __all__ = [
 ]
 
 LEAGUE_FORMAT: Final = "trpg-league/1"
-LEAGUE_DIR: Final = "league"
 MATCH_ID_PATTERN: Final = r"^m[0-9]{4,}$"
 MIN_ENTRIES: Final = 2
 """開跑至少要幾位參賽者。"""
@@ -351,10 +351,10 @@ class LeagueStore:
         return self.root / LEAGUE_DIR
 
     def _record_path(self) -> Path:
-        return self.folder / "league.json"
+        return self.folder / LEAGUE_FILE
 
     def _match_path(self, match_id: str) -> Path:
-        return self.folder / "matches" / f"{match_id}.json"
+        return self.folder / LEAGUE_MATCHES_DIR / f"{match_id}.json"
 
     def record(self, season_id: str | None = None) -> LeagueRecord | None:
         """目前的循環賽（沒開過、或檔案是別季的＝``None``）。"""
@@ -395,7 +395,7 @@ class LeagueStore:
 
     def archived(self) -> tuple[LeagueRecord, ...]:
         """因為規則改了而搬走的舊賽程（依開跑時間）。"""
-        folder = self.folder / "archive"
+        folder = self.folder / LEAGUE_ARCHIVE_DIR
         if not folder.is_dir():
             return ()
         found = [
@@ -406,11 +406,11 @@ class LeagueStore:
 
     def _archive(self, record: LeagueRecord) -> None:
         """把舊賽程與戰鬥紀錄搬進 ``archive/``，標「規則已變、不能重播」。"""
-        folder = self.folder / "archive"
+        folder = self.folder / LEAGUE_ARCHIVE_DIR
         tag = f"{record.season_id}-{record.started_at}-{record.reruns}"
         stale = record.model_copy(update={"stale_zh": STALE_ZH})
         write_atomic(folder / f"league-{tag}.json", stale.model_dump_json(indent=1))
-        matches = self.folder / "matches"
+        matches = self.folder / LEAGUE_MATCHES_DIR
         if matches.is_dir():
             target = folder / f"matches-{tag}"
             if target.exists():

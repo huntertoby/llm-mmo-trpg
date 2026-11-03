@@ -56,6 +56,7 @@ from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
 from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError, WorldError, WorldSaveFormatError
+from trpg.world.layout import world_dir_of
 
 __all__ = ["ERROR_STATUS", "create_app"]
 
@@ -145,7 +146,7 @@ def create_app(
     app.state.world = WorldStore(  # 大世界（5A-5）
         lib,
         app.state.store,
-        saves / "world",
+        world_dir_of(saves),
         season_start=None if start_date is None else season_start_at(lib, start_date),
     )
     app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒

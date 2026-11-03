@@ -61,6 +61,7 @@ from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
 from trpg.world.growth import as_run, skill_seed, world_library
+from trpg.world.layout import CHARS_DIR, LOG_FILE, WORLD_FILE, char_path
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
     dumps_char,
@@ -179,13 +180,13 @@ class WorldStore:
         return self._lock
 
     def _world_path(self) -> Path:
-        return self.root / "world.json"
+        return self.root / WORLD_FILE
 
     def _log_path(self) -> Path:
-        return self.root / "log.jsonl"
+        return self.root / LOG_FILE
 
     def _char_path(self, character_id: str) -> Path:
-        return self.root / "chars" / f"{character_id}.json"
+        return char_path(self.root, character_id)
 
     # -- 讀取 -----------------------------------------------------------------
 
@@ -229,7 +230,7 @@ class WorldStore:
 
     def character_ids(self) -> list[str]:
         """存檔資料夾裡的角色 ID（依 ID 排序）。"""
-        folder = self.root / "chars"
+        folder = self.root / CHARS_DIR
         with self._lock:
             found = set(self._chars)
             if folder.is_dir():

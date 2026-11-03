@@ -19,6 +19,7 @@ from typing import TextIO
 
 from trpg.roguelite.save import default_save_dir
 from trpg.server.notes import LocationNoteStore, NoteError, NoteNotFoundError
+from trpg.world.layout import world_dir_of
 
 EXIT_ERROR = 2
 TZ = dt.timezone(dt.timedelta(hours=8))
@@ -39,7 +40,7 @@ def main(
     argv: Sequence[str] | None = None, out: TextIO = sys.stdout, err: TextIO = sys.stderr
 ) -> int:
     args = _parser().parse_args(argv)
-    root = args.world_dir if args.world_dir is not None else default_save_dir() / "world"
+    root = args.world_dir if args.world_dir is not None else world_dir_of(default_save_dir())
     store = LocationNoteStore(root)
     try:
         if args.command == "delete":

@@ -30,6 +30,7 @@ from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, load_first_kill
 from trpg.world.calendar import day_of
 from trpg.world.calendar import season_day as calendar_season_day
 from trpg.world.clock import refresh_day
+from trpg.world.layout import LOG_FILE, WORLD_FILE, world_dir_of
 from trpg.world.save import loads_log, loads_world
 from trpg.world.season_board import daily_goals_for, players_on, roll_season
 from trpg.world.season_boss import boss_def, boss_status, status_note_zh
@@ -177,7 +178,7 @@ def _date_of(day: int) -> str:
 
 
 def _active_on(world_dir: Path, day: int) -> int:
-    path = world_dir / "log.jsonl"
+    path = world_dir / LOG_FILE
     if not path.is_file():
         return 0
     text = path.read_text(encoding="utf-8")
@@ -224,7 +225,7 @@ def daily_digest(
 
     ``library`` 有給時（5F-1）：日子照世界規則的日曆、世界先換日（只算不寫）、昨天的上線人數用
     世界狀態裡的帳號數（和世界事件門檻同一個數字；沒有紀錄時退回日誌裡的角色數）。"""
-    path = world_dir / "world.json"
+    path = world_dir / WORLD_FILE
     if not path.is_file():
         return None
     world = loads_world(path.read_text(encoding="utf-8"))
@@ -355,7 +356,7 @@ class AnnouncementSource:
         goals: DailyGoalsSource | None = None,
         world_events: WorldEventSource | None = None,
     ) -> None:
-        self.world_dir = world_dir if world_dir is not None else default_save_dir() / "world"
+        self.world_dir = world_dir if world_dir is not None else world_dir_of(default_save_dir())
         self.templates = templates if templates is not None else load_templates()
         self.library = library
         self.public_url = public_url

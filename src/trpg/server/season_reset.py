@@ -32,7 +32,6 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world_season import ChronicleFact, ChronicleTemplates
 from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
-    CHRONICLE_DIR,
     ChronicleHero,
     LeagueChronicle,
     LeagueChronicleRank,
@@ -43,13 +42,11 @@ from trpg.server.chronicle import (
     SeasonChronicleEntry,
     SeasonChronicleStore,
 )
-from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, elite_kind_name, load_first_kills
-from trpg.server.league import LEAGUE_DIR, LeagueMatch, LeagueRecord
-from trpg.server.notes import NOTES_FILE, LocationNote, LocationNoteStore
-from trpg.server.season_archive import ARCHIVE_DIR, archive_season
+from trpg.server.first_kills import FirstKill, elite_kind_name, load_first_kills
+from trpg.server.league import LeagueMatch, LeagueRecord
+from trpg.server.notes import LocationNote, LocationNoteStore
+from trpg.server.season_archive import archive_season
 from trpg.server.season_boss_board import (
-    BOSS_BOARD_FILE,
-    FIRST_KILL_DIR,
     BossBoardEntry,
     load_boss_board,
 )
@@ -61,6 +58,23 @@ from trpg.server.season_policy import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.world.calendar import season_status
+from trpg.world.layout import (
+    ARCHIVE_DIR,
+    BOSS_BOARD_FILE,
+    CHARS_DIR,
+    CHRONICLE_DIR,
+    FIRST_KILL_DIR,
+    FIRST_KILLS_FILE,
+    LEAGUE_ARCHIVE_DIR,
+    LEAGUE_DIR,
+    LEAGUE_FILE,
+    LEAGUE_HISTORY_DIR,
+    LOG_FILE,
+    NOTES_FILE,
+    SERVER_LOCK_FILE,
+    WORLD_FILE,
+    world_dir_of,
+)
 from trpg.world.loot import loot_rules
 from trpg.world.save import dumps_world, loads_char, loads_world, write_atomic
 from trpg.world.season_boss import boss_def
@@ -88,11 +102,7 @@ __all__ = [
     "season_reset",
 ]
 
-LEAGUE_HISTORY_DIR: Final = "league_history"
 BACKUP_DIR_NAME: Final = "saves-backups"
-CHARS_DIR: Final = "chars"
-WORLD_FILE: Final = "world.json"
-LOG_FILE: Final = "log.jsonl"
 _SEASON_ID: Final = re.compile(r"^s([0-9]+)$")
 _ID_PATTERN: Final = re.compile(r"^[a-z][a-z0-9_]*$")
 MASK64: Final = (1 << 64) - 1
@@ -139,6 +149,7 @@ WORLD_FILES: Final[Mapping[str, str]] = {
     FIRST_KILL_DIR: "archive",
     CHRONICLE_DIR: "keep",
     LEAGUE_HISTORY_DIR: "keep",  # 5F-5 的舊位置（5F-5c 起改搬進封存）
+    SERVER_LOCK_FILE: "keep",  # 5F-R1：遊戲伺服器的心跳檔（伺服器開著時才有；重置不動）
 }
 """世界資料夾裡認得的檔案與資料夾。不認得的照保守做法保留，列在報告裡。"""
 
@@ -427,13 +438,13 @@ def _read_current(world_dir: Path) -> _Current:
     )
     log = world_dir / LOG_FILE
     lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
-    league_path = world_dir / LEAGUE_DIR / "league.json"
+    league_path = world_dir / LEAGUE_DIR / LEAGUE_FILE
     league = (
         LeagueRecord.model_validate_json(league_path.read_text(encoding="utf-8"))
         if league_path.is_file()
         else None
     )
-    archive = world_dir / LEAGUE_DIR / "archive"
+    archive = world_dir / LEAGUE_DIR / LEAGUE_ARCHIVE_DIR
     boss_dir = world_dir / FIRST_KILL_DIR
     unknown = tuple(sorted(p.name for p in world_dir.iterdir() if p.name not in WORLD_FILES))
     return _Current(
@@ -601,8 +612,8 @@ def _clear_league_entries(world_dir: Path) -> None:
     league = world_dir / LEAGUE_DIR
     if not league.is_dir():
         return
-    records = [league / "league.json"]
-    archive = league / "archive"
+    records = [league / LEAGUE_FILE]
+    archive = league / LEAGUE_ARCHIVE_DIR
     if archive.is_dir():
         records += sorted(archive.glob("league-*.json"))
     for path in records:
@@ -699,7 +710,7 @@ def season_reset(
     :class:`SeasonResetError`。"""
     if start < 0:
         raise SeasonResetError("開賽時間不合法")
-    world = world_dir if world_dir is not None else save_dir / "world"
+    world = world_dir if world_dir is not None else world_dir_of(save_dir)
     options = _Options(start, now, season_id, seed, force, dry_run, backup_root, extra_cleared)
     if accounts is None:
         return _reset(library, save_dir, world, None, [], options=options)

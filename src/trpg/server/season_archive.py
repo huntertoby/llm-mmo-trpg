@@ -24,11 +24,19 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from trpg.engine.events import EVENT_LIST_ADAPTER
 from trpg.engine.runner import BattleLog, log_format_problem, log_replay_problem, replay
 from trpg.engine.state import state_to_json
-from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, load_first_kills
-from trpg.server.league import LEAGUE_DIR, LeagueMatch, LeagueRecord
-from trpg.server.season_boss_board import FIRST_KILL_DIR
+from trpg.server.first_kills import FirstKill, load_first_kills
+from trpg.server.league import LeagueMatch, LeagueRecord
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
+from trpg.world.layout import (
+    ARCHIVE_DIR,
+    FIRST_KILL_DIR,
+    FIRST_KILLS_FILE,
+    LEAGUE_DIR,
+    LEAGUE_FILE,
+    LEAGUE_MATCHES_DIR,
+    LOG_FILE,
+)
 from trpg.world.league import match_winner
 
 __all__ = [
@@ -46,10 +54,8 @@ __all__ = [
     "verify_league_match",
 ]
 
-ARCHIVE_DIR: Final = "archive"
 ARCHIVE_FORMAT: Final = "trpg-season-archive/1"
 MANIFEST_FILE: Final = "manifest.json"
-LOG_FILE: Final = "log.jsonl"
 ARCHIVED: Final[tuple[str, ...]] = (LOG_FILE, LEAGUE_DIR, FIRST_KILL_DIR)
 """季末從世界資料夾搬進封存的東西：世界日誌、循環賽、賽季 Boss 首殺的戰鬥紀錄。"""
 _READ_ONLY: Final = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
@@ -278,7 +284,7 @@ def verify_first_kill(save_dir: Path, world_dir: Path, season_id: str, target: s
 
 
 def _league_record(source: _Source, season_id: str) -> LeagueRecord | None:
-    path = source.root / LEAGUE_DIR / "league.json"
+    path = source.root / LEAGUE_DIR / LEAGUE_FILE
     if not path.is_file():
         return None
     record = LeagueRecord.model_validate_json(path.read_text(encoding="utf-8"))
@@ -312,10 +318,10 @@ def verify_league_match(
     match = None if record is None else record.match(match_id)
     if match is None:
         raise ArchiveRecordNotFoundError(f"{season_id} 的循環賽沒有場次 {match_id}")
-    relative = f"{LEAGUE_DIR}/matches/{match_id}.json"
+    relative = f"{LEAGUE_DIR}/{LEAGUE_MATCHES_DIR}/{match_id}.json"
     passed: list[str] = []
     problems: list[str] = []
-    for name in (f"{LEAGUE_DIR}/league.json", relative):
+    for name in (f"{LEAGUE_DIR}/{LEAGUE_FILE}", relative):
         hashed = source.hash_problem(name)
         problems += [] if hashed is None else [hashed]
     path = source.root / relative

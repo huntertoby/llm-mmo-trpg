@@ -34,6 +34,7 @@ from trpg.roguelite.save import default_save_dir
 from trpg.server.account_config import load_account_settings
 from trpg.server.accounts import AccountRecord, AccountStore, open_account_store
 from trpg.shared.errors import TrpgError
+from trpg.world.layout import WORLD_FILE, world_dir_of
 from trpg.world.save import loads_world
 from trpg.world.season import FIRST_SEASON_ID
 
@@ -77,12 +78,12 @@ def _store(folder: Path | None) -> AccountStore:
 
 
 def _world_root(world_dir: Path | None) -> Path:
-    return world_dir if world_dir is not None else default_save_dir() / "world"
+    return world_dir if world_dir is not None else world_dir_of(default_save_dir())
 
 
 def _world_season(world_dir: Path | None) -> str:
     """世界存檔目前的賽季（角色歸到帳號時記下，上限按賽季算；5D-R2）。還沒有世界＝第一季。"""
-    path = _world_root(world_dir) / "world.json"
+    path = _world_root(world_dir) / WORLD_FILE
     if not path.is_file():
         return FIRST_SEASON_ID
     return loads_world(path.read_text(encoding="utf-8")).season_id
