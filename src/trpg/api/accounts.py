@@ -25,6 +25,8 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from trpg.api.account_config import AccountSettings, load_account_settings
+from trpg.roguelite.save import default_save_dir
 from trpg.shared.errors import TrpgError
 from trpg.world.save import write_atomic
 
@@ -41,6 +43,7 @@ __all__ = [
     "PasswordHash",
     "SessionRecord",
     "hash_password",
+    "open_account_store",
     "verify_password",
 ]
 
@@ -119,6 +122,8 @@ class AccountRecord(BaseModel):
     """角色 ID（依建立順序）。"""
     discord_id: str | None = None
     """發帳號的 Discord 使用者 ID（5E-2；有值時全伺服器唯一）。"""
+    admin: bool = False
+    """管理者：可以改大世界的 LLM 開關（5E-2，計畫 29.8）。有預設值，舊檔照讀。"""
     created_at: int
     sessions: tuple[SessionRecord, ...] = ()
 
@@ -185,7 +190,11 @@ def dumps_account(record: AccountRecord) -> str:
 
 
 class AccountStore:
-    """帳號（記憶體快取＋本機 JSON 存檔）。所有方法執行緒安全。"""
+    """帳號（記憶體快取＋本機 JSON 存檔）。所有方法執行緒安全。
+
+    Bot（5E-2）與遊戲伺服器是兩個程序、共用同一個帳號資料夾：資料夾內檔案（名稱、修改時間、
+    大小）變了就重讀快取，所以另一個程序建的帳號、停用立刻看得到（計畫 29.6）。
+    """
 
     def __init__(
         self,
@@ -203,25 +212,42 @@ class AccountStore:
         self._new_id = new_id
         self._lock = threading.RLock()
         self._accounts: dict[str, AccountRecord] | None = None
+        self._signature: tuple[tuple[str, int, int], ...] = ()
 
     # -- 讀寫 -----------------------------------------------------------------
 
     def _path(self, account_id: str) -> Path:
         return self.root / f"{account_id}.json"
 
+    def _files(self) -> list[Path]:
+        return sorted(self.root.glob("*.json")) if self.root.is_dir() else []
+
+    def _current_signature(self) -> tuple[tuple[str, int, int], ...]:
+        entries: list[tuple[str, int, int]] = []
+        for path in self._files():
+            try:
+                stat = path.stat()
+            except OSError:  # pragma: no cover - 另一個程序剛好在換檔
+                continue
+            entries.append((path.name, stat.st_mtime_ns, stat.st_size))
+        return tuple(entries)
+
     def _loaded(self) -> dict[str, AccountRecord]:
-        if self._accounts is None:
+        signature = self._current_signature()
+        if self._accounts is None or signature != self._signature:
             found: dict[str, AccountRecord] = {}
-            if self.root.is_dir():
-                for path in sorted(self.root.glob("*.json")):
-                    record = loads_account(path.read_text(encoding="utf-8"))
-                    found[record.account_id] = record
+            for path in self._files():
+                record = loads_account(path.read_text(encoding="utf-8"))
+                found[record.account_id] = record
             self._accounts = found
+            self._signature = signature
         return self._accounts
 
     def _save(self, record: AccountRecord) -> AccountRecord:
+        accounts = self._loaded()
         write_atomic(self._path(record.account_id), dumps_account(record))
-        self._loaded()[record.account_id] = record
+        accounts[record.account_id] = record
+        self._signature = self._current_signature()
         return record
 
     # -- 查詢 -----------------------------------------------------------------
@@ -300,6 +326,12 @@ class AccountStore:
                 update["sessions"] = ()
             return self._save(record.model_copy(update=update))
 
+    def set_admin(self, account_id: str, admin: bool) -> AccountRecord:
+        """設定或取消管理者（開發腳本用；計畫 29.8）。"""
+        with self._lock:
+            record = self.get(account_id)
+            return self._save(record.model_copy(update={"admin": admin}))
+
     # -- 登入 -----------------------------------------------------------------
 
     def login(self, username: str, password: str) -> tuple[str, AccountRecord]:
@@ -376,3 +408,13 @@ class AccountStore:
             self.check_character_room(account_id)
             update = {"characters": (*record.characters, character_id)}
             return self._save(record.model_copy(update=update))
+
+
+def open_account_store(settings: AccountSettings | None = None) -> AccountStore:
+    """照 ``config/server.toml`` 開帳號存檔（Bot 與開發腳本共用；計畫 29.6）。"""
+    resolved = settings if settings is not None else load_account_settings()
+    return AccountStore(
+        resolved.accounts_dir(default_save_dir()),
+        max_characters=resolved.max_characters,
+        session_ttl_s=resolved.session_ttl_s,
+    )

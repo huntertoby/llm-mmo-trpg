@@ -148,3 +148,21 @@ def test_dev_mode_keeps_open_access(dev: TestClient) -> None:
     assert [c["character_id"] for c in scoped] == [mine]  # 帶 token：依帳號
     assert dev.get(f"/api/world/characters/{open_id}", headers=alice).status_code == 404
     assert dev.get(f"/api/world/characters/{open_id}").status_code == 200
+
+
+def test_llm_switch_needs_admin(locked: TestClient, dev: TestClient) -> None:
+    off = {"enabled": False}
+    assert locked.post("/api/world/llm", json=off).status_code == 401
+    alice = _login(locked, "alice")
+    reply = locked.post("/api/world/llm", json=off, headers=alice)
+    assert reply.status_code == 403
+    assert reply.json() == {"detail": "只有管理者能改 LLM 開關"}
+    assert locked.get("/api/world/llm", headers=alice).status_code == 200  # 讀照舊
+    root = _login(locked, "root")
+    store = _accounts(locked)
+    store.set_admin(store.find("root").account_id, True)  # type: ignore[union-attr]
+    assert locked.post("/api/world/llm", json=off, headers=root).status_code == 200
+    # 開發模式：沒帶 token 照舊可改；帶了非管理者的 token 一樣 403
+    assert dev.post("/api/world/llm", json=off).status_code == 200
+    bob = _login(dev, "bob")
+    assert dev.post("/api/world/llm", json=off, headers=bob).status_code == 403

@@ -243,6 +243,10 @@ def test_dev_account_script(tmp_path: Path) -> None:
     out = io.StringIO()
     assert script.main([*base, "create", "bob"], out, io.StringIO()) == 0
     assert "只顯示這一次" in out.getvalue()
+    world = tmp_path / "world"
+    (world / "chars").mkdir(parents=True)
+    (world / "chars" / "c12345678.json").write_text("{}", encoding="utf-8")
+    base = [*base, "--world-dir", str(world)]
     assert script.main([*base, "attach", "alice", "c12345678"], io.StringIO(), io.StringIO()) == 0
     assert script.main([*base, "disable", "bob"], io.StringIO(), io.StringIO()) == 0
     assert script.main([*base, "attach", "bob", "c12345678"], io.StringIO(), io.StringIO()) == 1
@@ -253,3 +257,52 @@ def test_dev_account_script(tmp_path: Path) -> None:
     assert lines[1].startswith("bob") and "停用" in lines[1]
     store = AccountStore(folder)
     store.login("alice", pw)
+
+
+def test_dev_account_attach_needs_character_file(tmp_path: Path) -> None:
+    script = _script()
+    world = tmp_path / "world"
+    base = ["--dir", str(tmp_path / "acc"), "--world-dir", str(world)]
+    assert script.main([*base, "create", "alice"], io.StringIO(), io.StringIO()) == 0
+    assert script.main([*base, "attach", "alice", "cdeadbeef"], io.StringIO(), io.StringIO()) == 1
+    assert AccountStore(tmp_path / "acc").find("alice").characters == ()  # type: ignore[union-attr]
+
+
+def test_dev_account_admin_flag(tmp_path: Path) -> None:
+    script = _script()
+    base = ["--dir", str(tmp_path / "acc")]
+    assert script.main([*base, "create", "root", "--admin"], io.StringIO(), io.StringIO()) == 0
+    assert script.main([*base, "create", "alice"], io.StringIO(), io.StringIO()) == 0
+    assert script.main([*base, "admin", "alice", "on"], io.StringIO(), io.StringIO()) == 0
+    assert script.main([*base, "admin", "root", "off"], io.StringIO(), io.StringIO()) == 0
+    listing = io.StringIO()
+    assert script.main([*base, "list"], listing, io.StringIO()) == 0
+    lines = listing.getvalue().splitlines()
+    assert "管理者" in lines[0] and lines[0].startswith("alice")
+    assert "管理者" not in lines[1]
+
+
+def test_old_account_file_without_admin_is_read(store: AccountStore) -> None:
+    record = store.create("alice", _pw())
+    path = store.root / f"{record.account_id}.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    del raw["admin"]
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    fresh = AccountStore(store.root)
+    assert fresh.get(record.account_id).admin is False
+    assert fresh.set_admin(record.account_id, True).admin is True
+
+
+def test_second_process_sees_changes(tmp_path: Path) -> None:
+    """Bot 與伺服器各自一個 :class:`AccountStore`，指向同一個資料夾（計畫 29.6）。"""
+    server = AccountStore(tmp_path / "acc")
+    bot = AccountStore(tmp_path / "acc")
+    assert server.all() == []
+    pw = _pw()
+    record = bot.create("alice", pw, discord_id="123")
+    token, _ = server.login("alice", pw)  # 伺服器看得到 Bot 剛建的帳號
+    bot.set_disabled(record.account_id, True)
+    with pytest.raises(AuthError):
+        server.authenticate(token)  # Bot 停用後 token 立即失效
+    with pytest.raises(AccountDisabledError):
+        server.login("alice", pw)

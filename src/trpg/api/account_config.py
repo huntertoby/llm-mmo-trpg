@@ -49,10 +49,20 @@ class AccountSettings(BaseModel):
     """session 有效時間（小時）。"""
     dir: str = ""
     """帳號存檔資料夾；空字串＝``<存檔資料夾>/accounts``。"""
+    login_max_failures: int = Field(default=5, ge=1)
+    """同一帳號名稱在視窗內最多失敗幾次（5E-2，計畫 29.7）。"""
+    login_ip_max_failures: int = Field(default=5, ge=1)
+    """同一 IP 在視窗內最多失敗幾次。"""
+    login_window_minutes: int = Field(default=15, ge=1)
+    """登入失敗的計數視窗（分鐘）。"""
 
     @property
     def session_ttl_s(self) -> int:
         return self.session_ttl_hours * 3600
+
+    @property
+    def login_window_s(self) -> int:
+        return self.login_window_minutes * 60
 
     def accounts_dir(self, save_dir: Path) -> Path:
         return Path(self.dir) if self.dir else save_dir / "accounts"
