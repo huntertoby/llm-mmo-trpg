@@ -9,7 +9,8 @@
 
 規則（09 9.6.6）：
 
-1. 依權重抽陣容。
+1. 依權重抽陣容。實地地圖上看得見的敵人（Phase 6C-1，``EncounterResult.contact``）改用那一隊的
+   ``group``，亂數改用 ``Rng(fnv1a64(f"{lineup_seed}:lineup"))``（地圖上顯示的陣容＝開戰的陣容）。
 2. 精英巢穴：固定精英（單位＋詞綴）放在第一個。
 3. 一般營地（``camp``）而且陣容沒有精英：``randint(0, 999) < camp_elite_permille`` 時，從可以套用
    本區某個詞綴的成員中均勻抽 1 名，再從可以套用的詞綴中均勻抽 1 個，把它升級成精英——不增加
@@ -127,8 +128,14 @@ def roll_lineup(
     bounty = _bounty_lineup(library, table, encounter)
     if bounty is not None:
         return bounty
-    rng = lineup_rng(encounter.battle_seed)
-    group = _pick_group(rng, table, entry)
+    contact = encounter.contact
+    if contact is None:
+        rng = lineup_rng(encounter.battle_seed)
+        group = _pick_group(rng, table, entry)
+    else:  # 6C-1 看得見的敵人：陣容是地圖上那一隊（種子＝地圖上顯示的那一份）
+        rng = lineup_rng(contact.lineup_seed)
+        fixed = table.group_by_id().get(contact.group)
+        group = _pick_group(rng, table, entry) if fixed is None else fixed
     members = [LineupMember(unit=_gated(u, entry, gate_level)) for u in group.units]
     third = tuple(LineupMember(unit=_gated(u, entry, gate_level)) for u in group.third)
     catalog = library.enemy_catalog()

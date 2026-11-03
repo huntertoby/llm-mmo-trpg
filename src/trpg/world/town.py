@@ -46,6 +46,10 @@ def retreat(
     encounter = char.pending_encounter
     if encounter is None:
         raise WorldActionError("目前沒有遭遇，不用撤退")
+    if encounter.contact is not None:  # 6C-1 實地地圖上碰到的敵人：回到進這張地圖時站的格子
+        event = RetreatedEvent(from_location=char.location, to=char.location)
+        update = {"pending_encounter": None, "field": encounter.contact.retreat_to}
+        return char.model_copy(update=update), (event,)
     to = encounter.from_location or world_map_of(library, char.region).town
     event = RetreatedEvent(from_location=char.location, to=to)
     char = char.model_copy(update={"location": to, "pending_encounter": None, "camped_at": None})

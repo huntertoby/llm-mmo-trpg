@@ -12,6 +12,9 @@ Phase 5A-6 加上成長欄位（靈感點、閃現狀態、生成技能、用法
 Phase 6B-2 加上實地地圖上的位置（:class:`FieldPos`）與解鎖的傳送石，角色格式升成 ``trpg-char/2``；
 ``trpg-char/1`` 的舊存檔照讀（``field`` 是 ``None``，第一次需要座標時放到地點的 ``entry``，
 :mod:`trpg.world.field`）。
+
+Phase 6C-1 加上看得見的敵人（:class:`FieldVisit`、:class:`FieldContact`），角色格式升成
+``trpg-char/3``；``/1``、``/2`` 照讀（只多了選填欄位）。
 """
 
 from __future__ import annotations
@@ -48,7 +51,9 @@ __all__ = [
     "DailyGoalProgress",
     "EncounterResult",
     "EventTrigger",
+    "FieldContact",
     "FieldPos",
+    "FieldVisit",
     "GearMod",
     "LastBattle",
     "LeagueEntry",
@@ -74,9 +79,9 @@ __all__ = [
 ]
 
 WORLD_FORMAT: Final = "trpg-world/1"
-CHAR_FORMAT: Final = "trpg-char/2"
-LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1"})
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2：只多了選填欄位）。"""
+CHAR_FORMAT: Final = "trpg-char/3"
+LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2"})
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2、6C-1：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -109,6 +114,62 @@ class PerceptionMark(_Model):
     day: int = Field(ge=0)
 
 
+type Facing = Literal["n", "e", "s", "w"]
+"""朝向（地圖上 y 向下：``n``＝往 y 減少）。"""
+
+
+class FieldPos(_Model):
+    """實地地圖上的位置（Phase 6B-2）：``map`` 是實地地圖或室內圖的 ID。"""
+
+    map: str = Field(pattern=ID_PATTERN)
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    facing: Facing = "s"
+
+
+class FieldContact(_Model):
+    """碰到實地地圖上看得見的敵人（Phase 6C-1，:mod:`trpg.world.field_enemies`）：哪一隊、陣容的
+    種子、接觸點與先手（21.10 第 4 條）、撤退回哪一格（21.10 第 7 條）。"""
+
+    map: str = Field(pattern=ID_PATTERN)
+    spawn: int = Field(ge=0)
+    """``FieldMapDef.spawns`` 的索引。"""
+    group: str = Field(pattern=ID_PATTERN)
+    """陣容 ID（``spawns`` 的 ``group``；遭遇變化、懸賞照舊優先）。"""
+    lineup_seed: int = Field(ge=0, le=0xFFFFFFFF)
+    """陣容用的種子（取代 ``battle_seed`` 的 ``":lineup"``；地圖上顯示的陣容＝開戰的陣容）。"""
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    """接觸點（自己站的格子；打贏回到這裡）。"""
+    first: Literal["ally", "enemy"] | None = None
+    """``ally``＝從背後、在敵人視野外接觸；``enemy``＝被敵人看到；``None``＝照現行先攻。"""
+    retreat_to: FieldPos
+    """撤退回到的格子（進這張地圖時站的格子）。"""
+
+
+class FieldVisit(_Model):
+    """這一趟待在某個地點的實地地圖（Phase 6C-1）：換地點時重來。
+
+    ``seed`` 由角色的 ``field`` 串流衍生（:mod:`trpg.world.rng`），決定每隊的陣容、巡邏起點與駐守
+    朝向；``ticks``＝這一趟在室外圖走了幾格（巡邏你走一格它走一格）；``defeated``＝這一趟打贏的
+    隊伍（非營地的地點不寫「已清空」，打贏的隊伍到離開這個地點前不再出現）。"""
+
+    region: str = Field(pattern=ID_PATTERN)
+    location: str = Field(pattern=ID_PATTERN)
+    seed: int = Field(ge=0, le=0xFFFFFFFF)
+    ticks: int = Field(default=0, ge=0)
+    defeated: tuple[int, ...] = ()
+    arrived: FieldPos
+    """進這張地圖時站的格子（撤退回這裡）。"""
+
+    @field_validator("defeated")
+    @classmethod
+    def _sorted_defeated(cls, ids: tuple[int, ...]) -> tuple[int, ...]:
+        if list(ids) != sorted(set(ids)):
+            raise ValueError("defeated 必須排序且不重複")
+        return ids
+
+
 class EncounterResult(_Model):
     """遇敵的結果（只是資料，不開戰；開戰在 5A-4，敵人陣容在 5A-3）。"""
 
@@ -138,6 +199,8 @@ class EncounterResult(_Model):
     season_boss: str | None = Field(default=None, pattern=ID_PATTERN)
     """賽季 Boss 的挑戰（Phase 5F-3；Boss ID）：陣容、地圖、等級照 ``season_boss`` 資料，戰後照
     賽季 Boss 的規則回寫。"""
+    contact: FieldContact | None = None
+    """碰到實地地圖上看得見的敵人（Phase 6C-1）；``None``＝移動遇敵、戰鬥解法等。"""
 
 
 class EventTrigger(_Model):
@@ -797,28 +860,15 @@ class WorldState(_Model):
         )
 
 
-type Facing = Literal["n", "e", "s", "w"]
-"""朝向（地圖上 y 向下：``n``＝往 y 減少）。"""
-
-
-class FieldPos(_Model):
-    """實地地圖上的位置（Phase 6B-2）：``map`` 是實地地圖或室內圖的 ID。"""
-
-    map: str = Field(pattern=ID_PATTERN)
-    x: int = Field(ge=0)
-    y: int = Field(ge=0)
-    facing: Facing = "s"
-
-
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/2``；``trpg-char/1`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/3``；``trpg-char/1``、``/2`` 照讀）。"""
 
-    format: Literal["trpg-char/2"] = CHAR_FORMAT
+    format: Literal["trpg-char/3"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1`` → ``trpg-char/2``：只多了選填欄位（6B-2），直接換版號。"""
+        """``trpg-char/1``、``/2`` → ``trpg-char/3``：只多了選填欄位（6B-2、6C-1），直接換版號。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             return {**data, "format": CHAR_FORMAT}
         return data
@@ -1007,6 +1057,10 @@ class CharacterState(_Model):
     地點沒有實地地圖（照舊用 ``travel`` 移動）。"""
     teleport_stones: tuple[str, ...] = ()
     """走到過、已解鎖的傳送石 ID（排序、不重複；21.2）。"""
+    # --- 6C-1 看得見的敵人（邏輯在 trpg.world.field_enemies） ---
+    field_visit: FieldVisit | None = None
+    """這一趟待在所在地點的實地地圖（巡邏進度、陣容種子、打贏的隊伍）；所在地點沒有實地地圖＝
+    ``None``。"""
 
     @field_validator("teleport_stones")
     @classmethod

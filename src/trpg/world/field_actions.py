@@ -51,8 +51,8 @@ class UseTeleportStoneAction(_Model):
     to: str = Field(pattern=ID_PATTERN)
 
 
-type StopReason = Literal["end", "exit", "door", "stone"]
-"""``walk`` 停下的原因：走完、踩到出口、門、傳送石。"""
+type StopReason = Literal["end", "exit", "door", "stone", "enemy"]
+"""``walk`` 停下的原因：走完、踩到出口、門、傳送石、碰到敵人（6C-1：走進視野或相鄰）。"""
 
 type EnterVia = Literal["exit", "door", "teleport_stone"]
 

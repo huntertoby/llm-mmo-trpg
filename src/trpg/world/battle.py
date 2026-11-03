@@ -298,11 +298,17 @@ def first_team(
     library: ContentLibrary, char: CharacterState, encounter: EncounterResult, enemy_first: bool
 ) -> Team | None:
     """先手的陣營：遭遇地點列了 ``ally_first_threads`` 且角色持有其中一條有效個人線頭（以遭遇時間
-    判定到期）→ 我方；增援時陣容已滿 → 敵方；兩者都成立時抵銷（``None``）。"""
+    判定到期）→ 我方；增援時陣容已滿 → 敵方；兩者都成立時抵銷（``None``）。
+
+    實地地圖上碰到敵人（Phase 6C-1，21.10 第 4 條）：從背後、在視野外接觸算我方一票，被看到算
+    敵方一票，和上面兩條一起照「兩邊都有就抵銷」判定。"""
     table = library.world_encounters.get(encounter.region)
     entry = None if table is None else table.location_by_id().get(encounter.location)
     wanted = () if entry is None else entry.ally_first_threads
     ally_first = any(t.thread in wanted and t.expires_at > encounter.at for t in char.threads)
+    contact = None if encounter.contact is None else encounter.contact.first
+    ally_first = ally_first or contact == "ally"
+    enemy_first = enemy_first or contact == "enemy"
     if ally_first == enemy_first:
         return None
     return Team.ALLY if ally_first else Team.ENEMY

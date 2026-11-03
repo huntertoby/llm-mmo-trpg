@@ -16,6 +16,8 @@ from trpg.engine.view import AppearanceView
 
 __all__ = [
     "FieldDoorView",
+    "FieldEnemyUnitView",
+    "FieldEnemyView",
     "FieldExitView",
     "FieldFacilityView",
     "FieldGearLookView",
@@ -99,6 +101,39 @@ class FieldFacilityView(_ApiModel):
     y: int
 
 
+class FieldEnemyUnitView(_ApiModel):
+    """敵群裡的一名（6C-1 陣容摘要）。"""
+
+    unit: str
+    name_zh: str
+    affix: str | None = None
+    """精英詞綴（沒有＝``None``）。"""
+    elite: bool = False
+    """精英範本或套了精英詞綴。"""
+    third: bool = False
+    """三方混戰的第三方（和我方、敵方都敵對）。"""
+
+
+class FieldEnemyView(_ApiModel):
+    """地圖上看得見的一隊敵人（Phase 6C-1）：位置、朝向、陣容摘要、視野格。"""
+
+    id: str
+    """``e<spawns 的索引>``。"""
+    x: int
+    y: int
+    facing: Literal["n", "e", "s", "w"]
+    patrol: bool
+    """巡邏（你走一格它走一格）；``False``＝駐守不動。"""
+    group: str
+    name_zh: str
+    """陣容名稱。"""
+    elite: bool
+    """陣容裡有精英。"""
+    units: tuple[FieldEnemyUnitView, ...] = ()
+    sight: tuple[tuple[int, int], ...] = ()
+    """看得到的格子（前方扇形 4 格、被牆與擋視線物遮住；走進去就開打、敵方先手）。"""
+
+
 class FieldPositionView(_ApiModel):
     x: int
     y: int
@@ -145,3 +180,5 @@ class FieldView(_ApiModel):
     """主角外觀（6B-3）。"""
     stone_targets: tuple[FieldStoneTargetView, ...] = ()
     """站在傳送石上時：其他已解鎖的傳送石（依 ID 排序；沒站在傳送石上＝空）。"""
+    enemies: tuple[FieldEnemyView, ...] = ()
+    """看得見的敵人（6C-1；依 ``spawns`` 順序；室內、已清空、打贏的不給）。"""
