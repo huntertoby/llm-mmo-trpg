@@ -167,13 +167,55 @@ def test_downscale_item_follows_item_level_budget(library: ContentLibrary) -> No
             low = downscale_item(library, item, 2)
             assert low.item_level == 2
             assert low.base_bonus_permille <= item.base_bonus_permille
-            for old, new in zip(item.affixes, low.affixes, strict=True):
-                assert old.affix == new.affix
+            old_by_id = {r.affix: r for r in item.affixes}
+            kept = [r.affix for r in item.affixes if r.affix in {n.affix for n in low.affixes}]
+            assert [r.affix for r in low.affixes] == kept  # 只拿掉、不換、不改順序
+            for new in low.affixes:
+                old = old_by_id[new.affix]
                 if old.value is not None and new.value is not None:
                     assert abs(new.value) <= abs(old.value)
+            dropped = [r.affix for r in item.affixes if r.affix not in kept]
+            assert all(library.affixes[a].value is None or _is_fixed(library, a) for a in dropped)
             budget = item_budget(rules, low, library.affixes)
             assert budget is not None
             floor = base_bonus_points(rules, low.base_bonus_permille) + sum(
                 (_min_points(library, r.affix) for r in low.affixes), Fraction(0)
             )
             assert budget.points <= max(Fraction(budget.budget), floor)
+            if any(_is_fixed(library, r.affix) for r in low.affixes):
+                assert budget.points <= budget.budget  # 還留著固定詞條＝已經放得進
+
+
+def _is_fixed(library: ContentLibrary, affix_id: str) -> bool:
+    affix = library.affixes[affix_id]
+    if affix.value is None:
+        return True
+    rules = library.item_gen
+    assert rules is not None
+    return affix_points(rules, affix, affix.value.min) == affix_points(
+        rules, affix, affix.value.max
+    )
+
+
+def test_downscale_drops_highest_fixed_affix_until_it_fits(library: ContentLibrary) -> None:
+    """#87（5D-4 玩法 PM 代決）：縮到下限仍超出新預算 → 從點數最高的固定點數詞條開始拿掉。"""
+    rules = library.item_gen
+    assert rules is not None
+    found = 0
+    for seed in range(40):
+        item = generate_item(library, Rng(seed), "weapon", "epic", 10, weapon_class="focus")
+        low = downscale_item(library, item, 1)
+        if len(low.affixes) == len(item.affixes):
+            continue
+        found += 1
+        dropped = [r.affix for r in item.affixes if r.affix not in {n.affix for n in low.affixes}]
+        kept_fixed = [r.affix for r in low.affixes if _is_fixed(library, r.affix)]
+        top_dropped = min(_min_points(library, a) for a in dropped)
+        assert all(_min_points(library, a) <= top_dropped for a in kept_fixed)
+        budget = item_budget(rules, low, library.affixes)
+        assert budget is not None
+        if kept_fixed:
+            assert budget.points <= budget.budget
+        # 拿掉的都是固定點數詞條（範圍詞條只縮數值）
+        assert all(_is_fixed(library, a) for a in dropped)
+    assert found > 0

@@ -686,12 +686,45 @@ def _lower_value(
     return lo
 
 
+def _fixed_points(rules: ItemGenRules, affix: AffixDef) -> bool:
+    """點數和數值無關的詞條（沒有範圍，或上下限點數相同）：縮數值也省不了點數。"""
+    if affix.value is None:
+        return True
+    return affix_points(rules, affix, affix.value.min) == affix_points(
+        rules, affix, affix.value.max
+    )
+
+
+def _drop_fixed(
+    rules: ItemGenRules,
+    library: ContentLibrary,
+    affixes: Sequence[AffixRoll],
+    budget: Fraction,
+) -> tuple[AffixRoll, ...]:
+    """每條都取下限仍超過 ``budget`` 時，從點數最高的固定點數詞條開始拿掉（同點數先拿後面的），
+    直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。"""
+    kept = list(affixes)
+
+    def floor(roll: AffixRoll) -> Fraction:
+        d = library.affixes[roll.affix]
+        return affix_points(rules, d, None if d.value is None else d.value.min)
+
+    while sum((floor(r) for r in kept), Fraction(0)) > budget:
+        fixed = [i for i, r in enumerate(kept) if _fixed_points(rules, library.affixes[r.affix])]
+        if not fixed:
+            break
+        drop = max(fixed, key=lambda i: (floor(kept[i]), i))
+        del kept[drop]
+    return tuple(kept)
+
+
 def downscale_item(library: ContentLibrary, item: ItemDef, item_level: int) -> ItemDef:
     """把物品等級壓到 ``item_level``（影子借用時壓到招募者等級，20.5、#87；5D-2b 玩法 PM 代決）。
 
     照現有的物品等級規則（8.22.1）：基礎數值跟著物品等級走（引擎照 ``item_level`` 算），詞條部分的
     預算改用新等級的；詞條依序「取能放進剩餘預算的最大 N」，但不超過原本的數值，並替後面的詞條
-    保留最低點數。詞條種類、條數不變；連下限都放不進時用下限（照穿，不拿掉詞條）。普通物品的
+    保留最低點數。每條取下限仍超過新預算時，先從點數最高的固定點數詞條開始拿掉，直到放得進
+    （5D-4，:func:`_drop_fixed`）；只剩範圍詞條仍放不進時用下限照穿。普通物品的
     基礎加成同樣壓到新預算。沒有物品等級或沒有超過時原樣回傳；沒有產生器規則時只改物品等級。
     """
     if item.item_level is None or item.item_level <= item_level:
@@ -707,11 +740,12 @@ def downscale_item(library: ContentLibrary, item: ItemDef, item_level: int) -> I
         bonus = min(item.base_bonus_permille, cap)
         update["base_bonus_permille"] = bonus
         budget -= base_bonus_points(rules, bonus)
-    defs = [library.affixes[r.affix] for r in item.affixes]
+    kept = _drop_fixed(rules, library, item.affixes, budget)
+    defs = [library.affixes[r.affix] for r in kept]
     mins = [affix_points(rules, d, None if d.value is None else d.value.min) for d in defs]
     rolls: list[AffixRoll] = []
     spent = Fraction(0)
-    for i, (roll, affix) in enumerate(zip(item.affixes, defs, strict=True)):
+    for i, (roll, affix) in enumerate(zip(kept, defs, strict=True)):
         allowance = budget - spent - sum(mins[i + 1 :], Fraction(0))
         value = _lower_value(rules, affix, roll.value, allowance)
         rolls.append(roll.model_copy(update={"value": value}))
