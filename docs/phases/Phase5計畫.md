@@ -3132,6 +3132,122 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5D2-10 | 影子裝備「壓到招募者等級」 | 物品等級超過招募者等級的那件不穿（不重算數值）；照比例降級需要重算詞條，留給 PM |
 | 5D2-11 | 誰撿 | 只有主角的背包（傭兵、影子、夥伴不撿） |
 
-## 28. 之後各段規格
+## 28. 5E-1 詳細規格：帳號與角色
+
+> 給實作 agent。只動 `src/trpg/api/`（新增 `accounts.py`（服務層）、`account_config.py`、`auth.py`（FastAPI 依賴）、`account_schemas.py`、`routes/auth.py`；`app.py`、`state.py`、`routes/world.py` 小改）、`config/server.toml`（新）、`scripts/dev_account.py`（新，開發用）、`tests/api/`（只加測試）、`client/`（登入畫面、首頁入口、API 型別）、`client/openapi.json`。**不改** `trpg.world`、`trpg.engine`、`trpg.roguelite`、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1`。另一個 agent 同時在做 5D-3（鐵匠與附魔台），不碰 `trpg.world` 的經濟檔與 `client/src/world/EconomyPanel.tsx`。
+> 依據：`docs/專案計畫.md` 3.1「大世界帳號與主機」（Discord Bot 發帳號密碼、不用 OAuth；伺服器只存密碼雜湊；一個 Discord 使用者 ID 一個帳號；Bot 可重設密碼；身分組被拔時停用；一個帳號 2～3 個角色）；09 9.6.9 #100（一帳號 2～3 角色、角色之間不共用不轉移、自己的其他角色可以當影子）；本檔 2.5（`trpg-account/1`）、11（5A-5 的開發模式，代決 5A5-1）、23（5C-2 的「朋友」，代決 5C2-1）。
+
+### 28.1 目標
+
+伺服器有帳號：帳號只存密碼雜湊、有停用旗標、最多 3 個角色（設定檔）；登入拿到伺服器產生的 session token（有過期時間）；大世界 API 依帳號存取，只看得到、只操作得到自己的角色。帳號由之後的 Discord Bot（5E-2）發放，這一段只做 **服務層函式** 與開發用腳本。使用者現在的試玩不被擋住：設定檔的 **開發模式** 預設開，開著時照舊不用登入。
+
+### 28.2 設定（`config/server.toml`，進版控、不放金鑰）
+
+```toml
+[accounts]
+dev_mode = true            # 開發模式：true 時大世界 API 不用登入（照 5A-5）；帶了有效 token 照樣依帳號存取
+max_characters = 3         # 一個帳號最多幾個角色（3.1「2～3 個」，預設 3）
+session_ttl_hours = 168    # session 有效時間（小時）
+dir = ""                   # 帳號存檔資料夾；空字串＝<存檔資料夾>/accounts（機器相關的路徑放這裡，5E-4）
+```
+
+- 環境變數覆寫：`TRPG_SERVER_CONFIG`（設定檔路徑）、`TRPG_DEV_MODE`（true／false）、`TRPG_ACCOUNTS_DIR`。
+- `create_app(accounts=AccountSettings(...))` 可直接傳（測試用）；省略時讀設定檔。
+
+### 28.3 存檔（`trpg-account/1`）
+
+- 位置：`<帳號資料夾>/<account_id>.json`，一帳號一檔；寫檔用 `write_atomic`。帳號不放在 `world/` 底下（季末重置 5F-5 清的是世界，帳號保留）。
+- 欄位：`format`、`account_id`（`a` ＋ 8 個十六進位字元，伺服器產生）、`username`（3～20 字，英數與底線，存小寫、不分大小寫唯一）、`password`（演算法、參數、鹽、雜湊）、`disabled`、`characters`（角色 ID 依建立順序）、`discord_id`（選填，5E-2 用；有值時全伺服器唯一）、`created_at`、`sessions`（token 的 SHA-256 與到期時間；**不存 token 原文**）。
+- 讀檔不認得的 `format` 就拒絕（同 2.5）。
+
+### 28.4 密碼與 session
+
+- 密碼雜湊：標準函式庫 `hashlib.scrypt`（n=2^14、r=8、p=1、32 位元組），每個帳號 16 位元組隨機鹽（`secrets.token_bytes`）；比對用 `hmac.compare_digest`。參數存在檔裡，之後調高時舊檔照讀。**密碼只在記憶體比對，不寫進 log、不出現在錯誤訊息或回應**。密碼長度 8～128 字。
+- token：`secrets.token_urlsafe(32)`；檔裡只存 SHA-256。每個帳號最多 5 個有效 session（新登入擠掉最舊的）；過期的在登入與驗證時清掉。
+- 重設密碼、停用帳號時清掉該帳號全部 session。停用的帳號不能登入（403「帳號已停用」），既有 token 立即失效。
+- 帳號或密碼錯一律回同一句「帳號或密碼錯誤」（401），不透露帳號是否存在。
+
+### 28.5 服務層（`trpg.api.accounts.AccountStore`；Bot 與開發腳本也用這一層）
+
+| 函式 | 內容 |
+|---|---|
+| `create(username, password, *, discord_id=None)` | 建帳號；名稱重複、`discord_id` 重複、格式不合 → `AccountError`（422） |
+| `login(username, password)` | 回 `(token, account)`；錯誤 401、停用 403 |
+| `authenticate(token)` | 回帳號；無效或過期 401、停用 403 |
+| `logout(token)` | 讓這個 token 失效 |
+| `reset_password(account_id, password)` | 換密碼、清 session |
+| `set_disabled(account_id, disabled)` | 停用或恢復；停用時清 session |
+| `attach_character(account_id, character_id)` | 角色歸到帳號；超過上限 409；已屬於任何帳號 → 409（**角色不轉移**，#100） |
+| `owner_of(character_id)` | 角色所屬帳號 ID（沒有＝`None`） |
+| `find(username)`、`get(account_id)`、`by_discord(discord_id)`、`all()` | 查詢 |
+
+- 沒有轉移、合併、共用角色的函式（#100）。
+- 時間由注入的時鐘提供（測試用固定時間）。
+
+### 28.6 API
+
+| 方法與路徑 | 內容 |
+|---|---|
+| `GET /api/auth/status` | `{dev_mode, account}`：`account` 是目前 token 的帳號（名稱、角色數、上限），沒有或無效＝`null` |
+| `POST /api/auth/login` | `{username, password}` → `{token, expires_at, account}` |
+| `POST /api/auth/logout` | 讓目前的 token 失效（204） |
+
+- token 放 `Authorization: Bearer <token>`。
+- **大世界端點**（`/api/world/characters…`、`/api/world/llm`）：
+  - 開發模式關：沒有有效 token → 401。`GET /characters` 只列自己的角色；`POST /characters` 先檢查上限（409「角色已達上限」）再建立並歸到帳號；`/characters/{id}…` 不是自己的角色 → 404（不透露存在）。
+  - 開發模式開：沒帶 token 照 5A-5（全部角色）；帶了有效 token 照上一條依帳號存取（方便本機測登入）。
+- 一輪（`/api/runs`）、技能工坊、戰鬥端點不變（戰鬥 ID 是 `token_urlsafe(12)`，只有開戰的人拿得到）。
+
+### 28.7 開發用腳本（`scripts/dev_account.py`）
+
+`create <username> [--password-stdin]`（沒給就用 `secrets` 產生並只印一次）、`list`、`disable`／`enable <username>`、`reset-password <username>`、`attach <username> <character_id>`（把開發模式建的角色歸到帳號）。帳號資料夾照設定檔，可用 `--dir` 指定。
+
+### 28.8 前端
+
+- 首頁「進入大世界」→ 先讀 `/api/auth/status`：開發模式開或已登入 → 角色畫面；否則 → 登入畫面（帳號、密碼、登入；錯誤顯示後端訊息）。
+- token 存瀏覽器 `localStorage`，每個請求帶 `Authorization`；收到 401 時清 token 回登入畫面。
+- 角色畫面：已登入時顯示帳號名稱、角色數／上限、「登出」；達上限時建立表單停用並說明。開發模式開且沒登入時顯示「開發模式（不用登入）」與「登入帳號」按鈕。
+
+### 28.9 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/api/test_accounts.py` | 雜湊不含密碼原文、同密碼不同鹽；登入對錯；停用不能登入、既有 token 失效；過期；重設密碼清 session；名稱與 Discord ID 唯一；角色上限；角色不能歸到第二個帳號；存檔格式與不認得的格式；token 原文不在檔裡 |
+| `tests/api/test_auth_api.py` | 開發模式關：沒 token 401、只列自己的角色、別人的角色 404、上限 409、登出後 401；開發模式開：不帶 token 照舊、帶 token 依帳號 |
+| `tests/scripts/test_dev_account.py`（或併入上面） | 腳本建帳號、歸角色 |
+| `client/src/auth/*.test.ts` | token 存取、登入表單驗證、狀態 → 畫面的純函式 |
+
+測試的密碼一律在測試裡用 `secrets` 產生，不寫死真實密碼。
+
+### 28.10 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/api`、`tests/world`（`-n 8`）；vitest 與 build；swamp 種子 7 重播；OpenAPI 重產（`scripts/export_openapi.py` ＋ `gen:api`）。
+- 瀏覽器（8120 埠）：開發模式關 → 登入畫面 → 登入 → 建角色 → 走一步 → 登出；開發模式開 → 照舊直接進。
+
+### 28.11 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5E1-1 | 開發模式 | 設定檔旗標預設 **開**（不擋使用者現在的試玩）；正式開服前改成關 |
+| 5E1-2 | 角色建立進不進世界日誌（5A2-8 說 5E-1 再定） | **不進**：帳號屬於 API／服務層，不在 `trpg.world`；重播照舊從初始快照開始，`trpg-wlog/1` 不變。角色歸屬記在帳號檔 |
+| 5E1-3 | 開發模式建的舊角色 | 不自動歸屬；開發模式關時沒有主人的角色看不到，用 `dev_account.py attach` 歸到帳號 |
+| 5E1-4 | 「朋友」名單（5C2-1 說 5E 再限制） | 規格與設計都沒定義「朋友」怎麼來：**照現狀**（同伺服器所有其他角色都能借），列待決 |
+| 5E1-5 | session 存法 | token 的 SHA-256 存在帳號檔（伺服器重啟後仍有效）；有效 7 天、每帳號最多 5 個 |
+| 5E1-6 | `/api/world/llm` | 開發模式關時要登入才能讀寫（伺服器全域開關，誰能改之後再定） |
+| 5E1-7 | 一輪、工坊 | 不加登入（單人測試台） |
+| 5E1-8 | 帳號名稱規則 | 3～20 字英數與底線、不分大小寫；Bot 發帳號時照這個規則產生 |
+
+### 28.12 5E-4 的設計預留（暫定，不是已寫入的決定；這一段不實作）
+
+5E-4（部署彈性）只是暫定（第 1 節 5E-4 列），這一段只確保設計不擋住它：
+- **Windows／macOS 都能跑**：新程式的路徑一律 `pathlib`，不寫死磁碟代號或分隔符；開發腳本用 `uv run python scripts/…`，兩邊同一條指令。
+- **機器相關的路徑放設定檔**：帳號存檔資料夾是 `config/server.toml` 的 `accounts.dir`（或 `TRPG_ACCOUNTS_DIR`），不寫死在程式裡；之後的世界存檔路徑、Tunnel 設定照同一個檔加欄位。
+- **LLM 單一佇列**：帳號登入與驗證不呼叫 LLM、不佔 LLM 佇列；之後加單一佇列時只動 `trpg.api` 的 LLM 來源，不影響帳號。
+
+### 28.13 不做的事
+
+- Discord Bot、身分組、重設密碼的 Bot 指令（5E-2）；公告、部署（5E-3）；朋友名單與好友邀請；帳號刪除；角色刪除；密碼強度規則以外的帳號鎖定（嘗試次數限制）。
+
+## 29. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
