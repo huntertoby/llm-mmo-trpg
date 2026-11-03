@@ -20,6 +20,7 @@ function loc(id: string, over: Partial<WorldLocationView> = {}): WorldLocationVi
     hidden: false,
     fog: "visited",
     quest_marks: [],
+    footprints: [],
     ...over,
   };
 }

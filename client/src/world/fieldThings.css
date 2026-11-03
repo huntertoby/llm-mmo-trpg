@@ -1,0 +1,38 @@
+/* 實地地圖上的東西（Phase 6C-5）：情境物件的說明卡、潛行中的畫面。 */
+.field-object-card p {
+  margin: 4px 0 8px;
+  line-height: 1.5;
+}
+
+.field-object-card button {
+  min-width: 72px;
+}
+
+/* 潛行中：畫面四周暗一點、上方一個小標籤（到下一張地圖為止） */
+.world-field-stage.sneaking {
+  position: relative;
+}
+
+.world-field-stage.sneaking::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: inset 0 0 70px 22px rgba(10, 10, 24, 0.6);
+  pointer-events: none;
+}
+
+.world-field-stage.sneaking::after {
+  z-index: 1;
+  content: "潛行中";
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  padding: 1px 10px;
+  border-radius: 10px;
+  background: rgba(30, 30, 48, 0.75);
+  color: #c8c8e8;
+  font-size: 12px;
+  pointer-events: none;
+}

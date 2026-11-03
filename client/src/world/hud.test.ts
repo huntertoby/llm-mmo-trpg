@@ -562,7 +562,7 @@ describe("功能列定稿圖示與說明卡（6A-4f，HUD功能列圖示.md）",
       expect(out).toContain(HUD_TOUCH_ZH);
     }
     expect(hudButtonCard(v, "quests").status).toBe("進行中 2 條");
-    expect(hudButtonCard(v, "sneak").status).toBe("尚未開放");
+    expect(hudButtonCard(v, "sneak").status).toBe("花 1 補給");
   });
 
   it("圖示的抖動由名字決定：畫兩次一樣", () => {
