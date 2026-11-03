@@ -126,6 +126,7 @@ def _npcs(
                 rank_zh=mark.rank_zh,
                 alert=mark.alert,
                 alert_zh=None if mark.alert is None else ALERT_ZH[mark.alert],
+                portrait=cards[n.id].portrait if n.id in cards else None,
             )
         )
     return tuple(out)
