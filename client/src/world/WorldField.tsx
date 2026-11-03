@@ -35,6 +35,8 @@ interface Props {
   commit(view: WorldView): void;
   /** 和設施或 NPC 互動（開對應的現有面板）。 */
   onInteract(target: FieldTarget): void;
+  /** HUD 版面（6B-5）：由外面給縮放（用滿整個舞台），說明列疊在畫面上。省略＝照 6B-3 自己量左欄。 */
+  hudScale?: number;
 }
 
 type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
@@ -52,7 +54,7 @@ function typingInto(target: EventTarget | null): boolean {
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-export function WorldField({ view, busy, send, commit, onInteract }: Props) {
+export function WorldField({ view, busy, send, commit, onInteract, hudScale }: Props) {
   const field = view.field as FieldView;
   const blocked = view.encounter != null || view.battle_id != null;
   const rendererRef = useRef<BattleRenderer | null>(null);
@@ -80,7 +82,7 @@ export function WorldField({ view, busy, send, commit, onInteract }: Props) {
       window.removeEventListener("resize", measure);
     };
   }, []);
-  const scale = fitScale(avail, model, undefined, 0.4, 1.5);
+  const scale = hudScale ?? fitScale(avail, model, undefined, 0.4, 1.5);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);
@@ -233,7 +235,7 @@ export function WorldField({ view, busy, send, commit, onInteract }: Props) {
 
   const caption = hoverText(field, hover);
   return (
-    <div className="world-field" data-testid="world-field" ref={boxRef}>
+    <div className={`world-field${hudScale !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
       <div className={`world-field-stage${fading ? " fading" : ""}`} data-map={field.map_id}>
         <BattleCanvas
           model={model}

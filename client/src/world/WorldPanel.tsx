@@ -87,7 +87,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   );
 }
 
-function HerePanel({
+export function HerePanel({
   view,
   busy,
   hasten,
@@ -100,10 +100,14 @@ function HerePanel({
   rumors = [],
   pane = "map",
   onPane,
+  hideHasten = false,
 }: Pick<
   Props,
   "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth" | "questsOpen" | "onQuests" | "rumors" | "pane" | "onPane"
->) {
+> & {
+  /** 實地地圖的 HUD（6B-5）不用「趕路」：走格子不花東西，功能列第 7 個圖示改成潛行。 */
+  hideHasten?: boolean;
+}) {
   const here = view.here;
   const [editing, setEditing] = useState(false);
   const shopping = pane === "shop";
@@ -236,10 +240,12 @@ function HerePanel({
         />
       )}
       {here.can_loadout && editing && <div className="muted small">欄位上限：{view.character.slots_zh}</div>}
-      <label className="world-hasten">
-        <input type="checkbox" checked={hasten} disabled={busy} onChange={(e) => onHasten(e.target.checked)} data-testid="world-hasten" />
-        趕路（每步花 {here.hasten_cost} 補給，遇敵機率減半）
-      </label>
+      {!hideHasten && (
+        <label className="world-hasten">
+          <input type="checkbox" checked={hasten} disabled={busy} onChange={(e) => onHasten(e.target.checked)} data-testid="world-hasten" />
+          趕路（每步花 {here.hasten_cost} 補給，遇敵機率減半）
+        </label>
+      )}
     </div>
   );
 }
