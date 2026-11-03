@@ -7,8 +7,9 @@
 - **封印鑰匙**（19.6.2）：個人每個來源第一次達成給 1 把（:func:`gain_seal_keys`），同時算進全服
   鑰匙（``WorldState.seal_keys``）；世界事件效果 ``seal_keys`` 也加全服。
 - **解鎖**（09 9.7）：世界事件「封印共鳴」成功的旗標第一次出現的時間記在 ``seal_full_at``
-  （:func:`note_seal_full`）；解鎖時間＝``min(強制日, max(最早日, 集滿 + 公告小時))``，公告時間＝
-  解鎖前 ``announce_hours`` 小時，開放到 ``close_day`` 結束（:func:`boss_schedule`）。
+  （:func:`note_seal_full`）；解鎖時間＝``min(強制日, max(最早日, 集滿 + 公告小時))`` 之後（含）的
+  第一個刷新時刻（6 點；5F-3b 對齊），公告時間＝解鎖前 ``announce_hours`` 小時，開放到 ``close_day``
+  結束（:func:`boss_schedule`）。
 - **挑戰**（:func:`challenge`）：在 ``entry_kinds`` 的地點、只准傭兵（#87）、個人鑰匙夠、帳號今天的
   次數還沒用完（#100）；扣 1 次並產生 Boss 的遭遇（之後照一般遭遇開戰或撤退，撤退不退次數）。
 - **通關**（:func:`boss_result`，由 :func:`~trpg.world.battle.fight` 呼叫）：分數（#87）、本季第一筆
@@ -24,7 +25,7 @@ from typing import Final, Literal
 from trpg.content.library import ContentLibrary
 from trpg.content.world_season import SeasonBossDef
 from trpg.world.actions import InsightGainedEvent, WorldEvent
-from trpg.world.calendar import day_of, day_start, local_time_zh
+from trpg.world.calendar import day_of, day_start, local_time_zh, next_refresh
 from trpg.world.clock import day_phase
 from trpg.world.common import world_map_of
 from trpg.world.errors import WorldActionError
@@ -150,6 +151,11 @@ def _season_day_start(library: ContentLibrary, world: WorldState, day: int) -> i
     return day_start(library, day_of(library, world.season_start) + day - 1)
 
 
+def _at_or_next_refresh(library: ContentLibrary, at: int) -> int:
+    """``at`` 本身是刷新時刻（6 點）就是它，否則是之後的第一個刷新時刻（5F-3b）。"""
+    return at if day_start(library, day_of(library, at)) == at else next_refresh(library, at)
+
+
 def boss_schedule(library: ContentLibrary, world: WorldState) -> BossSchedule | None:
     """解鎖、公告、結束的時間（見模組說明）；沒有賽季 Boss 時 ``None``。"""
     boss = boss_def(library)
@@ -161,7 +167,7 @@ def boss_schedule(library: ContentLibrary, world: WorldState) -> BossSchedule | 
     if world.seal_full_at is not None:
         earliest_at = _season_day_start(library, world, unlock.earliest_day)
         notice = world.seal_full_at + unlock.announce_hours * HOUR
-        unlock_at = min(forced_at, max(earliest_at, notice))
+        unlock_at = min(forced_at, _at_or_next_refresh(library, max(earliest_at, notice)))
     return BossSchedule(
         announce_at=unlock_at - unlock.announce_hours * HOUR,
         unlock_at=unlock_at,

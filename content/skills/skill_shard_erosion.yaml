@@ -4,6 +4,7 @@
 id: skill_shard_erosion
 schema_version: 1
 name_zh: 晶蝕
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare

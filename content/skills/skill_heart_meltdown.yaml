@@ -3,6 +3,7 @@
 id: skill_heart_meltdown
 schema_version: 1
 name_zh: 熔心爆
+enemy_only: true
 tier: 2
 rank: 2
 rarity: rare

@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_season import ChronicleFact, ChronicleTemplates
-from trpg.server.accounts import AccountRecord, AccountStore
+from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
     CHRONICLE_DIR,
     ChronicleHero,
@@ -108,6 +108,7 @@ HANDLERS: Final[Mapping[type[BaseModel], tuple[HandlerKind, str]]] = {
     FirstKill: ("keep", "world/first_kills.json 不動（戰鬥紀錄在封存 archive/<舊季>/ 的同一路徑）"),
     BossBoardEntry: ("keep", "world/season_boss_board.json 不動"),
     AccountRecord: ("keep", "帳號資料夾不動（重置期間持有鎖檔）"),
+    AccountTitle: ("keep", "帳號檔的紀念稱號（5F-3b「碎晶的終結者」）跟著帳號不動"),
     LocationNote: ("delete", "world/notes.json 刪掉"),
     LeagueRecord: ("split", "world/league/ 報名快照清空，搬進唯讀封存 archive/<舊季>/league/"),
     LeagueMatch: ("keep", "跟著賽程搬進封存，場次與戰鬥紀錄檔內容不動（可重播查證）"),

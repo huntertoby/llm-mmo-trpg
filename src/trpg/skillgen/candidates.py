@@ -74,6 +74,7 @@ from itertools import combinations
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
@@ -488,8 +489,7 @@ class _Search:
 
 def _pool(library: ContentLibrary, tier: int) -> tuple[tuple[SkillDef, tuple[str, ...]], ...]:
     found: list[tuple[SkillDef, tuple[str, ...]]] = []
-    for skill_id in sorted(library.skills):
-        skill = library.skills[skill_id]
+    for skill in player_skills(library).values():
         if skill.tier != tier or skill.rarity == "legendary" or minimum_tier(skill, library) > tier:
             continue
         keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
@@ -635,8 +635,7 @@ def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
     """通用池：階級相符、非傳說、**沒有任何關鍵字**（含通用歸類）的手寫技能＝基礎技能（06 6.27.1，
     玩法 PM 2026-10-24 選 B：通用池與「基礎技能」同一個範圍）。"""
     found: list[SkillDef] = []
-    for skill_id in sorted(library.skills):
-        skill = library.skills[skill_id]
+    for skill in player_skills(library).values():
         if skill.tier != tier or skill.rarity == "legendary" or minimum_tier(skill, library) > tier:
             continue
         if skill.form_id is not None:  # 形態技能（3J-1a 只為測試）：身分與技能池在 3J-3

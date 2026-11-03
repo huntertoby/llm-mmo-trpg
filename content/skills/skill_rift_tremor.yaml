@@ -3,6 +3,7 @@
 id: skill_rift_tremor
 schema_version: 1
 name_zh: 碎界脈動
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare

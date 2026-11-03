@@ -14,6 +14,7 @@ from trpg.cli.battle import cmd_replay
 from trpg.content.library import ContentLibrary
 from trpg.engine.battle import begin_battle
 from trpg.engine.runner import apply_step
+from trpg.server.accounts import AccountTitle
 from trpg.server.announce import load_templates, render_first_kill
 from trpg.server.season_boss_board import BossBoardEntry, SeasonBossBoard
 from trpg.shared.types import Team
@@ -73,6 +74,8 @@ def _winning(library: ContentLibrary, store: WorldStore, char: CharacterState) -
 def test_first_kill_records_replayable_log(library: ContentLibrary, tmp_path: Path) -> None:
     root = tmp_path / "world"
     store = _store(library, root)
+    granted: list[tuple[str, AccountTitle]] = []
+    store.grant_title = lambda account, title: granted.append((account, title))
     char = _winning(library, store, _ready(store))
     store._save_char(char)
     store.act(char.character_id, SeasonBossAction())
@@ -89,6 +92,11 @@ def test_first_kill_records_replayable_log(library: ContentLibrary, tmp_path: Pa
     assert "重播驗證通過" in out.getvalue()
     (entry,) = store.boss_board.top(store.world().season_id)
     assert entry.score == cleared.score and entry.account_id == "acc1"
+    # 5F-3b：帳號層級的紀念稱號「碎晶的終結者」（評分榜照樣顯示）
+    ((account, title),) = granted
+    assert account == "acc1" and title.name_zh == cleared.title_zh == "碎晶的終結者"
+    assert title.id == "season_boss:rift_shard_lord" and title.character_id == char.character_id
+    assert title.season_id == store.world().season_id
     text = render_first_kill(load_templates(), kill)
     assert text.startswith("【賽季首殺】") and "碎晶之主" in text
     board = season_board(

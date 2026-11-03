@@ -35,6 +35,7 @@ from collections.abc import Mapping, Sequence
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import top_attribute
@@ -193,8 +194,8 @@ class _Maker:
         tier = request.tier
         options = [
             skill
-            for skill_id in sorted(self.library.skills)
-            if (skill := self.library.skills[skill_id]).tier <= tier
+            for skill in player_skills(self.library).values()
+            if skill.tier <= tier
             and minimum_tier(skill, self.library) <= tier  # 最低角色階級（3W-9，6.34.9）
             and skill.rarity != "legendary"
             and skill.form_id is None

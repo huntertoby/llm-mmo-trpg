@@ -43,6 +43,7 @@ from pydantic import (
 from trpg.content.battle import ID_PATTERN
 from trpg.content.keyword_derive import derive_keywords, skill_condition_specs
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import (
     AFFECTS_VALUES,
     BACKLASH_TYPES,
@@ -388,7 +389,7 @@ def grantable_skills(library: ContentLibrary) -> tuple[str, ...]:
                 return False
         return True
 
-    return tuple(sorted(s.id for s in library.skills.values() if ok(s)))
+    return tuple(s.id for s in player_skills(library).values() if ok(s))
 
 
 _FIXED_PARAM_TYPES: dict[str, tuple[Any, dict[str, Any]]] = {

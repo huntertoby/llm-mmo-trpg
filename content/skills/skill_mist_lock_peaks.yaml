@@ -4,6 +4,7 @@
 id: skill_mist_lock_peaks
 schema_version: 1
 name_zh: 霧鎖千山
+enemy_only: true
 tier: 2
 rank: 2
 rarity: rare

@@ -2,6 +2,7 @@
 id: skill_sulfur_breath
 schema_version: 1
 name_zh: 硫煙吐息
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare

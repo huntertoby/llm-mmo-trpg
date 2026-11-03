@@ -3,6 +3,7 @@
 id: skill_mist_shift
 schema_version: 1
 name_zh: 霧遁
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare

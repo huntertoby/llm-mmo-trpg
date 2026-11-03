@@ -46,6 +46,7 @@ __all__ = [
     "AccountNotFoundError",
     "AccountRecord",
     "AccountStore",
+    "AccountTitle",
     "AuthError",
     "PasswordHash",
     "SessionRecord",
@@ -118,6 +119,21 @@ class SessionRecord(BaseModel):
     expires_at: int
 
 
+class AccountTitle(BaseModel):
+    """帳號的紀念稱號（Phase 5F-3b：打倒賽季 Boss 的「碎晶的終結者」）。季末保留（紀念類）。"""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    """稱號 ID（``season_boss:<Boss ID>``）；同一季同一個稱號只記一次。"""
+    name_zh: str
+    season_id: str
+    character_id: str
+    """第一次拿到這個稱號的角色。"""
+    at: int
+    """UTC 秒數。"""
+
+
 class AccountRecord(BaseModel):
     """一個帳號（``trpg-account/1``）。"""
 
@@ -139,6 +155,8 @@ class AccountRecord(BaseModel):
     """管理者：可以改大世界的 LLM 開關（5E-2，計畫 29.8）。有預設值，舊檔照讀。"""
     created_at: int
     sessions: tuple[SessionRecord, ...] = ()
+    titles: tuple[AccountTitle, ...] = ()
+    """紀念稱號（Phase 5F-3b；依取得順序）。有預設值，舊檔照讀、不升版。"""
 
     def season_of(self, character_id: str) -> str:
         return self.character_seasons.get(character_id, FIRST_SEASON_ID)
@@ -411,6 +429,16 @@ class AccountStore:
         if disabled:
             update["sessions"] = ()
         return self._update(account_id, lambda r: r.model_copy(update=update))
+
+    def grant_title(self, account_id: str, title: AccountTitle) -> AccountRecord:
+        """記一個紀念稱號（5F-3b）：鎖內重讀帳號檔再寫回（5D-R2）；同一季已有同一個稱號就不變。"""
+
+        def add(fresh: AccountRecord) -> AccountRecord:
+            if any(t.id == title.id and t.season_id == title.season_id for t in fresh.titles):
+                return fresh
+            return fresh.model_copy(update={"titles": (*fresh.titles, title)})
+
+        return self._update(account_id, add)
 
     def set_admin(self, account_id: str, admin: bool) -> AccountRecord:
         """設定或取消管理者（開發腳本用；計畫 29.8）。"""

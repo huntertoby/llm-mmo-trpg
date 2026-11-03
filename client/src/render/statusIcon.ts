@@ -363,6 +363,13 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     circle(c, 0, 0, 8.5);
     line(c, [[0, -6], [4, 0], [0, 6], [-4, 0], [0, -6]]);
   },
+  // 灌注源晶（Phase 5F-3b，三柱階段碎晶之主造成的傷害降低）：菱形晶體＋往外的三道細線，只用既有筆畫
+  rift_channel: (c) => {
+    line(c, [[0, -5], [3.5, 0], [0, 5], [-3.5, 0], [0, -5]]);
+    line(c, [[0, -6.5], [0, -9.5]]);
+    line(c, [[-5, 4], [-8, 6.5]]);
+    line(c, [[5, 4], [8, 6.5]]);
+  },
   // 晶能湧動／狂湧（Phase 5F-3，留下的柱子傷害提高）：菱形晶體＋下方 1～2 個點
   crystal_surge: (c) => {
     line(c, [[0, -8], [5, -1], [0, 6], [-5, -1], [0, -8]]);
@@ -373,7 +380,7 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     circle(c, -3, 9, 1.5, true);
     circle(c, 3, 9, 1.5, true);
   },
-  // 界崩（Phase 5F-3，第 15 輪起傷害加倍）：碎成兩半的菱形
+  // 界崩（Phase 5F-3，第 18 輪起傷害加倍）：碎成兩半的菱形
   rift_collapse: (c) => {
     line(c, [[-1, -8], [-6, 0], [-1, 8]]);
     line(c, [[1, -8], [6, 0], [1, 8]]);

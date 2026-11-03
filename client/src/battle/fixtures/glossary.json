@@ -686,6 +686,24 @@
    ]
   },
   {
+   "id": "rift_channel",
+   "name_zh": "灌注源晶",
+   "description_zh": "碎晶之主把力量灌進三根源晶柱：造成的傷害降低；柱子全部碎裂時解除。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×75%"
+   ]
+  },
+  {
    "id": "crystal_surge",
    "name_zh": "晶能湧動",
    "description_zh": "同伴碎裂的源晶流進這根柱子：造成的傷害提高。不能被淨化、驅散或奪取。",
