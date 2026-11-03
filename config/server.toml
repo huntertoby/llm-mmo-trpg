@@ -15,3 +15,17 @@ dir = ""
 login_max_failures = 5
 login_ip_max_failures = 5
 login_window_minutes = 15
+
+[network]
+# Tunnel（cloudflared 或其他）給的外部網址，例 "https://trpg.example.com"（Phase 5E-3）。
+# 只用來顯示與部署檢查（scripts/deploy.py check），不影響伺服器綁定的位址。環境變數 TRPG_PUBLIC_URL 可覆寫。
+public_url = ""
+# 可信任的轉發來源（IP 或 CIDR）。空＝不信任任何轉發標頭（X-Forwarded-For／CF-Connecting-IP 一律忽略）。
+# Tunnel 程式跑在同一台電腦時通常填 ["127.0.0.1", "::1"]（見 docs/部署說明.md）。
+# 環境變數 TRPG_TRUSTED_PROXIES（逗號分隔）可覆寫。
+trusted_proxies = []
+
+[llm_health]
+# 本機模型的健康檢查（Phase 5E-3）：啟動時 ping 一次，之後每 interval_s 秒 ping；0＝只在啟動時。
+# 只在大世界的 LLM 開關開著時 ping；不可用時大世界的敘述全部改用模板，伺服器視窗會印出警告。
+interval_s = 60

@@ -95,7 +95,9 @@ class WorldLlmView(_ApiModel):
     overridden: bool
     """有人改過開關（``false`` ＝ 跟著伺服器設定）。"""
     notice_zh: str | None = None
-    """打開時連不到模型的提示。"""
+    """打開時連不到模型的提示；健康檢查說模型不可用時也顯示（5E-3）。"""
+    model_available: bool | None = None
+    """本機模型的健康檢查結果（5E-3）：``null``＝還沒檢查（開關關著時不 ping）。"""
 
 
 class StoryView(_ApiModel):

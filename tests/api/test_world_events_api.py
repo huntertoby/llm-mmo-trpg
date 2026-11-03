@@ -329,6 +329,7 @@ def test_world_llm_switch(eventful: ContentLibrary, tmp_path: Path) -> None:
             "default": False,
             "overridden": False,
             "notice_zh": None,
+            "model_available": None,  # 5E-3：開關關著不 ping
         }
         down = _ok(client.post("/api/world/llm", json={"enabled": True}))
         assert down["enabled"] is False and down["notice_zh"]

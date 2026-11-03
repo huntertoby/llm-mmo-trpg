@@ -2348,6 +2348,136 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/notes": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Notes",
+        "description": "角色現在所在地點的留言（最新 20 則）與其他角色的足跡（5E-3，#105）。",
+        "operationId": "get_notes_api_world_characters__character_id__notes_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationBoard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Note",
+        "description": "在角色現在所在的地點留一則（1～50 字、不能換行；不進世界日誌、不送進 LLM）。",
+        "operationId": "post_note_api_world_characters__character_id__notes_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationBoard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/notes/{note_id}": {
+      "delete": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Delete Note",
+        "description": "刪一則留言（管理者；#105「使用者手動刪」）。",
+        "operationId": "delete_note_api_world_notes__note_id__delete",
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/status": {
       "get": {
         "tags": [
@@ -7338,6 +7468,35 @@
         "title": "FollowupTarget",
         "description": "複合技能動作段的選取（Phase 3F-3a）：依動作段形狀的 ``targeting`` 給對應欄位——\n``direction``（直線、錐形）、``target_id``／``target_object_id``（單體）；以落點為中心的形狀\n（十字、方陣、環）都不給（``target_pos`` 省略時為落點，給了也必須是落點）。"
       },
+      "FootprintView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "at",
+          "text_zh"
+        ],
+        "title": "FootprintView"
+      },
       "FormCooldownView": {
         "properties": {
           "form_id": {
@@ -10416,6 +10575,51 @@
         "title": "LoadoutChoice",
         "description": "營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合\n欄位上限）；沒裝上的進備用，閃現狀態保留。不推進節點。"
       },
+      "LocationBoard": {
+        "properties": {
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "location_name_zh": {
+            "type": "string",
+            "title": "Location Name Zh"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/NoteView"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "footprints": {
+            "items": {
+              "$ref": "#/components/schemas/FootprintView"
+            },
+            "type": "array",
+            "title": "Footprints"
+          },
+          "max_len": {
+            "type": "integer",
+            "title": "Max Len",
+            "default": 50
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region",
+          "location",
+          "location_name_zh",
+          "notes",
+          "footprints"
+        ],
+        "title": "LocationBoard"
+      },
       "LoginRequest": {
         "properties": {
           "username": {
@@ -10808,6 +11012,56 @@
         ],
         "title": "NodeOut",
         "description": "目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、\n``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，\n``after_battle``、``offer``；Phase 3W-5）、``campfire``（``after_battle``）、\n``ended``（``victory``）。"
+      },
+      "NoteRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "NoteRequest",
+        "description": "在角色現在所在的地點留言（去頭尾空白後 1～50 字、不能換行）。只當資料顯示，不送進 LLM。"
+      },
+      "NoteView": {
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "title": "Note Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "note_id",
+          "name",
+          "text",
+          "at",
+          "mine"
+        ],
+        "title": "NoteView"
       },
       "NpcHereView": {
         "properties": {
@@ -18628,6 +18882,17 @@
               }
             ],
             "title": "Notice Zh"
+          },
+          "model_available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Available"
           }
         },
         "additionalProperties": false,

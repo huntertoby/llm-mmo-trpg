@@ -955,6 +955,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notes
+         * @description 角色現在所在地點的留言（最新 20 則）與其他角色的足跡（5E-3，#105）。
+         */
+        get: operations["get_notes_api_world_characters__character_id__notes_get"];
+        put?: never;
+        /**
+         * Post Note
+         * @description 在角色現在所在的地點留一則（1～50 字、不能換行；不進世界日誌、不送進 LLM）。
+         */
+        post: operations["post_note_api_world_characters__character_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Note
+         * @description 刪一則留言（管理者；#105「使用者手動刪」）。
+         */
+        delete: operations["delete_note_api_world_notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/status": {
         parameters: {
             query?: never;
@@ -3025,6 +3069,17 @@ export interface components {
             target_pos?: components["schemas"]["Pos"] | null;
             direction?: components["schemas"]["Direction"] | null;
         };
+        /** FootprintView */
+        FootprintView: {
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** At */
+            at: number;
+            /** Text Zh */
+            text_zh: string;
+        };
         /**
          * FormCooldownView
          * @description 冷卻中的形態（Phase 3J-1a）：離開後該形態冷卻，自己的回合開始時 −1。
@@ -4358,6 +4413,24 @@ export interface components {
             /** Skills */
             skills: string[];
         };
+        /** LocationBoard */
+        LocationBoard: {
+            /** Region */
+            region: string;
+            /** Location */
+            location: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+            /** Notes */
+            notes: components["schemas"]["NoteView"][];
+            /** Footprints */
+            footprints: components["schemas"]["FootprintView"][];
+            /**
+             * Max Len
+             * @default 50
+             */
+            max_len: number;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Username */
@@ -4505,6 +4578,27 @@ export interface components {
             /** Victory */
             victory?: boolean | null;
             gear?: components["schemas"]["GearOfferOut"] | null;
+        };
+        /**
+         * NoteRequest
+         * @description 在角色現在所在的地點留言（去頭尾空白後 1～50 字、不能換行）。只當資料顯示，不送進 LLM。
+         */
+        NoteRequest: {
+            /** Text */
+            text: string;
+        };
+        /** NoteView */
+        NoteView: {
+            /** Note Id */
+            note_id: string;
+            /** Name */
+            name: string;
+            /** Text */
+            text: string;
+            /** At */
+            at: number;
+            /** Mine */
+            mine: boolean;
         };
         /** NpcHereView */
         NpcHereView: {
@@ -7652,6 +7746,8 @@ export interface components {
             overridden: boolean;
             /** Notice Zh */
             notice_zh?: string | null;
+            /** Model Available */
+            model_available?: boolean | null;
         };
         /** WorldLocationView */
         WorldLocationView: {
@@ -9343,6 +9439,101 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorldLlmView"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notes_api_world_characters__character_id__notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_note_api_world_characters__character_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_note_api_world_notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

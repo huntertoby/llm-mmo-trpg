@@ -290,6 +290,8 @@ export type WorldQuestHere = Schemas["QuestHereView"];
 export type WorldPendingOffer = Schemas["PendingOfferView"];
 export type WorldThread = Schemas["ThreadView"];
 export type WorldLlmView = Schemas["WorldLlmView"];
+/** 地點留言板（5E-3，#105）：所在地點的留言（最新 20 則）與其他角色的足跡。 */
+export type LocationBoard = Schemas["LocationBoard"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];

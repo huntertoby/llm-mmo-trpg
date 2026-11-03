@@ -16,5 +16,12 @@ token = ""
 guild_id = ""
 # 能領帳號的身分組 ID（身分組被拔時帳號停用）。
 role_id = ""
-# 公告頻道 ID（5E-3 的每日公告才會用到；現在只檢查有填）。
+# 公告頻道 ID（每日公告與首殺公告貼在這裡，5E-3）。
 announce_channel_id = ""
+
+[announce]
+# 每日公告的時間（Phase 5E-3）：每天 hour 點（timezone）貼今日目標與世界事件進度。
+timezone = "Asia/Taipei"
+# 系統沒有時區資料時（Windows 沒裝 tzdata）改用固定時差（分鐘）；台灣沒有日光節約，480＝UTC+8。
+utc_offset_minutes = 480
+hour = 6
