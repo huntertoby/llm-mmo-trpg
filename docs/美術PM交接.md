@@ -131,6 +131,7 @@
 | `ashenTiles.js`、`ashen-tiles.html` | 灰燼荒原實地地圖圖庫＋示範圖「赤沙村」（`ashen-tiles.png`、`灰燼實地圖庫.md`；11-04 樣張） |
 | `townTiles.js`、`town-tiles.html` | 主城、霧渡鎮的城鎮圖庫與酒館、鐵匠鋪、導師殿室內，疊 HUD A（`town-tiles.png`、`城鎮與室內圖庫.md`；11-04 樣張） |
 | `worldmap.js`、`worldmap.html` | 大世界圖（漂浮界域、灰色未解鎖）與雲嶺區域圖（戰爭迷霧三態）（`worldmap.png`、`大世界圖與區域圖.md`；11-04 樣張） |
+| `portraits.js`、`portraits.html` | NPC 頭像 24 位（雲嶺 9、荒原 6、傭兵 9）＋好感度表情（`portraits.png`、`NPC頭像.md`；11-04 樣張） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
@@ -213,3 +214,6 @@
 | 44 | 未解鎖的區 | 灰色剪影＋鎖頭＋「之後的賽季」 | 完全不顯示 |
 | 45 | 區域圖的畫風 | 掛圖式插畫（北方群山、中段雲海、南方竹林河流），地點圖示疊在上面 | 純示意的節點圖 |
 | 46 | 迷霧 | 更遠的地點用白霧蓋住；隱藏地點發現前完全不顯示 | 只灰掉不蓋霧 |
+| 47 | NPC 頭像的畫法 | 紙娃娃正面頭部放大＋頭像專用配件；圓角框依區域配色（`NPC頭像.md`） | 另畫半身立繪 |
+| 48 | NPC 的外觀 | 照身分和個性提案（24 位，表在 `portraits.js`）；資料放 NPC 檔的 `portrait` 欄位 | 由玩法 PM 另寫外觀描述 |
+| 49 | 好感度表情 | 五級：敵意、冷淡、普通、友善、信賴 | 三級 |

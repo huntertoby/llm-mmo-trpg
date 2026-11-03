@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>NPC 頭像</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1220px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 16px 0 6px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  figure { margin: 0; text-align: center; width: 112px; }
+  figcaption { font-size: 12px; color: #f2e6c8; margin-top: 4px; line-height: 1.3; }
+  figcaption b { display: block; color: #9a8e7c; font-weight: normal; font-size: 11px; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>NPC 頭像（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。用遊戲的 C 畫風紙娃娃正面頭部放大，加少數頭像專用的小配件（斗笠、布帽、頭巾、護目鏡、刀疤）。框色：雲嶺綠、荒原橘、傭兵金。NPC 檔沒有外觀欄位，外觀是照身分和個性提的方案。全部程式繪製。</p>
+<h2>1. 雲嶺（9 位）</h2><div class="grid" id="g-cloud_ridge"></div>
+<h2>2. 灰燼荒原（6 位）</h2><div class="grid" id="g-ashen_waste"></div>
+<h2>3. 系統傭兵（9 位）</h2><div class="grid" id="g-merc"></div>
+<h2>4. 用在哪裡<small>左：說書人字幕加 NPC 頭像（6C-7）；中：事件卡；右：好感度表情（頭頂小圖示，21.5）與三種大小</small></h2>
+<canvas id="use"></canvas>
+<script src="storyDoll.js"></script>
+<script src="portraits.js"></script>
+<script>
+  const P = Portraits;
+  for (const n of P.N) {
+    const f = document.createElement("figure"), c = document.createElement("canvas"); c.width = 224; c.height = 224; c.style.width = "112px"; c.style.height = "112px";
+    const ctx = c.getContext("2d"); ctx.scale(2, 2); P.portrait(ctx, 2, 2, 108, n);
+    f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = `${n[1]}<b>${n[2]}</b>`; f.appendChild(cap);
+    document.getElementById("g-" + n[3]).appendChild(f);
+  }
+  const c = document.getElementById("use"), W = 1180, H = 260; c.width = W * 2; c.height = H * 2; c.style.width = W + "px"; c.style.height = H + "px";
+  const ctx = c.getContext("2d"); ctx.scale(2, 2);
+  const by = (id) => P.N.find((n) => n[0] === id);
+  // 字幕：上方一行字幕＋頭像＋「多講一點」
+  ctx.fillStyle = "#3a4a3e"; ctx.fillRect(0, 0, 470, 250); ctx.fillStyle = "rgba(24,20,16,0.86)"; ctx.beginPath(); ctx.roundRect(10, 12, 450, 64, 10); ctx.fill(); ctx.strokeStyle = "#c8a868"; ctx.lineWidth = 1.5; ctx.stroke();
+  P.portrait(ctx, 18, 18, 52, by("granny_du"));
+  ctx.fillStyle = "#ffd23a"; ctx.font = "bold 13px 'Microsoft JhengHei'"; ctx.fillText("渡婆婆", 80, 36); ctx.fillStyle = "#f2e6c8"; ctx.font = "14px 'Microsoft JhengHei'"; ctx.fillText("「船要翻，先看是誰在搖槳。」", 80, 58);
+  ctx.fillStyle = "#9a8e7c"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText("多講一點 ▸", 380, 64);
+  P.mood(ctx, 70, 22, 8, 3);
+  ctx.fillStyle = "#b8ab96"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText("（畫面上方一行字幕，下面是遊戲畫面）", 120, 160);
+  // 事件卡：插圖區＋頭像＋選項
+  ctx.fillStyle = "rgba(24,20,16,0.95)"; ctx.beginPath(); ctx.roundRect(490, 6, 380, 244, 12); ctx.fill(); ctx.strokeStyle = "#c8a868"; ctx.stroke();
+  ctx.fillStyle = "#2a3a30"; ctx.fillRect(500, 16, 360, 96); ctx.fillStyle = "#9a8e7c"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText("（事件插圖區，見事件插圖樣張）", 580, 68);
+  P.portrait(ctx, 500, 120, 64, by("scavenger_laotie")); ctx.fillStyle = "#ffd23a"; ctx.font = "bold 13px 'Microsoft JhengHei'"; ctx.fillText("老鐵", 574, 136);
+  ctx.fillStyle = "#f2e6c8"; ctx.font = "13px 'Microsoft JhengHei'"; ctx.fillText("「這箱零件，你要的話分你一半。」", 574, 158);
+  for (const [k, t] of [[0, "⚔ 搶過來"], [1, "💬 說服他"], [2, "✋ 不理他"]]) { ctx.fillStyle = "#3a2e22"; ctx.beginPath(); ctx.roundRect(574 + k * 96, 196, 88, 28, 8); ctx.fill(); ctx.strokeStyle = "#c8a868"; ctx.stroke(); ctx.fillStyle = "#f2e6c8"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText(t, 586 + k * 96, 214); }
+  // 好感度表情與三種大小
+  ["敵意", "冷淡", "普通", "友善", "信賴"].forEach((t, k) => { P.mood(ctx, 910 + k * 52, 40, 14, k); ctx.fillStyle = "#d8ccb8"; ctx.font = "11px 'Microsoft JhengHei'"; ctx.textAlign = "center"; ctx.fillText(t, 910 + k * 52, 70); ctx.textAlign = "left"; });
+  for (const [s, x] of [[96, 900], [48, 1010], [28, 1072]]) { P.portrait(ctx, x, 110, s, by("iron_lady")); ctx.fillStyle = "#9a8e7c"; ctx.font = "11px 'Microsoft JhengHei'"; ctx.fillText(`${s}px`, x, 220); }
+</script>
+</body>
+</html>
