@@ -289,12 +289,12 @@ def test_armor_mods_clamp_and_schema() -> None:
 def test_ashen_heart_boss_battle(library: ContentLibrary, make_char: MakeChar) -> None:
     encounter = _encounter("molten_heart_pit")
     lineup = roll_lineup(library, encounter)
-    assert [m.unit for m in lineup.members] == [BOSS, "ember_lizard", "ember_lizard"]
+    assert [m.unit for m in lineup.members] == [BOSS, "heart_ember_lizard", "heart_ember_lizard"]
     char = _ashen(make_char, "molten_heart_pit", pending_encounter=encounter, level=9)
     prepared = prepare_battle(library, char)
     setup = prepared.setup
     assert setup.map.id == "molten_heart_pit" and setup.map.objective.leader_retreat
-    assert "ember_lizard" in setup.spawn_templates  # 第 2 階段的召喚
+    assert "heart_ember_lizard" in setup.spawn_templates  # 第 2 階段的召喚（5F-5b 殼縫餘燼蜥）
     boss = next(u for u in setup.units if u.template.id == BOSS)
     for phase in boss.template.phases:
         for skill_id in phase.skills or ():

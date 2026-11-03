@@ -103,23 +103,48 @@ VARIANTS: dict[str, tuple[Edit, ...]] = {
         ("skills/skill_heart_meltdown.yaml", "dice: 3d8,", "dice: 4d10,"),
     ),
     "fire50": (("units/ashen_heart.yaml", "fire: -750,", "fire: -500,"),),
-    # --- 5F-5b 荒原一般遭遇：熔核（熔岩獸群的開場狀態，只有荒原的範本有）加攻擊傷害倍率 ---
+    # --- 5F-5b 荒原一般遭遇：熔核（熔岩獸群的開場狀態，只有荒原的範本有）的攻擊傷害倍率 ---
+    # 現值 2250（5F-5b 定案）；burst1000＝5F-5a（沒有倍率）
     **{
-        f"burst{p}": (
+        f"burst{p}": tuple(
             (
                 "statuses.yaml",
-                "on_death_surface: {surface: fire, radius: 0, duration: 2}",
-                f"on_death_surface: {{surface: fire, radius: 0, duration: 2}}\n"
-                f"    damage_dealt_permille: {p}",
-            ),
+                f"duration: 2}}\n    damage_dealt_permille: 2250\n{tail}",
+                f"duration: 2}}\n    damage_dealt_permille: {p}\n{tail}",
+            )
+            for tail in ("  # 5F-5b：灰燼之心戰", "  # 5F-5a：灰燼之心第 1 階段")
+        )
+        for p in (1000, 1500, 2000, 2250, 2500)
+    },
+    # --- 5F-5b 灰燼之心戰的殼縫餘燼蜥（殼縫熔核）的攻擊傷害倍率；現值 1500 ---
+    **{
+        f"court{p}": (
             (
                 "statuses.yaml",
-                "on_death_surface: {surface: ice, radius: 0, duration: 2}",
-                f"on_death_surface: {{surface: ice, radius: 0, duration: 2}}\n"
-                f"    damage_dealt_permille: {p}",
+                "    damage_dealt_permille: 1500\n  # 5F-5a：冰變體",
+                f"    damage_dealt_permille: {p}\n  # 5F-5a：冰變體",
             ),
         )
-        for p in (1150, 1250, 1350, 1500, 1750, 2000, 2250, 2500)
+        for p in (1000, 1250, 1500, 1750, 2250)
+    },
+    # --- 5F-5b 灰燼之心自己的攻擊傷害倍率（開場狀態，整場不移除）：技能在 9 級照階級重配骰數，
+    # 改技能的骰不會生效（dice_up／dice_up2 與現值完全相同），所以用狀態倍率 ---
+    **{
+        f"heart{p}": (
+            (
+                "statuses.yaml",
+                "  - id: molten_shell\n",
+                "  - id: ashen_heart_heat\n    polarity: neutral\n    name_zh: 熔心之熱\n"
+                "    description_zh: 候選\n    expires: never\n    stacking: refresh\n"
+                f"    damage_dealt_permille: {p}\n  - id: molten_shell\n",
+            ),
+            (
+                "units/ashen_heart.yaml",
+                "  - {status: molten_shell}\n",
+                "  - {status: molten_shell}\n  - {status: ashen_heart_heat}\n",
+            ),
+        )
+        for p in (250, 500, 750, 1500)
     },
 }
 """候選內容（``--variant``）。"""

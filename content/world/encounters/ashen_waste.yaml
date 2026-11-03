@@ -52,7 +52,7 @@ groups:
   # 線頭「母獸的後代在擴散」到期（19.4 骨架 7）：焦油坑多一隻餘燼蜥（打贏那一場結束）
   - {id: brood_spread, name_zh: 擴散的蜥群, units: [furnace_matriarch, ember_lizard, ember_lizard, ember_lizard]}
   # 熔心坑 Boss 戰（19.2.3；20.6：餘燼蜥 ×2 在核心兩側，Boss 地圖 molten_heart_pit 的站位依這個順序）
-  - {id: ashen_heart_court, name_zh: 灰燼之心, units: [ashen_heart, ember_lizard, ember_lizard]}
+  - {id: ashen_heart_court, name_zh: 灰燼之心, units: [ashen_heart, heart_ember_lizard, heart_ember_lizard]}
 
 locations:
   - location: scorched_outskirts

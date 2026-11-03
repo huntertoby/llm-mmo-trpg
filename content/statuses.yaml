@@ -1356,21 +1356,35 @@ statuses:
     truce: true
   # 5F-5a（灰燼荒原，docs/design/19-灰燼荒原與賽季主線.md 19.2.1）：熔岩獸群的招牌手段「熔核爆裂」——死亡時在原地留下 2 回合的火焰表面
   # （#82；破解：用水、冰滅火，或在遠處擊殺）。由單位範本的 opening_statuses 掛上；數值初值。
+  # 5F-5b：荒原一般遭遇的難度（07 7.8，19.2.1 代決：高 2 級勝率高於 60% 才調高荒原敵人的傷害、只調荒原）——熔核（只有荒原的
+  # 熔岩獸群範本有）同時讓攻擊傷害 ×2.25（模擬見 docs/phases/Phase5F-5b報告.md：高 2 級 82% → 58%、同等級 93% → 72%）。
   - id: molten_burst
     polarity: neutral
     name_zh: 熔核爆裂
-    description_zh: 倒下時體內的熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
+    description_zh: 體內的熔核灼熱，造成的攻擊傷害大幅提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
     on_death_surface: {surface: fire, radius: 0, duration: 2}
-  # 5F-5a：冰變體寒燼蜥（19.2.1「死後留冰面」）。
+    damage_dealt_permille: 2250
+  # 5F-5b：灰燼之心戰的殼縫餘燼蜥（units/heart_ember_lizard.yaml）：同熔核爆裂（死後留火 2 回合），攻擊傷害只 ×1.5——
+  # Boss 戰的難度幾乎全由蜥蜴決定，和一般遭遇分開調（9 級主角＋2 傭兵勝率 70～80%）。
+  - id: heart_ember_burst
+    polarity: neutral
+    name_zh: 殼縫熔核
+    description_zh: 從灰燼之心的殼縫裡帶出來的熔核，造成的攻擊傷害提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_death_surface: {surface: fire, radius: 0, duration: 2}
+    damage_dealt_permille: 1500
+  # 5F-5a：冰變體寒燼蜥（19.2.1「死後留冰面」）；5F-5b 同熔核爆裂，攻擊傷害 ×2.25。
   - id: frost_ember_burst
     polarity: neutral
     name_zh: 寒燼爆裂
-    description_zh: 倒下時體內冷卻的灰燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。
+    description_zh: 體內的寒燼刺骨，造成的攻擊傷害大幅提高；倒下時寒燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
     on_death_surface: {surface: ice, radius: 0, duration: 2}
+    damage_dealt_permille: 2250
   # 5F-5a：灰燼之心第 1 階段「殼」（19.2.3：外殼高護甲；用水或冰攻擊外殼會「冷卻」）。階段不能改護甲、狀態移除後不會長回來，
   # 用「受到的傷害降低、被冰打到就移除」近似（元素沒有水）（代決 5F5a-6）；第 2 階段殼裂開時由階段移除。數值初值。
   - id: molten_shell

@@ -52,6 +52,6 @@ start_zones:
   enemy: [[5, 5], [3, 5], [7, 5], [5, 3]]
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
-  enemies: [ashen_heart, ember_lizard, ember_lizard]
+  enemies: [ashen_heart, heart_ember_lizard, heart_ember_lizard]
 # 勝利條件（05 5.8，#86）：頭目（boss 標籤）倒下時其餘護衛撤退，戰鬥直接勝利。
 objective: {kind: eliminate, leader_retreat: true}
