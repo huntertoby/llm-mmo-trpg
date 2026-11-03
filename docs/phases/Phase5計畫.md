@@ -3533,7 +3533,7 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 - 玩家文字（角色名）一律當資料：放進公告前中和 Discord 提及（`@` 後插入零寬字元）、換行換空白、截長度。
 - `trpg.bot.announcer.Announcer(gateway, channel_id, source, state_path, *, schedule)`：`tick(now)`：
   - 今天（設定時區）已過 `hour` 點、且還沒貼過今天 → 貼今日公告，記下日期。Bot 在 6 點後才啟動也會補貼一次；同一天不重貼。
-  - 首殺紀錄裡還沒貼過的（依 `seq`）→ 每筆貼一則，記下貼過哪些（`<kind>:<target>`）。
+  - 首殺紀錄裡還沒貼過的（依 `seq`）→ 每筆貼一則，記下貼過哪些（`<季>:<kind>:<target>`，每一季都帶季；5F-R2 統一）。
   - 貼失敗（`send_channel` 回 `False`）就不記，下次 `tick` 重試。
   - 狀態檔 `<存檔資料夾>/bot/announce_state.json`（`trpg-announce/1`；只有 Bot 程序寫）。第一次建立時把現有首殺都當作已貼（不洗版）。
 - `DiscordGateway.send_channel(channel_id, text) -> bool`（新）；`FakeDiscordGateway` 記錄頻道貼文。
@@ -4409,7 +4409,7 @@ world_events:
 | 編年史（循環賽最終排名） | `world/chronicle/league.json` | 紀念類 | 不動 |
 | 編年史（季末紀錄，新） | `world/chronicle/seasons.json`（`trpg-chronicle-seasons/1`） | 紀念類 | 本段新增：每季一筆（季名、開始、重置時間、上季角色、首位發現的配方） |
 | 地點留言 `LocationNote` | `world/notes.json` | 數值類（玩法 PM 代決） | 刪掉 |
-| Bot 公告狀態 | `bot/announce_state.json` | 不在政策表（Bot 自己的進度） | 不動；「貼過的首殺」鍵加上賽季（`s1` 以外的季是 `<季>:<kind>:<target>`，舊鍵不變），新一季同一種精英的首殺照樣會貼 |
+| Bot 公告狀態 | `bot/announce_state.json` | 不在政策表（Bot 自己的進度） | 不動；「貼過的首殺」鍵一律是 `<季>:<kind>:<target>`（含第一季；舊狀態檔的 `<kind>:<target>` 讀入時換成 `s1:<kind>:<target>`、算貼過，5F-R2 統一），新一季同一種精英的首殺照樣會貼 |
 | 一輪（roguelite）存檔 | `saves/run-*.json` | 不在政策表（不是大世界） | 不動 |
 | 記憶體裡的東西 | `WorldStore` 的快取、進行中的大世界戰鬥、三選一預先計算、循環賽快取 | — | API 重置後全部清掉、重讀；循環賽背景執行中時拒絕重置 |
 | 印記收藏、帳號稱號 | — | 紀念類 | 目前沒有存檔欄位（5F-3b 的帳號稱號若加在 `AccountRecord` 上，照紀念類不動） |
