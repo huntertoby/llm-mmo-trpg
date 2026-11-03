@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, get_args
 
@@ -646,6 +646,27 @@ class ContentLibrary:
     """傭兵系統裝備的快取（:func:`trpg.world.gear.mercenary_equipment`，5D-R1）：掛在內容庫上、隨它
     回收；鍵是「傭兵 ID ＋ 物品等級」，滿了就清空（上限在 ``trpg.world.gear``）。同 ``retier_cache``
     不是建構參數、不參與相等比較。"""
+    season_views: dict[str, ContentLibrary] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    """:meth:`for_season` 的快取（季 ID → 套上覆寫的內容庫；Phase 5F-R2）。"""
+    season_base: ContentLibrary | None = field(default=None, init=False, repr=False, compare=False)
+    """:meth:`for_season` 產生的內容庫指回原本的內容庫（原本的＝``None``）。"""
+
+    def for_season(self, season_id: str) -> ContentLibrary:
+        """``season_id`` 這一季的內容庫（Phase 5F-R2）：``world_season`` 換成套上
+        ``seasons.<季 ID>`` 覆寫的內容，其他不變。那一季沒有覆寫時回傳原本的內容庫（第一季的行為
+        完全不變）。結果有快取，同一季拿到同一個物件。"""
+        base = self.season_base or self
+        season = base.world_season
+        if season is None or season_id not in season.seasons:
+            return base
+        view = base.season_views.get(season_id)
+        if view is None:
+            view = replace(base, world_season=season.for_season(season_id))
+            object.__setattr__(view, "season_base", base)
+            base.season_views[season_id] = view
+        return view
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
         """單位範本的裝備快照（``equipment`` 解析成內嵌定義的 :class:`Loadout`；沒有裝備時
@@ -1209,12 +1230,21 @@ def _load_optional[M: ContentModel](
     return loaded
 
 
+def _season_variants(season: SeasonContent) -> list[tuple[str, SeasonContent]]:
+    """預設（標籤空字串）＋每一季套上覆寫後的內容（標籤「seasons.<季 ID>：」；依季 ID 排序）。"""
+    return [("", season)] + [
+        (f"seasons.{sid}：", season.for_season(sid)) for sid in sorted(season.seasons)
+    ]
+
+
 def _check_shop_prices(root: Path, season: SeasonContent | None, economy: WorldEconomy) -> None:
     """世界事件的商店價格加成（Phase 5F-5b）指到的商店都要存在；經濟比賽季晚載入，所以另外檢查。"""
     if season is None:
         return
     shop_ids = {shop.id for t in economy.shops.values() for shop in t.shops}
-    problems = shop_price_problems(season, shop_ids)
+    problems: list[str] = []
+    for label, content in _season_variants(season):
+        problems += [label + p for p in shop_price_problems(content, shop_ids)]
     if problems:
         raise ContentError(root / SEASON_FILE, "；".join(problems))
 
@@ -1237,19 +1267,22 @@ def _load_world_season(
     if not path.is_file():
         return None
     season = load_content_file(path, SeasonContent)
-    problems = season_problems(
-        season,
-        world_maps=world_maps,
-        encounters=encounters,
-        catalog=catalog,
-        weather_ids=weather_ids,
-        region_ids=region_ids,
-        location_kinds=get_args(LocationKind.__value__),
-        units=units,
-        maps=maps,
-        battle_maps=battle_maps,
-        status_ids=status_ids,
-    )
+    problems: list[str] = []
+    for label, content in _season_variants(season):  # 預設與每一季的覆寫（5F-R2）都檢查
+        found = season_problems(
+            content,
+            world_maps=world_maps,
+            encounters=encounters,
+            catalog=catalog,
+            weather_ids=weather_ids,
+            region_ids=region_ids,
+            location_kinds=get_args(LocationKind.__value__),
+            units=units,
+            maps=maps,
+            battle_maps=battle_maps,
+            status_ids=status_ids,
+        )
+        problems += [label + p for p in found]
     if problems:
         raise ContentError(path, "；".join(problems))
     files.append((path, season))

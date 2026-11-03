@@ -195,12 +195,13 @@ class SeasonAnnouncements:
         self.library = library
 
     def daily_goals(self, world: WorldState, now: int) -> Sequence[DailyGoal]:
-        goals = daily_goals_for(self.library, world, day_of(self.library, now))
+        library = self.library.for_season(world.season_id)  # 5F-R2
+        goals = daily_goals_for(library, world, day_of(library, now))
         return [DailyGoal(g.text_zh) for g in goals]
 
     def world_events(self, world: WorldState, now: int) -> Sequence[WorldEventProgress]:
         del now
-        season = self.library.world_season
+        season = self.library.for_season(world.season_id).world_season  # 5F-R2
         if season is None:
             return []
         found: list[WorldEventProgress] = []
@@ -229,6 +230,8 @@ def daily_digest(
     if not path.is_file():
         return None
     world = loads_world(path.read_text(encoding="utf-8"))
+    if library is not None:
+        library = library.for_season(world.season_id)  # 這一季的 season.yaml 覆寫（5F-R2）
     if library is None:
         today = refresh_day(now)
         season_day = max(1, today - refresh_day(world.season_start) + 1)

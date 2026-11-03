@@ -177,10 +177,11 @@ def _season_view(
     kills: list[FirstKill],
     board: list[BossBoardEntry],
     titles: ChronicleTitles,
+    library: ContentLibrary | None,
 ) -> ChronicleSeasonView:
     return ChronicleSeasonView(
         season_id=season_id,
-        name_zh=season_name_zh(season_id),
+        name_zh=season_name_zh(season_id, library),
         current=season_id == current,
         started_at=None if entry is None else entry.started_at,
         reset_at=None if entry is None else entry.reset_at,
@@ -249,9 +250,11 @@ def chronicle_view(
     board: tuple[BossBoardEntry, ...],
     *,
     titles: ChronicleTitles | None = None,
+    library: ContentLibrary | None = None,
 ) -> ChronicleView:
     """編年史：季末紀錄的季（依重置時間，新的在前），再加上還沒重置但已有紀錄的季（目前這一季）。
-    ``titles``：名字旁的帳號稱號（5F-3c；省略＝不顯示）。"""
+    ``titles``：名字旁的帳號稱號（5F-3c；省略＝不顯示）。``library``：季名的模板（5F-R2；省略＝
+    預設模板）。"""
     found = ChronicleTitles() if titles is None else titles
     entries = {s.season_id: s for s in seasons}
     league_by = {s.season_id: s for s in leagues}
@@ -270,6 +273,7 @@ def chronicle_view(
             kills=[k for k in kills if k.season_id == sid],
             board=[b for b in board if b.season_id == sid],
             titles=found,
+            library=library,
         )
         for sid in ids
     ]

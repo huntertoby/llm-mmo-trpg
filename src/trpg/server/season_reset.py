@@ -29,7 +29,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
-from trpg.content.world_season import ChronicleFact, ChronicleTemplates
+from trpg.content.world_season import ChronicleFact, ChronicleTemplates, SeasonNaming
 from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
     ChronicleHero,
@@ -191,26 +191,13 @@ class SeasonResetReport(BaseModel):
 
 # -- 小工具 -------------------------------------------------------------------
 
-_DIGITS: Final = "零一二三四五六七八九"
 
-
-_TEN: Final = 10
-
-
-def _zh_number(n: int) -> str:
-    if n < _TEN:
-        return _DIGITS[n]
-    if n < _TEN * _TEN:
-        tens, ones = divmod(n, _TEN)
-        head = "" if tens == 1 else _DIGITS[tens]
-        return head + "十" + (_DIGITS[ones] if ones else "")
-    return str(n)
-
-
-def season_name_zh(season_id: str) -> str:
-    """季名：``s1`` → 「第一季」；不是 ``s<N>`` 的 ID 照原樣（「賽季 xxx」）。"""
-    found = _SEASON_ID.match(season_id)
-    return f"第{_zh_number(int(found.group(1)))}季" if found else f"賽季 {season_id}"
+def season_name_zh(season_id: str, library: ContentLibrary | None = None) -> str:
+    """季名（5F-R2：模板在 ``world/season.yaml`` 的 ``naming``，某一季可在 ``seasons.<季 ID>`` 寫
+    ``name_zh``）：``s1`` → 「第一季」；不是 ``s<N>`` 的 ID 照 ``fallback``（「賽季 xxx」）。
+    沒有內容庫或沒有賽季資料時用 :class:`~trpg.content.world_season.SeasonNaming` 的預設模板。"""
+    base = None if library is None else (library.season_base or library).world_season
+    return SeasonNaming().name_of(season_id) if base is None else base.name_of(season_id)
 
 
 def next_season_id(season_id: str) -> str:
@@ -327,11 +314,9 @@ def _fact(rule: ChronicleFact, names: Sequence[str], joiner: str) -> str | None:
     return rule.text.format(items=joiner.join(rule.item.format(name=n) for n in names))
 
 
-def _chronicle_text(
-    templates: ChronicleTemplates | None, season_id: str, hero: ChronicleHero
-) -> str:
-    """編年史的一行（模板在 ``world/season.yaml`` 的 ``chronicle``；沒有模板＝只寫季名）。"""
-    season = season_name_zh(season_id)
+def _chronicle_text(templates: ChronicleTemplates | None, season: str, hero: ChronicleHero) -> str:
+    """編年史的一行（模板在 ``world/season.yaml`` 的 ``chronicle``；沒有模板＝只寫季名
+    ``season``）。"""
     if templates is None:
         return season
     t = templates
@@ -390,9 +375,10 @@ def chronicle_hero(
         league_rank=facts.league_ranks.get(cid),
         text_zh="",
     )
-    season = library.world_season
+    season = library.for_season(season_id).world_season  # 這一季的覆寫（5F-R2）
     templates = None if season is None else season.chronicle
-    return hero.model_copy(update={"text_zh": _chronicle_text(templates, season_id, hero)})
+    text = _chronicle_text(templates, season_name_zh(season_id, library), hero)
+    return hero.model_copy(update={"text_zh": text})
 
 
 CARRIED_HANDLERS: Final[Mapping[tuple[str, str], Callable[..., object]]] = {
@@ -672,7 +658,7 @@ def _plan(
     )
     entry = SeasonChronicleEntry(
         season_id=old,
-        name_zh=season_name_zh(old),
+        name_zh=season_name_zh(old, library),
         started_at=current.world.season_start,
         reset_at=now,
         next_season_id=new_id,
@@ -735,6 +721,7 @@ def _reset(
     options: _Options,
 ) -> SeasonResetReport:
     current = _read_current(world_dir)
+    library = library.for_season(current.world.season_id)  # 舊季的 season.yaml 覆寫（5F-R2）
     plan = _plan(
         library,
         current,
@@ -766,7 +753,7 @@ def _reset(
         dry_run=options.dry_run,
         old_season=old,
         new_season=plan.new_id,
-        new_season_name_zh=season_name_zh(plan.new_id),
+        new_season_name_zh=season_name_zh(plan.new_id, library),
         season_start=options.start,
         cleared=cleared,
         kept=kept,

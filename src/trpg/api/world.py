@@ -148,7 +148,7 @@ class WorldStore:
         self.account_titles: Callable[[str, str | None], tuple[str, ...]] | None = None
         """帳號 ID → 顯示用的紀念稱號（5F-3c：名片、評分榜、首殺、編年史）；``None``＝不顯示。
         :func:`~trpg.api.app.create_app` 接上帳號的 ``titles_of``。"""
-        self.library = library
+        self._library = library
         self.offers = OfferPrefetcher(library, enabled=prefetch)
         """三選一的背景預先計算與快取（PERF-3）。"""
         self.battles = battles
@@ -166,7 +166,7 @@ class WorldStore:
         """賽季 Boss 的通關評分榜與首殺戰鬥紀錄（5F-3）。"""
         self.notes = LocationNoteStore(root)
         """地點留言（5E-3，#105；不進日誌）。"""
-        self.league = LeagueStore(library, root, clock=self._now)
+        self.league = LeagueStore(library, root, clock=self._now, library_of=lambda: self.library)
         """影子循環賽的賽果（5F-4；衍生資料，不進日誌）。"""
         self.league_runner = LeagueRunner(self.league)
         """循環賽的背景執行（5F-4；管理者開跑）。"""
@@ -178,6 +178,15 @@ class WorldStore:
     @property
     def lock(self) -> threading.RLock:
         return self._lock
+
+    @property
+    def library(self) -> ContentLibrary:
+        """這一季的內容庫（5F-R2）：照世界的季 ID 套上 ``season.yaml`` 的覆寫（沒有覆寫＝原本的內容
+        庫）。還沒有世界存檔時用原本的（不為了這個建立世界）。"""
+        with self._lock:
+            if self._world is None and not self._world_path().is_file():
+                return self._library
+            return self._library.for_season(self.world().season_id)
 
     def _world_path(self) -> Path:
         return self.root / WORLD_FILE

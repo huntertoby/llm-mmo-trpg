@@ -15,7 +15,7 @@ import string
 from collections.abc import Collection, Mapping
 from typing import Final, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.maps import MapDef
@@ -44,6 +44,8 @@ __all__ = [
     "SealKeySource",
     "SeasonBossDef",
     "SeasonContent",
+    "SeasonNaming",
+    "SeasonOverride",
     "ShopPriceEffect",
     "WorldEventDef",
     "WorldEventEffect",
@@ -413,9 +415,89 @@ class ChronicleTemplates(ContentModel):
         return self
 
 
-class SeasonContent(ContentModel):
-    """``content/world/season.yaml``。"""
+def _error_text(loc: tuple[int | str, ...], msg: str) -> str:
+    text = msg.removeprefix("Value error, ")
+    return ".".join(str(p) for p in loc) + "：" + text if loc else text
 
+
+SEASON_NUMBER: Final = re.compile(r"^s([0-9]+)$")
+"""``s<N>`` 形式的季 ID（第 N 季）。"""
+
+
+class SeasonNaming(ContentModel):
+    """季名的模板（Phase 5F-R2，取代程式裡寫死的「第X季」）：``s<N>`` 的季 ID 套 ``template``
+    （``{number}``＝N 的中文數字，用 ``digits`` 與 ``units`` 拼，支援到 9999，再大用阿拉伯數字）；
+    其他格式的季 ID 套 ``fallback``（``{id}``＝季 ID）。預設值＝5F-5 原本的寫法。"""
+
+    template: str = "第{number}季"
+    fallback: str = "賽季 {id}"
+    digits: str = Field(default="零一二三四五六七八九", min_length=10, max_length=10)
+    """0～9 的寫法。"""
+    units: str = Field(default="十百千", min_length=3, max_length=3)
+    """十、百、千位的單位。"""
+
+    @model_validator(mode="after")
+    def _templates(self) -> SeasonNaming:
+        if _placeholders(self.template) != {"number"}:
+            raise ValueError(f"季名模板 {self.template!r} 要用而且只能用 {{number}}")
+        if _placeholders(self.fallback) != {"id"}:
+            raise ValueError(f"季名模板 {self.fallback!r} 要用而且只能用 {{id}}")
+        return self
+
+    def number_zh(self, n: int) -> str:
+        """``n`` 的中文數字（0～9999；10～19 省略「一十」的「一」，中間的零只寫一次）。"""
+        if n >= len(self.digits) ** (len(self.units) + 1):  # 千位以上沒有單位，照阿拉伯數字
+            return str(n)
+        if n < len(self.digits):
+            return self.digits[n]
+        places = [int(c) for c in str(n)]  # 高位在前
+        out: list[str] = []
+        zero = False
+        for i, digit in enumerate(places):
+            place = len(places) - 1 - i  # 0＝個位
+            if digit == 0:
+                zero = True
+                continue
+            if zero and out:
+                out.append(self.digits[0])
+            zero = False
+            unit = self.units[place - 1] if place > 0 else ""
+            lead = "" if (digit == 1 and place == 1 and i == 0) else self.digits[digit]
+            out.append(lead + unit)
+        return "".join(out)
+
+    def name_of(self, season_id: str) -> str:
+        found = SEASON_NUMBER.match(season_id)
+        if found is None:
+            return self.fallback.format(id=season_id)
+        return self.template.format(number=self.number_zh(int(found.group(1))))
+
+
+class SeasonOverride(ContentModel):
+    """某一季的覆寫（Phase 5F-R2；``season.yaml`` 的 ``seasons.<季 ID>``）：只寫要改的頂層項目，
+    沒寫的沿用預設；寫了就整項取代（不逐欄合併）。``season_boss``、``league``、``chronicle``、
+    ``daily_goals`` 明寫 ``null``＝這一季沒有。"""
+
+    name_zh: str | None = None
+    days: int | None = Field(default=None, ge=1)
+    schedule: tuple[SchedulePhase, ...] | None = None
+    milestones: tuple[Milestone, ...] | None = None
+    daily_goals: DailyGoalRules | None = None
+    bounties: tuple[BountyDef, ...] | None = None
+    world_events: tuple[WorldEventDef, ...] | None = None
+    seal_keys: SealKeyRules | None = None
+    season_boss: SeasonBossDef | None = None
+    league: LeagueRules | None = None
+    chronicle: ChronicleTemplates | None = None
+
+
+class SeasonContent(ContentModel):
+    """``content/world/season.yaml``。最上層是預設（沒有覆寫的季都用它，第一季就是）；
+    ``seasons`` 依季 ID 覆寫（Phase 5F-R2，:meth:`for_season`）。"""
+
+    name_zh: str | None = None
+    """這一季的名字（通常只寫在 ``seasons`` 的覆寫裡）；``None``＝照 ``naming`` 的模板。"""
+    naming: SeasonNaming = SeasonNaming()
     days: int = Field(ge=1)
     schedule: tuple[SchedulePhase, ...] = ()
     milestones: tuple[Milestone, ...] = ()
@@ -428,6 +510,37 @@ class SeasonContent(ContentModel):
     """影子循環賽（Phase 5F-4）；``None``＝這一季沒有循環賽。"""
     chronicle: ChronicleTemplates | None = None
     """季末編年史的模板（Phase 5F-5c）；``None``＝編年史只寫季名。"""
+    seasons: dict[str, SeasonOverride] = Field(default_factory=dict)
+    """依季 ID 的覆寫（Phase 5F-R2）；沒列的季＝預設。"""
+
+    def for_season(self, season_id: str) -> SeasonContent:
+        """``season_id`` 這一季的內容：預設套上覆寫；沒有覆寫時回傳自己（同一個物件）。"""
+        override = self.seasons.get(season_id)
+        if override is None:
+            return self
+        data = {name: getattr(self, name) for name in type(self).model_fields if name != "seasons"}
+        data.update({name: getattr(override, name) for name in override.model_fields_set})
+        return SeasonContent.model_validate(data)
+
+    def name_of(self, season_id: str) -> str:
+        """季名（Phase 5F-R2）：該季覆寫的 ``name_zh``；沒有就照 ``naming`` 的模板。"""
+        season = self.for_season(season_id)
+        if season.name_zh is not None:
+            return season.name_zh
+        return season.naming.name_of(season_id)
+
+    @model_validator(mode="after")
+    def _overrides(self) -> SeasonContent:
+        bad = sorted(k for k in self.seasons if re.match(ID_PATTERN, k) is None)
+        if bad:
+            raise ValueError(f"seasons 的季 ID 格式錯誤 {', '.join(bad)}")
+        for season_id in sorted(self.seasons):
+            try:
+                self.for_season(season_id)
+            except ValidationError as exc:
+                reasons = "；".join(_error_text(e["loc"], e["msg"]) for e in exc.errors())
+                raise ValueError(f"seasons.{season_id}：{reasons}") from exc
+        return self
 
     @model_validator(mode="after")
     def _season(self) -> SeasonContent:

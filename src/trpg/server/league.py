@@ -334,9 +334,17 @@ class LeagueStore:
     """``<root>/league/`` 的讀寫（一把鎖；背景執行緒與 API 共用）。"""
 
     def __init__(
-        self, library: ContentLibrary, root: Path, *, clock: Callable[[], int] | None = None
+        self,
+        library: ContentLibrary,
+        root: Path,
+        *,
+        clock: Callable[[], int] | None = None,
+        library_of: Callable[[], ContentLibrary] | None = None,
     ) -> None:
-        self.library = library
+        self._library = library
+        self._library_of = library_of
+        """目前這一季的內容庫（5F-R2：``season.yaml`` 依季 ID 覆寫）；``None``＝一直用
+        ``library``。"""
         self.root = root
         self.clock: Callable[[], int] = clock if clock is not None else _now
         self.chronicle = LeagueChronicleStore(root)
@@ -345,6 +353,11 @@ class LeagueStore:
         self._record: LeagueRecord | None = None
         self._loaded = False
         self._key: str | None = None
+
+    @property
+    def library(self) -> ContentLibrary:
+        """這一季的內容庫（有 ``library_of`` 時照它，5F-R2）。"""
+        return self._library if self._library_of is None else self._library_of()
 
     @property
     def folder(self) -> Path:
@@ -372,10 +385,12 @@ class LeagueStore:
         return record
 
     def forget(self) -> None:
-        """丟掉記憶體裡的賽程（季末重置 5F-5 把 ``league/`` 搬走之後，下次重讀）。"""
+        """丟掉記憶體裡的賽程（季末重置 5F-5 把 ``league/`` 搬走之後，下次重讀）；規則鍵也重算
+        （新一季可能有覆寫的循環賽規則，5F-R2）。"""
         with self._lock:
             self._record = None
             self._loaded = False
+            self._key = None
 
     def _save(self, record: LeagueRecord) -> None:
         with self._lock:
@@ -384,7 +399,7 @@ class LeagueStore:
             self._loaded = True
 
     def rules_key(self) -> str:
-        """目前內容的規則鍵（內容庫不會在執行中換掉，算一次）。"""
+        """目前內容的規則鍵（內容庫不會在執行中換掉，算一次；季末重置的 :meth:`forget` 清掉）。"""
         if self._key is None:
             self._key = rules_key(self.library)
         return self._key

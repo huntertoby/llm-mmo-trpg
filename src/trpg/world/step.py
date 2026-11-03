@@ -179,7 +179,10 @@ def world_step(
 ) -> StepResult:
     """套用一個世界動作；不合法拋 :class:`WorldActionError`。動作之後推進任務（5B-4）。
 
-    ``actor`` 是做這個動作的帳號 ID（世界事件門檻的上線人數，Q15；5F-1）；``None``＝用角色 ID。"""
+    ``actor`` 是做這個動作的帳號 ID（世界事件門檻的上線人數，Q15；5F-1）；``None``＝用角色 ID。
+    賽季的內容照世界的季 ID 套上 ``season.yaml`` 的覆寫（:meth:`ContentLibrary.for_season`，
+    5F-R2）。"""
+    library = library.for_season(world.season_id)  # 這一季的 season.yaml 覆寫（5F-R2）
     if char.pending_flash is not None and not isinstance(action, FlashPickAction):
         raise WorldActionError("還有閃現的選項沒有選（flash_pick）")
     if (
