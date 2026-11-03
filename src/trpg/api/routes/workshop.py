@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from trpg.api.auth import reject_dev_fields
 from trpg.api.player_text import player_options
 from trpg.api.schemas import MapSummary
 from trpg.api.sessions import playable_maps
@@ -146,6 +147,7 @@ def post_export(body: WorkshopExportRequest, request: Request) -> WorkshopExport
     """匯出 YAML（``provenance.origin: workshop``）。技能必須能通過 schema（否則 422）；規則上不合法
     的技能預設也擋下（422，列出問題）；``allow_illegal: true``（開發者模式）才能匯出，``legal`` 與
     ``problems`` 標示問題。"""
+    reject_dev_fields(request, body.dev_fields())  # 6S-1：allow_illegal 開發模式才能用
     library = store_of(request).library
     skill = build_skill(body.skill)
     provenance = skill.provenance.model_copy(update={"origin": "workshop"})

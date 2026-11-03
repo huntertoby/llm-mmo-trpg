@@ -6,9 +6,13 @@
 - 開發模式開：沒帶 token 照 5A-5（不登入、全部角色）；帶了 token 照上一條依帳號存取。
 - LLM 開關只給管理者改（5E-2，計畫 29.8）：:func:`require_admin`。
 - 開發模式關：runs／battles／workshop／gear 也要登入（:func:`require_login`，5D-R2）。
+- 6S-1（使用者「當然擋」）：開發模式關時開發用欄位一律 403（:func:`reject_dev_fields`）；戰鬥、
+  一輪只給建立它的帳號（:func:`check_owner`，別人的 404，不透露存在）。開發模式開都不檢查。
 """
 
 from __future__ import annotations
+
+from collections.abc import Iterable
 
 from fastapi import Request
 
@@ -22,11 +26,15 @@ from trpg.shared.errors import TrpgError
 
 __all__ = [
     "AdminRequiredError",
+    "DevModeRequiredError",
     "account_view",
     "accounts_of",
     "bearer_token",
+    "check_owner",
     "login_limiter_of",
     "optional_account",
+    "owner_id",
+    "reject_dev_fields",
     "require_admin",
     "require_league_admin",
     "require_login",
@@ -41,6 +49,10 @@ __all__ = [
 
 class AdminRequiredError(TrpgError):
     """需要管理者帳號（403）。"""
+
+
+class DevModeRequiredError(TrpgError):
+    """開發用欄位在開發模式關時送來（403，6S-1）。"""
 
 
 def accounts_of(request: Request) -> AccountStore:
@@ -110,6 +122,31 @@ def require_world_access(request: Request) -> None:
     character_id = request.path_params.get("character_id")
     if account is not None and character_id is not None and character_id not in account.characters:
         raise WorldCharacterNotFoundError(f"找不到角色 {character_id}")
+
+
+def owner_id(request: Request) -> str | None:
+    """建立戰鬥或一輪時記下的主人：登入的帳號 ID（6S-1）。開發模式開照舊不擋（token 沒帶或無效＝
+    ``None``，不 401）；開發模式關照 :func:`viewer`。"""
+    dev = settings_of(request).dev_mode
+    account = optional_account(request) if dev else viewer(request)
+    return None if account is None else account.account_id
+
+
+def check_owner(request: Request, owner: str | None, missing: Exception) -> None:
+    """開發模式關：不是自己帳號建立的（含沒有主人的）→ 拋 ``missing``（404 那一類，訊息與真的
+    不存在相同，不透露存在與否）；沒登入照 :func:`viewer` 401。開發模式開照舊不檢查（6S-1）。"""
+    if settings_of(request).dev_mode:
+        return
+    account = viewer(request)
+    if account is None or owner != account.account_id:
+        raise missing
+
+
+def reject_dev_fields(request: Request, fields: Iterable[str]) -> None:
+    """開發模式關時，請求裡有開發用欄位（``fields``＝有填的欄位名）→ 403（6S-1）。"""
+    used = sorted(fields)
+    if used and not settings_of(request).dev_mode:
+        raise DevModeRequiredError(f"{'、'.join(used)} 是開發用欄位，開發模式才能用")
 
 
 def _check_admin(request: Request, message: str) -> None:

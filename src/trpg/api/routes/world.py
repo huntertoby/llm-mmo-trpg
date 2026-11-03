@@ -49,6 +49,7 @@ from trpg.api.absence_view import AbsenceView, absence_summary
 from trpg.api.auth import (
     AdminRequiredError,
     accounts_of,
+    owner_id,
     require_admin,
     require_league_admin,
     require_note_admin,
@@ -348,6 +349,7 @@ def post_league_replay(character_id: str, match_id: str, request: Request) -> Le
     if problem is not None:
         raise LeagueError(f"這一場不能重播：{problem}")
     battle, _ = store.battles.open(log.setup, log.seed, restore=(list(log.actions), []))
+    battle.owner = owner_id(request)  # 6S-1：重播的戰鬥工作階段只給看的人
     with battle.lock:
         verified = battle.state == log.final_state
         out = battle_response(battle, battle.history())

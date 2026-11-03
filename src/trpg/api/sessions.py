@@ -107,6 +107,8 @@ class BattleSession:
         max_auto_steps: int = DEFAULT_MAX_ACTIONS,
     ) -> None:
         self.battle_id = battle_id
+        self.owner: str | None = None
+        """建立這場戰鬥的帳號 ID（6S-1；開發模式關時只有它能讀寫，沒有＝``None``）。"""
         self.library = library
         self.setup = setup
         self.seed = seed
