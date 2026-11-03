@@ -352,6 +352,12 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     circle(c, 0, 2, 7.5);
     drop(c, 0, -2, 5);
   },
+  // 開場休戰（Phase 5F-4b，循環賽第 1 輪不受、也不造成傷害）：圓裡的暫停符號，只用既有筆畫
+  league_truce: (c) => {
+    circle(c, 0, 0, 8.5);
+    line(c, [[-3, -4.5], [-3, 4.5]]);
+    line(c, [[3, -4.5], [3, 4.5]]);
+  },
   // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
   heart_link: (c) => {
     circle(c, -5, 0, 4);
