@@ -10,7 +10,8 @@
   align-items: flex-start;
   gap: 4px;
   max-width: min(340px, calc(100% - 8px));
-  max-height: calc(100% - 8px);
+  /* 左上角是選取面板：紀錄最多佔戰場下半部多一點 */
+  max-height: 58%;
   pointer-events: none;
 }
 
@@ -81,10 +82,10 @@
 
 .log-dock-panel {
   display: flex;
+  flex: 0 1 320px;
   width: 320px;
   max-width: 100%;
-  height: min(320px, calc(100vh - 260px));
-  min-height: 140px;
+  min-height: 120px;
 }
 
 .log-dock-panel .battle-log {
@@ -93,6 +94,10 @@
   margin: 0;
   background: rgb(28 28 38 / 96%);
   box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
+}
+
+.log-dock-panel .log-lines {
+  overflow-x: hidden;
 }
 
 .log-dock.pinned .log-dock-panel .battle-log {
