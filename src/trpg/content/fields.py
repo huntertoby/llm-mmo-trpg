@@ -468,7 +468,8 @@ def field_map_report(
 ) -> FieldMapReport:
     """實地地圖的跨檔案檢查（Phase 6 計畫 2.3）。
 
-    ``fields`` 的鍵是地圖 ID；``npcs`` 是「區域 → NPC ID → 人設卡的地點」（``None``＝不檢查 NPC）。
+    ``fields`` 的鍵是地圖 ID；``npcs`` 是「區域 → NPC ID → 人設卡的地點」（``None``＝不檢查 NPC；
+    沒有該區的鍵＝那一區不檢查）。
     """
     ctx = _Ctx(world_maps, {}, {}, [], [], [])
     for map_id in sorted(fields):
@@ -608,7 +609,9 @@ def _reach_problems(
 
 
 def _npc_problems(ctx: _Ctx, field: FieldMapDef, npcs: Mapping[str, Mapping[str, str]]) -> None:
-    cards = npcs.get(field.region, {})
+    cards = npcs.get(field.region)
+    if cards is None:
+        return  # 這區沒有 NPC 人設卡檔（內容庫允許省略 world/npcs/），無從比對
     for npc in field.npcs:
         home = cards.get(npc.id)
         if home is None:
