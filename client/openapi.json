@@ -10403,6 +10403,22 @@
             "type": "array",
             "title": "Resonance Zh",
             "default": []
+          },
+          "equipment": {
+            "items": {
+              "$ref": "#/components/schemas/HeroGearSlotOut"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          },
+          "gear_cards": {
+            "items": {
+              "$ref": "#/components/schemas/GearCandidateOut"
+            },
+            "type": "array",
+            "title": "Gear Cards",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -16310,7 +16326,8 @@
             "type": "string",
             "enum": [
               "llm",
-              "fallback"
+              "fallback",
+              "authored"
             ],
             "title": "Source"
           }

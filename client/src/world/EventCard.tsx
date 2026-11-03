@@ -7,7 +7,9 @@ import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/ty
 import { Hint } from "../ui/Hint";
 import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
 
-function StoryBlock({ story, testId }: { story: WorldStory; testId: string }) {
+/** 一段旁白。「（模板文字）」只標 LLM 不可用時的降級文字（`fallback`）；保底機遇的專用旁白（`authored`，
+ * 5D-4）與 LLM 的不標。 */
+export function StoryBlock({ story, testId = "world-story" }: { story: WorldStory; testId?: string }) {
   const [more, setMore] = useState(false);
   return (
     <div className="world-story" data-testid={testId}>

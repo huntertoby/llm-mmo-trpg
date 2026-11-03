@@ -77,7 +77,8 @@ def test_used_items_leave_pouch(library: ContentLibrary, make_char: MakeChar) ->
     used = next(e for e in result.events if isinstance(e, PouchUsedEvent))
     for item, n in used.items.items():
         assert result.char.pouch.get(item, 0) == POUCH[item] - n
-    assert result.char.bag == char.bag  # 背包不動
+    for item in POUCH:  # 用掉的道具不從背包扣、也不回到背包（背包可能多了掉落，5D-4）
+        assert result.char.bag.get(item, 0) == char.bag.get(item, 0)
     assert "skill_item_hp_potion_small" not in result.char.skill_usage  # 用法統計只看裝備的技能
 
 

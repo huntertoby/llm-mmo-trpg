@@ -3,6 +3,7 @@
 // 5A-7（13.3）：左欄可切換到「成長與技能」（配點、閃現、重閃、溶掉、傳承、誓約）；閃現待選時左欄固定顯示選項。
 // 5B-5（18.6）：事件卡（旁白、多講一點、解法）、情境判定（引用線索、第一次送出即定案）、判定結果、這裡的人（好感度、
 // 說話、聊天、接任務）、酒館傳聞、任務與線頭（左欄）、任務三選一（左欄固定）、說書人的 LLM 開關（標頭）。
+// 5D-4（33.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BattleResponse, RunChoice, WorldAction, WorldLlmView, WorldSituationResult, WorldView } from "../api/types";
@@ -12,7 +13,10 @@ import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
 import { WorldMap } from "../world/WorldMap";
 import { WorldPanel } from "../world/WorldPanel";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
-import { leftPane, worldActionOf, type WantPane } from "../world/growth";
+import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
+import { WorldBagScreen } from "../world/BagScreen";
+import { WorldShopScreen } from "../world/ShopScreen";
+import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
@@ -278,6 +282,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             <WorldGrowth view={view} busy={busy} onChoose={choose} onAct={actStatus} onClose={() => setWant("map")} />
           )}
           {leftPane(view, want) === "quests" && <QuestLog view={view} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "bag" && <WorldBagScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "shop" && <WorldShopScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "smithy" && <WorldSmithyScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "map" && <WorldMap view={view} busy={busy} onTravel={travel} />}
           <WorldPanel
             view={view}
@@ -287,6 +294,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             onAct={act}
             onBattle={fight}
             log={log}
+            pane={leftPane(view, want)}
+            onPane={(p) => setWant((v) => togglePane(v, p))}
             growthOpen={leftPane(view, want) === "growth" || leftPane(view, want) === "pending"}
             onGrowth={() => setWant((v) => (v === "growth" ? "map" : "growth"))}
             questsOpen={leftPane(view, want) === "quests"}

@@ -1,4 +1,4 @@
-"""雲頂觀 Boss 戰的大世界接線（Phase 5F-2；``docs/phases/Phase5計畫.md`` 33.6）。"""
+"""雲頂觀 Boss 戰的大世界接線（Phase 5F-2；``docs/phases/Phase5計畫.md`` 34.6）。"""
 
 from __future__ import annotations
 

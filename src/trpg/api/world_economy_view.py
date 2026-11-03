@@ -5,6 +5,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from trpg.api.gear import item_info
+from trpg.api.run_presenter import gear_candidate
+from trpg.api.run_schemas import HeroGearSlotOut
 from trpg.api.world_economy_schemas import (
     BagItemView,
     InventoryView,
@@ -19,6 +22,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPE_ZH, SLOT_ZH, SLOTS
 from trpg.content.world_economy import ITEM_KINDS, WorldItemDef
 from trpg.content.world_quests import AFFINITY_RANKS, AffinityRank
+from trpg.roguelite.gear import current_item
 from trpg.world.actions import WorldEvent
 from trpg.world.affinity import affinity_rules, rank_at_least, rank_of
 from trpg.world.economy import (
@@ -43,7 +47,7 @@ from trpg.world.economy_actions import (
     PouchChangedEvent,
     PouchUsedEvent,
 )
-from trpg.world.gear import equip_problem, worn_gear
+from trpg.world.gear import equip_problem, gear_run, worn_gear
 from trpg.world.state import CharacterState, LastBattle, WorldState
 
 __all__ = [
@@ -187,6 +191,22 @@ def inventory_view(
         pouch_problem_zh=problem,
         consumables=_views(library, total),
         equipped_zh=_equipped_lines(library, char),
+        equipment=_equipment(library, char),
+        gear_cards=tuple(gear_candidate(library, gear_run(char), g) for g in char.gear),
+    )
+
+
+def _equipment(library: ContentLibrary, char: CharacterState) -> tuple[HeroGearSlotOut, ...]:
+    run = gear_run(char)
+    return tuple(
+        HeroGearSlotOut(
+            slot=slot,
+            slot_zh=SLOT_ZH[slot],
+            item=None
+            if (held := current_item(library, run, slot)) is None
+            else item_info(library, held),
+        )
+        for slot in SLOTS
     )
 
 

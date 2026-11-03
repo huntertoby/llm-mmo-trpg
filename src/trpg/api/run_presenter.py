@@ -293,7 +293,7 @@ def offer_out(library: ContentLibrary, run: RunState, offer: SkillOffer | None) 
     )
 
 
-def _candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCandidateOut:
+def gear_candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCandidateOut:
     """戰後候選或背包裡的一件裝備：放進的欄位、該欄位目前的裝備與換上的連帶效果。"""
     slot = target_slot(library, run, item)
     current = current_item(library, run, slot)
@@ -312,7 +312,7 @@ def _candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCan
 def _gearoffer_out(library: ContentLibrary, run: RunState, node: GearOfferNode) -> GearOfferOut:
     return GearOfferOut(
         after_battle=node.after_battle,
-        candidates=tuple(_candidate(library, run, i) for i in node.candidates),
+        candidates=tuple(gear_candidate(library, run, i) for i in node.candidates),
     )
 
 
@@ -435,7 +435,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             )
             for slot in SLOTS
         ),
-        backpack=tuple(_candidate(library, run, i) for i in run.backpack),
+        backpack=tuple(gear_candidate(library, run, i) for i in run.backpack),
     )
 
 

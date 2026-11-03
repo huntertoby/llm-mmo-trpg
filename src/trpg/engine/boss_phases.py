@@ -1,4 +1,4 @@
-"""Boss 的階段（Phase 5F-2，``docs/phases/Phase5計畫.md`` 33；09 9.6.8、18.2.3）。
+"""Boss 的階段（Phase 5F-2，``docs/phases/Phase5計畫.md`` 34；09 9.6.8、18.2.3）。
 
 單位的 ``phases``（由範本帶入，第 1 項是開場階段）依 HP 門檻觸發：每次結算收尾
 （:func:`trpg.engine.turns.finish_resolution`）檢查，存活的單位 HP ≤ 下一個階段的

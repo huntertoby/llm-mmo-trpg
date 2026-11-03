@@ -1,4 +1,4 @@
-"""Boss 的階段（Phase 5F-2；``docs/phases/Phase5計畫.md`` 33.4、33.8）。
+"""Boss 的階段（Phase 5F-2；``docs/phases/Phase5計畫.md`` 34.4、34.8）。
 
 行為一致測試：都實際跑引擎（``start_battle``／``resolve``／``run_battle``／``replay``）。HP 門檻用
 「把 Boss 的 HP 設好、讓行動者結束回合」觸發——結算收尾（``finish_resolution``）一定會檢查。

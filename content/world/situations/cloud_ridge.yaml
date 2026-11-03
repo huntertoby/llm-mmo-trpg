@@ -124,7 +124,7 @@ templates:
     base_dc: 13
     danger: 1
     weaknesses:
-      - {id: monk_story_gap, text_zh: 其中一人的說法前後矛盾, methods: [notice], aliases_zh: [前後矛盾, 矛盾]}
+      - {id: monk_story_gap, text_zh: 其中一人的說法前後矛盾, methods: [notice], aliases_zh: [前後矛盾, 說法不一]}
     success: {rewards: {xp_permille: 1000, threads: [temple_traitor]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {penalties: {supplies: 1}}
@@ -138,7 +138,7 @@ templates:
     base_dc: 14
     danger: 3
     weaknesses:
-      - {id: pursuers_lost_in_fog, text_zh: 追兵不熟霧裡的小路, methods: [stealth], aliases_zh: [霧裡的小路, 小路]}
+      - {id: pursuers_lost_in_fog, text_zh: 追兵不熟霧裡的小路, methods: [stealth], aliases_zh: [霧裡的小路, 霧中小路]}
     success: {rewards: {xp_permille: 1000, threads: [gang_fort_secret_door]}}
     partial:
       rewards: {xp_permille: 500, threads: [gang_fort_secret_door]}
@@ -154,7 +154,7 @@ templates:
     base_dc: 14
     danger: 2
     weaknesses:
-      - {id: hunter_name, text_zh: 喊出獵人的名字能喚回他, methods: [uncanny], aliases_zh: [名字, 阿岳]}
+      - {id: hunter_name, text_zh: 喊出獵人的名字能喚回他, methods: [uncanny], aliases_zh: [喊出他的名字, 叫他的名字]}
     success: {rewards: {xp_permille: 1000, threads: [wraiths_from_rift], buffs: [rallied]}}
     partial:
       rewards: {xp_permille: 500, threads: [wraiths_from_rift]}
@@ -202,7 +202,7 @@ templates:
     base_dc: 13
     danger: 2
     weaknesses:
-      - {id: envoy_duty, text_zh: 雲鶴使只想確認身分, methods: [parley], aliases_zh: [確認身分, 身分]}
+      - {id: envoy_duty, text_zh: 雲鶴使只想確認身分, methods: [parley], aliases_zh: [確認身分, 表明身分]}
     success: {rewards: {xp_permille: 1000, threads: [temple_pass]}}
     partial: {rewards: {xp_permille: 500}}
     failure: {penalties: {hurt_permille: 150}}

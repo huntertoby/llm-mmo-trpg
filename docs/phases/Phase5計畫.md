@@ -147,6 +147,9 @@
 | 5E-2b | 真實 Discord adapter（使用者 2026-11-03 同意加相依，原話「裝」）：`uv add discord.py`（只加它本身與必要相依，鎖版本、更新 uv.lock）；實作 `DiscordGateway` 的真實版，fake 留給測試，測試不需網路與 token；token／身分組／頻道 ID 只從 `config/bot.local.toml` 讀；不嘗試真的連線，列使用者步驟。**token 從 `.env` 讀**（使用者：「到時候我會放.env然後 放token」）：順序 環境變數／`.env` → `bot.local.toml`；自寫小解析器、不加 python-dotenv；repo 放只有變數名的 `.env.example`（`.gitignore` 加 `!.env.example`），變數名寫進部署說明 | 5E-3 | 1 h | 可與 5F 平行 |
 | 5C-3d | 情境判定「用心清單」引擎端驗證（Gemma 評估：注入回答 13/30 被誤勾；專案 PM 2026-11-03 要求，5F 前插入）：玩法 PM 代決：每筆勾選的事實，玩家原文要找得到它的關鍵詞（事實名稱、線頭、NPC 名字、弱點 text_zh，加 content 別名），找不到就不給這筆，不交 LLM 判斷同義詞；只拿掉沒過的那筆、其餘照算、不退回重試（#31 第一次送出定案）；「針對弱點」要原文提到弱點關鍵詞或別名且方法在弱點 methods 內才給，模型關閉時照舊不能引用弱點（收緊 #85，9.6.4） | 5B-2 | 0.5 h | 可與 5D 平行 |
 | 5C-3e | 5C-3d／5E-3b 收尾（玩法 PM 2026-11-03 代決）：別名照玩法 PM 清單改（peddler_owes_you、alchemist_owes_you、ferryman_daughter、shards_under_den、碎片往荒原、tavern_rumor、frost_chime_we、NPC 阿岳／石師傅、monk_story_gap、hunter_name、pursuers_lost_in_fog、envoy_duty；逐字見 `docs/phases/Phase5C-3e代決.md`）；「NPC 往來」也認該 NPC 相關線頭（有 npc 欄位）的文字與別名；prompt 寫明「勾選的事實玩家原文要提到」並升 prompt 版本；首殺足跡保留，隱藏地點對未發現者用提示語顯示（同 5B-3） | 5C-3d | 0.5 h | 可與 5D-4 平行 |
+| 5C-3f | 5C-3e／5D-4 收尾（玩法 PM 2026-11-03 代決）：同一條線頭只算一項（一筆事實對一個項目，#85）：有 npc 欄位的線頭算「往來」、其他算「線索」；隱藏地點顯示一致規則：凡顯示給「看的人」而他還沒發現的隱藏地點一律用提示語（自己的戰鬥結果、存檔位置照常；朋友戰報、影子位置、排行榜照此規則，5F 做排行榜時沿用）；影子裝備降級時優先保留 build 詞條（關鍵字技能強化），從其他固定點數詞條開始拿，只剩 build 詞條仍超預算才拿；帶電利用詞條卡片說明寫「傷害 +」 | 5C-3e、5D-4 | 0.5 h | 可與 5F 平行 |
+| 5D-R1 | 5D 審查整理（世界端；2026-11-03 reviewer）：換裝檢查背包格數（已穿副手換雙手會多 1 件）且 `equip` 直接回傳換下的物品；新 `trpg/world/inventory.py` 集中格數／加減物品／移除裝備與 `gear_mods`（economy、crafting、loot、view 四處改用，沒有經濟規則時行為一致）；`item_gen` 加 `generate_item_retrying`（三處改用）；`step._dispatch` 改分派表、拿掉 noqa；`week_of` 移到世界時鐘模組、週長進世界規則；`loot_rules` 移回 loot；`_merc_cache` 改成不放模組全域；寫死的 `COARSE_MATERIAL`／`_EXCHANGE_NAME` 改資料；刪死欄位 `ShadowSnapshot.gear`；6.5.1 的浮動卡 grep 檢查加進測試。併做 5C-3f | 5D-4 | 1.5 h | 否（擋 5F-1） |
+| 5D-R2 | 5D 審查整理（伺服器端）：季末重置政策表（每個存檔欄位標「數值類／紀念類」，架構測試要求都已分類；為 5F-5 鋪路）；`FirstKill`、`RecipeRecord` 加 `season_id`；帳號角色上限按賽季算或重置時修剪；帳號檔跨程序寫入加鎖並重讀合併；`dev_mode=false` 時 runs／battles／workshop／gear 端點要登入、dev 與 saves 端點不掛載（保守代決，待使用者確認）；登入時帳號不存在也跑一次假雜湊；首殺紀錄寫入失敗不影響回應；accounts／first_kills／announce／notes 移出 `trpg.api`（如 `trpg.server`） | 5D-R1 | 1.5 h | 可與 5F-2 平行 |
 | 5E-4 | 部署彈性（暫定，未寫入決定）：使用者原話「伺服器和模型 都放在 Mac mini是代訂計畫 但是有可能」（M4 16GB、Gemma 4 12B Q4、context 8192、約 10～15 tok/s、一次一個請求）。①Windows／macOS 都能跑：路徑用 `pathlib`、啟動腳本 `.ps1`＋`.sh`、Tunnel 指令兩邊各一份，機器相關值全放設定檔；②LLM 請求單一佇列（同時 1 個），佇列上限與逾時為 `config/llm.toml` 參數，超過退回模板、玩家不卡；③每日 6 點刷新前預產當天事件文字與酒館傳聞，戰鬥旁白維持模板；④換模型或改雲端只改 `config/llm.toml` | 5E-3 | 1 h | 否 |
 
 ### 5F｜賽季與 Boss（5 段）
@@ -3674,16 +3677,87 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 
 - 真的連線測試；指令中文在地化；管理者的 Bot 指令（停用、恢復、刪留言）；全域指令；語音；自動重啟／常駐服務（使用者自己用工作排程器或 launchd）。
 
-## 33. 5F-2 詳細規格：區域 Boss 的階段機制
+## 33. 5D-4 詳細規格：經濟的完整畫面、戰鬥道具欄、5D-2b 代決收尾
+
+> 給實作 agent。動 `client/`（大世界左欄的背包、商店、鐵匠畫面；戰鬥技能列的道具欄；事件卡的模板標示；API 型別）、`client/openapi.json`、`src/trpg/api/`（`world_economy_schemas.py`、`world_economy_view.py`、`world_crafting_view.py`、`world_story_schemas.py`、`world_story_view.py`、`run_presenter.py` 一個公開函式）、`src/trpg/world/`（`crafting.py`、`state.py`；`gear.py` 只加查詢）、`src/trpg/content/item_gen.py`（`downscale_item`）、`content/affixes.yaml`、`tests/`。**不改** `trpg.engine`、`trpg.roguelite` 的規則、`LOG_FORMAT`、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值）。另一個 agent 在做 5C-3d、5E-3b，撞到以 main 為準。
+> 依據：本檔 26（背包、腰包、商店）、27（掉落、換裝）、30（鐵匠、附魔台）；`Phase5D-1報告.md` 待決 5（戰鬥中獨立道具欄，8.17）；`Phase5B-4e報告.md` #4（保底文字不標模板）；`Phase5D-2b報告.md` 待決 3、5、6（玩法 PM 2026-11-03 代決）；`Phase5D-3b報告.md` 待決 2（玩法 PM 2026-11-03 代決：配方表每件裝備只列最新一筆）；`docs/art/` 的共用元件（浮動卡、`<Hint>`、`GearCardView`）。
+
+### 33.1 目標
+
+前幾段的經濟面板都是「面板內展開的最小版」。這段整理成大世界左欄的完整畫面（同「成長與技能」「任務與線頭」的切換方式），重用一輪已有的裝備卡（`GearCardView`：部位、稀有度、物品等級、詞條、和目前裝備比較）；戰鬥技能列把腰包道具分成獨立的「道具」欄；並收掉 5D-2b、5D-3b 的代決。
+
+### 33.2 前端：左欄三個畫面（`WantPane` 加 `bag`、`shop`、`smithy`）
+
+- **背包與裝備**（右側背包面板的「打開背包」）：
+  - 穿戴中：9 個欄位都列（空欄位標「空」），每欄是物品圖示＋名稱＋稀有度・物品等級，滑過看詞條（共用浮動卡 `PartTip`）。
+  - 背包的裝備：一件一張 `GearCardView`（和該欄位目前的裝備比較：預算分數、目前的詞條、換上的連帶效果）＋「換上」（戒指可選放戒指 1／2；換主手且縮放屬性不同時先用既有的 `WeaponSwapConfirm` 確認）；不能換時停用、原因用 `<Hint>`。
+  - 背包的其他物品（消耗品、材料、染料：個數、說明）、腰包（整理腰包沿用 5D-1）、共鳴一行。
+  - 背包滿、有 `pending_loot` 時，畫面最上方是「選要丟哪件」（沿用 `LootChoicePanel`）；右側狀態列改成一行提示＋「打開背包」。
+- **商店**（服務列「商店」）：店主與好感度說明、商品表（分類、價格、限量、門檻、買）、賣出表；同 5D-1 的資料，換成左欄的完整畫面。
+- **鐵匠與附魔台**（服務列「鐵匠」）：上方分頁「打造」「配方碼」「強化與分解」「附魔台」：
+  - 打造：表單同 5D-3（部位、稀有度、詞條、通用料、特色材料、費用、傾向）。
+  - 配方碼：輸入框（10 碼，不分大小寫）＋「照配方打造」，下面是世界的配方表（碼、名稱、摘要、首位發現者、能不能打與原因）。輸入的碼不在表上（被新版取代、只列最新一筆）也照打：送 `craft{code}`，後端裁決。
+  - 強化與分解、附魔台：每件裝備一張卡（名稱、強化等級、配方碼、詞條），按鈕同 5D-3。
+  - 停用原因一律 `<Hint>`；費用、候選、能不能做都由後端算。
+- 右側的背包面板縮成摘要（格數、腰包）＋「打開背包」；服務列的「商店」「鐵匠」改成切換左欄（不再面板內展開）。
+
+### 33.3 API（全部有預設值）
+
+- `InventoryView.equipment: tuple[HeroGearSlotOut, ...]`（9 欄，沿用一輪的格式）、`InventoryView.gear_cards: tuple[GearCandidateOut, ...]`（背包裡每件裝備＋目前裝備比較，沿用一輪的 `_candidate`，改成公開函式 `gear_candidate`）。
+- `StoryView.source` 加 `"authored"`：保底機遇的專用旁白（骨架 `guarantee_text_zh`，5B-4e）不是 LLM 也不是降級；前端只在 `"fallback"` 標「（模板文字）」。日誌的 `NarrateAction.source` 不變（仍記 `fallback`），由 view 依觸發的 `guaranteed` 與文字是否為專用旁白判斷。
+
+### 33.4 戰鬥道具欄（5D-1 待決 5，8.17）
+
+- 技能卡 `tags` 有 `item` 的技能（腰包道具）從主動技能列拿出來，放在技能列的獨立「道具」群組（同種族技的群組樣式；不佔技能欄位，後端本來就不算）。按鈕：名稱、花費、停用原因；浮動卡同技能。
+- 沉默時能不能用照引擎現行規則（5D1-13，不改）。
+
+### 33.5 5D-2b／5D-3b 代決收尾（玩法 PM 2026-11-03）
+
+1. **帶電的利用詞條**：`content/affixes.yaml` 加 `affix_kw_shock_damage`（利用帶電的技能傷害 +N，60～150‰，主手／副手／項鍊／戒指；同 5D2b-2 的利用方向）。元素篩選（「雷電傷害」）要引擎新的 change，照 5D2b-1 用最接近的現成效果。
+2. **影子裝備降級仍超出預算**（#87）：`downscale_item` 先算「每條取下限」的總點數；超過新預算時，從點數最高的**固定點數詞條**（數值不影響點數：沒有範圍或上下限點數相同）開始拿掉，直到下限總點數放得進（點數相同先拿後面的）；之後照原本的規則縮數值。全部固定點數詞條都拿掉仍放不進就照穿（範圍詞條在下限）。
+3. **沒撿的戰利品**：確認現行實作＝`pending_loot` 留到下一場**打贏**結算掉落前，之後留在原地（`LootAbandonedEvent`）；輸掉的那場不動。不改規則，補測試鎖住。
+4. **配方表每件裝備只列最新一筆**（5D-3b 待決 2）：`RecipeRecord.listed: bool = True`。裝備重骰或指定後產生新配方碼時，那件裝備前一個配方碼（`variant`，沒有就是基礎配方 `recipe`）的紀錄改成 `listed=False`；有人用某個碼打造出一件新裝備時，那個碼改回 `listed=True`（那件裝備的最新一筆就是它）。配方表（`CraftingView.recipes`）只列 `listed`；舊碼照樣有效（`craft{code}` 查全部紀錄），首位發現者不變。強化不進配方（維持 5D3b-2）。
+
+### 33.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/world/test_gear.py` | 降級：下限仍超出時拿掉點數最高的固定詞條、拿到放得進為止、範圍詞條不拿；原本放得進的不變 |
+| `tests/content/test_equipment_content.py`、`tests/api/test_gear_api.py` | 詞條 77 → 78；帶電有製造與利用 |
+| `tests/world/test_crafting_variants.py` | 重骰後舊碼 `listed=False`、新碼列出；舊碼照打；用舊碼打造後改回列出；首位發現者不變；舊存檔沒有欄位照讀 |
+| `tests/world/test_loot.py` | 輸掉的那場不動 `pending_loot` |
+| `tests/api/` | `InventoryView.equipment`／`gear_cards`；配方表只列最新；保底旁白 `source=authored` |
+| vitest | 背包、商店、鐵匠畫面靜態輸出；道具欄分組；事件卡只在 fallback 標模板；配方碼輸入正規化 |
+
+### 33.7 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/world`、`tests/api`、`tests/content`（`-n 8`）、`tests/skillgen`／`tests/engine` 中詞條與裝備相關；vitest、build；swamp 種子 7 重播；OpenAPI 重產。
+- 瀏覽器（埠 8140，自己的分頁）：打一場 → 撿東西 → 背包滿選丟哪件 → 買東西 → 打造 → 重骰 → 用配方碼復刻 → 換裝；800×600 與 1600×900；浮動卡滑進、捲到底、釘住、Esc 關閉；`__layoutSmoke.scan()` 回空清單。
+
+### 33.8 代決（最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5D4-1 | 完整畫面放哪 | 大世界左欄切換（同成長、任務），不另開彈出視窗；右側只留摘要 |
+| 5D4-2 | 裝備比較 | 沿用一輪的預算分數比較與 `GearCardView`，不另算 DPS |
+| 5D4-3 | 配方表的「每件裝備」 | 世界不追蹤別人的裝備；用「碼的最後一次變動」近似：有裝備離開這個碼（改出新碼）就不列，有裝備被打成這個碼就列 |
+| 5D4-4 | 帶電利用詞條 | 只加 1 條傷害；元素篩選要引擎改動，留 PM |
+| 5D4-5 | 拿掉固定詞條的順序 | 點數高的先拿；同點數先拿後面的（保留第 1 條 build 詞條的機會較大） |
+
+### 33.9 不做的事
+
+- 卸下裝備（換上即替換）、裝備外觀與紙娃娃、物品排序與篩選、LLM 命名；荒原的設施；戰鬥中道具「剩幾個」（引擎的檢視不改，用完時按鈕停用）。
+
+## 34. 5F-2 詳細規格：區域 Boss 的階段機制
 
 > 給實作 agent。主要動 `src/trpg/engine/`（新模組 `boss_phases.py`、`turns.py` 收尾鉤子、`state.py`、`lifecycle.py`、`setup.py`、`battle.py` 開場、`events.py`、`runner.py`）、`src/trpg/content/`（`battle.py` 範本欄位與 `WardSpec` 範圍、`library.py` 載入檢查）、`src/trpg/narrative/`（戰鬥紀錄文字、單位卡特性欄）、`src/trpg/engine/view.py`／`src/trpg/api/`（單位的階段欄位）、`src/trpg/world/battle.py`（Boss 召喚物與階段技能跟著成長）、`content/`（霧鎖真人、雲頂觀陣眼、新技能與狀態、Boss 地圖、雲頂觀的遭遇與戰鬥地圖）、`client/`（階段轉換提示、單位卡階段行）、`docs/phases/戰鬥紀錄格式變更.md`。另一個 agent 可能在做 5F-1（賽季時鐘、懸賞、世界事件、共享地點；`trpg.world`、`content/world/`），本段在 `content/world/` 只改雲頂觀那兩處；撞到以 main 為準。
 > 依據：本檔第 1 節 5F-2 列；09 9.6.8（#86：區域 Boss 2～3 階段，HP 降到門檻就換招式或改變地形，例「半血時起霧，全場變成濃霧」；強招一律預告）；18 18.2.3（霧鎖真人 3 階段）；20 20.6（雲頂觀 Boss 地圖）；19 19.2.3、19.7（灰燼之心、碎晶之主：本段不做內容，只確認資料格式擋不住）；05 5.7（強招預告沿用環境預告的顯示）；本檔 14（5A-M1 蓄力強招）、17（5A-M2）與 `/105` 的護陣 `ward`。
 
-### 33.1 目標
+### 34.1 目標
 
 把「Boss 的階段」做成 **引擎資料化** 的機制：Boss 範本在 content 寫 `phases`，每個階段有 HP 門檻、換技能組或 AI 行為模式、加減狀態、改天氣／地形、召喚援兵；引擎依資料在 HP 跌破門檻時觸發，每個階段整場只觸發一次，確定性、可重播。用它做出雲頂觀 Boss「霧鎖真人」三階段與 Boss 專屬地圖，並接進大世界的雲頂觀地點。
 
-### 33.2 決策影響盤點（既有功能）
+### 34.2 決策影響盤點（既有功能）
 
 | 既有功能 | 位置 | 受影響？ | 處理 |
 |---|---|---|---|
@@ -3699,11 +3773,11 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 | 範本成長 `grow_enemy`（技能升階改名） | world | **是** | 階段技能組裡的技能 ID 一併升階改名；階段召喚的範本照同等級成長 |
 | 單位卡特性欄 `unit_traits` | narrative、前端 | **是** | 加「階段」句（數字由資料產生）；`UnitView` 加 `boss_phase`（目前第幾階段與下一個門檻） |
 | `UnitState.clone`、`state_to_json` | engine | **是** | 新欄位 `phases`、`phase_index` 加進 clone（`test_state_clone` 會抓） |
-| 雲頂觀地點（`kind: boss`，沒有戰鬥地圖、遭遇是 `summit_patrol`） | content/world | **是** | 戰鬥地圖改成 Boss 地圖、遭遇改成 Boss 陣容（見 33.6） |
+| 雲頂觀地點（`kind: boss`，沒有戰鬥地圖、遭遇是 `summit_patrol`） | content/world | **是** | 戰鬥地圖改成 Boss 地圖、遭遇改成 Boss 陣容（見 34.6） |
 | roguelite 盜賊巢穴 Boss（`bandit_lair`、`bandit_warlord`） | content | 否 | 沒有 `phases`，結算與 `/108` 相同 |
 | 戰鬥紀錄版號 | runner | **是** | `UnitTemplate`、`BattleSetup`、`BattleState`、事件都加欄位 → `/108` → `/109` |
 
-### 33.3 資料格式（`trpg.content.battle`）
+### 34.3 資料格式（`trpg.content.battle`）
 
 ```yaml
 # content/units/<boss>.yaml
@@ -3728,7 +3802,7 @@ phases:
 - 載入檢查（`library.py`）：技能存在且符合武器（同 `skills` 的規則與欄位上限）、行為模式存在、狀態存在、天氣存在、召喚範本存在且不是召喚物、`tiles` 的地形 ID 存在。`tiles` 的座標在地圖內由「Boss 地圖上的陣容」檢查（地圖 `encounter.enemies` 裡有階段的範本時）；引擎遇到地圖外的格子略過。
 - 格式擋不住的後續（只確認，不做）：灰燼之心「殼」高護甲＝第 1 階段開場狀態、第 2 階段 `remove_statuses`；「吸氣／吐氣」「熔心爆」＝第 2／3 階段的技能組；召喚餘燼蜥＝`spawns`；「火地每回合擴散」「冷卻（被水冰打中該回合護甲歸零）」需要新的規則改變／狀態欄位（之後加在 `BossPhase` 上，例如 `rule_changes`）；碎晶之主「三柱」＝新的 `trigger` 種類＋護陣類狀態（`taken_permille` 0）；事件 13「被攔下的碎片數 −護甲」＝開戰時改範本，不動階段格式。
 
-### 33.4 引擎規則（`trpg.engine.boss_phases`，純函式）
+### 34.4 引擎規則（`trpg.engine.boss_phases`，純函式）
 
 - 開戰：`make_unit` 把範本的 `phases` 帶到 `UnitState.phases`，`UnitState.phase_index = 0`（開場階段）。
 - **檢查時機**：每次結算收尾（`finish_resolution`）在被動觸發與誓約之後、勝負判定之前檢查一次；`advance_turn`（環境回合、下一位的回合開始傷害）之後再檢查一次。預覽（AI 估值）不檢查。
@@ -3736,7 +3810,7 @@ phases:
 - **轉換的順序**（每個階段）：發 `boss_phase_changed` → 移除狀態 → 換技能組（冷卻只保留新技能組裡還有的技能）→ 換行為模式 → 施加狀態 → 改天氣（`weather_changed`，天氣相同時不發）→ 改格子（`ChangeTileEffect`，依清單順序）→ 召喚（`SpawnUnitEffect`，依清單順序；新單位排在先攻順序最後）。
 - 確定性：不取用亂數（召喚位置照既有「最近的安全格」規則、依座標排序）；同種子同步驟結果逐位元相同。
 
-### 33.5 霧鎖真人（18.2.3；ID 由開發 PM 取）
+### 34.5 霧鎖真人（18.2.3；ID 由開發 PM 取）
 
 | 中文 | ID | 說明 |
 |---|---|---|
@@ -3752,22 +3826,22 @@ phases:
 | 2 鎖霧 | ≤ 60% | 天氣變 **濃霧**（既有 `fog`：遠程超過 4 格劣勢、視線減半）；技能組 霧遁＋霧鎖千山＋聚雷、`cunning`；開場先隱蔽 2 回合；真人附近召喚 2 名霧行者 |
 | 3 歸一 | ≤ 30% | 天氣回 **晴朗**（霧散）；移除隱蔽；技能組 蓄力斬（自身護盾＋方陣橫斬，蓄力強招）＋先發制人、`brute`（近戰化）；掛上「歸一」每回合回血 |
 
-數值（HP、骰子、冷卻、回血量）是初值，寫在 content，見 33.9。
+數值（HP、骰子、冷卻、回血量）是初值，寫在 content，見 34.9。
 
-### 33.6 Boss 專屬地圖與大世界接線（20.6、18.3）
+### 34.6 Boss 專屬地圖與大世界接線（20.6、18.3）
 
 - `content/maps/cloud_summit.yaml`「雲頂觀」：`archetype: boss`、`region: cloud_ridge`、12×12；中央高台（高 2）上是真人，高台前 1 格是陣眼石靈；兩側石階（高 1）；四角各 1 個油桶當香爐（換皮要新物件與美術，先用油桶：推倒或點燃就是火）；我方在下方石階（南側），兩名劍陣弟子守高台入口；`objective: {kind: eliminate, leader_retreat: true}`；預設陣容 `encounter`（原型三人對真人＋2 弟子＋石靈，給 CLI 與模擬）。
 - 大世界：`content/world/maps/cloud_ridge.yaml` 雲頂觀 `battle_maps: [cloud_summit]`；`content/world/encounters/cloud_ridge.yaml` 雲頂觀的遭遇改成 Boss 陣容 `mist_lock_court`（真人、劍陣弟子 ×2、陣眼石靈；不混精英）。`summit_patrol` 群組保留不刪（之後山路遇敵可能用）。
 - 大世界開戰（`prepare_battle`）：階段召喚的範本與階段天氣用 `with_phase_assets` 加進設定；召喚範本照敵人等級成長（`grow_enemy`）、階段技能組一起升階改名。
 
-### 33.7 戰鬥紀錄、畫面與版號
+### 34.7 戰鬥紀錄、畫面與版號
 
 - 事件：`boss_phase_changed`（`unit_id`、`phase`〔1 起算的新階段序號〕、`phase_id`、`name_zh`、`text_zh`、`hp`、`max_hp`、`permille`）；`weather_changed`（`before`、`after`、`after_name_zh`、`cause: boss_phase`）。戰鬥紀錄：「◆ 霧鎖真人進入第 2 階段「鎖霧」（HP 60% 以下）：真人掐訣，山間濃霧四合。」「天氣變為濃霧。」
 - 單位卡：`UnitView.boss_phase`（`index`、`total`、`name_zh`、`next_name_zh`、`next_permille`）；特性欄加一行「階段：劍陣 → HP 60%「鎖霧」→ 30%「歸一」」。
 - 前端：步驟事件裡有 `boss_phase_changed` 時用既有 `NoticeBanner` 顯示那句紀錄（15 秒）；單位卡（`UnitInfo`）顯示「階段 2/3 鎖霧（HP 30% 進入「歸一」）」。蓄力預告沿用既有的「蓄」標記與 `ChargeChips`，不新增畫法；天氣名稱沿用頂端列。
 - `LOG_FORMAT` `/108` → `/109`（`戰鬥紀錄格式變更.md`、`runner.py` 文件字串、測試字面值）。沒有 `phases` 的戰鬥結算與 `/108` 相同。
 
-### 33.8 測試與模擬
+### 34.8 測試與模擬
 
 | 檔案 | 內容 |
 |---|---|
@@ -3778,7 +3852,7 @@ phases:
 | 前端 vitest | 階段提示與單位卡階段行 |
 | 小模擬（`scripts/boss_phase_sim.py`） | 雲頂觀 Boss 地圖、原型三人與大世界 6 級三人隊伍各若干種子：**沒有階段**（同範本拿掉 `phases`）對 **有階段** 的勝率、平均輪數、真人剩餘 HP 摘要；結果寫進報告，數值建議由 PM 定 |
 
-### 33.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 34.9 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -3797,15 +3871,15 @@ phases:
 | 5F2-13 | 雲頂觀遭遇 | 只有 Boss 陣容（Boss 地點的戰鬥＝Boss 戰）；`summit_patrol` 保留不用 |
 | 5F2-14 | 戰鬥紀錄版號 | `/109` |
 
-### 33.10 驗收
+### 34.10 驗收
 
 `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/engine`（`-n 8`）、`tests/content`、`tests/world`、`tests/api`；改了前端跑 `npx vitest run`、`npm run build`；swamp 種子 7 重播；CLI 輸出有變時重產快照（`UPDATE_CLI_SNAPSHOTS=1`）。不跑全量 matrix／completion。
 
-### 33.11 不做的事
+### 34.11 不做的事
 
 - 賽季 Boss（封印鑰匙、只准傭兵、首殺、源晶柱解謎，5F-3）；灰燼之心與碎晶之主的內容（5F-5）；新的 `trigger` 種類（輪數、標籤全倒）、火地擴散、冷卻破甲等新規則。
 - Boss 掉落（5D-2 的規則照舊）、首殺公告；新物件與新美術（香爐、Boss 立繪）；HP 門檻的地圖預告（門檻轉換無法提前一輪預知，只在單位卡寫門檻）。
 
-## 34. 之後各段規格
+## 35. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

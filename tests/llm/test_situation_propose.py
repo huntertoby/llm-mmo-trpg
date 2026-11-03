@@ -95,6 +95,13 @@ def test_schema_enums(library: ContentLibrary) -> None:
     assert schema["additionalProperties"] is False
 
 
+def test_prompt_says_care_must_be_mentioned(library: ContentLibrary) -> None:
+    """5C-3e：prompt 寫明「勾選的事實，玩家原文要提到」，版本號升到 2。"""
+    system = build_situation_messages(_request(library))[0]["content"]
+    assert "勾選的事實，玩家原文（<player_input>）要提到" in system
+    assert SITUATION_PROMPT_VERSION == "situation-check/2"
+
+
 def test_player_text_only_in_player_input(library: ContentLibrary) -> None:
     messages = build_situation_messages(_request(library, INJECTION))
     system, user = messages[0]["content"], messages[1]["content"]

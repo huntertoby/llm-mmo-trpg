@@ -4317,6 +4317,16 @@ export interface components {
              * @default []
              */
             resonance_zh: string[];
+            /**
+             * Equipment
+             * @default []
+             */
+            equipment: components["schemas"]["HeroGearSlotOut"][];
+            /**
+             * Gear Cards
+             * @default []
+             */
+            gear_cards: components["schemas"]["GearCandidateOut"][];
         };
         JsonValue: unknown;
         /**
@@ -6771,7 +6781,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "llm" | "fallback";
+            source: "llm" | "fallback" | "authored";
         };
         /**
          * SummonInfoCard

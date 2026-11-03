@@ -1,4 +1,4 @@
-"""雲頂觀 Boss 階段的小模擬（Phase 5F-2；``docs/phases/Phase5計畫.md`` 33.8）。
+"""雲頂觀 Boss 階段的小模擬（Phase 5F-2；``docs/phases/Phase5計畫.md`` 34.8）。
 
 在 Boss 地圖 ``cloud_summit`` 上，同一組陣容各跑若干種子，比較霧鎖真人 **沒有階段**（同範本拿掉
 ``phases``，整場停在第 1 階段）與 **有階段** 的勝率、平均輪數、真人剩餘 HP 與各階段到達率。

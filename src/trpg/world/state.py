@@ -389,6 +389,9 @@ class RecipeRecord(_Model):
     """帶重骰序列的配方（5D-3b）：基礎配方的配方碼；基礎配方本身為 ``None``。"""
     steps: tuple[RecipeStep, ...] = ()
     """重骰序列（5D-3b，8.20）：照順序在基礎配方打出的裝備上重骰或指定。"""
+    listed: bool = True
+    """列在配方表上（5D-4，玩法 PM 2026-11-03 代決：每件裝備只列最新一筆）。裝備改出新碼時舊碼
+    改成 ``False``、有人用這個碼打出新裝備時改回 ``True``；不列的碼照樣能打（可能已經分享出去）。"""
 
 
 class ShopPurchase(_Model):

@@ -29,11 +29,13 @@ from trpg.api.notes import (
     clean_note_text,
     footprints,
 )
+from trpg.api.notes_schemas import location_board
 from trpg.api.server_config import ServerSettings
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import CampAction, TravelAction
 from trpg.world.replay import WorldLogEntry
+from trpg.world.state import LocationRef
 
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
 
@@ -282,3 +284,44 @@ def test_script_list_and_delete(dev: TestClient) -> None:
     assert "找不到" in err.getvalue()
     board = dev.get(f"/api/world/characters/{cid}/notes").json()  # 伺服器重讀檔案
     assert board["notes"] == []
+
+
+class _Kills:
+    def __init__(self, *kills: FirstKill) -> None:
+        self._kills = kills
+
+    def all(self) -> tuple[FirstKill, ...]:
+        return self._kills
+
+
+def test_hidden_location_board_uses_hint_until_revealed(
+    dev: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """5C-3e：首殺足跡保留；還沒發現的隱藏地點，地點名與足跡文字用提示語（同 5B-5）。"""
+    store = _store(dev)
+    me = _create(dev)
+    friend = _create(dev, "小美")
+    kill = FirstKill(
+        kind="elite",
+        target="furnace_keeper",
+        target_name_zh="丹爐洞的守爐獸",
+        character_id=friend,
+        name="小美",
+        region="cloud_ridge",
+        location="elixir_cave",
+        seq=1,
+        at=NOON,
+    )
+    monkeypatch.setattr(store, "first_kills", _Kills(kill))
+    char = store.character(me).model_copy(update={"location": "elixir_cave"})
+    board = location_board(store, char)
+    assert board.location_name_zh == "谷底一處隱密的洞窟"
+    assert [f.text_zh for f in board.footprints] == [
+        "小美 在這裡首殺了精英「谷底一處隱密的洞窟的守爐獸」"
+    ]
+    known = char.model_copy(
+        update={"revealed": (LocationRef(region="cloud_ridge", location="elixir_cave"),)}
+    )
+    board = location_board(store, known)
+    assert board.location_name_zh == "丹爐洞"
+    assert [f.text_zh for f in board.footprints] == ["小美 在這裡首殺了精英「丹爐洞的守爐獸」"]
