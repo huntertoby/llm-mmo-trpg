@@ -46,11 +46,13 @@ USER_RESERVE_TOKENS = 5_000
 BUDGET_NOTE_ZH = (
     "數值由遊戲補，但效果總強度必須到這一階預算的 70%～100%。"
     "只有一個沒有數值的核心效果（位移、淨化、地形、傳送等）一定過弱："
-    "骨架允許附帶效果時請再加一個（例：pull＋damage 可、cleanse＋heal 可；只有 pull 不可）。"
+    "骨架允許附帶效果時請再加一個，依技能主題選，不一定是傷害"
+    "（例：pull＋施加狀態、pull＋damage、cleanse＋heal、cleanse＋shield 都可；只有 pull 不可）。"
     "冷卻由遊戲依形狀自動補（大範圍形狀會加冷卻），不用填。"
     "選填欄位（代價、變奏、條件）越少越好，但效果數量不在此限。"
 )
-"""題目區的預算說明（Phase 6S-2：升級候選退回的第一大原因是單一核心效果過弱 ``budget.weak``）。"""
+"""題目區的預算說明（Phase 6S-2：升級候選退回的第一大原因是單一核心效果過弱 ``budget.weak``；
+6S-2c：例子改成中性，不暗示附帶效果固定是傷害）。"""
 KEYWORD_NOTE_ZH = (
     "技能必須帶到 keywords 的每一個：照 available.keywords 的 ways 選一種寫法"
     "（例：ways 有 apply_status（status＝commanding）就加一個施加 commanding 給友方的效果）。"

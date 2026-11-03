@@ -340,7 +340,8 @@ def test_request_payload_has_budget_and_keyword_notes(library: ContentLibrary) -
     prompt = build_proposal_prompt(library, request)
     user = prompt.messages[1]["content"]
     assert "budget_note_zh" in user
-    assert "pull＋damage" in user
+    assert "不一定是傷害" in user
+    assert "cleanse＋shield" in user
     assert "keyword_note_zh" in user
     plain = build_proposal_prompt(library, ProposalRequest(1, "rare", core_primitive="pull"))
     assert "keyword_note_zh" not in plain.messages[1]["content"]
