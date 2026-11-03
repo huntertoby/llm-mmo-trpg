@@ -129,13 +129,26 @@ class ChronicleHero(_Model):
     可以免費改。"""
     doll: DollLook | None = None
     """紙娃娃外觀（下季建角色沿用；種族改了時，跟著種族的部件改回預設，:func:`legacy_doll`）。"""
+    level: int | None = None
+    """季末的等級（5F-5c；舊紀錄沒有＝``None``）。"""
     elites: tuple[str, ...] = ()
-    """擊倒過的精英（中文名，依精英種類 ID 排序；來自 ``CharacterState.elite_kills``）。"""
+    """擊倒過的精英（中文名，依精英種類 ID 排序；來自 ``CharacterState.elite_kills``；5F-5c 起
+    不含區域 Boss）。"""
+    bosses: tuple[str, ...] = ()
+    """打倒過的 Boss（5F-5c：區域 Boss 的中文名，再加賽季 Boss）。"""
+    first_kills: tuple[str, ...] = ()
+    """這一季的全服首殺（5F-5c；目標中文名，依日誌序號）。"""
+    chapters: tuple[str, ...] = ()
+    """完成的主線章節（5F-5c；任務名）。"""
     events: tuple[str, ...] = ()
     """完成的事件（「誰：想要什麼」，依骨架 ID 排序；來自
     ``CharacterState.finished_skeletons``）。"""
+    recipes: tuple[str, ...] = ()
+    """首位發現的配方（5F-5c；配方名，依配方碼）。"""
+    league_rank: int | None = None
+    """影子循環賽的最終名次（5F-5c；沒參加＝``None``）。"""
     text_zh: str
-    """編年史的一行文字（例「第一季：擊倒北坡狼王；完成霜音：有人答出她的謎」）。"""
+    """編年史的一行文字（模板在 ``world/season.yaml`` 的 ``chronicle``，5F-5c）。"""
 
 
 class RecipeDiscovery(_Model):

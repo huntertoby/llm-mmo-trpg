@@ -93,7 +93,7 @@ def test_dry_run_then_execute(dev: TestClient, tmp_path: Path) -> None:
     preview = _ok(dev.post("/api/world/season/reset", json=RESET))
     assert preview["dry_run"] is True and preview["backup"] is None
     assert (preview["old_season"], preview["new_season"]) == ("s1", "s2")
-    assert preview["chronicle"] == ["阿霧：第一季：走過這一季"]
+    assert preview["chronicle"] == ["阿霧：第一季：到達 1 級"]
     assert _tree(tmp_path / "saves") == before
     body = {**RESET, "dry_run": False, "confirm_season": "s1"}
     # 真的執行一律要管理者帳號，開發模式沒帶 token 也不行（開發 PM 代決）

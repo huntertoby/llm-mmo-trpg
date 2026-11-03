@@ -145,3 +145,21 @@ league:
   # 5F-4b 平衡（玩法 PM 2026-11-03 代決；scripts/league_balance.py 200 場：平均 6.4 輪、先手 44%／後手 54%）
   hp_permille: 2000                 # 開場最大 HP ×2（只套在循環賽）
   opening_statuses: [league_truce]  # 第 1 輪雙方都不能造成傷害（只能移動、上增益、佈陣）
+
+# 季末編年史的固定模板（Phase 5F-5c；09 9.7 季末重置細節，玩法 PM 2026-11-03 代決）：第一季用固定模板，但列出事實細節
+# （等級、打過的精英與 Boss〔含首殺〕、完成的事件與主線章節、首位發現的配方、循環賽名次）；只寫狀態與日誌裡發生過的事。
+# 每個角色一行：line 的 {season}＝季名、{facts}＝有內容的事實依序用 separator 串起來；各項用 item 排版、joiner 串起來。
+# 07 7.11 的 LLM 傳記之後再依這些事實生成（後期）。
+chronicle:
+  line: "{season}：{facts}"
+  separator: "；"
+  joiner: "、"
+  empty: 走過這一季
+  level: "到達 {level} 級"
+  elites: {text: "擊倒{items}"}
+  bosses: {text: "打倒 Boss {items}"}
+  first_kills: {text: "全服首殺{items}"}
+  chapters: {text: "完成主線{items}", item: "「{name}」"}
+  events: {text: "完成事件{items}", item: "「{name}」"}
+  recipes: {text: "首位發現配方{items}", item: "「{name}」"}
+  league: "影子循環賽第 {rank} 名"

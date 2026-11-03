@@ -28,6 +28,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
+from trpg.content.world_season import ChronicleFact, ChronicleTemplates
 from trpg.server.accounts import AccountRecord, AccountStore
 from trpg.server.chronicle import (
     CHRONICLE_DIR,
@@ -58,7 +59,9 @@ from trpg.server.season_policy import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.world.calendar import season_status
+from trpg.world.loot import loot_rules
 from trpg.world.save import dumps_world, loads_char, loads_world, write_atomic
+from trpg.world.season_boss import boss_def
 from trpg.world.state import CharacterState, RecipeRecord, WorldState
 
 __all__ = [
@@ -70,6 +73,7 @@ __all__ = [
     "WORLD_FILES",
     "HandlerKind",
     "ResetLine",
+    "SeasonFacts",
     "SeasonResetError",
     "SeasonResetReport",
     "chronicle_hero",
@@ -77,6 +81,7 @@ __all__ = [
     "default_backup_root",
     "next_season_id",
     "recipe_discovery",
+    "season_facts",
     "season_name_zh",
     "season_reset",
 ]
@@ -235,41 +240,154 @@ def _skeleton_text(library: ContentLibrary) -> dict[str, str]:
     return found
 
 
+@dataclass(frozen=True)
+class SeasonFacts:
+    """季末寫編年史用的全季事實（Phase 5F-5c；都來自世界狀態與伺服器的紀念檔，不推測）。"""
+
+    season_id: str
+    skeletons: Mapping[str, str]
+    """事件骨架 ID → 「誰：想要什麼」。"""
+    main_quests: Mapping[str, str]
+    """主線任務 ID → 章節名。"""
+    region_bosses: frozenset[str]
+    """區域 Boss 的單位 ID（``world/loot.yaml`` 的 ``bosses``）。"""
+    season_boss: str | None
+    """賽季 Boss 的中文名（沒有賽季 Boss＝``None``）。"""
+    boss_clears: frozenset[str]
+    """這一季打倒過賽季 Boss 的角色 ID。"""
+    first_kills: Mapping[str, tuple[str, ...]]
+    """角色 ID → 這一季的全服首殺（目標中文名，依日誌序號）。"""
+    recipes: Mapping[str, tuple[str, ...]]
+    """角色 ID → 首位發現的配方名（依配方碼）。"""
+    league_ranks: Mapping[str, int]
+    """角色 ID → 循環賽最終名次（編年史 ``chronicle/league.json`` 的這一季）。"""
+
+
+def season_facts(
+    library: ContentLibrary,
+    world: WorldState,
+    *,
+    first_kills: Sequence[FirstKill] = (),
+    league: LeagueChronicleSeason | None = None,
+) -> SeasonFacts:
+    """從世界狀態、首殺紀錄與循環賽編年史整理這一季的事實（:class:`SeasonFacts`）。"""
+    season = world.season_id
+    mains = {
+        q.id: q.name_zh
+        for region in sorted(library.world_quests.quests)
+        for q in library.world_quests.quests[region].quests
+        if q.kind == "main"
+    }
+    loot = loot_rules(library)
+    boss = boss_def(library)
+    kills: dict[str, list[str]] = {}
+    for kill in sorted(first_kills, key=lambda k: k.seq):
+        if kill.season_id == season:
+            kills.setdefault(kill.character_id, []).append(kill.target_name_zh)
+    recipes: dict[str, list[str]] = {}
+    for record in sorted(world.recipes, key=lambda r: r.code):
+        if record.season_id == season:
+            recipes.setdefault(record.discoverer, []).append(record.name_zh)
+    accounts = {e.account: e.character_id for e in world.league_entries}
+    ranks: dict[str, int] = {}
+    if league is not None and league.season_id == season:
+        ranks = {accounts[r.account]: r.rank for r in league.ranks if r.account in accounts}
+    return SeasonFacts(
+        season_id=season,
+        skeletons=_skeleton_text(library),
+        main_quests=mains,
+        region_bosses=frozenset(() if loot is None else loot.bosses),
+        season_boss=None if boss is None else boss.name_zh,
+        boss_clears=frozenset(c.character_id for c in world.boss_clears),
+        first_kills={k: tuple(v) for k, v in kills.items()},
+        recipes={k: tuple(v) for k, v in recipes.items()},
+        league_ranks=ranks,
+    )
+
+
+def _fact(rule: ChronicleFact, names: Sequence[str], joiner: str) -> str | None:
+    if not names:
+        return None
+    return rule.text.format(items=joiner.join(rule.item.format(name=n) for n in names))
+
+
+def _chronicle_text(
+    templates: ChronicleTemplates | None, season_id: str, hero: ChronicleHero
+) -> str:
+    """編年史的一行（模板在 ``world/season.yaml`` 的 ``chronicle``；沒有模板＝只寫季名）。"""
+    season = season_name_zh(season_id)
+    if templates is None:
+        return season
+    t = templates
+    facts = [
+        None if hero.level is None else t.level.format(level=hero.level),
+        _fact(t.elites, hero.elites, t.joiner),
+        _fact(t.bosses, hero.bosses, t.joiner),
+        _fact(t.first_kills, hero.first_kills, t.joiner),
+        _fact(t.chapters, hero.chapters, t.joiner),
+        _fact(t.events, hero.events, t.joiner),
+        _fact(t.recipes, hero.recipes, t.joiner),
+        None if hero.league_rank is None else t.league.format(rank=hero.league_rank),
+    ]
+    body = t.separator.join(f for f in facts if f is not None) or t.empty
+    return t.line.format(season=season, facts=body)
+
+
 def chronicle_hero(
     library: ContentLibrary,
     char: CharacterState,
     season_id: str,
     account_id: str | None,
-    skeletons: Mapping[str, str] | None = None,
+    facts: SeasonFacts | None = None,
 ) -> ChronicleHero:
-    """一個角色的編年史：打過的精英、完成的事件（文字）＋名字與外觀（:data:`HERO_LEGACY_FIELDS`）。"""
-    texts = _skeleton_text(library) if skeletons is None else skeletons
-    elites = tuple(elite_kind_name(library, kind) for kind in char.elite_kills)
-    events = tuple(texts.get(s, s) for s in char.finished_skeletons)
-    parts: list[str] = []
-    if elites:
-        parts.append("擊倒" + "、".join(elites))
-    if events:
-        parts.append("完成" + "、".join(events))
-    body = "；".join(parts) if parts else "走過這一季"
+    """一個角色的編年史（5F-5c 列事實細節）：等級、打過的精英與 Boss、全服首殺、完成的主線章節與
+    事件、首位發現的配方、循環賽名次＋名字、紙娃娃與種族（:data:`HERO_LEGACY_FIELDS`）。``facts``
+    省略＝只用角色自己的狀態（沒有首殺、配方、循環賽、賽季 Boss）。"""
+    if facts is None:
+        empty = WorldState(season_id=season_id, season_seed=0, season_start=0)
+        facts = season_facts(library, empty)
+    cid = char.character_id
+    elites: list[str] = []
+    bosses: list[str] = []
+    for kind in char.elite_kills:
+        found = bosses if kind.partition("+")[0] in facts.region_bosses else elites
+        found.append(elite_kind_name(library, kind))
+    if facts.season_boss is not None and cid in facts.boss_clears:
+        bosses.append(facts.season_boss)
+    chapters = tuple(
+        facts.main_quests[q.quest] for q in char.quests if q.done and q.quest in facts.main_quests
+    )
     legacy = {name: getattr(char.hero, name) for name in HERO_LEGACY_FIELDS}
-    return ChronicleHero(
-        character_id=char.character_id,
+    hero = ChronicleHero(
+        character_id=cid,
         account_id=account_id,
         name=legacy["name_zh"],
         race=legacy["race"],
         doll=legacy["doll"],
-        elites=elites,
-        events=events,
-        text_zh=f"{season_name_zh(season_id)}：{body}",
+        level=char.level,
+        elites=tuple(elites),
+        bosses=tuple(bosses),
+        first_kills=facts.first_kills.get(cid, ()),
+        chapters=chapters,
+        events=tuple(facts.skeletons.get(s, s) for s in char.finished_skeletons),
+        recipes=facts.recipes.get(cid, ()),
+        league_rank=facts.league_ranks.get(cid),
+        text_zh="",
     )
+    season = library.world_season
+    templates = None if season is None else season.chronicle
+    return hero.model_copy(update={"text_zh": _chronicle_text(templates, season_id, hero)})
 
 
 CARRIED_HANDLERS: Final[Mapping[tuple[str, str], Callable[..., object]]] = {
     ("CharacterState", "hero"): chronicle_hero,
     ("CharacterState", "elite_kills"): chronicle_hero,
     ("CharacterState", "finished_skeletons"): chronicle_hero,
+    ("CharacterState", "level"): chronicle_hero,  # 5F-5c 編年史列事實細節
+    ("CharacterState", "quests"): chronicle_hero,
     ("WorldState", "recipes"): recipe_discovery,
+    ("WorldState", "boss_clears"): season_facts,
+    ("WorldState", "league_entries"): season_facts,
 }
 """:data:`~trpg.server.season_policy.CARRIED` 的每一項由哪個函式寫進紀念紀錄（架構測試檢查）。"""
 
@@ -521,10 +639,10 @@ def _plan(
         raise SeasonResetError("種子要在 0～2^64-1")
     old = current.world.season_id
     owners = _owners(accounts)
-    skeletons = _skeleton_text(library)
+    league = next((s for s in current.league_chronicle.seasons if s.season_id == old), None)
+    facts = season_facts(library, current.world, first_kills=current.first_kills, league=league)
     heroes = tuple(
-        chronicle_hero(library, c, old, owners.get(c.character_id), skeletons)
-        for c in current.chars
+        chronicle_hero(library, c, old, owners.get(c.character_id), facts) for c in current.chars
     )
     recipes = tuple(
         recipe_discovery(r) for r in sorted(current.world.recipes, key=lambda r: r.code)

@@ -304,8 +304,14 @@ _CHRONICLE_HERO: Final[dict[str, ResetKind]] = _all(
     "name",
     "race",
     "doll",
+    "level",  # 5F-5c 編年史列事實細節
     "elites",
+    "bosses",
+    "first_kills",
+    "chapters",
     "events",
+    "recipes",
+    "league_rank",
     "text_zh",
 )
 _RECIPE_DISCOVERY: Final[dict[str, ResetKind]] = _all(
@@ -351,6 +357,10 @@ CARRIED: Final[Mapping[tuple[str, str], str]] = {
     ("CharacterState", "hero"): "名字、紙娃娃（外觀）與種族（預設）→ 編年史的上季角色",
     ("CharacterState", "elite_kills"): "擊倒過的精英 → 編年史文字",
     ("CharacterState", "finished_skeletons"): "完成的事件 → 編年史文字",
+    ("CharacterState", "level"): "季末的等級 → 編年史文字（5F-5c）",
+    ("CharacterState", "quests"): "完成的主線章節 → 編年史文字（5F-5c）",
+    ("WorldState", "boss_clears"): "打倒賽季 Boss 的角色 → 編年史文字（5F-5c）",
+    ("WorldState", "league_entries"): "報名的角色（對到循環賽名次）→ 編年史（5F-5c）",
     ("WorldState", "recipes"): "配方的首位發現者（RecipeRecord 的紀念類欄位）→ 編年史",
 }
 """數值類、但季末先寫進紀念紀錄再清掉的欄位（模型名, 欄位）→ 去處（5F-5，玩法 PM 2026-11-03）。
