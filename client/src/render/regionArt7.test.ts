@@ -125,7 +125,7 @@ function commonChecks(region: { region: string; look: string }, objects: readonl
     const base = tileCalls({ surface: "none" }).length;
     for (const surface of SURFACES) {
       const ref = tileCalls({ surface });
-      const refTail = ref.slice(base - 3);
+      const refTail = ref.slice(base); // 6A-4a 起不畫格線
       expect(tileCalls({ surface, ...region }).slice(-refTail.length), surface).toEqual(refTail);
     }
     expect(mistLevel(region.region, "fog")).toBeNull();
