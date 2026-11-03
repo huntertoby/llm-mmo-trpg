@@ -93,7 +93,7 @@ exits:
   - {id: to_hunter_hut, at: [[0, 4], [0, 5]], to: hunter_hut, arrive: to_bamboo_path}   # 西：獵人踩出的小徑
   - {id: to_rain_terraces, at: [[19, 6], [19, 7]], to: rain_terraces, arrive: to_bamboo_path}   # 東：竹林盡頭的石橋
 spawns:
-  - {at: [16, 2], group: mist_wolf_pack}   # 竹林深處（新手任務 2 的固定戰）
+  - {at: [16, 2], group: mist_wolf_pack, personal: true}   # 竹林深處（新手任務 2 的固定戰；個人的駐守）
   - {at: [9, 9], group: bandit_wolf_handler, patrol: [[9, 9], [9, 5], [2, 5]]}   # 小路上巡邏
 event_spots:
   - {at: [11, 9], id: wounded_peddler}   # 小溪邊

@@ -104,7 +104,7 @@ entry: [9, 16]
 exits:
   - {id: to_ash_mire, at: [[11, 17], [12, 17]], to: ash_mire, arrive: to_ash_well_village}   # 南：往灰泥沼
 spawns:
-  - {at: [12, 15], group: village_raid_mid}   # 村口外（離灰井 5 格）
+  - {at: [12, 15], group: village_raid_mid, personal: true}   # 村口外（離灰井 5 格）
 campfires:
   - {at: [11, 7], id: campfire_ash_well_village}   # 灰井北的空地
 situation_objects:
