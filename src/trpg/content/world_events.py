@@ -27,6 +27,7 @@ from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.world_map import LocationMapDef
 from trpg.content.world_narration import (
+    ACTOR_MAX_CHARS,
     STORY_TEMPLATES_FILE,
     StoryTemplates,
     load_story_templates,
@@ -201,6 +202,15 @@ class EventSkeletonDef(ContentModel):
     guarantee_text_zh: str | None = Field(default=None, min_length=1, max_length=150)
     """機遇保底觸發時的專用旁白（Phase 5B-4e；不看天氣也通的文字，不經說書人）；``None``＝照一般
     事件敘述。上限同說書人旁白（``TEXT_MAX_CHARS``）。"""
+    guarantee_who_zh: str | None = Field(default=None, min_length=1, max_length=ACTOR_MAX_CHARS)
+    """機遇保底觸發時事件卡的「誰」（Phase 5B-4f）；``None``＝照 ``who_zh``。上限同說書人角色
+    （``ACTOR_MAX_CHARS``）。"""
+
+    def who_for(self, *, guaranteed: bool) -> str:
+        """事件的「誰」：保底觸發且有 ``guarantee_who_zh`` 時用它，否則 ``who_zh``（5B-4f）。"""
+        if guaranteed and self.guarantee_who_zh is not None:
+            return self.guarantee_who_zh
+        return self.who_zh
 
     def result_threads(self) -> frozenset[str]:
         """事件結果可以留下的線頭：本骨架的與 ``shared_threads``。"""

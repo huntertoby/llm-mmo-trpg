@@ -19,11 +19,17 @@ from trpg.api.world_story import (
     outcome_story,
     situation_story,
 )
+from trpg.api.world_story_view import event_view
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_situations import default_proposal
 from trpg.llm import LLMUnavailable, MockLLMClient
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION
-from trpg.world.actions import NarratedEvent, OpportunityHintEvent, SituationAction
+from trpg.world.actions import (
+    EventTriggeredEvent,
+    NarratedEvent,
+    OpportunityHintEvent,
+    SituationAction,
+)
 from trpg.world.situations import situation_rules, situation_template
 from trpg.world.state import CharacterState, EventTrigger
 from trpg.world.step import new_character, world_step
@@ -75,6 +81,8 @@ def test_event_story_llm_swaps_skeleton(library: ContentLibrary) -> None:
 
 
 GUARANTEE_TEXT = "古松樹皮上的焦痕還在發燙。你伸手一碰，一道細細的電流竄過掌心——像是有什麼在等你。"
+GUARANTEE_WHO = "焦痕未冷的古松"
+PLAIN_WHO = "雷雨中的古松祭壇"
 
 
 def test_guaranteed_opportunity_uses_dedicated_text(library: ContentLibrary) -> None:
@@ -104,6 +112,40 @@ def test_guaranteed_opportunity_uses_dedicated_text(library: ContentLibrary) -> 
         update={"pending_event": trigger.model_copy(update={"guaranteed": False})}
     )
     assert event_story(library, world, plain, None, NOON).story.text_zh != GUARANTEE_TEXT
+
+
+def test_guaranteed_opportunity_has_own_who(library: ContentLibrary) -> None:
+    """5B-4f（玩法 PM 2026-11-03 代決）：保底觸發的「誰」是「焦痕未冷的古松」；一般觸發照舊。"""
+    world = make_world()
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    trigger = EventTrigger(
+        region="cloud_ridge",
+        location="old_pine_altar",
+        skeleton="storm_altar",
+        candidates=("storm_altar",),
+        weather="clear",
+        day_phase="day",
+        at=NOON,
+        guaranteed=True,
+    )
+    char = char.model_copy(update={"location": "old_pine_altar", "pending_event": trigger})
+    plain = char.model_copy(
+        update={"pending_event": trigger.model_copy(update={"guaranteed": False})}
+    )
+    action = event_story(library, world, char, None, NOON)
+    assert action.story.actor_zh == GUARANTEE_WHO
+    assert event_story(library, world, plain, None, NOON).story.actor_zh == PLAIN_WHO
+    for state, who in ((char, GUARANTEE_WHO), (plain, PLAIN_WHO)):
+        card = event_view(library, world, state, NOON, ())
+        assert card is not None and (card.who_zh, card.actor_zh) == (who, who)
+        assert state.pending_event is not None
+        line = event_lines(
+            library, "cloud_ridge", (EventTriggeredEvent(trigger=state.pending_event),), state
+        )
+        assert line == (f"在古松祭壇遇到一件事：{who}。",)
+    told = world_step(library, world, char, action, NOON).char
+    card = event_view(library, world, told, NOON, (action,))
+    assert card is not None and (card.who_zh, card.actor_zh) == (GUARANTEE_WHO, GUARANTEE_WHO)
 
 
 def test_opportunity_hint_line(library: ContentLibrary) -> None:

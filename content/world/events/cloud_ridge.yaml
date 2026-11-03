@@ -181,6 +181,7 @@ skeletons:
     day_phase: night
     weather: [rain]
     # 5B-4e（18.7.6「5B-4d 代決」）：保底觸發（第 6 天起、不看天氣時段）時的專用旁白，晴天也通
+    guarantee_who_zh: 焦痕未冷的古松  # 5B-4f：保底觸發時事件卡的「誰」（玩法 PM 2026-11-03 代決）
     guarantee_text_zh: 古松樹皮上的焦痕還在發燙。你伸手一碰，一道細細的電流竄過掌心——像是有什麼在等你。
     solutions:
       - {kind: opportunity, note_zh: 帶「帶電」技能靠近, requires_keyword: charged}  # 18.4 補充：裝備技能任一招帶「帶電」（5B-2）
