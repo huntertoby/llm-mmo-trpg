@@ -3,7 +3,7 @@
 id: sect_summit_array_stone
 name_zh: 陣眼石靈
 attributes: {str: 10, dex: 6, con: 16, int: 6, wis: 10, wil: 10}
-max_hp: 40
+max_hp: 30
 speed: 0
 armor_bonus: 4
 weapon: fist
