@@ -63,6 +63,7 @@ def _test_maps() -> dict[str, FieldMapDef]:
         "entry": [1, 2],
         "doors": [{"id": "herb_door", "at": [3, 0], "to": "elixir_cave", "hidden_until": "reveal"}],
         "teleport_stones": [{"id": "stone_herb", "at": [1, 1]}],
+        "npcs": [{"id": "granny_du", "at": [5, 4]}],
     }
     cave = {
         "id": "elixir_cave",
@@ -91,10 +92,15 @@ def _test_maps() -> dict[str, FieldMapDef]:
     return {m["id"]: FieldMapDef.model_validate(m) for m in (herb, cave, ember)}
 
 
+NO_MAP = "hunter_hut"
+"""測試內容庫裡拿掉實地地圖的地點（「沒有地圖照舊 travel」用；不管正式內容有沒有畫）。"""
+
+
 @pytest.fixture(scope="module")
 def calm_field(field_library: ContentLibrary) -> ContentLibrary:
     calm = with_rules(field_library, encounter={"base_permille": 0, "per_level_permille": 0})
-    return dataclasses.replace(calm, field_maps={**calm.field_maps, **_test_maps()})
+    kept = {k: m for k, m in calm.field_maps.items() if m.place != NO_MAP}
+    return dataclasses.replace(calm, field_maps={**kept, **_test_maps()})
 
 
 @pytest.fixture(scope="module")
@@ -183,7 +189,6 @@ def test_walk_costs_nothing(calm_field: ContentLibrary) -> None:
         (ENTRY, [(13, 9)], "不相鄰"),  # 跳格
         (ENTRY, [(11, 9)], "不相鄰"),  # 原地
         ((2, 6), [(2, 5)], "走不過去"),  # 牆
-        ((13, 8), [(13, 7)], "走不過去"),  # NPC（杜婆婆）站的格子
         ((8, 8), [(8, 7)], "走不過去"),  # 石柱（懸賞板）
         ((0, 0), [(-1, 0)], "走不過去"),  # 地圖外
         ((3, 14), [(3, 15), (3, 16), (2, 16)], "走不過去"),  # 木棧橋旁邊是霧河（深淵）
@@ -198,6 +203,13 @@ def test_illegal_walk(
     char = _char(calm_field, field=_at(*start))
     with pytest.raises(WorldActionError, match=message):
         _step(calm_field, char, WalkAction(path=tuple(path)))
+
+
+def test_npc_blocks_walk(calm_field: ContentLibrary) -> None:
+    """NPC 站的格子不能走（測試的藥師谷 (5, 4) 站著 NPC）。"""
+    char = _char(calm_field, location="herb_valley", field=_at(4, 4, "herb_valley"))
+    with pytest.raises(WorldActionError, match="走不過去"):
+        _step(calm_field, char, _walk((5, 4)))
 
 
 def test_height_limit(calm_field: ContentLibrary) -> None:

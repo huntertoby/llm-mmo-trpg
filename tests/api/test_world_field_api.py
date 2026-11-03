@@ -45,40 +45,40 @@ def _act(client: TestClient, cid: str, **action: Any) -> Any:
     return client.post(f"/api/world/characters/{cid}/actions", json=action)
 
 
-def test_view_has_field(client: TestClient) -> None:
+def test_view_has_field(client: TestClient, field_library: ContentLibrary) -> None:
+    """畫面的 ``field`` 照內容資料投影（座標、高度都從地圖定義算，不寫死正式內容的數字）。"""
+    found = field_library.field_maps["mist_ferry"]
     view = _ok(client.post("/api/world/characters", json=START), 201)
     field = view["field"]
     assert field["map_id"] == "mist_ferry"
-    assert field["name_zh"] == "霧渡鎮"
-    assert (field["width"], field["height"]) == (24, 18)
-    assert len(field["tiles"]) == 24 * 18
-    assert field["tiles"][0] == {
-        "x": 0,
-        "y": 0,
-        "height": 1,
-        "terrain": "grass",
-        "surface": "none",
-        "walkable": True,
-    }
+    assert field["name_zh"] == found.name_zh
+    assert (field["width"], field["height"]) == (found.width, found.height)
+    assert len(field["tiles"]) == found.width * found.height
+    grid = found.grid()
+    assert [(t["x"], t["y"], t["height"], t["terrain"]) for t in field["tiles"]] == [
+        (x, y, h, terrain) for y, row in enumerate(grid) for x, (h, terrain) in enumerate(row)
+    ]
     tiles = {(t["x"], t["y"]): t for t in field["tiles"]}
-    assert tiles[(1, 2)]["walkable"] is False  # 牆（建築）
-    assert tiles[(13, 7)]["walkable"] is False  # NPC 站的格子
-    assert field["max_climb"] >= 1
+    walls = [(t["x"], t["y"]) for t in field["tiles"] if t["terrain"] == "wall"]
+    assert walls and all(tiles[c]["walkable"] is False for c in walls)  # 牆（建築）
+    assert all(tiles[npc.at]["walkable"] is False for npc in found.npcs)  # NPC 站的格子
+    assert tiles[found.entry]["walkable"] is True
+    assert field["max_climb"] == field_library.ruleset.core.max_climb_height
     assert field["hero"]["weapon_id"] == "fire_staff"
     assert field["hero"]["weapon_class"] == "focus"
-    assert field["me"] == {"x": 11, "y": 9, "facing": "s"}
-    assert {e["id"] for e in field["exits"]} == {
-        "to_hunter_hut",
-        "to_ferry_steps",
-        "to_ashen_ferry",
+    assert (field["me"]["x"], field["me"]["y"]) == found.entry
+    assert {e["id"] for e in field["exits"]} == {e.id for e in found.exits}
+    assert {d["id"] for d in field["doors"]} == {
+        d.id for d in found.doors if d.hidden_until != "reveal"
     }
-    assert {d["to_name_zh"] for d in field["doors"]} == {"霧渡鎮酒館", "石記鐵鋪"}
-    assert field["stones"] == [{"id": "stone_mist_ferry", "x": 12, "y": 8, "unlocked": False}]
-    assert [(n["name_zh"], n["x"], n["y"]) for n in field["npcs"]] == [
-        ("渡婆婆", 13, 7),
-        ("柳掌櫃", 15, 12),
+    assert field["stones"] == [
+        {"id": s.id, "x": s.at[0], "y": s.at[1], "unlocked": False} for s in found.teleport_stones
     ]
-    assert {f["kind"] for f in field["facilities"]} == {"shop", "notice_board", "mentor"}
+    assert [(n["id"], n["x"], n["y"]) for n in field["npcs"]] == [
+        (n.id, n.at[0], n.at[1]) for n in found.npcs
+    ]
+    assert all(n["name_zh"] != n["id"] for n in field["npcs"])  # 名字來自人設卡
+    assert {f["kind"] for f in field["facilities"]} == {f.id for f in found.facilities}
 
 
 def test_walk_and_stone_actions(client: TestClient, tmp_path: Path) -> None:
@@ -102,8 +102,10 @@ def test_walk_and_stone_actions(client: TestClient, tmp_path: Path) -> None:
     root = tmp_path / "saves" / "world"
     log = read_log((root / LOG_FILE).read_text(encoding="utf-8"))
     assert log.stale_through is None
-    assert [e.action.kind for e in log.entries] == ["walk", "walk"]
-    assert len(getattr(log.entries[1].action, "path", ())) == 11
+    # 進渡口石階時可能擲出地點事件（角色 ID 每次不同，亂數跟著變），說書紀錄 `narrate` 不在這裡比
+    walks = [e for e in log.entries if e.action.kind != "narrate"]
+    assert [e.action.kind for e in walks] == ["walk", "walk"]
+    assert len(getattr(walks[1].action, "path", ())) == 11
     saved = loads_char((root / "chars" / f"{cid}.json").read_text(encoding="utf-8"))
     assert saved.format == "trpg-char/2"
     assert saved.field is not None and (saved.field.map, saved.field.x) == ("ferry_steps", 1)
