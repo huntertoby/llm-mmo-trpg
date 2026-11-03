@@ -510,6 +510,8 @@ class LeagueEntry(_Model):
     snapshot: ShadowSnapshot
     ai: str | None = Field(default=None, pattern=ID_PATTERN)
     """報名的 AI 打法（``None``＝快照的預設打法）。"""
+    allocation: dict[Attribute, int] | None = None
+    """（5F-4b，#32）報名時的屬性點重新分配（拉到上限後全部可配的點；``None``＝照自動配點）。"""
     entered_at: int = Field(ge=0)
     """第一次報名的 UTC 秒（更新不改；排名同分時報名較早的在前）。"""
 

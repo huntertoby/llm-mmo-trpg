@@ -17,6 +17,9 @@ from trpg.shared.types import Attribute, Team
 from trpg.world.actions import CampAction
 from trpg.world.errors import WorldActionError
 from trpg.world.league import (
+    league_auto_allocation,
+    league_base_attributes,
+    league_point_pool,
     league_rules,
     league_schedule,
     league_spawns,
@@ -197,6 +200,41 @@ def test_leveled_snapshot(library: ContentLibrary, three: WorldState) -> None:
     assert {s.id for s in leveled.skills} == set(leveled.hero.skills)
     assert all(s.tier == 3 for s in leveled.skills)
     assert leveled_snapshot(library, leveled) == leveled
+
+
+def test_signup_reallocation(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5F-4b（#32）：報名時可以把全部可配的點重新分配；總和要剛好；不配＝自動配點。"""
+    alice = make_char("alice")
+    snap = shadow_snapshot(alice, NOON)
+    pool = league_point_pool(library, snap)
+    assert pool == sum(snap.attribute_spent.values()) + snap.attribute_points + 9 * (
+        library.roguelite.attribute_points_per_level
+    )
+    alloc = {Attribute.CON: pool - 1, Attribute.DEX: 1}
+    world = world_step(
+        library, make_world(), alice, LeagueEnterAction(allocation=alloc), NOON, actor="acc1"
+    ).world
+    (entry,) = world.league_entries
+    assert entry.allocation == alloc
+    leveled = leveled_snapshot(library, entry.snapshot, entry.allocation)
+    base = league_base_attributes(snap)
+    assert leveled.hero.attributes[Attribute.CON] == base[Attribute.CON] + pool - 1
+    assert leveled.hero.attributes[Attribute.DEX] == base[Attribute.DEX] + 1
+    assert leveled.attribute_spent == alloc
+    assert (
+        alice.hero.attributes
+        == world_step(  # 角色本身不變
+            library, world, alice, LeagueEnterAction(), NOON, actor="acc1"
+        ).char.hero.attributes
+    )
+    # 不配：和自動配點一樣
+    auto = league_auto_allocation(library, snap)
+    assert leveled_snapshot(library, snap) == leveled_snapshot(library, snap, auto)
+    for bad in ({Attribute.CON: pool + 1}, {Attribute.CON: pool + 1, Attribute.DEX: -1}):
+        with pytest.raises(WorldActionError, match="配點不合法"):
+            world_step(
+                library, make_world(), alice, LeagueEnterAction(allocation=bad), NOON, actor="a"
+            )
 
 
 # ---------------------------------------------------------------------------
