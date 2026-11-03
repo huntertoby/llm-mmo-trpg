@@ -208,7 +208,11 @@ def _fact_entries(
             card = cards.get(npc_id)
             name = card.name_zh if card is not None else npc_id
             text = f"{name}（{'、'.join(b.text_zh for b in bonds)}）"
-            words = _keywords(name, card.aliases_zh if card is not None else ())
+            words = _keywords(
+                name,
+                card.aliases_zh if card is not None else (),
+                *(word for bond in bonds for word in (bond.text_zh, *bond.aliases_zh)),
+            )
             entries.append(
                 (SituationFact(item="npc_bond", fact=f"npc:{npc_id}", text_zh=text), words)
             )
@@ -251,7 +255,8 @@ def situation_fact_keywords(
 ) -> dict[str, tuple[str, ...]]:
     """事實編號 → 關鍵詞（Phase 5C-3d）：玩家原文含其中任一個（完全字串包含）才算提到這筆。
 
-    ① 線頭的 ``text_zh``＋``aliases_zh``；② NPC 的 ``name_zh``＋``aliases_zh``；③「補給」＋
+    ① 線頭的 ``text_zh``＋``aliases_zh``；② NPC 的 ``name_zh``＋``aliases_zh``＋相關線頭
+    （``npc`` 等於該 NPC）的 ``text_zh``＋``aliases_zh``（5C-3e）；③「補給」＋
     ``exchange_aliases_zh``；④ 弱點的 ``text_zh``＋``aliases_zh``。第一個是事實本身的名稱。
     """
     return {fact.fact: words for fact, words in _fact_entries(library, world, char, template, now)}

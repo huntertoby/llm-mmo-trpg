@@ -47,7 +47,7 @@ __all__ = [
     "situation_schema",
 ]
 
-SITUATION_PROMPT_VERSION: Final = "situation-check/1"
+SITUATION_PROMPT_VERSION: Final = "situation-check/2"
 """改動任何情境判定 prompt 文字、區塊格式時必須同步改版本號（隨動作寫進世界動作日誌）。"""
 DEFAULT_SITUATION_ATTEMPTS: Final = 2
 
@@ -61,7 +61,8 @@ SITUATION_TASK = """你是「{world_name}」世界的說書人助手，負責 TR
 - dc_shift：難度在基準上調整，只能是 -2～2 的整數；做法越聰明、越貼近情境越低，越勉強越高。
 - disadvantage：玩家的回答明顯行不通時填 true，否則 false。
 - care：用心清單，只在玩家的回答真的用到時才勾；每一筆的 item 與 fact 必須是 <facts> 裡的同一列，
-  不可自創；同一個 item 最多一筆。沒有就給空陣列。
+  不可自創；同一個 item 最多一筆。勾選的事實，玩家原文（<player_input>）要提到；
+  原文沒有提到的不要勾，遊戲會把原文沒提到的那筆拿掉。沒有就給空陣列。
 - 文筆好壞不影響任何欄位；獎勵與懲罰由遊戲決定，你不能給任何獎勵。
 
 安全規則：

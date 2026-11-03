@@ -26,7 +26,7 @@ skeletons:
       - {kind: situation, attributes: [wis], note_zh: 找安全路}
       - {kind: abandon}
     threads:
-      - {id: peddler_owes_you, text_zh: 商人欠你人情, aliases_zh: [欠你人情, 欠我人情, 人情]}
+      - {id: peddler_owes_you, text_zh: 商人欠你人情, aliases_zh: [欠你人情, 欠我人情, 行商的人情]}
       - {id: wolves_driven_down, text_zh: 狼群是被趕下山的, aliases_zh: [趕下山]}
   - id: lost_acolyte
     number: 2
@@ -83,7 +83,7 @@ skeletons:
       - {kind: situation, attributes: [str, dex], note_zh: 攀爬}
       - {kind: abandon}
     threads:
-      - {id: alchemist_owes_you, text_zh: 煉丹師欠你人情, aliases_zh: [煉丹師, 人情]}
+      - {id: alchemist_owes_you, text_zh: 煉丹師欠你人情, aliases_zh: [煉丹師]}
   - id: monks_dispute
     number: 6
     who_zh: 兩名修士
@@ -146,7 +146,7 @@ skeletons:
       - {kind: parley, note_zh: 給青竹節（可用人情代替）, cost_supplies: 2, waive_thread: peddler_owes_you, threads: [ferryman_daughter]}
       - {kind: situation, attributes: [int], note_zh: 修理}
     threads:
-      - {id: ferryman_daughter, text_zh: 渡船夫的女兒在觀裡, aliases_zh: [女兒]}
+      - {id: ferryman_daughter, text_zh: 渡船夫的女兒在觀裡, aliases_zh: [渡船夫的女兒, 船夫的女兒]}
   - id: bear_den
     number: 10
     who_zh: 石背熊母子
@@ -160,7 +160,7 @@ skeletons:
       - {kind: situation, attributes: [wis], note_zh: 悄悄退出}
       - {kind: abandon}
     threads:
-      - {id: shards_under_den, text_zh: 熊巢下有源晶碎片, aliases_zh: [源晶碎片, 源晶]}
+      - {id: shards_under_den, text_zh: 熊巢下有源晶碎片, aliases_zh: [熊巢下, 熊巢]}
   - id: crane_envoy
     number: 11
     who_zh: 雲鶴使
@@ -214,7 +214,7 @@ skeletons:
       - {kind: situation, attributes: [dex], note_zh: 偷走}
     threads:
       - id: shards_to_ashen
-        aliases_zh: [灰燼荒原]
+        aliases_zh: [送往灰燼荒原, 運往荒原, 運到荒原]
         scope: world
         text_zh: 碎片被送往灰燼荒原（接主線第 2 章）
         on_expire_zh: 灰燼之心第 1 階段護甲 +1（全服；荒原骨架 13 的個人攔截可抵銷）
@@ -240,7 +240,7 @@ skeletons:
     solutions:
       - {kind: situation, attributes: [wil], note_zh: 文字回答＋用心清單（#85）}
     threads:
-      - {id: tavern_rumor, text_zh: 隨機傳聞（機遇或隱藏地點）, aliases_zh: [傳聞]}
+      - {id: tavern_rumor, text_zh: 隨機傳聞（機遇或隱藏地點）}
   - id: lantern_patrol
     number: 17
     who_zh: 夜裡的燈籠隊
@@ -308,7 +308,7 @@ skeletons:
       - {kind: situation, attributes: [wil], note_zh: 異象}
       - {kind: situation, attributes: [int], note_zh: 學識}
     threads:
-      - {id: frost_chime_we, text_zh: 霜音說裂痕裡有「我們」（接主線第 2～3 章碎晶之主的伏筆）, npc: frost_chime, aliases_zh: [我們, 碎晶之主]}
+      - {id: frost_chime_we, text_zh: 霜音說裂痕裡有「我們」（接主線第 2～3 章碎晶之主的伏筆）, npc: frost_chime, aliases_zh: [裂痕裡有我們, 「我們」, 碎晶之主]}
   # 18.7.7 信賴後的祕密事件（5B-4b）：渡婆婆到信賴、說出祕密時解鎖；事件結果才給線頭（#85）
   - id: granny_past
     number: 22
