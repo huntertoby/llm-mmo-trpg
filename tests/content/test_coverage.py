@@ -31,6 +31,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "crystal_surge": "只由源晶柱的階段 add_statuses 掛上（5F-3），沒有技能施加",
         "crystal_surge_2": "只由源晶柱的階段 add_statuses 掛上（5F-3），沒有技能施加",
         "rift_collapse": "只由碎晶之主第 4 階段的 add_statuses 掛上（5F-3），沒有技能施加",
+        "rift_channel": "只由碎晶之主的 opening_statuses 開場掛上、第 2 階段移除（5F-3b）",
         "oath_bonus_easy": "只由誓約在開戰時掛上（5C-3，trpg.engine.oaths），沒有技能施加",
         "oath_bonus_medium": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
         "oath_bonus_hard": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
