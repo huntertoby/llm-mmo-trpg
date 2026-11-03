@@ -400,9 +400,9 @@ function makeCanvas(dpr: number, humanoid = false): HTMLCanvasElement {
   return c;
 }
 
-function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr: number): HTMLCanvasElement | null {
+function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr: number, ground: boolean): HTMLCanvasElement | null {
   const style = HUMANOID_STYLE[look.variant];
-  const fig = renderFigureCanvas(spec, facing, false, dpr, style?.ground ?? true);
+  const fig = renderFigureCanvas(spec, facing, false, dpr, ground && (style?.ground ?? true));
   if (fig === null) return null;
   if (style === undefined) return fig;
   const out = makeCanvas(dpr, true);
@@ -442,8 +442,8 @@ function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr:
   return out;
 }
 
-/** 非人形召喚物的貼圖：地面影子＋身體（C 畫風：墨線取代黑色剪影外框；藤蔓整體半透明 0.9）。 */
-function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvasElement | null {
+/** 非人形召喚物的貼圖：地面影子＋身體（C 畫風：墨線取代黑色剪影外框；藤蔓整體半透明 0.9）。`ground` ＝ false 時不畫地面（影子、水窪、光環）。 */
+function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number, ground: boolean): HTMLCanvasElement | null {
   const size = SIZE_SCALE[look.size];
   const off = makeCanvas(dpr);
   const o = off.getContext("2d");
@@ -456,7 +456,7 @@ function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvas
     c.scale(size, size);
   }
   drawSummonBody(o, look, facing);
-  drawSummonGround(ctx, look);
+  if (ground) drawSummonGround(ctx, look);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = look.body === "plant" ? 0.9 : 1;
   ctx.drawImage(off, 0, 0);
@@ -466,12 +466,12 @@ function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvas
 
 /**
  * 產生召喚物貼圖用的離屏 canvas（人形與紙娃娃同尺寸 DOLL_W×DOLL_H；其他體型 SUMMON_W×SUMMON_H，腳底在 (W/2, FOOT_Y)）。
- * 人形用 `humanoid`（已解析好的紙娃娃規格）；沒有 DOM 時回傳 `null`。
+ * 人形用 `humanoid`（已解析好的紙娃娃規格）；沒有 DOM 時回傳 `null`。`ground` ＝ false 時不畫地上的東西（6C-8 受擊白閃用的身體）。
  */
-export function renderSummonCanvas(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null, dpr: number): HTMLCanvasElement | null {
+export function renderSummonCanvas(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null, dpr: number, ground = true): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
-  if (look.body === "humanoid") return humanoid === null ? null : humanoidCanvas(look, facing, humanoid, dpr);
-  return bodyCanvas(look, facing, dpr);
+  if (look.body === "humanoid") return humanoid === null ? null : humanoidCanvas(look, facing, humanoid, dpr, ground);
+  return bodyCanvas(look, facing, dpr, ground);
 }
 
 /** 關鍵字 → 色（`0xRRGGBB` 數字，給 Pixi 用）。 */

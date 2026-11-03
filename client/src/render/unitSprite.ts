@@ -292,6 +292,35 @@ export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Te
   return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null), frame.flash ?? 0);
 }
 
+/**
+ * 受擊時疊白色剪影閃白的單位（6C-8）：形態、有外觀的召喚物、倒下或倒地狀態的人；異形（6M-3）與站著的紙娃娃（6M-4）
+ * 有自己的受擊片段，回傳 `null`。判斷順序和 `dollNode` 選貼圖的順序相同。
+ */
+export function overlayFlashKind(u: UnitDraw): "form" | "summon" | "downed" | null {
+  if (creatureOf(u) !== null) return null;
+  if (formArtOfUnit(u, specOfUnit(u)) !== null) return "form";
+  const sl = summonLookOf(u);
+  if (sl !== null && !(u.downed && sl.body === "humanoid")) return "summon";
+  return u.downed || isProne(u) ? "downed" : null;
+}
+
+/** `overlayFlashKind` 的白色剪影貼圖（同一張圖不含地上影子、轉白；和小人的貼圖同畫布大小）；不需要或畫不出來時 `null`。 */
+export function flashTexture(art: ArtTextures, u: UnitDraw): Texture | null {
+  const kind = overlayFlashKind(u);
+  if (kind === null) return null;
+  const spec = specOfUnit(u);
+  if (kind === "form") {
+    const form = formArtOfUnit(u, spec)!;
+    return art.formFlash(form.id, form.hero, form.element, u.facing, u.downed);
+  }
+  if (kind === "summon") {
+    const sl = summonLookOf(u)!;
+    return art.summonFlash(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null);
+  }
+  const prone = summonLookOf(u) === null && isProne(u) ? proneBody(1, u.facing).pose : null;
+  return art.figureFlash(spec, u.facing, u.downed, prone);
+}
+
 /** 有紙娃娃骨架的人形（不是異形、形態、召喚物）：受擊、待機的小動作會換骨架姿勢（6M-4）。 */
 export function hasSkeleton(u: UnitDraw): boolean {
   if (u.downed || summonLookOf(u) !== null || creatureOf(u) !== null) return false;

@@ -41,7 +41,8 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, hasSkeleton, isLinked, isProne, PRONE, Pulses, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, PRONE, Pulses, type BodyFrame } from "./unitSprite";
+import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { IdleMotion } from "./idleMotion";
 import { arriveFrame, leaveFrame, type TransitFrame, type TransitKind } from "./doorClips";
 import { DOLL_SCALE } from "./paperdoll";
@@ -1439,6 +1440,41 @@ export class BattleRenderer {
     };
   }
 
+  /** 站在 `p`、受擊時疊白色剪影閃白的單位（形態、召喚物、倒地的人；6C-8）ID；沒有為 `null`。 */
+  private overlayFlashAt(p: Pos): string | null {
+    for (const [id, u] of this.unitDrawOf) if (u.x === p.x && u.y === p.y && overlayFlashKind(u) !== null) return id;
+    return null;
+  }
+
+  /**
+   * 形態、召喚物、倒地的人受擊（6C-8）：沒有骨架，不換姿勢，只在小人上疊一層白色剪影（同一張圖不含地上影子、轉白），
+   * 不透明度照人形受擊片段的白閃（開頭 0.85、播到 1/4 消失）；不畫整片白圓、不整格變白。結束時拿掉。
+   */
+  private overlayHit(unitId: string, startMs: number, ms: number): Effect {
+    const current = () => {
+      const s = this.unitSprites.get(unitId);
+      return s === undefined || s.destroyed ? null : s;
+    };
+    return {
+      node: new Container(),
+      startMs,
+      endMs: startMs + ms,
+      update: (t) => {
+        const s = current();
+        const draw = this.unitDrawOf.get(unitId);
+        if (s === null || draw === undefined) return;
+        const body = bodyNodes(s).find((n) => n.label === BODY_LABEL);
+        const tex = flashTexture(this.art, draw);
+        if (body === undefined || tex === null) return;
+        overlayFlash(body, tex, humanHit(t).flash);
+      },
+      end: () => {
+        const s = current();
+        if (s !== null) clearFlash(s);
+      },
+    };
+  }
+
   /** 把一組效果放進效果圖層並啟動效果迴圈。 */
   private launch(effects: readonly Effect[]): void {
     for (const e of effects) {
@@ -1461,12 +1497,14 @@ export class BattleRenderer {
     for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, at));
     for (const hit of vfx.hits) {
       // 異形（6M-3）：受擊只閃角色的剪影（不畫整片白圓），身體往後彈一下
-      // 有骨架的人形（6M-4，美術 PM 檢查）：同樣只閃剪影、往後彈；形態、召喚物、倒地的人照舊畫白圓
+      // 有骨架的人形（6M-4，美術 PM 檢查）：同樣只閃剪影、往後彈；形態、召喚物、倒地的人（6C-8）疊白色剪影閃白、不畫白圓
       const foe = this.creatureAt(hit.pos);
       const doll = foe === null ? this.dollAt(hit.pos) : null;
-      effects.push(...hitEffects(hit, now, impactMs, auraHits, at, foe === null && doll === null));
+      const flat = foe === null && doll === null ? this.overlayFlashAt(hit.pos) : null;
+      effects.push(...hitEffects(hit, now, impactMs, auraHits, at, foe === null && doll === null && flat === null));
       if (foe !== null) effects.push(this.creatureHit(foe, now + hit.atMs, Math.max(160, impactMs)));
       if (doll !== null) effects.push(this.dollHit(doll, now + hit.atMs, Math.max(160, impactMs)));
+      if (flat !== null) effects.push(this.overlayHit(flat, now + hit.atMs, Math.max(160, impactMs)));
     }
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
