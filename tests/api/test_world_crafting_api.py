@@ -70,6 +70,13 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     assert len(gear) == 2 and gear[0]["code"] == recipe["code"]
     first, second = gear[0]["item"], gear[1]["item"]
     assert first != second
+    # 5D-4：背包畫面的裝備卡（和目前裝備比較）與 9 欄穿戴中
+    inventory = view["inventory"]
+    assert [c["item"]["id"] for c in inventory["gear_cards"]] == [first, second]
+    card = inventory["gear_cards"][0]
+    assert card["slot"] == "neck" and card["slot_zh"] and card["item"]["points"] is not None
+    assert len(inventory["equipment"]) == 9
+    assert {e["slot"] for e in inventory["equipment"]} >= {"main_hand", "neck"}
 
     assert gear[0]["can_enhance"], gear[0]["enhance_zh"]
     view = _act(client, cid, kind="enhance", station=SMITHY, item=first)
