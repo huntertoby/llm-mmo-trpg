@@ -8495,6 +8495,129 @@
         ],
         "title": "FieldDoorView"
       },
+      "FieldEnemyUnitView": {
+        "properties": {
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "affix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affix"
+          },
+          "elite": {
+            "type": "boolean",
+            "title": "Elite",
+            "default": false
+          },
+          "third": {
+            "type": "boolean",
+            "title": "Third",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit",
+          "name_zh"
+        ],
+        "title": "FieldEnemyUnitView",
+        "description": "敵群裡的一名（6C-1 陣容摘要）。"
+      },
+      "FieldEnemyView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "facing": {
+            "type": "string",
+            "enum": [
+              "n",
+              "e",
+              "s",
+              "w"
+            ],
+            "title": "Facing"
+          },
+          "patrol": {
+            "type": "boolean",
+            "title": "Patrol"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "elite": {
+            "type": "boolean",
+            "title": "Elite"
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/FieldEnemyUnitView"
+            },
+            "type": "array",
+            "title": "Units",
+            "default": []
+          },
+          "sight": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Sight",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "x",
+          "y",
+          "facing",
+          "patrol",
+          "group",
+          "name_zh",
+          "elite"
+        ],
+        "title": "FieldEnemyView",
+        "description": "地圖上看得見的一隊敵人（Phase 6C-1）：位置、朝向、陣容摘要、視野格。"
+      },
       "FieldExitView": {
         "properties": {
           "id": {
@@ -9117,6 +9240,14 @@
             },
             "type": "array",
             "title": "Stone Targets",
+            "default": []
+          },
+          "enemies": {
+            "items": {
+              "$ref": "#/components/schemas/FieldEnemyView"
+            },
+            "type": "array",
+            "title": "Enemies",
             "default": []
           }
         },

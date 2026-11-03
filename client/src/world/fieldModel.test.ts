@@ -60,6 +60,7 @@ function town(over: Partial<FieldView> = {}): FieldView {
     max_climb: 1,
     hero: { template_id: "hero_mage", weapon_id: "fire_staff", weapon_class: "focus", doll_look: null, race_look: null, equipment: [] },
     stone_targets: [],
+    enemies: [],
     ...over,
   };
 }
@@ -254,5 +255,54 @@ describe("設施與 NPC 的互動", () => {
     const end = path[path.length - 1]!;
     expect(Math.abs(end.x - 1) + Math.abs(end.y - 4)).toBe(1);
     expect(pathNextTo(town({ me: { x: 2, y: 4, facing: "n" } }), { x: 1, y: 4 })).toEqual([]);
+  });
+});
+
+describe("看得見的敵人（6C-1）", () => {
+  const enemy = {
+    id: "e0",
+    x: 4,
+    y: 4,
+    facing: "w" as const,
+    patrol: true,
+    group: "bandit_raiders",
+    name_zh: "盜賊",
+    elite: true,
+    units: [
+      { unit: "bandit_blade", name_zh: "刀盜", affix: "swift", elite: true, third: false },
+      { unit: "bandit_archer", name_zh: "弓盜", affix: null, elite: false, third: false },
+      { unit: "mist_wolf", name_zh: "霧狼", affix: null, elite: false, third: true },
+    ],
+    sight: [
+      [3, 4],
+      [2, 4],
+      [3, 2],
+    ] as [number, number][],
+  };
+
+  it("敵群畫成敵方單位：陣容第一名的範本、朝向照伺服器", () => {
+    const view = fieldDrawModel(town({ enemies: [enemy] }));
+    const unit = view.units.find((u) => u.id === "enemy_e0");
+    expect(unit).toBeDefined();
+    expect(unit?.team).toBe("enemy");
+  });
+
+  it("視野畫淡紅（門與傳送石那一格不重疊）、精英多一個「精」", () => {
+    const marks = fieldHighlights(town({ enemies: [enemy] }), null).telegraph;
+    const sight = marks.filter((m) => m.kind === "sight").map((m) => `${m.pos.x},${m.pos.y}`);
+    expect(sight).toEqual(["2,4", "3,4"]); // (3, 2) 是傳送石
+    expect(marks.find((m) => m.kind === "elite")?.glyph).toBe("精");
+  });
+
+  it("滑過敵群說明陣容，滑過視野格提示", () => {
+    const field = town({ enemies: [enemy] });
+    expect(hoverText(field, { x: 4, y: 4 })).toBe("盜賊・精英・2 名・另有第三方 1 名・巡邏");
+    expect(hoverText(field, { x: 2, y: 4 })).toBe("敵人的視野");
+  });
+
+  it("沒有敵人時不多畫東西", () => {
+    const marks = fieldHighlights(town(), null).telegraph;
+    expect(marks.some((m) => m.kind === "sight" || m.kind === "elite")).toBe(false);
+    expect(fieldDrawModel(town()).units.some((u) => u.id.startsWith("enemy_"))).toBe(false);
   });
 });

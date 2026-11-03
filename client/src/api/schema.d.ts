@@ -3445,6 +3445,66 @@ export interface components {
             /** To Name Zh */
             to_name_zh: string;
         };
+        /**
+         * FieldEnemyUnitView
+         * @description 敵群裡的一名（6C-1 陣容摘要）。
+         */
+        FieldEnemyUnitView: {
+            /** Unit */
+            unit: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Affix */
+            affix?: string | null;
+            /**
+             * Elite
+             * @default false
+             */
+            elite: boolean;
+            /**
+             * Third
+             * @default false
+             */
+            third: boolean;
+        };
+        /**
+         * FieldEnemyView
+         * @description 地圖上看得見的一隊敵人（Phase 6C-1）：位置、朝向、陣容摘要、視野格。
+         */
+        FieldEnemyView: {
+            /** Id */
+            id: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Facing
+             * @enum {string}
+             */
+            facing: "n" | "e" | "s" | "w";
+            /** Patrol */
+            patrol: boolean;
+            /** Group */
+            group: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Elite */
+            elite: boolean;
+            /**
+             * Units
+             * @default []
+             */
+            units: components["schemas"]["FieldEnemyUnitView"][];
+            /**
+             * Sight
+             * @default []
+             */
+            sight: [
+                number,
+                number
+            ][];
+        };
         /** FieldExitView */
         FieldExitView: {
             /** Id */
@@ -3715,6 +3775,11 @@ export interface components {
              * @default []
              */
             stone_targets: components["schemas"]["FieldStoneTargetView"][];
+            /**
+             * Enemies
+             * @default []
+             */
+            enemies: components["schemas"]["FieldEnemyView"][];
         };
         /**
          * FlashAction

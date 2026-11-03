@@ -1,6 +1,7 @@
 // 實地地圖（Phase 6B-3；docs/phases/Phase6計畫.md 第 5 節）的純函式：`WorldView.field` → 戰鬥渲染器的 `DrawModel`、
 // 出口／門／傳送石的標示、前端的 BFS 路徑、方向鍵、相鄰的設施與 NPC。規則以伺服器為準（`walk` 回來的位置），
 // 這裡的可站格與爬升上限都由伺服器下發（`FieldTileView.walkable`、`FieldView.max_climb`）。
+// Phase 6C-1：看得見的敵人畫成敵方紙娃娃，視野（前方扇形 4 格）畫淡紅；開不開打由伺服器判定。
 import type { BattleView, Facing, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
 import { buildDrawModel, type DrawModel } from "../battle/drawModel";
 import { HIGHLIGHT } from "../battle/glossary";
@@ -312,7 +313,47 @@ function heroUnit(field: FieldView, name: string): UnitView {
   } as UnitView;
 }
 
-/** `field` → 戰鬥渲染器吃的假 `BattleView`（地形、高低差、物件、表面照戰鬥畫法；主角與 NPC 是單位）。 */
+export type FieldEnemy = FieldView["enemies"][number];
+
+/** 敵群在渲染器裡的單位 ID。 */
+export function enemyUnitId(enemy: FieldEnemy): string {
+  return `enemy_${enemy.id}`;
+}
+
+/** 敵群 → 敵方單位（紙娃娃用陣容第一名的範本；朝向照伺服器）。 */
+function enemyUnit(enemy: FieldEnemy): UnitView {
+  const lead = enemy.units.find((u) => !u.third) ?? enemy.units[0];
+  return {
+    ...unitBase(enemyUnitId(enemy), enemy.x, enemy.y),
+    name_zh: enemy.name_zh,
+    team: "enemy",
+    template_id: lead?.unit ?? enemy.group,
+    facing: FACING[enemy.facing],
+    tags: enemy.elite ? ["elite"] : [],
+  } as UnitView;
+}
+
+/** 格子上的敵群（站的那一格）；沒有為 `null`。 */
+export function enemyAt(field: FieldView, p: Pos): FieldEnemy | null {
+  return (field.enemies ?? []).find((e) => e.x === p.x && e.y === p.y) ?? null;
+}
+
+/** 所有敵人看得到的格子（`x,y`）。走進去就開打、敵方先手。 */
+export function sightCells(field: FieldView): Set<string> {
+  const out = new Set<string>();
+  for (const e of field.enemies ?? []) for (const [x, y] of e.sight) out.add(`${x},${y}`);
+  return out;
+}
+
+/** 敵群的一行說明：名稱、精英、人數與巡邏／駐守。 */
+export function enemyText(enemy: FieldEnemy): string {
+  const foes = enemy.units.filter((u) => !u.third).length;
+  const third = enemy.units.length - foes;
+  const parts = [enemy.name_zh, enemy.elite ? "精英" : null, `${foes} 名`, third > 0 ? `另有第三方 ${third} 名` : null, enemy.patrol ? "巡邏" : "駐守"];
+  return parts.filter((p) => p !== null).join("・");
+}
+
+/** `field` → 戰鬥渲染器吃的假 `BattleView`（地形、高低差、物件、表面照戰鬥畫法；主角、NPC、敵群是單位）。 */
 export function fieldBattleView(field: FieldView, heroName = "你"): BattleView {
   const tiles: TileView[] = field.tiles.map((t) => ({
     x: t.x,
@@ -335,7 +376,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     height: field.height,
     tiles,
     objects,
-    units: [heroUnit(field, heroName), ...npcs],
+    units: [heroUnit(field, heroName), ...npcs, ...(field.enemies ?? []).map(enemyUnit)],
     traps: [],
     turn_order: [],
     active_unit: null,
@@ -367,12 +408,26 @@ export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
 
 const DOOR_COLOR = 0xe0b060;
 const STONE_COLOR = 0x7fd8ff;
+/** 敵人視野的淡紅（同 HUD 的 HP 紅）。 */
+export const SIGHT_COLOR = 0xe04a3a;
 
-/** 門與傳送石的淡色標示（借用環境預告的半透明外框＋小圖示）；`hover` 是滑鼠所在格。 */
+/** 門與傳送石的淡色標示（借用環境預告的半透明外框＋小圖示）、敵人視野的淡紅格與精英的「精」；`hover` 是滑鼠所在格。 */
 export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
+  const marked = new Set<string>([...field.doors.map((d) => `${d.x},${d.y}`), ...field.stones.map((s) => `${s.x},${s.y}`)]);
+  const sight = [...sightCells(field)]
+    .filter((c) => !marked.has(c))
+    .sort()
+    .map((c) => {
+      const [x, y] = c.split(",").map(Number) as [number, number];
+      return { pos: { x, y }, kind: "sight", glyph: "", color: SIGHT_COLOR, texts: ["敵人的視野"] };
+    });
   const telegraph: TelegraphMark[] = [
     ...field.doors.map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
     ...field.stones.map((s) => ({ pos: { x: s.x, y: s.y }, kind: "stone", glyph: "◆", color: s.unlocked ? STONE_COLOR : HIGHLIGHT.well, texts: ["傳送石"] })),
+    ...sight,
+    ...(field.enemies ?? [])
+      .filter((e) => e.elite)
+      .map((e) => ({ pos: { x: e.x, y: e.y }, kind: "elite", glyph: "精", color: SIGHT_COLOR, texts: [enemyText(e)] })),
   ];
   return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [] };
 }
@@ -384,6 +439,9 @@ export function hoverText(field: FieldView, p: Pos | null): string | null {
   if (portal?.kind === "exit") return `往 ${portal.name}`;
   if (portal?.kind === "door") return portal.name;
   if (portal?.kind === "stone") return "傳送石";
+  const enemy = enemyAt(field, p);
+  if (enemy !== null) return enemyText(enemy);
+  if (sightCells(field).has(key(p))) return "敵人的視野";
   const t = targetAt(field, p);
   if (t?.kind === "npc") return t.name;
   if (t?.kind === "facility") return FACILITY_ZH[t.facility] ?? t.facility;
