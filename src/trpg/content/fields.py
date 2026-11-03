@@ -21,6 +21,12 @@
 - **渡口只是出口**：傳送點地點沒有實地地圖，與它相連的地圖直接放一個 ``region: <gate_to>`` 的出口，
   這個出口同時算作「往傳送點的那條連線」。
 
+主城（21.1、21.5；6D-4）：``region: capital``、``location: capital``（室內圖寫
+``interior_of: capital``），
+放在 ``capital/``。主城不在任何區域的地點圖裡、沒有走路的出口，只能傳送抵達；它是安全區，沒有敵人
+（``spawns``）與營火（``campfires``），傳送石恰好 1 個；功能型 NPC 沒有人設卡，用 ``facilities`` 或
+``situation_objects`` 表示，不用 ``npcs``。抵達方式與安全區規則是 6D-5 的事，這裡只檢查地圖。
+
 驗證分兩層：單檔（:class:`FieldMapDef` 的 validator：網格、座標、出口在邊緣、ID 不重複）與跨檔案
 （:func:`field_map_report`：地點與連線、出口配對、地形與物件 ID、走得到、尺寸、傳送石、NPC）。
 還沒畫的地圖不算錯：對面還沒畫的出口列為「待補」。
@@ -53,6 +59,9 @@ from trpg.content.schemas import ContentModel
 from trpg.content.world_map import LocationDef, LocationMapDef
 
 __all__ = [
+    "CAPITAL_LOCATION",
+    "CAPITAL_NAME_ZH",
+    "CAPITAL_REGION",
     "FACILITY_KINDS",
     "LAYOUT_SIZES",
     "FacilityKind",
@@ -116,6 +125,13 @@ FACILITY_KINDS: tuple[str, ...] = (
     "hire",
     "enchanter",
 )
+
+CAPITAL_REGION = "capital"
+"""主城的 ``region``（不是碎界五區之一，沒有地點圖；6D-4）。"""
+CAPITAL_LOCATION = "capital"
+"""主城室外圖的 ``location``（室內圖的 ``interior_of``）。"""
+CAPITAL_NAME_ZH = "主城"
+"""``content check`` 進度列的名稱（主城的正式名稱待使用者決定，草稿待確認 1）。"""
 
 STONES_PER_REGION = (2, 3)
 """每區野外的傳送石數（21.2「每區 2～3 個，城鎮各 1 個」：城鎮那顆不算在內）；不在範圍內只警告
@@ -249,6 +265,11 @@ class FieldMapDef(ContentModel):
         return self.interior_of is not None
 
     @property
+    def is_capital(self) -> bool:
+        """主城的室外圖或室內圖（6D-4）。"""
+        return self.region == CAPITAL_REGION
+
+    @property
     def place(self) -> str:
         """所屬的地點 ID（室外圖＝``location``，室內圖＝``interior_of``）。"""
         place = self.location if self.location is not None else self.interior_of
@@ -290,6 +311,8 @@ class FieldMapDef(ContentModel):
             return self.layout
         if self.is_interior:
             return "interior"
+        if self.is_capital:
+            return "capital"
         if location is None:
             return "site"
         return _KIND_LAYOUT.get(location.kind, "site")
@@ -486,9 +509,15 @@ def field_map_report(
         if npcs is not None:
             _npc_problems(ctx, field, npcs)
     for key in sorted(ctx.outdoor):
-        _outdoor_links(ctx, ctx.outdoor[key])
+        if key[0] == CAPITAL_REGION:
+            _capital_links(ctx, ctx.outdoor[key])
+        else:
+            _outdoor_links(ctx, ctx.outdoor[key])
     for key in sorted(ctx.interiors):
         _interior_links(ctx, ctx.interiors[key])
+    for map_id in sorted(fields):
+        if fields[map_id].is_capital:
+            _safe_zone_problems(ctx, fields[map_id])
     _size_warnings(ctx, fields)
     _stone_checks(ctx)
     return FieldMapReport(
@@ -501,13 +530,14 @@ def field_map_report(
 def field_progress(
     world_maps: Mapping[str, LocationMapDef], fields: Mapping[str, FieldMapDef]
 ) -> list[RegionProgress]:
-    """每區有實地地圖的地點數／地點總數（室內圖不算）；依區域等級、ID 排序。"""
+    """每區有實地地圖的地點數／地點總數（室內圖不算）；依區域等級、ID 排序，最後是主城（1 張，
+    6D-4）。"""
     done: dict[str, set[str]] = {}
     for field in fields.values():
         if field.location is not None:
             done.setdefault(field.region, set()).add(field.location)
     ordered = sorted(world_maps.values(), key=lambda m: (m.level_min, m.region))
-    return [
+    regions = [
         RegionProgress(
             region=m.region,
             name_zh=m.name_zh,
@@ -516,14 +546,26 @@ def field_progress(
         )
         for m in ordered
     ]
+    capital = RegionProgress(
+        region=CAPITAL_REGION,
+        name_zh=CAPITAL_NAME_ZH,
+        done=len(done.get(CAPITAL_REGION, set()) & {CAPITAL_LOCATION}),
+        total=1,
+    )
+    return [*regions, capital]
 
 
 def _index(ctx: _Ctx, field: FieldMapDef) -> None:
     prefix = f"實地地圖 {field.id}"
-    if field.region not in ctx.world_maps:
+    if field.is_capital:
+        if field.place != CAPITAL_LOCATION:
+            what = "interior_of" if field.is_interior else "location"
+            ctx.errors.append(f"{prefix}：主城的 {what} 必須是 {CAPITAL_LOCATION}")
+            return
+    elif field.region not in ctx.world_maps:
         ctx.errors.append(f"{prefix}：未知的區域 {field.region}（沒有地點圖）")
         return
-    if ctx.loc(field.region, field.place) is None:
+    elif ctx.loc(field.region, field.place) is None:
         ctx.errors.append(f"{prefix}：區域 {field.region} 沒有地點 {field.place}")
         return
     if field.is_interior:
@@ -615,6 +657,13 @@ def _reach_problems(
 
 
 def _npc_problems(ctx: _Ctx, field: FieldMapDef, npcs: Mapping[str, Mapping[str, str]]) -> None:
+    if field.is_capital:
+        ctx.errors += [
+            f"實地地圖 {field.id}：NPC {n.id} 沒有人設卡（主城的功能型 NPC 用 facilities 或 "
+            "situation_objects，草稿待確認 2）"
+            for n in field.npcs
+        ]
+        return
     cards = npcs.get(field.region)
     if cards is None:
         return  # 這區沒有 NPC 人設卡檔（內容庫允許省略 world/npcs/），無從比對
@@ -782,6 +831,29 @@ def _edge_coverage(ctx: _Ctx, field: FieldMapDef) -> None:
         )
 
 
+def _capital_links(ctx: _Ctx, field: FieldMapDef) -> None:
+    """主城：沒有走路的出口（只能傳送抵達，21.1）；門只通往主城的室內圖。"""
+    prefix = f"實地地圖 {field.id}"
+    ctx.errors += [
+        f"{prefix} 的出口 {e.id}：主城沒有走路的出口（只能傳送抵達；浮橋用 situation_objects）"
+        for e in field.exits
+    ]
+    for door in field.doors:
+        if (CAPITAL_REGION, door.to) not in ctx.interiors:
+            ctx.errors.append(f"{prefix} 的門 {door.id}：{door.to} 不是主城的室內圖")
+        else:
+            _check_door(ctx, field, door)
+
+
+def _safe_zone_problems(ctx: _Ctx, field: FieldMapDef) -> None:
+    """主城（含室內）是安全區：沒有敵人、沒有營火（草稿第 4 節：不能紮營，直接休息）。"""
+    prefix = f"實地地圖 {field.id}"
+    if field.spawns:
+        ctx.errors.append(f"{prefix}：主城是安全區，不可有 spawns")
+    if field.campfires:
+        ctx.errors.append(f"{prefix}：主城不能紮營，不可有 campfires")
+
+
 def _interior_links(ctx: _Ctx, field: FieldMapDef) -> None:
     prefix = f"室內圖 {field.id}"
     parent = ctx.outdoor.get((field.region, field.place))
@@ -828,11 +900,13 @@ def _stone_checks(ctx: _Ctx) -> None:
                 ctx.errors.append(f"傳送石 ID {stone.id} 重複（{seen[stone.id]}、{field.id}）")
             seen[stone.id] = field.id
             loc = ctx.loc(field.region, field.place)
+            if field.is_capital:
+                continue  # 主城的 1 個另外算（_map_stone_checks），不屬於任何區
             if loc is None or loc.kind != "town":  # 城鎮的 1 個另外算（_map_stone_checks）
                 by_region.setdefault(field.region, []).append(stone.id)
         _map_stone_checks(ctx, field)
     lo, hi = STONES_PER_REGION
-    for region in sorted({f.region for f in fields}):
+    for region in sorted({f.region for f in fields if not f.is_capital}):
         count = len(by_region.get(region, []))
         if not lo <= count <= hi:
             ctx.warnings.append(
@@ -842,6 +916,11 @@ def _stone_checks(ctx: _Ctx) -> None:
 
 
 def _map_stone_checks(ctx: _Ctx, field: FieldMapDef) -> None:
+    if field.is_capital and not field.is_interior:
+        count = len(field.teleport_stones)
+        if count != 1:
+            ctx.errors.append(f"實地地圖 {field.id}：主城要有 1 個傳送石，目前 {count} 個")
+        return
     loc = ctx.loc(field.region, field.place)
     if loc is None or field.is_interior:
         return

@@ -184,6 +184,7 @@ def test_progress_counts_outdoor_maps_per_region(library: ContentLibrary) -> Non
     assert [(p.region, p.done, p.total) for p in progress] == [
         ("cloud_ridge", 2, 18),
         ("ashen_waste", 0, 18),
+        ("capital", 0, 1),  # 主城排最後（6D-4）；底稿沒有主城
     ]
 
 

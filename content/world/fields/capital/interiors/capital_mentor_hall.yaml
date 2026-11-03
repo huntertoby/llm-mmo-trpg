@@ -1,0 +1,46 @@
+# 主城技能導師殿室內（6D-4；玩法 PM 主城草稿第 1、2 節；格式說明見 ../../cloud_ridge/mist_ferry.yaml 開頭）。
+# 10×8：南邊門口回到主城的導師殿門（[15, 4]）。
+# 殿主（導師）站在講壇前：閃現、重閃、溶掉、傳承、build 建議、種族重選（mentor 面板）。
+# 書記站在西邊的魔導書書架前：魔導書＝技能圖鑑（沒有現成設施種類，寫成 situation_objects）。
+# 兩人都沒有人設卡（草稿待確認 2），不放 npcs，點了直接開面板。
+id: capital_mentor_hall
+name_zh: 技能導師殿
+region: capital
+interior_of: capital
+size: [10, 8]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ##########
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  ####..####
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [1, 1], kind: crate}          # 魔導書書架
+  - {at: [2, 1], kind: crate}
+  - {at: [3, 1], kind: crate}
+  - {at: [6, 1], kind: low_wall}       # 講壇
+  - {at: [1, 5], kind: stone_pillar}   # 源晶燈
+  - {at: [8, 5], kind: stone_pillar}
+entry: [5, 6]
+exits:
+  - {id: to_capital, at: [[4, 7], [5, 7]], to: capital, arrive: mentor_hall_door}
+facilities:
+  - {at: [6, 2], id: mentor}           # 殿主（站位）
+situation_objects:
+  - {at: [2, 2], id: scribe}           # 書記（站位）：魔導書與技能圖鑑
+  - {at: [2, 1], id: grimoire_shelf}   # 魔導書書架

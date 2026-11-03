@@ -49,7 +49,9 @@ from trpg.api.world_party_view import (
     party_event_line,
     party_view,
 )
+from trpg.api.world_region_view import region_marks
 from trpg.api.world_schemas import (
+    BattlefieldRectView,
     EncounterEnemyView,
     EncounterView,
     HereView,
@@ -80,6 +82,7 @@ from trpg.content.world_narration import mask_text
 from trpg.shared.types import Team
 from trpg.world.actions import (
     BattleEndedEvent,
+    BattlefieldCut,
     CampedEvent,
     DefeatedEvent,
     EncounterEvent,
@@ -95,6 +98,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.battle import prepare_battle
+from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.growth import hero_tier
@@ -263,13 +267,14 @@ def _map_view(
         for loc in shown
     )
     edges = tuple((a, b) for a, b in world_map.edges if a in ids and b in ids)
-    return WorldMapView(
+    view = WorldMapView(
         region=world_map.region,
         name_zh=world_map.name_zh,
         level_zh=_level_zh(world_map.level_min, world_map.level_max) or "",
         locations=locations,
         edges=edges,
     )
+    return region_marks(library, char, view, town=world_map.town, in_battle=in_battle)  # 6C-6
 
 
 def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) -> list[str]:
@@ -376,6 +381,19 @@ def _encounter_view(
             oath_bonus=None if prepared.oath is None else prepared.oath.bonus_status,
         ),
         allies_zh=allies_line(library, char, prepared.hero_hp),
+        battlefield=_battlefield_view(prepared.field_cut),
+        battlefield_fallback_zh=(
+            None if prepared.cut_fallback is None else FALLBACK_ZH[prepared.cut_fallback]
+        ),
+    )
+
+
+def _battlefield_view(cut: BattlefieldCut | None) -> BattlefieldRectView | None:
+    """切出來的戰場（6C-2）在實地地圖上的範圍。"""
+    if cut is None:
+        return None
+    return BattlefieldRectView(
+        field_map=cut.field_map, x=cut.x, y=cut.y, width=cut.width, height=cut.height
     )
 
 

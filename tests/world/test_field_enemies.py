@@ -513,7 +513,8 @@ def test_replay_walk_into_patrol_sight(patrol_lib: ContentLibrary) -> None:
 def test_replay_sneak_and_clear(guard_lib: ContentLibrary) -> None:
     """繞背先手開打、打贏（營地寫「已清空」）、敵人消失，重播一致。"""
     seed = _seed_facing(GUARD, "e")
-    start = _char(guard_lib, (1, 6), field_visit=_visit(seed), mercenaries=PARTY)
+    # 6C-2 起就地切 12×12、貼著敵人開打：主角 3 級才穩定打贏（這裡測的是清空與重播）
+    start = _char(guard_lib, (1, 6), field_visit=_visit(seed), mercenaries=PARTY, level=3)
     world, live, entries = _play(
         guard_lib, start, [_walk((2, 6), (3, 6), (4, 6), (5, 6))], make_world()
     )

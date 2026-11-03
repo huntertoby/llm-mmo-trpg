@@ -1846,6 +1846,23 @@ export interface components {
             };
         };
         /**
+         * BattlefieldRectView
+         * @description 就地開打切出的戰場在實地地圖上的範圍（Phase 6C-2；格子座標）：畫面用 6B-6 的 ``frameCamera``
+         *     框住它。
+         */
+        BattlefieldRectView: {
+            /** Field Map */
+            field_map: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+        };
+        /**
          * BoardBossEntryView
          * @description 評分榜的一名（Phase 5F-3；#87）。
          */
@@ -3279,6 +3296,9 @@ export interface components {
              * @default
              */
             allies_zh: string;
+            battlefield?: components["schemas"]["BattlefieldRectView"] | null;
+            /** Battlefield Fallback Zh */
+            battlefield_fallback_zh?: string | null;
         };
         /**
          * EndStance
@@ -6936,6 +6956,20 @@ export interface components {
             transform_hint: boolean;
         };
         /**
+         * RegionStoneView
+         * @description 區域圖上的傳送石（21.2；6C-6）。只列在去過或剪影的地點上（霧裡的不給）。
+         */
+        RegionStoneView: {
+            /** Id */
+            id: string;
+            /** Location */
+            location: string;
+            /** Unlocked */
+            unlocked: boolean;
+            /** Here */
+            here: boolean;
+        };
+        /**
          * ReleaseOathAction
          * @description 解除誓約（#106：解除後現實 1 天內不能再立）。
          */
@@ -9466,6 +9500,17 @@ export interface components {
             cleared: boolean;
             /** Hidden */
             hidden: boolean;
+            /**
+             * Fog
+             * @default visited
+             * @enum {string}
+             */
+            fog: "visited" | "silhouette" | "fog";
+            /**
+             * Quest Marks
+             * @default []
+             */
+            quest_marks: string[];
         };
         /** WorldMapView */
         WorldMapView: {
@@ -9482,6 +9527,20 @@ export interface components {
                 string,
                 string
             ][];
+            /**
+             * Stones
+             * @default []
+             */
+            stones: components["schemas"]["RegionStoneView"][];
+            /**
+             * Can Teleport
+             * @default false
+             */
+            can_teleport: boolean;
+            /** Teleport Problem Zh */
+            teleport_problem_zh?: string | null;
+            /** Art Url */
+            art_url?: string | null;
         };
         /** WorldView */
         WorldView: {

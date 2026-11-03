@@ -61,7 +61,9 @@ from trpg.shared.types import Attribute, Team, UnitId
 from trpg.skillgen.usage import collect_usage, merge_usage
 from trpg.world.actions import (
     BattleEndedEvent,
+    BattlefieldCut,
     BattleStartedEvent,
+    CutFallback,
     DefeatedEvent,
     FightAction,
     InsightGainedEvent,
@@ -69,6 +71,7 @@ from trpg.world.actions import (
     StoryFlagClearedEvent,
     WorldEvent,
 )
+from trpg.world.battlefield import Battlefield, UnitCounts, contact_battlefield
 from trpg.world.calendar import day_of
 from trpg.world.common import max_hp, rules_of, world_map_of
 from trpg.world.companions import companion_spawns, companion_win_affinity
@@ -136,6 +139,10 @@ class PreparedBattle:
     hero_statuses: tuple[str, ...] = ()
     oath: OathSetup | None = None
     """這場帶的誓約（5C-3；``None``＝沒有誓約）。"""
+    field_cut: BattlefieldCut | None = None
+    """就地開打切出的戰場（6C-2，:mod:`trpg.world.battlefield`）；``None``＝用模板地圖。"""
+    cut_fallback: CutFallback | None = None
+    """碰到地圖上的敵人卻退回模板的原因（6C-2）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -411,7 +418,6 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     encounter = _pending(char)
     if encounter.season_boss is not None:
         return prepare_season_boss_battle(library, char)
-    map_def = encounter_map(library, encounter)
     reinforce = sum(1 for m in char.next_battle if m.kind == "reinforce")
     rolled = roll_lineup(library, encounter, char.story_flags)  # 線頭到期結局的變化（5B-4b）
     reinforced = reinforce_lineup(library, encounter, rolled, reinforce)
@@ -440,11 +446,13 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     hero, hp = _hero_with_items(library, char, extra, statuses)
     first = first_team(library, char, encounter, reinforced.enemy_first)
     oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
+    allies = (hero, *mercenaries, *shadow_units, *companions)
+    field = _battlefield(library, encounter, allies, enemies, first)  # 就地開打（6C-2）
     setup = _battle_setup(
         library,
-        map_def,
+        field.map,
         encounter,
-        units=(hero, *mercenaries, *shadow_units, *companions, *enemies),
+        units=(*allies, *enemies),
         extra=extra,
         phase_spawns=phase_spawns,
         first=first,
@@ -460,7 +468,31 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         first_team=first,
         hero_statuses=statuses,
         oath=oath,
+        field_cut=field.cut,
+        cut_fallback=field.fallback,
     )
+
+
+def _battlefield(
+    library: ContentLibrary,
+    encounter: EncounterResult,
+    allies: Sequence[UnitSpawn],
+    enemies: Sequence[UnitSpawn],
+    first: Team | None,
+) -> Battlefield:
+    """戰鬥地圖（已換皮成遭遇的區域）：地圖上碰到的敵人就地切 12×12，否則（或不合法時）用
+    :func:`encounter_map` 的模板（6C-2）。模板照舊先選（亂數只看 ``battle_seed``，切不切都
+    一樣）。"""
+    template = encounter_map(library, encounter)
+    counts = UnitCounts(
+        allies=len(allies),
+        enemies=sum(1 for u in enemies if u.team is Team.ENEMY),
+        third=sum(1 for u in enemies if u.team is Team.THIRD),
+    )
+    found = contact_battlefield(library, encounter, template, counts, first)
+    if found.cut is None:
+        return found
+    return Battlefield(map=reskin(library, found.map, encounter.region), cut=found.cut)
 
 
 def prepare_season_boss_battle(library: ContentLibrary, char: CharacterState) -> PreparedBattle:
@@ -570,7 +602,7 @@ def _battle_setup(
     勝利條件、誓約與 Boss 階段的召喚和天氣（5F-2）。"""
     base = build_setup(
         library,
-        map_def.id,
+        map_def.id if map_def.id in library.maps else encounter_map(library, encounter).id,
         library.roguelite.companions,  # 只借用設定的骨架；我方在下面整組換掉
         (),
         max_rounds=rules_of(library).battle.max_rounds,
@@ -688,6 +720,8 @@ def _started_event(
         shadows=tuple(s.owner for s in char.shadows),
         companions=char.companions,
         oath=None if prepared.oath is None else prepared.oath.template,
+        field_cut=prepared.field_cut,
+        cut_fallback=prepared.cut_fallback,
     )
 
 
