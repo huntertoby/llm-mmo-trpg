@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>屬性圖示</title>
+<style>body{margin:0;padding:14px 18px;background:#1b1714;color:#eadfcc;font-family:"Microsoft JhengHei",sans-serif;width:900px}h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px}canvas{display:block}</style></head>
+<body>
+<h1>縮放屬性圖示（6A-1 技能卡第 3 行用）</h1>
+<p class="note">美術 PM，2026-11-04。取代「屬性第一個字的圓形徽章」。六種屬性各一個 C 手繪墨線小圖示，外圈顏色依屬性；技能卡上是 16～20px，旁邊仍寫屬性名。全部程式繪製。</p>
+<canvas id="c"></canvas>
+<script src="storyDoll.js"></script>
+<script>
+  const { ink, stroke, ellPts } = StoryDoll.H, TAU = Math.PI * 2;
+  const A = [
+    ["str", "力量", "#e07a4a", (c) => { ink(c, "arm", [[10, 34], [14, 22], [20, 14], [28, 12], [32, 18], [28, 22], [24, 22], [22, 30], [30, 30], [38, 34], [36, 40], [12, 40]], "#e8b890", { w: 0.9 }); stroke(c, "arm-m", [[20, 22], [26, 26]], 0.8, "#8a5a3a"); }],
+    ["dex", "敏捷", "#6ac0a0", (c) => { c.save(); c.translate(24, 24); c.rotate(-0.7); ink(c, "fe", [[0, -18], [7, -8], [6, 8], [0, 16], [-6, 8], [-7, -8]], "#c8f0e0", { w: 0.8 }); stroke(c, "fe-q", [[0, -16], [0, 20]], 0.8, "#2b1e16"); c.restore(); stroke(c, "wind", [[8, 34], [16, 32]], 1, "#6ac0a0"); stroke(c, "wind2", [[10, 40], [20, 38]], 1, "#6ac0a0"); }],
+    ["con", "體質", "#d04a5a", (c) => { ink(c, "heart", [[24, 40], [10, 26], [10, 16], [17, 11], [24, 16], [31, 11], [38, 16], [38, 26]], "#e04a5a", { w: 0.9 }); c.fillStyle = "rgba(255,255,255,0.4)"; c.beginPath(); c.ellipse(16, 18, 3, 4, -0.4, 0, TAU); c.fill(); }],
+    ["int", "智力", "#7a8aff", (c) => { ink(c, "book", [[9, 14], [24, 18], [39, 14], [39, 38], [24, 42], [9, 38]], "#f2e6c8", { w: 0.9 }); stroke(c, "spine", [[24, 18], [24, 42]], 0.9, "#2b1e16"); c.save(); c.shadowColor = "#a898ff"; c.shadowBlur = 6; ink(c, "star", [[24, 4], [26, 10], [32, 10], [27, 13], [29, 19], [24, 15], [19, 19], [21, 13], [16, 10], [22, 10]], "#c8bcff", { shade: false, w: 0.5 }); c.restore(); }],
+    ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
+    ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
+  ];
+  const c = document.getElementById("c"), W = 860, H = 210; c.width = W * 2; c.height = H * 2; c.style.width = W + "px"; c.style.height = H + "px";
+  const ctx = c.getContext("2d"); ctx.scale(2, 2);
+  A.forEach(([id, zh, col, fn], i) => {
+    const x = 10 + i * 140;
+    for (const [s, dx, dy] of [[64, 0, 0], [20, 74, 10], [16, 74, 40]]) { ctx.save(); ctx.translate(x + dx, 6 + dy); ctx.beginPath(); ctx.arc(s / 2, s / 2, s / 2, 0, TAU); ctx.fillStyle = "#2a241e"; ctx.fill(); ctx.lineWidth = Math.max(1.2, s * 0.06); ctx.strokeStyle = col; ctx.stroke(); ctx.beginPath(); ctx.arc(s / 2, s / 2, s / 2 - 1, 0, TAU); ctx.clip(); ctx.scale(s / 48, s / 48); fn(ctx); ctx.restore(); }
+    ctx.fillStyle = "#f2e6c8"; ctx.font = "bold 13px 'Microsoft JhengHei'"; ctx.fillText(zh, x + 18, 92);
+    // 技能卡上的樣子
+    ctx.fillStyle = "#26201b"; ctx.beginPath(); ctx.roundRect(x, 110, 124, 30, 8); ctx.fill(); ctx.strokeStyle = "#4a4038"; ctx.stroke();
+    ctx.save(); ctx.translate(x + 8, 117); ctx.beginPath(); ctx.arc(8, 8, 8, 0, TAU); ctx.fillStyle = "#2a241e"; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = col; ctx.stroke(); ctx.beginPath(); ctx.arc(8, 8, 7, 0, TAU); ctx.clip(); ctx.scale(16 / 48, 16 / 48); fn(ctx); ctx.restore();
+    ctx.fillStyle = "#c8bca8"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText(zh, x + 30, 129);
+  });
+  ctx.fillStyle = "#9a8e7c"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText("上：64、20、16 三種大小；下：技能卡第 3 行的實際樣子（圖示＋屬性名）", 10, 170);
+</script></body></html>

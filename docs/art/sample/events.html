@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>事件插圖</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1180px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 16px 0 6px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  .grid { display: flex; flex-wrap: wrap; gap: 14px; } canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>事件插圖（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。6C 事件卡上方的小插圖：和實地地圖同一套畫法（格子地面、C 畫風紙娃娃、地物），每張是 7×3 格的小場景、四周暗角，左上角一個事件類型小牌。背景依區域換，事件內容不變。全部程式繪製。</p>
+<h2>1. 常見事件（雲嶺背景）</h2><div class="grid" id="cloud"></div>
+<h2>2. 同一個事件換到灰燼荒原<small>背景換成焦土、熔岩、枯木；敵人材質跟著區域</small></h2><div class="grid" id="ashen"></div>
+<script src="storyDoll.js"></script><script src="paperdoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="hud.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script><script src="ashenTiles.js"></script><script src="events.js"></script>
+<script>
+  const EA = EventArt, S = 1.0;
+  function add(id, kind, region) { const c = document.createElement("canvas"); c.width = EA.W * 2 * S; c.height = EA.H * 2 * S; c.style.width = EA.W * S + "px"; c.style.height = EA.H * S + "px"; const ctx = c.getContext("2d"); ctx.scale(2 * S, 2 * S); EA.draw(ctx, kind, region); document.getElementById(id).appendChild(c); }
+  for (const k of Object.keys(EA.SCENES)) add("cloud", k, "cloud");
+  for (const k of ["ambush", "chest", "altar", "trap"]) add("ashen", k, "ashen");
+</script>
+</body>
+</html>

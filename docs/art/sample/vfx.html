@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>技能特效細部</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1240px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 12px 0 4px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 8px; line-height: 1.6; } canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>技能特效細部（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。雲嶺、荒原常見的 6 種元素。每列是同一招的 7 個時間點：飛行物 → 命中爆發 → 地表擴散（十字 5 格，從中心一格一格長出去）。顏色由元素決定、範圍由形狀決定；變的是軌跡、爆發形狀、粒子分布（動畫方案 2.11）。粒子位置由雜湊決定，不用亂數。全部程式繪製。</p>
+<div id="root"></div>
+<script src="storyDoll.js"></script>
+<script src="vfx.js"></script>
+<script>
+  const V = Vfx, root = document.getElementById("root"), N = 7, FW = 170, FH = 120;
+  const ROWS = [
+    ["fire", { region: "ashen" }, "火（荒原）：微弧火球 → 放射 → 火地從中心燒開"],
+    ["ice", {}, "冰（雲嶺寒潭）：冰錐直線 → 星形冰晶 → 冰面一格一格凍開（白邊、裂紋）", { traj: "line", burst: "star" }],
+    ["lightning", {}, "雷：鋸齒閃電（閃兩下）→ 放射 → 沿水面跳到相鄰格（連鎖導電）", {}],
+    ["water", {}, "水：水珠微弧 → 圓環水花 → 水窪擴散、漣漪", { burst: "ring" }],
+    ["mist", {}, "霧：霧團螺旋 → 圓環 → 霧氣蔓延、慢慢飄", { traj: "spiral", burst: "ring" }],
+    ["poison", { region: "ashen" }, "毒（荒原硫磺）：毒液微弧 → 放射 → 毒池冒泡", {}],
+  ];
+  const VARS = [
+    [{ traj: "arc", burst: "rays" }, "變體 1：微弧・放射・同時擴散"],
+    [{ traj: "line", burst: "ring", spread: "sweep" }, "變體 2：直線・圓環・依序擴散"],
+    [{ traj: "spiral", burst: "star" }, "變體 3：螺旋・星形・同時擴散"],
+  ];
+  function row(title, el, opt) {
+    const h = document.createElement("h2"); h.innerHTML = title; root.appendChild(h);
+    const c = document.createElement("canvas"); c.width = (FW + 6) * N * 2; c.height = FH * 2; c.style.width = (FW + 6) * N + "px"; c.style.height = FH + "px";
+    const ctx = c.getContext("2d"); ctx.scale(2, 2);
+    for (let k = 0; k < N; k++) { const t = [0.12, 0.3, 0.45, 0.55, 0.7, 0.85, 1][k]; ctx.save(); ctx.translate(k * (FW + 6), 0); ctx.beginPath(); ctx.roundRect(0, 0, FW, FH, 6); ctx.clip(); V.frame(ctx, FW, FH, el, t, opt); ctx.restore(); }
+    root.appendChild(c);
+  }
+  for (const [el, base, title, extra] of ROWS) row(`${V.EL[el].zh}<small>${title}</small>`, el, { ...base, ...(extra || {}) });
+  const h = document.createElement("h2"); h.innerHTML = "同一招火球的 3 種變體<small>照戰鬥 ID＋事件序號＋施放者 ID 的雜湊挑；顏色與範圍不變</small>"; root.appendChild(h);
+  for (const [opt, t] of VARS) row(`<small>${t}</small>`, "fire", { region: "cloud", ...opt });
+</script>
+</body>
+</html>

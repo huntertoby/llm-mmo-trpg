@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>物品圖示</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1180px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 14px 0 6px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  .grid { display: flex; flex-wrap: wrap; gap: 10px; } figure { margin: 0; text-align: center; width: 84px; } figcaption { font-size: 11.5px; color: #d8ccb8; margin-top: 3px; } canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>背包與商店的物品圖示（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。現有的裝備圖示（武器、防具、飾品）沒涵蓋的類別都補上：藥水、投擲瓶、補給、材料、染料、貨幣、任務物品。C 手繪墨線，48 單位的框，底色依類別；材料的外框依品質（灰＝普通、藍＝精良、紫＝稀有）。ID 照 <code>content/world/items.yaml</code>。全部程式繪製。</p>
+<div id="root"></div>
+<h2>背包格的實際大小（48 與 28）<small>右下角是數量</small></h2>
+<canvas id="bag"></canvas>
+<script src="storyDoll.js"></script>
+<script src="itemIcons.js"></script>
+<script>
+  const I = ItemIcons, root = document.getElementById("root");
+  const ZH = { consumable: "藥水與草藥", throwable: "投擲瓶（地表，元素標記在右下）", supply: "補給", material: "材料（外框＝品質）", dye: "染料", currency: "貨幣", quest: "任務物品" };
+  for (const cat of Object.keys(ZH)) {
+    const h = document.createElement("h2"); h.textContent = ZH[cat]; root.appendChild(h);
+    const g = document.createElement("div"); g.className = "grid"; root.appendChild(g);
+    for (const it of I.LIST.filter((x) => x[2] === cat)) { const f = document.createElement("figure"), c = document.createElement("canvas"); c.width = 160; c.height = 160; c.style.width = "80px"; c.style.height = "80px"; const ctx = c.getContext("2d"); ctx.scale(2, 2); I.draw(ctx, 2, 2, 76, it); f.appendChild(c); const cap = document.createElement("figcaption"); cap.textContent = it[1]; f.appendChild(cap); g.appendChild(f); }
+  }
+  const c = document.getElementById("bag"), W = 1100, H = 140; c.width = W * 2; c.height = H * 2; c.style.width = W + "px"; c.style.height = H + "px"; const ctx = c.getContext("2d"); ctx.scale(2, 2);
+  const pick = ["item_hp_potion_small", "item_mana_potion", "item_fire_flask", "item_supplies", "item_wolf_fang", "item_mist_crystal", "item_superior_material", "item_dye_cinnabar", "gold", "quest_letter"];
+  pick.forEach((id, k) => { const it = I.LIST.find((x) => x[0] === id); I.draw(ctx, 4 + k * 54, 6, 48, it, { count: [3, 2, 5, 12, 4, 1, 2, 1, "1.2k", null][k] }); I.draw(ctx, 4 + k * 54 + 10, 70, 28, it); });
+</script>
+</body>
+</html>
