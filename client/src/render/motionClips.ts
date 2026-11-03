@@ -221,3 +221,33 @@ export function proneBody(t: number, facing: Facing, walking: InkPose = {}): { x
   }
   return { x: dx * PRONE_SLIDE * s, y: dy * PRONE_SLIDE * 0.5 * s, rotation: spin * PRONE_ANGLE * fall, pose: quantizePose(pose) };
 }
+
+// ---- 人形受擊（6M-4 併入美術 PM 檢查：和 6M-3 的異形一致，只閃剪影）-----------------
+
+/** 人形受擊片段的長度（毫秒；同樣張 CLIP.hit）。 */
+export const HUMAN_HIT_MS = 360;
+/** 受擊時往後彈的距離（虛擬像素；樣張 move −7）。 */
+export const HIT_KNOCK = 7;
+
+/** 白閃強度量化（0.05 一級；貼圖快取用）。 */
+export function quantizeFlash(f: number): number {
+  if (!(f > 0)) return 0;
+  return Number((Math.round(clamp(f) * 20) / 20).toFixed(2));
+}
+
+/**
+ * 人形受擊（樣張 CLIP.hit）：`t` 0～1 ＝ 仰一下、主手往後甩、往後彈 7，白閃開頭 0.85、播到 1/4 時消失。
+ * 回傳的姿勢、白閃都已量化；`knock` 是往後彈的距離（虛擬像素，往面向的反方向）。
+ */
+export function humanHit(t: number): { pose: InkPose; flash: number; knock: number } {
+  const k = clamp(t);
+  const pose = quantizePose({ lean: -0.3 * Math.sin(clamp(k * 2) * Math.PI), arm: -0.5 * Math.sin(k * Math.PI) });
+  return { pose, flash: quantizeFlash(Math.max(0, 1 - k * 4) * 0.85), knock: HIT_KNOCK * Math.sin(clamp(k * 1.6) * Math.PI) };
+}
+
+/** 往面向的反方向彈 `d`：東西向照原距離，南北向（有透視）只走一半。 */
+export function knockOffset(facing: Facing, d: number): { x: number; y: number } {
+  if (facing === "east") return { x: -d, y: 0 };
+  if (facing === "west") return { x: d, y: 0 };
+  return { x: 0, y: facing === "south" ? -d * 0.5 : d * 0.5 };
+}

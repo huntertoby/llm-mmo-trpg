@@ -14,7 +14,7 @@ import { copiesOwner, renderSummonCanvas, summonKey, type ResolvedLook } from ".
 import { creatureKey, renderCreatureCanvas, type ResolvedCreature } from "./inkCreature";
 import { creaturePoseKey, type CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
-import { poseKey } from "./motionClips";
+import { poseKey, quantizeFlash } from "./motionClips";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -125,10 +125,11 @@ export class ArtTextures {
    * `pose`：走路、倒地等片段的姿勢，呼叫端先量化（motionClips.ts 的 `quantizePose`），鍵用 `poseKey`，同一個姿勢共用一張貼圖。
    * 沒給姿勢時鍵和畫法都和之前相同。
    */
-  figure(spec: DollSpec, facing: Facing, downed: boolean, pose: InkPose | null = null): Texture | null {
+  figure(spec: DollSpec, facing: Facing, downed: boolean, pose: InkPose | null = null, flash = 0): Texture | null {
     const res = this.figureRes(HUMAN_DISPLAY);
-    const key = `f|${res}|${dollKey(spec, facing, downed)}${pose === null ? "" : `|p:${poseKey(pose)}`}`;
-    return this.canvas(key, () => renderFigureCanvas(spec, facing, downed, res, true, pose));
+    const w = quantizeFlash(flash); // 受擊白閃（6M-4）：量化到 0.05；沒有白閃時鍵和畫法都不變
+    const key = `f|${res}|${dollKey(spec, facing, downed)}${pose === null ? "" : `|p:${poseKey(pose)}`}${w > 0 ? `|w:${w}` : ""}`;
+    return this.canvas(key, () => renderFigureCanvas(spec, facing, downed, res, true, pose, w));
   }
 
   /** 召喚物貼圖（Phase 3-33h1；鍵 ＝ 外觀＋朝向，殘影另加召喚者外觀）；人形傳入 `humanoid` 紙娃娃規格。 */
