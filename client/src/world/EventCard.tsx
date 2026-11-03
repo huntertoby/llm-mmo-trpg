@@ -194,7 +194,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         </Hint>
         {facts.length > 0 && (
           <Hint text={`線索：你持有的線索與往來 ${facts.length} 筆（點開來引用；回答裡要提到它，遊戲核對得到才 +1，最多 +2）`}>
-            <button type="button" className={`world-clue-btn${cluesOpen ? " on" : ""}`} aria-expanded={cluesOpen} onClick={() => setCluesOpen((v) => !v)} data-testid="world-clues">
+            <button type="button" className={`world-clue-btn${cluesOpen ? " on" : ""}`} aria-expanded={cluesOpen} aria-label={`線索 ${facts.length} 筆`} onClick={() => setCluesOpen((v) => !v)} data-testid="world-clues">
               <MiscGlyph icon="clue" size={16} />
               <span className="small">{cited.length > 0 ? `${cited.length}／${facts.length}` : facts.length}</span>
             </button>

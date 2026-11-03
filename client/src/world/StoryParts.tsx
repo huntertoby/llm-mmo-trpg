@@ -140,7 +140,7 @@ export function DiceRoll({ dice, roll, outcome, elapsed }: DiceProps) {
         const used = frame.used === i;
         return (
           <span key={i} className={`world-die${used ? " used" : frame.done ? " unused" : ""}`} data-testid="world-die" data-face={f} style={used ? { filter: `drop-shadow(0 0 4px ${color})` } : undefined}>
-            <D20 size={34} value={f} color={used ? color : "#f2e6c8"} />
+            <D20 size={42} value={f} color={used ? color : "#f2e6c8"} />
           </span>
         );
       })}
