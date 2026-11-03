@@ -552,6 +552,11 @@ class CharacterState(_Model):
     met_opportunities: tuple[str, ...] = ()
     """觸發過的機遇骨架（有 ``opportunity`` 解法的骨架；排序、不重複；07 7.6 第 7 天前保底）。"""
 
+    # --- 5B-4f 機遇提示一天一次 ---
+    opportunity_hint_day: int | None = None
+    """最後一次聽到機遇提示的日子（``refresh_day``；``None``＝沒聽過）。同一天（6 點刷新為界）
+    不再提（玩法 PM 2026-11-03 代決）。"""
+
     # --- 5C-1 隊伍（邏輯在 trpg.world.party） ---
     mercenaries: tuple[str, ...] = ()
     """隊伍裡的系統傭兵（依選擇順序＝出場順序、不重複）。5C-2 起沒有隊友＝獨行（玩法 PM 定 ③）。"""

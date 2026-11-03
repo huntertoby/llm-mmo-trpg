@@ -19,7 +19,7 @@ from typing import Any
 from trpg.content.library import ContentLibrary
 from trpg.content.world import WorldStyle
 from trpg.content.world_events import EventSkeletonDef, NpcCardDef, ThreadDef
-from trpg.content.world_narration import StoryAllowed, StoryScene
+from trpg.content.world_narration import StoryAllowed, StoryScene, mask_text
 from trpg.content.world_situations import Outcome
 from trpg.llm.client import LLMClient
 from trpg.narrative.storyteller import StoryRequest, fallback_story, tell_story
@@ -33,7 +33,13 @@ from trpg.world.actions import (
 from trpg.world.affinity import talk_entries
 from trpg.world.clock import day_phase
 from trpg.world.common import world_map_of
-from trpg.world.narration import narration_problems, region_npcs, region_skeletons, story_choices
+from trpg.world.narration import (
+    narration_problems,
+    region_npcs,
+    region_skeletons,
+    story_choices,
+    story_masks,
+)
 from trpg.world.situations import situation_template
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.weather import weather_at
@@ -151,7 +157,7 @@ def event_story(
     )
     picked = skeletons.get(trigger.skeleton)
     if trigger.guaranteed and picked is not None and picked.guarantee_text_zh is not None:
-        return _guaranteed_story(library, world, char, request, picked.guarantee_text_zh, now=now)
+        return _guaranteed_story(library, world, char, request, picked, now=now)
     return _finish(library, world, char, request, client=client, now=now, style=style)
 
 
@@ -160,15 +166,18 @@ def _guaranteed_story(
     world: WorldState,
     char: CharacterState,
     request: StoryRequest,
-    text: str,
+    skeleton: EventSkeletonDef,
     *,
     now: int,
 ) -> NarrateAction:
-    """機遇保底的專用旁白（5B-4e，骨架的 ``guarantee_text_zh``）：不經說書人，模板文字的角色與動機
-    照舊，旁白換成專用文字；核對不過就退回一般模板。"""
+    """機遇保底的專用旁白（5B-4e，骨架的 ``guarantee_text_zh``）：不經說書人，模板文字的動機照舊，
+    旁白換成專用文字、角色換成 ``guarantee_who_zh``（5B-4f，有填時）；核對不過就退回一般模板。"""
     templates = library.world_event_content.story
     base = fallback_story(request, templates)
-    story = base.model_copy(update={"text_zh": text, "more_zh": ""})
+    update: dict[str, str] = {"text_zh": skeleton.guarantee_text_zh or base.text_zh, "more_zh": ""}
+    if skeleton.guarantee_who_zh is not None:
+        update["actor_zh"] = mask_text(skeleton.guarantee_who_zh, story_masks(library, char))
+    story = base.model_copy(update=update)
     action = NarrateAction(scene="event", story=story, source="fallback")
     if narration_problems(library, world, char, action, now):
         action = action.model_copy(update={"story": base})

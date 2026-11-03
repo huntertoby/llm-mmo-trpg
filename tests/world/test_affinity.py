@@ -75,15 +75,21 @@ def test_change_clamps_and_reports(library: ContentLibrary, make_char: MakeChar)
 
 
 def test_event_affinity_from_situation(library: ContentLibrary, make_char: MakeChar) -> None:
-    lib = sure(library, "acolyte_find_way", "failure")
+    """5B-4f（玩法 PM 2026-11-03 代決）：骨架 2 部分成功小蓮 +10；失敗不扣。"""
+    lib = sure(library, "acolyte_find_way", "partial")
     char = at_event(make_char(), "lost_acolyte", strong=True)
     action = act("acolyte_find_way", attribute=Attribute.WIS, method="tracking")
     result = world_step(lib, make_world(), char, action, NOON)
     changed = [e for e in result.events if isinstance(e, AffinityChangedEvent)]
     assert [(e.npc, e.delta, e.source) for e in changed] == [
-        ("acolyte_xiaolian", -5, "event:lost_acolyte")
+        ("acolyte_xiaolian", 10, "event:lost_acolyte")
     ]
-    assert result.char.affinity == {"acolyte_xiaolian": -5}
+    assert result.char.affinity == {"acolyte_xiaolian": 10}
+    failed = world_step(
+        sure(library, "acolyte_find_way", "failure"), make_world(), char, action, NOON
+    )
+    assert not any(isinstance(e, AffinityChangedEvent) for e in failed.events)
+    assert failed.char.affinity == {}
 
 
 def test_situation_without_table_row_no_affinity(

@@ -357,6 +357,7 @@ def event_view(
     opening = next((n for n in reversed(narrations) if n.scene == "event"), None)
     situation = next((n for n in reversed(narrations) if n.scene == "situation"), None)
     story = opening.story if opening is not None else None
+    who = skeleton.who_for(guaranteed=trigger.guaranteed)  # 5B-4f：保底有專用的「誰」
     follows = None
     if trigger.follows_thread is not None:
         defn = _thread_defs(library).get(trigger.follows_thread)
@@ -364,10 +365,10 @@ def event_view(
     return EventView(
         skeleton=skeleton.id,
         location_name_zh=_location_name(library, char.region, trigger.location),
-        actor_zh=mask_text(story.actor_zh if story else skeleton.who_zh, masks),
+        actor_zh=mask_text(story.actor_zh if story else who, masks),
         motive_zh=mask_text(story.motive_zh if story else skeleton.want_zh, masks),
         story=story_view(story, opening.source) if story is not None and opening else None,
-        who_zh=mask_text(skeleton.who_zh, masks),
+        who_zh=mask_text(who, masks),
         want_zh=mask_text(skeleton.want_zh, masks),
         obstacle_zh=mask_text(skeleton.obstacle_zh, masks),
         stakes_zh=mask_text(skeleton.stakes_zh, masks),
@@ -762,7 +763,11 @@ def _event_story_line(
     if isinstance(event, EventTriggeredEvent):
         trigger = event.trigger
         found = skeletons.get(trigger.skeleton)
-        who = mask_text(found.who_zh, masks) if found is not None else trigger.skeleton
+        who = (
+            mask_text(found.who_for(guaranteed=trigger.guaranteed), masks)
+            if found is not None
+            else trigger.skeleton
+        )
         place = _location_name(library, trigger.region, trigger.location)
         return f"在{place}遇到一件事：{who}。"
     if isinstance(event, EventLeftEvent):
