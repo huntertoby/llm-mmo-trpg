@@ -121,7 +121,7 @@ def test_xiaolian_event_sources_5b4e(library: ContentLibrary) -> None:
     # 5B-4f（玩法 PM 2026-11-03 代決）：骨架 2 部分成功 +10、失敗不扣
     assert rows[("lost_acolyte", "partial")] == 10
     assert ("lost_acolyte", "failure") not in rows
-    day, _ =trust_days(library)["acolyte_xiaolian"]
+    day, _ = trust_days(library)["acolyte_xiaolian"]
     assert day is not None and day <= 6
 
 

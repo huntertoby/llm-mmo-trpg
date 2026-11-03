@@ -35,7 +35,14 @@ from trpg.world.events import season_day
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.weather import weather_at
 
-__all__ = ["opportunity_hint", "talk", "tavern", "week_of", "week_rumors"]
+__all__ = [
+    "hear_opportunity_hint",
+    "opportunity_hint",
+    "talk",
+    "tavern",
+    "week_of",
+    "week_rumors",
+]
 
 
 def talk(
@@ -198,8 +205,10 @@ def opportunity_hint(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int
 ) -> str | None:
     """還沒遇過也沒拿過機遇的角色，在提示地點聽到的一句（5B-4e；``opportunity_hints``）；沒有時
-    ``None``。多條符合時取第一條（資料順序）。"""
+    ``None``。多條符合時取第一條（資料順序）。5B-4f：當天（6 點刷新為界）聽過就不再提。"""
     if char.met_opportunities or char.opportunities:
+        return None
+    if char.opportunity_hint_day == refresh_day(now):
         return None
     table = social_of(library, char.region)
     if table is None:
@@ -215,17 +224,28 @@ def opportunity_hint(
     )
 
 
+def hear_opportunity_hint(
+    library: ContentLibrary, world: WorldState, char: CharacterState, now: int
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """有提示時給 :class:`OpportunityHintEvent` 並記下今天（``opportunity_hint_day``，5B-4f
+    一天一次）；沒有時角色不變、沒有事件。"""
+    hint = opportunity_hint(library, world, char, now)
+    if hint is None:
+        return char, ()
+    char = char.model_copy(update={"opportunity_hint_day": refresh_day(now)})
+    return char, (OpportunityHintEvent(location=char.location, text_zh=hint),)
+
+
 def tavern(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int
-) -> tuple[WorldEvent, ...]:
-    """在城鎮的酒館聽本週傳聞；不改狀態。"""
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """在城鎮的酒館聽本週傳聞；只有聽到機遇提示時記下日子（5B-4f）。"""
     if here(library, char).kind != "town":
         raise WorldActionError("只有城鎮有酒館")
     if char.pending_encounter is not None:
         raise WorldActionError("還有沒處理的遭遇，不能去酒館")
     week, rumors = week_rumors(library, world, char.region, now)
-    events: list[WorldEvent] = [RumorsHeardEvent(week=week, rumors=tuple(r.id for r in rumors))]
-    hint = opportunity_hint(library, world, char, now)
-    if hint is not None:  # 5B-4e：還沒遇過機遇的角色在提示地點的酒館（說書人順口提）
-        events.append(OpportunityHintEvent(location=char.location, text_zh=hint))
-    return tuple(events)
+    heard = RumorsHeardEvent(week=week, rumors=tuple(r.id for r in rumors))
+    # 5B-4e：還沒遇過機遇的角色在提示地點的酒館（說書人順口提）
+    char, hint = hear_opportunity_hint(library, world, char, now)
+    return char, (heard, *hint)

@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import json
+from collections.abc import Callable, Sequence
 
 import pytest
 from pydantic import ValidationError
@@ -11,7 +12,15 @@ from pydantic import ValidationError
 from tests.world.helpers import NOON, make_world
 from trpg.content.library import ContentLibrary
 from trpg.content.world_quests import SocialTable
-from trpg.world.actions import OpportunityHintEvent, RumorsHeardEvent, TavernAction, TravelAction
+from trpg.world.actions import (
+    OpportunityHintEvent,
+    RumorsHeardEvent,
+    TavernAction,
+    TravelAction,
+    WorldEvent,
+)
+from trpg.world.clock import refresh_day
+from trpg.world.save import dumps_char, loads_char
 from trpg.world.social import opportunity_hint, week_rumors
 from trpg.world.state import CharacterState
 from trpg.world.step import world_step
@@ -54,7 +63,7 @@ def test_hint_on_arrival_at_ferry_from_day_6(library: ContentLibrary, make_char:
     after = world_step(library, world, away, TravelAction(to="mist_ferry"), _day(6))
     hints = [e for e in after.events if isinstance(e, OpportunityHintEvent)]
     assert [(h.location, h.text_zh) for h in hints] == [("mist_ferry", HINT)]
-    # 不改狀態（同一個動作少了提示也一樣）
+    # 只記下聽到提示的日子（5B-4f）
     assert after.char.met_opportunities == ()
     # 遇過或拿過機遇就不提
     met = away.model_copy(update={"met_opportunities": ("storm_altar",)})
@@ -92,3 +101,44 @@ def test_pinned_rumor_must_exist() -> None:
         SocialTable.model_validate(
             {"region": "cloud_ridge", "pinned_rumors": [{"rumor": "rumor_nope", "from_day": 4}]}
         )
+
+
+def test_hint_once_per_refresh_day(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5B-4f（玩法 PM 2026-11-03 代決）：每個角色一天只提一次（6 點刷新為界），抵達與酒館共用。"""
+    world = make_world()
+    away = make_char(location="ferry_steps")
+    first = world_step(library, world, away, TravelAction(to="mist_ferry"), _day(6))
+    assert _hints(first.events) == [HINT]
+    assert first.char.opportunity_hint_day == refresh_day(_day(6))
+    # 同一天：酒館、再抵達都不再提
+    tavern = world_step(library, world, first.char, TavernAction(), _day(6) + 60)
+    assert [type(e) for e in tavern.events] == [RumorsHeardEvent]
+    assert tavern.char == first.char
+    back = tavern.char.model_copy(update={"location": "ferry_steps"})
+    again = world_step(library, world, back, TravelAction(to="mist_ferry"), _day(6) + 120)
+    assert _hints(again.events) == []
+    # 過了午夜、還沒到 6 點仍是同一天
+    late_night = _day(6) + 15 * 3600
+    assert refresh_day(late_night) == refresh_day(_day(6))
+    night = world_step(library, world, again.char, TavernAction(), late_night)
+    assert _hints(night.events) == []
+    # 6 點刷新後再提一次（酒館先聽到，記下新的一天）
+    next_day = world_step(library, world, night.char, TavernAction(), _day(7))
+    assert _hints(next_day.events) == [HINT]
+    assert next_day.char.opportunity_hint_day == refresh_day(_day(7))
+
+
+def test_hint_day_absent_in_old_save(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5B-4f：新欄位有預設值，舊存檔（沒有 ``opportunity_hint_day``）照讀；不升版號。"""
+    char = make_char(location="mist_ferry")
+    data = json.loads(dumps_char(char))
+    data.pop("opportunity_hint_day")
+    old = loads_char(json.dumps(data, ensure_ascii=False))
+    assert data["format"] == "trpg-char/1"
+    assert old.opportunity_hint_day is None
+    result = world_step(library, make_world(), old, TavernAction(), _day(6))
+    assert _hints(result.events) == [HINT]
+
+
+def _hints(events: Sequence[WorldEvent]) -> list[str]:
+    return [e.text_zh for e in events if isinstance(e, OpportunityHintEvent)]

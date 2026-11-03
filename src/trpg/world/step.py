@@ -41,7 +41,6 @@ from trpg.world.actions import (
     LocationRevealedEvent,
     NarrateAction,
     OfferPickAction,
-    OpportunityHintEvent,
     PerceptionCheckEvent,
     RestAction,
     RetreatAction,
@@ -72,7 +71,7 @@ from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.shadows import save_after_prep
 from trpg.world.situations import resolve_situation
-from trpg.world.social import opportunity_hint, talk, tavern
+from trpg.world.social import hear_opportunity_hint, talk, tavern
 from trpg.world.solutions import make_encounter, settle_event_combat, solve_event
 from trpg.world.state import (
     CharacterState,
@@ -239,7 +238,7 @@ def _social(
     elif isinstance(action, TalkAction):
         char, events = talk(library, world, char, action, now)
     else:
-        events = tavern(library, world, char, now)
+        char, events = tavern(library, world, char, now)
     return StepResult(world=world, char=char, events=events)
 
 
@@ -350,9 +349,9 @@ def _travel(
     rolled = roll_event(library, world, char, encountered=encountered, now=now)
     char = rolled.char
     events += rolled.events
-    hint = None if encountered else opportunity_hint(library, world, char, now)
-    if hint is not None:  # 5B-4e：還沒遇過機遇的角色抵達提示地點（說書人順口提）
-        events.append(OpportunityHintEvent(location=char.location, text_zh=hint))
+    if not encountered:  # 5B-4e：還沒遇過機遇的角色抵達提示地點（說書人順口提；5B-4f 一天一次）
+        char, hint = hear_opportunity_hint(library, world, char, now)
+        events += hint
     char, found = _perceive(library, world, char, world_map, now)
     events += found
     return StepResult(world=world, char=char, events=tuple(events))
