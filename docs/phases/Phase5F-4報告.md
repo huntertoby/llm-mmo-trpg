@@ -25,7 +25,7 @@
 ## 驗收
 
 - `ruff check .`、`ruff format --check .`、`mypy`（1188 檔）、`lint-imports`（13 kept）：通過。
-- `tests/world tests/api tests/server tests/content tests/test_architecture.py -n 8`：見下方「檢查結果」。
+- `tests/world tests/api tests/server tests/content tests/test_architecture.py -n 8`：3194 項通過（合併 main 之後）。
 - `npx vitest run`：138 檔 1276 項通過；`pnpm build` 通過。
 - swamp 種子 7 重播：通過（88 個動作、313 個事件）。
 - 循環賽對戰重播：用目前程式產生一場（衝陣 vs 雷水，`open_plain`）→ `trpg battle replay` 通過（11 個動作、52 個事件）；API 測試的重播回應 `verified: true`。
