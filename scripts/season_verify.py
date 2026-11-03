@@ -25,6 +25,7 @@ from trpg.server.season_archive import (
     verify_first_kill,
     verify_league_match,
 )
+from trpg.world.layout import world_dir_of
 
 EXIT_MISMATCH = 1
 EXIT_ERROR = 2
@@ -55,7 +56,7 @@ def main(
 ) -> int:
     args = _parser().parse_args(argv)
     save_dir = args.save_dir if args.save_dir is not None else default_save_dir()
-    world_dir = save_dir / "world"
+    world_dir = world_dir_of(save_dir)
     try:
         if args.first_kill is not None:
             check = verify_first_kill(save_dir, world_dir, args.season_id, args.first_kill)

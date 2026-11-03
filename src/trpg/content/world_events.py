@@ -525,6 +525,7 @@ def load_world_event_content(
     files: list[tuple[Path, ContentModel]],
     *,
     status_ids: Collection[str] = (),
+    enemy_only_ids: Collection[str] = (),
     keyword_ids: Collection[str] | None = None,
     race_ids: Collection[str] | None = None,
 ) -> WorldEventContent:
@@ -581,6 +582,7 @@ def load_world_event_content(
         status_ids=status_ids,
         race_ids=race_ids,
         files=files,
+        enemy_only_ids=enemy_only_ids,
     )
     story_path = root / STORY_TEMPLATES_FILE
     story: StoryTemplates | None = None

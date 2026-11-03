@@ -6,23 +6,22 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
 
-from trpg.content.library import ContentLibrary, load_library, skill_reference_problems
+from trpg.content.library import (
+    ContentLibrary,
+    load_library,
+    player_template_enemy_only_problems,
+    skill_reference_problems,
+)
+from trpg.shared.errors import ContentError
 from trpg.skillgen.proposal import budget_statuses, rarity_statuses
 
 ENEMY_ONLY = ("frost_ember_burst", "heart_ember_burst", "molten_burst")
 CONTENT = Path(__file__).resolve().parents[2] / "content"
-PLAYER_SIDE_FILES = (
-    "sim/builds.yaml",
-    "world/mercenaries.yaml",
-    "dev_starters.yaml",
-    "races.yaml",
-    "origins.yaml",
-)
-"""玩家這一邊的單位與 build（主角、影子的底稿、傭兵、劇情夥伴、開發用起始角色、種族、出身）。"""
 
 
 @pytest.fixture(scope="module")
@@ -59,29 +58,59 @@ def test_a_skill_that_uses_an_enemy_only_status_is_rejected(library: ContentLibr
     assert not skill_reference_problems(skill, library.ruleset, library.skills)
 
 
-def test_no_content_skill_uses_an_enemy_only_status(library: ContentLibrary) -> None:
-    for path in sorted((CONTENT / "skills").rglob("*.yaml")):
-        text = path.read_text(encoding="utf-8")
-        assert not [s for s in ENEMY_ONLY if s in text], path
+def _copy_content(tmp_path: Path) -> Path:
+    dest = tmp_path / "content"
+    shutil.copytree(CONTENT, dest)
+    return dest
 
 
-def test_enemy_only_statuses_stay_on_enemy_unit_templates(library: ContentLibrary) -> None:
-    """內容裡只有 ``statuses.yaml`` 與敵方單位範本（``units/``）提到它們，那些單位不在玩家這邊。"""
-    holders: list[str] = []
-    for path in sorted(CONTENT.rglob("*.yaml")):
-        text = path.read_text(encoding="utf-8")
-        if not any(s in text for s in ENEMY_ONLY):
-            continue
-        rel = path.relative_to(CONTENT).as_posix()
-        if rel == "statuses.yaml":
-            continue
-        assert rel.startswith("units/"), rel
-        holders.append(path.stem)
-    assert holders
-    for rel in PLAYER_SIDE_FILES:
-        text = (CONTENT / rel).read_text(encoding="utf-8")
-        assert not [u for u in holders if u in text], rel
+def _edit(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text, path
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+def test_loader_rejects_a_skill_with_an_enemy_only_status(tmp_path: Path) -> None:
+    """5F-R1：載入時驗證（原本是比對 YAML 文字）——內容庫的技能施加 enemy_only 狀態＝資料錯誤。"""
+    root = _copy_content(tmp_path)
+    _edit(root / "skills" / "skill_fire_bolt.yaml", "status: burning", "status: molten_burst")
+    with pytest.raises(ContentError, match="molten_burst 只給敵人"):
+        load_library(root)
+
+
+def test_loader_rejects_enemy_only_opening_status_on_player_side(tmp_path: Path) -> None:
+    """build 英雄（主角、影子、傭兵、劇情夥伴的底稿）開場帶 enemy_only 狀態＝資料錯誤。"""
+    root = _copy_content(tmp_path)
+    _edit(
+        root / "sim" / "builds.yaml",
+        "      skills: [skill_fire_bolt,",
+        "      opening_statuses: [{status: molten_burst}]\n      skills: [skill_fire_bolt,",
+    )
+    with pytest.raises(ContentError, match="開場狀態 molten_burst 只給敵人"):
+        load_library(root)
+
+
+def test_loader_rejects_enemy_only_league_opening_status(tmp_path: Path) -> None:
+    library = load_library()
     season = library.world_season
     assert season is not None and season.league is not None
     league = (*season.league.opening_statuses, *season.league.first_opening_statuses)
-    assert not set(ENEMY_ONLY) & set(league)
+    assert league and not set(ENEMY_ONLY) & set(league)
+    root = _copy_content(tmp_path)
+    _edit(root / "world" / "season.yaml", league[0], "molten_burst")
+    with pytest.raises(ContentError, match="循環賽的開場狀態 molten_burst"):
+        load_library(root)
+
+
+def test_player_side_templates_have_no_enemy_only_status(library: ContentLibrary) -> None:
+    """現有內容：玩家這一邊的範本都通過（傭兵與劇情夥伴的底稿都是 build）。"""
+    templates = {b.id: b.hero for b in library.builds.builds}
+    for uid, template in sorted(templates.items()):
+        assert not player_template_enemy_only_problems(
+            uid, template, library.skills, library.ruleset
+        )
+    mercs = library.world_mercenaries
+    assert mercs is not None
+    builds = set(templates)
+    assert {m.build for m in mercs.mercenaries} <= builds
+    assert {c.build for c in mercs.companions} <= builds

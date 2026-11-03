@@ -5,7 +5,16 @@
 # 18 18.7.4（雲嶺懸賞）、19 19.6（主線時間點）、19.9（世界事件）。
 # 時區與刷新時刻在 world/rules.yaml 的 calendar；開賽日在 config/server.toml 的 [season]。
 # 數值（任務幣、門檻比例、目標次數）是開發 PM 的初值（Phase 5 計畫 Q14、代決 5F1-11），未經模擬。
+# 5F-R2：這個檔的最上層是「預設」，沒有覆寫的季（包括第一季 s1）都用它；某一季要不同時寫在最後的 seasons。
 days: 14
+
+# 季名（5F-R2，取代程式裡寫死的「第X季」）：季 ID 是 s<N> 時套 template（{number}＝N 的中文數字，用 digits
+# 與 units 拼，支援到 9999）；其他格式的季 ID 套 fallback（{id}＝季 ID）。某一季要特別的名字時在 seasons 寫 name_zh。
+naming:
+  template: "第{number}季"
+  fallback: "賽季 {id}"
+  digits: 零一二三四五六七八九
+  units: 十百千
 
 # 9.7 節奏（顯示用；天數 1 起、閉區間、依序涵蓋整季）
 schedule:
@@ -163,3 +172,13 @@ chronicle:
   events: {text: "完成事件{items}", item: "「{name}」"}
   recipes: {text: "首位發現配方{items}", item: "「{name}」"}
   league: "影子循環賽第 {rank} 名"
+
+# 依季 ID 覆寫（5F-R2）：seasons.<季 ID> 底下只寫要改的頂層項目（name_zh、days、schedule、milestones、daily_goals、
+# bounties、world_events、seal_keys、season_boss、league、chronicle），沒寫的沿用上面的預設；寫了就整項取代、
+# 不逐欄合併（例如改 world_events 要列出那一季全部的世界事件）。season_boss／league 寫 null＝那一季沒有。
+# 載入時每一季套上覆寫後都要通過和預設相同的檢查（例如改 days 時 schedule、時間點、Boss 的天數也要跟著改）。例：
+#   seasons:
+#     s2:
+#       name_zh: 第二季・餘燼
+#       league: null
+seasons: {}

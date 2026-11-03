@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from trpg.server.first_kills import FirstKill
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import TravelAction
+from trpg.world.layout import NOTES_FILE
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import write_atomic
 from trpg.world.state import CharacterState
@@ -44,7 +45,6 @@ __all__ = [
 ]
 
 NOTES_FORMAT: Final = "trpg-notes/1"
-NOTES_FILE: Final = "notes.json"
 NOTE_MAX_LEN: Final = 50
 """留言上限（#105）。"""
 BOARD_NOTES: Final = 20

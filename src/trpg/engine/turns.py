@@ -338,16 +338,20 @@ def _expire_round_end_statuses(ctx: Ctx) -> None:
     for unit in ctx.state.units_sorted():
         kept: list[StatusInstance] = []
         expired: list[str] = []
+        changed = False
         for status in unit.statuses:
             definition = ctx.rules.status_def(status.status_id)
             if definition.expires != "round_end" or status.remaining is None:
                 kept.append(status)
             elif status.remaining <= 1:
                 expired.append(status.status_id)
+                changed = True
             else:
                 kept.append(dataclasses.replace(status, remaining=status.remaining - 1))
-        if not expired:
+                changed = True
+        if not changed:
             continue
+        # 5F-R1：只要有遞減就寫回（原本只在有狀態到期時才寫回，duration ≥ 2 永不到期）。
         unit.statuses = kept
         for status_id in expired:
             ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="expired")

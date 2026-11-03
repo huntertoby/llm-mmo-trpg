@@ -51,11 +51,13 @@ from trpg.server.league import LeagueError, LeagueMatchNotFoundError
 from trpg.server.notes import NoteError, NoteNotFoundError
 from trpg.server.season_archive import ArchiveRecordNotFoundError
 from trpg.server.season_reset import SeasonResetError
+from trpg.server.server_presence import ServerPresence
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
 from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError, WorldError, WorldSaveFormatError
+from trpg.world.layout import world_dir_of
 
 __all__ = ["ERROR_STATUS", "create_app"]
 
@@ -116,6 +118,7 @@ def create_app(
     llm: LlmProvider | None = None,
     accounts: AccountSettings | None = None,
     server: ServerSettings | None = None,
+    hold_presence: bool = False,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
     （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
@@ -130,6 +133,9 @@ def create_app(
     ``server`` 是網路與健康檢查的設定（5E-3；省略時讀 ``config/server.toml`` 的 ``[network]``、
     ``[llm_health]``）：``trusted_proxies`` 決定登入限制讀不讀轉發標頭，``llm_health_interval_s`` 是
     本機模型的 ping 間隔（啟動時 ping 一次；0＝只在啟動時）。
+    ``hold_presence``（5F-R1；``trpg serve`` 傳 ``True``）：啟動時在世界資料夾寫心跳檔
+    ``server.lock``、關閉時移除（:mod:`trpg.server.server_presence`），命令列的季末重置看到就拒絕。
+    測試預設不寫，免得動到真正的存檔資料夾。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
     所以 ``/api/*`` 優先）。
     """
@@ -145,11 +151,15 @@ def create_app(
     app.state.world = WorldStore(  # 大世界（5A-5）
         lib,
         app.state.store,
-        saves / "world",
+        world_dir_of(saves),
         season_start=None if start_date is None else season_start_at(lib, start_date),
     )
     app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
     app.router.on_shutdown.append(app.state.world.league_runner.shutdown)  # 5F-4 循環賽
+    if hold_presence:  # 5F-R1：心跳檔，命令列重置看得到伺服器開著
+        presence = ServerPresence(world_dir_of(saves))
+        app.router.on_startup.append(presence.start)
+        app.router.on_shutdown.append(presence.stop)
     app.state.server_settings = network  # 網路與健康檢查（5E-3）
     health = LlmHealth(provider, interval_s=network.llm_health_interval_s)
     world_llm = WorldLlm(provider, health)  # 大世界自己的 LLM 開關（5B-5）

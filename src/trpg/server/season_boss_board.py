@@ -23,6 +23,7 @@ from trpg.engine.runner import replay
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction
 from trpg.world.battle import prepare_battle
+from trpg.world.layout import BOSS_BOARD_FILE, FIRST_KILL_DIR
 from trpg.world.save import write_atomic
 from trpg.world.season_events import SeasonBossClearedEvent
 from trpg.world.state import CharacterState
@@ -39,8 +40,6 @@ __all__ = [
 ]
 
 BOSS_BOARD_FORMAT: Final = "trpg-bossboard/1"
-BOSS_BOARD_FILE: Final = "season_boss_board.json"
-FIRST_KILL_DIR: Final = "season_boss"
 
 
 class BossBoardError(TrpgError):

@@ -2,7 +2,8 @@
 
 - 戰鬥狀態記錄 ``casts``（本輪以 ``UseSkill`` 施放過的主動技能：施放者、技能、當輪）。
 - 可複製的條件（:func:`copy_source`）：本輪內「最後一個別人施放的」（不算複製者自己的）、施放者
-  仍在場上而且複製者看得到它（視線）；技能本身不能是傳說、改寫規則型（含 ``copy_skill``）、陷阱
+  仍在場上而且複製者看得到它（視線）；技能本身不能是傳說、改寫規則型（含 ``copy_skill``）、陷阱、
+  敵人專用（``enemy_only``，5F-R1）
   或有層數需求的技能（保守）。
 - 複製的技能由複製者重新選目標（:func:`copy_selections`），不扣法力與 AP、不進冷卻、不花源力，但
   沉默、射程、視線與技能條件都要合法（:func:`copy_free_problem`、``selections``）；不檢查
@@ -40,18 +41,25 @@ def has_copy_effect(skill: SkillDef) -> bool:
 
 
 def uncopyable_reason(state: BattleState, skill: SkillDef) -> str | None:
-    """技能本身不能被複製的原因（傳說、改寫規則型、非主動、陷阱、層數需求、帶變奏）。"""
-    if skill.kind != "active" or skill.trap is not None:
-        return f"「{skill.name_zh}」不是一般的主動技能，不能複製"
-    if skill.rarity == "legendary":
-        return f"「{skill.name_zh}」是傳說技能，不能複製"
-    if skill.cost.stacks is not None:
-        return f"「{skill.name_zh}」需要層數，不能複製"
-    if skill.variants:  # 紀錄只存技能 ID，看不出當時施放的是哪個型態，保守地不複製（3E-2a）
-        return f"「{skill.name_zh}」帶有戰場變奏，不能複製"
-    for effect in skill.effects:
-        if state.ruleset.primitive_def(effect.type).category == "rule_rewrite":
-            return f"「{skill.name_zh}」改寫了規則，不能複製"
+    """技能本身不能被複製的原因（傳說、改寫規則型、非主動、陷阱、敵人專用、層數需求、帶變奏）。"""
+    checks = (
+        (skill.kind != "active" or skill.trap is not None, "不是一般的主動技能"),
+        (skill.enemy_only, "是敵人專用的技能"),  # 5F-R1（06 6.35）：戰鬥中暫時複製也不行
+        (skill.rarity == "legendary", "是傳說技能"),
+        (skill.cost.stacks is not None, "需要層數"),
+        # 紀錄只存技能 ID，看不出當時施放的是哪個型態，保守地不複製（3E-2a）
+        (bool(skill.variants), "帶有戰場變奏"),
+        (
+            any(
+                state.ruleset.primitive_def(e.type).category == "rule_rewrite"
+                for e in skill.effects
+            ),
+            "改寫了規則",
+        ),
+    )
+    for failed, why in checks:
+        if failed:
+            return f"「{skill.name_zh}」{why}，不能複製"
     return None
 
 

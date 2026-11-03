@@ -101,7 +101,7 @@ def test_first_kills_posted_once_and_not_flooded_on_first_start(tmp_path: Path) 
 
 
 def test_same_elite_next_season_is_posted(tmp_path: Path) -> None:
-    """季末重置（5F-5）後，新一季同一種精英的首殺照樣貼；第一季的舊鍵不變。"""
+    """季末重置（5F-5）後，新一季同一種精英的首殺照樣貼；每一季的鍵同一種格式（5F-R2）。"""
     feed = _Feed(kills=[_kill(1, "wolf")])
     announcer, _gateway = _announcer(tmp_path, feed)
     assert announcer.tick(_at(3, 5)) == []
@@ -109,7 +109,27 @@ def test_same_elite_next_season_is_posted(tmp_path: Path) -> None:
     assert announcer.tick(_at(3, 5, 1)) == ["kill wolf"]
     assert announcer.tick(_at(3, 5, 2)) == []
     state = read_state(tmp_path / "bot" / "state.json")
-    assert state is not None and state.posted_kills == ("elite:wolf", "s2:elite:wolf")
+    # 5F-R2 改：第一季的鍵原本是 "elite:wolf"，現在統一成 "<季>:<kind>:<target>"
+    assert state is not None and state.posted_kills == ("s1:elite:wolf", "s2:elite:wolf")
+
+
+def test_legacy_first_season_keys_are_not_reposted(tmp_path: Path) -> None:
+    """5F-R2 前的狀態檔（第一季鍵 ``<kind>:<target>``）照讀：貼過的不重貼，寫回時換成新格式。"""
+    path = tmp_path / "bot" / "state.json"
+    path.parent.mkdir(parents=True)
+    legacy = {"format": "trpg-announce/1", "posted_kills": ["elite:wolf", "s2:elite:hawk"]}
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+    feed = _Feed(kills=[_kill(1, "wolf")])
+    feed.kills.append(_kill(2, "hawk").model_copy(update={"season_id": "s2"}))
+    announcer, gateway = _announcer(tmp_path, feed)
+    assert announcer.tick(_at(3, 5)) == []  # 都貼過了
+    feed.kills.append(_kill(3, "boar"))
+    assert announcer.tick(_at(3, 5, 1)) == ["kill boar"]
+    assert gateway.posts_to(CHANNEL) == ["kill boar"]
+    state = read_state(path)
+    assert state is not None
+    assert state.posted_kills == ("s1:elite:boar", "s1:elite:wolf", "s2:elite:hawk")
+    assert "elite:wolf" not in json.loads(path.read_text(encoding="utf-8"))["posted_kills"]
 
 
 def test_failed_post_is_retried(tmp_path: Path) -> None:

@@ -48,12 +48,14 @@ from trpg.server.season_policy import (
     fields_of_kind,
 )
 from trpg.server.season_reset import (
+    WORLD_FILES,
     SeasonResetError,
     SeasonResetReport,
     next_season_id,
     season_name_zh,
     season_reset,
 )
+from trpg.world.layout import LEAGUE_HISTORY_DIR, SERVER_LOCK_FILE, WORLD_ENTRIES
 from trpg.world.league import league_rules
 from trpg.world.league_actions import LeagueEnterAction
 from trpg.world.save import dumps_char, dumps_world, loads_world, write_atomic
@@ -543,6 +545,21 @@ def test_backup_copies_whole_save_dir(library: ContentLibrary, tmp_path: Path) -
     assert copied == expected
 
 
+def test_backup_skips_read_only_archive(library: ContentLibrary, tmp_path: Path) -> None:
+    """5F-R1：存檔資料夾的 ``archive/``（舊季的唯讀封存）不備份；世界資料夾裡的
+    ``league/archive/`` 照樣備份。"""
+    season = _fake_season(library, tmp_path)
+    write_atomic(season.save_dir / "archive" / "s0" / "log.jsonl", '{"seq": 1}\n')
+    report = _reset(library, season)
+    assert report.backup is not None
+    backup = Path(report.backup)
+    assert not (backup / "archive").exists()
+    assert (backup / "world" / "league" / "archive" / "league-s1-1-0.json").is_file()
+    for p in (season.save_dir / "archive").rglob("*"):  # tmp_path 清理用：封存是唯讀的
+        if p.is_file():
+            os.chmod(p, 0o600)
+
+
 def test_backup_root_inside_saves_is_refused(library: ContentLibrary, tmp_path: Path) -> None:
     season = _fake_season(library, tmp_path)
     before = _tree(season.world_dir)
@@ -676,7 +693,7 @@ def test_script_dry_run_then_execute(library: ContentLibrary, tmp_path: Path) ->
     out, err = io.StringIO(), io.StringIO()
     if script.main(base, out, err) != 0:  # 真實時間：假賽季可能還沒結束
         assert "還沒結束" in err.getvalue()
-        base.append("--force")
+        base.append("--force-season")  # 5F-R2：原本的 --force 拆開，賽季沒結束是這個
         out = io.StringIO()
         assert script.main(base, out, err) == 0
     assert "dry-run" in out.getvalue() and "角色 2" in out.getvalue()
@@ -685,3 +702,17 @@ def test_script_dry_run_then_execute(library: ContentLibrary, tmp_path: Path) ->
     assert script.main([*base, "--execute"], out, err) == 0
     assert "已重置：s1 → s2" in out.getvalue() and "備份：" in out.getvalue()
     assert not (season.world_dir / "chars").exists()
+
+
+def test_every_world_entry_has_reset_handling(library: ContentLibrary, tmp_path: Path) -> None:
+    """5F-R1：世界資料夾版面（``trpg.world.layout``）的每一種檔案都有重置處理，反之亦然；
+    假世界（每一種都有）重置時沒有「不認得的檔案」。"""
+    assert set(WORLD_FILES) == set(WORLD_ENTRIES)
+    assert set(WORLD_FILES.values()) <= {"replace", "archive", "delete", "keep"}
+    season = _fake_season(library, tmp_path)
+    (season.world_dir / LEAGUE_HISTORY_DIR).mkdir()
+    write_atomic(season.world_dir / SERVER_LOCK_FILE, "{}\n")
+    present = {p.name for p in season.world_dir.iterdir()}
+    assert present == set(WORLD_ENTRIES)
+    report = _reset(library, season, dry_run=True)
+    assert not [line for line in report.kept if line.label_zh.startswith("不認得")]

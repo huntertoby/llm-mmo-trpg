@@ -416,8 +416,8 @@ def granted_skill_problems(
     skill: SkillDef, skills: Mapping[str, SkillDef], primitives: Mapping[str, PrimitiveDef]
 ) -> list[str]:
     """``grant_skill`` 的跨技能檢查（Phase 3D-8c，6.20）：被給的技能必須存在，而且是一般的主動技能
-    ——不是傳說、不含改寫規則型與規則改變型原語、不是 ``grant_skill`` 技能（不連鎖）、也不是技能
-    自己（空串列為通過）。"""
+    ——不是傳說、不是 ``enemy_only``（5F-R1）、不含改寫規則型與規則改變型原語、不是 ``grant_skill``
+    技能（不連鎖）、也不是技能自己（空串列為通過）。"""
     problems: list[str] = []
     for index, effect in enumerate(skill.effects):
         if effect.type != GRANT_SKILL or effect.skill is None:
@@ -434,6 +434,8 @@ def granted_skill_problems(
             reasons.append(f"必須是主動技能（kind: {granted.kind}）")
         if granted.rarity == "legendary":
             reasons.append("不能是傳說技能")
+        if granted.enemy_only:  # 5F-R1：只給敵人的技能不能經 grant_skill 流到別人手上
+            reasons.append("不能是只給敵人的技能（enemy_only）")
         rewrite = sorted(
             {
                 e.type
