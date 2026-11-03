@@ -46,6 +46,7 @@ event_affinity:
   - {skeleton: gang_toll, outcome: success, npc: scarface, delta: -10}  # 威嚇了斷崖幫的人
   - {skeleton: monks_dispute, outcome: success, npc: daoist_qingya, delta: 10}
   - {skeleton: monks_dispute, outcome: success, npc: acolyte_xiaolian, delta: 10}
+  - {skeleton: monks_dispute, outcome: partial, npc: acolyte_xiaolian, delta: 10}  # 5D-2b（玩法 PM 2026-11-03 代決）
   - {skeleton: fox_traveler, outcome: success, npc: frost_chime, delta: 10}  # 18.4 #18 賭注「狐族的好感度」
   - {skeleton: ayue_request, outcome: success, npc: hunter_ayue, delta: 10}
 

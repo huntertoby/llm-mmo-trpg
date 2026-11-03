@@ -25,6 +25,7 @@ from trpg.content.world_situations import default_proposal
 from trpg.llm import LLMUnavailable, MockLLMClient
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION
 from trpg.world.actions import (
+    EventLeftEvent,
     EventTriggeredEvent,
     NarratedEvent,
     OpportunityHintEvent,
@@ -245,3 +246,14 @@ def test_chat_hooks_filtered_by_affinity(
         assert text in user["content"]
     for text in hidden:
         assert text not in user["content"]
+
+
+def test_left_line_uses_guarantee_who(library: ContentLibrary) -> None:
+    """5D-2b（玩法 PM 2026-11-03 代決）：保底那次的「作罷」句子也用保底的「誰」。"""
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    for guaranteed, who in ((True, GUARANTEE_WHO), (False, PLAIN_WHO)):
+        left = EventLeftEvent(
+            skeleton="storm_altar", location="old_pine_altar", guaranteed=guaranteed
+        )
+        line = event_lines(library, "cloud_ridge", (left,), char)
+        assert line == (f"離開了古松祭壇，「{who}」的事就此作罷。",)

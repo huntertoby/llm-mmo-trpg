@@ -115,6 +115,8 @@ class LootRules(ContentModel):
     sell_rarity_coef: dict[Rarity, int] = Field(default_factory=dict)
     """20.1 裝備回收＝物品等級 × 係數；沒列的稀有度（傳說）不收。"""
     mercenary_gear: MercenaryGearRules = Field(default_factory=MercenaryGearRules)
+    families: dict[str, str] = Field(default_factory=dict)
+    """各區共用的敵人 → 家族材料（5D-2b：盜賊各區都掉焦鐵）；區域的 ``families`` 優先。"""
     regions: dict[str, RegionLoot] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -139,6 +141,10 @@ class LootRules(ContentModel):
     def region(self, region: str) -> RegionLoot:
         return self.regions.get(region, RegionLoot())
 
+    def family_material(self, region: str, unit: str) -> str | None:
+        """敵人的家族材料：區域的 ``families`` 優先，其次各區共用的；都沒有時為 ``None``。"""
+        return self.region(region).families.get(unit) or self.families.get(unit)
+
     def sell_price(self, rarity: str | None, item_level: int | None) -> int | None:
         """裝備回收價；不收時為 ``None``（代決 5D2-8）。"""
         if rarity is None or item_level is None:
@@ -158,9 +164,11 @@ def loot_problems(
     units: Collection[str] | None,
     affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
+    keywords: Collection[str] | None = None,
 ) -> list[str]:
     """跨檔案問題（27.2；依區域、鍵排序）。``units``／``affixes`` 為 ``None``＝沒有
-    ``world/enemies.yaml``（變體與詞綴不明），不檢查敵人與詞綴。"""
+    ``world/enemies.yaml``（變體與詞綴不明），不檢查敵人與詞綴；``keywords``（關鍵字推導表的 ID，
+    5D-2b）為 ``None``＝不檢查區域的偏向關鍵字。"""
     problems: list[str] = []
 
     def material(item: str, where: str) -> None:
@@ -172,10 +180,17 @@ def loot_problems(
 
     for row in rules.generic_by_level:
         material(row.item, "generic_by_level")
+    for unit, item in sorted(rules.families.items()):
+        if units is not None and unit not in units:
+            problems.append(f"families：未知的敵人 {unit}")
+        material(item, f"families.{unit}")
     for region, loot in sorted(rules.regions.items()):
         where = f"區域 {region}"
         if region not in regions:
             problems.append(f"{where}：沒有地點圖")
+        unknown = sorted(k for k in loot.keywords if keywords is not None and k not in keywords)
+        if unknown:
+            problems.append(f"{where} 的 keywords：未知的關鍵字 {unknown}")
         for unit, item in sorted(loot.families.items()):
             if units is not None and unit not in units:
                 problems.append(f"{where} 的 families：未知的敵人 {unit}")
@@ -195,13 +210,16 @@ def load_world_loot(
     units: Collection[str] | None,
     affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
+    keywords: Collection[str] | None = None,
 ) -> LootRules | None:
     """載入 ``world/loot.yaml``；不存在＝``None``（掉落關閉）。``units`` 是單位範本與變體 ID。"""
     path = root / LOOT_FILE
     if not path.is_file():
         return None
     rules = load_content_file(path, LootRules)
-    problems = loot_problems(rules, regions=regions, units=units, affixes=affixes, items=items)
+    problems = loot_problems(
+        rules, regions=regions, units=units, affixes=affixes, items=items, keywords=keywords
+    )
     if problems:
         raise ContentError(path, "；".join(problems))
     files.append((path, rules))

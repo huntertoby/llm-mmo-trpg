@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from trpg.api.world_economy_schemas import (
     BagItemView,
     InventoryView,
+    PendingLootView,
     ShopItemView,
     ShopView,
     WalletView,
@@ -36,6 +37,8 @@ from trpg.world.economy_actions import (
     ItemEquippedEvent,
     ItemSoldEvent,
     ItemUsedEvent,
+    LootAbandonedEvent,
+    LootChosenEvent,
     LootGainedEvent,
     PouchChangedEvent,
     PouchUsedEvent,
@@ -48,6 +51,7 @@ __all__ = [
     "gear_title",
     "inventory_view",
     "last_loot_line",
+    "pending_loot_view",
     "shop_view",
     "wallet_view",
 ]
@@ -313,13 +317,17 @@ def _item_line(library: ContentLibrary, event: WorldEvent) -> str | None:
 def _gear_line(library: ContentLibrary, event: WorldEvent) -> str | None:
     """掉落與換裝備的句子（Phase 5D-2）。"""
     if isinstance(event, LootGainedEvent):
-        return _loot_text(
+        text = _loot_text(
             library,
             event.materials,
             event.gear_names,
             event.lost_materials,
             event.lost_gear_names,
         )
+        waiting = _pending_text(library, event.pending_materials, event.pending_gear_names)
+        return "".join(t for t in (text, waiting) if t) or None
+    if isinstance(event, LootChosenEvent | LootAbandonedEvent):
+        return _choice_line(library, event)
     if isinstance(event, ItemEquippedEvent):
         removed = f"，換下{'、'.join(event.removed)}" if event.removed else ""
         return f"{SLOT_ZH.get(event.slot, event.slot)}換上{event.name_zh}{removed}。"
@@ -342,6 +350,54 @@ def _loot_text(
     if lost:
         parts.append(f"背包滿了，沒撿到：{'、'.join(lost)}。")
     return "".join(parts) or None
+
+
+def _listing(library: ContentLibrary, counts: Mapping[str, int], names: tuple[str, ...]) -> str:
+    return "、".join([f"{_name(library, k)} ×{v}" for k, v in sorted(counts.items())] + list(names))
+
+
+def _pending_text(
+    library: ContentLibrary, materials: Mapping[str, int], gear: tuple[str, ...]
+) -> str | None:
+    if not materials and not gear:
+        return None
+    return f"背包滿了，先選要丟哪件才收得下：{_listing(library, materials, gear)}。"
+
+
+def _choice_line(library: ContentLibrary, event: LootChosenEvent | LootAbandonedEvent) -> str:
+    if isinstance(event, LootAbandonedEvent):
+        left = _listing(library, event.materials, event.gear_names)
+        return f"上一場沒收下的戰利品留在原地：{left}。"
+    parts = []
+    if event.dropped_items or event.dropped_gear_names:
+        parts.append(f"丟掉了{_listing(library, event.dropped_items, event.dropped_gear_names)}。")
+    if event.materials or event.gear_names:
+        parts.append(f"收下了{_listing(library, event.materials, event.gear_names)}。")
+    return "".join(parts) or "戰利品整理好了。"
+
+
+def pending_loot_view(library: ContentLibrary, char: CharacterState) -> PendingLootView | None:
+    """背包滿了、等戰後結算選要丟哪件的戰利品（Phase 5D-2b）；沒有為 ``None``。"""
+    loot = char.pending_loot
+    rules = economy_rules(library)
+    if loot is None or rules is None:
+        return None
+    bag = dict(char.bag)
+    for item, count in loot.materials.items():
+        bag[item] = bag.get(item, 0) + count
+    over = max(0, bag_slots_used(library, bag) + len(char.gear) + len(loot.gear) - rules.bag_slots)
+    rows = (
+        *_views(library, loot.materials),
+        *(_gear_item(library, g, "還沒收進背包") for g in loot.gear),
+    )
+    return PendingLootView(
+        items=rows,
+        over_slots=over,
+        hint_zh=(
+            f"背包滿了：勾選要丟的（新拿到的或背包裡原本的），騰出 {over} 格就能收下其他的。"
+            "沒決定的在下一場打贏時留在原地。"
+        ),
+    )
 
 
 def last_loot_line(library: ContentLibrary, last: LastBattle | None) -> str | None:

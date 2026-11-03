@@ -11,6 +11,7 @@ from tests.world.test_situations import at_event
 from trpg.content.library import ContentLibrary
 from trpg.skillgen.candidates import skill_has_keywords
 from trpg.world.actions import (
+    EventLeftEvent,
     EventResolvedEvent,
     EventSolveAction,
     EventSolvedEvent,
@@ -206,3 +207,32 @@ def test_guarantee_waives_keyword_5b4e(library: ContentLibrary, make_char: MakeC
     )
     with pytest.raises(WorldActionError, match="條件不成立"):
         world_step(library, make_world(), plain, EventSolveAction(solution=OPPORTUNITY), DAY6)
+
+
+def test_guarantee_flag_recorded_on_offer_and_leave(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """5D-2b（玩法 PM 2026-11-03 代決）：保底觸發的機遇在待選三選一與「作罷」事件上記下是保底。"""
+    char, _ = _arrive(library, make_char(), DAY6)
+    assert char.pending_event is not None and char.pending_event.guaranteed
+    solved = world_step(library, make_world(), char, EventSolveAction(solution=OPPORTUNITY), DAY6)
+    assert solved.char.pending_offers[0].guaranteed
+    # 一般觸發不記
+    plain = _at_altar(_charged(make_char()))
+    taken = world_step(library, make_world(), plain, EventSolveAction(solution=OPPORTUNITY), NOON)
+    assert not taken.char.pending_offers[0].guaranteed
+    # 離開地點作罷：事件帶保底旗標
+    left = roll_event(
+        library,
+        make_world(),
+        char.model_copy(update={"location": "rain_terraces"}),
+        encountered=False,
+        now=DAY6,
+    )
+    gone = [e for e in left.events if isinstance(e, EventLeftEvent)]
+    assert len(gone) == 1 and gone[0].guaranteed
+    # 舊存檔／舊日誌沒有這個欄位照讀
+    data = solved.char.pending_offers[0].model_dump(mode="json")
+    del data["guaranteed"]
+    assert not type(solved.char.pending_offers[0]).model_validate(data).guaranteed
+    assert not EventLeftEvent.model_validate({"skeleton": ALTAR, "location": "x"}).guaranteed

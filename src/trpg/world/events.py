@@ -161,7 +161,13 @@ def roll_event(
     events: list[WorldEvent] = []
     pending = char.pending_event
     if pending is not None:
-        events.append(EventLeftEvent(skeleton=pending.skeleton, location=pending.location))
+        events.append(
+            EventLeftEvent(
+                skeleton=pending.skeleton,
+                location=pending.location,
+                guaranteed=pending.guaranteed,
+            )
+        )
         char = char.model_copy(update={"pending_event": None})
 
     steps = char.event_steps + 1

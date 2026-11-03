@@ -91,6 +91,7 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
             "regions": {
                 "nowhere": {},
                 "cloud_ridge": {
+                    "keywords": ["wet", "hidden"],
                     "families": {"ghost": "item_wolf_fang", "mist_wolf": "item_hp_potion_small"},
                     "elite_affixes": {"shiny": "item_nothing"},
                 },
@@ -103,8 +104,10 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
         units=set(library.units),
         affixes={"regenerating"},
         items=library.world_economy.items,
+        keywords={"wet", "charged", "concealed"},
     )
     text = "；".join(problems)
+    assert "未知的關鍵字 ['hidden']" in text  # 5D-2b：雲嶺的「隱蔽」是 concealed
     assert "nowhere：沒有地點圖" in text
     assert "未知的敵人 ghost" in text
     assert "item_hp_potion_small 不是材料" in text
@@ -114,3 +117,21 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
 
 def test_missing_file_is_none(tmp_path: Path) -> None:
     assert load_world_loot(tmp_path, [], regions=(), units=(), affixes=(), items={}) is None
+
+
+def test_bandits_drop_scorched_iron_in_every_region(library: ContentLibrary) -> None:
+    """5D-2b（19.2.4、20.2）：盜賊在各區都掉焦鐵（護甲、格擋傾向）；區域的家族材料優先。"""
+    rules = library.world_loot
+    assert rules is not None
+    iron = library.world_economy.items["item_scorched_iron"]
+    assert iron.kind == "material" and iron.name_zh == "焦鐵" and not iron.rare
+    bandits = sorted(u for u in library.units if u.startswith("bandit"))
+    assert bandits and set(bandits) <= set(rules.families)
+    for region in ("cloud_ridge", "ash_wastes"):
+        for unit in bandits:
+            assert rules.family_material(region, unit) == "item_scorched_iron"
+    assert rules.family_material("cloud_ridge", "mist_wolf") == "item_wolf_fang"
+    assert rules.family_material("ash_wastes", "mist_wolf") is None
+    crafting = library.world_crafting
+    assert crafting is not None
+    assert "affix_react_ranged_block" in crafting.materials["item_scorched_iron"].leanings

@@ -11,7 +11,7 @@ generic_by_level:
   - {max_level: 7, item: item_fine_material}
   - {max_level: 10, item: item_superior_material}
 
-# 20.2：一般戰鬥約 15% 掉 1 件（普通～稀有）；精英必掉 1 件、史詩 50%（一場最多 1 件，代決 5D2-4）
+# 20.2：一般戰鬥約 15% 掉 1 件（普通～稀有）；每名精英必掉 1 件、史詩 50%（5D-2b 玩法 PM 代決，取代 5D2-4 的一場 1 件）
 # 物品等級＝地點建議等級（8.26.2），第一季上限 10。區域 Boss 必掉史詩在 5F。
 gear:
   battle_permille: 150
@@ -28,11 +28,24 @@ mercenary_gear:
   rarity: rare
   slots: [head, body, hands, feet, neck, ring_1, ring_2]
 
+# 各區共用的家族材料（區域的 families 優先）。5D-2b（玩法 PM 2026-11-03 代決；19.2.4、20.2）：
+# 盜賊在各區都掉焦鐵（盜賊系列的單位範本全列）。
+families:
+  bandit: item_scorched_iron
+  bandit_archer: item_scorched_iron
+  bandit_archer_guard: item_scorched_iron
+  bandit_boss: item_scorched_iron
+  bandit_captain: item_scorched_iron
+  bandit_guard: item_scorched_iron
+  bandit_shieldbearer: item_scorched_iron
+  bandit_shieldbearer_guard: item_scorched_iron
+  bandit_warlord: item_scorched_iron
+
 regions:
   cloud_ridge:
-    # 20.2：雲嶺的詞條偏向潮濕、帶電、隱蔽（現成的技能強化詞條只有帶電，代決 5D2-5）
-    keywords: [wet, charged, hidden]
-    # 18.2.4 的來源；沒列的敵人掉通用料
+    # 20.2：雲嶺的詞條偏向潮濕、帶電、隱蔽（5D-2b 補了潮濕、隱蔽的技能強化詞條；ID 照 skill_keywords.yaml）
+    keywords: [wet, charged, concealed]
+    # 18.2.4 的來源；沒列的敵人掉上面各區共用的 families，再沒有就掉通用料
     families:
       sect_mist_walker: item_mist_crystal       # 霧行者 → 霧晶
       mist_wraith: item_mist_crystal            # 霧魅 → 霧晶

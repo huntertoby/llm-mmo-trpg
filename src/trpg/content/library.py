@@ -918,6 +918,7 @@ def load_library(  # noqa: PLR0915
         npcs_by_region={r: {n.id for n in t.npcs} for r, t in world_event_content.npcs.items()},
         check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
     )
+    keyword_ids = {k.id for k in keywords.keywords}
     world_loot = load_world_loot(  # 5D-2
         root,
         files,
@@ -925,8 +926,8 @@ def load_library(  # noqa: PLR0915
         units=None if world_enemies is None else {*units, *(v.id for v in world_enemies.variants)},
         affixes=None if world_enemies is None else {a.id for a in world_enemies.affixes},
         items=world_economy.items,
+        keywords=keyword_ids,
     )
-    keyword_ids = {k.id for k in keywords.keywords}
     world_crafting = load_world_crafting(  # 5D-3
         root,
         files,

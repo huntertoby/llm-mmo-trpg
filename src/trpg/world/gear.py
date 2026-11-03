@@ -18,7 +18,7 @@ from collections.abc import Mapping
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import ItemDef, Loadout, resolve_loadout
-from trpg.content.item_gen import ItemGenError, generate_item
+from trpg.content.item_gen import ItemGenError, downscale_item, generate_item
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.world_loot import LootRules
@@ -173,10 +173,11 @@ def mercenary_equipment(
     return {**extra, **base}
 
 
-def shadow_equipment(equipment: Mapping[str, ItemDef], recruiter_level: int) -> dict[str, ItemDef]:
-    """影子借用時穿的裝備：物品等級超過招募者等級的那件不穿（代決 5D2-10）。"""
+def shadow_equipment(
+    library: ContentLibrary, equipment: Mapping[str, ItemDef], recruiter_level: int
+) -> dict[str, ItemDef]:
+    """影子借用時穿的裝備：物品等級超過招募者等級的壓到招募者等級後照穿（20.5、#87；5D-2b 玩法 PM
+    代決，取代 5D2-10 的整件不穿）。詞條數值照物品等級規則縮（:func:`downscale_item`）。"""
     return {
-        slot: item
-        for slot, item in equipment.items()
-        if item.item_level is None or item.item_level <= recruiter_level
+        slot: downscale_item(library, item, recruiter_level) for slot, item in equipment.items()
     }
