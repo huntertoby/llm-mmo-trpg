@@ -500,9 +500,13 @@ def store_offer(
     offer: SkillOffer,
     *,
     source: Literal["quest", "opportunity"] = "quest",
+    guaranteed: bool = False,
 ) -> tuple[CharacterState, WorldEvent]:
-    """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務與機遇（5B-4c）共用。"""
-    pending = PendingOffer(quest=quest, step=step, offer=offer, source=source)
+    """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務與機遇（5B-4c）共用。
+    ``guaranteed``（5D-2b）：保底觸發的機遇。"""
+    pending = PendingOffer(
+        quest=quest, step=step, offer=offer, source=source, guaranteed=guaranteed
+    )
     char = char.model_copy(
         update={
             "pending_offers": (*char.pending_offers, pending),

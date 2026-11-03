@@ -468,11 +468,13 @@ class EventTriggeredEvent(_Model):
 
 
 class EventLeftEvent(_Model):
-    """離開地點時沒處理的事件作罷（Phase 5B-1 代決 5B1-4）。"""
+    """離開地點時沒處理的事件作罷（Phase 5B-1 代決 5B1-4）。``guaranteed``（5D-2b）：作罷的是保底
+    觸發的那次（句子用保底的「誰」）；預設 ``False``，舊日誌照讀。"""
 
     kind: Literal["event_left"] = "event_left"
     skeleton: str
     location: str
+    guaranteed: bool = False
 
 
 class CareResult(_Model):

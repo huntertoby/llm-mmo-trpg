@@ -269,12 +269,16 @@ class PendingOffer(_Model):
     """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。
 
     ``source``（Phase 5B-4c）：``quest``＝任務（``quest``、``step`` 是任務與步驟）；
-    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）。"""
+    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）。
+
+    ``guaranteed``（Phase 5D-2b）：機遇是保底觸發的那次（標題用骨架的保底「誰」）；預設 ``False``，
+    舊存檔照讀。"""
 
     quest: str = Field(pattern=ID_PATTERN)
     step: str = Field(pattern=ID_PATTERN)
     offer: SkillOffer
     source: Literal["quest", "opportunity"] = "quest"
+    guaranteed: bool = False
 
 
 def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
