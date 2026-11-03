@@ -13,6 +13,7 @@ import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
+import { battlefieldLine } from "./battlefield";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
 import { walletLine } from "./economy";
@@ -46,12 +47,18 @@ interface Props {
 export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "view" | "busy" | "onAct" | "onBattle">) {
   const e = view.encounter;
   if (e === null) return null;
+  const field = battlefieldLine(e); // 6C-2：就地開打或退回模板的原因
   return (
     <div className="panel world-encounter" data-testid="world-encounter" role="region" aria-label="遇敵">
       <div className="section-title">遇敵！{e.location_name_zh}</div>
       <div className="small">
         敵人等級 {e.enemy_level}・戰場 {e.map_name_zh}・{e.weather_zh}・{e.day_phase_zh}
       </div>
+      {field !== null && (
+        <div className="muted small" data-testid="world-encounter-battlefield">
+          {field}
+        </div>
+      )}
       <ul className="world-enemies">
         {e.enemies.map((x, i) => (
           <li key={i} className={x.elite ? "elite" : x.third === true ? "third" : undefined}>

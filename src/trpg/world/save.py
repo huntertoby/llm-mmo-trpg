@@ -3,8 +3,8 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/2``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/3``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/4``（JSON Lines：第一行 ``{"format": "trpg-wlog/4"}``，之後一行一筆
+| 角色 | ``trpg-char/4``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/5``（JSON Lines：第一行 ``{"format": "trpg-wlog/5"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -25,6 +25,10 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 **Phase 6C-1b**：``trpg-world/1`` 照讀（只多了選填欄位 ``defeated_spawns``），讀進來就是
 ``trpg-world/2``。``trpg-wlog/3`` 也是舊規則寫的（6C-1b 起進圖寬限、每隊清空、``personal``、
 ``day_phase``），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/4``。
+
+**Phase 6C-2**：``trpg-char/3`` 照讀（只多了遭遇接觸的選填欄位 ``enemy_at``），讀進來就是
+``trpg-char/4``。``trpg-wlog/4`` 也是舊規則寫的（6C-2 起碰到地圖上的敵人就地切 12×12 戰場，``fight``
+的步驟是照模板地圖記的），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/5``。
 """
 
 from __future__ import annotations
@@ -65,8 +69,8 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/4"
-LEGACY_WLOG_FORMATS: Final = frozenset({"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3"})
+WLOG_FORMAT: Final = "trpg-wlog/5"
+LEGACY_WLOG_FORMATS: Final = frozenset({"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4"})
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
 

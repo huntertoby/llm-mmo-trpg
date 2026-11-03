@@ -1846,6 +1846,23 @@ export interface components {
             };
         };
         /**
+         * BattlefieldRectView
+         * @description 就地開打切出的戰場在實地地圖上的範圍（Phase 6C-2；格子座標）：畫面用 6B-6 的 ``frameCamera``
+         *     框住它。
+         */
+        BattlefieldRectView: {
+            /** Field Map */
+            field_map: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+        };
+        /**
          * BoardBossEntryView
          * @description 評分榜的一名（Phase 5F-3；#87）。
          */
@@ -3279,6 +3296,9 @@ export interface components {
              * @default
              */
             allies_zh: string;
+            battlefield?: components["schemas"]["BattlefieldRectView"] | null;
+            /** Battlefield Fallback Zh */
+            battlefield_fallback_zh?: string | null;
         };
         /**
          * EndStance

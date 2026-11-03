@@ -4480,6 +4480,41 @@
         "title": "BattleView",
         "description": "``team`` 視角的戰場。"
       },
+      "BattlefieldRectView": {
+        "properties": {
+          "field_map": {
+            "type": "string",
+            "title": "Field Map"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_map",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "BattlefieldRectView",
+        "description": "就地開打切出的戰場在實地地圖上的範圍（Phase 6C-2；格子座標）：畫面用 6B-6 的 ``frameCamera``\n框住它。"
+      },
       "BoardBossEntryView": {
         "properties": {
           "rank": {
@@ -8117,6 +8152,27 @@
             "type": "string",
             "title": "Allies Zh",
             "default": ""
+          },
+          "battlefield": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BattlefieldRectView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "battlefield_fallback_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battlefield Fallback Zh"
           }
         },
         "additionalProperties": false,

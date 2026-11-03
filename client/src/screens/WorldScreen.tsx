@@ -23,6 +23,7 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
 import { WorldMap } from "../world/WorldMap";
+import { battleFrame } from "../world/battlefield";
 import { WorldField } from "../world/WorldField";
 import { mapPaneKind, PLACE_NAME_MS, placeBanner, type FieldTarget } from "../world/fieldModel";
 import { EncounterPanel, HerePanel, WorldPanel } from "../world/WorldPanel";
@@ -583,7 +584,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           send={sendField}
           commit={show}
           onInteract={interact}
-          hud={{ width: stage.width, height: stage.height, onCamera: onFieldCamera }}
+          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), onCamera: onFieldCamera }}
         />
         <WorldHud
           view={v}
