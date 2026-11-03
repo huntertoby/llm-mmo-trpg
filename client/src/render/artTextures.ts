@@ -10,7 +10,7 @@ import type { Facing } from "../api/types";
 import { dollKey, type DollSpec } from "./appearance";
 import { formKey, renderAuraCanvas, renderFormCanvas } from "./inkForm";
 import { DOLL_SCALE, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
-import { renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
+import { copiesOwner, renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -124,7 +124,7 @@ export class ArtTextures {
 
   /** 召喚物貼圖（Phase 3-33h1；鍵 ＝ 外觀＋朝向，殘影另加召喚者外觀）；人形傳入 `humanoid` 紙娃娃規格。 */
   summon(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null): Texture | null {
-    const owner = look.variant === "afterimage" && humanoid !== null ? dollKey(humanoid, facing, false) : "";
+    const owner = copiesOwner(look.variant) && humanoid !== null ? dollKey(humanoid, facing, false) : "";
     const res = this.figureRes(look.body === "humanoid" ? HUMAN_DISPLAY : BEAST_DISPLAY);
     return this.canvas(`s|${res}|${summonKey(look, facing, owner)}`, () => renderSummonCanvas(look, facing, humanoid, res));
   }

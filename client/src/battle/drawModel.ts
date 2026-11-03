@@ -3,7 +3,7 @@ import type { BattleView, DollLook, Facing, Pos, Surface } from "../api/types";
 import type { DollInput } from "../render/appearance";
 import type { GearLook } from "../render/gearIcon";
 import { themeOf } from "../render/regionArt";
-import type { SummonLookDraw } from "../render/summonArt";
+import { copiesOwner, type SummonLookDraw } from "../render/summonArt";
 import {
   HIGHLIGHT,
   SURFACES,
@@ -21,9 +21,9 @@ import { runeDraws, type RuneDraw } from "./runes";
 import type { FxSkills } from "./fxSkills";
 import { zoneDraws, type ZoneDraw } from "./zones";
 
-/** 殘影分身（外觀款式 afterimage）複製召喚者的外觀：回傳召喚者的紙娃娃輸入；其他單位或找不到召喚者為 `undefined`。 */
+/** 殘影分身與霧影（外觀款式 afterimage／mist_shade）複製召喚者的外觀：回傳召喚者的紙娃娃輸入；其他單位或找不到召喚者為 `undefined`。 */
 function copyTarget(view: BattleView, u: BattleView["units"][number]): DollInput | undefined {
-  if (u.summon_look?.variant !== "afterimage") return undefined;
+  if (!copiesOwner(u.summon_look?.variant)) return undefined;
   const owner = view.units.find((x) => x.id === u.owner_id);
   if (owner === undefined) return undefined;
   return {
