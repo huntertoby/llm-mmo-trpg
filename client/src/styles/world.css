@@ -668,3 +668,18 @@
 .world-board-open {
   color: #e6c46a;
 }
+
+/* 影子循環賽（5F-4）：排行榜表格沿用一輪的 run-history；場次列表在面板內捲動 */
+.world-league-mine td {
+  font-weight: bold;
+}
+
+.world-league-matches {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.world-league-replay {
+  margin-left: 6px;
+  padding: 0 6px;
+}

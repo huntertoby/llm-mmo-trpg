@@ -274,7 +274,10 @@ export type WorldAction =
   | Schemas["EnhanceAction"]
   | Schemas["RerollAction"]
   | Schemas["ImbueAction"]
-  | Schemas["SalvageAction"];
+  | Schemas["SalvageAction"]
+  // 5F-4：影子循環賽的報名與取消
+  | (Omit<Schemas["LeagueEnterAction"], "ai"> & { ai?: string | null })
+  | Schemas["LeagueWithdrawAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -300,6 +303,11 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 影子循環賽（5F-4）：報名、排行榜、場次與重播。 */
+export type LeagueView = Schemas["LeagueView"];
+export type LeagueStandingView = Schemas["LeagueStandingView"];
+export type LeagueMatchView = Schemas["LeagueMatchView"];
+export type LeagueReplayResponse = Schemas["LeagueReplayResponse"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];
