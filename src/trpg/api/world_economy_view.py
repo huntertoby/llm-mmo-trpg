@@ -12,7 +12,10 @@ from trpg.api.world_economy_schemas import (
     ShopView,
     WalletView,
 )
+from trpg.content.equipment import ItemDef, affix_text
+from trpg.content.item_budget import RARITY_ZH
 from trpg.content.library import ContentLibrary
+from trpg.content.slots import SLOT_TYPE_ZH, SLOT_ZH, SLOTS
 from trpg.content.world_economy import ITEM_KINDS, WorldItemDef
 from trpg.content.world_quests import AFFINITY_RANKS, AffinityRank
 from trpg.world.actions import WorldEvent
@@ -21,6 +24,7 @@ from trpg.world.economy import (
     bag_slots_used,
     buy_problem,
     economy_rules,
+    gear_price,
     pouch_problem,
     shop_affinity_left,
     shop_here,
@@ -29,14 +33,24 @@ from trpg.world.economy import (
 from trpg.world.economy_actions import (
     CurrencyGainedEvent,
     ItemBoughtEvent,
+    ItemEquippedEvent,
     ItemSoldEvent,
     ItemUsedEvent,
+    LootGainedEvent,
     PouchChangedEvent,
     PouchUsedEvent,
 )
-from trpg.world.state import CharacterState, WorldState
+from trpg.world.gear import equip_problem, worn_gear
+from trpg.world.state import CharacterState, LastBattle, WorldState
 
-__all__ = ["economy_event_line", "inventory_view", "shop_view", "wallet_view"]
+__all__ = [
+    "economy_event_line",
+    "gear_title",
+    "inventory_view",
+    "last_loot_line",
+    "shop_view",
+    "wallet_view",
+]
 
 
 def wallet_view(library: ContentLibrary, char: CharacterState) -> WalletView | None:
@@ -97,6 +111,48 @@ def _bag_item(library: ContentLibrary, item_id: str, count: int) -> BagItemView:
     )
 
 
+def gear_title(item: ItemDef) -> str:
+    """裝備的一句話名稱：「稀有布衣（3 級）」（沒有物品等級時只有名稱）。"""
+    return item.name_zh if item.item_level is None else f"{item.name_zh}（{item.item_level} 級）"
+
+
+def _gear_description(library: ContentLibrary, item: ItemDef) -> str:
+    parts = [SLOT_TYPE_ZH.get(item.slot_type, item.slot_type)]
+    if item.rarity is not None:
+        parts.append(RARITY_ZH.get(item.rarity, item.rarity))
+    if item.item_level is not None:
+        parts.append(f"物品等級 {item.item_level}")
+    lines = [
+        affix_text(library.affixes[r.affix], r.value)
+        for r in item.affixes
+        if r.affix in library.affixes
+    ]
+    text = "・".join(parts)
+    return f"{text}：{'；'.join(lines)}" if lines else text
+
+
+def _gear_item(library: ContentLibrary, item: ItemDef, problem: str | None) -> BagItemView:
+    price = gear_price(library, item)
+    return BagItemView(
+        item=item.id,
+        name_zh=gear_title(item),
+        kind_zh="裝備",
+        count=1,
+        description_zh=_gear_description(library, item),
+        sell_price=price or 0,
+        sellable=price is not None,
+        field_usable=False,
+        gear=True,
+        can_equip=problem is None,
+        equip_problem_zh=problem,
+    )
+
+
+def _equipped_lines(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    worn = worn_gear(library, char)
+    return tuple(f"{SLOT_ZH[s]}：{gear_title(worn[s])}" for s in SLOTS if s in worn)
+
+
 def _views(library: ContentLibrary, counts: Mapping[str, int]) -> tuple[BagItemView, ...]:
     return tuple(_bag_item(library, k, v) for k, v in sorted(counts.items()))
 
@@ -114,9 +170,11 @@ def inventory_view(
             found = _item(library, item_id)
             if found is not None and found.kind == "consumable":
                 total[item_id] = total.get(item_id, 0) + count
+    gear_problem = "戰鬥中" if in_battle else equip_problem(library, char)
+    gear = tuple(_gear_item(library, g, gear_problem) for g in char.gear)
     return InventoryView(
-        bag=_views(library, char.bag),
-        slots_used=bag_slots_used(library, char.bag),
+        bag=(*_views(library, char.bag), *gear),
+        slots_used=bag_slots_used(library, char.bag) + len(char.gear),
         slots_max=rules.bag_slots,
         pouch=_views(library, char.pouch),
         pouch_count=sum(char.pouch.values()),
@@ -124,6 +182,7 @@ def inventory_view(
         can_pouch=problem is None,
         pouch_problem_zh=problem,
         consumables=_views(library, total),
+        equipped_zh=_equipped_lines(library, char),
     )
 
 
@@ -240,7 +299,7 @@ def _item_line(library: ContentLibrary, event: WorldEvent) -> str | None:
         name = _name(library, event.item)
         return f"在{shop}買了{name} ×{event.count}（−{event.gold_spent} 金幣，剩 {event.gold}）。"
     if isinstance(event, ItemSoldEvent):
-        name = _name(library, event.item)
+        name = event.name_zh or _name(library, event.item)
         return f"賣掉{name} ×{event.count}（+{event.gold_gained} 金幣，共 {event.gold}）。"
     if isinstance(event, PouchChangedEvent):
         return f"腰包：{_counts_zh(library, event.pouch)}。"
@@ -248,4 +307,46 @@ def _item_line(library: ContentLibrary, event: WorldEvent) -> str | None:
         return f"這場用掉了：{_counts_zh(library, event.items)}。"
     if isinstance(event, ItemUsedEvent):
         return f"用了{_name(library, event.item)}：HP {event.hp}、法力 {event.mana}。"
+    return _gear_line(library, event)
+
+
+def _gear_line(library: ContentLibrary, event: WorldEvent) -> str | None:
+    """掉落與換裝備的句子（Phase 5D-2）。"""
+    if isinstance(event, LootGainedEvent):
+        return _loot_text(
+            library,
+            event.materials,
+            event.gear_names,
+            event.lost_materials,
+            event.lost_gear_names,
+        )
+    if isinstance(event, ItemEquippedEvent):
+        removed = f"，換下{'、'.join(event.removed)}" if event.removed else ""
+        return f"{SLOT_ZH.get(event.slot, event.slot)}換上{event.name_zh}{removed}。"
     return None
+
+
+def _loot_text(
+    library: ContentLibrary,
+    materials: Mapping[str, int],
+    gear: tuple[str, ...],
+    lost_materials: Mapping[str, int],
+    lost_gear: tuple[str, ...],
+) -> str | None:
+    got = [f"{_name(library, k)} ×{v}" for k, v in sorted(materials.items())] + list(gear)
+    lost = [f"{_name(library, k)} ×{v}" for k, v in sorted(lost_materials.items())]
+    lost += list(lost_gear)
+    parts = []
+    if got:
+        parts.append(f"掉落：{'、'.join(got)}。")
+    if lost:
+        parts.append(f"背包滿了，沒撿到：{'、'.join(lost)}。")
+    return "".join(parts) or None
+
+
+def last_loot_line(library: ContentLibrary, last: LastBattle | None) -> str | None:
+    """最近一次戰鬥的掉落（Phase 5D-2）；沒有掉落為 ``None``。"""
+    if last is None or last.loot is None:
+        return None
+    loot = last.loot
+    return _loot_text(library, loot.materials, loot.gear, loot.lost_materials, loot.lost_gear)

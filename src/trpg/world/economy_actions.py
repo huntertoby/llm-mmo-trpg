@@ -105,6 +105,8 @@ class ItemSoldEvent(_Model):
     count: int
     gold_gained: int
     gold: int
+    name_zh: str | None = None
+    """賣掉的裝備名稱（Phase 5D-2；裝備的 ID 不在物品表）；一般物品為 ``None``。"""
 
 
 class PouchChangedEvent(_Model):

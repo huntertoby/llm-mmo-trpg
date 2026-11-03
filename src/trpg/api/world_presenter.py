@@ -15,6 +15,7 @@ from typing import Final
 from trpg.api.world_economy_view import (
     economy_event_line,
     inventory_view,
+    last_loot_line,
     shop_view,
     wallet_view,
 )
@@ -507,6 +508,7 @@ def world_view(
             char.last_battle,
             lambda region, loc: _location_name(library, region, loc),
         ),
+        last_loot_zh=last_loot_line(library, char.last_battle),
         event=event_view(library, world, char, now, narrations, in_battle=in_battle),
         situation_result=situation_result_view(library, char, raw_events),
         npcs_here=npcs_here(library, char),

@@ -44,6 +44,11 @@ class BagItemView(_ApiModel):
     """野外使用的效果（例「HP +30%」）；不能用為 ``None``。"""
     battle_zh: str | None = None
     """放進腰包時戰鬥中的用法（例「戰鬥中 1 AP：回 2d6 HP」）；不是消耗品為 ``None``。"""
+    gear: bool = False
+    """背包裡的裝備（Phase 5D-2；``item`` 是這件裝備的 ID，``count`` 固定 1）。"""
+    can_equip: bool = False
+    """裝備可以換上（城鎮或營火、沒有遭遇）。"""
+    equip_problem_zh: str | None = None
 
 
 class InventoryView(_ApiModel):
@@ -58,6 +63,8 @@ class InventoryView(_ApiModel):
     pouch_problem_zh: str | None
     consumables: tuple[BagItemView, ...] = ()
     """背包＋腰包合計的消耗品（整理腰包的選單用；``count`` 是合計個數）。"""
+    equipped_zh: tuple[str, ...] = ()
+    """穿戴中的裝備（每欄一句，例「身體：稀有布衣（3 級）」；Phase 5D-2）。"""
 
 
 class ShopItemView(_ApiModel):

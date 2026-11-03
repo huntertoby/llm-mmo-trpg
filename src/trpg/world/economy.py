@@ -373,7 +373,14 @@ def _sell_gear(
     rest = list(char.gear)
     rest.remove(piece)
     char = char.model_copy(update={"gold": char.gold + price, "gear": tuple(rest)})
-    event = ItemSoldEvent(shop=shop.id, item=piece.id, count=1, gold_gained=price, gold=char.gold)
+    event = ItemSoldEvent(
+        shop=shop.id,
+        item=piece.id,
+        count=1,
+        gold_gained=price,
+        gold=char.gold,
+        name_zh=piece.name_zh,
+    )
     return char, (event,)
 
 
