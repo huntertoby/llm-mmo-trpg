@@ -136,9 +136,9 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(bad).toEqual([]);
   });
 
-  it("styles/*.css 裡 position: absolute 且 z-index ≥ 20 的規則只屬於共用彈出元件或版面分隔線", () => {
-    // `.popup-menu`：點擊式選單；`.resize-handle`：拖曳分隔線（版面，不是彈出層）
-    const allowed = [".float-card", ".unit-float", ".decision-card", ".popup-menu", ".resize-handle"];
+  it("styles/*.css 裡 position: absolute 且 z-index ≥ 20 的規則只屬於共用彈出元件", () => {
+    // `.popup-menu`：點擊式選單（6A-4g：舊版的拖曳分隔線 `.resize-handle` 已刪）
+    const allowed = [".float-card", ".unit-float", ".decision-card", ".popup-menu"];
     const bad: string[] = [];
     for (const m of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const body = m[2] ?? "";

@@ -1,53 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TILE_SIZE } from "./geometry";
-import {
-  clampLayout,
-  clampZoom,
-  DEFAULT_LAYOUT,
-  dragValue,
-  layoutLimits,
-  loadLayout,
-  saveLayout,
-  zoomBy,
-  zoomPercent,
-  ZOOM_MAX,
-  ZOOM_MIN,
-  ZOOM_STEP,
-} from "./layoutPrefs";
+import * as prefsModule from "./layoutPrefs";
+import { clampLayout, clampZoom, DEFAULT_LAYOUT, loadLayout, saveLayout, zoomBy, zoomPercent, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "./layoutPrefs";
 import { clientToTile, scaledSize } from "./stageLayout";
 
-describe("layout limits and dragging", () => {
-  const viewport = { width: 1280, height: 720 };
-
-  it("never lets the side column or bottom row take more than half of the area", () => {
-    const l = layoutLimits(viewport);
-    expect(l.side[1]).toBeLessThanOrEqual(viewport.width / 2);
-    expect(l.bottom[1]).toBeLessThanOrEqual(viewport.height / 2);
-    expect(l.side[0]).toBeLessThan(l.side[1]);
-    expect(l.bottom[0]).toBeLessThan(l.bottom[1]);
-    // 很小的視窗仍保持 min <= max
-    const tiny = layoutLimits({ width: 300, height: 200 });
-    expect(tiny.side[0]).toBeLessThanOrEqual(tiny.side[1]);
-    expect(tiny.bottom[0]).toBeLessThanOrEqual(tiny.bottom[1]);
+describe("layout prefs（6A-4g 起只剩地圖縮放）", () => {
+  it("clamps the stored zoom", () => {
+    expect(clampLayout({ zoom: 9 })).toEqual({ zoom: ZOOM_MAX });
+    expect(clampLayout(DEFAULT_LAYOUT)).toEqual(DEFAULT_LAYOUT);
   });
 
-  it("drags with the right direction and clamps", () => {
-    const l = layoutLimits(viewport);
-    // 右側窄欄的左緣往左拖（位移為負）會變寬
-    expect(dragValue(300, -50, -1, l.side)).toBe(350);
-    expect(dragValue(300, 50, -1, l.side)).toBe(250);
-    expect(dragValue(300, -5000, -1, l.side)).toBe(l.side[1]);
-    expect(dragValue(300, 5000, -1, l.side)).toBe(l.side[0]);
-    // 主角狀態卡的右緣往右拖變寬
-    expect(dragValue(300, 40, 1, l.hero)).toBe(340);
-  });
-
-  it("clamps a stored layout into the current viewport (shrinking the window pulls it back)", () => {
-    const big = { sideWidth: 900, bottomHeight: 600, heroWidth: 900, zoom: 9 };
-    const c = clampLayout(big, viewport);
-    const l = layoutLimits(viewport);
-    expect(c).toEqual({ sideWidth: l.side[1], bottomHeight: l.bottom[1], heroWidth: l.hero[1], zoom: ZOOM_MAX });
-    expect(clampLayout(DEFAULT_LAYOUT, viewport)).toEqual(DEFAULT_LAYOUT);
+  it("no longer exports the old column-width settings", () => {
+    const names = Object.keys(prefsModule);
+    for (const old of ["layoutLimits", "dragValue", "clampTo", "SIDE_MIN", "BOTTOM_MIN", "HERO_RANGE"]) expect(names).not.toContain(old);
+    expect(Object.keys(DEFAULT_LAYOUT)).toEqual(["zoom"]);
   });
 });
 
@@ -103,7 +69,7 @@ describe("persistence", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("round-trips through localStorage", () => {
-    const prefs = { sideWidth: 380, bottomHeight: 200, heroWidth: 340, zoom: 1.5 };
+    const prefs = { zoom: 1.5 };
     saveLayout(prefs);
     expect(loadLayout()).toEqual(prefs);
     saveLayout({ ...prefs, zoom: null });
@@ -114,8 +80,9 @@ describe("persistence", () => {
     expect(loadLayout()).toEqual(DEFAULT_LAYOUT);
     store.set("trpg.battleLayout", "not json");
     expect(loadLayout()).toEqual(DEFAULT_LAYOUT);
-    store.set("trpg.battleLayout", JSON.stringify({ sideWidth: "x", heroWidth: 350 }));
-    expect(loadLayout()).toEqual({ ...DEFAULT_LAYOUT, heroWidth: 350 });
+    // 舊版存的欄寬、列高忽略，只讀縮放
+    store.set("trpg.battleLayout", JSON.stringify({ sideWidth: 380, heroWidth: 350, zoom: 1.2 }));
+    expect(loadLayout()).toEqual({ zoom: 1.2 });
   });
 
   it("does not throw when localStorage is unavailable", () => {

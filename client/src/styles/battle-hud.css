@@ -25,10 +25,47 @@
   display: block;
 }
 
-/* 地圖可用區域：扣掉上方行動順序列、底部列與左右兩欄（主角卡、戰況框不蓋住地圖邊上的單位） */
+/* 地圖可用區域（6A-4g 改回鋪滿）：只扣掉上方行動順序列與底部列，左右鋪滿，主角卡、戰況框疊在地圖上；
+   底下有單位或可點格子的 HUD 塊變半透明（`data-hud-faded`，`battle/hudFade.ts`），滑上去恢復。 */
 .battle-screen.hud-a .board-scroll {
-  inset: var(--hud-top) calc(var(--hud-right-w) + 2 * var(--hud-gap)) calc(var(--hud-bottom, 160px) + var(--hud-gap))
-    calc(var(--hud-left-w) + 2 * var(--hud-gap));
+  inset: var(--hud-top) 0 calc(var(--hud-bottom, 160px) + var(--hud-gap)) 0;
+}
+
+.battle-screen.hud-a .bhud-hero,
+.battle-screen.hud-a .bhud-left > .mode-panel,
+.battle-screen.hud-a .bhud-top .turn-bar,
+.battle-screen.hud-a .bhud-corner,
+.battle-screen.hud-a .bhud-telegraph,
+.battle-screen.hud-a .bhud-right > .summon-panel,
+.battle-screen.hud-a .bhud-right > .unit-pin-dock,
+.battle-screen.hud-a .log-dock {
+  transition: opacity 0.15s;
+}
+
+.battle-screen.hud-a [data-hud-faded~="hero"] .bhud-hero,
+.battle-screen.hud-a [data-hud-faded~="mode"] .bhud-left > .mode-panel,
+.battle-screen.hud-a [data-hud-faded~="order"] .bhud-top .turn-bar,
+.battle-screen.hud-a [data-hud-faded~="corner"] .bhud-corner,
+.battle-screen.hud-a [data-hud-faded~="telegraph"] .bhud-telegraph,
+.battle-screen.hud-a [data-hud-faded~="summon"] .bhud-right > .summon-panel,
+.battle-screen.hud-a [data-hud-faded~="pin"] .bhud-right > .unit-pin-dock,
+.battle-screen.hud-a [data-hud-faded~="log"] .log-dock {
+  opacity: 0.38;
+}
+
+.battle-screen.hud-a [data-hud-faded] .bhud-hero:hover,
+.battle-screen.hud-a [data-hud-faded] .bhud-hero:focus-within,
+.battle-screen.hud-a [data-hud-faded] .bhud-left > .mode-panel:hover,
+.battle-screen.hud-a [data-hud-faded] .bhud-left > .mode-panel:focus-within,
+.battle-screen.hud-a [data-hud-faded] .bhud-top .turn-bar:hover,
+.battle-screen.hud-a [data-hud-faded] .bhud-corner:hover,
+.battle-screen.hud-a [data-hud-faded] .bhud-corner:focus-within,
+.battle-screen.hud-a [data-hud-faded] .bhud-telegraph:hover,
+.battle-screen.hud-a [data-hud-faded] .bhud-right > .summon-panel:hover,
+.battle-screen.hud-a [data-hud-faded] .bhud-right > .summon-panel:focus-within,
+.battle-screen.hud-a [data-hud-faded] .bhud-right > .unit-pin-dock:hover,
+.battle-screen.hud-a [data-hud-faded] .log-dock:hover {
+  opacity: 1;
 }
 
 /* 共用外觀：半透明深底金邊 */

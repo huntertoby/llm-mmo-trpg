@@ -9,7 +9,6 @@
 // 不需要安裝任何套件。
 
 import { HUD_BLOCKS, hudLayoutIssues, type HudBlockId } from "../battle/hudLayout";
-import { NARROW_WIDTH } from "../battle/skillTray";
 import { enterDevScreen, type DevScreen } from "./devScreens";
 
 export interface Box {
@@ -28,12 +27,8 @@ export interface LayoutSnapshot {
   /** 播放列（`.speed-control`）與它的按鈕。 */
   speed: Box | null;
   speedButtons: Box[];
-  /** 戰場（`.battle-board`）與它底緣、右緣的拖曳線；主角狀態卡與它右緣的拖曳線。 */
+  /** 戰場（`.battle-board`）。（6A-4g：舊版的拖曳線與主角狀態卡欄已刪，不再量） */
   board: Box | null;
-  bottomHandle: Box | null;
-  sideHandle: Box | null;
-  hero: Box | null;
-  heroHandle: Box | null;
   /** 格子資訊卡：整張浮動卡、底部提示列、提示列背景色的不透明度（0～1）。 */
   tileCard: { float: Box; bar: Box | null; barAlpha: number } | null;
   /** 「更多動作」：選單是否開著、此時畫面上有幾張說明卡（`role=tooltip`）。 */
@@ -76,7 +71,6 @@ export interface CheckResult {
 /** 長度誤差容許（CSS 像素；子像素與邊框）。 */
 export const TOL = 1.5;
 const w = (b: Box): number => b.right - b.left;
-const near = (a: number, b: number): boolean => Math.abs(a - b) <= TOL;
 const fmt = (b: Box | null): string => (b === null ? "找不到" : `[${[b.left, b.top, b.right, b.bottom].map(Math.round).join(",")}]`);
 const inside = (inner: Box, outer: Box): boolean =>
   inner.left >= outer.left - TOL && inner.top >= outer.top - TOL && inner.right <= outer.right + TOL && inner.bottom <= outer.bottom + TOL;
@@ -109,28 +103,6 @@ function speedOneRow(s: LayoutSnapshot): CheckResult {
   return result("speed-one-row", label, spread <= TOL, `${s.speedButtons.length} 顆按鈕，頂端落差 ${Math.round(spread)}px`);
 }
 
-function bottomHandleFlush(s: LayoutSnapshot): CheckResult {
-  const label = "底部拖曳線貼齊戰場底緣";
-  if (s.bottomHandle === null || s.board === null) return result("bottom-handle", label, false, "找不到拖曳線或戰場");
-  const pass = near(s.bottomHandle.bottom, s.board.bottom) && near(s.bottomHandle.left, s.board.left) && near(s.bottomHandle.right, s.board.right);
-  return result("bottom-handle", label, pass, `拖曳線 ${fmt(s.bottomHandle)} 戰場 ${fmt(s.board)}`);
-}
-
-function sideHandleFlush(s: LayoutSnapshot): CheckResult {
-  const label = "右側拖曳線貼齊戰場右緣";
-  if (s.sideHandle === null || s.board === null) return result("side-handle", label, false, "找不到拖曳線或戰場");
-  const pass = near(s.sideHandle.right, s.board.right) && near(s.sideHandle.top, s.board.top) && near(s.sideHandle.bottom, s.board.bottom);
-  return result("side-handle", label, pass, `拖曳線 ${fmt(s.sideHandle)} 戰場 ${fmt(s.board)}`);
-}
-
-function heroHandleFlush(s: LayoutSnapshot): CheckResult {
-  const label = "主角狀態卡的拖曳線跨在卡片右緣、與卡片等高";
-  if (s.heroHandle === null || s.hero === null) return result("hero-handle", label, false, "找不到拖曳線或主角狀態卡");
-  const straddle = s.heroHandle.left <= s.hero.right + TOL && s.heroHandle.right >= s.hero.right - TOL;
-  const pass = straddle && near(s.heroHandle.top, s.hero.top) && near(s.heroHandle.bottom, s.hero.bottom);
-  return result("hero-handle", label, pass, `拖曳線 ${fmt(s.heroHandle)} 主角卡 ${fmt(s.hero)}`);
-}
-
 function tileHint(s: LayoutSnapshot): CheckResult {
   const label = "格子資訊卡的提示列在卡片底色內";
   if (s.tileCard === null) return result("tile-hint", label, false, "沒有出現格子資訊卡");
@@ -151,22 +123,6 @@ function moreMenu(s: LayoutSnapshot): CheckResult {
 
 function noWrapper(s: LayoutSnapshot): CheckResult {
   return result("no-hint-wrapper", "說明卡不外包元素（.hint-tip 數量 0）", s.hintWrappers === 0, `${s.hintWrappers} 個`);
-}
-
-/** 窄螢幕（視窗寬 < `NARROW_WIDTH`）不顯示拖曳線：沒有才對，不是「找不到」。（6A-4e 前的版面用；保留給舊快照比對） */
-export function handleCheck(s: LayoutSnapshot, check: (s: LayoutSnapshot) => CheckResult, handle: Box | null): CheckResult {
-  const r = check(s);
-  if (s.viewport.width >= NARROW_WIDTH) return r;
-  return { ...r, pass: handle === null, detail: handle === null ? "窄螢幕不顯示拖曳線（略過）" : "窄螢幕卻出現拖曳線" };
-}
-
-/** 舊版的三條拖曳線檢查（6A-4e 起沒有拖曳線，只在比對舊快照時用）。 */
-export const LEGACY_HANDLE_CHECKS = [bottomHandleFlush, sideHandleFlush, heroHandleFlush] as const;
-
-/** 6A-4e 版面 A：四角 HUD 疊在戰場上，沒有拖曳線（出現就是舊版面跑出來）。 */
-function noHandles(s: LayoutSnapshot): CheckResult {
-  const n = [s.bottomHandle, s.sideHandle, s.heroHandle].filter((b) => b !== null).length;
-  return result("no-handles", "版面 A 沒有拖曳線（6A-4e）", n === 0, `${n} 條`);
 }
 
 /** 6A-4e 版面 A：主角卡、行動順序、戰況框、工具鈕、技能列、回合操作、紀錄都在畫面內、互不重疊。 */
@@ -192,7 +148,6 @@ export function evaluate(s: LayoutSnapshot): CheckResult[] {
     endTurnWide(s),
     speedVisible(s),
     speedOneRow(s),
-    noHandles(s),
     hudBlocks(s),
     tileHint(s),
     moreMenu(s),
@@ -232,14 +187,8 @@ export function alphaOf(color: string): number {
   return a.endsWith("%") ? Number.parseFloat(a) / 100 : Number.parseFloat(a);
 }
 
-function isHandle(el: Element, orientation: "vertical" | "horizontal", parent: string): boolean {
-  return el.classList.contains(orientation) && el.parentElement?.classList.contains(parent) === true;
-}
-
 function collectBase(doc: Document, win: Window): LayoutSnapshot {
   const q = (sel: string): Element | null => doc.querySelector(sel);
-  const handles = [...doc.querySelectorAll(".resize-handle")];
-  const handle = (o: "vertical" | "horizontal", parent: string): Element | null => handles.find((e) => isHandle(e, o, parent)) ?? null;
   return {
     viewport: { width: win.innerWidth, height: win.innerHeight },
     turnControls: box(q(".turn-controls")),
@@ -247,10 +196,6 @@ function collectBase(doc: Document, win: Window): LayoutSnapshot {
     speed: box(q(".speed-control")),
     speedButtons: [...doc.querySelectorAll(".speed-control button")].map((e) => box(e)).filter((b): b is Box => b !== null),
     board: box(q(".battle-board")),
-    bottomHandle: box(handle("horizontal", "battle-board")),
-    sideHandle: box(handle("vertical", "battle-board")),
-    hero: box(q(".battle-hero")),
-    heroHandle: box(handle("vertical", "battle-hero")),
     tileCard: null,
     moreMenu: null,
     hintWrappers: doc.querySelectorAll(".hint-tip").length,
@@ -377,8 +322,6 @@ async function probeMoreMenu(doc: Document): Promise<LayoutSnapshot["moreMenu"]>
 }
 
 export interface CaseOptions {
-  /** 先把底部列高度設成最矮（`BOTTOM_MIN`），測「拉到最矮」。 */
-  shortBottom?: boolean;
   /** 走「開新一輪」（種族與出身 → 武器 → 關鍵字 → 第 1 場）而不是首頁的單場戰鬥。 */
   viaRun?: boolean;
 }
@@ -440,8 +383,7 @@ export async function startBattle(doc: Document = document, seed = SMOKE_SEED, w
 /** 一個情況：（設定版面）→ 開戰鬥 → 量測 → 回傳 PASS／FAIL 表。視窗大小由呼叫端（resize_window）先設好、並重新載入頁面。 */
 export async function runCase(title: string, options: CaseOptions = {}): Promise<string> {
   const storage = window.localStorage;
-  if (options.shortBottom === true) storage.setItem(LAYOUT_KEY, JSON.stringify({ sideWidth: 300, bottomHeight: 120, heroWidth: 300, zoom: null }));
-  else storage.removeItem(LAYOUT_KEY);
+  storage.removeItem(LAYOUT_KEY);
   await startBattle(document, SMOKE_SEED, SMOKE_WEAPON, options.viaRun === true);
   const snap = collectBase(document, window);
   await hoverUntilCard(document);

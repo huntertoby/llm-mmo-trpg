@@ -1,44 +1,21 @@
-// 戰鬥畫面的版面與地圖視角（由 BattleScreen 抽出，Phase 3T-7）：欄寬與底部列高度的偏好（存在瀏覽器）、
-// 右側窄欄收合、地圖縮放（Ctrl＋滾輪、自動填滿）與中鍵拖曳平移。
+// 戰鬥畫面的版面與地圖視角（由 BattleScreen 抽出，Phase 3T-7）：地圖縮放的偏好（存在瀏覽器）、
+// 環境預告收合、地圖縮放（Ctrl＋滾輪、自動填滿）與中鍵拖曳平移。（6A-4g：舊的欄寬、列高設定刪掉）
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-  type RefObject,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import type { DrawModel } from "../../battle/drawModel";
-import {
-  clampLayout,
-  clampZoom,
-  DEFAULT_LAYOUT,
-  layoutLimits,
-  loadLayout,
-  saveLayout,
-  zoomBy,
-  ZOOM_STEP,
-  type LayoutPrefs,
-} from "../../battle/layoutPrefs";
+import { clampLayout, clampZoom, DEFAULT_LAYOUT, loadLayout, saveLayout, zoomBy, ZOOM_STEP, type LayoutPrefs } from "../../battle/layoutPrefs";
 import { loadSidePref, saveSideCollapsed, sideCollapsed } from "../../battle/skillTray";
 import { fitScale } from "../../battle/stageLayout";
-import { useElementSize, useNarrow, useViewportSize } from "../../ui/useLayout";
+import { useElementSize, useNarrow } from "../../ui/useLayout";
 
 export interface BoardViewport {
   narrow: boolean;
   /** 戰場捲動區（地圖縮放與平移的對象）。 */
   scrollRef: RefObject<HTMLDivElement>;
   layout: LayoutPrefs;
-  limits: ReturnType<typeof layoutLimits>;
   patchLayout(patch: Partial<LayoutPrefs>): void;
   resetLayout(): void;
-  /** 版面欄寬的 CSS 變數（`--side-w`、`--bottom-h`、`--hero-w`）。 */
-  layoutStyle: CSSProperties;
-  /** 右側窄欄是否收合，與切換。 */
+  /** 右上環境預告是否收合，與切換（沿用舊的窄欄收合偏好）。 */
   collapsed: boolean;
   toggleSide(): void;
   /** 目前縮放比例（手動縮放或自動填滿）與縮放一步。 */
@@ -60,10 +37,8 @@ export function useBoardViewport(model: DrawModel): BoardViewport {
   const [sidePref, setSidePref] = useState<boolean | null>(loadSidePref);
   const scrollRef = useRef<HTMLDivElement>(null);
   const boardSize = useElementSize(scrollRef);
-  const viewport = useViewportSize();
   const [layoutPref, setLayoutPref] = useState<LayoutPrefs>(loadLayout);
-  const layout = useMemo(() => clampLayout(layoutPref, viewport), [layoutPref, viewport]);
-  const limits = useMemo(() => layoutLimits(viewport), [viewport]);
+  const layout = useMemo(() => clampLayout(layoutPref), [layoutPref]);
   const patchLayout = useCallback((patch: Partial<LayoutPrefs>) => setLayoutPref((p) => ({ ...p, ...patch })), []);
   const resetLayout = useCallback(() => setLayoutPref(DEFAULT_LAYOUT), []);
   useEffect(() => saveLayout(layoutPref), [layoutPref]);
@@ -116,12 +91,6 @@ export function useBoardViewport(model: DrawModel): BoardViewport {
     saveSideCollapsed(!collapsed);
     setSidePref(!collapsed);
   };
-  const layoutStyle = {
-    "--side-w": `${layout.sideWidth}px`,
-    "--bottom-h": `${layout.bottomHeight}px`,
-    "--hero-w": `${layout.heroWidth}px`,
-  } as CSSProperties;
-
   const panHandlers = {
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
       const el = scrollRef.current;
@@ -152,10 +121,8 @@ export function useBoardViewport(model: DrawModel): BoardViewport {
     narrow,
     scrollRef,
     layout,
-    limits,
     patchLayout,
     resetLayout,
-    layoutStyle,
     collapsed,
     toggleSide,
     scale,

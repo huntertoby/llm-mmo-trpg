@@ -134,11 +134,6 @@
   min-height: 0;
 }
 
-.battle-side.no-log .side-telegraph {
-  flex: 1;
-  max-height: none;
-}
-
 /* 操作說明句收進「?」（滑過或點一下才看） */
 .op-hint-q {
   display: inline-flex;

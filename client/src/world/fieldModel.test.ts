@@ -13,6 +13,7 @@ import {
   mapPaneKind,
   pathNextTo,
   placeBanner,
+  SIGHT_COLOR,
   stepTarget,
   targetAt,
   walkAction,
@@ -288,11 +289,11 @@ describe("看得見的敵人（6C-1）", () => {
     expect(unit?.team).toBe("enemy");
   });
 
-  it("視野畫淡紅（門與傳送石那一格不重疊）、精英多一個「精」", () => {
-    const marks = fieldHighlights(town({ enemies: [enemy] }), null).telegraph;
-    const sight = marks.filter((m) => m.kind === "sight").map((m) => `${m.pos.x},${m.pos.y}`);
-    expect(sight).toEqual(["2,4", "3,4"]); // (3, 2) 是傳送石
-    expect(marks.find((m) => m.kind === "elite")?.glyph).toBe("精");
+  it("視野併成一塊淡紅範圍（門與傳送石那一格不重疊）、不再是每格的標記；精英多一個「精」", () => {
+    const h = fieldHighlights(town({ enemies: [enemy] }), null);
+    expect(h.regions?.map((r) => [r.color, r.cells.map((p) => `${p.x},${p.y}`)])).toEqual([[SIGHT_COLOR, ["2,4", "3,4"]]]); // (3, 2) 是傳送石
+    expect(h.telegraph.some((m) => m.kind === "sight")).toBe(false);
+    expect(h.telegraph.find((m) => m.kind === "elite")?.glyph).toBe("精");
   });
 
   it("滑過敵群說明陣容，滑過視野格提示", () => {
@@ -302,8 +303,9 @@ describe("看得見的敵人（6C-1）", () => {
   });
 
   it("沒有敵人時不多畫東西", () => {
-    const marks = fieldHighlights(town(), null).telegraph;
-    expect(marks.some((m) => m.kind === "sight" || m.kind === "elite")).toBe(false);
+    const h = fieldHighlights(town(), null);
+    expect(h.telegraph.some((m) => m.kind === "sight" || m.kind === "elite")).toBe(false);
+    expect(h.regions).toEqual([]);
     expect(fieldDrawModel(town()).units.some((u) => u.id.startsWith("enemy_"))).toBe(false);
   });
 });
