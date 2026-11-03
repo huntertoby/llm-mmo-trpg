@@ -560,7 +560,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     const folded = trackerFolded || (narrow && !narrowOpen);
     const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
     const cam = fieldCam ?? followCamera(stage, field, field.me);
-    const faded = fadedBlocks(layout, exitViewRects(field, cam));
+    const faded = fadedBlocks(layout, exitViewRects(field, cam, stage));
     const hasCenter = v.encounter !== null || result !== null || v.event != null;
     const style = { height: stage.height, "--hud-s": layout.scale } as CSSProperties;
     return (

@@ -277,6 +277,14 @@ describe("出口半透明照畫面上的出口位置", () => {
     expect(fadedBlocks(layout, exits)).toContain("tracker");
   });
 
+  it("出口剛好在畫面外（只差半格緩衝）：給了畫面大小就不讓 HUD 變半透明", () => {
+    const f = mistFerry({ x: 12, y: 9 });
+    const cam = followCamera(STAGE_1040, f, f.me);
+    expect(fadedBlocks(layout, exitViewRects(f, cam))).toContain("tracker");
+    expect(exitViewRects(f, cam, STAGE_1040).some((r) => r.left >= STAGE_1040.width)).toBe(false);
+    expect(fadedBlocks(layout, exitViewRects(f, cam, STAGE_1040))).toEqual([]);
+  });
+
   it("出口的位置隨鏡頭移動", () => {
     const f = mistFerry();
     const a = exitViewRects(f, { x: 0, y: 0, scale: 1 })[0]!;

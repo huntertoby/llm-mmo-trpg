@@ -104,9 +104,14 @@ export function tileViewRect(grid: HeightGrid, p: Pos, cam: Camera): Rect {
   return { left: p.x * cell - cam.x, top: (topReserve(grid) + p.y * TILE_SIZE) * cam.scale - cam.y, width: cell, height: cell };
 }
 
-/** 出口格在可視區（舞台）裡的矩形，給 HUD 的出口半透明判斷（以畫面上的位置為準）。 */
-export function exitViewRects(field: FieldView, cam: Camera): Rect[] {
-  return field.exits.flatMap((e) => e.cells.map(([x, y]) => tileViewRect(field, { x, y }, cam)));
+/**
+ * 出口格在可視區（舞台）裡的矩形，給 HUD 的出口半透明判斷（以畫面上的位置為準）。
+ * 給了 `view` 時只留畫面上看得到的出口格（在畫面外的不必讓 HUD 變半透明）。
+ */
+export function exitViewRects(field: FieldView, cam: Camera, view?: Size): Rect[] {
+  const rects = field.exits.flatMap((e) => e.cells.map(([x, y]) => tileViewRect(field, { x, y }, cam)));
+  if (view === undefined) return rects;
+  return rects.filter((r) => r.left < view.width && r.left + r.width > 0 && r.top < view.height && r.top + r.height > 0);
 }
 
 /** 鏡頭目前看得到的格子範圍（給小地圖畫框；夾在地圖內，格子座標可為小數）。 */
