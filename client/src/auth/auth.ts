@@ -3,7 +3,8 @@
 import type { AuthStatus } from "../api/types";
 
 export const AUTH_TOKEN_KEY = "trpg.auth.token";
-/** 收到 401 時發出的事件（client.ts 發、大世界入口聽）：token 已清掉，回登入畫面。 */
+/** 收到 401 時發出的事件（client.ts 發；大世界入口與 App 聽）：token 已清掉，回登入畫面。
+ * 5D-R2：開發模式關時一輪、戰鬥、工坊、裝備測試也要登入，沒帶 token 的 401 也發。 */
 export const AUTH_EXPIRED_EVENT = "trpg-auth-expired";
 
 export const USERNAME_MAX = 20;
@@ -24,6 +25,11 @@ export function writeToken(token: string | null): void {
   } catch {
     // 不能存：這次分頁裡照樣能用，重新整理後要再登入
   }
+}
+
+/** 這個回應要不要導到登入畫面（5D-R2）：401，且不是登入端點本身（帳號密碼錯也是 401）。 */
+export function needsLogin(status: number, path: string): boolean {
+  return status === 401 && !path.startsWith("/auth/");
 }
 
 /** 請求要帶的標頭（沒登入＝空）。 */
