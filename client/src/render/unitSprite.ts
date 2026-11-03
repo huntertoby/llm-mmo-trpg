@@ -516,6 +516,18 @@ export function statusRowY(cr: ResolvedCreature | null, fieldScale = 1): number 
   return Math.min(ROW_Y_FEET, Math.max(ROW_Y_HEADROOM_CAP, ROW_Y_UPPER_HP_CAP, y));
 }
 
+/**
+ * 單位圖實際畫出來的頂端（相對格子中心的 y，往上為負；6C-8b 敵群頭上的眼睛用）。
+ * 異形：身體最高點（`bodyTop`，浮空的含浮起的高度）× 體型（含精英）× 戰場縮放（頭目 ×0.9），同 `statusRowY` 的算法；
+ * 人形（含紙娃娃、形態與召喚物的退回）：頭頂 `DOLL_HEAD_TOP` × 精英 × 外觀大小。腳底一律 `FEET`。
+ */
+export function unitTopY(u: UnitDraw): number {
+  const px = (T / 52) * DOLL_SCALE;
+  const cr = creatureOf(u);
+  if (cr !== null) return FEET + bodyTop(cr.body).top * cr.size * creatureFieldScale(u) * px;
+  return FEET - DOLL_HEAD_TOP * humanoidEliteScale(u) * humanoidLookScale(u) * px;
+}
+
 /** 狀態列最多顯示的圖示數（3U-2c）；超過時在第 2 個圖示右上角疊「+N」，不多佔一格。 */
 export const ROW_MAX_ICONS = 2;
 /** 圖示最小間距（px）：召喚物回合數徽章擠壓時才會小於 `ROW_ICON_FEET + 1`。 */

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { FieldView, WorldLocationView, WorldMapView, WorldView } from "../api/types";
 import { FieldObjectCard, objectButtonText } from "./FieldThings";
-import { CAMPFIRE_ZH, EVENT_MARK_ZH, fieldHighlights, hoverText, interactTarget, mapThings, objectText, targetAt, THING_COLOR, thingMarks } from "./fieldModel";
+import { CAMPFIRE_ZH, EVENT_MARK_ZH, fieldHighlights, hoverText, interactTarget, mapThings, objectText, targetAt } from "./fieldModel";
 import { buttonState, HUD_BUTTONS, hudButtonCard, sneakState } from "./hud";
 import { regionNodes } from "./regionModel";
 
@@ -53,12 +53,9 @@ function field(over: Partial<FieldView> = {}): FieldView {
 }
 
 describe("地圖上的東西的標記", () => {
-  it("情境物件照舊是淡色框；「！」、營火、石碑、腳印（6C-8）改照形狀畫、不進格子框；和門同一格的不畫", () => {
-    const marks = thingMarks(field());
-    const at = (x: number, y: number) => marks.find((m) => m.pos.x === x && m.pos.y === y);
-    expect(at(4, 1)).toMatchObject({ kind: "object", glyph: "◎", color: THING_COLOR.object });
-    expect(at(0, 4)).toMatchObject({ kind: "object", color: THING_COLOR.note });
-    expect(marks.map((m) => m.kind).every((k) => k === "object")).toBe(true);
+  it("「！」、營火、石碑、腳印（6C-8）照形狀畫、不進格子框；情境物件不再有淡色框與「◎」（6C-8b）；和門同一格的不畫", () => {
+    const h0 = fieldHighlights(field(), null);
+    expect(h0.telegraph.some((m) => m.kind === "object" || m.glyph === "◎")).toBe(false);
     const things = mapThings(field());
     const thing = (x: number, y: number) => things.find((t) => t.pos.x === x && t.pos.y === y);
     expect(thing(2, 0)).toMatchObject({ kind: "event" });
@@ -80,8 +77,31 @@ describe("地圖上的東西的標記", () => {
     expect(things.filter((m) => m.pos.x === 2 && m.pos.y === 0).map((m) => m.kind)).toEqual(["event"]);
   });
 
+  it("情境物件提示（6C-8b）：主角在 1 格內（站上或四方向相鄰）才有，離開就沒有；說明卡照舊", () => {
+    const hints = (me: { x: number; y: number }) =>
+      mapThings(field({ me: { ...me, facing: "s" } }))
+        .filter((t) => t.kind === "object_hint")
+        .map((t) => t.pos);
+    expect(hints({ x: 2, y: 2 })).toEqual([]); // 祭壇 (4,1)、霧牆 (0,4)、觀門 (5,4) 都不在旁邊
+    expect(hints({ x: 4, y: 2 })).toEqual([{ x: 4, y: 1 }]); // 祭壇正下方
+    expect(hints({ x: 3, y: 1 })).toEqual([{ x: 4, y: 1 }]); // 祭壇左邊
+    expect(hints({ x: 4, y: 1 })).toEqual([{ x: 4, y: 1 }]); // 站在上面
+    expect(hints({ x: 3, y: 2 })).toEqual([]); // 斜角不算（同按 E 的判定）
+    expect(hints({ x: 5, y: 3 })).toEqual([{ x: 5, y: 4 }]); // 不能用的物件也提示（按 E 會開說明卡）
+    expect(hints({ x: 0, y: 3 })).toEqual([{ x: 0, y: 4 }]); // 只能看的也提示
+    const h = fieldHighlights(field({ me: { x: 4, y: 2, facing: "n" } }), null);
+    expect(h.things?.filter((t) => t.kind === "object_hint")).toEqual([{ kind: "object_hint", pos: { x: 4, y: 1 } }]);
+    expect(h.telegraph.some((m) => m.kind === "object")).toBe(false);
+    expect(hoverText(field({ me: { x: 4, y: 2, facing: "n" } }), { x: 4, y: 1 })).toBe("火焰祭壇（走過去調查）");
+    expect(hoverText(field(), { x: 4, y: 1 })).toBe("火焰祭壇（走過去調查）");
+  });
+
+  it("情境物件即使不畫提示也照舊佔住那一格（營火不會畫到物件上）", () => {
+    const things = mapThings(field({ campfires: [{ id: "c", x: 4, y: 1 }] }));
+    expect(things.some((t) => t.pos.x === 4 && t.pos.y === 1)).toBe(false);
+  });
+
   it("沒有東西的地圖沒有標記", () => {
-    expect(thingMarks(field({ campfires: [], event_mark: null, situation_objects: [], footprints: [], note_stone: null }))).toEqual([]);
     expect(mapThings(field({ campfires: [], event_mark: null, situation_objects: [], footprints: [], note_stone: null }))).toEqual([]);
   });
 });

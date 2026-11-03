@@ -41,9 +41,9 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, PRONE, Pulses, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
-import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
+import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { arriveFrame, leaveFrame, type TransitFrame, type TransitKind } from "./doorClips";
 import { DOLL_SCALE } from "./paperdoll";
@@ -194,6 +194,8 @@ export class BattleRenderer {
   private flameOn = false;
   /** 浮動的事件「！」泡泡（6C-8；每次重設高亮時重建）與它們的基準高度。 */
   private bobs: Array<{ node: Sprite; y: number }> = [];
+  /** 情境物件提示的虛線圈（6C-8b，呼吸的不透明度）。 */
+  private breaths: Sprite[] = [];
   private bobClock = 0;
   private readonly hover = new Container();
   private readonly effects = new Container();
@@ -833,6 +835,7 @@ export class BattleRenderer {
    */
   private drawThings(things: readonly MapThing[], eyes: readonly WatchEye[]): void {
     this.bobs = [];
+    this.breaths = [];
     const prints = new Graphics();
     for (const t of things) {
       const o = this.origin(t.pos);
@@ -844,7 +847,16 @@ export class BattleRenderer {
       }
       const tex = thingTexture(t);
       if (tex === null) continue;
-      this.marks.addChild(this.markSprite(tex, o.x - MARK_PAD, o.y - MARK_PAD));
+      const main = this.markSprite(tex, o.x - MARK_PAD, o.y - MARK_PAD);
+      this.marks.addChild(main);
+      if (t.kind === "object_hint") {
+        // 6C-8b：虛線圈呼吸（`objectHintAlpha`），右上小手不動
+        this.breaths.push(main);
+        main.alpha = objectHintAlpha(this.bobClock);
+        const hand = thingTexture(t, "bubble");
+        if (hand !== null) this.marks.addChild(this.markSprite(hand, o.x - MARK_PAD, o.y - MARK_PAD));
+        continue;
+      }
       if (t.kind === "event") {
         const bubble = thingTexture(t, "bubble");
         if (bubble === null) continue;
@@ -860,7 +872,9 @@ export class BattleRenderer {
       const tex = eyeTexture(e.sneaking);
       if (tex === null) continue;
       const o = this.origin(e.pos);
-      const at = eyeOffset(T);
+      // 6C-8b：眼睛放在這個單位實際畫出來的頂端再往上 6px（大型異形、頭目不被蓋住）
+      const unit = this.model?.units.find((u) => u.x === e.pos.x && u.y === e.pos.y && u.team !== "ally");
+      const at = eyeOffset(T, unit === undefined ? null : unitTopY(unit));
       const node = new Sprite(tex);
       node.anchor.set(0.5);
       node.width = MARK_SIZE;
@@ -881,6 +895,10 @@ export class BattleRenderer {
   /** 事件「！」上下浮動（6C-8；週期 1.6 秒、幅度 3px）。 */
   private tickBobs(dt: number): void {
     this.bobClock += dt;
+    if (this.breaths.length > 0) {
+      const a = objectHintAlpha(this.bobClock);
+      for (const n of this.breaths) if (!n.destroyed) n.alpha = a;
+    }
     if (this.bobs.length === 0) return;
     const dy = eventBob(this.bobClock);
     for (const b of this.bobs) if (!b.node.destroyed) b.node.y = b.y + dy;
