@@ -110,8 +110,9 @@ def test_every_group_fights_to_the_end(library: ContentLibrary) -> None:
 
 def test_groups_cover_every_new_enemy(library: ContentLibrary) -> None:
     fielded = {t.id for _l, _m, enemies, third in _cases(library) for t in enemies + third}
+    fielded.add("sect_mist_swordsman")  # 只在懸賞陣容：tests/world/test_mist_shade.py 打完整場
     new = {u for u, t in library.units.items() if {"sect", "beast", "construct"} & set(t.tags)}
-    assert len(new) == 19  # 5F-2：霧鎖真人、雲頂觀陣眼石靈
+    assert len(new) == 20  # 5F-2：霧鎖真人、雲頂觀陣眼石靈；5F-1b：霧中劍客
     assert library.world_enemies is not None
     variants = {v.id for v in library.world_enemies.variants}
     assert new | variants <= fielded

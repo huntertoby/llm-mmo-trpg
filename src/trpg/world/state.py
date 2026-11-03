@@ -879,6 +879,8 @@ class CharacterState(_Model):
     # --- 5F-1 今日目標（邏輯在 trpg.world.season_board） ---
     daily_goals: DailyGoalProgress | None = None
     """今天的今日目標進度（``None``＝還沒有；跨日歸零）。"""
+    bounty_days: dict[str, int] = Field(default_factory=dict)
+    """懸賞 → 最後一次打懸賞陣容的刷新日（5F-1b：每個角色每天在該地點的第一場遭遇才是懸賞陣容）。"""
 
     @field_validator("gear_mods")
     @classmethod
@@ -910,7 +912,7 @@ class CharacterState(_Model):
     def _sorted_party_ai(cls, ai: dict[str, str]) -> dict[str, str]:
         return dict(sorted(ai.items()))
 
-    @field_validator("talk_days", "failed_skeletons")
+    @field_validator("talk_days", "failed_skeletons", "bounty_days")
     @classmethod
     def _sorted_talk_days(cls, days: dict[str, int]) -> dict[str, int]:
         return dict(sorted(days.items()))

@@ -46,16 +46,17 @@ daily_goals:
     - {id: bounty_once, text_zh: 搶下 1 張懸賞, goal: {kind: bounty_claimed, count: 1}}
 
 # 懸賞（18.7.4；09 9.7「先搶先贏，不設每日數量」）：每天刷新時貼出 from_day 起的全部懸賞；
-# 貼出期間在該地點遇敵就是懸賞陣容（group＋elite 排最前；角色自己的遭遇變化優先），先打贏的人拿走當天的懸賞。
+# 每個角色每天在該地點的第一場遭遇是懸賞陣容（group＋elite 排最前；角色自己的遭遇變化優先），之後照一般遭遇（5F-1b）。
+# 先打倒的人拿大獎 coins（並補經驗到懸賞份數），其他人打倒拿小獎 consolation_coins（9.6.3；初值）。
 # 雲嶺懸賞第 1 天起（代決 5F1-8：9.7「第 4～7 天 懸賞」對應荒原懸賞 19.8 的等級 7～8）。
 bounties:
   - {id: north_wolf_king, name_zh: 北坡狼王, region: cloud_ridge, location: north_slope, level: 5,
-     group: north_slope_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, from_day: 1}
+     group: north_slope_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, consolation_coins: 1, from_day: 1}
   # 會分身：本體 sect_mist_swordsman 開場用召喚原語召出 1 名低血量、同招式的霧影（18.7.4；5F-1b 玩法 PM 代決）
   - {id: mist_swordsman, name_zh: 霧中劍客, region: cloud_ridge, location: sword_tomb, level: 5,
-     group: mist_swordsman_band, elite: {unit: sect_mist_swordsman, affix: mist_veiled}, coins: 3, from_day: 1}
+     group: mist_swordsman_band, elite: {unit: sect_mist_swordsman, affix: mist_veiled}, coins: 3, consolation_coins: 1, from_day: 1}
   - {id: scarface, name_zh: 斷崖幫二當家「疤面」, region: cloud_ridge, location: cliff_gang_fort, level: 4,
-     group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}, coins: 3, from_day: 1}
+     group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}, coins: 3, consolation_coins: 1, from_day: 1}
 
 # 世界事件（19.9、#103）：全服一條進度；門檻＝goal.count × 前一天上線帳號數 ÷ base_players（Q14），
 # 最少保留原門檻的 min_target_permille（250＝1/4，30 → 8，無條件進位）；前一天沒有上線紀錄（含第 1 天）

@@ -146,8 +146,8 @@ class DailyGoalRules(ContentModel):
 
 
 class BountyDef(ContentModel):
-    """一張懸賞（18.7.4）：貼出期間在 ``location`` 遇敵就是這個陣容（``group``＋精英 ``elite`` 排
-    最前），先打贏的人拿走當天的懸賞。"""
+    """一張懸賞（18.7.4）：貼出期間每個角色每天在 ``location`` 的第一場遭遇是這個陣容（``group``＋
+    精英 ``elite`` 排最前；5F-1b），先打贏的人拿走當天的懸賞（大獎），其他人打倒拿小獎（9.6.3）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -158,6 +158,9 @@ class BountyDef(ContentModel):
     group: str = Field(pattern=ID_PATTERN)
     elite: FixedElite
     coins: int = Field(default=0, ge=0)
+    """大獎：當天第一個打倒的人拿的任務幣（另補經驗到懸賞份數）。"""
+    consolation_coins: int = Field(default=0, ge=0)
+    """小獎：已被別人搶下後打倒的任務幣（9.6.3「其他人拿小獎」；5F-1b）。"""
     from_day: int = Field(default=1, ge=1)
     """賽季第幾天起每天貼出。"""
 

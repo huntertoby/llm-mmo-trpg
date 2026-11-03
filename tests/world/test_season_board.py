@@ -207,13 +207,15 @@ def test_activity_keeps_two_days(library: ContentLibrary) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_bounties_posted_daily(library: ContentLibrary) -> None:
+def test_bounties_posted_daily(library: ContentLibrary, make_char: MakeChar) -> None:
     world = make_world()
+    char = make_char()
     posted = posted_bounties(library, world, NOON)
     assert [p.bounty.id for p in posted] == ["north_wolf_king", "mist_swordsman", "scarface"]
     assert all(p.claim is None for p in posted)
-    assert open_bounty_at(library, world, "cloud_ridge", "north_slope", NOON) == "north_wolf_king"
-    assert open_bounty_at(library, world, "cloud_ridge", "ferry_steps", NOON) is None
+    found = open_bounty_at(library, world, char, "cloud_ridge", "north_slope", NOON)
+    assert found == "north_wolf_king"
+    assert open_bounty_at(library, world, char, "cloud_ridge", "ferry_steps", NOON) is None
     assert posted_bounties(library, world, _day(15)) == ()  # 季末後不再貼
 
 
@@ -242,12 +244,41 @@ def test_first_come_first_served(library: ContentLibrary, make_char: MakeChar) -
     xp = library.world_rules.xp.xp_for("bounty", 4)  # type: ignore[union-attr]
     assert claimed.xp == xp - 100  # 補到懸賞份數（代決 5F1-6）
     assert alice.quest_coins >= 3
+    # 已被搶下：bob 今天第一場仍是懸賞陣容（大家都打得到，5F-1b）
+    assert open_bounty_at(library, world, bob, "cloud_ridge", "north_slope", NOON) is not None
     world, bob, second = after_season_step(library, world, bob, fight, now=NOON + 60, actor="b")
-    assert BountyMissedEvent(bounty="north_wolf_king", claimed_by=alice.hero.name_zh) in second
+    missed = BountyMissedEvent(bounty="north_wolf_king", claimed_by=alice.hero.name_zh, coins=1)
+    assert missed in second  # 小獎（9.6.3）
+    gains = [e for e in second if isinstance(e, CurrencyGainedEvent)]
+    assert [g.amount for g in gains if g.source == "bounty_consolation:north_wolf_king"] == [1]
     assert not any(isinstance(e, BountyClaimedEvent) for e in second)
-    assert open_bounty_at(library, world, "cloud_ridge", "north_slope", NOON) is None
-    # 隔天重新貼出
-    assert open_bounty_at(library, world, "cloud_ridge", "north_slope", _day(2)) is not None
+    # 兩人今天的第一場都用掉了：之後照一般遭遇
+    for char in (alice, bob):
+        assert open_bounty_at(library, world, char, "cloud_ridge", "north_slope", NOON) is None
+    # 隔天（6 點換日）重新貼出、重新算第一場
+    assert open_bounty_at(library, world, alice, "cloud_ridge", "north_slope", _day(2)) is not None
+
+
+def test_first_bounty_encounter_per_day(library: ContentLibrary, make_char: MakeChar) -> None:
+    world = make_world()
+    char = make_char(location="north_slope")
+    place = library.world_maps["cloud_ridge"].location_by_id()["north_slope"]
+    first, _ = make_encounter(library, world, char, place, NOON)
+    assert first.bounty == "north_wolf_king"
+    lost = _battle(lineup=_bounty_lineup(), location="north_slope", won=False)
+    world, char, events = after_season_step(library, world, char, lost, now=NOON, actor="a")
+    assert char.bounty_days == {"north_wolf_king": day_of(library, NOON)}
+    assert not any(isinstance(e, (BountyClaimedEvent, BountyMissedEvent)) for e in events)
+    second, _ = make_encounter(library, world, char, place, NOON + 600)
+    assert second.bounty is None  # 輸了也算用掉今天的第一場
+    # 別的懸賞地點不受影響
+    tomb = library.world_maps["cloud_ridge"].location_by_id()["sword_tomb"]
+    assert make_encounter(library, world, char, tomb, NOON)[0].bounty == "mist_swordsman"
+    # 6 點換日前一刻仍是同一天，過了 6 點重新算
+    refresh = day_of(library, NOON)
+    before = next(t for t in range(NOON, NOON + DAY, 60) if day_of(library, t) != refresh) - 60
+    assert make_encounter(library, world, char, place, before)[0].bounty is None
+    assert make_encounter(library, world, char, place, before + 60)[0].bounty == "north_wolf_king"
 
 
 # ---------------------------------------------------------------------------

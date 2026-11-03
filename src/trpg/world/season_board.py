@@ -9,9 +9,10 @@
   事件依前一天的上線帳號數重算門檻（Q14），記下調整；門檻降到進度以下就成功。
 - **上線紀錄**：每個成功的動作之後把 ``actor``（帳號 ID；沒有帳號時用角色 ID，Q15）記進今天的
   ``activity``，只留今天與昨天。
-- **懸賞**（09 9.7「先搶先贏」）：每天貼出 ``from_day`` 起的全部懸賞；貼出、還沒被搶的地點遇敵就是
-  懸賞陣容（:func:`open_bounty_at`，由 ``make_encounter`` 記進遭遇）。打贏懸賞陣容時當天還沒被搶
-  → 記下、給任務幣、經驗補到懸賞份數；已被搶 → ``bounty_missed``。
+- **懸賞**（09 9.7「先搶先贏」、9.6.3「先打倒的人拿大獎，其他人拿小獎」）：每天貼出 ``from_day`` 起的
+  全部懸賞；每個角色每天在該地點的**第一場**遭遇是懸賞陣容，之後照一般遭遇（:func:`open_bounty_at`，
+  由 ``make_encounter`` 記進遭遇；開戰時記進 ``CharacterState.bounty_days``，5F-1b）。打贏懸賞陣容時
+  當天還沒被搶 → 記下、給任務幣、經驗補到懸賞份數（大獎）；已被搶 → ``bounty_missed``＋小獎任務幣。
 - **世界事件進度**：每一步的事件符合目標就累加；達到門檻立刻成功並套 ``on_success``。
 - **今日目標**（#99）：第 1～``newbie_days`` 天用固定的教學目標，之後每天從清單確定性抽；角色
   進度跨日歸零，完成一條給任務幣。
@@ -321,14 +322,39 @@ def posted_bounties(
 
 
 def open_bounty_at(
-    library: ContentLibrary, world: WorldState, region: str, location: str, now: int
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    region: str,
+    location: str,
+    now: int,
 ) -> str | None:
-    """``region``／``location`` 今天貼出、還沒被搶的懸賞 ID。"""
+    """``region``／``location`` 今天貼出、``char`` 今天還沒打過的懸賞 ID（已被別人搶下也照樣遇到，
+    打倒拿小獎；5F-1b）。"""
+    today = day_of(library, now)
     for posted in posted_bounties(library, world, now):
         bounty = posted.bounty
-        if posted.claim is None and (bounty.region, bounty.location) == (region, location):
+        if (bounty.region, bounty.location) != (region, location):
+            continue
+        if char.bounty_days.get(bounty.id) != today:
             return bounty.id
     return None
+
+
+def _mark_bounty_fights(
+    library: ContentLibrary, char: CharacterState, events: Sequence[WorldEvent], now: int
+) -> CharacterState:
+    """這一步開打的懸賞陣容記進 ``bounty_days``（今天在該地點的第一場已用掉）。"""
+    fought = {
+        e.lineup.bounty
+        for e in events
+        if isinstance(e, BattleStartedEvent) and e.lineup.bounty is not None
+    }
+    if not fought:
+        return char
+    today = day_of(library, now)
+    days = {**char.bounty_days, **dict.fromkeys(sorted(fought), today)}
+    return char.model_copy(update={"bounty_days": days})
 
 
 def _won_bounties(events: Sequence[WorldEvent]) -> Iterator[tuple[str, BattleStartedEvent, int]]:
@@ -360,8 +386,12 @@ def _claim_bounties(
         if bounty is None:
             continue
         claim = world.claim_of(today, bounty_id)
-        if claim is not None:
-            out.append(BountyMissedEvent(bounty=bounty_id, claimed_by=claim.name))
+        if claim is not None:  # 小獎（9.6.3）
+            small = bounty.consolation_coins
+            out.append(BountyMissedEvent(bounty=bounty_id, claimed_by=claim.name, coins=small))
+            if small > 0:
+                char, coins = _coins(char, small, f"bounty_consolation:{bounty_id}")
+                out.append(coins)
             continue
         record = BountyClaim(
             day=today,
@@ -469,6 +499,7 @@ def after_season_step(
     season = library.world_season
     if season is None:
         return world, char, ()
+    char = _mark_bounty_fights(library, char, events, now)
     world, char, claimed = _claim_bounties(library, world, char, events, now)
     seen = (*events, *claimed)
     world, progressed = _advance_events(library, season, world, seen, now)
