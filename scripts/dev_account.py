@@ -34,6 +34,8 @@ from trpg.roguelite.save import default_save_dir
 from trpg.server.account_config import load_account_settings
 from trpg.server.accounts import AccountRecord, AccountStore, open_account_store
 from trpg.shared.errors import TrpgError
+from trpg.world.save import loads_world
+from trpg.world.season import FIRST_SEASON_ID
 
 GENERATED_PASSWORD_BYTES = 12
 
@@ -74,8 +76,20 @@ def _store(folder: Path | None) -> AccountStore:
     )
 
 
+def _world_root(world_dir: Path | None) -> Path:
+    return world_dir if world_dir is not None else default_save_dir() / "world"
+
+
+def _world_season(world_dir: Path | None) -> str:
+    """世界存檔目前的賽季（角色歸到帳號時記下，上限按賽季算；5D-R2）。還沒有世界＝第一季。"""
+    path = _world_root(world_dir) / "world.json"
+    if not path.is_file():
+        return FIRST_SEASON_ID
+    return loads_world(path.read_text(encoding="utf-8")).season_id
+
+
 def _check_character_file(world_dir: Path | None, character_id: str) -> None:
-    root = world_dir if world_dir is not None else default_save_dir() / "world"
+    root = _world_root(world_dir)
     path = root / "chars" / f"{character_id}.json"
     if not path.is_file():
         raise TrpgError(
@@ -130,6 +144,8 @@ def run(args: argparse.Namespace, out: TextIO, stdin: TextIO) -> None:
     elif args.command == "attach":
         account_id = _account(store, args.username).account_id
         _check_character_file(args.world_dir, args.character_id)
+        season = _world_season(args.world_dir)
+        store.season = lambda: season
         record = store.attach_character(account_id, args.character_id)
         print(_line(record), file=out)
     elif args.command == "admin":

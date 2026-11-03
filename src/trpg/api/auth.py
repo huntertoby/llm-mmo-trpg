@@ -122,7 +122,7 @@ def account_view(store: AccountStore, record: AccountRecord) -> AccountView:
     return AccountView(
         account_id=record.account_id,
         username=record.username,
-        characters=len(record.characters),
+        characters=len(store.season_characters(record)),  # 當季的角色（5D-R2）
         max_characters=store.max_characters,
-        can_create=len(record.characters) < store.max_characters,
+        can_create=len(store.season_characters(record)) < store.max_characters,
     )

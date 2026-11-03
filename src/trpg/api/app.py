@@ -149,6 +149,7 @@ def create_app(
         settings.accounts_dir(saves),
         max_characters=settings.max_characters,
         session_ttl_s=settings.session_ttl_s,
+        season=app.state.world.current_season,  # 角色上限按賽季算（5D-R2）
     )
     app.state.login_limiter = LoginLimiter(  # 登入嘗試次數限制（5E-2）
         max_failures=settings.login_max_failures,

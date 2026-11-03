@@ -162,6 +162,13 @@ class WorldStore:
                     write_atomic(path, dumps_world(self._world))
             return self._world
 
+    def current_season(self) -> str:
+        """目前的賽季 ID（帳號的角色上限用，5D-R2）。還沒有世界存檔時不建立，回第一季。"""
+        with self._lock:
+            if self._world is None and not self._world_path().is_file():
+                return SEASON_ID
+            return self.world().season_id
+
     def entries(self) -> list[WorldLogEntry]:
         """世界動作日誌（第一次用到時讀檔）。"""
         with self._lock:
