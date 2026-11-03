@@ -221,9 +221,10 @@ describe("6M-1 姿勢鉤子", () => {
     expect(cy(of(b, PANTS)[0]!) - cy(of(a, PANTS)[0]!)).toBeCloseTo(-2, 6);
   });
 
-  it("wpn：主手武器繞手轉（沒給＝現有握法）", () => {
+  it("wpn（6M-2）：主手武器相對手的角度；給預設握法的角度（劍側面 0.75）＝ 沒給", () => {
     const solo = (p: InkPose | null): string => JSON.stringify(draw("east", p).filter((x) => x.color !== ARM && x.color !== darken(ARM, 0.25)));
-    expect(solo({ wpn: 0 })).toBe(solo(REST_POSE));
+    expect(solo({ wpn: 0.75 })).toBe(solo(REST_POSE));
+    expect(solo({ wpn: 0 })).not.toBe(solo(REST_POSE));
     expect(solo({ wpn: 0.8 })).not.toBe(solo(REST_POSE));
   });
 });

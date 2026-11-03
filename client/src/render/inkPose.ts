@@ -23,7 +23,7 @@ export interface InkPose {
   armF?: number;
   /** 側面：另一隻手的手肘。 */
   elbowF?: number;
-  /** 主手武器繞手的角度。6M-1：相對現有握法的增量（沒給＝現有握法）；6M-2 武器統一後改成「相對手」的絕對角度。 */
+  /** 側面主手武器相對手的角度（6M-2，統一座標：0 ＝ 作用端朝上，見 inkWeaponFrame.ts）；沒給＝該武器的預設握法。武器的絕對角度＝ arm＋elbow＋wpn。正面、背面不吃（照樣張）。 */
   wpn?: number;
   /** 正面、背面：主手側（liftL）、副手側（liftR）抬腳的高度（正＝抬高）。 */
   liftL?: number;
@@ -31,7 +31,7 @@ export interface InkPose {
   /** 正面、背面：主手側（armL）、副手側（armR）手臂上下擺（y 位移）。 */
   armL?: number;
   armR?: number;
-  /** 弓弦拉開的距離（6M-2 弓統一畫法後才會用到；6M-1 先保留欄位）。 */
+  /** 弓弦拉開的距離（6M-2：弦中點往握把的反方向移；> 0.5 時搭上一支箭）。四個朝向都吃。 */
   pull?: number;
 }
 

@@ -6,6 +6,7 @@ import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
 import { ellPts, iconHead, inIconMode, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
 import { drawTassel } from "./inkSect";
+import { orientWeapon, restLean, type WeaponPoseOpt } from "./inkWeaponFrame";
 
 /** 取一件裝備的 [主色, 暗色]（paperdoll.ts 的 `itemColors`）。 */
 export type ColorFn = (it: GearItem) => readonly [string, string];
@@ -89,7 +90,7 @@ export function drawInkHeadgear(ctx: Ctx, it: GearItem, view: View, colors: Colo
 }
 
 // ============================== 武器 ==============================
-export interface HeldOpt {
+export interface HeldOpt extends WeaponPoseOpt {
   /** 左右鏡像（成對武器的副手、背面的主手）。 */
   mirror: boolean;
   /** 真側面（劍、斧、匕首往前上斜）。 */
@@ -99,9 +100,6 @@ export interface HeldOpt {
   /** 背面（匕首不外斜）。 */
   back?: boolean;
 }
-
-/** 側面傾斜（弧度）；正面、背面豎直。 */
-const SIDE_TILT = 0.75;
 
 function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string, outward = 1): void {
   const L = it.kind === "sword" ? 21 : 10;
@@ -147,9 +145,14 @@ function drawStaff(ctx: Ctx, it: GearItem, key: string, wood: string): void {
   });
 }
 
-function drawBow(ctx: Ctx, key: string, wood: string): void {
-  stroke(ctx, `${key}-string`, [[2, -15], [2, 14]], 0.35, "#e8e0d0");
+/** 弓：弓弦在 +x、弓身往 -x 彎（箭的方向 -x）。`pull`（6M-2）＝ 弓弦中點往 +x 拉開的距離；> 0.5 時搭上一支箭。 */
+function drawBow(ctx: Ctx, key: string, wood: string, pull: number, metal: string): void {
+  stroke(ctx, `${key}-string`, pull > 0 ? [[2, -15], [2 + pull, 0], [2, 14]] : [[2, -15], [2, 14]], 0.35, "#e8e0d0");
   ink(ctx, `${key}-limb`, [[1.6, -15], [-2.4, -9], [-3.6, 0], [-2.4, 8], [1.6, 14], [0.4, 14.4], [-4.4, 8], [-5.8, 0], [-4.4, -9], [0.4, -15.4]], wood, { shade: false, w: 0.6 });
+  if (pull > 0.5) {
+    stroke(ctx, `${key}-arrow`, [[2 + pull, 0], [-9, 0]], 0.9, "#c8a070");
+    ink(ctx, `${key}-arrowhead`, [[-8.6, 1.2], [-11, 0], [-8.6, -1.2]], metal, { shade: false, w: 0.4, sharp: true });
+  }
 }
 
 /** 正面圓盾：握在手上，盾心在手的右下方 (0.4, 2.2)（骨架上盾心 (8.6,-21)）。 */
@@ -175,16 +178,14 @@ export function drawInkWeapon(ctx: Ctx, it: GearItem, key: string, x: number, y:
   ctx.translate(x, y);
   // 正面、背面的斧頭左右翻轉：大刃朝外、小刃朝內（C-1b 驗收）
   if (o.mirror !== (it.kind === "axe" && !o.side)) ctx.scale(-1, 1);
-  // 正面匕首往外斜 0.5 rad，刀身落在身體外（C-1b 驗收）
-  const tilt = o.side ? SIDE_TILT : it.kind === "dagger" && o.back !== true ? -0.5 : 0;
+  // 握法（inkWeaponFrame.ts）：正面匕首往外斜 0.5 rad，刀身落在身體外（C-1b 驗收）；側面劍、匕首往前上斜、斧 0.8 倍；有姿勢 `wpn` 時改用統一座標
+  orientWeapon(ctx, it, o, restLean(ctx, it, o));
   switch (it.kind) {
     case "sword":
     case "dagger":
-      ctx.rotate(tilt);
       drawBlade(ctx, it, key, metal, !o.side && o.back !== true ? -1 : 1);
       break;
     case "axe":
-      ctx.rotate(tilt * 0.8);
       drawAxe(ctx, key, metal, wood);
       break;
     case "staff":
@@ -192,7 +193,7 @@ export function drawInkWeapon(ctx: Ctx, it: GearItem, key: string, x: number, y:
       drawStaff(ctx, it, key, wood);
       break;
     default:
-      drawBow(ctx, key, it.color ?? wood);
+      drawBow(ctx, key, it.color ?? wood, o.pull ?? 0, metal);
       break;
   }
   ctx.restore();

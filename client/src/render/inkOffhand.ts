@@ -6,6 +6,7 @@ import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
 import type { ColorFn } from "./inkGear";
 import { ellPts, ink, MAT, stroke, type Pt } from "./inkStyle";
+import { orientWeapon, type WeaponPoseOpt } from "./inkWeaponFrame";
 
 const GOLD = MAT.gold;
 const PAGE = "#f2ead6";
@@ -109,10 +110,12 @@ function drawOrb(ctx: Ctx, it: GearItem, colors: ColorFn, side: boolean, shade: 
  * 畫副手手持物。(x, y) ＝ 手心。正面（`side` ＝ false）：鳶盾、書立在身側、法球托在掌上；
  * 側面（遠側手，身體之後）：往前移出身體輪廓外並暗 25%。不是這一層的 kind 回傳 false。
  */
-export function drawInkOffhand(ctx: Ctx, it: GearItem, x: number, y: number, side: boolean, colors: ColorFn): boolean {
+export function drawInkOffhand(ctx: Ctx, it: GearItem, x: number, y: number, side: boolean, colors: ColorFn, pose: WeaponPoseOpt = {}): boolean {
   if (!isInkOffhandHeld(it)) return false;
   ctx.save();
   ctx.translate(x, y);
+  // 6M-2：法球照統一座標（作用端＝球心）回報給測試；副手不吃 `wpn`，書、盾不是武器（不轉、不回報）
+  if (it.kind === "orb" && pose.probe !== undefined) orientWeapon(ctx, it, { side, probe: pose.probe }, null);
   const shade = side ? 0.25 : 0;
   if (it.kind === "tome") drawTome(ctx, it, colors, side, shade);
   else if (it.kind === "orb") drawOrb(ctx, it, colors, side, shade);
