@@ -39,6 +39,8 @@ interface Props {
   /** 格子上有單位時，地形資訊卡收起成一行（Phase 3-18b；另外存）。 */
   collapseTile: boolean;
   onCollapseTile(on: boolean): void;
+  /** 版面 A（6A-4e）：四角 HUD 疊在戰場上、沒有窄欄與分隔線，不顯示欄寬與列高的滑桿。 */
+  hudA?: boolean;
 }
 
 function SliderRow({
@@ -75,34 +77,38 @@ function SliderRow({
   );
 }
 
-export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, shake, onShake, collapseTile, onCollapseTile }: Props) {
+export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, shake, onShake, collapseTile, onCollapseTile, hudA = false }: Props) {
   return (
     <div className="layout-panel" aria-label="版面設定">
       <div className="section-title">版面</div>
-      <SliderRow
-        label="右側窄欄寬"
-        unit=" px"
-        value={prefs.sideWidth}
-        range={limits.side}
-        disabled={narrow}
-        onChange={(v) => onChange({ sideWidth: v })}
-      />
-      <SliderRow
-        label="底部列高"
-        unit=" px"
-        value={prefs.bottomHeight}
-        range={limits.bottom}
-        disabled={narrow}
-        onChange={(v) => onChange({ bottomHeight: v })}
-      />
-      <SliderRow
-        label="主角狀態卡寬"
-        unit=" px"
-        value={prefs.heroWidth}
-        range={limits.hero}
-        disabled={narrow}
-        onChange={(v) => onChange({ heroWidth: v })}
-      />
+      {!hudA && (
+        <>
+          <SliderRow
+            label="右側窄欄寬"
+            unit=" px"
+            value={prefs.sideWidth}
+            range={limits.side}
+            disabled={narrow}
+            onChange={(v) => onChange({ sideWidth: v })}
+          />
+          <SliderRow
+            label="底部列高"
+            unit=" px"
+            value={prefs.bottomHeight}
+            range={limits.bottom}
+            disabled={narrow}
+            onChange={(v) => onChange({ bottomHeight: v })}
+          />
+          <SliderRow
+            label="主角狀態卡寬"
+            unit=" px"
+            value={prefs.heroWidth}
+            range={limits.hero}
+            disabled={narrow}
+            onChange={(v) => onChange({ heroWidth: v })}
+          />
+        </>
+      )}
       <label className="layout-row">
         <span>地圖縮放</span>
         <input
@@ -131,8 +137,14 @@ export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, s
         </button>
       </div>
       <OpHintReset />
-      {narrow && <div className="small muted">視窗較窄時窄欄與底部列版型固定，這三項不生效。</div>}
-      <div className="small muted">也可以直接拖曳畫面上的分隔線；Ctrl＋滾輪縮放地圖，放大後用捲軸或滑鼠中鍵拖曳平移。</div>
+      {hudA ? (
+        <div className="small muted">Ctrl＋滾輪縮放地圖，放大後用捲軸或滑鼠中鍵拖曳平移。</div>
+      ) : (
+        <>
+          {narrow && <div className="small muted">視窗較窄時窄欄與底部列版型固定，這三項不生效。</div>}
+          <div className="small muted">也可以直接拖曳畫面上的分隔線；Ctrl＋滾輪縮放地圖，放大後用捲軸或滑鼠中鍵拖曳平移。</div>
+        </>
+      )}
     </div>
   );
 }
