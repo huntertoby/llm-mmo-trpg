@@ -78,6 +78,11 @@ class GearCheckRequest(_ApiModel):
     dev_pack: str | None = None
     equipment: dict[str, GearChoice] = Field(default_factory=dict)
 
+    def dev_fields(self) -> list[str]:
+        """有填的開發用欄位（6S-1：開發模式關時路由回 403）。"""
+        used = {"hero_build": self.hero_build is not None, "dev_pack": self.dev_pack is not None}
+        return [name for name, on in used.items() if on]
+
 
 class GearSlotInfo(_ApiModel):
     slot: str

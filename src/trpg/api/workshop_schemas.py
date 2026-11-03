@@ -72,6 +72,10 @@ class WorkshopExportRequest(WorkshopSkillRequest):
 
     allow_illegal: bool = False
 
+    def dev_fields(self) -> list[str]:
+        """有填的開發用欄位（6S-1：開發模式關時路由回 403）。"""
+        return ["allow_illegal"] if self.allow_illegal else []
+
 
 class WorkshopCheck(DraftCheck):
     """:class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"""

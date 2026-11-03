@@ -244,6 +244,17 @@ class CreateBattleRequest(_ApiModel):
     """裝備測試（Phase 3G-G4）：主角各欄位的物品（內容庫物品 id，或自訂物品）。沒選的欄位是空的；
     主手選了武器物品時主角的武器跟著換。不合法時 422 並列出中文原因。"""
 
+    def dev_fields(self) -> list[str]:
+        """有填的開發用欄位（6S-1：開發模式關時路由回 403）。``ally_builds`` 空串列（工坊試玩、
+        只有主角）不算；給了 build 才算。"""
+        used = {
+            "hero_build": self.hero_build is not None,
+            "dev_pack": self.dev_pack is not None,
+            "ally_builds": bool(self.ally_builds),
+            "equipment": bool(self.equipment),
+        }
+        return [name for name, on in used.items() if on]
+
 
 class DecisionRequest(_ApiModel):
     accept: bool

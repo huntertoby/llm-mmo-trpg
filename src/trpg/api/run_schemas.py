@@ -103,6 +103,16 @@ class CreateRunRequest(_ApiModel):
             raise ValueError("weapon 與 keywords 必須一起給")
         return self
 
+    def dev_fields(self) -> list[str]:
+        """有填的開發用欄位（6S-1：開發模式關時路由回 403）。"""
+        used = {
+            "build": self.build is not None,
+            "dev_pack": self.dev_pack is not None,
+            "test_mode": self.test_mode,
+            "test_equipment": bool(self.test_equipment),
+        }
+        return [name for name, on in used.items() if on]
+
 
 class StartWeaponOption(_ApiModel):
     """開局可選的武器（Phase 3-24b2）。"""

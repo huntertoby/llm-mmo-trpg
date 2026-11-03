@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from trpg.api.auth import reject_dev_fields
 from trpg.api.gear import gear_catalog, gear_problems
 from trpg.api.gear_schemas import GearCatalog, GearCheck, GearCheckRequest
 from trpg.api.schemas import CreateBattleRequest
@@ -32,6 +33,7 @@ def get_catalog(request: Request) -> GearCatalog:
 @router.post("/check")
 def post_check(body: GearCheckRequest, request: Request) -> GearCheck:
     """靶場上的主角穿這組裝備是否合法；合法時附上開戰時的主角（含裝備、加成來源與實際數值）。"""
+    reject_dev_fields(request, body.dev_fields())  # 6S-1：hero_build、dev_pack 開發模式才能用
     store = store_of(request)
     library = store.library
     base = store.base_setup(
