@@ -30,3 +30,42 @@ export function shadowEllipse(ctx: Ctx, cx: number, cy: number, rx: number, ry: 
   ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU);
   ctx.fill();
 }
+
+/** 危險記號（會爆的油桶，四區共用；docs/art/四區移植需求.md 第 1 節）：黃底黑框三角＋驚嘆號，中心在 (cx, cy)。 */
+export function hazardMark(ctx: Ctx, cx: number, cy: number, s = 7): void {
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - s);
+  ctx.lineTo(cx + s, cy + s * 0.8);
+  ctx.lineTo(cx - s, cy + s * 0.8);
+  ctx.closePath();
+  ctx.fillStyle = "#ffd23a";
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = "#1a1208";
+  ctx.stroke();
+  ctx.fillStyle = "#1a1208";
+  ctx.fillRect(cx - 1, cy - s * 0.45, 2, s * 0.65);
+  ctx.fillRect(cx - 1, cy + s * 0.32, 2, 2);
+}
+
+/** 發光線（裝飾光：裂縫熔岩光、晶能線）：`path` 只負責 moveTo／lineTo，畫完還原陰影設定。 */
+export function glowLine(ctx: Ctx, color: string, width: number, blur: number, path: () => void): void {
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  path();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** 實心小圓點。 */
+export function dot(ctx: Ctx, x: number, y: number, r: number, fill: string): void {
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fill();
+}
