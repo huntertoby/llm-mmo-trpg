@@ -146,8 +146,11 @@ def test_which_kinds_share_the_clear(
     if shared:
         assert [s.key() for s in world.defeated_spawns] == [("cloud_ridge", location, 0)]
         assert won.field_visit.defeated == ()
-    else:
-        assert world.defeated_spawns == ()
+    else:  # 6C-R2：世界只記重生世代（陣容換一批），不讓它對任何人消失
+        assert [(s.key(), s.wins) for s in world.defeated_spawns] == [
+            (("cloud_ridge", location, 0), 1)
+        ]
+        assert not world.spawn_defeated("cloud_ridge", location, 0, NOON)
         assert won.field_visit.defeated == (0,)
     assert _shown(library, world, won, NOON) == [1]  # 只消失打贏的那一隊
 
@@ -218,7 +221,7 @@ MIXED: list[dict[str, Any]] = [
 @pytest.mark.parametrize(
     ("spawns", "beat", "cleared", "world_rows", "visit_defeated", "shown"),
     [
-        (MIXED, 0, False, 0, (0,), [1]),  # 打贏個人的：只記在自己，不算進共享
+        (MIXED, 0, False, 1, (0,), [1]),  # 打贏個人的：只記在自己（世界只記重生世代，6C-R2）
         (MIXED, 1, True, 1, (), [0]),  # 打贏唯一的共享隊伍：已清空，個人的照樣在
     ],
 )

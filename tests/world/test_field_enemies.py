@@ -350,7 +350,9 @@ def test_won_group_stays_gone_for_this_visit(field_library: ContentLibrary) -> N
     after, won, _ = after_fight(
         library, world, contact, char, action=fight, events=(_ended(won=True),), now=NOON
     )
-    assert after == world  # 村落不共享：不寫世界
+    assert after.defeated_spawns != world.defeated_spawns  # 6C-R2：世界只記重生世代
+    assert after.spawn_generation("cloud_ridge", won.location, 0) == 1
+    assert not after.spawn_defeated("cloud_ridge", won.location, 0, NOON)  # 村落不共享：不消失
     assert won.field_visit is not None and won.field_visit.defeated == (0,)
     assert field_enemies(library, make_world(), won, NOON) == ()
     _, lost, _ = after_fight(

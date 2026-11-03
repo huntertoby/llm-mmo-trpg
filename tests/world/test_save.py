@@ -1,4 +1,5 @@
-"""存檔格式 ``trpg-world/2``、``trpg-char/5``、``trpg-wlog/6``（5A-2；6B-2、6C-1、6C-1b 升版）。"""
+"""存檔格式 ``trpg-world/3``、``trpg-char/5``、``trpg-wlog/7``（5A-2；6B-2、6C-1、6C-1b、6C-R2
+升版）。"""
 
 from __future__ import annotations
 
@@ -52,7 +53,7 @@ def test_world_roundtrip() -> None:
         cleared=(ClearedLocation(region="cloud_ridge", location="ferry_steps", respawn_at=9),),
     )
     text = dumps_world(world)
-    assert json.loads(text)["format"] == "trpg-world/2"
+    assert json.loads(text)["format"] == "trpg-world/3"
     assert loads_world(text) == world
     assert dumps_world(loads_world(text)) == text
 
@@ -74,7 +75,7 @@ def test_log_roundtrip() -> None:
     ]
     text = dumps_log(entries)
     lines = text.splitlines()
-    assert json.loads(lines[0]) == {"format": "trpg-wlog/6"}
+    assert json.loads(lines[0]) == {"format": "trpg-wlog/7"}
     assert len(lines) == 3
     assert loads_log(text) == tuple(entries)
 
@@ -89,9 +90,9 @@ def test_log_roundtrip() -> None:
         (loads_world, "not json"),
         (loads_log, ""),
         (loads_log, '{"format": "trpg-wlog/9"}\n'),
-        (loads_log, '{"format": "trpg-wlog/6"}\n{"seq": 1}\n'),
-        (loads_log, '{"format": "trpg-wlog/6"}\n{oops\n'),
-        (loads_log, '{"format": "trpg-wlog/6", "stale_through": -1}\n'),
+        (loads_log, '{"format": "trpg-wlog/7"}\n{"seq": 1}\n'),
+        (loads_log, '{"format": "trpg-wlog/7"}\n{oops\n'),
+        (loads_log, '{"format": "trpg-wlog/7", "stale_through": -1}\n'),
         (loads_char, '{"format": "trpg-char/9"}'),
     ],
 )
@@ -145,7 +146,7 @@ def test_world_v1_upgrades_and_wlog_v3_is_stale() -> None:
     old.pop("defeated_spawns")
     old["format"] = "trpg-world/1"
     loaded = loads_world(json.dumps(old))
-    assert loaded.format == "trpg-world/2" and loaded.defeated_spawns == ()
+    assert loaded.format == "trpg-world/3" and loaded.defeated_spawns == ()
     entry = WorldLogEntry(seq=4, now=NOON, character_id="alice", action=CampAction())
     log = read_log('{"format": "trpg-wlog/3"}\n' + dumps_log_entry(entry) + "\n")
     assert log.stale_through == 4 and log.stale_zh is not None

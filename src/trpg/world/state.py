@@ -89,9 +89,10 @@ __all__ = [
     "WorldState",
 ]
 
-WORLD_FORMAT: Final = "trpg-world/2"
-LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1"})
-"""照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``）。"""
+WORLD_FORMAT: Final = "trpg-world/3"
+LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2"})
+"""照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``；
+6C-R2：只多了 ``defeated_spawns`` 的 ``wins``，舊資料當作打贏過 1 次）。"""
 CHAR_FORMAT: Final = "trpg-char/5"
 LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4"})
 """照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6C-5：只多了選填欄位）。"""
@@ -127,6 +128,10 @@ class DefeatedSpawn(_Model):
     location: str = Field(pattern=ID_PATTERN)
     spawn: int = Field(ge=0)
     respawn_at: int = Field(ge=0)
+    wins: int = Field(default=1, ge=1)
+    """這一隊被打贏過幾次（Phase 6C-R2）＝現在這一隊的重生世代（陣容種子用，
+    :func:`trpg.world.rng.spawn_seed`）。``personal`` 的隊伍、不共享清空的地點打贏時也記
+    （``respawn_at`` 寫當下，不會讓它對任何人消失），讓下一次碰到的陣容換一批、所有人看到的一樣。"""
 
     def key(self) -> tuple[str, str, int]:
         return (self.region, self.location, self.spawn)
@@ -737,15 +742,16 @@ class DailyGoalProgress(_Model):
 
 
 class WorldState(_Model):
-    """共享的世界快照（``trpg-world/2``；``/1`` 照讀）。世界的變化由世界動作日誌重播得到，
+    """共享的世界快照（``trpg-world/3``；``/1``、``/2`` 照讀）。世界的變化由世界動作日誌重播得到，
     快照只是快取。"""
 
-    format: Literal["trpg-world/2"] = WORLD_FORMAT
+    format: Literal["trpg-world/3"] = WORLD_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_world(cls, data: object) -> object:
-        """``trpg-world/1`` → ``trpg-world/2``：只多了選填欄位（6C-1b），直接換版號。"""
+        """``trpg-world/1``、``/2`` → ``trpg-world/3``：只多了選填欄位（6C-1b、6C-R2），直接換
+        版號。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_WORLD_FORMATS:
             return {**data, "format": WORLD_FORMAT}
         return data
@@ -928,6 +934,12 @@ class WorldState(_Model):
         return any(
             c.region == region and c.location == location and now < c.respawn_at
             for c in self.cleared
+        )
+
+    def spawn_generation(self, region: str, location: str, spawn: int) -> int:
+        """實地地圖上第 ``spawn`` 隊的重生世代（被打贏過幾次；沒打贏過＝0；6C-R2）。"""
+        return next(
+            (s.wins for s in self.defeated_spawns if s.key() == (region, location, spawn)), 0
         )
 
     def spawn_defeated(self, region: str, location: str, spawn: int, now: int) -> bool:

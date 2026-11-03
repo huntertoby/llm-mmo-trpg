@@ -1,9 +1,10 @@
 """實地地圖上看得見的敵人（Phase 6C-1；``docs/phases/Phase6計畫.md`` 0.4 Q4、Q5、Q8，21.4、21.10）。
 
 - **敵群**：室外圖的每個 ``spawns`` 是一隊敵人。陣容照 ``group``（遭遇變化、懸賞照舊優先，
-  :func:`~trpg.world.encounters.roll_lineup`），種子由「這一趟」（:class:`FieldVisit`）衍生，所以地圖上
-  看到的陣容就是開戰的陣容。駐守不動（朝向照種子）；巡邏沿 ``patrol`` 的直線路線來回，你走一格它走
-  一格，起點照種子。
+  :func:`~trpg.world.encounters.roll_lineup`），種子由世界種子＋(區域, 地點, 隊伍)＋重生世代衍生
+  （6C-R2，:func:`lineup_seed`；所有角色看到同一隊的陣容一樣），地圖上看到的陣容就是開戰的陣容。
+  巡邏起點與駐守朝向照「這一趟」（:class:`FieldVisit`）的種子（角色層；世界層 tick 是後期）。
+  駐守不動（朝向照種子）；巡邏沿 ``patrol`` 的直線路線來回，你走一格它走一格，起點照種子。
 - **這一趟**：進入一個有敵人的地點時，從角色的 ``field`` 串流
   （:data:`~trpg.world.rng.STREAM_FIELD`）抽一次種子；換地點才重來（進出室內不算）。
 - **清空與重生**（21.10 第 9 條，6C-1b）：規則 ``battle.clear_kinds`` 的種類（營地、精英巢穴、遺跡、
@@ -28,8 +29,8 @@
 - **戰後**（21.10 第 7 條）：打贏就站在接觸點（走路停在那一格）；撤退回到進這張地圖時站的格子；
   全滅照現行回小鎮。
 
-確定性：只用角色的 ``field`` 串流衍生的種子與 :func:`~trpg.shared.rng.fnv1a64`；敵人依 ``spawns`` 的
-順序檢查，視野格依 (y, x) 排序（守則 2）。
+確定性：只用角色的 ``field`` 串流衍生的種子、世界的陣容種子與 :func:`~trpg.shared.rng.fnv1a64`；
+敵人依 ``spawns`` 的順序檢查，視野格依 (y, x) 排序（守則 2）。
 """
 
 from __future__ import annotations
@@ -56,7 +57,7 @@ from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
 from trpg.world.field import FieldCtx, FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
-from trpg.world.rng import STREAM_FIELD, derive_seed, draw
+from trpg.world.rng import STREAM_FIELD, draw, peek, spawn_seed
 from trpg.world.solutions import make_encounter
 from trpg.world.state import (
     CharacterState,
@@ -147,8 +148,7 @@ def visit_for(
     visit = char.field_visit
     if visit is not None and (visit.region, visit.location) == (char.region, char.location):
         return visit
-    counter = char.rng_counters.get(STREAM_FIELD, 0)
-    seed = Rng(derive_seed(world.season_seed, char.character_id, STREAM_FIELD, counter)).next_u32()
+    seed = peek(world.season_seed, char, STREAM_FIELD).next_u32()  # with_visit 用 draw 抽同一個
     pos = placed(library, char).field
     arrived = pos if pos is not None and pos.map == found.id else None
     if arrived is None:
@@ -162,7 +162,7 @@ def with_visit(library: ContentLibrary, world: WorldState, char: CharacterState)
     if visit == char.field_visit:
         return char
     if visit is not None:
-        _rng, char = draw(world.season_seed, char, STREAM_FIELD)  # 種子已由 visit_for 算好
+        _rng, char = draw(world.season_seed, char, STREAM_FIELD)  # 同 visit_for 的 peek，只推進計數
     return char.model_copy(update={"field_visit": visit})
 
 
@@ -200,14 +200,41 @@ def _won_contact(
 
 
 def with_defeated_spawn(
-    world: WorldState, region: str, location: str, spawn: int, respawn_at: int
+    world: WorldState,
+    region: str,
+    location: str,
+    spawn: int,
+    respawn_at: int,
+    *,
+    win: bool = True,
 ) -> WorldState:
-    """把第 ``spawn`` 隊寫成被打贏、到 ``respawn_at`` 重生（已有就更新；依地點、索引排序）。"""
+    """把第 ``spawn`` 隊寫成被打贏、到 ``respawn_at`` 重生（已有就更新；依地點、索引排序）。
+    ``win``＝這次是打贏（重生世代 ``wins`` +1，6C-R2）；``False``＝只對齊重生時間。"""
     key = (region, location, spawn)
+    wins = world.spawn_generation(region, location, spawn) + (1 if win else 0)
     kept = [s for s in world.defeated_spawns if s.key() != key]
-    kept.append(DefeatedSpawn(region=region, location=location, spawn=spawn, respawn_at=respawn_at))
+    kept.append(
+        DefeatedSpawn(
+            region=region, location=location, spawn=spawn, respawn_at=respawn_at, wins=max(wins, 1)
+        )
+    )
     kept.sort(key=DefeatedSpawn.key)
     return world.model_copy(update={"defeated_spawns": tuple(kept)})
+
+
+def _with_win(world: WorldState, visit: FieldVisit, spawn: int, now: int) -> WorldState:
+    """只對自己消失的隊伍被打贏：世界記重生世代 +1，``respawn_at`` 不晚於現在（已有較晚的重生時間，
+    例如同一隊在共享清空裡，就保留）。"""
+    region, location = visit.region, visit.location
+    hold = next(
+        (s.respawn_at for s in world.defeated_spawns if s.key() == (region, location, spawn)), now
+    )
+    return with_defeated_spawn(world, region, location, spawn, max(hold, now))
+
+
+def _shared_spawn(found: FieldMapDef, index: int) -> bool:
+    """第 ``index`` 隊是共享清空的隊伍（不是 ``personal``）。"""
+    return index < len(found.spawns) and not found.spawns[index].personal
 
 
 def _clear_if_done(
@@ -221,8 +248,8 @@ def _clear_if_done(
     respawn_at = now + rules_of(library).battle.respawn_seconds
     world = with_cleared(world, region, location, respawn_at)
     for s in world.defeated_spawns:
-        if (s.region, s.location) == (region, location):
-            world = with_defeated_spawn(world, region, location, s.spawn, respawn_at)
+        if (s.region, s.location) == (region, location) and _shared_spawn(found, s.spawn):
+            world = with_defeated_spawn(world, region, location, s.spawn, respawn_at, win=False)
     return world, (LocationClearedEvent(location=location, respawn_at=respawn_at),)
 
 
@@ -241,7 +268,9 @@ def after_fight(
     - 共享的地點（:func:`shared_clear`）、不是 ``personal`` 的隊伍：寫進世界的 ``defeated_spawns``
       （所有人看到它消失，重生時間照 ``battle.respawn_seconds``）；這張圖現在會出現的共享隊伍都打完
       才寫地點「已清空」（:class:`LocationClearedEvent`）。
-    - ``personal`` 的隊伍、或不共享的地點：記進角色這一趟的 ``defeated``，下一趟回來再出現。"""
+    - ``personal`` 的隊伍、或不共享的地點：記進角色這一趟的 ``defeated``，下一趟回來再出現。
+      世界只記重生世代 +1（``respawn_at`` 寫當下，不會讓它對任何人消失；下一次碰到換一批陣容，
+      6C-R2）。"""
     contact = _won_contact(before, char, action, events)
     visit = char.field_visit
     found = None if contact is None else field_map(library, contact.map)
@@ -251,6 +280,7 @@ def after_fight(
     if spawn.personal or not shared_clear(library, visit.region, visit.location):
         defeated = tuple(sorted({*visit.defeated, contact.spawn}))
         update = {"field_visit": visit.model_copy(update={"defeated": defeated})}
+        world = _with_win(world, visit, contact.spawn, now)
         return world, char.model_copy(update=update), ()
     respawn_at = now + rules_of(library).battle.respawn_seconds
     world = with_defeated_spawn(world, visit.region, visit.location, contact.spawn, respawn_at)
@@ -285,9 +315,11 @@ def _spawn_rng(seed: int, index: int, what: str) -> Rng:
     return Rng(fnv1a64(f"{seed}:{index}:{what}".encode()))
 
 
-def lineup_seed(visit: FieldVisit, index: int) -> int:
-    """第 ``index`` 隊的陣容種子（32 位元）。"""
-    return _spawn_rng(visit.seed, index, "lineup").next_u32()
+def lineup_seed(world: WorldState, region: str, location: str, index: int) -> int:
+    """第 ``index`` 隊的陣容種子（32 位元；6C-R2：世界種子＋(區域, 地點, 隊伍)＋重生世代，所有角色
+    一樣；:func:`trpg.world.rng.spawn_seed`）。"""
+    generation = world.spawn_generation(region, location, index)
+    return spawn_seed(world.season_seed, region, location, index, generation)
 
 
 def _toward(a: XY, b: XY) -> Facing:
@@ -518,18 +550,20 @@ def enemy_lineup(
     if visit is None or target is None or char.field is None:
         return None
     result, _ = make_encounter(library, world, char, target, now)
-    contact = _contact_model(char.field.map, visit, enemy, (char.field.x, char.field.y), None)
+    here = (char.field.x, char.field.y)
+    contact = _contact_model(world, (char.field.map, visit), enemy, at=here, first=None)
     return roll_lineup(library, result.model_copy(update={"contact": contact}), char.story_flags)
 
 
 def _contact_model(
-    map_id: str, visit: FieldVisit, enemy: FieldEnemy, at: XY, first: First
+    world: WorldState, where: tuple[str, FieldVisit], enemy: FieldEnemy, *, at: XY, first: First
 ) -> FieldContact:
+    map_id, visit = where
     return FieldContact(
         map=map_id,
         spawn=enemy.index,
         group=enemy.spawn.group,
-        lineup_seed=lineup_seed(visit, enemy.index),
+        lineup_seed=lineup_seed(world, visit.region, visit.location, enemy.index),
         x=at[0],
         y=at[1],
         first=first,
@@ -546,7 +580,7 @@ def _start(
     if target is None:  # _watch 已排除（沒有建議等級的地點沒有敵人）
         return char, ()
     result, char = make_encounter(ctx.library, ctx.world, char, target, ctx.now)
-    contact = _contact_model(watch.map.id, watch.visit, enemy, at, first)
+    contact = _contact_model(ctx.world, (watch.map.id, watch.visit), enemy, at=at, first=first)
     result = result.model_copy(update={"from_location": char.location, "contact": contact})
     char = char.model_copy(update={"pending_encounter": result})
     return char, (EncounterEvent(result=result),)

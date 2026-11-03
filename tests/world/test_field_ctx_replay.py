@@ -5,7 +5,8 @@
 SHA-256 要等於重構前（6C-R1 合併後的 ``680b2d38``）用同一支腳本算出的值。
 
 例外：陣容種子（``lineup_seed``）6C-R2 改由世界種子衍生（另見
-``tests/world/test_field_lineup_seed.py``），比較前一律遮掉。
+``tests/world/test_field_lineup_seed.py``），連同跟著升版的存檔版號（``format``）與重生世代
+（``wins``），比較前一律遮掉。
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from trpg.world.step import new_character, world_step
 
 type XY = tuple[int, int]
 
-BEFORE_6CR2 = "36e633b374e4caffdac4d2ae276db0306c9f6d4c5d9bdd26e06df46b4964edcc"
+BEFORE_6CR2 = "d2aedac47c76eb039169e9ffeb022221631653004516091b65e2d83c5ec73144"
 """重構前（``680b2d38``）同一串動作的 SHA-256（遮掉 ``lineup_seed``）。"""
 
 
@@ -49,9 +50,13 @@ def script() -> list[WorldAction]:
     ]
 
 
+MASKED = frozenset({"lineup_seed", "format", "wins"})
+"""陣容種子變更（6C-R2）動到的欄位：比較前遮掉。"""
+
+
 def _masked(data: Any) -> Any:
     if isinstance(data, dict):
-        return {k: (None if k == "lineup_seed" else _masked(v)) for k, v in data.items()}
+        return {k: (None if k in MASKED else _masked(v)) for k, v in data.items()}
     if isinstance(data, list):
         return [_masked(v) for v in data]
     return data
