@@ -532,7 +532,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   for (const b of statusBadges(u)) c.addChild(statusBadge(b));
   const infused = infusedBadge(u);
   if (infused !== null) c.addChild(infusedMark(infused));
-  c.addChild(hpBar(u));
+  if (u.noBar !== true) c.addChild(hpBar(u));
   const row = statusRow(u);
   if (row !== null) c.addChild(row);
   return c;

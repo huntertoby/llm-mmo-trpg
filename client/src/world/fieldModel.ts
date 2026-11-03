@@ -193,12 +193,24 @@ export function walkPlan(from: Pos, cells: readonly Pos[], stepMs = STEP_MS) {
 
 export type FieldTarget =
   | { kind: "facility"; facility: string; x: number; y: number }
-  | { kind: "npc"; npc: string; name: string; x: number; y: number };
+  | { kind: "npc"; npc: string; name: string; x: number; y: number }
+  /** 站在城裡的朋友（影子，6B-4）：點了直接開名片，不用走過去。 */
+  | { kind: "friend"; owner: string; name: string; x: number; y: number };
 
-/** 格子上的設施或 NPC（NPC 優先）。 */
+export type FieldFriend = NonNullable<FieldView["friends"]>[number];
+export type FieldNpc = FieldView["npcs"][number];
+
+/** 格子上的朋友（影子）；沒有為 `null`。 */
+export function friendAt(field: FieldView, p: Pos): FieldFriend | null {
+  return (field.friends ?? []).find((f) => f.x === p.x && f.y === p.y) ?? null;
+}
+
+/** 格子上的 NPC、朋友或設施（NPC 優先，再來是朋友）。 */
 export function targetAt(field: FieldView, p: Pos): FieldTarget | null {
   const npc = field.npcs.find((n) => n.x === p.x && n.y === p.y);
   if (npc !== undefined) return { kind: "npc", npc: npc.id, name: npc.name_zh, x: npc.x, y: npc.y };
+  const friend = friendAt(field, p);
+  if (friend !== null) return { kind: "friend", owner: friend.owner, name: friend.name_zh, x: friend.x, y: friend.y };
   const f = field.facilities.find((x) => x.x === p.x && x.y === p.y);
   if (f !== undefined) return { kind: "facility", facility: f.kind, x: f.x, y: f.y };
   return null;
@@ -298,19 +310,40 @@ function unitBase(id: string, x: number, y: number): UnitView {
   };
 }
 
-function heroUnit(field: FieldView, name: string): UnitView {
-  const hero = field.hero;
-  const base = unitBase(FIELD_HERO, field.me.x, field.me.y);
+type FieldLook = NonNullable<FieldView["hero"]>;
+
+/** 套上紙娃娃外觀（範本、`doll_look`、武器、裝備）；沒有外觀時保留 `base`（依陣營用預設外觀）。 */
+function withLook(base: UnitView, look: FieldLook | null | undefined, fallbackTemplate: string): UnitView {
   return {
     ...base,
-    name_zh: name,
-    template_id: hero?.template_id ?? "hero",
-    facing: FACING[field.me.facing],
-    weapon_id: hero?.weapon_id ?? base.weapon_id,
-    weapon_class: hero?.weapon_class ?? base.weapon_class,
-    doll_look: hero?.doll_look ?? null,
-    equipment: (hero?.equipment ?? []).map((e) => ({ slot: e.slot, slot_zh: "", item_id: "", name_zh: "", affixes: [], appearance: e.appearance })),
+    template_id: look?.template_id ?? fallbackTemplate,
+    weapon_id: look?.weapon_id ?? base.weapon_id,
+    weapon_class: look?.weapon_class ?? base.weapon_class,
+    doll_look: look?.doll_look ?? null,
+    equipment: (look?.equipment ?? []).map((e) => ({ slot: e.slot, slot_zh: "", item_id: "", name_zh: "", affixes: [], appearance: e.appearance })),
   } as UnitView;
+}
+
+function heroUnit(field: FieldView, name: string): UnitView {
+  const base = { ...unitBase(FIELD_HERO, field.me.x, field.me.y), name_zh: name, facing: FACING[field.me.facing] } as UnitView;
+  return withLook(base, field.hero, "hero");
+}
+
+/** NPC 在渲染器裡的單位 ID。 */
+export const npcUnitId = (id: string): string => `npc_${id}`;
+/** 朋友（影子）在渲染器裡的單位 ID。 */
+export const friendUnitId = (owner: string): string => `friend_${owner}`;
+
+/** NPC → 我方紙娃娃（人設卡有外觀就用，沒有用預設；6B-4 不畫血條，見 `fieldDrawModel`）。 */
+function npcUnit(n: FieldNpc): UnitView {
+  const base = { ...unitBase(npcUnitId(n.id), n.x, n.y), name_zh: n.name_zh } as UnitView;
+  return withLook(base, n.look, npcUnitId(n.id));
+}
+
+/** 朋友 → 我方紙娃娃（存影子時的外觀）。 */
+function friendUnit(f: FieldFriend): UnitView {
+  const base = { ...unitBase(friendUnitId(f.owner), f.x, f.y), name_zh: `${f.name_zh}的影子`, facing: FACING[f.facing ?? "s"] } as UnitView;
+  return withLook(base, f.look, "hero");
 }
 
 export type FieldEnemy = FieldView["enemies"][number];
@@ -367,7 +400,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     object_id: null,
   }));
   const objects: ObjectView[] = field.objects.map((o) => ({ id: o.id, kind: o.kind, pos: { x: o.x, y: o.y }, hp: null, max_hp: null, burning: null }));
-  const npcs: UnitView[] = field.npcs.map((n) => ({ ...unitBase(`npc_${n.id}`, n.x, n.y), name_zh: n.name_zh, template_id: `npc_${n.id}` }));
+  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...(field.friends ?? []).map(friendUnit)];
   return {
     team: "ally",
     map_id: field.map_id,
@@ -397,11 +430,24 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
   } as unknown as BattleView;
 }
 
-/** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角帶種族外觀。 */
+/** 不畫血條的單位（NPC 與朋友；6B-4）。 */
+export function barlessIds(field: FieldView): Set<string> {
+  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
+}
+
+/** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。 */
 export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
   const model = buildDrawModel(fieldBattleView(field, heroName), FIELD_HERO, null);
-  const race = field.hero?.race_look ?? null;
-  const units = model.units.map((u) => (u.id === FIELD_HERO ? { ...u, raceLook: race as Readonly<Record<string, unknown>> | null } : u));
+  const races = new Map<string, unknown>([[FIELD_HERO, field.hero?.race_look ?? null]]);
+  for (const n of field.npcs) if (n.look != null) races.set(npcUnitId(n.id), n.look.race_look ?? null);
+  for (const f of field.friends ?? []) races.set(friendUnitId(f.owner), f.look.race_look ?? null);
+  const barless = barlessIds(field);
+  const units = model.units.map((u) => {
+    let out = u;
+    if (races.has(u.id)) out = { ...out, raceLook: (races.get(u.id) ?? null) as Readonly<Record<string, unknown>> | null };
+    if (barless.has(u.id)) out = { ...out, noBar: true };
+    return out;
+  });
   const markers = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y, kind: "exit" as const })));
   return { ...model, units, markers };
 }
@@ -443,7 +489,12 @@ export function hoverText(field: FieldView, p: Pos | null): string | null {
   if (enemy !== null) return enemyText(enemy);
   if (sightCells(field).has(key(p))) return "敵人的視野";
   const t = targetAt(field, p);
-  if (t?.kind === "npc") return t.name;
+  if (t?.kind === "npc") {
+    const n = field.npcs.find((x) => x.id === t.npc);
+    const extra = [n?.rank_zh ? `好感：${n.rank_zh}` : null, n?.alert_zh ?? null].filter((s) => s !== null);
+    return extra.length > 0 ? `${t.name}（${extra.join("・")}）` : t.name;
+  }
+  if (t?.kind === "friend") return `${t.name}的影子（點了看名片）`;
   if (t?.kind === "facility") return FACILITY_ZH[t.facility] ?? t.facility;
   return null;
 }

@@ -54,13 +54,14 @@ function town(over: Partial<FieldView> = {}): FieldView {
     exits: [{ id: "to_ferry_steps", cells: [[5, 2], [5, 3]], to: "ferry_steps", to_name_zh: "渡口石階" }],
     doors: [{ id: "tavern_door", x: 1, y: 2, to: "mist_ferry_tavern", to_name_zh: "霧渡鎮酒館" }],
     stones: [{ id: "stone_mist_ferry", x: 3, y: 2, unlocked: false }],
-    npcs: [{ id: "granny_du", name_zh: "渡婆婆", x: 2, y: 3 }],
+    npcs: [{ id: "granny_du", name_zh: "渡婆婆", x: 2, y: 3, rank: "neutral", rank_zh: "中立" }],
     facilities: [{ kind: "shop", x: 1, y: 4 }],
     me: { x: 0, y: 2, facing: "s" },
     max_climb: 1,
     hero: { template_id: "hero_mage", weapon_id: "fire_staff", weapon_class: "focus", doll_look: null, race_look: null, equipment: [] },
     stone_targets: [],
     enemies: [],
+    friends: [],
     ...over,
   };
 }
@@ -104,7 +105,7 @@ describe("field 組成 DrawModel", () => {
     expect(hoverText(field, { x: 5, y: 3 })).toBe("往 渡口石階");
     expect(hoverText(field, { x: 1, y: 2 })).toBe("霧渡鎮酒館");
     expect(hoverText(field, { x: 3, y: 2 })).toBe("傳送石");
-    expect(hoverText(field, { x: 2, y: 3 })).toBe("渡婆婆");
+    expect(hoverText(field, { x: 2, y: 3 })).toBe("渡婆婆（好感：中立）"); // 6B-4：加上好感與「！」
     expect(hoverText(field, { x: 1, y: 4 })).toBe("商店");
     expect(hoverText(field, { x: 0, y: 0 })).toBeNull();
     expect(hoverText(field, null)).toBeNull();

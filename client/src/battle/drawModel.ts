@@ -135,6 +135,8 @@ export interface UnitDraw {
   copyOf?: DollInput | undefined;
   /** 身上穿的裝備（Phase 3G-G5b，紙娃娃依各欄位外觀畫）；舊資料沒有時視為沒穿。 */
   equipment?: ReadonlyArray<{ slot: string; appearance?: GearLook | null }>;
+  /** 不畫頭上的小血條（Phase 6B-4：實地地圖的 NPC 與朋友的影子；戰鬥單位一律畫）。 */
+  noBar?: boolean;
 }
 
 export interface TrapDraw {

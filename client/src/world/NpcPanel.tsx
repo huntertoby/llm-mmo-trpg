@@ -12,11 +12,15 @@ interface Props {
   chats: Readonly<Record<string, ChatEntry[]>>;
   onAct(action: WorldAction): void;
   onChat(npc: string, text: string): Promise<boolean>;
+  /** 只顯示這一位 NPC 與他給的任務（6B-4：走到 NPC 旁邊開的浮動面板）；省略＝這裡所有的人。 */
+  only?: string;
 }
 
-export function NpcPanel({ view, busy, chats, onAct, onChat }: Props) {
-  const npcs = view.npcs_here ?? [];
-  const quests = view.quests_here ?? [];
+export function NpcPanel({ view, busy, chats, onAct, onChat, only }: Props) {
+  const all = view.npcs_here ?? [];
+  const npcs = only === undefined ? all : all.filter((n) => n.id === only);
+  const giver = only === undefined ? undefined : npcs[0]?.name_zh;
+  const quests = (view.quests_here ?? []).filter((q) => only === undefined || (giver !== undefined && q.giver_zh === giver));
   const [open, setOpen] = useState<string | null>(null);
   const [text, setText] = useState("");
   if (npcs.length === 0 && quests.length === 0) return null;
@@ -28,7 +32,7 @@ export function NpcPanel({ view, busy, chats, onAct, onChat }: Props) {
 
   return (
     <div className="panel world-npcs" data-testid="world-npcs">
-      <div className="section-title">這裡的人</div>
+      <div className="section-title">{only === undefined ? "這裡的人" : "對話"}</div>
       {npcs.map((n) => (
         <div key={n.id} className="world-npc" data-testid="world-npc" data-npc={n.id} tabIndex={-1}>
           <div className="world-npc-head">

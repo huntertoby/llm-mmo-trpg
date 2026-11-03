@@ -6,10 +6,12 @@
 // 點擊換算沿用 `BattleCanvas` 的 `getBoundingClientRect()`（平移後的實際位置），所以鏡頭位移自動算進去。
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
-import { fitScale } from "../battle/stageLayout";
+import { fitScale, scaledSize } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
+import { FieldHeads } from "./FieldHeads";
+import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
   fieldDrawModel,
@@ -27,6 +29,7 @@ import {
   walkPlan,
   STEP_MS,
   type Direction,
+  type FieldFriend,
   type FieldTarget,
 } from "./fieldModel";
 
@@ -62,6 +65,8 @@ type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind:
 const KEY_QUEUE_MAX = 3;
 /** 換地圖前的淡出時間。 */
 const FADE_MS = 220;
+/** NPC 對話泡泡停留的時間。 */
+export const BUBBLE_MS = 6000;
 
 function typingInto(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -86,8 +91,27 @@ function CameraBox({ cam, ms, children }: { cam: Camera | null; ms: number; chil
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export function WorldField({ view, busy, send, commit, onInteract, hud }: Props) {
-  const field = view.field as FieldView;
+  const served = view.field as FieldView;
+  // 朋友（影子）的名單每次進城更新一次、不即時（21.5）：同一張地圖上沿用進來時的名單
+  const friendsMemo = useRef<{ map: string; friends: readonly FieldFriend[] } | null>(null);
+  const frozen = frozenFriends(friendsMemo.current, served);
+  friendsMemo.current = frozen;
+  const frozenList = frozen.friends;
+  const field = useMemo<FieldView>(
+    () => (frozenList === served.friends ? served : { ...served, friends: [...frozenList] }),
+    [served, frozenList],
+  );
   const blocked = view.encounter != null || view.battle_id != null;
+  // NPC 的對話泡泡（21.7）：這次請求說的話，約 6 秒後收起
+  const [bubbles, setBubbles] = useState<ReadonlyMap<string, string>>(() => new Map());
+  useEffect(() => {
+    const next = npcBubbles(view.dialog);
+    setBubbles(next);
+    if (next.size === 0) return undefined;
+    const id = window.setTimeout(() => setBubbles(new Map()), BUBBLE_MS);
+    return () => window.clearTimeout(id);
+  }, [view.dialog]);
+  const marks = useMemo(() => headMarks(field, bubbles), [field, bubbles]);
   const rendererRef = useRef<BattleRenderer | null>(null);
   // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）
   const [redraw, setRedraw] = useState(0);
@@ -211,6 +235,10 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
         if (next !== null) await walkPath([next]);
         return;
       }
+      if (job.kind === "interact" && job.target.kind === "friend") {
+        latest.current.onInteract(job.target); // 朋友：點了直接開名片，不用走過去
+        return;
+      }
       if (job.kind === "path") {
         const path = findPath(cur, cur.me, job.to);
         if (path !== null) await walkPath(path);
@@ -279,6 +307,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
     else enqueue({ kind: "path", to: tile }, true);
   }
 
+  /** 點頭上的圖示＝點那個人。 */
+  function pick(mark: HeadMark) {
+    click(mark.pos);
+  }
+
   const onStone = field.stones.some((s) => s.x === field.me.x && s.y === field.me.y);
   const teleport = (to: string) =>
     void (async () => {
@@ -299,18 +332,21 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
     <div className={`world-field${hud !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
       <div className={`world-field-stage${fading ? " fading" : ""}`} data-map={field.map_id}>
         <CameraBox cam={cam} ms={frame !== null ? FRAME_MS : focus.ms}>
-          <BattleCanvas
-            model={model}
-            highlights={highlights}
-            flameOn={false}
-            scale={scale}
-            onTileClick={(t) => click(t)}
-            onTileHover={setHover}
-            onCancel={() => {
-              jobs.current = [];
-            }}
-            rendererRef={rendererRef}
-          />
+          <div className="world-field-board" style={scaledSize(model, scale)}>
+            <BattleCanvas
+              model={model}
+              highlights={highlights}
+              flameOn={false}
+              scale={scale}
+              onTileClick={(t) => click(t)}
+              onTileHover={setHover}
+              onCancel={() => {
+                jobs.current = [];
+              }}
+              rendererRef={rendererRef}
+            />
+            <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} />
+          </div>
         </CameraBox>
       </div>
       <div className="world-field-bar small">
