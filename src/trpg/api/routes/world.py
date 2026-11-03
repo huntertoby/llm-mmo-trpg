@@ -17,6 +17,8 @@
   留一則；#105）、``DELETE /api/world/notes/{note_id}``（管理者刪留言）。
 - 5E-3b：``DELETE …/characters/{id}/notes/{note_id}``（作者刪自己的留言）；留言板回 ``admin``。
 
+- 5F-1（``docs/phases/Phase5計畫.md`` 35.7）：``GET …/board``（城鎮公告板）。
+
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
   依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
   歸到帳號。
@@ -47,6 +49,8 @@ from trpg.api.run_schemas import (
     FlashPreviewOut,
     FlashPreviewRequest,
 )
+from trpg.api.season_schemas import SeasonBoardView
+from trpg.api.season_view import season_board
 from trpg.api.state import world_llm_of, world_of
 from trpg.api.world import WorldOutcome, WorldStore
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
@@ -219,6 +223,16 @@ def post_chat(character_id: str, body: ChatRequest, request: Request) -> WorldVi
         region = store.character(character_id).region
         client = world_llm_of(request).client()
         return _view(store, chat(store, client, character_id, npc=body.npc, text=body.text), region)
+
+
+@router.get("/characters/{character_id}/board")
+def get_board(character_id: str, request: Request) -> SeasonBoardView:
+    """城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。"""
+    store = world_of(request)
+    with store.lock:
+        char = store.character(character_id)
+        now = store.clock()
+        return season_board(store.library, store.season_world(now), char, now)
 
 
 @router.get("/llm")

@@ -279,10 +279,10 @@ def _bounty_problems(
     where = f"懸賞 {bounty.id}"
     world_map = world_maps.get(bounty.region)
     table = encounters.get(bounty.region)
-    if world_map is None or table is None:
-        return [f"{where}：區域 {bounty.region} 沒有地點圖或遭遇表"]
-    if bounty.location not in world_map.location_by_id():
-        return [f"{where}：未知的地點 {bounty.location}"]
+    if world_map is None or bounty.location not in world_map.location_by_id():
+        return [f"{where}：區域 {bounty.region} 沒有地點圖或未知的地點 {bounty.location}"]
+    if table is None:
+        return []  # 沒有遭遇表（精簡的內容資料夾）：不會遇敵，懸賞陣容用不到
     if bounty.location not in table.location_by_id():
         return [f"{where}：地點 {bounty.location} 沒有遭遇表"]
     group = table.group_by_id().get(bounty.group)

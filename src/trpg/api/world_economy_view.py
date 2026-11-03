@@ -313,6 +313,8 @@ def economy_event_line(library: ContentLibrary, _region: str, event: WorldEvent)
             return f"獲得 {event.amount} 金幣（共 {event.total}）。"
         if event.source == "shadow":
             return f"影子被借用的任務幣 +{event.amount}（共 {event.total}）。"
+        if event.source.startswith(("bounty:", "daily_goal:")):  # 5F-1：懸賞、今日目標另有句子
+            return f"任務幣共 {event.total}。"
         return f"獲得 {event.amount} 任務幣（完成任務，共 {event.total}）。"
     return _item_line(library, event)
 

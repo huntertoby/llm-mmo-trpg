@@ -15,6 +15,7 @@ from trpg.server.announce import (
     AnnouncementSource,
     AnnouncementTemplates,
     DailyGoal,
+    SeasonAnnouncements,
     WorldEventProgress,
     daily_digest,
     load_templates,
@@ -27,7 +28,7 @@ from trpg.shared.errors import ContentError
 from trpg.world.actions import InsightGainedEvent, TravelAction
 from trpg.world.clock import REAL_DAY_SECONDS
 from trpg.world.replay import WorldLogEntry
-from trpg.world.save import dumps_log, dumps_world, write_atomic
+from trpg.world.save import dumps_log, dumps_world, loads_world, write_atomic
 from trpg.world.state import ClearedLocation, WorldState
 
 # 2026-11-03 06:00（UTC+8）＝ 2026-11-02 22:00 UTC
@@ -198,7 +199,7 @@ class _Events:
 
 def test_daily_text_uses_interfaces_when_available(library: ContentLibrary, tmp_path: Path) -> None:
     _world(tmp_path)
-    plain = AnnouncementSource(tmp_path, library=library).daily_text(DAY0_6AM)
+    plain = AnnouncementSource(tmp_path).daily_text(DAY0_6AM)  # 沒有內容庫：沒有資料來源
     assert plain is not None and plain.count("尚未開放") == 2 and "入口" not in plain
     full = AnnouncementSource(
         tmp_path,
@@ -211,6 +212,19 @@ def test_daily_text_uses_interfaces_when_available(library: ContentLibrary, tmp_
     assert "霧潮入侵：12／30" in full and "打倒 3 隻霧狼" in full
     assert "@here" not in full and "https://trpg.example.com" in full
     assert "尚未開放" not in full
+
+
+def test_daily_text_with_season_data(library: ContentLibrary, tmp_path: Path) -> None:
+    """5F-1：有內容庫時預設接上今日目標與世界事件進度（世界先換日，只算不寫）。"""
+    _world(tmp_path)
+    text = AnnouncementSource(tmp_path, library=library).daily_text(DAY0_6AM)
+    assert text is not None and "尚未開放" not in text
+    assert "霧潮入侵：0／3" in text  # 第 2 天沒人上線：門檻 30 × 1 ÷ 8
+    world_json = (tmp_path / "world.json").read_text(encoding="utf-8")
+    assert '"rolled_day": null' in world_json  # 公告不寫世界存檔
+    goals = SeasonAnnouncements(library)
+    world = loads_world(world_json)
+    assert len(goals.daily_goals(world, DAY0_6AM)) == 3
 
 
 def test_first_kill_text(library: ContentLibrary, tmp_path: Path) -> None:

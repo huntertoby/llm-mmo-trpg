@@ -3,7 +3,9 @@
 - 存檔：``<save_dir>/world/`` 底下 ``world.json``（``trpg-world/1``）、``chars/<id>.json``
   （``trpg-char/1``）、``log.jsonl``（``trpg-wlog/1``）；寫檔用
   :func:`trpg.world.save.write_atomic`。
-- 世界第一次用到時建立（賽季 ``s1``、伺服器亂數種子、開始時間＝當下；代決 5A5-2）。
+- 世界第一次用到時建立（賽季 ``s1``、伺服器亂數種子、開始時間＝當下；代決 5A5-2）。5F-1：開賽日有
+  設定時用它；每個世界動作的日誌帶做動作的帳號（``actor``，世界事件門檻的上線人數）。
+- 讀取畫面用 :meth:`WorldStore.season_world`：換日後的世界（只算，不寫檔；5F-1 公告板）。
 - 時間由這一層讀（:attr:`WorldStore.clock`，測試可注入），傳給純函式 ``world_step``（2.1）。
 - **單一寫入佇列**（2.4）：一把鎖；每個成功的世界動作依序取 ``seq`` 寫進日誌，再寫角色與世界快照。
 - 戰鬥：``prepare_battle`` 的設定在戰鬥工作階段表開一場（和一輪相同，用既有 ``/api/battles``
@@ -51,6 +53,7 @@ from trpg.world.save import (
     write_atomic,
 )
 from trpg.world.season import FIRST_SEASON_ID
+from trpg.world.season_board import roll_season
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import new_character, world_step
 
@@ -111,7 +114,13 @@ class WorldStore:
         clock: Callable[[], int] = _now,
         new_id: Callable[[], str] = _new_char_id,
         prefetch: bool = True,
+        season_start: int | None = None,
     ) -> None:
+        self.season_start = season_start
+        """建立世界時的開賽時間（UTC 秒；Phase 5F-1 的開賽日設定）；``None``＝建立當下。"""
+        self.actor_of: Callable[[str], str | None] | None = None
+        """角色 ID → 帳號 ID（世界事件門檻的上線人數，Q15）；``None`` 或回 ``None``＝用角色 ID。
+        :func:`~trpg.api.app.create_app` 接上帳號的 ``owner_of``。"""
         self.library = library
         self.offers = OfferPrefetcher(library, enabled=prefetch)
         """三選一的背景預先計算與快取（PERF-3）。"""
@@ -154,10 +163,11 @@ class WorldStore:
                 if path.is_file():
                     self._world = loads_world(path.read_text(encoding="utf-8"))
                 else:
+                    start = self.clock() if self.season_start is None else self.season_start
                     self._world = WorldState(
                         season_id=SEASON_ID,
                         season_seed=secrets.randbits(64),
-                        season_start=self.clock(),
+                        season_start=start,
                     )
                     write_atomic(path, dumps_world(self._world))
             return self._world
@@ -168,6 +178,11 @@ class WorldStore:
             if self._world is None and not self._world_path().is_file():
                 return SEASON_ID
             return self.world().season_id
+
+    def season_world(self, now: int) -> WorldState:
+        """換日後的世界（公告板、公告用；只算，不寫檔，下一個世界動作才真的寫進去）。"""
+        with self._lock:
+            return roll_season(self.library, self.world(), now)[0]
 
     def entries(self) -> list[WorldLogEntry]:
         """世界動作日誌（第一次用到時讀檔）。"""
@@ -308,11 +323,14 @@ class WorldStore:
 
     def _apply(self, char: CharacterState, action: WorldAction, now: int) -> WorldOutcome:
         world = self.world()
+        actor = None if self.actor_of is None else self.actor_of(char.character_id)
         with using_offer_cache(self.offers.cache):  # PERF-3：背景算好的三選一
-            result = world_step(self.library, world, char, action, now)
+            result = world_step(self.library, world, char, action, now, actor=actor)
         entries = self.entries()
         seq = entries[-1].seq + 1 if entries else 1
-        entry = WorldLogEntry(seq=seq, now=now, character_id=char.character_id, action=action)
+        entry = WorldLogEntry(
+            seq=seq, now=now, character_id=char.character_id, action=action, actor=actor
+        )
         write_atomic(self._log_path(), dumps_log([*entries, entry]))
         entries.append(entry)
         self._save_char(result.char)
