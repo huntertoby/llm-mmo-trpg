@@ -5,7 +5,7 @@ import type { Action, BattleResponse, BattleView, SkillCard, UnitView } from "..
 import type { ClassifiedActions, LabeledAction } from "../../battle/actions";
 import { DEFAULT_LAYOUT, type LayoutPrefs, type layoutLimits } from "../../battle/layoutPrefs";
 import { blockedMessage } from "../../battle/skillReasons";
-import { actionHintText } from "../../battle/skillTray";
+import { actionHintKind, actionHintText } from "../../battle/skillTray";
 import { hasControllableSummon } from "../../battle/summons";
 import { moreModes, TRAY_KINDS, type ActionMode, type SkillButton } from "../../battle/targeting";
 import { EndPanel } from "../../ui/EndPanel";
@@ -61,6 +61,22 @@ export function BattleBottomBar(p: Props) {
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
   const sprintMode = basic.find((m) => m.kind === "run") ?? null;
   const runReason = runButton(sprintMode, p.response.run_option).reason;
+  const hintState = {
+    copying,
+    canAct,
+    ended: p.ended,
+    moveCount: classified.moves.size,
+    attackCount: classified.attacks.size,
+    summonIdle:
+      hero !== null &&
+      classified.endTurn !== null &&
+      classified.moves.size === 0 &&
+      classified.attacks.size === 0 &&
+      classified.others.length === 0 &&
+      hasControllableSummon(view, hero.id),
+  };
+  // 6A-3：操作說明句每一輪只算一次（同一輪中途「等待中」再回來不多記）
+  const hintKind = actionHintKind(hintState);
   return (
     <div className={`battle-bottom${layout.bottomHeight < DEFAULT_LAYOUT.bottomHeight || narrow ? " short" : ""}`}>
       <div className="battle-hero">
@@ -85,20 +101,8 @@ export function BattleBottomBar(p: Props) {
         cards={p.cards}
         selectedKey={mode?.key ?? null}
         enabled={canAct}
-        hint={actionHintText({
-          copying,
-          canAct,
-          ended: p.ended,
-          moveCount: classified.moves.size,
-          attackCount: classified.attacks.size,
-          summonIdle:
-            hero !== null &&
-            classified.endTurn !== null &&
-            classified.moves.size === 0 &&
-            classified.attacks.size === 0 &&
-            classified.others.length === 0 &&
-            hasControllableSummon(view, hero.id),
-        })}
+        hint={actionHintText(hintState)}
+        hintOnce={hintKind === null ? null : { kind: hintKind, token: `${p.response.battle_id}:${view.round}` }}
         onPickMode={p.onPickMode}
         onSelect={p.onPickSkill}
         onBlocked={(b) => p.onHint(blockedMessage(b))}

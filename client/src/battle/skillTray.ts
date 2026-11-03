@@ -54,6 +54,17 @@ export function actionHintText(state: {
   return `點選藍色格子移動（${state.moveCount} 格），點選紅框敵人攻擊（${state.attackCount} 個）；右鍵或 Esc 取消選取。`;
 }
 
+/**
+ * 技能列上方那一行是不是操作說明句（6A-3：前 3 次之後收進「?」）：移動／攻擊的說明、複製技能的說明是；
+ * 「等待中」「戰鬥結束」「召喚物還能調整」這類狀態句不是，照常顯示。
+ */
+export function actionHintKind(state: Parameters<typeof actionHintText>[0]): "move" | "copy" | null {
+  if (state.ended) return null;
+  if (state.copying) return "copy";
+  if (!state.canAct || state.summonIdle === true) return null;
+  return "move";
+}
+
 /** 頂端列的彈出面板（同時只開一個）。 */
 export type TopPopup = "reactions" | "orders" | "legend" | "layout";
 

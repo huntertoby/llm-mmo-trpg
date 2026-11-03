@@ -19,6 +19,8 @@ import {
 } from "../battle/targeting";
 import type { UnitNames } from "../battle/units";
 import { Hint } from "./Hint";
+import { OpHint } from "./OpHint";
+import type { OpHintKind } from "../battle/opHints";
 
 interface Props {
   enabled: boolean;
@@ -60,7 +62,7 @@ function CompositeHelp({ mode, enabled, view, hurlPick, onHurlReset, onAction, o
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <div className="small muted">{compositePromptFor(mode, hurlPick)}</div>
+      <OpHint kind="composite" token={mode.key} label={mode.label} text={compositePromptFor(mode, hurlPick)} />
       {choices.length > 0 && (
         <div className="dir-buttons" aria-label="第二段">
           {choices.map(({ second, label }) => (
@@ -96,7 +98,7 @@ function HurlHelp({ mode, view, hurlPick, onHurlReset }: HelpProps) {
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <div className="small muted">{hurlPromptText(name, seconds, mode.targets.hurls.size, kind)}</div>
+      <OpHint kind="hurl" token={mode.key} label={mode.label} text={hurlPromptText(name, seconds, mode.targets.hurls.size, kind)} />
       {hurlPick !== null && (
         <button type="button" className="small-button" onClick={onHurlReset}>
           {kind === "hurl" ? "重選物件" : "重選單位"}
@@ -112,7 +114,7 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <div className="small muted">選擇要把物件撥向哪一邊（主角不動；左右以「主角 → 物件」方向為前方）。Esc／右鍵取消。</div>
+      <OpHint kind="aside" token={mode.key} label={mode.label} text="選擇要把物件撥向哪一邊（主角不動；左右以「主角 → 物件」方向為前方）。Esc／右鍵取消。" />
       {rows.map((row) => (
         <div key={row.objectId} className="aside-row">
           <div className="small">{row.name}</div>
@@ -145,6 +147,14 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
   );
 }
 
+/** 一般選目標模式的說明句種類（6A-3：同一種共用「前 3 次」的次數）。 */
+export function modeHintKind(mode: ActionMode): OpHintKind {
+  if (mode.kind === "vault") return "vault";
+  if (mode.kind === "defend" && mode.targets.self !== null) return "defend";
+  if (isSelfOnly(mode.targets)) return "self";
+  return "target";
+}
+
 /** 一般選目標模式的提示文字（攀跳與守護有自己的說法）。 */
 function modeHint(mode: ActionMode, pickable: number): string {
   const t = mode.targets;
@@ -166,7 +176,7 @@ function ModeHelp(props: HelpProps) {
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <div className="small muted">{hint}</div>
+      <OpHint kind={modeHintKind(mode)} token={mode.key} label={mode.label} text={hint} />
       {t.directions.size > 0 && (
         <div className="dir-buttons">
           {DIRECTION_ORDER.map((dir) => {
@@ -257,7 +267,7 @@ export function ModePanel(props: Props) {
       {orderHint !== null && (
         <div className="mode-help">
           <div className="section-title">隊友指令</div>
-          <div className="small muted">{orderHint} Esc／右鍵取消。</div>
+          <OpHint kind="order" token={orderHint} label="隊友指令" text={`${orderHint} Esc／右鍵取消。`} />
           {props.onProtectHero !== null && (
             <button type="button" onClick={props.onProtectHero}>
               保護主角

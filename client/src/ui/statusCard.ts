@@ -21,6 +21,16 @@ export interface BarData {
 
 const BAR_NAME: Readonly<Record<BarKind, string>> = { hp: "HP", mana: "法力", stamina: "耐力" };
 
+/**
+ * HP、法力、護盾的說明句（6A-3；玩法 PM 給的文字，一字不改）。主角狀態卡與單位小卡共用。
+ * 伺服器的名詞對照表沒有這三項，所以放在前端。
+ */
+export const RESOURCE_TEXT = {
+  hp: "生命值，歸零就會倒下；靠治療、藥水或營火回復。",
+  mana: "施放法術要花法力，戰鬥中不會自然回復；在營火或城鎮回滿。",
+  shield: "受到傷害時先扣護盾、再扣生命值；時間到就消失，重複獲得只保留較大的一層。",
+} as const;
+
 const lines = (...parts: (string | null | undefined)[]): string => parts.filter((p): p is string => p != null && p !== "").join("\n");
 
 export function barData(kind: BarKind, unit: UnitView): BarData {
@@ -30,10 +40,10 @@ export function barData(kind: BarKind, unit: UnitView): BarData {
   const shield = kind === "hp" ? unit.shield : 0;
   const hint =
     kind === "hp"
-      ? lines(text, shield > 0 ? `護盾 ${shield}` : null)
+      ? lines(text, RESOURCE_TEXT.hp, shield > 0 ? `護盾 ${shield}` : null, shield > 0 ? RESOURCE_TEXT.shield : null)
       : kind === "stamina"
         ? lines(text, actionCardText("stamina"))
-        : text;
+        : lines(text, RESOURCE_TEXT.mana);
   return { kind, text, value, max, shield, hint };
 }
 
@@ -131,10 +141,10 @@ export function heroChips(hero: UnitView): StatChip[] {
 export function unitChips(unit: UnitView): StatChip[] {
   const chips: StatChip[] = [];
   if (unit.shield > 0) {
-    chips.push({ key: "shield", icon: "shield", label: String(unit.shield), pips: null, dim: false, hint: `護盾 ${unit.shield}` });
+    chips.push({ key: "shield", icon: "shield", label: String(unit.shield), pips: null, dim: false, hint: lines(`護盾 ${unit.shield}`, RESOURCE_TEXT.shield) });
   }
   if (unit.max_mana > 0) {
-    chips.push({ key: "mana", icon: "mana", label: String(unit.mana), pips: null, dim: unit.mana <= 0, hint: `法力 ${unit.mana} / ${unit.max_mana}` });
+    chips.push({ key: "mana", icon: "mana", label: String(unit.mana), pips: null, dim: unit.mana <= 0, hint: lines(`法力 ${unit.mana} / ${unit.max_mana}`, RESOURCE_TEXT.mana) });
   }
   chips.push({ ...apChip(unit), label: String(unit.ap), pips: null });
   chips.push(moveChip(unit));
@@ -184,6 +194,17 @@ export function togglePin(current: string | null, id: string): string | null {
  */
 export function pinnedUnitOf(view: BattleView, id: string | null): UnitView | null {
   return id === null ? null : (view.units.find((u) => u.id === id) ?? null);
+}
+
+/** 釘選小卡收成精簡版的視窗寬度門檻（6A-3；美術 PM 6A-2 檢查第 2 項）。 */
+export const PIN_COMPACT_WIDTH = 1000;
+
+/**
+ * 釘住的小卡要不要收成精簡版（只留名稱、HP 條、耐力條）：視窗寬度不到 1000 時收起，
+ * 滑鼠移到小卡上（觸控是點一下）才展開。
+ */
+export function pinnedCompact(viewportWidth: number, expanded: boolean): boolean {
+  return viewportWidth < PIN_COMPACT_WIDTH && !expanded;
 }
 
 export interface AffixBadge {

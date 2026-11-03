@@ -12,6 +12,7 @@ import {
   affixBadges,
   barData,
   barFill,
+  RESOURCE_TEXT,
   heroChips,
   pinnedUnitOf,
   reactionChip,
@@ -102,7 +103,7 @@ describe("主角狀態卡：三條一樣粗、條上寫字", () => {
   it("護盾疊在 HP 條上（淺藍一段），數字只在說明卡", () => {
     expect(html).toContain("stat-bar-shield");
     expect(html).not.toContain("護盾 5");
-    expect(barData("hp", hero).hint).toBe("HP 41 / 50\n護盾 5");
+    expect(barData("hp", hero).hint).toBe(`HP 41 / 50\n${RESOURCE_TEXT.hp}\n護盾 5\n${RESOURCE_TEXT.shield}`);
     expect(barFill(41, 50, 5)).toEqual({ fill: 0.82, shieldLeft: 0.82, shieldWidth: 0.1 });
     expect(barFill(48, 50, 5).shieldLeft).toBeCloseTo(0.9);
   });
