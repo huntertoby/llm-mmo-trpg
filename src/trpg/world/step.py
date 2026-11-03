@@ -26,7 +26,6 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from trpg.content.battle import UnitTemplate
-from trpg.content.fields import FieldExit
 from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.world.actions import (
@@ -479,19 +478,13 @@ def _arrive(
 
 
 def _cross_fn(
-    ctx: FieldCtx, char: CharacterState, exit_: FieldExit
+    ctx: FieldCtx, char: CharacterState, where: tuple[LocationMapDef, LocationDef]
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
     """跨區出口＝對面那一區的一次 ``travel``（21.10 第 20 條，6C-R2）：照常擲遇敵、擲事件；不趕路、
-    過渡口本身不另外花東西。地點與開放條件已由 :func:`trpg.world.field.walk` 檢查。"""
-    region = exit_.region or char.region
-    world_map = _world_map(ctx.library, region)
-    target = world_map.location_by_id().get(exit_.to)
-    if target is None:
-        raise WorldActionError("跨區的出口還沒開放，請用傳送")
-    moved = char.model_copy(update={"region": region})
-    result = _travel_to(
-        ctx.library, ctx.world, moved, (world_map, target), now=ctx.now, hasten=False
-    )
+    過渡口本身不另外花東西。地點與開放條件只在 :func:`trpg.world.field._cross_region` 查一次
+    （6D-R1 合一）。"""
+    moved = char.model_copy(update={"region": where[0].region})
+    result = _travel_to(ctx.library, ctx.world, moved, where, now=ctx.now, hasten=False)
     return result.world, result.char, result.events
 
 

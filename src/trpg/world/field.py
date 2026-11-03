@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from trpg.content.fields import FieldDoor, FieldExit, FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import grid_bfs, grid_path, passable_grid
+from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.world.actions import TravelAction, WorldEvent
 from trpg.world.atlas import region_lit, unlocked_stones
 from trpg.world.common import rules_of, world_map_of
@@ -50,6 +51,7 @@ __all__ = [
     "WatchFn",
     "field_grid",
     "field_map",
+    "hidden_cells",
     "hidden_door",
     "outdoor_map",
     "placed",
@@ -91,10 +93,10 @@ type ArriveFn = Callable[
 type SenseFn = Callable[
     [FieldCtx, CharacterState, WalkedEvent], tuple[CharacterState, tuple[WorldEvent, ...]]
 ]
-type CrossFn = Callable[[FieldCtx, CharacterState, FieldExit], WorldResult]
-"""走跨區出口（21.10 第 20 條）：換到對面那一區的地點，算一步（:func:`trpg.world.step` 的
-``travel``）。"""
 """走完一段、觸發出口等之前（6C-5：隱藏入口的感知、碰到「！」開事件卡）。"""
+type CrossFn = Callable[[FieldCtx, CharacterState, tuple[LocationMapDef, LocationDef]], WorldResult]
+"""走跨區出口（21.10 第 20 條）：到對面那一區（地點圖, 地點）的一次 ``travel``，算一步
+（:func:`trpg.world.step` 的 ``_travel_to``）。地點與開放條件已由 :func:`_cross_region` 查過。"""
 
 
 @dataclass(frozen=True)
@@ -190,11 +192,25 @@ def hidden_door(char: CharacterState, found: FieldMapDef, door: FieldDoor) -> bo
     return door.hidden_until == "reveal" and not char.has_revealed(found.region, door.to)
 
 
-def field_grid(library: ContentLibrary, char: CharacterState, found: FieldMapDef) -> FieldGrid:
+def hidden_cells(char: CharacterState | None, found: FieldMapDef) -> frozenset[XY]:
+    """這張圖上 ``char`` 還沒發現的隱藏門格（``char`` 為 ``None``＝只看內容：「發現才出現」的隱藏門
+    一律當成還沒發現；6D-R1）。"""
+    return frozenset(
+        d.at
+        for d in found.doors
+        if d.hidden_until == "reveal" and (char is None or hidden_door(char, found, d))
+    )
+
+
+def field_grid(
+    library: ContentLibrary, char: CharacterState | None, found: FieldMapDef
+) -> FieldGrid:
+    """``char`` 在這張圖上走的格子；``char`` 為 ``None``＝只看內容的地形（靜態地形，6C-R3；
+    隱藏門一律當成還沒發現，:func:`hidden_cells`）。"""
     rules = library.ruleset
     passable = passable_grid(found, rules.terrain.by_id(), rules.objects.by_id())
     blocked = {npc.at for npc in found.npcs}
-    blocked |= {d.at for d in found.doors if hidden_door(char, found, d)}
+    blocked |= hidden_cells(char, found)
     grid = found.grid()
     return FieldGrid(
         map=found,
@@ -439,7 +455,7 @@ def _cross_region(
     region = exit_.region
     target_map = None if region is None else library.world_maps.get(region)
     target = None if target_map is None else target_map.location_by_id().get(exit_.to)
-    if region is None or target is None or cross is None:
+    if region is None or target_map is None or target is None or cross is None:
         raise WorldActionError("跨區的出口還沒開放，請用傳送")
     source = world_map_of(library, char.region).location_by_id().get(char.location)
     for place in (source, target):
@@ -449,7 +465,7 @@ def _cross_region(
             and not world.has_flag(place.unlock_flag)
         ):
             raise WorldActionError(f"{place.name_zh}還沒開放")
-    world, char, events = cross(ctx, char, exit_)
+    world, char, events = cross(ctx, char, (target_map, target))
     char = _enter(library, char, outdoor_map(library, region, exit_.to), exit_.arrive, index)
     return world, char, events
 

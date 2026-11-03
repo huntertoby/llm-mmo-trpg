@@ -57,7 +57,7 @@ from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
 from trpg.world.field import FieldCtx, FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
-from trpg.world.rng import STREAM_FIELD, draw, peek, spawn_seed
+from trpg.world.rng import STREAM_FIELD, draw, spawn_seed
 from trpg.world.solutions import make_encounter
 from trpg.world.state import (
     CharacterState,
@@ -137,33 +137,41 @@ def _spawn_map(library: ContentLibrary, char: CharacterState) -> FieldMapDef | N
     return found if found is not None and found.spawns else None
 
 
-def visit_for(
+def _next_visit(
     library: ContentLibrary, world: WorldState, char: CharacterState
-) -> FieldVisit | None:
-    """角色這一趟（只算、不改計數）：所在地點沒有有敵人的實地地圖＝``None``；已有同一地點的就照舊；
-    否則用 ``field`` 串流的下一個種子開新的一趟（:func:`with_visit` 實際抽的就是這一個）。"""
+) -> tuple[FieldVisit | None, CharacterState]:
+    """（這一趟, 開這一趟之後的角色）：:func:`visit_for` 與 :func:`with_visit` 共用（6D-R1：同一次
+    ``draw`` 取種子，兩邊一定拿到同一個值）。沒有開新的一趟時角色原樣回傳（計數不變）。"""
     found = _spawn_map(library, char)
     if found is None:
-        return None
+        return None, char
     visit = char.field_visit
     if visit is not None and (visit.region, visit.location) == (char.region, char.location):
-        return visit
-    seed = peek(world.season_seed, char, STREAM_FIELD).next_u32()  # with_visit 用 draw 抽同一個
+        return visit, char
+    rng, drawn = draw(world.season_seed, char, STREAM_FIELD)
     pos = placed(library, char).field
     arrived = pos if pos is not None and pos.map == found.id else None
     if arrived is None:
         arrived = FieldPos(map=found.id, x=found.entry[0], y=found.entry[1])
-    return FieldVisit(region=char.region, location=char.location, seed=seed, arrived=arrived)
+    seed = rng.next_u32()
+    return FieldVisit(region=char.region, location=char.location, seed=seed, arrived=arrived), drawn
+
+
+def visit_for(
+    library: ContentLibrary, world: WorldState, char: CharacterState
+) -> FieldVisit | None:
+    """角色這一趟（只算、不改計數）：所在地點沒有有敵人的實地地圖＝``None``；已有同一地點的就照舊；
+    否則用 ``field`` 串流的下一個種子開新的一趟（和 :func:`with_visit` 同一個值，
+    :func:`_next_visit`）。"""
+    return _next_visit(library, world, char)[0]
 
 
 def with_visit(library: ContentLibrary, world: WorldState, char: CharacterState) -> CharacterState:
     """把這一趟寫進角色（新的一趟會用掉 ``field`` 串流的一次）；沒有變化時回傳同一個物件。"""
-    visit = visit_for(library, world, char)
+    visit, drawn = _next_visit(library, world, char)
     if visit == char.field_visit:
         return char
-    if visit is not None:
-        _rng, char = draw(world.season_seed, char, STREAM_FIELD)  # 同 visit_for 的 peek，只推進計數
-    return char.model_copy(update={"field_visit": visit})
+    return drawn.model_copy(update={"field_visit": visit})
 
 
 def shared_clear(library: ContentLibrary, region: str, location: str) -> bool:
