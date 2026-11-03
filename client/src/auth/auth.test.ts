@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthStatus } from "../api/types";
-import { accountLine, AUTH_TOKEN_KEY, authHeaders, loginProblem, readToken, worldGate, writeToken } from "./auth";
+import {
+  accountLine,
+  AUTH_TOKEN_KEY,
+  authHeaders,
+  loginProblem,
+  needsLogin,
+  readToken,
+  worldGate,
+  writeToken,
+} from "./auth";
 
 const account = { account_id: "a1", username: "alice", characters: 1, max_characters: 3, can_create: true };
 
@@ -62,5 +71,13 @@ describe("auth helpers", () => {
   it("describes the account", () => {
     expect(accountLine({ dev_mode: true, account: null })).toBe("開發模式（不用登入）");
     expect(accountLine({ dev_mode: false, account })).toBe("帳號 alice・角色 1／3");
+  });
+
+  it("redirects to login on 401 except for the login endpoint itself (5D-R2)", () => {
+    expect(needsLogin(401, "/runs/start-options")).toBe(true);
+    expect(needsLogin(401, "/world/characters")).toBe(true);
+    expect(needsLogin(401, "/auth/login")).toBe(false);
+    expect(needsLogin(403, "/runs")).toBe(false);
+    expect(needsLogin(404, "/runs/saves")).toBe(false);
   });
 });

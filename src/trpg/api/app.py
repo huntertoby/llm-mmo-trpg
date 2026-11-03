@@ -10,26 +10,16 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.account_config import AccountSettings, load_account_settings
-from trpg.api.accounts import (
-    AccountDisabledError,
-    AccountError,
-    AccountLimitError,
-    AccountNotFoundError,
-    AccountStore,
-    AuthError,
-)
-from trpg.api.auth import AdminRequiredError
+from trpg.api.auth import AdminRequiredError, require_login
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
-from trpg.api.notes import NoteError, NoteNotFoundError
 from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.server_config import ServerSettings, load_server_settings
@@ -48,6 +38,16 @@ from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.primitive_coverage import check_primitive_coverage
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
 from trpg.roguelite.save import default_save_dir
+from trpg.server.account_config import AccountSettings, load_account_settings
+from trpg.server.accounts import (
+    AccountDisabledError,
+    AccountError,
+    AccountLimitError,
+    AccountNotFoundError,
+    AccountStore,
+    AuthError,
+)
+from trpg.server.notes import NoteError, NoteNotFoundError
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
@@ -149,6 +149,7 @@ def create_app(
         settings.accounts_dir(saves),
         max_characters=settings.max_characters,
         session_ttl_s=settings.session_ttl_s,
+        season=app.state.world.current_season,  # 角色上限按賽季算（5D-R2）
     )
     app.state.login_limiter = LoginLimiter(  # 登入嘗試次數限制（5E-2）
         max_failures=settings.login_max_failures,
@@ -158,10 +159,15 @@ def create_app(
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)
-    app.include_router(battles.router)
-    app.include_router(runs.router)
-    app.include_router(workshop.router)
-    app.include_router(gear.router)
+    # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
+    # 存檔列表、讀檔不掛（開發模式開照舊）。
+    login = [Depends(require_login)]
+    app.include_router(battles.router, dependencies=login)
+    if settings.dev_mode:
+        app.include_router(runs.dev_router)  # 在 runs.router 之前：/saves 不能被 /{run_id} 吃掉
+    app.include_router(runs.router, dependencies=login)
+    app.include_router(workshop.router, dependencies=login)
+    app.include_router(gear.router, dependencies=login)
     app.include_router(world.router)
     app.include_router(auth.router)
     if static_dir is not None:

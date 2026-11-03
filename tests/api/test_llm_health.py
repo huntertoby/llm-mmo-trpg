@@ -8,13 +8,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.account_config import AccountSettings
 from trpg.api.app import create_app
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import MockLlmProvider
 from trpg.api.server_config import ServerSettings
 from trpg.api.world_flow import WorldLlm
 from trpg.content.library import ContentLibrary
+from trpg.server.account_config import AccountSettings
 
 
 def test_unavailable_model_turns_story_off_and_logs(caplog: pytest.LogCaptureFixture) -> None:

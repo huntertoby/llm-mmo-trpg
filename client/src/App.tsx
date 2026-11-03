@@ -11,7 +11,9 @@ import { isDevMode } from "./run/startFlow";
 import { createDevRun, DEV_ENTER_EVENT, devScreenParam } from "./dev/devScreens";
 import { RunNewScreen } from "./screens/RunNewScreen";
 import { RunScreen } from "./screens/RunScreen";
+import { LoginScreen } from "./screens/LoginScreen";
 import { WorldEntry } from "./screens/WorldEntry";
+import { AUTH_EXPIRED_EVENT } from "./auth/auth";
 import { ErrorBanner } from "./ui/ErrorBanner";
 
 /** 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不丟步驟）；伺服器沒有（重啟過）才讀存檔。 */
@@ -34,6 +36,16 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 5D-R2：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；收到 401 就先顯示登入畫面。 */
+  const [needLogin, setNeedLogin] = useState(false);
+
+  // 大世界入口自己處理登入（WorldEntry 也聽這個事件），其他畫面在這裡導到登入畫面。
+  useEffect(() => {
+    if (screen === "world") return undefined;
+    const onExpired = () => setNeedLogin(true);
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, [screen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +61,8 @@ export function App() {
             if (!cancelled) setRun({ data, auto: true });
           },
           (e: unknown) => {
+            // 要登入（5D-R2）：先不忘掉這一輪，登入後重新整理還能接回來。
+            if (e instanceof ApiError && e.status === 401) return;
             // 讀不回來（存檔不見、內容檔已變更等）：忘掉這一輪，在首頁說明原因。
             writeCurrentRun(null);
             if (!cancelled) setNotice(e instanceof Error ? e.message : String(e));
@@ -104,6 +118,18 @@ export function App() {
         <ErrorBanner message={error} onClose={() => setError(null)} />
         {error === null ? "載入中……" : "無法載入名詞對照表，請確認 `trpg serve` 正在執行後重新整理。"}
       </div>
+    );
+  }
+  if (needLogin && screen !== "world") {
+    return (
+      <LoginScreen
+        heading="登入"
+        onLoggedIn={() => {
+          setNeedLogin(false);
+          window.location.reload(); // 重新讀取：上次的一輪與畫面照登入後的狀態接回來
+        }}
+        // 不給「返回首頁」：開發模式關時首頁（開戰表單）本身就要登入，回去會立刻再導回來
+      />
     );
   }
   if (run !== null) {

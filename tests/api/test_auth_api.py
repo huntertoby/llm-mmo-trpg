@@ -14,11 +14,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.world.helpers import NOON, with_rules
-from trpg.api.account_config import AccountSettings
-from trpg.api.accounts import AccountStore
 from trpg.api.app import create_app
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
+from trpg.server.account_config import AccountSettings
+from trpg.server.accounts import AccountStore
 
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
 

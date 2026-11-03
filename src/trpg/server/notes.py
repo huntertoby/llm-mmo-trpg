@@ -2,7 +2,7 @@
 
 - 只有地點留言與足跡、留言上限 50 字；不過濾、不檢舉、不封鎖、不限次數；使用者（管理者）手動刪。
 - 存檔 ``<世界資料夾>/notes.json``（``trpg-notes/1``）。**不進世界日誌**（代決 5E3-3）：留言是
-  玩家文字、不影響規則、要能手動刪；照 5E1-2（帳號不進日誌）的慣例放在 API 層，
+  玩家文字、不影響規則、要能手動刪；照 5E1-2（帳號不進日誌）的慣例放在伺服器服務層，
   ``trpg-wlog/1`` 與重播不變。
 - 每次操作都重讀檔案（管理者腳本 ``scripts/location_notes.py`` 可以從另一個程序刪）；呼叫者持有
   世界的寫入鎖。
@@ -21,7 +21,7 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from trpg.api.first_kills import FirstKill
+from trpg.server.first_kills import FirstKill
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import TravelAction
 from trpg.world.replay import WorldLogEntry

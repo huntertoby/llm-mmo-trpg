@@ -5,18 +5,19 @@
   （不透露存在）。
 - 開發模式開：沒帶 token 照 5A-5（不登入、全部角色）；帶了 token 照上一條依帳號存取。
 - LLM 開關只給管理者改（5E-2，計畫 29.8）：:func:`require_admin`。
+- 開發模式關：runs／battles／workshop／gear 也要登入（:func:`require_login`，5D-R2）。
 """
 
 from __future__ import annotations
 
 from fastapi import Request
 
-from trpg.api.account_config import AccountSettings
 from trpg.api.account_schemas import AccountView
-from trpg.api.accounts import AccountDisabledError, AccountRecord, AccountStore, AuthError
 from trpg.api.login_limit import LoginLimiter
 from trpg.api.server_config import ServerSettings
 from trpg.api.world import WorldCharacterNotFoundError
+from trpg.server.account_config import AccountSettings
+from trpg.server.accounts import AccountDisabledError, AccountRecord, AccountStore, AuthError
 from trpg.shared.errors import TrpgError
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "login_limiter_of",
     "optional_account",
     "require_admin",
+    "require_login",
     "require_note_admin",
     "require_world_access",
     "server_settings_of",
@@ -93,6 +95,13 @@ def viewer(request: Request) -> AccountRecord | None:
     raise AuthError("請先登入")
 
 
+def require_login(request: Request) -> None:
+    """runs／battles／workshop／gear 路由的共用依賴（5D-R2，保守代決）：開發模式關時要有效 token
+    （沒有或無效 401、停用 403）；開發模式開照舊不檢查。"""
+    if not settings_of(request).dev_mode:
+        viewer(request)
+
+
 def require_world_access(request: Request) -> None:
     """``/api/world`` 路由的共用依賴：檢查登入；路徑有 ``character_id`` 時檢查是不是自己的角色。"""
     account = viewer(request)
@@ -122,7 +131,7 @@ def account_view(store: AccountStore, record: AccountRecord) -> AccountView:
     return AccountView(
         account_id=record.account_id,
         username=record.username,
-        characters=len(record.characters),
+        characters=len(store.season_characters(record)),  # 當季的角色（5D-R2）
         max_characters=store.max_characters,
-        can_create=len(record.characters) < store.max_characters,
+        can_create=len(store.season_characters(record)) < store.max_characters,
     )

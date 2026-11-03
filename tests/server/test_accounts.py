@@ -15,8 +15,9 @@ from types import ModuleType
 
 import pytest
 
-from trpg.api.account_config import AccountConfigError, load_account_settings
-from trpg.api.accounts import (
+import trpg.server.accounts as accounts_module
+from trpg.server.account_config import AccountConfigError, load_account_settings
+from trpg.server.accounts import (
     ACCOUNT_FORMAT,
     MAX_SESSIONS,
     AccountDisabledError,
@@ -114,6 +115,27 @@ def test_login_and_authenticate(store: AccountStore) -> None:
     assert pw not in str(wrong.value)
     with pytest.raises(AuthError):
         store.authenticate("not-a-token")
+
+
+def test_login_unknown_user_still_runs_scrypt(
+    store: AccountStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """帳號不存在也跑一次 scrypt（同參數），回應時間和密碼錯誤一致（5D-R2）。"""
+    pw = _pw()
+    store.create("alice", pw)
+    calls: list[tuple[int, int, int]] = []
+    real = accounts_module._scrypt
+
+    def counting(password: str, salt: bytes, params: tuple[int, int, int], dklen: int) -> bytes:
+        calls.append(params)
+        return real(password, salt, params, dklen)
+
+    monkeypatch.setattr(accounts_module, "_scrypt", counting)
+    with pytest.raises(AuthError, match="帳號或密碼錯誤"):
+        store.login("nobody", pw)
+    with pytest.raises(AuthError, match="帳號或密碼錯誤"):
+        store.login("alice", pw + "x")
+    assert len(calls) == 2 and calls[0] == calls[1]
 
 
 def test_session_expires(store: AccountStore, clock: Clock) -> None:

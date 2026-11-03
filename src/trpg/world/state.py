@@ -392,6 +392,9 @@ class RecipeRecord(_Model):
     listed: bool = True
     """列在配方表上（5D-4，玩法 PM 2026-11-03 代決：每件裝備只列最新一筆）。裝備改出新碼時舊碼
     改成 ``False``、有人用這個碼打出新裝備時改回 ``True``；不列的碼照樣能打（可能已經分享出去）。"""
+    season_id: str = Field(pattern=ID_PATTERN)
+    """發現時的賽季（Phase 5D-R2；首位發現者是紀念類，見 ``trpg.server.season_policy``）。
+    舊存檔沒有這個欄位時，:class:`WorldState` 讀入時補成世界當季（``WorldState.season_id``）。"""
 
 
 class ShopPurchase(_Model):
@@ -505,6 +508,22 @@ class WorldState(_Model):
     """每個角色的影子（依主人 ID 排序、每人一筆；Phase 5C-2）。"""
     recipes: tuple[RecipeRecord, ...] = ()
     """打造過的配方與首位發現者（依配方碼排序、不重複；Phase 5D-3，M6）。"""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _recipes_default_season(cls, data: object) -> object:
+        """舊存檔的配方沒有 ``season_id``：補成世界當季（Phase 5D-R2）。"""
+        if not isinstance(data, dict):
+            return data
+        season = data.get("season_id")
+        recipes = data.get("recipes")
+        if not isinstance(season, str) or not isinstance(recipes, list | tuple):
+            return data
+        filled = [
+            {**r, "season_id": season} if isinstance(r, dict) and "season_id" not in r else r
+            for r in recipes
+        ]
+        return {**data, "recipes": filled}
 
     @field_validator("recipes")
     @classmethod

@@ -1,7 +1,7 @@
 """開發用：在本機建立與管理大世界帳號（Phase 5E-1；``docs/phases/Phase5計畫.md`` 28.7）。
 
 正式的帳號由 Discord Bot（5E-2）發放；這個腳本只給本機測試用，呼叫同一個服務層
-（:class:`trpg.api.accounts.AccountStore`）。
+（:class:`trpg.server.accounts.AccountStore`）。
 
     uv run python scripts/dev_account.py create alice            # 產生密碼並只印一次
     uv run python scripts/dev_account.py create alice --password-stdin < pw.txt
@@ -30,10 +30,12 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TextIO
 
-from trpg.api.account_config import load_account_settings
-from trpg.api.accounts import AccountRecord, AccountStore, open_account_store
 from trpg.roguelite.save import default_save_dir
+from trpg.server.account_config import load_account_settings
+from trpg.server.accounts import AccountRecord, AccountStore, open_account_store
 from trpg.shared.errors import TrpgError
+from trpg.world.save import loads_world
+from trpg.world.season import FIRST_SEASON_ID
 
 GENERATED_PASSWORD_BYTES = 12
 
@@ -74,8 +76,20 @@ def _store(folder: Path | None) -> AccountStore:
     )
 
 
+def _world_root(world_dir: Path | None) -> Path:
+    return world_dir if world_dir is not None else default_save_dir() / "world"
+
+
+def _world_season(world_dir: Path | None) -> str:
+    """世界存檔目前的賽季（角色歸到帳號時記下，上限按賽季算；5D-R2）。還沒有世界＝第一季。"""
+    path = _world_root(world_dir) / "world.json"
+    if not path.is_file():
+        return FIRST_SEASON_ID
+    return loads_world(path.read_text(encoding="utf-8")).season_id
+
+
 def _check_character_file(world_dir: Path | None, character_id: str) -> None:
-    root = world_dir if world_dir is not None else default_save_dir() / "world"
+    root = _world_root(world_dir)
     path = root / "chars" / f"{character_id}.json"
     if not path.is_file():
         raise TrpgError(
@@ -130,6 +144,8 @@ def run(args: argparse.Namespace, out: TextIO, stdin: TextIO) -> None:
     elif args.command == "attach":
         account_id = _account(store, args.username).account_id
         _check_character_file(args.world_dir, args.character_id)
+        season = _world_season(args.world_dir)
+        store.season = lambda: season
         record = store.attach_character(account_id, args.character_id)
         print(_line(record), file=out)
     elif args.command == "admin":

@@ -18,21 +18,21 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.world.helpers import NOON, with_rules
-from trpg.api.account_config import AccountSettings
-from trpg.api.accounts import AccountStore
 from trpg.api.app import create_app
-from trpg.api.first_kills import FirstKill
-from trpg.api.notes import (
+from trpg.api.notes_schemas import location_board
+from trpg.api.server_config import ServerSettings
+from trpg.api.world import WorldStore
+from trpg.content.library import ContentLibrary
+from trpg.server.account_config import AccountSettings
+from trpg.server.accounts import AccountStore
+from trpg.server.first_kills import FirstKill
+from trpg.server.notes import (
     FOOTPRINT_MAX,
     LocationNoteStore,
     NoteError,
     clean_note_text,
     footprints,
 )
-from trpg.api.notes_schemas import location_board
-from trpg.api.server_config import ServerSettings
-from trpg.api.world import WorldStore
-from trpg.content.library import ContentLibrary
 from trpg.world.actions import CampAction, TravelAction
 from trpg.world.replay import WorldLogEntry
 from trpg.world.state import LocationRef

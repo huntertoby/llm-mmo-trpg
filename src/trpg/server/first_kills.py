@@ -22,6 +22,7 @@ from trpg.content.library import ContentLibrary
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import InsightGainedEvent, WorldEvent
 from trpg.world.save import write_atomic
+from trpg.world.season import FIRST_SEASON_ID
 from trpg.world.state import CharacterState
 
 __all__ = [
@@ -61,6 +62,9 @@ class FirstKill(BaseModel):
     """世界日誌的序號（查證用）。"""
     at: int = Field(ge=0)
     """UTC 秒。"""
+    season_id: str = FIRST_SEASON_ID
+    """首殺的賽季（Phase 5D-R2；紀念類，季末保留）。舊檔沒有這個欄位＝第一季
+    （:data:`~trpg.world.season.FIRST_SEASON_ID`；欄位加上之前還沒有任何季末重置）。"""
 
 
 class _File(BaseModel):
@@ -115,9 +119,17 @@ class FirstKillRegistry:
         return load_first_kills(self.path)
 
     def record(
-        self, char: CharacterState, events: Iterable[WorldEvent], *, seq: int, now: int
+        self,
+        char: CharacterState,
+        events: Iterable[WorldEvent],
+        *,
+        seq: int,
+        now: int,
+        season_id: str = FIRST_SEASON_ID,
     ) -> tuple[FirstKill, ...]:
-        """把這次動作的精英首殺裡、全服還沒人打過的記下來；回傳新記的。"""
+        """把這次動作的精英首殺裡、這一季全服還沒人打過的記下來；回傳新記的。
+
+        首殺按賽季算（5D-R2）：上一季打過的種類，這一季的第一個仍然是首殺。"""
         kinds = [
             e.source.removeprefix(ELITE_SOURCE)
             for e in events
@@ -126,7 +138,7 @@ class FirstKillRegistry:
         if not kinds:
             return ()
         existing = self.all()
-        taken = {(k.kind, k.target) for k in existing}
+        taken = {(k.kind, k.target) for k in existing if k.season_id == season_id}
         location = char.last_battle.location if char.last_battle is not None else char.location
         added = tuple(
             FirstKill(
@@ -139,6 +151,7 @@ class FirstKillRegistry:
                 location=location,
                 seq=seq,
                 at=now,
+                season_id=season_id,
             )
             for kind in sorted(set(kinds))
             if ("elite", kind) not in taken

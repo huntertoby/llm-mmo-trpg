@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.api.announce import location_name
-from trpg.api.notes import NOTE_MAX_LEN, LocationNote, footprints
 from trpg.api.world import WorldStore
 from trpg.content.world_narration import mask_text
+from trpg.server.announce import location_name
+from trpg.server.notes import NOTE_MAX_LEN, LocationNote, footprints
 from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState
 
