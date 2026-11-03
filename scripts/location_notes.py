@@ -1,4 +1,4 @@
-"""地點留言的管理腳本（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.7；#105「使用者手動刪」）。
+"""地點留言的管理腳本（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.7；#105「使用者手動刪」）。
 
     uv run python scripts/location_notes.py list [--location <地點 ID>]
     uv run python scripts/location_notes.py delete <note_id>

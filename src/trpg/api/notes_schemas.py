@@ -1,4 +1,4 @@
-"""地點留言板的 API 型別與組裝（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.7）。"""
+"""地點留言板的 API 型別與組裝（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.7）。"""
 
 from __future__ import annotations
 

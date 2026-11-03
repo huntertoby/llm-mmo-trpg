@@ -1,4 +1,4 @@
-"""每日公告與首殺公告的排程（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.6）。
+"""每日公告與首殺公告的排程（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.6）。
 
 - :meth:`Announcer.tick` 由 Bot 的事件迴圈每分鐘左右呼叫一次，``now`` 是伺服器時鐘（UTC 秒），
   排程不進引擎（守則 1）。

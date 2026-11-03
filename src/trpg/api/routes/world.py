@@ -13,7 +13,7 @@
   第一次送出即定案）、``…/chat``（和 NPC 自由聊天）；``GET／POST /api/world/llm``（大世界的
   LLM 開關）。
 
-- 5E-3（``docs/phases/Phase5計畫.md`` 30.7）：``GET／POST …/notes``（角色所在地點的留言與足跡、
+- 5E-3（``docs/phases/Phase5計畫.md`` 31.7）：``GET／POST …/notes``（角色所在地點的留言與足跡、
   留一則；#105）、``DELETE /api/world/notes/{note_id}``（管理者刪留言）。
 
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`

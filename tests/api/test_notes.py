@@ -1,4 +1,4 @@
-"""地點留言與足跡（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.7；#105）。
+"""地點留言與足跡（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.7；#105）。
 
 測試裡的密碼一律用 ``secrets`` 當場產生。
 """

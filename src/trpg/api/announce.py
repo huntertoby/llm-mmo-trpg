@@ -1,4 +1,4 @@
-"""Discord 公告的資料與文字（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.6）。
+"""Discord 公告的資料與文字（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.6）。
 
 - :func:`daily_digest`：讀世界存檔（**唯讀**）算出今日公告要的數字。今日目標、世界事件全服進度是
   5F-1 的資料：這裡只留接口（:class:`DailyGoalsSource`、:class:`WorldEventSource`；

@@ -1,4 +1,4 @@
-"""全服首殺紀錄（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.5）。
+"""全服首殺紀錄（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.5）。
 
 - 現有資料能給的首殺：**全服第一個打倒某種精英的角色**
   （``InsightGainedEvent(source="elite:<種類>")``，06 6.34.2；代決 5E3-1）。
@@ -6,7 +6,7 @@
 - :class:`~trpg.api.world.WorldStore` 每個成功的世界動作之後（世界的寫入鎖內、日誌寫完後）呼叫
   :meth:`FirstKillRegistry.record`；同一種只記第一筆。
 - 存檔 ``<世界資料夾>/first_kills.json``（``trpg-firstkills/1``）。這是由世界日誌決定的衍生資料
-  （日誌序號 ``seq``＋時間戳可查證），不進 ``trpg-world/1``、不影響重播。Bot 只讀這個檔（30.6）。
+  （日誌序號 ``seq``＋時間戳可查證），不進 ``trpg-world/1``、不影響重播。Bot 只讀這個檔（31.6）。
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ class FirstKill(BaseModel):
     target_name_zh: str
     character_id: str
     name: str
-    """當下的角色名（玩家文字；放進公告前要中和，30.6）。"""
+    """當下的角色名（玩家文字；放進公告前要中和，31.6）。"""
     region: str
     location: str
     seq: int = Field(ge=0)

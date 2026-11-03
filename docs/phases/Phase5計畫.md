@@ -132,6 +132,7 @@
 | 5D-1 | 貨幣（金幣、任務幣，8.15）、背包 30 格與腰包 3 個（8.17）、商店（只賣消耗品、粗料、染料；區域特產每週限量；好感度門檻，8.26.1）、霧渡鎮柳掌櫃 | 5A-4 | 1.5 h | 可與 5B 各段平行（不碰事件與 narrative） |
 | 5D-2 | 材料：雲嶺 8 種（18.2.4）＋通用粗／精／上料、敵人家族掉材料（M1；被我方擊倒的第三方照常掉材料，玩法 PM 2026-11-03）、掉落物品等級＝地點建議等級（8.26.2）、精英掉史詩；沿用 3G／3K 物品產生器 | 5D-1、5A-3 | 1.5 h | 否 |
 | 5D-2b | 5B-4f／5D-2 收尾（玩法 PM 2026-11-03 代決）：骨架 6 部分成功給小蓮 +10；保底時機遇三選一標題與「作罷」句也用「焦痕未冷的古松」；補潮濕、隱蔽各 2 條製造／利用強化詞條（8.21.4.1），並檢查荒原偏向（點燃、倒地、中毒）缺的照補；影子裝備物品等級壓到招募者等級後照穿（#87）；精英掉裝備改每名精英 1 件（20.2）；背包滿時戰後結算讓玩家選丟哪件（新舊皆可，不做暫存區）；盜賊各區掉「焦鐵」（19.2.4） | 5D-3 | 1 h | 否（與 5D-3 同檔） |
+| 5D-3b | 5D-3 收尾（玩法 PM 2026-11-03）：**配方碼帶重骰序列與精華指定**（08 8.20／#33 使用者寫入的決定：配方＝基礎配方＋重骰序列，重骰過的裝備也能復刻；用配方碼打造時照序列重骰、費用照付）；石師傅人設卡（18.5）接上；荒原兩個隱藏配方的提示接 20.4（餘燼集酒館「霧與火相遇之處」、傳聞「冰與火在同一隻蜥蜴身上」）；餘燼集鐵匠「爐叔」（19.5）等荒原地點圖到位再接 | 5D-3 | 1 h | 否 |
 | 5D-3 | 鐵匠與附魔台：打造（指定部位＋1 條關鍵字詞條、其餘傾向由材料決定 M2、物品等級規則）、強化、重骰、精華指定詞條、配方碼與首位發現者（8.20、M6）、隱藏配方（M7，18 的「驚雷霧袍」）；2 件共鳴（M3） | 5D-2 | 1.5 h | 否 |
 | 5D-4 | 前端：背包、商店、鐵匠、附魔台畫面 | 5D-3 | 1.5 h | 否 |
 
@@ -3369,16 +3370,110 @@ announce_channel_id = ""   # 公告頻道 ID（5E-3 才用；這一段只檢查�
 
 - 真實 Discord 連線與 slash 指令註冊；公告（5E-3，這一段只讀設定）；Tunnel；朋友名單；帳號刪除；管理者的 Bot 指令。
 
-## 30. 5E-3 詳細規格：公告、地點留言與足跡、部署
+## 30. 5D-3 詳細規格：鐵匠與附魔台
+
+> 給實作 agent。只動 `content/world/crafting.yaml`（新）、`content/world/resonance.yaml`（新）、`content/world/items.yaml`（精華、荒原 3 種材料）、`content/world/npcs/cloud_ridge.yaml`（鐵匠人設卡）、`content/affixes.yaml`（3 條獨特詞條）、`content/item_gen.yaml`（`unique_affixes`）、`src/trpg/content/`（`world_crafting.py` 新；`item_gen.py` 加選填參數與重骰函式、`item_budget.py` 一個欄位、`library.py` 一個欄位一行呼叫）、`src/trpg/world/`（`crafting.py`、`crafting_actions.py`、`resonance.py` 新；`state.py`、`step.py`、`actions.py`、`gear.py`、`economy.py`、`battle.py` 小改）、`src/trpg/api/`（`world_crafting_view.py`、`world_crafting_schemas.py` 新；`world_schemas.py`、`world_presenter.py`、`world_economy_view.py` 小改）、`client/`（小鎮的「鐵匠」面板、背包的共鳴一行、API 型別）、`client/openapi.json`、`tests/`。另一個 agent（5E-1）同時在做帳號與角色：不碰帳號、角色清單、`trpg.api` 的帳號路由。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值，同 5D-1、5D-2）。
+> 依據：**`docs/design/20-第一季商店與裝備內容.md`（優先）** 20.3（獨特裝備：驚雷霧袍、蒸汽護腕、冰火雙生戒的部位與效果；強度不超過同物品等級史詩）、20.4（3 個隱藏配方與提示；提示只說意象；第一次打出的人成為首位發現者）、20.1（材料不能賣，只能分解或用掉）；08 8.13（打造＝指定部位＋1 條關鍵字詞條；材料用量依部位預算比例調整）、8.14（精華＝分解裝備，用來重骰、指定詞條；重骰同一件越骰越貴；強化 +1～+3）、8.15（金幣：打造手續費、重骰與強化；任務幣：高階打造）、8.9（共鳴：`resonance_tags`＝關鍵字，2 件小共鳴，效果用技能原語）、8.20（配方＝部位＋物品等級＋稀有度＋指定詞條＋材料組合；配方指紋 SHA-256；重骰由「指紋＋位置＋n」決定；配方碼分享、朋友用自己的材料打；掉落裝備沒有配方碼；名稱綁定配方第一次打造）、8.26.1（鐵匠：打造、強化；附魔台：重骰、精華指定；只給裝備）、8.26.2（打造的物品等級＝玩家等級，不超過材料階上限 粗 3／精 7／上 10）、8.26.3 M2（其餘詞條的傾向由材料決定）、M3（第一季 2 件門檻）、M4、M6（沒人試過的組合只看得到大致傾向；首位發現者名字掛在配方上）、M7；18 18.2.4（雲嶺材料與驚雷霧袍）、18.4 骨架 4（「雷雨夜的霧最濃」已是酒館傳聞）；19 19.2.4（熔岩核、寒燼、熔心晶）；09 9.6.1（鐵匠、附魔台見 08）；本檔 26（背包、金幣、任務幣）、27（材料、`gear`、`equipment`、`equip`、回收）。
+
+### 30.1 目標
+
+霧渡鎮有鐵匠（打造、強化、分解）與附魔台（重骰、精華指定）。打造：指定部位、稀有度（稀有或史詩）、1 條 build 詞條（關鍵字詞條）與材料（1 種通用料決定物品等級上限＋0～3 種特色材料決定其餘詞條的傾向）；同一份配方一定打出同一件裝備，配方碼可以分享，世界記下每份配方的首位發現者。3 個隱藏配方打出獨特裝備。穿著 2 件帶相同關鍵字的裝備觸發小共鳴。全部是世界動作（寫進日誌、可重播）；LLM 不碰數值與物品。
+
+### 30.2 內容（`content/world/`；schema `src/trpg/content/world_crafting.py`，`ContentModel`、錯誤訊息繁中並指出 ID）
+
+1. **`crafting.yaml`**（`CraftingRules`；沒有檔案＝鐵匠與附魔台關閉 `None`）：
+   - `stations`：`{id, kind: smithy | enchanter, name_zh, region, location, npc?}`。霧渡鎮：`smithy_mist_ferry`（石師傅）、`enchanter_mist_ferry`（渡口附魔台，沒有 NPC）。
+   - `craft`：`rarities`（只能是 `rare`、`epic`：稀有起才有 build 詞條，item_gen 的 `required`）→ `{gold_per_level, quest_coins}`；`grade_amount`（部位 → 通用料個數，依 8.22 部位比例）；`flavor_max: 3`；`leaning_weight`（傾向詞條的權重倍數）；`grade_cap`（粗 3、精 7、上 10）。
+   - `materials`：特色材料 → `{leanings: [詞條 ID…], resonance: 關鍵字 | null}`（M2；說明文字照 items.yaml 的傾向）。
+   - `hidden`：隱藏配方 `{id, name_zh, slot_type, materials: [2～3 種], affix: 獨特詞條, rarity: epic}`（20.4）。
+   - `enhance`：`max_level: 3`、`step_permille`（每級基礎加成 ‰：武器傷害、其他防禦，沿用 `base_bonus_permille`）、`gold_per_level`（× 物品等級 × 目標強化等級）；材料＝物品等級對應的通用料（≤3 粗、≤7 精、其餘上）× 目標強化等級。
+   - `reroll`：`essence`、`gold_base`、`gold_step`（費用＝base＋step × 這件已重骰／指定的次數）；`imbue`：同上（較貴）。
+   - `salvage`：稀有度 → 精華個數。
+   檢查：區域與地點在地點圖、`npc` 在人設卡且在同一地點；材料都是 `kind: material`、通用料有 `grade`、特色材料沒有；`leanings`、`affix` 是存在的詞條；`resonance` 是關鍵字；隱藏配方的材料是特色材料、組合不重複、獨特詞條能掛在該部位。
+2. **`resonance.yaml`**（`ResonanceRules`；沒有檔案＝沒有共鳴）：`pieces: 2`（M3；4 件留到正式季）、`resonances: [{keyword, name_zh, affixes: [{affix, value}]}]`：共鳴時依序挑第一條「能掛在帶該關鍵字的某件穿戴物品上、那件沒有同 ID、條數未滿」的詞條（效果都是現成詞條＝現成原語，8.9）。
+3. **`items.yaml`**：`item_essence`（精華，`kind: material`，分解裝備取得）；`item_lava_core`（熔岩核）、`item_frost_ember`（寒燼，稀有）、`item_molten_heart`（熔心晶，稀有）：19.2.4 的荒原材料，本段只定義（荒原掉落在荒原內容段）。
+4. **`affixes.yaml`**：3 條獨特詞條（20.3；觸發類，現成原語）：`affix_unique_thunder_mist`（身體；受到近戰傷害時，自己腳下產生 1 回合煙霧，每輪 1 次）、`affix_unique_steam_guard`（手；受到傷害時自己腳下產生 1 回合煙霧，每輪 1 次——引擎沒有「火焰傷害」的觸發篩選，代決 5D3-9）、`affix_unique_frostfire`（戒指；施加燃燒時也讓目標緩速 1 回合，每回合 1 次）。`item_gen.yaml` 加 `unique_affixes`：這些詞條不進一般產生器（掉落、傭兵、重骰都不會出現）。
+5. **`npcs/cloud_ridge.yaml`**：加「石師傅」（霧渡鎮鐵匠；18、20 沒寫鐵匠是誰，最小人設卡，代決 5D3-1）。
+
+### 30.3 狀態（全部有預設值；格式字串不變）
+
+- `CharacterState.gear_mods: dict[str, GearMod] = {}`：被打造、強化、重骰、指定過的裝備（物品 ID → `{fingerprint, recipe: 配方碼 | None, enhance: 0～3, rerolls: 依序的位置, imbues: 次數}`；依 ID 排序）。
+- `CharacterState.crafts: int = 0`：打造過幾件（打造品的 ID `item_craft_{配方碼}_{n}`，避免同配方打兩件撞 ID）。
+- `WorldState.recipes: tuple[RecipeRecord, ...] = ()`：世界記得的配方（依配方碼排序、不重複）：`{code, recipe, name_zh, discoverer, discoverer_name, discovered_at, hidden}`（M6）。
+
+### 30.4 規則（`trpg.world.crafting`；動作加進 `WorldAction`；不合法拋 `WorldActionError`、狀態不變）
+
+- **地點**：在該設施的地點（城鎮）、沒有遭遇。`craft`、`enhance`、`salvage` 在鐵匠；`reroll`、`imbue` 在附魔台。
+- **配方**（`CraftRecipe`，8.20）：`slot_type`、`weapon_class`（只有武器：主角武器的大類）、`rarity`、`item_level`、`affix`（build 詞條；隱藏配方為 `None`）、`grade`（1 種通用料）、`materials`（0～3 種特色材料，排序、不重複）。**指紋**＝正規化 JSON（鍵排序）的 SHA-256；**配方碼**＝指紋前 10 碼（顯示大寫）。
+- **`craft`**（`station`、`slot_type`、`rarity`、`affix`、`grade`、`materials`、`item_level?`；或只給 `code`）：
+  - 物品等級＝`item_level` 或預設 min(角色等級, `grade_cap[grade]`, 掉落的 `max_item_level`)；不得超過（8.26.2）。用配方碼打造時，配方的物品等級 > 角色等級就不能打（8.20「配方要求的等級不足時不能打」），主手的武器大類要和主角相同。
+  - build 詞條必須在該部位的 `required_picks` 候選裡（主手、副手、飾品＝技能強化〔關鍵字〕詞條；身體、頭、手、腳＝條件數值或防守型觸發，08 8.21.6；代決 5D3-3），且能掛在這個部位與這把武器。
+  - **隱藏配方**（M7）：部位與特色材料組合完全符合 → 稀有度改為配方的（史詩）、build 詞條換成獨特詞條（玩家選的詞條不用，配方的 `affix` 記 `None`）、名稱固定（20.3）。
+  - 費用：通用料 `grade_amount[部位]` 個＋每種特色材料 1 個；金幣 `gold_per_level × 物品等級`；史詩另加任務幣（8.15「高階打造」）。不夠就不能打。
+  - 產生：`generate_item(..., forced=build 詞條, leanings=材料傾向)`，亂數＝`Rng(指紋前 8 位元組)`（8.20：同配方同結果；不耗角色亂數）。產生失敗（預算放不下 build 詞條）就不能打、不扣東西。名稱：稀有度＋底材名（LLM 命名在之後），隱藏配方用固定名稱；配方第一次被打造時名稱記進世界、之後沿用（8.20）。
+  - 物品的 `tags` 加上特色材料的共鳴關鍵字（`resonance_<關鍵字>`，M3「同區同族的裝備自然帶相同關鍵字」）。
+  - 打好的裝備放進背包（放不下＝不能打）。世界沒有這個配方碼 → 記下首位發現者（角色 ID 與名字，M6）並在事件標 `discovered`。
+- **`enhance`**（`station`、`item`：背包或穿戴中的裝備）：強化等級 +1（上限 3，8.14）；`base_bonus_permille` +`step_permille`；扣金幣與通用料。沒有物品等級的（初始裝備）不能強化。
+- **`reroll`**（`station`、`item`、`index`）：把第 `index` 條換成另一條：候選＝同稀有度可用類別（第 1 條是 build 詞條時只從 build 候選裡挑）、能掛在這件、和其他條相容（同產生器規則）、不是原本那條、不是獨特詞條、放得進「部位詞條預算 − 其他條的點數」；數值取放得進的最大值。亂數＝`指紋:{index}:{n}`（n＝這個位置已重骰的次數，8.20）。費用：精華＋金幣，越骰越貴。獨特詞條不能重骰。
+- **`imbue`**（`station`、`item`、`index`、`affix`）：同 `reroll` 的候選，指定其中一條（8.20「完全沒有隨機」）；費用較高。
+- **`salvage`**（`station`、`item`：背包裡的裝備）：拿掉那件，得到 `salvage[稀有度]` 個精華（8.14）。穿戴中的不能分解。
+- **共鳴**（`trpg.world.resonance`，M3）：物品的共鳴關鍵字＝技能強化詞條的關鍵字＋`resonance_<關鍵字>` 標籤。主角開戰時，穿戴中帶同一關鍵字的裝備 ≥ `pieces` 件 → 加上那個共鳴的詞條（掛在第一件合適的物品上，見 30.2 第 2 點）；只算主角（代決 5D3-8）。
+- **指紋**：掉落的裝備第一次被強化／重骰時，指紋＝物品 JSON 的 SHA-256（掉落品沒有配方碼，8.20）。
+- **出售**：賣掉的裝備一併刪掉 `gear_mods`。
+
+### 30.5 API 與前端
+
+- `WorldActionRequest` 加 `craft`、`enhance`、`reroll`、`imbue`、`salvage`。`WorldView.crafting: CraftingView | None`（在設施的地點時）：設施、部位與 build 詞條的選項、稀有度費用、背包裡的材料（傾向說明、共鳴關鍵字）、已知配方（世界的配方表：碼、名稱、首位發現者、能不能打與原因）、可強化／重骰／指定／分解的裝備（每條詞條的文字與指定候選、費用、不能的原因）。`InventoryView.resonance_zh`（目前觸發的共鳴）。
+- 事件句子：打造（含「你是這份配方的首位發現者」）、強化、重骰、指定、分解。
+- 前端：小鎮服務列加「鐵匠」切換，面板內：打造表單（部位、稀有度、詞條、通用料、特色材料、費用與傾向）、配方碼打造、強化／分解、附魔台的重骰與指定；停用原因用共用 `<Hint>`。背包加共鳴一行。完整畫面在 5D-4。
+- OpenAPI 照既有方式重產。
+
+### 30.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_crafting.py` | 載入雲嶺；壞資料逐條（設施地點、材料不是材料、通用料沒有階、未知詞條、隱藏配方重複、獨特詞條掛不上）；沒有檔案＝`None`；獨特詞條不在一般產生器 |
+| `tests/world/test_crafting.py` | 打造：同配方同物品（兩個角色）、物品等級上限、build 詞條在第 1 條、傾向（多個配方統計）、費用與不夠時不變、配方碼打造、首位發現者只記第一次、等級不足不能用碼；隱藏配方 3 個；強化、重骰（確定性、越骰越貴、預算內）、指定、分解；地點檢查 |
+| `tests/world/test_resonance.py` | 2 件同關鍵字 → 開戰裝備多一條共鳴詞條；1 件沒有；掛不上就不加 |
+| `tests/api/test_world_crafting_api.py` | 小鎮看得到鐵匠 → 打造 → 背包 → 強化 → 附魔台重骰 → 分解 |
+| vitest | 鐵匠面板靜態輸出、停用原因 |
+
+### 30.7 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。
+- `tests/world`、`tests/api`、`tests/content`（`-n 8`）；vitest 與 build；swamp 種子 7 重播。
+
+### 30.8 不做的事
+
+- LLM 命名、外觀綁定配方（之後的段）；品質（正式季）；4 件共鳴；把詞條搬到別件；重骰序列併進配方碼（代決 5D3-6）；稱號；荒原的設施、掉落與提示（荒原內容段）；完整鐵匠畫面（5D-4）。
+
+### 30.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5D3-1 | 鐵匠是誰、在哪 | 18、20 沒寫：霧渡鎮加最小人設卡「石師傅」；附魔台是同鎮的設施（沒有 NPC）。9.6.1 的主城還沒做 |
+| 5D3-2 | 打造的稀有度 | 稀有或史詩（稀有起才有 build 詞條）；史詩要任務幣（8.15 高階打造） |
+| 5D3-3 | 「1 條關鍵字詞條」在身體、頭、手、腳 | 現成的技能強化詞條都掛不上防具，照 item_gen 的 build 詞條規則改用條件數值／防守型觸發 |
+| 5D3-4 | 材料組合與用量 | 1 種通用料（決定物品等級上限，用量依部位）＋0～3 種特色材料各 1 個；費用初值見 `crafting.yaml` |
+| 5D3-5 | 傾向（M2） | 特色材料的傾向詞條在抽詞條時權重 ×`leaning_weight`（不是限制） |
+| 5D3-6 | 重骰後的裝備能不能用配方碼復刻 | 配方碼只含基礎配方；重骰序列記在日誌與 `gear_mods`（可重播），併進配方碼留給 PM |
+| 5D3-7 | 隱藏配方的觸發條件 | 部位相同＋特色材料組合完全相同；玩家選的 build 詞條換成獨特詞條；稀有度固定史詩 |
+| 5D3-8 | 共鳴 | 只算主角；物品的關鍵字＝技能強化詞條＋特色材料的共鳴標籤；效果是現成詞條（不另算預算） |
+| 5D3-9 | 獨特效果的近似 | 「自身周圍」＝自己腳下 1 格（觸發效果的形狀只有自己）；蒸汽護腕「被火攻擊時」引擎沒有元素篩選，先用「受到傷害時」 |
+| 5D3-10 | 強化的效果 | 每級基礎加成 +2%（武器傷害、其他防禦；沿用 `base_bonus_permille`），不算進物品預算 |
+| 5D3-11 | 亂數 | 打造、重骰用配方指紋衍生的亂數（8.20 要求同配方同結果、誰打都一樣），不用角色的串流 |
+| 5D3-12 | 首位發現者 | 世界快照記角色 ID 與名字；只有名字，不給稱號、不給獎勵 |
+
+## 31. 5E-3 詳細規格：公告、地點留言與足跡、部署
 
 > 給實作 agent。只動 `src/trpg/api/`（新增 `server_config.py`、`client_ip.py`、`llm_health.py`、`first_kills.py`、`announce.py`、`notes.py`、`notes_schemas.py`；`app.py`、`auth.py`、`state.py`、`world.py`、`world_flow.py`、`world_story_schemas.py`、`routes/auth.py`、`routes/world.py` 小改）、`src/trpg/bot/`（`gateway.py`、`fake.py`、`config.py` 小改；新增 `announcer.py`）、`config/server.toml`、`config/bot.example.toml`、`config/deploy.example.toml`（新）、`content/world/announcements.yaml`（新）、`scripts/discord_bot.py`、`scripts/location_notes.py`（新）、`scripts/deploy.py`（新）、`scripts/start_*.ps1`／`.sh`（新）、`docs/部署說明.md`（新）、`tests/api/`、`tests/bot/`、`client/`（留言板、API 型別）、`client/openapi.json`。**不改** `trpg.world`、`trpg.engine`、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1`。不下載、不安裝任何東西、不連外部網路。另一個 agent 在做 5D-3，撞到以 main 為準。
 > 依據：`docs/專案計畫.md` 3.1（Bot 公告戰況、每日目標、世界事件進度、首殺；伺服器、Bot、模型放使用者電腦，對外用 Tunnel；模型不可用時遊戲要能降級；每天 6 點 Asia/Taipei 刷新）；09 9.6.10 #103（全服進度條、Bot 每天 6 點貼進度）、#105（只有地點留言與足跡、50 字、不過濾不檢舉不封鎖、使用者手動刪）、#101（首殺看伺服器日誌時間戳）；本檔 28、29；`Phase5E-2報告.md` 待 PM 決定 4。
 
-### 30.1 目標
+### 31.1 目標
 
 ① Bot 每天 6 點（時區在設定）向公告頻道貼「今日公告」，有新的全服首殺就貼首殺公告；文字一律走模板（`content/world/announcements.yaml`，5E-4 再預產 LLM 文字）。今日目標、世界事件全服進度是 5F-1 的資料，**這一段只做管線與接口**，現有資料能給的先貼。② 地點留言（50 字）與足跡：在所在地點看、留一則；管理者可刪。③ 部署說明與啟動腳本（Windows／macOS），Tunnel 工具不指定。④ 本機模型健康檢查：啟動時與定期 ping，不可用時大世界全部走模板並標示。⑤ 經 Tunnel 時讀真實 IP（`trusted_proxies`）。
 
-### 30.2 設定
+### 31.2 設定
 
 `config/server.toml` 新增（`trpg.api.server_config.ServerSettings`；環境變數 `TRPG_PUBLIC_URL`、`TRPG_TRUSTED_PROXIES`（逗號分隔）覆寫）：
 
@@ -3394,24 +3489,24 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 `config/bot.example.toml` 新增 `[announce]`：`timezone = "Asia/Taipei"`、`utc_offset_minutes = 480`（系統沒有時區資料庫時的退路；Windows 沒裝 `tzdata` 就用它，台灣沒有日光節約）、`hour = 6`。
 `config/deploy.example.toml`（新，進版控；真的值放 `config/deploy.local.toml`）：`host`、`port`、`tunnel_command`（字串陣列，使用者自己填，例 `["cloudflared", "tunnel", "run", "trpg"]`；空＝不啟動 Tunnel）。
 
-### 30.3 真實 IP（5E-2 待決 4）
+### 31.3 真實 IP（5E-2 待決 4）
 
 - `trpg.api.client_ip.client_ip(peer, headers, trusted)`：連線來源 `peer` **不在** `trusted_proxies` → 回 `peer`，忽略所有轉發標頭。在清單內 → 先看 `CF-Connecting-IP`（合法 IP 才用），再看 `X-Forwarded-For`（由右往左跳過可信任的位址，取第一個不可信任的；全部可信任取最左邊），都沒有回 `peer`。標頭內容不合法就忽略。
 - 登入嘗試次數限制改用它（`routes/auth.py`）。
 
-### 30.4 本機模型健康檢查（`trpg.api.llm_health.LlmHealth`）
+### 31.4 本機模型健康檢查（`trpg.api.llm_health.LlmHealth`）
 
 - 伺服器啟動時 ping 一次（`LlmProvider.probe`，有逾時），之後每 `interval_s` 秒在背景執行緒 ping（伺服器時鐘，不進引擎）。
 - 狀態：`available: bool | None`（`None`＝還沒 ping）、`checked_at`。狀態改變時寫 log（`WARNING 本機模型不可用，大世界的說書人全部改用模板`／`INFO 本機模型恢復可用`）。
 - 不可用時：`WorldLlm.client()` 回 `None`（說書人、情境、聊天全部走模板）；`GET /api/world/llm` 的 `WorldLlmView` 多 `model_available`（`null`＝還沒檢查），不可用時 `notice_zh` 顯示提示。一輪（`/api/runs`）原本開局就 probe，不變。
 - 測試：`create_app(llm_health_interval_s=0)`（或設定 0）不開背景執行緒；`LlmHealth.check()` 可直接呼叫。
 
-### 30.5 首殺紀錄（`trpg.api.first_kills`）
+### 31.5 首殺紀錄（`trpg.api.first_kills`）
 
 - 現有資料能給的「首殺」：**全服第一個打倒某種精英的角色**（`InsightGainedEvent(source="elite:<種類>")`，06 6.34.2）。賽季 Boss 首殺（#101）是 5F，留同一個格式（`kind` 欄位）。
 - `WorldStore` 每個成功的世界動作之後（在世界的寫入鎖內、日誌寫完後）把新的精英首殺記到 `<世界資料夾>/first_kills.json`（`trpg-firstkills/1`：`kind`、`target`、`target_name_zh`、`character_id`、`name`、`region`、`location`、`seq`、`at`）；同一種只記第一筆。這是由日誌決定的衍生資料（日誌序號＋時間戳可查證），不進 `trpg-world/1`、不影響重播。
 
-### 30.6 公告（`trpg.api.announce`、`trpg.bot.announcer`）
+### 31.6 公告（`trpg.api.announce`、`trpg.bot.announcer`）
 
 - `daily_digest(world_dir, now, *, goals=None, world_events=None)`：讀世界存檔（唯讀）算出 `DailyDigest`：賽季第幾天（`refresh_day(now) - refresh_day(season_start) + 1`）、昨天（前一個刷新日）有動作的角色數、世界級線頭數、已清空地點數、到目前為止的首殺數；`goals`／`world_events` 是接口（`DailyGoalsSource`／`WorldEventSource` protocol，5F-1 實作；`None`＝沒有資料，模板照 `goals_none`／`events_none` 寫「尚未開放」）。
 - 模板 `content/world/announcements.yaml`（pydantic 驗證、`string.Template` 的 `$name`，用到不認得的變數 → 載入錯誤）：`daily`、`goals_none`、`goal_line`、`events_none`、`event_line`、`first_kill`。
@@ -3424,7 +3519,7 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 - `DiscordGateway.send_channel(channel_id, text) -> bool`（新）；`FakeDiscordGateway` 記錄頻道貼文。
 - `scripts/discord_bot.py preview`：不連網、不需要 Bot 設定，印出現在的今日公告與未貼的首殺公告；`run` 照舊（真實 adapter 待決 5E2-1），說明加上 `Announcer.tick` 要每分鐘呼叫一次。
 
-### 30.7 地點留言與足跡（#105；`trpg.api.notes`）
+### 31.7 地點留言與足跡（#105；`trpg.api.notes`）
 
 - 存檔 `<世界資料夾>/notes.json`（`trpg-notes/1`）：`note_id`（`n`＋8 個十六進位字元）、`region`、`location`、`character_id`、`name`（留言當下的角色名）、`text`、`at`。寫檔 `write_atomic`；每次操作在世界的寫入鎖內重讀檔案（管理者腳本可以從另一個程序刪）。
 - **不進世界日誌**：留言是玩家文字、不影響規則、要能手動刪；照 5E1-2（帳號不進日誌）的慣例放在 API 層，`trpg-wlog/1` 與重播不變。
@@ -3437,14 +3532,14 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 - 管理者腳本 `scripts/location_notes.py list [--location <id>]`、`delete <note_id>`（世界資料夾預設 `<存檔資料夾>/world`，可 `--world-dir`）。
 - 前端：地點圖畫面加「地點留言」區塊：留言列表（名字、時間、文字）、足跡列表、輸入框（最多 50 字、顯示剩餘字數）與「留言」按鈕。
 
-### 30.8 部署（`docs/部署說明.md`、`scripts/deploy.py`、`scripts/start_*.ps1`／`.sh`）
+### 31.8 部署（`docs/部署說明.md`、`scripts/deploy.py`、`scripts/start_*.ps1`／`.sh`）
 
 - `scripts/deploy.py check`：讀 `config/deploy.local.toml`（沒有就用範本）與 `config/server.toml`，列出開服前的檢查：開發模式要關、`public_url` 有填、有 Tunnel 時 `trusted_proxies` 有填、前端已建置、帳號資料夾位置、Bot 設定齊全。只檢查不改。
 - `scripts/deploy.py server`／`bot`／`tunnel`：照設定啟動（`trpg serve --host --port`、`discord_bot.py run`、`tunnel_command`）。`tunnel_command` 空就印說明、exit 2。
 - `scripts/start_server.ps1`／`.sh`、`start_bot.*`、`start_tunnel.*`：只是 `uv run python scripts/deploy.py <子指令>` 的包裝；機器相關的值都在設定檔。
 - `docs/部署說明.md`：Windows 與 macOS 各一份步驟：前置（uv、Node／pnpm、Tunnel 由使用者自己裝）、建置前端、關開發模式、帳號資料夾位置、啟動伺服器、啟動 Bot、Tunnel（cloudflared 只是範例）、`public_url`／`trusted_proxies`、本機模型不可用時的行為、管理者刪留言、備份。
 
-### 30.9 測試
+### 31.9 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -3459,11 +3554,11 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 | `tests/scripts/test_deploy.py` | `check` 列出問題；`tunnel` 沒設定 exit 2；組出的指令 |
 | `client/src/world/notes.test.ts` | 剩餘字數、送出前檢查 |
 
-### 30.10 驗收
+### 31.10 驗收
 
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/api`、`tests/world`、`tests/bot`、`tests/test_architecture.py`（`-n 8`）；vitest 與 build；swamp 種子 7 重播；OpenAPI 重產。
 
-### 30.11 代決（最保守預設；寫進完成報告）
+### 31.11 代決（最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -3477,10 +3572,10 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 | 5E3-8 | 健康檢查 | 預設 60 秒；不可用時只影響大世界的說書人（一輪本來就每輪 probe） |
 | 5E3-9 | 轉發標頭 | 只在來源可信任時讀；`CF-Connecting-IP` 優先於 `X-Forwarded-For` |
 
-### 30.12 不做的事
+### 31.12 不做的事
 
 - 真實 Discord adapter（5E2-1）；預產公告文字（5E-4）；今日目標與世界事件的資料（5F-1）；賽季 Boss 首殺（5F）；Tunnel 的安裝與登入（使用者自己做）；留言的過濾、檢舉、封鎖（#105）；前端的管理者刪除按鈕。
 
-## 31. 之後各段規格
+## 32. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

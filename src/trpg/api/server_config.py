@@ -1,9 +1,9 @@
 """伺服器的網路與健康檢查設定：``config/server.toml`` 的 ``[network]``、``[llm_health]``
-（Phase 5E-3，計畫 30.2）。
+（Phase 5E-3，計畫 31.2）。
 
 - ``public_url``：Tunnel 給的外部網址（只用來顯示與部署檢查，不影響綁定）。
-- ``trusted_proxies``：可信任的轉發來源（IP 或 CIDR）；空＝不信任任何轉發標頭（30.3）。
-- ``llm_health.interval_s``：定期 ping 本機模型的間隔（秒）；0＝只在啟動時 ping（30.4）。
+- ``trusted_proxies``：可信任的轉發來源（IP 或 CIDR）；空＝不信任任何轉發標頭（31.3）。
+- ``llm_health.interval_s``：定期 ping 本機模型的間隔（秒）；0＝只在啟動時 ping（31.4）。
 
 環境變數覆寫：``TRPG_PUBLIC_URL``、``TRPG_TRUSTED_PROXIES``（逗號分隔）。設定檔路徑和帳號設定相同
 （``TRPG_SERVER_CONFIG``，預設 ``config/server.toml``）。

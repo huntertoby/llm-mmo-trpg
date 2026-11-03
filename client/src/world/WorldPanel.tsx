@@ -6,12 +6,14 @@
 // 「任務與線頭」切換左欄。
 // 5C-1：小鎮的「雇用傭兵」（面板內展開）、「隊伍」面板、遇敵面板的我方改用後端的 `allies_zh`。5C-2：雇用分傭兵／影子兩頁、「我的影子」面板。
 // 5D-1：角色狀態加金幣與任務幣；有店的地點加「商店」（面板內展開）；右側「背包」面板（腰包整理、野外用藥）。
+// 5D-3：有鐵匠或附魔台的地點加「鐵匠」（面板內展開，同商店）。
 import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { growthBadge } from "./growth";
 import { InventoryPanel, ShopPanel } from "./EconomyPanel";
+import { SmithyPanel } from "./SmithyPanel";
 import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { questBadge } from "./story";
@@ -96,6 +98,7 @@ function HerePanel({
   const here = view.here;
   const [editing, setEditing] = useState(false);
   const [shopping, setShopping] = useState(false);
+  const [smithing, setSmithing] = useState(false);
   const hiring = useHireToggle(view.party);
   const free = view.encounter === null && view.battle_id === null;
   return (
@@ -135,6 +138,13 @@ function HerePanel({
           <Hint text={`${view.shop.name_zh}：消耗品、粗料、染料；特產每週限量`}>
             <button type="button" aria-expanded={shopping} disabled={busy} onClick={() => setShopping((v) => !v)} data-testid="world-shop-toggle">
               {shopping ? "收起商店" : "商店"}
+            </button>
+          </Hint>
+        )}
+        {view.crafting != null && (
+          <Hint text="鐵匠：打造、強化、分解；附魔台：重骰、指定詞條">
+            <button type="button" aria-expanded={smithing} disabled={busy} onClick={() => setSmithing((v) => !v)} data-testid="world-smithy-toggle">
+              {smithing ? "收起鐵匠" : "鐵匠"}
             </button>
           </Hint>
         )}
@@ -193,6 +203,7 @@ function HerePanel({
       )}
       {hiring.open && view.party != null && <HireEditor party={view.party} busy={busy} onAct={onAct} />}
       {shopping && view.shop != null && <ShopPanel shop={view.shop} inventory={view.inventory} busy={busy} onAct={onAct} />}
+      {smithing && view.crafting != null && <SmithyPanel crafting={view.crafting} busy={busy} onAct={onAct} />}
       {here.can_loadout && editing && (
         <LoadoutEditor
           key={view.character.skills.map((s) => s.id).join(",")}

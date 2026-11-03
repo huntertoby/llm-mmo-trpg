@@ -68,3 +68,12 @@ npcs:
     speech_zh: 只用問句回答
     secret_zh: 是裂痕異象的見證者
     hooks_zh: 隱藏地點；狐族主角有專屬對話
+  # Phase 5D-3：18、20 沒寫鐵匠是誰，開發 PM 加的最小人設卡（代決 5D3-1，待玩法 PM 補完）。
+  - id: smith_shi
+    name_zh: 石師傅
+    role_zh: 鐵匠
+    location: mist_ferry
+    personality_zh: 寡言、手藝自負
+    speech_zh: 話少，常用打鐵比喻
+    secret_zh: 年輕時替青霧觀打過劍陣弟子的劍
+    hooks_zh: 打造、強化、分解；隱藏配方要靠自己試

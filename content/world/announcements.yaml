@@ -1,4 +1,4 @@
-# Discord 公告的模板（Phase 5E-3；docs/phases/Phase5計畫.md 30.6）。
+# Discord 公告的模板（Phase 5E-3；docs/phases/Phase5計畫.md 31.6）。
 # 變數用 $name（Python string.Template）；用到不認得的變數 → 載入錯誤（trpg.api.announce）。
 # 5E-4 會改成每天 6 點前預先請 LLM 產生，這裡的模板是退路。
 #

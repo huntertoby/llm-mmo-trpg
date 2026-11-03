@@ -189,8 +189,15 @@ export function InventoryPanel({ inventory, busy, onAct, canUse }: ActProps & { 
           </ul>
         </>
       )}
+      {(inventory.resonance_zh ?? []).length > 0 && (
+        <ul className="world-shop-list small" data-testid="world-resonance">
+          {(inventory.resonance_zh ?? []).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
       <div className="section-title small">
-        腰包　<span className="muted">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
+        腰包<span className="muted">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
       </div>
       {inventory.pouch.length === 0 ? (
         <div className="muted small">沒帶東西。</div>

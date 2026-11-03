@@ -29,6 +29,17 @@ from trpg.content.world_situations import (
 )
 from trpg.engine.actions import Step
 from trpg.shared.types import Attribute, Team
+from trpg.world.crafting_actions import (
+    AffixChangedEvent,
+    CraftAction,
+    EnhanceAction,
+    GearCraftedEvent,
+    GearEnhancedEvent,
+    GearSalvagedEvent,
+    ImbueAction,
+    RerollAction,
+    SalvageAction,
+)
 from trpg.world.economy_actions import (
     BuyAction,
     CurrencyGainedEvent,
@@ -384,7 +395,12 @@ type WorldAction = Annotated[
     | SellAction
     | PouchAction
     | UseItemAction
-    | EquipAction,  # 5D-2
+    | EquipAction  # 5D-2
+    | CraftAction  # 5D-3
+    | EnhanceAction
+    | RerollAction
+    | ImbueAction
+    | SalvageAction,
     Field(discriminator="kind"),
 ]
 
@@ -1005,6 +1021,10 @@ type WorldEvent = Annotated[
     | PouchUsedEvent
     | CurrencyGainedEvent
     | LootGainedEvent  # 5D-2
-    | ItemEquippedEvent,
+    | ItemEquippedEvent
+    | GearCraftedEvent  # 5D-3
+    | GearEnhancedEvent
+    | AffixChangedEvent
+    | GearSalvagedEvent,
     Field(discriminator="kind"),
 ]

@@ -1,4 +1,4 @@
-"""全服首殺紀錄與公告文字（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.5、30.6）。"""
+"""全服首殺紀錄與公告文字（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.5、31.6）。"""
 
 from __future__ import annotations
 

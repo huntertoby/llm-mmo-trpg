@@ -65,6 +65,8 @@ class InventoryView(_ApiModel):
     """背包＋腰包合計的消耗品（整理腰包的選單用；``count`` 是合計個數）。"""
     equipped_zh: tuple[str, ...] = ()
     """穿戴中的裝備（每欄一句，例「身體：稀有布衣（3 級）」；Phase 5D-2）。"""
+    resonance_zh: tuple[str, ...] = ()
+    """目前觸發的裝備共鳴（Phase 5D-3，M3；例「霧隱共鳴（隱蔽 2 件）：敏捷 +2」）。"""
 
 
 class ShopItemView(_ApiModel):

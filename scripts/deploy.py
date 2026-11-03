@@ -1,4 +1,4 @@
-"""部署用的啟動與檢查（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.8；``docs/部署說明.md``）。
+"""部署用的啟動與檢查（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.8；``docs/部署說明.md``）。
 
     uv run python scripts/deploy.py check    # 開服前的檢查（只檢查，不改任何東西）
     uv run python scripts/deploy.py server   # 啟動遊戲伺服器（照 [deploy] host／port）

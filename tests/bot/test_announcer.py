@@ -1,4 +1,4 @@
-"""每日公告與首殺公告的排程（Phase 5E-3；計畫 30.6）。用假 Discord，不連網。"""
+"""每日公告與首殺公告的排程（Phase 5E-3；計畫 31.6）。用假 Discord，不連網。"""
 
 from __future__ import annotations
 

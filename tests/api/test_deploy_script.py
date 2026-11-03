@@ -1,4 +1,4 @@
-"""``scripts/deploy.py`` 與啟動腳本（Phase 5E-3；計畫 30.8）。不啟動任何程序。"""
+"""``scripts/deploy.py`` 與啟動腳本（Phase 5E-3；計畫 31.8）。不啟動任何程序。"""
 
 from __future__ import annotations
 

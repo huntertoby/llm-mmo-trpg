@@ -1,4 +1,4 @@
-"""本機模型的健康檢查（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.4）。"""
+"""本機模型的健康檢查（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.4）。"""
 
 from __future__ import annotations
 

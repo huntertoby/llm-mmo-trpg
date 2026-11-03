@@ -1,0 +1,57 @@
+# 鐵匠與附魔台（Phase 5D-3；docs/phases/Phase5計畫.md 30.2；schema：src/trpg/content/world_crafting.py）。
+# 規則依 docs/design/08-裝備.md 8.13、8.14、8.15、8.20、8.26；隱藏配方依 20-第一季商店與裝備內容.md 20.3、20.4
+# （優先）與 18.2.4、19.2.4。費用、用量、傾向都是開發 PM 定的初值（代決 5D3-*），被改時只動這份資料。
+
+# 8.26.1：鐵匠＝打造、強化（分解也在這）；附魔台＝重骰、精華指定。18、20 沒寫鐵匠是誰，
+# 霧渡鎮加最小人設卡「石師傅」（代決 5D3-1）；附魔台是同鎮的設施，沒有 NPC。
+stations:
+  - {id: smithy_mist_ferry, kind: smithy, name_zh: 石記鐵鋪, region: cloud_ridge, location: mist_ferry, npc: smith_shi}
+  - {id: enchanter_mist_ferry, kind: enchanter, name_zh: 渡口附魔台, region: cloud_ridge, location: mist_ferry}
+
+craft:
+  # 稀有起才有 1 條 build 詞條（item_gen.yaml 的 required），所以打造只有稀有、史詩（代決 5D3-2）。
+  # 金幣＝gold_per_level × 物品等級（8.15 打造手續費）；史詩另收任務幣（8.15「高階打造」）。
+  rarities:
+    rare: {gold_per_level: 10}
+    epic: {gold_per_level: 20, quest_coins: 2}
+  # 8.13「打造的材料用量依部位預算比例調整」：主手 30%、身體 20%、其餘 ≤10%（8.22）
+  grade_amount: {weapon: 3, body: 2, offhand: 1, head: 1, hands: 1, feet: 1, neck: 1, ring: 1}
+  flavor_max: 3            # 特色材料最多 3 種，每種 1 個（代決 5D3-4）
+  leaning_weight: 4        # M2：材料傾向的詞條在抽詞條時權重 ×4（是偏向，不是限制；代決 5D3-5）
+  grade_cap: {coarse: 3, fine: 7, superior: 10}   # 8.26.2
+
+essence: item_essence      # 8.14：分解裝備得到，重骰、指定詞條花掉
+
+# M2：特色材料 → 抽詞條時偏向的詞條、打出來的裝備帶的共鳴關鍵字（M3「同區同族的裝備自然帶相同關鍵字」）。
+# 傾向照 items.yaml 的說明（18.2.4、19.2.4）；沒有現成詞條的傾向（隱蔽、流血、受傷回血…）用最接近的屬性。
+materials:
+  item_mist_crystal: {leanings: [affix_attr_dex, affix_cond_still_defense], resonance: concealed}        # 霧晶：隱蔽、閃避
+  item_talisman_ash: {leanings: [affix_attack_lightning, affix_weapon_lightning, affix_attr_wil], resonance: charged}  # 符紙灰：帶電、控制抵抗
+  item_cinnabar: {leanings: [affix_attr_wis, affix_attack_poison, affix_weapon_poison], resonance: poisoned}  # 丹砂：治療、中毒
+  item_green_bamboo: {leanings: [affix_attr_dex]}                                                           # 青竹節：敏捷、移動
+  item_wolf_fang: {leanings: [affix_attr_str, affix_attack_combo, affix_trait_dagger_backstab_die]}         # 狼牙：流血、包抄
+  item_thunder_feather: {leanings: [affix_attack_lightning, affix_weapon_lightning, affix_cond_height_hit, affix_trait_bow_high_range], resonance: charged}  # 雷羽：帶電、高處
+  item_living_bone: {leanings: [affix_max_hp, affix_attr_con]}                                              # 活血骨：受傷回血
+  item_summit_mist_crystal: {leanings: [affix_attr_wil, affix_attr_int], resonance: concealed}             # 雲頂霧晶
+  item_lava_core: {leanings: [affix_attack_fire, affix_weapon_fire, affix_trig_thorns_burn], resonance: ignite}  # 熔岩核：燃燒
+  item_frost_ember: {leanings: [affix_attack_ice, affix_weapon_ice], resonance: frozen}                    # 寒燼：冰
+  item_molten_heart: {leanings: [affix_resist_fire, affix_attr_con], resonance: ignite}                    # 熔心晶
+
+# M7、20.3、20.4：部位相同＋特色材料組合完全相同 → 獨特裝備（稀有度史詩；玩家選的 build 詞條換成獨特
+# 詞條，代決 5D3-7）。提示：驚雷霧袍＝霧渡鎮酒館「雷雨夜的霧最濃」（world/events 的傳聞）；
+# 另外兩個的提示在餘燼集（荒原內容段）。
+hidden:
+  - {id: recipe_thunder_mist_robe, name_zh: 驚雷霧袍, slot_type: body, materials: [item_mist_crystal, item_thunder_feather, item_talisman_ash], affix: affix_unique_thunder_mist}
+  - {id: recipe_steam_bracers, name_zh: 蒸汽護腕, slot_type: hands, materials: [item_mist_crystal, item_lava_core], affix: affix_unique_steam_guard}
+  - {id: recipe_frostfire_ring, name_zh: 冰火雙生戒, slot_type: ring, materials: [item_frost_ember, item_molten_heart], affix: affix_unique_frostfire}
+
+# 8.14 強化 +1～+3：每級基礎加成 +2%（武器傷害、其他部位防禦；代決 5D3-10）。
+# 金幣＝gold_per_level × 物品等級 × 目標等級；通用料（物品等級 ≤3 粗、≤7 精、其餘上）× 目標等級。
+enhance: {max_level: 3, step_permille: 20, gold_per_level: 10}
+
+# 8.14、8.20：重骰同一件越骰越貴（gold_base ＋ gold_step × 這件已重骰／指定的次數）；指定比較貴。
+reroll: {essence: 1, gold_base: 20, gold_step: 20}
+imbue: {essence: 3, gold_base: 60, gold_step: 20}
+
+# 8.14：分解裝備 → 精華（傳說不能分解）
+salvage: {common: 1, uncommon: 1, rare: 2, epic: 3}

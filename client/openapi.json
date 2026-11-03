@@ -4808,6 +4808,472 @@
         ],
         "title": "CoverOut"
       },
+      "CraftAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "craft",
+            "title": "Kind",
+            "default": "craft"
+          },
+          "station": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Station"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{10}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "slot_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlotType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "rare",
+                  "epic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "affix": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^affix_[a-z0-9_]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affix"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^item_[a-z0-9_]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Materials",
+            "default": []
+          },
+          "item_level": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 99.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Level"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "station"
+        ],
+        "title": "CraftAction",
+        "description": "在鐵匠打造（8.13、8.20）：給配方的各欄，或只給 ``code``（世界記得的配方碼）。"
+      },
+      "CraftGearView": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "worn": {
+            "type": "boolean",
+            "title": "Worn"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "enhance": {
+            "type": "integer",
+            "title": "Enhance",
+            "default": 0
+          },
+          "can_enhance": {
+            "type": "boolean",
+            "title": "Can Enhance",
+            "default": false
+          },
+          "enhance_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enhance Zh"
+          },
+          "can_salvage": {
+            "type": "boolean",
+            "title": "Can Salvage",
+            "default": false
+          },
+          "salvage_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salvage Zh"
+          },
+          "reroll_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reroll Zh"
+          },
+          "imbue_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imbue Zh"
+          },
+          "affixes": {
+            "items": {
+              "$ref": "#/components/schemas/GearAffixView"
+            },
+            "type": "array",
+            "title": "Affixes",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "name_zh",
+          "worn",
+          "description_zh"
+        ],
+        "title": "CraftGearView",
+        "description": "背包或穿戴中的一件裝備。"
+      },
+      "CraftMaterialView": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "grade": {
+            "type": "boolean",
+            "title": "Grade"
+          },
+          "level_cap": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Cap"
+          },
+          "leaning_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leaning Zh"
+          },
+          "resonance_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resonance Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "name_zh",
+          "count",
+          "grade"
+        ],
+        "title": "CraftMaterialView",
+        "description": "背包裡能打造的材料。"
+      },
+      "CraftOptionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text_zh"
+        ],
+        "title": "CraftOptionView"
+      },
+      "CraftRarityView": {
+        "properties": {
+          "rarity": {
+            "type": "string",
+            "title": "Rarity"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "cost_zh": {
+            "type": "string",
+            "title": "Cost Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rarity",
+          "name_zh",
+          "cost_zh"
+        ],
+        "title": "CraftRarityView"
+      },
+      "CraftSlotView": {
+        "properties": {
+          "slot_type": {
+            "type": "string",
+            "title": "Slot Type"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "grade_amount": {
+            "type": "integer",
+            "title": "Grade Amount"
+          },
+          "affixes": {
+            "items": {
+              "$ref": "#/components/schemas/CraftOptionView"
+            },
+            "type": "array",
+            "title": "Affixes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot_type",
+          "name_zh",
+          "grade_amount",
+          "affixes"
+        ],
+        "title": "CraftSlotView",
+        "description": "一個能打造的部位與能指定的 build 詞條。"
+      },
+      "CraftingView": {
+        "properties": {
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/StationView"
+            },
+            "type": "array",
+            "title": "Stations"
+          },
+          "smithy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smithy"
+          },
+          "enchanter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enchanter"
+          },
+          "can_use": {
+            "type": "boolean",
+            "title": "Can Use"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/CraftSlotView"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "rarities": {
+            "items": {
+              "$ref": "#/components/schemas/CraftRarityView"
+            },
+            "type": "array",
+            "title": "Rarities"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/CraftMaterialView"
+            },
+            "type": "array",
+            "title": "Materials"
+          },
+          "flavor_max": {
+            "type": "integer",
+            "title": "Flavor Max"
+          },
+          "recipes": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeView"
+            },
+            "type": "array",
+            "title": "Recipes"
+          },
+          "gear": {
+            "items": {
+              "$ref": "#/components/schemas/CraftGearView"
+            },
+            "type": "array",
+            "title": "Gear"
+          },
+          "essence": {
+            "type": "integer",
+            "title": "Essence"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stations",
+          "smithy",
+          "enchanter",
+          "can_use",
+          "problem_zh",
+          "slots",
+          "rarities",
+          "materials",
+          "flavor_max",
+          "recipes",
+          "gear",
+          "essence",
+          "note_zh"
+        ],
+        "title": "CraftingView",
+        "description": "角色所在地點的鐵匠與附魔台（沒有設施時 ``WorldView.crafting`` 是 ``None``）。"
+      },
       "CreateBattleRequest": {
         "properties": {
           "map_id": {
@@ -5885,6 +6351,34 @@
         ],
         "title": "EndTurn",
         "description": "結束回合。"
+      },
+      "EnhanceAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "enhance",
+            "title": "Kind",
+            "default": "enhance"
+          },
+          "station": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Station"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Item"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "station",
+          "item"
+        ],
+        "title": "EnhanceAction",
+        "description": "在鐵匠強化一件裝備（背包或穿戴中；+1，最多 +3，8.14）。"
       },
       "EquipAction": {
         "properties": {
@@ -7315,6 +7809,38 @@
         ],
         "title": "GearAffixPick",
         "description": "自訂物品上的一條詞條：白名單 id ＋ 數值（詞條沒有數值範圍時不填）。"
+      },
+      "GearAffixView": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "can_change": {
+            "type": "boolean",
+            "title": "Can Change"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/CraftOptionView"
+            },
+            "type": "array",
+            "title": "Choices",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "text_zh",
+          "can_change"
+        ],
+        "title": "GearAffixView"
       },
       "GearCandidateOut": {
         "properties": {
@@ -9258,6 +9784,47 @@
         "title": "IgnoredOrder",
         "description": "被忽略的指令與原因。``scope`` 為 ``\"team\"`` 或單位 ID。"
       },
+      "ImbueAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "imbue",
+            "title": "Kind",
+            "default": "imbue"
+          },
+          "station": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Station"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Item"
+          },
+          "index": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "affix": {
+            "type": "string",
+            "pattern": "^affix_[a-z0-9_]+$",
+            "title": "Affix"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "station",
+          "item",
+          "index",
+          "affix"
+        ],
+        "title": "ImbueAction",
+        "description": "在附魔台花精華把一條詞條指定成 ``affix``（8.20「完全沒有隨機」）。"
+      },
       "InfuseOptionsOut": {
         "properties": {
           "summon_id": {
@@ -9717,6 +10284,14 @@
             },
             "type": "array",
             "title": "Equipped Zh",
+            "default": []
+          },
+          "resonance_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Resonance Zh",
             "default": []
           }
         },
@@ -12716,6 +13291,57 @@
         "title": "ReactionRuleView",
         "description": "單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。"
       },
+      "RecipeView": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          },
+          "discoverer_name": {
+            "type": "string",
+            "title": "Discoverer Name"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "can_craft": {
+            "type": "boolean",
+            "title": "Can Craft"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "name_zh",
+          "summary_zh",
+          "discoverer_name",
+          "mine",
+          "can_craft"
+        ],
+        "title": "RecipeView",
+        "description": "世界記得的一份配方（M6）。"
+      },
       "ReflashSlotOut": {
         "properties": {
           "slot": {
@@ -12770,6 +13396,41 @@
         ],
         "title": "Reload",
         "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
+      },
+      "RerollAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reroll",
+            "title": "Kind",
+            "default": "reroll"
+          },
+          "station": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Station"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Item"
+          },
+          "index": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 0.0,
+            "title": "Index"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "station",
+          "item",
+          "index"
+        ],
+        "title": "RerollAction",
+        "description": "在附魔台重骰一條詞條（8.20：由「指紋＋位置＋n」決定；越骰越貴）。"
       },
       "RespecAction": {
         "properties": {
@@ -13191,6 +13852,34 @@
         ],
         "title": "RuneView",
         "description": "格子上的符文（Phase 3-23 ``inscribe``；雙方都看得到，但只有 ``owner_id`` 自己讀得到）。\n\n``element``／``tag``：恰好一個；``name_zh`` 例如「雷紋」；``remaining``：剩餘的環境回合數。"
+      },
+      "SalvageAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "salvage",
+            "title": "Kind",
+            "default": "salvage"
+          },
+          "station": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Station"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Item"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "station",
+          "item"
+        ],
+        "title": "SalvageAction",
+        "description": "在鐵匠分解背包裡的一件裝備，得到精華（8.14）。"
       },
       "SaveOut": {
         "properties": {
@@ -15008,6 +15697,41 @@
         ],
         "title": "StartWeaponOption",
         "description": "開局可選的武器（Phase 3-24b2）。"
+      },
+      "StationView": {
+        "properties": {
+          "station": {
+            "type": "string",
+            "title": "Station"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "npc_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Npc Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "station",
+          "kind",
+          "name_zh"
+        ],
+        "title": "StationView"
       },
       "StatusChanceOut": {
         "properties": {
@@ -17848,6 +18572,21 @@
           },
           {
             "$ref": "#/components/schemas/EquipAction"
+          },
+          {
+            "$ref": "#/components/schemas/CraftAction"
+          },
+          {
+            "$ref": "#/components/schemas/EnhanceAction"
+          },
+          {
+            "$ref": "#/components/schemas/RerollAction"
+          },
+          {
+            "$ref": "#/components/schemas/ImbueAction"
+          },
+          {
+            "$ref": "#/components/schemas/SalvageAction"
           }
         ],
         "discriminator": {
@@ -17857,20 +18596,25 @@
             "allocate": "#/components/schemas/AllocateAction",
             "buy": "#/components/schemas/BuyAction",
             "camp": "#/components/schemas/CampAction",
+            "craft": "#/components/schemas/CraftAction",
             "dissolve": "#/components/schemas/DissolveAction",
+            "enhance": "#/components/schemas/EnhanceAction",
             "equip": "#/components/schemas/EquipAction",
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
             "hire": "#/components/schemas/HireAction",
+            "imbue": "#/components/schemas/ImbueAction",
             "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
             "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
+            "reroll": "#/components/schemas/RerollAction",
             "respec": "#/components/schemas/RespecAction",
             "rest": "#/components/schemas/RestAction",
             "retreat": "#/components/schemas/RetreatAction",
+            "salvage": "#/components/schemas/SalvageAction",
             "sell": "#/components/schemas/SellAction",
             "shadow_ai": "#/components/schemas/ShadowAiAction",
             "swear_oath": "#/components/schemas/SwearOathAction",
@@ -18511,6 +19255,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ShopView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "crafting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CraftingView"
               },
               {
                 "type": "null"

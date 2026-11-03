@@ -1,4 +1,4 @@
-"""經 Tunnel 時的真實 IP 與網路設定（Phase 5E-3；``docs/phases/Phase5計畫.md`` 30.2、30.3）。"""
+"""經 Tunnel 時的真實 IP 與網路設定（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.2、31.3）。"""
 
 from __future__ import annotations
 

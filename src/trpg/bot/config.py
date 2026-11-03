@@ -7,7 +7,7 @@
   ``TRPG_BOT_ANNOUNCE_CHANNEL_ID`` 覆寫。
 - 缺值或 ID 不是數字 → :class:`BotConfigError`，列出全部缺的欄位與環境變數，**不印 token**。
 - 遊戲伺服器不讀這個設定：Bot 設定缺值不影響伺服器。
-- ``[announce]``（5E-3，計畫 30.2）：每日公告的時區與時間（:func:`load_announce_settings`；沒填用
+- ``[announce]``（5E-3，計畫 31.2）：每日公告的時區與時間（:func:`load_announce_settings`；沒填用
   預設 ``Asia/Taipei`` 6 點）。系統沒有時區資料（Windows 沒裝 ``tzdata``）時用
   ``utc_offset_minutes``。
 """

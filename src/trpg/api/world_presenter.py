@@ -12,6 +12,12 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Final
 
+from trpg.api.world_crafting_view import (
+    crafting_event_line,
+    crafting_view,
+    resonance_lines,
+)
+from trpg.api.world_economy_schemas import InventoryView
 from trpg.api.world_economy_view import (
     economy_event_line,
     inventory_view,
@@ -439,7 +445,14 @@ def _service_line(library: ContentLibrary, region: str, event: WorldEvent) -> st
     return None
 
 
-_LINES = (_move_line, _battle_line, _service_line, party_event_line, economy_event_line)
+_LINES = (
+    _move_line,
+    _battle_line,
+    _service_line,
+    party_event_line,
+    economy_event_line,
+    crafting_event_line,
+)
 
 
 def event_lines(
@@ -521,6 +534,16 @@ def world_view(
         party=party_view(library, world, char, in_battle=in_battle),
         my_shadow=my_shadow_view(library, world, char, in_battle=in_battle),
         wallet=wallet_view(library, char),
-        inventory=inventory_view(library, char, in_battle=in_battle),
+        inventory=_inventory(library, char, in_battle=in_battle),
         shop=shop_view(library, world, char, now, in_battle=in_battle),
+        crafting=crafting_view(library, world, char, in_battle=in_battle),
     )
+
+
+def _inventory(
+    library: ContentLibrary, char: CharacterState, *, in_battle: bool
+) -> InventoryView | None:
+    """背包與腰包，加上目前的共鳴（5D-3）。"""
+    view = inventory_view(library, char, in_battle=in_battle)
+    lines = resonance_lines(library, char)
+    return view if view is None or not lines else view.model_copy(update={"resonance_zh": lines})
