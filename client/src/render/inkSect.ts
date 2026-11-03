@@ -5,6 +5,7 @@ import type { Ctx } from "./artDraw";
 import type { GearItem, Look } from "./appearance";
 import { darken } from "./color";
 import { dot, ellPts, ink, INK, MAT, stroke, type Pt, type View } from "./inkStyle";
+import { orientWeapon, restLean, type WeaponPoseOpt } from "./inkWeaponFrame";
 
 const RED = "#c0392b";
 const HAIR_FALLBACK = "#6a3a1e";
@@ -132,16 +133,15 @@ export function drawVeil(ctx: Ctx, it: GearItem, view: View): boolean {
 }
 
 // ============================== 手持：拂塵、符紙、傀儡線 ==============================
-const SIDE_TILT = 0.75;
 
 /** 修士的手持物（主手或副手）：拂塵 `whisk`、符紙 `talisman`、傀儡線 `puppet_cross`。回傳 false ＝ 不是這一層的 kind。 */
-export function drawSectHeld(ctx: Ctx, it: GearItem, key: string, x: number, y: number, o: { mirror: boolean; side: boolean }): boolean {
+export function drawSectHeld(ctx: Ctx, it: GearItem, key: string, x: number, y: number, o: { mirror: boolean; side: boolean } & WeaponPoseOpt): boolean {
   if (it.kind !== "whisk" && it.kind !== "talisman" && it.kind !== "puppet_cross") return false;
   ctx.save();
   ctx.translate(x, y);
   if (o.mirror) ctx.scale(-1, 1);
+  orientWeapon(ctx, it, o, restLean(ctx, it, o)); // 拂塵側面往前上斜；符紙、傀儡線不轉（inkWeaponFrame.ts）
   if (it.kind === "whisk") {
-    if (o.side) ctx.rotate(SIDE_TILT);
     ink(ctx, `${key}-handle`, [[-0.8, 4], [0.8, 4], [0.8, -10], [-0.8, -10]], MAT.wood, { shade: false, w: 0.6 });
     ink(ctx, `${key}-hair`, [[-1.4, -10], [1.4, -10], [3.6, -16], [2.4, -22], [0, -19], [-2, -23], [-3.4, -16]], "#f4f0e6", { w: 0.6 });
   } else if (it.kind === "talisman") {

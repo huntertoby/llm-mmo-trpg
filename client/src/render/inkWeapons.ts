@@ -3,11 +3,13 @@
 // 輪廓沿用現行造型（paperdoll.ts／paperdollGear.ts，放大約 1.3 倍到 C 骨架），改用 `ink()`／`stroke()` 畫，顏色照 `itemColors()`。
 // 座標：以手心為原點、往上為 -y；槍弩朝 +x（前方／外側）。握法：正面、背面略往外斜，側面往前傾（同 inkGear.ts 的握點規則）。
 // 不認得的形制 → 該 kind 的預設形制；不是這一層的 kind 回傳 false。
+// 6M-2：握法角度表與「統一座標」（握把在原點、作用端朝 -y，姿勢 `wpn` 用）在 inkWeaponFrame.ts；這裡的輪廓座標不變。
 import type { Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
 import { drawInkWeapon, metalOf, type ColorFn, type HeldOpt } from "./inkGear";
 import { dot, ellPts, iconHead, inIconMode, ink, MAT, stroke, type Pt } from "./inkStyle";
+import { orientWeapon, restLean } from "./inkWeaponFrame";
 
 const GOLD = MAT.gold;
 const WOOD = MAT.wood;
@@ -270,22 +272,6 @@ const SHAPES: Readonly<Record<string, Shape>> = {
   crossbow: drawCrossbow,
 };
 
-/** 槍弩：朝 +x，正面略往外上抬、側面幾乎水平。 */
-const GUNS: readonly string[] = ["pistol", "shotgun", "longgun", "crossbow"];
-/** [正面／背面往外斜, 側面往前傾]（弧度）；槍弩是朝上抬的角度。 */
-const LEAN: Readonly<Record<string, readonly [number, number]>> = {
-  greatsword: [0.18, 0.8],
-  hammer: [0.2, 0.5],
-  spear: [0.12, 0.4],
-  scythe: [0.12, 0.3],
-  fist: [0.1, 1.2],
-  whip: [0, 0],
-  pistol: [0.35, 0.05],
-  shotgun: [0.35, 0.05],
-  longgun: [0.35, 0.05],
-  crossbow: [0.35, 0.05],
-};
-
 /** 這一層畫得出來的手持物：魔導劍、權杖、圖騰杖，以及上面那些武器 kind。 */
 export function isInkWeaponMore(it: GearItem): boolean {
   if (it.kind === "sword") return it.form === "arcane";
@@ -297,16 +283,6 @@ function shapeOf(it: GearItem): Shape {
   if (it.kind === "sword") return drawArcaneSword;
   if (it.kind === "staff") return it.form === "totem" ? drawTotem : drawScepter;
   return SHAPES[it.kind]!;
-}
-
-function leanOf(ctx: Ctx, it: GearItem, o: HeldOpt): number {
-  if (inIconMode(ctx)) return 0; // 小圖示一律 45° 斜放，由圖示自己轉，不再加握法的傾斜
-  if (it.kind === "sword") return o.side ? 0.75 : 0;
-  if (it.kind === "staff") return o.side ? (it.form === "totem" ? 0.4 : 0.4) : 0;
-  const [front, side] = LEAN[it.kind] ?? [0, 0];
-  const gun = GUNS.includes(it.kind);
-  if (!o.side) return gun ? -front : front;
-  return gun ? -side + (o.far ? 0.2 : 0) : side;
 }
 
 /**
@@ -329,7 +305,7 @@ export function drawInkWeaponMore(ctx: Ctx, it: GearItem, key: string, x: number
   // 外側朝 +x：正面主手（mirror ＝ false）在畫面左，外側是 -x
   if (!o.side && !o.mirror) ctx.scale(-1, 1);
   if (o.side && it.kind === "staff" && it.form === "totem") ctx.translate(2, 0);
-  ctx.rotate(leanOf(ctx, it, o));
+  orientWeapon(ctx, it, o, restLean(ctx, it, o)); // 握法表在 inkWeaponFrame.ts；有姿勢 `wpn` 時改用統一座標
   shapeOf(it)(ctx, it, key, c);
   ctx.restore();
   return true;

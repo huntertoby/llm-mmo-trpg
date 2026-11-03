@@ -11,6 +11,7 @@ import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { drawInkWeaponMore } from "./inkWeapons";
 import { drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawEye, drawInkHorns, drawInkTail, coverOf, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
 import { pz, type InkPose } from "./inkPose";
+import type { WeaponPoseOpt } from "./inkWeaponFrame";
 import { dot, ellPts, ink, INK, MAT, shadow, stroke, type Pt, type View, withShadeDir } from "./inkStyle";
 import { drawApron, drawBackItem, drawBareBody, drawBeads, drawBunBack, drawBunHair, drawMantle, drawSectHeld, drawVeil, drawWaist } from "./inkSect";
 
@@ -18,6 +19,8 @@ import { drawApron, drawBackItem, drawBareBody, drawBeads, drawBunBack, drawBunH
 /** 由 paperdoll.ts 提供的裝備顏色解析（避免循環匯入）。 */
 export interface InkHooks {
   colors: (it: GearItem) => readonly [string, string];
+  /** 測試用（6M-2）：每畫一件武器就回報握把（手）與作用端在畫布座標的位置。正式畫面不給。 */
+  probe?: (slot: "main" | "off", hand: Pt, tip: Pt) => void;
 }
 
 const SKIN_FALLBACK = "#eab48a";
@@ -354,7 +357,7 @@ function spreadOf(spec: DollSpec): number {
   return spec.gear.main_hand?.kind === "dagger" && offItemOf(spec)?.kind === "dagger" ? 2 : 0;
 }
 
-/** 手持物（C 畫法：inkGear／inkOffhand／inkWeapons；`resolveDoll` 只留認得的 kind，不會走到畫不出來的）。`inkOpt` ＝ C 畫法專用的 key 與鏡像（背面主手鏡像、副手不鏡像）。 */
+/** 手持物（C 畫法：inkGear／inkOffhand／inkWeapons；`resolveDoll` 只留認得的 kind，不會走到畫不出來的）。`inkOpt` ＝ C 畫法專用的 key 與鏡像（背面主手鏡像、副手不鏡像）；`main` ＝ 主手才給的姿勢參數（6M-2：`wpn`、`pull`）。 */
 function drawHeld(
   t: Ctxt,
   it: GearItem,
@@ -362,11 +365,15 @@ function drawHeld(
   y: number,
   o: { front: boolean; mirror: boolean; far: boolean; side: boolean },
   inkOpt?: { key: string; mirror: boolean },
+  main?: WeaponPoseOpt,
 ): void {
   if (!o.side && drawInkShieldFront(t.ctx, it, x, y, t.hooks.colors)) return;
-  if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors)) return;
   const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
-  const held = { mirror: k.mirror, side: o.side, far: o.far, back: !o.front };
+  const hp = t.hooks.probe;
+  const pose = main ?? {};
+  const p: WeaponPoseOpt = hp === undefined ? pose : { ...pose, probe: (hand, tip) => hp(main !== undefined ? "main" : "off", hand, tip) };
+  if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors, p)) return;
+  const held = { mirror: k.mirror, side: o.side, far: o.far, back: !o.front, ...p };
   if (drawSectHeld(t.ctx, it, k.key, x, y, held)) return; // 5A-ART3：拂塵、符紙、傀儡線
   if (!drawInkWeapon(t.ctx, it, k.key, x, y, held, t.hooks.colors)) drawInkWeaponMore(t.ctx, it, k.key, x, y, held, t.hooks.colors);
 }
@@ -433,14 +440,20 @@ function drawFront(t: Ctxt): void {
   drawHeadgear(t, "front");
   joint(t, swing("armL"), () => {
     drawArmFront(t, -1);
-    if (gear.main_hand !== undefined) drawMain(t, HAND_FRONT[0] - spread, HAND_FRONT[1], () => drawHeld(t, gear.main_hand!, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false }));
+    if (gear.main_hand !== undefined) drawHeld(t, gear.main_hand, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false }, undefined, mainPose(t, false));
     drawHand(t, -9, -23.2, "hand-l", 0.32);
   });
 }
 
-/** 主手武器：有姿勢且給了 `wpn` 時繞手 (x,y) 轉 `wpn`（6M-1 是相對現有握法的增量）。 */
-function drawMain(t: Ctxt, x: number, y: number, fn: () => void): void {
-  joint(t, (ctx, p) => rotAt(ctx, x, y, pz(p, "wpn")), fn);
+/**
+ * 主手武器的姿勢參數（6M-2）：`wpn` ＝ 武器相對手的角度（統一座標，見 inkWeaponFrame.ts），只在側面生效（照樣張 storyDoll.js）；
+ * `pull` ＝ 弓弦。沒設姿勢、或沒給 `wpn` ＝ 照預設握法（和沒設姿勢時同一個角度）。
+ */
+function mainPose(t: Ctxt, side: boolean): WeaponPoseOpt {
+  const p = t.pose;
+  if (p === null) return {};
+  const wpn = side && typeof p.wpn === "number" && Number.isFinite(p.wpn) ? p.wpn : undefined;
+  return { wpn, pull: pz(p, "pull") };
 }
 
 /** 背面（朝北）：左右對調（主手在畫面右）、看不到臉；披風、尾巴蓋在身上，武器在身體後面。 */
@@ -458,7 +471,7 @@ function drawBack(t: Ctxt): void {
     ctx.restore();
   };
   const main = gear.main_hand;
-  if (main !== undefined) joint(t, swing("armL"), () => screen(() => drawMain(t, -HAND_FRONT[0] + spread, HAND_FRONT[1], () => drawHeld(t, main, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }))));
+  if (main !== undefined) joint(t, swing("armL"), () => screen(() => drawHeld(t, main, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }, mainPose(t, false))));
   if (off !== undefined && !isShield(off)) joint(t, swing("armR"), () => screen(() => drawHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false })));
   drawLegs(t, "back");
   drawBody(t, "back");
@@ -506,7 +519,7 @@ function drawSide(t: Ctxt): void {
   drawHeadgear(t, "side");
   const main = gear.main_hand;
   const held = (): void => {
-    if (main !== undefined) drawMain(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], () => drawHeld(t, main, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true }));
+    if (main !== undefined) drawHeld(t, main, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true }, undefined, mainPose(t, true));
     drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
   };
   if (t.pose === null) {
