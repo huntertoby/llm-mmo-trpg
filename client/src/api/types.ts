@@ -226,6 +226,8 @@ export type AccountView = Schemas["AccountView"];
 export type LoginResponse = Schemas["LoginResponse"];
 // 大世界（Phase 5A-5）
 export type WorldView = Schemas["WorldView"];
+/** 實地地圖（Phase 6B-2／6B-3）。 */
+export type FieldView = Schemas["FieldView"];
 export type WorldCharacterView = Schemas["WorldCharacterView"];
 export type WorldCharacterSummary = Schemas["WorldCharacterSummary"];
 export type WorldLocationView = Schemas["WorldLocationView"];
@@ -280,7 +282,10 @@ export type WorldAction =
   | (Omit<Schemas["LeagueEnterAction"], "ai"> & { ai?: string | null })
   | Schemas["LeagueWithdrawAction"]
   // 5F-3：挑戰賽季 Boss（扣帳號今天的 1 次，之後照一般遭遇開戰）
-  | Schemas["SeasonBossAction"];
+  | Schemas["SeasonBossAction"]
+  // 6B-2：實地地圖走路、傳送石
+  | Schemas["WalkAction"]
+  | Schemas["UseTeleportStoneAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];

@@ -1,0 +1,268 @@
+// 可走動的實地地圖畫面（Phase 6B-3；docs/phases/Phase6計畫.md 第 5 節）：用戰鬥的 `BattleRenderer` 畫 `WorldView.field`，
+// 點格子走過去（前端 BFS，超過 30 格分段送）、方向鍵／WASD 一次一格（排隊，同時只有一個請求在路上）、
+// 小人逐格平移（每格約 0.12 秒）、換地圖淡出淡入。走到設施或 NPC 旁邊按 E 或點它就開原本的面板；
+// 站在傳送石上顯示「傳送」按鈕。位置一律以伺服器回來的 `walk` 結果為準，失敗時顯示錯誤、位置不動。
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
+import { fitScale } from "../battle/stageLayout";
+import type { BattleRenderer } from "../render/BattleRenderer";
+import { BattleCanvas } from "../ui/BattleCanvas";
+import {
+  chunkPath,
+  fieldDrawModel,
+  fieldHighlights,
+  findPath,
+  hoverText,
+  interactTarget,
+  keyDirection,
+  nearTarget,
+  pathNextTo,
+  stepTarget,
+  targetAt,
+  walkAction,
+  walkedCells,
+  walkPlan,
+  type Direction,
+  type FieldTarget,
+} from "./fieldModel";
+
+interface Props {
+  view: WorldView;
+  busy: boolean;
+  /** 送一個世界動作，回傳新的畫面（失敗時已顯示錯誤，回傳 `null`）；不自動套用。 */
+  send(action: WorldAction): Promise<WorldView | null>;
+  /** 套用伺服器回來的畫面。 */
+  commit(view: WorldView): void;
+  /** 和設施或 NPC 互動（開對應的現有面板）。 */
+  onInteract(target: FieldTarget): void;
+}
+
+type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
+
+/** 方向鍵最多排幾步（快速連按時；超過的丟掉，避免放開鍵之後還一直走）。 */
+const KEY_QUEUE_MAX = 3;
+/** 換地圖前的淡出時間。 */
+const FADE_MS = 220;
+
+function typingInto(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+}
+
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
+export function WorldField({ view, busy, send, commit, onInteract }: Props) {
+  const field = view.field as FieldView;
+  const blocked = view.encounter != null || view.battle_id != null;
+  const rendererRef = useRef<BattleRenderer | null>(null);
+  // 失敗時重畫一次（動畫可能已經把小人移走；以舊位置為準）
+  const [redraw, setRedraw] = useState(0);
+  const model = useMemo(() => fieldDrawModel(field, view.character.name), [field, view.character.name, redraw]);
+  const [hover, setHover] = useState<Pos | null>(null);
+  const highlights = useMemo(() => fieldHighlights(field, hover), [field, hover]);
+  const [fading, setFading] = useState(false);
+  const [walking, setWalking] = useState(false);
+
+  // 依可用寬度縮放（高度留給標頭與按鈕列）
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [avail, setAvail] = useState({ width: 800, height: 600 });
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (box === null) return undefined;
+    const measure = () => setAvail({ width: box.clientWidth, height: Math.max(320, window.innerHeight - 190) });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(box);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  const scale = fitScale(avail, model, undefined, 0.4, 1.5);
+
+  // 換了地圖：淡入
+  useEffect(() => setFading(false), [field.map_id]);
+
+  // ---- 走路佇列（同時只有一個請求在路上）----
+  const latest = useRef({ field, blocked, busy, send, commit, onInteract });
+  latest.current = { field, blocked, busy, send, commit, onInteract };
+  const fieldNow = useRef<FieldView | null>(field);
+  useEffect(() => {
+    fieldNow.current = field;
+  }, [field]);
+  const jobs = useRef<Job[]>([]);
+  const running = useRef(false);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      jobs.current = [];
+    };
+  }, []);
+
+  /** 沿路徑走（分段送）；回傳是否在同一張地圖上走到了終點。 */
+  const walkPath = useCallback(async (path: readonly Pos[]): Promise<boolean> => {
+    let cur = fieldNow.current;
+    if (cur === null) return false;
+    for (const chunk of chunkPath(path)) {
+      const res = await latest.current.send(walkAction(chunk));
+      if (!alive.current) return false;
+      if (res === null) {
+        jobs.current = [];
+        setRedraw((n) => n + 1);
+        return false;
+      }
+      const after = res.field ?? null;
+      const cells = walkedCells(cur, chunk, after);
+      await rendererRef.current?.animate(walkPlan(cur.me, cells), () => !alive.current);
+      if (!alive.current) return false;
+      const changed = after === null || after.map_id !== cur.map_id;
+      if (changed) {
+        setFading(true);
+        await wait(FADE_MS);
+      }
+      fieldNow.current = after;
+      latest.current.commit(res);
+      const last = chunk[chunk.length - 1]!;
+      if (changed || res.encounter != null || after.me.x !== last.x || after.me.y !== last.y) {
+        jobs.current = [];
+        return false;
+      }
+      cur = after;
+    }
+    return true;
+  }, []);
+
+  const runJob = useCallback(
+    async (job: Job) => {
+      const cur = fieldNow.current;
+      if (cur === null || latest.current.blocked) {
+        jobs.current = [];
+        return;
+      }
+      if (job.kind === "dir") {
+        const next = stepTarget(cur, job.dir);
+        if (next !== null) await walkPath([next]);
+        return;
+      }
+      if (job.kind === "path") {
+        const path = findPath(cur, cur.me, job.to);
+        if (path !== null) await walkPath(path);
+        return;
+      }
+      const path = pathNextTo(cur, job.target);
+      if (path === null) return;
+      if (path.length > 0 && !(await walkPath(path))) return;
+      const now = fieldNow.current;
+      if (now !== null && now.map_id === cur.map_id && nearTarget(now.me, job.target)) latest.current.onInteract(job.target);
+    },
+    [walkPath],
+  );
+
+  const pump = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
+    setWalking(true);
+    try {
+      while (jobs.current.length > 0 && alive.current) {
+        const job = jobs.current.shift()!;
+        await runJob(job);
+      }
+    } finally {
+      running.current = false;
+      if (alive.current) setWalking(false);
+    }
+  }, [runJob]);
+
+  const enqueue = useCallback(
+    (job: Job, replace: boolean) => {
+      if (latest.current.blocked) return;
+      if (replace) jobs.current = [job];
+      else if (jobs.current.length < KEY_QUEUE_MAX) jobs.current.push(job);
+      void pump();
+    },
+    [pump],
+  );
+
+  // 方向鍵／WASD、E
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || typingInto(e.target)) return;
+      const dir = keyDirection(e.key);
+      if (dir !== null) {
+        e.preventDefault();
+        enqueue({ kind: "dir", dir }, false);
+        return;
+      }
+      if (e.key === "e" || e.key === "E") {
+        const cur = fieldNow.current;
+        const target = cur === null ? null : interactTarget(cur);
+        if (target !== null) {
+          e.preventDefault();
+          enqueue({ kind: "interact", target }, false);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enqueue]);
+
+  function click(tile: Pos) {
+    const target = targetAt(field, tile);
+    if (target !== null) enqueue({ kind: "interact", target }, true);
+    else enqueue({ kind: "path", to: tile }, true);
+  }
+
+  const onStone = field.stones.some((s) => s.x === field.me.x && s.y === field.me.y);
+  const teleport = (to: string) =>
+    void (async () => {
+      if (running.current) return;
+      setFading(true);
+      const res = await send({ kind: "use_teleport_stone", to });
+      if (res === null) {
+        setFading(false);
+        return;
+      }
+      fieldNow.current = res.field ?? null;
+      commit(res);
+      if (res.field?.map_id === field.map_id) setFading(false);
+    })();
+
+  const caption = hoverText(field, hover);
+  return (
+    <div className="world-field" data-testid="world-field" ref={boxRef}>
+      <div className={`world-field-stage${fading ? " fading" : ""}`} data-map={field.map_id}>
+        <BattleCanvas
+          model={model}
+          highlights={highlights}
+          flameOn={false}
+          scale={scale}
+          onTileClick={(t) => click(t)}
+          onTileHover={setHover}
+          onCancel={() => {
+            jobs.current = [];
+          }}
+          rendererRef={rendererRef}
+        />
+      </div>
+      <div className="world-field-bar small">
+        <span className="muted" data-testid="world-field-caption">
+          {caption ?? (blocked ? "有遭遇：先開戰或撤退" : "點格子走過去・方向鍵／WASD 走一格・E 互動")}
+        </span>
+        {onStone && field.stone_targets.length > 0 && (
+          <span className="world-field-stone" data-testid="world-field-stone">
+            {field.stone_targets.map((t) => (
+              <button key={t.id} type="button" disabled={busy || walking || blocked} onClick={() => teleport(t.id)} data-testid="world-teleport-stone">
+                傳送：{t.name_zh}
+              </button>
+            ))}
+          </span>
+        )}
+        {onStone && field.stone_targets.length === 0 && <span className="muted">傳送石已點亮（還沒有別的傳送石可以去）</span>}
+      </div>
+    </div>
+  );
+}
