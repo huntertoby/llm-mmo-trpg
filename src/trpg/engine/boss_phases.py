@@ -125,7 +125,9 @@ def _change_weather(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
     before = None if state.weather is None else state.weather.id
     if (before or CLEAR_WEATHER) == phase.weather:
         return
-    weather = state.phase_weathers[phase.weather]
+    weather = state.phase_weathers.get(phase.weather)
+    if weather is None:  # 設定沒放這個天氣（沒經過 with_phase_assets）：不改，同召喚範本缺少時落空
+        return
     state.weather = weather
     ctx.emit(
         WeatherChanged,
