@@ -387,3 +387,12 @@ for (const id of CREATURE_CLIP_IDS) {
   );
   section(`⑮ 6M-2・異形片段 ${id}（${clip.dur} 毫秒${clip.loop ? "，循環" : ""}）`, [creatureCell(CREATURE_DEMO[0]!, "沒設姿勢", null), ...cells]);
 }
+
+// ⑯ Phase 6M-3：弓的朝向（6M-2 驗收：弓身朝前、弓弦朝自己）。四朝向沒設姿勢＋側面站好、拉弦、射出（截前後對照用）
+const ARCHER = withGear({ main_hand: W("bow"), off_hand: undefined, cloak: { kind: "cape", color: "#2f6a4a" } });
+section("⑯ 6M-3・弓（四朝向沒設姿勢；側面站好、拉弦、射出）", [
+  ...FACINGS.map((f) => figureOf(ARCHER, f, `${f}・沒設姿勢`)),
+  posedCell(ARCHER, "east", "east・站好", REST_POSE),
+  posedCell(ARCHER, "east", "east・拉弦", { arm: -1.3, wpn: 2.87, pull: 6, lean: -0.05 }),
+  posedCell(ARCHER, "west", "west・射出", { arm: -1.3, wpn: 2.87 }),
+]);

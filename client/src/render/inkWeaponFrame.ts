@@ -14,8 +14,8 @@ export interface WeaponPoseOpt {
   wpn?: number | undefined;
   /** 弓弦拉開的距離（虛擬像素，往握把的反方向）；> 0.5 時搭上一支箭。 */
   pull?: number | undefined;
-  /** 測試用：回報手（＝握把）與作用端在畫布座標的位置。正式畫面不給。 */
-  probe?: ((hand: Pt, tip: Pt) => void) | undefined;
+  /** 測試用：回報手（＝握把）、作用端與刃點（斧、戟、鐮才有，6M-3）在畫布座標的位置。正式畫面不給。 */
+  probe?: ((hand: Pt, tip: Pt, edge?: Pt) => void) | undefined;
 }
 
 /** 畫一件手持物需要知道的握法資訊（inkGear 的 HeldOpt 是它的超集）。 */
@@ -122,7 +122,8 @@ function rangedTip(it: GearItem, o: HoldView): Pt | undefined {
       if (it.form === "scepter") return [0, -34];
       return it.form === "wand" ? [0, -30.4 * 0.75] : [0, -30.4]; // 魔杖在旋轉之後縮 0.75
     case "bow":
-      return [-6, 0]; // 箭的方向：弓弦在 +x、弓身往 -x 彎
+      // 箭的方向：正面、背面照現有輪廓（弓弦在 +x、弓身往 -x 彎）；側面左右翻過來，弓身朝前、弓弦朝自己（6M-3）
+      return o.side ? [6, 0] : [-6, 0];
     case "crossbow":
       return it.form === "heavy" ? [18.6, -4.8] : [17.6, -4.8];
     case "pistol":
@@ -145,6 +146,30 @@ function rangedTip(it: GearItem, o: HoldView): Pt | undefined {
 /** 作用端在現有座標（握把＝原點、平移到手並鏡像之後、旋轉之前）；不是武器（盾、書）回傳 `undefined`。 */
 export function weaponTip(it: GearItem, o: HoldView): Pt | undefined {
   return meleeTip(it, o) ?? rangedTip(it, o);
+}
+
+/**
+ * 刃點（6M-3，6M-2 驗收第 2 點）：斧、戟、鐮的刃在柄的側邊，揮砍弧光與受擊點從刃的中心畫（技能特效批用）。
+ * 座標和 `weaponTip` 相同（現有座標，握把＝原點）；取刃口的中點，落在畫出來的輪廓上。
+ * 斧：主刃刃口 (9.4,-20.6)；戟：斧刃刃口中點 (8.5,-42.4)；鐮：內彎刃口的中段 (11,-28)。
+ */
+const EDGE: Readonly<Record<string, Pt>> = {
+  axe: [9.4, -20.6],
+  halberd: [8.5, -42.4],
+  scythe: [11, -28],
+};
+
+/** 有側刃的武器（斧、戟、鐮）的刃點；其他武器回傳 `undefined`（揮砍弧光與受擊點照作用端）。 */
+export function weaponEdge(it: GearItem): Pt | undefined {
+  if (it.kind === "axe") return EDGE["axe"];
+  if (it.kind === "spear" && it.form === "halberd") return EDGE["halberd"];
+  if (it.kind === "scythe") return EDGE["scythe"];
+  return undefined;
+}
+
+/** 揮砍弧光與受擊點：有刃點用刃點，否則用作用端。 */
+export function weaponStrikePoint(it: GearItem, o: HoldView): Pt | undefined {
+  return weaponEdge(it) ?? weaponTip(it, o);
 }
 
 /** 一件武器的統一座標：`base` ＝ 現有座標 → 統一座標的旋轉；`len` ＝ 握把到作用端的距離。 */
@@ -179,10 +204,11 @@ export function orientWeapon(ctx: Ctx, it: GearItem, o: HoldView & WeaponPoseOpt
   if (o.probe !== undefined) probeWeapon(ctx, it, o, o.probe);
 }
 
-function probeWeapon(ctx: Ctx, it: GearItem, o: HoldView, probe: (hand: Pt, tip: Pt) => void): void {
+function probeWeapon(ctx: Ctx, it: GearItem, o: HoldView, probe: (hand: Pt, tip: Pt, edge?: Pt) => void): void {
   const tip = weaponTip(it, o);
   if (tip === undefined) return;
   const m = ctx.getTransform();
   const at = (p: Pt): Pt => [m.a * p[0] + m.c * p[1] + m.e, m.b * p[0] + m.d * p[1] + m.f];
-  probe(at([0, 0]), at(tip));
+  const edge = weaponEdge(it);
+  probe(at([0, 0]), at(tip), edge === undefined ? undefined : at(edge));
 }
