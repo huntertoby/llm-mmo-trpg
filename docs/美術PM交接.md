@@ -118,6 +118,7 @@
 | `realms.js`、`realms.html` | 碎界五區比較（＋霓虹另案） |
 | `regions4.js`、`regions4.html` | 其他四區地形與物件換皮（`regions4.png`） |
 | `explore.js`、`explore.html` | 可走動的城鎮（霧渡鎮）與野外（渡口石階）畫面示意，畫面地圖靠路口銜接（`explore.png`；11-04 專案 PM 要的示意，非定案） |
+| `hud.js`、`hud.html` | 網遊式 HUD 三種版面（`hud.png`、`HUD版面.md`；11-04，等使用者選，未代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
 | `raceArt.js`、`races.html`、`dragonkin.html` | 可玩種族部件與衝突規則 |

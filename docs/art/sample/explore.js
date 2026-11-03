@@ -251,7 +251,7 @@ window.Explore = (() => {
   }
 
   // ======================= 畫面 1：霧渡鎮（主城）=======================
-  function town(ctx) {
+  function town(ctx, hudFn = hud) {
     const cols = 20, rows = 12;
     drawGround(ctx, [
       "gggggggppgggggggggggg",
@@ -291,11 +291,11 @@ window.Explore = (() => {
     // 出口
     exit(ctx, "e", 5, 6, "渡口石階", "sword", cols, rows);
     exit(ctx, "n", 7, 8, "獵戶小屋", "dots", cols, rows);
-    hud(ctx, cols, rows, "霧渡鎮", "portal");
+    hudFn(ctx, cols, rows, "霧渡鎮", "portal", { scene: "town" });
   }
 
   // ======================= 畫面 2：渡口石階（雲嶺野外）=======================
-  function field(ctx) {
+  function field(ctx, hudFn = hud) {
     const cols = 20, rows = 12;
     drawGround(ctx, [
       "gggggggggggggggppggg",
@@ -350,8 +350,8 @@ window.Explore = (() => {
     // 出口
     exit(ctx, "w", 4, 5, "霧渡鎮", "portal", cols, rows);
     exit(ctx, "n", 15, 16, "竹林小徑", "dots", cols, rows);
-    hud(ctx, cols, rows, "渡口石階", "sword");
+    hudFn(ctx, cols, rows, "渡口石階", "sword", { scene: "field" });
   }
 
-  return { T, town, field };
+  return { T, town, field, ICON, box, rr, dot, rgba, PARTY, OUT };
 })();

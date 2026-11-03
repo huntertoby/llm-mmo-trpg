@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>網遊式 HUD 版面</title>
+<style>
+  body { margin: 0; padding: 18px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 16px 0 6px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 8px; }
+  .rec { color: #ffd23a; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; }
+</style>
+</head>
+<body>
+<h1>網遊式 HUD：三種版面（示意，等使用者選）</h1>
+<p class="note">美術 PM，2026-11-04。把現在右側那一長條拆到畫面四周，主畫面留在中間。疊在可走動的霧渡鎮、渡口石階樣張上。每項資訊用純圖示、圖示＋數字或收進面板，對照表見 <code>HUD版面.md</code>。全部程式繪製。</p>
+<h2>A. 四角分散 <span class="rec">（推薦）</span><small>左上自己、隊友在下；右上地名＋小地圖＋時間天氣＋錢；右側任務追蹤；底部功能列；左下事件浮動</small></h2>
+<canvas id="a1"></canvas>
+<h2>A. 四角分散（野外）</h2>
+<canvas id="a2"></canvas>
+<h2>B. 底部集中<small>自己、功能列、錢、時間都在底部一條；隊友在左側直排；右上小地圖；事件在上方中央</small></h2>
+<canvas id="b1"></canvas>
+<h2>C. 極簡純圖示<small>頭像外圈就是 HP／法力；其他全部收成圖示，點了才開（圖中示範打開背包）</small></h2>
+<canvas id="c1"></canvas>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script src="hud.js"></script>
+<script>
+  const S = 1.25, Q = 1.6;
+  for (const [id, scene, h] of [["a1", "town", Hud.hudA], ["a2", "field", Hud.hudA], ["b1", "town", Hud.hudB], ["c1", "field", Hud.hudC]]) {
+    const c = document.getElementById(id), W = 20 * Explore.T, H = 12 * Explore.T;
+    c.width = W * S * Q; c.height = H * S * Q; c.style.width = W * S + "px"; c.style.height = H * S + "px";
+    const ctx = c.getContext("2d"); ctx.scale(S * Q, S * Q);
+    try { Explore[scene](ctx, h); } catch (e) { document.body.insertAdjacentHTML("beforeend", `<pre id="err">${e.stack}<\/pre>`); }
+  }
+</script>
+</body>
+</html>
