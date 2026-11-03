@@ -72,6 +72,8 @@ class RunNotFoundError(TrpgError):
 class RunSession:
     def __init__(self, run_id: str, library: ContentLibrary, run: RunState) -> None:
         self.run_id = run_id
+        self.owner: str | None = None
+        """開這一輪的帳號 ID（6S-1；開發模式關時只有它能讀寫，沒有＝``None``）。"""
         self.library = library
         self.run = run
         self.battle: BattleSession | None = None
@@ -237,6 +239,7 @@ class RunStore:
         setup = battle_setup(self.library, session.run)
         seed = session.run.plan_of(session.battle_index()).seed
         battle, records = self.battles.open(setup, seed)
+        battle.owner = session.owner  # 一輪的戰鬥跟著一輪的主人（6S-1）
         session.battle = battle
         self.autosave(session)
         return battle, records
@@ -335,10 +338,13 @@ class RunStore:
                 continue
         return found
 
-    def find_skill(self, skill_id: str) -> SkillDef | None:
+    def find_skill(self, skill_id: str, *, owner: str | None = None) -> SkillDef | None:
+        """各輪的生成技能與候選；``owner`` 有值時只查那個帳號的一輪（6S-1）。"""
         with self._lock:
             sessions = list(self._runs.values())
         for session in sessions:
+            if owner is not None and session.owner != owner:
+                continue
             for skill in session.known_skills():
                 if skill.id == skill_id:
                     return skill

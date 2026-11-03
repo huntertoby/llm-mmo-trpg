@@ -20,6 +20,9 @@
 :data:`dev_router`，只在開發模式（``config/server.toml`` 的 ``dev_mode``）開時掛載；開發模式關時
 整個 ``/api/runs`` 要登入（:func:`trpg.api.auth.require_login`，``create_app`` 掛）。
 
+6S-1：開發模式關時開新一輪不收開發用欄位（``build``、``dev_pack``、``test_mode``、
+``test_equipment``，403）；``/{run_id}…`` 只能讀寫自己帳號開的一輪（別人的 404）。
+
 Phase 3-6：節點改變（戰後結算、升級、營火、結束）與每個戰鬥動作之後自動存檔（同一個檔案覆寫）。
 
 錯誤：不存在 404、節點不符 409、內容不合法或存檔壞掉 422。
@@ -32,6 +35,7 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 
 from trpg.api.attribute_text import attribute_affects, attribute_suggestion, route_hint
+from trpg.api.auth import check_owner, owner_id, reject_dev_fields
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import (
     allocation_preview,
@@ -63,7 +67,7 @@ from trpg.api.run_schemas import (
     StartResourcesRequest,
     StartWeaponOption,
 )
-from trpg.api.runs import RunSession, RunStore
+from trpg.api.runs import RunNotFoundError, RunSession, RunStore
 from trpg.api.state import runs_of
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
@@ -86,6 +90,14 @@ dev_router = APIRouter(prefix="/api/runs", tags=["runs"])
 （``/saves`` 等不能被 ``/{run_id}`` 吃掉）。"""
 
 
+def _owned_run(request: Request, run_id: str) -> tuple[RunStore, RunSession]:
+    """取一輪；開發模式關時不是自己的當作不存在（404，6S-1）。"""
+    runs = runs_of(request)
+    found = runs.get(run_id)
+    check_owner(request, found.owner, RunNotFoundError(f"找不到一輪 {run_id}"))
+    return runs, found
+
+
 def _respond(store: RunStore, session: RunSession) -> RunResponse:
     store.sync(session)
     return run_response(session)
@@ -93,6 +105,8 @@ def _respond(store: RunStore, session: RunSession) -> RunResponse:
 
 @router.post("", status_code=201)
 def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
+    reject_dev_fields(request, body.dev_fields())
+    owner = owner_id(request)
     store = runs_of(request)
     session = store.create(
         body.seed,
@@ -107,6 +121,7 @@ def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
         origin=body.origin,
         llm=body.llm,
     )
+    session.owner = owner
     with session.lock:
         store.sync(session)
         return run_response(session, with_notice=True)
@@ -284,24 +299,21 @@ def post_allocation_preview(
 ) -> AllocationPreviewOut:
     """升級配點與營火重配的資源預覽（3H-5）：把配點加到主角目前的屬性上，回傳新的最大 HP、法力、
     耐力與變化文字；算式與一輪面板、開新一輪相同（後端算，前端不寫公式）。"""
-    store = runs_of(request)
-    session = store.get(run_id)
+    _store, session = _owned_run(request, run_id)
     with session.lock:
         return allocation_preview(session.library, session.run, body.attributes)
 
 
 @router.get("/{run_id}")
 def get_run(run_id: str, request: Request) -> RunResponse:
-    store = runs_of(request)
-    session = store.get(run_id)
+    store, session = _owned_run(request, run_id)
     with session.lock:
         return _respond(store, session)
 
 
 @router.post("/{run_id}/battle")
 def run_battle(run_id: str, request: Request) -> RunBattleResponse:
-    store = runs_of(request)
-    session = store.get(run_id)
+    store, session = _owned_run(request, run_id)
     with session.lock:
         battle, records = store.battle(session)
         with battle.lock:
@@ -311,8 +323,7 @@ def run_battle(run_id: str, request: Request) -> RunBattleResponse:
 
 @router.post("/{run_id}/choice")
 def post_choice(run_id: str, choice: Choice, request: Request) -> RunResponse:
-    store = runs_of(request)
-    session = store.get(run_id)
+    store, session = _owned_run(request, run_id)
     with session.lock:
         store.choose(session, choice)
         return _respond(store, session)
@@ -321,8 +332,7 @@ def post_choice(run_id: str, choice: Choice, request: Request) -> RunResponse:
 @router.post("/{run_id}/flash-preview")
 def post_flash_preview(run_id: str, body: FlashPreviewRequest, request: Request) -> FlashPreviewOut:
     """閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（Phase 3W-5）：不扣點、不改狀態。"""
-    store = runs_of(request)
-    session = store.get(run_id)
+    store, session = _owned_run(request, run_id)
     with session.lock:
         store.sync(session)
         return flash_preview(session.library, session.run, body.skill, body.slot)
@@ -370,8 +380,7 @@ def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> Run
 
 @router.post("/{run_id}/save")
 def save_run(run_id: str, request: Request) -> SaveOut:
-    store = runs_of(request)
-    session = store.get(run_id)
+    store, session = _owned_run(request, run_id)
     with session.lock:
         path, save = store.save(session)
         return SaveOut(

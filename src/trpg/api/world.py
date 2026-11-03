@@ -401,6 +401,7 @@ class WorldStore:
                 raise WorldConflictError("目前沒有遭遇，不能開戰")
             prepared = prepare_battle(self.library, synced.char)
             battle, records = self.battles.open(prepared.setup, prepared.seed)
+            battle.owner = None if self.actor_of is None else self.actor_of(character_id)  # 6S-1
             self._battles[character_id] = battle
             outcome = WorldOutcome(synced.world, synced.char, synced.events, synced.now, battle)
             return outcome, battle, records

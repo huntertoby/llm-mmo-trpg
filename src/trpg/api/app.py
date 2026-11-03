@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.auth import AdminRequiredError, require_login
+from trpg.api.auth import AdminRequiredError, DevModeRequiredError, require_login
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
@@ -87,6 +87,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     AccountError: 422,
     LoginRateLimitError: 429,
     AdminRequiredError: 403,
+    DevModeRequiredError: 403,  # 6S-1 開發用欄位
     NoteNotFoundError: 404,
     NoteError: 422,
     LeagueError: 409,  # 5F-4 循環賽還不能開跑
