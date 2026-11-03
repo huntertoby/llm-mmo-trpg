@@ -129,6 +129,7 @@
 | `cyborg.html` | 晶能義體人辨識記號三方案（`cyborg.png`、`晶能義體人記號.md`；11-04 樣張，推薦 C） |
 | `cloudTiles.js`、`cloud-tiles.html` | 雲嶺實地地圖地磚與地物圖庫＋示範圖「青霧觀山門」（`cloud-tiles.png`、`雲嶺實地圖庫.md`；11-04 樣張，待使用者看） |
 | `ashenTiles.js`、`ashen-tiles.html` | 灰燼荒原實地地圖圖庫＋示範圖「赤沙村」（`ashen-tiles.png`、`灰燼實地圖庫.md`；11-04 樣張） |
+| `townTiles.js`、`town-tiles.html` | 主城、霧渡鎮的城鎮圖庫與酒館、鐵匠鋪、導師殿室內，疊 HUD A（`town-tiles.png`、`城鎮與室內圖庫.md`；11-04 樣張） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
@@ -203,3 +204,7 @@
 | 36 | 荒原新物件 | `dead_grove`、`tent`、`watchtower`、`cart`、`cooling_well`（功能照現有物件複製，需玩法 PM 同意；`灰燼實地圖庫.md`） | 全部用現有 ID 換皮 |
 | 37 | 荒原新地面外觀 | `look floor=red_sand`、`floor=obsidian`、`wall=ruin` | 不加，靠物件區分 |
 | 38 | 飄灰在就地開打時 | 保留但濃度減半 | 戰鬥時拿掉 |
+| 39 | 主城的風格 | 白石藍頂金飾（晶冠城邦的基準風格），中央傳送陣、五面區旗（`城鎮與室內圖庫.md`） | 五區混搭的建築 |
+| 40 | 中央傳送陣 | 五個光圈，已開放的區有顏色、沒開放的是灰色 | 只有一個傳送陣 |
+| 41 | 室內的畫法 | 10×8 畫在畫面中央、四周暗，後牆 1.6 格 | 室內放大填滿畫面 |
+| 42 | 室內家具的規則 | 吧檯、櫃檯＝low_wall；酒桶、桌子＝crate；書架、壁爐、鍛爐＝wall；石像＝stone_pillar | 家具都不擋路 |
