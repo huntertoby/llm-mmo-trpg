@@ -623,3 +623,76 @@
 .hud-icon {
   flex: none;
 }
+
+/* 6A-4f：功能列定稿圖示的按鈕狀態（docs/art/HUD功能列圖示.md 第 2 節）與滑過說明卡（第 3 節） */
+
+.world-hud-btn:hover,
+.world-hud-btn:focus-visible {
+  border-color: #f2d898;
+  box-shadow: 0 0 10px rgba(255, 220, 140, 0.6);
+}
+
+.world-hud-btn[data-state="open"] {
+  background: rgba(90, 70, 30, 0.95);
+  border-color: #ffd23a;
+}
+
+.world-hud-btn[data-state="disabled"] .hud-bar-icon {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.world-hud-btn > .key {
+  font-family: Consolas, monospace;
+  font-weight: bold;
+  color: rgba(242, 230, 200, 0.75);
+}
+
+.hud-bar-card {
+  width: 230px;
+  display: grid;
+  gap: 4px;
+}
+
+.hud-bar-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(200, 168, 104, 0.35);
+}
+
+.hud-bar-card-head .name {
+  flex: 1;
+  font-weight: bold;
+  font-size: 14px;
+  color: #f2e6c8;
+}
+
+.hud-bar-card-head .key {
+  min-width: 24px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: #2a241e;
+  border: 1px solid #8a7a5a;
+  font: bold 12px Consolas, monospace;
+  color: #f2e6c8;
+}
+
+.hud-bar-card-status {
+  font-weight: bold;
+  font-size: 12.5px;
+  color: #ffd23a;
+}
+
+.hud-bar-card-desc {
+  font-size: 12px;
+  color: #d8ccb8;
+}
+
+.hud-bar-card-touch {
+  font-size: 10.5px;
+  color: #8a7e6c;
+}

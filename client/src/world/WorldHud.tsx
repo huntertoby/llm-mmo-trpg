@@ -6,10 +6,14 @@ import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { Hint } from "../ui/Hint";
 import type { TileRect } from "./camera";
+import { HudBarIcon, hudBarName, type HudBarKey } from "./HudBarIcons";
 import { HudIcon, HudPortrait, type HudIconName } from "./HudIcons";
 import {
   BAR_BTN,
   buttonBadge,
+  buttonState,
+  HUD_TOUCH_ZH,
+  hudButtonCard,
   dayPart,
   HUD_BUTTONS,
   mateCards,
@@ -19,21 +23,40 @@ import {
   trackedQuests,
   weatherMark,
   type HudBlock,
+  type HudButtonCard,
   type HudButtonId,
+  type HudButtonState,
   type HudLayout,
   type LiveToast,
   type MiniMap,
 } from "./hud";
 
-const BUTTON_ICON: Record<HudButtonId, HudIconName> = {
-  bag: "bag",
-  skills: "book",
-  growth: "growth",
-  quests: "scroll",
-  shadow: "shadow",
-  notes: "notes",
-  sneak: "boots",
+/** 功能列的定稿圖示（6A-4f；docs/art/HUD功能列圖示.md）。 */
+const BUTTON_ICON: Record<HudButtonId, HudBarKey> = {
+  bag: "I",
+  skills: "K",
+  growth: "G",
+  quests: "J",
+  shadow: "Y",
+  notes: "N",
+  sneak: "R",
 };
+
+/** 滑過說明卡（HUD功能列圖示.md 第 3 節）：標題列（圖示、名稱、快捷鍵）、黃字狀態、說明一句、觸控小字。 */
+export function HudBarCard({ k, card }: { k: HudBarKey; card: HudButtonCard }) {
+  return (
+    <div className="hud-bar-card" data-hud-card={k}>
+      <div className="hud-bar-card-head">
+        <HudBarIcon k={k} size={24} />
+        <span className="name">{hudBarName(k)}</span>
+        <span className="key">{k}</span>
+      </div>
+      <div className="hud-bar-card-status">{card.status}</div>
+      <div className="hud-bar-card-desc">{card.desc}</div>
+      <div className="hud-bar-card-touch">{HUD_TOUCH_ZH}</div>
+    </div>
+  );
+}
 
 /** 設計尺寸（`hudLayout` 的設計座標）：每塊的內容照這個大小排，再整塊 `scale`。 */
 function Block({
@@ -171,29 +194,37 @@ function IconButton({
   keyLabel,
   badge,
   active = false,
+  state,
+  rich,
   onClick,
 }: {
-  icon: HudIconName;
+  /** 舊的 24×24 圖示，或功能列的定稿圖示（`{ bar }`，6A-4f）。 */
+  icon: HudIconName | { bar: HudBarKey };
   size: number;
   hint: string;
   item: string;
   keyLabel?: string;
   badge?: { text: string; tone: "red" | "purple" | "count" } | null;
   active?: boolean;
+  /** 按鈕狀態（`disabled` 圖示變灰半透明，仍可以按：按了會提示開不了）。 */
+  state?: HudButtonState;
+  rich?: ReactNode;
   onClick(): void;
 }) {
+  const st = state ?? (active ? "open" : "normal");
   return (
-    <Hint text={hint}>
+    <Hint text={hint} rich={rich}>
       <button
         type="button"
-        className={`world-hud-btn${active ? " active" : ""}`}
+        className={`world-hud-btn${active ? " active" : ""}${st === "disabled" ? " disabled" : ""}`}
+        data-state={st}
         style={{ width: size, height: size }}
         onClick={onClick}
         aria-label={hint}
         aria-pressed={active}
         data-hud={item}
       >
-        <HudIcon name={icon} size={Math.round(size * 0.55)} />
+        {typeof icon === "string" ? <HudIcon name={icon} size={Math.round(size * 0.55)} /> : <HudBarIcon k={icon.bar} size={Math.round(size * 0.76)} />}
         {keyLabel !== undefined && <span className="key">{keyLabel}</span>}
         {badge != null && (badge.tone === "count" ? <span className="world-hud-count">{badge.text}</span> : <Dot tone={badge.tone} />)}
       </button>
@@ -283,7 +314,7 @@ export function WorldHud(props: WorldHudProps) {
         <Mates view={view} narrow={layout.narrow} />
       </Block>
       <Block id="shadow" layout={layout} faded={faded} label="影子">
-        <IconButton icon="shadow" size={36} hint="我的影子（Y）" item="shadow" badge={shadowBadge} onClick={() => props.onButton("shadow")} active={props.openPanel === "shadow"} />
+        <IconButton icon={{ bar: "Y" }} size={36} hint="我的影子（Y）" item="shadow" badge={shadowBadge} onClick={() => props.onButton("shadow")} active={props.openPanel === "shadow"} />
       </Block>
       <Block id="place" layout={layout} faded={faded} label="地名">
         <div className="world-hud-place">
@@ -315,7 +346,7 @@ export function WorldHud(props: WorldHudProps) {
         <div className="world-hud-clock">
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
-          <IconButton icon="map" size={30} hint="大地圖（M）：尚未開放" item="map" keyLabel="M" onClick={props.onMap} />
+          <IconButton icon={{ bar: "M" }} size={30} hint="大地圖（M）：尚未開放" item="map" keyLabel="M" onClick={props.onMap} />
           <IconButton icon="gear" size={30} hint="設定：尚未開放" item="settings" onClick={props.onSettings} />
         </div>
       </Block>
@@ -353,19 +384,25 @@ export function WorldHud(props: WorldHudProps) {
       </Block>
       <Block id="bar" layout={layout} faded={faded} label="功能列">
         <div className="world-hud-funcs">
-          {HUD_BUTTONS.map((b) => (
-            <IconButton
-              key={b.id}
-              icon={BUTTON_ICON[b.id]}
-              size={BAR_BTN}
-              hint={`${b.name}（${b.key.toUpperCase()}）${b.panel === null ? "：尚未開放" : ""}`}
-              item={`btn-${b.id}`}
-              keyLabel={b.key.toUpperCase()}
-              badge={buttonBadge(view, b.id)}
-              active={b.panel !== null && props.openPanel === b.panel}
-              onClick={() => props.onButton(b.id)}
-            />
-          ))}
+          {HUD_BUTTONS.map((b) => {
+            const card = hudButtonCard(view, b.id);
+            const k = BUTTON_ICON[b.id];
+            return (
+              <IconButton
+                key={b.id}
+                icon={{ bar: k }}
+                size={BAR_BTN}
+                hint={`${b.name}（${b.key.toUpperCase()}）：${card.status}。${card.desc}`}
+                rich={<HudBarCard k={k} card={card} />}
+                item={`btn-${b.id}`}
+                keyLabel={b.key.toUpperCase()}
+                badge={buttonBadge(view, b.id)}
+                active={b.panel !== null && props.openPanel === b.panel}
+                state={buttonState(view, b, props.openPanel)}
+                onClick={() => props.onButton(b.id)}
+              />
+            );
+          })}
         </div>
       </Block>
       <Block id="toasts" layout={layout} faded={faded} label="最近發生的事">

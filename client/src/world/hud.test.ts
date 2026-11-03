@@ -8,8 +8,11 @@ import { TOAST_TTL_MS } from "../battle/logToasts";
 import {
   addToasts,
   buttonBadge,
+  buttonState,
   dayPart,
   evaluateHudLayout,
+  HUD_TOUCH_ZH,
+  hudButtonCard,
   exitRects,
   fadedBlocks,
   fieldFitScale,
@@ -35,7 +38,8 @@ import {
   type HudLayout,
   type LiveToast,
 } from "./hud";
-import { WorldHud, type WorldHudProps } from "./WorldHud";
+import { HUD_BAR_ORDER, HudBarIcon, type HudBarKey } from "./HudBarIcons";
+import { HudBarCard, WorldHud, type WorldHudProps } from "./WorldHud";
 
 /** 24×18（霧渡鎮的大小）：東邊、北邊、西南各一個出口。 */
 function field(over: Partial<FieldView> = {}): FieldView {
@@ -501,5 +505,70 @@ describe("地圖用滿舞台、出口附近的 HUD 變半透明", () => {
     const middle = field({ exits: [{ id: "x", cells: [[12, 9]], to: "a", to_name_zh: "某處" }] });
     expect(fadedBlocks(layout, exitRects(middle, stage, fieldFitScale(stage, middle)))).toEqual([]);
     expect(HUD_BLOCKS).toHaveLength(10);
+  });
+});
+
+/** 某顆鈕（`data-hud=item`）的開頭標籤到 `</button>` 之間的內容。 */
+function buttonMarkup(markup: string, item: string): string {
+  const at = markup.indexOf(`data-hud="${item}"`);
+  if (at < 0) return "";
+  const start = markup.lastIndexOf("<button", at);
+  return markup.slice(start, markup.indexOf("</button>", at));
+}
+
+describe("功能列定稿圖示與說明卡（6A-4f，HUD功能列圖示.md）", () => {
+  const layout = hudLayout(1040, 624, { mates: 2, narrow: false, collapsed: false });
+  const v = view({ reports: 1 });
+  const markup = html(props(v, layout, { openPanel: "bag" }));
+  const expected: Record<string, HudBarKey> = { bag: "I", skills: "K", growth: "G", quests: "J", shadow: "Y", notes: "N", sneak: "R" };
+
+  it("7 顆鈕各畫自己的定稿圖示（48×48 畫布）；影子鈕、地圖鈕也用定稿", () => {
+    for (const b of HUD_BUTTONS) expect(buttonMarkup(markup, `btn-${b.id}`)).toContain(`data-bar-icon="${expected[b.id]}"`);
+    expect(buttonMarkup(markup, "shadow")).toContain('data-bar-icon="Y"');
+    expect(buttonMarkup(markup, "map")).toContain('data-bar-icon="M"');
+    expect(buttonMarkup(markup, "btn-bag")).toContain('viewBox="0 0 48 48"');
+    expect(markup).not.toContain('data-icon="boots"');
+  });
+
+  it("背包是梯形袋身＋前蓋＋金扣＋斜提把（不像掛鎖）；潛行是兜帽人影＋虛線足跡", () => {
+    const bag = buttonMarkup(markup, "btn-bag");
+    for (const part of ["bag", "bag-flap", "bag-clasp", "bag-handle"]) expect(bag).toContain(`data-part="${part}"`);
+    const sneak = buttonMarkup(markup, "btn-sneak");
+    expect(sneak).toContain('data-part="sneak-hood"');
+    expect(sneak).toMatch(/data-part="sneak-trail"[^>]*stroke-dasharray="3 3"/);
+  });
+
+  it("按鈕狀態：開著的面板金底、沒有資料開不了的變灰", () => {
+    expect(buttonMarkup(markup, "btn-bag")).toContain('data-state="open"');
+    expect(buttonMarkup(markup, "btn-skills")).toContain('data-state="normal"');
+    const bag = HUD_BUTTONS[0] as (typeof HUD_BUTTONS)[number];
+    const empty = { ...v, inventory: null } as unknown as WorldView;
+    expect(buttonState(empty, bag, null)).toBe("disabled");
+    expect(buttonMarkup(html(props(empty, layout)), "btn-bag")).toContain("world-hud-btn disabled");
+  });
+
+  it("每顆都有說明卡：標題列（圖示、名稱、快捷鍵）、黃字狀態、說明一句、觸控小字", () => {
+    for (const b of HUD_BUTTONS) {
+      const k = expected[b.id] as HudBarKey;
+      const card = hudButtonCard(v, b.id);
+      expect(card.status).not.toBe("");
+      expect(card.desc).not.toBe("");
+      const out = renderToStaticMarkup(createElement(HudBarCard, { k, card }));
+      expect(out).toContain(`data-hud-card="${k}"`);
+      expect(out).toContain(`data-bar-icon="${k}"`);
+      expect(out).toContain(`<span class="name">${b.name}</span>`);
+      expect(out).toContain(`<span class="key">${k}</span>`);
+      expect(out).toContain(card.status);
+      expect(out).toContain(HUD_TOUCH_ZH);
+    }
+    expect(hudButtonCard(v, "quests").status).toBe("進行中 2 條");
+    expect(hudButtonCard(v, "sneak").status).toBe("尚未開放");
+  });
+
+  it("圖示的抖動由名字決定：畫兩次一樣", () => {
+    const a = renderToStaticMarkup(createElement(HudBarIcon, { k: "I" }));
+    const b = renderToStaticMarkup(createElement(HudBarIcon, { k: "I" }));
+    expect(a.replace(/hudbar[^"-]*/g, "")).toBe(b.replace(/hudbar[^"-]*/g, ""));
+    expect(HUD_BAR_ORDER).toEqual(["I", "K", "G", "J", "Y", "N", "R", "M"]);
   });
 });
