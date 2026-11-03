@@ -228,7 +228,7 @@ def _status_choices(
             info={"beneficial": s.beneficial, "stance": s.stance, "min_rarity": s.min_rarity},
         )
         for s in library.ruleset.statuses.statuses
-        if keep is None or keep(s.id)
+        if not s.enemy_only and (keep is None or keep(s.id))  # 5F-5c：只給敵人的不列
     )
 
 
