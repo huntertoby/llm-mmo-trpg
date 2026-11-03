@@ -49,6 +49,7 @@ import type {
   WorldCharacterSummary,
   WorldLlmView,
   LocationBoard,
+  SeasonBoardView,
   WorldView,
 } from "./types";
 
@@ -223,6 +224,9 @@ export const api = {
       "DELETE",
       `/world/characters/${encodeURIComponent(characterId)}/notes/${encodeURIComponent(noteId)}`,
     ),
+  /** 城鎮公告板（5F-1）：只讀，後端用換日後的世界算。 */
+  worldBoard: (characterId: string) =>
+    request<SeasonBoardView>("GET", `/world/characters/${encodeURIComponent(characterId)}/board`),
   /** 管理者刪任何一則留言（5E-3；回 204）。 */
   adminDeleteWorldNote: (noteId: string) => request<null>("DELETE", `/world/notes/${encodeURIComponent(noteId)}`),
   decide: (
