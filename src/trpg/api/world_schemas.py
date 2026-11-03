@@ -95,6 +95,7 @@ __all__ = [
     "OathParamView",
     "OathTemplateView",
     "OathView",
+    "RegionStoneView",
     "TeleportOption",
     "WorldActionRequest",
     "WorldBattleResponse",
@@ -240,6 +241,22 @@ class WorldLocationView(_ApiModel):
     """已清空（還沒重生，9.6.7 #15）。"""
     hidden: bool
     """隱藏地點（已發現才會出現在回應裡）。"""
+    fog: Literal["visited", "silhouette", "fog"] = "visited"
+    """區域圖的戰爭迷霧（21.1；6C-6）：``visited``＝去過（彩色、名字、建議等級、清空狀態）；
+    ``silhouette``＝和去過的相連但沒去過（灰色剪影、「？？？」與建議等級）；``fog``＝更遠，被霧蓋住。"""
+    quest_marks: tuple[str, ...] = ()
+    """進行中的任務，目前這一步要到這裡（到達或在這裡打贏；任務名稱，依任務 ID；6C-6）。"""
+
+
+class RegionStoneView(_ApiModel):
+    """區域圖上的傳送石（21.2；6C-6）。只列在去過或剪影的地點上（霧裡的不給）。"""
+
+    id: str
+    location: str
+    """傳送石所在的地點 ID。"""
+    unlocked: bool
+    here: bool
+    """現在出發的那一顆（站在上面，或所在城鎮的那一顆）。"""
 
 
 class WorldMapView(_ApiModel):
@@ -248,6 +265,14 @@ class WorldMapView(_ApiModel):
     level_zh: str
     locations: tuple[WorldLocationView, ...]
     edges: tuple[tuple[str, str], ...]
+    stones: tuple[RegionStoneView, ...] = ()
+    """這一區的傳送石（依 ID；6C-6）。"""
+    can_teleport: bool = False
+    """現在能從區域圖點已解鎖的傳送石傳過去（站在傳送石上或在城鎮裡、沒有遭遇或戰鬥；21.1）。"""
+    teleport_problem_zh: str | None = None
+    """不能從圖上傳送的原因（``can_teleport`` 時為 ``None``）。"""
+    art_url: str | None = None
+    """區域插畫的路徑（還沒有插畫＝``None``，畫面用節點圖當底圖；6C-6）。"""
 
 
 class TeleportOption(_ApiModel):

@@ -277,6 +277,8 @@ export interface WorldHudProps {
   /** 功能列的按鈕（含潛行）、影子鈕。 */
   onButton(id: HudButtonId): void;
   onMap(): void;
+  /** 區域圖開著（地圖鈕亮框；6C-6）。 */
+  mapOpen?: boolean;
   onSettings(): void;
   /** 點地名條：開「這裡」（服務、這裡的人）。 */
   onPlace(): void;
@@ -346,7 +348,7 @@ export function WorldHud(props: WorldHudProps) {
         <div className="world-hud-clock">
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
-          <IconButton icon={{ bar: "M" }} size={30} hint="大地圖（M）：尚未開放" item="map" keyLabel="M" onClick={props.onMap} />
+          <IconButton icon={{ bar: "M" }} size={30} hint={`區域圖（M）：${props.mapOpen === true ? "再按一次關閉" : "看地點、任務標記與傳送石"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
           <IconButton icon="gear" size={30} hint="設定：尚未開放" item="settings" onClick={props.onSettings} />
         </div>
       </Block>

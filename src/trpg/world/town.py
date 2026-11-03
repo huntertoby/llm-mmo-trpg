@@ -23,9 +23,16 @@ from trpg.world.actions import (
 from trpg.world.common import here, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import at_service, loadout_skills
-from trpg.world.state import CharacterState
+from trpg.world.state import CharacterState, LocationRef
 
-__all__ = ["loadout", "rest", "retreat", "teleport", "with_visited_town"]
+__all__ = [
+    "loadout",
+    "rest",
+    "retreat",
+    "teleport",
+    "with_visited_location",
+    "with_visited_town",
+]
 
 
 def _no_encounter(char: CharacterState, what: str) -> None:
@@ -38,6 +45,20 @@ def with_visited_town(char: CharacterState, region: str) -> CharacterState:
     if region in char.visited_towns:
         return char
     return char.model_copy(update={"visited_towns": tuple(sorted({*char.visited_towns, region}))})
+
+
+def with_visited_location(
+    char: CharacterState, region: str | None = None, location: str | None = None
+) -> CharacterState:
+    """把地點（省略＝所在地點）記進 ``visited_locations``（區域圖的戰爭迷霧，21.1；6C-6）。
+    已記過＝同一個物件。"""
+    region = char.region if region is None else region
+    location = char.location if location is None else location
+    if char.has_visited(region, location):
+        return char
+    refs = [*char.visited_locations, LocationRef(region=region, location=location)]
+    refs.sort(key=LocationRef.key)
+    return char.model_copy(update={"visited_locations": tuple(refs)})
 
 
 def retreat(

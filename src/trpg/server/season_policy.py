@@ -140,6 +140,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "field",  # 6B-2 實地地圖上的位置（同 region、location）
     "teleport_stones",  # 6B-2 解鎖的傳送石（同 revealed）
     "field_visit",  # 6C-1 這一趟的實地地圖敵人（同 field）
+    "visited_locations",  # 6C-6 去過的地點（區域圖的迷霧，同 revealed）
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(

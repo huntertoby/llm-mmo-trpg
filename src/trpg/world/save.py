@@ -29,6 +29,8 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 **Phase 6C-2**：``trpg-char/3`` 照讀（只多了遭遇接觸的選填欄位 ``enemy_at``），讀進來就是
 ``trpg-char/4``。``trpg-wlog/4`` 也是舊規則寫的（6C-2 起碰到地圖上的敵人就地切 12×12 戰場，``fight``
 的步驟是照模板地圖記的），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/5``。
+**Phase 6C-6**：同一版 ``trpg-char/4`` 也多了選填欄位 ``visited_locations``（和 6C-2
+一起合進來，沒有另升版號）。去過的地點只是另外記下來，不改任何規則。
 """
 
 from __future__ import annotations

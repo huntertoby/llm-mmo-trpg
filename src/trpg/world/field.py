@@ -9,7 +9,8 @@
 - **出口**：一次 ``travel``（呼叫者傳入，沿用全部既有檢查與擲骰順序；這段不趕路），抵達時站在對面
   ``arrive`` 出口往地圖內側一格的可站格（6B-1 待決第 7 點）。室內圖的出口回到門外一格，不算一步。
 - **門**：室內圖不算進入一張地圖（Q6：不擲骰、不扣時間）；通往隱藏地點的門算 ``travel``。
-- **傳送石**：踩上就解鎖；:func:`use_teleport_stone` 傳到另一顆已解鎖的。
+- **傳送石**：踩上就解鎖；:func:`use_teleport_stone` 傳到另一顆已解鎖的。站在傳送石上，或在城鎮裡
+  （含室內，從城鎮的傳送石出發；21.1「從圖上傳送」，6C-6）才能傳送（:func:`teleport_origin`）。
 
 確定性：只看內容與角色狀態；候選格依固定順序挑，不依賴 ``set`` 的迭代順序（守則 2）。
 """
@@ -49,6 +50,7 @@ __all__ = [
     "outdoor_map",
     "placed",
     "stale_field",
+    "teleport_origin",
     "use_teleport_stone",
     "walk",
 ]
@@ -406,21 +408,36 @@ def _stone_map(library: ContentLibrary, stone_id: str) -> tuple[FieldMapDef, XY]
     return None
 
 
+def teleport_origin(library: ContentLibrary, char: CharacterState) -> str | None:
+    """現在能從哪一顆傳送石出發（21.1「從圖上傳送」；6C-6）：站在傳送石上＝那一顆；在城鎮裡
+    （含室內）＝城鎮實地地圖上的第一顆；都不是＝``None``。``char`` 先經過 :func:`placed`。"""
+    pos = char.field
+    found = None if pos is None else field_map(library, pos.map)
+    if pos is not None and found is not None:
+        here = next((s for s in found.teleport_stones if s.at == (pos.x, pos.y)), None)
+        if here is not None:
+            return here.id
+    place = world_map_of(library, char.region).location_by_id().get(char.location)
+    if place is None or place.kind != "town":
+        return None
+    town = outdoor_map(library, char.region, char.location)
+    if town is None or not town.teleport_stones:
+        return None
+    return town.teleport_stones[0].id
+
+
 def use_teleport_stone(
     library: ContentLibrary, char: CharacterState, action: UseTeleportStoneAction
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
-    """站在傳送石上傳到另一顆已解鎖的；跨區要去過那一區的小鎮（同 ``teleport``）。不擲骰。"""
+    """站在傳送石上（或在城鎮裡，:func:`teleport_origin`）傳到另一顆已解鎖的；跨區要去過那一區的
+    小鎮（同 ``teleport``）。不擲骰。"""
     if char.pending_encounter is not None:
         raise WorldActionError("還有沒處理的遭遇，不能傳送")
     char = placed(library, char)
-    pos = char.field
-    found = None if pos is None else field_map(library, pos.map)
-    here = None
-    if pos is not None and found is not None:
-        here = next((s for s in found.teleport_stones if s.at == (pos.x, pos.y)), None)
-    if here is None:
-        raise WorldActionError("要站在傳送石上才能傳送")
-    if action.to == here.id:
+    origin = teleport_origin(library, char)
+    if origin is None:
+        raise WorldActionError("要站在傳送石上或在城鎮裡才能傳送")
+    if action.to == origin:
         raise WorldActionError("已經在這顆傳送石上")
     if action.to not in char.teleport_stones:
         raise WorldActionError(f"還沒走到過傳送石 {action.to}")
@@ -444,6 +461,6 @@ def use_teleport_stone(
     if world_map_of(library, dest.region).location_by_id()[location].kind == "town":
         char = with_visited_town(char, dest.region)
     event = TeleportStoneUsedEvent(
-        from_stone=here.id, to_stone=action.to, region=dest.region, location=location
+        from_stone=origin, to_stone=action.to, region=dest.region, location=location
     )
     return char, (event,)

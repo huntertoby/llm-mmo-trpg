@@ -388,11 +388,7 @@ def test_use_teleport_stone(calm_field: ContentLibrary) -> None:
 @pytest.mark.parametrize(
     ("updates", "to", "message"),
     [
-        (
-            {"field": _at(*ENTRY), "teleport_stones": (MIST_STONE, "stone_herb")},
-            "stone_herb",
-            "站在",
-        ),
+        # 6C-6 起在城鎮裡（沒站在傳送石上）也能傳送：tests/world/test_region_teleport.py
         ({"field": _at(12, 8), "teleport_stones": (MIST_STONE,)}, "stone_herb", "還沒走到過"),
         ({"field": _at(12, 8), "teleport_stones": (MIST_STONE,)}, MIST_STONE, "已經在"),
         (
