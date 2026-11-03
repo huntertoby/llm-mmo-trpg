@@ -63,7 +63,10 @@ def make_encounter(
     """在 ``target`` 產生遭遇（``battle`` 串流：地圖、戰鬥種子）；移動遇敵與戰鬥解法共用。
 
     ``objective``（Phase 5B-4c 戰鬥解法的勝利條件）：地點的 ``battle_maps`` 裡有支援它的地圖時只從
-    那些挑（亂數消耗相同）。遇敵當下有效的世界旗標記進 ``world_flags``（世界級線頭到期結局）。"""
+    那些挑（亂數消耗相同）。遇敵當下有效的世界旗標記進 ``world_flags``（世界級線頭到期結局）。
+    呼叫端沒有指定 ``objective`` 時用遭遇表地點的 ``objective``（Phase 5F-5a：三村落的守點戰）。"""
+    if objective is None:
+        objective = _location_objective(library, char.region, target.id)
     rng, char = draw(world.season_seed, char, STREAM_BATTLE)
     maps = target.battle_maps
     if objective is not None:
@@ -86,6 +89,15 @@ def make_encounter(
         bounty=open_bounty_at(library, world, char, target.id, now),  # 懸賞（5F-1b）
     )
     return result, char
+
+
+def _location_objective(
+    library: ContentLibrary, region: str, location: str
+) -> Literal["escape", "defend"] | None:
+    """遭遇表地點的勝利條件（Phase 5F-5a）；沒有遭遇表或沒寫＝``None``。"""
+    table = library.world_encounters.get(region)
+    entry = None if table is None else table.location_by_id().get(location)
+    return None if entry is None else entry.objective
 
 
 def _skeleton(library: ContentLibrary, trigger: EventTrigger) -> EventSkeletonDef:

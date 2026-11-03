@@ -87,7 +87,8 @@ quests:
       - id: summit_boss
         text_zh: 雲頂觀：阻止霧鎖真人用碎片飛升
         when: [{kind: win_battle, location: cloud_summit}]
-        reward: {xp_source: main_step, xp_level: 6}
+        # 5F-5a：第 1 章結局的劇情旗標，荒原主線第 2 章（quests/ashen_waste.yaml）從這裡接（任務條件不能跨區指任務）
+        reward: {xp_source: main_step, xp_level: 6, flags: [mist_rift_done]}
 
   - id: chain_temple_split
     kind: chain

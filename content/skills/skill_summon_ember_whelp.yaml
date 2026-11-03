@@ -1,0 +1,25 @@
+# 熔爐母獸（Phase 5F-5a；19.2.1：每 2 回合產下 1 隻餘燼蜥）。用現有召喚原語：在身邊空格召出 1 隻幼蜥，冷卻 2 回合。
+# 只給敵人用；數值為初值，未經模擬。
+id: skill_summon_ember_whelp
+schema_version: 1
+name_zh: 產下幼蜥
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wil
+shape: {type: ground_tile, range: 2}
+effects:
+  - {type: summon, unit: summon_ember_whelp, duration: 2}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [fire, spell, summon]
+narrative:
+  concept: 母獸發光的腹部一陣收縮，一隻小小的餘燼蜥滾了出來
+  cast_flavor: 熱氣裡傳來一聲細細的嘶叫，灰燼裡多了一雙發亮的眼睛
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

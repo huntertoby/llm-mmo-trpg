@@ -83,17 +83,24 @@ class GoalSpec(ContentModel):
     """只算陣容有精英的戰鬥。"""
     location_kinds: tuple[str, ...] = ()
     """地點種類（任一符合即算；空＝不限）。"""
+    locations: tuple[str, ...] = ()
+    """地點 ID（任一符合即算；空＝不限；Phase 5F-5a，19.9 #2「守住 3 個村落」）。
+    要同時寫 ``region``。"""
     quest_kind: QuestKind | None = None
     quest: str | None = Field(default=None, pattern=ID_PATTERN)
 
     @model_validator(mode="after")
     def _filters(self) -> GoalSpec:
-        battle = bool(self.region or self.weather or self.elite or self.location_kinds)
+        battle = bool(
+            self.region or self.weather or self.elite or self.location_kinds or self.locations
+        )
         quest = self.quest_kind is not None or self.quest is not None
         if battle and self.kind != "battle_won":
             raise ValueError(f"{self.kind} 不能寫區域、天氣、精英、地點種類的篩選")
         if quest and self.kind != "quest_step":
             raise ValueError(f"{self.kind} 不能寫任務的篩選")
+        if self.locations and self.region is None:
+            raise ValueError("寫了 locations 就要寫 region（地點 ID 屬於哪一區）")
         return self
 
 
@@ -418,8 +425,17 @@ def _goal_problems(
     regions: Collection[str],
     weather_ids: Collection[str],
     location_kinds: Collection[str],
+    world_maps: Mapping[str, LocationMapDef] | None = None,
 ) -> list[str]:
     problems: list[str] = []
+    if goal.locations and world_maps is not None and goal.region is not None:
+        world_map = world_maps.get(goal.region)
+        known = set() if world_map is None else set(world_map.location_by_id())
+        problems += [
+            f"{where}：區域 {goal.region} 沒有地點 {loc}"
+            for loc in goal.locations
+            if loc not in known
+        ]
     if goal.region is not None and goal.region not in regions:
         problems.append(f"{where}：未知的區域 {goal.region}")
     problems += [f"{where}：未知的天氣 {w}" for w in goal.weather if w not in weather_ids]
@@ -541,6 +557,7 @@ def season_problems(
             regions=region_ids,
             weather_ids=weather_ids,
             location_kinds=location_kinds,
+            world_maps=world_maps,
         )
         for effect in (event.on_success, event.on_failure):
             problems += [

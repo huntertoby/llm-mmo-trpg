@@ -22,6 +22,33 @@ variants:
     name_zh: 水煉丹師
     theme: water
     skill_swaps: {skill_poison_mist: skill_splash_flask}   # 丹爆改成造水
+  # 灰燼荒原（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.1 元素變體、19.2.2 中立族群；#118 玩法 PM 代決）。
+  # 寒燼蜥要換元素修正與開場狀態（死後留冰面），變體做不到，所以是獨立範本 units/frost_ember_lizard.yaml。
+  - id: thunder_shell_beetle
+    base: lava_beetle
+    name_zh: 雷殼甲蟲
+    theme: lightning
+    skill_swaps: {skill_battering_ram: skill_static_palm}   # 硬殼帶電：「反傷」引擎沒有，用雷掌近似（代決 5F5a-7）
+  - id: scorched_stoneback
+    base: stoneback_bear
+    name_zh: 焦石背熊
+    theme: fire
+    skill_swaps: {skill_quake_topple: skill_battering_ram}   # 焦石背：撞擊（荒原變體，開發 PM 定）
+  - id: ashen_gunner
+    base: bandit_archer
+    name_zh: 斷崖幫火槍手
+    theme: fire
+    weapon: longgun          # 19.2.2「荒原分隊會用火槍」
+  - id: forge_scar
+    base: bandit_captain
+    name_zh: 熔爐督工「鍛疤」
+    theme: fire
+    weapon: whip             # 19.5「命令句」的督工、20.3「鍛疤的鐵鍊」（鞭）；懸賞「熔爐督工」與熔爐督工營的固定精英
+  - id: horned_zealot
+    base: sect_warrior_monk
+    name_zh: 角魔狂信者
+    theme: fire             # 赫琳的祭壇護衛（19.6.1 第 4 步三方混戰）
+    skill_swaps: {skill_rampart_jeer: skill_fire_enchant}   # 拳頭帶火（角魔的聖火）
 
 # 精英詞綴：套上的單位加 elite 標籤、HP × hp_permille、加技能與反應規則。
 affixes:
@@ -48,3 +75,16 @@ affixes:
     add_skills: [skill_berserker_rage]
     hp_permille: 1500
     weapon_classes: [melee]
+  # 灰燼荒原（Phase 5F-5a；19.2.1）。
+  - id: blazing
+    name_zh: 熾熱的
+    description_zh: 渾身發燙，被它碰到就會燒起來。
+    # 19.2.1「相鄰的敵人每回合受到小火傷」：非召喚物沒有光環，用近戰點燃「餘燼啃咬」近似（代決 5F5a-7）
+    add_skills: [skill_ember_bite]
+    hp_permille: 1500
+  - id: hard_shelled
+    name_zh: 硬殼的
+    description_zh: 開戰時硬殼還沒敲裂，受到的傷害大幅降低。
+    add_opening_statuses:
+      - {status: hard_shell, duration: 2}   # 19.2.1「前 2 次受擊傷害減半」用開場 2 回合近似（代決 5F5a-7）
+    hp_permille: 1500

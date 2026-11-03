@@ -7,6 +7,9 @@
 stations:
   - {id: smithy_mist_ferry, kind: smithy, name_zh: 石記鐵鋪, region: cloud_ridge, location: mist_ferry, npc: smith_shi}
   - {id: enchanter_mist_ferry, kind: enchanter, name_zh: 渡口附魔台, region: cloud_ridge, location: mist_ferry}
+  # 5F-5a：餘燼集（8.26.1 每個小鎮都有鐵匠與附魔台，5D-3b 代決）。鐵匠＝爐叔（19.5）；店名 19、20 沒寫，開發 PM 定。
+  - {id: smithy_ember_market, kind: smithy, name_zh: 爐叔鐵鋪, region: ashen_waste, location: ember_market, npc: smith_lu}
+  - {id: enchanter_ember_market, kind: enchanter, name_zh: 餘燼附魔台, region: ashen_waste, location: ember_market}
 
 craft:
   # 稀有起才有 1 條 build 詞條（item_gen.yaml 的 required），所以打造只有稀有、史詩（代決 5D3-2）。
@@ -37,13 +40,17 @@ materials:
   item_scorched_iron: {leanings: [affix_cond_still_defense, affix_react_ranged_block, affix_max_hp]}  # 焦鐵：護甲、格擋（5D-2b）
   item_frost_ember: {leanings: [affix_attack_ice, affix_weapon_ice], resonance: frozen}                    # 寒燼：冰
   item_molten_heart: {leanings: [affix_resist_fire, affix_attr_con], resonance: ignite}                    # 熔心晶
+  # 5F-5a：荒原的其他材料（19.2.4）
+  item_ember_feather: {leanings: [affix_attack_fire, affix_cond_height_hit, affix_trait_bow_high_range], resonance: ignite}  # 餘燼羽：火、高處
+  item_sulfur_crystal: {leanings: [affix_attack_poison, affix_weapon_poison, affix_act_smoke], resonance: poisoned}         # 硫磺結晶：中毒、煙霧
+  item_obsidian_shard: {leanings: [affix_attr_dex, affix_attack_combo, affix_trait_dagger_backstab_die]}                   # 黑曜片：爆擊、流血（沒有現成詞條，用最接近的）
 
 # M7、20.3、20.4：部位相同＋特色材料組合完全相同 → 獨特裝備（稀有度史詩；玩家選的 build 詞條換成獨特
 # 詞條，代決 5D3-7）。
 # hints（20.4，5D-3b）：提示只說材料的意象。驚雷霧袍的提示已由霧渡鎮酒館傳聞與事件 4 的線頭顯示
-# （world/social、world/events），這裡只記資料。另外兩個在餘燼集：灰燼荒原還沒有地點圖，
-# 地點 ID ember_market 是開發 PM 暫定（代決 5D3b-5），等荒原內容段建地點圖時接進酒館與聊天
-# （CraftingRules.hints_at）。
+# （world/social、world/events），這裡只記資料。另外兩個在餘燼集（5F-5a 接上）：酒館（tavern）的提示
+# 是 world/social/ashen_waste.yaml 的酒館傳聞、傳聞（rumor）的提示是餘燼集 NPC 的聊天傳聞；載入時檢查
+# 有地點圖的區域，提示的文字要出現在對應的傳聞裡（CraftingRules.hints_at）。
 hidden:
   - id: recipe_thunder_mist_robe
     name_zh: 驚雷霧袍

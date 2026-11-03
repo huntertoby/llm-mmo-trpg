@@ -1,0 +1,31 @@
+# 灰燼之心第 2 階段「呼吸」的吸氣（Phase 5F-5a；19.2.3：核心「吸氣」把 2 格內的單位拉近 1 格）。
+# 拉近之後在身邊一圈小火傷（同引力爆的聚集段）；只給敵人用；數值為初值，未經模擬。
+id: skill_heart_inhale
+schema_version: 1
+name_zh: 熔心吸氣
+enemy_only: true
+tier: 2
+rank: 2
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: ring, radius: 2}
+effects:
+  - {type: pull, distance: 1}
+followup:
+  when: after_gather
+  skeleton: area
+  shape: {type: square3, range: 0}
+  effects:
+    - {type: damage, dice: 1d10, element: fire}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [fire, spell, pull, aoe]
+narrative:
+  concept: 裂開的核心猛地一吸，把周圍的人和熱風一起拖過來
+  cast_flavor: 核心的光一縮，四周的空氣全往裂縫裡灌
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -24,6 +24,8 @@ __all__ = [
     "MAX_THIRD_SIZE",
     "MIN_GROUP_SIZE",
     "NO_ENCOUNTER_KINDS",
+    "ArmorMod",
+    "ArmorMods",
     "EncounterGroupDef",
     "EncounterSurge",
     "EncounterTable",
@@ -110,6 +112,55 @@ class EncounterSurge(ContentModel):
     day_phase: Literal["day", "night"] | None = None
 
 
+class ArmorMod(ContentModel):
+    """一條護甲調整（Phase 5F-5a；19.4 骨架 13「每攔下 1 批碎片，灰燼之心第 1 階段護甲 −1」、
+    18.4 骨架 14 世界線頭到期「灰燼之心第 1 階段護甲 +1」）：``world_flag``（遇敵當下有效的世界
+    旗標）、``story_flag``（角色的劇情旗標）、``thread``（遇敵時刻還有效的線頭）恰好填一個；符合時
+    加 ``amount``。"""
+
+    world_flag: str | None = Field(default=None, pattern=ID_PATTERN)
+    story_flag: str | None = Field(default=None, pattern=ID_PATTERN)
+    thread: str | None = Field(default=None, pattern=ID_PATTERN)
+    amount: int = Field(ge=-5, le=5)
+
+    @model_validator(mode="after")
+    def _one_source(self) -> ArmorMod:
+        sources = [s for s in (self.world_flag, self.story_flag, self.thread) if s is not None]
+        if len(sources) != 1:
+            raise ValueError("armor_mods 每一條要恰好填 world_flag、story_flag、thread 其中一個")
+        if self.amount == 0:
+            raise ValueError("armor_mods 的 amount 不可為 0")
+        return self
+
+
+class ArmorMods(ContentModel):
+    """開戰時調整陣容中 ``unit`` 的護甲（Phase 5F-5a）：符合的 ``mods`` 加總後夾在
+    ``min_total``～``max_total``，結果護甲不低於 0。不耗亂數。"""
+
+    unit: str = Field(pattern=ID_PATTERN)
+    min_total: int = Field(default=-5, ge=-10, le=0)
+    max_total: int = Field(default=5, ge=0, le=10)
+    mods: tuple[ArmorMod, ...] = Field(min_length=1)
+
+    def total(
+        self,
+        *,
+        world_flags: Collection[str],
+        story_flags: Collection[str],
+        threads: Collection[str],
+    ) -> int:
+        """符合的調整總和（已夾在上下限內）。"""
+        found = 0
+        for mod in self.mods:
+            if (
+                (mod.world_flag is not None and mod.world_flag in world_flags)
+                or (mod.story_flag is not None and mod.story_flag in story_flags)
+                or (mod.thread is not None and mod.thread in threads)
+            ):
+                found += mod.amount
+        return max(self.min_total, min(self.max_total, found))
+
+
 class LocationEncounters(ContentModel):
     location: str = Field(pattern=ID_PATTERN)
     groups: tuple[GroupWeight, ...] = Field(min_length=1)
@@ -123,6 +174,11 @@ class LocationEncounters(ContentModel):
     暗門」）。"""
     variants: tuple[EncounterVariant, ...] = ()
     """線頭到期結局的遭遇變化（Phase 5B-4b；第一個符合的旗標生效）。"""
+    objective: Literal["escape", "defend"] | None = None
+    """移動遇敵的勝利條件（Phase 5F-5a；19.9 #2 三村落的守點戰）：呼叫端沒有指定時用這個；
+    骨架的戰鬥解法照舊優先。``None``＝一般勝利。"""
+    armor_mods: ArmorMods | None = None
+    """開戰時的護甲調整（Phase 5F-5a；灰燼之心）。"""
 
     def variant_for(self, flags: Collection[str]) -> EncounterVariant | None:
         return next((v for v in self.variants if v.flag in flags), None)
@@ -279,6 +335,8 @@ def _location_problems(
         if any(not catalog.has(u) for m in members for u in m.all_units):
             continue  # 陣容的問題已經回報過
         problems += _gate_problems(loc, members, table, catalog)
+        if loc.armor_mods is not None and all(loc.armor_mods.unit not in m.units for m in members):
+            problems.append(f"地點 {loc_id}：armor_mods 的 {loc.armor_mods.unit} 不在任何陣容裡")
         problems += _variant_problems(loc, table, catalog)
         problems += _elite_problems(loc, place.kind, members, table, catalog)
     return problems

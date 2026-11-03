@@ -715,6 +715,21 @@ def _apply_map_themes(maps: dict[str, MapDef], regions: RegionTable | None) -> l
     return warnings
 
 
+def _hint_texts(events: WorldEventContent, quests: WorldQuestContent) -> dict[str, tuple[str, ...]]:
+    """區域 → 玩家看得到的傳聞文字（酒館傳聞、聊天、線頭；5F-5a 隱藏配方提示的檢查用）。只列聊天
+    內容與事件骨架都有的區域（精簡的內容資料夾不檢查）。"""
+    found: dict[str, tuple[str, ...]] = {}
+    for region in sorted(set(quests.social) & set(events.events)):
+        social = quests.social[region]
+        skeletons = events.events[region].skeletons
+        found[region] = (
+            *(r.text_zh for r in social.rumors),
+            *(t.text_zh for t in social.talk),
+            *(th.text_zh for s in skeletons for th in s.threads),
+        )
+    return found
+
+
 def load_library(  # noqa: PLR0915
     content_dir: Path | None = None,
 ) -> ContentLibrary:
@@ -969,6 +984,7 @@ def load_library(  # noqa: PLR0915
         items=world_economy.items,
         affixes=affixes,
         keywords=keyword_ids,
+        hint_texts=_hint_texts(world_event_content, world_quests),
     )
     world_resonance = load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids)
 

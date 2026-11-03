@@ -67,8 +67,10 @@ def test_board_lists_season_goals_bounties_events(calm: ContentLibrary, tmp_path
     names = {b["bounty"]: b for b in board["bounties"]}
     assert set(names) == {"north_wolf_king", "mist_swordsman", "scarface"}
     assert all(b["open"] and b["status_zh"] == "懸賞中" for b in board["bounties"])
-    event, seal = board["world_events"]  # 5F-3：封印共鳴（第 7～10 天）還沒開始
+    # 5F-3：封印共鳴（第 7～10 天）、5F-5a：熔岩潰堤（第 4～7 天）都還沒開始
+    event, breach, seal = board["world_events"]
     assert seal["event"] == "seal_resonance" and seal["status"] == "pending"
+    assert breach["event"] == "lava_breach" and breach["status"] == "pending"
     assert event["name_zh"] == "霧潮入侵" and event["status"] == "active"
     assert event["target"] == 30 and event["permille"] == 0
     assert event["target_note_zh"] == "沒有前一天的上線紀錄，用原門檻"
@@ -79,7 +81,6 @@ def test_board_lists_season_goals_bounties_events(calm: ContentLibrary, tmp_path
 
 def test_hidden_bounty_location_uses_hint(calm: ContentLibrary, tmp_path: Path) -> None:
     """懸賞地點是還沒發現的隱藏地點時用提示語（5C-3f）。"""
-    hidden = {loc.id for loc in calm.world_maps["cloud_ridge"].locations if loc.hidden}
     with _client(calm, tmp_path / "saves") as client:
         cid = _ok(client.post("/api/world/characters", json=START), 201)["character"][
             "character_id"
@@ -88,10 +89,13 @@ def test_hidden_bounty_location_uses_hint(calm: ContentLibrary, tmp_path: Path) 
     by_location = {b["bounty"]: b["location_zh"] for b in board["bounties"]}
     season = calm.world_season
     assert season is not None
-    places = calm.world_maps["cloud_ridge"].location_by_id()
     for bounty in season.bounties:
-        name = places[bounty.location].name_zh
-        if bounty.location in hidden:
+        if bounty.id not in by_location:  # 5F-5a：荒原懸賞第 4 天才貼出
+            assert bounty.from_day > 1
+            continue
+        place = calm.world_maps[bounty.region].location_by_id()[bounty.location]
+        name = place.name_zh
+        if place.hidden:
             assert by_location[bounty.id] != name
         else:
             assert by_location[bounty.id] == name

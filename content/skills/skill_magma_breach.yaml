@@ -1,0 +1,33 @@
+# 精英熔核領主的蓄力強招「熔流潰堤」（Phase 5F-5a；19.2.1：提前一輪標出直線 6 格，命中造火地並擊退）。
+# 延遲段只能以施放者為中心（十字、方陣、環形），用十字臂長 2 近似直線（代決 5F5a-7）。只給敵人用；數值為初值，未經模擬。
+id: skill_magma_breach
+schema_version: 1
+name_zh: 熔流潰堤
+enemy_only: true
+tier: 2
+rank: 2
+rarity: rare
+kind: active
+skeleton: aura
+category: weapon
+weapon_req: melee
+ap_cost: 3
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+followup:
+  when: delayed
+  release: next_turn
+  skeleton: area
+  shape: {type: cross, range: 0, arm: 2}
+  effects:
+    - {type: damage, multiplier_permille: 1500, element: fire}
+    - {type: create_surface, surface: fire}
+condition: null
+cost: {stamina: 10, cooldown: 3}
+tags: [fire, melee, aoe]
+narrative:
+  concept: 背上的熔岩池整個傾倒，熔流沿著地面潰堤而出
+  cast_flavor: 熔核領主伏低身子，背上的熔岩池開始翻滾冒泡
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

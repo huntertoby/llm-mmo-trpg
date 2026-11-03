@@ -5,6 +5,7 @@
 # 開發 PM 定（代決 5B3-7），之後可改；改了只動這個檔。
 tones:
   cloud_ridge: 古風：短句、少形容詞，帶一點文言；修士稱人「施主」
+  ashen_waste: 粗獷：短句、口語，常用廢鐵、灰燼與火的比喻；拾荒者與盜賊說話直白（5F-5a，開發 PM 定）
 event_text: 在{location}，{who}擋在你面前。
 event_more: '{who}想要{want}。擋在中間的是{obstacle}。賭上的是{stakes}。'
 event_more_no_obstacle: '{who}想要{want}。賭上的是{stakes}。'

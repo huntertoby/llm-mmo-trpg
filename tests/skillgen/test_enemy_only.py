@@ -21,6 +21,15 @@ ENEMY_ONLY = frozenset(
         "skill_rift_tremor",
         "skill_shard_erosion",
         "skill_summon_mist_shade",
+        # 5F-5a 灰燼荒原的敵人技能（開發 PM 2026-11-03 通知）
+        "skill_lava_spout",
+        "skill_heart_inhale",
+        "skill_heart_exhale",
+        "skill_heart_meltdown",
+        "skill_magma_breach",
+        "skill_summon_ember_whelp",
+        "skill_sulfur_breath",
+        "skill_ember_bite",
     }
 )
 
