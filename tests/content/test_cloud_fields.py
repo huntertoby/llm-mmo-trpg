@@ -176,7 +176,7 @@ def test_every_edge_between_drawn_maps_is_a_mutual_pair(library: ContentLibrary)
     pending = "\n".join(library.field_pending)
     for a, b in world_map.edges:
         if a in HIDDEN or b in HIDDEN:
-            continue  # 隱藏地點的連線是門配出口（test_hidden_places_are_entered_through_a_hidden_door）
+            continue  # 隱藏地點的連線是門配出口（見 test_hidden_places_...）
         if a in drawn and b in drawn:
             fa, fb = _field(library, a), _field(library, b)
             ab = next(e for e in fa.exits if e.to == b)
