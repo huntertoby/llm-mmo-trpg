@@ -44,8 +44,9 @@ import { clearLayer, label } from "./labels";
 import { buildUnitSprite, isLinked, Pulses } from "./unitSprite";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
-import type { PathDraw } from "../battle/pathPreview";
+import type { PathDraw, PathTag } from "../battle/pathPreview";
 import {
+  bangCenter,
   drawFaintGrid,
   drawPathLine,
   drawPathMarks,
@@ -55,7 +56,7 @@ import {
   MOVE_SOFT,
   pathTagNode,
   RANGE_SOFT,
-  tagPlacement,
+  placeTags,
   type TileGeo,
 } from "./pathArt";
 
@@ -787,10 +788,21 @@ export class BattleRenderer {
     const g = new Graphics();
     drawPathMarks(g, { ...path, bangs: [] }, geo);
     drawPathLine(g, path, geo);
-    drawPathMarks(g, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號畫在線之上
     this.marks.addChild(g);
-    path.tags.forEach((tag, i) => this.marks.addChild(pathTagNode(tag, tagPlacement(this.origin(tag.pos), i))));
+    const bangs = new Graphics();
+    drawPathMarks(bangs, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號畫在線與小牌之上（最後加入）
+    const nodes = path.tags.map((tag) => pathTagNode(tag));
+    const spots = placeTags(
+      nodes.map((n, i) => ({ o: this.origin((path.tags[i] as PathTag).pos), w: n.width })),
+      path.bangs.map((p) => bangCenter(this.center(p))),
+    );
+    nodes.forEach((n, i) => {
+      const at = spots[i] as { x: number; y: number };
+      n.position.set(at.x, at.y);
+      this.marks.addChild(n);
+    });
     if (path.missEnd !== null) this.marks.addChild(missTagNode(this.origin(path.missEnd)));
+    this.marks.addChild(bangs);
   }
 
   /** 反應詢問的觸發者（洋紅雙框）與滑鼠所在格（白框），畫在最上層、跟著頂面抬高。 */

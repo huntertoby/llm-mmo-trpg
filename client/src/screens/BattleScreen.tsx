@@ -221,6 +221,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const logRoomPx = useLogRoom(boardRef, selecting, `${mode?.key ?? ""}|${sel.hurlPick ?? ""}|${sel.orderPick ?? ""}`);
 
   const { cardTile, hoverUnit, tileCardSections } = tiles;
+  // 選移動時滑過空格、畫出路徑提示時不出格子資訊卡（會蓋住路徑與小牌；地表的效果已寫在小牌上）
+  const pathShown = (hl.highlights.path?.segments.length ?? 0) > 0 || (hl.highlights.path?.missEnd ?? null) !== null;
   const dockUnit = pinnedUnitOf(shown, pinnedUnit);
   return (
     <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`} style={board.layoutStyle}>
@@ -244,7 +246,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             onCancel={cmds.cancel}
             rendererRef={pb.rendererRef}
           >
-            {cardTile !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
+            {cardTile !== null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
               <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} card={tiles.tileCard}>
                 {hoverUnit !== null && (
                   <UnitInfo

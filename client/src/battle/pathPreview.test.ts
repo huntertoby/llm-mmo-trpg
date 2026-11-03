@@ -19,7 +19,7 @@ import {
   type PathPreview,
   type PathStep,
 } from "./pathPreview";
-import { drawPathLine, drawPathMarks, drawSoftCells, MOVE_SOFT, type Pen, type StrokeStyle } from "../render/pathArt";
+import { drawPathLine, drawPathMarks, drawSoftCells, MOVE_SOFT, placeTags, type Pen, type StrokeStyle } from "../render/pathArt";
 
 type Reach = PathStep["reach"];
 
@@ -462,5 +462,19 @@ describe("畫法", () => {
     expect(g.strokes[0]?.color).toBe(0xffffff);
     expect(g.calls.filter((c) => c.startsWith("M"))).toHaveLength(6);
     expect(g.strokes[g.strokes.length - 1]?.color).toBe(MOVE_SOFT.edge);
+  });
+
+  it("小牌不互相疊：右上被佔就換位置，都疊到時往上疊", () => {
+    const items = [0, 48, 96, 144].map((x) => ({ o: { x, y: 100 }, w: 150 }));
+    const spots = placeTags(items);
+    expect(spots[0]).toEqual({ x: 24, y: 82 });
+    expect(spots[1]).toEqual({ x: 72, y: 144 });
+    for (let i = 0; i < spots.length; i++) {
+      for (let j = i + 1; j < spots.length; j++) {
+        const a = spots[i] as { x: number; y: number };
+        const b = spots[j] as { x: number; y: number };
+        expect(a.x < b.x + 150 && a.x + 150 > b.x && a.y < b.y + 22 && a.y + 22 > b.y).toBe(false);
+      }
+    }
   });
 });

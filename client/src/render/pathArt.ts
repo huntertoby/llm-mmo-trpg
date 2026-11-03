@@ -182,16 +182,22 @@ export function drawPathMarks(g: Pen, draw: PathDraw, geo: TileGeo): void {
   for (const p of draw.bangs) drawBang(g, geo.center(p));
 }
 
+const BANG_R = 10;
+
+/** 驚嘆號泡泡的中心（格子中心上方）。 */
+export function bangCenter(c: Pt): Pt {
+  return { x: c.x, y: c.y - T * 0.62 };
+}
+
 /** 紅色驚嘆號泡泡（格子上方）。 */
 function drawBang(g: Pen, c: Pt): void {
-  const x = c.x;
-  const y = c.y - T * 0.62;
+  const { x, y } = bangCenter(c);
   g.moveTo(x - 4, y + 8);
   g.lineTo(x, y + 15);
   g.lineTo(x + 4, y + 8);
   g.closePath();
   g.fill({ color: 0xe0302a });
-  g.circle(x, y, 10);
+  g.circle(x, y, BANG_R);
   g.fill({ color: 0xe0302a });
   g.stroke({ width: 2, color: 0x1c1712 });
   g.roundRect(x - 1.6, y - 6, 3.2, 8, 1.6);
@@ -253,13 +259,44 @@ function drawTagIcon(g: Pen, icon: TagIcon, x: number, y: number): void {
 
 export const TAG_HEIGHT = 22;
 
-/** 小牌放在格子的哪裡（世界座標的左上角）：預設在格子右上方，奇數個放右下方，避免連續格的小牌疊在一起。 */
-export function tagPlacement(o: Pt, index: number): Pt {
-  return index % 2 === 0 ? { x: o.x + T * 0.5, y: o.y - TAG_HEIGHT + 4 } : { x: o.x + T * 0.5, y: o.y + T - 4 };
+/**
+ * 各張小牌放在哪裡（世界座標的左上角），依序擺、不互相疊：依序試格子的右上、右下、左上、左下；
+ * 都疊到時放右上再往上疊。`o` 是格子頂面的左上角，`w` 是小牌寬度。
+ */
+export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: readonly Pt[] = []): Pt[] {
+  // `avoid`：驚嘆號泡泡的中心（不讓小牌蓋住）
+  const placed: Array<{ x: number; y: number; w: number; h: number }> = avoid.map((c) => ({
+    x: c.x - BANG_R,
+    y: c.y - BANG_R,
+    w: BANG_R * 2,
+    h: BANG_R * 2 + 6,
+  }));
+  const hits = (x: number, y: number, w: number) =>
+    placed.some((r) => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + TAG_HEIGHT + 2 > r.y);
+  return items.map(({ o, w }) => {
+    const above = o.y - TAG_HEIGHT + 4;
+    const below = o.y + T - 4;
+    const right = o.x + T * 0.5;
+    const left = o.x + T * 0.5 - w;
+    const tries: Pt[] = [
+      { x: right, y: above },
+      { x: right, y: below },
+      { x: left, y: above },
+      { x: left, y: below },
+    ];
+    let at = tries.find((p) => !hits(p.x, p.y, w));
+    if (at === undefined) {
+      let y = above;
+      while (hits(right, y, w)) y -= TAG_HEIGHT + 2;
+      at = { x: right, y };
+    }
+    placed.push({ x: at.x, y: at.y, w, h: TAG_HEIGHT });
+    return at;
+  });
 }
 
-/** 一張結果小牌：深色圓角底、地表色邊、圖示、文字。 */
-export function pathTagNode(tag: PathTag, at: Pt): Container {
+/** 一張結果小牌：深色圓角底、地表色邊、圖示、文字（`at` 之後再設）。 */
+export function pathTagNode(tag: PathTag, at: Pt = { x: 0, y: 0 }): Container {
   const node = new Container();
   const text = label(tag.text, 12, 0xffffff, true);
   const w = Math.ceil(text.width) + 32;
