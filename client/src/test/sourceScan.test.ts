@@ -1,6 +1,6 @@
 // 6C-R1：掃原始碼工具本身的測試（去註解不誤吃字串／正則／JSX 文字；讀檔不靠 import.meta.glob）。
 import { describe, expect, it } from "vitest";
-import { listFiles, readSources, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "./sourceScan";
+import { listFiles, readFile, readSources, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } from "./sourceScan";
 
 describe("stripTsComments", () => {
   it("去掉行註解與區塊註解，保留換行與位置", () => {
@@ -55,5 +55,12 @@ describe("讀檔", () => {
     expect(css).toContain("styles/base.css");
     expect(css).toContain("world/story.css");
     expect(listFiles(SRC_DIR, (p) => p === "test/sourceScan.ts")).toEqual(["test/sourceScan.ts"]);
+  });
+
+  it("測試檔不用 `import.meta.glob`（清單會被 vitest 的 fsModuleCache 快取，新檔不會被掃到；改用本檔的 fs 工具）", () => {
+    const tests = listFiles(SRC_DIR, (p) => /\.test\.tsx?$/.test(p));
+    expect(tests.length).toBeGreaterThan(50);
+    const bad = tests.filter((p) => /import\.meta\.glob\s*[<(]/.test(stripTsComments(readFile(SRC_DIR, p), p)));
+    expect(bad).toEqual([]);
   });
 });

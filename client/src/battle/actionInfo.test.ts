@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { actionCardText, actionHint, actionSummary, moreActionsSummary } from "./actionInfo";
 import { objectiveRules } from "./objective";
 import { BASIC_MODES, MORE_KINDS } from "./targeting";
+import { readFile, SRC_DIR } from "../test/sourceScan";
 
-const ui = import.meta.glob("../ui/TurnControls.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+// 6C-R1：執行時用 fs 讀（不用 `import.meta.glob`，它的結果會被 vitest 的 fsModuleCache 快取）
+const ui = { "ui/TurnControls.tsx": readFile(SRC_DIR, "ui/TurnControls.tsx") };
 
 describe("動作說明", () => {
   it("常駐按鈕與「更多動作」的每一項都有浮動卡文字", () => {
