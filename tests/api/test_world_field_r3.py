@@ -1,4 +1,5 @@
-"""6C-R3：實地地圖的靜態地形快取（``GET /api/world/fields/{map_id}``）與敵群帶頭單位的外觀。"""
+"""6C-R3：實地地圖的靜態地形快取（6D-R1 起 ``GET /api/world/characters/{id}/fields/{map_id}``）
+與敵群帶頭單位的外觀。"""
 
 from __future__ import annotations
 
@@ -84,30 +85,33 @@ def test_revealed_hidden_door_in_open_cells(field_library: ContentLibrary) -> No
     view = field_view(field_library, char)
     static = field_tiles(field_library, "herb_valley")
     assert view is not None and static is not None
-    assert view.open_cells == (door.at,)
-    walk = {(t.x, t.y): t.walkable for t in view.tiles}
-    assert walk[door.at] is True
+    assert [(t.x, t.y) for t in view.open_cells] == [door.at]  # 6D-R1：整格（真地形）
+    walk = {(t.x, t.y): t for t in view.tiles}
+    assert walk[door.at].walkable is True
     assert {(t.x, t.y): t.walkable for t in static.tiles}[door.at] is False
-    patched = {(t.x, t.y): t.walkable or (t.x, t.y) in set(view.open_cells) for t in static.tiles}
-    assert patched == walk  # 靜態地形＋open_cells＝原本的地形
+    opened = {(t.x, t.y): t for t in view.open_cells}
+    patched = {(t.x, t.y): opened.get((t.x, t.y), t) for t in static.tiles}
+    assert patched == walk  # 靜態地形＋open_cells＝這個角色看到的地形
 
 
 def test_tiles_endpoint_and_cache_header(client: TestClient) -> None:
     view = client.post("/api/world/characters", json=START).json()
     field = view["field"]
+    base = f"/api/world/characters/{view['character']['character_id']}/fields"
     assert field["tiles"] == [] and field["tiles_hash"]
-    hit = client.get(f"/api/world/fields/{field['map_id']}?h={field['tiles_hash']}")
+    hit = client.get(f"{base}/{field['map_id']}?h={field['tiles_hash']}")
     assert hit.status_code == 200 and hit.json()["hash"] == field["tiles_hash"]
     assert "immutable" in hit.headers.get("cache-control", "")
-    miss = client.get(f"/api/world/fields/{field['map_id']}?h=stale")
+    miss = client.get(f"{base}/{field['map_id']}?h=stale")
     assert miss.status_code == 200 and miss.json()["hash"] == field["tiles_hash"]
     assert "cache-control" not in miss.headers
-    assert client.get("/api/world/fields/no_such_map").status_code == 404
+    assert client.get(f"{base}/no_such_map").status_code == 404
 
 
 def test_world_view_is_smaller_without_tiles(client: TestClient) -> None:
     view = client.post("/api/world/characters", json=START)
-    static = client.get(f"/api/world/fields/{view.json()['field']['map_id']}")
+    cid = view.json()["character"]["character_id"]
+    static = client.get(f"/api/world/characters/{cid}/fields/{view.json()['field']['map_id']}")
     assert len(view.content) < 2 * len(static.content) + 200_000  # 量測見 6C-R3 報告
 
 

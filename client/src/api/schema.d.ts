@@ -780,7 +780,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/world/fields/{map_id}": {
+    "/api/world/characters/{character_id}/fields/{map_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -791,8 +791,11 @@ export interface paths {
          * Get Field Tiles
          * @description 實地地圖的靜態地形（6C-R3）：只看內容。``h`` 等於目前的雜湊時允許瀏覽器快取（內容一樣
          *     就一樣）；不同或省略照樣回傳目前的地形（前端以回傳的 ``hash`` 為準）。
+         *
+         *     6D-R1：經角色走（擁有者檢查同其他 ``/characters/{id}`` 路由），只給這個角色看得到的圖
+         *     （:func:`~trpg.api.world_field_view.visible_field_map`）；看不到和不存在一樣 404、訊息相同。
          */
-        get: operations["get_field_tiles_api_world_fields__map_id__get"];
+        get: operations["get_field_tiles_api_world_characters__character_id__fields__map_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -826,7 +829,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Character */
+        /**
+         * Get Character
+         * @description ``with_tiles`` 為真時 ``field.tiles`` 直接帶這個角色看到的地形（6D-R1：前端另外取靜態地形
+         *     失敗時的退路）。
+         */
         get: operations["get_character_api_world_characters__character_id__get"];
         put?: never;
         post?: never;
@@ -3982,7 +3989,8 @@ export interface components {
         };
         /**
          * FieldTilesView
-         * @description 一張實地地圖的靜態地形（6C-R3；``GET /api/world/fields/{map_id}``）：只看內容，前端依
+         * @description 一張實地地圖的靜態地形（6C-R3；``GET /api/world/characters/{id}/fields/{map_id}``）：只看
+         *     內容，前端依
          *     ``hash`` 快取。
          */
         FieldTilesView: {
@@ -4029,10 +4037,7 @@ export interface components {
              * Open Cells
              * @default []
              */
-            open_cells: [
-                number,
-                number
-            ][];
+            open_cells: components["schemas"]["FieldTileView"][];
             /** Objects */
             objects: components["schemas"]["FieldObjectView"][];
             /** Exits */
@@ -11182,13 +11187,14 @@ export interface operations {
             };
         };
     };
-    get_field_tiles_api_world_fields__map_id__get: {
+    get_field_tiles_api_world_characters__character_id__fields__map_id__get: {
         parameters: {
             query?: {
                 h?: string | null;
             };
             header?: never;
             path: {
+                character_id: string;
                 map_id: string;
             };
             cookie?: never;
@@ -11270,7 +11276,9 @@ export interface operations {
     };
     get_character_api_world_characters__character_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                with_tiles?: boolean;
+            };
             header?: never;
             path: {
                 character_id: string;

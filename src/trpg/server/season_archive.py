@@ -38,6 +38,7 @@ from trpg.world.layout import (
     LOG_FILE,
 )
 from trpg.world.league import match_winner
+from trpg.world.save import log_lines
 
 __all__ = [
     "ARCHIVED",
@@ -250,9 +251,8 @@ def _log_entry(source: _Source, seq: int) -> dict[str, object] | None:
     path = source.root / LOG_FILE
     if not path.is_file():
         return None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
+    lines, _torn = log_lines(path.read_text(encoding="utf-8"))  # 寫到一半的最後一行略過（6D-R1）
+    for line in lines:
         entry = json.loads(line)
         if isinstance(entry, dict) and entry.get("seq") == seq:
             return entry

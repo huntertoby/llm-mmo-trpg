@@ -48,6 +48,12 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 設成最後一筆，處理同上：規則已變、不能重播。之後內容或規則改了不必再手動升版號（版號只留給格式
 變更）。日誌改成只 append：每個動作附加一行（:func:`append_log_line`）；標頭只在 ``stale_through``
 或 ``rules_key`` 改變、格式升版時整份重寫（:func:`write_atomic`）。
+
+**Phase 6D-R1**：規則鍵多一段 :data:`WORLD_RULES_VERSION`（``戰鬥紀錄版號|w世界規則版號|規則包雜湊|
+內容 digest``）：內容 digest 只看資料，世界規則的**程式**改了（例如走路、遇敵、感知的判法）資料
+不會變，所以改了這類程式要手動把它加一（``docs/開發PM交接.md`` 6.6）。讀檔時截掉寫到一半的最後
+一行（沒有換行結尾）由 :func:`read_log`／:func:`log_lines` 統一處理，所有讀者共用
+（:attr:`WorldLog.torn`）。
 """
 
 from __future__ import annotations
@@ -81,6 +87,7 @@ __all__ = [
     "LEGACY_WLOG_FORMATS",
     "STALE_LOG_ZH",
     "WLOG_FORMAT",
+    "WORLD_RULES_VERSION",
     "WorldLog",
     "append_log_line",
     "content_digest",
@@ -92,6 +99,7 @@ __all__ = [
     "loads_char",
     "loads_log",
     "loads_world",
+    "log_lines",
     "log_rules_key",
     "read_log",
     "write_atomic",
@@ -103,6 +111,10 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
+WORLD_RULES_VERSION: Final = 1
+"""世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
+的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
+只改內容資料不用加（內容 digest 會變）。"""
 
 
 @dataclass(frozen=True)
@@ -116,6 +128,8 @@ class WorldLog:
     """標頭記的規則鍵（6C-R3，:func:`log_rules_key`）；``None``＝沒記（6C-R3 以前寫的、舊格式）。"""
     header: str = field(default="", compare=False)
     """標頭那一行的原文（判斷要不要重寫標頭用）。"""
+    torn: bool = field(default=False, compare=False)
+    """最後一行沒有換行結尾（append 寫到一半中斷），已略過那一行（6D-R1）。"""
 
     @property
     def stale_zh(self) -> str | None:
@@ -224,9 +238,11 @@ def content_digest(library: ContentLibrary) -> str:
 
 
 def log_rules_key(library: ContentLibrary) -> str:
-    """世界日誌的規則鍵（6C-R3）：``戰鬥紀錄版號|規則包雜湊|內容 digest``（比照
-    :func:`trpg.server.league.rules_key`）。和日誌標頭記的不同＝規則或內容改了，舊紀錄不能重播。"""
-    return f"{LOG_FORMAT}|{hash_ruleset(library.ruleset)}|{content_digest(library)[:16]}"
+    """世界日誌的規則鍵（6C-R3）：``戰鬥紀錄版號|w世界規則版號|規則包雜湊|內容 digest``（比照
+    :func:`trpg.server.league.rules_key`；世界規則版號 :data:`WORLD_RULES_VERSION` 是 6D-R1 加的）。
+    和日誌標頭記的不同＝規則或內容改了，舊紀錄不能重播。"""
+    ruleset = hash_ruleset(library.ruleset)
+    return f"{LOG_FORMAT}|w{WORLD_RULES_VERSION}|{ruleset}|{content_digest(library)[:16]}"
 
 
 def _log_header(line: str) -> tuple[int | None, str | None]:
@@ -250,16 +266,28 @@ def _log_header(line: str) -> tuple[int | None, str | None]:
     return stale, key
 
 
+def log_lines(text: str) -> tuple[list[str], bool]:
+    """日誌的完整行（略過空行）與「最後一行有沒有被丟掉」（6D-R1）：最後一行沒有換行結尾＝append
+    寫到一半中斷（那個動作的角色存檔也還沒寫），丟掉那一行。所有讀日誌的地方都經過這裡。"""
+    torn = bool(text) and not text.endswith("\n")
+    if torn:
+        text = text[: text.rfind("\n") + 1]
+    return [line for line in text.splitlines() if line.strip()], torn
+
+
 def read_log(text: str) -> WorldLog:
-    """讀整份日誌（含舊格式；見模組說明）。"""
-    lines = [line for line in text.splitlines() if line.strip()]
+    """讀整份日誌（含舊格式；見模組說明）。寫到一半的最後一行略過（:func:`log_lines`）；連標頭都
+    沒寫完＝空的日誌（``torn`` 為真）。"""
+    lines, torn = log_lines(text)
     if not lines:
+        if torn:
+            return WorldLog(entries=(), torn=True)
         raise WorldSaveFormatError("日誌是空的（缺少標頭）")
     stale, key = _log_header(lines[0])
     entries = _log_entries(lines)
     if stale == -1:
         stale = entries[-1].seq if entries else None
-    return WorldLog(entries=entries, stale_through=stale, rules_key=key, header=lines[0])
+    return WorldLog(entries=entries, stale_through=stale, rules_key=key, header=lines[0], torn=torn)
 
 
 def loads_log(text: str) -> tuple[WorldLogEntry, ...]:

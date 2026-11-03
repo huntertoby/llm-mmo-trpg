@@ -1,5 +1,9 @@
 """世界畫面的實地地圖（Phase 6B-2；3.5）：目前地圖的地形、物件、出口、門、傳送石、NPC、設施與自己的
-位置。舊存檔沒有位置時照 :func:`trpg.world.field.placed` 放到 ``entry``（只算，不寫檔）。"""
+位置。舊存檔沒有位置時照 :func:`trpg.world.field.placed` 放到 ``entry``（只算，不寫檔）。
+
+**隱藏門（6D-R1）**：還沒發現的隱藏門格在地形裡畫成牆（:data:`HIDDEN_DOOR_TERRAIN`，不可站、沒有
+表面），和真的牆分不出來；靜態地形（:func:`field_tiles`）一律這樣畫，發現之後那一格的真地形放在
+``FieldView.open_cells``，前端蓋上去。靜態地形只給看得到這張圖的角色（:func:`visible_field_map`）。"""
 
 from __future__ import annotations
 
@@ -27,10 +31,9 @@ from trpg.api.world_field_schemas import (
 from trpg.api.world_field_things import FieldSocial, things_update
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import passable_grid
 from trpg.world.actions import WorldEvent
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
-from trpg.world.field import FieldGrid, field_grid, field_map, hidden_door, placed
+from trpg.world.field import FieldGrid, field_grid, field_map, hidden_cells, hidden_door, placed
 from trpg.world.field_actions import (
     FieldEnteredEvent,
     TeleportStoneUnlockedEvent,
@@ -41,7 +44,12 @@ from trpg.world.gear import hero_loadout
 from trpg.world.narration import region_npcs
 from trpg.world.state import CharacterState, WorldState
 
-__all__ = ["field_line", "field_tiles", "field_view"]
+__all__ = ["HIDDEN_DOOR_TERRAIN", "field_line", "field_tiles", "field_view", "visible_field_map"]
+
+type XY = tuple[int, int]
+
+HIDDEN_DOOR_TERRAIN: Final = "wall"
+"""還沒發現的隱藏門格畫成的地形（6D-R1；戰鬥規則的牆，前端本來就會畫）。"""
 
 
 def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str | None:
@@ -69,21 +77,18 @@ def _map_name(library: ContentLibrary, found: FieldMapDef) -> str:
     return found.name_zh or _place_name(library, found.region, found.place)
 
 
-def _static_grid(library: ContentLibrary, found: FieldMapDef) -> FieldGrid:
-    """只看內容的地形格（6C-R3）：同 :func:`~trpg.world.field.field_grid`，但「發現才出現」的隱藏門
-    一律當成還沒發現（不可站）。"""
-    rules = library.ruleset
-    passable = passable_grid(found, rules.terrain.by_id(), rules.objects.by_id())
-    blocked = {npc.at for npc in found.npcs}
-    blocked |= {d.at for d in found.doors if d.hidden_until == "reveal"}
-    return FieldGrid(
-        map=found,
-        heights=tuple(tuple(h for h, _ in row) for row in found.grid()),
-        open=tuple(
-            tuple(ok and (x, y) not in blocked for x, ok in enumerate(row))
-            for y, row in enumerate(passable)
-        ),
-    )
+def visible_field_map(
+    library: ContentLibrary, char: CharacterState, map_id: str
+) -> FieldMapDef | None:
+    """``char`` 看得到的實地地圖（6D-R1；看不到和不存在一樣是 ``None``，不能拿來列舉地圖 ID）：
+    目前地點的室外圖與它的室內圖，或去過（``visited_locations``）、已發現（``revealed``）的地點的
+    室外圖與室內圖。隱藏地點沒發現、還沒走到的區域都看不到。"""
+    found = field_map(library, map_id)
+    if found is None:
+        return None
+    places = {(r.region, r.location) for r in (*char.visited_locations, *char.revealed)}
+    places.add((char.region, char.location))
+    return found if (found.region, found.place) in places else None
 
 
 _TILES: dict[tuple[int, str], tuple[ContentLibrary, FieldTilesView]] = {}
@@ -99,7 +104,7 @@ def field_tiles(library: ContentLibrary, map_id: str) -> FieldTilesView | None:
     found = field_map(library, map_id)
     if found is None:
         return None
-    tiles = _tiles(found, _static_grid(library, found))
+    tiles = _tiles(found, field_grid(library, None, found), hidden_cells(None, found))
     text = json.dumps(
         [found.width, found.height, [t.model_dump(mode="json") for t in tiles]],
         sort_keys=True,
@@ -116,24 +121,52 @@ def field_tiles(library: ContentLibrary, map_id: str) -> FieldTilesView | None:
     return view
 
 
-def _open_cells(static: FieldTilesView, grid: FieldGrid) -> tuple[tuple[int, int], ...]:
-    """靜態地形不可站、這個角色站得上去的格子（已發現的隱藏門）。"""
-    return tuple((t.x, t.y) for t in static.tiles if not t.walkable and grid.standable((t.x, t.y)))
-
-
-def _tiles(found: FieldMapDef, grid: FieldGrid) -> tuple[FieldTileView, ...]:
-    surfaces = {s.at: str(s.surface) for s in found.surfaces}
+def _open_cells(
+    found: FieldMapDef, char: CharacterState, grid: FieldGrid
+) -> tuple[FieldTileView, ...]:
+    """靜態地形畫成牆、這個角色已經發現的隱藏門格：這一格真正的地形（6D-R1；前端蓋在靜態地形上）。"""
+    revealed = hidden_cells(None, found) - hidden_cells(char, found)
+    rows = found.grid()
+    surfaces = _surfaces(found)
     return tuple(
-        FieldTileView(
-            x=x,
-            y=y,
-            height=height,
-            terrain=terrain,
-            surface=surfaces.get((x, y), "none"),
-            walkable=grid.standable((x, y)),
-        )
+        _tile((x, y), rows[y][x], surfaces, grid, hidden=frozenset())
+        for x, y in sorted(revealed, key=lambda c: (c[1], c[0]))
+    )
+
+
+def _surfaces(found: FieldMapDef) -> dict[XY, str]:
+    return {s.at: str(s.surface) for s in found.surfaces}
+
+
+def _tile(
+    cell: XY,
+    height_terrain: tuple[int, str],
+    surfaces: dict[XY, str],
+    grid: FieldGrid,
+    *,
+    hidden: frozenset[XY],
+) -> FieldTileView:
+    x, y = cell
+    height, terrain = height_terrain
+    if cell in hidden:  # 還沒發現的隱藏門：畫成牆，和真的牆分不出來（6D-R1）
+        return FieldTileView(x=x, y=y, height=height, terrain=HIDDEN_DOOR_TERRAIN, walkable=False)
+    return FieldTileView(
+        x=x,
+        y=y,
+        height=height,
+        terrain=terrain,
+        surface=surfaces.get(cell, "none"),
+        walkable=grid.standable(cell),
+    )
+
+
+def _tiles(found: FieldMapDef, grid: FieldGrid, hidden: frozenset[XY]) -> tuple[FieldTileView, ...]:
+    """整張圖的地形；``hidden`` 的格子（還沒發現的隱藏門）畫成牆。"""
+    surfaces = _surfaces(found)
+    return tuple(
+        _tile((x, y), cell, surfaces, grid, hidden=hidden)
         for y, row in enumerate(found.grid())
-        for x, (height, terrain) in enumerate(row)
+        for x, cell in enumerate(row)
     )
 
 
@@ -293,9 +326,9 @@ def field_view(
         interior=found.is_interior,
         width=found.width,
         height=found.height,
-        tiles=_tiles(found, grid) if inline_tiles else (),
+        tiles=_tiles(found, grid, hidden_cells(char, found)) if inline_tiles else (),
         tiles_hash=static.hash,
-        open_cells=_open_cells(static, grid),
+        open_cells=_open_cells(found, char, grid),
         objects=tuple(
             FieldObjectView(id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1])
             for o in found.objects

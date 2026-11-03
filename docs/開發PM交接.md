@@ -469,6 +469,7 @@ PM 看完結論，決定哪些排進下一份規格（或獨立一個小的整�
 - **平行工作**（例如文件整理與程式實作同時進行）用 `isolation: "worktree"` 的 agent，完成後在 main 上 `git merge --ff-only <先完成的分支>`、再 `git merge --no-ff <另一個分支>`，合併後自己跑一次 `check.py` 與一場 `--log-json`／`replay`。兩個 agent 共用 CPU，同時跑全量測試會互搶，但仍比雲端快。
 - **建立新的 GitHub repo** 要請使用者在網頁上建。
 - 平衡調整很耗 token：讓 agent 寫腳本輸出摘要表，由 PM 決定數值，不要讓 agent 反覆試。
+- **`WORLD_RULES_VERSION`（`src/trpg/world/save.py`，6D-R1）何時加一**：改了 `trpg.world` 的規則**程式**、會讓同一份世界日誌重播出不同結果時（走路、遇敵、感知、事件、戰鬥回寫的判法等），在同一個 commit 手動加一；只改內容資料（`content/`）或純顯示、API、前端不用加（內容 digest 已涵蓋）。不確定就加（代價只是舊日誌標成「規則已變、不能重播」）。
 - 規格要求大型模擬時，寫明「只在最後跑一次全量」（2C-4 曾因完成度檢查跑兩次，用了 68 分鐘、28 萬 token）。
 
 ## 7. 節省 token 的原則

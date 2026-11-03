@@ -175,7 +175,7 @@ def test_the_drafts_pass_and_list_the_unpaired_ends_as_pending(library: ContentL
     assert "to_ashen_ferry" in pending
     assert "to_ferry_steps" not in pending  # 霧渡鎮－渡口石階兩邊都畫了，已經配對
     # 四張底稿只有霧渡鎮的傳送石；城鎮那顆不算在每區 2～3 個裡（21.2），所以野外是 0 個
-    assert any("傳送石 0 個" in w for w in report.warnings)
+    assert any("傳送石 0 個" in p for p in report.pending)  # 6D-R1：畫完才判（錯誤）
 
 
 def test_progress_counts_outdoor_maps_per_region(library: ContentLibrary) -> None:
@@ -328,6 +328,16 @@ def _cloud_summit_with_campfire(raw: Raw) -> None:
     )
 
 
+def _boss_interior_with_campfire(raw: Raw) -> None:
+    """Boss 地點的室內圖放營火點（6D-R1：室內圖照所屬地點判斷）。"""
+    _cloud_summit_with_campfire(raw)
+    raw["cloud_summit"].pop("campfires")
+    inner = dict(raw["mist_ferry_smithy"])
+    inner |= {"id": "summit_hall", "interior_of": "cloud_summit"}
+    inner["campfires"] = [{"id": "fire_hall", "at": [2, 2]}]
+    raw["summit_hall"] = inner
+
+
 _REPORT_ERROR_CASES: list[tuple[str, Mutate, str]] = [
     # 一條連線＝一對出口
     ("missing_pair", _drop_exit("mist_ferry", "to_ferry_steps"), "缺少往 ferry_steps 的出口"),
@@ -464,6 +474,7 @@ _REPORT_ERROR_CASES: list[tuple[str, Mutate, str]] = [
     ),
     ("boss_with_teleport_stone", _cloud_summit_with_stone, "不可有傳送石"),
     ("boss_with_campfire", _cloud_summit_with_campfire, "不可放營火點"),  # 21.10 第 24 條
+    ("boss_interior_with_campfire", _boss_interior_with_campfire, "summit_hall：Boss 地點"),
 ]
 
 
@@ -517,7 +528,7 @@ def test_hidden_door_waits_for_the_hidden_map(library: ContentLibrary) -> None:
     assert any("cave_mouth" in p for p in report.pending)
 
 
-def test_size_and_stone_counts_are_only_warnings(library: ContentLibrary) -> None:
+def test_size_is_a_warning_and_stone_counts_are_errors(library: ContentLibrary) -> None:
     raw = _raw(library)
     _add(_open_map("hunter_hut", "hunter_hut", size=(40, 30)))(raw)
     raw["hunter_hut"]["exits"] = [
@@ -527,11 +538,26 @@ def test_size_and_stone_counts_are_only_warnings(library: ContentLibrary) -> Non
     ]
     raw["mist_ferry"]["teleport_stones"] = []
     report = _report(library, raw)
-    assert report.errors == ()
-    text = "\n".join(report.warnings)
-    assert "hunter_hut：40×30 不在 site 的建議範圍" in text
-    assert "城鎮應有 1 個傳送石，目前 0 個" in text
-    assert "傳送石 0 個" in text
+    assert "hunter_hut：40×30 不在 site 的建議範圍" in "\n".join(report.warnings)
+    assert any("城鎮應有 1 個傳送石，目前 0 個" in e for e in report.errors)  # 6D-R1：升成錯誤
+    # 區域的傳送石數：地點還沒畫完先記成待補，不是錯誤也不是警告
+    assert not any("傳送石 0 個" in t for t in (*report.errors, *report.warnings))
+    assert any("傳送石 0 個" in p and "畫完再判" in p for p in report.pending)
+
+
+def test_region_stone_count_is_an_error_once_drawn(library: ContentLibrary) -> None:
+    """一區的地點全部畫完後，野外傳送石數不在 2～3 個是錯誤（6D-R1）。"""
+    raw = {
+        k: v.model_dump(mode="json", exclude_defaults=True)
+        for k, v in library.field_maps.items()
+        if v.region == "cloud_ridge"
+    }
+    assert not any("傳送石" in e for e in _report(library, raw).errors)
+    for map_id in sorted(raw):
+        if raw[map_id].get("location") not in (None, "mist_ferry"):
+            raw[map_id].pop("teleport_stones", None)
+    errors = _report(library, raw).errors
+    assert any("區域 cloud_ridge：傳送石 0 個" in e for e in errors), errors
 
 
 def test_field_map_problems_is_the_error_list(library: ContentLibrary) -> None:
