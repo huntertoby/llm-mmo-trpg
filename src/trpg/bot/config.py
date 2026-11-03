@@ -1,10 +1,12 @@
-"""Bot 設定（Phase 5E-2；``docs/phases/Phase5計畫.md`` 29.3）。
+"""Bot 設定（Phase 5E-2；``docs/phases/Phase5計畫.md`` 29.3、5E-2b 32.3）。
 
-- 範本 ``config/bot.example.toml`` 進版控（沒有真的值）；真的值放 ``config/bot.local.toml``
-  （``.gitignore`` 的 ``*.local.*`` 已排除）或環境變數，由使用者自己填。
-- 讀取順序：``TRPG_BOT_CONFIG``（設定檔路徑）→ ``config/bot.local.toml``（不存在就略過）；
-  環境變數 ``TRPG_BOT_TOKEN``、``TRPG_BOT_GUILD_ID``、``TRPG_BOT_ROLE_ID``、
-  ``TRPG_BOT_ANNOUNCE_CHANNEL_ID`` 覆寫。
+- 範本 ``config/bot.example.toml``、``.env.example`` 進版控（沒有真的值）；真的值放 repo 根目錄的
+  ``.env``、``config/bot.local.toml``（兩者都被 ``.gitignore`` 排除）或環境變數，由使用者自己填。
+- 每個欄位各自取第一個有值的：① 環境變數 ``TRPG_DISCORD_TOKEN``、``TRPG_DISCORD_GUILD_ID``、
+  ``TRPG_DISCORD_ROLE_ID``、``TRPG_DISCORD_ANNOUNCE_CHANNEL_ID`` → ② ``.env``（同一組名稱）→
+  ③ 設定檔 ``[discord]``（``TRPG_BOT_CONFIG`` 指的檔，沒有就 ``config/bot.local.toml``）。
+  5E-2 的舊名 ``TRPG_BOT_*`` 仍可用，排在同一來源的新名之後（代決 5E2b-5）。
+- ``.env`` 只在讀真的環境（``env=None``）時讀；呼叫端給了 ``env``（測試）就不讀，除非給 ``env_file``。
 - 缺值或 ID 不是數字 → :class:`BotConfigError`，列出全部缺的欄位與環境變數，**不印 token**。
 - 遊戲伺服器不讀這個設定：Bot 設定缺值不影響伺服器。
 - ``[announce]``（5E-3，計畫 31.2）：每日公告的時區與時間（:func:`load_announce_settings`；沒填用
@@ -24,12 +26,16 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 
+from trpg.bot.envfile import EnvFileError, read_env_file
 from trpg.shared.errors import TrpgError
 
 __all__ = [
     "BOT_CONFIG_ENV",
+    "ENV_FILE_PATH",
     "EXAMPLE_CONFIG_PATH",
+    "EXAMPLE_ENV_FILE_PATH",
     "FIELD_ENV",
+    "LEGACY_FIELD_ENV",
     "LOCAL_CONFIG_PATH",
     "AnnounceSettings",
     "BotConfigError",
@@ -38,17 +44,27 @@ __all__ = [
     "load_bot_settings",
 ]
 
-CONFIG_DIR: Final = Path(__file__).resolve().parents[3] / "config"
+REPO_ROOT: Final = Path(__file__).resolve().parents[3]
+CONFIG_DIR: Final = REPO_ROOT / "config"
 LOCAL_CONFIG_PATH: Final = CONFIG_DIR / "bot.local.toml"
 EXAMPLE_CONFIG_PATH: Final = CONFIG_DIR / "bot.example.toml"
+ENV_FILE_PATH: Final = REPO_ROOT / ".env"
+EXAMPLE_ENV_FILE_PATH: Final = REPO_ROOT / ".env.example"
 BOT_CONFIG_ENV: Final = "TRPG_BOT_CONFIG"
 FIELD_ENV: Final = {
+    "token": "TRPG_DISCORD_TOKEN",
+    "guild_id": "TRPG_DISCORD_GUILD_ID",
+    "role_id": "TRPG_DISCORD_ROLE_ID",
+    "announce_channel_id": "TRPG_DISCORD_ANNOUNCE_CHANNEL_ID",
+}
+"""設定欄位 → 環境變數／``.env`` 的名稱（依這個順序檢查與列出）。"""
+LEGACY_FIELD_ENV: Final = {
     "token": "TRPG_BOT_TOKEN",
     "guild_id": "TRPG_BOT_GUILD_ID",
     "role_id": "TRPG_BOT_ROLE_ID",
     "announce_channel_id": "TRPG_BOT_ANNOUNCE_CHANNEL_ID",
 }
-"""設定欄位 → 覆寫用的環境變數（依這個順序檢查與列出）。"""
+"""5E-2 的舊名（相容；排在同一來源的新名之後）。"""
 ID_FIELDS: Final = ("guild_id", "role_id", "announce_channel_id")
 _MASK_LEN: Final = 8
 _SHOWN: Final = 4
@@ -123,19 +139,47 @@ def _config_path(environ: Mapping[str, str]) -> Path | None:
     return LOCAL_CONFIG_PATH if LOCAL_CONFIG_PATH.is_file() else None
 
 
+def _from_vars(source: Mapping[str, str], field: str) -> str:
+    """新名優先、舊名其次；空字串＝沒填。"""
+    for names in (FIELD_ENV, LEGACY_FIELD_ENV):
+        value = source.get(names[field], "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _dotenv(env: Mapping[str, str] | None, env_file: Path | None) -> dict[str, str]:
+    path = env_file if env_file is not None else (ENV_FILE_PATH if env is None else None)
+    if path is None:
+        return {}
+    try:
+        return read_env_file(path)
+    except EnvFileError as exc:
+        raise BotConfigError(str(exc)) from exc
+
+
 def load_bot_settings(
-    path: Path | None = None, env: Mapping[str, str] | None = None
+    path: Path | None = None,
+    env: Mapping[str, str] | None = None,
+    *,
+    env_file: Path | None = None,
 ) -> BotSettings:
-    """讀 Bot 設定；缺值或不合法時 :class:`BotConfigError` 一次列出全部問題。"""
+    """讀 Bot 設定；缺值或不合法時 :class:`BotConfigError` 一次列出全部問題。
+
+    ``env=None`` 讀程序環境變數與 repo 根目錄的 ``.env``；給了 ``env`` 就只讀它（與 ``env_file``）。
+    """
     environ = os.environ if env is None else env
+    dotenv = _dotenv(env, env_file)
     source = path if path is not None else _config_path(environ)
     data: dict[str, object] = _read_file(source) if source is not None else {}
-    for field, name in FIELD_ENV.items():
-        if environ.get(name):
-            data[field] = environ[name]
-    values = {field: str(data.get(field, "") or "").strip() for field in FIELD_ENV}
+    values = {
+        field: _from_vars(environ, field)
+        or _from_vars(dotenv, field)
+        or str(data.get(field, "") or "").strip()
+        for field in FIELD_ENV
+    }
     problems = [
-        f"{field}（設定檔 [discord] {field}，或環境變數 {FIELD_ENV[field]}）"
+        f"{field}（環境變數或 .env 的 {FIELD_ENV[field]}，或設定檔 [discord] {field}）"
         for field, value in values.items()
         if not value
     ]
@@ -147,7 +191,10 @@ def load_bot_settings(
     if problems:
         where = str(source) if source is not None else f"沒有設定檔（可建 {LOCAL_CONFIG_PATH}）"
         lines = "\n".join(f"  - {p}" for p in problems)
-        raise BotConfigError(f"Bot 設定不完整（{where}）：\n{lines}\n範本：{EXAMPLE_CONFIG_PATH}")
+        raise BotConfigError(
+            f"Bot 設定不完整（{where}）：\n{lines}\n"
+            f"範本：{EXAMPLE_ENV_FILE_PATH}（複製成 {ENV_FILE_PATH} 填值）或 {EXAMPLE_CONFIG_PATH}"
+        )
     return BotSettings(
         token=SecretStr(values["token"]),
         guild_id=values["guild_id"],

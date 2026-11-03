@@ -37,6 +37,7 @@ scripts/rng_reference/rng_vectors
 # 本機設定與機密
 .env
 .env.*
+!.env.example
 *.local.*
 
 # IDE
