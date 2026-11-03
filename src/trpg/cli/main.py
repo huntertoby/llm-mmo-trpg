@@ -57,6 +57,7 @@ from trpg.cli.sim_flash import cmd_sim_flash
 from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.cli.skills_random import cmd_skills_random
+from trpg.content.fields import field_progress
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
@@ -406,7 +407,25 @@ def _cmd_content_check() -> int:
         print(f"地圖外觀警告（{len(library.map_warnings)} 項，不影響通過）：")
         for warning in library.map_warnings:
             print(f"  - {warning}")
+    _print_field_maps(library)
     return 0
+
+
+def _print_field_maps(library: ContentLibrary) -> None:
+    """實地地圖的進度、警告與待補（Phase 6B-1；警告與待補都不影響通過）。"""
+    progress = field_progress(library.world_maps, library.field_maps)
+    if progress:
+        parts = "、".join(f"{p.name_zh} {p.done}／{p.total}" for p in progress)
+        interiors = sum(1 for f in library.field_maps.values() if f.is_interior)
+        print(f"實地地圖：{parts}（另有室內圖 {interiors} 張）")
+    if library.field_warnings:
+        print(f"實地地圖警告（{len(library.field_warnings)} 項，不影響通過）：")
+        for warning in library.field_warnings:
+            print(f"  - {warning}")
+    if library.field_pending:
+        print(f"實地地圖待補（{len(library.field_pending)} 項，對面的地圖還沒畫）：")
+        for item in library.field_pending:
+            print(f"  - {item}")
 
 
 def _add_serve_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
