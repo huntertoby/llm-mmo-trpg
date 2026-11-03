@@ -151,8 +151,7 @@ def atlas_regions(
 def cross_gate(library: ContentLibrary, region: str, location: str) -> bool:
     """``location`` 是有實地地圖、而且畫了跨區出口的渡口：要走出口過去，不能直接傳送（21.1：
     第一次要親自走過渡口）。"""
-    for map_id in sorted(library.field_maps):
-        found = library.field_maps[map_id]
-        if found.region == region and found.location == location and not found.is_interior:
-            return any(e.region is not None and e.region != region for e in found.exits)
-    return False
+    found = library.outdoor_map(region, location)
+    return found is not None and any(
+        e.region is not None and e.region != region for e in found.exits
+    )

@@ -54,7 +54,7 @@ from trpg.world.battle import with_cleared
 from trpg.world.clock import day_phase
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
-from trpg.world.field import FieldGrid, field_grid, field_map, outdoor_map, placed
+from trpg.world.field import FieldCtx, FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
 from trpg.world.rng import STREAM_FIELD, derive_seed, draw
 from trpg.world.solutions import make_encounter
@@ -451,7 +451,7 @@ def _watch(
         return None
     if _target(library, char) is None:
         return None
-    spawns = _shown(library, world, char, found, visit, now)
+    spawns = _shown(FieldCtx(library=library, world=world, map=found, now=now), char, visit)
     if not spawns:
         return None
     return _Watch(
@@ -468,13 +468,8 @@ def _quest_done(char: CharacterState, quest: str | None) -> bool:
     return state is not None and state.done
 
 
-def _shown(  # noqa: PLR0917 - 要世界、角色、地圖、這一趟與時間
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    visit: FieldVisit,
-    now: int,
+def _shown(
+    ctx: FieldCtx, char: CharacterState, visit: FieldVisit
 ) -> tuple[tuple[int, FieldSpawn], ...]:
     """現在會出現的隊伍（21.10 第 9、11 條）：
 
@@ -482,9 +477,10 @@ def _shown(  # noqa: PLR0917 - 要世界、角色、地圖、這一趟與時間
     - ``until_quest`` 的任務角色已完成：不出現（6C-5）。
     - ``personal``：這一趟打贏了就不出現（地點「已清空」也照樣在）。
     - 其他：地點「已清空」就不出現；共享的地點看世界的 ``defeated_spawns``，不共享的看這一趟。"""
+    world, found, now = ctx.world, ctx.map, ctx.now
     region, location = visit.region, visit.location
     cleared = world.is_cleared(region, location, now)
-    shared = shared_clear(library, region, location)
+    shared = shared_clear(ctx.library, region, location)
     out: list[tuple[int, FieldSpawn]] = []
     for i, spawn in enumerate(found.spawns):
         if not appears(spawn, now) or _quest_done(char, spawn.until_quest):
@@ -542,19 +538,14 @@ def _contact_model(
     )
 
 
-def _start(  # noqa: PLR0917 - 開打要接觸的全部資料
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    watch: _Watch,
-    hit: tuple[FieldEnemy, First],
-    at: XY,
-    now: int,
+def _start(
+    ctx: FieldCtx, char: CharacterState, watch: _Watch, hit: tuple[FieldEnemy, First], at: XY
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
     enemy, first = hit
-    target = _target(library, char)
-    assert target is not None
-    result, char = make_encounter(library, world, char, target, now)
+    target = _target(ctx.library, char)
+    if target is None:  # _watch 已排除（沒有建議等級的地點沒有敵人）
+        return char, ()
+    result, char = make_encounter(ctx.library, ctx.world, char, target, ctx.now)
     contact = _contact_model(watch.map.id, watch.visit, enemy, at, first)
     result = result.model_copy(update={"from_location": char.location, "contact": contact})
     char = char.model_copy(update={"pending_encounter": result})
@@ -566,16 +557,13 @@ def _start(  # noqa: PLR0917 - 開打要接觸的全部資料
 # ---------------------------------------------------------------------------
 
 
-def walk_watch(  # noqa: PLR0917 - 同 field.WatchFn 的簽名
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    walked: WalkedEvent,
-    now: int,
+def walk_watch(
+    ctx: FieldCtx, char: CharacterState, walked: WalkedEvent
 ) -> tuple[WalkedEvent, CharacterState, tuple[WorldEvent, ...]]:
-    """逐格檢查敵人：碰到就在那一格停下（``stopped="enemy"``）並開打；推進巡邏的步數。"""
-    if found.is_interior:
+    """逐格檢查敵人：碰到就在那一格停下（``stopped="enemy"``）並開打；推進巡邏的步數
+    （:data:`trpg.world.field.WatchFn`）。"""
+    library, world, now = ctx.library, ctx.world, ctx.now
+    if ctx.map.is_interior:
         return walked, char, ()
     char = with_visit(library, world, char)
     visit = char.field_visit
@@ -597,7 +585,7 @@ def walk_watch(  # noqa: PLR0917 - 同 field.WatchFn 的簽名
     char = char.model_copy(update={"field_visit": visit.model_copy(update={"ticks": ticks})})
     if hit is None or watch is None:
         return walked, char, ()
-    char, events = _start(library, world, char, watch, hit, (walked.x, walked.y), now)
+    char, events = _start(ctx, char, watch, hit, (walked.x, walked.y))
     return walked, char, events
 
 
@@ -605,11 +593,9 @@ def _cut(walked: WalkedEvent, char: CharacterState, k: int) -> WalkedEvent:
     """走路停在第 ``k`` 格（碰到敵人）。"""
     steps = walked.steps[: k + 1]
     cell = steps[-1]
-    if k > 0:
-        before = steps[-2]
-    else:
-        assert char.field is not None
-        before = (char.field.x, char.field.y)
+    pos = char.field  # 走路前的位置（walk 一定有；沒有時當原地，朝向照預設）
+    origin: XY = cell if pos is None else (pos.x, pos.y)
+    before = steps[k - 1] if k > 0 else origin
     return walked.model_copy(
         update={
             "steps": steps,

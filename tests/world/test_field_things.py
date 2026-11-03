@@ -26,7 +26,7 @@ from trpg.world.actions import (
 )
 from trpg.world.battle import prepare_battle
 from trpg.world.errors import WorldActionError
-from trpg.world.field import arrival, field_grid, field_map, placed
+from trpg.world.field import FieldCtx, arrival, field_grid, field_map, placed
 from trpg.world.field_actions import (
     EventMarkedEvent,
     FieldObjectUsedEvent,
@@ -448,8 +448,13 @@ def test_lava_seal_card_follows_the_world_flag(calm: ContentLibrary) -> None:
     char = _ashen(calm, "ruined_fortress")
     found = _map(calm, char)
     spot = next(s for s in found.situation_objects if s.id == "pit_lava_seal")
-    closed = object_status(calm, make_world(), char, found, spot, NOON)
-    opened = object_status(calm, make_world(flags=("heart_pit_open",)), char, found, spot, NOON)
+    ctx = FieldCtx(library=calm, world=make_world(), map=found, now=NOON)
+    closed = object_status(ctx, char, spot)
+    opened = object_status(
+        FieldCtx(library=calm, world=make_world(flags=("heart_pit_open",)), map=found, now=NOON),
+        char,
+        spot,
+    )
     assert closed.use == "note" and "還過不去" in closed.note_zh
     assert "冷卻" in opened.note_zh
 
@@ -458,7 +463,8 @@ def test_secret_door_needs_the_thread(calm: ContentLibrary) -> None:
     char = _char(calm, "cliff_gang_fort")
     found = _map(calm, char)
     spot = next(s for s in found.situation_objects if s.id == "gang_fort_secret_door")
-    assert not object_status(calm, make_world(), char, found, spot, NOON).shown
+    ctx = FieldCtx(library=calm, world=make_world(), map=found, now=NOON)
+    assert not object_status(ctx, char, spot).shown
     view = field_view(calm, char, world=make_world(), now=NOON)
     assert view is not None and all(o.id != "gang_fort_secret_door" for o in view.situation_objects)
 

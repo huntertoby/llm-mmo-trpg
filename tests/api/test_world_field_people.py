@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.world.helpers import NOON, hero, make_world
-from trpg.api.world_field_people import FRIENDS_MAX, friend_cells, npc_marks
+from trpg.api.world_field_people import TOWN_FRIENDS_MAX, friend_cells, npc_marks
 from trpg.api.world_field_view import field_view
 from trpg.content.library import ContentLibrary
 from trpg.world.calendar import day_of
@@ -133,11 +133,11 @@ def test_friends_in_town_only(field_library: ContentLibrary) -> None:
 
 
 def test_friends_capped(field_library: ContentLibrary) -> None:
-    owners = [f"f{i:02d}" for i in range(FRIENDS_MAX + 3)]
+    owners = [f"f{i:02d}" for i in range(TOWN_FRIENDS_MAX + 3)]
     world = _world_with(field_library, owners)
     view = field_view(field_library, _char(field_library), world=world, now=NOON)
     assert view is not None
-    assert [f.owner for f in view.friends] == sorted(owners)[:FRIENDS_MAX]
+    assert [f.owner for f in view.friends] == sorted(owners)[:TOWN_FRIENDS_MAX]
 
 
 def test_field_npcs_carry_portrait(field_library: ContentLibrary) -> None:

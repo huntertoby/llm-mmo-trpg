@@ -16,6 +16,7 @@ from trpg.content.world_map import LocationDef
 from trpg.shared.types import Attribute
 from trpg.world.actions import LocationRevealedEvent, PerceptionCheckEvent, WorldEvent
 from trpg.world.common import rules_of
+from trpg.world.errors import WorldActionError
 from trpg.world.rng import STREAM_REVEAL, draw
 from trpg.world.state import CharacterState, LocationRef, PerceptionMark, WorldState
 
@@ -65,16 +66,19 @@ def can_perceive(char: CharacterState, region: str, hidden: LocationDef, today: 
     )
 
 
-def perceive(  # noqa: PLR0917 - 判定要角色、世界、地點與日子
+def perceive(
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
-    region: str,
     hidden: LocationDef,
+    *,
+    region: str,
     today: int,
 ) -> tuple[CharacterState, list[WorldEvent]]:
-    """擲一次感知（呼叫者先確認 :func:`can_perceive`）：記下今天判定過；成功就發現。"""
-    assert hidden.level_min is not None
+    """擲一次感知（呼叫者先確認 :func:`can_perceive`）：記下今天判定過；成功就發現。``region`` 是
+    ``hidden`` 所在的區。"""
+    if hidden.level_min is None:  # 內容檢查保證隱藏地點有建議等級
+        raise WorldActionError(f"隱藏地點 {hidden.id} 沒有建議等級")
     dc = rules_of(library).perception.dc_for(hidden.level_min)
     modifier = perception_modifier(library, char)
     rng, char = draw(world.season_seed, char, STREAM_REVEAL)

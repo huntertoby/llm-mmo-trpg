@@ -10,7 +10,7 @@ from tests.world.helpers import NOON, hero, make_world
 from trpg.api.sessions import SessionStore
 from trpg.api.world import WorldStore
 from trpg.api.world_field_things import (
-    FRIENDS_MAX,
+    FOOTPRINT_FRIENDS_MAX,
     PRINTS_MAX,
     FieldSocial,
     Visitor,
@@ -75,7 +75,9 @@ def test_footprints_are_deterministic_and_walkable(field_library: ContentLibrary
     assert first is not None and second is not None
     assert first.footprints == second.footprints and first.footprints
     owners = {p.owner for p in first.footprints}
-    assert owners <= {"c0", "c1", "c2"} and len(owners) <= FRIENDS_MAX  # 依角色 ID 最多 3 位
+    assert (
+        owners <= {"c0", "c1", "c2"} and len(owners) <= FOOTPRINT_FRIENDS_MAX
+    )  # 依角色 ID 最多 3 位
     walkable = {(t.x, t.y) for t in first.tiles if t.walkable}
     assert all((p.x, p.y) in walkable for p in first.footprints)
     found = field_map(field_library, "ferry_steps")

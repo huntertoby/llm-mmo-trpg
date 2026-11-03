@@ -35,7 +35,7 @@ from trpg.world.clock import day_phase
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.events import event_candidates
-from trpg.world.field import field_map, hidden_door, outdoor_map, placed
+from trpg.world.field import FieldCtx, field_map, hidden_door, outdoor_map, placed
 from trpg.world.field_actions import (
     EventMarkedEvent,
     FieldObjectUsedEvent,
@@ -98,20 +98,16 @@ def drop_stale_marks(before: CharacterState, after: CharacterState) -> Character
 # ---------------------------------------------------------------------------
 
 
-def _sense_doors(  # noqa: PLR0917 - 要世界、角色、地圖、走過的格子與時間
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    cells: Sequence[XY],
-    now: int,
+def _sense_doors(
+    ctx: FieldCtx, char: CharacterState, cells: Sequence[XY]
 ) -> tuple[CharacterState, list[WorldEvent]]:
     """依序站過 ``cells``：每一格對 3 格內還沒發現的隱藏入口判定（每個地點每天一次）。"""
+    library, found = ctx.library, ctx.map
     doors = [d for d in found.doors if hidden_door(char, found, d)]
     if found.is_interior or not doors or not cells:
         return char, []
     locations = world_map_of(library, found.region).location_by_id()
-    today = day_of(library, now)
+    today = day_of(library, ctx.now)
     reach = rules_of(library).field.perceive_range  # 21.6「3 格內」（6C-R2 搬到規則）
     events: list[WorldEvent] = []
     for cell in cells:
@@ -121,23 +117,21 @@ def _sense_doors(  # noqa: PLR0917 - 要世界、角色、地圖、走過的格�
                 continue
             if not can_perceive(char, found.region, hidden, today):
                 continue
-            char, more = perceive(library, world, char, found.region, hidden, today)
+            char, more = perceive(
+                library, ctx.world, char, hidden, region=found.region, today=today
+            )
             events += more
     return char, events
 
 
-def sense_walk(  # noqa: PLR0917 - 同 field.SenseFn 的簽名
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    walked: WalkedEvent,
-    now: int,
+def sense_walk(
+    ctx: FieldCtx, char: CharacterState, walked: WalkedEvent
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
-    """走完一段（觸發出口等之前）：走過的格子做隱藏入口的感知；碰到「！」就開事件卡。"""
-    char, events = _sense_doors(library, world, char, found, walked.steps, now)
+    """走完一段（觸發出口等之前）：走過的格子做隱藏入口的感知；碰到「！」就開事件卡
+    （:data:`trpg.world.field.SenseFn`）。"""
+    char, events = _sense_doors(ctx, char, walked.steps)
     if walked.stopped == "event":
-        char, opened = _open_event(char, now)
+        char, opened = _open_event(char, ctx.now)
         events += opened
     return char, tuple(events)
 
@@ -150,7 +144,8 @@ def arrive_sense(
     found = None if pos is None else field_map(library, pos.map)
     if pos is None or found is None:
         return char, ()
-    char, events = _sense_doors(library, world, char, found, [(pos.x, pos.y)], now)
+    ctx = FieldCtx(library=library, world=world, map=found, now=now)
+    char, events = _sense_doors(ctx, char, [(pos.x, pos.y)])
     return char, tuple(events)
 
 
@@ -303,14 +298,8 @@ def _used_today(
     return any(u.map == map_id and u.object == spot and u.day == today for u in char.object_uses)
 
 
-def _event_problem(  # noqa: PLR0917 - 判斷要角色、世界、地圖、物件與時間
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    spot: FieldSpot,
-    now: int,
-) -> str | None:
+def _event_problem(ctx: FieldCtx, char: CharacterState, spot: FieldSpot) -> str | None:
+    library, world, found, now = ctx.library, ctx.world, ctx.map, ctx.now
     if char.pending_event is not None:
         return "先處理眼前的事件"
     if _used_today(library, char, found.id, spot.id, now):
@@ -333,21 +322,16 @@ def _event_problem(  # noqa: PLR0917 - 判斷要角色、世界、地圖、物�
     return None
 
 
-def object_status(  # noqa: PLR0917 - 判斷要角色、世界、地圖、物件與時間
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    spot: FieldSpot,
-    now: int,
-) -> ObjectStatus:
+def object_status(ctx: FieldCtx, char: CharacterState, spot: FieldSpot) -> ObjectStatus:
+    """``ctx.map`` 上的情境物件 ``spot`` 現在的樣子。"""
+    world, now = ctx.world, ctx.now
     shown = spot.requires_thread is None or spot.requires_thread in held_threads(world, char, now)
     if spot.requires_flag is not None and not world.has_flag(spot.requires_flag):
         note = spot.locked_zh or spot.note_zh
         return ObjectStatus(spot=spot, shown=shown, use="note", note_zh=note, problem_zh=None)
     problem: str | None = None
     if spot.use == "event":
-        problem = _event_problem(library, world, char, found, spot, now)
+        problem = _event_problem(ctx, char, spot)
     elif spot.use == "encounter" and char.pending_encounter is not None:
         problem = "還有沒處理的遭遇"
     return ObjectStatus(
@@ -401,7 +385,7 @@ def use_field_object(
     )
     if pos is None or found is None or spot is None:
         raise WorldActionError(f"這裡沒有物件 {action.object}")
-    status = object_status(library, world, char, found, spot, now)
+    status = object_status(FieldCtx(library=library, world=world, map=found, now=now), char, spot)
     if not status.shown:
         raise WorldActionError(f"這裡沒有物件 {action.object}")
     if not _near((pos.x, pos.y), spot.at, 1):

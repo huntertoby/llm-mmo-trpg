@@ -36,7 +36,7 @@ from trpg.world.state import CharacterState, ShadowSnapshot, WorldState
 
 __all__ = [
     "ALERT_ZH",
-    "FRIENDS_MAX",
+    "TOWN_FRIENDS_MAX",
     "NpcMark",
     "friend_cells",
     "friends_here",
@@ -44,7 +44,7 @@ __all__ = [
     "npc_marks",
 ]
 
-FRIENDS_MAX: Final = 8
+TOWN_FRIENDS_MAX: Final = 8
 """一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）。"""
 
 ALERT_ZH: Final[Mapping[str, str]] = {"quest": "有任務可以接", "rumor": "有新的傳聞"}
@@ -155,6 +155,7 @@ def look_of(library: ContentLibrary, hero: UnitTemplate, loadout: Loadout) -> Fi
 # 朋友
 # ---------------------------------------------------------------------------
 
+
 def _reserved(found: FieldMapDef) -> set[XY]:
     """朋友不站的格子：入口、出口、門、傳送石、設施、營火、事件點、情境物件。"""
     cells = {found.entry}
@@ -213,7 +214,7 @@ def friends_here(
             and s.snapshot.location == found.place
         ),
         key=lambda s: s.owner,
-    )[:FRIENDS_MAX]
+    )[:TOWN_FRIENDS_MAX]
     climb = library.ruleset.core.max_climb_height
     cells = friend_cells(found, grid, [s.owner for s in snaps], climb)
     return tuple(

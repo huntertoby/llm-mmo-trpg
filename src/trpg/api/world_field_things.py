@@ -4,8 +4,8 @@
 - **朋友的腳印**：來源是其他角色的 ``visited_locations``（6C-6；:class:`FieldSocial` 由伺服器的
   :class:`~trpg.api.world.WorldStore` 從記憶體快取的角色組出來，不掃世界日誌）。每位朋友在室外圖上
   畫一串腳印：端點是入口與每個出口往內一格（依出口 ID），依 ``fnv1a64("<地圖>:<角色>")`` 挑兩個，
-  沿四方向 BFS 的最短路每隔一格畫一個（最多 :data:`PRINTS_MAX` 個）。最多 :data:`FRIENDS_MAX` 位
-  （依角色 ID）。同樣的地圖與名單一定畫在同樣的位置（確定性）。
+  沿四方向 BFS 的最短路每隔一格畫一個（最多 :data:`PRINTS_MAX` 個）。最多
+  :data:`FOOTPRINT_FRIENDS_MAX` 位（依角色 ID）。同樣的地圖與名單一定畫在同樣的位置（確定性）。
 - **留言石碑**：這個地點有留言時，畫在入口附近第一個空的可站格（依和入口的距離、y、x）。
 """
 
@@ -27,14 +27,14 @@ from trpg.content.library import ContentLibrary
 from trpg.shared.rng import fnv1a64
 from trpg.world.actions import WorldEvent
 from trpg.world.common import rules_of
-from trpg.world.field import FieldGrid, arrival
+from trpg.world.field import FieldCtx, FieldGrid, arrival
 from trpg.world.field_actions import EventMarkedEvent, SneakStartedEvent
 from trpg.world.field_things import object_status, sneak_problem
 from trpg.world.state import CharacterState, Facing, WorldState
 
 __all__ = [
+    "FOOTPRINT_FRIENDS_MAX",
     "FOOTPRINT_NAMES",
-    "FRIENDS_MAX",
     "PRINTS_MAX",
     "FieldSocial",
     "Visitor",
@@ -44,7 +44,7 @@ __all__ = [
     "things_update",
 ]
 
-FRIENDS_MAX: Final = 3
+FOOTPRINT_FRIENDS_MAX: Final = 3
 """一張圖最多畫幾位朋友的腳印。"""
 PRINTS_MAX: Final = 8
 """一位朋友最多畫幾個腳印。"""
@@ -154,7 +154,7 @@ def _footprints(
     visitors: Sequence[Visitor],
 ) -> tuple[FieldFootprintView, ...]:
     out: list[FieldFootprintView] = []
-    for v in sorted(visitors, key=lambda v: v.character_id)[:FRIENDS_MAX]:
+    for v in sorted(visitors, key=lambda v: v.character_id)[:FOOTPRINT_FRIENDS_MAX]:
         for (x, y), facing in footprint_cells(library, char, found, grid, v.character_id):
             out.append(
                 FieldFootprintView(owner=v.character_id, name_zh=v.name_zh, x=x, y=y, facing=facing)
@@ -171,9 +171,10 @@ def _objects(
 ) -> tuple[FieldSituationObjectView, ...]:
     if world is None:
         return ()
+    ctx = FieldCtx(library=library, world=world, map=found, now=now)
     out: list[FieldSituationObjectView] = []
     for spot in found.situation_objects:
-        status = object_status(library, world, char, found, spot, now)
+        status = object_status(ctx, char, spot)
         if not status.shown:
             continue
         out.append(
@@ -191,16 +192,17 @@ def _objects(
     return tuple(out)
 
 
-def things_update(  # noqa: PLR0917 - 畫面要世界、角色、地圖、格子、時間與社交資料
+def things_update(
     library: ContentLibrary,
     world: WorldState | None,
     char: CharacterState,
-    found: FieldMapDef,
     grid: FieldGrid,
+    *,
     now: int,
     social: FieldSocial | None,
 ) -> dict[str, object]:
-    """``FieldView`` 的 6C-5 欄位。"""
+    """``FieldView`` 的 6C-5 欄位（``grid.map`` 那張圖）。"""
+    found = grid.map
     mark = char.field_event
     update: dict[str, object] = {
         "campfires": tuple(FieldSpotView(id=c.id, x=c.at[0], y=c.at[1]) for c in found.campfires),

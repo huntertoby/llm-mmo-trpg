@@ -41,6 +41,7 @@ from trpg.world.town import with_visited_town
 
 __all__ = [
     "ArriveFn",
+    "FieldCtx",
     "FieldGrid",
     "FieldHooks",
     "SenseFn",
@@ -64,8 +65,21 @@ type TravelFn = Callable[
     [ContentLibrary, WorldState, CharacterState, TravelAction, int], WorldResult
 ]
 """一次 ``travel``（:func:`trpg.world.step` 的移動；這裡不直接匯入，避免循環）。"""
+
+
+@dataclass(frozen=True)
+class FieldCtx:
+    """一張實地地圖上做事共用的不變參數（Phase 6C-R2：取代一長串位置參數）：內容、世界、這張地圖與
+    時間。角色一路會更新，另外傳。"""
+
+    library: ContentLibrary
+    world: WorldState
+    map: FieldMapDef
+    now: int
+
+
 type WatchFn = Callable[
-    [ContentLibrary, WorldState, CharacterState, FieldMapDef, WalkedEvent, int],
+    [FieldCtx, CharacterState, WalkedEvent],
     tuple[WalkedEvent, CharacterState, tuple[WorldEvent, ...]],
 ]
 """走完路徑檢查之後、觸發出口等之前（6C-1 看得見的敵人：碰到就截短路徑並開打）。"""
@@ -74,8 +88,7 @@ type ArriveFn = Callable[
 ]
 """走出口或門換到另一張圖之後（6C-1：一到就被看到時開打；6C-5：抵達格的隱藏入口感知）。"""
 type SenseFn = Callable[
-    [ContentLibrary, WorldState, CharacterState, FieldMapDef, WalkedEvent, int],
-    tuple[CharacterState, tuple[WorldEvent, ...]],
+    [FieldCtx, CharacterState, WalkedEvent], tuple[CharacterState, tuple[WorldEvent, ...]]
 ]
 """走完一段、觸發出口等之前（6C-5：隱藏入口的感知、碰到「！」開事件卡）。"""
 
@@ -109,12 +122,8 @@ def field_map(library: ContentLibrary, map_id: str) -> FieldMapDef | None:
 
 
 def outdoor_map(library: ContentLibrary, region: str, location: str) -> FieldMapDef | None:
-    """地點的實地地圖（室外圖）；還沒畫＝``None``。"""
-    for map_id in sorted(library.field_maps):
-        found = library.field_maps[map_id]
-        if found.region == region and found.location == location:
-            return found
-    return None
+    """地點的實地地圖（室外圖）；還沒畫＝``None``（內容庫的索引，6C-R2）。"""
+    return library.outdoor_map(region, location)
 
 
 def _belongs(found: FieldMapDef | None, char: CharacterState) -> bool:
@@ -280,11 +289,13 @@ def _walk_path(
     limit = rules_of(library).field.walk_max_steps
     if len(action.path) > limit:
         raise WorldActionError(f"一次最多走 {limit} 格")
-    assert char.field is not None
+    pos = char.field
+    if pos is None:
+        raise WorldActionError("這裡還沒有實地地圖，請用 travel 移動")
     grid = field_grid(library, char, found)
     climb = library.ruleset.core.max_climb_height
-    here: XY = (char.field.x, char.field.y)
-    facing: Facing = char.field.facing
+    here: XY = (pos.x, pos.y)
+    facing: Facing = pos.facing
     steps: list[XY] = []
     stopped: StopReason = "end"
     for number, cell in enumerate(action.path, start=1):
@@ -306,12 +317,13 @@ def _walk_path(
     return event, index
 
 
-def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加鉤子
+def walk(
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
     action: WalkAction,
     now: int,
+    *,
     hooks: FieldHooks,
 ) -> WorldResult:
     """沿 ``action.path`` 走；不合法拋 :class:`WorldActionError`（狀態不變）。"""
@@ -321,16 +333,18 @@ def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加鉤子
     if char.field is None:
         raise WorldActionError("這裡還沒有實地地圖，請用 travel 移動")
     found = field_map(library, char.field.map)
-    assert found is not None
+    if found is None:  # placed() 保證位置屬於一張存在的地圖
+        raise WorldActionError(f"找不到實地地圖 {char.field.map}")
     walked, index = _walk_path(library, char, found, action)
+    ctx = FieldCtx(library=library, world=world, map=found, now=now)
     seen: tuple[WorldEvent, ...] = ()
     if hooks.watch is not None:  # 6C-1：碰到敵人就停在那一格開打
-        walked, char, seen = hooks.watch(library, world, char, found, walked, now)
+        walked, char, seen = hooks.watch(ctx, char, walked)
     pos = FieldPos(map=found.id, x=walked.x, y=walked.y, facing=walked.facing)
     char = char.model_copy(update={"field": pos})  # 同一個地點裡走動不算離開營火
     events: list[WorldEvent] = [walked, *seen]
     if hooks.sense is not None:  # 6C-5：隱藏入口的感知、碰到「！」
-        char, sensed = hooks.sense(library, world, char, found, walked, now)
+        char, sensed = hooks.sense(ctx, char, walked)
         events += sensed
     cell = (walked.x, walked.y)
     if walked.stopped == "stone":
@@ -338,11 +352,9 @@ def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加鉤子
         events += unlocked
     elif walked.stopped in ("exit", "door"):
         if walked.stopped == "exit":
-            world, char, more = _take_exit(
-                library, world, char, found, (cell, index), now, hooks.travel
-            )
+            world, char, more = _take_exit(ctx, char, (cell, index), hooks)
         else:
-            world, char, more = _take_door(library, world, char, found, cell, now, hooks.travel)
+            world, char, more = _take_door(ctx, char, cell, hooks.travel)
         events += more
         if hooks.arrive is not None:
             char, more = hooks.arrive(library, world, char, now)
@@ -386,15 +398,11 @@ def _entered(char: CharacterState, via: str) -> FieldEnteredEvent:
     )
 
 
-def _take_exit(  # noqa: PLR0917 - 出口需要整套移動參數
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    at: tuple[XY, int],
-    now: int,
-    travel: TravelFn,
+def _take_exit(
+    ctx: FieldCtx, char: CharacterState, at: tuple[XY, int], hooks: FieldHooks
 ) -> WorldResult:
+    """踩上出口：室內圖回到門外；跨區出口換區；其他＝一次 ``travel``。"""
+    library, world, found = ctx.library, ctx.world, ctx.map
     cell, index = at
     exit_ = next(e for e in found.exits if cell in e.at)
     if found.is_interior:  # 室內圖的出口：回到門外一格，不算一步（Q6）
@@ -402,31 +410,27 @@ def _take_exit(  # noqa: PLR0917 - 出口需要整套移動參數
         char = _enter(library, char, outside, exit_.arrive, 0)
         return world, char, (_entered(char, "exit"),)
     if exit_.region is not None and exit_.region != found.region:
-        char = _cross_region(library, world, char, exit_, index)
-        return world, char, (_entered(char, "exit"),)
-    world, char, events = travel(library, world, char, TravelAction(to=exit_.to), now)
+        world, char, events = _cross_region(ctx, char, (exit_, index))
+        return world, char, (*events, _entered(char, "exit"))
+    world, char, events = hooks.travel(library, world, char, TravelAction(to=exit_.to), ctx.now)
     target = outdoor_map(library, char.region, exit_.to)
     char = _enter(library, char, target, exit_.arrive, index)
     return world, char, (*events, _entered(char, "exit"))
 
 
-def _cross_region(
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    exit_: FieldExit,
-    index: int,
-) -> CharacterState:
+def _cross_region(ctx: FieldCtx, char: CharacterState, at: tuple[FieldExit, int]) -> WorldResult:
     """跨區的出口（6D-5；21.10 第 1 條：渡口走到尾端的出口才進入荒原的灰渡口）。
 
     兩端的地點都要已開放（``unlock_flag``）；換到對面那一區的地點，站在對面 ``arrive`` 出口往內
     一格。和原本渡口的傳送一樣不擲骰、不花時間與補給（保守做法，見 6D-5 報告）。之後
     :func:`trpg.world.step.world_step` 把抵達的地點記進 ``visited_locations``，那一區就在自己的
     大世界圖上亮起（:func:`trpg.world.atlas.region_lit`）。"""
-    assert exit_.region is not None
-    target_map = library.world_maps.get(exit_.region)
+    library, world = ctx.library, ctx.world
+    exit_, index = at
+    region = exit_.region
+    target_map = None if region is None else library.world_maps.get(region)
     target = None if target_map is None else target_map.location_by_id().get(exit_.to)
-    if target is None:
+    if region is None or target is None:
         raise WorldActionError("跨區的出口還沒開放，請用傳送")
     source = world_map_of(library, char.region).location_by_id().get(char.location)
     for place in (source, target):
@@ -436,26 +440,20 @@ def _cross_region(
             and not world.has_flag(place.unlock_flag)
         ):
             raise WorldActionError(f"{place.name_zh}還沒開放")
-    char = char.model_copy(update={"region": exit_.region, "location": exit_.to, "camped_at": None})
-    return _enter(library, char, outdoor_map(library, exit_.region, exit_.to), exit_.arrive, index)
+    char = char.model_copy(update={"region": region, "location": exit_.to, "camped_at": None})
+    char = _enter(library, char, outdoor_map(library, region, exit_.to), exit_.arrive, index)
+    return world, char, ()
 
 
-def _take_door(  # noqa: PLR0917 - 門需要整套移動參數
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    found: FieldMapDef,
-    cell: XY,
-    now: int,
-    travel: TravelFn,
-) -> WorldResult:
+def _take_door(ctx: FieldCtx, char: CharacterState, cell: XY, travel: TravelFn) -> WorldResult:
+    library, world, found = ctx.library, ctx.world, ctx.map
     door = next(d for d in found.doors if d.at == cell)
     interior = field_map(library, door.to)
     if interior is not None and interior.interior_of == found.place:  # 室內：不擲骰（Q6）
         back = next((e.id for e in interior.exits if e.arrive == door.id), interior.exits[0].id)
         char = _enter(library, char, interior, back, 0)
         return world, char, (_entered(char, "door"),)
-    world, char, events = travel(library, world, char, TravelAction(to=door.to), now)
+    world, char, events = travel(library, world, char, TravelAction(to=door.to), ctx.now)
     target = outdoor_map(library, char.region, door.to)
     back_id = door.id
     if target is not None:
@@ -516,7 +514,8 @@ def use_teleport_stone(
         raise WorldActionError(f"沒有傳送石 {action.to}")
     dest, (x, y) = target
     location = dest.location
-    assert location is not None
+    if location is None:  # 上面已排除；給型別檢查看
+        raise WorldActionError(f"沒有傳送石 {action.to}")
     if dest.region != char.region and not region_lit(char, dest.region):
         raise WorldActionError(f"還沒去過 {dest.region} 的小鎮，不能傳送")
 

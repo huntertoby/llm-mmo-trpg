@@ -340,7 +340,7 @@ def _handlers() -> dict[type, _Handler]:
         TravelAction: _travel_node,
         # 6B-2 實地地圖（:mod:`trpg.world.field`）
         WalkAction: _changes_world(
-            lambda lib, world, char, action, now: walk(lib, world, char, action, now, _HOOKS)
+            lambda lib, world, char, action, now: walk(lib, world, char, action, now, hooks=_HOOKS)
         ),
         UseTeleportStoneAction: _keeps_world(
             lambda lib, _w, char, action, _n: use_teleport_stone(lib, char, action)
@@ -549,7 +549,7 @@ def _perceive(
         hidden = locations[neighbor_id]
         if not can_perceive(char, region, hidden, today):
             continue
-        char, found = perceive(library, world, char, region, hidden, today)
+        char, found = perceive(library, world, char, hidden, region=region, today=today)
         events += found
     return char, events
 
