@@ -762,19 +762,61 @@ def _hint_texts(events: WorldEventContent, quests: WorldQuestContent) -> dict[st
     return found
 
 
-def load_library(  # noqa: PLR0915
-    content_dir: Path | None = None,
-) -> ContentLibrary:
-    """載入並交叉驗證 ``content/`` 下全部戰鬥內容；任何問題都拋出 :class:`ContentError`。"""
-    root = default_content_dir() if content_dir is None else content_dir
-    files: list[tuple[Path, ContentModel]] = []
+type _Loader = Callable[[str, type[Any]], Any]
+"""``load_library`` 裡讀一個檔並記進 ``files`` 的函式。"""
 
-    def load[M: ContentModel](rel: str, model: type[M]) -> M:
-        path = root / rel
-        item = load_content_file(path, model)
-        files.append((path, item))
-        return item
 
+@dataclass(frozen=True)
+class _BaseTables:
+    """``load_library`` 第一步讀的表（戰鬥規則、技能、單位以外的單檔內容；5F-R2 從 ``load_library``
+    拆出）。"""
+
+    elements: ElementTable
+    core: CoreRules
+    hit_table: HitTable
+    terrain: TerrainTable
+    weapons: WeaponTable
+    offhands: OffhandTable
+    statuses: StatusTable
+    objects: ObjectTable
+    surfaces: SurfaceTable
+    interactions: InteractionTable
+    reactions: ReactionTable
+    weather: WeatherTable
+    ai_profiles: AiProfileTable
+    shapes: ShapeTable
+    primitives: PrimitiveTable
+    conditions: ConditionTable
+    skill_triggers: SkillTriggerTable
+    stacks: StackTable
+    budget: BudgetRules
+    modifier_changes: ModifierChangeTable
+    composer: ComposerRules
+    builds: BuildTable
+    synergies: SynergyTable
+    keywords: KeywordTable
+    exclusions: ExclusionTable
+    skill_tags: SkillTagTable
+    skeletons: dict[str, SkeletonDef]
+    skills: dict[str, SkillDef]
+    summons: SummonTable
+    rule_changes: RuleChangeTable
+    forms: FormTable
+    roguelite: RunRules
+    workshop: WorkshopRules
+    workshop_text: WorkshopTextTable
+    equipment_rules: EquipmentRules
+    affix_table: AffixTable
+    item_table: ItemTable
+    appearance: AppearanceTable
+    item_gen: ItemGenRules
+    regions: RegionTable | None
+
+
+def _load_base_tables(
+    root: Path, load: _Loader, files: list[tuple[Path, ContentModel]]
+) -> _BaseTables:
+    """依固定順序讀第一批表（順序＝``files`` 的順序與第一個報錯的檔）。"""
     elements = load("elements.yaml", ElementTable)
     core = load("rules/core.yaml", CoreRules)
     hit_table = load("rules/hit_table.yaml", HitTable)
@@ -805,155 +847,208 @@ def load_library(  # noqa: PLR0915
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
-    rule_changes = load("rule_changes.yaml", RuleChangeTable)
-    forms = load("forms.yaml", FormTable)
-    roguelite = load("roguelite.yaml", RunRules)
-    workshop = load("workshop.yaml", WorkshopRules)
-    workshop_text = load("workshop_text.yaml", WorkshopTextTable)
-    equipment_rules = load("rules/equipment.yaml", EquipmentRules)
-    affix_table = load("affixes.yaml", AffixTable)
-    item_table = load("items.yaml", ItemTable)
-    appearance = load("equipment/appearance.yaml", AppearanceTable)
-    item_gen = load("item_gen.yaml", ItemGenRules)
-    regions = load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None
-    races, origins = _load_races(
-        root,
-        load,
-        regions,
-        shapes=shapes.by_id(),
-        weather=weather.by_id(),
-        terrain=terrain.by_id(),
-        summons=frozenset(s.id for s in summons.summons),
+    return _BaseTables(
+        elements=elements,
+        core=core,
+        hit_table=hit_table,
+        terrain=terrain,
+        weapons=weapons,
+        offhands=offhands,
+        statuses=statuses,
+        objects=objects,
+        surfaces=surfaces,
+        interactions=interactions,
+        reactions=reactions,
+        weather=weather,
+        ai_profiles=ai_profiles,
+        shapes=shapes,
+        primitives=primitives,
+        conditions=conditions,
+        skill_triggers=skill_triggers,
+        stacks=stacks,
+        budget=budget,
+        modifier_changes=modifier_changes,
+        composer=composer,
+        builds=builds,
+        synergies=synergies,
+        keywords=keywords,
+        exclusions=exclusions,
+        skill_tags=skill_tags,
+        skeletons=skeletons,
+        skills=skills,
+        summons=summons,
+        rule_changes=load("rule_changes.yaml", RuleChangeTable),
+        forms=load("forms.yaml", FormTable),
+        roguelite=load("roguelite.yaml", RunRules),
+        workshop=load("workshop.yaml", WorkshopRules),
+        workshop_text=load("workshop_text.yaml", WorkshopTextTable),
+        equipment_rules=load("rules/equipment.yaml", EquipmentRules),
+        affix_table=load("affixes.yaml", AffixTable),
+        item_table=load("items.yaml", ItemTable),
+        appearance=load("equipment/appearance.yaml", AppearanceTable),
+        item_gen=load("item_gen.yaml", ItemGenRules),
+        regions=load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None,
     )
+
+
+def _build_ruleset(root: Path, t: _BaseTables, races: RaceTable | None) -> Ruleset:
+    """組出戰鬥規則包（引擎用的整包規則；錯誤指向 ``rules/``）。"""
     try:
-        ruleset = Ruleset(
-            core=core,
-            hit_table=hit_table,
-            terrain=terrain,
-            statuses=statuses,
-            objects=objects,
-            surfaces=surfaces,
-            interactions=interactions,
-            reactions=reactions,
-            shapes=shapes,
-            primitives=primitives,
-            conditions=conditions,
-            skill_triggers=skill_triggers,
-            stacks=stacks,
-            skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
-            summons=summons,
-            forms=forms,
-            rule_changes=rule_changes,
+        return Ruleset(
+            core=t.core,
+            hit_table=t.hit_table,
+            terrain=t.terrain,
+            statuses=t.statuses,
+            objects=t.objects,
+            surfaces=t.surfaces,
+            interactions=t.interactions,
+            reactions=t.reactions,
+            shapes=t.shapes,
+            primitives=t.primitives,
+            conditions=t.conditions,
+            skill_triggers=t.skill_triggers,
+            stacks=t.stacks,
+            skills=SkillTable(skills=tuple(t.skills[k] for k in sorted(t.skills))),
+            summons=t.summons,
+            forms=t.forms,
+            rule_changes=t.rule_changes,
             races=races,
-            equipment=equipment_rules,
-            keywords=keywords,
-            skill_tags=skill_tags,
+            equipment=t.equipment_rules,
+            keywords=t.keywords,
+            skill_tags=t.skill_tags,
             gear_names={
-                **{w.id: w.name_zh for w in weapons.weapons},
-                **{o.id: o.name_zh for o in offhands.offhands},
+                **{w.id: w.name_zh for w in t.weapons.weapons},
+                **{o.id: o.name_zh for o in t.offhands.offhands},
             },
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
-    affixes = affix_table.by_id()
-    offhand_map = offhands.by_id()
+
+
+def _load_gear(
+    root: Path, t: _BaseTables, ruleset: Ruleset
+) -> tuple[dict[str, AffixDef], dict[str, ItemDef], _GearCatalog]:
+    """詞條（文字代入後）、物品（副手解析後）與裝備目錄；並檢查物品、外觀、物品生成。"""
+    affixes = t.affix_table.by_id()
+    offhand_map = t.offhands.by_id()
     items = {
         i.id: i
         if i.offhand is None
         else i.model_copy(update={"offhand_def": offhand_map.get(i.offhand)})
-        for i in item_table.items
+        for i in t.item_table.items
     }
-    weapon_map = weapons.by_id()
+    weapon_map = t.weapons.by_id()
     _check_affixes(root, affixes, ruleset, weapon_map)
     try:  # 詞條文字的欄位代入（Phase 3-41a）：數字與名稱從資料填，不寫死在 name_zh
         affixes = resolve_affix_names(affixes, ruleset)
     except (ValueError, KeyError) as exc:
         raise ContentError(root / "affixes.yaml", str(exc)) from exc
-    for item in item_table.items:
-        problems = item_problems(item, affixes, weapon_map, equipment_rules, offhand_map)
+    for item in t.item_table.items:
+        problems = item_problems(item, affixes, weapon_map, t.equipment_rules, offhand_map)
         if problems:
             raise ContentError(root / "items.yaml", "；".join(problems))
-    _check_appearance(root, appearance, item_table, keywords)
-    _check_item_gen(root, item_gen, affixes)
-    gear = _GearCatalog(items=items, affixes=affixes, rules=equipment_rules)
+    _check_appearance(root, t.appearance, t.item_table, t.keywords)
+    _check_item_gen(root, t.item_gen, affixes)
+    return affixes, items, _GearCatalog(items=items, affixes=affixes, rules=t.equipment_rules)
 
-    _check_skills(root, skills, ruleset, budget, weapons=weapon_map, offhands=offhand_map)
-    _check_skill_rules(root, ruleset, exclusions, skeletons)
-    _check_keywords(root, keywords, ruleset, skills)
-    unknown_values = sorted(set(ai_profiles.status_values) - {s.id for s in statuses.statuses})
+
+def _load_units(
+    root: Path,
+    t: _BaseTables,
+    ruleset: Ruleset,
+    gear: _GearCatalog,
+    files: list[tuple[Path, ContentModel]],
+) -> dict[str, UnitTemplate]:
+    """技能與 AI 設定的檢查，再讀 ``units/`` 並檢查單位、召喚物與模擬用 build。"""
+    weapon_map = t.weapons.by_id()
+    skills = t.skills
+    _check_skills(root, skills, ruleset, t.budget, weapons=weapon_map, offhands=t.offhands.by_id())
+    _check_skill_rules(root, ruleset, t.exclusions, t.skeletons)
+    _check_keywords(root, t.keywords, ruleset, skills)
+    unknown_values = sorted(set(t.ai_profiles.status_values) - {s.id for s in t.statuses.statuses})
     if unknown_values:
         raise ContentError(
             root / "ai_profiles.yaml",
             f"status_values 引用了未知的狀態：{', '.join(unknown_values)}",
         )
     units = _load_dir(root / "units", UnitTemplate, files)
-    stray = sorted(t for t, u in units.items() if u.summon)
+    stray = sorted(k for k, u in units.items() if u.summon)
     if stray:
         raise ContentError(root / "units", f"召喚物範本要放在 units/summons/：{', '.join(stray)}")
-    _check_units(
-        root,
-        units,
-        weapons=weapon_map,
-        skills=skills,
-        ruleset=ruleset,
-        ai_profiles=ai_profiles,
-        gear=gear,
-    )
-    _check_units(
-        root,
-        {s.id: s.template for s in summons.summons},
-        weapons=weapon_map,
-        skills=skills,
-        ruleset=ruleset,
-        ai_profiles=ai_profiles,
-        source=root / "units" / "summons",
-    )
+    checks: dict[str, Any] = {
+        "weapons": weapon_map,
+        "skills": skills,
+        "ruleset": ruleset,
+        "ai_profiles": t.ai_profiles,
+    }
+    _check_units(root, units, gear=gear, **checks)
+    summons = {s.id: s.template for s in t.summons.summons}
+    _check_units(root, summons, source=root / "units" / "summons", **checks)
+    _check_builds(root, t.builds, units, gear=gear, **checks)
+    return units
 
-    _check_builds(
-        root,
-        builds,
-        units,
-        weapons=weapon_map,
-        skills=skills,
-        ruleset=ruleset,
-        ai_profiles=ai_profiles,
-        gear=gear,
-    )
 
+def _load_maps(
+    root: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    units: dict[str, UnitTemplate],
+    ruleset: Ruleset,
+    gear: _GearCatalog,
+) -> dict[str, MapDef]:
+    """讀 ``maps/``；先檢查 Boss 階段（Phase 5F-2），再逐張檢查地圖。"""
     maps = _load_dir(root / "maps", MapDef, files)
-    terrain_map = terrain.by_id()
-    weather_map = weather.by_id()
+    terrain_map = t.terrain.by_id()
+    weather_map = t.weather.by_id()
     _check_unit_phases(  # Boss 階段（Phase 5F-2）
         root,
         units,
-        weapons=weapon_map,
-        skills=skills,
+        weapons=t.weapons.by_id(),
+        skills=t.skills,
         ruleset=ruleset,
-        ai_profiles=ai_profiles,
+        ai_profiles=t.ai_profiles,
         weather=weather_map,
         gear=gear,
     )
     for map_id, map_def in maps.items():
-        problems = check_map(map_def, terrain_map, core, objects.by_id())
+        problems = check_map(map_def, terrain_map, t.core, t.objects.by_id())
         problems += _map_reference_problems(map_def, units, weather_map)
         problems += _map_phase_tile_problems(map_def, units)
         if problems:
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
+    return maps
 
-    map_warnings = _apply_map_themes(maps, regions)
+
+def _load_world(
+    root: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    ruleset: Ruleset,
+    units: dict[str, UnitTemplate],
+    maps: dict[str, MapDef],
+    races: RaceTable | None,
+    affixes: dict[str, AffixDef],
+) -> dict[str, Any]:
+    """大世界的內容（Phase 5A 起，``world/``）：回傳 :class:`ContentLibrary` 的 ``world_*``
+    欄位。"""
+    regions, statuses, keywords = t.regions, t.statuses, t.keywords
+    skills, budget, weapon_map = t.skills, t.budget, t.weapons.by_id()
+    weather_map = t.weather.by_id()
     world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     world_oaths = _load_world_oaths(
         root / WORLD_OATHS_FILE,
         files,
         status_ids=set(statuses.by_id()),
-        tag_ids={t.id for t in skill_tags.tags},
-        element_ids={str(e.id) for e in elements.elements},
+        tag_ids={tag.id for tag in t.skill_tags.tags},
+        element_ids={str(e.id) for e in t.elements.elements},
     )
     world_mercenaries = _load_world_mercenaries(
-        root / WORLD_MERCENARIES_FILE, builds, ai_profiles, files
+        root / WORLD_MERCENARIES_FILE, t.builds, t.ai_profiles, files
     )
-    unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
+    unit_check = _UnitCheck(root, weapon_map, skills, ruleset, t.ai_profiles)
     world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
     catalog = _enemy_catalog(units, world_enemies, weapon_map, skills, ruleset)
     world_encounters = _load_world_encounters(
@@ -972,6 +1067,7 @@ def load_library(  # noqa: PLR0915
         battle_maps={k: v.archetype for k, v in maps.items()},
         status_ids={s.id for s in statuses.statuses if not s.enemy_only},  # 5F-R1：影子是玩家這邊
     )
+    keyword_ids = {k.id for k in keywords.keywords}
     world_event_content = load_world_event_content(
         root,
         world_maps,
@@ -979,7 +1075,7 @@ def load_library(  # noqa: PLR0915
         files,
         status_ids=statuses.by_id(),
         enemy_only_ids={s.id for s in statuses.statuses if s.enemy_only},  # 06 6.35（5F-R2）
-        keyword_ids={k.id for k in keywords.keywords},
+        keyword_ids=keyword_ids,
         race_ids=None if races is None else races.by_id(),
     )
     world_quests = load_world_quest_content(
@@ -988,19 +1084,18 @@ def load_library(  # noqa: PLR0915
         world_event_content,
         files,
         check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
-        keyword_ids={k.id for k in keywords.keywords},
+        keyword_ids=keyword_ids,
     )
-    _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
-    _check_companions(root, world_mercenaries, builds, world_event_content, world_quests)
+    _check_unit_races(root, {**units, **{b.id: b.hero for b in t.builds.builds}}, races)
+    _check_companions(root, world_mercenaries, t.builds, world_event_content, world_quests)
     world_economy = load_world_economy(  # 5D-1
         root,
         files,
         regions=set(world_maps),
-        npcs_by_region={r: {n.id for n in t.npcs} for r, t in world_event_content.npcs.items()},
+        npcs_by_region={r: {n.id for n in e.npcs} for r, e in world_event_content.npcs.items()},
         check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
     )
     _check_shop_prices(root, world_season, world_economy)  # 5F-5b
-    keyword_ids = {k.id for k in keywords.keywords}
     world_loot = load_world_loot(  # 5D-2
         root,
         files,
@@ -1014,81 +1109,134 @@ def load_library(  # noqa: PLR0915
         root,
         files,
         locations={r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
-        npcs={r: {n.id: n.location for n in t.npcs} for r, t in world_event_content.npcs.items()},
+        npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
         items=world_economy.items,
         affixes=affixes,
         keywords=keyword_ids,
         hint_texts=_hint_texts(world_event_content, world_quests),
     )
-    world_resonance = load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids)
+    return {
+        "world_maps": world_maps,
+        "world_rules": world_rules,
+        "world_enemies": world_enemies,
+        "world_encounters": world_encounters,
+        "world_event_content": world_event_content,
+        "world_quests": world_quests,
+        "world_oaths": world_oaths,
+        "world_mercenaries": world_mercenaries,
+        "world_economy": world_economy,
+        "world_loot": world_loot,
+        "world_crafting": world_crafting,
+        "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
+        "world_season": world_season,
+    }
 
-    problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
+
+def _load_run_extras(
+    root: Path,
+    t: _BaseTables,
+    load: _Loader,
+    *,
+    maps: dict[str, MapDef],
+    units: dict[str, UnitTemplate],
+) -> dict[str, Any]:
+    """一輪（roguelite）與工作坊的檢查、開發用起始包、技能演化、閃現與技能成長（回傳
+    :class:`ContentLibrary` 的對應欄位）。"""
+    problems = roguelite_problems(t.roguelite, maps, units, t.core.tier_budget)
     if problems:
         raise ContentError(root / "roguelite.yaml", "；".join(problems))
-    problems = workshop_problems(workshop, maps, units)
+    problems = workshop_problems(t.workshop, maps, units)
     if problems:
         raise ContentError(root / "workshop.yaml", "；".join(problems))
+    weapon_map = t.weapons.by_id()
     dev_starters = DevStarterTable()
     if (root / "dev_starters.yaml").exists():
         dev_starters = load("dev_starters.yaml", DevStarterTable)
-        problems = _dev_starter_problems(dev_starters, weapon_map, keywords, skills)
+        problems = _dev_starter_problems(dev_starters, weapon_map, t.keywords, t.skills)
         if problems:
             raise ContentError(root / "dev_starters.yaml", "；".join(problems))
     has_evolution = (root / "skill_evolution.yaml").exists()
     evolution = load("skill_evolution.yaml", EvolutionTable) if has_evolution else EvolutionTable()
-    _check_evolution(root, evolution, keywords, skeletons)
-    flash = _load_flash(root, load, evolution, skill_triggers)
+    _check_evolution(root, evolution, t.keywords, t.skeletons)
+    flash = _load_flash(root, load, evolution, t.skill_triggers)
     skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
-    _check_scaling(root, skill_scaling, skills, weapon_map)
+    _check_scaling(root, skill_scaling, t.skills, weapon_map)
+    return {
+        "dev_starters": dev_starters,
+        "evolution": evolution,
+        "flash": flash,
+        "skill_scaling": skill_scaling,
+    }
 
+
+def load_library(
+    content_dir: Path | None = None,
+) -> ContentLibrary:
+    """載入並交叉驗證 ``content/`` 下全部戰鬥內容；任何問題都拋出 :class:`ContentError`。
+
+    步驟（5F-R2 拆成小函式，順序不變）：第一批表 → 種族與出身 → 規則包 → 詞條與物品 → 技能與單位
+    → 地圖 → 大世界 → 一輪與其他。"""
+    root = default_content_dir() if content_dir is None else content_dir
+    files: list[tuple[Path, ContentModel]] = []
+
+    def load[M: ContentModel](rel: str, model: type[M]) -> M:
+        path = root / rel
+        item = load_content_file(path, model)
+        files.append((path, item))
+        return item
+
+    t = _load_base_tables(root, load, files)
+    races, origins = _load_races(
+        root,
+        load,
+        t.regions,
+        shapes=t.shapes.by_id(),
+        weather=t.weather.by_id(),
+        terrain=t.terrain.by_id(),
+        summons=frozenset(s.id for s in t.summons.summons),
+    )
+    ruleset = _build_ruleset(root, t, races)
+    affixes, items, gear = _load_gear(root, t, ruleset)
+    units = _load_units(root, t, ruleset, gear, files)
+    maps = _load_maps(root, t, files, units=units, ruleset=ruleset, gear=gear)
+    map_warnings = _apply_map_themes(maps, t.regions)
+    world = _load_world(
+        root, t, files, ruleset=ruleset, units=units, maps=maps, races=races, affixes=affixes
+    )
+    extras = _load_run_extras(root, t, load, maps=maps, units=units)
     return ContentLibrary(
         root=root,
-        elements=elements,
+        elements=t.elements,
         ruleset=ruleset,
-        weapons=weapon_map,
-        skills=skills,
+        weapons=t.weapons.by_id(),
+        skills=t.skills,
         units=units,
         maps=maps,
-        weather=weather_map,
-        ai_profiles=ai_profiles,
-        budget=budget,
-        composer=composer,
-        builds=builds,
-        synergies=synergies,
-        keywords=keywords,
-        exclusions=exclusions,
-        skeletons=skeletons,
-        roguelite=roguelite,
-        workshop=workshop,
-        workshop_text=workshop_text,
+        weather=t.weather.by_id(),
+        ai_profiles=t.ai_profiles,
+        budget=t.budget,
+        composer=t.composer,
+        builds=t.builds,
+        synergies=t.synergies,
+        keywords=t.keywords,
+        exclusions=t.exclusions,
+        skeletons=t.skeletons,
+        roguelite=t.roguelite,
+        workshop=t.workshop,
+        workshop_text=t.workshop_text,
         affixes=affixes,
-        offhands=offhand_map,
+        offhands=t.offhands.by_id(),
         items=items,
-        appearance=appearance,
-        item_gen=item_gen,
-        dev_starters=dev_starters,
-        evolution=evolution,
-        flash=flash,
-        skill_scaling=skill_scaling,
-        regions=regions,
+        appearance=t.appearance,
+        item_gen=t.item_gen,
+        regions=t.regions,
         races=races,
         origins=origins,
-        modifier_changes=modifier_changes,
+        modifier_changes=t.modifier_changes,
         map_warnings=tuple(map_warnings),
-        world_maps=world_maps,
-        world_rules=world_rules,
-        world_enemies=world_enemies,
-        world_encounters=world_encounters,
-        world_event_content=world_event_content,
-        world_quests=world_quests,
-        world_oaths=world_oaths,
-        world_mercenaries=world_mercenaries,
-        world_economy=world_economy,
-        world_loot=world_loot,
-        world_crafting=world_crafting,
-        world_resonance=world_resonance,
-        world_season=world_season,
         files=files,
+        **extras,
+        **world,
     )
 
 
