@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from tests.world.helpers import hero, with_rules
+from tests.world.helpers import hero, with_rules, without_fields
 from trpg.content.library import ContentLibrary, load_library
 from trpg.world.state import CharacterState
 from trpg.world.step import new_character
@@ -15,6 +15,13 @@ from trpg.world.step import new_character
 
 @pytest.fixture(scope="session")
 def library() -> ContentLibrary:
+    """5A～5F 的測試用：沒有實地地圖（照舊點地點移動；見 :func:`without_fields`）。"""
+    return without_fields(load_library())
+
+
+@pytest.fixture(scope="session")
+def field_library() -> ContentLibrary:
+    """完整的內容庫（含實地地圖；6B-2 起的走路測試用）。"""
     return load_library()
 
 

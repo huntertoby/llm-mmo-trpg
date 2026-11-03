@@ -577,7 +577,7 @@ export class BattleRenderer {
       sprite.height = T;
       c.addChild(sprite);
     } else {
-      g.rect(0, 0, T, T).fill(t.fill).stroke({ width: 1, color: 0x000000, alpha: 0.35 }); // 無法產生貼圖：退回色塊
+      g.rect(0, 0, T, T).fill(t.fill); // 無法產生貼圖：退回色塊（6A-4a：待機不畫格線）
     }
     c.addChild(edges);
     if (t.deadly) {

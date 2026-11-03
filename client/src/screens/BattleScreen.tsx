@@ -16,12 +16,13 @@ import { objectiveLine } from "../battle/objective";
 import { orderButton, withOrder } from "../battle/orders";
 import { togglePopup, type TopPopup } from "../battle/skillTray";
 import { BattleCanvas } from "../ui/BattleCanvas";
-import { BattleLog } from "../ui/BattleLog";
+import { BattleLogDock } from "../ui/BattleLogDock";
 import { BattleTopBar } from "../ui/BattleTopBar";
 import { ModePanel } from "../ui/ActionPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { NoticeBanner } from "../ui/NoticeBanner";
+import { PinnedUnitDock } from "../ui/PinnedUnitDock";
 import { phaseNotices } from "../battle/bossPhase";
 import { ResizeHandle } from "../ui/ResizeHandle";
 import { SidePanel } from "../ui/SidePanel";
@@ -306,6 +307,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             </div>
           )}
         </div>
+        <BattleLogDock lines={pb.lines} onHover={hl.setLogHover} />
         <ModePanel
           enabled={data.canAct || copying}
           mode={mode}
@@ -359,18 +361,15 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         )}
         {/* 放在召喚物面板之後：CSS 用 `.summon-panel ~ .unit-pin-dock` 讓開右上角 */}
         {dockUnit !== null && (
-          <div className="unit-pin-dock" aria-label="釘選的單位">
-            <UnitInfo
-              unit={dockUnit}
-              names={data.names}
-              heroId={heroId}
-              skills={data.skillNames}
-              cards={cards}
-              view={shown}
-              pinned
-              onTogglePin={() => setPinnedUnit(null)}
-            />
-          </div>
+          <PinnedUnitDock
+            unit={dockUnit}
+            names={data.names}
+            heroId={heroId}
+            skills={data.skillNames}
+            cards={cards}
+            view={shown}
+            onTogglePin={() => setPinnedUnit(null)}
+          />
         )}
       </div>
       <SidePanel
@@ -385,7 +384,6 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             onHoverTiles={hl.setTelegraphHover}
           />
         }
-        log={<BattleLog lines={pb.lines} onHover={hl.setLogHover} />}
       />
       <BattleBottomBar
         response={response}

@@ -156,6 +156,10 @@ export interface TrapPad {
   color: string;
 }
 
+/** 陷阱外圍淡紅虛線圈的半徑（虛擬格單位；中心在 (26, 28)，整圈在格子內）。 */
+export const TRAP_HALO_RX = 22;
+export const TRAP_HALO_RY = 16;
+
 /** 陷阱踏板：外圈＝陣營色（敵方虛線加「!」）；中央＝元素色的捕獸夾（enter）或沙漏（delay）。 */
 export function drawTrapPad(ctx: Ctx, pad: TrapPad): void {
   const col = pad.mine ? TEAM_COLOR.mine : TEAM_COLOR.enemy;
@@ -163,6 +167,16 @@ export function drawTrapPad(ctx: Ctx, pad: TrapPad): void {
   const cy = T / 2 + 2;
   const R = T * 0.3;
   ctx.save();
+  // 6A-4a（D 版）：已知的陷阱外加一圈淡紅虛線（危險範圍＝這一格；圈在格子內）
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, TRAP_HALO_RX, TRAP_HALO_RY, 0, 0, TAU);
+  ctx.fillStyle = "rgba(224,72,58,0.16)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(224,72,58,0.75)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
   ctx.beginPath();
   ctx.ellipse(cx, cy, R, R * 0.78, 0, 0, TAU);
   ctx.fillStyle = "rgba(20,18,16,0.55)";

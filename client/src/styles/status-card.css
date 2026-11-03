@@ -288,6 +288,11 @@
   right: 280px;
 }
 
+/* 6A-3：視窗不到 1000 寬時，釘住的小卡只留名稱、HP 條、耐力條；滑鼠移上去才展開 */
+.unit-pin-dock.compact {
+  width: 200px;
+}
+
 .unit-pin-dock .unit-info {
   margin: 0;
   padding: 6px 10px;

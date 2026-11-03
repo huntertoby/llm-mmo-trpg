@@ -137,6 +137,8 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "boss_drop_days",
     "bounty_days",  # 5F-1b 每天第一場懸賞遭遇
     "news_seen_at",  # 5F-1b「你不在的時候」看過的時刻
+    "field",  # 6B-2 實地地圖上的位置（同 region、location）
+    "teleport_stones",  # 6B-2 解鎖的傳送石（同 revealed）
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(

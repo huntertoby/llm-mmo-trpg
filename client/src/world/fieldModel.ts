@@ -1,0 +1,415 @@
+// 實地地圖（Phase 6B-3；docs/phases/Phase6計畫.md 第 5 節）的純函式：`WorldView.field` → 戰鬥渲染器的 `DrawModel`、
+// 出口／門／傳送石的標示、前端的 BFS 路徑、方向鍵、相鄰的設施與 NPC。規則以伺服器為準（`walk` 回來的位置），
+// 這裡的可站格與爬升上限都由伺服器下發（`FieldTileView.walkable`、`FieldView.max_climb`）。
+import type { BattleView, Facing, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
+import { buildDrawModel, type DrawModel } from "../battle/drawModel";
+import { HIGHLIGHT } from "../battle/glossary";
+import type { Highlights } from "../render/BattleRenderer";
+import type { TelegraphMark } from "../battle/telegraph";
+
+/** 主角在實地地圖上的單位 ID（動畫用）。 */
+export const FIELD_HERO = "field_hero";
+/** 一次 `walk` 最多幾格（伺服器 `WalkAction` 的上限）。 */
+export const WALK_MAX = 30;
+/** 走一格的動畫時間（同 6A-4d，約 0.12 秒）。 */
+export const STEP_MS = 120;
+/** 換地圖時地名停留的時間。 */
+export const PLACE_NAME_MS = 2000;
+
+const FACING: Readonly<Record<FieldView["me"]["facing"], Facing>> = { n: "north", e: "east", s: "south", w: "west" };
+
+const DIRS: ReadonlyArray<readonly [number, number]> = [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+];
+
+export type Direction = "up" | "down" | "left" | "right";
+
+const DIR_DELTA: Readonly<Record<Direction, readonly [number, number]>> = {
+  up: [0, -1],
+  down: [0, 1],
+  left: [-1, 0],
+  right: [1, 0],
+};
+
+/** 鍵盤 → 方向（方向鍵與 WASD）；其他鍵 `null`。 */
+export function keyDirection(key: string): Direction | null {
+  switch (key) {
+    case "ArrowUp":
+    case "w":
+    case "W":
+      return "up";
+    case "ArrowDown":
+    case "s":
+    case "S":
+      return "down";
+    case "ArrowLeft":
+    case "a":
+    case "A":
+      return "left";
+    case "ArrowRight":
+    case "d":
+    case "D":
+      return "right";
+    default:
+      return null;
+  }
+}
+
+const key = (p: Pos): string => `${p.x},${p.y}`;
+
+function inBounds(field: FieldView, p: Pos): boolean {
+  return p.x >= 0 && p.y >= 0 && p.x < field.width && p.y < field.height;
+}
+
+function tileOf(field: FieldView, p: Pos): FieldView["tiles"][number] | undefined {
+  return inBounds(field, p) ? field.tiles[p.y * field.width + p.x] : undefined;
+}
+
+/** 從 `from` 走一步到 `to` 合不合法（四方向相鄰、可站、往上不超過 `max_climb`；往下不限，同伺服器）。 */
+export function canStep(field: FieldView, from: Pos, to: Pos): boolean {
+  if (Math.abs(from.x - to.x) + Math.abs(from.y - to.y) !== 1) return false;
+  const a = tileOf(field, from);
+  const b = tileOf(field, to);
+  if (a === undefined || b === undefined || !b.walkable) return false;
+  return b.height - a.height <= field.max_climb;
+}
+
+/** 出口、門、傳送石所在的格子（伺服器走到這些格子就停下並觸發）。 */
+export function portalCells(field: FieldView): Set<string> {
+  const out = new Set<string>();
+  for (const e of field.exits) for (const [x, y] of e.cells) out.add(`${x},${y}`);
+  for (const d of field.doors) out.add(`${d.x},${d.y}`);
+  for (const s of field.stones) out.add(`${s.x},${s.y}`);
+  return out;
+}
+
+export type PortalHit =
+  | { kind: "exit"; to: string; name: string }
+  | { kind: "door"; to: string; name: string }
+  | { kind: "stone"; id: string };
+
+export function portalAt(field: FieldView, p: Pos): PortalHit | null {
+  const exit = field.exits.find((e) => e.cells.some(([x, y]) => x === p.x && y === p.y));
+  if (exit !== undefined) return { kind: "exit", to: exit.to, name: exit.to_name_zh };
+  const door = field.doors.find((d) => d.x === p.x && d.y === p.y);
+  if (door !== undefined) return { kind: "door", to: door.to, name: door.to_name_zh };
+  const stone = field.stones.find((s) => s.x === p.x && s.y === p.y);
+  if (stone !== undefined) return { kind: "stone", id: stone.id };
+  return null;
+}
+
+/**
+ * 四方向 BFS：`from` → `to` 的路徑（不含起點；到不了或原地為 `null`）。
+ * 路上避開出口、門、傳送石（伺服器踩到就停下），只有終點可以是它們；避不開時才允許穿過。
+ * 鄰格順序固定（北、東、南、西），同樣的地圖與起訖點一定得到同一條路。
+ */
+export function findPath(field: FieldView, from: Pos, to: Pos): Pos[] | null {
+  if (from.x === to.x && from.y === to.y) return null;
+  const target = tileOf(field, to);
+  if (target === undefined || !target.walkable) return null;
+  const portals = portalCells(field);
+  return bfs(field, from, to, portals) ?? bfs(field, from, to, new Set());
+}
+
+function bfs(field: FieldView, from: Pos, to: Pos, avoid: ReadonlySet<string>): Pos[] | null {
+  const prev = new Map<string, Pos | null>([[key(from), null]]);
+  const queue: Pos[] = [from];
+  for (let i = 0; i < queue.length; i++) {
+    const here = queue[i]!;
+    if (here.x === to.x && here.y === to.y) return unwind(prev, here);
+    if (i > 0 && avoid.has(key(here))) continue; // 不從出口、門、傳送石繼續往外走
+    for (const [dx, dy] of DIRS) {
+      const next = { x: here.x + dx, y: here.y + dy };
+      if (prev.has(key(next)) || !canStep(field, here, next)) continue;
+      prev.set(key(next), here);
+      queue.push(next);
+    }
+  }
+  return null;
+}
+
+function unwind(prev: Map<string, Pos | null>, end: Pos): Pos[] {
+  const path: Pos[] = [];
+  let cur: Pos | null = end;
+  while (cur !== null) {
+    const back: Pos | null = prev.get(key(cur)) ?? null;
+    if (back === null) break; // 起點不放進路徑
+    path.push(cur);
+    cur = back;
+  }
+  return path.reverse();
+}
+
+/** 超過 30 格的路徑切成好幾段（每段一次 `walk`）。 */
+export function chunkPath(path: readonly Pos[], max = WALK_MAX): Pos[][] {
+  const out: Pos[][] = [];
+  for (let i = 0; i < path.length; i += max) out.push(path.slice(i, i + max));
+  return out;
+}
+
+/** 方向鍵的下一格；走不過去為 `null`（不送請求）。 */
+export function stepTarget(field: FieldView, dir: Direction): Pos | null {
+  const [dx, dy] = DIR_DELTA[dir];
+  const next = { x: field.me.x + dx, y: field.me.y + dy };
+  return canStep(field, field.me, next) ? next : null;
+}
+
+/** 路徑 → `walk` 動作。 */
+export function walkAction(path: readonly Pos[]): { kind: "walk"; path: [number, number][] } {
+  return { kind: "walk", path: path.map((p) => [p.x, p.y] as [number, number]) };
+}
+
+/**
+ * 伺服器回來之後，這一段實際走了哪些格子（動畫用）：
+ * - 同一張地圖：走到伺服器回報的位置為止（中途碰到出口、門、傳送石會提早停）；
+ * - 換了地圖（或離開實地地圖）：走到第一個出口、門或傳送石為止。
+ */
+export function walkedCells(before: FieldView, sent: readonly Pos[], after: FieldView | null | undefined): Pos[] {
+  if (after != null && after.map_id === before.map_id) {
+    const end = sent.findIndex((p) => p.x === after.me.x && p.y === after.me.y);
+    return end < 0 ? [] : sent.slice(0, end + 1);
+  }
+  const portals = portalCells(before);
+  const end = sent.findIndex((p) => portals.has(key(p)));
+  return end < 0 ? [...sent] : sent.slice(0, end + 1);
+}
+
+/** 走一段的動畫計畫（逐格平移）。 */
+export function walkPlan(from: Pos, cells: readonly Pos[], stepMs = STEP_MS) {
+  const plan: Array<{ unitId: string; from: Pos; to: Pos; mode: "walk"; durationMs: number; style: "slide" }> = [];
+  let here = from;
+  for (const c of cells) {
+    plan.push({ unitId: FIELD_HERO, from: here, to: c, mode: "walk", durationMs: stepMs, style: "slide" });
+    here = c;
+  }
+  return plan;
+}
+
+// ---- 互動（設施與 NPC；6B-4 前的最小版）----
+
+export type FieldTarget =
+  | { kind: "facility"; facility: string; x: number; y: number }
+  | { kind: "npc"; npc: string; name: string; x: number; y: number };
+
+/** 格子上的設施或 NPC（NPC 優先）。 */
+export function targetAt(field: FieldView, p: Pos): FieldTarget | null {
+  const npc = field.npcs.find((n) => n.x === p.x && n.y === p.y);
+  if (npc !== undefined) return { kind: "npc", npc: npc.id, name: npc.name_zh, x: npc.x, y: npc.y };
+  const f = field.facilities.find((x) => x.x === p.x && x.y === p.y);
+  if (f !== undefined) return { kind: "facility", facility: f.kind, x: f.x, y: f.y };
+  return null;
+}
+
+/** 站在 `me` 能不能和目標互動：站在它上面或四方向相鄰。 */
+export function nearTarget(me: Pos, t: Pos): boolean {
+  return Math.abs(me.x - t.x) + Math.abs(me.y - t.y) <= 1;
+}
+
+/** 按 E 時的目標：先看面向的那一格，再依北、東、南、西找相鄰的，最後是腳下。 */
+export function interactTarget(field: FieldView): FieldTarget | null {
+  const me = field.me;
+  const ahead: Readonly<Record<FieldView["me"]["facing"], readonly [number, number]>> = { n: [0, -1], e: [1, 0], s: [0, 1], w: [-1, 0] };
+  const [fx, fy] = ahead[me.facing];
+  const order: Pos[] = [{ x: me.x + fx, y: me.y + fy }, ...DIRS.map(([dx, dy]) => ({ x: me.x + dx, y: me.y + dy })), { x: me.x, y: me.y }];
+  for (const p of order) {
+    const t = targetAt(field, p);
+    if (t !== null) return t;
+  }
+  return null;
+}
+
+/** 走到目標旁邊的路徑：可站的相鄰格（或目標本身可站時含本身）中路徑最短的；已經在旁邊為 `[]`、到不了為 `null`。 */
+export function pathNextTo(field: FieldView, t: Pos): Pos[] | null {
+  if (nearTarget(field.me, t)) return [];
+  let best: Pos[] | null = null;
+  const spots = [t, ...DIRS.map(([dx, dy]) => ({ x: t.x + dx, y: t.y + dy }))];
+  for (const spot of spots) {
+    const path = findPath(field, field.me, spot);
+    if (path !== null && (best === null || path.length < best.length)) best = path;
+  }
+  return best;
+}
+
+// ---- 繪製 ----
+
+function unitBase(id: string, x: number, y: number): UnitView {
+  return {
+    id,
+    template_id: "npc",
+    name_zh: "",
+    team: "ally",
+    pos: { x, y },
+    hp: 1,
+    max_hp: 1,
+    shield: 0,
+    mana: 0,
+    max_mana: 0,
+    stamina: 0,
+    max_stamina: 0,
+    ap: 0,
+    move_points: 0,
+    speed: 0,
+    initiative: 0,
+    weapon_name_zh: "",
+    weapon_id: "unarmed",
+    weapon_class: "melee",
+    weapon_traits_zh: [],
+    offhand_name_zh: "",
+    offhand_traits_zh: [],
+    traits_zh: [],
+    ammo: 0,
+    magazine: 0,
+    tags: [],
+    skills: [],
+    statuses: [],
+    stacks: {},
+    cooldowns: {},
+    reaction_available: false,
+    reaction_rules: [],
+    ap_carry: 0,
+    source: 0,
+    source_max: 0,
+    downed: false,
+    revivable: false,
+    escaped: false,
+    owner_id: null,
+    summon_expires_round: null,
+    dismissed: false,
+    totem_radius: null,
+    infusion: null,
+    infusion_options: [],
+    summon_mode: null,
+    summon_target_id: null,
+    commanded: false,
+    infused: false,
+    activations: [],
+    granted_skills: [],
+    facing: "south",
+    equipment: [],
+    gear_totals: [],
+    charges: [],
+    gear_skills: [],
+    form: null,
+    form_cooldowns: [],
+  };
+}
+
+function heroUnit(field: FieldView, name: string): UnitView {
+  const hero = field.hero;
+  const base = unitBase(FIELD_HERO, field.me.x, field.me.y);
+  return {
+    ...base,
+    name_zh: name,
+    template_id: hero?.template_id ?? "hero",
+    facing: FACING[field.me.facing],
+    weapon_id: hero?.weapon_id ?? base.weapon_id,
+    weapon_class: hero?.weapon_class ?? base.weapon_class,
+    doll_look: hero?.doll_look ?? null,
+    equipment: (hero?.equipment ?? []).map((e) => ({ slot: e.slot, slot_zh: "", item_id: "", name_zh: "", affixes: [], appearance: e.appearance })),
+  } as UnitView;
+}
+
+/** `field` → 戰鬥渲染器吃的假 `BattleView`（地形、高低差、物件、表面照戰鬥畫法；主角與 NPC 是單位）。 */
+export function fieldBattleView(field: FieldView, heroName = "你"): BattleView {
+  const tiles: TileView[] = field.tiles.map((t) => ({
+    x: t.x,
+    y: t.y,
+    height: t.height,
+    terrain: t.terrain,
+    surface: t.surface as Surface,
+    surface_remaining: null,
+    surface_team: null,
+    surface_creator: null,
+    object_id: null,
+  }));
+  const objects: ObjectView[] = field.objects.map((o) => ({ id: o.id, kind: o.kind, pos: { x: o.x, y: o.y }, hp: null, max_hp: null, burning: null }));
+  const npcs: UnitView[] = field.npcs.map((n) => ({ ...unitBase(`npc_${n.id}`, n.x, n.y), name_zh: n.name_zh, template_id: `npc_${n.id}` }));
+  return {
+    team: "ally",
+    map_id: field.map_id,
+    map_name_zh: field.name_zh,
+    width: field.width,
+    height: field.height,
+    tiles,
+    objects,
+    units: [heroUnit(field, heroName), ...npcs],
+    traps: [],
+    turn_order: [],
+    active_unit: null,
+    round: 1,
+    max_rounds: 1,
+    weather_id: null,
+    weather_name_zh: null,
+    objective: { kind: "eliminate", tiles: [], rounds: null },
+    ended: false,
+    winner: null,
+    end_reason: null,
+    pending: null,
+    source_wells: [],
+    zones: [],
+    runes: [],
+    region: field.region,
+    look: {},
+  } as unknown as BattleView;
+}
+
+/** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角帶種族外觀。 */
+export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
+  const model = buildDrawModel(fieldBattleView(field, heroName), FIELD_HERO, null);
+  const race = field.hero?.race_look ?? null;
+  const units = model.units.map((u) => (u.id === FIELD_HERO ? { ...u, raceLook: race as Readonly<Record<string, unknown>> | null } : u));
+  const markers = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y, kind: "exit" as const })));
+  return { ...model, units, markers };
+}
+
+const DOOR_COLOR = 0xe0b060;
+const STONE_COLOR = 0x7fd8ff;
+
+/** 門與傳送石的淡色標示（借用環境預告的半透明外框＋小圖示）；`hover` 是滑鼠所在格。 */
+export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
+  const telegraph: TelegraphMark[] = [
+    ...field.doors.map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
+    ...field.stones.map((s) => ({ pos: { x: s.x, y: s.y }, kind: "stone", glyph: "◆", color: s.unlocked ? STONE_COLOR : HIGHLIGHT.well, texts: ["傳送石"] })),
+  ];
+  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [] };
+}
+
+/** 滑鼠所在格的一行說明（出口往哪、門通到哪、傳送石、設施、NPC）；沒有東西為 `null`。 */
+export function hoverText(field: FieldView, p: Pos | null): string | null {
+  if (p === null) return null;
+  const portal = portalAt(field, p);
+  if (portal?.kind === "exit") return `往 ${portal.name}`;
+  if (portal?.kind === "door") return portal.name;
+  if (portal?.kind === "stone") return "傳送石";
+  const t = targetAt(field, p);
+  if (t?.kind === "npc") return t.name;
+  if (t?.kind === "facility") return FACILITY_ZH[t.facility] ?? t.facility;
+  return null;
+}
+
+/** 地圖區畫什麼：有實地地圖畫可走動畫面，沒有就照舊畫地點節點圖（兩種方式並存）。 */
+export function mapPaneKind(view: { field?: FieldView | null }): "field" | "nodes" {
+  return view.field != null ? "field" : "nodes";
+}
+
+/**
+ * 換地圖時跳的地名（21.7「只跳一行地名」）：`prev` 是上一個畫面的實地地圖 ID（`undefined`＝第一次載入、
+ * `null`＝上一個地點沒有實地地圖）。第一次載入不跳；換到另一張實地地圖時回傳新地圖的名稱。
+ */
+export function placeBanner(prev: string | null | undefined, next: FieldView | null | undefined): string | null {
+  if (prev === undefined || next == null) return null;
+  return next.map_id === prev ? null : next.name_zh;
+}
+
+export const FACILITY_ZH:Readonly<Record<string, string>> = {
+  shop: "商店",
+  smithy: "鐵匠",
+  tavern: "酒館",
+  mentor: "導師",
+  notice_board: "布告欄",
+  hire: "傭兵",
+  enchanter: "附魔台",
+};

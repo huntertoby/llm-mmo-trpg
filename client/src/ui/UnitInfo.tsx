@@ -38,6 +38,8 @@ interface Props {
   pinned?: boolean;
   /** 圖釘：釘選或取消；省略時不畫圖釘。 */
   onTogglePin?(): void;
+  /** 精簡版（6A-3：視窗不到 1000 寬的釘選小卡）：只留名稱、HP 條、耐力條。 */
+  compact?: boolean;
 }
 
 export function statusText(s: StatusView, skills?: SkillNames): string {
@@ -128,24 +130,22 @@ function surfaceText(view: BattleView, unit: UnitView): string {
   return `${surfaceName(tile.surface)}${left}`;
 }
 
-export function UnitInfo({ unit, names, heroId, skills, cards, view, pinned = false, onTogglePin }: Props) {
+export function UnitInfo(props: Props) {
+  const { unit, names, heroId, pinned = false, onTogglePin, compact = false } = props;
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
   }
   const kind = summonKind(unit);
   const tags = [unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
-  const cooldowns = Object.entries(unit.cooldowns).filter(([, n]) => n > 0);
-  const surface = view === undefined ? null : surfaceAt(view, unit);
-  const rows = detailRows(unit, names, view);
   return (
-    <div className={`panel unit-info unit-card${pinned ? " pinned" : ""}`} data-unit={unit.id}>
+    <div className={`panel unit-info unit-card${pinned ? " pinned" : ""}${compact ? " compact" : ""}`} data-unit={unit.id}>
       <div className="unit-title">
         <Hint text={TEAM_ZH[unit.team]}>
           <span className={`unit-badge ${unit.team}`}>{names.marker(unit.id)}</span>
         </Hint>
         <span className="unit-name">{unit.name_zh}</span>
-        {tags.length > 0 && <span className="muted small">（{tags.join("・")}）</span>}
-        {affixBadges(unit).map((b) => (
+        {!compact && tags.length > 0 && <span className="muted small">（{tags.join("・")}）</span>}
+        {(compact ? [] : affixBadges(unit)).map((b) => (
           <Hint key={b.label} text={b.hint}>
             <span className="affix-badge" data-testid="affix-badge">
               ◆ {b.label}
@@ -172,6 +172,18 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view, pinned = fa
         <StatBar bar={barData("hp", unit)} />
         <StatBar bar={barData("stamina", unit)} />
       </div>
+      {!compact && <UnitCardMore {...props} unit={unit} />}
+    </div>
+  );
+}
+
+/** 小卡的條以下：圖示＋數字、狀態與表面、「▸ 詳細」（精簡版不畫）。 */
+function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { unit: UnitView }) {
+  const cooldowns = Object.entries(unit.cooldowns).filter(([, n]) => n > 0);
+  const surface = view === undefined ? null : surfaceAt(view, unit);
+  const rows = detailRows(unit, names, view);
+  return (
+    <>
       <div className="hud-icons">
         {unitChips(unit).map((c) => (
           <StatChipView key={c.key} chip={c} />
@@ -220,6 +232,6 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view, pinned = fa
           <div className="unit-line">冷卻：{cooldowns.map(([k, v]) => `${skills[k] ?? k} ${v}`).join("、")}</div>
         )}
       </details>
-    </div>
+    </>
   );
 }

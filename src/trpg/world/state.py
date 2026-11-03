@@ -8,6 +8,10 @@ Phase 5A-6 加上成長欄位（靈感點、閃現狀態、生成技能、用法
 和 ``RunState`` 同名同型別，讓 :mod:`trpg.world.growth` 轉成 ``RunState`` 呼叫 roguelite 的成長
 函式。
 全部有預設值，``trpg-char/1`` 不升版號。
+
+Phase 6B-2 加上實地地圖上的位置（:class:`FieldPos`）與解鎖的傳送石，角色格式升成 ``trpg-char/2``；
+``trpg-char/1`` 的舊存檔照讀（``field`` 是 ``None``，第一次需要座標時放到地點的 ``entry``，
+:mod:`trpg.world.field`）。
 """
 
 from __future__ import annotations
@@ -30,6 +34,7 @@ from trpg.world.clock import DayPhase
 
 __all__ = [
     "CHAR_FORMAT",
+    "LEGACY_CHAR_FORMATS",
     "WORLD_FORMAT",
     "BossAttempt",
     "BossClear",
@@ -43,6 +48,7 @@ __all__ = [
     "DailyGoalProgress",
     "EncounterResult",
     "EventTrigger",
+    "FieldPos",
     "GearMod",
     "LastBattle",
     "LeagueEntry",
@@ -68,7 +74,9 @@ __all__ = [
 ]
 
 WORLD_FORMAT: Final = "trpg-world/1"
-CHAR_FORMAT: Final = "trpg-char/1"
+CHAR_FORMAT: Final = "trpg-char/2"
+LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1"})
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -789,10 +797,32 @@ class WorldState(_Model):
         )
 
 
-class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/1``）。"""
+type Facing = Literal["n", "e", "s", "w"]
+"""朝向（地圖上 y 向下：``n``＝往 y 減少）。"""
 
-    format: Literal["trpg-char/1"] = CHAR_FORMAT
+
+class FieldPos(_Model):
+    """實地地圖上的位置（Phase 6B-2）：``map`` 是實地地圖或室內圖的 ID。"""
+
+    map: str = Field(pattern=ID_PATTERN)
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    facing: Facing = "s"
+
+
+class CharacterState(_Model):
+    """一個角色在大世界的狀態（``trpg-char/2``；``trpg-char/1`` 照讀）。"""
+
+    format: Literal["trpg-char/2"] = CHAR_FORMAT
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_format(cls, data: object) -> object:
+        """``trpg-char/1`` → ``trpg-char/2``：只多了選填欄位（6B-2），直接換版號。"""
+        if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
+            return {**data, "format": CHAR_FORMAT}
+        return data
+
     character_id: str = Field(pattern=ID_PATTERN)
     hero: UnitTemplate
     origin: str | None = None
@@ -970,6 +1000,20 @@ class CharacterState(_Model):
     boss_drop_days: dict[str, int] = Field(default_factory=dict)
     """區域 Boss（單位 ID）→ 最後一次拿保底掉落的刷新日（每角色每刷新日一次，代決 5F3-15；
     依鍵排序）。"""
+
+    # --- 6B-2 實地地圖上的位置（邏輯在 trpg.world.field） ---
+    field: FieldPos | None = None
+    """實地地圖上的位置；一定屬於 ``location`` 的實地地圖或它的室內圖。``None``＝舊存檔，或所在
+    地點沒有實地地圖（照舊用 ``travel`` 移動）。"""
+    teleport_stones: tuple[str, ...] = ()
+    """走到過、已解鎖的傳送石 ID（排序、不重複；21.2）。"""
+
+    @field_validator("teleport_stones")
+    @classmethod
+    def _sorted_stones(cls, ids: tuple[str, ...]) -> tuple[str, ...]:
+        if list(ids) != sorted(set(ids)):
+            raise ValueError("teleport_stones 必須排序且不重複")
+        return ids
 
     @field_validator("seal_key_sources")
     @classmethod

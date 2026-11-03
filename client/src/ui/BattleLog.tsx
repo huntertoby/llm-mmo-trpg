@@ -1,7 +1,7 @@
 // 戰鬥紀錄（Phase 3-9b）：依行動分組、每輪與每個單位回合有分隔；我方藍、敵方紅；
 // 擲骰與修正細節預設收起（點「詳」看完整文字，或用右上角的開關全部展開）；滑過一組時高亮相關單位與格子。
 // 最新在下，自動捲動到底。
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Pos } from "../api/types";
 import type { LogLine, LogTone } from "../battle/log";
 import { groupLog, type LogGroup, type LogItem } from "../battle/logGroups";
@@ -16,9 +16,11 @@ export interface LogHover {
 interface Props {
   lines: readonly LogLine[];
   onHover?: (hover: LogHover | null) => void;
+  /** 標題列右邊多放的按鈕（6A-3：浮動紀錄的釘選與收起）。 */
+  actions?: ReactNode;
 }
 
-const TONE_MARK: Record<LogTone, string> = {
+export const TONE_MARK: Record<LogTone, string> = {
   damage: "−",
   heal: "＋",
   shield: "◇",
@@ -96,7 +98,7 @@ function ItemView({ item, ...rest }: ItemProps) {
   return <div className={`log-turn${item.team ? ` team-${item.team}` : ""}`}>{item.text}</div>;
 }
 
-export function BattleLog({ lines, onHover }: Props) {
+export function BattleLog({ lines, onHover, actions }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [all, setAll] = useState(false);
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set());
@@ -121,6 +123,7 @@ export function BattleLog({ lines, onHover }: Props) {
             擲骰細節
           </button>
         </Hint>
+        {actions}
       </div>
       <div className="log-lines" ref={boxRef} onMouseLeave={() => onHover?.(null)}>
         {items.map((item, i) => (

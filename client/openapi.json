@@ -8514,6 +8514,268 @@
           "west"
         ]
       },
+      "FieldDoorView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "to_name_zh": {
+            "type": "string",
+            "title": "To Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "x",
+          "y",
+          "to",
+          "to_name_zh"
+        ],
+        "title": "FieldDoorView"
+      },
+      "FieldExitView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "cells": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Cells"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "to_name_zh": {
+            "type": "string",
+            "title": "To Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "cells",
+          "to",
+          "to_name_zh"
+        ],
+        "title": "FieldExitView"
+      },
+      "FieldFacilityView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "x",
+          "y"
+        ],
+        "title": "FieldFacilityView"
+      },
+      "FieldGearLookView": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/AppearanceView",
+            "default": {
+              "rarity": "common",
+              "keywords": []
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot"
+        ],
+        "title": "FieldGearLookView"
+      },
+      "FieldHeroView": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "doll_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DollLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weapon_id": {
+            "type": "string",
+            "title": "Weapon Id"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "race_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RaceLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "equipment": {
+            "items": {
+              "$ref": "#/components/schemas/FieldGearLookView"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template_id",
+          "weapon_id",
+          "weapon_class"
+        ],
+        "title": "FieldHeroView",
+        "description": "主角的紙娃娃外觀（6B-3；欄位同戰鬥的 ``UnitView``，純顯示）。"
+      },
+      "FieldNpcView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "x",
+          "y"
+        ],
+        "title": "FieldNpcView"
+      },
+      "FieldObjectView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "x",
+          "y"
+        ],
+        "title": "FieldObjectView"
+      },
+      "FieldPositionView": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "facing": {
+            "type": "string",
+            "enum": [
+              "n",
+              "e",
+              "s",
+              "w"
+            ],
+            "title": "Facing"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "facing"
+        ],
+        "title": "FieldPositionView"
+      },
       "FieldSpec": {
         "properties": {
           "field": {
@@ -8700,6 +8962,94 @@
         "title": "FieldSpec",
         "description": "一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、\n``cost.cooldown``）。"
       },
+      "FieldStoneTargetView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "FieldStoneTargetView",
+        "description": "站在傳送石上時可以傳去的另一顆（已解鎖；6B-3 的「傳送」按鈕用）。"
+      },
+      "FieldStoneView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "unlocked": {
+            "type": "boolean",
+            "title": "Unlocked"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "x",
+          "y",
+          "unlocked"
+        ],
+        "title": "FieldStoneView"
+      },
+      "FieldTileView": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "terrain": {
+            "type": "string",
+            "title": "Terrain"
+          },
+          "surface": {
+            "type": "string",
+            "title": "Surface",
+            "default": "none"
+          },
+          "walkable": {
+            "type": "boolean",
+            "title": "Walkable",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "height",
+          "terrain"
+        ],
+        "title": "FieldTileView"
+      },
       "FieldType": {
         "type": "string",
         "enum": [
@@ -8716,6 +9066,133 @@
           "modifiers",
           "variants"
         ]
+      },
+      "FieldView": {
+        "properties": {
+          "map_id": {
+            "type": "string",
+            "title": "Map Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "interior": {
+            "type": "boolean",
+            "title": "Interior"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/FieldTileView"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/FieldObjectView"
+            },
+            "type": "array",
+            "title": "Objects"
+          },
+          "exits": {
+            "items": {
+              "$ref": "#/components/schemas/FieldExitView"
+            },
+            "type": "array",
+            "title": "Exits"
+          },
+          "doors": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDoorView"
+            },
+            "type": "array",
+            "title": "Doors"
+          },
+          "stones": {
+            "items": {
+              "$ref": "#/components/schemas/FieldStoneView"
+            },
+            "type": "array",
+            "title": "Stones"
+          },
+          "npcs": {
+            "items": {
+              "$ref": "#/components/schemas/FieldNpcView"
+            },
+            "type": "array",
+            "title": "Npcs"
+          },
+          "facilities": {
+            "items": {
+              "$ref": "#/components/schemas/FieldFacilityView"
+            },
+            "type": "array",
+            "title": "Facilities"
+          },
+          "me": {
+            "$ref": "#/components/schemas/FieldPositionView"
+          },
+          "max_climb": {
+            "type": "integer",
+            "title": "Max Climb",
+            "default": 1
+          },
+          "hero": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stone_targets": {
+            "items": {
+              "$ref": "#/components/schemas/FieldStoneTargetView"
+            },
+            "type": "array",
+            "title": "Stone Targets",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "map_id",
+          "name_zh",
+          "region",
+          "location",
+          "interior",
+          "width",
+          "height",
+          "tiles",
+          "objects",
+          "exits",
+          "doors",
+          "stones",
+          "npcs",
+          "facilities",
+          "me"
+        ],
+        "title": "FieldView"
       },
       "FlashAction": {
         "properties": {
@@ -21278,6 +21755,28 @@
         "title": "UseSkill",
         "description": "使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：\n\n- ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；\n- ``tile``（十字、方陣、指定格）：``target_pos``；\n- ``direction``（直線、錐形）：``direction``；\n- ``object_tile``（投擲物件）：``target_object_id`` 與 ``target_pos``；\n- ``unit_tile``（傳送他人，Phase 3D-2b）：``target_id``（被傳送的單位）與 ``target_pos``\n  （落點）；\n- ``unit_pair``（任意兩者互換，Phase 3D-2b）：``target_id`` 與 ``second_target_id``（兩個不同的\n  單位，順序不拘）；\n- ``self``／``none``（自身、環形、範圍光環）：都不給。\n\n複合技能（Phase 3F-3a）：上面的欄位是位移段的選取，``followup_target`` 是動作段的選取。\n\n是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出\n:class:`~trpg.shared.errors.IllegalActionError`。\n\n``copy_cast``（Phase 3C-4b）：``copy_skill`` 技能複製的技能的選取（``skill_id`` 必須是目前\n可複製的技能，``unit_id`` 是同一個施放者，目標欄位依該技能的形狀）。玩家省略它時結算暫停，由\n:class:`Decision` 補上；AI 與戰鬥紀錄直接給出。其他技能不能帶 ``copy_cast``。"
       },
+      "UseTeleportStoneAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "use_teleport_stone",
+            "title": "Kind",
+            "default": "use_teleport_stone"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "To"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "to"
+        ],
+        "title": "UseTeleportStoneAction",
+        "description": "站在傳送石上，傳到已解鎖的另一顆（``to`` 是傳送石 ID）。"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -21432,6 +21931,32 @@
         ],
         "title": "Vault",
         "description": "攀跳（Phase 3-21b，玩法 #24）：花 ``vault_ap_cost`` AP 與 ``vault_move_cost`` 點移動點數。\n\n``dest`` 是落點：相鄰且比現在高 2 層的格子＝**攀爬**；正前方隔著 1 格寬不可站立格（深淵、\n岩漿、斷橋缺口）的下一格＝**跳躍**。落點能分辨是哪一種，所以不另外帶 ``mode``。"
+      },
+      "WalkAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "walk",
+            "title": "Kind",
+            "default": "walk"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "WalkAction",
+        "description": "沿 ``path`` 走：每一格都要和前一格（第一格和目前位置）四方向相鄰。日誌記整串路徑，重播逐格\n重算。"
       },
       "WalletView": {
         "properties": {
@@ -21996,6 +22521,12 @@
           },
           {
             "$ref": "#/components/schemas/SeasonBossAction"
+          },
+          {
+            "$ref": "#/components/schemas/WalkAction"
+          },
+          {
+            "$ref": "#/components/schemas/UseTeleportStoneAction"
           }
         ],
         "discriminator": {
@@ -22036,7 +22567,9 @@
             "tavern": "#/components/schemas/TavernAction",
             "teleport": "#/components/schemas/TeleportAction",
             "travel": "#/components/schemas/TravelAction",
-            "use_item": "#/components/schemas/UseItemAction"
+            "use_item": "#/components/schemas/UseItemAction",
+            "use_teleport_stone": "#/components/schemas/UseTeleportStoneAction",
+            "walk": "#/components/schemas/WalkAction"
           }
         }
       },
@@ -22689,6 +23222,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/CraftingView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "field": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldView"
               },
               {
                 "type": "null"

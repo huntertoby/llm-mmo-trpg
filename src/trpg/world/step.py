@@ -69,6 +69,8 @@ from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
+from trpg.world.field import outdoor_map, stale_field, use_teleport_stone, walk
+from trpg.world.field_actions import UseTeleportStoneAction, WalkAction
 from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.league import league_step
@@ -201,6 +203,10 @@ def world_step(
         result = account(library, world, char, action, now, actor_id)
     else:
         result = _dispatch(library, world, char, action, now)
+    if not isinstance(action, _FIELD_MOVES):  # 6B-2：別的動作換了地點，舊位置作廢
+        moved = stale_field(before, result.char)
+        if moved is not result.char:
+            result = StepResult(world=result.world, char=moved, events=result.events)
     world, char, settled = settle_event_combat(
         library, result.world, before, result.char, result.events, now=now
     )
@@ -291,7 +297,14 @@ def _fight(
 def _handlers() -> dict[type, _Handler]:
     table: dict[type, _Handler] = dict.fromkeys(GROWTH_ACTIONS, _keeps_world(apply_growth))
     table |= {
-        TravelAction: _travel,
+        TravelAction: _travel_node,
+        # 6B-2 實地地圖（:mod:`trpg.world.field`）
+        WalkAction: _changes_world(
+            lambda lib, world, char, action, now: walk(lib, world, char, action, now, _travel_fn)
+        ),
+        UseTeleportStoneAction: _keeps_world(
+            lambda lib, _w, char, action, _n: use_teleport_stone(lib, char, action)
+        ),
         CampAction: lambda lib, world, char, _action, now: _camp(lib, world, char, now),
         FightAction: _changes_world(_fight),
         # 事件的情境判定（5B-2）與說書人敘述（5B-3，:mod:`trpg.world.narration`）
@@ -364,6 +377,35 @@ def _check_travel(
     if target.unlock_flag is not None and not world.has_flag(target.unlock_flag):
         raise WorldActionError(f"{target.name_zh}還沒開放")
     return target
+
+
+_FIELD_MOVES = (WalkAction, UseTeleportStoneAction)
+"""自己會設定實地地圖位置的動作（其他動作換了地點就讓舊位置作廢）。"""
+
+
+def _travel_node(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: TravelAction,
+    now: int,
+) -> StepResult:
+    """``travel`` 動作：目前地點有實地地圖時拒絕（6B-2：走到出口才換圖）。"""
+    if outdoor_map(library, char.region, char.location) is not None:
+        raise WorldActionError("這裡有實地地圖，請走到出口")
+    return _travel(library, world, char, action, now)
+
+
+def _travel_fn(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: TravelAction,
+    now: int,
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+    """踩上出口＝一次 ``travel``（:func:`trpg.world.field.walk` 用）。"""
+    result = _travel(library, world, char, action, now)
+    return result.world, result.char, result.events
 
 
 def _travel(
