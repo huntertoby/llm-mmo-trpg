@@ -7,14 +7,14 @@
 // 5C-1：小鎮的「雇用傭兵」（面板內展開）、「隊伍」面板、遇敵面板的我方改用後端的 `allies_zh`。5C-2：雇用分傭兵／影子兩頁、「我的影子」面板。
 // 5D-1：角色狀態加金幣與任務幣；有店的地點加「商店」（面板內展開）；右側「背包」面板（腰包整理、野外用藥）。
 // 5D-3：有鐵匠或附魔台的地點加「鐵匠」（面板內展開，同商店）。
+// 5D-4：「商店」「鐵匠」改成切換左欄的完整畫面；右側背包改成摘要（`InventorySummary`）＋「打開背包」；
+// 背包滿等決定時狀態列一行提示＋按鈕（選擇在背包畫面）。
 import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
-import { growthBadge } from "./growth";
-import { InventoryPanel, ShopPanel } from "./EconomyPanel";
-import { LootChoicePanel } from "./LootChoicePanel";
-import { SmithyPanel } from "./SmithyPanel";
+import { growthBadge, type LeftPane, type WantPane } from "./growth";
+import { InventorySummary } from "./EconomyPanel";
 import { walletLine } from "./economy";
 import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { questBadge } from "./story";
@@ -38,6 +38,9 @@ interface Props {
   rumors?: readonly string[];
   eventSlot?: ReactNode;
   peopleSlot?: ReactNode;
+  /** 左欄目前的畫面與切換（5D-4：背包、商店、鐵匠）。 */
+  pane?: LeftPane;
+  onPane?(pane: WantPane): void;
 }
 
 export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "view" | "busy" | "onAct" | "onBattle">) {
@@ -95,11 +98,16 @@ function HerePanel({
   questsOpen = false,
   onQuests,
   rumors = [],
-}: Pick<Props, "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth" | "questsOpen" | "onQuests" | "rumors">) {
+  pane = "map",
+  onPane,
+}: Pick<
+  Props,
+  "view" | "busy" | "hasten" | "onHasten" | "onAct" | "growthOpen" | "onGrowth" | "questsOpen" | "onQuests" | "rumors" | "pane" | "onPane"
+>) {
   const here = view.here;
   const [editing, setEditing] = useState(false);
-  const [shopping, setShopping] = useState(false);
-  const [smithing, setSmithing] = useState(false);
+  const shopping = pane === "shop";
+  const smithing = pane === "smithy";
   const hiring = useHireToggle(view.party);
   const free = view.encounter === null && view.battle_id === null;
   return (
@@ -137,15 +145,15 @@ function HerePanel({
         )}
         {view.shop != null && (
           <Hint text={`${view.shop.name_zh}：消耗品、粗料、染料；特產每週限量`}>
-            <button type="button" aria-expanded={shopping} disabled={busy} onClick={() => setShopping((v) => !v)} data-testid="world-shop-toggle">
-              {shopping ? "收起商店" : "商店"}
+            <button type="button" aria-expanded={shopping} disabled={busy} onClick={() => onPane?.("shop")} data-testid="world-shop-toggle">
+              {shopping ? "回到地點圖" : "商店"}
             </button>
           </Hint>
         )}
         {view.crafting != null && (
           <Hint text="鐵匠：打造、強化、分解；附魔台：重骰、指定詞條">
-            <button type="button" aria-expanded={smithing} disabled={busy} onClick={() => setSmithing((v) => !v)} data-testid="world-smithy-toggle">
-              {smithing ? "收起鐵匠" : "鐵匠"}
+            <button type="button" aria-expanded={smithing} disabled={busy} onClick={() => onPane?.("smithy")} data-testid="world-smithy-toggle">
+              {smithing ? "回到地點圖" : "鐵匠"}
             </button>
           </Hint>
         )}
@@ -203,8 +211,6 @@ function HerePanel({
         </div>
       )}
       {hiring.open && view.party != null && <HireEditor party={view.party} busy={busy} onAct={onAct} />}
-      {shopping && view.shop != null && <ShopPanel shop={view.shop} inventory={view.inventory} busy={busy} onAct={onAct} />}
-      {smithing && view.crafting != null && <SmithyPanel crafting={view.crafting} busy={busy} onAct={onAct} />}
       {here.can_loadout && editing && (
         <LoadoutEditor
           key={view.character.skills.map((s) => s.id).join(",")}
@@ -270,21 +276,18 @@ export function WorldPanel(props: Props) {
             {view.last_loot_zh}
           </div>
         )}
-        {view.pending_loot != null && (
-          <LootChoicePanel pending={view.pending_loot} inventory={view.inventory} busy={props.busy} onAct={props.onAct} />
-        )}
       </div>
+      {view.inventory != null && (
+        <InventorySummary
+          inventory={view.inventory}
+          pendingLoot={view.pending_loot != null}
+          open={props.pane === "bag"}
+          onOpen={() => props.onPane?.("bag")}
+        />
+      )}
       {view.party != null && <PartyPanel party={view.party} />}
       {view.my_shadow != null && (
         <MyShadowPanel shadow={view.my_shadow} choices={view.party?.ai_choices ?? []} busy={props.busy} onAct={props.onAct} />
-      )}
-      {view.inventory != null && (
-        <InventoryPanel
-          inventory={view.inventory}
-          busy={props.busy}
-          onAct={props.onAct}
-          canUse={view.encounter === null && view.battle_id === null}
-        />
       )}
       <HerePanel {...props} />
       {props.peopleSlot}

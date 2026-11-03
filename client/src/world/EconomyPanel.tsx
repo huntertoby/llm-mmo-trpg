@@ -1,10 +1,12 @@
-// 商店、背包與腰包（Phase 5D-1；docs/phases/Phase5計畫.md 25.6；最小可用，5D-4 再完整化）。
-// 商店在小鎮服務列「商店」切換後於面板內展開（不是新的彈出層）；背包與腰包是右側常駐面板。
+// 商店、背包與腰包（Phase 5D-1；docs/phases/Phase5計畫.md 25.6）。
 // 說明一律用共用 <Hint>（浮動卡規則 6.5.1）；能不能買、價格、限量、門檻都由後端算好。
-// 5D-2：背包也列掉落的裝備（「裝上」在城鎮或營火）與穿戴中的裝備；完整裝備畫面在 5D-4。
+// 5D-2：背包也列掉落的裝備（「裝上」在城鎮或營火）與穿戴中的裝備。
+// 5D-4（33.2）：右側改成摘要（`InventorySummary`）＋「打開背包」；`InventoryPanel` 是左欄背包畫面的物品與
+// 腰包區（裝備在背包畫面用裝備卡另列，`hideGear`）；`ShopPanel` 放在左欄的商店畫面。
 import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldShop } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { bagSummary } from "./bagView";
 import { draftCount, pouchAction, pouchDraft, samePouch, setDraft } from "./economy";
 
 interface ActProps {
@@ -12,7 +14,7 @@ interface ActProps {
   onAct(action: WorldAction): void;
 }
 
-function itemHint(item: { description_zh: string; battle_zh?: string | null }): string {
+export function itemHint(item: { description_zh: string; battle_zh?: string | null }): string {
   return [item.description_zh, item.battle_zh ?? ""].filter((s) => s !== "").join("　");
 }
 
@@ -77,7 +79,7 @@ export function ShopPanel({ shop, inventory, busy, onAct }: ActProps & { shop: W
   );
 }
 
-function BagRow({ item, busy, canUse, onAct }: ActProps & { item: WorldBagItem; canUse: boolean }) {
+export function BagRow({ item, busy, canUse, onAct }: ActProps & { item: WorldBagItem; canUse: boolean }) {
   return (
     <li>
       <Hint text={itemHint(item)}>
@@ -109,7 +111,7 @@ function BagRow({ item, busy, canUse, onAct }: ActProps & { item: WorldBagItem; 
   );
 }
 
-function PouchEditor({ inventory, busy, onAct, onDone }: ActProps & { inventory: WorldInventory; onDone(): void }) {
+export function PouchEditor({ inventory, busy, onAct, onDone }: ActProps & { inventory: WorldInventory; onDone(): void }) {
   const [draft, setDraftState] = useState<Record<string, number>>(() => pouchDraft(inventory));
   const choices = inventory.consumables ?? [];
   return (
@@ -163,23 +165,69 @@ function PouchEditor({ inventory, busy, onAct, onDone }: ActProps & { inventory:
   );
 }
 
-export function InventoryPanel({ inventory, busy, onAct, canUse }: ActProps & { inventory: WorldInventory; canUse: boolean }) {
-  const [editing, setEditing] = useState(false);
+/** 右側常駐的背包摘要（5D-4）：格數、裝備件數、腰包、共鳴、等著決定的戰利品；完整內容在左欄的背包畫面。 */
+export function InventorySummary({
+  inventory,
+  pendingLoot,
+  open,
+  onOpen,
+}: {
+  inventory: WorldInventory;
+  pendingLoot: boolean;
+  open: boolean;
+  onOpen(): void;
+}) {
   return (
     <div className="panel world-inventory" data-testid="world-inventory">
       <div className="section-title">
-        背包　<span className="muted small">{inventory.slots_used}／{inventory.slots_max} 格</span>
+        背包　<span className="muted small">{bagSummary(inventory)}</span>
       </div>
-      {inventory.bag.length === 0 ? (
+      {pendingLoot && (
+        <div className="small world-loot-alert" data-testid="world-loot-alert">
+          背包滿了：戰利品等你決定要丟哪件。
+        </div>
+      )}
+      {inventory.pouch.length > 0 && (
+        <div className="muted small">腰包：{inventory.pouch.map((p) => `${p.name_zh} ×${p.count}`).join("、")}</div>
+      )}
+      {(inventory.resonance_zh ?? []).map((line) => (
+        <div key={line} className="small" data-testid="world-resonance">
+          {line}
+        </div>
+      ))}
+      <div className="run-actions">
+        <button type="button" className={open ? "primary" : ""} onClick={onOpen} data-testid="world-bag-toggle">
+          {open ? "回到地點圖" : pendingLoot ? "打開背包（選要丟哪件）" : "打開背包"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function InventoryPanel({
+  inventory,
+  busy,
+  onAct,
+  canUse,
+  hideGear = false,
+}: ActProps & { inventory: WorldInventory; canUse: boolean; hideGear?: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const rows = hideGear ? inventory.bag.filter((b) => b.gear !== true) : inventory.bag;
+  return (
+    <div className="world-inventory-items" data-testid="world-inventory-items">
+      <div className="section-title">
+        {hideGear ? "其他物品" : "背包"}　<span className="muted small">{inventory.slots_used}／{inventory.slots_max} 格</span>
+      </div>
+      {rows.length === 0 ? (
         <div className="muted small">空的。</div>
       ) : (
         <ul className="world-shop-list small" data-testid="world-bag">
-          {inventory.bag.map((item) => (
+          {rows.map((item) => (
             <BagRow key={item.item} item={item} busy={busy} canUse={canUse} onAct={onAct} />
           ))}
         </ul>
       )}
-      {(inventory.equipped_zh ?? []).length > 0 && (
+      {!hideGear && (inventory.equipped_zh ?? []).length > 0 && (
         <>
           <div className="section-title small">穿戴中</div>
           <ul className="world-shop-list small" data-testid="world-equipped">
@@ -189,7 +237,7 @@ export function InventoryPanel({ inventory, busy, onAct, canUse }: ActProps & { 
           </ul>
         </>
       )}
-      {(inventory.resonance_zh ?? []).length > 0 && (
+      {!hideGear && (inventory.resonance_zh ?? []).length > 0 && (
         <ul className="world-shop-list small" data-testid="world-resonance">
           {(inventory.resonance_zh ?? []).map((line) => (
             <li key={line}>{line}</li>

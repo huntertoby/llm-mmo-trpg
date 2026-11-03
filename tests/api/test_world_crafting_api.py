@@ -70,6 +70,13 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     assert len(gear) == 2 and gear[0]["code"] == recipe["code"]
     first, second = gear[0]["item"], gear[1]["item"]
     assert first != second
+    # 5D-4：背包畫面的裝備卡（和目前裝備比較）與 9 欄穿戴中
+    inventory = view["inventory"]
+    assert [c["item"]["id"] for c in inventory["gear_cards"]] == [first, second]
+    card = inventory["gear_cards"][0]
+    assert card["slot"] == "neck" and card["slot_zh"] and card["item"]["points"] is not None
+    assert len(inventory["equipment"]) == 9
+    assert {e["slot"] for e in inventory["equipment"]} >= {"main_hand", "neck"}
 
     assert gear[0]["can_enhance"], gear[0]["enhance_zh"]
     view = _act(client, cid, kind="enhance", station=SMITHY, item=first)
@@ -83,6 +90,7 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     assert item["affixes"][0]["can_change"]
     view = _act(client, cid, kind="reroll", station=ENCHANTER, item=first, index=0)
     assert any("重骰成" in e for e in view["events"])
+    assert not any("{" in e for e in view["events"])  # 5D-4：原本那條沒有數值時不留下 {n}
     assert view["crafting"]["essence"] == 1
     # 5D-3b：重骰後這件有帶序列的新配方碼，配方表列出它（重骰 1 次）
     assert any("新的配方碼" in e and "首位發現者" in e for e in view["events"])
@@ -91,6 +99,8 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     variant = next(r for r in view["crafting"]["recipes"] if r["code"] == item["code"])
     assert "重骰 1 次" in variant["summary_zh"] and recipe["code"] in variant["summary_zh"]
     assert variant["can_craft"], variant["problem_zh"]  # 剩 1 精華，夠付 1 次重骰
+    # 5D-4：配方表每件裝備只列最新一筆（基礎碼不列，但照樣能打）
+    assert [r["code"] for r in view["crafting"]["recipes"]] == [item["code"]]
     view = _act(client, cid, kind="craft", station=SMITHY, code=variant["code"])
     copy = view["crafting"]["gear"][-1]
     assert copy["code"] == item["code"] and copy["description_zh"] == item["description_zh"]

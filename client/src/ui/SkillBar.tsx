@@ -1,5 +1,6 @@
 // 底部技能列（Phase 3-8）：基本動作（攻擊、推擊……）＋主動技能排成一排（超出寬度換成兩排，不捲動）；
 // 被動、反應、姿態、修正以小圖示放在同一列最右側，點開看卡片（可施放的姿態點了照樣選取）。
+// 5D-4：腰包的道具（卡片標籤 `item`，8.17）不佔技能欄位，放在獨立的「道具」群組（同種族技的群組樣式）。
 // 灰掉原因、滑過看卡片、選取提示照舊；卡片用共用的浮動卡規則（`useFloatCard`，Phase 3-30）：貼齊按鈕上方，滑過約 150ms 顯示，
 // 離開有 250ms 寬限可滑進卡片，點卡片釘住，Esc／點外面關閉。
 import type { RaceView, SkillCard } from "../api/types";
@@ -189,7 +190,7 @@ function MiniSlot({
 
 export function SkillBar(props: Props) {
   const { basic, buttons, cards, selectedKey, enabled, hint } = props;
-  const { main, minor } = splitSkills(buttons, cards);
+  const { main, minor, items } = splitSkills(buttons, cards);
   return (
     <div className="skill-bar" aria-label="技能列">
       <div className="skill-hint small muted">{hint}</div>
@@ -234,7 +235,23 @@ export function SkillBar(props: Props) {
               ))}
             </div>
           )}
-          {basic.length === 0 && main.length === 0 && (props.raceModes ?? []).length === 0 && (
+          {items.length > 0 && (
+            <div className="race-group item-group" aria-label="道具" data-testid="skill-item-group">
+              <span className="item-group-label small muted">道具</span>
+              {items.map((b) => (
+                <SkillSlot
+                  key={b.skillId}
+                  b={b}
+                  card={cards[b.skillId]}
+                  selected={selectedKey === `skill:${b.skillId}`}
+                  enabled={enabled}
+                  onSelect={props.onSelect}
+                  onBlocked={props.onBlocked}
+                />
+              ))}
+            </div>
+          )}
+          {basic.length === 0 && main.length === 0 && items.length === 0 && (props.raceModes ?? []).length === 0 && (
             <span className="muted small">（沒有可用的動作）</span>
           )}
         </div>

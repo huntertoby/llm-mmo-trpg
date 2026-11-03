@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.api.run_schemas import GearCandidateOut, HeroGearSlotOut
+
 __all__ = [
     "BagItemView",
     "InventoryView",
@@ -67,6 +69,11 @@ class InventoryView(_ApiModel):
     """穿戴中的裝備（每欄一句，例「身體：稀有布衣（3 級）」；Phase 5D-2）。"""
     resonance_zh: tuple[str, ...] = ()
     """目前觸發的裝備共鳴（Phase 5D-3，M3；例「霧隱共鳴（隱蔽 2 件）：敏捷 +2」）。"""
+    equipment: tuple[HeroGearSlotOut, ...] = ()
+    """穿戴中（5D-4 背包畫面；9 個欄位都列，空著 ``item`` 為 ``None``；格式同一輪）。"""
+    gear_cards: tuple[GearCandidateOut, ...] = ()
+    """背包裡的每件裝備：物品卡、換上會放進的欄位、和該欄位目前裝備的比較（5D-4；格式同一輪的
+    背包）。順序同 ``bag`` 裡的裝備。"""
 
 
 class PendingLootView(_ApiModel):
