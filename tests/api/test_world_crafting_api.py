@@ -91,6 +91,8 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     variant = next(r for r in view["crafting"]["recipes"] if r["code"] == item["code"])
     assert "重骰 1 次" in variant["summary_zh"] and recipe["code"] in variant["summary_zh"]
     assert variant["can_craft"], variant["problem_zh"]  # 剩 1 精華，夠付 1 次重骰
+    # 5D-4：配方表每件裝備只列最新一筆（基礎碼不列，但照樣能打）
+    assert [r["code"] for r in view["crafting"]["recipes"]] == [item["code"]]
     view = _act(client, cid, kind="craft", station=SMITHY, code=variant["code"])
     copy = view["crafting"]["gear"][-1]
     assert copy["code"] == item["code"] and copy["description_zh"] == item["description_zh"]

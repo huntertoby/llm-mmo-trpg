@@ -304,7 +304,9 @@ def crafting_view(
         rarities=_rarity_views(library),
         materials=_materials(library, char),
         flavor_max=rules.craft.flavor_max,
-        recipes=tuple(_recipe_view(library, world, char, r, smithy_ok) for r in world.recipes),
+        recipes=tuple(
+            _recipe_view(library, world, char, r, smithy_ok) for r in world.recipes if r.listed
+        ),
         gear=tuple(gear),
         essence=char.bag.get(rules.essence, 0),
         note_zh=_NOTE,
