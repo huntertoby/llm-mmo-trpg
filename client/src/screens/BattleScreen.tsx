@@ -7,7 +7,7 @@
 //   usePlayback（播放與送出）、useBattleData（派生資料）、useSelection（選取狀態）、useBattleActions（送出動作）、
 //   useSelectionCommands（選取操作）、useBattleKeys（鍵盤）、useTileInteraction（格子互動與資訊卡）、
 //   useHighlights（預覽與高亮）、useBoardViewport（版面與縮放）；子元件 ZoomControls、BattleBottomBar、BattleDialogs。
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
@@ -22,6 +22,7 @@ import { ModePanel } from "../ui/ActionPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { NoticeBanner } from "../ui/NoticeBanner";
+import { phaseNotices } from "../battle/bossPhase";
 import { ResizeHandle } from "../ui/ResizeHandle";
 import { SidePanel } from "../ui/SidePanel";
 import { SummonPanel } from "../ui/SummonPanel";
@@ -75,6 +76,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   /** 中性提示（例如灰掉技能的原因），幾秒後自動消失。 */
   const [hint, setHint] = useState<string | null>(null);
   const closeHint = useCallback(() => setHint(null), []);
+  // Boss 進入新階段（Phase 5F-2）：播放完這次推進後，把轉換的紀錄文字留在提示列 15 秒
+  const [phaseNotice, setPhaseNotice] = useState<string | null>(null);
+  const closePhaseNotice = useCallback(() => setPhaseNotice(null), []);
+  useEffect(() => {
+    const notices = phaseNotices(response);
+    if (notices.length > 0) setPhaseNotice(notices.join("　"));
+  }, [response]);
   // 大世界開場說明（5A-7）：橫幅消失後仍留一則提示，玩家自己關或 15 秒後消失
   const [opening, setOpening] = useState<string | null>(() => ((openingNotes ?? []).length > 0 ? (openingNotes ?? []).join("　") : null));
   const closeOpening = useCallback(() => setOpening(null), []);
@@ -274,6 +282,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         <div className="board-toasts">
           <ErrorBanner message={pb.error} onClose={() => pb.setError(null)} />
           <NoticeBanner message={hint} onClose={closeHint} />
+          <NoticeBanner message={phaseNotice} onClose={closePhaseNotice} autoCloseMs={15000} />
           <NoticeBanner message={opening} onClose={closeOpening} autoCloseMs={15000} />
           {runMode !== undefined && shownHero?.downed === true && (
             <div className="hero-downed-notice" role="status">

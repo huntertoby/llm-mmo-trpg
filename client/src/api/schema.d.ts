@@ -1617,6 +1617,23 @@ export interface components {
             tiles: components["schemas"]["XY"][];
         };
         /**
+         * BossPhaseView
+         * @description Boss 目前的階段（Phase 5F-2，唯讀）：``index`` 1 起算、``total`` 階段數；下一個階段的名字與
+         *     HP 門檻（‰；最後一個階段時兩者為 ``None``）。
+         */
+        BossPhaseView: {
+            /** Index */
+            index: number;
+            /** Total */
+            total: number;
+            /** Name Zh */
+            name_zh: string;
+            /** Next Name Zh */
+            next_name_zh?: string | null;
+            /** Next Permille */
+            next_permille?: number | null;
+        };
+        /**
          * BudgetLine
          * @description 一個效果（或修正規則）的點數：基礎點數 × 形狀 × 對象 × 條件。
          */
@@ -7299,6 +7316,7 @@ export interface components {
              */
             form_cooldowns: components["schemas"]["FormCooldownView"][];
             race?: components["schemas"]["RaceView"] | null;
+            boss_phase?: components["schemas"]["BossPhaseView"] | null;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

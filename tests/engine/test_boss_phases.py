@@ -343,3 +343,31 @@ def test_summit_battle_runs_all_phases_and_replays(seed: int) -> None:
     again = replay(setup, seed, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
     assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]
+
+
+# ---------------------------------------------------------------------------
+# 畫面：單位卡的階段與特性句
+# ---------------------------------------------------------------------------
+
+
+def test_unit_view_reports_phase_and_next_threshold() -> None:
+    from trpg.engine.view import project_for  # noqa: PLC0415
+
+    state = _state()
+    view = {u.id: u for u in project_for(state, Team.ALLY).units}
+    phase = view[BOSS].boss_phase
+    assert phase is not None
+    assert (phase.index, phase.total, phase.name_zh) == (1, 3, "一")
+    assert (phase.next_name_zh, phase.next_permille) == ("二", 600)
+    assert view[HERO].boss_phase is None
+    last = _end_turn_at(state, 10).state
+    phase = {u.id: u for u in project_for(last, Team.ALLY).units}[BOSS].boss_phase
+    assert phase is not None
+    assert (phase.index, phase.next_name_zh, phase.next_permille) == (3, None, None)
+
+
+def test_trait_line_lists_phases_from_data() -> None:
+    from trpg.narrative.unit_traits import unit_trait_lines  # noqa: PLC0415
+
+    lines = unit_trait_lines(library(), "sect_mist_lock_master")
+    assert "階段：劍陣 → HP 60%「鎖霧」 → 30%「歸一」" in lines
