@@ -27,6 +27,7 @@ from trpg.engine.state import state_to_json
 from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, load_first_kills
 from trpg.server.league import LEAGUE_DIR, LeagueMatch, LeagueRecord
 from trpg.server.season_boss_board import FIRST_KILL_DIR
+from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.world.league import match_winner
 
@@ -37,6 +38,7 @@ __all__ = [
     "MANIFEST_FILE",
     "ArchiveFile",
     "ArchiveManifest",
+    "ArchiveRecordNotFoundError",
     "ReplayCheck",
     "archive_season",
     "season_archive_dir",
@@ -51,6 +53,10 @@ LOG_FILE: Final = "log.jsonl"
 ARCHIVED: Final[tuple[str, ...]] = (LOG_FILE, LEAGUE_DIR, FIRST_KILL_DIR)
 """季末從世界資料夾搬進封存的東西：世界日誌、循環賽、賽季 Boss 首殺的戰鬥紀錄。"""
 _READ_ONLY: Final = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+
+
+class ArchiveRecordNotFoundError(TrpgError):
+    """要查證的首殺或循環賽場次不存在（404）。"""
 
 
 class _Model(BaseModel):
@@ -185,7 +191,10 @@ def _replay_problems(text: str) -> tuple[BattleLog | None, list[str]]:
     problem = log_replay_problem(log)
     if problem is not None:
         return log, [problem]
-    run = replay(log.setup, log.seed, log.actions)
+    try:
+        run = replay(log.setup, log.seed, log.actions)
+    except TrpgError as exc:  # 紀錄被改過時，動作可能在重播裡不合法
+        return log, [f"重播失敗：{exc}"]
     problems: list[str] = []
     if state_to_json(run.state) != state_to_json(log.final_state):
         problems.append("重播的最終狀態和紀錄不同")
@@ -226,7 +235,7 @@ def _check_log_entry(
 def verify_first_kill(save_dir: Path, world_dir: Path, season_id: str, target: str) -> ReplayCheck:
     """查證一筆首殺（``season_id`` 那一季、``target``＝精英種類或賽季 Boss ID）：世界日誌的序號是
     那個角色的動作；有戰鬥紀錄（賽季 Boss）就確定性重播、而且是我方勝。找不到首殺拋
-    :class:`KeyError`。"""
+    :class:`ArchiveRecordNotFoundError`。"""
     kill = next(
         (
             k
@@ -236,7 +245,7 @@ def verify_first_kill(save_dir: Path, world_dir: Path, season_id: str, target: s
         None,
     )
     if kill is None:
-        raise KeyError(f"{season_id} 沒有 {target} 的首殺紀錄")
+        raise ArchiveRecordNotFoundError(f"{season_id} 沒有 {target} 的首殺紀錄")
     source = _Source(save_dir, world_dir, season_id)
     passed: list[str] = []
     problems: list[str] = []
@@ -297,12 +306,12 @@ def verify_league_match(
     save_dir: Path, world_dir: Path, season_id: str, match_id: str
 ) -> ReplayCheck:
     """查證一場循環賽：確定性重播那一場的戰鬥紀錄，再比對賽程紀錄的勝方、輪數與結束原因（名次的
-    依據）。找不到那一季的賽程或那一場拋 :class:`KeyError`。"""
+    依據）。找不到那一季的賽程或那一場拋 :class:`ArchiveRecordNotFoundError`。"""
     source = _Source(save_dir, world_dir, season_id)
     record = _league_record(source, season_id)
     match = None if record is None else record.match(match_id)
     if match is None:
-        raise KeyError(f"{season_id} 的循環賽沒有場次 {match_id}")
+        raise ArchiveRecordNotFoundError(f"{season_id} 的循環賽沒有場次 {match_id}")
     relative = f"{LEAGUE_DIR}/matches/{match_id}.json"
     passed: list[str] = []
     problems: list[str] = []

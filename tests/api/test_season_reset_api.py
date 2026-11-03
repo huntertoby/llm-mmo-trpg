@@ -164,3 +164,20 @@ def test_legacy_is_per_account(calm: ContentLibrary, tmp_path: Path) -> None:
         assert (
             _ok(client.get("/api/world/chronicle", headers=bob))["seasons"][0]["season_id"] == "s1"
         )
+
+
+def test_season_verify_endpoint(calm: ContentLibrary, tmp_path: Path) -> None:
+    """5F-5c：重播查證（管理者；只讀）。重播的檢查在 ``tests/server/test_season_archive.py``。"""
+    with _make(calm, tmp_path / "saves", dev_mode=False) as client:
+        player = _login(client, "alice")
+        admin = _login(client, "boss", admin=True)
+        _ok(client.post("/api/world/characters", json=START, headers=admin), 201)
+        body = {"kind": "first_kill", "season_id": "s1", "target": "rift_shard_lord"}
+        url = "/api/world/season/verify"
+        assert client.post(url, json=body).status_code == 401
+        assert client.post(url, json=body, headers=player).status_code == 403
+        missing = client.post(url, json=body, headers=admin)
+        assert missing.status_code == 404 and "沒有 rift_shard_lord 的首殺" in missing.text
+        no_key = {"kind": "league_match", "season_id": "s1"}
+        reply = client.post(url, json=no_key, headers=admin)
+        assert reply.status_code == 422 and "match_id" in reply.text

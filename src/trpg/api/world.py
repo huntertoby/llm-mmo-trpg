@@ -49,6 +49,7 @@ from trpg.server.chronicle import (
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore
+from trpg.server.season_archive import ReplayCheck, verify_first_kill, verify_league_match
 from trpg.server.season_boss_board import SeasonBossBoard, first_kill_log_json
 from trpg.server.season_reset import (
     ResetLine,
@@ -562,6 +563,14 @@ class WorldStore:
             if not dry_run:
                 self._forget()
             return report
+
+    def verify_replay(self, kind: str, season_id: str, key: str) -> ReplayCheck:
+        """從封存（目前這一季從世界資料夾）重播查證一筆首殺（``key``＝目標）或一場循環賽
+        （``key``＝場次 ID）；只讀（5F-5c）。找不到拋 :class:`ArchiveRecordNotFoundError`。"""
+        save_dir = self.root.parent
+        if kind == "first_kill":
+            return verify_first_kill(save_dir, self.root, season_id, key)
+        return verify_league_match(save_dir, self.root, season_id, key)
 
     def _forget(self) -> None:
         """季末重置之後：記憶體裡的世界、角色、日誌、進行中的戰鬥與循環賽快取全部丟掉、重讀。"""
