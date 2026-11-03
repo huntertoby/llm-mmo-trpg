@@ -11,6 +11,7 @@ import dataclasses
 import importlib.util
 import io
 import json
+import os
 import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -36,6 +37,7 @@ from trpg.server.chronicle import (
 from trpg.server.first_kills import FirstKill
 from trpg.server.league import LeagueMatch, LeagueRecord, new_record
 from trpg.server.notes import LocationNote
+from trpg.server.season_archive import ArchiveManifest
 from trpg.server.season_boss_board import BossBoardEntry
 from trpg.server.season_policy import (
     CARRIED,
@@ -381,9 +383,17 @@ def _check_recipe(season: Season) -> None:
             assert name not in RecipeDiscovery.model_fields  # 數值類沒有留下來
 
 
+def _after(relative: str) -> str:
+    """重置後的位置：賽季 Boss 首殺的戰鬥紀錄搬進唯讀封存（5F-5c），內容不變。"""
+    moved = str(Path("world") / "season_boss") + os.sep
+    if relative.startswith(moved):
+        return str(Path("archive") / "s1" / "season_boss") + os.sep + relative[len(moved) :]
+    return relative
+
+
 def _check_unchanged(season: Season) -> None:
     for relative, content in season.memorial_files.items():
-        assert (season.save_dir / relative).read_bytes() == content, relative
+        assert (season.save_dir / _after(relative)).read_bytes() == content, relative
 
 
 def _check_note(season: Season) -> None:
@@ -391,7 +401,7 @@ def _check_note(season: Season) -> None:
 
 
 def _league_history(season: Season) -> Path:
-    return season.world_dir / "league_history" / "s1"
+    return season.save_dir / "archive" / "s1" / "league"  # 5F-5c：唯讀封存
 
 
 def _check_league(season: Season) -> None:
@@ -461,6 +471,21 @@ def test_every_policy_model_is_checked() -> None:
     assert set(CHECKS) == set(SEASON_POLICY)
 
 
+def _check_archive(season: Season) -> None:
+    """5F-5c：世界日誌、循環賽、賽季 Boss 首殺的戰鬥紀錄搬進存檔資料夾的唯讀封存。"""
+    folder = season.save_dir / "archive" / "s1"
+    assert (folder / "log.jsonl").read_text(encoding="utf-8") == '{"seq": 1}\n{"seq": 2}\n'
+    for name in ("log.jsonl", "league", "season_boss"):
+        assert not (season.world_dir / name).exists(), name
+    manifest = ArchiveManifest.model_validate_json(
+        (folder / "manifest.json").read_text(encoding="utf-8")
+    )
+    files = sorted(p for p in folder.rglob("*") if p.is_file() and p.name != "manifest.json")
+    assert [f.path for f in manifest.files] == [p.relative_to(folder).as_posix() for p in files]
+    for path in [*files, folder / "manifest.json"]:
+        assert not os.access(path, os.W_OK), path  # 唯讀
+
+
 def test_reset_clears_numeric_and_keeps_memorial(library: ContentLibrary, tmp_path: Path) -> None:
     season = _fake_season(library, tmp_path)
     report = _reset(library, season)
@@ -468,6 +493,8 @@ def test_reset_clears_numeric_and_keeps_memorial(library: ContentLibrary, tmp_pa
     for model, check in CHECKS.items():
         check(season)
         assert model in SEASON_POLICY
+    _check_archive(season)
+    assert report.archive == str(season.save_dir / "archive" / "s1")
     assert report.chronicle[0].startswith("勇者c1：第一季：到達 7 級；擊倒")
     cleared = {line.label_zh: line.count for line in report.cleared}
     assert cleared["角色"] == 2 and cleared["地點留言"] == 1 and cleared["配方表"] == 2

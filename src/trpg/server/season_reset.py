@@ -6,8 +6,9 @@
   ``scripts/season_reset.py`` 都呼叫它）。``dry_run=True``（預設）只算出會清什麼、留什麼，
   不寫任何檔。
 - **順序**（帳號資料夾的鎖檔內）：檢查 → 備份整個存檔資料夾 → 寫編年史（:data:`CARRIED` 的內容；
-  同一季已有就不覆寫，中斷後重跑不會用半套資料蓋掉）→ 循環賽搬到 ``league_history/<舊季>/``
-  （報名快照清空）→ 刪角色、日誌、留言 → 最後寫新一季的 ``world.json``。
+  同一季已有就不覆寫，中斷後重跑不會用半套資料蓋掉）→ 循環賽報名快照清空 → 世界日誌、循環賽、
+  賽季 Boss 首殺的戰鬥紀錄搬進存檔資料夾的唯讀封存 ``archive/<舊季>/``（5F-5c，
+  :mod:`trpg.server.season_archive`）→ 刪角色、留言 → 最後寫新一季的 ``world.json``。
 - **確定性**：同一份存檔＋同樣的參數（開賽時間、季 ID、種子、``now``）→ 一模一樣的結果。清單一律
   依 ID 排序；新一季的種子預設由舊種子＋新季 ID 雜湊（不用 ``random``、``secrets``）。時間由呼叫者
   傳入。
@@ -45,6 +46,7 @@ from trpg.server.chronicle import (
 from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, elite_kind_name, load_first_kills
 from trpg.server.league import LEAGUE_DIR, LeagueMatch, LeagueRecord
 from trpg.server.notes import NOTES_FILE, LocationNote, LocationNoteStore
+from trpg.server.season_archive import ARCHIVE_DIR, archive_season
 from trpg.server.season_boss_board import (
     BOSS_BOARD_FILE,
     FIRST_KILL_DIR,
@@ -103,12 +105,12 @@ HANDLERS: Final[Mapping[type[BaseModel], tuple[HandlerKind, str]]] = {
     CharacterState: ("delete", "world/chars/*.json：先把 CARRIED 寫進編年史再刪"),
     WorldState: ("replace", "world/world.json：換成新一季（新 season_id、種子、開賽時間）"),
     RecipeRecord: ("split", "配方表清空；首位發現者寫進編年史的 RecipeDiscovery"),
-    FirstKill: ("keep", "world/first_kills.json 不動"),
+    FirstKill: ("keep", "world/first_kills.json 不動（戰鬥紀錄在封存 archive/<舊季>/ 的同一路徑）"),
     BossBoardEntry: ("keep", "world/season_boss_board.json 不動"),
     AccountRecord: ("keep", "帳號資料夾不動（重置期間持有鎖檔）"),
     LocationNote: ("delete", "world/notes.json 刪掉"),
-    LeagueRecord: ("split", "world/league/ 搬到 league_history/<舊季>/，報名快照清空"),
-    LeagueMatch: ("keep", "跟著賽程搬到 league_history/<舊季>/，場次與戰鬥紀錄檔不動"),
+    LeagueRecord: ("split", "world/league/ 報名快照清空，搬進唯讀封存 archive/<舊季>/league/"),
+    LeagueMatch: ("keep", "跟著賽程搬進封存，場次與戰鬥紀錄檔內容不動（可重播查證）"),
     LeagueChronicle: ("keep", "world/chronicle/league.json 不動"),
     LeagueChronicleSeason: ("keep", "world/chronicle/league.json 不動"),
     LeagueChronicleRank: ("keep", "world/chronicle/league.json 不動"),
@@ -127,15 +129,15 @@ SPLIT_CARRIERS: Final[Mapping[type[BaseModel], type[BaseModel]]] = {
 
 WORLD_FILES: Final[Mapping[str, str]] = {
     WORLD_FILE: "replace",
-    LOG_FILE: "delete",
+    LOG_FILE: "archive",  # 5F-5c：搬進唯讀封存 archive/<舊季>/
     CHARS_DIR: "delete",
     NOTES_FILE: "delete",
-    LEAGUE_DIR: "move",
+    LEAGUE_DIR: "archive",
     FIRST_KILLS_FILE: "keep",
     BOSS_BOARD_FILE: "keep",
-    FIRST_KILL_DIR: "keep",
+    FIRST_KILL_DIR: "archive",
     CHRONICLE_DIR: "keep",
-    LEAGUE_HISTORY_DIR: "keep",
+    LEAGUE_HISTORY_DIR: "keep",  # 5F-5 的舊位置（5F-5c 起改搬進封存）
 }
 """世界資料夾裡認得的檔案與資料夾。不認得的照保守做法保留，列在報告裡。"""
 
@@ -171,6 +173,8 @@ class SeasonResetReport(BaseModel):
     """``force`` 略過的檢查。"""
     backup: str | None = None
     """備份資料夾（dry-run＝``None``）。"""
+    archive: str | None = None
+    """舊季的唯讀封存資料夾（5F-5c；dry-run＝``None``）。"""
 
 
 # -- 小工具 -------------------------------------------------------------------
@@ -482,7 +486,11 @@ def _lines(
             detail_zh="等級、技能、裝備、材料、任務幣、精英擊殺與完成的事件（先寫進編年史）",
         ),
         _world_line(current.world),
-        ResetLine(label_zh="世界日誌", count=current.log_entries, detail_zh="備份裡留著"),
+        ResetLine(
+            label_zh="世界日誌",
+            count=current.log_entries,
+            detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/",
+        ),
         ResetLine(
             label_zh="配方表",
             count=len(current.world.recipes),
@@ -500,11 +508,15 @@ def _lines(
         ResetLine(label_zh="帳號", count=len(accounts), detail_zh="含角色歸屬紀錄"),
         ResetLine(label_zh="首殺紀錄", count=len(current.first_kills)),
         ResetLine(label_zh="賽季 Boss 評分榜", count=len(current.boss_board)),
-        ResetLine(label_zh="賽季 Boss 首殺戰鬥紀錄", count=current.boss_logs),
+        ResetLine(
+            label_zh="賽季 Boss 首殺戰鬥紀錄",
+            count=current.boss_logs,
+            detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/",
+        ),
         ResetLine(
             label_zh="循環賽場次",
             count=matches,
-            detail_zh=f"搬到 {LEAGUE_HISTORY_DIR}/{current.world.season_id}/（舊賽程 "
+            detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/（舊賽程 "
             f"{current.league_archived} 份一起搬）",
         ),
         ResetLine(label_zh="循環賽最終排名（編年史）", count=len(current.league_chronicle.seasons)),
@@ -582,9 +594,9 @@ def _backup(save_dir: Path, accounts_dir: Path | None, root: Path, now: int, old
     return target
 
 
-def _move_league(world_dir: Path, old: str) -> None:
-    """``league/`` 整個搬到 ``league_history/<舊季>/``；賽程檔（現在的與 ``archive/`` 的）報名快照
-    先清空（數值類）。先改內容再搬：中斷後重跑照樣接得上。"""
+def _clear_league_entries(world_dir: Path) -> None:
+    """賽程檔（現在的與 ``league/archive/`` 的）報名快照清空（數值類）；搬進封存之前先改內容，
+    中斷後重跑照樣接得上。"""
     league = world_dir / LEAGUE_DIR
     if not league.is_dir():
         return
@@ -596,14 +608,6 @@ def _move_league(world_dir: Path, old: str) -> None:
         if path.is_file():
             record = LeagueRecord.model_validate_json(path.read_text(encoding="utf-8"))
             write_atomic(path, clear_numeric(record).model_dump_json(indent=1))
-    history = world_dir / LEAGUE_HISTORY_DIR
-    history.mkdir(parents=True, exist_ok=True)
-    target = history / old
-    n = 2
-    while target.exists():
-        target = history / f"{old}-{n}"
-        n += 1
-    league.rename(target)
 
 
 def _remove(path: Path) -> None:
@@ -724,13 +728,15 @@ def _reset(
     cleared, kept = _lines(current, records, options.extra)
     old = current.world.season_id
     backup: Path | None = None
+    archived: Path | None = None
     if not options.dry_run:
         root = options.backup_root or default_backup_root(save_dir)
         accounts_dir = None if accounts is None else accounts.root
         backup = _backup(save_dir, accounts_dir, root, options.now, old)
         SeasonChronicleStore(world_dir).add(plan.entry)
-        _move_league(world_dir, old)
-        for name in (CHARS_DIR, LOG_FILE, NOTES_FILE):
+        _clear_league_entries(world_dir)
+        archived = archive_season(save_dir, world_dir, old, options.now)
+        for name in (CHARS_DIR, NOTES_FILE):
             _remove(world_dir / name)
         fresh = WorldState(season_id=plan.new_id, season_seed=plan.seed, season_start=options.start)
         write_atomic(world_dir / WORLD_FILE, dumps_world(fresh))
@@ -745,4 +751,5 @@ def _reset(
         chronicle=tuple(f"{h.name}：{h.text_zh}" for h in plan.entry.heroes),
         warnings=plan.warnings,
         backup=None if backup is None else str(backup),
+        archive=None if archived is None else str(archived),
     )
