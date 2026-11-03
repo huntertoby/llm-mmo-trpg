@@ -12,7 +12,8 @@
   是對面地圖上「回來的那個出口」的 ID。一條地點連線＝一對互指的出口。
 - **門與洞口** ``doors``：通往本地點的室內圖，或相鄰的隱藏地點（``hidden_until: reveal``，21.6）。
   隱藏地點那一側用出口回來，出口的 ``arrive`` 指向這扇門。
-- **傳送石** ``teleport_stones``：每區 2～3 個、每個城鎮 1 個（不足時只警告，6D-R 改錯誤）。
+- **傳送石** ``teleport_stones``：每區 2～3 個、每個城鎮 1 個（不符是錯誤，6D-R1；那一區的地點
+  還沒畫完時先記成待補）。
 
 跨區（往灰燼荒原的渡口，21.10 第 1 條；Phase 6 計畫 Q2）兩種寫法都支援：
 
@@ -134,8 +135,8 @@ CAPITAL_NAME_ZH = "主城"
 """``content check`` 進度列的名稱（主城的正式名稱待使用者決定，草稿待確認 1）。"""
 
 STONES_PER_REGION = (2, 3)
-"""每區野外的傳送石數（21.2「每區 2～3 個，城鎮各 1 個」：城鎮那顆不算在內）；不在範圍內只警告
-（地圖還沒畫完前先放行，6D-R 改錯誤）。"""
+"""每區野外的傳送石數（21.2「每區 2～3 個，城鎮各 1 個」：城鎮那顆不算在內）；不在範圍內是錯誤
+（6D-R1；那一區的地點還沒全部畫完時先記成待補，畫完才判）。"""
 
 
 class FieldExit(ContentModel):
@@ -941,11 +942,21 @@ def _stone_checks(ctx: _Ctx) -> None:
     lo, hi = STONES_PER_REGION
     for region in sorted({f.region for f in fields if not f.is_capital}):
         count = len(by_region.get(region, []))
-        if not lo <= count <= hi:
-            ctx.warnings.append(
-                f"區域 {region}：傳送石 {count} 個，應為 {lo}～{hi} 個"
-                "（地圖畫完前先放行，6D-R 改錯誤）"
-            )
+        if lo <= count <= hi:
+            continue
+        text = f"區域 {region}：傳送石 {count} 個，應為 {lo}～{hi} 個"
+        if _region_drawn(ctx, region):
+            ctx.errors.append(text)
+        else:  # 地點還沒畫完：之後補上的地圖可能有傳送石（6D-R1）
+            ctx.pending.append(f"{text}（地點還沒畫完，畫完再判）")
+
+
+def _region_drawn(ctx: _Ctx, region: str) -> bool:
+    """這一區地點圖上的每個地點都有室外圖了（6D-R1：傳送石數畫完才判）。"""
+    world_map = ctx.world_maps.get(region)
+    if world_map is None:
+        return False
+    return all((region, loc.id) in ctx.outdoor for loc in world_map.locations)
 
 
 def _map_stone_checks(ctx: _Ctx, field: FieldMapDef) -> None:
@@ -955,7 +966,13 @@ def _map_stone_checks(ctx: _Ctx, field: FieldMapDef) -> None:
             ctx.errors.append(f"實地地圖 {field.id}：主城要有 1 個傳送石，目前 {count} 個")
         return
     loc = ctx.loc(field.region, field.place)
-    if loc is None or field.is_interior:
+    if loc is None:
+        return
+    if loc.kind == "boss" and field.campfires:
+        # 21.10 第 24 條：打贏 Boss 不寫「已清空」，Boss 地點（含前廳與室內圖，6D-R1）的營火點永遠
+        # 用不到；室內圖照所屬地點（``place``）判斷
+        ctx.errors.append(f"實地地圖 {field.id}：Boss 地點 {loc.id} 不可放營火點")
+    if field.is_interior:
         return
     count = len(field.teleport_stones)
     if loc.kind == "boss" and count:
@@ -963,8 +980,5 @@ def _map_stone_checks(ctx: _Ctx, field: FieldMapDef) -> None:
         ctx.errors.append(
             f"實地地圖 {field.id}：Boss 地點 {loc.id} 只能從相連的地點走進去，不可有傳送石"
         )
-    if loc.kind == "boss" and field.campfires:
-        # 21.10 第 24 條：打贏 Boss 不寫「已清空」，Boss 地點（含前廳）的營火點永遠用不到
-        ctx.errors.append(f"實地地圖 {field.id}：Boss 地點 {loc.id} 不可放營火點")
     if loc.kind == "town" and count != 1:
-        ctx.warnings.append(f"實地地圖 {field.id}：城鎮應有 1 個傳送石，目前 {count} 個")
+        ctx.errors.append(f"實地地圖 {field.id}：城鎮應有 1 個傳送石，目前 {count} 個")
