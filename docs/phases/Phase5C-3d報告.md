@@ -37,7 +37,7 @@
 ## 檢查結果
 
 - `ruff check`、`ruff format --check`、`mypy`（1150 檔）、`lint-imports`（11 kept）全過。
-- pytest `tests/world tests/api tests/llm tests/bot tests/content tests/test_architecture.py -n 8`：見下方（交件前跑）。
+- pytest `tests/world tests/api tests/llm tests/bot tests/content tests/test_architecture.py -n 8`：3408 passed。
 - vitest 134 檔 1254 passed；`build` 通過。
 - swamp 種子 7 重播通過（88 動作、313 事件）。
 - OpenAPI 已重產（`CiteFactView.insert_zh`、`NoteView.can_delete`、`LocationBoard.admin`、新端點）；合併 main 後再產一次沒有差異。
