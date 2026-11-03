@@ -45,6 +45,7 @@ import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, isLink
 import { CREATURE_CLIPS, quantizeCreaturePose } from "./creaturePose";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
+import { drawRegionBlobs, type RegionMark } from "./regionBlobs";
 import type { PathDraw, PathTag } from "../battle/pathPreview";
 import {
   bangCenter,
@@ -94,6 +95,8 @@ export interface Highlights {
   range?: readonly Pos[];
   /** 選移動時滑過的路徑提示（Phase 6A-4c，資料來自伺服器的路徑預覽）。 */
   path?: PathDraw;
+  /** 併成一塊的格子範圍（Phase 6A-4g：實地地圖上敵人的視野）：淡色填滿、只描外緣（`regionBlobs.ts`）。 */
+  regions?: readonly RegionMark[];
 }
 
 const T = TILE_SIZE;
@@ -743,6 +746,11 @@ export class BattleRenderer {
     drawSoftCells(pen.at(h.moves[0] ?? { x: 0, y: 0 }), h.moves, geo, MOVE_SOFT);
     drawSoftCells(pen.at(range[0] ?? { x: 0, y: 0 }), range, geo, RANGE_SOFT);
     drawSoftCells(pen.at(h.preview[0] ?? { x: 0, y: 0 }), h.preview, geo, HIT_SOFT);
+    if ((h.regions?.length ?? 0) > 0) {
+      const rg = new Graphics();
+      drawRegionBlobs(rg, h.regions ?? [], T, (p) => this.origin(p));
+      this.marks.addChild(rg);
+    }
     for (const m of h.telegraph) {
       const o = this.origin(m.pos);
       pen

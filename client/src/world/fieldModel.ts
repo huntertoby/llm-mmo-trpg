@@ -457,25 +457,33 @@ const STONE_COLOR = 0x7fd8ff;
 /** 敵人視野的淡紅（同 HUD 的 HP 紅）。 */
 export const SIGHT_COLOR = 0xe04a3a;
 
-/** 門與傳送石的淡色標示（借用環境預告的半透明外框＋小圖示）、敵人視野的淡紅格與精英的「精」；`hover` 是滑鼠所在格。 */
-export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
+/** 敵人視野的格子（門與傳送石那格不算，它們有自己的標示），依座標排序。 */
+export function sightRegion(field: FieldView): Pos[] {
   const marked = new Set<string>([...field.doors.map((d) => `${d.x},${d.y}`), ...field.stones.map((s) => `${s.x},${s.y}`)]);
-  const sight = [...sightCells(field)]
+  return [...sightCells(field)]
     .filter((c) => !marked.has(c))
-    .sort()
     .map((c) => {
       const [x, y] = c.split(",").map(Number) as [number, number];
-      return { pos: { x, y }, kind: "sight", glyph: "", color: SIGHT_COLOR, texts: ["敵人的視野"] };
-    });
+      return { x, y };
+    })
+    .sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+/**
+ * 門與傳送石的淡色標示（借用環境預告的半透明外框＋小圖示）、精英的「精」；`hover` 是滑鼠所在格。
+ * 敵人的視野（6A-4g）照地表併塊畫成一塊：淡紅填色、只描外緣，不再每格紅框＋格角小圓（那個小圓是空字的徽章底，沒有意思）。
+ */
+export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
   const telegraph: TelegraphMark[] = [
     ...field.doors.map((d) => ({ pos: { x: d.x, y: d.y }, kind: "door", glyph: "門", color: DOOR_COLOR, texts: [d.to_name_zh] })),
     ...field.stones.map((s) => ({ pos: { x: s.x, y: s.y }, kind: "stone", glyph: "◆", color: s.unlocked ? STONE_COLOR : HIGHLIGHT.well, texts: ["傳送石"] })),
-    ...sight,
     ...(field.enemies ?? [])
       .filter((e) => e.elite)
       .map((e) => ({ pos: { x: e.x, y: e.y }, kind: "elite", glyph: "精", color: SIGHT_COLOR, texts: [enemyText(e)] })),
   ];
-  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [] };
+  const sight = sightRegion(field);
+  const regions = sight.length > 0 ? [{ cells: sight, color: SIGHT_COLOR }] : [];
+  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [], regions };
 }
 
 /** 滑鼠所在格的一行說明（出口往哪、門通到哪、傳送石、設施、NPC）；沒有東西為 `null`。 */
