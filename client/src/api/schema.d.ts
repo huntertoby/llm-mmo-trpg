@@ -1253,6 +1253,8 @@ export interface components {
             max_characters: number;
             /** Can Create */
             can_create: boolean;
+            /** Titles */
+            titles?: string[];
         };
         Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
         /**

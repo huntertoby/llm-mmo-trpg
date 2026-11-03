@@ -2972,6 +2972,13 @@
           "can_create": {
             "type": "boolean",
             "title": "Can Create"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles"
           }
         },
         "type": "object",
