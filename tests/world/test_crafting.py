@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from collections.abc import Callable
 from typing import Any
@@ -26,6 +27,7 @@ from trpg.world.crafting_actions import (
     SalvageAction,
 )
 from trpg.world.errors import WorldActionError
+from trpg.world.save import dumps_world, loads_world
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import StepResult, world_step
 
@@ -88,6 +90,18 @@ def test_craft_basic(library: ContentLibrary, make_char: MakeChar) -> None:
     record = result.world.recipe_of(event.code)
     assert record is not None and record.discoverer == "alice"
     assert result.char.gear_mods[item.id].recipe == event.code
+
+
+def test_recipe_season_and_old_save(library: ContentLibrary, make_char: MakeChar) -> None:
+    """配方紀錄帶發現時的賽季；舊存檔沒有 season_id 時讀入補成世界當季（5D-R2）。"""
+    result = _step(library, make_world(), _rich(make_char), _craft(materials=(MIST,)))
+    record = result.world.recipe_of(_crafted(result).code)
+    assert record is not None and record.season_id == result.world.season_id
+    raw = json.loads(dumps_world(result.world))
+    assert raw["recipes"][0].pop("season_id") == result.world.season_id
+    raw["season_id"] = "s9"
+    loaded = loads_world(json.dumps(raw))
+    assert loaded.recipes[0].season_id == "s9"
 
 
 def test_same_recipe_same_item(library: ContentLibrary, make_char: MakeChar) -> None:

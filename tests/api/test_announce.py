@@ -80,6 +80,46 @@ def test_world_store_records_first_kills_from_actions(
     assert not (tmp_path / "first_kills.json").exists()
 
 
+def test_first_kill_write_failure_does_not_break_the_action(
+    library: ContentLibrary,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """首殺紀錄寫入失敗只記 log，世界動作照常完成（5D-R2）。"""
+    store = _store(library, tmp_path)
+    char = store.create("阿霧", "fire_staff", ["ignite", "marked"], seed=0)
+
+    def boom(*_args: object, **_kwargs: object) -> tuple[object, ...]:
+        raise OSError("磁碟滿了")
+
+    monkeypatch.setattr(store.first_kills, "record", boom)
+    to = _neighbor(library, char.location)
+    outcome = store.act(char.character_id, TravelAction(to=to))
+    assert outcome.char.location == to
+    assert store.entries()[-1].character_id == char.character_id
+    assert "首殺紀錄寫入失敗" in caplog.text
+
+
+def test_first_kill_season(library: ContentLibrary, tmp_path: Path) -> None:
+    """首殺帶賽季；舊檔沒有 season_id＝第一季；按賽季算（下一季的第一個仍是首殺）。"""
+    store = _store(library, tmp_path)
+    first = store.create("阿霧", "fire_staff", ["ignite", "marked"], seed=0)
+    second = store.create("小美", "fire_staff", ["ignite", "marked"], seed=1)
+    registry = FirstKillRegistry(library, tmp_path)
+    registry.record(first, [_event()], seq=1, now=DAY0_6AM)
+    path = tmp_path / "first_kills.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    assert raw["kills"][0]["season_id"] == "s1"
+    del raw["kills"][0]["season_id"]
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    assert load_first_kills(path)[0].season_id == "s1"
+    assert registry.record(second, [_event()], seq=2, now=DAY0_6AM, season_id="s1") == ()
+    added = registry.record(second, [_event()], seq=3, now=DAY0_6AM, season_id="s2")
+    assert [(k.season_id, k.character_id) for k in added] == [("s2", second.character_id)]
+    assert len(load_first_kills(path)) == 2
+
+
 def _neighbor(library: ContentLibrary, location: str) -> str:
     world_map = library.world_maps["cloud_ridge"]
     places = world_map.location_by_id()

@@ -152,6 +152,18 @@ def verify_password(password: str, stored: PasswordHash) -> bool:
     return hmac.compare_digest(digest, expected)
 
 
+_DUMMY_HASH: Final = PasswordHash(
+    algorithm="scrypt",
+    n=SCRYPT_N,
+    r=SCRYPT_R,
+    p=SCRYPT_P,
+    salt="00" * SALT_BYTES,
+    hash="00" * SCRYPT_DKLEN,
+)
+"""帳號不存在時拿來比對的假雜湊（5D-R2）：照樣跑一次 scrypt，讓回應時間和帳號存在時一致，
+不能從時間猜出哪些帳號名稱存在。沒有任何密碼會對上（比對結果一律丟掉）。"""
+
+
 def _token_sha256(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -340,7 +352,10 @@ class AccountStore:
         """帳號密碼對了就發一個新 token（回傳 token 原文，只此一次）。"""
         with self._lock:
             record = self.find(username)
-            if record is None or not verify_password(password, record.password):
+            if record is None:
+                verify_password(password, _DUMMY_HASH)  # 時間一致（5D-R2）
+                raise AuthError(_BAD_LOGIN)
+            if not verify_password(password, record.password):
                 raise AuthError(_BAD_LOGIN)
             if record.disabled:
                 raise AccountDisabledError("帳號已停用")

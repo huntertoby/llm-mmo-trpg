@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 import threading
 import time
@@ -49,6 +50,7 @@ from trpg.world.save import (
     loads_world,
     write_atomic,
 )
+from trpg.world.season import FIRST_SEASON_ID
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import new_character, world_step
 
@@ -61,11 +63,13 @@ __all__ = [
     "WorldStore",
 ]
 
-SEASON_ID: Final = "s1"
+SEASON_ID: Final = FIRST_SEASON_ID
 START_REGION: Final = "cloud_ridge"
 """新角色的起始區域（第一季從雲嶺開始，09 9.6.5）。"""
 
 CHAR_ID_PREFIX: Final = "c"
+
+_LOG = logging.getLogger(__name__)
 
 
 class WorldCharacterNotFoundError(TrpgError):
@@ -305,12 +309,27 @@ class WorldStore:
         write_atomic(self._log_path(), dumps_log([*entries, entry]))
         entries.append(entry)
         self._save_char(result.char)
-        self.first_kills.record(result.char, result.events, seq=seq, now=now)
+        self._record_first_kills(result.char, result.events, seq, now, result.world.season_id)
         if result.world != world:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world
         self.offers.prefetch(result.world, result.char)  # PERF-3：新出現的機遇、劇情步驟
         return WorldOutcome(result.world, result.char, result.events, now, None)
+
+    def _record_first_kills(
+        self,
+        char: CharacterState,
+        events: Sequence[WorldEvent],
+        seq: int,
+        now: int,
+        season_id: str,
+    ) -> None:
+        """首殺紀錄是衍生資料：寫入失敗（檔壞了、磁碟）只記 log，不影響這次動作的回應（5D-R2）。
+        日誌與角色已經寫好，之後可以從日誌補算。"""
+        try:
+            self.first_kills.record(char, events, seq=seq, now=now, season_id=season_id)
+        except Exception:
+            _LOG.exception("首殺紀錄寫入失敗（seq=%d，角色 %s）", seq, char.character_id)
 
     def _save_char(self, char: CharacterState) -> None:
         write_atomic(self._char_path(char.character_id), dumps_char(char))

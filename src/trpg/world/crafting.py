@@ -424,6 +424,7 @@ def _craft(
             hidden=None if plan.hidden is None else plan.hidden.id,
             base=plan.base_code if plan.steps else None,
             steps=plan.steps,
+            season_id=world.season_id,
         ),
     )
     mods = {**char.gear_mods, item.id: mod}
