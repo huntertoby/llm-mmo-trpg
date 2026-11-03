@@ -91,6 +91,14 @@ window.Anim = (() => {
     sigil_cast: { dur: 380, pose: (t) => ({ ...REST, arm: -1.25 - 0.15 * Math.sin(Math.min(1, t * 3) * Math.PI), wpn: 2.82, lean: 0.08 }), shot: true, hitAt: 0.95, afterSigil: true },
     // 魔導劍＋飛行物 選項 B：揮劍斬出（照揮砍，劍揮到前方時從劍尖放出火球）
     slash_wave: { ...slash(1.7, 1.85, -2.5, 0.15, 260), hitAt: undefined, shot: true, shotFrom: 0.55, shotHit: 0.98 },
+    // 劍的普攻變體 4：突刺（用劍尖刺，不是揮）；變體 5：小跳斬（跳起來由上往下劈）
+    stab_in: { dur: 200, pose: (t) => ({ ...REST, arm: mix(0, 0.6, ease.out(t)), wpn: mix(0.75, 1.0, t), lean: -0.1 * t, hipN: 0.2 * t }) },
+    stab: { dur: 180, pose: (t) => ({ ...REST, arm: mix(0.6, -1.15, ease.in(t)), wpn: mix(1.0, 2.72, ease.in(t)), lean: 0.25 * t, hipN: 0.55 * t, hipF: -0.4 * t }), move: (t) => [10 * ease.out(t), 0, 0], hitAt: 0.7 },
+    hop_windup: { dur: 280, pose: (t) => ({ ...REST, arm: mix(0, -2.7, ease.out(t)), wpn: mix(0.75, 1.9, ease.out(t)), kneeN: 1.0 * Math.sin(t * Math.PI), kneeF: 1.1 * Math.sin(t * Math.PI), hipN: 0.6 * Math.sin(t * Math.PI) }), move: (t) => [6 * t, 0, 16 * Math.sin(t * Math.PI * 0.9)] },
+    hop_slash: { dur: 220, pose: (t) => ({ ...REST, arm: mix(-2.7, 0.35, ease.in(t)), wpn: mix(1.9, 1.75, t), lean: mix(0, 0.3, t), hipN: 0.5, hipF: -0.3, kneeN: 0.6 * (1 - t), kneeF: 0.7 * (1 - t) }), move: (t) => [6 + 4 * t, 0, 16 * Math.sin((0.9 + 0.1 * t) * Math.PI) * (1 - t)], hitAt: 0.65, trail: true },
+    // 火球的詠唱變體：B＝杖橫在胸前畫圈（法陣在身前）；C＝杖頓地再上揚（法陣在腳下、火從地面捲起）
+    channel_b: { dur: 520, pose: (t) => ({ ...REST, arm: mix(0, -1.4, ease.out(clamp(t * 1.6))) + 0.25 * Math.sin(t * Math.PI * 4), wpn: mix(0, 3.0, ease.out(clamp(t * 1.6))), lean: -0.04 }), circleFront: true },
+    channel_c: { dur: 520, pose: (t) => { const down = clamp(t * 2.5), up = clamp((t - 0.45) * 2); return { ...REST, arm: mix(mix(0, 0.5, down), -2.2, ease.out(up)), wpn: mix(mix(0, -0.4, down), 2.6, ease.out(up)), lean: mix(0.1, -0.08, up), bob: 1.5 * down * (1 - up) }; }, circle: true, swirl: true },
     dash: { dur: 260, pose: () => ({ ...REST, lean: 0.35, hipN: 0.8, hipF: -0.7, kneeF: 0.9, arm: 0.6 }), move: (t) => [ease.inOut(t), 0, 0], ghost: true },
     leap: { dur: 420, pose: (t) => { const k = Math.sin(t * Math.PI); return { ...REST, hipN: 0.9 * k, kneeN: 1.5 * k, hipF: 0.5 * k, kneeF: 1.7 * k, arm: -0.9 * k }; }, move: (t) => [ease.inOut(t), 0, 34 * Math.sin(t * Math.PI)] },
     hit: { dur: 360, pose: (t) => ({ ...REST, lean: -0.3 * Math.sin(Math.min(1, t * 2) * Math.PI), arm: -0.5 * Math.sin(t * Math.PI), flash: Math.max(0, 1 - t * 4) * 0.85 }), move: (t) => [-7 * Math.sin(Math.min(1, t * 1.6) * Math.PI), 0, 0] },
@@ -113,9 +121,13 @@ window.Anim = (() => {
     for (const [w, col] of [[9 * wk, c1], [3.5 * wk, c2]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let k = 0; k <= 18; k++) { const a = a0 + d * k / 18; const px = S[0] + Math.cos(a) * r, py = S[1] + Math.sin(a) * r * squash + (squash < 1 ? r * (1 - squash) * 0.6 : 0); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
     ctx.restore();
   }
-  function projectile(ctx, from, to, t, el, kind) {
+  function projectile(ctx, from, to, t, el, kind, traj = "arc") {
     if (t <= 0 || t >= 1) return;
-    const [c1, c2] = ELEM[el]; const x = mix(from[0], to[0], t), y = mix(from[1], to[1], t) - Math.sin(t * Math.PI) * (kind === "orb" ? 10 : 3);
+    const [c1, c2] = ELEM[el];
+    let x = mix(from[0], to[0], t), y = mix(from[1], to[1], t);
+    if (traj === "arc") y -= Math.sin(t * Math.PI) * (kind === "orb" ? 14 : 3);
+    else if (traj === "spiral") { const r = 9 * Math.sin(t * Math.PI); y += Math.sin(t * 18) * r; x += Math.cos(t * 18) * r * 0.4; }
+    else if (traj === "high") y -= Math.sin(t * Math.PI) * 38;
     ctx.save();
     if (kind === "arrow" || kind === "bullet") { const a = Math.atan2(to[1] - from[1], to[0] - from[0]); ctx.translate(x, y); ctx.rotate(a); if (kind === "arrow") { ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(4, 0); ctx.stroke(); ctx.strokeStyle = "#c8a070"; ctx.lineWidth = 1.6; ctx.stroke(); ctx.fillStyle = "#dfe4ea"; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(2, -3); ctx.lineTo(2, 3); ctx.fill(); } else { ctx.fillStyle = "#fff4c0"; ctx.fillRect(-8, -1.2, 12, 2.4); } }
     else { ctx.shadowColor = c1; ctx.shadowBlur = 14; ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(x, y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, TAU); ctx.fill(); for (let k = 1; k < 5; k++) { ctx.globalAlpha = 0.5 - k * 0.1; ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(x - Math.sign(to[0] - from[0]) * 5 * k, y + k, 6 - k, 0, TAU); ctx.fill(); } }
@@ -134,10 +146,12 @@ window.Anim = (() => {
     const r = 11 * ease.out(clamp(t * 1.5)); ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, TAU * clamp(t * 1.4)); ctx.stroke();
     ctx.strokeStyle = c2; ctx.beginPath(); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * TAU * 2 / 5; ctx[k ? "lineTo" : "moveTo"](p[0] + Math.cos(a) * r * 0.7, p[1] + Math.sin(a) * r * 0.7); } ctx.closePath(); ctx.stroke(); ctx.restore();
   }
-  function burst(ctx, p, t, el) {
+  function burst(ctx, p, t, el, shape = "rays") {
     if (t <= 0 || t >= 1) return;
     const [c1, c2] = ELEM[el]; ctx.save(); ctx.globalAlpha = 1 - t; ctx.shadowColor = c1; ctx.shadowBlur = 12;
-    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.strokeStyle = k % 2 ? c1 : c2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(p[0] + Math.cos(a) * 6 * t, p[1] + Math.sin(a) * 6 * t); ctx.lineTo(p[0] + Math.cos(a) * (8 + 18 * t), p[1] + Math.sin(a) * (8 + 18 * t)); ctx.stroke(); }
+    if (shape === "ring") { ctx.strokeStyle = c1; ctx.lineWidth = 4 * (1 - t) + 1; ctx.beginPath(); ctx.ellipse(p[0], p[1], 6 + 24 * t, 4 + 14 * t, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = c2; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p[0], p[1], 3 + 14 * t, 2 + 8 * t, 0, 0, TAU); ctx.stroke(); }
+    else if (shape === "star") { ctx.fillStyle = c1; ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = (k % 2 ? 6 : 16 + 10 * t) * (0.6 + t); ctx[k ? "lineTo" : "moveTo"](p[0] + Math.cos(a) * r, p[1] + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.arc(p[0], p[1], 5 * (1 - t) + 1, 0, TAU); ctx.fill(); }
+    else for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.strokeStyle = k % 2 ? c1 : c2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(p[0] + Math.cos(a) * 6 * t, p[1] + Math.sin(a) * 6 * t); ctx.lineTo(p[0] + Math.cos(a) * (8 + 18 * t), p[1] + Math.sin(a) * (8 + 18 * t)); ctx.stroke(); }
     ctx.restore();
   }
   function damageNumber(ctx, p, t, n, crit = false) {
@@ -188,6 +202,8 @@ window.Anim = (() => {
       const el2 = crit ? "crit" : el;
       if (cur.c.trail && W) { const W0 = figure(probeCtx(), ax, groundY, dir, cur.c.pose(0), { unit: u, air: m[2] }); if (W0) arcTrail(ctx, W.shoulder, W0.tip, W.tip, cur.c.shot ? el : el2, 1 - Math.max(0, local - 0.8) * 5, cur.c.squash ?? 1, crit ? 1.7 : 1); }
       if (cur.c.circle) castCircle(ctx, [ax, groundY], local, el);
+      if (cur.c.circleFront && W) { ctx.save(); ctx.translate(W.hand[0] + 14 * sign, W.hand[1] - 4); ctx.scale(0.35, 1); castCircle(ctx, [0, 0], local, el); ctx.restore(); }
+      if (cur.c.swirl) { const [c1] = ELEM[el]; ctx.save(); ctx.globalAlpha = clamp(local * 2) * (1 - clamp((local - 0.8) * 5)); ctx.strokeStyle = c1; ctx.lineWidth = 2; ctx.shadowColor = c1; ctx.shadowBlur = 8; ctx.beginPath(); for (let q = 0; q <= 30; q++) { const a = q / 30 * TAU * 2 + local * 6, r = 14 - q * 0.3; ctx[q ? "lineTo" : "moveTo"](ax + Math.cos(a) * r, groundY - q * 1.6 * local); } ctx.stroke(); ctx.restore(); }
       if (cur.c.sigil && W) sigilAt(ctx, W.tip, local, el);
       if (cur.c.afterSigil && W) sigilAt(ctx, W.tip, 1 - local, el);
       if (cur.c.shot && W) {
@@ -196,17 +212,47 @@ window.Anim = (() => {
           // 出發點＝出招瞬間的作用端（劍尖、槍口、杖頭）
           const W1 = figure(probeCtx(), ax, groundY, dir, cur.c.pose(from), { unit: u, air: m[2] }) ?? W;
           const tt = clamp((local - from) / (upto - from));
-          projectile(ctx, W1.tip, B, tt, el, shotKind);
+          projectile(ctx, W1.tip, B, tt, el, shotKind, opt.traj ?? "arc");
           if (shotKind === "bullet") muzzle(ctx, W1.tip, tt * 3);
         }
       }
-      if (tl >= 0) { burst(ctx, B, tl * (crit ? 0.9 : 1.4), el2); damageNumber(ctx, [target, groundY - 70], tl * 0.6, crit ? 24 : 12, crit); }
+      if (tl >= 0) { burst(ctx, B, tl * (crit ? 0.9 : 1.4), el2, opt.burst ?? "rays"); damageNumber(ctx, [target, groundY - 70], tl * 0.6, crit ? 24 : 12, crit); }
       return { clip: cur.clip, parts, weapon: W };
     }
     return { total, draw };
   }
 
-  // ---------------- 樓梯 ----------------
+  // ---------------- 高低差：照遊戲規格（格子 48、每一級抬高 6，client battle/elevation.ts 的 TILE_SIZE／RAISE）----------------
+  const TILE = 48, RAISE = 6;
+  /** 一排格子（由西到東），heights 是每格的高度級數；人從第 0 格走到最後一格。高一級＝走上去（抬腳），高兩級以上＝跳。 */
+  function heightRow(ctx, x0, y0, heights, ms, sc = 1) {
+    const n = heights.length;
+    // 地面：兩列格子（後列、人站的列），每格依高度往上抬 RAISE×級數，南側畫立面
+    for (const row of [0, 1]) for (let i = 0; i < n; i++) {
+      const h = heights[i], x = x0 + i * TILE, y = y0 + row * TILE - h * RAISE;
+      ctx.fillStyle = ["#7d8c84", "#8a998f", "#97a69c"][Math.min(2, h)]; ctx.fillRect(x, y, TILE, TILE); ctx.fillStyle = "rgba(255,255,255,0.10)"; ctx.fillRect(x + 3, y + 3, TILE - 6, 2);
+      ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+      if (h > 0 && row === 1) { ctx.fillStyle = "#5e665f"; ctx.fillRect(x, y + TILE, TILE, h * RAISE); for (let k = 1; k < h; k++) { ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(x, y + TILE + k * RAISE, TILE, 1); } }
+      if (row === 0 && h > 0) { ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(x, y, TILE, 2); }
+    }
+    // 人：每格 0.55 秒；同高或差一級＝走（差一級時腳先抬，身體在後半段升 6）；差兩級以上＝跳（拋物線、落地揚塵）
+    const per = 550, total = per * (n - 1) + 700, t = ms % total, seg = Math.min(n - 2, Math.floor(t / per)), u = clamp((t - seg * per) / per);
+    const hA = heights[seg], hB = heights[seg + 1], diff = hB - hA, footY = y0 + TILE * 1.62;
+    let x = x0 + (seg + 0.5 + (t >= per * (n - 1) ? 1 : ease.inOut(u))) * TILE, lift, P, air = 0;
+    if (t >= per * (n - 1)) { lift = heights[n - 1] * RAISE; P = { ...CLIP.idle.pose((ms / 1600) % 1) }; x = x0 + (n - 0.5) * TILE; }
+    else if (Math.abs(diff) <= 1) {
+      lift = (hA + diff * ease.inOut(clamp((u - 0.4) / 0.6))) * RAISE;
+      P = walkPose(u * Math.PI * 2);
+      if (diff > 0) { P.hipN += 0.4 * Math.sin(u * Math.PI); P.kneeN += 0.7 * Math.sin(u * Math.PI); P.lean = 0.1; }
+    } else {
+      lift = mix(hA, hB, ease.inOut(u)) * RAISE; air = Math.sin(u * Math.PI) * (14 + Math.abs(diff) * RAISE) * (diff > 0 ? 1 : 0.7);
+      P = CLIP.leap.pose(u);
+      if (u > 0.85) { ctx.save(); ctx.globalAlpha = (1 - u) * 5; ctx.fillStyle = "#c8b890"; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(x + k * 6, footY - lift + 2, 3, 0, TAU); ctx.fill(); } ctx.restore(); }
+    }
+    figure(ctx, x, footY - lift, "east", P, { unit: HERO, scale: 0.9 * sc, air });
+    return { diff, seg };
+  }
+  // ---------------- 舊的示意樓梯（第一版，已不用）----------------
   function stairs(ctx, x0, gy, ms) {
     const steps = 4, sw = 34, sh = 12, period = 3600;
     for (let k = 0; k < steps; k++) { const x = x0 + 70 + k * sw; ctx.fillStyle = k % 2 ? "#8a948c" : "#9aa39c"; ctx.fillRect(x, gy - (k + 1) * sh, sw * (steps - k) + 40, sh); ctx.strokeStyle = OUT; ctx.lineWidth = 1.5; ctx.strokeRect(x, gy - (k + 1) * sh, sw * (steps - k) + 40, sh); ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(x, gy - (k + 1) * sh + sh - 3, sw * (steps - k) + 40, 3); }
@@ -235,5 +281,5 @@ window.Anim = (() => {
   const SLASH_VARIANTS = [["windup", "slash", "由上往下"], ["windup_lo", "slash_lo", "由下往上"], ["windup_side", "slash_side", "橫掃"]];
   function pickVariant(battleId, eventSeq, unitId, n) { return seedOf(`${battleId}:${eventSeq}:${unitId}:anim`) % n; }
 
-  return { CLIP, ELEM, REST, WEAPONS, WEAPON_ZH, ATTACK, figure, walkPose, sequence, stairs, selfTest, ease, unit, HERO, MAGE, FOE, seedOf, pickVariant, SLASH_VARIANTS };
+  return { CLIP, ELEM, REST, WEAPONS, WEAPON_ZH, ATTACK, figure, walkPose, sequence, stairs, heightRow, TILE, RAISE, selfTest, ease, unit, HERO, MAGE, FOE, seedOf, pickVariant, SLASH_VARIANTS };
 })();

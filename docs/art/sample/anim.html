@@ -32,7 +32,7 @@
   <h2>1. 走路四方向＋跑步、潛行<small>側面：髖、膝擺動，手臂擺；正面和背面：左右腳交替抬起、手上下擺；全身上下起伏</small></h2>
   <canvas id="walk" width="1260" height="170"></canvas>
   <div class="row">
-    <div><h2>2. 上樓梯<small>腳先抬、身體再跟上</small></h2><canvas id="stairs" width="420" height="170"></canvas></div>
+    <div><h2>2. 高低差（照遊戲規格：格子 48、每一級抬高 6）<small>高度 0→0→1→2→2→0→0：差一級＝走上去（腳先抬，身體在後半段升 6）；差兩級＝跳（拋物線、落地揚塵）</small></h2><canvas id="stairs" width="760" height="230"></canvas></div>
     <div><h2>3. 受擊<small>白閃＋後仰＋退半步</small></h2><canvas id="hit" width="260" height="170"></canvas></div>
   </div>
   <h2>4. 技能：揮砍、射擊（弓）、射擊（火槍）、施法（法杖，火）<small>刃尖、槍口、杖頭都朝目標；箭和子彈從弓、槍口飛出</small></h2>
@@ -64,6 +64,21 @@
     <div><canvas id="fb-arcA" width="400" height="170"></canvas><div class="chips" id="fb-arcA-chips"></div></div>
     <div><canvas id="fb-arcB" width="400" height="170"></canvas><div class="chips" id="fb-arcB-chips"></div></div>
   </div>
+  <h2>9. 劍的普攻：5 種變體<small>由上往下、由下往上、橫掃、突刺、小跳斬；每次出手依事件雜湊挑一種</small></h2>
+  <div class="row">
+    <div><canvas id="sw-1" width="240" height="170"></canvas><div class="chips" id="sw-1-chips"></div></div>
+    <div><canvas id="sw-2" width="240" height="170"></canvas><div class="chips" id="sw-2-chips"></div></div>
+    <div><canvas id="sw-3" width="240" height="170"></canvas><div class="chips" id="sw-3-chips"></div></div>
+    <div><canvas id="sw-4" width="240" height="170"></canvas><div class="chips" id="sw-4-chips"></div></div>
+    <div><canvas id="sw-5" width="240" height="170"></canvas><div class="chips" id="sw-5-chips"></div></div>
+  </div>
+  <h2>10. 同一個火球技能放 3 次（技能變體）<small>顏色（元素）和範圍（形狀）不變；變的是詠唱姿勢、飛行軌跡（微弧／直線／螺旋）、爆發形狀（放射／圓環／星形）</small></h2>
+  <div class="row">
+    <div><canvas id="fv-1" width="400" height="170"></canvas><div class="chips" id="fv-1-chips"></div></div>
+    <div><canvas id="fv-2" width="400" height="170"></canvas><div class="chips" id="fv-2-chips"></div></div>
+    <div><canvas id="fv-3" width="400" height="170"></canvas><div class="chips" id="fv-3-chips"></div></div>
+  </div>
+  <div class="note" id="pick2"></div>
 </div>
 <div id="strip" style="display:none"></div>
 <script src="storyDoll.js"></script>
@@ -87,10 +102,19 @@
     "fb-staff": { seq: [{ clip: "channel" }, { clip: "cast" }], x: 70, target: 330, el: "fire", unit: A.MAGE },
     "fb-arcA": { seq: [{ clip: "sigil" }, { clip: "sigil_cast" }], x: 70, target: 330, el: "fire", unit: ARC },
     "fb-arcB": { seq: [{ clip: "windup" }, { clip: "slash_wave" }], x: 70, target: 330, el: "fire", unit: ARC },
+    "sw-1": { seq: [{ clip: "windup" }, { clip: "slash" }], x: 80, target: 150, el: "physical", unit: SW },
+    "sw-2": { seq: [{ clip: "windup_lo" }, { clip: "slash_lo" }], x: 80, target: 150, el: "physical", unit: SW },
+    "sw-3": { seq: [{ clip: "windup_side" }, { clip: "slash_side" }], x: 80, target: 150, el: "physical", unit: SW },
+    "sw-4": { seq: [{ clip: "stab_in" }, { clip: "stab" }], x: 70, target: 150, el: "physical", unit: SW },
+    "sw-5": { seq: [{ clip: "hop_windup" }, { clip: "hop_slash" }], x: 70, target: 150, el: "physical", unit: SW },
+    "fv-1": { seq: [{ clip: "channel" }, { clip: "cast" }], x: 70, target: 330, el: "fire", unit: A.MAGE, traj: "arc", burst: "rays" },
+    "fv-2": { seq: [{ clip: "channel_b" }, { clip: "cast" }], x: 70, target: 330, el: "fire", unit: A.MAGE, traj: "line", burst: "ring" },
+    "fv-3": { seq: [{ clip: "channel_c" }, { clip: "cast" }], x: 70, target: 330, el: "fire", unit: A.MAGE, traj: "spiral", burst: "star" },
   };
-  const LABEL = { "combo-a": "砍＋跳", "combo-b": "跳＋砍", "combo-c": "衝刺＋砍（冰）", "v-hi": "變體 1・由上往下", "v-lo": "變體 2・由下往上", "v-side": "變體 3・橫掃", "v-crit": "暴擊版", "fb-staff": "法杖＋火球", "fb-arcA": "魔導劍＋火球・選項 A 劍指畫符", "fb-arcB": "魔導劍＋火球・選項 B 揮劍斬出", "sk-slash": "劍", "sk-bow": "弓", "sk-gun": "火槍", "sk-cast": "法杖（火）" };
+  Object.assign(ZH, { stab_in: "收劍", stab: "突刺", hop_windup: "躍起", hop_slash: "下劈", channel_b: "身前畫陣", channel_c: "頓地捲火" });
+  const LABEL = { "sw-1": "1 由上往下", "sw-2": "2 由下往上", "sw-3": "3 橫掃", "sw-4": "4 突刺", "sw-5": "5 小跳斬", "fv-1": "第 1 次：舉杖・微弧・放射", "fv-2": "第 2 次：身前畫陣・直線・圓環", "fv-3": "第 3 次：頓地捲火・螺旋・星形", "combo-a": "砍＋跳", "combo-b": "跳＋砍", "combo-c": "衝刺＋砍（冰）", "v-hi": "變體 1・由上往下", "v-lo": "變體 2・由下往上", "v-side": "變體 3・橫掃", "v-crit": "暴擊版", "fb-staff": "法杖＋火球", "fb-arcA": "魔導劍＋火球・選項 A 劍指畫符", "fb-arcB": "魔導劍＋火球・選項 B 揮劍斬出", "sk-slash": "劍", "sk-bow": "弓", "sk-gun": "火槍", "sk-cast": "法杖（火）" };
   const built = {};
-  for (const [id, s] of Object.entries(SEQ)) built[id] = A.sequence(s.seq, s.x, s.target, s.el, { unit: s.unit, crit: !!s.crit });
+  for (const [id, s] of Object.entries(SEQ)) built[id] = A.sequence(s.seq, s.x, s.target, s.el, { unit: s.unit, crit: !!s.crit, traj: s.traj, burst: s.burst });
   function ground(ctx, w, h, gy) {
     ctx.fillStyle = "#6a9a6a"; ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = "#5e8c5e"; for (let k = 0; k < 40; k++) ctx.fillRect((k * 97) % w, gy - 30 + ((k * 53) % 50), 3, 2);
@@ -144,6 +168,11 @@
     for (let seq = 1; seq <= 8; seq++) rows.push(`事件 #${seq} → ${A.SLASH_VARIANTS[A.pickVariant("battle_7f3a", seq, "unit_0001", 3)][2]}`);
     document.getElementById("pick").innerHTML = "挑變體（確定性）：雜湊（戰鬥 ID＋事件序號＋施放者 ID）÷ 變體數取餘數，雜湊和 client 的 inkStyle.seedOf 同一個 FNV-1a，重播、觀戰都一樣。例：主角在 battle_7f3a 連續揮砍 8 次：" + rows.join("、") + "。";
   }
+  {
+    const rows = [];
+    for (let seq = 1; seq <= 6; seq++) rows.push(`第 ${seq} 次 → 變體 ${A.pickVariant("battle_7f3a", 40 + seq, "unit_0002", 3) + 1}`);
+    document.getElementById("pick2").innerHTML = "技能變體也用同一個雜湊挑（鍵加上技能 ID）；例：法師在 battle_7f3a 連放 6 次火球：" + rows.join("、") + "。";
+  }
   const params = new URLSearchParams(location.search);
   if (params.has("strip")) {
     document.getElementById("live").style.display = "none"; document.getElementById("ctl").style.display = "none";
@@ -153,7 +182,7 @@
     const rows = [
       ["走路：側面（東）", (c, k) => { ground(c, FW, FH, 135); A.figure(c, 90, 135, "east", A.walkPose(k / N * Math.PI * 2), { unit: SW, scale: 1.8 }); }],
       ["走路：正面（南）", (c, k) => { ground(c, FW, FH, 135); A.figure(c, 90, 135, "south", A.walkPose(k / N * Math.PI * 2), { unit: SW, scale: 1.8 }); }],
-      ["上樓梯", (c, k) => { c.save(); c.scale(FW / 300, FW / 300); c.translate(-20, -(170 - FH * 300 / FW)); ground(c, 420, 170, 155); A.stairs(c, 10, 155, 700 + k * 380); c.restore(); }],
+      ["高低差（格子 48、每級 6；0→0→1→2→2→0→0）", (c, k) => { c.save(); c.scale(1.05, 1.05); c.translate(-(k * 0.8) * 48 + 10, 10); A.heightRow(c, 0, 20, [0, 0, 1, 2, 2, 0, 0], 275 + k * 520); c.restore(); }],
       seqRow("sk-slash", "揮砍（劍，變體 1・由上往下）", [70, 230]),
       seqRow("sk-bow", "射擊（弓）", [30, 300]),
       seqRow("sk-gun", "射擊（火槍）", [30, 300]),
@@ -166,6 +195,11 @@
       seqRow("fb-staff", "火球：法杖", [40, 360]),
       seqRow("fb-arcA", "火球：魔導劍・選項 A 劍指畫符", [40, 360]),
       seqRow("fb-arcB", "火球：魔導劍・選項 B 揮劍斬出", [40, 360]),
+      seqRow("sw-4", "劍普攻變體 4・突刺", [40, 200]),
+      seqRow("sw-5", "劍普攻變體 5・小跳斬", [40, 200]),
+      seqRow("fv-1", "火球第 1 次：舉杖・微弧・放射", [40, 360]),
+      seqRow("fv-2", "火球第 2 次：身前畫陣・直線・圓環", [40, 360]),
+      seqRow("fv-3", "火球第 3 次：頓地捲火・螺旋・星形", [40, 360]),
     ];
     for (const [name, fn] of rows) {
       const wrap = document.createElement("div"); wrap.innerHTML = `<h2>${name}<small>7 個時間點，左到右</small></h2>`;
@@ -183,7 +217,7 @@
       clock += (now - last) * speed; last = now;
       const ms = fixed ?? clock;
       drawWalk(document.getElementById("walk").getContext("2d"), ms);
-      const sc = document.getElementById("stairs").getContext("2d"); ground(sc, 420, 170, 155); A.stairs(sc, 10, 155, ms);
+      const sc = document.getElementById("stairs").getContext("2d"); sc.setTransform(1, 0, 0, 1, 0, 0); sc.fillStyle = "#6a9a6a"; sc.fillRect(0, 0, 760, 230); sc.scale(2, 2); A.heightRow(sc, 22, 6, [0, 0, 1, 2, 2, 0, 0], ms); sc.setTransform(1, 0, 0, 1, 0, 0);
       drawHit(document.getElementById("hit").getContext("2d"), ms);
       for (const id of Object.keys(SEQ)) { const cv = document.getElementById(id); const cur = drawSeq(id, cv.getContext("2d"), ms, cv.width, cv.height); chips(id, SEQ[id].seq, cur); }
       if (fixed === null) requestAnimationFrame(frame);
