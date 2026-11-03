@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>動畫樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1300px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  h2 { font-size: 15px; margin: 14px 0 5px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; background: #6a9a6a; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+  .chips { display: flex; gap: 4px; margin-top: 4px; font-size: 12px; }
+  .chips span { background: #2a241e; border: 1px solid #5a4a38; border-radius: 10px; padding: 1px 8px; color: #c8bca8; }
+  .chips span.on { background: #6a4a1e; border-color: #ffd23a; color: #fff; }
+  .ctl { position: sticky; top: 0; background: #1b1714; padding: 6px 0; z-index: 2; font-size: 13px; }
+  .ctl button { background: #2a241e; color: #eadfcc; border: 1px solid #5a4a38; border-radius: 6px; padding: 3px 10px; margin-right: 4px; cursor: pointer; }
+  .ctl button.on { border-color: #ffd23a; }
+  .strip canvas { margin-bottom: 2px; }
+  .lbl { font-size: 11px; color: #9a8e7c; }
+</style>
+</head>
+<body>
+<h1>動畫樣張：程式骨架動畫（示意，等使用者選）</h1>
+<p class="note">美術 PM，2026-11-04。紙娃娃拆成關節（頭、身體、上下臂、上下腿、武器），每個動作是一個「片段」，用程式算關節角度，所以會跟著換裝、換武器、換膚色，不用逐格手繪。技能動畫＝照引擎的技能結構與事件順序，把片段一個個串起來播；LLM 不參與。下方的小標籤是正在播的片段。全部程式繪製。</p>
+<div class="ctl" id="ctl">速度：<button data-s="0.5">0.5×</button><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="0">暫停</button></div>
+<div id="live">
+  <h2>1. 走路四方向＋跑步、潛行<small>擺手、抬腳、上下起伏；正面和背面是左右腳交替抬起</small></h2>
+  <canvas id="walk" width="1260" height="170"></canvas>
+  <div class="row">
+    <div><h2>2. 上樓梯<small>腳先抬、身體再跟上，一階一階升</small></h2><canvas id="stairs" width="420" height="170"></canvas></div>
+    <div><h2>3. 受擊<small>白閃＋後仰＋退半步＋傷害數字（下面每個技能的目標都會播）</small></h2><canvas id="hit" width="300" height="170"></canvas><div class="chips" id="hit-chips"></div></div>
+  </div>
+  <h2>4. 三種技能<small>揮砍＝蓄力＋揮；射擊＝拉弓＋放；施法＝詠唱＋施放（顏色跟元素走）</small></h2>
+  <div class="row">
+    <div><canvas id="sk-slash" width="400" height="170"></canvas><div class="chips" id="sk-slash-chips"></div></div>
+    <div><canvas id="sk-shoot" width="400" height="170"></canvas><div class="chips" id="sk-shoot-chips"></div></div>
+    <div><canvas id="sk-cast" width="400" height="170"></canvas><div class="chips" id="sk-cast-chips"></div></div>
+  </div>
+  <h2>5. 同樣的片段、不同的順序<small>左：砍＋跳（先砍再跳開）；右：跳＋砍（先跳近再砍）。片段完全一樣，只是引擎事件的順序不同</small></h2>
+  <div class="row">
+    <div><canvas id="combo-a" width="400" height="190"></canvas><div class="chips" id="combo-a-chips"></div></div>
+    <div><canvas id="combo-b" width="400" height="190"></canvas><div class="chips" id="combo-b-chips"></div></div>
+    <div><canvas id="combo-c" width="400" height="190"></canvas><div class="chips" id="combo-c-chips"></div></div>
+  </div>
+</div>
+<div id="strip" class="strip" style="display:none"></div>
+<script src="anim.js"></script>
+<script>
+  const A = Anim, PAUSE = 700;
+  const ZH = { windup: "蓄力", slash: "揮砍", thrust: "突刺", draw: "拉弓", release: "放箭", channel: "詠唱", cast: "施放", dash: "衝刺", leap: "跳躍", hit: "受擊", idle: "待機" };
+  const SEQ = {
+    "sk-slash": { seq: [{ clip: "windup" }, { clip: "slash" }], x: 150, target: 215, el: "physical", wpn: "sword" },
+    "sk-shoot": { seq: [{ clip: "draw" }, { clip: "release" }], x: 70, target: 320, el: "physical", wpn: null },
+    "sk-cast": { seq: [{ clip: "channel" }, { clip: "cast" }], x: 70, target: 320, el: "fire", wpn: "staff" },
+    "combo-a": { seq: [{ clip: "windup" }, { clip: "slash" }, { clip: "leap", to: 70 }], x: 230, target: 295, el: "physical", wpn: "sword" },
+    "combo-b": { seq: [{ clip: "leap", to: 230 }, { clip: "windup" }, { clip: "slash" }], x: 70, target: 295, el: "physical", wpn: "sword" },
+    "combo-c": { seq: [{ clip: "dash", to: 230 }, { clip: "windup" }, { clip: "slash" }], x: 70, target: 295, el: "ice", wpn: "sword" },
+  };
+  const LABEL = { "combo-a": "砍＋跳", "combo-b": "跳＋砍", "combo-c": "（同理）衝刺＋砍，冰元素" };
+  const built = {};
+  for (const [id, s] of Object.entries(SEQ)) built[id] = A.sequence(s.seq, s.x, s.target, s.el, s.wpn);
+  function ground(ctx, w, h, gy) {
+    ctx.fillStyle = "#6a9a6a"; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#5e8c5e"; for (let k = 0; k < 40; k++) ctx.fillRect((k * 97) % w, gy - 30 + ((k * 53) % 50), 3, 2);
+    ctx.fillStyle = "#b89a62"; ctx.fillRect(0, gy - 8, w, 18);
+  }
+  function chips(id, seq, cur) {
+    const el = document.getElementById(id + "-chips"); if (!el) return;
+    el.innerHTML = (LABEL[id] ? `<b style="margin-right:6px">${LABEL[id]}</b>` : "") + seq.map((s, i) => `<span class="${s.clip === cur ? "on" : ""}">${i + 1}. ${ZH[s.clip]}</span>`).join("→");
+  }
+  function drawWalk(ctx, ms) {
+    ground(ctx, 1260, 170, 140);
+    const ph = (ms / 900) * Math.PI * 2;
+    const labels = [["south", "正面（南）", "walk"], ["north", "背面（北）", "walk"], ["east", "側面（東）", "walk"], ["west", "側面（西，鏡像）", "walk"], ["east", "跑步", "run"], ["east", "潛行", "sneak"]];
+    labels.forEach(([dir, zh, kind], i) => {
+      const x = 90 + i * 205, p = kind === "run" ? ph * 1.6 : kind === "sneak" ? ph * 0.6 : ph;
+      A.figure(ctx, x, 140, dir, A.walkPose(p, kind), { wpn: "sword", phase: p });
+      ctx.fillStyle = "#1c1712"; ctx.font = "bold 13px 'Microsoft JhengHei'"; ctx.textAlign = "center"; ctx.fillText(zh, x, 162); ctx.textAlign = "left";
+    });
+  }
+  function drawSeq(id, ctx, ms, w = 400, h = 170) {
+    const b = built[id], loop = b.total + PAUSE, t = ms % loop;
+    ground(ctx, w, h, h - 30);
+    const r = b.draw(ctx, t, h - 30, "east");
+    return t >= b.total ? "idle" : r.clip;
+  }
+  function drawHit(ctx, ms) {
+    ground(ctx, 300, 170, 140);
+    const t = (ms % 1400) / A.CLIP.hit.dur;
+    const P = t < 1 ? A.CLIP.hit.pose(t) : A.CLIP.idle.pose((ms / 1600) % 1);
+    const dx = t < 1 ? A.CLIP.hit.move(t)[0] : 0;
+    A.figure(ctx, 150 - dx, 140, "west", P, { look: A.FOE, wpn: "axe" });
+    if (t < 1) { ctx.save(); ctx.globalAlpha = 1 - t; ctx.font = "bold 20px 'Microsoft JhengHei'"; ctx.lineWidth = 4; ctx.strokeStyle = "#1c1712"; ctx.textAlign = "center"; ctx.strokeText("−12", 150, 70 - 20 * t); ctx.fillStyle = "#ff5a48"; ctx.fillText("−12", 150, 70 - 20 * t); ctx.restore(); }
+    return t < 1 ? "hit" : "idle";
+  }
+  const params = new URLSearchParams(location.search);
+  if (params.has("strip")) {
+    // 連續截圖模式：每個動畫取 8 個時間點排成一列
+    document.getElementById("live").style.display = "none"; document.getElementById("ctl").style.display = "none";
+    const S = document.getElementById("strip"); S.style.display = "block";
+    const N = 7, FW = 180, FH = 160;
+    const rows = [
+      ["走路：側面（東）", (c, k) => { ground(c, FW, FH, 125); A.figure(c, 75, 125, "east", A.walkPose(k / N * Math.PI * 2), { wpn: "sword" }); }],
+      ["走路：正面（南）", (c, k) => { ground(c, FW, FH, 125); const p = k / N * Math.PI * 2; A.figure(c, 75, 125, "south", A.walkPose(p), { wpn: "sword", phase: p }); }],
+      ["上樓梯", (c, k) => { c.save(); c.scale(FW / 300, FH / 170); c.translate(-20, 0); ground(c, 420, 170, 155); A.stairs(c, 10, 155, 700 + k * 380); c.restore(); }],
+      ...["sk-slash", "sk-shoot", "sk-cast", "combo-a", "combo-b"].map((id) => [`${{ "sk-slash": "揮砍", "sk-shoot": "射擊", "sk-cast": "施法（火）", "combo-a": "砍＋跳", "combo-b": "跳＋砍" }[id]}`, (c, k) => { const crop = id === "sk-slash" ? [100, 300] : id.startsWith("combo") ? [30, 340] : [30, 360]; c.save(); c.scale(FW / (crop[1] - crop[0]), FW / (crop[1] - crop[0])); c.translate(-crop[0], -(190 - FH * (crop[1] - crop[0]) / FW)); drawSeq(id, c, built[id].total * (k + 0.5) / N, 400, 190); c.restore(); }]),
+    ];
+    for (const [name, fn] of rows) {
+      const wrap = document.createElement("div"); wrap.innerHTML = `<h2>${name}<small>同一個動畫的 7 個時間點，左到右</small></h2>`;
+      const cv = document.createElement("canvas"); cv.width = (FW + 6) * N * 2; cv.height = FH * 2; cv.style.width = (FW + 6) * N + "px"; cv.style.height = FH + "px"; cv.style.background = "#1b1714";
+      const ctx = cv.getContext("2d"); ctx.scale(2, 2);
+      for (let k = 0; k < N; k++) { ctx.save(); ctx.translate(k * (FW + 6), 0); ctx.beginPath(); ctx.rect(0, 0, FW, FH); ctx.clip(); ctx.fillStyle = "#6a9a6a"; ctx.fillRect(0, 0, FW, FH); fn(ctx, k); ctx.restore(); }
+      wrap.appendChild(cv); S.appendChild(wrap);
+    }
+  } else {
+    let speed = 1, clock = 0, last = performance.now();
+    document.querySelectorAll("#ctl button").forEach((b) => b.onclick = () => { speed = +b.dataset.s; document.querySelectorAll("#ctl button").forEach((x) => x.classList.toggle("on", x === b)); });
+    const fixed = params.has("t") ? +params.get("t") : null;
+    function frame(now) {
+      clock += (now - last) * speed; last = now;
+      const ms = fixed ?? clock;
+      drawWalk(document.getElementById("walk").getContext("2d"), ms);
+      const sc = document.getElementById("stairs").getContext("2d"); ground(sc, 420, 170, 155); A.stairs(sc, 10, 155, ms);
+      chips("hit", [{ clip: "hit" }], drawHit(document.getElementById("hit").getContext("2d"), ms));
+      for (const id of Object.keys(SEQ)) { const cv = document.getElementById(id); const cur = drawSeq(id, cv.getContext("2d"), ms, cv.width, cv.height); chips(id, SEQ[id].seq, cur); }
+      if (fixed === null) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+</script>
+</body>
+</html>

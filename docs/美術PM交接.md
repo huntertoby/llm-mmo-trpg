@@ -124,6 +124,7 @@
 | `hud.js`、`hud.html` | 網遊式 HUD 三種版面（`hud.png`、`HUD版面.md`；11-04，等使用者選，未代決） |
 | `textless.html` | 介面去文字化改前／改後對照：技能卡、單位資訊、主角狀態卡（`textless.png`；盤點在 `HUD版面.md` 第二部分） |
 | `battle.js`、`battle.html` | 戰鬥畫面現行格子版 vs D 版（待機、選移動、選範圍、路徑經過冰面和陷阱；`battle-d.png`、`戰鬥D版樣張.md`；2.5D 使用者不要，函式 `iso()` 留在檔案裡但不再顯示） |
+| `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
 | `raceArt.js`、`races.html`、`dragonkin.html` | 可玩種族部件與衝突規則 |
