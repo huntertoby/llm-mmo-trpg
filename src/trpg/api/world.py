@@ -144,6 +144,9 @@ class WorldStore:
         self.grant_title: Callable[[str, AccountTitle], object] | None = None
         """帳號 ID ＋紀念稱號 → 記到帳號檔（5F-3b「碎晶的終結者」）；``None``＝不記。
         :func:`~trpg.api.app.create_app` 接上帳號的 ``grant_title``（帳號檔鎖，5D-R2）。"""
+        self.account_titles: Callable[[str], tuple[str, ...]] | None = None
+        """帳號 ID → 顯示用的紀念稱號（5F-3c：名片、評分榜、首殺、編年史）；``None``＝不顯示。
+        :func:`~trpg.api.app.create_app` 接上帳號的 ``titles_of``。"""
         self.library = library
         self.offers = OfferPrefetcher(library, enabled=prefetch)
         """三選一的背景預先計算與快取（PERF-3）。"""
@@ -270,6 +273,18 @@ class WorldStore:
         """角色的帳號（世界日誌的 ``actor``；沒有帳號時＝角色 ID，同 Q15）。"""
         found = None if self.actor_of is None else self.actor_of(character_id)
         return character_id if found is None else found
+
+    def titles_of_account(self, account_id: str | None) -> tuple[str, ...]:
+        """帳號的紀念稱號（5F-3c；沒有帳號或沒接上帳號＝空）。"""
+        if account_id is None or self.account_titles is None:
+            return ()
+        return self.account_titles(account_id)
+
+    def titles_of_character(self, character_id: str) -> tuple[str, ...]:
+        """角色所屬帳號的紀念稱號（稱號是帳號層級，5F-3b；5F-3c 顯示在名字旁）。"""
+        if self.actor_of is None:
+            return ()
+        return self.titles_of_account(self.actor_of(character_id))
 
     def battle_of(self, character_id: str) -> BattleSession | None:
         with self._lock:

@@ -4468,6 +4468,14 @@
           "at": {
             "type": "integer",
             "title": "At"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -4725,6 +4733,14 @@
               }
             ],
             "title": "First Kill Zh"
+          },
+          "first_kill_titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "First Kill Titles",
+            "default": []
           },
           "title_zh": {
             "type": "string",
@@ -5566,6 +5582,14 @@
           "title_zh": {
             "type": "string",
             "title": "Title Zh"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles",
+            "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
           }
         },
         "additionalProperties": false,
@@ -5587,6 +5611,14 @@
           "text_zh": {
             "type": "string",
             "title": "Text Zh"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles",
+            "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
           }
         },
         "additionalProperties": false,
@@ -5610,6 +5642,14 @@
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles",
+            "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
           }
         },
         "additionalProperties": false,
@@ -5650,6 +5690,14 @@
           "tied": {
             "type": "boolean",
             "title": "Tied"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles",
+            "description": "這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。"
           }
         },
         "additionalProperties": false,
@@ -16658,6 +16706,14 @@
           "saved_zh": {
             "type": "string",
             "title": "Saved Zh"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles",
+            "default": []
           }
         },
         "additionalProperties": false,

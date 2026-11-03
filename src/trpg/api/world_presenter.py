@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Final
 
+from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.league_view import league_event_line
 from trpg.api.season_boss_view import season_boss_event_line
 from trpg.api.season_view import season_event_line
@@ -505,10 +506,11 @@ def world_view(
     battle_id: str | None = None,
     raw_events: Sequence[WorldEvent] = (),
     narrations: Sequence[NarrateAction] = (),
+    titles: TitlesOf = no_titles,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
-    的說書人敘述（事件卡用，5B-5）。"""
+    的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
@@ -539,7 +541,7 @@ def world_view(
         pending_offer=pending_offer_view(library, world, char),
         threads=thread_views(library, world, char, now),
         rumors=rumor_lines(library, char, raw_events),
-        party=party_view(library, world, char, in_battle=in_battle),
+        party=party_view(library, world, char, in_battle=in_battle, titles=titles),
         my_shadow=my_shadow_view(library, world, char, in_battle=in_battle),
         wallet=wallet_view(library, char),
         inventory=_inventory(library, char, in_battle=in_battle),

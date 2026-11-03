@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.world_party_schemas import (
     AiChoiceView,
     MercenaryView,
@@ -127,7 +128,10 @@ def _shadow_skill_names(library: ContentLibrary, snapshot: ShadowSnapshot) -> tu
 
 
 def _shadow_view(
-    library: ContentLibrary, char: CharacterState, snapshot: ShadowSnapshot
+    library: ContentLibrary,
+    char: CharacterState,
+    snapshot: ShadowSnapshot,
+    titles: TitlesOf = no_titles,
 ) -> ShadowView:
     level = shadow_level(snapshot, char.level)
     tier = shadow_tier(library, snapshot, char.level)
@@ -146,6 +150,7 @@ def _shadow_view(
         hired=hired,
         # 朋友的影子存的地點：看的人還沒發現的隱藏地點用提示語（5C-3f）
         saved_zh=location_name_for(library, char, snapshot.region, snapshot.location),
+        titles=titles(snapshot.owner),
     )
 
 
@@ -209,9 +214,14 @@ def _quest_name(library: ContentLibrary, quest: str) -> str | None:
 
 
 def party_view(
-    library: ContentLibrary, world: WorldState, char: CharacterState, *, in_battle: bool
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    *,
+    in_battle: bool,
+    titles: TitlesOf = no_titles,
 ) -> PartyView:
-    """隊伍面板與雇用清單（見模組說明）。"""
+    """隊伍面板與雇用清單（見模組說明）。``titles``：影子主人的帳號稱號（5F-3c 玩家名片）。"""
     problem = "戰鬥中" if in_battle else hire_problem(library, char)
     table = library.world_mercenaries
     roster = () if table is None else table.mercenaries
@@ -223,7 +233,7 @@ def party_view(
         hire_problem_zh=problem,
         mercenaries=tuple(_mercenary_view(library, m, m.id in char.mercenaries) for m in roster),
         shadows=tuple(
-            _shadow_view(library, char, s.snapshot)
+            _shadow_view(library, char, s.snapshot, titles)
             for s in world.shadows
             if s.snapshot.owner != char.character_id
         ),

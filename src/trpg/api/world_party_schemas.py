@@ -82,6 +82,8 @@ class ShadowView(_ApiModel):
     """保留給 5E（自己帳號的其他角色）；帳號還沒做，目前一律 ``False``。"""
     saved_zh: str
     """存的地點（例「霧渡鎮」）。"""
+    titles: tuple[str, ...] = ()
+    """影子主人帳號的紀念稱號（5F-3c 玩家名片；「碎晶的終結者（s1）」）。"""
 
 
 class AiChoiceView(_ApiModel):
