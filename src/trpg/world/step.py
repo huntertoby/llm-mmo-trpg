@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from trpg.content.battle import UnitTemplate
+from trpg.content.fields import FieldExit
 from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.world.actions import (
@@ -67,6 +68,7 @@ from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.field import (
+    FieldCtx,
     FieldHooks,
     outdoor_map,
     placed,
@@ -460,8 +462,28 @@ def _arrive(
     return char, (*watched, *sensed)
 
 
-_HOOKS: Final = FieldHooks(travel=_travel_fn, watch=walk_watch, arrive=_arrive, sense=sense_walk)
-"""``walk`` 的鉤子：踩出口＝``travel``、看得見的敵人（6C-1）、隱藏入口與「！」（6C-5）。"""
+def _cross_fn(
+    ctx: FieldCtx, char: CharacterState, exit_: FieldExit
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+    """跨區出口＝對面那一區的一次 ``travel``（21.10 第 20 條，6C-R2）：照常擲遇敵、擲事件；不趕路、
+    過渡口本身不另外花東西。地點與開放條件已由 :func:`trpg.world.field.walk` 檢查。"""
+    region = exit_.region or char.region
+    world_map = _world_map(ctx.library, region)
+    target = world_map.location_by_id().get(exit_.to)
+    if target is None:
+        raise WorldActionError("跨區的出口還沒開放，請用傳送")
+    moved = char.model_copy(update={"region": region})
+    result = _travel_to(
+        ctx.library, ctx.world, moved, (world_map, target), now=ctx.now, hasten=False
+    )
+    return result.world, result.char, result.events
+
+
+_HOOKS: Final = FieldHooks(
+    travel=_travel_fn, watch=walk_watch, arrive=_arrive, sense=sense_walk, cross=_cross_fn
+)
+"""``walk`` 的鉤子：踩出口＝``travel``、看得見的敵人（6C-1）、隱藏入口與「！」（6C-5）、跨區出口
+（21.10 第 20 條）。"""
 
 
 def _travel(
@@ -471,11 +493,26 @@ def _travel(
     action: TravelAction,
     now: int,
 ) -> StepResult:
-    rules = _rules(library)
     world_map = _world_map(library, char.region)
     target = _check_travel(world, char, world_map, action)
+    return _travel_to(library, world, char, (world_map, target), now=now, hasten=action.hasten)
+
+
+def _travel_to(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    where: tuple[LocationMapDef, LocationDef],
+    *,
+    now: int,
+    hasten: bool,
+) -> StepResult:
+    """抵達 ``where`` 的地點（已檢查過能去）：擲遇敵、事件、提示與感知（``travel``、跨區出口
+    共用）。"""
+    world_map, target = where
+    rules = _rules(library)
     spent = 0
-    if action.hasten:
+    if hasten:
         spent = rules.hasten.cost
         if char.supplies < spent:
             raise WorldActionError(f"補給不足，趕路要 {spent} 補給")
@@ -484,12 +521,12 @@ def _travel(
         chance = 0  # 已清空：沒有敵人（代決 5A4-9）；擲骰照擲，亂數消耗不變
     if outdoor_map(library, char.region, target.id) is not None:
         chance = 0  # 6C-1：有實地地圖的地點改由看得見的敵人取代（21.9 第 7 條）；擲骰照擲
-    if action.hasten:
+    if hasten:
         chance = chance * rules.hasten.encounter_permille // 1000
 
     events: list[WorldEvent] = [
         TraveledEvent(
-            from_location=char.location, to=target.id, hasten=action.hasten, supplies_spent=spent
+            from_location=char.location, to=target.id, hasten=hasten, supplies_spent=spent
         )
     ]
     from_location = char.location

@@ -41,6 +41,7 @@ from trpg.world.town import with_visited_town
 
 __all__ = [
     "ArriveFn",
+    "CrossFn",
     "FieldCtx",
     "FieldGrid",
     "FieldHooks",
@@ -90,6 +91,9 @@ type ArriveFn = Callable[
 type SenseFn = Callable[
     [FieldCtx, CharacterState, WalkedEvent], tuple[CharacterState, tuple[WorldEvent, ...]]
 ]
+type CrossFn = Callable[[FieldCtx, CharacterState, FieldExit], WorldResult]
+"""走跨區出口（21.10 第 20 條）：換到對面那一區的地點，算一步（:func:`trpg.world.step` 的
+``travel``）。"""
 """走完一段、觸發出口等之前（6C-5：隱藏入口的感知、碰到「！」開事件卡）。"""
 
 
@@ -101,6 +105,8 @@ class FieldHooks:
     watch: WatchFn | None = None
     arrive: ArriveFn | None = None
     sense: SenseFn | None = None
+    cross: CrossFn | None = None
+    """跨區出口＝對面那一區的一次 ``travel``（21.10 第 20 條；沒給＝跨區出口不能走）。"""
 
 
 _DIRS: tuple[tuple[XY, Facing], ...] = (
@@ -410,7 +416,7 @@ def _take_exit(
         char = _enter(library, char, outside, exit_.arrive, 0)
         return world, char, (_entered(char, "exit"),)
     if exit_.region is not None and exit_.region != found.region:
-        world, char, events = _cross_region(ctx, char, (exit_, index))
+        world, char, events = _cross_region(ctx, char, (exit_, index), hooks.cross)
         return world, char, (*events, _entered(char, "exit"))
     world, char, events = hooks.travel(library, world, char, TravelAction(to=exit_.to), ctx.now)
     target = outdoor_map(library, char.region, exit_.to)
@@ -418,11 +424,14 @@ def _take_exit(
     return world, char, (*events, _entered(char, "exit"))
 
 
-def _cross_region(ctx: FieldCtx, char: CharacterState, at: tuple[FieldExit, int]) -> WorldResult:
+def _cross_region(
+    ctx: FieldCtx, char: CharacterState, at: tuple[FieldExit, int], cross: CrossFn | None
+) -> WorldResult:
     """跨區的出口（6D-5；21.10 第 1 條：渡口走到尾端的出口才進入荒原的灰渡口）。
 
     兩端的地點都要已開放（``unlock_flag``）；換到對面那一區的地點，站在對面 ``arrive`` 出口往內
-    一格。和原本渡口的傳送一樣不擲骰、不花時間與補給（保守做法，見 6D-5 報告）。之後
+    一格。走過去是對面那一區的一次 ``travel``（``cross`` 鉤子；21.10 第 20 條，6C-R2 改：原本照
+    渡口的傳送不擲骰）：照常擲遇敵、擲事件，過渡口本身不另外花東西（不趕路）。之後
     :func:`trpg.world.step.world_step` 把抵達的地點記進 ``visited_locations``，那一區就在自己的
     大世界圖上亮起（:func:`trpg.world.atlas.region_lit`）。"""
     library, world = ctx.library, ctx.world
@@ -430,7 +439,7 @@ def _cross_region(ctx: FieldCtx, char: CharacterState, at: tuple[FieldExit, int]
     region = exit_.region
     target_map = None if region is None else library.world_maps.get(region)
     target = None if target_map is None else target_map.location_by_id().get(exit_.to)
-    if region is None or target is None:
+    if region is None or target is None or cross is None:
         raise WorldActionError("跨區的出口還沒開放，請用傳送")
     source = world_map_of(library, char.region).location_by_id().get(char.location)
     for place in (source, target):
@@ -440,9 +449,9 @@ def _cross_region(ctx: FieldCtx, char: CharacterState, at: tuple[FieldExit, int]
             and not world.has_flag(place.unlock_flag)
         ):
             raise WorldActionError(f"{place.name_zh}還沒開放")
-    char = char.model_copy(update={"region": region, "location": exit_.to, "camped_at": None})
+    world, char, events = cross(ctx, char, exit_)
     char = _enter(library, char, outdoor_map(library, region, exit_.to), exit_.arrive, index)
-    return world, char, ()
+    return world, char, events
 
 
 def _take_door(ctx: FieldCtx, char: CharacterState, cell: XY, travel: TravelFn) -> WorldResult:
