@@ -9,6 +9,7 @@ import { drawInkFigure, type InkHooks } from "./inkDoll";
 import { MATERIAL } from "./material";
 import type { InkPose } from "./inkPose";
 import type { View } from "./inkStyle";
+import { whiteSilhouette } from "./creaturePose";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
@@ -102,7 +103,7 @@ export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed:
  * 產生一張離屏 canvas（`dpr` 倍解析度；沒有 DOM 時回傳 `null`）。腳底在 (DOLL_W/2, DOLL_FOOT_Y)。
  * C 畫風沒有黑色剪影外框（墨線取代它）；史詩、傳說（頭目）保留外光，是唯一的身體外光。
  */
-export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number, ground = true, pose: InkPose | null = null): HTMLCanvasElement | null {
+export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number, ground = true, pose: InkPose | null = null, flash = 0): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const make = (): HTMLCanvasElement => {
     const c = document.createElement("canvas");
@@ -116,6 +117,23 @@ export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boole
   o.scale(dpr, dpr);
   o.translate(DOLL_W / 2, DOLL_FOOT_Y);
   drawFigurePose(o, spec, facing, downed, ground, pose);
+  if (flash > 0) {
+    // 受擊白閃（6M-4，同 6M-3 異形）：另畫一次不含地上影子的身體，轉成白色剪影疊回去；剪影外不變白、外光不閃
+    const body = make();
+    const b = body.getContext("2d");
+    if (b !== null) {
+      b.scale(dpr, dpr);
+      b.translate(DOLL_W / 2, DOLL_FOOT_Y);
+      drawFigurePose(b, spec, facing, downed, false, pose);
+      const img = b.getImageData(0, 0, body.width, body.height);
+      whiteSilhouette(img.data, flash);
+      b.putImageData(img, 0, 0);
+      o.save();
+      o.setTransform(1, 0, 0, 1, 0, 0); // 目標畫布已經縮放、平移到腳底：以像素疊回去
+      o.drawImage(body, 0, 0);
+      o.restore();
+    }
+  }
   const glowColor = spec.rarity !== undefined ? RARITY_GLOW[spec.rarity] : undefined;
   if (glowColor === undefined) return off;
   const glow = make();

@@ -41,7 +41,11 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, isLinked, isProne, Pulses, type BodyFrame } from "./unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, hasSkeleton, isLinked, isProne, PRONE, Pulses, type BodyFrame } from "./unitSprite";
+import { IdleMotion } from "./idleMotion";
+import { arriveFrame, leaveFrame, type TransitFrame, type TransitKind } from "./doorClips";
+import { DOLL_SCALE } from "./paperdoll";
+import type { InkPose } from "./inkPose";
 import { CREATURE_CLIPS, quantizeCreaturePose } from "./creaturePose";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
@@ -62,7 +66,7 @@ import {
   type TileGeo,
 } from "./pathArt";
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
-import { DUST_FROM, gaitPose, legFrame, proneBody, tilePhase } from "./motionClips";
+import { DUST_FROM, gaitPose, humanHit, knockOffset, legFrame, proneBody, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET } from "./unitSprite";
 import type { Facing } from "../api/types";
@@ -100,6 +104,8 @@ export interface Highlights {
 }
 
 const T = TILE_SIZE;
+/** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 0.92）。 */
+const DOLL_PX = (T / 52) * DOLL_SCALE;
 /** 可燃小火苗平時的透明度（3-38）。 */
 export const FLAME_DIM = 0.4;
 const BACKGROUND = 0x15151c;
@@ -200,6 +206,9 @@ export class BattleRenderer {
    * 目標高度沒變的動畫在重畫後接著播；目標變了（又有新的地形變化）就以新畫面為準。
    */
   private readonly lifting = new Map<string, LiftState>();
+  /** 待機（6M-4）：站著的人呼吸、偶爾的小動作。 */
+  private readonly idle = new IdleMotion();
+  private readonly drawWaiters: Array<() => void> = [];
   private ready = false;
   private destroyed = false;
   /** 算繪丟過例外或 WebGL context 一直沒恢復（UI-T1）；之後不再算繪，等 `BattleCanvas` 換新的繪製器。 */
@@ -238,6 +247,7 @@ export class BattleRenderer {
     ticker.remove(this.app.render, this.app);
     ticker.add(this.safeRender, this, UPDATE_PRIORITY.LOW);
     ticker.add((t) => this.guard(() => this.pulses.tick(t.deltaMS)));
+    ticker.add((t) => this.guard(() => this.tickIdle(t.deltaMS)));
     this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
     stage.eventMode = "none";
@@ -362,6 +372,7 @@ export class BattleRenderer {
     this.silhouetteOf.clear();
     this.unitSprites.clear();
     this.unitDrawOf.clear();
+    this.idle.reset();
     this.pulses.clear();
     this.art.beginFrame();
     this.flameMarks = [];
@@ -389,6 +400,8 @@ export class BattleRenderer {
     this.drawMist(model);
     this.art.endFrame();
     this.resumeLifts(model);
+    const waiters = this.drawWaiters.splice(0);
+    for (const w of waiters) w();
   }
 
   /** 重畫後：目標高度沒變的升降動畫套回目前的高度繼續播，其餘作廢。 */
@@ -916,33 +929,137 @@ export class BattleRenderer {
   async animate(plan: readonly MoveAnim[], skip: () => boolean): Promise<void> {
     if (!this.ready) return;
     for (const m of plan) {
-      let sprite = this.unitSprites.get(m.unitId);
+      const sprite = this.unitSprites.get(m.unitId);
       if (sprite === undefined) continue;
-      const outline = this.silhouetteOf.get(m.unitId);
-      if (outline !== undefined) outline.visible = false; // 剪影留在原位會誤導；重畫時再依新位置判斷
-      const to = this.center(m.to);
-      // 途中跟著當下所在的排換圖層（較南的那排），結束時回到終點那排
-      const toRow = (s: Container) => (t: number) => {
-        const units = this.rows.row(rowDuringMove(m.from.y, m.to.y, t)).units;
-        if (!s.destroyed && s.parent !== units) units.addChild(s);
+      this.idle.hold(m.unitId, sprite); // 移動中不播待機（6M-4）
+      try {
+        await this.moveOne(m, sprite, skip);
+      } finally {
+        this.idle.release(m.unitId);
+      }
+    }
+  }
+
+  private async moveOne(m: MoveAnim, start: Container, skip: () => boolean): Promise<void> {
+    let sprite = start;
+    const outline = this.silhouetteOf.get(m.unitId);
+    if (outline !== undefined) outline.visible = false; // 剪影留在原位會誤導；重畫時再依新位置判斷
+    const to = this.center(m.to);
+    // 途中跟著當下所在的排換圖層（較南的那排），結束時回到終點那排
+    const toRow = (s: Container) => (t: number) => {
+      const units = this.rows.row(rowDuringMove(m.from.y, m.to.y, t)).units;
+      if (!s.destroyed && s.parent !== units) units.addChild(s);
+    };
+    if (m.durationMs <= 0 || skip()) {
+      sprite.position.set(to.x, to.y);
+      toRow(sprite)(1);
+      return;
+    }
+    const gait: Gait | null = m.mode === "walk" ? "walk" : m.mode === "dash" ? "run" : null;
+    if (gait !== null && m.style === "slide") {
+      const facing = facingOf(m.from, m.to, this.unitDrawOf.get(m.unitId)?.facing ?? "south");
+      if (facing !== this.unitDrawOf.get(m.unitId)?.facing) sprite = this.turn(m.unitId, sprite, facing);
+      const tile = this.strideOf(m.unitId);
+      await this.stepLeg(m.unitId, sprite, m.from, m.to, m.durationMs, skip, { gait, tile, linear: true, onRow: toRow(sprite) });
+      this.restBody(m.unitId, sprite);
+      return;
+    }
+    this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
+    toRow(sprite)(0);
+    await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style, toRow(sprite));
+  }
+
+  // ---- 待機、進出門（6M-4）----------------------------------------------------
+
+  /** 每幀推進待機：站著的人呼吸、偶爾換小動作的貼圖。 */
+  private tickIdle(dt: number): void {
+    this.idle.tick(dt, this.unitSprites, this.unitDrawOf, (id, sprite, pose) => this.idlePose(id, sprite, pose));
+  }
+
+  private idlePose(unitId: string, sprite: Container, pose: InkPose | null): void {
+    const draw = this.unitDrawOf.get(unitId);
+    if (draw === undefined || sprite.destroyed) return;
+    for (const node of bodyNodes(sprite)) {
+      if (node.label !== BODY_LABEL) continue;
+      const tex = bodyTexture(this.art, draw, { pose });
+      if (tex !== null && node.texture !== tex) node.texture = tex;
+    }
+  }
+
+  /** 開關待機（截圖、量測用；關掉時下一幀全員站好）。 */
+  setIdle(on: boolean): void {
+    this.idle.enabled = on;
+  }
+
+  /** 待機時鐘歸零（截圖時固定相位用）。 */
+  setIdleClock(ms: number): void {
+    this.idle.clock = ms;
+  }
+
+  /** 等下一次重畫場景（換地圖後等新地圖畫好）；`timeoutMs` 內沒有重畫也繼續。 */
+  nextDraw(timeoutMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        resolve();
       };
-      if (m.durationMs <= 0 || skip()) {
-        sprite.position.set(to.x, to.y);
-        toRow(sprite)(1);
-        continue;
-      }
-      const gait: Gait | null = m.mode === "walk" ? "walk" : m.mode === "dash" ? "run" : null;
-      if (gait !== null && m.style === "slide") {
-        const facing = facingOf(m.from, m.to, this.unitDrawOf.get(m.unitId)?.facing ?? "south");
-        if (facing !== this.unitDrawOf.get(m.unitId)?.facing) sprite = this.turn(m.unitId, sprite, facing);
-        const tile = this.strideOf(m.unitId);
-        await this.stepLeg(m.unitId, sprite, m.from, m.to, m.durationMs, skip, { gait, tile, linear: true, onRow: toRow(sprite) });
-        this.restBody(m.unitId, sprite);
-        continue;
-      }
-      this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
-      toRow(sprite)(0);
-      await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style, toRow(sprite));
+      this.drawWaiters.push(finish);
+      window.setTimeout(finish, timeoutMs);
+    });
+  }
+
+  /** 目前快取的小人／地形貼圖數（效能量測用）。 */
+  textureCount(): number {
+    return this.art.size;
+  }
+
+  /** 把進出門、換地圖的一格畫到小人身上（整個人一起縮放、透明；走路時換姿勢）。 */
+  private transitPose(unitId: string, sprite: Container, base: { x: number; y: number }, f: TransitFrame): void {
+    if (sprite.destroyed) return;
+    sprite.position.set(base.x + f.dx * T, base.y + f.dy * T - f.rise);
+    sprite.scale.set(f.scale);
+    sprite.alpha = f.alpha;
+    if (f.pose !== null) this.poseBody(unitId, sprite, { pose: f.pose });
+    else this.restBody(unitId, sprite);
+  }
+
+  /**
+   * 離開這張地圖（進門／走出邊緣出口）：`ms` 毫秒內播離開片段，結束時停在看不見的樣子（之後換地圖會重畫）。
+   * `facing` ＝ 走進門格／出口格的方向；門的話先轉身朝門。
+   */
+  async playLeave(unitId: string, kind: TransitKind, facing: Facing, ms: number, skip: () => boolean): Promise<void> {
+    if (!this.ready) return;
+    let sprite = this.unitSprites.get(unitId);
+    if (sprite === undefined) return;
+    if (facing !== this.unitDrawOf.get(unitId)?.facing) sprite = this.turn(unitId, sprite, facing);
+    const s = sprite;
+    const base = { x: s.position.x, y: s.position.y };
+    this.idle.hold(unitId, s);
+    try {
+      await this.during(ms, skip, (u) => this.transitPose(unitId, s, base, leaveFrame(kind, facing, u)));
+      this.transitPose(unitId, s, base, leaveFrame(kind, facing, 1));
+    } finally {
+      this.idle.release(unitId);
+    }
+  }
+
+  /** 抵達新地圖（出門／從對面入口走進來一步）：從看不見播到站好。 */
+  async playArrive(unitId: string, kind: TransitKind, facing: Facing, ms: number, skip: () => boolean): Promise<void> {
+    if (!this.ready) return;
+    let sprite = this.unitSprites.get(unitId);
+    if (sprite === undefined) return;
+    if (facing !== this.unitDrawOf.get(unitId)?.facing) sprite = this.turn(unitId, sprite, facing);
+    const s = sprite;
+    const base = { x: s.position.x, y: s.position.y };
+    this.idle.hold(unitId, s);
+    try {
+      this.transitPose(unitId, s, base, arriveFrame(kind, facing, 0));
+      await this.during(ms, skip, (u) => this.transitPose(unitId, s, base, arriveFrame(kind, facing, u)));
+    } finally {
+      this.transitPose(unitId, s, base, arriveFrame(kind, facing, 1));
+      this.idle.release(unitId);
     }
   }
 
@@ -1006,6 +1123,13 @@ export class BattleRenderer {
     }
   }
 
+  /** 滑倒後到下次重畫之前，把這個人當作倒地狀態（待機不套用、受擊不站起來；6M-4）。 */
+  private markProne(unitId: string): void {
+    const draw = this.unitDrawOf.get(unitId);
+    if (draw === undefined || isProne(draw)) return;
+    this.unitDrawOf.set(unitId, { ...draw, statusIds: [...(draw.statusIds ?? []), PRONE] });
+  }
+
   /** 走完：小人回到站好（倒地狀態＝躺著）的貼圖與位置（之後的 `view` 會再以結果重畫）。 */
   private restBody(unitId: string, sprite: Container): void {
     const draw = this.unitDrawOf.get(unitId);
@@ -1030,6 +1154,7 @@ export class BattleRenderer {
     if (!this.ready) return;
     let sprite = this.unitSprites.get(walk.unitId);
     if (sprite === undefined) return;
+    this.idle.hold(walk.unitId, sprite); // 走路中不播待機（6M-4）
     const outline = this.silhouetteOf.get(walk.unitId);
     if (outline !== undefined) outline.visible = false;
     let facing: Facing = this.unitDrawOf.get(walk.unitId)?.facing ?? "south";
@@ -1073,7 +1198,9 @@ export class BattleRenderer {
         if (sprite.parent !== layer) layer.addChild(sprite);
       }
       if (!lying) this.restBody(walk.unitId, sprite);
+      else this.markProne(walk.unitId);
       this.follow(null);
+      this.idle.release(walk.unitId);
     }
   }
 
@@ -1243,6 +1370,7 @@ export class BattleRenderer {
    */
   private creatureHit(unitId: string, startMs: number, ms: number): Effect {
     const node = new Container();
+    let held = false;
     const current = () => {
       const s = this.unitSprites.get(unitId);
       return s === undefined || s.destroyed ? null : s;
@@ -1254,12 +1382,59 @@ export class BattleRenderer {
       update: (t) => {
         const s = current();
         if (s === null) return;
+        if (!held) {
+          held = true;
+          this.idle.hold(unitId, s);
+        }
         const pose = quantizeCreaturePose(CREATURE_CLIPS.hit.pose(t));
         this.poseBody(unitId, s, { creature: pose });
       },
       end: () => {
         const s = current();
         if (s !== null) this.restBody(unitId, s);
+        if (held) this.idle.release(unitId);
+        held = false;
+      },
+    };
+  }
+
+  /** 站在 `p`、有紙娃娃骨架、沒有倒地的人形單位 ID；沒有為 `null`。 */
+  private dollAt(p: Pos): string | null {
+    for (const [id, u] of this.unitDrawOf) if (u.x === p.x && u.y === p.y && hasSkeleton(u) && !isProne(u)) return id;
+    return null;
+  }
+
+  /**
+   * 人形受擊（6M-4）：`ms` 毫秒內播「受擊」片段——仰一下、往後彈、白閃只閃剪影（不含地上的影子、不整格變白）。
+   * 和異形一樣每幀照單位 ID 找目前的小人；結束時回到站好的貼圖。
+   */
+  private dollHit(unitId: string, startMs: number, ms: number): Effect {
+    let held = false;
+    const current = () => {
+      const s = this.unitSprites.get(unitId);
+      return s === undefined || s.destroyed ? null : s;
+    };
+    return {
+      node: new Container(),
+      startMs,
+      endMs: startMs + ms,
+      update: (t) => {
+        const s = current();
+        if (s === null) return;
+        if (!held) {
+          held = true;
+          this.idle.hold(unitId, s);
+        }
+        const h = humanHit(t);
+        this.poseBody(unitId, s, { pose: h.pose, flash: h.flash });
+        const off = knockOffset(this.unitDrawOf.get(unitId)?.facing ?? "south", h.knock * DOLL_PX);
+        for (const node of bodyNodes(s)) node.position.set(off.x, FEET + off.y);
+      },
+      end: () => {
+        const s = current();
+        if (s !== null) this.restBody(unitId, s);
+        if (held) this.idle.release(unitId);
+        held = false;
       },
     };
   }
@@ -1286,9 +1461,12 @@ export class BattleRenderer {
     for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, at));
     for (const hit of vfx.hits) {
       // 異形（6M-3）：受擊只閃角色的剪影（不畫整片白圓），身體往後彈一下
+      // 有骨架的人形（6M-4，美術 PM 檢查）：同樣只閃剪影、往後彈；形態、召喚物、倒地的人照舊畫白圓
       const foe = this.creatureAt(hit.pos);
-      effects.push(...hitEffects(hit, now, impactMs, auraHits, at, foe === null));
+      const doll = foe === null ? this.dollAt(hit.pos) : null;
+      effects.push(...hitEffects(hit, now, impactMs, auraHits, at, foe === null && doll === null));
       if (foe !== null) effects.push(this.creatureHit(foe, now + hit.atMs, Math.max(160, impactMs)));
+      if (doll !== null) effects.push(this.dollHit(doll, now + hit.atMs, Math.max(160, impactMs)));
     }
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {

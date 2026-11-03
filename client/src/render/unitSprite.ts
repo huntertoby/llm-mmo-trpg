@@ -275,6 +275,8 @@ function bodyPart(node: Sprite, u: UnitDraw, feet: number): Sprite {
 export interface BodyFrame {
   pose?: InkPose | null;
   creature?: CreaturePose | null;
+  /** 紙娃娃受擊白閃（6M-4；0～1，只閃剪影）；異形的白閃在 `creature.flash`。 */
+  flash?: number;
 }
 
 /**
@@ -287,7 +289,13 @@ export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Te
   if (formArtOfUnit(u, spec) !== null) return null;
   const cr = creatureOf(u);
   if (cr !== null) return art.creature(cr, creatureSide(u), frame.creature ?? null);
-  return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null));
+  return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null), frame.flash ?? 0);
+}
+
+/** 有紙娃娃骨架的人形（不是異形、形態、召喚物）：受擊、待機的小動作會換骨架姿勢（6M-4）。 */
+export function hasSkeleton(u: UnitDraw): boolean {
+  if (u.downed || summonLookOf(u) !== null || creatureOf(u) !== null) return false;
+  return formArtOfUnit(u, specOfUnit(u)) === null;
 }
 
 /** 倒地狀態持續躺著（6M-3）：小人以腳底為軸轉倒、往前溜一點（和滑倒動畫的最後一格相同）。 */
@@ -583,11 +591,14 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     if (over !== null) c.addChild(over);
   }
   if (u.summon) c.addChild(summonBadge(u));
-  const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
-  const marker = label(u.marker, 12, 0xffffff, true);
-  marker.anchor.set(0.5);
-  marker.position.set(-T * 0.37, T * 0.22);
-  c.addChild(tag, marker);
+  if (u.marker !== "") {
+    // 沒有代號（戰場不顯示字母，6M-4 併入美術 PM 檢查）時不畫黑色小圓：陣營看腳下的圓盤，字母只在滑過與行動順序列出現
+    const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
+    const marker = label(u.marker, 12, 0xffffff, true);
+    marker.anchor.set(0.5);
+    marker.position.set(-T * 0.37, T * 0.22);
+    c.addChild(tag, marker);
+  }
   if (look.badge !== null) {
     const badge = downedBadge(look.badge);
     badge.position.set(-T * 0.5 + 11, -T * 0.5 + 11);
