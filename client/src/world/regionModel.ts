@@ -1,7 +1,8 @@
 // 區域圖（只能看；Phase 6C-6，21.1、21.2）的純函式：迷霧三段、標記、傳送石能不能點。
 // 規則一律由後端算好（`WorldMapView.fog`、`stones`、`can_teleport`），這裡只決定外觀與說明文字。
-// 底圖：還沒有區域插畫時用節點圖的座標與連線（`art_url` 有值時改畫插畫，節點照樣疊在上面）。
+// 底圖：6F-ART1 起是程式畫的區域插畫（`regionScene` → `render/regionMapPainter.ts`）；節點留著當透明的點擊、滑過區。
 import type { WorldLocationView, WorldMapView } from "../api/types";
+import type { ArtRoad, ArtSpot, ArtTrail, RegionScene } from "../render/regionMapArt";
 
 export type Fog = WorldLocationView["fog"];
 type StoneView = WorldMapView["stones"][number];
@@ -38,6 +39,10 @@ export interface RegionNode {
 
 export interface RegionEdge {
   key: string;
+  a: string;
+  b: string;
+  /** 兩端有幾個是剪影（2＝兩端都沒去過，插畫不畫這條路）。 */
+  silhouettes: number;
   x1: number;
   y1: number;
   x2: number;
@@ -111,9 +116,53 @@ export function regionEdges(map: WorldMapView): RegionEdge[] {
     const fa = from.fog;
     const fb = to.fog;
     if (fa === "fog" || fb === "fog") continue;
-    out.push({ key: `${a}-${b}`, x1: from.x, y1: from.y, x2: to.x, y2: to.y, known: fa === "visited" && fb === "visited" });
+    const silhouettes = (fa === "silhouette" ? 1 : 0) + (fb === "silhouette" ? 1 : 0);
+    out.push({ key: `${a}-${b}`, a, b, silhouettes, x1: from.x, y1: from.y, x2: to.x, y2: to.y, known: fa === "visited" && fb === "visited" });
   }
   return out;
+}
+
+/** 足跡要畫在哪條路上（第 2 節表格）：通往這個地點、看得到的路；好幾條時選連到的地點 ID 排序最前的那條。 */
+function trailRoad(roads: readonly ArtRoad[], id: string): ArtRoad | null {
+  let best: { other: string; road: ArtRoad } | null = null;
+  for (const road of roads) {
+    const other = road.a === id ? road.b : road.b === id ? road.a : null;
+    if (other === null) continue;
+    if (best === null || other < best.other) best = { other, road };
+  }
+  return best?.road ?? null;
+}
+
+/** 區域插畫（6F-ART1）要畫的場景：霧裡的地點、路、標記都不在裡面（隱藏地點後端本來就不送）。 */
+export function regionScene(map: WorldMapView): RegionScene {
+  const nodes = regionNodes(map).filter((n) => n.fog !== "fog");
+  const kinds = new Map(map.locations.map((l) => [l.id, l.kind]));
+  const spots: ArtSpot[] = nodes.map((n) => ({
+    id: n.id,
+    kind: kinds.get(n.id) ?? "",
+    x: n.x,
+    y: n.y,
+    fog: n.fog === "visited" ? "visited" : "silhouette",
+    name: n.label ?? UNKNOWN_ZH,
+    level: n.level ?? "",
+    cleared: n.cleared,
+    current: n.current,
+    quest: n.quests.length > 0,
+    stone: n.stones.length === 0 ? null : n.stones.some((s) => s.state !== "locked") ? "on" : "off",
+  }));
+  // 路：兩端都不在霧裡、且至少一端去過（兩端都是剪影的路不畫）
+  const roads: ArtRoad[] = regionEdges(map)
+    .filter((e) => e.silhouettes < 2)
+    .map((e) => ({ a: e.a, b: e.b, solid: e.known }));
+  const trails: ArtTrail[] = [];
+  const lonelyTrails: string[] = [];
+  for (const n of nodes) {
+    if (n.footprints.length === 0) continue;
+    const road = trailRoad(roads, n.id);
+    if (road === null) lonelyTrails.push(n.id);
+    else trails.push({ road, to: n.id });
+  }
+  return { region: map.region, title: map.name_zh, level: map.level_zh, spots, roads, trails, lonelyTrails };
 }
 
 /** 面板上方的一行說明（現在能不能從圖上傳送）。 */

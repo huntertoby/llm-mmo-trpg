@@ -1,5 +1,6 @@
-/* 區域圖（Phase 6C-6；21.1）：只能看的浮動全畫面面板。底圖用節點圖的座標，之後換成區域插畫
-   （`.region-map-canvas` 的 background-image，`art_url`）。戰爭迷霧三段：去過（彩色）、剪影（灰）、霧。 */
+/* 區域圖（Phase 6C-6；21.1）：只能看的浮動全畫面面板。
+   6F-ART1：底圖是程式畫的區域插畫（兩張疊起來的 canvas，`world/MapStage.tsx`），
+   地點、任務、傳送石是透明的點擊、滑過區（.map-hit），位置用和畫布同一套座標的百分比。 */
 
 .region-map-backdrop {
   position: absolute;
@@ -17,7 +18,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  max-width: 1100px;
+  max-width: 1320px;
   background: var(--hud-panel);
   border: 1.5px solid var(--hud-gold);
   border-radius: 10px;
@@ -60,291 +61,81 @@
   color: #7fe0d0;
 }
 
+.region-map-keys {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .region-map-head .world-hud-panel-close {
   position: static;
   float: none;
 }
 
-.region-map-canvas {
+/* 畫布舞台：1280×860 等比縮放後置中 */
+.map-stage-box {
   position: relative;
   flex: 1;
   min-height: 0;
-  background:
-    radial-gradient(ellipse at 30% 70%, rgba(90, 140, 120, 0.2), transparent 60%),
-    radial-gradient(ellipse at 70% 20%, rgba(150, 160, 200, 0.16), transparent 55%),
-    #1b1d22;
-  background-size: cover;
-  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #1b1d22;
 }
 
-.region-map-area {
-  position: absolute;
-  inset: 6% 7%;
+.map-stage {
+  position: relative;
+  flex: none;
+  width: 100%;
+  aspect-ratio: 1280 / 860;
 }
 
-.region-map-lines {
+.map-stage-layer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-}
-
-.region-map-lines line {
-  stroke-width: 2;
-}
-
-.region-map-lines line.known {
-  stroke: #c9b46a;
-}
-
-.region-map-lines line.dim {
-  stroke: #5a5850;
-  stroke-dasharray: 5 5;
-}
-
-/* 霧：一團蓋住的雲，沒有名字、等級 */
-.region-fog {
-  position: absolute;
-  width: 74px;
-  height: 52px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(150, 150, 160, 0.42) 0%, rgba(120, 120, 130, 0.2) 45%, transparent 72%);
-  filter: blur(2px);
-  pointer-events: none;
-}
-
-.region-node {
-  position: absolute;
-  z-index: 2;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  pointer-events: none;
-}
-
-.region-node > * {
-  pointer-events: auto;
-}
-
-.region-node-dot {
-  position: relative;
   display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #6fb38a;
-  border: 2px solid #f0e6cc;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
 }
 
-.region-node.town .region-node-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: #e0b850;
-}
-
-.region-node.silhouette .region-node-dot {
-  background: #3e3e42;
-  border-color: #77757a;
-  box-shadow: none;
-}
-
-.region-node-name {
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px #000, 0 0 4px #000;
-}
-
-.region-node.silhouette .region-node-name {
-  color: #8f8c86;
-}
-
-.region-node-badge {
-  font-size: 10px;
-  line-height: 1.2;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.5);
-  color: var(--hud-gold);
-  white-space: nowrap;
-}
-
-.region-node.silhouette .region-node-badge {
-  color: #8f8c86;
-}
-
-/* 自己的位置：脈動的圈 */
-.region-me {
+.map-stage-hits {
   position: absolute;
-  inset: -7px;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  animation: region-me-pulse 1.6s ease-in-out infinite;
+  inset: 0;
 }
 
-@keyframes region-me-pulse {
-  0%,
-  100% {
-    transform: scale(0.85);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.25);
-    opacity: 0.4;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .region-me {
-    animation: none;
-  }
-}
-
-.region-node-marks {
-  display: flex;
-  gap: 3px;
-  align-items: center;
-}
-
-.region-quest {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #e8bb48;
-  color: #201810;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-/* 6C-5 朋友的足跡 */
-.region-footprint,
-.region-map-legend .lg-foot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(184, 160, 122, 0.9);
-  color: #201810;
-  font-size: 10px;
-  font-style: normal;
-}
-
-.region-map-legend .lg-foot {
-  width: 12px;
-  height: 12px;
-  font-size: 8px;
-}
-
-.region-stone {
-  display: inline-flex;
+/* 透明的點擊、滑過區：外觀全由畫布畫，這裡只留游標與鍵盤焦點 */
+.map-hit {
+  position: absolute;
+  display: block;
+  margin: 0;
   padding: 0;
-  width: 20px;
-  height: 20px;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid #4a6e70;
-  border-radius: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: transparent;
   cursor: default;
 }
 
-.region-stone-gem {
-  fill: #58c8d8;
-  stroke: #d8f6fa;
-  stroke-width: 0.8;
+.map-hit:focus-visible {
+  outline: 2px solid #7fe0d0;
+  outline-offset: 1px;
 }
 
-.region-stone.locked .region-stone-gem {
-  fill: #4a5658;
-  stroke: #7a8688;
-}
-
-.region-stone.view .region-stone-gem {
-  fill: #3e8f9a;
-}
-
-.region-stone-lock rect {
-  fill: #c8a868;
-  stroke: #201810;
-  stroke-width: 0.6;
-}
-
-.region-stone-lock path {
-  stroke: #c8a868;
-  stroke-width: 1.2;
-}
-
-.region-stone.here {
-  border-color: #ffffff;
+/* 只給螢幕閱讀器與測試的文字（畫面上的字畫在畫布上） */
+.map-hit-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .region-stone.go {
   cursor: pointer;
-  border-color: #7fe0d0;
-  box-shadow: 0 0 6px rgba(127, 224, 208, 0.7);
 }
 
 .region-stone.go:hover {
   background: rgba(127, 224, 208, 0.25);
-}
-
-.region-map-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  padding: 5px 10px;
-  font-size: 11px;
-  border-top: 1px solid rgba(200, 168, 104, 0.35);
-}
-
-.region-map-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.region-map-legend i {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  font-style: normal;
-}
-
-.region-map-legend .lg-me {
-  border: 2px solid #fff;
-}
-
-.region-map-legend .lg-quest {
-  background: #e8bb48;
-  color: #201810;
-  font-size: 9px;
-  line-height: 10px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.region-map-legend .lg-stone {
-  background: #58c8d8;
-  border-radius: 2px;
-  transform: rotate(45deg);
-}
-
-.region-map-legend .lg-sil {
-  background: #3e3e42;
-  border: 1px solid #77757a;
-}
-
-.region-map-legend .lg-fog {
-  background: radial-gradient(circle, rgba(150, 150, 160, 0.7), transparent 75%);
+  box-shadow: 0 0 8px rgba(127, 224, 208, 0.8);
 }

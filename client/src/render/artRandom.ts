@@ -11,7 +11,12 @@ export function hash(x: number, y: number, salt: number): number {
 
 /** 回傳 [0,1) 的確定性亂數產生器。 */
 export function rng(x: number, y: number, salt: number): () => number {
-  let a = hash(x, y, salt);
+  return seeded(hash(x, y, salt));
+}
+
+/** 直接以整數種子起算的確定性亂數（mulberry32）。區域插畫（6F-ART1）用，與樣張 `docs/art/sample/regionArt.js` 的 `rng(seed)` 同一序列。 */
+export function seeded(seed: number): () => number {
+  let a = seed | 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
