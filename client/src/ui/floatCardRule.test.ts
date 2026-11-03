@@ -36,6 +36,7 @@ const NON_HOVER_POPUPS: Record<string, string> = {
   "ui/BattleTopBar.tsx": "頂端列的設定／圖例面板（點按鈕開關的面板 `role=dialog`；已改用 `usePopupMenu`，見下方檢查）",
   "world/WorldHud.tsx": "大世界 HUD 功能列的浮動面板（6B-5：點圖示或快捷鍵開關、同時一個、Esc 關閉；不是說明卡）",
   "world/RegionMap.tsx": "區域圖（6C-6：M 或地圖鈕開關的全畫面面板，Esc 關閉；不是說明卡）",
+  "world/AtlasMap.tsx": "大世界圖（6D-5：在區域圖上按 M 或鈕切換的全畫面面板，Esc 關閉；不是說明卡）",
 };
 
 /** 這些檔案裡的點擊式面板必須用 `usePopupMenu`（Esc、點外面關閉、同時一張）。 */
