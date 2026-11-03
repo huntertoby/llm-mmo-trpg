@@ -6,7 +6,8 @@
   一格，起點照種子。
 - **這一趟**：進入一個有敵人的地點時，從角色的 ``field`` 串流
   （:data:`~trpg.world.rng.STREAM_FIELD`）抽一次種子；換地點才重來（進出室內不算）。
-- **清空與重生**（21.10 第 9 條，6C-1b）：營地、精英巢穴、遺跡、祭壇打贏一隊只有那一隊消失（世界的
+- **清空與重生**（21.10 第 9 條，6C-1b）：規則 ``battle.clear_kinds`` 的種類（營地、精英巢穴、遺跡、
+  祭壇）打贏一隊只有那一隊消失（世界的
   ``defeated_spawns``，所有人看得到）；這張圖現在會出現的隊伍都打完才寫地點「已清空」
   （:meth:`WorldState.is_cleared`），重生時間照 ``battle.respawn_seconds``，每隊對齊地點的。
   ``personal`` 的隊伍只對自己消失（角色這一趟的 ``defeated``）、不算進共享清空、下一趟回來再
@@ -64,7 +65,6 @@ from trpg.world.state import (
 )
 
 __all__ = [
-    "SHARED_CLEAR_KINDS",
     "SIGHT_RANGE",
     "FieldEnemy",
     "after_fight",
@@ -89,10 +89,6 @@ type First = Literal["ally", "enemy"] | None
 
 SIGHT_RANGE: Final = 4
 """敵人的視野距離（前方扇形 4 格，21.10 第 3 條；潛行減半是 6C-5）。"""
-
-SHARED_CLEAR_KINDS: Final = frozenset({"camp", "elite_lair", "ruin", "altar"})
-"""打贏一隊所有人看到它消失、全打完寫「已清空」的地點種類（21.10 第 9 條；另加規則的
-``battle.clear_kinds``）。"""
 
 _VECTORS: Final[dict[Facing, XY]] = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0)}
 _FACINGS: Final[tuple[Facing, ...]] = ("n", "e", "s", "w")
@@ -163,12 +159,12 @@ def with_visit(library: ContentLibrary, world: WorldState, char: CharacterState)
 
 def shared_clear(library: ContentLibrary, region: str, location: str) -> bool:
     """這個地點的隊伍是不是「打贏一隊、所有人看到它消失，全打完才寫已清空」（21.10 第 9 條）：
-    營地、精英巢穴、遺跡、祭壇（:data:`SHARED_CLEAR_KINDS`），以及規則 ``battle.clear_kinds``
-    列的種類。其他種類照 6C-1：打贏的那一隊只在這一趟消失。"""
+    規則 ``battle.clear_kinds`` 列的種類（正式內容：營地、精英巢穴、遺跡、祭壇；6C-2 從程式常數
+    搬到 ``content/world/rules.yaml``）。其他種類照 6C-1：打贏的那一隊只在這一趟消失。"""
     place = world_map_of(library, region).location_by_id().get(location)
     if place is None:
         return False
-    return place.kind in SHARED_CLEAR_KINDS or place.kind in rules_of(library).battle.clear_kinds
+    return place.kind in rules_of(library).battle.clear_kinds
 
 
 def appears(spawn: FieldSpawn, now: int) -> bool:

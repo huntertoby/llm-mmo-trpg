@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from tests.world.helpers import NOON, PARTY, hero, make_world
+from tests.world.helpers import NOON, PARTY, hero, make_world, with_rules
 from tests.world.test_field_enemies import (
     _char,
     _ended,
@@ -32,7 +32,6 @@ from trpg.world.clock import day_phase
 from trpg.world.common import rules_of
 from trpg.world.field_actions import WalkedEvent
 from trpg.world.field_enemies import (
-    SHARED_CLEAR_KINDS,
     after_fight,
     appears,
     field_enemies,
@@ -153,8 +152,12 @@ def test_which_kinds_share_the_clear(
     assert _shown(library, world, won, NOON) == [1]  # 只消失打贏的那一隊
 
 
-def test_shared_kinds_constant() -> None:
-    assert sorted(SHARED_CLEAR_KINDS) == ["altar", "camp", "elite_lair", "ruin"]
+def test_shared_kinds_from_rules(field_library: ContentLibrary) -> None:
+    """6C-2：共享清空的種類改讀規則檔的 ``battle.clear_kinds``（拿掉程式常數，行為不變）。"""
+    kinds = rules_of(field_library).battle.clear_kinds
+    assert sorted(kinds) == ["altar", "camp", "elite_lair", "ruin"]
+    library = _lib(with_rules(field_library, battle={"clear_kinds": ["camp"]}), TWO, "herb_valley")
+    assert not shared_clear(library, "cloud_ridge", "herb_valley")  # 規則拿掉遺跡就不共享
 
 
 def test_all_groups_beaten_clears_location_and_aligns_respawn(
