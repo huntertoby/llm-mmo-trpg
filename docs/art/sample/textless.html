@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>介面去文字化對照</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1180px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 12px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 18px 0 8px; }
+  .pair { display: grid; grid-template-columns: 1fr 50px 1fr; align-items: start; gap: 0; }
+  .arrow { font-size: 30px; color: #c8a868; text-align: center; padding-top: 80px; }
+  .tag { font-size: 12px; color: #9a8e7c; margin-bottom: 4px; }
+  .tag b { color: #ffd23a; }
+  /* 共用面板 */
+  .card { background: #26201b; border: 2px solid #6a5a8a; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.55; }
+  .card.plain { border-color: #4a4038; }
+  .muted { color: #a89c88; } .small { font-size: 12px; }
+  .before li { margin: 0; }
+  .before ul { margin: 4px 0; padding-left: 18px; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; background: #1a1410; border: 1px solid #5a4a38; border-radius: 11px; padding: 1px 8px 1px 4px; font-size: 13px; font-weight: bold; }
+  .chip svg { width: 16px; height: 16px; }
+  .pip { width: 10px; height: 10px; border-radius: 50%; background: #ffd23a; border: 1.5px solid #1c1712; display: inline-block; }
+  .pip.off { background: #3a3028; }
+  .head { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .icon { width: 56px; height: 56px; border-radius: 8px; border: 2px solid #1c1712; background: radial-gradient(circle at 40% 35%, #f0c060, #b05020); display: flex; align-items: center; justify-content: center; }
+  .icon svg { width: 34px; height: 34px; }
+  .title { font-size: 16px; font-weight: bold; }
+  .eff { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 4px 0; }
+  .eff svg { width: 18px; height: 18px; }
+  .more { margin-top: 8px; font-size: 12px; color: #9a8e7c; border-top: 1px dashed #4a4038; padding-top: 5px; display: flex; justify-content: space-between; }
+  .bar { height: 12px; border-radius: 6px; background: #1a1410; border: 1.5px solid #1c1712; position: relative; overflow: hidden; margin: 3px 0; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; }
+  .bar span { position: absolute; inset: 0; font-size: 10px; line-height: 11px; text-align: center; color: #fff; font-weight: bold; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+  .st { position: relative; width: 26px; height: 26px; border-radius: 6px; border: 1.5px solid #1c1712; display: inline-flex; align-items: center; justify-content: center; }
+  .st svg { width: 18px; height: 18px; }
+  .st b { position: absolute; right: -4px; bottom: -4px; background: #1c1712; color: #fff; font-size: 10px; border-radius: 7px; padding: 0 4px; }
+  .tip { position: relative; margin-top: 10px; background: #f2e6c8; color: #2a2018; border-radius: 6px; padding: 6px 9px; font-size: 12px; width: 230px; box-shadow: 0 2px 6px #0008; }
+  .tip:before { content: ""; position: absolute; left: 22px; top: -7px; border: 7px solid transparent; border-top: 0; border-bottom-color: #f2e6c8; }
+  .pin { float: right; font-size: 11px; color: #c8a868; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="ap" viewBox="0 0 20 20"><polygon points="11,1 4,11 9,11 7,19 16,8 11,8" fill="#ffd23a" stroke="#1c1712" stroke-width="1.5"/></symbol>
+  <symbol id="cd" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="none" stroke="#8ab8f0" stroke-width="2.5"/><path d="M10 4v6l4 2" stroke="#8ab8f0" stroke-width="2" fill="none"/></symbol>
+  <symbol id="mp" viewBox="0 0 20 20"><path d="M10 2C6 8 4 11 4 13a6 6 0 0 0 12 0c0-2-2-5-6-11z" fill="#4a8ae0" stroke="#1c1712" stroke-width="1.5"/></symbol>
+  <symbol id="range" viewBox="0 0 20 20"><rect x="2" y="7" width="6" height="6" fill="#ffd23a" stroke="#1c1712"/><rect x="8" y="7" width="6" height="6" fill="#e04a3a" stroke="#1c1712"/><rect x="14" y="7" width="4" height="6" fill="#3a3028" stroke="#1c1712"/></symbol>
+  <symbol id="slash" viewBox="0 0 20 20"><path d="M3 17L16 4" stroke="#1c1712" stroke-width="5"/><path d="M3 17L16 4" stroke="#e8eef4" stroke-width="2.5"/></symbol>
+  <symbol id="push" viewBox="0 0 20 20"><path d="M3 10h10M10 5l5 5-5 5" stroke="#f2e6c8" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+  <symbol id="clock" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="#f2e6c8" stroke="#1c1712" stroke-width="1.5"/><path d="M10 5v5l3 2" stroke="#1c1712" stroke-width="1.8" fill="none"/></symbol>
+  <symbol id="str" viewBox="0 0 20 20"><path d="M4 13c0-4 3-8 7-8 2 0 4 1 4 3s-2 2-3 2c2 1 3 2 3 4 0 3-3 4-6 4s-5-2-5-5z" fill="#e8a070" stroke="#1c1712" stroke-width="1.5"/></symbol>
+  <symbol id="hp" viewBox="0 0 20 20"><path d="M10 17S3 12 3 7a3.5 3.5 0 0 1 7-1 3.5 3.5 0 0 1 7 1c0 5-7 10-7 10z" fill="#e04a3a" stroke="#1c1712" stroke-width="1.5"/></symbol>
+  <symbol id="shield" viewBox="0 0 20 20"><path d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z" fill="#9ab8d8" stroke="#1c1712" stroke-width="1.5"/></symbol>
+  <symbol id="boot" viewBox="0 0 20 20"><path d="M6 2h5v9l6 2v4H6z" fill="#a07040" stroke="#1c1712" stroke-width="1.5"/></symbol>
+  <symbol id="fire" viewBox="0 0 20 20"><path d="M10 2c4 5 6 7 6 10a6 6 0 0 1-12 0c0-2 1-4 3-5 0 2 1 3 2 3 0-3-1-5 1-8z" fill="#ff7a2a" stroke="#1c1712" stroke-width="1.3"/></symbol>
+  <symbol id="vuln" viewBox="0 0 20 20"><path d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z" fill="#c8a0d8" stroke="#1c1712" stroke-width="1.5"/><path d="M8 5l3 4-3 2 3 5" stroke="#1c1712" stroke-width="1.6" fill="none"/></symbol>
+  <symbol id="sword" viewBox="0 0 20 20"><path d="M4 16L15 5" stroke="#1c1712" stroke-width="4"/><path d="M4 16L15 5" stroke="#dfe4ea" stroke-width="2"/><path d="M3 11l6 6" stroke="#e8bb48" stroke-width="2.5"/></symbol>
+  <symbol id="react" viewBox="0 0 20 20"><path d="M4 10a6 6 0 1 1 2 4.5" stroke="#5ad06a" stroke-width="2.5" fill="none"/><path d="M3 15l3-1-1-3" stroke="#5ad06a" stroke-width="2" fill="none"/></symbol>
+  <symbol id="src" viewBox="0 0 20 20"><polygon points="10,1 13,8 19,8 14,12 16,19 10,15 4,19 6,12 1,8 7,8" fill="#c8bcff" stroke="#1c1712" stroke-width="1.3"/></symbol>
+  <symbol id="water" viewBox="0 0 20 20"><path d="M2 8q4-4 8 0t8 0M2 14q4-4 8 0t8 0" stroke="#5ab0f0" stroke-width="2.5" fill="none"/></symbol>
+  <symbol id="stam" viewBox="0 0 20 20"><path d="M3 10h4l2-5 3 10 2-5h3" stroke="#5ad06a" stroke-width="2.2" fill="none"/></symbol>
+</svg>
+
+<h1>介面去文字化：改前／改後對照（示意，等使用者選）</h1>
+<p class="note">美術 PM，2026-11-04。「改前」照現在 client 的欄位排出（文字內容是範例），「改後」是同樣的資訊改成圖示加數字，細節收起來，滑鼠移上去或點「詳細」才看。不改規則、不刪資訊，只改常駐顯示的量。對照表見 <code>HUD版面.md</code> 第 4 節。</p>
+
+<h2>1. 技能卡（技能列的浮動卡）</h2>
+<div class="pair">
+  <div>
+    <div class="tag">改前：約 14 行字</div>
+    <div class="card before">
+      <div class="head"><div class="icon"><svg><use href="#slash"/></svg></div>
+        <div><div class="title">蓄力斬 <span class="muted small">稀有・主動・斬擊・攻擊</span></div>
+        <div class="small">2 AP，冷卻 2 回合</div><div class="small muted">近戰・射程 1・單體</div></div></div>
+      <div class="small">（組裝算式：骨架 ＋ 形狀 ＋ 效果）</div>
+      <div class="small">關鍵字：蓄力、擊退</div>
+      <div class="small">延遲：本回合結束後、下一個自己的回合開始時觸發</div>
+      <ul class="small">
+        <li>造成 8 點物理傷害（力量 ×1.2）</li>
+        <li>擊退 1 格</li>
+        <li>修正：目標在較低處時傷害 +2</li>
+      </ul>
+      <div class="small">傷害 ＝ 8 ＋ 力量 14 × 1.2 ＝ 24（高低差 +2）</div>
+      <div class="small">層數：蓄勢（累積）</div>
+      <div class="small">戰場變奏：雨天時擊退改為 2 格</div>
+      <div class="small muted">縮放：力量；專精：斬擊</div>
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div>
+    <div class="tag"><b>改後</b>：常駐 3 行，其餘收起</div>
+    <div class="card">
+      <div class="head"><div class="icon"><svg><use href="#slash"/></svg></div>
+        <div><div class="title">蓄力斬</div>
+        <div class="row" style="margin-top:4px">
+          <span class="chip"><svg><use href="#ap"/></svg><span class="pip"></span><span class="pip"></span></span>
+          <span class="chip"><svg><use href="#cd"/></svg>2</span>
+          <span class="chip"><svg><use href="#range"/></svg>1</span>
+          <span class="chip"><svg><use href="#clock"/></svg>延遲</span>
+        </div></div></div>
+      <div class="eff"><svg><use href="#slash"/></svg><b>24</b><span class="muted small">物理</span>　<svg><use href="#push"/></svg><b>1</b><span class="muted small">格</span>　<svg><use href="#str"/></svg><span class="muted small">力量</span></div>
+      <div class="more"><span>▸ 詳細（算式、修正、層數、變奏）</span><span>Shift 固定</span></div>
+    </div>
+    <div class="tip">滑到 <b>24</b> 上：8 ＋ 力量 14 × 1.2；目標在低處 +2</div>
+    <div class="small muted" style="margin-top:8px">稀有度看外框顏色；類型、骨架看圖示形狀（已在 3-18 做好），所以標題列不再重複寫。</div>
+  </div>
+</div>
+
+<h2>2. 戰場單位資訊（點選或滑過敵人）</h2>
+<div class="pair">
+  <div>
+    <div class="tag">改前：表格 9 列</div>
+    <div class="card plain before">
+      <div class="title">B 斷崖幫刀手 <span class="muted small">精英・狂暴的</span></div>
+      <table class="small" style="border-spacing:8px 2px">
+        <tr><td class="muted">HP</td><td>30 / 42（護盾 5）</td></tr>
+        <tr><td class="muted">法力</td><td>4 / 10</td></tr>
+        <tr><td class="muted">耐力</td><td>6 / 8</td></tr>
+        <tr><td class="muted">AP／移動</td><td>2 / 3</td></tr>
+        <tr><td class="muted">武器</td><td>鬼頭刀（斬擊、雙手）</td></tr>
+        <tr><td class="muted">特性</td><td>狂暴：HP 低於一半時傷害 +2</td></tr>
+        <tr><td class="muted">朝向</td><td>西</td></tr>
+        <tr><td class="muted">狀態</td><td>燃燒（2 回合）、易傷（1 回合）</td></tr>
+        <tr><td class="muted">腳下</td><td>油</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div>
+    <div class="tag"><b>改後</b>：一張小卡，數字都在圖示旁</div>
+    <div class="card plain" style="width:300px">
+      <div class="row" style="justify-content:space-between"><span class="title">B 斷崖幫刀手</span><span class="chip" style="border-color:#e8bb48">◆ 狂暴</span></div>
+      <div class="bar"><i style="width:71%;background:#e04a3a"></i><span>30 / 42</span></div>
+      <div class="row small"><span class="chip"><svg><use href="#shield"/></svg>5</span><span class="chip"><svg><use href="#mp"/></svg>4</span><span class="chip"><svg><use href="#ap"/></svg>2</span><span class="chip"><svg><use href="#boot"/></svg>3</span><span class="chip"><svg><use href="#sword"/></svg>雙手</span></div>
+      <div class="row" style="margin-top:8px"><span class="st" style="background:#5a2a14"><svg><use href="#fire"/></svg><b>2</b></span><span class="st" style="background:#3a2a48"><svg><use href="#vuln"/></svg><b>1</b></span><span class="muted small">　腳下</span><span class="st" style="background:#2a2418"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="12" rx="7" ry="4" fill="#3a3020" stroke="#c8a040" stroke-width="1.5"/></svg></span></div>
+      <div class="more"><span>▸ 詞綴、特性、耐力</span><span class="pin">📌 釘選</span></div>
+    </div>
+    <div class="small muted" style="margin-top:8px">朝向不寫字：戰場上的單位本來就看得出朝向（3S 真側面）。詞綴說明滑到金色徽章上才出現。</div>
+  </div>
+</div>
+
+<h2>3. 主角狀態卡（戰鬥畫面左下）</h2>
+<div class="pair">
+  <div>
+    <div class="tag">改前：一行一項，約 10 行</div>
+    <div class="card plain before small">
+      <div class="title">主角　Lv 4</div>
+      HP 41 / 50（盾 0）<br>法力 18 / 30<br>耐力 6 / 8<br>移動 3<br>充能：蓄力斬 1 / 2<br>反應可用<br>源力 1 / 3<br>狀態 無<br>腳下 水<br>層數 蓄勢 2<br>冷卻：旋風斬 1 回合
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div>
+    <div class="tag"><b>改後</b>：兩條、一列圖示</div>
+    <div class="card plain" style="width:320px">
+      <div class="bar" style="height:16px"><i style="width:82%;background:#e04a3a"></i><span style="line-height:15px;font-size:11px">HP 41 / 50</span></div>
+      <div class="bar"><i style="width:60%;background:#4a8ae0"></i><span>法力 18 / 30</span></div>
+      <div class="row" style="margin-top:6px">
+        <span class="chip"><svg><use href="#stam"/></svg>6</span>
+        <span class="chip"><svg><use href="#boot"/></svg>3</span>
+        <span class="chip" title="反應可用"><svg><use href="#react"/></svg></span>
+        <span class="chip"><svg><use href="#src"/></svg><span class="pip"></span><span class="pip off"></span><span class="pip off"></span></span>
+        <span class="st" style="background:#1a3048"><svg><use href="#water"/></svg></span>
+        <span class="st" style="background:#3a2a14"><svg><use href="#slash"/></svg><b>2</b></span>
+      </div>
+      <div class="small muted" style="margin-top:6px">充能、冷卻直接畫在技能列的按鈕上（數字＋灰色遮罩），不在這裡重複。</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
