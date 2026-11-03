@@ -15,3 +15,5 @@ tags: [elite, beast, lava_beast, steadfast]
 skills: [skill_battering_ram, skill_magma_breach]
 opening_statuses:
   - {status: molten_burst}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: crawler, variant: beetle, material: magma, size: large, traits: [lava_pool]}}

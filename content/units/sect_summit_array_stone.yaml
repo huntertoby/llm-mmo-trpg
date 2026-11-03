@@ -15,3 +15,5 @@ stamina: 0
 reactions: []
 opening_statuses:
   - {status: summit_array_ward}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: pylon, material: stone}}
