@@ -35,6 +35,7 @@ from trpg.world.state import CharacterState, WorldState
 
 __all__ = [
     "apply_narration",
+    "location_name_for",
     "narration_problems",
     "region_npcs",
     "region_skeletons",
@@ -78,6 +79,22 @@ def story_masks(library: ContentLibrary, char: CharacterState) -> dict[str, str]
         if card.secret_zh.strip() and card.id not in trusted:
             masks.setdefault(card.secret_zh, SECRET_MASK)
     return {k: masks[k] for k in sorted(masks) if k.strip()}
+
+
+def location_name_for(
+    library: ContentLibrary, viewer: CharacterState, region: str, location: str
+) -> str:
+    """給 ``viewer`` 看的地點名（5C-3f 隱藏地點顯示規則）：他還沒發現的隱藏地點用提示語
+    （``hint_zh``；沒填用 :data:`HIDDEN_HINT_DEFAULT`），其他照名稱；區域或地點不在內容裡時顯示 ID
+    （舊存檔）。用在顯示別人的東西（朋友戰報、影子位置；5F 排行榜沿用）；自己的戰鬥結果、存檔位置
+    照常顯示名稱，不必經過這裡。"""
+    world_map = library.world_maps.get(region)
+    found = None if world_map is None else world_map.location_by_id().get(location)
+    if found is None:
+        return location
+    if found.hidden and not viewer.has_revealed(region, found.id):
+        return found.hint_zh or HIDDEN_HINT_DEFAULT
+    return found.name_zh
 
 
 def _common(
