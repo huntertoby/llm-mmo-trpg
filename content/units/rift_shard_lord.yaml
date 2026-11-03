@@ -1,0 +1,41 @@
+# 第一季賽季 Boss「碎晶之主」（Phase 5F-3；docs/design/19-灰燼荒原與賽季主線.md 19.7、09 9.6.8 #86、#87）。
+# 裂界門（Boss 地圖 rift_gate）；依「主角＋2 名系統傭兵」、滿等（10 級）設計。數值是初值，模擬見 docs/phases/Phase5F-3報告.md。
+# 外觀（doll）是美術的事，這裡不寫。
+# 階段（引擎資料化，trpg.engine.boss_phases）：
+#   1 三柱（解謎）：三根源晶柱的「源晶共鳴」讓本體不受骰值傷害，柱子全倒才進下一階段（tag_down）。
+#   2 碎界脈動：身邊小傷的「碎界脈動」（需要治療的時刻）、單體持續傷害「晶蝕」（需要淨化的時刻）；召喚 2 個晶傀儡。
+#   3 核心過載（HP ≤ 50%）：蓄力強招「界碎」（十字每臂 2 格大傷＋擊退）、瞬步換邊。
+#   4 界崩（第 15 輪起）：造成的傷害加倍（防止拖延）。階段依序進入，所以要先到第 3 階段（代決 5F3-14）。
+# 原文做不到的地方用現有機制近似（代決 5F3-13）：晶蝕不能疊層、晶傀儡只召喚一次、「每回合結束全場傷害」與「每回合換邊」交給 AI。
+id: rift_shard_lord
+name_zh: 碎晶之主
+attributes: {str: 12, dex: 12, con: 14, int: 16, wis: 14, wil: 14}
+max_hp: 140
+speed: 4
+armor_bonus: 3
+weapon: lightning_staff
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [boss, elite, rift_core]
+skills: [skill_cluster_bolt]
+reactions: []
+phases:
+  - {id: three_pillars, name_zh: 三柱}
+  - id: rift_pulse
+    name_zh: 碎界脈動
+    trigger: {kind: tag_down, tag: rift_pillar, count: 3, tag_name_zh: 源晶柱}
+    text_zh: 最後一根源晶柱碎裂，浮台跟著一陣陣脈動——碎晶之主身上的光不再被擋住了。
+    skills: [skill_rift_tremor, skill_shard_erosion, skill_cluster_bolt]
+    spawns: [{template: rift_crystal_golem, count: 2}]
+  - id: core_overload
+    name_zh: 核心過載
+    trigger: {kind: hp_below, permille: 500}
+    text_zh: 核心的裂縫整個亮了起來，碎晶之主開始在浮台上閃爍移動。
+    skills: [skill_rift_shatter, skill_blink, skill_rift_tremor]
+    ai_profile: cunning
+  - id: rift_collapse
+    name_zh: 界崩
+    trigger: {kind: round_at, round: 15}
+    text_zh: 浮台的邊緣開始崩落，碎晶之主的每一擊都帶著整個界域的重量。
+    add_statuses: [{status: rift_collapse}]

@@ -1,0 +1,33 @@
+# 賽季 Boss「碎晶之主」的霧柱脈衝（Phase 5F-3；docs/design/19-灰燼荒原與賽季主線.md 19.7 第 1 階段：
+# 每根柱子每 2 回合發一次元素脈衝〔預告〕，霧柱＝範圍隱蔽＋命中劣勢）。只給敵人用；數值為初值，未經模擬。
+# 整回合蓄力（地圖預告 3×3），下回合開始時以柱子為中心的 3×3 小傷並致盲 1 回合（攻擊劣勢、只能打近距離）。冷卻 1＝每 2 回合一次。
+id: skill_rift_pulse_mist
+schema_version: 1
+name_zh: 霧晶脈衝
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 3
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+followup:
+  when: delayed
+  release: next_turn
+  skeleton: area
+  shape: {type: square3, range: 0}
+  effects:
+    - {type: damage, dice: 2d6, element: physical}
+    - {type: apply_status, status: blinded, duration: 1}
+condition: null
+cost: {mana: 2, cooldown: 1}
+tags: [arcane, spell, aoe, control]
+narrative:
+  concept: 源晶柱吐出一圈濃霧，霧裡的人什麼都看不清
+  cast_flavor: 柱心的光暗了下去，一圈灰白的霧正從裂縫裡滲出來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

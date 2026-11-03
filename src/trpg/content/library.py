@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, get_args
@@ -17,11 +17,13 @@ from pydantic import Field, PrivateAttr, model_validator
 from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
+    BossPhase,
     OffhandDef,
     OffhandTable,
     StatusDef,
     StatusTable,
     SummonLook,
+    TagDownTrigger,
     TerrainDef,
     TerrainTable,
     UnitTemplate,
@@ -918,6 +920,8 @@ def load_library(  # noqa: PLR0915
         catalog=catalog,
         weather_ids=set(weather_map),
         region_ids=set() if regions is None else {r.id for r in regions.regions},
+        units=set(units),
+        maps=maps,
     )
     world_event_content = load_world_event_content(
         root,
@@ -1183,6 +1187,8 @@ def _load_world_season(
     catalog: EnemyCatalog,
     weather_ids: set[str],
     region_ids: set[str],
+    units: set[str],
+    maps: Mapping[str, MapDef],
 ) -> SeasonContent | None:
     """載入 ``world/season.yaml``（檔案不存在＝``None``）並做跨檔案檢查（Phase 5F-1）。"""
     if not path.is_file():
@@ -1196,6 +1202,8 @@ def _load_world_season(
         weather_ids=weather_ids,
         region_ids=region_ids,
         location_kinds=get_args(LocationKind.__value__),
+        units=units,
+        maps=maps,
     )
     if problems:
         raise ContentError(path, "；".join(problems))
@@ -2165,7 +2173,25 @@ def _map_phase_tile_problems(map_def: MapDef, units: Mapping[str, UnitTemplate])
                 for xy in cells
                 if not (0 <= xy[0] < map_def.width and 0 <= xy[1] < map_def.height)
             ]
+            problems += _tag_down_problems(template_id, phase, map_def.encounter.enemies, units)
     return problems
+
+
+def _tag_down_problems(
+    template_id: str, phase: BossPhase, enemies: Sequence[str], units: Mapping[str, UnitTemplate]
+) -> list[str]:
+    """``tag_down`` 觸發（Phase 5F-3）：預設陣容裡帶該標籤的單位要夠 ``count`` 名（否則永遠不會
+    觸發）。"""
+    trigger = phase.trigger
+    if not isinstance(trigger, TagDownTrigger):
+        return []
+    have = sum(1 for e in enemies if (u := units.get(e)) is not None and trigger.tag in u.tags)
+    if have >= trigger.count:
+        return []
+    return [
+        f"{template_id} 階段 {phase.id} 要「{trigger.tag}」倒下 {trigger.count} 名，"
+        f"地圖的預設陣容只有 {have} 名"
+    ]
 
 
 def _map_reference_problems(

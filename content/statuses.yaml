@@ -178,6 +178,51 @@ statuses:
     expires: never
     stacking: refresh
     ward: {kin_tag: mist_lock_core, kin_name_zh: 霧鎖真人, range: 12, taken_permille: 500}
+  # 5F-3：賽季 Boss「碎晶之主」的三根源晶柱（19.7 第 1 階段「本體不受傷害，直到 3 根源晶柱都被打碎」）。
+  # 護陣 ×0：任一根柱子在場時，碎晶之主受到的骰值傷害為 0；柱子全倒由本體的階段觸發（tag_down）。初值未經模擬。
+  - id: rift_resonance
+    polarity: neutral
+    name_zh: 源晶共鳴
+    description_zh: 源晶柱還在時，碎晶之主不受任何骰值傷害；三根柱子全部打碎才會現出破綻。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    ward: {kin_tag: rift_core, kin_name_zh: 碎晶之主, range: 12, taken_permille: 0}
+  # 5F-3：19.7「打碎順序自由，留下的柱子脈衝變強」：倒 1 根、倒 2 根時留下的柱子換上（柱子的階段，tag_down）。
+  - id: crystal_surge
+    polarity: neutral
+    name_zh: 晶能湧動
+    description_zh: 同伴碎裂的源晶流進這根柱子：造成的傷害提高。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1250
+  - id: crystal_surge_2
+    polarity: neutral
+    name_zh: 晶能狂湧
+    description_zh: 只剩這根柱子，源晶的力量全都湧了進來：造成的傷害大幅提高。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1500
+  # 5F-3：碎晶之主第 2 階段「晶蝕」（19.7：每回合掉血、需要淨化的時刻）。引擎狀態不能疊層，先用持續傷害＋刷新（代決 5F3-13）。
+  - id: shard_erosion
+    polarity: debuff
+    name_zh: 晶蝕
+    description_zh: 碎晶鑽進傷口，每回合開始時受到傷害；可以被淨化。
+    duration: 3
+    expires: turn_end
+    stacking: refresh
+    budget_points: 3
+    min_rarity: rare
+    on_turn_start_damage:
+      dice: 1d6
+      element: physical
+  # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖）。
+  - id: rift_collapse
+    polarity: neutral
+    name_zh: 界崩
+    description_zh: 浮台開始崩塌：造成的傷害加倍。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 2000
   # 5F-2：霧鎖真人第 3 階段「歸一」（18.2.3：每回合結束治療自己少量）。引擎只有回合開始回血，先用回合開始（代決 5F2-7；初值）。
   - id: mist_return
     polarity: neutral

@@ -1,0 +1,30 @@
+# 裂界門的霧柱（Phase 5F-3；docs/design/19-灰燼荒原與賽季主線.md 19.7 第 1 階段的三根源晶柱之一）。
+# 不移動、不會被推動；開場狀態「源晶共鳴」（任一根柱子在場時碎晶之主不受骰值傷害）；每 2 回合蓄力脈衝。
+# 倒 1 根、倒 2 根時留下的柱子脈衝變強（階段 tag_down，換上晶能湧動／晶能狂湧）。數值是初值。
+id: rift_pillar_mist
+name_zh: 霧之源晶柱
+attributes: {str: 10, dex: 6, con: 16, int: 10, wis: 12, wil: 10}
+max_hp: 45
+speed: 0
+armor_bonus: 3
+weapon: fist
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [immovable, rift_pillar]
+stamina: 0
+skills: [skill_rift_pulse_mist]
+reactions: []
+opening_statuses:
+  - {status: rift_resonance}
+phases:
+  - {id: whole, name_zh: 共鳴}
+  - id: surge
+    name_zh: 晶能湧動
+    trigger: {kind: tag_down, tag: rift_pillar, count: 1, tag_name_zh: 源晶柱}
+    add_statuses: [{status: crystal_surge}]
+  - id: surge_2
+    name_zh: 晶能狂湧
+    trigger: {kind: tag_down, tag: rift_pillar, count: 2, tag_name_zh: 源晶柱}
+    remove_statuses: [crystal_surge]
+    add_statuses: [{status: crystal_surge_2}]

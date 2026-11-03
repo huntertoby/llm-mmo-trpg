@@ -1,8 +1,10 @@
 """Boss 的階段（Phase 5F-2，``docs/phases/Phase5計畫.md`` 34；09 9.6.8、18.2.3）。
 
-單位的 ``phases``（由範本帶入，第 1 項是開場階段）依 HP 門檻觸發：每次結算收尾
-（:func:`trpg.engine.turns.finish_resolution`）檢查，存活的單位 HP ≤ 下一個階段的
-``最大 HP × permille‰`` 就進入它；一次跌破多個門檻時依序進入每一個。``phase_index`` 只增不減，
+單位的 ``phases``（由範本帶入，第 1 項是開場階段）依觸發條件進入：每次結算收尾
+（:func:`trpg.engine.turns.finish_resolution`）檢查，存活的單位符合下一個階段的觸發就進入它——
+``hp_below``：HP ≤ ``最大 HP × permille‰``；``tag_down``（Phase 5F-3）：同陣營帶 ``tag`` 的單位
+已倒下 ``count`` 名以上（賽季 Boss 的源晶柱）；``round_at``（5F-3）：目前輪數 ≥ ``round``。
+一次符合多個時依序進入每一個。``phase_index`` 只增不減，
 所以每個階段整場只觸發一次（被治療回門檻以上也不退回、不再觸發）。預覽（AI 估值）不檢查。
 
 進入一個階段的順序：``boss_phase_changed`` → 移除狀態 → 換技能組（冷卻只保留新技能組裡的技能）→
@@ -15,7 +17,7 @@ Boss 當下的位置為目的地，由效果改到最近的安全格）。正在
 
 from __future__ import annotations
 
-from trpg.content.battle import BossPhase
+from trpg.content.battle import BossPhase, HpBelowTrigger, RoundTrigger, TagDownTrigger
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
@@ -26,7 +28,7 @@ from trpg.engine.effects.models import (
     SpawnUnitEffect,
 )
 from trpg.engine.events import BossPhaseChanged, WeatherChanged
-from trpg.engine.state import UnitState
+from trpg.engine.state import BattleState, UnitState
 
 __all__ = ["CLEAR_WEATHER", "check_boss_phases", "next_phase"]
 
@@ -40,11 +42,22 @@ def next_phase(unit: UnitState) -> BossPhase | None:
     return unit.phases[index] if index < len(unit.phases) else None
 
 
-def _reached(unit: UnitState, phase: BossPhase) -> bool:
+def _reached(state: BattleState, unit: UnitState, phase: BossPhase) -> bool:
     trigger = phase.trigger
-    if trigger is None:  # 開場階段（schema 保證只在第 1 項）
-        return False
-    return unit.hp * 1000 <= unit.max_hp * trigger.permille
+    match trigger:
+        case None:  # 開場階段（schema 保證只在第 1 項）
+            return False
+        case HpBelowTrigger():
+            return unit.hp * 1000 <= unit.max_hp * trigger.permille
+        case TagDownTrigger():  # 5F-3：同陣營、帶標籤、已倒下的單位數
+            down = sum(
+                1
+                for u in state.units.values()
+                if u.team is unit.team and u.downed and u.has_tag(trigger.tag)
+            )
+            return down >= trigger.count
+        case RoundTrigger():  # 5F-3：第 N 輪起
+            return state.round >= trigger.round
 
 
 def check_boss_phases(ctx: Ctx) -> None:
@@ -54,12 +67,17 @@ def check_boss_phases(ctx: Ctx) -> None:
     for unit in ctx.state.units_sorted():
         if not unit.phases:
             continue
-        while unit.alive and (phase := next_phase(unit)) is not None and _reached(unit, phase):
+        while (
+            unit.alive
+            and (phase := next_phase(unit)) is not None
+            and _reached(ctx.state, unit, phase)
+        ):
             _enter(ctx, unit, phase)
 
 
 def _enter(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
-    assert phase.trigger is not None
+    trigger = phase.trigger
+    assert trigger is not None
     unit.phase_index += 1
     ctx.emit(
         BossPhaseChanged,
@@ -69,7 +87,9 @@ def _enter(ctx: Ctx, unit: UnitState, phase: BossPhase) -> None:
         phase_id=phase.id,
         name_zh=phase.name_zh,
         text_zh=phase.text_zh,
-        permille=phase.trigger.permille,
+        trigger=trigger.kind,
+        permille=trigger.permille if isinstance(trigger, HpBelowTrigger) else None,
+        condition_zh=trigger.condition_zh,
         hp=unit.hp,
         max_hp=unit.max_hp,
         skills=phase.skills,

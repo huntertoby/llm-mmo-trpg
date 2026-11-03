@@ -17,6 +17,7 @@ from typing import Final, Literal
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.maps import MapDef
 from trpg.content.schemas import ContentModel
 from trpg.content.world_encounters import MAX_GROUP_SIZE, EncounterTable, FixedElite
 from trpg.content.world_enemies import EnemyCatalog
@@ -25,6 +26,8 @@ from trpg.content.world_quests import QuestKind
 
 __all__ = [
     "SEASON_FILE",
+    "BossScore",
+    "BossUnlock",
     "BountyDef",
     "DailyGoalDef",
     "DailyGoalRules",
@@ -33,6 +36,9 @@ __all__ = [
     "LevelBonusEffect",
     "Milestone",
     "SchedulePhase",
+    "SealKeyRules",
+    "SealKeySource",
+    "SeasonBossDef",
     "SeasonContent",
     "WorldEventDef",
     "WorldEventEffect",
@@ -49,8 +55,10 @@ type GoalKind = Literal[
     "talked",
     "camped",
     "bounty_claimed",
+    "seal_key",
 ]
-"""目標種類（今日目標與世界事件共用；由一步的世界事件判定）。"""
+"""目標種類（今日目標與世界事件共用；由一步的世界事件判定）。``seal_key``（Phase 5F-3）是全服累積的
+封印鑰匙：世界事件開始時進度帶入目前的全服鑰匙數，之後每把 +1。"""
 
 type DayRange = tuple[int, int]
 
@@ -168,10 +176,12 @@ class LevelBonusEffect(ContentModel):
 
 
 class WorldEventEffect(ContentModel):
-    """世界事件成功或失敗寫回世界的效果：世界旗標、區域建議等級加成（9.6.7 #15）。"""
+    """世界事件成功或失敗寫回世界的效果：世界旗標、區域建議等級加成（9.6.7 #15）、全服封印鑰匙
+    （Phase 5F-3；19.9 #2「封印鑰匙 +5」）。"""
 
     flags: tuple[str, ...] = ()
     level_bonus: tuple[LevelBonusEffect, ...] = ()
+    seal_keys: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def _ids(self) -> WorldEventEffect:
@@ -207,6 +217,81 @@ class WorldEventDef(ContentModel):
         return max(1, self.goal.count * max(players, 1) // self.base_players)
 
 
+class SealKeySource(ContentModel):
+    """封印鑰匙的一個來源（Phase 5F-3；19.6.2）：個人每個來源第一次達成給 1 把。
+
+    - ``elite_first_kill``：第一次打倒精英 ``unit``（例：雲頂觀的霧鎖真人）；來源 ID＝``id``。
+    - ``bounty_claimed``：每張懸賞第一次搶下（來源 ID＝``bounty:<懸賞 ID>``）。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    kind: Literal["elite_first_kill", "bounty_claimed"]
+    unit: str | None = Field(default=None, pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _unit(self) -> SealKeySource:
+        if (self.kind == "elite_first_kill") != (self.unit is not None):
+            raise ValueError(f"鑰匙來源 {self.id}：只有 elite_first_kill 要寫 unit")
+        return self
+
+
+class SealKeyRules(ContentModel):
+    """封印鑰匙（19.6.2）：個人至少 ``required`` 把才能挑戰賽季 Boss。"""
+
+    required: int = Field(default=1, ge=0)
+    sources: tuple[SealKeySource, ...] = ()
+
+
+class BossUnlock(ContentModel):
+    """賽季 Boss 的解鎖（09 9.7）：``flag``（封印鑰匙集滿的世界旗標）出現後最早第 ``earliest_day``
+    天、且至少 ``announce_hours`` 小時後解鎖；沒有集滿時第 ``forced_day`` 天強制；解鎖前
+    ``announce_hours`` 小時公告；開放到第 ``close_day`` 天結束。"""
+
+    earliest_day: int = Field(ge=1)
+    forced_day: int = Field(ge=1)
+    close_day: int = Field(ge=1)
+    announce_hours: int = Field(default=24, ge=0, le=72)
+    flag: str = Field(pattern=ID_PATTERN)
+
+    @model_validator(mode="after")
+    def _order(self) -> BossUnlock:
+        if not self.earliest_day <= self.forced_day <= self.close_day:
+            raise ValueError("season_boss.unlock：要 earliest_day ≤ forced_day ≤ close_day")
+        return self
+
+
+class BossScore(ContentModel):
+    """通關評分（#87：輪數、全隊存活、有沒有人倒下）：
+    ``max(0, base − per_round × 輪數) + per_survivor × 存活人數 + no_down（沒人倒下）``。"""
+
+    base: int = Field(default=1000, ge=0)
+    per_round: int = Field(default=20, ge=0)
+    per_survivor: int = Field(default=100, ge=0)
+    no_down: int = Field(default=200, ge=0)
+
+    def score(self, *, rounds: int, survivors: int, no_down: bool) -> int:
+        kept = max(0, self.base - self.per_round * rounds)
+        return kept + self.per_survivor * survivors + (self.no_down if no_down else 0)
+
+
+class SeasonBossDef(ContentModel):
+    """賽季 Boss（Phase 5F-3；19.7、09 9.7、#87、#100、#101）。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    battle_map: str = Field(pattern=ID_PATTERN)
+    units: tuple[str, ...] = Field(min_length=1, max_length=MAX_GROUP_SIZE)
+    """敵方陣容（第一個是本體；站位照地圖 ``start_zones.enemy`` 的順序）。"""
+    level: int = Field(ge=1, le=99)
+    unlock: BossUnlock
+    daily_attempts: int = Field(default=3, ge=1)
+    """每帳號每天的挑戰次數（#100）。"""
+    entry_kinds: tuple[str, ...] = ("town",)
+    """能出發挑戰的地點種類。"""
+    title_zh: str = Field(min_length=1)
+    score: BossScore = BossScore()
+
+
 class SeasonContent(ContentModel):
     """``content/world/season.yaml``。"""
 
@@ -216,6 +301,8 @@ class SeasonContent(ContentModel):
     daily_goals: DailyGoalRules | None = None
     bounties: tuple[BountyDef, ...] = ()
     world_events: tuple[WorldEventDef, ...] = ()
+    seal_keys: SealKeyRules = SealKeyRules()
+    season_boss: SeasonBossDef | None = None
 
     @model_validator(mode="after")
     def _season(self) -> SeasonContent:
@@ -237,9 +324,35 @@ class SeasonContent(ContentModel):
         late = [m.id for m in self.milestones if m.day > self.days]
         late += [b.id for b in self.bounties if b.from_day > self.days]
         late += [e.id for e in self.world_events if e.days[1] > self.days]
+        boss = self.season_boss
+        if boss is not None and boss.unlock.close_day > self.days:
+            late.append(f"{boss.id}（close_day）")
         if late:
             raise ValueError(f"超過賽季天數 {self.days}：{', '.join(late)}")
+        if boss is not None:
+            self._check_boss(boss)
         return self
+
+    def _check_boss(self, boss: SeasonBossDef) -> None:
+        """時間點 ``boss_earliest``／``boss_forced`` 有寫時要和解鎖規則一致；解鎖旗標要是某個世界
+        事件成功時給的；鑰匙來源 ID 不重複。"""
+        days = {m.id: m.day for m in self.milestones}
+        for milestone, day in (
+            ("boss_earliest", boss.unlock.earliest_day),
+            ("boss_forced", boss.unlock.forced_day),
+        ):
+            if milestone in days and days[milestone] != day:
+                raise ValueError(
+                    f"時間點 {milestone} 是第 {days[milestone]} 天，解鎖規則是第 {day} 天"
+                )
+        flags = {f for e in self.world_events for f in e.on_success.flags}
+        if boss.unlock.flag not in flags:
+            raise ValueError(
+                f"season_boss.unlock.flag {boss.unlock.flag} 不是任何世界事件成功的旗標"
+            )
+        ids = [s.id for s in self.seal_keys.sources]
+        if len(set(ids)) != len(ids):
+            raise ValueError("seal_keys.sources 的 ID 重複")
 
     def phase_on(self, day: int) -> SchedulePhase | None:
         return next((p for p in self.schedule if p.days[0] <= day <= p.days[1]), None)
@@ -307,6 +420,31 @@ def _bounty_elite_problems(where: str, bounty: BountyDef, catalog: EnemyCatalog)
     return []
 
 
+def _boss_problems(
+    season: SeasonContent,
+    *,
+    units: Collection[str],
+    maps: Mapping[str, MapDef] | None,
+    catalog: EnemyCatalog,
+) -> list[str]:
+    problems = [
+        f"封印鑰匙來源 {s.id}：未知的單位 {s.unit}"
+        for s in season.seal_keys.sources
+        if s.unit is not None and units and s.unit not in units
+    ]
+    boss = season.season_boss
+    if boss is None or maps is None:
+        return problems
+    where = f"賽季 Boss {boss.id}"
+    problems += [f"{where}：未知的單位 {u}" for u in boss.units if not catalog.has(u)]
+    map_def = maps.get(boss.battle_map)
+    if map_def is None:
+        problems.append(f"{where}：未知的地圖 {boss.battle_map}")
+    elif map_def.archetype != "boss":
+        problems.append(f"{where}：地圖 {boss.battle_map} 不是 Boss 地圖（archetype: boss）")
+    return problems
+
+
 def season_problems(
     season: SeasonContent,
     *,
@@ -316,10 +454,13 @@ def season_problems(
     weather_ids: Collection[str],
     region_ids: Collection[str],
     location_kinds: Collection[str],
+    units: Collection[str] = (),
+    maps: Mapping[str, MapDef] | None = None,
 ) -> list[str]:
-    """跨檔案檢查（繁體中文、排序；空＝通過）。``region_ids`` 是區域表的區域（世界事件的建議等級
+    """跨檔案檢查（繁體中文、排序；空＝通過）。``units``／``maps``（Phase 5F-3）：賽季 Boss 的陣容與
+    Boss 地圖、封印鑰匙來源的單位。``region_ids`` 是區域表的區域（世界事件的建議等級
     加成可以指向還沒有地點圖的區域，例如灰燼荒原）。"""
-    problems: list[str] = []
+    problems: list[str] = _boss_problems(season, units=units, maps=maps, catalog=catalog)
     rules = season.daily_goals
     for goal_def in () if rules is None else rules.goals:
         problems += _goal_problems(

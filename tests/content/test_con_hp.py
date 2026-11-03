@@ -96,6 +96,11 @@ OLD_HP = {
     "sect_steward": 62,  # 5A-3 新增（雲嶺）
     "sect_mist_lock_master": 132,  # 5F-2 新增（雲嶺 Boss）；5F-2b HP 90 → 120
     "sect_summit_array_stone": 58,  # 5F-2 新增（雲頂觀陣眼）；5F-2b HP 30 → 40
+    "rift_shard_lord": 152,  # 5F-3 新增（賽季 Boss 碎晶之主）
+    "rift_pillar_mist": 63,  # 5F-3 新增（源晶柱）
+    "rift_pillar_thunder": 63,
+    "rift_pillar_fire": 63,
+    "rift_crystal_golem": 38,  # 5F-3 新增（晶傀儡）
     "mist_wolf": 22,  # 5A-3 新增（雲嶺）
     "mountain_leopard": 26,  # 5A-3 新增（雲嶺）
     "stoneback_bear": 62,  # 5A-3 新增（雲嶺）
