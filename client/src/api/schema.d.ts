@@ -1850,6 +1850,11 @@ export interface components {
             mine: boolean;
             /** At */
             at: number;
+            /**
+             * Titles
+             * @default []
+             */
+            titles: string[];
         };
         /**
          * BoardBountyView
@@ -1950,6 +1955,11 @@ export interface components {
             problem_zh?: string | null;
             /** First Kill Zh */
             first_kill_zh?: string | null;
+            /**
+             * First Kill Titles
+             * @default []
+             */
+            first_kill_titles: string[];
             /** Title Zh */
             title_zh: string;
             /**
@@ -2352,6 +2362,11 @@ export interface components {
             rounds: number;
             /** Title Zh */
             title_zh: string;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
         };
         /** ChronicleHeroView */
         ChronicleHeroView: {
@@ -2359,6 +2374,11 @@ export interface components {
             name: string;
             /** Text Zh */
             text_zh: string;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
         };
         /** ChronicleKillView */
         ChronicleKillView: {
@@ -2368,6 +2388,11 @@ export interface components {
             target_name_zh: string;
             /** Name */
             name: string;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
         };
         /** ChronicleRankView */
         ChronicleRankView: {
@@ -2385,6 +2410,11 @@ export interface components {
             draws: number;
             /** Tied */
             tied: boolean;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
         };
         /** ChronicleRecipeView */
         ChronicleRecipeView: {
@@ -7082,6 +7112,11 @@ export interface components {
             own: boolean;
             /** Saved Zh */
             saved_zh: string;
+            /**
+             * Titles
+             * @default []
+             */
+            titles: string[];
         };
         /** ShopItemView */
         ShopItemView: {

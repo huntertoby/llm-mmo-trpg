@@ -158,6 +158,10 @@ class AccountRecord(BaseModel):
     titles: tuple[AccountTitle, ...] = ()
     """紀念稱號（Phase 5F-3b；依取得順序）。有預設值，舊檔照讀、不升版。"""
 
+    def title_labels(self) -> tuple[str, ...]:
+        """顯示用的稱號（「碎晶的終結者（s1）」，依取得順序；5F-3b／5F-3c）。"""
+        return tuple(f"{t.name_zh}（{t.season_id}）" for t in self.titles)
+
     def season_of(self, character_id: str) -> str:
         return self.character_seasons.get(character_id, FIRST_SEASON_ID)
 
@@ -385,6 +389,12 @@ class AccountStore:
                 if character_id in record.characters:
                     return record.account_id
             return None
+
+    def titles_of(self, account_id: str) -> tuple[str, ...]:
+        """帳號的顯示用稱號（5F-3c：名片、評分榜、首殺、編年史）；沒有這個帳號＝空。"""
+        with self._locked():
+            record = self._loaded().get(account_id)
+            return () if record is None else record.title_labels()
 
     # -- 帳號 -----------------------------------------------------------------
 

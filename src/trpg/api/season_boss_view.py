@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.season_schemas import BoardBossEntryView, BoardSeasonBossView
 from trpg.content.library import ContentLibrary
 from trpg.server.season_boss_board import BossBoardEntry
@@ -58,7 +59,10 @@ def _unlock_event(library: ContentLibrary) -> str | None:
 
 
 def _entries(
-    library: ContentLibrary, viewer: CharacterState, entries: Sequence[BossBoardEntry]
+    library: ContentLibrary,
+    viewer: CharacterState,
+    entries: Sequence[BossBoardEntry],
+    titles: TitlesOf,
 ) -> tuple[BoardBossEntryView, ...]:
     return tuple(
         BoardBossEntryView(
@@ -72,6 +76,7 @@ def _entries(
             location_zh=location_name_for(library, viewer, e.region, e.location),
             mine=e.character_id == viewer.character_id,
             at=e.at,
+            titles=titles(e.character_id),
         )
         for index, e in enumerate(entries, start=1)
     )
@@ -85,8 +90,10 @@ def season_boss_block(
     *,
     actor: str,
     entries: Sequence[BossBoardEntry] = (),
+    titles: TitlesOf = no_titles,
 ) -> BoardSeasonBossView | None:
-    """``char``（帳號 ``actor``）看到的賽季 Boss 區塊；沒有賽季 Boss 時 ``None``。"""
+    """``char``（帳號 ``actor``）看到的賽季 Boss 區塊；沒有賽季 Boss 時 ``None``。``titles``：
+    評分榜與首殺玩家的帳號稱號（5F-3c）。"""
     boss = boss_def(library)
     schedule = boss_schedule(library, world)
     status = boss_status(library, world, now)
@@ -115,8 +122,9 @@ def season_boss_block(
         can_challenge=problem is None,
         problem_zh=problem,
         first_kill_zh=None if first is None else f"本季首殺：{first.name}（{first.rounds} 輪）",
+        first_kill_titles=() if first is None else titles(first.character_id),
         title_zh=boss.title_zh,
-        board=_entries(library, char, entries),
+        board=_entries(library, char, entries, titles),
     )
 
 

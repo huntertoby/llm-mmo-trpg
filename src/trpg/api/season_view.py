@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.season_boss_view import season_boss_block
 from trpg.api.season_schemas import (
     BoardBountyView,
@@ -176,6 +177,7 @@ def season_board(
     *,
     actor: str | None = None,
     boss_board: Sequence[BossBoardEntry] = (),
+    titles: TitlesOf = no_titles,
 ) -> SeasonBoardView:
     """``char`` 看到的公告板（``world`` 是換日後的世界）。``actor`` 是看的人的帳號（賽季 Boss 的
     剩餘次數，5F-3；``None``＝角色 ID）；``boss_board`` 是這一季的評分榜。"""
@@ -207,6 +209,7 @@ def season_board(
             now,
             actor=char.character_id if actor is None else actor,
             entries=boss_board,
+            titles=titles,
         ),
     )
 

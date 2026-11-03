@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from pydantic import BaseModel, ConfigDict, Field
 
-__all__ = ["AccountView", "AuthStatus", "LoginRequest", "LoginResponse"]
+__all__ = ["AccountView", "AuthStatus", "LoginRequest", "LoginResponse", "TitlesOf", "no_titles"]
+
+type TitlesOf = Callable[[str], tuple[str, ...]]
+"""角色 ID → 所屬帳號的顯示用紀念稱號（5F-3c；名片、評分榜、首殺、編年史，戰鬥畫面不顯示）。"""
+
+
+def no_titles(_character_id: str) -> tuple[str, ...]:
+    """沒有帳號（開發模式、測試）時：不顯示稱號。"""
+    return ()
 
 
 class LoginRequest(BaseModel):

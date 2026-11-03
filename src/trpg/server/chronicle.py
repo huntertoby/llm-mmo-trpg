@@ -20,6 +20,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import DollLook
+from trpg.content.races import RaceLook
 from trpg.world.save import write_atomic
 
 __all__ = [
@@ -223,12 +224,30 @@ RACE_DOLL_FIELDS: Final[tuple[str, ...]] = ("skin", "hair", "hair_color", "eyes"
 
 
 def legacy_doll(
-    doll: DollLook, *, legacy_race: str | None, race: str | None, base: DollLook | None
+    doll: DollLook,
+    *,
+    legacy_race: str | None,
+    race: str | None,
+    base: DollLook | None,
+    race_look: RaceLook | None = None,
 ) -> DollLook | None:
-    """沿用上季的紙娃娃（5F-5c）：種族沒改＝原樣；改了＝:data:`RACE_DOLL_FIELDS` 換成新角色範本的
-    預設（``base``；範本沒有紙娃娃＝整個用預設 ``None``）。"""
+    """沿用上季的紙娃娃（5F-5c；5F-3c 玩法 PM 2026-11-03 代決）：種族沒改＝原樣；改了＝
+    :data:`RACE_DOLL_FIELDS` 每一項，目前的值新種族也有就保留，沒有才換成新角色範本的預設
+    （``base``；範本沒有紙娃娃＝整個用預設 ``None``）。
+
+    「新種族也有」＝等於新角色範本的預設值，或等於新種族外觀（``race_look``，``races.yaml`` 的
+    ``look``）同名欄位的值；種族外觀沒有的欄位（``skull``）只比範本。種族目前每一項只有一個值、
+    沒有可選清單，所以這是最保守的判斷（5F-3c 待 PM 決定）。"""
     if race == legacy_race:
         return doll
     if base is None:
         return None
-    return doll.model_copy(update={name: getattr(base, name) for name in RACE_DOLL_FIELDS})
+    update: dict[str, object] = {}
+    for name in RACE_DOLL_FIELDS:
+        current = getattr(doll, name)
+        allowed = [getattr(base, name)]
+        if race_look is not None and name in RaceLook.model_fields:
+            allowed.append(getattr(race_look, name))
+        if current not in allowed:
+            update[name] = getattr(base, name)
+    return doll.model_copy(update=update)
