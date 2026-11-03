@@ -15,6 +15,33 @@ export interface FetcherDeps {
   throttleMs?: number;
 }
 
+/**
+ * React 包裝用的範圍（6C-R1）：fetcher 只建一次，但送請求時讀「目前」的戰鬥 id（舊版建立時把 battleId 綁死，
+ * 換戰鬥後仍向舊戰鬥問路徑）。`update` 每次 render 呼叫：戰鬥或狀態變了回傳 `true`，呼叫端要 `reset` fetcher。
+ */
+export class PathPreviewScope {
+  constructor(
+    private battle: string,
+    private stateKey: unknown,
+  ) {}
+
+  get battleId(): string {
+    return this.battle;
+  }
+
+  update(battleId: string, stateKey: unknown): boolean {
+    if (battleId === this.battle && stateKey === this.stateKey) return false;
+    this.battle = battleId;
+    this.stateKey = stateKey;
+    return true;
+  }
+
+  /** 送出時才讀目前的戰鬥 id 的請求函式。 */
+  fetchWith(fetchFor: (battleId: string, body: PathQuery["body"]) => Promise<PathPreview>): FetcherDeps["fetch"] {
+    return (body) => fetchFor(this.battle, body);
+  }
+}
+
 export class PathPreviewFetcher {
   private readonly cache = new Map<string, PathPreview>();
   /** 已經送出、還沒回來的請求（同一條不重送）。 */

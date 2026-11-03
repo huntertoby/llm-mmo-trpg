@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest";
 import type { MoveAction } from "../api/types";
 import { dashRuns, outerEdges, polylineLength, roundedPieces } from "./pathGeometry";
-import { PathPreviewFetcher, PATH_PREVIEW_THROTTLE_MS } from "./pathFetch";
+import { PathPreviewFetcher, PathPreviewScope, PATH_PREVIEW_THROTTLE_MS } from "./pathFetch";
+import { readFile, SRC_DIR } from "../test/sourceScan";
 import {
   damageText,
   hoverPathQuery,
@@ -411,6 +412,40 @@ describe("請求節流與快取", () => {
     advance(200);
     f.want(q(1));
     expect(f.sent).toBe(3); // 快取已清：重新問
+  });
+
+  it("換戰鬥（6C-R1）：同一個 fetcher 之後的請求送到新的 battleId，並清掉舊戰鬥的快取", async () => {
+    const scope = new PathPreviewScope("b1", "s0");
+    const calls: string[] = [];
+    let clock = 0;
+    const f = new PathPreviewFetcher({
+      fetch: scope.fetchWith((id) => {
+        calls.push(id);
+        return Promise.resolve(plain);
+      }),
+      onResult: () => {},
+      now: () => clock,
+      setTimer: () => 0,
+      clearTimer: () => {},
+    });
+    expect(scope.update("b1", "s0")).toBe(false);
+    f.want(q(1));
+    await flush();
+    expect(calls).toEqual(["b1"]);
+    expect(scope.update("b2", "s0")).toBe(true);
+    expect(scope.battleId).toBe("b2");
+    f.reset();
+    clock += 500;
+    f.want(q(1)); // 同一條路徑：舊戰鬥的快取已清，要向新戰鬥重問
+    await flush();
+    expect(calls).toEqual(["b1", "b2"]);
+    expect(scope.update("b2", "s1")).toBe(true); // 狀態變了也要清
+  });
+
+  it("usePathPreview 用 PathPreviewScope，不在建立 fetcher 時綁死 battleId", () => {
+    const src = readFile(SRC_DIR, "ui/usePathPreview.ts");
+    expect(src).toMatch(/fetchWith\(/);
+    expect(src).not.toMatch(/api\.pathPreview\(battleId\b/);
   });
 
   it("不預覽時通知清掉", () => {

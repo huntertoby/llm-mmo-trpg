@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import type { SkillIconData } from "../api/types";
 import { ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
+import { listFiles, readFile, SRC_DIR } from "../test/sourceScan";
 import { ELEMENT_COLORS } from "./palette";
 import fixture from "./fixtures/skill_icons.json";
 import { drawMotif, ELEMENT_ICON, elementPalette, gridLayout, isRanged, normalizeArm, SKELETON_NAME } from "./skillGlyphs";
@@ -52,9 +53,10 @@ function yamlIds(raw: string, key: string): string[] {
   const doc = parse(raw) as Record<string, Array<{ id: string }>>;
   return (doc[key] ?? []).map((r) => r.id);
 }
-const content = import.meta.glob("../../../content/*.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-const skeletonFiles = import.meta.glob("../../../content/skeletons/*.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-const contentIds = (file: string, key: string) => yamlIds(content[`../../../content/${file}`] as string, key);
+// 6C-R1：content/ 在執行時用 fs 讀（不用 `import.meta.glob`：檔案清單會被 vitest 的 fsModuleCache 快取，新骨架不會被掃到）
+const CONTENT_DIR = new URL("../../content/", SRC_DIR);
+const contentIds = (file: string, key: string) => yamlIds(readFile(CONTENT_DIR, file), key);
+const skeletonFiles = listFiles(new URL("skeletons/", CONTENT_DIR), (p) => /^\w+\.yaml$/.test(p));
 
 const minimal = (over: Partial<SkillIconData> = {}): SkillIconData => ({
   kind: "active",
@@ -88,7 +90,7 @@ describe("部件庫：對照 content/ 沒有漏", () => {
   });
 
   it("每個骨架都有名稱", () => {
-    const ids = Object.keys(skeletonFiles).map((f) => f.replace(/^.*\/(\w+)\.yaml$/, "$1"));
+    const ids = skeletonFiles.map((f) => f.replace(/\.yaml$/, ""));
     expect(ids.length).toBeGreaterThan(10);
     for (const id of ids) expect(SKELETON_NAME[id], id).toBeDefined();
   });

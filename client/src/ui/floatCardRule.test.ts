@@ -2,35 +2,27 @@
 // `client/src` 除了共用浮動卡元件之外，不准有自製的彈出層或原生 `title=` tooltip。
 // 這裡用文字規則掃原始碼；有正當理由的例外一律列在白名單，並寫明原因。
 import { describe, expect, it } from "vitest";
-// @ts-expect-error 測試在 node 執行；專案沒裝 @types/node，只為了讀 CSS 檔
-import { readFileSync, readdirSync } from "node:fs";
+import { readSources, readStyleFiles, stripCssComments, stripTsComments } from "../test/sourceScan";
 
-// 注意：vitest 預設不處理 CSS，`?raw` 會變成空字串（舊的 CSS 規則因此形同虛設），所以直接讀檔。
-// 樣式在 `src/styles/` 依畫面拆成多檔（3T-7）；這裡把全部串起來檢查（規則只看內容，不看層疊順序）。
-const stylesDir = new URL("../styles/", import.meta.url);
-const styles: string = (readdirSync as (url: URL) => string[])(stylesDir)
-  .filter((f) => f.endsWith(".css"))
-  .sort()
-  .map((f) => (readFileSync as (url: URL, enc: string) => string)(new URL(f, stylesDir), "utf8"))
-  .join("\n");
-
-const sources = import.meta.glob<string>(["/src/**/*.tsx", "/src/**/*.ts", "!/src/**/*.test.ts", "!/src/**/*.d.ts"], {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
-const files = Object.entries(sources)
-  .map(([path, text]) => [path.replace(/^\/src\//, ""), text] as const)
-  .filter(([path]) => !path.endsWith(".test.tsx"))
-  .map(([path, text]) => [path, stripComments(text)] as const);
+// 6C-R1：原始碼與 CSS 都在執行時用 node 的 fs 遞迴讀（`test/sourceScan.ts`），不用 `import.meta.glob`——
+// vitest 的 fsModuleCache 會把 glob 的檔案清單跟著測試檔一起快取，新加的檔案不會被掃到。
+// CSS 掃 `src/**/*.css`（含 `world/*.css`）；全部串起來檢查（規則只看內容，不看層疊順序）。
+const styleFiles = readStyleFiles().map(([path, text]) => [path, stripCssComments(text)] as const);
+const styles: string = styleFiles.map(([, text]) => text).join("\n");
 
 /** 去掉註解（保留換行，行號不變）：說明文字裡提到 `title=` 不算違規。 */
-function stripComments(text: string): string {
-  return text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " ")).replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
-}
+const files = readSources().map(([path, text]) => [path, stripTsComments(text, path)] as const);
 
 /** 共用浮動卡元件本身：可以用 portal、`position: fixed`。 */
 const SHARED = new Set(["ui/useFloatCard.tsx", "ui/HoverFloat.tsx", "ui/Hint.tsx", "ui/PartTip.tsx"]);
+
+/**
+ * 內聯 `position: fixed／absolute` 的例外：檔名 → 原因。不是彈出層、也不是正式畫面的才放這裡。
+ */
+const INLINE_POSITION_OK: Record<string, string> = {
+  "dev/storyGallery.tsx":
+    "開發用樣張頁（`story-gallery.html`，不進正式 build、不屬於正式畫面）：`position: absolute` 只用在假戰場底圖的格線層與下方頭像對照面板的版面，不是彈出層（6C-R1）",
+};
 
 /** 允許帶 `title=` 的元件標籤：`title` 是它的 prop（視窗標題），不是 DOM 的 tooltip 屬性。 */
 const TITLE_PROP_OK = new Set(["DialogFrame"]);
@@ -56,8 +48,10 @@ function tagBefore(text: string, index: number): string | null {
 }
 
 describe("浮動卡規則（6.5.1）", () => {
-  it("讀得到 styles/*.css（CSS 規則不是對空字串空過）", () => {
+  it("讀得到 src/**/*.css 與各資料夾原始碼（規則不是對空清單空過）", () => {
     expect(styles.length).toBeGreaterThan(10000);
+    expect(styleFiles.map(([p]) => p)).toContain("world/story.css");
+    expect(files.length).toBeGreaterThan(100);
   });
 
   it("沒有原生 title= tooltip（說明一律用 Hint／PartTip／技能卡）", () => {
@@ -81,7 +75,7 @@ describe("浮動卡規則（6.5.1）", () => {
   it("沒有在元件裡用內聯樣式做 fixed／absolute 的彈出層", () => {
     const bad: string[] = [];
     for (const [path, text] of files) {
-      if (SHARED.has(path)) continue;
+      if (SHARED.has(path) || INLINE_POSITION_OK[path] !== undefined) continue;
       // 內聯樣式物件 `position: "fixed"`，以及直接改 DOM 的 `el.style.position = "fixed"`（5D-R1 補）
       for (const m of text.matchAll(/(?:position:|\.position\s*=)\s*["'](fixed|absolute)["']/g)) {
         bad.push(`${path}:${text.slice(0, m.index).split("\n").length}`);
@@ -126,32 +120,36 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(bad).toEqual([]);
   });
 
-  it("styles/*.css 裡 position: fixed 的規則只屬於共用浮動卡、對話框與遮罩", () => {
+  it("src/**/*.css 裡 position: fixed 的規則只屬於共用浮動卡、對話框與遮罩", () => {
     const allowed = [".float-card", ".unit-float", ".decision-card"];
     const bad: string[] = [];
-    for (const m of styles.matchAll(/([^{}]+)\{([^{}]*position:\s*fixed[^{}]*)\}/g)) {
-      const selector = (m[1] ?? "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
-      if (!allowed.some((a) => selector.startsWith(a))) bad.push(selector);
+    for (const [path, text] of styleFiles) {
+      for (const m of text.matchAll(/([^{}]+)\{([^{}]*position:\s*fixed[^{}]*)\}/g)) {
+        const selector = (m[1] ?? "").trim();
+        if (!allowed.some((a) => selector.startsWith(a))) bad.push(`${path}: ${selector}`);
+      }
     }
     expect(bad).toEqual([]);
   });
 
-  it("styles/*.css 裡 position: absolute 且 z-index ≥ 20 的規則只屬於共用彈出元件", () => {
+  it("src/**/*.css 裡 position: absolute 且 z-index ≥ 20 的規則只屬於共用彈出元件", () => {
     // `.popup-menu`：點擊式選單（6A-4g：舊版的拖曳分隔線 `.resize-handle` 已刪）
     const allowed = [".float-card", ".unit-float", ".decision-card", ".popup-menu"];
     const bad: string[] = [];
-    for (const m of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const body = m[2] ?? "";
-      if (!/position:\s*(absolute|fixed)/.test(body)) continue;
-      const z = /z-index:\s*(\d+)/.exec(body);
-      if (z === null || Number(z[1]) < 20) continue;
-      const selector = (m[1] ?? "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
-      if (!allowed.some((a) => selector.startsWith(a))) bad.push(selector);
+    for (const [path, text] of styleFiles) {
+      for (const m of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const body = m[2] ?? "";
+        if (!/position:\s*(absolute|fixed)/.test(body)) continue;
+        const z = /z-index:\s*(\d+)/.exec(body);
+        if (z === null || Number(z[1]) < 20) continue;
+        const selector = (m[1] ?? "").trim();
+        if (!allowed.some((a) => selector.startsWith(a))) bad.push(`${path}: ${selector}`);
+      }
     }
     expect(bad).toEqual([]);
   });
 
-  it("styles/*.css 沒有已移除的死碼（.modal-backdrop、.fallback-list）", () => {
+  it("src/**/*.css 沒有已移除的死碼（.modal-backdrop、.fallback-list）", () => {
     expect(styles).not.toMatch(/\.modal-backdrop|\.fallback-list/);
   });
 
