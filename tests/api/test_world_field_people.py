@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 from typing import Any
 
 import pytest
@@ -29,8 +28,12 @@ def _started(*quests: str) -> tuple[QuestState, ...]:
     return tuple(QuestState(quest=q, started_at=NOON) for q in quests)
 
 
+type Case = tuple[str, int, bool, tuple[str, ...], str, str | None]
+"""（NPC、好感度、今天聊過、已接的任務、預期級別、預期「！」）。"""
+
+
 @pytest.mark.parametrize(
-    ("npc", "affinity", "talked", "quests", "rank", "alert"),
+    "case",
     [
         # 新角色：渡婆給新手任務（還沒接）→ 任務的「！」
         ("granny_du", 0, False, (), "neutral", "quest"),
@@ -49,15 +52,8 @@ def _started(*quests: str) -> tuple[QuestState, ...]:
         ("shopkeeper_liu", 60, False, ("hidden_elixir_cave",), "trusted", "rumor"),
     ],
 )
-def test_npc_marks_table(
-    field_library: ContentLibrary,
-    npc: str,
-    affinity: int,
-    talked: bool,
-    quests: tuple[str, ...],
-    rank: str,
-    alert: str | None,
-) -> None:
+def test_npc_marks_table(field_library: ContentLibrary, case: Case) -> None:
+    npc, affinity, talked, quests, rank, alert = case
     today = day_of(field_library, NOON)
     char = _char(
         field_library,
@@ -101,8 +97,7 @@ def test_friend_cells_deterministic(field_library: ContentLibrary) -> None:
     grid = field_grid(field_library, _char(field_library), found)
     owners = [f"friend{i}" for i in range(6)]
     first = friend_cells(found, grid, owners, 1)
-    shuffled = owners[:]
-    random.Random(7).shuffle(shuffled)
+    shuffled = [*owners[3:], *reversed(owners[:3])]
     assert friend_cells(found, grid, shuffled, 1) == first  # 和名單順序無關
     assert friend_cells(found, grid, owners, 1) == first  # 同樣的輸入同樣的結果
     assert len(set(first.values())) == len(owners)  # 不重疊
