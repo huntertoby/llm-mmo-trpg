@@ -71,7 +71,7 @@ items:
     name_zh: 回魔藥
     kind: consumable
     description_zh: 戰鬥中回 10 法力；野外喝一瓶回 25% 法力。
-    price: 40
+    price: 30
     field_mana_permille: 250
     skill:
       id: skill_item_mana_potion
@@ -99,8 +99,8 @@ items:
   - id: item_antidote_herb
     name_zh: 解毒草
     kind: consumable
-    description_zh: 戰鬥中嚼下去，移除自己身上的負面狀態（含中毒、流血）。
-    price: 15
+    description_zh: 戰鬥中嚼下去，移除自己身上的負面狀態（淨化）。
+    price: 25
     skill:
       id: skill_item_antidote_herb
       schema_version: 1

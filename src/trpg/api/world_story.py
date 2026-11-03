@@ -149,7 +149,30 @@ def event_story(
         skeletons=tuple(skeletons[s] for s in allowed.skeletons),
         default_skeleton=trigger.skeleton,
     )
+    picked = skeletons.get(trigger.skeleton)
+    if trigger.guaranteed and picked is not None and picked.guarantee_text_zh is not None:
+        return _guaranteed_story(library, world, char, request, picked.guarantee_text_zh, now=now)
     return _finish(library, world, char, request, client=client, now=now, style=style)
+
+
+def _guaranteed_story(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    request: StoryRequest,
+    text: str,
+    *,
+    now: int,
+) -> NarrateAction:
+    """機遇保底的專用旁白（5B-4e，骨架的 ``guarantee_text_zh``）：不經說書人，模板文字的角色與動機
+    照舊，旁白換成專用文字；核對不過就退回一般模板。"""
+    templates = library.world_event_content.story
+    base = fallback_story(request, templates)
+    story = base.model_copy(update={"text_zh": text, "more_zh": ""})
+    action = NarrateAction(scene="event", story=story, source="fallback")
+    if narration_problems(library, world, char, action, now):
+        action = action.model_copy(update={"story": base})
+    return action
 
 
 def situation_story(

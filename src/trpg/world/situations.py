@@ -139,12 +139,18 @@ def opportunity_available(
 ) -> bool:
     """機遇解法的條件是否成立（18.4 補充：裝備的技能中任何一招帶 ``requires_keyword``）。
 
-    非機遇解法回傳 ``False``；機遇沒有條件時回傳 ``True``。
+    非機遇解法回傳 ``False``；機遇沒有條件時回傳 ``True``。5B-4e：角色身上的事件是保底觸發的
+    （``EventTrigger.guaranteed``）、``guarantee_waives_keyword`` 開著時也回傳 ``True``。
     """
     if solution.kind != "opportunity":
         return False
     keyword = solution.requires_keyword
     if keyword is None:
+        return True
+    rules = library.world_rules
+    trigger = char.pending_event
+    waived = rules is not None and rules.opportunity.guarantee_waives_keyword
+    if waived and trigger is not None and trigger.guaranteed:  # 5B-4e：保底的機遇不檢查關鍵字
         return True
     for skill_id in char.hero.skills:
         skill = library.skills.get(skill_id)

@@ -175,13 +175,13 @@ def test_settle_with_win_gives_threads(library: ContentLibrary, make_char: MakeC
 def test_event_affinity_follows_event_resolved(
     library: ContentLibrary, make_char: MakeChar
 ) -> None:
-    """事件好感度看 ``event_resolved``：護送戰（戰鬥解法）成功，小蓮 +10。"""
+    """事件好感度看 ``event_resolved``：護送戰（戰鬥解法）成功，小蓮 +20（5B-4e）。"""
     resolved = EventResolvedEvent(
         skeleton="lost_acolyte", location="rain_terraces", solution=1, outcome="success"
     )
     _, events = advance_quests(library, make_world(), make_char(), (resolved,), NOON)
     changed = [e for e in events if isinstance(e, AffinityChangedEvent)]
-    assert [(e.npc, e.delta) for e in changed] == [("acolyte_xiaolian", 10)]
+    assert [(e.npc, e.delta) for e in changed] == [("acolyte_xiaolian", 20)]
     abandoned = resolved.model_copy(update={"outcome": "abandoned"})
     _, none = advance_quests(library, make_world(), make_char(), (abandoned,), NOON)
     assert none == []

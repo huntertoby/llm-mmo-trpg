@@ -87,3 +87,5 @@ opportunity:
   tier_up_per_season: 1
   # 5B-4d：第 7 天前保底 1 次（07 7.6）：賽季第 6 天起，沒遇過機遇的角色走到機遇地點就一定出現（不看天氣、時段）
   guarantee_from_day: 6
+  # 5B-4e（18.7.6「5B-4d 代決」）：保底時不檢查「需要帶電技能」（三張照樣帶帶電）
+  guarantee_waives_keyword: true

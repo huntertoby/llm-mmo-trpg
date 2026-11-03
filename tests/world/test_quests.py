@@ -327,7 +327,7 @@ def test_main_temple_split_by_situation(library: ContentLibrary, make_char: Make
     result = world_step(lib, make_world(), char, action, NOON)
     done = [e.step for e in result.events if isinstance(e, QuestStepDoneEvent)]
     assert done == ["temple_split"]
-    assert result.char.affinity["acolyte_xiaolian"] == 10  # 5B-4c：有關的 NPC +10
+    assert result.char.affinity["acolyte_xiaolian"] == 10 + 10  # 5B-4c 步驟 +10、5B-4e 骨架 6 +10
     assert result.char.affinity["daoist_qingya"] == 20  # 事件好感度（骨架 6 成功）＋10
 
 

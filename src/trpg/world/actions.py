@@ -90,6 +90,7 @@ __all__ = [
     "OathReleasedEvent",
     "OathSwornEvent",
     "OfferPickAction",
+    "OpportunityHintEvent",
     "PartyChangedEvent",
     "PerceptionCheckEvent",
     "QuestCompletedEvent",
@@ -861,6 +862,14 @@ class RumorsHeardEvent(_Model):
     rumors: tuple[str, ...]
 
 
+class OpportunityHintEvent(_Model):
+    """還沒遇過機遇的角色在提示地點聽到的一句（5B-4e；``SocialTable.opportunity_hints``）。不改狀態。"""
+
+    kind: Literal["opportunity_hint"] = "opportunity_hint"
+    location: str
+    text_zh: str
+
+
 class PartyChangedEvent(_Model):
     """隊伍的傭兵換了（5C-1）。"""
 
@@ -975,6 +984,7 @@ type WorldEvent = Annotated[
     | AffinityChangedEvent
     | TalkedEvent
     | RumorsHeardEvent
+    | OpportunityHintEvent
     | EventSolvedEvent
     | ThreadSpentEvent
     | ThreadExpiredEvent

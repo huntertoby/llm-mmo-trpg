@@ -106,6 +106,8 @@ class OpenAICompatClient:
             "max_tokens": self.config.max_tokens,
             "chat_template_kwargs": {"enable_thinking": self.config.enable_thinking},
         }
+        if self.config.reasoning_effort is not None:
+            body["reasoning_effort"] = self.config.reasoning_effort
         if mode == "response_format":
             body["response_format"] = {
                 "type": "json_schema",
