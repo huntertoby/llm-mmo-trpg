@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>HUD 功能列圖示定稿</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1160px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 16px 0 6px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; } canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>HUD 功能列：8 個圖示定稿＋滑過說明卡（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。版面 A 底部中央的功能列。I 背包、K 技能、G 成長、J 任務、Y 影子、N 留言、R 潛行、M 地圖。R 原本是「趕路」，#120 第 21.4 節改成「潛行」，所以圖示換成兜帽與虛線腳步。C 手繪墨線；快捷鍵寫在右下角。全部程式繪製。</p>
+<h2>1. 八個圖示（80、46、28 三種大小）</h2><canvas id="c1"></canvas>
+<h2>2. 按鈕狀態<small>一般、滑過（亮邊＋光暈）、開著（面板打開時亮金框）、停用（灰、半透明）、有未讀（紅色數字或紅點）、開關開著（R 潛行中）</small></h2><canvas id="c2"></canvas>
+<h2>3. 功能列（實際排法）<small>R 正在潛行；N 有 3 則未讀；K 有新技能（紅點）；Y 影子這次停用（例：還沒存影子）</small></h2><canvas id="c3"></canvas>
+<h2>4. 滑過說明卡<small>標題列（圖示＋名稱＋快捷鍵）、目前狀態（黃字一行）、說明一句、觸控提示；觸控照 6A-1 的定案</small></h2><canvas id="c4"></canvas>
+<script src="storyDoll.js"></script>
+<script src="hudIcons.js"></script>
+<script>
+  const H = HudIcons;
+  function cv(id, w, h) { const c = document.getElementById(id); c.width = w * 2; c.height = h * 2; c.style.width = w + "px"; c.style.height = h + "px"; const x = c.getContext("2d"); x.scale(2, 2); return x; }
+  let ctx = cv("c1", 1140, 120);
+  H.ORDER.forEach((k, i) => { const x = 10 + i * 140; H.button(ctx, x, 6, 80, k); H.button(ctx, x + 86, 6, 46, k); H.button(ctx, x + 86, 58, 28, k); ctx.fillStyle = "#f2e6c8"; ctx.font = "bold 13px 'Microsoft JhengHei'"; ctx.fillText(`${k}　${H.ICONS[k].zh}`, x + 12, 106); });
+  ctx = cv("c2", 1140, 96);
+  [["normal", null, "一般"], ["hover", null, "滑過"], ["open", null, "開著"], ["disabled", null, "停用"], ["normal", "3", "未讀數字"], ["normal", "dot", "紅點"], ["on", null, "開關開著"]].forEach(([st, b, zh], i) => { H.button(ctx, 14 + i * 150, 8, 56, i === 6 ? "R" : i === 4 ? "N" : i === 5 ? "K" : "I", st, b); ctx.fillStyle = "#d8ccb8"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText(zh, 14 + i * 150, 82); });
+  ctx = cv("c3", 1140, 80);
+  ctx.fillStyle = "#4a6a4e"; ctx.fillRect(0, 0, 1140, 80); ctx.fillStyle = "rgba(24,20,16,0.6)"; ctx.beginPath(); ctx.roundRect(330, 8, 8 * 52 + 14, 64, 12); ctx.fill();
+  H.ORDER.forEach((k, i) => H.button(ctx, 337 + i * 52, 13, 46, k, k === "R" ? "on" : k === "Y" ? "disabled" : k === "I" ? "open" : "normal", k === "N" ? "3" : k === "K" ? "dot" : null));
+  ctx = cv("c4", 1140, 120);
+  H.card(ctx, 10, 10, "I", "18 / 24 格・金幣 1,240", "裝備、藥水、材料都在這裡；拖曳可以換裝。");
+  H.card(ctx, 280, 10, "R", "潛行中・剩 6 步", "花 1 補給，一段路內敵人的視野縮小。");
+  H.card(ctx, 550, 10, "N", "3 則未讀", "這個地點的留言，朋友也看得到。");
+  H.card(ctx, 820, 10, "Y", "還沒存影子", "在城鎮休息或整備時會自動存。");
+</script>
+</body>
+</html>
