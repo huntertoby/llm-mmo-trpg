@@ -24,6 +24,7 @@ from trpg.content.fields import FieldDoor, FieldExit, FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import passable_grid
 from trpg.world.actions import TravelAction, WorldEvent
+from trpg.world.atlas import region_lit, unlocked_stones
 from trpg.world.common import world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.field_actions import (
@@ -388,11 +389,42 @@ def _take_exit(  # noqa: PLR0917 - 出口需要整套移動參數
         char = _enter(library, char, outside, exit_.arrive, 0)
         return world, char, (_entered(char, "exit"),)
     if exit_.region is not None and exit_.region != found.region:
-        raise WorldActionError("跨區的出口還沒開放，請用傳送")
+        char = _cross_region(library, world, char, exit_, index)
+        return world, char, (_entered(char, "exit"),)
     world, char, events = travel(library, world, char, TravelAction(to=exit_.to), now)
     target = outdoor_map(library, char.region, exit_.to)
     char = _enter(library, char, target, exit_.arrive, index)
     return world, char, (*events, _entered(char, "exit"))
+
+
+def _cross_region(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    exit_: FieldExit,
+    index: int,
+) -> CharacterState:
+    """跨區的出口（6D-5；21.10 第 1 條：渡口走到尾端的出口才進入荒原的灰渡口）。
+
+    兩端的地點都要已開放（``unlock_flag``）；換到對面那一區的地點，站在對面 ``arrive`` 出口往內
+    一格。和原本渡口的傳送一樣不擲骰、不花時間與補給（保守做法，見 6D-5 報告）。之後
+    :func:`trpg.world.step.world_step` 把抵達的地點記進 ``visited_locations``，那一區就在自己的
+    大世界圖上亮起（:func:`trpg.world.atlas.region_lit`）。"""
+    assert exit_.region is not None
+    target_map = library.world_maps.get(exit_.region)
+    target = None if target_map is None else target_map.location_by_id().get(exit_.to)
+    if target is None:
+        raise WorldActionError("跨區的出口還沒開放，請用傳送")
+    source = world_map_of(library, char.region).location_by_id().get(char.location)
+    for place in (source, target):
+        if (
+            place is not None
+            and place.unlock_flag is not None
+            and not world.has_flag(place.unlock_flag)
+        ):
+            raise WorldActionError(f"{place.name_zh}還沒開放")
+    char = char.model_copy(update={"region": exit_.region, "location": exit_.to, "camped_at": None})
+    return _enter(library, char, outdoor_map(library, exit_.region, exit_.to), exit_.arrive, index)
 
 
 def _take_door(  # noqa: PLR0917 - 門需要整套移動參數
@@ -464,7 +496,7 @@ def use_teleport_stone(
         raise WorldActionError("要站在傳送石上或在城鎮裡才能傳送")
     if action.to == origin:
         raise WorldActionError("已經在這顆傳送石上")
-    if action.to not in char.teleport_stones:
+    if action.to not in unlocked_stones(library, char):  # 主城的傳送石一開始就解鎖（6D-5）
         raise WorldActionError(f"還沒走到過傳送石 {action.to}")
     target = _stone_map(library, action.to)
     if target is None or target[0].location is None:
@@ -472,7 +504,7 @@ def use_teleport_stone(
     dest, (x, y) = target
     location = dest.location
     assert location is not None
-    if dest.region != char.region and dest.region not in char.visited_towns:
+    if dest.region != char.region and not region_lit(char, dest.region):
         raise WorldActionError(f"還沒去過 {dest.region} 的小鎮，不能傳送")
 
     char = char.model_copy(

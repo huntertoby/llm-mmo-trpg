@@ -1555,6 +1555,61 @@ export interface components {
             enemies: string[];
         };
         /**
+         * AtlasRegionView
+         * @description 大世界圖上的一區（6D-5；21.1）。
+         */
+        AtlasRegionView: {
+            /** Region */
+            region: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "locked" | "later";
+            /** Condition Zh */
+            condition_zh?: string | null;
+            /** Town */
+            town?: string | null;
+            /** Town Name Zh */
+            town_name_zh?: string | null;
+            /**
+             * Current
+             * @default false
+             */
+            current: boolean;
+            /**
+             * Can Teleport
+             * @default false
+             */
+            can_teleport: boolean;
+        };
+        /**
+         * AtlasView
+         * @description 大世界圖（6D-5；21.1、9.6.5）：五區漂浮的界域與中央的主城浮島。只能看；站在傳送石上或在城鎮裡
+         *     打開時，可以點已開放區的城鎮傳送。
+         */
+        AtlasView: {
+            /** Regions */
+            regions: components["schemas"]["AtlasRegionView"][];
+            capital: components["schemas"]["AtlasRegionView"];
+            /**
+             * Can Teleport
+             * @default false
+             */
+            can_teleport: boolean;
+            /** Teleport Problem Zh */
+            teleport_problem_zh?: string | null;
+            /** Art Url */
+            art_url?: string | null;
+            /**
+             * Maps
+             * @default []
+             */
+            maps: components["schemas"]["WorldMapView"][];
+        };
+        /**
          * Attack
          * @description 以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。
          *
@@ -9820,6 +9875,7 @@ export interface components {
             shop?: components["schemas"]["ShopView"] | null;
             crafting?: components["schemas"]["CraftingView"] | null;
             field?: components["schemas"]["FieldView"] | null;
+            atlas?: components["schemas"]["AtlasView"] | null;
         };
         XY: [
             number,

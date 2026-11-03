@@ -234,6 +234,9 @@ export type WorldCharacterView = Schemas["WorldCharacterView"];
 export type WorldCharacterSummary = Schemas["WorldCharacterSummary"];
 export type WorldLocationView = Schemas["WorldLocationView"];
 export type WorldMapView = Schemas["WorldMapView"];
+/** 大世界圖（Phase 6D-5）。 */
+export type AtlasView = Schemas["AtlasView"];
+export type AtlasRegionView = Schemas["AtlasRegionView"];
 export type WorldEncounterView = Schemas["EncounterView"];
 export type WorldHereView = Schemas["HereView"];
 export type WorldBattleResponse = Schemas["WorldBattleResponse"];

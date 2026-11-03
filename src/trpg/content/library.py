@@ -65,7 +65,13 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
-from trpg.content.fields import FieldMapDef, FieldMapReport, field_map_report
+from trpg.content.fields import (
+    CAPITAL_LOCATION,
+    CAPITAL_REGION,
+    FieldMapDef,
+    FieldMapReport,
+    field_map_report,
+)
 from trpg.content.flash_templates import FlashTable
 from trpg.content.forms import FormDef, FormTable, scaled_form_def
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
@@ -1115,7 +1121,10 @@ def _load_world(
     world_crafting = load_world_crafting(  # 5D-3
         root,
         files,
-        locations={r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
+        locations={  # 6D-5：主城的鐵匠鋪也是設施（主城沒有地點圖，只有一個城鎮地點）
+            **{r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
+            CAPITAL_REGION: {CAPITAL_LOCATION: "town"},
+        },
         npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
         items=world_economy.items,
         affixes=affixes,

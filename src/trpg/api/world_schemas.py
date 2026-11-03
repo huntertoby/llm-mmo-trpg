@@ -90,6 +90,8 @@ from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.season_events import SeasonBossAction
 
 __all__ = [
+    "AtlasRegionView",
+    "AtlasView",
     "CreateWorldCharacterRequest",
     "EncounterEnemyView",
     "EncounterView",
@@ -282,6 +284,37 @@ class WorldMapView(_ApiModel):
     """不能從圖上傳送的原因（``can_teleport`` 時為 ``None``）。"""
     art_url: str | None = None
     """區域插畫的路徑（還沒有插畫＝``None``，畫面用節點圖當底圖；6C-6）。"""
+
+
+class AtlasRegionView(_ApiModel):
+    """大世界圖上的一區（6D-5；21.1）。"""
+
+    region: str
+    name_zh: str
+    status: Literal["open", "locked", "later"]
+    """``open``＝已開放（彩色）；``locked``＝灰色剪影＋解鎖條件；``later``＝「之後的賽季」。"""
+    condition_zh: str | None = None
+    town: str | None = None
+    town_name_zh: str | None = None
+    current: bool = False
+    """自己在這一區（主城：在主城裡）。"""
+    can_teleport: bool = False
+    """現在能點這一區的城鎮直接傳送（送 ``teleport``）。"""
+
+
+class AtlasView(_ApiModel):
+    """大世界圖（6D-5；21.1、9.6.5）：五區漂浮的界域與中央的主城浮島。只能看；站在傳送石上或在城鎮裡
+    打開時，可以點已開放區的城鎮傳送。"""
+
+    regions: tuple[AtlasRegionView, ...]
+    """``regions.yaml`` 的順序。"""
+    capital: AtlasRegionView
+    can_teleport: bool = False
+    teleport_problem_zh: str | None = None
+    art_url: str | None = None
+    """大世界圖插畫（還沒有＝``None``，畫面用程式畫的浮島）。"""
+    maps: tuple[WorldMapView, ...] = ()
+    """已開放、但不是所在區的區域圖（點大世界圖上的那一區進去看；只能看）。"""
 
 
 class TeleportOption(_ApiModel):
@@ -503,6 +536,8 @@ class WorldView(_ApiModel):
     field: FieldView | None = None
     """目前的實地地圖與自己的位置（Phase 6B-2；所在地點沒有實地地圖＝``None``，照舊用
     ``travel``）。"""
+    atlas: AtlasView | None = None
+    """大世界圖（Phase 6D-5；M 在區域圖上再按一次）。"""
 
 
 class WorldBattleResponse(_ApiModel):

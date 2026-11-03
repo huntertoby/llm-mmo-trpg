@@ -9,6 +9,8 @@ interface Props {
   map: WorldMapView;
   busy: boolean;
   onTeleport(to: string): void;
+  /** 切到大世界圖（6D-5；M 再按一次也一樣）。 */
+  onAtlas?: () => void;
   onClose(): void;
 }
 
@@ -81,7 +83,7 @@ function Node({ node, busy, onTeleport }: { node: RegionNode; busy: boolean; onT
   );
 }
 
-export function RegionMap({ map, busy, onTeleport, onClose }: Props) {
+export function RegionMap({ map, busy, onTeleport, onAtlas, onClose }: Props) {
   const nodes = regionNodes(map);
   const edges = regionEdges(map);
   const art = map.art_url ?? null;
@@ -102,6 +104,11 @@ export function RegionMap({ map, busy, onTeleport, onClose }: Props) {
           <span className={`region-map-note${map.can_teleport ? " go" : ""}`} data-testid="region-map-note">
             {regionNote(map)}
           </span>
+          {onAtlas !== undefined && (
+            <button type="button" className="atlas-switch" onClick={onAtlas} data-testid="region-map-atlas">
+              大世界圖（M）
+            </button>
+          )}
           <button type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉區域圖（Esc）" data-testid="region-map-close">
             ×
           </button>
@@ -125,7 +132,7 @@ export function RegionMap({ map, busy, onTeleport, onClose }: Props) {
           <span><i className="lg-foot">足</i>朋友的足跡</span>
           <span><i className="lg-sil" />沒去過（？？？）</span>
           <span><i className="lg-fog" />霧</span>
-          <span className="muted">M／Esc 關閉</span>
+          <span className="muted">M 大世界圖／Esc 關閉</span>
         </footer>
       </div>
     </div>

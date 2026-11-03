@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import (
     LoadoutAction,
@@ -20,6 +21,7 @@ from trpg.world.actions import (
     TeleportedEvent,
     WorldEvent,
 )
+from trpg.world.atlas import cross_gate, region_lit
 from trpg.world.common import here, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.growth import at_service, loadout_skills
@@ -41,8 +43,8 @@ def _no_encounter(char: CharacterState, what: str) -> None:
 
 
 def with_visited_town(char: CharacterState, region: str) -> CharacterState:
-    """記下到過 ``region`` 的小鎮。"""
-    if region in char.visited_towns:
+    """記下到過 ``region`` 的小鎮（主城不記：它不是區域，一開始就解鎖；6D-5）。"""
+    if region in char.visited_towns or region == CAPITAL_REGION:
         return char
     return char.model_copy(update={"visited_towns": tuple(sorted({*char.visited_towns, region}))})
 
@@ -110,18 +112,27 @@ def loadout(
 
 
 def teleport(
-    library: ContentLibrary, char: CharacterState, action: TeleportAction
+    library: ContentLibrary,
+    char: CharacterState,
+    action: TeleportAction,
+    *,
+    on_stone: bool = False,
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """傳到另一區的城鎮。城鎮裡、或站在傳送石上（``on_stone``，21.1「從圖上傳送」；6D-5）：目的地
+    要在自己的大世界圖上亮起（:func:`trpg.world.atlas.region_lit`；主城一開始就亮）。渡口：只能去它
+    通往的那一區；畫了跨區出口的渡口要走過去（21.1 第一次要親自走過渡口，6D-5）。"""
     _no_encounter(char, "傳送")
     if action.region == char.region:
         raise WorldActionError("已經在這個區域")
     location = here(library, char)
-    if location.kind == "town":
-        if action.region not in char.visited_towns:
+    if location.kind == "town" or on_stone:
+        if not region_lit(char, action.region):
             raise WorldActionError(f"還沒去過 {action.region} 的小鎮，不能傳送")
     elif location.kind == "gate":
         if location.gate_to != action.region:
             raise WorldActionError(f"{location.name_zh}不通往 {action.region}")
+        if cross_gate(library, char.region, char.location):
+            raise WorldActionError(f"{location.name_zh}要走到盡頭的出口過去")
     else:
         raise WorldActionError("只有城鎮與傳送點能傳送")
     try:

@@ -3665,6 +3665,136 @@
         ],
         "title": "ArenaOpponents"
       },
+      "AtlasRegionView": {
+        "properties": {
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "locked",
+              "later"
+            ],
+            "title": "Status"
+          },
+          "condition_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Zh"
+          },
+          "town": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Town"
+          },
+          "town_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Town Name Zh"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current",
+            "default": false
+          },
+          "can_teleport": {
+            "type": "boolean",
+            "title": "Can Teleport",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region",
+          "name_zh",
+          "status"
+        ],
+        "title": "AtlasRegionView",
+        "description": "大世界圖上的一區（6D-5；21.1）。"
+      },
+      "AtlasView": {
+        "properties": {
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/AtlasRegionView"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
+          "capital": {
+            "$ref": "#/components/schemas/AtlasRegionView"
+          },
+          "can_teleport": {
+            "type": "boolean",
+            "title": "Can Teleport",
+            "default": false
+          },
+          "teleport_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teleport Problem Zh"
+          },
+          "art_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Art Url"
+          },
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/WorldMapView"
+            },
+            "type": "array",
+            "title": "Maps",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "regions",
+          "capital"
+        ],
+        "title": "AtlasView",
+        "description": "大世界圖（6D-5；21.1、9.6.5）：五區漂浮的界域與中央的主城浮島。只能看；站在傳送石上或在城鎮裡\n打開時，可以點已開放區的城鎮傳送。"
+      },
       "Attack": {
         "properties": {
           "unit_id": {
@@ -24267,6 +24397,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/FieldView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "atlas": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasView"
               },
               {
                 "type": "null"

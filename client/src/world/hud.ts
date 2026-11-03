@@ -30,7 +30,11 @@ export type HudPanel =
   | "hire"
   | "friend"
   /** 情境物件的說明卡（6C-5；對象另外記）。 */
-  | "object";
+  | "object"
+  /** 主城的橋頭石碑：該區的傳送選單（6D-5；區域另外記）。 */
+  | "stele"
+  /** 主城的整備亭：休息、換技能、配點、換裝（6D-5）。 */
+  | "pavilion";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 

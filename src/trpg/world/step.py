@@ -66,7 +66,15 @@ from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
-from trpg.world.field import FieldHooks, outdoor_map, stale_field, use_teleport_stone, walk
+from trpg.world.field import (
+    FieldHooks,
+    outdoor_map,
+    placed,
+    stale_field,
+    teleport_origin,
+    use_teleport_stone,
+    walk,
+)
 from trpg.world.field_actions import (
     SneakAction,
     UseFieldObjectAction,
@@ -314,6 +322,18 @@ def _fight(
     return fight(library, world, char, action, now)
 
 
+def _teleport(
+    library: ContentLibrary,
+    _world: WorldState,
+    char: CharacterState,
+    action: TeleportAction,
+    _now: int,
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """傳到另一區的城鎮；站在傳送石上也可以（21.1「從圖上傳送」：大世界圖點城鎮；6D-5）。"""
+    on_stone = teleport_origin(library, placed(library, char)) is not None
+    return teleport(library, char, action, on_stone=on_stone)
+
+
 def _handlers() -> dict[type, _Handler]:
     table: dict[type, _Handler] = dict.fromkeys(GROWTH_ACTIONS, _keeps_world(apply_growth))
     table |= {
@@ -350,7 +370,7 @@ def _handlers() -> dict[type, _Handler]:
         RetreatAction: _keeps_world(lambda lib, _w, char, _a, _n: retreat(lib, char)),
         RestAction: _keeps_world(lambda lib, _w, char, _a, _n: rest(lib, char)),
         LoadoutAction: _keeps_world(lambda lib, _w, char, action, _n: loadout(lib, char, action)),
-        TeleportAction: _keeps_world(lambda lib, _w, char, action, _n: teleport(lib, char, action)),
+        TeleportAction: _keeps_world(_teleport),
         HireAction: _keeps_world(
             lambda lib, world, char, action, _n: hire(lib, world, char, action)
         ),
