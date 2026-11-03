@@ -1,12 +1,11 @@
 // 戰鬥 HUD（設計文件 7.3）：固定顯示主角當下需要的資訊。
+// Phase 6A-2（去文字化③）：三條（HP、法力、耐力）＋一排圖示，每個都能滑過看說明；細項收進「▸ 詳細」。
+import type { ReactNode } from "react";
 import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
-import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { chargeText } from "../battle/charges";
-import { sourcePips } from "../battle/source";
-import { statusIconTile, surfaceTile } from "../render/skillIcon";
+import { hasMagazine, ammoText } from "../battle/ammo";
 import { ChargeChips } from "./ChargeChips";
-import { TipGlyph } from "./SkillIconView";
-import { COST_STATUS_NOTE, glossaryHasTag, glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
+import { COST_STATUS_NOTE, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { activationLine } from "../battle/activations";
 import { grantedLine } from "../battle/granted";
@@ -16,9 +15,9 @@ import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
-import { StackTip } from "./StackTip";
-import { actionCardText } from "../battle/actionInfo";
 import { passiveLine, raceHudText } from "../battle/race";
+import { activeStacks, barData, heroChips, surfaceAt } from "./statusCard";
+import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
 
 interface Props {
   view: BattleView;
@@ -28,24 +27,6 @@ interface Props {
   cards?: Readonly<Record<string, SkillCard | undefined>>;
   /** 縮成一行（窄螢幕，Phase 3-8）。 */
   compact?: boolean;
-}
-
-function Bar({ label, value, max, className, extra, hint }: { label: string; value: number; max: number; className: string; extra?: string; hint?: string | null }) {
-  const ratio = max <= 0 ? 0 : Math.max(0, Math.min(1, value / max));
-  return (
-    <Hint text={hint}>
-    <div className="hud-bar">
-      <span className="hud-bar-label">{label}</span>
-      <div className="hud-bar-track">
-        <div className={`hud-bar-fill ${className}`} style={{ width: `${ratio * 100}%` }} />
-      </div>
-      <span className="hud-bar-value">
-        {value} / {max}
-        {extra ?? ""}
-      </span>
-    </div>
-    </Hint>
-  );
 }
 
 export function statusLine(s: StatusView): string {
@@ -64,13 +45,7 @@ export function surfaceUnder(view: BattleView, hero: UnitView): string {
   return `${surfaceName(tile.surface)}${left}`;
 }
 
-function SurfaceUnder({ view, hero }: { view: BattleView; hero: UnitView }) {
-  const tile = view.tiles.find((t) => t.x === hero.pos.x && t.y === hero.pos.y);
-  if (tile === undefined || tile.surface === "none") return <>無</>;
-  return <TipGlyph tile={surfaceTile(tile.surface)} text={surfaceUnder(view, hero)} />;
-}
-
-/** 一行版的主角狀態（窄螢幕，Phase 3-8）。 */
+/** 一行文字版的主角狀態（Phase 3-8；6A-2 起畫面改用圖示，這段文字留給無障礙與測試）。 */
 export function compactHudText(view: BattleView, hero: UnitView): string {
   const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
   const parts = [
@@ -92,168 +67,140 @@ export function compactHudText(view: BattleView, hero: UnitView): string {
   return parts.join("｜");
 }
 
-export function Hud({ view, hero, skills, cards, compact = false }: Props) {
+/** 狀態列：狀態圖示（右下角回合數）、層數（右下角層數）、腳下表面。 */
+function HudBadges({ view, hero, cards }: { view: BattleView; hero: UnitView; cards?: Props["cards"] }) {
+  const surface = surfaceAt(view, hero);
+  return (
+    <>
+      {hero.statuses.map((s, i) => (
+        <StatusBadge key={`${i}:${s.status_id}`} status={s} text={statusLine(s)} />
+      ))}
+      {activeStacks(hero).map(([k, n]) => (
+        <StackBadge key={k} id={k} count={n} cards={cards} owned={hero.skills} />
+      ))}
+      {surface !== null && <SurfaceBadge surface={surface} text={surfaceUnder(view, hero)} />}
+    </>
+  );
+}
+
+/**
+ * 主角狀態卡（Phase 6A-2，去文字化③）：HP、法力、耐力三條一樣粗、條上寫字（護盾疊在 HP 條上）；
+ * 下面一排 AP 圓點、移動、彈匣、反應（用過變灰）、源力圓點、狀態、層數、腳下表面，每個都能滑過看說明。
+ * 充能與冷卻畫在技能列，這裡不重複；裝備充能、種族、傳說、暫時技能、召喚物、持續區域收進「▸ 詳細」。
+ * 窄螢幕（`compact`）：三條與圖示排成一列，沒有「詳細」。
+ */
+export function Hud({ view, hero, cards, compact = false }: Props) {
   if (hero === null) return null;
+  const bars = (["hp", "mana", "stamina"] as const).map((k) => <StatBar key={k} bar={barData(k, hero)} />);
+  const icons = (
+    <div className="hud-icons">
+      {heroChips(hero).map((c) => (
+        <StatChipView key={c.key} chip={c} />
+      ))}
+      <HudBadges view={view} hero={hero} cards={cards} />
+    </div>
+  );
   if (compact) {
-    const text = compactHudText(view, hero);
     return (
-      <Hint text={text}>
-        <div className="panel hud hud-compact" aria-label="主角狀態">
-          <b>{hero.name_zh}</b>　{text}
-        </div>
-      </Hint>
+      <div className="panel hud hud-compact" aria-label="主角狀態">
+        <div className="hud-bars">{bars}</div>
+        {icons}
+      </div>
     );
   }
-  const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
-  const cooldowns = Object.entries(hero.cooldowns).filter(([, n]) => n > 0);
-  const summons = summonsOf(view, hero.id);
+  const details = heroDetails(view, hero);
   return (
     <div className="panel hud" aria-label="主角狀態">
       <div className="hud-title">{hero.name_zh}</div>
-      <Bar
-        label="HP"
-        value={hero.hp}
-        max={hero.max_hp}
-        className="hp"
-        extra={hero.shield > 0 ? `（護盾 ${hero.shield}）` : ""}
-      />
-      <Bar label="法力" value={hero.mana} max={hero.max_mana} className="mana" />
-      <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" hint={actionCardText("stamina")} />
-      <div className="hud-row">
-        <Hint text="剩餘行動點數（自己的回合已含上回合保留的 AP）">
-          <span className="hud-chip">
-            AP <b>{hero.ap}</b>
-            {hero.ap_carry > 0 && <span className="muted">（下回合保留 +{hero.ap_carry}）</span>}
-          </span>
-        </Hint>
-        <Hint text="剩餘移動點數">
-          <span className="hud-chip">
-            移動 <b>{hero.move_points}</b>
-          </span>
-        </Hint>
-        {hasMagazine(hero) && (
-          <Hint text={`${ammoText(hero)}：開火一次用掉 1 發，空膛時從「更多動作」選單裝填`}>
-            <span className={`hud-chip ammo-chip${hero.ammo <= 0 ? " empty" : ""}`} aria-label={ammoText(hero)}>
-              彈匣{" "}
-              <span className="ammo-pips">
-                {ammoPips(hero.ammo, hero.magazine).map((loaded, i) => (
-                  <span key={i} className={`ammo-pip${loaded ? " loaded" : ""}`} />
-                ))}
-              </span>
-              {hero.ammo <= 0 && <b className="ammo-empty">空膛</b>}
-            </span>
-          </Hint>
-        )}
-        <ChargeChips charges={hero.charges ?? []} />
-        <Hint text={`源力 ${hero.source}/${hero.source_max}：傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）`}>
-          <span className="hud-chip" aria-label={`源力 ${hero.source}/${hero.source_max}`}>
-            源力{" "}
-            <span className="source-pips">
-              {sourcePips(hero.source, hero.source_max).map((filled, i) => (
-                <span key={i} className={`source-pip${filled ? " filled" : ""}`} />
-              ))}
-            </span>
-          </span>
-        </Hint>
-        <Hint text="本輪還能反應嗎">
-          <span className={`hud-chip ${hero.reaction_available ? "on" : "off"}`}>
-            反應 <b>{hero.reaction_available ? "可用" : "已用"}</b>
-          </span>
-        </Hint>
-      </div>
-      {hero.race != null && (
-        <div className="hud-line hud-race" aria-label="種族">
-          <span className="muted">種族：</span>
-          <Hint text={passiveLine(hero.race)}>
-            <span className="has-hint">{hero.race.name_zh}</span>
-          </Hint>
-          <span className="muted small">
-            {" "}
-            ・{hero.race.skill_name_zh}剩 {hero.race.skill_uses_left}／{hero.race.skill_uses_max} 次・被動「{hero.race.passive_name_zh}」
-            {hero.race.passive_active ? "（目前有作用）" : ""}
-          </span>
-        </div>
-      )}
-      <div className="hud-line">
-        <span className="muted">腳下表面：</span>
-        <SurfaceUnder view={view} hero={hero} />
-      </div>
-      <div className="hud-line">
-        <span className="muted">層數：</span>
-        {stacks.length === 0
-          ? "無"
-          : stacks.map(([k, n], i) => (
-              <span key={k}>
-                {i > 0 && "、"}
-                <StackTip id={k} cards={cards} owned={hero.skills}>
-                  {stackName(k)} ×{n}
-                </StackTip>
-                {glossaryHasTag("stacks", k, "auto_consume") && (
-                  <span className="muted small">（下一個傷害技能會吃掉）</span>
-                )}
-              </span>
-            ))}
-      </div>
-      <div className="hud-line">
-        <span className="muted">狀態：</span>
-        {hero.statuses.length === 0 ? (
-          "無"
-        ) : (
-          <span className="status-chips">
-            {hero.statuses.map((s, i) => (
-              <TipGlyph key={`${i}:${s.status_id}`} tile={statusIconTile(s.status_id)} text={statusLine(s)} />
-            ))}
-          </span>
-        )}
-      </div>
-      {(hero.activations ?? []).length > 0 && (
-        <div className="hud-line hud-activations" aria-label="生效中的傳說">
-          <span className="muted">傳說：</span>
-          <ul className="hud-summon-list">
-            {(hero.activations ?? []).map((a) => (
-              <li key={a.skill_id}>{activationLine(view, a)}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {(hero.granted_skills ?? []).length > 0 && (
-        <div className="hud-line hud-granted" aria-label="暫時技能">
-          <span className="muted">暫時技能：</span>
-          {(hero.granted_skills ?? []).map(grantedLine).join("、")}
-        </div>
-      )}
-      {summons.length > 0 && (
-        <div className="hud-line hud-summons" aria-label="召喚物">
-          <span className="muted">召喚物：</span>
-          <ul className="hud-summon-list">
-            {summons.map((u) => (
-              <li key={u.id}>{summonLine(view, u)}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {zonesOf(view).length > 0 && (
-        <div className="hud-line hud-zones" aria-label="持續區域">
-          <span className="muted">持續區域：</span>
-          <ul className="hud-summon-list">
-            {zonesOf(view).map((z) => {
-              const next = zoneNextText(z);
-              return (
-                <li key={z.id}>
-                  {zoneLine(view, z, unitNames(view))}
-                  {next === "" ? "" : `；${next}`}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-      {cooldowns.length > 0 && (
-        <div className="hud-line">
-          <span className="muted">冷卻：</span>
-          {cooldowns.map(([k, n]) => `${skills[k] ?? glossaryName("statuses", k)} ${n}`).join("、")}
-        </div>
+      <div className="hud-bars">{bars}</div>
+      {icons}
+      {details.length > 0 && (
+        <details className="hud-details">
+          <summary>詳細</summary>
+          {details}
+        </details>
       )}
     </div>
   );
+}
+
+/** 「▸ 詳細」裡的行：裝備充能、種族、生效中的傳說、暫時技能、召喚物、持續區域（沒有就不列）。 */
+export function heroDetails(view: BattleView, hero: UnitView): ReactNode[] {
+  const rows: ReactNode[] = [];
+  const summons = summonsOf(view, hero.id);
+  const zones = zonesOf(view);
+  if ((hero.charges ?? []).length > 0) {
+    rows.push(
+      <div key="charges" className="hud-line charge-line" aria-label="裝備充能">
+        <span className="muted">裝備充能：</span>
+        <ChargeChips charges={hero.charges ?? []} />
+      </div>,
+    );
+  }
+  if (hero.race != null) {
+    rows.push(
+      <div key="race" className="hud-line hud-race" aria-label="種族">
+        <span className="muted">種族：</span>
+        <Hint text={passiveLine(hero.race)}>
+          <span className="has-hint">{hero.race.name_zh}</span>
+        </Hint>
+        <span className="muted small">
+          {" "}
+          ・{hero.race.skill_name_zh}剩 {hero.race.skill_uses_left}／{hero.race.skill_uses_max} 次・被動「{hero.race.passive_name_zh}」
+          {hero.race.passive_active ? "（目前有作用）" : ""}
+        </span>
+      </div>,
+    );
+  }
+  if ((hero.activations ?? []).length > 0) {
+    rows.push(
+      <div key="activations" className="hud-line hud-activations" aria-label="生效中的傳說">
+        <span className="muted">傳說：</span>
+        <ul className="hud-summon-list">
+          {(hero.activations ?? []).map((a) => (
+            <li key={a.skill_id}>{activationLine(view, a)}</li>
+          ))}
+        </ul>
+      </div>,
+    );
+  }
+  if ((hero.granted_skills ?? []).length > 0) {
+    rows.push(
+      <div key="granted" className="hud-line hud-granted" aria-label="暫時技能">
+        <span className="muted">暫時技能：</span>
+        {(hero.granted_skills ?? []).map(grantedLine).join("、")}
+      </div>,
+    );
+  }
+  if (summons.length > 0) {
+    rows.push(
+      <div key="summons" className="hud-line hud-summons" aria-label="召喚物">
+        <span className="muted">召喚物：</span>
+        <ul className="hud-summon-list">
+          {summons.map((u) => (
+            <li key={u.id}>{summonLine(view, u)}</li>
+          ))}
+        </ul>
+      </div>,
+    );
+  }
+  if (zones.length > 0) {
+    rows.push(
+      <div key="zones" className="hud-line hud-zones" aria-label="持續區域">
+        <span className="muted">持續區域：</span>
+        <ul className="hud-summon-list">
+          {zones.map((z) => {
+            const next = zoneNextText(z);
+            return (
+              <li key={z.id}>
+                {zoneLine(view, z, unitNames(view))}
+                {next === "" ? "" : `；${next}`}
+              </li>
+            );
+          })}
+        </ul>
+      </div>,
+    );
+  }
+  return rows;
 }

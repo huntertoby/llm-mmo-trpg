@@ -45,7 +45,7 @@ export function SkillIconView({ icon, size, small, className, label }: IconProps
   );
 }
 
-function TileCanvas({ tile, px }: { tile: AssemblyTile; px: number }) {
+export function TileCanvas({ tile, px }: { tile: AssemblyTile; px: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const epoch = useFontEpoch();
   useEffect(() => {

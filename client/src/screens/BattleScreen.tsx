@@ -30,6 +30,7 @@ import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TileCard } from "../ui/TileCard";
 import { TurnBar } from "../ui/TurnBar";
 import { UnitInfo } from "../ui/UnitInfo";
+import { pinnedUnitOf, togglePin } from "../ui/statusCard";
 import { BattleBottomBar } from "./battle/BattleBottomBar";
 import { BattleDialogs } from "./battle/BattleDialogs";
 import { battleTools } from "./battle/battleTools";
@@ -91,6 +92,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const [saveNote, setSaveNote] = useState<string | null>(null);
   /** 頂端列開著的彈出面板（同時只開一個）。 */
   const [popup, setPopup] = useState<TopPopup | null>(null);
+  /** 釘選的單位小卡（6A-2）：跟著單位（不是格子），敵人回合也一直顯示在戰場右上。 */
+  const [pinnedUnit, setPinnedUnit] = useState<string | null>(null);
+  const togglePinnedUnit = useCallback((id: string) => setPinnedUnit((cur) => togglePin(cur, id)), []);
 
   const actions = useBattleActions(
     battleId,
@@ -210,6 +214,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   });
 
   const { cardTile, hoverUnit, tileCardSections } = tiles;
+  const dockUnit = pinnedUnitOf(shown, pinnedUnit);
   return (
     <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`} style={board.layoutStyle}>
       <BattleTopBar
@@ -235,7 +240,16 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             {cardTile !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
               <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} card={tiles.tileCard}>
                 {hoverUnit !== null && (
-                  <UnitInfo unit={hoverUnit} names={data.names} heroId={heroId} skills={data.skillNames} cards={cards} view={view} />
+                  <UnitInfo
+                    unit={hoverUnit}
+                    names={data.names}
+                    heroId={heroId}
+                    skills={data.skillNames}
+                    cards={cards}
+                    view={shown}
+                    pinned={hoverUnit.id === pinnedUnit}
+                    onTogglePin={() => togglePinnedUnit(hoverUnit.id)}
+                  />
                 )}
                 <TileCard sections={tileCardSections} />
               </HoverFloat>
@@ -342,6 +356,21 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             infusePreview={sel.infuse === null ? null : (hl.preview?.infusion ?? null)}
             cards={cards}
           />
+        )}
+        {/* 放在召喚物面板之後：CSS 用 `.summon-panel ~ .unit-pin-dock` 讓開右上角 */}
+        {dockUnit !== null && (
+          <div className="unit-pin-dock" aria-label="釘選的單位">
+            <UnitInfo
+              unit={dockUnit}
+              names={data.names}
+              heroId={heroId}
+              skills={data.skillNames}
+              cards={cards}
+              view={shown}
+              pinned
+              onTogglePin={() => setPinnedUnit(null)}
+            />
+          </div>
         )}
       </div>
       <SidePanel

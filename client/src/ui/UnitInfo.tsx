@@ -1,4 +1,7 @@
-// 單位資訊：滑過或點選單位時顯示（文字即可）。
+// 單位資訊：滑過或點選單位時顯示的小卡。
+// Phase 6A-2（去文字化③）：名稱＋精英詞綴金色徽章；HP 條與耐力條（和主角卡一樣粗、寫字）；
+// 圖示＋數字（護盾、法力、AP、移動、武器）；狀態圖示＋回合數、腳下表面；朝向不寫字（看小人）；
+// 特性、詞綴說明與其餘細項收進「▸ 詳細」；圖釘可以釘選（釘住的小卡在敵人回合也一直顯示，由 BattleScreen 放在戰場右上）。
 import type { ReactNode } from "react";
 import { RuleText } from "./ruleText";
 import { tipLines } from "../gear/affixStatus";
@@ -7,10 +10,7 @@ import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
 import { ammoText, hasMagazine } from "../battle/ammo";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { CHARGING, chargeStatusText } from "../battle/followup";
-import { facingText } from "../battle/facing";
-import { statusIconTile } from "../render/skillIcon";
-import { TipGlyph } from "./SkillIconView";
-import { COST_STATUS_NOTE, stackName, statusName } from "../battle/glossary";
+import { COST_STATUS_NOTE, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { infusionName } from "../battle/infusion";
 import { remainingRounds, summonKind } from "../battle/summons";
@@ -20,9 +20,10 @@ import { GearIcon } from "./GearIcon";
 import { PartTip } from "./PartTip";
 import { GearTotals } from "./GearTotals";
 import { Hint } from "./Hint";
-import { StackTip } from "./StackTip";
-import { actionCardText } from "../battle/actionInfo";
 import { phaseText } from "../battle/bossPhase";
+import { PinGlyph } from "./SkillCardGlyphs";
+import { activeStacks, affixBadges, barData, surfaceAt, unitChips } from "./statusCard";
+import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
 
 interface Props {
   unit: UnitView | null;
@@ -31,11 +32,15 @@ interface Props {
   skills: SkillNames;
   /** 技能卡（層數說明框列出「你的技能」用；3-41c）。 */
   cards?: Readonly<Record<string, SkillCard | undefined>>;
-  /** 召喚物的剩餘輪數要用目前輪數計算。 */
+  /** 召喚物的剩餘輪數、腳下表面要用目前的戰場。 */
   view?: BattleView;
+  /** 這張小卡釘選中（6A-2）。 */
+  pinned?: boolean;
+  /** 圖釘：釘選或取消；省略時不畫圖釘。 */
+  onTogglePin?(): void;
 }
 
-function statusText(s: StatusView, skills?: SkillNames): string {
+export function statusText(s: StatusView, skills?: SkillNames): string {
   if (s.status_id === TIME_BOMB) return bombStatusText(s);
   if (s.status_id === CHARGING) return chargeStatusText(s, skills);
   const left = s.remaining === null ? "" : ` ${s.remaining} 回合`;
@@ -84,32 +89,20 @@ export function phaseRows(unit: UnitView): [string, ReactNode][] {
   return text === null ? [] : [["階段", text]];
 }
 
-export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
-  if (unit === null) {
-    return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
-  }
-  const team = unit.team === "ally" ? "我方" : unit.team === "third" ? "第三方" : "敵方";
-  const kind = summonKind(unit);
-  const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
-  const stacks = Object.entries(unit.stacks);
-  const cooldowns = Object.entries(unit.cooldowns);
+/** 「▸ 詳細」的表格列：特性與詞綴、階段、速度、武器特性、副手、種族、位置、召喚者、灌注、模式、光環、形態。 */
+export function detailRows(unit: UnitView, names: UnitNames, view?: BattleView): [string, ReactNode][] {
   const rows: [string, ReactNode][] = [
-    ["HP", `${unit.hp} / ${unit.max_hp}${unit.shield > 0 ? `（護盾 ${unit.shield}）` : ""}`],
-    ["法力", `${unit.mana} / ${unit.max_mana}`],
-    ["耐力", `${unit.stamina} / ${unit.max_stamina}`],
-    ["AP／移動", `${unit.ap}／${unit.move_points}（速度 ${unit.speed}）`],
-    ["武器", unit.weapon_name_zh],
-    ...unit.weapon_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
-    ...(hasMagazine(unit) ? [["　彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, ReactNode]] : []),
+    ...traitRows(unit),
+    ...phaseRows(unit),
+    ["速度", String(unit.speed)],
+    ...unit.weapon_traits_zh.map((line): [string, ReactNode] => ["武器特性", <RuleText key={line} text={line} />]),
+    ...(hasMagazine(unit) ? [["彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, ReactNode]] : []),
     ...(unit.offhand_name_zh === "" ? [] : [["副手", unit.offhand_name_zh] as [string, ReactNode]]),
     ...unit.offhand_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
     ...(unit.race == null
       ? []
       : [["種族", `${unit.race.name_zh}（種族技：${unit.race.skill_name_zh}；被動：${unit.race.passive_name_zh}）`] as [string, ReactNode]]),
-    ...phaseRows(unit),
-    ...traitRows(unit),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
-    ["朝向", facingText(unit)],
   ];
   if (unit.owner_id !== null) {
     const left = view === undefined ? null : remainingRounds(view, unit);
@@ -123,75 +116,110 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit.summon_mode != null) rows.push(["模式", modeText(unit, names)]);
   if (unit.totem_radius !== null) rows.push(["光環", `${unit.totem_radius} 格內的友方在圖騰行動時獲得增益`]);
   rows.push(...formRows(unit));
+  return rows;
+}
+
+const TEAM_ZH = { ally: "我方", enemy: "敵方", third: "第三方" } as const;
+
+function surfaceText(view: BattleView, unit: UnitView): string {
+  const tile = view.tiles.find((t) => t.x === unit.pos.x && t.y === unit.pos.y);
+  if (tile === undefined || tile.surface === "none") return "無";
+  const left = tile.surface_remaining === null ? "" : `（${tile.surface_remaining} 輪）`;
+  return `${surfaceName(tile.surface)}${left}`;
+}
+
+export function UnitInfo({ unit, names, heroId, skills, cards, view, pinned = false, onTogglePin }: Props) {
+  if (unit === null) {
+    return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
+  }
+  const kind = summonKind(unit);
+  const tags = [unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
+  const cooldowns = Object.entries(unit.cooldowns).filter(([, n]) => n > 0);
+  const surface = view === undefined ? null : surfaceAt(view, unit);
+  const rows = detailRows(unit, names, view);
   return (
-    <div className="panel unit-info">
+    <div className={`panel unit-info unit-card${pinned ? " pinned" : ""}`} data-unit={unit.id}>
       <div className="unit-title">
-        <span className={`unit-badge ${unit.team}`}>{names.marker(unit.id)}</span>
-        {unit.name_zh}
-        <span className="muted">（{tags.join("・")}）</span>
-      </div>
-      <table className="unit-stats">
-        <tbody>
-          {rows.map(([k, v]) => (
-            <tr key={k}>
-              <th>
-                {k === "耐力" ? (
-                  <Hint text={actionCardText("stamina")}>
-                    <span className="has-hint">{k}</span>
-                  </Hint>
-                ) : (
-                  k
-                )}
-              </th>
-              <td>{v}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="unit-line">
-        狀態：
-        {unit.statuses.length === 0 ? (
-          "無"
-        ) : (
-          <span className="status-chips">
-            {unit.statuses.map((s, i) => (
-              <TipGlyph key={`${i}:${s.status_id}`} tile={statusIconTile(s.status_id)} text={statusText(s, skills)} />
-            ))}
-          </span>
+        <Hint text={TEAM_ZH[unit.team]}>
+          <span className={`unit-badge ${unit.team}`}>{names.marker(unit.id)}</span>
+        </Hint>
+        <span className="unit-name">{unit.name_zh}</span>
+        {tags.length > 0 && <span className="muted small">（{tags.join("・")}）</span>}
+        {affixBadges(unit).map((b) => (
+          <Hint key={b.label} text={b.hint}>
+            <span className="affix-badge" data-testid="affix-badge">
+              ◆ {b.label}
+            </span>
+          </Hint>
+        ))}
+        {onTogglePin !== undefined && (
+          <button
+            type="button"
+            className={`unit-pin${pinned ? " on" : ""}`}
+            aria-pressed={pinned}
+            aria-label={pinned ? "取消釘選" : "釘選"}
+            onClick={(e) => {
+              e.stopPropagation(); // 不要算成點卡片（那是釘住格子資訊卡）
+              onTogglePin();
+            }}
+          >
+            <PinGlyph />
+            {pinned ? "取消釘選" : "釘選"}
+          </button>
         )}
       </div>
-      {unit.equipment.length > 0 && (
-        <div className="unit-line gear-row">
-          裝備：
-          {unit.equipment.map((e) => (
-            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip="" lines={tipLines(e.affixes)}>
-              <GearIcon look={e.appearance} slot={e.slot} size={32} />
-            </PartTip>
+      <div className="hud-bars">
+        <StatBar bar={barData("hp", unit)} />
+        <StatBar bar={barData("stamina", unit)} />
+      </div>
+      <div className="hud-icons">
+        {unitChips(unit).map((c) => (
+          <StatChipView key={c.key} chip={c} />
+        ))}
+      </div>
+      {(unit.statuses.length > 0 || activeStacks(unit).length > 0 || surface !== null) && (
+        <div className="hud-icons">
+          {unit.statuses.map((s, i) => (
+            <StatusBadge key={`${i}:${s.status_id}`} status={s} text={statusText(s, skills)} />
           ))}
-        </div>
-      )}
-      <GearTotals totals={unit.gear_totals} compact />
-      {(unit.charges ?? []).length > 0 && (
-        <div className="unit-line charge-line">
-          充能：<ChargeChips charges={unit.charges ?? []} />
-        </div>
-      )}
-      {stacks.length > 0 && (
-        <div className="unit-line">
-          層數：
-          {stacks.map(([k, v], i) => (
-            <span key={k}>
-              {i > 0 && "、"}
-              <StackTip id={k} cards={cards} owned={unit.id === heroId ? unit.skills : null}>
-                {stackName(k)} ×{v}
-              </StackTip>
-            </span>
+          {activeStacks(unit).map(([k, n]) => (
+            <StackBadge key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
           ))}
+          {surface !== null && view !== undefined && <SurfaceBadge surface={surface} text={surfaceText(view, unit)} />}
         </div>
       )}
-      {cooldowns.length > 0 && (
-        <div className="unit-line">冷卻：{cooldowns.map(([k, v]) => `${skills[k] ?? k} ${v}`).join("、")}</div>
-      )}
+      <details className="unit-details">
+        <summary>詳細</summary>
+        <table className="unit-stats">
+          <tbody>
+            {rows.map(([k, v], i) => (
+              <tr key={`${i}:${k}`}>
+                <th>{k}</th>
+                <td>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {unit.equipment.length > 0 && (
+          <div className="unit-line gear-row">
+            裝備：
+            {unit.equipment.map((e) => (
+              <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip="" lines={tipLines(e.affixes)}>
+                <GearIcon look={e.appearance} slot={e.slot} size={32} />
+              </PartTip>
+            ))}
+          </div>
+        )}
+        <GearTotals totals={unit.gear_totals} compact />
+        {(unit.charges ?? []).length > 0 && (
+          <div className="unit-line charge-line">
+            充能：<ChargeChips charges={unit.charges ?? []} />
+          </div>
+        )}
+        {cooldowns.length > 0 && (
+          <div className="unit-line">冷卻：{cooldowns.map(([k, v]) => `${skills[k] ?? k} ${v}`).join("、")}</div>
+        )}
+      </details>
     </div>
   );
 }
