@@ -94,7 +94,14 @@ from trpg.world.state import (
     PerceptionMark,
     WorldState,
 )
-from trpg.world.town import loadout, rest, retreat, teleport, with_visited_town
+from trpg.world.town import (
+    loadout,
+    rest,
+    retreat,
+    teleport,
+    with_visited_location,
+    with_visited_town,
+)
 
 __all__ = [
     "HANDLERS",
@@ -158,6 +165,7 @@ def new_character(
             "location": world_map.town,
             "supplies": _rules(library).supplies.start,
             "visited_towns": (region,),
+            "visited_locations": ({"region": region, "location": world_map.town},),  # 6C-6
             "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
             "mercenaries": default_party(library),  # 預設鐵壁＋回春（9.6.11，5C-3）
             "gold": 0 if (economy := library.world_economy.rules) is None else economy.start_gold,
@@ -208,6 +216,9 @@ def world_step(
     if not isinstance(action, _FIELD_MOVES):  # 6B-2：別的動作換了地點，舊位置作廢
         moved = stale_field(before, moved)
     moved = with_visit(library, result.world, moved)  # 6C-1：換了地點就開始新的一趟
+    if (moved.region, moved.location) != (before.region, before.location):
+        # 6C-6：區域圖的戰爭迷霧（換了地點才記；出發的地點也記，舊存檔才不會漏掉建角的小鎮）
+        moved = with_visited_location(with_visited_location(moved), before.region, before.location)
     cleared_world, moved, cleared = after_fight(  # 6C-1、6C-1b：打贏的那一隊消失（每隊清空）
         library, result.world, before, moved, action=action, events=result.events, now=now
     )

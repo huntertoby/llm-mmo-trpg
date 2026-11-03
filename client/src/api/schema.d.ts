@@ -6885,6 +6885,20 @@ export interface components {
             transform_hint: boolean;
         };
         /**
+         * RegionStoneView
+         * @description 區域圖上的傳送石（21.2；6C-6）。只列在去過或剪影的地點上（霧裡的不給）。
+         */
+        RegionStoneView: {
+            /** Id */
+            id: string;
+            /** Location */
+            location: string;
+            /** Unlocked */
+            unlocked: boolean;
+            /** Here */
+            here: boolean;
+        };
+        /**
          * ReleaseOathAction
          * @description 解除誓約（#106：解除後現實 1 天內不能再立）。
          */
@@ -9415,6 +9429,17 @@ export interface components {
             cleared: boolean;
             /** Hidden */
             hidden: boolean;
+            /**
+             * Fog
+             * @default visited
+             * @enum {string}
+             */
+            fog: "visited" | "silhouette" | "fog";
+            /**
+             * Quest Marks
+             * @default []
+             */
+            quest_marks: string[];
         };
         /** WorldMapView */
         WorldMapView: {
@@ -9431,6 +9456,20 @@ export interface components {
                 string,
                 string
             ][];
+            /**
+             * Stones
+             * @default []
+             */
+            stones: components["schemas"]["RegionStoneView"][];
+            /**
+             * Can Teleport
+             * @default false
+             */
+            can_teleport: boolean;
+            /** Teleport Problem Zh */
+            teleport_problem_zh?: string | null;
+            /** Art Url */
+            art_url?: string | null;
         };
         /** WorldView */
         WorldView: {

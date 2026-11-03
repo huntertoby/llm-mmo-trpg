@@ -1,4 +1,4 @@
-"""大世界的狀態：世界快照（``trpg-world/2``）與角色（``trpg-char/3``）（Phase 5A-2）。
+"""大世界的狀態：世界快照（``trpg-world/2``）與角色（``trpg-char/4``）（Phase 5A-2）。
 
 ``docs/phases/Phase5計畫.md`` 2.4、2.5、6.4。所有集合型欄位都以排序後的 tuple 存放（守則 2），
 同樣的動作序列一定得到逐字相同的 JSON。角色欄位盡量和 :class:`trpg.roguelite.state.RunState`
@@ -15,6 +15,9 @@ Phase 6B-2 加上實地地圖上的位置（:class:`FieldPos`）與解鎖的傳�
 
 Phase 6C-1 加上看得見的敵人（:class:`FieldVisit`、:class:`FieldContact`），角色格式升成
 ``trpg-char/3``；``/1``、``/2`` 照讀（只多了選填欄位）。
+
+Phase 6C-6 加上去過的地點（``visited_locations``，區域圖的戰爭迷霧），角色格式升成
+``trpg-char/4``；``/1``～``/3`` 照讀（只多了選填欄位）。
 """
 
 from __future__ import annotations
@@ -83,9 +86,9 @@ __all__ = [
 WORLD_FORMAT: Final = "trpg-world/2"
 LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``）。"""
-CHAR_FORMAT: Final = "trpg-char/3"
-LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2"})
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2、6C-1：只多了選填欄位）。"""
+CHAR_FORMAT: Final = "trpg-char/4"
+LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3"})
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2、6C-1、6C-6：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -906,14 +909,14 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/3``；``trpg-char/1``、``/2`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/4``；``trpg-char/1``～``/3`` 照讀）。"""
 
-    format: Literal["trpg-char/3"] = CHAR_FORMAT
+    format: Literal["trpg-char/4"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``、``/2`` → ``trpg-char/3``：只多了選填欄位（6B-2、6C-1），直接換版號。"""
+        """``trpg-char/1``～``/3`` → ``trpg-char/4``：只多了選填欄位（6B-2、6C-1、6C-6）。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             return {**data, "format": CHAR_FORMAT}
         return data
@@ -1106,6 +1109,11 @@ class CharacterState(_Model):
     field_visit: FieldVisit | None = None
     """這一趟待在所在地點的實地地圖（巡邏進度、陣容種子、打贏的隊伍）；所在地點沒有實地地圖＝
     ``None``。"""
+    # --- 6C-6 區域圖的戰爭迷霧（21.1） ---
+    visited_locations: tuple[LocationRef, ...] = ()
+    """走進過的地點（依區域、地點排序、不重複）。每個動作之後把所在地點記進來
+    （:func:`trpg.world.town.with_visited_location`）；舊存檔是空的，畫面另外把目前位置與到過的
+    小鎮當作去過。"""
 
     @field_validator("teleport_stones")
     @classmethod
@@ -1200,12 +1208,12 @@ class CharacterState(_Model):
             raise ValueError("elite_kills 必須排序且不重複")
         return kills
 
-    @field_validator("revealed")
+    @field_validator("revealed", "visited_locations")
     @classmethod
     def _revealed_sorted(cls, refs: tuple[LocationRef, ...]) -> tuple[LocationRef, ...]:
         keys = [r.key() for r in refs]
         if keys != sorted(set(keys)):
-            raise ValueError("revealed 必須依區域、地點排序且不重複")
+            raise ValueError("revealed／visited_locations 必須依區域、地點排序且不重複")
         return refs
 
     @field_validator("perception_marks")
@@ -1242,6 +1250,9 @@ class CharacterState(_Model):
 
     def has_revealed(self, region: str, location: str) -> bool:
         return any(r.region == region and r.location == location for r in self.revealed)
+
+    def has_visited(self, region: str, location: str) -> bool:
+        return any(r.region == region and r.location == location for r in self.visited_locations)
 
     def perception_day(self, region: str, location: str) -> int | None:
         for mark in self.perception_marks:

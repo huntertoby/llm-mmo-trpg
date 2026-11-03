@@ -49,6 +49,7 @@ from trpg.api.world_party_view import (
     party_event_line,
     party_view,
 )
+from trpg.api.world_region_view import region_marks
 from trpg.api.world_schemas import (
     EncounterEnemyView,
     EncounterView,
@@ -263,13 +264,14 @@ def _map_view(
         for loc in shown
     )
     edges = tuple((a, b) for a, b in world_map.edges if a in ids and b in ids)
-    return WorldMapView(
+    view = WorldMapView(
         region=world_map.region,
         name_zh=world_map.name_zh,
         level_zh=_level_zh(world_map.level_min, world_map.level_max) or "",
         locations=locations,
         edges=edges,
     )
+    return region_marks(library, char, view, town=world_map.town, in_battle=in_battle)  # 6C-6
 
 
 def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) -> list[str]:

@@ -16768,6 +16768,36 @@
         "title": "ReflashSlotOut",
         "description": "可以重閃的一欄（3W-R2：前端不自己推規則）。"
       },
+      "RegionStoneView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "unlocked": {
+            "type": "boolean",
+            "title": "Unlocked"
+          },
+          "here": {
+            "type": "boolean",
+            "title": "Here"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "location",
+          "unlocked",
+          "here"
+        ],
+        "title": "RegionStoneView",
+        "description": "區域圖上的傳送石（21.2；6C-6）。只列在去過或剪影的地點上（霧裡的不給）。"
+      },
       "ReleaseOathAction": {
         "properties": {
           "kind": {
@@ -23115,6 +23145,24 @@
           "hidden": {
             "type": "boolean",
             "title": "Hidden"
+          },
+          "fog": {
+            "type": "string",
+            "enum": [
+              "visited",
+              "silhouette",
+              "fog"
+            ],
+            "title": "Fog",
+            "default": "visited"
+          },
+          "quest_marks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Quest Marks",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -23173,6 +23221,41 @@
             },
             "type": "array",
             "title": "Edges"
+          },
+          "stones": {
+            "items": {
+              "$ref": "#/components/schemas/RegionStoneView"
+            },
+            "type": "array",
+            "title": "Stones",
+            "default": []
+          },
+          "can_teleport": {
+            "type": "boolean",
+            "title": "Can Teleport",
+            "default": false
+          },
+          "teleport_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teleport Problem Zh"
+          },
+          "art_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Art Url"
           }
         },
         "additionalProperties": false,
