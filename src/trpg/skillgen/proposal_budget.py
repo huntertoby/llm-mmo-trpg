@@ -542,7 +542,8 @@ def evaluate_with_repair(
         trial = _evaluate_repaired(candidate, models, library, ctx, seed)
         if trial.ok:
             done = tuple(TOPUP_PREFIX + c for c in codes)
-            return RepairedEvaluation(trial.result, (*evaluation.repaired, *trial.repaired, *done))
+            merged = (*evaluation.repaired, *trial.repaired, *done)
+            return RepairedEvaluation(trial.result, tuple(dict.fromkeys(merged)))
     advised = tuple(_topup_advice(e, models, library) for e in left)
     return replace(evaluation, result=replace(evaluation.result, errors=advised))
 
