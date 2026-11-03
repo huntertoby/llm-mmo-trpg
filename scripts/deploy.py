@@ -25,10 +25,10 @@ from typing import TextIO
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from trpg.api.account_config import AccountConfigError, load_account_settings
 from trpg.api.server_config import ServerConfigError, load_server_settings
 from trpg.bot.config import BotConfigError, load_bot_settings
 from trpg.roguelite.save import default_save_dir
+from trpg.server.account_config import AccountConfigError, load_account_settings
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_CONFIG = ROOT / "config" / "deploy.local.toml"

@@ -9,12 +9,18 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import DEFAULT_WEEK_DAYS
 from trpg.world.calendar import day_of
 from trpg.world.state import WorldState
 
-__all__ = ["week_days", "week_of"]
+__all__ = ["FIRST_SEASON_ID", "week_days", "week_of"]
+
+FIRST_SEASON_ID: Final = "s1"
+"""第一季（測試季）的賽季 ID（09 9.7）。新世界從這一季開始；沒有 ``season_id`` 的舊紀錄
+（首殺）都在這一季寫下（Phase 5D-R2）。"""
 
 
 def week_days(library: ContentLibrary) -> int:

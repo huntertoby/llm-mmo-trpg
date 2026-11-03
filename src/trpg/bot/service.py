@@ -13,15 +13,15 @@ import secrets
 from collections.abc import Callable
 from typing import Final
 
-from trpg.api.accounts import (
+from trpg.bot.config import BotSettings
+from trpg.bot.gateway import CommandEvent, DiscordGateway, MemberRemoveEvent, MemberUpdateEvent
+from trpg.server.accounts import (
     USERNAME_RE,
     AccountError,
     AccountRecord,
     AccountStore,
     normalize_username,
 )
-from trpg.bot.config import BotSettings
-from trpg.bot.gateway import CommandEvent, DiscordGateway, MemberRemoveEvent, MemberUpdateEvent
 
 __all__ = ["BotService", "derive_username"]
 

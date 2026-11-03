@@ -20,7 +20,6 @@ import discord
 import pytest
 from discord import app_commands
 
-from trpg.api.accounts import AccountStore
 from trpg.bot.commands import (
     SLASH_COMMANDS,
     command_event,
@@ -37,6 +36,7 @@ from trpg.bot.discord_adapter import (
 )
 from trpg.bot.gateway import CommandEvent
 from trpg.bot.service import DM_SENT, BotService
+from trpg.server.accounts import AccountStore
 
 GUILD = 1000
 ROLE = 2000

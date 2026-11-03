@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-from trpg.api.accounts import AccountDisabledError, AccountStore, AuthError
 from trpg.bot.fake import FakeDiscordGateway
 from trpg.bot.gateway import CommandEvent, MemberRemoveEvent, MemberUpdateEvent
 from trpg.bot.service import (
@@ -22,6 +21,7 @@ from trpg.bot.service import (
     BotService,
     derive_username,
 )
+from trpg.server.accounts import AccountDisabledError, AccountStore, AuthError
 
 GUILD = "1000"
 ROLE = "2000"

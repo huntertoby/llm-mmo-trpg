@@ -7,12 +7,15 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 
 interface Props {
   onLoggedIn(): void;
-  onHome(): void;
+  /** 沒給就不顯示「返回首頁」（5D-R2：開發模式關時首頁本身要登入）。 */
+  onHome?(): void;
   /** 開發模式下從角色畫面來登入時可以取消（回到不用登入的角色畫面）。 */
   onCancel?(): void;
+  /** 標題（預設「大世界・登入」；5D-R2 一輪、工坊要登入時用「登入」）。 */
+  heading?: string;
 }
 
-export function LoginScreen({ onLoggedIn, onHome, onCancel }: Props) {
+export function LoginScreen({ onLoggedIn, onHome, onCancel, heading = "大世界・登入" }: Props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,7 +40,7 @@ export function LoginScreen({ onLoggedIn, onHome, onCancel }: Props) {
 
   return (
     <div className="start-screen world-login">
-      <h1>大世界・登入</h1>
+      <h1>{heading}</h1>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       <form className="panel start-form" onSubmit={(e) => void submit(e)}>
         <label>
@@ -71,9 +74,11 @@ export function LoginScreen({ onLoggedIn, onHome, onCancel }: Props) {
               不登入（開發模式）
             </button>
           )}
-          <button type="button" onClick={onHome}>
-            返回首頁
-          </button>
+          {onHome !== undefined && (
+            <button type="button" onClick={onHome}>
+              返回首頁
+            </button>
+          )}
         </div>
       </form>
     </div>

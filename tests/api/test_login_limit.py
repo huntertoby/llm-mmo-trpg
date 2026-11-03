@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.account_config import AccountSettings, load_account_settings
-from trpg.api.accounts import AccountStore
 from trpg.api.app import create_app
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
 from trpg.content.library import ContentLibrary
+from trpg.server.account_config import AccountSettings, load_account_settings
+from trpg.server.accounts import AccountStore
 
 
 class Clock:

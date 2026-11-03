@@ -314,6 +314,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/dev-packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Dev Packs
+         * @description 開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。
+         */
+        get: operations["list_dev_packs_api_runs_dev_packs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/saves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saves */
+        get: operations["list_saves_api_runs_saves_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Load Run */
+        post: operations["load_run_api_runs_load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/dev-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dev Advance
+         * @description 開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
+         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
+         *     ``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。
+         */
+        post: operations["dev_advance_api_runs__run_id__dev_advance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs": {
         parameters: {
             query?: never;
@@ -393,26 +469,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs/dev-packs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Dev Packs
-         * @description 開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。
-         */
-        get: operations["list_dev_packs_api_runs_dev_packs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/runs/rules": {
         parameters: {
             query?: never;
@@ -427,40 +483,6 @@ export interface paths {
         get: operations["get_rules_api_runs_rules_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/saves": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Saves */
-        get: operations["list_saves_api_runs_saves_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/load": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Load Run */
-        post: operations["load_run_api_runs_load_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -553,28 +575,6 @@ export interface paths {
          * @description 閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（Phase 3W-5）：不扣點、不改狀態。
          */
         post: operations["post_flash_preview_api_runs__run_id__flash_preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/{run_id}/dev-advance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dev Advance
-         * @description 開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
-         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
-         *     ``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。
-         */
-        post: operations["dev_advance_api_runs__run_id__dev_advance_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8501,6 +8501,113 @@ export interface operations {
             };
         };
     };
+    list_dev_packs_api_runs_dev_packs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevPackOut"][];
+                };
+            };
+        };
+    };
+    list_saves_api_runs_saves_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveSummary"][];
+                };
+            };
+        };
+    };
+    load_run_api_runs_load_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dev_advance_api_runs__run_id__dev_advance_post: {
+        parameters: {
+            query: {
+                to: string;
+                insight?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_run_api_runs_post: {
         parameters: {
             query?: never;
@@ -8620,26 +8727,6 @@ export interface operations {
             };
         };
     };
-    list_dev_packs_api_runs_dev_packs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DevPackOut"][];
-                };
-            };
-        };
-    };
     get_rules_api_runs_rules_get: {
         parameters: {
             query?: never;
@@ -8656,59 +8743,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunRules"];
-                };
-            };
-        };
-    };
-    list_saves_api_runs_saves_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SaveSummary"][];
-                };
-            };
-        };
-    };
-    load_run_api_runs_load_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoadRunRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8867,40 +8901,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FlashPreviewOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dev_advance_api_runs__run_id__dev_advance_post: {
-        parameters: {
-            query: {
-                to: string;
-                insight?: number;
-            };
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunResponse"];
                 };
             };
             /** @description Validation Error */

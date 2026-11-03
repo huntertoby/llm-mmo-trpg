@@ -19,13 +19,13 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import TextIO
 
-from trpg.api.accounts import open_account_store
-from trpg.api.announce import AnnouncementSource, default_bot_state_path
 from trpg.api.server_config import ServerConfigError, load_server_settings
 from trpg.bot.announcer import Announcer, kill_key, read_state
 from trpg.bot.config import BotConfigError, BotSettings, load_announce_settings, load_bot_settings
 from trpg.bot.gateway import DiscordGateway
 from trpg.bot.service import BotService
+from trpg.server.accounts import open_account_store
+from trpg.server.announce import AnnouncementSource, default_bot_state_path
 
 EXIT_CONFIG = 2
 

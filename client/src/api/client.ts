@@ -1,6 +1,6 @@
 // fetch 包裝：所有請求走相對路徑 /api（開發時由 Vite proxy 轉到 127.0.0.1:8000）。
 // 5E-1：登入後每個請求帶 `Authorization: Bearer <token>`；收到 401 時清掉 token 並發出 AUTH_EXPIRED_EVENT。
-import { AUTH_EXPIRED_EVENT, authHeaders, readToken, writeToken } from "../auth/auth";
+import { AUTH_EXPIRED_EVENT, authHeaders, needsLogin, readToken, writeToken } from "../auth/auth";
 import type {
   AuthStatus,
   LoginResponse,
@@ -76,7 +76,8 @@ export function detailText(status: number, body: unknown): string {
   return `伺服器錯誤（HTTP ${status}）`;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** `quiet`：背景請求（首頁的存檔列表）收到 401 不導到登入畫面（5D-R2）。 */
+async function request<T>(method: string, path: string, body?: unknown, quiet = false): Promise<T> {
   const token = readToken();
   const init: RequestInit = { method, headers: authHeaders(token) };
   if (body !== undefined) {
@@ -98,8 +99,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       data = null;
     }
   }
-  if (res.status === 401 && token !== null) {
-    writeToken(null);
+  if (!quiet && needsLogin(res.status, path)) {
+    // 5D-R2：沒帶 token 的 401（開發模式關、還沒登入）也導到登入畫面
+    if (token !== null) writeToken(null);
     window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
   }
   if (!res.ok) throw new ApiError(res.status, detailText(res.status, data));
@@ -171,7 +173,7 @@ export const api = {
   /** 開發用（3U-3）：AI 代打到指定的戰後畫面；伺服器要帶 `TRPG_DEV_ROUTES=1`，否則 404。 */
   devAdvance: (runId: string, to: string, insight = 0) =>
     request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/dev-advance?to=${encodeURIComponent(to)}${insight > 0 ? `&insight=${insight}` : ""}`),
-  runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
+  runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves", undefined, true),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),
   run: (runId: string) => request<RunResponse>("GET", `/runs/${encodeURIComponent(runId)}`),
   runBattle: (runId: string) =>

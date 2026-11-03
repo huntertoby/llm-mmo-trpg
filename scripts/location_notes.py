@@ -17,8 +17,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TextIO
 
-from trpg.api.notes import LocationNoteStore, NoteError, NoteNotFoundError
 from trpg.roguelite.save import default_save_dir
+from trpg.server.notes import LocationNoteStore, NoteError, NoteNotFoundError
 
 EXIT_ERROR = 2
 TZ = dt.timezone(dt.timedelta(hours=8))

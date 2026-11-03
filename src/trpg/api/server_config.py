@@ -20,7 +20,7 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from trpg.api.account_config import CONFIG_ENV, DEFAULT_CONFIG_PATH
+from trpg.server.account_config import CONFIG_ENV, DEFAULT_CONFIG_PATH
 from trpg.shared.errors import TrpgError
 
 __all__ = [

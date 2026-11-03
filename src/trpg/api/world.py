@@ -11,7 +11,7 @@
 - 鎖的順序：世界的鎖 → 戰鬥的鎖。
 - 帳號是 5E-1：角色以伺服器產生的 ID 存取，不登入（代決 5A5-1）。
 - 全服首殺（5E-3，計畫 31.5）：每個成功的世界動作之後把新的精英首殺記到 ``first_kills.json``
-  （:mod:`trpg.api.first_kills`；衍生資料，不影響重播）。
+  （:mod:`trpg.server.first_kills`；衍生資料，不影響重播）。
 - 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
   三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
   :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 import threading
 import time
@@ -27,14 +28,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from trpg.api.first_kills import FirstKillRegistry
-from trpg.api.notes import LocationNoteStore
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
+from trpg.server.first_kills import FirstKillRegistry
+from trpg.server.notes import LocationNoteStore
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
@@ -49,6 +50,7 @@ from trpg.world.save import (
     loads_world,
     write_atomic,
 )
+from trpg.world.season import FIRST_SEASON_ID
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import new_character, world_step
 
@@ -61,11 +63,13 @@ __all__ = [
     "WorldStore",
 ]
 
-SEASON_ID: Final = "s1"
+SEASON_ID: Final = FIRST_SEASON_ID
 START_REGION: Final = "cloud_ridge"
 """新角色的起始區域（第一季從雲嶺開始，09 9.6.5）。"""
 
 CHAR_ID_PREFIX: Final = "c"
+
+_LOG = logging.getLogger(__name__)
 
 
 class WorldCharacterNotFoundError(TrpgError):
@@ -157,6 +161,13 @@ class WorldStore:
                     )
                     write_atomic(path, dumps_world(self._world))
             return self._world
+
+    def current_season(self) -> str:
+        """目前的賽季 ID（帳號的角色上限用，5D-R2）。還沒有世界存檔時不建立，回第一季。"""
+        with self._lock:
+            if self._world is None and not self._world_path().is_file():
+                return SEASON_ID
+            return self.world().season_id
 
     def entries(self) -> list[WorldLogEntry]:
         """世界動作日誌（第一次用到時讀檔）。"""
@@ -305,12 +316,27 @@ class WorldStore:
         write_atomic(self._log_path(), dumps_log([*entries, entry]))
         entries.append(entry)
         self._save_char(result.char)
-        self.first_kills.record(result.char, result.events, seq=seq, now=now)
+        self._record_first_kills(result.char, result.events, seq, now, result.world.season_id)
         if result.world != world:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world
         self.offers.prefetch(result.world, result.char)  # PERF-3：新出現的機遇、劇情步驟
         return WorldOutcome(result.world, result.char, result.events, now, None)
+
+    def _record_first_kills(
+        self,
+        char: CharacterState,
+        events: Sequence[WorldEvent],
+        seq: int,
+        now: int,
+        season_id: str,
+    ) -> None:
+        """首殺紀錄是衍生資料：寫入失敗（檔壞了、磁碟）只記 log，不影響這次動作的回應（5D-R2）。
+        日誌與角色已經寫好，之後可以從日誌補算。"""
+        try:
+            self.first_kills.record(char, events, seq=seq, now=now, season_id=season_id)
+        except Exception:
+            _LOG.exception("首殺紀錄寫入失敗（seq=%d，角色 %s）", seq, char.character_id)
 
     def _save_char(self, char: CharacterState) -> None:
         write_atomic(self._char_path(char.character_id), dumps_char(char))
