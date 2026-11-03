@@ -595,6 +595,59 @@
         }
       }
     },
+    "/api/battles/{battle_id}/path-preview": {
+      "post": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Post Path Preview",
+        "description": "主角移動路徑的每格預估事件與實際停點（Phase 6A-4b；不改變戰鬥、不消耗亂數）。",
+        "operationId": "post_path_preview_api_battles__battle_id__path_preview_post",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PathPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PathPreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/battles/{battle_id}/summons/{summon_id}/command-options": {
       "get": {
         "tags": [
@@ -14378,6 +14431,294 @@
         "title": "PartyView",
         "description": "目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"
       },
+      "PathEventKind": {
+        "type": "string",
+        "enum": [
+          "stood_up",
+          "surface",
+          "slip_check",
+          "trap",
+          "damage",
+          "status",
+          "reaction",
+          "displaced",
+          "surface_changed",
+          "fell",
+          "deadly",
+          "downed",
+          "escaped",
+          "stopped"
+        ]
+      },
+      "PathEventOut": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/PathEventKind"
+          },
+          "certain": {
+            "type": "boolean",
+            "title": "Certain"
+          },
+          "other_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Id"
+          },
+          "status_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Id"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Surface"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/XY"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "amount_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          },
+          "chance_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chance Permille"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "certain",
+          "other_id",
+          "status_id",
+          "surface",
+          "pos",
+          "amount_min",
+          "amount_max",
+          "chance_permille",
+          "detail"
+        ],
+        "title": "PathEventOut"
+      },
+      "PathPreviewOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "legal_length": {
+            "type": "integer",
+            "title": "Legal Length"
+          },
+          "reachable": {
+            "type": "boolean",
+            "title": "Reachable"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/PathStepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "worst_stop": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "stop_certain": {
+            "type": "boolean",
+            "title": "Stop Certain"
+          },
+          "certain": {
+            "type": "boolean",
+            "title": "Certain"
+          },
+          "move_cost": {
+            "type": "integer",
+            "title": "Move Cost"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "path",
+          "legal_length",
+          "reachable",
+          "reason",
+          "steps",
+          "stop",
+          "worst_stop",
+          "stop_certain",
+          "certain",
+          "move_cost"
+        ],
+        "title": "PathPreviewOut"
+      },
+      "PathPreviewRequest": {
+        "properties": {
+          "unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Pos"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "dest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PathPreviewRequest",
+        "description": "恰好給 ``path``（格子序列，``path[0]`` 為目前位置、之後每一步相鄰）或 ``dest``（終點：取\n本回合的最短路徑）其中一個。``unit_id`` 省略時為主角（目前只能預覽主角）。"
+      },
+      "PathStepOut": {
+        "properties": {
+          "pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/Surface"
+          },
+          "trap": {
+            "type": "boolean",
+            "title": "Trap"
+          },
+          "reach": {
+            "$ref": "#/components/schemas/StepReach"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PathEventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pos",
+          "index",
+          "surface",
+          "trap",
+          "reach",
+          "events"
+        ],
+        "title": "PathStepOut"
+      },
       "Pending": {
         "properties": {
           "kind": {
@@ -19148,6 +19489,15 @@
         ],
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
+      },
+      "StepReach": {
+        "type": "string",
+        "enum": [
+          "certain",
+          "possible",
+          "interrupted",
+          "unreachable"
+        ]
       },
       "StoryView": {
         "properties": {

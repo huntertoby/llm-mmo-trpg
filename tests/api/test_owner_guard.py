@@ -45,6 +45,7 @@ BATTLE_ROUTES: tuple[tuple[str, str, Any], ...] = (
     ("GET", "/api/battles/{b}", None),
     ("GET", "/api/battles/{b}/history", None),
     ("POST", "/api/battles/{b}/preview", END_TURN),
+    ("POST", "/api/battles/{b}/path-preview", {"dest": {"x": 0, "y": 0}}),
     ("GET", "/api/battles/{b}/summons/s1/command-options", None),
     ("GET", "/api/battles/{b}/summons/s1/infuse-options", None),
     ("GET", "/api/battles/{b}/skill-reasons", None),

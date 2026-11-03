@@ -193,6 +193,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/battles/{battle_id}/path-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Path Preview
+         * @description 主角移動路徑的每格預估事件與實際停點（Phase 6A-4b；不改變戰鬥、不消耗亂數）。
+         */
+        post: operations["post_path_preview_api_battles__battle_id__path_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles/{battle_id}/summons/{summon_id}/command-options": {
         parameters: {
             query?: never;
@@ -5982,6 +6002,75 @@ export interface components {
             /** Companion Zh */
             companion_zh?: string | null;
         };
+        /** @enum {string} */
+        PathEventKind: "stood_up" | "surface" | "slip_check" | "trap" | "damage" | "status" | "reaction" | "displaced" | "surface_changed" | "fell" | "deadly" | "downed" | "escaped" | "stopped";
+        /** PathEventOut */
+        PathEventOut: {
+            kind: components["schemas"]["PathEventKind"];
+            /** Certain */
+            certain: boolean;
+            /** Other Id */
+            other_id: string | null;
+            /** Status Id */
+            status_id: string | null;
+            surface: components["schemas"]["Surface"] | null;
+            pos: components["schemas"]["XY"] | null;
+            /** Amount Min */
+            amount_min: number | null;
+            /** Amount Max */
+            amount_max: number | null;
+            /** Chance Permille */
+            chance_permille: number | null;
+            /** Detail */
+            detail: string | null;
+        };
+        /** PathPreviewOut */
+        PathPreviewOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Path */
+            path: components["schemas"]["XY"][];
+            /** Legal Length */
+            legal_length: number;
+            /** Reachable */
+            reachable: boolean;
+            /** Reason */
+            reason: string | null;
+            /** Steps */
+            steps: components["schemas"]["PathStepOut"][];
+            stop: components["schemas"]["XY"];
+            worst_stop: components["schemas"]["XY"];
+            /** Stop Certain */
+            stop_certain: boolean;
+            /** Certain */
+            certain: boolean;
+            /** Move Cost */
+            move_cost: number;
+        };
+        /**
+         * PathPreviewRequest
+         * @description 恰好給 ``path``（格子序列，``path[0]`` 為目前位置、之後每一步相鄰）或 ``dest``（終點：取
+         *     本回合的最短路徑）其中一個。``unit_id`` 省略時為主角（目前只能預覽主角）。
+         */
+        PathPreviewRequest: {
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Path */
+            path?: components["schemas"]["Pos"][] | null;
+            dest?: components["schemas"]["Pos"] | null;
+        };
+        /** PathStepOut */
+        PathStepOut: {
+            pos: components["schemas"]["XY"];
+            /** Index */
+            index: number;
+            surface: components["schemas"]["Surface"];
+            /** Trap */
+            trap: boolean;
+            reach: components["schemas"]["StepReach"];
+            /** Events */
+            events: components["schemas"]["PathEventOut"][];
+        };
         /**
          * Pending
          * @description 結算暫停、等待玩家決定（``prompt`` 反應、``copy_skill`` 選目標，或複合技能的第二段選目標）。
@@ -7916,6 +8005,8 @@ export interface components {
             }[];
             view: components["schemas"]["BattleView"];
         };
+        /** @enum {string} */
+        StepReach: "certain" | "possible" | "interrupted" | "unreachable";
         /**
          * StoryView
          * @description 一段說書人的文字（旁白、情境、結果、回話）。
@@ -9447,6 +9538,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_path_preview_api_battles__battle_id__path_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathPreviewOut"];
                 };
             };
             /** @description Validation Error */
