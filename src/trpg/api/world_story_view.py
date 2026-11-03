@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Final
+from typing import Final, Literal
 
 from trpg.api.run_presenter import offer_out
 from trpg.api.world_growth_view import next_battle_lines
@@ -134,12 +134,12 @@ def _attrs_zh(attributes: Sequence[Attribute]) -> str:
     return "、".join(a.display_name for a in attributes)
 
 
-def story_view(story: StoryText, source: str) -> StoryView:
-    return StoryView(
-        text_zh=story.text_zh,
-        more_zh=story.more_zh,
-        source="llm" if source == "llm" else "fallback",
-    )
+def story_view(story: StoryText, source: str, *, authored: bool = False) -> StoryView:
+    """``authored``：文字是內容寫好的專用旁白（機遇保底，5B-4e），不是降級模板（5D-4）。"""
+    kind: Literal["llm", "fallback", "authored"] = "llm" if source == "llm" else "fallback"
+    if authored and kind == "fallback":
+        kind = "authored"
+    return StoryView(text_zh=story.text_zh, more_zh=story.more_zh, source=kind)
 
 
 def _thread_defs(library: ContentLibrary) -> dict[str, ThreadDef]:
@@ -367,7 +367,13 @@ def event_view(
         location_name_zh=_location_name(library, char.region, trigger.location),
         actor_zh=mask_text(story.actor_zh if story else who, masks),
         motive_zh=mask_text(story.motive_zh if story else skeleton.want_zh, masks),
-        story=story_view(story, opening.source) if story is not None and opening else None,
+        story=story_view(
+            story,
+            opening.source,
+            authored=trigger.guaranteed and story.text_zh == skeleton.guarantee_text_zh,
+        )
+        if story is not None and opening
+        else None,
         who_zh=mask_text(who, masks),
         want_zh=mask_text(skeleton.want_zh, masks),
         obstacle_zh=mask_text(skeleton.obstacle_zh, masks),

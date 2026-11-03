@@ -106,7 +106,9 @@ class StoryView(_ApiModel):
     text_zh: str
     more_zh: str = ""
     """「多講一點」（可空）。"""
-    source: Literal["llm", "fallback"]
+    source: Literal["llm", "fallback", "authored"]
+    """``llm``＝說書人；``fallback``＝LLM 不可用或核對不過時的降級模板（前端標「模板文字」）；
+    ``authored``＝內容寫好的專用文字（機遇保底的旁白，5B-4e；5D-4 起不標模板）。"""
 
 
 class EventSolutionView(_ApiModel):
