@@ -439,6 +439,7 @@ def test_beneficial_flags_in_content() -> None:
         "oath_bonus_easy",  # 5C-3：誓約之力
         "oath_bonus_medium",
         "oath_bonus_hard",
+        "hard_shell",  # 5F-5a：硬殼（詞綴硬殼的開場掛上）
         "hasted",
         "regenerating",
         "shielded",

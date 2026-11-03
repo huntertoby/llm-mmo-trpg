@@ -1,5 +1,5 @@
 # 灰燼之心第 1 階段「殼」（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.3：每 2 回合噴出熔岩，在隨機 3 格造火地，提前一輪預告）。
-# 引擎沒有「隨機 3 格」，用延遲段的環形（身邊第 2 圈）近似：施放時預告，下回合開始時噴發（代決 5F5a-7）。只給敵人用；數值為初值，未經模擬。
+# 引擎沒有「隨機 3 格」，用延遲段的環形（身邊一圈）近似：施放時預告，下回合開始時噴發（代決 5F5a-7）。只給敵人用；數值為初值，未經模擬。
 id: skill_lava_spout
 schema_version: 1
 name_zh: 熔岩噴發
@@ -19,12 +19,12 @@ followup:
   when: delayed
   release: next_turn
   skeleton: area
-  shape: {type: ring, radius: 2}
+  shape: {type: ring, radius: 1}
   effects:
     - {type: damage, dice: 1d6, element: fire}
     - {type: create_surface, surface: fire}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 6, cooldown: 2}
 tags: [fire, spell, aoe]
 narrative:
   concept: 殼縫裡的熔岩鼓脹起來，下一刻朝四周噴濺
