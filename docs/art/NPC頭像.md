@@ -37,3 +37,19 @@
 2. **畫法**：新增 `render/portrait.ts`，用 `inkDoll` 正面畫，加配件與框；做成離屏貼圖，依大小快取。
 3. **傭兵**用 `mercenaries.yaml` 的同一個欄位。
 4. **工作量**：約 0.75 段。畫法 0.5，24 位的資料 0.25（資料照 `portraits.js` 的表填）。
+5. **地圖上的紙娃娃用同一份外觀**（2026-11-04 補，6B-4 驗收時答應的對照）：
+   - 地圖上的 NPC（`FieldNpcView.look`）直接用 `portrait.look` 和 `portrait.gear`，地圖上和對話框裡才會是同一個人。不要另開一個外觀欄位。
+   - `look` 的 `build`、`beard`、`ears`、`horns`、`pattern` 紙娃娃本來就支援，照搬。
+   - 只畫在頭像上的配件（`extras`），在紙娃娃上換成頭部裝備，或不畫：
+
+| 頭像配件 | 地圖紙娃娃 |
+|---|---|
+| `cap` | `head: {kind: "cap", material: "leather"}` |
+| `wide_hat` | `head: {kind: "wide_hat", material: "leather"}` |
+| `bandana` | `head: {kind: "bandana", color: "#a83a2a"}` |
+| `headband` | `head: {kind: "bandana", color: "#b8432f"}`（紙娃娃沒有頭帶，用頭巾代替） |
+| `fur_collar`、`apron_cross` | 不畫（衣服顏色已經分得出來） |
+| `scar`、`mustache`、`wrinkles`、`soot`、`earring`、`goggles`、`goggles_up`、`ember_eye`、`rune`、`mist` | 不畫（地圖上太小） |
+| `fox`（霜音） | 不用紙娃娃，用異形「犬」的骨架、白色，頭上照樣有表情圖示 |
+
+   - `gear.head` 已經有值的（例：灰鬚的兜帽、赤焰的法師帽），以 `gear.head` 為準，配件不再換。
