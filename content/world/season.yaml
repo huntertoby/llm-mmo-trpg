@@ -70,3 +70,12 @@ world_events:
     on_success: {flags: [ashen_waste_open]}
     # 失敗：第 4 天仍開放，但荒原建議等級 +1（19.9；9.6.7 #15）
     on_failure: {flags: [ashen_waste_open], level_bonus: [{region: ashen_waste, amount: 1}]}
+
+# 影子循環賽（Phase 5F-4；09 9.7「季末保底」、#101）：每帳號 1 角色、第 13 天截止報名；
+# 每對組合 × maps × seeds 個種子 × 交換先後手，全員拉到等級上限、雙方都由 AI 操作（初值，開發 PM 定）。
+league:
+  signup_close_day: 13
+  maps: [open_plain, dark_forest, swamp]   # 3 張事先公布的地圖：開闊、遮蔽、水澤
+  seeds: 2          # 每對組合 × 每張地圖的種子數；每個種子交換先後手各打 1 場
+  max_rounds: 30    # 到輪數上限＝和局（同大世界戰鬥）
+  batch_size: 10    # 背景每批幾場

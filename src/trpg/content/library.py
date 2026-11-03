@@ -918,6 +918,7 @@ def load_library(  # noqa: PLR0915
         catalog=catalog,
         weather_ids=set(weather_map),
         region_ids=set() if regions is None else {r.id for r in regions.regions},
+        battle_maps={k: v.archetype for k, v in maps.items()},
     )
     world_event_content = load_world_event_content(
         root,
@@ -1183,6 +1184,7 @@ def _load_world_season(
     catalog: EnemyCatalog,
     weather_ids: set[str],
     region_ids: set[str],
+    battle_maps: Mapping[str, str] | None = None,
 ) -> SeasonContent | None:
     """載入 ``world/season.yaml``（檔案不存在＝``None``）並做跨檔案檢查（Phase 5F-1）。"""
     if not path.is_file():
@@ -1196,6 +1198,7 @@ def _load_world_season(
         weather_ids=weather_ids,
         region_ids=region_ids,
         location_kinds=get_args(LocationKind.__value__),
+        battle_maps=battle_maps,
     )
     if problems:
         raise ContentError(path, "；".join(problems))

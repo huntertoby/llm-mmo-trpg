@@ -70,6 +70,8 @@ from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
+from trpg.world.league import league_step
+from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
@@ -187,7 +189,13 @@ def world_step(
     world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
     before = char
-    result = _dispatch(library, world, char, action, now)
+    account = ACCOUNT_HANDLERS.get(type(action))
+    if account is not None:  # 算帳號的動作（5F-4 循環賽報名，#100）
+        result = account(
+            library, world, char, action, now, char.character_id if actor is None else actor
+        )
+    else:
+        result = _dispatch(library, world, char, action, now)
     world, char, settled = settle_event_combat(
         library, result.world, before, result.char, result.events, now=now
     )
@@ -495,6 +503,30 @@ def _camp(library: ContentLibrary, world: WorldState, char: CharacterState, now:
     )
     return StepResult(world=world, char=char, events=(event,))
 
+
+type _AccountHandler = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int, str], StepResult
+]
+"""算帳號的世界動作：多一個 ``actor``（帳號 ID；沒有帳號＝角色 ID）。"""
+
+
+def _league(  # noqa: PLR0917 - 和 _AccountHandler 同簽名（分派表的一格）
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: LeagueEnterAction | LeagueWithdrawAction,
+    now: int,
+    actor: str,
+) -> StepResult:
+    world, char, events = league_step(library, world, char, action, now, actor=actor)
+    return StepResult(world=world, char=char, events=events)
+
+
+ACCOUNT_HANDLERS: Final[dict[type, _AccountHandler]] = {
+    LeagueEnterAction: _league,
+    LeagueWithdrawAction: _league,
+}
+"""算帳號的世界動作 → 處理（5F-4 循環賽報名）；和 :data:`HANDLERS` 不重疊（測試檢查）。"""
 
 HANDLERS: Final = _handlers()
 """世界動作種類 → 處理（5D-R1 取代 ``isinstance`` 串）；每種世界動作恰好一個（測試檢查）。

@@ -59,6 +59,12 @@ from trpg.world.economy_actions import (
     UseItemAction,
 )
 from trpg.world.encounters import EncounterLineup
+from trpg.world.league_actions import (
+    LeagueEnterAction,
+    LeagueEnteredEvent,
+    LeagueWithdrawAction,
+    LeagueWithdrawnEvent,
+)
 from trpg.world.season_events import (
     BountyClaimedEvent,
     BountyMissedEvent,
@@ -414,7 +420,9 @@ type WorldAction = Annotated[
     | EnhanceAction
     | RerollAction
     | ImbueAction
-    | SalvageAction,
+    | SalvageAction
+    | LeagueEnterAction  # 5F-4
+    | LeagueWithdrawAction,
     Field(discriminator="kind"),
 ]
 
@@ -1052,6 +1060,8 @@ type WorldEvent = Annotated[
     | WorldEventResolvedEvent
     | BountyClaimedEvent
     | BountyMissedEvent
-    | DailyGoalDoneEvent,
+    | DailyGoalDoneEvent
+    | LeagueEnteredEvent  # 5F-4
+    | LeagueWithdrawnEvent,
     Field(discriminator="kind"),
 ]
