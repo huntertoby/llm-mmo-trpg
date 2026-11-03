@@ -7,6 +7,7 @@
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
+import { applyCreaturePose, type CreaturePose } from "./creaturePose";
 import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, lcg, seedOf, type InkOpt, type Pt } from "./inkStyle";
 
 /** 後端 `DollLook.creature`（字串都可能是前端不認得的新值）。 */
@@ -704,18 +705,35 @@ function fxInfo(r: ResolvedCreature): FxInfo {
   return { head: b.head, top: b.top, len: b.len, sp: b.sp, core: b.core, hover: b.hover, element: r.element };
 }
 
-function drawBody(ctx: Ctx, r: ResolvedCreature): void {
+/** 有姿勢時把 `fn` 包在 save／restore 裡、先套姿勢；沒姿勢時直接畫（不多任何指令）。 */
+function posed(ctx: Ctx, pose: CreaturePose | null, fn: () => void): void {
+  if (pose === null) {
+    fn();
+    return;
+  }
+  ctx.save();
+  applyCreaturePose(ctx, pose);
+  fn();
+  ctx.restore();
+}
+
+function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null): void {
   const b = BODIES[r.body]!;
   const P = paletteOf(r.material, r.element, r.tint, b.fur);
   const info = fxInfo(r);
-  shadow(ctx, b.len * 0.6);
-  for (const t of r.traits) if (BEHIND.has(t)) TRAITS[t]!.draw(ctx, info, P); // 霧在身體後面
-  b.draw(ctx, P, r.variant);
-  for (const t of r.traits) if (!BEHIND.has(t)) TRAITS[t]!.draw(ctx, info, P);
+  shadow(ctx, b.len * 0.6); // 影子留在地上，不跟著姿勢動
+  posed(ctx, pose, () => {
+    for (const t of r.traits) if (BEHIND.has(t)) TRAITS[t]!.draw(ctx, info, P); // 霧在身體後面
+    b.draw(ctx, P, r.variant);
+    for (const t of r.traits) if (!BEHIND.has(t)) TRAITS[t]!.draw(ctx, info, P);
+  });
 }
 
-/** 畫一隻異形（腳底在原點、朝東，已乘上大小）：分身、本體（霧隱 75%）、詞綴特效。地面環由戰場畫。 */
-export function drawCreature(ctx: Ctx, r: ResolvedCreature): void {
+/**
+ * 畫一隻異形（腳底在原點、朝東，已乘上大小）：分身、本體（霧隱 75%）、詞綴特效。地面環由戰場畫。
+ * `pose`（6M-2）：通用片段的姿勢（creaturePose.ts）；不給或 `null` 時畫法與指令流和原本相同。
+ */
+export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null = null): void {
   withShadeDir(ctx, -1, () => {
     ctx.save();
     ctx.scale(r.size, r.size);
@@ -723,15 +741,17 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature): void {
       ctx.save();
       ctx.globalAlpha = 0.35;
       ctx.translate(-9, -1);
-      drawBody(ctx, r);
+      drawBody(ctx, r, pose);
       ctx.restore();
     }
     ctx.save();
     if (r.affixes.includes("mist_hidden")) ctx.globalAlpha = 0.75;
-    drawBody(ctx, r);
+    drawBody(ctx, r, pose);
     ctx.restore();
     const info = fxInfo(r);
-    for (const a of r.affixes) AFFIX[a]?.draw(ctx, info);
+    posed(ctx, pose, () => {
+      for (const a of r.affixes) AFFIX[a]?.draw(ctx, info);
+    });
     ctx.restore();
   });
 }
