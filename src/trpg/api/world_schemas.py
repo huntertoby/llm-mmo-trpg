@@ -80,7 +80,12 @@ from trpg.world.economy_actions import (
     SellAction,
     UseItemAction,
 )
-from trpg.world.field_actions import UseTeleportStoneAction, WalkAction
+from trpg.world.field_actions import (
+    SneakAction,
+    UseFieldObjectAction,
+    UseTeleportStoneAction,
+    WalkAction,
+)
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.season_events import SeasonBossAction
 
@@ -152,7 +157,9 @@ type WorldActionRequest = Annotated[
     | LeagueWithdrawAction
     | SeasonBossAction  # 5F-3
     | WalkAction  # 6B-2
-    | UseTeleportStoneAction,
+    | UseTeleportStoneAction
+    | SneakAction  # 6C-5
+    | UseFieldObjectAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -246,6 +253,8 @@ class WorldLocationView(_ApiModel):
     ``silhouette``＝和去過的相連但沒去過（灰色剪影、「？？？」與建議等級）；``fog``＝更遠，被霧蓋住。"""
     quest_marks: tuple[str, ...] = ()
     """進行中的任務，目前這一步要到這裡（到達或在這裡打贏；任務名稱，依任務 ID；6C-6）。"""
+    footprints: tuple[str, ...] = ()
+    """去過這裡的朋友（其他角色）的名字（6C-5；依角色 ID，最多 3 位；霧裡的地點不給）。"""
 
 
 class RegionStoneView(_ApiModel):

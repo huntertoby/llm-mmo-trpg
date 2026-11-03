@@ -40,4 +40,4 @@ entry: [3, 5]
 exits:
   - {id: to_crystal_rift, at: [[2, 7], [3, 7]], to: crystal_rift, arrive: to_cloud_summit}   # 西南：前廳的山門
 situation_objects:
-  - {at: [6, 1], id: summit_gate}   # 觀門（走進去＝Boss 戰）
+  - {at: [6, 1], id: summit_gate, name_zh: 觀門, use: encounter, note_zh: 推開觀門，霧鎖真人就在裡面。}   # 觀門（走進去＝Boss 戰）

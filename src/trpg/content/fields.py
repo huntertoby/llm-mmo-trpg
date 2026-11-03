@@ -195,13 +195,38 @@ class FieldSpawn(ContentModel):
     下一趟回來（離開這個地點再進來）再出現。用在新手任務的固定戰與三村落的守點戰。"""
     day_phase: Literal["day", "night"] | None = None
     """只在這個時段出現（21.10 第 11 條，寫法同事件骨架的 ``day_phase``）；省略＝全天。"""
+    until_quest: str | None = Field(default=None, pattern=ID_PATTERN)
+    """這個任務完成後就不再出現（21.10 第 9 條「新手任務的固定戰在任務完成後就不再出現」，6C-5）；
+    省略＝一直出現。"""
+
+
+type SpotUse = Literal["note", "event", "encounter"]
+"""情境物件點了做什麼（6C-5）：``note``＝只開說明卡；``event``＝開這個地點的事件骨架（情境判定照
+骨架的模板）；``encounter``＝這個地點的遭遇（Boss 門）。"""
 
 
 class FieldSpot(ContentModel):
-    """營火點、事件點、情境物件（6C-5 用；這段只定義欄位）。"""
+    """營火點、事件點、情境物件（6C-5）。
+
+    - 營火點、事件點只用 ``at``、``id``（事件點的 ``id`` 是事件骨架 ID，6C-3 報告第 9 點）。
+    - 情境物件另外可寫 ``name_zh``、``use``、``event``、``note_zh``、``requires_*``、
+      ``locked_zh``。"""
 
     at: XY
     id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = ""
+    """顯示名稱（情境物件；省略＝畫面用「物件」）。"""
+    use: SpotUse = "note"
+    event: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``use: event`` 的事件骨架；省略＝和 ``id`` 同名。"""
+    note_zh: str = ""
+    """說明卡的文字（每種 ``use`` 都可以有）。"""
+    requires_thread: str | None = Field(default=None, pattern=ID_PATTERN)
+    """持有這個線頭才顯示（例：斷崖幫寨的暗門）。"""
+    requires_flag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """世界旗標沒開時只開說明卡、顯示 ``locked_zh``（例：熔心坑的熔岩封口）。"""
+    locked_zh: str = ""
+    """``requires_flag`` 沒開時的說明。"""
 
 
 def _is_edge(cell: XY, size: XY) -> bool:

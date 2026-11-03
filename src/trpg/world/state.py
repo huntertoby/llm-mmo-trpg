@@ -19,6 +19,9 @@ Phase 6C-1 加上看得見的敵人（:class:`FieldVisit`、:class:`FieldContact
 Phase 6C-2 加上遭遇接觸位置（``enemy_at``）、Phase 6C-6 加上去過的地點
 （``visited_locations``，區域圖的戰爭迷霧），角色格式升成
 ``trpg-char/4``；``/1``～``/3`` 照讀（只多了選填欄位）。
+
+Phase 6C-5 加上地圖上的「！」（:class:`FieldEventMark`）、潛行、情境物件的使用紀錄
+（:class:`ObjectUse`），角色格式升成 ``trpg-char/5``；``/1``～``/4`` 照讀（只多了選填欄位）。
 """
 
 from __future__ import annotations
@@ -58,6 +61,7 @@ __all__ = [
     "EncounterResult",
     "EventTrigger",
     "FieldContact",
+    "FieldEventMark",
     "FieldPos",
     "FieldVisit",
     "GearMod",
@@ -67,6 +71,7 @@ __all__ = [
     "LootSummary",
     "NextBattleMod",
     "OathState",
+    "ObjectUse",
     "PendingLoot",
     "PendingOffer",
     "PerceptionMark",
@@ -87,9 +92,9 @@ __all__ = [
 WORLD_FORMAT: Final = "trpg-world/2"
 LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``）。"""
-CHAR_FORMAT: Final = "trpg-char/4"
-LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3"})
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6C-6：只多了選填欄位）。"""
+CHAR_FORMAT: Final = "trpg-char/5"
+LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3", "trpg-char/4"})
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6C-5：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -194,6 +199,14 @@ class FieldVisit(_Model):
         return ids
 
 
+class ObjectUse(_Model):
+    """角色最後一次用某個情境物件開事件的日子（Phase 6C-5；每天 6 點刷新後才能再開）。"""
+
+    map: str = Field(pattern=ID_PATTERN)
+    object: str = Field(pattern=ID_PATTERN)
+    day: int = Field(ge=0)
+
+
 class EncounterResult(_Model):
     """遇敵的結果（只是資料，不開戰；開戰在 5A-4，敵人陣容在 5A-3）。"""
 
@@ -256,6 +269,19 @@ class EventTrigger(_Model):
         if list(candidates) != sorted(set(candidates)):
             raise ValueError("candidates 必須排序且不重複")
         return candidates
+
+
+class FieldEventMark(_Model):
+    """地圖上的「！」（Phase 6C-5；21.6、21.9 第 9 條）：進入地圖時擲出的事件先放在事件點上，走過去
+    碰到（站上或四方向相鄰）才變成 ``pending_event`` 開事件卡；同一趟只開一次，離開地點就消失。"""
+
+    trigger: EventTrigger
+    map: str = Field(pattern=ID_PATTERN)
+    """事件點所在的實地地圖或室內圖。"""
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    spot: str = Field(pattern=ID_PATTERN)
+    """事件點的 ID（``event_spots`` 的 ``id``）。"""
 
 
 class NextBattleMod(_Model):
@@ -913,15 +939,15 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/4``；``trpg-char/1``～``/3`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/5``；``trpg-char/1``～``/4`` 照讀）。"""
 
-    format: Literal["trpg-char/4"] = CHAR_FORMAT
+    format: Literal["trpg-char/5"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/3`` → ``trpg-char/4``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6），直接
-        換版號。"""
+        """``trpg-char/1``～``/4`` → ``trpg-char/5``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        6C-5），直接換版號。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             return {**data, "format": CHAR_FORMAT}
         return data
@@ -1119,6 +1145,21 @@ class CharacterState(_Model):
     """走進過的地點（依區域、地點排序、不重複）。每個動作之後把所在地點記進來
     （:func:`trpg.world.town.with_visited_location`）；舊存檔是空的，畫面另外把目前位置與到過的
     小鎮當作去過。"""
+    # --- 6C-5 地圖上的東西（邏輯在 trpg.world.field_things） ---
+    field_event: FieldEventMark | None = None
+    """地圖上還沒碰到的事件「！」；屬於所在地點，換地點就消失。"""
+    sneaking: bool = False
+    """潛行中（Q7：花補給開啟，持續到進入下一張地圖；敵人視野減半）。"""
+    object_uses: tuple[ObjectUse, ...] = ()
+    """用情境物件開事件的紀錄（依地圖、物件排序；每個物件每天一次）。"""
+
+    @field_validator("object_uses")
+    @classmethod
+    def _sorted_object_uses(cls, uses: tuple[ObjectUse, ...]) -> tuple[ObjectUse, ...]:
+        keys = [(u.map, u.object) for u in uses]
+        if keys != sorted(set(keys)):
+            raise ValueError("object_uses 必須依地圖、物件排序且不重複")
+        return uses
 
     @field_validator("teleport_stones")
     @classmethod

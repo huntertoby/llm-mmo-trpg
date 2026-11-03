@@ -80,4 +80,4 @@ event_spots:
   - {at: [10, 9], id: horned_pilgrim}   # 祭壇前
   - {at: [14, 8], id: noon_altar}   # 火焰祭壇
 situation_objects:
-  - {at: [14, 8], id: horned_fire_altar}   # 火焰祭壇（機遇 noon_altar）
+  - {at: [14, 8], id: horned_fire_altar, name_zh: 火焰祭壇, use: event, event: noon_altar}   # 火焰祭壇（機遇 noon_altar）

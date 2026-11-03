@@ -108,4 +108,4 @@ spawns:
 campfires:
   - {at: [11, 7], id: campfire_ash_well_village}   # 灰井北的空地
 situation_objects:
-  - {at: [12, 10], id: ash_well}   # 守點目標：灰井
+  - {at: [12, 10], id: ash_well, name_zh: 灰井, note_zh: 村裡唯一的井。盜匪來襲時，守住它就守住了村子。}   # 守點目標：灰井

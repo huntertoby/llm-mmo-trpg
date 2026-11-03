@@ -19,6 +19,7 @@ from trpg.api.world_field_schemas import (
     FieldTileView,
     FieldView,
 )
+from trpg.api.world_field_things import FieldSocial, things_update
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import WorldEvent
@@ -202,15 +203,17 @@ def field_view(
     *,
     world: WorldState | None = None,
     now: int = 0,
+    social: FieldSocial | None = None,
 ) -> FieldView | None:
-    """目前的實地地圖；所在地點沒有實地地圖＝``None``。``world`` 給了才帶看得見的敵人（6C-1）。"""
+    """目前的實地地圖；所在地點沒有實地地圖＝``None``。``world`` 給了才帶看得見的敵人（6C-1）與
+    情境物件（6C-5）；``social`` 給了才帶朋友的腳印與留言石碑（6C-5）。"""
     char = placed(library, char)
     pos = char.field
     found = None if pos is None else field_map(library, pos.map)
     if pos is None or found is None:
         return None
     grid = field_grid(library, char, found)
-    return FieldView(
+    view = FieldView(
         map_id=found.id,
         name_zh=_map_name(library, found),
         region=found.region,
@@ -247,4 +250,7 @@ def field_view(
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
         friends=friends_here(library, world, char, found, grid),
+    )
+    return view.model_copy(
+        update=things_update(library, world, char, found, grid, now, social)  # 6C-5
     )

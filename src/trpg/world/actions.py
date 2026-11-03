@@ -60,9 +60,14 @@ from trpg.world.economy_actions import (
 )
 from trpg.world.encounters import EncounterLineup
 from trpg.world.field_actions import (
+    EventMarkedEvent,
     FieldEnteredEvent,
+    FieldObjectUsedEvent,
+    SneakAction,
+    SneakStartedEvent,
     TeleportStoneUnlockedEvent,
     TeleportStoneUsedEvent,
+    UseFieldObjectAction,
     UseTeleportStoneAction,
     WalkAction,
     WalkedEvent,
@@ -450,7 +455,9 @@ type WorldAction = Annotated[
     | LeagueWithdrawAction
     | SeasonBossAction  # 5F-3
     | WalkAction  # 6B-2
-    | UseTeleportStoneAction,
+    | UseTeleportStoneAction
+    | SneakAction  # 6C-5
+    | UseFieldObjectAction,
     Field(discriminator="kind"),
 ]
 
@@ -1120,6 +1127,9 @@ type WorldEvent = Annotated[
     | WalkedEvent  # 6B-2
     | FieldEnteredEvent
     | TeleportStoneUnlockedEvent
-    | TeleportStoneUsedEvent,
+    | TeleportStoneUsedEvent
+    | SneakStartedEvent  # 6C-5
+    | EventMarkedEvent
+    | FieldObjectUsedEvent,
     Field(discriminator="kind"),
 ]

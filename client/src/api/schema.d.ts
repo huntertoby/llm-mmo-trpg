@@ -3551,6 +3551,16 @@ export interface components {
                 number
             ][];
         };
+        /**
+         * FieldEventMarkView
+         * @description 地圖上的事件「！」（6C-5，21.6）：走過去碰到（站上或相鄰）才開事件卡。不給骨架。
+         */
+        FieldEventMarkView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
         /** FieldExitView */
         FieldExitView: {
             /** Id */
@@ -3573,6 +3583,27 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+        };
+        /**
+         * FieldFootprintView
+         * @description 朋友走過的腳印（6C-5；21.6、21.9 第 14 條）：其他角色去過這個地點時，沿兩個出入口之間的一條
+         *     路畫幾個腳印（位置依地圖與角色 ID 的雜湊決定，不是真的走過的路）。
+         */
+        FieldFootprintView: {
+            /** Owner */
+            owner: string;
+            /** Name Zh */
+            name_zh: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Facing
+             * @default s
+             * @enum {string}
+             */
+            facing: "n" | "e" | "s" | "w";
         };
         /**
          * FieldFriendView
@@ -3629,6 +3660,18 @@ export interface components {
              */
             equipment: components["schemas"]["FieldGearLookView"][];
         };
+        /**
+         * FieldNoteStoneView
+         * @description 這個地點有留言時，入口旁畫一塊留言石碑（6C-5；點了開留言板，N）。
+         */
+        FieldNoteStoneView: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Count */
+            count: number;
+        };
         /** FieldNpcView */
         FieldNpcView: {
             /** Id */
@@ -3678,6 +3721,34 @@ export interface components {
              * @enum {string}
              */
             facing: "n" | "e" | "s" | "w";
+        };
+        /**
+         * FieldSituationObjectView
+         * @description 情境物件（6C-5；21.6「走到旁邊點了就開」）。
+         */
+        FieldSituationObjectView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Use
+             * @enum {string}
+             */
+            use: "note" | "event" | "encounter";
+            /** Usable */
+            usable: boolean;
+            /**
+             * Note Zh
+             * @default
+             */
+            note_zh: string;
+            /** Problem Zh */
+            problem_zh?: string | null;
         };
         /**
          * FieldSpec
@@ -3776,6 +3847,18 @@ export interface components {
             readonly object_choice: boolean;
         };
         /**
+         * FieldSpotView
+         * @description 營火點（6C-5）：站在上面可以紮營。
+         */
+        FieldSpotView: {
+            /** Id */
+            id: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /**
          * FieldStoneTargetView
          * @description 站在傳送石上時可以傳去的另一顆（已解鎖；6B-3 的「傳送」按鈕用）。
          */
@@ -3871,6 +3954,35 @@ export interface components {
              * @default []
              */
             friends: components["schemas"]["FieldFriendView"][];
+            /**
+             * Campfires
+             * @default []
+             */
+            campfires: components["schemas"]["FieldSpotView"][];
+            event_mark?: components["schemas"]["FieldEventMarkView"] | null;
+            /**
+             * Situation Objects
+             * @default []
+             */
+            situation_objects: components["schemas"]["FieldSituationObjectView"][];
+            /**
+             * Sneaking
+             * @default false
+             */
+            sneaking: boolean;
+            /**
+             * Sneak Cost
+             * @default 1
+             */
+            sneak_cost: number;
+            /** Sneak Problem Zh */
+            sneak_problem_zh?: string | null;
+            /**
+             * Footprints
+             * @default []
+             */
+            footprints: components["schemas"]["FieldFootprintView"][];
+            note_stone?: components["schemas"]["FieldNoteStoneView"] | null;
         };
         /**
          * FlashAction
@@ -8132,6 +8244,17 @@ export interface components {
         /** @enum {string} */
         SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
         /**
+         * SneakAction
+         * @description 潛行（Q7，21.4「取代趕路」）：花 ``hasten.cost`` 補給，到進入下一張地圖為止敵人視野減半。
+         */
+        SneakAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "sneak";
+        };
+        /**
          * StartKeywordOption
          * @description 一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字
          *     是實際會拿到的技能；沒選的是「下一個選它」時會拿到的技能。
@@ -8951,6 +9074,19 @@ export interface components {
             kind: "use_environment";
         };
         /**
+         * UseFieldObjectAction
+         * @description 點了站在旁邊的情境物件（``situation_objects`` 的 ``id``；21.6「走到旁邊點了就開」）。
+         */
+        UseFieldObjectAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "use_field_object";
+            /** Object */
+            object: string;
+        };
+        /**
          * UseItemAction
          * @description 野外或城鎮使用消耗品（09 9.6.11 #113「HP 靠藥水」）；先用背包裡的，背包沒有再用腰包的。
          */
@@ -9368,7 +9504,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -9511,6 +9647,11 @@ export interface components {
              * @default []
              */
             quest_marks: string[];
+            /**
+             * Footprints
+             * @default []
+             */
+            footprints: string[];
         };
         /** WorldMapView */
         WorldMapView: {

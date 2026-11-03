@@ -35,6 +35,7 @@ from typing import Final
 
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
+from trpg.api.world_field_things import FieldSocial, Visitor
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
@@ -48,7 +49,7 @@ from trpg.server.chronicle import (
 )
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
-from trpg.server.notes import LocationNoteStore
+from trpg.server.notes import LocationNoteStore, NoteError
 from trpg.server.season_archive import ReplayCheck, verify_first_kill, verify_league_match
 from trpg.server.season_boss_board import SeasonBossBoard, first_kill_log_json
 from trpg.server.season_reset import (
@@ -60,6 +61,7 @@ from trpg.server.season_reset import (
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
+from trpg.world.errors import WorldError
 from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.layout import CHARS_DIR, LOG_FILE, WORLD_FILE, char_path
 from trpg.world.replay import WorldLogEntry
@@ -158,6 +160,8 @@ class WorldStore:
         self._lock = threading.RLock()
         self._world: WorldState | None = None
         self._chars: dict[str, CharacterState] = {}
+        self._peeks: dict[str, tuple[int, CharacterState]] = {}
+        """足跡用的別人存檔（不進 `_chars`、不預先計算；依修改時間重讀，6C-5）。"""
         self._entries: list[WorldLogEntry] | None = None
         self._stale_through: int | None = None
         """日誌裡舊規則的紀錄到哪一筆（6B-2：``trpg-wlog/1`` 的舊日誌規則已變、不能重播）。"""
@@ -262,6 +266,48 @@ class WorldStore:
             self._chars[character_id] = char
             self.offers.prefetch(self.world(), char)  # PERF-3：讀檔時已有的機遇、劇情步驟
             return char
+
+    def _peek(self, character_id: str) -> CharacterState | None:
+        """讀角色但不放進快取、不預先計算（足跡用；讀不了＝``None``）。"""
+        char = self._chars.get(character_id)
+        if char is not None:
+            return char
+        path = self._char_path(character_id)
+        try:
+            stamp = path.stat().st_mtime_ns
+            cached = self._peeks.get(character_id)
+            if cached is not None and cached[0] == stamp:
+                return cached[1]
+            char = loads_char(path.read_text(encoding="utf-8"))
+        except (OSError, WorldError):
+            return None
+        self._peeks[character_id] = (stamp, char)
+        return char
+
+    def field_social(self, character_id: str) -> FieldSocial:
+        """其他角色去過的地點（足跡）與每個地點的留言數（6C-5；畫面用，不進日誌）。
+
+        來源是其他角色存檔的 ``visited_locations`` 加上目前位置（依角色 ID）；讀過的存檔依修改時間
+        快取，不掃世界日誌。"""
+        visitors: dict[tuple[str, str], list[Visitor]] = {}
+        with self._lock:
+            for cid in self.character_ids():
+                other = None if cid == character_id else self._peek(cid)
+                if other is None:
+                    continue
+                places = {r.key() for r in other.visited_locations}
+                places.add((other.region, other.location))
+                for place in sorted(places):
+                    visitors.setdefault(place, []).append(Visitor(cid, other.hero.name_zh))
+            try:
+                notes = self.notes.all()
+            except NoteError:
+                notes = ()
+        counts: dict[tuple[str, str], int] = {}
+        for note in notes:
+            place = (note.region, note.location)
+            counts[place] = counts.get(place, 0) + 1
+        return FieldSocial(visitors={k: tuple(v) for k, v in visitors.items()}, notes=counts)
 
     def growth_run(self, character_id: str) -> tuple[ContentLibrary, RunState]:
         """閃現與配點預覽用：大世界的內容庫視圖與角色轉成的 ``RunState``（帶角色技能種子）。"""

@@ -112,4 +112,4 @@ campfires:
 event_spots:
   - {at: [13, 2], id: lost_pup}   # 村口
 situation_objects:
-  - {at: [12, 8], id: red_sand_well}   # 守點目標：村中央的水井
+  - {at: [12, 8], id: red_sand_well, name_zh: 水井, note_zh: 赤沙村中央的水井。盜匪來襲時，守住它就守住了村子。}   # 守點目標：村中央的水井

@@ -40,4 +40,4 @@ entry: [2, 4]
 exits:
   - {id: to_ruined_fortress, at: [[0, 3], [0, 4]], to: ruined_fortress, arrive: to_molten_heart_pit}   # 西：岩坡，回廢墟要塞
 situation_objects:
-  - {at: [10, 3], id: pit_gate}   # 坑口（走進去＝Boss 戰）
+  - {at: [10, 3], id: pit_gate, name_zh: 坑口, use: encounter, note_zh: 坑底的熔岩翻滾著，熔心坑的主人就在下面。}   # 坑口（走進去＝Boss 戰）

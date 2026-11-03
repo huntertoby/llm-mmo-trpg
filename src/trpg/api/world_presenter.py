@@ -31,6 +31,7 @@ from trpg.api.world_economy_view import (
     shop_view,
     wallet_view,
 )
+from trpg.api.world_field_things import FieldSocial, things_line
 from trpg.api.world_field_view import field_line, field_view
 from trpg.api.world_growth_view import (
     growth_event_line,
@@ -240,8 +241,13 @@ def _blocked(
     return None
 
 
-def _map_view(
-    library: ContentLibrary, world: WorldState, char: CharacterState, now: int, in_battle: bool
+def _map_view(  # noqa: PLR0917 - 地點圖要世界、角色、時間、戰鬥中與朋友的足跡
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    now: int,
+    in_battle: bool,
+    social: FieldSocial | None = None,
 ) -> WorldMapView:
     world_map = world_map_of(library, char.region)
     neighbors = set(world_map.neighbors(char.location))
@@ -274,7 +280,9 @@ def _map_view(
         locations=locations,
         edges=edges,
     )
-    return region_marks(library, char, view, town=world_map.town, in_battle=in_battle)  # 6C-6
+    return region_marks(  # 6C-6；足跡 6C-5
+        library, char, view, town=world_map.town, in_battle=in_battle, social=social
+    )
 
 
 def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) -> list[str]:
@@ -480,6 +488,7 @@ _LINES = (
     season_boss_event_line,  # 5F-3
     league_event_line,  # 5F-4
     field_line,  # 6B-2
+    things_line,  # 6C-5
 )
 
 
@@ -527,15 +536,17 @@ def world_view(
     raw_events: Sequence[WorldEvent] = (),
     narrations: Sequence[NarrateAction] = (),
     titles: TitlesOf = no_titles,
+    social: FieldSocial | None = None,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
-    的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）。"""
+    的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）；``social`` 是
+    其他角色的足跡與地點留言數（6C-5；省略＝不畫）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
         character=_character_view(library, char),
-        map=_map_view(library, world, char, now, in_battle),
+        map=_map_view(library, world, char, now, in_battle, social),
         here=_here_view(library, world, char, now, in_battle),
         encounter=_encounter_view(library, char, in_battle),
         clock=_clock_view(library, world, char.region, now),
@@ -567,7 +578,7 @@ def world_view(
         inventory=_inventory(library, char, in_battle=in_battle),
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
-        field=field_view(library, char, world=world, now=now),
+        field=field_view(library, char, world=world, now=now, social=social),
     )
 
 

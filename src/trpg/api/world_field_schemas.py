@@ -18,14 +18,19 @@ __all__ = [
     "FieldDoorView",
     "FieldEnemyUnitView",
     "FieldEnemyView",
+    "FieldEventMarkView",
     "FieldExitView",
     "FieldFacilityView",
+    "FieldFootprintView",
     "FieldFriendView",
     "FieldGearLookView",
     "FieldHeroView",
+    "FieldNoteStoneView",
     "FieldNpcView",
     "FieldObjectView",
     "FieldPositionView",
+    "FieldSituationObjectView",
+    "FieldSpotView",
     "FieldStoneTargetView",
     "FieldStoneView",
     "FieldTileView",
@@ -183,6 +188,57 @@ class FieldFriendView(_ApiModel):
     """紙娃娃外觀（存影子時的主角範本與裝備）。"""
 
 
+class FieldSpotView(_ApiModel):
+    """營火點（6C-5）：站在上面可以紮營。"""
+
+    id: str
+    x: int
+    y: int
+
+
+class FieldEventMarkView(_ApiModel):
+    """地圖上的事件「！」（6C-5，21.6）：走過去碰到（站上或相鄰）才開事件卡。不給骨架。"""
+
+    x: int
+    y: int
+
+
+class FieldSituationObjectView(_ApiModel):
+    """情境物件（6C-5；21.6「走到旁邊點了就開」）。"""
+
+    id: str
+    name_zh: str
+    x: int
+    y: int
+    use: Literal["note", "event", "encounter"]
+    """``note``＝只看說明卡（不送動作）；``event``／``encounter``＝站在旁邊送
+    ``use_field_object``。"""
+    usable: bool
+    """現在能送 ``use_field_object``（``use`` 不是 ``note``、沒有 ``problem_zh``）。"""
+    note_zh: str = ""
+    problem_zh: str | None = None
+    """``use`` 是 ``event``／``encounter`` 但現在不能用的原因。"""
+
+
+class FieldFootprintView(_ApiModel):
+    """朋友走過的腳印（6C-5；21.6、21.9 第 14 條）：其他角色去過這個地點時，沿兩個出入口之間的一條
+    路畫幾個腳印（位置依地圖與角色 ID 的雜湊決定，不是真的走過的路）。"""
+
+    owner: str
+    name_zh: str
+    x: int
+    y: int
+    facing: Literal["n", "e", "s", "w"] = "s"
+
+
+class FieldNoteStoneView(_ApiModel):
+    """這個地點有留言時，入口旁畫一塊留言石碑（6C-5；點了開留言板，N）。"""
+
+    x: int
+    y: int
+    count: int
+
+
 class FieldView(_ApiModel):
     map_id: str
     name_zh: str
@@ -211,6 +267,21 @@ class FieldView(_ApiModel):
     """看得見的敵人（6C-1；依 ``spawns`` 順序；室內、已清空、打贏的不給）。"""
     friends: tuple[FieldFriendView, ...] = ()
     """站在城裡的朋友（6B-4；只在城鎮的主地圖、不含自己；依主人 ID，最多 8 位）。"""
+    campfires: tuple[FieldSpotView, ...] = ()
+    """營火點（6C-5）。"""
+    event_mark: FieldEventMarkView | None = None
+    """這張圖上還沒碰到的事件「！」（6C-5）。"""
+    situation_objects: tuple[FieldSituationObjectView, ...] = ()
+    """情境物件（6C-5；要線頭才顯示的，沒持有時不給）。"""
+    sneaking: bool = False
+    """潛行中（6C-5，Q7：到進入下一張地圖為止，敵人視野減半）。"""
+    sneak_cost: int = 1
+    sneak_problem_zh: str | None = None
+    """不能潛行的原因（HUD 的 R 鈕）；可以時為 ``None``。"""
+    footprints: tuple[FieldFootprintView, ...] = ()
+    """朋友的腳印（6C-5；室外圖，最多 3 位朋友）。"""
+    note_stone: FieldNoteStoneView | None = None
+    """留言石碑（6C-5；這個地點有留言時）。"""
 
 
 FieldNpcView.model_rebuild()

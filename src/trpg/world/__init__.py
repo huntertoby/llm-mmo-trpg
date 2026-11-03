@@ -12,7 +12,7 @@
 
 - :mod:`trpg.world.clock`：時鐘（一天 30 分鐘、半天換天氣、台北 6 點刷新）。
 - :mod:`trpg.world.rng`：世界亂數衍生（賽季種子:角色:串流:計數）。
-- :mod:`trpg.world.state`：``trpg-world/2``、``trpg-char/4`` 的模型。
+- :mod:`trpg.world.state`：``trpg-world/2``、``trpg-char/5`` 的模型。
 - :mod:`trpg.world.actions`：世界動作與事件。
 - :mod:`trpg.world.weather`：各區天氣。
 - :mod:`trpg.world.encounters`：遭遇的敵方陣容（遭遇表、營地混精英，5A-3）。

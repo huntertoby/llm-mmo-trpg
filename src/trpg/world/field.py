@@ -42,6 +42,7 @@ __all__ = [
     "ArriveFn",
     "FieldGrid",
     "FieldHooks",
+    "SenseFn",
     "TravelFn",
     "WatchFn",
     "field_grid",
@@ -51,6 +52,7 @@ __all__ = [
     "placed",
     "stale_field",
     "teleport_origin",
+    "touches_event",
     "use_teleport_stone",
     "walk",
 ]
@@ -69,7 +71,12 @@ type WatchFn = Callable[
 type ArriveFn = Callable[
     [ContentLibrary, WorldState, CharacterState, int], tuple[CharacterState, tuple[WorldEvent, ...]]
 ]
-"""走出口或門換到另一張圖之後（6C-1：一到就被看到時開打）。"""
+"""走出口或門換到另一張圖之後（6C-1：一到就被看到時開打；6C-5：抵達格的隱藏入口感知）。"""
+type SenseFn = Callable[
+    [ContentLibrary, WorldState, CharacterState, FieldMapDef, WalkedEvent, int],
+    tuple[CharacterState, tuple[WorldEvent, ...]],
+]
+"""走完一段、觸發出口等之前（6C-5：隱藏入口的感知、碰到「！」開事件卡）。"""
 
 
 @dataclass(frozen=True)
@@ -79,6 +86,7 @@ class FieldHooks:
     travel: TravelFn
     watch: WatchFn | None = None
     arrive: ArriveFn | None = None
+    sense: SenseFn | None = None
 
 
 _DIRS: tuple[tuple[XY, Facing], ...] = (
@@ -230,6 +238,18 @@ def _facing(start: XY, cell: XY) -> Facing | None:
     return next((facing for d, facing in _DIRS if d == delta), None)
 
 
+def touches_event(char: CharacterState, map_id: str, cell: XY) -> bool:
+    """站在 ``cell`` 會不會碰到地圖上的「！」（6C-5：同一張圖、站上或四方向相鄰；有事件卡開著時
+    不算）。"""
+    mark = char.field_event
+    return (
+        mark is not None
+        and char.pending_event is None
+        and mark.map == map_id
+        and abs(cell[0] - mark.x) + abs(cell[1] - mark.y) <= 1
+    )
+
+
 def _stop_at(char: CharacterState, found: FieldMapDef, cell: XY) -> StopReason | None:
     if any(cell in e.at for e in found.exits):
         return "exit"
@@ -237,6 +257,8 @@ def _stop_at(char: CharacterState, found: FieldMapDef, cell: XY) -> StopReason |
         return "door"
     if any(s.at == cell for s in found.teleport_stones):
         return "stone"
+    if touches_event(char, found.id, cell):
+        return "event"
     return None
 
 
@@ -293,6 +315,9 @@ def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加鉤子
     pos = FieldPos(map=found.id, x=walked.x, y=walked.y, facing=walked.facing)
     char = char.model_copy(update={"field": pos})  # 同一個地點裡走動不算離開營火
     events: list[WorldEvent] = [walked, *seen]
+    if hooks.sense is not None:  # 6C-5：隱藏入口的感知、碰到「！」
+        char, sensed = hooks.sense(library, world, char, found, walked, now)
+        events += sensed
     cell = (walked.x, walked.y)
     if walked.stopped == "stone":
         char, unlocked = _unlock_stone(char, found, cell)

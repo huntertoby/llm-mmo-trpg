@@ -3,8 +3,8 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/2``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/4``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/5``（JSON Lines：第一行 ``{"format": "trpg-wlog/5"}``，之後一行一筆
+| 角色 | ``trpg-char/5``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/6``（JSON Lines：第一行 ``{"format": "trpg-wlog/6"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -31,6 +31,11 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 的步驟是照模板地圖記的），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/5``。
 **Phase 6C-6**：同一版 ``trpg-char/4`` 也多了選填欄位 ``visited_locations``（和 6C-2
 一起合進來，沒有另升版號）。去過的地點只是另外記下來，不改任何規則。
+
+**Phase 6C-5**：``trpg-char/4`` 照讀（只多了選填欄位 ``field_event``、``sneaking``、
+``object_uses``），讀進來就是 ``trpg-char/5``。``trpg-wlog/5`` 也是舊規則寫的（6C-5 起有實地地圖的
+地點改成走到隱藏入口 3 格內才感知、事件放在地圖上碰到才開），處理同上：照讀、規則已變、不能重播，
+寫回時標頭改成 ``trpg-wlog/6``。
 """
 
 from __future__ import annotations
@@ -71,8 +76,10 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/5"
-LEGACY_WLOG_FORMATS: Final = frozenset({"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4"})
+WLOG_FORMAT: Final = "trpg-wlog/6"
+LEGACY_WLOG_FORMATS: Final = frozenset(
+    {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5"}
+)
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
 

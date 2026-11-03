@@ -8760,6 +8760,26 @@
         "title": "FieldEnemyView",
         "description": "地圖上看得見的一隊敵人（Phase 6C-1）：位置、朝向、陣容摘要、視野格。"
       },
+      "FieldEventMarkView": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "FieldEventMarkView",
+        "description": "地圖上的事件「！」（6C-5，21.6）：走過去碰到（站上或相鄰）才開事件卡。不給骨架。"
+      },
       "FieldExitView": {
         "properties": {
           "id": {
@@ -8825,6 +8845,47 @@
           "y"
         ],
         "title": "FieldFacilityView"
+      },
+      "FieldFootprintView": {
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "facing": {
+            "type": "string",
+            "enum": [
+              "n",
+              "e",
+              "s",
+              "w"
+            ],
+            "title": "Facing",
+            "default": "s"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner",
+          "name_zh",
+          "x",
+          "y"
+        ],
+        "title": "FieldFootprintView",
+        "description": "朋友走過的腳印（6C-5；21.6、21.9 第 14 條）：其他角色去過這個地點時，沿兩個出入口之間的一條\n路畫幾個腳印（位置依地圖與角色 ID 的雜湊決定，不是真的走過的路）。"
       },
       "FieldFriendView": {
         "properties": {
@@ -8949,6 +9010,31 @@
         ],
         "title": "FieldHeroView",
         "description": "主角的紙娃娃外觀（6B-3；欄位同戰鬥的 ``UnitView``，純顯示）。"
+      },
+      "FieldNoteStoneView": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "count"
+        ],
+        "title": "FieldNoteStoneView",
+        "description": "這個地點有留言時，入口旁畫一塊留言石碑（6C-5；點了開留言板，N）。"
       },
       "FieldNpcView": {
         "properties": {
@@ -9090,6 +9176,67 @@
           "facing"
         ],
         "title": "FieldPositionView"
+      },
+      "FieldSituationObjectView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "use": {
+            "type": "string",
+            "enum": [
+              "note",
+              "event",
+              "encounter"
+            ],
+            "title": "Use"
+          },
+          "usable": {
+            "type": "boolean",
+            "title": "Usable"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh",
+            "default": ""
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "x",
+          "y",
+          "use",
+          "usable"
+        ],
+        "title": "FieldSituationObjectView",
+        "description": "情境物件（6C-5；21.6「走到旁邊點了就開」）。"
       },
       "FieldSpec": {
         "properties": {
@@ -9276,6 +9423,31 @@
         ],
         "title": "FieldSpec",
         "description": "一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、\n``cost.cooldown``）。"
+      },
+      "FieldSpotView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "x",
+          "y"
+        ],
+        "title": "FieldSpotView",
+        "description": "營火點（6C-5）：站在上面可以紮營。"
       },
       "FieldStoneTargetView": {
         "properties": {
@@ -9502,6 +9674,71 @@
             "type": "array",
             "title": "Friends",
             "default": []
+          },
+          "campfires": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSpotView"
+            },
+            "type": "array",
+            "title": "Campfires",
+            "default": []
+          },
+          "event_mark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldEventMarkView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "situation_objects": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSituationObjectView"
+            },
+            "type": "array",
+            "title": "Situation Objects",
+            "default": []
+          },
+          "sneaking": {
+            "type": "boolean",
+            "title": "Sneaking",
+            "default": false
+          },
+          "sneak_cost": {
+            "type": "integer",
+            "title": "Sneak Cost",
+            "default": 1
+          },
+          "sneak_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sneak Problem Zh"
+          },
+          "footprints": {
+            "items": {
+              "$ref": "#/components/schemas/FieldFootprintView"
+            },
+            "type": "array",
+            "title": "Footprints",
+            "default": []
+          },
+          "note_stone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldNoteStoneView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -19721,6 +19958,20 @@
           "ring"
         ]
       },
+      "SneakAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "sneak",
+            "title": "Kind",
+            "default": "sneak"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SneakAction",
+        "description": "潛行（Q7，21.4「取代趕路」）：花 ``hasten.cost`` 補給，到進入下一張地圖為止敵人視野減半。"
+      },
       "StartKeywordOption": {
         "properties": {
           "keyword": {
@@ -21842,6 +22093,28 @@
         "title": "UseEnvironment",
         "description": "優先利用環境（爆炸、推落、表面）。"
       },
+      "UseFieldObjectAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "use_field_object",
+            "title": "Kind",
+            "default": "use_field_object"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Object"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object"
+        ],
+        "title": "UseFieldObjectAction",
+        "description": "點了站在旁邊的情境物件（``situation_objects`` 的 ``id``；21.6「走到旁邊點了就開」）。"
+      },
       "UseItemAction": {
         "properties": {
           "kind": {
@@ -22954,6 +23227,12 @@
           },
           {
             "$ref": "#/components/schemas/UseTeleportStoneAction"
+          },
+          {
+            "$ref": "#/components/schemas/SneakAction"
+          },
+          {
+            "$ref": "#/components/schemas/UseFieldObjectAction"
           }
         ],
         "discriminator": {
@@ -22989,11 +23268,13 @@
             "season_boss": "#/components/schemas/SeasonBossAction",
             "sell": "#/components/schemas/SellAction",
             "shadow_ai": "#/components/schemas/ShadowAiAction",
+            "sneak": "#/components/schemas/SneakAction",
             "swear_oath": "#/components/schemas/SwearOathAction",
             "talk": "#/components/schemas/TalkAction",
             "tavern": "#/components/schemas/TavernAction",
             "teleport": "#/components/schemas/TeleportAction",
             "travel": "#/components/schemas/TravelAction",
+            "use_field_object": "#/components/schemas/UseFieldObjectAction",
             "use_item": "#/components/schemas/UseItemAction",
             "use_teleport_stone": "#/components/schemas/UseTeleportStoneAction",
             "walk": "#/components/schemas/WalkAction"
@@ -23362,6 +23643,14 @@
             },
             "type": "array",
             "title": "Quest Marks",
+            "default": []
+          },
+          "footprints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Footprints",
             "default": []
           }
         },

@@ -13,6 +13,9 @@
   ``personal`` 的隊伍只對自己消失（角色這一趟的 ``defeated``）、不算進共享清空、下一趟回來再
   出現；其他種類的地點照 6C-1，打贏的那一隊到離開這個地點前不再出現。
 - **日夜**（21.10 第 11 條）：``day_phase`` 有寫的隊伍只在那個時段出現。
+- **任務完成後不再出現**（21.10 第 9 條，6C-5）：``until_quest`` 有寫的隊伍，角色完成那個任務後就
+  不出現（新手任務的固定戰）。
+- **潛行**（Q7，6C-5）：角色潛行中，視野距離減半（捨去小數，:func:`sight_range`）。
 - **進圖寬限**（21.10 第 8 條）：走出口或門抵達的那一格不檢查，從走的第一步才檢查。
 - **視野**（21.10 第 3 條）：前方扇形——往前 ≥ 1 格、橫向偏移 ≤ 往前格數（90°）、曼哈頓距離
   ≤ :data:`SIGHT_RANGE`；被擋視線的地形（牆）、物件、表面與高低差遮住（同戰鬥的視線規則：兩個方向
@@ -76,6 +79,7 @@ __all__ = [
     "lineup_seed",
     "shared_clear",
     "sight_cells",
+    "sight_range",
     "spawn_place",
     "spawn_route",
     "visit_for",
@@ -88,7 +92,13 @@ type XY = tuple[int, int]
 type First = Literal["ally", "enemy"] | None
 
 SIGHT_RANGE: Final = 4
-"""敵人的視野距離（前方扇形 4 格，21.10 第 3 條；潛行減半是 6C-5）。"""
+"""敵人的視野距離（前方扇形 4 格，21.10 第 3 條；潛行減半，:func:`sight_range`）。"""
+
+
+def sight_range(char: CharacterState) -> int:
+    """這個角色眼中敵人的視野距離：潛行中減半、捨去小數（Q7 原型值，6C-5）。"""
+    return SIGHT_RANGE // 2 if char.sneaking else SIGHT_RANGE
+
 
 _VECTORS: Final[dict[Facing, XY]] = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0)}
 _FACINGS: Final[tuple[Facing, ...]] = ("n", "e", "s", "w")
@@ -379,6 +389,8 @@ class _Watch:
     visit: FieldVisit
     sight: _Sight
     spawns: tuple[tuple[int, FieldSpawn], ...]
+    radius: int = SIGHT_RANGE
+    """視野距離（潛行減半）。"""
 
     def enemies(self, ticks: int) -> tuple[FieldEnemy, ...]:
         out: list[FieldEnemy] = []
@@ -391,7 +403,7 @@ class _Watch:
                     x=x,
                     y=y,
                     facing=facing,
-                    sight=self.sight.cells((x, y), facing),
+                    sight=self.sight.cells((x, y), facing, self.radius),
                 )
             )
         return tuple(out)
@@ -438,18 +450,35 @@ def _watch(
         return None
     if _target(library, char) is None:
         return None
-    spawns = _shown(library, world, found, visit, now)
+    spawns = _shown(library, world, char, found, visit, now)
     if not spawns:
         return None
-    return _Watch(map=found, visit=visit, sight=_sight(library, char, found), spawns=spawns)
+    return _Watch(
+        map=found,
+        visit=visit,
+        sight=_sight(library, char, found),
+        spawns=spawns,
+        radius=sight_range(char),
+    )
 
 
-def _shown(
-    library: ContentLibrary, world: WorldState, found: FieldMapDef, visit: FieldVisit, now: int
+def _quest_done(char: CharacterState, quest: str | None) -> bool:
+    state = None if quest is None else char.quest_state(quest)
+    return state is not None and state.done
+
+
+def _shown(  # noqa: PLR0917 - 要世界、角色、地圖、這一趟與時間
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    found: FieldMapDef,
+    visit: FieldVisit,
+    now: int,
 ) -> tuple[tuple[int, FieldSpawn], ...]:
     """現在會出現的隊伍（21.10 第 9、11 條）：
 
     - 不在這個時段的（``day_phase``）不出現。
+    - ``until_quest`` 的任務角色已完成：不出現（6C-5）。
     - ``personal``：這一趟打贏了就不出現（地點「已清空」也照樣在）。
     - 其他：地點「已清空」就不出現；共享的地點看世界的 ``defeated_spawns``，不共享的看這一趟。"""
     region, location = visit.region, visit.location
@@ -457,7 +486,7 @@ def _shown(
     shared = shared_clear(library, region, location)
     out: list[tuple[int, FieldSpawn]] = []
     for i, spawn in enumerate(found.spawns):
-        if not appears(spawn, now):
+        if not appears(spawn, now) or _quest_done(char, spawn.until_quest):
             continue
         if spawn.personal or not shared:
             gone = i in visit.defeated or (cleared and not spawn.personal)
