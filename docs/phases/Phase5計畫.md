@@ -4301,6 +4301,83 @@ world_events:
 存檔：新欄位都有預設值，不升版；`LOG_FORMAT` 不變（新的 `StatusDef` 欄位有預設值、舊內容結算不變，照 `戰鬥紀錄格式變更.md` 1.2；規則包雜湊變了，5F-4 的舊循環賽紀錄由規則鍵標示不能重播）。
 
 
-## 39. 之後各段規格
+## 39. 5F-5a 詳細規格：灰燼荒原內容接入
+
+> 給實作 agent。主要動 `content/`（`world/maps|encounters|events|situations|npcs|quests|social|shops/ashen_waste.yaml`（新）、`world/season.yaml`、`world/loot.yaml`、`world/crafting.yaml`、`world/items.yaml`、`world/enemies.yaml`、`world/narration.yaml`、`units/`、`units/summons/`、`skills/`、`statuses.yaml`、`summon_looks.yaml`、`maps/molten_heart_pit.yaml`（新）；刪 `world/pending/ashen_waste.yaml`）；小改 `src/trpg/content/`（`world_season.py`、`world_encounters.py`、`library.py`）與 `src/trpg/world/`（`season_board.py`、`solutions.py`、`battle.py`）。另一個 agent 在做 5F-3b（`enemy_only`、碎晶之主平衡），撞到以 main 為準。
+> 依據：本檔第 1 節 5F-5a 列；19 19.1～19.9；20 20.1（餘燼集欄）、20.2、20.4、20.6（灰燼之心的 Boss 地圖）；18（雲嶺 content 的寫法）；8.26.1（每個小鎮都有鐵匠與附魔台，5D-3b 代決）；#87（區域 Boss 可帶影子）；19.9 #1 失敗荒原建議等級 +1（5F-1 已接）；`Phase5F-1b報告.md`（渡口旗標 `ashen_waste_open`）、`Phase5D-3b報告.md`（爐叔、`hints_at`）、`Phase5F-2報告.md`／`5F-2b`（Boss 階段資料化、十字臂長）、`Phase5F-3報告.md`（封印鑰匙、`WorldEventEffect.seal_keys`）。完成報告：`Phase5F-5a報告.md`。
+
+### 39.1 目標
+
+荒原第一次能玩：從雲嶺的渡口傳送到餘燼集，走得到 18 個地點、遇得到熔岩獸群與中立族群、打得到精英與區域 Boss 灰燼之心；有荒原的事件骨架、情境模板、NPC、主線第 2 章（劇情技能「冷鋒」）、懸賞、世界事件 #2 熔岩潰堤、#3 封印共鳴接上荒原的鑰匙來源；餘燼集有商店、鐵匠爐叔與附魔台、兩個隱藏配方提示。新內容只寫資料；引擎不改，世界端只加三個資料化的小欄位（39.4）。
+
+### 39.2 決策影響盤點（既有功能）
+
+| 既有功能 | 位置 | 受影響？ | 處理 |
+|---|---|---|---|
+| **渡口解鎖**（5F-1b：雲嶺「往灰燼荒原的渡口」`unlock_flag: ashen_waste_open`，霧潮入侵成功或失敗都給） | `world/maps/cloud_ridge.yaml`、`town.teleport` | **是（只接資料）** | 荒原地點圖到位後，從渡口 `teleport` 到餘燼集才真的有地方去；荒原的「灰渡口」（`gate_to: cloud_ridge`）回雲嶺。規則不動 |
+| **#1 失敗建議等級 +1**（`level_bonus` 已寫 `ashen_waste`） | `season.yaml`、`world/battle.enemy_level` | 否 | 荒原地點的敵人等級照舊加上加成 |
+| **世界事件**（5F-1：目標種類、門檻調整、成敗效果） | `content/world_season.py`、`world/season_board.py` | **是** | #2 熔岩潰堤：`battle_won` 目標加篩選 `locations`（地點 ID，任一符合即算；跨檔檢查地點在該區地點圖）。成功：旗標 `heart_pit_open`（熔心坑提早開放）＋全服封印鑰匙 +5（`seal_keys: 5`，5F-3 已有欄位）；失敗：同旗標（事件結束才開）＋荒原建議等級 +1。#3 封印共鳴本身不改 |
+| **共享地點狀態**（已清空與重生、`unlock_flag`） | `world/step._check_travel` | **是（只接資料）** | 熔心坑 `unlock_flag: heart_pit_open` |
+| **懸賞**（5F-1／5F-1b：每天第一場是懸賞陣容、大獎小獎） | `season.yaml` | **是（只接資料）** | 加荒原 3 張（19.8），`from_day: 4`（9.7 第 4～7 天懸賞，代決 5F1-8） |
+| **封印鑰匙**（5F-3：`elite_first_kill`、`bounty_claimed`） | `season.yaml` `seal_keys.sources` | **是（只接資料）** | 加來源「打倒熔心坑的灰燼之心」（第 2 章結局，19.6.1）；荒原懸賞第一次搶下照既有 `bounty_claimed` 自動算；#2 成功 +5 |
+| **商店**（5D-1：每區一檔、特產每週限量、好感度門檻） | `world/shops/`、`world/items.yaml` | **是（只接資料）** | 餘燼集「鐵娘」的店照 20.1 欄（冰瓶友善、黑曜片每週 5、中立）；荒原材料標 `region: ashen_waste`；新材料餘燼羽、硫磺結晶、黑曜片 |
+| **鐵匠與附魔台**（5D-3／5D-3b：每鎮成對、爐叔卡在 pending） | `world/crafting.yaml`、`world/pending/` | **是** | 爐叔搬到 `world/npcs/ashen_waste.yaml`、刪 pending；加餘燼集的鐵匠與附魔台；新材料的傾向 |
+| **隱藏配方提示**（5D-3b：`CraftingRules.hints_at` 接口還沒人用） | `content/world_crafting.py`、`world/social/` | **是** | 提示接進荒原的酒館傳聞（tavern → `rumors`）與 NPC 傳聞（rumor → 該地點 NPC 的 `talk` 傳聞）；載入檢查：有地點圖的區域，提示的文字要出現在對應的傳聞裡 |
+| **掉落**（5D-2、5F-3 `bosses`） | `world/loot.yaml` | **是（只接資料）** | `regions.ashen_waste`（關鍵字點燃、倒地、中毒，20.2）、家族材料、灰燼之心保底熔心晶＋史詩 |
+| **遭遇**（5A-3：陣容、變化、加人） | `content/world_encounters.py`、`world/solutions.py`、`world/battle.py` | **是** | 地點加 `objective`（移動遇敵的勝利條件，村落＝守點，19.9 #2「守點戰」）；地點加 `armor_mods`（灰燼之心的護甲：世界旗標 `ashen_heart_hardened` +1〔雲嶺骨架 14 的世界線頭到期〕、攔下碎片每批 −1、合計 −3～+1） |
+| **Boss 階段**（5F-2／5F-3） | `content/battle.py`、`engine/boss_phases.py` | 否（只用） | 灰燼之心 3 階段只寫資料（`hp_below`） |
+| **戰鬥紀錄版號** | `LOG_FORMAT` | 否 | 引擎不動，只加內容（新技能、狀態、單位、地圖），照 `戰鬥紀錄格式變更.md` 1.2 不升版 |
+| 世界存檔版號、世界日誌重播 | `state`、`replay` | 否 | 新欄位都在內容；世界狀態沒有新欄位 |
+| 主線、劇情夥伴（5B-4、5C-3） | `world/quests/` | **是（只接資料）** | 主線第 2 章 `main_ashen_heart`（阿岳同行、章末照既有規則離隊）、區域任務鏈 1 條 |
+| skillgen、閃現、工坊、技能池 | — | **是（測試）** | 新的敵人技能照 5F-3 慣例是內建技能；main 有 `enemy_only` 時標上，沒有就在報告列清單 |
+| 快照與夾具 | CLI 快照、`glossary.json`、`skill_icons.json`、`refactor_3wr2.json`、`statusIcon.ts` | **是** | 照慣例重產，報告逐一說明原因 |
+
+### 39.3 內容（數值都是初值，ID 開發 PM 定）
+
+- **地點圖** `world/maps/ashen_waste.yaml`：19.3 的地點扣掉裂界門，共 18 個（三村落各一個地點；連線照 19.3 扣掉裂界門那條，共 17 條）；黑曜谷隱藏（感知、任務線索）；熔心坑 `unlock_flag: heart_pit_open`、Boss 專屬地圖 `molten_heart_pit`（20.6：12×12、中央灰燼之心不移動、外圈岩漿留 2 條通路、4 個冷卻井＝預放的水表面）。戰鬥地圖照 19.3 對到既有地圖（焦土平原 `open_plain`、枯木林 `dark_forest`、灰泥沼 `swamp`、岩漿渡橋 `lava_crossing`、廢墟要塞 `ruined_fort`、焦油坑 `oil_depot`、狹窄長廊 `narrow_halls`；熔岩洞窟用 `lava_crossing`＋`narrow_halls`）。
+- **敵人**：熔岩獸群 9 種＋精英熔核領主＋寒燼蜥（冰變體）＋熔晶魅；變體雷殼甲蟲、焦石背熊、荒原火槍手、角魔狂信者；詞綴熾熱的、硬殼的。共通被動「熔核爆裂」＝開場狀態 `on_death_surface`（火、半徑 0、2 回合）；怕水冰＝`element_mods`。
+- **灰燼之心**（19.2.3）：不移動、`boss`；階段 ① 殼（開場：狀態「熔殼」受到的傷害降低、被水或冰打到就移除；技能「熔岩噴發」延遲段環形火地）② 呼吸（≤ 60%：移除熔殼、換「吸氣」〔拉近＋小範圍火傷〕與「吐息」〔周圍一圈小火傷〕、召喚 2 隻餘燼蜥）③ 熔毀（≤ 30%：地圖多處火地、蓄力強招「熔心爆」十字臂長 2）。護甲調整見 39.4。
+- **事件骨架** 16 個（19.4 的 15 個＋角魔古祭壇的機遇「正午的聖火」）與每個情境解法的模板；**NPC** 6 張（19.5 扣掉阿岳〔沿用雲嶺的卡〕與碎晶之主〔沒有地點〕）；**任務**：主線第 2 章 5 步（第 3 步給劇情技能「冷鋒」）、區域任務鏈「鐵娘的委託」3 步；**社交**：聊天、事件好感度、酒館傳聞（含 20.4 提示）。
+- **懸賞** 3 張（19.8）；**世界事件** #2（39.2）；**鑰匙來源** +1；**商店、鐵匠、附魔台、材料、掉落**（39.2）。
+
+### 39.4 世界端的三個資料欄位
+
+| 欄位 | 檔案 | 規則 |
+|---|---|---|
+| `GoalSpec.locations` | `content/world_season.py`、`world/season_board.py` | `battle_won` 才能寫，且要同時寫 `region`；戰鬥地點在其中才算；跨檔檢查地點存在於該區地點圖 |
+| `LocationEncounters.objective`（`escape`／`defend`） | `content/world_encounters.py`、`world/solutions.make_encounter` | 移動遇敵（呼叫端沒給勝利條件）時用地點的；骨架的戰鬥解法照舊優先。亂數消耗不變 |
+| `LocationEncounters.armor_mods`（`unit`、`min_total`、`max_total`、`mods: [{world_flag｜story_flag｜thread, amount}]`） | `content/world_encounters.py`、`world/battle.prepare_battle` | 開戰時把陣容中 `unit` 的護甲加上符合的總和（夾在 min～max、結果不低於 0）；世界旗標看遇敵當下的 `world_flags`、線頭看遇敵時刻 `at` 還有效的線頭、劇情旗標看角色。不耗亂數 |
+
+### 39.5 測試與模擬
+
+- `tests/content/`：荒原各檔載入與跨檔檢查、地點數與連通、提示接到傳聞、pending 刪掉；`GoalSpec.locations`、`objective`、`armor_mods` 的 schema。
+- `tests/world/`：熔岩潰堤進度（只算三村落）與成敗效果（旗標、鑰匙 +5、等級 +1）、熔心坑未開放擋路、村落遇敵是守點、灰燼之心護甲（旗標、線頭、上下限）、荒原世界日誌一場重播。
+- 受影響的計數與快照照慣例更新並逐一說明（slow `test_con_hp`、`test_source`、skillgen `test_budget`、`test_refactor_3wr2`、`tests/sim/test_push_check.py`、CLI 快照、glossary、技能圖示）。
+- 小模擬（腳本放 `scripts/`）：荒原一般遭遇 40 場、灰燼之心 40 場，記勝率與輪數。
+
+### 39.6 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5F5a-1 | 裂界門 | 不放進荒原地點圖：賽季 Boss 照 5F-3 從城鎮挑戰（代決 5F3-1），避免多一條不受次數限制的路；19.3「餘燼集－裂界門」連線也不畫 |
+| 5F5a-2 | 熔心坑的開放 | 世界事件 #2 成功時立刻開放；失敗時事件結束（第 8 天 6 點）才開放 |
+| 5F5a-3 | 「失守的村落商店關閉到季末」 | 村落沒有商店（8.26.1 只規定小鎮），沒有東西可關；全服只記守住次數，也分不出哪一村失守 |
+| 5F5a-4 | 守點戰 | 三村落的移動遇敵一律是守點（地圖支援時），不只在事件期間 |
+| 5F5a-5 | 「每攔下 1 批 −1、最多 −3」 | 線頭不會重複，所以「批」用兩個來源近似：主線第 2 步攔截成功（劇情旗標，永久）−1、骨架 13 的線頭（有效期間）−1；上下限 −3～+1 照設計寫進資料 |
+| 5F5a-6 | 護甲只在第 1 階段 | 引擎的階段不能改護甲，整場都套；殼的「冷卻」用狀態「熔殼」被水冰移除近似（移除後不會長回來） |
+| 5F5a-7 | 引擎做不到的熔岩獸機制 | 站在火上回血、潮濕時不能回血、火地每回合擴散、隨機 3 格、熔心爆臂長 3、熔流潰堤直線 6 格：用火抗、延遲段環形、第 3 階段一次放多處火地、臂長 2 近似 |
+| 5F5a-8 | 熔岩洞窟的地圖 | 沒有熔岩洞窟地圖，用岩漿渡橋＋狹窄長廊 |
+| 5F5a-9 | 冷卻井「附近 3 個地點變成有水」、鐵匠的配方碼、小犬同伴 | 只留線頭（敘事），不做機制 |
+| 5F5a-10 | 阿岳、碎晶之主的人設卡 | 阿岳沿用雲嶺的卡；碎晶之主沒有地點，不建卡 |
+
+### 39.7 驗收
+
+`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/engine`、`content`、`world`、`api`、`server`、`narrative`、`skillgen`（含 slow `test_budget`、`test_refactor_3wr2`）、`tests/test_architecture.py`（`-n 8`）；slow `tests/content/test_con_hp.py`、`tests/engine/test_source.py`、`tests/sim/test_push_check.py`；`tests/cli`（`-m "slow or not slow"`）；`npx vitest run`、`npm run build`；swamp 種子 7 重播＋1 場荒原戰鬥重播。不跑全量 matrix／completion。
+
+### 39.8 不做的事
+
+- 季末重置（5F-5）；`enemy_only` 機制本身（5F-3b）；新美術（熔岩獸外觀、冷卻井物件、Boss 立繪）；引擎新機制。
+
+## 40. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
