@@ -10,6 +10,7 @@ import { setGlossary } from "../battle/glossary";
 import { object, tile, unit } from "../battle/testFixtures";
 import { BattleRenderer } from "../render/BattleRenderer";
 import { waitForFonts } from "../render/fontLoad";
+import { SURFACE_GALLERY_HERO, surfaceGalleryView } from "./surfaceGallery";
 
 setGlossary(glossary as unknown as Glossary);
 await waitForFonts();
@@ -135,3 +136,13 @@ const renderer = new BattleRenderer();
 await renderer.init(box);
 renderer.setScale(2);
 renderer.draw(buildDrawModel(board(), HERO, undefined, (id) => SKILLS[id]));
+
+// 第二個場景（6A-4a）：地表併塊（待機畫面，不畫格線）
+const blobBox = document.createElement("div");
+blobBox.className = "scene";
+blobBox.appendChild(Object.assign(document.createElement("h2"), { textContent: "地表併塊 12×8（6A-4a，對照 docs/art/戰鬥D版樣張.md 第 2 節）" }));
+document.body.appendChild(blobBox);
+const blobRenderer = new BattleRenderer();
+await blobRenderer.init(blobBox);
+blobRenderer.setScale(2);
+blobRenderer.draw(buildDrawModel(surfaceGalleryView(), SURFACE_GALLERY_HERO, undefined, (id) => SKILLS[id]));
