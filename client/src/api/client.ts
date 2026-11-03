@@ -48,6 +48,7 @@ import type {
   WorldBattleResponse,
   WorldCharacterSummary,
   WorldLlmView,
+  LocationBoard,
   WorldView,
 } from "./types";
 
@@ -209,6 +210,11 @@ export const api = {
   /** 大世界自己的 LLM 開關（預設跟著伺服器設定；`null` 回到預設）。 */
   worldLlm: () => request<WorldLlmView>("GET", "/world/llm"),
   setWorldLlm: (enabled: boolean | null) => request<WorldLlmView>("POST", "/world/llm", { enabled }),
+  /** 地點留言與足跡（5E-3，#105）：留言是純資料，不送進 LLM。 */
+  worldNotes: (characterId: string) =>
+    request<LocationBoard>("GET", `/world/characters/${encodeURIComponent(characterId)}/notes`),
+  postWorldNote: (characterId: string, text: string) =>
+    request<LocationBoard>("POST", `/world/characters/${encodeURIComponent(characterId)}/notes`, { text }),
   decide: (
     id: string,
     accept: boolean,

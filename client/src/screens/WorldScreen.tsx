@@ -14,6 +14,7 @@ import { WorldPanel } from "../world/WorldPanel";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, worldActionOf, type WantPane } from "../world/growth";
 import { EventCard, SituationResultCard } from "../world/EventCard";
+import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
 import { appendChat, dialogByNpc, dialogEntries, type ChatEntry } from "../world/story";
@@ -284,7 +285,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
                 {view.event != null && <EventCard event={view.event} busy={busy} onOpen={openSituation} onSolve={solve} onAnswer={answer} />}
               </>
             }
-            peopleSlot={<NpcPanel view={view} busy={busy} chats={chats} onAct={act} onChat={chat} />}
+            peopleSlot={
+              <>
+                <NpcPanel view={view} busy={busy} chats={chats} onAct={act} onChat={chat} />
+                {charId !== null && <NotesPanel characterId={charId} location={view.here.location} busy={busy} />}
+              </>
+            }
           />
         </div>
       )}
