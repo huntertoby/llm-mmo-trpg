@@ -14,6 +14,8 @@ import { FloatCard, useFloatCard } from "./useFloatCard";
 interface Props {
   text: string | null | undefined;
   children: ReactNode;
+  /** 卡片內容改用這個（6A-4f：HUD 功能列的說明卡有標題列、狀態行）；`text` 仍要給（決定有沒有卡）。 */
+  rich?: ReactNode;
 }
 
 type Handler = (e: never) => void;
@@ -53,7 +55,7 @@ export function isExpanded(props: Record<string, unknown>): boolean {
   return v === true || v === "true";
 }
 
-export function Hint({ text, children }: Props) {
+export function Hint({ text, children, rich }: Props) {
   const empty = text === null || text === undefined || text === "";
   const child = empty ? null : hintChild(children);
   const f = useFloatCard({ pinOn: hintPinMode(child) });
@@ -89,7 +91,7 @@ export function Hint({ text, children }: Props) {
       {cloneElement(child, merged)}
       {!expanded && f.open && (
         <FloatCard float={f} className="part-tip-box hint-tip-box" align="center" role="tooltip">
-          <div className="hint-tip-text">{text}</div>
+          {rich ?? <div className="hint-tip-text">{text}</div>}
         </FloatCard>
       )}
     </>

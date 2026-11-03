@@ -13,11 +13,13 @@ import {
   pathSegments,
   PATH_COLORS,
   PATH_DASHED,
+  slipRunText,
   stepKind,
   stopBangs,
   type PathEvent,
   type PathPreview,
   type PathStep,
+  type SlipRun,
 } from "./pathPreview";
 import { drawPathLine, drawPathMarks, drawSoftCells, MOVE_SOFT, placeTags, type Pen, type StrokeStyle } from "../render/pathArt";
 
@@ -57,7 +59,21 @@ function preview(steps: PathStep[], extra: Partial<PathPreview> = {}): PathPrevi
     stop_certain: true,
     certain: true,
     move_cost: steps.length - 1,
+    slip_runs: [],
     ...extra,
+  };
+}
+
+function slipRun(start: number, end: number, chance: number, y = 0): SlipRun {
+  return {
+    start,
+    end,
+    start_pos: [start, y],
+    end_pos: [end, y],
+    tiles: end - start + 1,
+    chance_permille: chance,
+    fail_stops: Array.from({ length: end - start + 1 }, (_, i) => [start + i, y]),
+    status_id: "prone",
   };
 }
 
@@ -88,7 +104,7 @@ const hazard = preview(
     }),
     step(4, 3, 1, { reach: "possible", surface: "water" }),
   ],
-  { stop: [3, 1], worst_stop: [2, 0], stop_certain: false, certain: false },
+  { stop: [3, 1], worst_stop: [2, 0], stop_certain: false, certain: false, slip_runs: [slipRun(2, 2, 450)] },
 );
 
 // 移動點數不足：後半段到不了
@@ -160,10 +176,10 @@ describe("結果小牌", () => {
     expect(tags[0]).toEqual({ pos: { x: 2, y: 0 }, icon: "ice", text: "滑倒 45%・失敗停在這格" });
   });
 
-  it("陷阱：「陷阱 −8・定身（可能）」", () => {
+  it("陷阱：「陷阱 −8・定身（可能）」；在冰面後面時不加「（可能）」（6A-4f）", () => {
     const tags = pathDraw(hazard).tags;
     expect(tags[1]?.icon).toBe("trap");
-    expect(tags[1]?.text).toBe("陷阱 −8（可能）・定身（可能）");
+    expect(tags[1]?.text).toBe("陷阱 −8・定身");
     const sure = pathDraw(
       preview([
         step(0, 0, 0),
@@ -476,5 +492,80 @@ describe("畫法", () => {
         expect(a.x < b.x + 150 && a.x + 150 > b.x && a.y < b.y + 22 && a.y + 22 > b.y).toBe(false);
       }
     }
+  });
+});
+
+// 6A-4f：兩格冰（整段滑倒 80%）→ 後方陷阱 −6～14・定身
+const iceRun = preview(
+  [
+    step(0, 0, 0),
+    step(1, 1, 0, {
+      surface: "ice",
+      events: [
+        ev("surface", { surface: "ice" }),
+        ev("slip_check", { chance_permille: 550, status_id: "prone", detail: "ice" }),
+        ev("status", { status_id: "prone", certain: false }),
+        ev("stopped", { detail: "prone", certain: false }),
+      ],
+    }),
+    step(2, 2, 0, {
+      surface: "ice",
+      reach: "possible",
+      events: [
+        ev("surface", { surface: "ice", certain: false }),
+        ev("slip_check", { chance_permille: 550, status_id: "prone", detail: "ice", certain: false }),
+      ],
+    }),
+    step(3, 3, 0, {
+      trap: true,
+      reach: "possible",
+      events: [
+        ev("trap", { other_id: "e1", certain: false }),
+        ev("damage", { other_id: "e1", amount_min: 6, amount_max: 14, certain: false }),
+        ev("status", { status_id: "root", certain: false }),
+      ],
+    }),
+    step(4, 4, 0, { reach: "possible" }),
+  ],
+  { stop: [4, 0], worst_stop: [1, 0], stop_certain: false, certain: false, slip_runs: [slipRun(1, 2, 798)] },
+);
+
+describe("連續冰面合成一張小牌（6A-4f）", () => {
+  it("兩格冰只出一張，放在第一格冰旁：「冰 2 格・滑倒 80%・失敗停在那格」，不加「（可能）」", () => {
+    const tags = pathDraw(iceRun).tags;
+    const ice = tags.filter((t) => t.icon === "ice");
+    expect(ice).toEqual([{ pos: { x: 1, y: 0 }, icon: "ice", text: "冰 2 格・滑倒 80%・失敗停在那格" }]);
+    expect(tags.some((t) => t.text.includes("（可能）"))).toBe(false);
+  });
+
+  it("單格冰照舊寫「滑倒 xx%・失敗停在這格」", () => {
+    expect(slipRunText(slipRun(2, 2, 450))).toBe("滑倒 45%・失敗停在這格");
+    expect(slipRunText(slipRun(1, 3, 914))).toBe("冰 3 格・滑倒 91%・失敗停在那格");
+  });
+
+  it("冰後面的陷阱：「陷阱 −6～14・定身」", () => {
+    const trap = pathDraw(iceRun).tags.find((t) => t.icon === "trap");
+    expect(trap).toEqual({ pos: { x: 3, y: 0 }, icon: "trap", text: "陷阱 −6～14・定身" });
+  });
+
+  it("冰後面的陷阱段改紅色虛線；沒有冰時陷阱段是實線", () => {
+    const segs = pathSegments(iceRun);
+    expect(segs.map((s) => [s.kind, s.dashed])).toEqual([
+      ["ice", true],
+      ["ice", true],
+      ["danger", true],
+      ["normal", false],
+    ]);
+    const solo = preview([step(0, 0, 0), step(1, 1, 0, { trap: true, events: [ev("trap", { other_id: "e1" })] })]);
+    expect(pathSegments(solo).map((s) => s.dashed)).toEqual([false]);
+  });
+
+  it("畫法：陷阱紅段在冰後面時是虛線（同一筆裡有多個 moveTo）", () => {
+    const g = recorder();
+    drawPathLine(g, pathDraw(iceRun), geo);
+    const red = g.calls.indexOf("Sff6a50");
+    const before = g.calls.lastIndexOf("S1e78d0", red);
+    const moves = g.calls.slice(before + 1, red).filter((c) => c.startsWith("M")).length;
+    expect(moves).toBeGreaterThan(1);
   });
 });

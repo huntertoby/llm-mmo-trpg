@@ -15226,6 +15226,13 @@
           "move_cost": {
             "type": "integer",
             "title": "Move Cost"
+          },
+          "slip_runs": {
+            "items": {
+              "$ref": "#/components/schemas/SlipRunOut"
+            },
+            "type": "array",
+            "title": "Slip Runs"
           }
         },
         "additionalProperties": false,
@@ -15241,7 +15248,8 @@
           "worst_stop",
           "stop_certain",
           "certain",
-          "move_cost"
+          "move_cost",
+          "slip_runs"
         ],
         "title": "PathPreviewOut"
       },
@@ -19397,6 +19405,64 @@
         ],
         "title": "SkillVariantCard",
         "description": "技能卡上的一個戰場變奏型態（Phase 3-25b，6.24）：型態名、條件與替換內容的中文說明、\n型態自己的圖示（技能列在這個型態生效時換成它）。"
+      },
+      "SlipRunOut": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End"
+          },
+          "start_pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "end_pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "tiles": {
+            "type": "integer",
+            "title": "Tiles"
+          },
+          "chance_permille": {
+            "type": "integer",
+            "title": "Chance Permille"
+          },
+          "fail_stops": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Fail Stops"
+          },
+          "status_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "start_pos",
+          "end_pos",
+          "tiles",
+          "chance_permille",
+          "fail_stops",
+          "status_id"
+        ],
+        "title": "SlipRunOut",
+        "description": "路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。"
       },
       "Slot": {
         "type": "string",

@@ -9,7 +9,14 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from trpg.api.schemas import permille
-from trpg.engine.path_preview import PathEvent, PathEventKind, PathPreview, PathStep, StepReach
+from trpg.engine.path_preview import (
+    PathEvent,
+    PathEventKind,
+    PathPreview,
+    PathStep,
+    SlipRun,
+    StepReach,
+)
 from trpg.shared.types import Pos, Surface, UnitId
 
 __all__ = [
@@ -17,6 +24,7 @@ __all__ = [
     "PathPreviewOut",
     "PathPreviewRequest",
     "PathStepOut",
+    "SlipRunOut",
     "path_preview_out",
 ]
 
@@ -76,6 +84,25 @@ class PathStepOut(_ApiModel):
     events: tuple[PathEventOut, ...]
 
 
+class SlipRunOut(_ApiModel):
+    """路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。"""
+
+    start: int
+    """第一格的 ``index``。"""
+    end: int
+    """最後一格的 ``index``（含）。"""
+    start_pos: XY
+    end_pos: XY
+    tiles: int
+    """格數。"""
+    chance_permille: int
+    """走過整段至少滑倒一次的機率（‰，四捨五入；由各格不滑倒的機率連乘精確計算，不擲骰）。"""
+    fail_stops: tuple[XY, ...]
+    """段內滑倒時可能的停點（依路徑順序；倒在其他單位上時是滑回的空格）。"""
+    status_id: str | None
+    """失敗得到的狀態（冰面為 ``prone``）。"""
+
+
 class PathPreviewOut(_ApiModel):
     unit_id: UnitId
     path: tuple[XY, ...]
@@ -93,6 +120,8 @@ class PathPreviewOut(_ApiModel):
     certain: bool
     """整個預覽都確定：與實際移動完全一致。"""
     move_cost: int
+    slip_runs: tuple[SlipRunOut, ...]
+    """連續冰面段（6A-4f），依路徑順序。"""
 
 
 def _event_out(event: PathEvent) -> PathEventOut:
@@ -121,6 +150,21 @@ def _step_out(step: PathStep) -> PathStepOut:
     )
 
 
+def _run_out(run: SlipRun, path: tuple[XY, ...]) -> SlipRunOut:
+    chance = permille(run.chance)
+    assert chance is not None
+    return SlipRunOut(
+        start=run.start,
+        end=run.end,
+        start_pos=path[run.start],
+        end_pos=path[run.end],
+        tiles=run.tiles,
+        chance_permille=chance,
+        fail_stops=run.fail_stops,
+        status_id=run.status_id,
+    )
+
+
 def path_preview_out(p: PathPreview) -> PathPreviewOut:
     return PathPreviewOut(
         unit_id=p.unit_id,
@@ -134,4 +178,5 @@ def path_preview_out(p: PathPreview) -> PathPreviewOut:
         stop_certain=p.stop_certain,
         certain=p.certain,
         move_cost=p.move_cost,
+        slip_runs=tuple(_run_out(r, p.path) for r in p.slip_runs),
     )

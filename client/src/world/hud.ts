@@ -102,6 +102,54 @@ export function buttonBadge(view: WorldView, id: HudButtonId): { text: string; t
   return null;
 }
 
+/** 功能列按鈕的狀態（docs/art/HUD功能列圖示.md 第 2 節；滑過由 CSS 處理）：
+ * `open` 面板開著、`disabled` 面板沒有資料開不了（例：還沒存影子）、`normal` 其餘。 */
+export type HudButtonState = "normal" | "open" | "disabled";
+
+export function buttonState(view: WorldView, b: HudButton, openPanel: string | null): HudButtonState {
+  if (b.panel === null) return "normal";
+  if (openPanel === b.panel) return "open";
+  return panelAvailable(view, b.panel) ? "normal" : "disabled";
+}
+
+/** 滑過說明卡（HUD功能列圖示.md 第 3 節）：第二行目前狀態、第三行說明一句。 */
+export interface HudButtonCard {
+  status: string;
+  desc: string;
+}
+
+export const HUD_TOUCH_ZH = "觸控：長按 0.4 秒看這張；點一下就打開";
+
+export function hudButtonCard(view: WorldView, id: HudButtonId): HudButtonCard {
+  switch (id) {
+    case "bag": {
+      const inv = view.inventory;
+      const gold = (view.wallet?.gold ?? 0).toLocaleString("en-US");
+      const slots = inv != null && typeof inv.slots_used === "number" ? `${inv.slots_used} / ${inv.slots_max} 格・` : "";
+      return { status: inv == null ? "背包還沒打開過" : `${slots}金幣 ${gold}`, desc: "裝備、道具與腰包；在這裡換裝備" };
+    }
+    case "skills":
+      return { status: `角色階級 ${view.character.skill_tier ?? 1}`, desc: "看技能卡與裝備的技能" };
+    case "growth": {
+      const badge = growthBadge(view);
+      return { status: badge === "" ? "沒有可以花的點" : badge, desc: "花屬性點與靈感，讓角色成長" };
+    }
+    case "quests": {
+      const n = (view.quests ?? []).filter((q) => !q.done).length;
+      return { status: n > 0 ? `進行中 ${n} 條` : "沒有進行中的任務", desc: "任務與線頭；點一條可以追蹤" };
+    }
+    case "shadow": {
+      const reports = (view.my_shadow?.reports_zh ?? []).length;
+      if (!panelAvailable(view, "shadow")) return { status: "還沒存影子", desc: "你的影子在別人世界的動態" };
+      return { status: reports > 0 ? `新戰報 ${reports} 則` : "沒有新戰報", desc: "你的影子在別人世界的動態" };
+    }
+    case "notes":
+      return { status: view.here.name_zh, desc: "看別人留在這裡的留言，也可以留一則" };
+    case "sneak":
+      return { status: NOT_OPEN_ZH, desc: "壓低身形、放輕腳步，比較不容易被敵人發現" };
+  }
+}
+
 // ---------------- 時間、天氣、限制 ----------------
 
 export interface DayPart {

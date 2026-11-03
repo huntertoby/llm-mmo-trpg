@@ -378,3 +378,60 @@ def test_preview_never_changes_state_and_matches_when_certain(
     assert len(p.steps) == len(path)
     if not (trap and seed % 2):  # 看不見的陷阱：預覽刻意不知道，實走可能不同
         _assert_matches_walk(state, p)
+
+
+# ---------------------------------------------------------------------------
+# 連續冰面（6A-4f）：整段的滑倒機率與停點＝窮舉實走
+# ---------------------------------------------------------------------------
+
+
+def _exhaust_two_checks(state: BattleState, path: tuple[XY, ...]) -> tuple[Fraction, set[XY]]:
+    """窮舉兩次 d20 檢定的實走：至少滑倒一次的機率、滑倒時的停點。"""
+    falls = 0
+    stops: set[XY] = set()
+    for first in range(1, 21):
+        for second in range(1, 21):
+            rolled = with_rolls(state, [(20, first), (20, second)])
+            actual = resolve(rolled, Move(unit_id=U1, path=_pos(path)))
+            hero = actual.state.units[U1]
+            if hero.has_status("prone"):
+                falls += 1
+                stops.add(hero.xy)
+    return Fraction(falls, 400), stops
+
+
+@pytest.mark.parametrize(
+    ("ally", "expected_stops"),
+    [(((0, 0),), ((1, 0), (2, 0))), (((0, 0), (2, 0)), ((1, 0),))],
+    ids=["two_ice", "two_ice_ally_on_second"],
+)
+def test_ice_run_chance_and_stops_match_the_walk(
+    ally: tuple[XY, ...], expected_stops: tuple[XY, ...]
+) -> None:
+    state = _battle(surfaces=[(1, 0, "ice"), (2, 0, "ice")], ally=ally)
+    path = ((0, 0), (1, 0), (2, 0), (3, 0))
+    before, rng = state_to_json(state), state.rng_state
+    p = preview_path(state, U1, path=_pos(path))
+    assert state_to_json(state) == before and state.rng_state == rng
+    assert len(p.slip_runs) == 1
+    run = p.slip_runs[0]
+    assert (run.start, run.end, run.tiles, run.status_id) == (1, 2, 2, "prone")
+    assert run.fail_stops == expected_stops
+    chance, stops = _exhaust_two_checks(state, path)
+    assert run.chance == chance
+    assert set(run.fail_stops) == stops
+    single = [next(e for e in p.steps[i].events if e.kind == "slip_check").chance for i in (1, 2)]
+    assert single[0] is not None and single[1] is not None
+    assert run.chance == 1 - (1 - single[0]) * (1 - single[1])
+
+
+def test_ice_runs_split_on_plain_ground_and_keep_the_trap_after() -> None:
+    split = _battle("000000\n000000", surfaces=[(1, 0, "ice"), (3, 0, "ice")])
+    p = preview_path(split, U1, path=_pos(((0, 0), (1, 0), (2, 0), (3, 0), (4, 0))))
+    assert [(r.start, r.end, r.tiles) for r in p.slip_runs] == [(1, 1, 1), (3, 3, 1)]
+    trap = _enemy_trap(_battle(surfaces=[(1, 0, "ice"), (2, 0, "ice")]), (3, 0), revealed=True)
+    q = preview_path(trap, U1, path=_pos(((0, 0), (1, 0), (2, 0), (3, 0))))
+    assert [(r.start, r.end) for r in q.slip_runs] == [(1, 2)]
+    assert q.steps[3].trap and q.steps[3].reach == "possible"
+    plain = preview_path(_battle(), U1, path=_pos(((0, 0), (1, 0), (2, 0))))
+    assert plain.slip_runs == ()

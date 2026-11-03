@@ -20,6 +20,8 @@
   看不見的陷阱——預覽不洩漏看不見的陷阱，所以踩到未發現的陷阱時實走會與預覽不同。
 - 規則沒有「冰上滑行多格」：冰面是進入時的敏捷檢定，失敗倒地並停下（倒在友軍的格子上時滑回最近
   的空格，見 ``battle._slide_back_if_stacked``）；預覽回報檢定的失敗機率與失敗時的停點。
+- 連續的冰面（6A-4f）：:attr:`PathPreview.slip_runs` 把路徑上連續有滑倒檢定的格子合成一段，給整段
+  「至少滑倒一次」的精確機率（各格不滑倒的機率連乘；同樣不擲骰）與失敗時可能的停點。
 """
 
 from __future__ import annotations
@@ -61,6 +63,7 @@ __all__ = [
     "PathEventKind",
     "PathPreview",
     "PathStep",
+    "SlipRun",
     "StepReach",
     "preview_path",
 ]
@@ -136,6 +139,28 @@ class PathStep:
 
 
 @dataclass(frozen=True, slots=True)
+class SlipRun:
+    """路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌。"""
+
+    start: int
+    """第一格在路徑中的位置（``PathStep.index``）。"""
+    end: int
+    """最後一格在路徑中的位置（含）。"""
+    chance: Fraction
+    """走過整段「至少滑倒一次」的機率：``1 − Π(1 − 各格失敗機率)``（精確計算，不擲骰）。
+    只算這段的檢定：在這段之前或段內被其他事件（藉機攻擊、陷阱）打斷的情況不另外計入。"""
+    fail_stops: tuple[XY, ...]
+    """在段內滑倒時可能的停點（依路徑順序、不重複）：滑倒的那一格；倒在其他單位的格子上時滑回
+    走過的最近空格（與 ``battle._slide_back_if_stacked`` 相同）。"""
+    status_id: str | None
+    """失敗得到的狀態（冰面為 ``prone``）。"""
+
+    @property
+    def tiles(self) -> int:
+        return self.end - self.start + 1
+
+
+@dataclass(frozen=True, slots=True)
 class PathPreview:
     unit_id: UnitId
     path: tuple[XY, ...]
@@ -155,6 +180,8 @@ class PathPreview:
     """模擬沒有經過任何分歧點：預覽保證與實際結算一致。"""
     move_cost: int
     """合法前段的移動點數（含站起的消耗）。"""
+    slip_runs: tuple[SlipRun, ...] = ()
+    """路徑上連續有滑倒檢定的格子（冰面）合成的段，依路徑順序（6A-4f）。"""
 
     @property
     def stop_certain(self) -> bool:
@@ -220,6 +247,7 @@ def preview_path(
         worst_stop=high_trace.stop,
         certain=low is high,
         move_cost=cost,
+        slip_runs=_slip_runs(seen, unit_id, requested, steps),
     )
 
 
@@ -419,3 +447,64 @@ def _step(
     xy = path[index]
     surface = state.tile(*xy).surface if state.in_bounds(*xy) else Surface.NONE
     return PathStep(xy, index, surface, xy in traps, outcome[0], outcome[1])
+
+
+# ---------------------------------------------------------------------------
+# 連續冰面（6A-4f）
+# ---------------------------------------------------------------------------
+
+
+def _slip_check(step: PathStep) -> PathEvent | None:
+    return next((e for e in step.events if e.kind == "slip_check" and e.chance is not None), None)
+
+
+def _slip_runs(
+    state: BattleState, unit_id: UnitId, path: tuple[XY, ...], steps: tuple[PathStep, ...]
+) -> tuple[SlipRun, ...]:
+    """把連續有滑倒檢定的格子合成段（走不到的格子沒有事件，自然不算在內）。"""
+    runs: list[SlipRun] = []
+    current: list[tuple[PathStep, PathEvent]] = []
+    for step in steps:
+        check = _slip_check(step)
+        if check is not None:
+            current.append((step, check))
+            continue
+        if current:
+            runs.append(_slip_run(state, unit_id, path, current))
+            current = []
+    if current:
+        runs.append(_slip_run(state, unit_id, path, current))
+    return tuple(runs)
+
+
+def _slip_run(
+    state: BattleState,
+    unit_id: UnitId,
+    path: tuple[XY, ...],
+    run: list[tuple[PathStep, PathEvent]],
+) -> SlipRun:
+    """一段的合計：不滑倒的機率連乘，失敗時的停點依序列出。"""
+    survive = Fraction(1)
+    stops: list[XY] = []
+    for step, check in run:
+        assert check.chance is not None
+        survive *= 1 - check.chance
+        stop = _fail_stop(state, unit_id, path, step.index)
+        if stop not in stops:
+            stops.append(stop)
+    return SlipRun(
+        start=run[0][0].index,
+        end=run[-1][0].index,
+        chance=1 - survive,
+        fail_stops=tuple(stops),
+        status_id=run[0][1].status_id,
+    )
+
+
+def _fail_stop(state: BattleState, unit_id: UnitId, path: tuple[XY, ...], index: int) -> XY:
+    """在第 ``index`` 格滑倒時的停點：那一格；有其他單位時滑回走過的最近空格。"""
+    occupied = {u.xy for u in state.units.values() if u.alive and u.id != unit_id}
+    for back in reversed(path[: index + 1]):
+        if back not in occupied:
+            return back
+    return path[index]

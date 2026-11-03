@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from fastapi.testclient import TestClient
 
 from tests.api.conftest import store_of
-from trpg.engine.rules.movement import reachable_tiles
+from trpg.api.schemas import permille
+from trpg.engine.path_preview import preview_path
+from trpg.engine.rules.movement import find_path, reachable_tiles
 from trpg.engine.state import state_to_json
-from trpg.shared.types import UnitId
+from trpg.shared.types import Pos, Surface, UnitId
 
 CREATE = {"map_id": "open_plain", "seed": 7, "hero_build": "build_fire"}
 
@@ -78,3 +81,30 @@ def test_path_preview_rejects_bad_requests(client: TestClient) -> None:
         client.post("/api/battles/nope/path-preview", json={"dest": {"x": 0, "y": 0}}).status_code
         == 404
     )
+
+
+def test_path_preview_merges_consecutive_ice(client: TestClient) -> None:
+    """6A-4f：連續冰面合成一段，機率與引擎的精確值一致（‰ 四捨五入），不改變戰鬥。"""
+    battle = _create(client)
+    session = store_of(client).get(battle["battle_id"])
+    state = session.state
+    hero_id = UnitId(battle["hero_id"])
+    x, y = _far_tile(client, battle)
+    path = find_path(state, hero_id, Pos(x=x, y=y))
+    assert path is not None and len(path) >= 4
+    for p in path[1:3]:
+        state.set_tile(p.x, p.y, replace(state.tile(p.x, p.y), surface=Surface.ICE))
+    before = state_to_json(state)
+    body = {"path": [{"x": p.x, "y": p.y} for p in path]}
+    reply = client.post(f"/api/battles/{battle['battle_id']}/path-preview", json=body)
+    assert reply.status_code == 200, reply.text
+    assert state_to_json(session.state) == before
+    runs = reply.json()["slip_runs"]
+    assert len(runs) == 1
+    run = runs[0]
+    assert (run["start"], run["end"], run["tiles"]) == (1, 2, 2)
+    assert run["start_pos"] == [path[1].x, path[1].y]
+    assert run["end_pos"] == [path[2].x, path[2].y]
+    assert run["status_id"] == "prone" and run["fail_stops"]
+    expected = preview_path(state, hero_id, path=tuple(path)).slip_runs[0]
+    assert run["chance_permille"] == permille(expected.chance)

@@ -11,6 +11,7 @@ export type PathPreview = Schemas["PathPreviewOut"];
 export type PathStep = Schemas["PathStepOut"];
 export type PathEvent = Schemas["PathEventOut"];
 export type PathPreviewRequest = Schemas["PathPreviewRequest"];
+export type SlipRun = Schemas["SlipRunOut"];
 
 /** 路徑一段的種類：一般、冰面（滑倒有機率）、陷阱或火、到不了。 */
 export type SegKind = "normal" | "ice" | "danger" | "unreachable";
@@ -36,6 +37,8 @@ export interface PathSeg {
   kind: SegKind;
   /** 只在骰子有利／不利其中一邊走得到（畫淡一點）。 */
   possible: boolean;
+  /** 畫虛線：冰面、到不了，以及冰面後面的陷阱段（前面可能先滑倒停下；6A-4f）。 */
+  dashed: boolean;
 }
 
 /** 經過的特殊格外框：冰（藍）、陷阱或火（紅）、油（油色）。 */
@@ -100,6 +103,11 @@ export function stepKind(step: PathStep): SegKind {
   return "normal";
 }
 
+/** 這一格在某段連續冰面的第一格之後（前面可能先滑倒停下；6A-4f）。 */
+export function afterIce(pv: PathPreview, step: PathStep): boolean {
+  return pv.slip_runs.some((r) => r.start < step.index);
+}
+
 /** 路徑的各段；伺服器回傳「完全沒有路」（起點＋終點不相鄰）時不畫線。 */
 export function pathSegments(pv: PathPreview): PathSeg[] {
   const out: PathSeg[] = [];
@@ -109,7 +117,9 @@ export function pathSegments(pv: PathPreview): PathSeg[] {
     const from = toPos(prev.pos);
     const to = toPos(step.pos);
     if (!adjacent(from, to)) return [];
-    out.push({ from, to, kind: stepKind(step), possible: step.reach === "possible" });
+    const kind = stepKind(step);
+    const dashed = PATH_DASHED[kind] || (kind === "danger" && afterIce(pv, step));
+    out.push({ from, to, kind, possible: step.reach === "possible", dashed });
   }
   return out;
 }
@@ -150,8 +160,16 @@ interface Part {
   text: string;
 }
 
-/** 一格的事件 → 小牌的各段（依序：滑倒、陷阱、點燃、其他狀態、潮濕、反應、墜落、致命、其餘傷害）。 */
-function stepParts(step: PathStep): Part[] {
+/** 連續冰面一段的小牌文字（6A-4f）：有百分比就不加「（可能）」。 */
+export function slipRunText(run: SlipRun): string {
+  const pct = Math.round(run.chance_permille / 10);
+  return run.tiles > 1 ? `冰 ${run.tiles} 格・滑倒 ${pct}%・失敗停在那格` : `滑倒 ${pct}%・失敗停在這格`;
+}
+
+/** 一格的事件 → 小牌的各段（依序：滑倒、陷阱、點燃、其他狀態、潮濕、反應、墜落、致命、其餘傷害）。
+ * 滑倒由連續冰面的段（`slip_runs`）合成一張，放在段的第一格（`run`）；段內其他格不再寫。
+ * `iced`：這一格在冰面之後，陷阱是否發生取決於前面有沒有滑倒，字上不加「（可能）」，改畫紅色虛線。 */
+function stepParts(step: PathStep, run: SlipRun | undefined, iced: boolean): Part[] {
   const parts: Part[] = [];
   const used = new Set<PathEvent>();
   const take = (pred: (e: PathEvent) => boolean): PathEvent[] => {
@@ -159,17 +177,17 @@ function stepParts(step: PathStep): Part[] {
     for (const e of hit) used.add(e);
     return hit;
   };
+  if (run !== undefined) parts.push({ icon: "ice", text: slipRunText(run) });
   for (const e of take((x) => x.kind === "slip_check")) {
-    const pct = Math.round((e.chance_permille ?? 0) / 10);
-    parts.push({ icon: "ice", text: `滑倒 ${pct}%・失敗停在這格${maybe(e.certain)}` });
-    take((x) => x.kind === "status" && x.status_id === e.status_id); // 滑倒的倒地已經寫在「失敗停在這格」
+    take((x) => x.kind === "status" && x.status_id === e.status_id); // 滑倒的倒地已經寫在「失敗停在那格」
   }
+  const trapMaybe = (certain: boolean): string => (iced ? "" : maybe(certain));
   for (const trap of take((x) => x.kind === "trap")) {
     const dmg = damageText(take((x) => x.kind === "damage" && x.other_id === trap.other_id));
     const statuses = take((x) => x.kind === "status" && x.status_id !== "burning").map(
-      (s) => `${statusWord(s.status_id ?? "")}${maybe(s.certain)}`,
+      (s) => `${statusWord(s.status_id ?? "")}${trapMaybe(s.certain)}`,
     );
-    const head = `陷阱${dmg === "" ? "" : ` ${dmg}`}${maybe(trap.certain)}`;
+    const head = `陷阱${dmg === "" ? "" : ` ${dmg}`}${trapMaybe(trap.certain)}`;
     parts.push({ icon: "trap", text: [head, ...statuses].join("・") });
   }
   for (const s of take((x) => x.kind === "status" && x.status_id === "burning")) {
@@ -195,10 +213,12 @@ function stepParts(step: PathStep): Part[] {
   return parts;
 }
 
-/** 一格的小牌（沒有可說的事時 `null`）；圖示取第一段的。 */
-export function stepTag(step: PathStep): PathTag | null {
+/** 一格的小牌（沒有可說的事時 `null`）；圖示取第一段的。`pv` 給連續冰面的段（6A-4f）。 */
+export function stepTag(step: PathStep, pv?: PathPreview): PathTag | null {
   if (stepMissed(step) || step.index === 0) return null;
-  const parts = stepParts(step);
+  const run = pv?.slip_runs.find((r) => r.start === step.index);
+  const iced = pv !== undefined && hasTrap(step) && afterIce(pv, step);
+  const parts = stepParts(step, run, iced);
   const first = parts[0];
   if (first === undefined) return null;
   return { pos: toPos(step.pos), icon: first.icon, text: parts.map((p) => p.text).join("・") };
@@ -245,7 +265,7 @@ export function pathDraw(pv: PathPreview | null): PathDraw {
       return kind === null ? [] : [{ pos: toPos(s.pos), kind }];
     }),
     tags: steps.flatMap((s) => {
-      const tag = stepTag(s);
+      const tag = stepTag(s, pv);
       return tag === null ? [] : [tag];
     }),
     bangs: stopBangs(pv),

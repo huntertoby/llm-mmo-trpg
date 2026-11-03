@@ -11,7 +11,6 @@ import { dashRuns, outerEdges, roundedPieces, type Pt } from "../battle/pathGeom
 import {
   FRAME_COLORS,
   PATH_COLORS,
-  PATH_DASHED,
   TAG_COLORS,
   type PathDraw,
   type PathTag,
@@ -133,7 +132,7 @@ export function drawPathLine(g: Pen, draw: PathDraw, geo: TileGeo): void {
   segs.forEach((seg, i) => {
     const piece = pieces[i] ?? [];
     const alpha = seg.possible ? 0.6 : 1;
-    if (PATH_DASHED[seg.kind]) {
+    if (seg.dashed) {
       for (const run of dashRuns(piece, PATH_DASH[0], PATH_DASH[1])) polyline(g, run);
     } else polyline(g, piece);
     g.stroke({ width: 4, color: PATH_COLORS[seg.kind], alpha, ...round });
