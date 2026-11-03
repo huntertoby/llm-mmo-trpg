@@ -45,6 +45,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request, Response
 
 from trpg.api.absence_view import AbsenceView, absence_summary
 from trpg.api.auth import (
+    AdminRequiredError,
     accounts_of,
     require_admin,
     require_league_admin,
@@ -394,7 +395,13 @@ def get_legacy(request: Request) -> list[LegacyHeroView]:
 @router.post("/season/reset", dependencies=[Depends(require_season_admin)])
 def post_season_reset(body: SeasonResetRequest, request: Request) -> SeasonResetReport:
     """季末重置（管理者，5F-5）：預設 dry-run，只列出會清什麼、留什麼；``dry_run: false`` 時先備份
-    整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。"""
+    整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。
+    真的執行一律要登入的管理者帳號，開發模式也一樣（開發 PM 代決：會清資料，不比照 LLM 開關
+    放行）。"""
+    if not body.dry_run:
+        account = viewer(request)
+        if account is None or not account.admin:
+            raise AdminRequiredError("季末重置要用管理者帳號登入後執行（開發模式也一樣）")
     store = world_of(request)
     return store.season_reset(
         accounts=accounts_of(request),
