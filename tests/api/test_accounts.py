@@ -5,9 +5,13 @@
 
 from __future__ import annotations
 
+import importlib.util
+import io
 import json
 import secrets
+import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -216,3 +220,36 @@ def test_default_settings_keep_dev_mode() -> None:
     assert settings.dev_mode is True
     assert settings.max_characters == 3
     assert settings.accounts_dir(Path("saves")) == Path("saves") / "accounts"
+
+
+def _script() -> ModuleType:
+    path = Path(__file__).resolve().parents[2] / "scripts" / "dev_account.py"
+    spec = importlib.util.spec_from_file_location("dev_account", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["dev_account"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_dev_account_script(tmp_path: Path) -> None:
+    script = _script()
+    folder = tmp_path / "acc"
+    out = io.StringIO()
+    pw = _pw()
+    base = ["--dir", str(folder)]
+    assert script.main([*base, "create", "alice", "--password-stdin"], out, io.StringIO(pw)) == 0
+    assert pw not in out.getvalue()
+    out = io.StringIO()
+    assert script.main([*base, "create", "bob"], out, io.StringIO()) == 0
+    assert "只顯示這一次" in out.getvalue()
+    assert script.main([*base, "attach", "alice", "c12345678"], io.StringIO(), io.StringIO()) == 0
+    assert script.main([*base, "disable", "bob"], io.StringIO(), io.StringIO()) == 0
+    assert script.main([*base, "attach", "bob", "c12345678"], io.StringIO(), io.StringIO()) == 1
+    listing = io.StringIO()
+    assert script.main([*base, "list"], listing, io.StringIO()) == 0
+    lines = listing.getvalue().splitlines()
+    assert lines[0].startswith("alice") and "c12345678" in lines[0]
+    assert lines[1].startswith("bob") and "停用" in lines[1]
+    store = AccountStore(folder)
+    store.login("alice", pw)
