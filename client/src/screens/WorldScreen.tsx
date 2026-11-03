@@ -22,6 +22,10 @@ import { BattleScreen } from "./BattleScreen";
 
 interface Props {
   onHome(): void;
+  /** 開發模式下沒登入時：到登入畫面（5E-1）。 */
+  onLogin?(): void;
+  /** 已登入時：登出（5E-1）。 */
+  onLogout?(): void;
 }
 
 const LOG_MAX = 12;
@@ -30,7 +34,7 @@ function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-export function WorldScreen({ onHome }: Props) {
+export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [charId, setCharId] = useState<string | null>(() => readWorldChar());
   const [view, setView] = useState<WorldView | null>(null);
   const [battle, setBattle] = useState<BattleResponse | null>(null);
@@ -224,7 +228,7 @@ export function WorldScreen({ onHome }: Props) {
     );
   }
   if (charId === null) {
-    return <WorldCharacterPicker onEnter={enter} onHome={onHome} />;
+    return <WorldCharacterPicker onEnter={enter} onHome={onHome} onLogin={onLogin} onLogout={onLogout} />;
   }
   return (
     <div className="run-screen world-screen">

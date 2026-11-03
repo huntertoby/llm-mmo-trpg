@@ -11,7 +11,7 @@ import { isDevMode } from "./run/startFlow";
 import { createDevRun, DEV_ENTER_EVENT, devScreenParam } from "./dev/devScreens";
 import { RunNewScreen } from "./screens/RunNewScreen";
 import { RunScreen } from "./screens/RunScreen";
-import { WorldScreen } from "./screens/WorldScreen";
+import { WorldEntry } from "./screens/WorldEntry";
 import { ErrorBanner } from "./ui/ErrorBanner";
 
 /** 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不丟步驟）；伺服器沒有（重啟過）才讀存檔。 */
@@ -122,7 +122,7 @@ export function App() {
       return <RunNewScreen onCreated={(data) => enterRun(data, false)} onHome={() => setScreen("start")} />;
     }
     if (screen === "world") {
-      return <WorldScreen onHome={() => setScreen("start")} />;
+      return <WorldEntry onHome={() => setScreen("start")} />;
     }
     if (screen === "workshop") {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
