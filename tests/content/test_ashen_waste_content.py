@@ -11,6 +11,7 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_map import LocationKind
 from trpg.content.world_season import GoalSpec, SeasonContent, season_problems
+from trpg.shared.types import Element
 
 REGION = "ashen_waste"
 
@@ -128,7 +129,7 @@ def test_5f5b_balance_values(library: ContentLibrary) -> None:
     assert statuses["frost_ember_burst"].damage_dealt_permille == 2250
     assert statuses["heart_ember_burst"].damage_dealt_permille == 1500
     heart = library.unit("ashen_heart")
-    assert heart.max_hp == 160 and heart.element_mods["fire"] == -750
+    assert heart.max_hp == 160 and heart.element_mods[Element.FIRE] == -750
     spawns = [s.template for p in heart.phases for s in p.spawns]
     assert spawns == ["heart_ember_lizard"]
     lizard, court = library.unit("ember_lizard"), library.unit("heart_ember_lizard")
