@@ -78,7 +78,9 @@ def test_field_npcs_carry_marks_without_look(field_library: ContentLibrary) -> N
     assert npcs["granny_du"].alert == "quest"
     assert npcs["granny_du"].alert_zh == "有任務可以接"
     assert npcs["shopkeeper_liu"].alert == "rumor"
-    assert all(n.look is None and n.rank == "neutral" and n.rank_zh == "中立" for n in npcs.values())
+    assert all(
+        n.look is None and n.rank == "neutral" and n.rank_zh == "中立" for n in npcs.values()
+    )
 
 
 # ---------------------------------------------------------------------------
