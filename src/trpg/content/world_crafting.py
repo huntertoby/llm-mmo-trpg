@@ -134,7 +134,8 @@ class EnhanceRules(ContentModel):
 
 
 class ModCost(ContentModel):
-    """重骰或指定的費用：精華 ``essence`` 個；金幣 ``gold_base`` ＋ ``gold_step`` × 這件已改過幾次。"""
+    """重骰或指定的費用：精華 ``essence`` 個；金幣 ``gold_base`` ＋ ``gold_step`` × 這件已改過
+    幾次。"""
 
     essence: int = Field(ge=0)
     gold_base: int = Field(ge=0)
@@ -294,9 +295,12 @@ def resonance_problems(
                 continue
             if (affix.value is None) != (entry.value is None):
                 problems.append(f"{where}：{entry.affix} 的 value 要和詞條的數值範圍一致")
-            elif affix.value is not None and entry.value is not None:
-                if not affix.value.min <= entry.value <= affix.value.max:
-                    problems.append(f"{where}：{entry.affix} 的 value 超出範圍")
+            elif (
+                affix.value is not None
+                and entry.value is not None
+                and not affix.value.min <= entry.value <= affix.value.max
+            ):
+                problems.append(f"{where}：{entry.affix} 的 value 超出範圍")
     return problems
 
 
