@@ -7,6 +7,8 @@ from trpg.api.world_field_schemas import (
     FieldDoorView,
     FieldExitView,
     FieldFacilityView,
+    FieldGearLookView,
+    FieldHeroView,
     FieldNpcView,
     FieldObjectView,
     FieldPositionView,
@@ -14,15 +16,18 @@ from trpg.api.world_field_schemas import (
     FieldTileView,
     FieldView,
 )
+from trpg.content.appearance import derive_keywords
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.engine.view import AppearanceView
 from trpg.world.actions import WorldEvent
-from trpg.world.field import field_map, hidden_door, placed
+from trpg.world.field import FieldGrid, field_grid, field_map, hidden_door, placed
 from trpg.world.field_actions import (
     FieldEnteredEvent,
     TeleportStoneUnlockedEvent,
     TeleportStoneUsedEvent,
 )
+from trpg.world.gear import hero_loadout
 from trpg.world.narration import region_npcs
 from trpg.world.state import CharacterState
 
@@ -54,11 +59,16 @@ def _map_name(library: ContentLibrary, found: FieldMapDef) -> str:
     return found.name_zh or _place_name(library, found.region, found.place)
 
 
-def _tiles(found: FieldMapDef) -> tuple[FieldTileView, ...]:
+def _tiles(found: FieldMapDef, grid: FieldGrid) -> tuple[FieldTileView, ...]:
     surfaces = {s.at: str(s.surface) for s in found.surfaces}
     return tuple(
         FieldTileView(
-            x=x, y=y, height=height, terrain=terrain, surface=surfaces.get((x, y), "none")
+            x=x,
+            y=y,
+            height=height,
+            terrain=terrain,
+            surface=surfaces.get((x, y), "none"),
+            walkable=grid.standable((x, y)),
         )
         for y, row in enumerate(found.grid())
         for x, (height, terrain) in enumerate(row)
@@ -84,6 +94,41 @@ def _doors(
     return tuple(out)
 
 
+def _hero(library: ContentLibrary, char: CharacterState) -> FieldHeroView:
+    """主角外觀（同戰鬥 ``UnitView`` 的 ``doll_look``、武器、種族外觀與裝備外觀；純顯示）。"""
+    hero = char.hero
+    weapon = library.weapons.get(hero.weapon)
+    race = None
+    if hero.race is not None:
+        try:
+            race = library.ruleset.race_def(hero.race).look
+        except KeyError:
+            race = None
+    gear = tuple(
+        FieldGearLookView(
+            slot=e.slot,
+            appearance=AppearanceView(
+                kind=e.item.kind,
+                form=e.item.form,
+                material=e.item.material,
+                dye=e.item.dye,
+                style=e.item.style,
+                rarity=e.item.rarity or ("legendary" if e.item.legendary else "common"),
+                keywords=derive_keywords(a.affix for a in e.affixes),
+            ),
+        )
+        for e in hero_loadout(library, char).items
+    )
+    return FieldHeroView(
+        template_id=hero.id,
+        doll_look=hero.doll,
+        weapon_id=hero.weapon,
+        weapon_class="melee" if weapon is None else weapon.weapon_class,
+        race_look=race,
+        equipment=gear,
+    )
+
+
 def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | None:
     """目前的實地地圖；所在地點沒有實地地圖＝``None``。"""
     char = placed(library, char)
@@ -100,7 +145,7 @@ def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | Non
         interior=found.is_interior,
         width=found.width,
         height=found.height,
-        tiles=_tiles(found),
+        tiles=_tiles(found, field_grid(library, char, found)),
         objects=tuple(
             FieldObjectView(id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1])
             for o in found.objects
@@ -132,4 +177,6 @@ def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | Non
             FieldFacilityView(kind=f.id, x=f.at[0], y=f.at[1]) for f in found.facilities
         ),
         me=FieldPositionView(x=pos.x, y=pos.y, facing=pos.facing),
+        max_climb=library.ruleset.core.max_climb_height,
+        hero=_hero(library, char),
     )

@@ -3468,6 +3468,37 @@ export interface components {
             /** Y */
             y: number;
         };
+        /** FieldGearLookView */
+        FieldGearLookView: {
+            /** Slot */
+            slot: string;
+            /**
+             * @default {
+             *       "rarity": "common",
+             *       "keywords": []
+             *     }
+             */
+            appearance: components["schemas"]["AppearanceView"];
+        };
+        /**
+         * FieldHeroView
+         * @description 主角的紙娃娃外觀（6B-3；欄位同戰鬥的 ``UnitView``，純顯示）。
+         */
+        FieldHeroView: {
+            /** Template Id */
+            template_id: string;
+            doll_look?: components["schemas"]["DollLook"] | null;
+            /** Weapon Id */
+            weapon_id: string;
+            /** Weapon Class */
+            weapon_class: string;
+            race_look?: components["schemas"]["RaceLook"] | null;
+            /**
+             * Equipment
+             * @default []
+             */
+            equipment: components["schemas"]["FieldGearLookView"][];
+        };
         /** FieldNpcView */
         FieldNpcView: {
             /** Id */
@@ -3624,6 +3655,11 @@ export interface components {
              * @default none
              */
             surface: string;
+            /**
+             * Walkable
+             * @default true
+             */
+            walkable: boolean;
         };
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
@@ -3658,6 +3694,12 @@ export interface components {
             /** Facilities */
             facilities: components["schemas"]["FieldFacilityView"][];
             me: components["schemas"]["FieldPositionView"];
+            /**
+             * Max Climb
+             * @default 1
+             */
+            max_climb: number;
+            hero?: components["schemas"]["FieldHeroView"] | null;
         };
         /**
          * FlashAction

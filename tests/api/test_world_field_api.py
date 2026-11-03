@@ -47,7 +47,20 @@ def test_view_has_field(client: TestClient) -> None:
     assert field["name_zh"] == "霧渡鎮"
     assert (field["width"], field["height"]) == (24, 18)
     assert len(field["tiles"]) == 24 * 18
-    assert field["tiles"][0] == {"x": 0, "y": 0, "height": 1, "terrain": "grass", "surface": "none"}
+    assert field["tiles"][0] == {
+        "x": 0,
+        "y": 0,
+        "height": 1,
+        "terrain": "grass",
+        "surface": "none",
+        "walkable": True,
+    }
+    tiles = {(t["x"], t["y"]): t for t in field["tiles"]}
+    assert tiles[(1, 2)]["walkable"] is False  # 牆（建築）
+    assert tiles[(13, 7)]["walkable"] is False  # NPC 站的格子
+    assert field["max_climb"] >= 1
+    assert field["hero"]["weapon_id"] == "fire_staff"
+    assert field["hero"]["weapon_class"] == "focus"
     assert field["me"] == {"x": 11, "y": 9, "facing": "s"}
     assert {e["id"] for e in field["exits"]} == {
         "to_hunter_hut",

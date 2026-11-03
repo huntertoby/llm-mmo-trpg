@@ -10,10 +10,16 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.content.battle import DollLook
+from trpg.content.races import RaceLook
+from trpg.engine.view import AppearanceView
+
 __all__ = [
     "FieldDoorView",
     "FieldExitView",
     "FieldFacilityView",
+    "FieldGearLookView",
+    "FieldHeroView",
     "FieldNpcView",
     "FieldObjectView",
     "FieldPositionView",
@@ -34,6 +40,8 @@ class FieldTileView(_ApiModel):
     terrain: str
     surface: str = "none"
     """初始表面（``water``、``fire``…；沒有＝``none``）。"""
+    walkable: bool = True
+    """角色站得上去（6B-3 前端算路徑用；同 ``field_grid``：地形、物件、NPC、隱藏門）。"""
 
 
 class FieldObjectView(_ApiModel):
@@ -88,6 +96,22 @@ class FieldPositionView(_ApiModel):
     facing: Literal["n", "e", "s", "w"]
 
 
+class FieldGearLookView(_ApiModel):
+    slot: str
+    appearance: AppearanceView = AppearanceView()
+
+
+class FieldHeroView(_ApiModel):
+    """主角的紙娃娃外觀（6B-3；欄位同戰鬥的 ``UnitView``，純顯示）。"""
+
+    template_id: str
+    doll_look: DollLook | None = None
+    weapon_id: str
+    weapon_class: str
+    race_look: RaceLook | None = None
+    equipment: tuple[FieldGearLookView, ...] = ()
+
+
 class FieldView(_ApiModel):
     map_id: str
     name_zh: str
@@ -106,3 +130,7 @@ class FieldView(_ApiModel):
     facilities: tuple[FieldFacilityView, ...]
     me: FieldPositionView
     """自己的位置與朝向。"""
+    max_climb: int = 1
+    """一步最多往上爬幾層（``core.max_climb_height``；6B-3 前端算路徑用）。"""
+    hero: FieldHeroView | None = None
+    """主角外觀（6B-3）。"""

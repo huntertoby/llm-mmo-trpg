@@ -8561,6 +8561,80 @@
         ],
         "title": "FieldFacilityView"
       },
+      "FieldGearLookView": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/AppearanceView",
+            "default": {
+              "rarity": "common",
+              "keywords": []
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot"
+        ],
+        "title": "FieldGearLookView"
+      },
+      "FieldHeroView": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "doll_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DollLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weapon_id": {
+            "type": "string",
+            "title": "Weapon Id"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "race_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RaceLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "equipment": {
+            "items": {
+              "$ref": "#/components/schemas/FieldGearLookView"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "template_id",
+          "weapon_id",
+          "weapon_class"
+        ],
+        "title": "FieldHeroView",
+        "description": "主角的紙娃娃外觀（6B-3；欄位同戰鬥的 ``UnitView``，純顯示）。"
+      },
       "FieldNpcView": {
         "properties": {
           "id": {
@@ -8886,6 +8960,11 @@
             "type": "string",
             "title": "Surface",
             "default": "none"
+          },
+          "walkable": {
+            "type": "boolean",
+            "title": "Walkable",
+            "default": true
           }
         },
         "additionalProperties": false,
@@ -8996,6 +9075,21 @@
           },
           "me": {
             "$ref": "#/components/schemas/FieldPositionView"
+          },
+          "max_climb": {
+            "type": "integer",
+            "title": "Max Climb",
+            "default": 1
+          },
+          "hero": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
