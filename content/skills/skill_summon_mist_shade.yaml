@@ -1,0 +1,24 @@
+# 主動（Phase 5F-1b；docs/design/18-雲嶺內容.md 18.7.4「霧中劍客會分身」，玩法 PM 2026-11-03 代決；數值為初值，未經模擬）：
+# 第 1 輪才能用（技能層級條件 first_round）＝每場最多一次；在身邊的空格召出 1 名霧影，持續 3 輪。只給霧中劍客，不進技能池。
+id: skill_summon_mist_shade
+schema_version: 1
+name_zh: 霧影分身
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wil
+shape: {type: ground_tile, range: 2}
+effects:
+  - {type: summon, unit: summon_mist_shade, duration: 3}
+condition: {type: first_round}
+cost: {mana: 4, cooldown: 4}
+tags: [shadow, spell, summon]
+narrative:
+  concept: 劍客在霧裡一晃，留下一個和自己一模一樣的影子
+  cast_flavor: 霧氣在劍客身側凝成人形，同樣的劍、同樣的起手式
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

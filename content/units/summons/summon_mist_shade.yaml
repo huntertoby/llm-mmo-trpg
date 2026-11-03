@@ -1,0 +1,17 @@
+# 召喚物（Phase 5F-1b；docs/design/18-雲嶺內容.md 18.7.4「霧中劍客會分身」，玩法 PM 2026-11-03 代決；數值為初值，未經模擬）。
+# 霧中劍客（sect_mist_swordsman）開場用現有召喚原語召出的「霧影」：低血量、招式和本體相同（單手劍＋先發制人）。
+id: summon_mist_shade
+name_zh: 霧影
+attributes: {str: 14, dex: 12, con: 10, int: 8, wis: 10, wil: 10}
+max_hp: 6
+speed: 5
+armor_bonus: 0
+weapon: one_handed_sword
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [summoned, afterimage]
+skills: [skill_first_strike]
+reactions: []
+summon: true
+role: melee   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）

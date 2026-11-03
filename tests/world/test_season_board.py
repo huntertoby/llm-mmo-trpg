@@ -225,7 +225,7 @@ def test_bounty_encounter_uses_bounty_lineup(library: ContentLibrary, make_char:
     assert encounter.bounty == "mist_swordsman"
     lineup = roll_lineup(library, encounter)
     assert lineup.bounty == "mist_swordsman"
-    assert lineup.members[0] == LineupMember(unit="sect_swordsman", affix="mist_veiled")
+    assert lineup.members[0] == LineupMember(unit="sect_mist_swordsman", affix="mist_veiled")
     # 自己的劇情變化優先（疤面的線頭到期結局）
     fort = library.world_maps["cloud_ridge"].location_by_id()["cliff_gang_fort"]
     at_fort, _ = make_encounter(library, world, char, fort, NOON)

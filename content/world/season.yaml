@@ -51,9 +51,9 @@ daily_goals:
 bounties:
   - {id: north_wolf_king, name_zh: 北坡狼王, region: cloud_ridge, location: north_slope, level: 5,
      group: north_slope_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, from_day: 1}
-  # 「會分身（召喚 1 個幻影）」沒有機制，先只有霧隱的詞綴（代決 5F1-13，待 PM）
+  # 會分身：本體 sect_mist_swordsman 開場用召喚原語召出 1 名低血量、同招式的霧影（18.7.4；5F-1b 玩法 PM 代決）
   - {id: mist_swordsman, name_zh: 霧中劍客, region: cloud_ridge, location: sword_tomb, level: 5,
-     group: mist_swordsman_band, elite: {unit: sect_swordsman, affix: mist_veiled}, coins: 3, from_day: 1}
+     group: mist_swordsman_band, elite: {unit: sect_mist_swordsman, affix: mist_veiled}, coins: 3, from_day: 1}
   - {id: scarface, name_zh: 斷崖幫二當家「疤面」, region: cloud_ridge, location: cliff_gang_fort, level: 4,
      group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}, coins: 3, from_day: 1}
 
