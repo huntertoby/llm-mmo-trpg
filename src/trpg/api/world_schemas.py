@@ -292,6 +292,17 @@ class EncounterEnemyView(_ApiModel):
     """第三方（Phase 5B-M3 三方混戰：和我方、敵方都敵對）。"""
 
 
+class BattlefieldRectView(_ApiModel):
+    """就地開打切出的戰場在實地地圖上的範圍（Phase 6C-2；格子座標）：畫面用 6B-6 的 ``frameCamera``
+    框住它。"""
+
+    field_map: str
+    x: int
+    y: int
+    width: int
+    height: int
+
+
 class EncounterView(_ApiModel):
     location: str
     location_name_zh: str
@@ -315,6 +326,10 @@ class EncounterView(_ApiModel):
     """開場說明（先手、開場狀態、增援）的句子；戰鬥畫面開場也顯示（5A-7）。"""
     allies_zh: str = ""
     """我方的說明（例「主角（開場 HP 30）＋青鋒、回春」；5C-1）。"""
+    battlefield: BattlefieldRectView | None = None
+    """就地開打切出的戰場（6C-2）；``None``＝用地點原本的戰鬥地圖模板。"""
+    battlefield_fallback_zh: str | None = None
+    """碰到地圖上的敵人卻改用模板的原因（6C-2，例「站位放不下」）。"""
 
 
 class WorldClockView(_ApiModel):
