@@ -20,6 +20,11 @@
 - 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
   三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
   :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
+- 6C-R3：日誌只 append（標頭記規則鍵 :func:`~trpg.world.save.log_rules_key`；讀檔時和目前的不同就
+  標成規則已變，標頭改變時才整份重寫）。足跡用的「誰去過哪裡」是 :meth:`WorldStore._save_char`
+  時更新
+  的記憶體索引（第一次用到時掃一次角色資料夾）；有待處理遭遇時畫面用的 ``prepare_battle``
+  依（角色存檔物件）快取（:meth:`WorldStore.prepared_battle`）。
 """
 
 from __future__ import annotations
@@ -60,17 +65,20 @@ from trpg.server.season_reset import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
-from trpg.world.battle import prepare_battle
+from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.errors import WorldError
 from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.layout import CHARS_DIR, LOG_FILE, WORLD_FILE, char_path
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
+    append_log_line,
     dumps_char,
     dumps_log,
+    dumps_log_header,
     dumps_world,
     loads_char,
     loads_world,
+    log_rules_key,
     read_log,
     write_atomic,
 )
@@ -125,6 +133,41 @@ def _now() -> int:
     return int(time.time())
 
 
+type Place = tuple[str, str]
+
+_RULES_KEYS: dict[int, tuple[ContentLibrary, str]] = {}
+"""內容庫 → 世界日誌的規則鍵（算一次約 0.2 秒；同一個內容庫物件只算一次）。存著內容庫本身，
+``id`` 不會被重用。"""
+_RULES_KEYS_MAX: Final = 16
+
+
+def _rules_key_of(library: ContentLibrary) -> str:
+    found = _RULES_KEYS.get(id(library))
+    if found is not None and found[0] is library:
+        return found[1]
+    key = log_rules_key(library)
+    if len(_RULES_KEYS) >= _RULES_KEYS_MAX:
+        _RULES_KEYS.clear()
+    _RULES_KEYS[id(library)] = (library, key)
+    return key
+
+
+def _places(char: CharacterState) -> tuple[Place, ...]:
+    """足跡用：角色去過的地點加上目前位置（排序、不重複）。"""
+    places = {r.key() for r in char.visited_locations}
+    places.add((char.region, char.location))
+    return tuple(sorted(places))
+
+
+def _complete_lines(text: str) -> tuple[str, bool]:
+    """日誌最後一行沒有換行＝append 寫到一半中斷：丟掉那一行（那個動作的角色存檔也還沒寫）。回傳
+    （完整的部分, 有沒有丟掉東西）。"""
+    if not text or text.endswith("\n"):
+        return text, False
+    cut = text.rfind("\n") + 1
+    return text[:cut], True
+
+
 class WorldStore:
     """大世界的角色與世界（記憶體快取＋本機 JSON 存檔）。"""
 
@@ -160,11 +203,17 @@ class WorldStore:
         self._lock = threading.RLock()
         self._world: WorldState | None = None
         self._chars: dict[str, CharacterState] = {}
-        self._peeks: dict[str, tuple[int, CharacterState]] = {}
-        """足跡用的別人存檔（不進 `_chars`、不預先計算；依修改時間重讀，6C-5）。"""
+        self._visits: dict[str, tuple[str, tuple[Place, ...]]] | None = None
+        """足跡的索引（6C-R3）：角色 ID →（名字, 去過的地點＋目前位置）。第一次用到時掃一次角色
+        資料夾，之後由 :meth:`_save_char` 更新；``None``＝還沒建。"""
+        self._prepared: dict[str, tuple[ContentLibrary, CharacterState, PreparedBattle]] = {}
+        """畫面用的 ``prepare_battle`` 快取（6C-R3）：角色 ID →（內容庫, 角色存檔物件, 結果）。
+        角色存檔是不可變物件，同一個物件＝同樣的輸入。"""
         self._entries: list[WorldLogEntry] | None = None
         self._stale_through: int | None = None
         """日誌裡舊規則的紀錄到哪一筆（6B-2：``trpg-wlog/1`` 的舊日誌規則已變、不能重播）。"""
+        self._log_header: str | None = None
+        """日誌檔現在的標頭那一行（6C-R3；``None``＝沒有檔或要整份重寫）。"""
         self._battles: dict[str, BattleSession] = {}
         self.first_kills = FirstKillRegistry(library, root)
         """全服首殺紀錄（5E-3）。"""
@@ -234,16 +283,42 @@ class WorldStore:
         with self._lock:
             return roll_season(self.library, self.world(), now)[0]
 
+    def rules_key(self) -> str:
+        """目前的世界日誌規則鍵（6C-R3，:func:`~trpg.world.save.log_rules_key`）。"""
+        return _rules_key_of(self.library)
+
     def entries(self) -> list[WorldLogEntry]:
-        """世界動作日誌（第一次用到時讀檔）。"""
+        """世界動作日誌（第一次用到時讀檔）。標頭的規則鍵和目前的不同（或沒記）時，到最後一筆為止
+        都標成規則已變、不能重播（6C-R3）；下一次寫入時重寫標頭。"""
         with self._lock:
             if self._entries is None:
                 path = self._log_path()
                 text = path.read_text(encoding="utf-8") if path.is_file() else ""
+                text, torn = _complete_lines(text)
+                if torn:
+                    _LOG.warning("世界日誌最後一行不完整（寫到一半中斷），已略過")
                 log = read_log(text) if text.strip() else None
                 self._entries = [] if log is None else list(log.entries)
                 self._stale_through = None if log is None else log.stale_through
+                if log is not None and log.rules_key != self.rules_key() and log.entries:
+                    self._stale_through = log.entries[-1].seq
+                self._log_header = None if log is None or torn else log.header
             return self._entries
+
+    def _write_log(self, entry: WorldLogEntry) -> None:
+        """日誌加一筆（6C-R3）：標頭沒變就 append 一行，否則整份重寫（原子改名）。"""
+        entries = self.entries()
+        header = dumps_log_header(stale_through=self._stale_through, rules_key=self.rules_key())
+        path = self._log_path()
+        if self._log_header == header and path.is_file():
+            append_log_line(path, entry)
+        else:
+            log_text = dumps_log(
+                [*entries, entry], stale_through=self._stale_through, rules_key=self.rules_key()
+            )
+            write_atomic(path, log_text)
+            self._log_header = header
+        entries.append(entry)
 
     def character_ids(self) -> list[str]:
         """存檔資料夾裡的角色 ID（依 ID 排序）。"""
@@ -267,47 +342,58 @@ class WorldStore:
             self.offers.prefetch(self.world(), char)  # PERF-3：讀檔時已有的機遇、劇情步驟
             return char
 
-    def _peek(self, character_id: str) -> CharacterState | None:
-        """讀角色但不放進快取、不預先計算（足跡用；讀不了＝``None``）。"""
-        char = self._chars.get(character_id)
-        if char is not None:
-            return char
-        path = self._char_path(character_id)
-        try:
-            stamp = path.stat().st_mtime_ns
-            cached = self._peeks.get(character_id)
-            if cached is not None and cached[0] == stamp:
-                return cached[1]
-            char = loads_char(path.read_text(encoding="utf-8"))
-        except (OSError, WorldError):
-            return None
-        self._peeks[character_id] = (stamp, char)
-        return char
+    def _visit_index(self) -> dict[str, tuple[str, tuple[Place, ...]]]:
+        """足跡的索引（6C-R3）：第一次用到時掃一次角色資料夾（讀不了的存檔略過），之後由
+        :meth:`_save_char` 更新。"""
+        if self._visits is None:
+            visits: dict[str, tuple[str, tuple[Place, ...]]] = {}
+            for cid in self.character_ids():
+                char = self._chars.get(cid)
+                if char is None:
+                    try:
+                        char = loads_char(self._char_path(cid).read_text(encoding="utf-8"))
+                    except (OSError, WorldError):
+                        continue
+                visits[cid] = (char.hero.name_zh, _places(char))
+            self._visits = visits
+        return self._visits
 
     def field_social(self, character_id: str) -> FieldSocial:
         """其他角色去過的地點（足跡）與每個地點的留言數（6C-5；畫面用，不進日誌）。
 
-        來源是其他角色存檔的 ``visited_locations`` 加上目前位置（依角色 ID）；讀過的存檔依修改時間
-        快取，不掃世界日誌。"""
-        visitors: dict[tuple[str, str], list[Visitor]] = {}
+        來源是其他角色存檔的 ``visited_locations`` 加上目前位置（依角色 ID）；6C-R3 起從記憶體索引
+        讀（:meth:`_visit_index`），不再每次掃角色資料夾，留言也走留言檔的記憶體快取。"""
+        visitors: dict[Place, list[Visitor]] = {}
         with self._lock:
-            for cid in self.character_ids():
-                other = None if cid == character_id else self._peek(cid)
-                if other is None:
+            index = self._visit_index()
+            for cid in sorted(index):
+                if cid == character_id:
                     continue
-                places = {r.key() for r in other.visited_locations}
-                places.add((other.region, other.location))
-                for place in sorted(places):
-                    visitors.setdefault(place, []).append(Visitor(cid, other.hero.name_zh))
+                name, places = index[cid]
+                for place in places:
+                    visitors.setdefault(place, []).append(Visitor(cid, name))
             try:
                 notes = self.notes.all()
             except NoteError:
                 notes = ()
-        counts: dict[tuple[str, str], int] = {}
+        counts: dict[Place, int] = {}
         for note in notes:
             place = (note.region, note.location)
             counts[place] = counts.get(place, 0) + 1
         return FieldSocial(visitors={k: tuple(v) for k, v in visitors.items()}, notes=counts)
+
+    def prepared_battle(self, char: CharacterState) -> PreparedBattle:
+        """畫面的遭遇面板用的 ``prepare_battle``（6C-R3）：同一個角色存檔物件只算一次（結果逐字
+        相同；
+        開戰本身照舊重算）。"""
+        library = self.library
+        with self._lock:
+            found = self._prepared.get(char.character_id)
+            if found is not None and found[0] is library and found[1] is char:
+                return found[2]
+            prepared = prepare_battle(library, char)
+            self._prepared[char.character_id] = (library, char, prepared)
+            return prepared
 
     def growth_run(self, character_id: str) -> tuple[ContentLibrary, RunState]:
         """閃現與配點預覽用：大世界的內容庫視圖與角色轉成的 ``RunState``（帶角色技能種子）。"""
@@ -468,9 +554,7 @@ class WorldStore:
         entry = WorldLogEntry(
             seq=seq, now=now, character_id=char.character_id, action=action, actor=actor
         )
-        log_text = dumps_log([*entries, entry], stale_through=self._stale_through)
-        write_atomic(self._log_path(), log_text)
-        entries.append(entry)
+        self._write_log(entry)
         self._save_char(result.char)
         self._record_first_kills(result.char, result.events, seq, now, result.world.season_id)
         self._record_boss_clear(char, result.char, action, result.events, seq=seq, now=now)
@@ -678,9 +762,15 @@ class WorldStore:
         self._chars = {}
         self._entries = None
         self._stale_through = None
+        self._log_header = None
+        self._visits = None
+        self._prepared = {}
         self._battles = {}
+        self.notes.forget()
         self.league.forget()
 
     def _save_char(self, char: CharacterState) -> None:
         write_atomic(self._char_path(char.character_id), dumps_char(char))
         self._chars[char.character_id] = char
+        if self._visits is not None:  # 6C-R3：足跡的索引跟著存檔更新
+            self._visits[char.character_id] = (char.hero.name_zh, _places(char))

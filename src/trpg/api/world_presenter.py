@@ -9,7 +9,7 @@ Phase 5B-5（18.4、18.5）：事件卡、情境判定結果、NPC、對話、�
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Final
 
 from trpg.api.account_schemas import TitlesOf, no_titles
@@ -101,7 +101,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.atlas import cross_gate, region_lit, region_name
-from trpg.world.battle import prepare_battle
+from trpg.world.battle import PreparedBattle, prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
@@ -357,13 +357,21 @@ def _here_view(
 # ---------------------------------------------------------------------------
 
 
+type PrepareBattle = Callable[[CharacterState], PreparedBattle]
+"""畫面用的 ``prepare_battle``（6C-R3：伺服器傳快取過的版本，
+:meth:`~trpg.api.world.WorldStore.prepared_battle`）。"""
+
+
 def _encounter_view(
-    library: ContentLibrary, char: CharacterState, in_battle: bool
+    library: ContentLibrary,
+    char: CharacterState,
+    in_battle: bool,
+    prepare: PrepareBattle | None = None,
 ) -> EncounterView | None:
     encounter = char.pending_encounter
     if encounter is None:
         return None
-    prepared = prepare_battle(library, char)
+    prepared = prepare_battle(library, char) if prepare is None else prepare(char)
     catalog = library.enemy_catalog()
     # 敵方在前、第三方（5B-M3）在後；第三方沒有詞綴
     foes = [u for u in prepared.setup.units if u.team is not Team.ALLY]
@@ -550,6 +558,7 @@ def world_view(
     narrations: Sequence[NarrateAction] = (),
     titles: TitlesOf = no_titles,
     social: FieldSocial | None = None,
+    prepare: PrepareBattle | None = None,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
@@ -561,7 +570,7 @@ def world_view(
         character=_character_view(library, char),
         map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
         here=_here_view(library, world, char, now, in_battle),
-        encounter=_encounter_view(library, char, in_battle),
+        encounter=_encounter_view(library, char, in_battle, prepare),
         clock=_clock_view(library, world, char.region, now),
         events=events,
         battle_id=battle_id,
