@@ -150,6 +150,7 @@ _WORLD: Final[dict[str, ResetKind]] = _all(
     "season_start",
     "flags",
     "cleared",
+    "defeated_spawns",  # 6C-1b 實地地圖上被打贏的隊伍（同 cleared）
     "threads",
     "timed_flags",
     "shadows",
