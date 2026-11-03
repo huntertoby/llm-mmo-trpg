@@ -25,8 +25,8 @@ export function worldActionOf(choice: RunChoice): WorldAction | null {
 /** 左欄顯示：閃現待選時固定是選項畫面、任務三選一待選時固定是三選一（閃現優先，5B-5）；
  * 否則照玩家切換（地點圖、成長、任務與線頭；5D-4 加背包、商店、鐵匠）。`want` 給布林時＝舊的「成長／地點圖」切換。
  * 商店、鐵匠只在這裡有店或設施時才開得了（離開城鎮就回到地點圖）；背包要有經濟資料。 */
-export type LeftPane = "map" | "growth" | "pending" | "offer" | "quests" | "bag" | "shop" | "smithy";
-export type WantPane = "map" | "growth" | "quests" | "bag" | "shop" | "smithy";
+export type LeftPane = "map" | "growth" | "pending" | "offer" | "quests" | "bag" | "shop" | "smithy" | "board";
+export type WantPane = "map" | "growth" | "quests" | "bag" | "shop" | "smithy" | "board";
 
 export function leftPane(view: WorldView, want: boolean | WantPane): LeftPane {
   if (view.pending_flash != null) return "pending";

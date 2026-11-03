@@ -931,6 +931,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Board
+         * @description 城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。
+         */
+        get: operations["get_board_api_world_characters__character_id__board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/llm": {
         parameters: {
             query?: never;
@@ -1581,6 +1601,92 @@ export interface components {
             look?: {
                 [key: string]: string;
             };
+        };
+        /**
+         * BoardBountyView
+         * @description 一張今天的懸賞（18.7.4；先搶先贏）。
+         */
+        BoardBountyView: {
+            /** Bounty */
+            bounty: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Location Zh */
+            location_zh: string;
+            /** Level */
+            level: number;
+            /** Coins */
+            coins: number;
+            /** Open */
+            open: boolean;
+            /** Claimed By */
+            claimed_by?: string | null;
+            /** Status Zh */
+            status_zh: string;
+        };
+        /**
+         * BoardClearedView
+         * @description 所有人看到的已清空地點（9.6.7 #15）。
+         */
+        BoardClearedView: {
+            /** Location Zh */
+            location_zh: string;
+            /** Respawn At */
+            respawn_at: number;
+        };
+        /**
+         * BoardGoalView
+         * @description 一條今日目標（#99）與這個角色的進度。
+         */
+        BoardGoalView: {
+            /** Goal */
+            goal: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Progress */
+            progress: number;
+            /** Count */
+            count: number;
+            /** Done */
+            done: boolean;
+            /** Coins */
+            coins: number;
+        };
+        /** BoardMilestoneView */
+        BoardMilestoneView: {
+            /** Day */
+            day: number;
+            /** Name Zh */
+            name_zh: string;
+        };
+        /**
+         * BoardWorldEventView
+         * @description 一個世界事件的全服進度（#103）。
+         */
+        BoardWorldEventView: {
+            /** Event */
+            event: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "succeeded" | "failed";
+            /** Status Zh */
+            status_zh: string;
+            /** Progress */
+            progress: number;
+            /** Target */
+            target: number;
+            /** Permille */
+            permille: number;
+            /** Days Zh */
+            days_zh: string;
+            /** Target Note Zh */
+            target_note_zh?: string | null;
         };
         /**
          * BombOut
@@ -5923,6 +6029,68 @@ export interface components {
             test_mode: boolean;
         };
         /**
+         * SeasonBoardView
+         * @description 城鎮公告板的整份資料。
+         */
+        SeasonBoardView: {
+            season: components["schemas"]["SeasonInfoView"];
+            /**
+             * Goals
+             * @default []
+             */
+            goals: components["schemas"]["BoardGoalView"][];
+            /** Goals Note Zh */
+            goals_note_zh?: string | null;
+            /**
+             * Bounties
+             * @default []
+             */
+            bounties: components["schemas"]["BoardBountyView"][];
+            /**
+             * World Events
+             * @default []
+             */
+            world_events: components["schemas"]["BoardWorldEventView"][];
+            /**
+             * Cleared
+             * @default []
+             */
+            cleared: components["schemas"]["BoardClearedView"][];
+            /**
+             * Level Bonus Zh
+             * @default []
+             */
+            level_bonus_zh: string[];
+        };
+        /**
+         * SeasonInfoView
+         * @description 賽季第幾天與日程（09 9.7）。
+         */
+        SeasonInfoView: {
+            /** Day */
+            day: number;
+            /** Days */
+            days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "upcoming" | "running" | "ended";
+            /** Status Zh */
+            status_zh: string;
+            /** Phase Zh */
+            phase_zh?: string | null;
+            /**
+             * Upcoming
+             * @default []
+             */
+            upcoming: components["schemas"]["BoardMilestoneView"][];
+            /** Next Refresh At */
+            next_refresh_at: number;
+            /** Next Refresh Zh */
+            next_refresh_zh: string;
+        };
+        /**
          * SegmentLine
          * @description 複合技能（Phase 3F-3a）一段的預算：``label`` 位移段／動作段，該段自己的效果點數、條件
          *     與協同。
@@ -9482,6 +9650,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_board_api_world_characters__character_id__board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonBoardView"];
                 };
             };
             /** @description Validation Error */

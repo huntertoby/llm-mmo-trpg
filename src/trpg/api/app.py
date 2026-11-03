@@ -51,6 +51,7 @@ from trpg.server.notes import NoteError, NoteNotFoundError
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
+from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError, WorldError, WorldSaveFormatError
 
 __all__ = ["ERROR_STATUS", "create_app"]
@@ -132,9 +133,15 @@ def create_app(
     saves = save_dir if save_dir is not None else default_save_dir()
     provider = llm if llm is not None else LocalLlmProvider()
     app.state.runs = RunStore(lib, app.state.store, saves, llm=provider)
-    app.state.world = WorldStore(lib, app.state.store, saves / "world")  # 大世界（5A-5）
-    app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
     network = server if server is not None else load_server_settings()
+    start_date = network.season_start_date  # 開賽日（5F-1）；沒設定＝建立世界的當下
+    app.state.world = WorldStore(  # 大世界（5A-5）
+        lib,
+        app.state.store,
+        saves / "world",
+        season_start=None if start_date is None else season_start_at(lib, start_date),
+    )
+    app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
     app.state.server_settings = network  # 網路與健康檢查（5E-3）
     health = LlmHealth(provider, interval_s=network.llm_health_interval_s)
     world_llm = WorldLlm(provider, health)  # 大世界自己的 LLM 開關（5B-5）
@@ -151,6 +158,7 @@ def create_app(
         session_ttl_s=settings.session_ttl_s,
         season=app.state.world.current_season,  # 角色上限按賽季算（5D-R2）
     )
+    app.state.world.actor_of = app.state.accounts.owner_of  # 世界日誌記帳號（5F-1，Q15）
     app.state.login_limiter = LoginLimiter(  # 登入嘗試次數限制（5E-2）
         max_failures=settings.login_max_failures,
         ip_max_failures=settings.login_ip_max_failures,

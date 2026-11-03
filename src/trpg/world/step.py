@@ -57,7 +57,7 @@ from trpg.world.actions import (
     WorldEvent,
 )
 from trpg.world.battle import fight
-from trpg.world.clock import refresh_day
+from trpg.world.calendar import day_of
 from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
@@ -75,6 +75,7 @@ from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
+from trpg.world.season_board import after_season_step, roll_season
 from trpg.world.shadows import save_after_prep
 from trpg.world.situations import resolve_situation
 from trpg.world.social import hear_opportunity_hint, talk, tavern
@@ -168,8 +169,12 @@ def world_step(
     char: CharacterState,
     action: WorldAction,
     now: int,
+    *,
+    actor: str | None = None,
 ) -> StepResult:
-    """套用一個世界動作；不合法拋 :class:`WorldActionError`。動作之後推進任務（5B-4）。"""
+    """套用一個世界動作；不合法拋 :class:`WorldActionError`。動作之後推進任務（5B-4）。
+
+    ``actor`` 是做這個動作的帳號 ID（世界事件門檻的上線人數，Q15；5F-1）；``None``＝用角色 ID。"""
     if char.pending_flash is not None and not isinstance(action, FlashPickAction):
         raise WorldActionError("還有閃現的選項沒有選（flash_pick）")
     if (
@@ -178,6 +183,8 @@ def world_step(
         and not isinstance(action, OfferPickAction | NarrateAction)
     ):  # 敘述不改數值（只有事件敘述換骨架），三選一待選時也能寫進日誌（5B-5）
         raise WorldActionError("還有任務給的技能三選一沒有選（offer_pick）")
+    # 換日（5F-1）：世界事件的開始、門檻調整、失敗只寫進世界狀態（調整紀錄可查），不算這個角色的事件
+    world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
     before = char
     result = _dispatch(library, world, char, action, now)
@@ -192,7 +199,24 @@ def world_step(
     extra = [*extra, *joined]
     world, saved = save_after_prep(library, world, char, action, now)  # 城鎮整備存影子（5C-2）
     world, char, paid = after_step(library, world, char, (*events, *extra))  # 任務幣（5D-1）
-    if not ended and not settled and not extra and not saved and not paid and char is result.char:
+    world, char, season = after_season_step(  # 懸賞、世界事件、今日目標、上線紀錄（5F-1）
+        library,
+        world,
+        char,
+        (*events, *extra),
+        now=now,
+        actor=char.character_id if actor is None else actor,
+    )
+    paid = [*paid, *season]
+    if (
+        not ended
+        and not settled
+        and not extra
+        and not saved
+        and not paid
+        and char is result.char
+        and world is result.world
+    ):
         return result
     return StepResult(world=world, char=char, events=(*events, *extra, *saved, *paid))
 
@@ -382,7 +406,7 @@ def _perceive(
     """抵達後對相鄰的隱藏地點自動感知判定（#112；鄰居依 ID 排序）。"""
     rules = _rules(library)
     locations = world_map.location_by_id()
-    today = refresh_day(now)
+    today = day_of(library, now)
     region = world_map.region
     events: list[WorldEvent] = []
     for neighbor_id in world_map.neighbors(char.location):

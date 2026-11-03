@@ -115,6 +115,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "gear_mods",
     "crafts",
     "generated_skills",
+    "daily_goals",  # 5F-1 今日目標
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(
@@ -129,6 +130,11 @@ _WORLD: Final[dict[str, ResetKind]] = _all(
     "timed_flags",
     "shadows",
     "recipes",
+    "rolled_day",  # 5F-1 賽季日程
+    "activity",
+    "world_events",
+    "bounty_claims",
+    "level_bonus",
 )
 """世界狀態整個是數值類（#91「世界狀態」）；新的一季換新的 ``season_id``、種子與開始時間。"""
 

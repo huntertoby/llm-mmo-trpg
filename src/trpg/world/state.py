@@ -31,11 +31,14 @@ from trpg.world.clock import DayPhase
 __all__ = [
     "CHAR_FORMAT",
     "WORLD_FORMAT",
+    "BountyClaim",
     "CharacterState",
     "ClearedLocation",
     "CompanionAffinity",
     "CompanionBench",
     "CraftRecipe",
+    "DailyActivity",
+    "DailyGoalProgress",
     "EncounterResult",
     "EventTrigger",
     "GearMod",
@@ -54,8 +57,10 @@ __all__ = [
     "ShadowReport",
     "ShadowSnapshot",
     "ShopPurchase",
+    "TargetAdjustment",
     "ThreadState",
     "TimedFlag",
+    "WorldEventState",
     "WorldState",
 ]
 
@@ -115,6 +120,10 @@ class EncounterResult(_Model):
     """戰鬥解法指定的勝利條件（Phase 5B-4c；地圖支援時用它，否則全滅）；``None``＝地圖預設。"""
     world_flags: tuple[str, ...] = ()
     """遇敵當下有效的世界旗標（排序；Phase 5B-4c 世界級線頭到期結局的遭遇加人）。"""
+    level_bonus: int = Field(default=0, ge=0)
+    """遇敵當下該區的建議等級加成（Phase 5F-1，世界事件失敗 +1；敵人等級與經驗照加成後）。"""
+    bounty: str | None = Field(default=None, pattern=ID_PATTERN)
+    """遇敵當下這個地點貼出、還沒被搶的懸賞（Phase 5F-1；陣容照懸賞）。"""
 
 
 class EventTrigger(_Model):
@@ -488,6 +497,77 @@ class ShadowRecord(_Model):
     """已轉進主人角色的任務幣（Phase 5D-1；``coins`` 保留為累計）。"""
 
 
+class DailyActivity(_Model):
+    """某個刷新日有成功世界動作的帳號（Phase 5F-1，Q15；世界事件門檻依前一天的人數調整）。"""
+
+    day: int
+    actors: tuple[str, ...] = ()
+    """帳號 ID（沒有帳號時用角色 ID；排序、不重複）。"""
+
+    @field_validator("actors")
+    @classmethod
+    def _sorted_actors(cls, actors: tuple[str, ...]) -> tuple[str, ...]:
+        if list(actors) != sorted(set(actors)):
+            raise ValueError("actors 必須排序且不重複")
+        return actors
+
+
+class TargetAdjustment(_Model):
+    """世界事件門檻的一次調整（#103、Q14；可查證：依前一天的上線人數）。"""
+
+    day: int
+    """哪個刷新日調的。"""
+    players: int | None = Field(ge=0)
+    """前一天的上線帳號數；``None``＝沒有前一天的資料（用原門檻）。"""
+    target: int = Field(ge=1)
+
+
+class WorldEventState(_Model):
+    """一個世界事件的全服進度（Phase 5F-1，#103）。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    status: Literal["active", "succeeded", "failed"] = "active"
+    progress: int = Field(default=0, ge=0)
+    target: int = Field(ge=1)
+    adjustments: tuple[TargetAdjustment, ...] = ()
+    """門檻的調整紀錄（依日期）。"""
+    resolved_day: int | None = None
+    """成功或失敗的刷新日。"""
+
+
+class BountyClaim(_Model):
+    """某天某張懸賞被誰搶下（Phase 5F-1；09 9.7「先搶先贏」）。"""
+
+    day: int
+    bounty: str = Field(pattern=ID_PATTERN)
+    character_id: str = Field(pattern=ID_PATTERN)
+    name: str
+    """搶下的角色名（顯示用）。"""
+    at: int = Field(ge=0)
+
+
+class DailyGoalProgress(_Model):
+    """角色今天的今日目標進度（Phase 5F-1，#99；跨日歸零）。"""
+
+    day: int
+    progress: dict[str, int] = Field(default_factory=dict)
+    """目標 ID → 次數（依鍵排序）。"""
+    done: tuple[str, ...] = ()
+    """已完成、已給任務幣的目標（排序）。"""
+
+    @field_validator("progress")
+    @classmethod
+    def _sorted_progress(cls, progress: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(progress.items()))
+
+    @field_validator("done")
+    @classmethod
+    def _sorted_done(cls, done: tuple[str, ...]) -> tuple[str, ...]:
+        if list(done) != sorted(set(done)):
+            raise ValueError("done 必須排序且不重複")
+        return done
+
+
 class WorldState(_Model):
     """共享的世界快照（``trpg-world/1``）。世界的變化由世界動作日誌重播得到，快照只是快取。"""
 
@@ -508,6 +588,45 @@ class WorldState(_Model):
     """每個角色的影子（依主人 ID 排序、每人一筆；Phase 5C-2）。"""
     recipes: tuple[RecipeRecord, ...] = ()
     """打造過的配方與首位發現者（依配方碼排序、不重複；Phase 5D-3，M6）。"""
+
+    # --- 5F-1 賽季日程（邏輯在 trpg.world.season_board） ---
+    rolled_day: int | None = None
+    """換日處理到的刷新日（``None``＝還沒處理過，從開賽日補）。"""
+    activity: tuple[DailyActivity, ...] = ()
+    """今天與昨天有動作的帳號（依日期排序）。"""
+    world_events: tuple[WorldEventState, ...] = ()
+    """開始過的世界事件（依 ID 排序）。"""
+    bounty_claims: tuple[BountyClaim, ...] = ()
+    """懸賞被搶下的紀錄（依日期、懸賞排序；每天每張最多一筆）。"""
+    level_bonus: dict[str, int] = Field(default_factory=dict)
+    """區域 → 建議等級加成（世界事件失敗，9.6.7 #15；依鍵排序）。"""
+
+    @field_validator("level_bonus")
+    @classmethod
+    def _sorted_bonus(cls, bonus: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(bonus.items()))
+
+    @field_validator("bounty_claims")
+    @classmethod
+    def _claims_sorted(cls, claims: tuple[BountyClaim, ...]) -> tuple[BountyClaim, ...]:
+        keys = [(c.day, c.bounty) for c in claims]
+        if keys != sorted(set(keys)):
+            raise ValueError("bounty_claims 必須依日期、懸賞排序且不重複")
+        return claims
+
+    @field_validator("world_events")
+    @classmethod
+    def _events_sorted(cls, events: tuple[WorldEventState, ...]) -> tuple[WorldEventState, ...]:
+        ids = [e.id for e in events]
+        if ids != sorted(set(ids)):
+            raise ValueError("world_events 必須依 ID 排序且不重複")
+        return events
+
+    def claim_of(self, day: int, bounty: str) -> BountyClaim | None:
+        return next((c for c in self.bounty_claims if c.day == day and c.bounty == bounty), None)
+
+    def world_event(self, event_id: str) -> WorldEventState | None:
+        return next((e for e in self.world_events if e.id == event_id), None)
 
     @model_validator(mode="before")
     @classmethod
@@ -756,6 +875,10 @@ class CharacterState(_Model):
     """打造、強化、重骰、指定過的裝備（物品 ID → 紀錄；依 ID 排序）。"""
     crafts: int = Field(default=0, ge=0)
     """打造過幾件（打造品 ID 的流水號，同配方打兩件不撞 ID）。"""
+
+    # --- 5F-1 今日目標（邏輯在 trpg.world.season_board） ---
+    daily_goals: DailyGoalProgress | None = None
+    """今天的今日目標進度（``None``＝還沒有；跨日歸零）。"""
 
     @field_validator("gear_mods")
     @classmethod

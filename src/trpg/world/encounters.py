@@ -82,6 +82,8 @@ class EncounterLineup(BaseModel):
     """第三方（Phase 5B-M3 三方混戰：和我方、敵方都敵對）；舊資料沒有＝空。"""
     variant: str | None = None
     """用了哪個遭遇變化（劇情旗標；Phase 5B-4b 線頭到期結局）；``None``＝一般抽陣容。"""
+    bounty: str | None = None
+    """懸賞陣容（Phase 5F-1）；``None``＝不是懸賞。"""
 
     @property
     def has_elite_affix(self) -> bool:
@@ -122,6 +124,9 @@ def roll_lineup(
             third=tuple(LineupMember(unit=_gated(u, entry, gate_level)) for u in group.third),
             variant=variant.flag,
         )
+    bounty = _bounty_lineup(library, table, encounter)
+    if bounty is not None:
+        return bounty
     rng = lineup_rng(encounter.battle_seed)
     group = _pick_group(rng, table, entry)
     members = [LineupMember(unit=_gated(u, entry, gate_level)) for u in group.units]
@@ -234,6 +239,28 @@ def _gated(unit: str, entry: LocationEncounters, level: int) -> str:
         if gate.unit == unit and level < gate.min_level:
             return gate.otherwise
     return unit
+
+
+def _bounty_lineup(
+    library: ContentLibrary, table: EncounterTable, encounter: EncounterResult
+) -> EncounterLineup | None:
+    """懸賞陣容（Phase 5F-1）：懸賞的陣容＋精英排最前；不抽、不混營地精英、不加人。內容改掉懸賞
+    時退回一般抽陣容。"""
+    season = library.world_season
+    if encounter.bounty is None or season is None:
+        return None
+    bounty = season.bounty_by_id().get(encounter.bounty)
+    if bounty is None:
+        return None
+    group = table.group_by_id()[bounty.group]
+    elite = LineupMember(unit=bounty.elite.unit, affix=bounty.elite.affix)
+    return EncounterLineup(
+        region=encounter.region,
+        location=encounter.location,
+        group=group.id,
+        members=(elite, *(LineupMember(unit=u) for u in group.units)),
+        bounty=bounty.id,
+    )
 
 
 def _pick_group(rng: Rng, table: EncounterTable, entry: LocationEncounters) -> EncounterGroupDef:

@@ -47,8 +47,9 @@ def _play(
     world: WorldState,
     chars: dict[str, CharacterState],
     picks: list[tuple[int, int, int, bool]],
-) -> list[WorldLogEntry]:
-    """依 ``picks``（角色、選項、時間增量、趕路）產生合法的日誌（不合法的動作跳過，同 API 層）。"""
+) -> tuple[list[WorldLogEntry], WorldState]:
+    """依 ``picks``（角色、選項、時間增量、趕路）產生合法的日誌（不合法的動作跳過，同 API 層）；
+    回傳日誌與最後的世界（5F-1 起每個動作都會記上線紀錄，世界會變）。"""
     entries: list[WorldLogEntry] = []
     now = NOON
     ids = sorted(chars)
@@ -69,7 +70,7 @@ def _play(
         entries.append(
             WorldLogEntry(seq=len(entries) + 1, now=now, character_id=char_id, action=action)
         )
-    return entries
+    return entries, world
 
 
 def _snapshot(world: WorldState, chars: dict[str, CharacterState]) -> str:
@@ -85,12 +86,12 @@ def test_replay_matches_live_play(calm: ContentLibrary, make_char: MakeChar) -> 
     start = _initial(make_char)
     live = dict(start)
     picks = [(i % 2, (i * 7) % 5, 37 * (i % 3), i % 4 == 0) for i in range(60)]
-    entries = _play(calm, world, live, picks)
+    entries, final = _play(calm, world, live, picks)
     assert len(entries) > 20
 
     first = replay(calm, world, start, entries)
     second = replay(calm, world, start, entries)
-    assert _snapshot(first.world, first.characters) == _snapshot(world, live)
+    assert _snapshot(first.world, first.characters) == _snapshot(final, live)
     assert _snapshot(first.world, first.characters) == _snapshot(second.world, second.characters)
     assert first.events == second.events
 
@@ -99,7 +100,7 @@ def test_replay_from_serialized_log(library: ContentLibrary, make_char: MakeChar
     world = make_world()
     start = _initial(make_char)
     picks = [(i % 2, i, 120, False) for i in range(30)]
-    entries = _play(library, world, dict(start), picks)
+    entries, _ = _play(library, world, dict(start), picks)
     text = dumps_log(entries)
     restored = loads_log(text)
     assert restored == tuple(entries)
@@ -174,9 +175,9 @@ def test_replay_is_deterministic(
     world = make_world(season_seed=seed)
     start = _initial(make_char)
     live = dict(start)
-    entries = _play(library, world, live, picks)
+    entries, final = _play(library, world, live, picks)
     result = replay(library, world, start, entries)
-    assert _snapshot(result.world, result.characters) == _snapshot(world, live)
+    assert _snapshot(result.world, result.characters) == _snapshot(final, live)
 
 
 def test_replay_with_battle_and_town(library: ContentLibrary, make_char: MakeChar) -> None:

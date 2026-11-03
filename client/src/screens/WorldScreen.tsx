@@ -18,6 +18,7 @@ import { WorldBagScreen } from "../world/BagScreen";
 import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
+import { BoardPanel } from "../world/BoardPanel";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
@@ -282,6 +283,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             <WorldGrowth view={view} busy={busy} onChoose={choose} onAct={actStatus} onClose={() => setWant("map")} />
           )}
           {leftPane(view, want) === "quests" && <QuestLog view={view} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "board" && charId !== null && (
+            <BoardPanel characterId={charId} view={view} onClose={() => setWant("map")} />
+          )}
           {leftPane(view, want) === "bag" && <WorldBagScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "shop" && <WorldShopScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "smithy" && <WorldSmithyScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}

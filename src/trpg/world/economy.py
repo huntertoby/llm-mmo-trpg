@@ -29,7 +29,7 @@ from trpg.shared.rng import Rng, fnv1a64
 from trpg.shared.types import UnitId
 from trpg.world.actions import QuestCompletedEvent, WorldEvent
 from trpg.world.affinity import affinity_rules, change_affinity, rank_at_least, rank_of
-from trpg.world.clock import refresh_day
+from trpg.world.calendar import day_of
 from trpg.world.common import max_hp, max_mana
 from trpg.world.economy_actions import (
     BuyAction,
@@ -171,7 +171,7 @@ def shop_affinity_left(
     if shop.affinity is None:
         return 0
     row = char.shop_affinity.get(shop.npc)
-    gained = row.gained if row is not None and row.day == refresh_day(now) else 0
+    gained = row.gained if row is not None and row.day == day_of(library, now) else 0
     return max(0, shop.affinity.daily_max - gained)
 
 
@@ -286,7 +286,7 @@ def _buy(
     if shop.affinity is not None and left > 0:  # 消費一次 +per_purchase、每天上限（18.7.6）
         delta = min(shop.affinity.per_purchase, left)
         row = char.shop_affinity.get(shop.npc)
-        day = refresh_day(now)
+        day = day_of(library, now)
         gained = (row.gained if row is not None and row.day == day else 0) + delta
         rows_aff = {**char.shop_affinity, shop.npc: CompanionAffinity(day=day, gained=gained)}
         char = char.model_copy(update={"shop_affinity": rows_aff})

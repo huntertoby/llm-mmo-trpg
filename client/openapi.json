@@ -2286,6 +2286,49 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/board": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Board",
+        "description": "城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。",
+        "operationId": "get_board_api_world_characters__character_id__board_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonBoardView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/llm": {
       "get": {
         "tags": [
@@ -3962,6 +4005,213 @@
         ],
         "title": "BattleView",
         "description": "``team`` 視角的戰場。"
+      },
+      "BoardBountyView": {
+        "properties": {
+          "bounty": {
+            "type": "string",
+            "title": "Bounty"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "location_zh": {
+            "type": "string",
+            "title": "Location Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "coins": {
+            "type": "integer",
+            "title": "Coins"
+          },
+          "open": {
+            "type": "boolean",
+            "title": "Open"
+          },
+          "claimed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed By"
+          },
+          "status_zh": {
+            "type": "string",
+            "title": "Status Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bounty",
+          "name_zh",
+          "location_zh",
+          "level",
+          "coins",
+          "open",
+          "status_zh"
+        ],
+        "title": "BoardBountyView",
+        "description": "一張今天的懸賞（18.7.4；先搶先贏）。"
+      },
+      "BoardClearedView": {
+        "properties": {
+          "location_zh": {
+            "type": "string",
+            "title": "Location Zh"
+          },
+          "respawn_at": {
+            "type": "integer",
+            "title": "Respawn At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "location_zh",
+          "respawn_at"
+        ],
+        "title": "BoardClearedView",
+        "description": "所有人看到的已清空地點（9.6.7 #15）。"
+      },
+      "BoardGoalView": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "coins": {
+            "type": "integer",
+            "title": "Coins"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "goal",
+          "text_zh",
+          "progress",
+          "count",
+          "done",
+          "coins"
+        ],
+        "title": "BoardGoalView",
+        "description": "一條今日目標（#99）與這個角色的進度。"
+      },
+      "BoardMilestoneView": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "name_zh"
+        ],
+        "title": "BoardMilestoneView"
+      },
+      "BoardWorldEventView": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "status_zh": {
+            "type": "string",
+            "title": "Status Zh"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "target": {
+            "type": "integer",
+            "title": "Target"
+          },
+          "permille": {
+            "type": "integer",
+            "title": "Permille"
+          },
+          "days_zh": {
+            "type": "string",
+            "title": "Days Zh"
+          },
+          "target_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Note Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event",
+          "name_zh",
+          "text_zh",
+          "status",
+          "status_zh",
+          "progress",
+          "target",
+          "permille",
+          "days_zh"
+        ],
+        "title": "BoardWorldEventView",
+        "description": "一個世界事件的全服進度（#103）。"
       },
       "BombOut": {
         "properties": {
@@ -14182,6 +14432,135 @@
           "in_battle"
         ],
         "title": "SaveSummary"
+      },
+      "SeasonBoardView": {
+        "properties": {
+          "season": {
+            "$ref": "#/components/schemas/SeasonInfoView"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/BoardGoalView"
+            },
+            "type": "array",
+            "title": "Goals",
+            "default": []
+          },
+          "goals_note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals Note Zh"
+          },
+          "bounties": {
+            "items": {
+              "$ref": "#/components/schemas/BoardBountyView"
+            },
+            "type": "array",
+            "title": "Bounties",
+            "default": []
+          },
+          "world_events": {
+            "items": {
+              "$ref": "#/components/schemas/BoardWorldEventView"
+            },
+            "type": "array",
+            "title": "World Events",
+            "default": []
+          },
+          "cleared": {
+            "items": {
+              "$ref": "#/components/schemas/BoardClearedView"
+            },
+            "type": "array",
+            "title": "Cleared",
+            "default": []
+          },
+          "level_bonus_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Level Bonus Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "season"
+        ],
+        "title": "SeasonBoardView",
+        "description": "城鎮公告板的整份資料。"
+      },
+      "SeasonInfoView": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "running",
+              "ended"
+            ],
+            "title": "Status"
+          },
+          "status_zh": {
+            "type": "string",
+            "title": "Status Zh"
+          },
+          "phase_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Zh"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/BoardMilestoneView"
+            },
+            "type": "array",
+            "title": "Upcoming",
+            "default": []
+          },
+          "next_refresh_at": {
+            "type": "integer",
+            "title": "Next Refresh At"
+          },
+          "next_refresh_zh": {
+            "type": "string",
+            "title": "Next Refresh Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "days",
+          "status",
+          "status_zh",
+          "next_refresh_at",
+          "next_refresh_zh"
+        ],
+        "title": "SeasonInfoView",
+        "description": "賽季第幾天與日程（09 9.7）。"
       },
       "SegmentLine": {
         "properties": {

@@ -108,6 +108,7 @@ function HerePanel({
   const [editing, setEditing] = useState(false);
   const shopping = pane === "shop";
   const smithing = pane === "smithy";
+  const reading = pane === "board";
   const hiring = useHireToggle(view.party);
   const free = view.encounter === null && view.battle_id === null;
   return (
@@ -154,6 +155,13 @@ function HerePanel({
           <Hint text="鐵匠：打造、強化、分解；附魔台：重骰、指定詞條">
             <button type="button" aria-expanded={smithing} disabled={busy} onClick={() => onPane?.("smithy")} data-testid="world-smithy-toggle">
               {smithing ? "回到地點圖" : "鐵匠"}
+            </button>
+          </Hint>
+        )}
+        {here.can_rest && onPane !== undefined && (
+          <Hint text="今日目標、懸賞板（先搶先贏）、世界事件的全服進度">
+            <button type="button" aria-expanded={reading} disabled={busy} onClick={() => onPane("board")} data-testid="world-board-toggle">
+              {reading ? "回到地點圖" : "公告板"}
             </button>
           </Hint>
         )}
