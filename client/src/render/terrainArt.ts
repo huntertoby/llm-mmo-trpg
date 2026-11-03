@@ -13,6 +13,7 @@ import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
 import { crystalTerrain } from "./crystalTerrain";
 import { FROST_TERRAIN } from "./frostTerrain";
 import { pickThemed, themeKey, waterTintOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
+import { ALL_CORNERS, blobPath, blobShape, strokeBlobEdges, type BlobShape, type Corners } from "./surfaceBlobs";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
 export const ART_T = 52;
@@ -36,6 +37,8 @@ export interface TileArtSpec extends ArtTheme {
   surface: string;
   /** 該方向的鄰格也是同一種表面（連成一片）。 */
   surfSame: Sides;
+  /** 四個斜鄰是不是同一種表面（6A-4a 併塊的內凹角）；沒給視為同種（角補滿）。 */
+  surfDiag?: Corners;
   /** 該方向的鄰格不是同一種地形（畫崖緣、冰緣）；地圖外視為同種。 */
   lip: Sides;
   /** 牆：南鄰不是牆就畫立面。 */
@@ -47,6 +50,7 @@ export interface TileArtSpec extends ArtTheme {
 }
 
 const flags = (s: Sides): string => `${+s.n}${+s.s}${+s.w}${+s.e}`;
+const diagFlags = (c: Corners): string => `${+c.nw}${+c.ne}${+c.se}${+c.sw}`;
 
 /** 貼圖快取鍵：規格相同 ＝ 圖相同。 */
 export function tileArtKey(s: TileArtSpec): string {
@@ -57,6 +61,7 @@ export function tileArtKey(s: TileArtSpec): string {
     s.height,
     s.surface,
     flags(s.surfSame),
+    diagFlags(s.surfDiag ?? ALL_CORNERS),
     flags(s.lip),
     +s.wallFace,
     +s.blocked,
@@ -325,160 +330,207 @@ function heightLight(ctx: Ctx, h: number): void {
   ctx.fillRect(0, 0, T, T);
 }
 
-// ---- 表面：相鄰同種表面連成一片，不是一格一格的方塊 ----
+/// ---- 表面（6A-4a 地表併塊）：同種表面的相鄰格併成一塊圓角有機形狀（`surfaceBlobs.ts`），不畫成方塊 ----
+// 每種表面：填色 → 紋理（裁在形狀內）→ 外緣（只描露在外面的邊，接縫不描）。形狀與紋理都只看格子座標雜湊。
 
-function surfaceBlob(ctx: Ctx, s: TileArtSpec, color: string, alpha: number): void {
-  const inset = 4;
-  const l = s.surfSame.w ? 0 : inset;
-  const t = s.surfSame.n ? 0 : inset;
-  const rr = s.surfSame.e ? 0 : inset;
-  const b = s.surfSame.s ? 0 : inset;
-  ctx.fillStyle = rgba(color, alpha);
+/** 表面外緣的筆觸：顏色、粗細與可選的光暈（火）。光暈只在格子貼圖內，不會畫到別格。 */
+interface SurfaceEdge {
+  color: string;
+  width: number;
+  glow?: string;
+}
+
+/** 一種表面的畫法：底色、紋理（已裁在形狀內）、外緣。 */
+interface SurfaceStyle {
+  fill: (s: TileArtSpec) => string;
+  texture?: (ctx: Ctx, s: TileArtSpec, r: () => number) => void;
+  edge: SurfaceEdge;
+}
+
+function waterTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  ctx.strokeStyle = "rgba(220,240,255,0.7)";
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 2; i++) {
+    const wx = 8 + r() * (T - 26);
+    const wy = 12 + r() * (T - 22);
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    ctx.quadraticCurveTo(wx + 5, wy - 4, wx + 10, wy);
+    ctx.stroke();
+  }
+}
+
+/** 冰：反光斜線＋細裂紋。 */
+function iceTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  const ox = (r() - 0.5) * 10;
+  const oy = (r() - 0.5) * 8;
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.roundRect(l, t, T - l - rr, T - t - b, [
-    l && t ? 12 : 0,
-    rr && t ? 12 : 0,
-    rr && b ? 12 : 0,
-    l && b ? 12 : 0,
-  ]);
+  ctx.moveTo(14 + ox, 20 + oy);
+  ctx.lineTo(24 + ox, 12 + oy);
+  ctx.moveTo(20 + ox, 26 + oy);
+  ctx.lineTo(34 + ox, 14 + oy);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(90,138,168,0.6)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const cx = T * (0.45 + r() * 0.2);
+  const cy = T * (0.5 + r() * 0.2);
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + 8, cy + 10);
+  ctx.lineTo(cx + 14, cy + 6);
+  ctx.moveTo(cx + 8, cy + 10);
+  ctx.lineTo(cx + 4 + r() * 6, cy + 16);
+  ctx.stroke();
+}
+
+/** 油：虹彩亮斑＋一抹白色油光。 */
+function oilTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  const cx = T * (0.3 + r() * 0.3);
+  const cy = T * (0.3 + r() * 0.3);
+  const g = ctx.createLinearGradient(cx - 12, cy - 6, cx + 12, cy + 6);
+  g.addColorStop(0, "rgba(160,90,220,0.4)");
+  g.addColorStop(0.5, "rgba(80,200,160,0.32)");
+  g.addColorStop(1, "rgba(230,200,80,0.3)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 11, 4.5, -0.4 + (r() - 0.5) * 0.6, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(cx + 11, cy + 11, 6, 2.5, -0.4, 0, TAU);
   ctx.fill();
 }
 
-type SurfaceDrawer = (ctx: Ctx, s: TileArtSpec, r: () => number) => void;
+/** 火：中央光暈＋三簇火苗。 */
+function fireTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  const glow = ctx.createRadialGradient(T / 2, T * 0.6, 2, T / 2, T * 0.6, T * 0.6);
+  glow.addColorStop(0, "rgba(255,200,60,0.8)");
+  glow.addColorStop(1, "rgba(255,90,20,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, T, T);
+  for (let i = 0; i < 3; i++) flame(ctx, 10 + i * 15 + r() * 6, T - 8 - r() * 8, 9 + r() * 5);
+}
 
-const SURFACE_DRAW: Readonly<Record<string, SurfaceDrawer>> = {
-  water(ctx, s, r) {
-    // `look.water_tint`（雲嶺雨中梯田：green）只微調水底色；水面反光線不變
-    surfaceBlob(ctx, s, waterTintOf(s.look) ?? PAL.water, 0.78);
-    ctx.strokeStyle = "rgba(220,240,255,0.7)";
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 2; i++) {
-      const wx = 8 + r() * (T - 26);
-      const wy = 12 + r() * (T - 22);
-      ctx.beginPath();
-      ctx.moveTo(wx, wy);
-      ctx.quadraticCurveTo(wx + 5, wy - 4, wx + 10, wy);
-      ctx.stroke();
-    }
-  },
-  ice(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.ice, 0.85);
-    ctx.strokeStyle = "rgba(120,180,220,0.7)";
-    ctx.lineWidth = 1;
+function poisonTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  ctx.strokeStyle = "rgba(220,255,180,0.8)";
+  ctx.fillStyle = "rgba(160,230,100,0.6)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
     ctx.beginPath();
-    const cx = T * (0.3 + r() * 0.4);
-    const cy = T * (0.3 + r() * 0.4);
-    for (let i = 0; i < 4; i++) {
-      const a = r() * TAU;
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + Math.cos(a) * 18, cy + Math.sin(a) * 18);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(10, T - 16);
-    ctx.lineTo(18, T - 24);
-    ctx.stroke();
-  },
-  oil(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.oil, 0.85);
-    const g = ctx.createLinearGradient(10, 10, 40, 30);
-    g.addColorStop(0, "rgba(160,90,220,0.35)");
-    g.addColorStop(0.5, "rgba(80,200,160,0.30)");
-    g.addColorStop(1, "rgba(230,200,80,0.25)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(T * (0.35 + r() * 0.3), T * (0.35 + r() * 0.3), 12, 6, r() * TAU, 0, TAU);
+    ctx.arc(8 + r() * (T - 16), 8 + r() * (T - 16), 2 + r() * 3, 0, TAU);
     ctx.fill();
-  },
-  fire(ctx, s, r) {
-    surfaceBlob(ctx, s, "#7a2a10", 0.6);
-    const glow = ctx.createRadialGradient(T / 2, T * 0.6, 2, T / 2, T * 0.6, T * 0.6);
-    glow.addColorStop(0, "rgba(255,200,60,0.8)");
-    glow.addColorStop(1, "rgba(255,90,20,0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, T, T);
-    for (let i = 0; i < 3; i++) flame(ctx, 10 + i * 15 + r() * 6, T - 8 - r() * 8, 9 + r() * 5);
-  },
-  poison(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.poison, 0.7);
-    ctx.strokeStyle = "rgba(220,255,180,0.8)";
-    ctx.fillStyle = "rgba(160,230,100,0.6)";
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath();
-      ctx.arc(8 + r() * (T - 16), 8 + r() * (T - 16), 2 + r() * 3, 0, TAU);
-      ctx.fill();
-      ctx.stroke();
-    }
-  },
-  // ---- 樣張沒有的表面：依同一套規則補（連成一片的底色＋該表面的標誌紋理）----
-  smoke(ctx, s, r) {
-    // 白灰半透明底＋幾個較大的雲團（貼圖以格子為界，雲團貼著邊緣被裁切，看起來浮在地面上）
-    surfaceBlob(ctx, s, PAL.smoke, 0.35);
-    const n = 4 + Math.floor(r() * 3);
-    for (let i = 0; i < n; i++) {
-      ctx.fillStyle = i % 3 === 2 ? "rgba(150,155,170,0.22)" : "rgba(235,238,245,0.38)";
-      ctx.beginPath();
-      ctx.arc(4 + r() * (T - 8), 4 + r() * (T - 8), 9 + r() * 7, 0, TAU);
-      ctx.fill();
-    }
-  },
-  holy(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.holy, 0.5);
-    const g = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.55);
-    g.addColorStop(0, "rgba(255,255,240,0.55)");
-    g.addColorStop(1, "rgba(255,255,240,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, T, T);
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = "round";
-    for (let i = 0; i < 3; i++) {
-      const cx = 10 + r() * (T - 20);
-      const cy = 10 + r() * (T - 20);
-      const k = 3 + r() * 3;
-      ctx.beginPath();
-      ctx.moveTo(cx - k, cy);
-      ctx.lineTo(cx + k, cy);
-      ctx.moveTo(cx, cy - k);
-      ctx.lineTo(cx, cy + k);
-      ctx.stroke();
-    }
-  },
-  darkness(ctx, _s, r) {
-    // 深紫徑向暈染（中心較深，不用橢圓斑塊避免和油混淆）＋2–3 道捲曲煙絲
-    const g = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.62);
-    g.addColorStop(0, rgba(PAL.darkness, 0.85));
-    g.addColorStop(1, rgba(PAL.darkness, 0.12));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, T, T);
-    ctx.strokeStyle = "rgba(190,130,240,0.5)";
-    ctx.lineWidth = 1.4;
-    ctx.lineCap = "round";
-    const wisps = 2 + Math.floor(r() * 2);
-    for (let i = 0; i < wisps; i++) {
-      const x0 = 8 + r() * (T - 16);
-      const y0 = T - 6 - r() * 10;
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.bezierCurveTo(x0 + 10, y0 - 10, x0 - 12, y0 - 18, x0 + 4, y0 - 26 - r() * 8);
-      ctx.bezierCurveTo(x0 + 10, y0 - 30, x0 + 12, y0 - 24, x0 + 6, y0 - 22);
-      ctx.stroke();
-    }
-  },
+    ctx.stroke();
+  }
+}
+
+/** 煙霧：幾個較大的雲團（裁在形狀內）。 */
+function smokeTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  const n = 4 + Math.floor(r() * 3);
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = i % 3 === 2 ? "rgba(150,155,170,0.22)" : "rgba(235,238,245,0.38)";
+    ctx.beginPath();
+    ctx.arc(4 + r() * (T - 8), 4 + r() * (T - 8), 9 + r() * 7, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function holyTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  const g = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.55);
+  g.addColorStop(0, "rgba(255,255,240,0.55)");
+  g.addColorStop(1, "rgba(255,255,240,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, T, T);
+  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 3; i++) {
+    const cx = 10 + r() * (T - 20);
+    const cy = 10 + r() * (T - 20);
+    const k = 3 + r() * 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - k, cy);
+    ctx.lineTo(cx + k, cy);
+    ctx.moveTo(cx, cy - k);
+    ctx.lineTo(cx, cy + k);
+    ctx.stroke();
+  }
+}
+
+/** 黑暗：深紫徑向暈染（中心較深，不用橢圓斑塊避免和油混淆）＋2–3 道捲曲煙絲。 */
+function darknessTexture(ctx: Ctx, _s: TileArtSpec, r: () => number): void {
+  const g = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.62);
+  g.addColorStop(0, rgba(PAL.darkness, 0.6));
+  g.addColorStop(1, rgba(PAL.darkness, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, T, T);
+  ctx.strokeStyle = "rgba(190,130,240,0.5)";
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  const wisps = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < wisps; i++) {
+    const x0 = 8 + r() * (T - 16);
+    const y0 = T - 6 - r() * 10;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.bezierCurveTo(x0 + 10, y0 - 10, x0 - 12, y0 - 18, x0 + 4, y0 - 26 - r() * 8);
+    ctx.bezierCurveTo(x0 + 10, y0 - 30, x0 + 12, y0 - 24, x0 + 6, y0 - 22);
+    ctx.stroke();
+  }
+}
+
+const SURFACE_STYLE: Readonly<Record<string, SurfaceStyle>> = {
+  // `look.water_tint`（雲嶺雨中梯田：green）只微調水底色；水面反光線不變
+  water: { fill: (s) => rgba(waterTintOf(s.look) ?? PAL.water, 0.78), texture: waterTexture, edge: { color: "rgba(220,240,255,0.55)", width: 1.2 } },
+  ice: { fill: () => rgba(PAL.ice, 0.88), texture: iceTexture, edge: { color: "#ffffff", width: 2.2 } },
+  oil: { fill: () => rgba(PAL.oil, 0.88), texture: oilTexture, edge: { color: "rgba(200,170,90,0.85)", width: 2 } },
+  fire: { fill: () => "rgba(70,26,10,0.7)", texture: fireTexture, edge: { color: "rgba(255,120,40,0.9)", width: 2, glow: "#ff8a2a" } },
+  poison: { fill: () => rgba(PAL.poison, 0.7), texture: poisonTexture, edge: { color: "rgba(190,240,140,0.85)", width: 1.6 } },
+  // ---- 樣張沒有的表面：沿用原本的顏色，用同一套併塊畫法 ----
+  smoke: { fill: () => rgba(PAL.smoke, 0.35), texture: smokeTexture, edge: { color: "rgba(235,238,245,0.6)", width: 1.4 } },
+  holy: { fill: () => rgba(PAL.holy, 0.5), texture: holyTexture, edge: { color: "rgba(255,245,200,0.9)", width: 1.6 } },
+  darkness: { fill: () => rgba(PAL.darkness, 0.55), texture: darknessTexture, edge: { color: "rgba(150,90,200,0.75)", width: 1.6 } },
 };
+
+/** 未知表面：灰色併塊、沒有紋理。 */
+const UNKNOWN_SURFACE: SurfaceStyle = { fill: () => rgba("#9a9aa8", 0.5), edge: { color: "rgba(210,210,220,0.6)", width: 1.4 } };
+
+/** 這一格表面的形狀（四鄰、斜鄰的同種旗標 → 併塊）。 */
+export function surfaceShape(s: TileArtSpec): BlobShape {
+  return blobShape(s.x, s.y, s.surfSame, s.surfDiag ?? ALL_CORNERS, T);
+}
 
 function drawSurface(ctx: Ctx, s: TileArtSpec): void {
   const r = rng(s.x, s.y, 20);
-  const draw = SURFACE_DRAW[s.surface];
-  if (draw !== undefined) draw(ctx, s, r);
-  else surfaceBlob(ctx, s, "#9a9aa8", 0.5); // 未知表面：灰色連成一片的底色
+  const style = SURFACE_STYLE[s.surface] ?? UNKNOWN_SURFACE;
+  const shape = surfaceShape(s);
+  ctx.save();
+  ctx.beginPath();
+  blobPath(ctx, shape);
+  ctx.fillStyle = style.fill(s);
+  ctx.fill();
+  if (style.texture !== undefined) {
+    ctx.clip();
+    style.texture(ctx, s, r);
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = style.edge.color;
+  ctx.lineWidth = style.edge.width;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  if (style.edge.glow !== undefined) {
+    ctx.shadowColor = style.edge.glow;
+    ctx.shadowBlur = 6;
+  }
+  strokeBlobEdges(ctx, shape);
+  ctx.restore();
 }
 
 export function hasSurfaceArt(surface: string): boolean {
-  return surface in SURFACE_DRAW;
+  return surface in SURFACE_STYLE;
 }
 
 /** 畫一個格子（座標以 ART_T 為單位；呼叫端負責縮放與裁切）。 */
@@ -492,8 +544,5 @@ export function drawTile(ctx: Ctx, s: TileArtSpec): void {
   }
   if (!s.blocked) heightLight(ctx, s.height);
   if (s.surface !== "none") drawSurface(ctx, s);
-  // 極淡格線：讓地面連成一片又看得出格子
-  ctx.strokeStyle = "rgba(0,0,0,0.14)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, T - 1, T - 1);
+  // 6A-4a（D 版待機）：不畫格線；選移動、選技能時的格子浮出由高亮層另畫
 }

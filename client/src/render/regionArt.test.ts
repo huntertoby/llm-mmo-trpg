@@ -286,7 +286,7 @@ describe("雲嶺換皮", () => {
       drawTile(ref.ctx, tileSpec({ surface }));
       const got = mockCtx();
       drawTile(got.ctx, tileSpec({ surface, ...CLOUD }));
-      const refTail = ref.calls.slice(base - 3); // 表面（S）＋格線（3 個呼叫）；地形與高度明暗在前
+      const refTail = ref.calls.slice(base); // 表面（S）；地形與高度明暗在前（6A-4a 起不畫格線）
       expect(refTail.length).toBeGreaterThan(3);
       expect(got.calls.slice(-refTail.length), surface).toEqual(refTail);
     }
