@@ -27,6 +27,7 @@ import { WorldField } from "../world/WorldField";
 import { mapPaneKind, PLACE_NAME_MS, placeBanner, type FieldTarget } from "../world/fieldModel";
 import { EncounterPanel, HerePanel, WorldPanel } from "../world/WorldPanel";
 import { WorldHud } from "../world/WorldHud";
+import { RegionMap } from "../world/RegionMap";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
   addToasts,
@@ -130,6 +131,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
+  /** 區域圖（M，6C-6）：浮動全畫面面板，和 HUD 面板分開（關掉區域圖不動面板）。 */
+  const [regionOpen, setRegionOpen] = useState(false);
   const [toasts, setToasts] = useState<HudToast[]>([]);
   const toastSeq = useRef(0);
   /** 這次進入角色後已經到過的地點（第一次進入有限制的地點時跳紅框提示）。 */
@@ -475,14 +478,25 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     setHudPanel((cur) => togglePanel(cur, panel));
   }
   const closeHud = () => setHudPanel(null);
-  const hudKeys = useRef({ active: false, locked: false, button: hudButton, close: closeHud, map: () => undefined as void });
+  const hudKeys = useRef({
+    active: false,
+    locked: false,
+    region: false,
+    button: hudButton,
+    close: closeHud,
+    map: () => undefined as void,
+  });
   hudKeys.current = {
     active: hudMode,
     locked: panelLocked,
+    region: regionOpen,
     button: hudButton,
     close: closeHud,
-    map: () => pushToast([`大地圖：${NOT_OPEN_ZH}`], false),
+    map: () => setRegionOpen((open) => !open),
   };
+  useEffect(() => {
+    if (!hudMode && regionOpen) setRegionOpen(false); // 進戰鬥、離開實地地圖就收起區域圖
+  }, [hudMode, regionOpen]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const h = hudKeys.current;
@@ -490,13 +504,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       const k = hudKey(e, typingInto(e.target));
       if (k === null) return;
       if (k.kind === "escape") {
-        if (!h.locked) h.close();
+        if (h.region) h.map();
+        else if (!h.locked) h.close();
         return;
       }
       if (e.repeat) return;
       e.preventDefault();
       if (k.kind === "map") h.map();
-      else h.button(k.id);
+      else if (!h.region) h.button(k.id); // 區域圖開著時只認 M、Esc
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -595,6 +610,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           panel={shown === null ? null : hudPanelContent(v)}
           panelLocked={panelLocked}
           onClosePanel={closeHud}
+          mapOpen={regionOpen}
           center={
             hasCenter ? (
               <>
@@ -605,6 +621,17 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             ) : null
           }
         />
+        {regionOpen && (
+          <RegionMap
+            map={v.map}
+            busy={busy}
+            onTeleport={(to) => {
+              setRegionOpen(false);
+              act({ kind: "use_teleport_stone", to });
+            }}
+            onClose={() => setRegionOpen(false)}
+          />
+        )}
       </div>
     );
   }

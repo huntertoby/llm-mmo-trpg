@@ -37,7 +37,7 @@ export const HUD_BUTTONS: readonly HudButton[] = [
   { id: "sneak", key: "r", name: "潛行", panel: null },
 ];
 
-/** 地圖鈕（M）：大地圖 6C-6 才做。 */
+/** 地圖鈕（M）：區域圖（6C-6；只能看，站在傳送石上或在城鎮裡可以點傳送石）。 */
 export const MAP_KEY = "m";
 
 /** 還沒開放的功能按了之後的提示。 */

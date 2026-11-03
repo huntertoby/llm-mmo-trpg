@@ -18,6 +18,8 @@ function loc(over: Partial<WorldLocationView> = {}): WorldLocationView {
     blocked_zh: null,
     cleared: false,
     hidden: false,
+    fog: "visited",
+    quest_marks: [],
     ...over,
   };
 }
