@@ -32,6 +32,9 @@ class WorldLogEntry(BaseModel):
     now: int = Field(ge=0)
     character_id: str = Field(pattern=ID_PATTERN)
     action: WorldAction
+    actor: str | None = None
+    """做這個動作的帳號 ID（Phase 5F-1：世界事件門檻的上線人數）；``None``＝用角色 ID（開發模式、
+    舊日誌）。"""
 
 
 @dataclass(frozen=True)
@@ -64,7 +67,7 @@ def replay(
         char = chars.get(entry.character_id)
         if char is None:
             raise WorldReplayError(f"第 {entry.seq} 筆：找不到角色 {entry.character_id}")
-        result = world_step(library, world, char, entry.action, entry.now)
+        result = world_step(library, world, char, entry.action, entry.now, actor=entry.actor)
         world = result.world
         chars[entry.character_id] = result.char
         events += [(entry.seq, event) for event in result.events]

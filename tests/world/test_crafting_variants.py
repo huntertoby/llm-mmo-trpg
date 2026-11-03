@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.world.helpers import NOON, make_world
+from tests.world.helpers import NOON, make_world, without_season
 from trpg.content.equipment import ItemDef
 from trpg.content.item_gen import affix_choices
 from trpg.content.library import ContentLibrary
@@ -117,7 +117,7 @@ def test_variant_code_reproduces_item(library: ContentLibrary, make_char: MakeCh
     assert copy.id == f"item_craft_{code}_1"
     event = _crafted(result)
     assert event.code == code and not event.discovered and event.discoverer_name
-    assert result.world == world  # 已知配方，世界不變
+    assert without_season(result.world) == without_season(world)  # 已知配方，世界不變
     # 費用照付：基礎打造＋重骰 20、40＋指定（第 3 次改動）；精華 1＋1＋3
     base = plan_craft(library, world, bob, CraftAction(station=SMITHY, code=plan.base_code))
     rules = library.world_crafting
@@ -174,7 +174,7 @@ def test_old_format_mod_does_not_make_code(library: ContentLibrary, make_char: M
     result = _step(library, world, char, RerollAction(station=ENCHANTER, item=item.id, index=0))
     event = _changed(result)
     assert event.code is None and not event.discovered
-    assert result.world == world
+    assert without_season(result.world) == without_season(world)
     assert result.char.gear_mods[item.id].variant is None
 
 
