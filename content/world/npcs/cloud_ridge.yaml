@@ -32,7 +32,7 @@ npcs:
     secret_zh: 想離開道觀
     hooks_zh: 導師任務鏈（#95）
   - id: hunter_ayue
-    aliases_zh: [獵人]
+    aliases_zh: [阿岳, 獵戶阿岳]
     name_zh: 阿岳
     role_zh: 獵戶，劇情夥伴
     location: hunter_hut
@@ -77,7 +77,7 @@ npcs:
     hooks_zh: 隱藏地點；狐族主角有專屬對話
   # Phase 5D-3 新增；5D-3b 照玩法 PM 補的 18.5 人設卡改寫。
   - id: smith_shi
-    aliases_zh: [師傅, 鐵匠]
+    aliases_zh: [石師傅, 鐵匠]
     name_zh: 石師傅
     role_zh: 鐵匠
     location: mist_ferry
