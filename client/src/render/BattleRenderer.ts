@@ -59,6 +59,10 @@ import {
   placeTags,
   type TileGeo,
 } from "./pathArt";
+import { cameraNudge, easeInOut, slipPose, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
+import { beatEffects } from "./walkFx";
+import { FEET } from "./unitSprite";
+import type { Facing } from "../api/types";
 
 export interface DirectionMark {
   pos: Pos;
@@ -177,6 +181,12 @@ export class BattleRenderer {
   private effectClock = 0;
   private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
+  /** 單位的繪製資料（走路轉彎時用新的朝向重建小人，6A-4d）。 */
+  private readonly unitDrawOf = new Map<string, UnitDraw>();
+  /** 移動中鏡頭稍微跟著角色（6A-4d）：目前的偏移與目標，加在戰場圖層上。 */
+  private readonly cam = { x: 0, y: 0, tx: 0, ty: 0 };
+  private camTick: ((ticker: Ticker) => void) | null = null;
+  private worldBaseY = 0;
   /** 程式繪製的地形、物件貼圖快取（Phase 3-16a）。 */
   private readonly art = new ArtTextures();
   private model: DrawModel | null = null;
@@ -239,6 +249,8 @@ export class BattleRenderer {
     this.clearLostTimer();
     for (const e of this.effectList) e.end?.();
     this.effectList = [];
+    if (this.ready && this.camTick !== null) this.app.ticker?.remove(this.camTick);
+    this.camTick = null;
     if (this.ready) {
       this.app.canvas.removeEventListener("webglcontextlost", this.onContextLost);
       this.app.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
@@ -303,7 +315,8 @@ export class BattleRenderer {
   /** 畫布的繪製尺寸 ＝ 模型像素（含上方預留）；解析度 ＝ 裝置像素比 × 縮放；CSS 大小 ＝ 模型像素 × 縮放。 */
   private applySize(model: DrawModel): void {
     const size = stagePixels(model);
-    this.world.y = topReserve(model);
+    this.worldBaseY = topReserve(model);
+    this.world.y = this.worldBaseY + this.cam.y;
     const resolution = (window.devicePixelRatio || 1) * this.scale;
     this.art.setScreenScale(resolution);
     const r = this.app.renderer;
@@ -343,6 +356,7 @@ export class BattleRenderer {
     clearLayer(this.silhouettes);
     this.silhouetteOf.clear();
     this.unitSprites.clear();
+    this.unitDrawOf.clear();
     this.pulses.clear();
     this.art.beginFrame();
     this.flameMarks = [];
@@ -405,7 +419,10 @@ export class BattleRenderer {
     const sprite = buildUnitSprite(this.art, this.pulses, u);
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
-    if (!u.downed) this.unitSprites.set(u.id, sprite);
+    if (!u.downed) {
+      this.unitSprites.set(u.id, sprite);
+      this.unitDrawOf.set(u.id, u);
+    }
     if (!occluded(model, u)) return;
     const c = this.center(u);
     const ring = u.summon ? RING.summon : RING[u.team];
@@ -906,6 +923,151 @@ export class BattleRenderer {
     }
   }
 
+  /**
+   * 一格一格走（6A-4d）：每格緩入緩出、轉彎時轉身；踩到特殊地表時在那一格停頓並播效果（冰花、滑倒、
+   * 陷阱夾住、冒火、濺油），停頓結束才跳傷害數字與狀態圖示；倒在友軍格時短短滑回空格。鏡頭稍微跟著走路的人。
+   * `skip()` 為真時直接跳到終點。人物先整個小人平移（骨架走路動畫是 6M-3）。
+   */
+  async animateWalk(walk: WalkAnim, skip: () => boolean): Promise<void> {
+    if (!this.ready) return;
+    let sprite = this.unitSprites.get(walk.unitId);
+    if (sprite === undefined) return;
+    const outline = this.silhouetteOf.get(walk.unitId);
+    if (outline !== undefined) outline.visible = false;
+    let facing: Facing = this.unitDrawOf.get(walk.unitId)?.facing ?? "south";
+    let pose = { x: 0, y: 0 }; // 倒地後的位移（滑回時保持躺著）
+    const units = (row: number) => this.rows.row(row).units;
+    const track = (s: Container, from: Pos, to: Pos) => (t: number) => {
+      const layer = units(rowDuringMove(from.y, to.y, t));
+      if (!s.destroyed && s.parent !== layer) layer.addChild(s);
+      if (!s.destroyed) this.follow(s.position);
+    };
+    let last: Pos | null = null;
+    try {
+      for (const piece of walk.pieces) {
+        if (sprite.destroyed || skip()) break;
+        if (piece.kind === "beat") {
+          pose = await this.playBeat(sprite, piece, facing, skip);
+          continue;
+        }
+        if (piece.kind === "leg" && piece.facing !== facing) {
+          sprite = this.turn(walk.unitId, sprite, piece.facing);
+          facing = piece.facing;
+        }
+        const a = this.center(piece.from);
+        const b = this.center(piece.to);
+        const from = { x: a.x + pose.x, y: a.y + pose.y };
+        const to = { x: b.x + pose.x, y: b.y + pose.y };
+        const ease = piece.kind === "leg" ? easeInOut : (t: number) => 1 - (1 - t) ** 2;
+        await this.tween(sprite, from, to, piece.durationMs, skip, "slide", track(sprite, piece.from, piece.to), ease);
+        last = piece.to;
+      }
+    } finally {
+      // 略過：直接放到終點（之後的 `view` 會以結果重畫）
+      const end = [...walk.pieces].reverse().find((p): p is Exclude<typeof p, WalkBeat> => p.kind !== "beat");
+      if (end !== undefined && last !== end.to && !sprite.destroyed) {
+        const c = this.center(end.to);
+        sprite.position.set(c.x + pose.x, c.y + pose.y);
+        const layer = units(end.to.y);
+        if (sprite.parent !== layer) layer.addChild(sprite);
+      }
+      this.follow(null);
+    }
+  }
+
+  /** 走路途中的一個停頓：腳下效果 →（滑倒時倒地）→ 停頓 → 跳數字與狀態圖示。回傳倒地後的位移。 */
+  private async playBeat(sprite: Container, beat: WalkBeat, facing: Facing, skip: () => boolean): Promise<{ x: number; y: number }> {
+    const c = this.center(beat.pos);
+    if (beat.fxMs > 0) this.launch(beatEffects(beat.beat, { x: c.x, y: c.y + FEET }, this.effectClock, beat.fxMs));
+    let pose = { x: 0, y: 0 };
+    if (beat.beat === "slip") {
+      await this.during(beat.holdMs, skip, (t) => {
+        const p = slipPose(t, facing, FEET);
+        sprite.rotation = p.rotation;
+        sprite.position.set(c.x + p.x, c.y + p.y);
+      });
+      const p = slipPose(1, facing, FEET);
+      if (!sprite.destroyed) {
+        sprite.rotation = p.rotation;
+        sprite.position.set(c.x + p.x, c.y + p.y);
+      }
+      pose = { x: p.x, y: p.y };
+    } else {
+      await this.during(beat.holdMs, skip, () => undefined);
+    }
+    if (!skip()) this.playFeedback(beat.feedback, beat.feedbackMs);
+    return pose;
+  }
+
+  /** 等 `ms` 毫秒（跟著畫面的 ticker），每幀呼叫 `step(t)`；`skip()` 為真時立刻結束。 */
+  private during(ms: number, skip: () => boolean, step: (t: number) => void): Promise<void> {
+    if (ms <= 0 || skip()) return Promise.resolve();
+    return new Promise((resolve) => {
+      let elapsed = 0;
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        this.app.ticker?.remove(tick);
+        resolve();
+      };
+      const tick = (ticker: Ticker) => {
+        elapsed += ticker.deltaMS;
+        if (skip() || elapsed >= ms) {
+          finish();
+          return;
+        }
+        this.guard(() => step(elapsed / ms));
+      };
+      this.app.ticker.add(tick);
+      window.setTimeout(finish, ms + 300); // 分頁在背景時 ticker 會停
+    });
+  }
+
+  /** 轉身：用新的朝向重建小人，放在原位與原圖層（重畫場景時再以 `view` 為準）。 */
+  private turn(unitId: string, old: Container, facing: Facing): Container {
+    const draw = this.unitDrawOf.get(unitId);
+    if (draw === undefined || old.destroyed) return old;
+    const next = { ...draw, facing };
+    const fresh = buildUnitSprite(this.art, this.pulses, next);
+    fresh.position.copyFrom(old.position);
+    const parent = old.parent;
+    if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
+    old.destroy({ children: true });
+    this.unitSprites.set(unitId, fresh);
+    this.unitDrawOf.set(unitId, next);
+    return fresh;
+  }
+
+  /** 鏡頭跟著 `p`（戰場像素位置）；`null` ＝ 回到原位。偏移平滑地追上目標。 */
+  private follow(p: { x: number; y: number } | null): void {
+    const model = this.model;
+    if (!this.ready || model === null) return;
+    const target = p === null ? { x: 0, y: 0 } : cameraNudge(p, { width: model.width * T, height: model.height * T });
+    this.cam.tx = target.x;
+    this.cam.ty = target.y;
+    if (this.camTick !== null) return;
+    const tick = (ticker: Ticker) => {
+      const cam = this.cam;
+      const k = 1 - Math.exp(-ticker.deltaMS / 140);
+      cam.x += (cam.tx - cam.x) * k;
+      cam.y += (cam.ty - cam.y) * k;
+      const settled = Math.abs(cam.tx - cam.x) < 0.05 && Math.abs(cam.ty - cam.y) < 0.05;
+      if (settled) {
+        cam.x = cam.tx;
+        cam.y = cam.ty;
+      }
+      this.world.x = cam.x;
+      this.world.y = this.worldBaseY + cam.y;
+      if (settled && cam.tx === 0 && cam.ty === 0) {
+        this.app.ticker?.remove(tick);
+        this.camTick = null;
+      }
+    };
+    this.camTick = tick;
+    this.app.ticker.add(tick);
+  }
+
   private tween(
     sprite: Container,
     from: { x: number; y: number },
@@ -914,6 +1076,7 @@ export class BattleRenderer {
     skip: () => boolean,
     style: MoveStyle,
     onProgress?: (t: number) => void,
+    ease: (t: number) => number = (t) => t,
   ): Promise<void> {
     return new Promise((resolve) => {
       let elapsed = 0;
@@ -932,7 +1095,7 @@ export class BattleRenderer {
           sprite.alpha = Math.abs(t - 0.5) * 2;
           return;
         }
-        const p = lerpPos(from, to, t);
+        const p = lerpPos(from, to, ease(t));
         onProgress?.(t);
         sprite.position.set(p.x, p.y);
       };

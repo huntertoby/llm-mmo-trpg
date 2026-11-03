@@ -393,7 +393,7 @@ const MARKER_RIGHT = -T * 0.37 + 8;
 export const ROW_Y_FEET = T * 0.36 - ROW_GAP_HP - ROW_ICON_FEET / 2;
 
 /** 腳底（相對格子中心）。 */
-const FEET = T * 0.23;
+export const FEET = T * 0.23;
 /** 異形畫出來的高度不到人形頭頂（`DOLL_HEAD_TOP`）的 90% 才算「比人形矮」；差 10% 內（傀儡）視為一樣高（5A-ART5 代決）。 */
 export const SHORT_CREATURE_RATIO = 0.9;
 /** 狀態列往上移的上限（圖示中心 y）：圖示上緣不超出最上排的頭頂預留 `UNIT_HEADROOM`。 */

@@ -1,5 +1,5 @@
 // 事件播放計畫（純函式）：`steps` → 依序的移動動畫。其他事件先不做動畫；播放完以 `view` 為準。
-import { asEvent, isUnitMoved, type MoveMode, type Pos, type StepOut } from "../api/types";
+import { asEvent, isUnitMoved, type MoveMode, type Pos, type StepOut, type UnitMovedEvent } from "../api/types";
 
 export interface MoveAnim {
   unitId: string;
@@ -37,21 +37,25 @@ export const MOVE_DURATION_MS: Readonly<Record<MoveMode, number>> = {
   shadowstep: 200, // 瞬步（Phase 3D-8d）：淡出後出現在目標身旁
 };
 
-/** `scale`：播放速度的時間倍率（正常 1、快 0.5；0 ＝ 不播動畫）。 */
+/** 一個 `unit_moved` → 位移動畫；`scale`：播放速度的時間倍率（正常 1、快 0.5；0 ＝ 不播動畫）。 */
+export function moveAnimOf(event: UnitMovedEvent, scale = 1): MoveAnim {
+  return {
+    unitId: event.unit_id,
+    from: event.from_pos,
+    to: event.to_pos,
+    mode: event.mode,
+    durationMs: Math.round(MOVE_DURATION_MS[event.mode] * scale),
+    style: MOVE_STYLE[event.mode],
+  };
+}
+
+/** 所有位移各自一段（戰鬥播放的走路改用 `walkAnim.ts` 的逐格時間軸，見 6A-4d）。 */
 export function movePlan(steps: readonly StepOut[], scale = 1): MoveAnim[] {
   const plan: MoveAnim[] = [];
   for (const step of steps) {
     for (const raw of step.events) {
       const event = asEvent(raw);
-      if (!isUnitMoved(event)) continue;
-      plan.push({
-        unitId: event.unit_id,
-        from: event.from_pos,
-        to: event.to_pos,
-        mode: event.mode,
-        durationMs: Math.round(MOVE_DURATION_MS[event.mode] * scale),
-        style: MOVE_STYLE[event.mode],
-      });
+      if (isUnitMoved(event)) plan.push(moveAnimOf(event, scale));
     }
   }
   return plan;
