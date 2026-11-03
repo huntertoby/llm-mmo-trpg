@@ -27,6 +27,7 @@ from trpg.content.keyword_derive import (
     walk_effect,
 )
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skill_keywords import KeywordDef, KeywordTable
 from trpg.content.skills import (
     ENTER_FORM,
@@ -150,8 +151,7 @@ def keyword_pools(
     ``exclusive_only`` 只依專屬規則歸池（開局與候選產生器用）。"""
     table = library.keywords
     pools: dict[str, list[str]] = {k.id: [] for k in table.keywords}
-    for skill_id in sorted(library.skills):
-        skill = library.skills[skill_id]
+    for skill_id, skill in player_skills(library).items():
         if starter_only and not is_starter_skill(skill):
             continue
         for keyword_id in derive_keywords(skill, table, exclusive_only=exclusive_only).all():

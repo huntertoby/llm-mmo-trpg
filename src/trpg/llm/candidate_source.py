@@ -20,6 +20,7 @@ from dataclasses import replace
 from typing import Protocol
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SkillDef, rarity_rank
 from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient
@@ -198,8 +199,7 @@ def _mock_texts(
     kind = wanted_kind(library, request)
     rank = rarity_rank(request.rarity)
     texts: list[str] = []
-    for skill_id in sorted(library.skills):
-        skill = library.skills[skill_id]
+    for skill in player_skills(library).values():
         if (
             skill.kind != kind
             or (tier and skill.tier != request.tier)

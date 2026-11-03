@@ -2,6 +2,7 @@
 id: skill_rift_pulse_fire
 schema_version: 1
 name_zh: 火晶脈衝
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare

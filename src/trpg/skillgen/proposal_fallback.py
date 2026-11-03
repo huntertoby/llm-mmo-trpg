@@ -16,6 +16,7 @@ from collections.abc import Callable, Iterator
 from typing import Any, Literal
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import SkillDef, rarity_rank
 from trpg.shared.rng import Rng
@@ -107,11 +108,11 @@ def _from_pool(
 ) -> SkillDef | None:
     kind = wanted_kind(library, request)
     options = [
-        library.skills[skill_id]
-        for skill_id in sorted(library.skills)
-        if library.skills[skill_id].tier == ctx.tier
-        and library.skills[skill_id].rarity == ctx.rarity
-        and _fits(library.skills[skill_id], request, kind, library)
+        skill
+        for skill in player_skills(library).values()
+        if skill.tier == ctx.tier
+        and skill.rarity == ctx.rarity
+        and _fits(skill, request, kind, library)
     ]
     return Rng(seed).fork("fallback.pool").choice(options) if options else None
 

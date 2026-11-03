@@ -489,6 +489,102 @@ def test_scanner_allows_legal_dependencies() -> None:
         assert not found, f"不應判為依賴違規：{current}: {source!r} -> {found}"
 
 
+# ---------------------------------------------------------------------------
+# 玩家技能池（Phase 5F-3b）：只能經 trpg.content.player_pool.player_skills 取池
+# ---------------------------------------------------------------------------
+
+PLAYER_POOL_PACKAGES = ("skillgen", "llm", "roguelite", "world", "api")
+"""玩家拿得到技能的套件（生成器、候選、閃現、工坊、LLM 提議、大世界、網頁）。"""
+
+_LIBRARY_NAMES = frozenset({"library", "lib", "self.library", "self._library"})
+_ITERATING_CALLS = frozenset({"sorted", "list", "tuple", "set", "frozenset", "iter", "enumerate"})
+
+LIBRARY_SKILLS_ITERATION_ALLOWED: dict[tuple[str, str], str] = {
+    ("trpg.llm.naming", "name_skill"): "避免撞名：比對所有內建技能名（含敵人專用）",
+    ("trpg.llm.naming", "template_text"): "避免撞名：比對所有內建技能名（含敵人專用）",
+    ("trpg.llm.flash_eval", "evaluate_flash"): "避免撞名：比對所有內建技能名",
+    ("trpg.skillgen.proposal_coverage", "round_trip_inventory"): "開發工具：全部手寫技能的結構盤點",
+    ("trpg.api.world_presenter", "event_lines"): "技能 ID → 中文名對照（顯示用）",
+    ("trpg.api.world_growth_view", "skill_names"): "技能 ID → 中文名對照（顯示用）",
+}
+"""（模組, 函式）→ 可以直接走訪 ``library.skills`` 的理由（不是玩家技能池）。"""
+
+
+def _library_skills(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "skills"
+        and _dotted_name(node.value) in _LIBRARY_NAMES
+    )
+
+
+def _iterated_nodes(tree: ast.AST) -> list[ast.AST]:
+    """被走訪的運算式：``for``／推導式的來源、``sorted(...)`` 等的參數、``.values()`` 等的本體。"""
+    found: list[ast.AST] = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.For, ast.comprehension)):
+            found.append(node.iter)
+        elif isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name) and func.id in _ITERATING_CALLS:
+                found += node.args[:1]
+            elif isinstance(func, ast.Attribute) and func.attr in ("values", "items", "keys"):
+                found.append(func.value)
+    return found
+
+
+def player_pool_violations(tree: ast.AST, current: str, location: str) -> list[Violation]:
+    """直接走訪 ``library.skills`` 的地方（沒在 :data:`LIBRARY_SKILLS_ITERATION_ALLOWED`）。"""
+    violations: list[Violation] = []
+    functions = [
+        n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    for function in functions:
+        if (current, function.name) in LIBRARY_SKILLS_ITERATION_ALLOWED:
+            continue
+        for node in _iterated_nodes(function):
+            if _library_skills(node):
+                violations.append(
+                    Violation(
+                        f"{location}:{getattr(node, 'lineno', 0)}",
+                        f"{function.name} 直接走訪 library.skills；玩家技能池請用 "
+                        "trpg.content.player_pool.player_skills",
+                    )
+                )
+    return sorted(set(violations), key=str)
+
+
+def test_player_skill_pools_go_through_player_skills() -> None:
+    """生成器、候選、閃現、工坊、LLM 提議等玩家技能池的入口都經過 ``player_skills``（排除
+    ``enemy_only``），不直接走訪 ``library.skills``（5F-3b）。"""
+    violations: list[Violation] = []
+    for path in _source_files():
+        current = module_name_for(path)
+        if not any(_is_within(current, f"trpg.{p}") for p in PLAYER_POOL_PACKAGES):
+            continue
+        violations += player_pool_violations(_parse(path), current, str(path.relative_to(SRC_ROOT)))
+    assert not violations, "\n".join(str(v) for v in violations)
+
+
+def test_scanner_detects_library_skills_iteration() -> None:
+    bad = (
+        "def f(library):\n    return [s for s in sorted(library.skills)]\n",
+        "def f(library):\n    return list(library.skills.values())\n",
+        "def f(self):\n    for k, s in self.library.skills.items():\n        pass\n",
+        "def f(lib):\n    for k in lib.skills:\n        pass\n",
+    )
+    for source in bad:
+        assert player_pool_violations(ast.parse(source), "trpg.skillgen.x", "<snippet>"), source
+    good = (
+        "def f(library, k):\n    return library.skills.get(k)\n",
+        "def f(library, k):\n    return k in library.skills\n",
+        "def f(library):\n    return list(player_skills(library).values())\n",
+        "def f(hero):\n    return sorted(hero.skills)\n",
+    )
+    for source in good:
+        assert not player_pool_violations(ast.parse(source), "trpg.skillgen.x", "<snippet>"), source
+
+
 def test_every_saved_field_has_a_season_reset_kind() -> None:
     """季末重置政策表（5D-R2）：表裡每個模型的欄位剛好都分類（新增欄位沒分類、刪掉的欄位還在表裡
     都失敗）；分類只有數值類／紀念類；拿不準的欄位都標數值類。"""

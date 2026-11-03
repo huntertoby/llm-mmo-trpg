@@ -18,6 +18,7 @@ from typing import Literal
 from trpg.api.run_schemas import AttributeAffectsOut, AttributeSuggestionOut, RouteHintOut
 from trpg.content.battle import WeaponDef
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.roguelite.start import primary_attribute
 from trpg.shared.types import Attribute
@@ -106,8 +107,7 @@ def keyword_supply(
     wanted = set(keywords)
     held = {weapon.id: weapon.name_zh}
     found: list[SkillDef] = []
-    for skill_id in sorted(library.skills):
-        skill = library.skills[skill_id]
+    for skill in player_skills(library).values():
         if skill.tier != 1 or skill.rarity == "legendary" or skill.form_id is not None:
             continue
         if weapon_problem(skill, weapon.weapon_class, held) is not None:

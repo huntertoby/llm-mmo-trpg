@@ -14,6 +14,7 @@ from typing import Any
 from pydantic.fields import FieldInfo
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import (
     SCALE_BY_VALUES,
     WIELDING_EFFECT_ONLY,
@@ -308,7 +309,7 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         ),
         "skill": lambda: tuple(
             Choice(value=s.id, name_zh=s.name_zh)
-            for s in sorted(library.skills.values(), key=lambda s: s.id)
+            for s in player_skills(library).values()
             if s.kind == "active" and s.rarity != "legendary"
         ),
     }
