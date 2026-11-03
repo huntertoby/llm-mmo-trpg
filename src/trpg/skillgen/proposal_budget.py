@@ -44,6 +44,12 @@ from trpg.skillgen.proposal import (
     evaluate_proposal,
 )
 from trpg.skillgen.proposal_numbers import NumberFiller, minimal_filler
+from trpg.skillgen.proposal_topup import (
+    TOPUP_CODES,
+    TOPUP_PREFIX,
+    keyword_way_texts,
+    topup_candidates,
+)
 from trpg.skillgen.validate import is_core_effect, share_violations
 
 __all__ = [
@@ -394,6 +400,8 @@ def lift_weak(library: ContentLibrary, data: dict[str, Any], seed: int) -> dict[
     1. 連同巢狀效果（:data:`NESTED_KNOB_KEYS`）的數值一起重調；
     2. 仍不行（主動技能）就依 ``llm_cost.weak_steps`` 由輕到重：降 AP（必要時補冷卻／法力把過頭的
        部分拉回），每一階都重調旋鈕；
+    3. （6S-2）仍不行、且有占比上限的附帶效果（例：位移骨架的傷害）時，把它降回最低值、只調核心
+       （含巢狀）再走一次 1～2。
 
     取第一個落進窗且占比合格的結果。全部不行時原樣回傳（交給驗證器照舊報 ``budget.weak``）。
     不降預算下限；確定性：同一份資料＋同一個 ``seed`` 必得相同結果。"""
@@ -402,31 +410,56 @@ def lift_weak(library: ContentLibrary, data: dict[str, Any], seed: int) -> dict[
     steps: tuple[CostStep | None, ...] = (None,)
     if data.get("kind") == "active" and data.get("ap_cost") is not None:
         steps += library.composer.llm_cost.weak_steps
-    low = Fraction(library.budget.min_ratio_permille, 1000)
     root = Rng(seed).fork("proposal.weak")
-    category = str(data.get("category", "spell"))
     for attempt, step in enumerate(steps):
         trial = deepcopy(data) if step is None else _with_weak_step(library, data, step)
-        knobs = _knobs(library, trial, core_only=False)
-        if knobs is None:
+        tuned = _weak_tune(library, trial, root.fork(f"weak.{attempt}"), core_only=False)
+        if tuned is None:
             return data
-        nested = list(_nested_of([*trial["effects"], *_extra_of(trial)]))
-        extra = _extra_of(trial)
-        offset = len(trial["effects"]) + len(extra)
-        knobs += _nested_knobs(library, nested, category=category, offset=offset)
-        rng = root.fork(f"weak.{attempt}")
-        tune(
-            rng,
-            library,
-            _base_of(trial),
-            trial["effects"],
-            knobs,
-            extra=[*extra, *nested],
-            min_ratio=low,
-        )
-        if _window_ok(library, trial):
+        if tuned:
+            return trial
+    # 6S-2：有占比上限的附帶效果（例：位移骨架的傷害）一起調時容易超過上限——全部階梯都不行時，
+    # 把它們降回最低值、只調核心（含巢狀）再走一次階梯（放在最後：不影響原本就補得到的結果）
+    if not _limited_secondary(library, data):
+        return data
+    for attempt, step in enumerate(steps):
+        trial = deepcopy(data) if step is None else _with_weak_step(library, data, step)
+        _floor_secondary(library, trial)
+        if _weak_tune(library, trial, root.fork(f"weak.core.{attempt}"), core_only=True):
             return trial
     return data
+
+
+def _limited_secondary(library: ContentLibrary, data: dict[str, Any]) -> bool:
+    """``data`` 有沒有占比受限的附帶效果（骨架 ``secondary.max_share_permille`` 的原語）。"""
+    limited = _limited_types(library, data)
+    targets = [*data["effects"], *_extra_of(data)]
+    return any(str(e.get("type")) in limited[i] for i, e in enumerate(targets))
+
+
+def _weak_tune(
+    library: ContentLibrary, trial: dict[str, Any], rng: Rng, *, core_only: bool
+) -> bool | None:
+    """過弱補強的一次重調（就地修改 ``trial``）：頂層與第二段旋鈕（``core_only`` 時只調核心）加上
+    巢狀效果的旋鈕，以預算下限為目標。回傳是否落進驗證器的窗；結構不合法時 ``None``。"""
+    knobs = _knobs(library, trial, core_only=core_only)
+    if knobs is None:
+        return None
+    category = str(trial.get("category", "spell"))
+    nested = list(_nested_of([*trial["effects"], *_extra_of(trial)]))
+    extra = _extra_of(trial)
+    offset = len(trial["effects"]) + len(extra)
+    knobs += _nested_knobs(library, nested, category=category, offset=offset)
+    tune(
+        rng,
+        library,
+        _base_of(trial),
+        trial["effects"],
+        knobs,
+        extra=[*extra, *nested],
+        min_ratio=Fraction(library.budget.min_ratio_permille, 1000),
+    )
+    return bool(_window_ok(library, trial))
 
 
 def budget_filler(
@@ -482,15 +515,84 @@ def evaluate_with_repair(
     ctx: ProposalContext,
     *,
     seed: int,
+    topup: bool = True,
 ) -> RepairedEvaluation:
     """``evaluate_proposal``（數值由 :func:`budget_filler` 補）；錯誤中有可修的代碼時，
-    **先修可修的**（一次），再回報修補後剩下的錯誤（Phase 4-L5b，4-L5 待決 #5）。"""
+    **先修可修的**（一次），再回報修補後剩下的錯誤（Phase 4-L5b，4-L5 待決 #5）。
+
+    Phase 6S-2：修補後只剩 ``budget.weak``／``keyword.required`` 時，再試結構補強
+    （:func:`~trpg.skillgen.proposal_topup.topup_candidates`：加一個選單內的附帶效果或關鍵字效果），
+    每個候選照樣走完整驗證，第一個合格的採用（``repaired`` 記 ``topup.<代碼>``）；都不合格時回報
+    原本的錯誤。``topup=False`` 關閉。"""
+    evaluation = _evaluate_repaired(raw, models, library, ctx, seed)
+    if not topup or evaluation.ok:
+        return evaluation
+    left = evaluation.result.errors
+    if not left or any(e.stage != "rules" or e.code not in TOPUP_CODES for e in left):
+        return evaluation
+    data = _raw_mapping(raw)
+    codes = sorted({e.code for e in left})
+    for candidate in topup_candidates(
+        library,
+        data,
+        keywords=ctx.keywords,
+        weak=WEAK in codes,
+        primitives=models.primitive_ids,
+    ):
+        trial = _evaluate_repaired(candidate, models, library, ctx, seed)
+        if trial.ok:
+            done = tuple(TOPUP_PREFIX + c for c in codes)
+            return RepairedEvaluation(trial.result, (*evaluation.repaired, *trial.repaired, *done))
+    advised = tuple(_topup_advice(e, models, library) for e in left)
+    return replace(evaluation, result=replace(evaluation.result, errors=advised))
+
+
+WEAK_ADVICE = (
+    "。引擎已把數值調到最高、AP 降到 1 仍不夠：請再加一個骨架允許的附帶效果"
+    "（例如對敵方的 damage、對友方的 heal），或改用有數值的核心效果"
+)
+"""補強也救不回的 ``budget.weak`` 附給 LLM 的建議（6S-2）。"""
+
+
+def _topup_advice(
+    error: ProposalError, models: ProposalModels, library: ContentLibrary
+) -> ProposalError:
+    """補強失敗時，把 ``budget.weak``／``keyword.required`` 的錯誤訊息改寫成可照做的建議。"""
+    if error.code == WEAK:
+        return replace(error, message=error.message + WEAK_ADVICE)
+    if error.code == "keyword.required":
+        ways = [
+            f"{k}：{'、'.join(texts)}"
+            for k in error.allowed
+            if (texts := keyword_way_texts(library, str(k), primitives=models.primitive_ids))
+        ]
+        if ways:
+            return replace(error, message=f"{error.message}。可用寫法（{'；'.join(ways)}）")
+    return error
+
+
+def _evaluate_repaired(
+    raw: str | Mapping[str, Any],
+    models: ProposalModels,
+    library: ContentLibrary,
+    ctx: ProposalContext,
+    seed: int,
+) -> RepairedEvaluation:
     first = evaluate_proposal(raw, models, library, ctx, fill=budget_filler(library, seed=seed))
     codes = () if first.ok else repairable_codes(first.errors, library)
     if not codes:
         return RepairedEvaluation(first)
     fill = budget_filler(library, seed=seed, repairs=codes)
     second = evaluate_proposal(raw, models, library, ctx, fill=fill)
+    more = tuple(c for c in repairable_codes(second.errors, library) if c not in codes)
+    if more:
+        # 6S-2：修一個問題時冒出另一個可修的（最常見：修占比把附帶傷害降回最低值後變成過弱）——
+        # 兩者一起再修一次；仍不合格就照舊回報第一次修補的結果。
+        merged = tuple(sorted({*codes, *more}))
+        fill = budget_filler(library, seed=seed, repairs=merged)
+        third = evaluate_proposal(raw, models, library, ctx, fill=fill)
+        if third.ok:
+            return RepairedEvaluation(third, merged)
     left = {e.code for e in second.errors}
     if SECONDARY_SHARE in left:
         second = _explain_secondary(raw, library, second)
