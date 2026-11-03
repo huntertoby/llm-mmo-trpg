@@ -106,7 +106,7 @@ entry: [4, 2]
 exits:
   - {id: to_scorched_outskirts, at: [[3, 0], [4, 0]], to: scorched_outskirts, arrive: to_red_sand_village}   # 西北：往焦土外圍
 spawns:
-  - {at: [11, 3], group: village_raid_light}   # 村口外（離水井 6 格）
+  - {at: [11, 3], group: village_raid_light, personal: true}   # 村口外（離水井 6 格）
 campfires:
   - {at: [11, 11], id: campfire_red_sand_village}   # 井南的空地
 event_spots:

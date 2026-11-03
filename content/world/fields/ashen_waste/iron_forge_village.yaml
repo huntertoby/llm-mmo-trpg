@@ -122,7 +122,7 @@ entry: [2, 3]
 exits:
   - {id: to_overseer_camp, at: [[0, 2], [0, 3]], to: overseer_camp, arrive: to_iron_forge_village}   # 西北：往熔爐督工營
 spawns:
-  - {at: [6, 9], group: village_raid_heavy}   # 村口外（離鐵砧 5 格）
+  - {at: [6, 9], group: village_raid_heavy, personal: true}   # 村口外（離鐵砧 5 格）
 campfires:
   - {at: [9, 6], id: campfire_iron_forge_village}   # 鐵砧北邊
 event_spots:

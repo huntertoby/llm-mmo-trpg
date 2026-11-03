@@ -5,8 +5,14 @@
   看到的陣容就是開戰的陣容。駐守不動（朝向照種子）；巡邏沿 ``patrol`` 的直線路線來回，你走一格它走
   一格，起點照種子。
 - **這一趟**：進入一個有敵人的地點時，從角色的 ``field`` 串流
-  （:data:`~trpg.world.rng.STREAM_FIELD`）抽一次種子；換地點才重來（進出室內不算）。地點「已清空」（:meth:`WorldState.is_cleared`）時整張圖
-  的敵人消失，重生時間到了就回來；不會寫「已清空」的地點種類，打贏的那一隊到離開這個地點前不再出現。
+  （:data:`~trpg.world.rng.STREAM_FIELD`）抽一次種子；換地點才重來（進出室內不算）。
+- **清空與重生**（21.10 第 9 條，6C-1b）：營地、精英巢穴、遺跡、祭壇打贏一隊只有那一隊消失（世界的
+  ``defeated_spawns``，所有人看得到）；這張圖現在會出現的隊伍都打完才寫地點「已清空」
+  （:meth:`WorldState.is_cleared`），重生時間照 ``battle.respawn_seconds``，每隊對齊地點的。
+  ``personal`` 的隊伍只對自己消失（角色這一趟的 ``defeated``）、不算進共享清空、下一趟回來再
+  出現；其他種類的地點照 6C-1，打贏的那一隊到離開這個地點前不再出現。
+- **日夜**（21.10 第 11 條）：``day_phase`` 有寫的隊伍只在那個時段出現。
+- **進圖寬限**（21.10 第 8 條）：走出口或門抵達的那一格不檢查，從走的第一步才檢查。
 - **視野**（21.10 第 3 條）：前方扇形——往前 ≥ 1 格、橫向偏移 ≤ 往前格數（90°）、曼哈頓距離
   ≤ :data:`SIGHT_RANGE`；被擋視線的地形（牆）、物件、表面與高低差遮住（同戰鬥的視線規則：兩個方向
   都畫 Bresenham 線，中間的格子高度 ≥ 兩端最高 ＋ 1 也擋）。只算站得上去的格子。不追擊。
@@ -32,8 +38,16 @@ from trpg.content.world_map import LocationDef
 from trpg.engine.rules.geometry import bresenham
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.shared.types import Surface
-from trpg.world.actions import BattleEndedEvent, EncounterEvent, FightAction, WorldEvent
-from trpg.world.common import world_map_of
+from trpg.world.actions import (
+    BattleEndedEvent,
+    EncounterEvent,
+    FightAction,
+    LocationClearedEvent,
+    WorldEvent,
+)
+from trpg.world.battle import with_cleared
+from trpg.world.clock import day_phase
+from trpg.world.common import rules_of, world_map_of
 from trpg.world.encounters import EncounterLineup, roll_lineup
 from trpg.world.field import FieldGrid, field_grid, field_map, outdoor_map, placed
 from trpg.world.field_actions import WalkedEvent
@@ -41,6 +55,7 @@ from trpg.world.rng import STREAM_FIELD, derive_seed, draw
 from trpg.world.solutions import make_encounter
 from trpg.world.state import (
     CharacterState,
+    DefeatedSpawn,
     Facing,
     FieldContact,
     FieldPos,
@@ -49,19 +64,23 @@ from trpg.world.state import (
 )
 
 __all__ = [
+    "SHARED_CLEAR_KINDS",
     "SIGHT_RANGE",
     "FieldEnemy",
     "after_fight",
+    "appears",
     "arrive_watch",
     "contact_of",
     "enemy_lineup",
     "field_enemies",
     "lineup_seed",
+    "shared_clear",
     "sight_cells",
     "spawn_place",
     "spawn_route",
     "visit_for",
     "walk_watch",
+    "with_defeated_spawn",
     "with_visit",
 ]
 
@@ -70,6 +89,10 @@ type First = Literal["ally", "enemy"] | None
 
 SIGHT_RANGE: Final = 4
 """敵人的視野距離（前方扇形 4 格，21.10 第 3 條；潛行減半是 6C-5）。"""
+
+SHARED_CLEAR_KINDS: Final = frozenset({"camp", "elite_lair", "ruin", "altar"})
+"""打贏一隊所有人看到它消失、全打完寫「已清空」的地點種類（21.10 第 9 條；另加規則的
+``battle.clear_kinds``）。"""
 
 _VECTORS: Final[dict[Facing, XY]] = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0)}
 _FACINGS: Final[tuple[Facing, ...]] = ("n", "e", "s", "w")
@@ -138,13 +161,25 @@ def with_visit(library: ContentLibrary, world: WorldState, char: CharacterState)
     return char.model_copy(update={"field_visit": visit})
 
 
-def after_fight(
-    before: CharacterState,
-    char: CharacterState,
-    action: object,
-    events: tuple[WorldEvent, ...],
-) -> CharacterState:
-    """打贏地圖上的一隊：記進這一趟的 ``defeated``（不寫「已清空」的地點也不會再碰到它）。"""
+def shared_clear(library: ContentLibrary, region: str, location: str) -> bool:
+    """這個地點的隊伍是不是「打贏一隊、所有人看到它消失，全打完才寫已清空」（21.10 第 9 條）：
+    營地、精英巢穴、遺跡、祭壇（:data:`SHARED_CLEAR_KINDS`），以及規則 ``battle.clear_kinds``
+    列的種類。其他種類照 6C-1：打贏的那一隊只在這一趟消失。"""
+    place = world_map_of(library, region).location_by_id().get(location)
+    if place is None:
+        return False
+    return place.kind in SHARED_CLEAR_KINDS or place.kind in rules_of(library).battle.clear_kinds
+
+
+def appears(spawn: FieldSpawn, now: int) -> bool:
+    """這一隊現在的時段會不會出現（``day_phase`` 省略＝全天，21.10 第 11 條）。"""
+    return spawn.day_phase is None or spawn.day_phase == day_phase(now)
+
+
+def _won_contact(
+    before: CharacterState, char: CharacterState, action: object, events: tuple[WorldEvent, ...]
+) -> FieldContact | None:
+    """這個動作是不是打贏了地圖上的一隊（回傳那次接觸）。"""
     encounter = before.pending_encounter
     visit = char.field_visit
     if (
@@ -155,9 +190,67 @@ def after_fight(
         or (visit.region, visit.location) != (encounter.region, encounter.location)
         or not any(isinstance(e, BattleEndedEvent) and e.won for e in events)
     ):
-        return char
-    defeated = tuple(sorted({*visit.defeated, encounter.contact.spawn}))
-    return char.model_copy(update={"field_visit": visit.model_copy(update={"defeated": defeated})})
+        return None
+    return encounter.contact
+
+
+def with_defeated_spawn(
+    world: WorldState, region: str, location: str, spawn: int, respawn_at: int
+) -> WorldState:
+    """把第 ``spawn`` 隊寫成被打贏、到 ``respawn_at`` 重生（已有就更新；依地點、索引排序）。"""
+    key = (region, location, spawn)
+    kept = [s for s in world.defeated_spawns if s.key() != key]
+    kept.append(DefeatedSpawn(region=region, location=location, spawn=spawn, respawn_at=respawn_at))
+    kept.sort(key=DefeatedSpawn.key)
+    return world.model_copy(update={"defeated_spawns": tuple(kept)})
+
+
+def _clear_if_done(
+    library: ContentLibrary, world: WorldState, found: FieldMapDef, visit: FieldVisit, now: int
+) -> tuple[WorldState, tuple[WorldEvent, ...]]:
+    """這張圖現在會出現的共享隊伍都打完了：地點寫「已清空」，每隊的重生時間對齊地點的。"""
+    region, location = visit.region, visit.location
+    shared = [i for i, s in enumerate(found.spawns) if not s.personal and appears(s, now)]
+    if any(not world.spawn_defeated(region, location, i, now) for i in shared):
+        return world, ()
+    respawn_at = now + rules_of(library).battle.respawn_seconds
+    world = with_cleared(world, region, location, respawn_at)
+    for s in world.defeated_spawns:
+        if (s.region, s.location) == (region, location):
+            world = with_defeated_spawn(world, region, location, s.spawn, respawn_at)
+    return world, (LocationClearedEvent(location=location, respawn_at=respawn_at),)
+
+
+def after_fight(
+    library: ContentLibrary,
+    world: WorldState,
+    before: CharacterState,
+    char: CharacterState,
+    *,
+    action: object,
+    events: tuple[WorldEvent, ...],
+    now: int,
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+    """打贏地圖上的一隊（21.10 第 9 條）。
+
+    - 共享的地點（:func:`shared_clear`）、不是 ``personal`` 的隊伍：寫進世界的 ``defeated_spawns``
+      （所有人看到它消失，重生時間照 ``battle.respawn_seconds``）；這張圖現在會出現的共享隊伍都打完
+      才寫地點「已清空」（:class:`LocationClearedEvent`）。
+    - ``personal`` 的隊伍、或不共享的地點：記進角色這一趟的 ``defeated``，下一趟回來再出現。"""
+    contact = _won_contact(before, char, action, events)
+    visit = char.field_visit
+    found = None if contact is None else field_map(library, contact.map)
+    if contact is None or visit is None or found is None or contact.spawn >= len(found.spawns):
+        return world, char, ()
+    spawn = found.spawns[contact.spawn]
+    if spawn.personal or not shared_clear(library, visit.region, visit.location):
+        defeated = tuple(sorted({*visit.defeated, contact.spawn}))
+        update = {"field_visit": visit.model_copy(update={"defeated": defeated})}
+        return world, char.model_copy(update=update), ()
+    respawn_at = now + rules_of(library).battle.respawn_seconds
+    world = with_defeated_spawn(world, visit.region, visit.location, contact.spawn, respawn_at)
+    world, cleared = _clear_if_done(library, world, found, visit, now)
+    return world, char, cleared
 
 
 # ---------------------------------------------------------------------------
@@ -347,12 +440,36 @@ def _watch(
     visit = visit_for(library, world, char)
     if found is None or found.is_interior or visit is None or found.place != visit.location:
         return None
-    if world.is_cleared(char.region, char.location, now) or _target(library, char) is None:
+    if _target(library, char) is None:
         return None
-    spawns = tuple((i, s) for i, s in enumerate(found.spawns) if i not in visit.defeated)
+    spawns = _shown(library, world, found, visit, now)
     if not spawns:
         return None
     return _Watch(map=found, visit=visit, sight=_sight(library, char, found), spawns=spawns)
+
+
+def _shown(
+    library: ContentLibrary, world: WorldState, found: FieldMapDef, visit: FieldVisit, now: int
+) -> tuple[tuple[int, FieldSpawn], ...]:
+    """現在會出現的隊伍（21.10 第 9、11 條）：
+
+    - 不在這個時段的（``day_phase``）不出現。
+    - ``personal``：這一趟打贏了就不出現（地點「已清空」也照樣在）。
+    - 其他：地點「已清空」就不出現；共享的地點看世界的 ``defeated_spawns``，不共享的看這一趟。"""
+    region, location = visit.region, visit.location
+    cleared = world.is_cleared(region, location, now)
+    shared = shared_clear(library, region, location)
+    out: list[tuple[int, FieldSpawn]] = []
+    for i, spawn in enumerate(found.spawns):
+        if not appears(spawn, now):
+            continue
+        if spawn.personal or not shared:
+            gone = i in visit.defeated or (cleared and not spawn.personal)
+        else:
+            gone = cleared or world.spawn_defeated(region, location, i, now)
+        if not gone:
+            out.append((i, spawn))
+    return tuple(out)
 
 
 def field_enemies(
@@ -480,15 +597,7 @@ def _cut(walked: WalkedEvent, char: CharacterState, k: int) -> WalkedEvent:
 def arrive_watch(
     library: ContentLibrary, world: WorldState, char: CharacterState, now: int
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
-    """走出口或門到了另一張圖：開始這一趟；一到就在視野內或相鄰時開打（敵人還沒走）。"""
-    char = with_visit(library, world, char)
-    if char.pending_encounter is not None or char.field is None:
-        return char, ()
-    watch = _watch(library, world, char, now)
-    if watch is None:
-        return char, ()
-    at = (char.field.x, char.field.y)
-    hit = watch.contact(at, watch.visit.ticks)
-    if hit is None:
-        return char, ()
-    return _start(library, world, char, watch, hit, at, now)
+    """走出口或門到了另一張圖：開始這一趟。進圖寬限（21.10 第 8 條，6C-1b）：抵達的那一格不檢查
+    視野與相鄰，從玩家走的第一步才開始檢查。"""
+    del now
+    return with_visit(library, world, char), ()

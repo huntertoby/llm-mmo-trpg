@@ -208,9 +208,11 @@ def world_step(
     if not isinstance(action, _FIELD_MOVES):  # 6B-2：別的動作換了地點，舊位置作廢
         moved = stale_field(before, moved)
     moved = with_visit(library, result.world, moved)  # 6C-1：換了地點就開始新的一趟
-    moved = after_fight(before, moved, action, result.events)  # 6C-1：打贏的那一隊不再出現
-    if moved is not result.char:
-        result = StepResult(world=result.world, char=moved, events=result.events)
+    cleared_world, moved, cleared = after_fight(  # 6C-1、6C-1b：打贏的那一隊消失（每隊清空）
+        library, result.world, before, moved, action=action, events=result.events, now=now
+    )
+    if moved is not result.char or cleared_world is not result.world:
+        result = StepResult(world=cleared_world, char=moved, events=(*result.events, *cleared))
     world, char, settled = settle_event_combat(
         library, result.world, before, result.char, result.events, now=now
     )

@@ -2,9 +2,9 @@
 
 | 資料 | 格式 |
 |---|---|
-| 世界快照 | ``trpg-world/1``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
+| 世界快照 | ``trpg-world/2``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
 | 角色 | ``trpg-char/3``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/3``（JSON Lines：第一行 ``{"format": "trpg-wlog/3"}``，之後一行一筆
+| 世界動作日誌 | ``trpg-wlog/4``（JSON Lines：第一行 ``{"format": "trpg-wlog/4"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -21,6 +21,10 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 **Phase 6C-1**：``trpg-char/2`` 照讀（只多了選填欄位 ``field_visit``、遭遇的 ``contact``），讀進來
 就是 ``trpg-char/3``。``trpg-wlog/2`` 也是舊規則寫的（6C-1 起有實地地圖的地點不再擲遇敵，改成
 看得見的敵人），處理同 ``trpg-wlog/1``：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/3``。
+
+**Phase 6C-1b**：``trpg-world/1`` 照讀（只多了選填欄位 ``defeated_spawns``），讀進來就是
+``trpg-world/2``。``trpg-wlog/3`` 也是舊規則寫的（6C-1b 起進圖寬限、每隊清空、``personal``、
+``day_phase``），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/4``。
 """
 
 from __future__ import annotations
@@ -39,6 +43,7 @@ from trpg.world.replay import WorldLogEntry
 from trpg.world.state import (
     CHAR_FORMAT,
     LEGACY_CHAR_FORMATS,
+    LEGACY_WORLD_FORMATS,
     WORLD_FORMAT,
     CharacterState,
     WorldState,
@@ -60,8 +65,8 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/3"
-LEGACY_WLOG_FORMATS: Final = frozenset({"trpg-wlog/1", "trpg-wlog/2"})
+WLOG_FORMAT: Final = "trpg-wlog/4"
+LEGACY_WLOG_FORMATS: Final = frozenset({"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3"})
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
 
@@ -115,7 +120,7 @@ def dumps_world(world: WorldState) -> str:
 
 
 def loads_world(text: str) -> WorldState:
-    return _validate(WorldState, _parse_object(text, WORLD_FORMAT))
+    return _validate(WorldState, _parse_object(text, WORLD_FORMAT, LEGACY_WORLD_FORMATS))
 
 
 def dumps_char(char: CharacterState) -> str:
