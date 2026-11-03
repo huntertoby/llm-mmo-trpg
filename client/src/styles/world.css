@@ -700,3 +700,83 @@
   margin-left: 6px;
   padding: 0 6px;
 }
+
+/* 可走動的實地地圖（Phase 6B-3）：戰鬥渲染器畫格子地圖；換地圖時淡出淡入，上方只跳一行地名（21.7）。 */
+.world-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.world-field-stage {
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  max-height: calc(100vh - 150px);
+  transition: opacity 0.22s ease;
+}
+
+.world-field-stage.fading {
+  opacity: 0;
+}
+
+.world-field-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.world-field-stone {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.world-place-banner {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 6px 28px;
+  font-size: 1.35rem;
+  letter-spacing: 0.3em;
+  color: #f3ead2;
+  background: rgba(10, 10, 16, 0.55);
+  border-top: 1px solid rgba(243, 234, 210, 0.35);
+  border-bottom: 1px solid rgba(243, 234, 210, 0.35);
+  pointer-events: none;
+  animation: world-place-banner 2s ease forwards;
+}
+
+@keyframes world-place-banner {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.world-flash {
+  animation: world-flash 1.2s ease;
+}
+
+@keyframes world-flash {
+  0%,
+  60% {
+    box-shadow: 0 0 0 2px #c9b46a;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}

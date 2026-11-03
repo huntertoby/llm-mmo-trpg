@@ -5,7 +5,8 @@
 // 說話、聊天、接任務）、酒館傳聞、任務與線頭（左欄）、任務三選一（左欄固定）、說書人的 LLM 開關（標頭）。
 // 5D-4（33.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
 // 5F-1b：進入角色時讀「你不在的時候」摘要，有新消息就跳一則（DialogFrame）；按「知道了」送 `news_seen`。
-import { useCallback, useEffect, useState } from "react";
+// 6B-3：所在地點有實地地圖（`view.field`）時，左欄改成可走動畫面（`WorldField`）；換地圖時上方只跳一行地名。
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type {
   AbsenceView,
@@ -20,6 +21,8 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
 import { WorldMap } from "../world/WorldMap";
+import { WorldField } from "../world/WorldField";
+import { mapPaneKind, PLACE_NAME_MS, placeBanner, type FieldTarget } from "../world/fieldModel";
 import { WorldPanel } from "../world/WorldPanel";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
@@ -51,6 +54,17 @@ const LOG_MAX = 12;
 /** 重讀大世界 LLM 開關與健康檢查結果的間隔（同伺服器健康檢查的預設 60 秒；5E-3b）。 */
 const LLM_REFRESH_MS = 60_000;
 
+/** 把右欄的某個元素捲到畫面裡並給焦點（NPC 卡片、雇用按鈕；6B-3 互動的最小版）。 */
+function revealInPanel(selector: string): void {
+  const el = document.querySelector<HTMLElement>(selector);
+  if (el === null) return;
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  el.focus({ preventScroll: true });
+  el.classList.remove("world-flash");
+  void el.offsetWidth; // 重新觸發閃一下的動畫
+  el.classList.add("world-flash");
+}
+
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -72,10 +86,16 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
+  /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
+  const lastMap = useRef<string | null | undefined>(undefined);
+  const [banner, setBanner] = useState<{ name: string; n: number } | null>(null);
 
   const show = useCallback((next: WorldView, mine: ChatEntry | null = null) => {
     for (const card of [...next.character.skills, ...next.character.bench]) primeSkillCard(card);
     setView(next);
+    const place = placeBanner(lastMap.current, next.field);
+    lastMap.current = next.field?.map_id ?? null;
+    if (place !== null) setBanner((b) => ({ name: place, n: (b?.n ?? 0) + 1 }));
     if (next.events.length > 0) setLog((cur) => [...next.events, ...cur].slice(0, LOG_MAX));
     if (next.situation_result != null) setResult(next.situation_result);
     if ((next.rumors ?? []).length > 0) setRumors({ at: next.here.location, lines: [...(next.rumors ?? [])] });
@@ -91,6 +111,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       });
     }
   }, []);
+
+  // 地名約 2 秒後淡出（21.7）
+  useEffect(() => {
+    if (banner === null) return undefined;
+    const timer = window.setTimeout(() => setBanner(null), PLACE_NAME_MS);
+    return () => window.clearTimeout(timer);
+  }, [banner]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +178,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   function enter(id: string, first?: WorldView) {
     writeWorldChar(id);
+    lastMap.current = undefined;
+    setBanner(null);
     setLog([]);
     setChats({});
     setResult(null);
@@ -163,6 +192,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   function leaveChar() {
     writeWorldChar(null);
+    lastMap.current = undefined;
     setCharId(null);
     setView(null);
     setLog([]);
@@ -249,6 +279,50 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   const travel = (to: string) => act({ kind: "travel", to, hasten });
 
+  /** 實地地圖的動作（走路、傳送石）：只送不套用，給可走動畫面先播動畫再套用；失敗時顯示錯誤、回傳 `null`。 */
+  async function sendField(action: WorldAction): Promise<WorldView | null> {
+    if (charId === null) return null;
+    try {
+      const next = await api.worldAct(charId, action);
+      setError(null);
+      return next;
+    } catch (e) {
+      setError(errorText(e));
+      return null;
+    }
+  }
+
+  /** 走到設施或 NPC 旁邊互動：開原本的面板（6B-4 前的最小版）。 */
+  function interact(target: FieldTarget) {
+    if (target.kind === "npc") {
+      revealInPanel(`[data-npc="${target.npc}"]`);
+      return;
+    }
+    switch (target.facility) {
+      case "shop":
+        setWant("shop");
+        return;
+      case "smithy":
+      case "enchanter":
+        setWant("smithy");
+        return;
+      case "notice_board":
+        setWant("board");
+        return;
+      case "mentor":
+        setWant("growth");
+        return;
+      case "tavern":
+        act({ kind: "tavern" });
+        return;
+      case "hire":
+        revealInPanel('[data-testid="world-hire-toggle"]');
+        return;
+      default:
+        return;
+    }
+  }
+
   const fight = () =>
     void run(async () => {
       if (charId === null) return;
@@ -323,6 +397,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
+      {banner !== null && (
+        <div key={banner.n} className="world-place-banner" role="status" data-testid="world-place-banner">
+          {banner.name}
+        </div>
+      )}
 
       {view === null ? (
         <div className="muted">載入中……</div>
@@ -350,7 +429,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           {leftPane(view, want) === "bag" && <WorldBagScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "shop" && <WorldShopScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "smithy" && <WorldSmithyScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
-          {leftPane(view, want) === "map" && <WorldMap view={view} busy={busy} onTravel={travel} />}
+          {leftPane(view, want) === "map" &&
+            (mapPaneKind(view) === "field" ? (
+              <WorldField view={view} busy={busy} send={sendField} commit={show} onInteract={interact} />
+            ) : (
+              <WorldMap view={view} busy={busy} onTravel={travel} />
+            ))}
           <WorldPanel
             view={view}
             busy={busy}

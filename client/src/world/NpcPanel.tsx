@@ -30,7 +30,7 @@ export function NpcPanel({ view, busy, chats, onAct, onChat }: Props) {
     <div className="panel world-npcs" data-testid="world-npcs">
       <div className="section-title">這裡的人</div>
       {npcs.map((n) => (
-        <div key={n.id} className="world-npc" data-testid="world-npc">
+        <div key={n.id} className="world-npc" data-testid="world-npc" data-npc={n.id} tabIndex={-1}>
           <div className="world-npc-head">
             <b>{n.name_zh}</b>
             {n.role_zh !== "" && <span className="muted small">　{n.role_zh}</span>}
