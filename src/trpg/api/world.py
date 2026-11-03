@@ -14,6 +14,9 @@
 - 帳號是 5E-1：角色以伺服器產生的 ID 存取，不登入（代決 5A5-1）。
 - 全服首殺（5E-3，計畫 31.5）：每個成功的世界動作之後把新的精英首殺記到 ``first_kills.json``
   （:mod:`trpg.server.first_kills`；衍生資料，不影響重播）。
+- 季末重置（5F-5）：:meth:`WorldStore.season_reset` 在世界的鎖內呼叫
+  :func:`trpg.server.season_reset.season_reset`，真的執行後清掉記憶體快取（世界、角色、日誌、進行中
+  的戰鬥、循環賽）。編年史的上季角色（:attr:`WorldStore.chronicle`）讓新角色沿用名字與外觀。
 - 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
   三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
   :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
@@ -36,11 +39,18 @@ from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
-from trpg.server.accounts import AccountTitle
+from trpg.server.accounts import AccountStore, AccountTitle
+from trpg.server.chronicle import ChronicleHero, SeasonChronicleEntry, SeasonChronicleStore
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore
 from trpg.server.season_boss_board import SeasonBossBoard, first_kill_log_json
+from trpg.server.season_reset import (
+    ResetLine,
+    SeasonResetError,
+    SeasonResetReport,
+    season_reset,
+)
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
@@ -150,6 +160,8 @@ class WorldStore:
         """影子循環賽的賽果（5F-4；衍生資料，不進日誌）。"""
         self.league_runner = LeagueRunner(self.league)
         """循環賽的背景執行（5F-4；管理者開跑）。"""
+        self.chronicle = SeasonChronicleStore(root)
+        """編年史的季末紀錄（5F-5；上季角色的文字、名字與外觀）。"""
 
     # -- 路徑 -----------------------------------------------------------------
 
@@ -268,16 +280,25 @@ class WorldStore:
         race: str | None = None,
         origin: str | None = None,
         seed: int | None = None,
+        legacy: ChronicleHero | None = None,
     ) -> CharacterState:
         """建立角色（07 7.6 創角：起始武器＋2 個關鍵字，和一輪開局同一套函式；配點照預設，代決
-        5A5-3）；站在起始區域的小鎮。不合法時拋 :class:`~trpg.roguelite.errors.ChoiceError`。"""
+        5A5-3）；站在起始區域的小鎮。不合法時拋 :class:`~trpg.roguelite.errors.ChoiceError`。
+
+        ``legacy``（5F-5）：沿用上季角色的名字與外觀（名字、種族、紙娃娃；取代 ``name``、
+        ``race``）。"""
+        if legacy is not None:
+            name, race = legacy.name, legacy.race
         start_seed = seed if seed is not None else secrets.randbelow(2**31)
         run = new_keyword_run(self.library, weapon, keywords, start_seed)
         run = with_origin(self.library, with_race(self.library, run, race), origin)
-        hero = run.hero.model_copy(update={"name_zh": name})
+        update: dict[str, object] = {"name_zh": name}
+        if legacy is not None and legacy.doll is not None:
+            update["doll"] = legacy.doll
+        hero = run.hero.model_copy(update=update)
         with self._lock:
             self.world()
-            taken = set(self.character_ids())
+            taken = set(self.character_ids()) | {h.character_id for _, h in self.chronicle.heroes()}
             character_id = self._new_id()
             while character_id in taken:  # pragma: no cover - 機率極低
                 character_id = self._new_id()
@@ -485,6 +506,73 @@ class WorldStore:
                 battle_log=log,
             )
         )
+
+    # -- 季末重置（5F-5） ------------------------------------------------------
+
+    def legacy_heroes(
+        self, account_id: str | None
+    ) -> tuple[tuple[SeasonChronicleEntry, ChronicleHero], ...]:
+        """上季（含更早）的角色，新的季在前；``account_id`` 給了只列那個帳號的（開發模式沒登入
+        ＝全部）。"""
+        found = self.chronicle.heroes()
+        if account_id is None:
+            return found
+        return tuple((s, h) for s, h in found if h.account_id == account_id)
+
+    def legacy_hero(self, character_id: str, account_id: str | None) -> ChronicleHero:
+        """沿用的上季角色；不存在或不是這個帳號的拋 :class:`WorldCharacterNotFoundError`。"""
+        for _, hero in self.legacy_heroes(account_id):
+            if hero.character_id == character_id:
+                return hero
+        raise WorldCharacterNotFoundError(f"找不到上季角色 {character_id}")
+
+    def season_reset(
+        self,
+        *,
+        accounts: AccountStore | None,
+        start: int,
+        season_id: str | None = None,
+        seed: int | None = None,
+        force: bool = False,
+        dry_run: bool = True,
+        confirm_season: str | None = None,
+        backup_root: Path | None = None,
+    ) -> SeasonResetReport:
+        """季末重置（管理者）：存檔資料夾＝世界資料夾的上一層。真的執行時 ``confirm_season`` 要等於
+        目前的季 ID；循環賽背景執行中一律拒絕。執行後清掉記憶體快取（進行中的戰鬥跟著角色清掉）。"""
+        with self._lock:
+            if self.league_runner.running:
+                raise SeasonResetError("循環賽正在背景執行，等跑完再重置")
+            current = self.current_season()
+            if not dry_run and confirm_season != current:
+                raise SeasonResetError(f"確認的季 ID 不符（目前是 {current}）")
+            battles = len(self._battles)
+            extra = (ResetLine(label_zh="進行中的大世界戰鬥", count=battles),) if battles else ()
+            report = season_reset(
+                self.library,
+                self.root.parent,
+                world_dir=self.root,
+                start=start,
+                now=self.clock(),
+                accounts=accounts,
+                season_id=season_id,
+                seed=seed,
+                force=force,
+                dry_run=dry_run,
+                backup_root=backup_root,
+                extra_cleared=extra,
+            )
+            if not dry_run:
+                self._forget()
+            return report
+
+    def _forget(self) -> None:
+        """季末重置之後：記憶體裡的世界、角色、日誌、進行中的戰鬥與循環賽快取全部丟掉、重讀。"""
+        self._world = None
+        self._chars = {}
+        self._entries = None
+        self._battles = {}
+        self.league.forget()
 
     def _save_char(self, char: CharacterState) -> None:
         write_atomic(self._char_path(char.character_id), dumps_char(char))

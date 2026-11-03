@@ -25,6 +25,10 @@
   （管理者開跑；背景分批執行）。報名、取消走 ``…/actions``（``league_enter``、
   ``league_withdraw``）。
 
+- 5F-5（``docs/phases/Phase5計畫.md`` 40.5）：``GET /api/world/chronicle``（編年史）、
+  ``GET /api/world/legacy``（自己帳號上季的角色）、``POST /api/world/season/reset``（管理者的季末
+  重置，預設 dry-run）；建立角色加 ``legacy_character``（沿用上季角色的名字與外觀）。
+
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
   依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
   歸到帳號。
@@ -45,8 +49,16 @@ from trpg.api.auth import (
     require_admin,
     require_league_admin,
     require_note_admin,
+    require_season_admin,
     require_world_access,
     viewer,
+)
+from trpg.api.chronicle_schemas import (
+    ChronicleView,
+    LegacyHeroView,
+    SeasonResetRequest,
+    chronicle_view,
+    legacy_view,
 )
 from trpg.api.league_schemas import LeagueReplayResponse, LeagueRunView, LeagueView
 from trpg.api.league_view import PAGE_SIZE, league_view, match_outcome_zh, match_title
@@ -81,7 +93,9 @@ from trpg.api.world_story_schemas import (
 )
 from trpg.engine.runner import log_replay_problem
 from trpg.server.league import STALE_ZH, LeagueError
+from trpg.server.season_reset import SeasonResetReport
 from trpg.world.actions import SwearOathAction
+from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError
 
 __all__ = ["router"]
@@ -129,6 +143,13 @@ def create_character(body: CreateWorldCharacterRequest, request: Request) -> Wor
     with store.lock:  # 建立角色經世界的鎖依序進行：檢查上限、建立、歸到帳號之間不會插隊
         if account is not None:
             accounts.check_character_room(account.account_id)  # 先檢查上限再建立（409）
+        legacy = (
+            None
+            if body.legacy_character is None
+            else store.legacy_hero(
+                body.legacy_character, None if account is None else account.account_id
+            )
+        )
         char = store.create(
             body.name,
             body.weapon,
@@ -136,6 +157,7 @@ def create_character(body: CreateWorldCharacterRequest, request: Request) -> Wor
             race=body.race,
             origin=body.origin,
             seed=body.seed,
+            legacy=legacy,
         )
         if account is not None:
             accounts.attach_character(account.account_id, char.character_id)
@@ -343,6 +365,46 @@ def post_league_run(request: Request) -> LeagueRunView:
         record = store.league.start(store.world(), store.clock())
     started = store.league_runner.start()
     return LeagueRunView(started=started, done=record.done, total=len(record.matches))
+
+
+@router.get("/chronicle")
+def get_chronicle(request: Request) -> ChronicleView:
+    """編年史（5F-5）：每季的季末紀錄、首位發現的配方、循環賽最終排名、首殺與評分榜。所有人可看。"""
+    store = world_of(request)
+    with store.lock:
+        return chronicle_view(
+            store.current_season(),
+            store.chronicle.load().seasons,
+            store.league.chronicle.load().seasons,
+            store.first_kills.all(),
+            store.boss_board.all(),
+        )
+
+
+@router.get("/legacy")
+def get_legacy(request: Request) -> list[LegacyHeroView]:
+    """自己帳號上季（含更早）的角色，新的季在前（5F-5；開發模式沒登入＝全部）。"""
+    account = viewer(request)
+    store = world_of(request)
+    with store.lock:
+        found = store.legacy_heroes(None if account is None else account.account_id)
+        return legacy_view(store.library, found)
+
+
+@router.post("/season/reset", dependencies=[Depends(require_season_admin)])
+def post_season_reset(body: SeasonResetRequest, request: Request) -> SeasonResetReport:
+    """季末重置（管理者，5F-5）：預設 dry-run，只列出會清什麼、留什麼；``dry_run: false`` 時先備份
+    整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。"""
+    store = world_of(request)
+    return store.season_reset(
+        accounts=accounts_of(request),
+        start=season_start_at(store.library, body.start_date),
+        season_id=body.season_id,
+        seed=body.seed,
+        force=body.force,
+        dry_run=body.dry_run,
+        confirm_season=body.confirm_season,
+    )
 
 
 @router.get("/llm")

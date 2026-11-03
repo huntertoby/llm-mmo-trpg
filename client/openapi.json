@@ -2553,6 +2553,96 @@
         }
       }
     },
+    "/api/world/chronicle": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Chronicle",
+        "description": "編年史（5F-5）：每季的季末紀錄、首位發現的配方、循環賽最終排名、首殺與評分榜。所有人可看。",
+        "operationId": "get_chronicle_api_world_chronicle_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChronicleView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/legacy": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get Legacy",
+        "description": "自己帳號上季（含更早）的角色，新的季在前（5F-5；開發模式沒登入＝全部）。",
+        "operationId": "get_legacy_api_world_legacy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LegacyHeroView"
+                  },
+                  "type": "array",
+                  "title": "Response Get Legacy Api World Legacy Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/season/reset": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Season Reset",
+        "description": "季末重置（管理者，5F-5）：預設 dry-run，只列出會清什麼、留什麼；``dry_run: false`` 時先備份\n整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。",
+        "operationId": "post_season_reset_api_world_season_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeasonResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonResetReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/llm": {
       "get": {
         "tags": [
@@ -2972,6 +3062,11 @@
           "can_create": {
             "type": "boolean",
             "title": "Can Create"
+          },
+          "admin": {
+            "type": "boolean",
+            "title": "Admin",
+            "default": false
           },
           "titles": {
             "items": {
@@ -5412,6 +5507,251 @@
         "title": "Choice",
         "description": "一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀\n``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的\n最低稀有度、附帶效果上限）。"
       },
+      "ChronicleBoardView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "score",
+          "rounds",
+          "title_zh"
+        ],
+        "title": "ChronicleBoardView"
+      },
+      "ChronicleHeroView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "text_zh"
+        ],
+        "title": "ChronicleHeroView"
+      },
+      "ChronicleKillView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "target_name_zh": {
+            "type": "string",
+            "title": "Target Name Zh"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "target_name_zh",
+          "name"
+        ],
+        "title": "ChronicleKillView"
+      },
+      "ChronicleRankView": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "build_zh": {
+            "type": "string",
+            "title": "Build Zh"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "draws": {
+            "type": "integer",
+            "title": "Draws"
+          },
+          "tied": {
+            "type": "boolean",
+            "title": "Tied"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rank",
+          "name",
+          "build_zh",
+          "wins",
+          "losses",
+          "draws",
+          "tied"
+        ],
+        "title": "ChronicleRankView"
+      },
+      "ChronicleRecipeView": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "discoverer_name": {
+            "type": "string",
+            "title": "Discoverer Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh",
+          "discoverer_name"
+        ],
+        "title": "ChronicleRecipeView"
+      },
+      "ChronicleSeasonView": {
+        "properties": {
+          "season_id": {
+            "type": "string",
+            "title": "Season Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "reset_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset At"
+          },
+          "heroes": {
+            "items": {
+              "$ref": "#/components/schemas/ChronicleHeroView"
+            },
+            "type": "array",
+            "title": "Heroes"
+          },
+          "recipes": {
+            "items": {
+              "$ref": "#/components/schemas/ChronicleRecipeView"
+            },
+            "type": "array",
+            "title": "Recipes"
+          },
+          "first_kills": {
+            "items": {
+              "$ref": "#/components/schemas/ChronicleKillView"
+            },
+            "type": "array",
+            "title": "First Kills"
+          },
+          "league": {
+            "items": {
+              "$ref": "#/components/schemas/ChronicleRankView"
+            },
+            "type": "array",
+            "title": "League"
+          },
+          "boss_board": {
+            "items": {
+              "$ref": "#/components/schemas/ChronicleBoardView"
+            },
+            "type": "array",
+            "title": "Boss Board"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "season_id",
+          "name_zh",
+          "current",
+          "started_at",
+          "reset_at",
+          "heroes",
+          "recipes",
+          "first_kills",
+          "league",
+          "boss_board"
+        ],
+        "title": "ChronicleSeasonView"
+      },
+      "ChronicleView": {
+        "properties": {
+          "current_season": {
+            "type": "string",
+            "title": "Current Season"
+          },
+          "seasons": {
+            "items": {
+              "$ref": "#/components/schemas/ChronicleSeasonView"
+            },
+            "type": "array",
+            "title": "Seasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current_season",
+          "seasons"
+        ],
+        "title": "ChronicleView"
+      },
       "CiteFactView": {
         "properties": {
           "fact": {
@@ -6419,6 +6759,18 @@
               }
             ],
             "title": "Seed"
+          },
+          "legacy_character": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Character"
           }
         },
         "additionalProperties": false,
@@ -11818,6 +12170,65 @@
         "title": "LeaveChoice",
         "description": "離開營火（有候選沒選時視為放棄）。"
       },
+      "LegacyHeroView": {
+        "properties": {
+          "character_id": {
+            "type": "string",
+            "title": "Character Id"
+          },
+          "season_id": {
+            "type": "string",
+            "title": "Season Id"
+          },
+          "season_name_zh": {
+            "type": "string",
+            "title": "Season Name Zh"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "race": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race"
+          },
+          "race_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race Name Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character_id",
+          "season_id",
+          "season_name_zh",
+          "name",
+          "race",
+          "race_name_zh",
+          "text_zh"
+        ],
+        "title": "LegacyHeroView",
+        "description": "可以沿用的上季角色。"
+      },
       "LevelUpChoice": {
         "properties": {
           "kind": {
@@ -14935,6 +15346,30 @@
         "title": "RerollAction",
         "description": "在附魔台重骰一條詞條（8.20：由「指紋＋位置＋n」決定；越骰越貴）。"
       },
+      "ResetLine": {
+        "properties": {
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "detail_zh": {
+            "type": "string",
+            "title": "Detail Zh",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label_zh",
+          "count"
+        ],
+        "title": "ResetLine"
+      },
       "RespecAction": {
         "properties": {
           "kind": {
@@ -15643,6 +16078,147 @@
         ],
         "title": "SeasonInfoView",
         "description": "賽季第幾天與日程（09 9.7）。"
+      },
+      "SeasonResetReport": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "old_season": {
+            "type": "string",
+            "title": "Old Season"
+          },
+          "new_season": {
+            "type": "string",
+            "title": "New Season"
+          },
+          "new_season_name_zh": {
+            "type": "string",
+            "title": "New Season Name Zh"
+          },
+          "season_start": {
+            "type": "integer",
+            "title": "Season Start"
+          },
+          "cleared": {
+            "items": {
+              "$ref": "#/components/schemas/ResetLine"
+            },
+            "type": "array",
+            "title": "Cleared"
+          },
+          "kept": {
+            "items": {
+              "$ref": "#/components/schemas/ResetLine"
+            },
+            "type": "array",
+            "title": "Kept"
+          },
+          "chronicle": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chronicle"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "backup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dry_run",
+          "old_season",
+          "new_season",
+          "new_season_name_zh",
+          "season_start",
+          "cleared",
+          "kept",
+          "chronicle"
+        ],
+        "title": "SeasonResetReport",
+        "description": "季末重置（或 dry-run）的結果。"
+      },
+      "SeasonResetRequest": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "season_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season Id"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1.8446744073709552e+19,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": true
+          },
+          "confirm_season": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm Season"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start_date"
+        ],
+        "title": "SeasonResetRequest",
+        "description": "季末重置（管理者）。``dry_run`` 預設 ``true``：只列出會清什麼、留什麼。"
       },
       "SegmentLine": {
         "properties": {

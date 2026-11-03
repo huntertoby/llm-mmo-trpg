@@ -49,6 +49,7 @@ from trpg.server.accounts import (
 )
 from trpg.server.league import LeagueError, LeagueMatchNotFoundError
 from trpg.server.notes import NoteError, NoteNotFoundError
+from trpg.server.season_reset import SeasonResetError
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
@@ -87,6 +88,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     NoteError: 422,
     LeagueError: 409,  # 5F-4 循環賽還不能開跑
     LeagueMatchNotFoundError: 404,
+    SeasonResetError: 409,  # 5F-5 季末重置的檢查沒過
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 

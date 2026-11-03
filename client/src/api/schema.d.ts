@@ -1055,6 +1055,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/chronicle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chronicle
+         * @description 編年史（5F-5）：每季的季末紀錄、首位發現的配方、循環賽最終排名、首殺與評分榜。所有人可看。
+         */
+        get: operations["get_chronicle_api_world_chronicle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/legacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Legacy
+         * @description 自己帳號上季（含更早）的角色，新的季在前（5F-5；開發模式沒登入＝全部）。
+         */
+        get: operations["get_legacy_api_world_legacy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/season/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Season Reset
+         * @description 季末重置（管理者，5F-5）：預設 dry-run，只列出會清什麼、留什麼；``dry_run: false`` 時先備份
+         *     整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。
+         */
+        post: operations["post_season_reset_api_world_season_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/llm": {
         parameters: {
             query?: never;
@@ -1253,6 +1314,11 @@ export interface components {
             max_characters: number;
             /** Can Create */
             can_create: boolean;
+            /**
+             * Admin
+             * @default false
+             */
+            admin: boolean;
             /** Titles */
             titles?: string[];
         };
@@ -2252,6 +2318,87 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** ChronicleBoardView */
+        ChronicleBoardView: {
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+            /** Rounds */
+            rounds: number;
+            /** Title Zh */
+            title_zh: string;
+        };
+        /** ChronicleHeroView */
+        ChronicleHeroView: {
+            /** Name */
+            name: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /** ChronicleKillView */
+        ChronicleKillView: {
+            /** Kind */
+            kind: string;
+            /** Target Name Zh */
+            target_name_zh: string;
+            /** Name */
+            name: string;
+        };
+        /** ChronicleRankView */
+        ChronicleRankView: {
+            /** Rank */
+            rank: number;
+            /** Name */
+            name: string;
+            /** Build Zh */
+            build_zh: string;
+            /** Wins */
+            wins: number;
+            /** Losses */
+            losses: number;
+            /** Draws */
+            draws: number;
+            /** Tied */
+            tied: boolean;
+        };
+        /** ChronicleRecipeView */
+        ChronicleRecipeView: {
+            /** Name Zh */
+            name_zh: string;
+            /** Discoverer Name */
+            discoverer_name: string;
+        };
+        /** ChronicleSeasonView */
+        ChronicleSeasonView: {
+            /** Season Id */
+            season_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Current */
+            current: boolean;
+            /** Started At */
+            started_at: number | null;
+            /** Reset At */
+            reset_at: number | null;
+            /** Heroes */
+            heroes: components["schemas"]["ChronicleHeroView"][];
+            /** Recipes */
+            recipes: components["schemas"]["ChronicleRecipeView"][];
+            /** First Kills */
+            first_kills: components["schemas"]["ChronicleKillView"][];
+            /** League */
+            league: components["schemas"]["ChronicleRankView"][];
+            /** Boss Board */
+            boss_board: components["schemas"]["ChronicleBoardView"][];
+        };
+        /** ChronicleView */
+        ChronicleView: {
+            /** Current Season */
+            current_season: string;
+            /** Seasons */
+            seasons: components["schemas"]["ChronicleSeasonView"][];
+        };
         /**
          * CiteFactView
          * @description 可以點選引用的事實（9.6.4：持有的線索、和 NPC 的往來、拿得出來的交換條件）。
@@ -2621,6 +2768,8 @@ export interface components {
             origin?: string | null;
             /** Seed */
             seed?: number | null;
+            /** Legacy Character */
+            legacy_character?: string | null;
         };
         /** DamageOut */
         DamageOut: {
@@ -4927,6 +5076,26 @@ export interface components {
             kind: "leave";
         };
         /**
+         * LegacyHeroView
+         * @description 可以沿用的上季角色。
+         */
+        LegacyHeroView: {
+            /** Character Id */
+            character_id: string;
+            /** Season Id */
+            season_id: string;
+            /** Season Name Zh */
+            season_name_zh: string;
+            /** Name */
+            name: string;
+            /** Race */
+            race: string | null;
+            /** Race Name Zh */
+            race_name_zh: string | null;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
          * LevelUpChoice
          * @description 升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
          *     欄位滿時 ``replace`` 指定要換掉的技能 ID。
@@ -6226,6 +6395,18 @@ export interface components {
             /** Index */
             index: number;
         };
+        /** ResetLine */
+        ResetLine: {
+            /** Label Zh */
+            label_zh: string;
+            /** Count */
+            count: number;
+            /**
+             * Detail Zh
+             * @default
+             */
+            detail_zh: string;
+        };
         /**
          * RespecAction
          * @description 免費重配屬性點（07 7.2「營火可以免費重配」；城鎮與營火；5A-6）。
@@ -6552,6 +6733,62 @@ export interface components {
             next_refresh_at: number;
             /** Next Refresh Zh */
             next_refresh_zh: string;
+        };
+        /**
+         * SeasonResetReport
+         * @description 季末重置（或 dry-run）的結果。
+         */
+        SeasonResetReport: {
+            /** Dry Run */
+            dry_run: boolean;
+            /** Old Season */
+            old_season: string;
+            /** New Season */
+            new_season: string;
+            /** New Season Name Zh */
+            new_season_name_zh: string;
+            /** Season Start */
+            season_start: number;
+            /** Cleared */
+            cleared: components["schemas"]["ResetLine"][];
+            /** Kept */
+            kept: components["schemas"]["ResetLine"][];
+            /** Chronicle */
+            chronicle: string[];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+            /** Backup */
+            backup?: string | null;
+        };
+        /**
+         * SeasonResetRequest
+         * @description 季末重置（管理者）。``dry_run`` 預設 ``true``：只列出會清什麼、留什麼。
+         */
+        SeasonResetRequest: {
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Season Id */
+            season_id?: string | null;
+            /** Seed */
+            seed?: number | null;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /**
+             * Dry Run
+             * @default true
+             */
+            dry_run: boolean;
+            /** Confirm Season */
+            confirm_season?: string | null;
         };
         /**
          * SegmentLine
@@ -10301,6 +10538,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeagueRunView"];
+                };
+            };
+        };
+    };
+    get_chronicle_api_world_chronicle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChronicleView"];
+                };
+            };
+        };
+    };
+    get_legacy_api_world_legacy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyHeroView"][];
+                };
+            };
+        };
+    };
+    post_season_reset_api_world_season_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonResetReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

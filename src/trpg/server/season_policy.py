@@ -5,12 +5,16 @@
 - ``"numeric"``（數值類）：季末清掉（等級、技能、裝備、材料、任務幣、世界狀態……）。
 - ``"memorial"``（紀念類）：季末保留（帳號、稱號、編年史、印記收藏、排行榜與 Boss 擊殺紀錄）。
 
-這一段只有分類與檢查（``tests/test_architecture.py``：表裡每個模型的欄位都要分類，新增欄位沒分類
-就失敗）；真正的重置流程在 5F-5。拿不準的欄位暫時標「數值類」（保守：季末會清掉），列在
-:data:`PROVISIONAL`，待使用者決定。
+5D-R2 只有分類與檢查（``tests/test_architecture.py``：表裡每個模型的欄位都要分類，新增欄位沒分類
+就失敗）。5F-5 的重置流程在 :mod:`trpg.server.season_reset`，照這張表清掉數值類、保留紀念類（架構
+測試另外檢查表裡每個模型都有重置處理）。
 
 角色（``CharacterState``）整個是數值類：#91 的「等級、技能、裝備、材料、任務幣」都在角色身上，
 角色本身也清掉（角色上限按賽季算，帳號保留歸屬紀錄，5D-R2）。
+
+5F-5（玩法 PM 2026-11-03 代決，第 1 節 5F-5 列）：5D-R2 暫標數值類的欄位都定案為數值類
+（:data:`PROVISIONAL` 清空）；其中幾個季末先寫進紀念紀錄再清（:data:`CARRIED`）：角色的名字與外觀
+（下季建角色可以沿用）、打過的精英與完成的事件（編年史文字）、配方的首位發現者。
 """
 
 from __future__ import annotations
@@ -21,7 +25,15 @@ from typing import Final, Literal
 from pydantic import BaseModel
 
 from trpg.server.accounts import AccountRecord, AccountTitle
-from trpg.server.chronicle import LeagueChronicle, LeagueChronicleRank, LeagueChronicleSeason
+from trpg.server.chronicle import (
+    ChronicleHero,
+    LeagueChronicle,
+    LeagueChronicleRank,
+    LeagueChronicleSeason,
+    RecipeDiscovery,
+    SeasonChronicle,
+    SeasonChronicleEntry,
+)
 from trpg.server.first_kills import FirstKill
 from trpg.server.league import LeagueMatch, LeagueRecord
 from trpg.server.notes import LocationNote
@@ -29,6 +41,8 @@ from trpg.server.season_boss_board import BossBoardEntry
 from trpg.world.state import CharacterState, RecipeRecord, WorldState
 
 __all__ = [
+    "CARRIED",
+    "HERO_LEGACY_FIELDS",
     "MEMORIAL",
     "NUMERIC",
     "PROVISIONAL",
@@ -278,6 +292,33 @@ _CHRONICLE_RANK: Final[dict[str, ResetKind]] = _all(
 )
 """編年史的循環賽最終排名（5F-4b，玩法 PM 代決：紀念類，季末保留）。"""
 
+_SEASON_CHRONICLE: Final[dict[str, ResetKind]] = _all(MEMORIAL, "format", "seasons")
+_SEASON_CHRONICLE_ENTRY: Final[dict[str, ResetKind]] = _all(
+    MEMORIAL,
+    "season_id",
+    "name_zh",
+    "started_at",
+    "reset_at",
+    "next_season_id",
+    "heroes",
+    "recipes",
+)
+_CHRONICLE_HERO: Final[dict[str, ResetKind]] = _all(
+    MEMORIAL,
+    "character_id",
+    "account_id",
+    "name",
+    "race",
+    "doll",
+    "elites",
+    "events",
+    "text_zh",
+)
+_RECIPE_DISCOVERY: Final[dict[str, ResetKind]] = _all(
+    MEMORIAL, "code", "name_zh", "discoverer", "discoverer_name", "discovered_at", "season_id"
+)
+"""編年史的季末紀錄（5F-5）：上季角色（編年史文字、名字與外觀）、配方的首位發現者。紀念類。"""
+
 SEASON_POLICY: Final[Mapping[type[BaseModel], Mapping[str, ResetKind]]] = {
     CharacterState: _CHARACTER,
     WorldState: _WORLD,
@@ -292,6 +333,10 @@ SEASON_POLICY: Final[Mapping[type[BaseModel], Mapping[str, ResetKind]]] = {
     LeagueChronicle: _CHRONICLE,  # 5F-4b 編年史
     LeagueChronicleSeason: _CHRONICLE_SEASON,
     LeagueChronicleRank: _CHRONICLE_RANK,
+    SeasonChronicle: _SEASON_CHRONICLE,  # 5F-5 季末紀錄
+    SeasonChronicleEntry: _SEASON_CHRONICLE_ENTRY,
+    ChronicleHero: _CHRONICLE_HERO,
+    RecipeDiscovery: _RECIPE_DISCOVERY,
 }
 """存檔模型 → 欄位 → 數值類／紀念類。"""
 
@@ -299,35 +344,23 @@ SAVED_MODELS: Final[tuple[type[BaseModel], ...]] = tuple(SEASON_POLICY)
 """要分類的存檔模型（角色、世界、配方紀錄、首殺、賽季 Boss 評分榜、帳號、地點留言、循環賽、
 編年史）。"""
 
-PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset(
-    {
-        ("WorldState", "recipes"),
-        ("RecipeRecord", "recipe"),
-        ("RecipeRecord", "hidden"),
-        ("RecipeRecord", "base"),
-        ("RecipeRecord", "steps"),
-        ("RecipeRecord", "listed"),
-        ("CharacterState", "elite_kills"),
-        ("CharacterState", "finished_skeletons"),
-        ("CharacterState", "hero"),
-        ("LocationNote", "note_id"),
-        ("LocationNote", "region"),
-        ("LocationNote", "location"),
-        ("LocationNote", "character_id"),
-        ("LocationNote", "name"),
-        ("LocationNote", "text"),
-        ("LocationNote", "at"),
-    }
-)
-"""拿不準、暫標數值類的欄位（模型名, 欄位）。待使用者決定（5D-R2 報告「待 PM 決定」）：
+PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset()
+"""拿不準、暫標數值類的欄位（模型名, 欄位）。5D-R2 列的四項（配方表、精英擊殺與完成的事件、角色名、
+地點留言）5F-5 由玩法 PM 代決，全部定案為數值類，其中要留下的部分改由 :data:`CARRIED` 寫進紀念
+紀錄。之後新增拿不準的欄位再列在這裡。"""
 
-- 配方表要不要跨季（#91 只說數值類全清；配方能直接打出裝備，偏數值類）。
-- 角色的精英擊殺、完成的事件骨架是不是「編年史」（目前是角色進度；編年史可由世界日誌與首殺算）。
-- 角色名（``hero`` 裡）要不要留給編年史／排行榜（首殺已經存下當時的名字）。
-- 地點留言要不要跨季。
+HERO_LEGACY_FIELDS: Final[tuple[str, ...]] = ("name_zh", "race", "doll")
+"""角色 ``hero``（``UnitTemplate``）裡季末保留、下季建角色可以沿用的欄位：名字與外觀（種族外觀、
+紙娃娃）。等級、技能、裝備、屬性等其他欄位照數值類清掉。"""
 
-（5F-4 的「循環賽凍結的報名要不要跨季」5F-4b 已定：快照照樣清掉，最終排名留在編年史。）
-"""
+CARRIED: Final[Mapping[tuple[str, str], str]] = {
+    ("CharacterState", "hero"): "名字與外觀（name_zh、race、doll）→ 編年史的上季角色（下季可沿用）",
+    ("CharacterState", "elite_kills"): "擊倒過的精英 → 編年史文字",
+    ("CharacterState", "finished_skeletons"): "完成的事件 → 編年史文字",
+    ("WorldState", "recipes"): "配方的首位發現者（RecipeRecord 的紀念類欄位）→ 編年史",
+}
+"""數值類、但季末先寫進紀念紀錄再清掉的欄位（模型名, 欄位）→ 去處（5F-5，玩法 PM 2026-11-03）。
+:mod:`trpg.server.season_reset` 每一項都要處理（架構測試檢查）。"""
 
 
 def fields_of_kind(model: type[BaseModel], kind: ResetKind) -> tuple[str, ...]:

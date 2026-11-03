@@ -291,6 +291,13 @@ class AccountStore:
                 if outer:
                     self._file_lock.release()
 
+    @contextmanager
+    def locked(self) -> Iterator[None]:
+        """整段持有帳號資料夾的鎖（季末重置 5F-5：期間 Bot 不能同時建角、改帳號）。同一執行緒裡
+        照常呼叫其他方法（可巢狀）。"""
+        with self._locked():
+            yield
+
     def _path(self, account_id: str) -> Path:
         return self.root / f"{account_id}.json"
 

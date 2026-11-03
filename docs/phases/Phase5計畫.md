@@ -94,7 +94,7 @@
 | 5A-M2 | 引擎機制②（玩法 PM 2026-11-02）：陣法範圍加成（≤ 3 格）、把傷害分給相鄰同門；雲嶺劍陣弟子、詞綴連心的換正式機制（第 17 節） | 5A-M1 | 1 h | — |
 | 5A-M2b | 5A-M2 收尾（玩法 PM 2026-11-03）：陣眼石靈存在時，3 格內同門（sect）受到的傷害 −20%，打碎後立刻解除（霧鎖真人陣眼 −50% 放 5F-2）；劍陣弟子補一招現有的直線 2 格刺擊類技能（不做新技能）——現有技能沒有近戰直線 2 格，玩法 PM 改選新增「穿陣刺」（近戰直線 2 格、武器技、吃武器屬性、照現有預算、放進手寫池），排 5A-M2c。劍陣只算劍陣弟子、連心分給任何相鄰友方照現狀 | 5A-M2 | 0.5 h | 可與 5B-4b 平行 |
 | 5B-M3 | 引擎機制③：三方混戰（排在 5B 主線第 1 章之前） | 5A-M1 | 1 h | — |
-| 5A-ART1 | 敵人外觀移植①：異形畫法（`docs/art/敵人外觀.md` 第 3 節；美術代決待使用者確認，未確認時照代決先做，改名與配色只動資料） | 5A-3 | 1 h | 可與 5A-4 平行（只動 `client/`） |
+| 5A-ART1 | 敵人外觀移植①：異形畫法（`docs/art/敵人外觀.md` 第 3 節；美術代決待使用者確認，未確認時照代決先做，改名與配色只動資料）。**2026-11-03 補充（第 3 節「第 4 段補充」，710051fa）**：新欄位 `status_traits`（灰燼之心有 `molten_shell` 時多畫一層殼 crust，第 2 階段狀態移除殼消失）；召喚物也能帶 creature、有的話優先用（餘燼幼蜥 lizard＋magma＋新 tiny 0.62）；熔爐母獸熔核移到腹部（lizard core 點）；ART4 的單位 ID 對照表含荒原與碎晶之主 | 5A-3 | 1.5 h | 可與 5A-4 平行（只動 `client/`） |
 | 5A-ART2 | 敵人外觀移植②：精英與頭目記號 | 5A-ART1 | 0.5 h | 可與 5A-5 平行 |
 | 5A-ART3 | 敵人外觀移植③：修士新部件（紙娃娃補 11 個小部件） | 5A-ART1 | 0.75 h | 可與 5A-ART2 平行（不同檔案時） |
 | 5A-ART4 | 敵人外觀移植④：內容資料（敵人外觀欄位，名稱與數量照玩法 PM 敵人清單） | 5A-3、5A-ART3 | 0.25 h | — |
@@ -166,6 +166,7 @@
 | 5F-ART1 | 霧鎖千山大十字圖示（美術 PM，`docs/art/大十字圖示.md`，分支 `claude/art-pm-8f4e6d` 753c517d，連 4df27344 熔核一起併）：arm ≥ 2 的十字 `grid()` 畫 5×5（cs 11、gap 2、總寬 63）、亮 9 格、中心星形 0.7 倍；segments 帶 arm 到 motif／grid()、shapeTile id 加 arm、不合法值當 1。**併做霧影外觀**（`docs/art/霧影外觀.md`，bc168013）：人形新款式 `mist_shade`（召喚者紙娃娃、月白 #dfe4e2、不透明度 0.55、不發光、腳底往上 14 單位漸隱、不畫影子、不帶本體金環金菱形詞綴粒子），`summon_mist_shade` 召喚外觀寫 `variant: mist_shade`；玩家殘影不變。待併 commit：4df27344、753c517d、bc168013 | 5F-2b、5F-1b | 0.5 h | 可平行 |
 | 5F-3b | 5F-3 收尾（玩法 PM 2026-11-03 代決）：技能 `enemy_only` 標記，生成器／候選／閃現／工坊都排除（霧鎖千山與 5F-3 的 6 招敵人技能都標上；夾具恢復成不含它們）；碎晶之主用 380／60，目標整體 60～70%、10～15 輪、**每個 build 至少 40%**：先查 striker 20%、trapper 40% 輸在哪個階段、哪個機制，再對那個機制調 Boss（#87：調 Boss 不調 build），原因寫報告；解鎖對齊：封印集滿後「最早第 8 天」且「公告滿 24 小時」之後的第一個 6 點；「碎晶的終結者」做成帳號層級紀念稱號（季末保留、評分榜照顯示） | 5F-3 | 1.5 h | 否 |
 | 5F-5a | 灰燼荒原內容接入（Q9；`docs/design/19-灰燼荒原與賽季主線.md` 19.1～19.9 全部：地點圖約 17 個、熔岩獸群與中立族群、區域 Boss 灰燼之心（護甲 +1 旗標）、材料、事件骨架約 15 個、NPC 人設卡、主線第 2 章、荒原懸賞、世界事件 #2 熔岩潰堤與 #3 封印共鳴；餘燼集商店、鐵匠爐叔與附魔台、20.4 兩個隱藏配方提示；情境模板）| 5F-3 | 2 h | 可與 5F-3b 平行（只碰 content／world 內容） |
+| 5F-5b | 5F-5a 收尾（玩法 PM 2026-11-03 代決，19 號文件與 3.5 已記，3d122a14）：灰燼之心 HP 維持 160、改調傷害，目標 9 級主角＋2 傭兵勝率 70～80%、6～10 輪；另量赤焰（build_fire）當主角至少 40%，火抗 −75% 達不到就降回 −50%（#87 調 Boss 不調 build）；一般遭遇補量「高 2 級」（07 7.8：同等級約 80%、高 2 級約一半，衝突時以高 2 級吃力優先），高於 60% 才調高荒原敵人傷害（只調荒原），60% 以內維持；世界事件 #2 失敗後果改成「餘燼集商店價格 +20% 到季末」（全服），荒原建議等級 +1 不變；村落不加商店 | 5F-5a | 1 h | 可與 5F-5 平行 |
 | 5F-5 | 季末重置（9.7、#91：數值類全清、紀念類保留）。**分類代決（玩法 PM 2026-11-03，改 `server/season_policy.py`）**：配方表 recipe／hidden／base／steps／listed 清掉，首位發現者紀錄（誰、配方名、哪一季）保留；`elite_kills`、`finished_skeletons` 清掉，但季末先寫成編年史文字紀錄（例「第一季：擊倒北坡狼王、解開霜音的謎」）並保留；名字與外觀保留、下季建角色可沿用，等級／技能／裝備清；地點留言清掉（首殺足跡已在首殺紀錄與編年史保留）。荒原內容一併接：餘燼集鐵匠爐叔與附魔台（8.26.1 每鎮成對）、20.4 兩個隱藏配方提示、餘燼集商店 | 5F-3 | 1.5 h | 否 |
 
 > 合計 25 段，約 33 小時 agent 工時。
@@ -4378,6 +4379,89 @@ world_events:
 
 - 季末重置（5F-5）；`enemy_only` 機制本身（5F-3b）；新美術（熔岩獸外觀、冷卻井物件、Boss 立繪）；引擎新機制。
 
-## 40. 之後各段規格
+## 40. 5F-5 詳細規格：季末重置（本段開工時由實作者補上，依第 1 節 5F-5 列的玩法 PM 2026-11-03 代決）
+
+> 給實作 agent。主要動 `src/trpg/server/`（`season_policy.py`、新 `season_reset.py`、`chronicle.py`、`accounts.py`）、`src/trpg/api/`（`world.py`、`routes/world.py`、新的編年史與重置 schema／view、`account_schemas.py`）、`src/trpg/bot/announcer.py`、`scripts/season_reset.py`（新）、`client/src/world/`。荒原內容已在 5F-5a 做完，本段不做。另一個 agent 在做 5F-3b（`enemy_only`、Boss 平衡、帳號稱號〔紀念類〕），撞到以 main 為準。
+> 依據：第 1 節 5F-5 列；09 9.7「季末重置」、#91；`Phase5D-R2報告.md`（政策表、`season_id`、角色上限按賽季、帳號檔鎖）；`Phase5F-1報告.md`（賽季日曆、第 14 天結束）；`Phase5F-4報告.md`／`5F-4b`（`chronicle/league.json`）；`Phase5F-3報告.md`（首殺、評分榜）。完成報告：`Phase5F-5報告.md`。
+
+### 40.1 目標
+
+管理者在季末（第 14 天之後）用一個指令（API 或 `scripts/season_reset.py`）把世界換到下一季：先備份整個存檔資料夾，再照 `season_policy.py` 清掉數值類、保留紀念類；打過的精英、完成的事件與首位發現的配方先寫成編年史；新一季有新的 `season_id`、種子與開賽日（參數）。可以先 dry-run 預覽。新一季建角色可以沿用上季角色的名字與外觀；一般玩家看得到編年史。
+
+### 40.2 決策影響盤點（所有存檔）
+
+| 存檔 | 位置 | 分類 | 重置時 |
+|---|---|---|---|
+| 世界狀態 `WorldState` | `world/world.json` | 數值類（整個） | 換成新的一季：新 `season_id`、`season_seed`（舊種子＋新 ID 雜湊，確定性；也可用參數指定）、`season_start`（參數的開賽日刷新時刻）；其餘欄位預設值 |
+| 世界日誌 | `world/log.jsonl` | 數值類（世界狀態的來源） | 刪掉（備份裡留著，舊季首殺的 `seq` 可在備份查證） |
+| 配方表 `WorldState.recipes`（`RecipeRecord`） | `world.json` | 分開：`recipe`／`hidden`／`base`／`steps`／`listed` 數值類；`code`／`name_zh`／`discoverer`／`discoverer_name`／`discovered_at`／`season_id` 紀念類 | 紀念類欄位寫進編年史 `chronicle/seasons.json` 的「首位發現」；配方表清空 |
+| 角色 `CharacterState` | `world/chars/*.json` | 數值類（整個；`hero` 裡的名字與外觀另存） | 先把 `elite_kills`（精英中文名）、`finished_skeletons`（骨架的「誰：想要什麼」）寫成編年史文字（「第一季：擊倒…；完成…」）；名字＋外觀（`hero.name_zh`、`hero.race`、`hero.doll`）存進編年史的上季角色；刪掉角色檔 |
+| 帳號 `AccountRecord` | `accounts/*.json` | 紀念類 | 不改；整個重置期間持有帳號資料夾鎖檔（`accounts.lock`），擋住 Bot 同時建角、改帳號。`characters` 歸屬照舊保留，角色上限本來就按賽季算（5D-R2） |
+| 首殺 `FirstKill` | `world/first_kills.json` | 紀念類 | 不動（按 `season_id` 分季；新一季的第一個仍是首殺） |
+| 評分榜 `BossBoardEntry`、首殺戰鬥紀錄 | `world/season_boss_board.json`、`world/season_boss/` | 紀念類 | 不動 |
+| 循環賽 `LeagueRecord`／`LeagueMatch` | `world/league/league.json`、`matches/`、`archive/` | `entries`（凍結的 build 快照）數值類；其餘紀念類 | 整個搬到 `world/league_history/<舊季>/`（每份賽程的 `entries` 清空），新一季的賽程不會蓋掉舊的場次檔；戰鬥紀錄檔保留（`trpg battle replay` 照樣能驗） |
+| 編年史（循環賽最終排名） | `world/chronicle/league.json` | 紀念類 | 不動 |
+| 編年史（季末紀錄，新） | `world/chronicle/seasons.json`（`trpg-chronicle-seasons/1`） | 紀念類 | 本段新增：每季一筆（季名、開始、重置時間、上季角色、首位發現的配方） |
+| 地點留言 `LocationNote` | `world/notes.json` | 數值類（玩法 PM 代決） | 刪掉 |
+| Bot 公告狀態 | `bot/announce_state.json` | 不在政策表（Bot 自己的進度） | 不動；「貼過的首殺」鍵加上賽季（`s1` 以外的季是 `<季>:<kind>:<target>`，舊鍵不變），新一季同一種精英的首殺照樣會貼 |
+| 一輪（roguelite）存檔 | `saves/run-*.json` | 不在政策表（不是大世界） | 不動 |
+| 記憶體裡的東西 | `WorldStore` 的快取、進行中的大世界戰鬥、三選一預先計算、循環賽快取 | — | API 重置後全部清掉、重讀；循環賽背景執行中時拒絕重置 |
+| 印記收藏、帳號稱號 | — | 紀念類 | 目前沒有存檔欄位（5F-3b 的帳號稱號若加在 `AccountRecord` 上，照紀念類不動） |
+
+### 40.3 政策表的改動（`server/season_policy.py`）
+
+- `PROVISIONAL` 清空（玩法 PM 已代決）；分類照上表（原本暫標數值類的欄位都維持數值類）。
+- 新增 `CARRIED`：數值類但季末先寫進紀念紀錄的欄位（`CharacterState.hero` 的名字與外觀、`elite_kills`、`finished_skeletons`；`WorldState.recipes` 的首位發現）。`HERO_LEGACY_FIELDS`＝`name_zh`、`race`、`doll`。
+- 新增紀念類模型：`SeasonChronicle`、`SeasonChronicleEntry`、`ChronicleHero`、`RecipeDiscovery`。
+
+### 40.4 重置流程（`server/season_reset.py`；只做檔案操作，時間由呼叫者傳入）
+
+1. **檢查**：世界存在；賽季已結束（`season_status == "ended"`），否則要 `force`；新的季 ID 不能等於舊的、不能已在編年史裡；循環賽還有沒跑完的場次時要 `force`（API 另外在背景執行中時一律拒絕）。
+2. **計畫**（dry-run 停在這裡，不寫任何檔）：列出會清的（角色、日誌、留言、配方、循環賽報名、世界欄位）與保留的（帳號、首殺、評分榜、編年史、循環賽場次），以及要寫進編年史的文字。
+3. **執行**（帳號鎖檔內）：備份 → 寫編年史（同一季已有就不覆寫，中斷後重跑不會用半套資料蓋掉）→ 搬循環賽 → 刪角色、日誌、留言 → 最後寫新的 `world.json`。
+4. **備份**：整個存檔資料夾複製到 `<備份根>/saves-<UTC 時間 YYYYMMDD-HHMMSS>-<舊季>/`（預設備份根＝存檔資料夾旁邊的 `saves-backups/`，加進 `.gitignore`）；帳號資料夾不在存檔資料夾裡時另外複製到備份裡的 `accounts/`。
+5. **確定性**：同一份存檔＋同樣參數（開賽日、季 ID、種子、時間）→ 一模一樣的結果；清單一律依 ID 排序；不用 `random`、`uuid4`。
+6. **季 ID**：省略時 `s<N+1>`（舊季是 `s<N>`）；季名「第 N 季」（中文數字）。
+
+### 40.5 入口
+
+| 入口 | 規則 |
+|---|---|
+| `POST /api/world/season/reset` | 管理者（規則同 `require_admin`）。body：`start_date`（YYYY-MM-DD，必填）、`season_id`、`seed`、`force`、`dry_run`（預設 `true`）、`confirm_season`（真的執行時必須等於目前的季 ID）。回 `SeasonResetView`（清、留、編年史文字、備份位置）。不能重置時 409 |
+| `scripts/season_reset.py` | `--start-date`、`--season-id`、`--seed`、`--force`、`--execute`（沒給＝dry-run）、`--save-dir`、`--accounts-dir`、`--backup-root`。說明寫「先停伺服器」（伺服器有記憶體快取） |
+| `GET /api/world/chronicle` | 所有人可看：每季的季名、日期、上季角色的紀錄文字、首位發現的配方、循環賽最終排名、首殺、評分榜前幾名 |
+| `GET /api/world/legacy` | 自己帳號上季的角色（名字、外觀、哪一季）；開發模式沒登入＝全部 |
+| `POST /api/world/characters` 加 `legacy_character` | 沿用那個上季角色的名字與外觀（種族、紙娃娃）；不是自己的 404。等級、技能、裝備照新角色 |
+| `AccountView.admin` | 前端用來顯示管理者介面 |
+
+### 40.6 前端
+
+- 角色畫面加「編年史」區塊（上季的紀錄）、建角時「沿用上季角色」選單（選了就帶入名字與種族、鎖住名稱）。
+- 管理者（或開發模式沒登入）看到「季末重置」區塊：填開賽日（可勾強制）→「預覽」顯示 dry-run 的清／留清單 → 輸入目前季 ID 確認後「執行」。
+
+### 40.7 測試
+
+- `tests/server/test_season_reset.py`：建一個有數值的假賽季（角色有等級、技能、精英擊殺、完成骨架；世界有配方、旗標、懸賞、鑰匙、報名；留言、首殺、評分榜、循環賽、編年史、帳號），重置後逐一檢查每個分類欄位：數值類都清掉、紀念類都還在且值不變、`CARRIED` 的內容寫進編年史；dry-run 不寫任何檔；備份完整；確定性（兩份相同存檔各重置一次，結果逐位元相同）；未結束要 `force`；季 ID 規則；中斷後重跑。
+- `tests/api/`：重置端點（非管理者 403、確認不對 409、dry-run、執行後快取重讀）、編年史、沿用角色。
+- `tests/bot/`：首殺鍵加賽季。
+- `tests/test_architecture.py`：政策表裡每個模型都有重置處理（`season_reset.HANDLERS`），處理方式和分類一致（整個數值類＝刪掉或換新、整個紀念類＝不動、混合＝分開且紀念欄位都有去處）；`CARRIED` 的每一項都有處理。
+
+### 40.8 不做的事
+
+- 獎金發放、自動排程重置（只由管理者觸發）、舊季世界的線上重播頁、印記收藏系統。
+
+### 40.9 代決（實作者照最保守的預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5F5-1 | 配方碼與發現時間 | 照 5D-R2 的分類留著（紀念類）；沒有配方內容，配方碼不能打造 |
+| 5F5-2 | 「外觀」的範圍 | 名字、種族（種族外觀）、紙娃娃；出身、武器、關鍵字照新角色重選 |
+| 5F5-3 | 世界日誌 | 刪掉（只在備份裡），不搬進存檔資料夾的歷史區 |
+| 5F5-4 | 賽季還沒結束 | 要 `force` 才能重置 |
+| 5F5-5 | 進行中的大世界戰鬥 | 跟著角色清掉（數值類）；循環賽背景執行中時拒絕 |
+| 5F5-6 | 管理者權限 | 同 `require_admin`（開發模式沒登入可用），真的執行另外要輸入目前季 ID |
+| 5F5-7 | 同一個上季角色沿用幾次 | 不限（名字本來就不唯一） |
+
+## 41. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

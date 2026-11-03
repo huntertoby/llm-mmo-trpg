@@ -371,6 +371,12 @@ class LeagueStore:
             return None
         return record
 
+    def forget(self) -> None:
+        """丟掉記憶體裡的賽程（季末重置 5F-5 把 ``league/`` 搬走之後，下次重讀）。"""
+        with self._lock:
+            self._record = None
+            self._loaded = False
+
     def _save(self, record: LeagueRecord) -> None:
         with self._lock:
             write_atomic(self._record_path(), record.model_dump_json(indent=1))

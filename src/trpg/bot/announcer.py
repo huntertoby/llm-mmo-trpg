@@ -37,6 +37,8 @@ __all__ = [
 ]
 
 ANNOUNCE_FORMAT: Final = "trpg-announce/1"
+_FIRST_SEASON: Final = FirstKill.model_fields["season_id"].default
+"""第一季的 ID（首殺紀錄舊檔的預設；bot 只直接匯入 server 與 shared）。"""
 
 
 class AnnouncementFeed(Protocol):
@@ -71,7 +73,11 @@ def daily_due(now: int, settings: AnnounceSettings, last_daily: str | None) -> s
 
 
 def kill_key(kill: FirstKill) -> str:
-    return f"{kill.kind}:{kill.target}"
+    """貼過的首殺的鍵：第一季 ``<kind>:<target>``（舊狀態檔照用）；之後的季前面加賽季
+    ``<季>:<kind>:<target>``（5F-5：季末重置後，新一季同一種精英的首殺照樣會貼）。"""
+    if kill.season_id == _FIRST_SEASON:
+        return f"{kill.kind}:{kill.target}"
+    return f"{kill.season_id}:{kill.kind}:{kill.target}"
 
 
 def _write(path: Path, state: AnnounceState) -> None:

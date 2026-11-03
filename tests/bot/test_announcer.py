@@ -100,6 +100,18 @@ def test_first_kills_posted_once_and_not_flooded_on_first_start(tmp_path: Path) 
     assert gateway.posts_to(CHANNEL) == ["kill wolf", "kill hawk"]
 
 
+def test_same_elite_next_season_is_posted(tmp_path: Path) -> None:
+    """季末重置（5F-5）後，新一季同一種精英的首殺照樣貼；第一季的舊鍵不變。"""
+    feed = _Feed(kills=[_kill(1, "wolf")])
+    announcer, _gateway = _announcer(tmp_path, feed)
+    assert announcer.tick(_at(3, 5)) == []
+    feed.kills.append(_kill(1, "wolf").model_copy(update={"season_id": "s2"}))
+    assert announcer.tick(_at(3, 5, 1)) == ["kill wolf"]
+    assert announcer.tick(_at(3, 5, 2)) == []
+    state = read_state(tmp_path / "bot" / "state.json")
+    assert state is not None and state.posted_kills == ("elite:wolf", "s2:elite:wolf")
+
+
 def test_failed_post_is_retried(tmp_path: Path) -> None:
     feed = _Feed()
     announcer, gateway = _announcer(tmp_path, feed)
