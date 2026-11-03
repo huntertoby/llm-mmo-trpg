@@ -42,6 +42,7 @@ from trpg.skillgen.proposal_followup import (
 )
 from trpg.skillgen.proposal_layouts import layout_hint, plan_layouts
 from trpg.skillgen.proposal_numbers import numeric_param_names
+from trpg.skillgen.proposal_topup import keyword_way_texts
 
 __all__ = [
     "DEFAULT_SUBSET_TOKEN_BUDGET",
@@ -201,7 +202,20 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
             for i in menu_order(subset.triggers, seed, "triggers")
         ],
         "keywords": [
-            {"id": i, "name_zh": keywords[i].name_zh, "hint": keywords[i].description_zh}
+            {
+                "id": i,
+                "name_zh": keywords[i].name_zh,
+                "hint": keywords[i].description_zh,
+                # 6S-2：這份選單裡帶得到這個關鍵字的寫法（keyword.required 的主因）
+                "ways": keyword_way_texts(
+                    library,
+                    i,
+                    primitives=subset.primitives,
+                    conditions=subset.conditions,
+                    triggers=subset.triggers,
+                    shapes=subset.shapes,
+                ),
+            }
             for i in sorted(subset.keywords)
         ],
     }

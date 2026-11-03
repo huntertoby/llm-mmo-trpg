@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -29,6 +29,7 @@ from trpg.skillgen.proposal_subset import (
     legal_core_primitives,
     select_subset,
 )
+from trpg.skillgen.proposal_topup import keywords_reachable
 
 __all__ = [
     "TOPIC_RARITIES",
@@ -163,6 +164,37 @@ def make_topic(
     return _make_topic_of_kind(library, topic, None)
 
 
+CORE_RETRIES = 4
+"""指定的核心原語讓題目關鍵字帶不到時（Phase 6S-2），最多再抽幾次別的核心；都不行就不指定核心。"""
+
+
+def _with_reachable_core(
+    library: ContentLibrary,
+    request: ProposalRequest,
+    legal: Sequence[str],
+    uses: Mapping[str, int],
+    rng: Rng,
+) -> ProposalRequest | None:
+    """依權重抽核心原語（第一次用 ``core`` 串流，與 6S-2 之前相同）；指定後得不出子集、或選單帶不到
+    題目關鍵字（:func:`~trpg.skillgen.proposal_topup.keywords_reachable`）就去掉它再抽，最多
+    :data:`CORE_RETRIES` 次。沒有可用的核心回傳 ``None``（題目不指定核心）。"""
+    remaining = list(legal)
+    for attempt in range(CORE_RETRIES + 1):
+        stream = rng.fork("core") if attempt == 0 else rng.fork(f"core.retry.{attempt}")
+        core = pick_core_primitive(library, remaining, uses, stream)
+        if core is None:
+            return None
+        with_core = replace(request, core_primitive=core)
+        try:
+            subset = select_subset(library, with_core)
+        except SubsetError:
+            return None  # 與 6S-2 之前相同：得不出子集就不指定核心
+        if keywords_reachable(library, subset, core=core):
+            return with_core
+        remaining.remove(core)
+    return None
+
+
 def _make_topic_of_kind(
     library: ContentLibrary, topic: TopicRequest, kind: str | None
 ) -> tuple[ProposalRequest, ProposalContext, int] | None:
@@ -182,27 +214,12 @@ def _make_topic_of_kind(
         )
         try:
             legal = legal_core_primitives(library, request)
-            select_subset(library, request)
+            base = select_subset(library, request)
         except SubsetError:
             continue
-        core = pick_core_primitive(library, legal, topic.uses, rng.fork("core"))
-        if core is not None:
-            with_core = ProposalRequest(
-                topic.tier,
-                rarity,
-                kind=kind,
-                keywords=topic.keywords,
-                core_primitive=core,
-                menu_seed=menu_seed,
-                theme=theme,
-                weapon_class=topic.weapon_class,
-            )
-            try:
-                select_subset(library, with_core)
-            except SubsetError:
-                pass
-            else:
-                request = with_core
+        if not keywords_reachable(library, base):
+            continue  # 6S-2：這個稀有度的選單帶不到題目關鍵字
+        request = _with_reachable_core(library, request, legal, topic.uses, rng) or request
         ctx = ProposalContext(
             topic.tier,
             rarity,

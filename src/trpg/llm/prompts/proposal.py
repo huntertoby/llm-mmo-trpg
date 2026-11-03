@@ -43,6 +43,21 @@ USER_RESERVE_TOKENS = 5_000
 重試時的上一次提議與錯誤回饋。固定值，讓同一題目的子集不隨重試改變。"""
 
 
+BUDGET_NOTE_ZH = (
+    "數值由遊戲補，但效果總強度必須到這一階預算的 70%～100%。"
+    "只有一個沒有數值的核心效果（位移、淨化、地形、傳送等）一定過弱："
+    "骨架允許附帶效果時請再加一個（例：pull＋damage 可、cleanse＋heal 可；只有 pull 不可）。"
+    "冷卻由遊戲依形狀自動補（大範圍形狀會加冷卻），不用填。"
+    "選填欄位（代價、變奏、條件）越少越好，但效果數量不在此限。"
+)
+"""題目區的預算說明（Phase 6S-2：升級候選退回的第一大原因是單一核心效果過弱 ``budget.weak``）。"""
+KEYWORD_NOTE_ZH = (
+    "技能必須帶到 keywords 的每一個：照 available.keywords 的 ways 選一種寫法"
+    "（例：ways 有 apply_status（status＝commanding）就加一個施加 commanding 給友方的效果）。"
+)
+"""題目有關鍵字時的說明（Phase 6S-2：``keyword.required``）。"""
+
+
 @dataclass(frozen=True, slots=True)
 class ProposalPrompt:
     """:func:`build_proposal_prompt` 的結果：送給 LLM 的 ``messages``、``json_schema``，以及驗證用的
@@ -79,7 +94,10 @@ def _request_payload(
         "rarity": request.rarity,
         "kind": subset.kind,
         "keywords": [{"id": k, "name_zh": names[k]} for k in request.keywords],
+        "budget_note_zh": BUDGET_NOTE_ZH,
     }
+    if request.keywords:  # 6S-2：keyword.required 是升級候選第二大退回原因
+        payload["keyword_note_zh"] = KEYWORD_NOTE_ZH
     if request.skeleton is not None:
         payload["skeleton"] = request.skeleton
     if request.weapon_class is not None:  # 技能的武器需求必須與主角的武器相容（4-L6）

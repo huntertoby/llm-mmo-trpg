@@ -536,7 +536,9 @@ def test_available_payload_format_snapshot() -> None:
     assert all(set(e) == {"id", "hint"} for e in payload["shapes"])
     assert all(set(e) == {"id", "hint"} for e in payload["conditions"])
     assert all(set(e) == {"id", "hint"} for e in payload["triggers"])
-    assert all(set(e) == {"id", "name_zh", "hint"} for e in payload["keywords"])
+    # 6S-2：關鍵字另列 ways（這份選單裡帶得到它的寫法）
+    assert all(set(e) == {"id", "name_zh", "hint", "ways"} for e in payload["keywords"])
+    assert "damage（element＝fire）" in payload["keywords"][0]["ways"]
     assert payload["keywords"][0]["name_zh"] == "點燃"
     damage = next(e for e in payload["primitives"] if e["id"] == "damage")
     assert set(damage) == {"id", "hint", "params"}
