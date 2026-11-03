@@ -393,8 +393,8 @@ class RecipeRecord(_Model):
     """列在配方表上（5D-4，玩法 PM 2026-11-03 代決：每件裝備只列最新一筆）。裝備改出新碼時舊碼
     改成 ``False``、有人用這個碼打出新裝備時改回 ``True``；不列的碼照樣能打（可能已經分享出去）。"""
     season_id: str = Field(pattern=ID_PATTERN)
-    """發現時的賽季（Phase 5D-R2；配方表是紀念類，季末保留、按賽季分）。舊存檔沒有這個欄位時，
-    :class:`WorldState` 讀入時補成世界當季（``WorldState.season_id``）。"""
+    """發現時的賽季（Phase 5D-R2；首位發現者是紀念類，見 ``trpg.server.season_policy``）。
+    舊存檔沒有這個欄位時，:class:`WorldState` 讀入時補成世界當季（``WorldState.season_id``）。"""
 
 
 class ShopPurchase(_Model):

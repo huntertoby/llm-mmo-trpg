@@ -23,6 +23,8 @@
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite``、``world`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式、內建 ``hash()``
    等。
+3. 季末重置政策表（Phase 5D-R2，09 9.7、#91）：``trpg.server.season_policy`` 裡每個存檔模型的每個
+   欄位都標了數值類或紀念類；新增欄位沒分類就失敗（這一條實際匯入模型）。
 """
 
 from __future__ import annotations
@@ -485,3 +487,41 @@ def test_scanner_allows_legal_dependencies() -> None:
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
         assert not found, f"不應判為依賴違規：{current}: {source!r} -> {found}"
+
+
+def test_every_saved_field_has_a_season_reset_kind() -> None:
+    """季末重置政策表（5D-R2）：表裡每個模型的欄位剛好都分類（新增欄位沒分類、刪掉的欄位還在表裡
+    都失敗）；分類只有數值類／紀念類；拿不準的欄位都標數值類。"""
+    from trpg.server.accounts import AccountRecord  # noqa: PLC0415 — 只有這條檢查要匯入模型
+    from trpg.server.first_kills import FirstKill  # noqa: PLC0415
+    from trpg.server.notes import LocationNote  # noqa: PLC0415
+    from trpg.server.season_policy import (  # noqa: PLC0415
+        NUMERIC,
+        PROVISIONAL,
+        SEASON_POLICY,
+    )
+    from trpg.world.state import CharacterState, RecipeRecord, WorldState  # noqa: PLC0415
+
+    required = {CharacterState, WorldState, RecipeRecord, FirstKill, AccountRecord, LocationNote}
+    assert required <= set(SEASON_POLICY), "存檔模型沒有列進季末重置政策表"
+    problems: list[str] = []
+    for model, policy in SEASON_POLICY.items():
+        fields = set(model.model_fields)
+        problems += [
+            f"{model.__name__}.{name}：沒有分類（數值類或紀念類）"
+            for name in sorted(fields - set(policy))
+        ]
+        problems += [
+            f"{model.__name__}.{name}：表裡有、模型沒有" for name in sorted(set(policy) - fields)
+        ]
+        problems += [
+            f"{model.__name__}.{name}：分類 {kind!r} 不認得"
+            for name, kind in sorted(policy.items())
+            if kind not in {"numeric", "memorial"}
+        ]
+    names = {m.__name__: m for m in SEASON_POLICY}
+    for model_name, field in sorted(PROVISIONAL):
+        found = names.get(model_name)
+        if found is None or SEASON_POLICY[found].get(field) != NUMERIC:
+            problems.append(f"{model_name}.{field}：待決的欄位要暫標數值類")
+    assert not problems, "季末重置政策表：\n" + "\n".join(problems)
