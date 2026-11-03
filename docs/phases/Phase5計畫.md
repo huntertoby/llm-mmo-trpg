@@ -4023,6 +4023,112 @@ world_events:              # 19.9（門檻依上線人數，Q14）
 - 灰燼荒原內容（地點、懸賞 19.8、世界事件 #2 的村落）；世界事件 #3 的資料。
 - 懸賞首殺的封印鑰匙、LLM 預產公告文字（5E-4）。
 
-## 36. 之後各段規格
+## 36. 5F-4 詳細規格：影子循環賽
+
+> 給實作 agent。主要動 `src/trpg/world/`（新 `league.py`〔報名、拉到上限、賽程、對戰設定與自動對戰〕、`league_actions.py`〔動作與事件〕；`state.py`、`actions.py`、`step.py` 小改）、`src/trpg/content/world_season.py`（`league:` 區塊）、`content/world/season.yaml`、`src/trpg/server/`（新 `league.py`〔賽果與戰鬥紀錄存檔、分批背景執行〕；`season_policy.py` 分類）、`src/trpg/api/`（新 `league_schemas.py`、`league_view.py`；`routes/world.py` 新端點、`app.py` 接線、`world_presenter.py` 事件句子）、`client/`（城鎮的「循環賽」面板、重播入口用既有戰鬥畫面、API 型別）、`client/openapi.json`。另一個 agent 在做 5F-2b（Boss 形狀、HP，碰 engine／content 的 Boss 部分），撞到以 main 為準。不改 `trpg.engine`、`LOG_FORMAT`、存檔版號。
+> 依據：本檔第 1 節 5F-4 列；09 9.7「季末保底：影子循環賽」（每人提交 build＋AI 行為設定、每兩人對戰、3 張事先公布的地圖 × 交換先後手 × 多個種子、勝場數最高者勝；全員拉到等級上限、屬性點重新分配、技能照常受預算上限約束；每場存「初始狀態＋種子＋動作列表」、任何人都能在網頁上重播驗證）、9.6.9 #100（循環賽算帳號：每個帳號只報名 1 個角色）、9.6.10 #101（循環賽第 13 天截止報名；無人首殺時獎金給冠軍）、#102（影子的 AI 打法）、9.6.8 #87（影子強度規則）；`Phase5C-2報告.md`（影子快照、`shadow_spawn`）、`Phase5F-1報告.md`（`season_day`）、`Phase5D-R2報告.md`（`trpg.server`、`season_policy.py`）、`Phase5D-R1報告.md`＋本檔第 1 節 5C-3f（影子裝備降級、別人看的隱藏地點用提示語）。
+
+### 36.1 目標
+
+① 報名：在城鎮把目前的 build 存成「參賽影子」＋選 AI 打法；每個帳號 1 個角色；賽季第 13 天之後的刷新日起不能報名、不能改、不能退。② 對戰時每位參賽者拉到等級上限（10）、新增的屬性點照規則自動補、技能照上限的角色階級重配。③ 賽程：每對組合 × 3 張地圖 × N 個種子 × 交換先後手，雙方都由效用 AI 操作；種子由伺服器（賽季種子）決定，同一份報名必得同一份結果。④ 每場存成可重播的戰鬥紀錄（`trpg battle replay` 同格式）；分批在背景執行、不卡伺服器、伺服器重啟後可接續。⑤ 勝場排行榜（給別人看：隱藏地點用提示語）、點進去看某一場的重播（既有戰鬥畫面，從開場播放到結束）並顯示「重播驗證一致」。
+
+### 36.2 決策影響盤點（既有功能）
+
+| 既有功能 | 位置 | 受影響？ | 處理 |
+|---|---|---|---|
+| 影子快照（`ShadowSnapshot`、`shadow_snapshot`） | `world/shadows.py`、`state.py` | **重用（不改格式）** | 報名時用同一個函式存一份快照進 `LeagueEntry`（不是借用中的影子、也不是 `WorldState.shadows` 那份：之後再整備不影響已報名的 build，要改就重新報名）。影子本身的存檔、借用、獎勵不變 |
+| 影子強度上限（`shadow_spawn`，#87 照招募者壓下來） | `world/shadows.py` | **重用** | 循環賽沒有招募者：先把快照「拉到上限」（36.4）再用 `shadow_spawn(…, recruiter_level=等級上限)`，等級、技能、裝備都不會被壓；改名規則 `<技能>_<主人>` 照舊（兩邊的生成技能不相撞） |
+| 影子裝備降級（5D-2b、5C-3f：物品等級超過招募者時優先保留 build 詞條） | `world/gear.py` `shadow_equipment` | 否（重用） | 上限 10 級 ≥ 任何物品等級，不會降級；仍走同一個函式 |
+| 傭兵／影子 AI 打法（`ai_choices`、`shadow_ai`） | `mercenaries.yaml`、`party.py` | **重用** | 報名帶 `ai`（`ai_choices` 或 `None`＝自己影子的預設打法 `shadow_ai`，再沒有＝範本的）；值不在選單 → 錯誤 |
+| 自動戰鬥（效用 AI 代打，`auto_steps` 同一套 `CommandedAI(UtilityAI)`） | `world/battle.py`、`engine/runner.py` | 否（重用） | 雙方都由同一個 AI 物件操作（各自照範本的 `ai_profile`）；`run_battle` 跑到結束（`max_rounds` 保證結束，到輪數上限＝和局） |
+| 戰鬥紀錄與重播（`BattleLog`、`log_replay_problem`、`trpg battle replay`） | `engine/runner.py` | 否（重用） | 每場存 `BattleLog`（含 `ruleset_hash`）；網頁重播先檢查 `log_replay_problem`，再依步驟重播、比對最終狀態 |
+| 網頁戰鬥畫面（`BattleScreen`、`/api/battles`） | `client/src/screens`、`api/sessions.py` | **是（小）** | 重播用 `SessionStore.open(setup, seed, restore=(steps, []))`＋`history()`，回傳的 `BattleResponse.steps` 從開場到結束，畫面照常一步一步播放；戰鬥已結束，結束面板的按鈕回到循環賽面板 |
+| 世界動作與日誌（單一寫入佇列、`actor`） | `step.py`、`replay.py`、`api/world.py` | **是** | 新動作 `league_enter`、`league_withdraw`；帳號用 `world_step(..., actor=)`（沒有帳號＝角色 ID，同 5F-1 Q15）。報名寫進 `WorldState.league_entries`，重播一致 |
+| 賽季日曆（`season_day`） | `world/calendar.py` | 否（重用） | 截止日判定用 `season_day`（5F-1） |
+| 季末欄位分類 | `server/season_policy.py` | **是** | `WorldState.league_entries` 數值類（世界狀態整個是數值類）；循環賽賽果（`LeagueRecord`、`LeagueMatch`）的名次、勝場、對戰紀錄是「排行榜」＝紀念類（#91），快照與 AI 打法這些 build 內容暫標數值類（待決） |
+| 首殺與獎金（#101） | `server/first_kills.py` | 否 | 獎金的發放、「有人首殺 → 娛樂賽」的判定是 5F-3／5F-5；本段只顯示冠軍 |
+| `trpg.sim` | `src/trpg/sim/` | 否 | 不改；模擬工具不讀循環賽。之後要做影子對戰平衡報表時可直接呼叫 `trpg.world.league.play_match` |
+| 戰鬥引擎、roguelite | engine、roguelite | 否 | 不動；`LOG_FORMAT` 不變（設定只用既有欄位：`first_team`、`max_rounds`） |
+| 存檔版號 | `state` | 否 | 新欄位都有預設值，`trpg-world/1`、`trpg-char/1`、`trpg-wlog/1` 不升版 |
+
+### 36.3 內容（`content/world/season.yaml` 加 `league:`；schema 在 `trpg.content.world_season`）
+
+```yaml
+league:
+  signup_close_day: 13        # 第 13 天是最後可以報名的刷新日（#101）
+  maps: [open_plain, dark_forest, swamp]   # 3 張事先公布的地圖（開發 PM 初值：開闊、遮蔽、水澤）
+  seeds: 2                    # 每對組合 × 每張地圖的種子數（N）；每個種子交換先後手各打 1 場
+  max_rounds: 30              # 到輪數上限＝和局（同大世界戰鬥）
+  batch_size: 10              # 背景每批幾場（批與批之間讓出執行緒）
+```
+
+- 載入檢查：地圖存在、不是 `boss`／`training`／`test` 類地圖、不重複；`seeds` 1～8；`signup_close_day` 在賽季天數內。
+
+### 36.4 規則（`trpg.world.league`，純函式）
+
+- **報名 `league_enter`**（`ai: str | None`）：人在城鎮、沒有遭遇、沒有待選的閃現或三選一；`season_day ≤ signup_close_day`；`ai` 在 `ai_choices` 或 `None`。同一個帳號已經用 **別的角色** 報名 → 錯誤（「這個帳號已經用『X』報名了，先取消報名」）；同一個角色重新報名＝更新快照與打法。存 `LeagueEntry`（`account`、`character_id`、`name`、`snapshot`〔`shadow_snapshot`〕、`ai`、`entered_at`）；`WorldState.league_entries` 依帳號排序。事件 `league_entered`（`updated`）。
+- **取消 `league_withdraw`**：同樣截止前；沒報名 → 錯誤。事件 `league_withdrawn`。
+- **拉到等級上限**（9.7「全員拉到等級上限、屬性點重新分配；技能照常受預算上限約束」）：上限＝`hero_growth.level_cap`。① 等級＝上限；② 新增點數＝（上限 − 快照等級）× 每級點數＋快照未分配的點，全部照開局的自動配點規則補（`primary_attribute`〔裝備中技能最常用的縮放屬性；武器技算武器主屬性〕＋`default_allocation`〔雙屬性取平均的武器平分〕）；已分配的點不動（「重新分配」由玩家自己配是之後的事，代決 5F4-2）；③ 每招技能照上限的角色階級重配（`at_run_tier`，往上或往下；同借用影子的改名規則）；④ HP、法力、耐力每場滿；裝備照快照（物品等級上限＝等級上限，不會降級）。
+- **賽程**：參賽者依帳號排序，所有 `i < j` 組合 × `maps` × 種子序號 `k`（0..N−1）× 先後手 `side`（0：i 在我方先手；1：j 在我方先手）。對戰編號 `m0001` 起依此順序。種子 `fnv1a64(f"{season_seed}:league:{帳號 i}:{帳號 j}:{地圖}:{k}")`；同一個種子交換先後手各打 1 場（只差先後手與站位）。
+- **對戰設定**：地圖（不換皮、照地圖天氣）、`max_rounds`、我方＝先手的參賽者（`first_team = ally`）、敵方＝另一位；單位 ID＝`shadow_<角色 ID>`、名稱＝角色名；兩人的生成技能都加進規則包。勝負：我方勝＝我方那位贏；到輪數上限或同時倒下＝和局。
+- **確定性**：只用報名快照、賽季種子、內容；不讀時間、不呼叫 LLM。
+
+### 36.5 狀態（全部有預設值；格式字串不變）
+
+- `WorldState.league_entries: tuple[LeagueEntry, ...] = ()`（依帳號排序、不重複；角色也不重複）。
+- 賽果（`trpg.server.league`，衍生資料，不進 `trpg-world/1`、不影響世界重播）：`<世界資料夾>/league/league.json`（`trpg-league/1`：`season_id`、`started_at`、`entries`〔開跑當下凍結的報名複本〕、`matches`〔`LeagueMatch`：`id`、`a`、`b`、`map`、`seed_index`、`seed`、`ally`、`status: pending|done|error`、`winner`〔帳號或 `None`＝和局〕、`rounds`、`end_reason`、`error`〕）、`<…>/league/matches/<id>.json`（`BattleLog`）。
+
+### 36.6 執行（`trpg.server.league.LeagueRunner`）
+
+- **觸發**（保守：只由管理者觸發，不自動在換日時開跑；代決 5F4-1）：`POST /api/world/league/run`（`require_admin`）。條件：賽季第 `signup_close_day + 1` 天之後；至少 2 位參賽者。第一次開跑時凍結報名、排好賽程寫進 `league.json`；之後再按（或伺服器重啟後再按）只接續 `pending` 的場次。
+- **背景執行**：一條背景執行緒；只在凍結報名時拿世界的鎖（之後不碰世界），跑完一場就寫該場紀錄與 `league.json`（原子寫入）；每 `batch_size` 場讓出一次執行緒（`time.sleep(0)`）。同時只會有一條。單場出錯 → 該場標 `error`＋原因，繼續下一場。
+- 狀態：`idle`／`running`／`done`；進度（完成場數／總場數）。
+
+### 36.7 API 與前端
+
+- `GET /api/world/characters/{id}/league`（`LeagueView`）：`status`（`signup`／`closed`／`running`／`done`）與中文、報名截止（第幾天）、地圖名、每對組合場數、這個角色的帳號有沒有報名（用哪個角色、打法）、能不能報名與原因、`ai_choices`；`standings`（名次、角色名、等級〔上限〕、定位〔武器・種族〕、報名地點〔看的人還沒發現的隱藏地點用提示語，5C-3f〕、勝／負／和、場數、是不是自己的帳號）；`matches`（自己帳號的場次在前，其他依編號；每場：雙方名字、地圖、種子序號、先手、結果文字）；`progress`（完成／總數）。
+- 報名、取消走既有 `POST …/actions`（`league_enter`、`league_withdraw`）。
+- `POST /api/world/characters/{id}/league/matches/{match_id}/replay`（`LeagueReplayResponse`：`battle`〔`BattleResponse`，`steps` 從開場到結束〕、`verified`〔重播的最終狀態和紀錄一致〕、`problem`〔不能重播的原因〕、`title_zh`）。`GET /api/world/league/matches/{match_id}/log`：原始紀錄（可用 `trpg battle replay` 驗證）。
+- 前端：左欄加「循環賽」畫面（`client/src/world/LeaguePanel.tsx`，面板樣式同公告板）：報名區（AI 打法下拉、報名／更新／取消按鈕；截止後顯示「報名已截止」）、排行榜表格、場次列表（每列「重播」按鈕 → 用 `BattleScreen` 播放，`exitLabel`「回到循環賽」）。浮動卡照 6.5.1（本段不新增浮動卡）。
+- 事件句子：`league_entered`「已報名影子循環賽（打法：…）。」／「已更新循環賽的報名。」；`league_withdrawn`「已取消循環賽報名。」。
+
+### 36.8 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_season.py`（加） | `league:` 地圖不存在、Boss 地圖、種子數範圍、截止日超過賽季 |
+| `tests/world/test_league.py` | 報名（城鎮限定、截止日、帳號只能 1 角色、同角色更新、取消、`ai` 不在選單）；拉到上限（等級、點數補到主屬性、技能階級 3、HP）；賽程數量＝C(P,2)×地圖×N×2、編號與種子確定性、交換先後手；對戰設定（我方先手、單位名、規則包含兩邊生成技能）；`play_match` 同種子兩次結果相同、紀錄可用 `log_replay_problem`＋重播得到相同最終狀態；世界日誌重播含報名 |
+| `tests/server/test_league_runner.py` | 開跑條件（截止前、不到 2 人）、凍結報名、分批跑完、重啟接續（只跑 pending）、單場錯誤標 `error`、排行榜勝場統計 |
+| `tests/api/test_world_league.py` | 端點欄位、報名動作經 API、管理者才能開跑、重播回應 `verified` 且 `steps` 從開場到結束、隱藏地點提示語、log 端點 |
+| `tests/test_architecture.py` | 新模型的欄位都已分類（既有檢查） |
+| 前端 vitest | 循環賽面板的顯示資料（名次、勝負和文字、能不能報名的文字） |
+
+### 36.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5F4-1 | 誰觸發賽程 | 只有管理者指令（`POST /api/world/league/run`），截止後才能開；不在換日時自動開跑 |
+| 5F4-2 | 「屬性點重新分配」 | 已分配的點不動；新增的點（拉到上限多出的＋沒分配的）照開局自動配點規則補到主屬性；玩家自己重新配是之後的事 |
+| 5F4-3 | 技能 | 裝備中的技能照上限的角色階級（3 階）重配；不補新技能、不換欄位 |
+| 5F4-4 | 用哪份 build | 報名當下的快照（之後整備不影響；要更新就重新報名）；截止後凍結 |
+| 5F4-5 | 隊伍 | 1 對 1，只有參賽者本人（不帶傭兵、影子、劇情夥伴、腰包道具、誓約） |
+| 5F4-6 | 交換先後手 | 同一個種子打 2 場：先手的一方站我方的起始區、`first_team = ally`，另一場兩人互換 |
+| 5F4-7 | 和局 | 到輪數上限（30）或同時倒下＝和局，雙方都不算勝場；排行榜另列和局數 |
+| 5F4-8 | 排名同分 | 勝場多 → 負場少 → 報名較早；冠軍同分時都列第 1（獎金怎麼分待 PM） |
+| 5F4-9 | 種子數 N、地圖 | `seeds: 2`、`open_plain`／`dark_forest`／`swamp`（初值，content） |
+| 5F4-10 | 賽果放哪 | `trpg.server.league` 的衍生檔（同首殺），由「報名＋賽季種子＋內容」決定，任何時候都能重算查證 |
+| 5F4-11 | 重播的視角 | 戰鬥畫面用我方視角（先手那位）；敵方的隱蔽照一般戰鬥規則顯示 |
+
+### 36.10 驗收
+
+`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/world`、`tests/api`、`tests/server`、`tests/content`（與本段相關）、`tests/test_architecture.py`（`-n 8`）；`npx vitest run`、`npm run build`；swamp 種子 7 重播；至少 1 場循環賽對戰的重播驗證；改了 API 型別重產 OpenAPI。不跑全量、不跑大型模擬。
+
+### 36.11 不做的事
+
+- 獎金發放、「有人首殺 → 娛樂賽」的判定（5F-3／5F-5）；季末重置流程（5F-5）。
+- 即時 PvP、多人隊伍對戰；玩家手動重新分配屬性點。
+- Bot 公告循環賽結果（之後）。
+
+## 37. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
