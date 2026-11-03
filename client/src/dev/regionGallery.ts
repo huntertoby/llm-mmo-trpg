@@ -1,6 +1,7 @@
 // 開發用：區域主題「雲嶺」的 7 種地圖類型場景（Phase 3-37b），對照 docs/art/realms.png 的雲嶺樣張。
 // 開 `client/region-gallery.html`（pnpm dev 後 /region-gallery.html）；不屬於正式 build。用真正的 BattleRenderer 畫。
 // 正式地圖只有 bridge_chasm（雲海吊橋）與 dark_forest（竹林）標了 region；其他類型與兩種 look 覆寫在這裡擺場景驗證。
+// 5A-ART6 加上灰燼荒原（7 地形＋9 物件、岩漿渡橋、熔心坑）與晶冠城邦（含沒標區域的對照）場景，對照 docs/art/regions4.png。
 import type { BattleView, Glossary, ObjectView, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel } from "../battle/drawModel";
@@ -238,6 +239,65 @@ SCENES.push(
       ["f", "f", "s", "s", "p", "p", "l", "l", "w", "w"],
     ),
     units: [["ally", 2, 2], ["enemy", 7, 2]],
+  },
+);
+
+// ---- 5A-ART6：灰燼荒原、晶冠城邦（docs/art/四區移植需求.md 第 2、3 節，對照 docs/art/regions4.png）----
+
+const ASHEN = "ashen_waste";
+const CRYSTAL = "crystal_crown";
+
+/** 灰燼與晶冠共用的 7 地形＋9 物件場景（裂谷與岩漿並排、岩漿上有渡橋、灰水坑上有浮板）。 */
+const ALL_KINDS = grid(
+  ["#", "#", "#", ".P", ".", ",r", ",", ".T", ".", "."],
+  [".", ".c", ".", "~", "~", "^", "^", ".", ".b", "."],
+  [".", ".", ".", "~", "~", "^B", "^B", ".", ".", "."],
+  [":", ":", ".", "~", "~", "^", "^", ".L", ".L", "."],
+  [",", ",g", ".", ".", ".", ".", "o", "oI", ".", ":"],
+  [",", ",", ",r", ".", ".", ".", "o", "o", ".", ":"],
+);
+
+SCENES.push(
+  {
+    title: "灰燼荒原：7 地形＋9 物件（裂谷與岩漿並排）",
+    region: ASHEN,
+    rows: ALL_KINDS,
+    units: [["ally", 2, 2], ["enemy", 8, 4]],
+  },
+  {
+    title: "灰燼荒原：岩漿渡橋（lava_crossing 同款）",
+    region: ASHEN,
+    rows: grid(
+      [".", ".T", ".", "^", "^", "^", "^", ".", ".c", "."],
+      [".", ".", ".", "^", "^", "^", "^", ".", ".", ".b"],
+      [".c", ".", ".", "^B", "^B", "^B", "^B", ".", ".", "."],
+      [".", ".L", ".L", "^", "^", "^", "^", ".", ".P", "."],
+      [",r", ".", ".", "^", "^", "^", "^", ".", ".", ".T"],
+    ),
+    units: [["ally", 1, 2], ["enemy", 8, 2]],
+  },
+  {
+    title: "灰燼荒原：熔心坑（冷卻井是水表面，不換皮、維持藍色）",
+    region: ASHEN,
+    rows: grid(
+      [".", ".", "^", "^", "^", "^", "^", "^", ".", "."],
+      [".", "^", "^", ".", "w", "w", ".", "^", "^", "."],
+      [".P", "^", ".", ".", ".", ".", ".", ".", "^", ".P"],
+      [".", "^", "^", ".", "w", "w", ".", "^", "^", "."],
+      [".", ".", "^", "^", "^", "^", "^", "^", ".", "."],
+    ),
+    units: [["ally", 3, 2], ["enemy", 6, 2]],
+  },
+  {
+    title: "晶冠城邦：7 地形＋9 物件（只有石板嵌線、城牆金邊、深淵晶光、晶柱是點綴）",
+    region: CRYSTAL,
+    rows: ALL_KINDS,
+    units: [["ally", 2, 2], ["enemy", 8, 4]],
+  },
+  {
+    title: "晶冠城邦（同上，沒標區域＝預設畫法，對照用）",
+    rows: ALL_KINDS,
+    units: [["ally", 2, 2], ["enemy", 8, 4]],
   },
 );
 
