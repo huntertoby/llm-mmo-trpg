@@ -132,7 +132,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
   /** 區域圖（M，6C-6）：浮動全畫面面板，和 HUD 面板分開（關掉區域圖不動面板）。 */
-  const [regionOpen, setRegionOpen] = useState(false);
+  const [regionOpen, setRegionState] = useState(false);
+  const regionRef = useRef(false); // 同步的開關（連按 Esc、M 時不等重新繪製）
+  const setRegionOpen = useCallback((open: boolean) => {
+    regionRef.current = open;
+    setRegionState(open);
+  }, []);
   const [toasts, setToasts] = useState<HudToast[]>([]);
   const toastSeq = useRef(0);
   /** 這次進入角色後已經到過的地點（第一次進入有限制的地點時跳紅框提示）。 */
@@ -481,22 +486,22 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const hudKeys = useRef({
     active: false,
     locked: false,
-    region: false,
     button: hudButton,
     close: closeHud,
     map: () => undefined as void,
+    closeRegion: () => undefined as void,
   });
   hudKeys.current = {
     active: hudMode,
     locked: panelLocked,
-    region: regionOpen,
     button: hudButton,
     close: closeHud,
-    map: () => setRegionOpen((open) => !open),
+    map: () => setRegionOpen(!regionRef.current),
+    closeRegion: () => setRegionOpen(false),
   };
   useEffect(() => {
     if (!hudMode && regionOpen) setRegionOpen(false); // 進戰鬥、離開實地地圖就收起區域圖
-  }, [hudMode, regionOpen]);
+  }, [hudMode, regionOpen, setRegionOpen]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const h = hudKeys.current;
@@ -504,14 +509,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       const k = hudKey(e, typingInto(e.target));
       if (k === null) return;
       if (k.kind === "escape") {
-        if (h.region) h.map();
+        if (regionRef.current) h.closeRegion();
         else if (!h.locked) h.close();
         return;
       }
       if (e.repeat) return;
       e.preventDefault();
       if (k.kind === "map") h.map();
-      else if (!h.region) h.button(k.id); // 區域圖開著時只認 M、Esc
+      else if (!regionRef.current) h.button(k.id); // 區域圖開著時只認 M、Esc
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
