@@ -1,6 +1,28 @@
 // 「版面」彈出面板（Phase 3-10）：右側窄欄寬、底部列高、主角狀態卡寬、地圖縮放的滑桿與「重設為預設」；
 // 技能特效的畫面震動開關（Phase 3-12）。
+// 6A-3：「重新顯示操作說明」清掉操作說明句的次數（`battle/opHints.ts`）。
+import { useState } from "react";
 import { ZOOM_MAX, ZOOM_MIN, zoomPercent, type LayoutLimits, type LayoutPrefs, type Range } from "../battle/layoutPrefs";
+import { resetOpHints } from "../battle/opHints";
+
+/** 設定：操作說明句（前 3 次之後收進「?」）全部重新顯示。 */
+export function OpHintReset({ onReset = resetOpHints }: { onReset?: () => void }) {
+  const [done, setDone] = useState(false);
+  return (
+    <div className="layout-actions op-hint-reset">
+      <button
+        type="button"
+        onClick={() => {
+          onReset();
+          setDone(true);
+        }}
+      >
+        重新顯示操作說明
+      </button>
+      {done && <span className="small muted">已重設，之後選取時會再顯示 3 次</span>}
+    </div>
+  );
+}
 
 interface Props {
   prefs: LayoutPrefs;
@@ -108,6 +130,7 @@ export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, s
           重設為預設
         </button>
       </div>
+      <OpHintReset />
       {narrow && <div className="small muted">視窗較窄時窄欄與底部列版型固定，這三項不生效。</div>}
       <div className="small muted">也可以直接拖曳畫面上的分隔線；Ctrl＋滾輪縮放地圖，放大後用捲軸或滑鼠中鍵拖曳平移。</div>
     </div>

@@ -16,7 +16,7 @@ import { objectiveLine } from "../battle/objective";
 import { orderButton, withOrder } from "../battle/orders";
 import { togglePopup, type TopPopup } from "../battle/skillTray";
 import { BattleCanvas } from "../ui/BattleCanvas";
-import { BattleLog } from "../ui/BattleLog";
+import { BattleLogDock } from "../ui/BattleLogDock";
 import { BattleTopBar } from "../ui/BattleTopBar";
 import { ModePanel } from "../ui/ActionPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -307,6 +307,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             </div>
           )}
         </div>
+        <BattleLogDock lines={pb.lines} onHover={hl.setLogHover} />
         <ModePanel
           enabled={data.canAct || copying}
           mode={mode}
@@ -383,7 +384,6 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             onHoverTiles={hl.setTelegraphHover}
           />
         }
-        log={<BattleLog lines={pb.lines} onHover={hl.setLogHover} />}
       />
       <BattleBottomBar
         response={response}
