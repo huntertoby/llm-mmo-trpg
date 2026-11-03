@@ -22,7 +22,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import ID_PATTERN
+from trpg.content.battle import ID_PATTERN, DollHair, DollSlot
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.content.world_map import LocationMapDef
@@ -286,6 +286,46 @@ class EventSkeletonTable(ContentModel):
 # ---------------------------------------------------------------------------
 
 
+_PORTRAIT_HEX = r"^#[0-9a-fA-F]{6}$"
+
+
+class NpcPortraitLook(ContentModel):
+    """NPC 頭像的紙娃娃外觀（Phase 6C-7，``docs/art/NPC頭像.md`` 第 4 節；純顯示，不影響數值）。
+
+    欄位同紙娃娃的 ``look``（``DollLook`` 與種族外觀 ``RaceLook`` 的常用子集，駝峰改底線）。
+    地圖上的紙娃娃也用這一份（第 4 節第 5 項）。"""
+
+    skin: str = Field(default="#f1c9a5", pattern=_PORTRAIT_HEX)
+    hair: DollHair | None = None
+    hair_color: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+    bun_band: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+    beard: bool = False
+    build: Literal["stout", "tall"] | None = None
+    ears: str | None = Field(default=None, pattern=ID_PATTERN)
+    horns: str | None = Field(default=None, pattern=ID_PATTERN)
+    horn_color: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+    pattern: str | None = Field(default=None, pattern=ID_PATTERN)
+    mark_color: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+
+
+class NpcPortraitGear(ContentModel):
+    """頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。"""
+
+    kind: str = Field(pattern=ID_PATTERN)
+    material: str | None = Field(default=None, pattern=ID_PATTERN)
+    color: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+    trim: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
+
+
+class NpcPortrait(ContentModel):
+    """NPC 頭像（6C-7）：``look``、``gear`` 寫法同紙娃娃；``extras`` 是只畫在頭像上的配件
+    （斗笠、刀疤……；``fox``＝白狐，不用紙娃娃）。前端不認得的值略過。"""
+
+    look: NpcPortraitLook | None = None
+    gear: dict[DollSlot, NpcPortraitGear] = Field(default_factory=dict)
+    extras: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
+
+
 class NpcCardDef(ContentModel):
     """NPC 人設卡（18.5、#107）。給說書人寫對話與旁白用；不影響數值。"""
 
@@ -302,6 +342,8 @@ class NpcCardDef(ContentModel):
     """祕密：只給說書人參考，不直接顯示給玩家。"""
     hooks_zh: str = ""
     """和線頭、任務的關係。"""
+    portrait: NpcPortrait | None = None
+    """頭像與地圖紙娃娃的外觀（6C-7，選填；沒寫＝通用剪影）。"""
 
 
 class NpcCardTable(ContentModel):

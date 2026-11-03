@@ -302,6 +302,8 @@ export type WorldCiteFact = Schemas["CiteFactView"];
 export type WorldSituationResult = Schemas["SituationResultView"];
 export type WorldStory = Schemas["StoryView"];
 export type WorldNpcHere = Schemas["NpcHereView"];
+// NPC 頭像（6C-7；`docs/art/NPC頭像.md`）
+export type NpcPortrait = Schemas["NpcPortrait"];
 export type WorldDialogLine = Schemas["DialogLineView"];
 export type WorldQuestLog = Schemas["QuestLogView"];
 export type WorldQuestHere = Schemas["QuestHereView"];

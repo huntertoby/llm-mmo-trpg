@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.run_schemas import OfferOut
 from trpg.content.battle import ID_PATTERN
+from trpg.content.world_events import NpcPortrait
 from trpg.content.world_situations import PLAYER_TEXT_LIMIT, Outcome
 
 __all__ = [
@@ -174,6 +175,9 @@ class EventView(_ApiModel):
     solutions: tuple[EventSolutionView, ...]
     leave_zh: str
     situation: SituationView | None = None
+    art_url: str | None = None
+    """事件卡插圖（6C-7，21.7「一張插圖」）；插圖還沒有，目前一律 ``None``
+    （前端畫場景色塊＋圖示）。"""
 
 
 class CareLineView(_ApiModel):
@@ -221,6 +225,8 @@ class NpcHereView(_ApiModel):
     """級距，例「中立（−9～19）」。"""
     talk_zh: str
     """這一級聊得到什麼。"""
+    portrait: NpcPortrait | None = None
+    """頭像外觀（人設卡的 ``portrait``，6C-7）；沒寫為 ``None``（前端用通用剪影）。"""
 
 
 class DialogLineView(_ApiModel):

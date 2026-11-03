@@ -13,6 +13,10 @@ npcs:
     speech_zh: 短句，愛用渡船比喻
     secret_zh: 年輕時是斷崖幫的人
     hooks_zh: 區域任務鏈；好感度高才說出暗門
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#e8c8a8', hair: bun, hair_color: '#c8c8c0', bun_band: '#b8432f'}
+      gear: {body: {kind: robe, color: '#3c4a48', trim: '#e8bb48'}}
+      extras: [wrinkles]
   - id: shopkeeper_liu
     aliases_zh: [掌櫃]
     name_zh: 柳掌櫃
@@ -22,6 +26,10 @@ npcs:
     speech_zh: 客氣，句尾常加「呢」
     secret_zh: 偷偷收購源晶碎片
     hooks_zh: 傳聞來源；隱藏配方的材料
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#f1c9a5', hair: short, hair_color: '#2a1a10'}
+      gear: {body: {kind: robe, color: '#8a6a3a', trim: '#e8bb48'}}
+      extras: [cap, mustache]
   - id: daoist_qingya
     aliases_zh: [道長, 青崖]
     name_zh: 青崖道長
@@ -31,6 +39,9 @@ npcs:
     speech_zh: 古風、文言，稱人「施主」
     secret_zh: 想離開道觀
     hooks_zh: 導師任務鏈（#95）
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#f1c9a5', hair: bun, hair_color: '#e8e8e0', bun_band: '#2f5a5a', beard: true}
+      gear: {body: {kind: robe, color: '#2f5a5a', trim: '#e8e8e0'}}
   - id: hunter_ayue
     aliases_zh: [阿岳, 獵戶阿岳]
     name_zh: 阿岳
@@ -40,6 +51,10 @@ npcs:
     speech_zh: 口語、粗短
     secret_zh: 父親死在源晶裂痕
     hooks_zh: 新手任務鏈的劇情夥伴（#97）；主線第 1 章同行
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#d9a47a', hair: short, hair_color: '#3a2414'}
+      gear: {body: {kind: leather, color: '#6a5040'}}
+      extras: [fur_collar]
   - id: acolyte_xiaolian
     aliases_zh: [道童]
     name_zh: 小蓮
@@ -49,6 +64,9 @@ npcs:
     speech_zh: 叫人「哥哥／姐姐」
     secret_zh: 偷看過觀主修煉
     hooks_zh: 事件 2、6；主線線索
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#f6e0cc', hair: bun, hair_color: '#1a1a1a', bun_band: '#6aa84a'}
+      gear: {body: {kind: robe, color: '#8ab890', trim: '#f2e6c8'}}
   - id: mistlock_master
     aliases_zh: [真人, 觀主]
     name_zh: 霧鎖真人
@@ -58,6 +76,10 @@ npcs:
     speech_zh: 慢條斯理，愛講道理
     secret_zh: 想用源晶飛升
     hooks_zh: 主線第 1 章 Boss
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#e8d8c8', hair: long, hair_color: '#9aa8b0'}
+      gear: {body: {kind: robe, color: '#e8e8e0', trim: '#3a5a5a'}, head: {kind: veil, color: '#dfe4e2'}}
+      extras: [mist]
   - id: scarface
     aliases_zh: [二當家]
     name_zh: 疤面
@@ -67,6 +89,10 @@ npcs:
     speech_zh: 粗話少、威脅多
     secret_zh: 和柳掌櫃有交易
     hooks_zh: 懸賞、線頭「二當家記恨你」
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#a8724c', hair: short, hair_color: '#1a1a1a'}
+      gear: {body: {kind: leather, color: '#7a6a4a'}}
+      extras: [wide_hat, scar]
   - id: frost_chime
     name_zh: 霜音
     role_zh: 白狐
@@ -75,6 +101,8 @@ npcs:
     speech_zh: 只用問句回答
     secret_zh: 是裂痕異象的見證者
     hooks_zh: 隱藏地點；狐族主角有專屬對話
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      extras: [fox]
   # Phase 5D-3 新增；5D-3b 照玩法 PM 補的 18.5 人設卡改寫。
   - id: smith_shi
     aliases_zh: [石師傅, 鐵匠]
@@ -85,3 +113,7 @@ npcs:
     speech_zh: 一句話不超過十個字，常用「嗯」「拿來」
     secret_zh: 年輕時替青霧觀打過劍陣用的劍，知道劍陣的弱點
     hooks_zh: 鐵匠與附魔台；信賴時說出祕密（劍陣弟子落單時最弱，只是資訊）
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#d9a47a', hair: short, hair_color: '#6a5440', beard: true, build: stout}
+      gear: {body: {kind: leather, color: '#5a4030'}}
+      extras: [headband]

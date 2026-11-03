@@ -138,3 +138,24 @@ def test_friends_capped(field_library: ContentLibrary) -> None:
     view = field_view(field_library, _char(field_library), world=world, now=NOON)
     assert view is not None
     assert [f.owner for f in view.friends] == sorted(owners)[:FRIENDS_MAX]
+
+
+def test_field_npcs_carry_portrait(field_library: ContentLibrary) -> None:
+    """6C-7：人設卡的 ``portrait`` 原樣給前端（地圖紙娃娃與頭像同一份）；``look`` 仍為空。"""
+    view = field_view(field_library, _char(field_library), world=make_world(), now=NOON)
+    assert view is not None
+    npcs = {n.id: n for n in view.npcs}
+    granny = npcs["granny_du"].portrait
+    assert granny is not None and granny.look is not None
+    assert granny.look.hair == "bun" and granny.look.bun_band == "#b8432f"
+    assert granny.gear["body"].kind == "robe"
+    assert granny.extras == ("wrinkles",)
+
+
+def test_all_cards_have_portraits(field_library: ContentLibrary) -> None:
+    """兩區 15 張人設卡都有頭像；霜音是白狐（``fox``，沒有紙娃娃外觀）。"""
+    tables = field_library.world_event_content.npcs
+    cards = {c.id: c for t in tables.values() for c in t.npcs}
+    assert all(c.portrait is not None for c in cards.values())
+    fox = cards["frost_chime"].portrait
+    assert fox is not None and fox.extras == ("fox",) and fox.look is None

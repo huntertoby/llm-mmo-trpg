@@ -8574,6 +8574,17 @@
                 "type": "null"
               }
             ]
+          },
+          "art_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Art Url"
           }
         },
         "additionalProperties": false,
@@ -9101,6 +9112,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/FieldHeroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
               },
               {
                 "type": "null"
@@ -14615,6 +14636,16 @@
           "talk_zh": {
             "type": "string",
             "title": "Talk Zh"
+          },
+          "portrait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortrait"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -14630,6 +14661,241 @@
           "talk_zh"
         ],
         "title": "NpcHereView"
+      },
+      "NpcPortrait": {
+        "properties": {
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NpcPortraitLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gear": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NpcPortraitGear"
+            },
+            "propertyNames": {
+              "enum": [
+                "head",
+                "body",
+                "hands",
+                "feet",
+                "cloak",
+                "off_hand",
+                "neck",
+                "back",
+                "waist"
+              ]
+            },
+            "type": "object",
+            "title": "Gear"
+          },
+          "extras": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Extras",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NpcPortrait",
+        "description": "NPC 頭像（6C-7）：``look``、``gear`` 寫法同紙娃娃；``extras`` 是只畫在頭像上的配件\n（斗笠、刀疤……；``fox``＝白狐，不用紙娃娃）。前端不認得的值略過。"
+      },
+      "NpcPortraitGear": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Kind"
+          },
+          "material": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "trim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "NpcPortraitGear",
+        "description": "頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。"
+      },
+      "NpcPortraitLook": {
+        "properties": {
+          "skin": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Skin",
+            "default": "#f1c9a5"
+          },
+          "hair": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "short",
+                  "long",
+                  "none",
+                  "bun"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair"
+          },
+          "hair_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair Color"
+          },
+          "bun_band": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bun Band"
+          },
+          "beard": {
+            "type": "boolean",
+            "title": "Beard",
+            "default": false
+          },
+          "build": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "stout",
+                  "tall"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build"
+          },
+          "ears": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ears"
+          },
+          "horns": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horns"
+          },
+          "horn_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Horn Color"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "mark_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark Color"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NpcPortraitLook",
+        "description": "NPC 頭像的紙娃娃外觀（Phase 6C-7，``docs/art/NPC頭像.md`` 第 4 節；純顯示，不影響數值）。\n\n欄位同紙娃娃的 ``look``（``DollLook`` 與種族外觀 ``RaceLook`` 的常用子集，駝峰改底線）。\n地圖上的紙娃娃也用這一份（第 4 節第 5 項）。"
       },
       "OathCurrentView": {
         "properties": {

@@ -9,6 +9,7 @@ import { buildDrawModel, type DrawModel } from "../battle/drawModel";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
+import { npcFieldLook } from "./npcLook";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
 export const FIELD_HERO = "field_hero";
@@ -351,10 +352,10 @@ export const npcUnitId = (id: string): string => `npc_${id}`;
 /** 朋友（影子）在渲染器裡的單位 ID。 */
 export const friendUnitId = (owner: string): string => `friend_${owner}`;
 
-/** NPC → 我方紙娃娃（人設卡有外觀就用，沒有用預設；6B-4 不畫血條，見 `fieldDrawModel`）。 */
+/** NPC → 我方紙娃娃（伺服器的外觀、沒有時照頭像換算〔6C-7〕、都沒有用預設；6B-4 不畫血條，見 `fieldDrawModel`）。 */
 function npcUnit(n: FieldNpc): UnitView {
   const base = { ...unitBase(npcUnitId(n.id), n.x, n.y), name_zh: n.name_zh } as UnitView;
-  return withLook(base, n.look, npcUnitId(n.id));
+  return withLook(base, npcFieldLook(n), npcUnitId(n.id));
 }
 
 /** 朋友 → 我方紙娃娃（存影子時的外觀）。 */
@@ -456,7 +457,10 @@ export function barlessIds(field: FieldView): Set<string> {
 export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
   const model = buildDrawModel(fieldBattleView(field, heroName), FIELD_HERO, null);
   const races = new Map<string, unknown>([[FIELD_HERO, field.hero?.race_look ?? null]]);
-  for (const n of field.npcs) if (n.look != null) races.set(npcUnitId(n.id), n.look.race_look ?? null);
+  for (const n of field.npcs) {
+    const look = npcFieldLook(n);
+    if (look != null) races.set(npcUnitId(n.id), look.race_look ?? null);
+  }
   for (const f of field.friends ?? []) races.set(friendUnitId(f.owner), f.look.race_look ?? null);
   const barless = barlessIds(field);
   const units = model.units.map((u) => {

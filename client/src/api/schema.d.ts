@@ -3475,6 +3475,8 @@ export interface components {
             /** Leave Zh */
             leave_zh: string;
             situation?: components["schemas"]["SituationView"] | null;
+            /** Art Url */
+            art_url?: string | null;
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
@@ -3698,6 +3700,7 @@ export interface components {
             /** Alert Zh */
             alert_zh?: string | null;
             look?: components["schemas"]["FieldHeroView"] | null;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
         };
         /** FieldObjectView */
         FieldObjectView: {
@@ -6067,6 +6070,75 @@ export interface components {
             range_zh: string;
             /** Talk Zh */
             talk_zh: string;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
+        };
+        /**
+         * NpcPortrait
+         * @description NPC 頭像（6C-7）：``look``、``gear`` 寫法同紙娃娃；``extras`` 是只畫在頭像上的配件
+         *     （斗笠、刀疤……；``fox``＝白狐，不用紙娃娃）。前端不認得的值略過。
+         */
+        NpcPortrait: {
+            look?: components["schemas"]["NpcPortraitLook"] | null;
+            /** Gear */
+            gear?: {
+                [key: string]: components["schemas"]["NpcPortraitGear"];
+            };
+            /**
+             * Extras
+             * @default []
+             */
+            extras: string[];
+        };
+        /**
+         * NpcPortraitGear
+         * @description 頭像紙娃娃身上的一件外觀（同紙娃娃 ``gear``；``material`` 可省略，前端用布料色）。
+         */
+        NpcPortraitGear: {
+            /** Kind */
+            kind: string;
+            /** Material */
+            material?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Trim */
+            trim?: string | null;
+        };
+        /**
+         * NpcPortraitLook
+         * @description NPC 頭像的紙娃娃外觀（Phase 6C-7，``docs/art/NPC頭像.md`` 第 4 節；純顯示，不影響數值）。
+         *
+         *     欄位同紙娃娃的 ``look``（``DollLook`` 與種族外觀 ``RaceLook`` 的常用子集，駝峰改底線）。
+         *     地圖上的紙娃娃也用這一份（第 4 節第 5 項）。
+         */
+        NpcPortraitLook: {
+            /**
+             * Skin
+             * @default #f1c9a5
+             */
+            skin: string;
+            /** Hair */
+            hair?: ("short" | "long" | "none" | "bun") | null;
+            /** Hair Color */
+            hair_color?: string | null;
+            /** Bun Band */
+            bun_band?: string | null;
+            /**
+             * Beard
+             * @default false
+             */
+            beard: boolean;
+            /** Build */
+            build?: ("stout" | "tall") | null;
+            /** Ears */
+            ears?: string | null;
+            /** Horns */
+            horns?: string | null;
+            /** Horn Color */
+            horn_color?: string | null;
+            /** Pattern */
+            pattern?: string | null;
+            /** Mark Color */
+            mark_color?: string | null;
         };
         /** OathCurrentView */
         OathCurrentView: {

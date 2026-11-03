@@ -15,6 +15,10 @@ npcs:
     speech_zh: 粗獷、愛罵人但心軟
     secret_zh: 丈夫是斷崖幫荒原分隊長
     hooks_zh: 區域任務鏈；餘燼集的商店（20.1）
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#c8906a', hair: long, hair_color: '#6a2a1a'}
+      gear: {body: {kind: leather, color: '#4a3a30'}}
+      extras: [bandana, earring]
   - id: greybeard
     aliases_zh: [灰鬚, 導師]
     name_zh: 灰鬚
@@ -24,6 +28,9 @@ npcs:
     speech_zh: 短句，只說重點
     secret_zh: 曾是源晶研究者，碎界時在場
     hooks_zh: 導師任務鏈；主線第 3 章揭露碎晶之主的來歷
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#d9a47a', hair: short, hair_color: '#8a8a88', beard: true}
+      gear: {body: {kind: robe, color: '#6a5e54', trim: '#ff6a1a'}, head: {kind: hood, color: '#5a4e44'}}
   - id: smith_lu
     aliases_zh: [爐叔, 鐵匠]
     name_zh: 爐叔
@@ -33,6 +40,10 @@ npcs:
     speech_zh: 大嗓門、愛講當年
     secret_zh: 和鐵爐村的鐵匠是師兄弟，吵翻了
     hooks_zh: 鐵匠與附魔台；事件 8 的延伸
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#a8724c', hair: none, hair_color: '#3a2a1a', beard: true, build: stout}
+      gear: {body: {kind: bare}}
+      extras: [goggles_up, soot]
   - id: scavenger_laotie
     aliases_zh: [老鐵, 拾荒者]
     name_zh: 老鐵
@@ -42,6 +53,10 @@ npcs:
     speech_zh: 嘮叨，句尾愛加「嘿」
     secret_zh: 知道黑曜谷在哪
     hooks_zh: 事件 1；隱藏地點黑曜谷
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#c89a7a', hair: short, hair_color: '#6a6a68'}
+      gear: {body: {kind: shirt, color: '#6a5e4a'}}
+      extras: [cap, goggles]
   - id: priestess_helin
     aliases_zh: [赫琳, 祭司]
     name_zh: 赫琳
@@ -51,6 +66,10 @@ npcs:
     speech_zh: 莊重、宗教語氣
     secret_zh: 想讓灰燼之心「覺醒」
     hooks_zh: 主線第 2 章轉折（她是幫兇）
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#b07a7a', hair: long, hair_color: '#1e1418', horns: curved, horn_color: '#bfb0a4'}
+      gear: {body: {kind: robe, color: '#4a1a2a', trim: '#c83a2a'}}
+      extras: [rune]
   - id: overseer_scar
     aliases_zh: [鍛疤, 督工]
     name_zh: 鍛疤
@@ -60,3 +79,7 @@ npcs:
     speech_zh: 命令句
     secret_zh: 偷偷把碎片賣給柳掌櫃（雲嶺）
     hooks_zh: 懸賞「熔爐督工」；串起兩區的盜賊線
+    portrait:  # 6C-7：照 docs/art/sample/portraits.js（美術 PM 提案）
+      look: {skin: '#8a5a3a', hair: none, hair_color: '#1a1a1a', build: stout}
+      gear: {body: {kind: plate}}
+      extras: [scar, ember_eye]

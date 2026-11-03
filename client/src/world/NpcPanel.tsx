@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { affinityLine, canSendChat, lengthLabel, PLAYER_TEXT_MAX, type ChatEntry } from "./story";
+import { Portrait } from "./StoryIcons";
 
 interface Props {
   view: WorldView;
@@ -64,6 +65,7 @@ export function NpcPanel({ view, busy, chats, onAct, onChat, only }: Props) {
             <ul className="world-chat-log small" data-testid="world-chat-log">
               {(chats[n.id] ?? []).map((c, i) => (
                 <li key={i} className={c.mine ? "mine" : "theirs"}>
+                  {!c.mine && <Portrait portrait={n.portrait ?? null} region={view.field?.region ?? null} size={28} />}
                   <b>{c.speaker}：</b>
                   {c.text}
                   {c.more !== undefined && c.more !== "" && <div className="muted">{c.more}</div>}

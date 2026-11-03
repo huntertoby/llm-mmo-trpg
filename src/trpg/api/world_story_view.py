@@ -531,6 +531,7 @@ def npcs_here(library: ContentLibrary, char: CharacterState) -> tuple[NpcHereVie
                 rank_zh=rank_zh,
                 range_zh=range_zh,
                 talk_zh=RANK_TALK_ZH[rank],
+                portrait=card.portrait,
             )
         )
     return tuple(out)

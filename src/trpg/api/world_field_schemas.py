@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import DollLook
 from trpg.content.races import RaceLook
+from trpg.content.world_events import NpcPortrait
 from trpg.engine.view import AppearanceView
 
 __all__ = [
@@ -109,6 +110,9 @@ class FieldNpcView(_ApiModel):
     """「！」的說明（例「有任務可以接」）。"""
     look: FieldHeroView | None = None
     """紙娃娃外觀；人設卡沒有外觀資料時為 ``None``（前端用預設外觀，6B-4）。"""
+    portrait: NpcPortrait | None = None
+    """頭像外觀（人設卡的 ``portrait``，6C-7）；``look`` 為 ``None`` 時前端照它換算地圖紙娃娃
+    （``docs/art/NPC頭像.md`` 第 4 節第 5 項）。沒寫為 ``None``（前端用通用剪影）。"""
 
 
 class FieldFacilityView(_ApiModel):
