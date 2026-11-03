@@ -1,4 +1,4 @@
-// 鐵匠與附魔台的純函式（Phase 5D-3；docs/phases/Phase5計畫.md 28.5）。
+// 鐵匠與附魔台的純函式（Phase 5D-3；docs/phases/Phase5計畫.md 30.5）。
 // 規則在後端（能不能打、費用、候選詞條都由後端算好），這裡只處理打造表單的草稿與送出的動作。
 import type { WorldAction, WorldCrafting } from "../api/types";
 

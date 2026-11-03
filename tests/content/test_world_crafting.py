@@ -1,4 +1,4 @@
-"""鐵匠與附魔台、共鳴的內容（Phase 5D-3；``docs/phases/Phase5計畫.md`` 28.2）。"""
+"""鐵匠與附魔台、共鳴的內容（Phase 5D-3；``docs/phases/Phase5計畫.md`` 30.2）。"""
 
 from __future__ import annotations
 

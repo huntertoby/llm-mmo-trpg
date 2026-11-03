@@ -1,4 +1,4 @@
-"""鐵匠與附魔台（Phase 5D-3；``docs/phases/Phase5計畫.md`` 28.4）：打造、配方碼與首位發現者、
+"""鐵匠與附魔台（Phase 5D-3；``docs/phases/Phase5計畫.md`` 30.4）：打造、配方碼與首位發現者、
 隱藏配方、強化、重骰、指定、分解。"""
 
 from __future__ import annotations

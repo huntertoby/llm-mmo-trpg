@@ -15,9 +15,20 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
+from trpg.api.account_config import AccountSettings, load_account_settings
+from trpg.api.accounts import (
+    AccountDisabledError,
+    AccountError,
+    AccountLimitError,
+    AccountNotFoundError,
+    AccountStore,
+    AuthError,
+)
+from trpg.api.auth import AdminRequiredError
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
-from trpg.api.routes import battles, content, gear, runs, workshop, world
+from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
+from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
     AutoAdvanceLimitError,
@@ -60,6 +71,13 @@ ERROR_STATUS: dict[type[Exception], int] = {
     WorldActionError: 422,
     WorldSaveFormatError: 422,
     WorldError: 422,
+    AuthError: 401,
+    AccountDisabledError: 403,
+    AccountNotFoundError: 404,
+    AccountLimitError: 409,
+    AccountError: 422,
+    LoginRateLimitError: 429,
+    AdminRequiredError: 403,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
@@ -83,6 +101,7 @@ def create_app(
     static_dir: Path | None = None,
     save_dir: Path | None = None,
     llm: LlmProvider | None = None,
+    accounts: AccountSettings | None = None,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
     （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
@@ -92,6 +111,8 @@ def create_app(
     大世界存在它底下的 ``world/``（5A-5）。
     ``llm`` 是網頁版 LLM 開關的模型來源（4-L6b；省略時讀 ``config/llm.toml`` 連本機模型，連不到就
     把那一輪當作關閉）；測試傳 :class:`~trpg.api.llm_source.MockLlmProvider`。
+    ``accounts`` 是帳號與登入的設定（5E-1；省略時讀 ``config/server.toml`` 的 ``[accounts]``，
+    開發模式預設開）。帳號存在 ``accounts.dir``，空字串時 ``<save_dir>/accounts``。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
     所以 ``/api/*`` 優先）。
     """
@@ -105,6 +126,18 @@ def create_app(
     app.state.world = WorldStore(lib, app.state.store, saves / "world")  # 大世界（5A-5）
     app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
     app.state.world_llm = WorldLlm(provider)  # 大世界自己的 LLM 開關（5B-5）
+    settings = accounts if accounts is not None else load_account_settings()
+    app.state.account_settings = settings  # 帳號與登入（5E-1）
+    app.state.accounts = AccountStore(
+        settings.accounts_dir(saves),
+        max_characters=settings.max_characters,
+        session_ttl_s=settings.session_ttl_s,
+    )
+    app.state.login_limiter = LoginLimiter(  # 登入嘗試次數限制（5E-2）
+        max_failures=settings.login_max_failures,
+        ip_max_failures=settings.login_ip_max_failures,
+        window_s=settings.login_window_s,
+    )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)
@@ -113,6 +146,7 @@ def create_app(
     app.include_router(workshop.router)
     app.include_router(gear.router)
     app.include_router(world.router)
+    app.include_router(auth.router)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

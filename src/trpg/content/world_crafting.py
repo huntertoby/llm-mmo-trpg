@@ -1,4 +1,4 @@
-"""大世界的鐵匠與附魔台、裝備共鳴（Phase 5D-3；``docs/phases/Phase5計畫.md`` 28.2）。
+"""大世界的鐵匠與附魔台、裝備共鳴（Phase 5D-3；``docs/phases/Phase5計畫.md`` 30.2）。
 
 - ``content/world/crafting.yaml``（:class:`CraftingRules`）：設施（鐵匠、附魔台）、打造的費用與材料
   用量、特色材料的傾向（M2）與共鳴關鍵字、隱藏配方（M7）、強化、重骰、指定、分解。

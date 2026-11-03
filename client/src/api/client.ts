@@ -1,5 +1,9 @@
 // fetch 包裝：所有請求走相對路徑 /api（開發時由 Vite proxy 轉到 127.0.0.1:8000）。
+// 5E-1：登入後每個請求帶 `Authorization: Bearer <token>`；收到 401 時清掉 token 並發出 AUTH_EXPIRED_EVENT。
+import { AUTH_EXPIRED_EVENT, authHeaders, readToken, writeToken } from "../auth/auth";
 import type {
+  AuthStatus,
+  LoginResponse,
   Action,
   BattleHistory,
   BattleResponse,
@@ -72,9 +76,10 @@ export function detailText(status: number, body: unknown): string {
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, headers: {} };
+  const token = readToken();
+  const init: RequestInit = { method, headers: authHeaders(token) };
   if (body !== undefined) {
-    init.headers = { "Content-Type": "application/json" };
+    init.headers = { ...authHeaders(token), "Content-Type": "application/json" };
     init.body = JSON.stringify(body);
   }
   let res: Response;
@@ -91,6 +96,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     } catch {
       data = null;
     }
+  }
+  if (res.status === 401 && token !== null) {
+    writeToken(null);
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
   }
   if (!res.ok) throw new ApiError(res.status, detailText(res.status, data));
   return data as T;
@@ -174,6 +183,10 @@ export const api = {
   saveRun: (runId: string) =>
     request<RunSaveOut>("POST", `/runs/${encodeURIComponent(runId)}/save`),
   /** 大世界（Phase 5A-5）：角色列表、建立、地點圖畫面、世界動作、開戰。 */
+  /** 帳號與登入（5E-1）：開發模式與目前 token 的帳號。 */
+  authStatus: () => request<AuthStatus>("GET", "/auth/status"),
+  login: (username: string, password: string) => request<LoginResponse>("POST", "/auth/login", { username, password }),
+  logout: () => request<null>("POST", "/auth/logout"),
   worldCharacters: () => request<WorldCharacterSummary[]>("GET", "/world/characters"),
   createWorldCharacter: (body: CreateWorldCharacterRequest) => request<WorldView>("POST", "/world/characters", body),
   world: (characterId: string) => request<WorldView>("GET", `/world/characters/${encodeURIComponent(characterId)}`),

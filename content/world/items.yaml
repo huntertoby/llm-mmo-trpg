@@ -376,7 +376,7 @@ items:
     description_zh: 外觀染料，不影響數值（染色在之後的段）。
     price: 15
     color: "#E8E8E8"
-  # --- 5D-3（docs/phases/Phase5計畫.md 28.2）：精華（8.14：分解裝備 → 重骰、指定詞條）---
+  # --- 5D-3（docs/phases/Phase5計畫.md 30.2）：精華（8.14：分解裝備 → 重骰、指定詞條）---
   - id: item_essence
     name_zh: 精華
     kind: material

@@ -608,3 +608,12 @@
 .world-pouch-edit select {
   margin: 0 4px;
 }
+
+/* 帳號一行（5E-1）：角色畫面上方的帳號名稱、角色數／上限、登入或登出。 */
+.world-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

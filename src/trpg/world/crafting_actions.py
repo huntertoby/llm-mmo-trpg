@@ -1,4 +1,4 @@
-"""鐵匠與附魔台的世界動作與事件（Phase 5D-3；``docs/phases/Phase5計畫.md`` 28.4）。
+"""鐵匠與附魔台的世界動作與事件（Phase 5D-3；``docs/phases/Phase5計畫.md`` 30.4）。
 
 放在獨立模組，由 :mod:`trpg.world.actions` 併進 ``WorldAction``／``WorldEvent`` 聯集（不匯入
 ``actions``，避免循環）。規則在 :mod:`trpg.world.crafting`。

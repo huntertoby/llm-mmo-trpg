@@ -2347,6 +2347,82 @@
           }
         }
       }
+    },
+    "/api/auth/status": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status_api_auth_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Post Login",
+        "operationId": "post_login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Post Logout",
+        "operationId": "post_logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2372,6 +2448,40 @@
         ],
         "title": "AcceptQuestAction",
         "description": "接任務（Phase 5B-4；09 9.6.3）：在給任務的 NPC 所在地點、``start`` 條件成立。"
+      },
+      "AccountView": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "characters": {
+            "type": "integer",
+            "title": "Characters"
+          },
+          "max_characters": {
+            "type": "integer",
+            "title": "Max Characters"
+          },
+          "can_create": {
+            "type": "boolean",
+            "title": "Can Create"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "username",
+          "characters",
+          "max_characters",
+          "can_create"
+        ],
+        "title": "AccountView",
+        "description": "目前登入的帳號（不含密碼雜湊與 session）。"
       },
       "Action": {
         "oneOf": [
@@ -3003,6 +3113,29 @@
         ],
         "title": "AttributeSuggestionOut",
         "description": "開局建議的主屬性（Phase 3H-3）：起始技能最常用的縮放屬性（和自動配點同一個規則）。"
+      },
+      "AuthStatus": {
+        "properties": {
+          "dev_mode": {
+            "type": "boolean",
+            "title": "Dev Mode"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccountView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "dev_mode"
+        ],
+        "title": "AuthStatus"
       },
       "BagItemView": {
         "properties": {
@@ -10282,6 +10415,51 @@
         ],
         "title": "LoadoutChoice",
         "description": "營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合\n欄位上限）；沒裝上的進備用，閃現狀態保留。不推進節點。"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "expires_at": {
+            "type": "integer",
+            "title": "Expires At"
+          },
+          "account": {
+            "$ref": "#/components/schemas/AccountView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "expires_at",
+          "account"
+        ],
+        "title": "LoginResponse"
       },
       "MapSummary": {
         "properties": {

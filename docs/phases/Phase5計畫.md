@@ -131,6 +131,7 @@
 | 5C-3c | LLM 把玩家誓詞轉成誓約模板（#27；接 5B-3 說書人的 LLM 管線，輸出過 pydantic 與模板檢查，模型關閉時退回選單）；優先度低 | 5C-3、5B-3 | 1 h | — |
 | 5D-1 | 貨幣（金幣、任務幣，8.15）、背包 30 格與腰包 3 個（8.17）、商店（只賣消耗品、粗料、染料；區域特產每週限量；好感度門檻，8.26.1）、霧渡鎮柳掌櫃 | 5A-4 | 1.5 h | 可與 5B 各段平行（不碰事件與 narrative） |
 | 5D-2 | 材料：雲嶺 8 種（18.2.4）＋通用粗／精／上料、敵人家族掉材料（M1；被我方擊倒的第三方照常掉材料，玩法 PM 2026-11-03）、掉落物品等級＝地點建議等級（8.26.2）、精英掉史詩；沿用 3G／3K 物品產生器 | 5D-1、5A-3 | 1.5 h | 否 |
+| 5D-2b | 5B-4f／5D-2 收尾（玩法 PM 2026-11-03 代決）：骨架 6 部分成功給小蓮 +10；保底時機遇三選一標題與「作罷」句也用「焦痕未冷的古松」；補潮濕、隱蔽各 2 條製造／利用強化詞條（8.21.4.1），並檢查荒原偏向（點燃、倒地、中毒）缺的照補；影子裝備物品等級壓到招募者等級後照穿（#87）；精英掉裝備改每名精英 1 件（20.2）；背包滿時戰後結算讓玩家選丟哪件（新舊皆可，不做暫存區）；盜賊各區掉「焦鐵」（19.2.4） | 5D-3 | 1 h | 否（與 5D-3 同檔） |
 | 5D-3 | 鐵匠與附魔台：打造（指定部位＋1 條關鍵字詞條、其餘傾向由材料決定 M2、物品等級規則）、強化、重骰、精華指定詞條、配方碼與首位發現者（8.20、M6）、隱藏配方（M7，18 的「驚雷霧袍」）；2 件共鳴（M3） | 5D-2 | 1.5 h | 否 |
 | 5D-4 | 前端：背包、商店、鐵匠、附魔台畫面 | 5D-3 | 1.5 h | 否 |
 
@@ -3132,16 +3133,252 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5D2-10 | 影子裝備「壓到招募者等級」 | 物品等級超過招募者等級的那件不穿（不重算數值）；照比例降級需要重算詞條，留給 PM |
 | 5D2-11 | 誰撿 | 只有主角的背包（傭兵、影子、夥伴不撿） |
 
-## 28. 5D-3 詳細規格：鐵匠與附魔台
+## 28. 5E-1 詳細規格：帳號與角色
+
+> 給實作 agent。只動 `src/trpg/api/`（新增 `accounts.py`（服務層）、`account_config.py`、`auth.py`（FastAPI 依賴）、`account_schemas.py`、`routes/auth.py`；`app.py`、`state.py`、`routes/world.py` 小改）、`config/server.toml`（新）、`scripts/dev_account.py`（新，開發用）、`tests/api/`（只加測試）、`client/`（登入畫面、首頁入口、API 型別）、`client/openapi.json`。**不改** `trpg.world`、`trpg.engine`、`trpg.roguelite`、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1`。另一個 agent 同時在做 5D-3（鐵匠與附魔台），不碰 `trpg.world` 的經濟檔與 `client/src/world/EconomyPanel.tsx`。
+> 依據：`docs/專案計畫.md` 3.1「大世界帳號與主機」（Discord Bot 發帳號密碼、不用 OAuth；伺服器只存密碼雜湊；一個 Discord 使用者 ID 一個帳號；Bot 可重設密碼；身分組被拔時停用；一個帳號 2～3 個角色）；09 9.6.9 #100（一帳號 2～3 角色、角色之間不共用不轉移、自己的其他角色可以當影子）；本檔 2.5（`trpg-account/1`）、11（5A-5 的開發模式，代決 5A5-1）、23（5C-2 的「朋友」，代決 5C2-1）。
+
+### 28.1 目標
+
+伺服器有帳號：帳號只存密碼雜湊、有停用旗標、最多 3 個角色（設定檔）；登入拿到伺服器產生的 session token（有過期時間）；大世界 API 依帳號存取，只看得到、只操作得到自己的角色。帳號由之後的 Discord Bot（5E-2）發放，這一段只做 **服務層函式** 與開發用腳本。使用者現在的試玩不被擋住：設定檔的 **開發模式** 預設開，開著時照舊不用登入。
+
+### 28.2 設定（`config/server.toml`，進版控、不放金鑰）
+
+```toml
+[accounts]
+dev_mode = true            # 開發模式：true 時大世界 API 不用登入（照 5A-5）；帶了有效 token 照樣依帳號存取
+max_characters = 3         # 一個帳號最多幾個角色（3.1「2～3 個」，預設 3）
+session_ttl_hours = 168    # session 有效時間（小時）
+dir = ""                   # 帳號存檔資料夾；空字串＝<存檔資料夾>/accounts（機器相關的路徑放這裡，5E-4）
+```
+
+- 環境變數覆寫：`TRPG_SERVER_CONFIG`（設定檔路徑）、`TRPG_DEV_MODE`（true／false）、`TRPG_ACCOUNTS_DIR`。
+- `create_app(accounts=AccountSettings(...))` 可直接傳（測試用）；省略時讀設定檔。
+
+### 28.3 存檔（`trpg-account/1`）
+
+- 位置：`<帳號資料夾>/<account_id>.json`，一帳號一檔；寫檔用 `write_atomic`。帳號不放在 `world/` 底下（季末重置 5F-5 清的是世界，帳號保留）。
+- 欄位：`format`、`account_id`（`a` ＋ 8 個十六進位字元，伺服器產生）、`username`（3～20 字，英數與底線，存小寫、不分大小寫唯一）、`password`（演算法、參數、鹽、雜湊）、`disabled`、`characters`（角色 ID 依建立順序）、`discord_id`（選填，5E-2 用；有值時全伺服器唯一）、`created_at`、`sessions`（token 的 SHA-256 與到期時間；**不存 token 原文**）。
+- 讀檔不認得的 `format` 就拒絕（同 2.5）。
+
+### 28.4 密碼與 session
+
+- 密碼雜湊：標準函式庫 `hashlib.scrypt`（n=2^14、r=8、p=1、32 位元組），每個帳號 16 位元組隨機鹽（`secrets.token_bytes`）；比對用 `hmac.compare_digest`。參數存在檔裡，之後調高時舊檔照讀。**密碼只在記憶體比對，不寫進 log、不出現在錯誤訊息或回應**。密碼長度 8～128 字。
+- token：`secrets.token_urlsafe(32)`；檔裡只存 SHA-256。每個帳號最多 5 個有效 session（新登入擠掉最舊的）；過期的在登入與驗證時清掉。
+- 重設密碼、停用帳號時清掉該帳號全部 session。停用的帳號不能登入（403「帳號已停用」），既有 token 立即失效。
+- 帳號或密碼錯一律回同一句「帳號或密碼錯誤」（401），不透露帳號是否存在。
+
+### 28.5 服務層（`trpg.api.accounts.AccountStore`；Bot 與開發腳本也用這一層）
+
+| 函式 | 內容 |
+|---|---|
+| `create(username, password, *, discord_id=None)` | 建帳號；名稱重複、`discord_id` 重複、格式不合 → `AccountError`（422） |
+| `login(username, password)` | 回 `(token, account)`；錯誤 401、停用 403 |
+| `authenticate(token)` | 回帳號；無效或過期 401、停用 403 |
+| `logout(token)` | 讓這個 token 失效 |
+| `reset_password(account_id, password)` | 換密碼、清 session |
+| `set_disabled(account_id, disabled)` | 停用或恢復；停用時清 session |
+| `attach_character(account_id, character_id)` | 角色歸到帳號；超過上限 409；已屬於任何帳號 → 409（**角色不轉移**，#100） |
+| `owner_of(character_id)` | 角色所屬帳號 ID（沒有＝`None`） |
+| `find(username)`、`get(account_id)`、`by_discord(discord_id)`、`all()` | 查詢 |
+
+- 沒有轉移、合併、共用角色的函式（#100）。
+- 時間由注入的時鐘提供（測試用固定時間）。
+
+### 28.6 API
+
+| 方法與路徑 | 內容 |
+|---|---|
+| `GET /api/auth/status` | `{dev_mode, account}`：`account` 是目前 token 的帳號（名稱、角色數、上限），沒有或無效＝`null` |
+| `POST /api/auth/login` | `{username, password}` → `{token, expires_at, account}` |
+| `POST /api/auth/logout` | 讓目前的 token 失效（204） |
+
+- token 放 `Authorization: Bearer <token>`。
+- **大世界端點**（`/api/world/characters…`、`/api/world/llm`）：
+  - 開發模式關：沒有有效 token → 401。`GET /characters` 只列自己的角色；`POST /characters` 先檢查上限（409「角色已達上限」）再建立並歸到帳號；`/characters/{id}…` 不是自己的角色 → 404（不透露存在）。
+  - 開發模式開：沒帶 token 照 5A-5（全部角色）；帶了有效 token 照上一條依帳號存取（方便本機測登入）。
+- 一輪（`/api/runs`）、技能工坊、戰鬥端點不變（戰鬥 ID 是 `token_urlsafe(12)`，只有開戰的人拿得到）。
+
+### 28.7 開發用腳本（`scripts/dev_account.py`）
+
+`create <username> [--password-stdin]`（沒給就用 `secrets` 產生並只印一次）、`list`、`disable`／`enable <username>`、`reset-password <username>`、`attach <username> <character_id>`（把開發模式建的角色歸到帳號）。帳號資料夾照設定檔，可用 `--dir` 指定。
+
+### 28.8 前端
+
+- 首頁「進入大世界」→ 先讀 `/api/auth/status`：開發模式開或已登入 → 角色畫面；否則 → 登入畫面（帳號、密碼、登入；錯誤顯示後端訊息）。
+- token 存瀏覽器 `localStorage`，每個請求帶 `Authorization`；收到 401 時清 token 回登入畫面。
+- 角色畫面：已登入時顯示帳號名稱、角色數／上限、「登出」；達上限時建立表單停用並說明。開發模式開且沒登入時顯示「開發模式（不用登入）」與「登入帳號」按鈕。
+
+### 28.9 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/api/test_accounts.py` | 雜湊不含密碼原文、同密碼不同鹽；登入對錯；停用不能登入、既有 token 失效；過期；重設密碼清 session；名稱與 Discord ID 唯一；角色上限；角色不能歸到第二個帳號；存檔格式與不認得的格式；token 原文不在檔裡 |
+| `tests/api/test_auth_api.py` | 開發模式關：沒 token 401、只列自己的角色、別人的角色 404、上限 409、登出後 401；開發模式開：不帶 token 照舊、帶 token 依帳號 |
+| `tests/scripts/test_dev_account.py`（或併入上面） | 腳本建帳號、歸角色 |
+| `client/src/auth/*.test.ts` | token 存取、登入表單驗證、狀態 → 畫面的純函式 |
+
+測試的密碼一律在測試裡用 `secrets` 產生，不寫死真實密碼。
+
+### 28.10 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/api`、`tests/world`（`-n 8`）；vitest 與 build；swamp 種子 7 重播；OpenAPI 重產（`scripts/export_openapi.py` ＋ `gen:api`）。
+- 瀏覽器（8120 埠）：開發模式關 → 登入畫面 → 登入 → 建角色 → 走一步 → 登出；開發模式開 → 照舊直接進。
+
+### 28.11 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5E1-1 | 開發模式 | 設定檔旗標預設 **開**（不擋使用者現在的試玩）；正式開服前改成關 |
+| 5E1-2 | 角色建立進不進世界日誌（5A2-8 說 5E-1 再定） | **不進**：帳號屬於 API／服務層，不在 `trpg.world`；重播照舊從初始快照開始，`trpg-wlog/1` 不變。角色歸屬記在帳號檔 |
+| 5E1-3 | 開發模式建的舊角色 | 不自動歸屬；開發模式關時沒有主人的角色看不到，用 `dev_account.py attach` 歸到帳號 |
+| 5E1-4 | 「朋友」名單（5C2-1 說 5E 再限制） | 規格與設計都沒定義「朋友」怎麼來：**照現狀**（同伺服器所有其他角色都能借），列待決 |
+| 5E1-5 | session 存法 | token 的 SHA-256 存在帳號檔（伺服器重啟後仍有效）；有效 7 天、每帳號最多 5 個 |
+| 5E1-6 | `/api/world/llm` | 開發模式關時要登入才能讀寫（伺服器全域開關，誰能改之後再定） |
+| 5E1-7 | 一輪、工坊 | 不加登入（單人測試台） |
+| 5E1-8 | 帳號名稱規則 | 3～20 字英數與底線、不分大小寫；Bot 發帳號時照這個規則產生 |
+
+### 28.12 5E-4 的設計預留（暫定，不是已寫入的決定；這一段不實作）
+
+5E-4（部署彈性）只是暫定（第 1 節 5E-4 列），這一段只確保設計不擋住它：
+- **Windows／macOS 都能跑**：新程式的路徑一律 `pathlib`，不寫死磁碟代號或分隔符；開發腳本用 `uv run python scripts/…`，兩邊同一條指令。
+- **機器相關的路徑放設定檔**：帳號存檔資料夾是 `config/server.toml` 的 `accounts.dir`（或 `TRPG_ACCOUNTS_DIR`），不寫死在程式裡；之後的世界存檔路徑、Tunnel 設定照同一個檔加欄位。
+- **LLM 單一佇列**：帳號登入與驗證不呼叫 LLM、不佔 LLM 佇列；之後加單一佇列時只動 `trpg.api` 的 LLM 來源，不影響帳號。
+
+### 28.13 不做的事
+
+- Discord Bot、身分組、重設密碼的 Bot 指令（5E-2）；公告、部署（5E-3）；朋友名單與好友邀請；帳號刪除；角色刪除；密碼強度規則以外的帳號鎖定（嘗試次數限制）。
+
+## 29. 5E-2 詳細規格：Discord Bot（假介面、不連網）
+
+> 給實作 agent。只動 `src/trpg/bot/`（新套件）、`src/trpg/api/`（`accounts.py`、`account_config.py`、`auth.py`、`routes/auth.py`、`routes/world.py`、`app.py` 小改；新增 `login_limit.py`）、`config/server.toml`（加欄位）、`config/bot.example.toml`（新）、`scripts/dev_account.py`、`scripts/discord_bot.py`（新）、`pyproject.toml`（只改 import-linter 契約）、`tests/bot/`（新）、`tests/api/`、`tests/test_architecture.py`。**不加** 任何 Discord 函式庫相依、不連網、不碰 `trpg.world`、`trpg.engine`、前端。另一個 agent 同時在做 5D-3，撞到以 main 為準。
+> 依據：`docs/專案計畫.md` 3.1（Bot 發帳號密碼、不用 OAuth；有指定身分組才能領；只存雜湊；一個 Discord 使用者 ID 一個帳號；Bot 可重設密碼；身分組被拔時停用）；本檔 2.x（`trpg.bot` 依賴規則）、28（5E-1 服務層）、`docs/phases/Phase5E-1報告.md` 待 PM 決定 3～5。
+
+### 29.1 目標
+
+`trpg.bot` 是一個 **只靠介面** 的 Discord Bot 核心：收到「領帳號」「重設密碼」指令、成員身分組變動、成員離開伺服器這三類事件，呼叫 5E-1 的帳號服務層（`trpg.api.accounts.AccountStore`）。Discord 的實際連線藏在 `DiscordGateway` protocol 後面；這一段只做 `FakeDiscordGateway`（測試用），**真實 adapter 不做**（只留介面與說明，列待決）。順手補 5E-1 的三個待決：登入嘗試次數限制、LLM 開關只給管理者改、`attach` 檢查角色檔。
+
+### 29.2 套件依賴
+
+- `trpg.bot` 直接匯入只限 `trpg.api`（服務層：`accounts`、`account_config`）、`trpg.shared` 與標準函式庫／pydantic；不直接匯入 `trpg.world`、`trpg.engine`、`trpg.roguelite`、`trpg.content`、`trpg.skillgen`、`trpg.sim`、`trpg.llm`、`trpg.narrative`、`trpg.cli`（import-linter 契約，`allow_indirect_imports`：服務層自己用到 `trpg.world.save.write_atomic` 不算）。
+- `trpg.engine`、`trpg.world`、`trpg.api`、`trpg.shared`、`trpg.content`、`trpg.roguelite` 不得匯入 `trpg.bot`（import-linter ＋ `tests/test_architecture.py`）。
+
+### 29.3 設定（`config/bot.example.toml` 進版控；真的值放 `config/bot.local.toml`（已被 `.gitignore` 的 `*.local.*` 排除）或環境變數）
+
+```toml
+[discord]
+token = ""                 # Bot token；建議只用環境變數 TRPG_BOT_TOKEN
+guild_id = ""              # Discord 伺服器 ID
+role_id = ""               # 能領帳號的身分組 ID
+announce_channel_id = ""   # 公告頻道 ID（5E-3 才用；這一段只檢查有填）
+```
+
+- 讀取順序：`TRPG_BOT_CONFIG`（設定檔路徑）→ `config/bot.local.toml`（不存在就略過）；環境變數 `TRPG_BOT_TOKEN`、`TRPG_BOT_GUILD_ID`、`TRPG_BOT_ROLE_ID`、`TRPG_BOT_ANNOUNCE_CHANNEL_ID` 覆寫。
+- 缺值或 ID 不是數字 → `BotConfigError`，訊息 **列出全部缺的欄位與對應的環境變數**，不印 token。token 用 `SecretStr`（`repr`、log 不會出現原文）。
+- Bot 是獨立程序：遊戲伺服器（`create_app`）**不讀** Bot 設定，Bot 設定缺值不影響伺服器啟動。
+- 帳號資料夾、角色上限照 `config/server.toml`（同一個服務層函式 `open_account_store()`，Bot 與開發腳本共用）。
+
+### 29.4 介面（`trpg.bot.gateway`）
+
+| 名稱 | 內容 |
+|---|---|
+| `CommandEvent` | `guild_id`、`user_id`、`user_name`、`command`（`register`／`reset_password`）、`username`（選填，`register` 指定帳號名稱） |
+| `MemberUpdateEvent` | `guild_id`、`user_id`、`before_roles`、`after_roles` |
+| `MemberRemoveEvent` | `guild_id`、`user_id`（離開或被踢出伺服器） |
+| `DiscordGateway.member_roles(guild_id, user_id)` | 目前的身分組 ID（不在伺服器＝`None`）；**每次指令都重查**，不信任事件附帶的資料 |
+| `DiscordGateway.send_dm(user_id, text)` | 私訊；對方關閉私訊 → 回 `False` |
+| `DiscordGateway.reply(event, text)` | 只有指令發送者看得到的回覆（ephemeral）；**絕不含密碼** |
+
+- 介面是同步的；真實 adapter（之後）在自己的事件迴圈裡用執行緒呼叫（scrypt 是 CPU 工作）。
+- `FakeDiscordGateway`：記憶體裡的成員與身分組表、記錄每則私訊與回覆、可設定某人關閉私訊。
+
+### 29.5 Bot 行為（`trpg.bot.service.BotService`）
+
+| 事件 | 行為 |
+|---|---|
+| 指令來自別的伺服器 | 回覆「請在指定的伺服器使用」，不動帳號 |
+| `register`：沒有指定身分組 | 回覆「需要指定的身分組才能領帳號」 |
+| `register`：這個 Discord ID 已有帳號 | 回覆「你已經有帳號了：<名稱>」（停用中則說明找管理者恢復）；不發新密碼 |
+| `register`：成功 | 產生密碼（`secrets.token_urlsafe(12)`）→ 建帳號（`discord_id` 綁定）→ **私訊** 帳號名稱與密碼（只此一次）→ 回覆「已私訊」 |
+| `register`／`reset_password`：私訊失敗 | 帳號照建立／密碼照換，但密碼沒送出（記憶體裡丟掉，沒人知道）；回覆「私訊失敗，請開啟私訊後用重設密碼」 |
+| `reset_password`：沒身分組／沒帳號／停用 | 各自回覆原因，不換密碼 |
+| `reset_password`：成功 | 換密碼（清掉全部 session）→ 私訊新密碼 → 回覆「已私訊」 |
+| `MemberUpdateEvent`：指定身分組被拔 | 該 Discord ID 的帳號停用（清 session） |
+| `MemberUpdateEvent`：身分組被加回 | **不自動恢復**（代決 5E2-2）；管理者用 `dev_account.py enable` |
+| `MemberRemoveEvent` | 同身分組被拔 |
+| `reconcile()`（Bot 啟動時） | 每個有 `discord_id` 的帳號重查身分組，沒有就停用（Bot 離線期間的變動） |
+
+- 帳號名稱：`register` 有指定就用（不合 5E1-8 規則或已被用 → 回覆原因）；沒指定就由 Discord 名稱轉成合法名稱（小寫、`.`／`-`→`_`、去掉其他字元、截到 20 字，不足 3 字補 `player`），撞名時加 `_` ＋ 4 個十六進位字元。
+- 密碼只出現在私訊文字；回覆、log、錯誤訊息都不帶。伺服器只存雜湊（5E-1）。
+
+### 29.6 帳號服務層小改
+
+- `AccountRecord.admin: bool = False`（新欄位、有預設值，舊檔照讀，格式仍是 `trpg-account/1`）；`AccountStore.set_admin(account_id, admin)`。
+- **跨程序**：Bot 與伺服器是兩個程序寫同一個帳號資料夾；`AccountStore` 的快取在資料夾內檔案（名稱、修改時間、大小）變了時重讀，所以 Bot 建的帳號、停用伺服器立刻看得到。兩邊同時改同一帳號仍可能後寫蓋前寫（列待決）。
+- `open_account_store(settings=None)`：照 `config/server.toml` 開帳號存檔（Bot、開發腳本共用）。
+
+### 29.7 登入嘗試次數限制（5E-1 待決 4）
+
+- `config/server.toml` `[accounts]` 加 `login_max_failures = 5`、`login_window_minutes = 15`、`login_ip_max_failures = 5`。
+- 只算 **失敗**（帳號或密碼錯）；同一帳號名稱（不分大小寫，帳號不存在也算，不透露存在）或同一 IP 在視窗內失敗達上限 → 429「登入嘗試次數過多，請稍後再試」，連密碼都不比對。成功登入清掉該帳號名稱的紀錄（IP 的不清）。
+- 記憶體計數（伺服器重啟歸零）；時鐘可注入。IP 取 `request.client.host`（Tunnel 之後的真實 IP 是 5E-3 的事，列待決）。
+
+### 29.8 LLM 開關只給管理者（5E-1 待決 3）
+
+- `POST /api/world/llm`：帶了 token 的非管理者 → 403「只有管理者能改 LLM 開關」；開發模式關時沒 token 照舊 401；開發模式開、沒帶 token 照舊可改（本機試玩）。`GET` 不變。
+- `dev_account.py create --admin`、`admin <username> on|off`；`list` 顯示「管理者」。
+
+### 29.9 `dev_account.py attach` 檢查角色檔（5E-1 待決 5）
+
+- 角色檔 `<世界資料夾>/chars/<character_id>.json` 不存在 → 錯誤、不歸屬。世界資料夾預設 `<存檔資料夾>/world`，可用 `--world-dir` 指定。
+
+### 29.10 啟動腳本（`scripts/discord_bot.py`）
+
+- `check`：讀設定，缺值印清楚的錯誤（exit 2）；齊了印「設定齊全」與遮住的 token（只露最後 4 字）。
+- `run`：先做 `check`；真實 adapter 還沒做 → 印說明（exit 3），不當掉、不碰遊戲伺服器。
+
+### 29.11 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/bot/test_config.py` | example 設定沒有 token；缺值列出欄位與環境變數；環境變數覆寫；ID 非數字；token 不出現在錯誤與 `repr`；`config/bot.local.toml` 被 gitignore |
+| `tests/bot/test_service.py` | 有身分組才能領；一個 Discord ID 一個帳號；密碼只在私訊、只一次、能登入、檔裡只有雜湊；私訊失敗；名稱轉換與撞名；重設密碼清 session；拔身分組／離開 → 停用、token 失效；加回不恢復；`reconcile`；別的伺服器 |
+| `tests/bot/test_script.py` | `discord_bot.py check`／`run` 的 exit code 與訊息；伺服器不讀 Bot 設定 |
+| `tests/api/test_login_limit.py` | 帳號與 IP 各自上限、429、視窗過後恢復、成功清帳號紀錄 |
+| `tests/api/test_auth_api.py`／`test_accounts.py` | LLM 開關只給管理者；`admin` 舊檔照讀；跨程序重讀；`attach` 角色檔不存在 |
+
+測試密碼與 token 一律用 `secrets` 當場產生。
+
+### 29.12 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/api`、`tests/world`、`tests/bot`、`tests/test_architecture.py`（`-n 8`）；swamp 種子 7 重播；API 型別有變就重產 OpenAPI。
+
+### 29.13 代決（最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5E2-1 | 真實 Discord adapter | **不做**：只留 `DiscordGateway` 與說明，不加 discord 函式庫相依 |
+| 5E2-2 | 身分組加回 | **不自動恢復**；管理者手動 `enable`（避免誤判、也不區分「誰停用的」） |
+| 5E2-3 | 私訊失敗 | 帳號照建立／密碼照換但不送出，提示開私訊後重設 |
+| 5E2-4 | 停用中的帳號重設密碼 | 拒絕（不能用重設密碼繞過停用） |
+| 5E2-5 | 嘗試次數限制 | 只算失敗；帳號 5 次、IP 5 次／15 分（設定檔）；記憶體計數 |
+| 5E2-6 | 開發模式下沒 token 改 LLM 開關 | 照舊可改（開發模式本來就不擋）；帶 token 才檢查管理者 |
+| 5E2-7 | 前端 | 不改（非管理者按 LLM 開關會看到 403 訊息） |
+
+### 29.14 不做的事
+
+- 真實 Discord 連線與 slash 指令註冊；公告（5E-3，這一段只讀設定）；Tunnel；朋友名單；帳號刪除；管理者的 Bot 指令。
+
+## 30. 5D-3 詳細規格：鐵匠與附魔台
 
 > 給實作 agent。只動 `content/world/crafting.yaml`（新）、`content/world/resonance.yaml`（新）、`content/world/items.yaml`（精華、荒原 3 種材料）、`content/world/npcs/cloud_ridge.yaml`（鐵匠人設卡）、`content/affixes.yaml`（3 條獨特詞條）、`content/item_gen.yaml`（`unique_affixes`）、`src/trpg/content/`（`world_crafting.py` 新；`item_gen.py` 加選填參數與重骰函式、`item_budget.py` 一個欄位、`library.py` 一個欄位一行呼叫）、`src/trpg/world/`（`crafting.py`、`crafting_actions.py`、`resonance.py` 新；`state.py`、`step.py`、`actions.py`、`gear.py`、`economy.py`、`battle.py` 小改）、`src/trpg/api/`（`world_crafting_view.py`、`world_crafting_schemas.py` 新；`world_schemas.py`、`world_presenter.py`、`world_economy_view.py` 小改）、`client/`（小鎮的「鐵匠」面板、背包的共鳴一行、API 型別）、`client/openapi.json`、`tests/`。另一個 agent（5E-1）同時在做帳號與角色：不碰帳號、角色清單、`trpg.api` 的帳號路由。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值，同 5D-1、5D-2）。
 > 依據：**`docs/design/20-第一季商店與裝備內容.md`（優先）** 20.3（獨特裝備：驚雷霧袍、蒸汽護腕、冰火雙生戒的部位與效果；強度不超過同物品等級史詩）、20.4（3 個隱藏配方與提示；提示只說意象；第一次打出的人成為首位發現者）、20.1（材料不能賣，只能分解或用掉）；08 8.13（打造＝指定部位＋1 條關鍵字詞條；材料用量依部位預算比例調整）、8.14（精華＝分解裝備，用來重骰、指定詞條；重骰同一件越骰越貴；強化 +1～+3）、8.15（金幣：打造手續費、重骰與強化；任務幣：高階打造）、8.9（共鳴：`resonance_tags`＝關鍵字，2 件小共鳴，效果用技能原語）、8.20（配方＝部位＋物品等級＋稀有度＋指定詞條＋材料組合；配方指紋 SHA-256；重骰由「指紋＋位置＋n」決定；配方碼分享、朋友用自己的材料打；掉落裝備沒有配方碼；名稱綁定配方第一次打造）、8.26.1（鐵匠：打造、強化；附魔台：重骰、精華指定；只給裝備）、8.26.2（打造的物品等級＝玩家等級，不超過材料階上限 粗 3／精 7／上 10）、8.26.3 M2（其餘詞條的傾向由材料決定）、M3（第一季 2 件門檻）、M4、M6（沒人試過的組合只看得到大致傾向；首位發現者名字掛在配方上）、M7；18 18.2.4（雲嶺材料與驚雷霧袍）、18.4 骨架 4（「雷雨夜的霧最濃」已是酒館傳聞）；19 19.2.4（熔岩核、寒燼、熔心晶）；09 9.6.1（鐵匠、附魔台見 08）；本檔 26（背包、金幣、任務幣）、27（材料、`gear`、`equipment`、`equip`、回收）。
 
-### 28.1 目標
+### 30.1 目標
 
 霧渡鎮有鐵匠（打造、強化、分解）與附魔台（重骰、精華指定）。打造：指定部位、稀有度（稀有或史詩）、1 條 build 詞條（關鍵字詞條）與材料（1 種通用料決定物品等級上限＋0～3 種特色材料決定其餘詞條的傾向）；同一份配方一定打出同一件裝備，配方碼可以分享，世界記下每份配方的首位發現者。3 個隱藏配方打出獨特裝備。穿著 2 件帶相同關鍵字的裝備觸發小共鳴。全部是世界動作（寫進日誌、可重播）；LLM 不碰數值與物品。
 
-### 28.2 內容（`content/world/`；schema `src/trpg/content/world_crafting.py`，`ContentModel`、錯誤訊息繁中並指出 ID）
+### 30.2 內容（`content/world/`；schema `src/trpg/content/world_crafting.py`，`ContentModel`、錯誤訊息繁中並指出 ID）
 
 1. **`crafting.yaml`**（`CraftingRules`；沒有檔案＝鐵匠與附魔台關閉 `None`）：
    - `stations`：`{id, kind: smithy | enchanter, name_zh, region, location, npc?}`。霧渡鎮：`smithy_mist_ferry`（石師傅）、`enchanter_mist_ferry`（渡口附魔台，沒有 NPC）。
@@ -3157,13 +3394,13 @@ chat_text: '{name}看了你一眼，沒有多說。'
 4. **`affixes.yaml`**：3 條獨特詞條（20.3；觸發類，現成原語）：`affix_unique_thunder_mist`（身體；受到近戰傷害時，自己腳下產生 1 回合煙霧，每輪 1 次）、`affix_unique_steam_guard`（手；受到傷害時自己腳下產生 1 回合煙霧，每輪 1 次——引擎沒有「火焰傷害」的觸發篩選，代決 5D3-9）、`affix_unique_frostfire`（戒指；施加燃燒時也讓目標緩速 1 回合，每回合 1 次）。`item_gen.yaml` 加 `unique_affixes`：這些詞條不進一般產生器（掉落、傭兵、重骰都不會出現）。
 5. **`npcs/cloud_ridge.yaml`**：加「石師傅」（霧渡鎮鐵匠；18、20 沒寫鐵匠是誰，最小人設卡，代決 5D3-1）。
 
-### 28.3 狀態（全部有預設值；格式字串不變）
+### 30.3 狀態（全部有預設值；格式字串不變）
 
 - `CharacterState.gear_mods: dict[str, GearMod] = {}`：被打造、強化、重骰、指定過的裝備（物品 ID → `{fingerprint, recipe: 配方碼 | None, enhance: 0～3, rerolls: 依序的位置, imbues: 次數}`；依 ID 排序）。
 - `CharacterState.crafts: int = 0`：打造過幾件（打造品的 ID `item_craft_{配方碼}_{n}`，避免同配方打兩件撞 ID）。
 - `WorldState.recipes: tuple[RecipeRecord, ...] = ()`：世界記得的配方（依配方碼排序、不重複）：`{code, recipe, name_zh, discoverer, discoverer_name, discovered_at, hidden}`（M6）。
 
-### 28.4 規則（`trpg.world.crafting`；動作加進 `WorldAction`；不合法拋 `WorldActionError`、狀態不變）
+### 30.4 規則（`trpg.world.crafting`；動作加進 `WorldAction`；不合法拋 `WorldActionError`、狀態不變）
 
 - **地點**：在該設施的地點（城鎮）、沒有遭遇。`craft`、`enhance`、`salvage` 在鐵匠；`reroll`、`imbue` 在附魔台。
 - **配方**（`CraftRecipe`，8.20）：`slot_type`、`weapon_class`（只有武器：主角武器的大類）、`rarity`、`item_level`、`affix`（build 詞條；隱藏配方為 `None`）、`grade`（1 種通用料）、`materials`（0～3 種特色材料，排序、不重複）。**指紋**＝正規化 JSON（鍵排序）的 SHA-256；**配方碼**＝指紋前 10 碼（顯示大寫）。
@@ -3179,18 +3416,18 @@ chat_text: '{name}看了你一眼，沒有多說。'
 - **`reroll`**（`station`、`item`、`index`）：把第 `index` 條換成另一條：候選＝同稀有度可用類別（第 1 條是 build 詞條時只從 build 候選裡挑）、能掛在這件、和其他條相容（同產生器規則）、不是原本那條、不是獨特詞條、放得進「部位詞條預算 − 其他條的點數」；數值取放得進的最大值。亂數＝`指紋:{index}:{n}`（n＝這個位置已重骰的次數，8.20）。費用：精華＋金幣，越骰越貴。獨特詞條不能重骰。
 - **`imbue`**（`station`、`item`、`index`、`affix`）：同 `reroll` 的候選，指定其中一條（8.20「完全沒有隨機」）；費用較高。
 - **`salvage`**（`station`、`item`：背包裡的裝備）：拿掉那件，得到 `salvage[稀有度]` 個精華（8.14）。穿戴中的不能分解。
-- **共鳴**（`trpg.world.resonance`，M3）：物品的共鳴關鍵字＝技能強化詞條的關鍵字＋`resonance_<關鍵字>` 標籤。主角開戰時，穿戴中帶同一關鍵字的裝備 ≥ `pieces` 件 → 加上那個共鳴的詞條（掛在第一件合適的物品上，見 28.2 第 2 點）；只算主角（代決 5D3-8）。
+- **共鳴**（`trpg.world.resonance`，M3）：物品的共鳴關鍵字＝技能強化詞條的關鍵字＋`resonance_<關鍵字>` 標籤。主角開戰時，穿戴中帶同一關鍵字的裝備 ≥ `pieces` 件 → 加上那個共鳴的詞條（掛在第一件合適的物品上，見 30.2 第 2 點）；只算主角（代決 5D3-8）。
 - **指紋**：掉落的裝備第一次被強化／重骰時，指紋＝物品 JSON 的 SHA-256（掉落品沒有配方碼，8.20）。
 - **出售**：賣掉的裝備一併刪掉 `gear_mods`。
 
-### 28.5 API 與前端
+### 30.5 API 與前端
 
 - `WorldActionRequest` 加 `craft`、`enhance`、`reroll`、`imbue`、`salvage`。`WorldView.crafting: CraftingView | None`（在設施的地點時）：設施、部位與 build 詞條的選項、稀有度費用、背包裡的材料（傾向說明、共鳴關鍵字）、已知配方（世界的配方表：碼、名稱、首位發現者、能不能打與原因）、可強化／重骰／指定／分解的裝備（每條詞條的文字與指定候選、費用、不能的原因）。`InventoryView.resonance_zh`（目前觸發的共鳴）。
 - 事件句子：打造（含「你是這份配方的首位發現者」）、強化、重骰、指定、分解。
 - 前端：小鎮服務列加「鐵匠」切換，面板內：打造表單（部位、稀有度、詞條、通用料、特色材料、費用與傾向）、配方碼打造、強化／分解、附魔台的重骰與指定；停用原因用共用 `<Hint>`。背包加共鳴一行。完整畫面在 5D-4。
 - OpenAPI 照既有方式重產。
 
-### 28.6 測試
+### 30.6 測試
 
 | 檔案 | 內容 |
 |---|---|
@@ -3200,16 +3437,16 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | `tests/api/test_world_crafting_api.py` | 小鎮看得到鐵匠 → 打造 → 背包 → 強化 → 附魔台重骰 → 分解 |
 | vitest | 鐵匠面板靜態輸出、停用原因 |
 
-### 28.7 驗收
+### 30.7 驗收
 
 - `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。
 - `tests/world`、`tests/api`、`tests/content`（`-n 8`）；vitest 與 build；swamp 種子 7 重播。
 
-### 28.8 不做的事
+### 30.8 不做的事
 
 - LLM 命名、外觀綁定配方（之後的段）；品質（正式季）；4 件共鳴；把詞條搬到別件；重骰序列併進配方碼（代決 5D3-6）；稱號；荒原的設施、掉落與提示（荒原內容段）；完整鐵匠畫面（5D-4）。
 
-### 28.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+### 30.9 代決（開發 PM 定，最保守預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -3226,6 +3463,6 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5D3-11 | 亂數 | 打造、重骰用配方指紋衍生的亂數（8.20 要求同配方同結果、誰打都一樣），不用角色的串流 |
 | 5D3-12 | 首位發現者 | 世界快照記角色 ID 與名字；只有名字，不給稱號、不給獎勵 |
 
-## 29. 之後各段規格
+## 31. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

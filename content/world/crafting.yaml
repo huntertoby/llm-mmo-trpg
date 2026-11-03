@@ -1,4 +1,4 @@
-# 鐵匠與附魔台（Phase 5D-3；docs/phases/Phase5計畫.md 28.2；schema：src/trpg/content/world_crafting.py）。
+# 鐵匠與附魔台（Phase 5D-3；docs/phases/Phase5計畫.md 30.2；schema：src/trpg/content/world_crafting.py）。
 # 規則依 docs/design/08-裝備.md 8.13、8.14、8.15、8.20、8.26；隱藏配方依 20-第一季商店與裝備內容.md 20.3、20.4
 # （優先）與 18.2.4、19.2.4。費用、用量、傾向都是開發 PM 定的初值（代決 5D3-*），被改時只動這份資料。
 

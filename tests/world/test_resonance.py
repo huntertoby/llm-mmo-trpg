@@ -1,4 +1,4 @@
-"""裝備共鳴（Phase 5D-3；08 8.9、M3；``docs/phases/Phase5計畫.md`` 28.4）。"""
+"""裝備共鳴（Phase 5D-3；08 8.9、M3；``docs/phases/Phase5計畫.md`` 30.4）。"""
 
 from __future__ import annotations
 

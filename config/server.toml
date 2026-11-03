@@ -1,0 +1,17 @@
+# 遊戲伺服器設定（Phase 5E-1）。此檔進版控，不放金鑰或密碼。
+# 環境變數可覆寫：TRPG_SERVER_CONFIG（設定檔路徑）、TRPG_DEV_MODE（true／false）、TRPG_ACCOUNTS_DIR。
+
+[accounts]
+# 開發模式：true 時大世界不用登入（照 5A-5，方便本機試玩）；帶了有效 token 照樣依帳號存取。
+# 正式開服（朋友連進來）前改成 false。
+dev_mode = true
+# 一個帳號最多幾個角色（專案計畫 3.1「2～3 個」）。
+max_characters = 3
+# 登入後的 session 有效時間（小時）。
+session_ttl_hours = 168
+# 帳號存檔資料夾（機器相關）；空字串＝<存檔資料夾>/accounts（預設 saves/accounts，已在 .gitignore 內）。
+dir = ""
+# 登入嘗試次數限制（Phase 5E-2）：同一帳號名稱或同一 IP 在視窗內「失敗」達上限 → 429，視窗過後恢復。
+login_max_failures = 5
+login_ip_max_failures = 5
+login_window_minutes = 15
