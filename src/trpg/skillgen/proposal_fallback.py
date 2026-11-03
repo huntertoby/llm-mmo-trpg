@@ -138,26 +138,37 @@ def _step(draft: dict[str, Any], library: ContentLibrary) -> StepOptions | None:
     return next(s for s in options.steps if s.id == options.next_step)
 
 
-def _trigger(kind_choice: Choice, rank: int) -> dict[str, Any] | None:
-    trigger = next((p for p in kind_choice.params if p.field == "trigger"), None)
-    event = None if trigger is None else _field_of(trigger.fields, "event")
+_KIND_PARAM = {"passive": "trigger", "reaction": "reaction"}
+"""需要選時機的種類與它的參數欄位（被動選觸發時機、反應技選反應時機；6S-2b 補上反應技）。"""
+
+
+def _events(kind_choice: Choice, kind: str, rank: int) -> list[dict[str, Any]]:
+    """種類的時機參數的每一種可用填法（依選項順序）；不需要時機的種類為 ``[{}]``。"""
+    name = _KIND_PARAM.get(kind)
+    if name is None:
+        return [{}]
+    param = next((p for p in kind_choice.params if p.field == name), None)
+    event = None if param is None else _field_of(param.fields, "event")
     if event is None:
-        return None
+        return []
+    out: list[dict[str, Any]] = []
     for choice in event.choices:
         if _usable(choice, rank):
             picked = fill_fields([event], {"event": choice})
             if picked is not None:
-                return picked
-    return None
+                out.append({name: picked})
+    return out
 
 
 def _field_of(fields: tuple[FieldSpec, ...], name: str) -> FieldSpec | None:
     return next((f for f in fields if f.field == name), None)
 
 
-def _basics(
+def _bases(
     library: ContentLibrary, skeleton: SkeletonDef, kind: str, ctx: ProposalContext
-) -> dict[str, Any] | None:
+) -> list[dict[str, Any]]:
+    """骨架的基本設定草稿；被動與反應技每一種可用的時機各一份（依選項順序，第一份與 6S-2b 之前
+    的被動相同）。做不出來時為空串列。"""
     draft: dict[str, Any] = {"skeleton": skeleton.id}
     step = _step(draft, library)
     kinds = None if step is None else _field(step, "kind")
@@ -165,24 +176,19 @@ def _basics(
         None if kinds is None else next((c for c in kinds.choices if c.value == kind), None)
     )
     if step is None or kind_choice is None:
-        return None
+        return []
     filled = fill_fields(
         [f for f in step.fields if f.field not in ("kind", "tier")], {}
     )  # 類別（含武器需求）、縮放屬性取第一個
     if filled is None:
-        return None
+        return []
     draft.update(filled, kind=kind, tier=ctx.tier, rarity=ctx.rarity)
     if draft.get("category") == "weapon":  # 武器技看手上武器：縮放屬性鎖成武器大類主屬性（3H-6）
         attr = library.skill_scaling.weapon_class_attr(str(draft.get("weapon_req")))
         draft["scaling_attr"] = attr.value
     if kind == "active":
         draft["ap_cost"] = DEFAULT_ACTIVE_AP
-    elif kind == "passive":
-        trigger = _trigger(kind_choice, rarity_rank(ctx.rarity))
-        if trigger is None:
-            return None
-        draft["trigger"] = trigger
-    return draft
+    return [{**draft, **event} for event in _events(kind_choice, kind, rarity_rank(ctx.rarity))]
 
 
 def _choices(step: StepOptions | None, name: str, rank: int, limit: int) -> list[Choice]:
@@ -276,13 +282,11 @@ def _from_workshop(
     kind = wanted_kind(library, request)
     rank = rarity_rank(ctx.rarity)
     for skeleton in _workshop_skeletons(library, request, kind, rank):
-        base = _basics(library, skeleton, kind, ctx)
-        if base is None:
-            continue
-        for draft in _structures(library, base, rank):
-            skill = _finish(library, draft, seed)
-            if skill is not None:
-                return skill
+        for base in _bases(library, skeleton, kind, ctx):
+            for draft in _structures(library, base, rank):
+                skill = _finish(library, draft, seed)
+                if skill is not None:
+                    return skill
     return None
 
 
