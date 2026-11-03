@@ -193,13 +193,15 @@ def _fact_entries(
     defs = _thread_defs(library)
     held = held_threads(world, char, now)
     entries: list[tuple[SituationFact, tuple[str, ...]]] = []
+    skeleton = _skeleton(library, char.region, template.skeleton)
     for thread_id in held:
         thread = defs.get(thread_id)
+        if thread is not None and thread.npc is not None and thread.npc in skeleton.npcs:
+            continue  # 一筆事實一項（5C-3f）：有 NPC 的線頭只算「往來」（下面的 npc_bond）
         text = thread.text_zh if thread is not None else thread_id
         words = _keywords(text, thread.aliases_zh if thread is not None else ())
         fact = SituationFact(item="clue", fact=f"thread:{thread_id}", text_zh=text)
         entries.append((fact, words))
-    skeleton = _skeleton(library, char.region, template.skeleton)
     npc_table = library.world_event_content.npcs.get(char.region)
     cards = {} if npc_table is None else npc_table.npc_by_id()
     for npc_id in sorted(skeleton.npcs):

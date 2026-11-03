@@ -415,9 +415,9 @@ def test_facts(library: ContentLibrary, make_char: MakeChar) -> None:
     )
     template = situation_template(library, "cloud_ridge", "monks_persuade")
     facts = {(f.item, f.fact) for f in situation_facts(library, world, char, template, NOON)}
+    # 5C-3f 一筆事實一項：temple_quarrel 有 npc（小蓮），只算「往來」，不再同時算「線索」
     assert facts == {
         ("clue", "thread:peddler_owes_you"),
-        ("clue", "thread:temple_quarrel"),
         ("npc_bond", "npc:acolyte_xiaolian"),
         ("exchange", "supplies"),
         ("weakness", "weakness:monk_fear"),
