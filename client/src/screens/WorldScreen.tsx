@@ -61,6 +61,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [battle, setBattle] = useState<BattleResponse | null>(null);
   /** 循環賽的重播（5F-4）：開場說明（標題、重播驗證）；``null``＝一般戰鬥。 */
   const [replay, setReplay] = useState<string[] | null>(null);
+  const [replayOutcome, setReplayOutcome] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasten, setHasten] = useState(false);
@@ -262,6 +263,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       if (charId === null) return;
       const res = await api.worldLeagueReplay(charId, matchId);
       setReplay(replayNotes(res));
+      setReplayOutcome(res.outcome_zh);
       setBattle(res.battle);
     });
 
@@ -284,6 +286,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         onExit={() => void backToMap()}
         exitLabel={replay !== null ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
+        endTitle={replay !== null ? replayOutcome : undefined}
       />
     );
   }

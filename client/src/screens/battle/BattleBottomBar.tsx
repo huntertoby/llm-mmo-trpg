@@ -40,6 +40,8 @@ interface Props {
   copying: boolean;
   ended: boolean;
   exitLabel: string | undefined;
+  /** 結束面板的中性勝負文字（循環賽重播，5F-4b）。 */
+  endTitle?: string;
   onExit(): void;
   speed: PlaySpeed;
   playing: boolean;
@@ -104,7 +106,7 @@ export function BattleBottomBar(p: Props) {
       />
       <div className="battle-turn">
         {p.ended ? (
-          <EndPanel response={p.response} onRestart={p.onExit} restartLabel={p.exitLabel} />
+          <EndPanel response={p.response} onRestart={p.onExit} restartLabel={p.exitLabel} heading={p.endTitle} />
         ) : (
           <TurnControls
             enabled={canAct}

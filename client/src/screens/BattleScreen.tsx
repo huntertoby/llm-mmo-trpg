@@ -53,6 +53,8 @@ interface Props {
   runMode?: RunMode;
   /** 開場說明（大世界 5A-7：先手、開場狀態、增援）；開場橫幅下顯示，另在畫面上留一則可關的提示。 */
   openingNotes?: readonly string[];
+  /** 結束面板取代「勝利！／敗北……」的中性文字（循環賽重播「某某 勝」，5F-4b）。 */
+  endTitle?: string;
 }
 
 export interface RunMode {
@@ -60,7 +62,7 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
@@ -378,6 +380,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         copying={copying}
         ended={ended}
         exitLabel={exitLabel}
+        endTitle={endTitle}
         onExit={onExit}
         speed={pb.speed}
         playing={pb.playing}
