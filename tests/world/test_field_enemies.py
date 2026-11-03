@@ -345,10 +345,17 @@ def test_won_group_stays_gone_for_this_visit(field_library: ContentLibrary) -> N
     char = _char(library, (6, 5), location="hunter_hut", field_visit=visit)
     assert len(field_enemies(library, make_world(), char, NOON)) == 1
     contact = char.model_copy(update={"pending_encounter": _encounter_on(library, char)})
-    won = after_fight(contact, char, FightAction(steps=()), (_ended(won=True),))
+    world = make_world()
+    fight = FightAction(steps=())
+    after, won, _ = after_fight(
+        library, world, contact, char, action=fight, events=(_ended(won=True),), now=NOON
+    )
+    assert after == world  # 村落不共享：不寫世界
     assert won.field_visit is not None and won.field_visit.defeated == (0,)
     assert field_enemies(library, make_world(), won, NOON) == ()
-    lost = after_fight(contact, char, FightAction(steps=()), (_ended(won=False),))
+    _, lost, _ = after_fight(
+        library, world, contact, char, action=fight, events=(_ended(won=False),), now=NOON
+    )
     assert lost.field_visit == visit
 
 

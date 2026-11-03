@@ -941,7 +941,8 @@ def _won(
     char, insight = _elite_first_kills(library, char, lineup)
     events += insight
     kind = world_map_of(library, encounter.region).location_by_id()[encounter.location].kind
-    if kind in rules.clear_kinds:
+    if kind in rules.clear_kinds and encounter.contact is None:
+        # 碰到地圖上的一隊（6C-1b）：每隊清空、全打完才寫已清空，由 field_enemies.after_fight 處理
         respawn_at = now + rules.respawn_seconds
         world = with_cleared(world, encounter.region, encounter.location, respawn_at)
         events.append(LocationClearedEvent(location=encounter.location, respawn_at=respawn_at))
