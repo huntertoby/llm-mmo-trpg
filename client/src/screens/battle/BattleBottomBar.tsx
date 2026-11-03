@@ -1,35 +1,28 @@
-// 戰鬥畫面的底部列（由 BattleScreen 抽出，Phase 3T-7）：左下主角狀態卡（右緣有寬度拖曳線）、中間技能列、右下回合操作
-// （戰鬥結束後換成結束面板）。
+// 戰鬥畫面的底部列（由 BattleScreen 抽出，Phase 3T-7；6A-4e 起是版面 A 戰鬥版的底部）：中間技能列、右下回合操作
+// （戰鬥結束後換成結束面板）。主角狀態卡移到左上（`BattleScreen` 的 `.bhud-left`）。
 
+import type { RefObject } from "react";
 import type { Action, BattleResponse, BattleView, SkillCard, UnitView } from "../../api/types";
 import type { ClassifiedActions, LabeledAction } from "../../battle/actions";
-import { DEFAULT_LAYOUT, type LayoutPrefs, type layoutLimits } from "../../battle/layoutPrefs";
+import type { PlaySpeed } from "../../battle/playback";
+import { runButton } from "../../battle/runAction";
 import { blockedMessage } from "../../battle/skillReasons";
 import { actionHintKind, actionHintText } from "../../battle/skillTray";
 import { hasControllableSummon } from "../../battle/summons";
 import { moreModes, TRAY_KINDS, type ActionMode, type SkillButton } from "../../battle/targeting";
 import { EndPanel } from "../../ui/EndPanel";
-import { Hud } from "../../ui/Hud";
-import { ResizeHandle } from "../../ui/ResizeHandle";
 import { SkillBar } from "../../ui/SkillBar";
 import { SpeedControl } from "../../ui/SpeedControl";
 import { TurnControls } from "../../ui/TurnControls";
-import type { PlaySpeed } from "../../battle/playback";
-import { runButton } from "../../battle/runAction";
 
 interface Props {
+  /** 量底部列高度用（戰場、左下紀錄讓開）。 */
+  rootRef?: RefObject<HTMLDivElement>;
   response: BattleResponse;
   view: BattleView;
-  /** 播放中畫面上的視圖與主角（Hud 顯示播放中的狀態）。 */
-  shown: BattleView;
-  shownHero: UnitView | null;
   hero: UnitView | null;
   cards: Readonly<Record<string, SkillCard | undefined>>;
-  skillNames: Readonly<Record<string, string>>;
-  layout: LayoutPrefs;
-  limits: ReturnType<typeof layoutLimits>;
   narrow: boolean;
-  onLayoutChange(patch: Partial<LayoutPrefs>): void;
   classified: ClassifiedActions;
   basic: ActionMode[];
   raceModeList: ActionMode[];
@@ -56,7 +49,7 @@ interface Props {
 }
 
 export function BattleBottomBar(p: Props) {
-  const { layout, narrow, classified, basic, mode, copying, canAct, hero, view } = p;
+  const { narrow, classified, basic, mode, copying, canAct, hero, view } = p;
   const attackMode = basic.find((m) => m.kind === "attack") ?? null;
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
   const sprintMode = basic.find((m) => m.kind === "run") ?? null;
@@ -78,21 +71,7 @@ export function BattleBottomBar(p: Props) {
   // 6A-3：操作說明句每一輪只算一次（同一輪中途「等待中」再回來不多記）
   const hintKind = actionHintKind(hintState);
   return (
-    <div className={`battle-bottom${layout.bottomHeight < DEFAULT_LAYOUT.bottomHeight || narrow ? " short" : ""}`}>
-      <div className="battle-hero">
-        <Hud view={p.shown} hero={p.shownHero} skills={p.skillNames} cards={p.cards} compact={narrow} />
-        {!narrow && (
-          <ResizeHandle
-            orientation="vertical"
-            direction={1}
-            value={layout.heroWidth}
-            range={p.limits.hero}
-            label="調整主角狀態卡寬度"
-            onChange={(v) => p.onLayoutChange({ heroWidth: v })}
-            onReset={() => p.onLayoutChange({ heroWidth: DEFAULT_LAYOUT.heroWidth })}
-          />
-        )}
-      </div>
+    <div className={`battle-bottom${narrow ? " short" : ""}`} ref={p.rootRef}>
       <SkillBar
         basic={basic.filter((m) => TRAY_KINDS.includes(m.kind))}
         race={hero?.race ?? null}

@@ -4,7 +4,7 @@
 import { useMemo } from "react";
 import type { BattleResponse, BattleView, Pos, SkillCard, UnitView } from "../../api/types";
 import { actionLabel, classifyActions, type ClassifiedActions, type LabeledAction } from "../../battle/actions";
-import { buildDrawModel, type DrawModel } from "../../battle/drawModel";
+import { BATTLE_DRAW, buildDrawModel, type DrawModel } from "../../battle/drawModel";
 import { fxSkillsOf } from "../../battle/fxSkills";
 import { followupMode, isFollowupPending } from "../../battle/followup";
 import { withPushReasons } from "../../battle/pushReasons";
@@ -130,7 +130,7 @@ export function useBattleData(
           })),
     [hero, response.legal_actions, view, skillNames, liveNames],
   );
-  const model = useMemo(() => buildDrawModel(shown, heroId, acting, fxSkillsOf(cards)), [shown, heroId, acting, cards]);
+  const model = useMemo(() => buildDrawModel(shown, heroId, acting, fxSkillsOf(cards), BATTLE_DRAW), [shown, heroId, acting, cards]);
   const marks = useMemo(
     () => (busy || view.ended ? [] : telegraphMarks(response.telegraph, view)),
     [busy, view, response.telegraph],

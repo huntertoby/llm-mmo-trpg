@@ -1,5 +1,7 @@
-// 戰鬥畫面（Phase 3-8 版面）：頂端列（回合、行動順序、反應設定／隊友指令／圖例的彈出面板）、
-// 中央放大的戰場（滑過單位顯示浮動資訊卡）、右側可收合的紀錄與預告、左下主角狀態、底部技能列、右下回合操作。
+// 戰鬥畫面（6A-4e 起是 HUD 版面 A 的戰鬥版；docs/art/戰鬥D版樣張.md 第 5 節）：戰場用滿整個畫面，HUD 疊在四周——
+// 左上主角卡（HP、法力、耐力三條；下面接選取面板）、上方中央行動順序、右上地名＋回合＋天氣＋勝利條件與工具鈕
+// （環境預告、反應設定、隊友指令、圖例、版面、存檔、離開）、底部技能列與回合操作、左下紀錄浮動提示。
+// 地圖照可用區域（扣掉上方行動順序與底部列）自動填滿；字母標記只在滑過單位與行動順序列上顯示。
 // 每次送出動作或決定：鎖住操作 → 收到回應 → 先畫 `initial_view`，再依 `steps` 一步一步播放
 // （標示行動者 → 移動動畫 → 該步的 `view` → 紀錄 → 停頓）→ 最後以 `res.view` 為準。
 //
@@ -11,21 +13,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
-import { DEFAULT_LAYOUT } from "../battle/layoutPrefs";
 import { objectiveLine } from "../battle/objective";
 import { orderButton, withOrder } from "../battle/orders";
 import { togglePopup, type TopPopup } from "../battle/skillTray";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLogDock } from "../ui/BattleLogDock";
+import { BattleStatusBox } from "../ui/BattleStatusBox";
 import { BattleTopBar } from "../ui/BattleTopBar";
 import { ModePanel } from "../ui/ActionPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
+import { Hud } from "../ui/Hud";
 import { NoticeBanner } from "../ui/NoticeBanner";
 import { PinnedUnitDock } from "../ui/PinnedUnitDock";
 import { phaseNotices } from "../battle/bossPhase";
-import { ResizeHandle } from "../ui/ResizeHandle";
-import { SidePanel } from "../ui/SidePanel";
+import { hudInsetStyle } from "../battle/hudLayout";
+import { useElementSize } from "../ui/useLayout";
 import { SummonPanel } from "../ui/SummonPanel";
 import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TileCard } from "../ui/TileCard";
@@ -58,6 +61,8 @@ interface Props {
   openingNotes?: readonly string[];
   /** 結束面板取代「勝利！／敗北……」的中性文字（循環賽重播「某某 勝」，5F-4b）。 */
   endTitle?: string;
+  /** 右上顯示的地名（6A-4e：大世界的戰鬥由世界畫面帶入地點名）；省略用戰場地圖名（一輪照舊）。 */
+  placeName?: string | null;
 }
 
 export interface RunMode {
@@ -65,7 +70,7 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle, placeName }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
@@ -173,6 +178,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   });
   const board = useBoardViewport(data.model);
   const boardRef = useRef<HTMLDivElement>(null);
+  /** 底部列（技能列＋回合操作）的高度：地圖可用區域、左下紀錄、縮放鈕都讓開它。 */
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const bottomSize = useElementSize(bottomRef);
   const { layout, narrow, collapsed, scale } = board;
 
   /** 浮動資訊卡：只在滑過單位時出現（取代固定的單位資訊欄，Phase 3-8）。 */
@@ -224,16 +232,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   // 選移動時滑過空格、畫出路徑提示時不出格子資訊卡（會蓋住路徑與小牌；地表的效果已寫在小牌上）
   const pathShown = (hl.highlights.path?.segments.length ?? 0) > 0 || (hl.highlights.path?.missEnd ?? null) !== null;
   const dockUnit = pinnedUnitOf(shown, pinnedUnit);
+  const telegraphOpen = !collapsed;
   return (
-    <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`} style={board.layoutStyle}>
-      <BattleTopBar
-        turnBar={<TurnBar view={shown} names={data.names} acting={pb.acting} />}
-        tools={tools}
-        open={popup}
-        onToggle={(id) => setPopup((cur) => togglePopup(cur, id))}
-        exit={exitLabel !== undefined && !ended ? { label: exitLabel, onExit } : null}
-        save={runMode !== undefined && !ended ? { busy, note: saveNote, onSave: () => void saveRun() } : null}
-      />
+    <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={{ ...board.layoutStyle, ...hudInsetStyle(bottomSize?.height ?? null) }}>
       <div className="battle-board" ref={boardRef}>
         <div className={`board-scroll${board.panning ? " panning" : ""}`} ref={board.scrollRef} {...board.panHandlers}>
           <BattleCanvas
@@ -271,28 +272,6 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           onZoomStep={board.zoomStep}
           onFill={() => board.patchLayout({ zoom: null })}
         />
-        {!collapsed && !narrow && (
-          <ResizeHandle
-            orientation="vertical"
-            direction={-1}
-            value={layout.sideWidth}
-            range={board.limits.side}
-            label="調整右側窄欄寬度"
-            onChange={(v) => board.patchLayout({ sideWidth: v })}
-            onReset={() => board.patchLayout({ sideWidth: DEFAULT_LAYOUT.sideWidth })}
-          />
-        )}
-        {!narrow && (
-          <ResizeHandle
-            orientation="horizontal"
-            direction={-1}
-            value={layout.bottomHeight}
-            range={board.limits.bottom}
-            label="調整底部列高度"
-            onChange={(v) => board.patchLayout({ bottomHeight: v })}
-            onReset={() => board.patchLayout({ bottomHeight: DEFAULT_LAYOUT.bottomHeight })}
-          />
-        )}
         {pb.banner && (
           <div className="battle-banner">
             戰鬥開始
@@ -307,6 +286,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         <div className="board-toasts">
           <ErrorBanner message={pb.error} onClose={() => pb.setError(null)} />
           <NoticeBanner message={hint} onClose={closeHint} />
+          <NoticeBanner message={saveNote} onClose={() => setSaveNote(null)} autoCloseMs={6000} />
           <NoticeBanner message={phaseNotice} onClose={closePhaseNotice} autoCloseMs={15000} />
           <NoticeBanner message={opening} onClose={closeOpening} autoCloseMs={15000} />
           {runMode !== undefined && shownHero?.downed === true && (
@@ -316,118 +296,132 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
           )}
         </div>
         <BattleLogDock lines={pb.lines} onHover={hl.setLogHover} room={logRoomPx} />
-        <ModePanel
-          enabled={data.canAct || copying}
-          mode={mode}
-          hurlPick={sel.hurlPick}
-          onHurlReset={() => sel.setHurlPick(null)}
-          preview={hl.preview}
+        {/* 版面 A 戰鬥版（6A-4e）：左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕、底部技能列 */}
+        <div className="bhud-left">
+          <div className="bhud-hero">
+            <Hud view={shown} hero={shownHero} skills={data.skillNames} cards={cards} />
+          </div>
+          <ModePanel
+            enabled={data.canAct || copying}
+            mode={mode}
+            hurlPick={sel.hurlPick}
+            onHurlReset={() => sel.setHurlPick(null)}
+            preview={hl.preview}
+            view={view}
+            interactOptions={response.interact_options}
+            names={data.liveNames}
+            legend={hl.legend}
+            orderHint={sel.orderPick !== null && data.canOrder ? orderButton(sel.orderPick).hint : null}
+            onProtectHero={
+              sel.orderPick === "protect" && data.canOrder
+                ? () => actions.issueOrders(withOrder(response.orders, { kind: "protect", ward: heroId }))
+                : null
+            }
+            cancellable={!copying}
+            onCancel={cmds.cancel}
+            onAction={copying ? actions.decideCopy : actions.act}
+            onPreviewAction={sel.setPanelPreview}
+          />
+        </div>
+        <div className="bhud-top">
+          <TurnBar view={shown} names={data.names} acting={pb.acting} />
+        </div>
+        <div className="bhud-right">
+          <div className="bhud-corner">
+            <BattleStatusBox view={shown} placeName={placeName} />
+            <BattleTopBar
+              tools={tools}
+              open={popup}
+              onToggle={(id) => setPopup((cur) => togglePopup(cur, id))}
+              exit={exitLabel !== undefined && !ended ? { label: exitLabel, onExit } : null}
+              save={runMode !== undefined && !ended ? { busy, onSave: () => void saveRun() } : null}
+              telegraph={{ open: telegraphOpen, onToggle: board.toggleSide }}
+            />
+          </div>
+          {telegraphOpen && (
+            <div className="bhud-telegraph">
+              <TelegraphPanel
+                telegraph={response.telegraph}
+                marks={data.marks}
+                hoverTexts={tiles.hoverTexts}
+                view={view}
+                onHoverTiles={hl.setTelegraphHover}
+              />
+            </div>
+          )}
+          {hero !== null && !view.ended && !copying && (
+            <SummonPanel
+              view={view}
+              hero={hero}
+              summons={cmds.summons}
+              names={data.liveNames}
+              enabled={data.canAct}
+              command={sel.command}
+              loadingCommand={sel.loadingCommand}
+              onSetMode={actions.send}
+              onStartCommand={cmds.startCommand}
+              onPickDest={cmds.pickCommandDest}
+              onCancelCommand={() => {
+                sel.setCommand(null);
+                sel.setPanelPreview(null);
+              }}
+              onCommand={actions.send}
+              onPreviewAction={sel.setPanelPreview}
+              infuse={sel.infuse}
+              loadingInfuse={sel.loadingInfuse}
+              onStartInfuse={cmds.startInfuse}
+              onCancelInfuse={() => {
+                sel.setInfuse(null);
+                sel.setPanelPreview(null);
+              }}
+              onInfuse={actions.send}
+              infusePreview={sel.infuse === null ? null : (hl.preview?.infusion ?? null)}
+              cards={cards}
+            />
+          )}
+          {dockUnit !== null && (
+            <PinnedUnitDock
+              unit={dockUnit}
+              names={data.names}
+              heroId={heroId}
+              skills={data.skillNames}
+              cards={cards}
+              view={shown}
+              onTogglePin={() => setPinnedUnit(null)}
+            />
+          )}
+        </div>
+        <BattleBottomBar
+          rootRef={bottomRef}
+          response={response}
           view={view}
-          interactOptions={response.interact_options}
-          names={data.liveNames}
-          legend={hl.legend}
-          orderHint={sel.orderPick !== null && data.canOrder ? orderButton(sel.orderPick).hint : null}
-          onProtectHero={
-            sel.orderPick === "protect" && data.canOrder
-              ? () => actions.issueOrders(withOrder(response.orders, { kind: "protect", ward: heroId }))
-              : null
-          }
-          cancellable={!copying}
+          hero={hero}
+          cards={cards}
+          narrow={narrow}
+          classified={data.classified}
+          basic={data.basic}
+          raceModeList={data.raceModeList}
+          buttons={data.buttons}
+          fallback={data.fallback}
+          mode={mode}
+          canAct={data.canAct}
+          copying={copying}
+          ended={ended}
+          exitLabel={exitLabel}
+          endTitle={endTitle}
+          onExit={onExit}
+          speed={pb.speed}
+          playing={pb.playing}
+          onSpeed={pb.setSpeed}
+          onSkipNow={pb.skipNow}
+          onPickMode={cmds.pickMode}
+          onPickSkill={cmds.pickSkill}
+          onHint={setHint}
           onCancel={cmds.cancel}
-          onAction={copying ? actions.decideCopy : actions.act}
+          onAct={actions.act}
           onPreviewAction={sel.setPanelPreview}
         />
-        {hero !== null && !view.ended && !copying && (
-          <SummonPanel
-            view={view}
-            hero={hero}
-            summons={cmds.summons}
-            names={data.liveNames}
-            enabled={data.canAct}
-            command={sel.command}
-            loadingCommand={sel.loadingCommand}
-            onSetMode={actions.send}
-            onStartCommand={cmds.startCommand}
-            onPickDest={cmds.pickCommandDest}
-            onCancelCommand={() => {
-              sel.setCommand(null);
-              sel.setPanelPreview(null);
-            }}
-            onCommand={actions.send}
-            onPreviewAction={sel.setPanelPreview}
-            infuse={sel.infuse}
-            loadingInfuse={sel.loadingInfuse}
-            onStartInfuse={cmds.startInfuse}
-            onCancelInfuse={() => {
-              sel.setInfuse(null);
-              sel.setPanelPreview(null);
-            }}
-            onInfuse={actions.send}
-            infusePreview={sel.infuse === null ? null : (hl.preview?.infusion ?? null)}
-            cards={cards}
-          />
-        )}
-        {/* 放在召喚物面板之後：CSS 用 `.summon-panel ~ .unit-pin-dock` 讓開右上角 */}
-        {dockUnit !== null && (
-          <PinnedUnitDock
-            unit={dockUnit}
-            names={data.names}
-            heroId={heroId}
-            skills={data.skillNames}
-            cards={cards}
-            view={shown}
-            onTogglePin={() => setPinnedUnit(null)}
-          />
-        )}
       </div>
-      <SidePanel
-        collapsed={collapsed}
-        onToggle={board.toggleSide}
-        telegraph={
-          <TelegraphPanel
-            telegraph={response.telegraph}
-            marks={data.marks}
-            hoverTexts={tiles.hoverTexts}
-            view={view}
-            onHoverTiles={hl.setTelegraphHover}
-          />
-        }
-      />
-      <BattleBottomBar
-        response={response}
-        view={view}
-        shown={shown}
-        shownHero={shownHero}
-        hero={hero}
-        cards={cards}
-        skillNames={data.skillNames}
-        layout={layout}
-        limits={board.limits}
-        narrow={narrow}
-        onLayoutChange={board.patchLayout}
-        classified={data.classified}
-        basic={data.basic}
-        raceModeList={data.raceModeList}
-        buttons={data.buttons}
-        fallback={data.fallback}
-        mode={mode}
-        canAct={data.canAct}
-        copying={copying}
-        ended={ended}
-        exitLabel={exitLabel}
-        endTitle={endTitle}
-        onExit={onExit}
-        speed={pb.speed}
-        playing={pb.playing}
-        onSpeed={pb.setSpeed}
-        onSkipNow={pb.skipNow}
-        onPickMode={cmds.pickMode}
-        onPickSkill={cmds.pickSkill}
-        onHint={setHint}
-        onCancel={cmds.cancel}
-        onAct={actions.act}
-        onPreviewAction={sel.setPanelPreview}
-      />
       <BattleDialogs
         response={response}
         hero={hero}

@@ -69,6 +69,7 @@ import { QuestLog, WorldOfferPending } from "../world/QuestLog";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
+import { worldPlaceName } from "../battle/placeName";
 
 interface Props {
   onHome(): void;
@@ -630,6 +631,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         exitLabel={replay !== null ? "回到循環賽" : "回到地點圖"}
         openingNotes={replay ?? view?.encounter?.opening_zh}
         endTitle={replay !== null ? replayOutcome : undefined}
+        placeName={replay !== null ? null : worldPlaceName(view)}
       />
     );
   }

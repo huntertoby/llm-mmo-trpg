@@ -1,0 +1,369 @@
+/* 戰鬥版 HUD 版面 A（Phase 6A-4e；docs/art/戰鬥D版樣張.md 第 5 節、HUD移植需求.md 的外觀）：
+   戰場用滿整個畫面，HUD 疊在四周——左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕（下面接
+   環境預告、召喚物、釘選小卡）、底部技能列與回合操作、左下紀錄浮動提示（在底部列上方）。
+   面板是半透明深底 rgba(24,20,16,0.84) 加金邊 #c8a868。只套在 `.battle-screen.hud-a`，不影響其他畫面。
+   `--hud-bottom` 是量到的底部列高度（`battle/hudLayout.ts`）。放在 battle-layout／battle-panels／status-card／log-dock 之後，蓋過舊版的位置。 */
+
+.battle-screen.hud-a {
+  --hud-bg: rgb(24 20 16 / 84%);
+  --hud-gold: #c8a868;
+  --hud-gap: 8px;
+  /* 上方行動順序列佔的高度：地圖從這下面開始 */
+  --hud-top: 52px;
+  --hud-left-w: 252px;
+  --hud-right-w: 224px;
+  display: block;
+  position: relative;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.battle-screen.hud-a .battle-board {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* 地圖可用區域：扣掉上方行動順序列、底部列與左右兩欄（主角卡、戰況框不蓋住地圖邊上的單位） */
+.battle-screen.hud-a .board-scroll {
+  inset: var(--hud-top) calc(var(--hud-right-w) + 2 * var(--hud-gap)) calc(var(--hud-bottom, 160px) + var(--hud-gap))
+    calc(var(--hud-left-w) + 2 * var(--hud-gap));
+}
+
+/* 共用外觀：半透明深底金邊 */
+.battle-screen.hud-a .bhud-hero > .hud,
+.battle-screen.hud-a .bhud-status,
+.battle-screen.hud-a .battle-top-tools,
+.battle-screen.hud-a .turn-bar,
+.battle-screen.hud-a .battle-bottom .skill-bar,
+.battle-screen.hud-a .battle-turn,
+.battle-screen.hud-a .bhud-telegraph > .panel {
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-gold);
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 45%);
+}
+
+/* ---- 左上：主角卡＋選取面板 ---- */
+
+.battle-screen.hud-a .bhud-left {
+  position: absolute;
+  left: var(--hud-gap);
+  top: var(--hud-gap);
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-height: calc(100% - var(--hud-bottom, 160px) - 3 * var(--hud-gap));
+  min-height: 0;
+  pointer-events: none;
+}
+
+.battle-screen.hud-a .bhud-left > * {
+  pointer-events: auto;
+}
+
+.battle-screen.hud-a .bhud-hero {
+  flex: 0 0 auto;
+  width: var(--hud-left-w);
+}
+
+.battle-screen.hud-a .bhud-hero > .hud {
+  margin: 0;
+  padding: 6px 10px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.battle-screen.hud-a .bhud-hero .hud-title {
+  margin-bottom: 3px;
+  font-size: 13px;
+  color: #f0e6d0;
+}
+
+.battle-screen.hud-a .bhud-left > .mode-panel {
+  position: static;
+  width: var(--hud-left-w);
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+/* ---- 上方中央：行動順序 ---- */
+
+.battle-screen.hud-a .bhud-top {
+  position: absolute;
+  top: var(--hud-gap);
+  left: calc(var(--hud-left-w) + 2 * var(--hud-gap));
+  right: calc(var(--hud-right-w) + 2 * var(--hud-gap));
+  z-index: 12;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.battle-screen.hud-a .turn-bar {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  pointer-events: auto;
+}
+
+.battle-screen.hud-a .turn-order {
+  gap: 4px;
+  padding: 2px 0;
+}
+
+/* 圓形小章：陣營底色、字母、HP 小條 */
+.battle-screen.hud-a .turn-chip {
+  flex: 0 0 auto;
+  min-width: 28px;
+  width: 28px;
+  padding: 3px 0 3px;
+  border-radius: 14px;
+  border: 1.5px solid rgb(0 0 0 / 55%);
+  color: #fff;
+  text-shadow: 0 1px 1px #000;
+}
+
+.battle-screen.hud-a .turn-chip-hp {
+  width: 18px;
+  height: 3px;
+}
+
+.battle-screen.hud-a .turn-chip.active {
+  outline: 2.5px solid #ffd23f;
+  outline-offset: 1px;
+}
+
+/* ---- 右上：戰況框＋工具鈕，下面接環境預告、召喚物、釘選小卡 ---- */
+
+.battle-screen.hud-a .bhud-right {
+  position: absolute;
+  right: var(--hud-gap);
+  top: var(--hud-gap);
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-height: calc(100% - var(--hud-bottom, 160px) - 3 * var(--hud-gap));
+  min-height: 0;
+  pointer-events: none;
+}
+
+.battle-screen.hud-a .bhud-right > * {
+  pointer-events: auto;
+}
+
+.battle-screen.hud-a .bhud-corner {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: var(--hud-right-w);
+}
+
+.battle-screen.hud-a .bhud-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 10px 5px;
+}
+
+.battle-screen.hud-a .bhud-place {
+  font-weight: 700;
+  font-size: 14px;
+  color: #f0e6d0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.battle-screen.hud-a .bhud-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.battle-screen.hud-a .bhud-round {
+  white-space: nowrap;
+  font-size: 13px;
+  color: #e8dcc0;
+}
+
+.battle-screen.hud-a .bhud-round b {
+  font-size: 16px;
+  color: #fff;
+}
+
+.battle-screen.hud-a .bhud-weather,
+.battle-screen.hud-a .bhud-goal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 30%);
+}
+
+.battle-screen.hud-a .bhud-goal-icon {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f0e6d0;
+}
+
+.battle-screen.hud-a .bhud-goal.escape .bhud-goal-icon {
+  color: #5ee08a;
+}
+
+.battle-screen.hud-a .bhud-goal.defend .bhud-goal-icon {
+  color: #ffc83d;
+}
+
+.battle-screen.hud-a .bhud-goal-left {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 2px;
+  line-height: 14px;
+  border-radius: 7px;
+  background: #000;
+  color: #ffd23f;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.battle-screen.hud-a .battle-top-tools {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 3px;
+  padding: 3px 4px;
+}
+
+.battle-screen.hud-a .bhud-tool {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgb(255 255 255 / 4%);
+}
+
+.battle-screen.hud-a .bhud-tool:hover:not(:disabled),
+.battle-screen.hud-a .bhud-tool.selected {
+  border-color: var(--hud-gold);
+  background: rgb(200 168 104 / 18%);
+}
+
+.battle-screen.hud-a .bhud-tool .top-tool-badge {
+  position: absolute;
+  top: -3px;
+  right: -2px;
+  margin: 0;
+  font-size: 9px;
+}
+
+.battle-screen.hud-a .top-popup {
+  top: calc(100% + 8px);
+  right: -4px;
+}
+
+.battle-screen.hud-a .bhud-telegraph {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: var(--hud-right-w);
+  overflow-y: auto;
+}
+
+.battle-screen.hud-a .bhud-telegraph > .panel {
+  margin: 0;
+  font-size: 12px;
+}
+
+.battle-screen.hud-a .bhud-right > .summon-panel,
+.battle-screen.hud-a .bhud-right > .unit-pin-dock {
+  position: static;
+  width: var(--hud-right-w);
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+/* ---- 底部：技能列＋回合操作 ---- */
+
+.battle-screen.hud-a .battle-bottom {
+  position: absolute;
+  left: var(--hud-gap);
+  right: var(--hud-gap);
+  bottom: var(--hud-gap);
+  z-index: 14;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--hud-gap);
+  height: auto;
+  pointer-events: none;
+}
+
+.battle-screen.hud-a .battle-bottom > * {
+  pointer-events: auto;
+  max-height: 42vh;
+}
+
+.battle-screen.hud-a .battle-bottom .skill-bar {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.battle-screen.hud-a .battle-turn {
+  flex: 0 0 250px;
+  width: 250px;
+  padding: 6px 8px;
+}
+
+.battle-screen.hud-a.narrow .battle-turn {
+  flex-basis: 220px;
+  width: 220px;
+}
+
+/* ---- 左下紀錄、縮放鈕、提示：讓開底部列 ---- */
+
+.battle-screen.hud-a .log-dock {
+  left: var(--hud-gap);
+  bottom: calc(var(--hud-bottom, 160px) + 2 * var(--hud-gap));
+}
+
+.battle-screen.hud-a .zoom-controls {
+  right: var(--hud-gap);
+  bottom: calc(var(--hud-bottom, 160px) + 2 * var(--hud-gap));
+}
+
+.battle-screen.hud-a .board-toasts {
+  top: calc(var(--hud-top) + 8px);
+}
+
+/* 窄視窗：左上主角卡與右上戰況框收窄 */
+@media (width < 900px) {
+  .battle-screen.hud-a {
+    --hud-left-w: 230px;
+    --hud-right-w: 210px;
+  }
+}

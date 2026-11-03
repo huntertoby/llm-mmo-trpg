@@ -87,6 +87,7 @@ export function battleTools(t: ToolsInput): ToolEntry[] {
           onShake={t.onShake}
           collapseTile={t.collapseTile}
           onCollapseTile={t.onCollapseTile}
+          hudA
         />
       ),
     },

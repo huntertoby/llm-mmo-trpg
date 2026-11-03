@@ -4,7 +4,7 @@ import { alphaOf, evaluate, formatTable, type LayoutSnapshot } from "./layoutSmo
 
 const bx = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
 
-/** 1600×900 預設版面的實測數值（2026-10-24，main 上量到的）。 */
+/** 1600×900 預設版面的實測數值（2026-10-24 main 上量到的；6A-4e 起沒有拖曳線、多量 HUD 各塊）。 */
 const good = (): LayoutSnapshot => ({
   viewport: { width: 1600, height: 900 },
   turnControls: bx(1342, 740, 1592, 894),
@@ -12,15 +12,24 @@ const good = (): LayoutSnapshot => ({
   speed: bx(1342, 871, 1592, 894),
   speedButtons: [1342, 1380, 1418, 1456, 1494, 1532].map((l) => bx(l, 871, l + 36, 894)),
   board: bx(8, 52, 1286, 722),
-  bottomHandle: bx(8, 714, 1286, 722),
-  sideHandle: bx(1278, 52, 1286, 722),
-  hero: bx(8, 728, 308, 894),
-  heroHandle: bx(307, 728, 315, 894),
+  bottomHandle: null,
+  sideHandle: null,
+  hero: null,
+  heroHandle: null,
   tileCard: { float: bx(643, 344, 900, 480), bar: bx(643, 450, 900, 480), barAlpha: 0.96 },
   moreMenu: { open: true, tooltips: 0, hintBefore: 1 },
   hintWrappers: 0,
   floatCards: [{ name: "float-card.skill-card-float「刺擊」", alpha: 1 }],
   textIssues: [],
+  hud: {
+    hero: bx(8, 8, 260, 112),
+    order: bx(680, 8, 920, 46),
+    status: bx(1368, 8, 1592, 52),
+    tools: bx(1368, 56, 1592, 92),
+    skills: bx(480, 746, 1334, 892),
+    turn: bx(1342, 740, 1592, 894),
+    log: bx(8, 690, 38, 720),
+  },
 });
 
 const failedIds = (s: LayoutSnapshot): string[] => evaluate(s).filter((r) => !r.pass).map((r) => r.id);
@@ -43,10 +52,10 @@ describe("排版煙霧檢查 evaluate", () => {
     expect(failedIds(wrapped)).toEqual(["speed-one-row"]);
   });
 
-  it("拖曳線跑位（不貼齊戰場邊緣）→ FAIL", () => {
-    expect(failedIds({ ...good(), bottomHandle: bx(8, 380, 1286, 388) })).toEqual(["bottom-handle"]);
-    expect(failedIds({ ...good(), sideHandle: bx(600, 52, 608, 722) })).toEqual(["side-handle"]);
-    expect(failedIds({ ...good(), heroHandle: bx(307, 300, 315, 466) })).toEqual(["hero-handle"]);
+  it("版面 A 出現拖曳線、HUD 塊重疊或出畫面 → FAIL（6A-4e）", () => {
+    expect(failedIds({ ...good(), sideHandle: bx(600, 52, 608, 722) })).toEqual(["no-handles"]);
+    expect(failedIds({ ...good(), hud: { ...good().hud, order: bx(200, 8, 520, 46) } })).toEqual(["hud-blocks"]);
+    expect(failedIds({ ...good(), hud: { ...good().hud, turn: bx(1342, 740, 1620, 894) } })).toEqual(["hud-blocks"]);
   });
 
   it("格子資訊卡的提示列跑出卡片或沒有底色 → FAIL", () => {
@@ -69,10 +78,18 @@ describe("排版煙霧檢查 evaluate", () => {
     expect(failedIds({ ...good(), textIssues: ["溢出 span.run-alloc-name「敏捷 ★建議」"] })).toEqual(["no-text-clash"]);
   });
 
-  it("窄螢幕不顯示拖曳線：沒有才 PASS，出現反而 FAIL", () => {
-    const narrow: LayoutSnapshot = { ...good(), viewport: { width: 800, height: 600 }, speed: bx(572, 540, 792, 563), speedButtons: [572, 610, 648, 686, 724, 756].map((l) => bx(l, 540, l + 34, 563)), tileCard: { float: bx(108, 189, 378, 296), bar: bx(108, 270, 378, 296), barAlpha: 0.96 }, bottomHandle: null, sideHandle: null, heroHandle: null };
+  it("800×600：HUD 塊收窄後也全 PASS", () => {
+    const hud = {
+      hero: bx(8, 8, 238, 112),
+      order: bx(300, 8, 520, 46),
+      status: bx(582, 8, 792, 52),
+      tools: bx(582, 56, 792, 92),
+      skills: bx(8, 448, 564, 592),
+      turn: bx(572, 432, 792, 592),
+      log: bx(8, 390, 38, 418),
+    };
+    const narrow: LayoutSnapshot = { ...good(), viewport: { width: 800, height: 600 }, turnControls: bx(572, 432, 792, 592), endTurn: bx(572, 480, 792, 520), speed: bx(572, 569, 792, 592), speedButtons: [572, 610, 648, 686, 724, 756].map((l) => bx(l, 569, l + 34, 592)), tileCard: { float: bx(108, 189, 378, 296), bar: bx(108, 270, 378, 296), barAlpha: 0.96 }, hud };
     expect(failedIds(narrow)).toEqual([]);
-    expect(failedIds({ ...narrow, sideHandle: bx(1, 1, 9, 9) })).toEqual(["side-handle"]);
   });
 
   it("量不到元件時 FAIL，不當作通過", () => {

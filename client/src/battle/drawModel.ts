@@ -228,13 +228,24 @@ function ratio(value: number, max: number): number {
   return max <= 0 ? 0 : Math.max(0, Math.min(1, value / max));
 }
 
+/** 畫法選項（6A-4e）。 */
+export interface DrawOptions {
+  /** 戰場上的單位畫字母標記（預設 true）；戰鬥畫面 6A-4e 起關掉，字母只在滑過單位與行動順序列上顯示。 */
+  markers?: boolean;
+}
+
+/** 戰鬥畫面用的畫法：不在戰場上畫字母標記（6A-4e）。 */
+export const BATTLE_DRAW: DrawOptions = { markers: false };
+
 /** `activeId` 省略時以 `view.active_unit` 為行動中的單位；逐步播放時由播放器指定。 */
 export function buildDrawModel(
   view: BattleView,
   heroId: string,
   activeId: string | null | undefined = undefined,
   skills?: FxSkills,
+  options: DrawOptions = {},
 ): DrawModel {
+  const showMarkers = options.markers !== false;
   const acting = activeId === undefined ? view.active_unit : activeId;
   const tiles: TileDraw[] = view.tiles.map((t) => {
     const style = terrainStyle(t.terrain);
@@ -278,7 +289,7 @@ export function buildDrawModel(
       id: u.id,
       x: u.pos.x,
       y: u.pos.y,
-      marker: markers.get(u.id) ?? "?",
+      marker: showMarkers ? (markers.get(u.id) ?? "?") : "",
       template: u.template_id,
       name: u.name_zh,
       team: u.team,

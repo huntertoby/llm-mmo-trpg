@@ -8,6 +8,7 @@
 // 用內建瀏覽器（`mcp__Claude_Browser__*`）的 `javascript_tool` 呼叫；步驟見 docs/開發PM交接.md 6.2 第 5 點。
 // 不需要安裝任何套件。
 
+import { HUD_BLOCKS, hudLayoutIssues, type HudBlockId } from "../battle/hudLayout";
 import { NARROW_WIDTH } from "../battle/skillTray";
 import { enterDevScreen, type DevScreen } from "./devScreens";
 
@@ -43,7 +44,20 @@ export interface LayoutSnapshot {
   floatCards: FloatCardBg[];
   /** 文字溢出自己的框、或相鄰元素矩形互相重疊的描述（3U-1）；應為空。 */
   textIssues: string[];
+  /** 版面 A 的 HUD 各塊（6A-4e，`battle/hudLayout.ts` 的 `HUD_BLOCKS`）。 */
+  hud: Partial<Record<HudBlockId, Box | null>>;
 }
+
+/** HUD 各塊的選擇器（6A-4e）。 */
+export const HUD_SELECTORS: Readonly<Record<HudBlockId, string>> = {
+  hero: ".bhud-hero",
+  order: ".bhud-top .turn-bar",
+  status: ".bhud-status",
+  tools: ".battle-top-tools",
+  skills: ".battle-bottom .skill-bar",
+  turn: ".battle-turn",
+  log: ".log-dock",
+};
 
 export interface FloatCardBg {
   /** 卡片的 class 與開頭文字，方便定位。 */
@@ -139,11 +153,26 @@ function noWrapper(s: LayoutSnapshot): CheckResult {
   return result("no-hint-wrapper", "說明卡不外包元素（.hint-tip 數量 0）", s.hintWrappers === 0, `${s.hintWrappers} 個`);
 }
 
-/** 窄螢幕（視窗寬 < `NARROW_WIDTH`）不顯示拖曳線：沒有才對，不是「找不到」。 */
-function handleCheck(s: LayoutSnapshot, check: (s: LayoutSnapshot) => CheckResult, handle: Box | null): CheckResult {
+/** 窄螢幕（視窗寬 < `NARROW_WIDTH`）不顯示拖曳線：沒有才對，不是「找不到」。（6A-4e 前的版面用；保留給舊快照比對） */
+export function handleCheck(s: LayoutSnapshot, check: (s: LayoutSnapshot) => CheckResult, handle: Box | null): CheckResult {
   const r = check(s);
   if (s.viewport.width >= NARROW_WIDTH) return r;
   return { ...r, pass: handle === null, detail: handle === null ? "窄螢幕不顯示拖曳線（略過）" : "窄螢幕卻出現拖曳線" };
+}
+
+/** 舊版的三條拖曳線檢查（6A-4e 起沒有拖曳線，只在比對舊快照時用）。 */
+export const LEGACY_HANDLE_CHECKS = [bottomHandleFlush, sideHandleFlush, heroHandleFlush] as const;
+
+/** 6A-4e 版面 A：四角 HUD 疊在戰場上，沒有拖曳線（出現就是舊版面跑出來）。 */
+function noHandles(s: LayoutSnapshot): CheckResult {
+  const n = [s.bottomHandle, s.sideHandle, s.heroHandle].filter((b) => b !== null).length;
+  return result("no-handles", "版面 A 沒有拖曳線（6A-4e）", n === 0, `${n} 條`);
+}
+
+/** 6A-4e 版面 A：主角卡、行動順序、戰況框、工具鈕、技能列、回合操作、紀錄都在畫面內、互不重疊。 */
+function hudBlocks(s: LayoutSnapshot): CheckResult {
+  const issues = hudLayoutIssues(s.hud, s.viewport.width, s.viewport.height);
+  return result("hud-blocks", "HUD 各塊在畫面內、互不重疊（6A-4e）", issues.length === 0, issues.length === 0 ? `${Object.keys(s.hud).length} 塊` : issues.join("；"));
 }
 
 function floatCardsOpaque(s: LayoutSnapshot): CheckResult {
@@ -163,9 +192,8 @@ export function evaluate(s: LayoutSnapshot): CheckResult[] {
     endTurnWide(s),
     speedVisible(s),
     speedOneRow(s),
-    handleCheck(s, bottomHandleFlush, s.bottomHandle),
-    handleCheck(s, sideHandleFlush, s.sideHandle),
-    handleCheck(s, heroHandleFlush, s.heroHandle),
+    noHandles(s),
+    hudBlocks(s),
     tileHint(s),
     moreMenu(s),
     noWrapper(s),
@@ -228,6 +256,7 @@ function collectBase(doc: Document, win: Window): LayoutSnapshot {
     hintWrappers: doc.querySelectorAll(".hint-tip").length,
     floatCards: collectFloatCards(doc, win),
     textIssues: scanTextIssues(doc, win),
+    hud: Object.fromEntries(HUD_BLOCKS.map((id) => [id, box(q(HUD_SELECTORS[id]))])),
   };
 }
 
