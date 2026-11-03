@@ -14,7 +14,7 @@ from trpg.content.library import ContentLibrary
 from trpg.engine.events import DamageDealt, EventBase, UnitDowned
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
-from trpg.shared.types import Team
+from trpg.shared.types import Team, UnitId
 from trpg.world.actions import BattleEndedEvent, FightAction
 from trpg.world.battle import PreparedBattle, _run, auto_steps, prepare_battle
 from trpg.world.economy_actions import LootGainedEvent
@@ -155,21 +155,30 @@ def test_third_party_needs_ally_kill(library: ContentLibrary, make_char: MakeCha
     _, prepared, state, _ = _won_battle(library, make_char)
     ally = next(u for u in state.units_sorted() if u.team is Team.ALLY)
     foe = [u for u in state.units_sorted() if u.team is Team.ENEMY]
-    hit = {
-        "cause": "attack",
-        "element": "physical",
-        "rolls": (3,),
-        "crit": False,
-        "element_mod_ppm": 1_000_000,
-        "amount": 3,
-        "hp_before": 3,
-        "hp_after": 0,
-    }
+
+    def hit(seq: int, target: UnitId, source: UnitId) -> EventBase:
+        return DamageDealt.model_validate(
+            {
+                "seq": seq,
+                "round": 1,
+                "target_id": target,
+                "source_id": source,
+                "cause": "attack",
+                "element": "physical",
+                "rolls": (3,),
+                "crit": False,
+                "element_mod_ppm": 1_000_000,
+                "amount": 3,
+                "hp_before": 3,
+                "hp_after": 0,
+            }
+        )
+
     events: list[EventBase] = [
-        DamageDealt.model_construct(target_id=foe[0].id, source_id=ally.id, **hit),
-        UnitDowned.model_construct(unit_id=foe[0].id),
-        DamageDealt.model_construct(target_id=foe[1].id, source_id=foe[0].id, **hit),
-        UnitDowned.model_construct(unit_id=foe[1].id),
+        hit(0, foe[0].id, ally.id),
+        UnitDowned(seq=1, round=1, unit_id=foe[0].id),
+        hit(2, foe[1].id, foe[0].id),
+        UnitDowned(seq=3, round=1, unit_id=foe[1].id),
     ]
     assert third_downed_by_allies(state, events) == frozenset({foe[0].id})
     assert prepared.lineup.third == ()
