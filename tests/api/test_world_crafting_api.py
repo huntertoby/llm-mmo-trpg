@@ -90,6 +90,7 @@ def test_craft_enhance_salvage_reroll(client: TestClient) -> None:
     assert item["affixes"][0]["can_change"]
     view = _act(client, cid, kind="reroll", station=ENCHANTER, item=first, index=0)
     assert any("重骰成" in e for e in view["events"])
+    assert not any("{" in e for e in view["events"])  # 5D-4：原本那條沒有數值時不留下 {n}
     assert view["crafting"]["essence"] == 1
     # 5D-3b：重骰後這件有帶序列的新配方碼，配方表列出它（重骰 1 次）
     assert any("新的配方碼" in e and "首位發現者" in e for e in view["events"])

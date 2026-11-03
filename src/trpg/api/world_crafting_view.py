@@ -346,7 +346,7 @@ def crafting_event_line(library: ContentLibrary, _region: str, event: WorldEvent
     if isinstance(event, AffixChangedEvent):
         verb = "重骰" if event.mode == "reroll" else "指定"
         new = _affix_zh(library, event.new, event.value)
-        old = _affix_zh(library, event.old)
+        old = _affix_zh(library, event.old).replace("{n}", "n")  # 事件沒記原本的數值（5D-4）
         line = (
             f"{event.name_zh}的第 {event.index + 1} 條詞條{verb}成「{new}」（原本「{old}」；"
             f"精華 ×{event.essence_spent}、金幣 {event.gold_spent}）。"
