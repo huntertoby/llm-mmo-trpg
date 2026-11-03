@@ -1,0 +1,26 @@
+# Discord 公告的模板（Phase 5E-3；docs/phases/Phase5計畫.md 30.6）。
+# 變數用 $name（Python string.Template）；用到不認得的變數 → 載入錯誤（trpg.api.announce）。
+# 5E-4 會改成每天 6 點前預先請 LLM 產生，這裡的模板是退路。
+#
+# daily 可用：$date（刷新日，YYYY-MM-DD）、$season_day、$active_yesterday、$threads、$cleared、
+#             $first_kills、$goals（今日目標的多行文字）、$events（世界事件進度的多行文字）、$public_url
+# goal_line 可用：$text
+# event_line 可用：$name、$progress、$target
+# first_kill 可用：$name（角色名）、$target（精英名）、$location、$region
+# public_url_line 可用：$public_url（public_url 空白時整行不出現）
+daily: |-
+  【今日公告】$date　賽季第 $season_day 天
+  昨天有 $active_yesterday 位冒險者在大世界活動。
+  世界線頭 $threads 條、已清空的地點 $cleared 處、全服精英首殺 $first_kills 種。
+  ── 今日目標 ──
+  $goals
+  ── 世界事件進度 ──
+  $events$public_url
+goals_none: （尚未開放）
+goal_line: ・$text
+events_none: （尚未開放）
+event_line: ・$name：$progress／$target
+public_url_line: |-
+
+  入口：$public_url
+first_kill: 【首殺】$name 在$region・$location 全服第一個打倒了精英「$target」！

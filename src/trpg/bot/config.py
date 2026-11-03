@@ -7,17 +7,22 @@
   ``TRPG_BOT_ANNOUNCE_CHANNEL_ID`` 覆寫。
 - 缺值或 ID 不是數字 → :class:`BotConfigError`，列出全部缺的欄位與環境變數，**不印 token**。
 - 遊戲伺服器不讀這個設定：Bot 設定缺值不影響伺服器。
+- ``[announce]``（5E-3，計畫 30.2）：每日公告的時區與時間（:func:`load_announce_settings`；沒填用
+  預設 ``Asia/Taipei`` 6 點）。系統沒有時區資料（Windows 沒裝 ``tzdata``）時用
+  ``utc_offset_minutes``。
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 import tomllib
+import zoneinfo
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 
 from trpg.shared.errors import TrpgError
 
@@ -26,8 +31,10 @@ __all__ = [
     "EXAMPLE_CONFIG_PATH",
     "FIELD_ENV",
     "LOCAL_CONFIG_PATH",
+    "AnnounceSettings",
     "BotConfigError",
     "BotSettings",
+    "load_announce_settings",
     "load_bot_settings",
 ]
 
@@ -71,11 +78,32 @@ class BotSettings(BaseModel):
         return mask + raw[-_SHOWN:] if len(raw) > _MASK_LEN else mask
 
 
-def _read_file(path: Path) -> dict[str, object]:
+class AnnounceSettings(BaseModel):
+    """每日公告的時間（5E-3）：每天 ``hour`` 點（``timezone``）貼今日公告。"""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    timezone: str = "Asia/Taipei"
+    utc_offset_minutes: int = Field(default=480, ge=-14 * 60, le=14 * 60)
+    """系統沒有 ``timezone`` 的時區資料時用的固定時差（台灣沒有日光節約，480＝UTC+8）。"""
+    hour: int = Field(default=6, ge=0, le=23)
+
+    def tzinfo(self) -> dt.tzinfo:
+        try:
+            return zoneinfo.ZoneInfo(self.timezone)
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+            return dt.timezone(dt.timedelta(minutes=self.utc_offset_minutes))
+
+
+def _load_toml(path: Path) -> dict[str, object]:
     try:
-        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+        return tomllib.loads(path.read_text(encoding="utf-8"))
     except (tomllib.TOMLDecodeError, OSError) as exc:
         raise BotConfigError(f"無法讀取 Bot 設定檔 {path}：{exc}") from exc
+
+
+def _read_file(path: Path) -> dict[str, object]:
+    raw = _load_toml(path)
     section = raw.get("discord", {})
     if not isinstance(section, dict):
         raise BotConfigError(f"Bot 設定檔 {path} 的 [discord] 不是表格")
@@ -126,3 +154,20 @@ def load_bot_settings(
         role_id=values["role_id"],
         announce_channel_id=values["announce_channel_id"],
     )
+
+
+def load_announce_settings(
+    path: Path | None = None, env: Mapping[str, str] | None = None
+) -> AnnounceSettings:
+    """讀 ``[announce]``（同一個 Bot 設定檔；沒有檔案或沒有這節＝預設值）。不需要 token。"""
+    environ = os.environ if env is None else env
+    source = path if path is not None else _config_path(environ)
+    if source is None:
+        return AnnounceSettings()
+    section = _load_toml(source).get("announce", {})
+    if not isinstance(section, dict):
+        raise BotConfigError(f"Bot 設定檔 {source} 的 [announce] 不是表格")
+    try:
+        return AnnounceSettings.model_validate(section)
+    except ValidationError as exc:
+        raise BotConfigError(f"Bot 設定檔 {source} 的 [announce] 不合法：{exc}") from exc

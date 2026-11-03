@@ -10,6 +10,8 @@
   端點操作）；結束後下一次讀取該角色時把步驟送 ``fight`` 回寫（:meth:`WorldStore.sync`）。
 - 鎖的順序：世界的鎖 → 戰鬥的鎖。
 - 帳號是 5E-1：角色以伺服器產生的 ID 存取，不登入（代決 5A5-1）。
+- 全服首殺（5E-3，計畫 30.5）：每個成功的世界動作之後把新的精英首殺記到 ``first_kills.json``
+  （:mod:`trpg.api.first_kills`；衍生資料，不影響重播）。
 - 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
   三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
   :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
@@ -25,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from trpg.api.first_kills import FirstKillRegistry
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
@@ -116,6 +119,8 @@ class WorldStore:
         self._chars: dict[str, CharacterState] = {}
         self._entries: list[WorldLogEntry] | None = None
         self._battles: dict[str, BattleSession] = {}
+        self.first_kills = FirstKillRegistry(library, root)
+        """全服首殺紀錄（5E-3）。"""
 
     # -- 路徑 -----------------------------------------------------------------
 
@@ -297,6 +302,7 @@ class WorldStore:
         write_atomic(self._log_path(), dumps_log([*entries, entry]))
         entries.append(entry)
         self._save_char(result.char)
+        self.first_kills.record(result.char, result.events, seq=seq, now=now)
         if result.world != world:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world

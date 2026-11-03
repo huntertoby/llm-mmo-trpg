@@ -3418,7 +3418,7 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 - 玩家文字（角色名）一律當資料：放進公告前中和 Discord 提及（`@` 後插入零寬字元）、換行換空白、截長度。
 - `trpg.bot.announcer.Announcer(gateway, channel_id, source, state_path, *, schedule)`：`tick(now)`：
   - 今天（設定時區）已過 `hour` 點、且還沒貼過今天 → 貼今日公告，記下日期。Bot 在 6 點後才啟動也會補貼一次；同一天不重貼。
-  - 首殺紀錄裡還沒貼過的（依 `seq`）→ 每筆貼一則，記下最後的 `seq`。
+  - 首殺紀錄裡還沒貼過的（依 `seq`）→ 每筆貼一則，記下貼過哪些（`<kind>:<target>`）。
   - 貼失敗（`send_channel` 回 `False`）就不記，下次 `tick` 重試。
   - 狀態檔 `<存檔資料夾>/bot/announce_state.json`（`trpg-announce/1`；只有 Bot 程序寫）。第一次建立時把現有首殺都當作已貼（不洗版）。
 - `DiscordGateway.send_channel(channel_id, text) -> bool`（新）；`FakeDiscordGateway` 記錄頻道貼文。
