@@ -2551,6 +2551,25 @@ export interface components {
             /** Replace */
             replace?: string | null;
         };
+        /**
+         * CostStat
+         * @description 代價的一段（和 ``SkillCard.cost`` 的第 ``index`` 段同一件事）。
+         */
+        CostStat: {
+            /** Index */
+            index: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ap" | "mana" | "stamina" | "hp_percent" | "self_status" | "overdraft" | "upkeep" | "cooldown" | "uses_per_battle" | "source" | "backlash";
+            /** Value */
+            value: number | null;
+            /** Unit */
+            unit: string;
+            /** Label */
+            label: string;
+        };
         /** CoverOut */
         CoverOut: {
             /** Penalty */
@@ -3130,6 +3149,44 @@ export interface components {
              * @default
              */
             reason_zh: string;
+        };
+        /**
+         * EffectStat
+         * @description 效果的一段（和 ``SkillCard.effects`` 的第 ``index`` 行同一件事）。
+         */
+        EffectStat: {
+            /** Index */
+            index: number;
+            /** Type */
+            type: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "damage" | "heal" | "shield" | "move" | "status" | "surface" | "summon" | "stack" | "other";
+            /** Label */
+            label: string | null;
+            /** Unit */
+            unit: string | null;
+            /** Dice */
+            dice?: string | null;
+            /** Multiplier Permille */
+            multiplier_permille?: number | null;
+            /**
+             * Weapon
+             * @default false
+             */
+            weapon: boolean;
+            /** Amount */
+            amount?: number | null;
+            /** Element */
+            element?: string | null;
+            /** Element Zh */
+            element_zh?: string | null;
+            /** Name Zh */
+            name_zh?: string | null;
+            /** Affects */
+            affects?: string | null;
         };
         /**
          * Element
@@ -7295,9 +7352,7 @@ export interface components {
         };
         /**
          * SkillCard
-         * @description 一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。
-         *
-         *     ``*_id`` 與 ``scaling_attrs`` 是對應的英文代碼（Phase 3-2；給前端上色、排序與篩選用）。
+         * @description API 回應的技能卡：敘事層的卡片（句子欄位不變）加上結構化的 ``stats``。
          */
         SkillCard: {
             /** Id */
@@ -7409,6 +7464,7 @@ export interface components {
              * @default []
              */
             stacks: components["schemas"]["SkillStackRef"][];
+            stats: components["schemas"]["SkillCardStats"];
         };
         /**
          * SkillCardKeywords
@@ -7431,6 +7487,44 @@ export interface components {
              * @default false
              */
             basic: boolean;
+        };
+        /**
+         * SkillCardStats
+         * @description 技能卡常駐 3 行要用的結構化數字（Phase 6A-1）。
+         */
+        SkillCardStats: {
+            /** Ap */
+            ap: number | null;
+            /** Cooldown */
+            cooldown: number | null;
+            /** Range */
+            range: number | null;
+            /**
+             * Range Weapon
+             * @default false
+             */
+            range_weapon: boolean;
+            /** Radius */
+            radius?: number | null;
+            /** Size */
+            size?: number | null;
+            /** Timing */
+            timing?: ("reaction" | "trigger" | "delayed" | "activation") | null;
+            /**
+             * Costs
+             * @default []
+             */
+            costs: components["schemas"]["CostStat"][];
+            /**
+             * Effects
+             * @default []
+             */
+            effects: components["schemas"]["EffectStat"][];
+            /**
+             * Scaling Attrs
+             * @default []
+             */
+            scaling_attrs: string[];
         };
         /**
          * SkillFlashOut

@@ -16,6 +16,7 @@ from trpg.api.account_schemas import TitlesOf, no_titles
 from trpg.api.league_view import league_event_line
 from trpg.api.season_boss_view import season_boss_event_line
 from trpg.api.season_view import season_event_line
+from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.api.world_crafting_view import (
     crafting_event_line,
     crafting_view,
@@ -75,7 +76,6 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world_map import LocationDef, LocationMapDef
 from trpg.content.world_narration import mask_text
-from trpg.narrative.skills import SkillCard, skill_card
 from trpg.shared.types import Team
 from trpg.world.actions import (
     BattleEndedEvent,

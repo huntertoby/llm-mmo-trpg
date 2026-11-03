@@ -6,13 +6,88 @@
 // 2. 卡片貼齊觸發元素（預設上方、無空隙，兩者之間是透明橋接區），超出視窗就翻到下方或往內推。
 // 3. 點一下釘住；Esc 或點外面關閉；同時只開一張（新的取代舊的；卡片內的部件說明框例外）。
 // 4. 取得焦點（鍵盤）時顯示；觸控沒有滑過，點一下開關。
+// 5. 有動作的按鈕（技能列、功能列；`pinOn: "hold"`，6A-1 開發 PM 定案）：觸控點一下執行動作、不開說明；
+//    長按約 0.4 秒開說明（釘住），放開時不執行動作（`LongPress`）。
 
 export const OPEN_DELAY_MS = 150;
 export const CLOSE_GRACE_MS = 250;
 /** 卡片與觸發元素之間的透明橋接區高度（像素）；視覺上的間距就是它。 */
 export const BRIDGE_PX = 6;
 
-export type PinMode = "always" | "touch" | "never";
+/** 長按開說明的時間（6A-1：約 0.4 秒）。 */
+export const LONG_PRESS_MS = 400;
+/** 長按期間手指移動超過這麼多像素就當成捲動，取消長按。 */
+export const LONG_PRESS_SLOP_PX = 10;
+
+/**
+ * 卡片的釘住方式：
+ * - `always`：滑鼠與觸控點一下都釘住（本身沒有動作的元素）；
+ * - `touch`：只有觸控點一下開關（滑鼠點擊留給元素自己的動作）；
+ * - `hold`：有動作的按鈕——觸控長按才開說明，點一下只執行動作（6A-1）；
+ * - `never`：不因點擊釘住。
+ */
+export type PinMode = "always" | "touch" | "hold" | "never";
+
+/**
+ * 長按判定（6A-1，純邏輯；計時器可用 fake timers 測）。
+ * `down` 開始計時，`LONG_PRESS_MS` 內沒有 `up`／`move` 超過 `LONG_PRESS_SLOP_PX`／`cancel` 就觸發 `onFire`；
+ * 觸發過的這次按壓，接下來的 click 由 `consumeClick()` 回傳 `true`，呼叫端吞掉它（放開不執行動作）。
+ */
+export class LongPress {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private fired = false;
+  private start: { x: number; y: number } | null = null;
+
+  constructor(private readonly onFire: () => void) {}
+
+  down(x = 0, y = 0): void {
+    this.clear();
+    this.fired = false;
+    this.start = { x, y };
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.fired = true;
+      this.onFire();
+    }, LONG_PRESS_MS);
+  }
+
+  move(x: number, y: number): void {
+    if (this.start === null || this.timer === null) return;
+    if (Math.hypot(x - this.start.x, y - this.start.y) > LONG_PRESS_SLOP_PX) this.clear();
+  }
+
+  /** 放開：還沒到時間就取消（之後的 click 照常執行動作）。 */
+  up(): void {
+    this.clear();
+  }
+
+  cancel(): void {
+    this.clear();
+    this.fired = false;
+  }
+
+  /** 這次按壓有觸發長按嗎（有的話接下來的 click 要吞掉）；讀一次就清掉。 */
+  consumeClick(): boolean {
+    const was = this.fired;
+    this.fired = false;
+    return was;
+  }
+
+  /** 長按已觸發、還沒被 click 讀走（給 contextmenu 判斷要不要擋）。 */
+  get pending(): boolean {
+    return this.fired || this.timer !== null;
+  }
+
+  private clear(): void {
+    if (this.timer !== null) clearTimeout(this.timer);
+    this.timer = null;
+    this.start = null;
+  }
+
+  dispose(): void {
+    this.cancel();
+  }
+}
 
 export class FloatController {
   hover = false;

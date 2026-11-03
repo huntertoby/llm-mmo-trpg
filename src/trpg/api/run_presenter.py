@@ -30,11 +30,12 @@ from trpg.api.run_schemas import (
     SkillFlashOut,
 )
 from trpg.api.runs import RunSession
+from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_ZH, SLOTS
-from trpg.narrative.skills import CardOwner, KeywordRef, SkillCard, skill_card
+from trpg.narrative.skills import CardOwner, KeywordRef
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.flashes import (
     carryable_records,

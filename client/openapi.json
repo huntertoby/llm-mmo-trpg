@@ -6052,6 +6052,61 @@
         "title": "CompletePickChoice",
         "description": "完整技能三選一的選擇（Phase 3W-5）：``pick`` 為候選索引（``None`` ＝ 跳過）；欄位滿時\n``replace`` 指定要換掉的技能 ID（換下的進備用）。"
       },
+      "CostStat": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ap",
+              "mana",
+              "stamina",
+              "hp_percent",
+              "self_status",
+              "overdraft",
+              "upkeep",
+              "cooldown",
+              "uses_per_battle",
+              "source",
+              "backlash"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "value",
+          "unit",
+          "label"
+        ],
+        "title": "CostStat",
+        "description": "代價的一段（和 ``SkillCard.cost`` 的第 ``index`` 段同一件事）。"
+      },
       "CoverOut": {
         "properties": {
           "penalty": {
@@ -7697,6 +7752,148 @@
         ],
         "title": "EffectFix",
         "description": "草稿裡已加入的效果，對象不合法時的修正建議（3-48h）：第 ``index`` 個效果的對象改成 ``value``\n（沒有合理的合法對象時為 ``None``）。前端照縮放屬性的做法自動套用。"
+      },
+      "EffectStat": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "damage",
+              "heal",
+              "shield",
+              "move",
+              "status",
+              "surface",
+              "summon",
+              "stack",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "dice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dice"
+          },
+          "multiplier_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier Permille"
+          },
+          "weapon": {
+            "type": "boolean",
+            "title": "Weapon",
+            "default": false
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element"
+          },
+          "element_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element Zh"
+          },
+          "name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Zh"
+          },
+          "affects": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "type",
+          "category",
+          "label",
+          "unit"
+        ],
+        "title": "EffectStat",
+        "description": "效果的一段（和 ``SkillCard.effects`` 的第 ``index`` 行同一件事）。"
       },
       "Element": {
         "type": "string",
@@ -17727,6 +17924,9 @@
             "type": "array",
             "title": "Stacks",
             "default": []
+          },
+          "stats": {
+            "$ref": "#/components/schemas/SkillCardStats"
           }
         },
         "additionalProperties": false,
@@ -17759,10 +17959,11 @@
           "weapon_req_id",
           "scaling_attrs",
           "mastery_id",
-          "icon"
+          "icon",
+          "stats"
         ],
         "title": "SkillCard",
-        "description": "一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。\n\n``*_id`` 與 ``scaling_attrs`` 是對應的英文代碼（Phase 3-2；給前端上色、排序與篩選用）。"
+        "description": "API 回應的技能卡：敘事層的卡片（句子欄位不變）加上結構化的 ``stats``。"
       },
       "SkillCardKeywords": {
         "properties": {
@@ -17792,6 +17993,120 @@
         "type": "object",
         "title": "SkillCardKeywords",
         "description": "技能製造與利用的關鍵字（Phase 3-24b1，``docs/design/06-技能.md`` 6.27.1；由原語、條件、觸發\n自動推導）。技能卡顯示「製造：點燃｜利用：倒地」。"
+      },
+      "SkillCardStats": {
+        "properties": {
+          "ap": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ap"
+          },
+          "cooldown": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooldown"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range"
+          },
+          "range_weapon": {
+            "type": "boolean",
+            "title": "Range Weapon",
+            "default": false
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "timing": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "reaction",
+                  "trigger",
+                  "delayed",
+                  "activation"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing"
+          },
+          "costs": {
+            "items": {
+              "$ref": "#/components/schemas/CostStat"
+            },
+            "type": "array",
+            "title": "Costs",
+            "default": []
+          },
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/EffectStat"
+            },
+            "type": "array",
+            "title": "Effects",
+            "default": []
+          },
+          "scaling_attrs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scaling Attrs",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ap",
+          "cooldown",
+          "range"
+        ],
+        "title": "SkillCardStats",
+        "description": "技能卡常駐 3 行要用的結構化數字（Phase 6A-1）。"
       },
       "SkillFlashOut": {
         "properties": {
