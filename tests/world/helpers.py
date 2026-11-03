@@ -18,6 +18,12 @@ PARTY = ("merc_tiebi", "merc_huichun")
 """2026-11-02 12:00 台北（UTC 04:00）；遊戲日的前半（白天）。"""
 
 
+def without_fields(library: ContentLibrary) -> ContentLibrary:
+    """拿掉實地地圖的內容庫（Phase 6B-2）：有實地地圖的地點不能 ``travel``，測地點之間移動、事件、
+    戰鬥等 5A～5F 規則的測試用這份（照舊點地點移動）；實地地圖的測試用完整的內容庫。"""
+    return dataclasses.replace(library, field_maps={})
+
+
 def with_rules(library: ContentLibrary, **updates: Any) -> ContentLibrary:
     """換掉 ``world_rules`` 的部分欄位（巢狀欄位傳 dict 時只蓋過給的鍵）。"""
     assert library.world_rules is not None

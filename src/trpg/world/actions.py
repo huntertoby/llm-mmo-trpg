@@ -59,6 +59,14 @@ from trpg.world.economy_actions import (
     UseItemAction,
 )
 from trpg.world.encounters import EncounterLineup
+from trpg.world.field_actions import (
+    FieldEnteredEvent,
+    TeleportStoneUnlockedEvent,
+    TeleportStoneUsedEvent,
+    UseTeleportStoneAction,
+    WalkAction,
+    WalkedEvent,
+)
 from trpg.world.league_actions import (
     LeagueEnterAction,
     LeagueEnteredEvent,
@@ -438,7 +446,9 @@ type WorldAction = Annotated[
     | SalvageAction
     | LeagueEnterAction  # 5F-4
     | LeagueWithdrawAction
-    | SeasonBossAction,  # 5F-3
+    | SeasonBossAction  # 5F-3
+    | WalkAction  # 6B-2
+    | UseTeleportStoneAction,
     Field(discriminator="kind"),
 ]
 
@@ -1082,6 +1092,10 @@ type WorldEvent = Annotated[
     | SealKeyGainedEvent  # 5F-3
     | SeasonBossChallengedEvent
     | SeasonBossClearedEvent
-    | SeasonBossFailedEvent,
+    | SeasonBossFailedEvent
+    | WalkedEvent  # 6B-2
+    | FieldEnteredEvent
+    | TeleportStoneUnlockedEvent
+    | TeleportStoneUsedEvent,
     Field(discriminator="kind"),
 ]
