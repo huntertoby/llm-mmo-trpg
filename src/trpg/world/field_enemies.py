@@ -508,6 +508,7 @@ def _contact_model(
         y=at[1],
         first=first,
         retreat_to=visit.arrived,
+        enemy_at=enemy.xy,
     )
 
 

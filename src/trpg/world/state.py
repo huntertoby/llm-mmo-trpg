@@ -1,4 +1,4 @@
-"""大世界的狀態：世界快照（``trpg-world/2``）與角色（``trpg-char/3``）（Phase 5A-2）。
+"""大世界的狀態：世界快照（``trpg-world/2``）與角色（``trpg-char/4``）（Phase 5A-2）。
 
 ``docs/phases/Phase5計畫.md`` 2.4、2.5、6.4。所有集合型欄位都以排序後的 tuple 存放（守則 2），
 同樣的動作序列一定得到逐字相同的 JSON。角色欄位盡量和 :class:`trpg.roguelite.state.RunState`
@@ -14,7 +14,7 @@ Phase 6B-2 加上實地地圖上的位置（:class:`FieldPos`）與解鎖的傳�
 :mod:`trpg.world.field`）。
 
 Phase 6C-1 加上看得見的敵人（:class:`FieldVisit`、:class:`FieldContact`），角色格式升成
-``trpg-char/3``；``/1``、``/2`` 照讀（只多了選填欄位）。
+``trpg-char/4``；``/1``～``/3`` 照讀（只多了選填欄位）。
 """
 
 from __future__ import annotations
@@ -83,9 +83,9 @@ __all__ = [
 WORLD_FORMAT: Final = "trpg-world/2"
 LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1"})
 """照讀、讀進來就升成 :data:`WORLD_FORMAT` 的舊世界格式（6C-1b：只多了 ``defeated_spawns``）。"""
-CHAR_FORMAT: Final = "trpg-char/3"
-LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2"})
-"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2、6C-1：只多了選填欄位）。"""
+CHAR_FORMAT: Final = "trpg-char/4"
+LEGACY_CHAR_FORMATS: Final = frozenset({"trpg-char/1", "trpg-char/2", "trpg-char/3"})
+"""照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2、6C-1、6C-2：只多了選填欄位）。"""
 
 
 class _Model(BaseModel):
@@ -162,6 +162,9 @@ class FieldContact(_Model):
     """``ally``＝從背後、在敵人視野外接觸；``enemy``＝被敵人看到；``None``＝照現行先攻。"""
     retreat_to: FieldPos
     """撤退回到的格子（進這張地圖時站的格子）。"""
+    enemy_at: tuple[int, int] | None = None
+    """接觸時這一隊站的格子（Phase 6C-2：就地切 12×12 戰場用）；6C-2 以前的資料沒有，開戰時改用
+    地點原本的戰鬥地圖模板。"""
 
 
 class FieldVisit(_Model):
@@ -906,14 +909,15 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/3``；``trpg-char/1``、``/2`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/4``；``trpg-char/1``～``/3`` 照讀）。"""
 
-    format: Literal["trpg-char/3"] = CHAR_FORMAT
+    format: Literal["trpg-char/4"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``、``/2`` → ``trpg-char/3``：只多了選填欄位（6B-2、6C-1），直接換版號。"""
+        """``trpg-char/1``～``/3`` → ``trpg-char/4``：只多了選填欄位（6B-2、6C-1、6C-2），直接
+        換版號。"""
         if isinstance(data, dict) and data.get("format") in LEGACY_CHAR_FORMATS:
             return {**data, "format": CHAR_FORMAT}
         return data

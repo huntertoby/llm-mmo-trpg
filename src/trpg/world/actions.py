@@ -97,11 +97,13 @@ __all__ = [
     "AttributesRespeccedEvent",
     "BattleEndedEvent",
     "BattleStartedEvent",
+    "BattlefieldCut",
     "CampAction",
     "CampedEvent",
     "CareResult",
     "CompanionJoinedEvent",
     "CompanionLeftEvent",
+    "CutFallback",
     "DefeatedEvent",
     "DissolveAction",
     "EncounterCheckEvent",
@@ -676,6 +678,24 @@ class RetreatedEvent(_Model):
     to: str
 
 
+type CutFallback = Literal[
+    "no_field", "no_enemy_at", "boss", "objective", "too_small", "zones", "check_map"
+]
+"""就地開打退回模板的原因（Phase 6C-2，:mod:`trpg.world.battlefield`）：沒有實地地圖、接觸資料沒有
+敵人位置（6C-2 以前的存檔）、Boss 地圖、遭遇指定了模板才有的勝利條件、地圖不到 12×12、站位放不下、
+``check_map`` 沒過。"""
+
+
+class BattlefieldCut(_Model):
+    """就地開打切出的戰場（Phase 6C-2）：從哪張實地地圖、左上角與大小（實地地圖的格子座標）。"""
+
+    field_map: str = Field(pattern=ID_PATTERN)
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    width: int = Field(ge=1)
+    height: int = Field(ge=1)
+
+
 class BattleStartedEvent(_Model):
     """開戰：地圖（已換皮成 ``region``）、敵方陣容與等級、天氣、主角開場 HP。"""
 
@@ -703,6 +723,10 @@ class BattleStartedEvent(_Model):
     """這場帶的劇情夥伴（5C-3）。"""
     oath: str | None = None
     """這場帶的誓約模板（5C-3；``None``＝沒有誓約）。"""
+    field_cut: BattlefieldCut | None = None
+    """就地開打切出的戰場（6C-2）；``None``＝用地點原本的戰鬥地圖模板。"""
+    cut_fallback: CutFallback | None = None
+    """碰到地圖上的敵人卻退回模板的原因（6C-2）；不是地圖上碰到的遭遇＝``None``。"""
 
 
 class BattleEndedEvent(_Model):

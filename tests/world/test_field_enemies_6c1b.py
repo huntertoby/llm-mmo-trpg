@@ -316,7 +316,8 @@ def test_replay_arrival_and_per_group_clear(field_library: ContentLibrary) -> No
     library = _lib(field_library, [{"at": [6, 6], "group": "bandit_raiders"}, *TWO[1:]])
     char = new_character(library, "alice", hero(library), region="cloud_ridge")
     start = char.model_copy(
-        update={"field": FieldPos(map="mist_ferry", x=22, y=8), "mercenaries": PARTY}
+        # 6C-2 起就地切 12×12、貼著敵人開打：主角 3 級才穩定打贏（這裡測的是每隊清空與重播）
+        update={"field": FieldPos(map="mist_ferry", x=22, y=8), "mercenaries": PARTY, "level": 3}
     )
     world, live, entries = _play(
         library, start, [_walk((23, 8)), _walk((2, 6), (3, 6), (4, 6), (5, 6))], make_world()
