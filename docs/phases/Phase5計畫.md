@@ -3748,6 +3748,138 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 
 - 卸下裝備（換上即替換）、裝備外觀與紙娃娃、物品排序與篩選、LLM 命名；荒原的設施；戰鬥中道具「剩幾個」（引擎的檢視不改，用完時按鈕停用）。
 
-## 34. 之後各段規格
+## 34. 5F-2 詳細規格：區域 Boss 的階段機制
+
+> 給實作 agent。主要動 `src/trpg/engine/`（新模組 `boss_phases.py`、`turns.py` 收尾鉤子、`state.py`、`lifecycle.py`、`setup.py`、`battle.py` 開場、`events.py`、`runner.py`）、`src/trpg/content/`（`battle.py` 範本欄位與 `WardSpec` 範圍、`library.py` 載入檢查）、`src/trpg/narrative/`（戰鬥紀錄文字、單位卡特性欄）、`src/trpg/engine/view.py`／`src/trpg/api/`（單位的階段欄位）、`src/trpg/world/battle.py`（Boss 召喚物與階段技能跟著成長）、`content/`（霧鎖真人、雲頂觀陣眼、新技能與狀態、Boss 地圖、雲頂觀的遭遇與戰鬥地圖）、`client/`（階段轉換提示、單位卡階段行）、`docs/phases/戰鬥紀錄格式變更.md`。另一個 agent 可能在做 5F-1（賽季時鐘、懸賞、世界事件、共享地點；`trpg.world`、`content/world/`），本段在 `content/world/` 只改雲頂觀那兩處；撞到以 main 為準。
+> 依據：本檔第 1 節 5F-2 列；09 9.6.8（#86：區域 Boss 2～3 階段，HP 降到門檻就換招式或改變地形，例「半血時起霧，全場變成濃霧」；強招一律預告）；18 18.2.3（霧鎖真人 3 階段）；20 20.6（雲頂觀 Boss 地圖）；19 19.2.3、19.7（灰燼之心、碎晶之主：本段不做內容，只確認資料格式擋不住）；05 5.7（強招預告沿用環境預告的顯示）；本檔 14（5A-M1 蓄力強招）、17（5A-M2）與 `/105` 的護陣 `ward`。
+
+### 34.1 目標
+
+把「Boss 的階段」做成 **引擎資料化** 的機制：Boss 範本在 content 寫 `phases`，每個階段有 HP 門檻、換技能組或 AI 行為模式、加減狀態、改天氣／地形、召喚援兵；引擎依資料在 HP 跌破門檻時觸發，每個階段整場只觸發一次，確定性、可重播。用它做出雲頂觀 Boss「霧鎖真人」三階段與 Boss 專屬地圖，並接進大世界的雲頂觀地點。
+
+### 34.2 決策影響盤點（既有功能）
+
+| 既有功能 | 位置 | 受影響？ | 處理 |
+|---|---|---|---|
+| `boss` 標籤：硬控轉換（`control.py`）、Boss 傷害倍率（`boss_damage_permille`） | engine | 否 | 霧鎖真人照帶 `boss`；階段不改標籤 |
+| 勝利條件 `leader_retreat`（`objectives.py`） | engine | 否 | 真人倒下即勝，階段召喚的霧行者一起撤退；倒下的那一擊不觸發階段 |
+| 地圖事件 `spawn_units`／`terrain_change`（`environment.py`，依輪數）與預告的 `upcoming` | engine、narrative、前端 | 否（重用效果） | 階段的召喚與改地形重用同一組效果 `SpawnUnitEffect`／`ChangeTileEffect`；HP 門檻無法提前一輪預知，所以 **不進** `upcoming`（只在觸發時發事件＋前端提示） |
+| `spawn_templates`（setup → state，援軍要用的範本） | engine、world | **是** | 階段召喚的範本也要放進來：`build_setup` 與大世界 `prepare_battle` 共用新函式 `with_phase_assets` |
+| 天氣（`BattleState.weather`，開戰固定） | engine、view | **是** | 天氣第一次可以在戰鬥中改：新事件 `weather_changed`；階段用到的天氣定義隨設定內嵌（`BattleSetup.phase_weathers` → `BattleState.phase_weathers`），重播不讀資料檔 |
+| 蓄力強招（6.23 #5 延遲段、`charging`、`telegraph.charges`、前端「蓄」標記、AI `interrupt_points`） | engine、api、前端 | 否（重用） | 「霧鎖千山」是一般延遲段技能；**換技能組時正在蓄力的強招照常釋放**（蓄力記在狀態上，不看技能欄） |
+| 青霧執事「九轉回天」預告 | content、前端 | 否 | 5A-M1 已完成（延遲段＋`telegraph.charges`）；本段只補一個行為測試確認預告範圍 |
+| 護陣 `ward`（`/105`，陣眼石靈） | content schema | **是（小）** | 18.2.3 第 1 階段「打碎陣眼才能傷到真人（−50%）」直接用護陣；`WardSpec.range` 上限 5 → 12（Boss 地圖 12×12，真人會換位） |
+| 開場狀態 `opening_statuses`、`_apply_opening_statuses` | engine | 否（重用） | 階段加狀態走同一條（不擲抵抗、持續回合照指定或預設） |
+| 範本成長 `grow_enemy`（技能升階改名） | world | **是** | 階段技能組裡的技能 ID 一併升階改名；階段召喚的範本照同等級成長 |
+| 單位卡特性欄 `unit_traits` | narrative、前端 | **是** | 加「階段」句（數字由資料產生）；`UnitView` 加 `boss_phase`（目前第幾階段與下一個門檻） |
+| `UnitState.clone`、`state_to_json` | engine | **是** | 新欄位 `phases`、`phase_index` 加進 clone（`test_state_clone` 會抓） |
+| 雲頂觀地點（`kind: boss`，沒有戰鬥地圖、遭遇是 `summit_patrol`） | content/world | **是** | 戰鬥地圖改成 Boss 地圖、遭遇改成 Boss 陣容（見 34.6） |
+| roguelite 盜賊巢穴 Boss（`bandit_lair`、`bandit_warlord`） | content | 否 | 沒有 `phases`，結算與 `/108` 相同 |
+| 戰鬥紀錄版號 | runner | **是** | `UnitTemplate`、`BattleSetup`、`BattleState`、事件都加欄位 → `/108` → `/109` |
+
+### 34.3 資料格式（`trpg.content.battle`）
+
+```yaml
+# content/units/<boss>.yaml
+phases:
+  - {id: sword_array, name_zh: 劍陣}            # 第 1 項＝開場階段：沒有 trigger，只有名字（範本本身就是它）
+  - id: mist_lock
+    name_zh: 鎖霧
+    trigger: {kind: hp_below, permille: 600}  # HP ≤ 最大 HP × 600‰ 時進入
+    text_zh: 真人掐訣，山間濃霧四合。            # 選填：轉換時的一句敘事（戰鬥紀錄與前端提示）
+    skills: [skill_mist_shift, skill_mist_lock_peaks, skill_cluster_bolt]   # 選填：整組換掉
+    ai_profile: cunning                       # 選填：換行為模式
+    remove_statuses: [concealed]              # 選填：移除（原因 removed）
+    add_statuses: [{status: concealed, duration: 2}]   # 選填：施加（同 opening_statuses 格式）
+    weather: fog                              # 選填：改天氣（clear＝晴朗）
+    tiles: [{at: [5, 5], surface: water}]     # 選填：改格子（同地圖事件 terrain_change 的 TileChange）
+    spawns: [{template: sect_mist_walker, count: 2}]   # 選填：召喚；at 省略＝真人附近
+```
+
+- `UnitTemplate.phases: tuple[BossPhase, ...] = ()`；有寫時 2～4 項（開場＋1～3 次轉換）。第 1 項只能有 `id`、`name_zh`；之後每項必有 `trigger`，`permille` 嚴格遞減（1～999）。`id` 不重複。
+- `trigger` 是依 `kind` 區分的聯集，本段只有 `hp_below`；之後要加「第 N 輪起」（碎晶之主第 15 輪狂暴）、「某標籤的單位全倒」（三根源晶柱）只加新種類，不改舊資料。
+- `spawns[].count` 1～4；`at`（選填）是絕對格子（多名時依序往最近的安全格排）；省略＝真人當下的位置（`SpawnUnitEffect` 本來就會改到最近的可站空格）。召喚物在對方陣營＝真人的陣營。
+- 載入檢查（`library.py`）：技能存在且符合武器（同 `skills` 的規則與欄位上限）、行為模式存在、狀態存在、天氣存在、召喚範本存在且不是召喚物、`tiles` 的地形 ID 存在。`tiles` 的座標在地圖內由「Boss 地圖上的陣容」檢查（地圖 `encounter.enemies` 裡有階段的範本時）；引擎遇到地圖外的格子略過。
+- 格式擋不住的後續（只確認，不做）：灰燼之心「殼」高護甲＝第 1 階段開場狀態、第 2 階段 `remove_statuses`；「吸氣／吐氣」「熔心爆」＝第 2／3 階段的技能組；召喚餘燼蜥＝`spawns`；「火地每回合擴散」「冷卻（被水冰打中該回合護甲歸零）」需要新的規則改變／狀態欄位（之後加在 `BossPhase` 上，例如 `rule_changes`）；碎晶之主「三柱」＝新的 `trigger` 種類＋護陣類狀態（`taken_permille` 0）；事件 13「被攔下的碎片數 −護甲」＝開戰時改範本，不動階段格式。
+
+### 34.4 引擎規則（`trpg.engine.boss_phases`，純函式）
+
+- 開戰：`make_unit` 把範本的 `phases` 帶到 `UnitState.phases`，`UnitState.phase_index = 0`（開場階段）。
+- **檢查時機**：每次結算收尾（`finish_resolution`）在被動觸發與誓約之後、勝負判定之前檢查一次；`advance_turn`（環境回合、下一位的回合開始傷害）之後再檢查一次。預覽（AI 估值）不檢查。
+- **條件**：單位存活（沒倒下、沒撤離）、`phase_index` 之後的下一個階段 `hp × 1000 ≤ max_hp × permille`。一次跌破多個門檻時 **依序觸發每一個**（每個只觸發一次；`phase_index` 只增不減，被治療回門檻以上也不會退回或再觸發）。多個 Boss 依單位 ID 順序。
+- **轉換的順序**（每個階段）：發 `boss_phase_changed` → 移除狀態 → 換技能組（冷卻只保留新技能組裡還有的技能）→ 換行為模式 → 施加狀態 → 改天氣（`weather_changed`，天氣相同時不發）→ 改格子（`ChangeTileEffect`，依清單順序）→ 召喚（`SpawnUnitEffect`，依清單順序；新單位排在先攻順序最後）。
+- 確定性：不取用亂數（召喚位置照既有「最近的安全格」規則、依座標排序）；同種子同步驟結果逐位元相同。
+
+### 34.5 霧鎖真人（18.2.3；ID 由開發 PM 取）
+
+| 中文 | ID | 說明 |
+|---|---|---|
+| 霧鎖真人 | `sect_mist_lock_master` | Boss；標籤 `boss`、`elite`、`humanoid`、`sect`、`mist_lock_core`；單手劍 |
+| 陣眼石靈（雲頂觀） | `sect_summit_array_stone` | 不動、高護甲；開場狀態 `summit_array_ward`：12 格內帶 `mist_lock_core` 的友方受到的傷害 ×500‰，石靈倒下即解除 |
+| 霧遁 | `skill_mist_shift` | 傳送 3 格＋隱蔽 2 回合（閃現的同型） |
+| 霧鎖千山 | `skill_mist_lock_peaks` | 蓄力強招：整回合（3 AP）蓄力、自身小護盾；下回合開始以自己為中心十字範圍傷害＋定身 1 回合；地圖提前一輪標示（既有 `telegraph.charges`） |
+| 歸一 | `mist_return` | 狀態：每回合開始回復少量 HP；中性、不倒數 |
+
+| 階段 | HP | 內容 |
+|---|---|---|
+| 1 劍陣 | 100～60% | 真人在高台後方施法（`archer` 行為模式、聚雷＋霧遁）；陣眼石靈護陣（−50%，打碎才解除）；兩名劍陣弟子守高台入口 |
+| 2 鎖霧 | ≤ 60% | 天氣變 **濃霧**（既有 `fog`：遠程超過 4 格劣勢、視線減半）；技能組 霧遁＋霧鎖千山＋聚雷、`cunning`；開場先隱蔽 2 回合；真人附近召喚 2 名霧行者 |
+| 3 歸一 | ≤ 30% | 天氣回 **晴朗**（霧散）；移除隱蔽；技能組 蓄力斬（自身護盾＋方陣橫斬，蓄力強招）＋先發制人、`brute`（近戰化）；掛上「歸一」每回合回血 |
+
+數值（HP、骰子、冷卻、回血量）是初值，寫在 content，見 34.9。
+
+### 34.6 Boss 專屬地圖與大世界接線（20.6、18.3）
+
+- `content/maps/cloud_summit.yaml`「雲頂觀」：`archetype: boss`、`region: cloud_ridge`、12×12；中央高台（高 2）上是真人，高台前 1 格是陣眼石靈；兩側石階（高 1）；四角各 1 個油桶當香爐（換皮要新物件與美術，先用油桶：推倒或點燃就是火）；我方在下方石階（南側），兩名劍陣弟子守高台入口；`objective: {kind: eliminate, leader_retreat: true}`；預設陣容 `encounter`（原型三人對真人＋2 弟子＋石靈，給 CLI 與模擬）。
+- 大世界：`content/world/maps/cloud_ridge.yaml` 雲頂觀 `battle_maps: [cloud_summit]`；`content/world/encounters/cloud_ridge.yaml` 雲頂觀的遭遇改成 Boss 陣容 `mist_lock_court`（真人、劍陣弟子 ×2、陣眼石靈；不混精英）。`summit_patrol` 群組保留不刪（之後山路遇敵可能用）。
+- 大世界開戰（`prepare_battle`）：階段召喚的範本與階段天氣用 `with_phase_assets` 加進設定；召喚範本照敵人等級成長（`grow_enemy`）、階段技能組一起升階改名。
+
+### 34.7 戰鬥紀錄、畫面與版號
+
+- 事件：`boss_phase_changed`（`unit_id`、`phase`〔1 起算的新階段序號〕、`phase_id`、`name_zh`、`text_zh`、`hp`、`max_hp`、`permille`）；`weather_changed`（`before`、`after`、`after_name_zh`、`cause: boss_phase`）。戰鬥紀錄：「◆ 霧鎖真人進入第 2 階段「鎖霧」（HP 60% 以下）：真人掐訣，山間濃霧四合。」「天氣變為濃霧。」
+- 單位卡：`UnitView.boss_phase`（`index`、`total`、`name_zh`、`next_name_zh`、`next_permille`）；特性欄加一行「階段：劍陣 → HP 60%「鎖霧」→ 30%「歸一」」。
+- 前端：步驟事件裡有 `boss_phase_changed` 時用既有 `NoticeBanner` 顯示那句紀錄（15 秒）；單位卡（`UnitInfo`）顯示「階段 2/3 鎖霧（HP 30% 進入「歸一」）」。蓄力預告沿用既有的「蓄」標記與 `ChargeChips`，不新增畫法；天氣名稱沿用頂端列。
+- `LOG_FORMAT` `/108` → `/109`（`戰鬥紀錄格式變更.md`、`runner.py` 文件字串、測試字面值）。沒有 `phases` 的戰鬥結算與 `/108` 相同。
+
+### 34.8 測試與模擬
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/engine/test_boss_phases.py` | 表格測試（實際跑引擎）：門檻觸發（61%／60%／59% 邊界）、只觸發一次（治療回門檻以上不再觸發）、一次跌破兩個門檻依序觸發、倒下那一擊不觸發、換技能組與行為模式、加減狀態、天氣變更事件、改格子、召喚位置與先攻順序、蓄力中換階段照常釋放、重播一致（同種子同步驟 → 相同事件與狀態）；霧鎖千山蓄力預告範圍；九轉回天預告範圍 |
+| `tests/content/`（新、受影響） | `phases` schema（第 1 項不能有 trigger、門檻遞減、項數、未知技能／狀態／天氣／範本）；雲頂觀地圖檢查；護陣範圍上限 |
+| `tests/world/`（受影響） | 雲頂觀遭遇用 Boss 地圖、Boss 陣容打得完；成長後階段技能改名、召喚範本有成長 |
+| `tests/api/`（受影響） | 單位的 `boss_phase` 欄位 |
+| 前端 vitest | 階段提示與單位卡階段行 |
+| 小模擬（`scripts/boss_phase_sim.py`） | 雲頂觀 Boss 地圖、原型三人與大世界 6 級三人隊伍各若干種子：**沒有階段**（同範本拿掉 `phases`）對 **有階段** 的勝率、平均輪數、真人剩餘 HP 摘要；結果寫進報告，數值建議由 PM 定 |
+
+### 34.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5F2-1 | 檢查時機 | 每次結算收尾與換手之後；預覽不檢查（AI 不預估階段轉換） |
+| 5F2-2 | 一次跌破多個門檻 | 依序觸發每一個（第 2 階段的召喚照樣出現，天氣以最後一個為準） |
+| 5F2-3 | 門檻的「降到」 | `HP ≤ 門檻`（60% 剛好也算）；倒下的那一擊不觸發 |
+| 5F2-4 | 換技能組時的蓄力 | 正在蓄力的強招照常釋放；冷卻只保留新技能組裡的技能 |
+| 5F2-5 | 第 1 階段的 −50% | 用護陣 `ward`（石靈在場時、12 格內）；石靈打碎才解除，進第 2 階段也不自動解除 |
+| 5F2-6 | 「每回合隱蔽換位」 | 技能「霧遁」（傳送 3 格＋隱蔽 2 回合，冷卻 1、法力 3）交給 AI，不是強制每回合 |
+| 5F2-7 | 「每回合結束治療自己少量」 | 引擎只有回合開始回血（`on_turn_start_heal`），先用回合開始 `1d6`；要真的回合結束另加欄位，待 PM |
+| 5F2-8 | 「近戰化（劍＋自身護盾）」 | 真人全程拿單手劍（換武器要動武器狀態，不做）；第 3 階段換近戰技能組與 `brute`，護盾來自蓄力斬的第一段 |
+| 5F2-9 | 霧鎖千山範圍 | 既有十字（中心＋四方向 1 格），以真人當下位置為中心；傷害 `2d8`＋定身 1 回合（初值） |
+| 5F2-10 | 香爐 | 先用既有油桶（推倒造油、遇火爆燃）；換皮要新物件與美術 |
+| 5F2-11 | 召喚物陣營與成長 | 和 Boss 同陣營；大世界照敵人等級成長；不加 `boss_escort` 標籤 |
+| 5F2-12 | 數值初值 | 真人 HP 90（1 級基準）、石靈 HP 30、歸一回血 `1d6`（未經模擬；模擬摘要見報告） |
+| 5F2-13 | 雲頂觀遭遇 | 只有 Boss 陣容（Boss 地點的戰鬥＝Boss 戰）；`summit_patrol` 保留不用 |
+| 5F2-14 | 戰鬥紀錄版號 | `/109` |
+
+### 34.10 驗收
+
+`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/engine`（`-n 8`）、`tests/content`、`tests/world`、`tests/api`；改了前端跑 `npx vitest run`、`npm run build`；swamp 種子 7 重播；CLI 輸出有變時重產快照（`UPDATE_CLI_SNAPSHOTS=1`）。不跑全量 matrix／completion。
+
+### 34.11 不做的事
+
+- 賽季 Boss（封印鑰匙、只准傭兵、首殺、源晶柱解謎，5F-3）；灰燼之心與碎晶之主的內容（5F-5）；新的 `trigger` 種類（輪數、標籤全倒）、火地擴散、冷卻破甲等新規則。
+- Boss 掉落（5D-2 的規則照舊）、首殺公告；新物件與新美術（香爐、Boss 立繪）；HP 門檻的地圖預告（門檻轉換無法提前一輪預知，只在單位卡寫門檻）。
+
+## 35. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

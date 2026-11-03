@@ -1,0 +1,45 @@
+# 雲嶺區域 Boss（Phase 5F-2；docs/design/18-雲嶺內容.md 18.2.3、09 9.6.8 #86）：霧鎖真人（青霧觀觀主），雲頂觀（Boss 地圖 cloud_summit）。
+# 數值是初值（未經模擬，見 docs/phases/Phase5F-2報告.md 的模擬摘要）；外觀（doll）是美術的事，這裡不寫。
+# 階段（引擎資料化，trpg.engine.boss_phases）：
+#   1 劍陣（100～60%）：在陣眼石靈後方施法；陣眼的「鎖霧大陣」讓真人受到的傷害 −50%，打碎陣眼才解除。
+#   2 鎖霧（≤ 60%）：全場濃霧（遠程 4 格外劣勢）；霧遁換位、蓄力強招「霧鎖千山」（十字、定身 1 回合，提前一輪預告）；召喚 2 名霧行者。
+#   3 歸一（≤ 30%）：霧散去；近戰化（蓄力斬帶自身護盾）；每回合回血（歸一）。
+# 真人全程拿單手劍（換武器不做，代決 5F2-8）。
+id: sect_mist_lock_master
+name_zh: 霧鎖真人
+attributes: {str: 14, dex: 12, con: 14, int: 14, wis: 16, wil: 14}
+max_hp: 90
+speed: 5
+armor_bonus: 3
+weapon: one_handed_sword
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [boss, elite, humanoid, sect, mist_lock_core]
+skills: [skill_cluster_bolt, skill_mist_shift]
+reactions:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+phases:
+  - {id: sword_array, name_zh: 劍陣}
+  - id: mist_lock
+    name_zh: 鎖霧
+    trigger: {kind: hp_below, permille: 600}
+    text_zh: 真人掐訣長嘯，山間濃霧四合，霧中走出兩名霧行者。
+    skills: [skill_mist_shift, skill_mist_lock_peaks, skill_cluster_bolt]
+    ai_profile: cunning
+    add_statuses: [{status: concealed, duration: 2}]
+    weather: fog
+    spawns: [{template: sect_mist_walker, count: 2}]
+  - id: return_to_one
+    name_zh: 歸一
+    trigger: {kind: hp_below, permille: 300}
+    text_zh: 真人張口一吸，滿山的霧都收進身體裡——霧散了，他提劍逼了上來。
+    skills: [skill_charged_cleave, skill_first_strike]
+    ai_profile: brute
+    remove_statuses: [concealed]
+    add_statuses: [{status: mist_return}]
+    weather: clear

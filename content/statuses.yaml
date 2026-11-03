@@ -169,6 +169,24 @@ statuses:
     expires: never
     stacking: refresh
     ward: {kin_tag: sect, range: 3, taken_permille: 800}
+  # 5F-2：雲頂觀的陣眼石靈（18.2.3 第 1 階段「打碎陣眼石靈才能傷到真人（受到的傷害 −50% 直到陣眼碎）」）。同門標籤 mist_lock_core
+  # 只有霧鎖真人；範圍 12 格（Boss 地圖 12×12，真人會換位）。代決 5F2-5（初值，未經模擬）。
+  - id: summit_array_ward
+    polarity: neutral
+    name_zh: 鎖霧大陣
+    description_zh: 陣眼還在時，霧鎖真人受到的傷害大幅減少；打碎陣眼就失效。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    ward: {kin_tag: mist_lock_core, range: 12, taken_permille: 500}
+  # 5F-2：霧鎖真人第 3 階段「歸一」（18.2.3：每回合結束治療自己少量）。引擎只有回合開始回血，先用回合開始（代決 5F2-7；初值）。
+  - id: mist_return
+    polarity: neutral
+    name_zh: 歸一
+    description_zh: 吸盡山霧歸於一身：每回合開始時恢復少量 HP。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_turn_start_heal:
+      dice: 1d6
   # 5A-M2：詞綴「連心的」（18.2.1：受到的傷害分一部分給相鄰同門）。詞綴池含野獸、盜賊，所以不限標籤（相鄰友方都算）；
   # 數值初值（代決 5AM2-5，未經模擬）。
   - id: heart_link

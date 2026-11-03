@@ -16,7 +16,7 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.runner import run_battle
-from trpg.engine.setup import BattleSetup, UnitSpawn
+from trpg.engine.setup import BattleSetup, UnitSpawn, with_phase_assets
 from trpg.shared.types import Team
 
 HEROES = ("hero_fighter", "hero_archer", "hero_stormcaller")
@@ -42,13 +42,14 @@ def _setup(
         for t in templates
     ]
     map_def = library.map(map_id)
-    return BattleSetup(
+    setup = BattleSetup(
         map=map_def,
         ruleset=library.ruleset,
         units=tuple(spawns),
         max_rounds=MAX_ROUNDS,
         weather=library.weather_def(map_def.weather),
     )
+    return with_phase_assets(library, setup)  # Boss 階段的召喚與天氣（5F-2）
 
 
 Case = tuple[str, str, list[UnitTemplate], list[UnitTemplate]]
@@ -110,7 +111,7 @@ def test_every_group_fights_to_the_end(library: ContentLibrary) -> None:
 def test_groups_cover_every_new_enemy(library: ContentLibrary) -> None:
     fielded = {t.id for _l, _m, enemies, third in _cases(library) for t in enemies + third}
     new = {u for u, t in library.units.items() if {"sect", "beast", "construct"} & set(t.tags)}
-    assert len(new) == 17
+    assert len(new) == 19  # 5F-2：霧鎖真人、雲頂觀陣眼石靈
     assert library.world_enemies is not None
     variants = {v.id for v in library.world_enemies.variants}
     assert new | variants <= fielded

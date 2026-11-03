@@ -650,6 +650,42 @@
    ]
   },
   {
+   "id": "summit_array_ward",
+   "name_zh": "鎖霧大陣",
+   "description_zh": "陣眼還在時，霧鎖真人受到的傷害大幅減少；打碎陣眼就失效。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "護陣：持有者還在場時，12 格內的帶「mist_lock_core」標籤的友方（不含自己）受到的傷害 ×50%；持有者倒下後立刻解除"
+   ]
+  },
+  {
+   "id": "mist_return",
+   "name_zh": "歸一",
+   "description_zh": "吸盡山霧歸於一身：每回合開始時恢復少量 HP。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "回合開始時恢復 1d6 HP"
+   ]
+  },
+  {
    "id": "heart_link",
    "name_zh": "連心",
    "description_zh": "受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。",

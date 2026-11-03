@@ -101,7 +101,7 @@ def test_cloud_ridge_locations_follow_18_3(cloud: LocationMapDef) -> None:
     by_id = cloud.location_by_id()
     assert by_id["mist_ferry"].kind == "town"
     assert by_id["cloud_summit"].kind == "boss"
-    assert by_id["cloud_summit"].battle_maps == ()
+    assert by_id["cloud_summit"].battle_maps == ("cloud_summit",)  # Boss 專屬地圖（5F-2）
     gate = by_id["ashen_ferry"]
     assert (gate.kind, gate.gate_to, gate.unlock_flag) == (
         "gate",
@@ -119,7 +119,7 @@ def test_cloud_ridge_cross_file(library: ContentLibrary, cloud: LocationMapDef) 
     assert library.regions is not None
     pool = set(library.regions.region_by_id()["cloud_ridge"].map_pool)
     archetypes = {library.maps[m].archetype for loc in cloud.locations for m in loc.battle_maps}
-    assert archetypes <= pool
+    assert archetypes - {"boss"} <= pool  # Boss 地圖只在 boss 地點（validator 檢查，5F-2）
     assert "oil_depot" not in archetypes
 
 

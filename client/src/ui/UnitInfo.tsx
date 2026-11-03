@@ -22,6 +22,7 @@ import { GearTotals } from "./GearTotals";
 import { Hint } from "./Hint";
 import { StackTip } from "./StackTip";
 import { actionCardText } from "../battle/actionInfo";
+import { phaseText } from "../battle/bossPhase";
 
 interface Props {
   unit: UnitView | null;
@@ -77,6 +78,12 @@ export function traitRows(unit: UnitView): [string, ReactNode][] {
   ];
 }
 
+/** Boss 的「階段」列（Phase 5F-2）：目前階段與下一個 HP 門檻；沒有階段時不列。 */
+export function phaseRows(unit: UnitView): [string, ReactNode][] {
+  const text = phaseText(unit);
+  return text === null ? [] : [["階段", text]];
+}
+
 export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
@@ -99,6 +106,7 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
     ...(unit.race == null
       ? []
       : [["種族", `${unit.race.name_zh}（種族技：${unit.race.skill_name_zh}；被動：${unit.race.passive_name_zh}）`] as [string, ReactNode]]),
+    ...phaseRows(unit),
     ...traitRows(unit),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],

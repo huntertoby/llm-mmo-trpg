@@ -43,8 +43,14 @@ from trpg.engine.events import EventBase
 from trpg.engine.oaths import OathSetup
 from trpg.engine.results import battle_result
 from trpg.engine.runner import advance, apply_step
-from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
-from trpg.engine.state import BattleState
+from trpg.engine.setup import (
+    BattleSetup,
+    UnitSpawn,
+    build_setup,
+    phase_spawn_ids,
+    with_phase_assets,
+)
+from trpg.engine.state import BattleState, SpawnTemplate
 from trpg.roguelite.flashes import after_battle_flash
 from trpg.roguelite.offers import at_run_tier
 from trpg.roguelite.progress import hero_unit_id
@@ -211,6 +217,7 @@ def grow_enemy(
     - 技能：階級低於 ``skill_tier_by_level[等級]`` 的照 roguelite ``at_run_tier`` 重配成
       ``<原 ID>_t<階級>``（只升不降），反應規則引用的 ID 一併改名。
     - ``level`` 欄位＝等級（召喚物依施放者等級成長）。
+    - Boss 階段（5F-2）換上的技能組一併升階改名。
     """
     if level <= 1:
         return template, ()
@@ -223,7 +230,8 @@ def grow_enemy(
     tier = growth.tier_for(level)
     rename: dict[str, str] = {}
     extra: dict[str, SkillDef] = {}
-    for skill_id in template.skills:
+    phase_skills = [s for phase in template.phases for s in phase.skills or ()]
+    for skill_id in dict.fromkeys((*template.skills, *phase_skills)):
         skill = library.skills[skill_id]
         if skill.tier >= tier:
             continue
@@ -236,6 +244,13 @@ def grow_enemy(
         "skills": tuple(rename.get(s, s) for s in template.skills),
         "level": level,
     }
+    if template.phases:
+        update["phases"] = tuple(
+            phase
+            if phase.skills is None
+            else phase.model_copy(update={"skills": tuple(rename.get(s, s) for s in phase.skills)})
+            for phase in template.phases
+        )
     if template.reactions is not None:
         update["reactions"] = tuple(
             r.model_copy(update={"reaction": rename[r.reaction]}) if r.reaction in rename else r
@@ -349,6 +364,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
                     team=team,
                 )
             )
+    phase_spawns = _phase_spawns(library, enemies, level, extra)  # Boss 階段的召喚（5F-2）
     base = build_setup(
         library,
         map_def.id,
@@ -382,8 +398,10 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
             "first_team": first,
             "objective": objective,
             "oath": oath,
+            "spawn_templates": {**base.spawn_templates, **phase_spawns},
         }
     )
+    setup = with_phase_assets(library, setup)  # 階段會換成的天氣（5F-2）
     return PreparedBattle(
         setup=setup,
         seed=encounter.battle_seed,
@@ -395,6 +413,23 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         hero_statuses=hero_statuses(char),
         oath=oath,
     )
+
+
+def _phase_spawns(
+    library: ContentLibrary, enemies: Sequence[UnitSpawn], level: int, extra: dict[str, SkillDef]
+) -> dict[str, SpawnTemplate]:
+    """敵方 Boss 階段（5F-2）會召喚的範本，照敵人等級成長（代決 5F2-11）；重配的技能加進
+    ``extra``。"""
+    found: dict[str, SpawnTemplate] = {}
+    for template_id in phase_spawn_ids(enemies):
+        grown, skills = grow_enemy(library, library.unit(template_id), level)
+        extra.update((s.id, s) for s in skills)
+        found[template_id] = SpawnTemplate(
+            template=grown,
+            weapon=library.weapon_of(grown),
+            equipment=library.loadout_of(grown),
+        )
+    return found
 
 
 def auto_steps(library: ContentLibrary, char: CharacterState) -> tuple[Step, ...]:

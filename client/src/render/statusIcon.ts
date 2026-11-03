@@ -341,6 +341,17 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     star(c, 0, 0, 6);
     line(c, [[-8, 8], [8, -8]]);
   },
+  // 鎖霧大陣（Phase 5F-2，雲頂觀陣眼：霧鎖真人減傷）：護陣的雙圈，只用既有筆畫
+  summit_array_ward: (c) => {
+    circle(c, 0, 0, 8.5);
+    circle(c, 0, 0, 5);
+    circle(c, 0, 0, 2, true);
+  },
+  // 歸一（Phase 5F-2，霧鎖真人第 3 階段：每回合回血）：一滴水落進圓心，只用既有筆畫
+  mist_return: (c) => {
+    circle(c, 0, 2, 7.5);
+    drop(c, 0, -2, 5);
+  },
   // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
   heart_link: (c) => {
     circle(c, -5, 0, 4);

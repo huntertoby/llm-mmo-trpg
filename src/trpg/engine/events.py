@@ -28,6 +28,7 @@ __all__ = [
     "BombCause",
     "BombExploded",
     "BombTicked",
+    "BossPhaseChanged",
     "ChainLimitReached",
     "ChargeActivated",
     "CheckRolled",
@@ -152,6 +153,7 @@ __all__ = [
     "UnitVaulted",
     "WallToppled",
     "WeaponReloaded",
+    "WeatherChanged",
     "ZoneCreated",
     "ZoneExpanded",
     "ZoneExpired",
@@ -1891,6 +1893,38 @@ class OathBroken(EventBase):
     at_end: bool = False
 
 
+class BossPhaseChanged(EventBase):
+    """Boss 進入新階段（Phase 5F-2，:mod:`trpg.engine.boss_phases`）：``phase`` 是 1 起算的新階段
+    序號（開場階段為 1，所以第一次轉換是 2）；``permille`` 是這個階段的 HP 門檻；
+    ``hp``／``max_hp`` 是觸發當下。之後依序是移除狀態、換技能組與行為模式、施加狀態、
+    改天氣、改格子、召喚的事件。"""
+
+    type: Literal["boss_phase_changed"] = "boss_phase_changed"
+    unit_id: UnitId
+    phase: int
+    total: int
+    phase_id: str
+    name_zh: str
+    text_zh: str | None = None
+    permille: int
+    hp: int
+    max_hp: int
+    skills: tuple[str, ...] | None = None
+    """換成的技能組（``None``＝不變）。"""
+
+
+class WeatherChanged(EventBase):
+    """戰鬥中天氣改變（Phase 5F-2：Boss 階段）。``before``／``after`` 是天氣 ID（``None``＝
+    晴朗）。"""
+
+    type: Literal["weather_changed"] = "weather_changed"
+    before: str | None
+    after: str | None
+    after_name_zh: str
+    cause: Literal["boss_phase"] = "boss_phase"
+    source_id: UnitId | None = None
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -2017,7 +2051,9 @@ type Event = Annotated[
     | GearHpLost
     | GearTriggered
     | ChargeActivated
-    | OathBroken,
+    | OathBroken
+    | BossPhaseChanged
+    | WeatherChanged,
     Field(discriminator="type"),
 ]
 

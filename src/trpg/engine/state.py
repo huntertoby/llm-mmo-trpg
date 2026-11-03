@@ -17,7 +17,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from trpg.content.battle import DollLook, ReactionRule, SummonMode, UnitTemplate, WeaponDef
+from trpg.content.battle import (
+    BossPhase,
+    DollLook,
+    ReactionRule,
+    SummonMode,
+    UnitTemplate,
+    WeaponDef,
+)
 from trpg.content.environment import ObjectDef, WeatherDef
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
@@ -505,6 +512,10 @@ class UnitState:
     race: str | None = None
     """可玩種族（Phase 3R-2，``content/races.yaml``）：由範本帶入、戰鬥中不變；種族技的每場次數記在
     ``skill_uses``（鍵為種族技 ID），環境被動由 :mod:`trpg.engine.race_passives` 查詢。"""
+    phases: tuple[BossPhase, ...] = ()
+    """Boss 的階段（Phase 5F-2）：由範本帶入、戰鬥中不變；第 1 項是開場階段。"""
+    phase_index: int = 0
+    """目前的階段（``phases`` 的索引；0 ＝ 開場階段）：只增不減，每個階段整場只進入一次。"""
 
     @property
     def alive(self) -> bool:
@@ -625,6 +636,8 @@ class UnitState:
             next_attack_hit=self.next_attack_hit,
             next_attack_crit=self.next_attack_crit,
             race=self.race,
+            phases=self.phases,
+            phase_index=self.phase_index,
         )
 
 
@@ -655,6 +668,8 @@ class BattleState:
     objective: Objective = field(default_factory=Objective)
     map_events: tuple[MapEvent, ...] = ()
     spawn_templates: dict[str, SpawnTemplate] = field(default_factory=dict)
+    phase_weathers: dict[str, WeatherDef] = field(default_factory=dict)
+    """Boss 階段會換成的天氣（Phase 5F-2，``BattleSetup.phase_weathers``；以天氣 ID 為鍵）。"""
     pending: PendingResolution | None = None
     traps: list[TrapState] = field(default_factory=list)
     """戰場上的陷阱（Phase 2E-3），依 ``(y, x)`` 排序；同一格最多一個。"""
@@ -716,6 +731,7 @@ class BattleState:
             objective=self.objective,
             map_events=self.map_events,
             spawn_templates=self.spawn_templates,
+            phase_weathers=self.phase_weathers,
             pending=self.pending,
             traps=list(self.traps),
             source_wells=self.source_wells,
