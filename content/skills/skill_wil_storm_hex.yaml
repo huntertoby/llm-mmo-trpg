@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶雷電；數值為初值，未經模擬
+id: skill_wil_storm_hex
+schema_version: 1
+name_zh: 雷咒
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d6, element: shadow}
+  - {type: damage, dice: 1d4, element: lightning}
+condition: null
+cost: {mana: 3}
+tags: [shadow, spell, curse, lightning]
+narrative:
+  concept: 詛咒裡藏著一道雷，暗影先咬上去，雷電再順著咒紋劈下
+  cast_flavor: 暗影纏住對手的瞬間，一道細小的雷光沿著它竄了進去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

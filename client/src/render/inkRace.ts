@@ -84,6 +84,7 @@ export const COVERS: Readonly<Record<string, Cover>> = {
   crown: { narrow: true },
   wide_hat: { top: true, tall: true },
   wizard_hat: { top: true, tall: true, hair: true },
+  veil: { top: true, side: true, hair: true }, // 5A-ART3：霧行者的白紗兜帽
 };
 
 /** 沒戴＝什麼都不蓋；沒登記的 kind 當作只蓋頭頂。 */

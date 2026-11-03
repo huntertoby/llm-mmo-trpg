@@ -1,0 +1,135 @@
+"""大世界隊伍與系統傭兵的 API 格式（Phase 5C-1；``docs/phases/Phase5計畫.md`` 22.6）。
+
+全部由後端算好（前端不寫規則）：隊伍成員、能不能雇用與理由、傭兵名單（定位、主題、技能概要）。
+"""
+
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict
+
+__all__ = [
+    "AiChoiceView",
+    "MercenaryView",
+    "MyShadowView",
+    "PartyMemberView",
+    "PartyView",
+    "ShadowView",
+]
+
+
+class _ApiModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class PartyMemberView(_ApiModel):
+    """隊伍的一名成員（主角、傭兵或標準隊友）。"""
+
+    name_zh: str
+    title_zh: str
+    """主角＝「主角」；傭兵＝稱號＋定位（例「盾衛・守護」）；標準隊友＝「標準隊友」。"""
+    level: int
+    """開戰時的等級（傭兵與標準隊友照主角等級成長，5A-SIM2）。"""
+    mercenary: str | None = None
+    """傭兵 ID（主角與影子為 ``None``）。"""
+    shadow: str | None = None
+    """影子主人的角色 ID（5C-2；不是影子為 ``None``）。"""
+    ai_zh: str | None = None
+    """打法（例「守衛」、「預設（守衛）」）；主角為 ``None``。"""
+    companion: str | None = None
+    """劇情夥伴 ID（5C-3；不是夥伴為 ``None``）。"""
+    note_zh: str | None = None
+    """補充說明（夥伴：「劇情夥伴：任務結束後離隊」）。"""
+
+
+class MercenaryView(_ApiModel):
+    """名單上的一名系統傭兵（每個人都一樣，9.6.8）。"""
+
+    id: str
+    name_zh: str
+    title_zh: str
+    role: str
+    role_zh: str
+    theme_zh: str
+    """底稿 build 的主題說明（打法、有利與不利的地形）。"""
+    skills_zh: tuple[str, ...]
+    """技能概要：底稿技能的中文名（依底稿順序；開戰時照主角等級升階）。"""
+    hired: bool
+
+
+class ShadowView(_ApiModel):
+    """一個可以借的影子（5C-2；其他角色在城鎮整備時存的）。"""
+
+    owner: str
+    """影子主人的角色 ID（``hire`` 的 ``shadows`` 送這個）。"""
+    name_zh: str
+    level: int
+    """影子本身的等級。"""
+    role_zh: str
+    """定位：玩家 build 沒有固定定位，顯示「武器・種族」（代決 5C2-9）。"""
+    skills_zh: tuple[str, ...]
+    """技能概要：裝備中的技能中文名（依裝備順序）。"""
+    borrowed_level: int
+    """借用時的等級（不超過招募者，#87）。"""
+    borrowed_tier: int
+    """借用時的技能階級上限。"""
+    capped: bool
+    """借用時會被壓到招募者的上限。"""
+    cap_zh: str | None = None
+    """例「借用時壓到 Lv 1・技能 1 階（你的上限）」；沒被壓時 ``None``。"""
+    hired: bool
+    """目前在隊伍裡（借用當下的複本）。"""
+    own: bool = False
+    """保留給 5E（自己帳號的其他角色）；帳號還沒做，目前一律 ``False``。"""
+    saved_zh: str
+    """存的地點（例「霧渡鎮」）。"""
+    titles: tuple[str, ...] = ()
+    """影子主人帳號的紀念稱號（5F-3c 玩家名片；「碎晶的終結者（s1）」）。"""
+
+
+class AiChoiceView(_ApiModel):
+    """一種可選的 AI 打法（``ai_profiles.yaml``；5C-2 玩法 PM 定 ④）。"""
+
+    id: str
+    name_zh: str
+    description_zh: str
+
+
+class PartyView(_ApiModel):
+    """目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"""
+
+    members: tuple[PartyMemberView, ...]
+    max_hired: int
+    can_hire: bool
+    hire_problem_zh: str | None
+    """不能換隊友的理由（例「出城前在城鎮選好，野外不能換」）；可以時為 ``None``。"""
+    mercenaries: tuple[MercenaryView, ...] = ()
+    """傭兵名單（名單順序）。"""
+    shadows: tuple[ShadowView, ...] = ()
+    """可以借的影子（不含自己；依主人 ID）。"""
+    ai_choices: tuple[AiChoiceView, ...] = ()
+    ai: dict[str, str] = {}
+    """目前每名成員選的打法（傭兵 ID 或影子主人 ID → 打法 ID；沒有＝預設）。"""
+    season_boss_ok: bool = True
+    """隊伍能不能打賽季 Boss（有影子＝不能，#87）。"""
+    season_boss_zh: str | None = None
+    free_slots: int = 2
+    """傭兵＋影子還能選幾名（劇情夥伴佔隊友位，5C-3）。"""
+    companion_zh: str | None = None
+    """劇情夥伴在隊時的說明（例「阿岳跟著你（霧渡新手路），佔 1 個隊友位；任務結束後離隊」）。"""
+
+
+class MyShadowView(_ApiModel):
+    """自己的影子（5C-2；#102）。"""
+
+    saved: bool
+    level: int | None = None
+    saved_zh: str | None = None
+    """存的地點與等級（例「霧渡鎮・Lv 3」）。"""
+    ai: str | None = None
+    """預設打法（``None``＝範本的預設）。"""
+    ai_zh: str = "預設"
+    can_set_ai: bool = False
+    coins: int = 0
+    """被借用累計的任務幣（5D 轉入角色）。"""
+    reports_zh: tuple[str, ...] = ()
+    """被借用的戰報（新的在前）。"""

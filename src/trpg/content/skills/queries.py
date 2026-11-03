@@ -12,6 +12,9 @@ from trpg.content.skills.effects import EffectSpec
 from trpg.content.skills.skill import SkillDef
 from trpg.shared.types import Element
 
+ITEM_SKILL_TAG = "item"
+"""道具技能的標籤（Phase 5D-1；不佔技能欄位，08 8.17）。"""
+
 
 def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef:
     """把修正規則的命中後效果包成一個「技能」（同一個修正技能的複本，``effects`` 換成命中後
@@ -80,8 +83,9 @@ def held_gear(weapon: Any, offhand: Any = None) -> dict[str, str]:
 
 def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[str]:
     """裝備的技能數量超過 ``core.yaml`` 的欄位上限時的原因（依 ``kind``），以及規則改變型傳說
-    超過 1 個（Phase 3D-6）。"""
-    skills = tuple(skills)
+    超過 1 個（Phase 3D-6）。帶 ``item`` 標籤的道具技能（大世界腰包的消耗品，Phase 5D-1）不佔欄位
+    （08 8.17「物品欄另外放」）。"""
+    skills = tuple(s for s in skills if ITEM_SKILL_TAG not in s.tags)
     # 修正技能（kind: modifier，3C-2）裝在被動欄位，與觸發型被動共用上限
     counts: Counter[str] = Counter(s.slot_kind for s in skills)
     limits = {

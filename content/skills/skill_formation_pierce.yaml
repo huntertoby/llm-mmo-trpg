@@ -1,0 +1,24 @@
+# 主動（Phase 5B-5b，玩法 PM 2026-11-03「穿陣刺」；數值為初值，未經模擬）：近戰直線 2 格刺擊，吃武器屬性。
+# 雲嶺劍陣弟子的招式；也在手寫技能池裡（通用池，一般角色也可能學到）。
+id: skill_formation_pierce
+schema_version: 1
+name_zh: 穿陣刺
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: area
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: line, size: 2}
+effects:
+  - {type: damage, multiplier_permille: 1400}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, melee, line]
+narrative:
+  concept: 一劍直送，劍勢穿過面前的人，連站在後面的也一併刺中
+  cast_flavor: 你足下一蹬，長劍化作一線寒光，貫穿了排在前後的人影
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

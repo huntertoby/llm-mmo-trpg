@@ -37,6 +37,7 @@ def test_only_cloud_ridge_maps_have_a_theme(library: ContentLibrary) -> None:
     assert library.map_warnings == ()
     assert {k for k, m in library.maps.items() if m.region is not None} == {
         "bridge_chasm",
+        "cloud_summit",  # 5F-2：雲頂觀 Boss 地圖（雲嶺）
         "dark_forest",
     }
     assert {m.region for m in library.maps.values()} == {None, "cloud_ridge"}

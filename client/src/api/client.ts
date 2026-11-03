@@ -1,5 +1,9 @@
 // fetch 包裝：所有請求走相對路徑 /api（開發時由 Vite proxy 轉到 127.0.0.1:8000）。
+// 5E-1：登入後每個請求帶 `Authorization: Bearer <token>`；收到 401 時清掉 token 並發出 AUTH_EXPIRED_EVENT。
+import { AUTH_EXPIRED_EVENT, authHeaders, needsLogin, readToken, writeToken } from "../auth/auth";
 import type {
+  AuthStatus,
+  LoginResponse,
   Action,
   BattleHistory,
   BattleResponse,
@@ -39,6 +43,21 @@ import type {
   WorkshopWeapon,
   WorkshopRandom,
   WorkshopRandomRequest,
+  CreateWorldCharacterRequest,
+  WorldAction,
+  WorldBattleResponse,
+  WorldCharacterSummary,
+  WorldLlmView,
+  LeagueReplayResponse,
+  LeagueView,
+  LocationBoard,
+  SeasonBoardView,
+  AbsenceView,
+  ChronicleView,
+  LegacyHeroView,
+  SeasonResetRequest,
+  SeasonResetReport,
+  WorldView,
 } from "./types";
 
 export class ApiError extends Error {
@@ -65,10 +84,12 @@ export function detailText(status: number, body: unknown): string {
   return `伺服器錯誤（HTTP ${status}）`;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, headers: {} };
+/** `quiet`：背景請求（首頁的存檔列表）收到 401 不導到登入畫面（5D-R2）。 */
+async function request<T>(method: string, path: string, body?: unknown, quiet = false): Promise<T> {
+  const token = readToken();
+  const init: RequestInit = { method, headers: authHeaders(token) };
   if (body !== undefined) {
-    init.headers = { "Content-Type": "application/json" };
+    init.headers = { ...authHeaders(token), "Content-Type": "application/json" };
     init.body = JSON.stringify(body);
   }
   let res: Response;
@@ -85,6 +106,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     } catch {
       data = null;
     }
+  }
+  if (!quiet && needsLogin(res.status, path)) {
+    // 5D-R2：沒帶 token 的 401（開發模式關、還沒登入）也導到登入畫面
+    if (token !== null) writeToken(null);
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
   }
   if (!res.ok) throw new ApiError(res.status, detailText(res.status, data));
   return data as T;
@@ -155,7 +181,7 @@ export const api = {
   /** 開發用（3U-3）：AI 代打到指定的戰後畫面；伺服器要帶 `TRPG_DEV_ROUTES=1`，否則 404。 */
   devAdvance: (runId: string, to: string, insight = 0) =>
     request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/dev-advance?to=${encodeURIComponent(to)}${insight > 0 ? `&insight=${insight}` : ""}`),
-  runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
+  runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves", undefined, true),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),
   run: (runId: string) => request<RunResponse>("GET", `/runs/${encodeURIComponent(runId)}`),
   runBattle: (runId: string) =>
@@ -167,6 +193,67 @@ export const api = {
     request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/choice`, choice),
   saveRun: (runId: string) =>
     request<RunSaveOut>("POST", `/runs/${encodeURIComponent(runId)}/save`),
+  /** 大世界（Phase 5A-5）：角色列表、建立、地點圖畫面、世界動作、開戰。 */
+  /** 帳號與登入（5E-1）：開發模式與目前 token 的帳號。 */
+  authStatus: () => request<AuthStatus>("GET", "/auth/status"),
+  login: (username: string, password: string) => request<LoginResponse>("POST", "/auth/login", { username, password }),
+  logout: () => request<null>("POST", "/auth/logout"),
+  worldCharacters: () => request<WorldCharacterSummary[]>("GET", "/world/characters"),
+  createWorldCharacter: (body: CreateWorldCharacterRequest) => request<WorldView>("POST", "/world/characters", body),
+  world: (characterId: string) => request<WorldView>("GET", `/world/characters/${encodeURIComponent(characterId)}`),
+  worldAct: (characterId: string, action: WorldAction) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
+  worldBattle: (characterId: string) =>
+    request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`),
+  /** 大世界的閃現與配點預覽（5A-7；同一輪的預覽，不扣點）。 */
+  worldFlashPreview: (characterId: string, skill: string, slot: number | null) =>
+    request<FlashPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/flash-preview`, { skill, slot }),
+  worldAllocationPreview: (characterId: string, attributes: Record<string, number>) =>
+    request<AllocationPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/allocation-preview`, { attributes }),
+  /** 大世界事件（5B-5）：打開情境判定、送出回答（第一次送出即定案；文字是純資料，後端包進 <player_input>）、和 NPC 聊天。 */
+  worldSituation: (characterId: string, template: string) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/situation`, { template }),
+  worldAnswer: (characterId: string, template: string, text: string, cite: string[]) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/situation/answer`, { template, text, cite }),
+  worldChat: (characterId: string, npc: string, text: string) =>
+    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/chat`, { npc, text }),
+  /** 大世界自己的 LLM 開關（預設跟著伺服器設定；`null` 回到預設）。 */
+  worldLlm: () => request<WorldLlmView>("GET", "/world/llm"),
+  setWorldLlm: (enabled: boolean | null) => request<WorldLlmView>("POST", "/world/llm", { enabled }),
+  /** 地點留言與足跡（5E-3，#105）：留言是純資料，不送進 LLM。 */
+  worldNotes: (characterId: string) =>
+    request<LocationBoard>("GET", `/world/characters/${encodeURIComponent(characterId)}/notes`),
+  postWorldNote: (characterId: string, text: string) =>
+    request<LocationBoard>("POST", `/world/characters/${encodeURIComponent(characterId)}/notes`, { text }),
+  /** 作者刪自己的留言（5E-3b）；回更新後的留言板。 */
+  deleteOwnWorldNote: (characterId: string, noteId: string) =>
+    request<LocationBoard>(
+      "DELETE",
+      `/world/characters/${encodeURIComponent(characterId)}/notes/${encodeURIComponent(noteId)}`,
+    ),
+  /** 城鎮公告板（5F-1）：只讀，後端用換日後的世界算。 */
+  worldBoard: (characterId: string) =>
+    request<SeasonBoardView>("GET", `/world/characters/${encodeURIComponent(characterId)}/board`),
+  /** 「你不在的時候」摘要（5F-1b）：只讀；看過送 `news_seen` 動作（`until` ＝ `as_of`）。 */
+  worldAbsence: (characterId: string) =>
+    request<AbsenceView>("GET", `/world/characters/${encodeURIComponent(characterId)}/absence`),
+  /** 影子循環賽（5F-4）：報名狀態、排行榜、場次（5F-4b 分頁，`page` 從 1 起）。 */
+  worldLeague: (characterId: string, page = 1) =>
+    request<LeagueView>("GET", `/world/characters/${encodeURIComponent(characterId)}/league?page=${page}`),
+  /** 某一場循環賽的重播（從開場播到結束；既有戰鬥畫面）。 */
+  worldLeagueReplay: (characterId: string, matchId: string) =>
+    request<LeagueReplayResponse>(
+      "POST",
+      `/world/characters/${encodeURIComponent(characterId)}/league/matches/${encodeURIComponent(matchId)}/replay`,
+    ),
+  /** 編年史（5F-5）：每季的季末紀錄、首位發現的配方、循環賽排名、首殺與評分榜；所有人可看。 */
+  worldChronicle: () => request<ChronicleView>("GET", "/world/chronicle"),
+  /** 自己帳號上季的角色（5F-5；建角時沿用名字與外觀）。 */
+  worldLegacy: () => request<LegacyHeroView[]>("GET", "/world/legacy"),
+  /** 季末重置（5F-5，管理者）：預設 dry-run；真的執行要帶 `confirm_season`。 */
+  seasonReset: (body: SeasonResetRequest) => request<SeasonResetReport>("POST", "/world/season/reset", body),
+  /** 管理者刪任何一則留言（5E-3；回 204）。 */
+  adminDeleteWorldNote: (noteId: string) => request<null>("DELETE", `/world/notes/${encodeURIComponent(noteId)}`),
   decide: (
     id: string,
     accept: boolean,

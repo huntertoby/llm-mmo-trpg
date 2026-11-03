@@ -25,7 +25,7 @@ OLD_HP = {
     "gear_tester_g3b": 60,  # 3G-G3b 新增
     "gear_tester_g3b_sentinel": 46,  # 3G-G3b 新增
     "gear_tester": 60,  # 3G-G1 新增（遷移之後）：範本的 HP，不含裝備加成
-    "build:build_assassin": 50,
+    "build:build_assassin": 59,  # BAL-12d：HP +20%（44→53）
     "build:build_banisher": 40,
     "build:build_bomber": 40,
     "build:build_charger": 60,
@@ -82,7 +82,49 @@ OLD_HP = {
     "summon_pull_totem": 18,  # 3-33e2b 新增
     "summon_plateau_totem": 18,  # 3-33e2b 新增
     "summon_water_sprite": 12,
+    "summon_mist_shade": 6,  # 5F-1b 新增（霧中劍客的霧影分身）
     "training_dummy": 300,
+    "sect_acolyte": 22,  # 5A-3 新增（雲嶺）
+    "sect_swordsman": 36,  # 5A-3 新增（雲嶺）
+    "sect_talisman_caster": 24,  # 5A-3 新增（雲嶺）
+    "sect_alchemist": 32,  # 5A-3 新增（雲嶺）
+    "sect_warrior_monk": 58,  # 5A-3 新增（雲嶺）
+    "sect_array_disciple": 26,  # 5A-3 新增（雲嶺）
+    "sect_mist_walker": 24,  # 5A-3 新增（雲嶺）
+    "sect_crane_archer": 26,  # 5A-3 新增（雲嶺）
+    "sect_puppeteer": 24,  # 5A-3 新增（雲嶺）
+    "sect_array_stone": 48,  # 5A-3 新增（雲嶺）
+    "sect_steward": 62,  # 5A-3 新增（雲嶺）
+    "sect_mist_swordsman": 36,  # 5F-1b 新增（雲嶺懸賞「霧中劍客」本體）
+    "sect_mist_lock_master": 132,  # 5F-2 新增（雲嶺 Boss）；5F-2b HP 90 → 120
+    "sect_summit_array_stone": 48,  # 5F-2 新增（雲頂觀陣眼）；5F-2b HP 30 → 40 → 30（玩法 PM 代決）
+    "rift_shard_lord": 392,  # 5F-3 新增（賽季 Boss 碎晶之主）
+    "rift_pillar_mist": 60,  # 5F-3 新增（源晶柱）
+    "rift_pillar_thunder": 60,
+    "rift_pillar_fire": 60,
+    "rift_crystal_golem": 38,  # 5F-3 新增（晶傀儡）
+    "mist_wolf": 22,  # 5A-3 新增（雲嶺）
+    "mountain_leopard": 26,  # 5A-3 新增（雲嶺）
+    "stoneback_bear": 62,  # 5A-3 新增（雲嶺）
+    "thunder_hawk": 14,  # 5A-3 新增（雲嶺）
+    "mist_wraith": 22,  # 5A-3 新增（雲嶺）
+    "shard_golem": 48,  # 5A-3 新增（雲嶺）
+    # 5F-5a 新增（灰燼荒原：熔岩獸群、熔核領主、寒燼蜥、熔晶魅、灰燼之心、餘燼幼蜥）
+    "ember_lizard": 18,
+    "heart_ember_lizard": 18,  # 5F-5b：灰燼之心戰的殼縫餘燼蜥（同餘燼蜥）
+    "ash_hound": 22,
+    "lava_beetle": 56,
+    "fire_dust_bat": 16,
+    "lava_tortoise": 50,
+    "magma_slug": 48,
+    "sulfur_beast": 40,
+    "scorched_colossus": 70,
+    "furnace_matriarch": 56,
+    "molten_lord": 88,
+    "frost_ember_lizard": 20,
+    "molten_wraith": 22,
+    "ashen_heart": 178,
+    "summon_ember_whelp": 8,
 }
 
 

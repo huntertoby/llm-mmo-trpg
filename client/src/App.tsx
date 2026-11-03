@@ -1,4 +1,4 @@
-// 畫面切換：開始畫面、戰鬥畫面、技能工坊、roguelite 一輪。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
+// 畫面切換：開始畫面、戰鬥畫面、技能工坊、roguelite 一輪、大世界（測試，5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api/client";
 import type { BattleResponse, RunResponse } from "./api/types";
@@ -11,6 +11,9 @@ import { isDevMode } from "./run/startFlow";
 import { createDevRun, DEV_ENTER_EVENT, devScreenParam } from "./dev/devScreens";
 import { RunNewScreen } from "./screens/RunNewScreen";
 import { RunScreen } from "./screens/RunScreen";
+import { LoginScreen } from "./screens/LoginScreen";
+import { WorldEntry } from "./screens/WorldEntry";
+import { AUTH_EXPIRED_EVENT } from "./auth/auth";
 import { ErrorBanner } from "./ui/ErrorBanner";
 
 /** 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不丟步驟）；伺服器沒有（重啟過）才讀存檔。 */
@@ -26,13 +29,23 @@ function resume(runId: string): Promise<RunResponse> {
 export function App() {
   const [battle, setBattle] = useState<BattleResponse | null>(null);
   // 戰鬥結束或離開後回到哪裡：從技能工坊進來的戰鬥回到工坊（草稿存在瀏覽器，不會遺失）。
-  const [screen, setScreen] = useState<"start" | "workshop" | "run_new">("start");
+  const [screen, setScreen] = useState<"start" | "workshop" | "run_new" | "world">("start");
   /** 進行中的一輪；`auto` ＝ 存檔在戰鬥中時直接進入該場戰鬥。 */
   const [run, setRun] = useState<{ data: RunResponse; auto: boolean } | null>(null);
   const [resuming, setResuming] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 5D-R2：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；收到 401 就先顯示登入畫面。 */
+  const [needLogin, setNeedLogin] = useState(false);
+
+  // 大世界入口自己處理登入（WorldEntry 也聽這個事件），其他畫面在這裡導到登入畫面。
+  useEffect(() => {
+    if (screen === "world") return undefined;
+    const onExpired = () => setNeedLogin(true);
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, [screen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +61,8 @@ export function App() {
             if (!cancelled) setRun({ data, auto: true });
           },
           (e: unknown) => {
+            // 要登入（5D-R2）：先不忘掉這一輪，登入後重新整理還能接回來。
+            if (e instanceof ApiError && e.status === 401) return;
             // 讀不回來（存檔不見、內容檔已變更等）：忘掉這一輪，在首頁說明原因。
             writeCurrentRun(null);
             if (!cancelled) setNotice(e instanceof Error ? e.message : String(e));
@@ -105,6 +120,18 @@ export function App() {
       </div>
     );
   }
+  if (needLogin && screen !== "world") {
+    return (
+      <LoginScreen
+        heading="登入"
+        onLoggedIn={() => {
+          setNeedLogin(false);
+          window.location.reload(); // 重新讀取：上次的一輪與畫面照登入後的狀態接回來
+        }}
+        // 不給「返回首頁」：開發模式關時首頁（開戰表單）本身就要登入，回去會立刻再導回來
+      />
+    );
+  }
   if (run !== null) {
     return (
       <RunScreen
@@ -120,6 +147,9 @@ export function App() {
     if (screen === "run_new") {
       return <RunNewScreen onCreated={(data) => enterRun(data, false)} onHome={() => setScreen("start")} />;
     }
+    if (screen === "world") {
+      return <WorldEntry onHome={() => setScreen("start")} />;
+    }
     if (screen === "workshop") {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
     }
@@ -128,6 +158,7 @@ export function App() {
         onStart={setBattle}
         onWorkshop={() => setScreen("workshop")}
         onNewRun={() => setScreen("run_new")}
+        onWorld={() => setScreen("world")}
         onLoadRun={(data) => enterRun(data, true)}
         notice={notice}
         onCloseNotice={() => setNotice(null)}

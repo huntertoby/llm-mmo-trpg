@@ -37,7 +37,9 @@ def list_builds(request: Request) -> list[BuildSummary]:
             name_zh=b.name_zh,
             theme_zh=b.theme_zh,
             skills=tuple(b.hero.skills),
-            max_mana=b.hero.max_mana,
+            max_mana=library.ruleset.core.template_base_resource(
+                "mana", b.hero, library.weapons[b.hero.weapon].weapon_class
+            ),
             max_hp=library.ruleset.core.template_max_hp(b.hero),
             weapon=b.hero.weapon,
             weapon_name_zh=library.weapons[b.hero.weapon].name_zh,

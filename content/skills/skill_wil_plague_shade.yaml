@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶毒素；數值為初值，未經模擬
+id: skill_wil_plague_shade
+schema_version: 1
+name_zh: 疫影
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wil
+shape: {type: square3, range: 4}
+effects:
+  - {type: damage, dice: 1d10, element: shadow}
+  - {type: apply_status, status: poison, duration: 3}
+condition: null
+cost: {mana: 9, cooldown: 2}
+tags: [shadow, spell, curse, poison, area]
+narrative:
+  concept: 一團帶著瘟疫的暗影罩住敵群，散去之後，每個人身上都留下了病
+  cast_flavor: 黑影在敵群中翻滾，所到之處冒出一股腐敗的甜味
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

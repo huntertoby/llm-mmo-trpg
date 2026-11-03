@@ -19,7 +19,7 @@ effects:
     element: fire
     condition: {type: target_has_status, status: burning}
 condition: null
-cost: {mana: 8, cooldown: 2}
+cost: {mana: 7, cooldown: 2}
 tags: [fire, spell, finisher]
 narrative:
   concept: 引爆敵人身上尚未熄滅的火種

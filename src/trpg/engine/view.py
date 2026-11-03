@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.content.battle import DollLook, ReactionRule, SummonMode
+from trpg.content.battle import DollLook, HpBelowTrigger, ReactionRule, SummonMode
 from trpg.content.equipment import (
     AFFIX_CATEGORY_NUMBER,
     AFFIX_CATEGORY_ZH,
@@ -29,6 +29,7 @@ from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.bombs import bomb_spec
+from trpg.engine.boss_phases import next_phase
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
@@ -59,6 +60,7 @@ __all__ = [
     "AffixLineView",
     "AppearanceView",
     "BattleView",
+    "BossPhaseView",
     "ChargeView",
     "EquipmentSlotView",
     "GearSkillView",
@@ -136,6 +138,7 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "enemy_moves_in_range": "敵人在射程與視線內移動一步後",
     "ally_hit_in_range": "範圍內的友方被攻擊命中時（傷害之前）",
     "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
+    "kin_hit_in_range": "範圍內的同門被攻擊命中時（傷害之前）",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
 
@@ -274,6 +277,20 @@ class EquipmentSlotView(_ViewModel):
     appearance: AppearanceView = AppearanceView()
 
 
+class BossPhaseView(_ViewModel):
+    """Boss 目前的階段（Phase 5F-2，唯讀）：``index`` 1 起算、``total`` 階段數；下一個階段的名字與
+    HP 門檻（‰；最後一個階段時兩者為 ``None``）。"""
+
+    index: int
+    total: int
+    name_zh: str
+    next_name_zh: str | None = None
+    next_permille: int | None = None
+    """下一個階段的 HP 門檻（‰；不是 HP 觸發時為 ``None``）。"""
+    next_condition_zh: str | None = None
+    """下一個階段的觸發條件中文（Phase 5F-3，例「「源晶柱」倒下 3 名」）。"""
+
+
 class ChargeView(_ViewModel):
     """裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。
 
@@ -363,6 +380,10 @@ class UnitView(_ViewModel):
     """副手（圓盾、塔盾、法書、法器珠；Phase 3I-2）的中文名；沒有副手特性時為空字串。"""
     offhand_traits_zh: tuple[str, ...] = ()
     """副手特性的說明，每個特性一行（Phase 3I-2；取自副手資料，圓盾附目前的格擋強化）。"""
+    traits_zh: tuple[str, ...] = ()
+    """單位卡的「特性」欄（Phase 5A-M1b）：招牌被動、反應、開場狀態與精英詞綴，
+    每項一行。引擎投影不產生，
+    由 API（``trpg.narrative.unit_traits``）依單位範本填入；沒有時為空。"""
     ammo: int = 0
     """彈匣裡的子彈數（Phase 3-24a2；HUD 顯示用，沒有彈匣的武器為 0）。"""
     magazine: int = 0
@@ -445,6 +466,8 @@ class UnitView(_ViewModel):
     """冷卻中的形態與剩餘回合（Phase 3J-1a；依形態 ID）。"""
     race: RaceView | None = None
     """種族（Phase 3R-2）：種族技與環境被動；沒有種族為 ``None``。"""
+    boss_phase: BossPhaseView | None = None
+    """Boss 的階段（Phase 5F-2）；沒有階段為 ``None``。"""
 
 
 class TrapView(_ViewModel):
@@ -960,6 +983,27 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             if unit.team is team
             else ()
         ),
+        boss_phase=_boss_phase_view(unit),
+    )
+
+
+def _boss_phase_view(unit: UnitState) -> BossPhaseView | None:
+    """Boss 目前的階段與下一個門檻（Phase 5F-2）。"""
+    if not unit.phases:
+        return None
+    current = unit.phases[unit.phase_index]
+    following = next_phase(unit)
+    return BossPhaseView(
+        index=unit.phase_index + 1,
+        total=len(unit.phases),
+        name_zh=current.name_zh,
+        next_name_zh=None if following is None else following.name_zh,
+        next_permille=following.trigger.permille
+        if following is not None and isinstance(following.trigger, HpBelowTrigger)
+        else None,
+        next_condition_zh=None
+        if following is None or following.trigger is None
+        else following.trigger.condition_zh,
     )
 
 

@@ -116,13 +116,13 @@ def test_recipes_follow_the_tier_table_of_decision_72() -> None:
             assert recipe.species == "stance" or recipe.min_tier == 2, recipe.id
         if recipe.species in ("modifier", "dual"):
             assert recipe.min_tier == 3, recipe.id
-        if recipe.species == "summon":  # 3W-9：召喚 2 階；基本召喚物 1 階只給創角
-            assert recipe.min_tier == 2, recipe.id
+        if recipe.species == "summon":  # 3W-9：召喚 2 階；BAL-19c（#110）：基本召喚物 1 階
+            assert recipe.min_tier == (1 if recipe.keyword == "summon" else 2), recipe.id
             assert recipe.creation_tier == (1 if recipe.keyword == "summon" else None), recipe.id
     by_tier = {
         t: {r.species for k in WHITEBOARD_KINDS for r in RULES.recipes(k, t)} for t in (1, 2, 3)
     }
-    assert by_tier[1] == {"basic"}
+    assert by_tier[1] == {"basic", "summon"}
     created = {r.species for k in WHITEBOARD_KINDS for r in RULES.recipes(k, 1, creation=True)}
     assert created == {"basic", "summon"}
     assert {"trap", "stance", "displace"} <= by_tier[2] and not {"modifier", "dual"} & by_tier[2]

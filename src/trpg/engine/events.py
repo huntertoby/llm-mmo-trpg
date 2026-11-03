@@ -28,11 +28,13 @@ __all__ = [
     "BombCause",
     "BombExploded",
     "BombTicked",
+    "BossPhaseChanged",
     "ChainLimitReached",
     "ChargeActivated",
     "CheckRolled",
     "Collided",
     "CollisionObstacle",
+    "ConductBlocked",
     "DamageCause",
     "DamageDealt",
     "DamageRedirected",
@@ -56,6 +58,7 @@ __all__ = [
     "GearHpLost",
     "GearTriggered",
     "GuardSet",
+    "GuardsRetreated",
     "Healed",
     "InfusedSkillCast",
     "InfusionFizzled",
@@ -65,6 +68,7 @@ __all__ = [
     "MapEventTriggered",
     "MoveBlocked",
     "MoveMode",
+    "OathBroken",
     "ObjectAttacked",
     "ObjectCreated",
     "ObjectDamaged",
@@ -149,6 +153,7 @@ __all__ = [
     "UnitVaulted",
     "WallToppled",
     "WeaponReloaded",
+    "WeatherChanged",
     "ZoneCreated",
     "ZoneExpanded",
     "ZoneExpired",
@@ -263,10 +268,27 @@ class TurnEnded(EventBase):
 
 
 type EndReason = Literal[
-    "eliminate", "round_limit", "escaped", "escape_failed", "defended", "point_lost"
+    "eliminate",
+    "round_limit",
+    "escaped",
+    "escape_failed",
+    "defended",
+    "point_lost",
+    "leader_defeated",
 ]
 """``eliminate``：一方全滅；``escaped``：我方全員撤離；``escape_failed``：撤離超時；
-``defended``：守點成功；``point_lost``：守點被占領；``round_limit``：輪數上限（平手）。"""
+``defended``：守點成功；``point_lost``：守點被占領；``round_limit``：輪數上限（平手）；
+``leader_defeated``：Boss 戰頭目倒下、護衛撤退（我方勝，BAL-16a）。"""
+
+
+class GuardsRetreated(EventBase):
+    """Boss 戰頭目倒下（``leader_retreat``，BAL-16a／16b2，#86）：``leader_ids`` 的頭目全部倒下，
+    ``unit_ids`` 的其餘敵人撤退（不算倒下、不給擊殺、不掉落）；緊接著是 ``battle_ended``
+    （``leader_defeated``）。"""
+
+    type: Literal["guards_retreated"] = "guards_retreated"
+    leader_ids: tuple[UnitId, ...]
+    unit_ids: tuple[UnitId, ...]
 
 
 class BattleEnded(EventBase):
@@ -478,6 +500,15 @@ class AttackRolled(EventBase):
     """潛行偷襲的命中加值（Phase 3D-8d；攻擊者帶 ``concealed`` 狀態；0 為沒有）。"""
 
 
+class ConductBlocked(EventBase):
+    """雷電擴散被「每輪一次」擋下（BAL-13d，#78）：``unit_id`` 本輪已受過擴散傷害，這次的擴散不結算
+    （不改數值，只讓戰鬥紀錄看得到）。``source_id`` 是引發擴散的單位。"""
+
+    type: Literal["conduct_blocked"] = "conduct_blocked"
+    unit_id: UnitId
+    source_id: UnitId | None = None
+
+
 class DamageDealt(EventBase):
     type: Literal["damage_dealt"] = "damage_dealt"
     target_id: UnitId
@@ -498,6 +529,8 @@ class DamageDealt(EventBase):
     """其他倍率（格擋 500）；穿透後方折扣也包含在內。"""
     pierce_permille: int = 1000
     """穿透後方折扣（‰，已包含在 ``multiplier_permille`` 裡；Phase 3C-6a 供紀錄分開顯示）。"""
+    chain_permille: int = 1000
+    """連鎖衰減（‰，已包含在 ``multiplier_permille`` 裡，也乘在 ``base_amount`` 上；BAL-13c）。"""
     base_amount: int | None = None
     """套用目標自身的元素修正與格擋等倍率 **之前** 的傷害（已含暴擊骰與天氣）。
 
@@ -508,10 +541,18 @@ class DamageDealt(EventBase):
     × 目標的 ``damage_taken_permille``（易傷、護衛，骰值傷害）。"""
     absorbed: int = 0
     """被護盾吸收的點數（Phase 2D-1）。``amount`` 是所有倍率之後、護盾之前的傷害；實際扣血為
-    ``amount − absorbed − redirected``（即 ``hp_before − hp_after``，致命以上的過量不算在內）。"""
+    ``amount − absorbed − redirected − shared``（即 ``hp_before − hp_after``，致命以上的過量
+    不算在內）。"""
     redirected: int = 0
     """轉給連結者（``redirect_damage`` 的狀態，Phase 3C-4b）的點數；轉移本身是緊接著的
     ``damage_redirected`` 事件。"""
+    shared: int = 0
+    """分給同門（``share_damage`` 的狀態，Phase 5A-M2「連心」）的總點數；實際扣血為
+    ``amount − absorbed − redirected − shared``。每名同門各一個緊接著的 ``damage_redirected``。"""
+    formation_permille: int = 1000
+    """攻擊者的陣法倍率（‰，Phase 5A-M2「劍陣」；已包含在 ``status_ppm`` 裡，供紀錄分開顯示）。"""
+    ward_permille: int = 1000
+    """目標受到的護陣倍率（‰，Phase 5A-M2b；已包含在 ``status_ppm`` 裡，供紀錄分開顯示）。"""
     exploded: int = 0
     """爆骰（Phase 3D-7b）多擲的骰子數（``rolls`` 已包含它們）。"""
     flat: int = 0
@@ -533,7 +574,7 @@ class Healed(EventBase):
     hp_before: int
     hp_after: int
     received_permille: int = 1000
-    """目標的狀態治療倍率（‰，中毒 500）。"""
+    """目標受到的治療倍率（‰）：狀態（中毒 500）× 站在水上（``wet_heal_permille``，BAL-16b）。"""
     cause: Literal["heal", "lifesteal"] = "heal"
     """``lifesteal``：吸血（Phase 3D-8a），施放者回復自己造成傷害的一部分。"""
 
@@ -1031,14 +1072,15 @@ class FollowupCharged(EventBase):
 
 class FollowupCancelled(EventBase):
     """延遲段（Phase 3F-4b）取消：``downed`` 施放者倒下、``controlled`` 被暈眩或冰凍
-    （``skip_turn`` 的狀態）、``expired`` 被攻擊才釋放的延遲段到下回合開始都沒被攻擊、
+    （``skip_turn`` 的狀態）、``silenced`` 法術型蓄力被沉默打斷（Phase 5A-M1b）、
+    ``expired`` 被攻擊才釋放的延遲段到下回合開始都沒被攻擊、
     ``replaced`` 施放了另一個延遲段、``form_left`` 蓄力吐息的形態解除了（Phase 3J-2）。"""
 
     type: Literal["followup_cancelled"] = "followup_cancelled"
     unit_id: UnitId
     skill_id: str
     name_zh: str
-    reason: Literal["downed", "controlled", "expired", "replaced", "form_left"]
+    reason: Literal["downed", "controlled", "silenced", "expired", "replaced", "form_left"]
 
 
 class SkillTriggered(EventBase):
@@ -1260,7 +1302,9 @@ class DeathCheated(EventBase):
 
 
 class DamageRedirected(EventBase):
-    """``redirect_damage`` 的連結：``from_id`` 受到的傷害有 ``amount`` 點轉給 ``to_id``（施放者）。
+    """``redirect_damage`` 的連結：``from_id`` 受到的傷害有 ``amount`` 點轉給 ``to_id``（施放者）；
+    或分傷（``share_damage``，Phase 5A-M2「連心」）：``from_id`` 的傷害分 ``amount`` 點給同門
+    ``to_id``。
     ``to_id`` 直接扣 HP（不經護盾、抗性與元素修正）；免死狀態照常生效。"""
 
     type: Literal["damage_redirected"] = "damage_redirected"
@@ -1838,6 +1882,54 @@ class RuleChangeTriggered(EventBase):
     """``element_heals_allies``：被轉為治療的原本傷害。"""
 
 
+class OathBroken(EventBase):
+    """違反誓約（Phase 5C-3，06 6.26）：``at_end`` 為 ``False``（戰鬥中）時之後移除加成、施加破誓；
+    ``True`` 時是戰鬥結束時判定「每場至少……」沒達到（沒有效果）。``check`` 是判定種類。"""
+
+    type: Literal["oath_broken"] = "oath_broken"
+    unit_id: UnitId
+    template: str
+    check: str
+    at_end: bool = False
+
+
+class BossPhaseChanged(EventBase):
+    """Boss 進入新階段（Phase 5F-2，:mod:`trpg.engine.boss_phases`）：``phase`` 是 1 起算的新階段
+    序號（開場階段為 1，所以第一次轉換是 2）；``trigger``／``permille``／``condition_zh`` 是這個
+    階段的觸發條件；``hp``／``max_hp`` 是觸發當下。之後依序是移除狀態、換技能組與行為模式、
+    施加狀態、改天氣、改格子、召喚的事件。"""
+
+    type: Literal["boss_phase_changed"] = "boss_phase_changed"
+    unit_id: UnitId
+    phase: int
+    total: int
+    phase_id: str
+    name_zh: str
+    text_zh: str | None = None
+    trigger: Literal["hp_below", "tag_down", "round_at"] = "hp_below"
+    """觸發種類（Phase 5F-3 起）。"""
+    permille: int | None = None
+    """``hp_below`` 的 HP 門檻（‰）；其他種類為 ``None``。"""
+    condition_zh: str = ""
+    """觸發條件的中文（例「HP 60% 以下」「「源晶柱」倒下 3 名」「第 15 輪起」）。"""
+    hp: int
+    max_hp: int
+    skills: tuple[str, ...] | None = None
+    """換成的技能組（``None``＝不變）。"""
+
+
+class WeatherChanged(EventBase):
+    """戰鬥中天氣改變（Phase 5F-2：Boss 階段）。``before``／``after`` 是天氣 ID（``None``＝
+    晴朗）。"""
+
+    type: Literal["weather_changed"] = "weather_changed"
+    before: str | None
+    after: str | None
+    after_name_zh: str
+    cause: Literal["boss_phase"] = "boss_phase"
+    source_id: UnitId | None = None
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -1847,6 +1939,7 @@ type Event = Annotated[
     | RoundEnded
     | TurnStarted
     | TurnEnded
+    | GuardsRetreated
     | BattleEnded
     | UnitMoved
     | UnitStoodUp
@@ -1862,6 +1955,7 @@ type Event = Annotated[
     | EnteredDeadlyTerrain
     | AttackRolled
     | DamageDealt
+    | ConductBlocked
     | Healed
     | ShieldGained
     | ShieldAbsorbed
@@ -1961,7 +2055,10 @@ type Event = Annotated[
     | OverloadTriggered
     | GearHpLost
     | GearTriggered
-    | ChargeActivated,
+    | ChargeActivated
+    | OathBroken
+    | BossPhaseChanged
+    | WeatherChanged,
     Field(discriminator="type"),
 ]
 

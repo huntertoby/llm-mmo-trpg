@@ -1,0 +1,18 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
+# 山中修士・控制：「定身符」（定身）、「封符」（噤聲：沉默 1 回合；5A-4 追加 B 改成純控制，代決 5A4-14）。
+# 雷符只留給雷符師變體（world/enemies.yaml）。用法器但算遠程（ranged 標籤，代決 5A3-7）。
+id: sect_talisman_caster
+name_zh: 符籙師
+attributes: {str: 8, dex: 12, con: 10, int: 14, wis: 12, wil: 10}
+max_hp: 24
+speed: 5
+armor_bonus: 1
+weapon: totem_staff
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [humanoid, ranged, sect]
+skills: [skill_frost_shackle, skill_hush]
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {skin: '#f1c9a5', hair: long, hair_color: '#1c1c22', main_kind: talisman, gear: {body: {kind: robe, material: cloth, color: '#5f8f8a', trim: '#c0392b'}, waist: {kind: talismans, material: paper}}}

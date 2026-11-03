@@ -22,23 +22,42 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "primitive": {},
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
+        "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
+        "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
+        "array_ward": "只由陣眼石靈範本的 opening_statuses 開場掛上（5A-M2b），沒有技能施加",
+        "summit_array_ward": "只由雲頂觀陣眼石靈的 opening_statuses 開場掛上（5F-2），沒有技能施加",
+        "mist_return": "只由霧鎖真人第 3 階段的 add_statuses 掛上（5F-2），沒有技能施加",
+        "rift_resonance": "只由源晶柱的 opening_statuses 開場掛上（5F-3），沒有技能施加",
+        "crystal_surge": "只由源晶柱的階段 add_statuses 掛上（5F-3），沒有技能施加",
+        "crystal_surge_2": "只由源晶柱的階段 add_statuses 掛上（5F-3），沒有技能施加",
+        "rift_collapse": "只由碎晶之主第 4 階段的 add_statuses 掛上（5F-3），沒有技能施加",
+        "rift_channel": "只由碎晶之主的 opening_statuses 開場掛上、第 2 階段移除（5F-3b）",
+        "molten_burst": "只由熔岩獸群範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
+        "frost_ember_burst": "只由寒燼蜥範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
+        "heart_ember_burst": "只由殼縫餘燼蜥的 opening_statuses 開場掛上（5F-5b），沒有技能施加",
+        "molten_shell": "只由灰燼之心範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
+        "hard_shell": "只由詞綴硬殼的 add_opening_statuses 開場掛上（5F-5a），沒有技能施加",
+        "oath_bonus_easy": "只由誓約在開戰時掛上（5C-3，trpg.engine.oaths），沒有技能施加",
+        "oath_bonus_medium": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
+        "oath_bonus_hard": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
+        "oath_broken": "只在違反誓約時施加（5C-3），沒有技能施加",
+        "league_truce": "只由循環賽的 league.opening_statuses 開場掛上（5F-4b），沒有技能施加",
+        "heart_link": "只由詞綴連心的 add_opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "race_stonewall": "只由矮人種族技「穩若磐石」施加（3R-2），沒有技能施加",
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",
         "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
         "overdrawn": "只由 cost.overdraft 施加（3-50，竭力一擊），不是效果原語",
-        "stance_guard": "只由白板姿態配方施加（3W-4b，skill_composer.yaml），沒有手寫技能",
-        "stance_ironwall": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_flame": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_blaze": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_frost": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
         "stance_glacier": "只由白板姿態配方施加（3W-4b），沒有手寫技能",
+        "commanding": "只由號令型武器技白板配方施加（BAL-19f 追加），沒有手寫技能",
         "stance_bastion": "只由閃現的防守姿態轉型施加（3W-2b），沒有手寫技能",
         "shielded_thorns": "只由閃現的護盾類大變化施加（3W-2b，shield 的 status），沒有手寫技能",
         "shielded_mending": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
         "shielded_wet": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
         "shielded_marking": "只由閃現的護盾類大變化施加（3W-2b），沒有手寫技能",
-        "shielded_charged": "只由閃現的護盾類大變化施加（3W-2c），沒有手寫技能",
     },
     "stack": {},
 }
@@ -59,6 +78,9 @@ _UNCOVERED["status"].update(
         for level in range(1, 6)
     }
 )
+# BAL-19e：感知姿態「晨禱架勢」、意志姿態「幽影架勢」用元素姿態階梯的第 1 級（手寫技能）
+for _status in ("stance_holy_1", "stance_shadow_1"):
+    _UNCOVERED["status"].pop(_status)
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。
 # prone 由 knock_prone 原語產生、shielded 由 shield 原語產生、undying 由 cheat_death 原語產生
@@ -216,6 +238,20 @@ _SEEDS_54C = frozenset(
     }
 )
 
+# BAL-19（玩法決定 #110）：補內容的技能由關鍵字池給出（候選產生器），沒有放進任何 build 或單位；
+# 依 ID 前綴算進來（19a 感知組合主題法術 ``skill_wis_*``、19b 意志組合主題法術 ``skill_wil_*``、
+# 19c 召喚武器技 ``skill_sum_*``、19d 遠程武器技 ``skill_rng_*``、19e 反應 ``skill_rx_*``、姿態
+# ``skill_st_*``、19f 火杖召喚法術 ``skill_fsum_*``）。
+_BAL19_PREFIXES = (
+    "skill_wis_",
+    "skill_wil_",
+    "skill_sum_",
+    "skill_rng_",
+    "skill_rx_",
+    "skill_st_",
+    "skill_fsum_",
+)
+
 
 def _skills() -> list[SkillDef]:
     return list(library().skills.values())
@@ -225,8 +261,11 @@ def _equipped() -> set[str]:
     lib = library()
     ids = {s for b in lib.builds.builds for s in b.hero.skills}
     ids |= {s for unit in lib.units.values() for s in unit.skills}
+    # 5F-2：Boss 階段換上的技能組也算被裝備
+    ids |= {s for unit in lib.units.values() for p in unit.phases for s in p.skills or ()}
     ids |= _POOL_ONLY
     ids |= _SEEDS_54C
+    ids |= {s for s in lib.skills if s.startswith(_BAL19_PREFIXES)}
     # 3G-G3b：裝備的授予動作詞條授予的常駐技能也算被裝備
     ids |= {a.skill for a in lib.affixes.values() if a.category == "action"}
     # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備

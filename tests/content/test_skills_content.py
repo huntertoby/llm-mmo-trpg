@@ -88,7 +88,7 @@ def test_ashen_oath_example_matches_spec() -> None:
     )
     assert skill.shape.type == "cone" and skill.shape.size == 3
     assert [e.type for e in skill.effects] == ["damage", "create_surface"]
-    assert (skill.cost.mana, skill.cost.cooldown) == (12, 2)
+    assert skill.cost.cooldown == 2 and skill.cost.mana > 0  # 法力費用由平衡調整（BAL-12d），不寫死
     assert skill.provenance.origin == "builtin" and skill.provenance.bound
     assert not skill.provenance.tradeable
 
@@ -178,6 +178,23 @@ def test_shape_parameter_out_of_range_rejected_at_load(tmp_path: Path) -> None:
         tmp_path,
         "不接受參數 radius",
         _skill(id="skill_t_x", shape={"type": "cone", "size": 3, "radius": 1}),
+    )
+
+
+def test_cross_arm_is_a_content_param(tmp_path: Path) -> None:
+    """5F-2b：十字的臂長 ``arm`` 是 ``content_params``（驗證器認得、範圍 1–2）；其他形狀不接受，
+    生成器看的 ``params`` 裡沒有它。"""
+    cross = library().ruleset.shape_def("cross")
+    assert "arm" not in cross.params and cross.content_params["arm"].default == 1
+    _rejects(
+        tmp_path,
+        "cross 的 arm 必須在 1–2，收到 3",
+        _skill(id="skill_t_arm", shape={"type": "cross", "range": 0, "arm": 3}),
+    )
+    _rejects(
+        tmp_path,
+        "不接受參數 arm",
+        _skill(id="skill_t_arm2", shape={"type": "square3", "range": 0, "arm": 2}),
     )
 
 

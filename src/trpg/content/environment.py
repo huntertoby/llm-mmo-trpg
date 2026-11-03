@@ -339,7 +339,8 @@ class InteractionOutcome(ContentModel):
     - ``explode``：物件爆炸（參數見 ``objects.yaml`` 的 ``explosion``）。
     - ``conduct``：沿相連的 water 格（與帶 ``conductive`` 的物件）擴散，其上的其他單位（含友方與
       攻擊者自己，不含主要目標）受到「主要目標套用自身抗性與格擋之前的傷害」× ``damage_permille``
-      的同元素傷害（最低 ``min_damage``），再各自套用自己的元素修正。
+      的同元素傷害（最低 ``min_damage``），再各自套用自己的元素修正。同一輪內同一單位最多受一次
+      擴散傷害（不論幾次雷擊、幾個施放者；直接命中不算；BAL-13c，#78）。
     - ``push``：推動該格的物件或單位（方向與距離由觸及的效果提供）。
     - ``spread_surface``：沿觸及的方向，在下一格產生 ``surface``。
     - ``fill_chasm``：移除物件，該格地形改為 ``terrain``。
@@ -521,12 +522,16 @@ class ReactionDef(ContentModel):
 
     ``requires_status``（Phase 3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉之後移除該狀態
     （監視射擊 ``overwatch_shot`` 用 ``overwatch``）。
+
+    - ``shield_ally``（Phase 5A-M1，18.2.1「同門相護」）：``kin_hit_in_range`` 時，``range`` 格內
+      帶 ``kin_tag`` 標籤的友方（不含自己）被敵人的攻擊命中、傷害之前，給他一層護盾
+      （``shield_dice`` ＋ ``shield_flat``）；``blocked_by_silence`` 時持有者被沉默就不能用。
     """
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
-    effect: Literal["reduce_damage", "basic_attack", "redirect_damage"]
+    effect: Literal["reduce_damage", "basic_attack", "redirect_damage", "shield_ally"]
     events: tuple[
         Literal[
             "targeted_by_melee",
@@ -535,9 +540,17 @@ class ReactionDef(ContentModel):
             "enemy_moves_in_range",
             "ally_hit_in_range",
             "hit_by_melee",
+            "kin_hit_in_range",
         ],
         ...,
     ]
+    range: int | None = Field(default=None, ge=1, le=4)
+    """``shield_ally`` 的範圍（曼哈頓格數，Phase 5A-M1）。"""
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``shield_ally`` 的同門標籤（持有者與受擊者都要帶，Phase 5A-M1）。"""
+    shield_dice: Dice | None = None
+    shield_flat: int = Field(default=0, ge=0, le=20)
+    blocked_by_silence: bool = False
     stamina_cost: int = Field(default=0, ge=0)
     damage_reduction_permille: int = Field(default=0, ge=0, le=1000)
     requires_melee_weapon: bool = False
@@ -545,6 +558,19 @@ class ReactionDef(ContentModel):
     requires_counter_weapon: bool = False
     """Phase 3I-1：持有者手上的武器必須有 ``counter``（拳套的反擊）才能反應；持有這種武器的單位由
     引擎自動加上一條 ``auto`` 規則。"""
+
+    @model_validator(mode="after")
+    def _check_shield_ally(self) -> ReactionDef:
+        shielding = self.effect == "shield_ally"
+        if shielding != ("kin_hit_in_range" in self.events):
+            raise ValueError(f"反應 {self.id}：shield_ally 與事件 kin_hit_in_range 要一起使用")
+        if shielding and (
+            self.range is None
+            or self.kin_tag is None
+            or (self.shield_dice is None and self.shield_flat == 0)
+        ):
+            raise ValueError(f"反應 {self.id}：shield_ally 必須填 range、kin_tag 與護盾量")
+        return self
 
 
 class ReactionEventDef(ContentModel):
@@ -664,6 +690,9 @@ class AiWeights(ContentModel):
     ``approach`` 上；有集火指令時不套用；預設 0 ＝ 不套用，非 Boss 戰完全不變）。表格層級的
     ``weapon_ai`` 填入每個行為模式。"""
     multi_target: int = 0
+    formation: int = 0
+    """（Phase 5A-M2）帶陣法狀態的單位：位置價值 ＋ 這個值 ×（站在該格時的陣法倍率 − 1000）÷ 100
+    （偏好待在同門的範圍內，落單扣分）。表格層級的 ``formation_ai`` 填入每個行為模式。"""
     """（BAL-5 B1）範圍技每多打到一名敵人（預期，乘命中率）的加分（技能分數；敵人數 ≥ 2 才有）。表格
     層級的 ``skill_ai`` 填入每個行為模式。"""
     line_up: int = 0
@@ -748,6 +777,18 @@ class RewriteAiRules(ContentModel):
     - ``delayed_enemy_points``：延遲段（Phase 3F-4b）預計範圍內（以施放者目前的位置推算）每個
       敵人的價值（範圍內的友方扣同樣的分數）；``delayed_attacked_permille``：被攻擊才釋放的延遲段
       再乘這個千分比（可能沒人來打）。
+    - ``delayed_heal_points``（Phase 5A-M1）：第二段是治療的延遲段（九轉回天），預計範圍內每個
+      受傷的友方（含自己）的價值。
+    - ``priority_kill_points``（Phase 5A-M1，18.2.1「先打補師」）：擊倒帶「同門相護」反應
+      （``shield_ally``）的敵人額外的價值。
+    - ``interrupt_points``（Phase 5A-M1，05 5.7 強招預告）：擊倒、或使其跳過回合（暈眩、冰凍）
+      正在蓄力（``charging``）的敵人額外的價值。
+    - ``formation_break_points``（Phase 5A-M2，18.2.1「劍陣」）：動作讓對方陣法持有者的倍率總和
+      每下降 1000‰（擊倒、推開或拉走同門）的價值。
+    - ``ward_kill_points``（Phase 5A-M2b，18.2 陣眼石靈）：擊倒帶護陣（``ward``）的敵人額外的價值
+      （打碎陣眼讓同門失去減傷，AI 會優先打；初值，代決 5AM2b-2）。
+    - ``share_discount_permille``（Phase 5A-M2，詞綴「連心的」）：打在分傷持有者身上、被分給同門的
+      傷害打這個折扣（‰，扣在傷害收益上）——集火持有者的效益下降。
     """
 
     ap_points: int = Field(default=6, ge=0)
@@ -772,6 +813,12 @@ class RewriteAiRules(ContentModel):
     activation_battle_rounds: int = Field(default=4, ge=1)
     delayed_enemy_points: int = Field(default=5, ge=0)
     delayed_attacked_permille: int = Field(default=600, ge=0, le=1000)
+    delayed_heal_points: int = Field(default=5, ge=0)
+    priority_kill_points: int = Field(default=10, ge=0)
+    interrupt_points: int = Field(default=12, ge=0)
+    formation_break_points: int = Field(default=10, ge=0)
+    ward_kill_points: int = Field(default=12, ge=0)
+    share_discount_permille: int = Field(default=500, ge=0, le=1000)
 
 
 class GambleAiRules(ContentModel):
@@ -801,6 +848,25 @@ class SelfCostAiRules(ContentModel):
     overdraft_min_targets: int = Field(default=2, ge=1)
 
 
+class StanceAiRules(ContentModel):
+    """有代價的姿態的 AI 使用條件（BAL-13d；ai_profiles.yaml 的 ``stance:``；AI 數值初值）。
+
+    只套用在 ``risky_statuses`` 列出的姿態狀態（例：狂怒姿態，力量 +2 但受到的骰值傷害 ×1.2）：
+
+    - 進入：有敵人在「``enter_enemy_turns`` 回合可達範圍」內（曼哈頓距離 ≤ 回合數 × 速度 ＋ 普攻
+      射程），且不符合下面的取消條件，才考慮進入；
+    - 取消：HP 低於最大 HP 的 ``cancel_hp_below_permille``‰ 且 ``cancel_enemy_radius`` 格內有
+      敵人時，回合一開始就取消姿態（取消姿態不花 AP）。
+
+    其他姿態照舊（AI 不主動取消）。
+    """
+
+    risky_statuses: tuple[str, ...] = ()
+    enter_enemy_turns: int = Field(default=2, ge=1)
+    cancel_hp_below_permille: int = Field(default=400, ge=0, le=1000)
+    cancel_enemy_radius: int = Field(default=6, ge=1)
+
+
 class FormAiRules(ContentModel):
     """形態的 AI 數值（Phase 3J-1a，06 6.30；ai_profiles.yaml 的 ``form:``；初值未經模擬）。
 
@@ -824,10 +890,6 @@ class SummonAiRules(ContentModel):
       排序）。
     - ``totem_ally_points``：圖騰光環的價值：每個範圍內友方 × 狀態在 ``ally_status_values`` 的價值
       （沒列出的用這個值）× 持續輪數 × ``support`` 權重 × 折合（沿用 ``hit_permille``）。
-    - ``boss_blocker_points`` / ``boss_blocker_slack``（Phase 3-33b）：Boss 優先清擋路的召喚物——
-      召喚物與 Boss 的距離加上它與某個非召喚物敵人的距離，不超過 Boss 到該敵人的距離再加
-      ``boss_blocker_slack`` 時算「擋在路徑上」；Boss 的動作會打到這樣的召喚物時，每隻加
-      ``boss_blocker_points`` 分（× 命中折合）。0 ＝ 不加分。
     - 模式（Phase 3-33c）：``follow_radius`` 跟隨時待在召喚者幾格內（軟性：超出每格扣
       ``orders.hold_weight`` 分，仍會主動攻擊）；``guard_radius`` 守護我時只走到召喚者幾格內；
       ``guard_threat_range`` 守護我時，敵人與召喚者的距離不超過（敵人武器射程 ＋ 速度 ＋ 此值）
@@ -848,8 +910,6 @@ class SummonAiRules(ContentModel):
     hit_permille: int = Field(default=500, ge=0, le=1000)
     distance_cost_permille: int = Field(default=100, ge=0)
     totem_ally_points: int = Field(default=3, ge=0)
-    boss_blocker_points: int = Field(default=0, ge=0)
-    boss_blocker_slack: int = Field(default=1, ge=0, le=4)
     follow_radius: int = Field(default=3, ge=0, le=3)
     guard_radius: int = Field(default=2, ge=0, le=3)
     guard_threat_range: int = Field(default=1, ge=0, le=4)
@@ -952,6 +1012,7 @@ class AiProfile(ContentModel):
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    stance: StanceAiRules = Field(default_factory=StanceAiRules)
     terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
     """純地形技能的 AI 數值（Phase 3T-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     form: FormAiRules = Field(default_factory=FormAiRules)
@@ -983,6 +1044,16 @@ def _with_facing(weights: Any, facing: Any) -> Any:
     if not isinstance(weights, dict) or not isinstance(facing, dict):
         return weights
     return {**facing, **weights}
+
+
+def _merged_tables(shared: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    """行為模式自己列出的表格（例：``rewrite:``）與表格層級的同名表格逐欄合併（BAL-13d：
+    行為模式只寫要改的欄位，其餘沿用表格層級的值）。"""
+    return {
+        key: {**shared[key], **value}
+        for key, value in profile.items()
+        if isinstance(value, dict) and isinstance(shared.get(key), dict)
+    }
 
 
 class RunAiRules(ContentModel):
@@ -1078,6 +1149,7 @@ class AiProfileTable(ContentModel):
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    stance: StanceAiRules = Field(default_factory=StanceAiRules)
     form: FormAiRules = Field(default_factory=FormAiRules)
     terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
@@ -1094,6 +1166,9 @@ class AiProfileTable(ContentModel):
     weapon_ai: dict[str, int] = Field(default_factory=dict)
     """武器站位的位置權重（BAL-5 B19；``close_range``）：敵我同一套，填入每個行為模式的 ``weights``
     （行為模式自己列出的優先）。"""
+    formation_ai: dict[str, int] = Field(default_factory=dict)
+    """陣法站位的位置權重（Phase 5A-M2；``formation``）：敵我同一套，填入每個行為模式的
+    ``weights``（行為模式自己列出的優先）。"""
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
@@ -1118,13 +1193,14 @@ class AiProfileTable(ContentModel):
                 "gamble",
                 "rune",
                 "self_cost",
+                "stance",
                 "form",
                 "terrain",
             )
             if key in data
         }
         facing = data.get("facing")
-        for extra_key in ("objective_ai", "weapon_ai", "skill_ai"):
+        for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai"):
             extra = data.get(extra_key)
             if isinstance(extra, dict):
                 facing = {**(facing if isinstance(facing, dict) else {}), **extra}
@@ -1141,6 +1217,7 @@ class AiProfileTable(ContentModel):
             {
                 **trap_default,
                 **p,
+                **_merged_tables(trap_default, p),
                 "status_values": {**(shared or {}), **p.get("status_values", {})},
                 "ally_status_values": {**(ally_shared or {}), **p.get("ally_status_values", {})},
                 "self_status_values": {**(self_shared or {}), **p.get("self_status_values", {})},

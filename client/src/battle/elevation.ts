@@ -34,9 +34,26 @@ export function maxHeight(grid: HeightGrid): number {
   return m;
 }
 
-/** 畫布上方預留的高度（模型像素）＝ 最高格的抬高量。 */
+/**
+ * 單位頭頂超出所在格頂邊的最大高度（模型像素，48px 格；UI-T1）。紙娃娃腳底在格子中心下方 0.23 格，
+ * 尖帽頭頂約在腳底上方 70 虛擬像素 × (48/52 × 0.92) ≈ 59.4 → 超出格頂約 24.4；非人形召喚物畫布頂
+ * 58 × (48/52 × 1.15) ≈ 61.6 → 約 26.6。取 28，`elevation.test.ts` 以實際常數檢查。
+ */
+export const UNIT_HEADROOM = 28;
+
+/**
+ * 畫布上方預留的高度（模型像素）：最高格的抬高量，以及最上面幾排的單位頭頂（含所在格的抬高）
+ * 不被畫布上緣切掉（UI-T1：「人在最上面那行頭會被切」）。依地圖格子算（不看單位目前位置），
+ * 單位移動時畫布大小不跳。沒有 `tiles` 的格子（只算座標的純幾何）不留頭頂空間。
+ */
 export function topReserve(grid: HeightGrid): number {
-  return tileLift(maxHeight(grid));
+  let need = tileLift(maxHeight(grid));
+  const tiles = grid.tiles ?? [];
+  tiles.forEach((t, i) => {
+    const row = Math.floor(i / Math.max(1, grid.width));
+    need = Math.max(need, tileLift(t.height) + UNIT_HEADROOM - row * TILE_SIZE);
+  });
+  return need;
 }
 
 /** 畫布的模型像素大小（含上方預留）。 */

@@ -1,0 +1,326 @@
+# 雲嶺事件骨架（Phase 5B-1；docs/phases/Phase5計畫.md 8.3）。schema：src/trpg/content/world_events.py。
+# 來源：docs/design/18-雲嶺內容.md 18.4（18 個骨架；#85、#89；#111 玩法 PM 代決、待使用者確認）。
+# 欄位對照 18.4：who／want／obstacle／stakes＝誰／想要什麼／阻礙／賭注；solutions＝可選解法
+# （combat 戰鬥、situation 情境判定〔attributes＝允許的屬性〕、parley 交涉、abandon 放棄、opportunity 機遇）；
+# threads＝事件結果可能留下的線頭（9.6.7 #6；線頭只能由事件結果產生，5B-2／5B-4）。
+# 開發 PM 自定（代決 5B1-1、5B1-5）：所有 ID；locations、day_phase、weather（18.4 沒寫出現地點，
+# 依 18.3「內容」欄與骨架文字推定）；線頭 scope 全部 personal；「雷雨」＝ rain ＋ night。
+# 屬性：str 力量、dex 敏捷、con 體質、int 智力、wis 感知、wil 意志。
+# 5B-4b（Phase5計畫 19.3、19.6、19.7、19.14）：戰鬥／交涉解法成功留下的線頭（threads；照同骨架情境判定成功時的線頭）、
+# 交涉付出的補給（cost_supplies；沒有金幣與道具，付錢、青竹節都用補給代替）、人情抵用（waive_thread）、線頭到期結局的
+# 旗標（on_expire_flag；遭遇表 variants 依它換陣容）、只能解鎖的骨架（unlock_only；信賴的祕密解鎖）。
+# 城鎮是安全區（玩法 PM 定）：有戰鬥解法的骨架不能出現在城鎮（載入檢查）；霧渡鎮只有骨架 16、22。
+# 5B-4c（Phase5計畫 21.4～21.7）：戰鬥解法的勝利條件（objective：escape 撤離、defend 守點）、機遇的結算、只出一次的骨架
+# （once）、世界級線頭的到期結局（on_expire_flag＋on_expire_seconds：限時的世界旗標）。
+region: cloud_ridge
+skeletons:
+  - id: wounded_peddler
+    number: 1
+    who_zh: 受傷的行商
+    want_zh: 回霧渡鎮
+    obstacle_zh: 霧狼群
+    stakes_zh: 他的貨與命
+    locations: [ferry_steps, bamboo_path]
+    solutions:
+      - {kind: combat, threads: [peddler_owes_you, wolves_driven_down]}
+      - {kind: situation, attributes: [wis], note_zh: 找安全路}
+      - {kind: abandon}
+    threads:
+      - {id: peddler_owes_you, text_zh: 商人欠你人情, aliases_zh: [欠你人情, 欠我人情, 行商的人情]}
+      - {id: wolves_driven_down, text_zh: 狼群是被趕下山的, aliases_zh: [趕下山]}
+  - id: lost_acolyte
+    number: 2
+    who_zh: 迷路的道童
+    want_zh: 回青霧觀
+    obstacle_zh: 霧太濃
+    stakes_zh: 修士的好感度
+    locations: [rain_terraces, old_pine_altar]
+    npcs: [acolyte_xiaolian]
+    solutions:
+      - {kind: situation, attributes: [wis, int], note_zh: 認路}
+      - {kind: combat, note_zh: 帶他走（護送戰）, objective: escape, threads: [temple_quarrel]}  # 5B-4c：撤離
+    threads:
+      - {id: temple_quarrel, text_zh: 道童提到觀裡在吵架, npc: acolyte_xiaolian, aliases_zh: [吵架]}
+  - id: gang_toll
+    number: 3
+    who_zh: 斷崖幫哨兵
+    want_zh: 收過路費
+    obstacle_zh: 你
+    stakes_zh: 金幣
+    locations: [rain_terraces, cliff_gang_fort]
+    follows: [wolves_driven_down]
+    solutions:
+      - {kind: combat, threads: [scarface_grudge]}
+      - {kind: situation, attributes: [wil], note_zh: 威嚇}
+      - {kind: parley, note_zh: 付錢, cost_supplies: 1}
+    threads:
+      - id: scarface_grudge
+        aliases_zh: [二當家, 記恨]
+        text_zh: 二當家記恨你
+        npc: scarface
+        on_expire_zh: 二當家坐大，變成精英懸賞
+        on_expire_flag: scarface_rises
+  - id: pine_elder_go
+    number: 4
+    who_zh: 古松下的老人
+    want_zh: 有人陪他下一盤棋
+    obstacle_zh: 他說話打啞謎
+    stakes_zh: 一條傳聞
+    locations: [old_pine_altar]
+    solutions:
+      - {kind: situation, attributes: [int], note_zh: 下棋}
+      - {kind: situation, attributes: [wil], note_zh: 耐心}
+    threads:
+      - {id: storm_night_fog, text_zh: 雷雨夜的霧最濃（隱藏配方提示）, aliases_zh: [雷雨夜]}
+  - id: cliff_lingzhi
+    number: 5
+    who_zh: 煉丹師
+    want_zh: 採到崖上的靈芝
+    obstacle_zh: 峭壁
+    stakes_zh: 丹藥（補給）
+    locations: [herb_valley]
+    solutions:
+      - {kind: situation, attributes: [str, dex], note_zh: 攀爬}
+      - {kind: abandon}
+    threads:
+      - {id: alchemist_owes_you, text_zh: 煉丹師欠你人情, aliases_zh: [煉丹師]}
+  - id: monks_dispute
+    number: 6
+    who_zh: 兩名修士
+    want_zh: 爭論要不要把源晶交給官府
+    obstacle_zh: 彼此
+    stakes_zh: 修士內部的分裂
+    locations: [mist_temple_gate]
+    follows: [temple_quarrel, temple_pass, ferryman_daughter]
+    npcs: [acolyte_xiaolian]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 說服一方}
+      - {kind: situation, attributes: [wis], note_zh: 看穿誰在說謊}
+    threads:
+      - id: temple_traitor
+        aliases_zh: [私通, 內奸]
+        text_zh: 觀內有人私通盜賊
+        on_expire_zh: 主線第 1 章出現叛徒戰
+        on_expire_flag: temple_traitor_strikes
+  - id: gang_deserter
+    number: 7
+    who_zh: 盜賊逃兵
+    want_zh: 脫離斷崖幫
+    obstacle_zh: 追兵
+    stakes_zh: 他的情報
+    locations: [cliff_gang_fort, herb_valley]
+    follows: [temple_traitor]
+    solutions:
+      - {kind: combat, note_zh: 擋追兵, objective: defend, threads: [gang_fort_secret_door]}  # 5B-4c：守點
+      - {kind: situation, attributes: [dex], note_zh: 帶他躲藏}
+    threads:
+      - {id: gang_fort_secret_door, text_zh: 斷崖幫寨的暗門（隱藏入口）, aliases_zh: [暗門]}
+  - id: possessed_hunter
+    number: 8
+    who_zh: 被霧魅附身的獵人
+    want_zh: 被救回來
+    obstacle_zh: 霧魅
+    stakes_zh: 獵人性命
+    locations: [crystal_rift, north_slope]
+    follows: [missing_went_to_rift]
+    solutions:
+      - {kind: combat, note_zh: 不殺獵人, objective: defend, threads: [wraiths_from_rift]}  # 5B-4c：引擎沒有保護目標，先用守點
+      - {kind: situation, attributes: [wil], note_zh: 喚醒}
+    threads:
+      - id: wraiths_from_rift
+        aliases_zh: [霧魅]
+        scope: world
+        text_zh: 霧魅從裂痕湧出
+        on_expire_zh: 之後 2 天雲嶺夜晚營地的遭遇多 1 名霧魅（全服）
+        on_expire_flag: wraiths_surge   # 5B-4c：遭遇表 surges 依它加人
+        on_expire_seconds: 172800       # 2 天（現實時間，同線頭到期）
+  - id: broken_ferry
+    number: 9
+    who_zh: 渡船夫
+    want_zh: 修好被砸的渡船
+    obstacle_zh: 缺材料
+    stakes_zh: 渡口通行
+    locations: [ferry_steps]
+    follows: [peddler_owes_you]
+    solutions:
+      - {kind: parley, note_zh: 給青竹節（可用人情代替）, cost_supplies: 2, waive_thread: peddler_owes_you, threads: [ferryman_daughter]}
+      - {kind: situation, attributes: [int], note_zh: 修理}
+    threads:
+      - {id: ferryman_daughter, text_zh: 渡船夫的女兒在觀裡, aliases_zh: [渡船夫的女兒, 船夫的女兒]}
+  - id: bear_den
+    number: 10
+    who_zh: 石背熊母子
+    want_zh: 守住巢穴
+    obstacle_zh: 你闖入
+    stakes_zh: 熊的去留
+    locations: [winter_lake]
+    follows: [wolves_driven_down]
+    solutions:
+      - {kind: combat, threads: [shards_under_den]}
+      - {kind: situation, attributes: [wis], note_zh: 悄悄退出}
+      - {kind: abandon}
+    threads:
+      - {id: shards_under_den, text_zh: 熊巢下有源晶碎片, aliases_zh: [熊巢下, 熊巢]}
+  - id: crane_envoy
+    number: 11
+    who_zh: 雲鶴使
+    want_zh: 確認你不是盜賊
+    obstacle_zh: 他在高處瞄準你
+    stakes_zh: 是否開戰
+    locations: [cloud_sea_bridge]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 說服}
+      - {kind: situation, attributes: [dex], note_zh: 躲到掩體}
+    threads:
+      - {id: temple_pass, text_zh: 青霧觀的通行令, aliases_zh: [通行令]}
+  - id: storm_altar
+    number: 12
+    who_zh: 雷雨中的古松祭壇
+    want_zh: （異象）
+    obstacle_zh: 雷擊
+    stakes_zh: 機遇
+    locations: [old_pine_altar]
+    follows: [storm_night_fog]
+    day_phase: night
+    weather: [rain]
+    # 5B-4e（18.7.6「5B-4d 代決」）：保底觸發（第 6 天起、不看天氣時段）時的專用旁白，晴天也通
+    guarantee_who_zh: 焦痕未冷的古松  # 5B-4f：保底觸發時事件卡的「誰」（玩法 PM 2026-11-03 代決）
+    guarantee_text_zh: 古松樹皮上的焦痕還在發燙。你伸手一碰，一道細細的電流竄過掌心——像是有什麼在等你。
+    solutions:
+      - {kind: opportunity, note_zh: 帶「帶電」技能靠近, requires_keyword: charged}  # 18.4 補充：裝備技能任一招帶「帶電」（5B-2）
+      - {kind: situation, attributes: [con], note_zh: 硬撐}
+  - id: tomb_sword
+    number: 13
+    who_zh: 劍冢的殘劍
+    want_zh: 被拔出
+    obstacle_zh: 劍陣殘留
+    stakes_zh: 一把劍的歸屬
+    locations: [sword_tomb]
+    solutions:
+      - {kind: situation, attributes: [str], note_zh: 拔劍}
+      - {kind: situation, attributes: [int], note_zh: 解陣}
+    threads:
+      - {id: swordsman_seeks_blade, text_zh: 霧中劍客在找這把劍, aliases_zh: [霧中劍客, 劍客]}
+  - id: shard_convoy
+    number: 14
+    who_zh: 盜賊押送隊
+    want_zh: 把源晶碎片運出山
+    obstacle_zh: 你
+    stakes_zh: 碎片
+    locations: [crystal_rift, sword_tomb]
+    follows: [scarface_grudge, temple_traitor, shards_under_den]
+    solutions:
+      - {kind: combat, note_zh: 搶下碎片帶到出口（撤離）, objective: escape, threads: [shards_to_ashen]}  # 5B-4c：撤離
+      - {kind: situation, attributes: [dex], note_zh: 偷走}
+    threads:
+      - id: shards_to_ashen
+        aliases_zh: [送往灰燼荒原, 運往荒原, 運到荒原]
+        scope: world
+        text_zh: 碎片被送往灰燼荒原（接主線第 2 章）
+        on_expire_zh: 灰燼之心第 1 階段護甲 +1（全服；荒原骨架 13 的個人攔截可抵銷）
+        on_expire_flag: ashen_heart_hardened   # 5B-4c：永久世界旗標；灰燼之心與荒原骨架 13 在 5F 接上
+  - id: poison_spring
+    number: 15
+    who_zh: 藥師谷的毒泉
+    want_zh: （遺跡）
+    obstacle_zh: 毒霧
+    stakes_zh: 通往丹爐洞
+    locations: [herb_valley]
+    follows: [alchemist_owes_you]
+    solutions:
+      - {kind: situation, attributes: [con], note_zh: 憋氣}
+      - {kind: situation, attributes: [int], note_zh: 配解藥}
+  - id: tavern_storyteller
+    number: 16
+    who_zh: 酒館的說書人
+    want_zh: 有人講一段新故事
+    obstacle_zh: ""
+    stakes_zh: 一條傳聞
+    locations: [mist_ferry]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 文字回答＋用心清單（#85）}
+    threads:
+      - {id: tavern_rumor, text_zh: 隨機傳聞（機遇或隱藏地點）}
+  - id: lantern_patrol
+    number: 17
+    who_zh: 夜裡的燈籠隊
+    want_zh: 找失蹤的鎮民
+    obstacle_zh: 霧與霧行者
+    stakes_zh: 鎮民性命
+    locations: [ferry_steps, bamboo_path]  # 玩法 PM 2026-11-03：城鎮是安全區，移到渡口石階與竹林小徑（夜晚）
+    follows: [wraiths_from_rift]
+    day_phase: night
+    solutions:
+      - {kind: combat, threads: [missing_went_to_rift]}
+      - {kind: situation, attributes: [wis], note_zh: 追蹤}
+    threads:
+      - {id: missing_went_to_rift, text_zh: 失蹤的人都去過裂痕, aliases_zh: [失蹤]}
+  - id: fox_traveler
+    number: 18
+    who_zh: 狐族旅人
+    want_zh: 換一點補給
+    obstacle_zh: 她不信任人類
+    stakes_zh: 狐族的好感度
+    locations: [north_slope, winter_lake]
+    solutions:
+      - {kind: parley, note_zh: 換補給, cost_supplies: 1, threads: [foxfire_guide]}
+      - {kind: situation, attributes: [wil], note_zh: 說服（狐族主角 +1，#89）}
+    threads:
+      - id: foxfire_guide
+        aliases_zh: [狐火]
+        text_zh: 狐火在霧裡指路
+        hints_location: crane_cliff
+  - id: ayue_request
+    number: 19
+    who_zh: 阿岳
+    want_zh: 一起打一頭山豹
+    obstacle_zh: 山豹躲在草叢
+    stakes_zh: 獵物（補給）
+    locations: [hunter_hut]
+    day_phase: day
+    npcs: [hunter_ayue]
+    follows: [peddler_owes_you]
+    solutions:
+      - {kind: combat, threads: [ayue_father_relic]}
+      - {kind: situation, attributes: [wis], note_zh: 追蹤}
+    threads:
+      - {id: ayue_father_relic, text_zh: 阿岳提起父親的遺物, npc: hunter_ayue, aliases_zh: [父親的遺物, 遺物]}
+  - id: runaway_furnace
+    number: 20
+    who_zh: 失控的丹爐
+    want_zh: （遺跡）
+    obstacle_zh: 毒霧爆發
+    stakes_zh: 丹砂
+    locations: [elixir_cave]
+    solutions:
+      - {kind: situation, attributes: [con], note_zh: 耐力（憋氣）}
+      - {kind: situation, attributes: [int], note_zh: 學識（關火）}
+  - id: frost_chime_riddle
+    number: 21
+    who_zh: 白狐霜音
+    want_zh: 有人答出她的謎
+    obstacle_zh: 她只用問句說話
+    stakes_zh: 一條線索
+    locations: [crane_cliff]
+    npcs: [frost_chime]
+    follows: [foxfire_guide, ayue_father_relic]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 異象}
+      - {kind: situation, attributes: [int], note_zh: 學識}
+    threads:
+      - {id: frost_chime_we, text_zh: 霜音說裂痕裡有「我們」（接主線第 2～3 章碎晶之主的伏筆）, npc: frost_chime, aliases_zh: [裂痕裡有我們, 「我們」, 碎晶之主]}
+  # 18.7.7 信賴後的祕密事件（5B-4b）：渡婆婆到信賴、說出祕密時解鎖；事件結果才給線頭（#85）
+  - id: granny_past
+    number: 22
+    who_zh: 渡婆婆
+    want_zh: 有人替她了結斷崖幫的舊帳
+    obstacle_zh: 她不肯明說
+    stakes_zh: 暗門的位置
+    locations: [mist_ferry]
+    npcs: [granny_du]
+    unlock_only: true
+    once: true  # 5B-4c：每個角色只出現到解決為止（18.4 補充）
+    shared_threads: [gang_fort_secret_door]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 交涉}
+      - {kind: situation, attributes: [wis], note_zh: 察覺}

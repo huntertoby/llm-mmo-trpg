@@ -1,0 +1,26 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
+# 山中修士・雜兵：普攻；「清心」小治療；同門相護（5A-M1）。
+id: sect_acolyte
+name_zh: 青霧道童
+attributes: {str: 8, dex: 10, con: 10, int: 10, wis: 14, wil: 10}
+max_hp: 22
+speed: 5
+armor_bonus: 1
+weapon: totem_staff
+ai_profile: support
+resist: {}
+element_mods: {}
+tags: [humanoid, sect]
+skills: [skill_radiant_mend]
+reactions:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+  - reaction: kin_ward          # 同門相護（5A-M1）
+    when: {event: kin_hit_in_range}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+# 5A-ART5：杖頭綠光 #b6f0a0（樣張 enemies.html）、小一號 0.9
+doll: {skin: '#f1c9a5', hair: bun, hair_color: '#1c1c22', main_glow: '#b6f0a0', scale: 0.9, gear: {body: {kind: robe, material: cloth, color: '#8a9aa0', trim: '#dfe4e2'}}}

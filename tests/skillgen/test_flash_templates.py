@@ -38,8 +38,8 @@ from trpg.skillgen.flash_derive import (
     derive_skill,
 )
 from trpg.skillgen.flash_offer import FlashRequest, UsageSource, choose, make_offer
-from trpg.skillgen.flash_ops import FLASH_OPS
 from trpg.skillgen.flash_state import COMPLETE_SLOT, Variation, acquire
+from trpg.skillgen.flash_trade import MINOR_OPS
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import validate_skill
 
@@ -114,7 +114,7 @@ def _pool() -> tuple[SkillDef, ...]:
             "shape": ShapeSpec.model_validate({"type": "ground_tile", "range": 4}),
         }
     )
-    return (*plain, *stances, small, *_bal10b_fixtures())
+    return (*plain, *stances, small, *_bal10b_fixtures(), *_bal10e_fixtures())
 
 
 def _bal10b_fixtures() -> tuple[SkillDef, ...]:
@@ -149,6 +149,35 @@ def _bal10b_fixtures() -> tuple[SkillDef, ...]:
         update={"id": "skill_ember_cycle_paired_test", "modifiers": tuple(rules)}
     )
     return cooled, paired
+
+
+def _bal10e_fixtures() -> tuple[SkillDef, ...]:
+    """BAL-10e：收回家族要先有「可以收回的部分」——內容裡沒有的結構由閃現先做出來：多段同元素
+    傷害（連打）、一次召喚 2 隻（雙生）、觸發距離上限 2 的被動、兩條規則（多一條範圍 +1）的修正型
+    被動。"""
+    lib = library()
+    out: list[SkillDef] = []
+    steps = (
+        ("skill_fire_bolt", Variation(source="minor", template="multi_hit", category="combo")),
+        (
+            "skill_summon_spirit",
+            Variation(source="major", template="summon_count", category="deepen"),
+        ),
+        (
+            "skill_thorn_skin",
+            Variation(source="minor", template="trigger_range", category="trigger"),
+        ),
+        ("skill_war_avatar", Variation(source="minor", template="mod_range", category="modifier")),
+    )
+    for base, variation in steps:
+        major = variation.source == "major"  # 雙生是第 3 次的大變化（3 階做不出來，先在 2 階做）
+        skill = at_tier(lib.skills[base], TIER - 1 if major else TIER)
+        bonus = 3 * BONUS if major else BONUS
+        done = apply_variation(lib, skill, variation, bonus=bonus, rng=Rng(SEED))
+        assert done is not None, (base, variation.template)
+        renamed = {"id": f"{base}_bal10e_test", "budget_bonus_permille": None}
+        out.append(done.model_copy(update=renamed))
+    return tuple(out)
 
 
 @cache
@@ -186,7 +215,7 @@ def test_the_thirteen_families_are_all_in_the_data_and_registered() -> None:
     assert ops >= FAMILIES, FAMILIES - ops
     assert ops >= TRIGGER_OPS
     assert ops >= MODIFIER_OPS
-    assert ops <= set(FLASH_OPS), ops - set(FLASH_OPS)
+    assert ops <= set(MINOR_OPS), ops - set(MINOR_OPS)
 
 
 @pytest.mark.parametrize("template_id", _minor_ids())
@@ -508,6 +537,10 @@ ENGINE_TEMPLATES = [
     "cost_charge",
     "cost_light",
     "dual_scaling",
+    "converge_single",
+    "converge_step",
+    "refine",
+    "refine_merge",
 ]
 
 

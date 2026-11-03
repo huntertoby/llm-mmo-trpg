@@ -43,6 +43,8 @@
 ``mod_cooldown``   命中後冷卻 −1 → −2（修正型被動，BAL-10b）
 ``mod_cost``       代價減輕（修正型被動：負的幅度減輕一格，不讓代價消失，BAL-10b／10c）
 ``stance_enter_light``  進入代價 −1（姿態：進入時的冷卻、法力、耐力 −1，維持費不動，BAL-10b／10c）
+``stance_enter_heavy``  進入代價 +1（姿態：進入時的法力或耐力 +1、本體提高一級，BAL-19e）
+``self_rider``     附帶護身（姿態進入時、反應觸發時多一個作用於自己的效果，BAL-19e）
 =================  ============================================================
 
 輔助類（6.34.4）沒有獨立的改法：效果 + 用 ``potency``、範圍 +1 用 ``area``、附帶關鍵字用
@@ -57,8 +59,14 @@ from typing import Any
 
 from trpg.content.flash_templates import FlashTemplate
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import EffectSpec, SkillDef
-from trpg.content.skills.constants import ENTER_FORM, FOLLOWUP_FORBIDDEN, MAX_EFFECTS
+from trpg.content.skills import EffectSpec, SkillDef, skill_elements
+from trpg.content.skills.constants import (
+    ENTER_FORM,
+    FLAT_BONUS_EFFECTS,
+    FOLLOWUP_FORBIDDEN,
+    MAX_EFFECTS,
+)
+from trpg.content.skills.effects import composition_rules
 from trpg.engine.shape_growth import grow_shape
 from trpg.shared.types import Element
 from trpg.skillgen.composer_parts import Knob, dice_ladder
@@ -69,7 +77,9 @@ from trpg.skillgen.usage import SkillUsage
 __all__ = [
     "FIXED_FIRST_OPS",
     "FLASH_OPS",
+    "RECLAIM_MOD_OP",
     "STRICT_OPS",
+    "SUMMON_HP_STEPS",
     "Draft",
     "FlashOp",
     "base_draft",
@@ -154,14 +164,56 @@ def _new_damage(skill: SkillDef, source: dict[str, Any], element: str | None) ->
 def _op_area(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """範圍 +delta：形狀第一個可增加的大小參數（``size``／``radius``），不超過形狀上限（6.6）。"""
+    """範圍 +delta：形狀第一個可增加的大小參數（``size``／``radius``），不超過形狀上限（6.6）。
+
+    BAL-12b 定（只限 ``delta`` 1）：陷阱改觸發範圍（``rules.area_trap_shapes`` 的下一個）；形狀沒有
+    大小參數的地面格換成 ``rules.area_tile_shapes`` 的下一個（指定格 → 十字）。"""
+    if (
+        skill.kind == "active"
+        and skill.followup is None
+        and skill.trap is not None
+        and template.delta == 1
+    ):
+        return _trap_area(skill, library.flash.rules.area_trap_shapes)
     if not _reshapable(skill):
         return []
     grown = grow_shape(library.ruleset, skill.shape, template.delta or 0)
     if grown == skill.shape:
-        return []
+        return _tile_area(skill, library) if template.delta == 1 else []
     base, effects = base_draft(skill)
     base["shape"] = grown.model_dump(mode="json", exclude_none=True)
+    return [(base, effects)]
+
+
+def _next_in(ladder: Sequence[str], current: str) -> str | None:
+    if current not in ladder or current == ladder[-1]:
+        return None
+    return ladder[ladder.index(current) + 1]
+
+
+def _trap_area(skill: SkillDef, ladder: Sequence[str]) -> list[Draft]:
+    """陷阱觸發範圍升一級（BAL-12b 定）。"""
+    assert skill.trap is not None
+    shape = _next_in(ladder, skill.trap.shape)
+    if shape is None:
+        return []
+    base, effects = base_draft(skill)
+    base["trap"] = {**base["trap"], "shape": shape}
+    return [(base, effects)]
+
+
+def _tile_area(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """地面格半徑 +1（BAL-12b 定）：換成 ``area_tile_shapes`` 的下一個形狀，射程夾在新形狀的範圍內
+    （同升階重配的換形狀）；效果允不允許新形狀交給驗證器。"""
+    shape_id = _next_in(library.flash.rules.area_tile_shapes, skill.shape.type)
+    if shape_id is None:
+        return []
+    spec: dict[str, Any] = {"type": shape_id}
+    limits = library.ruleset.shape_def(shape_id).params.get("range")
+    if limits is not None and isinstance(skill.shape.range, int):
+        spec["range"] = min(max(skill.shape.range, limits.min), limits.max)
+    base, effects = base_draft(skill)
+    base["shape"] = spec
     return [(base, effects)]
 
 
@@ -244,7 +296,7 @@ def cell_count(shape: Any, library: ContentLibrary) -> int | None:
     if definition is None or definition.cell_count is None:
         return None
     try:
-        return definition.cell_count.count_for(shape.param_values())
+        return definition.cell_count.count_for(definition.with_defaults(shape.param_values()))
     except ValueError:
         return None
 
@@ -373,7 +425,20 @@ def _followup_knob(effect: dict[str, Any], library: ContentLibrary) -> tuple[str
     """接續段傷害的旋鈕欄位與階梯（骰子或武器倍率）。"""
     if effect.get("dice") is not None:
         return "dice", dice_ladder(library.composer.dice)
-    return "multiplier_permille", multiplier_ladder(library)
+    return "multiplier_permille", _followup_multipliers(library)
+
+
+_FINE_MULTIPLIER_TOP = 3000
+"""接續段細階梯只細到這裡（‰；以上照原階梯）。"""
+
+
+def _followup_multipliers(library: ContentLibrary) -> tuple[int, ...]:
+    """接續段強化類的武器倍率階梯：原階梯＋``rules.followup_multiplier_step`` 的細格（BAL-11b）。"""
+    ladder = multiplier_ladder(library)
+    step = library.flash.rules.followup_multiplier_step
+    if step is None:
+        return ladder
+    return tuple(sorted({*ladder, *range(ladder[0], _FINE_MULTIPLIER_TOP, step)}))
 
 
 def _op_followup_area(
@@ -499,18 +564,47 @@ def _keyword_op(op: str, side: str) -> FlashOp:
             or keyword is None
             or (template.keywords and keyword not in template.keywords)
             or skill.kind not in ("active", "passive", "reaction")
+            or _graft_blocked(skill)
         ):
             return []
         drafts = template_drafts(evolution, skill, keyword, SkillUsage(), library)
         out: list[Draft] = []
         for base, effects in drafts:
             _inherit_affects(skill, effects)
+            if skill.category == "spell":
+                _spell_graft_damage(skill, effects, library)
             out.append((base, effects))
             if side == "uses" and skill.kind == "active" and skill.skeleton != "combo":
                 out.append(({**base, "skeleton": "combo"}, [dict(e) for e in effects]))
         return out
 
     return run
+
+
+def _graft_blocked(skill: SkillDef) -> bool:
+    """BAL-11b：技能裡有「必須是唯一的效果」或「其他效果只能作用在施放者」的原語（召喚、復活、
+    規則改變、持續區域……；``skill_primitives.yaml`` 的組合規則）時，嫁接第二個關鍵字一定不合法，
+    不出這類模板。"""
+    rules = composition_rules()
+    return any(
+        (rule := rules.get(e.type)) is not None
+        and (rule.sole_effect or rule.others_affect is not None)
+        for e in skill.effects
+    )
+
+
+def _spell_graft_damage(
+    skill: SkillDef, effects: list[dict[str, Any]], library: ContentLibrary
+) -> None:
+    """BAL-11b：法術技嫁接的傷害要有骰子與元素（schema 規定）。元素沿用這招的傷害元素、再來技能
+    元素，都沒有時用物理；骰子先給最小一格（由預算器重調）。"""
+    element = _damage_element(skill) or next(
+        iter(sorted(e.value for e in skill_elements(skill))), Element.PHYSICAL.value
+    )
+    for effect in effects[len(skill.effects) :]:
+        if effect["type"] == "damage":
+            effect.setdefault("element", element)
+            effect.setdefault("dice", dice_ladder(library.composer.dice)[0])
 
 
 def _inherit_affects(skill: SkillDef, effects: list[dict[str, Any]]) -> None:
@@ -531,14 +625,35 @@ def _inherit_affects(skill: SkillDef, effects: list[dict[str, Any]]) -> None:
 def _op_extend(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """延長狀態、表面、區域 1 回合（沿用「恆久」的草稿；硬控狀態不延長）。"""
+    """延長狀態、表面、區域 1 回合（沿用「恆久」的草稿；硬控狀態不延長）。
+
+    BAL-12b 定：這些都延長不了時，改延長 ``rules.extend_effects`` 列的效果（召喚物存活、障礙、
+    刻印）與陷阱持續回合（``rules.extend_trap``），各 +1 回合。"""
     evolution = evolution_template(library, "extend")
     if evolution is None or skill.kind not in ("active", "passive", "reaction"):
         return []
-    return template_drafts(evolution, skill, None, SkillUsage(), library)
+    drafts = template_drafts(evolution, skill, None, SkillUsage(), library)
+    return drafts or _extend_wider(skill, library)
 
 
-_SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
+def _extend_wider(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """延長放寬的草稿（BAL-12b 定）：有回合數的召喚、障礙、刻印 +1，陷阱的 ``rounds`` +1；
+    參數上限交給驗證器（超過就不合法、不出）。沒有可延長的就不出。"""
+    rules = library.flash.rules
+    base, effects = base_draft(skill)
+    changed = False
+    for effect in effects:
+        if effect["type"] in rules.extend_effects and effect.get("duration"):
+            effect["duration"] += 1
+            changed = True
+    # 陷阱持續回合：只限觸發型（enter）；延遲型（delay）的 rounds 是引爆前的等待，加了反而變慢
+    if rules.extend_trap and skill.trap is not None and skill.trap.trigger == "enter":
+        base["trap"] = {**base["trap"], "rounds": skill.trap.rounds + 1}
+        changed = True
+    return [(base, effects)] if changed else []
+
+
+SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
 """召喚物最大 HP 加成（‰）的階梯：強度固定的召喚技能沒有旋鈕，依序試，第一個過預算窗與下限
 的是結果。"""
 
@@ -553,7 +668,7 @@ def _op_summon_toughen(
         return []
     current = skill.effects[index].max_hp_permille or 0
     drafts: list[Draft] = []
-    for step in _SUMMON_HP_STEPS:
+    for step in SUMMON_HP_STEPS:
         if step <= current:
             continue
         base, effects = base_draft(skill)
@@ -595,17 +710,39 @@ def _op_charge(
 
 
 def _op_light(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, template: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。"""
-    if skill.kind != "active" or (skill.ap_cost or 1) <= 1:
+    """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。
+
+    BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）−1，
+    威力照樣由預算器降低；每項最少留 1（只減不拿掉）。"""
+    if skill.kind != "active":
         return []
+    if (skill.ap_cost or 1) <= 1:
+        return _light_cost_drafts(skill, template.cost_fields)
     base, effects = base_draft(skill)
     base["ap_cost"] = (skill.ap_cost or 2) - 1
     cooldown = skill.cost.cooldown
     if cooldown is not None and cooldown > MAX_LIGHT_COOLDOWN:
         base["cost"] = {**base["cost"], "cooldown": MAX_LIGHT_COOLDOWN}
     return [(base, effects)]
+
+
+_LIGHT_COST_FIELDS = frozenset({"cooldown", "mana", "stamina"})
+"""AP 已是 1 時輕巧能減的代價（BAL-12b 定；AP、源力不在這裡）。"""
+
+
+def _light_cost_drafts(skill: SkillDef, fields: Sequence[str]) -> list[Draft]:
+    """``fields`` 依序各減 1 的草稿（每項最少留 1；沒有可減的就不出）。"""
+    drafts: list[Draft] = []
+    for field in fields:
+        current = getattr(skill.cost, field, None) if field in _LIGHT_COST_FIELDS else None
+        if not isinstance(current, int) or current - 1 < 1:
+            continue
+        base, effects = base_draft(skill)
+        base["cost"] = {**base["cost"], field: current - 1}
+        drafts.append((base, effects))
+    return drafts
 
 
 # ---------------------------------------------------------------------------
@@ -625,7 +762,10 @@ def _op_potency(
 def _op_trigger_range(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """觸發範圍 +delta（預設 1）：``trigger.max_distance`` 加 delta；沒有距離上限時看形狀的大小。"""
+    """觸發範圍 +delta（預設 1）：``trigger.max_distance`` 加 delta；沒有距離上限時看形狀的大小。
+
+    BAL-19e：反應技的單體形狀沒有大小可加，改加射程（固定射程，不超過形狀上限；武器射程不適用）——
+    反應的觸發者要在射程內才打得到（6.34.4「觸發範圍 +1」）。"""
     if skill.kind not in ("passive", "reaction"):
         return []
     step = template.delta or 1
@@ -634,12 +774,30 @@ def _op_trigger_range(
     if trigger is not None and trigger.max_distance is not None:
         base["trigger"] = {**base["trigger"], "max_distance": trigger.max_distance + step}
         return [(base, effects)]
+    if skill.kind == "reaction" and skill.shape.type == "single":
+        return _reaction_reach(skill, step, library)
     if skill.shape.type == "self":
         return []
     grown = grow_shape(library.ruleset, skill.shape, step)
     if grown == skill.shape:
         return []
     base["shape"] = grown.model_dump(mode="json", exclude_none=True)
+    return [(base, effects)]
+
+
+def _reaction_reach(skill: SkillDef, step: int, library: ContentLibrary) -> list[Draft]:
+    """反應技單體形狀的射程 +``step``（BAL-19e）：固定射程才加，不超過形狀上限。"""
+    shape = skill.shape
+    param = library.ruleset.shape_def(shape.type).params.get("range")
+    if param is None or not isinstance(shape.range, int) or shape.range < 1:
+        return []
+    value = min(shape.range + step, param.max)
+    if value == shape.range:
+        return []
+    base, effects = base_draft(skill)
+    base["shape"] = shape.model_copy(update={"range": value}).model_dump(
+        mode="json", exclude_none=True
+    )
     return [(base, effects)]
 
 
@@ -1054,6 +1212,78 @@ def _op_stance_enter_light(
     return drafts
 
 
+def _op_stance_enter_heavy(
+    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """沉勢（姿態，BAL-19e）：進入代價（``template.cost_fields`` 依序，法力、耐力）+1，姿態本體提高
+    一級（元素姿態換到較高的級別、其他姿態狀態的姿態幅度提高）；維持費不動（#67）。
+
+    ``stance_enter_light`` 的反向。變身姿態不出（BAL-10c：變身姿態只出修正類）；進入冷卻不算代價
+    （BAL-10c），模板不列。"""
+    family = _stance_family(skill, library)
+    if family not in ("status", "ladder"):
+        return []
+    drafts: list[Draft] = []
+    for field in template.cost_fields:
+        cost = _entry_cost(skill, field, 1)
+        if cost is None:
+            continue
+        for base, effects in _stronger_body(skill, library):
+            base["cost"] = cost
+            drafts.append((base, effects))
+    return drafts
+
+
+def _stronger_body(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """姿態本體往上一級的草稿（維持費不變）：元素姿態換到較高級別、其他姿態狀態的幅度提高。"""
+    if _stance_family(skill, library) == "status":
+        return _magnitude_drafts(skill, library, skill.stance_upkeep, down=False)
+    rung = _stance_rung(skill, library)
+    if rung is None:
+        return []
+    ladder, position, index = rung
+    return _stance_drafts(skill, ladder[position + 1 :], skill.stance_upkeep, ladder, index)
+
+
+def _weaker_body(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
+    """姿態本體往下一級的草稿（維持費不變；由近到遠）：附帶效果放不進預算時用。"""
+    if _stance_family(skill, library) == "status":
+        return _magnitude_drafts(skill, library, skill.stance_upkeep, down=True)
+    rung = _stance_rung(skill, library)
+    if rung is None:
+        return []
+    ladder, position, index = rung
+    return _stance_drafts(skill, ladder[:position][::-1], skill.stance_upkeep, ladder, index)
+
+
+def _op_self_rider(
+    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """附帶護身（BAL-19e）：多一個作用於自己的效果（``template.rider``：護盾、治療、回復資源、淨化）。
+
+    - 姿態（06 6.34.4 姿態的「修正」類）：進入姿態時生效。只給只有姿態本體一個效果的姿態（骨架的附帶
+      效果最多 1 個；變身姿態的 ``enter_form`` 必須是唯一效果，不出）。先試姿態本體不變（附帶的骰子
+      由預算器重調），放不進預算時再試本體降一級換附帶。
+    - 反應（「觸發」類的效果 +）：反應觸發時順便生效。只給只有一個效果、而且沒有同種效果的反應
+      （附帶效果最多 1 個；擋攻擊 ``intercept`` 的不出）；主要效果由預算器一起重調。
+    強度下限照 6.34.3（預算分數不低於閃現前）。"""
+    rider = template.rider
+    if rider is None or len(skill.effects) != 1:
+        return []
+    extra = rider.model_dump(mode="json", exclude_none=True)
+    base, effects = base_draft(skill)
+    if skill.kind == "reaction":
+        if skill.effects[0].type in (rider.type, "intercept"):
+            return []
+        return [(base, [*effects, extra])]
+    if _stance_family(skill, library) not in ("status", "ladder"):
+        return []
+    drafts: list[Draft] = [(base, [*effects, copy.deepcopy(extra)])]
+    for lowered, lowered_effects in _weaker_body(skill, library):
+        drafts.append((lowered, [*lowered_effects, copy.deepcopy(extra)]))
+    return drafts
+
+
 def _stance_family(skill: SkillDef, library: ContentLibrary) -> str | None:
     """姿態屬於哪一族（BAL-2b）：``ladder`` 元素姿態階梯、``form`` 變身姿態（BAL-2c）、``status``
     其他姿態狀態的姿態（白板姿態：狂怒、堅壁…）；不是姿態或做不了時 ``None``。BAL-10b：多效果姿態
@@ -1142,6 +1372,9 @@ FLASH_OPS: dict[str, FlashOp] = {
     "mod_cooldown": _op_mod_cooldown,
     "mod_cost": _op_mod_cost,
     "stance_enter_light": _op_stance_enter_light,
+    # BAL-19e
+    "stance_enter_heavy": _op_stance_enter_heavy,
+    "self_rider": _op_self_rider,
 }
 """小變化的改法登錄表（``op`` → 草稿）。資料裡 ``op`` 沒有登錄的模板不會出現
 （:func:`trpg.skillgen.flash_derive.unimplemented_ops` 列出）。"""
@@ -1181,6 +1414,31 @@ def tuning_extras(
     return [], []
 
 
+TRIGGER_FINE_OPS = frozenset({"potency"})
+"""用「觸發效果 +1 固定值」細旋鈕的改法（BAL-12b 定：被動、反應的「效果 +」）。"""
+
+
+def trigger_fine_knobs(
+    op: str, base: dict[str, Any], effects: list[dict[str, Any]], library: ContentLibrary
+) -> list[Knob]:
+    """被動、反應的「效果 +」（BAL-12b 定）：帶骰子的傷害（只限法術技）、治療、護盾的
+    ``flat_bonus``（無 → +1 … +``rules.trigger_flat_bonus``）；``index`` 指向 ``effects``。只在一般
+    重調失敗後才加（呼叫者決定）；``rules.trigger_flat_bonus`` 為 0、不是被動／反應時是空的。"""
+    top = library.flash.rules.trigger_flat_bonus
+    if op not in TRIGGER_FINE_OPS or not top or base.get("kind") not in ("passive", "reaction"):
+        return []
+    spell = base.get("category") == "spell"
+    values: tuple[int | None, ...] = (None, *range(1, top + 1))
+    return [
+        Knob(i, "flat_bonus", values)
+        for i, e in enumerate(effects)
+        if e["type"] in FLAT_BONUS_EFFECTS
+        and (spell or e["type"] != "damage")
+        and e.get("dice") is not None
+        and not e.get("flat_bonus")
+    ]
+
+
 def _from_current(values: tuple[Any, ...], current: Any, keep: bool) -> tuple[Any, ...]:
     """旋鈕階梯從目前的值開始（``keep`` 且目前的值在階梯上時）；否則整條階梯。"""
     if keep and current in values:
@@ -1190,7 +1448,11 @@ def _from_current(values: tuple[Any, ...], current: Any, keep: bool) -> tuple[An
 
 NEW_MOD_OPS = frozenset({"mod_duration", "mod_stack", "mod_cooldown", "mod_cost"})
 """BAL-10b 新增的修正模板。"""
-EXTENDED_MOD_OPS = NEW_MOD_OPS | {"mod_potency"}
+RECLAIM_MOD_OP = "reclaim_modifier"
+"""收回家族（BAL-10e 專注，:mod:`trpg.skillgen.flash_reclaim`）換修正幅度時用的旋鈕組：同
+:data:`NEW_MOD_OPS` 的細階梯與其他幅度（結構一變點數常跳太多，要能往下補）。"""
+FINE_MOD_OPS = NEW_MOD_OPS | {RECLAIM_MOD_OP}
+EXTENDED_MOD_OPS = FINE_MOD_OPS | {"mod_potency"}
 """會用 ``rules.modifier_knobs`` 幅度的修正模板（``mod_potency`` 只在沒有傷害、治療幅度時；
 BAL-10b）。"""
 
@@ -1208,10 +1470,13 @@ def _modifier_knobs(
       幅度時加，有的時候照舊。"""
     flash = library.flash.rules
     changes = [m["change"] for m in rules]
-    fine = op in NEW_MOD_OPS
+    fine = op in FINE_MOD_OPS
     ladder = tuple(range(flash.modifier_fine_step, 1001, flash.modifier_fine_step))
+    plain = MODIFIER_LADDER
+    if op == "mod_potency" and flash.modifier_potency_step is not None:  # BAL-11b：只在閃現強效
+        plain = tuple(range(flash.modifier_potency_step, 1001, flash.modifier_potency_step))
     knobs = [
-        Knob(i, name, ladder if fine else MODIFIER_LADDER)
+        Knob(i, name, ladder if fine else plain)
         for i, change in enumerate(changes)
         for name in _MAGNITUDES
         if (change.get(name) or 0) > 0

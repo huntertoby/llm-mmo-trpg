@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.7",
     "pyyaml>=6",
     "uvicorn>=0.54.0",
+    "discord-py>=2.7.1",
 ]
 
 [project.scripts]
@@ -110,6 +111,8 @@ timeout_method = "thread"
 # starlette 1.9 建議改用 httpx2；規格（Phase 3-2 4.1）指定 httpx，功能相同，只略過這則提示。
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+    # discord.py 2.7 的語音模組在 Python 3.12 匯入 audioop（3.13 起改用 audioop-lts）；Bot 不用語音。
+    "ignore:'audioop' is deprecated:DeprecationWarning",
 ]
 markers = [
     "llm: 需要真的本機模型（先用 F:\\WSL\\start.bat 啟動）；預設與 --full 都不跑，用 `-m llm` 手動執行",
@@ -134,10 +137,11 @@ forbidden_modules = [
     "trpg.sim",
     "trpg.skillgen",
     "trpg.cli",
+    "trpg.world",
 ]
 
 [[tool.importlinter.contracts]]
-name = "narrative 不得匯入 cli、api、roguelite、sim"
+name = "narrative 不得匯入 cli、api、roguelite、sim、world"
 type = "forbidden"
 source_modules = ["trpg.narrative"]
 forbidden_modules = [
@@ -145,6 +149,7 @@ forbidden_modules = [
     "trpg.api",
     "trpg.roguelite",
     "trpg.sim",
+    "trpg.world",
 ]
 
 [[tool.importlinter.contracts]]
@@ -191,4 +196,88 @@ forbidden_modules = [
     "trpg.roguelite",
     "trpg.api",
     "trpg.cli",
+    "trpg.world",
 ]
+
+[[tool.importlinter.contracts]]
+name = "world 不得匯入上層模組（Phase 5A-2）"
+type = "forbidden"
+source_modules = ["trpg.world"]
+forbidden_modules = [
+    "trpg.api",
+    "trpg.cli",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+]
+
+[[tool.importlinter.contracts]]
+name = "bot 只直接匯入 server 服務層與 shared（Phase 5E-2；5D-R2 起不匯入 api）"
+type = "forbidden"
+source_modules = ["trpg.bot"]
+forbidden_modules = [
+    "trpg.api",
+    "trpg.world",
+    "trpg.engine",
+    "trpg.roguelite",
+    "trpg.content",
+    "trpg.skillgen",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.cli",
+]
+# 服務層（trpg.server.accounts 等）自己用到 trpg.world.save 等不算；只限制 bot 的直接匯入。
+# （bot 已不再經 api；這裡的間接匯入只剩 server → world／content／roguelite。）
+allow_indirect_imports = "True"
+
+[[tool.importlinter.contracts]]
+name = "server 不得匯入 api、cli、bot、sim、llm、narrative（Phase 5D-R2）"
+type = "forbidden"
+source_modules = ["trpg.server"]
+forbidden_modules = [
+    "trpg.api",
+    "trpg.cli",
+    "trpg.bot",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+]
+
+[[tool.importlinter.contracts]]
+name = "下層模組不得匯入 server（Phase 5D-R2）"
+type = "forbidden"
+source_modules = [
+    "trpg.engine",
+    "trpg.world",
+    "trpg.shared",
+    "trpg.content",
+    "trpg.roguelite",
+    "trpg.skillgen",
+    "trpg.narrative",
+]
+forbidden_modules = ["trpg.server"]
+
+[[tool.importlinter.contracts]]
+name = "下層模組不得匯入 bot（Phase 5E-2）"
+type = "forbidden"
+source_modules = [
+    "trpg.engine",
+    "trpg.world",
+    "trpg.api",
+    "trpg.shared",
+    "trpg.content",
+    "trpg.roguelite",
+    "trpg.server",
+]
+forbidden_modules = ["trpg.bot"]
+
+[[tool.importlinter.contracts]]
+name = "下層模組不得匯入 world（Phase 5A-2）"
+type = "forbidden"
+source_modules = [
+    "trpg.content",
+    "trpg.roguelite",
+    "trpg.skillgen",
+]
+forbidden_modules = ["trpg.world"]

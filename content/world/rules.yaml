@@ -1,0 +1,98 @@
+# 大世界規則的數值（Phase 5A-2；docs/phases/Phase5計畫.md 6.4）。schema：src/trpg/content/world_rules.py。
+# 全部是開發 PM 定的初值（Phase 5 計畫 Q2、D10），之後用模擬定（docs/design/09-世界與敘事.md 9.6.10「數值類」）；
+# 改數值只改這裡，不改程式。規則本身在 trpg.world（移動、遇敵、感知判定、紮營、天氣）。
+# - supplies：補給上限與新角色帶的量（9.6.7 #11「野外紮營要用，用完只能回城補」）。
+# - camp_cost：紮營（＝營火）花的補給（9.6.11 #114「花 1 補給紮營」）。
+# - hasten：趕路花的補給與遇敵機率倍率 ‰（9.6.7 #9「可花補給趕路降低遇敵機率」）。
+# - encounter：每一步的遇敵機率 ‰ ＝ min(max, base ＋ per_level ×（目的地建議等級 − 1））；
+#   城鎮、傳送點為 0（9.6.7 #9「越危險的區越高」）。
+# - perception：隱藏地點感知判定 DC ＝ dc_base ＋ 建議等級 ÷ level_divisor（捨去；9.6.11 #112）。
+# - weather：各區每半天的天氣權重（9.6.10 #104；05 5.1「各區天氣傾向」：傾向的天氣權重 3、其他 1；
+#   day／night 是遊戲日的前半與後半）。天氣 ID 見 weather.yaml。沒列的區用 default_weather。
+# - week_days：一週幾天（以早上 6 點刷新的日子算；酒館傳聞、商店每週限量；5D-R1 從 affinity.yaml 移來）。
+week_days: 7
+# - calendar：每日刷新的時區（UTC 位移分鐘）與當地時刻（Phase 5F-1；docs/專案計畫.md 3.1「06:00 Asia/Taipei」）。
+#   開賽日在 config/server.toml 的 [season]；賽季天數與日程在 world/season.yaml。
+calendar:
+  utc_offset_minutes: 480
+  refresh_hour: 6
+supplies:
+  max: 10
+  start: 5
+camp_cost: 1
+hasten:
+  cost: 1
+  encounter_permille: 500
+encounter:
+  base_permille: 150
+  per_level_permille: 30
+  max_permille: 500
+perception:
+  dc_base: 10
+  level_divisor: 2
+default_weather:
+  day: {clear: 1}
+  night: {night: 1}
+weather:
+  # 晶冠城邦：晴、夜
+  - region: crystal_crown
+    day: {clear: 3, rain: 1, fog: 1}
+    night: {night: 3, rain: 1, fog: 1}
+  # 雲嶺：霧、雨
+  - region: cloud_ridge
+    day: {clear: 1, rain: 3, fog: 3}
+    night: {night: 1, rain: 3, fog: 3}
+  # 魔導樞市：夜、雨
+  - region: arcane_hub
+    day: {clear: 1, rain: 3, fog: 1}
+    night: {night: 3, rain: 3, fog: 1}
+  # 灰燼荒原：晴、霧
+  - region: ashen_waste
+    day: {clear: 3, rain: 1, fog: 3}
+    night: {night: 1, rain: 1, fog: 3}
+  # 霜潮海境：雨、霧
+  - region: frost_tide
+    day: {clear: 1, rain: 3, fog: 3}
+    night: {night: 1, rain: 3, fog: 3}
+# 遇敵戰鬥與勝負回寫（Phase 5A-4；docs/phases/Phase5計畫.md 8.4，代決 5A4-7～5A4-13）。
+# - fatigue_hp_permille：全滅後下一場「疲憊」開場 HP 上限（9.6.9 #98「開場 HP 80%」）。
+# - clear_kinds／respawn_seconds：打贏後寫「已清空」的地點種類與重生秒數（9.6.7 #15；遊戲內 1 天）。
+battle:
+  max_rounds: 30
+  fatigue_hp_permille: 800
+  clear_kinds: [camp]
+  respawn_seconds: 1800
+# 敵人依地點建議等級成長（5A-4 追加 A；和主角同樣：每級屬性 +2、HP +5%，技能階級照 07 7.6）。
+enemy_growth:
+  attribute_points_per_level: 2
+  skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]
+# 主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。level_thresholds：2～10 級累計經驗（5A-SIM2 方案 B）。
+hero_growth:
+  level_thresholds: [950, 3800, 8600, 14350, 20200, 26050, 31950, 37800, 43650]
+  skill_tier_by_level: [1, 1, 1, 2, 2, 2, 2, 3, 3, 3]   # 07 7.6（玩法 PM 定）
+  insight_per_level: 2        # 每升 1 級 2 點靈感
+  insight_per_elite_kind: 1   # 每種精英首殺 1 點
+  level_cap: 10               # 第一季等級上限（09 9.7）
+# 經驗（5A-SIM2，玩法 PM 代決 2026-11-03；07 7.8 方案 B）：1 份＝base ×（1 ＋ level_permille‰ ×（地點建議等級 − 1））。
+# shares_permille：各來源給幾份（1000＝1 份）。battle 一般戰鬥、elite 陣容含精英；situation_* 情境判定；
+# quest_chain_step／main_step／bounty／hidden_location 等那些功能做好時接上。
+xp:
+  base: 100
+  level_permille: 100
+  shares_permille:
+    battle: 1000
+    elite: 3000
+    situation_success: 500
+    situation_partial: 250
+    quest_chain_step: 3000
+    main_step: 5000
+    bounty: 4000
+    hidden_location: 2000
+# 機遇給的技能三選一（5B-4c；07 7.6「通常同階，15% 機率高 1 階，每人每季最多 1 次」；機率用確定性種子）。
+opportunity:
+  tier_up_permille: 150
+  tier_up_per_season: 1
+  # 5B-4d：第 7 天前保底 1 次（07 7.6）：賽季第 6 天起，沒遇過機遇的角色走到機遇地點就一定出現（不看天氣、時段）
+  guarantee_from_day: 6
+  # 5B-4e（18.7.6「5B-4d 代決」）：保底時不檢查「需要帶電技能」（三張照樣帶帶電）
+  guarantee_waives_keyword: true

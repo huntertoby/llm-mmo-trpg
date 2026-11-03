@@ -96,6 +96,7 @@ conditions:
     llm_hint: "施放者站在目標背後時才成立。"
     description_zh: 施放者站在目標的背後格（目標朝向的反方向相鄰格；只算相鄰）。單位的朝向由引擎自動更新：主動移動後面向移動方向，攻擊或對單位施放技能後面向目標。
     harshness: common
+    budget_permille: 700   # BAL-13d：預算倍率 850（common）→ 700；harshness 仍為 common（武器親和照舊）
     min_rarity: rare
   - id: self_concealed
     name_zh: 潛行偷襲

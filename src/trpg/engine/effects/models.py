@@ -103,6 +103,9 @@ class DamageEffect(EffectBase):
     multiplier_permille: int = Field(default=1000, ge=0)
     pierce_permille: int = Field(default=1000, ge=0)
     """穿透後方折扣（Phase 3C-6a，僅供紀錄顯示）：已包含在 ``multiplier_permille`` 裡，不再乘。"""
+    chain_permille: int = Field(default=1000, ge=0)
+    """連鎖衰減（BAL-13c，#77）：已包含在 ``multiplier_permille`` 裡，不再乘；另外乘在雷電擴散的
+    基準傷害（``base_amount``）上——跳躍變弱的那一擊，擴散也跟著變弱。"""
     explode_max: int = Field(default=0, ge=0)
     """爆骰（Phase 3D-7b）：傷害骰擲到最大值時再加擲一次，每顆骰最多再擲這麼多次（0 為不爆骰）。"""
     preset_rolls: tuple[int, ...] | None = None
@@ -192,7 +195,8 @@ class ApplyStatusEffect(EffectBase):
     """自己付的代價（``cost.self_status``／``cost.overdraft``，Phase 3-50）：不觸發控制遞減，也不受
     Boss 硬控轉換影響。"""
     magnitude_permille: int = Field(default=1000, ge=1000)
-    """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）。"""
+    """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）；數值型狀態的
+    強度（BAL-12e，#76）。其他狀態一律 1000。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -242,7 +246,7 @@ class CancelChargeEffect(EffectBase):
 
     kind: Literal["cancel_charge"] = "cancel_charge"
     unit_id: UnitId
-    reason: Literal["downed", "controlled"]
+    reason: Literal["downed", "controlled", "silenced"]
 
     def sort_target(self) -> str:
         return self.unit_id
@@ -361,6 +365,8 @@ class CreateSurfaceEffect(_AtPos):
     team: Team | None = None
     react: bool = True
     cause: str = "effect"
+    magnitude_permille: int = Field(default=1000, ge=1000)
+    """表面的強度（‰，BAL-12e，#76；``Tile.surface_magnitude_permille``）。"""
 
 
 class BlowSurfaceEffect(EffectBase):

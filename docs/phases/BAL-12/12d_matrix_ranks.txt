@@ -1,0 +1,69 @@
+seeds=30 top_count=7 never_top=['build_assassin', 'build_striker', 'build_charger', 'build_banisher', 'build_gambler', 'build_seer', 'build_winged', 'build_wallburn', 'build_runeweaver']
+bridge_chasm: 第7名 68%（第1名 build_storm 90%）
+ruined_heights: 第7名 57%（第1名 build_summoner 72%）
+forest: 第7名 90%（第1名 build_healer 97%）
+frozen_lake: 第7名 83%（第1名 build_summoner 93%）
+corridor: 第7名 80%（第1名 build_healer 97%）
+oil_depot: 第7名 43%（第1名 build_storm 67%）
+open_plain: 第7名 70%（第1名 build_healer 83%）
+swamp: 第7名 47%（第1名 build_storm 80%）
+
+build_assassin
+  bridge_chasm   勝率 31.7% 名次23 與第7名差-36.7pt DPR  6.5
+  ruined_heights 勝率 38.3% 名次17 與第7名差-18.3pt DPR  3.8
+  forest         勝率 83.3% 名次16 與第7名差 -6.7pt DPR  5.5
+  frozen_lake    勝率 53.3% 名次22 與第7名差-30.0pt DPR  5.4
+  corridor       勝率 43.3% 名次21 與第7名差-36.7pt DPR  3.4
+  oil_depot      勝率 10.0% 名次23 與第7名差-33.3pt DPR  6.5
+  open_plain     勝率 33.3% 名次22 與第7名差-36.7pt DPR  4.7
+  swamp          勝率 26.7% 名次18 與第7名差-20.0pt DPR  7.3
+
+build_seer
+  bridge_chasm   勝率 53.3% 名次16 與第7名差-15.0pt DPR 12.3
+  ruined_heights 勝率 45.0% 名次15 與第7名差-11.7pt DPR  8.0
+  forest         勝率 73.3% 名次17 與第7名差-16.7pt DPR  7.5
+  frozen_lake    勝率 63.3% 名次18 與第7名差-20.0pt DPR  5.9
+  corridor       勝率 66.7% 名次15 與第7名差-13.3pt DPR  8.9
+  oil_depot      勝率 26.7% 名次17 與第7名差-16.7pt DPR  9.9
+  open_plain     勝率 40.0% 名次20 與第7名差-30.0pt DPR 12.2
+  swamp          勝率 23.3% 名次21 與第7名差-23.3pt DPR  8.0
+
+build_gambler
+  bridge_chasm   勝率 35.0% 名次21 與第7名差-33.3pt DPR  6.3
+  ruined_heights 勝率 48.3% 名次13 與第7名差 -8.3pt DPR  7.0
+  forest         勝率 53.3% 名次23 與第7名差-36.7pt DPR  6.2
+  frozen_lake    勝率 66.7% 名次17 與第7名差-16.7pt DPR  7.8
+  corridor       勝率 43.3% 名次22 與第7名差-36.7pt DPR  6.8
+  oil_depot      勝率 36.7% 名次13 與第7名差 -6.7pt DPR 11.7
+  open_plain     勝率 46.7% 名次19 與第7名差-23.3pt DPR  9.0
+  swamp          勝率 30.0% 名次16 與第7名差-16.7pt DPR 11.4
+
+build_fire
+  bridge_chasm   勝率 80.0% 名次 2 與第7名差+11.7pt DPR 18.8
+  ruined_heights 勝率 68.3% 名次 3 與第7名差+11.7pt DPR 11.2
+  forest         勝率100.0% 名次 6 與第7名差+10.0pt DPR 13.4
+  frozen_lake    勝率 83.3% 名次 8 與第7名差 +0.0pt DPR 15.3
+  corridor       勝率 93.3% 名次 3 與第7名差+13.3pt DPR 17.3
+  oil_depot      勝率 66.7% 名次 2 與第7名差+23.3pt DPR 18.5
+  open_plain     勝率 83.3% 名次 3 與第7名差+13.3pt DPR 18.8
+  swamp          勝率 66.7% 名次 3 與第7名差+20.0pt DPR 12.4
+
+build_support
+  bridge_chasm   勝率 61.7% 名次11 與第7名差 -6.7pt DPR  6.9
+  ruined_heights 勝率 58.3% 名次 6 與第7名差 +1.7pt DPR  6.1
+  forest         勝率 90.0% 名次 9 與第7名差 +0.0pt DPR  5.7
+  frozen_lake    勝率 83.3% 名次 6 與第7名差 +0.0pt DPR  5.4
+  corridor       勝率 73.3% 名次13 與第7名差 -6.7pt DPR  5.7
+  oil_depot      勝率 36.7% 名次12 與第7名差 -6.7pt DPR  6.9
+  open_plain     勝率 70.0% 名次 7 與第7名差 +0.0pt DPR  7.6
+  swamp          勝率 50.0% 名次 5 與第7名差 +3.3pt DPR  6.7
+
+build_charger
+  bridge_chasm   勝率 48.3% 名次18 與第7名差-20.0pt DPR  6.7
+  ruined_heights 勝率 33.3% 名次20 與第7名差-23.3pt DPR  6.3
+  forest         勝率 70.0% 名次20 與第7名差-20.0pt DPR  6.8
+  frozen_lake    勝率 83.3% 名次10 與第7名差 +0.0pt DPR 11.1
+  corridor       勝率 53.3% 名次18 與第7名差-26.7pt DPR  7.0
+  oil_depot      勝率 26.7% 名次20 與第7名差-16.7pt DPR  7.5
+  open_plain     勝率 50.0% 名次16 與第7名差-20.0pt DPR  7.7
+  swamp          勝率 23.3% 名次20 與第7名差-23.3pt DPR  8.0

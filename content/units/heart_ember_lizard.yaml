@@ -1,0 +1,20 @@
+# 灰燼之心的殼縫餘燼蜥（Phase 5F-5b；docs/design/19-灰燼荒原與賽季主線.md 19.2.3：第 2 階段「殼縫裡爬出兩隻餘燼蜥」）。
+# 和餘燼蜥（ember_lizard）同一套數值，只差開場狀態：荒原一般遭遇的熔核爆裂在 5F-5b 把攻擊傷害調到 ×2.25（07 7.8 高 2 級要吃力），
+# 灰燼之心戰的難度幾乎全由這幾隻蜥蜴決定，所以 Boss 戰另用「殼縫熔核」（×1.5）單獨調（9 級主角＋2 傭兵勝率 70～80%，
+# 模擬見 docs/phases/Phase5F-5b報告.md）。只出現在熔心坑（Boss 陣容與第 2 階段的召喚）。
+id: heart_ember_lizard
+name_zh: 殼縫餘燼蜥
+attributes: {str: 10, dex: 14, con: 10, int: 3, wis: 10, wil: 6}
+max_hp: 18
+speed: 6
+armor_bonus: 1
+weapon: fangs
+ai_profile: brute
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [beast, lava_beast]
+skills: [skill_ember_bite]
+opening_statuses:
+  - {status: heart_ember_burst}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: lizard, material: magma, size: small}}

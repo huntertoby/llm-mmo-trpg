@@ -12,7 +12,7 @@ ap_cost: 2
 scaling_attr: int
 shape: {type: chain, range: 5, jumps: 2, jump_range: 3}
 effects:
-  - {type: damage, dice: 2d8, element: lightning}
+  - {type: damage, dice: 2d8, flat_bonus: 1, element: lightning}   # BAL-13c：連鎖衰減後重算預算（2d8 65.6% → 2d8＋1 72.9%）
 condition: null
 cost: {mana: 10}
 tags: [lightning, spell, chain]

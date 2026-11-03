@@ -1,0 +1,69 @@
+# 雲嶺的聊天內容、事件好感度與酒館傳聞（Phase 5B-4；docs/phases/Phase5計畫.md 16.4、16.5）。
+# schema：src/trpg/content/world_quests.py。
+# 級別（玩法 PM 定，2026-11-03，照 #85 2a）：中立給一般傳聞、友善給隱藏任務入口、信賴才說人設卡的祕密
+# （例：渡婆婆說出暗門）。內容取自 18.4、18.5（#111 待使用者確認）；文字、事件好感度數值、傳聞池是開發 PM
+# 定（代決 5B4-3、5B4-13）。聊天與傳聞只是資訊：不給線頭、不揭露地點、不給道具經驗（9.6.7 #3、#6）。
+region: cloud_ridge
+talk:
+  # 渡婆婆（鎮長）
+  - {id: granny_du_rumor, npc: granny_du, rank: neutral, kind: rumor, text_zh: 夜裡鎮上有燈籠隊在找失蹤的人，失蹤的都往山裡去了}
+  # 信賴說出祕密時解鎖骨架 22「渡婆婆的往事」（18.7.7）；暗門的線頭只由那個事件的結果給（#85）
+  # 5B-4e（18.7.6「5B-4d 代決」）：還沒解決時，每天第一次聊天可以再觸發一次（retrigger_daily；當天失敗過的不觸發）
+  - {id: granny_du_secret, npc: granny_du, rank: trusted, kind: secret, unlocks_skeleton: granny_past, retrigger_daily: true, text_zh: 她年輕時是斷崖幫的人，提到斷崖幫的舊帳就欲言又止}
+  # 柳掌櫃（商人）
+  - {id: liu_rumor, npc: shopkeeper_liu, rank: neutral, kind: rumor, text_zh: 雷雨夜的古松祭壇不太平，聽說有人在那兒撿到怪東西}
+  - {id: liu_cave_entry, npc: shopkeeper_liu, rank: friendly, kind: quest_entry, quest: hidden_elixir_cave, text_zh: 藥師谷的谷底似乎還有一處洞窟，沒人敢進去，他想知道裡面還有沒有丹砂}
+  - {id: liu_secret, npc: shopkeeper_liu, rank: trusted, kind: secret, text_zh: 他一直偷偷收購源晶碎片，連斷崖幫都和他做過買賣}
+  # 青崖道長（技能導師）
+  - {id: qingya_rumor, npc: daoist_qingya, rank: neutral, kind: rumor, text_zh: 觀裡為了源晶要不要交給官府，吵了好幾天}
+  - {id: qingya_secret, npc: daoist_qingya, rank: trusted, kind: secret, text_zh: 他其實想離開道觀，只是放心不下這些弟子}
+  # 阿岳（獵戶）
+  - {id: ayue_rumor, npc: hunter_ayue, rank: neutral, kind: rumor, text_zh: 北坡的狼最近被什麼東西趕下山，連熊都不安分}
+  - {id: ayue_secret, npc: hunter_ayue, rank: trusted, kind: secret, text_zh: 他的父親死在源晶裂痕，他一直想進去找父親的遺物}
+  # 小蓮（道童）
+  - {id: xiaolian_rumor, npc: acolyte_xiaolian, rank: neutral, kind: rumor, text_zh: 觀裡的師兄們最近常吵架，有人半夜偷偷下山}
+  - {id: xiaolian_secret, npc: acolyte_xiaolian, rank: trusted, kind: secret, text_zh: 她偷看過觀主修煉，觀主身上纏著源晶的光}
+  # 霧鎖真人（觀主、Boss）
+  - {id: mistlock_rumor, npc: mistlock_master, rank: neutral, kind: rumor, text_zh: 雲頂觀的霧一年比一年濃，觀主很久沒下山了}
+  - {id: mistlock_secret, npc: mistlock_master, rank: trusted, kind: secret, text_zh: 他想借源晶的力量飛升}
+  # 疤面（斷崖幫二當家）
+  - {id: scarface_rumor, npc: scarface, rank: neutral, kind: rumor, text_zh: 斷崖幫最近在運一批東西出山，要走藥師谷那條路}
+  - {id: scarface_secret, npc: scarface, rank: trusted, kind: secret, text_zh: 他和柳掌櫃一直有交易，碎片就是賣給柳掌櫃的}
+  # 霜音（白狐）
+  - {id: frost_chime_rumor, npc: frost_chime, rank: neutral, kind: rumor, text_zh: 狐火在霧裡會指路，跟著走的人不一定回得來}
+  - {id: frost_chime_secret, npc: frost_chime, rank: trusted, kind: secret, text_zh: 她親眼見過裂痕裡的異象，說那裡面有「我們」}
+  # 石師傅（鐵匠；18.5，5D-3b 照玩法 PM 的人設卡改寫）。傳聞只說材料的意象，不說配方（20.4）
+  - {id: smith_shi_rumor, npc: smith_shi, rank: neutral, kind: rumor, text_zh: 他只丟下一句「嗯，好料湊一起，我也沒見過」，就低頭繼續打鐵}
+  # 信賴才說祕密（18.5「劍陣弟子落單時最弱」）；只是資訊，不給線頭、不改戰鬥數值
+  - {id: smith_shi_secret, npc: smith_shi, rank: trusted, kind: secret, text_zh: 他年輕時替青霧觀打過劍陣用的劍，悶聲說了句「劍陣弟子，落單最弱」}
+
+# 事件結果 → 好感度（開發 PM 定初值，代決 5B4-3）。看事件的結果（event_resolved：情境判定、交涉、戰鬥解法；5B-4b）。
+event_affinity:
+  # 5B-4e（18.7.6「5B-4d 代決」）：小蓮＝骨架 2 成功 +20（取代原本的 +10）、骨架 6 成功 +10；目標第 6 天到信賴
+  # 5B-4f：骨架 2 部分成功 +10、失敗不扣（玩法 PM 2026-11-03 代決）
+  - {skeleton: lost_acolyte, outcome: success, npc: acolyte_xiaolian, delta: 20}  # 18.4 #2 賭注「修士的好感度」
+  - {skeleton: lost_acolyte, outcome: partial, npc: acolyte_xiaolian, delta: 10}
+  - {skeleton: gang_toll, outcome: success, npc: scarface, delta: -10}  # 威嚇了斷崖幫的人
+  - {skeleton: monks_dispute, outcome: success, npc: daoist_qingya, delta: 10}
+  - {skeleton: monks_dispute, outcome: success, npc: acolyte_xiaolian, delta: 10}
+  - {skeleton: monks_dispute, outcome: partial, npc: acolyte_xiaolian, delta: 10}  # 5D-2b（玩法 PM 2026-11-03 代決）
+  - {skeleton: fox_traveler, outcome: success, npc: frost_chime, delta: 10}  # 18.4 #18 賭注「狐族的好感度」
+  - {skeleton: ayue_request, outcome: success, npc: hunter_ayue, delta: 10}
+
+# 霧渡鎮酒館的傳聞池（9.6.7 #1：指向機遇或隱藏地點的線索；開發 PM 定，代決 5B4-13）。只是文字。
+rumors:
+  - {id: rumor_storm_altar, skeleton: storm_altar, text_zh: 有人說雷雨夜站在古松祭壇旁，帶著雷的招式會跟著發光}
+  - {id: rumor_poison_spring, skeleton: poison_spring, text_zh: 藥師谷的毒泉後面好像還有路，只是沒人撐得過那陣毒霧}
+  - {id: rumor_tomb_sword, skeleton: tomb_sword, text_zh: 劍冢裡有把殘劍拔不出來，聽說有個劍客一直在找它}
+  - {id: rumor_north_slope, location: north_slope, text_zh: 北坡獵場出了一頭狼王，眼睛紅得像火}
+  - {id: rumor_bear_den, skeleton: bear_den, text_zh: 冬湖邊的熊巢底下會發光，獵戶都不敢靠近}
+  - {id: rumor_crystal_rift, location: crystal_rift, text_zh: 源晶裂痕這陣子霧特別濃，常有霧魅從裡面爬出來}
+
+# 5B-4e（18.7.6「5B-4d 代決」，機遇保底綁在古松祭壇）：賽季第 4 天起本週傳聞一定含祭壇那條
+# （沒抽到時換掉本週最後抽到的那條；代決 5B4e-2）。
+pinned_rumors:
+  - {rumor: rumor_storm_altar, from_day: 4}
+
+# 5B-4e：賽季第 6 天起，還沒遇過機遇的角色抵達霧渡鎮、或在霧渡鎮的酒館時，說書人順口提一句（代決 5B4e-3）。
+opportunity_hints:
+  - {location: mist_ferry, from_day: 6, text_zh: 酒館的說書人順口提了一句：「古松那邊最近不太平。」}

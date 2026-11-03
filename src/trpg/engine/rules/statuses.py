@@ -39,6 +39,7 @@ __all__ = [
     "move_points_for_turn",
     "move_reduction",
     "prevents_concealment",
+    "scaled_bonus",
     "scaled_permille",
     "scaled_status_def",
     "shield_amount",
@@ -46,6 +47,8 @@ __all__ = [
     "stance_status_ids",
     "status_attack_bonus",
     "status_duration_bonus",
+    "summon_damage_dealt_permille",
+    "under_truce",
     "weapon_attribute",
 ]
 
@@ -91,14 +94,38 @@ _BETTER: dict[str, Better] = {
 """狀態的倍率欄位與對持有者有利的方向（:func:`_combined` 各呼叫處用的方向與這裡相同）。"""
 
 
+def _aligned(status: StatusDef, better: Better) -> Better:
+    """幅度／強度放大的方向：增益（含姿態）放大對持有者有利的一邊，減益（BAL-12e 的強度，#76）
+    放大對持有者不利的一邊（虛弱的造成傷害更低、中毒的受到治療更低）。"""
+    if status.beneficial or status.stance:
+        return better
+    return "down" if better == "up" else "up"
+
+
+def scaled_bonus(status: StatusDef, value: int, magnitude: int) -> int:
+    """狀態的屬性加值與攻擊加值套上強度（BAL-12e，#76；無條件捨去）。姿態的幅度不放大加值
+    （3W-5b 只放大倍率欄位），照原值。"""
+    if magnitude == PERMILLE or status.stance:
+        return value
+    return value * magnitude // PERMILLE
+
+
 def scaled_status_def(status: StatusDef, magnitude: int) -> StatusDef:
-    """狀態定義的倍率欄位都套上姿態幅度 ``magnitude`` 之後的樣子（卡片顯示用，數字與結算相同；
-    3W-5b）。1000 時原樣回傳。"""
+    """狀態定義的倍率欄位（與非姿態狀態的屬性、攻擊加值）都套上幅度／強度 ``magnitude`` 之後的
+    樣子（卡片顯示用，數字與結算相同；3W-5b、BAL-12e）。1000 時原樣回傳。每回合的傷害與治療骰子
+    沒辦法寫進定義，結算時另外乘（``multiplier_permille``）。"""
     if magnitude == PERMILLE:
         return status
-    return status.model_copy(
-        update={f: scaled_permille(getattr(status, f), magnitude, b) for f, b in _BETTER.items()}
-    )
+    update: dict[str, object] = {
+        f: scaled_permille(getattr(status, f), magnitude, _aligned(status, b))
+        for f, b in _BETTER.items()
+    }
+    if not status.stance:
+        update["attr_bonus"] = {
+            a: scaled_bonus(status, v, magnitude) for a, v in status.attr_bonus.items()
+        }
+        update["attack_bonus"] = scaled_bonus(status, status.attack_bonus, magnitude)
+    return status.model_copy(update=update)
 
 
 def _combined(
@@ -106,8 +133,10 @@ def _combined(
 ) -> int:
     value = PERMILLE
     for status in unit.statuses:  # 狀態清單依狀態 ID 排序，順序確定
-        own = field(rules.status_def(status.status_id))
-        own = scaled_permille(own, status.magnitude_permille, better)  # 完整姿態的幅度（3W-5b）
+        definition = rules.status_def(status.status_id)
+        own = field(definition)
+        # 完整姿態的幅度（3W-5b）、數值型狀態的強度（BAL-12e）
+        own = scaled_permille(own, status.magnitude_permille, _aligned(definition, better))
         value = value * own // PERMILLE
     return value
 
@@ -181,6 +210,12 @@ def damage_dealt_permille(
     return combined * elemental // PERMILLE
 
 
+def summon_damage_dealt_permille(rules: Ruleset, owner: UnitState) -> int:
+    """召喚者身上的「號令」類狀態給自己召喚物的攻擊傷害倍率（‰；``summon_damage_dealt_permille``
+    相乘，BAL-19f 追加）。"""
+    return _combined(rules, owner, lambda d: d.summon_damage_dealt_permille)
+
+
 def status_duration_bonus(rules: Ruleset, unit: UnitState, status_id: str) -> int:
     """自己施加 ``status_id`` 時多出來的持續回合（所有狀態的 ``status_duration_bonus`` 相加；
     元素姿態的小特色，Phase 3W-2b）。"""
@@ -221,13 +256,20 @@ def effective_attribute(rules: Ruleset, unit: UnitState, attr: Attribute) -> int
     """
     value = unit.attributes[attr]
     for status in unit.statuses:
-        value += rules.status_def(status.status_id).attr_bonus.get(attr, 0)
+        definition = rules.status_def(status.status_id)
+        bonus = definition.attr_bonus.get(attr, 0)
+        value += scaled_bonus(definition, bonus, status.magnitude_permille)  # 強度（BAL-12e）
     return value
 
 
 def status_attack_bonus(rules: Ruleset, unit: UnitState) -> int:
-    """所有狀態的 ``attack_bonus`` 之和（Phase 3-33e1，戰意圖騰的「攻擊 +1」）。"""
-    return sum(rules.status_def(s.status_id).attack_bonus for s in unit.statuses)
+    """所有狀態的 ``attack_bonus`` 之和（Phase 3-33e1，戰意圖騰的「攻擊 +1」；強度見
+    :func:`scaled_bonus`）。"""
+    total = 0
+    for status in unit.statuses:
+        definition = rules.status_def(status.status_id)
+        total += scaled_bonus(definition, definition.attack_bonus, status.magnitude_permille)
+    return total
 
 
 def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:
@@ -310,6 +352,11 @@ def grants_advantage_against(rules: Ruleset, unit: UnitState) -> bool:
 def prevents_concealment(rules: Ruleset, unit: UnitState) -> bool:
     """是否帶有 ``prevents_concealment`` 的狀態（被揭露，Phase 3D-8a）：不算隱蔽、不能再隱蔽。"""
     return any(rules.status_def(s.status_id).prevents_concealment for s in unit.statuses)
+
+
+def under_truce(rules: Ruleset, unit: UnitState) -> bool:
+    """是否帶有 ``truce`` 的狀態（休戰，Phase 5F-4b）：不受、也不造成任何傷害。"""
+    return any(rules.status_def(s.status_id).truce for s in unit.statuses)
 
 
 def has_attack_disadvantage_status(rules: Ruleset, unit: UnitState) -> bool:

@@ -1,5 +1,5 @@
-"""BAL-4c：``ally_mana_cost_permille`` 依施放者陣營套用——我方打折、敵方原價，同一個技能 ID 也一樣；
-扣費、施放檢查、事件、AI 估價一致，技能資料保持原始費用。"""
+"""BAL-4c：``mana_cost_permille`` 在施放時套用，扣費、施放檢查、事件、AI 估價一致，技能資料保持原始
+費用。BAL-15b（玩法決定 #80）起敵我同一套：敵方施放者也打折（BAL-4c 時敵方原價）。"""
 
 from __future__ import annotations
 
@@ -46,19 +46,19 @@ def _raw() -> int:
 
 
 def _ally() -> int:
-    return library().ruleset.core.ally_mana(_raw())
+    return library().ruleset.core.mana_cost(_raw())
 
 
 def test_content_has_a_real_discount_for_the_test_skill() -> None:
-    assert library().ruleset.core.ally_mana_cost_permille == 800
-    assert library().ruleset.skill_def(FIRE_BOLT).cost.mana == _raw() == 6  # 規則包也是原始費用
-    assert _ally() == 5  # 4.8 → 5
+    assert library().ruleset.core.mana_cost_permille == 800
+    assert library().ruleset.skill_def(FIRE_BOLT).cost.mana == _raw()  # 規則包也是原始費用
+    assert _ally() < _raw()  # 八折後仍比原始費用少（讀 content，不寫死）
 
 
-@pytest.mark.parametrize(("team", "paid"), [(Team.ALLY, "ally"), (Team.ENEMY, "raw")])
-def test_casting_pays_by_the_casters_team(team: Team, paid: str) -> None:
+@pytest.mark.parametrize("team", [Team.ALLY, Team.ENEMY])
+def test_casting_pays_the_discounted_cost_for_both_teams(team: Team) -> None:
     state = _state(team)
-    expected = _ally() if paid == "ally" else _raw()
+    expected = _ally()
     skill = state.ruleset.skill_def(FIRE_BOLT)
     assert skill_mana_cost(state.ruleset.core, state.units[U1], skill) == expected
     before = state.units[U1].mana
@@ -68,16 +68,17 @@ def test_casting_pays_by_the_casters_team(team: Team, paid: str) -> None:
     assert result.state.units[U1].mana == before - expected == used.mana_after
 
 
-def test_cast_check_uses_the_discounted_cost_only_for_allies() -> None:
+@pytest.mark.parametrize("team", [Team.ALLY, Team.ENEMY])
+def test_cast_check_uses_the_discounted_cost_for_both_teams(team: Team) -> None:
     skill = library().ruleset.skill_def(FIRE_BOLT)
-    ally = _state(Team.ALLY, mana=_ally())
-    assert resource_problem(ally, ally.units[U1], skill) is None
-    assert any(isinstance(a, UseSkill) and a.skill_id == FIRE_BOLT for a in legal_actions(ally))
-    enemy = _state(Team.ENEMY, mana=_ally())
-    problem = resource_problem(enemy, enemy.units[U1], skill)
-    assert problem == f"法力不足：需要 {_raw()}，剩餘 {_ally()}"
+    enough = _state(team, mana=_ally())
+    assert resource_problem(enough, enough.units[U1], skill) is None
+    assert any(isinstance(a, UseSkill) and a.skill_id == FIRE_BOLT for a in legal_actions(enough))
+    short = _state(team, mana=_ally() - 1)
+    problem = resource_problem(short, short.units[U1], skill)
+    assert problem == f"法力不足：需要 {_ally()}，剩餘 {_ally() - 1}"
     assert not any(
-        isinstance(a, UseSkill) and a.skill_id == FIRE_BOLT for a in legal_actions(enemy)
+        isinstance(a, UseSkill) and a.skill_id == FIRE_BOLT for a in legal_actions(short)
     )
 
 
@@ -87,7 +88,7 @@ def test_ai_values_the_mana_it_actually_pays() -> None:
     ally, enemy = _state(Team.ALLY), _state(Team.ENEMY)
     ally_cost = skill_cost(ally, ally.units[U1], action, profile.weights, profile.status_values)
     enemy_cost = skill_cost(enemy, enemy.units[U1], action, profile.weights, profile.status_values)
-    assert enemy_cost - ally_cost == profile.weights.mana * (_raw() - _ally())
+    assert enemy_cost == ally_cost  # 敵我同一套（BAL-15b）
 
 
 def test_neutral_permille_means_no_discount() -> None:
@@ -96,7 +97,7 @@ def test_neutral_permille_means_no_discount() -> None:
         spawn(Team.ALLY, (1, 3), caster_template([FIRE_BOLT])),
         spawn(Team.ENEMY, (4, 3), no_reactions(max_hp=99)),
     ]
-    state = give_turn(make_state(m, spawns, ally_mana_cost_permille=1000), U1)
+    state = give_turn(make_state(m, spawns, mana_cost_permille=1000), U1)
     result = resolve(state, UseSkill(unit_id=U1, skill_id=FIRE_BOLT, target_id=U2))
     (used,) = [e for e in result.events if isinstance(e, SkillUsed)]
     assert used.mana == _raw()

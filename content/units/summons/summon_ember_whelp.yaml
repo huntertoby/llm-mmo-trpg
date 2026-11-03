@@ -1,0 +1,17 @@
+# 召喚物（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.1 熔爐母獸「每 2 回合產下 1 隻餘燼蜥」；數值為初值，未經模擬）。
+# 熔爐母獸用現有召喚原語產下的幼蜥：低血量、啃咬點燃（同餘燼蜥）。召喚物沒有開場狀態，所以倒下不留火（代決 5F5a-7）。
+id: summon_ember_whelp
+name_zh: 餘燼幼蜥
+attributes: {str: 8, dex: 12, con: 10, int: 3, wis: 8, wil: 6}
+max_hp: 8
+speed: 5
+armor_bonus: 0
+weapon: fangs
+ai_profile: brute
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [summoned, beast, lava_beast]
+skills: [skill_ember_bite]
+reactions: []
+summon: true
+role: melee   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）

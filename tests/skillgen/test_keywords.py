@@ -592,7 +592,7 @@ def test_rule_grades_are_data_and_match_the_comments() -> None:
             assert "grade: general" in stripped, stripped
         assert "provisional" not in stripped, stripped  # Phase 3-51：暫定規則全部移除
     rules = [r for k in library().keywords.keywords for r in (*k.makes, *k.uses)]
-    assert sum(1 for r in rules if r.grade == "general") == 19
+    assert sum(1 for r in rules if r.grade == "general") == 21  # BAL-16b：潮濕 × 治療 +2
     assert {r.grade for r in rules} == {"exclusive", "general"}
 
 

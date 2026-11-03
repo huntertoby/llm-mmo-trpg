@@ -1,0 +1,25 @@
+# BAL-19f 追加（玩法 PM 2026-11-02，06 6.10 組合主題、6.27.4）：火杖用的「主效果召喚＋附帶元素」法術，元素＋意志主題看智力或意志（提示填智力）；
+# 召喚基本召喚物（元素之靈，1 階），自己獲得火焰附魔（召喚原語的其餘效果只能作用在施放者自己）；數值為初值，未經模擬
+id: skill_fsum_ember_herald
+schema_version: 1
+name_zh: 燼火喚靈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_elemental_spirit, duration: 3}
+  - {type: apply_status, status: infused_fire, duration: 3, affects: self}
+condition: null
+cost: {mana: 10, cooldown: 4}
+tags: [fire, spell, summon]
+narrative:
+  concept: 以火為引喚出一縷元素之靈，餘燼順勢纏上你的兵刃
+  cast_flavor: 你把一撮火星撒向地面，光霧在火光裡凝成人形，剩下的火苗爬上了你的手
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

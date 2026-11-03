@@ -1,0 +1,157 @@
+# 灰燼荒原地點圖（Phase 5F-5a；schema：src/trpg/content/world_map.py）。
+# - 地點、種類、建議等級、戰鬥地圖、內容、連線：docs/design/19-灰燼荒原與賽季主線.md 19.3（#118，玩法 PM 代決、待使用者確認）。
+#   ID 與戰鬥地圖對照是開發 PM 定（docs/phases/Phase5計畫.md 39.3）。
+# - 19.3 的「裂界門（隱藏，賽季）」不放進地點圖：賽季 Boss 照 5F-3 從城鎮挑戰（代決 5F5a-1），所以「餘燼集－裂界門」連線也不畫。
+#   三村落（赤沙村、灰井村、鐵爐村）各一個地點：世界事件 #2「熔岩潰堤」要守的 3 個村落（19.9）。
+# - 熔岩洞窟沒有自己的地圖，用岩漿渡橋＋狹窄長廊（代決 5F5a-8）。
+# - 熔心坑：世界事件 #2 成功時立刻開放、失敗時事件結束才開放（旗標 heart_pit_open；代決 5F5a-2）。
+# - pos：開發 PM 排的顯示座標（0～100，純顯示）。
+# - 規則（9.6.2）：每區 15～25 點；從小鎮走得到全部地點；隱藏地點不可是任何非隱藏地點的唯一通路；
+#   戰鬥地圖的類型必須在 regions.yaml 灰燼荒原的 map_pool 內。
+region: ashen_waste
+name_zh: 灰燼荒原
+level_min: 5
+level_max: 9
+town: ember_market
+locations:
+  - id: ember_market
+    name_zh: 餘燼集
+    kind: town
+    description_zh: 廢鐵搭成的避難市集；傳送點、商人、懸賞板、導師、酒館
+    pos: {x: 15, y: 80}
+  - id: ash_ferry
+    name_zh: 灰渡口
+    kind: gate
+    gate_to: cloud_ridge
+    description_zh: 連雲嶺「往灰燼荒原的渡口」
+    pos: {x: 5, y: 95}
+  - id: scorched_outskirts
+    name_zh: 焦土外圍
+    kind: camp
+    level_min: 5
+    battle_maps: [open_plain]
+    description_zh: 餘燼蜥、灰燼犬
+    pos: {x: 32, y: 72}
+  - id: old_iron_post
+    name_zh: 舊鐵哨站
+    kind: village
+    level_min: 5
+    description_zh: 獵人、拾荒者 NPC；區域任務鏈起點
+    pos: {x: 20, y: 56}
+  - id: deadwood_forest
+    name_zh: 枯木林
+    kind: camp
+    level_min: 5
+    level_max: 6
+    battle_maps: [dark_forest]
+    description_zh: 易燃；硫煙獸
+    pos: {x: 48, y: 62}
+  - id: red_sand_village
+    name_zh: 赤沙村
+    kind: village
+    level_min: 6
+    description_zh: 世界事件「熔岩潰堤」要守的村落之一；平時是補給與任務 NPC
+    pos: {x: 40, y: 88}
+  - id: ash_mire
+    name_zh: 灰泥沼
+    kind: camp
+    level_min: 6
+    battle_maps: [swamp]
+    description_zh: 水能發揮；熔核蛞蝓
+    pos: {x: 12, y: 40}
+  - id: cooling_well
+    name_zh: 冷卻井
+    kind: ruin
+    level_min: 6
+    description_zh: 情境判定（修理古代冷卻裝置，機關）
+    pos: {x: 34, y: 44}
+  - id: gang_convoy_road
+    name_zh: 斷崖幫運輸道
+    kind: camp
+    level_min: 6
+    battle_maps: [lava_crossing]
+    description_zh: 盜賊押運源晶碎片（撤離／攔截）
+    pos: {x: 64, y: 70}
+  - id: ash_well_village
+    name_zh: 灰井村
+    kind: village
+    level_min: 7
+    description_zh: 世界事件「熔岩潰堤」要守的村落之一；平時是補給與任務 NPC
+    pos: {x: 8, y: 24}
+  - id: tar_pits
+    name_zh: 焦油坑
+    kind: camp
+    level_min: 7
+    battle_maps: [oil_depot]
+    description_zh: 油＋火；噴岩龜
+    pos: {x: 46, y: 30}
+  - id: overseer_camp
+    name_zh: 熔爐督工營
+    kind: elite_lair
+    level_min: 7
+    battle_maps: [ruined_fort]
+    description_zh: 懸賞「熔爐督工」
+    pos: {x: 80, y: 78}
+  - id: iron_forge_village
+    name_zh: 鐵爐村
+    kind: village
+    level_min: 8
+    description_zh: 世界事件「熔岩潰堤」要守的村落之一；鐵爐村的鐵匠
+    pos: {x: 94, y: 90}
+  - id: obsidian_valley
+    name_zh: 黑曜谷
+    kind: secret
+    level_min: 8
+    battle_maps: [narrow_halls]
+    hidden: true
+    reveal: [perception_nearby, quest_clue]
+    hint_zh: 焦油坑後一道漆黑的峽谷
+    description_zh: 寒燼蜥、黑曜片；感知判定或拾荒者的線索才會出現
+    pos: {x: 30, y: 12}
+  - id: lava_cave
+    name_zh: 熔岩洞窟
+    kind: camp
+    level_min: 7
+    level_max: 8
+    battle_maps: [lava_crossing, narrow_halls]
+    description_zh: 熔核領主（精英）
+    pos: {x: 62, y: 34}
+  - id: horned_altar
+    name_zh: 角魔古祭壇
+    kind: altar
+    level_min: 7
+    description_zh: 機遇：帶「點燃」技能、在晴天正午來此
+    pos: {x: 84, y: 44}
+  - id: ruined_fortress
+    name_zh: 廢墟要塞
+    kind: ruin
+    level_min: 8
+    battle_maps: [ruined_fort]
+    description_zh: 情境判定（古文、地圖）；主線線索
+    pos: {x: 66, y: 14}
+  - id: molten_heart_pit
+    name_zh: 熔心坑
+    kind: boss
+    level_min: 9
+    battle_maps: [molten_heart_pit]   # Boss 專屬地圖（20.6）
+    unlock_flag: heart_pit_open        # 世界事件 #2 成功時提早開放（19.9；代決 5F5a-2）
+    description_zh: 灰燼之心；世界事件「熔岩潰堤」成功時提早開放
+    pos: {x: 90, y: 8}
+edges:
+  - [ash_ferry, ember_market]
+  - [ember_market, scorched_outskirts]
+  - [ember_market, old_iron_post]
+  - [scorched_outskirts, deadwood_forest]
+  - [scorched_outskirts, red_sand_village]
+  - [old_iron_post, ash_mire]
+  - [old_iron_post, cooling_well]
+  - [deadwood_forest, gang_convoy_road]
+  - [ash_mire, ash_well_village]
+  - [cooling_well, tar_pits]
+  - [gang_convoy_road, overseer_camp]
+  - [tar_pits, lava_cave]
+  - [tar_pits, obsidian_valley]
+  - [overseer_camp, iron_forge_village]
+  - [lava_cave, horned_altar]
+  - [lava_cave, ruined_fortress]
+  - [ruined_fortress, molten_heart_pit]

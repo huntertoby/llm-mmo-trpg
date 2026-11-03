@@ -7,7 +7,7 @@
 //   usePlayback（播放與送出）、useBattleData（派生資料）、useSelection（選取狀態）、useBattleActions（送出動作）、
 //   useSelectionCommands（選取操作）、useBattleKeys（鍵盤）、useTileInteraction（格子互動與資訊卡）、
 //   useHighlights（預覽與高亮）、useBoardViewport（版面與縮放）；子元件 ZoomControls、BattleBottomBar、BattleDialogs。
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
 import { cardPlacement } from "../battle/stageLayout";
@@ -22,6 +22,7 @@ import { ModePanel } from "../ui/ActionPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { NoticeBanner } from "../ui/NoticeBanner";
+import { phaseNotices } from "../battle/bossPhase";
 import { ResizeHandle } from "../ui/ResizeHandle";
 import { SidePanel } from "../ui/SidePanel";
 import { SummonPanel } from "../ui/SummonPanel";
@@ -50,6 +51,10 @@ interface Props {
   exitLabel?: string;
   /** 從一輪（roguelite）進入時：顯示「存檔」按鈕與主角倒下提示（Phase 3-5c-1）。 */
   runMode?: RunMode;
+  /** 開場說明（大世界 5A-7：先手、開場狀態、增援）；開場橫幅下顯示，另在畫面上留一則可關的提示。 */
+  openingNotes?: readonly string[];
+  /** 結束面板取代「勝利！／敗北……」的中性文字（循環賽重播「某某 勝」，5F-4b）。 */
+  endTitle?: string;
 }
 
 export interface RunMode {
@@ -57,7 +62,7 @@ export interface RunMode {
   onSave(): Promise<string>;
 }
 
-export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes, endTitle }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const cardsRef = useRef<Readonly<Record<string, SkillCard | undefined>>>({});
@@ -73,6 +78,16 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   /** 中性提示（例如灰掉技能的原因），幾秒後自動消失。 */
   const [hint, setHint] = useState<string | null>(null);
   const closeHint = useCallback(() => setHint(null), []);
+  // Boss 進入新階段（Phase 5F-2）：播放完這次推進後，把轉換的紀錄文字留在提示列 15 秒
+  const [phaseNotice, setPhaseNotice] = useState<string | null>(null);
+  const closePhaseNotice = useCallback(() => setPhaseNotice(null), []);
+  useEffect(() => {
+    const notices = phaseNotices(response);
+    if (notices.length > 0) setPhaseNotice(notices.join("　"));
+  }, [response]);
+  // 大世界開場說明（5A-7）：橫幅消失後仍留一則提示，玩家自己關或 15 秒後消失
+  const [opening, setOpening] = useState<string | null>(() => ((openingNotes ?? []).length > 0 ? (openingNotes ?? []).join("　") : null));
+  const closeOpening = useCallback(() => setOpening(null), []);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   /** 頂端列開著的彈出面板（同時只開一個）。 */
   const [popup, setPopup] = useState<TopPopup | null>(null);
@@ -259,11 +274,18 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           <div className="battle-banner">
             戰鬥開始
             <div className="battle-banner-goal">{objectiveLine(shown.objective)}</div>
+            {(openingNotes ?? []).map((line) => (
+              <div key={line} className="battle-banner-note">
+                {line}
+              </div>
+            ))}
           </div>
         )}
         <div className="board-toasts">
           <ErrorBanner message={pb.error} onClose={() => pb.setError(null)} />
           <NoticeBanner message={hint} onClose={closeHint} />
+          <NoticeBanner message={phaseNotice} onClose={closePhaseNotice} autoCloseMs={15000} />
+          <NoticeBanner message={opening} onClose={closeOpening} autoCloseMs={15000} />
           {runMode !== undefined && shownHero?.downed === true && (
             <div className="hero-downed-notice" role="status">
               主角倒下，隊友繼續作戰
@@ -358,6 +380,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         copying={copying}
         ended={ended}
         exitLabel={exitLabel}
+        endTitle={endTitle}
         onExit={onExit}
         speed={pb.speed}
         playing={pb.playing}
@@ -382,6 +405,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         liveNames={data.liveNames}
         focusTile={data.focusTile}
         model={data.model}
+        oathWarning={actions.oathPending?.warning ?? null}
+        onConfirmOath={actions.confirmOath}
+        onCancelOath={actions.cancelOath}
         infusionPick={actions.infusionPick}
         infusionOptions={actions.infusionOptions}
         onCancelInfusion={closeInfusion}

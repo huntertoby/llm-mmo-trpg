@@ -22,6 +22,7 @@ import { GearTotals } from "./GearTotals";
 import { Hint } from "./Hint";
 import { StackTip } from "./StackTip";
 import { actionCardText } from "../battle/actionInfo";
+import { phaseText } from "../battle/bossPhase";
 
 interface Props {
   unit: UnitView | null;
@@ -59,11 +60,35 @@ export function formRows(unit: UnitView): [string, ReactNode][] {
   return rows;
 }
 
+/** 單位的「特性」欄（Phase 5A-M1b，玩法決定 #82）：招牌被動、反應、開場狀態與精英詞綴，一項一行；沒有時不列。 */
+export function traitRows(unit: UnitView): [string, ReactNode][] {
+  const lines = unit.traits_zh ?? [];
+  if (lines.length === 0) return [];
+  return [
+    [
+      "特性",
+      <div key="traits" className="unit-traits">
+        {lines.map((line) => (
+          <div key={line}>
+            <RuleText text={line} />
+          </div>
+        ))}
+      </div>,
+    ],
+  ];
+}
+
+/** Boss 的「階段」列（Phase 5F-2）：目前階段與下一個 HP 門檻；沒有階段時不列。 */
+export function phaseRows(unit: UnitView): [string, ReactNode][] {
+  const text = phaseText(unit);
+  return text === null ? [] : [["階段", text]];
+}
+
 export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
   }
-  const team = unit.team === "ally" ? "我方" : "敵方";
+  const team = unit.team === "ally" ? "我方" : unit.team === "third" ? "第三方" : "敵方";
   const kind = summonKind(unit);
   const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
   const stacks = Object.entries(unit.stacks);
@@ -81,6 +106,8 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
     ...(unit.race == null
       ? []
       : [["種族", `${unit.race.name_zh}（種族技：${unit.race.skill_name_zh}；被動：${unit.race.passive_name_zh}）`] as [string, ReactNode]]),
+    ...phaseRows(unit),
+    ...traitRows(unit),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],
   ];

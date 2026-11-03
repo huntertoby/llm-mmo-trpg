@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.engine.helpers import PROJECT_ROOT
+from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.cli.main import main
 from trpg.content.loader import CONTENT_DIR_ENV
 
@@ -26,9 +26,10 @@ def test_budget_for_one_skill_prints_the_breakdown(capsys: pytest.CaptureFixture
     assert "damage" in out and "形狀 ×1.6" in out  # 錐形 3
     assert "create_surface" in out and "fire 3×1" in out
     assert "raw ＝ 16.00" in out and "total ＝ raw × 條件 × 協同 ＝ 16.00" in out
-    assert "tier_budget 18 × AP 係數 1.00 × (1000 + 折抵 160‰) ÷ 1000 ＝ 20.88" in out
-    assert "冷卻 2 回合 +100‰、法力 12 +60‰" in out
-    assert "比例 ＝ total ÷ 可用預算 ＝ 76.6%" in out and "→ 合格" in out
+    assert "tier_budget 18 × AP 係數 1.00 × (1000 + 折抵 " in out
+    mana = library().skills["skill_ashen_oath"].cost.mana  # 法力費用由平衡調整，讀 content
+    assert f"冷卻 2 回合 +100‰、法力 {mana} +" in out
+    assert "比例 ＝ total ÷ 可用預算 ＝ " in out and "→ 合格" in out
     assert "驗證：通過" in out
 
 
@@ -42,7 +43,11 @@ def test_budget_shows_conditions_and_synergies(capsys: pytest.CaptureFixture[str
 def test_budget_all_lists_every_skill(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["skills", "budget", "--all"], capsys)
     assert code == 0
-    assert "技能預算總表（共 301 個" in out and "通過 301 個，違規 0 個。" in out
+    known = len(library().budget.known_budget_exceptions)  # BAL-14b 起清單改讀 content
+    tail = f"，已知例外 {known} 個" if known else "。"
+    total = len(library().skills)
+    assert f"技能預算總表（共 {total} 個" in out
+    assert f"通過 {total - known} 個，違規 0 個{tail}" in out
     for skill_id in sorted(p.stem for p in (PROJECT_ROOT / "content/skills").glob("*.yaml")):
         assert skill_id in out
 
@@ -56,7 +61,7 @@ def test_budget_needs_an_id_or_all(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_content_check_passes_with_the_shipped_skills(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["content", "check"], capsys)
-    assert code == 0 and "301 個技能通過預算與結構驗證" in out
+    assert code == 0 and f"{len(library().skills)} 個技能通過預算與結構驗證" in out
 
 
 def test_content_check_fails_on_a_skill_that_breaks_the_rules(

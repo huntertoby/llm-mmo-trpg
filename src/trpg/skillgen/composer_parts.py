@@ -30,10 +30,12 @@ from trpg.content.skills import (
 )
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Surface
+from trpg.skillgen.memo import by_id
 
 __all__ = [
     "KNOB_LADDERS",
     "NON_INTERCEPT_EVENTS",
+    "STRETCH_FIELD",
     "Ctx",
     "Knob",
     "KnobSpec",
@@ -50,7 +52,27 @@ __all__ = [
     "choose_core",
     "dice_ladder",
     "effect_knobs",
+    "set_knob_value",
 ]
+
+STRETCH_FIELD = "duration+magnitude_permille"
+_NEUTRAL_MAGNITUDE = 1000
+"""升階重配的複合旋鈕（BAL-12e，#76）：值是 ``(持續回合, 強度‰)``，先把持續回合加到上限、再加強度
+（同一個旋鈕，所以順序固定）。強度 1000 時不寫進效果。"""
+
+
+def set_knob_value(target: dict[str, Any], field: str, value: Any) -> None:
+    """把旋鈕的值寫進效果字典；:data:`STRETCH_FIELD` 一次寫持續回合與強度。"""
+    if field != STRETCH_FIELD:
+        target[field] = value
+        return
+    duration, magnitude = value
+    target["duration"] = duration
+    if magnitude == _NEUTRAL_MAGNITUDE:
+        target.pop("magnitude_permille", None)
+    else:
+        target["magnitude_permille"] = magnitude
+
 
 # 抽選機率與範圍在 ``content/skill_composer.yaml``（``library.composer``）；這裡只留結構判斷。
 _BIG_SHAPES = frozenset({"square3", "allies_in_radius"})
@@ -112,7 +134,7 @@ class Ctx:
         return rarity_rank(self.rarity)
 
     def primitive(self, primitive_id: str) -> PrimitiveDef:
-        return self.library.ruleset.primitives.by_id()[primitive_id]
+        return by_id(self.library.ruleset.primitives)[primitive_id]
 
     def chance(self, permille: int) -> bool:
         return self.rng.chance_permille(permille)
@@ -166,7 +188,7 @@ def _status_ladder(
     library: ContentLibrary, _knob: PrimitiveKnob, _param: PrimitiveParam, effect: Mapping[str, Any]
 ) -> tuple[Any, ...]:
     """狀態的持續回合（依狀態的預設持續與控制類別；只有一階時不算旋鈕）。"""
-    status = library.ruleset.statuses.by_id().get(str(effect.get("status")))
+    status = by_id(library.ruleset.statuses).get(str(effect.get("status")))
     if status is None:
         return ()
     values = _duration_values(status.duration, status.control_group, library.composer.duration)
@@ -328,7 +350,7 @@ def _has_status(ctx: Ctx, beneficial: bool) -> bool:
 def build_shape(ctx: Ctx, core: list[str], only: tuple[str, ...] | None = None) -> None:
     """形狀（骨架允許、稀有度夠、角色階級已開放、核心原語接受；``only`` 再限縮），再依形狀的參數
     範圍隨機填值。"""
-    shapes = ctx.library.ruleset.shapes.by_id()
+    shapes = by_id(ctx.library.ruleset.shapes)
     tiers = ctx.library.budget.min_character_tier.shapes
     allowed = [
         s
@@ -393,6 +415,8 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
             continue
         if rarity_rank(status.min_rarity) > ctx.rank or status.stance:
             continue  # 姿態狀態只有姿態技能（build_stance_effects）會施加
+        if status.id in ctx.rules.whiteboard.command_statuses:
+            continue  # 號令只給號令型白板（BAL-19f 追加），完整模式不抽，既有種子的輸出不變
         if not _theme_allows(ctx, status.id, status=True):
             continue  # 石膚只有大地主題（3-54d）
         if status.control_group == "hard" and ctx.shape != "single":
@@ -584,7 +608,7 @@ def _secondary_pool(ctx: Ctx) -> list[str]:
     rules = ctx.skeleton.secondary
     fallback = ctx.rules.structure.fallback_secondary
     pool = list(rules.primitives) if rules.primitives is not None else list(fallback)
-    primitives = ctx.library.ruleset.primitives.by_id()
+    primitives = by_id(ctx.library.ruleset.primitives)
     kept: list[str] = []
     for name in sorted(pool):
         primitive = primitives[name]
@@ -788,7 +812,11 @@ def _condition_spec(ctx: Ctx, kind: str) -> dict[str, Any]:
         names = sorted(s.value for s in Surface if s is not Surface.NONE)
         return {"type": kind, "surface": rng.choice(names)}
     if kind == "target_has_status":
-        names = sorted(s.id for s in ctx.library.ruleset.statuses.statuses if not s.beneficial)
+        names = sorted(
+            s.id
+            for s in ctx.library.ruleset.statuses.statuses
+            if not s.beneficial and not s.enemy_only  # 5F-5c：只給敵人的狀態不進技能池
+        )
         return {"type": kind, "status": rng.choice(names)}
     return {"type": kind}
 
@@ -922,7 +950,7 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
     rules = ctx.rules.cost
     if not ctx.chance(rules.self_status_permille):
         return None
-    statuses = ctx.library.ruleset.statuses.by_id()
+    statuses = by_id(ctx.library.ruleset.statuses)
     allowance = ctx.library.budget.allowance.self_status
     options = sorted(
         status_id

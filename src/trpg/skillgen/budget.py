@@ -54,6 +54,7 @@ from trpg.content.skills import (
 from trpg.content.summons import SummonDef, summon_dpr
 from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
+from trpg.skillgen.memo import by_id
 
 __all__ = [
     "BUDGET_BASES",
@@ -65,9 +66,11 @@ __all__ = [
     "VariantBudget",
     "self_status_allowance_permille",
     "skill_budget",
+    "weak_floor_exempt",
 ]
 
 _PERMILLE = 1000
+_EXEMPT_MIN_TIER = 2
 _SHAPED_AFFECTS = frozenset({"enemies", "allies", "all", "tiles"})
 _ACTION_NAMES = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
@@ -230,7 +233,7 @@ def _base_points(
     """基礎點數（含強度）與一句說明；傷害效果再乘高變異、縮放與超載的期望值係數（3D-7b）。"""
     points, note = _plain_base_points(skill, effect, primitive, library)
     if effect.form_bonus_permille is not None:  # 在形態中的加成（3J-4b）：加成的部分乘條件倍率
-        harsh = _condition_multiplier("in_form", library.ruleset.conditions.by_id(), library.budget)
+        harsh = _condition_multiplier("in_form", by_id(library.ruleset.conditions), library.budget)
         ratio = 1 + Fraction(effect.form_bonus_permille, _PERMILLE) * harsh
         points *= ratio
         note += f"，在形態中 +{effect.form_bonus_permille / 10:g}% ×{_fmt(ratio)}"
@@ -331,7 +334,7 @@ def _overload_stack_cost(
             assert sub.dice is not None
             backlash += _dice_average(sub.dice)
         else:
-            backlash += _status_points(sub, rules.statuses.by_id())[0]
+            backlash += _status_points(sub, by_id(rules.statuses))[0]
     harm = Fraction(library.budget.gamble_self_harm_permille, _PERMILLE)
     amount = effect.amount or 1
     cost = backlash * harm * amount / stack.overload.threshold
@@ -399,19 +402,21 @@ def _plain_base_points(  # noqa: PLR0911
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
         extra, extra_note = _shield_rider_points(primitive.id, effect, library)
+        average = _dice_average(effect.dice) + (effect.flat_bonus or 0)  # BAL-12b：固定值加成
+        dice = f"{effect.dice}＋{effect.flat_bonus}" if effect.flat_bonus else str(effect.dice)
         if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
             permille = library.budget.shield_duration_permille[min(max(effect.duration, 2), 3) - 2]
             return (
-                _dice_average(effect.dice) * Fraction(permille, _PERMILLE) + extra,
-                f"{effect.dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
+                average * Fraction(permille, _PERMILLE) + extra,
+                f"{dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
             )
-        return _dice_average(effect.dice) + extra, f"{effect.dice} 平均{extra_note}"
+        return average + extra, f"{dice} 平均{extra_note}"
     if basis == "damage":
         permille = effect.multiplier_permille or _PERMILLE
         reference = rules.core.budget_reference_weapon_damage
         return Fraction(permille * reference, _PERMILLE), f"武器 ×{permille / _PERMILLE:g}"
     if basis == "status":
-        return _status_points(effect, rules.statuses.by_id())
+        return _status_points(effect, by_id(rules.statuses))
     if basis == "surface":
         return _surface_points(effect, library)
     raise BudgetError(f"原語 {primitive.id} 的預算算法 {basis} 沒有實作")
@@ -459,7 +464,7 @@ def _obstacle_points(
 ) -> tuple[Fraction, str]:
     """``create_obstacle`` 的點數（3-11）：基礎點數 × 持續時間係數（永久 ＝ 基礎）。"""
     rules = library.budget
-    primitive = library.ruleset.primitives.by_id()[effect.type]
+    primitive = by_id(library.ruleset.primitives)[effect.type]
     assert primitive.base_points is not None
     if effect.duration is None:
         return Fraction(primitive.base_points), "固定（永久）"
@@ -475,7 +480,7 @@ def _inscribe_points(
 ) -> tuple[Fraction, str]:
     """``inscribe`` 的點數（3-23）：基礎點數 × 持續時間係數（省略 ``duration`` ＝ 預設輪數）。"""
     rules = library.budget
-    primitive = library.ruleset.primitives.by_id()[effect.type]
+    primitive = by_id(library.ruleset.primitives)[effect.type]
     assert primitive.base_points is not None
     rounds = effect.duration or library.ruleset.core.rune_default_rounds
     permille = rules.inscribe_duration_permille[min(rounds, 5) - 1]
@@ -621,7 +626,7 @@ def _hurl_object_points(
     points = _dice_average(effect.dice) * Fraction(discount, _PERMILLE)
     note = f"{effect.dice} 平均 × 需有物件 {discount}‰"
     if effect.knock_prone:
-        prone = library.ruleset.primitives.by_id()["knock_prone"].base_points or 0
+        prone = by_id(library.ruleset.primitives)["knock_prone"].base_points or 0
         points += prone
         note += f" ＋ 擊倒 {prone}"
     return points, note
@@ -634,7 +639,7 @@ def _charge_through_points(
     ``on_hit`` 的點數：``knock_prone`` 為擊倒原語的 ``base_points``、``push_aside`` 為推擊 1 格。"""
     if effect.dice is None or effect.on_hit is None:
         raise BudgetError("charge_through 缺少 dice 或 on_hit，無法計算點數")
-    primitives = library.ruleset.primitives.by_id()
+    primitives = by_id(library.ruleset.primitives)
     follow = (
         primitives["knock_prone" if effect.on_hit == "knock_prone" else "push"].base_points or 0
     )
@@ -749,7 +754,7 @@ def _infusion_trait_points(
     notes: list[str] = []
     if infusion is None:
         return per_round, once, notes
-    primitives = library.ruleset.primitives.by_id()
+    primitives = by_id(library.ruleset.primitives)
     if infusion.status is not None:
         per_round += _status_value(library, infusion.status) * Fraction(
             rules.summon_trait_status_permille, _PERMILLE
@@ -840,7 +845,7 @@ def _rule_trait_points(
             once += surface * tiles * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
         notes.append("自爆")
     if "topplable" in template.tags:
-        prone = library.ruleset.primitives.by_id()["knock_prone"].base_points or 0
+        prone = by_id(library.ruleset.primitives)["knock_prone"].base_points or 0
         topple = _dice_average(library.ruleset.core.topple_damage_dice) + prone
         once += topple * Fraction(rules.summon_topple_targets_permille, _PERMILLE)
         notes.append("被推倒壓人")
@@ -864,12 +869,12 @@ def summon_trait_points(
         notes.append("不會被推動")
     pulse = summon.template.pulse
     if pulse is not None and pulse.pull_radius > 0:  # 拉扯（吸引圖騰，3-33e2b）：每輪拉近 1 格
-        pull = library.ruleset.primitives.by_id()["pull"].base_points or 0
+        pull = by_id(library.ruleset.primitives)["pull"].base_points or 0
         per_round += pull * Fraction(library.budget.summon_trait_pull_permille, _PERMILLE)
         notes.append("拉扯")
     platform = summon.template.platform
     if platform is not None:  # 高台（高台圖騰，3-33e2b）：高台在的每一輪都有地形價值
-        raised = library.ruleset.primitives.by_id()["raise_terrain"].base_points or 0
+        raised = by_id(library.ruleset.primitives)["raise_terrain"].base_points or 0
         per_round += (
             raised
             * platform.height
@@ -883,13 +888,13 @@ def zone_cell_count(skill: SkillDef, library: ContentLibrary) -> int:
     """持續區域（3D-5）的形狀格數（純幾何，不看地圖上的牆壁）；資料在 ``skill_shapes.yaml`` 的
     ``cell_count``，形狀沒有格數（例如連鎖）或參數不在表內時拋出 :class:`BudgetError`。"""
     shape_id = skill.shape.type
-    shape = library.ruleset.shapes.by_id().get(shape_id)
+    shape = by_id(library.ruleset.shapes).get(shape_id)
     if shape is None:
         raise BudgetError(f"未知的形狀：{shape_id}")
     if shape.cell_count is None:
         raise BudgetError(f"形狀 {shape_id} 沒有 cell_count，無法計算區域格數")
     try:
-        return shape.cell_count.count_for(skill.shape.param_values())
+        return shape.cell_count.count_for(shape.with_defaults(skill.shape.param_values()))
     except ValueError as error:
         raise BudgetError(str(error)) from None
 
@@ -900,7 +905,7 @@ def _zone_points(
     """``zone`` 的點數（3D-5）：``effects`` 的基礎點數合計 × 格數 × 輪數 × 每格每輪的觸發率
     （× ``both`` 倍率、× ``moving`` 倍率）＋ 表面點數 × 新覆蓋的格數 × 表面折合。"""
     rules = library.budget
-    primitives = library.ruleset.primitives.by_id()
+    primitives = by_id(library.ruleset.primitives)
     if effect.duration is None:
         raise BudgetError("zone 缺少 duration，無法計算點數")
     per_trigger = Fraction(0)
@@ -933,7 +938,7 @@ def _zone_points(
 def _damage_points(skill: SkillDef, library: ContentLibrary) -> Fraction:
     """技能傷害效果（含形狀與對象倍率，不含賭注分支）的點數合計：``damage_multiplier`` 與
     ``self_damage_of_hit`` 以它為基礎。"""
-    primitives = library.ruleset.primitives.by_id()
+    primitives = by_id(library.ruleset.primitives)
     total = Fraction(0)
     for other in skill.effects:
         if other.type == "damage":
@@ -1032,7 +1037,7 @@ def _consume_stack_points(
     expected = Fraction(
         rules.stack_def(effect.stack).max * budget.consume_stack_expected_permille, _PERMILLE
     )
-    primitives = rules.primitives.by_id()
+    primitives = by_id(rules.primitives)
     stack = rules.stack_def(effect.stack)
     consumer = stack.consumer
     damage = Fraction(0)
@@ -1049,7 +1054,7 @@ def _consume_status_points(
 ) -> tuple[Fraction, str]:
     """``consume_status`` 的點數（3C-3b）：``then`` 各效果的基礎點數合計 × 期望倍率（有 ``scale``）
     × 濺射加成 × 「需要先有狀態」折扣。"""
-    budget = library.ruleset.primitives.by_id()
+    budget = by_id(library.ruleset.primitives)
     rules = library.budget
     total = Fraction(0)
     for sub in effect.then or ():
@@ -1134,11 +1139,13 @@ def _shape_parts(
     if not (affects in _SHAPED_AFFECTS and primitive.acts_on != "caster"):
         return Fraction(1), Fraction(1)
     if skill.trap is not None:
-        shape = rules.shapes.by_id()[skill.trap.shape]
+        shape = by_id(rules.shapes)[skill.trap.shape]
         return Fraction(shape.budget.permille_for({}), _PERMILLE), Fraction(1)
-    shape = rules.shapes.by_id()[skill.shape.type]
-    multiplier = Fraction(shape.budget.permille_for(skill.shape.param_values()), _PERMILLE)
-    return multiplier, range_coefficient(skill.shape, library.budget)[1]
+    shape = by_id(rules.shapes)[skill.shape.type]
+    # 連鎖的非威力效果（狀態等）不衰減，維持衰減前的倍率（BAL-13d，06 6.5「BAL-13c 定」）
+    values = shape.with_defaults(skill.shape.param_values())
+    permille = shape.budget.permille_for(values, primitive.id)
+    return Fraction(permille, _PERMILLE), range_coefficient(skill.shape, library.budget)[1]
 
 
 def _shape_multiplier(
@@ -1156,7 +1163,8 @@ def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[
     if status.budget_points is None:
         raise BudgetError(f"狀態 {status.id}（{status.name_zh}）沒有預算點數，不能由技能施加")
     ratio = _duration_ratio(effect.duration, status.duration)
-    if effect.magnitude_permille and status.stance:  # 完整姿態的幅度（3W-5b）：點數等比例放大
+    # 完整姿態的幅度（3W-5b）、數值型狀態的強度（BAL-12e，#76）：點數等比例放大
+    if effect.magnitude_permille and (status.stance or status.scales_with_magnitude):
         ratio *= Fraction(effect.magnitude_permille, _PERMILLE)
     return status.budget_points * ratio, f"{status.id} {status.budget_points}×{_fmt(ratio)}"
 
@@ -1171,6 +1179,9 @@ def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fracti
     if surface.budget_points is None:
         raise BudgetError(f"表面 {surface.id.value}（{surface.name_zh}）沒有預算點數")
     ratio = _duration_ratio(effect.duration, surface.duration)
+    magnitude = effect.magnitude_permille
+    if magnitude and library.ruleset.surface_scales_with_magnitude(surface.id):
+        ratio *= Fraction(magnitude, _PERMILLE)  # 表面的強度（BAL-12e，#76）：點數等比例放大
     return (
         surface.budget_points * ratio,
         f"{surface.id.value} {surface.budget_points}×{_fmt(ratio)}",
@@ -1188,7 +1199,8 @@ def _condition_multiplier(
     definition = conditions.get(condition_type)
     if definition is None:
         raise BudgetError(f"未知的條件 {condition_type!r}")
-    best = Fraction(budget.condition_permille[definition.harshness], _PERMILLE)
+    permille = definition.budget_permille or budget.condition_permille[definition.harshness]
+    best = Fraction(permille, _PERMILLE)
     for part in any_of or ():
         best = max(best, _condition_multiplier(part.type, conditions, budget))
     return best
@@ -1198,7 +1210,7 @@ def _effect_budget(
     skill: SkillDef, index: int, effect: EffectSpec, library: ContentLibrary
 ) -> EffectBudget:
     rules, budget = library.ruleset, library.budget
-    primitive = rules.primitives.by_id().get(effect.type)
+    primitive = by_id(rules.primitives).get(effect.type)
     if primitive is None:
         raise BudgetError(f"未知的效果原語 {effect.type!r}")
     base, note = _base_points(skill, effect, primitive, library)
@@ -1215,7 +1227,7 @@ def _effect_budget(
     condition = Fraction(1)
     if effect.condition is not None:
         condition = _condition_multiplier(
-            effect.condition.type, rules.conditions.by_id(), budget, effect.condition.any_of
+            effect.condition.type, by_id(rules.conditions), budget, effect.condition.any_of
         )
     return EffectBudget(
         index=index,
@@ -1240,7 +1252,7 @@ def _allowance_parts(
         parts.append(
             (
                 f"冷卻 {cost.cooldown} 回合",
-                min(cost.cooldown * allowance.cooldown_per_turn, allowance.cooldown_cap),
+                allowance.cooldown_allowance(cost.cooldown, stance=skill.kind == "stance"),
             )
         )
     if cost.uses_per_battle is not None:
@@ -1297,7 +1309,7 @@ def _self_status_allowance(
 
 def self_status_allowance_permille(cost: SelfStatusCost, library: ContentLibrary) -> int:
     """自身狀態代價換到的預算折抵（‰；已套用該狀態的上限，尚未和其他代價加總）。"""
-    return _self_status_allowance(cost, library.budget, library.ruleset.statuses.by_id())[1]
+    return _self_status_allowance(cost, library.budget, by_id(library.ruleset.statuses))[1]
 
 
 def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Fraction, str]:
@@ -1306,7 +1318,7 @@ def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Frac
     trigger = skill.trigger
     if trigger is None:
         raise BudgetError(f"被動技能 {skill.id} 沒有 trigger，無法計算預算")
-    definition = library.ruleset.skill_triggers.by_id().get(trigger.event)
+    definition = by_id(library.ruleset.skill_triggers).get(trigger.event)
     if definition is None:
         raise BudgetError(f"未知的觸發時機 {trigger.event!r}")
     if (
@@ -1456,7 +1468,7 @@ def _shape_to_value(library: ContentLibrary, target: str) -> tuple[Fraction, str
     """``shape_to`` 每次使用的價值（3D-3）：基準武器傷害 ×（轉換後的形狀倍率 − 轉換前的形狀倍率），
     倍率取自 ``skill_shapes.yaml``（6.5）；保留自原形狀的大小參數以 :data:`_REFERENCE_PARAM` 計。"""
     shapes = library.ruleset.shapes
-    by_id = shapes.by_id()
+    shape_defs = by_id(shapes)
     gains: list[tuple[Fraction, str]] = []
     for conv in shapes.conversions:
         if conv.to != target:
@@ -1465,8 +1477,8 @@ def _shape_to_value(library: ContentLibrary, target: str) -> tuple[Fraction, str
             name: _REFERENCE_PARAM for name in conv.keep if name in ("size", "radius")
         }
         after_params: dict[str, int | str] = {**conv.params, **before_params}
-        before = by_id[conv.from_shape].budget.permille_for(before_params)
-        after = by_id[conv.to].budget.permille_for(after_params)
+        before = shape_defs[conv.from_shape].budget.permille_for(before_params)
+        after = shape_defs[conv.to].budget.permille_for(after_params)
         damage = library.ruleset.core.budget_reference_weapon_damage
         gains.append(
             (
@@ -1483,7 +1495,7 @@ def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectB
     """修正技能每條規則的點數（當成 :class:`EffectBudget` 的一列；形狀與對象倍率為 1）。"""
     rules, budget = library.ruleset, library.budget
     out: list[EffectBudget] = []
-    changes = library.modifier_changes.by_id()
+    changes = by_id(library.modifier_changes)
     for index, rule in enumerate(skill.modifiers):
         uses, where = _modifier_uses(rule, budget.modifier)
         change = changes[rule.change.kind]
@@ -1496,7 +1508,7 @@ def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectB
         condition = Fraction(1)
         if rule.condition is not None:
             condition = _condition_multiplier(
-                rule.condition.type, rules.conditions.by_id(), budget, rule.condition.any_of
+                rule.condition.type, by_id(rules.conditions), budget, rule.condition.any_of
             )
         base = count * value
         out.append(
@@ -1671,6 +1683,29 @@ def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     )
 
 
+def weak_floor_exempt(skill: SkillDef, library: ContentLibrary) -> bool:
+    """升階後豁免預算窗下限（BAL-12f，06 6.34.9「BAL-12e 定」；``retier_report`` 用，一般驗證
+    不受影響）：2 階以上、效果全是沒有數值的狀態（標記、隱蔽等，不含控制與姿態）或沒有數值的表面
+    （冰、水、油、煙霧、黑暗），也就是沒有任何可放大的數值——持續到上限 6 回合就不再加（#76
+    接受），掉出下限不補償、不標過弱。有任何一項數值（傷害、治療、護盾、位移、數值型狀態或表面、
+    召喚、形態、接續段）就不豁免。"""
+    if skill.tier < _EXEMPT_MIN_TIER or skill.followup is not None or not skill.effects:
+        return False
+    rules = library.ruleset
+    statuses = by_id(rules.statuses)
+    for effect in skill.effects:
+        if effect.type == "apply_status" and effect.status in statuses:
+            status = statuses[effect.status]
+            if status.stance or status.control_group is not None or status.scales_with_magnitude:
+                return False
+        elif effect.type == "create_surface" and effect.surface is not None:
+            if rules.surface_scales_with_magnitude(effect.surface):
+                return False
+        else:
+            return False
+    return True
+
+
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。
 
@@ -1695,7 +1730,7 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     condition_multiplier = Fraction(1)
     if skill.condition is not None:
         condition_multiplier = _condition_multiplier(
-            skill.condition.type, rules.conditions.by_id(), budget, skill.condition.any_of
+            skill.condition.type, by_id(rules.conditions), budget, skill.condition.any_of
         )
     tags = mechanic_tags(skill, rules)
     synergies = tuple(
@@ -1735,7 +1770,7 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         total=total,
         tier_budget=tier_budget,
         ap_coefficient=coefficient,
-        allowance_parts=_allowance_parts(skill, budget, rules.statuses.by_id()),
+        allowance_parts=_allowance_parts(skill, budget, by_id(rules.statuses)),
         allowance_cap=budget.allowance.total_cap,
         min_ratio=Fraction(budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),

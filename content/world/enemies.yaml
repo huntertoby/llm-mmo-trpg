@@ -1,0 +1,101 @@
+# 大世界敵人的元素變體與精英詞綴（Phase 5A-3；schema：src/trpg/content/world_enemies.py）。
+# 規則：docs/design/09-世界與敘事.md 9.6.6（#82：變體換元素或武器、精英帶詞綴，都是 content 資料）。
+# 內容：docs/design/18-雲嶺內容.md 18.2.1（#111，玩法 PM 代決、待使用者確認）。
+# 只用既有技能、反應與開場狀態；引擎沒有的機制照最保守替代（docs/phases/Phase5計畫.md 7.6 代決 5A3-3；霧隱的在 5A-M1 換成開場隱蔽）。
+# 數值（hp_permille）是開發 PM 的初值，未經模擬。
+
+# 變體：以 base 範本為底，換名字、武器與技能；theme 是外觀用的元素標記（5A-ART）。
+variants:
+  - id: thunder_talisman_caster
+    base: sect_talisman_caster
+    name_zh: 雷符師
+    theme: lightning
+    weapon: lightning_staff
+    skill_swaps: {skill_hush: skill_static_palm}  # 5A-4 追加 B：雷符＋定身符
+    doll: {skin: '#f1c9a5', hair: long, hair_color: '#1c1c22', main_kind: talisman, traits: [sparks], gear: {body: {kind: robe, material: cloth, color: '#3c4248', trim: '#fff36b'}, waist: {kind: talismans, material: paper, color: '#fff7c0'}}}   # 5A-ART4：墨灰袍黃邊、淡黃符、電光
+  - id: frost_crane_archer
+    base: sect_crane_archer
+    name_zh: 冰鶴使
+    theme: ice
+    skill_swaps: {skill_rng_hawkeye_mark: skill_annotated_frost}   # 命中緩速
+    doll: {skin: '#d9a47a', hair: bun, hair_color: '#1c1c22', gear: {body: {kind: robe, material: cloth, color: '#bfe4f2', trim: '#dfe4e2'}, cloak: {kind: cape, material: cloth, form: feather, color: '#d8f6ff'}}}   # 5A-ART4：淡藍袍、冰藍羽
+  - id: water_alchemist
+    base: sect_alchemist
+    name_zh: 水煉丹師
+    theme: water
+    skill_swaps: {skill_poison_mist: skill_splash_flask}   # 丹爆改成造水
+    doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk, gear: {body: {kind: robe, material: cloth, color: '#3a6ab0', trim: '#dfe4e2', apron: '#d8e8f4'}, back: {kind: gourd, material: wood, color: '#4a9af0'}}}   # 5A-ART4：藍袍、藍葫蘆
+  # 灰燼荒原（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.1 元素變體、19.2.2 中立族群；#118 玩法 PM 代決）。
+  # 寒燼蜥要換元素修正與開場狀態（死後留冰面），變體做不到，所以是獨立範本 units/frost_ember_lizard.yaml。
+  - id: thunder_shell_beetle
+    base: lava_beetle
+    name_zh: 雷殼甲蟲
+    theme: lightning
+    skill_swaps: {skill_battering_ram: skill_static_palm}   # 硬殼帶電：「反傷」引擎沒有，用雷掌近似（代決 5F5a-7）
+    doll: {creature: {body: crawler, variant: beetle, material: magma, element: lightning}}   # 5A-ART4：只換元素
+  - id: scorched_stoneback
+    base: stoneback_bear
+    name_zh: 焦石背熊
+    theme: fire
+    skill_swaps: {skill_quake_topple: skill_battering_ram}   # 焦石背：撞擊（荒原變體，開發 PM 定）
+    doll: {creature: {body: bear, material: fur, element: fire, traits: [stone_back]}}   # 5A-ART4：石背熊換火元素（開發 PM 代決）
+  - id: ashen_gunner
+    base: bandit_archer
+    name_zh: 斷崖幫火槍手
+    theme: fire
+    weapon: longgun          # 19.2.2「荒原分隊會用火槍」
+  - id: forge_scar
+    base: bandit_captain
+    name_zh: 熔爐督工「鍛疤」
+    theme: fire
+    weapon: whip             # 19.5「命令句」的督工、20.3「鍛疤的鐵鍊」（鞭）；懸賞「熔爐督工」與熔爐督工營的固定精英
+  - id: horned_zealot
+    base: sect_warrior_monk
+    name_zh: 角魔狂信者
+    theme: fire             # 赫琳的祭壇護衛（19.6.1 第 4 步三方混戰）
+    skill_swaps: {skill_rampart_jeer: skill_fire_enchant}   # 拳頭帶火（角魔的聖火）
+
+# 精英詞綴：套上的單位加 elite 標籤、HP × hp_permille、加技能與反應規則。
+affixes:
+  - id: regenerating
+    look: regen   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
+    name_zh: 再生的
+    description_zh: 每回合結束回血。
+    add_skills: [skill_steady_breath]
+    hp_permille: 1500
+  - id: mist_veiled
+    look: mist_hidden   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
+    name_zh: 霧隱的
+    description_zh: 開戰時隱身在霧中 1 回合。
+    add_opening_statuses:
+      - {status: concealed, duration: 1}   # 開場隱蔽 1 回合（18.2.1；5A-M1）
+    hp_permille: 1500
+  - id: heart_linked
+    look: linked   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
+    name_zh: 連心的
+    description_zh: 受到的傷害有一部分分給相鄰的同門（Phase 5A-M2，開場狀態「連心」）。
+    add_opening_statuses:
+      - {status: heart_link}
+    hp_permille: 1500
+  - id: berserk
+    look: berserk   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
+    name_zh: 狂暴的
+    description_zh: 傷得越重砍得越狠（近戰限定）。
+    add_skills: [skill_berserker_rage]
+    hp_permille: 1500
+    weapon_classes: [melee]
+  # 灰燼荒原（Phase 5F-5a；19.2.1）。
+  - id: blazing
+    look: blazing   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
+    name_zh: 熾熱的
+    description_zh: 渾身發燙，被它碰到就會燒起來。
+    # 19.2.1「相鄰的敵人每回合受到小火傷」：非召喚物沒有光環，用近戰點燃「餘燼啃咬」近似（代決 5F5a-7）
+    add_skills: [skill_ember_bite]
+    hp_permille: 1500
+  - id: hard_shelled
+    look: hardshell   # 5A-ART2 詞綴特效（docs/art/敵人外觀.md 1.2）
+    name_zh: 硬殼的
+    description_zh: 開戰時硬殼還沒敲裂，受到的傷害大幅降低。
+    add_opening_statuses:
+      - {status: hard_shell, duration: 2}   # 19.2.1「前 2 次受擊傷害減半」用開場 2 回合近似（代決 5F5a-7）
+    hp_permille: 1500

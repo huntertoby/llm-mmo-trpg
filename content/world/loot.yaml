@@ -1,0 +1,81 @@
+# 大世界的掉落（Phase 5D-2；docs/phases/Phase5計畫.md 27.2；schema：src/trpg/content/world_loot.py）。
+# 數值依 docs/design/20-第一季商店與裝備內容.md 20.1、20.2、20.5（玩法 PM #119 代決，待使用者確認）；
+# 被改時只動這份資料。只有打贏的戰鬥有掉落。
+
+# 20.2：每名被擊倒的敵人 40% 掉自己家族的材料；精英必掉 1 份（詞綴的稀有材料 > 家族材料 > 通用料）
+material_permille: 400
+
+# 沒有家族材料的敵人掉通用料，依地點建議等級（代決 5D2-2；粗／精／上＝08 8.26.2 打造上限 3／7／10）
+generic_by_level:
+  - {max_level: 3, item: item_coarse_material}
+  - {max_level: 7, item: item_fine_material}
+  - {max_level: 10, item: item_superior_material}
+
+# 20.2：一般戰鬥約 15% 掉 1 件（普通～稀有）；每名精英必掉 1 件、史詩 50%（5D-2b 玩法 PM 代決，取代 5D2-4 的一場 1 件）
+# 物品等級＝地點建議等級（8.26.2），第一季上限 10。區域 Boss 必掉史詩見下面的 bosses（5F-3）。
+gear:
+  battle_permille: 150
+  battle_weights: {common: 40, uncommon: 25, rare: 20}   # 照 item_gen.yaml 的 rarity_weights
+  elite_epic_permille: 500
+  max_item_level: 10
+
+# 20.1：裝備回收＝物品等級 × 稀有度係數；沒列的（傳說）與沒有物品等級的（初始裝備）不收（代決 5D2-8）
+sell_rarity_coef: {common: 3, uncommon: 5, rare: 8, epic: 12}
+
+# 20.5：傭兵每個部位帶同物品等級、稀有的系統裝備（詞條照底稿 build 的關鍵字；不掉落、不能拆）。
+# 主手、副手照底稿的武器不換（代決 5D2-9）。
+mercenary_gear:
+  rarity: rare
+  slots: [head, body, hands, feet, neck, ring_1, ring_2]
+
+# 各區共用的家族材料（區域的 families 優先）。5D-2b（玩法 PM 2026-11-03 代決；19.2.4、20.2）：
+# 盜賊在各區都掉焦鐵（盜賊系列的單位範本全列）。
+families:
+  bandit: item_scorched_iron
+  bandit_archer: item_scorched_iron
+  bandit_archer_guard: item_scorched_iron
+  bandit_boss: item_scorched_iron
+  bandit_captain: item_scorched_iron
+  bandit_guard: item_scorched_iron
+  bandit_shieldbearer: item_scorched_iron
+  bandit_shieldbearer_guard: item_scorched_iron
+  bandit_warlord: item_scorched_iron
+
+regions:
+  cloud_ridge:
+    # 20.2：雲嶺的詞條偏向潮濕、帶電、隱蔽（5D-2b 補了潮濕、隱蔽的技能強化詞條；ID 照 skill_keywords.yaml）
+    keywords: [wet, charged, concealed]
+    # 18.2.4 的來源；沒列的敵人掉上面各區共用的 families，再沒有就掉通用料
+    families:
+      sect_mist_walker: item_mist_crystal       # 霧行者 → 霧晶
+      mist_wraith: item_mist_crystal            # 霧魅 → 霧晶
+      sect_talisman_caster: item_talisman_ash   # 符籙師 → 符紙灰
+      thunder_talisman_caster: item_talisman_ash  # 雷符師 → 符紙灰
+      sect_alchemist: item_cinnabar             # 煉丹師 → 丹砂
+      water_alchemist: item_cinnabar            # 水煉丹師（煉丹師的變體）→ 丹砂
+      sect_steward: item_cinnabar               # 青霧執事 → 丹砂
+      mist_wolf: item_wolf_fang                 # 霧狼 → 狼牙
+      thunder_hawk: item_thunder_feather        # 雷羽鷹 → 雷羽
+    elite_affixes:
+      regenerating: item_living_bone            # 「再生的」精英 → 活血骨（稀有）
+  ashen_waste:
+    # 20.2：荒原的詞條偏向點燃、倒地、中毒（ID 照 skill_keywords.yaml）
+    keywords: [ignite, prone, poisoned]
+    # 19.2.4 的來源（5F-5a）；盜賊照上面各區共用的焦鐵，沒列的敵人掉通用料
+    families:
+      lava_beetle: item_lava_core               # 熔岩甲蟲 → 熔岩核
+      thunder_shell_beetle: item_lava_core      # 雷殼甲蟲（熔岩甲蟲的變體）→ 熔岩核
+      molten_lord: item_lava_core               # 熔核領主（巨型熔岩甲蟲）→ 熔岩核
+      scorched_colossus: item_lava_core         # 焦岩巨像 → 熔岩核
+      fire_dust_bat: item_ember_feather         # 火塵蝠 → 餘燼羽
+      sulfur_beast: item_sulfur_crystal         # 硫煙獸 → 硫磺結晶
+      frost_ember_lizard: item_frost_ember      # 寒燼蜥（冰變體）→ 寒燼（稀有）
+      ashen_gunner: item_scorched_iron          # 斷崖幫火槍手（盜賊弓手的變體）→ 焦鐵
+      forge_scar: item_scorched_iron            # 熔爐督工鍛疤（盜賊隊長的變體）→ 焦鐵
+
+# 區域 Boss 的保底掉落（Phase 5F-3；20.2「區域 Boss 必掉 1 件史詩」、18.2.3 霧鎖真人掉雲頂霧晶）。
+# 重複挑戰不限次數（Boss 地點不寫已清空）；保底只在每角色每個刷新日第一次打倒時（代決 5F3-15）：
+# 這名 Boss 的材料換成 material、裝備換成 gear_rarity；同一天之後照一般精英（必掉 1 件、史詩 50%）。
+bosses:
+  sect_mist_lock_master: {material: item_summit_mist_crystal, gear_rarity: epic}
+  ashen_heart: {material: item_molten_heart, gear_rarity: epic}   # 5F-5a：灰燼之心 → 熔心晶（19.2.3、19.2.4）

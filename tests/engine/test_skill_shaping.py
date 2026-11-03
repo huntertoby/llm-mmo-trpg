@@ -405,9 +405,10 @@ def budget_of(*rules: dict[str, Any]) -> list[Any]:
 
 def test_the_budget_of_shape_to_is_the_shape_multiplier_difference() -> None:
     """基準傷害 7 ×（轉換後 − 轉換前的形狀倍率）× 使用次數 6（所有技能）× 站位受益 400‰。"""
+    chain_1 = library().ruleset.shapes.by_id()["chain"].budget.permille_for({"jumps": 1})
     expected = {
         "line": 7 * (1400 - 1000),  # 單體 1000‰ → 直線 3 格（800 + 200 × 3）
-        "chain": 7 * (1250 - 1000),  # 單體 → 連鎖 1 跳（1000 + 250 × 1）
+        "chain": 7 * (chain_1 - 1000),  # 單體 → 連鎖 1 跳（skill_shapes.yaml；BAL-13c 連鎖衰減）
         "cone": 7 * (1600 - 1400),  # 直線 3 格 1400‰ → 錐形 3 格 1600‰
     }
     for target, milli in expected.items():
@@ -487,24 +488,26 @@ def test_legal_actions_never_list_an_action_the_resolution_would_refuse(
 
 
 @pytest.mark.parametrize(
-    ("build", "needle"),
+    ("build", "seed", "needle"),
     [
         (
             "build_healer",
+            0,
             "施放「回春」（AP 1，法力 4，冷卻 1 回合）→ 影響 4 格",
         ),  # 直線 3 格 ＋ 自己
         (
             "build_tank",
+            1,  # BAL-15c 種子 0 → 1
             "施放「挑釁怒吼」（AP 1，法力 1，冷卻 2 回合）→ 影響 16 格",
         ),  # 環形半徑 1 → 2
     ],
 )
 def test_ai_battles_with_reshaped_skills_replay(
-    build: str, needle: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    build: str, seed: int, needle: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """AI 打整場：變形後的技能照常被使用，戰鬥紀錄重播一致。"""
     log = tmp_path / "shaping.json"
-    argv = ["battle", "--map", "open_plain", "--seed", "0", "--ally-build", build]
+    argv = ["battle", "--map", "open_plain", "--seed", str(seed), "--ally-build", build]
     assert main([*argv, "--log-json", str(log)]) == 0
     assert needle in capsys.readouterr().out
     out = io.StringIO()

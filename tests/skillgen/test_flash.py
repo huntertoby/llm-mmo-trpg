@@ -232,7 +232,7 @@ def test_area_plus_grows_size_or_radius() -> None:
         if skill.kind != "active" or skill.tier != 1:
             continue
         done = apply_variation(lib, skill, AREA, bonus=40, rng=Rng(2))
-        if done is None:
+        if done is None or done.shape.type != skill.shape.type:  # 地面格換十字另測（BAL-12c）
             continue
         grown += 1
         before, after = skill.shape, done.shape

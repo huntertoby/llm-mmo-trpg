@@ -45,16 +45,19 @@ from trpg.skillgen.composer_parts import (
 )
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
-from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.keywords import has_keyword
 from trpg.skillgen.mechanics import mechanic_tags
+from trpg.skillgen.memo import draft_key, library_memo
 from trpg.skillgen.scaling import retarget_scaling
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.variant_gen import variant_specs
 
 __all__ = [
+    "KEYWORD_TRIES",
     "MAX_ATTEMPTS",
     "ComposeError",
     "ComposeResult",
+    "KeywordExhaustedError",
     "compose_random_skill",
     "compose_with_stats",
     "default_library",
@@ -76,12 +79,23 @@ class ComposeError(TrpgError):
     """參數無解，或 :data:`MAX_ATTEMPTS` 次重抽都做不出合格的技能。"""
 
 
+class KeywordExhaustedError(ComposeError):
+    """指定關鍵字時，``variants`` 個種子變體都做不出帶該關鍵字的技能（PERF-3：呼叫端用
+    ``variants`` 扣搜尋上限）。"""
+
+    def __init__(self, message: str, variants: int) -> None:
+        super().__init__(message)
+        self.variants = variants
+
+
 @dataclass(frozen=True, slots=True)
 class ComposeResult:
     """組合結果與重抽次數（``attempts`` 為 1 表示第一次就成功）。"""
 
     skill: SkillDef
     attempts: int
+    variants: int = 1
+    """指定關鍵字時用掉的種子變體數（PERF-3；沒指定關鍵字時是 1）。"""
 
 
 @cache
@@ -365,10 +379,18 @@ def _with_scaling_extras(
 
 
 def _tags(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> list[str]:
-    """組合器技能的標籤：主題元素、骨架與機制標籤（:func:`mechanic_tags`）。"""
-    draft = SkillDef.model_validate({**base, "effects": ctx.effects})
+    """組合器技能的標籤：主題元素、骨架與機制標籤（:func:`mechanic_tags`）。機制標籤以草稿內容
+    快取（PERF-2：同一次組合常對同樣的草稿算好幾次）。"""
+    data = {**base, "effects": ctx.effects}
+    key = draft_key(data)
+    memo = library_memo(library, "composer.mechanic_tags")
+    found: tuple[str, ...] | None = None if key is None else memo.get(key)
+    if found is None:
+        found = tuple(mechanic_tags(SkillDef.model_validate(data), library.ruleset))
+        if key is not None:
+            memo[key] = found
     tags: list[str] = [ctx.theme.value, ctx.skeleton.id]
-    return tags + [t for t in mechanic_tags(draft, library.ruleset) if t not in tags]
+    return tags + [t for t in found if t not in tags]
 
 
 def _range(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> tuple[Attribute, ...]:
@@ -453,7 +475,9 @@ def _trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, 
         return {"tag": rng.choice([e.value for e in _SPELL_ELEMENTS])}
     if event == "on_status_applied" and rng.chance_permille(_PARAM_PERMILLE):
         statuses = sorted(
-            s.id for s in library.ruleset.statuses.statuses if not s.beneficial and not s.stance
+            s.id
+            for s in library.ruleset.statuses.statuses
+            if not s.beneficial and not s.stance and not s.enemy_only  # 5F-5c
         )
         return {"status": rng.choice(statuses)}
     if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):
@@ -643,23 +667,47 @@ def _relabel(skill: SkillDef, variant: int, seed: int) -> SkillDef:
 
 
 def _compose_with_keyword(
-    seed: int, keyword: str, lib: ContentLibrary, **kwargs: Any
+    seed: int,
+    keyword: str,
+    lib: ContentLibrary,
+    *,
+    tries: int = KEYWORD_TRIES,
+    skip_legendary: bool = False,
+    rarity: SkillRarity | None,
+    **kwargs: Any,
 ) -> ComposeResult:
-    """依種子變體重抽，直到技能製造或利用 ``keyword``（確定性：同樣的參數必得同樣的技能）。"""
+    """依種子變體重抽，直到技能製造或利用 ``keyword``（確定性：同樣的參數必得同樣的技能）。
+
+    PERF-3（玩法 PM 2026-11-03）：``skip_legendary`` 為真且沒有指定稀有度時，**抽到傳說的變體直接
+    跳過**（不組；三選一的候選產生器用：傳說不當候選，而且多半做不出指定關鍵字），跳過的變體也
+    算一次嘗試。``tries``：最多試幾個變體（預設 :data:`KEYWORD_TRIES`；橋接搜尋用剩下的上限）。"""
     if keyword not in lib.keywords.ids():
         raise ComposeError(f"未知的關鍵字 {keyword!r}（可用：{'、'.join(lib.keywords.ids())}）")
     if not lib.keywords.by_id()[keyword].composable:
         raise ComposeError(f"組合器做不出關鍵字 {keyword} 的技能（該關鍵字需要手寫技能）")
-    for index in range(KEYWORD_TRIES):
+    limit = min(tries, KEYWORD_TRIES)
+    for index in range(limit):
         variant = seed + index * _VARIANT_STEP
         try:
-            found = compose_with_stats(variant, library=lib, **kwargs)
+            found = _with_affinity(
+                _compose_plain(
+                    variant,
+                    lib,
+                    rarity=rarity,
+                    no_legendary=skip_legendary and rarity is None,
+                    **kwargs,
+                ),
+                None,
+                lib,
+            )
         except ComposeError:
             continue
-        if keyword in derive_keywords(found.skill, lib.keywords).all():
+        if has_keyword(found.skill, keyword, lib.keywords):  # PERF-2：只看這個關鍵字的規則
             skill = found.skill if index == 0 else _relabel(found.skill, variant, seed)
-            return ComposeResult(skill, found.attempts)
-    raise ComposeError(f"種子 {seed}：{KEYWORD_TRIES} 次嘗試都做不出帶有關鍵字 {keyword} 的技能")
+            return ComposeResult(skill, found.attempts, index + 1)
+    raise KeywordExhaustedError(
+        f"種子 {seed}：{limit} 次嘗試都做不出帶有關鍵字 {keyword} 的技能", limit
+    )
 
 
 def compose_with_stats(
@@ -675,8 +723,13 @@ def compose_with_stats(
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
     held: Mapping[str, str] | None = None,
+    keyword_tries: int = KEYWORD_TRIES,
+    skip_legendary: bool = False,
 ) -> ComposeResult:
-    """:func:`compose_random_skill`，另外回傳重抽次數。"""
+    """:func:`compose_random_skill`，另外回傳重抽次數。PERF-3（三選一的候選產生器用）：
+    ``keyword_tries`` ＝ 指定關鍵字時最多試幾個種子變體（橋接搜尋上限，最多
+    :data:`KEYWORD_TRIES`），
+    ``skip_legendary`` ＝ 指定關鍵字時抽到傳說的變體跳過。預設值＝原行為。"""
     lib = library if library is not None else default_library()
     fixed: dict[str, Any] = {
         "tier": tier,
@@ -686,7 +739,9 @@ def compose_with_stats(
         "ap_cost": ap_cost,
     }
     found = (
-        _compose_with_keyword(seed, keyword, lib, **fixed)
+        _compose_with_keyword(
+            seed, keyword, lib, tries=keyword_tries, skip_legendary=skip_legendary, **fixed
+        )
         if keyword is not None
         else _compose_plain(seed, lib, **fixed)
     )
@@ -728,6 +783,20 @@ def _pick_variant(
     return None
 
 
+def _legendary_unless(  # noqa: PLR0917 — 傳說的參數照原樣轉交
+    skip: bool,
+    seed: int,
+    lib: ContentLibrary,
+    tier: int | None,
+    skeleton: str | None,
+    ap_cost: int | None,
+) -> ComposeResult:
+    """抽到傳說：``skip``（PERF-3，指定關鍵字的組合不抽傳說）時這個變體跳過，否則照常組傳說。"""
+    if skip:
+        raise ComposeError(f"種子 {seed}：抽到傳說（指定關鍵字時跳過）")
+    return _compose_legendary_result(seed, lib, tier, skeleton, ap_cost)
+
+
 def _compose_plain(
     seed: int,
     lib: ContentLibrary,
@@ -737,6 +806,7 @@ def _compose_plain(
     skeleton: str | None,
     category: str | None,
     ap_cost: int | None,
+    no_legendary: bool = False,
 ) -> ComposeResult:
     rng = Rng(seed)
     tier_value = tier if tier is not None else rng.randint(1, 5)
@@ -744,7 +814,7 @@ def _compose_plain(
         raise ComposeError(f"沒有階級 {tier_value} 的預算")
     rarity_value, skeleton_def = _choose_rarity_and_skeleton(rng, rarity, skeleton, lib)
     if rarity_value == "legendary":
-        return _compose_legendary_result(seed, lib, tier, skeleton, ap_cost)
+        return _legendary_unless(no_legendary, seed, lib, tier, skeleton, ap_cost)
     passive = skeleton_def.kinds == ("passive",) or (
         skeleton is None and _wants_passive(seed, rarity_value, lib)
     )

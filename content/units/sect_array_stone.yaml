@@ -1,0 +1,21 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
+# 山中修士・物件型：不行動、不會被推動、高護甲；開場狀態「護陣」（Phase 5A-M2b）：3 格內的同門受到的傷害 −20%，
+# 石靈被打碎後立刻解除（取代 5A-3 的「只是高護甲物件」，代決 5A3-2）。
+id: sect_array_stone
+name_zh: 陣眼石靈
+attributes: {str: 10, dex: 6, con: 16, int: 6, wis: 10, wil: 10}
+max_hp: 30
+speed: 0
+armor_bonus: 4
+weapon: fist
+ai_profile: idle
+resist: {}
+element_mods: {}
+tags: [immovable, sect]
+stamina: 0
+reactions: []
+opening_statuses:
+  - {status: array_ward}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: pylon, material: stone}}

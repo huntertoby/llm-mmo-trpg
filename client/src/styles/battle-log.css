@@ -72,6 +72,11 @@
   border-color: #ff6b6b;
 }
 
+.log-turn.team-third,
+.log-group.team-third .log-head {
+  border-color: #c08bff;
+}
+
 .log-group {
   padding: 1px 0 2px;
   border-radius: 3px;
@@ -93,6 +98,10 @@
 
 .log-line.team-enemy {
   color: #ff9a9a;
+}
+
+.log-line.team-third {
+  color: #d6b3ff;
 }
 
 .log-head {

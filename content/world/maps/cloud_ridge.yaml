@@ -1,0 +1,164 @@
+# 雲嶺地點圖（Phase 5A-1；schema：src/trpg/content/world_map.py）。
+# - 地點、種類、建議等級、戰鬥地圖、內容：docs/design/18-雲嶺內容.md 18.3（#111，玩法 PM 代決、待使用者確認）。
+#   ID 與種類對照、戰鬥地圖模板對照見 docs/phases/Phase5計畫.md 5.3（開發 PM 定）。
+# - edges（連線）：開發 PM 初稿（Phase 5 計畫 5.4；Q1，待玩法 PM 代決）。改連線只改這裡，不用改程式。
+# - pos：開發 PM 排的顯示座標（0～100，純顯示）。
+# - 規則（9.6.2）：每區 15～25 點；從小鎮走得到全部地點；隱藏地點不可是任何非隱藏地點的唯一通路；
+#   戰鬥地圖的類型必須在 regions.yaml 雲嶺的 map_pool 內。
+region: cloud_ridge
+name_zh: 雲嶺
+level_min: 1
+level_max: 6
+town: mist_ferry
+locations:
+  - id: mist_ferry
+    name_zh: 霧渡鎮
+    kind: town
+    description_zh: 傳送點、商人、懸賞板、導師、酒館
+    pos: {x: 10, y: 80}
+  - id: ferry_steps
+    name_zh: 渡口石階
+    kind: camp
+    level_min: 1
+    battle_maps: [cliff_outpost]
+    description_zh: 新手任務 1（盜賊搶渡船）
+    pos: {x: 25, y: 85}
+  - id: bamboo_path
+    name_zh: 竹林小徑
+    kind: camp
+    level_min: 1
+    level_max: 2
+    battle_maps: [dark_forest]
+    description_zh: 霧狼、新手任務 2
+    pos: {x: 30, y: 65}
+  - id: rain_terraces
+    name_zh: 雨中梯田
+    kind: camp
+    level_min: 2
+    battle_maps: [swamp]
+    description_zh: 新手任務 3（盜賊＋修士衝突）
+    pos: {x: 45, y: 70}
+  - id: mist_temple_gate
+    name_zh: 青霧觀山門
+    kind: village
+    level_min: 2
+    description_zh: 修士 NPC、區域任務鏈起點
+    pos: {x: 50, y: 55}
+  - id: hunter_hut
+    name_zh: 獵戶小屋
+    kind: village
+    level_min: 2
+    description_zh: 劇情夥伴「獵戶阿岳」
+    pos: {x: 15, y: 55}
+  - id: cliff_gang_fort
+    name_zh: 斷崖幫寨
+    kind: camp
+    level_min: 3
+    battle_maps: [narrow_halls]
+    description_zh: 盜賊據點；懸賞「斷崖幫二當家」
+    pos: {x: 60, y: 80}
+  - id: old_pine_altar
+    name_zh: 古松祭壇
+    kind: altar
+    level_min: 3
+    description_zh: 機遇：雷雨夜帶「帶電」技能來此
+    pos: {x: 35, y: 45}
+  - id: cloud_sea_bridge
+    name_zh: 雲海吊橋
+    kind: camp
+    level_min: 3
+    level_max: 4
+    battle_maps: [bridge_chasm]
+    description_zh: 吊橋深淵；修士巡邏
+    pos: {x: 60, y: 45}
+  - id: herb_valley
+    name_zh: 藥師谷
+    kind: ruin
+    level_min: 4
+    description_zh: 情境判定（辨藥、解毒）；通往隱藏地點「丹爐洞」
+    pos: {x: 75, y: 65}
+  - id: elixir_cave
+    name_zh: 丹爐洞
+    kind: secret
+    level_min: 5
+    battle_maps: [narrow_halls]
+    hidden: true
+    reveal: [situation]
+    hint_zh: 谷底一處隱密的洞窟
+    description_zh: 青霧執事；丹砂、活血骨
+    pos: {x: 90, y: 70}
+  - id: north_slope
+    name_zh: 北坡獵場
+    kind: elite_lair
+    level_min: 4
+    level_max: 5
+    battle_maps: [open_plain]
+    description_zh: 懸賞「北坡狼王」（霧狼精英，狂暴的）
+    pos: {x: 25, y: 25}
+  - id: winter_lake
+    name_zh: 冬湖
+    kind: camp
+    level_min: 4
+    battle_maps: [frozen_lake]
+    description_zh: 冰鶴使、石背熊
+    pos: {x: 15, y: 40}
+  - id: sword_tomb
+    name_zh: 劍冢
+    kind: ruin
+    level_min: 5
+    battle_maps: [ruined_fort]
+    description_zh: 情境判定（解劍陣）；懸賞「霧中劍客」
+    pos: {x: 70, y: 30}
+  - id: crystal_rift
+    name_zh: 源晶裂痕
+    kind: anomaly
+    level_min: 5
+    battle_maps: [open_plain]
+    description_zh: 霧魅、碎晶傀儡；主線第 1 章核心
+    pos: {x: 50, y: 20}
+  - id: crane_cliff
+    name_zh: 鶴歸崖
+    kind: secret
+    level_min: 6
+    battle_maps: [cliff_outpost]
+    hidden: true
+    reveal: [perception_nearby, quest_clue, friend_footprint]
+    hint_zh: 霧裡一座沒見過的山崖
+    description_zh: 雷羽鷹巢；感知判定或朋友足跡才會出現
+    pos: {x: 30, y: 8}
+  - id: cloud_summit
+    name_zh: 雲頂觀
+    kind: boss
+    level_min: 6
+    battle_maps: [cloud_summit]   # Boss 專屬地圖（5F-2；18.3「Boss 專屬」、20.6）
+    description_zh: 霧鎖真人
+    pos: {x: 75, y: 10}
+  - id: ashen_ferry
+    name_zh: 往灰燼荒原的渡口
+    kind: gate
+    gate_to: ashen_waste
+    unlock_flag: ashen_waste_open   # 霧潮入侵成功或失敗都開放（19.9；5F-1b 修正：原本的 mist_tide_success 沒有事件會設）
+    description_zh: 世界事件 #1「霧潮入侵」結束後開放（失敗時荒原建議等級 +1）
+    pos: {x: 5, y: 95}
+edges:
+  - [mist_ferry, ferry_steps]
+  - [mist_ferry, hunter_hut]
+  - [mist_ferry, ashen_ferry]
+  - [ferry_steps, bamboo_path]
+  - [bamboo_path, hunter_hut]
+  - [bamboo_path, rain_terraces]
+  - [rain_terraces, mist_temple_gate]
+  - [rain_terraces, cliff_gang_fort]
+  - [rain_terraces, old_pine_altar]
+  - [hunter_hut, winter_lake]
+  - [old_pine_altar, cloud_sea_bridge]
+  - [mist_temple_gate, cloud_sea_bridge]
+  - [cliff_gang_fort, herb_valley]
+  - [cloud_sea_bridge, herb_valley]
+  - [cloud_sea_bridge, sword_tomb]
+  - [herb_valley, elixir_cave]
+  - [winter_lake, north_slope]
+  - [north_slope, crane_cliff]
+  - [north_slope, crystal_rift]
+  - [sword_tomb, crystal_rift]
+  - [crystal_rift, cloud_summit]

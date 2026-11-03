@@ -170,6 +170,8 @@ def test_every_shipped_skill_fits_the_options() -> None:
     lib = library()
     for skill_id, skill in sorted(lib.skills.items()):
         data = skill.model_dump(mode="json", exclude_none=True)
+        if any((m.change.summon_limit_delta or 0) < 0 for m in skill.modifiers):
+            continue  # BAL-14c：召喚上限 −1 只有內建召喚專精能帶，工坊選單不列
         assert _fits(lib, data) == (None, ()), skill_id
 
 

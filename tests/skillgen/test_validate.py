@@ -435,6 +435,11 @@ def test_beneficial_flags_in_content() -> None:
         "infused_fire",  # 3I-6：臨時附魔
         "infused_holy",
         "rallied",  # 3-33e1
+        "commanding",  # BAL-19f 追加：號令
+        "oath_bonus_easy",  # 5C-3：誓約之力
+        "oath_bonus_medium",
+        "oath_bonus_hard",
+        "hard_shell",  # 5F-5a：硬殼（詞綴硬殼的開場掛上）
         "hasted",
         "regenerating",
         "shielded",

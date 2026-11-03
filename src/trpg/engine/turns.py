@@ -16,6 +16,7 @@ import dataclasses
 from trpg.content.library import Ruleset
 from trpg.content.skills import CHARGING
 from trpg.engine.activations import expire_activations
+from trpg.engine.boss_phases import check_boss_phases
 from trpg.engine.context import Ctx
 from trpg.engine.delayed import release_at_turn_start
 from trpg.engine.effects import execute
@@ -33,6 +34,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     StatusRemoved,
     TurnEnded,
+    TurnOrderSet,
     TurnSkipped,
     TurnStarted,
 )
@@ -40,6 +42,7 @@ from trpg.engine.forms import pay_stance_upkeep, pay_upkeep, tick_form_cooldowns
 from trpg.engine.gear.core import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.ids import BURNING
+from trpg.engine.oaths import settle_oath
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
@@ -137,6 +140,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
                     cause="status",
                     element=tick.element,
                     dice=tick.dice,
+                    multiplier_permille=status.magnitude_permille,  # 強度（BAL-12e）
                 )
             )
         if definition.on_turn_start_heal is not None:
@@ -145,6 +149,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
                     target_id=unit.id,
                     source_id=status.source_id,
                     dice=definition.on_turn_start_heal.dice,
+                    multiplier_permille=status.magnitude_permille,  # 強度（BAL-12e）
                 )
             )
     # 先移除到期狀態，再結算持續傷害（各自依狀態 ID 順序），最後是表面效果
@@ -233,24 +238,35 @@ def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
     if on_start is None:
         return []
     effects: list[EffectBase] = []
+    magnitude = tile.surface_magnitude_permille  # 表面的強度（BAL-12e）
     heal = on_start.heal
     if heal is not None:
         ally = not heal.allies_only or tile.surface_team is None or tile.surface_team is unit.team
         excluded = heal.exclude_tag is not None and unit.has_tag(heal.exclude_tag)
         if ally and not excluded:
-            effects.append(HealEffect(target_id=unit.id, dice=heal.dice))
+            effects.append(
+                HealEffect(target_id=unit.id, dice=heal.dice, multiplier_permille=magnitude)
+            )
     damage = on_start.damage
     if damage is not None and (damage.only_tag is None or unit.has_tag(damage.only_tag)):
         effects.append(
             DamageEffect(
-                target_id=unit.id, cause="surface", element=damage.element, dice=damage.dice
+                target_id=unit.id,
+                cause="surface",
+                element=damage.element,
+                dice=damage.dice,
+                multiplier_permille=magnitude,
             )
         )
     burn_proof = on_start.apply_status == BURNING and burn_immune(
         ctx.rules, unit, tile.surface
     )  # 角魔站在火焰表面上不會燃燒（Phase 3R-2）
     if on_start.apply_status is not None and not burn_proof:
-        effects.append(ApplyStatusEffect(target_id=unit.id, status_id=on_start.apply_status))
+        effects.append(
+            ApplyStatusEffect(
+                target_id=unit.id, status_id=on_start.apply_status, magnitude_permille=magnitude
+            )
+        )
     return effects
 
 
@@ -279,6 +295,7 @@ def end_turn(ctx: Ctx) -> None:
                     source_id=status.source_id,
                     amount=status.amount,
                     cost_status=status.cost_status,
+                    magnitude_permille=status.magnitude_permille,  # 強度（BAL-12e）
                 )
             )
             continue
@@ -299,6 +316,43 @@ def end_turn(ctx: Ctx) -> None:
     ctx.emit(TurnEnded, unit_id=unit.id, ap_carried=unit.ap_carry)
 
 
+def _restore_normal_order(ctx: Ctx) -> None:
+    """先手只影響第 1 輪（Phase 5A-6b）：第 2 輪起還原成正常的先攻順序。第 1 輪中途離場的單位
+    略過、中途加入的（召喚物、復活）接在後面，維持原本的相對順序。"""
+    state = ctx.state
+    normal = state.normal_turn_order
+    if not normal:
+        return
+    state.normal_turn_order = ()
+    current = state.turn_order
+    restored = [uid for uid in normal if uid in current]
+    restored += [uid for uid in current if uid not in normal]
+    if restored != current:
+        state.turn_order = restored
+        ctx.emit(TurnOrderSet, order=tuple(restored))
+
+
+def _expire_round_end_statuses(ctx: Ctx) -> None:
+    """``expires: round_end`` 的狀態（Phase 5F-4b）：每一輪結束時（環境回合之後）−1，歸零移除。
+    單位依 ID 排序、狀態照清單順序，順序確定。"""
+    for unit in ctx.state.units_sorted():
+        kept: list[StatusInstance] = []
+        expired: list[str] = []
+        for status in unit.statuses:
+            definition = ctx.rules.status_def(status.status_id)
+            if definition.expires != "round_end" or status.remaining is None:
+                kept.append(status)
+            elif status.remaining <= 1:
+                expired.append(status.status_id)
+            else:
+                kept.append(dataclasses.replace(status, remaining=status.remaining - 1))
+        if not expired:
+            continue
+        unit.statuses = kept
+        for status_id in expired:
+            ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="expired")
+
+
 def _end_round(ctx: Ctx) -> bool:
     """一輪結束：環境回合與每輪勝負判定。回傳戰鬥是否已結束。"""
     state = ctx.state
@@ -309,7 +363,9 @@ def _end_round(ctx: Ctx) -> bool:
     if state.max_rounds is not None and state.round >= state.max_rounds:
         end_battle(ctx, None, "round_limit")
         return True
+    _expire_round_end_statuses(ctx)
     state.round += 1
+    _restore_normal_order(ctx)
     for unit in state.units.values():
         unit.reactions_used = 0
         unit.extra_reactions = 0  # extra_reaction 到下一輪開始為止（Phase 3C-4b）
@@ -345,7 +401,10 @@ def advance_turn(ctx: Ctx) -> None:
 def finish_resolution(ctx: Ctx) -> ResolveResult:
     """一次結算的收尾：（尚未結算的）被動觸發、勝負判定、行動者離場時換下一位、寫回亂數狀態。"""
     settle(ctx)
+    settle_oath(ctx)  # 剛違反的誓約：移除加成、施加破誓（Phase 5C-3）
+    check_boss_phases(ctx)  # Boss 跌破 HP 門檻 → 進入新階段（Phase 5F-2）
     if not check_battle_end(ctx) and ctx.state.active_unit is None:
         advance_turn(ctx)
+        check_boss_phases(ctx)  # 換手中的環境回合、回合開始傷害
     ctx.finish_rng()
     return ResolveResult(ctx.state, ctx.events, None)

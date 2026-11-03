@@ -12,6 +12,10 @@ from tests.engine.helpers import library
 from trpg.cli.main import main
 
 
+def _ashen_mana() -> int:
+    return library().skills["skill_ashen_oath"].cost.mana  # 法力費用由平衡調整，讀 content
+
+
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
     code = main(argv)
     captured = capsys.readouterr()
@@ -32,7 +36,7 @@ def test_oil_depot_battle_uses_at_least_three_different_skills_and_replays(
     assert re.search(r"（AP 3，移動 \d+，法力 \d+/\d+）", out)  # 回合標頭顯示法力
     assert re.search(r"以「.+?」攻擊 .+?：d20=", out)  # 命中擲骰看得出技能
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/90"
+    assert data["format"] == "trpg-battle-log/110"
     assert any(a.get("type") == "use_skill" for a in data["actions"])
     assert any(e["type"] == "skill_used" for e in data["events"])
     code, replayed, _ = _run(["battle", "replay", str(log)], capsys)
@@ -48,7 +52,7 @@ def test_skills_list_is_a_table_of_every_skill(capsys: pytest.CaptureFixture[str
     header = lines[1].split()
     assert header[:4] == ["ID", "名稱", "骨架", "AP"]
     assert sum(1 for line in lines if re.match(r"\s+skill_\w+\s", line)) == total
-    assert "灰燼誓約" in out and "法力 12，冷卻 2 回合" in out
+    assert "灰燼誓約" in out and f"法力 {_ashen_mana()}，冷卻 2 回合" in out
 
 
 def test_skills_show_prints_the_full_content_and_an_effect_summary(
@@ -61,7 +65,7 @@ def test_skills_show_prints_the_full_content_and_an_effect_summary(
     assert "形狀 錐形（大小 3）" in out
     assert "2d6＋智力加成的火焰傷害（敵方）" in out
     assert "生成「火焰」表面 2 回合（影響的格子）" in out
-    assert "代價 AP 2，法力 12，冷卻 2 回合" in out
+    assert f"代價 AP 2，法力 {_ashen_mana()}，冷卻 2 回合" in out
 
 
 def test_skills_show_unknown_id(capsys: pytest.CaptureFixture[str]) -> None:

@@ -21,7 +21,7 @@ effects:
     then:
       - {type: damage, dice: 2d6, element: fire}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 5, cooldown: 2}
 tags: [fire, spell, detonate]
 narrative:
   concept: 把還在目標身上燃燒的火焰一口氣引爆

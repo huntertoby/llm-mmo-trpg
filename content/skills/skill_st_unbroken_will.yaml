@@ -1,0 +1,24 @@
+# BAL-19e（玩法決定 #110，06 6.27.4）：意志姿態，以心志撐住肉身（受到的骰值傷害大幅降低，但移動減少）；花 1 AP 進入，持續到取消，每回合付 1 點維持費；數值為初值，未經模擬
+id: skill_st_unbroken_will
+schema_version: 1
+name_zh: 不屈心志
+tier: 2
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wil
+shape: {type: self}
+effects:
+  - {type: apply_status, status: stance_ironwall, affects: self}
+condition: null
+cost: {}
+stance_upkeep: 1
+tags: [stance, defense]
+narrative:
+  concept: 身體早該倒下了，是意志硬撐著不讓膝蓋落地
+  cast_flavor: 你咬緊牙關，把痛楚一寸寸壓回心底，腳下沒有退半步
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

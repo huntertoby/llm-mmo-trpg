@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { SkillFlashInfo } from "../ui/SkillFlashInfo";
-import { FlashChooser } from "./FlashChooser";
+import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import {
   carryable,
   dissolveChoice,
@@ -28,27 +28,31 @@ interface Props {
   hero: RunHero;
   busy: boolean;
   onChoose(choice: RunChoice): Promise<number | null>;
+  /** 閃現預覽的來源（大世界）；省略 ＝ 一輪的端點。 */
+  previewFlash?: FlashPreviewLoader;
+  /** 標題裡的地點說明（大世界：「只在城鎮與營火」）；省略 ＝「只在營火」。 */
+  place?: string;
 }
 
-export function CampfireSkillCare({ runId, hero, busy, onChoose }: Props) {
+export function CampfireSkillCare({ runId, hero, busy, onChoose, previewFlash, place = "只在營火" }: Props) {
   return (
     <div className="campfire-care" data-testid="campfire-care">
-      <ReflashSection runId={runId} hero={hero} busy={busy} onChoose={onChoose} />
-      <OldSkillSection hero={hero} busy={busy} onChoose={onChoose} />
+      <ReflashSection runId={runId} hero={hero} busy={busy} onChoose={onChoose} previewFlash={previewFlash} place={place} />
+      <OldSkillSection hero={hero} busy={busy} onChoose={onChoose} place={place} />
     </div>
   );
 }
 
 // ---- 重閃 --------------------------------------------------------------------------------
 
-function ReflashSection({ runId, hero, busy, onChoose }: Props) {
+function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place }: Props) {
   const [target, setTarget] = useState<{ id: string; slot: number } | null>(null);
   const list = reflashable(hero);
   const chosen = target === null ? undefined : list.find((s) => s.card.id === target.id);
   const slotLabel = chosen === undefined || target === null ? undefined : reflashSlots(chosen.flash).find((s) => s.slot === target.slot)?.label;
   return (
     <div className="panel campfire-reflash" data-testid="campfire-reflash">
-      <div className="section-title">重閃（只在營火）</div>
+      <div className="section-title">重閃（{place}）</div>
       <p className="small muted">
         把一招以前某一次的變化換掉，價格和閃現相同（{rulesOf(hero.flash_rules).open_cost} 點出 {rulesOf(hero.flash_rules).open_options} 個；指定類別
         {" "}{rulesOf(hero.flash_rules).focused_cost} 點出 {rulesOf(hero.flash_rules).focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項不會比被換掉的更弱。
@@ -57,6 +61,7 @@ function ReflashSection({ runId, hero, busy, onChoose }: Props) {
         <FlashChooser
           key={`${target.id}:${target.slot}`}
           runId={runId}
+          previewFlash={previewFlash}
           hero={hero}
           skillId={target.id}
           skillName={chosen.card.name_zh}
@@ -105,7 +110,7 @@ function ReflashSection({ runId, hero, busy, onChoose }: Props) {
 
 type Mode = "dissolve" | "inherit";
 
-function OldSkillSection({ hero, busy, onChoose }: Omit<Props, "runId">) {
+function OldSkillSection({ hero, busy, onChoose, place }: Omit<Props, "runId">) {
   const [oldId, setOldId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
   const skills = ownedSkills(hero);
@@ -116,7 +121,7 @@ function OldSkillSection({ hero, busy, onChoose }: Omit<Props, "runId">) {
   }
   return (
     <div className="panel campfire-old" data-testid="campfire-old">
-      <div className="section-title">溶掉或傳承（二選一，只在營火）</div>
+      <div className="section-title">溶掉或傳承（二選一，{place}）</div>
       <p className="small muted">
         選一招舊技能，然後二選一：<b>溶掉</b>（退回花在它身上的靈感點的一半）或<b>傳承</b>（把它的小變化帶給另一招新技能）。兩種都會讓舊技能消失。
       </p>

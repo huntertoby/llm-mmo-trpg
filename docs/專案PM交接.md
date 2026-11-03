@@ -201,9 +201,11 @@
 
 | 角色 | session id |
 |---|---|
-| 專案 PM | （下一任上任後填） |
-| 玩法 PM | |
-| 開發 PM | |
-| 美術 PM | |
+| 專案 PM | `local_39dda90d-ce85-4c15-bc89-1b2889c1f2f1`（2026-10-31 起） |
+| 玩法 PM | `local_9a9218ab-a6f0-4106-9b64-6b250badc748` |
+| 開發 PM | `local_f953ad4f-0c81-4cca-bbb3-5f75aa009578` |
+| 美術 PM | `local_23fb8088-ed5f-435d-ad70-d36ec8725ff3`（worktree） |
+
+上一組（2026-10-31 交接）：專案 PM `local_69ff6dd8`、玩法 PM `local_9c79efb1`、開發 PM `local_c5b3c3fe`／`local_ab425b7d`、美術 PM `local_cb74dfda`，已列入上表舊對話。
 
 注意：使用者用遠端連線（Remote Control）時，`start_session` 會被拒；要在使用者於桌面 App 打字的那一輪才能開新對話。開發 PM 的開場 prompt 請加一句：先讀 `docs/開發PM交接.md` 3.00「接手第一件事」。

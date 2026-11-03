@@ -88,6 +88,7 @@ def _surface_spread(
                 duration=tile.surface_remaining,
                 team=tile.surface_team,
                 cause=SPREAD_CAUSE,
+                magnitude_permille=tile.surface_magnitude_permille,  # 強度照原表面（BAL-12e）
             )
             for cell in _line(state, xy, direction, distance)
         )

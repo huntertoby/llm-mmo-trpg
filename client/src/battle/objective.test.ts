@@ -32,6 +32,11 @@ describe("勝利條件文字", () => {
     expect(objectiveBadge(ESCAPE)).toBe("➜ 撤離");
     expect(objectiveBadge(DEFEND)).toBe("◎ 守點");
     expect(objectiveBadge(ELIMINATE)).toBe("⚔ 全滅");
+    // Boss 戰（BAL-16b2）：HUD 與選路畫面顯示「打倒頭目（護衛會撤退）」
+    const boss = { ...ELIMINATE, leader_retreat: true };
+    expect(objectiveBadge(boss)).toBe("⚔ 打倒頭目（護衛會撤退）");
+    expect(objectiveHud(boss, 1)).toBe("⚔ 打倒頭目（護衛會撤退）");
+    expect(objectiveLine(boss)).toBe("打倒頭目：頭目倒下時，剩下的護衛撤退，直接勝利");
   });
 });
 
@@ -59,13 +64,13 @@ describe("目標格標記", () => {
   });
 
   it("繪製模型帶著標記（格子位置與高度由繪圖端的 place 套用抬高）", () => {
-    const view = smallView({ objective: { kind: "escape", rounds: 5, tiles: [[2, 0]] } });
+    const view = smallView({ objective: { kind: "escape", rounds: 5, tiles: [[2, 0]], leader_retreat: false } });
     expect(buildDrawModel(view, "unit_0001").markers).toEqual([{ x: 2, y: 0, kind: "exit" }]);
     expect(buildDrawModel(smallView(), "unit_0001").markers).toEqual([]);
   });
 
   it("格子資訊卡說明出口與守點", () => {
-    const view = smallView({ objective: { kind: "escape", rounds: 5, tiles: [[2, 0]] }, round: 2 });
+    const view = smallView({ objective: { kind: "escape", rounds: 5, tiles: [[2, 0]], leader_retreat: false }, round: 2 });
     expect(markerAt(view, { x: 2, y: 0 })).toBe("exit");
     expect(markerAt(view, { x: 0, y: 0 })).toBeNull();
     const card = markerCard(view, { x: 2, y: 0 });
@@ -73,7 +78,7 @@ describe("目標格標記", () => {
     const sections = tileSections(view, { x: 2, y: 0 }, {});
     expect(sections.some((s) => s.kind === "objective")).toBe(true);
     expect(tileSections(view, { x: 1, y: 0 }, {}).some((s) => s.kind === "objective")).toBe(false);
-    const defend = smallView({ objective: { kind: "defend", rounds: 6, tiles: [[0, 0]] } });
+    const defend = smallView({ objective: { kind: "defend", rounds: 6, tiles: [[0, 0]], leader_retreat: false } });
     expect(markerCard(defend, { x: 0, y: 0 })?.title).toBe("守點格（剩 6 輪）");
   });
 });

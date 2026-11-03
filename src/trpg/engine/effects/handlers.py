@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from trpg.content.rule_changes import ELEMENT_HEALS_ALLIES
 from trpg.engine.activations import active_rule_change
 from trpg.engine.context import Ctx
@@ -20,6 +22,7 @@ from trpg.engine.effects.models import (
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
     CheckRolled,
+    ConductBlocked,
     DamageDealt,
     DamageRedirected,
     DeathCheated,
@@ -40,6 +43,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
+from trpg.engine.formation import formation_permille, share_spec, share_split, ward_permille
 from trpg.engine.forms import leave_form
 from trpg.engine.ids import (
     BOSS_ESCORT_TAG,
@@ -65,6 +69,8 @@ from trpg.engine.rules.statuses import (
     prevents_concealment,
     shield_amount,
     stance_status_ids,
+    summon_damage_dealt_permille,
+    under_truce,
 )
 from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
@@ -88,12 +94,49 @@ def ability_modifier(ctx: Ctx, value: int) -> int:
     return (value - ctx.core.ability_mod_base) // ctx.core.ability_mod_divisor
 
 
+def _take_conduct(state: BattleState, unit: UnitState, effect: DamageEffect) -> bool:
+    """雷電擴散每輪每單位一次（BAL-13c，#78）：``cause: conduct`` 的傷害在本輪已受過擴散時不結算
+    （回傳 ``False``），否則記下本輪；其他傷害一律結算（直接命中不算擴散）。"""
+    if effect.cause != "conduct":
+        return True
+    if unit.conducted_round == state.round:
+        return False
+    unit.conducted_round = state.round
+    return True
+
+
+def _skipped_damage(
+    ctx: Ctx, unit: UnitState | None, effect: DamageEffect
+) -> list[EventBase] | None:
+    """不結算的傷害：目標不在或已倒下（沒有事件）；休戰（目標、來源或來源的召喚者帶 ``truce``，
+    Phase 5F-4b，沒有事件）；本輪已受過擴散（只發 ``conduct_blocked``，BAL-13d）。要結算時回傳
+    ``None``。"""
+    if unit is None or not unit.alive or _truce_blocks(ctx, unit, effect):
+        return []
+    if not _take_conduct(ctx.state, unit, effect):
+        return [ctx.emit(ConductBlocked, unit_id=unit.id, source_id=effect.source_id)]
+    return None
+
+
+def _truce_blocks(ctx: Ctx, unit: UnitState, effect: DamageEffect) -> bool:
+    """休戰（Phase 5F-4b）：目標、傷害來源或來源的召喚者帶 ``truce`` 狀態時不結算。"""
+    if under_truce(ctx.rules, unit):
+        return True
+    source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
+    if source is None:
+        return False
+    if under_truce(ctx.rules, source):
+        return True
+    owner = None if source.owner_id is None else ctx.state.units.get(source.owner_id)
+    return owner is not None and under_truce(ctx.rules, owner)
+
+
 @register_effect("damage")
 def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, DamageEffect)
-    unit = ctx.state.units.get(effect.target_id)
-    if unit is None or not unit.alive:
-        return []
+    skipped = _skipped_damage(ctx, unit := ctx.state.units.get(effect.target_id), effect)
+    if skipped is not None or unit is None:
+        return skipped or []
     rolls: tuple[int, ...] = ()
     exploded = 0
     mod_ppm = PPM
@@ -102,6 +145,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     base_amount: int | None = None
     status_ppm = PPM
     absorbed = 0
+    formation, ward = _formation_and_ward(ctx, effect, unit)
     events: list[EventBase] = []
     if effect.mode == "lethal":
         amount = unit.hp
@@ -114,34 +158,43 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
-        dealt = _dealt_permille(ctx, effect, unit)  # 虛弱
-        status_ppm = dealt * damage_taken_permille(
-            ctx.rules, unit, effect.element
-        )  # 易傷、石膚；千分比 × 千分比
+        dealt = _dealt_permille(ctx, effect, unit) * formation // PERMILLE  # 虛弱、陣法
+        status_ppm = (  # 易傷、石膚（千分比 × 千分比）再乘護陣
+            dealt * damage_taken_permille(ctx.rules, unit, effect.element) * ward // PERMILLE
+        )
         multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
         multiplier //= PERMILLE
         multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
-        amount = max(
-            raw_permille
-            * mod_ppm
-            * weather
-            * multiplier
-            * status_ppm
-            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
-            effect.min_damage,
+        # 護陣 ×0（5F-3 源晶柱）：完全不受骰值傷害，不套最低傷害
+        amount = (
+            max(
+                raw_permille
+                * mod_ppm
+                * weather
+                * multiplier
+                * status_ppm
+                // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
+                effect.min_damage,
+            )
+            if ward > 0
+            else 0
         )
         base_amount = max(
-            raw_permille * weather * dealt // (PERMILLE * PERMILLE * PERMILLE), effect.min_damage
+            raw_permille
+            * weather
+            * dealt
+            * effect.chain_permille
+            // (PERMILLE * PERMILLE * PERMILLE * PERMILLE),
+            effect.min_damage,
         )
         mended = _mend_ally(ctx, unit, effect, amount)  # 規則改變「慈焰」（Phase 3D-6）
         if mended is not None:
             return mended
         amount = _cap_backlash(ctx, unit, effect, amount)
         absorbed = _absorb(ctx, unit, amount, events, effect)  # 護盾：所有倍率之後、扣 HP 之前
-    link = redirect_link(ctx, unit, effect)
-    redirected = 0 if link is None else (amount - absorbed) * (link[0].amount or 0) // PERMILLE
+    link, redirected, shares, shared = _transfers(ctx, unit, effect, amount - absorbed)
     hp_before = unit.hp
-    unit.hp = max(0, unit.hp - (amount - absorbed - redirected))
+    unit.hp = max(0, unit.hp - (amount - absorbed - redirected - shared))
     cheated = _undying_status(ctx, unit, effect)
     if cheated is not None:
         unit.hp = 1
@@ -162,10 +215,14 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             weather_permille=weather,
             multiplier_permille=multiplier,
             pierce_permille=effect.pierce_permille,
+            chain_permille=effect.chain_permille,
             base_amount=base_amount,
             status_ppm=status_ppm,
             absorbed=absorbed,
             redirected=redirected,
+            shared=shared,
+            formation_permille=formation,
+            ward_permille=ward,
             exploded=exploded,
             block_permille=effect.block_permille,
             flat=effect.flat,
@@ -173,9 +230,11 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             scale_attr=effect.scale_attr,
         )
     ]
-    events += _redirect(ctx, unit, link, redirected, effect)
+    events += _redirect(ctx, unit, link, redirected, effect) + _share(ctx, unit, shares, effect)
     if cheated is not None:
-        events += _cheat_death(ctx, unit, cheated, amount - absorbed - redirected - (hp_before - 1))
+        events += _cheat_death(
+            ctx, unit, cheated, amount - absorbed - redirected - shared - (hp_before - 1)
+        )
     if amount > 0:
         events.extend(_thaw(ctx, unit, effect.element))
     if unit.hp <= 0:
@@ -207,7 +266,8 @@ def _difficulty_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> i
     ):
         return PERMILLE
     source = ctx.state.units.get(effect.source_id)
-    if source is None or source.team is not Team.ENEMY or target.team is Team.ENEMY:
+    # 非我方打我方才乘（第三方同敵方；敵方與第三方互打不乘，Phase 5B-M3 代決 5BM3-5）
+    if source is None or source.team is Team.ALLY or target.team is not Team.ALLY:
         return PERMILLE
     if source.has_tag(BOSS_TAG):
         return core.boss_damage_permille
@@ -256,12 +316,100 @@ def _cap_backlash(ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int) 
 
 
 def _dealt_permille(ctx: Ctx, effect: DamageEffect, target: UnitState) -> int:
-    """攻擊者造成傷害的狀態倍率（‰，虛弱）；不是攻擊或沒有來源時 1000。"""
+    """攻擊者造成傷害的狀態倍率（‰，虛弱）；召喚物再乘召喚者的號令（BAL-19f 追加）；不是攻擊或
+    沒有來源時 1000。"""
     source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
     if effect.cause == "attack" and source is not None:
         on_water = ctx.state.tile(target.pos.x, target.pos.y).surface is Surface.WATER
-        return damage_dealt_permille(ctx.rules, source, effect.element, on_water=on_water)
+        own = damage_dealt_permille(ctx.rules, source, effect.element, on_water=on_water)
+        owner = None if source.owner_id is None else ctx.state.units.get(source.owner_id)
+        if owner is not None:  # 召喚者的號令（BAL-19f 追加）
+            own = own * summon_damage_dealt_permille(ctx.rules, owner) // PERMILLE
+        return own
     return PERMILLE
+
+
+def _formation_and_ward(ctx: Ctx, effect: DamageEffect, unit: UnitState) -> tuple[int, int]:
+    """（陣法倍率, 護陣倍率），‰：只對骰值傷害（Phase 5A-M2／5A-M2b）；致命與最大 HP 比例傷害為
+    1000。"""
+    if effect.mode in ("lethal", "percent_max_hp"):
+        return PERMILLE, PERMILLE
+    return _formation_permille(ctx, effect), ward_permille(ctx.state, unit)
+
+
+def _formation_permille(ctx: Ctx, effect: DamageEffect) -> int:
+    """攻擊者的陣法倍率（‰，Phase 5A-M2）：只對攻擊傷害（``cause: attack``）、以出手當下的位置計算；
+    不是攻擊或沒有來源時 1000。"""
+    if effect.cause != "attack" or effect.source_id is None:
+        return PERMILLE
+    source = ctx.state.units.get(effect.source_id)
+    return PERMILLE if source is None else formation_permille(ctx.state, source)
+
+
+_NO_SHARES: tuple[str, list[tuple[UnitState, int]]] = ("", [])
+
+
+def _transfers(
+    ctx: Ctx, unit: UnitState, effect: DamageEffect, remaining: int
+) -> tuple[
+    tuple[StatusInstance, UnitState] | None, int, tuple[str, list[tuple[UnitState, int]]], int
+]:
+    """護盾之後剩下的 ``remaining`` 點傷害中轉走的部分：（靈魂連結, 轉給連結者的點數, 分給同門的
+    明細, 分給同門的總點數）。靈魂連結先算，分傷（連心，Phase 5A-M2）用連結之後剩下的。"""
+    link = redirect_link(ctx, unit, effect)
+    redirected = 0 if link is None else remaining * (link[0].amount or 0) // PERMILLE
+    shares = _kin_shares(ctx, unit, effect, remaining - redirected)
+    return link, redirected, shares, sum(n for _, n in shares[1])
+
+
+def _kin_shares(
+    ctx: Ctx, unit: UnitState, effect: DamageEffect, remaining: int
+) -> tuple[str, list[tuple[UnitState, int]]]:
+    """把傷害分給同門（Phase 5A-M2，``share_damage`` 狀態）：（狀態 ID, [(同門, 點數)]）。墜落、致命
+    地形與 ``lethal`` 不分（同靈魂連結）。"""
+    if effect.mode == "lethal" or effect.cause in _UNPREVENTABLE_CAUSES:
+        return _NO_SHARES
+    found = share_spec(ctx.state, unit)
+    if found is None:
+        return _NO_SHARES
+    status, spec = found
+    return status.status_id, share_split(ctx.state, unit, spec, remaining)
+
+
+def _share(
+    ctx: Ctx,
+    unit: UnitState,
+    shares: tuple[str, list[tuple[UnitState, int]]],
+    effect: DamageEffect,
+) -> list[EventBase]:
+    """同門各自直接扣 HP（不經護盾、抗性與元素修正，不再往外分）；免死照常，HP 歸零則倒下。
+    每名發一個 ``damage_redirected``（``status_id`` 為分傷狀態）。"""
+    status_id, split = shares
+    events: list[EventBase] = []
+    for kin, amount in split:
+        if not kin.alive:
+            continue
+        hp_before = kin.hp
+        kin.hp = max(0, kin.hp - amount)
+        cheated = _undying_status(ctx, kin, effect)
+        if cheated is not None:
+            kin.hp = 1
+        events.append(
+            ctx.emit(
+                DamageRedirected,
+                from_id=unit.id,
+                to_id=kin.id,
+                status_id=status_id,
+                amount=amount,
+                hp_before=hp_before,
+                hp_after=kin.hp,
+            )
+        )
+        if cheated is not None:
+            events += _cheat_death(ctx, kin, cheated, amount - (hp_before - 1))
+        if kin.hp <= 0:
+            events.extend(down_unit(ctx, kin))
+    return events
 
 
 def _mend_ally(
@@ -279,7 +427,7 @@ def _mend_ally(
     if change is None or change.rule.element is not effect.element:
         return None
     permille = change.rule.permille or PERMILLE
-    received = healing_received_permille(ctx.rules, unit)
+    received = _received_permille(ctx, unit)
     heal = amount * permille * received // (PERMILLE * PERMILLE)
     hp_before = unit.hp
     unit.hp = min(unit.max_hp, unit.hp + heal)
@@ -454,6 +602,14 @@ def _absorb(
     return absorbed
 
 
+def _received_permille(ctx: Ctx, unit: UnitState) -> int:
+    """受到的治療倍率（‰）：狀態（中毒 500）× 潮濕（BAL-16b，#93：站在水上 ×wet_heal_permille）。"""
+    received = healing_received_permille(ctx.rules, unit)
+    if ctx.state.tile(unit.pos.x, unit.pos.y).surface is Surface.WATER:
+        return received * ctx.rules.core.wet_heal_permille // PERMILLE
+    return received
+
+
 @register_effect("heal")
 def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, HealEffect)
@@ -465,7 +621,7 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         rolls = effect.preset_rolls
     elif effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
-    received = healing_received_permille(ctx.rules, unit)  # 中毒
+    received = _received_permille(ctx, unit)  # 中毒、潮濕
     amount = max(
         0,
         ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille)
@@ -724,7 +880,11 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         and (definition.skip_turn or definition.blocks_spells)
         and ctx.state.active_unit == unit.id,  # 自暈／自我沉默：本回合照常，回合結束才生效
         cost_status=effect.self_paid,  # 代價狀態：淨化與驅散移除不了（#62）
-        magnitude_permille=effect.magnitude_permille if definition.stance else 1000,  # 3W-5b
+        magnitude_permille=(
+            effect.magnitude_permille
+            if definition.stance or definition.scales_with_magnitude
+            else 1000
+        ),  # 姿態幅度（3W-5b）、數值型狀態的強度（BAL-12e）
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
@@ -751,20 +911,8 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
                 )
                 break
     # 重複施加：不疊加，剩餘回合取較長者（None＝永久最長），見 docs/design/06-技能.md 6.6
-    if (
-        existing is not None
-        and _outlasts(existing.remaining, duration)
-        and not definition.redirects_damage  # 新的連結一律取代舊的（連結者與比例都可能不同）
-    ):
-        instance = StatusInstance(
-            status_id=status_id,
-            remaining=existing.remaining,
-            source_id=existing.source_id,
-            amount=existing.amount,
-            skill_id=existing.skill_id,
-            cost_status=existing.cost_status,
-            magnitude_permille=existing.magnitude_permille,
-        )
+    if existing is not None:
+        instance = _reapplied(existing, instance, redirects=definition.redirects_damage)
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
     if (
@@ -782,6 +930,21 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         )
     )
     return events
+
+
+def _reapplied(
+    existing: StatusInstance, instance: StatusInstance, *, redirects: bool
+) -> StatusInstance:
+    """重複施加時留下哪個實例：剩餘回合較長者，強度跟著它；剩餘回合相同時強度取較高者（BAL-12f，
+    06 6.34.9「BAL-12e 定」）。新的連結（``redirects``）一律取代舊的（連結者與比例都可能不同）。"""
+    if redirects:
+        return instance
+    if _outlasts(existing.remaining, instance.remaining):
+        return replace(existing, dormant=False)  # 舊實例的內容照舊（自暈的延後生效旗標不留）
+    if existing.remaining == instance.remaining:
+        magnitude = max(instance.magnitude_permille, existing.magnitude_permille)
+        return replace(instance, magnitude_permille=magnitude)
+    return instance
 
 
 def _outlasts(old: int | None, new: int | None) -> bool:

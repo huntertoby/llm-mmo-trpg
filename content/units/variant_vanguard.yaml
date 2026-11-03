@@ -11,5 +11,4 @@ weapon: one_handed_sword
 resist: {physical: 100}
 element_mods: {}
 tags: [hero]
-max_mana: 20
 skills: [skill_wall_brace_bash, skill_frost_ledge_cleave]

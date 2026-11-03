@@ -12,10 +12,10 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 1000}
+  - {type: damage, multiplier_permille: 1300}
   # 3D-1 連段條件：第一輪
   - type: damage
-    multiplier_permille: 1200
+    multiplier_permille: 1560
     condition: {type: first_round}
 condition: null
 cost: {stamina: 10, cooldown: 2}

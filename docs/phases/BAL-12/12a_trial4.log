@@ -1,0 +1,3 @@
+[   35.7s] baseline
+[   69.5s] skill_summon_spirit,skill_raise_skeleton,skill_plant_totem:mana=+99;skill_shatter_blast,skill_gravity_burst,skill_ashen_oath,skill_cinder_burst,skill_detonate_burning:dmg=700
+[  105.8s] skill_fire_wall:dmg=600;skill_fire_bolt:dmg=700

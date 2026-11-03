@@ -1,0 +1,23 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：帶電護盾：破盾時電擊攻擊者（感知＋雷電）
+id: skill_wis_storm_aegis
+schema_version: 1
+name_zh: 雷殼守護
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 3}
+effects:
+  - {type: shield, dice: 1d8, status: shielded_charged, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [lightning, spell, shield]
+narrative:
+  concept: 替同伴披上一層劈啪作響的雷殼，敢打破它的人會被電得一縮
+  cast_flavor: 你按上同伴的肩頭，細碎的電弧在他身周織成一層發亮的殼
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

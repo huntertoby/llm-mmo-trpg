@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.main import main
+from trpg.content.library import load_library
 
 DEMOS = {
     # 地圖：戰鬥紀錄中應出現的環境互動（種子見 SEEDS；AI 或內容改動後種子會漂移，依需要重選）
@@ -110,7 +111,14 @@ def test_simple_ai_weather_and_deploy_options(capsys: pytest.CaptureFixture[str]
         capsys,
     )
     assert code == 0 and "勝方：" in out
-    assert "戰士：HP 60/60 法力 20/20 源力 1/3 耐力 30 位置 (1, 5)" in out
+    # 法力、耐力上限由公式算出（BAL-15b，敵我同一套；讀 content）
+    lib = load_library()
+    fighter = lib.unit("hero_fighter")
+    wclass = lib.weapons[fighter.weapon].weapon_class
+    core = lib.ruleset.core
+    mana = core.template_max_resource("mana", fighter, wclass)
+    stamina = core.template_max_resource("stamina", fighter, wclass)
+    assert f"戰士：HP 60/60 法力 {mana}/{mana} 源力 1/3 耐力 {stamina} 位置 (1, 5)" in out
     code, _, err = _run(
         ["battle", "--map", "test_flat_6x6", "--seed", "1", "--deploy", "5,5"], capsys
     )

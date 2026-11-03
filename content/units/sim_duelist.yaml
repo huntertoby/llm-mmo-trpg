@@ -9,5 +9,5 @@ weapon: one_handed_sword
 resist: {physical: 100}
 element_mods: {}
 tags: [sim]
-max_mana: 20
 skills: [skill_riposte]
+# BAL-15c（#83）：裝了反應技，引擎把預設的格擋設成關閉（lifecycle.default_block_off），不必另寫反應規則。

@@ -15,7 +15,7 @@ effects:
   - {type: damage, dice: 1d8, element: fire}
   - {type: apply_status, status: burning, duration: 1}
 condition: null
-cost: {mana: 6}
+cost: {mana: 5}
 tags: [fire, spell, burn]
 narrative:
   concept: 最基本也最可靠的火焰咒語

@@ -1,0 +1,24 @@
+# BAL-19b（玩法決定 #110，06 6.10 組合主題、6.27.4）：意志主題（暗影、詛咒、恐懼、沉默）為主要效果，附帶火焰；數值為初值，未經模擬
+id: skill_wil_ashen_curse
+schema_version: 1
+name_zh: 灰燼詛咒
+tier: 2
+rank: 1
+rarity: epic
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wil
+shape: {type: square3, range: 4}
+effects:
+  - {type: damage, dice: 2d6, element: shadow}
+  - {type: apply_status, status: burning, duration: 2}
+condition: null
+cost: {mana: 10, cooldown: 2}
+tags: [shadow, spell, curse, fire, area]
+narrative:
+  concept: 一片詛咒的灰燼落在敵群頭上，沾到的人從裡到外慢慢燒成灰
+  cast_flavor: 灰黑色的餘燼從半空飄落，落地的每一點都燃起暗紅的火
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

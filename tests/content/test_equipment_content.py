@@ -48,6 +48,15 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_kw_burn_duration",
         "affix_kw_prone_damage",
         "affix_kw_shock_area",
+        "affix_kw_wet_area",
+        "affix_kw_wet_damage",
+        "affix_kw_conceal_duration",
+        "affix_kw_conceal_damage",
+        "affix_kw_ignite_damage",
+        "affix_kw_prone_area",
+        "affix_kw_poison_duration",
+        "affix_kw_poison_damage",
+        "affix_kw_shock_damage",
         "affix_summon_cooldown",
         "affix_summon_duration",
         "affix_summon_sacrifice",
@@ -91,6 +100,9 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_trig_thorns_burn",
         "affix_trig_summon_blast",
         "affix_trig_summon_mend",
+        "affix_unique_thunder_mist",  # 5D-3 獨特詞條（20.3）
+        "affix_unique_steam_guard",
+        "affix_unique_frostfire",
     ),
     "charge": ("affix_charge_static", "affix_charge_fury"),
     "cost": ("affix_cost_glass", "affix_cost_blood", "affix_cost_swift"),
@@ -118,10 +130,11 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_66_affixes_in_11_categories() -> None:
-    """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66。"""
+def test_whitelist_has_all_78_affixes_in_11_categories() -> None:
+    """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66；5D-3 加 3 條獨特詞條 → 69；
+    5D-2b 補 8 條技能強化（潮濕、隱蔽、點燃、倒地、中毒）→ 77；5D-4 補帶電利用 → 78。"""
     affixes = library().affixes
-    assert len(affixes) == 66
+    assert len(affixes) == 78
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)
@@ -434,3 +447,10 @@ def test_two_handed_weapon_cannot_be_paired() -> None:
     loadout = _loadout(main_hand="item_test_twin_daggers")
     problems = loadout_problems(loadout, lib.weapons["greatsword"], _rules())
     assert any("不能是成對武器" in p for p in problems)
+
+
+def test_shock_exploit_affix_card_says_damage() -> None:
+    """5C-3f（玩法 PM 代決）：帶電利用詞條是一般傷害加成（元素篩選要引擎新的 change），卡片寫
+    「傷害 +」，不寫「雷電傷害 +」。"""
+    name = library().affixes["affix_kw_shock_damage"].name_zh
+    assert "傷害 +" in name and "雷電" not in name

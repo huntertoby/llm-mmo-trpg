@@ -13,7 +13,12 @@ export interface ObjectiveLike {
   rounds?: number | null;
   /** 後端的格子是 `[x, y]` 對。 */
   tiles?: readonly (readonly [number, number])[] | null;
+  /** Boss 戰：頭目倒下時護衛撤退、直接勝利（後端 `Objective.leader_retreat`，BAL-16b2）。 */
+  leader_retreat?: boolean | null;
 }
+
+/** Boss 戰的勝利條件名稱（HUD、選路畫面與開場）。 */
+export const LEADER_OBJECTIVE_NAME = "打倒頭目（護衛會撤退）";
 
 /** 地圖上的目標格種類：`exit` 出口格（撤離）、`point` 守點格（守點）。 */
 export type MarkerKind = "exit" | "point";
@@ -39,6 +44,19 @@ function kindOf(objective: ObjectiveLike): ObjectiveKind {
   return objective.kind;
 }
 
+function isLeader(objective: ObjectiveLike): boolean {
+  return objective.leader_retreat === true;
+}
+
+/** 對照表的條目：Boss 戰用 `leader`，其餘用種類本身。 */
+function glossaryKey(objective: ObjectiveLike): string {
+  return isLeader(objective) ? "leader" : kindOf(objective);
+}
+
+function objectiveName(objective: ObjectiveLike): string {
+  return isLeader(objective) ? LEADER_OBJECTIVE_NAME : OBJECTIVE_NAMES[kindOf(objective)];
+}
+
 /** 把說明裡的 `{rounds}` 佔位換成該場的限時輪數；沒有輪數時改寫成不帶數字的說法。 */
 function fillRounds(text: string, rounds: number | null): string {
   if (rounds !== null) return text.replaceAll("{rounds}", String(rounds));
@@ -47,22 +65,20 @@ function fillRounds(text: string, rounds: number | null): string {
 
 /** 一行說明，例如「撤離：5 輪內，所有還活著的我方單位抵達出口」（文字來自對照表）。 */
 export function objectiveLine(objective: ObjectiveLike): string {
-  const kind = kindOf(objective);
-  const entry = glossaryEntry("objectives", kind);
-  if (entry === undefined) return OBJECTIVE_NAMES[kind];
+  const entry = glossaryEntry("objectives", glossaryKey(objective));
+  if (entry === undefined) return objectiveName(objective);
   return `${entry.name_zh}：${fillRounds(entry.description_zh ?? "", objective.rounds ?? null)}`;
 }
 
 /** 完整的規則列（勝利與失敗的判定時機、誰不計入）；對照表沒有時為空。 */
 export function objectiveRules(objective: ObjectiveLike): string[] {
-  const entry = glossaryEntry("objectives", kindOf(objective));
+  const entry = glossaryEntry("objectives", glossaryKey(objective));
   return (entry?.rules_zh ?? []).map((l) => fillRounds(l, objective.rounds ?? null));
 }
 
 /** 圖示加名稱，例如「➜ 撤離」。 */
 export function objectiveBadge(objective: ObjectiveLike): string {
-  const kind = kindOf(objective);
-  return `${OBJECTIVE_ICONS[kind]} ${OBJECTIVE_NAMES[kind]}`;
+  return `${OBJECTIVE_ICONS[kindOf(objective)]} ${objectiveName(objective)}`;
 }
 
 /**

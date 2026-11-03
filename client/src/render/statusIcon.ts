@@ -304,6 +304,125 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     circle(c, 0, 0, 8);
     circle(c, 0, 0, 3.5, true);
   },
+  // 碎晶（Phase 5A-M1，碎晶傀儡倒下時留下導電的水）：碎片＋水滴，只用既有筆畫
+  shard_burst: (c) => {
+    star(c, -4, -4, 4);
+    star(c, 5, -2, 3);
+    drop(c, 0, 5, 5);
+  },
+  // 劍陣（Phase 5A-M2，陣法範圍加成）：三把並排的劍，只用既有筆畫
+  sword_formation: (c) => {
+    for (const x of [-6, 0, 6]) {
+      line(c, [[x, -9], [x, 6]]);
+      line(c, [[x - 2.5, 3], [x + 2.5, 3]]);
+    }
+  },
+  // 護陣（Phase 5A-M2b，陣眼石靈：附近同門減傷）：一圈外框裡一個實心圓，只用既有筆畫
+  array_ward: (c) => {
+    circle(c, 0, 0, 8.5);
+    circle(c, 0, 0, 3, true);
+  },
+  // 誓約之力（Phase 5C-3，依難度 1～3 個點）：一顆星＋下方的點，只用既有筆畫
+  oath_bonus_easy: (c) => {
+    star(c, 0, -2, 6);
+    circle(c, 0, 8, 1.5, true);
+  },
+  oath_bonus_medium: (c) => {
+    star(c, 0, -2, 6);
+    circle(c, -3, 8, 1.5, true);
+    circle(c, 3, 8, 1.5, true);
+  },
+  oath_bonus_hard: (c) => {
+    star(c, 0, -2, 6);
+    for (const x of [-5, 0, 5]) circle(c, x, 8, 1.5, true);
+  },
+  // 破誓（Phase 5C-3，違反誓約）：一顆星被斜線劃掉
+  oath_broken: (c) => {
+    star(c, 0, 0, 6);
+    line(c, [[-8, 8], [8, -8]]);
+  },
+  // 鎖霧大陣（Phase 5F-2，雲頂觀陣眼：霧鎖真人減傷）：護陣的雙圈，只用既有筆畫
+  summit_array_ward: (c) => {
+    circle(c, 0, 0, 8.5);
+    circle(c, 0, 0, 5);
+    circle(c, 0, 0, 2, true);
+  },
+  // 歸一（Phase 5F-2，霧鎖真人第 3 階段：每回合回血）：一滴水落進圓心，只用既有筆畫
+  mist_return: (c) => {
+    circle(c, 0, 2, 7.5);
+    drop(c, 0, -2, 5);
+  },
+  // 開場休戰（Phase 5F-4b，循環賽第 1 輪不受、也不造成傷害）：圓裡的暫停符號，只用既有筆畫
+  league_truce: (c) => {
+    circle(c, 0, 0, 8.5);
+    line(c, [[-3, -4.5], [-3, 4.5]]);
+    line(c, [[3, -4.5], [3, 4.5]]);
+  },
+  // 源晶共鳴（Phase 5F-3，源晶柱：碎晶之主不受骰值傷害）：圓框裡一塊菱形晶體，只用既有筆畫
+  rift_resonance: (c) => {
+    circle(c, 0, 0, 8.5);
+    line(c, [[0, -6], [4, 0], [0, 6], [-4, 0], [0, -6]]);
+  },
+  // 灌注源晶（Phase 5F-3b，三柱階段碎晶之主造成的傷害降低）：菱形晶體＋往外的三道細線，只用既有筆畫
+  rift_channel: (c) => {
+    line(c, [[0, -5], [3.5, 0], [0, 5], [-3.5, 0], [0, -5]]);
+    line(c, [[0, -6.5], [0, -9.5]]);
+    line(c, [[-5, 4], [-8, 6.5]]);
+    line(c, [[5, 4], [8, 6.5]]);
+  },
+  // 晶能湧動／狂湧（Phase 5F-3，留下的柱子傷害提高）：菱形晶體＋下方 1～2 個點
+  crystal_surge: (c) => {
+    line(c, [[0, -8], [5, -1], [0, 6], [-5, -1], [0, -8]]);
+    circle(c, 0, 9, 1.5, true);
+  },
+  crystal_surge_2: (c) => {
+    line(c, [[0, -8], [5, -1], [0, 6], [-5, -1], [0, -8]]);
+    circle(c, -3, 9, 1.5, true);
+    circle(c, 3, 9, 1.5, true);
+  },
+  // 界崩（Phase 5F-3，第 18 輪起傷害加倍）：碎成兩半的菱形
+  rift_collapse: (c) => {
+    line(c, [[-1, -8], [-6, 0], [-1, 8]]);
+    line(c, [[1, -8], [6, 0], [1, 8]]);
+    line(c, [[0, -6], [2, -1], [-2, 2], [0, 6]]);
+  },
+  // 熔核爆裂（Phase 5F-5a，熔岩獸倒下時留下火）：碎片＋火苗，只用既有筆畫
+  molten_burst: (c) => {
+    star(c, -5, -4, 3.5);
+    star(c, 5, -4, 3.5);
+    flame(c, 0, 4, 7);
+  },
+  // 殼縫熔核（Phase 5F-5b，灰燼之心戰的殼縫餘燼蜥：同熔核爆裂、傷害倍率另調）：殼的弧線＋火苗
+  heart_ember_burst: (c) => {
+    line(c, [[-8, -2], [-5, -7], [0, -8.5], [5, -7], [8, -2]]);
+    star(c, 0, -3, 3);
+    flame(c, 0, 4, 7);
+  },
+  // 寒燼爆裂（Phase 5F-5a，寒燼蜥倒下時留下冰面）：碎片＋雪花的三條線
+  frost_ember_burst: (c) => {
+    star(c, -5, -5, 3.5);
+    star(c, 5, -5, 3.5);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI;
+      line(c, [[Math.cos(a) * -5, 4 + Math.sin(a) * -5], [Math.cos(a) * 5, 4 + Math.sin(a) * 5]]);
+    }
+  },
+  // 熔殼（Phase 5F-5a，灰燼之心第 1 階段：受到的傷害降低、被冰打碎）：圓殼裡一團火
+  molten_shell: (c) => {
+    circle(c, 0, 0, 8.5);
+    flame(c, 0, 2, 7);
+  },
+  // 硬殼（Phase 5F-5a，詞綴硬殼的：開場 2 回合傷害減半）：兩層弧形外殼
+  hard_shell: (c) => {
+    line(c, [[-8, 4], [-5, -4], [0, -7], [5, -4], [8, 4]]);
+    line(c, [[-5, 6], [-3, 0], [0, -2], [3, 0], [5, 6]]);
+  },
+  // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
+  heart_link: (c) => {
+    circle(c, -5, 0, 4);
+    circle(c, 5, 0, 4);
+    line(c, [[-1, 0], [1, 0]]);
+  },
   slow: (c) => {
     circle(c, 0, 0, 8.5);
     line(c, [[0, 0], [0, -6]]);
@@ -334,6 +453,12 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
   empowered: (c) => {
     line(c, [[-8, 0], [0, -8], [8, 0]]); // 雙箭頭↑（全屬性提升）
     line(c, [[-8, 8], [0, 0], [8, 8]]);
+  },
+  commanding: (c) => {
+    line(c, [[-9, 9], [-1, -1]]); // 號令（BAL-19f）：指揮棒＋召喚物（小圓）＋↑（召喚物傷害提高）
+    circle(c, -3, -5, 2.4, true);
+    circle(c, 3, 5, 3.5);
+    arrow(c, 8, -3, true);
   },
   infused_fire: (c) => {
     sword(c); // 臨時附魔（3I-6）：劍＋火星

@@ -314,6 +314,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/dev-packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Dev Packs
+         * @description 開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。
+         */
+        get: operations["list_dev_packs_api_runs_dev_packs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/saves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saves */
+        get: operations["list_saves_api_runs_saves_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Load Run */
+        post: operations["load_run_api_runs_load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/dev-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dev Advance
+         * @description 開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
+         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
+         *     ``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。
+         */
+        post: operations["dev_advance_api_runs__run_id__dev_advance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs": {
         parameters: {
             query?: never;
@@ -393,26 +469,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs/dev-packs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Dev Packs
-         * @description 開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。
-         */
-        get: operations["list_dev_packs_api_runs_dev_packs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/runs/rules": {
         parameters: {
             query?: never;
@@ -427,40 +483,6 @@ export interface paths {
         get: operations["get_rules_api_runs_rules_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/saves": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Saves */
-        get: operations["list_saves_api_runs_saves_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/load": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Load Run */
-        post: operations["load_run_api_runs_load_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -553,28 +575,6 @@ export interface paths {
          * @description 閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（Phase 3W-5）：不扣點、不改狀態。
          */
         post: operations["post_flash_preview_api_runs__run_id__flash_preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/{run_id}/dev-advance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dev Advance
-         * @description 開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
-         *     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。
-         *     ``insight`` 大於 0 時把靈感點補到至少這個數（3W-6：閃現畫面的排版掃描與截圖用）。
-         */
-        post: operations["dev_advance_api_runs__run_id__dev_advance_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -760,10 +760,592 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Characters */
+        get: operations["list_characters_api_world_characters_get"];
+        put?: never;
+        /** Create Character */
+        post: operations["create_character_api_world_characters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Character */
+        get: operations["get_character_api_world_characters__character_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Action */
+        post: operations["post_action_api_world_characters__character_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/battle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Battle */
+        post: operations["post_battle_api_world_characters__character_id__battle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/flash-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Flash Preview
+         * @description 閃現（``slot`` 為空）或重閃第 ``slot`` 次之前的預覽（5A-7）：不扣點、不寫日誌。點數與地點
+         *     另外看（``WorldView.growth``）。
+         */
+        post: operations["post_flash_preview_api_world_characters__character_id__flash_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/allocation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Allocation Preview
+         * @description 配點後的最大 HP、法力、耐力與變化文字（5A-7；同一輪的預覽）。
+         */
+        post: operations["post_allocation_preview_api_world_characters__character_id__allocation_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/situation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Situation
+         * @description 打開目前事件的某個情境判定解法：說書人寫情境敘述（還沒送出前可以換別的解法）。
+         */
+        post: operations["post_situation_api_world_characters__character_id__situation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/situation/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Situation Answer
+         * @description 送出情境判定的回答（**第一次送出即定案**，09 9.6.4）：玩家文字只放進 LLM 的
+         *     ``<player_input>``；引用的事實由引擎核對。回應的 ``situation_result`` 是判定明細與結果敘述。
+         */
+        post: operations["post_situation_answer_api_world_characters__character_id__situation_answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Chat
+         * @description 和所在地點的 NPC 自由聊天（只換資訊，不改狀態）；回話在 ``dialog``。
+         */
+        post: operations["post_chat_api_world_characters__character_id__chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Board
+         * @description 城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點；
+         *     5F-3 加賽季 Boss（封印、鑰匙、帳號今天剩幾次、首殺、評分榜）。
+         */
+        get: operations["get_board_api_world_characters__character_id__board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/absence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Absence
+         * @description 「你不在的時候」摘要（5F-1b）：上次看過之後的世界事件成敗、懸賞歸屬、新開放的區域。看過時送
+         *     ``news_seen`` 動作（``until``＝``as_of``）。只讀，用換日後的世界算。
+         */
+        get: operations["get_absence_api_world_characters__character_id__absence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/league": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get League
+         * @description 影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次（分頁，5F-4b）與進度。
+         *     第 14 天換日後、還沒有人首殺賽季 Boss 時，第一次看到這裡就自動開跑（5F-4b）。
+         */
+        get: operations["get_league_api_world_characters__character_id__league_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/league/matches/{match_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post League Replay
+         * @description 某一場循環賽的重播（5F-4）：依紀錄的步驟在戰鬥工作階段重播（不推進、不呼叫 AI），回傳從開場
+         *     到結束的每一步（既有戰鬥畫面播放），並比對最終狀態。紀錄不能重播時 409。
+         */
+        post: operations["post_league_replay_api_world_characters__character_id__league_matches__match_id__replay_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/league/matches/{match_id}/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get League Log
+         * @description 某一場循環賽的原始戰鬥紀錄（``trpg battle replay`` 同格式，可以自己重播驗證）。
+         */
+        get: operations["get_league_log_api_world_league_matches__match_id__log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/league/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post League Run
+         * @description 開始（或接續）影子循環賽（管理者，代決 5F4-1）：截止後凍結報名、排好賽程，背景分批跑。
+         */
+        post: operations["post_league_run_api_world_league_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/chronicle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chronicle
+         * @description 編年史（5F-5）：每季的季末紀錄、首位發現的配方、循環賽最終排名、首殺與評分榜。所有人可看。
+         */
+        get: operations["get_chronicle_api_world_chronicle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/legacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Legacy
+         * @description 自己帳號上季（含更早）的角色，新的季在前（5F-5；開發模式沒登入＝全部）。
+         */
+        get: operations["get_legacy_api_world_legacy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/season/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Season Verify
+         * @description 重播查證（管理者，5F-5c）：給一筆首殺（``target``）或一場循環賽（``match_id``），從唯讀封存
+         *     （目前這一季從世界資料夾）確定性重播，回報結果和保留下來的紀錄是否一致。只讀。找不到 404；
+         *     沒給對應的 ``target``／``match_id`` 422。
+         */
+        post: operations["post_season_verify_api_world_season_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/season/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Season Reset
+         * @description 季末重置（管理者，5F-5）：預設 dry-run，只列出會清什麼、留什麼；``dry_run: false`` 時先備份
+         *     整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。
+         *     真的執行一律要登入的管理者帳號，開發模式也一樣（開發 PM 代決：會清資料，不比照 LLM 開關
+         *     放行）。
+         */
+        post: operations["post_season_reset_api_world_season_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/llm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get World Llm
+         * @description 大世界的 LLM 開關（預設跟著伺服器設定，玩法 PM 2026-11-03）。
+         */
+        get: operations["get_world_llm_api_world_llm_get"];
+        put?: never;
+        /**
+         * Post World Llm
+         * @description 改大世界的 LLM 開關：打開時先探測，連不到維持關閉並回提示；``null`` 回到伺服器設定。
+         */
+        post: operations["post_world_llm_api_world_llm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notes
+         * @description 角色現在所在地點的留言（最新 20 則）與其他角色的足跡（5E-3，#105）。
+         */
+        get: operations["get_notes_api_world_characters__character_id__notes_get"];
+        put?: never;
+        /**
+         * Post Note
+         * @description 在角色現在所在的地點留一則（1～50 字、不能換行；不進世界日誌、不送進 LLM）。
+         */
+        post: operations["post_note_api_world_characters__character_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Own Note
+         * @description 作者刪自己的留言（5E-3b）：只能刪這個角色留的；別人的或不存在都 404。
+         */
+        delete: operations["delete_own_note_api_world_characters__character_id__notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Note
+         * @description 刪一則留言（管理者；#105「使用者手動刪」）。
+         */
+        delete: operations["delete_note_api_world_notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Status */
+        get: operations["get_status_api_auth_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Login */
+        post: operations["post_login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Logout */
+        post: operations["post_logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AbsenceItemView
+         * @description 摘要的一行。
+         */
+        AbsenceItemView: {
+            /** Kind */
+            kind: string;
+            /** At */
+            at: number;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
+         * AbsenceView
+         * @description ``GET /api/world/characters/{id}/absence``：沒有新消息時 ``items`` 為空（前端不跳）。
+         */
+        AbsenceView: {
+            /** Since */
+            since: number;
+            /** As Of */
+            as_of: number;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["AbsenceItemView"][];
+        };
+        /**
+         * AcceptQuestAction
+         * @description 接任務（Phase 5B-4；09 9.6.3）：在給任務的 NPC 所在地點、``start`` 條件成立。
+         */
+        AcceptQuestAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "accept_quest";
+            /** Quest */
+            quest: string;
+        };
+        /**
+         * AccountView
+         * @description 目前登入的帳號（不含密碼雜湊與 session）。
+         */
+        AccountView: {
+            /** Account Id */
+            account_id: string;
+            /** Username */
+            username: string;
+            /** Characters */
+            characters: number;
+            /** Max Characters */
+            max_characters: number;
+            /** Can Create */
+            can_create: boolean;
+            /**
+             * Admin
+             * @default false
+             */
+            admin: boolean;
+            /** Titles */
+            titles?: string[];
+        };
         Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
         /**
          * ActivateCharge
@@ -832,6 +1414,18 @@ export interface components {
             duplicate_of?: string | null;
         };
         /**
+         * AiChoiceView
+         * @description 一種可選的 AI 打法（``ai_profiles.yaml``；5C-2 玩法 PM 定 ④）。
+         */
+        AiChoiceView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+        };
+        /**
          * Aim
          * @description 瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；
          *     不疊加，回合結束或用掉即失效。
@@ -844,6 +1438,21 @@ export interface components {
              * @enum {string}
              */
             type: "aim";
+        };
+        /**
+         * AllocateAction
+         * @description 分配未分配的屬性點（07 7.2；5A-6）：屬性 → 加幾點，總數 ≤ ``attribute_points``。
+         */
+        AllocateAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "allocate";
+            /** Attributes */
+            attributes: {
+                [key: string]: number;
+            };
         };
         /**
          * AllocateChoice
@@ -988,6 +1597,53 @@ export interface components {
             /** Reason Zh */
             reason_zh: string;
         };
+        /** AuthStatus */
+        AuthStatus: {
+            /** Dev Mode */
+            dev_mode: boolean;
+            account?: components["schemas"]["AccountView"] | null;
+        };
+        /**
+         * BagItemView
+         * @description 背包或腰包裡的一種物品。
+         */
+        BagItemView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Count */
+            count: number;
+            /** Description Zh */
+            description_zh: string;
+            /** Sell Price */
+            sell_price: number;
+            /**
+             * Sellable
+             * @default true
+             */
+            sellable: boolean;
+            /** Field Usable */
+            field_usable: boolean;
+            /** Use Zh */
+            use_zh?: string | null;
+            /** Battle Zh */
+            battle_zh?: string | null;
+            /**
+             * Gear
+             * @default false
+             */
+            gear: boolean;
+            /**
+             * Can Equip
+             * @default false
+             */
+            can_equip: boolean;
+            /** Equip Problem Zh */
+            equip_problem_zh?: string | null;
+        };
         /**
          * BattleHistory
          * @description 到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。
@@ -1082,6 +1738,11 @@ export interface components {
              */
             variant_states: components["schemas"]["VariantStateOut"][];
             /**
+             * Oath Active
+             * @default false
+             */
+            oath_active: boolean;
+            /**
              * Followup Options
              * @default []
              */
@@ -1165,6 +1826,178 @@ export interface components {
             };
         };
         /**
+         * BoardBossEntryView
+         * @description 評分榜的一名（Phase 5F-3；#87）。
+         */
+        BoardBossEntryView: {
+            /** Rank */
+            rank: number;
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+            /** Rounds */
+            rounds: number;
+            /** Survivors */
+            survivors: number;
+            /** Allies */
+            allies: number;
+            /** No Down */
+            no_down: boolean;
+            /** Location Zh */
+            location_zh: string;
+            /** Mine */
+            mine: boolean;
+            /** At */
+            at: number;
+            /**
+             * Titles
+             * @default []
+             */
+            titles: string[];
+        };
+        /**
+         * BoardBountyView
+         * @description 一張今天的懸賞（18.7.4；先搶先贏）。
+         */
+        BoardBountyView: {
+            /** Bounty */
+            bounty: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Location Zh */
+            location_zh: string;
+            /** Level */
+            level: number;
+            /** Coins */
+            coins: number;
+            /** Open */
+            open: boolean;
+            /** Claimed By */
+            claimed_by?: string | null;
+            /** Status Zh */
+            status_zh: string;
+        };
+        /**
+         * BoardClearedView
+         * @description 所有人看到的已清空地點（9.6.7 #15）。
+         */
+        BoardClearedView: {
+            /** Location Zh */
+            location_zh: string;
+            /** Respawn At */
+            respawn_at: number;
+        };
+        /**
+         * BoardGoalView
+         * @description 一條今日目標（#99）與這個角色的進度。
+         */
+        BoardGoalView: {
+            /** Goal */
+            goal: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Progress */
+            progress: number;
+            /** Count */
+            count: number;
+            /** Done */
+            done: boolean;
+            /** Coins */
+            coins: number;
+        };
+        /** BoardMilestoneView */
+        BoardMilestoneView: {
+            /** Day */
+            day: number;
+            /** Name Zh */
+            name_zh: string;
+        };
+        /**
+         * BoardSeasonBossView
+         * @description 賽季 Boss 區塊（Phase 5F-3；09 9.7、#87、#100、#101）。
+         */
+        BoardSeasonBossView: {
+            /** Boss */
+            boss: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sealed" | "announced" | "open" | "closed";
+            /** Status Zh */
+            status_zh: string;
+            /** Note Zh */
+            note_zh?: string | null;
+            /** Announce At */
+            announce_at: number;
+            /** Unlock At */
+            unlock_at: number;
+            /** Close At */
+            close_at: number;
+            /** World Keys */
+            world_keys: number;
+            /** Keys Target */
+            keys_target?: number | null;
+            /** My Keys */
+            my_keys: number;
+            /** Keys Required */
+            keys_required: number;
+            /** Attempts Left */
+            attempts_left: number;
+            /** Daily Attempts */
+            daily_attempts: number;
+            /** Can Challenge */
+            can_challenge: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+            /** First Kill Zh */
+            first_kill_zh?: string | null;
+            /**
+             * First Kill Titles
+             * @default []
+             */
+            first_kill_titles: string[];
+            /** Title Zh */
+            title_zh: string;
+            /**
+             * Board
+             * @default []
+             */
+            board: components["schemas"]["BoardBossEntryView"][];
+        };
+        /**
+         * BoardWorldEventView
+         * @description 一個世界事件的全服進度（#103）。
+         */
+        BoardWorldEventView: {
+            /** Event */
+            event: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "succeeded" | "failed";
+            /** Status Zh */
+            status_zh: string;
+            /** Progress */
+            progress: number;
+            /** Target */
+            target: number;
+            /** Permille */
+            permille: number;
+            /** Days Zh */
+            days_zh: string;
+            /** Target Note Zh */
+            target_note_zh?: string | null;
+        };
+        /**
          * BombOut
          * @description 帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。
          */
@@ -1197,6 +2030,25 @@ export interface components {
             radius: number;
             /** Tiles */
             tiles: components["schemas"]["XY"][];
+        };
+        /**
+         * BossPhaseView
+         * @description Boss 目前的階段（Phase 5F-2，唯讀）：``index`` 1 起算、``total`` 階段數；下一個階段的名字與
+         *     HP 門檻（‰；最後一個階段時兩者為 ``None``）。
+         */
+        BossPhaseView: {
+            /** Index */
+            index: number;
+            /** Total */
+            total: number;
+            /** Name Zh */
+            name_zh: string;
+            /** Next Name Zh */
+            next_name_zh?: string | null;
+            /** Next Permille */
+            next_permille?: number | null;
+            /** Next Condition Zh */
+            next_condition_zh?: string | null;
         };
         /**
          * BudgetLine
@@ -1353,6 +2205,51 @@ export interface components {
             text: string;
         };
         /**
+         * BuyAction
+         * @description 在店主所在的地點向他買東西（08 8.26.1）；一次 ``buy`` 算消費一次（代決 5D1-11）。
+         */
+        BuyAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "buy";
+            /** Shop */
+            shop: string;
+            /** Item */
+            item: string;
+            /**
+             * Count
+             * @default 1
+             */
+            count: number;
+        };
+        /**
+         * CampAction
+         * @description 在目前地點紮營＝營火（09 9.6.11 #114）。
+         */
+        CampAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "camp";
+        };
+        /** CareLineView */
+        CareLineView: {
+            /** Item Zh */
+            item_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Counted */
+            counted: boolean;
+            /**
+             * Reason Zh
+             * @default
+             */
+            reason_zh: string;
+        };
+        /**
          * ChargeOut
          * @description 等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。
          */
@@ -1406,6 +2303,17 @@ export interface components {
             ready: boolean;
         };
         /**
+         * ChatRequest
+         * @description 和所在地點的 NPC 自由聊天（9.6.7 #3：只換資訊）。``text`` 只放進 LLM 的
+         *     ``<player_input>``。
+         */
+        ChatRequest: {
+            /** Npc */
+            npc: string;
+            /** Text */
+            text: string;
+        };
+        /**
          * Choice
          * @description 一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀
          *     ``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的
@@ -1443,6 +2351,126 @@ export interface components {
             info: {
                 [key: string]: unknown;
             };
+        };
+        /** ChronicleBoardView */
+        ChronicleBoardView: {
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+            /** Rounds */
+            rounds: number;
+            /** Title Zh */
+            title_zh: string;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
+        };
+        /** ChronicleHeroView */
+        ChronicleHeroView: {
+            /** Name */
+            name: string;
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
+        };
+        /** ChronicleKillView */
+        ChronicleKillView: {
+            /** Kind */
+            kind: string;
+            /** Target Name Zh */
+            target_name_zh: string;
+            /** Name */
+            name: string;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
+        };
+        /** ChronicleRankView */
+        ChronicleRankView: {
+            /** Rank */
+            rank: number;
+            /** Name */
+            name: string;
+            /** Build Zh */
+            build_zh: string;
+            /** Wins */
+            wins: number;
+            /** Losses */
+            losses: number;
+            /** Draws */
+            draws: number;
+            /** Tied */
+            tied: boolean;
+            /**
+             * Titles
+             * @description 這名玩家帳號的紀念稱號（5F-3c；名字旁顯示，目前的帳號稱號）。
+             */
+            titles?: string[];
+        };
+        /** ChronicleRecipeView */
+        ChronicleRecipeView: {
+            /** Name Zh */
+            name_zh: string;
+            /** Discoverer Name */
+            discoverer_name: string;
+        };
+        /** ChronicleSeasonView */
+        ChronicleSeasonView: {
+            /** Season Id */
+            season_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Current */
+            current: boolean;
+            /** Started At */
+            started_at: number | null;
+            /** Reset At */
+            reset_at: number | null;
+            /** Heroes */
+            heroes: components["schemas"]["ChronicleHeroView"][];
+            /** Recipes */
+            recipes: components["schemas"]["ChronicleRecipeView"][];
+            /** First Kills */
+            first_kills: components["schemas"]["ChronicleKillView"][];
+            /** League */
+            league: components["schemas"]["ChronicleRankView"][];
+            /** Boss Board */
+            boss_board: components["schemas"]["ChronicleBoardView"][];
+        };
+        /** ChronicleView */
+        ChronicleView: {
+            /** Current Season */
+            current_season: string;
+            /** Seasons */
+            seasons: components["schemas"]["ChronicleSeasonView"][];
+        };
+        /**
+         * CiteFactView
+         * @description 可以點選引用的事實（9.6.4：持有的線索、和 NPC 的往來、拿得出來的交換條件）。
+         */
+        CiteFactView: {
+            /** Fact */
+            fact: string;
+            /**
+             * Item
+             * @enum {string}
+             */
+            item: "clue" | "npc_bond" | "exchange";
+            /** Item Zh */
+            item_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Insert Zh */
+            insert_zh?: string | null;
         };
         /**
          * CollisionOut
@@ -1536,6 +2564,161 @@ export interface components {
             pos: components["schemas"]["XY"];
         };
         /**
+         * CraftAction
+         * @description 在鐵匠打造（8.13、8.20）：給配方的各欄，或只給 ``code``（世界記得的配方碼）。
+         */
+        CraftAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "craft";
+            /** Station */
+            station: string;
+            /** Code */
+            code?: string | null;
+            slot_type?: components["schemas"]["SlotType"] | null;
+            /** Rarity */
+            rarity?: ("rare" | "epic") | null;
+            /** Affix */
+            affix?: string | null;
+            /** Grade */
+            grade?: string | null;
+            /**
+             * Materials
+             * @default []
+             */
+            materials: string[];
+            /** Item Level */
+            item_level?: number | null;
+        };
+        /**
+         * CraftGearView
+         * @description 背包或穿戴中的一件裝備。
+         */
+        CraftGearView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Worn */
+            worn: boolean;
+            /** Description Zh */
+            description_zh: string;
+            /** Code */
+            code?: string | null;
+            /**
+             * Enhance
+             * @default 0
+             */
+            enhance: number;
+            /**
+             * Can Enhance
+             * @default false
+             */
+            can_enhance: boolean;
+            /** Enhance Zh */
+            enhance_zh?: string | null;
+            /**
+             * Can Salvage
+             * @default false
+             */
+            can_salvage: boolean;
+            /** Salvage Zh */
+            salvage_zh?: string | null;
+            /** Reroll Zh */
+            reroll_zh?: string | null;
+            /** Imbue Zh */
+            imbue_zh?: string | null;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: components["schemas"]["GearAffixView"][];
+        };
+        /**
+         * CraftMaterialView
+         * @description 背包裡能打造的材料。
+         */
+        CraftMaterialView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Count */
+            count: number;
+            /** Grade */
+            grade: boolean;
+            /** Level Cap */
+            level_cap?: number | null;
+            /** Leaning Zh */
+            leaning_zh?: string | null;
+            /** Resonance Zh */
+            resonance_zh?: string | null;
+        };
+        /** CraftOptionView */
+        CraftOptionView: {
+            /** Id */
+            id: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /** CraftRarityView */
+        CraftRarityView: {
+            /** Rarity */
+            rarity: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Cost Zh */
+            cost_zh: string;
+        };
+        /**
+         * CraftSlotView
+         * @description 一個能打造的部位與能指定的 build 詞條。
+         */
+        CraftSlotView: {
+            /** Slot Type */
+            slot_type: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Grade Amount */
+            grade_amount: number;
+            /** Affixes */
+            affixes: components["schemas"]["CraftOptionView"][];
+        };
+        /**
+         * CraftingView
+         * @description 角色所在地點的鐵匠與附魔台（沒有設施時 ``WorldView.crafting`` 是 ``None``）。
+         */
+        CraftingView: {
+            /** Stations */
+            stations: components["schemas"]["StationView"][];
+            /** Smithy */
+            smithy: string | null;
+            /** Enchanter */
+            enchanter: string | null;
+            /** Can Use */
+            can_use: boolean;
+            /** Problem Zh */
+            problem_zh: string | null;
+            /** Slots */
+            slots: components["schemas"]["CraftSlotView"][];
+            /** Rarities */
+            rarities: components["schemas"]["CraftRarityView"][];
+            /** Materials */
+            materials: components["schemas"]["CraftMaterialView"][];
+            /** Flavor Max */
+            flavor_max: number;
+            /** Recipes */
+            recipes: components["schemas"]["RecipeView"][];
+            /** Gear */
+            gear: components["schemas"]["CraftGearView"][];
+            /** Essence */
+            essence: number;
+            /** Note Zh */
+            note_zh: string;
+        };
+        /**
          * CreateBattleRequest
          * @description 建立戰鬥。``ally_builds`` 省略時與 ``trpg battle --ally-build <hero_build>`` 相同，以標準
          *     隊友補齊到 3 人；給了（可以是空串列）就只用 ``hero_build`` ＋ 這些 build。
@@ -1622,6 +2805,57 @@ export interface components {
              */
             llm: boolean;
         };
+        /**
+         * CreateWorldCharacterRequest
+         * @description 建立大世界角色（07 7.6 創角）。選項沿用 ``GET /api/runs/start-options``。
+         */
+        CreateWorldCharacterRequest: {
+            /** Name */
+            name: string;
+            /** Weapon */
+            weapon: string;
+            /** Keywords */
+            keywords: string[];
+            /** Race */
+            race?: string | null;
+            /** Origin */
+            origin?: string | null;
+            /** Seed */
+            seed?: number | null;
+            /** Legacy Character */
+            legacy_character?: string | null;
+        };
+        /**
+         * CreatureLook
+         * @description 異形敵人的外觀（Phase 5A-ART1，``docs/art/敵人外觀.md`` 1.1；純顯示資料）。
+         *
+         *     身形 × 材質 × 元素 × 大小 × 特徵。值只檢查格式、**不檢查是否認得**：前端不認得時退回
+         *     （身形 → 軟泥、材質 → 毛皮、元素 → 無、大小 → 1、特徵 → 略過），讓 LLM 產生的新值也畫得出來。
+         *     ``status_traits``：單位身上有該狀態時才多畫的特徵（灰燼之心有「熔殼」時畫甲蟲殼堆）。
+         */
+        CreatureLook: {
+            /** Body */
+            body: string;
+            /** Variant */
+            variant?: string | null;
+            /** Material */
+            material?: string | null;
+            /** Element */
+            element?: string | null;
+            /** Size */
+            size?: string | null;
+            /** Tint */
+            tint?: string | null;
+            /**
+             * Traits
+             * @default []
+             */
+            traits: string[];
+            /** Status Traits */
+            status_traits?: {
+                [key: string]: string[];
+            };
+        };
         /** DamageOut */
         DamageOut: {
             /** Minimum */
@@ -1697,6 +2931,30 @@ export interface components {
             /** Keywords */
             keywords: components["schemas"]["KeywordRef"][];
         };
+        /**
+         * DialogLineView
+         * @description 這次請求的 NPC 回話或聊到的內容。
+         */
+        DialogLineView: {
+            /** Npc */
+            npc: string | null;
+            /** Speaker Zh */
+            speaker_zh: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "rumor" | "quest_entry" | "secret" | "chat" | "nothing" | "tavern";
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * More Zh
+             * @default
+             */
+            more_zh: string;
+            /** Source */
+            source?: ("llm" | "fallback") | null;
+        };
         /** @enum {string} */
         Direction: "north" | "east" | "south" | "west";
         /**
@@ -1715,6 +2973,19 @@ export interface components {
             lethal: boolean;
         };
         /**
+         * DissolveAction
+         * @description 溶掉一招（06 6.34.3 #71；城鎮與營火）：退回花在它身上的點的一半。
+         */
+        DissolveAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "dissolve";
+            /** Skill */
+            skill: string;
+        };
+        /**
          * DissolveChoice
          * @description 溶掉一招學會的技能（Phase 3W-5，#71）：技能消失，退回花在它身上的靈感點的一半（無條件捨去）。
          *     只在營火；欄位空出（可以用 ``loadout`` 從備用補上）。不推進節點。
@@ -1731,6 +3002,9 @@ export interface components {
         /**
          * DollGear
          * @description 範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
+         *
+         *     Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
+         *     ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。
          */
         DollGear: {
             /** Kind */
@@ -1739,6 +3013,12 @@ export interface components {
             material: string;
             /** Color */
             color?: string | null;
+            /** Form */
+            form?: string | null;
+            /** Trim */
+            trim?: string | null;
+            /** Apron */
+            apron?: string | null;
         };
         /**
          * DollLook
@@ -1747,12 +3027,22 @@ export interface components {
          *     頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的
          *     ``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，
          *     前端依陣營退回預設外觀。
+         *
+         *     Phase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；
+         *     ``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`
+         *     加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、
+         *     ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型；
+         *     5A-ART5 加 ``main_glow`` 杖頭光色、``scale`` 戰場大小。都經 ``UnitView.doll_look`` 給前端
+         *     （不改引擎）。
          */
         DollLook: {
-            /** Skin */
+            /**
+             * Skin
+             * @default #f1c9a5
+             */
             skin: string;
             /** Hair */
-            hair?: ("short" | "long" | "none") | null;
+            hair?: ("short" | "long" | "none" | "bun") | null;
             /** Hair Color */
             hair_color?: string | null;
             /** Pants */
@@ -1776,6 +3066,34 @@ export interface components {
             main_color?: string | null;
             /** Rarity */
             rarity?: ("epic" | "legendary") | null;
+            /** Main Kind */
+            main_kind?: string | null;
+            /** Main Tassel */
+            main_tassel?: string | null;
+            /** Bun Band */
+            bun_band?: string | null;
+            /**
+             * Beard
+             * @default false
+             */
+            beard: boolean;
+            /** Build */
+            build?: ("stout" | "tall") | null;
+            /** Main Glow */
+            main_glow?: string | null;
+            /** Scale */
+            scale?: number | null;
+            creature?: components["schemas"]["CreatureLook"] | null;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: string[];
+            /**
+             * Traits
+             * @default []
+             */
+            traits: string[];
         };
         /**
          * DraftOptions
@@ -1819,6 +3137,66 @@ export interface components {
          * @enum {string}
          */
         Element: "physical" | "fire" | "ice" | "lightning" | "poison" | "wind" | "earth" | "holy" | "shadow";
+        /** EncounterEnemyView */
+        EncounterEnemyView: {
+            /** Name Zh */
+            name_zh: string;
+            /** Elite */
+            elite: boolean;
+            /** Affix Zh */
+            affix_zh: string | null;
+            /**
+             * Third
+             * @default false
+             */
+            third: boolean;
+        };
+        /** EncounterView */
+        EncounterView: {
+            /** Location */
+            location: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+            /** Enemy Level */
+            enemy_level: number;
+            /** Map Name Zh */
+            map_name_zh: string;
+            /** Weather Zh */
+            weather_zh: string;
+            /** Day Phase Zh */
+            day_phase_zh: string;
+            /** Enemies */
+            enemies: components["schemas"]["EncounterEnemyView"][];
+            /** Retreat To Zh */
+            retreat_to_zh: string;
+            /** Fatigued */
+            fatigued: boolean;
+            /** Hero Hp */
+            hero_hp: number;
+            /** In Battle */
+            in_battle: boolean;
+            /**
+             * Reinforcements
+             * @default 0
+             */
+            reinforcements: number;
+            first_team?: components["schemas"]["Team"] | null;
+            /**
+             * Hero Statuses
+             * @default []
+             */
+            hero_statuses: components["schemas"]["HeroStatusView"][];
+            /**
+             * Opening Zh
+             * @default []
+             */
+            opening_zh: string[];
+            /**
+             * Allies Zh
+             * @default
+             */
+            allies_zh: string;
+        };
         /**
          * EndStance
          * @description 取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。
@@ -1844,6 +3222,35 @@ export interface components {
              * @enum {string}
              */
             type: "end_turn";
+        };
+        /**
+         * EnhanceAction
+         * @description 在鐵匠強化一件裝備（背包或穿戴中；+1，最多 +3，8.14）。
+         */
+        EnhanceAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "enhance";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
+        };
+        /**
+         * EquipAction
+         * @description 把背包裡的一件裝備換上（Phase 5D-2；城鎮或營火，同換技能）；換下的放回背包。
+         */
+        EquipAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "equip";
+            /** Item */
+            item: string;
+            slot?: components["schemas"]["Slot"] | null;
         };
         /**
          * EquipChoice
@@ -1886,6 +3293,85 @@ export interface components {
              *     }
              */
             appearance: components["schemas"]["AppearanceView"];
+        };
+        /** EventSolutionView */
+        EventSolutionView: {
+            /** Index */
+            index: number;
+            /** Kind */
+            kind: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Attributes Zh */
+            attributes_zh: string;
+            /** Template */
+            template: string | null;
+            /** Available */
+            available: boolean;
+            /** Unavailable Zh */
+            unavailable_zh?: string | null;
+            /**
+             * Cost Supplies
+             * @default 0
+             */
+            cost_supplies: number;
+            /**
+             * Can Pay
+             * @default true
+             */
+            can_pay: boolean;
+            /** Waive Thread */
+            waive_thread?: string | null;
+            /** Waive Zh */
+            waive_zh?: string | null;
+        };
+        /**
+         * EventSolveAction
+         * @description 用放棄、交涉或戰鬥解法處理身上的事件（Phase 5B-4b；9.6.7 #6）。``solution`` 是骨架
+         *     ``solutions`` 的索引；``use_thread`` 是交涉時拿來抵掉付出的線頭（例：用人情代替青竹節）。
+         */
+        EventSolveAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "event_solve";
+            /** Solution */
+            solution: number;
+            /** Use Thread */
+            use_thread?: string | null;
+        };
+        /**
+         * EventView
+         * @description 事件卡（9.6.7 #6、#7）。
+         */
+        EventView: {
+            /** Skeleton */
+            skeleton: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+            /** Actor Zh */
+            actor_zh: string;
+            /** Motive Zh */
+            motive_zh: string;
+            story: components["schemas"]["StoryView"] | null;
+            /** Who Zh */
+            who_zh: string;
+            /** Want Zh */
+            want_zh: string;
+            /** Obstacle Zh */
+            obstacle_zh: string;
+            /** Stakes Zh */
+            stakes_zh: string;
+            /** Follows Zh */
+            follows_zh?: string | null;
+            /** Solutions */
+            solutions: components["schemas"]["EventSolutionView"][];
+            /** Leave Zh */
+            leave_zh: string;
+            situation?: components["schemas"]["SituationView"] | null;
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
@@ -1988,6 +3474,24 @@ export interface components {
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
         /**
+         * FlashAction
+         * @description 閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``
+         *     為 ``None`` ＝ 閃現下一次，否則重閃第 ``slot`` 次；``category`` 指定類別（多花 1 點）。
+         */
+        FlashAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flash";
+            /** Skill */
+            skill: string;
+            /** Slot */
+            slot?: number | null;
+            /** Category */
+            category?: string | null;
+        };
+        /**
          * FlashCategoryOut
          * @description 可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。
          */
@@ -2051,6 +3555,21 @@ export interface components {
              * @default []
              */
             unequip_candidates: string[];
+        };
+        /**
+         * FlashPickAction
+         * @description 選閃現的第 ``pick`` 個選項（同 roguelite ``FlashPickChoice``）。
+         */
+        FlashPickAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flash_pick";
+            /** Pick */
+            pick: number;
+            /** Unequip */
+            unequip?: string | null;
         };
         /**
          * FlashPickChoice
@@ -2186,6 +3705,17 @@ export interface components {
             target_object_id?: string | null;
             target_pos?: components["schemas"]["Pos"] | null;
             direction?: components["schemas"]["Direction"] | null;
+        };
+        /** FootprintView */
+        FootprintView: {
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** At */
+            at: number;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * FormCooldownView
@@ -2327,6 +3857,20 @@ export interface components {
             affix: string;
             /** Value */
             value?: number | null;
+        };
+        /** GearAffixView */
+        GearAffixView: {
+            /** Index */
+            index: number;
+            /** Text Zh */
+            text_zh: string;
+            /** Can Change */
+            can_change: boolean;
+            /**
+             * Choices
+             * @default []
+             */
+            choices: components["schemas"]["CraftOptionView"][];
         };
         /**
          * GearCandidateOut
@@ -2760,6 +4304,28 @@ export interface components {
             /** Remaining */
             remaining: number;
         };
+        /**
+         * GrowthView
+         * @description 成長服務的可用狀態（5A-7；規則照 ``trpg.world.growth``）。
+         */
+        GrowthView: {
+            /** Insight */
+            insight: number;
+            /** Skill Tier */
+            skill_tier: number;
+            /** At Service */
+            at_service: boolean;
+            /** Service Zh */
+            service_zh: string;
+            /** Can Allocate */
+            can_allocate: boolean;
+            /** Can Spend */
+            can_spend: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** Pending */
+            pending: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2773,6 +4339,36 @@ export interface components {
             minimum: number;
             /** Maximum */
             maximum: number;
+        };
+        /** HereView */
+        HereView: {
+            /** Location */
+            location: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Can Rest */
+            can_rest: boolean;
+            /** Can Loadout */
+            can_loadout: boolean;
+            /** Camp Problem Zh */
+            camp_problem_zh: string | null;
+            /** Camped */
+            camped: boolean;
+            /** Teleports */
+            teleports: components["schemas"]["TeleportOption"][];
+            /** Hasten Cost */
+            hasten_cost: number;
+            /** Camp Cost */
+            camp_cost: number;
+            /**
+             * Can Tavern
+             * @default false
+             */
+            can_tavern: boolean;
         };
         /**
          * HeroCards
@@ -2939,6 +4535,48 @@ export interface components {
             backpack: components["schemas"]["GearCandidateOut"][];
         };
         /**
+         * HeroStatusView
+         * @description 開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。
+         */
+        HeroStatusView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Beneficial */
+            beneficial: boolean;
+            /** Rounds */
+            rounds: number | null;
+        };
+        /**
+         * HireAction
+         * @description 在城鎮雇用系統傭兵（Phase 5C-1；09 9.6.9 #97：免費、出城前選好、野外不能換）：整組換成
+         *     ``mercenaries``（依出場順序；空＝不帶傭兵）。
+         */
+        HireAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hire";
+            /**
+             * Mercenaries
+             * @default []
+             */
+            mercenaries: string[];
+            /**
+             * Shadows
+             * @default []
+             */
+            shadows: string[];
+            /** Ai */
+            ai?: {
+                [key: string]: string;
+            };
+        };
+        /**
          * HistoryStepOut
          * @description 戰鬥紀錄的一步：只有事件（含中文 ``text``），不含戰場視圖。
          */
@@ -3034,6 +4672,8 @@ export interface components {
             shape_id: string | null;
             /** Range */
             range: number | null;
+            /** Arm */
+            arm?: number | null;
             /**
              * Elements
              * @default []
@@ -3052,6 +4692,25 @@ export interface components {
             order: components["schemas"]["TacticalOrder"];
             /** Reason */
             reason: string;
+        };
+        /**
+         * ImbueAction
+         * @description 在附魔台花精華把一條詞條指定成 ``affix``（8.20「完全沒有隨機」）。
+         */
+        ImbueAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "imbue";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
+            /** Index */
+            index: number;
+            /** Affix */
+            affix: string;
         };
         /**
          * InfuseOptionsOut
@@ -3141,6 +4800,23 @@ export interface components {
             no_target: boolean;
         };
         /**
+         * InheritAction
+         * @description 傳承（06 6.34.9 第 4 點；城鎮與營火）：同 roguelite ``InheritChoice``。
+         */
+        InheritAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "inherit";
+            /** Skill */
+            skill: string;
+            /** Source */
+            source: string;
+            /** Records */
+            records: number[];
+        };
+        /**
          * InheritChoice
          * @description 傳承（Phase 3W-5，#72，06 6.34.9 第 4 點）：還沒閃過的白板 ``skill`` 帶走舊技能 ``source`` 的
          *     最多 2 個小變化（``records`` 是舊技能變化歷程的「第幾次」，依序變成新技能的第 1、2 次）。舊技能
@@ -3208,6 +4884,50 @@ export interface components {
             reason: string | null;
             to_pos: components["schemas"]["Pos"] | null;
         };
+        /** InventoryView */
+        InventoryView: {
+            /** Bag */
+            bag: components["schemas"]["BagItemView"][];
+            /** Slots Used */
+            slots_used: number;
+            /** Slots Max */
+            slots_max: number;
+            /** Pouch */
+            pouch: components["schemas"]["BagItemView"][];
+            /** Pouch Count */
+            pouch_count: number;
+            /** Pouch Max */
+            pouch_max: number;
+            /** Can Pouch */
+            can_pouch: boolean;
+            /** Pouch Problem Zh */
+            pouch_problem_zh: string | null;
+            /**
+             * Consumables
+             * @default []
+             */
+            consumables: components["schemas"]["BagItemView"][];
+            /**
+             * Equipped Zh
+             * @default []
+             */
+            equipped_zh: string[];
+            /**
+             * Resonance Zh
+             * @default []
+             */
+            resonance_zh: string[];
+            /**
+             * Equipment
+             * @default []
+             */
+            equipment: components["schemas"]["HeroGearSlotOut"][];
+            /**
+             * Gear Cards
+             * @default []
+             */
+            gear_cards: components["schemas"]["GearCandidateOut"][];
+        };
         JsonValue: unknown;
         /**
          * KeywordHint
@@ -3254,6 +4974,229 @@ export interface components {
             reason_zh?: string | null;
         };
         /**
+         * LeagueAllocationView
+         * @description （5F-4b，#32）報名時的免費重新配點：拉到等級上限後全部可配的點（已分配的＋未分配的＋升到
+         *     上限多出的）。前端用既有的配點元件；不配＝照 ``auto``。
+         */
+        LeagueAllocationView: {
+            /** Base */
+            base: {
+                [key: string]: number;
+            };
+            /** Points */
+            points: number;
+            /** Auto */
+            auto: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * LeagueEnterAction
+         * @description 在城鎮用目前的 build 報名影子循環賽（9.7；每個帳號 1 個角色，#100）；同一個角色再送＝更新。
+         *     ``ai`` 是 AI 打法（``ai_choices``；``None``＝自己影子的預設打法）。
+         */
+        LeagueEnterAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "league_enter";
+            /** Ai */
+            ai?: string | null;
+            /** Allocation */
+            allocation?: {
+                [key: string]: number;
+            } | null;
+        };
+        /**
+         * LeagueEntryView
+         * @description 看的人的帳號報名的角色。
+         */
+        LeagueEntryView: {
+            /** Character Id */
+            character_id: string;
+            /** Name */
+            name: string;
+            /** Ai */
+            ai: string | null;
+            /** Ai Zh */
+            ai_zh: string;
+            /** This Character */
+            this_character: boolean;
+            /** Allocation */
+            allocation?: {
+                [key: string]: number;
+            } | null;
+        };
+        /** LeagueMatchView */
+        LeagueMatchView: {
+            /** Id */
+            id: string;
+            /** Ally Name */
+            ally_name: string;
+            /** Enemy Name */
+            enemy_name: string;
+            /** Map Zh */
+            map_zh: string;
+            /** Seed Index */
+            seed_index: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "done" | "error";
+            /** Result Zh */
+            result_zh: string;
+            /** Mine */
+            mine: boolean;
+            /** Replayable */
+            replayable: boolean;
+            /** Replay Problem Zh */
+            replay_problem_zh?: string | null;
+        };
+        /**
+         * LeagueReplayResponse
+         * @description ``POST …/league/matches/{match_id}/replay``：從開場播到結束的戰鬥（既有戰鬥畫面）。
+         */
+        LeagueReplayResponse: {
+            /** Title Zh */
+            title_zh: string;
+            battle: components["schemas"]["BattleResponse"];
+            /** Verified */
+            verified: boolean;
+            /** Outcome Zh */
+            outcome_zh: string;
+        };
+        /**
+         * LeagueRunView
+         * @description ``POST /api/world/league/run``（管理者）。
+         */
+        LeagueRunView: {
+            /** Started */
+            started: boolean;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * LeagueStandingView
+         * @description 排行榜的一列（代決 5F4-7、5F4-8）。
+         */
+        LeagueStandingView: {
+            /** Rank */
+            rank: number | null;
+            /** Name */
+            name: string;
+            /** Level */
+            level: number;
+            /** Role Zh */
+            role_zh: string;
+            /** Place Zh */
+            place_zh: string;
+            /** Wins */
+            wins: number;
+            /** Losses */
+            losses: number;
+            /** Draws */
+            draws: number;
+            /** Played */
+            played: number;
+            /** Mine */
+            mine: boolean;
+            /**
+             * Hp Permille Total
+             * @default 0
+             */
+            hp_permille_total: number;
+            /**
+             * Rounds Total
+             * @default 0
+             */
+            rounds_total: number;
+            /**
+             * Tied
+             * @default false
+             */
+            tied: boolean;
+        };
+        /** @enum {string} */
+        LeagueStatus: "none" | "signup" | "closed" | "running" | "done";
+        /**
+         * LeagueView
+         * @description ``GET /api/world/characters/{id}/league``。
+         */
+        LeagueView: {
+            status: components["schemas"]["LeagueStatus"];
+            /** Status Zh */
+            status_zh: string;
+            /** Season Day */
+            season_day: number;
+            /** Signup Close Day */
+            signup_close_day: number;
+            /** Maps Zh */
+            maps_zh: string[];
+            /** Per Pair */
+            per_pair: number;
+            /** Rules Zh */
+            rules_zh: string;
+            entry: components["schemas"]["LeagueEntryView"] | null;
+            /** Can Enter */
+            can_enter: boolean;
+            /** Enter Problem Zh */
+            enter_problem_zh: string | null;
+            /** Can Withdraw */
+            can_withdraw: boolean;
+            /** Ai Choices */
+            ai_choices: components["schemas"]["AiChoiceView"][];
+            /** Entrants */
+            entrants: number;
+            /** Standings */
+            standings: components["schemas"]["LeagueStandingView"][];
+            /** Matches */
+            matches: components["schemas"]["LeagueMatchView"][];
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /** Champion Zh */
+            champion_zh: string | null;
+            /**
+             * Page
+             * @default 1
+             */
+            page: number;
+            /**
+             * Pages
+             * @default 1
+             */
+            pages: number;
+            /**
+             * Page Size
+             * @default 20
+             */
+            page_size: number;
+            allocation?: components["schemas"]["LeagueAllocationView"] | null;
+            /** Stale Zh */
+            stale_zh?: string | null;
+            /**
+             * Reruns
+             * @default 0
+             */
+            reruns: number;
+        };
+        /**
+         * LeagueWithdrawAction
+         * @description 取消循環賽報名（截止前）。
+         */
+        LeagueWithdrawAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "league_withdraw";
+        };
+        /**
          * LeaveChoice
          * @description 離開營火（有候選沒選時視為放棄）。
          */
@@ -3263,6 +5206,26 @@ export interface components {
              * @enum {string}
              */
             kind: "leave";
+        };
+        /**
+         * LegacyHeroView
+         * @description 可以沿用的上季角色。
+         */
+        LegacyHeroView: {
+            /** Character Id */
+            character_id: string;
+            /** Season Id */
+            season_id: string;
+            /** Season Name Zh */
+            season_name_zh: string;
+            /** Name */
+            name: string;
+            /** Race */
+            race: string | null;
+            /** Race Name Zh */
+            race_name_zh: string | null;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * LevelUpChoice
@@ -3316,6 +5279,19 @@ export interface components {
             run_id: string;
         };
         /**
+         * LoadoutAction
+         * @description 換技能（城鎮或營火；07 7.6）：新的裝備清單，沒裝上的進備用。
+         */
+        LoadoutAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "loadout";
+            /** Skills */
+            skills: string[];
+        };
+        /**
          * LoadoutChoice
          * @description 營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合
          *     欄位上限）；沒裝上的進備用，閃現狀態保留。不推進節點。
@@ -3329,6 +5305,66 @@ export interface components {
             /** Skills */
             skills: string[];
         };
+        /** LocationBoard */
+        LocationBoard: {
+            /** Region */
+            region: string;
+            /** Location */
+            location: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+            /** Notes */
+            notes: components["schemas"]["NoteView"][];
+            /** Footprints */
+            footprints: components["schemas"]["FootprintView"][];
+            /**
+             * Max Len
+             * @default 50
+             */
+            max_len: number;
+            /**
+             * Admin
+             * @default false
+             */
+            admin: boolean;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Username */
+            username: string;
+            /** Password */
+            password: string;
+        };
+        /** LoginResponse */
+        LoginResponse: {
+            /** Token */
+            token: string;
+            /** Expires At */
+            expires_at: number;
+            account: components["schemas"]["AccountView"];
+        };
+        /**
+         * LootChooseAction
+         * @description 戰後結算：背包滿了時選要丟哪些（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決）。新拿到的
+         *     （``CharacterState.pending_loot``）和背包裡原本的都可以丟；丟完剩下的戰利品必須全部放得下。
+         *     什麼都不丟＝背包已經有空位（例如剛賣掉東西）時把戰利品收進來。
+         */
+        LootChooseAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "loot_choose";
+            /** Drop Items */
+            drop_items?: {
+                [key: string]: number;
+            };
+            /**
+             * Drop Gear
+             * @default []
+             */
+            drop_gear: string[];
+        };
         /** MapSummary */
         MapSummary: {
             /** Id */
@@ -3341,6 +5377,28 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+        };
+        /**
+         * MercenaryView
+         * @description 名單上的一名系統傭兵（每個人都一樣，9.6.8）。
+         */
+        MercenaryView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Title Zh */
+            title_zh: string;
+            /** Role */
+            role: string;
+            /** Role Zh */
+            role_zh: string;
+            /** Theme Zh */
+            theme_zh: string;
+            /** Skills Zh */
+            skills_zh: string[];
+            /** Hired */
+            hired: boolean;
         };
         /**
          * Move
@@ -3377,6 +5435,54 @@ export interface components {
             path: components["schemas"]["XY"][];
         };
         /**
+         * MyShadowView
+         * @description 自己的影子（5C-2；#102）。
+         */
+        MyShadowView: {
+            /** Saved */
+            saved: boolean;
+            /** Level */
+            level?: number | null;
+            /** Saved Zh */
+            saved_zh?: string | null;
+            /** Ai */
+            ai?: string | null;
+            /**
+             * Ai Zh
+             * @default 預設
+             */
+            ai_zh: string;
+            /**
+             * Can Set Ai
+             * @default false
+             */
+            can_set_ai: boolean;
+            /**
+             * Coins
+             * @default 0
+             */
+            coins: number;
+            /**
+             * Reports Zh
+             * @default []
+             */
+            reports_zh: string[];
+        };
+        /**
+         * NewsSeenAction
+         * @description 看過「你不在的時候」摘要（Phase 5F-1b）：``until`` 是摘要算到的時刻（``GET …/absence`` 的
+         *     ``as_of``），寫進 ``CharacterState.news_seen_at``（只往後、不超過現在）；任何地點都能做。
+         */
+        NewsSeenAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "news_seen";
+            /** Until */
+            until: number;
+        };
+        /**
          * NodeOut
          * @description 目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
          *     ``level_up``（``level``、``points``、``offer``、``tier_up``）、``complete_offer``（完整技能三選一，
@@ -3406,6 +5512,193 @@ export interface components {
             victory?: boolean | null;
             gear?: components["schemas"]["GearOfferOut"] | null;
         };
+        /**
+         * NoteRequest
+         * @description 在角色現在所在的地點留言（去頭尾空白後 1～50 字、不能換行）。只當資料顯示，不送進 LLM。
+         */
+        NoteRequest: {
+            /** Text */
+            text: string;
+        };
+        /** NoteView */
+        NoteView: {
+            /** Note Id */
+            note_id: string;
+            /** Name */
+            name: string;
+            /** Text */
+            text: string;
+            /** At */
+            at: number;
+            /** Mine */
+            mine: boolean;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+        };
+        /** NpcHereView */
+        NpcHereView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Role Zh */
+            role_zh: string;
+            /** Affinity */
+            affinity: number;
+            /** Rank */
+            rank: string;
+            /** Rank Zh */
+            rank_zh: string;
+            /** Range Zh */
+            range_zh: string;
+            /** Talk Zh */
+            talk_zh: string;
+        };
+        /** OathCurrentView */
+        OathCurrentView: {
+            /** Template */
+            template: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Difficulty Zh */
+            difficulty_zh: string;
+            /** Params Zh */
+            params_zh: string;
+            /** Sworn At */
+            sworn_at: number;
+            /**
+             * Bonus Zh
+             * @default
+             */
+            bonus_zh: string;
+            /**
+             * Judge Zh
+             * @default
+             */
+            judge_zh: string;
+        };
+        /** OathParamView */
+        OathParamView: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "choice" | "int";
+            /**
+             * Choices
+             * @default []
+             */
+            choices: string[];
+            /**
+             * Min
+             * @default 0
+             */
+            min: number;
+            /**
+             * Max
+             * @default 0
+             */
+            max: number;
+            /**
+             * Name Zh
+             * @default
+             */
+            name_zh: string;
+            /**
+             * Choice Names Zh
+             * @default {}
+             */
+            choice_names_zh: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * OathProposal
+         * @description 立誓的提議：模板與參數（LLM 只能從白名單模板挑、從允許值填，06 6.26 安全流程第 2 步）。
+         */
+        OathProposal: {
+            /** Template */
+            template: string;
+            /** Params */
+            params?: {
+                [key: string]: string | number;
+            };
+        };
+        /** OathTemplateView */
+        OathTemplateView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Difficulty
+             * @enum {string}
+             */
+            difficulty: "easy" | "medium" | "hard";
+            /** Difficulty Zh */
+            difficulty_zh: string;
+            /**
+             * Params
+             * @default []
+             */
+            params: components["schemas"]["OathParamView"][];
+            /**
+             * Description Zh
+             * @default
+             */
+            description_zh: string;
+            /**
+             * Bonus Zh
+             * @default
+             */
+            bonus_zh: string;
+            /**
+             * Judge Zh
+             * @default
+             */
+            judge_zh: string;
+        };
+        /**
+         * OathView
+         * @description 誓約（06 6.26、09 9.6.10 #106；模板內容在 5C-3）。
+         */
+        OathView: {
+            /** Available */
+            available: boolean;
+            /** Unavailable Zh */
+            unavailable_zh: string | null;
+            current: components["schemas"]["OathCurrentView"] | null;
+            /** Cooldown Until */
+            cooldown_until: number;
+            /** Cooldown Zh */
+            cooldown_zh: string | null;
+            /** Can Swear */
+            can_swear: boolean;
+            /** Swear Problem Zh */
+            swear_problem_zh: string | null;
+            /** Can Release */
+            can_release: boolean;
+            /**
+             * Templates
+             * @default []
+             */
+            templates: components["schemas"]["OathTemplateView"][];
+            /**
+             * Penalty Zh
+             * @default
+             */
+            penalty_zh: string;
+            /**
+             * Slot Zh
+             * @default
+             */
+            slot_zh: string;
+        };
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -3432,6 +5725,9 @@ export interface components {
          *     - ``defend``：守住 ``tiles``（守點格）``rounds`` 輪；某輪結束時有敵方單位站在守點格上即敗。
          *
          *     任何模式下，我方全滅即敗；敵方全滅即勝。
+         *
+         *     ``leader_retreat``（BAL-16a，05 5.8，#86；只用在 ``eliminate``）：Boss 戰——敵方頭目（``boss``
+         *     標籤）全部倒下時，其餘敵人撤退，我方直接勝利（``leader_defeated``）。
          */
         Objective: {
             /**
@@ -3450,6 +5746,11 @@ export interface components {
                 number,
                 number
             ][];
+            /**
+             * Leader Retreat
+             * @default false
+             */
+            leader_retreat: boolean;
         };
         /** OfferOut */
         OfferOut: {
@@ -3470,6 +5771,22 @@ export interface components {
              * @default []
              */
             tags: components["schemas"]["OfferTagOut"][];
+        };
+        /**
+         * OfferPickAction
+         * @description 選任務給的技能三選一（07 7.6）：``pick`` 為 ``None`` ＝ 跳過；``replace`` 是要換掉的技能
+         *     （只在城鎮與營火）。
+         */
+        OfferPickAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "offer_pick";
+            /** Pick */
+            pick?: number | null;
+            /** Replace */
+            replace?: string | null;
         };
         /**
          * OfferTagOut
@@ -3535,6 +5852,78 @@ export interface components {
             pos: components["schemas"]["XY"] | null;
             /** Detail */
             detail: string | null;
+        };
+        /**
+         * PartyMemberView
+         * @description 隊伍的一名成員（主角、傭兵或標準隊友）。
+         */
+        PartyMemberView: {
+            /** Name Zh */
+            name_zh: string;
+            /** Title Zh */
+            title_zh: string;
+            /** Level */
+            level: number;
+            /** Mercenary */
+            mercenary?: string | null;
+            /** Shadow */
+            shadow?: string | null;
+            /** Ai Zh */
+            ai_zh?: string | null;
+            /** Companion */
+            companion?: string | null;
+            /** Note Zh */
+            note_zh?: string | null;
+        };
+        /**
+         * PartyView
+         * @description 目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。
+         */
+        PartyView: {
+            /** Members */
+            members: components["schemas"]["PartyMemberView"][];
+            /** Max Hired */
+            max_hired: number;
+            /** Can Hire */
+            can_hire: boolean;
+            /** Hire Problem Zh */
+            hire_problem_zh: string | null;
+            /**
+             * Mercenaries
+             * @default []
+             */
+            mercenaries: components["schemas"]["MercenaryView"][];
+            /**
+             * Shadows
+             * @default []
+             */
+            shadows: components["schemas"]["ShadowView"][];
+            /**
+             * Ai Choices
+             * @default []
+             */
+            ai_choices: components["schemas"]["AiChoiceView"][];
+            /**
+             * Ai
+             * @default {}
+             */
+            ai: {
+                [key: string]: string;
+            };
+            /**
+             * Season Boss Ok
+             * @default true
+             */
+            season_boss_ok: boolean;
+            /** Season Boss Zh */
+            season_boss_zh?: string | null;
+            /**
+             * Free Slots
+             * @default 2
+             */
+            free_slots: number;
+            /** Companion Zh */
+            companion_zh?: string | null;
         };
         /**
          * Pending
@@ -3603,6 +5992,35 @@ export interface components {
             options: components["schemas"]["FlashOptionOut"][];
         };
         /**
+         * PendingLootView
+         * @description 背包滿了：戰後結算選要丟哪件（Phase 5D-2b）。``items`` 是新拿到、還沒放進背包的；
+         *     背包裡原本的看 ``InventoryView.bag``。用 ``loot_choose`` 動作送出要丟的
+         *     （``drop_items``、``drop_gear``）。
+         */
+        PendingLootView: {
+            /** Items */
+            items: components["schemas"]["BagItemView"][];
+            /** Over Slots */
+            over_slots: number;
+            /** Hint Zh */
+            hint_zh: string;
+        };
+        /**
+         * PendingOfferView
+         * @description 任務給的技能三選一（07 7.6）。
+         */
+        PendingOfferView: {
+            /** Quest Name Zh */
+            quest_name_zh: string;
+            /** Step Zh */
+            step_zh: string;
+            offer: components["schemas"]["OfferOut"];
+            /** Can Replace */
+            can_replace: boolean;
+            /** Place Zh */
+            place_zh: string;
+        };
+        /**
          * PendingView
          * @description 目前的反應詢問（只有公開欄位；內部的重播資料不外流）。
          */
@@ -3659,6 +6077,21 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+        };
+        /**
+         * PouchAction
+         * @description 整理腰包（城鎮或營火）：整組換成 ``items``（消耗品 → 個數，合計最多 3 個，8.17）。
+         */
+        PouchAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "pouch";
+            /** Items */
+            items?: {
+                [key: string]: number;
+            };
         };
         /**
          * PreviewOut
@@ -3771,6 +6204,8 @@ export interface components {
             /** Followup When */
             followup_when?: string | null;
             infusion?: components["schemas"]["InfusionPreviewOut"] | null;
+            /** Oath Warning */
+            oath_warning?: string | null;
             variant?: components["schemas"]["PreviewVariantOut"] | null;
         };
         /**
@@ -3806,6 +6241,52 @@ export interface components {
             kind: "protect";
             /** Ward */
             ward: string;
+        };
+        /**
+         * QuestHereView
+         * @description 在這裡可以接的任務。
+         */
+        QuestHereView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Giver Zh */
+            giver_zh: string | null;
+            /** Can Accept */
+            can_accept: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /** QuestLogView */
+        QuestLogView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Giver Zh */
+            giver_zh: string | null;
+            /** Steps */
+            steps: components["schemas"]["QuestStepView"][];
+            /** Done */
+            done: boolean;
+        };
+        /** QuestStepView */
+        QuestStepView: {
+            /** Text Zh */
+            text_zh: string;
+            /** Done */
+            done: boolean;
+            /** Current */
+            current: boolean;
         };
         /**
          * RaceLook
@@ -3972,6 +6453,26 @@ export interface components {
             gear_source_zh: string;
         };
         /**
+         * RecipeView
+         * @description 世界記得的一份配方（M6）。
+         */
+        RecipeView: {
+            /** Code */
+            code: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Discoverer Name */
+            discoverer_name: string;
+            /** Mine */
+            mine: boolean;
+            /** Can Craft */
+            can_craft: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /**
          * ReflashSlotOut
          * @description 可以重閃的一欄（3W-R2：前端不自己推規則）。
          */
@@ -3983,6 +6484,17 @@ export interface components {
              * @default false
              */
             transform_hint: boolean;
+        };
+        /**
+         * ReleaseOathAction
+         * @description 解除誓約（#106：解除後現實 1 天內不能再立）。
+         */
+        ReleaseOathAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "release_oath";
         };
         /**
          * Reload
@@ -3999,6 +6511,74 @@ export interface components {
             type: "reload";
         };
         /**
+         * ReplayCheck
+         * @description 一次查證的結果。
+         */
+        ReplayCheck: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "first_kill" | "league_match";
+            /** Season Id */
+            season_id: string;
+            /** Subject Zh */
+            subject_zh: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "archive" | "world";
+            /** Battle Log */
+            battle_log: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Passed */
+            passed: string[];
+            /** Problems */
+            problems: string[];
+        };
+        /**
+         * RerollAction
+         * @description 在附魔台重骰一條詞條（8.20：由「指紋＋位置＋n」決定；越骰越貴）。
+         */
+        RerollAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "reroll";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
+            /** Index */
+            index: number;
+        };
+        /** ResetLine */
+        ResetLine: {
+            /** Label Zh */
+            label_zh: string;
+            /** Count */
+            count: number;
+            /**
+             * Detail Zh
+             * @default
+             */
+            detail_zh: string;
+        };
+        /**
+         * RespecAction
+         * @description 免費重配屬性點（07 7.2「營火可以免費重配」；城鎮與營火；5A-6）。
+         */
+        RespecAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "respec";
+        };
+        /**
          * RespecAttributesChoice
          * @description 營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用
          *     ``allocate`` 重新分配。免費、不推進節點。
@@ -4009,6 +6589,28 @@ export interface components {
              * @enum {string}
              */
             kind: "respec_attributes";
+        };
+        /**
+         * RestAction
+         * @description 在城鎮休息：HP、法力、耐力回滿，補給補到初值（09 9.6.7 #2、#11）。
+         */
+        RestAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "rest";
+        };
+        /**
+         * RetreatAction
+         * @description 看了陣容不打，退回出發地點（09 9.6.6：不開戰、不扣任何東西）。
+         */
+        RetreatAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "retreat";
         };
         /**
          * RetreatTo
@@ -4033,6 +6635,23 @@ export interface components {
             hp: number;
             pos: components["schemas"]["XY"];
             from_pos: components["schemas"]["XY"];
+        };
+        /**
+         * RouteHintOut
+         * @description 關鍵字與屬性不搭的提示（BAL-19g，06 6.27.3，#110）：配點後的最高屬性不在 ``fits`` 時，
+         *     前端顯示 ``text_zh``（只提示、不擋）。``lean``：選的關鍵字前期的技能多半是法術（``spell``）或
+         *     武器技（``weapon``）。
+         */
+        RouteHintOut: {
+            /**
+             * Lean
+             * @enum {string}
+             */
+            lean: "spell" | "weapon";
+            /** Fits */
+            fits: components["schemas"]["Attribute"][];
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * Run
@@ -4143,6 +6762,21 @@ export interface components {
             /** Remaining */
             remaining: number;
         };
+        /**
+         * SalvageAction
+         * @description 在鐵匠分解背包裡的一件裝備，得到精華（8.14）。
+         */
+        SalvageAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "salvage";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
+        };
         /** SaveOut */
         SaveOut: {
             /** Run Id */
@@ -4186,6 +6820,156 @@ export interface components {
             test_mode: boolean;
         };
         /**
+         * SeasonBoardView
+         * @description 城鎮公告板的整份資料。
+         */
+        SeasonBoardView: {
+            season: components["schemas"]["SeasonInfoView"];
+            /**
+             * Goals
+             * @default []
+             */
+            goals: components["schemas"]["BoardGoalView"][];
+            /** Goals Note Zh */
+            goals_note_zh?: string | null;
+            /**
+             * Bounties
+             * @default []
+             */
+            bounties: components["schemas"]["BoardBountyView"][];
+            /**
+             * World Events
+             * @default []
+             */
+            world_events: components["schemas"]["BoardWorldEventView"][];
+            /**
+             * Cleared
+             * @default []
+             */
+            cleared: components["schemas"]["BoardClearedView"][];
+            /**
+             * Level Bonus Zh
+             * @default []
+             */
+            level_bonus_zh: string[];
+            season_boss?: components["schemas"]["BoardSeasonBossView"] | null;
+        };
+        /**
+         * SeasonBossAction
+         * @description 挑戰賽季 Boss（Phase 5F-3；09 9.7、#87、#100）：在城鎮出發，扣這個帳號今天的 1 次挑戰，
+         *     產生 Boss 的遭遇（種子由伺服器的賽季種子衍生）；之後照一般遭遇開戰或撤退（撤退不退次數）。
+         */
+        SeasonBossAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "season_boss";
+        };
+        /**
+         * SeasonInfoView
+         * @description 賽季第幾天與日程（09 9.7）。
+         */
+        SeasonInfoView: {
+            /** Day */
+            day: number;
+            /** Days */
+            days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "upcoming" | "running" | "ended";
+            /** Status Zh */
+            status_zh: string;
+            /** Phase Zh */
+            phase_zh?: string | null;
+            /**
+             * Upcoming
+             * @default []
+             */
+            upcoming: components["schemas"]["BoardMilestoneView"][];
+            /** Next Refresh At */
+            next_refresh_at: number;
+            /** Next Refresh Zh */
+            next_refresh_zh: string;
+        };
+        /**
+         * SeasonResetReport
+         * @description 季末重置（或 dry-run）的結果。
+         */
+        SeasonResetReport: {
+            /** Dry Run */
+            dry_run: boolean;
+            /** Old Season */
+            old_season: string;
+            /** New Season */
+            new_season: string;
+            /** New Season Name Zh */
+            new_season_name_zh: string;
+            /** Season Start */
+            season_start: number;
+            /** Cleared */
+            cleared: components["schemas"]["ResetLine"][];
+            /** Kept */
+            kept: components["schemas"]["ResetLine"][];
+            /** Chronicle */
+            chronicle: string[];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+            /** Backup */
+            backup?: string | null;
+            /** Archive */
+            archive?: string | null;
+        };
+        /**
+         * SeasonResetRequest
+         * @description 季末重置（管理者）。``dry_run`` 預設 ``true``：只列出會清什麼、留什麼。
+         */
+        SeasonResetRequest: {
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Season Id */
+            season_id?: string | null;
+            /** Seed */
+            seed?: number | null;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /**
+             * Dry Run
+             * @default true
+             */
+            dry_run: boolean;
+            /** Confirm Season */
+            confirm_season?: string | null;
+        };
+        /**
+         * SeasonVerifyRequest
+         * @description 從封存重播查證一筆首殺或一場循環賽（5F-5c；舊季讀唯讀封存，目前這一季讀世界資料夾）。
+         */
+        SeasonVerifyRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "first_kill" | "league_match";
+            /** Season Id */
+            season_id: string;
+            /** Target */
+            target?: string | null;
+            /** Match Id */
+            match_id?: string | null;
+        };
+        /**
          * SegmentLine
          * @description 複合技能（Phase 3F-3a）一段的預算：``label`` 位移段／動作段，該段自己的效果點數、條件
          *     與協同。
@@ -4217,6 +7001,26 @@ export interface components {
              * @default
              */
             range_text: string;
+        };
+        /**
+         * SellAction
+         * @description 把背包裡的東西賣給商店（8.15「出售物品」得金幣；腰包裡的不賣）。
+         */
+        SellAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "sell";
+            /** Shop */
+            shop: string;
+            /** Item */
+            item: string;
+            /**
+             * Count
+             * @default 1
+             */
+            count: number;
         };
         /**
          * SetReactionMode
@@ -4265,6 +7069,113 @@ export interface components {
             target_id?: string | null;
         };
         /**
+         * ShadowAiAction
+         * @description 在城鎮設定自己影子的預設打法（Phase 5C-2；#102）；``None``＝範本的預設。
+         */
+        ShadowAiAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "shadow_ai";
+            /** Profile */
+            profile?: string | null;
+        };
+        /**
+         * ShadowView
+         * @description 一個可以借的影子（5C-2；其他角色在城鎮整備時存的）。
+         */
+        ShadowView: {
+            /** Owner */
+            owner: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level */
+            level: number;
+            /** Role Zh */
+            role_zh: string;
+            /** Skills Zh */
+            skills_zh: string[];
+            /** Borrowed Level */
+            borrowed_level: number;
+            /** Borrowed Tier */
+            borrowed_tier: number;
+            /** Capped */
+            capped: boolean;
+            /** Cap Zh */
+            cap_zh?: string | null;
+            /** Hired */
+            hired: boolean;
+            /**
+             * Own
+             * @default false
+             */
+            own: boolean;
+            /** Saved Zh */
+            saved_zh: string;
+            /**
+             * Titles
+             * @default []
+             */
+            titles: string[];
+        };
+        /** ShopItemView */
+        ShopItemView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Price */
+            price: number;
+            /** Weekly */
+            weekly: boolean;
+            /** Stock Zh */
+            stock_zh: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Lock Zh */
+            lock_zh: string | null;
+            /** Can Buy */
+            can_buy: boolean;
+            /** Problem Zh */
+            problem_zh: string | null;
+            /** Battle Zh */
+            battle_zh?: string | null;
+        };
+        /**
+         * ShopView
+         * @description 角色所在地點的店（8.26.1）。
+         */
+        ShopView: {
+            /** Shop */
+            shop: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Npc */
+            npc: string;
+            /** Npc Name Zh */
+            npc_name_zh: string;
+            /** Rank Zh */
+            rank_zh: string;
+            /** Affinity Zh */
+            affinity_zh: string | null;
+            /** Items */
+            items: components["schemas"]["ShopItemView"][];
+            /** Can Trade */
+            can_trade: boolean;
+            /** Trade Problem Zh */
+            trade_problem_zh: string | null;
+            /**
+             * Price Notes Zh
+             * @default []
+             */
+            price_notes_zh: string[];
+        };
+        /**
          * Shove
          * @description 推擊（技巧動作）：相鄰敵人，力量對抗；成功時沿「行動者 → 目標」方向推 1 格。
          */
@@ -4278,6 +7189,109 @@ export interface components {
             type: "shove";
             /** Target Id */
             target_id: string;
+        };
+        /**
+         * SituationAnswerRequest
+         * @description 送出情境判定的回答（**第一次送出即定案**，9.6.4）。``text`` 只放進 LLM 的
+         *     ``<player_input>``；``cite`` 是玩家點選引用的事實編號（``CiteFactView.fact``）。
+         */
+        SituationAnswerRequest: {
+            /** Template */
+            template: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Cite
+             * @default []
+             */
+            cite: string[];
+        };
+        /**
+         * SituationOpenRequest
+         * @description 打開事件的某個情境判定解法（說書人寫情境敘述）。
+         */
+        SituationOpenRequest: {
+            /** Template */
+            template: string;
+        };
+        /**
+         * SituationResultView
+         * @description 這次請求的情境判定明細與結果敘述。
+         */
+        SituationResultView: {
+            /** Template */
+            template: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Attribute Zh */
+            attribute_zh: string;
+            /** Method Zh */
+            method_zh: string;
+            /** Dice */
+            dice: [
+                number,
+                number
+            ];
+            /** Mode Zh */
+            mode_zh: string;
+            /** Roll */
+            roll: number;
+            /** Attribute Mod */
+            attribute_mod: number;
+            /** Care */
+            care: components["schemas"]["CareLineView"][];
+            /** Care Bonus */
+            care_bonus: number;
+            /** Race Bonus */
+            race_bonus: number;
+            /** Total */
+            total: number;
+            /** Base Dc */
+            base_dc: number;
+            /** Dc Shift */
+            dc_shift: number;
+            /** Dc */
+            dc: number;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "success" | "partial" | "failure";
+            /** Outcome Zh */
+            outcome_zh: string;
+            /** Effects Zh */
+            effects_zh: string[];
+            story?: components["schemas"]["StoryView"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "llm" | "fallback";
+        };
+        /**
+         * SituationView
+         * @description 最近一次打開的情境判定（還沒送出）。
+         */
+        SituationView: {
+            /** Template */
+            template: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Attributes Zh */
+            attributes_zh: string;
+            /** Methods Zh */
+            methods_zh: string;
+            /** Base Dc */
+            base_dc: number;
+            story: components["schemas"]["StoryView"] | null;
+            /**
+             * Facts
+             * @default []
+             */
+            facts: components["schemas"]["CiteFactView"][];
         };
         /**
          * SkillCard
@@ -4573,6 +7587,8 @@ export interface components {
             icon: components["schemas"]["SkillIcon"];
         };
         /** @enum {string} */
+        Slot: "main_hand" | "off_hand" | "head" | "body" | "hands" | "feet" | "neck" | "ring_1" | "ring_2";
+        /** @enum {string} */
         SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
         /**
          * StartKeywordOption
@@ -4621,6 +7637,7 @@ export interface components {
              * @default []
              */
             attribute_affects: components["schemas"]["AttributeAffectsOut"][];
+            route_hint?: components["schemas"]["RouteHintOut"] | null;
         };
         /**
          * StartPreviewRequest
@@ -4681,6 +7698,17 @@ export interface components {
             hp: number;
             /** Mana */
             mana: number;
+        };
+        /** StationView */
+        StationView: {
+            /** Station */
+            station: string;
+            /** Kind */
+            kind: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Npc Name Zh */
+            npc_name_zh?: string | null;
         };
         /** StatusChanceOut */
         StatusChanceOut: {
@@ -4793,6 +7821,24 @@ export interface components {
                 [key: string]: unknown;
             }[];
             view: components["schemas"]["BattleView"];
+        };
+        /**
+         * StoryView
+         * @description 一段說書人的文字（旁白、情境、結果、回話）。
+         */
+        StoryView: {
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * More Zh
+             * @default
+             */
+            more_zh: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "llm" | "fallback" | "authored";
         };
         /**
          * SummonInfoCard
@@ -4908,7 +7954,47 @@ export interface components {
             /** Target Id */
             target_id: string;
         };
+        /**
+         * SwearOathAction
+         * @description 立誓（06 6.26、09 9.6.10 #106；城鎮與營火，同時 1 個）。``proposal`` 是 LLM 或選單提議、
+         *     已經過 pydantic 驗證的模板與參數；引擎另外檢查合法性。誓言原文只是紀錄（給 LLM 時包在
+         *     ``<player_input>``），重播照紀錄、不呼叫 LLM。
+         */
+        SwearOathAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "swear_oath";
+            proposal: components["schemas"]["OathProposal"];
+            /**
+             * Player Text
+             * @default
+             */
+            player_text: string;
+            /**
+             * Source
+             * @default menu
+             * @enum {string}
+             */
+            source: "llm" | "menu";
+            /** Prompt Version */
+            prompt_version?: string | null;
+        };
         TacticalOrder: components["schemas"]["FocusTarget"] | components["schemas"]["HoldPosition"] | components["schemas"]["RetreatTo"] | components["schemas"]["Protect"] | components["schemas"]["UseEnvironment"];
+        /**
+         * TalkAction
+         * @description 和所在地點的 NPC 說話（9.6.7 #3）：引擎依好感度列出能給的內容（只換資訊）。
+         */
+        TalkAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "talk";
+            /** Npc */
+            npc: string;
+        };
         /** TargetOut */
         TargetOut: {
             /** Unit Id */
@@ -4926,11 +8012,25 @@ export interface components {
             status_chances: components["schemas"]["StatusChanceOut"][];
         };
         /**
+         * TavernAction
+         * @description 在城鎮的酒館聽本週傳聞（9.6.7 #1）。
+         */
+        TavernAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "tavern";
+        };
+        /**
          * Team
          * @description 戰鬥中的陣營。地圖起始區以此為鍵。
+         *
+         *     ``THIRD``（Phase 5B-M3，三方混戰）：和我方、敵方都敵對。陣營關係一律是「不同陣營彼此敵對、
+         *     同陣營友好」（:meth:`hostile_to`；代決 5BM3-1）。
          * @enum {string}
          */
-        Team: "ally" | "enemy";
+        Team: "ally" | "enemy" | "third";
         /**
          * TelegraphChangeOut
          * @description 預告的一項變化（:class:`trpg.engine.environment.TelegraphChange` ＋ 中文 ``text``）。
@@ -4982,6 +8082,47 @@ export interface components {
              */
             charges: components["schemas"]["ChargeOut"][];
         };
+        /**
+         * TeleportAction
+         * @description 傳送到另一區的小鎮（09 9.6.2「城鎮之間用傳送點」）：從城鎮到去過的小鎮，或從傳送點到它通往
+         *     的區域。
+         */
+        TeleportAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "teleport";
+            /** Region */
+            region: string;
+        };
+        /** TeleportOption */
+        TeleportOption: {
+            /** Region */
+            region: string;
+            /** Name Zh */
+            name_zh: string;
+        };
+        /** ThreadView */
+        ThreadView: {
+            /** Id */
+            id: string;
+            /** Text Zh */
+            text_zh: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "personal" | "world";
+            /** Scope Zh */
+            scope_zh: string;
+            /** Expires Zh */
+            expires_zh: string;
+            /** Npc Zh */
+            npc_zh?: string | null;
+            /** Location Zh */
+            location_zh?: string | null;
+        };
         /** TileView */
         TileView: {
             /** X */
@@ -5026,6 +8167,24 @@ export interface components {
             skill_id: string;
             /** Remaining */
             remaining: number;
+        };
+        /**
+         * TravelAction
+         * @description 走到相鄰地點（09 9.6.7 #9）；``hasten``＝花補給趕路，降低遇敵機率。
+         */
+        TravelAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "travel";
+            /** To */
+            to: string;
+            /**
+             * Hasten
+             * @default false
+             */
+            hasten: boolean;
         };
         /**
          * Trip
@@ -5101,6 +8260,11 @@ export interface components {
              * @default []
              */
             offhand_traits_zh: string[];
+            /**
+             * Traits Zh
+             * @default []
+             */
+            traits_zh: string[];
             /**
              * Ammo
              * @default 0
@@ -5219,6 +8383,7 @@ export interface components {
              */
             form_cooldowns: components["schemas"]["FormCooldownView"][];
             race?: components["schemas"]["RaceView"] | null;
+            boss_phase?: components["schemas"]["BossPhaseView"] | null;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
@@ -5241,6 +8406,19 @@ export interface components {
              * @enum {string}
              */
             kind: "use_environment";
+        };
+        /**
+         * UseItemAction
+         * @description 野外或城鎮使用消耗品（09 9.6.11 #113「HP 靠藥水」）；先用背包裡的，背包沒有再用腰包的。
+         */
+        UseItemAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "use_item";
+            /** Item */
+            item: string;
         };
         /**
          * UseRaceSkill
@@ -5436,6 +8614,13 @@ export interface components {
             type: "vault";
             dest: components["schemas"]["Pos"];
         };
+        /** WalletView */
+        WalletView: {
+            /** Gold */
+            gold: number;
+            /** Quest Coins */
+            quest_coins: number;
+        };
         /**
          * WeaponLook
          * @description 武器的預設外觀（Phase 3E-2e，純顯示資料）：紙娃娃主手與武器小圖示畫哪一種造型。
@@ -5612,6 +8797,220 @@ export interface components {
             weapon_class: string;
             /** Class Zh */
             class_zh: string;
+        };
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"];
+        /** WorldBattleResponse */
+        WorldBattleResponse: {
+            world: components["schemas"]["WorldView"];
+            battle: components["schemas"]["BattleResponse"];
+        };
+        /** WorldCharacterSummary */
+        WorldCharacterSummary: {
+            /** Character Id */
+            character_id: string;
+            /** Name */
+            name: string;
+            /** Level */
+            level: number;
+            /** Region Name Zh */
+            region_name_zh: string;
+            /** Location Name Zh */
+            location_name_zh: string;
+        };
+        /** WorldCharacterView */
+        WorldCharacterView: {
+            /** Character Id */
+            character_id: string;
+            /** Name */
+            name: string;
+            /** Level */
+            level: number;
+            /** Xp */
+            xp: number;
+            /** Xp Next */
+            xp_next: number | null;
+            /** Hp */
+            hp: number;
+            /** Max Hp */
+            max_hp: number;
+            /** Mana */
+            mana: number;
+            /** Max Mana */
+            max_mana: number;
+            /** Supplies */
+            supplies: number;
+            /** Max Supplies */
+            max_supplies: number;
+            /** Fatigued */
+            fatigued: boolean;
+            /** Attribute Points */
+            attribute_points: number;
+            /** Weapon Name Zh */
+            weapon_name_zh: string;
+            /** Race Name Zh */
+            race_name_zh: string | null;
+            /** Skills */
+            skills: components["schemas"]["SkillCard"][];
+            /** Bench */
+            bench: components["schemas"]["SkillCard"][];
+            /** Slots Zh */
+            slots_zh: string;
+            /**
+             * Insight
+             * @default 0
+             */
+            insight: number;
+            /**
+             * Skill Tier
+             * @default 1
+             */
+            skill_tier: number;
+        };
+        /** WorldClockView */
+        WorldClockView: {
+            /** Time Zh */
+            time_zh: string;
+            /**
+             * Day Phase
+             * @enum {string}
+             */
+            day_phase: "day" | "night";
+            /** Day Phase Zh */
+            day_phase_zh: string;
+            /** Weather Zh */
+            weather_zh: string;
+        };
+        /**
+         * WorldLlmRequest
+         * @description 大世界的 LLM 開關：``true`` 打開（先探測，連不到維持關閉）、``false`` 關閉、``null`` 回到
+         *     伺服器設定（18.2）。
+         */
+        WorldLlmRequest: {
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** WorldLlmView */
+        WorldLlmView: {
+            /** Enabled */
+            enabled: boolean;
+            /** Default */
+            default: boolean;
+            /** Overridden */
+            overridden: boolean;
+            /** Notice Zh */
+            notice_zh?: string | null;
+            /** Model Available */
+            model_available?: boolean | null;
+        };
+        /** WorldLocationView */
+        WorldLocationView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Kind */
+            kind: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Level Zh */
+            level_zh: string | null;
+            /** Description Zh */
+            description_zh: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Current */
+            current: boolean;
+            /** Adjacent */
+            adjacent: boolean;
+            /** Blocked Zh */
+            blocked_zh: string | null;
+            /** Cleared */
+            cleared: boolean;
+            /** Hidden */
+            hidden: boolean;
+        };
+        /** WorldMapView */
+        WorldMapView: {
+            /** Region */
+            region: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level Zh */
+            level_zh: string;
+            /** Locations */
+            locations: components["schemas"]["WorldLocationView"][];
+            /** Edges */
+            edges: [
+                string,
+                string
+            ][];
+        };
+        /** WorldView */
+        WorldView: {
+            character: components["schemas"]["WorldCharacterView"];
+            map: components["schemas"]["WorldMapView"];
+            here: components["schemas"]["HereView"];
+            encounter: components["schemas"]["EncounterView"] | null;
+            clock: components["schemas"]["WorldClockView"];
+            /** Events */
+            events: string[];
+            /** Battle Id */
+            battle_id: string | null;
+            hero: components["schemas"]["HeroOut"];
+            pending_flash?: components["schemas"]["PendingFlashOut"] | null;
+            growth: components["schemas"]["GrowthView"];
+            oath: components["schemas"]["OathView"];
+            /**
+             * Next Battle Zh
+             * @default []
+             */
+            next_battle_zh: string[];
+            /** Last Battle Zh */
+            last_battle_zh?: string | null;
+            /** Last Loot Zh */
+            last_loot_zh?: string | null;
+            pending_loot?: components["schemas"]["PendingLootView"] | null;
+            event?: components["schemas"]["EventView"] | null;
+            situation_result?: components["schemas"]["SituationResultView"] | null;
+            /**
+             * Npcs Here
+             * @default []
+             */
+            npcs_here: components["schemas"]["NpcHereView"][];
+            /**
+             * Dialog
+             * @default []
+             */
+            dialog: components["schemas"]["DialogLineView"][];
+            /**
+             * Quests
+             * @default []
+             */
+            quests: components["schemas"]["QuestLogView"][];
+            /**
+             * Quests Here
+             * @default []
+             */
+            quests_here: components["schemas"]["QuestHereView"][];
+            pending_offer?: components["schemas"]["PendingOfferView"] | null;
+            /**
+             * Threads
+             * @default []
+             */
+            threads: components["schemas"]["ThreadView"][];
+            /**
+             * Rumors
+             * @default []
+             */
+            rumors: string[];
+            party?: components["schemas"]["PartyView"] | null;
+            my_shadow?: components["schemas"]["MyShadowView"] | null;
+            wallet?: components["schemas"]["WalletView"] | null;
+            inventory?: components["schemas"]["InventoryView"] | null;
+            shop?: components["schemas"]["ShopView"] | null;
+            crafting?: components["schemas"]["CraftingView"] | null;
         };
         XY: [
             number,
@@ -6159,6 +9558,113 @@ export interface operations {
             };
         };
     };
+    list_dev_packs_api_runs_dev_packs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevPackOut"][];
+                };
+            };
+        };
+    };
+    list_saves_api_runs_saves_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveSummary"][];
+                };
+            };
+        };
+    };
+    load_run_api_runs_load_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dev_advance_api_runs__run_id__dev_advance_post: {
+        parameters: {
+            query: {
+                to: string;
+                insight?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_run_api_runs_post: {
         parameters: {
             query?: never;
@@ -6278,26 +9784,6 @@ export interface operations {
             };
         };
     };
-    list_dev_packs_api_runs_dev_packs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DevPackOut"][];
-                };
-            };
-        };
-    };
     get_rules_api_runs_rules_get: {
         parameters: {
             query?: never;
@@ -6314,59 +9800,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunRules"];
-                };
-            };
-        };
-    };
-    list_saves_api_runs_saves_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SaveSummary"][];
-                };
-            };
-        };
-    };
-    load_run_api_runs_load_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoadRunRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6525,40 +9958,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FlashPreviewOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dev_advance_api_runs__run_id__dev_advance_post: {
-        parameters: {
-            query: {
-                to: string;
-                insight?: number;
-            };
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6825,6 +10224,867 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    list_characters_api_world_characters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldCharacterSummary"][];
+                };
+            };
+        };
+    };
+    create_character_api_world_characters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorldCharacterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_character_api_world_characters__character_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_action_api_world_characters__character_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorldActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_battle_api_world_characters__character_id__battle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldBattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_flash_preview_api_world_characters__character_id__flash_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlashPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlashPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_allocation_preview_api_world_characters__character_id__allocation_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_situation_api_world_characters__character_id__situation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SituationOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_situation_answer_api_world_characters__character_id__situation_answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SituationAnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_chat_api_world_characters__character_id__chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_board_api_world_characters__character_id__board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonBoardView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_absence_api_world_characters__character_id__absence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbsenceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_league_api_world_characters__character_id__league_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeagueView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_league_replay_api_world_characters__character_id__league_matches__match_id__replay_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeagueReplayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_league_log_api_world_league_matches__match_id__log_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_league_run_api_world_league_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeagueRunView"];
+                };
+            };
+        };
+    };
+    get_chronicle_api_world_chronicle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChronicleView"];
+                };
+            };
+        };
+    };
+    get_legacy_api_world_legacy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyHeroView"][];
+                };
+            };
+        };
+    };
+    post_season_verify_api_world_season_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_season_reset_api_world_season_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonResetReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_world_llm_api_world_llm_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldLlmView"];
+                };
+            };
+        };
+    };
+    post_world_llm_api_world_llm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorldLlmRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldLlmView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notes_api_world_characters__character_id__notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_note_api_world_characters__character_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_own_note_api_world_characters__character_id__notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_note_api_world_notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_status_api_auth_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+        };
+    };
+    post_login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

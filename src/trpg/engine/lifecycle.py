@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, WeaponDef
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
@@ -29,7 +31,7 @@ from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import Facing, UnitState
 from trpg.engine.traps import remove_traps_of
 from trpg.engine.zones import remove_caster_zones_of
-from trpg.shared.types import Pos, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 __all__ = [
     "default_ai_profile",
@@ -302,12 +304,23 @@ def weapon_reaction_rules(
     ]
     if not defaults:
         return (*auto, *written)
+    return (*auto, *default_block_off(written, rules))
+
+
+def default_block_off(
+    reactions: tuple[ReactionRule, ...], rules: Ruleset
+) -> tuple[ReactionRule, ...]:
+    """把格擋（``reduce_damage``）規則改成 ``off``，其他規則不動（只用在預設規則上）。"""
     block = {d.id for d in rules.reactions.reactions if d.effect == "reduce_damage"}
-    kept = tuple(
+    return tuple(
         rule.model_copy(update={"mode": "off"}) if rule.reaction in block else rule
-        for rule in written
+        for rule in reactions
     )
-    return (*auto, *kept)
+
+
+def has_reaction_skill(template: UnitTemplate, rules: Ruleset) -> bool:
+    """範本裝了反應技（``kind: reaction``）。"""
+    return any(rules.skill_def(sid).kind == "reaction" for sid in sorted(template.skills))
 
 
 def make_unit(
@@ -321,15 +334,20 @@ def make_unit(
     rules: Ruleset,
     facing: Facing | None = None,
     equipment: Loadout | None = None,
+    resource_attributes: Mapping[Attribute, int] | None = None,
 ) -> UnitState:
     """由範本建立戰鬥中的單位（開場與戰鬥中產生的單位共用）。``facing`` 省略時我方朝東、敵方
     朝西（Phase 3D-8d）。``equipment``（Phase 3G-G1）：裝備快照；數值類詞條併進範本的屬性、
-    最大 HP、抗性與速度（:func:`~trpg.engine.gear.core.geared_template`）。"""
+    最大 HP、抗性與速度（:func:`~trpg.engine.gear.core.geared_template`）。
+
+    法力與耐力（BAL-15b，玩法決定 #80）：敵我同一套公式（:meth:`CoreRules.template_max_resource`），
+    基礎依範本或武器大類；``resource_attributes``（召喚物傳施放者的屬性，6.29）省略時用範本的。"""
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
-    stamina = rules.core.template_max_resource("stamina", template)  # 主角依屬性（3H-2）
-    max_mana = rules.core.template_max_resource("mana", template)
+    wclass = weapon.weapon_class
+    stamina = rules.core.template_max_resource("stamina", template, wclass, resource_attributes)
+    max_mana = rules.core.template_max_resource("mana", template, wclass, resource_attributes)
     reactions = (
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )
@@ -337,6 +355,10 @@ def make_unit(
     reactions = weapon_reaction_rules(
         weapon, rules, tuple(reactions), defaults=template.reactions is None
     )
+    if template.reactions is None and has_reaction_skill(template, rules):
+        # BAL-15c（玩法決定 #83，05 5.2.1）：裝了反應技時預設先用反應技、不自動格擋（敵我同樣）；
+        # 玩家可以在反應設定把格擋改回自動（格擋在傷害前結算，改回後就是格擋優先）。
+        reactions = default_block_off(tuple(reactions), rules)
     reactions = (*reactions, *gear_reaction_rules(gear, rules, tuple(reactions)))  # 3G-G3b
     max_hp = rules.core.template_max_hp(template)
     return UnitState(
@@ -368,4 +390,5 @@ def make_unit(
         gear=gear,
         doll=template.doll,
         race=template.race,
+        phases=template.phases,
     )

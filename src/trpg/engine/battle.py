@@ -88,6 +88,7 @@ from trpg.engine.gear.charge import charge_actions, do_activate_charge
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
+from trpg.engine.oaths import open_oath
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
@@ -122,7 +123,7 @@ from trpg.engine.rules.statuses import (
     stance_status_ids,
     weapon_attribute,
 )
-from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
+from trpg.engine.setup import BattleSetup, BattleSetupError, UnitSpawn, starting_source
 from trpg.engine.skill_infusion import do_infuse_skill
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.conditions import Subject
@@ -218,14 +219,30 @@ def _place_units(setup: BattleSetup, state: BattleState) -> list[XY]:
         if spawn.position is not None:
             result.append(spawn.position)
             continue
-        free = [
-            c for c in setup.map.start_zones[spawn.team] if c not in used and is_standable(state, c)
-        ]
+        free = [c for c in _zone_of(setup, state, spawn.team) if c not in used]
+        free = [c for c in free if is_standable(state, c)]
         if not free:
             raise BattleSetupError(f"{spawn.team.display_name}起始區的格子不足")
         used.add(free[0])
         result.append(free[0])
     return result
+
+
+def _zone_of(setup: BattleSetup, state: BattleState, team: Team) -> list[XY]:
+    """陣營的起始格（依順序）。第三方（Phase 5B-M3）沒有起始區時：地圖上可站、不致命、不在任何
+    起始區的格子，依「到敵方起始區最近格的曼哈頓距離, y, x」排序（代決 5BM3-2：兩方在交戰）。"""
+    zones = setup.map.start_zones
+    if team in zones:
+        return list(zones[team])
+    taken = {c for cells in zones.values() for c in cells}
+    enemy = zones[Team.ENEMY]
+    cells = [
+        (x, y)
+        for y in range(state.height)
+        for x in range(state.width)
+        if (x, y) not in taken and is_standable(state, (x, y)) and not is_deadly(state, (x, y))
+    ]
+    return sorted(cells, key=lambda c: (min(manhattan(c, e) for e in enemy), c[1], c[0]))
 
 
 def _initial_board(setup: BattleSetup) -> tuple[list[Tile], dict[ObjectId, ObjectState]]:
@@ -286,7 +303,7 @@ def _check_loadouts(setup: BattleSetup) -> None:
 def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     """建立初始狀態：放置物件與單位、擲先攻、開始第 1 輪與第一位的回合。回傳狀態與開場事件。"""
     teams = {spawn.team for spawn in setup.units}
-    if teams != set(Team):
+    if not {Team.ALLY, Team.ENEMY} <= teams:  # 第三方可有可無（Phase 5B-M3）
         raise BattleSetupError("雙方都至少要有一個單位")
     map_def = setup.map
     _check_loadouts(setup)
@@ -311,6 +328,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         objective=setup.effective_objective,
         map_events=map_def.events,
         spawn_templates=dict(setup.spawn_templates),
+        phase_weathers=dict(setup.phase_weathers),
         region=map_def.region,
         look=tuple(sorted(map_def.look.items())),
         map_tags=tuple(sorted(map_def.tags)),
@@ -319,8 +337,14 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     names = _unit_names(setup)
     ids = IdAllocator("unit")
     facings = _opening_facings(setup, positions)
+    opening: list[tuple[UnitId, tuple[tuple[str, int | None], ...]]] = []
+    unit_ids: list[UnitId] = []
     for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
         uid = UnitId(ids.next())
+        unit_ids.append(uid)
+        wanted = _opening_of(spawn)
+        if wanted:
+            opening.append((uid, wanted))
         state.units[uid] = make_unit(
             uid,
             template=spawn.template,
@@ -344,6 +368,8 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     ctx = Ctx(state)
     core = ctx.core
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)
+    _apply_opening_statuses(ctx, opening)
+    open_oath(ctx, setup.oath, unit_ids)  # 誓約的加成（Phase 5C-3）
     for unit in state.units_sorted():
         roll = ctx.rng.d20()
         modifier = (base_attribute(unit, Attribute.DEX) - core.initiative_attr_base) // (
@@ -353,11 +379,59 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         ctx.emit(
             InitiativeRolled, unit_id=unit.id, roll=roll, modifier=modifier, total=unit.initiative
         )
-    state.turn_order = _initiative_order(ctx)
+    normal_order = _initiative_order(ctx)
+    state.turn_order = _first_team_order(state, normal_order, setup.first_team)
+    if state.turn_order != normal_order:
+        state.normal_turn_order = tuple(normal_order)
     ctx.emit(TurnOrderSet, order=tuple(state.turn_order))
     ctx.emit(RoundStarted)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
+
+
+OPENING_STATUS_MAX_DURATION = 2
+"""開場狀態（``opening_statuses``）的持續回合上限（Phase 5A-6b）。"""
+
+
+def _opening_of(spawn: UnitSpawn) -> tuple[tuple[str, int | None], ...]:
+    """單位開場要掛的狀態與指定的持續回合（``None``＝狀態預設）：先範本的
+    ``opening_statuses``（Phase 5A-M1：霧隱、死後碎片），再 ``UnitSpawn.opening_statuses``
+    （Phase 5A-6：下一場 buff／debuff）。"""
+    return (
+        *((o.status, o.duration) for o in spawn.template.opening_statuses),
+        *((status_id, None) for status_id in spawn.opening_statuses),
+    )
+
+
+def _apply_opening_statuses(
+    ctx: Ctx, opening: list[tuple[UnitId, tuple[tuple[str, int | None], ...]]]
+) -> None:
+    """開場就掛上的狀態（Phase 5A-6，``UnitSpawn.opening_statuses``；Phase 5A-M1 範本的
+    ``opening_statuses``）：依單位、清單順序施加，不擲抵抗；持續回合照指定值或狀態定義的預設，
+    但最多 ``OPENING_STATUS_MAX_DURATION``（2）回合（Phase 5A-6b；不倒數的狀態維持原樣）。"""
+    for uid, statuses in opening:
+        for status_id, wanted in statuses:
+            default = ctx.rules.status_def(status_id).duration
+            base = wanted if wanted is not None else default
+            duration = None if base is None else min(base, OPENING_STATUS_MAX_DURATION)
+            execute(
+                ctx,
+                [
+                    ApplyStatusEffect(
+                        target_id=uid, status_id=status_id, source_id=uid, duration=duration
+                    )
+                ],
+            )
+
+
+def _first_team_order(state: BattleState, order: list[UnitId], first: Team | None) -> list[UnitId]:
+    """先手（Phase 5A-6，``BattleSetup.first_team``）：``first`` 陣營的單位照原本的先攻順序排在
+    最前面，其他單位照原本的順序接在後面；``None`` 時原樣。只影響第 1 輪（Phase 5A-6b）：
+    第 2 輪起由 ``turns`` 還原成 ``state.normal_turn_order``。"""
+    if first is None:
+        return order
+    leading = [uid for uid in order if state.units[uid].team is first]
+    return leading + [uid for uid in order if state.units[uid].team is not first]
 
 
 def _opening_facings(setup: BattleSetup, positions: list[XY]) -> dict[Team, Facing]:

@@ -109,7 +109,7 @@
    "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合",
-    "雷電：沿相連的水與導電物傳導，波及其上的其他單位",
+    "雷電：沿相連的水與導電物傳導，波及其上的其他單位（傷害 ×0.5，每輪每個單位最多一次）",
     "冰霜：變成冰",
     "冰霜：站在上面的單位獲得冰凍 1 回合",
     "火焰無法在上面形成"
@@ -596,6 +596,202 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "shard_burst",
+   "name_zh": "碎晶",
+   "description_zh": "倒下時碎成源晶碎片，在原地與相鄰格留下一灘會導電的晶液（水；雷電會沿水擴散）。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "sword_formation",
+   "name_zh": "劍陣",
+   "description_zh": "與其他劍陣弟子站得越近、人越多，劍勢越盛；落單時威力減弱。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "陣法：3 格內每有一名友方「劍陣」，攻擊傷害 +20%（最多算 2 名）；範圍內沒有時攻擊傷害 ×80%"
+   ]
+  },
+  {
+   "id": "array_ward",
+   "name_zh": "護陣",
+   "description_zh": "陣眼還在時，附近的同門受到的傷害減少；陣眼被打碎就失效。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "護陣：持有者還在場時，3 格內的友方「同門」（不含自己）受到的傷害 ×80%；持有者倒下後立刻解除"
+   ]
+  },
+  {
+   "id": "summit_array_ward",
+   "name_zh": "鎖霧大陣",
+   "description_zh": "陣眼還在時，霧鎖真人受到的傷害大幅減少；打碎陣眼就失效。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "護陣：持有者還在場時，12 格內的友方「霧鎖真人」（不含自己）受到的傷害 ×50%；持有者倒下後立刻解除"
+   ]
+  },
+  {
+   "id": "rift_resonance",
+   "name_zh": "源晶共鳴",
+   "description_zh": "源晶柱還在時，碎晶之主不受任何骰值傷害；三根柱子全部打碎才會現出破綻。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "護陣：持有者還在場時，24 格內的友方「碎晶之主」（不含自己）受到的傷害 ×0%；持有者倒下後立刻解除"
+   ]
+  },
+  {
+   "id": "rift_channel",
+   "name_zh": "灌注源晶",
+   "description_zh": "碎晶之主把力量灌進三根源晶柱：造成的傷害降低；柱子全部碎裂時解除。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×75%"
+   ]
+  },
+  {
+   "id": "crystal_surge",
+   "name_zh": "晶能湧動",
+   "description_zh": "同伴碎裂的源晶流進這根柱子：造成的傷害提高。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×125%"
+   ]
+  },
+  {
+   "id": "crystal_surge_2",
+   "name_zh": "晶能狂湧",
+   "description_zh": "只剩這根柱子，源晶的力量全都湧了進來：造成的傷害大幅提高。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×150%"
+   ]
+  },
+  {
+   "id": "rift_collapse",
+   "name_zh": "界崩",
+   "description_zh": "浮台開始崩塌：造成的傷害大幅提高。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×200%"
+   ]
+  },
+  {
+   "id": "mist_return",
+   "name_zh": "歸一",
+   "description_zh": "吸盡山霧歸於一身：每回合開始時恢復少量 HP。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "回合開始時恢復 1d6 HP"
+   ]
+  },
+  {
+   "id": "heart_link",
+   "name_zh": "連心",
+   "description_zh": "受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "分傷：受到的傷害（護盾之後）有 30% 平分給相鄰的友方（直接扣血，不經護盾）"
+   ]
   },
   {
    "id": "slow",
@@ -1276,6 +1472,26 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "commanding",
+   "name_zh": "號令",
+   "description_zh": "你的召喚物造成的攻擊傷害提高，持續到你的下回合開始。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "你的召喚物造成的攻擊傷害 ×125%"
+   ]
   },
   {
    "id": "race_adapt",
@@ -2368,6 +2584,196 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "oath_bonus_easy",
+   "name_zh": "誓約之力・易",
+   "description_zh": "守著誓約（易）：自己造成的攻擊傷害提高（易檔）。違反誓約時移除。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×105%"
+   ]
+  },
+  {
+   "id": "oath_bonus_medium",
+   "name_zh": "誓約之力・中",
+   "description_zh": "守著誓約（中）：自己造成的攻擊傷害提高（中檔）。違反誓約時移除。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×110%"
+   ]
+  },
+  {
+   "id": "oath_bonus_hard",
+   "name_zh": "誓約之力・難",
+   "description_zh": "守著誓約（難）：自己造成的攻擊傷害提高（難檔）。違反誓約時移除。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×115%"
+   ]
+  },
+  {
+   "id": "oath_broken",
+   "name_zh": "破誓",
+   "description_zh": "違反了誓約：自己造成的攻擊傷害降低、受到的傷害提高。下一場恢復誓約的加成。",
+   "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×90%",
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×110%"
+   ]
+  },
+  {
+   "id": "league_truce",
+   "name_zh": "開場休戰",
+   "description_zh": "循環賽第 1 輪：不會受到、也不會造成任何傷害（召喚物也一樣），只能移動、上增益、佈陣。第 1 輪結束時移除。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "molten_burst",
+   "name_zh": "熔核爆裂",
+   "description_zh": "體內的熔核灼熱，造成的攻擊傷害大幅提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×225%"
+   ]
+  },
+  {
+   "id": "heart_ember_burst",
+   "name_zh": "殼縫熔核",
+   "description_zh": "從灰燼之心的殼縫裡帶出來的熔核，造成的攻擊傷害提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×150%"
+   ]
+  },
+  {
+   "id": "frost_ember_burst",
+   "name_zh": "寒燼爆裂",
+   "description_zh": "體內的寒燼刺骨，造成的攻擊傷害大幅提高；倒下時寒燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×225%"
+   ]
+  },
+  {
+   "id": "molten_shell",
+   "name_zh": "熔殼",
+   "description_zh": "熔岩甲蟲堆成的外殼：受到的傷害大幅降低。被冰打到時外殼冷卻碎裂。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [
+     "ice"
+    ],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×60%",
+    "受到冰霜傷害時立即解除"
+   ]
+  },
+  {
+   "id": "hard_shell",
+   "name_zh": "硬殼",
+   "description_zh": "硬殼還沒被敲裂：受到的骰值傷害大幅降低。不能被淨化、驅散或奪取。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×50%"
+   ]
   }
  ],
  "stacks": [
@@ -2550,6 +2956,14 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "kin_ward",
+   "name_zh": "同門相護",
+   "description_zh": "2 格內的同門被敵人攻擊命中時（傷害之前），替他加一層小護盾（每輪 1 次；被沉默時不能用）。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "elements": [
@@ -2580,7 +2994,7 @@
   {
    "id": "lightning",
    "name_zh": "雷電",
-   "description_zh": "沿著導電物與相連的水面擴散、連鎖。",
+   "description_zh": "沿著導電物與相連的水面擴散、連鎖；同一輪內每個單位最多受一次擴散傷害。",
    "tags": [],
    "status_look": null,
    "rules_zh": []
@@ -3554,6 +3968,14 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "kin_hit_in_range",
+   "name_zh": "同門受擊時",
+   "description_zh": "範圍內帶同門標籤的友方被敵人的攻擊命中、傷害結算之前。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "actions": [
@@ -3752,6 +4174,18 @@
    ]
   },
   {
+   "id": "leader",
+   "name_zh": "打倒頭目",
+   "description_zh": "頭目倒下時，剩下的護衛撤退，直接勝利",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [
+    "Boss 戰：頭目倒下時，剩下的護衛撤退，直接勝利",
+    "也可以擊倒所有敵人取勝；我方全部倒下即敗",
+    "撤退的護衛不算擊倒（不給擊殺、不掉落），獎勵照完整勝利"
+   ]
+  },
+  {
    "id": "escape",
    "name_zh": "撤離",
    "description_zh": "{rounds} 輪內，所有還活著的我方單位抵達出口",
@@ -3825,6 +4259,14 @@
    "id": "result_point_lost",
    "name_zh": "守點失守",
    "description_zh": "守點失守：敵人占領了守點。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "result_leader_defeated",
+   "name_zh": "頭目倒下",
+   "description_zh": "頭目倒下：剩下的護衛撤退，戰鬥勝利。",
    "tags": [],
    "status_look": null,
    "rules_zh": []

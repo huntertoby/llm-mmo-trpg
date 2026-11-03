@@ -88,7 +88,7 @@ from trpg.engine.skills.revive import revive_candidates, revive_target_problem
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, UnitId
 
 __all__ = [
     "DamageParameters",
@@ -165,12 +165,14 @@ class SkillArea:
     - ``units``：站在這些格子上的存活單位（連鎖為擊中的順序，其餘依單位 ID）。
     - ``origin``：推擊與拉扯的原點（中心格型為中心，其他為施放者所在格）。
     - ``direction``：方向型形狀的前進向量。
+    - ``chained``：``units`` 是連鎖形狀依序跳到的單位（連鎖衰減依這個順序；BAL-13c，#77）。
     """
 
     tiles: tuple[XY, ...]
     units: tuple[UnitId, ...]
     origin: XY
     direction: XY | None = None
+    chained: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -329,11 +331,12 @@ class PaidCost:
 
 
 def skill_mana_cost(core: CoreRules, unit: UnitState, skill: SkillDef) -> int:
-    """``unit`` 施放 ``skill`` 實際要付的法力（BAL-4c）：我方單位（含我方召喚物）乘
-    ``core.ally_mana_cost_permille``（:meth:`CoreRules.ally_mana`），其他陣營照原價。
+    """``unit`` 施放 ``skill`` 實際要付的法力：乘 ``core.mana_cost_permille``
+    （:meth:`CoreRules.mana_cost`）。BAL-4c 時只有我方打折；BAL-15b（玩法決定 #80）起敵我同一套，
+    不看陣營。姿態與形態的維持費不經過這裡（#67，不打折）。
     扣費、施放檢查、反應詢問、卡片與 AI 估價都用這一個函式。"""
-    mana = skill.cost.mana
-    return core.ally_mana(mana) if unit.team is Team.ALLY else mana
+    del unit  # 敵我同一套（BAL-15b）；保留參數讓呼叫端不必改
+    return core.mana_cost(skill.cost.mana)
 
 
 def pay_skill_cost(core: CoreRules, caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCost:
@@ -716,7 +719,7 @@ def _tile_area(
         problem = leap_problem(state, caster, center, reach)
         if problem is not None:
             raise IllegalActionError(problem)
-        return center_tiles(state, skill.shape.type, center), center
+        return center_tiles(state, skill.shape.type, center, arm=_arm(state, skill)), center
     problem = shapes.center_problem(state, caster.xy, center, reach)
     if problem is not None:
         raise IllegalActionError(problem)
@@ -731,7 +734,7 @@ def _tile_area(
     problem = _site_problem(state, skill, effects, center)
     if problem is not None:
         raise IllegalActionError(problem)
-    return center_tiles(state, skill.shape.type, center), center
+    return center_tiles(state, skill.shape.type, center, arm=_arm(state, skill)), center
 
 
 def _site_problem(
@@ -969,7 +972,9 @@ def compute_area(
     units = _tiles_to_units(state, tiles, chain)
     if any(e.type == CHARGE_THROUGH for e in effects):  # 隊友讓路：只有沿途的敵人會被撞
         units = tuple(u for u in units if state.units[u].team is not caster.team)
-    return SkillArea(tiles=tiles, units=units, origin=origin, direction=direction)
+    return SkillArea(
+        tiles=tiles, units=units, origin=origin, direction=direction, chained=chain is not None
+    )
 
 
 def _trap_site_problem(state: BattleState, center: XY) -> str | None:
@@ -1014,9 +1019,20 @@ def checked_area(
     return area
 
 
-def center_tiles(state: BattleState, shape_type: str, center: XY) -> tuple[XY, ...]:
+def _arm(state: BattleState, skill: SkillDef) -> int:
+    """十字的臂長（``content_params`` 的 ``arm``，省略時用資料的預設值）；其他形狀回傳 1。"""
+    if skill.shape.type != "cross":
+        return 1
+    definition = state.ruleset.shape_def("cross")
+    return definition.param_or_default(skill.shape.param_values(), "arm")
+
+
+def center_tiles(
+    state: BattleState, shape_type: str, center: XY, *, arm: int = 1
+) -> tuple[XY, ...]:
+    """中心格型的影響格；``arm`` 是十字的臂長（陷阱的觸發範圍沒有參數，一律預設）。"""
     if shape_type == "cross":
-        return shapes.cross_tiles(state, center)
+        return shapes.cross_tiles(state, center, arm)
     if shape_type == "square3":
         return shapes.square3_tiles(state, center)
     return (center,)  # ground_tile
@@ -1382,7 +1398,7 @@ def damage_parameters(
         permille = spec.attr_permille
         if permille is None:
             permille = core.spell_attr_multiplier_permille
-        dice, flat, scaled = spec.dice, 0, attr * permille
+        dice, flat, scaled = spec.dice, spec.flat_bonus or 0, attr * permille
         multiplier = _PERMILLE
     else:
         weapon = held_weapon(caster)

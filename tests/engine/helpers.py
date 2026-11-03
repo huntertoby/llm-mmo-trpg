@@ -198,8 +198,8 @@ def with_rolls(state: BattleState, rolls: Sequence[tuple[int, int]]) -> BattleSt
 
 
 def ally_mana(raw: int) -> int:
-    """我方施放者實際付的法力（BAL-4c：``ally_mana_cost_permille`` 依施放者陣營打折）。"""
-    return library().ruleset.core.ally_mana(raw)
+    """我方施放者實際付的法力（BAL-4c：``mana_cost_permille`` 依施放者陣營打折）。"""
+    return library().ruleset.core.mana_cost(raw)
 
 
 def no_reactions(base: str = "bandit", **overrides: object) -> UnitTemplate:
@@ -258,3 +258,27 @@ def answered(result: ResolveResult) -> ResolveResult:
     while result.pending is not None:
         result = resume(result.state, accept_all(result.state, result.pending))
     return result
+
+
+def with_conduct_permille(state: BattleState, permille: int = 1000) -> BattleState:
+    """回傳複本：規則包的雷電擴散（``op: conduct``）倍率改成 ``permille``‰。
+
+    BAL-13c 起內容的擴散倍率是 500‰；測擴散「基準怎麼算」的測試用 1000‰ 的副本，讓擴散傷害
+    ＝基準傷害，斷言的意義不變。"""
+    rs = state.ruleset
+    rules = tuple(
+        rule.model_copy(
+            update={
+                "then": tuple(
+                    o.model_copy(update={"damage_permille": permille}) if o.op == "conduct" else o
+                    for o in rule.then
+                )
+            }
+        )
+        for rule in rs.interactions.rules
+    )
+    s = state.clone()
+    s.ruleset = rs.model_copy(
+        update={"interactions": rs.interactions.model_copy(update={"rules": rules})}
+    )
+    return s

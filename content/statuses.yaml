@@ -70,7 +70,13 @@
 #   attack_element  攻擊元素：帶有者的普攻與沒有自己元素的武器技，物理傷害改成這個元素（優先順序見
 #                   trpg.engine.attack_element：附魔 ＞ 普攻附加詞條 ＞ 武器元素詞條 ＞ 武器本身元素 ＞ 物理）。
 #                   同時只會有一個附魔狀態：施加新的會先移除舊的（StatusRemoved 原因 replaced）；外觀顯示該元素色
+# 5A-M1（死亡時留下表面）：
+#   on_death_surface  {surface, radius, duration}：帶有者倒下時在倒下的格子與曼哈頓 radius 內的格子產生表面（cause: death_surface）。
+#                     只能用在 polarity: neutral、expires: never 的狀態（不被淨化、驅散、奪取）；由單位範本的 opening_statuses 掛上
 # control_group 新增 mental（心智：恐懼、沉默；2026-10-23 加嘲諷）：適用控制遞減，不是 hard，對 Boss 不轉換。
+# 5F-4b（循環賽）：
+#   truce  休戰：帶有者不受、也不造成任何傷害（含召喚物、墜落、致命地形）；只能用在 polarity: neutral
+#   expires: round_end（5F-4b）每一輪結束時（環境回合之後）−1，歸零移除
 statuses:
   - id: defending
     polarity: buff
@@ -139,6 +145,101 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
+  # 5A-M1：碎晶傀儡（docs/design/18-雲嶺內容.md 18.2.2「死後爆出源晶碎片＝帶電表面」）。引擎沒有帶電表面、新表面要新美術，
+  # 先留下會導電的水（代決 5AM1-6；初值，未經模擬）。
+  - id: shard_burst
+    polarity: neutral
+    name_zh: 碎晶
+    description_zh: 倒下時碎成源晶碎片，在原地與相鄰格留下一灘會導電的晶液（水；雷電會沿水擴散）。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_death_surface: {surface: water, radius: 1}
+  # 5A-M2：劍陣弟子「劍陣」（18.2.1：與另一名劍陣弟子相隔 ≤ 3 格時傷害 +；落單時弱；三人一組）。同門標籤 sword_array 只有劍陣弟子
+  # （代決 5AM2-1）；數值初值（5AM2-2，未經模擬）。
+  - id: sword_formation
+    polarity: neutral
+    name_zh: 劍陣
+    description_zh: 與其他劍陣弟子站得越近、人越多，劍勢越盛；落單時威力減弱。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    formation: {kin_tag: sword_array, kin_name_zh: 劍陣, range: 3, per_ally_permille: 200, max_allies: 2, alone_permille: 800}
+  # 5A-M2b：陣眼石靈「護陣」（18.2：陣眼石靈存在時，3 格內的同門受到的傷害 −20%，打碎後立刻解除）。同門標籤 sect
+  # （石靈自己不算）；數值初值（代決 5AM2b-1，未經模擬）。
+  - id: array_ward
+    polarity: neutral
+    name_zh: 護陣
+    description_zh: 陣眼還在時，附近的同門受到的傷害減少；陣眼被打碎就失效。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    ward: {kin_tag: sect, kin_name_zh: 同門, range: 3, taken_permille: 800}
+  # 5F-2：雲頂觀的陣眼石靈（18.2.3 第 1 階段「打碎陣眼石靈才能傷到真人（受到的傷害 −50% 直到陣眼碎）」）。同門標籤 mist_lock_core（畫面顯示 kin_name_zh，5F-2b）
+  # 只有霧鎖真人；範圍 12 格（Boss 地圖 12×12，真人會換位）。代決 5F2-5（初值，未經模擬）。
+  - id: summit_array_ward
+    polarity: neutral
+    name_zh: 鎖霧大陣
+    description_zh: 陣眼還在時，霧鎖真人受到的傷害大幅減少；打碎陣眼就失效。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    ward: {kin_tag: mist_lock_core, kin_name_zh: 霧鎖真人, range: 12, taken_permille: 500}
+  # 5F-3：賽季 Boss「碎晶之主」的三根源晶柱（19.7 第 1 階段「本體不受傷害，直到 3 根源晶柱都被打碎」）。
+  # 護陣 ×0（範圍 24＝整張浮台）：任一根柱子在場時，碎晶之主受到的骰值傷害為 0；柱子全倒由本體的階段觸發（tag_down）。初值未經模擬。
+  - id: rift_resonance
+    polarity: neutral
+    name_zh: 源晶共鳴
+    description_zh: 源晶柱還在時，碎晶之主不受任何骰值傷害；三根柱子全部打碎才會現出破綻。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    ward: {kin_tag: rift_core, kin_name_zh: 碎晶之主, range: 24, taken_permille: 0}
+  # 5F-3b：三柱階段的碎晶之主把力量灌進柱子（開場掛上，柱子全倒進第 2 階段時移除）：造成的傷害降低。
+  # 對準「柱子打得慢的隊伍在三柱階段被本體慢慢磨死」（陷阱流的主要敗因，見 docs/phases/Phase5F-3b報告.md）。
+  - id: rift_channel
+    polarity: neutral
+    name_zh: 灌注源晶
+    description_zh: 碎晶之主把力量灌進三根源晶柱：造成的傷害降低；柱子全部碎裂時解除。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 750
+  # 5F-3：19.7「打碎順序自由，留下的柱子脈衝變強」：倒 1 根、倒 2 根時留下的柱子換上（柱子的階段，tag_down）。
+  - id: crystal_surge
+    polarity: neutral
+    name_zh: 晶能湧動
+    description_zh: 同伴碎裂的源晶流進這根柱子：造成的傷害提高。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1250
+  - id: crystal_surge_2
+    polarity: neutral
+    name_zh: 晶能狂湧
+    description_zh: 只剩這根柱子，源晶的力量全都湧了進來：造成的傷害大幅提高。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1500
+  # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖；5F-3b 維持第 15 輪，玩法 PM 代決，見 Phase5F-3b報告）。
+  - id: rift_collapse
+    polarity: neutral
+    name_zh: 界崩
+    description_zh: 浮台開始崩塌：造成的傷害大幅提高。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 2000
+  # 5F-2：霧鎖真人第 3 階段「歸一」（18.2.3：每回合結束治療自己少量）。引擎只有回合開始回血，先用回合開始（代決 5F2-7；初值）。
+  - id: mist_return
+    polarity: neutral
+    name_zh: 歸一
+    description_zh: 吸盡山霧歸於一身：每回合開始時恢復少量 HP。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_turn_start_heal:
+      dice: 1d6
+  # 5A-M2：詞綴「連心的」（18.2.1：受到的傷害分一部分給相鄰同門）。詞綴池含野獸、盜賊，所以不限標籤（相鄰友方都算）；
+  # 數值初值（代決 5AM2-5，未經模擬）。
+  - id: heart_link
+    polarity: neutral
+    name_zh: 連心
+    description_zh: 受到的傷害有一部分分給身旁的同伴承受；身邊沒有同伴時全部自己承受。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    share_damage: {range: 1, permille: 300}
   - id: slow
     polarity: debuff
     name_zh: 緩速
@@ -527,6 +628,18 @@ statuses:
     min_rarity: rare
     budget_points: 6
     attack_element: holy
+  # --- BAL-19f 追加（玩法 PM 2026-11-02）：號令型武器技白板的「號令」；數值為初值，未經模擬 ---
+  # summon_damage_dealt_permille：帶有者的召喚物造成的攻擊傷害（cause: attack）倍率；持續到帶有者下回合開始（召喚物緊接在召喚者之後行動）
+  - id: commanding
+    polarity: buff
+    name_zh: 號令
+    description_zh: 你的召喚物造成的攻擊傷害提高，持續到你的下回合開始。
+    expires: own_turn_start
+    stacking: refresh
+    beneficial: true
+    budget_points: 3
+    min_rarity: rare
+    summon_damage_dealt_permille: 1250
   # --- 種族技（Phase 3R-2，content/races.yaml；只能由種族技施加，沒有 budget_points；polarity 用 neutral，不能被奪取或驅散）---
   - id: race_adapt
     polarity: neutral
@@ -1206,3 +1319,101 @@ statuses:
     absorbs_damage: true
     shield_break_status: marked
     budget_points: 2
+  # 5C-3 誓約（06 6.26、#27；docs/phases/Phase5計畫.md 24.5，數值初值、開發 PM 定）：加成依難度 3 檔，
+  # 開戰時由引擎掛上、整場不倒數、不能被驅散或奪取；違反時移除並改掛「破誓」2 回合。只由誓約施加（無 budget_points）。
+  - id: oath_bonus_easy
+    polarity: neutral
+    beneficial: true
+    name_zh: 誓約之力・易
+    description_zh: 守著誓約（易）：自己造成的攻擊傷害提高（易檔）。違反誓約時移除。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1050
+  - id: oath_bonus_medium
+    polarity: neutral
+    beneficial: true
+    name_zh: 誓約之力・中
+    description_zh: 守著誓約（中）：自己造成的攻擊傷害提高（中檔）。違反誓約時移除。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1100
+  - id: oath_bonus_hard
+    polarity: neutral
+    beneficial: true
+    name_zh: 誓約之力・難
+    description_zh: 守著誓約（難）：自己造成的攻擊傷害提高（難檔）。違反誓約時移除。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 1150
+  - id: oath_broken
+    polarity: debuff
+    name_zh: 破誓
+    description_zh: 違反了誓約：自己造成的攻擊傷害降低、受到的傷害提高。下一場恢復誓約的加成。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    damage_dealt_permille: 900
+    damage_taken_permille: 1100
+  # 5F-4b（影子循環賽第 1 輪，玩法 PM 2026-11-03 代決）：只由 season.yaml 的 league.opening_statuses 掛上
+  - id: league_truce
+    polarity: neutral
+    name_zh: 開場休戰
+    description_zh: 循環賽第 1 輪：不會受到、也不會造成任何傷害（召喚物也一樣），只能移動、上增益、佈陣。第 1 輪結束時移除。
+    duration: 1
+    expires: round_end
+    stacking: refresh
+    truce: true
+  # 5F-5a（灰燼荒原，docs/design/19-灰燼荒原與賽季主線.md 19.2.1）：熔岩獸群的招牌手段「熔核爆裂」——死亡時在原地留下 2 回合的火焰表面
+  # （#82；破解：用水、冰滅火，或在遠處擊殺）。由單位範本的 opening_statuses 掛上；數值初值。
+  # 5F-5b：荒原一般遭遇的難度（07 7.8，19.2.1 代決：高 2 級勝率高於 60% 才調高荒原敵人的傷害、只調荒原）——熔核（只有荒原的
+  # 熔岩獸群範本有）同時讓攻擊傷害 ×2.25（模擬見 docs/phases/Phase5F-5b報告.md：高 2 級 82% → 58%、同等級 93% → 72%）。
+  - id: molten_burst
+    polarity: neutral
+    enemy_only: true   # 5F-5c：只給敵人（不能給玩家、影子，也不能進技能池）
+    name_zh: 熔核爆裂
+    description_zh: 體內的熔核灼熱，造成的攻擊傷害大幅提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_death_surface: {surface: fire, radius: 0, duration: 2}
+    damage_dealt_permille: 2250
+  # 5F-5b：灰燼之心戰的殼縫餘燼蜥（units/heart_ember_lizard.yaml）：同熔核爆裂（死後留火 2 回合），攻擊傷害只 ×1.5——
+  # Boss 戰的難度幾乎全由蜥蜴決定，和一般遭遇分開調（9 級主角＋2 傭兵勝率 70～80%）。
+  - id: heart_ember_burst
+    polarity: neutral
+    enemy_only: true   # 5F-5c：只給敵人（不能給玩家、影子，也不能進技能池）
+    name_zh: 殼縫熔核
+    description_zh: 從灰燼之心的殼縫裡帶出來的熔核，造成的攻擊傷害提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_death_surface: {surface: fire, radius: 0, duration: 2}
+    damage_dealt_permille: 1500
+  # 5F-5a：冰變體寒燼蜥（19.2.1「死後留冰面」）；5F-5b 同熔核爆裂，攻擊傷害 ×2.25。
+  - id: frost_ember_burst
+    polarity: neutral
+    enemy_only: true   # 5F-5c：只給敵人（不能給玩家、影子，也不能進技能池）
+    name_zh: 寒燼爆裂
+    description_zh: 體內的寒燼刺骨，造成的攻擊傷害大幅提高；倒下時寒燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    on_death_surface: {surface: ice, radius: 0, duration: 2}
+    damage_dealt_permille: 2250
+  # 5F-5a：灰燼之心第 1 階段「殼」（19.2.3：外殼高護甲；用水或冰攻擊外殼會「冷卻」）。階段不能改護甲、狀態移除後不會長回來，
+  # 用「受到的傷害降低、被冰打到就移除」近似（元素沒有水）（代決 5F5a-6）；第 2 階段殼裂開時由階段移除。數值初值。
+  - id: molten_shell
+    polarity: neutral
+    name_zh: 熔殼
+    description_zh: 熔岩甲蟲堆成的外殼：受到的傷害大幅降低。被冰打到時外殼冷卻碎裂。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_taken_permille: 600
+    removed_by_element: [ice]
+  # 5F-5a：精英詞綴「硬殼的」（19.2.1：前 2 次受擊傷害減半）。引擎沒有「受擊次數」，用開場 2 回合受到的傷害減半近似（代決 5F5a-7）。
+  - id: hard_shell
+    polarity: neutral
+    name_zh: 硬殼
+    description_zh: 硬殼還沒被敲裂：受到的骰值傷害大幅降低。不能被淨化、驅散或奪取。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    damage_taken_permille: 500

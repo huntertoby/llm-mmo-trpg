@@ -62,6 +62,7 @@ NEUTRAL_PERMILLE = 1000
 
 _PERMILLE_FIELDS = (
     ("damage_dealt_permille", "自己造成的攻擊傷害"),
+    ("summon_damage_dealt_permille", "你的召喚物造成的攻擊傷害"),
     ("damage_taken_permille", "受到的骰值傷害（不含墜落、致命地形等百分比傷害）"),
     ("physical_taken_permille", "受到的物理骰值傷害"),
     ("healing_received_permille", "受到的治療"),
@@ -160,11 +161,50 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
             f"控制遞減（{group}）：成功施加後 {core.control_dr_rounds} 輪內，同類控制的抵抗判定中"
             f"目標的屬性 ×{core.control_dr_resist_permille / 1000:g}"
         )
+    lines += formation_rules(status)
     converted = core.boss_control_conversion.get(status.id)
     if converted is not None:
         name = library.ruleset.status_def(converted).name_zh
         lines.append(f"對 Boss：改為施加「{name}」（持續時間不變）")
     return tuple(lines)
+
+
+def _kin_text(kin_tag: str | None, kin_name_zh: str | None = None) -> str:
+    """同門的稱呼：有中文名（5F-2b ``kin_name_zh``）時用中文名，否則照舊顯示標籤 ID。"""
+    if kin_tag is None:
+        return "友方"
+    if kin_name_zh is not None:
+        return f"友方「{kin_name_zh}」"
+    return f"帶「{kin_tag}」標籤的友方"
+
+
+def formation_rules(status: StatusDef) -> list[str]:
+    """陣法範圍加成與分傷（Phase 5A-M2）的規則句，數字由欄位產生。"""
+    lines: list[str] = []
+    spec = status.formation
+    if spec is not None:
+        line = (
+            f"陣法：{spec.range} 格內每有一名{_kin_text(spec.kin_tag, spec.kin_name_zh)}，攻擊傷害 "
+            f"+{spec.per_ally_permille / 10:g}%（最多算 {spec.max_allies} 名）"
+        )
+        if spec.alone_permille != NEUTRAL_PERMILLE:
+            line += f"；範圍內沒有時攻擊傷害 ×{spec.alone_permille / 10:g}%"
+        lines.append(line)
+    ward = status.ward
+    if ward is not None:
+        lines.append(
+            f"護陣：持有者還在場時，{ward.range} 格內的{_kin_text(ward.kin_tag, ward.kin_name_zh)}"
+            "（不含自己）受到的傷害 "
+            f"×{ward.taken_permille / 10:g}%；持有者倒下後立刻解除"
+        )
+    share = status.share_damage
+    if share is not None:
+        where = "相鄰" if share.range == 1 else f"{share.range} 格內"
+        lines.append(
+            f"分傷：受到的傷害（護盾之後）有 {share.permille / 10:g}% 平分給{where}的"
+            f"{_kin_text(share.kin_tag, share.kin_name_zh)}（直接扣血，不經護盾）"
+        )
+    return lines
 
 
 BOOST_TEXT = {"damage": "傷害", "heal": "治療", "shield": "護盾"}

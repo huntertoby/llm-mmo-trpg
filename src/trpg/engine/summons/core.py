@@ -300,6 +300,7 @@ def summon_unit(  # noqa: PLR0917
         name=f"{summon.template.name_zh}{same + 1}",
         rules=state.ruleset,
         facing=owner.facing,  # 召喚物與召喚者同向（Phase 3D-8d）
+        resource_attributes=owner.attributes,  # 資源上限的屬性由施放者推得（BAL-15b，6.29）
     )
     unit.owner_id = owner.id
     unit.level = owner.level

@@ -31,6 +31,7 @@ from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.shared.rng import Rng
+from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.evolution import (
     budget_power,
     evolution_template,
@@ -49,7 +50,7 @@ from trpg.skillgen.flash_major import (
     transform_drafts,
     transform_prefix,
 )
-from trpg.skillgen.flash_ops import FIXED_FIRST_OPS, FLASH_OPS, STRICT_OPS, tuning_extras
+from trpg.skillgen.flash_ops import FIXED_FIRST_OPS, STRICT_OPS, trigger_fine_knobs, tuning_extras
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -57,6 +58,7 @@ from trpg.skillgen.flash_state import (
     bonus_permille,
     seed_tag,
 )
+from trpg.skillgen.flash_trade import MINOR_OPS, TRADES, apply_trade
 from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.usage import SkillUsage
 
@@ -131,7 +133,7 @@ TRANSFORM_OPS: dict[str, TransformOp] = {}
 
 def unimplemented_ops(table: FlashTable) -> tuple[str, ...]:
     """資料裡用到、但還沒有實作的小變化 ``op``（依名稱排序）。"""
-    return tuple(sorted({t.op for t in table.minor} - set(FLASH_OPS)))
+    return tuple(sorted({t.op for t in table.minor} - set(MINOR_OPS)))
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +159,7 @@ def variation_rng(seed: int, base_id: str, record: FlashRecord) -> Rng:
 
 def _minor_drafts(skill: SkillDef, variation: Variation, library: ContentLibrary) -> list[_Draft]:
     template = library.flash.minor_template(variation.template)
-    op = None if template is None else FLASH_OPS.get(template.op)
+    op = None if template is None else MINOR_OPS.get(template.op)
     if (
         template is None
         or op is None
@@ -229,6 +231,39 @@ def power_floor(
     return floor
 
 
+def _retuned(  # noqa: PLR0917 - 同 retune 的參數，只在本模組內部呼叫
+    library: ContentLibrary,
+    base: dict[str, Any],
+    effects: list[dict[str, Any]],
+    variation: Variation,
+    rng: Rng,
+    tag: str,
+    floor: Fraction | None,
+    extra: Sequence[dict[str, Any]],
+    knobs: Sequence[Knob],
+    effect_knobs: Sequence[Knob] = (),
+) -> SkillDef | None:
+    """同一份草稿重調 ``TUNE_ATTEMPTS`` 次（子亂數 ``tag``、``tag.r1``…）。
+
+    回傳第一個合格且帶上變化的；都不合格時 ``None``。"""
+    for attempt in range(TUNE_ATTEMPTS):
+        # 第一次的子亂數與 3W-1 相同；強度下限讓調整更容易失敗，所以同一份草稿多試幾次
+        fork = tag if attempt == 0 else f"{tag}.r{attempt}"
+        done = retune(
+            base,
+            effects,
+            rng.fork(fork),
+            library,
+            floor=floor,
+            extra=extra,
+            extra_knobs=knobs,
+            effect_knobs=effect_knobs,
+        )
+        if done is not None and _carries(done, variation, library):
+            return done
+    return None
+
+
 def apply_variation(
     library: ContentLibrary,
     skill: SkillDef,
@@ -260,6 +295,9 @@ def apply_variation(
         drafts = _minor_drafts(current, variation, library)
         template = library.flash.minor_template(variation.template)
         tag = "" if template is None else template.op
+        trade = TRADES.get(tag)
+        if trade is not None:  # 收回家族（BAL-10d）：拿掉的預算 ＋ 這次的 +40‰ 換成核心數值
+            return apply_trade(library, current, drafts, trade, rng, floor=floor)
     if tag in FIXED_FIRST_OPS:  # BAL-10b：先取最小的合格增幅（草稿已按增幅由小到大）
         for base, effects in drafts:
             fixed = fixed_strength(base, effects, library, floor=floor)
@@ -267,20 +305,14 @@ def apply_variation(
                 return fixed
     for index, (base, effects) in enumerate(drafts):
         extra, knobs = tuning_extras(tag, base, library)
-        for attempt in range(TUNE_ATTEMPTS):
-            # 第一次的子亂數與 3W-1 相同；強度下限讓調整更容易失敗，所以同一份草稿多試幾次
-            fork = str(index) if attempt == 0 else f"{index}.r{attempt}"
-            done = retune(
-                base,
-                effects,
-                rng.fork(fork),
-                library,
-                floor=floor,
-                extra=extra,
-                extra_knobs=knobs,
+        done = _retuned(library, base, effects, variation, rng, str(index), floor, extra, knobs)
+        if done is None and (fine := trigger_fine_knobs(tag, base, effects, library)):
+            # BAL-12b 定：被動、反應的「效果 +」骰子一階跳過預算窗時，加「+1 固定值」再試一次
+            done = _retuned(
+                library, base, effects, variation, rng, f"{index}.fine", floor, extra, knobs, fine
             )
-            if done is not None and _carries(done, variation, library):
-                return done
+        if done is not None:
+            return done
         # 固定強度的種類（召喚、姿態、修正型被動）沒有旋鈕：直接檢查預算窗與強度下限（3W-3）
         fixed = (
             finish_transform(base, effects, rng.fork(f"{index}.fx"), library)

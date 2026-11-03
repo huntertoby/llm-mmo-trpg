@@ -23,7 +23,6 @@ from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.engine import BattleState, UseSkill, resolve
 from trpg.engine import modifiers as mods
-from trpg.engine.ai.summon import blocking_summons
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -422,26 +421,6 @@ def test_boss_double_damage_only_applies_to_summons() -> None:
     assert dealt.amount == 10  # 打施放者本人不加倍
 
 
-def boss_arena(summon_xy: tuple[int, int]) -> tuple[BattleState, UnitId]:
-    """Boss（U2，(6,3)）、我方施放者 U1（(0,3)）與一隻我方召喚物；輪到 Boss。"""
-    skill = summon_skill()
-    state = arena([skill], custom=[skill], foes=((6, 3),), foe_tags=("boss",))
-    state, sid = cast_at(state, skill.id, *summon_xy)
-    boss = state.clone()
-    boss.active_unit = U2
-    boss.turn_pos = boss.turn_order.index(U2)
-    boss.units[U2].ap = boss.ruleset.core.ap_per_turn
-    boss.units[U2].move_points = 0
-    return boss, sid
-
-
-def test_blocking_summons_lie_between_the_boss_and_the_hero() -> None:
-    state, sid = boss_arena((3, 3))
-    assert sid in blocking_summons(state, state.units[U2], 1)
-    off, side = boss_arena((2, 5))
-    assert side not in blocking_summons(off, off.units[U2], 1)
-
-
 def blocked_arena(
     boss_tags: Sequence[str], boss_skills: Sequence[str] | None = None
 ) -> tuple[BattleState, UnitId]:
@@ -468,37 +447,6 @@ def blocked_arena(
     state.turn_pos = state.turn_order.index(U2)
     state.units[U2].ap = state.ruleset.core.ap_per_turn
     return state, sid
-
-
-def best_on(state: BattleState, sid: UnitId, points: int) -> Any:
-    """AI 對召喚物 ``sid`` 的最高分動作（``boss_blocker_points`` 覆寫為 ``points``）。"""
-    table = library().ai_profiles
-    patched = table.model_copy(
-        update={
-            "profiles": tuple(
-                p.model_copy(
-                    update={"summon": p.summon.model_copy(update={"boss_blocker_points": points})}
-                )
-                for p in table.profiles
-            )
-        }
-    )
-    ranked = UtilityAI(patched, override="brute").rank(state)
-    return max(
-        (r for r in ranked if getattr(r.action, "target_id", None) == sid),
-        key=lambda r: r.score,
-    ).score
-
-
-def test_boss_ai_scores_hits_on_a_blocking_summon_higher() -> None:
-    boss, sid = blocked_arena(("boss", "elite"))
-    assert sid in blocking_summons(boss, boss.units[U2], 1)
-    assert best_on(boss, sid, 60) > best_on(boss, sid, 0)
-
-
-def test_non_boss_units_get_no_blocker_bonus() -> None:
-    plain, sid = blocked_arena(())
-    assert best_on(plain, sid, 60) == best_on(plain, sid, 0)
 
 
 def test_boss_ai_actually_attacks_the_blocking_summon() -> None:

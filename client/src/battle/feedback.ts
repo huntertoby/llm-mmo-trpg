@@ -96,6 +96,9 @@ function textFor(e: EventBase, at: Locate): Spot[] {
       return e.success === true ? [] : [{ pos: at(e.target_id), text: "抵抗", tone: "text" }];
     case "reaction_triggered":
       return e.reaction === "block" ? [{ pos: at(e.unit_id), text: "格擋", tone: "good" }] : [];
+    case "unit_ran":
+      // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
+      return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];
     default: {
       const word = EVENT_WORDS[e.type];
       if (word === undefined) return [];

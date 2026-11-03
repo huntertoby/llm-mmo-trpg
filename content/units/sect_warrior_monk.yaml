@@ -1,0 +1,25 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
+# 山中修士・坦克：「金剛身」自身護盾；嘲諷；同門相護同持劍弟子（代決 5A3-1）。
+id: sect_warrior_monk
+name_zh: 護法武僧
+attributes: {str: 14, dex: 10, con: 16, int: 8, wis: 10, wil: 12}
+max_hp: 40
+speed: 4
+armor_bonus: 4
+weapon: fist
+ai_profile: guard
+resist: {}
+element_mods: {}
+tags: [humanoid, sect, steadfast]
+skills: [skill_parry_riposte, skill_rampart_jeer, skill_stand_firm]
+reactions:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+  - reaction: skill_stand_firm
+    when: {event: ally_hit_adjacent}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {skin: '#c08050', hair: none, build: stout, pants: '#d8a030', gear: {body: {kind: bare, material: cloth, color: '#d8a030'}, neck: {kind: beads, material: wood}}}

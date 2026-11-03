@@ -269,7 +269,8 @@ def test_shape_multiplier_table() -> None:
     assert [mult("cone", size=n) for n in (2, 3, 4)] == [F(13, 10), F(16, 10), F(2)]
     assert mult("cross") == F(18, 10) and mult("square3") == 2
     assert [mult("ring", radius=n) for n in (1, 2)] == [F(18, 10), F(22, 10)]
-    assert mult("chain", jumps=2) == F(15, 10) and mult("chain", jumps=1) == F(125, 100)
+    # BAL-13c（#77）：連鎖衰減後的倍率（公式見 test_chain_falloff_budget.py）
+    assert mult("chain", jumps=2) == F(1313, 1000) and mult("chain", jumps=1) == F(1188, 1000)
     assert mult("allies_in_radius", radius=2) == F(18, 10)
 
 
@@ -326,6 +327,28 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "shielded_wet": 1,
         "shielded_marking": 2,
         "shielded_charged": 2,
+        "commanding": 3,  # BAL-19f 追加：號令（你的召喚物傷害提高）
+        "shard_burst": None,  # 5A-M1：碎晶（倒下時留下表面），只由範本開場掛上
+        "sword_formation": None,  # 5A-M2：劍陣（陣法範圍加成），只由範本開場掛上
+        "array_ward": None,  # 5A-M2b：護陣（陣眼石靈），只由範本開場掛上
+        "summit_array_ward": None,  # 5F-2：雲頂觀護陣，只由 Boss 範本與階段掛上
+        "mist_return": None,  # 5F-2：霧鎖真人階段回血，只由 Boss 階段掛上
+        "rift_resonance": None,  # 5F-3：源晶共鳴（護陣 ×0），只由源晶柱開場掛上
+        "crystal_surge": None,  # 5F-3：晶能湧動，只由源晶柱的階段掛上
+        "crystal_surge_2": None,
+        "rift_collapse": None,  # 5F-3：界崩，只由碎晶之主的階段掛上
+        "rift_channel": None,  # 5F-3b：灌注源晶，只由碎晶之主開場掛上
+        "heart_link": None,  # 5A-M2：連心（分傷），只由詞綴開場掛上
+        "oath_bonus_easy": None,  # 5C-3：誓約之力，只由誓約開戰時掛上
+        "oath_bonus_medium": None,
+        "oath_bonus_hard": None,
+        "oath_broken": None,  # 5C-3：破誓，只在違反誓約時施加
+        "league_truce": None,  # 5F-4b：循環賽開場休戰，只由 league.opening_statuses 掛上
+        "molten_burst": None,  # 5F-5a：熔核爆裂（死後留火），只由熔岩獸群開場掛上
+        "frost_ember_burst": None,  # 5F-5a：寒燼爆裂（死後留冰），只由寒燼蜥開場掛上
+        "heart_ember_burst": None,  # 5F-5b：殼縫熔核（死後留火），只由殼縫餘燼蜥開場掛上
+        "molten_shell": None,  # 5F-5a：熔殼，只由灰燼之心開場掛上
+        "hard_shell": None,  # 5F-5a：硬殼，只由詞綴硬殼的開場掛上
         # 3W-2b：元素姿態階梯（每個元素 5 級）
         **{
             f"stance_{e}_{n}": points

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, field_validator, model_serializer, model_validator
 
@@ -28,17 +28,28 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "BlockBonus",
+    "BossPhase",
+    "CreatureLook",
+    "DeathSurfaceSpec",
     "Dice",
     "DollGear",
     "DollLook",
     "Entangle",
+    "FormationSpec",
     "HitCondition",
+    "HpBelowTrigger",
     "OffhandDef",
     "OffhandTable",
+    "OpeningStatus",
+    "PhaseSpawn",
+    "PhaseTile",
+    "PhaseTrigger",
     "ReactionRule",
     "ReactionUnless",
     "ReactionWhen",
     "Reap",
+    "RoundTrigger",
+    "ShareDamageSpec",
     "StatusDef",
     "StatusTable",
     "StatusTickDamage",
@@ -53,13 +64,16 @@ __all__ = [
     "SummonPlatform",
     "SummonPulse",
     "SummonSnare",
+    "TagDownTrigger",
     "TerrainDef",
     "TerrainTable",
     "TotemSpec",
     "UnitTemplate",
+    "WardSpec",
     "WeaponDef",
     "WeaponLook",
     "WeaponTable",
+    "check_phases",
     "weapon_attr_examples_zh",
 ]
 
@@ -705,12 +719,92 @@ _NEUTRAL_PERMILLE = 1000
 _MAX_DURATION_BONUS = 2
 
 
+class DeathSurfaceSpec(ContentModel):
+    """倒下時留下的表面（Phase 5A-M1，18.2.2 碎晶傀儡、19 熔岩獸「熔核爆裂」）。
+
+    帶有這個狀態的單位倒下時，在倒下的格子與曼哈頓距離 ``radius`` 以內可以有表面的格子產生
+    ``surface``；``duration`` 省略＝表面的預設持續回合。"""
+
+    surface: Surface
+    radius: int = Field(default=0, ge=0, le=2)
+    duration: int | None = Field(default=None, ge=1, le=6)
+
+
+def _check_kin_name(kin_tag: str | None, kin_name_zh: str | None) -> None:
+    """``kin_name_zh``（同門標籤的中文名，5F-2b）只能和 ``kin_tag`` 一起寫。"""
+    if kin_name_zh is not None and kin_tag is None:
+        raise ValueError("kin_name_zh 必須和 kin_tag 一起寫")
+
+
+class FormationSpec(ContentModel):
+    """陣法範圍加成（Phase 5A-M2，18.2.1 劍陣弟子「劍陣」）。
+
+    「同門」＝與持有者同陣營、存活、在場、不是自己、帶 ``kin_tag``、曼哈頓距離 ≤ ``range`` 的單位。
+    倍率：有同門時 ``1000 + per_ally_permille × min(人數, max_allies)``，沒有時 ``alone_permille``；
+    乘在持有者造成的攻擊傷害（``cause: attack``）上（``applies_to`` 目前只有 ``damage``）。"""
+
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """同門標籤；省略＝任何友方都算。"""
+    kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """同門標籤在畫面上的中文名（Phase 5F-2b；見 :class:`WardSpec`）。"""
+    range: int = Field(default=3, ge=1, le=5)
+    per_ally_permille: int = Field(ge=1, le=1000)
+    max_allies: int = Field(ge=1, le=5)
+    alone_permille: int = Field(default=1000, ge=100, le=1000)
+    applies_to: Literal["damage"] = "damage"
+
+    @model_validator(mode="after")
+    def _kin_name_needs_tag(self) -> FormationSpec:
+        _check_kin_name(self.kin_tag, self.kin_name_zh)
+        return self
+
+
+class WardSpec(ContentModel):
+    """護陣（Phase 5A-M2b，18.2 陣眼石靈）：持有者還在場時，``range`` 格內帶 ``kin_tag`` 的友方
+    （不含持有者自己）受到的骰值傷害 × ``taken_permille``‰；持有者倒下後立刻解除。多個護陣依
+    單位 ID 順序相乘、逐步捨去。"""
+
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """被護住的同門標籤；省略＝任何友方都算。"""
+    kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """同門標籤在單位卡、狀態說明上的中文名（Phase 5F-2b，例：``mist_lock_core`` →「霧鎖真人」）；
+    省略時照舊顯示標籤 ID。只能和 ``kin_tag`` 一起寫。"""
+    range: int = Field(default=3, ge=1, le=24)
+    taken_permille: int = Field(ge=0, le=999)
+    """受到的骰值傷害倍率（‰）；0＝持有者在場時完全不受骰值傷害（Phase 5F-3 源晶柱）。"""
+
+    @model_validator(mode="after")
+    def _kin_name_needs_tag(self) -> WardSpec:
+        _check_kin_name(self.kin_tag, self.kin_name_zh)
+        return self
+
+
+class ShareDamageSpec(ContentModel):
+    """把傷害分給同門（Phase 5A-M2，18.2.1 詞綴「連心的」）。
+
+    持有者受到傷害時，護盾與靈魂連結之後剩下的量有 ``permille``‰（捨去）平分給 ``range`` 格內帶
+    ``kin_tag`` 的友方（依單位 ID，餘數從 ID 小的開始各多 1 點）；沒有這樣的友方時不分。"""
+
+    kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """同門標籤；省略＝任何友方都算。"""
+    kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """同門標籤在畫面上的中文名（Phase 5F-2b；見 :class:`WardSpec`）。"""
+    range: int = Field(default=1, ge=1, le=2)
+    permille: int = Field(ge=1, le=900)
+
+    @model_validator(mode="after")
+    def _kin_name_needs_tag(self) -> ShareDamageSpec:
+        _check_kin_name(self.kin_tag, self.kin_name_zh)
+        return self
+
+
 class StatusDef(ContentModel):
     """一種狀態。
 
     - ``duration``：預設持續回合；``None`` 表示不倒數（直到被移除或到期條件成立）。
     - ``expires``：``turn_end`` 每次在帶有者的回合結束時 −1，歸零移除；
-      ``own_turn_start`` 在帶有者的下個回合開始時移除；``never`` 只能由效果或動作移除。
+      ``own_turn_start`` 在帶有者的下個回合開始時移除；``round_end``（Phase 5F-4b）每一輪結束時
+      （環境回合之後）−1，歸零移除；``never`` 只能由效果或動作移除。
     - ``stacking``：重複施加時的規則；目前只有 ``refresh``（刷新持續時間，不疊加）。
 
     Phase 2B-1 的數值效果欄位（千分比一律 ‰，1000 = ×1；多個狀態的同一欄位依序相乘、逐步
@@ -800,7 +894,7 @@ class StatusDef(ContentModel):
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     duration: int | None = Field(default=None, ge=1)
-    expires: Literal["turn_end", "own_turn_start", "never"]
+    expires: Literal["turn_end", "own_turn_start", "round_end", "never"]
     stacking: Literal["refresh"] = "refresh"
     on_turn_start_damage: StatusTickDamage | None = None
     on_turn_start_heal: StatusTickHeal | None = None
@@ -827,6 +921,8 @@ class StatusDef(ContentModel):
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)
     damage_taken_permille: int = Field(default=1000, ge=0, le=10000)
     physical_taken_permille: int = Field(default=1000, ge=0, le=10000)
+    summon_damage_dealt_permille: int = Field(default=1000, ge=1000, le=3000)
+    """號令（BAL-19f 追加）：帶有者的召喚物造成的攻擊傷害（``cause: attack``）倍率。"""
     element_dealt: Element | None = None
     """元素傷害加成（Phase 3W-2b，元素姿態）：帶有者造成這個元素的攻擊傷害再 ×
     ``element_dealt_permille``。"""
@@ -856,9 +952,43 @@ class StatusDef(ContentModel):
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
     beneficial: bool = False
     polarity: Literal["buff", "debuff", "neutral"]
+    on_death_surface: DeathSurfaceSpec | None = None
+    """（Phase 5A-M1）帶有者倒下時在原地留下表面（:class:`DeathSurfaceSpec`）。只能用在
+    ``polarity: neutral``、``expires: never`` 的狀態（不被淨化、驅散、奪取，整場都在）。"""
+    formation: FormationSpec | None = None
+    """（Phase 5A-M2）陣法範圍加成（:class:`FormationSpec`）。限制同 ``on_death_surface``。"""
+    ward: WardSpec | None = None
+    """（Phase 5A-M2b）護陣（:class:`WardSpec`）。限制同 ``on_death_surface``。"""
+    share_damage: ShareDamageSpec | None = None
+    """（Phase 5A-M2）受到的傷害分給同門（:class:`ShareDamageSpec`）。限制同
+    ``on_death_surface``。"""
+    truce: bool = False
+    """（Phase 5F-4b）休戰：帶有者不會受到任何傷害（含墜落、致命地形、最大 HP 比例），帶有者（或
+    帶有者的召喚物）也不會對任何單位造成傷害；傷害直接略過、不發事件。只能用在 ``polarity:
+    neutral`` 的狀態（不被淨化、驅散、奪取）。循環賽第 1 輪用（``league_truce``，
+    ``expires: round_end``）。"""
+    enemy_only: bool = False
+    """（Phase 5F-5c，玩法 PM 2026-11-03 代決）只給敵人：只能由敵方單位範本的 ``opening_statuses``
+    掛上，不能給玩家、影子、傭兵，也不能進技能池（技能引用它＝引用錯誤，生成器、候選、閃現、
+    工坊、LLM 可選清單都排除）。必須沒有 ``budget_points``。"""
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
+        if self.enemy_only and self.budget_points is not None:
+            raise ValueError(f"狀態 {self.id}：enemy_only 的狀態不能有 budget_points")
+        for name, spec in (
+            ("on_death_surface", self.on_death_surface),
+            ("formation", self.formation),
+            ("share_damage", self.share_damage),
+            ("ward", self.ward),
+        ):
+            if spec is not None and (
+                self.polarity != "neutral" or self.expires != "never" or self.duration is not None
+            ):
+                raise ValueError(
+                    f"狀態 {self.id}：{name} 只能用在 polarity: neutral、expires: never、"
+                    "不設 duration 的狀態"
+                )
         if self.polarity == "buff" and not self.beneficial:
             raise ValueError(f"狀態 {self.id}：polarity: buff 必須 beneficial: true")
         if self.polarity == "debuff" and self.beneficial:
@@ -866,6 +996,8 @@ class StatusDef(ContentModel):
         if self.stance and (self.expires != "never" or self.duration is not None):
             raise ValueError(f"狀態 {self.id}：姿態（stance）必須 expires: never 且不設 duration")
         self._check_elemental_stance()
+        if self.truce and self.polarity != "neutral":
+            raise ValueError(f"狀態 {self.id}：truce 只能用在 polarity: neutral 的狀態")
         riders = (
             self.shield_reflect
             or self.shield_end_heal
@@ -881,9 +1013,34 @@ class StatusDef(ContentModel):
             raise ValueError(f"狀態 {self.id}：attack_element 不能是 physical")
         if self.control_group is not None and self.save_attr is None:
             raise ValueError(f"狀態 {self.id}：有 control_group 的狀態必須設定 save_attr")
-        if self.expires == "turn_end" and self.duration is None:
-            raise ValueError(f"狀態 {self.id}：expires 為 turn_end 時必須設定 duration")
+        if self.expires in ("turn_end", "round_end") and self.duration is None:
+            raise ValueError(f"狀態 {self.id}：expires 為 {self.expires} 時必須設定 duration")
         return self
+
+    @property
+    def scales_with_magnitude(self) -> bool:
+        """強度（BAL-12e，玩法決定 #76，06 6.3、6.34.9）能放大的數值型狀態：有每回合傷害或治療、
+        倍率欄位（移動、造成／受到的傷害、受到的治療、元素加成）、屬性加值或攻擊加值。控制類狀態
+        （``control_group``）與姿態（姿態用自己的幅度規則，3W-5b）不算；潮濕、標記、隱蔽這類沒有
+        數值的狀態也不算。"""
+        if self.control_group is not None or self.stance:
+            return False
+        permilles = (
+            self.move_permille,
+            self.damage_dealt_permille,
+            self.damage_taken_permille,
+            self.physical_taken_permille,
+            self.healing_received_permille,
+            self.element_dealt_permille,
+            self.element_dealt_wet_permille,
+        )
+        return bool(
+            self.on_turn_start_damage is not None
+            or self.on_turn_start_heal is not None
+            or any(v != _PERMILLE for v in permilles)
+            or any(self.attr_bonus.values())
+            or self.attack_bonus
+        )
 
     @property
     def has_shield_riders(self) -> bool:
@@ -947,7 +1104,10 @@ class ReactionWhen(ContentModel):
         "ally_targeted",
         "enemy_moves_in_range",
         "ally_hit_in_range",
+        "kin_hit_in_range",
     ]
+    """``kin_hit_in_range``（Phase 5A-M1）：內建反應「同門相護」的事件——範圍內帶同門標籤的友方
+    被敵人的攻擊（普攻或技能）命中、傷害之前。"""
 
 
 class ReactionUnless(ContentModel):
@@ -1032,16 +1192,46 @@ class WeaponLook(ContentModel):
     form: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
-DollSlot = Literal["head", "body", "hands", "feet", "cloak", "off_hand"]
-DollHair = Literal["short", "long", "none"]
+DollSlot = Literal["head", "body", "hands", "feet", "cloak", "off_hand", "neck", "back", "waist"]
+"""紙娃娃的外觀格；``neck``／``back``／``waist``（念珠、背物、腰掛）只給敵人範本用（Phase 5A-ART3，
+純顯示，不是裝備格）。"""
+DollHair = Literal["short", "long", "none", "bun"]
+
+_HEX = r"^#[0-9a-fA-F]{6}$"
 
 
 class DollGear(ContentModel):
-    """範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。"""
+    """範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
+
+    Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
+    ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。"""
 
     kind: str = Field(pattern=ID_PATTERN)
     material: str = Field(pattern=ID_PATTERN)
-    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    color: str | None = Field(default=None, pattern=_HEX)
+    form: str | None = Field(default=None, pattern=ID_PATTERN)
+    trim: str | None = Field(default=None, pattern=_HEX)
+    apron: str | None = Field(default=None, pattern=_HEX)
+
+
+class CreatureLook(ContentModel):
+    """異形敵人的外觀（Phase 5A-ART1，``docs/art/敵人外觀.md`` 1.1；純顯示資料）。
+
+    身形 × 材質 × 元素 × 大小 × 特徵。值只檢查格式、**不檢查是否認得**：前端不認得時退回
+    （身形 → 軟泥、材質 → 毛皮、元素 → 無、大小 → 1、特徵 → 略過），讓 LLM 產生的新值也畫得出來。
+    ``status_traits``：單位身上有該狀態時才多畫的特徵（灰燼之心有「熔殼」時畫甲蟲殼堆）。"""
+
+    body: str = Field(pattern=ID_PATTERN)
+    variant: str | None = Field(default=None, pattern=ID_PATTERN)
+    material: str | None = Field(default=None, pattern=ID_PATTERN)
+    element: str | None = Field(default=None, pattern=ID_PATTERN)
+    size: str | None = Field(default=None, pattern=ID_PATTERN)
+    tint: str | None = Field(default=None, pattern=_HEX)
+    traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=12)
+    status_traits: dict[
+        Annotated[str, Field(pattern=ID_PATTERN)],
+        tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...],
+    ] = Field(default_factory=dict)
 
 
 class DollLook(ContentModel):
@@ -1050,19 +1240,42 @@ class DollLook(ContentModel):
     頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的
     ``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，
     前端依陣營退回預設外觀。
+
+    Phase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；
+    ``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`
+    加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、
+    ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型；
+    5A-ART5 加 ``main_glow`` 杖頭光色、``scale`` 戰場大小。都經 ``UnitView.doll_look`` 給前端
+    （不改引擎）。
     """
 
-    skin: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    skin: str = Field(default="#f1c9a5", pattern=_HEX)
     hair: DollHair | None = None
-    hair_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    pants: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    trim: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    eyes: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    hair_color: str | None = Field(default=None, pattern=_HEX)
+    pants: str | None = Field(default=None, pattern=_HEX)
+    trim: str | None = Field(default=None, pattern=_HEX)
+    eyes: str | None = Field(default=None, pattern=_HEX)
     skull: bool = False
     gear: dict[DollSlot, DollGear] = Field(default_factory=dict)
     main_material: str | None = Field(default=None, pattern=ID_PATTERN)
-    main_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    main_color: str | None = Field(default=None, pattern=_HEX)
     rarity: Literal["epic", "legendary"] | None = None
+    main_kind: str | None = Field(default=None, pattern=ID_PATTERN)
+    main_tassel: str | None = Field(default=None, pattern=_HEX)
+    bun_band: str | None = Field(default=None, pattern=_HEX)
+    beard: bool = False
+    build: Literal["stout", "tall"] | None = None
+    main_glow: str | None = Field(default=None, pattern=_HEX)
+    """杖頭光色（Phase 5A-ART5；青霧道童的綠光）：主手是杖時取代預設光色，附魔元素仍優先。"""
+    scale: float | None = Field(default=None, ge=0.5, le=1.5)
+    """人形在戰場上的大小倍率（Phase 5A-ART5；道童小一號 0.9）。
+
+    精英 ×1.15 照乘；異形用 ``creature.size``。"""
+    creature: CreatureLook | None = None
+    affixes: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
+    traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
+    """人形也能帶的特徵（霧鎖真人的 ``mist`` 霧氣繞身、雷符師的 ``sparks`` 電光）；異形的特徵寫在
+    ``creature.traits``。前端不認得的略過。"""
 
 
 HitCondition = Literal["always", "target_in_water", "self_in_water"]
@@ -1171,12 +1384,158 @@ SUMMON_ROLES: tuple[str, ...] = (
 type SummonRole = Literal["melee", "ranged", "support", "totem", "scout", "assassin", "bomber"]
 
 
+class OpeningStatus(ContentModel):
+    """範本開場就帶著的狀態（Phase 5A-M1：霧隱的開場隱蔽 1 回合、碎晶傀儡的死後碎片）。
+
+    ``duration`` 省略＝狀態定義的預設；有限的持續回合在開戰時最多 2（5A-6b，
+    ``OPENING_STATUS_MAX_DURATION``）。"""
+
+    status: str = Field(pattern=ID_PATTERN)
+    duration: int | None = Field(default=None, ge=1, le=2)
+
+
+class HpBelowTrigger(ContentModel):
+    """Boss 階段的觸發（Phase 5F-2）：HP ≤ 最大 HP × ``permille``‰ 時進入。"""
+
+    kind: Literal["hp_below"]
+    permille: int = Field(ge=1, le=999)
+
+    @property
+    def condition_zh(self) -> str:
+        return f"HP {self.permille // 10}% 以下"
+
+
+class TagDownTrigger(ContentModel):
+    """Boss 階段的觸發（Phase 5F-3，賽季 Boss 的解謎）：同陣營、帶 ``tag`` 標籤的單位已倒下
+    ``count`` 名以上時進入（例：3 根源晶柱都被打碎）。``tag_name_zh`` 是標籤在畫面上的中文名
+    （省略時顯示標籤 ID）。"""
+
+    kind: Literal["tag_down"]
+    tag: str = Field(pattern=ID_PATTERN)
+    count: int = Field(ge=1, le=8)
+    tag_name_zh: str | None = Field(default=None, min_length=1)
+
+    @property
+    def condition_zh(self) -> str:
+        return f"「{self.tag_name_zh or self.tag}」倒下 {self.count} 名"
+
+
+class RoundTrigger(ContentModel):
+    """Boss 階段的觸發（Phase 5F-3）：第 ``round`` 輪起進入（例：第 15 輪起傷害加倍，防止拖延）。"""
+
+    kind: Literal["round_at"]
+    round: int = Field(ge=2, le=99)
+
+    @property
+    def condition_zh(self) -> str:
+        return f"第 {self.round} 輪起"
+
+
+type PhaseTrigger = Annotated[
+    HpBelowTrigger | TagDownTrigger | RoundTrigger, Field(discriminator="kind")
+]
+"""Boss 階段的觸發種類（依 ``kind`` 區分；新種類加在這裡，不動舊資料）。"""
+
+
+class PhaseTile(ContentModel):
+    """階段轉換時改變的一格（同地圖事件 ``terrain_change`` 的格子：高度、地形、表面；省略的
+    不變）。"""
+
+    at: tuple[int, int]
+    height: int | None = Field(default=None, ge=0, le=3)
+    terrain: str | None = Field(default=None, pattern=ID_PATTERN)
+    surface: Surface | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> PhaseTile:
+        if self.height is None and self.terrain is None and self.surface is None:
+            raise ValueError("階段的 tiles 每一格至少要改變 height、terrain 或 surface 其中之一")
+        return self
+
+
+class PhaseSpawn(ContentModel):
+    """階段轉換時召喚的單位（和 Boss 同陣營）。``at`` 省略＝Boss 當下的位置（改到最近的安全格）。"""
+
+    template: str = Field(pattern=ID_PATTERN)
+    count: int = Field(default=1, ge=1, le=4)
+    at: tuple[int, int] | None = None
+
+
+class BossPhase(ContentModel):
+    """Boss 的一個階段（Phase 5F-2，09 9.6.8、18.2.3）。
+
+    第 1 項是開場階段：只有 ``id``、``name_zh``（範本本身就是它）；之後每項必有 ``trigger``，
+    進入時依序：移除狀態 → 換技能組 → 換行為模式 → 施加狀態 → 改天氣 → 改格子 → 召喚
+    （:mod:`trpg.engine.boss_phases`）。省略的欄位不變。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    trigger: PhaseTrigger | None = None
+    text_zh: str | None = Field(default=None, min_length=1)
+    """轉換時的一句敘事（戰鬥紀錄與前端提示）。"""
+    skills: tuple[str, ...] | None = Field(default=None, max_length=32)
+    ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
+    remove_statuses: tuple[str, ...] = ()
+    add_statuses: tuple[OpeningStatus, ...] = ()
+    weather: str | None = Field(default=None, pattern=ID_PATTERN)
+    tiles: tuple[PhaseTile, ...] = ()
+    spawns: tuple[PhaseSpawn, ...] = ()
+
+    @property
+    def is_opening(self) -> bool:
+        return self.trigger is None
+
+    def changes_anything(self) -> bool:
+        return bool(
+            self.skills is not None
+            or self.ai_profile is not None
+            or self.remove_statuses
+            or self.add_statuses
+            or self.weather is not None
+            or self.tiles
+            or self.spawns
+            or self.text_zh is not None
+        )
+
+
+PHASES_MIN = 2
+PHASES_MAX = 4
+"""``phases`` 的項數範圍（開場階段＋1～3 次轉換；09 9.6.8「2～3 個階段」，留一格給之後的 Boss）。"""
+
+
+def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
+    """``UnitTemplate.phases`` 的結構問題（空列表＝沒問題）。"""
+    if not phases:
+        return []
+    problems: list[str] = []
+    if not PHASES_MIN <= len(phases) <= PHASES_MAX:
+        problems.append("phases 要有 2～4 項（開場階段＋1～3 次轉換）")
+    first = phases[0]
+    if not first.is_opening or first.changes_anything():
+        problems.append("phases 第 1 項是開場階段：只能有 id 與 name_zh")
+    last = 1000
+    for phase in phases[1:]:
+        if phase.trigger is None:
+            problems.append(f"階段 {phase.id} 缺少 trigger（只有第 1 項可以省略）")
+            continue
+        if not isinstance(phase.trigger, HpBelowTrigger):  # 5F-3：其他種類不排序
+            continue
+        if phase.trigger.permille >= last:
+            problems.append(f"階段 {phase.id} 的 HP 門檻必須比前一個階段低")
+        last = phase.trigger.permille
+    ids = [p.id for p in phases]
+    if len(set(ids)) != len(ids):
+        problems.append("phases 的 id 不能重複")
+    return problems
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
     - ``resist``：4 組抗性（‰），未列出的分組為 0；可為負值表示易傷。
     - ``element_mods``：個別元素的弱點（正值）或抗性（負值），‰。
-    - ``stamina``：耐力（格擋等反應消耗）；省略時用 ``rules/core.yaml`` 的 ``default_stamina``。
+    - ``stamina``：耐力基礎（武器技、格擋等反應消耗）；省略時依武器大類（``rules/core.yaml`` 的
+      ``resources.class_base``，BAL-15b），上限再加屬性加成。
     - ``reactions``：反應規則；省略時用 ``reactions.yaml`` 的 ``default_rules``；
       ``[]`` 表示沒有反應。
     - ``ai_profile``：效用 AI 的行為模式（``ai_profiles.yaml``）；省略時遠程武器用 ``archer``、
@@ -1184,7 +1543,8 @@ class UnitTemplate(ContentModel):
     - ``skills``：裝備的技能 ID（``content/skills/``，順序即 ``legal_actions`` 的順序）；數量上限依
       ``core.yaml`` 的 ``skill_slots``，``weapon_req`` 必須與武器的 ``weapon_class`` 相容
       （載入時檢查）。
-    - ``max_mana``：法力上限（戰鬥開始時為滿，Phase 2A 不回復）。
+    - ``max_mana``：法力基礎（戰鬥開始時為滿，只在營火回滿）；省略時依武器大類（BAL-15b），上限
+      再加屬性加成並 × ``mana_cap_permille``。
     - ``summon``：召喚物範本（Phase 3D-4a；放在 ``content/units/summons/``，只能由 ``summon``
       原語產生，不能直接參戰）。
     - ``totem``：圖騰（Phase 3D-4b；不移動、不攻擊，只提供光環）。
@@ -1208,11 +1568,11 @@ class UnitTemplate(ContentModel):
     reactions: tuple[ReactionRule, ...] | None = None
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     skills: tuple[str, ...] = Field(default=(), max_length=32)
-    max_mana: int = Field(default=0, ge=0)
+    max_mana: int | None = Field(default=None, ge=0)
     scaled_resources: bool = False
-    """法力與耐力上限依屬性（Phase 3H-2，07 7.2；主角）：``max_mana``／``stamina`` 是基礎值，引擎依
-    ``core.yaml`` 的 ``resources`` 加上屬性加成。一輪的主角與 build 英雄為 ``True``，其他單位照
-    固定值。"""
+    """舊旗標（Phase 3H-2：只有主角的法力與耐力上限依屬性）。BAL-15b（玩法決定 #80）起敵我同一套
+    公式，引擎不再看這個旗標；保留欄位讓舊存檔與舊資料照常載入。``max_mana``／``stamina`` 是基礎
+    值（省略時依武器大類，``core.yaml`` 的 ``resources.class_base``），引擎再加屬性加成。"""
     summon: bool = False
     totem: TotemSpec | None = None
     """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""
@@ -1252,6 +1612,21 @@ class UnitTemplate(ContentModel):
     level: int = Field(default=1, ge=1, le=99)
     """角色等級（Phase 3-33b）：召喚物的 HP 與傷害依施放者的等級成長；一輪的主角帶入目前等級，
     其他單位為 1。"""
+    opening_statuses: tuple[OpeningStatus, ...] = ()
+    """開場就帶著的狀態（Phase 5A-M1）：開戰時在擲先攻前施加、不擲抵抗（同
+    ``UnitSpawn.opening_statuses``，先施加範本的）。"""
+    phases: tuple[BossPhase, ...] = ()
+    """Boss 的階段（Phase 5F-2）：HP 跌破門檻時換技能組／行為模式、加減狀態、改天氣與格子、召喚
+    （:class:`BossPhase`、:mod:`trpg.engine.boss_phases`）；空＝沒有階段。"""
+
+    @model_validator(mode="after")
+    def _check_phases(self) -> UnitTemplate:
+        problems = check_phases(self.phases)
+        if problems:
+            raise ValueError("；".join(problems))
+        if self.phases and self.summon:
+            raise ValueError("召喚物不能有 phases")
+        return self
 
     @model_validator(mode="after")
     def _check_totem(self) -> UnitTemplate:

@@ -16,7 +16,7 @@ export function tile(x: number, y: number, over: Partial<TileView> = {}): TileVi
   };
 }
 
-export function unit(id: string, team: "ally" | "enemy", x: number, y: number, over: Partial<UnitView> = {}): UnitView {
+export function unit(id: string, team: "ally" | "enemy" | "third", x: number, y: number, over: Partial<UnitView> = {}): UnitView {
   return {
     id,
     template_id: "t",
@@ -40,6 +40,7 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     weapon_traits_zh: [],
     offhand_name_zh: "",
     offhand_traits_zh: [],
+    traits_zh: [],
     ammo: 0,
     magazine: 0,
     tags: [],
@@ -117,7 +118,7 @@ export function smallView(over: Partial<BattleView> = {}): BattleView {
     max_rounds: 30,
     weather_id: null,
     weather_name_zh: null,
-    objective: { kind: "eliminate", tiles: [], rounds: null },
+    objective: { kind: "eliminate", tiles: [], rounds: null, leader_retreat: false },
     ended: false,
     winner: null,
     end_reason: null,

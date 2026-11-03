@@ -1,0 +1,103 @@
+// 任務日誌與線頭（Phase 5B-5；09 9.6.3、9.6.7 #6）：左欄切換（地點圖 ↔ 任務與線頭，代決 5B5-10）。
+// 任務三選一待選時左欄固定顯示三選一（`WorldOfferPending`，重用一輪的 `OfferPicker`；野外學到的放進備用）。
+import { useState } from "react";
+import type { WorldAction, WorldView } from "../api/types";
+import { OfferPicker } from "../run/OfferPicker";
+import { sortQuests, stepMark } from "./story";
+
+export function QuestLog({ view, onClose }: { view: WorldView; onClose(): void }) {
+  const quests = sortQuests(view.quests ?? []);
+  const threads = view.threads ?? [];
+  return (
+    <div className="panel world-quest-log" data-testid="world-quest-log">
+      <div className="world-quest-head">
+        <h2>任務與線頭</h2>
+        <button type="button" onClick={onClose}>
+          回到地點圖
+        </button>
+      </div>
+      <div className="section-title">任務日誌</div>
+      {quests.length === 0 ? (
+        <div className="muted small">還沒有接任務。到小鎮找人說話，看看「可以接的任務」。</div>
+      ) : (
+        quests.map((q) => (
+          <div key={q.id} className={`world-quest${q.done ? " done" : ""}`} data-testid="world-quest">
+            <div>
+              <b>{q.name_zh}</b>
+              <span className="muted small">
+                　{q.kind_zh}
+                {q.giver_zh != null ? `・${q.giver_zh}` : ""}
+                {q.done ? "・已完成" : ""}
+              </span>
+            </div>
+            {q.summary_zh !== "" && <div className="muted small">{q.summary_zh}</div>}
+            <ol className="world-quest-steps small">
+              {q.steps.map((s, i) => (
+                <li key={i} className={s.done ? "done" : s.current ? "current" : "todo"} data-testid="world-quest-step">
+                  <span className="world-step-mark">{stepMark(s)}</span> {s.text_zh}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))
+      )}
+      <div className="section-title">線頭</div>
+      {threads.length === 0 ? (
+        <div className="muted small">還沒有線頭。事件的結果會留下線頭（每人約 5 條，約 3 天到期）。</div>
+      ) : (
+        <ul className="world-threads small" data-testid="world-threads">
+          {threads.map((t) => (
+            <li key={t.id}>
+              <b>{t.text_zh}</b>
+              <span className="muted">
+                　{t.scope_zh}・{t.expires_zh}
+                {t.npc_zh != null ? `・${t.npc_zh}` : ""}
+                {t.location_zh != null ? `・指向${t.location_zh}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy: boolean; onAct(action: WorldAction): void }) {
+  const pending = view.pending_offer!;
+  const [pick, setPick] = useState<number | null>(null);
+  const [replace, setReplace] = useState<string | null>(null);
+  return (
+    <div className="panel world-offer" data-testid="world-offer">
+      <h2>任務給的技能三選一</h2>
+      <div className="small">
+        {pending.quest_name_zh}：{pending.step_zh}
+      </div>
+      <div className="muted small">{pending.place_zh}選之前不能移動或使用其他服務。</div>
+      <OfferPicker
+        offer={pending.offer}
+        hero={view.hero}
+        runSeed={0}
+        groupKey={`${pending.quest_name_zh}:${pending.step_zh}`}
+        pick={pick}
+        replace={pending.can_replace ? replace : null}
+        disabled={busy}
+        onPick={setPick}
+        onReplace={(id) => setReplace(pending.can_replace ? id : null)}
+      />
+      <div className="run-actions">
+        <button
+          type="button"
+          className="primary"
+          disabled={busy || pick === null}
+          onClick={() => onAct({ kind: "offer_pick", pick, replace: pending.can_replace ? replace : null })}
+          data-testid="world-offer-take"
+        >
+          學這招
+        </button>
+        <button type="button" disabled={busy} onClick={() => onAct({ kind: "offer_pick", pick: null })} data-testid="world-offer-skip">
+          跳過
+        </button>
+      </div>
+    </div>
+  );
+}

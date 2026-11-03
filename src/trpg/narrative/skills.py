@@ -14,7 +14,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import Dice, WeaponDef, weapon_attr_examples_zh
+from trpg.content.battle import Dice, StatusDef, WeaponDef, weapon_attr_examples_zh
 from trpg.content.form_text import form_sentence, natural_weapon_text
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
@@ -127,6 +127,13 @@ def _dice(dice: Dice) -> str:
     return f"{dice.count}d{dice.sides}"
 
 
+def _dice_flat(spec: EffectSpec) -> str:
+    """骰子，帶固定值加成時接「＋n」（BAL-12b）。"""
+    assert spec.dice is not None
+    flat = f"＋{spec.flat_bonus}" if spec.flat_bonus else ""
+    return f"{_dice(spec.dice)}{flat}"
+
+
 def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     """形狀與參數的一句話，例如「錐形 3」「單體 射程 6」。"""
     name = library.ruleset.shape_def(shape.type).name_zh
@@ -136,12 +143,21 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
         "radius": "半徑",
         "jumps": "跳躍",
         "jump_range": "跳躍距離",
+        "arm": "臂長",
     }
     parts: list[str] = []
     for key, value in shape.param_values().items():
         text = "武器射程" if value == "weapon" else str(value)
         parts.append(f"{labels[key]} {text}")
+    falloff = library.ruleset.core.chain_falloff_permille
+    if shape.type == "chain" and falloff:  # 連鎖衰減（BAL-13d，06 6.5「BAL-13c 定」）
+        parts.append(f"每跳 −{_percent(falloff)}%")
     return f"{name}（{'，'.join(parts)}）" if parts else name
+
+
+def _percent(permille: int) -> str:
+    whole, rest = divmod(permille, 10)
+    return f"{whole}.{rest}" if rest else str(whole)
 
 
 def skill_shape_text(library: ContentLibrary, skill: SkillDef) -> str:
@@ -318,7 +334,7 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
     if skill.category == "spell":
         assert spec.dice is not None and spec.element is not None
         attr, element = scaling_label(skill, lib), spec.element.display_name
-        text = f"{_dice(spec.dice)}＋{attr}加成的{element}傷害"
+        text = f"{_dice_flat(spec)}＋{attr}加成的{element}傷害"
         if skill.damage_permille is not None:
             text += f"（基礎傷害 ×{discount / 1000:g}）"
     else:
@@ -359,7 +375,7 @@ def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
 
 def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
-    text = f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
+    text = f"治療 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
     if spec.form_bonus_permille is not None:
         text += f"（{_form_bonus_text(spec)}）"
     return text
@@ -592,18 +608,37 @@ def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> st
     status = lib.ruleset.status_def(spec.status)
     text = f"狀態「{status.name_zh}」{status_duration_text(lib, spec.status, spec.duration)}"
     magnitude = spec.magnitude_permille
-    if magnitude is None or magnitude == NEUTRAL_PERMILLE or not status.stance:
+    if magnitude is None or magnitude == NEUTRAL_PERMILLE:
         return text
+    if not status.stance:
+        if not status.scales_with_magnitude:
+            return text
+        return f"{text}，{_strength_text(lib, status, magnitude)}"
     # 完整姿態（3W-5b）：數值句用與結算同一個算法放大，卡片數字＝實戰
     lines = status_modifier_lines(scaled_status_def(status, magnitude), lib)
     detail = f"：{'；'.join(lines)}" if lines else ""
     return f"{text}，幅度強化 ×{magnitude / 10:g}%{detail}"
 
 
+def _strength_text(lib: ContentLibrary, status: StatusDef, magnitude: int) -> str:
+    """數值型狀態的強度（BAL-12e，#76）：每回合的傷害／治療寫倍率，倍率與加值的數字用與結算同一個
+    算法放大（卡片數字＝實戰）。"""
+    parts: list[str] = []
+    if status.on_turn_start_damage is not None:
+        parts.append("每回合傷害")
+    if status.on_turn_start_heal is not None:
+        parts.append("每回合治療")
+    head = f"強度 {magnitude / 10:g}%"
+    if parts:
+        head += f"（{'、'.join(parts)} ×{magnitude / 10:g}%）"
+    lines = status_modifier_lines(scaled_status_def(status, magnitude), lib)
+    return head + (f"：{'；'.join(lines)}" if lines else "")
+
+
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
     status = lib.ruleset.status_def(SHIELD_STATUS)
-    amount = "" if spec.dice is None else f"{_dice(spec.dice)}＋"
+    amount = "" if spec.dice is None else f"{_dice_flat(spec)}＋"
     rounds = spec.duration or status.duration
     return (
         f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {rounds} 回合；"
@@ -619,7 +654,17 @@ def _cleanse(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
 def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.surface is not None
     turns = f" {spec.duration} 回合" if spec.duration else ""
-    return f"生成「{lib.ruleset.surface_def(spec.surface).name_zh}」表面{turns}"
+    text = f"生成「{lib.ruleset.surface_def(spec.surface).name_zh}」表面{turns}"
+    magnitude = spec.magnitude_permille
+    # 表面的強度（BAL-12e）
+    if (
+        magnitude
+        and magnitude != NEUTRAL_PERMILLE
+        and lib.ruleset.surface_scales_with_magnitude(spec.surface)
+    ):
+        pct = f"{magnitude / 10:g}%"
+        text += f"，強度 {pct}（表面每回合的傷害、治療與施加的狀態 ×{pct}）"
+    return text
 
 
 def _blow_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -1244,12 +1289,13 @@ def cost_parts(
     library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True, ally: bool = False
 ) -> list[str]:
     """代價的各段文字（AP、法力、耐力、HP、施放後狀態、冷卻、每場次數）。``ally`` 時法力顯示我方
-    實際會扣的費用（``ally_mana_cost_permille`` 打折後，BAL-4c）；否則為技能資料的原始費用。"""
+    實際會扣的費用（``mana_cost_permille`` 打折後，BAL-4c；BAL-15b 起敵我都打折）；否則為技能
+    資料的原始費用。"""
     cost = skill.cost
     ap = skill_ap(library, skill)
     parts = [f"AP {ap}"] if with_ap and ap is not None else []
     if cost.mana:
-        mana = library.ruleset.core.ally_mana(cost.mana) if ally else cost.mana
+        mana = library.ruleset.core.mana_cost(cost.mana) if ally else cost.mana
         parts.append(f"法力 {mana}")
     if cost.stamina:
         parts.append(f"耐力 {cost.stamina}")
@@ -1656,8 +1702,8 @@ def skill_card(
 ) -> SkillCard:
     """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`；``owner`` 見
     :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。
-    ``ally``（預設，卡片是給玩家看的）時代價的法力是我方實際會扣的費用（BAL-4c）；敵方單位的
-    卡片傳 ``False`` 顯示原價。"""
+    ``ally``（預設）時代價的法力是戰鬥中實際會扣的費用（BAL-4c；BAL-15b 起敵我同一套，敵方單位的
+    卡片也一樣）；``False`` 顯示技能資料的原價。"""
     token = _CARD_WEAPON.set(None if owner is None else owner.weapon)
     try:
         return _build_card(library, skill, mastery_active, owner, ally=ally)

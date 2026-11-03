@@ -179,6 +179,8 @@ export type AttributeId = Schemas["Attribute"];
 // 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）
 export type AttributeAffects = Schemas["AttributeAffectsOut"];
 export type AttributeSuggestion = Schemas["AttributeSuggestionOut"];
+/** 創角時關鍵字與屬性不搭的提示（BAL-19g）。 */
+export type RouteHint = Schemas["RouteHintOut"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
 export type RunChoice =
   | Schemas["LevelUpChoice"]
@@ -218,3 +220,127 @@ export type GearCheck = Schemas["GearCheck"];
 export type GearCheckRequest = Schemas["GearCheckRequest"];
 /** 英雄面板的一行裝備加成（實際值、截斷前的值、每條詞條的貢獻）。 */
 export type GearTotalView = Schemas["GearTotalView"];
+// 帳號與登入（Phase 5E-1）
+export type AuthStatus = Schemas["AuthStatus"];
+export type AccountView = Schemas["AccountView"];
+export type LoginResponse = Schemas["LoginResponse"];
+// 大世界（Phase 5A-5）
+export type WorldView = Schemas["WorldView"];
+export type WorldCharacterView = Schemas["WorldCharacterView"];
+export type WorldCharacterSummary = Schemas["WorldCharacterSummary"];
+export type WorldLocationView = Schemas["WorldLocationView"];
+export type WorldMapView = Schemas["WorldMapView"];
+export type WorldEncounterView = Schemas["EncounterView"];
+export type WorldHereView = Schemas["HereView"];
+export type WorldBattleResponse = Schemas["WorldBattleResponse"];
+export type CreateWorldCharacterRequest = Schemas["CreateWorldCharacterRequest"];
+/** 世界動作（`fight` 走開戰端點）；`hasten` 省略 ＝ 不趕路。 */
+export type WorldAction =
+  | (Omit<Schemas["TravelAction"], "hasten"> & { hasten?: boolean })
+  | Schemas["CampAction"]
+  | Schemas["RetreatAction"]
+  | Schemas["RestAction"]
+  | Schemas["LoadoutAction"]
+  | Schemas["TeleportAction"]
+  // 5A-7：成長的世界動作
+  | Schemas["AllocateAction"]
+  | Schemas["RespecAction"]
+  | Schemas["FlashAction"]
+  | Schemas["FlashPickAction"]
+  | Schemas["DissolveAction"]
+  | Schemas["InheritAction"]
+  | (Omit<Schemas["SwearOathAction"], "source" | "prompt_version" | "player_text"> & { player_text?: string })
+  | Schemas["ReleaseOathAction"]
+  // 5B-5：任務、三選一、說話、酒館（情境判定與聊天走自己的端點）
+  | Schemas["AcceptQuestAction"]
+  | (Omit<Schemas["OfferPickAction"], "pick" | "replace"> & { pick?: number | null; replace?: string | null })
+  | Schemas["TalkAction"]
+  | Schemas["TavernAction"]
+  // 5B-5b：放棄、交涉、戰鬥解法
+  | (Omit<Schemas["EventSolveAction"], "use_thread"> & { use_thread?: string | null })
+  // 5C-1：雇用系統傭兵（整組換掉）；5C-2：借影子、打法、自己影子的預設打法
+  | (Omit<Schemas["HireAction"], "shadows" | "ai"> & { shadows?: string[]; ai?: Record<string, string> })
+  | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null })
+  | Schemas["NewsSeenAction"]
+  // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
+  | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
+  | (Omit<Schemas["SellAction"], "count"> & { count?: number })
+  | (Omit<Schemas["PouchAction"], "items"> & { items: Record<string, number> })
+  | Schemas["UseItemAction"]
+  | Schemas["EquipAction"]
+  // 5D-2b：背包滿了，戰後結算選要丟哪件
+  | (Omit<Schemas["LootChooseAction"], "drop_gear"> & { drop_gear?: string[] })
+  // 5D-3：鐵匠（打造、強化、分解）與附魔台（重骰、指定）
+  | (Pick<Schemas["CraftAction"], "kind" | "station"> & Partial<Omit<Schemas["CraftAction"], "kind" | "station">>)
+  | Schemas["EnhanceAction"]
+  | Schemas["RerollAction"]
+  | Schemas["ImbueAction"]
+  | Schemas["SalvageAction"]
+  // 5F-4：影子循環賽的報名與取消
+  | (Omit<Schemas["LeagueEnterAction"], "ai"> & { ai?: string | null })
+  | Schemas["LeagueWithdrawAction"]
+  // 5F-3：挑戰賽季 Boss（扣帳號今天的 1 次，之後照一般遭遇開戰）
+  | Schemas["SeasonBossAction"];
+export type WorldGrowthView = Schemas["GrowthView"];
+export type WorldOathView = Schemas["OathView"];
+export type WorldOathTemplate = Schemas["OathTemplateView"];
+// 大世界事件與任務（Phase 5B-5）
+export type WorldEventView = Schemas["EventView"];
+export type WorldEventSolution = Schemas["EventSolutionView"];
+export type WorldSituationView = Schemas["SituationView"];
+export type WorldCiteFact = Schemas["CiteFactView"];
+export type WorldSituationResult = Schemas["SituationResultView"];
+export type WorldStory = Schemas["StoryView"];
+export type WorldNpcHere = Schemas["NpcHereView"];
+export type WorldDialogLine = Schemas["DialogLineView"];
+export type WorldQuestLog = Schemas["QuestLogView"];
+export type WorldQuestHere = Schemas["QuestHereView"];
+export type WorldPendingOffer = Schemas["PendingOfferView"];
+export type WorldThread = Schemas["ThreadView"];
+export type WorldLlmView = Schemas["WorldLlmView"];
+/** 地點留言板（5E-3，#105）：所在地點的留言（最新 20 則）與其他角色的足跡。 */
+export type LocationBoard = Schemas["LocationBoard"];
+export type NoteView = Schemas["NoteView"];
+/** 城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。 */
+export type SeasonBoardView = Schemas["SeasonBoardView"];
+export type BoardGoalView = Schemas["BoardGoalView"];
+export type BoardBountyView = Schemas["BoardBountyView"];
+export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
+export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
+export type BoardBossEntryView = Schemas["BoardBossEntryView"];
+/** 「你不在的時候」摘要（5F-1b）：上次看過之後的世界事件成敗、懸賞歸屬、新開放的區域。 */
+export type AbsenceView = Schemas["AbsenceView"];
+export type AbsenceItemView = Schemas["AbsenceItemView"];
+/** 影子循環賽（5F-4）：報名、排行榜、場次與重播。 */
+export type LeagueView = Schemas["LeagueView"];
+export type LeagueStandingView = Schemas["LeagueStandingView"];
+export type LeagueMatchView = Schemas["LeagueMatchView"];
+export type LeagueReplayResponse = Schemas["LeagueReplayResponse"];
+/** 編年史、上季角色與季末重置（5F-5）。 */
+export type ChronicleView = Schemas["ChronicleView"];
+export type ChronicleSeasonView = Schemas["ChronicleSeasonView"];
+export type LegacyHeroView = Schemas["LegacyHeroView"];
+export type SeasonResetRequest = Schemas["SeasonResetRequest"];
+export type SeasonResetReport = Schemas["SeasonResetReport"];
+export type ResetLine = Schemas["ResetLine"];
+// 隊伍與系統傭兵（Phase 5C-1）
+export type WorldPartyView = Schemas["PartyView"];
+export type WorldPartyMember = Schemas["PartyMemberView"];
+export type WorldMercenary = Schemas["MercenaryView"];
+// 朋友的影子（Phase 5C-2）
+export type WorldShadow = Schemas["ShadowView"];
+export type WorldAiChoice = Schemas["AiChoiceView"];
+export type WorldMyShadow = Schemas["MyShadowView"];
+// 貨幣、背包、腰包與商店（Phase 5D-1）
+export type WorldWallet = Schemas["WalletView"];
+export type WorldInventory = Schemas["InventoryView"];
+export type WorldBagItem = Schemas["BagItemView"];
+export type WorldShop = Schemas["ShopView"];
+export type WorldShopItem = Schemas["ShopItemView"];
+export type WorldPendingLoot = Schemas["PendingLootView"];
+// 鐵匠與附魔台（Phase 5D-3）
+export type WorldCrafting = Schemas["CraftingView"];
+export type WorldCraftGear = Schemas["CraftGearView"];
+export type WorldCraftMaterial = Schemas["CraftMaterialView"];
+export type WorldRecipe = Schemas["RecipeView"];

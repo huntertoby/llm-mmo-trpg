@@ -12,17 +12,17 @@ from trpg.narrative.skills import cost_summary, skill_card
 from trpg.shared.types import Team, UnitId
 
 FIRE_BOLT = "skill_fire_bolt"
-"""法力 6；我方 ×0.8 ＝ 4.8 → 5。"""
+"""法力 5（BAL-12d 火系 ×0.9）；我方 ×0.8 ＝ 4。"""
 
 
 def _raw_and_ally() -> tuple[int, int]:
     lib = library()
     raw = lib.skills[FIRE_BOLT].cost.mana
-    return raw, lib.ruleset.core.ally_mana(raw)
+    return raw, lib.ruleset.core.mana_cost(raw)
 
 
 def test_fixture_skill_has_a_visible_discount() -> None:
-    assert _raw_and_ally() == (6, 5)
+    assert _raw_and_ally() == (5, 4)
 
 
 def test_skill_card_shows_the_ally_cost_and_cli_summary_the_raw_cost() -> None:
@@ -52,8 +52,8 @@ def test_workshop_check_reports_battle_mana_and_keeps_raw_skill(client: TestClie
     assert f"法力 {ally}" in body["card"]["cost"]
 
 
-def test_hero_cards_follow_the_units_team() -> None:
-    """戰鬥中的卡片（有算式的才會列出）：我方單位打折、敵方單位原價。"""
+def test_hero_cards_show_the_discounted_cost_for_both_teams() -> None:
+    """戰鬥中的卡片（有算式的才會列出）：BAL-15b 起敵我同一套，敵方單位也顯示打折後的費用。"""
     lib = library()
     raw, ally = _raw_and_ally()
     m = make_map(FLAT7, ally=[(1, 3)], enemy=[(5, 3)])
@@ -66,4 +66,4 @@ def test_hero_cards_follow_the_units_team() -> None:
     enemy_cards = hero_cards(state, lib, UnitId("unit_0002")).cards
     assert FIRE_BOLT in ally_cards and FIRE_BOLT in enemy_cards
     assert f"法力 {ally}" in ally_cards[FIRE_BOLT].cost
-    assert f"法力 {raw}" in enemy_cards[FIRE_BOLT].cost
+    assert f"法力 {ally}" in enemy_cards[FIRE_BOLT].cost and raw != ally

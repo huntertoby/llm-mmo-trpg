@@ -1,0 +1,36 @@
+# 遊戲伺服器設定（Phase 5E-1）。此檔進版控，不放金鑰或密碼。
+# 環境變數可覆寫：TRPG_SERVER_CONFIG（設定檔路徑）、TRPG_DEV_MODE（true／false）、TRPG_ACCOUNTS_DIR。
+
+[accounts]
+# 開發模式：true 時大世界不用登入（照 5A-5，方便本機試玩）；帶了有效 token 照樣依帳號存取。
+# 正式開服（朋友連進來）前改成 false。
+dev_mode = true
+# 一個帳號最多幾個角色（專案計畫 3.1「2～3 個」）。
+max_characters = 3
+# 登入後的 session 有效時間（小時）。
+session_ttl_hours = 168
+# 帳號存檔資料夾（機器相關）；空字串＝<存檔資料夾>/accounts（預設 saves/accounts，已在 .gitignore 內）。
+dir = ""
+# 登入嘗試次數限制（Phase 5E-2）：同一帳號名稱或同一 IP 在視窗內「失敗」達上限 → 429，視窗過後恢復。
+login_max_failures = 5
+login_ip_max_failures = 5
+login_window_minutes = 15
+
+[network]
+# Tunnel（cloudflared 或其他）給的外部網址，例 "https://trpg.example.com"（Phase 5E-3）。
+# 只用來顯示與部署檢查（scripts/deploy.py check），不影響伺服器綁定的位址。環境變數 TRPG_PUBLIC_URL 可覆寫。
+public_url = ""
+# 可信任的轉發來源（IP 或 CIDR）。空＝不信任任何轉發標頭（X-Forwarded-For／CF-Connecting-IP 一律忽略）。
+# Tunnel 程式跑在同一台電腦時通常填 ["127.0.0.1", "::1"]（見 docs/部署說明.md）。
+# 環境變數 TRPG_TRUSTED_PROXIES（逗號分隔）可覆寫。
+trusted_proxies = []
+
+[llm_health]
+# 本機模型的健康檢查（Phase 5E-3）：啟動時 ping 一次，之後每 interval_s 秒 ping；0＝只在啟動時。
+# 只在大世界的 LLM 開關開著時 ping；不可用時大世界的敘述全部改用模板，伺服器視窗會印出警告。
+interval_s = 60
+
+[season]
+# 開賽日（Phase 5F-1）：當地日期 YYYY-MM-DD；那天的刷新時刻（世界規則 calendar，預設台北 06:00）是賽季第 1 天的開始。
+# 空字串＝第一次建立世界的當下。世界建立後改這裡不會生效（開賽時間已寫進存檔）。環境變數 TRPG_SEASON_START 可覆寫。
+start_date = ""

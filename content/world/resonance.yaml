@@ -1,0 +1,28 @@
+# 裝備共鳴（Phase 5D-3；docs/phases/Phase5計畫.md 30.2；schema：src/trpg/content/world_crafting.py）。
+# 08 8.9：resonance_tags＝06 6.27 的關鍵字；穿 2 件同關鍵字的裝備觸發小共鳴（8.26.3 M3：第一季只有 2 件，
+# 4 件留到正式季）。物品的關鍵字＝技能強化詞條的關鍵字＋打造時特色材料的共鳴標籤（代決 5D3-8）。
+# 效果是現成詞條（＝現成原語）：依序挑第一條「掛得上帶該關鍵字的某件穿戴物品、那件沒有同 ID、條數未滿」
+# 的詞條（同一件不能有兩條同 ID，所以多數共鳴最後備一條「最大 HP +8」）。效果與數值是開發 PM 定的初值，不另算物品預算（待 PM 決定）。
+pieces: 2
+resonances:
+  - keyword: ignite
+    name_zh: 燎原共鳴
+    affixes: [{affix: affix_kw_burn_duration}, {affix: affix_resist_fire, value: 100}]
+  - keyword: charged
+    name_zh: 雷鳴共鳴
+    affixes: [{affix: affix_kw_shock_area}, {affix: affix_attr_wil, value: 2}, {affix: affix_max_hp, value: 8}]
+  - keyword: concealed
+    name_zh: 霧隱共鳴
+    affixes: [{affix: affix_attr_dex, value: 2}, {affix: affix_max_hp, value: 8}]
+  - keyword: poisoned
+    name_zh: 丹毒共鳴
+    affixes: [{affix: affix_attr_wis, value: 2}, {affix: affix_max_hp, value: 8}]
+  - keyword: frozen
+    name_zh: 寒霜共鳴
+    affixes: [{affix: affix_attr_int, value: 2}, {affix: affix_max_hp, value: 8}]
+  - keyword: prone
+    name_zh: 崩山共鳴
+    affixes: [{affix: affix_kw_prone_damage, value: 100}, {affix: affix_attr_str, value: 2}]
+  - keyword: summon
+    name_zh: 群靈共鳴
+    affixes: [{affix: affix_summon_duration}, {affix: affix_attr_wis, value: 2}, {affix: affix_max_hp, value: 8}]

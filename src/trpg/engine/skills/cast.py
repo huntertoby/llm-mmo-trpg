@@ -71,6 +71,7 @@ from trpg.engine.reactions import (
     enemy_enters_adjacent_reactions,
     enemy_moves_in_range_reactions,
     hit_reactions,
+    kin_ward_reactions,
     opportunity_attacks,
     spell_hit_reactions,
     take_decoy,
@@ -314,6 +315,8 @@ class Cast:
                 unit = guardian
         if roll.hit and self.skill.category == "spell" and unit.team is not self.caster.team:
             spell_hit_reactions(ctx, self.caster, unit)  # 被法術命中、傷害之前（3D-3）
+        if roll.hit and unit.team is not self.caster.team:
+            kin_ward_reactions(ctx, self.caster, unit)  # 同門相護：命中後、傷害前（Phase 5A-M1）
         if roll.hit and (force_block or self._affected_by_damage(unit)):
             self.blocks[unit.id] = block_multiplier(
                 ctx, self.caster, unit, melee=self.profile.height_limited
@@ -662,6 +665,16 @@ class Cast:
             return self.ctx.core.pierce_behind_permille
         return PERMILLE
 
+    def chain_permille(self, unit: UnitState) -> int:
+        """連鎖衰減（BAL-13c，#77）：連鎖形狀第 n 個目標（從 0 起）的傷害、治療、護盾威力
+        ＝ ``1000 − n × chain_falloff_permille``，不低於 ``chain_floor_permille``；不是連鎖的施放、
+        或不在連鎖裡的單位（例如施放者自己）為 1000。"""
+        if not self.area.chained or unit.id not in self.area.units:
+            return PERMILLE
+        core = self.ctx.core
+        hop = self.area.units.index(unit.id)
+        return max(PERMILLE - hop * core.chain_falloff_permille, core.chain_floor_permille)
+
     def shorten_cooldown(self) -> None:
         """修正規則的 ``cooldown_delta``：命中後該技能的剩餘冷卻減少（下限 0）。"""
         if self.cooldown_delta == 0 or not self.caster.alive:
@@ -770,6 +783,7 @@ class Cast:
             bonus = bonus * range_damage_permille(self.caster, manhattan(self.caster.xy, unit.xy))
             bonus //= PERMILLE
         behind = self.behind_permille(unit)
+        chain = self.chain_permille(unit)
         return DamageEffect(
             target_id=unit.id,
             source_id=self.caster.id,
@@ -787,8 +801,10 @@ class Cast:
             * block
             * bonus
             * behind
-            // (PERMILLE * PERMILLE * PERMILLE),
+            * chain
+            // (PERMILLE * PERMILLE * PERMILLE * PERMILLE),
             pierce_permille=behind,
+            chain_permille=chain,
             block_permille=block,
         )
 

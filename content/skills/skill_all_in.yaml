@@ -14,7 +14,7 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 1800}
+  - {type: damage, multiplier_permille: 2340}
 condition: null
 cost:
   stamina: 6

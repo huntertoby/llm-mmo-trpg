@@ -15,7 +15,7 @@ from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons.core import SummonStats, summon_stats
 from trpg.narrative.skills import CardOwner, SkillCard, skill_card
-from trpg.shared.types import Attribute, Team, UnitId
+from trpg.shared.types import Attribute, UnitId
 
 __all__ = ["hero_cards", "unit_card_owner"]
 
@@ -49,7 +49,7 @@ def hero_cards(state: BattleState, library: ContentLibrary, unit_id: UnitId) -> 
         except KeyError:
             continue
         owner = unit_card_owner(state, unit, skill)
-        card = skill_card(library, skill, owner=owner, ally=unit.team is Team.ALLY)
+        card = skill_card(library, skill, owner=owner)  # 法力敵我都打折（BAL-15b）
         if card.formula_lines or card.summons:
             cards[skill_id] = card
     return HeroCards(cards=cards)

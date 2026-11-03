@@ -16,6 +16,10 @@
   3W-5）。
 - ``POST /api/runs/{run_id}/save``：存檔（戰鬥中也可以）。
 
+5D-R2：開發用端點（``dev-packs``、``dev-advance``）與存檔列表、讀檔（``saves``、``load``）在
+:data:`dev_router`，只在開發模式（``config/server.toml`` 的 ``dev_mode``）開時掛載；開發模式關時
+整個 ``/api/runs`` 要登入（:func:`trpg.api.auth.require_login`，``create_app`` 掛）。
+
 Phase 3-6：節點改變（戰後結算、升級、營火、結束）與每個戰鬥動作之後自動存檔（同一個檔案覆寫）。
 
 錯誤：不存在 404、節點不符 409、內容不合法或存檔壞掉 422。
@@ -27,7 +31,7 @@ import os
 
 from fastapi import APIRouter, HTTPException, Request
 
-from trpg.api.attribute_text import attribute_affects, attribute_suggestion
+from trpg.api.attribute_text import attribute_affects, attribute_suggestion, route_hint
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import (
     allocation_preview,
@@ -74,9 +78,12 @@ from trpg.roguelite.start import (
 )
 from trpg.roguelite.state import Choice, RunState
 
-__all__ = ["router"]
+__all__ = ["dev_router", "router"]
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
+dev_router = APIRouter(prefix="/api/runs", tags=["runs"])
+"""只在開發模式掛的端點（5D-R2）。要掛在 :data:`router` 之前
+（``/saves`` 等不能被 ``/{run_id}`` 吃掉）。"""
 
 
 def _respond(store: RunStore, session: RunSession) -> RunResponse:
@@ -215,6 +222,7 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         options=tuple(options),
         suggestion=attribute_suggestion(picked, weapon),
         attribute_affects=attribute_affects(picked, weapon),
+        route_hint=route_hint(library, weapon, tuple(chosen)),
     )
 
 
@@ -227,7 +235,7 @@ def post_start_resources(body: StartResourcesRequest, request: Request) -> Start
     return StartResourcesOut(hp=out.hp, mana=out.mana, stamina=out.stamina)
 
 
-@router.get("/dev-packs")
+@dev_router.get("/dev-packs")
 def list_dev_packs(request: Request) -> list[DevPackOut]:
     """開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。"""
     library = runs_of(request).library
@@ -255,13 +263,13 @@ def get_rules(request: Request) -> RunRules:
     )
 
 
-@router.get("/saves")
+@dev_router.get("/saves")
 def list_saves(request: Request) -> list[SaveSummary]:
     store = runs_of(request)
     return [save_summary(store.library, s) for s in store.saves()]
 
 
-@router.post("/load")
+@dev_router.post("/load")
 def load_run(body: LoadRunRequest, request: Request) -> RunResponse:
     store = runs_of(request)
     session = store.load(body.run_id)
@@ -337,7 +345,7 @@ def _dev_mark_used(run: RunState) -> RunState:
     return run.model_copy(update={"flash": {**run.flash, **flash}})
 
 
-@router.post("/{run_id}/dev-advance")
+@dev_router.post("/{run_id}/dev-advance")
 def dev_advance(run_id: str, to: str, request: Request, insight: int = 0) -> RunResponse:
     """開發用（Phase 3U-3）：AI 代打到指定的戰後畫面，排版掃描不必手打戰鬥。只在環境變數
     ``TRPG_DEV_ROUTES=1`` 時可用（否則 404）；只對尚未進行戰鬥的一輪有效。

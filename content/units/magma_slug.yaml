@@ -1,0 +1,18 @@
+# 灰燼荒原敵人（Phase 5F-5a；19.2.1）。數值是初值（未經模擬）。
+# 熔核蛞蝓：控制。「爬過的格子留火地」引擎沒有，用吐黏油（燈油瓶：油面，遇火燃燒）近似（代決 5F5a-7）。
+id: magma_slug
+name_zh: 熔核蛞蝓
+attributes: {str: 10, dex: 6, con: 16, int: 4, wis: 8, wil: 10}
+max_hp: 30
+speed: 3
+armor_bonus: 2
+weapon: stone_fist
+ai_profile: brute
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [beast, lava_beast]
+skills: [skill_oil_flask]
+opening_statuses:
+  - {status: molten_burst}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: ooze, material: magma, traits: [core]}}

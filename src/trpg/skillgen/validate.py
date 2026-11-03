@@ -55,6 +55,7 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget, zone_cell_count
 from trpg.skillgen.mechanics import affect_set, resolved_affects
+from trpg.skillgen.memo import by_id
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 
 __all__ = [
@@ -137,7 +138,7 @@ def _rune_tag_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
 def _on_kill_status_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """``on_kill.beneficial``（3-48f，06 6.18）：擊殺時效果一律作用在施放者自己身上，施加的狀態
     只能是有益狀態（工坊已只列有益狀態；LLM 提議與 YAML 匯入也在這裡擋下）。"""
-    statuses = library.ruleset.statuses.by_id()
+    statuses = by_id(library.ruleset.statuses)
     out: list[Violation] = []
     for effect in skill.iter_effects(include_followup=True):
         for sub in effect.on_kill or ():
@@ -235,6 +236,7 @@ def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     out = _cap_violations(skill, library)
     out += _passive_violations(skill, library)
     out += _stance_violations(skill, library)
+    out += _magnitude_violations(skill, library)
     out += _shield_status_violations(skill, library)
     out += _exclusion_violations(skill, library)
     report, budget_out = _budget_violations(skill, library)
@@ -455,7 +457,7 @@ def _revive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
 
 
 def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
-    primitives = library.ruleset.primitives.by_id()
+    primitives = by_id(library.ruleset.primitives)
     rewrites = [e.type for e in skill.effects if primitives[e.type].category == "rule_rewrite"]
     if not rewrites:
         return []
@@ -538,7 +540,7 @@ def _skeleton_category_mismatch(skill: SkillDef, skeleton: SkeletonDef) -> bool:
 
 def _shield_status_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """護盾效果指定的 ``status``（3W-2b）必須是吸收傷害（``absorbs_damage``）的狀態。"""
-    statuses = library.ruleset.statuses.by_id()
+    statuses = by_id(library.ruleset.statuses)
     return [
         Violation(
             skill.id,
@@ -555,7 +557,7 @@ def _shield_status_violations(skill: SkillDef, library: ContentLibrary) -> list[
 def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """姿態（2E-2 4.3）：姿態技能的核心 ``apply_status`` 必須是 ``stance: true`` 的狀態，
     且不設持續回合；其他技能不得施加姿態狀態（取消只能靠 ``EndStance``，不會自己到期）。"""
-    statuses = library.ruleset.statuses.by_id()
+    statuses = by_id(library.ruleset.statuses)
     out: list[Violation] = []
     for index, effect in enumerate(skill.effects):
         if effect.type != "apply_status" or effect.status not in statuses:
@@ -594,6 +596,36 @@ def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
     return out
 
 
+def _magnitude_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """強度（BAL-12e，#76）：``magnitude_permille`` 只能填在有數值可放大的狀態（姿態另有幅度規則）
+    與表面上；潮濕、標記、隱蔽、控制類狀態這類沒有數值的不能填。"""
+    rules = library.ruleset
+    statuses = by_id(rules.statuses)
+    out: list[Violation] = []
+    for index, effect in enumerate(skill.effects):
+        if effect.magnitude_permille is None:
+            continue
+        if effect.type == "apply_status" and effect.status in statuses:
+            status = statuses[effect.status]
+            if status.stance or status.scales_with_magnitude:
+                continue
+            what = f"狀態 {status.id}（{status.name_zh}）"
+        elif effect.type == "create_surface" and effect.surface is not None:
+            if rules.surface_scales_with_magnitude(effect.surface):
+                continue
+            what = f"表面 {effect.surface.value}"
+        else:
+            continue
+        out.append(
+            Violation(
+                skill.id,
+                "magnitude.unscalable",
+                f"effects[{index}]：{what}沒有可放大的數值，不能填 magnitude_permille（強度）",
+            )
+        )
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 4.4 互斥規則
 # ---------------------------------------------------------------------------
@@ -617,7 +649,7 @@ def _effect_matches(library: ContentLibrary, effect: EffectSpec, pattern: Effect
 
 
 def _repeated_control_group(skill: SkillDef, library: ContentLibrary) -> bool:
-    statuses = library.ruleset.statuses.by_id()
+    statuses = by_id(library.ruleset.statuses)
     groups = [
         statuses[e.status].control_group
         for e in skill.effects
@@ -737,9 +769,29 @@ def _modifier_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
                 f"收到 {skill.shape.type}",
             )
         )
+    out += _summon_limit_cost_violations(skill)
     out += _rarity_violations(skill, library) + tier_violations(skill, library)
     _, budget_out = _budget_violations(skill, library)
     return out + budget_out
+
+
+def _summon_limit_cost_violations(skill: SkillDef) -> list[Violation]:
+    """``modifier.summon_limit_cost``（BAL-14c）：「召喚物同時上限 −1」只有手寫的召喚專精被動
+    （``provenance.origin: builtin``）和由它們衍生的技能（有 ``parents``，閃現、升階沿用既有規則）
+    可以帶；組合器、工坊白板、LLM 提議等新做出來的技能不得把它當一般代價（約 3500 點）去換預算。"""
+    provenance = skill.provenance
+    if provenance.origin == "builtin" or provenance.parents:
+        return []
+    return [
+        Violation(
+            skill.id,
+            "modifier.summon_limit_cost",
+            f"modifiers[{index}]：召喚物同時上限 −1 只有召喚專精的內建被動可以帶，"
+            "不能當一般代價換預算",
+        )
+        for index, rule in enumerate(skill.modifiers)
+        if (rule.change.summon_limit_delta or 0) < 0
+    ]
 
 
 def _skeleton_violations(
@@ -823,7 +875,7 @@ EFFECT_PARAM_RULES: tuple[str, ...] = (
 def effect_param_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """:data:`EFFECT_PARAM_RULES` 的違規。呼叫的是 :func:`validate_skill` 用的同一批規則函式，
     所以驗證器與工坊的選項停用不可能各說各話（3-48h：同源）。"""
-    known = library.ruleset.primitives.by_id()
+    known = by_id(library.ruleset.primitives)
     if (
         skill.is_modifier
         or skill.skeleton not in library.skeletons
@@ -865,7 +917,7 @@ def _effect_role_violations(
 ) -> list[Violation]:
     """核心效果至少一個；附帶效果的原語、有害性與數量。"""
     out: list[Violation] = []
-    primitives = library.ruleset.primitives.by_id()
+    primitives = by_id(library.ruleset.primitives)
     secondary = [(i, e) for i, e in enumerate(skill.effects) if not _is_core(library, skeleton, e)]
     if len(secondary) == len(skill.effects):
         names = "、".join(skeleton.core.primitives)
@@ -910,7 +962,7 @@ def _beneficial_core_violations(
 ) -> list[Violation]:
     """核心效果的狀態與表面必須有益（``beneficial``）。"""
     rules = library.ruleset
-    statuses = rules.statuses.by_id()
+    statuses = by_id(rules.statuses)
     out: list[Violation] = []
     for index, effect in enumerate(skill.effects):
         if not _is_core(library, skeleton, effect):
@@ -1027,20 +1079,20 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
     needs: list[RarityNeed] = []
     needs.append(
         RarityNeed(
-            "shape", f"形狀 {skill.shape.type}", rules.shapes.by_id()[skill.shape.type].min_rarity
+            "shape", f"形狀 {skill.shape.type}", by_id(rules.shapes)[skill.shape.type].min_rarity
         )
     )
     skeleton = library.skeletons.get(skill.skeleton)
     if skeleton is not None:
         needs.append(RarityNeed("skeleton", f"骨架 {skeleton.id}", skeleton.min_rarity))
     if skill.trigger is not None:
-        timing = rules.skill_triggers.by_id().get(skill.trigger.event)
+        timing = by_id(rules.skill_triggers).get(skill.trigger.event)
         if timing is not None:
             needs.append(RarityNeed("trigger", f"觸發時機 {timing.id}", timing.min_rarity))
     primitives, statuses, conditions = (
-        rules.primitives.by_id(),
-        rules.statuses.by_id(),
-        rules.conditions.by_id(),
+        by_id(rules.primitives),
+        by_id(rules.statuses),
+        by_id(rules.conditions),
     )
     if skill.cost.on_miss:  # 失手反噬至少 rare（3D-7a 驗收決定、設計 6.17）
         needs.append(RarityNeed("on_miss", "失手反噬 cost.on_miss", ON_MISS_MIN_RARITY))
@@ -1147,6 +1199,7 @@ class TierNeed:
 
 _DAMAGE_TYPES = ("damage", "delayed_damage")
 _SECOND_ELEMENT = 2
+_SUMMON = "summon"
 
 
 def _damage_elements(skill: SkillDef) -> set[str]:
@@ -1198,16 +1251,21 @@ def tier_requirements(skill: SkillDef, library: ContentLibrary) -> list[TierNeed
     needs: list[TierNeed] = []
     if skill.kind in table.kinds:
         needs.append(TierNeed("kind", f"{skill.kind} 技能", table.kinds[skill.kind]))
-    if skill.skeleton in table.skeletons:
+    on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
+    follow = skill.followup.effects if skill.followup is not None else ()
+    every = (*skill.effects, *follow, *on_hit)
+    summons = [e for e in every if e.type == _SUMMON]
+    basic = bool(summons) and all(  # BAL-19c：只召喚 1 隻基本召喚物（1 階召喚白板，#110）
+        e.unit in table.basic_summon_units and e.count in (None, 1) for e in summons
+    )
+    if skill.skeleton in table.skeletons and not (basic and skill.skeleton == _SUMMON):
         needs.append(
             TierNeed("skeleton", f"骨架 {skill.skeleton}", table.skeletons[skill.skeleton])
         )
     needs += _shape_tier_needs(skill, library)
-    on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
-    follow = skill.followup.effects if skill.followup is not None else ()
-    for effect in (*skill.effects, *follow, *on_hit):
+    for effect in every:
         tier = table.primitives.get(effect.type)
-        if tier is not None:
+        if tier is not None and not (basic and effect.type == _SUMMON):
             needs.append(TierNeed("primitive", f"原語 {effect.type}", tier))
     if skill.followup is not None:
         needs.append(TierNeed("followup", "接續段", table.followup))

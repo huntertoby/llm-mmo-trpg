@@ -14,7 +14,7 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 2000, explode: true}
+  - {type: damage, multiplier_permille: 2560, explode: true}
 condition: null
 crit_range: 17
 damage_permille: 750

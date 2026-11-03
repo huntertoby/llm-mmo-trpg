@@ -14,7 +14,8 @@ CONTENT = PROJECT_ROOT / "content"
 
 def test_the_look_table_loads() -> None:
     table = load_summon_looks(CONTENT)
-    assert len(table.looks) == 19  # 17 種特色召喚物＋通用的元素之靈＋狐火誘餌（3R-2）
+    # 17 種特色召喚物＋通用的元素之靈＋狐火誘餌（3R-2）＋霧影（5F-1b）＋餘燼幼蜥（5F-5a）
+    assert len(table.looks) == 21
     bodies = {e.body for e in table.looks.values()}
     assert bodies == {"humanoid", "spirit", "construct", "beast", "plant", "totem"}
 
@@ -27,7 +28,9 @@ def test_every_summon_template_resolves_its_look_from_the_table() -> None:
         entry = table[summon.id.removeprefix("summon_")]
         look = summon.template.look
         assert look is not None, summon.id
-        assert look == SummonLook.model_validate(entry.model_dump(exclude={"zh"})), summon.id
+        assert look == SummonLook.model_validate(entry.model_dump(exclude={"zh", "creature"})), (
+            summon.id
+        )
 
 
 def test_template_files_do_not_carry_their_own_look() -> None:

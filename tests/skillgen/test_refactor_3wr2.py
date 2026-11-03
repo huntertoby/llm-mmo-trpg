@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from tests.engine.helpers import library
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SkillDef
 from trpg.skillgen.complete import complete_strength
 from trpg.skillgen.flash_offer import FlashRequest, choose, make_offer
@@ -82,9 +83,12 @@ def flash_snapshot(skill_id: str, seed: int, tier: int) -> str:
 
 
 def _flash_ids() -> list[str]:
+    """等距取樣照舊在全部內建技能上取（取樣點不因敵人專用技能而整排位移），再去掉
+    ``enemy_only``（5F-3b：只給敵人的技能不會被閃現）。"""
     ids = sorted(library().skills)
     step = max(1, len(ids) // FLASH_SKILLS)
-    return ids[::step]
+    pool = player_skills(library())
+    return [i for i in ids[::step] if i in pool]
 
 
 @cache
@@ -94,7 +98,7 @@ def _fixture() -> dict[str, dict[str, str]]:
 
 
 def _generate() -> dict[str, dict[str, str]]:
-    ids = sorted(library().skills)
+    ids = list(player_skills(library()))
     return {
         "complete": {i: complete_snapshot(i) for i in ids},
         "retier": {i: retier_snapshot(i) for i in ids},
@@ -130,8 +134,8 @@ def test_flash_offers_unchanged(key: str) -> None:
 
 
 def test_fixture_covers_every_builtin_skill() -> None:
-    assert set(_fixture()["complete"]) == set(library().skills)
-    assert set(_fixture()["retier"]) == set(library().skills)
+    assert set(_fixture()["complete"]) == set(player_skills(library()))
+    assert set(_fixture()["retier"]) == set(player_skills(library()))
 
 
 if __name__ == "__main__":

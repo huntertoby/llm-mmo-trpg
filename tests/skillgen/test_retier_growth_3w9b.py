@@ -29,7 +29,7 @@ from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.state import BattleState
 from trpg.narrative.skills import skill_card
 from trpg.shared.types import Pos, Team, UnitId
-from trpg.skillgen.budget import skill_budget, zone_cell_count
+from trpg.skillgen.budget import skill_budget, weak_floor_exempt, zone_cell_count
 from trpg.skillgen.evolution import budget_power
 from trpg.skillgen.skill_tier import retier, retier_report
 from trpg.skillgen.validate import validate_skill
@@ -70,6 +70,22 @@ def _window() -> tuple[Fraction, Fraction]:
     return Fraction(rules.min_ratio_permille, 1000), Fraction(rules.max_ratio_permille, 1000)
 
 
+def _capped_without_numbers(skill: SkillDef) -> bool:
+    """核心效果是沒有數值可加強度的狀態或表面，而且持續已到升階上限（BAL-12e，06 6.34.9）。"""
+    rules = LIB.ruleset
+    cap = LIB.budget.retier_growth.stretch["apply_status"]["duration"]
+    for effect in skill.effects:
+        if effect.type == "apply_status" and effect.status is not None:
+            numeric = rules.status_def(effect.status).scales_with_magnitude
+        elif effect.type == "create_surface" and effect.surface is not None:
+            numeric = rules.surface_scales_with_magnitude(effect.surface)
+        else:
+            continue
+        if not numeric and (effect.duration or 0) >= cap:
+            return True
+    return False
+
+
 def _durations(skill: SkillDef) -> list[int | None]:
     return [e.duration for e in skill.effects if e.type in ("apply_status", "create_surface")]
 
@@ -88,8 +104,15 @@ def test_fixed_blanks_scale_the_effect_itself(recipe: str, seed: int) -> None:
     for tier, skill in enumerate(ladder, start=1):
         assert skill.tier == tier
         assert [e.type for e in skill.effects] == [e.type for e in first.effects]  # 不補傷害
+        ratio = skill_budget(skill, LIB).ratio
+        if _capped_without_numbers(skill):
+            # BAL-12e（#76）：沒有數值的狀態／表面持續到 6 就不再加，偏弱接受（只容許「過弱」；
+            # BAL-12f 的豁免見檔尾的 retier_report 測試）
+            assert [v.rule for v in validate_skill(skill, LIB)] in ([], ["budget.weak"])
+            assert ratio <= high, (recipe, tier)
+            continue
         assert validate_skill(skill, LIB) == [], (recipe, tier)
-        assert low <= skill_budget(skill, LIB).ratio <= high, (recipe, tier)
+        assert low <= ratio <= high, (recipe, tier)
     for before, after in pairwise(ladder):
         assert budget_power(after, LIB) >= budget_power(before, LIB)
         # 持續回合只增不減
@@ -265,7 +288,64 @@ def test_retier_keeps_the_ratio(kind: str, recipe: str, start: int, starter: boo
         done = retier(LIB, prev, tier)
         before = min(max(skill_budget(prev, LIB).ratio, low), high)
         after = skill_budget(done, LIB).ratio
-        assert low <= after <= high, (recipe, tier, float(after))
-        assert abs(after - before) <= RATIO_SLACK, (recipe, tier, float(before), float(after))
         assert budget_power(done, LIB) >= budget_power(prev, LIB)
         prev = done
+        if _capped_without_numbers(done):
+            continue  # BAL-12e（#76）：沒有數值的狀態／表面持續到 6 就不再加，偏弱接受
+        assert low <= after <= high, (recipe, tier, float(after))
+        assert abs(after - before) <= RATIO_SLACK, (recipe, tier, float(before), float(after))
+
+
+# ---------------------------------------------------------------------------
+# BAL-12f：沒有數值的白板升階後豁免預算窗下限
+# ---------------------------------------------------------------------------
+
+
+def _no_number_ladders() -> list[tuple[str, list[SkillDef]]]:
+    out = []
+    for recipe in sorted(_KIND):
+        for seed in (0, 1, 2, 3):
+            ladder = _recipe_ladder(recipe, seed)
+            if weak_floor_exempt(ladder[-1], LIB):
+                out.append((f"{recipe}/{seed}", ladder))
+    return out
+
+
+def test_no_number_blanks_are_exempt_from_the_floor_after_tiering() -> None:
+    ladders = _no_number_ladders()
+    assert ladders, "要有沒有數值的白板"
+    flagged = 0
+    for name, ladder in ladders:
+        assert not weak_floor_exempt(ladder[0], LIB), name  # 1 階沒有升階
+        for tier, skill in enumerate(ladder[1:], start=2):
+            assert weak_floor_exempt(skill, LIB), (name, tier)
+            report = retier_report(LIB, ladder[tier - 2], skill)
+            assert report.in_window and "budget.weak" not in report.problems, (name, tier)
+            flagged += skill_budget(skill, LIB).too_weak
+            assert not report.problems, (name, tier, report.problems)  # 驗證器其餘規則照舊
+    assert flagged, "至少有一招真的掉出下限（否則豁免沒有被用到）"
+
+
+def test_exemption_is_narrow() -> None:
+    """有任何數值（傷害、數值型狀態或表面、位移、控制狀態）的技能照舊檢查過弱。"""
+    for recipe in sorted(_KIND):
+        skill = _recipe_ladder(recipe, 0)[-1]
+        numeric = any(
+            e.type not in ("apply_status", "create_surface")
+            or (
+                e.type == "apply_status"
+                and e.status is not None
+                and (
+                    LIB.ruleset.status_def(e.status).scales_with_magnitude
+                    or LIB.ruleset.status_def(e.status).control_group is not None
+                )
+            )
+            or (
+                e.type == "create_surface"
+                and e.surface is not None
+                and LIB.ruleset.surface_scales_with_magnitude(e.surface)
+            )
+            for e in skill.effects
+        )
+        if numeric:
+            assert not weak_floor_exempt(skill, LIB), recipe

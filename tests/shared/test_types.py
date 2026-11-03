@@ -101,7 +101,7 @@ def test_enum_values() -> None:
         "smoke",
     ]
     assert [g.value for g in ResistGroup] == ["physical", "elemental", "nature", "spirit"]
-    assert [t.value for t in Team] == ["ally", "enemy"]
+    assert [t.value for t in Team] == ["ally", "enemy", "third"]
     assert [a.value for a in Attribute] == ["str", "dex", "con", "int", "wis", "wil"]
     assert [r.value for r in Rarity] == ["common", "uncommon", "rare", "epic", "legendary"]
 

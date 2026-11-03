@@ -1,0 +1,386 @@
+// 大世界（測試）畫面（Phase 5A-5；docs/phases/Phase5計畫.md 11.5）：角色畫面 → 地點圖（點相鄰地點移動、遇敵看陣容、
+// 開戰或撤退、小鎮休息／換技能／傳送、野外紮營）。戰鬥沿用戰鬥畫面；結束或離開後重新讀地點圖（勝負已由後端回寫）。
+// 5A-7（13.3）：左欄可切換到「成長與技能」（配點、閃現、重閃、溶掉、傳承、誓約）；閃現待選時左欄固定顯示選項。
+// 5B-5（18.6）：事件卡（旁白、多講一點、解法）、情境判定（引用線索、第一次送出即定案）、判定結果、這裡的人（好感度、
+// 說話、聊天、接任務）、酒館傳聞、任務與線頭（左欄）、任務三選一（左欄固定）、說書人的 LLM 開關（標頭）。
+// 5D-4（33.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
+// 5F-1b：進入角色時讀「你不在的時候」摘要，有新消息就跳一則（DialogFrame）；按「知道了」送 `news_seen`。
+import { useCallback, useEffect, useState } from "react";
+import { api, ApiError } from "../api/client";
+import type {
+  AbsenceView,
+  BattleResponse,
+  RunChoice,
+  WorldAction,
+  WorldLlmView,
+  WorldSituationResult,
+  WorldView,
+} from "../api/types";
+import { ErrorBanner } from "../ui/ErrorBanner";
+import { primeSkillCard } from "../ui/useSkillCards";
+import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
+import { WorldMap } from "../world/WorldMap";
+import { WorldPanel } from "../world/WorldPanel";
+import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
+import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
+import { WorldBagScreen } from "../world/BagScreen";
+import { WorldShopScreen } from "../world/ShopScreen";
+import { WorldSmithyScreen } from "../world/SmithyPanel";
+import { EventCard, SituationResultCard } from "../world/EventCard";
+import { AbsenceDialog } from "../world/AbsenceDialog";
+import { newsSeenAction, shouldShowAbsence } from "../world/absence";
+import { BoardPanel } from "../world/BoardPanel";
+import { LeaguePanel } from "../world/LeaguePanel";
+import { replayNotes } from "../world/league";
+import { NotesPanel } from "../world/NotesPanel";
+import { NpcPanel } from "../world/NpcPanel";
+import { QuestLog, WorldOfferPending } from "../world/QuestLog";
+import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
+import { readWorldChar, writeWorldChar } from "../world/mapView";
+import { BattleScreen } from "./BattleScreen";
+
+interface Props {
+  onHome(): void;
+  /** 開發模式下沒登入時：到登入畫面（5E-1）。 */
+  onLogin?(): void;
+  /** 已登入時：登出（5E-1）。 */
+  onLogout?(): void;
+}
+
+const LOG_MAX = 12;
+/** 重讀大世界 LLM 開關與健康檢查結果的間隔（同伺服器健康檢查的預設 60 秒；5E-3b）。 */
+const LLM_REFRESH_MS = 60_000;
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
+  const [charId, setCharId] = useState<string | null>(() => readWorldChar());
+  const [view, setView] = useState<WorldView | null>(null);
+  const [battle, setBattle] = useState<BattleResponse | null>(null);
+  /** 循環賽的重播（5F-4）：開場說明（標題、重播驗證）；``null``＝一般戰鬥。 */
+  const [replay, setReplay] = useState<string[] | null>(null);
+  const [replayOutcome, setReplayOutcome] = useState<string | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasten, setHasten] = useState(false);
+  const [log, setLog] = useState<string[]>([]);
+  const [want, setWant] = useState<WantPane>("map");
+  const [chats, setChats] = useState<Record<string, ChatEntry[]>>({});
+  const [result, setResult] = useState<WorldSituationResult | null>(null);
+  const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
+  const [llm, setLlm] = useState<WorldLlmView | null>(null);
+  const [absence, setAbsence] = useState<AbsenceView | null>(null);
+
+  const show = useCallback((next: WorldView, mine: ChatEntry | null = null) => {
+    for (const card of [...next.character.skills, ...next.character.bench]) primeSkillCard(card);
+    setView(next);
+    if (next.events.length > 0) setLog((cur) => [...next.events, ...cur].slice(0, LOG_MAX));
+    if (next.situation_result != null) setResult(next.situation_result);
+    if ((next.rumors ?? []).length > 0) setRumors({ at: next.here.location, lines: [...(next.rumors ?? [])] });
+    const grouped = dialogByNpc(next.dialog ?? []);
+    if (mine !== null || Object.keys(grouped).length > 0) {
+      setChats((cur) => {
+        let out = cur;
+        for (const [npc, lines] of Object.entries(grouped)) {
+          const head = mine !== null && mine.speaker === npc ? [{ ...mine, speaker: "你" }] : [];
+          out = appendChat(out, npc, [...head, ...dialogEntries(lines)]);
+        }
+        return out;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      api.worldLlm().then(
+        (v) => !cancelled && setLlm(v),
+        () => undefined,
+      );
+    void load();
+    // 健康檢查每 60 秒一次（伺服器端）；這裡跟著重讀，讓「說書人休息中」標示出現／消失（5E-3b）
+    const timer = window.setInterval(() => void load(), LLM_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (charId === null || view !== null) return undefined;
+    let cancelled = false;
+    api.world(charId).then(
+      (v) => !cancelled && show(v),
+      (e: unknown) => {
+        if (cancelled) return;
+        // 角色不見了（存檔被刪）：回角色畫面
+        if (e instanceof ApiError && e.status === 404) {
+          writeWorldChar(null);
+          setCharId(null);
+        }
+        setError(errorText(e));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [charId, view, show]);
+
+  // 「你不在的時候」（5F-1b）：每次進入角色讀一次；讀不到就算了（不擋畫面）。
+  useEffect(() => {
+    setAbsence(null);
+    if (charId === null) return undefined;
+    let cancelled = false;
+    api.worldAbsence(charId).then(
+      (v) => !cancelled && setAbsence(v),
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [charId]);
+
+  function closeAbsence() {
+    if (absence === null) return;
+    const action = newsSeenAction(absence);
+    setAbsence(null);
+    act(action);
+  }
+
+  function enter(id: string, first?: WorldView) {
+    writeWorldChar(id);
+    setLog([]);
+    setChats({});
+    setResult(null);
+    setRumors(null);
+    setError(null);
+    setCharId(id);
+    if (first !== undefined) show(first);
+    else setView(null);
+  }
+
+  function leaveChar() {
+    writeWorldChar(null);
+    setCharId(null);
+    setView(null);
+    setLog([]);
+  }
+
+  async function run(task: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await task();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const act = (action: WorldAction) =>
+    void run(async () => {
+      if (charId === null) return;
+      if (action.kind === "travel") setResult(null);
+      show(await api.worldAct(charId, action));
+    });
+
+  const openSituation = (template: string) =>
+    void run(async () => {
+      if (charId !== null) show(await api.worldSituation(charId, template));
+    });
+
+  const solve = (solution: number, useThread: string | null) =>
+    act({ kind: "event_solve", solution, use_thread: useThread });
+
+  const answer = (template: string, text: string, cite: string[]) =>
+    void run(async () => {
+      if (charId !== null) show(await api.worldAnswer(charId, template, text, cite));
+    });
+
+  /** 聊天：成功回傳 `true`（清掉輸入框）；玩家說的話先記進紀錄（`speaker` 暫放 NPC ID）。 */
+  async function chat(npc: string, text: string): Promise<boolean> {
+    if (charId === null) return false;
+    setBusy(true);
+    setError(null);
+    try {
+      show(await api.worldChat(charId, npc, text), { speaker: npc, text, mine: true });
+      return true;
+    } catch (e) {
+      setError(errorText(e));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const toggleLlm = (on: boolean) =>
+    void run(async () => {
+      setLlm(await api.setWorldLlm(on));
+    });
+
+  /** 送一個世界動作；回傳失敗時的 HTTP 狀態（成功為 `null`），給一輪元件判斷要不要收起表單。 */
+  async function actStatus(action: WorldAction): Promise<number | null> {
+    if (charId === null) return 0;
+    setBusy(true);
+    setError(null);
+    try {
+      show(await api.worldAct(charId, action));
+      return null;
+    } catch (e) {
+      setError(errorText(e));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return e instanceof ApiError ? e.status : 0;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function choose(choice: RunChoice): Promise<number | null> {
+    const action = worldActionOf(choice);
+    if (action === null) {
+      setError("大世界沒有這個選項");
+      return Promise.resolve(0);
+    }
+    return actStatus(action);
+  }
+
+  const travel = (to: string) => act({ kind: "travel", to, hasten });
+
+  const fight = () =>
+    void run(async () => {
+      if (charId === null) return;
+      const res = await api.worldBattle(charId);
+      show(res.world);
+      setReplay(null);
+      setBattle(res.battle);
+    });
+
+  const watchReplay = (matchId: string) =>
+    void run(async () => {
+      if (charId === null) return;
+      const res = await api.worldLeagueReplay(charId, matchId);
+      setReplay(replayNotes(res));
+      setReplayOutcome(res.outcome_zh);
+      setBattle(res.battle);
+    });
+
+  async function backToMap() {
+    setError(null);
+    try {
+      if (charId !== null) show(await api.world(charId));
+      setBattle(null);
+      setReplay(null);
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
+
+  if (battle !== null) {
+    return (
+      <BattleScreen
+        key={battle.battle_id}
+        initial={battle}
+        onExit={() => void backToMap()}
+        exitLabel={replay !== null ? "回到循環賽" : "回到地點圖"}
+        openingNotes={replay ?? view?.encounter?.opening_zh}
+        endTitle={replay !== null ? replayOutcome : undefined}
+      />
+    );
+  }
+  if (charId === null) {
+    return <WorldCharacterPicker onEnter={enter} onHome={onHome} onLogin={onLogin} onLogout={onLogout} />;
+  }
+  return (
+    <div className="run-screen world-screen">
+      <header className="run-header">
+        <h1>
+          大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
+        </h1>
+        <div className="run-header-buttons">
+          {narratorResting(llm) && (
+            <span className="world-narrator-rest small" role="status" data-testid="world-narrator-rest">
+              說書人休息中（使用固定文字）
+            </span>
+          )}
+          {llm !== null && (
+            <label className="world-llm small" data-testid="world-llm">
+              <input type="checkbox" checked={llm.enabled} disabled={busy} onChange={(e) => toggleLlm(e.target.checked)} />
+              說書人用本機模型
+              <span className="muted">（伺服器預設{llm.default ? "開" : "關"}）</span>
+            </label>
+          )}
+          <button type="button" onClick={leaveChar}>
+            換角色
+          </button>
+          <button type="button" onClick={onHome}>
+            回首頁
+          </button>
+        </div>
+      </header>
+      <ErrorBanner message={error} onClose={() => setError(null)} />
+      {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
+      {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
+
+      {view === null ? (
+        <div className="muted">載入中……</div>
+      ) : (
+        <div className="world-layout">
+          {leftPane(view, want) === "pending" && <WorldFlashPending view={view} busy={busy} onChoose={choose} />}
+          {leftPane(view, want) === "offer" && <WorldOfferPending view={view} busy={busy} onAct={act} />}
+          {leftPane(view, want) === "growth" && (
+            <WorldGrowth view={view} busy={busy} onChoose={choose} onAct={actStatus} onClose={() => setWant("map")} />
+          )}
+          {leftPane(view, want) === "quests" && <QuestLog view={view} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "board" && charId !== null && (
+            <BoardPanel characterId={charId} view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />
+          )}
+          {leftPane(view, want) === "league" && charId !== null && (
+            <LeaguePanel
+              characterId={charId}
+              view={view}
+              busy={busy}
+              onAct={act}
+              onReplay={watchReplay}
+              onClose={() => setWant("map")}
+            />
+          )}
+          {leftPane(view, want) === "bag" && <WorldBagScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "shop" && <WorldShopScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "smithy" && <WorldSmithyScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
+          {leftPane(view, want) === "map" && <WorldMap view={view} busy={busy} onTravel={travel} />}
+          <WorldPanel
+            view={view}
+            busy={busy}
+            hasten={hasten}
+            onHasten={setHasten}
+            onAct={act}
+            onBattle={fight}
+            log={log}
+            pane={leftPane(view, want)}
+            onPane={(p) => setWant((v) => togglePane(v, p))}
+            growthOpen={leftPane(view, want) === "growth" || leftPane(view, want) === "pending"}
+            onGrowth={() => setWant((v) => (v === "growth" ? "map" : "growth"))}
+            questsOpen={leftPane(view, want) === "quests"}
+            onQuests={() => setWant((v) => (v === "quests" ? "map" : "quests"))}
+            rumors={rumors !== null && rumors.at === view.here.location ? rumors.lines : []}
+            eventSlot={
+              <>
+                {result !== null && <SituationResultCard result={result} onClose={() => setResult(null)} />}
+                {view.event != null && <EventCard event={view.event} busy={busy} onOpen={openSituation} onSolve={solve} onAnswer={answer} />}
+              </>
+            }
+            peopleSlot={
+              <>
+                <NpcPanel view={view} busy={busy} chats={chats} onAct={act} onChat={chat} />
+                {charId !== null && <NotesPanel characterId={charId} location={view.here.location} busy={busy} />}
+              </>
+            }
+          />
+        </div>
+      )}
+    </div>
+  );
+}

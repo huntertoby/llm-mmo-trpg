@@ -140,6 +140,92 @@ affixes:
     direction: create
     change: area_delta
     amount: 1
+  # Phase 5D-2b（玩法 PM 2026-11-03 代決；08 8.21.4.1「每個關鍵字都有製造強化／利用強化」、20.2 區域偏向）：
+  # 雲嶺的潮濕、隱蔽與荒原的點燃、倒地、中毒補齊製造 1、利用 1。只用現成的 change（範圍、狀態持續、傷害‰），
+  # 8.21.4.1 寫的元素篩選（雷電、冰凍）、「推倒長度」、「潛行偷襲」照最接近的現成效果；利用方向的數值範圍
+  # 照 affix_kw_prone_damage（60～150‰）。中毒不在 8.21.4.1 的表裡，照點燃的寫法。
+  - id: affix_kw_wet_area
+    category: keyword
+    name_zh: 製造潮濕的技能範圍 +{amount}
+    slots: [weapon, offhand, neck]
+    keyword: wet
+    direction: create
+    change: area_delta
+    amount: 1
+  - id: affix_kw_wet_damage
+    category: keyword
+    name_zh: 利用潮濕的技能傷害 +{n}
+    slots: [weapon, offhand, neck, ring]
+    keyword: wet
+    direction: exploit
+    change: damage_permille
+    value: {min: 60, max: 150}
+    value_unit: permille
+  - id: affix_kw_conceal_duration
+    category: keyword
+    name_zh: 你施加的{status} +{amount} 回合
+    slots: [weapon, offhand, neck, ring]
+    keyword: concealed
+    direction: create
+    change: status_duration
+    status: concealed
+    amount: 1
+  - id: affix_kw_conceal_damage
+    category: keyword
+    name_zh: 利用隱蔽的技能傷害 +{n}
+    slots: [weapon, offhand, neck, ring]
+    keyword: concealed
+    direction: exploit
+    change: damage_permille
+    value: {min: 60, max: 150}
+    value_unit: permille
+  - id: affix_kw_ignite_damage
+    category: keyword
+    name_zh: 利用點燃的技能傷害 +{n}
+    slots: [weapon, offhand, neck, ring]
+    keyword: ignite
+    direction: exploit
+    change: damage_permille
+    value: {min: 60, max: 150}
+    value_unit: permille
+  - id: affix_kw_prone_area
+    category: keyword
+    name_zh: 製造倒地的技能範圍 +{amount}
+    slots: [weapon, offhand, neck]
+    keyword: prone
+    direction: create
+    change: area_delta
+    amount: 1
+  - id: affix_kw_poison_duration
+    category: keyword
+    name_zh: 你施加的{status} +{amount} 回合
+    slots: [weapon, offhand, neck, ring]
+    keyword: poisoned
+    direction: create
+    include_attack: true
+    change: status_duration
+    status: poison
+    amount: 1
+  - id: affix_kw_poison_damage
+    category: keyword
+    name_zh: 利用中毒的技能傷害 +{n}
+    slots: [weapon, offhand, neck, ring]
+    keyword: poisoned
+    direction: exploit
+    change: damage_permille
+    value: {min: 60, max: 150}
+    value_unit: permille
+  # Phase 5D-4（玩法 PM 2026-11-03 代決）：帶電補「利用」方向。8.21.4.1 的「對潮濕或帶電中的目標雷電傷害增加」
+  # 要元素篩選（引擎新的 change），照 5D2b-1 用最接近的現成效果：利用帶電的技能傷害 +N（範圍照 5D2b-2）。
+  - id: affix_kw_shock_damage
+    category: keyword
+    name_zh: 利用帶電的技能傷害 +{n}
+    slots: [weapon, offhand, neck, ring]
+    keyword: charged
+    direction: exploit
+    change: damage_permille
+    value: {min: 60, max: 150}
+    value_unit: permille
 
   # --- 4 普攻附加（結算在 G2）---
   - id: affix_attack_lightning
@@ -498,3 +584,34 @@ affixes:
     name_zh: 你的召喚物繼承你 1 條普攻附加詞條
     slots: [weapon, offhand]
     summon_inherit: true
+
+  # --- Phase 5D-3 獨特詞條（docs/design/20-第一季商店與裝備內容.md 20.3、08 8.26.3 M4、M7）---
+  # 只由隱藏配方指定（content/world/crafting.yaml 的 hidden）；item_gen.yaml 的 unique_affixes 讓它們不進
+  # 一般產生器。觸發效果的形狀只有自己，「自身周圍」先做成自己腳下 1 格（代決 5D3-9）。
+  - id: affix_unique_thunder_mist
+    category: trigger
+    name_zh: 受到近戰傷害時，腳下湧出煙霧 {effect.duration} 回合（每輪 1 次）
+    slots: [body]
+    trigger: on_damaged
+    melee_only: true
+    effect_target: self
+    effects: [{type: create_surface, surface: smoke, duration: 1}]
+    limit: per_round
+  # 20.3「被火攻擊時」：引擎的觸發沒有元素篩選，先用「受到傷害時」（代決 5D3-9，待 PM 決定）。
+  - id: affix_unique_steam_guard
+    category: trigger
+    name_zh: 受到傷害時，腳下冒出煙霧 {effect.duration} 回合（每輪 1 次）
+    slots: [hands]
+    trigger: on_damaged
+    effect_target: self
+    effects: [{type: create_surface, surface: smoke, duration: 1}]
+    limit: per_round
+  - id: affix_unique_frostfire
+    category: trigger
+    name_zh: 施加燃燒時，目標也「{effect.status}」{effect.duration} 回合（每回合 1 次）
+    slots: [ring]
+    trigger: on_status_applied
+    status: burning
+    effect_target: target
+    effects: [{type: apply_status, status: slow, duration: 1}]
+    limit: per_turn

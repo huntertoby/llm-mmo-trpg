@@ -1,0 +1,24 @@
+# BAL-19a（玩法決定 #110，06 6.10 組合主題、6.27.4 補內容；數值為初值，未經模擬）：十字聖光灼燒敵人，落點燃起聖火地面（感知＋火焰）
+id: skill_wis_sacred_pyre
+schema_version: 1
+name_zh: 聖焰壇
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: cross, range: 4}
+effects:
+  - {type: damage, dice: 2d6, element: holy}
+  - {type: create_surface, surface: fire, duration: 2}
+condition: null
+cost: {mana: 8, cooldown: 2}
+tags: [holy, fire, spell, area]
+narrative:
+  concept: 一道十字聖光落下，在地上留下久久不熄的聖火
+  cast_flavor: 聖徽亮起的瞬間，十字形的光柱砸在地面，石縫裡竄出金白色的火焰
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

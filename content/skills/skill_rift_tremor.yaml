@@ -1,0 +1,25 @@
+# 賽季 Boss「碎晶之主」第 2 階段「碎界脈動」（Phase 5F-3；19.7：每回合結束全場受到小量傷害——需要治療或護盾的時刻）。
+# 引擎沒有「回合結束全場傷害」，用本體周圍一圈（距離 2 格的環形）的小傷技能交給 AI（代決 5F3-13）。只給敵人用；數值為初值，未經模擬。
+id: skill_rift_tremor
+schema_version: 1
+name_zh: 碎界脈動
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: ring, radius: 2}
+effects:
+  - {type: damage, dice: 2d4, element: physical}
+condition: null
+cost: {mana: 4, cooldown: 1}
+tags: [arcane, spell, aoe]
+narrative:
+  concept: 碎裂的界域一陣陣脈動，整座浮台都在震
+  cast_flavor: 碎晶之主的身軀發出低鳴，腳下的石板跟著一起顫抖
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

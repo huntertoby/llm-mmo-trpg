@@ -13,6 +13,10 @@
 3. 仍然沒有可加的數值時，依 ``cost_cuts`` 的順序減一格代價（維持費、冷卻、法力、耐力、AP）；
    只減不拿掉（每項最少留 1）。
 
+一步都會超過上限 +``cap_permille``‰ 時才接受超過；但若會超過 +``stop_over_permille``‰（BAL-12b 定，
+200），改停在只走上限內的步子停下的版本（+120‰ 以下最接近的一階）。修正型被動的修正幅度在這裡用
+``modifier_step``‰ 的細階梯（BAL-12b 定，只用在完整技能）。
+
 每一步都要通過驗證（不超過預算上限、骨架占比等；「過弱」除外，見 :data:`_WEAK`）。同一組裡有能
 一步達標的，取超出最少的；否則取分數加最多的（同分取資料順序在前的）。都加不動、還沒達標時停在
 目前最強的版本（例如沒有代價的修正型被動），由呼叫者記錄。旋鈕的階梯與減代價的順序都在資料檔；
@@ -34,6 +38,7 @@ from pydantic import ValidationError
 from trpg.content.flash_templates import CompleteSkillRules, CostCut
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.types import Surface
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.flash_derive import with_budget_bonus
@@ -44,6 +49,8 @@ from trpg.skillgen.validate import validate_skill
 __all__ = ["complete_gain_permille", "complete_power", "complete_strength"]
 
 _PERMILLE = 1000
+_MODIFIER_MAGNITUDES = frozenset({"damage_permille", "heal_permille"})
+"""修正規則 ``change`` 上的修正幅度（細階梯 ``complete.modifier_step`` 的對象）。"""
 _MAX_STEPS = 40
 """最多加幾步（每一步一格；防止資料寫錯時無窮迴圈）。"""
 
@@ -80,7 +87,12 @@ def complete_strength(library: ContentLibrary, skill: SkillDef) -> SkillDef:
     capped, power = _climb(library, rules, start, target, cap)
     if power >= target:
         return capped
-    return _climb(library, rules, start, target, None)[0]
+    over = _climb(library, rules, start, target, None)[0]
+    # BAL-12b 定：大幅超過（> stop_over_permille）時停在 +120‰ 以下最接近的一階（只走上限內的版本）
+    limit = rules.stop_over_permille
+    if limit is not None and complete_gain_permille(skill, over, library) > limit:
+        return capped
+    return over
 
 
 def _climb(
@@ -184,6 +196,15 @@ def _strength_knobs(
     """預算器的強度旋鈕（:func:`~trpg.skillgen.knobs.strength_knobs`），加上召喚與姿態的旋鈕。"""
     effects = draft[1]
     knobs = strength_knobs(skill, draft, library)
+    if skill.kind == "modifier" and rules.modifier_step is not None:
+        # BAL-12b 定：修正幅度（修正規則的 change，接在效果後面）改用細階梯，只在完整技能
+        fine = tuple(range(rules.modifier_step, _PERMILLE + 1, rules.modifier_step))
+        knobs = [
+            Knob(k.index, k.field, fine, k.weight)
+            if k.index >= len(effects) and k.field in _MODIFIER_MAGNITUDES
+            else k
+            for k in knobs
+        ]
     statuses = library.ruleset.statuses.by_id()
     for index, effect in enumerate(effects):
         if effect["type"] == "summon" and (effect.get("count") or 1) == 1:
@@ -211,10 +232,29 @@ def _strength_knobs(
 
 
 def _param_knobs(
-    library: ContentLibrary, _rules: CompleteSkillRules, skill: SkillDef, draft: _Draft
+    library: ContentLibrary, rules: CompleteSkillRules, skill: SkillDef, draft: _Draft
 ) -> list[Knob]:
-    """效果參數的旋鈕（:func:`~trpg.skillgen.knobs.param_knobs`，同升階重配）。"""
-    return param_knobs(draft[1], skill.category, library)
+    """效果參數的旋鈕（:func:`~trpg.skillgen.knobs.param_knobs`，同升階重配），加上數值型狀態與
+    表面的強度（BAL-12e，#76；``status_magnitude_steps`` 乘在原本的強度上，比持續 +1 回合細）。"""
+    effects = draft[1]
+    knobs = param_knobs(effects, skill.category, library)
+    ruleset = library.ruleset
+    statuses = ruleset.statuses.by_id()
+    for index, effect in enumerate(effects):
+        if effect["type"] == "apply_status":
+            status = statuses.get(str(effect.get("status")))
+            scalable = status is not None and status.scales_with_magnitude
+        elif effect["type"] == "create_surface" and effect.get("surface") is not None:
+            scalable = ruleset.surface_scales_with_magnitude(Surface(str(effect["surface"])))
+        else:
+            continue
+        if not scalable:
+            continue
+        start = int(effect.get("magnitude_permille") or _PERMILLE)
+        effect["magnitude_permille"] = start  # 比較大小用（只在這份草稿上）
+        values = tuple(start * s // _PERMILLE for s in rules.status_magnitude_steps)
+        knobs.append(Knob(index, "magnitude_permille", values))
+    return knobs
 
 
 # ---------------------------------------------------------------------------

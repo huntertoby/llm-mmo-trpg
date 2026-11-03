@@ -1,0 +1,19 @@
+# 灰燼荒原精英（Phase 5F-5a；19.2.1）。數值是初值（未經模擬）。
+# 熔核領主：巨型熔岩甲蟲、背負熔岩池；蓄力強招「熔流潰堤」（提前一輪預告，十字臂長 2 近似直線 6 格，代決 5F5a-7）。
+# 懸賞「熔核領主」（19.8）與熔岩洞窟的精英陣容。
+id: molten_lord
+name_zh: 熔核領主
+attributes: {str: 16, dex: 8, con: 18, int: 4, wis: 10, wil: 12}
+max_hp: 64
+speed: 4
+armor_bonus: 5
+weapon: stone_fist
+ai_profile: brute
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [elite, beast, lava_beast, steadfast]
+skills: [skill_battering_ram, skill_magma_breach]
+opening_statuses:
+  - {status: molten_burst}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: crawler, variant: beetle, material: magma, size: large, traits: [lava_pool]}}

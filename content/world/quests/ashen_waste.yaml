@@ -1,0 +1,117 @@
+# 灰燼荒原任務（Phase 5F-5a；schema：src/trpg/content/world_quests.py）。
+# 來源：docs/design/19-灰燼荒原與賽季主線.md 19.6.1（主線第 2 章「灰燼之心」，約第 6 天給劇情技能「冷鋒」）、19.5（鐵娘＝區域任務鏈、
+# 老鐵＝隱藏地點）、19.3（舊鐵哨站＝區域任務鏈起點）；#118 玩法 PM 代決、待使用者確認。寫法同 quests/cloud_ridge.yaml。
+# 開發 PM 自定（代決 5F5a-*）：所有 ID、步驟拆法、條件、xp_level、靈感、每步有關的 NPC；經驗份數照 5A-SIM2
+# （任務鏈一步 3 份、主線一步 5 份、隱藏地點 2 份）。
+# - 主線第 2 章：接續雲嶺第 1 章（第 1 章完成的劇情旗標 mist_rift_done 才接得到）；阿岳同行（19.5「主線第 2 章同行；第 2 章結尾回雲嶺」：任務完成時照
+#   5C-3 的規則離隊）。第 2 步攔截成功記劇情旗標 ashen_convoy_stopped（灰燼之心護甲 −1，encounters/ashen_waste.yaml）。
+#   第 4 步「赫琳的背叛」：19.6.1 寫在熔心坑，但熔心坑的戰鬥＝Boss 戰，所以三方混戰放在她的角魔古祭壇（代決 5F5a-7）。
+#   第 5 步打倒灰燼之心＝第 1 把封印鑰匙（world/season.yaml seal_keys：heart_pit_boss）。
+region: ashen_waste
+# 本區關鍵字（20.2 荒原偏向點燃、倒地、中毒）：區域任務鏈（chain）的三選一，新方向優先挑玩家還沒有的這些關鍵字。
+region_keywords: [ignite, prone, poisoned]
+quests:
+  - id: main_ashen_heart
+    kind: main
+    name_zh: 灰燼之心
+    summary_zh: 源晶碎片一路被運進荒原，餘燼集的鐵娘說，運輸隊最近常往熔心坑那邊走。
+    giver: iron_lady
+    companion: companion_ayue   # 19.5：阿岳主線第 2 章同行
+    start: [{kind: flag, flag: mist_rift_done}]   # 雲嶺主線第 1 章完成（quests/cloud_ridge.yaml 最後一步的旗標）
+    steps:
+      - id: ask_convoy
+        text_zh: 在餘燼集打聽斷崖幫的運輸隊
+        when:
+          - kind: any_of
+            conditions:
+              - {kind: talk, npc: iron_lady}
+              - {kind: hold_thread, thread: convoy_timetable}
+        npcs: [iron_lady]
+        reward: {xp_source: main_step, xp_level: 6}
+      - id: intercept_convoy
+        text_zh: 斷崖幫運輸道：攔截運送源晶碎片的運輸隊
+        when: [{kind: win_battle, location: gang_convoy_road}]
+        npcs: [iron_lady]
+        reward: {xp_source: main_step, xp_level: 6, flags: [ashen_convoy_stopped]}
+      - id: read_stele
+        text_zh: 廢墟要塞：讀懂石碑上關於核心殘片的古文
+        when:
+          - kind: any_of
+            conditions:
+              - {kind: situation, skeleton: fortress_stele}
+              - {kind: hold_thread, thread: core_breathes}
+        npcs: [greybeard]
+        reward: {xp_source: main_step, xp_level: 8, story_skill: skill_cold_front}
+      - id: helin_betrayal
+        text_zh: 角魔古祭壇：赫琳的背叛（熔岩獸群、盜賊、祭司的護衛）
+        when: [{kind: win_battle, location: horned_altar}]
+        reward: {xp_source: main_step, xp_level: 8}
+      - id: heart_pit_boss
+        text_zh: 熔心坑：打倒灰燼之心
+        when: [{kind: win_battle, location: molten_heart_pit}]
+        reward: {xp_source: main_step, xp_level: 9}
+
+  - id: chain_iron_lady
+    kind: chain
+    name_zh: 鐵娘的委託
+    summary_zh: 鐵娘要你幫餘燼集把焦土一帶整頓乾淨，順便看看熔爐督工營在搞什麼鬼。
+    giver: iron_lady
+    steps:
+      - id: clear_outskirts
+        text_zh: 焦土外圍：趕走靠近市集的熔岩獸
+        when: [{kind: win_battle, location: scorched_outskirts}]
+        npcs: [iron_lady]
+        reward: {xp_source: quest_chain_step, xp_level: 5, insight: 1}
+      - id: supply_post
+        text_zh: 把補給送到舊鐵哨站
+        when: [{kind: at_location, location: old_iron_post}]
+        npcs: [iron_lady]
+        # 中段三選一：新方向偏向本區關鍵字（region_keywords：點燃、倒地、中毒）
+        reward: {xp_source: quest_chain_step, xp_level: 5, insight: 1, offer: {kind: whiteboard}}
+      - id: raid_overseer
+        text_zh: 熔爐督工營：查清楚盜賊用鐵鍊牽著熔岩甲蟲要做什麼
+        when: [{kind: win_battle, location: overseer_camp}]
+        npcs: [iron_lady]
+        reward: {xp_source: quest_chain_step, xp_level: 7, insight: 1, offer: {kind: whiteboard}}
+
+  - id: hidden_obsidian_valley
+    kind: hidden
+    name_zh: 黑曜谷的寒燼
+    summary_zh: 老鐵嘮叨著說，焦油坑後面有一道漆黑的峽谷，裡頭的蜥蜴是冷的，嘿。
+    start:
+      - {kind: hold_thread, thread: laotie_knows_valley}
+      - {kind: at_location, location: obsidian_valley}
+    steps:
+      - id: valley_fight
+        text_zh: 在黑曜谷打倒寒燼蜥群
+        when: [{kind: win_battle, location: obsidian_valley}]
+        npcs: [scavenger_laotie]
+        reward: {xp_source: hidden_location, xp_level: 8}
+
+# 劇情技能（07 7.6：骨架固定、每人相同；LLM 依關鍵字換元素與名稱之後再接）。19.6.1「冷鋒」：一招在範圍內滅火、造水或冰面，
+# 並對火屬性敵人加傷的技能。熔岩獸群怕冰（元素修正），所以加傷靠敵人的弱點，不另寫條件（代決 5F5a-7）。
+story_skills:
+  - id: skill_cold_front
+    schema_version: 1
+    name_zh: 冷鋒
+    tier: 1
+    rank: 1
+    rarity: rare
+    kind: active
+    skeleton: control
+    category: spell
+    weapon_req: any
+    ap_cost: 2
+    scaling_attr: wis
+    shape: {type: square3, range: 3}
+    effects:
+      - {type: clear_surface, affects: tiles}
+      - {type: create_surface, surface: ice}
+      - {type: damage, dice: 1d4, element: ice}
+    condition: null
+    cost: {mana: 6, cooldown: 4}
+    tags: [ice, spell, area, control]
+    narrative:
+      concept: 一道冷鋒橫掃過去，火滅了，地上結起一層薄冰
+      cast_flavor: 你一揮手，寒氣貼著地面捲開，火苗嘶的一聲全熄了
+    provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

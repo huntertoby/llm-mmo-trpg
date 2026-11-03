@@ -1,0 +1,35 @@
+build              基準勝率  新勝率   差
+build_fire            79.0    79.0   +0.0
+build_storm           79.7    75.0   -4.7 *
+build_summoner        74.3    74.3   +0.0
+build_healer          73.3    73.3   +0.0
+build_detonator       71.3    71.3   +0.0
+build_warlock         69.0    69.0   +0.0
+build_telekinesis     69.0    69.0   +0.0
+build_support         64.3    64.3   +0.0
+build_push            59.3    60.3   +1.0 *
+build_banisher        59.0    59.0   +0.0
+build_trapper         57.3    57.3   +0.0
+build_striker         56.3    56.3   +0.0 *
+build_ranged          54.7    54.7   +0.0
+build_bomber          54.7    54.7   +0.0
+build_wallburn        52.3    52.3   +0.0
+build_seer            49.0    49.0   +0.0
+build_guardian        48.3    48.3   +0.0
+build_tank            47.7    47.7   +0.0 *
+build_runeweaver      47.0    47.3   +0.3 *
+build_charger         47.0    47.0   +0.0
+build_gambler         44.3    44.3   +0.0
+build_winged          39.7    39.7   +0.0
+build_assassin        39.0    39.0   +0.0
+
+top_count=7
+全類型前段：['build_storm']
+無前段：['build_assassin', 'build_striker', 'build_charger', 'build_banisher', 'build_gambler', 'build_seer', 'build_winged', 'build_wallburn', 'build_runeweaver']
+（基準）全類型前段：['build_storm']
+（基準）無前段：['build_assassin', 'build_striker', 'build_charger', 'build_banisher', 'build_gambler', 'build_seer', 'build_winged', 'build_wallburn', 'build_runeweaver']
+build_push：bridge_chasm:14  ruined_heights:10  forest:7*  frozen_lake:16  corridor:12  oil_depot:9  open_plain:11  swamp:11
+build_runeweaver：bridge_chasm:20  ruined_heights:18  forest:10  frozen_lake:9  corridor:17  oil_depot:22  open_plain:13  swamp:15
+build_storm：bridge_chasm:1*  ruined_heights:7*  forest:4*  frozen_lake:5*  corridor:2*  oil_depot:4*  open_plain:5*  swamp:2*
+build_striker：bridge_chasm:13  ruined_heights:12  forest:13  frozen_lake:13  corridor:11  oil_depot:16  open_plain:17  swamp:13
+build_tank：bridge_chasm:22  ruined_heights:21  forest:15  frozen_lake:12  corridor:23  oil_depot:10  open_plain:9  swamp:6*

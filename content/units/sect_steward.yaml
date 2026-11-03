@@ -1,0 +1,25 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
+# 山中修士・精英（煉丹師升級版）：群體治療、每回合結束回血、蓄力強招「九轉回天」（5A-M1，提前一輪預告）；同門相護。
+id: sect_steward
+name_zh: 青霧執事
+attributes: {str: 10, dex: 10, con: 14, int: 12, wis: 16, wil: 12}
+max_hp: 50
+speed: 5
+armor_bonus: 2
+weapon: totem_staff
+ai_profile: support
+resist: {}
+element_mods: {}
+tags: [elite, humanoid, sect]
+skills: [skill_sanctuary, skill_nine_turns_revival, skill_steady_breath]
+reactions:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+  - reaction: kin_ward          # 同門相護（5A-M1）
+    when: {event: kin_hit_in_range}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', beard: true, main_kind: whisk, affixes: [regen], gear: {body: {kind: robe, material: cloth, color: '#4f8a6a', trim: '#e8bb48', apron: '#f2e8c8'}, back: {kind: gourd, material: wood, color: '#e8bb48'}}}

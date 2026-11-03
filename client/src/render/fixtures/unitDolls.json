@@ -1,4 +1,41 @@
 {
+ "ash_hound": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "hound",
+   "material": "magma",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "ashen_heart": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "rarity": "legendary",
+  "beard": false,
+  "creature": {
+   "body": "wisp",
+   "material": "crystal",
+   "element": "fire",
+   "size": "huge",
+   "traits": [
+    "core"
+   ],
+   "status_traits": {
+    "molten_shell": [
+     "crust"
+    ]
+   }
+  },
+  "affixes": [],
+  "traits": []
+ },
  "bandit": {
   "skin": "#a8724c",
   "hair": "short",
@@ -18,7 +55,10 @@
     "material": "cloth",
     "color": "#b33a3a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_archer": {
   "skin": "#d9a47a",
@@ -39,7 +79,10 @@
     "material": "cloth",
     "color": "#6a4a2e"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_archer_guard": {
   "skin": "#d9a47a",
@@ -60,7 +103,10 @@
     "material": "cloth",
     "color": "#6a4a2e"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_boss": {
   "skin": "#a8724c",
@@ -90,7 +136,10 @@
     "color": "#a32a2a"
    }
   },
-  "rarity": "epic"
+  "rarity": "epic",
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_captain": {
   "skin": "#a8724c",
@@ -111,7 +160,10 @@
     "material": "cloth",
     "color": "#a32a2a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_guard": {
   "skin": "#a8724c",
@@ -132,7 +184,10 @@
     "material": "cloth",
     "color": "#b33a3a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_shieldbearer": {
   "skin": "#7a4e32",
@@ -159,7 +214,10 @@
    }
   },
   "main_material": "iron",
-  "main_color": "#9a8a76"
+  "main_color": "#9a8a76",
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_shieldbearer_guard": {
   "skin": "#7a4e32",
@@ -186,7 +244,10 @@
    }
   },
   "main_material": "iron",
-  "main_color": "#9a8a76"
+  "main_color": "#9a8a76",
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "bandit_warlord": {
   "skin": "#7a4e32",
@@ -215,7 +276,89 @@
     "material": "cloth",
     "color": "#3a2a4a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "ember_lizard": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "lizard",
+   "material": "magma",
+   "size": "small",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "fire_dust_bat": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "flyer",
+   "variant": "bat",
+   "material": "magma",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "frost_ember_lizard": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "lizard",
+   "material": "magma",
+   "element": "ice",
+   "size": "small",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "furnace_matriarch": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "lizard",
+   "material": "magma",
+   "size": "large",
+   "traits": [
+    "brood",
+    "core"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "heart_ember_lizard": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "lizard",
+   "material": "magma",
+   "size": "small",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
  },
  "hero_archer": {
   "skin": "#f1c9a5",
@@ -242,7 +385,10 @@
     "material": "cloth",
     "color": "#3f6a32"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "hero_fighter": {
   "skin": "#f1c9a5",
@@ -272,7 +418,10 @@
     "material": "cloth",
     "color": "#2c4f8a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "hero_mage": {
   "skin": "#d9a47a",
@@ -300,7 +449,10 @@
     "material": "leather",
     "color": "#7a2a3a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "hero_stormcaller": {
   "skin": "#f1c9a5",
@@ -328,7 +480,535 @@
     "material": "leather",
     "color": "#7a2a3a"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "lava_beetle": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "crawler",
+   "variant": "beetle",
+   "material": "magma",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "lava_tortoise": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "shell",
+   "material": "magma",
+   "traits": [
+    "volcano"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "magma_slug": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "ooze",
+   "material": "magma",
+   "traits": [
+    "core"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "mist_wolf": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "hound",
+   "material": "fur",
+   "tint": "#c8ccd0",
+   "traits": [
+    "mist"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "mist_wraith": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "wraith",
+   "material": "mist",
+   "element": "shadow",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "molten_lord": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "crawler",
+   "variant": "beetle",
+   "material": "magma",
+   "size": "large",
+   "traits": [
+    "lava_pool"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "molten_wraith": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "wraith",
+   "material": "mist",
+   "element": "fire",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "mountain_leopard": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "feline",
+   "material": "fur",
+   "traits": [
+    "spots"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "rift_crystal_golem": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "golem",
+   "material": "crystal",
+   "element": "lightning",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "rift_pillar_fire": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "pylon",
+   "material": "crystal",
+   "element": "fire",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "rift_pillar_mist": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "pylon",
+   "material": "crystal",
+   "element": "wind",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "rift_pillar_thunder": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "pylon",
+   "material": "crystal",
+   "element": "lightning",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "rift_shard_lord": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "rarity": "legendary",
+  "beard": false,
+  "creature": {
+   "body": "golem",
+   "material": "crystal",
+   "size": "huge",
+   "traits": [
+    "core"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "scorched_colossus": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "golem",
+   "material": "stone",
+   "element": "fire",
+   "tint": "#5a4e48",
+   "traits": [
+    "core"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "sect_acolyte": {
+  "skin": "#f1c9a5",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#8a9aa0",
+    "trim": "#dfe4e2"
+   }
+  },
+  "beard": false,
+  "main_glow": "#b6f0a0",
+  "scale": 0.9,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_alchemist": {
+  "skin": "#d9a47a",
+  "hair": "bun",
+  "hair_color": "#2a2a30",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#4f8a6a",
+    "trim": "#dfe4e2",
+    "apron": "#e8dcc0"
+   },
+   "back": {
+    "kind": "gourd",
+    "material": "wood"
+   }
+  },
+  "main_kind": "whisk",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_array_disciple": {
+  "skin": "#f1c9a5",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#dfe4e2",
+    "trim": "#5f8f8a"
+   }
+  },
+  "main_tassel": "#c0392b",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_array_stone": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "pylon",
+   "material": "stone",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "sect_crane_archer": {
+  "skin": "#d9a47a",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#dfe4e2",
+    "trim": "#3c4248"
+   },
+   "cloak": {
+    "kind": "cape",
+    "material": "cloth",
+    "color": "#f2f0ea",
+    "form": "feather"
+   }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_mist_lock_master": {
+  "skin": "#f1c9a5",
+  "hair": "long",
+  "hair_color": "#f0f0f0",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#dfe4e2",
+    "trim": "#e8bb48"
+   },
+   "cloak": {
+    "kind": "cape",
+    "material": "cloth",
+    "color": "#5f8f8a"
+   },
+   "off_hand": {
+    "kind": "sword",
+    "material": "steel"
+   }
+  },
+  "rarity": "legendary",
+  "main_kind": "whisk",
+  "beard": true,
+  "affixes": [],
+  "traits": [
+   "mist"
+  ]
+ },
+ "sect_mist_swordsman": {
+  "skin": "#f1c9a5",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#dfe4e2",
+    "trim": "#5f8f8a"
+   }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_mist_walker": {
+  "skin": "#f1c9a5",
+  "hair": "short",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#e8ecee",
+    "trim": "#b8c4cc"
+   },
+   "head": {
+    "kind": "veil",
+    "material": "cloth"
+   }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_puppeteer": {
+  "skin": "#f1c9a5",
+  "hair": "long",
+  "hair_color": "#3a2a20",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#3c4248",
+    "trim": "#c0392b"
+   },
+   "back": {
+    "kind": "puppet_box",
+    "material": "wood"
+   }
+  },
+  "main_kind": "puppet_cross",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_steward": {
+  "skin": "#d9a47a",
+  "hair": "bun",
+  "hair_color": "#2a2a30",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#4f8a6a",
+    "trim": "#e8bb48",
+    "apron": "#f2e8c8"
+   },
+   "back": {
+    "kind": "gourd",
+    "material": "wood",
+    "color": "#e8bb48"
+   }
+  },
+  "main_kind": "whisk",
+  "beard": true,
+  "affixes": [
+   "regen"
+  ],
+  "traits": []
+ },
+ "sect_summit_array_stone": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "pylon",
+   "material": "stone",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "sect_swordsman": {
+  "skin": "#d9a47a",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#5f8f8a",
+    "trim": "#dfe4e2"
+   }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_talisman_caster": {
+  "skin": "#f1c9a5",
+  "hair": "long",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#5f8f8a",
+    "trim": "#c0392b"
+   },
+   "waist": {
+    "kind": "talismans",
+    "material": "paper"
+   }
+  },
+  "main_kind": "talisman",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_warrior_monk": {
+  "skin": "#c08050",
+  "hair": "none",
+  "pants": "#d8a030",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "bare",
+    "material": "cloth",
+    "color": "#d8a030"
+   },
+   "neck": {
+    "kind": "beads",
+    "material": "wood"
+   }
+  },
+  "beard": false,
+  "build": "stout",
+  "affixes": [],
+  "traits": []
+ },
+ "shard_golem": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "golem",
+   "material": "crystal",
+   "element": "lightning",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
  },
  "sim_companion_archer": {
   "skin": "#d9a47a",
@@ -349,7 +1029,10 @@
     "kind": "gloves",
     "material": "leather"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
  },
  "sim_companion_fighter": {
   "skin": "#7a4e32",
@@ -374,7 +1057,60 @@
     "material": "wood",
     "color": "#8a5a32"
    }
-  }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "stoneback_bear": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "bear",
+   "material": "fur",
+   "element": "earth",
+   "traits": [
+    "stone_back"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "sulfur_beast": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "boar",
+   "material": "fur",
+   "element": "poison",
+   "tint": "#8a7a3a",
+   "traits": [
+    "smoke"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
+ "summon_ember_whelp": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "lizard",
+   "material": "magma",
+   "size": "tiny",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
  },
  "summon_skeleton_warrior": {
   "skin": "#e9e3cf",
@@ -388,6 +1124,28 @@
    }
   },
   "main_material": "iron",
-  "main_color": "#9a8a76"
+  "main_color": "#9a8a76",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "thunder_hawk": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "flyer",
+   "variant": "bird",
+   "material": "fur",
+   "element": "lightning",
+   "tint": "#c8d8f0",
+   "traits": [
+    "sparks"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
  }
 }

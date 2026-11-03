@@ -15,7 +15,7 @@ scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
   - type: damage
-    multiplier_permille: 1600
+    multiplier_permille: 2020
     scaling: {by: missing_hp_10pct, per_step_permille: 80, cap_permille: 800}
 condition: null
 cost: {stamina: 8, cooldown: 1}

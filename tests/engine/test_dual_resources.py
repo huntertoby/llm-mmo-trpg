@@ -92,6 +92,7 @@ def test_block_shares_the_stamina_pool_with_weapon_skills() -> None:
     fresh = make_state(
         m, [spawn(Team.ALLY, (3, 3), hero), spawn(Team.ENEMY, (4, 3), foe)], skills=[skill]
     )
+    fresh.units[U1].stamina = 30  # 上限由公式算出（BAL-15b）；情境要的是目前耐力 30
 
     def attacked(state: BattleState) -> list[ReactionTriggered]:
         s = with_rolls(give_turn(state, "unit_0002"), [(20, 15), (4, 4)])
@@ -106,7 +107,7 @@ def test_block_shares_the_stamina_pool_with_weapon_skills() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 上限依屬性（只有主角：scaled_resources）
+# 上限依屬性（BAL-15b 起敵我同一套，不看 scaled_resources）
 # ---------------------------------------------------------------------------
 
 
@@ -134,9 +135,34 @@ def test_hero_caps_follow_the_highest_attribute_of_each_group() -> None:
     assert _unit(attributes=low, max_mana=40, stamina=30, scaled_resources=True) == (capped(36), 26)
 
 
-def test_other_units_keep_their_fixed_caps() -> None:
+def test_other_units_use_the_same_formula() -> None:
+    """BAL-15b（玩法決定 #80）：沒有 ``scaled_resources`` 的範本也照主角的公式。"""
     attrs = {a: 10 for a in Attribute} | {Attribute.INT: 18, Attribute.STR: 18}
-    assert _unit(attributes=attrs, max_mana=40, stamina=30) == (40, 30)
+    plain = _unit(attributes=attrs, max_mana=40, stamina=30)
+    assert plain == _unit(attributes=attrs, max_mana=40, stamina=30, scaled_resources=True)
+    core = library().ruleset.core
+    assert plain == (
+        core.resources.max_for("mana", 40, attrs),
+        core.resources.max_for("stamina", 30, attrs),
+    )
+
+
+@pytest.mark.parametrize("template_id", ["bandit", "bandit_archer", "bandit_shieldbearer"])
+def test_omitted_bases_come_from_the_weapon_class(template_id: str) -> None:
+    """範本沒寫 ``max_mana``／``stamina`` 時依武器大類（``resources.class_base``，BAL-15b）。"""
+    lib = library()
+    t = lib.unit(template_id)
+    assert t.max_mana is None and t.stamina is None  # content 不再寫死（BAL-15b）
+    base = lib.ruleset.core.resources.class_base[lib.weapons[t.weapon].weapon_class]
+    m = make_map(FLAT7, ally=[(0, 0)], enemy=[(6, 6)])
+    state = make_state(m, [spawn(Team.ALLY, (0, 0)), spawn(Team.ENEMY, (6, 6), template_id)])
+    unit = state.units[U2]
+    res = lib.ruleset.core.resources
+    assert (unit.max_mana, unit.max_stamina) == (
+        res.max_for("mana", base.mana, unit.attributes),
+        res.max_for("stamina", base.stamina, unit.attributes),
+    )
+    assert unit.stamina_regen == res.stamina_regen
 
 
 def test_a_build_hero_battle_with_stamina_skills_replays_identically() -> None:
@@ -154,7 +180,7 @@ def test_a_build_hero_battle_with_stamina_skills_replays_identically() -> None:
     assert state_to_json(again.state) == state_to_json(run.state)
 
 
-def test_hero_stamina_regenerates_each_turn_up_to_the_cap_and_only_for_heroes() -> None:
+def test_stamina_regenerates_each_turn_up_to_the_cap_for_every_unit() -> None:
     from trpg.engine.ai.utility import UtilityAI  # noqa: PLC0415
     from trpg.engine.events import TurnStarted  # noqa: PLC0415
     from trpg.sim.matrix import library_with_builds  # noqa: PLC0415
@@ -168,5 +194,6 @@ def test_hero_stamina_regenerates_each_turn_up_to_the_cap_and_only_for_heroes() 
     hero_turns = [e for e in turns if e.unit_id == U1]
     assert any(e.stamina_gained == regen for e in hero_turns), "有一個回合回復了耐力"
     assert all(0 <= e.stamina_gained <= regen and e.stamina <= e.max_stamina for e in hero_turns)
-    assert all(e.stamina_gained == 0 for e in turns if e.unit_id != U1)  # 敵人、隊友不回復
-    assert run.state.units[U1].stamina_regen == regen
+    assert all(0 <= e.stamina_gained <= regen and e.stamina <= e.max_stamina for e in turns)
+    # 敵我同一套（BAL-15b）：敵人、隊友也每回合回復
+    assert all(u.stamina_regen == regen for u in run.state.units.values())

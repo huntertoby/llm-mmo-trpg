@@ -48,15 +48,28 @@ def _sides(state: BattleState, unit: UnitState, units: tuple[UnitId, ...]) -> tu
     return enemies, allies
 
 
+def _heals(skill: SkillDef) -> bool:
+    follow = skill.followup_skill()
+    return follow is not None and any(e.type == "heal" for e in follow.effects)
+
+
 def composite_estimate(
     state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea
 ) -> Fraction | None:
-    """複合技能一個選取的估計；影響範圍（延遲段為預計範圍）內沒有敵方單位時為 ``None``。"""
+    """複合技能一個選取的估計；影響範圍（延遲段為預計範圍）內沒有敵方單位時為 ``None``。
+    治療型延遲段（Phase 5A-M1，九轉回天）改看預計範圍內受傷的友方（含自己），沒有就是 ``None``。"""
     if skill.followup is not None and skill.followup.when == "delayed":
         found = delayed_selection(state, unit, skill)
         if found is None:
             return None
         area = found[1]
+        if _heals(skill):
+            hurt = sum(
+                1
+                for uid in area.units
+                if (u := state.units[uid]).team is unit.team and u.alive and u.hp < u.max_hp
+            )
+            return Fraction(2 * hurt) if hurt else None
     enemies, allies = _sides(state, unit, area.units)
     if enemies == 0:
         return None

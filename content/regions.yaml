@@ -3,14 +3,27 @@
 #   look 是該區自己的預設覆寫（目前都沒有）；地圖檔的 look 再蓋過它。
 # - look_keys：地圖檔 look 的鍵與允許的值（地板 floor、牆 wall、草地 grass、水底色 water_tint…）。
 #   值只列「不是預設」的畫法；沒列的值、沒列的鍵一律被忽略（載入時警告、不報錯），前端也照預設畫。
+# - map_pool：該區的戰場地圖池（docs/design/05-戰鬥.md 5.1「區域地圖池」，#43；Phase 5A-1）。只寫地圖類型
+#   （archetype）：4 種通用（open_plain、corridor、ruined_heights、bridge_chasm）每區都有，另從 forest、swamp、
+#   frozen_lake、oil_depot 選 3 種。大世界地點圖（content/world/maps/）的戰鬥地圖類型必須在該區池內；空＝不檢查。
 # 新增一區或一種覆寫畫法：加一列即可，不用改程式；畫法本身在 client/src/render/regionArt.ts。
 default_region: crystal_crown
 regions:
-  - {id: cloud_ridge,   name_zh: 雲嶺}
-  - {id: crystal_crown, name_zh: 晶冠城邦}
-  - {id: arcane_hub,    name_zh: 魔導樞市}
-  - {id: ashen_waste,   name_zh: 灰燼荒原}
-  - {id: frost_tide,    name_zh: 霜潮海境}
+  - id: cloud_ridge
+    name_zh: 雲嶺
+    map_pool: [open_plain, corridor, ruined_heights, bridge_chasm, forest, swamp, frozen_lake]
+  - id: crystal_crown
+    name_zh: 晶冠城邦
+    map_pool: [open_plain, corridor, ruined_heights, bridge_chasm, forest, swamp, oil_depot]
+  - id: arcane_hub
+    name_zh: 魔導樞市
+    map_pool: [open_plain, corridor, ruined_heights, bridge_chasm, swamp, frozen_lake, oil_depot]
+  - id: ashen_waste
+    name_zh: 灰燼荒原
+    map_pool: [open_plain, corridor, ruined_heights, bridge_chasm, forest, swamp, oil_depot]
+  - id: frost_tide
+    name_zh: 霜潮海境
+    map_pool: [open_plain, corridor, ruined_heights, bridge_chasm, forest, swamp, frozen_lake]
 look_keys:
   - {key: wall,       values: [canyon_rock]}
   - {key: floor,      values: [plank_walk, paddy]}

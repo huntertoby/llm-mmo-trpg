@@ -14,6 +14,7 @@ import {
   elementPalette,
   framePath,
   isRanged,
+  normalizeArm,
   paintBackground,
   rarityColor,
   SKELETON_NAME,
@@ -76,11 +77,11 @@ export function partsOf(icon: SkillIconData): IconParts {
   // 草稿還沒有形狀或效果時，元素還沒決定（中性色）；其他情況沒有元素＝紫色預設
   const el: ElementSlot = first !== undefined ? first : icon.partial ? undefined : null;
   const segs: SegmentParts[] = icon.segments.map((s, i) => ({
-    motif: { shape_id: s.shape_id, skeleton: s.skeleton, ranged: isRanged(s.range, icon.weapon_req) },
+    motif: { shape_id: s.shape_id, skeleton: s.skeleton, ranged: isRanged(s.range, icon.weapon_req), arm: normalizeArm(s.arm) },
     el: i === 0 ? el : (s.elements?.[0] ?? el),
     effects: s.effects.map(effectPart),
   }));
-  if (segs.length === 0) segs.push({ motif: { shape_id: null, skeleton: null, ranged: false }, el, effects: [] });
+  if (segs.length === 0) segs.push({ motif: { shape_id: null, skeleton: null, ranged: false, arm: 1 }, el, effects: [] });
   const mod =
     icon.modifier === null || icon.modifier === undefined
       ? null
@@ -407,11 +408,13 @@ function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
 function shapeTile(seg: SegmentParts): AssemblyTile | null {
   if (seg.motif.shape_id === null) return null;
   const shape = seg.motif.shape_id;
+  const arm = normalizeArm(seg.motif.arm);
   return {
     cat: "形狀",
     label: SHAPE_NAME_ZH[shape] ?? shape,
-    tip: "技能的作用範圍",
-    id: `shape|${shape}|${String(seg.el)}|${seg.motif.skeleton ?? ""}|${seg.motif.ranged ? 1 : 0}`,
+    // 5F-ART1：臂長 ≥ 2 的十字在說明裡寫出臂長（圖示只畫得下 5×5）
+    tip: shape === "cross" && arm >= 2 ? `技能的作用範圍，臂長 ${arm}` : "技能的作用範圍",
+    id: `shape|${shape}|${String(seg.el)}|${seg.motif.skeleton ?? ""}|${seg.motif.ranged ? 1 : 0}|${arm}`,
     draw: (ctx) => {
       paintBackground(ctx, seg.el);
       segMotif(ctx, seg, 50, 50, 0.95);

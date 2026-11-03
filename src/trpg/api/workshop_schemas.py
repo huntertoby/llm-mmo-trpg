@@ -78,8 +78,8 @@ class WorkshopCheck(DraftCheck):
 
     card: SkillCard | None = None
     battle_mana: int | None = None
-    """我方施放時實際會扣的法力（``ally_mana_cost_permille`` 打折後，BAL-4c）；技能不完整時為
-    ``None``。``skill.cost.mana`` 仍是原始費用（預算以它計算、試玩送出的也是它）。"""
+    """施放時實際會扣的法力（``mana_cost_permille`` 打折後，BAL-4c；BAL-15b 起敵我同一套）；
+    技能不完整時為 ``None``。``skill.cost.mana`` 仍是原始費用（預算以它計算、試玩送出的也是它）。"""
     icon: SkillIcon
     """組裝式圖示（Phase 3-17）：草稿組到哪一步就有哪些部件（沒完成也有，``partial`` 為真）。"""
     concept_provisional: bool = False

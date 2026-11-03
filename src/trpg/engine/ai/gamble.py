@@ -4,7 +4,8 @@
   :attr:`trpg.engine.preview.Preview.gamble`），AI 對每個分支各自評分，再依分支的機率加權平均。
 - **失手反噬**（``cost.on_miss``）：預覽只算命中的情形，所以另外扣「未命中的機率 × 反噬的價值」。
 - **不在快死時亂賭**（:func:`cautious`）：施放者的 HP 低於 ``hp_floor_permille`` 時，反噬可能造成
-  傷害的賭博技能，正分乘上 ``low_hp_permille``（大幅降低）。
+  傷害的賭博技能，正分乘上 ``low_hp_permille``（大幅降低）。BAL-13d 起，有失手反噬的技能（例：
+  孤注一擲，失手倒地）不論反噬是不是傷害都算（照 gambler 主題「血量低於三成時不再亂賭」）。
 """
 
 from __future__ import annotations
@@ -50,10 +51,11 @@ def overloads(state: BattleState, actor: UnitState, skill: SkillDef) -> bool:
 def cautious(
     state: BattleState, actor: UnitState, skill: SkillDef, score: Fraction, profile: AiProfile
 ) -> Fraction:
-    """施放者 HP 太低時，降低會自傷的賭博技能（含這次會超載的技能）的分數（正分乘
-    ``low_hp_permille``；負分不變）。"""
+    """施放者 HP 太低時，降低會自傷的賭博技能（含這次會超載的技能、BAL-13d 起含任何失手反噬）
+    的分數（正分乘 ``low_hp_permille``；負分不變）。"""
     rules = profile.gamble
-    if not (can_hurt_caster(skill) or overloads(state, actor, skill)) or score <= 0:
+    risky = bool(skill.cost.on_miss) or can_hurt_caster(skill) or overloads(state, actor, skill)
+    if not risky or score <= 0:
         return score
     if actor.hp * _PERMILLE >= actor.max_hp * rules.hp_floor_permille:
         return score

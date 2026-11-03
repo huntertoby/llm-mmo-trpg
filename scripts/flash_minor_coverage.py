@@ -151,11 +151,20 @@ def _why_active(op: str, skill: SkillDef) -> str:
         "terrain_area": "沒有升降地形效果",
         "multi_hit": "複合技／陷阱／無傷害／效果已滿",
         "followup": "複合技／陷阱／變奏／失手反噬／常駐／無傷害／禁用效果",
-        "light": "AP 已是 1" if (skill.ap_cost or 1) <= 1 else "其他",
+        "light": "AP 已是 1 且沒有冷卻／資源可減" if (skill.ap_cost or 1) <= 1 else "其他",
         "element": "沒有傷害效果／陷阱／效果已滿／元素已有",
         "kill_refund": "無傷害效果（或已有擊殺返還）",
         "summon_toughen": "不是單隻召喚",
         "extend": "沒有可延長的狀態／表面／區域",
+        "converge_single": "沒有威力／不是多格範圍（陷阱看觸發範圍）／骨架或效果不允許單體",
+        "converge_step": "沒有威力／已是最小一級（或環形、連鎖、光環；陷阱十字）",
+        "refine": "陷阱／沒有威力／沒有附帶狀態、第二元素、第二關鍵字或接續段",
+        "refine_merge": "陷阱／沒有多段同元素傷害",
+        "fuse": "不是一次召喚 2 隻以上",
+        "focus_range": "沒有可收回的觸發距離上限或形狀大小",
+        "focus_condition": "條件已是最緊（狀態、表面等）且不是被攻擊時",
+        "focus_mod_range": "沒有範圍／射程 +n 的規則（或只剩這一條規則）",
+        "focus_mod_condition": "規則的條件已是最緊（狀態、表面等）",
     }
     return reasons.get(op, "其他")
 

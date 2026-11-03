@@ -90,6 +90,21 @@ class CostAllowance(ContentModel):
 
     cooldown_per_turn: int = Field(ge=0)
     cooldown_cap: int = Field(ge=0)
+    stance_cooldown_per_turn: int | None = Field(default=None, ge=0)
+    """姿態／形態（``kind: stance``）的冷卻每回合折抵（BAL-11b，06 6.34.4「BAL-11a 定」）：
+    姿態進入後持續到取消，冷卻幾乎不是代價。省略時同 ``cooldown_per_turn``。"""
+    stance_cooldown_cap: int | None = Field(default=None, ge=0)
+    """姿態冷卻折抵的上限；省略時同 ``cooldown_cap``。"""
+
+    def cooldown_allowance(self, cooldown: int, *, stance: bool) -> int:
+        """冷卻 ``cooldown`` 回合的折抵（‰）：姿態用姿態專用的每回合值與上限。"""
+        per = self.stance_cooldown_per_turn if stance else None
+        cap = self.stance_cooldown_cap if stance else None
+        return min(
+            cooldown * (self.cooldown_per_turn if per is None else per),
+            self.cooldown_cap if cap is None else cap,
+        )
+
     uses_per_battle: dict[int, int]
     """每場次數 → 折抵；次數超過表中最大值時用 ``uses_default``。"""
     uses_default: int = Field(ge=0)
@@ -240,8 +255,9 @@ class RetierGrowthRules(ContentModel):
     """升階時放大效果本身（Phase 3W-9b，06 6.34.9「升階時重算」；``skill_budget.yaml`` 的
     ``retier_growth``）。只用在點數固定（沒有骰子、倍率這類強度旋鈕）的技能升階時：
 
-    - ``stretch``：原語 → 參數 → 升階時可以放大到的上限（狀態、表面的持續回合）。只放大組合器本來
-      就有旋鈕的參數（硬控狀態的持續回合沒有旋鈕，不會被放大），而且只增不減。
+    - ``stretch``：原語 → 參數 → 升階時可以放大到的上限（狀態、表面的持續回合；BAL-12e 起 6）。只
+      放大組合器本來就有旋鈕的參數（硬控狀態的持續回合沒有旋鈕，不會被放大），而且只增不減；到上限
+      後數值型狀態與表面改加強度（``magnitude_step``／``magnitude_max``）。
     - ``area_shapes``：表面與升降地形放大格數時依序換的形狀（同一種選取方式，格數由少到多）。新形狀
       要符合角色階級（``min_character_tier`` 的形狀與升降地形格數表）。
     - ``max_extra_cooldown``：換成較大的形狀時，最多可以多加幾回合冷卻（互斥規則「無冷卻的大範圍」、
@@ -249,6 +265,11 @@ class RetierGrowthRules(ContentModel):
     """
 
     stretch: dict[str, dict[str, int]] = Field(default_factory=dict)
+    magnitude_step: int = Field(default=25, ge=1, le=500)
+    """BAL-12e（#76）：持續回合放大到 ``stretch`` 的上限（6）之後，數值型狀態與表面改加強度
+    （``magnitude_permille``）的級距（‰）。表面要先放大到最大的形狀才加強度。"""
+    magnitude_max: int = Field(default=2000, ge=1000, le=2000)
+    """升階重配的強度上限（‰；同原語參數的上限）。"""
     area_shapes: tuple[str, ...] = ()
     max_extra_cooldown: int = Field(default=0, ge=0)
     max_cooldown: int = Field(default=6, ge=0)
@@ -277,6 +298,8 @@ class CharacterTierRules(ContentModel):
     - ``second_element``：傷害帶兩種以上的元素（第二元素）。
     - ``dual_scaling``：雙屬性縮放。
     - ``terrain_area``：升降地形的影響格數（4～6 格 2 階、7 格以上 3 階，#58）。
+    - ``basic_summon_units``：基本召喚物（BAL-19c，#110 開放 1 階召喚白板）：技能的召喚效果全部
+      是一次召喚 1 隻這些單位時，召喚原語與召喚骨架不受上面的階級限制（1 階）。
     """
 
     kinds: dict[str, int] = Field(default_factory=dict)
@@ -289,6 +312,7 @@ class CharacterTierRules(ContentModel):
     second_element: int = Field(default=2, ge=1)
     dual_scaling: int = Field(default=3, ge=1)
     terrain_area: tuple[TerrainAreaTier, ...] = ()
+    basic_summon_units: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _check(self) -> CharacterTierRules:

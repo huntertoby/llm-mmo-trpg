@@ -1,0 +1,3 @@
+[   72.8s] baseline
+[  143.5s] skill_life_drain,skill_hex_bolt,skill_dispel_magic,skill_blessing_thief:dmg=1500;skill_fire_bolt,skill_shatter_blast,skill_ashen_oath,skill_gravity_burst,skill_cinder_burst,skill_detonate_burning:dmg=850;skill_summon_spirit:dur=-1
+[  213.5s] skill_life_drain,skill_hex_bolt,skill_dispel_magic,skill_blessing_thief:dmg=2000;skill_fire_bolt,skill_shatter_blast,skill_ashen_oath,skill_gravity_burst,skill_cinder_burst,skill_detonate_burning:dmg=700;skill_summon_spirit:dur=-1;skill_raise_skeleton:cd=+1

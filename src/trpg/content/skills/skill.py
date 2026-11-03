@@ -35,6 +35,7 @@ from trpg.content.skills.constants import (
     DELAYED_DAMAGE,
     DETONATE_RUNES,
     ENTER_FORM,
+    FLAT_BONUS_EFFECTS,
     GAMBLE,
     GAMBLE_BRANCH_TYPES,
     GAMBLE_TAG,
@@ -191,6 +192,11 @@ class SkillDef(ContentModel):
     """閃現（靈光一閃，Phase 3W-1，6.34.3）提高的預算上限（‰，佔同階預算）：可用預算再 ×（1000 ＋
     它）÷ 1000。每閃一次 +40‰、完整技能 +120‰（``flash_templates.yaml``）；省略＝沒有加成。只影響
     預算驗證與重調，不影響結算（結算只看技能本身的數值）。"""
+
+    enemy_only: bool = Field(default=False, exclude_if=lambda v: not v)
+    """只給敵人（Phase 5F-3b，玩法 PM 2026-11-03 代決）：為真時不進任何玩家技能池——生成器、候選、
+    閃現、工坊與 LLM 提議的可選清單都經 :func:`trpg.content.player_pool.player_skills` 排除；敵人
+    範本照常可以裝備、施放。不影響結算；``False`` 時不輸出，既有技能的序列化與雜湊不變。"""
 
     stance_upkeep: int = Field(default=0, ge=0, le=2)
     """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
@@ -938,15 +944,16 @@ class SkillDef(ContentModel):
         ):
             raise ValueError("stance_upkeep 只有一般姿態（不含形態）可以填")
         magnitudes = [e for e in self.effects if e.magnitude_permille is not None]
-        not_stance = self.kind != "stance" or any(
-            e.type not in ("apply_status", ENTER_FORM) for e in magnitudes
-        )
-        if magnitudes and not_stance:
+        # 姿態幅度（3W-5b）、形態幅度（BAL-2c）、狀態與表面的強度（BAL-12e，#76；哪些狀態與表面
+        # 有數值可放大由驗證器對照內容庫檢查）
+        if any(e.type not in ("apply_status", "create_surface", ENTER_FORM) for e in magnitudes):
             raise ValueError(
-                "magnitude_permille 只有姿態技能的 apply_status 與 enter_form（形態幅度）可以填"
+                "magnitude_permille 只有 apply_status、create_surface 與 enter_form 可以填"
             )
+        if any(e.type == ENTER_FORM for e in magnitudes) and self.kind != "stance":
+            raise ValueError("enter_form 的 magnitude_permille（形態幅度）只有姿態技能可以填")
         if any((e.magnitude_permille or 0) < _PERMILLE for e in magnitudes):
-            raise ValueError("magnitude_permille 不能小於 1000（姿態幅度的強化）")
+            raise ValueError("magnitude_permille 不能小於 1000（幅度與強度只能強化）")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""
@@ -1119,6 +1126,18 @@ class SkillDef(ContentModel):
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 
+    def _check_flat_bonus(self, where: str, effect: EffectSpec, *, top: bool) -> None:
+        """``flat_bonus``（固定值加成，BAL-12b）：只有技能自己的傷害、治療、護盾可以用；傷害只限
+        法術技（武器技的傷害由武器骰與倍率決定）。"""
+        if effect.flat_bonus is None:
+            return
+        if effect.type not in FLAT_BONUS_EFFECTS:
+            raise ValueError(f"{where}：只有 damage、heal、shield 使用 flat_bonus")
+        if not top:
+            raise ValueError(f"{where}：flat_bonus 只能用在技能自己的傷害、治療或護盾效果")
+        if effect.type == "damage" and self.category != "spell":
+            raise ValueError(f"{where}：flat_bonus（固定值加成）的傷害只限法術技")
+
     @staticmethod
     def _check_form_bonus(where: str, effect: EffectSpec, *, top: bool) -> None:
         """``form_bonus_permille``（在形態中的倍率）：只有技能自己的傷害、治療可以用。"""
@@ -1188,6 +1207,7 @@ class SkillDef(ContentModel):
                 f"{where}：推擊與拉扯的距離必須是 1 到 {_MAX_DISPLACE} 格，收到 {effect.distance}"
             )
         self._check_form_bonus(where, effect, top=top)
+        self._check_flat_bonus(where, effect, top=top)
         if effect.type != "damage":
             return
         if self.category == "spell":
@@ -1380,7 +1400,8 @@ class SkillTable(ContentModel):
 
 def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDef) -> list[str]:
     problems: list[str] = []
-    for name, spec in shape.params.items():
+    params = shape.all_params()
+    for name, spec in params.items():
         value = values.get(name)
         if value is None:
             if spec.required:
@@ -1396,6 +1417,6 @@ def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDe
                 f"{where}.{name}：{shape.id} 的 {name} 必須在 {spec.min}–{spec.max}，收到 {value}"
             )
     for name in values:
-        if name not in shape.params:
+        if name not in params:
             problems.append(f"{where}.{name}：{shape.id} 不接受參數 {name}")
     return problems

@@ -29,7 +29,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
+from trpg.content.skills import EffectSpec, ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
 from trpg.content.skills.modifiers import ModifierChange
 
 __all__ = [
@@ -92,10 +92,19 @@ class CompleteSkillRules(ContentModel):
     cap_permille: int = Field(default=150, ge=0, le=1000)
     """實際加上去的上限（06 6.34.6，玩法 PM ec73486f）：
     一步會超過時先用較細的旋鈕補，都不行才接受超過。"""
+    stop_over_permille: int | None = Field(default=None, ge=0, le=1000)
+    """BAL-12b 定（06 6.34.6）：都不行、要超過上限時，若會超過這個值，改成停在
+    +``budget_permille``‰ 以下最接近的那一階（只走上限內的步子停下的版本）；省略＝接受超過。"""
+    modifier_step: int | None = Field(default=None, ge=1, le=25)
+    """BAL-12b 定：完整技能的修正幅度（傷害、治療）改用每 ``modifier_step``‰ 一格的細階梯；
+    省略＝同升階重配的修正階梯。只用在完整技能。"""
     can_flash: bool = False
     can_reflash: bool = True
     summon_power_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
     stance_magnitude_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
+    status_magnitude_steps: tuple[int, ...] = (1000, 1040, 1080, 1120, 1160, 1200, 1250, 1300)
+    """數值型狀態與表面的強度（BAL-12e，#76；``magnitude_permille``，乘在原本的強度上）。在效果參數
+    那一組（持續回合等）一起加，比持續 +1 回合細。"""
     cost_cuts: tuple[CostCut, ...] = (
         CostCut(field="stance_upkeep"),
         CostCut(field="cooldown"),
@@ -108,6 +117,7 @@ class CompleteSkillRules(ContentModel):
     def _check_ladders(self) -> CompleteSkillRules:
         _ladder(self.summon_power_steps, "summon_power_steps")
         _ladder(self.stance_magnitude_steps, "stance_magnitude_steps")
+        _ladder(self.status_magnitude_steps, "status_magnitude_steps")
         return self
 
 
@@ -164,12 +174,44 @@ class FlashRules(ContentModel):
     """同上，命中後效果（``on_hit_effects``）的骰子也當旋鈕（組合器的骰子階梯；BAL-10b）。"""
     modifier_fine_step: int = Field(default=5, ge=1, le=50)
     """BAL-10b 新增的修正模板重調正的傷害、治療幅度用的階梯間距（‰；從這個數到 1000）。"""
+    modifier_potency_step: int | None = Field(default=None, ge=1, le=50)
+    """閃現「強效」（``mod_potency``）重調正的傷害、治療幅度的階梯間距（‰；從這個數到 1000；
+    BAL-11b）。省略時用舊階梯（50～1000 每 25）。只在閃現；升階重配、完整技能照舊。"""
+    followup_multiplier_step: int | None = Field(default=None, ge=1, le=100)
+    """接續段強化類（BAL-10b 的 ``followup_*``）重調接續段武器倍率的細階梯間距（‰；3000‰ 以下，
+    與原階梯合併；BAL-11b）。省略時用原階梯。"""
+    trigger_flat_bonus: int = Field(default=0, ge=0, le=10)
+    """被動、反應「效果 +」的細旋鈕（BAL-12b 定）：骰子重調不進預算窗時，法術傷害再試固定值
+    +1～+n（``damage.flat_bonus``）。0 ＝ 不用。"""
+    area_trap_shapes: tuple[str, ...] = ()
+    """「範圍 +1」用在陷阱時（BAL-12b 定）：陷阱觸發範圍（``trap.shape``）依序換到下一個；空 ＝ 陷阱
+    不改範圍（舊行為）。"""
+    area_tile_shapes: tuple[str, ...] = ()
+    """「範圍 +1」用在地面格（BAL-12b 定）：形狀依序換到下一個（例：指定格 → 十字）；空 ＝ 不改。"""
+    extend_effects: tuple[str, ...] = ()
+    """「延長」放寬的對象（BAL-12b 定）：原本的狀態、表面、區域延長不了時，這些效果的 ``duration``
+    ＋1（召喚物存活、障礙、刻印）；陷阱另看 ``extend_trap``。"""
+    extend_trap: bool = False
+    """「延長」也加陷阱持續回合（``trap.rounds`` ＋1，BAL-12b 定）。"""
     modifier_drawback_step: int = Field(default=100, ge=1, le=500)
     """``mod_cost``（代價減輕）：負的傷害、治療幅度（‰）往 0 減輕多少（BAL-10b）。"""
     form_magnitudes: tuple[int, ...] = tuple(range(1000, 2001, 50))
     """變身姿態（BAL-2c）修正類小變化與升階重配可換到的形態幅度（‰，``enter_form.magnitude_permille``；
     上限 2000）。比 ``stance_magnitudes`` 細：升階重配把形態拉到接近原本的比例（例如 99%）之後，
     一次閃現的 +40‰ 預算仍要放得下下一格。"""
+    single_hit_cap_permille: int = Field(default=3000, ge=1000, le=10000)
+    """收回家族（收束起，BAL-10d，06 6.34.4）的單發上限：收回後一次施放對單一目標的期望傷害（治療、
+    護盾同理）最多是「同階、同 AP 的單體技能預算」（``tier_budget`` × AP 係數）的這麼多‰；超過的預算
+    改成減費用（減不動就不出這個選項）。"""
+    converge_targets_permille: int = Field(default=1500, ge=1000, le=10000)
+    converge_usage_score: int = Field(default=3, ge=0, le=5)
+    """收束的用法分數（BAL-10d2，原型 AI 權重）：這招放過、平均命中目標數（‰）低於
+    ``converge_targets_permille`` 時，兩種收束各加這麼多分（換形狀在同樣條件下是 2 分，3 分讓
+    常打單體的範圍技優先看到收束）。"""
+    tighten_permille: int = Field(default=100, ge=0, le=1000)
+    """專注的條件收緊一級（BAL-10e2，06 6.34.4「BAL-10e 定」）：預算器不幫條件計價，收緊一級固定
+    視為拿掉這麼多‰（佔同階可用預算），和這次閃現的 ``budget_step_permille`` 一起換觸發效果或
+    修正幅度。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
@@ -272,9 +314,19 @@ class FlashTemplate(ContentModel):
     """姿態的進入代價（施放費用）可以動的欄位，依序試（BAL-10b）：``stance_enter_light`` 減 1；
     姿態費用類（``stance_light``／``stance_heavy``）填了就也適用變身姿態（形態的維持費照 #67 不動，
     改用進入代價當費用旋鈕）。空 ＝ 不動進入代價（變身姿態不出費用類，同 BAL-2c）。"""
+    skeletons: tuple[str, ...] = ()
+    """收束（BAL-10d）：新形狀不在原骨架允許的形狀內時，依序改試的骨架（例：範圍骨架收成單體 →
+    打擊、連擊）；只取允許新形狀的。空 ＝ 只用原骨架。"""
+    rider: EffectSpec | None = None
+    """附帶護身（``self_rider``，BAL-19e）：姿態進入時、反應觸發時多一個作用於自己的效果（護盾、
+    治療、回復資源、淨化）。數值只是起點，套用後由預算器重調。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
+        if (self.op == "self_rider") != (self.rider is not None):
+            raise ValueError(f"模板 {self.id}：rider 只給 self_rider 用，而且 self_rider 必須填")
+        if self.rider is not None and self.rider.affects != "self":
+            raise ValueError(f"模板 {self.id}：附帶護身的效果只能作用於自己（affects: self）")
         if self.op in ("area", "range") and not self.delta:
             raise ValueError(f"模板 {self.id}：{self.op} 必須填非 0 的 delta")
         if self.op == "terrain_area" and (not self.shapes or self.min_cells is None):

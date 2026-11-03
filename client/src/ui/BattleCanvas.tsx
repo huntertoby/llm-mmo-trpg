@@ -1,7 +1,7 @@
 // React 包裝：建立／銷毀 PixiJS 繪製器，模型、高亮或縮放改變時重畫。
 // 滑鼠事件（Phase 3-8）：在 DOM 上接，以畫布實際的矩形把 client 座標換算成格子（`clientToTile`），
 // 不論畫布被縮放多少都對得上。`children` 是疊在畫布上、以畫布左上角為原點的浮動元素（浮動資訊卡等）。
-import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type MouseEvent, type MutableRefObject, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type MutableRefObject, type ReactNode } from "react";
 import type { Pos } from "../api/types";
 import type { DrawModel } from "../battle/drawModel";
 import { clientToTile, scaledSize } from "../battle/stageLayout";
@@ -25,6 +25,10 @@ interface Props {
   children?: ReactNode;
 }
 
+/** 繪製器壞掉時最多重建幾次（`REBUILD_WINDOW_MS` 內）。 */
+const MAX_REBUILDS = 3;
+const REBUILD_WINDOW_MS = 10_000;
+
 function tileFromEvent(e: MouseEvent<HTMLDivElement>, model: DrawModel) {
   const canvas = e.currentTarget.querySelector("canvas");
   if (canvas === null) return null;
@@ -36,26 +40,45 @@ export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, o
   const latest = useRef({ model, highlights, flameOn, scale });
   latest.current = { model, highlights, flameOn, scale };
 
+  // 繪製器壞掉（算繪丟例外、WebGL context 沒恢復）時加一，重建繪製器（UI-T1：原本要 F5 才恢復）。
+  const [generation, setGeneration] = useState(0);
+  const rebuilds = useRef<number[]>([]);
+
   useEffect(() => {
     const host = hostRef.current;
     if (host === null) return undefined;
     const renderer = new BattleRenderer();
     rendererRef.current = renderer;
-    void renderer.init(host).then(async () => {
-      await waitForFonts();
+    renderer.onBroken = () => {
       if (rendererRef.current !== renderer) return;
+      const now = Date.now();
+      rebuilds.current = [...rebuilds.current.filter((t) => now - t < REBUILD_WINDOW_MS), now];
+      if (rebuilds.current.length > MAX_REBUILDS) return; // 一直壞：不無限重建（主控台已有錯誤）
+      setGeneration((g) => g + 1);
+    };
+    const show = () => {
       if (rendererRef.current !== renderer) return;
       renderer.setScale(latest.current.scale);
       renderer.draw(latest.current.model);
       renderer.setFlameEmphasis(latest.current.flameOn);
       renderer.setHighlights(latest.current.highlights);
-    });
+    };
+    void renderer
+      .init(host)
+      .then(async () => {
+        await waitForFonts();
+        show();
+      })
+      .catch((e: unknown) => {
+        console.error("[BattleCanvas] 繪製器初始化失敗", e);
+        renderer.onBroken?.();
+      });
     return () => {
       if (rendererRef.current === renderer) rendererRef.current = null;
       renderer.destroy();
       host.replaceChildren();
     };
-  }, [rendererRef]);
+  }, [rendererRef, generation]);
 
   // 版面效果：逐步播放時用 flushSync 換畫面，需要同步重畫（動畫才找得到單位）。
   useLayoutEffect(() => {

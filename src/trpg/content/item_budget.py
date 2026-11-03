@@ -176,6 +176,9 @@ class ItemGenRules(ContentModel):
     """戰後裝備三選一的候選件數（Phase 3K-2，07 7.1）；部位不重複。"""
     offer_attempts: int = Field(default=8, ge=1, le=50)
     """候選的某一件穿不上時（例如傳說物品會超過全身上限）最多重抽幾次。"""
+    unique_affixes: tuple[str, ...] = ()
+    """獨特詞條（Phase 5D-3，08 8.26.3 M4）：不進一般產生器（掉落、傭兵、重骰都不會抽到），只由隱藏
+    配方指定。"""
 
     @model_validator(mode="after")
     def _check(self) -> ItemGenRules:

@@ -57,14 +57,14 @@ rules:
     element: lightning
     target: surface
     surface: water
-    then: [{op: conduct, damage_permille: 1000, min_damage: 1}]
+    then: [{op: conduct, damage_permille: 500, min_damage: 1}]   # BAL-13c：1000 → 500（BAL-13a 原型 conduct_500）
   - id: lightning_conducts_object
     description_zh: 雷電沿導電物件擴散
     trigger: element
     element: lightning
     target: object
     object_tag: conductive
-    then: [{op: conduct, damage_permille: 1000, min_damage: 1}]
+    then: [{op: conduct, damage_permille: 500, min_damage: 1}]   # BAL-13c：1000 → 500（BAL-13a 原型 conduct_500）
   # --- 冰霜 ---
   - id: ice_freezes_water
     description_zh: 冰霜使水結冰（進入時滑倒檢定）

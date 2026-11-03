@@ -36,8 +36,12 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # 225 ＋ 3I-5 的 29 招武器親和 ＋ 3-52 的 14 招層數示範
     # ＋ 3-54c 的 14 招風毒聖種子 ＋ 3-54d 的 2 招大地種子 ＋ 3-54e 的 2 招大地種子
     # ＋ 3J-1a 的 5 招測試用形態 ＋ 3J-1b 的 5 招 ＋ 3J-3 的化形專精 ＋ 3J-4 的 3 招形態利用者
-    # ＋ 3J-4c 的解形爆發
-    assert len(BUILTIN) == 301
+    # ＋ 3J-4c 的解形爆發 ＋ BAL-19a 的 16 招感知、BAL-19b 的 18 招意志組合主題法術
+    # ＋ BAL-19c 的 9 招召喚武器技 ＋ BAL-19d 的 14 招遠程（風、聖）武器技
+    # ＋ BAL-19e 的 8 招反應、4 招姿態 ＋ BAL-19f 的 3 招火杖召喚法術
+    # ＋ 5A-M1 的九轉回天 ＋ 5B-5b 的穿陣刺 ＋ 5F-2 的霧遁、霧鎖千山 ＋ 5F-1b 的霧影分身
+    # ＋ 5F-3 碎晶之主與源晶柱的 6 招（只給敵人）＋ 5F-5a 灰燼荒原的 8 招（只給敵人）
+    assert len(BUILTIN) == 392
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

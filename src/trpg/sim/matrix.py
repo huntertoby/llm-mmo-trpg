@@ -3,7 +3,8 @@
 每個（build, 地圖）跑一批戰鬥：我方 ＝ build 英雄 ＋ 標準隊友（``content/sim/builds.yaml``），
 敵方 ＝ 地圖 ``encounter.enemies``。每格記錄我方勝率、build 英雄的 DPR 與存活率、平均輪數。
 
-- **排名**：每張地圖內依「勝率，平手比 build 英雄 DPR」排序（仍相同時依 build 在檔案中的順序）；
+- **排名**（BAL-12d，06 6.8）：每張地圖內依勝場排序，勝場差 ≤ 1 視為同分，同分比我方隊伍剩餘 HP 比例
+  （含隊友），仍相同時依 build 在檔案中的順序；每格至少 30 場；
   **前段 ＝ 前 ``max(1, n ÷ 3)`` 名**（6 個 build 時為前 2 名）。
 - **地圖類型**：同一類型有多張地圖時，勝率、DPR、存活率、輪數取各地圖的平均，再以同樣的規則排名。
 - **兩條標準**：(1) 沒有任何 build 在所有地圖類型都排名前段；
@@ -16,9 +17,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
+from typing import Final
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
@@ -88,6 +90,9 @@ class RawCell:
     teammate_survival: float = 0.0
     """保護指標（Phase 2D-2）：build 英雄每場平均的治療量、護盾吸收量（它施放的護盾）、承受傷害，
     以及戰鬥結束時隊友的存活率。只列數字，不進排名與 6.8 標準。"""
+    team_hp_ratio: float = 0.0
+    """我方隊伍（含隊友、不含召喚物）戰鬥結束時剩餘 HP 比例的平均（BAL-12d）；勝場差 ≤ 1 的同分
+    以它決勝。"""
 
 
 class MatrixCell(_Model):
@@ -111,6 +116,7 @@ class MatrixCell(_Model):
     hero_shield: float = 0.0
     hero_taken: float = 0.0
     teammate_survival: float = 0.0
+    team_hp_ratio: float = 0.0
 
 
 class ArchetypeCell(_Model):
@@ -129,6 +135,9 @@ class ArchetypeCell(_Model):
     hero_shield: float = 0.0
     hero_taken: float = 0.0
     teammate_survival: float = 0.0
+    team_hp_ratio: float = 0.0
+    ally_wins: int = 0
+    """各地圖勝場合計（BAL-12d 排名用）。"""
 
 
 class Standards(_Model):
@@ -183,12 +192,30 @@ def _win_rate(cell: RawCell) -> Fraction:
     return Fraction(cell.ally_wins, cell.completed) if cell.completed else Fraction(0)
 
 
-def _ranked[T](items: Sequence[T], key: Mapping[int, tuple[Fraction, float]]) -> list[int]:
-    """依 ``key``（勝率、DPR；越大越前面）排序後的名次（1 起算）；同分依原順序。"""
-    order = sorted(range(len(items)), key=lambda i: (-key[i][0], -key[i][1], i))
-    ranks = [0] * len(items)
-    for place, index in enumerate(order, start=1):
-        ranks[index] = place
+TIE_WINS: Final = 1
+"""勝場差不超過這個數字視為同分（BAL-12d，06 6.8）。"""
+MIN_SEEDS_PER_CELL: Final = 30
+"""每格（build × 地圖）至少要打的場數（06 6.8）；:func:`assemble_matrix` 不強制，由指令檢查。"""
+
+
+def _ranked(wins: Sequence[int], hp: Sequence[float]) -> list[int]:
+    """名次（1 起算）：勝場多者在前；與組內最高者勝場差 ≤ :data:`TIE_WINS` 的視為同分，
+    同分比隊伍剩餘 HP 比例（高者在前），再同分依原順序（BAL-12d）。
+
+    分組從最高勝場開始，組長之後勝場差在容許內的都歸同一組（不連鎖），確定性。"""
+    order = sorted(range(len(wins)), key=lambda i: (-wins[i], i))
+    ranks = [0] * len(wins)
+    place = 1
+    pos = 0
+    while pos < len(order):
+        leader = wins[order[pos]]
+        end = pos
+        while end < len(order) and leader - wins[order[end]] <= TIE_WINS:
+            end += 1
+        for i in sorted(order[pos:end], key=lambda i: (-hp[i], i)):
+            ranks[i] = place
+            place += 1
+        pos = end
     return ranks
 
 
@@ -205,8 +232,7 @@ def assemble_matrix(
     cells: list[MatrixCell] = []
     for info in maps:
         row = sorted((c for c in raw if c.map_id == info.map_id), key=lambda c: index[c.build_id])
-        keys = {i: (_win_rate(c), c.hero_dpr) for i, c in enumerate(row)}
-        ranks = _ranked(row, keys)
+        ranks = _ranked([c.ally_wins for c in row], [c.team_hp_ratio for c in row])
         cells += [
             MatrixCell(
                 build_id=c.build_id,
@@ -227,6 +253,7 @@ def assemble_matrix(
                 hero_shield=c.hero_shield,
                 hero_taken=c.hero_taken,
                 teammate_survival=c.teammate_survival,
+                team_hp_ratio=c.team_hp_ratio,
             )
             for c, rank in zip(row, ranks, strict=True)
         ]
@@ -252,11 +279,12 @@ def assemble_matrix(
                         sum(c.hero_shield for c in mine) / k,
                         sum(c.hero_taken for c in mine) / k,
                         sum(c.teammate_survival for c in mine) / k,
+                        sum(c.team_hp_ratio for c in mine) / k,
+                        float(sum(c.ally_wins for c in mine)),
                     ),
                 )
             )
-        keys = {i: (r[2], r[3]) for i, r in enumerate(rows)}
-        ranks = _ranked(rows, keys)
+        ranks = _ranked([int(r[6][5]) for r in rows], [r[6][4] for r in rows])
         archetype_cells += [
             ArchetypeCell(
                 build_id=b,
@@ -272,6 +300,8 @@ def assemble_matrix(
                 hero_shield=prot[1],
                 hero_taken=prot[2],
                 teammate_survival=prot[3],
+                team_hp_ratio=prot[4],
+                ally_wins=int(prot[5]),
             )
             for (b, ms, w, d, s, r, prot), rank in zip(rows, ranks, strict=True)
         ]
@@ -367,6 +397,7 @@ def _raw_cell(build: str, map_id: str, archetype: str, report: BatchReport) -> R
         teammate_survival=(
             0.0 if hero is None or hero.teammate_survival is None else hero.teammate_survival
         ),
+        team_hp_ratio=report.ally_hp_ratio,
     )
 
 

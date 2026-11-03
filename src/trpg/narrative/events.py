@@ -21,10 +21,12 @@ from trpg.engine.events import (
     BattleStarted,
     BombExploded,
     BombTicked,
+    BossPhaseChanged,
     ChainLimitReached,
     ChargeActivated,
     CheckRolled,
     Collided,
+    ConductBlocked,
     DamageDealt,
     DamageRedirected,
     DeathCheated,
@@ -43,6 +45,7 @@ from trpg.engine.events import (
     GearHpLost,
     GearTriggered,
     GuardSet,
+    GuardsRetreated,
     Healed,
     InfusedSkillCast,
     InfusionFizzled,
@@ -51,6 +54,7 @@ from trpg.engine.events import (
     ManeuverRolled,
     MapEventTriggered,
     MoveBlocked,
+    OathBroken,
     ObjectAttacked,
     ObjectCreated,
     ObjectDamaged,
@@ -130,6 +134,7 @@ from trpg.engine.events import (
     UnitVaulted,
     WallToppled,
     WeaponReloaded,
+    WeatherChanged,
     ZoneCreated,
     ZoneExpanded,
     ZoneExpired,
@@ -178,6 +183,7 @@ _END_REASONS = {
     "defended": "守住守點",
     "point_lost": "守點失守",
     "round_limit": "輪數上限",
+    "leader_defeated": "頭目倒下，護衛撤退",
 }
 
 _DESTROY_CAUSES = {
@@ -355,6 +361,12 @@ def _turn_skipped(e: TurnSkipped, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 受到「{v.statuses[e.status_id]}」影響，跳過這個回合"
 
 
+@_handles(GuardsRetreated)
+def _guards_retreated(e: GuardsRetreated, v: _View) -> str:
+    guards = "、".join(v.name.get(u, u) for u in e.unit_ids)
+    return f"  頭目倒下，{guards} 撤退了"
+
+
 @_handles(BattleEnded)
 def _battle_ended(e: BattleEnded, _v: _View) -> str:
     if e.winner is None:
@@ -401,6 +413,11 @@ _FIZZLE_TEXT = {
     "stonewall": "  穩若磐石：擊不倒",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
 }
+
+
+@_handles(ConductBlocked)
+def _conduct_blocked(e: ConductBlocked, v: _View) -> str:
+    return f"  ⚡ {v.name[e.unit_id]} 這一輪已經被擴散打過，這次不受傷害"
 
 
 @_handles(EffectFizzled)
@@ -707,17 +724,28 @@ def _damage(e: DamageDealt, v: _View) -> str:
     if e.block_permille != _PERMILLE:
         mod += f"（格擋 ×{e.block_permille / _PERMILLE:g}）"
     # 扣掉穿透折扣與格擋後，剩下的是技能／裝備／狀態的傷害加成
-    divisor = e.pierce_permille * max(e.block_permille, 1)
-    bonus = e.multiplier_permille * _PERMILLE * _PERMILLE // divisor if e.block_permille else 0
+    divisor = e.pierce_permille * max(e.block_permille, 1) * max(e.chain_permille, 1)
+    bonus = (
+        e.multiplier_permille * _PERMILLE**3 // divisor
+        if e.block_permille and e.chain_permille
+        else 0
+    )
     bonus = bonus or _PERMILLE
     if bonus != _PERMILLE:
         mod += f"（加成 ×{bonus / _PERMILLE:g}）"
     if e.pierce_permille != _PERMILLE:
         mod += f"（穿透後方 ×{e.pierce_permille / _PERMILLE:g}）"
+    if e.chain_permille != _PERMILLE:
+        mod += f"（連鎖衰減 ×{e.chain_permille / _PERMILLE:g}）"
     if e.status_ppm != _PPM:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
+    if e.formation_permille != _PERMILLE:  # 已包含在狀態倍率裡（Phase 5A-M2）
+        mod += f"（陣法 ×{e.formation_permille / _PERMILLE:g}）"
+    if e.ward_permille != _PERMILLE:  # 已包含在狀態倍率裡（Phase 5A-M2b）
+        mod += f"（護陣 ×{e.ward_permille / _PERMILLE:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
     linked = f"（{e.redirected} 點轉給連結者）" if e.redirected else ""
+    linked += f"（{e.shared} 點分給同門）" if e.shared else ""
     burst = f"（爆骰 ×{e.exploded}）" if e.exploded else ""
     return (
         f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_damage_parts_text(e)}{burst}"
@@ -923,6 +951,7 @@ _RELEASE_TEXT = {"next_turn": "下回合開始時釋放", "attacked": "下回合
 _CANCEL_TEXT = {
     "downed": "倒下了",
     "controlled": "被控制（暈眩或冰凍）",
+    "silenced": "法術被沉默打斷",
     "expired": "到下回合開始都沒被攻擊",
     "replaced": "改為蓄力另一招",
     "form_left": "形態解除了",
@@ -1052,6 +1081,26 @@ def _rule_change_triggered(e: RuleChangeTriggered, v: _View) -> str:
     if e.kind == "pass_through_apply":
         return f"    ✦ {who} 的「{skill}」：掠過 {v.name[e.other_id or '']} 身邊"
     return f"  ✦ {who} 的「{skill}」：倒下的地方留下了分身"
+
+
+@_handles(OathBroken)
+def _oath_broken(e: OathBroken, v: _View) -> str:
+    who = v.name[e.unit_id]
+    if e.at_end:
+        return f"  ✦ 戰鬥結束：{who} 沒有守住誓約，破誓會帶到下一場開場"
+    return f"  ✦ {who} 違反了誓約：誓約之力消失，陷入破誓"
+
+
+@_handles(BossPhaseChanged)
+def _boss_phase_changed(e: BossPhaseChanged, v: _View) -> str:
+    who = v.name[e.unit_id]
+    line = f"◆ {who} 進入第 {e.phase} 階段「{e.name_zh}」（{e.condition_zh}）"
+    return line if e.text_zh is None else f"{line}：{e.text_zh}"
+
+
+@_handles(WeatherChanged)
+def _weather_changed(e: WeatherChanged, v: _View) -> str:
+    return f"  ☁ 天氣變為{e.after_name_zh}"
 
 
 @_handles(DeathCheated)
@@ -1194,9 +1243,10 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
         if e.cause == "clear":
             return f"  {xy_text(e.pos)} 的{before}被清除了"
         return f"  {xy_text(e.pos)} 的{before}消失了"
+    why = "（倒下時留下的）" if e.cause == "death_surface" else ""  # Phase 5A-M1
     if e.before is Surface.NONE:
-        return f"  {xy_text(e.pos)} 出現了{after}"
-    return f"  {xy_text(e.pos)} 的{before}變成了{after}"
+        return f"  {xy_text(e.pos)} 出現了{after}{why}"
+    return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
 
 
 @_handles(SurfaceBlown)

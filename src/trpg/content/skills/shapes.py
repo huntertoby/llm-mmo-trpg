@@ -32,11 +32,15 @@ class ParamDef(ContentModel):
     allow_weapon: bool = False
     llm_hint: str = ""
     """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名。"""
+    default: int | None = None
+    """省略時的值（Phase 5F-2b；只用在 ``content_params``：格數、預算、引擎幾何都照這個值）。"""
 
     @model_validator(mode="after")
     def _range(self) -> ParamDef:
         if self.min > self.max:
             raise ValueError(f"參數範圍不合理：min {self.min} > max {self.max}")
+        if self.default is not None and not self.min <= self.default <= self.max:
+            raise ValueError(f"預設值 {self.default} 不在 {self.min}–{self.max}")
         return self
 
 
@@ -45,29 +49,46 @@ class ShapeBudget(ContentModel):
 
     倍率 ＝ ``by_value_permille[參數值]``（有表格時），否則 ``base_permille ＋ per_unit_permille ×
     參數值``（``param`` 為 ``None`` 時只有 ``base_permille``）。
+
+    ``non_power_by_value_permille``（BAL-13d，06 6.5「BAL-13c 定」）：形狀會衰減威力時（連鎖每跳
+    −25%），不在 ``power_primitives`` 的效果（狀態、推擊、表面等照常施加的非數值效果）改查這張表
+    （連鎖維持衰減前的倍率）；``power_primitives`` 是威力會跟著衰減的原語（傷害、治療、護盾……）。
     """
 
     base_permille: int = Field(default=1000, ge=1)
     param: str | None = None
     per_unit_permille: int = Field(default=0, ge=0)
     by_value_permille: dict[int, int] | None = None
+    non_power_by_value_permille: dict[int, int] | None = None
+    power_primitives: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _check(self) -> ShapeBudget:
-        if self.param is None and (self.per_unit_permille or self.by_value_permille):
+        tables = (self.by_value_permille, self.non_power_by_value_permille)
+        if self.param is None and (self.per_unit_permille or any(tables)):
             raise ValueError("設定 per_unit_permille 或 by_value_permille 時必須指定 param")
-        if self.by_value_permille is not None and not self.by_value_permille:
+        if any(table is not None and not table for table in tables):
             raise ValueError("by_value_permille 不可為空")
+        if self.non_power_by_value_permille is not None and not self.power_primitives:
+            raise ValueError("設定 non_power_by_value_permille 時必須列出 power_primitives")
         return self
 
-    def permille_for(self, values: dict[str, int | str]) -> int:
-        """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。"""
+    def permille_for(self, values: dict[str, int | str], primitive: str | None = None) -> int:
+        """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。給了
+        ``primitive`` 且它不是威力原語時，有 ``non_power_by_value_permille`` 就查那張表。"""
         if self.param is None:
             return self.base_permille
         raw = values.get(self.param)
         value = raw if isinstance(raw, int) else 0
-        if self.by_value_permille is not None:
-            return self.by_value_permille.get(value, self.base_permille)
+        table = self.by_value_permille
+        if (
+            self.non_power_by_value_permille is not None
+            and primitive is not None
+            and primitive not in self.power_primitives
+        ):
+            table = self.non_power_by_value_permille
+        if table is not None:
+            return table.get(value, self.base_permille)
         return self.base_permille + self.per_unit_permille * value
 
 
@@ -117,17 +138,52 @@ class ShapeDef(ContentModel):
     llm_hint: str = ""
     """給 LLM 看的一句話說明（Phase 4-L3）。"""
     params: dict[str, ParamDef] = Field(default_factory=dict)
+    content_params: dict[str, ParamDef] = Field(default_factory=dict)
+    """只有內建內容（``content/skills/``）能寫的參數（Phase 5F-2b，例：十字的臂長 ``arm``）：
+    驗證器、預算、格數、敘述與引擎都認得；技能生成器、LLM 提議、玩家選項只看 ``params``，不提供
+    這些參數。每個都必須選填（``required: false``）且有 ``default``（省略＝預設值，行為不變）。"""
     min_rarity: SkillRarity = "common"
     budget: ShapeBudget = Field(default_factory=ShapeBudget)
     cell_count: ShapeCells | None = None
     """影響的格子數（沒有固定格數的形狀，例如連鎖，為 ``None``）。"""
 
     @model_validator(mode="after")
+    def _check_content_params(self) -> ShapeDef:
+        for name, spec in sorted(self.content_params.items()):
+            if name in self.params:
+                raise ValueError(f"形狀 {self.id}：content_params {name} 和 params 重複")
+            if spec.required or spec.default is None:
+                raise ValueError(
+                    f"形狀 {self.id}：content_params {name} 必須 required: false 並寫 default"
+                )
+        return self
+
+    def all_params(self) -> dict[str, ParamDef]:
+        """``params`` 加上 ``content_params``（驗證器與格數、預算用）。"""
+        return {**self.params, **self.content_params}
+
+    def with_defaults(self, values: dict[str, int | str]) -> dict[str, int | str]:
+        """技能形狀已填的參數，補上 ``content_params`` 省略時的預設值（依名稱排序）。"""
+        out = dict(values)
+        for name, spec in self.content_params.items():
+            if out.get(name) is None and spec.default is not None:
+                out[name] = spec.default
+        return dict(sorted(out.items()))
+
+    def param_or_default(self, values: dict[str, int | str], name: str) -> int:
+        """整數參數 ``name`` 的值（省略時用 ``content_params`` 的預設值；都沒有時拋出
+        ``KeyError``）。"""
+        value = self.with_defaults(values).get(name)
+        if not isinstance(value, int):
+            raise KeyError(f"形狀 {self.id} 沒有整數參數 {name}")
+        return value
+
+    @model_validator(mode="after")
     def _check_cells(self) -> ShapeDef:
         cells = self.cell_count
         if cells is None or cells.param is None:
             return self
-        spec = self.params.get(cells.param)
+        spec = self.all_params().get(cells.param)
         if spec is None:
             raise ValueError(f"形狀 {self.id}：cell_count.param {cells.param!r} 不是這個形狀的參數")
         assert cells.by_value is not None
@@ -141,14 +197,14 @@ class ShapeDef(ContentModel):
         param = self.budget.param
         if param is None:
             return self
-        spec = self.params.get(param)
+        spec = self.all_params().get(param)
         if spec is None:
             raise ValueError(f"形狀 {self.id}：budget.param {param!r} 不是這個形狀的參數")
-        table = self.budget.by_value_permille
-        if table is not None:
-            missing = [v for v in range(spec.min, spec.max + 1) if v not in table]
-            if missing:
-                raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
+        for table in (self.budget.by_value_permille, self.budget.non_power_by_value_permille):
+            if table is not None:
+                missing = [v for v in range(spec.min, spec.max + 1) if v not in table]
+                if missing:
+                    raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
         return self
 
     def summary(self) -> str:

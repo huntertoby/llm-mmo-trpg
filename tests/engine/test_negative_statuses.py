@@ -301,7 +301,6 @@ HUSH = "skill_hush"
 def _hush_score(foe_template_skills: list[str], mana: int = 99) -> Fraction:
     m = make_map(FLAT7, ally=[(1, 3)], enemy=[(4, 3)])
     foe = caster_template(foe_template_skills, base="hero_mage")
-    foe = foe.model_copy(update={"max_mana": mana})
     state = make_state(
         m,
         [
@@ -309,6 +308,7 @@ def _hush_score(foe_template_skills: list[str], mana: int = 99) -> Fraction:
             spawn(Team.ENEMY, (4, 3), foe),
         ],
     )
+    state.units[U2].mana = mana  # 上限由公式算出（BAL-15b）：情境要的是目前法力
     state = give_turn(state, U1)
     ranked = UtilityAI(library().ai_profiles).rank_all(state)
     return max(

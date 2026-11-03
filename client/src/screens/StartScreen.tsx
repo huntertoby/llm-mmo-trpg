@@ -14,6 +14,8 @@ interface Props {
   onWorkshop(): void;
   /** 開新一輪（roguelite，Phase 3-5c-1）。 */
   onNewRun(): void;
+  /** 進入大世界（測試，Phase 5A-5）。 */
+  onWorld?(): void;
   /** 讀取存檔後進入該輪。 */
   onLoadRun(run: RunResponse): void;
   /** 首頁頂端的提示（例如上次的一輪無法讀回的原因）。 */
@@ -34,7 +36,7 @@ export function parseSeed(text: string): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
-export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice = null, onCloseNotice }: Props) {
+export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun, notice = null, onCloseNotice }: Props) {
   const [maps, setMaps] = useState<MapSummary[]>([]);
   const [mapId, setMapId] = useState("");
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
@@ -134,6 +136,15 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
           </div>
         )}
       </div>
+      {onWorld !== undefined && (
+        <div className="panel start-world">
+          <div className="section-title">大世界（測試）</div>
+          <div className="muted small">雲嶺地點圖：點相鄰地點移動、路上遇敵、回小鎮休息。</div>
+          <button type="button" className="primary" onClick={onWorld} data-testid="enter-world">
+            進入大世界（測試）
+          </button>
+        </div>
+      )}
       <form className="panel start-form" onSubmit={submit}>
         <label>
           地圖

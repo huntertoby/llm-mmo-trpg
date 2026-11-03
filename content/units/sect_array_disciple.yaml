@@ -1,0 +1,20 @@
+# 雲嶺敵人（Phase 5A-3；docs/design/18-雲嶺內容.md 18.2，#111 玩法 PM 代決、待使用者確認）。
+# 數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
+# 山中修士・連攜：開場狀態「劍陣」（Phase 5A-M2，陣法範圍加成：3 格內的其他劍陣弟子越多攻擊越痛，落單時弱）；
+# 取代 5A-3 的替代品「並肩斬」（代決 5A3-2）。
+id: sect_array_disciple
+name_zh: 劍陣弟子
+attributes: {str: 12, dex: 14, con: 10, int: 8, wis: 10, wil: 10}
+max_hp: 26
+speed: 5
+armor_bonus: 2
+weapon: one_handed_sword
+ai_profile: flanker
+resist: {}
+element_mods: {}
+tags: [humanoid, sect, sword_array]
+skills: [skill_formation_pierce]
+opening_statuses:
+  - {status: sword_formation}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {skin: '#f1c9a5', hair: bun, hair_color: '#1c1c22', main_tassel: '#c0392b', gear: {body: {kind: robe, material: cloth, color: '#dfe4e2', trim: '#5f8f8a'}}}

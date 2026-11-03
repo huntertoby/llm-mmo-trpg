@@ -81,6 +81,10 @@
   background: var(--enemy);
 }
 
+.turn-chip.third {
+  background: var(--third);
+}
+
 .turn-chip.active {
   outline: 3px solid var(--accent);
 }
@@ -611,6 +615,14 @@
 .turn-objective.defend {
   color: #ffc83d;
   border-color: #ffc83d;
+}
+
+.battle-banner-note {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: #ffe9a8;
 }
 
 .battle-banner-goal {

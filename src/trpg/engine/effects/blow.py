@@ -58,6 +58,8 @@ class _Piece:
     team: Team | None
     creator: UnitId | None
     lost: bool = False
+    magnitude: int = 1000
+    """表面的強度（BAL-12e）：吹送時照原表面帶著。"""
     """被推進致命地形（深淵、岩漿）而消失：不放下，``dest`` 是消失的那一格。"""
 
 
@@ -105,6 +107,7 @@ def _blow_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
                 remaining=tile.surface_remaining,
                 team=tile.surface_team,
                 creator=tile.surface_creator,
+                magnitude=tile.surface_magnitude_permille,
             )
         )
     events: list[EventBase] = []
@@ -134,6 +137,7 @@ def _blow_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             creator=piece.creator,
             depth=effect.depth,
             permanent=True,
+            magnitude=piece.magnitude,
         )
     return events
 

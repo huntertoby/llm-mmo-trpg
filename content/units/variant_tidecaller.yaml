@@ -11,5 +11,4 @@ ai_profile: cunning
 resist: {elemental: 150}
 element_mods: {}
 tags: [hero]
-max_mana: 40
 skills: [skill_tidal_spear]

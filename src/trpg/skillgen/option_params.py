@@ -14,6 +14,7 @@ from typing import Any
 from pydantic.fields import FieldInfo
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import (
     SCALE_BY_VALUES,
     WIELDING_EFFECT_ONLY,
@@ -75,6 +76,7 @@ PARAM_TEXT: dict[str, str] = {
     "knock_prone": "另外擊倒",
     "landing": "落點",
     "lifesteal_permille": "吸血（‰）",
+    "flat_bonus": "固定值加成",
     "lose": "失敗時的效果",
     "max_hp_permille": "召喚物最大 HP 加成（‰）",
     "magnitude_permille": "姿態幅度（‰）",
@@ -227,7 +229,7 @@ def _status_choices(
             info={"beneficial": s.beneficial, "stance": s.stance, "min_rarity": s.min_rarity},
         )
         for s in library.ruleset.statuses.statuses
-        if keep is None or keep(s.id)
+        if not s.enemy_only and (keep is None or keep(s.id))  # 5F-5c：只給敵人的不列
     )
 
 
@@ -307,7 +309,7 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         ),
         "skill": lambda: tuple(
             Choice(value=s.id, name_zh=s.name_zh)
-            for s in sorted(library.skills.values(), key=lambda s: s.id)
+            for s in player_skills(library).values()
             if s.kind == "active" and s.rarity != "legendary"
         ),
     }

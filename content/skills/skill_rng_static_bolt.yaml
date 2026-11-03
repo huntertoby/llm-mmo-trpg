@@ -1,0 +1,28 @@
+# BAL-19d（玩法決定 #110，06 6.27.4 補內容：遠程武器技；數值為初值，未經模擬）：雷電弩矢，對站在水上的目標導電加傷（敏捷＋帶電，利用潮濕）
+id: skill_rng_static_bolt
+schema_version: 1
+name_zh: 導雷弩矢
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000, element: lightning}
+  # 腳下積水把電流導進全身
+  - type: damage
+    multiplier_permille: 1000
+    element: lightning
+    condition: {type: target_on_surface, surface: water}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [lightning, ranged, combo]
+narrative:
+  concept: 纏著銅線的弩矢，打中泡在水裡的敵人時電流會整個炸開
+  cast_flavor: 弩矢釘進目標，銅線上的電弧順著腳下的積水竄了一圈
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

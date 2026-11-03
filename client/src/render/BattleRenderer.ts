@@ -5,7 +5,7 @@
 // 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
 // 高度「整格抬高」（Phase 3-19）：場景放在 `world`（往下移畫布上方預留的高度），由北到南一排一排畫
 // （`RowStack`），格子上的所有東西都依 `tileLift` 往上移；位移只從 `battle/elevation.ts` 來。
-import { Application, Container, Graphics, Sprite, type Text, type Ticker } from "pixi.js";
+import { Application, Container, GlobalResourceRegistry, Graphics, Sprite, UPDATE_PRIORITY, type Text, type Ticker } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, rowDuringMove, type MoveAnim, type MoveStyle } from "../battle/animation";
@@ -41,7 +41,9 @@ import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Ef
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
-import { buildUnitSprite, Pulses } from "./unitSprite";
+import { buildUnitSprite, isLinked, Pulses } from "./unitSprite";
+import { LINK_COLOR } from "./inkCreature";
+import { linkPairs } from "./linkLines";
 
 export interface DirectionMark {
   pos: Pos;
@@ -73,6 +75,23 @@ const T = TILE_SIZE;
 /** 可燃小火苗平時的透明度（3-38）。 */
 export const FLAME_DIM = 0.4;
 const BACKGROUND = 0x15151c;
+/**
+ * 銷毀時移除畫布、銷毀場景，但**不在銷毀當下釋放 Pixi 的全域資源**（UI-T1）：`app.destroy(true)` 會呼叫
+ * `GlobalResourceRegistry.release()`，把所有繪製器共用的批次池、貼圖池清掉；另一個還活著的繪製器
+ * 手上的批次被銷毀，下一幀就丟例外、畫面整塊黑，而且壞掉的批次會被還回池子、連下一個繪製器一起壞，要 F5 才恢復。
+ * 全域資源改成「最後一個繪製器銷毀後」才釋放（見 `releaseIfLast`），同時清掉壞掉的批次。
+ */
+const APP_DESTROY_VIEW = { removeView: true } as const;
+/** 還沒銷毀的繪製器數量（含初始化中的）。 */
+let liveRenderers = 0;
+
+/** 沒有其他繪製器活著時才釋放 Pixi 的全域池（避免累積，也清掉壞掉的批次）。 */
+function releaseIfLast(): void {
+  if (liveRenderers === 0) GlobalResourceRegistry.release();
+}
+const APP_DESTROY_SCENE = { children: true } as const;
+/** WebGL context 遺失後等瀏覽器恢復的時間；超過就重建繪製器。 */
+const CONTEXT_RESTORE_MS = 2000;
 
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   route: HIGHLIGHT.route,
@@ -149,8 +168,17 @@ export class BattleRenderer {
   private readonly lifting = new Map<string, LiftState>();
   private ready = false;
   private destroyed = false;
+  /** 算繪丟過例外或 WebGL context 一直沒恢復（UI-T1）；之後不再算繪，等 `BattleCanvas` 換新的繪製器。 */
+  private broken = false;
+  private lostTimer: number | null = null;
+  /** 繪製器壞掉時呼叫一次（`BattleCanvas` 用來重建；銷毀後不再呼叫）。 */
+  onBroken: (() => void) | null = null;
   /** 畫面上的縮放比例（1 ＝ 每格 TILE_SIZE 個 CSS 像素）。 */
   private scale = 1;
+
+  constructor() {
+    liveRenderers += 1;
+  }
 
   async init(host: HTMLElement): Promise<void> {
     await this.app.init({
@@ -162,14 +190,22 @@ export class BattleRenderer {
       autoDensity: false,
     });
     if (this.destroyed) {
-      this.app.destroy(true, { children: true });
+      this.app.destroy(APP_DESTROY_VIEW, APP_DESTROY_SCENE);
+      releaseIfLast();
       return;
     }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
     stage.addChild(this.world);
     this.world.addChild(this.rows.root, this.marks, this.silhouettes, this.hover, this.effects);
-    this.app.ticker.add((ticker) => this.pulses.tick(ticker.deltaMS));
+    // 自動算繪換成有防護的版本（UI-T1）：Pixi 的 ticker 只要有一個監聽丟例外就不再排下一幀，畫布會停在
+    // 最後一幀（剛改過大小時是整塊黑）；改成接住例外並通知 `onBroken`，由 `BattleCanvas` 換一個新的繪製器。
+    const ticker = this.app.ticker;
+    ticker.remove(this.app.render, this.app);
+    ticker.add(this.safeRender, this, UPDATE_PRIORITY.LOW);
+    ticker.add((t) => this.guard(() => this.pulses.tick(t.deltaMS)));
+    this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
+    this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
     stage.eventMode = "none";
     this.app.canvas.style.display = "block";
     this.ready = true;
@@ -177,12 +213,65 @@ export class BattleRenderer {
   }
 
   destroy(): void {
+    if (this.destroyed) return;
     this.destroyed = true;
+    liveRenderers -= 1;
+    this.onBroken = null;
+    this.clearLostTimer();
     for (const e of this.effectList) e.end?.();
     this.effectList = [];
-    if (this.ready) this.app.destroy(true, { children: true });
+    if (this.ready) {
+      this.app.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+      this.app.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
+      this.app.destroy(APP_DESTROY_VIEW, APP_DESTROY_SCENE);
+      releaseIfLast();
+    }
     this.art.destroy();
     this.ready = false;
+  }
+
+  /** 自動算繪（取代 Pixi 預設的 `app.render`）：例外時標記壞掉並通知，不讓 ticker 停擺。 */
+  private safeRender(): void {
+    if (this.broken) return;
+    this.guard(() => this.app.render());
+  }
+
+  /** 執行 ticker 上的一段工作；丟例外時視為繪製器壞掉。 */
+  private guard(work: () => void): void {
+    if (this.broken) return;
+    try {
+      work();
+    } catch (e) {
+      this.fail(e);
+    }
+  }
+
+  /** 繪製器壞掉：只通知一次（非同步，避免在 ticker 或 React 繪製中途換掉繪製器）。 */
+  private fail(reason: unknown): void {
+    if (this.broken || this.destroyed) return;
+    this.broken = true;
+    console.error("[BattleRenderer] 戰場繪製失敗，重建繪製器", reason);
+    window.setTimeout(() => this.onBroken?.(), 0);
+  }
+
+  private readonly onContextLost = (): void => {
+    // Pixi 已呼叫 preventDefault 等瀏覽器恢復；太久沒恢復（瀏覽器不再給 WebGL）就重建。
+    this.clearLostTimer();
+    this.lostTimer = window.setTimeout(() => {
+      this.lostTimer = null;
+      this.fail(new Error("WebGL context 遺失後沒有恢復"));
+    }, CONTEXT_RESTORE_MS);
+  };
+
+  private readonly onContextRestored = (): void => {
+    this.clearLostTimer();
+    if (this.model !== null && !this.broken) this.draw(this.model);
+  };
+
+  private clearLostTimer(): void {
+    if (this.lostTimer === null) return;
+    window.clearTimeout(this.lostTimer);
+    this.lostTimer = null;
   }
 
   /** 設定畫面上的縮放比例（由可用空間算出）；畫布大小與解析度立即更新，場景不必重畫。 */
@@ -256,6 +345,7 @@ export class BattleRenderer {
     }
     this.drawBadges(model);
     for (const trap of model.traps) this.drawTrap(trap);
+    this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
     this.drawVeils(model);
     this.drawMist(model);
@@ -268,6 +358,26 @@ export class BattleRenderer {
     for (const [key, st] of [...this.lifting]) {
       if (heightAt(model, st.pos) === st.to) this.rows.setLift(st.pos, tileLift(st.h));
       else this.lifting.delete(key);
+    }
+  }
+
+  /** 「連心的」精英到相鄰（曼哈頓 1）同陣營單位的青色虛線（Phase 5A-ART2），畫在腳邊、單位底下。 */
+  private drawLinks(model: DrawModel): void {
+    const color = parseInt(LINK_COLOR.slice(1), 16);
+    for (const [a, b] of linkPairs(model.units, isLinked)) {
+      const p = this.center(a);
+      const q = this.center(b);
+      const y0 = p.y + T * 0.2;
+      const y1 = q.y + T * 0.2;
+      const g = new Graphics();
+      const n = 9;
+      for (let i = 0; i < n; i += 2) {
+        const t0 = i / n;
+        const t1 = (i + 1) / n;
+        g.moveTo(p.x + (q.x - p.x) * t0, y0 + (y1 - y0) * t0).lineTo(p.x + (q.x - p.x) * t1, y0 + (y1 - y0) * t1);
+      }
+      g.stroke({ width: 2, color, alpha: 0.9 });
+      this.rows.row(Math.max(a.y, b.y)).deco.addChild(g);
     }
   }
 
@@ -781,7 +891,7 @@ export class BattleRenderer {
       const finish = () => {
         if (done) return;
         done = true;
-        this.app.ticker.remove(tick);
+        this.app.ticker?.remove(tick);
         if (!sprite.destroyed) {
           onProgress?.(1);
           sprite.position.set(to.x, to.y);
@@ -881,7 +991,7 @@ export class BattleRenderer {
     t.style.stroke = { color: 0x000000, width: 4 };
     node.addChild(t);
     const baseY = c.y - T * 0.3 - item.slot * 22;
-    node.position.set(c.x + (isStatus ? T * 0.12 : 0), baseY);
+    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), t.width / 2), baseY);
     node.alpha = 0;
     if (isStatus) {
       // 狀態：格子先閃一圈光環
@@ -899,6 +1009,13 @@ export class BattleRenderer {
         node.scale.set(pop);
       },
     };
+  }
+
+  /** 浮動文字的水平位置往內推，不超出地圖左右邊緣（UI-T1：邊緣格的「跑步 移動＋N」被切掉）。 */
+  private clampFloatX(x: number, half: number): number {
+    const width = (this.model?.width ?? 0) * T;
+    if (width <= 0 || half * 2 >= width) return x;
+    return Math.min(Math.max(x, half + 2), width - half - 2);
   }
 
   private lineEffect(from: Pos, to: Pos, now: number, durationMs: number): Effect {
@@ -937,18 +1054,20 @@ export class BattleRenderer {
     const tick = (ticker: Ticker) => {
       this.effectClock += ticker.deltaMS;
       const alive: Effect[] = [];
-      for (const e of this.effectList) {
-        if (this.effectClock >= e.endMs) {
-          e.end?.();
-          e.node.destroy({ children: true });
-          continue;
+      this.guard(() => {
+        for (const e of this.effectList) {
+          if (this.effectClock >= e.endMs) {
+            e.end?.();
+            e.node.destroy({ children: true });
+            continue;
+          }
+          if (this.effectClock >= e.startMs) e.update((this.effectClock - e.startMs) / (e.endMs - e.startMs));
+          alive.push(e);
         }
-        if (this.effectClock >= e.startMs) e.update((this.effectClock - e.startMs) / (e.endMs - e.startMs));
-        alive.push(e);
-      }
+      });
       this.effectList = alive;
       if (alive.length === 0) {
-        this.app.ticker.remove(tick);
+        this.app.ticker?.remove(tick);
         this.effectTick = null;
       }
     };

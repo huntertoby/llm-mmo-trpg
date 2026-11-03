@@ -4,7 +4,7 @@ import type { FlashRules, SkillCard, SkillFlash } from "../api/types";
 import { RARITY_HINT } from "../run/flash";
 import { Hint } from "./Hint";
 import { SkillFlashInfo } from "./SkillFlashInfo";
-import { categoryLabel, kindLabel, sourceCostText } from "../battle/source";
+import { categoryLabel, kindLabel, skeletonLabel, sourceCostText } from "../battle/source";
 import { KeywordLine } from "./KeywordLine";
 import { RuleText } from "./ruleText";
 import { StackTip } from "./StackTip";
@@ -49,7 +49,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
                 </Hint>
               )}
               ・{kindLabel(card)}
-              {(card.skeleton_zh ?? "") !== "" && `・${card.skeleton_zh}`}・{categoryLabel(card)}
+              {skeletonLabel(card) !== "" && `・${skeletonLabel(card)}`}・{categoryLabel(card)}
             </span>
           </div>
           <div className="small">{card.cost.join("，")}</div>

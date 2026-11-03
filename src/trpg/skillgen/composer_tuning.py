@@ -17,7 +17,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_parts import Knob
+from trpg.skillgen.composer_parts import Knob, set_knob_value
 from trpg.skillgen.validate import share_violations
 
 __all__ = ["base_ratio", "tune", "tuning_bounds"]
@@ -63,7 +63,7 @@ class _Evaluator:
 
 
 def _apply(knob: Knob, effects: list[dict[str, Any]]) -> None:
-    effects[knob.index][knob.field] = knob.value
+    set_knob_value(effects[knob.index], knob.field, knob.value)
 
 
 def _pick(rng: Rng, knobs: Sequence[Knob]) -> Knob:
@@ -86,6 +86,7 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
     knob.pos = start + 1
     _apply(knob, ev.targets)
     one = ev.ratio()
+    one_shares = ev.shares
     if one is None or one > ev.high or ev.shares > shares:
         knob.pos = start
         _apply(knob, ev.targets)
@@ -101,9 +102,10 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
             far = ev.ratio()
             if far is not None and far <= ev.high and ev.shares <= shares:
                 return far, True
+            # 退回一格：旋鈕與違規數回到 ``one`` 那時（同樣的草稿必得同樣的結果，PERF-2 不再重算）
             knob.pos = start + 1
             _apply(knob, ev.targets)
-            ev.ratio()
+            ev.shares = one_shares
     return one, True
 
 

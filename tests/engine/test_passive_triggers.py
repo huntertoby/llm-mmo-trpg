@@ -488,8 +488,9 @@ def test_preview_includes_the_triggered_status_and_matches_the_resolution(
 def test_preview_does_not_change_the_state_or_consume_trigger_counts() -> None:
     state = _armed("skill_ember_brand")
     before = state.units[U1].trigger_counts.copy()
+    mana = state.units[U1].mana
     preview(state, Attack(unit_id=U1, target_id=U2))
-    assert state.units[U1].trigger_counts == before and state.units[U1].mana == 99
+    assert state.units[U1].trigger_counts == before and state.units[U1].mana == mana
 
 
 # ---------------------------------------------------------------------------

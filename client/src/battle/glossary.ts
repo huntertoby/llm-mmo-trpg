@@ -191,6 +191,7 @@ export const END_REASONS: Readonly<Record<string, string>> = {
   defended: "守住守點",
   point_lost: "守點失守",
   round_limit: "輪數上限",
+  leader_defeated: "頭目倒下",
 };
 
 export const DIRECTIONS: Readonly<Record<string, string>> = {
@@ -200,9 +201,11 @@ export const DIRECTIONS: Readonly<Record<string, string>> = {
   west: "西",
 };
 
-export const TEAM_COLORS: Readonly<Record<"ally" | "enemy", number>> = {
+export const TEAM_COLORS: Readonly<Record<"ally" | "enemy" | "third", number>> = {
   ally: 0x2f7de1,
   enemy: 0xd23c3c,
+  /** 第三方（Phase 5B-M3 三方混戰）：紫色，和我方藍、敵方紅、召喚物青綠分得開。 */
+  third: 0x9b4fd6,
 };
 
 export const HIGHLIGHT = {

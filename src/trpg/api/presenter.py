@@ -27,6 +27,7 @@ from trpg.api.schemas import (
 from trpg.api.sessions import BattleSession, StepRecord
 from trpg.api.telegraph import telegraph_out
 from trpg.api.variants import preview_variant, variant_states
+from trpg.content.library import ContentLibrary
 from trpg.engine.actions import Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
 from trpg.engine.battle import (
@@ -42,8 +43,9 @@ from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
 from trpg.engine.skills.followups import followup_options
 from trpg.engine.state import BattleState
-from trpg.engine.view import project_for
+from trpg.engine.view import BattleView, project_for
 from trpg.narrative.events import battle_started_text, describe_event
+from trpg.narrative.unit_traits import unit_trait_lines
 from trpg.shared.types import Pos, Team, UnitId
 
 __all__ = [
@@ -87,14 +89,38 @@ def step_view(step: Step | None, state: BattleState, team: Team) -> Step | None:
     )
 
 
-def step_out(record: StepRecord, team: Team = VIEW_TEAM) -> StepOut:
+def traits_view(
+    state: BattleState, team: Team, library: ContentLibrary, hero_id: UnitId | None
+) -> BattleView:
+    """:func:`~trpg.engine.view.project_for` ＋ 每個單位卡的「特性」欄
+    （Phase 5A-M1b，``trpg.narrative`` 依單位範本產生；主角的招牌在技能列，不重複列）。"""
+    view = project_for(state, team)
+    cache: dict[str, tuple[str, ...]] = {}
+    units = tuple(
+        u
+        if u.id == hero_id
+        else u.model_copy(
+            update={
+                "traits_zh": cache.setdefault(
+                    u.template_id, unit_trait_lines(library, u.template_id)
+                )
+            }
+        )
+        for u in view.units
+    )
+    return view.model_copy(update={"units": units})
+
+
+def step_out(
+    record: StepRecord, library: ContentLibrary, hero_id: UnitId, team: Team = VIEW_TEAM
+) -> StepOut:
     state = record.result.state
     events = filter_events(record.result.events, state, team)
     return StepOut(
         actor_id=None if record.step is None else record.step.unit_id,
         step=step_view(record.step, state, team),
         events=tuple(event_out(e, state) for e in events),
-        view=project_for(state, team),
+        view=traits_view(state, team, library, hero_id),
     )
 
 
@@ -202,8 +228,8 @@ def battle_response(
         battle_id=session.battle_id,
         hero_id=session.hero_id,
         awaiting=awaiting,
-        initial_view=project_for(before, VIEW_TEAM),
-        view=project_for(state, VIEW_TEAM),
+        initial_view=traits_view(before, VIEW_TEAM, session.library, session.hero_id),
+        view=traits_view(state, VIEW_TEAM, session.library, session.hero_id),
         legal_actions=legal,
         interact_options=interact_options_out(state, session.hero_id)
         if awaiting == "action"
@@ -212,12 +238,13 @@ def battle_response(
         variant_states=variant_states(state, session.hero_id, legal)
         if awaiting == "action"
         else (),
+        oath_active=state.oath is not None and not state.oath.broken and not state.oath.pending,
         pending=pending,
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),
-        steps=tuple(step_out(r) for r in records),
+        steps=tuple(step_out(r, session.library, session.hero_id) for r in records),
         outcome=outcome,
     )

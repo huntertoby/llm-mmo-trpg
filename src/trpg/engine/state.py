@@ -17,13 +17,21 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from trpg.content.battle import DollLook, ReactionRule, SummonMode, UnitTemplate, WeaponDef
+from trpg.content.battle import (
+    BossPhase,
+    DollLook,
+    ReactionRule,
+    SummonMode,
+    UnitTemplate,
+    WeaponDef,
+)
 from trpg.content.environment import ObjectDef, WeatherDef
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
 from trpg.content.maps import MapEvent, Objective
 from trpg.content.rules import CoreRules
 from trpg.engine.gear.state import GearState
+from trpg.engine.oaths import OathTracker
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
@@ -78,7 +86,10 @@ class StatusInstance:
     magnitude_permille: int = 1000
     """姿態的幅度（‰，Phase 3W-5b，完整技能的 ``apply_status.magnitude_permille``）：狀態倍率欄位
     對持有者有利的那一邊離中性值（1000）的距離乘上它，見
-    :func:`~trpg.engine.rules.statuses.scaled_permille`。1000 ＝ 照狀態定義。"""
+    :func:`~trpg.engine.rules.statuses.scaled_permille`。1000 ＝ 照狀態定義。
+    數值型狀態的強度（BAL-12e，#76；升階重配給的 ``apply_status.magnitude_permille``）也存在這裡：
+    每回合的傷害與治療乘上它，倍率欄位離中性值的距離（增益放大有利的一邊、減益放大不利的一邊）、
+    屬性與攻擊加值也乘上它（無條件捨去）。"""
 
 
 @dataclass(slots=True, frozen=True)
@@ -90,6 +101,9 @@ class Tile:
     - ``surface_creator``：產生表面的單位 ID（Phase 3C-3b；``on_enter_surface`` 用）。蔓延、天氣、
       地圖原有的表面為 ``None``；環境互動產生的表面沿用觸及它的來源。
     - ``object_id``：格上的物件（最多一個；摧毀後清除）。
+    - ``surface_magnitude_permille``：表面的強度（‰，BAL-12e，#76；技能的
+      ``create_surface.magnitude_permille``）：回合開始的傷害與治療、進入或回合開始時施加的狀態
+      乘上它。1000 ＝ 照表面定義；表面換成別種時回到 1000（吹送與擴散照原表面帶著）。
     """
 
     height: int
@@ -99,6 +113,7 @@ class Tile:
     surface_team: Team | None = None
     object_id: ObjectId | None = None
     surface_creator: UnitId | None = None
+    surface_magnitude_permille: int = 1000
 
 
 @dataclass(slots=True, frozen=True)
@@ -410,6 +425,10 @@ class UnitState:
     """本回合做過主動移動（步行；傳送與強制位移不算；``moved_this_turn`` 條件，Phase 3D-1）；
     自己回合開始時清除。"""
     collided_round: int = 0
+    conducted_round: int = 0
+    """最近一次受到雷電擴散傷害（``damage_dealt`` 的 ``cause: conduct``）的輪數（0 為從未）：同一輪
+    （所有單位都行動完一次）內同一單位最多受一次擴散傷害，不論幾次雷擊、幾個施放者；直接命中不算
+    擴散（BAL-13c，#78）。"""
     """最近一次被撞擊（``collided`` 事件的受害者：被擋下的單位與撞到的單位）的輪數（0 為從未；
     ``target_collided`` 條件「目標本回合受過撞擊」，Phase 3-24c）。"""
     ran_this_turn: bool = False
@@ -493,6 +512,10 @@ class UnitState:
     race: str | None = None
     """可玩種族（Phase 3R-2，``content/races.yaml``）：由範本帶入、戰鬥中不變；種族技的每場次數記在
     ``skill_uses``（鍵為種族技 ID），環境被動由 :mod:`trpg.engine.race_passives` 查詢。"""
+    phases: tuple[BossPhase, ...] = ()
+    """Boss 的階段（Phase 5F-2）：由範本帶入、戰鬥中不變；第 1 項是開場階段。"""
+    phase_index: int = 0
+    """目前的階段（``phases`` 的索引；0 ＝ 開場階段）：只增不減，每個階段整場只進入一次。"""
 
     @property
     def alive(self) -> bool:
@@ -579,6 +602,7 @@ class UnitState:
             extra_reactions=self.extra_reactions,
             moved_this_turn=self.moved_this_turn,
             collided_round=self.collided_round,
+            conducted_round=self.conducted_round,
             ran_this_turn=self.ran_this_turn,
             guarding_id=self.guarding_id,
             guard_transfers=self.guard_transfers,
@@ -612,6 +636,8 @@ class UnitState:
             next_attack_hit=self.next_attack_hit,
             next_attack_crit=self.next_attack_crit,
             race=self.race,
+            phases=self.phases,
+            phase_index=self.phase_index,
         )
 
 
@@ -642,6 +668,8 @@ class BattleState:
     objective: Objective = field(default_factory=Objective)
     map_events: tuple[MapEvent, ...] = ()
     spawn_templates: dict[str, SpawnTemplate] = field(default_factory=dict)
+    phase_weathers: dict[str, WeatherDef] = field(default_factory=dict)
+    """Boss 階段會換成的天氣（Phase 5F-2，``BattleSetup.phase_weathers``；以天氣 ID 為鍵）。"""
     pending: PendingResolution | None = None
     traps: list[TrapState] = field(default_factory=list)
     """戰場上的陷阱（Phase 2E-3），依 ``(y, x)`` 排序；同一格最多一個。"""
@@ -664,6 +692,10 @@ class BattleState:
     """外觀覆寫（鍵排序；Phase 3-37a；只影響外觀）。"""
     map_tags: tuple[str, ...] = ()
     """地圖標籤（Phase 3R-2，例如 ``forest``；種族的環境被動「林間視野」讀取）。"""
+    normal_turn_order: tuple[UnitId, ...] = ()
+    """正常的先攻順序（Phase 5A-6b）：先手改過第 1 輪順序時才有值，第 2 輪開始時還原並清空。"""
+    oath: OathTracker | None = None
+    """誓約的進度（Phase 5C-3，``BattleSetup.oath``；不可變，改變時換新的）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -699,6 +731,7 @@ class BattleState:
             objective=self.objective,
             map_events=self.map_events,
             spawn_templates=self.spawn_templates,
+            phase_weathers=self.phase_weathers,
             pending=self.pending,
             traps=list(self.traps),
             source_wells=self.source_wells,
@@ -710,6 +743,8 @@ class BattleState:
             region=self.region,
             look=self.look,
             map_tags=self.map_tags,
+            normal_turn_order=self.normal_turn_order,
+            oath=self.oath,
         )
 
     # ------------------------------------------------------------------

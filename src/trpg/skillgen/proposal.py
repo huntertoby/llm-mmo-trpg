@@ -43,6 +43,7 @@ from pydantic import (
 from trpg.content.battle import ID_PATTERN
 from trpg.content.keyword_derive import derive_keywords, skill_condition_specs
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import (
     AFFECTS_VALUES,
     BACKLASH_TYPES,
@@ -344,7 +345,7 @@ class _Refs:
     def of(cls, library: ContentLibrary) -> _Refs:
         rules = library.ruleset
         return cls(
-            statuses=tuple(sorted(s.id for s in rules.statuses.statuses)),
+            statuses=tuple(sorted(s.id for s in rules.statuses.statuses if not s.enemy_only)),
             objects=tuple(sorted(o.id for o in rules.objects.objects)),
             stacks=tuple(sorted(rules.stacks.by_id())),
             summons=tuple(sorted(rules.summons.by_id())),
@@ -388,7 +389,7 @@ def grantable_skills(library: ContentLibrary) -> tuple[str, ...]:
                 return False
         return True
 
-    return tuple(sorted(s.id for s in library.skills.values() if ok(s)))
+    return tuple(s.id for s in player_skills(library).values() if ok(s))
 
 
 _FIXED_PARAM_TYPES: dict[str, tuple[Any, dict[str, Any]]] = {
@@ -467,6 +468,7 @@ TOP_ONLY_DAMAGE_PARAMS: tuple[str, ...] = (
     "explode",
     "scaling",
     "lifesteal_permille",
+    "flat_bonus",
     "split_heal",
     "spread",
 )
@@ -953,7 +955,11 @@ def rarity_statuses(library: ContentLibrary, rarity: SkillRarity) -> tuple[str, 
     """這個稀有度能施加的狀態 ID（排序；規則與驗證器的 ``rarity.status`` 相同）。"""
     rank = rarity_rank(rarity)
     return tuple(
-        sorted(s.id for s in library.ruleset.statuses.statuses if rarity_rank(s.min_rarity) <= rank)
+        sorted(
+            s.id
+            for s in library.ruleset.statuses.statuses
+            if rarity_rank(s.min_rarity) <= rank and not s.enemy_only  # 5F-5c
+        )
     )
 
 

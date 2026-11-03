@@ -1,0 +1,19 @@
+# 灰燼荒原敵人（Phase 5F-5a；19.2.1 元素變體）。數值是初值（未經模擬）。
+# 寒燼蜥：餘燼蜥的冰版，死後留冰面；怕火。變體只能換武器與技能，換不了元素修正與開場狀態，所以獨立成一個範本。
+# 黑曜谷（隱藏）；懸賞「寒燼蜥王」（19.8，再生的）。
+id: frost_ember_lizard
+name_zh: 寒燼蜥
+attributes: {str: 10, dex: 14, con: 10, int: 8, wis: 10, wil: 6}
+max_hp: 20
+speed: 6
+armor_bonus: 1
+weapon: fangs
+ai_profile: brute
+resist: {}
+element_mods: {ice: -500, fire: 500}
+tags: [beast, lava_beast]
+skills: [skill_annotated_frost]
+opening_statuses:
+  - {status: frost_ember_burst}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: lizard, material: magma, element: ice, size: small}}

@@ -1,0 +1,24 @@
+# BAL-19d（玩法決定 #110，06 6.27.4 補內容：遠程武器技；數值為初值，未經模擬）：審判斬，聖光重劈並讓目標倒地（力量近戰＋聖＋倒地）
+id: skill_rng_judgment_cleave
+schema_version: 1
+name_zh: 審判斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1400, element: holy}
+  - {type: knock_prone}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [holy, melee, control]
+narrative:
+  concept: 刀刃裹著聖光，一劍把罪人劈得跪倒
+  cast_flavor: 你高舉武器，刃上亮起白光，一記重劈把對手砸得雙膝跪地
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

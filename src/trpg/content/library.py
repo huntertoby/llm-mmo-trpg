@@ -7,21 +7,24 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 from pydantic import Field, PrivateAttr, model_validator
 
 from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
+    BossPhase,
+    DollLook,
     OffhandDef,
     OffhandTable,
     StatusDef,
     StatusTable,
     SummonLook,
+    TagDownTrigger,
     TerrainDef,
     TerrainTable,
     UnitTemplate,
@@ -126,6 +129,28 @@ from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
+from trpg.content.world_crafting import (
+    CraftingRules,
+    ResonanceRules,
+    load_world_crafting,
+    load_world_resonance,
+)
+from trpg.content.world_economy import WorldEconomy, load_world_economy
+from trpg.content.world_encounters import EncounterTable, encounter_table_problems
+from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
+from trpg.content.world_events import WorldEventContent, load_world_event_content
+from trpg.content.world_loot import LootRules, load_world_loot
+from trpg.content.world_map import LocationKind, LocationMapDef, world_map_problems
+from trpg.content.world_mercenaries import MercenaryTable
+from trpg.content.world_oaths import OathTable, OathTemplateDef
+from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
+from trpg.content.world_rules import WorldRules, world_rules_problems
+from trpg.content.world_season import (
+    SEASON_FILE,
+    SeasonContent,
+    season_problems,
+    shop_price_problems,
+)
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -384,6 +409,10 @@ class Ruleset(ContentModel):
         rules.model_post_init(None)
         return rules
 
+    def enemy_only_statuses(self) -> frozenset[str]:
+        """只給敵人的狀態 ID（``enemy_only``，Phase 5F-5c）：技能引用它們一律當引用錯誤。"""
+        return frozenset(s.id for s in self.statuses.statuses if s.enemy_only)
+
     def unsafe_backlash_statuses(self) -> frozenset[str]:
         """不能當反噬的狀態 ID（Phase 3D-7a）：硬控類、會讓持有者跳過回合、回合開始時持續傷害
         （反噬不會讓施放者跳過回合，也不會讓他的 HP 低於 1）。"""
@@ -398,6 +427,25 @@ class Ruleset(ContentModel):
 
     def surface_def(self, surface: Surface) -> SurfaceDef:
         return self.surfaces.get(surface)
+
+    def surface_scales_with_magnitude(self, surface: Surface) -> bool:
+        """表面的強度（BAL-12e，#76）有沒有作用：回合開始的傷害或治療，或進入、回合開始時施加的
+        狀態是數值型（:attr:`StatusDef.scales_with_magnitude`，例如火焰表面的燃燒）。"""
+        if surface is Surface.NONE:
+            return False
+        definition = self.surface_def(surface)
+        start, enter = definition.on_turn_start, definition.on_enter
+        if start is not None and (start.damage is not None or start.heal is not None):
+            return True
+        applied = [
+            s
+            for s in (
+                None if start is None else start.apply_status,
+                None if enter is None else enter.apply_status,
+            )
+            if s is not None
+        ]
+        return any(self.status_def(s).scales_with_magnitude for s in applied)
 
     # 查表是引擎最常呼叫的函式之一：直接讀 ``__pydantic_private__``，略過 BaseModel.__getattr__
     # 的私有屬性慢速路徑（結果與 ``self._terrain_index`` 相同）。
@@ -553,6 +601,37 @@ class ContentLibrary:
     :mod:`trpg.content.skills` 由內建資料推導的常數）。"""
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
+    world_maps: dict[str, LocationMapDef] = field(default_factory=dict)
+    """大世界地點圖（``world/maps/*.yaml``，Phase 5A-1）；鍵＝區域 ID。沒有資料夾時為空。"""
+    world_rules: WorldRules | None = None
+    """大世界規則的數值（``world/rules.yaml``，Phase 5A-2）；沒有檔案時為 ``None``。"""
+    world_enemies: WorldEnemies | None = None
+    """大世界敵人的元素變體與精英詞綴（``world/enemies.yaml``，Phase 5A-3）；沒有檔案時為
+    ``None``。"""
+    world_encounters: dict[str, EncounterTable] = field(default_factory=dict)
+    """大世界遭遇表（``world/encounters/*.yaml``，Phase 5A-3）；鍵＝區域 ID。沒有資料夾時為空。"""
+    world_event_content: WorldEventContent = field(default_factory=WorldEventContent)
+    """事件骨架、NPC 人設卡、事件規則（``world/events/``、``world/npcs/``、
+    ``world/event_rules.yaml``，Phase 5B-1）；沒有資料時為空。"""
+    world_quests: WorldQuestContent = field(default_factory=WorldQuestContent)
+    """任務、聊天內容、事件好感度、酒館傳聞與好感度規則（``world/quests/``、``world/social/``、
+    ``world/affinity.yaml``，Phase 5B-4）；沒有資料時為空。"""
+    world_oaths: OathTable | None = None
+    """誓約模板（``world/oaths.yaml``，Phase 5A-6 接點；內容在 5C-3）；沒有檔案時為 ``None``。"""
+    world_mercenaries: MercenaryTable | None = None
+    """系統傭兵名單（``world/mercenaries.yaml``，Phase 5C-1）；沒有檔案時為 ``None``（開戰用標準
+    隊友）。"""
+    world_economy: WorldEconomy = field(default_factory=WorldEconomy)
+    """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
+    world_loot: LootRules | None = None
+    """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
+    world_crafting: CraftingRules | None = None
+    """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
+    world_season: SeasonContent | None = None
+    """賽季日程、今日目標、懸賞、世界事件（``world/season.yaml``，Phase 5F-1）；沒有檔案時為
+    ``None``（這些功能關閉）。"""
+    world_resonance: ResonanceRules | None = None
+    """裝備共鳴（``world/resonance.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（沒有共鳴）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -560,6 +639,12 @@ class ContentLibrary:
     """技能照角色階級重配的快取（:func:`trpg.skillgen.skill_tier.retier`，3W-R1）：掛在內容庫上、隨它
     回收；鍵是「技能內容的 SHA-256 ＋ 階級」。不是建構參數，``dataclasses.replace`` 換內容後是新的空
     快取；不參與相等比較。"""
+    mercenary_gear_cache: dict[tuple[str, int], dict[str, ItemDef]] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    """傭兵系統裝備的快取（:func:`trpg.world.gear.mercenary_equipment`，5D-R1）：掛在內容庫上、隨它
+    回收；鍵是「傭兵 ID ＋ 物品等級」，滿了就清空（上限在 ``trpg.world.gear``）。同 ``retier_cache``
+    不是建構參數、不參與相等比較。"""
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
         """單位範本的裝備快照（``equipment`` 解析成內嵌定義的 :class:`Loadout`；沒有裝備時
@@ -567,6 +652,12 @@ class ContentLibrary:
         if not template.equipment:
             return Loadout()
         return resolve_loadout(template.equipment, self.items, self.affixes)
+
+    def enemy_catalog(self) -> EnemyCatalog:
+        """解析大世界敵人名字（範本或變體）與套用精英詞綴（Phase 5A-3）。"""
+        return _enemy_catalog(
+            self.units, self.world_enemies, self.weapons, self.skills, self.ruleset
+        )
 
     def unit(self, template_id: str) -> UnitTemplate:
         try:
@@ -632,6 +723,21 @@ def _apply_map_themes(maps: dict[str, MapDef], regions: RegionTable | None) -> l
     for warning in warnings:
         _LOG.warning(warning)
     return warnings
+
+
+def _hint_texts(events: WorldEventContent, quests: WorldQuestContent) -> dict[str, tuple[str, ...]]:
+    """區域 → 玩家看得到的傳聞文字（酒館傳聞、聊天、線頭；5F-5a 隱藏配方提示的檢查用）。只列聊天
+    內容與事件骨架都有的區域（精簡的內容資料夾不檢查）。"""
+    found: dict[str, tuple[str, ...]] = {}
+    for region in sorted(set(quests.social) & set(events.events)):
+        social = quests.social[region]
+        skeletons = events.events[region].skeletons
+        found[region] = (
+            *(r.text_zh for r in social.rumors),
+            *(t.text_zh for t in social.talk),
+            *(th.text_zh for s in skeletons for th in s.threads),
+        )
+    return found
 
 
 def load_library(  # noqa: PLR0915
@@ -795,14 +901,103 @@ def load_library(  # noqa: PLR0915
     maps = _load_dir(root / "maps", MapDef, files)
     terrain_map = terrain.by_id()
     weather_map = weather.by_id()
+    _check_unit_phases(  # Boss 階段（Phase 5F-2）
+        root,
+        units,
+        weapons=weapon_map,
+        skills=skills,
+        ruleset=ruleset,
+        ai_profiles=ai_profiles,
+        weather=weather_map,
+        gear=gear,
+    )
     for map_id, map_def in maps.items():
         problems = check_map(map_def, terrain_map, core, objects.by_id())
         problems += _map_reference_problems(map_def, units, weather_map)
+        problems += _map_phase_tile_problems(map_def, units)
         if problems:
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
     map_warnings = _apply_map_themes(maps, regions)
+    world_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
+    world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
+    world_oaths = _load_world_oaths(
+        root / WORLD_OATHS_FILE,
+        files,
+        status_ids=set(statuses.by_id()),
+        tag_ids={t.id for t in skill_tags.tags},
+        element_ids={str(e.id) for e in elements.elements},
+    )
+    world_mercenaries = _load_world_mercenaries(
+        root / WORLD_MERCENARIES_FILE, builds, ai_profiles, files
+    )
+    unit_check = _UnitCheck(root, weapon_map, skills, ruleset, ai_profiles)
+    world_enemies = _load_world_enemies(root / WORLD_ENEMIES_FILE, units, unit_check, files)
+    catalog = _enemy_catalog(units, world_enemies, weapon_map, skills, ruleset)
+    world_encounters = _load_world_encounters(
+        root / WORLD_ENCOUNTERS_DIR, world_maps, catalog, unit_check, files
+    )
+    world_season = _load_world_season(  # 5F-1
+        root / SEASON_FILE,
+        files,
+        world_maps=world_maps,
+        encounters=world_encounters,
+        catalog=catalog,
+        weather_ids=set(weather_map),
+        region_ids=set() if regions is None else {r.id for r in regions.regions},
+        units=set(units),
+        maps=maps,
+        battle_maps={k: v.archetype for k, v in maps.items()},
+        status_ids={s.id for s in statuses.statuses},
+    )
+    world_event_content = load_world_event_content(
+        root,
+        world_maps,
+        weather_map,
+        files,
+        status_ids=statuses.by_id(),
+        keyword_ids={k.id for k in keywords.keywords},
+        race_ids=None if races is None else races.by_id(),
+    )
+    world_quests = load_world_quest_content(
+        root,
+        world_maps,
+        world_event_content,
+        files,
+        check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
+        keyword_ids={k.id for k in keywords.keywords},
+    )
     _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
+    _check_companions(root, world_mercenaries, builds, world_event_content, world_quests)
+    world_economy = load_world_economy(  # 5D-1
+        root,
+        files,
+        regions=set(world_maps),
+        npcs_by_region={r: {n.id for n in t.npcs} for r, t in world_event_content.npcs.items()},
+        check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
+    )
+    _check_shop_prices(root, world_season, world_economy)  # 5F-5b
+    keyword_ids = {k.id for k in keywords.keywords}
+    world_loot = load_world_loot(  # 5D-2
+        root,
+        files,
+        regions=set(world_maps),
+        units=None if world_enemies is None else {*units, *(v.id for v in world_enemies.variants)},
+        affixes=None if world_enemies is None else {a.id for a in world_enemies.affixes},
+        items=world_economy.items,
+        keywords=keyword_ids,
+    )
+    world_crafting = load_world_crafting(  # 5D-3
+        root,
+        files,
+        locations={r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
+        npcs={r: {n.id: n.location for n in t.npcs} for r, t in world_event_content.npcs.items()},
+        items=world_economy.items,
+        affixes=affixes,
+        keywords=keyword_ids,
+        hint_texts=_hint_texts(world_event_content, world_quests),
+    )
+    world_resonance = load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -857,8 +1052,354 @@ def load_library(  # noqa: PLR0915
         origins=origins,
         modifier_changes=modifier_changes,
         map_warnings=tuple(map_warnings),
+        world_maps=world_maps,
+        world_rules=world_rules,
+        world_enemies=world_enemies,
+        world_encounters=world_encounters,
+        world_event_content=world_event_content,
+        world_quests=world_quests,
+        world_oaths=world_oaths,
+        world_mercenaries=world_mercenaries,
+        world_economy=world_economy,
+        world_loot=world_loot,
+        world_crafting=world_crafting,
+        world_resonance=world_resonance,
+        world_season=world_season,
         files=files,
     )
+
+
+WORLD_MAPS_DIR = "world/maps"
+"""大世界地點圖的資料夾（相對於內容資料夾；Phase 5A-1）。"""
+
+
+WORLD_RULES_FILE = "world/rules.yaml"
+"""大世界規則的數值（相對於內容資料夾；Phase 5A-2）。"""
+WORLD_OATHS_FILE = "world/oaths.yaml"
+"""誓約模板（相對於內容資料夾；Phase 5A-6 接點，內容在 5C-3）。"""
+
+
+WORLD_MERCENARIES_FILE = "world/mercenaries.yaml"
+"""系統傭兵名單（相對於內容資料夾；Phase 5C-1）。"""
+
+
+def _load_world_mercenaries(
+    path: Path,
+    builds: BuildTable,
+    ai_profiles: AiProfileTable,
+    files: list[tuple[Path, ContentModel]],
+) -> MercenaryTable | None:
+    """系統傭兵名單：底稿必須是 ``builds.yaml`` 裡的一般 build（不是白板或對照組）；AI 打法選單
+    （5C-2）必須在 ``ai_profiles.yaml``。"""
+    table = _load_optional(path, MercenaryTable, files)
+    if table is None:
+        return None
+    known = builds.by_id()
+    problems = [
+        f"傭兵 {m.id} 的底稿 {m.build} 不在 sim/builds.yaml"
+        if m.build not in known
+        else f"傭兵 {m.id} 的底稿 {m.build} 是白板或對照組"
+        for m in table.mercenaries
+        if m.build not in known or known[m.build].blank or known[m.build].reference
+    ]
+    profiles = ai_profiles.by_id()
+    problems += [f"AI 打法 {p} 不在 ai_profiles" for p in table.ai_choices if p not in profiles]
+    problems += [
+        f"夥伴 {c.id} 的 AI 打法 {c.ai_profile} 不在 ai_profiles"
+        for c in table.companions
+        if c.ai_profile is not None and c.ai_profile not in profiles
+    ]
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    return table
+
+
+def _check_companions(
+    root: Path,
+    table: MercenaryTable | None,
+    builds: BuildTable,
+    events: WorldEventContent,
+    quests: WorldQuestContent,
+) -> None:
+    """劇情夥伴（5C-3）：底稿是一般 build、NPC 在人設卡（有人設卡時）；任務的 ``companion`` 在名單裡
+    （沒有傭兵名單時不檢查：舊內容資料夾照常載入，夥伴不會加入）。"""
+    if table is None:
+        return
+    known = table.companion_by_id()
+    npcs = {n.id for t in events.npcs.values() for n in t.npcs}
+    build_map = builds.by_id()
+    problems: list[str] = []
+    for c in known.values():
+        build = build_map.get(c.build)
+        if build is None or build.blank or build.reference:
+            problems.append(f"劇情夥伴 {c.id} 的底稿 {c.build} 不是 sim/builds.yaml 的一般 build")
+        if npcs and c.npc not in npcs:
+            problems.append(f"劇情夥伴 {c.id} 的 NPC {c.npc} 不在人設卡")
+    if problems:
+        raise ContentError(root / WORLD_MERCENARIES_FILE, "；".join(problems))
+    for region in sorted(quests.quests):
+        bad = [
+            f"任務 {q.id} 的劇情夥伴 {q.companion} 不在 world/mercenaries.yaml"
+            for q in quests.quests[region].quests
+            if q.companion is not None and q.companion not in known
+        ]
+        if bad:
+            raise ContentError(root / "world" / "quests" / f"{region}.yaml", "；".join(bad))
+
+
+def _load_world_oaths(
+    path: Path,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    status_ids: set[str],
+    tag_ids: set[str],
+    element_ids: set[str],
+) -> OathTable | None:
+    """誓約模板（5C-3）：每個模板要有判定、參數要有中文名（``choice`` 的每個值也要）；加成與破誓
+    狀態、判定引用的標籤、元素與狀態參數的值都要存在。"""
+    table = _load_optional(path, OathTable, files)
+    if table is None:
+        return None
+    problems = [
+        f"缺少難度 {d} 的加成" for d in ("easy", "medium", "hard") if d not in table.bonuses
+    ]
+    statuses = [*table.bonuses.values(), *([table.penalty_status] if table.penalty_status else [])]
+    problems += [f"未知的狀態 {s}" for s in statuses if s not in status_ids]
+    for template in table.templates:
+        problems += [f"{template.id}：{p}" for p in _oath_template_problems(template, tag_ids)]
+        for param in template.params:
+            field = template.bind.get(param.id)
+            known = {"element": element_ids, "status": status_ids}.get(field or "")
+            if known is not None:
+                problems += [
+                    f"{template.id}：參數 {param.id} 的值 {v} 不存在"
+                    for v in param.choices
+                    if v not in known
+                ]
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    return table
+
+
+def _oath_template_problems(template: OathTemplateDef, tag_ids: set[str]) -> list[str]:
+    problems: list[str] = []
+    if template.check is None:
+        problems.append("沒有判定（check）")
+    else:
+        problems += [f"未知的技能標籤 {t}" for t in template.check.tags if t not in tag_ids]
+    for param in template.params:
+        if not param.name_zh:
+            problems.append(f"參數 {param.id} 沒有中文名")
+        missing = [c for c in param.choices if c not in param.choice_names_zh]
+        if missing:
+            problems.append(f"參數 {param.id} 的值沒有中文名：{', '.join(missing)}")
+    return problems
+
+
+def _load_optional[M: ContentModel](
+    path: Path, model: type[M], files: list[tuple[Path, ContentModel]]
+) -> M | None:
+    """載入沒有跨檔案檢查的選用資料檔（檔案不存在＝``None``）。"""
+    if not path.is_file():
+        return None
+    loaded = load_content_file(path, model)
+    files.append((path, loaded))
+    return loaded
+
+
+def _check_shop_prices(root: Path, season: SeasonContent | None, economy: WorldEconomy) -> None:
+    """世界事件的商店價格加成（Phase 5F-5b）指到的商店都要存在；經濟比賽季晚載入，所以另外檢查。"""
+    if season is None:
+        return
+    shop_ids = {shop.id for t in economy.shops.values() for shop in t.shops}
+    problems = shop_price_problems(season, shop_ids)
+    if problems:
+        raise ContentError(root / SEASON_FILE, "；".join(problems))
+
+
+def _load_world_season(
+    path: Path,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    world_maps: Mapping[str, LocationMapDef],
+    encounters: Mapping[str, EncounterTable],
+    catalog: EnemyCatalog,
+    weather_ids: set[str],
+    region_ids: set[str],
+    units: set[str],
+    maps: Mapping[str, MapDef],
+    battle_maps: Mapping[str, str] | None = None,
+    status_ids: set[str] | None = None,
+) -> SeasonContent | None:
+    """載入 ``world/season.yaml``（檔案不存在＝``None``）並做跨檔案檢查（Phase 5F-1）。"""
+    if not path.is_file():
+        return None
+    season = load_content_file(path, SeasonContent)
+    problems = season_problems(
+        season,
+        world_maps=world_maps,
+        encounters=encounters,
+        catalog=catalog,
+        weather_ids=weather_ids,
+        region_ids=region_ids,
+        location_kinds=get_args(LocationKind.__value__),
+        units=units,
+        maps=maps,
+        battle_maps=battle_maps,
+        status_ids=status_ids,
+    )
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    files.append((path, season))
+    return season
+
+
+def _load_world_rules(
+    path: Path,
+    regions: RegionTable | None,
+    weather: Mapping[str, WeatherDef],
+    files: list[tuple[Path, ContentModel]],
+) -> WorldRules | None:
+    """載入 ``world/rules.yaml``（檔案不存在＝``None``）並做跨檔案檢查。"""
+    if not path.is_file():
+        return None
+    rules = load_content_file(path, WorldRules)
+    problems = world_rules_problems(rules, regions=regions, weather_ids=weather)
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    files.append((path, rules))
+    return rules
+
+
+def _load_world_maps(
+    directory: Path,
+    regions: RegionTable | None,
+    maps: Mapping[str, MapDef],
+    files: list[tuple[Path, ContentModel]],
+) -> dict[str, LocationMapDef]:
+    """載入 ``world/maps/*.yaml``（鍵＝``region``；資料夾不存在＝空）並做跨檔案檢查。
+
+    地點圖以 ``region`` 而不是 ``id`` 為鍵，所以不用 :func:`_load_dir`；檔名必須等於 ``region``。
+    """
+    if not directory.is_dir():
+        return {}
+    result: dict[str, LocationMapDef] = {}
+    for path in sorted(directory.glob("*.yaml")):
+        world_map = load_content_file(path, LocationMapDef)
+        if world_map.region in result:
+            raise ContentError(path, f"區域 {world_map.region} 已有另一份地點圖")
+        if world_map.region != path.stem:
+            raise ContentError(path, f"檔名必須與 region 相同（region 為 {world_map.region!r}）")
+        problems = world_map_problems(world_map, regions=regions, maps=maps)
+        if problems:
+            raise ContentError(path, "；".join(problems))
+        files.append((path, world_map))
+        result[world_map.region] = world_map
+    return result
+
+
+WORLD_ENEMIES_FILE = "world/enemies.yaml"
+"""大世界敵人的元素變體與精英詞綴（相對於內容資料夾；Phase 5A-3）。"""
+
+
+WORLD_ENCOUNTERS_DIR = "world/encounters"
+"""大世界遭遇表的資料夾（相對於內容資料夾；Phase 5A-3）。"""
+
+
+@dataclass(frozen=True)
+class _UnitCheck:
+    """對「載入後才產生的範本」（變體、套詞綴）跑和 ``units/`` 相同的單位檢查。"""
+
+    root: Path
+    weapons: dict[str, WeaponDef]
+    skills: dict[str, SkillDef]
+    ruleset: Ruleset
+    ai_profiles: AiProfileTable
+
+    def __call__(self, path: Path, template: UnitTemplate) -> None:
+        _check_units(
+            self.root,
+            {template.id: template},
+            weapons=self.weapons,
+            skills=self.skills,
+            ruleset=self.ruleset,
+            ai_profiles=self.ai_profiles,
+            source=path,
+        )
+
+
+def _enemy_catalog(
+    units: Mapping[str, UnitTemplate],
+    enemies: WorldEnemies | None,
+    weapons: Mapping[str, WeaponDef],
+    skills: Mapping[str, SkillDef],
+    ruleset: Ruleset,
+) -> EnemyCatalog:
+    return EnemyCatalog(
+        units=units,
+        enemies=enemies,
+        weapons=weapons,
+        skills=skills,
+        slots=ruleset.core.skill_slots,
+        default_rules=ruleset.reactions.default_rules,
+    )
+
+
+def _load_world_enemies(
+    path: Path,
+    units: dict[str, UnitTemplate],
+    unit_check: _UnitCheck,
+    files: list[tuple[Path, ContentModel]],
+) -> WorldEnemies | None:
+    """載入 ``world/enemies.yaml``（檔案不存在＝``None``）；變體套用後要通過單位檢查。"""
+    if not path.is_file():
+        return None
+    enemies = load_content_file(path, WorldEnemies)
+    problems = world_enemies_problems(
+        enemies, units=units, weapons=unit_check.weapons, skills=unit_check.skills
+    )
+    if problems:
+        raise ContentError(path, "；".join(problems))
+    catalog = _enemy_catalog(
+        units, enemies, unit_check.weapons, unit_check.skills, unit_check.ruleset
+    )
+    for variant in enemies.variants:
+        unit_check(path, catalog.template(variant.id))
+    files.append((path, enemies))
+    return enemies
+
+
+def _load_world_encounters(
+    directory: Path,
+    world_maps: Mapping[str, LocationMapDef],
+    catalog: EnemyCatalog,
+    unit_check: _UnitCheck,
+    files: list[tuple[Path, ContentModel]],
+) -> dict[str, EncounterTable]:
+    """載入 ``world/encounters/*.yaml``（鍵＝``region``，檔名必須相同；資料夾不存在＝空）。
+
+    除了 :func:`encounter_table_problems`，表裡每個單位套上每個可以套的本區詞綴後，也要通過單位
+    檢查（反應規則、欄位上限）。"""
+    if not directory.is_dir():
+        return {}
+    result: dict[str, EncounterTable] = {}
+    for path in sorted(directory.glob("*.yaml")):
+        table = load_content_file(path, EncounterTable)
+        if table.region != path.stem:
+            raise ContentError(path, f"檔名必須與 region 相同（region 為 {table.region!r}）")
+        problems = encounter_table_problems(
+            table, world_map=world_maps.get(table.region), catalog=catalog
+        )
+        if problems:
+            raise ContentError(path, "；".join(problems))
+        names = sorted({u for g in table.groups for u in g.units})
+        for name in names:
+            template = catalog.template(name)
+            for affix in catalog.applicable_affixes(template, table.affixes):
+                unit_check(path, catalog.with_affix(template, affix))
+        files.append((path, table))
+        result[table.region] = table
+    return result
 
 
 def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: BudgetRules) -> None:
@@ -1023,8 +1564,11 @@ def _load_summons(
         entry = looks.get(summon_id.removeprefix("summon_"))
         if entry is None:
             raise ContentError(path, f"summon_looks.yaml 沒有 {summon_id} 的外觀")
-        look = SummonLook.model_validate(entry.model_dump(exclude={"zh"}))
-        template = template.model_copy(update={"look": look})
+        look = SummonLook.model_validate(entry.model_dump(exclude={"zh", "creature"}))
+        update: dict[str, object] = {"look": look}
+        if entry.creature is not None and template.doll is None:
+            update["doll"] = DollLook(creature=entry.creature)  # 5A-ART1：召喚物的異形外觀
+        template = template.model_copy(update=update)
         weapon = weapons.get(template.weapon)
         if weapon is None:
             raise ContentError(path, f"未知的武器：{template.weapon}")
@@ -1040,11 +1584,12 @@ def skill_reference_problems(
 
     ``skills`` 是 ``grant_skill`` 查找的技能表；所有引用表一律帶齊（不省略任何一項）。
     """
+    enemy_only = ruleset.enemy_only_statuses()  # 5F-5c：只給敵人的狀態，技能不能引用
     problems = skill_problems(
         skill,
         ruleset.shapes.by_id(),
         ruleset.primitives.by_id(),
-        status_ids={s.id for s in ruleset.statuses.statuses},
+        status_ids={s.id for s in ruleset.statuses.statuses if s.id not in enemy_only},
         object_ids={o.id for o in ruleset.objects.objects},
         conditions=ruleset.conditions.by_id(),
         triggers=ruleset.skill_triggers.by_id(),
@@ -1058,6 +1603,11 @@ def skill_reference_problems(
         infusion_ids=set(ruleset.core.summon_infusions),
         form_ids=set(ruleset.forms.by_id()),
     )
+    problems += [
+        f"狀態 {sid} 只給敵人（enemy_only），技能不能用"
+        for sid in sorted(enemy_only)
+        if any(sid in p for p in problems)
+    ]
     problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
     follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查
     if follow is not None:
@@ -1175,6 +1725,16 @@ def _check_skills(
             problems.append(cost)
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
+
+
+def _story_skill_problems(
+    skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef], budget: BudgetRules
+) -> list[str]:
+    """劇情技能（``world/quests/`` 的 ``story_skills``，Phase 5B-4）的引用與費用檢查（同
+    ``content/skills/``；不進技能池）。"""
+    problems = skill_reference_problems(skill, ruleset, skills)
+    cost = budget.cost_problem(skill.category, skill.cost)
+    return problems if cost is None else [*problems, cost]
 
 
 def _keyword_rule_problems(
@@ -1328,6 +1888,9 @@ def _check_summon_traits(path: Path, template: UnitTemplate, ruleset: Ruleset) -
     for rule in template.hit_rules:
         if rule.status is not None and rule.status not in status_ids:
             raise ContentError(path, f"命中特性引用了未知的狀態：{rule.status}")
+    for opening in template.opening_statuses:  # Phase 5A-M1
+        if opening.status not in status_ids:
+            raise ContentError(path, f"開場狀態引用了未知的狀態：{opening.status}")
 
 
 def _check_builds(
@@ -1573,6 +2136,114 @@ def unit_skill_problems(
             problems.append(f"skills：{problem}")
     problems += [f"skills：{p}" for p in skill_slot_problems(equipped, core.skill_slots)]
     return problems
+
+
+def unit_phase_problems(
+    template: UnitTemplate,
+    *,
+    units: Mapping[str, UnitTemplate],
+    weapons: Mapping[str, WeaponDef],
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    ai_profiles: AiProfileTable,
+    weather: Mapping[str, WeatherDef],
+    offhand: OffhandDef | None = None,
+) -> list[str]:
+    """範本 ``phases``（Phase 5F-2）引用的技能（存在、符合武器、欄位上限）、行為模式、狀態、天氣、
+    召喚範本與地形都存在（繁體中文，空串列為通過）。"""
+    problems: list[str] = []
+    status_ids = set(ruleset.statuses.by_id())
+    profiles = ai_profiles.by_id()
+    terrain_ids = set(ruleset.terrain.by_id())
+    weapon = weapons.get(template.weapon)
+    for phase in template.phases:
+        where = f"階段 {phase.id}"
+        if phase.skills is not None and weapon is not None:
+            staged = template.model_copy(update={"skills": phase.skills})
+            problems += [
+                f"{where}：{p}"
+                for p in unit_skill_problems(staged, weapon, skills, ruleset.core, offhand)
+            ]
+        if phase.ai_profile is not None and phase.ai_profile not in profiles:
+            problems.append(f"{where}：未知的行為模式 {phase.ai_profile}")
+        wanted = [*phase.remove_statuses, *(o.status for o in phase.add_statuses)]
+        problems += [f"{where}：未知的狀態 {s}" for s in wanted if s not in status_ids]
+        if phase.weather is not None and phase.weather not in weather:
+            problems.append(f"{where}：未知的天氣 {phase.weather}")
+        for spawn in phase.spawns:
+            found = units.get(spawn.template)
+            if found is None or found.summon:
+                problems.append(f"{where}：召喚的單位範本不存在或是召喚物 {spawn.template}")
+            elif found.phases:
+                problems.append(f"{where}：召喚的單位範本不能也有 phases（{spawn.template}）")
+        problems += [
+            f"{where}：未知的地形 {t.terrain}"
+            for t in phase.tiles
+            if t.terrain is not None and t.terrain not in terrain_ids
+        ]
+    return problems
+
+
+def _check_unit_phases(
+    root: Path,
+    units: dict[str, UnitTemplate],
+    *,
+    weapons: dict[str, WeaponDef],
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    ai_profiles: AiProfileTable,
+    weather: dict[str, WeatherDef],
+    gear: _GearCatalog,
+) -> None:
+    """每個範本的 ``phases`` 都通過 :func:`unit_phase_problems`。"""
+    for template_id, template in units.items():
+        problems = unit_phase_problems(
+            template,
+            units=units,
+            weapons=weapons,
+            skills=skills,
+            ruleset=ruleset,
+            ai_profiles=ai_profiles,
+            weather=weather,
+            offhand=gear.offhand_of(template),
+        )
+        if problems:
+            raise ContentError(root / "units" / f"{template_id}.yaml", "；".join(problems))
+
+
+def _map_phase_tile_problems(map_def: MapDef, units: Mapping[str, UnitTemplate]) -> list[str]:
+    """地圖預設陣容裡 Boss 階段的 ``tiles``／``spawns.at`` 在地圖內（Phase 5F-2）。"""
+    if map_def.encounter is None:
+        return []
+    problems: list[str] = []
+    for template_id in sorted(set(map_def.encounter.enemies)):
+        template = units.get(template_id)
+        for phase in () if template is None else template.phases:
+            cells = [t.at for t in phase.tiles] + [s.at for s in phase.spawns if s.at is not None]
+            problems += [
+                f"{template_id} 階段 {phase.id} 的 {list(xy)} 在地圖外"
+                for xy in cells
+                if not (0 <= xy[0] < map_def.width and 0 <= xy[1] < map_def.height)
+            ]
+            problems += _tag_down_problems(template_id, phase, map_def.encounter.enemies, units)
+    return problems
+
+
+def _tag_down_problems(
+    template_id: str, phase: BossPhase, enemies: Sequence[str], units: Mapping[str, UnitTemplate]
+) -> list[str]:
+    """``tag_down`` 觸發（Phase 5F-3）：預設陣容裡帶該標籤的單位要夠 ``count`` 名（否則永遠不會
+    觸發）。"""
+    trigger = phase.trigger
+    if not isinstance(trigger, TagDownTrigger):
+        return []
+    have = sum(1 for e in enemies if (u := units.get(e)) is not None and trigger.tag in u.tags)
+    if have >= trigger.count:
+        return []
+    return [
+        f"{template_id} 階段 {phase.id} 要「{trigger.tag}」倒下 {trigger.count} 名，"
+        f"地圖的預設陣容只有 {have} 名"
+    ]
 
 
 def _map_reference_problems(

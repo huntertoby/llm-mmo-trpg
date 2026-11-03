@@ -32,6 +32,7 @@ tags:
   - {id: defense, name_zh: 防禦}
   - {id: detonate, name_zh: 引爆}
   - {id: dispel, name_zh: 驅散}
+  - {id: dot, name_zh: 持續傷害}
   - {id: displace, name_zh: 位移}
   - {id: drain, name_zh: 吸取}
   - {id: earth, name_zh: 大地}
@@ -51,6 +52,7 @@ tags:
   - {id: hunter, name_zh: 獵手}
   - {id: ice, name_zh: 冰霜}
   - {id: intercept, name_zh: 攔截}
+  - {id: item, name_zh: 道具}
   - {id: kill, name_zh: 擊殺}
   - {id: knockdown, name_zh: 擊倒}
   - {id: leap, name_zh: 跳躍}

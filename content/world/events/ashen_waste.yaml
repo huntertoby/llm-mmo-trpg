@@ -1,0 +1,216 @@
+# 灰燼荒原事件骨架（Phase 5F-5a；schema：src/trpg/content/world_events.py）。
+# 來源：docs/design/19-灰燼荒原與賽季主線.md 19.4（15 個骨架；#85、#89；#118 玩法 PM 代決、待使用者確認）＋
+# 19.3「角魔古祭壇：機遇（帶點燃技能、在晴天正午來此）」寫成骨架 16（同雲嶺骨架 12 雷雨中的古松祭壇）。
+# 欄位對照 19.4：who／want／obstacle／stakes＝誰／想要什麼／阻礙／賭注；solutions＝可選解法；threads＝事件結果可能留下的線頭。
+# 寫法同 events/cloud_ridge.yaml（18 雲嶺）。開發 PM 自定（代決 5F5a-*）：所有 ID；locations、day_phase、weather
+# （19.4 沒寫出現地點，依 19.3「內容」欄與骨架文字推定）；線頭 scope 全部 personal；交涉付出的東西都用補給代替。
+# 城鎮是安全區：有戰鬥解法的骨架不在餘燼集出現（載入檢查）；餘燼集只有骨架 15。
+# 只留線頭、不做機制的（代決 5F5a-9）：冷卻井「附近 3 個地點變成有水」、鐵匠的配方碼、小犬同伴。
+# 屬性：str 力量、dex 敏捷、con 體質、int 智力、wis 感知、wil 意志。
+region: ashen_waste
+skeletons:
+  - id: laotie_dig
+    number: 1
+    who_zh: 拾荒者老鐵
+    want_zh: 挖出埋在灰裡的舊機械
+    obstacle_zh: 餘燼蜥巢
+    stakes_zh: 一件舊零件
+    locations: [old_iron_post, scorched_outskirts]
+    npcs: [scavenger_laotie]
+    solutions:
+      - {kind: combat, threads: [laotie_knows_valley]}
+      - {kind: situation, attributes: [int], note_zh: 機關（安全拆出）}
+    threads:
+      - id: laotie_knows_valley
+        aliases_zh: [黑曜谷, 老鐵知道]
+        text_zh: 老鐵知道黑曜谷在哪
+        npc: scavenger_laotie
+        hints_location: obsidian_valley
+  - id: water_caravan
+    number: 2
+    who_zh: 迷路的運水隊
+    want_zh: 把水送到灰井村
+    obstacle_zh: 灰燼犬
+    stakes_zh: 村落的水源
+    locations: [ash_mire, old_iron_post]
+    solutions:
+      - {kind: combat, note_zh: 護送戰（撤離）, objective: escape, threads: [ash_well_owes_you]}
+      - {kind: situation, attributes: [wis], note_zh: 追蹤（找捷徑）}
+    threads:
+      - {id: ash_well_owes_you, text_zh: 灰井村欠你人情, aliases_zh: [灰井村的人情]}
+  - id: ashen_deserter
+    number: 3
+    who_zh: 斷崖幫逃兵
+    want_zh: 回雲嶺
+    obstacle_zh: 追兵
+    stakes_zh: 運輸路線情報
+    locations: [deadwood_forest, gang_convoy_road]
+    follows: [gang_fort_secret_door]   # 雲嶺骨架 7「盜賊逃兵」的延續
+    solutions:
+      - {kind: combat, note_zh: 擋追兵（守點）, objective: defend, threads: [convoy_timetable]}
+      - {kind: situation, attributes: [dex], note_zh: 潛行}
+    threads:
+      - {id: convoy_timetable, text_zh: 運輸隊的時刻表, aliases_zh: [時刻表]}
+  - id: horned_pilgrim
+    number: 4
+    who_zh: 角魔巡禮者
+    want_zh: 點燃古祭壇的聖火
+    obstacle_zh: 熔晶魅
+    stakes_zh: 角魔的好感度
+    locations: [horned_altar]
+    npcs: [priestess_helin]
+    solutions:
+      - {kind: combat, threads: [altar_fire_guides]}
+      - {kind: situation, attributes: [wil], note_zh: 異象（與火溝通；角魔主角 +1，#89）}
+    threads:
+      - {id: altar_fire_guides, text_zh: 祭壇的火會指路, aliases_zh: [聖火, 祭壇的火]}
+  - id: burned_bandit
+    number: 5
+    who_zh: 燒傷的盜賊
+    want_zh: 有人治療他
+    obstacle_zh: 他是敵人
+    stakes_zh: 他的命
+    locations: [gang_convoy_road, overseer_camp]
+    solutions:
+      - {kind: parley, note_zh: 治療（花補給）, cost_supplies: 1, threads: [bandit_wants_out]}
+      - {kind: situation, attributes: [wil], note_zh: 交涉（換情報）}
+      - {kind: abandon}
+    threads:
+      - {id: bandit_wants_out, text_zh: 盜賊裡有人想退出, aliases_zh: [想退出]}
+  - id: cooling_well_relic
+    number: 6
+    who_zh: 冷卻井
+    want_zh: （遺跡）
+    obstacle_zh: 古代機關
+    stakes_zh: 附近 3 個地點變得有水
+    locations: [cooling_well]
+    solutions:
+      - {kind: situation, attributes: [int], note_zh: 機關}
+      - {kind: situation, attributes: [int], note_zh: 學識}
+    threads:
+      - {id: well_flowing, text_zh: 冷卻井重新出水了, aliases_zh: [冷卻井出水, 重新出水]}
+  - id: furnace_brood
+    number: 7
+    who_zh: 熔爐母獸
+    want_zh: 在焦油坑產卵
+    obstacle_zh: 你路過
+    stakes_zh: 巢的去留
+    locations: [tar_pits]
+    solutions:
+      - {kind: combat, note_zh: 擊殺母獸}
+      - {kind: situation, attributes: [dex], note_zh: 潛行（繞過）}
+    threads:
+      - id: brood_spreading
+        aliases_zh: [母獸的後代, 擴散]
+        text_zh: 母獸的後代在擴散
+        on_expire_zh: 焦油坑的遭遇多一隻餘燼蜥
+        on_expire_flag: brood_spread   # 遭遇表 variants 依它換陣容（打贏那一場結束）
+  - id: forge_smith
+    number: 8
+    who_zh: 鐵爐村的鐵匠
+    want_zh: 黑曜片
+    obstacle_zh: 黑曜谷危險
+    stakes_zh: 一份打造配方
+    locations: [iron_forge_village]
+    follows: [laotie_knows_valley]
+    solutions:
+      - {kind: parley, note_zh: 交材料（用補給代替黑曜片）, cost_supplies: 2, threads: [ancestral_recipe]}
+      - {kind: abandon}
+    threads:
+      - {id: ancestral_recipe, text_zh: 鐵匠的祖傳配方, aliases_zh: [祖傳配方]}
+  - id: sandstorm
+    number: 9
+    who_zh: 沙暴
+    want_zh: （天氣異象）
+    obstacle_zh: 視線
+    stakes_zh: 迷路
+    locations: [scorched_outskirts, deadwood_forest, tar_pits]
+    day_phase: day
+    solutions:
+      - {kind: situation, attributes: [con], note_zh: 耐力（硬撐）}
+      - {kind: situation, attributes: [wis], note_zh: 追蹤（認路）}
+  - id: scarface_revenge
+    number: 10
+    who_zh: 斷崖幫二當家「疤面」
+    want_zh: 報仇
+    obstacle_zh: 你
+    stakes_zh: 決鬥
+    locations: [overseer_camp]   # 精英巢穴：遭遇一定有精英（19.4「戰鬥（精英）」）
+    follows: [scarface_grudge]   # 雲嶺線頭「二當家記恨你」的延續
+    solutions:
+      - {kind: combat, note_zh: 決鬥（精英）}
+  - id: fortress_stele
+    number: 11
+    who_zh: 廢墟要塞的石碑
+    want_zh: 被讀懂
+    obstacle_zh: 古文
+    stakes_zh: 主線線索
+    locations: [ruined_fortress]
+    solutions:
+      - {kind: situation, attributes: [int], note_zh: 學識}
+      - {kind: situation, attributes: [wis], note_zh: 察覺（找另一半石碑）}
+    threads:
+      - {id: core_breathes, text_zh: 核心殘片會呼吸, aliases_zh: [會呼吸, 核心殘片]}
+  - id: lost_pup
+    number: 12
+    who_zh: 赤沙村的孩子
+    want_zh: 找走失的灰燼犬幼犬
+    obstacle_zh: 熔岩洞窟附近
+    stakes_zh: 村民好感度
+    locations: [red_sand_village, lava_cave]
+    solutions:
+      - {kind: situation, attributes: [wis], note_zh: 追蹤}
+      - {kind: parley, note_zh: 用食物引誘, cost_supplies: 1, threads: [pup_follows]}
+    threads:
+      - {id: pup_follows, text_zh: 小犬變成你的同伴？（只是敘事）, aliases_zh: [小犬, 幼犬]}
+  - id: ashen_convoy
+    number: 13
+    who_zh: 盜賊運輸隊
+    want_zh: 把碎片送到熔心坑
+    obstacle_zh: 你
+    stakes_zh: 碎片數量（影響灰燼之心強度）
+    locations: [gang_convoy_road, deadwood_forest]
+    follows: [shards_to_ashen, convoy_timetable]   # 雲嶺骨架 14 的世界線頭、荒原骨架 3
+    solutions:
+      - {kind: combat, note_zh: 攔截（撤離）, objective: escape, threads: [convoy_intercepted]}
+      - {kind: situation, attributes: [dex], note_zh: 靈巧（偷走）}
+    threads:
+      # 有效期間灰燼之心第 1 階段護甲 −1（encounters/ashen_waste.yaml 的 armor_mods；代決 5F5a-5）
+      - {id: convoy_intercepted, text_zh: 被攔下的碎片數, aliases_zh: [被攔下的碎片, 攔下碎片]}
+  - id: molten_lord_pool
+    number: 14
+    who_zh: 熔核領主
+    want_zh: 守住熔岩池
+    obstacle_zh: 你
+    stakes_zh: 稀有材料
+    locations: [lava_cave]
+    solutions:
+      - {kind: combat, note_zh: 戰鬥（精英）}
+      - {kind: abandon}
+  - id: tavern_veteran
+    number: 15
+    who_zh: 酒館的老兵
+    want_zh: 有人聽他講碎界那天
+    obstacle_zh: ""
+    stakes_zh: 一條傳聞
+    locations: [ember_market]
+    solutions:
+      - {kind: situation, attributes: [wil], note_zh: 文字回答＋用心清單（#85）}
+    threads:
+      - {id: rift_gate_rumor, text_zh: 裂界門的位置（賽季線索）, aliases_zh: [裂界門]}
+  - id: noon_altar
+    number: 16
+    who_zh: 正午的角魔古祭壇
+    want_zh: （異象）
+    obstacle_zh: 烈日
+    stakes_zh: 機遇
+    locations: [horned_altar]
+    follows: [altar_fire_guides]
+    day_phase: day
+    weather: [clear]
+    # 保底觸發（第 6 天起、不看天氣時段；world/rules.yaml opportunity）時的旁白，同雲嶺骨架 12
+    guarantee_who_zh: 還在發燙的古祭壇
+    guarantee_text_zh: 祭壇的石面燙得冒煙，聖火的灰燼裡還有一點火星——像是在等帶著火的人。
+    solutions:
+      - {kind: opportunity, note_zh: 帶「點燃」技能靠近, requires_keyword: ignite}
+      - {kind: situation, attributes: [con], note_zh: 硬撐}

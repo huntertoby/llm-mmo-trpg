@@ -12,7 +12,7 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 2800}
+  - {type: damage, multiplier_permille: 3270}
 condition: null
 cost: {stamina: 8, cooldown: 2, self_status: {status: vulnerable, duration: 2}}
 tags: [physical, melee, sacrifice]

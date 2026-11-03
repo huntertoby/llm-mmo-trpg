@@ -1,0 +1,24 @@
+# BAL-19d（玩法決定 #110，06 6.27.4 補內容：遠程武器技；數值為初值，未經模擬）：裂風斬，劈出的風壓把目標推開（力量近戰＋風＋撞擊）
+id: skill_rng_gale_cleave
+schema_version: 1
+name_zh: 裂風斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1400, element: wind}
+  - {type: push, distance: 1}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [wind, melee, push]
+narrative:
+  concept: 揮得夠快，刀鋒會帶出一道撕裂空氣的風壓
+  cast_flavor: 你一刀橫斬，風壓隨刃炸開，把對手連人帶盾推了出去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

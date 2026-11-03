@@ -64,7 +64,7 @@ def damage(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectB
             dice=spec.dice,
             scaled_permille=cast.spell_scaled(),
             preset_rolls=preset,
-            multiplier_permille=cast.heal_multiplier(),
+            multiplier_permille=cast.heal_multiplier() * cast.chain_permille(unit) // PERMILLE,
         )
         for unit in healed
     ]
@@ -125,8 +125,11 @@ def heal(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBas
             target_id=unit.id,
             source_id=cast.caster.id,
             dice=spec.dice,
+            flat=spec.flat_bonus or 0,
             scaled_permille=scaled,
-            multiplier_permille=cast.heal_multiplier(self_heal=effect.affects == "self", spec=spec),
+            multiplier_permille=cast.heal_multiplier(self_heal=effect.affects == "self", spec=spec)
+            * cast.chain_permille(unit)
+            // PERMILLE,
         )
         for unit in cast.targets(effect.affects, spec.condition)
     ]
@@ -140,8 +143,9 @@ def shield(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectB
             target_id=unit.id,
             source_id=cast.caster.id,
             dice=spec.dice,
+            flat=spec.flat_bonus or 0,
             scaled_permille=scaled,
-            multiplier_permille=multiplier,
+            multiplier_permille=multiplier * cast.chain_permille(unit) // PERMILLE,
             duration=spec.duration,
             status_id=spec.status,
         )
