@@ -1,10 +1,15 @@
 // 大世界圖（Phase 6D-5；21.1）：五區畫成漂浮的界域、主城在中央浮島。按 M 在區域圖上再按一次打開，Esc 關閉。
 // 已開放的區彩色（點了進該區的區域圖）；未解鎖的灰色剪影寫條件；第一季其他三區寫「之後的賽季」。
 // 站在傳送石上或在城鎮裡打開時，已開放區的城鎮可以點了直接傳送（送 `teleport`）。
-// 底圖：`art_url` 有值時畫插畫，否則用程式畫的簡單浮島。
+// 底圖（6F-ART1）：程式畫的大世界插畫（`render/worldMapArt.ts`）。天空照尺寸快取，浮島與字牌依狀態重畫；
+// 浮島、傳送鈕、條件的 DOM 節點留著當透明的點擊、滑過區，位置與畫布同一套座標。`art_url` 不再使用（欄位留著）。
 import type { AtlasView, WorldMapView } from "../api/types";
+import { hitPercent } from "../render/regionMapArt";
+import { AtlasPainter, buttonHitBox, islandHitBox, type AtlasArtIsland } from "../render/worldMapArt";
 import { Hint } from "../ui/Hint";
-import { atlasIslands, atlasNote, capitalIsland, type AtlasIsland } from "./atlasModel";
+import { atlasNote, type AtlasIsland } from "./atlasModel";
+import { atlasScene } from "./atlasScene";
+import { domSurface, MapStage, type StagePaint } from "./MapStage";
 
 interface Props {
   atlas: AtlasView;
@@ -16,83 +21,84 @@ interface Props {
   onClose(): void;
 }
 
-/** 浮島：上面是地面（橢圓）、下面是倒三角的岩塊，旁邊一抹雲。 */
-function IslandArt({ tone }: { tone: string }) {
-  return (
-    <svg viewBox="0 0 100 70" className="atlas-island-art" aria-hidden="true">
-      <path d="M12 30 Q50 72 88 30 Z" className="atlas-rock" />
-      <path d="M30 40 L50 68 L66 42 Z" className="atlas-rock deep" />
-      <ellipse cx="50" cy="28" rx="40" ry="13" className={`atlas-land ${tone}`} />
-      <ellipse cx="50" cy="25" rx="30" ry="7" className={`atlas-land-top ${tone}`} />
-      <path d="M2 46 q8 -6 16 0 q6 -5 12 0" className="atlas-cloud" />
-      <path d="M72 52 q7 -5 14 0 q5 -4 11 0" className="atlas-cloud" />
-    </svg>
-  );
+let shared: AtlasPainter | null = null;
+function painter(): AtlasPainter {
+  shared ??= new AtlasPainter(domSurface);
+  return shared;
 }
 
-function Island({
+function IslandHits({
   island,
+  art,
   busy,
   onOpenRegion,
   onTeleport,
   capital = false,
+  k = 1,
 }: {
   island: AtlasIsland;
+  art: AtlasArtIsland;
   busy: boolean;
   onOpenRegion(region: string): void;
   onTeleport(region: string): void;
   capital?: boolean;
+  k?: number;
 }) {
-  const { spot } = island;
-  const style = { left: `${spot.x}%`, top: `${spot.y}%`, width: `${spot.size}%` };
-  const tone = capital ? "capital" : island.status === "open" ? island.region : "grey";
-  const cls = ["atlas-island", island.status, capital ? "capital" : "", island.current ? "current" : "", island.canOpen ? "openable" : ""]
+  const cls = ["atlas-island", "map-hit", island.status, capital ? "capital" : "", island.current ? "current" : "", island.canOpen ? "openable" : ""]
     .filter((c) => c !== "")
     .join(" ");
+  const btn = buttonHitBox(art, k);
   return (
-    <div className={cls} style={style} data-region={island.region} data-status={island.status} data-testid={`atlas-${island.region}`}>
+    <>
       <Hint text={island.hint}>
         <button
           type="button"
-          className="atlas-island-body"
+          className={cls}
+          style={hitPercent(islandHitBox(art))}
+          data-region={island.region}
+          data-status={island.status}
+          data-testid={`atlas-${island.region}`}
           aria-label={island.hint}
           aria-disabled={!island.canOpen}
           onClick={() => {
             if (island.canOpen) onOpenRegion(island.region);
           }}
         >
-          <IslandArt tone={tone} />
-          {island.current && <span className="atlas-me" aria-hidden="true" data-testid="atlas-me" />}
+          <span className="map-hit-label">{island.name}</span>
+          {island.status === "open" ? (
+            island.caption !== "" && <span className="map-hit-label">{island.caption}</span>
+          ) : (
+            <span className="map-hit-label" data-testid={`atlas-condition-${island.region}`}>
+              {island.caption}
+            </span>
+          )}
+          {island.current && <span className="map-hit-label" data-testid="atlas-me">你在這裡</span>}
         </button>
       </Hint>
-      <div className="atlas-island-name">{island.name}</div>
-      {island.status === "open" ? (
-        island.canTeleport ? (
-          <button
-            type="button"
-            className="atlas-town go"
-            disabled={busy}
-            onClick={() => onTeleport(island.region)}
-            data-testid={`atlas-teleport-${island.region}`}
-          >
-            傳送到{island.caption}
-          </button>
-        ) : (
-          island.caption !== "" && <div className="atlas-town">{island.caption}</div>
-        )
-      ) : (
-        <div className="atlas-condition" data-testid={`atlas-condition-${island.region}`}>
-          {island.caption}
-        </div>
+      {btn !== null && (
+        <button
+          type="button"
+          className="atlas-town go map-hit"
+          style={hitPercent(btn)}
+          disabled={busy}
+          onClick={() => onTeleport(island.region)}
+          data-testid={`atlas-teleport-${island.region}`}
+        >
+          <span className="map-hit-label">傳送到{island.caption}</span>
+        </button>
       )}
-    </div>
+    </>
   );
 }
 
 export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }: Props) {
-  const islands = atlasIslands(atlas, map);
-  const capital = capitalIsland(atlas);
-  const art = atlas.art_url ?? null;
+  const { scene, islands, capital } = atlasScene(atlas, map);
+  const paint = (pw: number, ph: number, k: number, epoch: number): StagePaint => ({
+    baseKey: `${pw}x${ph}`,
+    overlayKey: JSON.stringify([scene, atlas.can_teleport, pw, ph, k, epoch]),
+    paintBase: (ctx, w, h) => painter().paintBase(ctx, w, h),
+    paintOverlay: (ctx, w, h, kk) => painter().paintOverlay(ctx, scene, atlas.can_teleport, w, h, kk),
+  });
   return (
     <div className="region-map-backdrop" data-testid="atlas-backdrop" onClick={onClose}>
       <div
@@ -107,36 +113,24 @@ export function AtlasMap({ atlas, map, busy, onOpenRegion, onTeleport, onClose }
           <span className={`region-map-note${atlas.can_teleport ? " go" : ""}`} data-testid="atlas-note">
             {atlasNote(atlas)}
           </span>
+          <span className="region-map-keys muted">M／Esc 關閉</span>
           <button type="button" className="world-hud-panel-close" onClick={onClose} aria-label="關閉大世界圖（Esc）" data-testid="atlas-close">
             ×
           </button>
         </header>
-        <div className="region-map-canvas atlas-canvas" style={art !== null ? { backgroundImage: `url(${art})` } : undefined} data-art={art ?? ""}>
-          <svg className="atlas-bridges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            {islands.map((i) => (
-              <line
-                key={i.region}
-                x1={capital.spot.x}
-                y1={capital.spot.y}
-                x2={i.spot.x}
-                y2={i.spot.y}
-                className={i.status === "open" ? "open" : "dim"}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-          </svg>
-          {islands.map((i) => (
-            <Island key={i.region} island={i} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} />
-          ))}
-          <Island island={capital} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} capital />
-        </div>
-        <footer className="region-map-legend" aria-label="圖例">
-          <span><i className="lg-open" />已開放（點了看區域圖）</span>
-          <span><i className="lg-sil" />未解鎖（寫條件）</span>
-          <span><i className="lg-later" />之後的賽季</span>
-          <span><i className="lg-me" />自己</span>
-          <span className="muted">M／Esc 關閉</span>
-        </footer>
+        <MapStage className="region-map-canvas atlas-canvas" paint={paint} testId="atlas-stage">
+          {(k) => (
+            <>
+              {islands.map((i, n) => {
+                const art = scene.islands[n];
+                return art === undefined ? null : (
+                  <IslandHits key={i.region} island={i} art={art} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} k={k} />
+                );
+              })}
+              <IslandHits island={capital} art={scene.capital} busy={busy} onOpenRegion={onOpenRegion} onTeleport={onTeleport} capital k={k} />
+            </>
+          )}
+        </MapStage>
       </div>
     </div>
   );

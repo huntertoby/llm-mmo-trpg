@@ -1,9 +1,14 @@
 // 區域圖（Phase 6C-6；21.1）：按 M 或 HUD 地圖鈕打開的浮動全畫面面板，Esc 關閉。
 // 只能看（不能點了走過去）；站在傳送石上或在城鎮裡打開時，已解鎖的傳送石可以點了傳送。
-// 底圖：`art_url` 有值時畫區域插畫，否則用節點圖的座標與連線（座標 0～100，同 `WorldMap`）。
+// 底圖（6F-ART1）：程式畫的區域插畫（B 俯視彩繪）。地景照區域與尺寸快取，迷霧與標記在狀態變時重畫
+// （`render/regionMapPainter.ts`）；地點、任務、傳送石的 DOM 節點留著當透明的點擊、滑過區，位置用同一套 `P()` 換算。
+// `art_url` 不再使用（欄位留著）。
 import type { WorldMapView } from "../api/types";
+import { hitPercent, questHitBox, spotHitBox, stoneHitBox } from "../render/regionMapArt";
+import { baseKey, overlayKey, RegionMapPainter } from "../render/regionMapPainter";
 import { Hint } from "../ui/Hint";
-import { footprintHint, regionEdges, regionNodes, regionNote, stoneTarget, type RegionNode, type RegionStone } from "./regionModel";
+import { domSurface, MapStage, type StagePaint } from "./MapStage";
+import { regionNodes, regionNote, regionScene, stoneTarget, type RegionNode, type RegionStone } from "./regionModel";
 
 interface Props {
   map: WorldMapView;
@@ -14,13 +19,22 @@ interface Props {
   onClose(): void;
 }
 
-function StoneMark({ stone, busy, onTeleport }: { stone: RegionStone; busy: boolean; onTeleport(to: string): void }) {
+let shared: RegionMapPainter | null = null;
+/** 整個畫面共用一個（快取跨開關保留：同一區開兩次直接用快取的地景）。 */
+function painter(): RegionMapPainter {
+  shared ??= new RegionMapPainter(domSurface);
+  return shared;
+}
+
+function StoneMark({ stone, x, y, k, index, busy, onTeleport }: { stone: RegionStone; x: number; y: number; k: number; index: number; busy: boolean; onTeleport(to: string): void }) {
   const to = stoneTarget(stone);
+  const box = stoneHitBox(x, y, k);
   return (
     <Hint text={stone.hint}>
       <button
         type="button"
-        className={`region-stone ${stone.state}`}
+        className={`region-stone map-hit ${stone.state}`}
+        style={hitPercent({ ...box, y: box.y + index * box.h })}
         data-stone={stone.id}
         data-state={stone.state}
         aria-label={stone.hint}
@@ -28,65 +42,49 @@ function StoneMark({ stone, busy, onTeleport }: { stone: RegionStone; busy: bool
         onClick={() => {
           if (to !== null && !busy) onTeleport(to);
         }}
-      >
-        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-          <path d="M8 1.5 L12.5 6 L8 14.5 L3.5 6 Z" className="region-stone-gem" />
-          {(stone.state === "locked" || stone.state === "view") && (
-            <g className="region-stone-lock">
-              <rect x="8.5" y="9" width="6.5" height="5.5" rx="1" />
-              <path d="M10 9 V7.6 a1.75 1.75 0 0 1 3.5 0 V9" fill="none" />
-            </g>
-          )}
-        </svg>
-      </button>
+      />
     </Hint>
   );
 }
 
-function Node({ node, busy, onTeleport }: { node: RegionNode; busy: boolean; onTeleport(to: string): void }) {
-  const style = { left: `${node.x}%`, top: `${node.y}%` };
-  if (node.fog === "fog") {
-    return <div className="region-fog" style={style} data-loc={node.id} data-fog="fog" aria-hidden="true" />;
-  }
-  const cls = ["region-node", node.fog, node.town ? "town" : "", node.current ? "current" : ""].filter((c) => c !== "").join(" ");
+function NodeHits({ node, k, busy, onTeleport }: { node: RegionNode; k: number; busy: boolean; onTeleport(to: string): void }) {
+  if (node.fog === "fog") return null;
+  const cls = ["region-node", "map-hit", node.fog, node.town ? "town" : "", node.current ? "current" : ""].filter((c) => c !== "").join(" ");
   return (
-    <div className={cls} style={style} data-loc={node.id} data-fog={node.fog}>
+    <>
       <Hint text={node.hint}>
-        <span className="region-node-dot" tabIndex={0} aria-label={node.hint}>
-          {node.current && <span className="region-me" aria-hidden="true" data-testid="region-me" />}
+        <span className={cls} style={hitPercent(spotHitBox(node.x, node.y, k))} data-loc={node.id} data-fog={node.fog} tabIndex={0} aria-label={node.hint}>
+          {node.current && <span className="map-hit-label" data-testid="region-me">目前位置</span>}
+          {node.footprints.length > 0 && <span className="map-hit-label" data-testid="region-footprint">足跡</span>}
         </span>
       </Hint>
-      {node.label !== null && <span className="region-node-name">{node.label}</span>}
-      {(node.level !== null || node.cleared) && <span className="region-node-badge">{node.cleared ? "已清空" : node.level}</span>}
-      {(node.quests.length > 0 || node.stones.length > 0 || node.footprints.length > 0) && (
-        <span className="region-node-marks">
-          {node.footprints.length > 0 && (
-            <Hint text={footprintHint(node.footprints)}>
-              <span className="region-footprint" data-testid="region-footprint" aria-label={footprintHint(node.footprints)}>
-                足
-              </span>
-            </Hint>
-          )}
-          {node.quests.length > 0 && (
-            <Hint text={node.quests.map((q) => `任務：${q}`).join("\n")}>
-              <span className="region-quest" data-testid="region-quest" aria-label={`任務：${node.quests.join("、")}`}>
-                !
-              </span>
-            </Hint>
-          )}
-          {node.stones.map((s) => (
-            <StoneMark key={s.id} stone={s} busy={busy} onTeleport={onTeleport} />
-          ))}
-        </span>
+      {node.quests.length > 0 && (
+        <Hint text={node.quests.map((q) => `任務：${q}`).join("\n")}>
+          <span
+            className="region-quest map-hit"
+            style={hitPercent(questHitBox(node.x, node.y, k))}
+            data-testid="region-quest"
+            tabIndex={0}
+            aria-label={`任務：${node.quests.join("、")}`}
+          />
+        </Hint>
       )}
-    </div>
+      {node.stones.map((s, i) => (
+        <StoneMark key={s.id} stone={s} x={node.x} y={node.y} k={k} index={i} busy={busy} onTeleport={onTeleport} />
+      ))}
+    </>
   );
 }
 
 export function RegionMap({ map, busy, onTeleport, onAtlas, onClose }: Props) {
   const nodes = regionNodes(map);
-  const edges = regionEdges(map);
-  const art = map.art_url ?? null;
+  const scene = regionScene(map);
+  const paint = (pw: number, ph: number, k: number, epoch: number): StagePaint => ({
+    baseKey: baseKey(map.region, pw, ph, epoch),
+    overlayKey: overlayKey(scene, pw, ph, k, epoch),
+    paintBase: (ctx, w, h, e) => painter().paintBase(ctx, map.region, w, h, e),
+    paintOverlay: (ctx, w, h, kk) => painter().paintOverlay(ctx, scene, w, h, kk),
+  });
   return (
     <div className="region-map-backdrop" data-testid="region-map-backdrop" onClick={onClose}>
       <div
@@ -104,6 +102,7 @@ export function RegionMap({ map, busy, onTeleport, onAtlas, onClose }: Props) {
           <span className={`region-map-note${map.can_teleport ? " go" : ""}`} data-testid="region-map-note">
             {regionNote(map)}
           </span>
+          <span className="region-map-keys muted">{onAtlas !== undefined ? "M 大世界圖／Esc 關閉" : "Esc 關閉"}</span>
           {onAtlas !== undefined && (
             <button type="button" className="atlas-switch" onClick={onAtlas} data-testid="region-map-atlas">
               大世界圖（M）
@@ -113,27 +112,9 @@ export function RegionMap({ map, busy, onTeleport, onAtlas, onClose }: Props) {
             ×
           </button>
         </header>
-        <div className="region-map-canvas" style={art !== null ? { backgroundImage: `url(${art})` } : undefined} data-art={art ?? ""}>
-          <div className="region-map-area">
-            <svg className="region-map-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              {edges.map((e) => (
-                <line key={e.key} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} className={e.known ? "known" : "dim"} vectorEffect="non-scaling-stroke" />
-              ))}
-            </svg>
-            {nodes.map((n) => (
-              <Node key={n.id} node={n} busy={busy} onTeleport={onTeleport} />
-            ))}
-          </div>
-        </div>
-        <footer className="region-map-legend" aria-label="圖例">
-          <span><i className="lg-me" />自己</span>
-          <span><i className="lg-quest">!</i>任務</span>
-          <span><i className="lg-stone" />傳送石</span>
-          <span><i className="lg-foot">足</i>朋友的足跡</span>
-          <span><i className="lg-sil" />沒去過（？？？）</span>
-          <span><i className="lg-fog" />霧</span>
-          <span className="muted">M 大世界圖／Esc 關閉</span>
-        </footer>
+        <MapStage className="region-map-canvas" paint={paint} testId="region-map-stage">
+          {(k) => nodes.map((n) => <NodeHits key={n.id} node={n} k={k} busy={busy} onTeleport={onTeleport} />)}
+        </MapStage>
       </div>
     </div>
   );
