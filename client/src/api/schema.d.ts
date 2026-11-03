@@ -4373,6 +4373,28 @@ export interface components {
             expires_at: number;
             account: components["schemas"]["AccountView"];
         };
+        /**
+         * LootChooseAction
+         * @description 戰後結算：背包滿了時選要丟哪些（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決）。新拿到的
+         *     （``CharacterState.pending_loot``）和背包裡原本的都可以丟；丟完剩下的戰利品必須全部放得下。
+         *     什麼都不丟＝背包已經有空位（例如剛賣掉東西）時把戰利品收進來。
+         */
+        LootChooseAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "loot_choose";
+            /** Drop Items */
+            drop_items?: {
+                [key: string]: number;
+            };
+            /**
+             * Drop Gear
+             * @default []
+             */
+            drop_gear: string[];
+        };
         /** MapSummary */
         MapSummary: {
             /** Id */
@@ -4958,6 +4980,20 @@ export interface components {
             cost: number;
             /** Options */
             options: components["schemas"]["FlashOptionOut"][];
+        };
+        /**
+         * PendingLootView
+         * @description 背包滿了：戰後結算選要丟哪件（Phase 5D-2b）。``items`` 是新拿到、還沒放進背包的；
+         *     背包裡原本的看 ``InventoryView.bag``。用 ``loot_choose`` 動作送出要丟的
+         *     （``drop_items``、``drop_gear``）。
+         */
+        PendingLootView: {
+            /** Items */
+            items: components["schemas"]["BagItemView"][];
+            /** Over Slots */
+            over_slots: number;
+            /** Hint Zh */
+            hint_zh: string;
         };
         /**
          * PendingOfferView
@@ -7551,7 +7587,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -7722,6 +7758,7 @@ export interface components {
             last_battle_zh?: string | null;
             /** Last Loot Zh */
             last_loot_zh?: string | null;
+            pending_loot?: components["schemas"]["PendingLootView"] | null;
             event?: components["schemas"]["EventView"] | null;
             situation_result?: components["schemas"]["SituationResultView"] | null;
             /**

@@ -21,6 +21,9 @@ __all__ = [
     "ItemEquippedEvent",
     "ItemSoldEvent",
     "ItemUsedEvent",
+    "LootAbandonedEvent",
+    "LootChooseAction",
+    "LootChosenEvent",
     "LootGainedEvent",
     "PouchAction",
     "PouchChangedEvent",
@@ -81,6 +84,18 @@ class EquipAction(_Model):
     """背包裡裝備的 ID（``CharacterState.gear``）。"""
     slot: Slot | None = None
     """指定欄位（戒指 1／2）；``None``＝照物品種類自動挑（戒指先放空的）。"""
+
+
+class LootChooseAction(_Model):
+    """戰後結算：背包滿了時選要丟哪些（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決）。新拿到的
+    （``CharacterState.pending_loot``）和背包裡原本的都可以丟；丟完剩下的戰利品必須全部放得下。
+    什麼都不丟＝背包已經有空位（例如剛賣掉東西）時把戰利品收進來。"""
+
+    kind: Literal["loot_choose"] = "loot_choose"
+    drop_items: dict[str, int] = Field(default_factory=dict, max_length=40)
+    """丟掉的物品 → 個數（先丟新拿到的，再丟背包裡的）。"""
+    drop_gear: tuple[str, ...] = Field(default=(), max_length=40)
+    """丟掉的裝備 ID（新拿到的或背包裡的；穿戴中的不能丟）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +163,31 @@ class LootGainedEvent(_Model):
     gear_names: tuple[str, ...] = ()
     lost_materials: dict[str, int] = Field(default_factory=dict)
     lost_gear_names: tuple[str, ...] = ()
+    pending_materials: dict[str, int] = Field(default_factory=dict)
+    """背包放不下、等戰後結算決定的材料（5D-2b；舊日誌沒有這個欄位）。"""
+    pending_gear_names: tuple[str, ...] = ()
+    """背包放不下、等戰後結算決定的裝備名稱（5D-2b）。"""
+
+
+class LootChosenEvent(_Model):
+    """戰後結算選完要丟的（Phase 5D-2b）：丟掉的、收進背包的戰利品。"""
+
+    kind: Literal["loot_chosen"] = "loot_chosen"
+    dropped_items: dict[str, int] = Field(default_factory=dict)
+    dropped_gear_names: tuple[str, ...] = ()
+    materials: dict[str, int] = Field(default_factory=dict)
+    """收進背包的材料（物品 → 個數）。"""
+    gear: tuple[str, ...] = ()
+    """收進背包的裝備 ID。"""
+    gear_names: tuple[str, ...] = ()
+
+
+class LootAbandonedEvent(_Model):
+    """上一場沒決定的戰利品留在原地（Phase 5D-2b；下一場打贏結算掉落前）。"""
+
+    kind: Literal["loot_abandoned"] = "loot_abandoned"
+    materials: dict[str, int] = Field(default_factory=dict)
+    gear_names: tuple[str, ...] = ()
 
 
 class ItemEquippedEvent(_Model):

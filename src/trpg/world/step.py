@@ -62,12 +62,13 @@ from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
 from trpg.world.crafting import CRAFTING_ACTIONS, apply_crafting
 from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
-from trpg.world.economy_actions import EquipAction
+from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
+from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.quests import accept_quest, advance_quests, take_offer
@@ -225,6 +226,9 @@ def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
     if isinstance(action, EquipAction):  # 5D-2 換裝備
         char, equipped = apply_equip(library, char, action)
         return StepResult(world=world, char=char, events=equipped)
+    if isinstance(action, LootChooseAction):  # 5D-2b 背包滿了：戰後結算選要丟哪件
+        char, chosen = choose_loot(library, char, action)
+        return StepResult(world=world, char=char, events=chosen)
     if isinstance(action, CRAFTING_ACTIONS):  # 5D-3 鐵匠與附魔台
         world, char, crafted = apply_crafting(library, world, char, action, now)
         return StepResult(world=world, char=char, events=crafted)

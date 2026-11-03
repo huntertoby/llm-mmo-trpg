@@ -44,6 +44,7 @@ __all__ = [
     "LootSummary",
     "NextBattleMod",
     "OathState",
+    "PendingLoot",
     "PendingOffer",
     "PerceptionMark",
     "QuestState",
@@ -193,6 +194,25 @@ class LootSummary(_Model):
     @property
     def empty(self) -> bool:
         return not (self.materials or self.gear or self.lost_materials or self.lost_gear)
+
+
+class PendingLoot(_Model):
+    """背包放不下、等玩家在戰後結算選要丟哪件的戰利品（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決：
+    不做暫存區）。只留最近一場：下一場打贏、結算掉落前還沒決定的就留在原地（``LootAbandonedEvent``）。"""
+
+    materials: dict[str, int] = Field(default_factory=dict)
+    """放不下的材料（物品 → 個數，依 ID 排序）。"""
+    gear: tuple[ItemDef, ...] = ()
+    """放不下的裝備（依掉落順序）。"""
+
+    @field_validator("materials")
+    @classmethod
+    def _sorted(cls, counts: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(counts.items()))
+
+    @property
+    def empty(self) -> bool:
+        return not self.materials and not self.gear
 
 
 class LastBattle(_Model):
@@ -670,6 +690,8 @@ class CharacterState(_Model):
     """背包裡的裝備（依取得順序；每件佔背包 1 格，8.17）。"""
     equipment: dict[str, ItemDef] = Field(default_factory=dict)
     """穿戴中的裝備（欄位 → 物品；空＝主角範本的裝備，同 ``RunState.equipment``）。"""
+    pending_loot: PendingLoot | None = None
+    """背包滿了、等戰後結算選要丟哪件的戰利品（5D-2b；``None``＝沒有）。舊存檔沒有這個欄位照讀。"""
 
     # --- 5D-3 鐵匠與附魔台（邏輯在 trpg.world.crafting） ---
     gear_mods: dict[str, GearMod] = Field(default_factory=dict)
