@@ -5,6 +5,7 @@ import { TAU, type Ctx } from "./artDraw";
 import { elementTint, type GearItem } from "./appearance";
 import { darken } from "./color";
 import { ellPts, iconHead, inIconMode, ink, MAT, stroke, type Pt, type View } from "./inkStyle";
+import { drawTassel } from "./inkSect";
 
 /** 取一件裝備的 [主色, 暗色]（paperdoll.ts 的 `itemColors`）。 */
 export type ColorFn = (it: GearItem) => readonly [string, string];
@@ -116,6 +117,7 @@ function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string, outward =
     return;
   }
   ink(ctx, `${key}-guard`, [[-3.4, -3.2], [3.4, -3.2], [3.4, -1.6], [-3.4, -1.6]], it.hilt ?? MAT.gold, { shade: false, w: 0.6 });
+  drawTassel(ctx, it, key); // 5A-ART3：劍穗（劍陣弟子）
 }
 
 function drawAxe(ctx: Ctx, key: string, metal: string, wood: string): void {

@@ -11,6 +11,7 @@ import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { drawInkWeaponMore } from "./inkWeapons";
 import { drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawEye, drawInkHorns, drawInkTail, coverOf, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
 import { dot, ellPts, ink, INK, MAT, shadow, stroke, type Pt, type View, withShadeDir } from "./inkStyle";
+import { drawApron, drawBackItem, drawBareBody, drawBeads, drawBunBack, drawBunHair, drawMantle, drawSectHeld, drawVeil, drawWaist } from "./inkSect";
 
 
 /** 由 paperdoll.ts 提供的裝備顏色解析（避免循環匯入）。 */
@@ -123,6 +124,11 @@ function drawBody(t: Ctxt, view: View): void {
   const c = colorOf(t.hooks, it, SHIRT_FALLBACK);
   if (it !== undefined && kind === "robe") {
     drawRobe(t, it, view, c);
+    drawApron(ctx, it, view);
+    return;
+  }
+  if (it !== undefined && kind === "bare") {
+    drawBareBody(ctx, view, t.skin, c);
     return;
   }
   if (it !== undefined && drawInkBodyArmor(ctx, it, view, t.hooks.colors)) {
@@ -156,6 +162,7 @@ function armColor(t: Ctxt): string {
   const body = t.spec.gear.body;
   if (body?.kind === "plate") return MAT.steel;
   if (body?.kind === "ribs") return "#d9d2bd";
+  if (body?.kind === "bare") return t.skin; // 赤膊：手臂也是膚色
   return colorOf(t.hooks, body, SHIRT_FALLBACK);
 }
 
@@ -212,9 +219,11 @@ function drawHair(t: Ctxt, view: View): void {
       ? [[-9.8, -44], [-6, -51.8], [6, -51.8], [9.8, -44], [9.6, -30], [0, -28.6], [-9.6, -30]]
       : [[-9.6, -42], [-6, -51.8], [6, -51.8], [9.6, -42], [8, -36], [0, -34.4], [-8, -36]];
     ink(t.ctx, "hair-b", pts, c);
+    drawBunBack(t.ctx, look, coverOf(gear.head).top === true);
     return;
   }
   if (covered) return;
+  if (drawBunHair(t.ctx, look, view)) return;
   if (view === "front") ink(t.ctx, "hair-f", [[-9.6, -41], [-10, -48], [-5, -52.5], [2, -52.5], [8, -49.5], [10, -42], [8, -45], [5, -45.5], [2, -44], [-1, -46], [-4, -44.8], [-7, -45.5]], c);
   else ink(t.ctx, "hair-s", [[-9.2, -38], [-9.4, -47], [-4, -52.5], [3, -52.6], [8.6, -48.5], [9.4, -44.6], [6, -46], [3, -45.5], [1, -43], [-1.4, -41], [-2.6, -37], [-6, -35.4]], c);
 }
@@ -272,6 +281,7 @@ function drawHeld(
   if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors)) return;
   const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
   const held = { mirror: k.mirror, side: o.side, far: o.far, back: !o.front };
+  if (drawSectHeld(t.ctx, it, k.key, x, y, held)) return; // 5A-ART3：拂塵、符紙、傀儡線
   if (!drawInkWeapon(t.ctx, it, k.key, x, y, held, t.hooks.colors)) drawInkWeaponMore(t.ctx, it, k.key, x, y, held, t.hooks.colors);
 }
 
@@ -292,7 +302,7 @@ function drawHeadgearItem(t: Ctxt, view: View): void {
   t.ctx.save();
   if (adj.dy !== 0) t.ctx.translate(0, adj.dy);
   if (adj.sx !== 1) t.ctx.scale(adj.sx, 1);
-  if (!drawInkHeadgear(t.ctx, adj.item, view, t.hooks.colors)) drawInkHeadgearMore(t.ctx, adj.item, view, t.hooks.colors);
+  if (!drawInkHeadgear(t.ctx, adj.item, view, t.hooks.colors) && !drawInkHeadgearMore(t.ctx, adj.item, view, t.hooks.colors)) drawVeil(t.ctx, adj.item, view);
   t.ctx.restore();
 }
 
@@ -301,6 +311,14 @@ function drawHeadgear(t: Ctxt, view: View): void {
   drawHeadgearItem(t, view);
   drawEarsAfterHat(t.ctx, earCtx(t, view));
   drawInkHorns(t.ctx, t.spec.look, view);
+}
+
+/** 修士的身上小部件（5A-ART3）：腰掛黃符、念珠、白羽披肩；畫在身體之後、手臂之前。 */
+function drawSectExtras(t: Ctxt, view: View): void {
+  const { gear } = t.spec;
+  drawWaist(t.ctx, gear.waist, view);
+  drawBeads(t.ctx, gear.neck, view);
+  drawMantle(t.ctx, gear.cloak, view);
 }
 
 // ============================== 組合 ==============================
@@ -312,9 +330,11 @@ function drawFront(t: Ctxt): void {
   drawCloak(t, "front");
   drawInkTail(t.ctx, spec.look, "front");
   drawHairBack(t, "front");
+  drawBackItem(t.ctx, gear.back, "front", false);
   drawLegs(t, "front");
   drawBackSpines(t.ctx, spec.look, "front"); // 只露出肩頭的尖端
   drawBody(t, "front");
+  drawSectExtras(t, "front");
   drawArmFront(t, 1);
   if (off !== undefined) {
     const mirror = !heldNotMirrored(off);
@@ -351,6 +371,7 @@ function drawBack(t: Ctxt): void {
   drawHand(t, -9, -23.2, "hand-bl", 0.32);
   drawHand(t, 9, -23.2, "hand-br", -0.32);
   drawCloak(t, "back");
+  drawBackItem(ctx, gear.back, "back", true);
   drawBackSpines(ctx, spec.look, "back"); // 背刺畫在披風之上（當作披風開了口）
   drawInkTail(ctx, spec.look, "back");
   if (off !== undefined && isShield(off)) drawWoodShieldBack(t, off);
@@ -365,6 +386,7 @@ function drawSide(t: Ctxt): void {
   drawCloak(t, "side");
   drawInkTail(ctx, spec.look, "side");
   drawHairBack(t, "side");
+  drawBackItem(ctx, gear.back, "side", false);
   // 成對武器的副手在遠側手，畫在身體後面，比近側手往前上錯開約 3px
   if (off !== undefined && !heldNotMirrored(off)) {
     drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
@@ -377,6 +399,7 @@ function drawSide(t: Ctxt): void {
   drawLegs(t, "side");
   drawBackSpines(ctx, spec.look, "side");
   drawBody(t, "side");
+  drawSectExtras(t, "side");
   if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) drawInkKiteSide(ctx, off, t.hooks.colors);
   drawHead(t, "side");
   drawHeadgear(t, "side");
