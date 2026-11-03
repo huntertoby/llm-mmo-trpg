@@ -277,6 +277,18 @@
   display: block;
 }
 
+/* 6A-4c：戰鬥區外柔和變暗——戰場外圍一圈柔和的暗影，邊緣往內淡淡的暗角（不擋滑鼠） */
+.battle-canvas {
+  box-shadow: 0 0 36px 14px rgb(16 12 10 / 55%);
+}
+
+.battle-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 28px 10px rgb(16 12 10 / 42%);
+}
+
 .battle-side {
   grid-area: side;
   display: flex;

@@ -621,10 +621,15 @@ export function hurlPromptText(
     shadowstep: "要落在他身旁哪一格（落在他背後可以背刺）",
     composite: "動作段的方向或目標",
   }[kind];
-  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定", shadowstep: "已鎖定", composite: "已選定" }[kind];
   if (pickName === null) return `第 1 段：點選${first}（紅框 ${firstCount} 個）。Esc／右鍵取消。`;
   const redo = kind === "swap" ? "點同一個單位或按「重選單位」可以改選" : "再點其他目標可改選，點同一個取消";
-  return `第 2 段：${verb}${pickName}，點選${second}（紅框 ${secondCount} 個）；${redo}。`;
+  return `第 2 段：${hurlPickedTag(pickName, kind)}，點選${second}（紅框 ${secondCount} 個）；${redo}。`;
+}
+
+/** 兩段選取第 2 段的狀態（「已舉起木箱」「已選定盜賊」）；說明句收進「?」後留在「?」旁當小標籤（6A-4c）。 */
+export function hurlPickedTag(pickName: string, kind: PairKind = "hurl"): string {
+  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定", shadowstep: "已鎖定", composite: "已選定" }[kind];
+  return `${verb}${pickName}`;
 }
 
 /**

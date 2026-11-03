@@ -162,6 +162,11 @@ export function compositePrompt(first: CompositeFirst | null, count: number): st
   if (first === null) {
     return `第 1 段（位移）：點選落點或目標（紅框 ${count} 個）。只有「以落點為中心」的技能點一下就會施放。Esc／右鍵取消。`;
   }
+  return `第 2 段（動作）：${compositePickedTag(first)}，點方向箭頭或目標，或用下方按鈕；紫色格子是第二段的範圍。再點其他落點可改選。`;
+}
+
+/** 複合技能第 2 段的狀態（「已選定落點 (3, 4)」）；說明句收進「?」後留在「?」旁當小標籤（6A-4c）。 */
+export function compositePickedTag(first: CompositeFirst): string {
   const where = first.pos !== null ? `落點 (${first.pos.x}, ${first.pos.y})` : "目標";
-  return `第 2 段（動作）：已選定${where}，點方向箭頭或目標，或用下方按鈕；紫色格子是第二段的範圍。再點其他落點可改選。`;
+  return `已選定${where}`;
 }

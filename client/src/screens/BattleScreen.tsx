@@ -40,6 +40,7 @@ import { useBattleData } from "./battle/useBattleData";
 import { useBattleKeys } from "./battle/useBattleKeys";
 import { useBoardViewport } from "./battle/useBoardViewport";
 import { useHighlights } from "./battle/useHighlights";
+import { useLogRoom } from "./battle/useLogRoom";
 import { errorText, usePlayback } from "./battle/usePlayback";
 import { useSelection } from "./battle/useSelection";
 import { useSelectionCommands } from "./battle/useSelectionCommands";
@@ -171,6 +172,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     cards,
   });
   const board = useBoardViewport(data.model);
+  const boardRef = useRef<HTMLDivElement>(null);
   const { layout, narrow, collapsed, scale } = board;
 
   /** 浮動資訊卡：只在滑過單位時出現（取代固定的單位資訊欄，Phase 3-8）。 */
@@ -214,7 +216,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     onCollapseTile: tiles.setCollapseTile,
   });
 
+  // 選取時戰鬥紀錄縮短讓開選取面板（6A-4c）
+  const selecting = mode !== null || (sel.orderPick !== null && data.canOrder);
+  const logRoomPx = useLogRoom(boardRef, selecting, `${mode?.key ?? ""}|${sel.hurlPick ?? ""}|${sel.orderPick ?? ""}`);
+
   const { cardTile, hoverUnit, tileCardSections } = tiles;
+  // 選移動時滑過空格、畫出路徑提示時不出格子資訊卡（會蓋住路徑與小牌；地表的效果已寫在小牌上）
+  const pathShown = (hl.highlights.path?.segments.length ?? 0) > 0 || (hl.highlights.path?.missEnd ?? null) !== null;
   const dockUnit = pinnedUnitOf(shown, pinnedUnit);
   return (
     <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`} style={board.layoutStyle}>
@@ -226,7 +234,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         exit={exitLabel !== undefined && !ended ? { label: exitLabel, onExit } : null}
         save={runMode !== undefined && !ended ? { busy, note: saveNote, onSave: () => void saveRun() } : null}
       />
-      <div className="battle-board">
+      <div className="battle-board" ref={boardRef}>
         <div className={`board-scroll${board.panning ? " panning" : ""}`} ref={board.scrollRef} {...board.panHandlers}>
           <BattleCanvas
             model={data.model}
@@ -238,7 +246,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             onCancel={cmds.cancel}
             rendererRef={pb.rendererRef}
           >
-            {cardTile !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
+            {cardTile !== null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
               <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} card={tiles.tileCard}>
                 {hoverUnit !== null && (
                   <UnitInfo
@@ -307,7 +315,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             </div>
           )}
         </div>
-        <BattleLogDock lines={pb.lines} onHover={hl.setLogHover} />
+        <BattleLogDock lines={pb.lines} onHover={hl.setLogHover} room={logRoomPx} />
         <ModePanel
           enabled={data.canAct || copying}
           mode={mode}

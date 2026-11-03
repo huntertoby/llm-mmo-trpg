@@ -44,6 +44,21 @@ import { clearLayer, label } from "./labels";
 import { buildUnitSprite, isLinked, Pulses } from "./unitSprite";
 import { LINK_COLOR } from "./inkCreature";
 import { linkPairs } from "./linkLines";
+import type { PathDraw, PathTag } from "../battle/pathPreview";
+import {
+  bangCenter,
+  drawFaintGrid,
+  drawPathLine,
+  drawPathMarks,
+  drawSoftCells,
+  HIT_SOFT,
+  missTagNode,
+  MOVE_SOFT,
+  pathTagNode,
+  RANGE_SOFT,
+  placeTags,
+  type TileGeo,
+} from "./pathArt";
 
 export interface DirectionMark {
   pos: Pos;
@@ -69,6 +84,10 @@ export interface Highlights {
   picked: readonly Pos[];
   /** 攀跳模式（Phase 3-21b）：可攀爬或跳躍的落點（紫色，附「攀」「跳」字樣），與一般目標的紅框分開。 */
   vaults?: readonly { pos: Pos; kind: "climb" | "jump" }[];
+  /** 選技能時淡淡浮出的施放範圍（Phase 6A-4c）：淡色圓角格＋外緣亮線，格線極淡地浮出。 */
+  range?: readonly Pos[];
+  /** 選移動時滑過的路徑提示（Phase 6A-4c，資料來自伺服器的路徑預覽）。 */
+  path?: PathDraw;
 }
 
 const T = TILE_SIZE;
@@ -698,14 +717,13 @@ export class BattleRenderer {
     clearLayer(this.marks);
     clearLayer(this.hover);
     const pen = this.markPen();
-    for (const p of h.moves) {
-      const o = this.origin(p);
-      pen.at(p).rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.move, alpha: 0.4 });
-    }
-    for (const p of h.preview) {
-      const o = this.origin(p);
-      pen.at(p).rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color: HIGHLIGHT.preview, alpha: 0.38 });
-    }
+    const geo = this.geo();
+    // 6A-4c：選移動、選技能時格子淡色圓角浮出，範圍外緣加亮線；選技能時格線極淡地浮出
+    const range = h.range ?? [];
+    if (range.length > 0 && this.model !== null) drawFaintGrid(pen.at(range[0] as Pos), this.model.tiles, geo);
+    drawSoftCells(pen.at(h.moves[0] ?? { x: 0, y: 0 }), h.moves, geo, MOVE_SOFT);
+    drawSoftCells(pen.at(range[0] ?? { x: 0, y: 0 }), range, geo, RANGE_SOFT);
+    drawSoftCells(pen.at(h.preview[0] ?? { x: 0, y: 0 }), h.preview, geo, HIT_SOFT);
     for (const m of h.telegraph) {
       const o = this.origin(m.pos);
       pen
@@ -751,10 +769,40 @@ export class BattleRenderer {
     }
     for (const p of h.attacks) {
       const o = this.origin(p);
-      pen.at(p).rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.attack });
+      pen.at(p).roundRect(o.x + 2, o.y + 2, T - 4, T - 4, 8).stroke({ width: 3, color: HIGHLIGHT.attack });
     }
     for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
+    if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawFrames(h.focus, h.hover);
+  }
+
+  /** 抬高後的格子幾何（給 `pathArt` 用）。 */
+  private geo(): TileGeo {
+    return { origin: (p) => this.origin(p), center: (p) => this.center(p) };
+  }
+
+  /** 選移動時的路徑提示（6A-4c）：外框與停點標記、路徑線與點、結果小牌，畫在其他高亮之上。 */
+  private drawPath(path: PathDraw, geo: TileGeo): void {
+    const hasAny = path.segments.length > 0 || path.frames.length > 0 || path.missEnd !== null || path.tags.length > 0;
+    if (!hasAny) return;
+    const g = new Graphics();
+    drawPathMarks(g, { ...path, bangs: [] }, geo);
+    drawPathLine(g, path, geo);
+    this.marks.addChild(g);
+    const bangs = new Graphics();
+    drawPathMarks(bangs, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號畫在線與小牌之上（最後加入）
+    const nodes = path.tags.map((tag) => pathTagNode(tag));
+    const spots = placeTags(
+      nodes.map((n, i) => ({ o: this.origin((path.tags[i] as PathTag).pos), w: n.width })),
+      path.bangs.map((p) => bangCenter(this.center(p))),
+    );
+    nodes.forEach((n, i) => {
+      const at = spots[i] as { x: number; y: number };
+      n.position.set(at.x, at.y);
+      this.marks.addChild(n);
+    });
+    if (path.missEnd !== null) this.marks.addChild(missTagNode(this.origin(path.missEnd)));
+    this.marks.addChild(bangs);
   }
 
   /** 反應詢問的觸發者（洋紅雙框）與滑鼠所在格（白框），畫在最上層、跟著頂面抬高。 */

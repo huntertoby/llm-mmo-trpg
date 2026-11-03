@@ -125,6 +125,8 @@ export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, o
       }}
     >
       <div className="battle-canvas-host" ref={hostRef} />
+      {/* 6A-4c：戰鬥區外柔和變暗（邊緣往內淡淡的暗角，不切場景） */}
+      <div className="battle-vignette" aria-hidden="true" />
       {children}
     </div>
   );

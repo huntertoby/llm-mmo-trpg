@@ -120,6 +120,20 @@
   border-color: #806a30;
 }
 
+/* 6A-4c：選取時紀錄縮短讓開選取面板（底部固定；高度上限由 `battle/logRoom.ts` 算出，寫在 style） */
+.log-dock-root {
+  display: contents;
+}
+
+.log-dock.squeezed .log-dock-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.log-dock.squeezed .log-dock-panel .battle-log {
+  min-height: 0;
+}
+
 .battle-side.no-log .side-telegraph {
   flex: 1;
   max-height: none;
@@ -140,6 +154,19 @@
   font-weight: 700;
   line-height: 1;
   cursor: help;
+  vertical-align: middle;
+}
+
+/* 6A-4c：兩段選取的「已選定○○」留在「?」旁 */
+.op-hint-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #4fd8ff;
+  border-radius: 8px;
+  color: #bfefff;
+  font-size: 11px;
+  line-height: 16px;
   vertical-align: middle;
 }
 

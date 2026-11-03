@@ -35,6 +35,8 @@ import type { SkillCard } from "../../api/types";
 import type { Highlights } from "../../render/BattleRenderer";
 import type { LogHover } from "../../ui/BattleLog";
 import { usePreview } from "../../ui/usePreview";
+import { usePathPreview } from "../../ui/usePathPreview";
+import { hoverPathQuery, pathDraw } from "../../battle/pathPreview";
 
 type Cards = Readonly<Record<string, SkillCard | undefined>>;
 
@@ -104,6 +106,15 @@ export function useHighlights(i: HighlightInput): HighlightState {
     response,
     canAct || copying ? (hoverAction ?? i.panelPreview ?? selfAction) : null,
   );
+  // 選移動（6A-4c）：滑過格子時向伺服器要路徑預覽（節流＋快取），畫分段顏色、小牌、停點與到不了
+  const moving =
+    canAct && !copying && mode === null && command === null && infuse === null && !(orderPick !== null && canOrder) && i.panelPreview === null;
+  const pathQ = useMemo(
+    () => hoverPathQuery({ moving, hover, hero, view, moves: classified.moves }),
+    [moving, hover, hero, view, classified],
+  );
+  const pathPv = usePathPreview(battleId, response, pathQ);
+  const path = useMemo(() => pathDraw(pathPv), [pathPv]);
 
   const baseHighlights = useMemo<Highlights>(() => {
     const common = { telegraph: marks, focus: focusTile, hover };
@@ -142,6 +153,7 @@ export function useHighlights(i: HighlightInput): HighlightState {
       const pickedAt = hurlPickPos(mode, view, hurlPick);
       return {
         moves: [],
+        range: mode.kind === "vault" ? [] : tt.targets,
         attacks: mode.kind === "vault" ? [] : tt.targets,
         vaults: vaultMarks(mode, hero),
         directions: tt.directions.map((d) => ({ pos: d.pos, arrow: DIRECTION_ARROWS[d.direction] })),
@@ -160,8 +172,9 @@ export function useHighlights(i: HighlightInput): HighlightState {
       const u = view.units.find((x) => x.id === id);
       return u === undefined ? [] : [u.pos];
     });
-    return { moves, attacks, directions: [], preview: previewTiles, overlays, picked: [], ...common };
+    return { moves, attacks, directions: [], preview: previewTiles, overlays, picked: [], path, ...common };
   }, [
+    path,
     canAct,
     copying,
     canOrder,

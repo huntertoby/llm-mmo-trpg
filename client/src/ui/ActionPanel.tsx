@@ -3,7 +3,7 @@
 import type { Action, BattleView, InteractOption, PreviewOut } from "../api/types";
 import { cssColor, type LegendEntry } from "../battle/legend";
 import { DIRECTIONS } from "../battle/glossary";
-import { secondChoices } from "../battle/composite";
+import { compositePickedTag, secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
 import { objectStyle } from "../battle/glossary";
 import {
@@ -11,6 +11,7 @@ import {
   DIRECTION_ORDER,
   asideRows,
   compositePromptFor,
+  hurlPickedTag,
   hurlLandings,
   hurlPromptText,
   isHurlMode,
@@ -62,7 +63,13 @@ function CompositeHelp({ mode, enabled, view, hurlPick, onHurlReset, onAction, o
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <OpHint kind="composite" token={mode.key} label={mode.label} text={compositePromptFor(mode, hurlPick)} />
+      <OpHint
+        kind="composite"
+        token={mode.key}
+        label={mode.label}
+        text={compositePromptFor(mode, hurlPick)}
+        tag={first === undefined ? null : compositePickedTag(first)}
+      />
       {choices.length > 0 && (
         <div className="dir-buttons" aria-label="第二段">
           {choices.map(({ second, label }) => (
@@ -98,7 +105,13 @@ function HurlHelp({ mode, view, hurlPick, onHurlReset }: HelpProps) {
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <OpHint kind="hurl" token={mode.key} label={mode.label} text={hurlPromptText(name, seconds, mode.targets.hurls.size, kind)} />
+      <OpHint
+        kind="hurl"
+        token={mode.key}
+        label={mode.label}
+        text={hurlPromptText(name, seconds, mode.targets.hurls.size, kind)}
+        tag={name === null ? null : hurlPickedTag(name, kind)}
+      />
       {hurlPick !== null && (
         <button type="button" className="small-button" onClick={onHurlReset}>
           {kind === "hurl" ? "重選物件" : "重選單位"}

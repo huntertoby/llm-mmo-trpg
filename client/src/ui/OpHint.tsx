@@ -32,8 +32,8 @@ export function useOpHintFull(kind: OpHintKind, token: string): boolean {
   return full;
 }
 
-/** 完整句子或「?」。 */
-export function OpHintView({ full, label, text }: { full: boolean; label: string; text: string }) {
+/** 完整句子或「?」；收起時兩段選取的狀態（「已選定○○」）留在「?」旁當小標籤（6A-4c）。 */
+export function OpHintView({ full, label, text, tag = null }: { full: boolean; label: string; text: string; tag?: string | null }) {
   if (full) return <div className="small muted op-hint">{text}</div>;
   return (
     <div className="small muted op-hint collapsed">
@@ -42,11 +42,16 @@ export function OpHintView({ full, label, text }: { full: boolean; label: string
           ?
         </span>
       </PartTip>
+      {tag !== null && tag !== "" && (
+        <span className="op-hint-tag" data-testid="op-hint-tag">
+          {tag}
+        </span>
+      )}
     </div>
   );
 }
 
-export function OpHint({ kind, token, label, text }: Props) {
+export function OpHint({ kind, token, label, text, tag = null }: Props & { tag?: string | null }) {
   const full = useOpHintFull(kind, token);
-  return <OpHintView full={full} label={label} text={text} />;
+  return <OpHintView full={full} label={label} text={text} tag={tag} />;
 }

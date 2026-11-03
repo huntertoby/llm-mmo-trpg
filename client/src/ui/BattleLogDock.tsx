@@ -1,8 +1,9 @@
 // 戰鬥紀錄（Phase 6A-3，去文字化④）：預設收成戰場左下 2～3 條浮動提示，舊的約 6 秒淡出（`battle/logToasts.ts`）；
 // 點紀錄圖示展開完整清單（`BattleLog`），展開後可以釘選，釘住就一直顯示（釘選記在本機，讀寫失敗當作沒釘）。
 // 沒釘住時再點一次圖示或按 Esc 收起。
-import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import type { LogLine } from "../battle/log";
+import { logLimit, type LogLimit } from "../battle/logRoom";
 import { liveToasts, nextToastChange, stampArrivals, type LogToast } from "../battle/logToasts";
 import { BattleLog, TONE_MARK, type LogHover } from "./BattleLog";
 import { Hint } from "./Hint";
@@ -63,10 +64,12 @@ interface ViewProps {
   onTogglePin(): void;
   /** 展開時的完整清單（`BattleLog`，標題列帶釘選鈕）。 */
   log: (actions: ReactNode) => ReactNode;
+  /** 選取中：縮短讓開選取面板（6A-4c，`battle/logRoom.ts`）；`null` 或省略 ＝ 照原本的高度。 */
+  limit?: LogLimit | null;
 }
 
 /** 畫面本體（不含計時與本機儲存，方便測試）。 */
-export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onTogglePin, log }: ViewProps) {
+export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onTogglePin, log, limit = null }: ViewProps) {
   const pin = (
     <Hint text={pinned ? "取消釘選（收起後回到浮動提示）" : "釘選：一直顯示完整紀錄"}>
       <button type="button" className={`log-pin${pinned ? " on" : ""}`} aria-pressed={pinned} aria-label={pinned ? "取消釘選" : "釘選"} onClick={onTogglePin}>
@@ -75,7 +78,11 @@ export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onToggle
     </Hint>
   );
   return (
-    <div className={`log-dock${open ? " open" : ""}${pinned ? " pinned" : ""}`} aria-label="戰鬥紀錄">
+    <div
+      className={`log-dock${open ? " open" : ""}${pinned ? " pinned" : ""}${limit === null ? "" : " squeezed"}${limit?.tight === true ? " tight" : ""}`}
+      aria-label="戰鬥紀錄"
+      style={limit === null ? undefined : { maxHeight: limit.tight ? `${limit.maxHeight}px` : `min(58%, ${limit.maxHeight}px)` }}
+    >
       {open ? (
         <div className="log-dock-panel">{log(pin)}</div>
       ) : (
@@ -99,9 +106,18 @@ export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onToggle
 interface Props {
   lines: readonly LogLine[];
   onHover?: (hover: LogHover | null) => void;
+  /** 選取時可用的高度（`useLogRoom`）；`null` 或省略 ＝ 沒有選取。 */
+  room?: number | null;
 }
 
-export function BattleLogDock({ lines, onHover }: Props) {
+export function BattleLogDock({ lines, onHover, room = null }: Props) {
+  const limit = logLimit(room);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // 縮短或恢復時捲到最新一行（只顯示最新的幾行）
+  useLayoutEffect(() => {
+    const box = rootRef.current?.querySelector<HTMLElement>(".log-lines");
+    if (box != null) box.scrollTop = box.scrollHeight;
+  }, [limit?.maxHeight]);
   const [pinned, setPinned] = useState(readPinned);
   const [expanded, setExpanded] = useState(false);
   const [, tick] = useReducer((n: number) => n + 1, 0);
@@ -128,7 +144,9 @@ export function BattleLogDock({ lines, onHover }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [expanded, pinned]);
   return (
+    <div ref={rootRef} className="log-dock-root">
     <BattleLogDockView
+      limit={limit}
       toasts={toasts}
       open={open}
       pinned={pinned}
@@ -147,5 +165,6 @@ export function BattleLogDock({ lines, onHover }: Props) {
       }}
       log={(actions) => <BattleLog lines={lines} actions={actions} {...(onHover === undefined ? {} : { onHover })} />}
     />
+    </div>
   );
 }

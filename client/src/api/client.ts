@@ -23,6 +23,8 @@ import type {
   OrderSet,
   HeroCards,
   PreviewOut,
+  PathPreviewOut,
+  PathPreviewRequest,
   RunBattleResponse,
   RunChoice,
   RunResponse,
@@ -143,6 +145,9 @@ export const api = {
   act: (id: string, action: Action) => request<BattleResponse>("POST", `/battles/${id}/actions`, action),
   preview: (id: string, action: Action) =>
     request<PreviewOut>("POST", `/battles/${id}/preview`, action),
+  /** 選移動時的路徑預覽（6A-4b）：每格的表面、陷阱、預估事件與停點；不擲骰、不改狀態。 */
+  pathPreview: (id: string, body: PathPreviewRequest) =>
+    request<PathPreviewOut>("POST", `/battles/${id}/path-preview`, body),
   /** 設定我方隊友的戰術指令（空集合 ＝ 取消）；不推進戰鬥，`steps` 為空。 */
   setOrders: (id: string, orders: OrderSet) =>
     request<BattleResponse>("PUT", `/battles/${id}/orders`, orders),
