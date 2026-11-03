@@ -463,6 +463,7 @@ def _outcome_problems(
     rules: SituationRules,
     world_map: LocationMapDef | None,
     status_ids: Collection[str],
+    enemy_only_ids: Collection[str] = (),
 ) -> list[str]:
     label = f"情境模板 {template.id}"
     budget = rules.budget
@@ -483,6 +484,10 @@ def _outcome_problems(
                 out.append(f"{where}：{what} {value} 超過預算 {cap}")
         statuses = (*rew.buffs, *pen.debuffs)
         out += [f"{where}：未知的狀態 {s}" for s in statuses if s not in status_ids]
+        # 06 6.35（5F-R2）：世界事件的效果不能引用只給敵人的狀態
+        out += [
+            f"{where}：狀態 {s} 只給敵人（enemy_only）" for s in statuses if s in enemy_only_ids
+        ]
         for loc_id in rew.reveal:
             loc = locations.get(loc_id)
             if loc is None or not loc.hidden or "situation" not in loc.reveal:
@@ -505,8 +510,11 @@ def situation_problems(
     world_map: LocationMapDef | None,
     status_ids: Collection[str],
     thread_ids: Collection[str],
+    enemy_only_ids: Collection[str] = (),
 ) -> list[str]:
-    """情境模板的跨檔案檢查（骨架、解法、方法、線頭、地點、狀態、預算、危險度）。排序後回傳。"""
+    """情境模板的跨檔案檢查（骨架、解法、方法、線頭、地點、狀態、預算、危險度）。排序後回傳。
+
+    ``enemy_only_ids``：只給敵人的狀態（06 6.35，5F-R2）；buff／debuff 引用它們算資料錯誤。"""
     region = table.region
     if rules is None:
         return [f"情境模板 {region}：沒有 {SITUATION_RULES_FILE}"]
@@ -515,7 +523,7 @@ def situation_problems(
         problems.append(f"情境模板 {region}：沒有 {region} 的事件骨架")
     for template in table.templates:
         problems += _template_shape_problems(template, rules, events)
-        problems += _outcome_problems(template, rules, world_map, status_ids)
+        problems += _outcome_problems(template, rules, world_map, status_ids, enemy_only_ids)
         problems += [
             f"情境模板 {template.id}：advantage_threads 是未知的線頭 {t}"
             for t in template.advantage_threads
@@ -551,6 +559,7 @@ def load_situation_content(
     status_ids: Collection[str],
     race_ids: Collection[str] | None,
     files: list[tuple[Path, ContentModel]],
+    enemy_only_ids: Collection[str] = (),
 ) -> SituationContent:
     """載入 ``world/situation_rules.yaml`` 與 ``world/situations/``（不存在＝``None``／空）。"""
     rules_path = root / SITUATION_RULES_FILE
@@ -582,6 +591,7 @@ def load_situation_content(
             world_map=world_maps.get(table.region),
             status_ids=status_ids,
             thread_ids=thread_ids,
+            enemy_only_ids=enemy_only_ids,
         )
         if problems:
             raise ContentError(path, "；".join(problems))

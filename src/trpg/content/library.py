@@ -957,6 +957,7 @@ def load_library(  # noqa: PLR0915
         weather_map,
         files,
         status_ids=statuses.by_id(),
+        enemy_only_ids={s.id for s in statuses.statuses if s.enemy_only},  # 06 6.35（5F-R2）
         keyword_ids={k.id for k in keywords.keywords},
         race_ids=None if races is None else races.by_id(),
     )

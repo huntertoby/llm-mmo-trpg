@@ -218,6 +218,30 @@ def test_bad_file_raises(tmp_path: Path, library: ContentLibrary) -> None:
         load_library(content)
 
 
+def test_enemy_only_status_rejected(tmp_path: Path, library: ContentLibrary) -> None:
+    """06 6.35（5F-R2）：世界事件（情境判定）的 buff／debuff 不能引用 enemy_only 狀態。"""
+    enemy_only = library.ruleset.enemy_only_statuses()
+    assert "molten_burst" in enemy_only
+    content = _copy_content(tmp_path, library)
+    path = content / "world" / "situations" / "cloud_ridge.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    template = data["templates"][0]
+    template.setdefault("failure", {}).setdefault("penalties", {})["debuffs"] = ["molten_burst"]
+    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    with pytest.raises(ContentError, match="狀態 molten_burst 只給敵人（enemy_only）"):
+        load_library(content)
+
+
+def test_current_situations_use_no_enemy_only_status(library: ContentLibrary) -> None:
+    enemy_only = library.ruleset.enemy_only_statuses()
+    for table in library.world_event_content.situations.templates.values():
+        for template in table.templates:
+            for name in ("success", "partial", "failure"):
+                outcome = template.outcome(name)
+                used = {*outcome.rewards.buffs, *outcome.penalties.debuffs}
+                assert not used & enemy_only, (template.id, name)
+
+
 def test_unknown_race_in_rules(tmp_path: Path, library: ContentLibrary) -> None:
     content = _copy_content(tmp_path, library)
     path = content / "world" / "situation_rules.yaml"
