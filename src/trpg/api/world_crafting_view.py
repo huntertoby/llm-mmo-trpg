@@ -132,6 +132,13 @@ def _recipe_view(
             "＋".join(mats),
         ]
     )
+    if record.steps:  # 帶重骰序列的配方（5D-3b）
+        rerolls = sum(1 for s in record.steps if s.affix is None)
+        imbues = len(record.steps) - rerolls
+        parts = [f"重骰 {rerolls} 次" if rerolls else "", f"指定 {imbues} 次" if imbues else ""]
+        summary += "・" + "、".join(p for p in parts if p)
+        if record.base is not None:
+            summary += f"（基礎配方 {record.base.upper()}）"
     problem = (
         "這裡沒有鐵匠"
         if smithy is None
@@ -205,7 +212,7 @@ def _gear_view(
         name_zh=gear_title(item),
         worn=worn,
         description_zh="；".join(_affix_zh(library, r.affix, r.value) for r in item.affixes),
-        code=None if mod.recipe is None else mod.recipe.upper(),
+        code=None if mod.code is None else mod.code.upper(),
         enhance=mod.enhance,
         can_enhance=can_enhance,
         enhance_zh=enhance_zh,
@@ -338,10 +345,15 @@ def crafting_event_line(library: ContentLibrary, _region: str, event: WorldEvent
         verb = "重骰" if event.mode == "reroll" else "指定"
         new = _affix_zh(library, event.new, event.value)
         old = _affix_zh(library, event.old)
-        return (
+        line = (
             f"{event.name_zh}的第 {event.index + 1} 條詞條{verb}成「{new}」（原本「{old}」；"
             f"精華 ×{event.essence_spent}、金幣 {event.gold_spent}）。"
         )
+        if event.code is not None:
+            line += f"新的配方碼 {event.code.upper()}（含重骰序列）。"
+            if event.discovered:
+                line += "你是這份配方的首位發現者！"
+        return line
     if isinstance(event, GearSalvagedEvent):
         return f"分解了{event.name_zh}，得到精華 ×{event.essence}。"
     return None

@@ -39,12 +39,33 @@ materials:
   item_molten_heart: {leanings: [affix_resist_fire, affix_attr_con], resonance: ignite}                    # 熔心晶
 
 # M7、20.3、20.4：部位相同＋特色材料組合完全相同 → 獨特裝備（稀有度史詩；玩家選的 build 詞條換成獨特
-# 詞條，代決 5D3-7）。提示：驚雷霧袍＝霧渡鎮酒館「雷雨夜的霧最濃」（world/events 的傳聞）；
-# 另外兩個的提示在餘燼集（荒原內容段）。
+# 詞條，代決 5D3-7）。
+# hints（20.4，5D-3b）：提示只說材料的意象。驚雷霧袍的提示已由霧渡鎮酒館傳聞與事件 4 的線頭顯示
+# （world/social、world/events），這裡只記資料。另外兩個在餘燼集：灰燼荒原還沒有地點圖，
+# 地點 ID ember_market 是開發 PM 暫定（代決 5D3b-5），等荒原內容段建地點圖時接進酒館與聊天
+# （CraftingRules.hints_at）。
 hidden:
-  - {id: recipe_thunder_mist_robe, name_zh: 驚雷霧袍, slot_type: body, materials: [item_mist_crystal, item_thunder_feather, item_talisman_ash], affix: affix_unique_thunder_mist}
-  - {id: recipe_steam_bracers, name_zh: 蒸汽護腕, slot_type: hands, materials: [item_mist_crystal, item_lava_core], affix: affix_unique_steam_guard}
-  - {id: recipe_frostfire_ring, name_zh: 冰火雙生戒, slot_type: ring, materials: [item_frost_ember, item_molten_heart], affix: affix_unique_frostfire}
+  - id: recipe_thunder_mist_robe
+    name_zh: 驚雷霧袍
+    slot_type: body
+    materials: [item_mist_crystal, item_thunder_feather, item_talisman_ash]
+    affix: affix_unique_thunder_mist
+    hints:
+      - {source: tavern, region: cloud_ridge, location: mist_ferry, place_zh: 霧渡鎮酒館, text_zh: 雷雨夜的霧最濃}
+  - id: recipe_steam_bracers
+    name_zh: 蒸汽護腕
+    slot_type: hands
+    materials: [item_mist_crystal, item_lava_core]
+    affix: affix_unique_steam_guard
+    hints:
+      - {source: tavern, region: ashen_waste, location: ember_market, place_zh: 餘燼集酒館, text_zh: 霧與火相遇之處}
+  - id: recipe_frostfire_ring
+    name_zh: 冰火雙生戒
+    slot_type: ring
+    materials: [item_frost_ember, item_molten_heart]
+    affix: affix_unique_frostfire
+    hints:
+      - {source: rumor, region: ashen_waste, location: ember_market, place_zh: 餘燼集傳聞, text_zh: 冰與火在同一隻蜥蜴身上}
 
 # 8.14 強化 +1～+3：每級基礎加成 +2%（武器傷害、其他部位防禦；代決 5D3-10）。
 # 金幣＝gold_per_level × 物品等級 × 目標等級；通用料（物品等級 ≤3 粗、≤7 精、其餘上）× 目標等級。
