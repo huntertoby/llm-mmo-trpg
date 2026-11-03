@@ -26,7 +26,7 @@
 
 - 新增測試：`test_truce.py` duration 1／2／3（3）、`test_copy_enemy_only.py`（2）、`test_server_presence.py`（7）、`test_season_archive_merge.py`（2）、`test_season_reset.py`（版面一致、備份不含封存，2）、`test_enemy_only_skills.py`（6）、`test_enemy_only_statuses.py`（改寫成載入器測試，4 個新的取代 2 個文字比對）。
 - `ruff check`、`ruff format --check`、`mypy`、`lint-imports`（13 契約）通過。
-- 交件檢查結果見下方「交件檢查」。
+- pytest `tests/engine`、`content`、`skillgen`、`llm`、`world`、`api`、`server`、`bot`、`test_architecture.py`（`-n 8`）：11695 通過、14 略過（第一次跑抓到 3 個測試寫死 `LOG_FORMAT.endswith("/110")`，已改成 `/111`、重跑通過）。skillgen slow `test_budget`＋`test_refactor_3wr2`：873 通過。vitest 145 檔 1344 通過；`pnpm build` 通過。沒有改 API 型別，OpenAPI 不用重產。已 `git merge main`（沒有新 commit）。
 - **重播前後比對**：用 5F-R1 之前的程式（`6af12836` 的 `src/`、`content/`）與現在的程式各跑一次：swamp 種子 7 一般戰鬥只差 `format` 字串（88 動作、313 事件完全相同），`trpg battle replay` 通過；三人影子循環賽（輔助、衝陣、雷水，帶第 1 輪休戰）36 場的動作與事件逐位元相同（2055 動作、12362 事件），每場重播一致。
 
 ## 代決（最保守的做法）
