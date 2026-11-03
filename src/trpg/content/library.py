@@ -65,6 +65,7 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
+from trpg.content.fields import FieldMapDef, FieldMapReport, field_map_report
 from trpg.content.flash_templates import FlashTable
 from trpg.content.forms import FormDef, FormTable, scaled_form_def
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
@@ -633,6 +634,12 @@ class ContentLibrary:
     ``None``（這些功能關閉）。"""
     world_resonance: ResonanceRules | None = None
     """裝備共鳴（``world/resonance.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（沒有共鳴）。"""
+    field_maps: dict[str, FieldMapDef] = field(default_factory=dict)
+    """實地地圖與室內圖（``world/fields/<region>/``，Phase 6B-1）；鍵＝地圖 ID；沒有資料夾＝空。"""
+    field_warnings: tuple[str, ...] = ()
+    """實地地圖的數值類警告（尺寸、傳送石數；不影響通過）。"""
+    field_pending: tuple[str, ...] = ()
+    """對面還沒畫的出口與門（配對待補；不是錯誤）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -1115,7 +1122,17 @@ def _load_world(
         keywords=keyword_ids,
         hint_texts=_hint_texts(world_event_content, world_quests),
     )
+    fields, field_report = _load_world_fields(
+        root / WORLD_FIELDS_DIR,
+        t,
+        files,
+        world_maps=world_maps,
+        npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
+    )
     return {
+        "field_maps": fields,
+        "field_warnings": field_report.warnings,
+        "field_pending": field_report.pending,
         "world_maps": world_maps,
         "world_rules": world_rules,
         "world_enemies": world_enemies,
@@ -1479,6 +1496,54 @@ def _load_world_maps(
         files.append((path, world_map))
         result[world_map.region] = world_map
     return result
+
+
+WORLD_FIELDS_DIR = "world/fields"
+"""實地地圖的資料夾（相對於內容資料夾；Phase 6B-1）：``<region>/<location>.yaml``，室內圖在
+``<region>/interiors/<id>.yaml``。"""
+
+
+def _load_world_fields(
+    directory: Path,
+    t: _BaseTables,
+    files: list[tuple[Path, ContentModel]],
+    *,
+    world_maps: Mapping[str, LocationMapDef],
+    npcs: Mapping[str, Mapping[str, str]],
+) -> tuple[dict[str, FieldMapDef], FieldMapReport]:
+    """載入 ``world/fields/``（資料夾不存在＝空）並做跨檔案檢查；錯誤丟 :class:`ContentError`。
+
+    檔名：室外圖＝``location``、室內圖＝``id``；上一層資料夾＝``region``。地圖 ID 全部不重複。
+    """
+    if not directory.is_dir():
+        return {}, FieldMapReport()
+    result: dict[str, FieldMapDef] = {}
+    paths = sorted(directory.glob("*/*.yaml")) + sorted(directory.glob("*/interiors/*.yaml"))
+    for path in paths:
+        field_map = load_content_file(path, FieldMapDef)
+        interior = path.parent.name == "interiors"
+        region_dir = path.parent.parent.name if interior else path.parent.name
+        stem = field_map.id if interior else field_map.location
+        if field_map.region != region_dir:
+            raise ContentError(path, f"資料夾必須與 region 相同（region 為 {field_map.region!r}）")
+        if interior != field_map.is_interior or stem != path.stem:
+            what = "室內圖放在 interiors/、檔名＝id" if interior else "室外圖的檔名＝location"
+            raise ContentError(path, f"檔案位置不對：{what}")
+        if field_map.id in result:
+            raise ContentError(path, f"實地地圖 ID {field_map.id} 重複")
+        files.append((path, field_map))
+        result[field_map.id] = field_map
+    report = field_map_report(
+        result,
+        world_maps=world_maps,
+        terrain=t.terrain.by_id(),
+        objects=t.objects.by_id(),
+        core=t.core,
+        npcs=npcs,
+    )
+    if report.errors:
+        raise ContentError(directory, "；".join(report.errors))
+    return result, report
 
 
 WORLD_ENEMIES_FILE = "world/enemies.yaml"

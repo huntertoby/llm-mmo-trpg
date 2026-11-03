@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from typing import Annotated, Literal
+from collections.abc import Sequence
+from typing import Annotated, Literal, Protocol
 
 from pydantic import Field, model_validator
 
@@ -37,7 +38,13 @@ __all__ = [
     "SpawnUnitsEvent",
     "TerrainChangeEvent",
     "TileChange",
+    "TileSource",
     "check_map",
+    "grid_rows",
+    "grid_shape_problems",
+    "passable_grid",
+    "placement_problems",
+    "reachable_from",
     "standable",
     "step_allowed",
 ]
@@ -224,6 +231,43 @@ def _grid_lines(text: str) -> list[str]:
     return [line.rstrip("\r") for line in text.strip("\n").split("\n")]
 
 
+def grid_rows(text: str) -> list[str]:
+    """``heights``／``terrain`` 文字網格拆成每行一個字串（戰鬥地圖與實地地圖共用，6B-1）。"""
+    return _grid_lines(text)
+
+
+def grid_shape_problems(
+    size: tuple[int, int], heights: str, terrain: str, legend: dict[str, str]
+) -> list[str]:
+    """網格的形狀檢查（戰鬥地圖與實地地圖共用，6B-1）：行數、每行字元數與 ``size`` 一致；
+    ``legend`` 的鍵是單一字元且涵蓋 ``terrain`` 用到的字元；高度是 0～``MAX_HEIGHT``。"""
+    w, h = size
+    problems: list[str] = []
+    for name, rows in (("heights", _grid_lines(heights)), ("terrain", _grid_lines(terrain))):
+        if len(rows) != h:
+            problems.append(f"{name} 應有 {h} 行，實際 {len(rows)} 行")
+            continue
+        problems += [
+            f"{name} 第 {y} 行應有 {w} 個字元，實際 {len(row)} 個"
+            for y, row in enumerate(rows)
+            if len(row) != w
+        ]
+    problems += [f"legend 的鍵必須是單一字元，收到 {k!r}" for k in legend if len(k) != 1]
+    if problems:
+        return problems
+    problems += [
+        f"heights ({x}, {y}) 的高度必須是 0–{MAX_HEIGHT}，收到 {ch!r}"
+        for y, row in enumerate(_grid_lines(heights))
+        for x, ch in enumerate(row)
+        if ch not in "0123456789" or int(ch) > MAX_HEIGHT
+    ]
+    used = sorted({ch for row in _grid_lines(terrain) for ch in row})
+    missing = [ch for ch in used if ch not in legend]
+    if missing:
+        problems.append(f"legend 缺少字元：{', '.join(repr(c) for c in missing)}")
+    return problems
+
+
 class MapDef(ContentModel):
     """一張地圖。"""
 
@@ -321,31 +365,7 @@ class MapDef(ContentModel):
         return self
 
     def _grid_problems(self) -> list[str]:
-        w, h = self.size
-        problems: list[str] = []
-        for name, rows in (("heights", self.height_rows()), ("terrain", self.terrain_rows())):
-            if len(rows) != h:
-                problems.append(f"{name} 應有 {h} 行，實際 {len(rows)} 行")
-                continue
-            problems += [
-                f"{name} 第 {y} 行應有 {w} 個字元，實際 {len(row)} 個"
-                for y, row in enumerate(rows)
-                if len(row) != w
-            ]
-        problems += [f"legend 的鍵必須是單一字元，收到 {k!r}" for k in self.legend if len(k) != 1]
-        if problems:
-            return problems
-        problems += [
-            f"heights ({x}, {y}) 的高度必須是 0–{MAX_HEIGHT}，收到 {ch!r}"
-            for y, row in enumerate(self.height_rows())
-            for x, ch in enumerate(row)
-            if ch not in "0123456789" or int(ch) > MAX_HEIGHT
-        ]
-        used = sorted({ch for row in self.terrain_rows() for ch in row})
-        missing = [ch for ch in used if ch not in self.legend]
-        if missing:
-            problems.append(f"legend 缺少字元：{', '.join(repr(c) for c in missing)}")
-        return problems
+        return grid_shape_problems(self.size, self.heights, self.terrain, self.legend)
 
     def _zone_problems(self) -> list[str]:
         problems = [
@@ -426,8 +446,17 @@ def step_allowed(from_height: int, to_height: int, to_terrain: TerrainDef, core:
 type Passable = list[list[bool]]
 
 
-def _passable_grid(
-    map_def: MapDef, terrain: dict[str, TerrainDef], objects: dict[str, ObjectDef]
+class TileSource(Protocol):
+    """有網格與物件的地圖（:class:`MapDef`、實地地圖 ``FieldMapDef``；6B-1 共用驗證工具）。"""
+
+    @property
+    def objects(self) -> Sequence[MapObjectPlacement]: ...
+
+    def grid(self) -> list[list[tuple[int, str]]]: ...
+
+
+def passable_grid(
+    map_def: TileSource, terrain: dict[str, TerrainDef], objects: dict[str, ObjectDef]
 ) -> Passable:
     """每格是否可站立：地形可站立或有 ``over_chasm`` 物件，且沒有 ``blocks_move`` 物件。"""
     grid = map_def.grid()
@@ -445,9 +474,14 @@ def _passable_grid(
     return result
 
 
-def _reachable_from(
+_passable_grid = passable_grid
+
+
+def reachable_from(
     start: XY, grid: list[list[tuple[int, str]]], passable: Passable, core: CoreRules
 ) -> set[XY]:
+    """從 ``start`` 依移動規則走得到的格子（含自己）：只走可站立的格子，往上一步最多
+    ``max_climb_height`` 層。"""
     height, width = len(grid), len(grid[0])
     seen = {start}
     queue = deque([start])
@@ -461,6 +495,38 @@ def _reachable_from(
                 seen.add((nx, ny))
                 queue.append((nx, ny))
     return seen
+
+
+_reachable_from = reachable_from
+
+
+def placement_problems(
+    grid: list[list[tuple[int, str]]],
+    objects: Sequence[MapObjectPlacement],
+    surfaces: Sequence[MapSurfacePlacement],
+    terrain: dict[str, TerrainDef],
+) -> list[str]:
+    """物件與表面的位置（戰鬥地圖與實地地圖共用，6B-1）：表面不放在致命地形或牆壁上、
+    不可為 ``none``；物件不放在牆壁（不可進入且非致命的地形）上。座標須已在地圖內。"""
+    problems = [
+        f"surfaces 的 {list(s.at)} 位於致命地形"
+        for s in surfaces
+        if terrain[grid[s.at[1]][s.at[0]][1]].deadly
+    ]
+    problems += [
+        f"surfaces 的 {list(s.at)} 位於牆壁等不可站立的地形"
+        for s in surfaces
+        if _is_solid(terrain[grid[s.at[1]][s.at[0]][1]])
+    ]
+    problems += [
+        f"objects 的 {list(o.at)} 位於牆壁等不可站立的地形"
+        for o in objects
+        if _is_solid(terrain[grid[o.at[1]][o.at[0]][1]])
+    ]
+    problems += [
+        f"surfaces 的 {list(s.at)} 不可為 none" for s in surfaces if s.surface is Surface.NONE
+    ]
+    return problems
 
 
 def check_map(
@@ -503,26 +569,7 @@ def check_map(
             for x, y in alt.tiles
             if not passable[y][x]
         ]
-    problems += [
-        f"surfaces 的 {list(s.at)} 位於致命地形"
-        for s in map_def.surfaces
-        if terrain[grid[s.at[1]][s.at[0]][1]].deadly
-    ]
-    problems += [
-        f"surfaces 的 {list(s.at)} 位於牆壁等不可站立的地形"
-        for s in map_def.surfaces
-        if _is_solid(terrain[grid[s.at[1]][s.at[0]][1]])
-    ]
-    problems += [
-        f"objects 的 {list(o.at)} 位於牆壁等不可站立的地形"
-        for o in map_def.objects
-        if _is_solid(terrain[grid[o.at[1]][o.at[0]][1]])
-    ]
-    problems += [
-        f"surfaces 的 {list(s.at)} 不可為 none"
-        for s in map_def.surfaces
-        if s.surface is Surface.NONE
-    ]
+    problems += placement_problems(grid, map_def.objects, map_def.surfaces, terrain)
     for event in map_def.events:
         if isinstance(event, TerrainChangeEvent):
             problems += [

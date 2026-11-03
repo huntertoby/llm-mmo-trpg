@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -74,6 +75,10 @@ def test_content_check_success(
     out = capsys.readouterr().out
     assert "內容檢查通過" in out
     assert "elements.yaml：9 種元素" in out
+    # 實地地圖的進度、警告與待補（Phase 6B-1；都不影響通過）
+    assert re.search(r"實地地圖：雲嶺 \d+／18、灰燼荒原 \d+／18（另有室內圖 \d+ 張）", out)
+    assert "實地地圖待補（" in out
+    assert "world/fields/cloud_ridge/mist_ferry.yaml：霧渡鎮（24×18）" in out
 
 
 def test_content_check_prints_map_warnings_without_failing(
