@@ -7,7 +7,9 @@ import { flame, roundRect, shadowEllipse, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { cracks, type HpStage } from "./fieldFx";
 import { drawLowWall } from "./lowWallArt";
+import { ASHEN_OBJECTS } from "./ashenObjects";
 import { CLOUD_OBJECTS } from "./cloudRidgeObjects";
+import { CRYSTAL_OBJECTS } from "./crystalObjects";
 import { pickThemed, themeKey, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 import { ART_T } from "./terrainArt";
 
@@ -493,8 +495,12 @@ export const OBJECT_DRAW: Readonly<Record<string, ObjectDrawer>> = {
   grass: grassFloor,
 };
 
-/** 各區的物件畫法（區域 ID → 物件 ID → 畫法）；預設區不在表內，雲嶺（3-37b）已加入，其他區之後加。 */
-export const REGION_OBJECT_DRAW: RegionTable<ObjectDrawer> = { cloud_ridge: CLOUD_OBJECTS };
+/** 各區的物件畫法（區域 ID → 物件 ID → 畫法）；預設區不在表內。雲嶺（3-37b）、灰燼荒原與晶冠點綴（5A-ART6）已加入。 */
+export const REGION_OBJECT_DRAW: RegionTable<ObjectDrawer> = {
+  cloud_ridge: CLOUD_OBJECTS,
+  ashen_waste: ASHEN_OBJECTS,
+  crystal_crown: CRYSTAL_OBJECTS,
+};
 
 /** `look` 覆寫的物件畫法（`"鍵=值"` → 物件 ID → 畫法）；目前沒有。 */
 export const LOOK_OBJECT_DRAW: LookTable<ObjectDrawer> = {};
