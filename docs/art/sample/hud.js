@@ -188,5 +188,5 @@ window.Hud = (() => {
     text(c, place, W / 2, 30, 20, TEXT, "center");
   }
 
-  return { hudA, hudB, hudC };
+  return { hudA, hudB, hudC, I, text, bar, portrait, badge, iconBtn, chip, toast, PANEL, GOLD, DIM, HP, MP };
 })();

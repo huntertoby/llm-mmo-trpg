@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>戰鬥畫面 D 版對照</title>
+<style>
+  body { margin: 0; padding: 16px 18px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1340px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  h2 { font-size: 15px; margin: 0 0 5px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; }
+  .wide { grid-column: 1 / 3; }
+</style>
+</head>
+<body>
+<h1>戰鬥畫面：現行格子版 vs D 版（同一場戰鬥，示意，不代決）</h1>
+<p class="note">美術 PM，2026-11-04。場景是渡口石階（同 explore.png），碰到斷崖幫後就地開打。規則照舊用格子（12×12），D 版只改畫面：平常不畫格線、角色沿路徑平滑走、選移動或技能時格子才淡淡浮出。HUD 是版面 A 的戰鬥版，技能卡和單位資訊是去文字化後的版本。全部程式繪製。</p>
+<div class="grid">
+  <div><h2>1. 現行格子版<small>格線、字母標記、右側文字欄</small></h2><canvas id="c1"></canvas></div>
+  <div><h2>2. D 版：待機<small>不畫格線；戰鬥區外柔和變暗＝「這裡開打了」；滑到敵人出現小卡</small></h2><canvas id="c2"></canvas></div>
+  <div><h2>3. D 版：選移動<small>可走範圍淡淡浮出、路徑是曲線、殘影表示平滑走過去</small></h2><canvas id="c3"></canvas></div>
+  <div><h2>4. D 版：選範圍技能（十字）<small>格線極淡浮出；命中格亮橘、預估傷害浮在目標頭上</small></h2><canvas id="c4"></canvas></div>
+  <div class="wide"><h2>5. 加碼：2.5D 斜視角（D 版待機）<small>規則仍是方格，畫面轉 45° 斜看；台地有厚度</small></h2><canvas id="c5"></canvas></div>
+</div>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script src="hud.js"></script>
+<script src="battle.js"></script>
+<script>
+  const T = Explore.T, W = 20 * T, H = 12 * T, Q = 2;
+  for (const [id, fn, disp] of [["c1", "current", 652], ["c2", "dIdle", 652], ["c3", "dMove", 652], ["c4", "dArea", 652], ["c5", "iso", 1040]]) {
+    const c = document.getElementById(id), k = disp / W;
+    c.width = W * k * Q; c.height = H * k * Q; c.style.width = disp + "px"; c.style.height = H * k + "px";
+    const ctx = c.getContext("2d"); ctx.scale(k * Q, k * Q);
+    try { Battle[fn](ctx); } catch (e) { document.body.insertAdjacentHTML("beforeend", `<pre id="err">${id}: ${e.stack}<\/pre>`); }
+  }
+</script>
+</body>
+</html>
