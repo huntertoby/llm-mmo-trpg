@@ -37,7 +37,7 @@ from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
 from trpg.server.first_kills import FirstKillRegistry
-from trpg.server.league import LeagueRunner, LeagueStore
+from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
@@ -138,7 +138,7 @@ class WorldStore:
         """全服首殺紀錄（5E-3）。"""
         self.notes = LocationNoteStore(root)
         """地點留言（5E-3，#105；不進日誌）。"""
-        self.league = LeagueStore(library, root)
+        self.league = LeagueStore(library, root, clock=self._now)
         """影子循環賽的賽果（5F-4；衍生資料，不進日誌）。"""
         self.league_runner = LeagueRunner(self.league)
         """循環賽的背景執行（5F-4；管理者開跑）。"""
@@ -350,7 +350,47 @@ class WorldStore:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world
         self.offers.prefetch(result.world, result.char)  # PERF-3：新出現的機遇、劇情步驟
+        self.auto_start_league(now)
         return WorldOutcome(result.world, result.char, result.events, now, None)
+
+    # -- 影子循環賽（5F-4b） --------------------------------------------------
+
+    def _now(self) -> int:
+        """現在（``clock`` 可能在建立後被換掉，例如測試；循環賽的編年史時間用這個）。"""
+        return self.clock()
+
+    def season_boss_killed(self, season_id: str) -> bool:
+        """這一季有沒有人首殺賽季 Boss（讀首殺紀錄；沒有資料或讀不了＝還沒首殺）。"""
+        try:
+            kills = self.first_kills.all()
+        except Exception:
+            _LOG.exception("首殺紀錄讀不了：當作還沒有人首殺賽季 Boss")
+            return False
+        return any(k.kind == "season_boss" and k.season_id == season_id for k in kills)
+
+    def auto_start_league(self, now: int) -> bool:
+        """第 ``signup_close_day + 1`` 天的刷新時間（第 14 天 6 點）之後、還沒有人首殺賽季 Boss 時
+        自動開跑循環賽（玩法 PM 2026-11-03 代決；管理者手動開跑 ``POST /api/world/league/run``
+        留著備用）。換日是被動的：在世界動作與看循環賽畫面時檢查。已經開跑、還有 ``pending`` 的
+        賽程（伺服器重啟後）也在這裡接續。回傳這次有沒有開背景執行緒。出錯只記 log。"""
+        try:
+            with self._lock:
+                world = self.season_world(now)
+                record = self.league.record(world.season_id)
+                if record is None:
+                    if start_problem(self.library, world, now) is not None:
+                        return False
+                    if self.season_boss_killed(world.season_id):
+                        return False  # 有人首殺：不自動開跑（娛樂賽與否是 5F-3／5F-5）
+                    record = self.league.start(world, now)
+                elif record.finished or self.league.stale(record):
+                    return False  # 規則已變的賽程等管理者重新開跑（整個重跑）
+            return self.league_runner.start()
+        except LeagueError:
+            return False
+        except Exception:
+            _LOG.exception("循環賽自動開跑失敗")
+            return False
 
     def _record_first_kills(
         self,

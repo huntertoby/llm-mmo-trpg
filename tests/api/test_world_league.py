@@ -20,6 +20,7 @@ from trpg.content.library import ContentLibrary
 from trpg.engine.runner import LOG_FORMAT
 from trpg.server.account_config import AccountSettings
 from trpg.server.accounts import AccountStore
+from trpg.server.first_kills import FirstKill
 from trpg.world.league_actions import LeagueEnterAction
 from trpg.world.step import new_character, reveal_location, world_step
 
@@ -69,6 +70,23 @@ def _create(client: TestClient, body: dict[str, Any]) -> str:
     return cid
 
 
+def _season_boss_killed(store: WorldStore) -> None:
+    kill = FirstKill(
+        kind="season_boss",
+        target="mist_lock_master",
+        target_name_zh="霧鎖真人",
+        character_id="someone",
+        name="某人",
+        region="cloud_ridge",
+        location="cloud_summit",
+        seq=1,
+        at=NOON,
+        season_id=store.world().season_id,
+    )
+    body = {"format": "trpg-firstkills/1", "kills": [kill.model_dump(mode="json")]}
+    store.first_kills.path.write_text(json.dumps(body), encoding="utf-8")
+
+
 def test_league_flow(small: ContentLibrary, tmp_path: Path) -> None:
     with _client(small, tmp_path / "saves") as client:
         store = _store(client)
@@ -93,9 +111,11 @@ def test_league_flow(small: ContentLibrary, tmp_path: Path) -> None:
         assert all(r["rank"] is None and r["level"] == 10 for r in view["standings"])
         # 截止前不能開跑
         assert client.post("/api/world/league/run").status_code == 409
+        _season_boss_killed(store)  # 有人首殺：第 14 天不自動開跑，只能管理者開（5F-4b）
         store.clock = lambda: AFTER
         view = _ok(client.get(f"/api/world/characters/{a}/league"))
         assert view["status"] == "closed" and not view["can_enter"]
+        assert view["allocation"] is None  # 截止後不給配點畫面
         assert "截止" in view["enter_problem_zh"]
         reply = client.post(f"/api/world/characters/{a}/actions", json={"kind": "league_withdraw"})
         assert reply.status_code == 422
@@ -195,3 +215,69 @@ def test_standings_hide_unrevealed_place(small: ContentLibrary) -> None:
     seen = reveal_location(viewer, "cloud_ridge", "elixir_cave")
     revealed = league_view(small, world, seen, None, NOON, account="b1")
     assert revealed.standings[0].place_zh == secret.name_zh
+
+
+# ---------------------------------------------------------------------------
+# 5F-4b
+# ---------------------------------------------------------------------------
+
+
+def test_auto_start_reallocation_paging_and_stale(small: ContentLibrary, tmp_path: Path) -> None:
+    """第 14 天沒有人首殺賽季 Boss → 看循環賽就自動開跑；報名可以重新配點；場次分頁；
+    規則改了的賽程不能重播、管理者再開跑就整個重跑。"""
+    with _client(small, tmp_path / "saves") as client:
+        store = _store(client)
+        ids = [_create(client, START | {"name": n, "seed": s}) for s, n in enumerate("甲乙丙")]
+        view = _ok(client.get(f"/api/world/characters/{ids[0]}/league"))
+        alloc = view["allocation"]
+        assert alloc is not None and alloc["points"] > 0
+        assert sum(alloc["auto"].values()) == alloc["points"]
+        custom = {"con": alloc["points"]}
+        _ok(
+            client.post(
+                f"/api/world/characters/{ids[0]}/actions",
+                json={"kind": "league_enter", "allocation": custom},
+            )
+        )
+        bad = client.post(
+            f"/api/world/characters/{ids[1]}/actions",
+            json={"kind": "league_enter", "allocation": {"con": alloc["points"] + 1}},
+        )
+        assert bad.status_code == 422
+        for cid in ids[1:]:
+            _ok(client.post(f"/api/world/characters/{cid}/actions", json={"kind": "league_enter"}))
+        view = _ok(client.get(f"/api/world/characters/{ids[0]}/league"))
+        assert view["entry"]["allocation"] == custom
+        assert "HP ×2" in view["rules_zh"] and "開場休戰" in view["rules_zh"]
+        store.clock = lambda: AFTER
+        view = _ok(client.get(f"/api/world/characters/{ids[0]}/league", params={"page_size": 4}))
+        assert view["status"] in ("running", "done")  # 自動開跑
+        store.league_runner.join(120)
+        view = _ok(client.get(f"/api/world/characters/{ids[0]}/league", params={"page_size": 4}))
+        assert view["status"] == "done" and view["total"] == 6
+        assert view["pages"] == 2 and view["page"] == 1 and len(view["matches"]) == 4
+        assert all(m["mine"] for m in view["matches"])  # 自己的在前
+        last = _ok(
+            client.get(f"/api/world/characters/{ids[0]}/league", params={"page_size": 4, "page": 9})
+        )
+        assert last["page"] == 2 and len(last["matches"]) == 2
+        assert all(" 勝（" in m["result_zh"] or "和局" in m["result_zh"] for m in view["matches"])
+        season = store.league.chronicle.season(store.world().season_id)
+        assert season is not None and len(season.ranks) == 3
+        match_id = view["matches"][0]["id"]
+        _ok(client.post(f"/api/world/characters/{ids[0]}/league/matches/{match_id}/replay"))
+        # 規則改了：標示不能重播、重播 409；管理者再開跑＝整個重跑
+        record = store.league.record()
+        assert record is not None
+        store.league._save(record.model_copy(update={"rules_key": "old"}))
+        view = _ok(client.get(f"/api/world/characters/{ids[0]}/league"))
+        assert view["stale_zh"] is not None and "規則已變" in view["stale_zh"]
+        assert not any(m["replayable"] for m in view["matches"])
+        assert {m["replay_problem_zh"] for m in view["matches"]} == {"規則已變、不能重播"}
+        reply = client.post(f"/api/world/characters/{ids[0]}/league/matches/{match_id}/replay")
+        assert reply.status_code == 409
+        run = _ok(client.post("/api/world/league/run"))
+        assert run["done"] == 0 and run["total"] == 6
+        store.league_runner.join(120)
+        view = _ok(client.get(f"/api/world/characters/{ids[0]}/league"))
+        assert view["status"] == "done" and view["stale_zh"] is None and view["reruns"] == 1
