@@ -36,10 +36,10 @@
 ## 檢查
 
 - `ruff check`、`ruff format --check`、`mypy`（1194 檔）、`lint-imports`（13 契約）通過。
-- `tests/engine tests/world tests/api tests/server tests/content tests/test_architecture.py`（`-n 8`）：7296 通過（合併 main 後；`glossary.json` 加了 `league_truce` 的說明，照慣例用 `scripts/export_client_fixtures.py` 重產）。
-- vitest 139 檔 1283 通過（新狀態加了圖示 `league_truce`：圓裡的暫停符號）；`pnpm build` 通過。
+- `tests/engine tests/world tests/api tests/server tests/content tests/test_architecture.py`（`-n 8`）：7351 通過（合併 main〔5F-3〕後；`glossary.json` 加了 `league_truce` 的說明，照慣例用 `scripts/export_client_fixtures.py` 重產）。
+- vitest 140 檔 1286 通過（新狀態加了圖示 `league_truce`：圓裡的暫停符號；狀態總數測試 111 → 112）；`pnpm build` 通過。
 - swamp 種子 7 重播：88 個動作、313 個事件，最終狀態一致（和 5F-1b 相同，一般戰鬥不受影響）。
-- 循環賽重播：瀏覽器那次的 `m0003.json` → `trpg battle replay` 通過（24 個動作、99 個事件，open_plain）。
+- 循環賽重播：合併前瀏覽器那次的 `m0003.json` 通過（24 個動作、99 個事件）；合併 main 後 5F-3 把 `LOG_FORMAT` 升到 `/110`，那份舊紀錄照預期被擋下（正好是「規則已變」的情況），用目前程式另跑一場（衝陣 vs 雷水、沼澤、種子 7）→ `trpg battle replay` 通過（25 個動作、140 個事件）。合併後平衡腳本重跑同一組：仍是 6.4 輪、44%／54%。
 - 瀏覽器（8210 埠、自己的分頁與暫存存檔）：兩個角色，一個經 API 報名、一個在面板把智力的 3 點改配體質後報名（顯示「自己配點」，點沒用完時按鈕停用並提示）→ 存檔的開賽日往前調一天到第 14 天 → 打開循環賽面板自動開跑，12 場跑完：排行榜顯示同分比較數字（「剩餘 HP 合計 244%・共 61 輪」）、冠軍、場次結果「A-Wu 勝（4 輪）」→ 重播 m0003：開場兩人都有「開場休戰」、HP 134（加倍），結束面板顯示「Mei 勝（全滅）・第 4 輪」；`chronicle/league.json` 寫入最終排名。
 - 新測試：`tests/engine/test_truce.py`（8）、`tests/world/test_league.py`（+8：平衡規則只套循環賽、6 場第 1 輪沒有傷害事件且休戰在第 1 輪結束移除、重新配點）、`tests/server/test_league_runner.py`（同分改寫＋3：編年史、規則改了整個重跑、舊賽程沒有規則鍵）、`tests/api/test_world_league.py`（改＋1：首殺擋自動開跑、自動開跑、配點經 API、分頁、規則已變 409 與重跑）、`tests/content/test_world_season.py`（+3）、`client/src/world/league.test.ts`（+4）；`test_coverage.py` 允許清單加 `league_truce`。
 - CLI 快照：`tests/cli` 跑過一次，`test_output_snapshots` 沒有變動；`test_llm_propose_cli.py::test_mock_n3_snapshot` 失敗，但把 `src`、`content`、`tests/cli` 換回本段開工的 commit（`db6487d7`）一樣失敗，是既有問題、不是本段造成的，所以沒有重產（待 PM）。
