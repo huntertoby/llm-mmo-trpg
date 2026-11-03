@@ -388,6 +388,7 @@ def get_chronicle(request: Request) -> ChronicleView:
             store.first_kills.all(),
             store.boss_board.all(),
             titles=ChronicleTitles(store.titles_of_character, store.titles_of_account),
+            library=store.library,
         )
 
 

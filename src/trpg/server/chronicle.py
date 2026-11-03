@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import DollLook
 from trpg.content.races import RaceLook
+from trpg.world.layout import CHRONICLE_DIR, LEAGUE_CHRONICLE_FILE, SEASON_CHRONICLE_FILE
 from trpg.world.save import write_atomic
 
 __all__ = [
@@ -42,7 +43,6 @@ __all__ = [
 ]
 
 LEAGUE_CHRONICLE_FORMAT: Final = "trpg-chronicle-league/1"
-CHRONICLE_DIR: Final = "chronicle"
 
 
 class _Model(BaseModel):
@@ -89,7 +89,7 @@ class LeagueChronicleStore:
     """``<root>/chronicle/league.json`` 的讀寫（檔案不存在＝沒有紀錄）。"""
 
     def __init__(self, root: Path) -> None:
-        self.path = root / CHRONICLE_DIR / "league.json"
+        self.path = root / CHRONICLE_DIR / LEAGUE_CHRONICLE_FILE
         self._lock = threading.Lock()
 
     def load(self) -> LeagueChronicle:
@@ -114,7 +114,6 @@ class LeagueChronicleStore:
 # ---------------------------------------------------------------------------
 
 SEASON_CHRONICLE_FORMAT: Final = "trpg-chronicle-seasons/1"
-SEASON_CHRONICLE_FILE: Final = "seasons.json"
 
 
 class ChronicleHero(_Model):

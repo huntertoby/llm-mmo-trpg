@@ -27,7 +27,7 @@ def cmd_serve(host: str, port: int, out: TextIO, *, client_dist: Path = CLIENT_D
     from trpg.api.app import create_app  # noqa: PLC0415
 
     static_dir = find_client_dist(client_dist)
-    app = create_app(static_dir=static_dir)
+    app = create_app(static_dir=static_dir, hold_presence=True)  # 5F-R1：心跳檔
     if static_dir is None:
         print(
             f"找不到建置好的前端（{client_dist}）；只提供 API。"

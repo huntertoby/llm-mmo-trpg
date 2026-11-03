@@ -43,6 +43,7 @@ from trpg.server.chronicle import LeagueChronicleRank, LeagueChronicleSeason, Le
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.world.calendar import season_day
+from trpg.world.layout import LEAGUE_ARCHIVE_DIR, LEAGUE_DIR, LEAGUE_FILE, LEAGUE_MATCHES_DIR
 from trpg.world.league import (
     LeagueMatchSpec,
     LeagueSpawn,
@@ -76,7 +77,6 @@ __all__ = [
 ]
 
 LEAGUE_FORMAT: Final = "trpg-league/1"
-LEAGUE_DIR: Final = "league"
 MATCH_ID_PATTERN: Final = r"^m[0-9]{4,}$"
 MIN_ENTRIES: Final = 2
 """開跑至少要幾位參賽者。"""
@@ -334,9 +334,17 @@ class LeagueStore:
     """``<root>/league/`` 的讀寫（一把鎖；背景執行緒與 API 共用）。"""
 
     def __init__(
-        self, library: ContentLibrary, root: Path, *, clock: Callable[[], int] | None = None
+        self,
+        library: ContentLibrary,
+        root: Path,
+        *,
+        clock: Callable[[], int] | None = None,
+        library_of: Callable[[], ContentLibrary] | None = None,
     ) -> None:
-        self.library = library
+        self._library = library
+        self._library_of = library_of
+        """目前這一季的內容庫（5F-R2：``season.yaml`` 依季 ID 覆寫）；``None``＝一直用
+        ``library``。"""
         self.root = root
         self.clock: Callable[[], int] = clock if clock is not None else _now
         self.chronicle = LeagueChronicleStore(root)
@@ -347,14 +355,19 @@ class LeagueStore:
         self._key: str | None = None
 
     @property
+    def library(self) -> ContentLibrary:
+        """這一季的內容庫（有 ``library_of`` 時照它，5F-R2）。"""
+        return self._library if self._library_of is None else self._library_of()
+
+    @property
     def folder(self) -> Path:
         return self.root / LEAGUE_DIR
 
     def _record_path(self) -> Path:
-        return self.folder / "league.json"
+        return self.folder / LEAGUE_FILE
 
     def _match_path(self, match_id: str) -> Path:
-        return self.folder / "matches" / f"{match_id}.json"
+        return self.folder / LEAGUE_MATCHES_DIR / f"{match_id}.json"
 
     def record(self, season_id: str | None = None) -> LeagueRecord | None:
         """目前的循環賽（沒開過、或檔案是別季的＝``None``）。"""
@@ -372,10 +385,12 @@ class LeagueStore:
         return record
 
     def forget(self) -> None:
-        """丟掉記憶體裡的賽程（季末重置 5F-5 把 ``league/`` 搬走之後，下次重讀）。"""
+        """丟掉記憶體裡的賽程（季末重置 5F-5 把 ``league/`` 搬走之後，下次重讀）；規則鍵也重算
+        （新一季可能有覆寫的循環賽規則，5F-R2）。"""
         with self._lock:
             self._record = None
             self._loaded = False
+            self._key = None
 
     def _save(self, record: LeagueRecord) -> None:
         with self._lock:
@@ -384,7 +399,7 @@ class LeagueStore:
             self._loaded = True
 
     def rules_key(self) -> str:
-        """目前內容的規則鍵（內容庫不會在執行中換掉，算一次）。"""
+        """目前內容的規則鍵（內容庫不會在執行中換掉，算一次；季末重置的 :meth:`forget` 清掉）。"""
         if self._key is None:
             self._key = rules_key(self.library)
         return self._key
@@ -395,7 +410,7 @@ class LeagueStore:
 
     def archived(self) -> tuple[LeagueRecord, ...]:
         """因為規則改了而搬走的舊賽程（依開跑時間）。"""
-        folder = self.folder / "archive"
+        folder = self.folder / LEAGUE_ARCHIVE_DIR
         if not folder.is_dir():
             return ()
         found = [
@@ -406,11 +421,11 @@ class LeagueStore:
 
     def _archive(self, record: LeagueRecord) -> None:
         """把舊賽程與戰鬥紀錄搬進 ``archive/``，標「規則已變、不能重播」。"""
-        folder = self.folder / "archive"
+        folder = self.folder / LEAGUE_ARCHIVE_DIR
         tag = f"{record.season_id}-{record.started_at}-{record.reruns}"
         stale = record.model_copy(update={"stale_zh": STALE_ZH})
         write_atomic(folder / f"league-{tag}.json", stale.model_dump_json(indent=1))
-        matches = self.folder / "matches"
+        matches = self.folder / LEAGUE_MATCHES_DIR
         if matches.is_dir():
             target = folder / f"matches-{tag}"
             if target.exists():

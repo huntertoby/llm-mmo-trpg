@@ -173,6 +173,8 @@
 | 5F-5c | 5F-5 收尾（玩法 PM 2026-11-03 代決，9.7 與 3.5 已記，c341e3e1）：存檔資料夾另留**唯讀封存**（舊季世界日誌、循環賽與 Boss 戰重播），供確定性重播查證排行榜與 Boss 擊殺；編年史第一季用固定模板但列事實細節（等級、打過的精英與 Boss 含首殺、完成的事件與主線章節、首位發現的配方、循環賽名次），只寫日誌裡真的發生的事（LLM 傳記 7.11 後期）；外觀只有名字與紙娃娃，種族不算外觀：新季建角種族預設帶上季的、可免費改，紙娃娃裡不合新種族的部件改回預設；舊季循環賽重播頁列後期 | 5F-5 | 1 h | 可與 5F-5b 平行 |
 | 5F-R1 | 5F 審查整理①（2026-11-03 reviewer，正確性與資料完整）：`engine/turns.py:335` `_expire_round_end_statuses` 沒到期時不寫回遞減（duration ≥ 2 的 round_end 狀態永不到期）→ 有改就寫回、補 duration 2 表格測試；命令列季末重置與開著的伺服器沒有跨程序保護 → 世界資料夾加伺服器持有的鎖檔／心跳，腳本偵測到就拒絕（`--force` 才放行），或 WorldStore 寫入一起拿同一把鎖；`enemy_only` 補入口：`granted_skill_problems`（grant_skill 不可給 enemy_only）、載入時檢查玩家方範本（傭兵、dev_starters、sim/builds、劇情技能）不得引用 enemy_only 技能、enemy_only 狀態檢查從文字比對改成載入驗證；世界資料夾檔名抽成單一版面模組（`log.jsonl`、`world.json`、`chars`、`league.json`、`archive` 等），重置的 `WORLD_FILES` 從那裡取；封存中斷重跑改成併入既有資料夾（同名檔 sha256 一致略過、不一致報錯），備份排除 `archive/`；`season_policy.py` `_NOTE` 說明更新 | 5F 全部 | 1.5 h | 否 |
 | 5F-R2 | 5F 審查整理②（結構）：`world/battle.py` 賽季 Boss 特例拆出 `prepare_season_boss_battle`（`encounter_map`、`enemy_level` 由呼叫端分流）；`season.yaml` 支援依季 ID 覆寫（沒寫的沿用預設）、季名改 YAML 模板（取代 `_zh_number`）、Bot 的 `s1` 特例鍵格式統一；`load_library` 順手拆（PLR0915） | 5F-R1 | 1.5 h | 否 |
+| 5A-ART6 | 四區換皮①：灰燼荒原（地形 7、物件 9）＋晶冠城邦（3 樣點綴，只在 `region` 明確是 `crystal_crown` 時畫）。美術 PM 2026-11-04 `docs/art/四區移植需求.md` 第 1～3、7 節（c9c5e650）；使用者原話（專案 PM 轉達）「四區換皮 先做吧」。規格第 43.1 節 | 5A-ART5 | 1 h | 只動 `client/` |
+| 5A-ART7 | 四區換皮②：魔導樞市＋霜潮海境（各地形 7、物件 9）。同上第 1、4、5、7 節；規格第 43.2 節 | 5A-ART6 | 1.5 h | 只動 `client/` |
 | 5F 後待辦 | **（玩法 PM 2026-11-03：優先）** 碎晶之主兩條離 19.7 原文最遠的近似換回原文：「回合結束全場傷害」（目前是 AI 自選的環形技「碎界脈動」，約 24% 回合）與「晶傀儡每 3 回合召喚」（目前只在進第 2 階段召喚一次 2 隻）；需要引擎新增「回合結束效果」與「定期召喚」欄位（資料化）。其他列後期：舊季循環賽重播頁、LLM 傳記（7.11）、盜賊區域配色、Bot 斜線指令在地化；戰場縮放版面（美術 PM 2026-11-03 觀察：800×600 預設「自動 62%」時一格約 23px、單位很小） | 5F 全部 | — | — |
 
 > 合計 25 段，約 33 小時 agent 工時。
@@ -3533,7 +3535,7 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
 - 玩家文字（角色名）一律當資料：放進公告前中和 Discord 提及（`@` 後插入零寬字元）、換行換空白、截長度。
 - `trpg.bot.announcer.Announcer(gateway, channel_id, source, state_path, *, schedule)`：`tick(now)`：
   - 今天（設定時區）已過 `hour` 點、且還沒貼過今天 → 貼今日公告，記下日期。Bot 在 6 點後才啟動也會補貼一次；同一天不重貼。
-  - 首殺紀錄裡還沒貼過的（依 `seq`）→ 每筆貼一則，記下貼過哪些（`<kind>:<target>`）。
+  - 首殺紀錄裡還沒貼過的（依 `seq`）→ 每筆貼一則，記下貼過哪些（`<季>:<kind>:<target>`，每一季都帶季；5F-R2 統一）。
   - 貼失敗（`send_channel` 回 `False`）就不記，下次 `tick` 重試。
   - 狀態檔 `<存檔資料夾>/bot/announce_state.json`（`trpg-announce/1`；只有 Bot 程序寫）。第一次建立時把現有首殺都當作已貼（不洗版）。
 - `DiscordGateway.send_channel(channel_id, text) -> bool`（新）；`FakeDiscordGateway` 記錄頻道貼文。
@@ -4369,7 +4371,7 @@ world_events:
 | 5F5a-1 | 裂界門 | 不放進荒原地點圖：賽季 Boss 照 5F-3 從城鎮挑戰（代決 5F3-1），避免多一條不受次數限制的路；19.3「餘燼集－裂界門」連線也不畫 |
 | 5F5a-2 | 熔心坑的開放 | 世界事件 #2 成功時立刻開放；失敗時事件結束（第 8 天 6 點）才開放 |
 | 5F5a-3 | 「失守的村落商店關閉到季末」 | 村落沒有商店（8.26.1 只規定小鎮），沒有東西可關；全服只記守住次數，也分不出哪一村失守 |
-| 5F5a-4 | 守點戰 | 三村落的移動遇敵一律是守點（地圖支援時），不只在事件期間 |
+| 5F5a-4 | 守點戰 | 三村落的移動遇敵一律是守點（地圖支援時），不只在事件期間。**Phase 6 起改成「在村落地圖上碰到敵人就是守點戰」（#120，21.9 第 20 條；見 `Phase6計畫.md` 6D-2）** |
 | 5F5a-5 | 「每攔下 1 批 −1、最多 −3」 | 線頭不會重複，所以「批」用兩個來源近似：主線第 2 步攔截成功（劇情旗標，永久）−1、骨架 13 的線頭（有效期間）−1；上下限 −3～+1 照設計寫進資料 |
 | 5F5a-6 | 護甲只在第 1 階段 | 引擎的階段不能改護甲，整場都套；殼的「冷卻」用狀態「熔殼」被水冰移除近似（移除後不會長回來） |
 | 5F5a-7 | 引擎做不到的熔岩獸機制 | 站在火上回血、潮濕時不能回血、火地每回合擴散、隨機 3 格、熔心爆臂長 3、熔流潰堤直線 6 格：用火抗、延遲段環形、第 3 階段一次放多處火地、臂長 2 近似 |
@@ -4409,7 +4411,7 @@ world_events:
 | 編年史（循環賽最終排名） | `world/chronicle/league.json` | 紀念類 | 不動 |
 | 編年史（季末紀錄，新） | `world/chronicle/seasons.json`（`trpg-chronicle-seasons/1`） | 紀念類 | 本段新增：每季一筆（季名、開始、重置時間、上季角色、首位發現的配方） |
 | 地點留言 `LocationNote` | `world/notes.json` | 數值類（玩法 PM 代決） | 刪掉 |
-| Bot 公告狀態 | `bot/announce_state.json` | 不在政策表（Bot 自己的進度） | 不動；「貼過的首殺」鍵加上賽季（`s1` 以外的季是 `<季>:<kind>:<target>`，舊鍵不變），新一季同一種精英的首殺照樣會貼 |
+| Bot 公告狀態 | `bot/announce_state.json` | 不在政策表（Bot 自己的進度） | 不動；「貼過的首殺」鍵一律是 `<季>:<kind>:<target>`（含第一季；舊狀態檔的 `<kind>:<target>` 讀入時換成 `s1:<kind>:<target>`、算貼過，5F-R2 統一），新一季同一種精英的首殺照樣會貼 |
 | 一輪（roguelite）存檔 | `saves/run-*.json` | 不在政策表（不是大世界） | 不動 |
 | 記憶體裡的東西 | `WorldStore` 的快取、進行中的大世界戰鬥、三選一預先計算、循環賽快取 | — | API 重置後全部清掉、重讀；循環賽背景執行中時拒絕重置 |
 | 印記收藏、帳號稱號 | — | 紀念類 | 目前沒有存檔欄位（5F-3b 的帳號稱號若加在 `AccountRecord` 上，照紀念類不動） |
@@ -4564,6 +4566,32 @@ doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
 | ART-6 | 霧鎖真人的雙手 | 主手拂塵（`main_kind: whisk`）、副手長劍（副手格加認 `sword`） |
 | ART-7 | 道童杖頭綠光 | 杖頭光色沿用現有畫法（沒有新增欄位） |
 
-## 43. 之後各段規格
+## 43. 5A-ART6／ART7 詳細規格：其他四區換皮
 
-（5B-5 驗收後補上之後各段。）
+> 給實作 agent。**只動 `client/`**：`client/src/render/`（新 `ashenTerrain.ts`／`ashenObjects.ts`、`crystalTerrain.ts`／`crystalObjects.ts`，ART7 再加 `arcaneTerrain.ts`／`arcaneObjects.ts`、`frostTerrain.ts`／`frostObjects.ts`；`terrainArt.ts`、`objectArt.ts` 的 `REGION_TERRAIN_DRAW`／`REGION_OBJECT_DRAW` 各加一列）、`client/src/dev/regionGallery.ts`、對應的前端測試。`src/`、`content/` 一行不動（`reskin()` 已經會把大世界戰鬥的地圖換成遭遇所在區）。
+> 依據：第 1 節 5A-ART6／ART7 列；`docs/art/四區移植需求.md`（全文，色票、每格外觀與「必須保留」為主規格）、`docs/art/sample/regions4.js`（畫法與參數，可直接移植）、`docs/art/regions4.png`；寫法比照雲嶺（`cloudRidgeTerrain.ts`、`cloudRidgeObjects.ts`、3-37b）。完成報告：`Phase5A-ART6報告.md`、`Phase5A-ART7報告.md`。
+
+### 43.0 共同規則
+
+1. 每區一張地形表、一張物件表，ID 與功能不變；查不到的 ID 照現在的 `pickThemed` 退回預設畫法。
+2. 「必須保留」欄全部照做（牆比單位高、擋視線物畫到格頂、半掩護約 0.3 T、可燃看得出材質、油桶共用黃色三角危險記號、深淵北緣崖線、岩漿紅橘、冰窟深色水）。矮牆一律 `drawLowWall` 加各區 `LowWallPalette`，`extra` 不超過矮牆頂 6 單位。
+3. 裝飾光（裂縫熔岩光、晶光點、晶能線）亮度低於技能特效、導電提示、岩漿；位置用格子座標雜湊決定（沿用 `artRandom.ts`），同一張圖最多約 1/3 的格子有。不用 `Math.random`。
+4. 不換皮的照舊：所有表面（含熔心坑冷卻井的水）、技能產生的物件、圖示、元素色、稀有度外框；致命標記、可燃記號、受損裂痕由 objectArt／terrainArt 統一疊加。
+5. 不加區域裝飾層（薄霧、灰燼粒子、潮汐）。
+6. 快取鍵已含 region，不用改；`region` 是空字串或沒有時，畫面與現在完全相同（加測試鎖住：預設表的輸出不受新表影響）。
+7. 測試比照 `regionArt.test.ts`：每區 7 種地形、9 種物件都查得到畫法；空 `region` 走預設；`crystal_crown` 以外的 ID 退回預設。
+
+### 43.1 5A-ART6：灰燼荒原＋晶冠城邦
+
+- 灰燼：需求第 2 節全部 16 格。裂谷底部紅光透明度 ≤ 0.3 且只在格子下半；裂縫光 1.4 線寬、模糊 5，先畫 3 寬黑縫再疊；岩漿整格亮橘加 2～3 片黑色結殼。
+- 晶冠：需求第 3 節的 `stone`、`wall`、`chasm`、`stone_pillar` 4 格，其他退回預設。晶柱外光比頭目外光淡、不閃動，推倒後照預設。**法陣地板不做**。
+- 區域畫廊加灰燼、晶冠各一個場景（7 地形＋9 物件都要出現；灰燼要有裂谷與岩漿並排）。
+- 實戰截圖（附在報告）：灰燼荒原的焦土外圍（`open_plain`）、枯木林（`dark_forest`）、岩漿渡橋（`lava_crossing`）、熔心坑（`molten_heart_pit`，冷卻井是藍色的水）各一張。用自己 worktree 的伺服器、暫存存檔資料夾（不碰 `saves/`），埠避開 8000、8001、8010；開發模式的捷徑可以用。真的到不了某個地點時，用區域畫廊擺同一張地圖加 `region: ashen_waste`，並在報告寫明。
+- 交件：`ruff`／`mypy` 不用跑（沒動 Python）；跑 `corepack pnpm -C client exec vitest run`（相關檔）、`tsc`／`pnpm build`，前端快照有變時說明差異。
+
+### 43.2 5A-ART7：魔導樞市＋霜潮海境
+
+- 樞市：需求第 4 節 16 格。晶能線約 1/3 格、2 寬、模糊 6，比導電提示暗；冷卻槽 `#2a7a9a` 加黃銅邊；沙包矮牆的欄杆是細線，不能看起來變高。
+- 霜潮：需求第 5 節 16 格。物件與牆一律 2px 深色外框；`thin_ice` 同預設。
+- 兩區還沒有內容：只用區域畫廊驗收（各一個場景，7 地形＋9 物件）。不做實戰截圖。
+- 交件同 43.1。

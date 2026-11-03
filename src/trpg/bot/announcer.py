@@ -4,8 +4,9 @@
   排程不進引擎（守則 1）。
 - 今天（設定時區）已過 ``hour`` 點、且還沒貼過今天 → 貼今日公告。Bot 晚啟動也會補貼當天一次，不補
   前幾天（代決 5E3-7）。
-- 首殺紀錄裡還沒貼過的（依日誌序號；以 ``<kind>:<target>`` 記貼過哪些，季末清掉世界後照樣能貼新的）
-  → 每筆貼一則。
+- 首殺紀錄裡還沒貼過的（依日誌序號；以 ``<季>:<kind>:<target>`` 記貼過哪些，季末清掉世界後照樣能貼
+  新的）→ 每筆貼一則。5F-R2 起每一季（含第一季）都用同一種鍵；舊狀態檔的第一季鍵 ``<kind>:<target>``
+  讀入時換成 ``s1:<kind>:<target>``，照樣算貼過、不重複貼。
 - 貼失敗（``send_channel`` 回 ``False``）就不記，下次 ``tick`` 重試。
 - 狀態檔 ``<存檔資料夾>/bot/announce_state.json``（``trpg-announce/1``；只有 Bot 程序寫）。第一次
   建立時把現有首殺都當作已貼（不洗版）。
@@ -20,7 +21,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Final, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from trpg.bot.config import AnnounceSettings, BotConfigError
 from trpg.bot.gateway import DiscordGateway
@@ -34,11 +35,14 @@ __all__ = [
     "daily_due",
     "kill_key",
     "read_state",
+    "upgrade_key",
 ]
 
 ANNOUNCE_FORMAT: Final = "trpg-announce/1"
 _FIRST_SEASON: Final = FirstKill.model_fields["season_id"].default
-"""第一季的 ID（首殺紀錄舊檔的預設；bot 只直接匯入 server 與 shared）。"""
+"""第一季的 ID（首殺紀錄舊檔的預設、舊狀態檔的鍵；bot 只直接匯入 server 與 shared）。"""
+_LEGACY_KEY_PARTS: Final = 2
+"""舊（5F-R2 前）第一季的鍵 ``<kind>:<target>`` 的段數；新的鍵是 3 段。"""
 
 
 class AnnouncementFeed(Protocol):
@@ -60,7 +64,12 @@ class AnnounceState(BaseModel):
     last_daily: str | None = None
     """最後貼過今日公告的日期（設定時區，YYYY-MM-DD）。"""
     posted_kills: tuple[str, ...] = ()
-    """貼過的首殺（``<kind>:<target>``，排序）。"""
+    """貼過的首殺（``<季>:<kind>:<target>``，排序；舊的第一季鍵讀入時補上季，5F-R2）。"""
+
+    @field_validator("posted_kills", mode="after")
+    @classmethod
+    def _upgrade_keys(cls, keys: tuple[str, ...]) -> tuple[str, ...]:
+        return tuple(sorted({upgrade_key(k) for k in keys}))
 
 
 def daily_due(now: int, settings: AnnounceSettings, last_daily: str | None) -> str | None:
@@ -73,11 +82,16 @@ def daily_due(now: int, settings: AnnounceSettings, last_daily: str | None) -> s
 
 
 def kill_key(kill: FirstKill) -> str:
-    """貼過的首殺的鍵：第一季 ``<kind>:<target>``（舊狀態檔照用）；之後的季前面加賽季
-    ``<季>:<kind>:<target>``（5F-5：季末重置後，新一季同一種精英的首殺照樣會貼）。"""
-    if kill.season_id == _FIRST_SEASON:
-        return f"{kill.kind}:{kill.target}"
+    """貼過的首殺的鍵：``<季>:<kind>:<target>``（5F-5：季末重置後，新一季同一種精英的首殺照樣會貼；
+    5F-R2 起第一季也一樣）。"""
     return f"{kill.season_id}:{kill.kind}:{kill.target}"
+
+
+def upgrade_key(key: str) -> str:
+    """舊狀態檔的第一季鍵 ``<kind>:<target>`` → ``s1:<kind>:<target>``；新的鍵原樣（5F-R2）。"""
+    if len(key.split(":")) == _LEGACY_KEY_PARTS:
+        return f"{_FIRST_SEASON}:{key}"
+    return key
 
 
 def _write(path: Path, state: AnnounceState) -> None:

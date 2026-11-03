@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from trpg.content.library import ContentLibrary
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import InsightGainedEvent, WorldEvent
+from trpg.world.layout import FIRST_KILLS_FILE
 from trpg.world.save import write_atomic
 from trpg.world.season import FIRST_SEASON_ID
 from trpg.world.state import CharacterState
@@ -36,7 +37,6 @@ __all__ = [
 ]
 
 FIRST_KILLS_FORMAT: Final = "trpg-firstkills/1"
-FIRST_KILLS_FILE: Final = "first_kills.json"
 ELITE_SOURCE: Final = "elite:"
 
 

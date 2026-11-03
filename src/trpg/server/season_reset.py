@@ -29,10 +29,9 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
-from trpg.content.world_season import ChronicleFact, ChronicleTemplates
+from trpg.content.world_season import ChronicleFact, ChronicleTemplates, SeasonNaming
 from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
-    CHRONICLE_DIR,
     ChronicleHero,
     LeagueChronicle,
     LeagueChronicleRank,
@@ -43,13 +42,11 @@ from trpg.server.chronicle import (
     SeasonChronicleEntry,
     SeasonChronicleStore,
 )
-from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, elite_kind_name, load_first_kills
-from trpg.server.league import LEAGUE_DIR, LeagueMatch, LeagueRecord
-from trpg.server.notes import NOTES_FILE, LocationNote, LocationNoteStore
-from trpg.server.season_archive import ARCHIVE_DIR, archive_season
+from trpg.server.first_kills import FirstKill, elite_kind_name, load_first_kills
+from trpg.server.league import LeagueMatch, LeagueRecord
+from trpg.server.notes import LocationNote, LocationNoteStore
+from trpg.server.season_archive import SeasonArchiveError, archive_season
 from trpg.server.season_boss_board import (
-    BOSS_BOARD_FILE,
-    FIRST_KILL_DIR,
     BossBoardEntry,
     load_boss_board,
 )
@@ -61,6 +58,23 @@ from trpg.server.season_policy import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.world.calendar import season_status
+from trpg.world.layout import (
+    ARCHIVE_DIR,
+    BOSS_BOARD_FILE,
+    CHARS_DIR,
+    CHRONICLE_DIR,
+    FIRST_KILL_DIR,
+    FIRST_KILLS_FILE,
+    LEAGUE_ARCHIVE_DIR,
+    LEAGUE_DIR,
+    LEAGUE_FILE,
+    LEAGUE_HISTORY_DIR,
+    LOG_FILE,
+    NOTES_FILE,
+    SERVER_LOCK_FILE,
+    WORLD_FILE,
+    world_dir_of,
+)
 from trpg.world.loot import loot_rules
 from trpg.world.save import dumps_world, loads_char, loads_world, write_atomic
 from trpg.world.season_boss import boss_def
@@ -88,11 +102,7 @@ __all__ = [
     "season_reset",
 ]
 
-LEAGUE_HISTORY_DIR: Final = "league_history"
 BACKUP_DIR_NAME: Final = "saves-backups"
-CHARS_DIR: Final = "chars"
-WORLD_FILE: Final = "world.json"
-LOG_FILE: Final = "log.jsonl"
 _SEASON_ID: Final = re.compile(r"^s([0-9]+)$")
 _ID_PATTERN: Final = re.compile(r"^[a-z][a-z0-9_]*$")
 MASK64: Final = (1 << 64) - 1
@@ -139,6 +149,7 @@ WORLD_FILES: Final[Mapping[str, str]] = {
     FIRST_KILL_DIR: "archive",
     CHRONICLE_DIR: "keep",
     LEAGUE_HISTORY_DIR: "keep",  # 5F-5 的舊位置（5F-5c 起改搬進封存）
+    SERVER_LOCK_FILE: "keep",  # 5F-R1：遊戲伺服器的心跳檔（伺服器開著時才有；重置不動）
 }
 """世界資料夾裡認得的檔案與資料夾。不認得的照保守做法保留，列在報告裡。"""
 
@@ -180,26 +191,13 @@ class SeasonResetReport(BaseModel):
 
 # -- 小工具 -------------------------------------------------------------------
 
-_DIGITS: Final = "零一二三四五六七八九"
 
-
-_TEN: Final = 10
-
-
-def _zh_number(n: int) -> str:
-    if n < _TEN:
-        return _DIGITS[n]
-    if n < _TEN * _TEN:
-        tens, ones = divmod(n, _TEN)
-        head = "" if tens == 1 else _DIGITS[tens]
-        return head + "十" + (_DIGITS[ones] if ones else "")
-    return str(n)
-
-
-def season_name_zh(season_id: str) -> str:
-    """季名：``s1`` → 「第一季」；不是 ``s<N>`` 的 ID 照原樣（「賽季 xxx」）。"""
-    found = _SEASON_ID.match(season_id)
-    return f"第{_zh_number(int(found.group(1)))}季" if found else f"賽季 {season_id}"
+def season_name_zh(season_id: str, library: ContentLibrary | None = None) -> str:
+    """季名（5F-R2：模板在 ``world/season.yaml`` 的 ``naming``，某一季可在 ``seasons.<季 ID>`` 寫
+    ``name_zh``）：``s1`` → 「第一季」；不是 ``s<N>`` 的 ID 照 ``fallback``（「賽季 xxx」）。
+    沒有內容庫或沒有賽季資料時用 :class:`~trpg.content.world_season.SeasonNaming` 的預設模板。"""
+    base = None if library is None else (library.season_base or library).world_season
+    return SeasonNaming().name_of(season_id) if base is None else base.name_of(season_id)
 
 
 def next_season_id(season_id: str) -> str:
@@ -316,11 +314,9 @@ def _fact(rule: ChronicleFact, names: Sequence[str], joiner: str) -> str | None:
     return rule.text.format(items=joiner.join(rule.item.format(name=n) for n in names))
 
 
-def _chronicle_text(
-    templates: ChronicleTemplates | None, season_id: str, hero: ChronicleHero
-) -> str:
-    """編年史的一行（模板在 ``world/season.yaml`` 的 ``chronicle``；沒有模板＝只寫季名）。"""
-    season = season_name_zh(season_id)
+def _chronicle_text(templates: ChronicleTemplates | None, season: str, hero: ChronicleHero) -> str:
+    """編年史的一行（模板在 ``world/season.yaml`` 的 ``chronicle``；沒有模板＝只寫季名
+    ``season``）。"""
     if templates is None:
         return season
     t = templates
@@ -379,9 +375,10 @@ def chronicle_hero(
         league_rank=facts.league_ranks.get(cid),
         text_zh="",
     )
-    season = library.world_season
+    season = library.for_season(season_id).world_season  # 這一季的覆寫（5F-R2）
     templates = None if season is None else season.chronicle
-    return hero.model_copy(update={"text_zh": _chronicle_text(templates, season_id, hero)})
+    text = _chronicle_text(templates, season_name_zh(season_id, library), hero)
+    return hero.model_copy(update={"text_zh": text})
 
 
 CARRIED_HANDLERS: Final[Mapping[tuple[str, str], Callable[..., object]]] = {
@@ -427,13 +424,13 @@ def _read_current(world_dir: Path) -> _Current:
     )
     log = world_dir / LOG_FILE
     lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
-    league_path = world_dir / LEAGUE_DIR / "league.json"
+    league_path = world_dir / LEAGUE_DIR / LEAGUE_FILE
     league = (
         LeagueRecord.model_validate_json(league_path.read_text(encoding="utf-8"))
         if league_path.is_file()
         else None
     )
-    archive = world_dir / LEAGUE_DIR / "archive"
+    archive = world_dir / LEAGUE_DIR / LEAGUE_ARCHIVE_DIR
     boss_dir = world_dir / FIRST_KILL_DIR
     unknown = tuple(sorted(p.name for p in world_dir.iterdir() if p.name not in WORLD_FILES))
     return _Current(
@@ -587,7 +584,14 @@ def _backup(save_dir: Path, accounts_dir: Path | None, root: Path, now: int, old
         target = target_root / f"{base}-{n}"
         n += 1
     ignore = shutil.ignore_patterns("*.lock")  # 鎖檔被持有時 Windows 讀不了；鎖檔本身沒有資料
-    shutil.copytree(save, target, ignore=ignore)
+
+    def ignore_save(directory: str, names: list[str]) -> set[str]:
+        skipped = set(ignore(directory, names))
+        if Path(directory) == save and ARCHIVE_DIR in names:
+            skipped.add(ARCHIVE_DIR)  # 5F-R1：存檔資料夾的 archive/ 本身就是唯讀封存，不再備份
+        return skipped
+
+    shutil.copytree(save, target, ignore=ignore_save)
     if accounts_dir is not None and accounts_dir.is_dir():
         accounts = accounts_dir.resolve()
         if save not in accounts.parents:
@@ -601,8 +605,8 @@ def _clear_league_entries(world_dir: Path) -> None:
     league = world_dir / LEAGUE_DIR
     if not league.is_dir():
         return
-    records = [league / "league.json"]
-    archive = league / "archive"
+    records = [league / LEAGUE_FILE]
+    archive = league / LEAGUE_ARCHIVE_DIR
     if archive.is_dir():
         records += sorted(archive.glob("league-*.json"))
     for path in records:
@@ -639,7 +643,9 @@ def _plan(
     new_id = _new_season_id(current, season_id)
     problems = _soft_problems(library, current, now)
     if problems and not force:
-        raise SeasonResetError("不能重置：" + "；".join(problems) + "（確定要重置請加 force）")
+        raise SeasonResetError(
+            "不能重置：" + "；".join(problems) + "（確定要重置請加 force；腳本是 --force-season）"
+        )
     if seed is not None and not 0 <= seed <= MASK64:
         raise SeasonResetError("種子要在 0～2^64-1")
     old = current.world.season_id
@@ -654,7 +660,7 @@ def _plan(
     )
     entry = SeasonChronicleEntry(
         season_id=old,
-        name_zh=season_name_zh(old),
+        name_zh=season_name_zh(old, library),
         started_at=current.world.season_start,
         reset_at=now,
         next_season_id=new_id,
@@ -699,7 +705,7 @@ def season_reset(
     :class:`SeasonResetError`。"""
     if start < 0:
         raise SeasonResetError("開賽時間不合法")
-    world = world_dir if world_dir is not None else save_dir / "world"
+    world = world_dir if world_dir is not None else world_dir_of(save_dir)
     options = _Options(start, now, season_id, seed, force, dry_run, backup_root, extra_cleared)
     if accounts is None:
         return _reset(library, save_dir, world, None, [], options=options)
@@ -717,6 +723,7 @@ def _reset(
     options: _Options,
 ) -> SeasonResetReport:
     current = _read_current(world_dir)
+    library = library.for_season(current.world.season_id)  # 舊季的 season.yaml 覆寫（5F-R2）
     plan = _plan(
         library,
         current,
@@ -736,7 +743,10 @@ def _reset(
         backup = _backup(save_dir, accounts_dir, root, options.now, old)
         SeasonChronicleStore(world_dir).add(plan.entry)
         _clear_league_entries(world_dir)
-        archived = archive_season(save_dir, world_dir, old, options.now)
+        try:
+            archived = archive_season(save_dir, world_dir, old, options.now)
+        except SeasonArchiveError as exc:
+            raise SeasonResetError(str(exc)) from exc
         for name in (CHARS_DIR, NOTES_FILE):
             _remove(world_dir / name)
         fresh = WorldState(season_id=plan.new_id, season_seed=plan.seed, season_start=options.start)
@@ -745,7 +755,7 @@ def _reset(
         dry_run=options.dry_run,
         old_season=old,
         new_season=plan.new_id,
-        new_season_name_zh=season_name_zh(plan.new_id),
+        new_season_name_zh=season_name_zh(plan.new_id, library),
         season_start=options.start,
         cleared=cleared,
         kept=kept,
