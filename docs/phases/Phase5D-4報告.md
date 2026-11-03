@@ -73,10 +73,17 @@
 | `tests/api/test_world_crafting_api.py`（加） | 背包的裝備卡與 9 欄穿戴中；重骰後配方表只剩新碼；事件句子沒有 `{` |
 | `tests/api/test_world_story.py`（加） | 保底旁白 `authored`、降級模板 `fallback` |
 | `tests/content/test_equipment_content.py`、`tests/api/test_gear_api.py`（改） | 詞條 77 → 78 |
+| `tests/world/test_economy_battle.py`（改） | 「背包不動」改成只比對腰包道具（掉落會進背包） |
 | `client/src/world/bagScreen.test.ts`（新） | `bagView` 純函式、左欄切換、背包畫面（9 欄、裝備卡、換上、改戴戒指、背包滿在最上方、停用）、右側摘要、商店畫面、道具欄分組、事件卡只在 fallback 標模板 |
 | `client/src/world/crafting.test.ts`（改、加） | 四個分頁、配方碼輸入與配方表、強化與附魔台分頁、沒有鐵匠時的分頁、配方碼正規化 |
 | `client/src/world/economy.test.ts`、`lootChoice.test.ts`（改） | 型別補新欄位 |
 
-## 7. 檢查
+## 7. 檢查（最後一次合併 main〔含 5E-2b〕之後）
 
-（見下方「最後一次合併 main 之後」。）
+- `ruff check .`、`ruff format --check .`、`mypy`（1155 檔）、`lint-imports`（11 契約）通過。
+- `tests/world tests/api tests/content -n 8`：3050 通過、1 失敗 → `tests/world/test_economy_battle.py::test_used_items_leave_pouch` 斷言「背包不動」，新詞條讓傭兵的系統裝備候選變了，同一個種子的戰鬥改成打贏有掉落（用 main 的 `affixes.yaml` 跑會過）。測試的本意是「用掉的道具不從背包扣」，改成只比對道具那幾種；改完 6 個通過。
+- `tests/engine tests/skillgen -k "gear or affix or keyword or item or equip or loot or resonance"`：527 通過。
+- vitest 135 檔 1265 通過；`pnpm build`（`tsc --noEmit` ＋ vite）通過。
+- swamp 種子 7 重播：88 個動作、313 個事件，最終狀態一致。
+- OpenAPI 重產（`scripts/export_openapi.py` → `pnpm gen:api`）；合併 main 後再產一次沒有差異。
+- 沒有新增 `# noqa`；沒跑全量與大型模擬。
