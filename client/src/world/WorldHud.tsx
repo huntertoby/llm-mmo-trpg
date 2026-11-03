@@ -5,6 +5,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { Hint } from "../ui/Hint";
+import type { TileRect } from "./camera";
 import { HudIcon, HudPortrait, type HudIconName } from "./HudIcons";
 import {
   BAR_BTN,
@@ -200,7 +201,7 @@ function IconButton({
   );
 }
 
-function MiniMapView({ map }: { map: MiniMap }) {
+function MiniMapView({ map, viewTiles }: { map: MiniMap; viewTiles?: TileRect | null }) {
   const arrow = (dir: string) => (dir === "up" ? "0,-0.9 0.8,0.5 -0.8,0.5" : dir === "down" ? "0,0.9 0.8,-0.5 -0.8,-0.5" : dir === "left" ? "-0.9,0 0.5,0.8 0.5,-0.8" : "0.9,0 -0.5,0.8 -0.5,-0.8");
   return (
     <svg className="world-hud-minimap-svg" viewBox={`-0.5 -0.5 ${map.cols + 1} ${map.rows + 1}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
@@ -213,6 +214,16 @@ function MiniMapView({ map }: { map: MiniMap }) {
       {map.dots.map((d, i) => (
         <circle key={`d${i}`} cx={d.x + 0.5} cy={d.y + 0.5} r={d.kind === "me" ? 0.75 : 0.55} className={`mini-${d.kind}`} data-mini={d.kind} />
       ))}
+      {viewTiles != null && viewTiles.width > 0 && viewTiles.height > 0 && (
+        <rect
+          className="mini-view"
+          x={viewTiles.x}
+          y={viewTiles.y}
+          width={viewTiles.width}
+          height={viewTiles.height}
+          data-mini="view"
+        />
+      )}
     </svg>
   );
 }
@@ -220,11 +231,13 @@ function MiniMapView({ map }: { map: MiniMap }) {
 function minimapHint(map: MiniMap): string {
   const exits = map.exits.map((e) => e.label).join("、");
   const npcs = map.dots.filter((d) => d.kind === "npc").length;
-  return `小地圖：藍＝你、黃＝NPC（${npcs}）、橘＝休息點、青＝傳送石、箭頭＝出口${exits !== "" ? `（往 ${exits}）` : ""}`;
+  return `小地圖：藍＝你、黃＝NPC（${npcs}）、橘＝休息點、青＝傳送石、箭頭＝出口${exits !== "" ? `（往 ${exits}）` : ""}、白框＝畫面看得到的範圍`;
 }
 
 export interface WorldHudProps {
   view: WorldView;
+  /** 鏡頭目前看得到的格子範圍（6B-6：小地圖上畫白框）。 */
+  viewTiles?: TileRect | null;
   layout: HudLayout;
   faded: readonly HudBlock[];
   toasts: readonly LiveToast[];
@@ -293,7 +306,7 @@ export function WorldHud(props: WorldHudProps) {
         {map !== null && (
           <Hint text={minimapHint(map)}>
             <div className="world-hud-minimap" tabIndex={0} data-hud="minimap">
-              <MiniMapView map={map} />
+              <MiniMapView map={map} viewTiles={props.viewTiles} />
             </div>
           </Hint>
         )}
