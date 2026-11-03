@@ -53,12 +53,13 @@ class FieldTileView(_ApiModel):
     """初始表面（``water``、``fire``…；沒有＝``none``）。"""
     walkable: bool = True
     """角色站得上去（6B-3 前端算路徑用；同 ``field_grid``：地形、物件、NPC、隱藏門）。靜態地形
-    （:class:`FieldTilesView`，6C-R3）把「發現才出現」的隱藏門一律當成還沒發現（不可站），這個角色
+    （:class:`FieldTilesView`，6C-R3）把「發現才出現」的隱藏門一律畫成牆（不可站，6D-R1），這個角色
     已發現的放在 ``FieldView.open_cells``。"""
 
 
 class FieldTilesView(_ApiModel):
-    """一張實地地圖的靜態地形（6C-R3；``GET /api/world/fields/{map_id}``）：只看內容，前端依
+    """一張實地地圖的靜態地形（6C-R3；``GET /api/world/characters/{id}/fields/{map_id}``）：只看
+    內容，前端依
     ``hash`` 快取。"""
 
     map_id: str
@@ -272,11 +273,13 @@ class FieldView(_ApiModel):
     height: int
     tiles: tuple[FieldTileView, ...] = ()
     """逐列（y 由上到下、x 由左到右）。6C-R3 起世界畫面不帶（空），前端用 ``tiles_hash`` 向
-    ``GET /api/world/fields/{map_id}?h=…`` 取靜態地形並快取，再套上 ``open_cells``。"""
+    ``GET /api/world/characters/{id}/fields/{map_id}?h=…`` 取靜態地形並快取，再套上
+    ``open_cells``。"""
     tiles_hash: str = ""
     """靜態地形的雜湊（:class:`FieldTilesView` 的 ``hash``；6C-R3）。"""
-    open_cells: tuple[tuple[int, int], ...] = ()
-    """靜態地形標成不可站、但這個角色站得上去的格子（已發現的隱藏門；6C-R3）。"""
+    open_cells: tuple[FieldTileView, ...] = ()
+    """這個角色看到的地形和靜態地形不同的格子（已發現的隱藏門：靜態地形畫成牆，這裡是真地形；6C-R3，
+    6D-R1 改成整格），前端蓋在靜態地形上。"""
     objects: tuple[FieldObjectView, ...]
     exits: tuple[FieldExitView, ...]
     doors: tuple[FieldDoorView, ...]

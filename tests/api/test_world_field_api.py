@@ -54,7 +54,9 @@ def test_view_has_field(client: TestClient, field_library: ContentLibrary) -> No
     assert field["name_zh"] == found.name_zh
     assert (field["width"], field["height"]) == (found.width, found.height)
     assert field["tiles"] == []  # 6C-R3：地形另外取，依雜湊快取
-    static = _ok(client.get(f"/api/world/fields/mist_ferry?h={field['tiles_hash']}"))
+    cid = view["character"]["character_id"]
+    url = f"/api/world/characters/{cid}/fields/mist_ferry?h={field['tiles_hash']}"
+    static = _ok(client.get(url))
     assert static["hash"] == field["tiles_hash"]
     assert len(static["tiles"]) == found.width * found.height
     grid = found.grid()

@@ -29,6 +29,9 @@
   ``GET /api/world/legacy``（自己帳號上季的角色）、``POST /api/world/season/reset``（管理者的季末
   重置，預設 dry-run）；建立角色加 ``legacy_character``（沿用上季角色的名字與外觀）。
 
+- 6D-R1：``GET …/characters/{id}/fields/{map_id}``（實地地圖的靜態地形；只給這個角色看得到的圖，
+  其他一律 404）；``GET …/characters/{id}?with_tiles=1`` 讓 ``field.tiles`` 直接帶地形。
+
 - 5F-5c：``POST /api/world/season/verify``（管理者；從舊季的唯讀封存重播查證首殺或循環賽場次）。
 
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
@@ -83,7 +86,7 @@ from trpg.api.sessions import InvalidRequestError
 from trpg.api.state import world_llm_of, world_of
 from trpg.api.world import WorldCharacterNotFoundError, WorldOutcome, WorldStore
 from trpg.api.world_field_schemas import FieldTilesView
-from trpg.api.world_field_view import field_tiles
+from trpg.api.world_field_view import field_tiles, visible_field_map
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
 from trpg.api.world_presenter import character_summary, event_lines, world_view
 from trpg.api.world_schemas import (
@@ -115,7 +118,9 @@ router = APIRouter(
 )
 
 
-def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
+def _view(
+    store: WorldStore, outcome: WorldOutcome, region: str, *, inline_tiles: bool = False
+) -> WorldView:
     battle = outcome.battle
     trigger = outcome.char.pending_event
     narrations = (
@@ -133,23 +138,34 @@ def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
         titles=store.titles_of_character,
         social=store.field_social(outcome.char.character_id),  # 6C-5 足跡與留言石碑
         prepare=store.prepared_battle,  # 6C-R3：遭遇面板的 prepare_battle 快取
-        inline_tiles=False,  # 6C-R3：靜態地形改由 GET /api/world/fields/{map_id} 取
+        # 6C-R3：靜態地形改由 GET …/characters/{id}/fields/{map_id} 取；前端取不到時用
+        # ?with_tiles=1 請伺服器直接帶（6D-R1）
+        inline_tiles=inline_tiles,
     )
 
 
-@router.get("/fields/{map_id}")
+@router.get("/characters/{character_id}/fields/{map_id}")
 def get_field_tiles(
+    character_id: str,
     map_id: str,
     request: Request,
     response: Response,
     h: Annotated[str | None, Query(max_length=64)] = None,
 ) -> FieldTilesView:
     """實地地圖的靜態地形（6C-R3）：只看內容。``h`` 等於目前的雜湊時允許瀏覽器快取（內容一樣
-    就一樣）；不同或省略照樣回傳目前的地形（前端以回傳的 ``hash`` 為準）。"""
+    就一樣）；不同或省略照樣回傳目前的地形（前端以回傳的 ``hash`` 為準）。
+
+    6D-R1：經角色走（擁有者檢查同其他 ``/characters/{id}`` 路由），只給這個角色看得到的圖
+    （:func:`~trpg.api.world_field_view.visible_field_map`）；看不到和不存在一樣 404、訊息相同。"""
     store = world_of(request)
+    with store.lock:
+        char = store.character(character_id)
+    missing = WorldCharacterNotFoundError(f"找不到實地地圖 {map_id}")
+    if visible_field_map(store.library, char, map_id) is None:
+        raise missing
     found = field_tiles(store.library, map_id)
     if found is None:
-        raise WorldCharacterNotFoundError(f"找不到實地地圖 {map_id}")
+        raise missing
     if h == found.hash:
         response.headers["Cache-Control"] = "private, max-age=86400, immutable"
     return found
@@ -198,11 +214,17 @@ def create_character(body: CreateWorldCharacterRequest, request: Request) -> Wor
 
 
 @router.get("/characters/{character_id}")
-def get_character(character_id: str, request: Request) -> WorldView:
+def get_character(
+    character_id: str,
+    request: Request,
+    with_tiles: Annotated[bool, Query()] = False,
+) -> WorldView:
+    """``with_tiles`` 為真時 ``field.tiles`` 直接帶這個角色看到的地形（6D-R1：前端另外取靜態地形
+    失敗時的退路）。"""
     store = world_of(request)
     with store.lock:
         region = store.character(character_id).region
-        return _view(store, store.sync(character_id), region)
+        return _view(store, store.sync(character_id), region, inline_tiles=with_tiles)
 
 
 @router.post("/characters/{character_id}/actions")
