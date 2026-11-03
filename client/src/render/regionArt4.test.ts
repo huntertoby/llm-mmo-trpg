@@ -200,7 +200,7 @@ describe("灰燼荒原換皮", () => {
     const base = tileCalls({ surface: "none" }).length;
     for (const surface of ["fire", "ice", "poison", "holy", "darkness", "smoke", "oil", "water"]) {
       const ref = tileCalls({ surface });
-      const refTail = ref.slice(base - 3);
+      const refTail = ref.slice(base); // 6A-4a 起不畫格線
       expect(tileCalls({ surface, ...ASH }).slice(-refTail.length), surface).toEqual(refTail);
     }
   });
@@ -267,4 +267,5 @@ describe("晶冠點綴（只在 region 明確是 crystal_crown 時）", () => {
   });
 });
 
-const DEFAULT_DIGEST = "383666b2";
+// 6A-4a：拿掉格線、表面改併塊畫法，預設輸出跟著變（刻意更新）
+const DEFAULT_DIGEST = "1837b83c";

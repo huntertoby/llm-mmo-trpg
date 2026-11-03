@@ -6,6 +6,7 @@ import { terrainStyle } from "../battle/glossary";
 import { hpStageOf } from "./fieldFx";
 import type { ObjectArtSpec } from "./objectArt";
 import { DEFAULT_THEME, type ArtTheme } from "./regionArt";
+import type { Corners } from "./surfaceBlobs";
 import { hasTerrainArt, type Sides, type TileArtSpec } from "./terrainArt";
 
 function neighbor(model: DrawModel, t: { x: number; y: number }, dx: number, dy: number): TileDraw | undefined {
@@ -24,6 +25,13 @@ export function tileArtSpec(model: DrawModel, t: TileDraw): TileArtSpec {
   const differs = (nb: TileDraw | undefined): boolean => nb !== undefined && nb.terrain !== t.terrain;
   const same = (nb: TileDraw | undefined): boolean => nb !== undefined && nb.surface === t.surface && t.surface !== "none";
   const surfSame: Sides = { n: same(n), s: same(s), w: same(w), e: same(e) };
+  // 斜鄰（6A-4a 地表併塊的內凹角）：只有兩邊都是接縫的角才用得到
+  const surfDiag: Corners = {
+    nw: same(neighbor(model, t, -1, -1)),
+    ne: same(neighbor(model, t, 1, -1)),
+    se: same(neighbor(model, t, 1, 1)),
+    sw: same(neighbor(model, t, -1, 1)),
+  };
   return {
     ...theme,
     terrain: t.terrain,
@@ -32,6 +40,7 @@ export function tileArtSpec(model: DrawModel, t: TileDraw): TileArtSpec {
     height: t.height,
     surface: t.surface,
     surfSame,
+    surfDiag,
     lip: { n: differs(n), s: differs(s), w: differs(w), e: differs(e) },
     wallFace: t.wall && !(s !== undefined && s.wall),
     blocked: t.blocked,

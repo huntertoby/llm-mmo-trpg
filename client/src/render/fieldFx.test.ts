@@ -154,19 +154,19 @@ describe("擋視線表面的上層霧", () => {
 
 describe("陷阱踏板", () => {
   it("我方實線、敵方虛線加「!」；enter 與 delay 畫法不同；不認得的觸發方式與元素都能畫", () => {
-    const run = (mine: boolean, trigger: "enter" | "delay", color = fxColor(null)): { calls: string[]; dash: boolean } => {
+    const run = (mine: boolean, trigger: "enter" | "delay", color = fxColor(null)): { calls: string[]; dash: number } => {
       const { ctx, calls } = mockCtx();
-      let dash = false;
+      let dash = 0;
       const real = ctx.setLineDash.bind(ctx);
       ctx.setLineDash = (d: number[]) => {
-        if (d.length > 0) dash = true;
+        if (d.length > 0) dash += 1;
         real(d);
       };
       drawTrapPad(ctx, { mine, trigger, color });
       return { calls, dash };
     };
-    expect(run(true, "enter").dash).toBe(false);
-    expect(run(false, "enter").dash).toBe(true);
+    expect(run(true, "enter").dash).toBe(1); // 6A-4a：外圍淡紅虛線圈（我方、敵方都有）
+    expect(run(false, "enter").dash).toBe(2);
     expect(run(false, "enter").calls).toContain("strokeText");
     expect(run(true, "enter").calls).not.toContain("strokeText");
     expect(run(true, "enter").calls.length).not.toBe(run(true, "delay").calls.length);
