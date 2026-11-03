@@ -161,13 +161,13 @@ def test_all_eighteen_maps_are_drawn_and_pass(library: ContentLibrary) -> None:
     assert not [w for w in report.warnings if "建議範圍" in w]
 
 
-def test_only_the_ashen_waste_crossing_is_pending(library: ContentLibrary) -> None:
-    """6C-4 交件：雲嶺內沒有待補；只剩往灰燼荒原（6D-1）的那一項。"""
+def test_cloud_ridge_has_nothing_pending(library: ContentLibrary) -> None:
+    """6C-4 交件時雲嶺內沒有待補、只剩往灰燼荒原的那一項；6D-1 畫了灰渡口之後那一項也配對了
+    （配對本身在 ``test_ashen_fields.py``）。"""
     ours = [line for line in library.field_pending if f"→ {REGION}/" in line]
     assert ours == []
     cross = [line for line in library.field_pending if "ashen_ferry" in line]
-    assert len(cross) == 1
-    assert "→ ashen_waste/ash_ferry" in cross[0]
+    assert cross == []
 
 
 def test_every_edge_between_drawn_maps_is_a_mutual_pair(library: ContentLibrary) -> None:

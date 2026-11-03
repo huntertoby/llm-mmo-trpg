@@ -1,0 +1,133 @@
+# 焦油坑實地地圖（6D-1；玩法 PM 草稿第 11 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 營地 24×18，建議 7 級，傳送石（北部的分岔，在南側）：冒泡的焦油池（大片油表面），油加火。
+# 熔爐母獸在西南的巢（瓦礫）產卵，噴岩龜站在東北的岩台（石地高 1～2）上拋射。
+# 岩台下的滲水用水表面 2 格（區域題目「怕水」）。
+# 西南往冷卻井；東往熔岩洞窟（6D-2，待補）。
+# 隱藏：西北岩壁上被黑曜碎石堵住的窄縫是黑曜谷的入口（門 obsidian_valley_crack，hidden_until: reveal；
+# 黑曜谷在 6D-2，配對待補）。顯示條件（3 格內感知、線頭「老鐵知道黑曜谷在哪」、朋友的足跡）是
+# reveal 的事，地圖只畫窄縫的位置。
+# 敵人：池邊岩台駐守 tar_tortoises；母獸巢駐守 tar_brood（線頭「母獸的後代在擴散」到期後換成
+# brood_spread，是遭遇表 variants 的事）；南側小路巡邏 lizard_brood。
+# 事件點：母獸巢（furnace_brood）、開闊處（sandstorm）。
+id: tar_pits
+name_zh: 焦油坑
+region: ashen_waste
+location: tar_pits
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000111110000
+  000000000000000112210000
+  000000000000000112210000
+  000000000000000111110000
+  000000000000000111110000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  #####,,,,,,,,,,,,,,,,,,,
+  ##,##,,,,,,,,,,,,,,,,,,,
+  ##,,,,,,,,,,,,,,,,,,,,,,
+  ##,,,,,,,,,,,,,.....,,,,
+  ,,,,,,,,,,,,,,,.....,,,,
+  ,,,,,,,,,,,,,,,.....,,,,
+  ,,,,,,,,,,,,,,,.....,,,,
+  ,,,,,,,,,,,,,,,.....,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ........................
+  ........................
+  ........................
+legend:
+  ",": dirt
+  ".": stone
+  "#": wall
+objects:
+  - {at: [5, 12], kind: rubble}   # 母獸巢
+  - {at: [6, 12], kind: rubble}
+  - {at: [5, 13], kind: rubble}
+  - {at: [2, 4], kind: rubble}   # 黑曜碎石
+  - {at: [3, 3], kind: rubble}
+  - {at: [21, 2], kind: stone_pillar}   # 岩柱
+  - {at: [21, 12], kind: stone_pillar}
+surfaces:
+  - {at: [6, 4], surface: oil}   # 焦油池（油表面）
+  - {at: [7, 4], surface: oil}
+  - {at: [8, 4], surface: oil}
+  - {at: [9, 4], surface: oil}
+  - {at: [10, 4], surface: oil}
+  - {at: [11, 4], surface: oil}
+  - {at: [6, 5], surface: oil}
+  - {at: [7, 5], surface: oil}
+  - {at: [8, 5], surface: oil}
+  - {at: [9, 5], surface: oil}
+  - {at: [10, 5], surface: oil}
+  - {at: [11, 5], surface: oil}
+  - {at: [6, 6], surface: oil}
+  - {at: [7, 6], surface: oil}
+  - {at: [8, 6], surface: oil}
+  - {at: [9, 6], surface: oil}
+  - {at: [10, 6], surface: oil}
+  - {at: [11, 6], surface: oil}
+  - {at: [6, 7], surface: oil}
+  - {at: [7, 7], surface: oil}
+  - {at: [8, 7], surface: oil}
+  - {at: [9, 7], surface: oil}
+  - {at: [10, 7], surface: oil}
+  - {at: [11, 7], surface: oil}
+  - {at: [6, 8], surface: oil}
+  - {at: [7, 8], surface: oil}
+  - {at: [8, 8], surface: oil}
+  - {at: [9, 8], surface: oil}
+  - {at: [10, 8], surface: oil}
+  - {at: [11, 8], surface: oil}
+  - {at: [13, 11], surface: oil}
+  - {at: [14, 11], surface: oil}
+  - {at: [15, 11], surface: oil}
+  - {at: [16, 11], surface: oil}
+  - {at: [17, 11], surface: oil}
+  - {at: [18, 11], surface: oil}
+  - {at: [13, 12], surface: oil}
+  - {at: [14, 12], surface: oil}
+  - {at: [15, 12], surface: oil}
+  - {at: [16, 12], surface: oil}
+  - {at: [17, 12], surface: oil}
+  - {at: [18, 12], surface: oil}
+  - {at: [13, 13], surface: oil}
+  - {at: [14, 13], surface: oil}
+  - {at: [15, 13], surface: oil}
+  - {at: [16, 13], surface: oil}
+  - {at: [17, 13], surface: oil}
+  - {at: [18, 13], surface: oil}
+  - {at: [15, 8], surface: water}   # 岩台下的滲水
+  - {at: [16, 8], surface: water}
+entry: [5, 15]
+exits:
+  - {id: to_cooling_well, at: [[3, 17], [4, 17]], to: cooling_well, arrive: to_tar_pits}   # 西南：往冷卻井
+  - {id: to_lava_cave, at: [[23, 8], [23, 9]], to: lava_cave, arrive: to_tar_pits}   # 東：往熔岩洞窟
+doors:
+  - {id: obsidian_valley_crack, at: [2, 1], to: obsidian_valley, hidden_until: reveal}   # 西北岩壁上被黑曜碎石堵住的窄縫
+teleport_stones:
+  - {id: stone_tar_pits, at: [11, 15]}   # 南側
+spawns:
+  - {at: [17, 5], group: tar_tortoises}   # 池邊岩台（高 2）
+  - {at: [7, 13], group: tar_brood}   # 母獸巢
+  - {at: [6, 16], group: lizard_brood, patrol: [[6, 16], [20, 16]]}   # 南側小路巡邏
+event_spots:
+  - {at: [7, 11], id: furnace_brood}   # 母獸巢
+  - {at: [12, 10], id: sandstorm}   # 開闊處

@@ -1,0 +1,101 @@
+# 枯木林實地地圖（6D-1；玩法 PM 草稿第 5 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 營地 24×18，建議 5～6 級：燒焦的枯樹林，地面是灰燼地（草地），非常易燃；硫煙獸冒著黃煙。
+# 枯木叢用枯樹（dead_grove 待確認，草稿第 0 節：還沒進 objects.yaml 前用 dead_tree）、倒木；
+# 硫磺坑用毒霧表面。區域題目「怕水」（草稿第 0 節、待確認 5）：有戰鬥的圖至少一處水（快乾的溪，水表面 3 格）。
+# 南側一條林間小路（泥土）東西貫穿：西南往焦土外圍、東南往斷崖幫運輸道；東側小路上方是開闊處。
+# 敵人：林中駐守 deadwood_sulfur；林間小路巡邏 colossus_smoke。
+# 事件點：林間小路（ashen_deserter）、開闊處（sandstorm）、林緣（ashen_convoy）。
+id: deadwood_forest
+name_zh: 枯木林
+region: ashen_waste
+location: deadwood_forest
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+  ggggggggggggggggg,,,,,gg
+  ggggggggggggggggg,,,,,gg
+  ggggggggggggggggg,,,,,gg
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  gggggggggggggggggggggggg
+  gggggggggggggggggggggggg
+legend:
+  "g": grass
+  ",": dirt
+objects:
+  - {at: [3, 3], kind: dead_tree}   # 枯木叢（dead_grove 待使用者確認，先用枯樹：擋視線、可燃）
+  - {at: [4, 3], kind: dead_tree}
+  - {at: [3, 4], kind: dead_tree}
+  - {at: [8, 2], kind: dead_tree}
+  - {at: [9, 3], kind: dead_tree}
+  - {at: [14, 2], kind: dead_tree}
+  - {at: [15, 2], kind: dead_tree}
+  - {at: [15, 3], kind: dead_tree}
+  - {at: [19, 4], kind: dead_tree}
+  - {at: [20, 5], kind: dead_tree}
+  - {at: [5, 8], kind: dead_tree}
+  - {at: [6, 9], kind: dead_tree}
+  - {at: [11, 7], kind: dead_tree}
+  - {at: [12, 7], kind: dead_tree}
+  - {at: [2, 11], kind: dead_tree}
+  - {at: [9, 11], kind: dead_tree}
+  - {at: [14, 9], kind: dead_tree}
+  - {at: [22, 8], kind: dead_tree}
+  - {at: [1, 6], kind: dead_tree}
+  - {at: [17, 7], kind: dead_tree}
+  - {at: [4, 16], kind: dead_tree}
+  - {at: [10, 17], kind: dead_tree}
+  - {at: [16, 16], kind: dead_tree}
+  - {at: [20, 17], kind: dead_tree}
+  - {at: [9, 10], kind: fallen_log}   # 倒木
+  - {at: [13, 11], kind: fallen_log}
+  - {at: [21, 2], kind: fallen_log}
+surfaces:
+  - {at: [15, 5], surface: poison}   # 硫磺坑（毒霧）
+  - {at: [16, 5], surface: poison}
+  - {at: [15, 6], surface: poison}
+  - {at: [16, 6], surface: poison}
+  - {at: [6, 12], surface: water}   # 快乾的溪
+  - {at: [7, 12], surface: water}
+  - {at: [8, 12], surface: water}
+entry: [3, 14]
+exits:
+  - {id: to_scorched_outskirts, at: [[0, 14], [0, 15]], to: scorched_outskirts, arrive: to_deadwood_forest}   # 西南：往焦土外圍
+  - {id: to_gang_convoy_road, at: [[23, 14], [23, 15]], to: gang_convoy_road, arrive: to_deadwood_forest}   # 東南：往斷崖幫運輸道
+spawns:
+  - {at: [12, 5], group: deadwood_sulfur}   # 林中
+  - {at: [5, 14], group: colossus_smoke, patrol: [[5, 14], [19, 14]]}   # 林間小路巡邏
+event_spots:
+  - {at: [10, 15], id: ashen_deserter}   # 林間小路
+  - {at: [19, 11], id: sandstorm}   # 開闊處
+  - {at: [21, 16], id: ashen_convoy}   # 林緣

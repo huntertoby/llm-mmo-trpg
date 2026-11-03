@@ -1,0 +1,95 @@
+# 冷卻井實地地圖（6D-1；玩法 PM 草稿第 8 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 遺跡 24×18，建議 6 級，營火：古代的冷卻裝置。中央是巨大的井圈（石地高 1），井口是深淵（=）。
+# 古代裝置：情境物件 cooling_well_relic（井圈北緣，用機關或學識修理；事件點同名放在旁邊）。
+# 啟動後「附近 3 個地點變有水」只留成線頭，不做機制（5F5a-9）。
+# 四周 3 口小冷卻井：cooling_well 物件（打破後造水，十字 5 格）待使用者確認，先用預放的水表面代替
+# （草稿待確認 7）。斷管用矮牆。
+# 西南往舊鐵哨站；東北往焦油坑。
+# 敵人：井邊駐守 well_guardians。事件點：古代裝置（cooling_well_relic）。
+id: cooling_well
+name_zh: 冷卻井
+region: ashen_waste
+location: cooling_well
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000111111000000000
+  000000000111111000000000
+  000000000111111000000000
+  000000000111111000000000
+  000000000111111000000000
+  000000000111111000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  ggggg,,,,,,,,,,,,,,,,,,,
+  ggggg,,,,,,,,,,,,,,,,,,,
+  ggggg,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,......,,,,,,,,,
+  ,,,,,,,,,.====.,,,,,,,,,
+  ,,,,,,,,,.====.,,,,,,,,,
+  ,,,,,,,,,.====.,,,,,,,,,
+  ,,,,,,,,,.====.,,,,,,,,,
+  ,,,,,,,,,......,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,ggggg
+  ,,,,,,,,,,,,,,,,,,,ggggg
+  ,,,,,,,,,,,,,,,,,,,ggggg
+  ,,,,,,,,,,,,,,,,,,,ggggg
+legend:
+  ",": dirt
+  ".": stone
+  "g": grass
+  "=": chasm
+objects:
+  - {at: [6, 9], kind: low_wall}   # 斷掉的管路（矮牆）
+  - {at: [7, 9], kind: low_wall}
+  - {at: [17, 9], kind: low_wall}
+  - {at: [18, 9], kind: low_wall}
+  - {at: [12, 14], kind: low_wall}
+  - {at: [12, 15], kind: low_wall}
+  - {at: [3, 7], kind: low_wall}
+  - {at: [20, 11], kind: rubble}   # 古代裝置的碎片
+  - {at: [5, 16], kind: rubble}
+surfaces:
+  - {at: [4, 3], surface: water}   # 小冷卻井（cooling_well 待使用者確認，先用預放的水表面，十字 5 格）
+  - {at: [3, 4], surface: water}
+  - {at: [4, 4], surface: water}
+  - {at: [5, 4], surface: water}
+  - {at: [4, 5], surface: water}
+  - {at: [19, 4], surface: water}
+  - {at: [18, 5], surface: water}
+  - {at: [19, 5], surface: water}
+  - {at: [20, 5], surface: water}
+  - {at: [19, 6], surface: water}
+  - {at: [16, 13], surface: water}
+  - {at: [15, 14], surface: water}
+  - {at: [16, 14], surface: water}
+  - {at: [17, 14], surface: water}
+  - {at: [16, 15], surface: water}
+entry: [4, 14]
+exits:
+  - {id: to_old_iron_post, at: [[2, 17], [3, 17]], to: old_iron_post, arrive: to_cooling_well}   # 西南：往舊鐵哨站
+  - {id: to_tar_pits, at: [[20, 0], [21, 0]], to: tar_pits, arrive: to_cooling_well}   # 東北：往焦油坑
+spawns:
+  - {at: [12, 12], group: well_guardians}   # 井邊
+campfires:
+  - {at: [5, 13], id: campfire_cooling_well}   # 井圈西南的空地
+event_spots:
+  - {at: [12, 4], id: cooling_well_relic}   # 古代裝置旁
+situation_objects:
+  - {at: [11, 5], id: cooling_well_relic}   # 古代裝置（井圈北緣）
