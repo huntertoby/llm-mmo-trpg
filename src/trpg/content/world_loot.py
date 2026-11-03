@@ -158,9 +158,11 @@ def loot_problems(
     units: Collection[str] | None,
     affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
+    keywords: Collection[str] | None = None,
 ) -> list[str]:
     """跨檔案問題（27.2；依區域、鍵排序）。``units``／``affixes`` 為 ``None``＝沒有
-    ``world/enemies.yaml``（變體與詞綴不明），不檢查敵人與詞綴。"""
+    ``world/enemies.yaml``（變體與詞綴不明），不檢查敵人與詞綴；``keywords``（關鍵字推導表的 ID，
+    5D-2b）為 ``None``＝不檢查區域的偏向關鍵字。"""
     problems: list[str] = []
 
     def material(item: str, where: str) -> None:
@@ -176,6 +178,9 @@ def loot_problems(
         where = f"區域 {region}"
         if region not in regions:
             problems.append(f"{where}：沒有地點圖")
+        unknown = sorted(k for k in loot.keywords if keywords is not None and k not in keywords)
+        if unknown:
+            problems.append(f"{where} 的 keywords：未知的關鍵字 {unknown}")
         for unit, item in sorted(loot.families.items()):
             if units is not None and unit not in units:
                 problems.append(f"{where} 的 families：未知的敵人 {unit}")
@@ -195,13 +200,16 @@ def load_world_loot(
     units: Collection[str] | None,
     affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
+    keywords: Collection[str] | None = None,
 ) -> LootRules | None:
     """載入 ``world/loot.yaml``；不存在＝``None``（掉落關閉）。``units`` 是單位範本與變體 ID。"""
     path = root / LOOT_FILE
     if not path.is_file():
         return None
     rules = load_content_file(path, LootRules)
-    problems = loot_problems(rules, regions=regions, units=units, affixes=affixes, items=items)
+    problems = loot_problems(
+        rules, regions=regions, units=units, affixes=affixes, items=items, keywords=keywords
+    )
     if problems:
         raise ContentError(path, "；".join(problems))
     files.append((path, rules))

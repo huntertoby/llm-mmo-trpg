@@ -30,8 +30,8 @@ mercenary_gear:
 
 regions:
   cloud_ridge:
-    # 20.2：雲嶺的詞條偏向潮濕、帶電、隱蔽（現成的技能強化詞條只有帶電，代決 5D2-5）
-    keywords: [wet, charged, hidden]
+    # 20.2：雲嶺的詞條偏向潮濕、帶電、隱蔽（5D-2b 補了潮濕、隱蔽的技能強化詞條；ID 照 skill_keywords.yaml）
+    keywords: [wet, charged, concealed]
     # 18.2.4 的來源；沒列的敵人掉通用料
     families:
       sect_mist_walker: item_mist_crystal       # 霧行者 → 霧晶

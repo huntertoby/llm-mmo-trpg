@@ -19,6 +19,7 @@ from trpg.world.actions import BattleEndedEvent, FightAction
 from trpg.world.battle import PreparedBattle, _run, auto_steps, prepare_battle
 from trpg.world.economy_actions import LootGainedEvent
 from trpg.world.encounters import LineupMember
+from trpg.world.gear import loot_rules
 from trpg.world.loot import LootRoll, add_loot, roll_loot, third_downed_by_allies
 from trpg.world.state import CharacterState
 from trpg.world.step import StepResult, world_step
@@ -213,15 +214,44 @@ def test_keywords_default_is_unchanged(library: ContentLibrary) -> None:
 
 
 def test_keywords_bias_build_affix(library: ContentLibrary) -> None:
-    charged = {
+    wanted = {
         a.id
         for a in library.affixes.values()
-        if isinstance(a, KeywordAffix) and a.keyword == "charged"
+        if isinstance(a, KeywordAffix) and a.keyword in ("wet", "charged")
     }
-    if not charged:
-        pytest.skip("沒有帶電的技能強化詞條")
+    if not wanted:
+        pytest.skip("沒有潮濕、帶電的技能強化詞條")
     hits = 0
     for seed in range(10):
         item = generate_item(library, Rng(seed), "neck", "rare", 5, keywords=("wet", "charged"))
-        hits += any(r.affix in charged for r in item.affixes)
+        hits += any(r.affix in wanted for r in item.affixes)
     assert hits >= 8
+
+
+def test_cloud_ridge_bias_reaches_all_three_keywords(library: ContentLibrary) -> None:
+    """5D-2b：雲嶺的偏向（潮濕、帶電、隱蔽）每個都有技能強化詞條，掉落真的會出現三種。"""
+    rules = loot_rules(library)
+    assert rules is not None
+    keywords = rules.region("cloud_ridge").keywords
+    assert set(keywords) == {"wet", "charged", "concealed"}
+    by_id = {
+        a.id: a
+        for a in library.affixes.values()
+        if isinstance(a, KeywordAffix) and a.keyword in keywords
+    }
+    seen: set[str] = set()
+    for seed in range(40):
+        item = generate_item(library, Rng(seed), "neck", "rare", 5, keywords=keywords)
+        seen |= {by_id[r.affix].keyword for r in item.affixes if r.affix in by_id}
+    assert seen == set(keywords)
+
+
+@pytest.mark.parametrize("keyword", ["ignite", "prone", "poisoned", "wet", "concealed"])
+def test_every_region_keyword_has_create_and_exploit(library: ContentLibrary, keyword: str) -> None:
+    """8.21.4.1：雲嶺與荒原（點燃、倒地、中毒）的偏向關鍵字各有製造 1、利用 1 條技能強化詞條。"""
+    directions = {
+        a.direction
+        for a in library.affixes.values()
+        if isinstance(a, KeywordAffix) and a.keyword == keyword
+    }
+    assert directions == {"create", "exploit"}

@@ -91,6 +91,7 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
             "regions": {
                 "nowhere": {},
                 "cloud_ridge": {
+                    "keywords": ["wet", "hidden"],
                     "families": {"ghost": "item_wolf_fang", "mist_wolf": "item_hp_potion_small"},
                     "elite_affixes": {"shiny": "item_nothing"},
                 },
@@ -103,8 +104,10 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
         units=set(library.units),
         affixes={"regenerating"},
         items=library.world_economy.items,
+        keywords={"wet", "charged", "concealed"},
     )
     text = "；".join(problems)
+    assert "未知的關鍵字 ['hidden']" in text  # 5D-2b：雲嶺的「隱蔽」是 concealed
     assert "nowhere：沒有地點圖" in text
     assert "未知的敵人 ghost" in text
     assert "item_hp_potion_small 不是材料" in text
