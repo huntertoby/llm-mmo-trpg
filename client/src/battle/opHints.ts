@@ -8,7 +8,7 @@ export const OP_HINT_LIMIT = 3;
 export const OP_HINTS_KEY = "trpg.opHints.v1";
 
 /** 說明句的種類：同一種共用次數。 */
-export type OpHintKind = "target" | "vault" | "defend" | "self" | "aside" | "composite" | "hurl" | "order";
+export type OpHintKind = "move" | "copy" | "target" | "vault" | "defend" | "self" | "aside" | "composite" | "hurl" | "order";
 
 /** 讀寫次數用的儲存區（測試可換成假的）。 */
 export interface HintStore {
@@ -64,8 +64,26 @@ export function bumpOpHint(kind: OpHintKind, store: HintStore | null = defaultSt
   }
 }
 
+/** 這個頁面已經決定過的（種類＋識別）：同一個識別只算一次、結果不變。 */
+const decidedOnce = new Map<string, boolean>();
+
+/**
+ * 常駐的說明句（技能列上方「點選藍色格子移動…」）用：同一個 `token`（例如「這場戰鬥的第 N 輪」）只算一次，
+ * 第一次問的時候決定要不要完整顯示，之後同一個 `token` 都回傳同樣的結果。中途「等待中……」再回來也不會多記。
+ */
+export function opHintFullOnce(kind: OpHintKind, token: string, store: HintStore | null = defaultStore()): boolean {
+  const id = `${kind}\u0000${token}`;
+  const known = decidedOnce.get(id);
+  if (known !== undefined) return known;
+  const full = showOpHint(kind, store);
+  decidedOnce.set(id, full);
+  if (full) bumpOpHint(kind, store);
+  return full;
+}
+
 /** 設定的「重新顯示操作說明」：清掉全部次數。 */
 export function resetOpHints(store: HintStore | null = defaultStore()): void {
+  decidedOnce.clear();
   if (store === null) return;
   try {
     store.removeItem(OP_HINTS_KEY);

@@ -8,6 +8,7 @@ import { liveToasts, nextToastChange, stampArrivals, TOAST_FADE_MS, TOAST_MAX, T
 import {
   bumpOpHint,
   opHintCount,
+  opHintFullOnce,
   OP_HINT_LIMIT,
   OP_HINTS_KEY,
   readOpHintCounts,
@@ -15,6 +16,7 @@ import {
   showOpHint,
   type HintStore,
 } from "../battle/opHints";
+import { actionHintKind } from "../battle/skillTray";
 import { emptyTargets, type ActionMode } from "../battle/targeting";
 import { smallView, unit } from "../battle/testFixtures";
 import type { UnitNames } from "../battle/units";
@@ -285,6 +287,23 @@ describe("選取面板的說明句接上次數（localStorage）", () => {
     expect(html).not.toContain("Esc／右鍵取消");
     expect(html).toContain('data-testid="op-hint-q"');
     expect(html).toContain("火焰爆");
+  });
+  it("技能列上方的移動說明：同一輪只算一次，第 4 輪起收進「?」；狀態句不算", () => {
+    const base = { copying: false, canAct: true, ended: false, moveCount: 5, attackCount: 1 };
+    expect(actionHintKind(base)).toBe("move");
+    expect(actionHintKind({ ...base, copying: true })).toBe("copy");
+    expect(actionHintKind({ ...base, canAct: false })).toBeNull();
+    expect(actionHintKind({ ...base, ended: true })).toBeNull();
+    expect(actionHintKind({ ...base, summonIdle: true })).toBeNull();
+    const s = memoryStore();
+    resetOpHints(s);
+    for (const round of [1, 1, 2, 2, 3]) expect(opHintFullOnce("move", `b1:${round}`, s)).toBe(true);
+    expect(opHintCount("move", s)).toBe(3);
+    expect(opHintFullOnce("move", "b1:4", s)).toBe(false);
+    expect(opHintFullOnce("move", "b1:4", s)).toBe(false);
+    expect(opHintCount("move", s)).toBe(3);
+    resetOpHints(s);
+    expect(opHintFullOnce("move", "b1:4", s)).toBe(true);
   });
   it("OpHint 元件直接用：別種說明句不受影響", () => {
     mem.map.set(OP_HINTS_KEY, JSON.stringify({ target: 3 }));

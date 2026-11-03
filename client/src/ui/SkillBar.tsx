@@ -15,6 +15,8 @@ import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
 import { Hint } from "./Hint";
+import { PartTip } from "./PartTip";
+import { opHintFullOnce, type OpHintKind } from "../battle/opHints";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -28,6 +30,8 @@ interface Props {
   enabled: boolean;
   /** 技能列上方的一行提示（可移動格數、攻擊目標數、等待中……）。 */
   hint: string;
+  /** 這行是操作說明句時的種類與這次的識別（6A-3：同一識別只算一次，前 3 次之後收進「?」）；狀態句省略。 */
+  hintOnce?: { kind: OpHintKind; token: string } | null;
   onPickMode(mode: ActionMode): void;
   onSelect(skillId: string): void;
   /** 點到灰掉、有原因的技能：把原因交給畫面的訊息列（Phase 3-5c-2）。 */
@@ -195,11 +199,22 @@ function MiniSlot({
 }
 
 export function SkillBar(props: Props) {
-  const { basic, buttons, cards, selectedKey, enabled, hint } = props;
+  const { basic, buttons, cards, selectedKey, enabled, hint, hintOnce } = props;
   const { main, minor, items } = splitSkills(buttons, cards);
+  const full = hintOnce == null || opHintFullOnce(hintOnce.kind, hintOnce.token);
   return (
     <div className="skill-bar" aria-label="技能列">
-      <div className="skill-hint small muted">{hint}</div>
+      {full ? (
+        <div className="skill-hint small muted">{hint}</div>
+      ) : (
+        <div className="skill-hint small muted op-hint collapsed">
+          <PartTip cat="操作說明" label={hintOnce.kind === "copy" ? "複製技能" : "移動與攻擊"} tip={hint}>
+            <span className="op-hint-q" data-testid="op-hint-q">
+              ?
+            </span>
+          </PartTip>
+        </div>
+      )}
       <div className="skill-row">
         <div className="skill-buttons">
           {basic.map((m) => (
