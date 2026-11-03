@@ -135,6 +135,7 @@
 | `events.js`、`events.html` | 事件插圖 10 種（雲嶺背景＋荒原換背景）（`events.png`、`事件插圖.md`；11-04 樣張） |
 | `itemIcons.js`、`items.html` | 物品圖示 42 個：藥水、投擲瓶、補給、材料、染料、貨幣、任務物品（`items.png`、`物品圖示.md`；11-04 樣張） |
 | `hudIcons.js`、`hud-icons.html` | HUD 功能列 8 個圖示定稿（R＝潛行）、按鈕狀態、滑過說明卡（`hud-icons.png`、`HUD功能列圖示.md`；11-04 樣張） |
+| `attr-icons.html` | 六種縮放屬性圖示（6A-1 技能卡用；`attr-icons.png`） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
