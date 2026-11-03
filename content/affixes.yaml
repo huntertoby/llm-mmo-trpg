@@ -498,3 +498,34 @@ affixes:
     name_zh: 你的召喚物繼承你 1 條普攻附加詞條
     slots: [weapon, offhand]
     summon_inherit: true
+
+  # --- Phase 5D-3 獨特詞條（docs/design/20-第一季商店與裝備內容.md 20.3、08 8.26.3 M4、M7）---
+  # 只由隱藏配方指定（content/world/crafting.yaml 的 hidden）；item_gen.yaml 的 unique_affixes 讓它們不進
+  # 一般產生器。觸發效果的形狀只有自己，「自身周圍」先做成自己腳下 1 格（代決 5D3-9）。
+  - id: affix_unique_thunder_mist
+    category: trigger
+    name_zh: 受到近戰傷害時，腳下湧出煙霧 {effect.duration} 回合（每輪 1 次）
+    slots: [body]
+    trigger: on_damaged
+    melee_only: true
+    effect_target: self
+    effects: [{type: create_surface, surface: smoke, duration: 1}]
+    limit: per_round
+  # 20.3「被火攻擊時」：引擎的觸發沒有元素篩選，先用「受到傷害時」（代決 5D3-9，待 PM 決定）。
+  - id: affix_unique_steam_guard
+    category: trigger
+    name_zh: 受到傷害時，腳下冒出煙霧 {effect.duration} 回合（每輪 1 次）
+    slots: [hands]
+    trigger: on_damaged
+    effect_target: self
+    effects: [{type: create_surface, surface: smoke, duration: 1}]
+    limit: per_round
+  - id: affix_unique_frostfire
+    category: trigger
+    name_zh: 施加燃燒時，目標也「{effect.status}」{effect.duration} 回合（每回合 1 次）
+    slots: [ring]
+    trigger: on_status_applied
+    status: burning
+    effect_target: target
+    effects: [{type: apply_status, status: slow, duration: 1}]
+    limit: per_turn

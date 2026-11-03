@@ -130,6 +130,12 @@ from trpg.content.world_economy import WorldEconomy, load_world_economy
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_enemies import EnemyCatalog, WorldEnemies, world_enemies_problems
 from trpg.content.world_events import WorldEventContent, load_world_event_content
+from trpg.content.world_crafting import (
+    CraftingRules,
+    ResonanceRules,
+    load_world_crafting,
+    load_world_resonance,
+)
 from trpg.content.world_loot import LootRules, load_world_loot
 from trpg.content.world_map import LocationMapDef, world_map_problems
 from trpg.content.world_mercenaries import MercenaryTable
@@ -606,6 +612,10 @@ class ContentLibrary:
     """貨幣規則、物品與商店（Phase 5D-1；沒有 ``world/economy.yaml`` 時經濟功能關閉）。"""
     world_loot: LootRules | None = None
     """掉落規則（``world/loot.yaml``，Phase 5D-2）；沒有檔案時為 ``None``（掉落關閉）。"""
+    world_crafting: CraftingRules | None = None
+    """鐵匠與附魔台（``world/crafting.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（關閉）。"""
+    world_resonance: ResonanceRules | None = None
+    """裝備共鳴（``world/resonance.yaml``，Phase 5D-3）；沒有檔案時為 ``None``（沒有共鳴）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -916,6 +926,19 @@ def load_library(  # noqa: PLR0915
         affixes=None if world_enemies is None else {a.id for a in world_enemies.affixes},
         items=world_economy.items,
     )
+    keyword_ids = {k.id for k in keywords.keywords}
+    world_crafting = load_world_crafting(  # 5D-3
+        root,
+        files,
+        locations={r: {loc.id: loc.kind for loc in m.locations} for r, m in world_maps.items()},
+        npcs={
+            r: {n.id: n.location for n in t.npcs} for r, t in world_event_content.npcs.items()
+        },
+        items=world_economy.items,
+        affixes=affixes,
+        keywords=keyword_ids,
+    )
+    world_resonance = load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -980,6 +1003,8 @@ def load_library(  # noqa: PLR0915
         world_mercenaries=world_mercenaries,
         world_economy=world_economy,
         world_loot=world_loot,
+        world_crafting=world_crafting,
+        world_resonance=world_resonance,
         files=files,
     )
 
