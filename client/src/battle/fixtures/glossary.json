@@ -2718,7 +2718,7 @@
   {
    "id": "hard_shell",
    "name_zh": "硬殼",
-   "description_zh": "硬殼還沒被敲裂：受到的骰值傷害減半。",
+   "description_zh": "硬殼還沒被敲裂：受到的骰值傷害大幅降低。",
    "tags": [
     "beneficial"
    ],

@@ -84,7 +84,7 @@ affixes:
     hp_permille: 1500
   - id: hard_shelled
     name_zh: 硬殼的
-    description_zh: 硬殼還沒敲裂前，受到的傷害減半（開場 2 回合）。
+    description_zh: 開戰時硬殼還沒敲裂，受到的傷害大幅降低。
     add_opening_statuses:
       - {status: hard_shell, duration: 2}   # 19.2.1「前 2 次受擊傷害減半」用開場 2 回合近似（代決 5F5a-7）
     hp_permille: 1500
