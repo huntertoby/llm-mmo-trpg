@@ -178,8 +178,10 @@ class SituationRules(ContentModel):
     dangers: tuple[DangerDef, ...]
     exchange_supplies: int = Field(ge=1)
     """用心清單 ③ 拿補給當交換條件時花掉的量。"""
+    exchange_name_zh: str = Field(default="補給", min_length=1)
+    """用心清單 ③ 的事實名稱（關鍵詞；事實文字「拿出 N 份〔名稱〕交換」；5D-R1 從程式移來）。"""
     exchange_aliases_zh: AliasesZh = ()
-    """用心清單 ③ 的關鍵詞別名（事實名稱「補給」之外；5C-3d）。"""
+    """用心清單 ③ 的關鍵詞別名（事實名稱之外；5C-3d）。"""
 
     @model_validator(mode="after")
     def _check(self) -> SituationRules:

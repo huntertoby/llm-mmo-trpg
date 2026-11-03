@@ -71,8 +71,8 @@ __all__ = [
 ]
 
 _EXCHANGE_FACT = "supplies"
-_EXCHANGE_NAME = "補給"
-"""用心清單 ③ 的事實名稱（關鍵詞；別名在 ``situation_rules.yaml`` ``exchange_aliases_zh``）。"""
+"""用心清單 ③ 的事實 ID（名稱與別名在 ``situation_rules.yaml`` 的 ``exchange_name_zh``、
+``exchange_aliases_zh``）。"""
 REASON_NO_KEYWORD = "原文沒有提到這筆事實"
 
 
@@ -217,8 +217,8 @@ def _fact_entries(
                 (SituationFact(item="npc_bond", fact=f"npc:{npc_id}", text_zh=text), words)
             )
     if char.supplies >= rules.exchange_supplies:
-        text = f"拿出 {rules.exchange_supplies} 份補給交換"
-        words = _keywords(_EXCHANGE_NAME, rules.exchange_aliases_zh)
+        text = f"拿出 {rules.exchange_supplies} 份{rules.exchange_name_zh}交換"
+        words = _keywords(rules.exchange_name_zh, rules.exchange_aliases_zh)
         entries.append((SituationFact(item="exchange", fact=_EXCHANGE_FACT, text_zh=text), words))
     for weakness in template.weaknesses:
         fact = SituationFact(

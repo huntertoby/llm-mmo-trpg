@@ -139,7 +139,7 @@ class AffinityRules(ContentModel):
     max_value: int = 100
     ranks: tuple[AffinityRankDef, ...]
     rumors_per_week: int = Field(default=3, ge=1)
-    week_days: int = Field(default=7, ge=1)
+    """酒館每週的傳聞數（一週幾天在世界規則的 ``week_days``，5D-R1）。"""
     quest_step_delta: int = Field(default=0, ge=0, le=_MAX_DELTA)
     """完成和該 NPC 有關的任務步驟（``QuestStepDef.npcs``）的好感度（5B-4b，18.7.6：+15）。"""
     daily_talk_delta: int = Field(default=0, ge=0, le=_MAX_DELTA)
@@ -175,7 +175,7 @@ class AffinityRules(ContentModel):
         bounds = "、".join(f"{r.name_zh} ≥ {r.min}" for r in self.ranks)
         return (
             f"好感度 {self.min_value}～{self.max_value}（{bounds}）；"
-            f"酒館每 {self.week_days} 天 {self.rumors_per_week} 條傳聞"
+            f"酒館每週 {self.rumors_per_week} 條傳聞"
         )
 
 

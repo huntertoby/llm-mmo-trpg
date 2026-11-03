@@ -13,7 +13,6 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_economy import (
-    COARSE_MATERIAL,
     EconomyRules,
     WorldItemDef,
     WorldItemTable,
@@ -44,7 +43,7 @@ def test_cloud_ridge_economy(library: ContentLibrary) -> None:
     kinds = {economy.items[s.item].kind for s in shop.stock}
     assert kinds == {"consumable", "material", "dye", "supply"}  # 8.26.1、20.1
     assert [s.item for s in shop.stock if economy.items[s.item].kind == "material"] == [
-        COARSE_MATERIAL
+        "item_coarse_material"
     ]
     mist = shop.stock_of("item_mist_flask")
     assert mist is not None and mist.rank == "friendly"  # 8.26.1 例

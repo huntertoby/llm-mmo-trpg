@@ -14,7 +14,7 @@ Phase 5A-6 加上 ``hero_growth``（主角的技能階級表、每級靈感點�
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import Field, model_validator
 
@@ -251,9 +251,15 @@ class OpportunityRules(ContentModel):
     """保底觸發的機遇不檢查 ``requires_keyword``（Phase 5B-4e；三選一照樣指定該關鍵字）。"""
 
 
+DEFAULT_WEEK_DAYS: Final = 7
+"""一週的預設天數（沒有世界規則時也用這個）。"""
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
+    week_days: int = Field(default=DEFAULT_WEEK_DAYS, ge=1)
+    """一週幾天（以早上 6 點刷新的日子算；酒館傳聞、商店每週限量，5D-R1）。"""
     supplies: SupplyRules
     camp_cost: int = Field(ge=0)
     hasten: HastenRules

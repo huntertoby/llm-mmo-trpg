@@ -46,7 +46,7 @@ from trpg.world.economy_actions import (
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import at_service
 from trpg.world.inventory import add_items, check_room, remove_gear, remove_items, room_problem
-from trpg.world.social import week_of
+from trpg.world.season import week_of
 from trpg.world.state import CharacterState, CompanionAffinity, ShopPurchase, WorldState
 
 __all__ = [
