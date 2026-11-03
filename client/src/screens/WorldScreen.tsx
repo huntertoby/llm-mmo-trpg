@@ -30,9 +30,7 @@ import { WorldHud } from "../world/WorldHud";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
   addToasts,
-  exitRects,
   fadedBlocks,
-  fieldFitScale,
   HUD_BUTTONS,
   hudKey,
   hudLayout,
@@ -52,6 +50,7 @@ import {
   type HudToast,
 } from "../world/hud";
 import { useHudStage } from "../world/useHudStage";
+import { exitViewRects, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
 import { WorldBagScreen } from "../world/BagScreen";
@@ -138,6 +137,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [trackerFolded, setTrackerFolded] = useState(() => readTrackerCollapsed());
   /** 窄視窗時任務追蹤自動收合；玩家點開後這次先展開（不寫進本機）。 */
   const [narrowOpen, setNarrowOpen] = useState(false);
+  // 6B-6：實地地圖的鏡頭（`WorldField` 逐格回報）：小地圖的框、出口半透明以畫面上的出口位置判斷
+  const [fieldCam, setFieldCam] = useState<Camera | null>(null);
+  const onFieldCamera = useCallback((cam: Camera) => setFieldCam((cur) => (cur !== null && sameCamera(cur, cam) ? cur : cam)), []);
   const [, tick] = useReducer((n: number) => n + 1, 0);
   const pushToast = useCallback((texts: readonly string[], warn: boolean) => {
     if (texts.length === 0) return;
@@ -557,15 +559,23 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     if (field == null) return null;
     const folded = trackerFolded || (narrow && !narrowOpen);
     const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
-    const fieldScale = fieldFitScale(stage, field);
-    const faded = fadedBlocks(layout, exitRects(field, stage, fieldScale));
+    const cam = fieldCam ?? followCamera(stage, field, field.me);
+    const faded = fadedBlocks(layout, exitViewRects(field, cam));
     const hasCenter = v.encounter !== null || result !== null || v.event != null;
     const style = { height: stage.height, "--hud-s": layout.scale } as CSSProperties;
     return (
       <div className="world-hud-stage" ref={stage.ref} style={style} data-testid="world-hud-stage">
-        <WorldField view={v} busy={busy} send={sendField} commit={show} onInteract={interact} hudScale={fieldScale} />
+        <WorldField
+          view={v}
+          busy={busy}
+          send={sendField}
+          commit={show}
+          onInteract={interact}
+          hud={{ width: stage.width, height: stage.height, onCamera: onFieldCamera }}
+        />
         <WorldHud
           view={v}
+          viewTiles={visibleTiles(stage, field, cam)}
           layout={layout}
           faded={faded}
           toasts={liveToasts}

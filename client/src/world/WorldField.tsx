@@ -2,11 +2,14 @@
 // 點格子走過去（前端 BFS，超過 30 格分段送）、方向鍵／WASD 一次一格（排隊，同時只有一個請求在路上）、
 // 小人逐格平移（每格約 0.12 秒）、換地圖淡出淡入。走到設施或 NPC 旁邊按 E 或點它就開原本的面板；
 // 站在傳送石上顯示「傳送」按鈕。位置一律以伺服器回來的 `walk` 結果為準，失敗時顯示錯誤、位置不動。
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+// 6B-6：HUD 版面時格子照戰鬥的預設大小，鏡頭跟著主角（`camera.ts`）；畫布在可視區裡平移，逐格走時鏡頭用同樣的時間平滑跟上。
+// 點擊換算沿用 `BattleCanvas` 的 `getBoundingClientRect()`（平移後的實際位置），所以鏡頭位移自動算進去。
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
 import { fitScale } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
 import { BattleCanvas } from "../ui/BattleCanvas";
+import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
 import {
   chunkPath,
   fieldDrawModel,
@@ -22,6 +25,7 @@ import {
   walkAction,
   walkedCells,
   walkPlan,
+  STEP_MS,
   type Direction,
   type FieldTarget,
 } from "./fieldModel";
@@ -35,8 +39,21 @@ interface Props {
   commit(view: WorldView): void;
   /** 和設施或 NPC 互動（開對應的現有面板）。 */
   onInteract(target: FieldTarget): void;
-  /** HUD 版面（6B-5）：由外面給縮放（用滿整個舞台），說明列疊在畫面上。省略＝照 6B-3 自己量左欄。 */
-  hudScale?: number;
+  /**
+   * HUD 版面（6B-5、6B-6）：舞台（可視區）大小；格子照戰鬥的預設大小，鏡頭跟著主角，說明列疊在畫面上。
+   * 省略＝照 6B-3 自己量左欄、整張放進去。
+   */
+  hud?: HudCamera;
+}
+
+/** HUD 版面的鏡頭設定。 */
+export interface HudCamera {
+  width: number;
+  height: number;
+  /** 框住這個格子範圍（6C-2 就地開打框住戰場用）；`null`／省略＝跟著主角。 */
+  frame?: TileRect | null;
+  /** 鏡頭變了（逐格走、換地圖、視窗大小變）時通知外面（小地圖的框、出口半透明）。 */
+  onCamera?(cam: Camera): void;
 }
 
 type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
@@ -52,9 +69,23 @@ function typingInto(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
 }
 
+/** 切到「框住範圍」或切回跟隨時鏡頭平移的時間。 */
+const FRAME_MS = 300;
+
+/** 鏡頭：畫布在可視區裡平移（沒有鏡頭時照舊直接放）。 */
+function CameraBox({ cam, ms, children }: { cam: Camera | null; ms: number; children: ReactNode }) {
+  if (cam === null) return <>{children}</>;
+  const style = { transform: cameraTransform(cam), transition: ms > 0 ? `transform ${ms}ms linear` : "none" };
+  return (
+    <div className="world-field-camera" style={style} data-testid="world-field-camera" data-cam={`${Math.round(cam.x)},${Math.round(cam.y)}`}>
+      {children}
+    </div>
+  );
+}
+
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-export function WorldField({ view, busy, send, commit, onInteract, hudScale }: Props) {
+export function WorldField({ view, busy, send, commit, onInteract, hud }: Props) {
   const field = view.field as FieldView;
   const blocked = view.encounter != null || view.battle_id != null;
   const rendererRef = useRef<BattleRenderer | null>(null);
@@ -82,7 +113,32 @@ export function WorldField({ view, busy, send, commit, onInteract, hudScale }: P
       window.removeEventListener("resize", measure);
     };
   }, []);
-  const scale = hudScale ?? fitScale(avail, model, undefined, 0.4, 1.5);
+  // ---- 鏡頭（6B-6）：跟著「畫面上的主角」，逐格走時每一步更新一次、用同樣的時間平移 ----
+  const [focus, setFocus] = useState<{ pos: Pos; ms: number }>({ pos: field.me, ms: 0 });
+  const lastMap = useRef(field.map_id);
+  useEffect(() => {
+    const changed = lastMap.current !== field.map_id;
+    lastMap.current = field.map_id;
+    setFocus((cur) => (!changed && cur.pos.x === field.me.x && cur.pos.y === field.me.y ? cur : { pos: field.me, ms: changed ? 0 : STEP_MS }));
+  }, [field.map_id, field.me]);
+  const hasHud = hud !== undefined;
+  const hudW = hud?.width ?? 0;
+  const hudH = hud?.height ?? 0;
+  const frame = hud?.frame ?? null;
+  // `hud`、`frame` 物件每次重畫都是新的：只看數值
+  const frameKey = frame === null ? "" : `${frame.x},${frame.y},${frame.width},${frame.height}`;
+  const cam = useMemo<Camera | null>(() => {
+    if (!hasHud) return null;
+    const viewSize = { width: hudW, height: hudH };
+    if (frameKey === "") return followCamera(viewSize, model, focus.pos);
+    const [x = 0, y = 0, width = 0, height = 0] = frameKey.split(",").map(Number);
+    return frameCamera(viewSize, model, { x, y, width, height });
+  }, [hasHud, hudW, hudH, frameKey, model, focus.pos]);
+  const onCamera = hud?.onCamera;
+  useEffect(() => {
+    if (cam !== null) onCamera?.(cam);
+  }, [cam, onCamera]);
+  const scale = cam?.scale ?? fitScale(avail, model, undefined, 0.4, 1.5);
 
   // 換了地圖：淡入
   useEffect(() => setFading(false), [field.map_id]);
@@ -119,7 +175,12 @@ export function WorldField({ view, busy, send, commit, onInteract, hudScale }: P
       }
       const after = res.field ?? null;
       const cells = walkedCells(cur, chunk, after);
-      await rendererRef.current?.animate(walkPlan(cur.me, cells), () => !alive.current);
+      // 一格一格播，鏡頭跟著每一格的終點用同樣的時間平移
+      for (const step of walkPlan(cur.me, cells)) {
+        if (!alive.current) return false;
+        setFocus({ pos: step.to, ms: step.durationMs });
+        await rendererRef.current?.animate([step], () => !alive.current);
+      }
       if (!alive.current) return false;
       const changed = after === null || after.map_id !== cur.map_id;
       if (changed) {
@@ -235,20 +296,22 @@ export function WorldField({ view, busy, send, commit, onInteract, hudScale }: P
 
   const caption = hoverText(field, hover);
   return (
-    <div className={`world-field${hudScale !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
+    <div className={`world-field${hud !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
       <div className={`world-field-stage${fading ? " fading" : ""}`} data-map={field.map_id}>
-        <BattleCanvas
-          model={model}
-          highlights={highlights}
-          flameOn={false}
-          scale={scale}
-          onTileClick={(t) => click(t)}
-          onTileHover={setHover}
-          onCancel={() => {
-            jobs.current = [];
-          }}
-          rendererRef={rendererRef}
-        />
+        <CameraBox cam={cam} ms={frame !== null ? FRAME_MS : focus.ms}>
+          <BattleCanvas
+            model={model}
+            highlights={highlights}
+            flameOn={false}
+            scale={scale}
+            onTileClick={(t) => click(t)}
+            onTileHover={setHover}
+            onCancel={() => {
+              jobs.current = [];
+            }}
+            rendererRef={rendererRef}
+          />
+        </CameraBox>
       </div>
       <div className="world-field-bar small">
         <span className="muted" data-testid="world-field-caption">

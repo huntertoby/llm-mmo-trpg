@@ -31,10 +31,19 @@
 }
 
 .world-field.hud .world-field-stage {
+  position: relative;
+  display: block;
   max-height: none;
   height: 100%;
   overflow: hidden;
-  align-items: center;
+}
+
+/* 鏡頭（6B-6）：畫布在舞台裡平移（transform 由 camera.ts 算），逐格走時用同樣的時間平移 */
+.world-field-camera {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
 }
 
 /* 說明列（滑過的格子、傳送石按鈕）：疊在功能列上方中央 */
@@ -399,6 +408,15 @@
   fill: #3a8aff;
   stroke: #fff;
   stroke-width: 0.25;
+}
+
+/* 鏡頭目前的範圍（6B-6） */
+.world-hud-minimap-svg .mini-view {
+  fill: none;
+  stroke: #f4f0e4;
+  stroke-width: 0.3;
+  stroke-opacity: 0.9;
+  pointer-events: none;
 }
 
 .world-hud-clock {
