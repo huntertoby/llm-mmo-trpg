@@ -12,6 +12,7 @@ import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
 import { FieldHeads } from "./FieldHeads";
 import { peopleSteps } from "./peopleWalk";
+import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
@@ -220,12 +221,16 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
       if (others.length > 0) await Promise.all(others.map((m) => rendererRef.current?.animate([m], () => !alive.current)));
       if (!alive.current) return false;
       const changed = after === null || after.map_id !== cur.map_id;
-      if (changed) {
+      // 換地圖（6M-4）：走進門格播進門、走進邊緣出口播走出去，和畫面淡出重疊；其他照舊只淡出
+      const transit = changed && after !== null ? mapTransit(cur, cells.length > 1 ? cells[cells.length - 2]! : cur.me, cells[cells.length - 1]) : null;
+      if (transit !== null) await leaveMap(rendererRef.current, transit, setFading, () => !alive.current);
+      else if (changed) {
         setFading(true);
         await wait(FADE_MS);
       }
       fieldNow.current = after;
       latest.current.commit(res);
+      if (transit !== null && after !== null) void arriveMap(rendererRef, transit, after, () => !alive.current);
       const last = chunk[chunk.length - 1]!;
       if (changed || res.encounter != null || after.me.x !== last.x || after.me.y !== last.y) {
         jobs.current = [];
