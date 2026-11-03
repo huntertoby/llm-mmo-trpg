@@ -5,6 +5,9 @@
 - 這是紀念類（#91，:mod:`trpg.server.season_policy`）：季末保留；同一季重算（規則改了整個重跑）時
   取代那一季的那一筆。循環賽凍結的報名（build 快照）照樣是數值類、季末清掉——編年史只留名字與
   build 名。
+- 季末紀錄（Phase 5F-5）：``<世界資料夾>/chronicle/seasons.json``（``trpg-chronicle-seasons/1``）。
+  季末重置時寫：上季每個角色的編年史文字（打過的精英、完成的事件）與名字、外觀（下季建角色可以
+  沿用），以及配方的首位發現者。紀念類。
 """
 
 from __future__ import annotations
@@ -16,15 +19,23 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from trpg.content.battle import DollLook
 from trpg.world.save import write_atomic
 
 __all__ = [
     "CHRONICLE_DIR",
     "LEAGUE_CHRONICLE_FORMAT",
+    "SEASON_CHRONICLE_FILE",
+    "SEASON_CHRONICLE_FORMAT",
+    "ChronicleHero",
     "LeagueChronicle",
     "LeagueChronicleRank",
     "LeagueChronicleSeason",
     "LeagueChronicleStore",
+    "RecipeDiscovery",
+    "SeasonChronicle",
+    "SeasonChronicleEntry",
+    "SeasonChronicleStore",
 ]
 
 LEAGUE_CHRONICLE_FORMAT: Final = "trpg-chronicle-league/1"
@@ -93,3 +104,98 @@ class LeagueChronicleStore:
             seasons = tuple(sorted([*kept, season], key=lambda s: s.season_id))
             data = LeagueChronicle(seasons=seasons).model_dump(mode="json")
             write_atomic(self.path, json.dumps(data, ensure_ascii=False, indent=1) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# 季末紀錄（Phase 5F-5）
+# ---------------------------------------------------------------------------
+
+SEASON_CHRONICLE_FORMAT: Final = "trpg-chronicle-seasons/1"
+SEASON_CHRONICLE_FILE: Final = "seasons.json"
+
+
+class ChronicleHero(_Model):
+    """上季的一個角色：編年史文字＋下季可以沿用的名字與外觀（5F-5，玩法 PM 2026-11-03 代決）。"""
+
+    character_id: str
+    account_id: str | None = None
+    """角色的帳號（沒有帳號的開發模式角色＝``None``）。"""
+    name: str
+    """角色名（玩家文字；顯示時當資料）。"""
+    race: str | None = None
+    """種族（種族外觀；下季建角色沿用）。"""
+    doll: DollLook | None = None
+    """紙娃娃外觀（下季建角色沿用）。"""
+    elites: tuple[str, ...] = ()
+    """擊倒過的精英（中文名，依精英種類 ID 排序；來自 ``CharacterState.elite_kills``）。"""
+    events: tuple[str, ...] = ()
+    """完成的事件（「誰：想要什麼」，依骨架 ID 排序；來自
+    ``CharacterState.finished_skeletons``）。"""
+    text_zh: str
+    """編年史的一行文字（例「第一季：擊倒北坡狼王；完成霜音：有人答出她的謎」）。"""
+
+
+class RecipeDiscovery(_Model):
+    """配方的首位發現者（``RecipeRecord`` 的紀念類欄位；配方內容季末清掉）。"""
+
+    code: str
+    name_zh: str
+    discoverer: str
+    discoverer_name: str
+    discovered_at: int = Field(ge=0)
+    season_id: str
+
+
+class SeasonChronicleEntry(_Model):
+    """一季的季末紀錄。"""
+
+    season_id: str
+    name_zh: str
+    """季名（「第一季」）。"""
+    started_at: int = Field(ge=0)
+    reset_at: int = Field(ge=0)
+    """季末重置的時間（UTC 秒）。"""
+    next_season_id: str
+    heroes: tuple[ChronicleHero, ...] = ()
+    """依角色 ID 排序。"""
+    recipes: tuple[RecipeDiscovery, ...] = ()
+    """依配方碼排序。"""
+
+
+class SeasonChronicle(_Model):
+    """``chronicle/seasons.json``。"""
+
+    format: Literal["trpg-chronicle-seasons/1"] = SEASON_CHRONICLE_FORMAT
+    seasons: tuple[SeasonChronicleEntry, ...] = ()
+
+
+class SeasonChronicleStore:
+    """``<root>/chronicle/seasons.json`` 的讀寫（檔案不存在＝沒有紀錄）。"""
+
+    def __init__(self, root: Path) -> None:
+        self.path = root / CHRONICLE_DIR / SEASON_CHRONICLE_FILE
+        self._lock = threading.Lock()
+
+    def load(self) -> SeasonChronicle:
+        if not self.path.is_file():
+            return SeasonChronicle()
+        return SeasonChronicle.model_validate_json(self.path.read_text(encoding="utf-8"))
+
+    def season(self, season_id: str) -> SeasonChronicleEntry | None:
+        return next((s for s in self.load().seasons if s.season_id == season_id), None)
+
+    def add(self, entry: SeasonChronicleEntry) -> bool:
+        """加一季（同一季已有就不覆寫：季末重置中斷後重跑，不會用半套資料蓋掉）。回傳有沒有寫。"""
+        with self._lock:
+            current = self.load()
+            if any(s.season_id == entry.season_id for s in current.seasons):
+                return False
+            seasons = tuple(sorted([*current.seasons, entry], key=lambda s: s.reset_at))
+            data = SeasonChronicle(seasons=seasons).model_dump(mode="json", exclude_none=True)
+            write_atomic(self.path, json.dumps(data, ensure_ascii=False, indent=1) + "\n")
+            return True
+
+    def heroes(self) -> tuple[tuple[SeasonChronicleEntry, ChronicleHero], ...]:
+        """所有上季角色（新的季在前）。"""
+        seasons = sorted(self.load().seasons, key=lambda s: s.reset_at, reverse=True)
+        return tuple((s, h) for s in seasons for h in s.heroes)
