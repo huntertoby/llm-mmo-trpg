@@ -36,8 +36,8 @@
 ## 檢查
 
 - `ruff check`、`ruff format --check`、`mypy`（1194 檔）、`lint-imports`（13 契約）通過。
-- `tests/engine tests/world tests/api tests/server tests/content tests/test_architecture.py`（`-n 8`）：見最後一節。
-- vitest、`pnpm build`：見最後一節。
+- `tests/engine tests/world tests/api tests/server tests/content tests/test_architecture.py`（`-n 8`）：7296 通過（合併 main 後；`glossary.json` 加了 `league_truce` 的說明，照慣例用 `scripts/export_client_fixtures.py` 重產）。
+- vitest 139 檔 1283 通過（新狀態加了圖示 `league_truce`：圓裡的暫停符號）；`pnpm build` 通過。
 - swamp 種子 7 重播：88 個動作、313 個事件，最終狀態一致（和 5F-1b 相同，一般戰鬥不受影響）。
 - 循環賽重播：瀏覽器那次的 `m0003.json` → `trpg battle replay` 通過（24 個動作、99 個事件，open_plain）。
 - 瀏覽器（8210 埠、自己的分頁與暫存存檔）：兩個角色，一個經 API 報名、一個在面板把智力的 3 點改配體質後報名（顯示「自己配點」，點沒用完時按鈕停用並提示）→ 存檔的開賽日往前調一天到第 14 天 → 打開循環賽面板自動開跑，12 場跑完：排行榜顯示同分比較數字（「剩餘 HP 合計 244%・共 61 輪」）、冠軍、場次結果「A-Wu 勝（4 輪）」→ 重播 m0003：開場兩人都有「開場休戰」、HP 134（加倍），結束面板顯示「Mei 勝（全滅）・第 4 輪」；`chronicle/league.json` 寫入最終排名。
