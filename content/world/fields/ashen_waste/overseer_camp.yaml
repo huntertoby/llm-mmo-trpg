@@ -1,0 +1,74 @@
+# 熔爐督工營實地地圖（6D-1；玩法 PM 草稿第 12 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 精英巢穴 16×14，建議 7 級：盜賊的熔爐工坊，用鐵鍊牽著熔岩甲蟲。懸賞「熔爐督工」。
+# 工坊棚用牆（#，北側），熔爐用油桶（換外觀，可以引爆），鐵鍊樁用石柱，營門兩側是土牆。
+# 區域題目「怕水」（草稿第 0 節、待確認 5）：有戰鬥的圖至少一處水（淬火槽，水表面 2 格）。
+# 西邊營門往斷崖幫運輸道；東南往鐵爐村（6D-2，待補）。
+# 敵人：工坊中央駐守 overseer_crew（精英鍛疤是遭遇的事）；營門駐守 overseer_guard。
+# 懸賞期間換成 forge_scar_band 加鍛疤（草稿待確認 8，遭遇表的事）。鍛疤的人設卡在這裡，但他是
+# 懸賞精英、在戰鬥裡出現，地圖上不放 NPC。
+# 事件點：營門（burned_bandit）、工坊（scarface_revenge）。
+id: overseer_camp
+name_zh: 熔爐督工營
+region: ashen_waste
+location: overseer_camp
+size: [16, 14]
+heights: |
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+terrain: |
+  ################
+  ,,,,,,,,,#####,,
+  ,,,,,,,,,#####,,
+  ,,,,,,,,,,,,,,,,
+  ,,,,,.........,,
+  ,,,,,.........,,
+  ,,,,,.........,,
+  ,,,,,.........,,
+  ,,,,,.........,,
+  ,,,,,.........,,
+  ,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,
+  ################
+legend:
+  ",": dirt
+  ".": stone
+  "#": wall
+objects:
+  - {at: [10, 3], kind: oil_barrel}   # 熔爐（油桶換外觀，可以引爆）
+  - {at: [12, 3], kind: oil_barrel}
+  - {at: [6, 4], kind: stone_pillar}   # 鐵鍊樁
+  - {at: [6, 9], kind: stone_pillar}
+  - {at: [13, 9], kind: stone_pillar}
+  - {at: [3, 3], kind: earth_wall}   # 營門兩側的土牆
+  - {at: [3, 4], kind: earth_wall}
+  - {at: [3, 9], kind: earth_wall}
+  - {at: [3, 10], kind: earth_wall}
+  - {at: [9, 11], kind: crate}   # 工坊的材料
+  - {at: [2, 12], kind: crate}
+surfaces:
+  - {at: [11, 10], surface: water}   # 淬火槽
+  - {at: [12, 10], surface: water}
+entry: [1, 7]
+exits:
+  - {id: to_gang_convoy_road, at: [[0, 6], [0, 7]], to: gang_convoy_road, arrive: to_overseer_camp}   # 西：營門
+  - {id: to_iron_forge_village, at: [[15, 10], [15, 11]], to: iron_forge_village, arrive: to_overseer_camp}   # 東南：往鐵爐村
+spawns:
+  - {at: [9, 7], group: overseer_crew}   # 工坊中央
+  - {at: [4, 6], group: overseer_guard}   # 營門
+event_spots:
+  - {at: [2, 8], id: burned_bandit}   # 營門
+  - {at: [11, 5], id: scarface_revenge}   # 工坊

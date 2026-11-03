@@ -1,0 +1,88 @@
+# 舊鐵哨站實地地圖（6D-1；玩法 PM 草稿第 4 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 村落 24×18，建議 5 級，營火、傳送石（城北的交通樞紐）：舊時代的鐵哨站，現在是獵人和拾荒者的落腳處，
+# 區域任務鏈起點。中央是鐵板地（石地），鐵哨塔用石柱（watchtower 待使用者確認）、帳篷用木箱（tent 待確認），
+# 四角留著鐵欄殘段（矮牆）。區域題目「怕水」（草稿第 0 節、待確認 5）：有戰鬥的圖至少一處水（水表面）。
+# 南邊往餘燼集（6D-3，待補）；西北往灰泥沼；東北往冷卻井。
+# NPC：老鐵（scavenger_laotie）。草稿的「獵人」沒有人設卡（world/npcs/ashen_waste.yaml），先不放。
+# 敵人：哨站外圍巡邏 scavenger_beasts。哨站是村落但不是三村落，碰到是一般戰鬥（草稿待確認 4）。
+# 事件點：帳篷（laotie_dig）、水槽（water_caravan）。
+id: old_iron_post
+name_zh: 舊鐵哨站
+region: ashen_waste
+location: old_iron_post
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,gggg,,,,,,,,,,,,,,,,,,,
+  ,gggg,,,,,,,,,,,,,,,,,,,
+  ,gggg,,,,,,,,,,,,,,,,,,,
+  ,gggg,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,..........,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,gggg,
+  ,,,,,,,,,,,,,,,,,,,gggg,
+  ,,,,,,,,,,,,,,,,,,,gggg,
+  ,,,,,,,,,,,,,,,,,,,gggg,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+legend:
+  ",": dirt
+  ".": stone
+  "g": grass
+objects:
+  - {at: [11, 6], kind: stone_pillar}   # 鐵哨塔（watchtower，物件 ID 還沒進 objects.yaml，先用石柱）
+  - {at: [8, 8], kind: crate}   # 拾荒者的帳篷（tent，先用木箱）
+  - {at: [9, 8], kind: crate}
+  - {at: [14, 9], kind: crate}
+  - {at: [7, 5], kind: low_wall}   # 哨站的鐵欄殘段
+  - {at: [8, 5], kind: low_wall}
+  - {at: [15, 5], kind: low_wall}
+  - {at: [16, 5], kind: low_wall}
+  - {at: [7, 12], kind: low_wall}
+  - {at: [16, 12], kind: low_wall}
+  - {at: [4, 9], kind: rubble}   # 廢鐵
+  - {at: [19, 7], kind: rubble}
+surfaces:
+  - {at: [15, 11], surface: water}   # 水槽
+  - {at: [16, 11], surface: water}
+entry: [11, 14]
+exits:
+  - {id: to_ember_market, at: [[11, 17], [12, 17]], to: ember_market, arrive: to_old_iron_post}   # 南：往餘燼集的北門
+  - {id: to_ash_mire, at: [[3, 0], [4, 0]], to: ash_mire, arrive: to_old_iron_post}   # 西北：往灰泥沼
+  - {id: to_cooling_well, at: [[19, 0], [20, 0]], to: cooling_well, arrive: to_old_iron_post}   # 東北：往冷卻井
+teleport_stones:
+  - {id: stone_old_iron_post, at: [13, 7]}   # 鐵哨塔旁
+npcs:
+  - {at: [10, 10], id: scavenger_laotie}   # 帳篷前
+spawns:
+  - {at: [2, 15], group: scavenger_beasts, patrol: [[2, 15], [21, 15]]}   # 哨站外圍巡邏
+campfires:
+  - {at: [11, 9], id: campfire_old_iron_post}   # 哨站中央
+event_spots:
+  - {at: [9, 9], id: laotie_dig}   # 帳篷
+  - {at: [14, 11], id: water_caravan}   # 水槽
