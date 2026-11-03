@@ -9,6 +9,7 @@ import { buildDrawModel, type DrawModel } from "../battle/drawModel";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
+import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
 import { npcFieldLook } from "./npcLook";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
@@ -478,27 +479,72 @@ const STONE_COLOR = 0x7fd8ff;
 /** 6C-5 地圖上的東西的標記顏色。 */
 export const THING_COLOR = { event: 0xffc83a, campfire: 0xff8a3a, object: 0xe8d27a, note: 0x9fb0c8, footprint: 0xb8a07a, noteStone: 0xa0c4ff } as const;
 
-/** 6C-5：事件「！」、營火、情境物件、朋友的腳印、留言石碑的標記（同一格只畫優先的一個：「！」＞物件＞營火＞石碑＞腳印）。 */
-export function thingMarks(field: FieldView): TelegraphMark[] {
-  const out: TelegraphMark[] = [];
+type ThingEntry = { mark: TelegraphMark; thing: MapThing | null };
+
+/**
+ * 地圖上的東西，照優先序去重（同一格只畫優先的一個：「！」＞物件＞營火＞石碑＞腳印；門與傳送石那格不畫）。
+ * 6C-8 起「！」、營火、石碑、腳印照自己的形狀畫（`thing`，`render/mapMarks.ts`）；情境物件照舊是淡色框（`thing` ＝ `null`）。
+ */
+function thingEntries(field: FieldView): ThingEntry[] {
+  const out: ThingEntry[] = [];
   const taken = new Set<string>([...field.doors.map((d) => `${d.x},${d.y}`), ...field.stones.map((s) => `${s.x},${s.y}`)]);
-  const add = (m: TelegraphMark) => {
-    const k = key(m.pos);
+  const add = (mark: TelegraphMark, thing: MapThing | null) => {
+    const k = key(mark.pos);
     if (taken.has(k)) return;
     taken.add(k);
-    out.push(m);
+    out.push({ mark, thing });
   };
   const ev = field.event_mark;
-  if (ev != null) add({ pos: { x: ev.x, y: ev.y }, kind: "event", glyph: "！", color: THING_COLOR.event, texts: [EVENT_MARK_ZH] });
+  if (ev != null) {
+    const pos = { x: ev.x, y: ev.y };
+    add({ pos, kind: "event", glyph: "！", color: THING_COLOR.event, texts: [EVENT_MARK_ZH] }, { kind: "event", pos });
+  }
   for (const o of field.situation_objects ?? []) {
     const color = o.usable ? THING_COLOR.object : THING_COLOR.note;
-    add({ pos: { x: o.x, y: o.y }, kind: "object", glyph: "◎", color, texts: [objectText(o)] });
+    add({ pos: { x: o.x, y: o.y }, kind: "object", glyph: "◎", color, texts: [objectText(o)] }, null);
   }
-  for (const c of field.campfires ?? []) add({ pos: { x: c.x, y: c.y }, kind: "campfire", glyph: "火", color: THING_COLOR.campfire, texts: [CAMPFIRE_ZH] });
+  // 營火：伺服器沒給「今天紮過營」，一律畫點著的（待 PM 決定）
+  for (const c of field.campfires ?? []) {
+    const pos = { x: c.x, y: c.y };
+    add({ pos, kind: "campfire", glyph: "火", color: THING_COLOR.campfire, texts: [CAMPFIRE_ZH] }, { kind: "campfire", pos, lit: true });
+  }
+  // 石碑：伺服器只給留言數、沒有「未讀」，不畫紅點（待 PM 決定）
   const stone = field.note_stone;
-  if (stone != null) add({ pos: { x: stone.x, y: stone.y }, kind: "note_stone", glyph: "碑", color: THING_COLOR.noteStone, texts: [noteStoneText(stone.count)] });
-  for (const f of field.footprints ?? []) add({ pos: { x: f.x, y: f.y }, kind: "footprint", glyph: "足", color: THING_COLOR.footprint, texts: [`${f.name_zh}走過這裡`] });
+  if (stone != null) {
+    const pos = { x: stone.x, y: stone.y };
+    add({ pos, kind: "note_stone", glyph: "碑", color: THING_COLOR.noteStone, texts: [noteStoneText(stone.count)] }, { kind: "note_stone", pos, unread: false });
+  }
+  // 腳印：同一位朋友的腳印依伺服器給的順序越舊越淡（第一個最淡）
+  const prints = field.footprints ?? [];
+  const count = new Map<string, number>();
+  for (const f of prints) count.set(f.owner, (count.get(f.owner) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  for (const f of prints) {
+    const i = seen.get(f.owner) ?? 0;
+    seen.set(f.owner, i + 1);
+    const pos = { x: f.x, y: f.y };
+    const alpha = footprintAlpha(i, count.get(f.owner) ?? 1);
+    add({ pos, kind: "footprint", glyph: "足", color: THING_COLOR.footprint, texts: [`${f.name_zh}走過這裡`] }, { kind: "footprint", pos, facing: f.facing ?? "s", alpha });
+  }
   return out;
+}
+
+/** 6C-5 的格子框標記（6C-8 起只剩情境物件；「！」、營火、石碑、腳印改由 `mapThings` 照形狀畫）。 */
+export function thingMarks(field: FieldView): TelegraphMark[] {
+  return thingEntries(field)
+    .filter((e) => e.thing === null)
+    .map((e) => e.mark);
+}
+
+/** 6C-8：照自己的形狀畫的標記（事件「！」、營火、留言石碑、朋友腳印；去重與優先序同 `thingMarks`）。 */
+export function mapThings(field: FieldView): MapThing[] {
+  return thingEntries(field).flatMap((e) => (e.thing === null ? [] : [e.thing]));
+}
+
+/** 6C-8：「誰在看」——有視野的敵群頭上一個眼睛（潛行中半閉）；取代格角的黑點。 */
+export function watchEyes(field: FieldView): WatchEye[] {
+  const sneaking = field.sneaking === true;
+  return (field.enemies ?? []).filter((e) => e.sight.length > 0).map((e) => ({ pos: { x: e.x, y: e.y }, sneaking }));
 }
 
 export const EVENT_MARK_ZH = "有事情發生：走過去看看";
@@ -537,6 +583,7 @@ export function sightRegion(field: FieldView): Pos[] {
 /**
  * 門與傳送石的淡色標示（借用環境預告的半透明外框＋小圖示）、精英的「精」；`hover` 是滑鼠所在格。
  * 敵人的視野（6A-4g）照地表併塊畫成一塊：淡紅填色、只描外緣，不再每格紅框＋格角小圓（那個小圓是空字的徽章底，沒有意思）。
+ * 6C-8：外緣改虛線、潛行時更淡；「！」、營火、石碑、腳印照形狀畫（`things`），有視野的敵群頭上一個眼睛（`eyes`）。
  */
 export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights {
   const telegraph: TelegraphMark[] = [
@@ -548,8 +595,9 @@ export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights
     ...thingMarks(field),
   ];
   const sight = sightRegion(field);
-  const regions = sight.length > 0 ? [{ cells: sight, color: SIGHT_COLOR }] : [];
-  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [], regions };
+  // 6C-8：淡紅 0.20、外緣紅色虛線；潛行時 0.10、虛線更短更淡（`render/mapMarks.ts` 的 `sightStyle`）
+  const regions = sight.length > 0 ? [{ cells: sight, color: SIGHT_COLOR, ...sightStyle(field.sneaking === true) }] : [];
+  return { moves: [], attacks: [], directions: [], preview: [], telegraph, focus: null, hover, overlays: [], picked: [], regions, things: mapThings(field), eyes: watchEyes(field) };
 }
 
 /** 滑鼠所在格的一行說明（出口往哪、門通到哪、傳送石、設施、NPC）；沒有東西為 `null`。 */

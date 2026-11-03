@@ -5,7 +5,7 @@
 // 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
 // 高度「整格抬高」（Phase 3-19）：場景放在 `world`（往下移畫布上方預留的高度），由北到南一排一排畫
 // （`RowStack`），格子上的所有東西都依 `tileLift` 往上移；位移只從 `battle/elevation.ts` 來。
-import { Application, Container, GlobalResourceRegistry, Graphics, Sprite, UPDATE_PRIORITY, type Text, type Ticker } from "pixi.js";
+import { Application, Container, GlobalResourceRegistry, Graphics, Sprite, UPDATE_PRIORITY, type Text, type Texture, type Ticker } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, rowDuringMove, type MoveAnim, type MoveStyle } from "../battle/animation";
@@ -43,6 +43,7 @@ import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, PRONE, Pulses, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
+import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { arriveFrame, leaveFrame, type TransitFrame, type TransitKind } from "./doorClips";
 import { DOLL_SCALE } from "./paperdoll";
@@ -102,6 +103,10 @@ export interface Highlights {
   path?: PathDraw;
   /** 併成一塊的格子範圍（Phase 6A-4g：實地地圖上敵人的視野）：淡色填滿、只描外緣（`regionBlobs.ts`）。 */
   regions?: readonly RegionMark[];
+  /** 實地地圖上照形狀畫的東西（Phase 6C-8：事件「！」、營火、留言石碑、朋友腳印；`mapMarks.ts`）。 */
+  things?: readonly MapThing[];
+  /** 實地地圖上有視野的敵群頭上的眼睛（6C-8，潛行時半閉）。 */
+  eyes?: readonly WatchEye[];
 }
 
 const T = TILE_SIZE;
@@ -187,6 +192,9 @@ export class BattleRenderer {
   /** 可燃小火苗的節點（3-38；每次重畫重建）與目前是否明顯。 */
   private flameMarks: Container[] = [];
   private flameOn = false;
+  /** 浮動的事件「！」泡泡（6C-8；每次重設高亮時重建）與它們的基準高度。 */
+  private bobs: Array<{ node: Sprite; y: number }> = [];
+  private bobClock = 0;
   private readonly hover = new Container();
   private readonly effects = new Container();
   private effectList: Effect[] = [];
@@ -249,6 +257,7 @@ export class BattleRenderer {
     ticker.add(this.safeRender, this, UPDATE_PRIORITY.LOW);
     ticker.add((t) => this.guard(() => this.pulses.tick(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.tickIdle(t.deltaMS)));
+    ticker.add((t) => this.guard(() => this.tickBobs(t.deltaMS)));
     this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
     stage.eventMode = "none";
@@ -765,6 +774,7 @@ export class BattleRenderer {
       drawRegionBlobs(rg, h.regions ?? [], T, (p) => this.origin(p));
       this.marks.addChild(rg);
     }
+    this.drawThings(h.things ?? [], h.eyes ?? []);
     for (const m of h.telegraph) {
       const o = this.origin(m.pos);
       pen
@@ -815,6 +825,65 @@ export class BattleRenderer {
     for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
     if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawFrames(h.focus, h.hover);
+  }
+
+  /**
+   * 實地地圖的標記（6C-8，`mapMarks.ts`）：腳印用 Graphics 畫兩步鞋印，其他是程式繪製的貼圖（格子左上角對齊、四周多留 `MARK_PAD`）；
+   * 事件「！」的泡泡另一張、上下浮動；眼睛放在敵群頭上。不畫格子框、不寫字。
+   */
+  private drawThings(things: readonly MapThing[], eyes: readonly WatchEye[]): void {
+    this.bobs = [];
+    const prints = new Graphics();
+    for (const t of things) {
+      const o = this.origin(t.pos);
+      if (t.kind === "footprint") {
+        for (const e of footprintShapes(t.facing, T)) {
+          prints.ellipse(o.x + e.cx, o.y + e.cy, e.rx, e.ry).fill({ color: 0xe8f0ff, alpha: t.alpha }).stroke({ width: 0.9, color: 0x281e14, alpha: 0.55 * t.alpha });
+        }
+        continue;
+      }
+      const tex = thingTexture(t);
+      if (tex === null) continue;
+      this.marks.addChild(this.markSprite(tex, o.x - MARK_PAD, o.y - MARK_PAD));
+      if (t.kind === "event") {
+        const bubble = thingTexture(t, "bubble");
+        if (bubble === null) continue;
+        const node = this.markSprite(bubble, o.x - MARK_PAD, o.y - MARK_PAD);
+        this.bobs.push({ node, y: node.y });
+        node.y += eventBob(this.bobClock);
+        this.marks.addChild(node);
+      }
+    }
+    if (prints.context.instructions.length > 0) this.marks.addChildAt(prints, 0);
+    else prints.destroy();
+    for (const e of eyes) {
+      const tex = eyeTexture(e.sneaking);
+      if (tex === null) continue;
+      const o = this.origin(e.pos);
+      const at = eyeOffset(T);
+      const node = new Sprite(tex);
+      node.anchor.set(0.5);
+      node.width = MARK_SIZE;
+      node.height = MARK_SIZE;
+      node.position.set(o.x + at.x, o.y + at.y);
+      this.marks.addChild(node);
+    }
+  }
+
+  private markSprite(tex: Texture, x: number, y: number): Sprite {
+    const node = new Sprite(tex);
+    node.width = MARK_SIZE;
+    node.height = MARK_SIZE;
+    node.position.set(x, y);
+    return node;
+  }
+
+  /** 事件「！」上下浮動（6C-8；週期 1.6 秒、幅度 3px）。 */
+  private tickBobs(dt: number): void {
+    this.bobClock += dt;
+    if (this.bobs.length === 0) return;
+    const dy = eventBob(this.bobClock);
+    for (const b of this.bobs) if (!b.node.destroyed) b.node.y = b.y + dy;
   }
 
   /** 抬高後的格子幾何（給 `pathArt` 用）。 */
