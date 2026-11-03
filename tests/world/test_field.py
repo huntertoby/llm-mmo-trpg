@@ -14,6 +14,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.world.helpers import NOON, hero, make_world, with_rules
+from trpg.api.world_field_view import field_view
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import (
@@ -314,7 +315,11 @@ def test_hidden_door(calm_field: ContentLibrary) -> None:
     char = _char(calm_field, location="herb_valley", field=_at(3, 1, "herb_valley"))
     with pytest.raises(WorldActionError, match="走不過去"):  # 還沒發現：不可站
         _step(calm_field, char, _walk((3, 0)))
+    view = field_view(calm_field, char)
+    assert view is not None and view.doors == ()  # 未發現的隱藏門不顯示
     found = reveal_location(char, "cloud_ridge", "elixir_cave")
+    shown = field_view(calm_field, found)
+    assert shown is not None and [d.to_name_zh for d in shown.doors] == ["丹爐洞"]
     cave, events = _step(calm_field, found, _walk((3, 0)))
     assert cave.location == "elixir_cave"
     assert cave.field == FieldPos(map="elixir_cave", x=2, y=2, facing="n")
