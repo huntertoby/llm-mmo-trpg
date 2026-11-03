@@ -735,12 +735,17 @@
   gap: 6px;
 }
 
+/* 換地圖的地名（6B-3）：疊在大世界畫面上方，不是浮動卡，所以用 absolute＋低 z-index（6.5.1） */
+.world-screen {
+  position: relative;
+}
+
 .world-place-banner {
-  position: fixed;
+  position: absolute;
   top: 64px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 40;
+  z-index: 15;
   padding: 6px 28px;
   font-size: 1.35rem;
   letter-spacing: 0.3em;
