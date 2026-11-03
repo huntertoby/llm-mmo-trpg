@@ -353,5 +353,5 @@ window.Explore = (() => {
     hudFn(ctx, cols, rows, "渡口石階", "sword", { scene: "field" });
   }
 
-  return { T, town, field, ICON, box, rr, dot, rgba, PARTY, OUT };
+  return { T, town, field, ICON, box, rr, dot, rgba, shade, PARTY, OUT, SKIN, ground, person, ring, dock, boat, campfire, bubble, R };
 })();
