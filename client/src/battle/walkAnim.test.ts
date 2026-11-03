@@ -256,7 +256,8 @@ describe("播放速度與敵方 2 倍速", () => {
 describe("畫面小算式", () => {
   it("滑倒姿勢：開始站著；倒地後轉 SLIP_ANGLE，腳底留在往前溜的位置", () => {
     const feet = 11;
-    expect(slipPose(0, "east", feet)).toEqual({ x: 0, y: 0, rotation: -0 });
+    const start = slipPose(0, "east", feet);
+    expect([start.x, start.y, Math.abs(start.rotation)]).toEqual([0, 0, 0]);
     const end = slipPose(1, "east", feet);
     expect(Math.abs(end.rotation)).toBeCloseTo(SLIP_ANGLE);
     // 腳底 (0, feet) 旋轉後加上位移 ＝ (往前溜 6, feet)

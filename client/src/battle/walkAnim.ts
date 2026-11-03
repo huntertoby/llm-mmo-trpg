@@ -316,12 +316,13 @@ export const SLIP_ANGLE = 1.35;
  */
 export function slipPose(t: number, facing: Facing, feet: number, slide = 6): { x: number; y: number; rotation: number } {
   const k = Math.max(0, Math.min(1, t));
-  const dir = facing === "west" ? -1 : 1; // 往東（或南北）走時往左後方倒
-  const dx = facing === "north" || facing === "south" ? 0 : dir;
+  const dx = facing === "east" ? 1 : facing === "west" ? -1 : 0;
   const dy = facing === "south" ? 1 : facing === "north" ? -1 : 0;
+  // 往東走往西倒（逆時針）、往西走往東倒；南北走時一律往東側倒
+  const spin = facing === "east" ? -1 : 1;
   const s = easeInOut(Math.min(1, k / 0.35));
   const fall = easeInOut(Math.max(0, Math.min(1, (k - 0.35) / 0.35)));
-  const rotation = -dir * SLIP_ANGLE * fall;
+  const rotation = spin * SLIP_ANGLE * fall;
   // 以腳底 (0, feet) 為軸：旋轉後腳底留在原處（再加上往前溜的距離）
   return {
     x: dx * slide * s + feet * Math.sin(rotation),
