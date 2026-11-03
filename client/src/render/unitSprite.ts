@@ -261,8 +261,8 @@ export const BODY_LABEL = "body";
 export const BODY_FX_LABEL = "body-fx";
 
 /** 小人與跟著它的特效（動畫時一起動）。 */
-export function bodyNodes(unit: Container): Container[] {
-  return unit.children.filter((n) => n.label === BODY_LABEL || n.label === BODY_FX_LABEL);
+export function bodyNodes(unit: Container): Sprite[] {
+  return unit.children.filter((n): n is Sprite => n instanceof Sprite && (n.label === BODY_LABEL || n.label === BODY_FX_LABEL)); // 退回的色塊（沒有 DOM）不動
 }
 
 function bodyPart(node: Sprite, u: UnitDraw, feet: number): Sprite {

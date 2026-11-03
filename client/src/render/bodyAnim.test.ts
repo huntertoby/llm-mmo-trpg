@@ -186,7 +186,7 @@ describe("6M-3：倒地狀態持續躺著、動畫只動小人", () => {
       expect(body.x, facing).toBeCloseTo(lie.x, 9);
       expect(body.y, facing).toBeCloseTo(FEET + lie.y, 9);
       expect(poseKey(poses[0]!)).toBe(poseKey(PRONE_POSE));
-      for (const n of c.children) if (!bodyNodes(c).includes(n)) expect(n.rotation, `${facing} ${n.label}`).toBe(0);
+      for (const n of c.children) if (!(bodyNodes(c) as unknown[]).includes(n)) expect(n.rotation, `${facing} ${n.label}`).toBe(0);
     }
   });
 
