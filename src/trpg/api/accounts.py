@@ -33,6 +33,7 @@ from trpg.world.save import write_atomic
 __all__ = [
     "ACCOUNT_FORMAT",
     "MAX_SESSIONS",
+    "USERNAME_RE",
     "AccountDisabledError",
     "AccountError",
     "AccountLimitError",
@@ -43,6 +44,7 @@ __all__ = [
     "PasswordHash",
     "SessionRecord",
     "hash_password",
+    "normalize_username",
     "open_account_store",
     "verify_password",
 ]
