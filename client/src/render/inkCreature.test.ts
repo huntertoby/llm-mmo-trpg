@@ -21,7 +21,7 @@ import {
   type CreatureLookDraw,
 } from "./inkCreature";
 import { linkPairs } from "./linkLines";
-import { creatureOf, hasEliteMark, humanoidEliteScale, isLinked } from "./unitSprite";
+import { creatureOf, creatureSide, hasEliteMark, humanoidEliteScale, isLinked } from "./unitSprite";
 
 /** 記錄所有呼叫的假 Canvas 2D：任何方法都可以呼叫、任何屬性都可以設定。 */
 function mockCtx(): { ctx: CanvasRenderingContext2D; calls: string[] } {
@@ -191,6 +191,14 @@ describe("戰場單位（unitSprite）", () => {
     const heart = unit({ statusIds: ["molten_shell"], dollLook: dollLook({ rarity: "legendary", creature: { body: "wisp", traits: ["core"], status_traits: { molten_shell: ["crust"] } } }) });
     expect(creatureOf(heart)?.traits).toEqual(["core", "crust"]);
     expect(creatureOf({ ...heart, statusIds: [] })?.traits).toEqual(["core"]);
+  });
+
+  it("異形只有側面：南北依陣營朝向對手（敵方朝西、我方朝東）", () => {
+    expect(creatureSide({ facing: "west", team: "ally" })).toBe("west");
+    expect(creatureSide({ facing: "east", team: "enemy" })).toBe("east");
+    expect(creatureSide({ facing: "south", team: "enemy" })).toBe("west");
+    expect(creatureSide({ facing: "north", team: "third" })).toBe("west");
+    expect(creatureSide({ facing: "south", team: "ally" })).toBe("east");
   });
 
   it("金環：精英或頭目；倒下不畫。人形精英 ×1.15、頭目不放大", () => {

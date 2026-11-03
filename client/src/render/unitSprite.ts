@@ -136,6 +136,15 @@ export function creatureOf(u: UnitDraw): ResolvedCreature | null {
   return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity });
 }
 
+/**
+ * 異形只畫側面（docs/art/敵人外觀.md 1 節）：朝東、朝西照朝向；朝南、朝北（正面、背面）沿用側面，
+ * 敵方與第三方畫成朝西、我方朝東（面向對手那一側，開發 PM 代決）。
+ */
+export function creatureSide(u: Pick<UnitDraw, "facing" | "team">): "east" | "west" {
+  if (u.facing === "east" || u.facing === "west") return u.facing;
+  return u.team === "ally" ? "east" : "west";
+}
+
 /** 精英記號（Phase 5A-ART2）：`elite` 標籤或頭目外光（`rarity`）→ 金環＋金菱形；倒下不畫。 */
 export function hasEliteMark(u: UnitDraw): boolean {
   return !u.downed && (u.elite === true || u.dollLook?.rarity != null);
@@ -228,7 +237,7 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   if (formSprite !== null) return formSprite;
   const cr = creatureOf(u);
   if (cr !== null) {
-    const tex = art.creature(cr, u.facing);
+    const tex = art.creature(cr, creatureSide(u));
     if (tex !== null) {
       const sprite = new Sprite(tex);
       const k = (T / 52) * DOLL_SCALE * (u.dollLook?.creature?.size === "huge" ? HUGE_FIELD_SCALE : 1);
