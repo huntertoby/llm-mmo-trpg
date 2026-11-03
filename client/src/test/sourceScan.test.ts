@@ -62,5 +62,5 @@ describe("讀檔", () => {
     expect(tests.length).toBeGreaterThan(50);
     const bad = tests.filter((p) => /import\.meta\.glob\s*[<(]/.test(stripTsComments(readFile(SRC_DIR, p), p)));
     expect(bad).toEqual([]);
-  });
+  }, 30_000); // 用 TypeScript 剖析每個測試檔：完整平行跑時會超過預設 5 秒
 });
