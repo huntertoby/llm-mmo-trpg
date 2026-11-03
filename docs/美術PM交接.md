@@ -103,6 +103,7 @@
 | 其他四區（晶冠、樞市、灰燼、霜潮）換皮 | **四區全部完成並驗收**：5A-ART6（灰燼＋晶冠）、5A-ART7（樞市＋霜潮）11-04 通過（`5A-ART6檢查.md`、`5A-ART7檢查.md`） | `四區移植需求.md`、`regions4.png`、`sample/regions4.html`／`regions4.js` |
 | 冰橋（召喚物） | 玩法 PM 之後評估 | 不在 17 種內 |
 | 召喚物新增 `trait` 值 | 有新召喚物時 | 前端目前認得 9 個 |
+| 雲嶺區域插畫：等使用者選風格 | 11-04 樣張已交專案 PM | 選定後寫移植需求，接著畫荒原區域插畫、重畫大世界圖（`雲嶺區域插畫.md`） |
 | 手部細節 | 低優先 | 臂甲、露指手套在小人上很難分 |
 
 ## 5. 樣張檔一覽（`docs/art/sample/`）
@@ -137,6 +138,7 @@
 | `hudIcons.js`、`hud-icons.html` | HUD 功能列 8 個圖示定稿（R＝潛行）、按鈕狀態、滑過說明卡（`hud-icons.png`、`HUD功能列圖示.md`；11-04 樣張） |
 | `attr-icons.html` | 六種縮放屬性圖示（6A-1 技能卡用；`attr-icons.png`） |
 | `vfx.js`、`vfx.html` | 技能特效細部：火冰雷水霧毒 6 元素的飛行物、爆發、地表擴散與變體（`vfx.png`、`技能特效細部.md`；11-04 樣張） |
+| `regionArt.js`、`region-map.html` | 雲嶺區域插畫兩種風格：古地圖卷軸、俯視彩繪（`region-scroll.png`、`region-painted.png`、`雲嶺區域插畫.md`；11-04 樣張，等使用者選，不排開發） |
 | `mapMarks.js`、`map-marks.html` | 實地地圖標記：事件「！」、營火、腳印、石碑、物件提示、視野併塊、潛行（`map-marks.png`、`地圖標記.md`；11-04 樣張） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
