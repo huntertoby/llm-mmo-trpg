@@ -11,13 +11,17 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.slots import Slot
 
 __all__ = [
     "BuyAction",
     "CurrencyGainedEvent",
+    "EquipAction",
     "ItemBoughtEvent",
+    "ItemEquippedEvent",
     "ItemSoldEvent",
     "ItemUsedEvent",
+    "LootGainedEvent",
     "PouchAction",
     "PouchChangedEvent",
     "PouchUsedEvent",
@@ -69,6 +73,16 @@ class UseItemAction(_Model):
     item: str = Field(pattern=_ITEM_ID)
 
 
+class EquipAction(_Model):
+    """把背包裡的一件裝備換上（Phase 5D-2；城鎮或營火，同換技能）；換下的放回背包。"""
+
+    kind: Literal["equip"] = "equip"
+    item: str = Field(pattern=ID_PATTERN)
+    """背包裡裝備的 ID（``CharacterState.gear``）。"""
+    slot: Slot | None = None
+    """指定欄位（戒指 1／2）；``None``＝照物品種類自動挑（戒指先放空的）。"""
+
+
 # ---------------------------------------------------------------------------
 # 事件
 # ---------------------------------------------------------------------------
@@ -91,6 +105,8 @@ class ItemSoldEvent(_Model):
     count: int
     gold_gained: int
     gold: int
+    name_zh: str | None = None
+    """賣掉的裝備名稱（Phase 5D-2；裝備的 ID 不在物品表）；一般物品為 ``None``。"""
 
 
 class PouchChangedEvent(_Model):
@@ -120,3 +136,26 @@ class CurrencyGainedEvent(_Model):
     amount: int
     total: int
     source: str
+
+
+class LootGainedEvent(_Model):
+    """打贏一場撿到的東西（Phase 5D-2）：材料（物品 → 個數）、裝備；背包滿了沒撿到的另列。"""
+
+    kind: Literal["loot_gained"] = "loot_gained"
+    materials: dict[str, int] = Field(default_factory=dict)
+    gear: tuple[str, ...] = ()
+    """撿到的裝備 ID（依掉落順序）。"""
+    gear_names: tuple[str, ...] = ()
+    lost_materials: dict[str, int] = Field(default_factory=dict)
+    lost_gear_names: tuple[str, ...] = ()
+
+
+class ItemEquippedEvent(_Model):
+    """換上裝備（Phase 5D-2）：欄位、換上的物品、換下的物品（沒有為 ``None``）。"""
+
+    kind: Literal["item_equipped"] = "item_equipped"
+    slot: str
+    item: str
+    name_zh: str
+    removed: tuple[str, ...] = ()
+    """換下放回背包的物品名稱（雙手武器收起副手時有 2 件）。"""

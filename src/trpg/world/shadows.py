@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Final
 
 from trpg.content.battle import UnitTemplate
+from trpg.content.equipment import Loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.engine.setup import UnitSpawn
@@ -32,7 +33,9 @@ from trpg.world.actions import (
 )
 from trpg.world.clock import refresh_day
 from trpg.world.common import here
+from trpg.world.economy_actions import EquipAction
 from trpg.world.encounters import EncounterLineup
+from trpg.world.gear import item_loadout, shadow_equipment
 from trpg.world.growth import GROWTH_ACTIONS, hero_tier
 from trpg.world.state import (
     CharacterState,
@@ -61,6 +64,7 @@ PREP_ACTIONS: Final = (
     LoadoutAction,
     HireAction,
     ShadowAiAction,
+    EquipAction,  # 5D-2：換裝備也算整備（影子帶裝備，20.5）
     *GROWTH_ACTIONS,
 )
 """算「城鎮整備」的動作（代決 5C2-2）。"""
@@ -87,6 +91,7 @@ def shadow_snapshot(char: CharacterState, now: int) -> ShadowSnapshot:
         attribute_spent=dict(char.attribute_spent),
         skills=tuple(generated[s] for s in skills),
         ai_profile=char.shadow_ai,
+        equipment=dict(char.equipment),  # 5D-2：存影子時穿的裝備（20.5）
         region=char.region,
         location=char.location,
         saved_at=now,
@@ -215,10 +220,19 @@ def shadow_spawn(
     spawn = UnitSpawn(
         template=template,
         weapon=library.weapons[hero.weapon],
-        equipment=library.loadout_of(hero),
+        equipment=_shadow_loadout(library, snapshot, recruiter_level),
         team=Team.ALLY,
     )
     return spawn, tuple(extra[k] for k in sorted(extra))
+
+
+def _shadow_loadout(
+    library: ContentLibrary, snapshot: ShadowSnapshot, recruiter_level: int
+) -> Loadout:
+    """影子的裝備（5D-2，20.5）：存影子時穿的、物品等級不超過招募者等級的；沒存裝備時照範本。"""
+    if not snapshot.equipment:
+        return library.loadout_of(snapshot.hero)
+    return item_loadout(library, shadow_equipment(snapshot.equipment, recruiter_level))
 
 
 # ---------------------------------------------------------------------------

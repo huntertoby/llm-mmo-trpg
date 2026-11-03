@@ -3016,6 +3016,121 @@ chat_text: '{name}看了你一眼，沒有多說。'
 | 5D1-12 | 影子任務幣轉入時機 | 主人自己的下一個世界動作；累計數字保留顯示 |
 | 5D1-13 | 道具與沉默 | 道具技能是 `spell` 類型，沉默時不能用（引擎現行規則；要例外再改引擎） |
 
-## 27. 之後各段規格
+## 27. 5D-2 詳細規格：材料與掉落
+
+> 給實作 agent。只動 `content/world/items.yaml`（材料）、`content/world/loot.yaml`（新）、`src/trpg/content/world_loot.py`（新：schema 與載入）、`src/trpg/content/library.py`（一個欄位、一行呼叫）、`src/trpg/content/item_gen.py`（`generate_item` 加選填的 `keywords`，不給時行為不變）、`src/trpg/world/`（`loot.py`、`gear.py` 新；`state.py`、`economy.py`、`economy_actions.py`、`battle.py`、`party.py`、`shadows.py`、`step.py`、`actions.py` 小改）、`src/trpg/api/`（`world_economy_view.py`、`world_economy_schemas.py`、`world_presenter.py`、`world_schemas.py` 小改）、`client/`（戰後掉落一行、背包的裝備列與「裝上」、API 型別）、`client/openapi.json`、`tests/content/`、`tests/world/`、`tests/api/`、vitest。另一個 agent（5B-4e）同時在改小蓮好感度、酒館傳聞、保底機遇與骨架 22：不碰 `trpg.world.events`／`social`／`solutions`／`quests` 與 `content/world/events`、`social`。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值，同 5D-1 的做法）。
+> 依據：**`docs/design/20-第一季商店與裝備內容.md`（優先）** 20.1（賣出：裝備照物品等級 × 稀有度係數 3／5／8／12 回收金幣；材料不能賣）、20.2（每名被擊倒的敵人 40% 掉自己家族的材料；精英必掉 1 份稀有或家族材料；一般戰鬥約 15% 掉 1 件裝備〔普通～稀有〕；精英必掉 1 件、史詩 50%；區域 Boss 必掉 1 件史詩；物品等級＝地點建議等級；詞條偏向該區關鍵字〔雲嶺：潮濕、帶電、隱蔽〕）、20.5（傭兵每個部位帶同物品等級、稀有的系統裝備，詞條照底稿 build 的關鍵字，不掉落、不能拆；影子帶主人存影子時的裝備，物品等級壓到招募者等級）；18 18.2.4（雲嶺 8 種材料與來源）；08 8.26.2（掉落物品等級＝地點建議等級；精英、頭目不掉更高等級、改掉較高稀有度；材料階上限粗 3、精 7、上 10；第一季上限 10）、8.13、8.17（背包 30 格）；M1（敵人家族掉材料）；玩法 PM 2026-11-03「被我方擊倒的第三方照常掉材料」；本檔 26（5D-1 的背包、出售）、23（影子快照的 `gear` 預留欄位）、22（傭兵）。
+
+### 27.1 目標
+
+打贏一場戰鬥後，被擊倒的敵人照家族掉材料（被我方擊倒的第三方也掉），有機率掉一件裝備（物品等級＝地點建議等級、精英掉史詩機率高、詞條偏向該區關鍵字），全部寫進背包；背包放不下的不撿。背包裡的裝備可以在城鎮或營火裝上、在商店照 20.1 回收金幣。系統傭兵每個部位帶同物品等級的稀有系統裝備；影子帶主人存影子時穿的裝備（超過招募者等級的那件不穿）。全部由「日誌＋內容庫＋種子」決定、可重播；LLM 不碰數值與物品。
+
+### 27.2 內容
+
+1. **`items.yaml` 加材料**（`kind: material`；材料不能賣、店裡不賣，`price` 只是名目價〔schema 必填〕；`rare: true` 標稀有材料；`grade: coarse | fine | superior` 只給通用料，5D-3 打造的材料階上限用）：
+
+   | `id` | 名稱 | 來源（18.2.4） | 備註 |
+   |---|---|---|---|
+   | `item_mist_crystal` | 霧晶 | 霧行者、霧魅（雲頂觀在 5F） | 傾向：隱蔽、閃避（寫在說明，5D-3 用） |
+   | `item_talisman_ash` | 符紙灰 | 符籙師、雷符師 | 帶電、控制抵抗 |
+   | `item_cinnabar` | 丹砂 | 煉丹師、水煉丹師、青霧執事 | 治療、中毒 |
+   | `item_green_bamboo` | 青竹節 | 竹林採集點（5D-1 已有；採集點之後的段） | 敏捷、移動 |
+   | `item_wolf_fang` | 狼牙 | 霧狼 | 流血、包抄 |
+   | `item_thunder_feather` | 雷羽 | 雷羽鷹 | 帶電、高處 |
+   | `item_living_bone` | 活血骨（稀有） | 「再生的」精英 | 受傷回血 |
+   | `item_summit_mist_crystal` | 雲頂霧晶（稀有） | 霧鎖真人（5F Boss；本段只定義） | 獨特配方關鍵材料（M7） |
+   | `item_coarse_material` | 粗料 | 5D-1 已有；加 `grade: coarse` | 通用 1 階 |
+   | `item_fine_material` | 精料 | 新；`grade: fine` | 通用 2 階 |
+   | `item_superior_material` | 上料 | 新；`grade: superior` | 通用 3 階 |
+
+2. **`loot.yaml`**（`LootRules`，schema `src/trpg/content/world_loot.py`；數值是 20.2 的初值）：
+
+   ```yaml
+   material_permille: 400          # 每名被擊倒的敵人掉自己家族材料的機率（20.2）
+   generic_by_level:               # 沒有家族材料的敵人掉通用料（代決 5D2-2；階＝8.26.2 的上限 3／7／10）
+     - {max_level: 3, item: item_coarse_material}
+     - {max_level: 7, item: item_fine_material}
+     - {max_level: 10, item: item_superior_material}
+   gear:
+     battle_permille: 150          # 一般戰鬥掉 1 件（20.2）
+     battle_weights: {common: 40, uncommon: 25, rare: 20}   # 普通～稀有（照 item_gen.yaml 的權重）
+     elite_epic_permille: 500      # 陣容有精英：必掉 1 件、史詩 50%；沒中時照 battle_weights
+     max_item_level: 10            # 第一季上限（8.26.2）
+   sell_rarity_coef: {common: 3, uncommon: 5, rare: 8, epic: 12}   # 20.1 裝備回收＝物品等級 × 係數
+   mercenary_gear:                 # 20.5
+     rarity: rare
+     slots: [head, body, hands, feet, neck, ring_1, ring_2]
+   regions:
+     cloud_ridge:
+       keywords: [wet, charged, hidden]     # 20.2 詞條偏向（雲嶺：潮濕、帶電、隱蔽）
+       families: {sect_mist_walker: item_mist_crystal, mist_wraith: item_mist_crystal, ...}
+       elite_affixes: {regenerating: item_living_bone}
+   ```
+
+   檢查：區域有地點圖；`families` 的鍵是單位範本或變體、值是 `kind: material`；`elite_affixes` 的鍵是精英詞綴、值是材料；`generic_by_level` 的 `max_level` 遞增、物品是材料；權重非負且合計 > 0；`slots` 是欄位、不含主手與副手。沒有檔案＝掉落關閉（`None`）。
+
+### 27.3 狀態（全部有預設值；格式字串不變）
+
+- `CharacterState.gear: tuple[ItemDef, ...] = ()`：背包裡的裝備（依取得順序；每件佔 1 格，和 `bag` 合計 ≤ `bag_slots`）。
+- `CharacterState.equipment: dict[str, ItemDef] = {}`：穿戴中（欄位 → 物品；空＝主角範本的裝備，同 roguelite `RunState.equipment`）。
+- `LastBattle.loot: LootSummary | None = None`：這場撿到的材料（物品 → 個數）、裝備（名稱）、背包滿了沒撿到的（材料、裝備名稱）。
+- `ShadowSnapshot.equipment: dict[str, ItemDef] = {}`：存影子時穿的裝備（5C-2 的 `gear` 預留欄位保留不用）。
+
+### 27.4 規則
+
+- **掉落只在打贏時**（`fight` 結算、`_won` 之後）。輸了、撤退沒有掉落。
+- **誰會掉材料**：陣容的敵方成員（`lineup.members`，含增援，不含召喚物）在戰鬥結束時倒下 → 掉；第三方（`lineup.third`）倒下而且倒下前最後一次受到傷害的來源是我方單位（含我方召喚物）→ 掉（玩法 PM 2026-11-03）；來源不明（地形、狀態）的第三方不掉（代決 5D2-3）。單位 ID 照設定順序對應（`unit_0001` 起）。
+- **掉什麼材料**：精英（`elite` 標籤或帶詞綴）必掉 1 份：詞綴在 `elite_affixes` → 那個稀有材料，否則家族材料，否則通用料；一般敵人 `material_permille` 機率掉 1 份：家族材料，沒有家族的掉通用料（依地點建議等級）。
+- **裝備**：陣容有精英 → 必掉 1 件，`elite_epic_permille` 史詩、否則照 `battle_weights`；沒有精英 → `battle_permille` 掉 1 件（`battle_weights`）。**一場最多 1 件**（代決 5D2-4）。部位在 8 種物品種類均勻抽（主角武器是雙手或成對時不出副手；主手只出主角武器同大類，07 7.1）；物品等級＝`enemy_level`（地點 `level_min`，同敵人等級），≤ `max_item_level`；詞條：`generate_item(..., keywords=區域 keywords)`——稀有起的 build 詞條（技能強化類）優先挑關鍵字在清單裡的，沒有符合的照原本（雲嶺只有「帶電」有現成詞條，代決 5D2-5）。產生失敗照 `offer_attempts` 重試，還不行就不掉。Boss 必掉史詩在 5F。
+- **亂數**：`Rng(fnv1a64(f"{battle_seed}:loot"))`，依敵人順序（陣容、第三方）抽材料，再 `fork("gear")` 抽裝備；不耗角色亂數。
+- **進背包**：材料先、裝備後，依掉落順序逐份放；放不下（`bag_slots`）的那份不撿，記進 `LootSummary.lost_*`，事件句子說「背包滿了，沒撿到：…」（代決 5D2-6，最保守：不新增暫存區）。
+- **裝上**（`equip` 動作：`item`、`slot: Slot | None`）：城鎮或營火、沒有遭遇（同換技能）；物品在 `gear`；照 roguelite `equip`（主手只換同大類、雙手武器收副手、戒指先放空的），換下的放回 `gear`（放不下也放，避免裝備消失，代決 5D2-7）。事件 `item_equipped`。開戰時主角用 `equipment`（空時照範本）。
+- **出售裝備**（`sell` 的 `item` 是 `gear` 裡的 ID、`count` 必須 1）：金幣 ＋ 物品等級 × `sell_rarity_coef[稀有度]`；沒有物品等級（初始裝備）或係數沒列（傳說）不收（代決 5D2-8）。事件 `item_sold` 照舊。
+- **傭兵裝備**（20.5）：開戰時每名傭兵在 `mercenary_gear.slots` 裡範本沒穿的欄位穿系統裝備：`rarity`、物品等級＝主角等級（傭兵照主角等級成長），≤ `max_item_level`；詞條關鍵字＝底稿 build 技能製造與利用的關鍵字；亂數 `fnv1a64(f"merc_gear:{傭兵}:{欄位}:{等級}")`（每個人都一樣，#87「事先公布」）。不進任何背包。主手、副手不換（武器照底稿；代決 5D2-9）。
+- **影子裝備**（20.5、#87）：存影子時帶 `equipment`；借用時物品等級 > 招募者等級的那件不穿（不降級重算，代決 5D2-10）。
+
+### 27.5 API 與前端
+
+- `WorldActionRequest` 加 `equip`。`InventoryView.bag` 也列裝備（`kind_zh: 裝備`、`count: 1`、說明＝稀有度、部位、物品等級與詞條；回收價；`gear: true`、`can_equip`／`equip_problem_zh`）；`InventoryView.equipped_zh`（穿戴中每欄一句）。`WorldView.last_loot_zh`：「掉落：霧晶 ×1、稀有短劍（1 級）。」／加上「背包滿了，沒撿到：…」。
+- 事件句子：`loot_gained`、`item_equipped`。
+- 前端：地點圖的「最近一次戰鬥」下面多一行掉落；背包列的裝備有「裝上」（城鎮或營火）；商店的賣出列照舊（後端把裝備放進背包清單）。完整背包畫面在 5D-4。
+- OpenAPI 照既有方式重產。
+
+### 27.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_loot.py` | 載入雲嶺；壞資料逐條（未知單位、詞綴、物品不是材料、等級沒遞增、欄位含主手）；沒有檔案＝`None` |
+| `tests/world/test_loot.py` | 精英必掉材料與裝備、詞綴的稀有材料、一般 40%（多個種子統計落在範圍）、物品等級＝地點等級、第三方被我方打倒才掉、輸了不掉、背包滿了不撿並記錄、同種子兩次相同、`generate_item` 給 keywords 時偏向、不給時與原本逐位元相同 |
+| `tests/world/test_gear.py` | 裝上（地點、遭遇、主手大類、換下回背包）、開戰用穿戴的裝備、賣裝備的價錢與傳說／初始不收、傭兵每欄有稀有裝備且每個人一樣、影子帶裝備並去掉超過等級的 |
+| `tests/api/test_world_loot_api.py` | 打贏 → `last_loot_zh`、背包列出裝備 → 裝上 → 賣 |
+| vitest | 背包的裝備列與「裝上」、掉落一行 |
+
+### 27.7 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。
+- `tests/world`、`tests/api`、`tests/content`（`-n 8`）；vitest 與 build；swamp 種子 7 重播（`trpg battle --map swamp --seed 7 --log-json f` → `trpg battle replay f`）。
+
+### 27.8 不做的事
+
+- 打造、強化、重骰、附魔、配方、分解（5D-3）；採集點（青竹節的竹林採集）；Boss 掉落（5F）；完整背包與裝備畫面（5D-4）；脫下裝備（只能換上別件）。
+
+### 27.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5D2-1 | 材料 ID、名目價、`rare`／`grade` | 開發 PM 取 ID；名目價 10（稀有 40），材料不能賣所以不影響金幣 |
+| 5D2-2 | 沒有家族材料的敵人（盜賊、多數修士、山豹、石背熊…） | 掉通用料，依地點建議等級：1～3 粗料、4～7 精料、8～10 上料 |
+| 5D2-3 | 第三方怎樣算「被我方擊倒」 | 倒下前最後一次受到傷害的來源是我方單位（含我方召喚物）；來源不明不算 |
+| 5D2-4 | 精英必掉 1 件 | 一場最多 1 件（不是每名精英 1 件） |
+| 5D2-5 | 詞條偏向該區關鍵字 | 只影響稀有起的技能強化詞條：有符合關鍵字的就從裡面抽；雲嶺只有「帶電」有現成詞條（潮濕、隱蔽沒有，新詞條是內容工作） |
+| 5D2-6 | 背包滿了 | 放不下的那份不撿（記錄並告知），不新增暫存區或信箱 |
+| 5D2-7 | 換下的裝備放不下 | 照樣放回背包（可以超過 30 格，之後撿不到東西，直到賣掉） |
+| 5D2-8 | 傳說、初始裝備回收 | 不收（20.1 只給 4 種係數；初始裝備沒有物品等級） |
+| 5D2-9 | 傭兵的主手、副手 | 不換（照底稿武器）；其餘 7 欄範本沒穿的穿系統裝備 |
+| 5D2-10 | 影子裝備「壓到招募者等級」 | 物品等級超過招募者等級的那件不穿（不重算數值）；照比例降級需要重算詞條，留給 PM |
+| 5D2-11 | 誰撿 | 只有主角的背包（傭兵、影子、夥伴不撿） |
+
+## 28. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

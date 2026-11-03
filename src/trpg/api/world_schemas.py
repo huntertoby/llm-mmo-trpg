@@ -57,7 +57,13 @@ from trpg.world.actions import (
     TeleportAction,
     TravelAction,
 )
-from trpg.world.economy_actions import BuyAction, PouchAction, SellAction, UseItemAction
+from trpg.world.economy_actions import (
+    BuyAction,
+    EquipAction,
+    PouchAction,
+    SellAction,
+    UseItemAction,
+)
 
 __all__ = [
     "CreateWorldCharacterRequest",
@@ -113,7 +119,8 @@ type WorldActionRequest = Annotated[
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
-    | UseItemAction,
+    | UseItemAction
+    | EquipAction,  # 5D-2
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -378,6 +385,8 @@ class WorldView(_ApiModel):
     next_battle_zh: tuple[str, ...] = ()
     """角色身上的下一場修正（每筆一句；5A-7）。"""
     last_battle_zh: str | None = None
+    last_loot_zh: str | None = None
+    """最近一次戰鬥的掉落（Phase 5D-2，例「掉落：霧晶 ×1、稀有短劍（1 級）。」）。"""
     """最近一次戰鬥結果的一句話（5A-5 待決 1；沒打過為 ``None``）。"""
     event: EventView | None = None
     """事件卡（5B-5；``event_solve`` 是放棄、交涉、戰鬥解法，5B-5b）。"""

@@ -261,7 +261,8 @@ export type WorldAction =
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
   | (Omit<Schemas["PouchAction"], "items"> & { items: Record<string, number> })
-  | Schemas["UseItemAction"];
+  | Schemas["UseItemAction"]
+  | Schemas["EquipAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];

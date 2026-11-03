@@ -1251,6 +1251,18 @@ export interface components {
             use_zh?: string | null;
             /** Battle Zh */
             battle_zh?: string | null;
+            /**
+             * Gear
+             * @default false
+             */
+            gear: boolean;
+            /**
+             * Can Equip
+             * @default false
+             */
+            can_equip: boolean;
+            /** Equip Problem Zh */
+            equip_problem_zh?: string | null;
         };
         /**
          * BattleHistory
@@ -2301,6 +2313,20 @@ export interface components {
              * @enum {string}
              */
             type: "end_turn";
+        };
+        /**
+         * EquipAction
+         * @description 把背包裡的一件裝備換上（Phase 5D-2；城鎮或營火，同換技能）；換下的放回背包。
+         */
+        EquipAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "equip";
+            /** Item */
+            item: string;
+            slot?: components["schemas"]["Slot"] | null;
         };
         /**
          * EquipChoice
@@ -3911,6 +3937,11 @@ export interface components {
              * @default []
              */
             consumables: components["schemas"]["BagItemView"][];
+            /**
+             * Equipped Zh
+             * @default []
+             */
+            equipped_zh: string[];
         };
         JsonValue: unknown;
         /**
@@ -5962,6 +5993,8 @@ export interface components {
             icon: components["schemas"]["SkillIcon"];
         };
         /** @enum {string} */
+        Slot: "main_hand" | "off_hand" | "head" | "body" | "hands" | "feet" | "neck" | "ring_1" | "ring_2";
+        /** @enum {string} */
         SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
         /**
          * StartKeywordOption
@@ -7159,7 +7192,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -7328,6 +7361,8 @@ export interface components {
             next_battle_zh: string[];
             /** Last Battle Zh */
             last_battle_zh?: string | null;
+            /** Last Loot Zh */
+            last_loot_zh?: string | null;
             event?: components["schemas"]["EventView"] | null;
             situation_result?: components["schemas"]["SituationResultView"] | null;
             /**

@@ -32,9 +32,12 @@ from trpg.shared.types import Attribute, Team
 from trpg.world.economy_actions import (
     BuyAction,
     CurrencyGainedEvent,
+    EquipAction,
     ItemBoughtEvent,
+    ItemEquippedEvent,
     ItemSoldEvent,
     ItemUsedEvent,
+    LootGainedEvent,
     PouchAction,
     PouchChangedEvent,
     PouchUsedEvent,
@@ -380,7 +383,8 @@ type WorldAction = Annotated[
     | BuyAction  # 5D-1
     | SellAction
     | PouchAction
-    | UseItemAction,
+    | UseItemAction
+    | EquipAction,  # 5D-2
     Field(discriminator="kind"),
 ]
 
@@ -999,6 +1003,8 @@ type WorldEvent = Annotated[
     | PouchChangedEvent
     | ItemUsedEvent
     | PouchUsedEvent
-    | CurrencyGainedEvent,
+    | CurrencyGainedEvent
+    | LootGainedEvent  # 5D-2
+    | ItemEquippedEvent,
     Field(discriminator="kind"),
 ]

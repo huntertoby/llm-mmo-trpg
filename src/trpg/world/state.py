@@ -17,6 +17,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
+from trpg.content.equipment import ItemDef
 from trpg.content.skills import SkillDef
 from trpg.content.world_oaths import OathDifficulty
 from trpg.roguelite.state import PendingFlash, SkillOffer
@@ -37,6 +38,7 @@ __all__ = [
     "EventTrigger",
     "LastBattle",
     "LocationRef",
+    "LootSummary",
     "NextBattleMod",
     "OathState",
     "PendingOffer",
@@ -167,6 +169,28 @@ class OathState(_Model):
         return dict(sorted(params.items()))
 
 
+class LootSummary(_Model):
+    """一場戰鬥撿到的東西（Phase 5D-2；``LastBattle.loot``）。"""
+
+    materials: dict[str, int] = Field(default_factory=dict)
+    """撿到的材料（物品 → 個數，依 ID 排序）。"""
+    gear: tuple[str, ...] = ()
+    """撿到的裝備名稱（依掉落順序）。"""
+    lost_materials: dict[str, int] = Field(default_factory=dict)
+    """背包滿了沒撿到的材料（代決 5D2-6）。"""
+    lost_gear: tuple[str, ...] = ()
+    """背包滿了沒撿到的裝備名稱。"""
+
+    @field_validator("materials", "lost_materials")
+    @classmethod
+    def _sorted(cls, counts: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(counts.items()))
+
+    @property
+    def empty(self) -> bool:
+        return not (self.materials or self.gear or self.lost_materials or self.lost_gear)
+
+
 class LastBattle(_Model):
     """最近一次戰鬥的結果（Phase 5A-7；5A-5 待決 1）：``fight`` 結算時寫入（勝負都算），讓重新整理的
     畫面仍看得到輸贏。由日誌決定，可重播。"""
@@ -184,6 +208,8 @@ class LastBattle(_Model):
     """這場帶的誓約模板（5C-3；``None``＝沒有誓約）。"""
     oath_broken: bool = False
     """這場違反了誓約（戰鬥中或戰鬥結束時判定，5C-3）。"""
+    loot: LootSummary | None = None
+    """這場撿到的東西（Phase 5D-2；打贏才有，沒有掉落為 ``None``）。"""
 
 
 class CompanionBench(_Model):
@@ -297,7 +323,9 @@ class ShadowSnapshot(_Model):
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     """主人設定的預設打法（#102）；``None``＝範本的 ``ai_profile``。"""
     gear: tuple[str, ...] = ()
-    """裝備欄位預留（5D 接物品等級；目前影子不帶裝備）。"""
+    """裝備欄位預留（5C-2；5D-2 起改用 ``equipment``，這個欄位不再使用）。"""
+    equipment: dict[str, ItemDef] = Field(default_factory=dict)
+    """存影子時穿的裝備（欄位 → 物品；Phase 5D-2，20.5）。借用時物品等級超過招募者等級的不穿。"""
     region: str = Field(pattern=ID_PATTERN)
     location: str = Field(pattern=ID_PATTERN)
     saved_at: int = Field(ge=0)
@@ -557,6 +585,12 @@ class CharacterState(_Model):
     """本週買過的限量商品（依店、物品排序）。"""
     shop_affinity: dict[str, CompanionAffinity] = Field(default_factory=dict)
     """店主 NPC → 今天在店裡消費加過的好感度（18.7.6：柳掌櫃每天最多 +4）。"""
+
+    # --- 5D-2 掉落與裝備（邏輯在 trpg.world.loot、trpg.world.gear） ---
+    gear: tuple[ItemDef, ...] = ()
+    """背包裡的裝備（依取得順序；每件佔背包 1 格，8.17）。"""
+    equipment: dict[str, ItemDef] = Field(default_factory=dict)
+    """穿戴中的裝備（欄位 → 物品；空＝主角範本的裝備，同 ``RunState.equipment``）。"""
 
     @field_validator("bag", "pouch")
     @classmethod

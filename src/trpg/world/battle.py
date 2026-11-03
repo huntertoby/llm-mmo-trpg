@@ -73,7 +73,9 @@ from trpg.world.encounters import (
     roll_lineup,
 )
 from trpg.world.errors import WorldActionError, WorldError
+from trpg.world.gear import hero_loadout
 from trpg.world.growth import as_run, gain_xp, world_library
+from trpg.world.loot import add_loot, roll_loot
 from trpg.world.oaths import oath_carries, oath_events, oath_setup
 from trpg.world.party import party_spawns, shadow_spawns
 from trpg.world.shadows import record_lent
@@ -82,6 +84,7 @@ from trpg.world.state import (
     ClearedLocation,
     EncounterResult,
     LastBattle,
+    LootSummary,
     WorldState,
 )
 
@@ -297,7 +300,7 @@ def _hero_spawn(
     return UnitSpawn(
         template=leveled,
         weapon=library.weapons[hero.weapon],
-        equipment=library.loadout_of(hero),
+        equipment=hero_loadout(library, char),  # 穿戴的裝備（5D-2；空時照範本）
         team=Team.ALLY,
         hp=hp,
         mana=char.mana,
@@ -478,6 +481,7 @@ def fight(
     char, used = _after_battle_skills(library, char, prepared, action.steps, hero_id, won=won)
     char = char.model_copy(update={"next_battle": ()})  # 下一場修正打完一場就消耗（5A-6）
     char, pouch_used = spend_pouch(library, char, state, hero_id)  # 腰包用掉的道具（5D-1）
+    loot: LootSummary | None = None
     if won:
         world, char, more = _won(
             library,
@@ -494,6 +498,18 @@ def fight(
         elite = bool(elite_kinds(library, prepared.lineup))
         char, gold = battle_gold(library, char, elite=elite, level=prepared.enemy_level)  # 5D-1
         more += gold
+        roll = roll_loot(  # 掉落（5D-2）：材料、裝備進背包
+            library,
+            char,
+            setup=prepared.setup,
+            lineup=prepared.lineup,
+            state=state,
+            events=battle_events,
+            seed=prepared.seed,
+            level=prepared.enemy_level,
+        )
+        char, loot, loot_events = add_loot(library, char, roll)
+        more += loot_events
     else:
         char, more = _lost(library, char, hero.mana)
     oath_more, oath_broken = oath_events(prepared.oath, battle_events)  # 誓約（5C-3）
@@ -531,6 +547,7 @@ def fight(
         at=now,
         oath=None if prepared.oath is None else prepared.oath.template,
         oath_broken=oath_broken,
+        loot=loot,
     )
     char = char.model_copy(update={"last_battle": last})
     return world, char, (*events, ended, *pouch_used, *more)

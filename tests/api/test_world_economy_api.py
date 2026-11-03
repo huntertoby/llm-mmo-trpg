@@ -51,6 +51,16 @@ def _shop_item(view: dict[str, Any], item: str) -> dict[str, Any]:
     return found
 
 
+def _loot(view: dict[str, Any]) -> list[dict[str, Any]]:
+    """背包裡打贏撿到的材料與裝備（5D-2）。"""
+    return [b for b in view["inventory"]["bag"] if b["gear"] or b["kind_zh"] == "材料"]
+
+
+def _shelf(view: dict[str, Any]) -> list[dict[str, Any]]:
+    """背包裡掉落以外的東西。"""
+    return [b for b in view["inventory"]["bag"] if b not in _loot(view)]
+
+
 def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None:
     view = _ok(client.post("/api/world/characters", json=START), 201)
     cid = view["character"]["character_id"]
@@ -82,24 +92,23 @@ def test_fight_buy_and_pouch(client: TestClient, ambush: ContentLibrary) -> None
     assert home["shop"] is not None and _shop_item(home, "item_antidote_herb")["can_buy"] is True
     bought = _act(client, cid, kind="buy", shop="shop_liu", item="item_antidote_herb")
     assert bought["wallet"]["gold"] == 5
-    assert [(b["item"], b["count"]) for b in bought["inventory"]["bag"]] == [
-        ("item_antidote_herb", 1)
-    ]
-    assert bought["inventory"]["slots_used"] == 1
+    looted = len(_loot(home))  # 5D-2：打贏可能撿到材料、裝備
+    assert [(b["item"], b["count"]) for b in _shelf(bought)] == [("item_antidote_herb", 1)]
+    assert bought["inventory"]["slots_used"] == 1 + looted
     assert any("買了解毒草 ×1" in e for e in bought["events"])
     assert any("柳掌櫃的好感度" in e for e in bought["events"]), bought["events"]
     assert "今天還能 +2" in bought["shop"]["affinity_zh"]
 
     pouched = _act(client, cid, kind="pouch", items={"item_antidote_herb": 1})
     inventory = pouched["inventory"]
-    assert inventory["bag"] == [] and inventory["pouch_count"] == 1
+    assert _shelf(pouched) == [] and inventory["pouch_count"] == 1
     assert inventory["pouch"][0]["battle_zh"].startswith("放進腰包")
     assert any("腰包：解毒草 ×1" in e for e in pouched["events"])
 
     emptied = _act(client, cid, kind="pouch", items={})
     sold = _act(client, cid, kind="sell", shop="shop_liu", item="item_antidote_herb")
     assert emptied["inventory"]["pouch"] == []
-    assert sold["wallet"]["gold"] == 17 and sold["inventory"]["bag"] == []
+    assert sold["wallet"]["gold"] == 17 and _shelf(sold) == []
 
 
 def test_bad_economy_actions_are_rejected(client: TestClient) -> None:
