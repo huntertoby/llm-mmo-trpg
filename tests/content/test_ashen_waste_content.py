@@ -11,6 +11,7 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_encounters import EncounterTable, encounter_table_problems
 from trpg.content.world_map import LocationKind
 from trpg.content.world_season import GoalSpec, SeasonContent, season_problems
+from trpg.shared.types import Element
 
 REGION = "ashen_waste"
 
@@ -102,7 +103,7 @@ def test_armor_mods_unit_must_be_in_a_group(library: ContentLibrary) -> None:
     table = library.world_encounters[REGION]
     data = table.model_dump(mode="json")
     pit = next(loc for loc in data["locations"] if loc["location"] == "molten_heart_pit")
-    pit["armor_mods"]["unit"] = "ember_lizard"
+    pit["armor_mods"]["unit"] = "heart_ember_lizard"
     assert (
         encounter_table_problems(
             EncounterTable.model_validate(data),
@@ -118,3 +119,21 @@ def test_armor_mods_unit_must_be_in_a_group(library: ContentLibrary) -> None:
         catalog=library.enemy_catalog(),
     )
     assert problems == ["地點 molten_heart_pit：armor_mods 的 lava_beetle 不在任何陣容裡"]
+
+
+def test_5f5b_balance_values(library: ContentLibrary) -> None:
+    """5F-5b 的平衡值（模擬見 docs/phases/Phase5F-5b報告.md）：荒原熔岩獸群的熔核攻擊傷害 ×2.25；
+    灰燼之心戰另用殼縫餘燼蜥（×1.5）；灰燼之心 HP 160、火抗 −75% 不動。"""
+    statuses = library.ruleset.statuses.by_id()
+    assert statuses["molten_burst"].damage_dealt_permille == 2250
+    assert statuses["frost_ember_burst"].damage_dealt_permille == 2250
+    assert statuses["heart_ember_burst"].damage_dealt_permille == 1500
+    heart = library.unit("ashen_heart")
+    assert heart.max_hp == 160 and heart.element_mods[Element.FIRE] == -750
+    spawns = [s.template for p in heart.phases for s in p.spawns]
+    assert spawns == ["heart_ember_lizard"]
+    lizard, court = library.unit("ember_lizard"), library.unit("heart_ember_lizard")
+    same = {"attributes", "max_hp", "speed", "armor_bonus", "weapon", "skills", "element_mods"}
+    assert court.model_dump(include=same) == lizard.model_dump(include=same)
+    group = next(g for g in library.world_encounters[REGION].groups if g.id == "ashen_heart_court")
+    assert "ember_lizard" not in group.units  # 熔心坑只用殼縫餘燼蜥

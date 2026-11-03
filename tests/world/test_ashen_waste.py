@@ -1,5 +1,6 @@
 """灰燼荒原的接線（Phase 5F-5a；``docs/phases/Phase5計畫.md`` 39）：渡口、熔心坑開放、世界事件 #2
-熔岩潰堤、村落的守點戰、灰燼之心的護甲調整與 Boss 戰、荒原世界日誌重播。"""
+熔岩潰堤、村落的守點戰、灰燼之心的護甲調整與 Boss 戰、荒原世界日誌重播；5F-5b：熔岩潰堤失敗後
+餘燼集商店買價 +20% 到季末。"""
 
 from __future__ import annotations
 
@@ -21,6 +22,8 @@ from trpg.world.actions import (
 )
 from trpg.world.battle import armored, prepare_battle
 from trpg.world.calendar import day_of
+from trpg.world.economy import item_def, shop_buy_price
+from trpg.world.economy_actions import BuyAction, ItemBoughtEvent, ItemSoldEvent, SellAction
 from trpg.world.encounters import EncounterLineup, LineupMember, roll_lineup
 from trpg.world.errors import WorldActionError
 from trpg.world.replay import WorldLogEntry, replay
@@ -40,6 +43,7 @@ DAY = 24 * 3600
 REGION = "ashen_waste"
 VILLAGES = ("red_sand_village", "ash_well_village", "iron_forge_village")
 BOSS = "ashen_heart"
+IRON_LADY = "shop_iron_lady"
 
 
 def _day(n: int) -> int:
@@ -166,6 +170,7 @@ def test_lava_breach_success_opens_pit_and_adds_keys(
     assert world.has_flag("heart_pit_open")
     assert world.seal_keys == keys + 5
     assert REGION not in world.level_bonus or world.level_bonus[REGION] == 1  # 只有霧潮入侵的 +1
+    assert world.shop_price == {}
 
 
 def test_lava_breach_failure_opens_pit_late_and_raises_level(library: ContentLibrary) -> None:
@@ -176,6 +181,41 @@ def test_lava_breach_failure_opens_pit_late_and_raises_level(library: ContentLib
     assert state is not None and state.status == "failed"
     assert world.has_flag("heart_pit_open")
     assert world.level_bonus[REGION] == 2  # 霧潮入侵失敗 +1、熔岩潰堤失敗 +1
+    assert world.shop_price == {IRON_LADY: 200}  # 5F-5b：餘燼集商店買價 +20% 到季末
+    later = _at_day(library, 10)
+    assert later.shop_price == {IRON_LADY: 200}  # 到季末都不會自己消失
+
+
+def test_shop_price_rounds_up_and_only_affects_that_shop() -> None:
+    world = make_world().model_copy(update={"shop_price": {IRON_LADY: 200}})
+    assert shop_buy_price(world, IRON_LADY, 10) == 12
+    assert shop_buy_price(world, IRON_LADY, 11) == 14  # 13.2 → 無條件進位
+    assert shop_buy_price(world, IRON_LADY, 1) == 2
+    assert shop_buy_price(world, "shop_liu", 11) == 11
+    assert shop_buy_price(make_world(), IRON_LADY, 11) == 11
+
+
+def test_iron_lady_charges_more_after_breach_failure(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    potion = "item_hp_potion_small"
+    base = item_def(library, potion).price
+    raised = make_world().model_copy(update={"shop_price": {IRON_LADY: 200}})
+    char = _ashen(make_char, gold=500)
+    plain = world_step(library, make_world(), char, BuyAction(shop=IRON_LADY, item=potion), NOON)
+    step = world_step(library, raised, char, BuyAction(shop=IRON_LADY, item=potion, count=2), NOON)
+    bought = next(e for e in step.events if isinstance(e, ItemBoughtEvent))
+    assert plain.char.gold == 500 - base
+    assert (
+        bought.gold_spent == 2 * (-(-base * 1200 // 1000))
+        and step.char.gold == 500 - bought.gold_spent
+    )
+    sold = world_step(library, raised, step.char, SellAction(shop=IRON_LADY, item=potion), NOON)
+    gained = next(e for e in sold.events if isinstance(e, ItemSoldEvent))
+    sold_plain = world_step(
+        library, make_world(), step.char, SellAction(shop=IRON_LADY, item=potion), NOON
+    )
+    assert gained == next(e for e in sold_plain.events if isinstance(e, ItemSoldEvent))  # 賣價不變
 
 
 # ---------------------------------------------------------------------------
@@ -249,12 +289,12 @@ def test_armor_mods_clamp_and_schema() -> None:
 def test_ashen_heart_boss_battle(library: ContentLibrary, make_char: MakeChar) -> None:
     encounter = _encounter("molten_heart_pit")
     lineup = roll_lineup(library, encounter)
-    assert [m.unit for m in lineup.members] == [BOSS, "ember_lizard", "ember_lizard"]
+    assert [m.unit for m in lineup.members] == [BOSS, "heart_ember_lizard", "heart_ember_lizard"]
     char = _ashen(make_char, "molten_heart_pit", pending_encounter=encounter, level=9)
     prepared = prepare_battle(library, char)
     setup = prepared.setup
     assert setup.map.id == "molten_heart_pit" and setup.map.objective.leader_retreat
-    assert "ember_lizard" in setup.spawn_templates  # 第 2 階段的召喚
+    assert "heart_ember_lizard" in setup.spawn_templates  # 第 2 階段的召喚（5F-5b 殼縫餘燼蜥）
     boss = next(u for u in setup.units if u.template.id == BOSS)
     for phase in boss.template.phases:
         for skill_id in phase.skills or ():

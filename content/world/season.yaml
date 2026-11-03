@@ -82,8 +82,9 @@ world_events:
     on_failure: {flags: [ashen_waste_open], level_bonus: [{region: ashen_waste, amount: 1}]}
   # #2 熔岩潰堤（19.9；Phase 5F-5a）：全服累計在三村落打贏的守點戰（村落的移動遇敵是守點，encounters/ashen_waste.yaml）。
   # 門檻 24（每人約 3 場，開發 PM 的初值）照上線人數調整。成功：熔心坑提早開放（旗標 heart_pit_open）＋全服封印鑰匙 +5；
-  # 失敗：熔心坑在事件結束（第 8 天 6 點）才開放＋荒原建議等級 +1（代決 5F5a-2）。
-  # 「失守的村落商店關閉到季末」：村落沒有商店，全服進度也分不出哪一村失守（代決 5F5a-3）。
+  # 失敗：熔心坑在事件結束（第 8 天 6 點）才開放＋荒原建議等級 +1（代決 5F5a-2）＋餘燼集商店（鐵娘的廢鐵攤）買價 +20% 到季末
+  # （shop_price：商店 ID 與加成千分比；世界狀態 shop_price 季末重置清掉）。19.9 原本的「失守的村落商店關閉到季末」改成這條
+  # （玩法 PM 2026-11-03 代決：村落沒有商店，全服只記守住次數、分不出哪一村失守；5F-5b）。
   - id: lava_breach
     name_zh: 熔岩潰堤
     text_zh: 全服在赤沙村、灰井村、鐵爐村打贏守點戰；成功則熔心坑提早開放、封印鑰匙 +5
@@ -92,7 +93,10 @@ world_events:
     base_players: 8
     min_target_permille: 250
     on_success: {flags: [heart_pit_open], seal_keys: 5}
-    on_failure: {flags: [heart_pit_open], level_bonus: [{region: ashen_waste, amount: 1}]}
+    on_failure:
+      flags: [heart_pit_open]
+      level_bonus: [{region: ashen_waste, amount: 1}]
+      shop_price: [{shop: shop_iron_lady, permille: 200}]
   # #3 封印共鳴（19.9；Phase 5F-3）：全服累積封印鑰匙（目標種類 seal_key：事件開始時帶入之前的全服鑰匙數）。
   # 集滿 → 旗標 seal_resonance_full（season_boss.unlock.flag）：最早第 8 天、且至少 24 小時後解鎖碎晶之主；
   # 沒集滿時第 10 天強制解鎖，所以失敗沒有效果。門檻 12 是開發 PM 的初值（代決 5F3-7），照上線人數調整。

@@ -120,8 +120,8 @@ def test_groups_cover_every_new_enemy(library: ContentLibrary) -> None:
     fielded.add("forge_scar")  # 5F-5a：只當督工營的固定精英（套詞綴後 ID 帶詞綴）
     new = {u for u, t in library.units.items() if {"sect", "beast", "construct"} & set(t.tags)}
     # 5F-2：霧鎖真人、雲頂觀陣眼石靈；5F-1b：霧中劍客
-    # 5F-5a：灰燼荒原 12 種（熔岩獸群 9、熔核領主、寒燼蜥、熔晶魅）
-    assert len(new) == 32
+    # 5F-5a：灰燼荒原 12 種（熔岩獸群 9、熔核領主、寒燼蜥、熔晶魅）；5F-5b：殼縫餘燼蜥
+    assert len(new) == 33
     assert library.world_enemies is not None
     variants = {v.id for v in library.world_enemies.variants}
     assert new | variants <= fielded

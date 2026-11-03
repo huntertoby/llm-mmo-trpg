@@ -33,6 +33,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "rift_collapse": "只由碎晶之主第 4 階段的 add_statuses 掛上（5F-3），沒有技能施加",
         "molten_burst": "只由熔岩獸群範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
         "frost_ember_burst": "只由寒燼蜥範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
+        "heart_ember_burst": "只由殼縫餘燼蜥的 opening_statuses 開場掛上（5F-5b），沒有技能施加",
         "molten_shell": "只由灰燼之心範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
         "hard_shell": "只由詞綴硬殼的 add_opening_statuses 開場掛上（5F-5a），沒有技能施加",
         "oath_bonus_easy": "只由誓約在開戰時掛上（5C-3，trpg.engine.oaths），沒有技能施加",

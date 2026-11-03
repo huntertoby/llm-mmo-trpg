@@ -385,6 +385,12 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     star(c, 5, -4, 3.5);
     flame(c, 0, 4, 7);
   },
+  // 殼縫熔核（Phase 5F-5b，灰燼之心戰的殼縫餘燼蜥：同熔核爆裂、傷害倍率另調）：殼的弧線＋火苗
+  heart_ember_burst: (c) => {
+    line(c, [[-8, -2], [-5, -7], [0, -8.5], [5, -7], [8, -2]]);
+    star(c, 0, -3, 3);
+    flame(c, 0, 4, 7);
+  },
   // 寒燼爆裂（Phase 5F-5a，寒燼蜥倒下時留下冰面）：碎片＋雪花的三條線
   frost_ember_burst: (c) => {
     star(c, -5, -5, 3.5);

@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from tests.world.helpers import NOON, hero, make_world, with_rules
 from trpg.api.absence_view import absence_summary
 from trpg.api.app import create_app
+from trpg.api.season_view import season_board
 from trpg.api.server_config import ServerSettings
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
@@ -38,6 +39,19 @@ def calm(library: ContentLibrary) -> ContentLibrary:
 def _char(library: ContentLibrary, cid: str = "alice", **updates: Any) -> CharacterState:
     char = new_character(library, cid, hero(library), region="cloud_ridge")
     return char.model_copy(update=updates)
+
+
+def test_lava_breach_failure_lists_price_raise(library: ContentLibrary) -> None:
+    """5F-5b：熔岩潰堤失敗＝餘燼集商店買價 +20% 到季末（離線摘要與公告板的世界變化都列）。"""
+    world, _ = roll_season(library, make_world(), NOON)
+    world, _ = roll_season(library, world, _day(9))  # 第 8 天換日：熔岩潰堤失敗
+    char = _char(library, news_seen_at=_day(7))
+    texts = [i.text_zh for i in absence_summary(library, world, char, _day(9)).items]
+    assert (
+        "世界事件「熔岩潰堤」失敗（0／24），灰燼荒原建議等級 +1、鐵娘的廢鐵攤買價 +20%。" in texts
+    )
+    board = season_board(library, world, char, _day(9))
+    assert board.level_bonus_zh == ("灰燼荒原：建議等級 +2", "鐵娘的廢鐵攤：買價 +20%")
 
 
 def _claim(day: int, bounty: str, who: str, at: int) -> BountyClaim:

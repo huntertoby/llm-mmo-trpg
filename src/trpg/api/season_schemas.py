@@ -159,6 +159,7 @@ class SeasonBoardView(_ApiModel):
     world_events: tuple[BoardWorldEventView, ...] = ()
     cleared: tuple[BoardClearedView, ...] = ()
     level_bonus_zh: tuple[str, ...] = ()
-    """世界事件失敗的建議等級加成（例「灰燼荒原：建議等級 +1」）。"""
+    """世界事件失敗的建議等級加成（例「灰燼荒原：建議等級 +1」）與商店價格加成（Phase 5F-5b，例
+    「鐵娘的廢鐵攤：買價 +20%」）。"""
     season_boss: BoardSeasonBossView | None = None
     """賽季 Boss（Phase 5F-3；沒有賽季 Boss 時 ``None``）。"""

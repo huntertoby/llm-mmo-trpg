@@ -2665,7 +2665,7 @@
   {
    "id": "molten_burst",
    "name_zh": "熔核爆裂",
-   "description_zh": "倒下時體內的熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。",
+   "description_zh": "體內的熔核灼熱，造成的攻擊傷害大幅提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。",
    "tags": [],
    "status_look": {
     "polarity": "neutral",
@@ -2676,12 +2676,32 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×225%"
+   ]
+  },
+  {
+   "id": "heart_ember_burst",
+   "name_zh": "殼縫熔核",
+   "description_zh": "從灰燼之心的殼縫裡帶出來的熔核，造成的攻擊傷害提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×150%"
+   ]
   },
   {
    "id": "frost_ember_burst",
    "name_zh": "寒燼爆裂",
-   "description_zh": "倒下時體內冷卻的灰燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。",
+   "description_zh": "體內的寒燼刺骨，造成的攻擊傷害大幅提高；倒下時寒燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。",
    "tags": [],
    "status_look": {
     "polarity": "neutral",
@@ -2692,7 +2712,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×225%"
+   ]
   },
   {
    "id": "molten_shell",

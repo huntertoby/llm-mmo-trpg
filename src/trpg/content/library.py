@@ -144,7 +144,12 @@ from trpg.content.world_mercenaries import MercenaryTable
 from trpg.content.world_oaths import OathTable, OathTemplateDef
 from trpg.content.world_quests import WorldQuestContent, load_world_quest_content
 from trpg.content.world_rules import WorldRules, world_rules_problems
-from trpg.content.world_season import SEASON_FILE, SeasonContent, season_problems
+from trpg.content.world_season import (
+    SEASON_FILE,
+    SeasonContent,
+    season_problems,
+    shop_price_problems,
+)
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -966,6 +971,7 @@ def load_library(  # noqa: PLR0915
         npcs_by_region={r: {n.id for n in t.npcs} for r, t in world_event_content.npcs.items()},
         check_skill=lambda skill: _story_skill_problems(skill, ruleset, skills, budget),
     )
+    _check_shop_prices(root, world_season, world_economy)  # 5F-5b
     keyword_ids = {k.id for k in keywords.keywords}
     world_loot = load_world_loot(  # 5D-2
         root,
@@ -1194,6 +1200,16 @@ def _load_optional[M: ContentModel](
     loaded = load_content_file(path, model)
     files.append((path, loaded))
     return loaded
+
+
+def _check_shop_prices(root: Path, season: SeasonContent | None, economy: WorldEconomy) -> None:
+    """世界事件的商店價格加成（Phase 5F-5b）指到的商店都要存在；經濟比賽季晚載入，所以另外檢查。"""
+    if season is None:
+        return
+    shop_ids = {shop.id for t in economy.shops.values() for shop in t.shops}
+    problems = shop_price_problems(season, shop_ids)
+    if problems:
+        raise ContentError(root / SEASON_FILE, "；".join(problems))
 
 
 def _load_world_season(

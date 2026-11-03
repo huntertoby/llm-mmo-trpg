@@ -29,6 +29,7 @@ from trpg.world.calendar import (
     season_day,
     season_status,
 )
+from trpg.world.economy import shop_price_zh
 from trpg.world.narration import location_name_for
 from trpg.world.season_board import daily_goals_for, players_on, posted_bounties
 from trpg.world.season_events import (
@@ -190,7 +191,7 @@ def season_board(
     bonus = tuple(
         f"{region_name(library, region)}：建議等級 +{amount}"
         for region, amount in world.level_bonus.items()
-    )
+    ) + tuple(shop_price_zh(library, shop, p) for shop, p in world.shop_price.items())
     return SeasonBoardView(
         season=_season_info(library, world, now),
         goals=goals,
