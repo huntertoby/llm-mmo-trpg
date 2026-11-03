@@ -1108,6 +1108,8 @@ export interface paths {
          * Post Season Reset
          * @description 季末重置（管理者，5F-5）：預設 dry-run，只列出會清什麼、留什麼；``dry_run: false`` 時先備份
          *     整個存檔資料夾再清，``confirm_season`` 要等於目前的季 ID。不能重置時 409。
+         *     真的執行一律要登入的管理者帳號，開發模式也一樣（開發 PM 代決：會清資料，不比照 LLM 開關
+         *     放行）。
          */
         post: operations["post_season_reset_api_world_season_reset_post"];
         delete?: never;

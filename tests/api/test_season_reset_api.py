@@ -95,10 +95,14 @@ def test_dry_run_then_execute(dev: TestClient, tmp_path: Path) -> None:
     assert (preview["old_season"], preview["new_season"]) == ("s1", "s2")
     assert preview["chronicle"] == ["阿霧：第一季：走過這一季"]
     assert _tree(tmp_path / "saves") == before
-    wrong = dev.post("/api/world/season/reset", json={**RESET, "dry_run": False})
-    assert wrong.status_code == 409 and "確認的季 ID 不符" in wrong.json()["detail"]
     body = {**RESET, "dry_run": False, "confirm_season": "s1"}
-    done = _ok(dev.post("/api/world/season/reset", json=body))
+    # 真的執行一律要管理者帳號，開發模式沒帶 token 也不行（開發 PM 代決）
+    assert dev.post("/api/world/season/reset", json=body).status_code == 403
+    assert _tree(tmp_path / "saves") == before
+    admin = _login(dev, "boss", admin=True)
+    wrong = dev.post("/api/world/season/reset", json={**RESET, "dry_run": False}, headers=admin)
+    assert wrong.status_code == 409 and "確認的季 ID 不符" in wrong.json()["detail"]
+    done = _ok(dev.post("/api/world/season/reset", json=body, headers=admin))
     assert done["backup"] is not None and Path(done["backup"]).is_dir()
     assert Path(done["backup"]).parent == tmp_path / "saves-backups"
     assert store.current_season() == "s2"
