@@ -2,7 +2,30 @@
 import { describe, expect, it } from "vitest";
 import type { FieldView } from "../api/types";
 import { fieldHighlights, mapThings, SIGHT_COLOR, watchEyes } from "../world/fieldModel";
-import { drawCampfire, drawEventMark, drawStele, drawWatchEye, eventBob, EVENT_BOB_MS, eyeOffset, footprintAlpha, footprintShapes, MARK_PAD, MARK_SIZE, MARK_T, sightStyle } from "./mapMarks";
+import type { UnitDraw } from "../battle/drawModel";
+import { DOLL_HEAD_TOP } from "./inkDoll";
+import {
+  drawCampfire,
+  drawEventMark,
+  drawObjectHint,
+  drawStele,
+  drawWatchEye,
+  eventBob,
+  EVENT_BOB_MS,
+  EYE_GAP,
+  EYE_HALF_H,
+  eyeOffset,
+  footprintAlpha,
+  footprintShapes,
+  MARK_PAD,
+  MARK_SIZE,
+  MARK_T,
+  OBJECT_HINT_MS,
+  objectHintAlpha,
+  sightStyle,
+} from "./mapMarks";
+import { DOLL_SCALE } from "./paperdoll";
+import { FEET, unitTopY } from "./unitSprite";
 import { dashRun } from "./regionBlobs";
 
 function field(over: Partial<FieldView> = {}): FieldView {
@@ -127,7 +150,71 @@ describe("6C-8：「誰在看」改成敵群頭上的眼睛", () => {
     expect(fieldHighlights(field(), null).eyes).toEqual(watchEyes(field()));
     const at = eyeOffset(48);
     expect(at.x).toBe(24);
-    expect(at.y).toBeLessThan(0); // 格子上緣再往上：在頭上，不在格角
+    expect(at.y).toBeLessThan(0); // 找不到單位時：格子上緣再往上 18px（6C-8 的位置）
+  });
+});
+
+describe("6C-8b：眼睛放在單位圖實際頂端再往上 6px", () => {
+  const unit = (over: Partial<UnitDraw>): UnitDraw => ({
+    id: "u1", x: 0, y: 0, marker: "A", template: "t", name: "n", team: "enemy", fill: 0, hpRatio: 1, shieldRatio: 0,
+    active: false, hero: false, downed: false, summon: false, totem: false, remaining: null, revivable: false, bomb: null,
+    facing: "west", weaponId: "fangs", weaponClass: "melee", ...over,
+  });
+  const look = (creature: Record<string, unknown> | null, over: Record<string, unknown> = {}): UnitDraw["dollLook"] =>
+    ({ skin: "#f1c9a5", skull: false, gear: {}, beard: false, affixes: [], traits: [], ...(creature === null ? {} : { creature: { traits: [], ...creature } }), ...over }) as UnitDraw["dollLook"];
+  /** 眼睛下緣（相對格子中心）。 */
+  const eyeBottom = (u: UnitDraw) => eyeOffset(48, unitTopY(u)).y - 24 + EYE_HALF_H;
+
+  it("眼睛下緣 ＝ 單位頂端 − 6px（人形、異形、頭目都一樣）", () => {
+    const cases = [unit({}), unit({ dollLook: look({ body: "golem", size: "large" }) }), unit({ dollLook: look({ body: "bear", size: "huge" }) })];
+    for (const u of cases) expect(eyeBottom(u)).toBeCloseTo(unitTopY(u) - EYE_GAP);
+    expect(EYE_GAP).toBe(6);
+  });
+
+  it("單位頂端照實際畫出來的高度：人形約 47px 高；越高大的異形頂端越高；精英人形比一般人形高", () => {
+    const human = unitTopY(unit({}));
+    expect(FEET - human).toBeCloseTo(DOLL_HEAD_TOP * (48 / 52) * DOLL_SCALE);
+    const ooze = unitTopY(unit({ dollLook: look({ body: "ooze", size: "medium" }) }));
+    const golem = unitTopY(unit({ dollLook: look({ body: "golem", size: "medium" }) }));
+    const golemL = unitTopY(unit({ dollLook: look({ body: "golem", size: "large" }) }));
+    const golemBoss = unitTopY(unit({ dollLook: look({ body: "golem", size: "huge" }) }));
+    expect(ooze).toBeGreaterThan(human); // 軟泥比人矮：眼睛跟著低
+    expect(golemL).toBeLessThan(golem);
+    expect(golemBoss).toBeLessThan(golemL); // 頭目（×0.9 後）仍比 large 高
+    expect(golemBoss).toBeLessThan(human - 10); // 大型異形頭頂遠高於人：6C-8 固定位置（−42）會蓋在身上
+    expect(eyeOffset(48, golemBoss).y + EYE_HALF_H).toBeLessThan(24 + golemBoss);
+    expect(unitTopY(unit({ elite: true }))).toBeLessThan(human);
+  });
+});
+
+describe("6C-8b：情境物件提示（金色虛線呼吸光＋小手）", () => {
+  it("虛線圈的不透明度呼吸：0.45～0.85、週期 1.4 秒", () => {
+    expect(objectHintAlpha(0)).toBeCloseTo(0.65);
+    expect(objectHintAlpha(OBJECT_HINT_MS / 4)).toBeCloseTo(0.85);
+    expect(objectHintAlpha((OBJECT_HINT_MS * 3) / 4)).toBeCloseTo(0.45);
+    expect(objectHintAlpha(OBJECT_HINT_MS)).toBeCloseTo(0.65);
+  });
+
+  it("虛線圈在物件底下（格子下方 0.7 處的金色虛線橢圓）、小手在右上", () => {
+    const calls: string[] = [];
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get(t, p: string) {
+        if (p in t) return t[p];
+        return (...a: unknown[]) => void calls.push(`${p}(${a.map((x) => (Array.isArray(x) ? `[${x.join(",")}]` : String(x))).join(",")})`);
+      },
+      set(t, p: string, v) {
+        t[p] = v;
+        calls.push(`${p}=${String(v)}`);
+        return true;
+      },
+    }) as unknown as CanvasRenderingContext2D;
+    drawObjectHint(ctx, "ring");
+    expect(calls).toContain("setLineDash([4,3])");
+    expect(calls.some((c) => c.startsWith(`ellipse(${MARK_T / 2},${MARK_T * 0.7},19,8`))).toBe(true);
+    expect(calls).toContain("strokeStyle=rgb(255,210,58)");
+    calls.length = 0;
+    drawObjectHint(ctx, "hand");
+    expect(calls).toContain(`translate(${MARK_T - 8},8)`);
   });
 });
 
@@ -156,6 +243,8 @@ describe("6C-8：畫法（程式繪製、不寫字、不畫格子框）", () => 
     ["石碑（未讀）", (c) => drawStele(c, true)],
     ["眼睛", (c) => drawWatchEye(c, false)],
     ["眼睛（潛行）", (c) => drawWatchEye(c, true)],
+    ["情境物件虛線圈", (c) => drawObjectHint(c, "ring")],
+    ["情境物件小手", (c) => drawObjectHint(c, "hand")],
   ];
 
   it.each(draws)("%s：沒有 fillText、沒有格子大小的 rect／strokeRect", (_name, draw) => {

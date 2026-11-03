@@ -26,13 +26,18 @@ export type MapThing =
   | { kind: "event"; pos: Pos }
   | { kind: "campfire"; pos: Pos; lit: boolean }
   | { kind: "note_stone"; pos: Pos; unread: boolean }
-  | { kind: "footprint"; pos: Pos; facing: "n" | "e" | "s" | "w"; alpha: number };
+  | { kind: "footprint"; pos: Pos; facing: "n" | "e" | "s" | "w"; alpha: number }
+  /** 6C-8b：情境物件提示（主角在 1 格內時才有）：物件底下一圈金色虛線呼吸光＋右上小手。 */
+  | { kind: "object_hint"; pos: Pos };
 
 /** 敵群頭上的眼睛：`sneaking` ＝ 主角潛行中（眼睛半閉）。 */
 export interface WatchEye {
   pos: Pos;
   sneaking: boolean;
 }
+
+/** 情境物件提示的呼吸週期（毫秒，照樣張 `objectHint`）。 */
+export const OBJECT_HINT_MS = 1400;
 
 // ---- 純函式 ----
 
@@ -86,9 +91,24 @@ export function sightStyle(sneaking: boolean): { fill: number; edge: number; edg
   return sneaking ? { fill: 0.1, edge: 0.55, edgeColor: 0xff7864, dash: [3, 5] } : { fill: 0.2, edge: 0.9, edgeColor: 0xff6e5a, dash: [7, 4] };
 }
 
-/** 眼睛相對格子左上角（含抬高）的位置：敵群頭上（格子上緣再往上 18px），不放在格角。 */
-export function eyeOffset(T = TILE_SIZE): { x: number; y: number } {
-  return { x: T / 2, y: -18 };
+/** 情境物件提示的虛線圈這一刻的不透明度（樣張 `objectHint`：0.35 ＋ 0.2·sin ＋ 0.3，即 0.45～0.85）。 */
+export function objectHintAlpha(t: number): number {
+  return 0.65 + 0.2 * Math.sin((t / OBJECT_HINT_MS) * TAU);
+}
+
+/** 眼睛圖示的半高（px，`drawWatchEye` 的外框上下各 5）。 */
+export const EYE_HALF_H = 5;
+/** 眼睛下緣離單位圖頂端的距離（px；6C-8b，`docs/art/6C-8檢查.md` 第 2 節第 4 項）。 */
+export const EYE_GAP = 6;
+
+/**
+ * 眼睛中心相對格子左上角（含抬高）的位置：敵群頭上，不放在格角。
+ * `unitTop` ＝ 這個單位實際畫出來的頂端（相對格子中心的 y，往上為負；`unitSprite.unitTopY`）：眼睛下緣在頂端再往上 `EYE_GAP`。
+ * 找不到單位時（`null`）退回 6C-8 的格子上緣往上 18px。
+ */
+export function eyeOffset(T = TILE_SIZE, unitTop: number | null = null): { x: number; y: number } {
+  if (unitTop === null) return { x: T / 2, y: -18 };
+  return { x: T / 2, y: T / 2 + unitTop - EYE_GAP - EYE_HALF_H };
 }
 
 // ---- 畫法（樣張 mapMarks.js，原點＝格子左上角）----
@@ -185,6 +205,26 @@ export function drawStele(ctx: Ctx, unread = false): void {
   ctx.restore();
 }
 
+/** 情境物件提示（樣張 `objectHint`）：`ring` ＝ 物件底下的金色虛線橢圓（不透明度由戰場呼吸，`objectHintAlpha`），`hand` ＝ 右上的小手。 */
+export function drawObjectHint(ctx: Ctx, part: "ring" | "hand"): void {
+  const T = MARK_T;
+  ctx.save();
+  if (part === "ring") {
+    ctx.strokeStyle = "rgb(255,210,58)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.ellipse(T / 2, T * 0.7, 19, 8, 0, 0, TAU);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    ctx.translate(T - 8, 8);
+    ink(ctx, "oh-bg", ellPts(0, 0, 7.5, 7.5, 14), "#2a241e", { shade: false, w: 0.7 });
+    ink(ctx, "oh-hand", [[-3, 4], [-3, -1], [-1.5, -1], [-1.5, -5], [0.3, -5], [0.3, -1], [3.5, 0], [3.5, 4]], "#f2d898", { shade: false, w: 0.4 });
+  }
+  ctx.restore();
+}
+
 /** 敵群頭上的眼睛（原點＝眼睛中心）：白底紅瞳；`sneaking` ＝ 潛行時上眼皮蓋下來（半閉）。 */
 export function drawWatchEye(ctx: Ctx, sneaking = false): void {
   ctx.save();
@@ -228,9 +268,14 @@ function markTexture(key: string, draw: (ctx: Ctx) => void): Texture | null {
   return tex;
 }
 
-/** 腳印以外的標記貼圖；事件「！」分成地上的光（`event`）與浮動的泡泡（`event_bubble`）兩張。 */
+/**
+ * 腳印以外的標記貼圖；事件「！」分成地上的光（`event`）與浮動的泡泡（`event_bubble`）兩張；
+ * 情境物件提示分成虛線圈（`main`，會呼吸）與小手（`bubble`）兩張。
+ */
 export function thingTexture(thing: Exclude<MapThing, { kind: "footprint" }>, part: "main" | "bubble" = "main"): Texture | null {
   switch (thing.kind) {
+    case "object_hint":
+      return part === "bubble" ? markTexture("object_hand", (c) => drawObjectHint(c, "hand")) : markTexture("object_ring", (c) => drawObjectHint(c, "ring"));
     case "event":
       return part === "bubble" ? markTexture("event_bubble", (c) => drawEventMark(c, "bubble")) : markTexture("event", (c) => drawEventMark(c, "ground"));
     case "campfire":
