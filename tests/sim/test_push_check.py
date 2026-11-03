@@ -74,7 +74,8 @@ def test_official_maps_are_all_connected_and_the_table_renders() -> None:
     library = load_library()
     ids = sorted(m for m in library.maps if not m.startswith("test_"))
     # 10 張正式地圖 ＋ 靶場（Phase 3F-1）＋ Boss 地圖（3-5b）＋ 雲頂觀（5F-2）＋ 裂界門（5F-3）
-    assert len(ids) == 14
+    # ＋ 熔心坑（5F-5a）
+    assert len(ids) == 15
     reports = [check_map(library, m) for m in ids]
     assert all(r.connected and not r.seals and not r.topple_seals for r in reports)
     assert any(r.topplable for r in reports)
