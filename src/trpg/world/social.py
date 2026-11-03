@@ -32,6 +32,7 @@ from trpg.world.clock import day_phase, refresh_day
 from trpg.world.common import here
 from trpg.world.errors import WorldActionError
 from trpg.world.events import season_day
+from trpg.world.season import week_of
 from trpg.world.state import CharacterState, EventTrigger, WorldState
 from trpg.world.weather import weather_at
 
@@ -40,7 +41,6 @@ __all__ = [
     "opportunity_hint",
     "talk",
     "tavern",
-    "week_of",
     "week_rumors",
 ]
 
@@ -155,12 +155,6 @@ def _trigger_here(
     )
     events.append(EventTriggeredEvent(trigger=trigger))
     return char.model_copy(update={"pending_event": trigger, "event_steps": 0}), events
-
-
-def week_of(library: ContentLibrary, world: WorldState, now: int) -> int:
-    """賽季開始以來的第幾週（0 起；早上 6 點刷新的日子）。"""
-    days = refresh_day(now) - refresh_day(world.season_start)
-    return max(0, days) // affinity_rules(library).week_days
 
 
 def week_rumors(

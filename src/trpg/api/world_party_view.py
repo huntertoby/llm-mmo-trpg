@@ -30,6 +30,7 @@ from trpg.world.clock import refresh_day
 from trpg.world.common import world_map_of
 from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
+from trpg.world.narration import location_name_for
 from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
 from trpg.world.shadows import shadow_level, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
@@ -126,7 +127,8 @@ def _shadow_view(
         capped=capped,
         cap_zh=f"借用時壓到 Lv {level}・技能 {tier} 階（你的上限）" if capped else None,
         hired=hired,
-        saved_zh=_location_name(library, snapshot.region, snapshot.location),
+        # 朋友的影子存的地點：看的人還沒發現的隱藏地點用提示語（5C-3f）
+        saved_zh=location_name_for(library, char, snapshot.region, snapshot.location),
     )
 
 
@@ -240,11 +242,14 @@ def _foes_zh(library: ContentLibrary, foes: tuple[str, ...]) -> str:
     return "、".join(n if counts[n] == 1 else f"{n} ×{counts[n]}" for n in ordered)
 
 
-def report_line(library: ContentLibrary, report: ShadowReport, season_start: int) -> str:
+def report_line(
+    library: ContentLibrary, report: ShadowReport, season_start: int, viewer: CharacterState
+) -> str:
     """一則戰報（例「第 3 天：你的影子幫小美在竹林小徑打倒了霧狼 ×3（+1 任務幣）」；天數從賽季開始
-    那天算第 1 天，早上 6 點刷新）。"""
+    那天算第 1 天，早上 6 點刷新）。地點是朋友打的：看的人（影子主人 ``viewer``）還沒發現的隱藏地點
+    用提示語（5C-3f）。"""
     day = max(1, report.day - refresh_day(season_start) + 1)
-    where = _location_name(library, report.region, report.location)
+    where = location_name_for(library, viewer, report.region, report.location)
     coins = f"（+{report.coins} 任務幣）" if report.coins else ""
     if report.won:
         foes = _foes_zh(library, report.foes) or "敵人"
@@ -264,7 +269,9 @@ def my_shadow_view(
     if record is None:
         return MyShadowView(saved=False, ai=char.shadow_ai, ai_zh=ai_zh, can_set_ai=can_set)
     snap = record.snapshot
-    reports = tuple(report_line(library, r, world.season_start) for r in reversed(record.reports))
+    reports = tuple(
+        report_line(library, r, world.season_start, char) for r in reversed(record.reports)
+    )
     return MyShadowView(
         saved=True,
         level=snap.level,

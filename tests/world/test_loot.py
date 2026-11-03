@@ -25,8 +25,7 @@ from trpg.world.economy_actions import (
 )
 from trpg.world.encounters import LineupMember
 from trpg.world.errors import WorldActionError
-from trpg.world.gear import loot_rules
-from trpg.world.loot import LootRoll, add_loot, roll_loot, third_downed_by_allies
+from trpg.world.loot import LootRoll, add_loot, loot_rules, roll_loot, third_downed_by_allies
 from trpg.world.state import CharacterState
 from trpg.world.step import StepResult, world_step
 

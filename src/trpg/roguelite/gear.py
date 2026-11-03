@@ -37,6 +37,7 @@ __all__ = [
     "current_item",
     "equip",
     "equip_notes",
+    "equip_swap",
     "gear_offer_node",
     "item_score",
     "make_gear_offer",
@@ -140,6 +141,19 @@ def equip(
 ) -> RunState:
     """把 ``item`` 換上（見模組說明）；不合法時拋出 :class:`ChoiceError`（狀態不變）。
     ``from_backpack``：物品來自背包（換上時先從背包拿掉）。"""
+    return equip_swap(library, run, item, slot, from_backpack=from_backpack)[0]
+
+
+def equip_swap(
+    library: ContentLibrary,
+    run: RunState,
+    item: ItemDef,
+    slot: str | None = None,
+    *,
+    from_backpack: bool = False,
+) -> tuple[RunState, tuple[ItemDef, ...]]:
+    """同 :func:`equip`，另外回傳換下來放進背包的物品（依放進的順序：被占用的副手、原本那格的物品；
+    5D-R1）。"""
     slot = target_slot(library, run, item, slot)
     hero = run.hero
     weapon = library.weapons[hero.weapon]
@@ -157,16 +171,19 @@ def equip(
         hero = hero.model_copy(update={"weapon": new_weapon.id})
     new = dict(worn)
     new[slot] = item
+    removed: list[ItemDef] = []
     if slot == "main_hand" and (weapon.two_handed or weapon.paired or item.paired):
         displaced = new.pop("off_hand", None)  # 雙手或成對武器占用副手：副手收進背包
         if displaced is not None:
-            backpack.append(displaced)
+            removed.append(displaced)
     problems = loadout_problems(_loadout(library, new), weapon, library.ruleset.equipment)
     if problems:
         raise ChoiceError("；".join(problems))
     if old is not None:
-        backpack.append(old)
-    return run.model_copy(update={"hero": hero, "equipment": new, "backpack": tuple(backpack)})
+        removed.append(old)
+    backpack += removed
+    done = run.model_copy(update={"hero": hero, "equipment": new, "backpack": tuple(backpack)})
+    return done, tuple(removed)
 
 
 # ---------------------------------------------------------------------------

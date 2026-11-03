@@ -18,18 +18,18 @@ from collections.abc import Mapping
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import ItemDef, Loadout, resolve_loadout
-from trpg.content.item_gen import ItemGenError, downscale_item, generate_item
+from trpg.content.item_gen import downscale_item, generate_item_retrying
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
-from trpg.content.world_loot import LootRules
 from trpg.roguelite.errors import ChoiceError
-from trpg.roguelite.gear import equip as run_equip
-from trpg.roguelite.gear import target_slot, worn_items
+from trpg.roguelite.gear import equip_swap, target_slot, worn_items
 from trpg.roguelite.state import RunState
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.world.economy_actions import EquipAction, ItemEquippedEvent
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import as_run, at_service
+from trpg.world.inventory import room_problem
+from trpg.world.loot import loot_rules
 from trpg.world.resonance import apply_resonance
 from trpg.world.state import CharacterState
 
@@ -39,18 +39,13 @@ __all__ = [
     "gear_run",
     "hero_loadout",
     "item_loadout",
-    "loot_rules",
     "mercenary_equipment",
     "shadow_equipment",
     "worn_gear",
 ]
 
-_merc_cache: dict[tuple[int, str, int], tuple[ContentLibrary, dict[str, ItemDef]]] = {}
-
-
-def loot_rules(library: ContentLibrary) -> LootRules | None:
-    """掉落規則；內容庫沒有 ``world/loot.yaml`` 時為 ``None``（掉落與系統裝備關閉）。"""
-    return library.world_loot
+_MERC_CACHE_LIMIT = 1024
+"""內容庫上傭兵裝備快取（``ContentLibrary.mercenary_gear_cache``）的上限：滿了就清空。"""
 
 
 def item_loadout(library: ContentLibrary, items: Mapping[str, ItemDef]) -> Loadout:
@@ -115,10 +110,15 @@ def apply_equip(
     run = _run(char)
     try:
         slot = target_slot(library, run, item, action.slot)
-        done = run_equip(library, run, item, slot, from_backpack=True)
+        done, taken_off = equip_swap(library, run, item, slot, from_backpack=True)
     except ChoiceError as exc:
         raise WorldActionError(str(exc)) from exc
-    removed = tuple(g.name_zh for g in done.backpack[len(char.gear) - 1 :])
+    # 換下的比換上的多（雙手武器收起副手）：背包要有空格（5D-R1）
+    if len(done.backpack) > len(char.gear):
+        room = room_problem(library, char.bag, len(done.backpack))
+        if room is not None:
+            raise WorldActionError(f"不能換裝備：{room}")
+    removed = tuple(g.name_zh for g in taken_off)
     char = char.model_copy(
         update={"hero": done.hero, "equipment": dict(done.equipment), "gear": done.backpack}
     )
@@ -151,31 +151,25 @@ def mercenary_equipment(
     if rules is None or library.item_gen is None:
         return base
     item_level = max(1, min(level, rules.gear.max_item_level))
-    key = (id(library), merc_id, item_level)
-    cached = _merc_cache.get(key)
-    if cached is not None and cached[0] is library:
-        return {**cached[1], **base}
+    cache = library.mercenary_gear_cache
+    key = (merc_id, item_level)
+    cached = cache.get(key)
+    if cached is not None:
+        return {**cached, **base}
     keywords = _build_keywords(library, template)
     extra: dict[str, ItemDef] = {}
     for slot in rules.mercenary_gear.ordered_slots():
         if slot in base:
             continue
         rng = Rng(fnv1a64(f"merc_gear:{merc_id}:{slot}:{item_level}".encode()))
-        for attempt in range(library.item_gen.offer_attempts):
-            try:
-                item = generate_item(
-                    library,
-                    rng.fork(f"try/{attempt}"),
-                    slot,
-                    rules.mercenary_gear.rarity,
-                    item_level,
-                    keywords=keywords,
-                )
-            except ItemGenError:
-                continue
+        item = generate_item_retrying(
+            library, rng, slot, rules.mercenary_gear.rarity, item_level, keywords=keywords
+        )
+        if item is not None:
             extra[slot] = item.model_copy(update={"id": f"item_merc_{merc_id}_{slot}"})
-            break
-    _merc_cache[key] = (library, extra)
+    if len(cache) >= _MERC_CACHE_LIMIT:
+        cache.clear()
+    cache[key] = extra
     return {**extra, **base}
 
 

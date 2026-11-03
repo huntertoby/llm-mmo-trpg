@@ -71,7 +71,6 @@ def test_town_prep_saves_shadow(library: ContentLibrary, make_char: MakeChar) ->
     assert snap.level == 1
     assert (snap.region, snap.location) == ("cloud_ridge", "mist_ferry")
     assert snap.saved_at == NOON
-    assert snap.gear == ()  # 裝備欄位預留（5D）
     assert record.coins == 0 and record.reports == ()
 
 
@@ -379,3 +378,10 @@ def test_shadow_log_replays(calm: ContentLibrary, make_char: MakeChar) -> None:
     assert dumps_char(first.characters["bob"]) == dumps_char(second.characters["bob"])
     assert first.characters["bob"].shadows[0].owner == "alice"
     assert first.events == second.events
+
+
+def test_old_snapshot_with_gear_field_loads(make_char: MakeChar) -> None:
+    """5D-R1：刪掉死欄位 ``ShadowSnapshot.gear``；舊存檔帶這個欄位照讀（忽略）。"""
+    snapshot = shadow_snapshot(make_char("alice"), NOON)
+    data = {**snapshot.model_dump(mode="json"), "gear": []}
+    assert ShadowSnapshot.model_validate(data) == snapshot

@@ -29,7 +29,6 @@ from trpg.content.world_quests import AffinityRank
 from trpg.shared.errors import ContentError
 
 __all__ = [
-    "COARSE_MATERIAL",
     "ECONOMY_FILE",
     "ITEMS_FILE",
     "ITEM_KINDS",
@@ -65,10 +64,6 @@ ITEM_KINDS: Final[dict[str, str]] = {
     "supply": "補給",
 }
 """物品種類 → 中文。"""
-
-COARSE_MATERIAL: Final = "item_coarse_material"
-"""粗料（08 8.14 通用 1 階）：商店能賣的唯一一般材料（8.26.1）。"""
-
 
 _ITEM_ID = r"^item_[a-z0-9_]+$"
 _STACKS: Final[dict[ItemKind, int]] = {"consumable": 10, "material": 20, "dye": 10, "supply": 1}
@@ -313,7 +308,7 @@ def shop_problems(
             item = items.get(stock.item)
             if item is None:
                 problems.append(f"店 {shop.id} 的商品 {stock.item} 不在 world/items.yaml")
-            elif item.kind == "material" and item.id != COARSE_MATERIAL:
+            elif item.kind == "material" and item.grade != "coarse":  # 通用 1 階（08 8.14）
                 problems.append(f"店 {shop.id} 只能賣粗料這種材料（8.26.1），不能賣 {item.id}")
         for weekly in shop.weekly:
             item = items.get(weekly.item)

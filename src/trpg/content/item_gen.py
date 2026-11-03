@@ -62,6 +62,7 @@ __all__ = [
     "affix_choices",
     "downscale_item",
     "generate_item",
+    "generate_item_retrying",
     "pick_affix",
     "replace_affix",
     "roll_rarity",
@@ -591,6 +592,42 @@ def generate_item(
     return item
 
 
+def generate_item_retrying(
+    library: ContentLibrary,
+    rng: Rng,
+    slot: str,
+    rarity: Rarity,
+    item_level: int,
+    *,
+    weapon_class: WeaponClass | None = None,
+    keywords: Sequence[str] = (),
+    forced: str | None = None,
+    leanings: Mapping[str, int] | None = None,
+    problems: list[str] | None = None,
+) -> ItemDef | None:
+    """:func:`generate_item` 失敗就重試（Phase 5D-R1，打造、掉落、傭兵裝備共用）：第 n 次用
+    ``rng.fork(f"try/{n}")``，最多 ``offer_attempts`` 次（沒有產生器規則時 1 次）；都失敗為
+    ``None``。``problems`` 給了的話，每次失敗的原因依序加進去。"""
+    attempts = 1 if library.item_gen is None else library.item_gen.offer_attempts
+    for attempt in range(attempts):
+        try:
+            return generate_item(
+                library,
+                rng.fork(f"try/{attempt}"),
+                slot,
+                rarity,
+                item_level,
+                weapon_class=weapon_class,
+                keywords=keywords,
+                forced=forced,
+                leanings=leanings,
+            )
+        except ItemGenError as exc:
+            if problems is not None:
+                problems.append(str(exc))
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 重骰與指定（Phase 5D-3 附魔台，08 8.20、8.26.1）
 # ---------------------------------------------------------------------------
@@ -702,18 +739,23 @@ def _drop_fixed(
     budget: Fraction,
 ) -> tuple[AffixRoll, ...]:
     """每條都取下限仍超過 ``budget`` 時，從點數最高的固定點數詞條開始拿掉（同點數先拿後面的），
-    直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。"""
+    直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。
+    **build 詞條（關鍵字的技能強化）最後才拿**：先拿其他固定點數詞條，只剩 build 詞條仍超出預算
+    才拿它（5C-3f 玩法 PM 代決）。"""
     kept = list(affixes)
 
     def floor(roll: AffixRoll) -> Fraction:
         d = library.affixes[roll.affix]
         return affix_points(rules, d, None if d.value is None else d.value.min)
 
+    def is_build(roll: AffixRoll) -> bool:
+        return isinstance(library.affixes[roll.affix], KeywordAffix)
+
     while sum((floor(r) for r in kept), Fraction(0)) > budget:
         fixed = [i for i, r in enumerate(kept) if _fixed_points(rules, library.affixes[r.affix])]
         if not fixed:
             break
-        drop = max(fixed, key=lambda i: (floor(kept[i]), i))
+        drop = max(fixed, key=lambda i: (not is_build(kept[i]), floor(kept[i]), i))
         del kept[drop]
     return tuple(kept)
 

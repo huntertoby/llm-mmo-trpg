@@ -80,7 +80,8 @@ describe("浮動卡規則（6.5.1）", () => {
     const bad: string[] = [];
     for (const [path, text] of files) {
       if (SHARED.has(path)) continue;
-      for (const m of text.matchAll(/position:\s*["'](fixed|absolute)["']/g)) {
+      // 內聯樣式物件 `position: "fixed"`，以及直接改 DOM 的 `el.style.position = "fixed"`（5D-R1 補）
+      for (const m of text.matchAll(/(?:position:|\.position\s*=)\s*["'](fixed|absolute)["']/g)) {
         bad.push(`${path}:${text.slice(0, m.index).split("\n").length}`);
       }
     }

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.equipment import ItemDef
@@ -435,13 +435,20 @@ class ShadowSnapshot(_Model):
     """裝備中、不在內容庫的技能定義（依 ID 排序）。"""
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     """主人設定的預設打法（#102）；``None``＝範本的 ``ai_profile``。"""
-    gear: tuple[str, ...] = ()
-    """裝備欄位預留（5C-2；5D-2 起改用 ``equipment``，這個欄位不再使用）。"""
     equipment: dict[str, ItemDef] = Field(default_factory=dict)
     """存影子時穿的裝備（欄位 → 物品；Phase 5D-2，20.5）。借用時物品等級超過招募者等級的不穿。"""
     region: str = Field(pattern=ID_PATTERN)
     location: str = Field(pattern=ID_PATTERN)
     saved_at: int = Field(ge=0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_legacy_gear(cls, data: object) -> object:
+        """舊存檔的 ``gear``（5C-2 預留的裝備欄位，5D-2 起改用 ``equipment``、從沒寫過值）讀入時
+        忽略（5D-R1 刪掉這個死欄位）。"""
+        if isinstance(data, dict) and "gear" in data:
+            return {k: v for k, v in data.items() if k != "gear"}
+        return data
 
     @field_validator("attribute_spent")
     @classmethod

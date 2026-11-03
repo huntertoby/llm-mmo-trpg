@@ -19,14 +19,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import Any, Final
 
 from trpg.content.equipment import AffixDef, ItemDef
 from trpg.content.item_gen import (
-    ItemGenError,
     affix_choices,
-    generate_item,
+    generate_item_retrying,
     pick_affix,
     replace_affix,
 )
@@ -45,8 +45,8 @@ from trpg.world.crafting_actions import (
     RerollAction,
     SalvageAction,
 )
-from trpg.world.economy import bag_slots_used, economy_rules
 from trpg.world.errors import WorldActionError
+from trpg.world.inventory import add_items, check_room, remove_gear, remove_items
 from trpg.world.state import (
     CharacterState,
     CraftRecipe,
@@ -58,6 +58,7 @@ from trpg.world.state import (
 
 __all__ = [
     "CRAFTING_ACTIONS",
+    "CRAFTING_HANDLERS",
     "RESONANCE_TAG",
     "CraftPlan",
     "apply_crafting",
@@ -348,26 +349,20 @@ def _make_item(
     }
     forced = plan.hidden.affix if plan.hidden is not None else recipe.affix
     rng = Rng(int(plan.print_[:16], 16))
-    attempts = 1 if library.item_gen is None else library.item_gen.offer_attempts
-    item: ItemDef | None = None
-    problem = ""
-    for attempt in range(attempts):
-        try:
-            item = generate_item(
-                library,
-                rng.fork(f"try/{attempt}"),
-                recipe.slot_type,
-                recipe.rarity,
-                recipe.item_level,
-                weapon_class=recipe.weapon_class,
-                forced=forced,
-                leanings=leanings,
-            )
-            break
-        except ItemGenError as exc:
-            problem = str(exc)
+    problems: list[str] = []
+    item = generate_item_retrying(
+        library,
+        rng,
+        recipe.slot_type,
+        recipe.rarity,
+        recipe.item_level,
+        weapon_class=recipe.weapon_class,
+        forced=forced,
+        leanings=leanings,
+        problems=problems,
+    )
     if item is None:
-        raise WorldActionError(f"這份配方打不出來（{problem}）")
+        raise WorldActionError(f"這份配方打不出來（{problems[-1] if problems else ''}）")
     tags = dict.fromkeys(item.tags)
     for m in recipe.materials:
         keyword = rules.materials[m].resonance
@@ -393,34 +388,6 @@ def _make_item(
     return item, mod
 
 
-def _spend(bag: Mapping[str, int], spent: Mapping[str, int]) -> dict[str, int]:
-    updated = dict(bag)
-    for item, count in spent.items():
-        have = updated.get(item, 0)
-        if have < count:
-            raise WorldActionError(f"材料不夠：{item}（要 {count}，有 {have}）")
-        if have == count:
-            del updated[item]
-        else:
-            updated[item] = have - count
-    return dict(sorted(updated.items()))
-
-
-def _gain(bag: Mapping[str, int], item: str, count: int) -> dict[str, int]:
-    updated = dict(bag)
-    updated[item] = updated.get(item, 0) + count
-    return dict(sorted(updated.items()))
-
-
-def _check_room(library: ContentLibrary, bag: Mapping[str, int], gear: int) -> None:
-    rules = economy_rules(library)
-    if rules is None:
-        return
-    used = bag_slots_used(library, bag) + gear
-    if used > rules.bag_slots:
-        raise WorldActionError(f"背包放不下（需要 {used} 格，只有 {rules.bag_slots} 格）")
-
-
 def _pay(char: CharacterState, gold: int, quest_coins: int = 0) -> dict[str, int]:
     if char.gold < gold:
         raise WorldActionError(f"金幣不夠（要 {gold}，有 {char.gold}）")
@@ -440,11 +407,11 @@ def _craft(
     plan = plan_craft(library, world, char, action)
     if plan.steps and not any(s.kind == "enchanter" for s in stations_here(library, char)):
         raise WorldActionError("這份配方帶重骰序列，要在有附魔台的地方打")
-    bag = _spend(char.bag, plan.spent)
+    bag = remove_items(char.bag, plan.spent)
     wallet = _pay(char, plan.gold, plan.quest_coins)
     known = world.recipe_of(plan.code)
     item, mod = _make_item(library, plan, char.crafts + 1, None if known is None else known.name_zh)
-    _check_room(library, bag, len(char.gear) + 1)
+    check_room(library, bag, len(char.gear) + 1)
     world, record, discovered = _remember(
         world,
         RecipeRecord(
@@ -573,7 +540,7 @@ def _enhance(
     if isinstance(cost, str):
         raise WorldActionError(f"不能強化：{cost}")
     level, spent, gold = cost
-    bag = _spend(char.bag, spent)
+    bag = remove_items(char.bag, spent)
     wallet = _pay(char, gold)
     step = _rules(library).enhance.step_permille
     new = item.model_copy(update={"base_bonus_permille": item.base_bonus_permille + step})
@@ -598,12 +565,10 @@ def _salvage(
     essence = rules.salvage.get(item.rarity or "")
     if essence is None:
         raise WorldActionError(f"{item.name_zh}不能分解")
-    gear = list(char.gear)
-    gear.remove(item)
-    bag = _gain(char.bag, rules.essence, essence)
-    _check_room(library, bag, len(gear))
-    mods = {k: v for k, v in char.gear_mods.items() if k != item.id}
-    char = char.model_copy(update={"gear": tuple(gear), "bag": bag, "gear_mods": mods})
+    char = remove_gear(char, [item.id])
+    bag = add_items(char.bag, {rules.essence: essence})
+    check_room(library, bag, len(char.gear))
+    char = char.model_copy(update={"bag": bag})
     return char, (GearSalvagedEvent(item=item.id, name_zh=item.name_zh, essence=essence),)
 
 
@@ -650,7 +615,7 @@ def _change(
         index=action.index, affix=action.affix if isinstance(action, ImbueAction) else None
     )
     new, changed, chosen = _apply_step(library, item, mod, step)
-    bag = _spend(char.bag, {rules.essence: cost.essence}) if cost.essence else dict(char.bag)
+    bag = remove_items(char.bag, {rules.essence: cost.essence}) if cost.essence else dict(char.bag)
     wallet = _pay(char, gold)
     code: str | None = None
     discovered = False
@@ -704,13 +669,35 @@ def apply_crafting(
     action: CraftAction | EnhanceAction | RerollAction | ImbueAction | SalvageAction,
     now: int,
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
-    """鐵匠與附魔台的動作（見模組說明）；不合法拋 :class:`WorldActionError`（狀態不變）。"""
-    if isinstance(action, CraftAction):
-        return _craft(library, world, char, action, now)
-    if isinstance(action, EnhanceAction):
-        char, events = _enhance(library, char, action)
-    elif isinstance(action, SalvageAction):
-        char, events = _salvage(library, char, action)
-    else:
-        return _change(library, world, char, action, now)
-    return world, char, events
+    """鐵匠與附魔台的動作（見模組說明；依 :data:`CRAFTING_HANDLERS` 分派）；不合法拋
+    :class:`WorldActionError`（狀態不變）。"""
+    return CRAFTING_HANDLERS[type(action)](library, world, char, action, now)
+
+
+def _keeps_world(
+    fn: Callable[
+        [ContentLibrary, CharacterState, Any], tuple[CharacterState, tuple[WorldEvent, ...]]
+    ],
+) -> CraftingHandler:
+    def run(
+        library: ContentLibrary, world: WorldState, char: CharacterState, action: Any, _now: int
+    ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+        char, events = fn(library, char, action)
+        return world, char, events
+
+    return run
+
+
+type CraftingHandler = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int],
+    tuple[WorldState, CharacterState, tuple[WorldEvent, ...]],
+]
+CRAFTING_HANDLERS: Final[Mapping[type, CraftingHandler]] = {
+    CraftAction: _craft,
+    EnhanceAction: _keeps_world(_enhance),
+    RerollAction: _change,
+    ImbueAction: _change,
+    SalvageAction: _keeps_world(_salvage),
+}
+"""鐵匠與附魔台的動作種類 → 處理 ``(library, world, char, action, now) → (world, char, events)``
+（5D-R1）。"""

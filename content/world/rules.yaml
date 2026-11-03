@@ -9,6 +9,8 @@
 # - perception：隱藏地點感知判定 DC ＝ dc_base ＋ 建議等級 ÷ level_divisor（捨去；9.6.11 #112）。
 # - weather：各區每半天的天氣權重（9.6.10 #104；05 5.1「各區天氣傾向」：傾向的天氣權重 3、其他 1；
 #   day／night 是遊戲日的前半與後半）。天氣 ID 見 weather.yaml。沒列的區用 default_weather。
+# - week_days：一週幾天（以早上 6 點刷新的日子算；酒館傳聞、商店每週限量；5D-R1 從 affinity.yaml 移來）。
+week_days: 7
 supplies:
   max: 10
   start: 5

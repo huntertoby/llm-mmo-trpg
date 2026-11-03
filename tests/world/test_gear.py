@@ -9,7 +9,7 @@ from fractions import Fraction
 import pytest
 
 from tests.world.helpers import NOON, PARTY, make_encounter, make_world
-from trpg.content.equipment import ItemDef
+from trpg.content.equipment import AffixRoll, ItemDef
 from trpg.content.item_budget import affix_points, base_bonus_points, item_budget
 from trpg.content.item_gen import downscale_item, generate_item
 from trpg.content.library import ContentLibrary
@@ -77,6 +77,48 @@ def test_main_hand_same_class(library: ContentLibrary, make_char: MakeChar) -> N
     assert char.equipment["main_hand"] == staff
     assert char.hero.weapon == staff.weapon
     assert [g.id for g in char.gear] == [f"base_{make_char().hero.weapon}"]  # 原本的武器收進背包
+
+
+def _weapon(library: ContentLibrary, weapon_class: str, *, two_handed: bool) -> ItemDef:
+    for s in range(3000):
+        item = generate_item(library, Rng(s), "weapon", "common", 2, weapon_class=weapon_class)  # type: ignore[arg-type]
+        found = library.weapons.get(item.weapon or "")
+        if found is not None and found.two_handed == two_handed and not found.paired:
+            return item
+    raise AssertionError(weapon_class)
+
+
+def test_two_handed_needs_room_for_the_offhand(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """5D-R1：已穿副手時換雙手武器，換下主手＋副手兩件、換上一件，背包要多 1 格；滿了就拒絕。"""
+    weapon_class = library.weapons[make_char().hero.weapon].weapon_class
+    one_handed = _weapon(library, weapon_class, two_handed=False)
+    two_handed = _weapon(library, weapon_class, two_handed=True)
+    shield = next(
+        i
+        for s in range(300)
+        if (i := generate_item(library, Rng(s), "offhand", "common", 2)).slot_type == "offhand"
+    )
+    worn = _act(library, make_char(gear=(one_handed,)), EquipAction(item=one_handed.id))
+    worn = _act(library, worn.model_copy(update={"gear": (shield,)}), EquipAction(item=shield.id))
+    assert worn.equipment["off_hand"] == shield
+    rules = library.world_economy.rules
+    assert rules is not None
+    # 粗料一格 20 個：29 格粗料＋1 件雙手武器＝30 格滿
+    full = worn.model_copy(
+        update={"gear": (two_handed,), "bag": {"item_coarse_material": 20 * (rules.bag_slots - 1)}}
+    )
+    with pytest.raises(WorldActionError, match="背包放不下"):
+        world_step(library, make_world(), full, EquipAction(item=two_handed.id), NOON)
+    # 騰出 1 格就換得上：副手與原本的主手都收進背包，``removed`` 依放進的順序
+    roomy = full.model_copy(update={"bag": {"item_coarse_material": 20 * (rules.bag_slots - 2)}})
+    result = world_step(library, make_world(), roomy, EquipAction(item=two_handed.id), NOON)
+    assert "off_hand" not in result.char.equipment
+    assert result.char.equipment["main_hand"] == two_handed
+    assert result.char.gear == (shield, one_handed)
+    event = next(e for e in result.events if isinstance(e, ItemEquippedEvent))
+    assert event.removed == (shield.name_zh, one_handed.name_zh)
 
 
 def test_battle_uses_worn_gear(library: ContentLibrary, make_char: MakeChar) -> None:
@@ -219,3 +261,21 @@ def test_downscale_drops_highest_fixed_affix_until_it_fits(library: ContentLibra
         # 拿掉的都是固定點數詞條（範圍詞條只縮數值）
         assert all(_is_fixed(library, a) for a in dropped)
     assert found > 0
+
+
+def test_downscale_keeps_build_affix_until_only_it_is_left(library: ContentLibrary) -> None:
+    """5C-3f（玩法 PM 代決）：build 詞條（關鍵字的技能強化）最後才拿；先拿其他固定點數詞條，即使
+    那條點數比較低。戒指：帶電利用 8 點＋血祭 4 點＝12；Lv 5 預算 8 → 拿掉血祭、留帶電利用。"""
+    build, other = "affix_kw_shock_damage", "affix_cost_blood"
+    assert _is_fixed(library, build) and _is_fixed(library, other)
+    assert _min_points(library, build) > _min_points(library, other)
+    rolls = tuple(
+        AffixRoll(affix=a, value=None if (v := library.affixes[a].value) is None else v.min)
+        for a in (build, other)
+    )
+    ring = generate_item(library, Rng(1), "ring", "rare", 10).model_copy(
+        update={"affixes": rolls, "base_bonus_permille": 0}
+    )
+    assert [r.affix for r in downscale_item(library, ring, 5).affixes] == [build]
+    # 只剩 build 詞條仍超出預算（Lv 1 預算 4）才拿它
+    assert downscale_item(library, ring, 1).affixes == ()
