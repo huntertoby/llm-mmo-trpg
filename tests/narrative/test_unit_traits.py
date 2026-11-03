@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
+from trpg.content.battle import WardSpec
 from trpg.content.library import ContentLibrary, load_library
 from trpg.narrative.unit_traits import unit_trait_lines
 
@@ -36,3 +38,17 @@ def test_unknown_or_plain_templates_have_no_traits(library: ContentLibrary) -> N
     assert unit_trait_lines(library, "no_such_template") == ()
     plain = [t for t in sorted(library.units) if not unit_trait_lines(library, t)]
     assert plain  # 沒有招牌的單位不會多出空列
+
+
+def test_summit_array_stone_shows_the_kin_name_in_chinese(library: ContentLibrary) -> None:
+    """5F-2b：陣眼石靈的護陣顯示同門標籤的中文名（``kin_name_zh``），不顯示 ``mist_lock_core``。"""
+    text = "".join(unit_trait_lines(library, "sect_summit_array_stone"))
+    assert "12 格內的友方「霧鎖真人」（不含自己）" in text
+    assert "mist_lock_core" not in text
+    plain = "".join(unit_trait_lines(library, "sect_array_stone"))  # 沒寫中文名的照舊
+    assert "帶「sect」標籤的友方" in plain
+
+
+def test_kin_name_needs_a_kin_tag() -> None:
+    with pytest.raises(ValidationError, match="kin_name_zh 必須和 kin_tag 一起寫"):
+        WardSpec(kin_name_zh="霧鎖真人", taken_permille=500)

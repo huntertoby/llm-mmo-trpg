@@ -727,6 +727,12 @@ class DeathSurfaceSpec(ContentModel):
     duration: int | None = Field(default=None, ge=1, le=6)
 
 
+def _check_kin_name(kin_tag: str | None, kin_name_zh: str | None) -> None:
+    """``kin_name_zh``（同門標籤的中文名，5F-2b）只能和 ``kin_tag`` 一起寫。"""
+    if kin_name_zh is not None and kin_tag is None:
+        raise ValueError("kin_name_zh 必須和 kin_tag 一起寫")
+
+
 class FormationSpec(ContentModel):
     """陣法範圍加成（Phase 5A-M2，18.2.1 劍陣弟子「劍陣」）。
 
@@ -736,11 +742,18 @@ class FormationSpec(ContentModel):
 
     kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """同門標籤；省略＝任何友方都算。"""
+    kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """同門標籤在畫面上的中文名（Phase 5F-2b；見 :class:`WardSpec`）。"""
     range: int = Field(default=3, ge=1, le=5)
     per_ally_permille: int = Field(ge=1, le=1000)
     max_allies: int = Field(ge=1, le=5)
     alone_permille: int = Field(default=1000, ge=100, le=1000)
     applies_to: Literal["damage"] = "damage"
+
+    @model_validator(mode="after")
+    def _kin_name_needs_tag(self) -> FormationSpec:
+        _check_kin_name(self.kin_tag, self.kin_name_zh)
+        return self
 
 
 class WardSpec(ContentModel):
@@ -750,8 +763,16 @@ class WardSpec(ContentModel):
 
     kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """被護住的同門標籤；省略＝任何友方都算。"""
+    kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """同門標籤在單位卡、狀態說明上的中文名（Phase 5F-2b，例：``mist_lock_core`` →「霧鎖真人」）；
+    省略時照舊顯示標籤 ID。只能和 ``kin_tag`` 一起寫。"""
     range: int = Field(default=3, ge=1, le=12)
     taken_permille: int = Field(ge=100, le=999)
+
+    @model_validator(mode="after")
+    def _kin_name_needs_tag(self) -> WardSpec:
+        _check_kin_name(self.kin_tag, self.kin_name_zh)
+        return self
 
 
 class ShareDamageSpec(ContentModel):
@@ -762,8 +783,15 @@ class ShareDamageSpec(ContentModel):
 
     kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """同門標籤；省略＝任何友方都算。"""
+    kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """同門標籤在畫面上的中文名（Phase 5F-2b；見 :class:`WardSpec`）。"""
     range: int = Field(default=1, ge=1, le=2)
     permille: int = Field(ge=1, le=900)
+
+    @model_validator(mode="after")
+    def _kin_name_needs_tag(self) -> ShareDamageSpec:
+        _check_kin_name(self.kin_tag, self.kin_name_zh)
+        return self
 
 
 class StatusDef(ContentModel):

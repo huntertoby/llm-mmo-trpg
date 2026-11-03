@@ -84,7 +84,7 @@ shapes:
     description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
     targeting: none
     min_rarity: common
-    budget: {param: radius, by_value_permille: {1: 1800, 2: 2000}}
+    budget: {param: radius, by_value_permille: {1: 1800, 2: 2200}}
     cell_count: {param: radius, by_value: {1: 8, 2: 16}}
     params:
       radius: {llm_hint: "圈的半徑。", min: 1, max: 2}
