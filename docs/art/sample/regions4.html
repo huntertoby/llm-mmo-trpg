@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>四區換皮樣張</title>
+<style>
+  body { margin: 0; padding: 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 18px; }
+  section { background: #26201b; border: 1px solid #3a3129; border-radius: 8px; padding: 14px 16px 16px; margin-bottom: 18px; }
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  h2 small { font-weight: normal; color: #b8ab96; font-size: 13px; margin-left: 8px; }
+  .line { font-size: 13px; color: #d8ccb8; margin: 0 0 10px; }
+  .sw { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .sw span { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #c8bca8; }
+  .sw i { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #000; display: inline-block; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  figure { margin: 0; text-align: center; width: 112px; }
+  figure canvas { display: block; border: 1px solid #000; }
+  figcaption { font-size: 11px; line-height: 1.35; color: #d8ccb8; margin-top: 3px; }
+  figcaption b { display: block; color: #9a8e7c; font-weight: normal; font-family: Consolas, monospace; font-size: 10px; }
+  .lbl { font-size: 12px; color: #9a8e7c; margin: 4px 0 4px; }
+</style>
+</head>
+<body>
+<h1>碎界其他四區：地形與物件換皮樣張</h1>
+<p class="note">美術 PM，2026-11-04。依 <code>區域外觀換法.md</code>、<code>四區移植需求.md</code>。每格 52 單位、放大 2 倍。第一列地形 7 種、第二列物件 9 種（物件畫在該區的地板上）、最後是一張 12×5 的小戰場。技能表面、技能物件、圖示五區共用，不在這裡。全部程式繪製。</p>
+<div id="root"></div>
+<script src="regions4.js"></script>
+<script>
+  const { T, REGIONS, TERRAIN_IDS, OBJECT_IDS, tile, object, scene } = Regions4;
+  const S = 2;
+  const root = document.getElementById("root");
+  function cv(w, h) {
+    const c = document.createElement("canvas");
+    c.width = w * S; c.height = h * S; c.style.width = w * S + "px"; c.style.height = h * S + "px";
+    const ctx = c.getContext("2d"); ctx.scale(S, S);
+    return [c, ctx];
+  }
+  function fig(canvas, name, id) {
+    const f = document.createElement("figure");
+    f.appendChild(canvas);
+    const cap = document.createElement("figcaption");
+    cap.innerHTML = `${name}<b>${id}</b>`;
+    f.appendChild(cap);
+    return f;
+  }
+  for (const reg of [...REGIONS].sort((a, b) => a.order - b.order)) {
+    const sec = document.createElement("section");
+    sec.innerHTML = `<h2>${reg.order}. ${reg.name}<small>${reg.id}</small></h2><p class="line">${reg.line}</p>`;
+    const sw = document.createElement("div"); sw.className = "sw";
+    sw.innerHTML = reg.swatch.map(([c, n]) => `<span><i style="background:${c}"></i>${n} ${c}</span>`).join("");
+    sec.appendChild(sw);
+    const l1 = document.createElement("div"); l1.className = "lbl"; l1.textContent = "地形"; sec.appendChild(l1);
+    const r1 = document.createElement("div"); r1.className = "row";
+    TERRAIN_IDS.forEach((id, i) => { const [c, ctx] = cv(T, T); tile(ctx, reg, id, 0, 0, i, 1); r1.appendChild(fig(c, reg.terrain[id][0], id)); });
+    sec.appendChild(r1);
+    const l2 = document.createElement("div"); l2.className = "lbl"; l2.textContent = "物件（同一個 ID，功能不變）"; sec.appendChild(l2);
+    const r2 = document.createElement("div"); r2.className = "row";
+    OBJECT_IDS.forEach((id, i) => {
+      const [c, ctx] = cv(T, T);
+      const under = id === "wooden_bridge" ? (reg.id === "ashen_waste" || reg.id === "arcane_hub" ? "lava" : "chasm") : id === "thin_ice" ? "ice_hole" : "stone";
+      tile(ctx, reg, under, 0, 0, i, 2);
+      object(ctx, reg, id, 0, 0);
+      r2.appendChild(fig(c, reg.objects[id][0], id));
+    });
+    sec.appendChild(r2);
+    const l3 = document.createElement("div"); l3.className = "lbl"; l3.textContent = "小戰場"; sec.appendChild(l3);
+    const [c, ctx] = cv(T * 12, T * 5);
+    c.style.width = T * 12 * 1.5 + "px"; c.style.height = T * 5 * 1.5 + "px";
+    scene(ctx, reg);
+    sec.appendChild(c);
+    root.appendChild(sec);
+  }
+</script>
+</body>
+</html>

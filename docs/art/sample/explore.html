@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>可走動的城鎮與野外</title>
+<style>
+  body { margin: 0; padding: 18px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 14px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 14px 0 6px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 8px; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: #c8bca8; margin-top: 6px; }
+</style>
+</head>
+<body>
+<h1>可走動的城鎮與野外（示意，不是定案）</h1>
+<p class="note">美術 PM，2026-11-04。一張畫面就是一張格子地圖，用戰鬥的同一套畫法（52 單位一格、紙娃娃、雲嶺配色）。玩家在畫面上走動；走進門口換到室內畫面，走到畫面邊緣的路口換到相鄰地點的畫面，不用節點大地圖。互動都用圖示泡泡，字只留地名。全部程式繪製。</p>
+<h2>1. 霧渡鎮（主城）<small>門口有光圈＝入口；東邊路口通渡口石階、北邊通獵戶小屋；南邊渡船通灰燼荒原</small></h2>
+<canvas id="town"></canvas>
+<div class="legend"><span>泡泡：金幣＝商人、鐵砧＝鐵匠、黃底驚嘆號＝有任務、點點＝可聊天、船＝渡船</span><span>招牌只放圖示</span><span>玩家站到可互動的東西旁：頭上浮出「E＋圖示」</span></div>
+<h2>2. 渡口石階（雲嶺野外）<small>西邊路口回霧渡鎮、北邊路口通竹林小徑；東北是未探索的霧</small></h2>
+<canvas id="field"></canvas>
+<div class="legend"><span>紅環＋紅色劍泡泡＝看得見的敵群，虛線圈是警戒範圍，走進去就開戰（切到戰鬥畫面，地圖照舊）</span><span>營火＝休息點、寶箱、問號古碑＝事件</span></div>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script>
+  for (const [id, fn] of [["town", Explore.town], ["field", Explore.field]]) {
+    const c = document.getElementById(id), S = 1.25, W = 20 * Explore.T, H = 12 * Explore.T;
+    c.width = W * S * 1.6; c.height = H * S * 1.6; c.style.width = W * S + "px"; c.style.height = H * S + "px";
+    const ctx = c.getContext("2d"); ctx.scale(S * 1.6, S * 1.6); try { fn(ctx); } catch (e) { document.body.insertAdjacentHTML("beforeend", `<pre id="err">${e.stack}</pre>`); }
+  }
+</script>
+</body>
+</html>
