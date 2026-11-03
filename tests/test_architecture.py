@@ -15,8 +15,8 @@
      skillgen、narrative 不得匯入 ``trpg.world``（Phase 5A-2，``docs/phases/Phase5計畫.md`` 2.3）。
    - ``trpg.bot`` 只直接匯入 ``trpg.api`` 服務層與 ``trpg.shared``；engine、world、api、shared、
      content、roguelite 不得匯入 ``trpg.bot``（Phase 5E-2，計畫 29.2）。
-   - 外部套件 ``discord``（discord.py）只能在 ``trpg.bot`` 匯入；``scripts/`` 只透過 ``trpg.bot`` 用它
-     （Phase 5E-2b，計畫 32.2）。
+   - 外部套件 ``discord``（discord.py）只能在 ``trpg.bot`` 匯入；``scripts/`` 只透過
+     ``trpg.bot`` 用它（Phase 5E-2b，計畫 32.2）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite``、``world`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式、內建 ``hash()``
    等。

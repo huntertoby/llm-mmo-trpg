@@ -1,8 +1,8 @@
 """Bot 與 Discord 之間的介面（Phase 5E-2；``docs/phases/Phase5計畫.md`` 29.4）。
 
-:class:`DiscordGateway` 是同步介面：真實 adapter（之後，代決 5E2-1）在自己的事件迴圈裡把事件
-轉成這裡的資料類別，再用執行緒呼叫 :class:`~trpg.bot.service.BotService`（scrypt 是 CPU 工作）。
-測試用 :class:`~trpg.bot.fake.FakeDiscordGateway`。
+:class:`DiscordGateway` 是同步介面：真實 adapter（:mod:`trpg.bot.discord_adapter`，5E-2b）在自己的
+事件迴圈裡把事件轉成這裡的資料類別，再用工作執行緒呼叫 :class:`~trpg.bot.service.BotService`（scrypt
+是 CPU 工作）。測試用 :class:`~trpg.bot.fake.FakeDiscordGateway`。
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ class CommandEvent:
     command: BotCommand
     username: str | None = None
     """``register`` 指定的帳號名稱（選填）。"""
+    interaction_id: str | None = None
+    """真實 adapter 用來找回要回覆的那次互動（5E-2b）；假介面與測試不用。"""
 
 
 @dataclass(frozen=True)

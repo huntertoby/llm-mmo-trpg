@@ -3634,7 +3634,8 @@ interval_s = 60            # 定期 ping 本機模型的間隔（秒）；0＝�
   - 所有 `BotService`／`Announcer` 的呼叫都排進 **同一條** 工作執行緒（`ThreadPoolExecutor(max_workers=1)`），帳號存檔不會被兩個事件同時改；事件迴圈不被 scrypt 卡住。
   - 指令：先 `defer(ephemeral=True, thinking=True)`（3 秒內回應 Discord），再交給 `BotService.handle_command`。
   - `on_member_update` → `MemberUpdateEvent`；`on_raw_member_remove`（不靠快取）→ `MemberRemoveEvent`。
-  - 第一次 `on_ready`：同步指令到設定的伺服器 → `reconcile()`（停用的帳號名寫 log）→ 開始公告迴圈（每 60 秒 `Announcer.tick(int(time.time()))`；例外寫 log、迴圈不停）。重連時不重複做。
+  - `setup_hook`（登入後、連 gateway 前）：建 gateway／服務／公告，同步指令到設定的伺服器（沒有 `applications.commands` 權限 → `BotConfigError`）。
+  - 第一次 `on_ready`：`reconcile()`（停用的帳號名寫 log）→ 開始公告迴圈（每 60 秒 `Announcer.tick(int(time.time()))`；例外寫 log、迴圈不停）。重連時不重複做。
 - `run_bot(settings, service_factory, announcer_factory)`：建 client 並 `run`；token 錯（`LoginFailure`）或 members intent 沒開（`PrivilegedIntentsRequired`）→ `BotConfigError`，訊息說明怎麼修，不印 token。
 
 ### 32.6 啟動腳本（`scripts/discord_bot.py run`）

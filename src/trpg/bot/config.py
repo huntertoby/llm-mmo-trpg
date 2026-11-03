@@ -6,7 +6,8 @@
   ``TRPG_DISCORD_ROLE_ID``、``TRPG_DISCORD_ANNOUNCE_CHANNEL_ID`` → ② ``.env``（同一組名稱）→
   ③ 設定檔 ``[discord]``（``TRPG_BOT_CONFIG`` 指的檔，沒有就 ``config/bot.local.toml``）。
   5E-2 的舊名 ``TRPG_BOT_*`` 仍可用，排在同一來源的新名之後（代決 5E2b-5）。
-- ``.env`` 只在讀真的環境（``env=None``）時讀；呼叫端給了 ``env``（測試）就不讀，除非給 ``env_file``。
+- ``.env`` 只在讀真的環境（``env=None``）時讀；呼叫端給了 ``env``（測試）就不讀，除非給
+  ``env_file``。
 - 缺值或 ID 不是數字 → :class:`BotConfigError`，列出全部缺的欄位與環境變數，**不印 token**。
 - 遊戲伺服器不讀這個設定：Bot 設定缺值不影響伺服器。
 - ``[announce]``（5E-3，計畫 31.2）：每日公告的時區與時間（:func:`load_announce_settings`；沒填用
