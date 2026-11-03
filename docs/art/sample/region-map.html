@@ -11,11 +11,12 @@
 <body>
 <canvas id="c"></canvas>
 <script src="regionArt.js"></script>
+<script src="ashenRegionArt.js"></script>
 <script>
   // ?style=scroll（古地圖卷軸）或 ?style=painted（俯視彩繪）
-  // &full=1：不蓋霧、不畫地點，看整張地景
+  // &full=1：不蓋霧、不畫地點，看整張地景；&region=ashen_waste 換荒原（只有 painted）
   const q = new URLSearchParams(location.search);
-  RegionArt.draw(document.getElementById("c"), q.get("style") || "scroll", { full: q.get("full") === "1" });
+  RegionArt.draw(document.getElementById("c"), q.get("style") || "scroll", { full: q.get("full") === "1", region: q.get("region") || "cloud_ridge" });
 </script>
 </body>
 </html>

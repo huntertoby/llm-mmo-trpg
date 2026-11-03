@@ -2,7 +2,7 @@
 // 地點座標照 content/world/maps/cloud_ridge.yaml 的 pos（0～100）。
 (function () {
   const W = 1280, H = 860, MX = 80, MY = 70;
-  const LOC = [
+  const CLOUD_LOC = [
     { id: "mist_ferry", name: "霧渡鎮", kind: "town", lv: "", pos: [10, 80] },
     { id: "ferry_steps", name: "渡口石階", kind: "camp", lv: "1", pos: [25, 85] },
     { id: "bamboo_path", name: "竹林小徑", kind: "camp", lv: "1～2", pos: [30, 65] },
@@ -22,7 +22,7 @@
     { id: "cloud_summit", name: "雲頂觀", kind: "boss", lv: "6", pos: [75, 10] },
     { id: "ashen_ferry", name: "往灰燼荒原的渡口", kind: "gate", lv: "", pos: [5, 95] },
   ];
-  const EDGES = [
+  const CLOUD_EDGES = [
     ["mist_ferry", "ferry_steps"], ["mist_ferry", "hunter_hut"], ["mist_ferry", "ashen_ferry"],
     ["ferry_steps", "bamboo_path"], ["bamboo_path", "hunter_hut"], ["bamboo_path", "rain_terraces"],
     ["rain_terraces", "mist_temple_gate"], ["rain_terraces", "cliff_gang_fort"], ["rain_terraces", "old_pine_altar"],
@@ -32,7 +32,7 @@
     ["north_slope", "crystal_rift"], ["sword_tomb", "crystal_rift"], ["crystal_rift", "cloud_summit"],
   ];
   // 樣張用的玩家狀態
-  const STATE = {
+  const CLOUD_STATE = {
     visited: ["mist_ferry", "ferry_steps", "bamboo_path", "rain_terraces", "cliff_gang_fort", "cloud_sea_bridge",
       "hunter_hut", "mist_temple_gate", "old_pine_altar", "sword_tomb"],
     cleared: ["ferry_steps", "bamboo_path", "rain_terraces", "cliff_gang_fort"],
@@ -42,7 +42,9 @@
     trail: ["rain_terraces", "mist_temple_gate"],
   };
 
-  const byId = Object.fromEntries(LOC.map((l) => [l.id, l]));
+  // 目前畫的區域；draw() 依 opts.region 換掉
+  let LOC = CLOUD_LOC, EDGES = CLOUD_EDGES, STATE = CLOUD_STATE, REGION = null;
+  let byId = Object.fromEntries(LOC.map((l) => [l.id, l]));
   const P = (x, y) => [MX + (x / 100) * (W - 2 * MX), MY + (y / 100) * (H - 2 * MY)];
   const LP = (l) => P(l.pos[0], l.pos[1]);
   function rng(seed) {
@@ -256,7 +258,7 @@
     items.sort((a, b) => a[1] - b[1]).forEach(([x, y, k]) => pine(ctx, s, x, y, k));
   }
 
-  function mountain(ctx, s, x, y, h, r, snowy) {
+  function mountain(ctx, s, x, y, h, r, snowy, col = ["#9aa596", "#68756a"]) {
     const w = h * (0.8 + r() * 0.3), px = x + (r() - 0.5) * w * 0.3;
     if (s === "scroll") {
       const g = ctx.createLinearGradient(0, y - h, 0, y);
@@ -272,9 +274,9 @@
         ctx.beginPath(); ctx.moveTo(px + w * 0.12 * t, y - h * (1 - t * 0.9)); ctx.lineTo(px + w * 0.45 * t, y - h * (1 - t) * 0.7); ctx.stroke();
       }
     } else {
-      ctx.fillStyle = "#9aa596";
+      ctx.fillStyle = col[0];
       ctx.beginPath(); ctx.moveTo(x - w, y); ctx.lineTo(px, y - h); ctx.lineTo(px + w * 0.05, y); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#68756a";
+      ctx.fillStyle = col[1];
       ctx.beginPath(); ctx.moveTo(px, y - h); ctx.lineTo(x + w, y); ctx.lineTo(px + w * 0.05, y); ctx.closePath(); ctx.fill();
       if (snowy) {
         const t = 0.38;
@@ -320,9 +322,10 @@
     ctx.beginPath(); ctx.arc(x + 20 * k, y + 3 * k, 7 * k, Math.PI * 1.0, Math.PI * 2.4); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x - 10 * k, y + 7 * k); ctx.quadraticCurveTo(x + 10 * k, y + 14 * k, x + 34 * k, y + 8 * k); ctx.stroke();
   }
-  function puff(ctx, x, y, rad, a) {
+  function puff(ctx, x, y, rad, a, col = [255, 255, 255]) {
+    const [r, g0, b] = col, c2 = `${r - 15},${g0 - 11},${b - 7}`, c3 = `${r - 25},${g0 - 19},${b - 13}`;
     const g = ctx.createRadialGradient(x, y - rad * 0.3, rad * 0.1, x, y, rad);
-    g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(0.7, `rgba(240,244,248,${a * 0.85})`); g.addColorStop(1, "rgba(230,236,242,0)");
+    g.addColorStop(0, `rgba(${r},${g0},${b},${a})`); g.addColorStop(0.7, `rgba(${c2},${a * 0.85})`); g.addColorStop(1, `rgba(${c3},0)`);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
   }
 
@@ -446,12 +449,13 @@
         }
       }
     } else {
-      f.fillStyle = "#e9edf1"; f.fillRect(0, 0, W, H);
-      for (let i = 0; i < 520; i++) puff(f, r() * W, r() * H, 30 + r() * 55, 0.55 + r() * 0.4);
+      const fp = REGION.fog;
+      f.fillStyle = fp.base; f.fillRect(0, 0, W, H);
+      for (let i = 0; i < 520; i++) puff(f, r() * W, r() * H, 30 + r() * 55, 0.55 + r() * 0.4, fp.puff);
       for (let i = 0; i < 160; i++) {
         const x = r() * W, y = r() * H, rad = 20 + r() * 40;
         const g = f.createRadialGradient(x, y + rad * 0.4, 0, x, y + rad * 0.4, rad);
-        g.addColorStop(0, "rgba(170,182,198,0.25)"); g.addColorStop(1, "rgba(170,182,198,0)");
+        g.addColorStop(0, `rgba(${fp.shade},0.25)`); g.addColorStop(1, `rgba(${fp.shade},0)`);
         f.fillStyle = g; f.fillRect(x - rad, y - rad, rad * 2, rad * 2.4);
       }
     }
@@ -474,6 +478,7 @@
       }
     }
     ctx.drawImage(fc, 0, 0);
+    if (REGION.afterFog) { REGION.afterFog(ctx, s); return; }
     // 霧上露出的雪峰尖（只是地景，不洩漏地點）
     if (s === "painted") {
       const rr = rng(5);
@@ -728,17 +733,19 @@
       ctx.strokeStyle = PAL.scroll.ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, 190, 74);
       ctx.lineWidth = 1; ctx.strokeRect(x + 5, y + 5, 180, 64);
       ctx.fillStyle = PAL.scroll.ink; ctx.font = `38px ${PAL.scroll.font}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText("雲嶺", x + 18, y + 38);
+      ctx.fillText(REGION.title, x + 18, y + 38);
       ctx.fillStyle = "#a8322a"; ctx.fillRect(x + 112, y + 16, 60, 42);
       ctx.fillStyle = "#f6ead0"; ctx.font = `bold 13px ${PAL.painted.font}`; ctx.textAlign = "center";
-      ctx.fillText("建議", x + 142, y + 28); ctx.fillText("Lv 1～6", x + 142, y + 46);
+      ctx.fillText("建議", x + 142, y + 28); ctx.fillText(`Lv ${REGION.lv}`, x + 142, y + 46);
     } else {
-      ctx.fillStyle = "rgba(35,42,51,0.82)"; roundRect(ctx, x, y, 210, 60, 12); ctx.fill();
+      ctx.font = `bold 28px ${PAL.painted.font}`;
+      const tw = ctx.measureText(REGION.title).width;
+      ctx.fillStyle = "rgba(35,42,51,0.82)"; roundRect(ctx, x, y, tw + 150, 60, 12); ctx.fill();
       ctx.strokeStyle = "#e0c27a"; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = "#ffffff"; ctx.font = `bold 28px ${PAL.painted.font}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText("雲嶺", x + 18, y + 31);
+      ctx.fillStyle = "#ffffff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(REGION.title, x + 18, y + 31);
       ctx.fillStyle = "#ffe08a"; ctx.font = `bold 15px ${PAL.painted.font}`;
-      ctx.fillText("建議 Lv 1～6", x + 92, y + 32);
+      ctx.fillText(`建議 Lv ${REGION.lv}`, x + tw + 34, y + 32);
     }
   }
   function compass(ctx, s) {
@@ -803,9 +810,7 @@
   }
 
   // opts.full：不蓋霧、不畫地點，只看整張地景（給使用者看全貌用）
-  function draw(canvas, s, opts = {}) {
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext("2d");
+  function cloudTerrain(ctx, s) {
     base(ctx, s);
     river(ctx, s);
     lake(ctx, s);
@@ -816,6 +821,26 @@
     mountains(ctx, s);
     gorge(ctx, s);
     terrainLabels(ctx, s);
+  }
+  const REGIONS = {
+    cloud_ridge: {
+      title: "雲嶺", lv: "1～6", loc: CLOUD_LOC, edges: CLOUD_EDGES, state: CLOUD_STATE, terrain: cloudTerrain,
+      fog: { base: "#e9edf1", puff: [255, 255, 255], shade: "170,182,198" },
+    },
+  };
+  function setRegion(id) {
+    REGION = REGIONS[id];
+    LOC = REGION.loc; EDGES = REGION.edges; STATE = REGION.state;
+    byId = Object.fromEntries(LOC.map((l) => [l.id, l]));
+  }
+  // 別的區域（ashenRegionArt.js）用這個登記自己的資料與地景
+  function register(id, def) { REGIONS[id] = def; }
+
+  function draw(canvas, s, opts = {}) {
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    setRegion(opts.region || "cloud_ridge");
+    REGION.terrain(ctx, s);
     if (!opts.full) {
       fog(ctx, s);
       roads(ctx, s);
@@ -828,5 +853,9 @@
     frame(ctx, s);
   }
 
-  window.RegionArt = { draw, W, H, LOC, EDGES, STATE, fogOf };
+  window.RegionArt = {
+    draw, register, W, H, fogOf,
+    // 給其他區域與大世界圖共用的畫法
+    P, rng, pathThrough, puff, pine, mountain, icon, label, lvTag, roundRect, stone, selfMark, quest, check, PAL,
+  };
 })();
