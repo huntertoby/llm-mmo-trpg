@@ -153,10 +153,14 @@ def test_real_weak_failures_are_topped_up(
     assert [e.type for e in skill.effects][: len(effects)] == [e["type"] for e in effects]
     assert len(skill.effects) == len(effects) + 1
     assert skill.shape.type == shape["type"]
-    # 補的效果語意合理：傷害打敵方、治療／護盾給友方
+    # 補的效果語意合理：傷害與有害狀態打敵方、治療／護盾給友方（6S-2c 起也可能補有害狀態）
     added = skill.effects[-1]
     if added.type == "damage":
         assert added.affects == "enemies"
+    elif added.type == "apply_status":
+        assert added.affects == "enemies"
+        assert added.status is not None
+        assert not library.ruleset.statuses.by_id()[added.status].beneficial
     else:
         assert added.type in ("heal", "shield")
         assert added.affects in ("allies", "self")
@@ -257,11 +261,20 @@ def test_topup_only_adds_menu_primitives(library: ContentLibrary) -> None:
 def test_unfixable_weak_gets_actionable_feedback(
     library: ContentLibrary, models: ProposalModels
 ) -> None:
-    """控制骨架的淨地（傷害最多占 40%）補什麼都不夠：照舊回報 ``budget.weak``，訊息附建議。"""
+    """控制骨架的淨地（傷害最多占 40%）補什麼都不夠：照舊回報 ``budget.weak``，訊息附建議。
+
+    6S-2c 起附帶效果也會試有害狀態（``apply_status`` 是控制骨架的核心原語，淨地＋定身就合格），
+    所以這裡用不開放 ``apply_status`` 的選單，維持「補強救不回」的情境。"""
+    no_status = build_proposal_models(
+        library,
+        primitives=[p.id for p in library.ruleset.primitives.primitives if p.id != "apply_status"],
+    )
     raw = _proposal(
         library, "control", _single(3), [{"type": "clear_surface", "affects": "enemies"}]
     )
-    after = evaluate_with_repair(raw, models, library, _ctx(2, "rare"), seed=SEED)
+    fixed = evaluate_with_repair(raw, models, library, _ctx(2, "rare"), seed=SEED)
+    assert fixed.ok and "topup.budget.weak" in fixed.repaired
+    after = evaluate_with_repair(raw, no_status, library, _ctx(2, "rare"), seed=SEED)
     assert [e.code for e in after.result.errors] == ["budget.weak"]
     assert after.result.errors[0].message.endswith(WEAK_ADVICE)
 
@@ -327,7 +340,8 @@ def test_request_payload_has_budget_and_keyword_notes(library: ContentLibrary) -
     prompt = build_proposal_prompt(library, request)
     user = prompt.messages[1]["content"]
     assert "budget_note_zh" in user
-    assert "pull＋damage" in user
+    assert "不一定是傷害" in user
+    assert "cleanse＋shield" in user
     assert "keyword_note_zh" in user
     plain = build_proposal_prompt(library, ProposalRequest(1, "rare", core_primitive="pull"))
     assert "keyword_note_zh" not in plain.messages[1]["content"]

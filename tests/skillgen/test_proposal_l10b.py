@@ -266,11 +266,17 @@ def test_lifted_skill_card_numbers_match_the_battle(
 def test_lone_knobless_core_still_reports_weak(
     library: ContentLibrary, models: ProposalModels
 ) -> None:
-    """3 階的單獨傳送：降 AP 也補不到下限，照舊回報 ``budget.weak``（不降預算下限）。"""
+    """3 階的單獨傳送：降 AP 也補不到下限，照舊回報 ``budget.weak``（不降預算下限）。
+
+    這裡驗的是數值補強（4-L10b），所以關掉結構補強（``topup=False``）：6S-2c 起結構補強會試
+    有害狀態附帶效果，傳送＋施加狀態就合格，但那是另一段（``test_topup_6s2c``）的行為。"""
     proposal = _proposal(library, "displace", TILE, [{"type": "teleport"}])
-    evaluation = evaluate_with_repair(proposal, models, library, ProposalContext(3, "epic"), seed=3)
+    ctx = ProposalContext(3, "epic")
+    evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=3, topup=False)
     assert [e.code for e in evaluation.result.errors] == ["budget.weak"]
     assert evaluation.repaired == ()
+    topped = evaluate_with_repair(proposal, models, library, ctx, seed=3)
+    assert topped.ok and "topup.budget.weak" in topped.repaired
 
 
 def test_proposal_that_passes_keeps_the_default_ap(

@@ -147,6 +147,8 @@ SNAPSHOTS = {
     "skill-proposal/5": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
     # 6S-2：系統指令不變；題目區加 budget_note_zh、keyword_note_zh，keywords 加 ways
     "skill-proposal/6": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
+    # 6S-2c：系統指令不變；budget_note_zh 的附帶效果例子改成中性（不暗示固定加傷害）
+    "skill-proposal/7": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
 }
 
 

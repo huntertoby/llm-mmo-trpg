@@ -538,6 +538,8 @@ def evaluate_with_repair(
         keywords=ctx.keywords,
         weak=WEAK in codes,
         primitives=models.primitive_ids,
+        seed=seed,
+        rarity=ctx.rarity,
     ):
         trial = _evaluate_repaired(candidate, models, library, ctx, seed)
         if trial.ok:
@@ -550,9 +552,10 @@ def evaluate_with_repair(
 
 WEAK_ADVICE = (
     "。引擎已把數值調到最高、AP 降到 1 仍不夠：請再加一個骨架允許的附帶效果"
-    "（例如對敵方的 damage、對友方的 heal），或改用有數值的核心效果"
+    "（依技能主題選，例如對友方的 heal 或 shield、對敵方的施加狀態或 damage），"
+    "或改用有數值的核心效果"
 )
-"""補強也救不回的 ``budget.weak`` 附給 LLM 的建議（6S-2）。"""
+"""補強也救不回的 ``budget.weak`` 附給 LLM 的建議（6S-2；6S-2c 例子改成中性）。"""
 
 
 def _topup_advice(
