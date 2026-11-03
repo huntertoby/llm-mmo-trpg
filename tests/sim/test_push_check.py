@@ -73,7 +73,7 @@ def test_a_pillar_that_blocks_the_corridor_can_be_toppled_away_when_it_lands_off
 def test_official_maps_are_all_connected_and_the_table_renders() -> None:
     library = load_library()
     ids = sorted(m for m in library.maps if not m.startswith("test_"))
-    assert len(ids) == 12  # 10 張正式地圖 ＋ 靶場（Phase 3F-1）＋ Boss 地圖（3-5b）
+    assert len(ids) == 13  # 10 張正式地圖 ＋ 靶場（Phase 3F-1）＋ Boss 地圖（3-5b）＋ 雲頂觀（5F-2）
     reports = [check_map(library, m) for m in ids]
     assert all(r.connected and not r.seals and not r.topple_seals for r in reports)
     assert any(r.topplable for r in reports)

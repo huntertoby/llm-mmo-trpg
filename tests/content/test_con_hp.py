@@ -94,6 +94,8 @@ OLD_HP = {
     "sect_puppeteer": 24,  # 5A-3 新增（雲嶺）
     "sect_array_stone": 48,  # 5A-3 新增（雲嶺）
     "sect_steward": 62,  # 5A-3 新增（雲嶺）
+    "sect_mist_lock_master": 102,  # 5F-2 新增（雲嶺 Boss）
+    "sect_summit_array_stone": 48,  # 5F-2 新增（雲頂觀陣眼）
     "mist_wolf": 22,  # 5A-3 新增（雲嶺）
     "mountain_leopard": 26,  # 5A-3 新增（雲嶺）
     "stoneback_bear": 62,  # 5A-3 新增（雲嶺）

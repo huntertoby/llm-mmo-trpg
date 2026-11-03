@@ -1,0 +1,33 @@
+# 蓄力強招「霧鎖千山」（Phase 5F-2，docs/design/18-雲嶺內容.md 18.2.3 霧鎖真人第 2 階段：提前一輪標示十字範圍，命中定身 1 回合；
+# 05 5.7 強招預告；數值為初值，未經模擬）：整回合（3 AP）蓄力、身上護一層小盾，地圖預告十字範圍；
+# 下回合開始時以自己為中心的十字範圍傷害並定身。倒下、暈眩、冰凍、沉默時取消（6.23 #5 延遲段，法術型）。
+id: skill_mist_lock_peaks
+schema_version: 1
+name_zh: 霧鎖千山
+tier: 2
+rank: 2
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 3
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+followup:
+  when: delayed
+  release: next_turn
+  skeleton: area
+  shape: {type: cross, range: 0}
+  effects:
+    - {type: damage, dice: 2d8, element: physical}
+    - {type: apply_status, status: root, duration: 1}
+condition: null
+cost: {mana: 10, cooldown: 3}
+tags: [arcane, spell, aoe, control]
+narrative:
+  concept: 以身為陣眼，讓千山的霧在四方鎖死
+  cast_flavor: 你雙指一併，四周的霧氣凝成鎖鏈般的紋路，緩緩收緊
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

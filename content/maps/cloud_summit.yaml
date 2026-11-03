@@ -1,0 +1,57 @@
+# Boss 地圖：雲頂觀（Phase 5F-2；docs/design/20-第一季商店與裝備內容.md 20.6、18-雲嶺內容.md 18.2.3）。
+# 雲嶺區域 Boss「霧鎖真人」的專屬地圖（地圖類型 boss：不進一般抽選、模擬的預設地圖與一般地圖列表）。12×12，山寺石階的 Boss 版。
+#
+# - 中央高台（x 4–7、y 1–3，高 2）：真人在高台上施法；高台前 1 格（6, 4）是陣眼石靈（鎖霧大陣：真人受到的傷害 −50%，打碎才解除）。
+# - 高台前緣（x 4–7、y 4）與兩側石階（x 2–3、x 8–9，y 1–4）高 1：從石階或正面爬上高台。
+# - 兩名劍陣弟子守高台入口（4, 4）、（7, 4）。
+# - 四角各 1 個香爐：先用油桶（推倒漏油、遇火爆燃；換皮要新物件與美術，代決 5F2-10）。
+# - 中場兩道矮牆當掩護；我方從下方石階（南側）攻上來。
+# 階段（第 2 階段濃霧、召喚霧行者；第 3 階段霧散）寫在真人的範本裡（content/units/sect_mist_lock_master.yaml）。
+id: cloud_summit
+name_zh: 雲頂觀
+archetype: boss
+region: cloud_ridge
+size: [12, 12]
+heights: |
+  000000000000
+  001122221100
+  001122221100
+  001122221100
+  001111111100
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+terrain: |
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+  ............
+legend:
+  ".": stone
+objects:
+  - {at: [0, 0], kind: oil_barrel}
+  - {at: [11, 0], kind: oil_barrel}
+  - {at: [0, 11], kind: oil_barrel}
+  - {at: [11, 11], kind: oil_barrel}
+  - {at: [3, 7], kind: low_wall}
+  - {at: [8, 7], kind: low_wall}
+start_zones:
+  ally: [[5, 10], [6, 10], [4, 10], [7, 10], [5, 11], [6, 11]]
+  enemy: [[5, 2], [4, 4], [7, 4], [6, 4], [6, 2]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [sect_mist_lock_master, sect_array_disciple, sect_array_disciple, sect_summit_array_stone]
+# 勝利條件（05 5.8，#86）：頭目（boss 標籤）倒下時其餘護衛撤退，戰鬥直接勝利。
+objective: {kind: eliminate, leader_retreat: true}

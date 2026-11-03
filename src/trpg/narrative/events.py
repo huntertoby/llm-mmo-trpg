@@ -21,6 +21,7 @@ from trpg.engine.events import (
     BattleStarted,
     BombExploded,
     BombTicked,
+    BossPhaseChanged,
     ChainLimitReached,
     ChargeActivated,
     CheckRolled,
@@ -133,6 +134,7 @@ from trpg.engine.events import (
     UnitVaulted,
     WallToppled,
     WeaponReloaded,
+    WeatherChanged,
     ZoneCreated,
     ZoneExpanded,
     ZoneExpired,
@@ -1087,6 +1089,18 @@ def _oath_broken(e: OathBroken, v: _View) -> str:
     if e.at_end:
         return f"  ✦ 戰鬥結束：{who} 沒有守住誓約，破誓會帶到下一場開場"
     return f"  ✦ {who} 違反了誓約：誓約之力消失，陷入破誓"
+
+
+@_handles(BossPhaseChanged)
+def _boss_phase_changed(e: BossPhaseChanged, v: _View) -> str:
+    who = v.name[e.unit_id]
+    line = f"◆ {who} 進入第 {e.phase} 階段「{e.name_zh}」（HP {e.permille // 10}% 以下）"
+    return line if e.text_zh is None else f"{line}：{e.text_zh}"
+
+
+@_handles(WeatherChanged)
+def _weather_changed(e: WeatherChanged, v: _View) -> str:
+    return f"  ☁ 天氣變為{e.after_name_zh}"
 
 
 @_handles(DeathCheated)

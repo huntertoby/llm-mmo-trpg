@@ -4043,6 +4043,53 @@
         "title": "BombPreviewOut",
         "description": "預覽中會綁上的定時炸彈（Phase 3D-8b）：``rounds`` 次環境回合後爆炸，``tiles`` 是以攜帶者\n目前位置展開的波及格子。"
       },
+      "BossPhaseView": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "next_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Name Zh"
+          },
+          "next_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "total",
+          "name_zh"
+        ],
+        "title": "BossPhaseView",
+        "description": "Boss 目前的階段（Phase 5F-2，唯讀）：``index`` 1 起算、``total`` 階段數；下一個階段的名字與\nHP 門檻（‰；最後一個階段時兩者為 ``None``）。"
+      },
       "BudgetLine": {
         "properties": {
           "index": {
@@ -17601,6 +17648,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/RaceView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "boss_phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BossPhaseView"
               },
               {
                 "type": "null"

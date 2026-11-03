@@ -29,6 +29,7 @@ from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.bombs import bomb_spec
+from trpg.engine.boss_phases import next_phase
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
@@ -59,6 +60,7 @@ __all__ = [
     "AffixLineView",
     "AppearanceView",
     "BattleView",
+    "BossPhaseView",
     "ChargeView",
     "EquipmentSlotView",
     "GearSkillView",
@@ -275,6 +277,17 @@ class EquipmentSlotView(_ViewModel):
     appearance: AppearanceView = AppearanceView()
 
 
+class BossPhaseView(_ViewModel):
+    """Boss 目前的階段（Phase 5F-2，唯讀）：``index`` 1 起算、``total`` 階段數；下一個階段的名字與
+    HP 門檻（‰；最後一個階段時兩者為 ``None``）。"""
+
+    index: int
+    total: int
+    name_zh: str
+    next_name_zh: str | None = None
+    next_permille: int | None = None
+
+
 class ChargeView(_ViewModel):
     """裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。
 
@@ -450,6 +463,8 @@ class UnitView(_ViewModel):
     """冷卻中的形態與剩餘回合（Phase 3J-1a；依形態 ID）。"""
     race: RaceView | None = None
     """種族（Phase 3R-2）：種族技與環境被動；沒有種族為 ``None``。"""
+    boss_phase: BossPhaseView | None = None
+    """Boss 的階段（Phase 5F-2）；沒有階段為 ``None``。"""
 
 
 class TrapView(_ViewModel):
@@ -965,6 +980,24 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             if unit.team is team
             else ()
         ),
+        boss_phase=_boss_phase_view(unit),
+    )
+
+
+def _boss_phase_view(unit: UnitState) -> BossPhaseView | None:
+    """Boss 目前的階段與下一個門檻（Phase 5F-2）。"""
+    if not unit.phases:
+        return None
+    current = unit.phases[unit.phase_index]
+    following = next_phase(unit)
+    return BossPhaseView(
+        index=unit.phase_index + 1,
+        total=len(unit.phases),
+        name_zh=current.name_zh,
+        next_name_zh=None if following is None else following.name_zh,
+        next_permille=None
+        if following is None or following.trigger is None
+        else following.trigger.permille,
     )
 
 

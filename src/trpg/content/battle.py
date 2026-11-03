@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, field_validator, model_serializer, model_validator
 
@@ -28,6 +28,7 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "BlockBonus",
+    "BossPhase",
     "DeathSurfaceSpec",
     "Dice",
     "DollGear",
@@ -35,9 +36,13 @@ __all__ = [
     "Entangle",
     "FormationSpec",
     "HitCondition",
+    "HpBelowTrigger",
     "OffhandDef",
     "OffhandTable",
     "OpeningStatus",
+    "PhaseSpawn",
+    "PhaseTile",
+    "PhaseTrigger",
     "ReactionRule",
     "ReactionUnless",
     "ReactionWhen",
@@ -65,6 +70,7 @@ __all__ = [
     "WeaponDef",
     "WeaponLook",
     "WeaponTable",
+    "check_phases",
     "weapon_attr_examples_zh",
 ]
 
@@ -744,7 +750,7 @@ class WardSpec(ContentModel):
 
     kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """被護住的同門標籤；省略＝任何友方都算。"""
-    range: int = Field(default=3, ge=1, le=5)
+    range: int = Field(default=3, ge=1, le=12)
     taken_permille: int = Field(ge=100, le=999)
 
 
@@ -1289,6 +1295,107 @@ class OpeningStatus(ContentModel):
     duration: int | None = Field(default=None, ge=1, le=2)
 
 
+class HpBelowTrigger(ContentModel):
+    """Boss 階段的觸發（Phase 5F-2）：HP ≤ 最大 HP × ``permille``‰ 時進入。之後的觸發種類
+    （第 N 輪起、某標籤的單位全倒）以新的 ``kind`` 加在 :data:`PhaseTrigger` 聯集裡。"""
+
+    kind: Literal["hp_below"]
+    permille: int = Field(ge=1, le=999)
+
+
+type PhaseTrigger = Annotated[HpBelowTrigger, Field(discriminator="kind")]
+
+
+class PhaseTile(ContentModel):
+    """階段轉換時改變的一格（同地圖事件 ``terrain_change`` 的格子：高度、地形、表面；省略的
+    不變）。"""
+
+    at: tuple[int, int]
+    height: int | None = Field(default=None, ge=0, le=3)
+    terrain: str | None = Field(default=None, pattern=ID_PATTERN)
+    surface: Surface | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> PhaseTile:
+        if self.height is None and self.terrain is None and self.surface is None:
+            raise ValueError("階段的 tiles 每一格至少要改變 height、terrain 或 surface 其中之一")
+        return self
+
+
+class PhaseSpawn(ContentModel):
+    """階段轉換時召喚的單位（和 Boss 同陣營）。``at`` 省略＝Boss 當下的位置（改到最近的安全格）。"""
+
+    template: str = Field(pattern=ID_PATTERN)
+    count: int = Field(default=1, ge=1, le=4)
+    at: tuple[int, int] | None = None
+
+
+class BossPhase(ContentModel):
+    """Boss 的一個階段（Phase 5F-2，09 9.6.8、18.2.3）。
+
+    第 1 項是開場階段：只有 ``id``、``name_zh``（範本本身就是它）；之後每項必有 ``trigger``，
+    進入時依序：移除狀態 → 換技能組 → 換行為模式 → 施加狀態 → 改天氣 → 改格子 → 召喚
+    （:mod:`trpg.engine.boss_phases`）。省略的欄位不變。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    trigger: PhaseTrigger | None = None
+    text_zh: str | None = Field(default=None, min_length=1)
+    """轉換時的一句敘事（戰鬥紀錄與前端提示）。"""
+    skills: tuple[str, ...] | None = Field(default=None, max_length=32)
+    ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
+    remove_statuses: tuple[str, ...] = ()
+    add_statuses: tuple[OpeningStatus, ...] = ()
+    weather: str | None = Field(default=None, pattern=ID_PATTERN)
+    tiles: tuple[PhaseTile, ...] = ()
+    spawns: tuple[PhaseSpawn, ...] = ()
+
+    @property
+    def is_opening(self) -> bool:
+        return self.trigger is None
+
+    def changes_anything(self) -> bool:
+        return bool(
+            self.skills is not None
+            or self.ai_profile is not None
+            or self.remove_statuses
+            or self.add_statuses
+            or self.weather is not None
+            or self.tiles
+            or self.spawns
+            or self.text_zh is not None
+        )
+
+
+PHASES_MIN = 2
+PHASES_MAX = 4
+"""``phases`` 的項數範圍（開場階段＋1～3 次轉換；09 9.6.8「2～3 個階段」，留一格給之後的 Boss）。"""
+
+
+def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
+    """``UnitTemplate.phases`` 的結構問題（空列表＝沒問題）。"""
+    if not phases:
+        return []
+    problems: list[str] = []
+    if not PHASES_MIN <= len(phases) <= PHASES_MAX:
+        problems.append("phases 要有 2～4 項（開場階段＋1～3 次轉換）")
+    first = phases[0]
+    if not first.is_opening or first.changes_anything():
+        problems.append("phases 第 1 項是開場階段：只能有 id 與 name_zh")
+    last = 1000
+    for phase in phases[1:]:
+        if phase.trigger is None:
+            problems.append(f"階段 {phase.id} 缺少 trigger（只有第 1 項可以省略）")
+            continue
+        if phase.trigger.permille >= last:
+            problems.append(f"階段 {phase.id} 的 HP 門檻必須比前一個階段低")
+        last = phase.trigger.permille
+    ids = [p.id for p in phases]
+    if len(set(ids)) != len(ids):
+        problems.append("phases 的 id 不能重複")
+    return problems
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -1375,6 +1482,18 @@ class UnitTemplate(ContentModel):
     opening_statuses: tuple[OpeningStatus, ...] = ()
     """開場就帶著的狀態（Phase 5A-M1）：開戰時在擲先攻前施加、不擲抵抗（同
     ``UnitSpawn.opening_statuses``，先施加範本的）。"""
+    phases: tuple[BossPhase, ...] = ()
+    """Boss 的階段（Phase 5F-2）：HP 跌破門檻時換技能組／行為模式、加減狀態、改天氣與格子、召喚
+    （:class:`BossPhase`、:mod:`trpg.engine.boss_phases`）；空＝沒有階段。"""
+
+    @model_validator(mode="after")
+    def _check_phases(self) -> UnitTemplate:
+        problems = check_phases(self.phases)
+        if problems:
+            raise ValueError("；".join(problems))
+        if self.phases and self.summon:
+            raise ValueError("召喚物不能有 phases")
+        return self
 
     @model_validator(mode="after")
     def _check_totem(self) -> UnitTemplate:

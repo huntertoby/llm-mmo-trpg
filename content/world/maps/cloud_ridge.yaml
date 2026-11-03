@@ -130,7 +130,7 @@ locations:
     name_zh: 雲頂觀
     kind: boss
     level_min: 6
-    # 戰鬥地圖：Boss 專屬地圖在 5F-2 補上（18.3「Boss 專屬」）
+    battle_maps: [cloud_summit]   # Boss 專屬地圖（5F-2；18.3「Boss 專屬」、20.6）
     description_zh: 霧鎖真人
     pos: {x: 75, y: 10}
   - id: ashen_ferry

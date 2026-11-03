@@ -328,6 +328,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         objective=setup.effective_objective,
         map_events=map_def.events,
         spawn_templates=dict(setup.spawn_templates),
+        phase_weathers=dict(setup.phase_weathers),
         region=map_def.region,
         look=tuple(sorted(map_def.look.items())),
         map_tags=tuple(sorted(map_def.tags)),
