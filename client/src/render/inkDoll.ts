@@ -408,7 +408,7 @@ function drawSide(t: Ctxt): void {
   drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
 }
 
-const DOLL_HEAD_TOP = 53; // 頭頂（不含角、帽）離腳底約 53
+export const DOLL_HEAD_TOP = 53; // 頭頂（不含角、帽）離腳底約 53
 
 /** 體型縮放：stout 整個人 ×(1.12, 0.88)、tall ×(0.96, 1.1)；不認得的值不縮放。 */
 export function buildScale(look: Look): readonly [number, number] {
