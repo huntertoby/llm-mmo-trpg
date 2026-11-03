@@ -3,14 +3,12 @@
 # 小鎮 24×18：廢鐵搭成的避難市集。地上是焦土（dirt）和鐵板路（stone），中央有一口大水缸（水表面 2×2），
 # 傳送石在水缸旁。城鎮是安全區，沒有敵人，只出非戰鬥事件。
 # 出口：西南往灰渡口（岸邊的廢鐵門）、東門往焦土外圍、北門往舊鐵哨站。
-# 建築（外觀在美術段才到，先用牆拼）：西北酒館、東北爐叔鐵鋪（含餘燼附魔台）有室內，室內圖在 6D-3。
-#   現行的實地地圖驗證不允許門通往還沒有的室內圖（會是錯誤，不是待補），所以這段先不寫 doors：
-#   酒館門口 [3, 5]、鐵鋪門口 [19, 5] 留成可站的鐵板格，6D-3 畫室內圖時加
-#   {id: tavern_door, at: [3, 5], to: ember_market_tavern}、{id: smithy_door, at: [19, 5], to: ember_market_smithy}。
-#   鐵匠（smithy）、酒館（tavern）、附魔台（enchanter）的設施跟著室內圖放（比照霧渡鎮）。
+# 建築（外觀在美術段才到，先用牆拼）：西北酒館、東北爐叔鐵鋪（含餘燼附魔台）有室內（6D-3）：
+#   酒館門 [3, 5] → interiors/ember_market_tavern.yaml、鐵鋪門 [19, 5] → interiors/ember_market_smithy.yaml。
+#   鐵匠（smithy）、酒館（tavern）、雇用（hire）、附魔台（enchanter）的設施在室內（比照霧渡鎮）。
 # 攤位與設施：鐵娘的廢鐵攤（shop）、懸賞板（notice_board，石柱）、灰鬚站在酒館外的牆邊（mentor，19.5）。
-# NPC：鐵娘、灰鬚。爐叔（smith_lu）在鐵鋪室內、酒館老兵在酒館室內，6D-3 放。
-# 事件點：酒館老兵（tavern_veteran）先放在酒館門口外，6D-3 可以移進室內。
+# NPC：鐵娘、灰鬚。爐叔（smith_lu）在鐵鋪室內（6D-3）。
+# 事件點：酒館老兵（tavern_veteran）在酒館室內（6D-3 由門口外移進去），鎮上不放事件點。
 # 「餘燼集－裂界門」照 5F5a-1 不畫。
 id: ember_market
 name_zh: 餘燼集
@@ -80,6 +78,9 @@ exits:
   - {id: to_ash_ferry, at: [[2, 17], [3, 17]], to: ash_ferry, arrive: to_ember_market}   # 西南：岸邊的廢鐵門，往灰渡口
   - {id: to_scorched_outskirts, at: [[23, 8], [23, 9]], to: scorched_outskirts, arrive: to_ember_market}   # 東門：往焦土外圍
   - {id: to_old_iron_post, at: [[11, 0], [12, 0]], to: old_iron_post, arrive: to_ember_market}   # 北門：往舊鐵哨站
+doors:
+  - {id: tavern_door, at: [3, 5], to: ember_market_tavern}   # 西北酒館
+  - {id: smithy_door, at: [19, 5], to: ember_market_smithy}   # 東北爐叔鐵鋪
 teleport_stones:
   - {id: stone_ember_market, at: [13, 10]}   # 中央水缸旁
 npcs:
@@ -89,5 +90,3 @@ facilities:
   - {at: [8, 11], id: shop}   # 鐵娘的廢鐵攤
   - {at: [15, 6], id: notice_board}   # 懸賞板
   - {at: [6, 4], id: mentor}   # 灰鬚（荒原的導師在小鎮，19.5）
-event_spots:
-  - {at: [3, 6], id: tavern_veteran}   # 酒館門口外（6D-3 可移進室內）

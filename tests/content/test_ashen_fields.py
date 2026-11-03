@@ -14,7 +14,9 @@
   （切不到的村落改用守點模板，草稿待確認 3）；
 - 熔心坑前廳：坑口 ``pit_gate``、廢墟要塞那一側的熔岩封口 ``pit_lava_seal``；
   Boss 地圖的冷卻井照舊預放水；
-- 餘燼集（小鎮）：傳送石 1 個、設施與 NPC 站位；室內圖在 6D-3（現在不寫門）。
+- 餘燼集（小鎮）：傳送石 1 個、設施與 NPC 站位；
+- 餘燼集室內（6D-3）：酒館、爐叔鐵鋪兩扇門與室內圖互指，設施、爐叔、酒館老兵的事件點在室內，
+  站位從入口走得到、相鄰格站得上。
 """
 
 from __future__ import annotations
@@ -149,6 +151,18 @@ def _field(library: ContentLibrary, location: str, region: str = REGION) -> Fiel
     )
 
 
+def _interiors(library: ContentLibrary, location: str) -> list[FieldMapDef]:
+    """這個地點的室內圖（依 ID 排序）。"""
+    return sorted(
+        (
+            f
+            for f in library.field_maps.values()
+            if f.region == REGION and f.interior_of == location
+        ),
+        key=lambda f: f.id,
+    )
+
+
 def _passable(library: ContentLibrary, field: FieldMapDef) -> list[list[bool]]:
     return passable_grid(field, library.ruleset.terrain.by_id(), library.ruleset.objects.by_id())
 
@@ -189,7 +203,7 @@ def test_all_18_maps_are_drawn_and_pass(library: ContentLibrary) -> None:
 
 
 def test_nothing_is_pending(library: ContentLibrary) -> None:
-    """18 張都畫了：荒原沒有待補（餘燼集的室內圖在 6D-3，現在不寫門，所以也沒有門的待補）。"""
+    """18 張都畫了：荒原沒有待補（餘燼集的兩扇門也都有室內圖，6D-3）。"""
     assert not [line for line in library.field_pending if REGION in line]
     assert not [line for line in library.field_pending if any(m in line for m in MAPS)]
 
@@ -258,8 +272,11 @@ def test_obsidian_valley_is_entered_through_a_hidden_door(library: ContentLibrar
 
 def test_hidden_entrances_use_hidden_until(library: ContentLibrary) -> None:
     locations = library.world_maps[REGION].location_by_id()
+    interiors = {f.id for f in library.field_maps.values() if f.is_interior}
     for location in MAPS:
         for door in _field(library, location).doors:
+            if door.to in interiors:
+                continue  # 通往室內圖的門（餘燼集，6D-3）另外測
             assert locations[door.to].hidden, (location, door.id)
             assert door.hidden_until == "reveal", (location, door.id)
 
@@ -355,7 +372,10 @@ def test_event_spots_use_this_places_skeletons(library: ContentLibrary) -> None:
         ids = [s.id for s in field.event_spots]
         assert set(ids) <= places.get(location, set()), location
         assert len(ids) == len(set(ids)) <= 3
-        # 這個地點的事件骨架都有地方放
+        # 這個地點的事件骨架都有地方放（室外或這個地點的室內圖，6D-3）
+        for interior in _interiors(library, location):
+            ids += [s.id for s in interior.event_spots]
+        assert len(ids) == len(set(ids)), location
         assert set(ids) == places.get(location, set()), location
 
 
@@ -535,19 +555,80 @@ def test_molten_heart_pit_antechamber(library: ContentLibrary) -> None:
 
 
 def test_ember_market_town(library: ContentLibrary) -> None:
-    """餘燼集（小鎮 24×18）：安全區、傳送石 1 個、鐵娘與灰鬚站在鎮上、商店／懸賞板／導師；
-    爐叔與酒館在室內（6D-3），現在不寫門。"""
+    """餘燼集（小鎮 24×18）：安全區、傳送石 1 個、鐵娘與灰鬚站在鎮上（灰鬚在酒館外的牆邊，19.5）、
+    商店／懸賞板／導師；酒館與爐叔鐵鋪各一扇門（6D-3）。"""
     town = _field(library, "ember_market")
     assert town.size == (24, 18)
     assert town.spawns == () and town.campfires == ()
     assert [s.id for s in town.teleport_stones] == ["stone_ember_market"]
     assert {n.id for n in town.npcs} == {"iron_lady", "greybeard"}
     assert {f.id for f in town.facilities} == {"shop", "notice_board", "mentor"}
-    assert town.doors == ()
     assert {e.to for e in town.exits} == {"ash_ferry", "scorched_outskirts", "old_iron_post"}
-    # 6D-3 要放門的兩個門口格（酒館、鐵鋪）留成站得上、走得到的格子
+    assert {(d.id, d.at, d.to) for d in town.doors} == {
+        ("tavern_door", (3, 5), "ember_market_tavern"),
+        ("smithy_door", (19, 5), "ember_market_smithy"),
+    }
     passable = _passable(library, town)
     reach = _reach(library, town, town.entry)
-    for x, y in ((3, 5), (19, 5)):
-        assert passable[y][x] and (x, y) in reach
-    assert [s.id for s in town.event_spots] == ["tavern_veteran"]
+    for door in town.doors:
+        x, y = door.at
+        assert passable[y][x] and door.at in reach, door.id
+        assert door.hidden_until is None
+        # 門外一格（南邊）站得上：從室內出來的落腳處
+        assert passable[y + 1][x] and (x, y + 1) in reach, door.id
+    for npc in town.npcs:
+        assert npc.at in reach, npc.id
+    # 酒館老兵移進室內，鎮上不放事件點
+    assert town.event_spots == ()
+
+
+INTERIORS: dict[str, tuple[str, set[str], set[str], set[str]]] = {
+    # 室內圖: (鎮上的門, 設施, NPC, 事件點)
+    "ember_market_tavern": ("tavern_door", {"tavern", "hire"}, set(), {"tavern_veteran"}),
+    "ember_market_smithy": ("smithy_door", {"smithy", "enchanter"}, {"smith_lu"}, set()),
+}
+"""餘燼集的兩張室內圖（6D-3；草稿第 2 張、19.5）。酒館老兵沒有人設卡，只放事件點。"""
+
+
+def test_ember_market_has_exactly_two_interiors(library: ContentLibrary) -> None:
+    assert [f.id for f in _interiors(library, "ember_market")] == sorted(INTERIORS)
+    # 荒原其他地點沒有室內圖
+    others = {f.interior_of for f in library.field_maps.values() if f.region == REGION}
+    assert others - {None} == {"ember_market"}
+
+
+@pytest.mark.parametrize("interior_id", sorted(INTERIORS))
+def test_ember_market_interiors(library: ContentLibrary, interior_id: str) -> None:
+    door_id, facilities, npcs, spots = INTERIORS[interior_id]
+    town = _field(library, "ember_market")
+    room = library.field_maps[interior_id]
+    assert room.interior_of == "ember_market" and room.region == REGION
+    assert room.size == (10, 8)
+    assert room.doors == () and room.teleport_stones == () and room.spawns == ()
+    # 門與出口互指：鎮上的門通往這張室內圖，室內圖的出口回到餘燼集、arrive 指向那扇門
+    door = next(d for d in town.doors if d.id == door_id)
+    assert door.to == interior_id
+    assert len(room.exits) == 1
+    exit_ = room.exits[0]
+    assert exit_.to == "ember_market" and exit_.arrive == door_id and exit_.region is None
+    # 設施、NPC、事件點照草稿與 19.5
+    assert {f.id for f in room.facilities} == facilities
+    assert {n.id for n in room.npcs} == npcs
+    assert {s.id for s in room.event_spots} == spots
+    # 站位：入口走得到出口、NPC、事件點；設施（櫃檯、鐵砧、石柱）旁邊至少一格走得到
+    passable = _passable(library, room)
+    reach = _reach(library, room, room.entry)
+    for cell in exit_.at:
+        x, y = _inward(cell, room.size)
+        assert passable[y][x] and room.entry in _reach(library, room, cell), cell
+    for at in [n.at for n in room.npcs] + [s.at for s in room.event_spots]:
+        assert at in reach, at
+    for facility in room.facilities:
+        x, y = facility.at
+        near = {(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))}
+        assert near & reach, facility.id
+    # 爐叔站在鐵砧旁
+    if "smith_lu" in npcs:
+        smith = next(n for n in room.npcs if n.id == "smith_lu")
+        anvil = next(f for f in room.facilities if f.id == "smithy")
+        assert _manhattan(smith.at, anvil.at) == 1

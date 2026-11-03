@@ -1,0 +1,44 @@
+# 餘燼集酒館室內（6D-3；玩法 PM 草稿第 2 張；格式說明見 ../../cloud_ridge/mist_ferry.yaml 開頭）。
+# 10×8：廢鐵板搭的酒館。南邊門口回到鎮上的酒館門（餘燼集 [3, 5]）。
+# 櫃檯開酒館面板（傳聞），東北角的告示開雇用面板；酒館老兵（tavern_veteran）坐在西邊的桌旁。
+# 酒館老兵沒有人設卡（19.5 沒有這位），只放事件點，不放 NPC。
+id: ember_market_tavern
+name_zh: 餘燼集酒館
+region: ashen_waste
+interior_of: ember_market
+size: [10, 8]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ##########
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  ####..####
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [5, 2], kind: crate}      # 櫃檯
+  - {at: [6, 2], kind: crate}
+  - {at: [7, 2], kind: crate}
+  - {at: [2, 4], kind: low_wall}   # 老兵的桌子
+  - {at: [7, 5], kind: crate}      # 酒桶
+entry: [4, 6]
+exits:
+  - {id: to_ember_market, at: [[4, 7], [5, 7]], to: ember_market, arrive: tavern_door}
+facilities:
+  - {at: [6, 2], id: tavern}
+  - {at: [8, 1], id: hire}
+event_spots:
+  - {at: [2, 3], id: tavern_veteran}   # 酒館老兵（由門口外移進室內；城鎮只出非戰鬥事件）

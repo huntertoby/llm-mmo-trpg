@@ -1,0 +1,42 @@
+# 餘燼集爐叔鐵鋪室內（6D-3；玩法 PM 草稿第 2 張；格式說明見 ../../cloud_ridge/mist_ferry.yaml 開頭）。
+# 10×8：南邊門口回到鎮上的鐵鋪門（餘燼集 [19, 5]）。
+# 爐叔（smith_lu）站在鐵砧旁（走到旁邊開鐵匠面板），東邊的石柱是餘燼附魔台（19.5「鐵匠與附魔台」）。
+id: ember_market_smithy
+name_zh: 爐叔鐵鋪
+region: ashen_waste
+interior_of: ember_market
+size: [10, 8]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ##########
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  ####..####
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [3, 2], kind: crate}         # 鐵砧
+  - {at: [7, 2], kind: stone_pillar}  # 餘燼附魔台
+  - {at: [1, 1], kind: rubble}        # 廢鐵料堆
+  - {at: [8, 5], kind: crate}         # 淬火桶
+entry: [5, 6]
+exits:
+  - {id: to_ember_market, at: [[4, 7], [5, 7]], to: ember_market, arrive: smithy_door}
+npcs:
+  - {at: [4, 2], id: smith_lu}
+facilities:
+  - {at: [3, 2], id: smithy}
+  - {at: [7, 2], id: enchanter}
