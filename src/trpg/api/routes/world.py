@@ -13,15 +13,21 @@
   第一次送出即定案）、``…/chat``（和 NPC 自由聊天）；``GET／POST /api/world/llm``（大世界的
   LLM 開關）。
 
-錯誤：角色不存在 404；動作或內容不合法 422；戰鬥中做其他動作、沒有遭遇卻開戰 409。
+- 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
+  依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
+  歸到帳號。
+
+錯誤：沒有登入 401；角色不存在 404；角色已達上限 409；動作或內容不合法 422；戰鬥中做其他動作、
+沒有遭遇卻開戰 409。
 """
 
 from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Depends, Request
 
+from trpg.api.auth import accounts_of, require_world_access, viewer
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import allocation_preview, flash_preview
 from trpg.api.run_schemas import (
@@ -53,7 +59,9 @@ from trpg.world.errors import WorldActionError
 
 __all__ = ["router"]
 
-router = APIRouter(prefix="/api/world", tags=["world"])
+router = APIRouter(
+    prefix="/api/world", tags=["world"], dependencies=[Depends(require_world_access)]
+)
 
 
 def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
@@ -76,15 +84,24 @@ def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
 
 @router.get("/characters")
 def list_characters(request: Request) -> list[WorldCharacterSummary]:
+    account = viewer(request)
     store = world_of(request)
     with store.lock:
-        return [character_summary(store.library, store.character(c)) for c in store.character_ids()]
+        ids = store.character_ids()
+        if account is not None:  # 只列自己的角色（建立順序）
+            existing = set(ids)
+            ids = [c for c in account.characters if c in existing]
+        return [character_summary(store.library, store.character(c)) for c in ids]
 
 
 @router.post("/characters", status_code=201)
 def create_character(body: CreateWorldCharacterRequest, request: Request) -> WorldView:
+    account = viewer(request)
+    accounts = accounts_of(request)
     store = world_of(request)
-    with store.lock:
+    with store.lock:  # 建立角色經世界的鎖依序進行：檢查上限、建立、歸到帳號之間不會插隊
+        if account is not None:
+            accounts.check_character_room(account.account_id)  # 先檢查上限再建立（409）
         char = store.create(
             body.name,
             body.weapon,
@@ -93,6 +110,8 @@ def create_character(body: CreateWorldCharacterRequest, request: Request) -> Wor
             origin=body.origin,
             seed=body.seed,
         )
+        if account is not None:
+            accounts.attach_character(account.account_id, char.character_id)
         outcome = store.sync(char.character_id)
         return _view(store, outcome, char.region)
 

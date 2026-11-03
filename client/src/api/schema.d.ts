@@ -955,6 +955,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Status */
+        get: operations["get_status_api_auth_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Login */
+        post: operations["post_login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Logout */
+        post: operations["post_logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -971,6 +1022,22 @@ export interface components {
             kind: "accept_quest";
             /** Quest */
             quest: string;
+        };
+        /**
+         * AccountView
+         * @description 目前登入的帳號（不含密碼雜湊與 session）。
+         */
+        AccountView: {
+            /** Account Id */
+            account_id: string;
+            /** Username */
+            username: string;
+            /** Characters */
+            characters: number;
+            /** Max Characters */
+            max_characters: number;
+            /** Can Create */
+            can_create: boolean;
         };
         Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
         /**
@@ -1222,6 +1289,12 @@ export interface components {
             attr: components["schemas"]["Attribute"];
             /** Reason Zh */
             reason_zh: string;
+        };
+        /** AuthStatus */
+        AuthStatus: {
+            /** Dev Mode */
+            dev_mode: boolean;
+            account?: components["schemas"]["AccountView"] | null;
         };
         /**
          * BagItemView
@@ -4076,6 +4149,21 @@ export interface components {
             kind: "loadout";
             /** Skills */
             skills: string[];
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Username */
+            username: string;
+            /** Password */
+            password: string;
+        };
+        /** LoginResponse */
+        LoginResponse: {
+            /** Token */
+            token: string;
+            /** Expires At */
+            expires_at: number;
+            account: components["schemas"]["AccountView"];
         };
         /** MapSummary */
         MapSummary: {
@@ -8992,6 +9080,77 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_status_api_auth_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthStatus"];
+                };
+            };
+        };
+    };
+    post_login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

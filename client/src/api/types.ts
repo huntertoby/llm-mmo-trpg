@@ -220,6 +220,10 @@ export type GearCheck = Schemas["GearCheck"];
 export type GearCheckRequest = Schemas["GearCheckRequest"];
 /** 英雄面板的一行裝備加成（實際值、截斷前的值、每條詞條的貢獻）。 */
 export type GearTotalView = Schemas["GearTotalView"];
+// 帳號與登入（Phase 5E-1）
+export type AuthStatus = Schemas["AuthStatus"];
+export type AccountView = Schemas["AccountView"];
+export type LoginResponse = Schemas["LoginResponse"];
 // 大世界（Phase 5A-5）
 export type WorldView = Schemas["WorldView"];
 export type WorldCharacterView = Schemas["WorldCharacterView"];
