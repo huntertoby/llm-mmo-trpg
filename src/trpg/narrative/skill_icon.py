@@ -74,6 +74,8 @@ class IconSegment(_Model):
     """``skill_shapes.yaml`` 的形狀 id；草稿還沒選形狀時 ``None``。"""
     range: int | None
     """形狀射程；武器射程（``weapon``）或沒有射程為 ``None``。"""
+    arm: int | None = None
+    """十字的臂長（5F-ART1，``docs/art/大十字圖示.md``）；形狀沒寫 ``arm`` 時為 ``None``（前端當 1）。"""
     elements: tuple[str, ...] = ()
     """這一段自己效果上的元素（第二段與第一段不同時前端換底色）；沒有為空。"""
     effects: tuple[IconEffect, ...]
@@ -190,10 +192,12 @@ def _segment(raw: Any, *, with_elements: bool) -> IconSegment:
     d = _map(raw)
     shape = _map(d.get("shape"))
     rng = shape.get("range")
+    arm = shape.get("arm")
     return IconSegment(
         skeleton=_text(d.get("skeleton")),
         shape_id=_text(shape.get("type")),
         range=rng if isinstance(rng, int) and not isinstance(rng, bool) else None,
+        arm=arm if isinstance(arm, int) and not isinstance(arm, bool) else None,
         elements=tuple(_elements_of(d.get("effects"))) if with_elements else (),
         effects=_effects(d.get("effects")),
     )

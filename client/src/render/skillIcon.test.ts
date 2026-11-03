@@ -4,7 +4,7 @@ import type { SkillIconData } from "../api/types";
 import { ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
 import { ELEMENT_COLORS } from "./palette";
 import fixture from "./fixtures/skill_icons.json";
-import { ELEMENT_ICON, elementPalette, isRanged, SKELETON_NAME } from "./skillGlyphs";
+import { drawMotif, ELEMENT_ICON, elementPalette, gridLayout, isRanged, normalizeArm, SKELETON_NAME } from "./skillGlyphs";
 import {
   assemblyFormula,
   statusTile,
@@ -423,5 +423,69 @@ describe("工坊選項小圖與其他", () => {
     expect(isRanged(1, "ranged")).toBe(false);
     expect(isRanged(null, "ranged")).toBe(true);
     expect(isRanged(null, "melee")).toBe(false);
+  });
+});
+
+// ---- 5F-ART1：臂長 ≥ 2 的十字畫 5×5（docs/art/大十字圖示.md）----
+describe("大十字圖示", () => {
+  const lit = (cells: readonly number[]) => cells.filter((c) => c === 1).length;
+  const rects = (spec: Parameters<typeof drawMotif>[1]) => {
+    const { ctx, calls } = fakeCtx();
+    drawMotif(ctx, spec, "default", elementPalette(null));
+    return calls.filter((c) => c === "roundRect").length;
+  };
+
+  it("arm ≥ 2 的十字是 5×5、亮 9 格，總寬和 3×3 一樣是 63", () => {
+    for (const arm of [2, 3, 7]) {
+      const g = gridLayout("cross", arm);
+      expect(g.n).toBe(5);
+      expect(g.cs).toBe(11);
+      expect(g.gap).toBe(2);
+      expect(g.cells).toHaveLength(25);
+      expect(lit(g.cells)).toBe(9);
+      expect(g.cs * g.n + g.gap * (g.n - 1)).toBe(63);
+    }
+    const small = gridLayout("cross", 1);
+    expect(small.n).toBe(3);
+    expect(lit(small.cells)).toBe(5);
+    expect(small.cs * small.n + small.gap * (small.n - 1)).toBe(63);
+  });
+
+  it("其他形狀不受 arm 影響", () => {
+    expect(gridLayout("square3", 2).n).toBe(3);
+    expect(lit(gridLayout("square3", 2).cells)).toBe(9);
+    expect(gridLayout("ring", 3).n).toBe(3);
+    expect(lit(gridLayout("ring", 3).cells)).toBe(8);
+  });
+
+  it("不合法的 arm 一律當 1", () => {
+    for (const bad of [0, -1, 1.5, Number.NaN, undefined, null, "2"]) expect(normalizeArm(bad)).toBe(1);
+    expect(normalizeArm(2)).toBe(2);
+    expect(rects({ shape_id: "cross", skeleton: "area", ranged: false, arm: 0 })).toBe(9);
+    expect(rects({ shape_id: "cross", skeleton: "area", ranged: false })).toBe(9);
+    expect(rects({ shape_id: "cross", skeleton: "area", ranged: false, arm: 2 })).toBe(25);
+  });
+
+  it("霧鎖千山的接續段帶 arm 2、畫 25 格；leap_slam 的十字仍是 3×3", () => {
+    const peaks = partsOf(data.skills["skill_mist_lock_peaks"] as SkillIconData);
+    const seg = peaks.segs[1];
+    expect(seg?.motif.arm).toBe(2);
+    expect(rects(seg!.motif)).toBe(25);
+    const leapCross = partsOf(data.skills["skill_leap_slam"] as SkillIconData).segs.find((s) => s.motif.shape_id === "cross");
+    expect(leapCross).toBeDefined();
+    expect(leapCross!.motif.arm).toBe(1);
+    expect(rects(leapCross!.motif)).toBe(9);
+  });
+
+  it("形狀小格的 id 帶 arm，說明寫臂長", () => {
+    const f = assemblyFormula(data.skills["skill_mist_lock_peaks"] as SkillIconData);
+    const tile = f.rows.flat().find((t) => t.cat === "形狀" && t.id.startsWith("shape|cross|"));
+    expect(tile).toBeDefined();
+    expect(tile!.id.endsWith("|2")).toBe(true);
+    expect(tile!.tip).toContain("臂長 2");
+    const leap = assemblyFormula(data.skills["skill_leap_slam"] as SkillIconData);
+    const plain = leap.rows.flat().find((t) => t.cat === "形狀" && t.id.startsWith("shape|cross|"));
+    expect(plain!.id.endsWith("|1")).toBe(true);
+    expect(plain!.tip).toBe("技能的作用範圍");
   });
 });

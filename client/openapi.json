@@ -10556,6 +10556,17 @@
             ],
             "title": "Range"
           },
+          "arm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arm"
+          },
           "elements": {
             "items": {
               "type": "string"
