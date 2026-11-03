@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.account_config import AccountSettings
 from trpg.api.app import create_app
 from trpg.api.client_ip import client_ip
 from trpg.api.login_limit import LoginLimiter
@@ -19,6 +18,7 @@ from trpg.api.server_config import (
     load_server_settings,
 )
 from trpg.content.library import ContentLibrary
+from trpg.server.account_config import AccountSettings
 
 LOCAL = (ipaddress.ip_network("127.0.0.1/32"), ipaddress.ip_network("::1/128"))
 

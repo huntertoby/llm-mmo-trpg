@@ -13,8 +13,11 @@
      skillgen）。
    - ``trpg.world`` 不得匯入 api、cli、sim、llm、narrative；engine、content、shared、roguelite、
      skillgen、narrative 不得匯入 ``trpg.world``（Phase 5A-2，``docs/phases/Phase5計畫.md`` 2.3）。
-   - ``trpg.bot`` 只直接匯入 ``trpg.api`` 服務層與 ``trpg.shared``；engine、world、api、shared、
-     content、roguelite 不得匯入 ``trpg.bot``（Phase 5E-2，計畫 29.2）。
+   - ``trpg.bot`` 只直接匯入 ``trpg.server`` 服務層與 ``trpg.shared``（5D-R2 起不再匯入
+     ``trpg.api``）；engine、world、api、shared、content、roguelite、server 不得匯入 ``trpg.bot``
+     （Phase 5E-2，計畫 29.2）。
+   - ``trpg.server``（領域服務，5D-R2）不得匯入 api、cli、bot、sim、llm、narrative；engine、world、
+     shared、content、roguelite、skillgen、narrative 不得匯入 ``trpg.server``。
    - 外部套件 ``discord``（discord.py）只能在 ``trpg.bot`` 匯入；``scripts/`` 只透過
      ``trpg.bot`` 用它（Phase 5E-2b，計畫 32.2）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite``、``world`` 內
@@ -41,15 +44,23 @@ ENGINE_FORBIDDEN = (
     "trpg.cli",
     "trpg.world",
     "trpg.bot",
+    "trpg.server",
 )
 
-CONTENT_FORBIDDEN = ("trpg.skillgen", "trpg.world", "trpg.bot")
+CONTENT_FORBIDDEN = ("trpg.skillgen", "trpg.world", "trpg.bot", "trpg.server")
 
-NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim", "trpg.world")
+NARRATIVE_FORBIDDEN = (
+    "trpg.cli",
+    "trpg.api",
+    "trpg.roguelite",
+    "trpg.sim",
+    "trpg.world",
+    "trpg.server",
+)
 
 API_FORBIDDEN = ("trpg.cli", "trpg.bot")
 
-SKILLGEN_FORBIDDEN = ("trpg.llm", "trpg.world")
+SKILLGEN_FORBIDDEN = ("trpg.llm", "trpg.world", "trpg.server")
 
 ROGUELITE_FORBIDDEN = (
     "trpg.api",
@@ -59,11 +70,23 @@ ROGUELITE_FORBIDDEN = (
     "trpg.narrative",
     "trpg.world",
     "trpg.bot",
+    "trpg.server",
 )
 
-WORLD_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.sim", "trpg.llm", "trpg.narrative", "trpg.bot")
+WORLD_FORBIDDEN = (
+    "trpg.api",
+    "trpg.cli",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.bot",
+    "trpg.server",
+)
+
+SERVER_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.bot", "trpg.sim", "trpg.llm", "trpg.narrative")
 
 BOT_FORBIDDEN = (
+    "trpg.api",
     "trpg.world",
     "trpg.engine",
     "trpg.roguelite",
@@ -84,6 +107,7 @@ FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.skillgen": SKILLGEN_FORBIDDEN,
     "trpg.world": WORLD_FORBIDDEN,
     "trpg.bot": BOT_FORBIDDEN,
+    "trpg.server": SERVER_FORBIDDEN,
 }
 
 # 外部套件 → 唯一可以匯入它的 trpg 子套件（Phase 5E-2b：discord.py 只在 trpg.bot）。
@@ -424,6 +448,11 @@ def test_scanner_detects_dependency_violations() -> None:
         ("trpg.world.step", False, "from trpg.bot.service import BotService"),
         ("trpg.engine.grid", False, "import trpg.bot"),
         ("trpg.api.app", False, "from trpg.bot.config import load_bot_settings"),
+        ("trpg.bot.service", False, "from trpg.api.app import create_app"),
+        ("trpg.world.step", False, "from trpg.server.accounts import AccountStore"),
+        ("trpg.engine.grid", False, "import trpg.server"),
+        ("trpg.server.accounts", False, "from trpg.api.auth import require_account"),
+        ("trpg.server.notes", False, "from trpg.bot.service import BotService"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
@@ -448,7 +477,9 @@ def test_scanner_allows_legal_dependencies() -> None:
         ("trpg.world.step", False, "from trpg.engine.runner import LOG_FORMAT"),
         ("trpg.world.step", False, "from trpg.content.library import ContentLibrary"),
         ("trpg.api.world", False, "from trpg.world.step import world_step"),
-        ("trpg.bot.service", False, "from trpg.api.accounts import AccountStore"),
+        ("trpg.bot.service", False, "from trpg.server.accounts import AccountStore"),
+        ("trpg.api.auth", False, "from trpg.server.accounts import AccountStore"),
+        ("trpg.server.notes", False, "from trpg.world.state import CharacterState"),
         ("trpg.bot.service", False, "from trpg.shared.errors import TrpgError"),
     ]
     for current, is_package, source in cases:

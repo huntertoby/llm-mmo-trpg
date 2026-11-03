@@ -16,7 +16,6 @@ from types import ModuleType
 import pytest
 from fastapi.testclient import TestClient
 
-from trpg.api.account_config import AccountSettings
 from trpg.api.app import create_app
 from trpg.bot.announcer import Announcer
 from trpg.bot.config import BOT_CONFIG_ENV, BotConfigError, BotSettings
@@ -24,6 +23,7 @@ from trpg.bot.fake import FakeDiscordGateway
 from trpg.bot.gateway import DiscordGateway
 from trpg.bot.service import BotService
 from trpg.content.library import ContentLibrary
+from trpg.server.account_config import AccountSettings
 
 
 def _script() -> ModuleType:

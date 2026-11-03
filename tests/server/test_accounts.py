@@ -15,8 +15,8 @@ from types import ModuleType
 
 import pytest
 
-from trpg.api.account_config import AccountConfigError, load_account_settings
-from trpg.api.accounts import (
+from trpg.server.account_config import AccountConfigError, load_account_settings
+from trpg.server.accounts import (
     ACCOUNT_FORMAT,
     MAX_SESSIONS,
     AccountDisabledError,

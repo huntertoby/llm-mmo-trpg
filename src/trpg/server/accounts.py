@@ -25,8 +25,8 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from trpg.api.account_config import AccountSettings, load_account_settings
 from trpg.roguelite.save import default_save_dir
+from trpg.server.account_config import AccountSettings, load_account_settings
 from trpg.shared.errors import TrpgError
 from trpg.world.save import write_atomic
 

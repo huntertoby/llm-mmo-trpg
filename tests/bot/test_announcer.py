@@ -14,10 +14,10 @@ from types import ModuleType
 
 import pytest
 
-from trpg.api.first_kills import FirstKill
 from trpg.bot.announcer import Announcer, daily_due, read_state
 from trpg.bot.config import AnnounceSettings, BotConfigError, load_announce_settings
 from trpg.bot.fake import FakeDiscordGateway
+from trpg.server.first_kills import FirstKill
 
 TZ8 = dt.timezone(dt.timedelta(hours=8))
 CHANNEL = "300"

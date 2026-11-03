@@ -21,11 +21,11 @@ from typing import Final, Protocol
 
 from pydantic import model_validator
 
-from trpg.api.first_kills import FIRST_KILLS_FILE, FirstKill, load_first_kills
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.schemas import ContentModel
 from trpg.roguelite.save import default_save_dir
+from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, load_first_kills
 from trpg.world.clock import refresh_day
 from trpg.world.save import loads_log, loads_world
 from trpg.world.state import WorldState

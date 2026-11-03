@@ -11,7 +11,7 @@
 - 鎖的順序：世界的鎖 → 戰鬥的鎖。
 - 帳號是 5E-1：角色以伺服器產生的 ID 存取，不登入（代決 5A5-1）。
 - 全服首殺（5E-3，計畫 31.5）：每個成功的世界動作之後把新的精英首殺記到 ``first_kills.json``
-  （:mod:`trpg.api.first_kills`；衍生資料，不影響重播）。
+  （:mod:`trpg.server.first_kills`；衍生資料，不影響重播）。
 - 三選一背景預先計算（PERF-3）：每個世界動作之後、角色第一次讀進來時，把看得到的機遇與劇情步驟的
   三選一丟到背景先算（:mod:`trpg.api.offer_prefetch`）；``world_step`` 在
   :func:`~trpg.roguelite.offers.using_offer_cache` 裡執行，命中就直接拿（結果逐字相同）。
@@ -27,14 +27,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from trpg.api.first_kills import FirstKillRegistry
-from trpg.api.notes import LocationNoteStore
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
+from trpg.server.first_kills import FirstKillRegistry
+from trpg.server.notes import LocationNoteStore
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle

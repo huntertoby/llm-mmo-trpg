@@ -1,7 +1,7 @@
 """開發用：在本機建立與管理大世界帳號（Phase 5E-1；``docs/phases/Phase5計畫.md`` 28.7）。
 
 正式的帳號由 Discord Bot（5E-2）發放；這個腳本只給本機測試用，呼叫同一個服務層
-（:class:`trpg.api.accounts.AccountStore`）。
+（:class:`trpg.server.accounts.AccountStore`）。
 
     uv run python scripts/dev_account.py create alice            # 產生密碼並只印一次
     uv run python scripts/dev_account.py create alice --password-stdin < pw.txt
@@ -30,9 +30,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TextIO
 
-from trpg.api.account_config import load_account_settings
-from trpg.api.accounts import AccountRecord, AccountStore, open_account_store
 from trpg.roguelite.save import default_save_dir
+from trpg.server.account_config import load_account_settings
+from trpg.server.accounts import AccountRecord, AccountStore, open_account_store
 from trpg.shared.errors import TrpgError
 
 GENERATED_PASSWORD_BYTES = 12

@@ -13,7 +13,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Response
 
 from trpg.api.account_schemas import AuthStatus, LoginRequest, LoginResponse
-from trpg.api.accounts import AuthError
 from trpg.api.auth import (
     account_view,
     accounts_of,
@@ -24,6 +23,7 @@ from trpg.api.auth import (
     settings_of,
 )
 from trpg.api.client_ip import client_ip
+from trpg.server.accounts import AuthError
 
 __all__ = ["router"]
 

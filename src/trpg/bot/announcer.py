@@ -22,9 +22,9 @@ from typing import Final, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from trpg.api.first_kills import FirstKill
 from trpg.bot.config import AnnounceSettings, BotConfigError
 from trpg.bot.gateway import DiscordGateway
+from trpg.server.first_kills import FirstKill
 
 __all__ = [
     "ANNOUNCE_FORMAT",
@@ -40,7 +40,7 @@ ANNOUNCE_FORMAT: Final = "trpg-announce/1"
 
 
 class AnnouncementFeed(Protocol):
-    """公告文字的來源（:class:`trpg.api.announce.AnnouncementSource`）。"""
+    """公告文字的來源（:class:`trpg.server.announce.AnnouncementSource`）。"""
 
     def daily_text(self, now: int) -> str | None: ...
 

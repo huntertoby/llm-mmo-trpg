@@ -15,21 +15,11 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.account_config import AccountSettings, load_account_settings
-from trpg.api.accounts import (
-    AccountDisabledError,
-    AccountError,
-    AccountLimitError,
-    AccountNotFoundError,
-    AccountStore,
-    AuthError,
-)
 from trpg.api.auth import AdminRequiredError
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
-from trpg.api.notes import NoteError, NoteNotFoundError
 from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.server_config import ServerSettings, load_server_settings
@@ -48,6 +38,16 @@ from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.primitive_coverage import check_primitive_coverage
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
 from trpg.roguelite.save import default_save_dir
+from trpg.server.account_config import AccountSettings, load_account_settings
+from trpg.server.accounts import (
+    AccountDisabledError,
+    AccountError,
+    AccountLimitError,
+    AccountNotFoundError,
+    AccountStore,
+    AuthError,
+)
+from trpg.server.notes import NoteError, NoteNotFoundError
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
