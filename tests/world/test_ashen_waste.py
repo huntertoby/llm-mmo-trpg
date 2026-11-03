@@ -271,7 +271,7 @@ def test_ashen_heart_boss_battle(library: ContentLibrary, make_char: MakeChar) -
 def test_ashen_world_log_replays(library: ContentLibrary, make_char: MakeChar) -> None:
     world = make_world(flags=("ashen_waste_open",))
     alice = make_char("alice", location="ashen_ferry", supplies=5)
-    actions = [
+    actions: list[TeleportAction | TravelAction] = [
         TeleportAction(region=REGION),
         TravelAction(to="old_iron_post"),
         TravelAction(to="cooling_well"),

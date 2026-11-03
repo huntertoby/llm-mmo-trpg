@@ -200,7 +200,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             for loc in (GENERAL_LOCATIONS[i % len(GENERAL_LOCATIONS)],)
         ]
     if args.only in (None, "boss"):
-        candidates = [int(v) for v in args.boss_hp.split(",") if v] or [None]
+        given: list[int | None] = [int(v) for v in args.boss_hp.split(",") if v]
+        candidates = given or [None]
         for hp in candidates:
             label = "現值" if hp is None else f"HP {hp}"
             jobs[f"灰燼之心（熔心坑，9 級；{label}）"] = [
