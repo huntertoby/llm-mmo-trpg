@@ -656,7 +656,7 @@ export interface HitBox {
 
 export function spotHitBox(x: number, y: number, k = 1): HitBox {
   const [cx, cy] = P(x, y);
-  return { x: cx - 24 * k, y: cy - 26 * k, w: 48 * k, h: 66 * k };
+  return { x: cx - 24 * k, y: cy - 26 * k, w: 48 * k, h: 84 * k };
 }
 
 export function stoneHitBox(x: number, y: number, k = 1): HitBox {
