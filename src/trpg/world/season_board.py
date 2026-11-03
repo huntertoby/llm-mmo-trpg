@@ -128,7 +128,7 @@ def _roll_day(
 ) -> tuple[WorldState, list[WorldEvent]]:
     """刷新日 ``day``（賽季第 ``day − start_day + 1`` 天）的換日。"""
     sday = day - start_day + 1
-    players = None if sday <= 1 else players_on(world, day - 1)
+    players = None if sday <= 1 else (players_on(world, day - 1) or None)  # 沒有紀錄＝None
     events: list[WorldEvent] = []
     for event in season.world_events:
         state = world.world_event(event.id)

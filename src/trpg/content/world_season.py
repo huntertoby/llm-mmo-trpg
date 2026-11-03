@@ -182,8 +182,9 @@ class WorldEventEffect(ContentModel):
 
 
 class WorldEventDef(ContentModel):
-    """一個世界事件（#103、19.9）：全服共用一條進度；門檻＝``goal.count`` × max(前一天上線人數, 1)
-    ÷ ``base_players``（最少 1，Q14）。"""
+    """一個世界事件（#103、19.9）：全服共用一條進度；門檻＝``goal.count`` × 前一天上線人數
+    ÷ ``base_players``（Q14），最少保留原門檻的 ``min_target_permille``（無條件進位）；前一天沒有
+    上線紀錄時用原門檻（5F-1b，玩法 PM 2026-11-03 代決）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -191,6 +192,8 @@ class WorldEventDef(ContentModel):
     days: DayRange
     goal: GoalSpec
     base_players: int = Field(default=8, ge=1)
+    min_target_permille: int = Field(default=250, ge=1, le=1000)
+    """門檻下限：原門檻的千分比（250＝1/4，30 → 最少 8；無條件進位）。"""
     on_success: WorldEventEffect = WorldEventEffect()
     on_failure: WorldEventEffect = WorldEventEffect()
 
@@ -199,12 +202,16 @@ class WorldEventDef(ContentModel):
         _check_range(self.days, f"世界事件 {self.id}")
         return self
 
+    def min_target(self) -> int:
+        """門檻下限（原門檻 × ``min_target_permille`` ‰，無條件進位、最少 1）。"""
+        return max(1, -(-self.goal.count * self.min_target_permille // 1000))
+
     def target_for(self, players: int | None) -> int:
-        """前一天上線 ``players`` 人時的門檻；``None``＝沒有前一天的資料（用原門檻，
-        代決 5F1-4）。"""
-        if players is None:
+        """前一天上線 ``players`` 人時的門檻；``None`` 或 0＝沒有前一天的上線紀錄（用原門檻，
+        代決 5F1-4、5F-1b）。"""
+        if not players:
             return self.goal.count
-        return max(1, self.goal.count * max(players, 1) // self.base_players)
+        return max(self.min_target(), self.goal.count * players // self.base_players)
 
 
 class SeasonContent(ContentModel):

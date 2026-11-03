@@ -120,11 +120,20 @@ def test_target_follows_yesterdays_players(library: ContentLibrary) -> None:
     )
 
 
-def test_target_minimum_one_player(library: ContentLibrary) -> None:
+def test_target_without_activity_keeps_base(library: ContentLibrary) -> None:
     world, _ = roll_season(library, make_world(), NOON)
-    world, _ = roll_season(library, world, _day(2))  # 第 1 天沒人：max(0, 1) ＝ 1 人
+    world, _ = roll_season(library, world, _day(2))  # 第 1 天沒有上線紀錄：原門檻（5F-1b）
     state = world.world_event("mist_tide")
-    assert state is not None and state.target == 3
+    assert state is not None and state.target == 30 and len(state.adjustments) == 1
+
+
+def test_target_floor_quarter(library: ContentLibrary) -> None:
+    world, _ = roll_season(library, make_world(), NOON)
+    world = _with_players(world, day_of(library, NOON), 1)
+    world, _ = roll_season(library, world, _day(2))  # 30 × 1 ÷ 8 ＝ 3 → 下限 1/4 ＝ 8（5F-1b）
+    state = world.world_event("mist_tide")
+    assert state is not None and state.target == 8
+    assert state.adjustments[-1].players == 1
 
 
 def test_progress_reaches_target_and_applies_success(
@@ -132,16 +141,16 @@ def test_progress_reaches_target_and_applies_success(
 ) -> None:
     world, _ = roll_season(library, make_world(), NOON)
     world = _with_players(world, day_of(library, NOON), 1)
-    world, _ = roll_season(library, world, _day(2))  # 門檻 3
+    world, _ = roll_season(library, world, _day(2))  # 門檻 8（下限 1/4）
     char = make_char()
     events: list[WorldEvent] = []
-    for _ in range(3):
+    for _ in range(8):
         world, char, more = after_season_step(
             library, world, char, _battle(), now=_day(2), actor="alice"
         )
         events += more
     state = world.world_event("mist_tide")
-    assert state is not None and state.status == "succeeded" and state.progress == 3
+    assert state is not None and state.status == "succeeded" and state.progress == 8
     assert world.has_flag("ashen_waste_open")
     assert world.level_bonus == {}
     resolved = [e for e in events if isinstance(e, WorldEventResolvedEvent)]

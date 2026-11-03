@@ -57,7 +57,10 @@ def test_target_formula(season: SeasonContent) -> None:
     event = season.event_by_id()["mist_tide"]
     assert event.target_for(None) == 30
     assert event.target_for(4) == 15
-    assert event.target_for(0) == 3  # max(0, 1) × 30 ÷ 8
+    assert event.target_for(0) == 30  # 沒有上線紀錄：原門檻（5F-1b）
+    assert event.target_for(1) == 8  # 30 ÷ 8 ＝ 3 → 下限 1/4 進位 ＝ 8
+    assert event.target_for(2) == 8
+    assert event.target_for(3) == 11
     assert event.target_for(8) == 30
     assert event.target_for(16) == 60
 
