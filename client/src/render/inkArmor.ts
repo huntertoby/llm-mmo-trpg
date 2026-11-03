@@ -204,10 +204,14 @@ export function footTop(feet: GearItem | undefined): number | undefined {
 }
 
 /** 鞋靴的額外細節（綁腿、鐵靴鞋尖與護片），畫在腿與靴之後。 */
-export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: View, colors: ColorFn, heavy = false): void {
+/** `only`（6M-1 姿勢用）：只畫一條腿（`sx`；側面只有近側 1）的大腿段（護膝）或小腿靴段（綁腿、鐵靴鞋尖）；不給＝照原本一次畫完。 */
+export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: View, colors: ColorFn, heavy = false, only?: { sx: number; part: "upper" | "lower" }): void {
   if (feet === undefined) return;
-  const sides = view === "side" ? [1] : [-1, 1];
+  const sides = only !== undefined ? [only.sx] : view === "side" ? [1] : [-1, 1];
+  const upper = only === undefined || only.part === "upper";
+  const lower = only === undefined || only.part === "lower";
   if (feet.kind === "shoes" && feet.form === "wrapped") {
+    if (!lower) return;
     const d = colors(feet)[1];
     for (const sx of sides) {
       for (const y of [-5.4, -7.2]) {
@@ -217,11 +221,13 @@ export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: View,
     }
   } else if (feet.kind === "greaves" && feet.form === "knee" && view !== "back") {
     // 護膝（美術 PM C-2a 驗收）：膝蓋 y≈-9 的鋼色小橢圓 2.4×1.8；正面兩腿、側面近側腿，背面不畫
+    if (!upper) return;
     for (const sx of sides) {
       const cx = view === "side" ? 1.6 : sx * 2.7;
       ink(ctx, `knee-${view}-${sx}`, ellPts(cx, -9, 2.4, 1.8, 10), heavy ? lighten(metalOf(feet, colors), 0.35) : metalOf(feet, colors), { shade: false, w: 0.6 });
     }
   } else if (feet.kind === "iron_boots") {
+    if (!lower) return;
     for (const sx of sides) {
       if (view === "side") stroke(ctx, "ib-cap-s", [[2, -3.2], [6.4, -1.6]], 0.5);
       else stroke(ctx, `ib-cap-${sx}`, [[sx * 1, -2.6], [sx * 4.8, -2.6]], 0.5);

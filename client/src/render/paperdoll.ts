@@ -7,6 +7,7 @@ import { elementTint, RARITY_GLOW, type DollSpec, type GearItem } from "./appear
 import { mix } from "./color";
 import { drawInkFigure, type InkHooks } from "./inkDoll";
 import { MATERIAL } from "./material";
+import type { InkPose } from "./inkPose";
 import type { View } from "./inkStyle";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
@@ -67,7 +68,8 @@ function drawTotem(ctx: Ctx): void {
 }
 
 /** 畫一個小人（腳底中心在 (0, 0)）。facing：south ＝ 正面、north ＝ 背面、east／west ＝ 側面（西 ＝ 東的左右鏡像）。C 畫風（Phase C-1a）。 */
-export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = true): void {
+/** `pose`（6M-1）：骨架姿勢（inkPose.ts）；不給＝和加鉤子之前逐像素相同。圖騰柱不吃姿勢。 */
+export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = true, pose: InkPose | null = null): void {
   if (spec.totem === true) {
     drawTotem(ctx);
     return;
@@ -75,7 +77,7 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = tr
   ctx.save();
   if (facing === "west") ctx.scale(-1, 1);
   const view: View = facing === "north" ? "back" : facing === "south" ? "front" : "side";
-  drawInkFigure(ctx, spec, view, HOOKS, ground);
+  drawInkFigure(ctx, spec, view, HOOKS, ground, pose);
   ctx.restore();
 }
 
@@ -84,15 +86,15 @@ const DOWNED_DX = 27;
 const DOWNED_DY = 11;
 
 /** 倒地姿勢：整個小人橫躺（頭朝右），腳底仍在原點附近。 */
-export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed: boolean, ground = true): void {
+export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed: boolean, ground = true, pose: InkPose | null = null): void {
   if (!downed || spec.totem === true) {
-    drawFigure(ctx, spec, facing, ground);
+    drawFigure(ctx, spec, facing, ground, pose);
     return;
   }
   ctx.save();
   ctx.translate(-DOWNED_DX, -DOWNED_DY);
   ctx.rotate(Math.PI / 2);
-  drawFigure(ctx, spec, facing, false);
+  drawFigure(ctx, spec, facing, false, pose);
   ctx.restore();
 }
 
@@ -100,7 +102,7 @@ export function drawFigurePose(ctx: Ctx, spec: DollSpec, facing: Facing, downed:
  * 產生一張離屏 canvas（`dpr` 倍解析度；沒有 DOM 時回傳 `null`）。腳底在 (DOLL_W/2, DOLL_FOOT_Y)。
  * C 畫風沒有黑色剪影外框（墨線取代它）；史詩、傳說（頭目）保留外光，是唯一的身體外光。
  */
-export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number, ground = true): HTMLCanvasElement | null {
+export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boolean, dpr: number, ground = true, pose: InkPose | null = null): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const make = (): HTMLCanvasElement => {
     const c = document.createElement("canvas");
@@ -113,7 +115,7 @@ export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boole
   if (o === null) return null;
   o.scale(dpr, dpr);
   o.translate(DOLL_W / 2, DOLL_FOOT_Y);
-  drawFigurePose(o, spec, facing, downed, ground);
+  drawFigurePose(o, spec, facing, downed, ground, pose);
   const glowColor = spec.rarity !== undefined ? RARITY_GLOW[spec.rarity] : undefined;
   if (glowColor === undefined) return off;
   const glow = make();
