@@ -245,6 +245,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           大世界（測試）　<span className="muted small">{view === null ? "" : `${view.map.name_zh}（${view.map.level_zh}）`}</span>
         </h1>
         <div className="run-header-buttons">
+          {narratorResting(llm) && (
+            <span className="world-narrator-rest small" role="status" data-testid="world-narrator-rest">
+              說書人休息中（使用固定文字）
+            </span>
+          )}
           {llm !== null && (
             <label className="world-llm small" data-testid="world-llm">
               <input type="checkbox" checked={llm.enabled} disabled={busy} onChange={(e) => toggleLlm(e.target.checked)} />
@@ -262,11 +267,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
-      {narratorResting(llm) && (
-        <div className="world-narrator-rest small" role="status" data-testid="world-narrator-rest">
-          說書人休息中（使用固定文字）
-        </div>
-      )}
+
       {view === null ? (
         <div className="muted">載入中……</div>
       ) : (

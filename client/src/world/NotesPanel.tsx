@@ -85,7 +85,6 @@ export function NotesPanel({ characterId, location, busy }: Props) {
                       className="world-note-delete small"
                       data-testid="world-note-delete"
                       aria-label={noteDeleteLabel(n.mine)}
-                      title={noteDeleteLabel(n.mine)}
                       disabled={busy || sending}
                       onClick={() => void remove(n)}
                     >
