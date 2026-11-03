@@ -20,7 +20,7 @@ from typing import Final, Literal
 
 from pydantic import BaseModel
 
-from trpg.server.accounts import AccountRecord
+from trpg.server.accounts import AccountRecord, AccountTitle
 from trpg.server.chronicle import LeagueChronicle, LeagueChronicleRank, LeagueChronicleSeason
 from trpg.server.first_kills import FirstKill
 from trpg.server.league import LeagueMatch, LeagueRecord
@@ -208,9 +208,16 @@ _ACCOUNT: Final[dict[str, ResetKind]] = _all(
     "admin",
     "created_at",
     "sessions",
+    "titles",
 )
-"""帳號保留（#91）。``characters`` 是歸屬紀錄（不轉移，#100），角色上限只算當季
+"""帳號保留（#91；5F-3b 的紀念稱號 ``titles`` 也是）。``characters`` 是歸屬紀錄
+（不轉移，#100），角色上限只算當季
 （``character_seasons``），所以不用修剪。"""
+
+_ACCOUNT_TITLE: Final[dict[str, ResetKind]] = _all(
+    MEMORIAL, "id", "name_zh", "season_id", "character_id", "at"
+)
+"""帳號的紀念稱號（5F-3b，#91「只給榮譽稱號」）：季末保留。"""
 
 _NOTE: Final[dict[str, ResetKind]] = _all(
     NUMERIC, "note_id", "region", "location", "character_id", "name", "text", "at"
@@ -278,6 +285,7 @@ SEASON_POLICY: Final[Mapping[type[BaseModel], Mapping[str, ResetKind]]] = {
     FirstKill: _FIRST_KILL,
     BossBoardEntry: _BOSS_BOARD,
     AccountRecord: _ACCOUNT,
+    AccountTitle: _ACCOUNT_TITLE,  # 5F-3b
     LocationNote: _NOTE,
     LeagueRecord: _LEAGUE_RECORD,  # 5F-4
     LeagueMatch: _LEAGUE_MATCH,

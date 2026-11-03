@@ -24,6 +24,7 @@ from trpg.server.accounts import (
     AccountError,
     AccountLimitError,
     AccountStore,
+    AccountTitle,
     AuthError,
     hash_password,
     loads_account,
@@ -328,3 +329,39 @@ def test_second_process_sees_changes(tmp_path: Path) -> None:
         server.authenticate(token)  # Bot 停用後 token 立即失效
     with pytest.raises(AccountDisabledError):
         server.login("alice", pw)
+
+
+def _title(season: str = "s1", character: str = "char_a", at: int = T0) -> AccountTitle:
+    return AccountTitle(
+        id="season_boss:rift_shard_lord",
+        name_zh="碎晶的終結者",
+        season_id=season,
+        character_id=character,
+        at=at,
+    )
+
+
+def test_grant_title_is_kept_once_per_season(tmp_path: Path) -> None:
+    """紀念稱號（5F-3b）：同一季同一個稱號只記一次（第一次的角色）；下一季再記一筆；另一個程序的
+    帳號檔變動不被蓋掉（鎖內重讀，5D-R2）。"""
+    server = AccountStore(tmp_path / "acc")
+    bot = AccountStore(tmp_path / "acc")
+    record = server.create("alice", _pw())
+    assert record.titles == ()
+    server.grant_title(record.account_id, _title())
+    bot.set_admin(record.account_id, True)  # 另一個程序改了同一個帳號
+    again = server.grant_title(record.account_id, _title(character="char_b", at=T0 + 9))
+    assert [(t.season_id, t.character_id) for t in again.titles] == [("s1", "char_a")]
+    assert again.admin is True
+    later = server.grant_title(record.account_id, _title(season="s2"))
+    assert [t.season_id for t in later.titles] == ["s1", "s2"]
+    assert AccountStore(tmp_path / "acc").get(record.account_id).titles == later.titles
+
+
+def test_old_account_file_without_titles_is_read(store: AccountStore) -> None:
+    record = store.create("alice", _pw())
+    path = store.root / f"{record.account_id}.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw.pop("titles", None)
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    assert AccountStore(store.root).get(record.account_id).titles == ()

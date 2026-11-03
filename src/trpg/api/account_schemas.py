@@ -24,6 +24,8 @@ class AccountView(BaseModel):
     max_characters: int
     can_create: bool
     """還能不能建角色（沒到上限）。"""
+    titles: list[str] = Field(default_factory=list)
+    """紀念稱號（5F-3b；「碎晶的終結者（s1）」，依取得順序；季末保留）。"""
 
 
 class AuthStatus(BaseModel):
