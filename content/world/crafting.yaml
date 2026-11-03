@@ -10,6 +10,9 @@ stations:
   # 5F-5a：餘燼集（8.26.1 每個小鎮都有鐵匠與附魔台，5D-3b 代決）。鐵匠＝爐叔（19.5）；店名 19、20 沒寫，開發 PM 定。
   - {id: smithy_ember_market, kind: smithy, name_zh: 爐叔鐵鋪, region: ashen_waste, location: ember_market, npc: smith_lu}
   - {id: enchanter_ember_market, kind: enchanter, name_zh: 餘燼附魔台, region: ashen_waste, location: ember_market}
+  # 6D-5：主城（樞島）的鐵匠鋪＋附魔台（6D-4 的室內 capital_smithy；主城的 NPC 沒有人設卡，不寫 npc）。
+  - {id: smithy_capital, kind: smithy, name_zh: 樞島鐵匠鋪, region: capital, location: capital}
+  - {id: enchanter_capital, kind: enchanter, name_zh: 樞島附魔台, region: capital, location: capital}
 
 craft:
   # 稀有起才有 1 條 build 詞條（item_gen.yaml 的 required），所以打造只有稀有、史詩（代決 5D3-2）。

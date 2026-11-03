@@ -17,6 +17,7 @@ from trpg.api.league_view import league_event_line
 from trpg.api.season_boss_view import season_boss_event_line
 from trpg.api.season_view import season_event_line
 from trpg.api.skill_cards import SkillCard, skill_card
+from trpg.api.world_atlas_view import atlas_view
 from trpg.api.world_crafting_view import (
     crafting_event_line,
     crafting_view,
@@ -76,6 +77,7 @@ from trpg.api.world_story_view import (
     story_event_line,
     thread_views,
 )
+from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world_map import LocationDef, LocationMapDef
@@ -98,6 +100,7 @@ from trpg.world.actions import (
     TraveledEvent,
     WorldEvent,
 )
+from trpg.world.atlas import cross_gate, region_lit, region_name
 from trpg.world.battle import prepare_battle
 from trpg.world.battlefield import FALLBACK_ZH
 from trpg.world.clock import day_phase, game_clock
@@ -137,7 +140,9 @@ _END_REASON_ZH: Final[dict[str, str]] = {"max_rounds": "輪數用完"}
 def _region_name(library: ContentLibrary, region: str) -> str:
     regions = library.regions.region_by_id() if library.regions is not None else {}
     found = regions.get(region)
-    return found.name_zh if found is not None else region
+    if found is None:
+        return region_name(library, region)  # 主城（6D-5）
+    return found.name_zh
 
 
 def _level_zh(lo: int | None, hi: int | None) -> str | None:
@@ -288,13 +293,16 @@ def _map_view(  # noqa: PLR0917 - 地點圖要世界、角色、時間、戰鬥�
 def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) -> list[str]:
     if char.pending_encounter is not None or char.pending_flash is not None or char.pending_offers:
         return []
-    if loc.kind == "town":
-        targets = [r for r in char.visited_towns if r != char.region]
+    if loc.kind == "town":  # 6D-5：主城一開始就能去；其他區要在大世界圖上亮起
+        lit = [r for r in sorted(library.world_maps) if region_lit(char, r)]
+        targets = [r for r in (CAPITAL_REGION, *lit) if r != char.region]
     elif loc.kind == "gate" and loc.gate_to is not None:
+        if cross_gate(library, char.region, char.location):  # 6D-5：要走到渡口盡頭的出口過去
+            return []
         targets = [loc.gate_to]
     else:
         return []
-    return [r for r in targets if r in library.world_maps]
+    return [r for r in targets if r in library.world_maps or r == CAPITAL_REGION]
 
 
 def _camp_problem(char: CharacterState, problem: str | None, *, in_battle: bool) -> str | None:
@@ -579,6 +587,7 @@ def world_view(
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
         field=field_view(library, char, world=world, now=now, social=social),
+        atlas=atlas_view(library, world, char, in_battle=in_battle),
     )
 
 
