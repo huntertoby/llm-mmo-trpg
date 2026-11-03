@@ -43,11 +43,14 @@ class ShapeSpec(ContentModel):
     radius: int | None = None
     jumps: int | None = None
     jump_range: int | None = None
+    arm: int | None = Field(default=None, exclude_if=lambda v: v is None)
+    """十字的臂長（Phase 5F-2b；``skill_shapes.yaml`` 的 ``content_params``，只有內建內容可寫，
+    省略＝預設 1）。沒填時不輸出，舊技能的序列化（快照、雜湊）不變。"""
 
     def param_values(self) -> dict[str, int | str]:
         """已填寫的參數（依名稱排序）。"""
         values: dict[str, int | str] = {}
-        for name in ("jump_range", "jumps", "radius", "range", "size"):
+        for name in ("arm", "jump_range", "jumps", "radius", "range", "size"):
             value = getattr(self, name)
             if value is not None:
                 values[name] = value

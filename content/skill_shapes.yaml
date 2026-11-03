@@ -60,10 +60,14 @@ shapes:
     description_zh: 選射程內的一個中心格（0 為施放者自己），影響中心與四方向相鄰格。
     targeting: tile
     min_rarity: rare
-    budget: {base_permille: 1800}
-    cell_count: {base: 5}
+    # Phase 5F-2b：臂長 arm（content_params：只有內建內容能寫，生成器與 LLM 不提供；省略＝1，行為不變）。
+    # 臂長 2＝9 格；預算倍率 2000‰ 是初值（同方陣 9 格；2200‰ 會讓霧鎖千山頂到預算上限，代決 5F2b-2）。
+    budget: {base_permille: 1800, param: arm, by_value_permille: {1: 1800, 2: 2000}}
+    cell_count: {base: 5, param: arm, by_value: {1: 5, 2: 9}}
     params:
       range: {llm_hint: "中心格最遠可以選幾格外。", min: 0, max: 6}
+    content_params:
+      arm: {llm_hint: "中心往四方向各延伸幾格。", min: 1, max: 2, required: false, default: 1}
   - id: square3
     name_zh: 方陣
     llm_hint: "選一個中心格，影響它周圍三乘三的方形範圍。"
@@ -80,7 +84,7 @@ shapes:
     description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
     targeting: none
     min_rarity: common
-    budget: {param: radius, by_value_permille: {1: 1800, 2: 2200}}
+    budget: {param: radius, by_value_permille: {1: 1800, 2: 2000}}
     cell_count: {param: radius, by_value: {1: 8, 2: 16}}
     params:
       radius: {llm_hint: "圈的半徑。", min: 1, max: 2}
