@@ -1244,7 +1244,7 @@ class DollLook(ContentModel):
     Phase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；
     ``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`
     加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、
-    ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型。都經 ``UnitView.doll_look`` 給前端
+    ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型；5A-ART5 加 ``main_glow`` 杖頭光色、``scale`` 戰場大小。都經 ``UnitView.doll_look`` 給前端
     （不改引擎）。
     """
 
@@ -1264,6 +1264,10 @@ class DollLook(ContentModel):
     bun_band: str | None = Field(default=None, pattern=_HEX)
     beard: bool = False
     build: Literal["stout", "tall"] | None = None
+    main_glow: str | None = Field(default=None, pattern=_HEX)
+    """杖頭光色（Phase 5A-ART5；青霧道童的綠光）：主手是杖時取代預設光色，附魔元素仍優先。"""
+    scale: float | None = Field(default=None, ge=0.5, le=1.5)
+    """人形在戰場上的大小倍率（Phase 5A-ART5；道童小一號 0.9）。精英 ×1.15 照乘；異形用 ``creature.size``。"""
     creature: CreatureLook | None = None
     affixes: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)
     traits: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(default=(), max_length=8)

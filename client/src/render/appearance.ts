@@ -22,6 +22,8 @@ export interface GearItem {
   apron?: string;
   /** 劍穗色（Phase 5A-ART3；劍陣弟子）。 */
   tassel?: string;
+  /** 杖頭光色（Phase 5A-ART5，`DollLook.main_glow`；道童綠光）：附魔元素仍優先。 */
+  glow?: string;
 }
 
 export interface Look {
@@ -172,6 +174,7 @@ function fromDollLook(d: DollLook): Appearance {
   if (d.main_color != null) mainStyle.color = d.main_color;
   if (d.main_kind != null) mainStyle.kind = d.main_kind; // 5A-ART3：拂塵、符紙、傀儡線
   if (d.main_tassel != null) mainStyle.tassel = d.main_tassel;
+  if (d.main_glow != null) mainStyle.glow = d.main_glow; // 5A-ART5：杖頭光色
   return { look, gear, ...(d.rarity != null ? { rarity: d.rarity } : {}), ...(Object.keys(mainStyle).length > 0 ? { mainStyle } : {}) };
 }
 
