@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from tests.engine.helpers import DEMO_ALLIES, DEMO_ENEMIES, library
@@ -84,3 +86,32 @@ def test_without_truce_round_one_has_damage() -> None:
         run = run_battle(_setup(()), seed, CommandedAI(UtilityAI(library().ai_profiles), {}))
         hits += len([e for e in run.events if e.round == 1 and isinstance(e, DamageDealt)])
     assert hits > 0
+
+
+@pytest.mark.parametrize("duration", [1, 2, 3])
+def test_round_end_expiry_by_duration(duration: int) -> None:
+    """5F-R1：``round_end`` 狀態的 duration N 在第 N 輪結束時到期。"""
+    state = begin_battle(_setup(("league_truce",)), 3).state
+    for unit in state.units_sorted():
+        unit.statuses = [
+            dataclasses.replace(s, remaining=duration) if s.status_id == "league_truce" else s
+            for s in unit.statuses
+        ]
+    removed_round: int | None = None
+    while not state.ended and state.round <= duration + 1:
+        assert state.active_unit is not None
+        result = resolve(state, EndTurn(unit_id=state.active_unit))
+        removals = [
+            e
+            for e in result.events
+            if isinstance(e, StatusRemoved) and e.status_id == "league_truce"
+        ]
+        if removals:
+            assert removed_round is None
+            assert len(removals) == len(state.units_sorted())
+            removed_round = removals[0].round
+        state = result.state
+        if removed_round is None:
+            assert all(u.has_status("league_truce") for u in state.units_sorted())
+    assert removed_round == duration
+    assert not any(u.has_status("league_truce") for u in state.units_sorted())
