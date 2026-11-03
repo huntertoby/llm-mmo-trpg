@@ -79,6 +79,8 @@ from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.season_board import after_season_step, roll_season
+from trpg.world.season_boss import challenge
+from trpg.world.season_events import SeasonBossAction
 from trpg.world.shadows import save_after_prep
 from trpg.world.situations import resolve_situation
 from trpg.world.social import hear_opportunity_hint, talk, tavern
@@ -190,11 +192,10 @@ def world_step(
     world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
     before = char
+    actor_id = char.character_id if actor is None else actor
     account = ACCOUNT_HANDLERS.get(type(action))
-    if account is not None:  # 算帳號的動作（5F-4 循環賽報名，#100）
-        result = account(
-            library, world, char, action, now, char.character_id if actor is None else actor
-        )
+    if account is not None:  # 算帳號的動作（5F-4 循環賽報名、5F-3 賽季 Boss 挑戰，#100）
+        result = account(library, world, char, action, now, actor_id)
     else:
         result = _dispatch(library, world, char, action, now)
     world, char, settled = settle_event_combat(
@@ -214,7 +215,7 @@ def world_step(
         char,
         (*events, *extra),
         now=now,
-        actor=char.character_id if actor is None else actor,
+        actor=actor_id,
     )
     paid = [*paid, *season]
     if (
@@ -536,11 +537,25 @@ def _league(  # noqa: PLR0917 - 和 _AccountHandler 同簽名（分派表的一�
     return StepResult(world=world, char=char, events=events)
 
 
+def _season_boss(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    _action: SeasonBossAction,
+    now: int,
+    actor: str,
+) -> StepResult:
+    world, char, events = challenge(library, world, char, now, actor=actor)
+    return StepResult(world=world, char=char, events=events)
+
+
 ACCOUNT_HANDLERS: Final[dict[type, _AccountHandler]] = {
     LeagueEnterAction: _league,
     LeagueWithdrawAction: _league,
+    SeasonBossAction: _season_boss,  # 5F-3：每帳號每天 3 次
 }
-"""算帳號的世界動作 → 處理（5F-4 循環賽報名）；和 :data:`HANDLERS` 不重疊（測試檢查）。"""
+"""算帳號的世界動作 → 處理（5F-4 循環賽報名、5F-3 賽季 Boss 挑戰）；和 :data:`HANDLERS` 不重疊
+（測試檢查）。"""
 
 HANDLERS: Final = _handlers()
 """世界動作種類 → 處理（5D-R1 取代 ``isinstance`` 串）；每種世界動作恰好一個（測試檢查）。

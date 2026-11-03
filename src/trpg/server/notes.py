@@ -198,7 +198,10 @@ def footprints(
     found += [
         Footprint("first_kill", k.character_id, k.name, k.at, k.target_name_zh)
         for k in kills
-        if k.region == region and k.location == location and k.character_id != exclude
+        if k.region == region
+        and k.location == location
+        and k.character_id != exclude
+        and k.kind == "elite"  # 賽季 Boss 首殺在裂界門，不留在出發的城鎮（5F-3）
     ]
     found.sort(key=lambda f: (f.at, f.kind, f.character_id), reverse=True)
     return found[:FOOTPRINT_MAX]

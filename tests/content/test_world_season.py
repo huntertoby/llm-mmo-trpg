@@ -110,6 +110,69 @@ def test_cross_file_problems(
 
 
 # ---------------------------------------------------------------------------
+# 5F-3 賽季 Boss 與封印鑰匙
+# ---------------------------------------------------------------------------
+
+
+def test_season_boss_loaded(season: SeasonContent) -> None:
+    boss = season.season_boss
+    assert boss is not None and boss.id == "rift_shard_lord" and boss.battle_map == "rift_gate"
+    assert (boss.unlock.earliest_day, boss.unlock.forced_day, boss.unlock.close_day) == (8, 10, 13)
+    assert boss.daily_attempts == 3 and boss.unlock.announce_hours == 24
+    assert boss.score.score(rounds=10, survivors=3, no_down=True) == 1000 - 200 + 300 + 200
+    assert boss.score.score(rounds=99, survivors=0, no_down=False) == 0
+    assert [s.id for s in season.seal_keys.sources] == ["summit_boss", "bounty"]
+    assert season.event_by_id()["seal_resonance"].goal.kind == "seal_key"
+
+
+@pytest.mark.parametrize(
+    ("patch", "message"),
+    [
+        (lambda d: d["season_boss"]["unlock"].update(forced_day=7), "earliest_day"),
+        (lambda d: d["season_boss"]["unlock"].update(close_day=15), "超過賽季天數"),
+        (lambda d: d["season_boss"]["unlock"].update(flag="nope"), "不是任何世界事件"),
+        (lambda d: d["milestones"][2].update(day=9), "boss_earliest"),
+        (lambda d: d["seal_keys"]["sources"][1].update(unit="bandit"), "只有 elite_first_kill"),
+        (lambda d: d["season_boss"].update(units=[]), "at least 1"),
+    ],
+)
+def test_season_boss_schema_rejects(season: SeasonContent, patch: Any, message: str) -> None:
+    data = _data(season)
+    patch(data)
+    with pytest.raises(ValidationError, match=message):
+        SeasonContent.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    ("patch", "message"),
+    [
+        (lambda d: d["season_boss"].update(battle_map="swamp"), "不是 Boss 地圖"),
+        (lambda d: d["season_boss"].update(battle_map="nowhere"), "未知的地圖"),
+        (lambda d: d["season_boss"].update(units=["nobody"]), "未知的單位"),
+        (lambda d: d["seal_keys"]["sources"][0].update(unit="nobody"), "未知的單位"),
+    ],
+)
+def test_season_boss_cross_file(
+    library: ContentLibrary, season: SeasonContent, patch: Any, message: str
+) -> None:
+    data = _data(season)
+    patch(data)
+    assert library.regions is not None
+    problems = season_problems(
+        SeasonContent.model_validate(data),
+        world_maps=library.world_maps,
+        encounters=library.world_encounters,
+        catalog=library.enemy_catalog(),
+        weather_ids=set(library.weather),
+        region_ids={r.id for r in library.regions.regions},
+        location_kinds=get_args(LocationKind.__value__),
+        units=set(library.units),
+        maps=library.maps,
+    )
+    assert any(message in p for p in problems), problems
+
+
+# ---------------------------------------------------------------------------
 # 影子循環賽（Phase 5F-4）
 # ---------------------------------------------------------------------------
 

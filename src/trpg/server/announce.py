@@ -32,6 +32,7 @@ from trpg.world.calendar import season_day as calendar_season_day
 from trpg.world.clock import refresh_day
 from trpg.world.save import loads_log, loads_world
 from trpg.world.season_board import daily_goals_for, players_on, roll_season
+from trpg.world.season_boss import boss_def, boss_status, status_note_zh
 from trpg.world.state import WorldState
 
 __all__ = [
@@ -70,6 +71,7 @@ TEMPLATE_VARS: Final[Mapping[str, frozenset[str]]] = {
             "first_kills",
             "goals",
             "events",
+            "season_boss",
             "public_url",
         }
     ),
@@ -79,6 +81,8 @@ TEMPLATE_VARS: Final[Mapping[str, frozenset[str]]] = {
     "event_line": frozenset({"name", "progress", "target"}),
     "public_url_line": frozenset({"public_url"}),
     "first_kill": frozenset({"name", "target"}),
+    "season_boss_line": frozenset({"name", "status", "note"}),
+    "season_boss_first_kill": frozenset({"name", "target"}),
 }
 """每個模板可用的變數（用到別的 → 載入錯誤）。"""
 
@@ -93,6 +97,10 @@ class AnnouncementTemplates(ContentModel):
     event_line: str
     public_url_line: str
     first_kill: str
+    season_boss_line: str = ""
+    """今日公告的賽季 Boss 一行（Phase 5F-3；空＝不寫）。"""
+    season_boss_first_kill: str = ""
+    """賽季 Boss 首殺的公告（Phase 5F-3；空＝用 ``first_kill``）。"""
 
     @model_validator(mode="after")
     def _known_variables(self) -> AnnouncementTemplates:
@@ -160,6 +168,8 @@ class DailyDigest:
     first_kills: int
     goals: tuple[DailyGoal, ...] | None = None
     events: tuple[WorldEventProgress, ...] | None = None
+    season_boss: tuple[str, str, str] | None = None
+    """賽季 Boss 的（名字、狀態、說明）（Phase 5F-3；``None``＝沒有賽季 Boss）。"""
 
 
 def _date_of(day: int) -> str:
@@ -234,10 +244,30 @@ def daily_digest(
         active_yesterday=active,
         threads=len(world.threads),
         cleared=sum(1 for c in world.cleared if now < c.respawn_at),
-        first_kills=len(load_first_kills(world_dir / FIRST_KILLS_FILE)),
+        first_kills=sum(k.kind == "elite" for k in load_first_kills(world_dir / FIRST_KILLS_FILE)),
         goals=tuple(goals.daily_goals(world, now)) if goals is not None else None,
         events=tuple(world_events.world_events(world, now)) if world_events is not None else None,
+        season_boss=None if library is None else _season_boss_line(library, world, now),
     )
+
+
+_BOSS_STATUS_ZH: Final = {
+    "sealed": "封印中",
+    "announced": "即將解鎖",
+    "open": "已解鎖",
+    "closed": "本季挑戰已結束",
+}
+
+
+def _season_boss_line(
+    library: ContentLibrary, world: WorldState, now: int
+) -> tuple[str, str, str] | None:
+    """今日公告的賽季 Boss：封印中、即將解鎖（解鎖前 24 小時公告，09 9.7）、已解鎖、已結束。"""
+    boss = boss_def(library)
+    status = boss_status(library, world, now)
+    if boss is None or status is None:
+        return None
+    return boss.name_zh, _BOSS_STATUS_ZH[status], status_note_zh(library, world, now) or ""
 
 
 def _sub(template: str, **values: object) -> str:
@@ -264,6 +294,10 @@ def render_daily(
     else:
         events = templates.events_none
     url = _sub(templates.public_url_line, public_url=public_url) if public_url else ""
+    boss = ""
+    if digest.season_boss is not None and templates.season_boss_line:
+        name, status, note = digest.season_boss
+        boss = _sub(templates.season_boss_line, name=name, status=status, note=note)
     return _sub(
         templates.daily,
         date=digest.date,
@@ -274,6 +308,7 @@ def render_daily(
         first_kills=digest.first_kills,
         goals=goals,
         events=events,
+        season_boss=boss,
         public_url=url,
     )
 
@@ -296,7 +331,10 @@ def render_first_kill(
     """首殺公告只說「誰打倒了什麼」，不說地點（5E-3b，玩法 PM 代決、9.6.10）：模板只認
     ``$name``、``$target``，寫了 ``$location``／``$region`` 會載入錯誤。``library`` 留著相容。"""
     del library
-    return _sub(templates.first_kill, name=safe_text(kill.name), target=kill.target_name_zh)
+    template = templates.first_kill
+    if kill.kind == "season_boss" and templates.season_boss_first_kill:  # 5F-3
+        template = templates.season_boss_first_kill
+    return _sub(template, name=safe_text(kill.name), target=kill.target_name_zh)
 
 
 def default_bot_state_path(save_dir: Path | None = None) -> Path:

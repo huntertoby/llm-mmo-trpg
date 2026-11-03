@@ -69,6 +69,11 @@ from trpg.world.season_events import (
     BountyClaimedEvent,
     BountyMissedEvent,
     DailyGoalDoneEvent,
+    SealKeyGainedEvent,
+    SeasonBossAction,
+    SeasonBossChallengedEvent,
+    SeasonBossClearedEvent,
+    SeasonBossFailedEvent,
     WorldEventProgressEvent,
     WorldEventResolvedEvent,
     WorldEventStartedEvent,
@@ -432,7 +437,8 @@ type WorldAction = Annotated[
     | ImbueAction
     | SalvageAction
     | LeagueEnterAction  # 5F-4
-    | LeagueWithdrawAction,
+    | LeagueWithdrawAction
+    | SeasonBossAction,  # 5F-3
     Field(discriminator="kind"),
 ]
 
@@ -1072,6 +1078,10 @@ type WorldEvent = Annotated[
     | BountyMissedEvent
     | DailyGoalDoneEvent
     | LeagueEnteredEvent  # 5F-4
-    | LeagueWithdrawnEvent,
+    | LeagueWithdrawnEvent
+    | SealKeyGainedEvent  # 5F-3
+    | SeasonBossChallengedEvent
+    | SeasonBossClearedEvent
+    | SeasonBossFailedEvent,
     Field(discriminator="kind"),
 ]

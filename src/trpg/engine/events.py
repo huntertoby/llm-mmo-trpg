@@ -1895,9 +1895,9 @@ class OathBroken(EventBase):
 
 class BossPhaseChanged(EventBase):
     """Boss 進入新階段（Phase 5F-2，:mod:`trpg.engine.boss_phases`）：``phase`` 是 1 起算的新階段
-    序號（開場階段為 1，所以第一次轉換是 2）；``permille`` 是這個階段的 HP 門檻；
-    ``hp``／``max_hp`` 是觸發當下。之後依序是移除狀態、換技能組與行為模式、施加狀態、
-    改天氣、改格子、召喚的事件。"""
+    序號（開場階段為 1，所以第一次轉換是 2）；``trigger``／``permille``／``condition_zh`` 是這個
+    階段的觸發條件；``hp``／``max_hp`` 是觸發當下。之後依序是移除狀態、換技能組與行為模式、
+    施加狀態、改天氣、改格子、召喚的事件。"""
 
     type: Literal["boss_phase_changed"] = "boss_phase_changed"
     unit_id: UnitId
@@ -1906,7 +1906,12 @@ class BossPhaseChanged(EventBase):
     phase_id: str
     name_zh: str
     text_zh: str | None = None
-    permille: int
+    trigger: Literal["hp_below", "tag_down", "round_at"] = "hp_below"
+    """觸發種類（Phase 5F-3 起）。"""
+    permille: int | None = None
+    """``hp_below`` 的 HP 門檻（‰）；其他種類為 ``None``。"""
+    condition_zh: str = ""
+    """觸發條件的中文（例「HP 60% 以下」「「源晶柱」倒下 3 名」「第 15 輪起」）。"""
     hp: int
     max_hp: int
     skills: tuple[str, ...] | None = None

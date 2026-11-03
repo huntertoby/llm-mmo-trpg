@@ -335,7 +335,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           )}
           {leftPane(view, want) === "quests" && <QuestLog view={view} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "board" && charId !== null && (
-            <BoardPanel characterId={charId} view={view} onClose={() => setWant("map")} />
+            <BoardPanel characterId={charId} view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />
           )}
           {leftPane(view, want) === "league" && charId !== null && (
             <LeaguePanel

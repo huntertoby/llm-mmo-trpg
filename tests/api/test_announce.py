@@ -246,3 +246,14 @@ def test_first_kill_template_rejects_location() -> None:
         bad["first_kill"] = f"$name 在 {variable} 打倒了 $target"
         with pytest.raises(ValueError, match=variable.removeprefix("$")):
             AnnouncementTemplates.model_validate(bad)
+
+
+def test_daily_text_has_season_boss_line(library: ContentLibrary, tmp_path: Path) -> None:
+    """5F-3：今日公告寫賽季 Boss 的封印狀態；解鎖前 24 小時（第 9 天 6 點）起寫「即將解鎖」。"""
+    _world(tmp_path)
+    text = AnnouncementSource(tmp_path, library=library).daily_text(DAY0_6AM)
+    assert text is not None and "── 賽季 Boss ──" in text
+    assert "「碎晶之主」：封印中" in text and "最晚" in text
+    day9 = DAY0_6AM + 6 * REAL_DAY_SECONDS  # DAY0_6AM 是賽季第 3 天的刷新時刻
+    text9 = AnnouncementSource(tmp_path, library=library).daily_text(day9)
+    assert text9 is not None and "即將解鎖" in text9

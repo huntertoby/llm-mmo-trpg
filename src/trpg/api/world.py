@@ -36,9 +36,10 @@ from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
-from trpg.server.first_kills import FirstKillRegistry
+from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore
+from trpg.server.season_boss_board import SeasonBossBoard, first_kill_log_json
 from trpg.shared.errors import TrpgError
 from trpg.world.actions import FightAction, NarrateAction, WorldAction, WorldEvent
 from trpg.world.battle import prepare_battle
@@ -55,6 +56,7 @@ from trpg.world.save import (
 )
 from trpg.world.season import FIRST_SEASON_ID
 from trpg.world.season_board import roll_season
+from trpg.world.season_events import SeasonBossClearedEvent
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import new_character, world_step
 
@@ -136,6 +138,8 @@ class WorldStore:
         self._battles: dict[str, BattleSession] = {}
         self.first_kills = FirstKillRegistry(library, root)
         """全服首殺紀錄（5E-3）。"""
+        self.boss_board = SeasonBossBoard(root)
+        """賽季 Boss 的通關評分榜與首殺戰鬥紀錄（5F-3）。"""
         self.notes = LocationNoteStore(root)
         """地點留言（5E-3，#105；不進日誌）。"""
         self.league = LeagueStore(library, root, clock=self._now)
@@ -346,6 +350,7 @@ class WorldStore:
         entries.append(entry)
         self._save_char(result.char)
         self._record_first_kills(result.char, result.events, seq, now, result.world.season_id)
+        self._record_boss_clear(char, result.char, action, result.events, seq=seq, now=now)
         if result.world != world:
             write_atomic(self._world_path(), dumps_world(result.world))
         self._world = result.world
@@ -406,6 +411,67 @@ class WorldStore:
             self.first_kills.record(char, events, seq=seq, now=now, season_id=season_id)
         except Exception:
             _LOG.exception("首殺紀錄寫入失敗（seq=%d，角色 %s）", seq, char.character_id)
+
+    def _record_boss_clear(
+        self,
+        before: CharacterState,
+        after: CharacterState,
+        action: WorldAction,
+        events: Sequence[WorldEvent],
+        *,
+        seq: int,
+        now: int,
+    ) -> None:
+        """賽季 Boss 通關（5F-3）：評分榜記一筆；本季首殺另存那一場的戰鬥紀錄並記首殺。衍生資料：
+        寫入失敗只記 log，不影響回應（同首殺）。"""
+        cleared = next((e for e in events if isinstance(e, SeasonBossClearedEvent)), None)
+        if cleared is None or not isinstance(action, FightAction):
+            return
+        season = self.world().season_id
+        account = None if self.actor_of is None else self.actor_of(after.character_id)
+        try:
+            self.boss_board.record(
+                before, after, cleared, season_id=season, account_id=account, seq=seq, now=now
+            )
+            if cleared.first:
+                self._record_boss_first_kill(
+                    before, after, action, cleared, account=account, seq=seq, now=now
+                )
+        except Exception:
+            _LOG.exception("賽季 Boss 紀錄寫入失敗（seq=%d，角色 %s）", seq, after.character_id)
+
+    def _record_boss_first_kill(
+        self,
+        before: CharacterState,
+        after: CharacterState,
+        action: FightAction,
+        cleared: SeasonBossClearedEvent,
+        *,
+        account: str | None,
+        seq: int,
+        now: int,
+    ) -> None:
+        season = self.world().season_id
+        log = self.boss_board.save_first_kill_log(
+            season, first_kill_log_json(self.library, before, action)
+        )
+        encounter = before.pending_encounter
+        self.first_kills.record_season_boss(
+            FirstKill(
+                kind="season_boss",
+                target=cleared.boss,
+                target_name_zh=cleared.name_zh,
+                character_id=after.character_id,
+                name=after.hero.name_zh,
+                region=after.region if encounter is None else encounter.region,
+                location=after.location if encounter is None else encounter.location,
+                seq=seq,
+                at=now,
+                season_id=season,
+                account_id=account,
+                battle_log=log,
+            )
+        )
 
     def _save_char(self, char: CharacterState) -> None:
         write_atomic(self._char_path(char.character_id), dumps_char(char))

@@ -11,10 +11,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
+    "BoardBossEntryView",
     "BoardBountyView",
     "BoardClearedView",
     "BoardGoalView",
     "BoardMilestoneView",
+    "BoardSeasonBossView",
     "BoardWorldEventView",
     "SeasonBoardView",
     "SeasonInfoView",
@@ -100,6 +102,52 @@ class BoardClearedView(_ApiModel):
     respawn_at: int
 
 
+class BoardBossEntryView(_ApiModel):
+    """評分榜的一名（Phase 5F-3；#87）。"""
+
+    rank: int
+    name: str
+    score: int
+    rounds: int
+    survivors: int
+    allies: int
+    no_down: bool
+    location_zh: str
+    """出發挑戰的地點（看的人還沒發現的隱藏地點用提示語，5C-3f）。"""
+    mine: bool
+    at: int
+
+
+class BoardSeasonBossView(_ApiModel):
+    """賽季 Boss 區塊（Phase 5F-3；09 9.7、#87、#100、#101）。"""
+
+    boss: str
+    name_zh: str
+    status: Literal["sealed", "announced", "open", "closed"]
+    status_zh: str
+    note_zh: str | None = None
+    """例「11 月 10 日 06:00 解鎖」「開放到 11 月 13 日 06:00」。"""
+    announce_at: int
+    unlock_at: int
+    close_at: int
+    world_keys: int
+    """全服累積的封印鑰匙。"""
+    keys_target: int | None = None
+    """封印共鳴的門檻（事件還沒開始＝``None``）。"""
+    my_keys: int
+    keys_required: int
+    attempts_left: int
+    """這個帳號今天還剩幾次。"""
+    daily_attempts: int
+    can_challenge: bool
+    problem_zh: str | None = None
+    """不能挑戰的原因。"""
+    first_kill_zh: str | None = None
+    title_zh: str
+    board: tuple[BoardBossEntryView, ...] = ()
+    """通關評分榜（前 10 名）。"""
+
+
 class SeasonBoardView(_ApiModel):
     """城鎮公告板的整份資料。"""
 
@@ -112,3 +160,5 @@ class SeasonBoardView(_ApiModel):
     cleared: tuple[BoardClearedView, ...] = ()
     level_bonus_zh: tuple[str, ...] = ()
     """世界事件失敗的建議等級加成（例「灰燼荒原：建議等級 +1」）。"""
+    season_boss: BoardSeasonBossView | None = None
+    """賽季 Boss（Phase 5F-3；沒有賽季 Boss 時 ``None``）。"""

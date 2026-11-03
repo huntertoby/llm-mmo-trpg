@@ -65,6 +65,11 @@ class FirstKill(BaseModel):
     season_id: str = FIRST_SEASON_ID
     """首殺的賽季（Phase 5D-R2；紀念類，季末保留）。舊檔沒有這個欄位＝第一季
     （:data:`~trpg.world.season.FIRST_SEASON_ID`；欄位加上之前還沒有任何季末重置）。"""
+    account_id: str | None = None
+    """首殺的帳號（Phase 5F-3；#101 首殺算帳號）；精英首殺與舊檔沒有。"""
+    battle_log: str | None = None
+    """那一場的戰鬥紀錄（相對於世界資料夾的路徑，``trpg battle replay`` 可驗證；Phase 5F-3 賽季
+    Boss 首殺才有）。"""
 
 
 class _File(BaseModel):
@@ -157,7 +162,20 @@ class FirstKillRegistry:
             if ("elite", kind) not in taken
         )
         if added:
-            data = _File(kills=(*existing, *added))
-            text = json.dumps(data.model_dump(mode="json"), ensure_ascii=False, indent=2)
-            write_atomic(self.path, text + "\n")
+            self._write((*existing, *added))
         return added
+
+    def record_season_boss(self, kill: FirstKill) -> bool:
+        """記賽季 Boss 首殺（Phase 5F-3；由世界狀態判定是不是首殺，這裡只防重複）。"""
+        existing = self.all()
+        if any((k.kind, k.season_id) == ("season_boss", kill.season_id) for k in existing):
+            return False
+        self._write((*existing, kill))
+        return True
+
+    def _write(self, kills: tuple[FirstKill, ...]) -> None:
+        data = _File(kills=kills)
+        text = json.dumps(
+            data.model_dump(mode="json", exclude_none=True), ensure_ascii=False, indent=2
+        )
+        write_atomic(self.path, text + "\n")

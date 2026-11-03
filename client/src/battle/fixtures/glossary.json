@@ -668,6 +668,78 @@
    ]
   },
   {
+   "id": "rift_resonance",
+   "name_zh": "源晶共鳴",
+   "description_zh": "源晶柱還在時，碎晶之主不受任何骰值傷害；三根柱子全部打碎才會現出破綻。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "護陣：持有者還在場時，24 格內的友方「碎晶之主」（不含自己）受到的傷害 ×0%；持有者倒下後立刻解除"
+   ]
+  },
+  {
+   "id": "crystal_surge",
+   "name_zh": "晶能湧動",
+   "description_zh": "同伴碎裂的源晶流進這根柱子：造成的傷害提高。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×125%"
+   ]
+  },
+  {
+   "id": "crystal_surge_2",
+   "name_zh": "晶能狂湧",
+   "description_zh": "只剩這根柱子，源晶的力量全都湧了進來：造成的傷害大幅提高。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×150%"
+   ]
+  },
+  {
+   "id": "rift_collapse",
+   "name_zh": "界崩",
+   "description_zh": "浮台開始崩塌：造成的傷害加倍。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "自己造成的攻擊傷害 ×200%"
+   ]
+  },
+  {
    "id": "mist_return",
    "name_zh": "歸一",
    "description_zh": "吸盡山霧歸於一身：每回合開始時恢復少量 HP。不能被淨化、驅散或奪取。",

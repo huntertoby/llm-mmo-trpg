@@ -165,14 +165,19 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
         multiplier //= PERMILLE
         multiplier = multiplier * _difficulty_permille(ctx, unit, effect) // PERMILLE
-        amount = max(
-            raw_permille
-            * mod_ppm
-            * weather
-            * multiplier
-            * status_ppm
-            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
-            effect.min_damage,
+        # 護陣 ×0（5F-3 源晶柱）：完全不受骰值傷害，不套最低傷害
+        amount = (
+            max(
+                raw_permille
+                * mod_ppm
+                * weather
+                * multiplier
+                * status_ppm
+                // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
+                effect.min_damage,
+            )
+            if ward > 0
+            else 0
         )
         base_amount = max(
             raw_permille
