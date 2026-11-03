@@ -84,7 +84,7 @@
 
 ## 檢查結果
 
-（最後一次合併 main＝`06a8c01f`，含 5F-5a、5F-5 之後）
+（合併 main＝`06a8c01f`〔含 5F-5a、5F-5〕之後全跑；再合併 `2772279d`〔5F-5b〕後複查：上述 pytest 12420 通過、propose／output 快照與 push_check 38 通過、靜態檢查通過，產生檔不變）
 
 - `ruff check .`、`ruff format --check .`、`mypy`（strict，1205 檔）、`lint-imports`（13 kept）：通過。
 - `pytest -n 8 -m "(slow or not slow) and not llm"` tests/engine、content、skillgen（含 slow 的 test_budget、test_refactor_3wr2）、llm、world、api、server、test_architecture：12413 通過、0 失敗（合併 5F-5 後）。要連真實模型的 `llm` 標記測試沒跑。
