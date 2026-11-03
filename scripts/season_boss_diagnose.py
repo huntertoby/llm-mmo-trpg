@@ -18,17 +18,16 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import importlib.util
 import sys
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from season_boss_sim import BOSS, BUILDS, PILLARS, make_char
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.ai.utility import UtilityAI
@@ -41,6 +40,19 @@ from trpg.engine.events import (
 from trpg.engine.runner import run_battle
 from trpg.shared.types import Attribute, Team
 from trpg.world.battle import prepare_battle
+from trpg.world.state import CharacterState
+
+_spec = importlib.util.spec_from_file_location(
+    "season_boss_sim", Path(__file__).resolve().parent / "season_boss_sim.py"
+)
+assert _spec is not None and _spec.loader is not None
+_sim = importlib.util.module_from_spec(_spec)
+sys.modules["season_boss_sim"] = _sim
+_spec.loader.exec_module(_sim)
+BOSS: str = _sim.BOSS
+BUILDS: tuple[str, ...] = _sim.BUILDS
+PILLARS: tuple[str, ...] = _sim.PILLARS
+make_char: Callable[[ContentLibrary, str, int], CharacterState] = _sim.make_char
 
 PHASE_NAMES = ("三柱", "碎界脈動", "核心過載", "界崩")
 
