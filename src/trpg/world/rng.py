@@ -21,6 +21,7 @@ __all__ = [
     "STREAM_EVENT",
     "STREAM_FIELD",
     "STREAM_REVEAL",
+    "STREAM_SPOT",
     "STREAM_TRAVEL",
     "derive_seed",
     "draw",
@@ -37,6 +38,8 @@ STREAM_EVENT: Final = "event"
 """事件出現擲骰與骨架挑選（Phase 5B-1）。"""
 STREAM_CHECK: Final = "check"
 """情境判定的 d20（Phase 5B-2；一律擲兩顆）。"""
+STREAM_SPOT: Final = "spot"
+"""地圖上的事件「！」放在哪個事件點（Phase 6C-5；候選超過一個時才抽）。"""
 STREAM_FIELD: Final = "field"
 """實地地圖上看得見的敵人（Phase 6C-1）：每進一個有實地地圖的地點抽 1 次，決定這一趟每隊的陣容、
 巡邏起點與駐守朝向（:mod:`trpg.world.field_enemies`）。"""

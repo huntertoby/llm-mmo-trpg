@@ -3,7 +3,7 @@
 // 底圖：`art_url` 有值時畫區域插畫，否則用節點圖的座標與連線（座標 0～100，同 `WorldMap`）。
 import type { WorldMapView } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { regionEdges, regionNodes, regionNote, stoneTarget, type RegionNode, type RegionStone } from "./regionModel";
+import { footprintHint, regionEdges, regionNodes, regionNote, stoneTarget, type RegionNode, type RegionStone } from "./regionModel";
 
 interface Props {
   map: WorldMapView;
@@ -56,8 +56,15 @@ function Node({ node, busy, onTeleport }: { node: RegionNode; busy: boolean; onT
       </Hint>
       {node.label !== null && <span className="region-node-name">{node.label}</span>}
       {(node.level !== null || node.cleared) && <span className="region-node-badge">{node.cleared ? "已清空" : node.level}</span>}
-      {(node.quests.length > 0 || node.stones.length > 0) && (
+      {(node.quests.length > 0 || node.stones.length > 0 || node.footprints.length > 0) && (
         <span className="region-node-marks">
+          {node.footprints.length > 0 && (
+            <Hint text={footprintHint(node.footprints)}>
+              <span className="region-footprint" data-testid="region-footprint" aria-label={footprintHint(node.footprints)}>
+                足
+              </span>
+            </Hint>
+          )}
           {node.quests.length > 0 && (
             <Hint text={node.quests.map((q) => `任務：${q}`).join("\n")}>
               <span className="region-quest" data-testid="region-quest" aria-label={`任務：${node.quests.join("、")}`}>
@@ -115,6 +122,7 @@ export function RegionMap({ map, busy, onTeleport, onClose }: Props) {
           <span><i className="lg-me" />自己</span>
           <span><i className="lg-quest">!</i>任務</span>
           <span><i className="lg-stone" />傳送石</span>
+          <span><i className="lg-foot">足</i>朋友的足跡</span>
           <span><i className="lg-sil" />沒去過（？？？）</span>
           <span><i className="lg-fog" />霧</span>
           <span className="muted">M／Esc 關閉</span>

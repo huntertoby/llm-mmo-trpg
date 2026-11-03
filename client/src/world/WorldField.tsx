@@ -343,7 +343,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
   const caption = hoverText(field, hover);
   return (
     <div className={`world-field${hud !== undefined ? " hud" : ""}`} data-testid="world-field" ref={boxRef}>
-      <div className={`world-field-stage${fading ? " fading" : ""}`} data-map={field.map_id}>
+      <div className={`world-field-stage${fading ? " fading" : ""}${field.sneaking === true ? " sneaking" : ""}`} data-map={field.map_id}>
         <CameraBox cam={cam} ms={frame !== null ? FRAME_MS : focus.ms}>
           <div className="world-field-board" style={scaledSize(model, scale)}>
             <BattleCanvas

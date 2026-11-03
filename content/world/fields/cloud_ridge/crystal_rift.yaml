@@ -82,4 +82,4 @@ event_spots:
   - {at: [11, 10], id: possessed_hunter}   # 裂縫邊
   - {at: [14, 9], id: shard_convoy}   # 石橋
 situation_objects:
-  - {at: [20, 1], id: rift_mist_wall}   # 山門前的霧牆（主線推進前擋住）
+  - {at: [20, 1], id: rift_mist_wall, name_zh: 霧牆, note_zh: 山門前翻湧著一道霧牆，霧後隱約是雲頂觀的石階。}   # 山門前的霧牆（主線推進前擋住）

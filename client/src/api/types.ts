@@ -287,7 +287,10 @@ export type WorldAction =
   | Schemas["SeasonBossAction"]
   // 6B-2：實地地圖走路、傳送石
   | Schemas["WalkAction"]
-  | Schemas["UseTeleportStoneAction"];
+  | Schemas["UseTeleportStoneAction"]
+  // 6C-5：潛行、點情境物件
+  | Schemas["SneakAction"]
+  | Schemas["UseFieldObjectAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];

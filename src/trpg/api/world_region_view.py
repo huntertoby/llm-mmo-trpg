@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from trpg.api.world_field_things import FOOTPRINT_NAMES, FieldSocial
 from trpg.api.world_schemas import RegionStoneView, WorldLocationView, WorldMapView
 from trpg.content.library import ContentLibrary
 from trpg.content.world_narration import mask_text
@@ -129,8 +130,10 @@ def region_marks(
     *,
     town: str,
     in_battle: bool,
+    social: FieldSocial | None = None,
 ) -> WorldMapView:
-    """在地點圖的回應上加上迷霧、任務標記、傳送石與能不能從圖上傳送（6C-6）。"""
+    """在地點圖的回應上加上迷霧、任務標記、傳送石與能不能從圖上傳送（6C-6）；朋友的足跡（6C-5：
+    去過的其他角色，依角色 ID 最多 :data:`FOOTPRINT_NAMES` 位，霧裡的不給）。"""
     visited = _visited(char, view.region, town)
     fog = fog_levels((loc.id for loc in view.locations), view.edges, visited)
     marks = _quest_marks(library, char) if char.region == view.region else {}
@@ -140,6 +143,10 @@ def region_marks(
         update: dict[str, object] = {"fog": level}
         if level != "fog" and loc.id in marks:
             update["quest_marks"] = tuple(marks[loc.id])
+        if level != "fog" and social is not None:
+            visitors = social.visitors_at(view.region, loc.id)[:FOOTPRINT_NAMES]
+            if visitors:
+                update["footprints"] = tuple(v.name_zh for v in visitors)
         return loc.model_copy(update=update)
 
     stones, origin = _stones(library, char, view.region, fog)

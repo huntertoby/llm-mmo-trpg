@@ -2,6 +2,8 @@
 // 出口／門／傳送石的標示、前端的 BFS 路徑、方向鍵、相鄰的設施與 NPC。規則以伺服器為準（`walk` 回來的位置），
 // 這裡的可站格與爬升上限都由伺服器下發（`FieldTileView.walkable`、`FieldView.max_climb`）。
 // Phase 6C-1：看得見的敵人畫成敵方紙娃娃，視野（前方扇形 4 格）畫淡紅；開不開打由伺服器判定。
+// Phase 6C-5：地圖上的東西——事件「！」、營火、情境物件、朋友的腳印、留言石碑（標記與滑過說明；
+// 碰到「！」開卡、站營火紮營、點物件開卡都由伺服器判定）。
 import type { BattleView, Facing, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
 import { buildDrawModel, type DrawModel } from "../battle/drawModel";
 import { HIGHLIGHT } from "../battle/glossary";
@@ -195,7 +197,18 @@ export type FieldTarget =
   | { kind: "facility"; facility: string; x: number; y: number }
   | { kind: "npc"; npc: string; name: string; x: number; y: number }
   /** 站在城裡的朋友（影子，6B-4）：點了直接開名片，不用走過去。 */
-  | { kind: "friend"; owner: string; name: string; x: number; y: number };
+  | { kind: "friend"; owner: string; name: string; x: number; y: number }
+  /** 情境物件（6C-5）：走到旁邊開說明卡，能用時卡上有按鈕送 `use_field_object`。 */
+  | { kind: "object"; id: string; name: string; x: number; y: number }
+  /** 留言石碑（6C-5）：走到旁邊開留言板。 */
+  | { kind: "note_stone"; x: number; y: number };
+
+export type FieldSituationObject = NonNullable<FieldView["situation_objects"]>[number];
+
+/** 格子上的情境物件；沒有為 `null`。 */
+export function objectAt(field: FieldView, p: Pos): FieldSituationObject | null {
+  return (field.situation_objects ?? []).find((o) => o.x === p.x && o.y === p.y) ?? null;
+}
 
 export type FieldFriend = NonNullable<FieldView["friends"]>[number];
 export type FieldNpc = FieldView["npcs"][number];
@@ -213,6 +226,10 @@ export function targetAt(field: FieldView, p: Pos): FieldTarget | null {
   if (friend !== null) return { kind: "friend", owner: friend.owner, name: friend.name_zh, x: friend.x, y: friend.y };
   const f = field.facilities.find((x) => x.x === p.x && x.y === p.y);
   if (f !== undefined) return { kind: "facility", facility: f.kind, x: f.x, y: f.y };
+  const o = objectAt(field, p);
+  if (o !== null) return { kind: "object", id: o.id, name: o.name_zh, x: o.x, y: o.y };
+  const stone = field.note_stone;
+  if (stone != null && stone.x === p.x && stone.y === p.y) return { kind: "note_stone", x: stone.x, y: stone.y };
   return null;
 }
 
@@ -454,6 +471,50 @@ export function fieldDrawModel(field: FieldView, heroName = "你"): DrawModel {
 
 const DOOR_COLOR = 0xe0b060;
 const STONE_COLOR = 0x7fd8ff;
+/** 6C-5 地圖上的東西的標記顏色。 */
+export const THING_COLOR = { event: 0xffc83a, campfire: 0xff8a3a, object: 0xe8d27a, note: 0x9fb0c8, footprint: 0xb8a07a, noteStone: 0xa0c4ff } as const;
+
+/** 6C-5：事件「！」、營火、情境物件、朋友的腳印、留言石碑的標記（同一格只畫優先的一個：「！」＞物件＞營火＞石碑＞腳印）。 */
+export function thingMarks(field: FieldView): TelegraphMark[] {
+  const out: TelegraphMark[] = [];
+  const taken = new Set<string>([...field.doors.map((d) => `${d.x},${d.y}`), ...field.stones.map((s) => `${s.x},${s.y}`)]);
+  const add = (m: TelegraphMark) => {
+    const k = key(m.pos);
+    if (taken.has(k)) return;
+    taken.add(k);
+    out.push(m);
+  };
+  const ev = field.event_mark;
+  if (ev != null) add({ pos: { x: ev.x, y: ev.y }, kind: "event", glyph: "！", color: THING_COLOR.event, texts: [EVENT_MARK_ZH] });
+  for (const o of field.situation_objects ?? []) {
+    const color = o.usable ? THING_COLOR.object : THING_COLOR.note;
+    add({ pos: { x: o.x, y: o.y }, kind: "object", glyph: "◎", color, texts: [objectText(o)] });
+  }
+  for (const c of field.campfires ?? []) add({ pos: { x: c.x, y: c.y }, kind: "campfire", glyph: "火", color: THING_COLOR.campfire, texts: [CAMPFIRE_ZH] });
+  const stone = field.note_stone;
+  if (stone != null) add({ pos: { x: stone.x, y: stone.y }, kind: "note_stone", glyph: "碑", color: THING_COLOR.noteStone, texts: [noteStoneText(stone.count)] });
+  for (const f of field.footprints ?? []) add({ pos: { x: f.x, y: f.y }, kind: "footprint", glyph: "足", color: THING_COLOR.footprint, texts: [`${f.name_zh}走過這裡`] });
+  return out;
+}
+
+export const EVENT_MARK_ZH = "有事情發生：走過去看看";
+export const CAMPFIRE_ZH = "營火：站上去可以紮營";
+
+export function noteStoneText(count: number): string {
+  return `留言石碑：${count} 則留言（走過去看）`;
+}
+
+/** 情境物件的一行說明：名稱與能做什麼。 */
+export function objectText(o: FieldSituationObject): string {
+  if (o.use === "note") return o.name_zh;
+  if (!o.usable) return `${o.name_zh}（${o.problem_zh ?? "現在不能用"}）`;
+  return `${o.name_zh}（${o.use === "encounter" ? "走過去挑戰" : "走過去調查"}）`;
+}
+
+/** 朋友的腳印（格子上的第一個）；沒有為 `null`。 */
+export function footprintAt(field: FieldView, p: Pos): NonNullable<FieldView["footprints"]>[number] | null {
+  return (field.footprints ?? []).find((f) => f.x === p.x && f.y === p.y) ?? null;
+}
 /** 敵人視野的淡紅（同 HUD 的 HP 紅）。 */
 export const SIGHT_COLOR = 0xe04a3a;
 
@@ -480,6 +541,7 @@ export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights
     ...(field.enemies ?? [])
       .filter((e) => e.elite)
       .map((e) => ({ pos: { x: e.x, y: e.y }, kind: "elite", glyph: "精", color: SIGHT_COLOR, texts: [enemyText(e)] })),
+    ...thingMarks(field),
   ];
   const sight = sightRegion(field);
   const regions = sight.length > 0 ? [{ cells: sight, color: SIGHT_COLOR }] : [];
@@ -495,7 +557,9 @@ export function hoverText(field: FieldView, p: Pos | null): string | null {
   if (portal?.kind === "stone") return "傳送石";
   const enemy = enemyAt(field, p);
   if (enemy !== null) return enemyText(enemy);
-  if (sightCells(field).has(key(p))) return "敵人的視野";
+  const ev = field.event_mark;
+  if (ev != null && ev.x === p.x && ev.y === p.y) return EVENT_MARK_ZH;
+  if (sightCells(field).has(key(p))) return field.sneaking === true ? "敵人的視野（潛行中，減半）" : "敵人的視野";
   const t = targetAt(field, p);
   if (t?.kind === "npc") {
     const n = field.npcs.find((x) => x.id === t.npc);
@@ -504,6 +568,14 @@ export function hoverText(field: FieldView, p: Pos | null): string | null {
   }
   if (t?.kind === "friend") return `${t.name}的影子（點了看名片）`;
   if (t?.kind === "facility") return FACILITY_ZH[t.facility] ?? t.facility;
+  if (t?.kind === "object") {
+    const o = objectAt(field, p);
+    return o === null ? t.name : objectText(o);
+  }
+  if (t?.kind === "note_stone") return noteStoneText(field.note_stone?.count ?? 0);
+  if ((field.campfires ?? []).some((c) => c.x === p.x && c.y === p.y)) return CAMPFIRE_ZH;
+  const print = footprintAt(field, p);
+  if (print !== null) return `${print.name_zh}走過這裡`;
   return null;
 }
 

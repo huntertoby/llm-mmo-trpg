@@ -129,6 +129,7 @@ def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
         raw_events=outcome.events,
         narrations=narrations,
         titles=store.titles_of_character,
+        social=store.field_social(outcome.char.character_id),  # 6C-5 足跡與留言石碑
     )
 
 

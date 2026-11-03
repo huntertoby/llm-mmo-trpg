@@ -77,4 +77,5 @@ event_spots:
   - {at: [4, 8], id: gang_toll}   # 寨門外
   - {at: [16, 4], id: gang_deserter}   # 岩縫邊
 situation_objects:
-  - {at: [17, 4], id: gang_fort_secret_door}   # 東側岩縫的暗門（持有線頭才顯示）
+  - {at: [17, 4], id: gang_fort_secret_door, name_zh: 暗門, requires_thread: gang_fort_secret_door,
+     note_zh: 岩縫後面藏著一道暗門。持有這條線頭，在斷崖幫寨開打時我方先手。}   # 東側岩縫的暗門（持有線頭才顯示）

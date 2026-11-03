@@ -31,6 +31,8 @@ export interface RegionNode {
   town: boolean;
   quests: readonly string[];
   stones: readonly RegionStone[];
+  /** 去過這裡的朋友（6C-5 足跡；霧裡不顯示）。 */
+  footprints: readonly string[];
   hint: string;
 }
 
@@ -63,7 +65,13 @@ export function nodeHint(loc: WorldLocationView, fog: Fog): string {
   const lines = [`${loc.name_zh}（${head.join("・")}）`];
   if (loc.current) lines.push("目前位置");
   for (const q of loc.quest_marks) lines.push(`任務：${q}`);
+  if ((loc.footprints ?? []).length > 0) lines.push(footprintHint(loc.footprints));
   return lines.join("\n");
+}
+
+/** 足跡的說明（6C-5）：「足跡：阿岳、小白走過這裡」。 */
+export function footprintHint(names: readonly string[]): string {
+  return `足跡：${names.join("、")}走過這裡`;
 }
 
 /** 地圖上的節點（隱藏地點後端根本不送，這裡不用另外濾）。 */
@@ -85,6 +93,7 @@ export function regionNodes(map: WorldMapView): RegionNode[] {
       current: loc.current,
       town: loc.kind === "town",
       quests: shown ? loc.quest_marks : [],
+      footprints: shown ? (loc.footprints ?? []) : [],
       stones: shown ? stones.filter((s) => s.location === loc.id).map((s) => stoneState(map, s, name)) : [],
       hint: nodeHint(loc, fog),
     };

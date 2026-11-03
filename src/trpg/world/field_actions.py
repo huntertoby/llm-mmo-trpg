@@ -3,6 +3,7 @@
 - ``walk``：沿一串四方向相鄰的格子走（一次最多 :data:`WALK_MAX_STEPS` 格）；中途碰到出口、門、
   傳送石就停在那一格並觸發。走格子不花時間、補給，也不擲遇敵（21.10 第 2 條）。
 - ``use_teleport_stone``：站在傳送石上，傳到另一顆已解鎖的傳送石（21.2）。
+- ``sneak``、``use_field_object``（6C-5）：潛行、點情境物件（:mod:`trpg.world.field_things`）。
 
 邏輯在 :mod:`trpg.world.field`。
 """
@@ -18,9 +19,14 @@ from trpg.world.state import Facing
 
 __all__ = [
     "WALK_MAX_STEPS",
+    "EventMarkedEvent",
     "FieldEnteredEvent",
+    "FieldObjectUsedEvent",
+    "SneakAction",
+    "SneakStartedEvent",
     "TeleportStoneUnlockedEvent",
     "TeleportStoneUsedEvent",
+    "UseFieldObjectAction",
     "UseTeleportStoneAction",
     "WalkAction",
     "WalkedEvent",
@@ -51,8 +57,9 @@ class UseTeleportStoneAction(_Model):
     to: str = Field(pattern=ID_PATTERN)
 
 
-type StopReason = Literal["end", "exit", "door", "stone", "enemy"]
-"""``walk`` 停下的原因：走完、踩到出口、門、傳送石、碰到敵人（6C-1：走進視野或相鄰）。"""
+type StopReason = Literal["end", "exit", "door", "stone", "enemy", "event"]
+"""``walk`` 停下的原因：走完、踩到出口、門、傳送石、碰到敵人（6C-1：走進視野或相鄰）、碰到地圖上
+的事件「！」（6C-5：站上或四方向相鄰）。"""
 
 type EnterVia = Literal["exit", "door", "teleport_stone"]
 
@@ -91,3 +98,45 @@ class TeleportStoneUsedEvent(_Model):
     to_stone: str
     region: str
     location: str
+
+
+# ---------------------------------------------------------------------------
+# 6C-5 地圖上的東西（邏輯在 trpg.world.field_things）
+# ---------------------------------------------------------------------------
+
+
+class SneakAction(_Model):
+    """潛行（Q7，21.4「取代趕路」）：花 ``hasten.cost`` 補給，到進入下一張地圖為止敵人視野減半。"""
+
+    kind: Literal["sneak"] = "sneak"
+
+
+class UseFieldObjectAction(_Model):
+    """點了站在旁邊的情境物件（``situation_objects`` 的 ``id``；21.6「走到旁邊點了就開」）。"""
+
+    kind: Literal["use_field_object"] = "use_field_object"
+    object: str = Field(pattern=ID_PATTERN)
+
+
+class SneakStartedEvent(_Model):
+    kind: Literal["sneak_started"] = "sneak_started"
+    supplies_spent: int
+    supplies_left: int
+
+
+class EventMarkedEvent(_Model):
+    """進入地圖時擲出的事件放在事件點上（地圖上的「！」，21.6）；碰到才開事件卡。"""
+
+    kind: Literal["event_marked"] = "event_marked"
+    location: str
+    map: str
+    x: int
+    y: int
+    spot: str
+
+
+class FieldObjectUsedEvent(_Model):
+    kind: Literal["field_object_used"] = "field_object_used"
+    map: str
+    object: str
+    use: Literal["event", "encounter"]

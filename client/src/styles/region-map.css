@@ -224,6 +224,27 @@
   font-weight: bold;
 }
 
+/* 6C-5 朋友的足跡 */
+.region-footprint,
+.region-map-legend .lg-foot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(184, 160, 122, 0.9);
+  color: #201810;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.region-map-legend .lg-foot {
+  width: 12px;
+  height: 12px;
+  font-size: 8px;
+}
+
 .region-stone {
   display: inline-flex;
   padding: 0;

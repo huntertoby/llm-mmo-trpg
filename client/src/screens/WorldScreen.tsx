@@ -45,6 +45,7 @@ import {
   readTrackerCollapsed,
   restrictions,
   shownPanel,
+  sneakState,
   togglePanel,
   writeTrackerCollapsed,
   type HudButtonId,
@@ -52,6 +53,7 @@ import {
   type HudToast,
 } from "../world/hud";
 import { useHudStage } from "../world/useHudStage";
+import { FieldObjectCard } from "../world/FieldThings";
 import { exitViewRects, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
@@ -384,6 +386,15 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setHudPanel("friend");
       return;
     }
+    if (target.kind === "object") {
+      setHudWho(target.id);
+      setHudPanel("object");
+      return;
+    }
+    if (target.kind === "note_stone") {
+      setHudPanel("notes");
+      return;
+    }
     const panel: Partial<Record<string, HudPanel>> = { shop: "shop", smithy: "smithy", enchanter: "smithy", notice_board: "board", mentor: "growth" };
     const to = panel[target.facility];
     if (to !== undefined) {
@@ -406,7 +417,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       revealInPanel(`[data-npc="${target.npc}"]`);
       return;
     }
-    if (target.kind === "friend") return; // 朋友只站在實地地圖（HUD 版面）上
+    if (target.kind === "friend" || target.kind === "object" || target.kind === "note_stone") return; // 只在實地地圖（HUD 版面）上
     switch (target.facility) {
       case "shop":
         setWant("shop");
@@ -479,6 +490,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   function hudButton(id: HudButtonId) {
     const b = HUD_BUTTONS.find((x) => x.id === id);
     if (b === undefined) return;
+    if (b.id === "sneak" && view !== null) {
+      // 6C-5 潛行：按了就送（花補給，到下一張地圖為止）；不能開時說原因
+      const s = sneakState(view);
+      if (s.active || s.problem !== null) pushToast([`${b.name}：${s.status}`], s.problem !== null);
+      else act({ kind: "sneak" });
+      return;
+    }
     if (b.panel === null) {
       pushToast([`${b.name}：${NOT_OPEN_ZH}`], false);
       return;
@@ -573,6 +591,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         return <HudHirePanel view={v} busy={busy} onAct={act} />;
       case "friend":
         return hudWho === null ? null : <FriendCard key={hudWho} view={v} owner={hudWho} />;
+      case "object":
+        return hudWho === null ? null : <FieldObjectCard key={hudWho} view={v} object={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
       case "shop":
         return <WorldShopScreen view={v} busy={busy} onAct={act} onClose={closeHud} />;
       case "smithy":

@@ -82,5 +82,6 @@ spawns:
 event_spots:
   - {at: [12, 9], id: fortress_stele}   # 石碑
 situation_objects:
-  - {at: [12, 8], id: fortress_stele}   # 石碑（事件 11）
-  - {at: [22, 4], id: pit_lava_seal}   # 熔岩封住的通道（熔心坑的入口）
+  - {at: [12, 8], id: fortress_stele, name_zh: 石碑, use: event}   # 石碑（事件 11）
+  - {at: [22, 4], id: pit_lava_seal, name_zh: 熔岩封口, requires_flag: heart_pit_open,
+     locked_zh: 熔岩封住了往熔心坑的通道，現在還過不去。, note_zh: 封住通道的熔岩已經冷卻，往東就是熔心坑。}   # 熔岩封住的通道（熔心坑的入口）

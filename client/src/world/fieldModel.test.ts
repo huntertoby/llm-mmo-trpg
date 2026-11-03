@@ -63,6 +63,11 @@ function town(over: Partial<FieldView> = {}): FieldView {
     stone_targets: [],
     enemies: [],
     friends: [],
+    campfires: [],
+    situation_objects: [],
+    sneaking: false,
+    sneak_cost: 1,
+    footprints: [],
     ...over,
   };
 }

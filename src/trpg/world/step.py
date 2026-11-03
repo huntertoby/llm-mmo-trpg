@@ -28,7 +28,6 @@ from typing import Any, Final
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationDef, LocationMapDef
-from trpg.shared.types import Attribute
 from trpg.world.actions import (
     AcceptQuestAction,
     CampAction,
@@ -40,11 +39,9 @@ from trpg.world.actions import (
     FlashPickAction,
     HireAction,
     LoadoutAction,
-    LocationRevealedEvent,
     NarrateAction,
     NewsSeenAction,
     OfferPickAction,
-    PerceptionCheckEvent,
     RestAction,
     RetreatAction,
     ShadowAiAction,
@@ -70,8 +67,22 @@ from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
 from trpg.world.field import FieldHooks, outdoor_map, stale_field, use_teleport_stone, walk
-from trpg.world.field_actions import UseTeleportStoneAction, WalkAction
+from trpg.world.field_actions import (
+    SneakAction,
+    UseFieldObjectAction,
+    UseTeleportStoneAction,
+    WalkAction,
+)
 from trpg.world.field_enemies import after_fight, arrive_watch, walk_watch, with_visit
+from trpg.world.field_things import (
+    arrive_sense,
+    drop_stale_marks,
+    on_campfire,
+    place_event,
+    sense_walk,
+    sneak,
+    use_field_object,
+)
 from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.league import league_step
@@ -79,8 +90,9 @@ from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.loot import choose_loot
 from trpg.world.narration import apply_narration
 from trpg.world.party import default_party, hire, set_shadow_ai
+from trpg.world.perception import can_perceive, perceive, perception_modifier, reveal_location
 from trpg.world.quests import accept_quest, advance_quests, take_offer
-from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
+from trpg.world.rng import STREAM_TRAVEL, draw
 from trpg.world.season_board import after_season_step, roll_season
 from trpg.world.season_boss import challenge
 from trpg.world.season_events import SeasonBossAction
@@ -91,7 +103,6 @@ from trpg.world.solutions import make_encounter, settle_event_combat, solve_even
 from trpg.world.state import (
     CharacterState,
     LocationRef,
-    PerceptionMark,
     WorldState,
 )
 from trpg.world.town import (
@@ -120,8 +131,6 @@ NO_CAMP_KINDS = frozenset({"town", "elite_lair", "boss"})
 """不能紮營的地點種類（#114：Boss 地點、精英巢穴不行；城鎮直接休息，5A-4）。
 ``camp`` 另看是否已清空。"""
 
-_PERCEPTION_REVEAL = "perception_nearby"
-
 
 @dataclass(frozen=True)
 class StepResult:
@@ -133,13 +142,6 @@ class StepResult:
 # ---------------------------------------------------------------------------
 # 內容與角色數值
 # ---------------------------------------------------------------------------
-
-
-def perception_modifier(library: ContentLibrary, char: CharacterState) -> int:
-    """感知修正：``(感知 − ability_mod_base) // ability_mod_divisor``（同引擎的檢定修正）。"""
-    core = library.ruleset.core
-    wis = char.hero.attributes[Attribute.WIS]
-    return (wis - core.ability_mod_base) // core.ability_mod_divisor
 
 
 def new_character(
@@ -215,6 +217,7 @@ def world_step(
     moved = result.char
     if not isinstance(action, _FIELD_MOVES):  # 6B-2：別的動作換了地點，舊位置作廢
         moved = stale_field(before, moved)
+    moved = drop_stale_marks(before, moved)  # 6C-5：換了地點，潛行結束、舊的「！」消失
     moved = with_visit(library, result.world, moved)  # 6C-1：換了地點就開始新的一趟
     if (moved.region, moved.location) != (before.region, before.location):
         # 6C-6：區域圖的戰爭迷霧（換了地點才記；出發的地點也記，舊存檔才不會漏掉建角的小鎮）
@@ -322,6 +325,9 @@ def _handlers() -> dict[type, _Handler]:
         UseTeleportStoneAction: _keeps_world(
             lambda lib, _w, char, action, _n: use_teleport_stone(lib, char, action)
         ),
+        # 6C-5 地圖上的東西（:mod:`trpg.world.field_things`）
+        SneakAction: _keeps_world(sneak),
+        UseFieldObjectAction: _keeps_world(use_field_object),
         CampAction: lambda lib, world, char, _action, now: _camp(lib, world, char, now),
         FightAction: _changes_world(_fight),
         # 事件的情境判定（5B-2）與說書人敘述（5B-3，:mod:`trpg.world.narration`）
@@ -425,8 +431,17 @@ def _travel_fn(
     return result.world, result.char, result.events
 
 
-_HOOKS: Final = FieldHooks(travel=_travel_fn, watch=walk_watch, arrive=arrive_watch)
-"""``walk`` 的鉤子：踩出口＝``travel``、看得見的敵人（6C-1）。"""
+def _arrive(
+    library: ContentLibrary, world: WorldState, char: CharacterState, now: int
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """走出口或門抵達另一張圖：開始這一趟（6C-1）、抵達格的隱藏入口感知（6C-5）。"""
+    char, watched = arrive_watch(library, world, char, now)
+    char, sensed = arrive_sense(library, world, char, now)
+    return char, (*watched, *sensed)
+
+
+_HOOKS: Final = FieldHooks(travel=_travel_fn, watch=walk_watch, arrive=_arrive, sense=sense_walk)
+"""``walk`` 的鉤子：踩出口＝``travel``、看得見的敵人（6C-1）、隱藏入口與「！」（6C-5）。"""
 
 
 def _travel(
@@ -459,7 +474,13 @@ def _travel(
     ]
     from_location = char.location
     char = char.model_copy(
-        update={"location": target.id, "supplies": char.supplies - spent, "camped_at": None}
+        update={
+            "location": target.id,
+            "supplies": char.supplies - spent,
+            "camped_at": None,
+            "field_event": None,  # 6C-5：進入下一張地圖，舊的「！」消失、潛行結束
+            "sneaking": False,
+        }
     )
     if target.kind == "town":
         char = with_visited_town(char, char.region)
@@ -477,8 +498,8 @@ def _travel(
         char = char.model_copy(update={"pending_encounter": result})
         events.append(EncounterEvent(result=result))
     rolled = roll_event(library, world, char, encountered=encountered, now=now)
-    char = rolled.char
-    events += rolled.events
+    char, placed_events = place_event(library, world, rolled.char, rolled.events)  # 6C-5「！」
+    events += placed_events
     if not encountered:  # 5B-4e：還沒遇過機遇的角色抵達提示地點（說書人順口提；5B-4f 一天一次）
         char, hint = hear_opportunity_hint(library, world, char, now)
         events += hint
@@ -494,53 +515,23 @@ def _perceive(
     world_map: LocationMapDef,
     now: int,
 ) -> tuple[CharacterState, list[WorldEvent]]:
-    """抵達後對相鄰的隱藏地點自動感知判定（#112；鄰居依 ID 排序）。"""
-    rules = _rules(library)
+    """抵達後對相鄰的隱藏地點自動感知判定（#112；鄰居依 ID 排序）。
+
+    抵達的地點有實地地圖時不在這裡判定：改成走到隱藏入口 3 格內才判定（21.9 第 10 條，6C-5，
+    :func:`trpg.world.field_things.sense_doors`）。"""
+    if outdoor_map(library, char.region, char.location) is not None:
+        return char, []
     locations = world_map.location_by_id()
     today = day_of(library, now)
     region = world_map.region
     events: list[WorldEvent] = []
     for neighbor_id in world_map.neighbors(char.location):
         hidden = locations[neighbor_id]
-        if (
-            not hidden.hidden
-            or _PERCEPTION_REVEAL not in hidden.reveal
-            or char.has_revealed(region, neighbor_id)
-            or char.perception_day(region, neighbor_id) == today
-        ):
+        if not can_perceive(char, region, hidden, today):
             continue
-        assert hidden.level_min is not None
-        dc = rules.perception.dc_for(hidden.level_min)
-        modifier = perception_modifier(library, char)
-        rng, char = draw(world.season_seed, char, STREAM_REVEAL)
-        roll = rng.d20()
-        success = roll + modifier >= dc
-        char = _mark_perception(char, region, neighbor_id, today)
-        events.append(
-            PerceptionCheckEvent(
-                location=neighbor_id, roll=roll, modifier=modifier, dc=dc, success=success
-            )
-        )
-        if success:
-            char = reveal_location(char, region, neighbor_id)
-            events.append(LocationRevealedEvent(location=neighbor_id, method=_PERCEPTION_REVEAL))
+        char, found = perceive(library, world, char, region, hidden, today)
+        events += found
     return char, events
-
-
-def _mark_perception(char: CharacterState, region: str, location: str, day: int) -> CharacterState:
-    marks = [m for m in char.perception_marks if (m.region, m.location) != (region, location)]
-    marks.append(PerceptionMark(region=region, location=location, day=day))
-    marks.sort(key=lambda m: (m.region, m.location))
-    return char.model_copy(update={"perception_marks": tuple(marks)})
-
-
-def reveal_location(char: CharacterState, region: str, location: str) -> CharacterState:
-    """把隱藏地點加進角色的 ``revealed``（已發現則不變）。"""
-    if char.has_revealed(region, location):
-        return char
-    refs = [*char.revealed, LocationRef(region=region, location=location)]
-    refs.sort(key=LocationRef.key)
-    return char.model_copy(update={"revealed": tuple(refs)})
 
 
 # ---------------------------------------------------------------------------
@@ -560,8 +551,12 @@ def camp_problem(
         return "城鎮裡直接休息，不用紮營"
     if here.kind in NO_CAMP_KINDS:
         return f"{here.name_zh}不能紮營"
-    if here.kind == "camp" and not world.is_cleared(char.region, here.id, now):
-        return f"{here.name_zh}的敵人還在，不能紮營"
+    if (
+        here.kind == "camp"
+        and not world.is_cleared(char.region, here.id, now)
+        and not on_campfire(library, char)  # 6C-5：固定營火點（#120、#114）
+    ):
+        return f"{here.name_zh}的敵人還在，不能紮營（營火點上可以）"
     cost = _rules(library).camp_cost
     if char.supplies < cost:
         return f"補給不足，紮營要 {cost} 補給"

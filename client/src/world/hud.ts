@@ -28,7 +28,9 @@ export type HudPanel =
   | "league"
   | "npc"
   | "hire"
-  | "friend";
+  | "friend"
+  /** 情境物件的說明卡（6C-5；對象另外記）。 */
+  | "object";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 
@@ -37,7 +39,7 @@ export interface HudButton {
   /** 快捷鍵（小寫）。 */
   key: string;
   name: string;
-  /** 打開的面板；`null`＝還沒開放的功能（潛行 6C-5）。 */
+  /** 打開的面板；`null`＝不是面板（潛行 6C-5：按了就送 `sneak`）。 */
   panel: HudPanel | null;
 }
 
@@ -124,6 +126,10 @@ export function buttonBadge(view: WorldView, id: HudButtonId): { text: string; t
 export type HudButtonState = "normal" | "open" | "disabled";
 
 export function buttonState(view: WorldView, b: HudButton, openPanel: string | null): HudButtonState {
+  if (b.id === "sneak") {
+    const s = sneakState(view);
+    return s.active ? "open" : s.problem === null ? "normal" : "disabled";
+  }
   if (b.panel === null) return "normal";
   if (openPanel === b.panel) return "open";
   return panelAvailable(view, b.panel) ? "normal" : "disabled";
@@ -162,9 +168,27 @@ export function hudButtonCard(view: WorldView, id: HudButtonId): HudButtonCard {
     }
     case "notes":
       return { status: view.here.name_zh, desc: "看別人留在這裡的留言，也可以留一則" };
-    case "sneak":
-      return { status: NOT_OPEN_ZH, desc: "壓低身形、放輕腳步，比較不容易被敵人發現" };
+    case "sneak": {
+      const s = sneakState(view);
+      return { status: s.status, desc: "壓低身形、放輕腳步：到下一張地圖為止，敵人的視野減半" };
+    }
   }
+}
+
+/** 潛行鈕（R，6C-5）的狀態：潛行中、能不能開、說明。 */
+export interface SneakState {
+  active: boolean;
+  /** 不能開的原因；可以開（或已經在潛行）為 `null`。 */
+  problem: string | null;
+  status: string;
+}
+
+export function sneakState(view: WorldView): SneakState {
+  const field = view.field;
+  if (field == null) return { active: false, problem: "這裡沒有實地地圖", status: "這裡沒有實地地圖" };
+  if (field.sneaking === true) return { active: true, problem: null, status: "潛行中（到下一張地圖為止）" };
+  const problem = field.sneak_problem_zh ?? null;
+  return { active: false, problem, status: problem ?? `花 ${field.sneak_cost ?? 1} 補給` };
 }
 
 // ---------------- 時間、天氣、限制 ----------------

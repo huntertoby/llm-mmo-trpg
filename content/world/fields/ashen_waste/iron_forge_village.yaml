@@ -128,4 +128,4 @@ campfires:
 event_spots:
   - {at: [13, 13], id: forge_smith}   # 鐵匠屋門口
 situation_objects:
-  - {at: [11, 9], id: iron_forge_anvil}   # 守點目標：村中央的大鐵砧
+  - {at: [11, 9], id: iron_forge_anvil, name_zh: 大鐵砧, note_zh: 鐵爐村的大鐵砧，村民說它比村子還老。盜匪來襲時要守住它。}   # 守點目標：村中央的大鐵砧
