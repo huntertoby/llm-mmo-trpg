@@ -15,14 +15,14 @@
 </style>
 </head>
 <body>
-<h1>戰鬥畫面：現行格子版 vs D 版（同一場戰鬥，示意，不代決）</h1>
+<h1>戰鬥畫面：現行格子版 vs D 版（同一場戰鬥，示意，不代決；2.5D 使用者不要，已拿掉）</h1>
 <p class="note">美術 PM，2026-11-04。場景是渡口石階（同 explore.png），碰到斷崖幫後就地開打。規則照舊用格子（12×12），D 版只改畫面：平常不畫格線、角色沿路徑平滑走、選移動或技能時格子才淡淡浮出。HUD 是版面 A 的戰鬥版，技能卡和單位資訊是去文字化後的版本。全部程式繪製。</p>
 <div class="grid">
   <div><h2>1. 現行格子版<small>格線、字母標記、右側文字欄</small></h2><canvas id="c1"></canvas></div>
   <div><h2>2. D 版：待機<small>不畫格線；戰鬥區外柔和變暗＝「這裡開打了」；滑到敵人出現小卡</small></h2><canvas id="c2"></canvas></div>
-  <div><h2>3. D 版：選移動<small>可走範圍淡淡浮出、路徑是曲線、殘影表示平滑走過去</small></h2><canvas id="c3"></canvas></div>
+  <div><h2>3. D 版：選移動<small>可走範圍淡淡浮出；路徑沿格子走（直線＋圓角），每格一個點；殘影＝一格一格走過去</small></h2><canvas id="c3"></canvas></div>
   <div><h2>4. D 版：選範圍技能（十字）<small>格線極淡浮出；命中格亮橘、預估傷害浮在目標頭上</small></h2><canvas id="c4"></canvas></div>
-  <div class="wide"><h2>5. 加碼：2.5D 斜視角（D 版待機）<small>規則仍是方格，畫面轉 45° 斜看；台地有厚度</small></h2><canvas id="c5"></canvas></div>
+  <div class="wide"><h2>5. D 版：選移動，路徑經過冰面和陷阱<small>路徑沿格子走、每格一個點；冰上是藍色虛線（滑行）；陷阱格亮紅＋「陷阱 −8・定身」；實際停在陷阱上，原定終點變灰「到不了」</small></h2><canvas id="c5"></canvas></div>
 </div>
 <script src="paperdoll.js"></script>
 <script src="realms.js"></script>
@@ -33,7 +33,7 @@
 <script src="battle.js"></script>
 <script>
   const T = Explore.T, W = 20 * T, H = 12 * T, Q = 2;
-  for (const [id, fn, disp] of [["c1", "current", 652], ["c2", "dIdle", 652], ["c3", "dMove", 652], ["c4", "dArea", 652], ["c5", "iso", 1040]]) {
+  for (const [id, fn, disp] of [["c1", "current", 652], ["c2", "dIdle", 652], ["c3", "dMove", 652], ["c4", "dArea", 652], ["c5", "dHazard", 1040]]) {
     const c = document.getElementById(id), k = disp / W;
     c.width = W * k * Q; c.height = H * k * Q; c.style.width = disp + "px"; c.style.height = H * k + "px";
     const ctx = c.getContext("2d"); ctx.scale(k * Q, k * Q);
