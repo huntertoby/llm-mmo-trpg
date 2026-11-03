@@ -5,7 +5,12 @@
 
 **先停遊戲伺服器**（伺服器有記憶體快取；伺服器開著時請用管理者介面或
 ``POST /api/world/season/reset``）。伺服器開著時世界資料夾有心跳檔 ``server.lock``（5F-R1），
-偵測到就拒絕 ``--execute``，要加 ``--force`` 才放行。執行前會把整個存檔資料夾備份到
+偵測到就拒絕 ``--execute``。兩種略過各自獨立（5F-R2）：
+
+- ``--force-season``：賽季還沒結束、循環賽還沒跑完也重置（API 的 ``force`` 就是這個）。
+- ``--force-server``：偵測到伺服器心跳也執行（確定伺服器已經不在、只是心跳檔沒清掉時用）。
+
+執行前會把整個存檔資料夾備份到
 ``--backup-root``（預設存檔資料夾旁邊的 ``saves-backups/``）。存檔資料夾預設 ``TRPG_SAVE_DIR``
 或專案的 ``saves/``；帳號資料夾預設照
 ``config/server.toml`` 的 ``[accounts] dir``。路徑一律 ``pathlib``，Windows 與 macOS 同一條指令。
@@ -41,10 +46,14 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--season-id", default=None, help="新一季的 ID（省略＝s<N+1>）")
     parser.add_argument("--seed", type=int, default=None, help="新一季的種子（省略＝由舊種子推）")
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="賽季還沒結束、循環賽沒跑完、偵測到遊戲伺服器的心跳也重置",
+        "--force-season", action="store_true", help="賽季還沒結束、循環賽還沒跑完也重置"
     )
+    parser.add_argument(
+        "--force-server",
+        action="store_true",
+        help="偵測到遊戲伺服器的心跳也執行（確定伺服器已經不在時才用）",
+    )
+    parser.add_argument("--force", action="store_true", help=argparse.SUPPRESS)  # 5F-R2 已拆開
     parser.add_argument("--execute", action="store_true", help="真的執行（沒加＝dry-run）")
     parser.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾")
     parser.add_argument("--accounts-dir", type=Path, default=None, help="帳號資料夾")
@@ -79,6 +88,13 @@ def main(
     argv: Sequence[str] | None = None, out: TextIO = sys.stdout, err: TextIO = sys.stderr
 ) -> int:
     args = _parser().parse_args(argv)
+    if args.force:
+        print(
+            "--force 已拆成 --force-season（賽季沒結束也重置）與"
+            " --force-server（伺服器開著也執行）",
+            file=err,
+        )
+        return EXIT_ERROR
     save_dir = args.save_dir if args.save_dir is not None else default_save_dir()
     accounts_dir = (
         args.accounts_dir
@@ -89,11 +105,11 @@ def main(
     server = running_server(world_dir_of(save_dir), now)
     if server is not None:
         seen = f"PID {server.pid}，{now - server.heartbeat_at} 秒前還有心跳"
-        if args.execute and not args.force:
+        if args.execute and not args.force_server:
             print(
                 f"不能重置：遊戲伺服器還開著（{seen}）。請先停掉伺服器，或在伺服器開著時用管理者"
                 "介面或 POST /api/world/season/reset；確定伺服器已經不在、只是心跳檔沒清掉，"
-                "請加 --force（或等心跳過期）。",
+                "請加 --force-server（或等心跳過期）。",
                 file=err,
             )
             return EXIT_ERROR
@@ -108,7 +124,7 @@ def main(
             accounts=AccountStore(accounts_dir),
             season_id=args.season_id,
             seed=args.seed,
-            force=args.force,
+            force=args.force_season,
             dry_run=not args.execute,
             backup_root=args.backup_root,
         )

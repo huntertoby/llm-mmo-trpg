@@ -643,7 +643,9 @@ def _plan(
     new_id = _new_season_id(current, season_id)
     problems = _soft_problems(library, current, now)
     if problems and not force:
-        raise SeasonResetError("不能重置：" + "；".join(problems) + "（確定要重置請加 force）")
+        raise SeasonResetError(
+            "不能重置：" + "；".join(problems) + "（確定要重置請加 force；腳本是 --force-season）"
+        )
     if seed is not None and not 0 <= seed <= MASK64:
         raise SeasonResetError("種子要在 0～2^64-1")
     old = current.world.season_id

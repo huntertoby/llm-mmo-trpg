@@ -100,12 +100,39 @@ def test_script_refuses_execute_while_server_runs(tmp_path: Path) -> None:
         before = _tree(season.save_dir)
         out, err = io.StringIO(), io.StringIO()
         assert script.main(base, out, err) == script.EXIT_ERROR
-        assert "遊戲伺服器還開著" in err.getvalue() and "--force" in err.getvalue()
+        assert "遊戲伺服器還開著" in err.getvalue() and "--force-server" in err.getvalue()
+        # 5F-R2：--force 拆成兩個各自獨立的旗標；--force-season 不略過伺服器心跳
+        out, err = io.StringIO(), io.StringIO()
+        assert script.main([*base, "--force-season"], out, err) == script.EXIT_ERROR
+        assert "遊戲伺服器還開著" in err.getvalue()
+        out, err = io.StringIO(), io.StringIO()
+        assert script.main([*base, "--force"], out, err) == script.EXIT_ERROR  # 舊旗標：說明怎麼改
+        assert "--force-season" in err.getvalue() and "--force-server" in err.getvalue()
         assert _tree(season.save_dir) == before
         out, err = io.StringIO(), io.StringIO()
-        assert script.main([*base, "--force"], out, err) == 0  # --force 放行（也略過賽季未結束）
+        both = [*base, "--force-server", "--force-season"]  # 真實時間：假賽季可能還沒結束
+        assert script.main(both, out, err) == 0
         assert "已重置：s1 → s2" in out.getvalue()
         assert "似乎還開著" in err.getvalue()
         assert (season.world_dir / SERVER_LOCK_FILE).is_file()  # 重置不動心跳檔
     finally:
         presence.stop()
+
+
+def test_force_server_does_not_skip_unfinished_season(tmp_path: Path) -> None:
+    """5F-R2：--force-server 只略過伺服器心跳；賽季沒結束照樣要 --force-season。"""
+    library: ContentLibrary = load_library()
+    season = _fake_season(library, tmp_path)
+    script = _script()
+    world = season.world_dir / "world.json"
+    data = json.loads(world.read_text(encoding="utf-8"))
+    data["season_start"] = 4_102_444_800  # 2100 年才開賽：一定還沒結束
+    world.write_text(json.dumps(data), encoding="utf-8")
+    base = ["--start-date", "2027-01-01", "--save-dir", str(season.save_dir)]
+    base += ["--accounts-dir", str(season.save_dir / "accounts"), "--force-server"]
+    out, err = io.StringIO(), io.StringIO()
+    assert script.main(base, out, err) == script.EXIT_ERROR
+    assert "還沒結束" in err.getvalue() and "--force-season" in err.getvalue()
+    out, err = io.StringIO(), io.StringIO()
+    assert script.main([*base, "--force-season"], out, err) == 0
+    assert "dry-run" in out.getvalue()

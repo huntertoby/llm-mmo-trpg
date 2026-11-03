@@ -693,7 +693,7 @@ def test_script_dry_run_then_execute(library: ContentLibrary, tmp_path: Path) ->
     out, err = io.StringIO(), io.StringIO()
     if script.main(base, out, err) != 0:  # 真實時間：假賽季可能還沒結束
         assert "還沒結束" in err.getvalue()
-        base.append("--force")
+        base.append("--force-season")  # 5F-R2：原本的 --force 拆開，賽季沒結束是這個
         out = io.StringIO()
         assert script.main(base, out, err) == 0
     assert "dry-run" in out.getvalue() and "角色 2" in out.getvalue()
