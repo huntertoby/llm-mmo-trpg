@@ -4,9 +4,18 @@
 // 5B-5（18.6）：事件卡（旁白、多講一點、解法）、情境判定（引用線索、第一次送出即定案）、判定結果、這裡的人（好感度、
 // 說話、聊天、接任務）、酒館傳聞、任務與線頭（左欄）、任務三選一（左欄固定）、說書人的 LLM 開關（標頭）。
 // 5D-4（33.2）：左欄加背包與裝備、商店、鐵匠與附魔台的完整畫面（右側背包摘要、服務列的「商店」「鐵匠」切換）。
+// 5F-1b：進入角色時讀「你不在的時候」摘要，有新消息就跳一則（DialogFrame）；按「知道了」送 `news_seen`。
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { BattleResponse, RunChoice, WorldAction, WorldLlmView, WorldSituationResult, WorldView } from "../api/types";
+import type {
+  AbsenceView,
+  BattleResponse,
+  RunChoice,
+  WorldAction,
+  WorldLlmView,
+  WorldSituationResult,
+  WorldView,
+} from "../api/types";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
@@ -18,6 +27,8 @@ import { WorldBagScreen } from "../world/BagScreen";
 import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
+import { AbsenceDialog } from "../world/AbsenceDialog";
+import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
@@ -55,6 +66,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [result, setResult] = useState<WorldSituationResult | null>(null);
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
+  const [absence, setAbsence] = useState<AbsenceView | null>(null);
 
   const show = useCallback((next: WorldView, mine: ChatEntry | null = null) => {
     for (const card of [...next.character.skills, ...next.character.bench]) primeSkillCard(card);
@@ -110,6 +122,27 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       cancelled = true;
     };
   }, [charId, view, show]);
+
+  // 「你不在的時候」（5F-1b）：每次進入角色讀一次；讀不到就算了（不擋畫面）。
+  useEffect(() => {
+    setAbsence(null);
+    if (charId === null) return undefined;
+    let cancelled = false;
+    api.worldAbsence(charId).then(
+      (v) => !cancelled && setAbsence(v),
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [charId]);
+
+  function closeAbsence() {
+    if (absence === null) return;
+    const action = newsSeenAction(absence);
+    setAbsence(null);
+    act(action);
+  }
 
   function enter(id: string, first?: WorldView) {
     writeWorldChar(id);
@@ -271,6 +304,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         </div>
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
 
       {view === null ? (
