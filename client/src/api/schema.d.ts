@@ -3629,6 +3629,16 @@ export interface components {
              */
             readonly object_choice: boolean;
         };
+        /**
+         * FieldStoneTargetView
+         * @description 站在傳送石上時可以傳去的另一顆（已解鎖；6B-3 的「傳送」按鈕用）。
+         */
+        FieldStoneTargetView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+        };
         /** FieldStoneView */
         FieldStoneView: {
             /** Id */
@@ -3700,6 +3710,11 @@ export interface components {
              */
             max_climb: number;
             hero?: components["schemas"]["FieldHeroView"] | null;
+            /**
+             * Stone Targets
+             * @default []
+             */
+            stone_targets: components["schemas"]["FieldStoneTargetView"][];
         };
         /**
          * FlashAction

@@ -12,6 +12,7 @@ from trpg.api.world_field_schemas import (
     FieldNpcView,
     FieldObjectView,
     FieldPositionView,
+    FieldStoneTargetView,
     FieldStoneView,
     FieldTileView,
     FieldView,
@@ -129,6 +130,22 @@ def _hero(library: ContentLibrary, char: CharacterState) -> FieldHeroView:
     )
 
 
+def _stone_targets(
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef, at: tuple[int, int]
+) -> tuple[FieldStoneTargetView, ...]:
+    here = next((s.id for s in found.teleport_stones if s.at == at), None)
+    if here is None:
+        return ()
+    out: list[FieldStoneTargetView] = []
+    for map_id in sorted(library.field_maps):
+        other = library.field_maps[map_id]
+        for stone in other.teleport_stones:
+            if stone.id != here and stone.id in char.teleport_stones:
+                name = _place_name(library, other.region, other.place)
+                out.append(FieldStoneTargetView(id=stone.id, name_zh=name))
+    return tuple(sorted(out, key=lambda t: t.id))
+
+
 def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | None:
     """目前的實地地圖；所在地點沒有實地地圖＝``None``。"""
     char = placed(library, char)
@@ -179,4 +196,5 @@ def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | Non
         me=FieldPositionView(x=pos.x, y=pos.y, facing=pos.facing),
         max_climb=library.ruleset.core.max_climb_height,
         hero=_hero(library, char),
+        stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
     )

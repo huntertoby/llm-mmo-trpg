@@ -8909,6 +8909,26 @@
         "title": "FieldSpec",
         "description": "一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、\n``cost.cooldown``）。"
       },
+      "FieldStoneTargetView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "FieldStoneTargetView",
+        "description": "站在傳送石上時可以傳去的另一顆（已解鎖；6B-3 的「傳送」按鈕用）。"
+      },
       "FieldStoneView": {
         "properties": {
           "id": {
@@ -9090,6 +9110,14 @@
                 "type": "null"
               }
             ]
+          },
+          "stone_targets": {
+            "items": {
+              "$ref": "#/components/schemas/FieldStoneTargetView"
+            },
+            "type": "array",
+            "title": "Stone Targets",
+            "default": []
           }
         },
         "additionalProperties": false,

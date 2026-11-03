@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -9,12 +10,16 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.world.helpers import NOON, with_rules
+from tests.world.helpers import NOON, hero, with_rules
 from trpg.api.app import create_app
 from trpg.api.world import WorldStore
+from trpg.api.world_field_view import field_view
+from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.world.layout import LOG_FILE
 from trpg.world.save import loads_char, read_log
+from trpg.world.state import FieldPos
+from trpg.world.step import new_character
 
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
 
@@ -119,3 +124,35 @@ def test_old_log_marked_stale(client: TestClient, tmp_path: Path) -> None:
     assert log.stale_through == 1
     assert log.stale_zh == "規則已變、不能重播"
     assert [e.seq for e in log.entries] == [1, 2]
+
+
+def test_field_view_stone_targets(field_library: ContentLibrary) -> None:
+    """站在傳送石上時列出其他已解鎖的傳送石（6B-3 的「傳送」按鈕用）；不在石上＝空。"""
+    herb = FieldMapDef.model_validate(
+        {
+            "id": "herb_valley",
+            "region": "cloud_ridge",
+            "location": "herb_valley",
+            "size": [4, 4],
+            "heights": "0000\n" * 4,
+            "terrain": "....\n" * 4,
+            "legend": {".": "stone"},
+            "entry": [1, 2],
+            "teleport_stones": [{"id": "stone_herb", "at": [1, 1]}],
+        }
+    )
+    library = dataclasses.replace(
+        field_library, field_maps={**field_library.field_maps, "herb_valley": herb}
+    )
+    char = new_character(library, "alice", hero(library), region="cloud_ridge")
+    stones = ("stone_herb", "stone_mist_ferry")
+    on_stone = char.model_copy(
+        update={"field": FieldPos(map="mist_ferry", x=12, y=8), "teleport_stones": stones}
+    )
+    view = field_view(library, on_stone)
+    assert view is not None
+    assert [(t.id, t.name_zh) for t in view.stone_targets] == [("stone_herb", "藥師谷")]
+    off = on_stone.model_copy(update={"field": FieldPos(map="mist_ferry", x=11, y=9)})
+    off_view = field_view(library, off)
+    assert off_view is not None
+    assert off_view.stone_targets == ()

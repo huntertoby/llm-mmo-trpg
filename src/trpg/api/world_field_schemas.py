@@ -23,6 +23,7 @@ __all__ = [
     "FieldNpcView",
     "FieldObjectView",
     "FieldPositionView",
+    "FieldStoneTargetView",
     "FieldStoneView",
     "FieldTileView",
     "FieldView",
@@ -74,6 +75,14 @@ class FieldStoneView(_ApiModel):
     x: int
     y: int
     unlocked: bool
+
+
+class FieldStoneTargetView(_ApiModel):
+    """站在傳送石上時可以傳去的另一顆（已解鎖；6B-3 的「傳送」按鈕用）。"""
+
+    id: str
+    name_zh: str
+    """傳送石所在地點的名稱。"""
 
 
 class FieldNpcView(_ApiModel):
@@ -134,3 +143,5 @@ class FieldView(_ApiModel):
     """一步最多往上爬幾層（``core.max_climb_height``；6B-3 前端算路徑用）。"""
     hero: FieldHeroView | None = None
     """主角外觀（6B-3）。"""
+    stone_targets: tuple[FieldStoneTargetView, ...] = ()
+    """站在傳送石上時：其他已解鎖的傳送石（依 ID 排序；沒站在傳送石上＝空）。"""
