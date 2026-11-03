@@ -43,6 +43,7 @@ __all__ = [
     "EventTrigger",
     "GearMod",
     "LastBattle",
+    "LeagueEntry",
     "LocationRef",
     "LootSummary",
     "NextBattleMod",
@@ -497,6 +498,22 @@ class ShadowRecord(_Model):
     """已轉進主人角色的任務幣（Phase 5D-1；``coins`` 保留為累計）。"""
 
 
+class LeagueEntry(_Model):
+    """影子循環賽的一筆報名（Phase 5F-4；09 9.7、#100 每個帳號 1 個角色）。快照是報名當下的 build
+    （:func:`~trpg.world.shadows.shadow_snapshot`），對戰時再拉到等級上限（:mod:`trpg.world.league`）。"""
+
+    account: str = Field(min_length=1, max_length=80)
+    """報名的帳號（世界日誌的 ``actor``；沒有帳號時＝角色 ID）。"""
+    character_id: str = Field(pattern=ID_PATTERN)
+    name: str
+    """報名時的角色名。"""
+    snapshot: ShadowSnapshot
+    ai: str | None = Field(default=None, pattern=ID_PATTERN)
+    """報名的 AI 打法（``None``＝快照的預設打法）。"""
+    entered_at: int = Field(ge=0)
+    """第一次報名的 UTC 秒（更新不改；排名同分時報名較早的在前）。"""
+
+
 class DailyActivity(_Model):
     """某個刷新日有成功世界動作的帳號（Phase 5F-1，Q15；世界事件門檻依前一天的人數調整）。"""
 
@@ -603,6 +620,20 @@ class WorldState(_Model):
     """懸賞被搶下的紀錄（依日期、懸賞排序；每天每張最多一筆）。"""
     level_bonus: dict[str, int] = Field(default_factory=dict)
     """區域 → 建議等級加成（世界事件失敗，9.6.7 #15；依鍵排序）。"""
+
+    # --- 5F-4 影子循環賽（邏輯在 trpg.world.league） ---
+    league_entries: tuple[LeagueEntry, ...] = ()
+    """循環賽的報名（依帳號排序；帳號、角色都不重複）。"""
+
+    @field_validator("league_entries")
+    @classmethod
+    def _league_sorted(cls, entries: tuple[LeagueEntry, ...]) -> tuple[LeagueEntry, ...]:
+        accounts = [e.account for e in entries]
+        if accounts != sorted(set(accounts)):
+            raise ValueError("league_entries 必須依帳號排序且不重複")
+        if len({e.character_id for e in entries}) != len(entries):
+            raise ValueError("league_entries 的角色重複")
+        return entries
 
     @field_validator("level_bonus")
     @classmethod

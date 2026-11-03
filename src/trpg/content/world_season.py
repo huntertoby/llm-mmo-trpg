@@ -30,6 +30,7 @@ __all__ = [
     "DailyGoalRules",
     "GoalKind",
     "GoalSpec",
+    "LeagueRules",
     "LevelBonusEffect",
     "Milestone",
     "SchedulePhase",
@@ -217,6 +218,31 @@ class WorldEventDef(ContentModel):
         return max(self.min_target(), self.goal.count * players // self.base_players)
 
 
+LEAGUE_EXCLUDED_ARCHETYPES: Final = frozenset({"boss", "training", "test"})
+"""循環賽不能用的地圖類型（Boss 專屬、靶場、測試圖；Phase 5F-4）。"""
+
+
+class LeagueRules(ContentModel):
+    """影子循環賽（Phase 5F-4；09 9.7「季末保底」、#101）。規則在 :mod:`trpg.world.league`。"""
+
+    signup_close_day: int = Field(default=13, ge=1)
+    """最後可以報名的賽季日（含；#101 第 13 天截止）。"""
+    maps: tuple[str, ...] = Field(min_length=1, max_length=8)
+    """事先公布的地圖（9.7：3 張）。"""
+    seeds: int = Field(default=2, ge=1, le=8)
+    """每對組合 × 每張地圖的種子數；每個種子交換先後手各打 1 場。"""
+    max_rounds: int = Field(default=30, ge=1)
+    """到輪數上限＝和局。"""
+    batch_size: int = Field(default=10, ge=1)
+    """背景每批幾場（批與批之間讓出執行緒）。"""
+
+    @model_validator(mode="after")
+    def _maps(self) -> LeagueRules:
+        if len(set(self.maps)) != len(self.maps):
+            raise ValueError("循環賽的地圖重複")
+        return self
+
+
 class SeasonContent(ContentModel):
     """``content/world/season.yaml``。"""
 
@@ -226,6 +252,8 @@ class SeasonContent(ContentModel):
     daily_goals: DailyGoalRules | None = None
     bounties: tuple[BountyDef, ...] = ()
     world_events: tuple[WorldEventDef, ...] = ()
+    league: LeagueRules | None = None
+    """影子循環賽（Phase 5F-4）；``None``＝這一季沒有循環賽。"""
 
     @model_validator(mode="after")
     def _season(self) -> SeasonContent:
@@ -247,6 +275,8 @@ class SeasonContent(ContentModel):
         late = [m.id for m in self.milestones if m.day > self.days]
         late += [b.id for b in self.bounties if b.from_day > self.days]
         late += [e.id for e in self.world_events if e.days[1] > self.days]
+        if self.league is not None and self.league.signup_close_day > self.days:
+            late.append("league.signup_close_day")
         if late:
             raise ValueError(f"超過賽季天數 {self.days}：{', '.join(late)}")
         return self
@@ -326,10 +356,14 @@ def season_problems(
     weather_ids: Collection[str],
     region_ids: Collection[str],
     location_kinds: Collection[str],
+    battle_maps: Mapping[str, str] | None = None,
 ) -> list[str]:
     """跨檔案檢查（繁體中文、排序；空＝通過）。``region_ids`` 是區域表的區域（世界事件的建議等級
-    加成可以指向還沒有地點圖的區域，例如灰燼荒原）。"""
+    加成可以指向還沒有地點圖的區域，例如灰燼荒原）。``battle_maps`` 是戰鬥地圖 ID → 地圖類型
+    （循環賽的地圖檢查，5F-4；``None``＝不檢查）。"""
     problems: list[str] = []
+    if season.league is not None and battle_maps is not None:
+        problems += _league_problems(season.league, battle_maps)
     rules = season.daily_goals
     for goal_def in () if rules is None else rules.goals:
         problems += _goal_problems(
@@ -359,3 +393,14 @@ def season_problems(
                 if b.region not in region_ids
             ]
     return sorted(problems)
+
+
+def _league_problems(league: LeagueRules, battle_maps: Mapping[str, str]) -> list[str]:
+    problems: list[str] = []
+    for map_id in league.maps:
+        archetype = battle_maps.get(map_id)
+        if archetype is None:
+            problems.append(f"循環賽的地圖 {map_id} 不存在")
+        elif archetype in LEAGUE_EXCLUDED_ARCHETYPES:
+            problems.append(f"循環賽的地圖 {map_id} 是 {archetype} 類地圖，不能用")
+    return problems

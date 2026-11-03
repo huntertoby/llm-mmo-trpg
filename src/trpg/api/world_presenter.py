@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Final
 
+from trpg.api.league_view import league_event_line
 from trpg.api.season_view import season_event_line
 from trpg.api.world_crafting_view import (
     crafting_event_line,
@@ -455,6 +456,7 @@ _LINES = (
     economy_event_line,
     crafting_event_line,
     season_event_line,  # 5F-1
+    league_event_line,  # 5F-4
 )
 
 

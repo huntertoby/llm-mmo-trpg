@@ -45,8 +45,8 @@ def test_summit_array_stone_shows_the_kin_name_in_chinese(library: ContentLibrar
     text = "".join(unit_trait_lines(library, "sect_summit_array_stone"))
     assert "12 格內的友方「霧鎖真人」（不含自己）" in text
     assert "mist_lock_core" not in text
-    plain = "".join(unit_trait_lines(library, "sect_array_stone"))  # 沒寫中文名的照舊
-    assert "帶「sect」標籤的友方" in plain
+    plain = "".join(unit_trait_lines(library, "sect_array_stone"))  # sect 也有中文名「同門」
+    assert "的友方「同門」" in plain and "sect" not in plain
 
 
 def test_kin_name_needs_a_kin_tag() -> None:

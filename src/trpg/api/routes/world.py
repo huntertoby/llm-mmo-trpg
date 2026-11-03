@@ -19,6 +19,11 @@
 
 - 5F-1（``docs/phases/Phase5計畫.md`` 35.7）：``GET …/board``（城鎮公告板）。
 - 5F-1b：``GET …/absence``（「你不在的時候」摘要；看過送 ``news_seen`` 動作）。
+- 5F-4（``docs/phases/Phase5計畫.md`` 36.7）：``GET …/league``（影子循環賽：報名狀態、排行榜、
+  場次）、``POST …/league/matches/{match_id}/replay``（某一場從開場播到結束＋重播驗證）、
+  ``GET /api/world/league/matches/{match_id}/log``（原始戰鬥紀錄）、``POST /api/world/league/run``
+  （管理者開跑；背景分批執行）。報名、取消走 ``…/actions``（``league_enter``、
+  ``league_withdraw``）。
 
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
   依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
@@ -38,10 +43,13 @@ from trpg.api.absence_view import AbsenceView, absence_summary
 from trpg.api.auth import (
     accounts_of,
     require_admin,
+    require_league_admin,
     require_note_admin,
     require_world_access,
     viewer,
 )
+from trpg.api.league_schemas import LeagueReplayResponse, LeagueRunView, LeagueView
+from trpg.api.league_view import league_view, match_title
 from trpg.api.notes_schemas import LocationBoard, NoteRequest, location_board
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import allocation_preview, flash_preview
@@ -71,6 +79,8 @@ from trpg.api.world_story_schemas import (
     WorldLlmRequest,
     WorldLlmView,
 )
+from trpg.engine.runner import log_replay_problem
+from trpg.server.league import LeagueError
 from trpg.world.actions import SwearOathAction
 from trpg.world.errors import WorldActionError
 
@@ -246,6 +256,66 @@ def get_absence(character_id: str, request: Request) -> AbsenceView:
         char = store.character(character_id)
         now = store.clock()
         return absence_summary(store.library, store.season_world(now), char, now)
+
+
+@router.get("/characters/{character_id}/league")
+def get_league(character_id: str, request: Request) -> LeagueView:
+    """影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次與進度。"""
+    store = world_of(request)
+    with store.lock:
+        char = store.character(character_id)
+        now = store.clock()
+        world = store.season_world(now)
+        record = store.league.record(world.season_id)
+        return league_view(
+            store.library,
+            world,
+            char,
+            record,
+            now,
+            account=store.account_of(character_id),
+            running=store.league_runner.running,
+        )
+
+
+@router.post("/characters/{character_id}/league/matches/{match_id}/replay")
+def post_league_replay(character_id: str, match_id: str, request: Request) -> LeagueReplayResponse:
+    """某一場循環賽的重播（5F-4）：依紀錄的步驟在戰鬥工作階段重播（不推進、不呼叫 AI），回傳從開場
+    到結束的每一步（既有戰鬥畫面播放），並比對最終狀態。紀錄不能重播時 409。"""
+    store = world_of(request)
+    with store.lock:
+        store.character(character_id)
+        record = store.league.record(store.world().season_id)
+        match = None if record is None else record.match(match_id)
+        log = store.league.log(match_id)
+    assert record is not None and match is not None  # log() 已檢查
+    problem = log_replay_problem(log)
+    if problem is not None:
+        raise LeagueError(f"這一場不能重播：{problem}")
+    battle, _ = store.battles.open(log.setup, log.seed, restore=(list(log.actions), []))
+    with battle.lock:
+        verified = battle.state == log.final_state
+        out = battle_response(battle, battle.history())
+    return LeagueReplayResponse(
+        title_zh=match_title(store.library, record, match), battle=out, verified=verified
+    )
+
+
+@router.get("/league/matches/{match_id}/log")
+def get_league_log(match_id: str, request: Request) -> Response:
+    """某一場循環賽的原始戰鬥紀錄（``trpg battle replay`` 同格式，可以自己重播驗證）。"""
+    store = world_of(request)
+    return Response(content=store.league.log_text(match_id), media_type="application/json")
+
+
+@router.post("/league/run", dependencies=[Depends(require_league_admin)])
+def post_league_run(request: Request) -> LeagueRunView:
+    """開始（或接續）影子循環賽（管理者，代決 5F4-1）：截止後凍結報名、排好賽程，背景分批跑。"""
+    store = world_of(request)
+    with store.lock:  # 只在凍結報名時拿世界的鎖
+        record = store.league.start(store.world(), store.clock())
+    started = store.league_runner.start()
+    return LeagueRunView(started=started, done=record.done, total=len(record.matches))
 
 
 @router.get("/llm")

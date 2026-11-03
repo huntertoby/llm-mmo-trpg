@@ -2372,6 +2372,164 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/league": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get League",
+        "description": "影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次與進度。",
+        "operationId": "get_league_api_world_characters__character_id__league_get",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/characters/{character_id}/league/matches/{match_id}/replay": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post League Replay",
+        "description": "某一場循環賽的重播（5F-4）：依紀錄的步驟在戰鬥工作階段重播（不推進、不呼叫 AI），回傳從開場\n到結束的每一步（既有戰鬥畫面播放），並比對最終狀態。紀錄不能重播時 409。",
+        "operationId": "post_league_replay_api_world_characters__character_id__league_matches__match_id__replay_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueReplayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/league/matches/{match_id}/log": {
+      "get": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Get League Log",
+        "description": "某一場循環賽的原始戰鬥紀錄（``trpg battle replay`` 同格式，可以自己重播驗證）。",
+        "operationId": "get_league_log_api_world_league_matches__match_id__log_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/world/league/run": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post League Run",
+        "description": "開始（或接續）影子循環賽（管理者，代決 5F4-1）：截止後凍結報名、排好賽程，背景分批跑。",
+        "operationId": "post_league_run_api_world_league_run_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueRunView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/llm": {
       "get": {
         "tags": [
@@ -10864,6 +11022,404 @@
         "title": "KeywordRef",
         "description": "技能卡上的一個關鍵字（Phase 3-24b1）：代碼、顯示名稱與一句話說明（給部件說明框）。"
       },
+      "LeagueEnterAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "league_enter",
+            "title": "Kind",
+            "default": "league_enter"
+          },
+          "ai": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LeagueEnterAction",
+        "description": "在城鎮用目前的 build 報名影子循環賽（9.7；每個帳號 1 個角色，#100）；同一個角色再送＝更新。\n``ai`` 是 AI 打法（``ai_choices``；``None``＝自己影子的預設打法）。"
+      },
+      "LeagueEntryView": {
+        "properties": {
+          "character_id": {
+            "type": "string",
+            "title": "Character Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ai": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai"
+          },
+          "ai_zh": {
+            "type": "string",
+            "title": "Ai Zh"
+          },
+          "this_character": {
+            "type": "boolean",
+            "title": "This Character"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "character_id",
+          "name",
+          "ai",
+          "ai_zh",
+          "this_character"
+        ],
+        "title": "LeagueEntryView",
+        "description": "看的人的帳號報名的角色。"
+      },
+      "LeagueMatchView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "ally_name": {
+            "type": "string",
+            "title": "Ally Name"
+          },
+          "enemy_name": {
+            "type": "string",
+            "title": "Enemy Name"
+          },
+          "map_zh": {
+            "type": "string",
+            "title": "Map Zh"
+          },
+          "seed_index": {
+            "type": "integer",
+            "title": "Seed Index"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "done",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "result_zh": {
+            "type": "string",
+            "title": "Result Zh"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "replayable": {
+            "type": "boolean",
+            "title": "Replayable"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "ally_name",
+          "enemy_name",
+          "map_zh",
+          "seed_index",
+          "status",
+          "result_zh",
+          "mine",
+          "replayable"
+        ],
+        "title": "LeagueMatchView"
+      },
+      "LeagueReplayResponse": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "battle": {
+            "$ref": "#/components/schemas/BattleResponse"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "battle",
+          "verified"
+        ],
+        "title": "LeagueReplayResponse",
+        "description": "``POST …/league/matches/{match_id}/replay``：從開場播到結束的戰鬥（既有戰鬥畫面）。"
+      },
+      "LeagueRunView": {
+        "properties": {
+          "started": {
+            "type": "boolean",
+            "title": "Started"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "started",
+          "done",
+          "total"
+        ],
+        "title": "LeagueRunView",
+        "description": "``POST /api/world/league/run``（管理者）。"
+      },
+      "LeagueStandingView": {
+        "properties": {
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "role_zh": {
+            "type": "string",
+            "title": "Role Zh"
+          },
+          "place_zh": {
+            "type": "string",
+            "title": "Place Zh"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "draws": {
+            "type": "integer",
+            "title": "Draws"
+          },
+          "played": {
+            "type": "integer",
+            "title": "Played"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rank",
+          "name",
+          "level",
+          "role_zh",
+          "place_zh",
+          "wins",
+          "losses",
+          "draws",
+          "played",
+          "mine"
+        ],
+        "title": "LeagueStandingView",
+        "description": "排行榜的一列（代決 5F4-7、5F4-8）。"
+      },
+      "LeagueStatus": {
+        "type": "string",
+        "enum": [
+          "none",
+          "signup",
+          "closed",
+          "running",
+          "done"
+        ]
+      },
+      "LeagueView": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/LeagueStatus"
+          },
+          "status_zh": {
+            "type": "string",
+            "title": "Status Zh"
+          },
+          "season_day": {
+            "type": "integer",
+            "title": "Season Day"
+          },
+          "signup_close_day": {
+            "type": "integer",
+            "title": "Signup Close Day"
+          },
+          "maps_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Maps Zh"
+          },
+          "per_pair": {
+            "type": "integer",
+            "title": "Per Pair"
+          },
+          "rules_zh": {
+            "type": "string",
+            "title": "Rules Zh"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeagueEntryView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_enter": {
+            "type": "boolean",
+            "title": "Can Enter"
+          },
+          "enter_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enter Problem Zh"
+          },
+          "can_withdraw": {
+            "type": "boolean",
+            "title": "Can Withdraw"
+          },
+          "ai_choices": {
+            "items": {
+              "$ref": "#/components/schemas/AiChoiceView"
+            },
+            "type": "array",
+            "title": "Ai Choices"
+          },
+          "entrants": {
+            "type": "integer",
+            "title": "Entrants"
+          },
+          "standings": {
+            "items": {
+              "$ref": "#/components/schemas/LeagueStandingView"
+            },
+            "type": "array",
+            "title": "Standings"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/LeagueMatchView"
+            },
+            "type": "array",
+            "title": "Matches"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "champion_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Champion Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "status_zh",
+          "season_day",
+          "signup_close_day",
+          "maps_zh",
+          "per_pair",
+          "rules_zh",
+          "entry",
+          "can_enter",
+          "enter_problem_zh",
+          "can_withdraw",
+          "ai_choices",
+          "entrants",
+          "standings",
+          "matches",
+          "done",
+          "total",
+          "champion_zh"
+        ],
+        "title": "LeagueView",
+        "description": "``GET /api/world/characters/{id}/league``。"
+      },
+      "LeagueWithdrawAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "league_withdraw",
+            "title": "Kind",
+            "default": "league_withdraw"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LeagueWithdrawAction",
+        "description": "取消循環賽報名（截止前）。"
+      },
       "LeaveChoice": {
         "properties": {
           "kind": {
@@ -19296,6 +19852,12 @@
           },
           {
             "$ref": "#/components/schemas/SalvageAction"
+          },
+          {
+            "$ref": "#/components/schemas/LeagueEnterAction"
+          },
+          {
+            "$ref": "#/components/schemas/LeagueWithdrawAction"
           }
         ],
         "discriminator": {
@@ -19315,6 +19877,8 @@
             "hire": "#/components/schemas/HireAction",
             "imbue": "#/components/schemas/ImbueAction",
             "inherit": "#/components/schemas/InheritAction",
+            "league_enter": "#/components/schemas/LeagueEnterAction",
+            "league_withdraw": "#/components/schemas/LeagueWithdrawAction",
             "loadout": "#/components/schemas/LoadoutAction",
             "loot_choose": "#/components/schemas/LootChooseAction",
             "news_seen": "#/components/schemas/NewsSeenAction",

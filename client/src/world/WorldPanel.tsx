@@ -109,6 +109,7 @@ function HerePanel({
   const shopping = pane === "shop";
   const smithing = pane === "smithy";
   const reading = pane === "board";
+  const league = pane === "league";
   const hiring = useHireToggle(view.party);
   const free = view.encounter === null && view.battle_id === null;
   return (
@@ -162,6 +163,13 @@ function HerePanel({
           <Hint text="今日目標、懸賞板（先搶先贏）、世界事件的全服進度">
             <button type="button" aria-expanded={reading} disabled={busy} onClick={() => onPane("board")} data-testid="world-board-toggle">
               {reading ? "回到地點圖" : "公告板"}
+            </button>
+          </Hint>
+        )}
+        {here.can_rest && onPane !== undefined && (
+          <Hint text="影子循環賽：報名（每個帳號 1 個角色、第 13 天截止）、勝場排行榜、看每一場的重播">
+            <button type="button" aria-expanded={league} disabled={busy} onClick={() => onPane("league")} data-testid="world-league-toggle">
+              {league ? "回到地點圖" : "循環賽"}
             </button>
           </Hint>
         )}

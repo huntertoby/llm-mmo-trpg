@@ -972,6 +972,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/league": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get League
+         * @description 影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次與進度。
+         */
+        get: operations["get_league_api_world_characters__character_id__league_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/characters/{character_id}/league/matches/{match_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post League Replay
+         * @description 某一場循環賽的重播（5F-4）：依紀錄的步驟在戰鬥工作階段重播（不推進、不呼叫 AI），回傳從開場
+         *     到結束的每一步（既有戰鬥畫面播放），並比對最終狀態。紀錄不能重播時 409。
+         */
+        post: operations["post_league_replay_api_world_characters__character_id__league_matches__match_id__replay_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/league/matches/{match_id}/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get League Log
+         * @description 某一場循環賽的原始戰鬥紀錄（``trpg battle replay`` 同格式，可以自己重播驗證）。
+         */
+        get: operations["get_league_log_api_world_league_matches__match_id__log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/world/league/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post League Run
+         * @description 開始（或接續）影子循環賽（管理者，代決 5F4-1）：截止後凍結報名、排好賽程，背景分批跑。
+         */
+        post: operations["post_league_run_api_world_league_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/llm": {
         parameters: {
             query?: never;
@@ -4528,6 +4609,162 @@ export interface components {
             reason_zh?: string | null;
         };
         /**
+         * LeagueEnterAction
+         * @description 在城鎮用目前的 build 報名影子循環賽（9.7；每個帳號 1 個角色，#100）；同一個角色再送＝更新。
+         *     ``ai`` 是 AI 打法（``ai_choices``；``None``＝自己影子的預設打法）。
+         */
+        LeagueEnterAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "league_enter";
+            /** Ai */
+            ai?: string | null;
+        };
+        /**
+         * LeagueEntryView
+         * @description 看的人的帳號報名的角色。
+         */
+        LeagueEntryView: {
+            /** Character Id */
+            character_id: string;
+            /** Name */
+            name: string;
+            /** Ai */
+            ai: string | null;
+            /** Ai Zh */
+            ai_zh: string;
+            /** This Character */
+            this_character: boolean;
+        };
+        /** LeagueMatchView */
+        LeagueMatchView: {
+            /** Id */
+            id: string;
+            /** Ally Name */
+            ally_name: string;
+            /** Enemy Name */
+            enemy_name: string;
+            /** Map Zh */
+            map_zh: string;
+            /** Seed Index */
+            seed_index: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "done" | "error";
+            /** Result Zh */
+            result_zh: string;
+            /** Mine */
+            mine: boolean;
+            /** Replayable */
+            replayable: boolean;
+        };
+        /**
+         * LeagueReplayResponse
+         * @description ``POST …/league/matches/{match_id}/replay``：從開場播到結束的戰鬥（既有戰鬥畫面）。
+         */
+        LeagueReplayResponse: {
+            /** Title Zh */
+            title_zh: string;
+            battle: components["schemas"]["BattleResponse"];
+            /** Verified */
+            verified: boolean;
+        };
+        /**
+         * LeagueRunView
+         * @description ``POST /api/world/league/run``（管理者）。
+         */
+        LeagueRunView: {
+            /** Started */
+            started: boolean;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * LeagueStandingView
+         * @description 排行榜的一列（代決 5F4-7、5F4-8）。
+         */
+        LeagueStandingView: {
+            /** Rank */
+            rank: number | null;
+            /** Name */
+            name: string;
+            /** Level */
+            level: number;
+            /** Role Zh */
+            role_zh: string;
+            /** Place Zh */
+            place_zh: string;
+            /** Wins */
+            wins: number;
+            /** Losses */
+            losses: number;
+            /** Draws */
+            draws: number;
+            /** Played */
+            played: number;
+            /** Mine */
+            mine: boolean;
+        };
+        /** @enum {string} */
+        LeagueStatus: "none" | "signup" | "closed" | "running" | "done";
+        /**
+         * LeagueView
+         * @description ``GET /api/world/characters/{id}/league``。
+         */
+        LeagueView: {
+            status: components["schemas"]["LeagueStatus"];
+            /** Status Zh */
+            status_zh: string;
+            /** Season Day */
+            season_day: number;
+            /** Signup Close Day */
+            signup_close_day: number;
+            /** Maps Zh */
+            maps_zh: string[];
+            /** Per Pair */
+            per_pair: number;
+            /** Rules Zh */
+            rules_zh: string;
+            entry: components["schemas"]["LeagueEntryView"] | null;
+            /** Can Enter */
+            can_enter: boolean;
+            /** Enter Problem Zh */
+            enter_problem_zh: string | null;
+            /** Can Withdraw */
+            can_withdraw: boolean;
+            /** Ai Choices */
+            ai_choices: components["schemas"]["AiChoiceView"][];
+            /** Entrants */
+            entrants: number;
+            /** Standings */
+            standings: components["schemas"]["LeagueStandingView"][];
+            /** Matches */
+            matches: components["schemas"]["LeagueMatchView"][];
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /** Champion Zh */
+            champion_zh: string | null;
+        };
+        /**
+         * LeagueWithdrawAction
+         * @description 取消循環賽報名（截止前）。
+         */
+        LeagueWithdrawAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "league_withdraw";
+        };
+        /**
          * LeaveChoice
          * @description 離開營火（有候選沒選時視為放棄）。
          */
@@ -7971,7 +8208,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -9783,6 +10020,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_league_api_world_characters__character_id__league_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeagueView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_league_replay_api_world_characters__character_id__league_matches__match_id__replay_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeagueReplayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_league_log_api_world_league_matches__match_id__log_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_league_run_api_world_league_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeagueRunView"];
                 };
             };
         };

@@ -97,7 +97,7 @@ OLD_HP = {
     "sect_steward": 62,  # 5A-3 新增（雲嶺）
     "sect_mist_swordsman": 36,  # 5F-1b 新增（雲嶺懸賞「霧中劍客」本體）
     "sect_mist_lock_master": 132,  # 5F-2 新增（雲嶺 Boss）；5F-2b HP 90 → 120
-    "sect_summit_array_stone": 58,  # 5F-2 新增（雲頂觀陣眼）；5F-2b HP 30 → 40
+    "sect_summit_array_stone": 48,  # 5F-2 新增（雲頂觀陣眼）；5F-2b HP 30 → 40 → 30（玩法 PM 代決）
     "mist_wolf": 22,  # 5A-3 新增（雲嶺）
     "mountain_leopard": 26,  # 5A-3 新增（雲嶺）
     "stoneback_bear": 62,  # 5A-3 新增（雲嶺）

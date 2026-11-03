@@ -30,6 +30,8 @@ import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
+import { LeaguePanel } from "../world/LeaguePanel";
+import { replayNotes } from "../world/league";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
@@ -57,6 +59,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [charId, setCharId] = useState<string | null>(() => readWorldChar());
   const [view, setView] = useState<WorldView | null>(null);
   const [battle, setBattle] = useState<BattleResponse | null>(null);
+  /** 循環賽的重播（5F-4）：開場說明（標題、重播驗證）；``null``＝一般戰鬥。 */
+  const [replay, setReplay] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasten, setHasten] = useState(false);
@@ -249,6 +253,15 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       if (charId === null) return;
       const res = await api.worldBattle(charId);
       show(res.world);
+      setReplay(null);
+      setBattle(res.battle);
+    });
+
+  const watchReplay = (matchId: string) =>
+    void run(async () => {
+      if (charId === null) return;
+      const res = await api.worldLeagueReplay(charId, matchId);
+      setReplay(replayNotes(res));
       setBattle(res.battle);
     });
 
@@ -257,6 +270,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     try {
       if (charId !== null) show(await api.world(charId));
       setBattle(null);
+      setReplay(null);
     } catch (e) {
       setError(errorText(e));
     }
@@ -268,8 +282,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         key={battle.battle_id}
         initial={battle}
         onExit={() => void backToMap()}
-        exitLabel="回到地點圖"
-        openingNotes={view?.encounter?.opening_zh}
+        exitLabel={replay !== null ? "回到循環賽" : "回到地點圖"}
+        openingNotes={replay ?? view?.encounter?.opening_zh}
       />
     );
   }
@@ -319,6 +333,16 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           {leftPane(view, want) === "quests" && <QuestLog view={view} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "board" && charId !== null && (
             <BoardPanel characterId={charId} view={view} onClose={() => setWant("map")} />
+          )}
+          {leftPane(view, want) === "league" && charId !== null && (
+            <LeaguePanel
+              characterId={charId}
+              view={view}
+              busy={busy}
+              onAct={act}
+              onReplay={watchReplay}
+              onClose={() => setWant("map")}
+            />
           )}
           {leftPane(view, want) === "bag" && <WorldBagScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}
           {leftPane(view, want) === "shop" && <WorldShopScreen view={view} busy={busy} onAct={act} onClose={() => setWant("map")} />}

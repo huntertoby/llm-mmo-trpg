@@ -8,7 +8,7 @@ from typing import get_args
 from trpg.world.actions import WorldAction
 from trpg.world.crafting import CRAFTING_ACTIONS, CRAFTING_HANDLERS
 from trpg.world.economy import ECONOMY_ACTIONS, ECONOMY_HANDLERS
-from trpg.world.step import HANDLERS
+from trpg.world.step import ACCOUNT_HANDLERS, HANDLERS
 
 
 def _action_types() -> set[type]:
@@ -18,7 +18,8 @@ def _action_types() -> set[type]:
 
 
 def test_every_world_action_has_one_handler() -> None:
-    assert set(HANDLERS) == _action_types()
+    assert set(HANDLERS) | set(ACCOUNT_HANDLERS) == _action_types()
+    assert not set(HANDLERS) & set(ACCOUNT_HANDLERS)  # 算帳號的動作（5F-4）另一張表
 
 
 def test_sub_tables_cover_their_actions() -> None:

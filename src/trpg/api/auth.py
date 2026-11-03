@@ -28,6 +28,7 @@ __all__ = [
     "login_limiter_of",
     "optional_account",
     "require_admin",
+    "require_league_admin",
     "require_login",
     "require_note_admin",
     "require_world_access",
@@ -125,6 +126,11 @@ def require_admin(request: Request) -> None:
 def require_note_admin(request: Request) -> None:
     """刪地點留言（5E-3，#105「使用者手動刪」）：規則同 :func:`require_admin`。"""
     _check_admin(request, "只有管理者能刪留言")
+
+
+def require_league_admin(request: Request) -> None:
+    """開始影子循環賽（5F-4，代決 5F4-1 只由管理者觸發）：規則同 :func:`require_admin`。"""
+    _check_admin(request, "只有管理者能開始循環賽")
 
 
 def account_view(store: AccountStore, record: AccountRecord) -> AccountView:

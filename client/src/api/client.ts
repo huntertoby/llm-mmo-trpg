@@ -48,6 +48,8 @@ import type {
   WorldBattleResponse,
   WorldCharacterSummary,
   WorldLlmView,
+  LeagueReplayResponse,
+  LeagueView,
   LocationBoard,
   SeasonBoardView,
   AbsenceView,
@@ -231,6 +233,15 @@ export const api = {
   /** 「你不在的時候」摘要（5F-1b）：只讀；看過送 `news_seen` 動作（`until` ＝ `as_of`）。 */
   worldAbsence: (characterId: string) =>
     request<AbsenceView>("GET", `/world/characters/${encodeURIComponent(characterId)}/absence`),
+  /** 影子循環賽（5F-4）：報名狀態、排行榜、場次。 */
+  worldLeague: (characterId: string) =>
+    request<LeagueView>("GET", `/world/characters/${encodeURIComponent(characterId)}/league`),
+  /** 某一場循環賽的重播（從開場播到結束；既有戰鬥畫面）。 */
+  worldLeagueReplay: (characterId: string, matchId: string) =>
+    request<LeagueReplayResponse>(
+      "POST",
+      `/world/characters/${encodeURIComponent(characterId)}/league/matches/${encodeURIComponent(matchId)}/replay`,
+    ),
   /** 管理者刪任何一則留言（5E-3；回 204）。 */
   adminDeleteWorldNote: (noteId: string) => request<null>("DELETE", `/world/notes/${encodeURIComponent(noteId)}`),
   decide: (
