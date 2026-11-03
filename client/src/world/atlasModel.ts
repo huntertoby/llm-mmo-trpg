@@ -11,14 +11,14 @@ export interface IslandSpot {
   size: number;
 }
 
-export const CAPITAL_SPOT: IslandSpot = { x: 50, y: 50, size: 18 };
+export const CAPITAL_SPOT: IslandSpot = { x: 50, y: 47, size: 16 };
 
 const SPOTS: Readonly<Record<string, IslandSpot>> = {
-  crystal_crown: { x: 50, y: 15, size: 22 },
-  cloud_ridge: { x: 15, y: 50, size: 24 },
-  arcane_hub: { x: 85, y: 42, size: 22 },
-  ashen_waste: { x: 45, y: 85, size: 24 },
-  frost_tide: { x: 80, y: 80, size: 22 },
+  crystal_crown: { x: 50, y: 17, size: 18 },
+  cloud_ridge: { x: 16, y: 48, size: 20 },
+  arcane_hub: { x: 84, y: 40, size: 18 },
+  ashen_waste: { x: 42, y: 76, size: 20 },
+  frost_tide: { x: 78, y: 74, size: 18 },
 };
 
 /** 沒列在上面的區（內容新增的）：沿外圈依序排。 */

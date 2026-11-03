@@ -126,8 +126,10 @@ def region_state(
 ) -> RegionState:
     name = region_name(library, region)
     world_map = library.world_maps.get(region)
-    if region == CAPITAL_REGION:
-        return RegionState(region, name, "open", town=CAPITAL_LOCATION, town_name_zh=name)
+    if region == CAPITAL_REGION:  # 城鎮名＝主城實地地圖的名字（暫名「樞島」）
+        found = library.field_maps.get(CAPITAL_LOCATION)
+        town_name = name if found is None else found.name_zh
+        return RegionState(region, name, "open", town=CAPITAL_LOCATION, town_name_zh=town_name)
     if world_map is None:
         return RegionState(region, name, "later", LATER_ZH)
     town = world_map.location_by_id()[world_map.town]

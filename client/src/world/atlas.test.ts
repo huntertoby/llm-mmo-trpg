@@ -47,7 +47,7 @@ describe("大世界圖的浮島", () => {
 
   it("主城在正中央；所在區的區域圖用 view.map，別區用 atlas.maps", () => {
     const a = atlas();
-    expect(capitalIsland(a)).toMatchObject({ region: "capital", current: true, spot: { x: 50, y: 50 } });
+    expect(capitalIsland(a)).toMatchObject({ region: "capital", current: true, spot: { x: 50, y: 47 } });
     const here = map("cloud_ridge", "雲嶺（所在）");
     expect(atlasMapOf(a, here, "cloud_ridge")).toBe(here);
     expect(atlasMapOf(a, map("capital"), "cloud_ridge")?.name_zh).toBe("雲嶺");
