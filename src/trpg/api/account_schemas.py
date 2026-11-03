@@ -24,6 +24,8 @@ class AccountView(BaseModel):
     max_characters: int
     can_create: bool
     """還能不能建角色（沒到上限）。"""
+    admin: bool = False
+    """管理者（5F-5：前端顯示季末重置等管理介面；權限仍由伺服器檢查）。"""
 
 
 class AuthStatus(BaseModel):
