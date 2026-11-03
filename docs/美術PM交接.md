@@ -128,6 +128,7 @@
 | `bossArt.js`、`bosses.html` | 灰燼之心、碎晶之主的專屬造型與各階段（`bosses.png`、`頭目造型.md`；11-04 樣張，待使用者看） |
 | `cyborg.html` | 晶能義體人辨識記號三方案（`cyborg.png`、`晶能義體人記號.md`；11-04 樣張，推薦 C） |
 | `cloudTiles.js`、`cloud-tiles.html` | 雲嶺實地地圖地磚與地物圖庫＋示範圖「青霧觀山門」（`cloud-tiles.png`、`雲嶺實地圖庫.md`；11-04 樣張，待使用者看） |
+| `ashenTiles.js`、`ashen-tiles.html` | 灰燼荒原實地地圖圖庫＋示範圖「赤沙村」（`ashen-tiles.png`、`灰燼實地圖庫.md`；11-04 樣張） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
@@ -199,3 +200,6 @@
 | 33 | 實地地圖的河 | 淺水＝水表面，深水＝`chasm` 換成深水外觀 | 新地形「深水」 |
 | 34 | 多格建築 | 新欄位 `buildings`，載入時展開成牆、柱、可走格 | 每格各自寫地形 |
 | 35 | 新物件 ID | `bamboo_grove`、`boulder`、`fence`、`stone_lantern`、地面 `path_stones`（功能照現有物件複製，需玩法 PM 同意） | 全部用現有 ID 換皮 |
+| 36 | 荒原新物件 | `dead_grove`、`tent`、`watchtower`、`cart`、`cooling_well`（功能照現有物件複製，需玩法 PM 同意；`灰燼實地圖庫.md`） | 全部用現有 ID 換皮 |
+| 37 | 荒原新地面外觀 | `look floor=red_sand`、`floor=obsidian`、`wall=ruin` | 不加，靠物件區分 |
+| 38 | 飄灰在就地開打時 | 保留但濃度減半 | 戰鬥時拿掉 |
