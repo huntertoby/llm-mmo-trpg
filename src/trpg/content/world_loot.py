@@ -115,6 +115,8 @@ class LootRules(ContentModel):
     sell_rarity_coef: dict[Rarity, int] = Field(default_factory=dict)
     """20.1 裝備回收＝物品等級 × 係數；沒列的稀有度（傳說）不收。"""
     mercenary_gear: MercenaryGearRules = Field(default_factory=MercenaryGearRules)
+    families: dict[str, str] = Field(default_factory=dict)
+    """各區共用的敵人 → 家族材料（5D-2b：盜賊各區都掉焦鐵）；區域的 ``families`` 優先。"""
     regions: dict[str, RegionLoot] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -138,6 +140,10 @@ class LootRules(ContentModel):
 
     def region(self, region: str) -> RegionLoot:
         return self.regions.get(region, RegionLoot())
+
+    def family_material(self, region: str, unit: str) -> str | None:
+        """敵人的家族材料：區域的 ``families`` 優先，其次各區共用的；都沒有時為 ``None``。"""
+        return self.region(region).families.get(unit) or self.families.get(unit)
 
     def sell_price(self, rarity: str | None, item_level: int | None) -> int | None:
         """裝備回收價；不收時為 ``None``（代決 5D2-8）。"""
@@ -174,6 +180,10 @@ def loot_problems(
 
     for row in rules.generic_by_level:
         material(row.item, "generic_by_level")
+    for unit, item in sorted(rules.families.items()):
+        if units is not None and unit not in units:
+            problems.append(f"families：未知的敵人 {unit}")
+        material(item, f"families.{unit}")
     for region, loot in sorted(rules.regions.items()):
         where = f"區域 {region}"
         if region not in regions:

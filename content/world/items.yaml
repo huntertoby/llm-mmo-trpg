@@ -388,6 +388,12 @@ items:
     kind: material
     description_zh: 熔岩甲蟲體內的熔核；打造時偏向燃燒。
     price: 10
+  # 5D-2b（玩法 PM 2026-11-03 代決；19.2.4、20.2）：盜賊在各區都掉焦鐵（loot.yaml 的 families）
+  - id: item_scorched_iron
+    name_zh: 焦鐵
+    kind: material
+    description_zh: 盜賊身上燒黑的舊鐵護甲片；打造時偏向護甲、格擋。
+    price: 10
   - id: item_frost_ember
     name_zh: 寒燼
     kind: material

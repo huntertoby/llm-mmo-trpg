@@ -34,6 +34,7 @@ materials:
   item_living_bone: {leanings: [affix_max_hp, affix_attr_con]}                                              # 活血骨：受傷回血
   item_summit_mist_crystal: {leanings: [affix_attr_wil, affix_attr_int], resonance: concealed}             # 雲頂霧晶
   item_lava_core: {leanings: [affix_attack_fire, affix_weapon_fire, affix_trig_thorns_burn], resonance: ignite}  # 熔岩核：燃燒
+  item_scorched_iron: {leanings: [affix_cond_still_defense, affix_react_ranged_block, affix_max_hp]}  # 焦鐵：護甲、格擋（5D-2b）
   item_frost_ember: {leanings: [affix_attack_ice, affix_weapon_ice], resonance: frozen}                    # 寒燼：冰
   item_molten_heart: {leanings: [affix_resist_fire, affix_attr_con], resonance: ignite}                    # 熔心晶
 

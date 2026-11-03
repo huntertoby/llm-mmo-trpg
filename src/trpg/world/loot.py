@@ -2,7 +2,8 @@
 
 - **材料**：陣容的敵方成員在戰鬥結束時倒下就掉；第三方要「被我方擊倒」（倒下前最後一次受到傷害的
   來源是我方單位，含我方召喚物；玩法 PM 2026-11-03、代決 5D2-3）。精英必掉 1 份（詞綴的稀有材料 >
-  家族材料 > 通用料），一般敵人 ``material_permille`` 掉 1 份（家族材料，沒有家族的掉通用料）。
+  家族材料 > 通用料），一般敵人 ``material_permille`` 掉 1 份（家族材料〔區域的優先，其次各區共用的，
+  例：盜賊各區掉焦鐵，5D-2b〕，沒有家族的掉通用料）。
 - **裝備**：一場最多 1 件（代決 5D2-4）；陣容有精英必掉、``elite_epic_permille`` 史詩，否則
   ``battle_permille``；物品等級＝地點建議等級（敵人等級），詞條偏向該區關鍵字（20.2）。
 - **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的不撿（代決 5D2-6）。
@@ -114,7 +115,7 @@ def _material_of(
     loot = rules.region(region)
     if elite and member.affix is not None and member.affix in loot.elite_affixes:
         return loot.elite_affixes[member.affix]
-    return loot.families.get(member.unit) or rules.generic_material(level)
+    return rules.family_material(region, member.unit) or rules.generic_material(level)
 
 
 def _weighted(rng: Rng, weights: dict[Rarity, int]) -> Rarity:

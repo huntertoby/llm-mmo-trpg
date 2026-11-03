@@ -28,11 +28,24 @@ mercenary_gear:
   rarity: rare
   slots: [head, body, hands, feet, neck, ring_1, ring_2]
 
+# 各區共用的家族材料（區域的 families 優先）。5D-2b（玩法 PM 2026-11-03 代決；19.2.4、20.2）：
+# 盜賊在各區都掉焦鐵（盜賊系列的單位範本全列）。
+families:
+  bandit: item_scorched_iron
+  bandit_archer: item_scorched_iron
+  bandit_archer_guard: item_scorched_iron
+  bandit_boss: item_scorched_iron
+  bandit_captain: item_scorched_iron
+  bandit_guard: item_scorched_iron
+  bandit_shieldbearer: item_scorched_iron
+  bandit_shieldbearer_guard: item_scorched_iron
+  bandit_warlord: item_scorched_iron
+
 regions:
   cloud_ridge:
     # 20.2：雲嶺的詞條偏向潮濕、帶電、隱蔽（5D-2b 補了潮濕、隱蔽的技能強化詞條；ID 照 skill_keywords.yaml）
     keywords: [wet, charged, concealed]
-    # 18.2.4 的來源；沒列的敵人掉通用料
+    # 18.2.4 的來源；沒列的敵人掉上面各區共用的 families，再沒有就掉通用料
     families:
       sect_mist_walker: item_mist_crystal       # 霧行者 → 霧晶
       mist_wraith: item_mist_crystal            # 霧魅 → 霧晶

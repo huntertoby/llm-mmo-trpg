@@ -142,9 +142,11 @@ def test_normal_material_rate(library: ContentLibrary, make_char: MakeChar) -> N
 
 def test_family_or_generic_material(library: ContentLibrary, make_char: MakeChar) -> None:
     char, prepared, state, events = _won_battle(library, make_char)
-    families = library.world_loot.region("cloud_ridge").families  # type: ignore[union-attr]
-    allowed = {families[m.unit] for m in prepared.lineup.members if m.unit in families}
-    if any(m.unit not in families for m in prepared.lineup.members):
+    rules = library.world_loot
+    assert rules is not None
+    found = {m.unit: rules.family_material("cloud_ridge", m.unit) for m in prepared.lineup.members}
+    allowed = {item for item in found.values() if item is not None}
+    if None in found.values():
         allowed.add("item_coarse_material")  # 1 級地點：沒有家族的掉粗料
     seen: set[str] = set()
     for s in range(30):
