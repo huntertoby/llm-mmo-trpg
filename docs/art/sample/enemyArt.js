@@ -181,7 +181,7 @@ window.EnemyArt = (() => {
         eye(ctx, 15.6, -11.6, P, 0.8);
       }
     } },
-    lizard: { zh: "蜥蜴", fur: "#6a7a3a", top: -19, head: [20, -12], len: 30, sp: [[-6, -13.6], [-1, -14], [4, -13.6]], draw(ctx, P) {
+    lizard: { zh: "蜥蜴", fur: "#6a7a3a", top: -19, core: [2, -7.4], head: [20, -12], len: 30, sp: [[-6, -13.6], [-1, -14], [4, -13.6]], draw(ctx, P) {
       for (const x of [-6, 9]) mass(ctx, `lz-lf${x}`, [[x - 2, -6], [x + 2, -6], [x + 1, 0], [x - 3, 0]], P, { color: P.d });
       mass(ctx, "lz-tail", [[-8, -10], [-20, -9], [-30, -3], [-32, -1], [-22, -4], [-8, -5]], P, { main: true });
       mass(ctx, "lz-body", [[-10, -5], [-10, -11], [-2, -14], [10, -13], [14, -9], [12, -5], [0, -4]], P, { main: true });
@@ -232,7 +232,7 @@ window.EnemyArt = (() => {
       mass(ctx, "go-arm", [[4, -38], [11, -38], [16, -24], [16, -14], [10, -14], [9, -24]], P, { main: true });
       mass(ctx, "go-fist", ellPts(13, -12, 4, 3.6, 12), P);
     } },
-    wisp: { zh: "晶靈", fur: "#9a86ff", top: -34, head: [0, -22], len: 12, hover: true, sp: [[0, -31]], draw(ctx, P) {
+    wisp: { zh: "晶靈", fur: "#9a86ff", top: -34, core: [0, -20], head: [0, -22], len: 12, hover: true, sp: [[0, -31]], draw(ctx, P) {
       ctx.save(); ctx.translate(0, -20);
       for (const [i, [x, y, s]] of [[-11, -5, 2.4], [10, -8, 2], [3, 9, 1.8]].entries()) mass(ctx, `wp-or${i}`, [[x, y - s * 1.6], [x + s, y], [x, y + s * 1.6], [x - s, y]], P, { sharp: true, shade: false, w: 0.5, color: P.l });
       const core = [[0, -11], [7.4, 0], [0, 11], [-7.4, 0]];
@@ -270,7 +270,7 @@ window.EnemyArt = (() => {
     } },
   };
   const MATERIALS = ["fur", "magma", "crystal", "stone", "wood", "mist"];
-  const SIZES = { small: 0.8, medium: 1, large: 1.25, huge: 1.6 };
+  const SIZES = { tiny: 0.62, small: 0.8, medium: 1, large: 1.25, huge: 1.6 };
 
   // ============================== 特徵 traits（外觀提示用的小部件；不認得的跳過） ==============================
   const TRAITS = {
@@ -293,6 +293,17 @@ window.EnemyArt = (() => {
     core: { zh: "胸口熔核", draw(ctx, a, P) {
       const [x, y] = a.core ?? a.head, c = P.accent ?? ELEM.fire[0];
       ink(ctx, "tr-core", ellPts(x, y, 3.2, 3.2, 12), c, { shade: false, w: 0.6 }); dot(ctx, x - 0.6, y - 0.8, 1.2, 1.2, light(c, 0.6));
+    } },
+    crust: { zh: "甲蟲殼堆（熔殼）", draw(ctx, a) {
+      // 灰燼之心第 1 階段：熔岩甲蟲背殼一片片疊成外殼，殼縫透出火光；殼裂開（移除熔殼）後就不畫
+      const [cx, cy] = a.core ?? a.head;
+      const plates = [[-7, 3, -0.5], [6.6, 3.4, 0.5], [-8.6, -5, -1.1], [8, -5.6, 1.1], [-3.4, -10.6, -0.3], [3.8, -10.4, 0.35], [0, 6.6, 0]];
+      for (const [i, [dx, dy, rot]] of plates.entries()) {
+        const x = cx + dx, y = cy + dy, c = Math.cos(rot), sn = Math.sin(rot), q = (u, v) => [x + u * c - v * sn, y + u * sn + v * c];
+        ink(ctx, `tr-cr${i}`, [q(-4.4, 2.6), q(-3.6, -2.4), q(0, -3.6), q(3.6, -2.4), q(4.4, 2.6), q(0, 3.4)], BASALT, { w: 0.7 });
+        stroke(ctx, `tr-crl${i}`, [q(0, -3.2), q(0, 3)], 0.45, "#1c1412");
+      }
+      for (const [i, [x0, y0, x1, y1]] of [[-2, -1, 2, -2], [-4, 6, -1, 9], [3, 5, 5, 8]].entries()) stroke(ctx, `tr-crg${i}`, [[cx + x0, cy + y0], [cx + x1, cy + y1]], 0.9, ELEM.fire[1]);
     } },
     scar: { zh: "疤", draw(ctx, a) { const [x, y] = a.head; stroke(ctx, "tr-scar1", [[x - 3, y - 3], [x + 1, y + 2]], 0.8, "#5a2a22"); stroke(ctx, "tr-scar2", [[x - 1.6, y - 1.2], [x - 3, y]], 0.6, "#5a2a22"); } },
     brood: { zh: "背負卵囊", draw(ctx, a, P) { a.sp.forEach(([x, y], i) => ink(ctx, `tr-egg${i}`, ellPts(x, y - 2, 2.4, 3, 10), P.accent ?? "#ffb23a", { shade: false, w: 0.5 })); } },
