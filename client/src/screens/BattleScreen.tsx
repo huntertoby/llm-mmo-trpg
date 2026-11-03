@@ -1,7 +1,7 @@
 // 戰鬥畫面（6A-4e 起是 HUD 版面 A 的戰鬥版；docs/art/戰鬥D版樣張.md 第 5 節）：戰場用滿整個畫面，HUD 疊在四周——
 // 左上主角卡（HP、法力、耐力三條；下面接選取面板）、上方中央行動順序、右上地名＋回合＋天氣＋勝利條件與工具鈕
 // （環境預告、反應設定、隊友指令、圖例、版面、存檔、離開）、底部技能列與回合操作、左下紀錄浮動提示。
-// 地圖照可用區域（扣掉上方行動順序與底部列）自動填滿；字母標記只在滑過單位與行動順序列上顯示。
+// 地圖照可用區域（扣掉上方行動順序與底部列，左右鋪滿；6A-4g）自動填滿，HUD 塊底下有單位或可點格子時變半透明（`useHudFade`）；字母標記只在滑過單位與行動順序列上顯示。
 // 每次送出動作或決定：鎖住操作 → 收到回應 → 先畫 `initial_view`，再依 `steps` 一步一步播放
 // （標示行動者 → 移動動畫 → 該步的 `view` → 紀錄 → 停頓）→ 最後以 `res.view` 為準。
 //
@@ -43,6 +43,7 @@ import { useBattleData } from "./battle/useBattleData";
 import { useBattleKeys } from "./battle/useBattleKeys";
 import { useBoardViewport } from "./battle/useBoardViewport";
 import { useHighlights } from "./battle/useHighlights";
+import { useHudFade } from "./battle/useHudFade";
 import { useLogRoom } from "./battle/useLogRoom";
 import { errorText, usePlayback } from "./battle/usePlayback";
 import { useSelection } from "./battle/useSelection";
@@ -233,9 +234,11 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const pathShown = (hl.highlights.path?.segments.length ?? 0) > 0 || (hl.highlights.path?.missEnd ?? null) !== null;
   const dockUnit = pinnedUnitOf(shown, pinnedUnit);
   const telegraphOpen = !collapsed;
+  // 6A-4g：地圖鋪滿、HUD 疊在上面；HUD 塊底下有單位或可點的格子時那一塊變半透明（滑上去恢復）
+  const hudFaded = useHudFade(boardRef, board.scrollRef, data.model, hl.highlights);
   return (
     <div className={`battle-screen hud-a${narrow ? " narrow" : ""}`} style={{ ...board.layoutStyle, ...hudInsetStyle(bottomSize?.height ?? null) }}>
-      <div className="battle-board" ref={boardRef}>
+      <div className="battle-board" ref={boardRef} data-hud-faded={hudFaded}>
         <div className={`board-scroll${board.panning ? " panning" : ""}`} ref={board.scrollRef} {...board.panHandlers}>
           <BattleCanvas
             model={data.model}
