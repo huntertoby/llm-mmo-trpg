@@ -40,7 +40,12 @@ from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
 from trpg.server.accounts import AccountStore
-from trpg.server.chronicle import ChronicleHero, SeasonChronicleEntry, SeasonChronicleStore
+from trpg.server.chronicle import (
+    ChronicleHero,
+    SeasonChronicleEntry,
+    SeasonChronicleStore,
+    legacy_doll,
+)
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
 from trpg.server.notes import LocationNoteStore
@@ -282,16 +287,20 @@ class WorldStore:
         """建立角色（07 7.6 創角：起始武器＋2 個關鍵字，和一輪開局同一套函式；配點照預設，代決
         5A5-3）；站在起始區域的小鎮。不合法時拋 :class:`~trpg.roguelite.errors.ChoiceError`。
 
-        ``legacy``（5F-5）：沿用上季角色的名字與外觀（名字、種族、紙娃娃；取代 ``name``、
-        ``race``）。"""
+        ``legacy``（5F-5；5F-5c 玩法 PM 代決）：沿用上季角色的外觀＝名字與紙娃娃（取代 ``name``）。
+        種族不算外觀：``race`` 省略＝帶上季的種族，給了就照新選（免費改）；紙娃娃裡跟著種族的部件
+        （:data:`~trpg.server.chronicle.RACE_DOLL_FIELDS`）在種族改了時改回新角色範本的預設。"""
         if legacy is not None:
-            name, race = legacy.name, legacy.race
+            name = legacy.name
+            race = legacy.race if race is None else race
         start_seed = seed if seed is not None else secrets.randbelow(2**31)
         run = new_keyword_run(self.library, weapon, keywords, start_seed)
         run = with_origin(self.library, with_race(self.library, run, race), origin)
         update: dict[str, object] = {"name_zh": name}
         if legacy is not None and legacy.doll is not None:
-            update["doll"] = legacy.doll
+            update["doll"] = legacy_doll(
+                legacy.doll, legacy_race=legacy.race, race=run.hero.race, base=run.hero.doll
+            )
         hero = run.hero.model_copy(update=update)
         with self._lock:
             self.world()

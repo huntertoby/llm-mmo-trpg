@@ -343,11 +343,12 @@ PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset()
 紀錄。之後新增拿不準的欄位再列在這裡。"""
 
 HERO_LEGACY_FIELDS: Final[tuple[str, ...]] = ("name_zh", "race", "doll")
-"""角色 ``hero``（``UnitTemplate``）裡季末保留、下季建角色可以沿用的欄位：名字與外觀（種族外觀、
-紙娃娃）。等級、技能、裝備、屬性等其他欄位照數值類清掉。"""
+"""角色 ``hero``（``UnitTemplate``）裡季末寫進編年史、下季建角色用得到的欄位：外觀（名字、紙娃娃）
+與上季的種族（5F-5c：種族不算外觀，只當新角色的預設、可以免費改）。等級、技能、裝備、屬性等其他
+欄位照數值類清掉。"""
 
 CARRIED: Final[Mapping[tuple[str, str], str]] = {
-    ("CharacterState", "hero"): "名字與外觀（name_zh、race、doll）→ 編年史的上季角色（下季可沿用）",
+    ("CharacterState", "hero"): "名字、紙娃娃（外觀）與種族（預設）→ 編年史的上季角色",
     ("CharacterState", "elite_kills"): "擊倒過的精英 → 編年史文字",
     ("CharacterState", "finished_skeletons"): "完成的事件 → 編年史文字",
     ("WorldState", "recipes"): "配方的首位發現者（RecipeRecord 的紀念類欄位）→ 編年史",

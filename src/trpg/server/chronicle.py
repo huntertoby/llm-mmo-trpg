@@ -25,6 +25,7 @@ from trpg.world.save import write_atomic
 __all__ = [
     "CHRONICLE_DIR",
     "LEAGUE_CHRONICLE_FORMAT",
+    "RACE_DOLL_FIELDS",
     "SEASON_CHRONICLE_FILE",
     "SEASON_CHRONICLE_FORMAT",
     "ChronicleHero",
@@ -36,6 +37,7 @@ __all__ = [
     "SeasonChronicle",
     "SeasonChronicleEntry",
     "SeasonChronicleStore",
+    "legacy_doll",
 ]
 
 LEAGUE_CHRONICLE_FORMAT: Final = "trpg-chronicle-league/1"
@@ -123,9 +125,10 @@ class ChronicleHero(_Model):
     name: str
     """角色名（玩家文字；顯示時當資料）。"""
     race: str | None = None
-    """種族（種族外觀；下季建角色沿用）。"""
+    """上季的種族。種族不算外觀（5F-5c，玩法 PM 2026-11-03 代決）：下季建角色時當預設，
+    可以免費改。"""
     doll: DollLook | None = None
-    """紙娃娃外觀（下季建角色沿用）。"""
+    """紙娃娃外觀（下季建角色沿用；種族改了時，跟著種族的部件改回預設，:func:`legacy_doll`）。"""
     elites: tuple[str, ...] = ()
     """擊倒過的精英（中文名，依精英種類 ID 排序；來自 ``CharacterState.elite_kills``）。"""
     events: tuple[str, ...] = ()
@@ -199,3 +202,20 @@ class SeasonChronicleStore:
         """所有上季角色（新的季在前）。"""
         seasons = sorted(self.load().seasons, key=lambda s: s.reset_at, reverse=True)
         return tuple((s, h) for s in seasons for h in s.heroes)
+
+
+RACE_DOLL_FIELDS: Final[tuple[str, ...]] = ("skin", "hair", "hair_color", "eyes", "skull")
+"""紙娃娃裡跟著種族的部件（Phase 5F-5c）：膚色、髮型、髮色、眼睛、骷髏（前端畫圖時這些也會被種族的
+預設外觀蓋過，``client/src/render/appearance.ts``）。裝備、褲子、飾邊、主手材質與外光不跟種族。"""
+
+
+def legacy_doll(
+    doll: DollLook, *, legacy_race: str | None, race: str | None, base: DollLook | None
+) -> DollLook | None:
+    """沿用上季的紙娃娃（5F-5c）：種族沒改＝原樣；改了＝:data:`RACE_DOLL_FIELDS` 換成新角色範本的
+    預設（``base``；範本沒有紙娃娃＝整個用預設 ``None``）。"""
+    if race == legacy_race:
+        return doll
+    if base is None:
+        return None
+    return doll.model_copy(update={name: getattr(base, name) for name in RACE_DOLL_FIELDS})

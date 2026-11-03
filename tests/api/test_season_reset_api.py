@@ -120,6 +120,11 @@ def test_dry_run_then_execute(dev: TestClient, tmp_path: Path) -> None:
     assert new_cid != cid
     char = store.character(new_cid)
     assert (char.hero.name_zh, char.hero.race, char.level) == ("阿霧", "fox", 1)
+    # 5F-5c：種族不算外觀——沿用時可以免費改種族，名字照沿用
+    elf = {**START, "race": "elf", "legacy_character": cid}
+    created = _ok(dev.post("/api/world/characters", json=elf), 201)
+    changed = store.character(created["character"]["character_id"])
+    assert (changed.hero.name_zh, changed.hero.race) == ("阿霧", "elf")
     assert dev.post("/api/world/season/reset", json=RESET).status_code == 409  # s2 還沒結束
 
 
