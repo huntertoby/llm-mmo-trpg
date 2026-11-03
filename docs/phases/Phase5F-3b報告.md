@@ -12,7 +12,7 @@
 | 4 | 夾具與快照：`refactor_3wr2.json` 只對玩家技能池取樣（閃現的等距取樣點仍在全部內建技能上取，再去掉敵人專用，避免整排位移）並重產；`llm_propose_mock.txt`（`test_mock_n3_snapshot`）重產後回到 BAL-19f 的內容；`cli_output_hashes.json` 不變 | `tests/skillgen/test_refactor_3wr2.py`、`tests/skillgen/fixtures/refactor_3wr2.json` |
 | 5 | 碎晶之主平衡（見下節） | `content/units/rift_shard_lord.yaml`、`content/statuses.yaml`、`scripts/season_boss_diagnose.py`（新） |
 | 6 | 解鎖時間：`max(最早第 8 天, 集滿 + 24 小時)` 之後（含）的第一個刷新時刻（6 點），再和第 10 天強制解鎖取早；公告照舊是解鎖前 24 小時 | `src/trpg/world/season_boss.py` |
-| 7 | 帳號紀念稱號「碎晶的終結者」：`AccountTitle`（`id`＝`season_boss:<Boss>`、名字、賽季、第一次拿到的角色、時間）、`AccountRecord.titles`（預設空，舊檔照讀、不升版）、`AccountStore.grant_title`（走 5D-R2 的帳號檔鎖：鎖內重讀再寫回；同一季同一個稱號只記一次）。每個打倒賽季 Boss 的帳號都拿到（19.7「所有打倒者得稱號」）；`WorldStore.grant_title` 由 `create_app` 接上，寫入失敗只記 log（同評分榜）。季末分類：`AccountRecord.titles` 與 `AccountTitle` 全部欄位都是紀念類。`AccountView.titles`（「碎晶的終結者（s1）」）；評分榜照舊顯示 | `src/trpg/server/accounts.py`、`season_policy.py`、`src/trpg/api/world.py`、`app.py`、`auth.py`、`account_schemas.py`、`client/openapi.json`、`client/src/api/schema.d.ts` |
+| 7 | 帳號紀念稱號「碎晶的終結者」：`AccountTitle`（`id`＝`season_boss:<Boss>`、名字、賽季、第一次拿到的角色、時間）、`AccountRecord.titles`（預設空，舊檔照讀、不升版）、`AccountStore.grant_title`（走 5D-R2 的帳號檔鎖：鎖內重讀再寫回；同一季同一個稱號只記一次）。每個打倒賽季 Boss 的帳號都拿到（19.7「所有打倒者得稱號」）；`WorldStore.grant_title` 由 `create_app` 接上，寫入失敗只記 log（同評分榜）。季末分類：`AccountRecord.titles` 與 `AccountTitle` 全部欄位都是紀念類；5F-5 的重置處理表 `HANDLERS` 加 `AccountTitle: keep`（跟著帳號檔不動），`tests/server/test_season_reset.py` 給帳號一個稱號、重置後檢查仍在。`AccountView.titles`（「碎晶的終結者（s1）」）；評分榜照舊顯示 | `src/trpg/server/accounts.py`、`season_policy.py`、`season_reset.py`、`src/trpg/api/world.py`、`app.py`、`auth.py`、`account_schemas.py`、`client/openapi.json`、`client/src/api/schema.d.ts` |
 | 8 | 新狀態 `rift_channel` 的圖示（菱形晶體＋往外三道線）、`test_budget` 狀態點數表與 `test_coverage` 允許清單、vitest 狀態數 116 → 117 | `client/src/render/statusIcon.ts`、`statusIcon.test.ts`、`tests/skillgen/test_budget.py`、`tests/content/test_coverage.py` |
 
 
@@ -84,13 +84,13 @@
 
 ## 檢查結果
 
-（合併 main 後）
+（最後一次合併 main＝`06a8c01f`，含 5F-5a、5F-5 之後）
 
 - `ruff check .`、`ruff format --check .`、`mypy`（strict，1205 檔）、`lint-imports`（13 kept）：通過。
-- `pytest -n 8 -m "(slow or not slow) and not llm"` tests/engine、content、skillgen（含 slow 的 test_budget、test_refactor_3wr2）、llm、world、api、server、test_architecture：12396 通過、0 失敗（合併 5F-5a 後）。要連真實模型的 `llm` 標記測試沒跑。
+- `pytest -n 8 -m "(slow or not slow) and not llm"` tests/engine、content、skillgen（含 slow 的 test_budget、test_refactor_3wr2）、llm、world、api、server、test_architecture：12413 通過、0 失敗（合併 5F-5 後）。要連真實模型的 `llm` 標記測試沒跑。
 - `tests/cli -m "slow or not slow" --timeout=3000`（不加 -n）：180 通過（`test_mock_n3_snapshot` 重產後；其餘快照不變）。`tests/sim/test_push_check.py`（slow）：5 通過。
-- vitest：合併 5F-5a 前 1294 通過（140 檔）；合併後 `statusIcon.test.ts` 13 通過（狀態 117 個）；`pnpm build` 通過。
-- 重播：swamp 種子 7 通過（88 動作、313 事件，和之前相同）；首殺重播通過（`trpg battle replay <世界>/season_boss/s1-first-kill.json`：209 動作、945 事件、rift_gate）。
+- vitest：1300 通過（141 檔；狀態圖示 117 個）；`pnpm build` 通過（合併 5F-5 後）。
+- 重播：swamp 種子 7 通過（88 動作、313 事件，和之前相同）；首殺重播通過（`trpg battle replay <世界>/season_boss/s1-first-kill.json`：255 動作、1036 事件、rift_gate；合併 5F-5 後重做）。
 - 產生檔：`client/openapi.json`、`schema.d.ts`（`AccountView.titles`）、`glossary.json`（新狀態）重產；`refactor_3wr2.json` 重產。
 - 沒跑全量、matrix、completion。
 
