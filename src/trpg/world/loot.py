@@ -4,11 +4,13 @@
   來源是我方單位，含我方召喚物；玩法 PM 2026-11-03、代決 5D2-3）。精英必掉 1 份（詞綴的稀有材料 >
   家族材料 > 通用料），一般敵人 ``material_permille`` 掉 1 份（家族材料〔區域的優先，其次各區共用的，
   例：盜賊各區掉焦鐵，5D-2b〕，沒有家族的掉通用料）。
-- **裝備**：一場最多 1 件（代決 5D2-4）；陣容有精英必掉、``elite_epic_permille`` 史詩，否則
-  ``battle_permille``；物品等級＝地點建議等級（敵人等級），詞條偏向該區關鍵字（20.2）。
+- **裝備**：陣容的每名精英必掉 1 件、``elite_epic_permille`` 史詩（20.2；5D-2b 玩法 PM 代決，取代
+  5D2-4 的一場 1 件）；沒有精英時 ``battle_permille`` 掉 1 件；物品等級＝地點建議等級（敵人等級），
+  詞條偏向該區關鍵字（20.2）。
 - **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的不撿（代決 5D2-6）。
 
-亂數：``Rng(fnv1a64(f"{battle_seed}:loot"))``（材料依敵人順序抽，裝備用 ``fork("gear")``）；
+亂數：``Rng(fnv1a64(f"{battle_seed}:loot"))``（材料依敵人順序抽，裝備用 ``fork("gear")``；第 2 名起的
+精英用 ``fork("gear/<序號>")``，所以只有 1 名精英的場次和之前一樣）；
 不耗角色亂數，不讀時間、不呼叫 LLM。
 """
 
@@ -39,7 +41,8 @@ __all__ = ["LootRoll", "add_loot", "roll_loot", "third_downed_by_allies"]
 
 @dataclass(frozen=True)
 class LootRoll:
-    """一場戰鬥掉的東西（還沒放進背包）：材料（依掉落順序，每份 1 個）與裝備（最多 1 件）。"""
+    """一場戰鬥掉的東西（還沒放進背包）：材料（依掉落順序，每份 1 個）與裝備（每名精英 1 件，
+    沒有精英時最多 1 件）。"""
 
     materials: tuple[str, ...] = ()
     gear: tuple[ItemDef, ...] = field(default_factory=tuple)
@@ -199,17 +202,19 @@ def roll_loot(
         elite = _is_elite(library, member)
         if elite or rng.randint(0, 999) < rules.material_permille:
             materials.append(_material_of(rules, lineup.region, member, level, elite=elite))
-    elite_lineup = any(_is_elite(library, m) for m in lineup.members)
-    gear = _roll_gear(
-        library,
-        rules,
-        char,
-        rng.fork("gear"),
-        region=lineup.region,
-        level=level,
-        elite=elite_lineup,
-    )
-    return LootRoll(materials=tuple(materials), gear=gear)
+    elites = sum(1 for m in lineup.members if _is_elite(library, m))
+    gear: list[ItemDef] = []
+    for n in range(max(1, elites)):  # 每名精英 1 件（20.2、5D-2b）；沒有精英時照一般掉落抽 1 次
+        gear += _roll_gear(
+            library,
+            rules,
+            char,
+            rng.fork("gear" if n == 0 else f"gear/{n + 1}"),
+            region=lineup.region,
+            level=level,
+            elite=elites > 0,
+        )
+    return LootRoll(materials=tuple(materials), gear=tuple(gear))
 
 
 # ---------------------------------------------------------------------------

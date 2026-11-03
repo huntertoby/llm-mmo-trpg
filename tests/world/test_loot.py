@@ -120,6 +120,41 @@ def test_elite_gear_epic_about_half(library: ContentLibrary, make_char: MakeChar
     assert 10 <= epic <= 30  # 50%
 
 
+def test_each_elite_drops_one_gear(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5D-2b（20.2，玩法 PM 2026-11-03 代決）：每名精英 1 件。"""
+    char, prepared, state, events = _won_battle(library, make_char)
+    members = prepared.lineup.members
+    assert len(members) >= 2
+    one = (LineupMember(unit=members[0].unit, affix="regenerating"), *members[1:])
+    two = (
+        LineupMember(unit=members[0].unit, affix="regenerating"),
+        LineupMember(unit=members[1].unit, affix="regenerating"),
+        *members[2:],
+    )
+    for seed in range(5):
+        single = _roll(
+            library,
+            char,
+            prepared,
+            state,
+            events,
+            seed=seed,
+            lineup=prepared.lineup.model_copy(update={"members": one}),
+        )
+        double = _roll(
+            library,
+            char,
+            prepared,
+            state,
+            events,
+            seed=seed,
+            lineup=prepared.lineup.model_copy(update={"members": two}),
+        )
+        assert len(single.gear) == 1 and len(double.gear) == 2
+        assert double.gear[0].id != double.gear[1].id
+        assert all(g.item_level == prepared.enemy_level for g in double.gear)
+
+
 def test_normal_material_rate(library: ContentLibrary, make_char: MakeChar) -> None:
     char, prepared, state, events = _won_battle(library, make_char)
     downed = sum(
