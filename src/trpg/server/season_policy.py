@@ -237,7 +237,7 @@ _ACCOUNT_TITLE: Final[dict[str, ResetKind]] = _all(
 _NOTE: Final[dict[str, ResetKind]] = _all(
     NUMERIC, "note_id", "region", "location", "character_id", "name", "text", "at"
 )
-"""地點留言（#105）：#91 沒提到；暫標數值類（待決）。"""
+"""地點留言（#105）：數值類，季末刪掉（5F-5 玩法 PM 代決定案，:data:`PROVISIONAL` 已清空）。"""
 
 _LEAGUE_RECORD: Final[dict[str, ResetKind]] = {
     **_all(
