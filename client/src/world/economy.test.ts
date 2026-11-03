@@ -15,6 +15,8 @@ function bag(item: string, name_zh: string, count: number, field = false): World
     description_zh: `${name_zh}的說明`,
     sell_price: 7,
     sellable: true,
+    gear: false,
+    can_equip: false,
     field_usable: field,
     use_zh: field ? "HP +30%" : null,
     battle_zh: "放進腰包：戰鬥中花 1 AP 使用，每個用一次（不佔技能欄位）",
@@ -32,6 +34,7 @@ function inventory(overrides: Partial<WorldInventory> = {}): WorldInventory {
     can_pouch: true,
     pouch_problem_zh: null,
     consumables: [bag("item_oil_flask", "油瓶", 1), bag("item_hp_potion_small", "小回復藥", 2, true)],
+    equipped_zh: [],
     ...overrides,
   };
 }
@@ -139,6 +142,29 @@ describe("InventoryPanel", () => {
     expect(html).toContain('data-testid="world-use-item_hp_potion_small"');
     expect(html).not.toContain('data-testid="world-use-item_oil_flask"'); // 投擲瓶野外不能用
     expect(html).toContain('data-testid="world-pouch-toggle"');
+  });
+
+  it("lists dropped gear with the equip button and what is worn (5D-2)", () => {
+    const sword: WorldBagItem = {
+      ...bag("item_gen_weapon_0000abcd", "稀有短劍（1 級）", 1),
+      kind_zh: "裝備",
+      gear: true,
+      can_equip: false,
+      equip_problem_zh: "只有城鎮與營火能換裝備",
+      battle_zh: null,
+    };
+    const html = renderToStaticMarkup(
+      createElement(InventoryPanel, {
+        inventory: inventory({ bag: [sword], equipped_zh: ["身體：稀有布衣（3 級）"] }),
+        busy: false,
+        onAct: noop,
+        canUse: true,
+      }),
+    );
+    expect(html).toContain("稀有短劍（1 級）");
+    expect(html).toContain('data-testid="world-equip-item_gen_weapon_0000abcd"');
+    expect(html).toMatch(/data-testid="world-equip-item_gen_weapon_0000abcd"[^>]*disabled|disabled[^>]*data-testid="world-equip-item_gen_weapon_0000abcd"/);
+    expect(html).toContain("身體：稀有布衣（3 級）");
   });
 
   it("explains why the pouch cannot be changed in the field", () => {

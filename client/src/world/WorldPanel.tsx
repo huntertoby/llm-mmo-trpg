@@ -253,6 +253,11 @@ export function WorldPanel(props: Props) {
             {view.last_battle_zh}
           </div>
         )}
+        {view.last_loot_zh != null && (
+          <div className="small world-last-battle" data-testid="world-last-loot">
+            {view.last_loot_zh}
+          </div>
+        )}
       </div>
       {view.party != null && <PartyPanel party={view.party} />}
       {view.my_shadow != null && (

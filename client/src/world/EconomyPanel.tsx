@@ -1,6 +1,7 @@
 // 商店、背包與腰包（Phase 5D-1；docs/phases/Phase5計畫.md 25.6；最小可用，5D-4 再完整化）。
 // 商店在小鎮服務列「商店」切換後於面板內展開（不是新的彈出層）；背包與腰包是右側常駐面板。
 // 說明一律用共用 <Hint>（浮動卡規則 6.5.1）；能不能買、價格、限量、門檻都由後端算好。
+// 5D-2：背包也列掉落的裝備（「裝上」在城鎮或營火）與穿戴中的裝備；完整裝備畫面在 5D-4。
 import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldShop } from "../api/types";
 import { Hint } from "../ui/Hint";
@@ -82,7 +83,21 @@ function BagRow({ item, busy, canUse, onAct }: ActProps & { item: WorldBagItem; 
       <Hint text={itemHint(item)}>
         <span className="world-shop-name">{item.name_zh}</span>
       </Hint>
-      <span className="muted">×{item.count}</span>
+      {item.gear === true ? <span className="muted">{item.kind_zh}</span> : <span className="muted">×{item.count}</span>}
+      {item.gear === true && (
+        <Hint text={item.can_equip === true ? "換上（換下的放回背包）" : item.equip_problem_zh ?? "不能換上"}>
+          <span className="world-shop-buy">
+            <button
+              type="button"
+              disabled={busy || item.can_equip !== true}
+              onClick={() => onAct({ kind: "equip", item: item.item })}
+              data-testid={`world-equip-${item.item}`}
+            >
+              裝上
+            </button>
+          </span>
+        </Hint>
+      )}
       {item.field_usable && item.use_zh != null && (
         <Hint text={`使用 1 個：${item.use_zh}`}>
           <button type="button" disabled={busy || !canUse} onClick={() => onAct({ kind: "use_item", item: item.item })} data-testid={`world-use-${item.item}`}>
@@ -163,6 +178,16 @@ export function InventoryPanel({ inventory, busy, onAct, canUse }: ActProps & { 
             <BagRow key={item.item} item={item} busy={busy} canUse={canUse} onAct={onAct} />
           ))}
         </ul>
+      )}
+      {(inventory.equipped_zh ?? []).length > 0 && (
+        <>
+          <div className="section-title small">穿戴中</div>
+          <ul className="world-shop-list small" data-testid="world-equipped">
+            {(inventory.equipped_zh ?? []).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </>
       )}
       <div className="section-title small">
         腰包　<span className="muted">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
