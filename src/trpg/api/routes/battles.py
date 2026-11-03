@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request, Response
 
 from trpg.api.auth import check_owner, owner_id, reject_dev_fields
 from trpg.api.hero_cards import hero_cards
+from trpg.api.path_schemas import PathPreviewOut, PathPreviewRequest, path_preview_out
 from trpg.api.presenter import battle_response, history_response, preview_response
 from trpg.api.schemas import (
     BattleHistory,
@@ -99,6 +100,14 @@ def post_preview(battle_id: str, action: Action, request: Request) -> PreviewOut
     session = owned_battle(request, battle_id)
     with session.lock:
         return preview_response(session.preview(action), session.state)
+
+
+@router.post("/{battle_id}/path-preview")
+def post_path_preview(battle_id: str, body: PathPreviewRequest, request: Request) -> PathPreviewOut:
+    """主角移動路徑的每格預估事件與實際停點（Phase 6A-4b；不改變戰鬥、不消耗亂數）。"""
+    session = owned_battle(request, battle_id)
+    with session.lock:
+        return path_preview_out(session.preview_path(body.unit_id, body.path, body.dest))
 
 
 @router.get("/{battle_id}/summons/{summon_id}/command-options")

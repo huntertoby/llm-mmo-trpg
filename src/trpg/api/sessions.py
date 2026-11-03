@@ -31,6 +31,7 @@ from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, FollowupTarget
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
 from trpg.engine.events import EventBase
+from trpg.engine.path_preview import PathPreview, preview_path
 from trpg.engine.preview import Preview, preview
 from trpg.engine.results import Pending, ResolveResult
 from trpg.engine.runner import (
@@ -49,7 +50,7 @@ from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.progress import hero_spawn
 from trpg.roguelite.start import new_dev_run, new_keyword_run
 from trpg.shared.errors import IllegalActionError, TrpgError
-from trpg.shared.types import Team, UnitId
+from trpg.shared.types import Pos, Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
 from trpg.sim.lineup import TEAM_SIZE, UnknownBuildError, build_allies, default_lineup
 
@@ -257,6 +258,18 @@ class BattleSession:
         self._require("action")
         self._require_hero(action)
         return preview(self.state, action)
+
+    def preview_path(
+        self, unit_id: UnitId | None, path: tuple[Pos, ...] | None, dest: Pos | None
+    ) -> PathPreview:
+        """預覽主角沿 ``path``（或走到 ``dest``）的移動（Phase 6A-4b；不改變工作階段，看不見的陷阱
+        已濾掉）。``unit_id`` 省略時為主角。"""
+        self._require("action")
+        uid = self.hero_id if unit_id is None else unit_id
+        if uid != self.hero_id:
+            hero = self.state.units[self.hero_id].name_zh
+            raise IllegalActionError(f"只能操控主角 {hero}（{self.hero_id}）")
+        return preview_path(self.state, uid, path=path, dest=dest)
 
     def command_options(self, summon_id: UnitId) -> tuple[CommandOption, ...]:
         """主角指揮 ``summon_id`` 時可選的終點與目標（Phase 3-33c）；不能指揮時拋出
