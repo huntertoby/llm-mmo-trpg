@@ -2442,6 +2442,58 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/notes/{note_id}": {
+      "delete": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Delete Own Note",
+        "description": "作者刪自己的留言（5E-3b）：只能刪這個角色留的；別人的或不存在都 404。",
+        "operationId": "delete_own_note_api_world_characters__character_id__notes__note_id__delete",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationBoard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/notes/{note_id}": {
       "delete": {
         "tags": [
@@ -10618,6 +10670,11 @@
             "type": "integer",
             "title": "Max Len",
             "default": 50
+          },
+          "admin": {
+            "type": "boolean",
+            "title": "Admin",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -11061,6 +11118,11 @@
           "mine": {
             "type": "boolean",
             "title": "Mine"
+          },
+          "can_delete": {
+            "type": "boolean",
+            "title": "Can Delete",
+            "default": false
           }
         },
         "additionalProperties": false,

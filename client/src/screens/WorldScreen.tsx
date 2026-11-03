@@ -17,7 +17,7 @@ import { EventCard, SituationResultCard } from "../world/EventCard";
 import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
-import { appendChat, dialogByNpc, dialogEntries, type ChatEntry } from "../world/story";
+import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
 
@@ -30,6 +30,8 @@ interface Props {
 }
 
 const LOG_MAX = 12;
+/** 重讀大世界 LLM 開關與健康檢查結果的間隔（同伺服器健康檢查的預設 60 秒；5E-3b）。 */
+const LLM_REFRESH_MS = 60_000;
 
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -70,12 +72,17 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    api.worldLlm().then(
-      (v) => !cancelled && setLlm(v),
-      () => undefined,
-    );
+    const load = () =>
+      api.worldLlm().then(
+        (v) => !cancelled && setLlm(v),
+        () => undefined,
+      );
+    void load();
+    // 健康檢查每 60 秒一次（伺服器端）；這裡跟著重讀，讓「說書人休息中」標示出現／消失（5E-3b）
+    const timer = window.setInterval(() => void load(), LLM_REFRESH_MS);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -255,6 +262,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
+      {narratorResting(llm) && (
+        <div className="world-narrator-rest small" role="status" data-testid="world-narrator-rest">
+          說書人休息中（使用固定文字）
+        </div>
+      )}
       {view === null ? (
         <div className="muted">載入中……</div>
       ) : (

@@ -1,6 +1,6 @@
 // 地點留言的純函式（Phase 5E-3）。
 import { describe, expect, it } from "vitest";
-import { NOTE_MAX, noteProblem, noteTime, remainingLabel } from "./notes";
+import { NOTE_MAX, noteDeleteLabel, noteProblem, noteTime, remainingLabel } from "./notes";
 
 describe("noteProblem", () => {
   it("accepts up to 50 characters after trimming", () => {
@@ -19,6 +19,13 @@ describe("remainingLabel", () => {
     expect(remainingLabel("")).toBe("還可以打 50 字");
     expect(remainingLabel("霧裡")).toBe("還可以打 48 字");
     expect(remainingLabel("字".repeat(52))).toBe("超過 2 字");
+  });
+});
+
+describe("noteDeleteLabel", () => {
+  it("自己的留言與管理者刪別人的", () => {
+    expect(noteDeleteLabel(true)).toBe("刪除我的留言");
+    expect(noteDeleteLabel(false)).toContain("管理者");
   });
 });
 

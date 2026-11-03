@@ -30,7 +30,9 @@ class NoteView(_ApiModel):
     at: int
     """UTC 秒。"""
     mine: bool
-    """是不是這個角色留的。"""
+    """是不是這個角色留的（是＝作者可以刪，5E-3b）。"""
+    can_delete: bool = False
+    """畫面要不要給刪除鍵：自己的留言，或管理者登入時每一則（5E-3b，#105）。"""
 
 
 class FootprintView(_ApiModel):
@@ -50,20 +52,26 @@ class LocationBoard(_ApiModel):
     footprints: list[FootprintView]
     """其他角色的足跡，新的在前（最多 10 筆）。"""
     max_len: int = NOTE_MAX_LEN
+    admin: bool = False
+    """目前登入的是管理者（每則留言旁都有刪除鍵，走 ``DELETE /api/world/notes/{note_id}``）。"""
 
 
-def _note_view(note: LocationNote, character_id: str) -> NoteView:
+def _note_view(note: LocationNote, character_id: str, *, admin: bool) -> NoteView:
+    mine = note.character_id == character_id
     return NoteView(
         note_id=note.note_id,
         name=note.name,
         text=note.text,
         at=note.at,
-        mine=note.character_id == character_id,
+        mine=mine,
+        can_delete=mine or admin,
     )
 
 
-def location_board(store: WorldStore, char: CharacterState) -> LocationBoard:
-    """角色現在所在地點的留言與足跡（呼叫者持有世界的寫入鎖）。"""
+def location_board(
+    store: WorldStore, char: CharacterState, *, admin: bool = False
+) -> LocationBoard:
+    """角色現在所在地點的留言與足跡（呼叫者持有世界的寫入鎖）。``admin``＝登入的是管理者。"""
     region, location = char.region, char.location
     world_map = store.library.world_maps.get(region)
     places = world_map.location_by_id() if world_map is not None else {}
@@ -81,7 +89,9 @@ def location_board(store: WorldStore, char: CharacterState) -> LocationBoard:
         region=region,
         location=location,
         location_name_zh=location_name(store.library, region, location),
-        notes=[_note_view(n, char.character_id) for n in store.notes.at(region, location)],
+        notes=[
+            _note_view(n, char.character_id, admin=admin) for n in store.notes.at(region, location)
+        ],
         footprints=[
             FootprintView(
                 kind=f.kind,
@@ -95,4 +105,5 @@ def location_board(store: WorldStore, char: CharacterState) -> LocationBoard:
             )
             for f in steps
         ],
+        admin=admin,
     )

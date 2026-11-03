@@ -150,10 +150,12 @@ class LocationNoteStore:
         self._write((*notes, note))
         return note
 
-    def delete(self, note_id: str) -> LocationNote:
+    def delete(self, note_id: str, *, author: str | None = None) -> LocationNote:
+        """刪一則留言。``author``＝角色 ID 時只能刪這個角色留的（5E-3b：作者刪自己的留言；別人的
+        一律當作找不到，不洩漏是誰的）；``None``＝管理者，哪則都能刪。"""
         notes = self.all()
         found = next((n for n in notes if n.note_id == note_id), None)
-        if found is None:
+        if found is None or (author is not None and found.character_id != author):
             raise NoteNotFoundError(f"找不到留言 {note_id}")
         self._write(n for n in notes if n.note_id != note_id)
         return found
