@@ -66,9 +66,25 @@ export interface WalkSlide {
 
 export type WalkPiece = WalkLeg | WalkBeat | WalkSlide;
 
+/** 走法（6M-3 的骨架片段）：走路、跑步（這個回合跑過＝衝刺）、潛行（6C-5 接上開關）。 */
+export type Gait = "walk" | "run" | "sneak";
+
 export interface WalkAnim {
   unitId: string;
   pieces: WalkPiece[];
+  /** 走法；省略＝走路。 */
+  gait?: Gait;
+}
+
+/**
+ * 這個回合跑過（衝刺，`unit_ran`）的單位（6M-3：之後的步行用跑步片段）。依事件順序更新：`unit_ran` 加入，
+ * 同一單位的 `turn_started`／`turn_ended` 移除。只影響畫面。
+ */
+export function trackRunning(running: Set<string>, e: EventBase): void {
+  const id = typeof e.unit_id === "string" ? e.unit_id : null;
+  if (id === null) return;
+  if (e.type === "unit_ran") running.add(id);
+  else if (e.type === "turn_started" || e.type === "turn_ended") running.delete(id);
 }
 
 /** 緩入緩出（二次）：0 → 0、1 → 1，兩端速度為 0。 */
@@ -128,6 +144,8 @@ interface WalkOptions {
   after: BattleView;
   /** 回饋項目的顯示時間（已縮放）。 */
   feedbackMs: number;
+  /** 這個回合跑過的單位（`trackRunning`；依事件順序原地更新，跨步、跨回應沿用同一個集合）。省略＝沒有人跑。 */
+  running?: Set<string>;
 }
 
 /** 一步的移動：`walks` 依事件順序；`other` 是非走路的位移（照舊的 `MoveAnim`）在事件中的位置。 */
@@ -167,6 +185,8 @@ interface OpenBeat {
 
 class WalkBuilder {
   readonly pieces: WalkPiece[] = [];
+  /** 走法：開始走的那一刻這個單位跑過沒有（之後的回合結束不影響這一段）。 */
+  gait: Gait = "walk";
   private beat: OpenBeat | null = null;
   private facing: Facing;
   last: Pos;
@@ -273,13 +293,14 @@ export function stepMotions<M>(
   const flush = () => {
     if (walk === null) return;
     walk.closeBeat();
-    motions.push({ kind: "walk", walk: { unitId: walk.unitId, pieces: walk.pieces } });
+    motions.push({ kind: "walk", walk: { unitId: walk.unitId, pieces: walk.pieces, ...(walk.gait === "walk" ? {} : { gait: walk.gait }) } });
     walk = null;
   };
   events.forEach((e, i) => {
     const cur: WalkBuilder | null = walk;
     if (!isUnitMoved(e)) {
       // 不屬於走路的事件（藉機攻擊、反應…）不收；走路還沒結束，下一格照常接著走
+      if (opts.running !== undefined) trackRunning(opts.running, e);
       cur?.take(e, i);
       return;
     }
@@ -289,6 +310,7 @@ export function stepMotions<M>(
       if (w === null) {
         flush();
         w = new WalkBuilder(e.unit_id, e.from_pos, facingIn(opts.before, e.unit_id), opts, events, consumed);
+        if (opts.running?.has(e.unit_id) === true) w.gait = "run";
         walk = w;
       }
       w.leg(e.from_pos, e.to_pos);

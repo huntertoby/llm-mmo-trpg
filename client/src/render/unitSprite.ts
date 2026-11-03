@@ -22,6 +22,9 @@ import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE,
 import { DOLL_HEAD_TOP } from "./inkDoll";
 import { UNIT_HEADROOM } from "../battle/elevation";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
+import type { CreaturePose } from "./creaturePose";
+import type { InkPose } from "./inkPose";
+import { proneBody } from "./motionClips";
 
 const T = TILE_SIZE;
 
@@ -242,9 +245,69 @@ function formAuraSprite(art: ArtTextures, u: UnitDraw, feet: number): Sprite | n
   return s;
 }
 
+function specOfUnit(u: UnitDraw): DollSpec {
+  return resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, raceLook: u.raceLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
+}
+
+/** 倒地狀態（`prone`，例如冰面滑倒）：還站得起來、只是躺著；和 HP 歸零的倒下（`downed`）不同。 */
+export const PRONE = "prone";
+export function isProne(u: Pick<UnitDraw, "downed" | "statusIds">): boolean {
+  return !u.downed && u.statusIds?.includes(PRONE) === true;
+}
+
+/** 小人本身（紙娃娃、異形、形態、召喚物）的節點名稱；走路、倒地、受擊時只動小人，底圈與血條不動。 */
+export const BODY_LABEL = "body";
+/** 跟著小人的詞綴特效、人形特徵（同畫布、同錨點）：跟著小人位移、旋轉，但不換貼圖。 */
+export const BODY_FX_LABEL = "body-fx";
+
+/** 小人與跟著它的特效（動畫時一起動）。 */
+export function bodyNodes(unit: Container): Container[] {
+  return unit.children.filter((n) => n.label === BODY_LABEL || n.label === BODY_FX_LABEL);
+}
+
+function bodyPart(node: Sprite, u: UnitDraw, feet: number): Sprite {
+  node.label = BODY_FX_LABEL;
+  layDown(node, u, feet);
+  return node;
+}
+
+/** 一格動畫：紙娃娃的骨架姿勢、異形的姿勢（都已量化）。 */
+export interface BodyFrame {
+  pose?: InkPose | null;
+  creature?: CreaturePose | null;
+}
+
+/**
+ * 動畫中這一格的小人貼圖（6M-3）：紙娃娃照骨架姿勢、異形照異形姿勢；形態與召喚物沒有骨架，回傳 `null`（照舊整個平移）。
+ * 倒地狀態的紙娃娃沒給姿勢時照躺著的姿勢。
+ */
+export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Texture | null {
+  if (summonLookOf(u) !== null) return null;
+  const spec = specOfUnit(u);
+  if (formArtOfUnit(u, spec) !== null) return null;
+  const cr = creatureOf(u);
+  if (cr !== null) return art.creature(cr, creatureSide(u), frame.creature ?? null);
+  return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null));
+}
+
+/** 倒地狀態持續躺著（6M-3）：小人以腳底為軸轉倒、往前溜一點（和滑倒動畫的最後一格相同）。 */
+function layDown(node: Container, u: UnitDraw, feet: number): void {
+  if (!isProne(u)) return;
+  const p = proneBody(1, u.facing);
+  node.rotation = p.rotation;
+  node.position.set(p.x, feet + p.y);
+}
+
 function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
+  const node = dollNode(art, u, look, feet, r);
+  node.label = BODY_LABEL;
+  layDown(node, u, feet);
+  return node;
+}
+
+function dollNode(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
   const sl = summonLookOf(u);
-  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, raceLook: u.raceLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
+  const spec = specOfUnit(u);
   const form = formArtOfUnit(u, spec);
   const formSprite = form === null ? null : formDoll(art, u, look, feet, form);
   if (formSprite !== null) return formSprite;
@@ -263,7 +326,8 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   }
   // 倒地的人形召喚物沿用紙娃娃的躺下姿勢；其他體型（圖騰、構造體、植物…）不躺下
   const useSummonArt = sl !== null && !(u.downed && sl.body === "humanoid");
-  const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
+  const prone = sl === null && isProne(u) ? proneBody(1, u.facing).pose : null; // 倒地狀態：骨架躺著的姿勢（6M-3）
+  const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed, prone);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
   // C 骨架（人形與紙娃娃）：52px 格縮放 0.92（3U-2），人約 48px 高；非人形召喚物沿用舊的 64×64 畫布，縮放 1.15
@@ -510,10 +574,10 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     if (under !== null) c.addChild(under);
   }
   const fxUnder = humanoidFxSprite(art, u, feet, true);
-  if (fxUnder !== null) c.addChild(fxUnder);
+  if (fxUnder !== null) c.addChild(bodyPart(fxUnder, u, feet));
   c.addChild(doll(art, u, look, feet, r));
   const fxOver = humanoidFxSprite(art, u, feet, false);
-  if (fxOver !== null) c.addChild(fxOver);
+  if (fxOver !== null) c.addChild(bodyPart(fxOver, u, feet));
   if (effects !== null && hasOverEffect(effects)) {
     const over = effectSprite("over", effects, feet);
     if (over !== null) c.addChild(over);

@@ -7,7 +7,7 @@
 import type { Facing } from "../api/types";
 import { TAU, type Ctx } from "./artDraw";
 import { darken, lighten, mix } from "./color";
-import { applyCreaturePose, type CreaturePose } from "./creaturePose";
+import { applyCreaturePose, whiteSilhouette, type CreaturePose } from "./creaturePose";
 import { dot, ellPts, ink, INK, shadow, stroke, withShadeDir, lcg, seedOf, type InkOpt, type Pt } from "./inkStyle";
 
 /** 後端 `DollLook.creature`（字串都可能是前端不認得的新值）。 */
@@ -717,11 +717,11 @@ function posed(ctx: Ctx, pose: CreaturePose | null, fn: () => void): void {
   ctx.restore();
 }
 
-function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null): void {
+function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null, ground = true): void {
   const b = BODIES[r.body]!;
   const P = paletteOf(r.material, r.element, r.tint, b.fur);
   const info = fxInfo(r);
-  shadow(ctx, b.len * 0.6); // 影子留在地上，不跟著姿勢動
+  if (ground) shadow(ctx, b.len * 0.6); // 影子留在地上，不跟著姿勢動
   posed(ctx, pose, () => {
     for (const t of r.traits) if (BEHIND.has(t)) TRAITS[t]!.draw(ctx, info, P); // 霧在身體後面
     b.draw(ctx, P, r.variant);
@@ -732,8 +732,9 @@ function drawBody(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null): voi
 /**
  * 畫一隻異形（腳底在原點、朝東，已乘上大小）：分身、本體（霧隱 75%）、詞綴特效。地面環由戰場畫。
  * `pose`（6M-2）：通用片段的姿勢（creaturePose.ts）；不給或 `null` 時畫法與指令流和原本相同。
+ * `ground`（6M-3）：false ＝ 不畫地上的影子（受擊白閃只閃身體剪影用）。
  */
-export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null = null): void {
+export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null = null, ground = true): void {
   withShadeDir(ctx, -1, () => {
     ctx.save();
     ctx.scale(r.size, r.size);
@@ -741,12 +742,12 @@ export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose |
       ctx.save();
       ctx.globalAlpha = 0.35;
       ctx.translate(-9, -1);
-      drawBody(ctx, r, pose);
+      drawBody(ctx, r, pose, ground);
       ctx.restore();
     }
     ctx.save();
     if (r.affixes.includes("mist_hidden")) ctx.globalAlpha = 0.75;
-    drawBody(ctx, r, pose);
+    drawBody(ctx, r, pose, ground);
     ctx.restore();
     const info = fxInfo(r);
     posed(ctx, pose, () => {
@@ -781,8 +782,28 @@ function makeCanvas(dpr: number): HTMLCanvasElement {
   return c;
 }
 
-/** 異形貼圖（朝西鏡像；頭目加外光：剪影染色往 12 個方向錯開 2.6px、50%，同 `renderFigureCanvas`）；沒有 DOM 時回傳 `null`。 */
-export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: number): HTMLCanvasElement | null {
+/**
+ * 受擊白閃（6M-3）：另畫一次不含影子的身體，轉成白色剪影（`whiteSilhouette`，不透明度 × flash）再疊回去；
+ * 剪影外的像素不動，不會整格變白。`draw` 在空白畫布上畫（自己設縮放、腳底原點、鏡像）。
+ */
+function applyFlash(target: HTMLCanvasElement, dpr: number, flash: number, draw: (ctx: Ctx) => void): void {
+  if (!(flash > 0)) return;
+  const body = makeCanvas(dpr);
+  const b = body.getContext("2d");
+  const t = target.getContext("2d");
+  if (b === null || t === null) return;
+  draw(b);
+  const img = b.getImageData(0, 0, body.width, body.height);
+  whiteSilhouette(img.data, flash);
+  b.putImageData(img, 0, 0);
+  t.drawImage(body, 0, 0);
+}
+
+/**
+ * 異形貼圖（朝西鏡像；頭目加外光：剪影染色往 12 個方向錯開 2.6px、50%，同 `renderFigureCanvas`）；沒有 DOM 時回傳 `null`。
+ * `pose`（6M-3）：走、受擊等片段的姿勢；`flash` ＞ 0 時只閃身體的剪影（外光不閃、剪影外不變白）。
+ */
+export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: number, pose: CreaturePose | null = null): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const off = makeCanvas(dpr);
   const o = off.getContext("2d");
@@ -790,7 +811,13 @@ export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: n
   o.scale(dpr, dpr);
   o.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
   if (facing === "west") o.scale(-1, 1);
-  drawCreature(o, r);
+  drawCreature(o, r, pose);
+  applyFlash(off, dpr, pose?.flash ?? 0, (b) => {
+    b.scale(dpr, dpr);
+    b.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
+    if (facing === "west") b.scale(-1, 1);
+    drawCreature(b, r, pose, false);
+  });
   if (r.glow === undefined) return off;
   const glow = makeCanvas(dpr);
   const g = glow.getContext("2d");

@@ -363,14 +363,14 @@ export function castEffects(cast: VfxCast, now: number, impactMs: number, at: Lo
   return out;
 }
 
-/** 受擊閃白（暴擊加一圈金色外環）；光環類技能另在命中的單位身上爆發。 */
-export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst: boolean, at: Locate = tileCenter): Effect[] {
+/** 受擊閃白（暴擊加一圈金色外環）；光環類技能另在命中的單位身上爆發。`circle` 為假（異形，6M-3）時不畫白圓——改由戰場只閃角色的剪影。 */
+export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst: boolean, at: Locate = tileCenter, circle = true): Effect[] {
   const c = at(hit.pos);
   const g = new Graphics();
   const start = now + hit.atMs;
   const flash = effect(g, start, start + impactMs * 0.4, (t) => {
     const alpha = 1 - t;
-    g.circle(c.x, c.y, T * 0.36 * (hit.crit ? 1.25 : 1)).fill({ color: 0xffffff, alpha: 0.85 * alpha });
+    if (circle) g.circle(c.x, c.y, T * 0.36 * (hit.crit ? 1.25 : 1)).fill({ color: 0xffffff, alpha: 0.85 * alpha });
     if (hit.crit) g.circle(c.x, c.y, T * (0.4 + 0.5 * t)).stroke({ width: 4, color: 0xffe066, alpha });
   });
   const out = [flash];

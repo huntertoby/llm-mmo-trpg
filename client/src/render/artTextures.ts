@@ -12,6 +12,9 @@ import { formKey, renderAuraCanvas, renderFormCanvas } from "./inkForm";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
 import { copiesOwner, renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
 import { creatureKey, renderCreatureCanvas, type ResolvedCreature } from "./inkCreature";
+import { creaturePoseKey, type CreaturePose } from "./creaturePose";
+import type { InkPose } from "./inkPose";
+import { poseKey } from "./motionClips";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -117,10 +120,15 @@ export class ArtTextures {
     return this.get(`x|${key}`, draw);
   }
 
-  /** 紙娃娃小人貼圖（鍵 ＝ 裝備組合＋朝向＋姿勢）；沒有 DOM 時回傳 `null`。 */
-  figure(spec: DollSpec, facing: Facing, downed: boolean): Texture | null {
+  /**
+   * 紙娃娃小人貼圖（鍵 ＝ 裝備組合＋朝向＋倒地；6M-3 起再加骨架姿勢）；沒有 DOM 時回傳 `null`。
+   * `pose`：走路、倒地等片段的姿勢，呼叫端先量化（motionClips.ts 的 `quantizePose`），鍵用 `poseKey`，同一個姿勢共用一張貼圖。
+   * 沒給姿勢時鍵和畫法都和之前相同。
+   */
+  figure(spec: DollSpec, facing: Facing, downed: boolean, pose: InkPose | null = null): Texture | null {
     const res = this.figureRes(HUMAN_DISPLAY);
-    return this.canvas(`f|${res}|${dollKey(spec, facing, downed)}`, () => renderFigureCanvas(spec, facing, downed, res));
+    const key = `f|${res}|${dollKey(spec, facing, downed)}${pose === null ? "" : `|p:${poseKey(pose)}`}`;
+    return this.canvas(key, () => renderFigureCanvas(spec, facing, downed, res, true, pose));
   }
 
   /** 召喚物貼圖（Phase 3-33h1；鍵 ＝ 外觀＋朝向，殘影另加召喚者外觀）；人形傳入 `humanoid` 紙娃娃規格。 */
@@ -131,9 +139,10 @@ export class ArtTextures {
   }
 
   /** 異形貼圖（Phase 5A-ART1；鍵 ＝ 解析後的外觀＋朝向，依狀態的特徵已解進外觀）。 */
-  creature(r: ResolvedCreature, facing: Facing): Texture | null {
+  creature(r: ResolvedCreature, facing: Facing, pose: CreaturePose | null = null): Texture | null {
     const res = this.figureRes(HUMAN_DISPLAY);
-    return this.canvas(`c|${res}|${creatureKey(r, facing)}`, () => renderCreatureCanvas(r, facing, res));
+    const key = `c|${res}|${creatureKey(r, facing)}${pose === null ? "" : `|p:${creaturePoseKey(pose)}`}`;
+    return this.canvas(key, () => renderCreatureCanvas(r, facing, res, pose));
   }
 
   /** 人形敵人的詞綴特效／人形特徵貼圖（Phase 5A-ART2；與紙娃娃同畫布、同錨點）。`draw` 在腳底原點畫。 */
