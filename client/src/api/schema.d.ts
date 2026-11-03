@@ -1095,6 +1095,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/season/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Season Verify
+         * @description 重播查證（管理者，5F-5c）：給一筆首殺（``target``）或一場循環賽（``match_id``），從唯讀封存
+         *     （目前這一季從世界資料夾）確定性重播，回報結果和保留下來的紀錄是否一致。只讀。找不到 404；
+         *     沒給對應的 ``target``／``match_id`` 422。
+         */
+        post: operations["post_season_verify_api_world_season_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/season/reset": {
         parameters: {
             query?: never;
@@ -6454,6 +6476,34 @@ export interface components {
             type: "reload";
         };
         /**
+         * ReplayCheck
+         * @description 一次查證的結果。
+         */
+        ReplayCheck: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "first_kill" | "league_match";
+            /** Season Id */
+            season_id: string;
+            /** Subject Zh */
+            subject_zh: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "archive" | "world";
+            /** Battle Log */
+            battle_log: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Passed */
+            passed: string[];
+            /** Problems */
+            problems: string[];
+        };
+        /**
          * RerollAction
          * @description 在附魔台重骰一條詞條（8.20：由「指紋＋位置＋n」決定；越骰越貴）。
          */
@@ -6837,6 +6887,8 @@ export interface components {
             warnings: string[];
             /** Backup */
             backup?: string | null;
+            /** Archive */
+            archive?: string | null;
         };
         /**
          * SeasonResetRequest
@@ -6864,6 +6916,23 @@ export interface components {
             dry_run: boolean;
             /** Confirm Season */
             confirm_season?: string | null;
+        };
+        /**
+         * SeasonVerifyRequest
+         * @description 從封存重播查證一筆首殺或一場循環賽（5F-5c；舊季讀唯讀封存，目前這一季讀世界資料夾）。
+         */
+        SeasonVerifyRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "first_kill" | "league_match";
+            /** Season Id */
+            season_id: string;
+            /** Target */
+            target?: string | null;
+            /** Match Id */
+            match_id?: string | null;
         };
         /**
          * SegmentLine
@@ -7060,6 +7129,11 @@ export interface components {
             can_trade: boolean;
             /** Trade Problem Zh */
             trade_problem_zh: string | null;
+            /**
+             * Price Notes Zh
+             * @default []
+             */
+            price_notes_zh: string[];
         };
         /**
          * Shove
@@ -10653,6 +10727,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LegacyHeroView"][];
+                };
+            };
+        };
+    };
+    post_season_verify_api_world_season_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

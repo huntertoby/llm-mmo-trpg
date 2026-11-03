@@ -311,8 +311,14 @@ _CHRONICLE_HERO: Final[dict[str, ResetKind]] = _all(
     "name",
     "race",
     "doll",
+    "level",  # 5F-5c 編年史列事實細節
     "elites",
+    "bosses",
+    "first_kills",
+    "chapters",
     "events",
+    "recipes",
+    "league_rank",
     "text_zh",
 )
 _RECIPE_DISCOVERY: Final[dict[str, ResetKind]] = _all(
@@ -351,13 +357,18 @@ PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset()
 紀錄。之後新增拿不準的欄位再列在這裡。"""
 
 HERO_LEGACY_FIELDS: Final[tuple[str, ...]] = ("name_zh", "race", "doll")
-"""角色 ``hero``（``UnitTemplate``）裡季末保留、下季建角色可以沿用的欄位：名字與外觀（種族外觀、
-紙娃娃）。等級、技能、裝備、屬性等其他欄位照數值類清掉。"""
+"""角色 ``hero``（``UnitTemplate``）裡季末寫進編年史、下季建角色用得到的欄位：外觀（名字、紙娃娃）
+與上季的種族（5F-5c：種族不算外觀，只當新角色的預設、可以免費改）。等級、技能、裝備、屬性等其他
+欄位照數值類清掉。"""
 
 CARRIED: Final[Mapping[tuple[str, str], str]] = {
-    ("CharacterState", "hero"): "名字與外觀（name_zh、race、doll）→ 編年史的上季角色（下季可沿用）",
+    ("CharacterState", "hero"): "名字、紙娃娃（外觀）與種族（預設）→ 編年史的上季角色",
     ("CharacterState", "elite_kills"): "擊倒過的精英 → 編年史文字",
     ("CharacterState", "finished_skeletons"): "完成的事件 → 編年史文字",
+    ("CharacterState", "level"): "季末的等級 → 編年史文字（5F-5c）",
+    ("CharacterState", "quests"): "完成的主線章節 → 編年史文字（5F-5c）",
+    ("WorldState", "boss_clears"): "打倒賽季 Boss 的角色 → 編年史文字（5F-5c）",
+    ("WorldState", "league_entries"): "報名的角色（對到循環賽名次）→ 編年史（5F-5c）",
     ("WorldState", "recipes"): "配方的首位發現者（RecipeRecord 的紀念類欄位）→ 編年史",
 }
 """數值類、但季末先寫進紀念紀錄再清掉的欄位（模型名, 欄位）→ 去處（5F-5，玩法 PM 2026-11-03）。

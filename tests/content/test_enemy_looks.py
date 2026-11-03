@@ -1,4 +1,4 @@
-"""Phase 5A-ART：敵人外觀資料（`docs/art/敵人外觀.md` 第 3 節、Phase5計畫第 41 節）。"""
+"""Phase 5A-ART：敵人外觀資料（`docs/art/敵人外觀.md` 第 3 節、Phase5計畫第 42 節）。"""
 
 from __future__ import annotations
 

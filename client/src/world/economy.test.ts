@@ -51,6 +51,7 @@ const SHOP: WorldShop = {
   affinity_zh: "每次消費柳掌櫃好感度 +2（每天最多 +4，今天還能 +4）",
   can_trade: true,
   trade_problem_zh: null,
+  price_notes_zh: [],
   items: [
     {
       item: "item_hp_potion_small",
@@ -134,6 +135,14 @@ describe("ShopPanel", () => {
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*data-testid="world-buy-item_green_bamboo"/);
     expect(html).toContain('data-testid="world-sell-item_hp_potion_small"'); // 背包裡的可以賣
     expect(html).not.toContain("title="); // 說明用共用 Hint，不用原生 title
+    expect(html).not.toContain("world-shop-price-note");
+  });
+
+  it("explains a world event surcharge (5F-5c)", () => {
+    const shop = { ...SHOP, price_notes_zh: ["熔岩潰堤失守：買價 +20%"] };
+    const html = renderToStaticMarkup(createElement(ShopPanel, { shop, inventory: inventory(), busy: false, onAct: noop }));
+    expect(html).toContain('data-testid="world-shop-price-note"');
+    expect(html).toContain("熔岩潰堤失守：買價 +20%");
   });
 });
 

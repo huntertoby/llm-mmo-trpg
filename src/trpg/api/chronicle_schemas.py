@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Final
+from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,6 +36,7 @@ __all__ = [
     "ChronicleView",
     "LegacyHeroView",
     "SeasonResetRequest",
+    "SeasonVerifyRequest",
     "chronicle_view",
     "legacy_view",
 ]
@@ -127,6 +128,17 @@ class SeasonResetRequest(_ApiModel):
     dry_run: bool = True
     confirm_season: str | None = None
     """真的執行時必須等於目前的季 ID。"""
+
+
+class SeasonVerifyRequest(_ApiModel):
+    """從封存重播查證一筆首殺或一場循環賽（5F-5c；舊季讀唯讀封存，目前這一季讀世界資料夾）。"""
+
+    kind: Literal["first_kill", "league_match"]
+    season_id: str = Field(pattern=r"^[a-z][a-z0-9_]*$", max_length=32)
+    target: str | None = Field(default=None, max_length=80)
+    """``first_kill``：首殺的目標（精英種類或賽季 Boss ID）。"""
+    match_id: str | None = Field(default=None, max_length=80)
+    """``league_match``：循環賽的場次 ID。"""
 
 
 def _season_view(

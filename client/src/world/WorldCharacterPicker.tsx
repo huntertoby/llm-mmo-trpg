@@ -150,7 +150,7 @@ export function WorldCharacterPicker({ onEnter, onHome, onLogin, onLogout }: Pro
             data-testid="world-name"
           />
         </label>
-        {legacyId !== "" && <div className="muted small">沿用上季的名字與種族；等級、技能、裝備從頭開始。</div>}
+        {legacyId !== "" && <div className="muted small">沿用上季的名字與紙娃娃；種族預設帶上季的，可以免費改。等級、技能、裝備從頭開始。</div>}
         <RaceOriginPicker options={picker.options} choice={raceOrigin} onChoice={setRaceOrigin} disabled={busy} />
         <StartPickerView picker={picker} disabled={busy} />
         <div className="muted small">

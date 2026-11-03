@@ -65,6 +65,7 @@ __all__ = [
     "shop_buy_price",
     "shop_here",
     "shop_location",
+    "shop_price_notes",
     "shop_price_zh",
     "spend_pouch",
     "weekly_left",
@@ -123,6 +124,28 @@ def shop_buy_price(world: WorldState, shop: str, price: int) -> int:
     賣價照定價算、不受影響（代決 5F5b-3）。"""
     bonus = world.shop_price.get(shop, 0)
     return price if bonus == 0 else -(-price * (1000 + bonus) // 1000)
+
+
+def shop_price_notes(library: ContentLibrary, world: WorldState, shop: str) -> tuple[str, ...]:
+    """商店畫面的加價原因（Phase 5F-5c；例「熔岩潰堤失守：買價 +20%」）：已結束的世界事件裡，結果
+    （成功或失敗）的價格加成指到這家店的每一筆，原因文字是內容的 ``reason_zh``（空＝事件名）。
+    依世界事件 ID 排序。"""
+    season = library.world_season
+    if season is None or world.shop_price.get(shop, 0) == 0:
+        return ()
+    events = {e.id: e for e in season.world_events}
+    notes: list[str] = []
+    for state in world.world_events:
+        event = events.get(state.id)
+        if event is None or state.status == "active":
+            continue
+        effect = event.on_success if state.status == "succeeded" else event.on_failure
+        notes += [
+            f"{row.reason_zh or event.name_zh}：買價 +{row.permille / 10:g}%"
+            for row in effect.shop_price
+            if row.shop == shop
+        ]
+    return tuple(notes)
 
 
 def shop_price_zh(library: ContentLibrary, shop: str, permille: int, *, sep: str = "：") -> str:

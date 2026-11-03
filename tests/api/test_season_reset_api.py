@@ -93,7 +93,7 @@ def test_dry_run_then_execute(dev: TestClient, tmp_path: Path) -> None:
     preview = _ok(dev.post("/api/world/season/reset", json=RESET))
     assert preview["dry_run"] is True and preview["backup"] is None
     assert (preview["old_season"], preview["new_season"]) == ("s1", "s2")
-    assert preview["chronicle"] == ["阿霧：第一季：走過這一季"]
+    assert preview["chronicle"] == ["阿霧：第一季：到達 1 級"]
     assert _tree(tmp_path / "saves") == before
     body = {**RESET, "dry_run": False, "confirm_season": "s1"}
     # 真的執行一律要管理者帳號，開發模式沒帶 token 也不行（開發 PM 代決）
@@ -120,6 +120,11 @@ def test_dry_run_then_execute(dev: TestClient, tmp_path: Path) -> None:
     assert new_cid != cid
     char = store.character(new_cid)
     assert (char.hero.name_zh, char.hero.race, char.level) == ("阿霧", "fox", 1)
+    # 5F-5c：種族不算外觀——沿用時可以免費改種族，名字照沿用
+    elf = {**START, "race": "elf", "legacy_character": cid}
+    created = _ok(dev.post("/api/world/characters", json=elf), 201)
+    changed = store.character(created["character"]["character_id"])
+    assert (changed.hero.name_zh, changed.hero.race) == ("阿霧", "elf")
     assert dev.post("/api/world/season/reset", json=RESET).status_code == 409  # s2 還沒結束
 
 
@@ -159,3 +164,20 @@ def test_legacy_is_per_account(calm: ContentLibrary, tmp_path: Path) -> None:
         assert (
             _ok(client.get("/api/world/chronicle", headers=bob))["seasons"][0]["season_id"] == "s1"
         )
+
+
+def test_season_verify_endpoint(calm: ContentLibrary, tmp_path: Path) -> None:
+    """5F-5c：重播查證（管理者；只讀）。重播的檢查在 ``tests/server/test_season_archive.py``。"""
+    with _make(calm, tmp_path / "saves", dev_mode=False) as client:
+        player = _login(client, "alice")
+        admin = _login(client, "boss", admin=True)
+        _ok(client.post("/api/world/characters", json=START, headers=admin), 201)
+        body = {"kind": "first_kill", "season_id": "s1", "target": "rift_shard_lord"}
+        url = "/api/world/season/verify"
+        assert client.post(url, json=body).status_code == 401
+        assert client.post(url, json=body, headers=player).status_code == 403
+        missing = client.post(url, json=body, headers=admin)
+        assert missing.status_code == 404 and "沒有 rift_shard_lord 的首殺" in missing.text
+        no_key = {"kind": "league_match", "season_id": "s1"}
+        reply = client.post(url, json=no_key, headers=admin)
+        assert reply.status_code == 422 and "match_id" in reply.text

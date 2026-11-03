@@ -409,6 +409,10 @@ class Ruleset(ContentModel):
         rules.model_post_init(None)
         return rules
 
+    def enemy_only_statuses(self) -> frozenset[str]:
+        """只給敵人的狀態 ID（``enemy_only``，Phase 5F-5c）：技能引用它們一律當引用錯誤。"""
+        return frozenset(s.id for s in self.statuses.statuses if s.enemy_only)
+
     def unsafe_backlash_statuses(self) -> frozenset[str]:
         """不能當反噬的狀態 ID（Phase 3D-7a）：硬控類、會讓持有者跳過回合、回合開始時持續傷害
         （反噬不會讓施放者跳過回合，也不會讓他的 HP 低於 1）。"""
@@ -1580,11 +1584,12 @@ def skill_reference_problems(
 
     ``skills`` 是 ``grant_skill`` 查找的技能表；所有引用表一律帶齊（不省略任何一項）。
     """
+    enemy_only = ruleset.enemy_only_statuses()  # 5F-5c：只給敵人的狀態，技能不能引用
     problems = skill_problems(
         skill,
         ruleset.shapes.by_id(),
         ruleset.primitives.by_id(),
-        status_ids={s.id for s in ruleset.statuses.statuses},
+        status_ids={s.id for s in ruleset.statuses.statuses if s.id not in enemy_only},
         object_ids={o.id for o in ruleset.objects.objects},
         conditions=ruleset.conditions.by_id(),
         triggers=ruleset.skill_triggers.by_id(),
@@ -1598,6 +1603,11 @@ def skill_reference_problems(
         infusion_ids=set(ruleset.core.summon_infusions),
         form_ids=set(ruleset.forms.by_id()),
     )
+    problems += [
+        f"狀態 {sid} 只給敵人（enemy_only），技能不能用"
+        for sid in sorted(enemy_only)
+        if any(sid in p for p in problems)
+    ]
     problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
     follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查
     if follow is not None:

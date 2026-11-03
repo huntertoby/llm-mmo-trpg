@@ -165,6 +165,7 @@
 | 5F-4b | 5F-4 收尾（玩法 PM 2026-11-03 代決）：先試「開場 HP ×2＋第 1 輪雙方不能造成傷害（只能移動、上增益、佈陣）」，目標平均 6 輪以上、先後手勝率各 40～60%；不達標再試拉開站位，最後才用先手少 1 AP（寫腳本出摘要表，不手動反覆試）；同分照 6.8 BAL-12a：己方剩餘 HP 比例合計 → 總輪數少者勝 → 平分獎金；最終排名（名次、名字、build 名）寫進編年史（紀念類），快照照清；第 14 天 6 點換日若還沒有人首殺賽季 Boss 就自動開跑，管理者手動留著備用；報名時可免費重新配點（#32），不配照自動；重播結束面板改中性「某某 勝」。實作細節保守代決：開跑後規則改了就整個賽程重跑（不跨 ruleset 重播）；場次列表分頁 | 5F-4 | 1 h | 否 |
 | 5F-ART1 | 霧鎖千山大十字圖示（美術 PM，`docs/art/大十字圖示.md`，分支 `claude/art-pm-8f4e6d` 753c517d，連 4df27344 熔核一起併）：arm ≥ 2 的十字 `grid()` 畫 5×5（cs 11、gap 2、總寬 63）、亮 9 格、中心星形 0.7 倍；segments 帶 arm 到 motif／grid()、shapeTile id 加 arm、不合法值當 1。**併做霧影外觀**（`docs/art/霧影外觀.md`，bc168013）：人形新款式 `mist_shade`（召喚者紙娃娃、月白 #dfe4e2、不透明度 0.55、不發光、腳底往上 14 單位漸隱、不畫影子、不帶本體金環金菱形詞綴粒子），`summon_mist_shade` 召喚外觀寫 `variant: mist_shade`；玩家殘影不變。待併 commit：4df27344、753c517d、bc168013 | 5F-2b、5F-1b | 0.5 h | 可平行 |
 | 5F-3b | 5F-3 收尾（玩法 PM 2026-11-03 代決）：技能 `enemy_only` 標記，生成器／候選／閃現／工坊都排除（霧鎖千山與 5F-3 的 6 招敵人技能都標上；夾具恢復成不含它們）；碎晶之主用 380／60，目標整體 60～70%、10～15 輪、**每個 build 至少 40%**：先查 striker 20%、trapper 40% 輸在哪個階段、哪個機制，再對那個機制調 Boss（#87：調 Boss 不調 build），原因寫報告；解鎖對齊：封印集滿後「最早第 8 天」且「公告滿 24 小時」之後的第一個 6 點；「碎晶的終結者」做成帳號層級紀念稱號（季末保留、評分榜照顯示） | 5F-3 | 1.5 h | 否 |
+| 5F-3c | 5F-3b 收尾（玩法 PM 2026-11-03 代決，19.7 與 3.5 已記，6a6786df）：碎晶之主改「灌注 ×0.75、界崩維持第 15 輪」（開發 PM 已改 content，50c939a6；19.7 原文不動）並重測確認整體約 70%、每個 build ≥ 40%；霧影分身確定 `enemy_only`；稱號顯示在三處：玩家名片（城裡點開朋友、看 build）、主城排行榜與 Boss 擊殺紀錄、編年史，戰鬥畫面不顯示；近似清單寫清楚實際做法（全場傷害在什麼時機觸發、晶傀儡多久召喚一次），補進 `Phase5F-3b報告.md` | 5F-3b | 0.75 h | 可與 5A-ART 平行 |
 | 5F-5a | 灰燼荒原內容接入（Q9；`docs/design/19-灰燼荒原與賽季主線.md` 19.1～19.9 全部：地點圖約 17 個、熔岩獸群與中立族群、區域 Boss 灰燼之心（護甲 +1 旗標）、材料、事件骨架約 15 個、NPC 人設卡、主線第 2 章、荒原懸賞、世界事件 #2 熔岩潰堤與 #3 封印共鳴；餘燼集商店、鐵匠爐叔與附魔台、20.4 兩個隱藏配方提示；情境模板）| 5F-3 | 2 h | 可與 5F-3b 平行（只碰 content／world 內容） |
 | 5F-5b | 5F-5a 收尾（玩法 PM 2026-11-03 代決，19 號文件與 3.5 已記，3d122a14）：灰燼之心 HP 維持 160、改調傷害，目標 9 級主角＋2 傭兵勝率 70～80%、6～10 輪；另量赤焰（build_fire）當主角至少 40%，火抗 −75% 達不到就降回 −50%（#87 調 Boss 不調 build）；一般遭遇補量「高 2 級」（07 7.8：同等級約 80%、高 2 級約一半，衝突時以高 2 級吃力優先），高於 60% 才調高荒原敵人傷害（只調荒原），60% 以內維持；世界事件 #2 失敗後果改成「餘燼集商店價格 +20% 到季末」（全服），荒原建議等級 +1 不變；村落不加商店 | 5F-5a | 1 h | 可與 5F-5 平行 |
 | 5F-5 | 季末重置（9.7、#91：數值類全清、紀念類保留）。**分類代決（玩法 PM 2026-11-03，改 `server/season_policy.py`）**：配方表 recipe／hidden／base／steps／listed 清掉，首位發現者紀錄（誰、配方名、哪一季）保留；`elite_kills`、`finished_skeletons` 清掉，但季末先寫成編年史文字紀錄（例「第一季：擊倒北坡狼王、解開霜音的謎」）並保留；名字與外觀保留、下季建角色可沿用，等級／技能／裝備清；地點留言清掉（首殺足跡已在首殺紀錄與編年史保留）。荒原內容一併接：餘燼集鐵匠爐叔與附魔台（8.26.1 每鎮成對）、20.4 兩個隱藏配方提示、餘燼集商店 | 5F-3 | 1.5 h | 否 |
@@ -4463,16 +4464,31 @@ world_events:
 | 5F5-6 | 管理者權限 | 同 `require_admin`（開發模式沒登入可用），真的執行另外要輸入目前季 ID |
 | 5F5-7 | 同一個上季角色沿用幾次 | 不限（名字本來就不唯一） |
 
-## 41. 5A-ART 詳細規格：敵人外觀移植（ART1～ART4）
+## 41. 5F-5c 詳細規格：季末重置收尾（本段開工時由實作者補上，依第 1 節 5F-5c 列的玩法 PM 2026-11-03 代決）
+
+> 依據：第 1 節 5F-5c 列；09 9.7「季末重置細節」；`Phase5F-5報告.md` 待 PM 決定 1～4。開發 PM 另外補兩項（玩法 PM 2026-11-03 代決）：熔核類狀態不外流、商店寫出加價原因。完成報告：`Phase5F-5c報告.md`。
+
+| # | 項目 | 做法 |
+|---|---|---|
+| 41.1 | 唯讀封存 | 季末重置把 `world/log.jsonl`、`world/league/`、`world/season_boss/` 搬進存檔資料夾的 `archive/<舊季>/`（同一相對路徑），寫 `manifest.json`（每個檔的 sha256），所有檔設成唯讀（`os.chmod`）。只有重置會寫（`server/season_archive.py`）；備份照舊 |
+| 41.2 | 重播查證 | `POST /api/world/season/verify`（管理者，`kind`＝`first_kill`＋`target` 或 `league_match`＋`match_id`）與 `scripts/season_verify.py`：舊季讀封存、目前這一季讀世界資料夾；首殺比對世界日誌序號＋（有戰鬥紀錄時）確定性重播＋我方勝；循環賽重播後比對勝方、輪數、結束原因；封存檔 sha256 不符要報出來。只讀 |
+| 41.3 | 編年史列事實 | 模板在 `content/world/season.yaml` 的 `chronicle`（`ChronicleTemplates`）；`ChronicleHero` 加 `level`、`bosses`、`first_kills`、`chapters`、`recipes`、`league_rank`（紀念類）；事實來自角色狀態、世界狀態（`boss_clears`、`recipes`、`league_entries`）、首殺紀錄與循環賽編年史 |
+| 41.4 | 種族不算外觀 | 沿用上季角色：名字＋紙娃娃；`race` 省略＝上季的、給了就照新選；種族改了時紙娃娃的膚色、髮型、髮色、眼睛、骷髏改回新角色範本的預設 |
+| 41.5 | 熔核類狀態只給敵人 | `StatusDef.enemy_only`（不能有 `budget_points`）；技能引用它＝引用錯誤；技能池的狀態清單都排除；資料檢查鎖住只在敵方單位範本 |
+| 41.6 | 商店加價原因 | `ShopPriceEffect.reason_zh`（content）；`ShopView.price_notes_zh`（例「熔岩潰堤失守：買價 +20%」）；前端商店標題下顯示 |
+
+不做：舊季循環賽的網頁重播頁、LLM 傳記（7.11）。
+
+## 42. 5A-ART 詳細規格：敵人外觀移植（ART1～ART4）
 
 > 給實作 agent。動 `client/src/render/`（新 `inkCreature.ts`、`inkDoll.ts`、`inkGear.ts`／`inkArmor.ts`／`inkWeapons.ts`、`appearance.ts`、`unitSprite.ts`、`artTextures.ts`、`BattleRenderer.ts`）、`client/src/battle/drawModel.ts`、`src/trpg/content/battle.py`（`DollLook` 擴充、新 `CreatureLook`）、`src/trpg/content/world_enemies.py`（變體外觀、詞綴外觀）、`src/trpg/content/summons.py`／`library.py`（召喚物 `creature`）、`content/units/`、`content/world/enemies.yaml`、`content/summon_looks.yaml`、`tests/content/`、前端測試夾具與 OpenAPI。**不改引擎**（`src/trpg/engine/` 一行不動）。
 > 依據：第 1 節 5A-ART1～ART4 列；`docs/art/敵人外觀.md`（全文，第 3 節與「第 4 段補充」為主規格）、`docs/art/sample/enemyArt.js`／`enemies.html`／`storyDoll.js`、`docs/art/enemies.png`；`docs/美術PM交接.md` 的重要視覺決定（外光只代表頭目）。美術 PM 的代決（`美術PM交接.md` 第 6 節）未經使用者確認，照代決先做；改名、改配色只動資料。完成報告：`Phase5A-ART報告.md`。
 
-### 41.1 目標
+### 42.1 目標
 
 異形敵人（野獸、熔岩獸、源晶造物、傀儡、石靈、召喚物）用新的 C 畫風異形畫法（身形 × 材質 × 元素 × 大小 × 特徵）；精英有金環＋金菱形＋詞綴小特效、頭目有外光＋金環；修士用紙娃娃新部件；所有大世界敵人寫好外觀資料。不認得的值一律退回、不出錯，資料和前端誰先上線都可以。
 
-### 41.2 決策影響盤點（既有功能）
+### 42.2 決策影響盤點（既有功能）
 
 | 既有功能 | 影響 | 處理 |
 |---|---|---|
@@ -4488,7 +4504,7 @@ world_events:
 | 浮動卡（開發PM交接 6.5.1） | 本段不新增彈出 UI | 不適用；排版煙霧檢查 `__layoutSmoke.scan()` 照跑 |
 | 盜賊三套配色（`enemy-dolls.html`） | 同一批盜賊範本在 roguelite、雲嶺、荒原共用 | 本段不換（要區域配色得有區域範本或依區域換色的機制）；列入待 PM 決定 |
 
-### 41.3 資料格式（`trpg.content.battle`）
+### 42.3 資料格式（`trpg.content.battle`）
 
 ```yaml
 # 異形
@@ -4502,37 +4518,37 @@ doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
 
 - `CreatureLook`：`body`、`variant`、`material`、`element`、`size`（ID 格式字串，**值不檢查**，前端不認得就退回）、`tint`（`#rrggbb`）、`traits`（ID 清單，最多 12）、`status_traits`（狀態 ID → 特徵清單）。
 - `DollLook` 新增：`creature`、`affixes`（精英詞綴的外觀 id）、`hair` 加 `bun`、`bun_band`、`beard`、`build`（`stout`／`tall`）、`main_kind`（主手造型覆寫：`whisk` 拂塵、`talisman` 符紙、`puppet_cross` 傀儡線）、`main_tassel`（劍穗色）；`gear` 欄位加 `neck`、`back`、`waist`（只給敵人範本的外觀格，不是裝備格）；`DollGear` 加 `form`、`trim`、`apron`。`skin` 改選填。
-- `EliteAffixDef.look`、`EnemyVariantDef.doll`、`summon_looks.yaml` 的 `creature`：見 41.2。
+- `EliteAffixDef.look`、`EnemyVariantDef.doll`、`summon_looks.yaml` 的 `creature`：見 42.2。
 
-### 41.4 前端
+### 42.4 前端
 
 1. **ART1 異形畫法**（`inkCreature.ts`）：移植 `enemyArt.js` 的 14 種身形（含 `flyer` 的 `bird`／`bat`、`crawler` 的 `beetle`／`spider`）、6 種材質（色票、裂縫、切面、刻符、木紋、背上小物）、特徵（含 `crust`）、大小（`tiny` 0.62～`huge` 1.6）。不認得：body → `ooze`、material → `fur`、element → 無、size → 1、trait → 略過。畫布 96×96、腳底在下方 12px；朝西鏡像，正面背面沿用側面。`status_traits`：單位身上有該狀態時才畫那些特徵（灰燼之心的熔殼，第 2 階段狀態移除就消失）。全部用 `inkStyle.ts` 的確定性墨線，禁止 `Math.random()`。
 2. **ART2 精英與頭目記號**：`elite` 標籤 → 陣營環外加金環（墨線 2.2px＋`#ffbf3a` 1.2px）＋環前方金菱形、小人 ×1.15；頭目（`rarity`）→ 身體外光（同 `renderFigureCanvas`）＋金環。詞綴特效照 `敵人外觀.md` 1.2：異形畫在異形貼圖裡；人形另疊一張詞綴貼圖。`mirror` 錯開分身 35%、`mist_hidden` 本體 75%、`linked` 由 `BattleRenderer` 畫到相鄰同陣營單位的青色虛線。詞綴 id 同時認得內容的詞綴 ID（`regenerating`、`mist_veiled`、`heart_linked`、`hard_shelled`）與美術 id。
 3. **ART3 修士新部件**：照 `storyDoll.js` 移植髮髻、赤膊、念珠、圍裙、背物（藥葫蘆、木偶箱）、腰掛黃符、白紗面罩、白羽披肩、劍穗、拂塵／符紙／傀儡線（11 項）；不認得的 kind 不畫。
 4. 外觀優先順序：形態 ＞ `doll_look.creature`（含召喚物）＞ 召喚物 `summon_look` ＞ 紙娃娃。
 
-### 41.5 ART4 內容資料
+### 42.5 ART4 內容資料
 
 - 異形：照 `敵人外觀.md` 第 3 節「第 4 段補充」的單位 ID 對照表（荒原、碎晶之主、源晶柱、晶傀儡、熔晶魅、殼縫餘燼蜥＝餘燼蜥同款）與第 2 節（雲嶺野獸、霧魅、碎晶傀儡、陣眼石靈）。頭目寫 `rarity: legendary`。
 - 修士：照 `enemies.html` 的 `MONKS`（色票：青灰 `#8a9aa0`、青 `#5f8f8a`、月白 `#dfe4e2`、墨灰 `#3c4248`、朱紅 `#c0392b`、竹青 `#4f8a6a`）；三個修士變體（雷符師、冰鶴使、水煉丹師）寫變體 `doll`；荒原的雷殼甲蟲、焦石背熊寫變體 `doll`（換 `element`）。
 - 召喚物：餘燼幼蜥 `{body: lizard, material: magma, size: tiny}`。
 - 詞綴：`enemies.yaml` 的六個詞綴寫 `look`（`regen`、`mist_hidden`、`linked`、`berserk`、`blazing`、`hardshell`）。
 
-### 41.6 測試
+### 42.6 測試
 
 - `tests/content/test_enemy_looks.py`：對照表每個單位的 `creature` 值；schema（不認得的值照樣載入、格式錯誤擋下）；`apply_affix` 加詞綴外觀、沒有 `doll` 時不加；變體 `doll` 覆寫；召喚物 `creature` 寫進範本。
 - vitest：每種 body × material × size 畫得出來、不認得的值不丟錯（全組合自測）；`status_traits` 有狀態才畫殼、移除後消失（貼圖鍵與繪製呼叫都看）；精英金環／菱形與 ×1.15、頭目外光只在有 `rarity` 時；召喚物有 `creature` 時優先；修士新部件畫得出來、不認得不畫。
 
-### 41.7 驗收
+### 42.7 驗收
 
 - 交件前：ruff check、ruff format --check、mypy、lint-imports、`tests/content`、`tests/api`、`tests/narrative`、vitest、build、swamp 種子 7 重播。
 - 瀏覽器（8260 埠，800×600 與 1600×900）：雲嶺一般遭遇、荒原遭遇、灰燼之心第 1→2 階段殼消失、碎晶之主、霧鎖真人；對照 `docs/art/enemies.png`；`__layoutSmoke.scan()` 回空清單。
 
-### 41.8 不做的事
+### 42.8 不做的事
 
 - 頭目專屬畫法（灰燼之心「嵌在甲蟲殼裡」、碎晶之主「無數碎片的人形」，美術 PM 之後另畫）；盜賊區域配色；敵人種族外觀（`fromDollLook` 接 `race.look`，等有種族敵人）；異形倒地姿勢（倒地照舊去色＋半透明）。
 
-### 41.9 代決（實作者照最保守的預設；寫進完成報告）
+### 42.9 代決（實作者照最保守的預設；寫進完成報告）
 
 | # | 事項 | 代決 |
 |---|---|---|
@@ -4544,6 +4560,6 @@ doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
 | ART-6 | 霧鎖真人的雙手 | 主手拂塵（`main_kind: whisk`）、副手長劍（副手格加認 `sword`） |
 | ART-7 | 道童杖頭綠光 | 杖頭光色沿用現有畫法（沒有新增欄位） |
 
-## 42. 之後各段規格
+## 43. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

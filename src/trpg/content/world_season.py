@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import re
+import string
 from collections.abc import Collection, Mapping
 from typing import Final, Literal
 
@@ -29,6 +30,8 @@ __all__ = [
     "BossScore",
     "BossUnlock",
     "BountyDef",
+    "ChronicleFact",
+    "ChronicleTemplates",
     "DailyGoalDef",
     "DailyGoalRules",
     "GoalKind",
@@ -194,6 +197,9 @@ class ShopPriceEffect(ContentModel):
 
     shop: str = Field(pattern=ID_PATTERN)
     permille: int = Field(ge=1, le=10_000)
+    reason_zh: str = ""
+    """商店畫面寫的加價原因（Phase 5F-5c，例「熔岩潰堤失守」；畫面顯示「原因：買價 +20%」）。
+    空字串＝用世界事件的名字。"""
 
 
 class WorldEventEffect(ContentModel):
@@ -353,6 +359,60 @@ class SeasonBossDef(ContentModel):
     score: BossScore = BossScore()
 
 
+def _placeholders(text: str) -> set[str]:
+    return {name for _, name, _, _ in string.Formatter().parse(text) if name is not None}
+
+
+class ChronicleFact(ContentModel):
+    """編年史一種事實的寫法（Phase 5F-5c）：``text`` 裡的 ``{items}`` 換成各項（每項用 ``item``
+    排版、:attr:`ChronicleTemplates.joiner` 串起來）。"""
+
+    text: str = Field(min_length=1)
+    item: str = "{name}"
+
+    @model_validator(mode="after")
+    def _check(self) -> ChronicleFact:
+        if _placeholders(self.text) != {"items"}:
+            raise ValueError(f"編年史模板 {self.text!r} 只能用 {{items}}")
+        if _placeholders(self.item) != {"name"}:
+            raise ValueError(f"編年史模板 {self.item!r} 只能用 {{name}}")
+        return self
+
+
+class ChronicleTemplates(ContentModel):
+    """季末編年史的固定模板（Phase 5F-5c，玩法 PM 2026-11-03 代決：第一季用固定模板、列事實細節；
+    LLM 傳記 07 7.11 是後期）。每個角色一行：``line`` 的 ``{season}``＝季名、``{facts}``＝依序
+    （等級、精英、Boss、首殺、主線章節、事件、配方、循環賽）有內容的事實用 ``separator`` 串起來；
+    都沒有＝``empty``。只寫狀態與日誌裡確實發生過的事。"""
+
+    line: str = Field(min_length=1)
+    separator: str = Field(min_length=1)
+    joiner: str = Field(min_length=1)
+    empty: str = Field(min_length=1)
+    level: str = Field(min_length=1)
+    """``{level}``＝季末的等級。"""
+    elites: ChronicleFact
+    bosses: ChronicleFact
+    """區域 Boss（``world/loot.yaml`` 的 ``bosses``）與賽季 Boss。"""
+    first_kills: ChronicleFact
+    chapters: ChronicleFact
+    events: ChronicleFact
+    recipes: ChronicleFact
+    league: str = Field(min_length=1)
+    """``{rank}``＝循環賽最終名次。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> ChronicleTemplates:
+        for text, names in (
+            (self.line, {"season", "facts"}),
+            (self.level, {"level"}),
+            (self.league, {"rank"}),
+        ):
+            if _placeholders(text) != names:
+                raise ValueError(f"編年史模板 {text!r} 要用而且只能用 {sorted(names)}")
+        return self
+
+
 class SeasonContent(ContentModel):
     """``content/world/season.yaml``。"""
 
@@ -366,6 +426,8 @@ class SeasonContent(ContentModel):
     season_boss: SeasonBossDef | None = None
     league: LeagueRules | None = None
     """影子循環賽（Phase 5F-4）；``None``＝這一季沒有循環賽。"""
+    chronicle: ChronicleTemplates | None = None
+    """季末編年史的模板（Phase 5F-5c）；``None``＝編年史只寫季名。"""
 
     @model_validator(mode="after")
     def _season(self) -> SeasonContent:

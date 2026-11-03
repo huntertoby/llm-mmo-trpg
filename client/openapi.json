@@ -2601,6 +2601,48 @@
         }
       }
     },
+    "/api/world/season/verify": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Season Verify",
+        "description": "重播查證（管理者，5F-5c）：給一筆首殺（``target``）或一場循環賽（``match_id``），從唯讀封存\n（目前這一季從世界資料夾）確定性重播，回報結果和保留下來的紀錄是否一致。只讀。找不到 404；\n沒給對應的 ``target``／``match_id`` 422。",
+        "operationId": "post_season_verify_api_world_season_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeasonVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/season/reset": {
       "post": {
         "tags": [
@@ -15534,6 +15576,77 @@
         "title": "Reload",
         "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
       },
+      "ReplayCheck": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "first_kill",
+              "league_match"
+            ],
+            "title": "Kind"
+          },
+          "season_id": {
+            "type": "string",
+            "title": "Season Id"
+          },
+          "subject_zh": {
+            "type": "string",
+            "title": "Subject Zh"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "archive",
+              "world"
+            ],
+            "title": "Source"
+          },
+          "battle_log": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Log"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "passed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Passed"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "season_id",
+          "subject_zh",
+          "source",
+          "battle_log",
+          "ok",
+          "passed",
+          "problems"
+        ],
+        "title": "ReplayCheck",
+        "description": "一次查證的結果。"
+      },
       "RerollAction": {
         "properties": {
           "kind": {
@@ -16363,6 +16476,17 @@
               }
             ],
             "title": "Backup"
+          },
+          "archive": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive"
           }
         },
         "additionalProperties": false,
@@ -16442,6 +16566,56 @@
         ],
         "title": "SeasonResetRequest",
         "description": "季末重置（管理者）。``dry_run`` 預設 ``true``：只列出會清什麼、留什麼。"
+      },
+      "SeasonVerifyRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "first_kill",
+              "league_match"
+            ],
+            "title": "Kind"
+          },
+          "season_id": {
+            "type": "string",
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Season Id"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "match_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "season_id"
+        ],
+        "title": "SeasonVerifyRequest",
+        "description": "從封存重播查證一筆首殺或一場循環賽（5F-5c；舊季讀唯讀封存，目前這一季讀世界資料夾）。"
       },
       "SegmentLine": {
         "properties": {
@@ -16876,6 +17050,14 @@
               }
             ],
             "title": "Trade Problem Zh"
+          },
+          "price_notes_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Price Notes Zh",
+            "default": []
           }
         },
         "additionalProperties": false,

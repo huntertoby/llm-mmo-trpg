@@ -9,6 +9,7 @@ from collections.abc import Callable
 import pytest
 
 from tests.world.helpers import NOON, make_world
+from trpg.api.world_economy_view import shop_view
 from trpg.content.library import ContentLibrary
 from trpg.content.world_encounters import ArmorMod, ArmorMods
 from trpg.engine.ai.utility import UtilityAI
@@ -22,7 +23,7 @@ from trpg.world.actions import (
 )
 from trpg.world.battle import armored, prepare_battle
 from trpg.world.calendar import day_of
-from trpg.world.economy import item_def, shop_buy_price
+from trpg.world.economy import item_def, shop_buy_price, shop_price_notes
 from trpg.world.economy_actions import BuyAction, ItemBoughtEvent, ItemSoldEvent, SellAction
 from trpg.world.encounters import EncounterLineup, LineupMember, roll_lineup
 from trpg.world.errors import WorldActionError
@@ -184,6 +185,10 @@ def test_lava_breach_failure_opens_pit_late_and_raises_level(library: ContentLib
     assert world.shop_price == {IRON_LADY: 200}  # 5F-5b：餘燼集商店買價 +20% 到季末
     later = _at_day(library, 10)
     assert later.shop_price == {IRON_LADY: 200}  # 到季末都不會自己消失
+    # 5F-5c：商店畫面寫出加價原因（文字在 world/season.yaml 的 reason_zh）
+    assert shop_price_notes(library, later, IRON_LADY) == ("熔岩潰堤失守：買價 +20%",)
+    assert shop_price_notes(library, later, "shop_liu") == ()
+    assert shop_price_notes(library, early, IRON_LADY) == ()
 
 
 def test_shop_price_rounds_up_and_only_affects_that_shop() -> None:
@@ -331,3 +336,13 @@ def test_ashen_world_log_replays(library: ContentLibrary, make_char: MakeChar) -
     assert char.region == REGION
     replayed = replay(library, world, {"alice": alice}, applied)
     assert replayed.world == live and replayed.characters["alice"] == char
+
+
+def test_shop_view_explains_the_surcharge(library: ContentLibrary, make_char: MakeChar) -> None:
+    """5F-5c：商店畫面（``ShopView.price_notes_zh``）寫出加價原因。"""
+    char = _ashen(make_char, gold=500)
+    view = shop_view(library, _at_day(library, 10), char, _day(10), in_battle=False)
+    assert view is not None and view.shop == IRON_LADY
+    assert view.price_notes_zh == ("熔岩潰堤失守：買價 +20%",)
+    plain = shop_view(library, make_world(), char, NOON, in_battle=False)
+    assert plain is not None and plain.price_notes_zh == ()

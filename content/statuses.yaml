@@ -198,7 +198,7 @@ statuses:
     description_zh: 碎晶之主把力量灌進三根源晶柱：造成的傷害降低；柱子全部碎裂時解除。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
-    damage_dealt_permille: 700
+    damage_dealt_permille: 750
   # 5F-3：19.7「打碎順序自由，留下的柱子脈衝變強」：倒 1 根、倒 2 根時留下的柱子換上（柱子的階段，tag_down）。
   - id: crystal_surge
     polarity: neutral
@@ -214,7 +214,7 @@ statuses:
     expires: never
     stacking: refresh
     damage_dealt_permille: 1500
-  # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖；5F-3b 延到第 18 輪，見 Phase5F-3b報告）。
+  # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖；5F-3b 維持第 15 輪，玩法 PM 代決，見 Phase5F-3b報告）。
   - id: rift_collapse
     polarity: neutral
     name_zh: 界崩
@@ -1369,6 +1369,7 @@ statuses:
   # 熔岩獸群範本有）同時讓攻擊傷害 ×2.25（模擬見 docs/phases/Phase5F-5b報告.md：高 2 級 82% → 58%、同等級 93% → 72%）。
   - id: molten_burst
     polarity: neutral
+    enemy_only: true   # 5F-5c：只給敵人（不能給玩家、影子，也不能進技能池）
     name_zh: 熔核爆裂
     description_zh: 體內的熔核灼熱，造成的攻擊傷害大幅提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
     expires: never
@@ -1379,6 +1380,7 @@ statuses:
   # Boss 戰的難度幾乎全由蜥蜴決定，和一般遭遇分開調（9 級主角＋2 傭兵勝率 70～80%）。
   - id: heart_ember_burst
     polarity: neutral
+    enemy_only: true   # 5F-5c：只給敵人（不能給玩家、影子，也不能進技能池）
     name_zh: 殼縫熔核
     description_zh: 從灰燼之心的殼縫裡帶出來的熔核，造成的攻擊傷害提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。
     expires: never
@@ -1388,6 +1390,7 @@ statuses:
   # 5F-5a：冰變體寒燼蜥（19.2.1「死後留冰面」）；5F-5b 同熔核爆裂，攻擊傷害 ×2.25。
   - id: frost_ember_burst
     polarity: neutral
+    enemy_only: true   # 5F-5c：只給敵人（不能給玩家、影子，也不能進技能池）
     name_zh: 寒燼爆裂
     description_zh: 體內的寒燼刺骨，造成的攻擊傷害大幅提高；倒下時寒燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。
     expires: never

@@ -6,8 +6,9 @@
   ``scripts/season_reset.py`` 都呼叫它）。``dry_run=True``（預設）只算出會清什麼、留什麼，
   不寫任何檔。
 - **順序**（帳號資料夾的鎖檔內）：檢查 → 備份整個存檔資料夾 → 寫編年史（:data:`CARRIED` 的內容；
-  同一季已有就不覆寫，中斷後重跑不會用半套資料蓋掉）→ 循環賽搬到 ``league_history/<舊季>/``
-  （報名快照清空）→ 刪角色、日誌、留言 → 最後寫新一季的 ``world.json``。
+  同一季已有就不覆寫，中斷後重跑不會用半套資料蓋掉）→ 循環賽報名快照清空 → 世界日誌、循環賽、
+  賽季 Boss 首殺的戰鬥紀錄搬進存檔資料夾的唯讀封存 ``archive/<舊季>/``（5F-5c，
+  :mod:`trpg.server.season_archive`）→ 刪角色、留言 → 最後寫新一季的 ``world.json``。
 - **確定性**：同一份存檔＋同樣的參數（開賽時間、季 ID、種子、``now``）→ 一模一樣的結果。清單一律
   依 ID 排序；新一季的種子預設由舊種子＋新季 ID 雜湊（不用 ``random``、``secrets``）。時間由呼叫者
   傳入。
@@ -28,6 +29,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
+from trpg.content.world_season import ChronicleFact, ChronicleTemplates
 from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
     CHRONICLE_DIR,
@@ -44,6 +46,7 @@ from trpg.server.chronicle import (
 from trpg.server.first_kills import FIRST_KILLS_FILE, FirstKill, elite_kind_name, load_first_kills
 from trpg.server.league import LEAGUE_DIR, LeagueMatch, LeagueRecord
 from trpg.server.notes import NOTES_FILE, LocationNote, LocationNoteStore
+from trpg.server.season_archive import ARCHIVE_DIR, archive_season
 from trpg.server.season_boss_board import (
     BOSS_BOARD_FILE,
     FIRST_KILL_DIR,
@@ -58,7 +61,9 @@ from trpg.server.season_policy import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.world.calendar import season_status
+from trpg.world.loot import loot_rules
 from trpg.world.save import dumps_world, loads_char, loads_world, write_atomic
+from trpg.world.season_boss import boss_def
 from trpg.world.state import CharacterState, RecipeRecord, WorldState
 
 __all__ = [
@@ -70,6 +75,7 @@ __all__ = [
     "WORLD_FILES",
     "HandlerKind",
     "ResetLine",
+    "SeasonFacts",
     "SeasonResetError",
     "SeasonResetReport",
     "chronicle_hero",
@@ -77,6 +83,7 @@ __all__ = [
     "default_backup_root",
     "next_season_id",
     "recipe_discovery",
+    "season_facts",
     "season_name_zh",
     "season_reset",
 ]
@@ -98,13 +105,13 @@ HANDLERS: Final[Mapping[type[BaseModel], tuple[HandlerKind, str]]] = {
     CharacterState: ("delete", "world/chars/*.json：先把 CARRIED 寫進編年史再刪"),
     WorldState: ("replace", "world/world.json：換成新一季（新 season_id、種子、開賽時間）"),
     RecipeRecord: ("split", "配方表清空；首位發現者寫進編年史的 RecipeDiscovery"),
-    FirstKill: ("keep", "world/first_kills.json 不動"),
+    FirstKill: ("keep", "world/first_kills.json 不動（戰鬥紀錄在封存 archive/<舊季>/ 的同一路徑）"),
     BossBoardEntry: ("keep", "world/season_boss_board.json 不動"),
     AccountRecord: ("keep", "帳號資料夾不動（重置期間持有鎖檔）"),
     AccountTitle: ("keep", "帳號檔的紀念稱號（5F-3b「碎晶的終結者」）跟著帳號不動"),
     LocationNote: ("delete", "world/notes.json 刪掉"),
-    LeagueRecord: ("split", "world/league/ 搬到 league_history/<舊季>/，報名快照清空"),
-    LeagueMatch: ("keep", "跟著賽程搬到 league_history/<舊季>/，場次與戰鬥紀錄檔不動"),
+    LeagueRecord: ("split", "world/league/ 報名快照清空，搬進唯讀封存 archive/<舊季>/league/"),
+    LeagueMatch: ("keep", "跟著賽程搬進封存，場次與戰鬥紀錄檔內容不動（可重播查證）"),
     LeagueChronicle: ("keep", "world/chronicle/league.json 不動"),
     LeagueChronicleSeason: ("keep", "world/chronicle/league.json 不動"),
     LeagueChronicleRank: ("keep", "world/chronicle/league.json 不動"),
@@ -123,15 +130,15 @@ SPLIT_CARRIERS: Final[Mapping[type[BaseModel], type[BaseModel]]] = {
 
 WORLD_FILES: Final[Mapping[str, str]] = {
     WORLD_FILE: "replace",
-    LOG_FILE: "delete",
+    LOG_FILE: "archive",  # 5F-5c：搬進唯讀封存 archive/<舊季>/
     CHARS_DIR: "delete",
     NOTES_FILE: "delete",
-    LEAGUE_DIR: "move",
+    LEAGUE_DIR: "archive",
     FIRST_KILLS_FILE: "keep",
     BOSS_BOARD_FILE: "keep",
-    FIRST_KILL_DIR: "keep",
+    FIRST_KILL_DIR: "archive",
     CHRONICLE_DIR: "keep",
-    LEAGUE_HISTORY_DIR: "keep",
+    LEAGUE_HISTORY_DIR: "keep",  # 5F-5 的舊位置（5F-5c 起改搬進封存）
 }
 """世界資料夾裡認得的檔案與資料夾。不認得的照保守做法保留，列在報告裡。"""
 
@@ -167,6 +174,8 @@ class SeasonResetReport(BaseModel):
     """``force`` 略過的檢查。"""
     backup: str | None = None
     """備份資料夾（dry-run＝``None``）。"""
+    archive: str | None = None
+    """舊季的唯讀封存資料夾（5F-5c；dry-run＝``None``）。"""
 
 
 # -- 小工具 -------------------------------------------------------------------
@@ -236,41 +245,154 @@ def _skeleton_text(library: ContentLibrary) -> dict[str, str]:
     return found
 
 
+@dataclass(frozen=True)
+class SeasonFacts:
+    """季末寫編年史用的全季事實（Phase 5F-5c；都來自世界狀態與伺服器的紀念檔，不推測）。"""
+
+    season_id: str
+    skeletons: Mapping[str, str]
+    """事件骨架 ID → 「誰：想要什麼」。"""
+    main_quests: Mapping[str, str]
+    """主線任務 ID → 章節名。"""
+    region_bosses: frozenset[str]
+    """區域 Boss 的單位 ID（``world/loot.yaml`` 的 ``bosses``）。"""
+    season_boss: str | None
+    """賽季 Boss 的中文名（沒有賽季 Boss＝``None``）。"""
+    boss_clears: frozenset[str]
+    """這一季打倒過賽季 Boss 的角色 ID。"""
+    first_kills: Mapping[str, tuple[str, ...]]
+    """角色 ID → 這一季的全服首殺（目標中文名，依日誌序號）。"""
+    recipes: Mapping[str, tuple[str, ...]]
+    """角色 ID → 首位發現的配方名（依配方碼）。"""
+    league_ranks: Mapping[str, int]
+    """角色 ID → 循環賽最終名次（編年史 ``chronicle/league.json`` 的這一季）。"""
+
+
+def season_facts(
+    library: ContentLibrary,
+    world: WorldState,
+    *,
+    first_kills: Sequence[FirstKill] = (),
+    league: LeagueChronicleSeason | None = None,
+) -> SeasonFacts:
+    """從世界狀態、首殺紀錄與循環賽編年史整理這一季的事實（:class:`SeasonFacts`）。"""
+    season = world.season_id
+    mains = {
+        q.id: q.name_zh
+        for region in sorted(library.world_quests.quests)
+        for q in library.world_quests.quests[region].quests
+        if q.kind == "main"
+    }
+    loot = loot_rules(library)
+    boss = boss_def(library)
+    kills: dict[str, list[str]] = {}
+    for kill in sorted(first_kills, key=lambda k: k.seq):
+        if kill.season_id == season:
+            kills.setdefault(kill.character_id, []).append(kill.target_name_zh)
+    recipes: dict[str, list[str]] = {}
+    for record in sorted(world.recipes, key=lambda r: r.code):
+        if record.season_id == season:
+            recipes.setdefault(record.discoverer, []).append(record.name_zh)
+    accounts = {e.account: e.character_id for e in world.league_entries}
+    ranks: dict[str, int] = {}
+    if league is not None and league.season_id == season:
+        ranks = {accounts[r.account]: r.rank for r in league.ranks if r.account in accounts}
+    return SeasonFacts(
+        season_id=season,
+        skeletons=_skeleton_text(library),
+        main_quests=mains,
+        region_bosses=frozenset(() if loot is None else loot.bosses),
+        season_boss=None if boss is None else boss.name_zh,
+        boss_clears=frozenset(c.character_id for c in world.boss_clears),
+        first_kills={k: tuple(v) for k, v in kills.items()},
+        recipes={k: tuple(v) for k, v in recipes.items()},
+        league_ranks=ranks,
+    )
+
+
+def _fact(rule: ChronicleFact, names: Sequence[str], joiner: str) -> str | None:
+    if not names:
+        return None
+    return rule.text.format(items=joiner.join(rule.item.format(name=n) for n in names))
+
+
+def _chronicle_text(
+    templates: ChronicleTemplates | None, season_id: str, hero: ChronicleHero
+) -> str:
+    """編年史的一行（模板在 ``world/season.yaml`` 的 ``chronicle``；沒有模板＝只寫季名）。"""
+    season = season_name_zh(season_id)
+    if templates is None:
+        return season
+    t = templates
+    facts = [
+        None if hero.level is None else t.level.format(level=hero.level),
+        _fact(t.elites, hero.elites, t.joiner),
+        _fact(t.bosses, hero.bosses, t.joiner),
+        _fact(t.first_kills, hero.first_kills, t.joiner),
+        _fact(t.chapters, hero.chapters, t.joiner),
+        _fact(t.events, hero.events, t.joiner),
+        _fact(t.recipes, hero.recipes, t.joiner),
+        None if hero.league_rank is None else t.league.format(rank=hero.league_rank),
+    ]
+    body = t.separator.join(f for f in facts if f is not None) or t.empty
+    return t.line.format(season=season, facts=body)
+
+
 def chronicle_hero(
     library: ContentLibrary,
     char: CharacterState,
     season_id: str,
     account_id: str | None,
-    skeletons: Mapping[str, str] | None = None,
+    facts: SeasonFacts | None = None,
 ) -> ChronicleHero:
-    """一個角色的編年史：打過的精英、完成的事件（文字）＋名字與外觀（:data:`HERO_LEGACY_FIELDS`）。"""
-    texts = _skeleton_text(library) if skeletons is None else skeletons
-    elites = tuple(elite_kind_name(library, kind) for kind in char.elite_kills)
-    events = tuple(texts.get(s, s) for s in char.finished_skeletons)
-    parts: list[str] = []
-    if elites:
-        parts.append("擊倒" + "、".join(elites))
-    if events:
-        parts.append("完成" + "、".join(events))
-    body = "；".join(parts) if parts else "走過這一季"
+    """一個角色的編年史（5F-5c 列事實細節）：等級、打過的精英與 Boss、全服首殺、完成的主線章節與
+    事件、首位發現的配方、循環賽名次＋名字、紙娃娃與種族（:data:`HERO_LEGACY_FIELDS`）。``facts``
+    省略＝只用角色自己的狀態（沒有首殺、配方、循環賽、賽季 Boss）。"""
+    if facts is None:
+        empty = WorldState(season_id=season_id, season_seed=0, season_start=0)
+        facts = season_facts(library, empty)
+    cid = char.character_id
+    elites: list[str] = []
+    bosses: list[str] = []
+    for kind in char.elite_kills:
+        found = bosses if kind.partition("+")[0] in facts.region_bosses else elites
+        found.append(elite_kind_name(library, kind))
+    if facts.season_boss is not None and cid in facts.boss_clears:
+        bosses.append(facts.season_boss)
+    chapters = tuple(
+        facts.main_quests[q.quest] for q in char.quests if q.done and q.quest in facts.main_quests
+    )
     legacy = {name: getattr(char.hero, name) for name in HERO_LEGACY_FIELDS}
-    return ChronicleHero(
-        character_id=char.character_id,
+    hero = ChronicleHero(
+        character_id=cid,
         account_id=account_id,
         name=legacy["name_zh"],
         race=legacy["race"],
         doll=legacy["doll"],
-        elites=elites,
-        events=events,
-        text_zh=f"{season_name_zh(season_id)}：{body}",
+        level=char.level,
+        elites=tuple(elites),
+        bosses=tuple(bosses),
+        first_kills=facts.first_kills.get(cid, ()),
+        chapters=chapters,
+        events=tuple(facts.skeletons.get(s, s) for s in char.finished_skeletons),
+        recipes=facts.recipes.get(cid, ()),
+        league_rank=facts.league_ranks.get(cid),
+        text_zh="",
     )
+    season = library.world_season
+    templates = None if season is None else season.chronicle
+    return hero.model_copy(update={"text_zh": _chronicle_text(templates, season_id, hero)})
 
 
 CARRIED_HANDLERS: Final[Mapping[tuple[str, str], Callable[..., object]]] = {
     ("CharacterState", "hero"): chronicle_hero,
     ("CharacterState", "elite_kills"): chronicle_hero,
     ("CharacterState", "finished_skeletons"): chronicle_hero,
+    ("CharacterState", "level"): chronicle_hero,  # 5F-5c 編年史列事實細節
+    ("CharacterState", "quests"): chronicle_hero,
     ("WorldState", "recipes"): recipe_discovery,
+    ("WorldState", "boss_clears"): season_facts,
+    ("WorldState", "league_entries"): season_facts,
 }
 """:data:`~trpg.server.season_policy.CARRIED` 的每一項由哪個函式寫進紀念紀錄（架構測試檢查）。"""
 
@@ -365,7 +487,11 @@ def _lines(
             detail_zh="等級、技能、裝備、材料、任務幣、精英擊殺與完成的事件（先寫進編年史）",
         ),
         _world_line(current.world),
-        ResetLine(label_zh="世界日誌", count=current.log_entries, detail_zh="備份裡留著"),
+        ResetLine(
+            label_zh="世界日誌",
+            count=current.log_entries,
+            detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/",
+        ),
         ResetLine(
             label_zh="配方表",
             count=len(current.world.recipes),
@@ -383,11 +509,15 @@ def _lines(
         ResetLine(label_zh="帳號", count=len(accounts), detail_zh="含角色歸屬紀錄"),
         ResetLine(label_zh="首殺紀錄", count=len(current.first_kills)),
         ResetLine(label_zh="賽季 Boss 評分榜", count=len(current.boss_board)),
-        ResetLine(label_zh="賽季 Boss 首殺戰鬥紀錄", count=current.boss_logs),
+        ResetLine(
+            label_zh="賽季 Boss 首殺戰鬥紀錄",
+            count=current.boss_logs,
+            detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/",
+        ),
         ResetLine(
             label_zh="循環賽場次",
             count=matches,
-            detail_zh=f"搬到 {LEAGUE_HISTORY_DIR}/{current.world.season_id}/（舊賽程 "
+            detail_zh=f"搬進唯讀封存 {ARCHIVE_DIR}/{current.world.season_id}/（舊賽程 "
             f"{current.league_archived} 份一起搬）",
         ),
         ResetLine(label_zh="循環賽最終排名（編年史）", count=len(current.league_chronicle.seasons)),
@@ -465,9 +595,9 @@ def _backup(save_dir: Path, accounts_dir: Path | None, root: Path, now: int, old
     return target
 
 
-def _move_league(world_dir: Path, old: str) -> None:
-    """``league/`` 整個搬到 ``league_history/<舊季>/``；賽程檔（現在的與 ``archive/`` 的）報名快照
-    先清空（數值類）。先改內容再搬：中斷後重跑照樣接得上。"""
+def _clear_league_entries(world_dir: Path) -> None:
+    """賽程檔（現在的與 ``league/archive/`` 的）報名快照清空（數值類）；搬進封存之前先改內容，
+    中斷後重跑照樣接得上。"""
     league = world_dir / LEAGUE_DIR
     if not league.is_dir():
         return
@@ -479,14 +609,6 @@ def _move_league(world_dir: Path, old: str) -> None:
         if path.is_file():
             record = LeagueRecord.model_validate_json(path.read_text(encoding="utf-8"))
             write_atomic(path, clear_numeric(record).model_dump_json(indent=1))
-    history = world_dir / LEAGUE_HISTORY_DIR
-    history.mkdir(parents=True, exist_ok=True)
-    target = history / old
-    n = 2
-    while target.exists():
-        target = history / f"{old}-{n}"
-        n += 1
-    league.rename(target)
 
 
 def _remove(path: Path) -> None:
@@ -522,10 +644,10 @@ def _plan(
         raise SeasonResetError("種子要在 0～2^64-1")
     old = current.world.season_id
     owners = _owners(accounts)
-    skeletons = _skeleton_text(library)
+    league = next((s for s in current.league_chronicle.seasons if s.season_id == old), None)
+    facts = season_facts(library, current.world, first_kills=current.first_kills, league=league)
     heroes = tuple(
-        chronicle_hero(library, c, old, owners.get(c.character_id), skeletons)
-        for c in current.chars
+        chronicle_hero(library, c, old, owners.get(c.character_id), facts) for c in current.chars
     )
     recipes = tuple(
         recipe_discovery(r) for r in sorted(current.world.recipes, key=lambda r: r.code)
@@ -607,13 +729,15 @@ def _reset(
     cleared, kept = _lines(current, records, options.extra)
     old = current.world.season_id
     backup: Path | None = None
+    archived: Path | None = None
     if not options.dry_run:
         root = options.backup_root or default_backup_root(save_dir)
         accounts_dir = None if accounts is None else accounts.root
         backup = _backup(save_dir, accounts_dir, root, options.now, old)
         SeasonChronicleStore(world_dir).add(plan.entry)
-        _move_league(world_dir, old)
-        for name in (CHARS_DIR, LOG_FILE, NOTES_FILE):
+        _clear_league_entries(world_dir)
+        archived = archive_season(save_dir, world_dir, old, options.now)
+        for name in (CHARS_DIR, NOTES_FILE):
             _remove(world_dir / name)
         fresh = WorldState(season_id=plan.new_id, season_seed=plan.seed, season_start=options.start)
         write_atomic(world_dir / WORLD_FILE, dumps_world(fresh))
@@ -628,4 +752,5 @@ def _reset(
         chronicle=tuple(f"{h.name}：{h.text_zh}" for h in plan.entry.heroes),
         warnings=plan.warnings,
         backup=None if backup is None else str(backup),
+        archive=None if archived is None else str(archived),
     )
