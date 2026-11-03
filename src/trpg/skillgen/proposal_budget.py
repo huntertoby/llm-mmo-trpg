@@ -538,6 +538,8 @@ def evaluate_with_repair(
         keywords=ctx.keywords,
         weak=WEAK in codes,
         primitives=models.primitive_ids,
+        seed=seed,
+        rarity=ctx.rarity,
     ):
         trial = _evaluate_repaired(candidate, models, library, ctx, seed)
         if trial.ok:

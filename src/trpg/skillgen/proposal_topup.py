@@ -6,17 +6,24 @@
   仍只有預算的 10～40%。
 - ``keyword.required``：題目要求的關鍵字沒有帶到（例：題目是「召喚物」，提議只有淨化）。
 
-這裡產生 **候選補強**：在提議的 ``effects`` 末尾加一個效果（關鍵字的專屬效果、或傷害／治療／護盾
-附帶效果），或替已有效果補上 LLM 沒填的參數（例：沒指定元素的 ``damage`` 補 ``element:
+這裡產生 **候選補強**：在提議的 ``effects`` 末尾加一個效果（關鍵字的專屬效果、或傷害／治療／護盾／
+有害狀態附帶效果），或替已有效果補上 LLM 沒填的參數（例：沒指定元素的 ``damage`` 補 ``element:
 lightning`` 讓它帶到「帶電」）。只加題目選單（提議模型）開放的原語，也就是 LLM 本來就能選的。
 補強後的提議 **照原樣走完整的驗證**（提議模型、數值補值、``validate_skill``、題目要求），第一個
 合格的才採用；驗證規則、預算數值與上下限都不變。
 
-確定性：候選的順序只取決於提議與內容庫（YAML 順序），沒有亂數。純函式：不修改輸入。
+附帶效果的順序（Phase 6S-2c）：不再固定 ``damage → heal → shield``。先試骨架偏好的一組
+（:data:`FILLER_PREFERENCE`：攻擊骨架傷害、支援骨架治療／護盾、控制骨架有害狀態、位移骨架傷害與
+有害狀態），再試其餘；
+兩組各自依「題目種子＋提議內容」的雜湊輪替起點（:func:`filler_order`）。
+
+確定性：候選的順序只取決於提議、種子與內容庫（YAML 順序）；雜湊用
+:func:`trpg.shared.rng.fnv1a64`（不用內建 ``hash()``），沒有亂數。純函式：不修改輸入。
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
@@ -26,17 +33,22 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skill_keywords import KeywordRule
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import SkillRarity, rarity_rank
+from trpg.shared.rng import fnv1a64
 from trpg.skillgen.keywords import draft_facts
+from trpg.skillgen.proposal import budget_statuses, rarity_statuses
 
 if TYPE_CHECKING:
     from trpg.skillgen.proposal_subset import ProposalSubset
 
 __all__ = [
     "FILLER_EFFECTS",
+    "FILLER_PREFERENCE",
+    "FILLER_STATUS_MAX",
     "TOPUP_CODES",
     "TOPUP_GROUP_MAX",
     "TOPUP_MAX",
     "TOPUP_PREFIX",
+    "filler_order",
     "keyword_effect_rules",
     "keyword_way_texts",
     "keywords_reachable",
@@ -52,8 +64,28 @@ TOPUP_MAX = 24
 """每份提議最多試幾個候選（每個候選要跑一次完整驗證）。"""
 TOPUP_GROUP_MAX = 10
 """每一組候選（關鍵字、附帶效果、關鍵字＋附帶效果）最多幾個，讓三組都有機會被試到。"""
-FILLER_EFFECTS: tuple[str, ...] = ("damage", "heal", "shield")
-"""過弱時補的附帶效果（依序試）：數值由預算器補，對象先跟著核心效果（不合骨架的由驗證擋下）。"""
+FILLER_EFFECTS: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
+"""過弱時補的附帶效果（試的順序由 :func:`filler_order` 決定）：數值由預算器補；對象依效果性質
+（傷害與有害狀態只打敵方、治療與護盾只給友方），不合骨架的由驗證擋下。"""
+FILLER_PREFERENCE: dict[str, tuple[str, ...]] = {
+    # 攻擊骨架：核心是傷害，先試傷害
+    "strike": ("damage",),
+    "area": ("damage",),
+    "combo": ("damage",),
+    "builder_finisher": ("damage",),
+    "rune": ("damage",),
+    "consume_status": ("damage",),
+    "trap": ("damage",),
+    # 支援骨架：先試治療、護盾
+    "aura": ("heal", "shield"),
+    # 控制骨架：先試非傷害的有害狀態；位移骨架：傷害與有害狀態輪替
+    "control": ("apply_status",),
+    "displace": ("damage", "apply_status"),
+}
+"""骨架偏好的附帶效果（6S-2c，原型值）。表外的骨架依核心效果的對象：對友方／自己的先試治療與
+護盾，其他先試傷害與有害狀態。偏好只決定試的先後，每個候選照樣走完整驗證。"""
+FILLER_STATUS_MAX = 3
+"""附帶效果 ``apply_status`` 每份提議最多試幾種有害狀態（依雜湊輪替起點選）。"""
 _AFFECTS_ORDER: tuple[str, ...] = ("enemies", "allies", "self")
 _SKIP_PARAMS = frozenset({"infusion", "unit", "on_hit", "rule", "skill"})
 """推導規則裡這些參數對應的是手寫內容（附魔召喚、指定召喚物、規則改寫、授予指定技能），
@@ -212,8 +244,9 @@ _FILLER_AFFECTS: dict[str, tuple[str, ...]] = {
     "damage": _HOSTILE,
     "heal": _FRIENDLY,
     "shield": _FRIENDLY,
+    "apply_status": _HOSTILE,
 }
-"""附帶效果的對象：傷害只打敵方、治療與護盾只給友方（不產生「治療敵人」這類怪招）。"""
+"""附帶效果的對象：傷害與有害狀態只打敵方、治療與護盾只給友方（不產生「治療敵人」這類怪招）。"""
 DEFAULT_ELEMENT = "physical"
 """補的傷害沒有可沿用的元素時用物理（法術技的傷害必須指定元素）。"""
 
@@ -297,15 +330,64 @@ def _keyword_candidates(
             yield _appended(data, effect)
 
 
+def _rotated[T](items: Sequence[T], start: int) -> list[T]:
+    if not items:
+        return []
+    k = start % len(items)
+    return [*items[k:], *items[:k]]
+
+
+def _order_key(data: Mapping[str, Any], seed: int) -> int:
+    """「題目種子＋提議內容」的穩定雜湊（排序鍵的 JSON 再 FNV-1a；不用內建 ``hash()``）。"""
+    text = json.dumps(data, sort_keys=True, ensure_ascii=False, default=str)
+    return fnv1a64(f"{seed}|{text}".encode())
+
+
+def _preferred(data: Mapping[str, Any]) -> tuple[str, ...]:
+    skeleton = data.get("skeleton")
+    if isinstance(skeleton, str) and skeleton in FILLER_PREFERENCE:
+        return FILLER_PREFERENCE[skeleton]
+    if _core_affects(data["effects"])[0] in _FRIENDLY:
+        return ("heal", "shield")
+    return ("damage", "apply_status")
+
+
+def filler_order(data: Mapping[str, Any], *, seed: int = 0) -> tuple[str, ...]:
+    """附帶效果原語要試的順序（6S-2c）：骨架偏好的一組在前、其餘在後，兩組各自依「題目種子＋
+    提議內容」的雜湊輪替起點。``data`` 需有非空的 ``effects`` 清單。"""
+    key = _order_key(data, seed)
+    preferred = [p for p in FILLER_EFFECTS if p in _preferred(data)]
+    rest = [p for p in FILLER_EFFECTS if p not in preferred]
+    return (*_rotated(preferred, key), *_rotated(rest, key >> 16))
+
+
+def _hostile_statuses(library: ContentLibrary, rarity: SkillRarity | None, key: int) -> list[str]:
+    """附帶效果可試的有害狀態：非有益、有預算點數、（有給稀有度時）稀有度夠——與提議模型的
+    ``apply_status`` 狀態選單條件相同；依 ``key`` 輪替起點取 :data:`FILLER_STATUS_MAX` 個。"""
+    usable = set(budget_statuses(library))
+    if rarity is not None:
+        usable &= set(rarity_statuses(library, rarity))
+    pool = [s.id for s in library.ruleset.statuses.statuses if not s.beneficial and s.id in usable]
+    return _rotated(pool, key >> 32)[:FILLER_STATUS_MAX]
+
+
 def _filler_candidates(
-    data: Mapping[str, Any], allowed: frozenset[str] | None
+    data: Mapping[str, Any],
+    allowed: frozenset[str] | None,
+    *,
+    order: Sequence[str],
+    statuses: Sequence[str],
 ) -> Iterator[dict[str, Any]]:
     affects = _core_affects(data["effects"])
     element = _element_of(data["effects"])
-    for primitive in FILLER_EFFECTS:
+    for primitive in order:
         if allowed is not None and primitive not in allowed:
             continue
         for target in (a for a in affects if a in _FILLER_AFFECTS[primitive]):
+            if primitive == "apply_status":
+                for status in statuses:
+                    yield _appended(data, {"type": primitive, "affects": target, "status": status})
+                continue
             effect: dict[str, Any] = {"type": primitive, "affects": target}
             if primitive == "damage":
                 effect["element"] = element
@@ -319,11 +401,14 @@ def topup_candidates(
     keywords: Sequence[str] = (),
     weak: bool = False,
     primitives: Iterable[str] | None = None,
+    seed: int = 0,
+    rarity: SkillRarity | None = None,
 ) -> list[dict[str, Any]]:
     """依序要試的補強提議（最多 :data:`TOPUP_MAX` 個，去重；``data`` 不變）。
 
     1. 題目關鍵字沒帶到：先補參數、再加該關鍵字的專屬效果（只補第一個缺的關鍵字）；
-    2. ``weak``：加一個 :data:`FILLER_EFFECTS` 附帶效果；
+    2. ``weak``：加一個 :data:`FILLER_EFFECTS` 附帶效果（順序見 :func:`filler_order`，依 ``seed``
+       與提議內容輪替；``rarity`` 有給時只試這個稀有度能用的有害狀態）；
     3. 兩者都有：關鍵字效果 ＋ 附帶效果。
 
     ``primitives``：題目選單（提議模型）開放的原語；給了就只加選單內的效果。每組最多
@@ -332,16 +417,22 @@ def topup_candidates(
         return []
     allowed = None if primitives is None else frozenset(primitives)
     lacking = missing_keywords(library, data, keywords)
+    order = filler_order(data, seed=seed)
+    statuses = _hostile_statuses(library, rarity, _order_key(data, seed))
+
+    def fillers(base: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
+        return _filler_candidates(base, allowed, order=order, statuses=statuses)
+
     groups: list[Iterable[dict[str, Any]]] = []
     if lacking:
         groups.append(_keyword_candidates(library, data, lacking[0], allowed))
     if weak:
-        groups.append(_filler_candidates(data, allowed))
+        groups.append(fillers(data))
     if lacking and weak:
         groups.append(
             filled
             for base in _keyword_candidates(library, data, lacking[0], allowed)
-            for filled in _filler_candidates(base, allowed)
+            for filled in fillers(base)
         )
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
