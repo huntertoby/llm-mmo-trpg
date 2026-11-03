@@ -22,10 +22,10 @@ from dataclasses import dataclass
 
 from trpg.content.fields import FieldDoor, FieldExit, FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import passable_grid
+from trpg.content.maps import grid_bfs, grid_path, passable_grid
 from trpg.world.actions import TravelAction, WorldEvent
 from trpg.world.atlas import region_lit, unlocked_stones
-from trpg.world.common import world_map_of
+from trpg.world.common import rules_of, world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.field_actions import (
     FieldEnteredEvent,
@@ -159,6 +159,16 @@ class FieldGrid:
             return False
         return self.heights[cell[1]][cell[0]] - self.heights[start[1]][start[0]] <= max_climb
 
+    def reachable(self, start: XY, max_climb: int) -> set[XY]:
+        """從 ``start`` 四方向走得到的格子（含自己；``start`` 不可站＝空；同走路規則）。"""
+        if not self.standable(start):
+            return set()
+        return set(grid_bfs(start, lambda a, b: self.can_step(a, b, max_climb)))
+
+    def shortest_path(self, start: XY, goal: XY, max_climb: int) -> list[XY]:
+        """``start`` 到 ``goal`` 的四方向最短路（含兩端；走不到＝空；北、東、南、西的順序展開）。"""
+        return grid_path(start, goal, lambda a, b: self.can_step(a, b, max_climb))
+
 
 def hidden_door(char: CharacterState, found: FieldMapDef, door: FieldDoor) -> bool:
     """還沒發現的隱藏門（不可站、不顯示）。"""
@@ -267,6 +277,9 @@ def _walk_path(
     library: ContentLibrary, char: CharacterState, found: FieldMapDef, action: WalkAction
 ) -> tuple[WalkedEvent, int]:
     """逐格檢查路徑；回傳走路事件與停下那一格在出口的第幾格（不是出口＝0）。"""
+    limit = rules_of(library).field.walk_max_steps
+    if len(action.path) > limit:
+        raise WorldActionError(f"一次最多走 {limit} 格")
     assert char.field is not None
     grid = field_grid(library, char, found)
     climb = library.ruleset.core.max_climb_height

@@ -36,8 +36,8 @@ from trpg.world.field_actions import (
     WalkAction,
     WalkedEvent,
 )
-from trpg.world.field_enemies import SIGHT_RANGE, field_enemies, sight_range
-from trpg.world.field_things import PERCEIVE_RANGE, object_status
+from trpg.world.field_enemies import field_enemies, sight_range
+from trpg.world.field_things import object_status
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, loads_char, read_log
 from trpg.world.state import CharacterState, FieldPos, QuestState, WorldState
@@ -167,6 +167,9 @@ def _dist(a: XY, b: XY) -> int:
 # 1. 隱藏入口：3 格內自動感知
 # ---------------------------------------------------------------------------
 
+PERCEIVE = 3
+"""規則 ``field.perceive_range``（6C-R2 從程式常數搬到規則；21.10 第 17 條「3 格內」）。"""
+
 CRACK: XY = (6, 1)
 """北坡獵場上往鶴歸崖的裂縫（``crane_cliff_crack``）。"""
 
@@ -177,7 +180,7 @@ def _near_crack(library: ContentLibrary, char: CharacterState) -> tuple[XY, ...]
     grid = field_grid(library, char, found)
     cells = ((x, y) for y in range(found.height) for x in range(found.width))
     goals = sorted(
-        c for c in cells if grid.standable(c) and _dist(c, CRACK) <= PERCEIVE_RANGE and c != CRACK
+        c for c in cells if grid.standable(c) and _dist(c, CRACK) <= PERCEIVE and c != CRACK
     )
     paths = [_path(library, char, g) for g in goals if _reachable(library, char, g)]
     return min(paths, key=len)
@@ -194,7 +197,7 @@ def _reachable(library: ContentLibrary, char: CharacterState, goal: XY) -> bool:
 def test_walking_near_hidden_door_reveals_it(sharp: ContentLibrary) -> None:
     char = _char(sharp, "north_slope")
     path = _near_crack(sharp, char)
-    assert all(_dist(c, CRACK) > PERCEIVE_RANGE for c in path[:-1])  # 最後一格才進入 3 格
+    assert all(_dist(c, CRACK) > PERCEIVE for c in path[:-1])  # 最後一格才進入 3 格
     before = field_view(sharp, char)
     assert before is not None and all(d.id != "crane_cliff_crack" for d in before.doors)
     moved, events = _step(sharp, char, WalkAction(path=path))
@@ -238,7 +241,7 @@ def test_far_from_door_never_checks(sharp: ContentLibrary) -> None:
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
         if grid.can_step(start, (start[0] + dx, start[1] + dy), 1)
     )
-    assert _dist(step, CRACK) > PERCEIVE_RANGE
+    assert _dist(step, CRACK) > PERCEIVE
     _moved, events = _step(sharp, char, WalkAction(path=(step,)))
     assert _of(PerceptionCheckEvent, events) == []
 
@@ -253,7 +256,7 @@ def test_arrival_by_exit_no_longer_checks_neighbours(sharp: ContentLibrary) -> N
     moved, events = _step(sharp, char, WalkAction(path=(exit_.at[0],)))
     assert moved.location == "north_slope"
     assert moved.field is not None
-    assert _dist((moved.field.x, moved.field.y), CRACK) > PERCEIVE_RANGE
+    assert _dist((moved.field.x, moved.field.y), CRACK) > PERCEIVE
     assert _of(PerceptionCheckEvent, events) == []
     assert not moved.has_revealed("cloud_ridge", "crane_cliff")
 
@@ -489,7 +492,7 @@ def test_sneak_costs_supply_and_halves_sight(guarded: ContentLibrary) -> None:
     sneaky, events = _step(guarded, char, SneakAction(), world=world)
     assert sneaky.sneaking and sneaky.supplies == char.supplies - 1
     assert _of(SneakStartedEvent, events)[0].supplies_left == sneaky.supplies
-    assert sight_range(sneaky) == SIGHT_RANGE // 2 == 2
+    assert sight_range(guarded, sneaky) == sight_range(guarded, char) // 2 == 2
     halved = field_enemies(guarded, world, sneaky, NOON)
     for a, b in zip(normal, halved, strict=True):
         assert set(b.sight) <= set(a.sight)

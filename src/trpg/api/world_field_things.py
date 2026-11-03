@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-from collections import deque
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Final
@@ -93,28 +92,6 @@ _DIRS: Final[tuple[tuple[XY, Facing], ...]] = (
 )
 
 
-def _bfs(grid: FieldGrid, start: XY, goal: XY, climb: int) -> list[XY]:
-    prev: dict[XY, XY | None] = {start: None}
-    queue = deque([start])
-    while queue:
-        here = queue.popleft()
-        if here == goal:
-            break
-        for (dx, dy), _facing in _DIRS:
-            nxt = (here[0] + dx, here[1] + dy)
-            if nxt not in prev and grid.can_step(here, nxt, climb):
-                prev[nxt] = here
-                queue.append(nxt)
-    if goal not in prev:
-        return []
-    out: list[XY] = []
-    cur: XY | None = goal
-    while cur is not None:
-        out.append(cur)
-        cur = prev[cur]
-    return out[::-1]
-
-
 def _ends(library: ContentLibrary, char: CharacterState, found: FieldMapDef) -> list[XY]:
     ends: list[XY] = [found.entry]
     for exit_ in sorted(found.exits, key=lambda e: e.id):
@@ -144,7 +121,7 @@ def footprint_cells(
     a = h % len(ends)
     b = (h // len(ends)) % (len(ends) - 1)
     b = b + 1 if b >= a else b
-    path = _bfs(grid, ends[a], ends[b], library.ruleset.core.max_climb_height)
+    path = grid.shortest_path(ends[a], ends[b], library.ruleset.core.max_climb_height)
     out: list[tuple[XY, Facing]] = []
     for i in range(1, len(path) - 1, 2):
         out.append((path[i], _facing(path[i - 1], path[i])))

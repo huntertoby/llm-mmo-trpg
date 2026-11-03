@@ -1,7 +1,7 @@
 """實地地圖上的世界動作與事件（Phase 6B-2；``docs/phases/Phase6計畫.md`` 第 3 節）。
 
-- ``walk``：沿一串四方向相鄰的格子走（一次最多 :data:`WALK_MAX_STEPS` 格）；中途碰到出口、門、
-  傳送石就停在那一格並觸發。走格子不花時間、補給，也不擲遇敵（21.10 第 2 條）。
+- ``walk``：沿一串四方向相鄰的格子走（一次最多規則 ``field.walk_max_steps`` 格，30）；中途碰到
+  出口、門、傳送石就停在那一格並觸發。走格子不花時間、補給，也不擲遇敵（21.10 第 2 條）。
 - ``use_teleport_stone``：站在傳送石上，傳到另一顆已解鎖的傳送石（21.2）。
 - ``sneak``、``use_field_object``（6C-5）：潛行、點情境物件（:mod:`trpg.world.field_things`）。
 
@@ -18,7 +18,7 @@ from trpg.content.battle import ID_PATTERN
 from trpg.world.state import Facing
 
 __all__ = [
-    "WALK_MAX_STEPS",
+    "WALK_PATH_CAP",
     "EventMarkedEvent",
     "FieldEnteredEvent",
     "FieldObjectUsedEvent",
@@ -32,10 +32,11 @@ __all__ = [
     "WalkedEvent",
 ]
 
-WALK_MAX_STEPS: Final = 30
-"""一次 ``walk`` 最多幾格（第 3.2 節）。"""
-
 type XY = tuple[int, int]
+
+WALK_PATH_CAP: Final = 30
+"""``walk`` 請求格式的路徑長度上限（6C-R2：規則數值改在 ``rules.yaml`` 的 ``field.walk_max_steps``，
+不得超過這個值；要放寬時同時改這裡並重產 OpenAPI 與前端型別）。"""
 
 
 class _Model(BaseModel):
@@ -47,7 +48,9 @@ class WalkAction(_Model):
     重算。"""
 
     kind: Literal["walk"] = "walk"
-    path: tuple[XY, ...] = Field(min_length=1, max_length=WALK_MAX_STEPS)
+    # 一次最多幾格照規則 field.walk_max_steps（6C-R2；trpg.world.field.walk 檢查）；這裡的上限只是
+    # 請求格式（WALK_PATH_CAP；docstring 會進 OpenAPI 快照，所以說明寫在註解）。
+    path: tuple[XY, ...] = Field(min_length=1, max_length=WALK_PATH_CAP)
 
 
 class UseTeleportStoneAction(_Model):

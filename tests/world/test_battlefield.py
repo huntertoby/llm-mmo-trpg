@@ -31,10 +31,7 @@ from trpg.shared.types import Team
 from trpg.world.actions import BattleEndedEvent, BattleStartedEvent, FightAction, RetreatAction
 from trpg.world.battle import _run, auto_steps, encounter_map, prepare_battle
 from trpg.world.battlefield import (
-    CUT,
     FALLBACK_ZH,
-    MIN_ALLY,
-    MIN_ENEMY,
     UnitCounts,
     contact_battlefield,
     cut_battlefield,
@@ -120,7 +117,7 @@ def _dist(a: XY, b: XY) -> int:
     ],
 )
 def test_cut_origin_centers_and_shifts_inward(center: XY, size: XY, origin: XY) -> None:
-    assert cut_origin(center, size) == origin
+    assert cut_origin(center, size, 12) == origin
 
 
 def test_cut_copies_field_tiles(field_library: ContentLibrary, template: MapDef) -> None:
@@ -131,7 +128,7 @@ def test_cut_copies_field_tiles(field_library: ContentLibrary, template: MapDef)
     base = _open(rows=rows, heights=heights).model_dump(mode="json")
     field = FieldMapDef.model_validate({**base, "objects": [{"at": [18, 11], "kind": "crate"}]})
     battle = _cut(field_library, field, template, (15, 15), (17, 15))  # 中點 (16, 15) → (10, 9)
-    assert battle.size == (CUT, CUT)
+    assert battle.size == (12, 12)  # 規則 field.cut_size
     assert battle.tile_terrain(4, 3) == "wall"  # 實地 (14, 12)
     assert battle.tile_height(6, 1) == 2  # 實地 (16, 10)
     assert [(o.at, o.kind) for o in battle.objects] == [((8, 2), "crate")]
@@ -164,12 +161,12 @@ def test_zones_on_each_side(
 ) -> None:
     field = _open()
     battle = _cut(field_library, field, template, ally, enemy)
-    x0, y0 = cut_origin(((ally[0] + enemy[0]) // 2, (ally[1] + enemy[1]) // 2), field.size)
+    x0, y0 = cut_origin(((ally[0] + enemy[0]) // 2, (ally[1] + enemy[1]) // 2), field.size, 12)
     a = (ally[0] - x0, ally[1] - y0)
     e = (enemy[0] - x0, enemy[1] - y0)
     allies = battle.start_zones[Team.ALLY]
     enemies = battle.start_zones[Team.ENEMY]
-    assert len(allies) == MIN_ALLY and len(enemies) == MIN_ENEMY
+    assert (len(allies), len(enemies)) == (3, 4)  # field.min_ally_cells、min_enemy_cells
     assert allies[0] == a  # 主角站在接觸點
     assert enemies[0] == e  # 帶頭的站在地圖上看到的位置
     assert all(_dist(c, a) < _dist(c, e) for c in allies)  # 我方在玩家這一側

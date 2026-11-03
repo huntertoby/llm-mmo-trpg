@@ -1,10 +1,10 @@
 """地圖上的東西（Phase 6C-5；``docs/phases/Phase6計畫.md`` 第 1 節 6C-5 列、21.4、21.6、21.9
 第 8～12 條、21.10 第 6 條）。
 
-- **隱藏入口**（#112、21.9 第 10 條）：走到 ``hidden_until: reveal`` 的門 :data:`PERCEIVE_RANGE` 格
-  （曼哈頓距離）內，對門通往的隱藏地點自動感知判定（DC、每天一次、影子不能代判照 #112，
-  :mod:`trpg.world.perception`）。逐格照走過的順序判定；走出口或門抵達新地圖時，抵達格也算
-  一次。
+- **隱藏入口**（#112、21.9 第 10 條）：走到 ``hidden_until: reveal`` 的門規則
+  ``field.perceive_range`` 格（曼哈頓距離）內，對門通往的隱藏地點自動感知判定（DC、每天一次、
+  影子不能代判照 #112，:mod:`trpg.world.perception`）。逐格照走過的順序判定；走出口或門抵達
+  新地圖時，抵達格也算一次。
 - **事件「！」**（21.6、21.9 第 9 條）：進入一張有實地地圖的地點時，``roll_event`` 照舊擲機率與
   骨架；觸發的事件不直接開卡，而是放在這個地點的事件點上（:class:`~trpg.world.state.FieldEventMark`）：
   優先放在和骨架同名的事件點，沒有就從全部事件點挑；候選超過一個時用 ``spot`` 串流挑。走路碰到
@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Final
 
 from trpg.content.fields import FieldMapDef, FieldSpot, SpotUse
 from trpg.content.library import ContentLibrary
@@ -60,7 +59,6 @@ from trpg.world.threads import active_threads
 from trpg.world.weather import weather_at
 
 __all__ = [
-    "PERCEIVE_RANGE",
     "ObjectStatus",
     "arrive_sense",
     "drop_stale_marks",
@@ -75,9 +73,6 @@ __all__ = [
 ]
 
 type XY = tuple[int, int]
-
-PERCEIVE_RANGE: Final = 3
-"""隱藏入口幾格內自動感知（21.6「3 格內」；曼哈頓距離）。"""
 
 
 def _near(a: XY, b: XY, reach: int) -> bool:
@@ -117,11 +112,12 @@ def _sense_doors(  # noqa: PLR0917 - 要世界、角色、地圖、走過的格�
         return char, []
     locations = world_map_of(library, found.region).location_by_id()
     today = day_of(library, now)
+    reach = rules_of(library).field.perceive_range  # 21.6「3 格內」（6C-R2 搬到規則）
     events: list[WorldEvent] = []
     for cell in cells:
         for door in doors:
             hidden = locations.get(door.to)
-            if hidden is None or not _near(cell, door.at, PERCEIVE_RANGE):
+            if hidden is None or not _near(cell, door.at, reach):
                 continue
             if not can_perceive(char, found.region, hidden, today):
                 continue

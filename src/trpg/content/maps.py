@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Annotated, Literal, Protocol
 
 from pydantic import Field, model_validator
@@ -40,6 +40,8 @@ __all__ = [
     "TileChange",
     "TileSource",
     "check_map",
+    "grid_bfs",
+    "grid_path",
     "grid_rows",
     "grid_shape_problems",
     "passable_grid",
@@ -477,24 +479,60 @@ def passable_grid(
 _passable_grid = passable_grid
 
 
+type StepFn = Callable[[XY, XY], bool]
+"""``(這一格, 下一格) → 走不走得過去``（地圖範圍也由它檢查）。"""
+
+_BFS_DIRS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
+"""四方向 BFS 的展開順序（北、東、南、西；同一組輸入一定得到同一條最短路）。"""
+
+
+def grid_bfs(start: XY, can_step: StepFn, goal: XY | None = None) -> dict[XY, XY | None]:
+    """四方向 BFS（戰鬥地圖、實地地圖共用，6C-R2）：走得到的格子 → 前一格（``start`` → ``None``）。
+    給了 ``goal`` 時走到就停。"""
+    prev: dict[XY, XY | None] = {start: None}
+    queue = deque([start])
+    while queue:
+        here = queue.popleft()
+        if here == goal:
+            break
+        for dx, dy in _BFS_DIRS:
+            nxt = (here[0] + dx, here[1] + dy)
+            if nxt not in prev and can_step(here, nxt):
+                prev[nxt] = here
+                queue.append(nxt)
+    return prev
+
+
+def grid_path(start: XY, goal: XY, can_step: StepFn) -> list[XY]:
+    """``start`` 到 ``goal`` 的四方向最短路（含兩端；走不到＝空）。"""
+    prev = grid_bfs(start, can_step, goal)
+    if goal not in prev:
+        return []
+    out: list[XY] = []
+    cur: XY | None = goal
+    while cur is not None:
+        out.append(cur)
+        cur = prev[cur]
+    return out[::-1]
+
+
 def reachable_from(
     start: XY, grid: list[list[tuple[int, str]]], passable: Passable, core: CoreRules
 ) -> set[XY]:
     """從 ``start`` 依移動規則走得到的格子（含自己）：只走可站立的格子，往上一步最多
     ``max_climb_height`` 層。"""
     height, width = len(grid), len(grid[0])
-    seen = {start}
-    queue = deque([start])
-    while queue:
-        x, y = queue.popleft()
-        h = grid[y][x][0]
-        for nx, ny in ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)):
-            if not (0 <= nx < width and 0 <= ny < height) or (nx, ny) in seen:
-                continue
-            if passable[ny][nx] and grid[ny][nx][0] - h <= core.max_climb_height:
-                seen.add((nx, ny))
-                queue.append((nx, ny))
-    return seen
+
+    def can_step(here: XY, nxt: XY) -> bool:
+        nx, ny = nxt
+        return (
+            0 <= nx < width
+            and 0 <= ny < height
+            and passable[ny][nx]
+            and grid[ny][nx][0] - grid[here[1]][here[0]][0] <= core.max_climb_height
+        )
+
+    return set(grid_bfs(start, can_step))
 
 
 _reachable_from = reachable_from

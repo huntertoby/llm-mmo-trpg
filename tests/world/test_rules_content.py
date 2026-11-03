@@ -98,3 +98,23 @@ def test_bad_rules_file_raises(tmp_path: Path, library: ContentLibrary) -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
     with pytest.raises(ContentError, match="hail"):
         load_library(content)
+
+
+def test_field_rules_loaded_with_old_defaults(library: ContentLibrary) -> None:
+    """6C-R2：實地地圖的規則數值搬進 ``field:`` 區塊，數值和原本程式裡的常數相同。"""
+    assert library.world_rules is not None
+    field = library.world_rules.field
+    assert (field.sight_range, field.sneak_sight()) == (4, 2)  # 21.10 第 3、6 條
+    assert field.perceive_range == 3  # 21.10 第 17 條
+    assert (field.cut_size, field.min_enemy_cells, field.min_ally_cells) == (12, 4, 3)
+    assert field.walk_max_steps == 30
+
+
+def test_field_rules_default_when_block_missing(library: ContentLibrary) -> None:
+    """沒寫 ``field:`` 的舊 content 照常載入，用同樣的預設值；不合法的數值擋下。"""
+    assert library.world_rules is not None
+    data = _rules_dict(library)
+    data.pop("field")
+    assert WorldRules.model_validate(data).field == library.world_rules.field
+    with pytest.raises(ValidationError):
+        WorldRules.model_validate({**data, "field": {"sneak_sight_divisor": 0}})

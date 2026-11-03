@@ -18,8 +18,9 @@
 - **潛行**（Q7，6C-5）：角色潛行中，視野距離減半（捨去小數，:func:`sight_range`）。
 - **進圖寬限**（21.10 第 8 條）：走出口或門抵達的那一格不檢查，從走的第一步才檢查。
 - **視野**（21.10 第 3 條）：前方扇形——往前 ≥ 1 格、橫向偏移 ≤ 往前格數（90°）、曼哈頓距離
-  ≤ :data:`SIGHT_RANGE`；被擋視線的地形（牆）、物件、表面與高低差遮住（同戰鬥的視線規則：兩個方向
-  都畫 Bresenham 線，中間的格子高度 ≥ 兩端最高 ＋ 1 也擋）。只算站得上去的格子。不追擊。
+  ≤ 規則 ``field.sight_range``；被擋視線的地形（牆）、物件、表面與高低差遮住（同戰鬥的視線
+  規則：兩個方向都畫 Bresenham 線，中間的格子高度 ≥ 兩端最高 ＋ 1 也擋）。只算站得上去的格子。
+  不追擊。
 - **開打**：走進視野或和敵人四方向相鄰就開打（產生 ``pending_encounter``，同移動遇敵用
   :func:`~trpg.world.solutions.make_encounter`）。順序：你走一格 → 檢查 → 敵人走一格 → 再檢查；踩上
   出口或門的那一格只檢查一次（人已經離開）。先手（21.10 第 4 條）：被看到＝敵方先手；在視野外、站在
@@ -68,7 +69,6 @@ from trpg.world.state import (
 )
 
 __all__ = [
-    "SIGHT_RANGE",
     "FieldEnemy",
     "after_fight",
     "appears",
@@ -91,13 +91,12 @@ __all__ = [
 type XY = tuple[int, int]
 type First = Literal["ally", "enemy"] | None
 
-SIGHT_RANGE: Final = 4
-"""敵人的視野距離（前方扇形 4 格，21.10 第 3 條；潛行減半，:func:`sight_range`）。"""
 
-
-def sight_range(char: CharacterState) -> int:
-    """這個角色眼中敵人的視野距離：潛行中減半、捨去小數（Q7 原型值，6C-5）。"""
-    return SIGHT_RANGE // 2 if char.sneaking else SIGHT_RANGE
+def sight_range(library: ContentLibrary, char: CharacterState) -> int:
+    """這個角色眼中敵人的視野距離：規則 ``field.sight_range``（前方扇形 4 格，21.10 第 3 條）；
+    潛行中除以 ``field.sneak_sight_divisor``、捨去小數（Q7 原型值，6C-5；6C-R2 搬到規則）。"""
+    rules = rules_of(library).field
+    return rules.sneak_sight() if char.sneaking else rules.sight_range
 
 
 _VECTORS: Final[dict[Facing, XY]] = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0)}
@@ -332,7 +331,7 @@ class _Sight:
                     return False
         return True
 
-    def cells(self, at: XY, facing: Facing, radius: int = SIGHT_RANGE) -> tuple[XY, ...]:
+    def cells(self, at: XY, facing: Facing, radius: int) -> tuple[XY, ...]:
         fx, fy = _VECTORS[facing]
         out: list[XY] = []
         for dy in range(-radius, radius + 1):
@@ -370,10 +369,12 @@ def sight_cells(
     at: XY,
     facing: Facing,
     *,
-    radius: int = SIGHT_RANGE,
+    radius: int | None = None,
 ) -> tuple[XY, ...]:
-    """站在 ``at``、面向 ``facing`` 的敵人看得到的格子（依 (y, x) 排序）。"""
-    return _sight(library, char, found).cells(at, facing, radius)
+    """站在 ``at``、面向 ``facing`` 的敵人看得到的格子（依 (y, x) 排序）；``radius`` 省略＝規則
+    ``field.sight_range``。"""
+    reach = rules_of(library).field.sight_range if radius is None else radius
+    return _sight(library, char, found).cells(at, facing, reach)
 
 
 # ---------------------------------------------------------------------------
@@ -389,7 +390,7 @@ class _Watch:
     visit: FieldVisit
     sight: _Sight
     spawns: tuple[tuple[int, FieldSpawn], ...]
-    radius: int = SIGHT_RANGE
+    radius: int
     """視野距離（潛行減半）。"""
 
     def enemies(self, ticks: int) -> tuple[FieldEnemy, ...]:
@@ -458,7 +459,7 @@ def _watch(
         visit=visit,
         sight=_sight(library, char, found),
         spawns=spawns,
-        radius=sight_range(char),
+        radius=sight_range(library, char),
     )
 
 
