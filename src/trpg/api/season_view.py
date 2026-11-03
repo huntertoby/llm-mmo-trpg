@@ -6,6 +6,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
+from trpg.api.season_boss_view import season_boss_block
 from trpg.api.season_schemas import (
     BoardBountyView,
     BoardClearedView,
@@ -17,6 +20,7 @@ from trpg.api.season_schemas import (
 )
 from trpg.content.library import ContentLibrary
 from trpg.server.announce import region_name
+from trpg.server.season_boss_board import BossBoardEntry
 from trpg.world.actions import WorldEvent
 from trpg.world.calendar import (
     calendar_of,
@@ -161,9 +165,16 @@ def _world_events(
 
 
 def season_board(
-    library: ContentLibrary, world: WorldState, char: CharacterState, now: int
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    now: int,
+    *,
+    actor: str | None = None,
+    boss_board: Sequence[BossBoardEntry] = (),
 ) -> SeasonBoardView:
-    """``char`` 看到的公告板（``world`` 是換日後的世界）。"""
+    """``char`` 看到的公告板（``world`` 是換日後的世界）。``actor`` 是看的人的帳號（賽季 Boss 的
+    剩餘次數，5F-3；``None``＝角色 ID）；``boss_board`` 是這一季的評分榜。"""
     goals, goals_note = _goals(library, world, char, now)
     cleared = tuple(
         BoardClearedView(
@@ -185,6 +196,14 @@ def season_board(
         world_events=_world_events(library, world, now),
         cleared=cleared,
         level_bonus_zh=bonus,
+        season_boss=season_boss_block(
+            library,
+            world,
+            char,
+            now,
+            actor=char.character_id if actor is None else actor,
+            entries=boss_board,
+        ),
     )
 
 

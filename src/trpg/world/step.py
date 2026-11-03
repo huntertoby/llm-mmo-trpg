@@ -76,6 +76,8 @@ from trpg.world.party import default_party, hire, set_shadow_ai
 from trpg.world.quests import accept_quest, advance_quests, take_offer
 from trpg.world.rng import STREAM_REVEAL, STREAM_TRAVEL, draw
 from trpg.world.season_board import after_season_step, roll_season
+from trpg.world.season_boss import challenge
+from trpg.world.season_events import SeasonBossAction
 from trpg.world.shadows import save_after_prep
 from trpg.world.situations import resolve_situation
 from trpg.world.social import hear_opportunity_hint, talk, tavern
@@ -187,7 +189,12 @@ def world_step(
     world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
     before = char
-    result = _dispatch(library, world, char, action, now)
+    actor_id = char.character_id if actor is None else actor
+    if isinstance(action, SeasonBossAction):  # 次數算帳號（#100，5F-3）：要知道是哪個帳號
+        boss_world, boss_char, boss_events = challenge(library, world, char, now, actor=actor_id)
+        result = StepResult(world=boss_world, char=boss_char, events=boss_events)
+    else:
+        result = _dispatch(library, world, char, action, now)
     world, char, settled = settle_event_combat(
         library, result.world, before, result.char, result.events, now=now
     )
@@ -205,7 +212,7 @@ def world_step(
         char,
         (*events, *extra),
         now=now,
-        actor=char.character_id if actor is None else actor,
+        actor=actor_id,
     )
     paid = [*paid, *season]
     if (
@@ -297,6 +304,12 @@ def _handlers() -> dict[type, _Handler]:
         ),
         ShadowAiAction: _keeps_world(
             lambda lib, _w, char, action, _n: set_shadow_ai(lib, char, action)
+        ),
+        # 賽季 Boss 挑戰（5F-3）：world_step 帶帳號呼叫；直接分派時用角色 ID 當帳號
+        SeasonBossAction: _changes_world(
+            lambda lib, world, char, _a, now: challenge(
+                lib, world, char, now, actor=char.character_id
+            )
         ),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1

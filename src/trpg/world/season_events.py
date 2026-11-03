@@ -16,6 +16,11 @@ __all__ = [
     "BountyClaimedEvent",
     "BountyMissedEvent",
     "DailyGoalDoneEvent",
+    "SealKeyGainedEvent",
+    "SeasonBossAction",
+    "SeasonBossChallengedEvent",
+    "SeasonBossClearedEvent",
+    "SeasonBossFailedEvent",
     "WorldEventProgressEvent",
     "WorldEventResolvedEvent",
     "WorldEventStartedEvent",
@@ -96,3 +101,58 @@ class DailyGoalDoneEvent(_Model):
     kind: Literal["daily_goal_done"] = "daily_goal_done"
     goal: str = Field(pattern=ID_PATTERN)
     coins: int = 0
+
+
+# ---------------------------------------------------------------------------
+# 5F-3 賽季 Boss（規則在 trpg.world.season_boss）
+# ---------------------------------------------------------------------------
+
+
+class SeasonBossAction(_Model):
+    """挑戰賽季 Boss（Phase 5F-3；09 9.7、#87、#100）：在城鎮出發，扣這個帳號今天的 1 次挑戰，
+    產生 Boss 的遭遇（種子由伺服器的賽季種子衍生）；之後照一般遭遇開戰或撤退（撤退不退次數）。"""
+
+    kind: Literal["season_boss"] = "season_boss"
+
+
+class SealKeyGainedEvent(_Model):
+    """拿到 1 把封印鑰匙（19.6.2）：``source`` 是來源 ID；``keys`` 是個人鑰匙數，``world_keys`` 是
+    全服累積數。"""
+
+    kind: Literal["seal_key_gained"] = "seal_key_gained"
+    source: str
+    name_zh: str
+    keys: int
+    world_keys: int
+
+
+class SeasonBossChallengedEvent(_Model):
+    """開始挑戰賽季 Boss：這個帳號今天第 ``attempt`` 次、還剩 ``attempts_left`` 次。"""
+
+    kind: Literal["season_boss_challenged"] = "season_boss_challenged"
+    boss: str = Field(pattern=ID_PATTERN)
+    attempt: int
+    attempts_left: int
+
+
+class SeasonBossClearedEvent(_Model):
+    """打倒賽季 Boss（#87 通關評分、#101 首殺）：``first``＝這一季第一個；``survivors``／``allies``
+    是存活與出場的我方人數（主角＋傭兵）；``no_down``＝我方沒有人倒下過。"""
+
+    kind: Literal["season_boss_cleared"] = "season_boss_cleared"
+    boss: str = Field(pattern=ID_PATTERN)
+    name_zh: str
+    first: bool
+    score: int
+    rounds: int
+    survivors: int
+    allies: int
+    no_down: bool
+    title_zh: str
+
+
+class SeasonBossFailedEvent(_Model):
+    """挑戰賽季 Boss 失敗（只扣次數，#98）。"""
+
+    kind: Literal["season_boss_failed"] = "season_boss_failed"
+    boss: str = Field(pattern=ID_PATTERN)

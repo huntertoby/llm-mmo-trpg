@@ -1,19 +1,31 @@
 // 城鎮公告板（Phase 5F-1；09 9.7、9.6.9 #99、9.6.10 #103、18.7.4）：賽季第幾天與日程、今日目標 3 條、
-// 懸賞板（先搶先贏）、世界事件全服進度、已清空的地點。全部由後端算好（換日後的世界，只讀）；左欄切換，
-// 樣式沿用任務日誌與一輪的進度條。
+// 懸賞板（先搶先贏）、世界事件全服進度、已清空的地點；5F-3 加賽季 Boss（封印、鑰匙、帳號今天的次數、
+// 首殺、評分榜、挑戰按鈕）。全部由後端算好（換日後的世界，只讀）；左欄切換，樣式沿用任務日誌與一輪的進度條。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { SeasonBoardView, WorldView } from "../api/types";
-import { barWidth, eventProgressLabel, goalProgressLabel, respawnLabel } from "./board";
+import type { SeasonBoardView, WorldAction, WorldView } from "../api/types";
+import {
+  barWidth,
+  bossAttemptsLabel,
+  bossEntryLabel,
+  bossKeysLabel,
+  bossKeysPermille,
+  eventProgressLabel,
+  goalProgressLabel,
+  respawnLabel,
+} from "./board";
 
 interface Props {
   characterId: string;
   /** 世界畫面（每次動作之後換新：重新讀公告板）。 */
   view: WorldView;
+  busy?: boolean;
+  /** 送世界動作（5F-3 賽季 Boss 的「挑戰」）；沒給時不顯示按鈕。 */
+  onAct?(action: WorldAction): void;
   onClose(): void;
 }
 
-export function BoardPanel({ characterId, view, onClose }: Props) {
+export function BoardPanel({ characterId, view, busy = false, onAct, onClose }: Props) {
   const [board, setBoard] = useState<SeasonBoardView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,6 +116,63 @@ export function BoardPanel({ characterId, view, onClose }: Props) {
                 {e.target_note_zh != null && <div className="muted small">門檻：{e.target_note_zh}</div>}
               </div>
             ))
+          )}
+
+          {board.season_boss != null && (
+            <div className="world-board-event" data-testid="world-board-boss">
+              <div className="section-title">賽季 Boss</div>
+              <div className="small">
+                <b>{board.season_boss.name_zh}</b>
+                <span className={board.season_boss.status === "open" ? "world-board-open" : "muted"}>
+                  　{board.season_boss.status_zh}
+                </span>
+              </div>
+              {board.season_boss.note_zh != null && <div className="muted small">{board.season_boss.note_zh}</div>}
+              <div className="run-bar">
+                <span className="run-bar-track">
+                  <span
+                    className="run-bar-fill world-board-fill"
+                    style={{ width: barWidth(bossKeysPermille(board.season_boss)) }}
+                  />
+                </span>
+                <span className="small">封印鑰匙：{bossKeysLabel(board.season_boss)}</span>
+              </div>
+              <div className="muted small">
+                {bossAttemptsLabel(board.season_boss)}；只准系統傭兵，失敗只扣次數。
+              </div>
+              {board.season_boss.first_kill_zh != null && <div className="small">{board.season_boss.first_kill_zh}</div>}
+              {onAct !== undefined && board.season_boss.status === "open" && (
+                <div>
+                  <button
+                    type="button"
+                    disabled={busy || !board.season_boss.can_challenge}
+                    title={board.season_boss.problem_zh ?? undefined}
+                    data-testid="world-board-boss-challenge"
+                    onClick={() => {
+                      onAct({ kind: "season_boss" });
+                      onClose();
+                    }}
+                  >
+                    挑戰「{board.season_boss.name_zh}」
+                  </button>
+                  {board.season_boss.problem_zh != null && (
+                    <span className="muted small">　{board.season_boss.problem_zh}</span>
+                  )}
+                </div>
+              )}
+              <div className="small">通關評分榜（稱號「{board.season_boss.title_zh}」）</div>
+              {board.season_boss.board.length === 0 ? (
+                <div className="muted small">還沒有人打倒。</div>
+              ) : (
+                <ul className="world-threads small" data-testid="world-board-boss-ranking">
+                  {board.season_boss.board.map((e) => (
+                    <li key={`${e.rank}-${e.name}`} className={e.mine ? "world-board-open" : ""}>
+                      {bossEntryLabel(e)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
 
           {(board.cleared.length > 0 || board.level_bonus_zh.length > 0) && (

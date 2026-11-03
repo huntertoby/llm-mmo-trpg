@@ -179,14 +179,14 @@ statuses:
     stacking: refresh
     ward: {kin_tag: mist_lock_core, kin_name_zh: 霧鎖真人, range: 12, taken_permille: 500}
   # 5F-3：賽季 Boss「碎晶之主」的三根源晶柱（19.7 第 1 階段「本體不受傷害，直到 3 根源晶柱都被打碎」）。
-  # 護陣 ×0：任一根柱子在場時，碎晶之主受到的骰值傷害為 0；柱子全倒由本體的階段觸發（tag_down）。初值未經模擬。
+  # 護陣 ×0（範圍 24＝整張浮台）：任一根柱子在場時，碎晶之主受到的骰值傷害為 0；柱子全倒由本體的階段觸發（tag_down）。初值未經模擬。
   - id: rift_resonance
     polarity: neutral
     name_zh: 源晶共鳴
     description_zh: 源晶柱還在時，碎晶之主不受任何骰值傷害；三根柱子全部打碎才會現出破綻。不能被淨化、驅散或奪取。
     expires: never
     stacking: refresh
-    ward: {kin_tag: rift_core, kin_name_zh: 碎晶之主, range: 12, taken_permille: 0}
+    ward: {kin_tag: rift_core, kin_name_zh: 碎晶之主, range: 24, taken_permille: 0}
   # 5F-3：19.7「打碎順序自由，留下的柱子脈衝變強」：倒 1 根、倒 2 根時留下的柱子換上（柱子的階段，tag_down）。
   - id: crystal_surge
     polarity: neutral

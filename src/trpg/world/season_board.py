@@ -43,15 +43,17 @@ from trpg.world.actions import (
     TalkedEvent,
     WorldEvent,
 )
-from trpg.world.calendar import day_of, season_day
+from trpg.world.calendar import day_of, day_start, season_day
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.economy_actions import CurrencyGainedEvent
 from trpg.world.encounters import elite_kinds
 from trpg.world.growth import gain_xp
+from trpg.world.season_boss import gain_seal_keys, note_seal_full
 from trpg.world.season_events import (
     BountyClaimedEvent,
     BountyMissedEvent,
     DailyGoalDoneEvent,
+    SealKeyGainedEvent,
     WorldEventProgressEvent,
     WorldEventResolvedEvent,
     WorldEventStartedEvent,
@@ -102,7 +104,13 @@ def _apply_effect(world: WorldState, effect: WorldEventEffect) -> WorldState:
     bonus = dict(world.level_bonus)
     for row in effect.level_bonus:
         bonus[row.region] = bonus.get(row.region, 0) + row.amount
-    return world.model_copy(update={"flags": flags, "level_bonus": bonus})
+    keys = world.seal_keys + effect.seal_keys  # 全服封印鑰匙（5F-3；19.9 #2）
+    return world.model_copy(update={"flags": flags, "level_bonus": bonus, "seal_keys": keys})
+
+
+def _initial_progress(world: WorldState, event: WorldEventDef) -> int:
+    """世界事件開始時的進度：``seal_key`` 是全服累積數（帶入之前的鑰匙，5F-3）；其他從 0 起。"""
+    return world.seal_keys if event.goal.kind == "seal_key" else 0
 
 
 def _resolve(
@@ -141,7 +149,12 @@ def _roll_day(
         target = event.target_for(players)
         if state is None:
             adjustment = TargetAdjustment(day=day, players=players, target=target)
-            state = WorldEventState(id=event.id, target=target, adjustments=(adjustment,))
+            state = WorldEventState(
+                id=event.id,
+                target=target,
+                adjustments=(adjustment,),
+                progress=_initial_progress(world, event),
+            )
             world = _with_event(world, state)
             events.append(WorldEventStartedEvent(event=event.id, day=day, target=target))
         elif state.status == "active" and target != state.target:
@@ -175,6 +188,7 @@ def roll_season(
     events: list[WorldEvent] = []
     for day in range(first, last + 1):
         world, more = _roll_day(season, world, day, start_day)
+        world = note_seal_full(library, world, day_start(library, day))  # 5F-3：集滿的時間
         events += more
     return world.model_copy(update={"rolled_day": today}), tuple(events)
 
@@ -254,6 +268,8 @@ def goal_count(library: ContentLibrary, goal: GoalSpec, events: Sequence[WorldEv
                 count += 1
             case BountyClaimedEvent() if goal.kind == "bounty_claimed":
                 count += 1
+            case SealKeyGainedEvent() if goal.kind == "seal_key":
+                count += 1
             case _:
                 pass
     return count
@@ -285,6 +301,7 @@ def _advance_events(
         )
         if state.progress >= state.target:
             world, resolved = _resolve(world, event, state, today, success=True)
+            world = note_seal_full(library, world, now)  # 5F-3：集滿的時間
             out.append(resolved)
     return world, out
 
@@ -465,11 +482,14 @@ def after_season_step(
     now: int,
     actor: str,
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
-    """動作之後：懸賞搶先、世界事件進度、今日目標、上線紀錄（依序；見模組說明）。"""
+    """動作之後：懸賞搶先、封印鑰匙（5F-3）、世界事件進度、今日目標、上線紀錄（依序；見模組
+    說明）。"""
     season = library.world_season
     if season is None:
         return world, char, ()
     world, char, claimed = _claim_bounties(library, world, char, events, now)
+    world, char, keys = gain_seal_keys(library, world, char, (*events, *claimed))  # 5F-3
+    claimed += keys
     seen = (*events, *claimed)
     world, progressed = _advance_events(library, season, world, seen, now)
     char, goals = _advance_goals(library, world, char, seen, now)

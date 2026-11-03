@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from trpg.server.accounts import AccountRecord
 from trpg.server.first_kills import FirstKill
 from trpg.server.notes import LocationNote
+from trpg.server.season_boss_board import BossBoardEntry
 from trpg.world.state import CharacterState, RecipeRecord, WorldState
 
 __all__ = [
@@ -116,6 +117,8 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "crafts",
     "generated_skills",
     "daily_goals",  # 5F-1 今日目標
+    "seal_key_sources",  # 5F-3 封印鑰匙、區域 Boss 保底掉落
+    "boss_drop_days",
 )
 
 _WORLD: Final[dict[str, ResetKind]] = _all(
@@ -135,6 +138,10 @@ _WORLD: Final[dict[str, ResetKind]] = _all(
     "world_events",
     "bounty_claims",
     "level_bonus",
+    "seal_keys",  # 5F-3 賽季 Boss（世界狀態；紀念的首殺與評分榜在伺服器檔）
+    "seal_full_at",
+    "boss_attempts",
+    "boss_clears",
 )
 """世界狀態整個是數值類（#91「世界狀態」）；新的一季換新的 ``season_id``、種子與開始時間。"""
 
@@ -158,8 +165,30 @@ _FIRST_KILL: Final[dict[str, ResetKind]] = _all(
     "seq",
     "at",
     "season_id",
+    "account_id",  # 5F-3
+    "battle_log",
 )
 """首殺是「Boss 擊殺紀錄」（#91 紀念類），整筆保留；``season_id`` 分季。"""
+
+_BOSS_BOARD: Final[dict[str, ResetKind]] = _all(
+    MEMORIAL,
+    "season_id",
+    "boss",
+    "character_id",
+    "account_id",
+    "name",
+    "score",
+    "rounds",
+    "survivors",
+    "allies",
+    "no_down",
+    "title_zh",
+    "region",
+    "location",
+    "seq",
+    "at",
+)
+"""賽季 Boss 的通關評分榜（Phase 5F-3；#91「排行榜與 Boss 擊殺紀錄」紀念類），整筆保留。"""
 
 _ACCOUNT: Final[dict[str, ResetKind]] = _all(
     MEMORIAL,
@@ -188,13 +217,14 @@ SEASON_POLICY: Final[Mapping[type[BaseModel], Mapping[str, ResetKind]]] = {
     WorldState: _WORLD,
     RecipeRecord: _RECIPE,
     FirstKill: _FIRST_KILL,
+    BossBoardEntry: _BOSS_BOARD,
     AccountRecord: _ACCOUNT,
     LocationNote: _NOTE,
 }
 """存檔模型 → 欄位 → 數值類／紀念類。"""
 
 SAVED_MODELS: Final[tuple[type[BaseModel], ...]] = tuple(SEASON_POLICY)
-"""要分類的存檔模型（角色、世界、配方紀錄、首殺、帳號、地點留言）。"""
+"""要分類的存檔模型（角色、世界、配方紀錄、首殺、賽季 Boss 評分榜、帳號、地點留言）。"""
 
 PROVISIONAL: Final[frozenset[tuple[str, str]]] = frozenset(
     {

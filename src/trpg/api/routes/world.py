@@ -227,12 +227,22 @@ def post_chat(character_id: str, body: ChatRequest, request: Request) -> WorldVi
 
 @router.get("/characters/{character_id}/board")
 def get_board(character_id: str, request: Request) -> SeasonBoardView:
-    """城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。"""
+    """城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點；
+    5F-3 加賽季 Boss（封印、鑰匙、帳號今天剩幾次、首殺、評分榜）。"""
     store = world_of(request)
     with store.lock:
         char = store.character(character_id)
         now = store.clock()
-        return season_board(store.library, store.season_world(now), char, now)
+        world = store.season_world(now)
+        actor = None if store.actor_of is None else store.actor_of(character_id)
+        return season_board(
+            store.library,
+            world,
+            char,
+            now,
+            actor=actor,
+            boss_board=store.boss_board.top(world.season_id),
+        )
 
 
 @router.get("/llm")

@@ -7,6 +7,9 @@
 # goal_line 可用：$text
 # event_line 可用：$name、$progress、$target
 # first_kill 可用：$name（角色名）、$target（精英名）。不說地點（5E-3b：精英在哪裡由玩家自己找）。
+# season_boss_line（5F-3，daily 的 $season_boss）可用：$name（賽季 Boss 名）、$status（封印中／即將解鎖／已解鎖／本季挑戰已結束）、
+#   $note（解鎖時間的說明；解鎖前 24 小時起寫「… 解鎖」，09 9.7 的公告）
+# season_boss_first_kill（5F-3）可用：$name（角色名）、$target（賽季 Boss 名）
 # public_url_line 可用：$public_url（public_url 空白時整行不出現）
 daily: |-
   【今日公告】$date　賽季第 $season_day 天
@@ -15,7 +18,7 @@ daily: |-
   ── 今日目標 ──
   $goals
   ── 世界事件進度 ──
-  $events$public_url
+  $events$season_boss$public_url
 goals_none: （尚未開放）
 goal_line: ・$text
 events_none: （尚未開放）
@@ -24,3 +27,8 @@ public_url_line: |-
 
   入口：$public_url
 first_kill: 【首殺】$name 全服第一個打倒了精英「$target」！
+season_boss_line: |-
+
+  ── 賽季 Boss ──
+  「$name」：$status　$note
+season_boss_first_kill: 【賽季首殺】$name 第一個打倒了賽季 Boss「$target」！

@@ -12,7 +12,7 @@ generic_by_level:
   - {max_level: 10, item: item_superior_material}
 
 # 20.2：一般戰鬥約 15% 掉 1 件（普通～稀有）；每名精英必掉 1 件、史詩 50%（5D-2b 玩法 PM 代決，取代 5D2-4 的一場 1 件）
-# 物品等級＝地點建議等級（8.26.2），第一季上限 10。區域 Boss 必掉史詩在 5F。
+# 物品等級＝地點建議等級（8.26.2），第一季上限 10。區域 Boss 必掉史詩見下面的 bosses（5F-3）。
 gear:
   battle_permille: 150
   battle_weights: {common: 40, uncommon: 25, rare: 20}   # 照 item_gen.yaml 的 rarity_weights
@@ -58,3 +58,9 @@ regions:
       thunder_hawk: item_thunder_feather        # 雷羽鷹 → 雷羽
     elite_affixes:
       regenerating: item_living_bone            # 「再生的」精英 → 活血骨（稀有）
+
+# 區域 Boss 的保底掉落（Phase 5F-3；20.2「區域 Boss 必掉 1 件史詩」、18.2.3 霧鎖真人掉雲頂霧晶）。
+# 重複挑戰不限次數（Boss 地點不寫已清空）；保底只在每角色每個刷新日第一次打倒時（代決 5F3-15）：
+# 這名 Boss 的材料換成 material、裝備換成 gear_rarity；同一天之後照一般精英（必掉 1 件、史詩 50%）。
+bosses:
+  sect_mist_lock_master: {material: item_summit_mist_crystal, gear_rarity: epic}

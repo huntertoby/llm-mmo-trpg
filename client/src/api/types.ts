@@ -274,7 +274,9 @@ export type WorldAction =
   | Schemas["EnhanceAction"]
   | Schemas["RerollAction"]
   | Schemas["ImbueAction"]
-  | Schemas["SalvageAction"];
+  | Schemas["SalvageAction"]
+  // 5F-3：挑戰賽季 Boss（扣帳號今天的 1 次，之後照一般遭遇開戰）
+  | Schemas["SeasonBossAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -300,6 +302,9 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
+export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
+export type BoardBossEntryView = Schemas["BoardBossEntryView"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];

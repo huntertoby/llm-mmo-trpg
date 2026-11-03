@@ -67,7 +67,8 @@ def test_board_lists_season_goals_bounties_events(calm: ContentLibrary, tmp_path
     names = {b["bounty"]: b for b in board["bounties"]}
     assert set(names) == {"north_wolf_king", "mist_swordsman", "scarface"}
     assert all(b["open"] and b["status_zh"] == "懸賞中" for b in board["bounties"])
-    (event,) = board["world_events"]
+    event, seal = board["world_events"]  # 5F-3：封印共鳴（第 7～10 天）還沒開始
+    assert seal["event"] == "seal_resonance" and seal["status"] == "pending"
     assert event["name_zh"] == "霧潮入侵" and event["status"] == "active"
     assert event["target"] == 30 and event["permille"] == 0
     assert event["target_note_zh"] == "第 1 天用原門檻"

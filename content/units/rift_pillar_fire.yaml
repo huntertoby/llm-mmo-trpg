@@ -1,8 +1,8 @@
 # 裂界門的火柱（Phase 5F-3；19.7 第 1 階段的三根源晶柱之一；規則同霧柱 rift_pillar_mist）。數值是初值。
 id: rift_pillar_fire
 name_zh: 火之源晶柱
-attributes: {str: 10, dex: 6, con: 16, int: 10, wis: 12, wil: 10}
-max_hp: 45
+attributes: {str: 10, dex: 6, con: 10, int: 10, wis: 14, wil: 10}
+max_hp: 60
 speed: 0
 armor_bonus: 3
 weapon: fist

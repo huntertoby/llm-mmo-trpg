@@ -2292,7 +2292,7 @@
           "world"
         ],
         "summary": "Get Board",
-        "description": "城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。",
+        "description": "城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點；\n5F-3 加賽季 Boss（封印、鑰匙、帳號今天剩幾次、首殺、評分榜）。",
         "operationId": "get_board_api_world_characters__character_id__board_get",
         "parameters": [
           {
@@ -4006,6 +4006,66 @@
         "title": "BattleView",
         "description": "``team`` 視角的戰場。"
       },
+      "BoardBossEntryView": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
+          "survivors": {
+            "type": "integer",
+            "title": "Survivors"
+          },
+          "allies": {
+            "type": "integer",
+            "title": "Allies"
+          },
+          "no_down": {
+            "type": "boolean",
+            "title": "No Down"
+          },
+          "location_zh": {
+            "type": "string",
+            "title": "Location Zh"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rank",
+          "name",
+          "score",
+          "rounds",
+          "survivors",
+          "allies",
+          "no_down",
+          "location_zh",
+          "mine",
+          "at"
+        ],
+        "title": "BoardBossEntryView",
+        "description": "評分榜的一名（Phase 5F-3；#87）。"
+      },
       "BoardBountyView": {
         "properties": {
           "bounty": {
@@ -4140,6 +4200,144 @@
           "name_zh"
         ],
         "title": "BoardMilestoneView"
+      },
+      "BoardSeasonBossView": {
+        "properties": {
+          "boss": {
+            "type": "string",
+            "title": "Boss"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sealed",
+              "announced",
+              "open",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "status_zh": {
+            "type": "string",
+            "title": "Status Zh"
+          },
+          "note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Zh"
+          },
+          "announce_at": {
+            "type": "integer",
+            "title": "Announce At"
+          },
+          "unlock_at": {
+            "type": "integer",
+            "title": "Unlock At"
+          },
+          "close_at": {
+            "type": "integer",
+            "title": "Close At"
+          },
+          "world_keys": {
+            "type": "integer",
+            "title": "World Keys"
+          },
+          "keys_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keys Target"
+          },
+          "my_keys": {
+            "type": "integer",
+            "title": "My Keys"
+          },
+          "keys_required": {
+            "type": "integer",
+            "title": "Keys Required"
+          },
+          "attempts_left": {
+            "type": "integer",
+            "title": "Attempts Left"
+          },
+          "daily_attempts": {
+            "type": "integer",
+            "title": "Daily Attempts"
+          },
+          "can_challenge": {
+            "type": "boolean",
+            "title": "Can Challenge"
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          },
+          "first_kill_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Kill Zh"
+          },
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "board": {
+            "items": {
+              "$ref": "#/components/schemas/BoardBossEntryView"
+            },
+            "type": "array",
+            "title": "Board",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "boss",
+          "name_zh",
+          "status",
+          "status_zh",
+          "announce_at",
+          "unlock_at",
+          "close_at",
+          "world_keys",
+          "my_keys",
+          "keys_required",
+          "attempts_left",
+          "daily_attempts",
+          "can_challenge",
+          "title_zh"
+        ],
+        "title": "BoardSeasonBossView",
+        "description": "賽季 Boss 區塊（Phase 5F-3；09 9.7、#87、#100、#101）。"
       },
       "BoardWorldEventView": {
         "properties": {
@@ -4328,6 +4526,17 @@
               }
             ],
             "title": "Next Permille"
+          },
+          "next_condition_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Condition Zh"
           }
         },
         "additionalProperties": false,
@@ -14488,6 +14697,16 @@
             "type": "array",
             "title": "Level Bonus Zh",
             "default": []
+          },
+          "season_boss": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardSeasonBossView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -14497,6 +14716,20 @@
         ],
         "title": "SeasonBoardView",
         "description": "城鎮公告板的整份資料。"
+      },
+      "SeasonBossAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "season_boss",
+            "title": "Kind",
+            "default": "season_boss"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SeasonBossAction",
+        "description": "挑戰賽季 Boss（Phase 5F-3；09 9.7、#87、#100）：在城鎮出發，扣這個帳號今天的 1 次挑戰，\n產生 Boss 的遭遇（種子由伺服器的賽季種子衍生）；之後照一般遭遇開戰或撤退（撤退不退次數）。"
       },
       "SeasonInfoView": {
         "properties": {
@@ -19175,6 +19408,9 @@
           },
           {
             "$ref": "#/components/schemas/SalvageAction"
+          },
+          {
+            "$ref": "#/components/schemas/SeasonBossAction"
           }
         ],
         "discriminator": {
@@ -19204,6 +19440,7 @@
             "rest": "#/components/schemas/RestAction",
             "retreat": "#/components/schemas/RetreatAction",
             "salvage": "#/components/schemas/SalvageAction",
+            "season_boss": "#/components/schemas/SeasonBossAction",
             "sell": "#/components/schemas/SellAction",
             "shadow_ai": "#/components/schemas/ShadowAiAction",
             "swear_oath": "#/components/schemas/SwearOathAction",

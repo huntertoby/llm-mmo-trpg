@@ -78,6 +78,7 @@ from trpg.world.economy_actions import (
     SellAction,
     UseItemAction,
 )
+from trpg.world.season_events import SeasonBossAction
 
 __all__ = [
     "CreateWorldCharacterRequest",
@@ -140,7 +141,8 @@ type WorldActionRequest = Annotated[
     | EnhanceAction
     | RerollAction
     | ImbueAction
-    | SalvageAction,
+    | SalvageAction
+    | SeasonBossAction,  # 5F-3
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收

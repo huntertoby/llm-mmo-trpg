@@ -3,8 +3,8 @@
 # 倒 1 根、倒 2 根時留下的柱子脈衝變強（階段 tag_down，換上晶能湧動／晶能狂湧）。數值是初值。
 id: rift_pillar_mist
 name_zh: 霧之源晶柱
-attributes: {str: 10, dex: 6, con: 16, int: 10, wis: 12, wil: 10}
-max_hp: 45
+attributes: {str: 10, dex: 6, con: 10, int: 10, wis: 14, wil: 10}
+max_hp: 60
 speed: 0
 armor_bonus: 3
 weapon: fist

@@ -768,7 +768,7 @@ class WardSpec(ContentModel):
     kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
     """同門標籤在單位卡、狀態說明上的中文名（Phase 5F-2b，例：``mist_lock_core`` →「霧鎖真人」）；
     省略時照舊顯示標籤 ID。只能和 ``kin_tag`` 一起寫。"""
-    range: int = Field(default=3, ge=1, le=12)
+    range: int = Field(default=3, ge=1, le=24)
     taken_permille: int = Field(ge=0, le=999)
     """受到的骰值傷害倍率（‰）；0＝持有者在場時完全不受骰值傷害（Phase 5F-3 源晶柱）。"""
 
