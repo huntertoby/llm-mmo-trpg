@@ -14,8 +14,8 @@
   ``personal`` 的隊伍只對自己消失（角色這一趟的 ``defeated``）、不算進共享清空、下一趟回來再
   出現；其他種類的地點照 6C-1，打贏的那一隊到離開這個地點前不再出現。
 - **日夜**（21.10 第 11 條）：``day_phase`` 有寫的隊伍只在那個時段出現。
-- **任務完成後不再出現**（21.10 第 9 條，6C-5）：``until_quest`` 有寫的隊伍，角色完成那個任務後就
-  不出現（新手任務的固定戰）。
+- **任務那一步完成後不再出現**（21.10 第 9 條，6C-5、6C-5b）：``until_quest`` 有寫的隊伍，角色完成
+  ``until_step`` 那一步（沒寫步驟＝整個任務）後就不出現（新手任務的固定戰）。
 - **潛行**（Q7，6C-5）：角色潛行中，視野距離減半（捨去小數，:func:`sight_range`）。
 - **進圖寬限**（21.10 第 8 條）：走出口或門抵達的那一格不檢查，從走的第一步才檢查。
 - **視野**（21.10 第 3 條）：前方扇形——往前 ≥ 1 格、橫向偏移 ≤ 往前格數（90°）、曼哈頓距離
@@ -495,9 +495,19 @@ def _watch(
     )
 
 
-def _quest_done(char: CharacterState, quest: str | None) -> bool:
-    state = None if quest is None else char.quest_state(quest)
-    return state is not None and state.done
+def _retired(library: ContentLibrary, char: CharacterState, spawn: FieldSpawn) -> bool:
+    """``until_quest``／``until_step`` 的隊伍角色已經用不到了（21.10 第 9 條；6C-5b：那一步完成就
+    不出現；沒寫步驟＝整個任務完成）。任務的步驟照順序完成（``steps_done``＝完成了幾步）。"""
+    state = None if spawn.until_quest is None else char.quest_state(spawn.until_quest)
+    if state is None or spawn.until_quest is None:
+        return False
+    if state.done:
+        return True
+    if spawn.until_step is None:
+        return False
+    quest = library.world_quests.quest(char.region, spawn.until_quest)
+    ids = [] if quest is None else [s.id for s in quest.steps]
+    return spawn.until_step in ids and state.steps_done > ids.index(spawn.until_step)
 
 
 def _shown(
@@ -506,7 +516,7 @@ def _shown(
     """現在會出現的隊伍（21.10 第 9、11 條）：
 
     - 不在這個時段的（``day_phase``）不出現。
-    - ``until_quest`` 的任務角色已完成：不出現（6C-5）。
+    - ``until_quest``（``until_step``）的任務（那一步）角色已完成：不出現（6C-5、6C-5b）。
     - ``personal``：這一趟打贏了就不出現（地點「已清空」也照樣在）。
     - 其他：地點「已清空」就不出現；共享的地點看世界的 ``defeated_spawns``，不共享的看這一趟。"""
     world, found, now = ctx.world, ctx.map, ctx.now
@@ -515,7 +525,7 @@ def _shown(
     shared = shared_clear(ctx.library, region, location)
     out: list[tuple[int, FieldSpawn]] = []
     for i, spawn in enumerate(found.spawns):
-        if not appears(spawn, now) or _quest_done(char, spawn.until_quest):
+        if not appears(spawn, now) or _retired(ctx.library, char, spawn):
             continue
         if spawn.personal or not shared:
             gone = i in visit.defeated or (cleared and not spawn.personal)

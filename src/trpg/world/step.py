@@ -138,8 +138,11 @@ __all__ = [
 ]
 
 NO_CAMP_KINDS = frozenset({"town", "elite_lair", "boss"})
-"""不能紮營的地點種類（#114：Boss 地點、精英巢穴不行；城鎮直接休息，5A-4）。
-``camp`` 另看是否已清空。"""
+"""不能紮營的地點種類（#114：Boss 地點、精英巢穴不行；城鎮直接休息，5A-4）。精英巢穴、Boss 站在
+營火點上、地點已清空時例外（:data:`CLEAR_FIRST_KINDS`，6C-5b）。"""
+CLEAR_FIRST_KINDS = frozenset({"camp", "elite_lair", "boss"})
+"""要等地點「已清空」才能紮營的種類（含營火點上；21.10 第 13 條，6C-5b）。其他種類有巡邏也能
+紮營。"""
 
 
 @dataclass(frozen=True)
@@ -438,7 +441,20 @@ def _travel_node(
     """``travel`` 動作：目前地點有實地地圖時拒絕（6B-2：走到出口才換圖）。"""
     if outdoor_map(library, char.region, char.location) is not None:
         raise WorldActionError("這裡有實地地圖，請走到出口")
-    return _travel(library, world, char, action, now)
+    result = _travel(library, world, char, action, now)
+    return _sense_arrival(library, result, now)
+
+
+def _sense_arrival(library: ContentLibrary, result: StepResult, now: int) -> StepResult:
+    """走路（``travel``）抵達有實地地圖的地點：抵達格也做隱藏入口的感知（21.10 第 17 條：走路抵達的
+    那一格照判，6C-5b）。傳送、撤退、全滅回城抵達時不判。"""
+    char = result.char
+    if outdoor_map(library, char.region, char.location) is None:
+        return result
+    sensed, events = arrive_sense(library, result.world, placed(library, char), now)
+    if not events:
+        return result
+    return StepResult(world=result.world, char=sensed, events=(*result.events, *events))
 
 
 def _travel_fn(
@@ -606,14 +622,11 @@ def camp_problem(
     here = world_map.location_by_id()[char.location]
     if here.kind == "town":
         return "城鎮裡直接休息，不用紮營"
-    if here.kind in NO_CAMP_KINDS:
+    on_fire = on_campfire(library, char)  # 6C-5：固定營火點（#120、#114）
+    if here.kind in NO_CAMP_KINDS and not on_fire:
         return f"{here.name_zh}不能紮營"
-    if (
-        here.kind == "camp"
-        and not world.is_cleared(char.region, here.id, now)
-        and not on_campfire(library, char)  # 6C-5：固定營火點（#120、#114）
-    ):
-        return f"{here.name_zh}的敵人還在，不能紮營（營火點上可以）"
+    if here.kind in CLEAR_FIRST_KINDS and not world.is_cleared(char.region, here.id, now):
+        return f"{here.name_zh}的敵人還在，要先清空才能紮營"  # 6C-5b：營火點上也一樣
     cost = _rules(library).camp_cost
     if char.supplies < cost:
         return f"補給不足，紮營要 {cost} 補給"

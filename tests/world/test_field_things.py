@@ -24,7 +24,7 @@ from trpg.world.actions import (
     PerceptionCheckEvent,
     WorldAction,
 )
-from trpg.world.battle import prepare_battle
+from trpg.world.battle import prepare_battle, with_cleared
 from trpg.world.errors import WorldActionError
 from trpg.world.field import FieldCtx, arrival, field_grid, field_map, placed
 from trpg.world.field_actions import (
@@ -359,13 +359,16 @@ def test_town_events_are_placed_too(eventful: ContentLibrary) -> None:
 LAKE_FIRE: XY = (3, 9)
 
 
-def test_camp_on_campfire_even_with_enemies(calm: ContentLibrary) -> None:
+def test_camp_campfire_needs_the_clear(calm: ContentLibrary) -> None:
+    """6C-5b（21.10 第 13 條）：冬湖是營地，要先清空才能用帳篷旁的營火。"""
     world = make_world()
     off = _char(calm, "winter_lake", (11, 15))
     assert camp_problem(calm, world, off, NOON) is not None  # 營地敵人還在
     on = _char(calm, "winter_lake", LAKE_FIRE)
+    assert camp_problem(calm, world, on, NOON) == "冬湖的敵人還在，要先清空才能紮營"
+    world = with_cleared(world, "cloud_ridge", "winter_lake", NOON + 600)
     assert camp_problem(calm, world, on, NOON) is None
-    camped, _ = _step(calm, on, CampAction())
+    camped, _ = _step(calm, on, CampAction(), world=world)
     assert camped.supplies == on.supplies - 1
     assert camped.camped_at is not None and camped.camped_at.location == "winter_lake"
 
