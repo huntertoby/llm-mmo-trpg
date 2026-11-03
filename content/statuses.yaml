@@ -202,19 +202,6 @@ statuses:
     expires: never
     stacking: refresh
     damage_dealt_permille: 1500
-  # 5F-3：碎晶之主第 2 階段「晶蝕」（19.7：每回合掉血、需要淨化的時刻）。引擎狀態不能疊層，先用持續傷害＋刷新（代決 5F3-13）。
-  - id: shard_erosion
-    polarity: debuff
-    name_zh: 晶蝕
-    description_zh: 碎晶鑽進傷口，每回合開始時受到傷害；可以被淨化。
-    duration: 3
-    expires: turn_end
-    stacking: refresh
-    budget_points: 3
-    min_rarity: rare
-    on_turn_start_damage:
-      dice: 1d6
-      element: physical
   # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖）。
   - id: rift_collapse
     polarity: neutral

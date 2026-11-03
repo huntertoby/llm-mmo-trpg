@@ -1,5 +1,6 @@
 # 賽季 Boss「碎晶之主」第 2 階段「晶蝕」（Phase 5F-3；19.7：對隨機一人施加每回合掉血的晶蝕——需要淨化的時刻）。
-# 狀態不能疊層（代決 5F3-13）；目標交給 AI。只給敵人用；數值為初值，未經模擬。
+# 持續傷害用既有的「流血」（可淨化；新狀態會進技能生成器的狀態池，所以不新增）；不能疊層（代決 5F3-13）；目標交給 AI。
+# 只給敵人用；數值為初值，未經模擬。
 id: skill_shard_erosion
 schema_version: 1
 name_zh: 晶蝕
@@ -15,7 +16,7 @@ scaling_attr: int
 shape: {type: single, range: 6}
 effects:
   - {type: damage, dice: 2d6, element: physical}
-  - {type: apply_status, status: shard_erosion, duration: 3}
+  - {type: apply_status, status: bleed, duration: 3}
 condition: null
 cost: {mana: 4, cooldown: 1}
 tags: [arcane, spell, dot]

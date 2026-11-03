@@ -722,24 +722,6 @@
    ]
   },
   {
-   "id": "shard_erosion",
-   "name_zh": "晶蝕",
-   "description_zh": "碎晶鑽進傷口，每回合開始時受到傷害；可以被淨化。",
-   "tags": [],
-   "status_look": {
-    "polarity": "debuff",
-    "control_group": null,
-    "dot_element": "physical",
-    "skip_turn": false,
-    "removed_by_element": [],
-    "absorbs_damage": false,
-    "prevents_move": false
-   },
-   "rules_zh": [
-    "回合開始時受到 1d6 物理傷害"
-   ]
-  },
-  {
    "id": "rift_collapse",
    "name_zh": "界崩",
    "description_zh": "浮台開始崩塌：造成的傷害加倍。不能被淨化、驅散或奪取。",

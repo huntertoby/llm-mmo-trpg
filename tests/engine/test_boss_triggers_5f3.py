@@ -13,10 +13,13 @@ from tests.engine.helpers import give_turn, library, make_setup, spawn, template
 from trpg.content.battle import BossPhase, check_phases
 from trpg.engine import BattleState, resolve
 from trpg.engine.actions import EndTurn
+from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.battle import start_battle
-from trpg.engine.events import BossPhaseChanged
+from trpg.engine.events import BossPhaseChanged, DamageDealt
 from trpg.engine.formation import ward_permille
-from trpg.engine.setup import with_phase_assets
+from trpg.engine.runner import replay, run_battle
+from trpg.engine.setup import build_setup, with_phase_assets
+from trpg.engine.state import state_to_json
 from trpg.narrative.events import describe_event
 from trpg.shared.types import Team, UnitId
 
@@ -149,3 +152,24 @@ def test_zero_ward_blocks_all_dice_damage() -> None:
     state.units[PILLAR_A].hp = 0
     state.units[PILLAR_A].downed = True
     assert ward_permille(state, state.units[BOSS]) == 1000
+
+
+def test_shard_lord_battle_replays_identically() -> None:
+    """碎晶之主整場（裂界門預設陣容、10 級前的 1 級基準）：同種子同步驟 → 相同事件與狀態。"""
+    lib = library()
+    map_def = lib.map("rift_gate")
+    assert map_def.encounter is not None
+    setup = build_setup(
+        lib, "rift_gate", map_def.encounter.allies, map_def.encounter.enemies, max_rounds=30
+    )
+    setup = with_phase_assets(lib, setup)
+    run = run_battle(setup, 2, UtilityAI(lib.ai_profiles))
+    again = replay(setup, 2, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    boss = next(u for u in run.state.units.values() if u.template_id == "rift_shard_lord")
+    pillars_alive_hits = [
+        e
+        for e in run.events
+        if isinstance(e, DamageDealt) and e.target_id == boss.id and e.ward_permille == 0
+    ]
+    assert all(e.amount == 0 for e in pillars_alive_hits)  # 柱子在場時本體完全不受骰值傷害
