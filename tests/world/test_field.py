@@ -96,16 +96,28 @@ NO_MAP = "hunter_hut"
 """測試內容庫裡拿掉實地地圖的地點（「沒有地圖照舊 travel」用；不管正式內容有沒有畫）。"""
 
 
+def _no_spawns(maps: dict[str, FieldMapDef]) -> dict[str, FieldMapDef]:
+    """拿掉看得見的敵人（6C-1）：這裡測的是 6B-2 的走路，不讓巡邏擋路。"""
+    return {k: m.model_copy(update={"spawns": ()}) for k, m in maps.items()}
+
+
 @pytest.fixture(scope="module")
 def calm_field(field_library: ContentLibrary) -> ContentLibrary:
     calm = with_rules(field_library, encounter={"base_permille": 0, "per_level_permille": 0})
     kept = {k: m for k, m in calm.field_maps.items() if m.place != NO_MAP}
-    return dataclasses.replace(calm, field_maps={**kept, **_test_maps()})
+    return dataclasses.replace(calm, field_maps=_no_spawns({**kept, **_test_maps()}))
+
+
+AMBUSH_NO_MAP = "ferry_steps"
+"""遇敵測試拿掉實地地圖的地點：6C-1 起有實地地圖的地點不再擲遇敵，所以渡口石階改成沒有地圖、
+照舊每步遇敵。"""
 
 
 @pytest.fixture(scope="module")
 def ambush_field(field_library: ContentLibrary) -> ContentLibrary:
-    return with_rules(field_library, encounter={"base_permille": 1000, "max_permille": 1000})
+    ambush = with_rules(field_library, encounter={"base_permille": 1000, "max_permille": 1000})
+    kept = {k: m for k, m in ambush.field_maps.items() if m.place != AMBUSH_NO_MAP}
+    return dataclasses.replace(ambush, field_maps=_no_spawns(kept))
 
 
 def _char(library: ContentLibrary, **updates: Any) -> CharacterState:
@@ -152,7 +164,7 @@ def test_old_save_loads_and_is_placed_at_entry(calm_field: ContentLibrary) -> No
     data["format"] = "trpg-char/1"
     del data["field"], data["teleport_stones"]
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert old.format == "trpg-char/2"
+    assert old.format == "trpg-char/3"
     assert old.field is None
     char, events = _step(calm_field, old, _walk((12, 9)))
     assert char.field == FieldPos(map="mist_ferry", x=12, y=9, facing="e")
@@ -417,7 +429,8 @@ def test_cross_region_stone_needs_visited_town(calm_field: ContentLibrary) -> No
 
 def test_retreat_and_teleport_drop_stale_field(ambush_field: ContentLibrary) -> None:
     char, _ = _step(ambush_field, _char(ambush_field, field=_at(22, 8)), _walk((23, 8)))
-    assert char.field is not None and char.field.map == "ferry_steps"
+    assert char.location == "ferry_steps" and char.field is None
+    assert char.pending_encounter is not None
     back, _ = _step(ambush_field, char, RetreatAction())
     assert back.location == "mist_ferry"
     assert back.field is None
@@ -506,5 +519,5 @@ def test_old_world_log_is_stale() -> None:
     assert log.stale_zh == "規則已變、不能重播"
     again = read_log(dumps_log(log.entries, stale_through=log.stale_through))
     assert again == log
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/2"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/3"
     assert read_log('{"format": "trpg-wlog/1"}\n').stale_through is None

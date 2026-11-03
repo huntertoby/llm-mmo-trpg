@@ -69,8 +69,9 @@ from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
-from trpg.world.field import outdoor_map, stale_field, use_teleport_stone, walk
+from trpg.world.field import FieldHooks, outdoor_map, stale_field, use_teleport_stone, walk
 from trpg.world.field_actions import UseTeleportStoneAction, WalkAction
+from trpg.world.field_enemies import after_fight, arrive_watch, walk_watch, with_visit
 from trpg.world.gear import apply_equip
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.league import league_step
@@ -203,10 +204,13 @@ def world_step(
         result = account(library, world, char, action, now, actor_id)
     else:
         result = _dispatch(library, world, char, action, now)
+    moved = result.char
     if not isinstance(action, _FIELD_MOVES):  # 6B-2：別的動作換了地點，舊位置作廢
-        moved = stale_field(before, result.char)
-        if moved is not result.char:
-            result = StepResult(world=result.world, char=moved, events=result.events)
+        moved = stale_field(before, moved)
+    moved = with_visit(library, result.world, moved)  # 6C-1：換了地點就開始新的一趟
+    moved = after_fight(before, moved, action, result.events)  # 6C-1：打贏的那一隊不再出現
+    if moved is not result.char:
+        result = StepResult(world=result.world, char=moved, events=result.events)
     world, char, settled = settle_event_combat(
         library, result.world, before, result.char, result.events, now=now
     )
@@ -300,7 +304,7 @@ def _handlers() -> dict[type, _Handler]:
         TravelAction: _travel_node,
         # 6B-2 實地地圖（:mod:`trpg.world.field`）
         WalkAction: _changes_world(
-            lambda lib, world, char, action, now: walk(lib, world, char, action, now, _travel_fn)
+            lambda lib, world, char, action, now: walk(lib, world, char, action, now, _HOOKS)
         ),
         UseTeleportStoneAction: _keeps_world(
             lambda lib, _w, char, action, _n: use_teleport_stone(lib, char, action)
@@ -408,6 +412,10 @@ def _travel_fn(
     return result.world, result.char, result.events
 
 
+_HOOKS: Final = FieldHooks(travel=_travel_fn, watch=walk_watch, arrive=arrive_watch)
+"""``walk`` 的鉤子：踩出口＝``travel``、看得見的敵人（6C-1）。"""
+
+
 def _travel(
     library: ContentLibrary,
     world: WorldState,
@@ -426,6 +434,8 @@ def _travel(
     chance = rules.encounter.permille_for(target.level_max)
     if world.is_cleared(char.region, target.id, now):
         chance = 0  # 已清空：沒有敵人（代決 5A4-9）；擲骰照擲，亂數消耗不變
+    if outdoor_map(library, char.region, target.id) is not None:
+        chance = 0  # 6C-1：有實地地圖的地點改由看得見的敵人取代（21.9 第 7 條）；擲骰照擲
     if action.hasten:
         chance = chance * rules.hasten.encounter_permille // 1000
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from trpg.api.world_field_schemas import (
     FieldDoorView,
+    FieldEnemyUnitView,
+    FieldEnemyView,
     FieldExitView,
     FieldFacilityView,
     FieldGearLookView,
@@ -22,15 +24,17 @@ from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.engine.view import AppearanceView
 from trpg.world.actions import WorldEvent
+from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import FieldGrid, field_grid, field_map, hidden_door, placed
 from trpg.world.field_actions import (
     FieldEnteredEvent,
     TeleportStoneUnlockedEvent,
     TeleportStoneUsedEvent,
 )
+from trpg.world.field_enemies import FieldEnemy, enemy_lineup, field_enemies
 from trpg.world.gear import hero_loadout
 from trpg.world.narration import region_npcs
-from trpg.world.state import CharacterState
+from trpg.world.state import CharacterState, WorldState
 
 __all__ = ["field_line", "field_view"]
 
@@ -146,8 +150,64 @@ def _stone_targets(
     return tuple(sorted(out, key=lambda t: t.id))
 
 
-def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | None:
-    """目前的實地地圖；所在地點沒有實地地圖＝``None``。"""
+def _units(library: ContentLibrary, lineup: EncounterLineup) -> tuple[FieldEnemyUnitView, ...]:
+    catalog = library.enemy_catalog()
+
+    def one(member: LineupMember, *, third: bool) -> FieldEnemyUnitView:
+        template = catalog.template(member.unit)
+        return FieldEnemyUnitView(
+            unit=member.unit,
+            name_zh=template.name_zh,
+            affix=member.affix,
+            elite=member.affix is not None or catalog.is_elite(template),
+            third=third,
+        )
+
+    return (
+        *(one(m, third=False) for m in lineup.members),
+        *(one(m, third=True) for m in lineup.third),
+    )
+
+
+def _enemy(
+    library: ContentLibrary, world: WorldState, char: CharacterState, enemy: FieldEnemy, now: int
+) -> FieldEnemyView:
+    lineup = enemy_lineup(library, world, char, enemy, now)
+    table = library.world_encounters.get(char.region)
+    group = enemy.spawn.group if lineup is None else lineup.group
+    found = None if table is None else table.group_by_id().get(group)
+    return FieldEnemyView(
+        id=f"e{enemy.index}",
+        x=enemy.x,
+        y=enemy.y,
+        facing=enemy.facing,
+        patrol=enemy.patrols,
+        group=group,
+        name_zh=group if found is None else found.name_zh,
+        elite=lineup is not None and bool(elite_kinds(library, lineup)),
+        units=() if lineup is None else _units(library, lineup),
+        sight=enemy.sight,
+    )
+
+
+def _enemies(
+    library: ContentLibrary, world: WorldState | None, char: CharacterState, now: int
+) -> tuple[FieldEnemyView, ...]:
+    if world is None:
+        return ()
+    return tuple(
+        _enemy(library, world, char, e, now) for e in field_enemies(library, world, char, now)
+    )
+
+
+def field_view(
+    library: ContentLibrary,
+    char: CharacterState,
+    *,
+    world: WorldState | None = None,
+    now: int = 0,
+) -> FieldView | None:
+    """目前的實地地圖；所在地點沒有實地地圖＝``None``。``world`` 給了才帶看得見的敵人（6C-1）。"""
     char = placed(library, char)
     pos = char.field
     found = None if pos is None else field_map(library, pos.map)
@@ -197,4 +257,5 @@ def field_view(library: ContentLibrary, char: CharacterState) -> FieldView | Non
         max_climb=library.ruleset.core.max_climb_height,
         hero=_hero(library, char),
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
+        enemies=_enemies(library, world, char, now),
     )

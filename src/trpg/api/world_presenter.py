@@ -549,7 +549,7 @@ def world_view(
         inventory=_inventory(library, char, in_battle=in_battle),
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
-        field=field_view(library, char),
+        field=field_view(library, char, world=world, now=now),
     )
 
 

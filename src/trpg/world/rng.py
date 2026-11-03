@@ -19,6 +19,7 @@ __all__ = [
     "STREAM_BATTLE",
     "STREAM_CHECK",
     "STREAM_EVENT",
+    "STREAM_FIELD",
     "STREAM_REVEAL",
     "STREAM_TRAVEL",
     "derive_seed",
@@ -36,6 +37,9 @@ STREAM_EVENT: Final = "event"
 """事件出現擲骰與骨架挑選（Phase 5B-1）。"""
 STREAM_CHECK: Final = "check"
 """情境判定的 d20（Phase 5B-2；一律擲兩顆）。"""
+STREAM_FIELD: Final = "field"
+"""實地地圖上看得見的敵人（Phase 6C-1）：每進一個有實地地圖的地點抽 1 次，決定這一趟每隊的陣容、
+巡邏起點與駐守朝向（:mod:`trpg.world.field_enemies`）。"""
 
 
 def derive_seed(season_seed: int, character_id: str, stream: str, counter: int) -> int:

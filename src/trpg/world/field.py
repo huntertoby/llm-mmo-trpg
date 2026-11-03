@@ -38,8 +38,11 @@ from trpg.world.state import CharacterState, Facing, FieldPos, WorldState
 from trpg.world.town import with_visited_town
 
 __all__ = [
+    "ArriveFn",
     "FieldGrid",
+    "FieldHooks",
     "TravelFn",
+    "WatchFn",
     "field_grid",
     "field_map",
     "hidden_door",
@@ -56,6 +59,25 @@ type TravelFn = Callable[
     [ContentLibrary, WorldState, CharacterState, TravelAction, int], WorldResult
 ]
 """一次 ``travel``（:func:`trpg.world.step` 的移動；這裡不直接匯入，避免循環）。"""
+type WatchFn = Callable[
+    [ContentLibrary, WorldState, CharacterState, FieldMapDef, WalkedEvent, int],
+    tuple[WalkedEvent, CharacterState, tuple[WorldEvent, ...]],
+]
+"""走完路徑檢查之後、觸發出口等之前（6C-1 看得見的敵人：碰到就截短路徑並開打）。"""
+type ArriveFn = Callable[
+    [ContentLibrary, WorldState, CharacterState, int], tuple[CharacterState, tuple[WorldEvent, ...]]
+]
+"""走出口或門換到另一張圖之後（6C-1：一到就被看到時開打）。"""
+
+
+@dataclass(frozen=True)
+class FieldHooks:
+    """``walk`` 需要、但住在別的模組的函式（避免循環匯入）。"""
+
+    travel: TravelFn
+    watch: WatchFn | None = None
+    arrive: ArriveFn | None = None
+
 
 _DIRS: tuple[tuple[XY, Facing], ...] = (
     ((0, 1), "s"),
@@ -246,13 +268,13 @@ def _walk_path(
     return event, index
 
 
-def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加移動函式
+def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加鉤子
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
     action: WalkAction,
     now: int,
-    travel: TravelFn,
+    hooks: FieldHooks,
 ) -> WorldResult:
     """沿 ``action.path`` 走；不合法拋 :class:`WorldActionError`（狀態不變）。"""
     if char.pending_encounter is not None:
@@ -263,19 +285,27 @@ def walk(  # noqa: PLR0917 - 和世界動作處理同簽名，外加移動函式
     found = field_map(library, char.field.map)
     assert found is not None
     walked, index = _walk_path(library, char, found, action)
+    seen: tuple[WorldEvent, ...] = ()
+    if hooks.watch is not None:  # 6C-1：碰到敵人就停在那一格開打
+        walked, char, seen = hooks.watch(library, world, char, found, walked, now)
     pos = FieldPos(map=found.id, x=walked.x, y=walked.y, facing=walked.facing)
     char = char.model_copy(update={"field": pos})  # 同一個地點裡走動不算離開營火
-    events: list[WorldEvent] = [walked]
+    events: list[WorldEvent] = [walked, *seen]
     cell = (walked.x, walked.y)
     if walked.stopped == "stone":
         char, unlocked = _unlock_stone(char, found, cell)
         events += unlocked
-    elif walked.stopped == "exit":
-        world, char, more = _take_exit(library, world, char, found, (cell, index), now, travel)
+    elif walked.stopped in ("exit", "door"):
+        if walked.stopped == "exit":
+            world, char, more = _take_exit(
+                library, world, char, found, (cell, index), now, hooks.travel
+            )
+        else:
+            world, char, more = _take_door(library, world, char, found, cell, now, hooks.travel)
         events += more
-    elif walked.stopped == "door":
-        world, char, more = _take_door(library, world, char, found, cell, now, travel)
-        events += more
+        if hooks.arrive is not None:
+            char, more = hooks.arrive(library, world, char, now)
+            events += more
     return world, char, tuple(events)
 
 
