@@ -1,0 +1,40 @@
+# 霧渡鎮鐵匠鋪室內（石記鐵鋪；Phase 6B-1 草稿；格式說明見 ../mist_ferry.yaml 開頭）。
+# 10×8：石師傅站在鐵砧旁（走到旁邊開鐵匠面板），東邊的石柱是附魔台（21.5「鐵匠鋪含附魔台」）。
+id: mist_ferry_smithy
+name_zh: 石記鐵鋪
+region: cloud_ridge
+interior_of: mist_ferry
+size: [10, 8]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ##########
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  ####..####
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [4, 2], kind: crate}         # 鐵砧
+  - {at: [7, 2], kind: stone_pillar}  # 附魔台
+  - {at: [1, 5], kind: crate}
+entry: [5, 6]
+exits:
+  - {id: to_mist_ferry, at: [[4, 7], [5, 7]], to: mist_ferry, arrive: smithy_door}
+npcs:
+  - {at: [3, 2], id: smith_shi}
+facilities:
+  - {at: [4, 2], id: smithy}
+  - {at: [7, 2], id: enchanter}
