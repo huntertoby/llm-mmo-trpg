@@ -10733,6 +10733,37 @@
         ],
         "title": "LoginResponse"
       },
+      "LootChooseAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "loot_choose",
+            "title": "Kind",
+            "default": "loot_choose"
+          },
+          "drop_items": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "maxProperties": 40,
+            "title": "Drop Items"
+          },
+          "drop_gear": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Drop Gear",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LootChooseAction",
+        "description": "戰後結算：背包滿了時選要丟哪些（Phase 5D-2b；20.2，玩法 PM 2026-11-03 代決）。新拿到的\n（``CharacterState.pending_loot``）和背包裡原本的都可以丟；丟完剩下的戰利品必須全部放得下。\n什麼都不丟＝背包已經有空位（例如剛賣掉東西）時把戰利品收進來。"
+      },
       "MapSummary": {
         "properties": {
           "id": {
@@ -12180,6 +12211,34 @@
         ],
         "title": "PendingFlashOut",
         "description": "已付點、還沒選的閃現選項（Phase 3W-5）；選之前不能做別的事。"
+      },
+      "PendingLootView": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BagItemView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "over_slots": {
+            "type": "integer",
+            "title": "Over Slots"
+          },
+          "hint_zh": {
+            "type": "string",
+            "title": "Hint Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "over_slots",
+          "hint_zh"
+        ],
+        "title": "PendingLootView",
+        "description": "背包滿了：戰後結算選要丟哪件（Phase 5D-2b）。``items`` 是新拿到、還沒放進背包的；\n背包裡原本的看 ``InventoryView.bag``。用 ``loot_choose`` 動作送出要丟的\n（``drop_items``、``drop_gear``）。"
       },
       "PendingOfferView": {
         "properties": {
@@ -18647,6 +18706,9 @@
             "$ref": "#/components/schemas/EquipAction"
           },
           {
+            "$ref": "#/components/schemas/LootChooseAction"
+          },
+          {
             "$ref": "#/components/schemas/CraftAction"
           },
           {
@@ -18680,6 +18742,7 @@
             "imbue": "#/components/schemas/ImbueAction",
             "inherit": "#/components/schemas/InheritAction",
             "loadout": "#/components/schemas/LoadoutAction",
+            "loot_choose": "#/components/schemas/LootChooseAction",
             "offer_pick": "#/components/schemas/OfferPickAction",
             "pouch": "#/components/schemas/PouchAction",
             "release_oath": "#/components/schemas/ReleaseOathAction",
@@ -19205,6 +19268,16 @@
               }
             ],
             "title": "Last Loot Zh"
+          },
+          "pending_loot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingLootView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "event": {
             "anyOf": [

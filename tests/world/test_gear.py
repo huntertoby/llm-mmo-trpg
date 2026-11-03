@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from fractions import Fraction
 
 import pytest
 
 from tests.world.helpers import NOON, PARTY, make_encounter, make_world
 from trpg.content.equipment import ItemDef
-from trpg.content.item_gen import generate_item
+from trpg.content.item_budget import affix_points, base_bonus_points, item_budget
+from trpg.content.item_gen import downscale_item, generate_item
 from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
 from trpg.world.battle import prepare_battle
@@ -27,6 +29,13 @@ SHOP = "shop_liu"
 
 def _item(library: ContentLibrary, slot: str, rarity: str = "rare", level: int = 3) -> ItemDef:
     return generate_item(library, Rng(7), slot, rarity, level, weapon_class="focus")  # type: ignore[arg-type]
+
+
+def _min_points(library: ContentLibrary, affix_id: str) -> Fraction:
+    affix = library.affixes[affix_id]
+    rules = library.item_gen
+    assert rules is not None
+    return affix_points(rules, affix, None if affix.value is None else affix.value.min)
 
 
 def _act(library: ContentLibrary, char: CharacterState, action: object) -> CharacterState:
@@ -136,6 +145,35 @@ def test_shadow_gear_capped(library: ContentLibrary, make_char: MakeChar) -> Non
     char = make_char(equipment={"body": low, "neck": high})
     snapshot = shadow_snapshot(char, NOON)
     assert snapshot.equipment == {"body": low, "neck": high}
-    assert set(shadow_equipment(snapshot.equipment, 3)) == {"body"}
+    # 5D-2b（#87，玩法 PM 2026-11-03 代決）：超過招募者等級的壓到招募者等級後照穿
+    worn = shadow_equipment(library, snapshot.equipment, 3)
+    assert set(worn) == {"body", "neck"}
+    assert worn["body"] == low  # 沒超過的原樣
+    assert worn["neck"].item_level == 3 and worn["neck"].id == high.id
+    assert [r.affix for r in worn["neck"].affixes] == [r.affix for r in high.affixes]
     spawn, _ = shadow_spawn(library, snapshot.model_copy(update={"level": 5}), 3)
-    assert {e.slot for e in spawn.equipment.items} == {"body"}
+    assert {e.slot for e in spawn.equipment.items} == {"body", "neck"}
+
+
+def test_downscale_item_follows_item_level_budget(library: ContentLibrary) -> None:
+    """詞條數值照物品等級規則縮（8.22.1）：不超過原本的數值、放進新等級的詞條預算；同等級以下不變。"""
+    rules = library.item_gen
+    assert rules is not None
+    for slot_type in ("weapon", "body", "neck", "ring"):
+        for rarity in ("common", "uncommon", "rare", "epic"):
+            item = _item(library, slot_type, rarity, 8)
+            assert downscale_item(library, item, 8) == item
+            assert downscale_item(library, item, 9) == item
+            low = downscale_item(library, item, 2)
+            assert low.item_level == 2
+            assert low.base_bonus_permille <= item.base_bonus_permille
+            for old, new in zip(item.affixes, low.affixes, strict=True):
+                assert old.affix == new.affix
+                if old.value is not None and new.value is not None:
+                    assert abs(new.value) <= abs(old.value)
+            budget = item_budget(rules, low, library.affixes)
+            assert budget is not None
+            floor = base_bonus_points(rules, low.base_bonus_permille) + sum(
+                (_min_points(library, r.affix) for r in low.affixes), Fraction(0)
+            )
+            assert budget.points <= max(Fraction(budget.budget), floor)

@@ -1,0 +1,15 @@
+# 灰燼荒原的待接內容（Phase 5D-3b；docs/phases/Phase5計畫.md 第 1 節 5D-3b 列）。
+# 荒原還沒有地點圖：world/npcs/ 的人設卡要對到地點圖，所以先放這裡（schema 同 world/npcs 的
+# NpcCardTable，由 tests/content/test_world_crafting.py 驗證；遊戲不載入）。荒原內容段建好地點圖後，
+# 把卡片搬到 world/npcs/ashen_waste.yaml，再在 world/crafting.yaml 加餘燼集的鐵匠與附魔台。
+# 來源：docs/design/19-灰燼荒原與賽季主線.md 19.5。ID 與地點 ID ember_market 是開發 PM 暫定（代決 5D3b-5）。
+region: ashen_waste
+npcs:
+  - id: smith_lu
+    name_zh: 爐叔
+    role_zh: 鐵匠
+    location: ember_market
+    personality_zh: 熱心、話多
+    speech_zh: 大嗓門、愛講當年
+    secret_zh: 和鐵爐村的鐵匠是師兄弟，吵翻了
+    hooks_zh: 鐵匠與附魔台；事件 8 的延伸

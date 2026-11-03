@@ -3,6 +3,8 @@
 - ``content/world/crafting.yaml``（:class:`CraftingRules`）：設施（鐵匠、附魔台）、打造的費用與材料
   用量、特色材料的傾向（M2）與共鳴關鍵字、隱藏配方（M7）、強化、重骰、指定、分解。
 - ``content/world/resonance.yaml``（:class:`ResonanceRules`）：2 件共鳴（M3）的效果（現成詞條）。
+- 隱藏配方的提示（5D-3b，20.4；:class:`RecipeHint`）：只說材料的意象。提示所在區域還沒有地點圖時
+  （灰燼荒原）先不檢查地點，資料放好、接口（:meth:`CraftingRules.hints_at`）留給荒原內容段接上。
 
 數值是開發 PM 定的初值（代決 5D3-*）；之後只改資料。跨檔案檢查在 :func:`load_world_crafting`、
 :func:`load_world_resonance`。
@@ -35,6 +37,7 @@ __all__ = [
     "FlavorMaterial",
     "HiddenRecipe",
     "ModCost",
+    "RecipeHint",
     "ResonanceAffix",
     "ResonanceDef",
     "ResonanceRules",
@@ -104,6 +107,20 @@ class FlavorMaterial(ContentModel):
     resonance: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
+class RecipeHint(ContentModel):
+    """隱藏配方的一則提示（20.4，5D-3b）：在哪裡聽得到、說什麼（只說材料的意象，不說配方）。
+
+    ``source``：``tavern``＝酒館傳聞、``rumor``＝當地的傳聞（NPC 聊天）。``location`` 是提示出現的
+    地點；``region`` 還沒有地點圖時不檢查（等該區內容段）。"""
+
+    source: Literal["tavern", "rumor"]
+    region: str = Field(pattern=ID_PATTERN)
+    location: str | None = Field(default=None, pattern=ID_PATTERN)
+    place_zh: str = Field(min_length=1)
+    """顯示用的出處（例：「餘燼集酒館」）。"""
+    text_zh: str = Field(min_length=1)
+
+
 class HiddenRecipe(ContentModel):
     """隱藏配方（M7、20.4）：部位相同＋特色材料組合完全相同 → 獨特裝備。"""
 
@@ -113,6 +130,8 @@ class HiddenRecipe(ContentModel):
     materials: tuple[str, ...] = Field(min_length=1, max_length=5)
     affix: str = Field(pattern=_AFFIX_ID)
     rarity: CraftRarity = "epic"
+    hints: tuple[RecipeHint, ...] = ()
+    """提示（20.4；5D-3b）。"""
 
     @model_validator(mode="after")
     def _check(self) -> HiddenRecipe:
@@ -181,6 +200,19 @@ class CraftingRules(ContentModel):
     def hidden_for(self, slot_type: str, materials: Collection[str]) -> HiddenRecipe | None:
         key = (slot_type, tuple(sorted(materials)))
         return next((h for h in self.hidden if h.key() == key), None)
+
+    def hints_at(
+        self, region: str, location: str | None = None, source: str | None = None
+    ) -> tuple[tuple[HiddenRecipe, RecipeHint], ...]:
+        """某區（某地點、某種來源）的隱藏配方提示，依資料順序（5D-3b；給酒館與聊天接上用）。"""
+        return tuple(
+            (h, hint)
+            for h in self.hidden
+            for hint in h.hints
+            if hint.region == region
+            and (location is None or hint.location == location)
+            and (source is None or hint.source == source)
+        )
 
 
 class ResonanceAffix(ContentModel):
@@ -267,6 +299,15 @@ def crafting_problems(
             elif at != station.location:
                 problems.append(f"{where}：{station.npc} 不在 {station.location}")
     problems += _material_problems(rules, items, affixes, keywords)
+    return problems + _hidden_problems(rules, locations, affixes)
+
+
+def _hidden_problems(
+    rules: CraftingRules,
+    locations: Mapping[str, Mapping[str, str]],
+    affixes: Mapping[str, AffixDef],
+) -> list[str]:
+    problems: list[str] = []
     for hidden in rules.hidden:
         where = f"隱藏配方 {hidden.id}"
         for item_id in hidden.materials:
@@ -277,6 +318,10 @@ def crafting_problems(
             problems.append(f"{where}：未知的詞條 {hidden.affix}")
         elif hidden.slot_type not in affix.slots:
             problems.append(f"{where}：{hidden.affix} 不能掛在 {hidden.slot_type}")
+        for hint in hidden.hints:  # 區域還沒有地點圖＝等該區內容段（5D-3b）
+            kinds = locations.get(hint.region)
+            if kinds is not None and hint.location is not None and hint.location not in kinds:
+                problems.append(f"{where}：提示的地點 {hint.location} 不在 {hint.region}")
     return problems
 
 

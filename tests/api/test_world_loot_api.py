@@ -101,3 +101,38 @@ def test_loot_equip_and_sell(client: TestClient, lucky: ContentLibrary) -> None:
     sold = _act(client, cid, kind="sell", shop="shop_liu", item=loot[-1]["item"])
     assert sold["wallet"]["gold"] == gold + loot[-1]["sell_price"]
     assert any(f"賣掉{loot[-1]['name_zh'].split('（')[0]}" in e for e in sold["events"])
+
+
+def test_full_bag_choice_flow(lucky: ContentLibrary, tmp_path: Path) -> None:
+    """5D-2b（玩法 PM 2026-11-03 代決）：背包滿了 → ``pending_loot`` → ``loot_choose`` 丟掉一件。"""
+    economy = lucky.world_economy
+    assert economy.rules is not None
+    tiny = dataclasses.replace(
+        lucky,
+        world_economy=dataclasses.replace(
+            economy, rules=economy.rules.model_copy(update={"bag_slots": 1})
+        ),
+    )
+    with _client(tiny, tmp_path / "saves") as client:
+        view = _ok(client.post("/api/world/characters", json=START), 201)
+        cid = view["character"]["character_id"]
+        assert view["pending_loot"] is None
+        for _ in range(6):
+            _act(client, cid, kind="travel", to="ferry_steps")
+            opened = _ok(client.post(f"/api/world/characters/{cid}/battle"))
+            _finish_battle(client, opened["battle"], tiny)
+            view = _ok(client.get(f"/api/world/characters/{cid}"))
+            if view["pending_loot"] is not None:
+                break
+        else:
+            raise AssertionError("6 場都沒有背包滿")
+        pending = view["pending_loot"]
+        assert pending["over_slots"] >= 1 and pending["items"]
+        assert "背包滿了" in pending["hint_zh"]
+        bad = client.post(f"/api/world/characters/{cid}/actions", json={"kind": "loot_choose"})
+        assert bad.status_code in (400, 409, 422) and "還差" in bad.text
+        drop_items = {r["item"]: r["count"] for r in pending["items"] if not r["gear"]}
+        drop_gear = [r["item"] for r in pending["items"] if r["gear"]]
+        done = _act(client, cid, kind="loot_choose", drop_items=drop_items, drop_gear=drop_gear)
+        assert done["pending_loot"] is None
+        assert any(e.startswith("丟掉了") for e in done["events"])

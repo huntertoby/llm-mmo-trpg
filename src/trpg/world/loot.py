@@ -2,18 +2,22 @@
 
 - **材料**：陣容的敵方成員在戰鬥結束時倒下就掉；第三方要「被我方擊倒」（倒下前最後一次受到傷害的
   來源是我方單位，含我方召喚物；玩法 PM 2026-11-03、代決 5D2-3）。精英必掉 1 份（詞綴的稀有材料 >
-  家族材料 > 通用料），一般敵人 ``material_permille`` 掉 1 份（家族材料，沒有家族的掉通用料）。
-- **裝備**：一場最多 1 件（代決 5D2-4）；陣容有精英必掉、``elite_epic_permille`` 史詩，否則
-  ``battle_permille``；物品等級＝地點建議等級（敵人等級），詞條偏向該區關鍵字（20.2）。
-- **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的不撿（代決 5D2-6）。
+  家族材料 > 通用料），一般敵人 ``material_permille`` 掉 1 份（家族材料〔區域的優先，其次
+  各區共用的，例：盜賊各區掉焦鐵，5D-2b〕，沒有家族的掉通用料）。
+- **裝備**：陣容的每名精英必掉 1 件、``elite_epic_permille`` 史詩（20.2；5D-2b 玩法 PM 代決，取代
+  5D2-4 的一場 1 件）；沒有精英時 ``battle_permille`` 掉 1 件；物品等級＝地點建議等級（敵人等級），
+  詞條偏向該區關鍵字（20.2）。
+- **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的留給戰後結算（``pending_loot``），玩家選要
+  丟哪件（新拿到的、原本的都可以；5D-2b 玩法 PM 代決，取代 5D2-6 的不撿，不做暫存區）。
 
-亂數：``Rng(fnv1a64(f"{battle_seed}:loot"))``（材料依敵人順序抽，裝備用 ``fork("gear")``）；
+亂數：``Rng(fnv1a64(f"{battle_seed}:loot"))``（材料依敵人順序抽，裝備用 ``fork("gear")``；
+第 2 名起的精英用 ``fork("gear/<序號>")``，所以只有 1 名精英的場次和之前一樣）；
 不耗角色亂數，不讀時間、不呼叫 LLM。
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from trpg.content.equipment import ItemDef
@@ -27,18 +31,26 @@ from trpg.engine.setup import BattleSetup
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.shared.types import Team, UnitId
+from trpg.world.actions import WorldEvent
 from trpg.world.economy import bag_slots_used, economy_rules
-from trpg.world.economy_actions import LootGainedEvent
+from trpg.world.economy_actions import (
+    LootAbandonedEvent,
+    LootChooseAction,
+    LootChosenEvent,
+    LootGainedEvent,
+)
 from trpg.world.encounters import EncounterLineup, LineupMember
+from trpg.world.errors import WorldActionError
 from trpg.world.gear import loot_rules
-from trpg.world.state import CharacterState, LootSummary
+from trpg.world.state import CharacterState, LootSummary, PendingLoot
 
-__all__ = ["LootRoll", "add_loot", "roll_loot", "third_downed_by_allies"]
+__all__ = ["LootRoll", "add_loot", "choose_loot", "roll_loot", "third_downed_by_allies"]
 
 
 @dataclass(frozen=True)
 class LootRoll:
-    """一場戰鬥掉的東西（還沒放進背包）：材料（依掉落順序，每份 1 個）與裝備（最多 1 件）。"""
+    """一場戰鬥掉的東西（還沒放進背包）：材料（依掉落順序，每份 1 個）與裝備（每名精英 1 件，
+    沒有精英時最多 1 件）。"""
 
     materials: tuple[str, ...] = ()
     gear: tuple[ItemDef, ...] = field(default_factory=tuple)
@@ -114,7 +126,7 @@ def _material_of(
     loot = rules.region(region)
     if elite and member.affix is not None and member.affix in loot.elite_affixes:
         return loot.elite_affixes[member.affix]
-    return loot.families.get(member.unit) or rules.generic_material(level)
+    return rules.family_material(region, member.unit) or rules.generic_material(level)
 
 
 def _weighted(rng: Rng, weights: dict[Rarity, int]) -> Rarity:
@@ -198,17 +210,19 @@ def roll_loot(
         elite = _is_elite(library, member)
         if elite or rng.randint(0, 999) < rules.material_permille:
             materials.append(_material_of(rules, lineup.region, member, level, elite=elite))
-    elite_lineup = any(_is_elite(library, m) for m in lineup.members)
-    gear = _roll_gear(
-        library,
-        rules,
-        char,
-        rng.fork("gear"),
-        region=lineup.region,
-        level=level,
-        elite=elite_lineup,
-    )
-    return LootRoll(materials=tuple(materials), gear=gear)
+    elites = sum(1 for m in lineup.members if _is_elite(library, m))
+    gear: list[ItemDef] = []
+    for n in range(max(1, elites)):  # 每名精英 1 件（20.2、5D-2b）；沒有精英時照一般掉落抽 1 次
+        gear += _roll_gear(
+            library,
+            rules,
+            char,
+            rng.fork("gear" if n == 0 else f"gear/{n + 1}"),
+            region=lineup.region,
+            level=level,
+            elite=elites > 0,
+        )
+    return LootRoll(materials=tuple(materials), gear=tuple(gear))
 
 
 # ---------------------------------------------------------------------------
@@ -226,48 +240,161 @@ def _unique_id(item: ItemDef, taken: set[str]) -> ItemDef:
     return item.model_copy(update={"id": f"{item.id}_{n}"})
 
 
+def _slots(library: ContentLibrary) -> int:
+    rules = economy_rules(library)
+    return 10**9 if rules is None else rules.bag_slots
+
+
+def _used(library: ContentLibrary, bag: Mapping[str, int], gear: Sequence[ItemDef]) -> int:
+    return bag_slots_used(library, bag) + len(gear)
+
+
+def _abandon(char: CharacterState) -> tuple[CharacterState, list[WorldEvent]]:
+    """上一場沒決定的戰利品留在原地（5D-2b：只留最近一場，不做暫存區）。"""
+    pending = char.pending_loot
+    if pending is None:
+        return char, []
+    event = LootAbandonedEvent(
+        materials=dict(pending.materials), gear_names=tuple(g.name_zh for g in pending.gear)
+    )
+    return char.model_copy(update={"pending_loot": None}), [event]
+
+
 def add_loot(
     library: ContentLibrary, char: CharacterState, roll: LootRoll
-) -> tuple[CharacterState, LootSummary | None, list[LootGainedEvent]]:
-    """把掉落逐份放進背包（材料先、裝備後）；放不下的不撿（代決 5D2-6）。"""
+) -> tuple[CharacterState, LootSummary | None, list[WorldEvent]]:
+    """把掉落逐份放進背包（材料先、裝備後）；放不下的留給戰後結算選要丟哪件（5D-2b，取代代決
+    5D2-6 的不撿）。上一場還沒決定的先留在原地。"""
+    char, events = _abandon(char)
     if roll.empty:
-        return char, None, []
-    rules = economy_rules(library)
-    slots = 10**9 if rules is None else rules.bag_slots
+        return char, None, events
+    slots = _slots(library)
     bag = dict(char.bag)
     gear = list(char.gear)
     got: dict[str, int] = {}
-    lost: dict[str, int] = {}
+    over: dict[str, int] = {}
     for item in roll.materials:
         trial = {**bag, item: bag.get(item, 0) + 1}
-        if bag_slots_used(library, trial) + len(gear) <= slots:
+        if _used(library, trial, gear) <= slots:
             bag = trial
             got[item] = got.get(item, 0) + 1
         else:
-            lost[item] = lost.get(item, 0) + 1
+            over[item] = over.get(item, 0) + 1
     taken = {g.id for g in gear} | {g.id for g in char.equipment.values()}
     got_gear: list[ItemDef] = []
-    lost_gear: list[str] = []
+    over_gear: list[ItemDef] = []
     for dropped in roll.gear:
-        if bag_slots_used(library, bag) + len(gear) + 1 <= slots:
-            piece = _unique_id(dropped, taken)
-            taken.add(piece.id)
+        piece = _unique_id(dropped, taken)
+        taken.add(piece.id)
+        if _used(library, bag, gear) + 1 <= slots:
             gear.append(piece)
             got_gear.append(piece)
         else:
-            lost_gear.append(dropped.name_zh)
-    char = char.model_copy(update={"bag": dict(sorted(bag.items())), "gear": tuple(gear)})
-    summary = LootSummary(
-        materials=got,
-        gear=tuple(g.name_zh for g in got_gear),
-        lost_materials=lost,
-        lost_gear=tuple(lost_gear),
+            over_gear.append(piece)
+    pending = PendingLoot(materials=over, gear=tuple(over_gear))
+    char = char.model_copy(
+        update={
+            "bag": dict(sorted(bag.items())),
+            "gear": tuple(gear),
+            "pending_loot": None if pending.empty else pending,
+        }
     )
-    event = LootGainedEvent(
-        materials=dict(sorted(got.items())),
-        gear=tuple(g.id for g in got_gear),
-        gear_names=tuple(g.name_zh for g in got_gear),
-        lost_materials=dict(sorted(lost.items())),
-        lost_gear_names=tuple(lost_gear),
+    summary = LootSummary(materials=got, gear=tuple(g.name_zh for g in got_gear))
+    events.append(
+        LootGainedEvent(
+            materials=dict(sorted(got.items())),
+            gear=tuple(g.id for g in got_gear),
+            gear_names=tuple(g.name_zh for g in got_gear),
+            pending_materials=dict(pending.materials),
+            pending_gear_names=tuple(g.name_zh for g in over_gear),
+        )
     )
-    return char, summary, [event]
+    return char, summary, events
+
+
+# ---------------------------------------------------------------------------
+# 戰後結算：背包滿了選要丟哪件（5D-2b）
+# ---------------------------------------------------------------------------
+
+
+def _drop_items(
+    library: ContentLibrary,
+    bag: dict[str, int],
+    pending: dict[str, int],
+    drops: Mapping[str, int],
+) -> None:
+    """先丟新拿到的，再丟背包裡的（就地修改）。"""
+    for item, count in sorted(drops.items()):
+        if count <= 0:
+            raise WorldActionError("丟掉的個數至少 1")
+        found = library.world_economy.items.get(item)
+        name = item if found is None else found.name_zh
+        if count > pending.get(item, 0) + bag.get(item, 0):
+            raise WorldActionError(f"{name}沒有那麼多")
+        from_pending = min(count, pending.get(item, 0))
+        for counts, n in ((pending, from_pending), (bag, count - from_pending)):
+            left = counts.get(item, 0) - n
+            if left > 0:
+                counts[item] = left
+            else:
+                counts.pop(item, None)
+
+
+def _drop_gear(
+    gear: list[ItemDef], pending: list[ItemDef], drops: Sequence[str]
+) -> tuple[list[str], set[str]]:
+    """丟掉指定的裝備（就地修改）；回傳丟掉的名稱與背包裡被丟掉的 ID（刪改動紀錄用）。"""
+    if len(set(drops)) != len(drops):
+        raise WorldActionError("同一件裝備只能丟一次")
+    names: list[str] = []
+    from_bag: set[str] = set()
+    for gear_id in drops:
+        for source in (pending, gear):
+            piece = next((g for g in source if g.id == gear_id), None)
+            if piece is not None:
+                source.remove(piece)
+                names.append(piece.name_zh)
+                if source is gear:
+                    from_bag.add(gear_id)
+                break
+        else:
+            raise WorldActionError("背包裡沒有這件裝備（穿戴中的不能丟）")
+    return names, from_bag
+
+
+def choose_loot(
+    library: ContentLibrary, char: CharacterState, action: LootChooseAction
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """戰後結算：丟掉選的（新拿到的或背包裡的），剩下的戰利品收進背包；放不下就拒絕。"""
+    loot = char.pending_loot
+    if loot is None:
+        raise WorldActionError("沒有等著決定的戰利品")
+    bag = dict(char.bag)
+    gear = list(char.gear)
+    pending_items = dict(loot.materials)
+    pending_gear = list(loot.gear)
+    _drop_items(library, bag, pending_items, action.drop_items)
+    dropped_gear, from_bag = _drop_gear(gear, pending_gear, action.drop_gear)
+    for item, count in pending_items.items():
+        bag[item] = bag.get(item, 0) + count
+    gear += pending_gear
+    short = _used(library, bag, gear) - _slots(library)
+    if short > 0:
+        raise WorldActionError(f"背包還是放不下：還差 {short} 格")
+    mods = {k: v for k, v in char.gear_mods.items() if k not in from_bag}
+    char = char.model_copy(
+        update={
+            "bag": dict(sorted(bag.items())),
+            "gear": tuple(gear),
+            "gear_mods": mods,
+            "pending_loot": None,
+        }
+    )
+    event = LootChosenEvent(
+        dropped_items=dict(sorted(action.drop_items.items())),
+        dropped_gear_names=tuple(dropped_gear),
+        materials=dict(sorted(pending_items.items())),
+        gear=tuple(g.id for g in pending_gear),
+        gear_names=tuple(g.name_zh for g in pending_gear),
+    )
+    return char, (event,)

@@ -203,7 +203,14 @@ def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
             "opportunity_tier_ups": char.opportunity_tier_ups + bonus,
         }
     )
-    char, offered = store_offer(char, trigger.skeleton, "opportunity", made, source="opportunity")
+    char, offered = store_offer(
+        char,
+        trigger.skeleton,
+        "opportunity",
+        made,
+        source="opportunity",
+        guaranteed=trigger.guaranteed,  # 5D-2b：三選一標題用保底的「誰」
+    )
     return world, char, (solved, offered, _resolved(trigger, action.solution, "success"))
 
 

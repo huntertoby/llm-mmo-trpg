@@ -149,6 +149,10 @@ class AffixChangedEvent(_Model):
     value: int | None = None
     gold_spent: int = 0
     essence_spent: int = 0
+    code: str | None = None
+    """改完後這件的配方碼（打造品才有；5D-3b 配方＝基礎配方＋重骰序列）。"""
+    discovered: bool = False
+    """這份帶序列的配方是不是第一次出現（首位發現者，M6）。"""
 
 
 class GearSalvagedEvent(_Model):
