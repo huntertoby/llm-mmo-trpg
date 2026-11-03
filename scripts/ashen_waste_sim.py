@@ -11,6 +11,7 @@
 用法::
 
     uv run python scripts/ashen_waste_sim.py [--runs 40] [--only general|boss]
+    uv run python scripts/ashen_waste_sim.py --only boss --boss-hp 200,240   # 候選 HP（1 級）
 
 只輸出摘要表（勝率、平均輪數、敗場；Boss 另列到第 2／3 階段的比例、敗場剩餘 HP）；數值建議寫進報告由
 PM 決定（CLAUDE.md 第 11 條）。
@@ -19,6 +20,7 @@ PM 決定（CLAUDE.md 第 11 條）。
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import sys
 from collections import Counter
 from collections.abc import Sequence
@@ -119,9 +121,18 @@ def make_char(library: ContentLibrary, build_id: str, location: str, seed: int) 
     return char.model_copy(update={"hp": max_hp(library, char)})
 
 
-def _run(args: tuple[str, str, str, int]) -> Outcome:
-    label, build_id, location, seed = args
+def _library(boss_hp: int | None) -> ContentLibrary:
     library = load_library()
+    if boss_hp is None:
+        return library
+    units = dict(library.units)
+    units[BOSS] = units[BOSS].model_copy(update={"max_hp": boss_hp})
+    return dataclasses.replace(library, units=units)
+
+
+def _run(args: tuple[str, str, str, int, int | None]) -> Outcome:
+    label, build_id, location, seed, boss_hp = args
+    library = _library(boss_hp)
     prepared = prepare_battle(library, make_char(library, build_id, location, seed))
     run = run_battle(prepared.setup, prepared.seed, UtilityAI(library.ai_profiles))
     won = run.state.winner is Team.ALLY
@@ -179,24 +190,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--runs", type=int, default=40)
     parser.add_argument("--only", choices=("general", "boss"), default=None)
     parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument("--boss-hp", default="", help="候選的灰燼之心 HP（逗號分隔；空＝現值）")
     args = parser.parse_args(argv)
-    jobs: dict[str, list[tuple[str, str, str, int]]] = {}
+    jobs: dict[str, list[tuple[str, str, str, int, int | None]]] = {}
     if args.only in (None, "general"):
-        jobs["general"] = [
-            (loc, BUILDS[i % len(BUILDS)], loc, 1000 + i)
+        jobs["荒原一般遭遇"] = [
+            (loc, BUILDS[i % len(BUILDS)], loc, 1000 + i, None)
             for i in range(args.runs)
             for loc in (GENERAL_LOCATIONS[i % len(GENERAL_LOCATIONS)],)
         ]
     if args.only in (None, "boss"):
-        jobs["boss"] = [
-            (BOSS_LOCATION, BUILDS[i % len(BUILDS)], BOSS_LOCATION, 2000 + i)
-            for i in range(args.runs)
-        ]
+        candidates = [int(v) for v in args.boss_hp.split(",") if v] or [None]
+        for hp in candidates:
+            label = "現值" if hp is None else f"HP {hp}"
+            jobs[f"灰燼之心（熔心坑，9 級；{label}）"] = [
+                (BOSS_LOCATION, BUILDS[i % len(BUILDS)], BOSS_LOCATION, 2000 + i, hp)
+                for i in range(args.runs)
+            ]
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        for kind, batch in jobs.items():
+        for title, batch in jobs.items():
             outcomes = list(pool.map(_run, batch))
-            title = "荒原一般遭遇" if kind == "general" else "灰燼之心（熔心坑，9 級）"
-            print(summarize(title, outcomes, boss=kind == "boss"))
+            print(summarize(title, outcomes, boss=title.startswith("灰燼之心")))
             print()
     return 0
 
