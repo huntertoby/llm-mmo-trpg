@@ -2,9 +2,9 @@
 
 | 資料 | 格式 |
 |---|---|
-| 世界快照 | ``trpg-world/2``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
+| 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
 | 角色 | ``trpg-char/5``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/6``（JSON Lines：第一行 ``{"format": "trpg-wlog/6"}``，之後一行一筆
+| 世界動作日誌 | ``trpg-wlog/7``（JSON Lines：第一行 ``{"format": "trpg-wlog/7"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -36,6 +36,11 @@ JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔
 ``object_uses``），讀進來就是 ``trpg-char/5``。``trpg-wlog/5`` 也是舊規則寫的（6C-5 起有實地地圖的
 地點改成走到隱藏入口 3 格內才感知、事件放在地圖上碰到才開），處理同上：照讀、規則已變、不能重播，
 寫回時標頭改成 ``trpg-wlog/6``。
+
+**Phase 6C-R2**：``trpg-world/2`` 照讀（只多了 ``defeated_spawns`` 的選填欄位 ``wins``），讀進來就是
+``trpg-world/3``。``trpg-wlog/6`` 也是舊規則寫的（6C-R2 起地圖上每隊的陣容改由世界種子＋(區域, 地點,
+隊伍)＋重生世代衍生；6C-5b 起營火點的清空條件、新手固定戰照步驟消失、走路抵達格也感知；21.10 第 20
+條起走過渡口算一步），處理同上：照讀、規則已變、不能重播，寫回時標頭改成 ``trpg-wlog/7``。
 """
 
 from __future__ import annotations
@@ -76,9 +81,9 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/6"
+WLOG_FORMAT: Final = "trpg-wlog/7"
 LEGACY_WLOG_FORMATS: Final = frozenset(
-    {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5"}
+    {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"

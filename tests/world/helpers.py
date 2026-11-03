@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import dataclasses
+from functools import cache
+from pathlib import Path
 from typing import Any
 
+import yaml
+
 from trpg.content.battle import UnitTemplate
+from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import WorldRules
 from trpg.shared.types import Attribute
@@ -22,6 +27,26 @@ def without_fields(library: ContentLibrary) -> ContentLibrary:
     """拿掉實地地圖的內容庫（Phase 6B-2）：有實地地圖的地點不能 ``travel``，測地點之間移動、事件、
     戰鬥等 5A～5F 規則的測試用這份（照舊點地點移動）；實地地圖的測試用完整的內容庫。"""
     return dataclasses.replace(library, field_maps={})
+
+
+TEST_FIELDS = Path(__file__).resolve().parent / "fields"
+"""測試專用的實地地圖（6C-R2）：霧渡鎮、渡口石階與霧渡鎮的室內圖，照 2026-11-04 的正式內容凍結。"""
+
+
+@cache
+def frozen_field_maps() -> dict[str, FieldMapDef]:
+    """``tests/world/fields/`` 的地圖（地圖 ID → 定義）。"""
+    out: dict[str, FieldMapDef] = {}
+    for path in sorted(TEST_FIELDS.glob("*.yaml")):
+        found = FieldMapDef.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+        out[found.id] = found
+    return out
+
+
+def with_test_fields(library: ContentLibrary) -> ContentLibrary:
+    """把測試專用的實地地圖注入內容庫（6C-R2）：規則測試寫死的座標（霧渡鎮的入口、傳送石、出口，
+    渡口石階的抵達格）照這份，不跟著正式內容改版；其他地圖照正式內容。"""
+    return dataclasses.replace(library, field_maps={**library.field_maps, **frozen_field_maps()})
 
 
 def with_rules(library: ContentLibrary, **updates: Any) -> ContentLibrary:

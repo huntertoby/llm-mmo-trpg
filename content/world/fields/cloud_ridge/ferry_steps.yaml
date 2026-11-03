@@ -60,7 +60,7 @@ exits:
   - {id: to_mist_ferry, at: [[0, 8], [0, 9]], to: mist_ferry, arrive: to_ferry_steps}   # 石階底
   - {id: to_bamboo_path, at: [[14, 0], [15, 0]], to: bamboo_path, arrive: to_ferry_steps}   # 石階頂的山門牌坊
 spawns:
-  - {at: [9, 6], group: bandit_raiders, personal: true, until_quest: starter_ferry}   # 中段平台（新手任務 1 的固定戰；個人的駐守；任務完成後不再出現，6C-5）
+  - {at: [9, 6], group: bandit_raiders, personal: true, until_quest: starter_ferry, until_step: ferry_bandits}   # 中段平台（新手任務 1 的固定戰；個人的駐守；那一步完成後不再出現，6C-5b）
   - {at: [3, 7], group: bandit_shield_line, patrol: [[3, 7], [17, 7]], day_phase: night}   # 石階上巡邏（草稿：夜晚）
 event_spots:
   - {at: [8, 8], id: wounded_peddler}   # 石階中段

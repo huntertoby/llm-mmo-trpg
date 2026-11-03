@@ -8,6 +8,7 @@ from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.world.helpers import with_test_fields
 from trpg.api.app import create_app
 from trpg.api.sessions import SessionStore
 from trpg.content.library import ContentLibrary, load_library
@@ -22,8 +23,9 @@ def library() -> ContentLibrary:
 
 @pytest.fixture(scope="session")
 def field_library() -> ContentLibrary:
-    """完整的內容庫（含實地地圖；6B-2 起）。"""
-    return load_library()
+    """完整的內容庫（含實地地圖；6B-2 起）。霧渡鎮、渡口石階與室內圖換成測試專用的凍結複本
+    （6C-R2，:func:`tests.world.helpers.with_test_fields`）。"""
+    return with_test_fields(load_library())
 
 
 @pytest.fixture

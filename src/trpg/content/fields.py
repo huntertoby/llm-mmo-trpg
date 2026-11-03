@@ -196,8 +196,16 @@ class FieldSpawn(ContentModel):
     day_phase: Literal["day", "night"] | None = None
     """只在這個時段出現（21.10 第 11 條，寫法同事件骨架的 ``day_phase``）；省略＝全天。"""
     until_quest: str | None = Field(default=None, pattern=ID_PATTERN)
-    """這個任務完成後就不再出現（21.10 第 9 條「新手任務的固定戰在任務完成後就不再出現」，6C-5）；
-    省略＝一直出現。"""
+    """這個任務完成後就不再出現（21.10 第 9 條，6C-5）；省略＝一直出現。"""
+    until_step: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``until_quest`` 的這一步完成後就不再出現（21.10 第 9 條 6C-5 改：「那一步完成後就不再出現」，
+    6C-5b）；省略＝整個任務完成才不出現。要和 ``until_quest`` 一起寫。"""
+
+    @model_validator(mode="after")
+    def _step_needs_quest(self) -> FieldSpawn:
+        if self.until_step is not None and self.until_quest is None:
+            raise ValueError("until_step 要和 until_quest 一起寫")
+        return self
 
 
 type SpotUse = Literal["note", "event", "encounter"]

@@ -1,13 +1,14 @@
 """就地開打：從實地地圖切 12×12 戰場（Phase 6C-2；21.4、21.9 第 6 條、21.10 第 4、7 條）。
 
-- **切法**：以「我方接觸點與那一隊所在格的中點」（捨去小數）為中心切 :data:`CUT`×:data:`CUT`；靠邊時
-  往內平移，不超出實地地圖。地形、高低差、物件、表面照實地地圖；``region`` 由呼叫端換皮（``reskin``
-  照舊），勝利條件一律全滅，``archetype``、``tags``、``weather`` 照地點原本的戰鬥地圖模板。
+- **切法**：以「我方接觸點與那一隊所在格的中點」（捨去小數）為中心切規則 ``field.cut_size``
+  見方（12×12）；靠邊時往內平移，不超出實地地圖。地形、高低差、物件、表面照實地地圖；``region``
+  由呼叫端換皮（``reskin`` 照舊），勝利條件一律全滅，``archetype``、``tags``、``weather`` 照地點
+  原本的戰鬥地圖模板。
 - **起始區**：我方從接觸點、敵方從那一隊所在格起算，只取走得到的格子；排序＝（在自己這一側優先：
   離自己的起點比離對方近 → 等距 → 比較近對方）、離自己起點的曼哈頓距離、y、x。所以主角站在接觸點、
-  敵方帶頭的站在地圖上看到的位置。至少敵方 :data:`MIN_ENEMY` 格、我方 :data:`MIN_ALLY` 格（單位
-  比較多時照單位數）。先手的那一方先挑（同一格時歸先手方；沒有先手照敵方先挑）。第三方不另畫
-  起始區（引擎自動排在敵方附近），但要留得出位置。
+  敵方帶頭的站在地圖上看到的位置。至少敵方 ``field.min_enemy_cells`` 格、我方
+  ``field.min_ally_cells`` 格（單位比較多時照單位數）。先手的那一方先挑（同一格時歸先手方；
+  沒有先手照敵方先挑）。第三方不另畫起始區（引擎自動排在敵方附近），但要留得出位置。
 - **不合法就退回模板**（:data:`~trpg.world.actions.CutFallback`）：實地地圖不到 12×12、起點不可站、
   站位放不下、``check_map`` 沒過；另外 Boss 地圖、遭遇指定了模板才有的撤離／守點、接觸資料沒有敵人
   位置（6C-2 以前的存檔）時也用模板。
@@ -26,13 +27,11 @@ from trpg.content.library import ContentLibrary
 from trpg.content.maps import BOSS_ARCHETYPE, MapDef, check_map, passable_grid, reachable_from
 from trpg.shared.types import Team
 from trpg.world.actions import BattlefieldCut, CutFallback
+from trpg.world.common import rules_of
 from trpg.world.state import EncounterResult, FieldContact
 
 __all__ = [
-    "CUT",
     "FALLBACK_ZH",
-    "MIN_ALLY",
-    "MIN_ENEMY",
     "Battlefield",
     "UnitCounts",
     "contact_battlefield",
@@ -41,12 +40,6 @@ __all__ = [
 ]
 
 type XY = tuple[int, int]
-
-CUT: Final = 12
-"""就地開打的戰場邊長（21.4）。"""
-MIN_ENEMY: Final = 4
-MIN_ALLY: Final = 3
-"""起始區至少幾格（6C-3 驗收：敵方 4 格、我方 3 格）。"""
 
 FALLBACK_ZH: Final[dict[CutFallback, str]] = {
     "no_field": "找不到實地地圖",
@@ -79,7 +72,7 @@ class Battlefield:
     fallback: CutFallback | None = None
 
 
-def cut_origin(center: XY, size: XY, cut: int = CUT) -> XY:
+def cut_origin(center: XY, size: XY, cut: int) -> XY:
     """以 ``center`` 為中心的 ``cut``×``cut`` 左上角；越過地圖邊緣就往內推（地圖不夠大時貼 0）。"""
     w, h = size
     x0 = min(max(center[0] - cut // 2, 0), max(w - cut, 0))
@@ -107,15 +100,17 @@ def _pick(cells: set[XY], own: XY, other: XY, count: int, taken: set[XY]) -> lis
     return ordered[:count]
 
 
-def _window_data(field: FieldMapDef, origin: XY, template: MapDef, name_zh: str) -> dict[str, Any]:
-    x0, y0 = origin
-    rows = range(y0, y0 + CUT)
-    heights = "\n".join(field.height_rows()[y][x0 : x0 + CUT] for y in rows)
-    terrain = "\n".join(field.terrain_rows()[y][x0 : x0 + CUT] for y in rows)
+def _window_data(
+    field: FieldMapDef, window: tuple[XY, int], template: MapDef, name_zh: str
+) -> dict[str, Any]:
+    (x0, y0), cut = window
+    rows = range(y0, y0 + cut)
+    heights = "\n".join(field.height_rows()[y][x0 : x0 + cut] for y in rows)
+    terrain = "\n".join(field.terrain_rows()[y][x0 : x0 + cut] for y in rows)
     used = sorted({ch for line in terrain.splitlines() for ch in line})
 
     def inside(at: XY) -> bool:
-        return x0 <= at[0] < x0 + CUT and y0 <= at[1] < y0 + CUT
+        return x0 <= at[0] < x0 + cut and y0 <= at[1] < y0 + cut
 
     def shift(at: XY) -> list[int]:
         return [at[0] - x0, at[1] - y0]
@@ -124,7 +119,7 @@ def _window_data(field: FieldMapDef, origin: XY, template: MapDef, name_zh: str)
         "id": f"cut_{field.id}_{x0}_{y0}",
         "name_zh": name_zh,
         "archetype": template.archetype,
-        "size": [CUT, CUT],
+        "size": [cut, cut],
         "heights": heights,
         "terrain": terrain,
         "legend": {ch: field.legend[ch] for ch in used},
@@ -155,7 +150,9 @@ def _zones(
     grid = probe.grid()
     ally_cells = reachable_from(ally_at, grid, passable, rules.core)
     enemy_cells = reachable_from(enemy_at, grid, passable, rules.core)
-    need_ally, need_enemy = max(MIN_ALLY, counts.allies), max(MIN_ENEMY, counts.enemies)
+    field_rules = rules_of(library).field
+    need_ally = max(field_rules.min_ally_cells, counts.allies)
+    need_enemy = max(field_rules.min_enemy_cells, counts.enemies)
     if ally_first:
         ally = _pick(ally_cells, ally_at, enemy_at, need_ally, set())
         enemy = _pick(enemy_cells, enemy_at, ally_at, need_enemy, set(ally))
@@ -183,11 +180,13 @@ def cut_battlefield(
 ) -> tuple[MapDef, BattlefieldCut] | CutFallback:
     """從 ``field`` 切出戰場（見模組說明）；不合法時回傳退回模板的原因。``ally_at``、``enemy_at``
     是實地地圖的格子；``first`` 是先手（``Team.ALLY``＝我方先挑起始格）。"""
-    if field.width < CUT or field.height < CUT:
+    cut = rules_of(library).field.cut_size
+    if field.width < cut or field.height < cut:
         return "too_small"
     center = ((ally_at[0] + enemy_at[0]) // 2, (ally_at[1] + enemy_at[1]) // 2)
-    x0, y0 = cut_origin(center, field.size)
-    data = _window_data(field, (x0, y0), template, name_zh or field.name_zh or template.name_zh)
+    x0, y0 = cut_origin(center, field.size, cut)
+    name = name_zh or field.name_zh or template.name_zh
+    data = _window_data(field, ((x0, y0), cut), template, name)
     probe = MapDef.model_validate({**data, "start_zones": {"ally": [[0, 0]], "enemy": [[0, 1]]}})
     anchors = ((ally_at[0] - x0, ally_at[1] - y0), (enemy_at[0] - x0, enemy_at[1] - y0))
     zones = _zones(library, probe, anchors, counts, first is Team.ALLY)
@@ -197,7 +196,7 @@ def cut_battlefield(
     rules = library.ruleset
     if check_map(battle, rules.terrain.by_id(), rules.core, rules.objects.by_id()):
         return "check_map"
-    return battle, BattlefieldCut(field_map=field.id, x=x0, y=y0, width=CUT, height=CUT)
+    return battle, BattlefieldCut(field_map=field.id, x=x0, y=y0, width=cut, height=cut)
 
 
 def _contact_fallback(

@@ -1,0 +1,46 @@
+# 測試專用的實地地圖（Phase 6C-R2）：照 2026-11-04 的正式內容凍結的複本，規則測試寫死的座標照這份；
+# 正式內容（content/world/fields/）之後改版不影響規則測試，正式內容只測結構性質（tests/content/）。
+# 由 tests/world/helpers.py 的 with_test_fields() 注入。
+# 霧渡鎮酒館室內（Phase 6B-1 草稿；格式說明見 ../mist_ferry.yaml 開頭）。
+# 10×8：南邊門口回到鎮上的酒館門；櫃檯開酒館面板（說書人、傳聞），角落的告示開雇用面板。
+# 6C-3：加上說書人的事件點（tavern_storyteller，玩法 PM 草稿第 1 張「酒館說書人（在室內）」）。
+id: mist_ferry_tavern
+name_zh: 霧渡鎮酒館
+region: cloud_ridge
+interior_of: mist_ferry
+size: [10, 8]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ##########
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  #........#
+  ####..####
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [2, 3], kind: crate}    # 櫃檯
+  - {at: [3, 3], kind: crate}
+  - {at: [4, 3], kind: crate}
+  - {at: [6, 4], kind: low_wall}  # 桌子
+  - {at: [7, 4], kind: low_wall}
+entry: [4, 6]
+exits:
+  - {id: to_mist_ferry, at: [[4, 7], [5, 7]], to: mist_ferry, arrive: tavern_door}
+facilities:
+  - {at: [3, 3], id: tavern}
+  - {at: [8, 1], id: hire}
+event_spots:
+  - {at: [6, 2], id: tavern_storyteller}   # 酒館說書人（6C-3；城鎮只出非戰鬥事件，5B-5）

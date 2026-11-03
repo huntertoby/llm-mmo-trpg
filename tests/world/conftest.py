@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from tests.world.helpers import hero, with_rules, without_fields
+from tests.world.helpers import hero, with_rules, with_test_fields, without_fields
 from trpg.content.library import ContentLibrary, load_library
 from trpg.world.state import CharacterState
 from trpg.world.step import new_character
@@ -21,8 +21,9 @@ def library() -> ContentLibrary:
 
 @pytest.fixture(scope="session")
 def field_library() -> ContentLibrary:
-    """完整的內容庫（含實地地圖；6B-2 起的走路測試用）。"""
-    return load_library()
+    """完整的內容庫（含實地地圖；6B-2 起的走路測試用）。霧渡鎮、渡口石階與霧渡鎮的室內圖換成測試
+    專用的凍結複本（6C-R2，:func:`with_test_fields`）；正式內容的結構性質在 ``tests/content/``。"""
+    return with_test_fields(load_library())
 
 
 @pytest.fixture(scope="session")

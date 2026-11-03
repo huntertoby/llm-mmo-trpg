@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-from collections import deque
 from collections.abc import Mapping, Sequence
 from typing import Final, Literal
 
@@ -37,7 +36,7 @@ from trpg.world.state import CharacterState, ShadowSnapshot, WorldState
 
 __all__ = [
     "ALERT_ZH",
-    "FRIENDS_MAX",
+    "TOWN_FRIENDS_MAX",
     "NpcMark",
     "friend_cells",
     "friends_here",
@@ -45,7 +44,7 @@ __all__ = [
     "npc_marks",
 ]
 
-FRIENDS_MAX: Final = 8
+TOWN_FRIENDS_MAX: Final = 8
 """一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）。"""
 
 ALERT_ZH: Final[Mapping[str, str]] = {"quest": "有任務可以接", "rumor": "有新的傳聞"}
@@ -156,25 +155,6 @@ def look_of(library: ContentLibrary, hero: UnitTemplate, loadout: Loadout) -> Fi
 # 朋友
 # ---------------------------------------------------------------------------
 
-_DIRS: Final = ((0, -1), (1, 0), (0, 1), (-1, 0))
-
-
-def _reachable(found: FieldMapDef, grid: FieldGrid, max_climb: int) -> set[XY]:
-    """從入口走得到的格子（四方向，同伺服器的走路規則）。"""
-    start = found.entry
-    if not grid.standable(start):
-        return set()
-    seen = {start}
-    queue = deque([start])
-    while queue:
-        here = queue.popleft()
-        for dx, dy in _DIRS:
-            nxt = (here[0] + dx, here[1] + dy)
-            if nxt not in seen and grid.can_step(here, nxt, max_climb):
-                seen.add(nxt)
-                queue.append(nxt)
-    return seen
-
 
 def _reserved(found: FieldMapDef) -> set[XY]:
     """朋友不站的格子：入口、出口、門、傳送石、設施、營火、事件點、情境物件。"""
@@ -193,7 +173,7 @@ def friend_cells(
     """每位朋友站的格子（見模組說明；``owners`` 依 ID 排序處理，格子不夠時後面的不放）。"""
     reserved = _reserved(found)
     spots = sorted(
-        (c for c in _reachable(found, grid, max_climb) if c not in reserved),
+        (c for c in grid.reachable(found.entry, max_climb) if c not in reserved),
         key=lambda c: (c[1], c[0]),
     )
     out: dict[str, XY] = {}
@@ -234,7 +214,7 @@ def friends_here(
             and s.snapshot.location == found.place
         ),
         key=lambda s: s.owner,
-    )[:FRIENDS_MAX]
+    )[:TOWN_FRIENDS_MAX]
     climb = library.ruleset.core.max_climb_height
     cells = friend_cells(found, grid, [s.owner for s in snaps], climb)
     return tuple(

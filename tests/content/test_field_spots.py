@@ -48,6 +48,23 @@ def test_until_quest_names_a_real_quest(library: ContentLibrary) -> None:
     assert all(q in quests for _, q in used)
 
 
+def test_until_step_names_a_step_of_the_quest(library: ContentLibrary) -> None:
+    """6C-5b：新手固定戰寫了是哪一步（那一步完成就不再出現），步驟要存在於 ``until_quest``。"""
+    steps = {
+        q.id: {s.id for s in q.steps}
+        for table in library.world_quests.quests.values()
+        for q in table.quests
+    }
+    used = [
+        (spawn.until_quest, spawn.until_step)
+        for found in library.field_maps.values()
+        for spawn in found.spawns
+        if spawn.until_quest is not None
+    ]
+    assert used and all(step is not None for _, step in used)  # 三場固定戰都照步驟
+    assert all(step in steps[q] for q, step in used if q is not None)
+
+
 def test_campfires_are_standable(library: ContentLibrary) -> None:
     rules = library.ruleset
     for found in library.field_maps.values():

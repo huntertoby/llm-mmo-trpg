@@ -246,11 +246,12 @@ def _blocked(
     return None
 
 
-def _map_view(  # noqa: PLR0917 - 地點圖要世界、角色、時間、戰鬥中與朋友的足跡
+def _map_view(
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
     now: int,
+    *,
     in_battle: bool,
     social: FieldSocial | None = None,
     region: str | None = None,
@@ -558,7 +559,7 @@ def world_view(
     hero, pending = hero_panel(library, world, char)
     return WorldView(
         character=_character_view(library, char),
-        map=_map_view(library, world, char, now, in_battle, social),
+        map=_map_view(library, world, char, now, in_battle=in_battle, social=social),
         here=_here_view(library, world, char, now, in_battle),
         encounter=_encounter_view(library, char, in_battle),
         clock=_clock_view(library, world, char.region, now),
@@ -596,7 +597,9 @@ def world_view(
             world,
             char,
             in_battle=in_battle,
-            region_map=lambda r: _map_view(library, world, char, now, in_battle, social, r),
+            region_map=lambda r: _map_view(
+                library, world, char, now, in_battle=in_battle, social=social, region=r
+            ),
         ),
     )
 

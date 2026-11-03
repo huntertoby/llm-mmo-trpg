@@ -253,5 +253,5 @@ def field_view(
         friends=friends_here(library, world, char, found, grid),
     )
     return view.model_copy(
-        update=things_update(library, world, char, found, grid, now, social)  # 6C-5
+        update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5
     )

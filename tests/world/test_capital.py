@@ -13,11 +13,14 @@ from trpg.api.world_presenter import world_view
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import (
     CampAction,
+    EncounterCheckEvent,
+    EventCheckEvent,
     LoadoutAction,
     RestAction,
     TavernAction,
     TeleportAction,
     TravelAction,
+    TraveledEvent,
     WorldAction,
 )
 from trpg.world.atlas import atlas_regions, capital_stone, region_lit, unlocked_stones
@@ -252,7 +255,8 @@ def test_walk_across_the_ferry_lights_ashen_waste(calm: ContentLibrary) -> None:
     assert region_lit(moved, "ashen_waste")
     assert "ashen_waste" not in moved.visited_towns  # 還沒到過餘燼集，但已經能傳送
     assert any(e.kind == "field_entered" for e in events)
-    assert moved.rng_counters == char.rng_counters  # 和原本渡口的傳送一樣不擲骰
+    # 21.10 第 20 條（6C-R2）：走進灰渡口算一步，照常擲遇敵（6D-5 原本照傳送不擲骰）
+    assert moved.rng_counters["travel"] == char.rng_counters.get("travel", 0) + 1
     # 渡口兩端都不能直接傳送（要走）；回到雲嶺的城鎮之後，可以直接傳送到餘燼集
     with pytest.raises(WorldActionError, match="要走到盡頭的出口過去"):
         _step(calm, moved, TeleportAction(region="cloud_ridge"), world)
@@ -369,6 +373,29 @@ def test_capital_trip_replays(calm: ContentLibrary) -> None:
     start = start.model_copy(update={"teleport_stones": ("stone_mist_ferry",)})
     live = _replays(calm, make_world(), start, actions)
     assert (live.region, live.location) == ("cloud_ridge", "mist_ferry")
+
+
+def test_ferry_counts_as_steps_and_replays(calm: ContentLibrary) -> None:
+    """21.10 第 20 條（6C-R2）：走進渡口圖、從尾端出口走進灰渡口，各算一步（照常擲遇敵、擲事件），
+    過渡口本身不另外花東西；重播兩次逐字一致。"""
+    world = make_world(flags=OPEN)
+    start = _char(calm, field=FieldPos(map="mist_ferry", x=3, y=16))
+    to_ferry = WalkAction(path=((3, 17),))  # 霧渡鎮西南的碼頭 → 往灰燼荒原的渡口
+    _, at_ferry, first = _step(calm, start, to_ferry, world)
+    assert at_ferry.location == "ashen_ferry"
+    cross = WalkAction(path=_path(calm, at_ferry, (0, 5)))
+    _, across, second = _step(calm, at_ferry, cross, world)
+    assert (across.region, across.location) == ("ashen_waste", "ash_ferry")
+    for events, to in ((first, "ashen_ferry"), (second, "ash_ferry")):
+        assert [e.to for e in events if isinstance(e, TraveledEvent)] == [to]
+        assert [e.supplies_spent for e in events if isinstance(e, TraveledEvent)] == [0]
+        assert sum(isinstance(e, EncounterCheckEvent) for e in events) == 1
+        assert sum(isinstance(e, EventCheckEvent) for e in events) == 1
+    assert across.rng_counters["travel"] == start.rng_counters.get("travel", 0) + 2
+    assert across.supplies == start.supplies  # 過渡口不另外花東西
+    live = _replays(calm, world, start, [to_ferry, cross])
+    assert (live.region, live.location) == ("ashen_waste", "ash_ferry")
+    assert region_lit(live, "ashen_waste")
 
 
 def test_ferry_crossing_replays(calm: ContentLibrary) -> None:

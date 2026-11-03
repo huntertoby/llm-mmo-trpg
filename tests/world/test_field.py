@@ -28,7 +28,6 @@ from trpg.world.actions import (
 from trpg.world.errors import WorldActionError
 from trpg.world.field import placed
 from trpg.world.field_actions import (
-    WALK_MAX_STEPS,
     FieldEnteredEvent,
     TeleportStoneUnlockedEvent,
     TeleportStoneUsedEvent,
@@ -231,13 +230,18 @@ def test_height_limit(calm_field: ContentLibrary) -> None:
         _step(calm_field, char, _walk((4, 2)))
 
 
-def test_walk_limit_is_30_cells() -> None:
-    line = tuple((x, 0) for x in range(1, WALK_MAX_STEPS + 2))
-    with pytest.raises(ValidationError):
-        WalkAction(path=line)
-    assert len(WalkAction(path=line[:WALK_MAX_STEPS]).path) == WALK_MAX_STEPS
+def test_walk_limit_is_30_cells(calm_field: ContentLibrary) -> None:
+    """一次最多 30 格（6C-R2：規則 ``field.walk_max_steps``，由 ``walk`` 檢查）。"""
     with pytest.raises(ValidationError):
         WalkAction(path=())
+    line = tuple((ENTRY[0], ENTRY[1] + (k % 2)) for k in range(1, 32))
+    with pytest.raises(ValidationError):  # 請求格式的上限（WALK_PATH_CAP）
+        WalkAction(path=line)
+    char = _char(calm_field, field=_at(*ENTRY))
+    assert _step(calm_field, char, WalkAction(path=line[:30]))[0].field is not None
+    short = with_rules(calm_field, field={"walk_max_steps": 2})
+    with pytest.raises(WorldActionError, match="最多走 2 格"):
+        _step(short, char, _walk((ENTRY[0], ENTRY[1] + 1), ENTRY, (ENTRY[0], ENTRY[1] + 1)))
 
 
 def test_pending_encounter_blocks_walk(ambush_field: ContentLibrary) -> None:
@@ -515,5 +519,5 @@ def test_old_world_log_is_stale() -> None:
     assert log.stale_zh == "規則已變、不能重播"
     again = read_log(dumps_log(log.entries, stale_through=log.stale_through))
     assert again == log
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/6"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/7"
     assert read_log('{"format": "trpg-wlog/1"}\n').stale_through is None

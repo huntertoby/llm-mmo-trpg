@@ -9,6 +9,9 @@ Phase 5A-4 加上 ``battle``（遇敵戰鬥的回寫：經驗、疲憊、已清�
 地點建議等級成長）；兩者都有預設值，舊的精簡 content 照常載入。
 
 Phase 5A-6 加上 ``hero_growth``（主角的技能階級表、每級靈感點、精英首殺靈感、等級上限）；有預設值。
+
+Phase 6C-R2 加上 ``field``（實地地圖的規則數值：敵人視野、潛行、隱藏入口感知距離、就地切戰場、
+一次走幾格；原本寫死在 ``trpg.world`` 的常數）；有預設值，預設值和原本的常數相同。
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ __all__ = [
     "CalendarRules",
     "EncounterRates",
     "EnemyGrowthRules",
+    "FieldRules",
     "HastenRules",
     "HeroGrowthRules",
     "OpportunityRules",
@@ -266,6 +270,29 @@ class CalendarRules(ContentModel):
     """每日刷新的當地時刻（懸賞、今日目標、每天一次的判定）。"""
 
 
+class FieldRules(ContentModel):
+    """實地地圖的規則數值（Phase 6C-R2；原本是 ``trpg.world`` 的常數，預設值不變）。"""
+
+    sight_range: int = Field(default=4, ge=0)
+    """敵人的視野距離（前方扇形、曼哈頓距離；21.10 第 3、12 條）。"""
+    sneak_sight_divisor: int = Field(default=2, ge=1)
+    """潛行中敵人視野＝``sight_range // sneak_sight_divisor``（捨去小數；21.10 第 6 條）。"""
+    perceive_range: int = Field(default=3, ge=0)
+    """走到隱藏入口幾格內自動感知（曼哈頓距離；21.6、21.10 第 17 條）。"""
+    cut_size: int = Field(default=12, ge=1)
+    """就地開打的戰場邊長（21.4）。"""
+    min_enemy_cells: int = Field(default=4, ge=1)
+    min_ally_cells: int = Field(default=3, ge=1)
+    """就地開打的起始區至少幾格（6C-3 驗收：敵方 4 格、我方 3 格）。"""
+    walk_max_steps: int = Field(default=30, ge=1, le=30)
+    """一次 ``walk`` 最多幾格（6B-2 第 3.2 節）；不得超過請求格式的上限 30
+    （``trpg.world.field_actions.WALK_PATH_CAP``）。"""
+
+    def sneak_sight(self) -> int:
+        """潛行中敵人的視野距離。"""
+        return self.sight_range // self.sneak_sight_divisor
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
@@ -286,6 +313,8 @@ class WorldRules(ContentModel):
     hero_growth: HeroGrowthRules = HeroGrowthRules()
     xp: XpRules = XpRules()
     opportunity: OpportunityRules = OpportunityRules()
+    field: FieldRules = FieldRules()
+    """實地地圖的規則數值（Phase 6C-R2）。"""
 
     @model_validator(mode="after")
     def _unique_regions(self) -> WorldRules:

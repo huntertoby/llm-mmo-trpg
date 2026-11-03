@@ -659,6 +659,12 @@ class ContentLibrary:
     """傭兵系統裝備的快取（:func:`trpg.world.gear.mercenary_equipment`，5D-R1）：掛在內容庫上、隨它
     回收；鍵是「傭兵 ID ＋ 物品等級」，滿了就清空（上限在 ``trpg.world.gear``）。同 ``retier_cache``
     不是建構參數、不參與相等比較。"""
+    outdoor_index: dict[str, dict[tuple[str, str], FieldMapDef]] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    """:meth:`outdoor_map` 的索引（Phase 6C-R2：``"maps"`` → (區域, 地點) → 室外圖；第一次查時建）。
+    同 ``retier_cache`` 不是建構參數，``dataclasses.replace`` 換了 ``field_maps`` 後是新的空
+    索引。"""
     season_views: dict[str, ContentLibrary] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )
@@ -680,6 +686,19 @@ class ContentLibrary:
             object.__setattr__(view, "season_base", base)
             base.season_views[season_id] = view
         return view
+
+    def outdoor_map(self, region: str, location: str) -> FieldMapDef | None:
+        """地點的實地地圖（室外圖；還沒畫＝``None``）。同一個地點有好幾張時取地圖 ID 最小的
+        （和原本依 ID 排序掃描的結果一樣）。"""
+        index = self.outdoor_index.get("maps")
+        if index is None:
+            index = {}
+            for map_id in sorted(self.field_maps):
+                found = self.field_maps[map_id]
+                if found.location is not None:
+                    index.setdefault((found.region, found.location), found)
+            self.outdoor_index["maps"] = index
+        return index.get((region, location))
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
         """單位範本的裝備快照（``equipment`` 解析成內嵌定義的 :class:`Loadout`；沒有裝備時
