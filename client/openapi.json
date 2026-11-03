@@ -7560,6 +7560,31 @@
             ],
             "title": "Build"
           },
+          "main_glow": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Glow"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.5,
+                "minimum": 0.5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale"
+          },
           "creature": {
             "anyOf": [
               {
@@ -7594,7 +7619,7 @@
         "additionalProperties": false,
         "type": "object",
         "title": "DollLook",
-        "description": "單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。\n\n頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的\n``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，\n前端依陣營退回預設外觀。\n\nPhase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；\n``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`\n加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、\n``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型。都經 ``UnitView.doll_look`` 給前端\n（不改引擎）。"
+        "description": "單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。\n\n頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的\n``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，\n前端依陣營退回預設外觀。\n\nPhase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；\n``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`\n加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、\n``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型；\n5A-ART5 加 ``main_glow`` 杖頭光色、``scale`` 戰場大小。都經 ``UnitView.doll_look`` 給前端\n（不改引擎）。"
       },
       "DraftOptions": {
         "properties": {

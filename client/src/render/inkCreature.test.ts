@@ -187,7 +187,7 @@ describe("戰場單位（unitSprite）", () => {
     expect(creatureOf(unit({ dollLook: dollLook({}) }))).toBeNull();
     const whelp = creatureOf(unit({ summon: true, summonLook: { body: "beast", variant: "wolf" }, dollLook: dollLook({ creature: { body: "lizard", material: "magma", size: "tiny", traits: [] } }) }));
     expect(whelp?.body).toBe("lizard");
-    expect(whelp?.size).toBeCloseTo(0.62);
+    expect(whelp?.size).toBeCloseTo(0.8); // 戰場最小大小（5A-ART5）
     const heart = unit({ statusIds: ["molten_shell"], dollLook: dollLook({ rarity: "legendary", creature: { body: "wisp", traits: ["core"], status_traits: { molten_shell: ["crust"] } } }) });
     expect(creatureOf(heart)?.traits).toEqual(["core", "crust"]);
     expect(creatureOf({ ...heart, statusIds: [] })?.traits).toEqual(["core"]);

@@ -3031,7 +3031,8 @@ export interface components {
          *     Phase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；
          *     ``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`
          *     加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、
-         *     ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型。都經 ``UnitView.doll_look`` 給前端
+         *     ``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型；
+         *     5A-ART5 加 ``main_glow`` 杖頭光色、``scale`` 戰場大小。都經 ``UnitView.doll_look`` 給前端
          *     （不改引擎）。
          */
         DollLook: {
@@ -3078,6 +3079,10 @@ export interface components {
             beard: boolean;
             /** Build */
             build?: ("stout" | "tall") | null;
+            /** Main Glow */
+            main_glow?: string | null;
+            /** Scale */
+            scale?: number | null;
             creature?: components["schemas"]["CreatureLook"] | null;
             /**
              * Affixes

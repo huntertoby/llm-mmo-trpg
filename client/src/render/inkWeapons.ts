@@ -165,7 +165,20 @@ function drawScepter(ctx: Ctx, it: GearItem, k: string, c: Cols): void {
   });
 }
 
-function drawTotem(ctx: Ctx, _it: GearItem, k: string): void {
+/** 杖頭光暈（Phase 5A-ART5，`GearItem.glow`）：同心半透明圓疊出柔邊，同 inkGear 的 `drawStaff`。 */
+function staffHalo(ctx: Ctx, glow: string, y: number): void {
+  ctx.save();
+  ctx.fillStyle = glow;
+  for (const [r, a] of [[8, 0.14], [6.2, 0.2], [4.4, 0.28]] as const) {
+    ctx.globalAlpha = a;
+    ctx.beginPath();
+    ctx.arc(0, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawTotem(ctx: Ctx, it: GearItem, k: string): void {
   ink(ctx, `${k}-pole`, rect(-1.9, -42, 1.9, 8), "#8f5f2c", { shade: false, w: 0.6 });
   for (const [y, col] of [[-39, "#b83a3a"], [-27, "#3a8a8a"]] as const) {
     ink(ctx, `${k}-face${y}`, rect(-5.2, y, 5.2, y + 9), "#b77f3f", { w: 0.7 });
@@ -175,7 +188,8 @@ function drawTotem(ctx: Ctx, _it: GearItem, k: string): void {
   for (const s of [-1, 1]) {
     ink(ctx, `${k}-feather${s}`, [[s * 5, -37], [s * 10.5, -43], [s * 11, -33], [s * 5, -31]], "#e6e6e0", { w: 0.6 });
   }
-  ink(ctx, `${k}-orb`, ellPts(0, -46, 3.4, 3.4, 10), "#7dffb0", { shade: false, w: 0.6 });
+  if (it.glow !== undefined) staffHalo(ctx, it.glow, -46); // 5A-ART5：道童杖頭綠光
+  ink(ctx, `${k}-orb`, ellPts(0, -46, 3.4, 3.4, 10), it.glow ?? "#7dffb0", { shade: false, w: 0.6 });
   dot(ctx, -1, -47, 0.9, 0.9, "#ffffff");
 }
 

@@ -32,6 +32,8 @@ export interface CreatureInput {
   affixes?: readonly string[] | undefined;
   /** 頭目外光（`DollLook.rarity`）。 */
   rarity?: string | null | undefined;
+  /** 戰場上（Phase 5A-ART5）：大小查 `FIELD_SIZES`，精英倍率照乘。 */
+  field?: boolean | undefined;
 }
 
 // 元素色（palette.ts 同一份元素主色；第二色是亮色，眼睛與晶光用）
@@ -53,6 +55,8 @@ const BASALT = "#3b2c28";
 export const MATERIALS = ["fur", "magma", "crystal", "stone", "wood", "mist"] as const;
 export type Material = (typeof MATERIALS)[number];
 export const SIZES: Readonly<Record<string, number>> = { tiny: 0.62, small: 0.8, medium: 1, large: 1.25, huge: 1.6 };
+/** 戰場上的大小（Phase 5A-ART5，`docs/art/5A-ART檢查.md` 1）：tiny、small 放大，medium 以上不變；樣張頁與其他畫面照 `SIZES`。 */
+export const FIELD_SIZES: Readonly<Record<string, number>> = { ...SIZES, tiny: 0.8, small: 0.9 };
 /** 精英的大小倍率（頭目不乘）。 */
 export const ELITE_SCALE = 1.15;
 /** 頭目外光色（同紙娃娃 `RARITY_GLOW`）。 */
@@ -671,7 +675,8 @@ export function resolveCreature(input: CreatureInput): ResolvedCreature {
   const tint = look.tint != null && HEX.test(look.tint) ? look.tint : undefined;
   const glow = input.rarity != null ? CREATURE_GLOW[input.rarity] : undefined;
   const elite = input.elite === true && glow === undefined; // 頭目不再放大
-  const size = (look.size != null ? (SIZES[look.size] ?? 1) : 1) * (elite ? ELITE_SCALE : 1);
+  const table = input.field === true ? FIELD_SIZES : SIZES;
+  const size = (look.size != null ? (table[look.size] ?? 1) : 1) * (elite ? ELITE_SCALE : 1);
   const traits: string[] = [];
   const add = (t: string): void => {
     if (TRAITS[t] !== undefined && !traits.includes(t)) traits.push(t);
@@ -686,6 +691,12 @@ export function resolveCreature(input: CreatureInput): ResolvedCreature {
 /** 貼圖快取鍵（外觀＋朝向）：status_traits 已解進 `traits`，狀態一變鍵就跟著變。 */
 export function creatureKey(r: ResolvedCreature, facing: Facing): string {
   return ["c", r.body, r.variant, r.material, r.element ?? "", r.tint ?? "", r.size.toFixed(3), r.traits.join("+"), r.affixes.join("+"), r.glow ?? "", facing === "west" ? "w" : "e"].join("|");
+}
+
+/** 身形的最高點（虛擬單位，往上是負值，未乘大小）與是否浮空；不認得的身形退回軟泥。 */
+export function bodyTop(body: string): { top: number; hover: boolean } {
+  const b = BODIES[body] ?? BODIES["ooze"]!;
+  return { top: b.top, hover: b.hover === true };
 }
 
 function fxInfo(r: ResolvedCreature): FxInfo {

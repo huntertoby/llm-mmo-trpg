@@ -131,7 +131,7 @@ function drawAxe(ctx: Ctx, key: string, metal: string, wood: string): void {
 /** 杖頭光暈：用同心半透明圓疊出柔邊（不用漸層，確定性、好測）。 */
 function drawStaff(ctx: Ctx, it: GearItem, key: string, wood: string): void {
   ink(ctx, `${key}-pole`, [[-0.8, 22], [0.8, 22], [0.9, -27], [-0.9, -27]], wood, { shade: false, w: 0.6 });
-  const glow = elementTint(it.element) ?? STAFF_GLOW;
+  const glow = elementTint(it.element) ?? it.glow ?? STAFF_GLOW;
   iconHead(ctx, 0, -27, () => {
     ctx.save();
     ctx.fillStyle = glow;

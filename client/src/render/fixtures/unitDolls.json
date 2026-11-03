@@ -723,6 +723,8 @@
    }
   },
   "beard": false,
+  "main_glow": "#b6f0a0",
+  "scale": 0.9,
   "affixes": [],
   "traits": []
  },
