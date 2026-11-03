@@ -317,6 +317,13 @@ export type LeagueView = Schemas["LeagueView"];
 export type LeagueStandingView = Schemas["LeagueStandingView"];
 export type LeagueMatchView = Schemas["LeagueMatchView"];
 export type LeagueReplayResponse = Schemas["LeagueReplayResponse"];
+/** 編年史、上季角色與季末重置（5F-5）。 */
+export type ChronicleView = Schemas["ChronicleView"];
+export type ChronicleSeasonView = Schemas["ChronicleSeasonView"];
+export type LegacyHeroView = Schemas["LegacyHeroView"];
+export type SeasonResetRequest = Schemas["SeasonResetRequest"];
+export type SeasonResetReport = Schemas["SeasonResetReport"];
+export type ResetLine = Schemas["ResetLine"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];

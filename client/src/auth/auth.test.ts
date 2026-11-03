@@ -11,7 +11,7 @@ import {
   writeToken,
 } from "./auth";
 
-const account = { account_id: "a1", username: "alice", characters: 1, max_characters: 3, can_create: true };
+const account = { account_id: "a1", username: "alice", characters: 1, max_characters: 3, can_create: true, admin: false };
 
 describe("token storage", () => {
   const store = new Map<string, string>();

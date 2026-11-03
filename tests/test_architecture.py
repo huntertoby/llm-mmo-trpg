@@ -24,7 +24,8 @@
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式、內建 ``hash()``
    等。
 3. 季末重置政策表（Phase 5D-R2，09 9.7、#91）：``trpg.server.season_policy`` 裡每個存檔模型的每個
-   欄位都標了數值類或紀念類；新增欄位沒分類就失敗（這一條實際匯入模型）。
+   欄位都標了數值類或紀念類；新增欄位沒分類就失敗（這一條實際匯入模型）。5F-5：表裡每個模型都有
+   季末重置的處理（``trpg.server.season_reset.HANDLERS``），處理方式和分類一致。
 """
 
 from __future__ import annotations
@@ -525,3 +526,55 @@ def test_every_saved_field_has_a_season_reset_kind() -> None:
         if found is None or SEASON_POLICY[found].get(field) != NUMERIC:
             problems.append(f"{model_name}.{field}：待決的欄位要暫標數值類")
     assert not problems, "季末重置政策表：\n" + "\n".join(problems)
+
+
+def _expected_handlers(numeric: tuple[str, ...], memorial: tuple[str, ...]) -> set[str]:
+    if not memorial:
+        return {"replace", "delete"}
+    if not numeric:
+        return {"keep"}
+    return {"split"}
+
+
+def test_season_reset_handles_every_policy_model() -> None:
+    """季末重置（5F-5）：政策表裡每個模型都有重置處理，處理方式和分類一致（整個數值類＝刪掉或換新、
+    整個紀念類＝不動、混合＝分開且紀念類欄位都有去處）；``CARRIED`` 的每一項都有處理函式。
+    不能只分類卻不清（實際清掉的行為由 ``tests/server/test_season_reset.py`` 逐欄位檢查）。"""
+    from trpg.server.season_policy import (  # noqa: PLC0415
+        CARRIED,
+        MEMORIAL,
+        NUMERIC,
+        SEASON_POLICY,
+        fields_of_kind,
+    )
+    from trpg.server.season_reset import (  # noqa: PLC0415
+        CARRIED_HANDLERS,
+        HANDLERS,
+        SPLIT_CARRIERS,
+    )
+
+    problems = [f"{m.__name__}：政策表有、重置沒有處理" for m in set(SEASON_POLICY) - set(HANDLERS)]
+    problems += [f"{m.__name__}：重置有處理、表裡沒有" for m in set(HANDLERS) - set(SEASON_POLICY)]
+    for model, (kind, _) in HANDLERS.items():
+        if model not in SEASON_POLICY:
+            continue
+        memorial = fields_of_kind(model, MEMORIAL)
+        expected = _expected_handlers(fields_of_kind(model, NUMERIC), memorial)
+        if kind not in expected:
+            problems.append(
+                f"{model.__name__}：處理 {kind!r} 和分類不符（應為 {sorted(expected)}）"
+            )
+        carrier = SPLIT_CARRIERS.get(model)
+        if kind == "split" and carrier is None:
+            problems.append(f"{model.__name__}：分開處理但沒有留下紀念類欄位的模型")
+        if kind == "split" and carrier is not None:
+            lost = sorted(set(memorial) - set(carrier.model_fields))
+            problems += [f"{model.__name__}.{n}：紀念類欄位沒有去處" for n in lost]
+    names = {m.__name__: m for m in SEASON_POLICY}
+    for model_name, field in sorted(CARRIED):
+        found = names.get(model_name)
+        if found is None or SEASON_POLICY[found].get(field) != NUMERIC:
+            problems.append(f"{model_name}.{field}：CARRIED 的欄位要是數值類")
+    problems += [f"{m}.{f}：CARRIED 沒有處理函式" for m, f in set(CARRIED) - set(CARRIED_HANDLERS)]
+    problems += [f"{m}.{f}：處理函式不在 CARRIED" for m, f in set(CARRIED_HANDLERS) - set(CARRIED)]
+    assert not problems, "季末重置：\n" + "\n".join(sorted(problems))

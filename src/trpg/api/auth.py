@@ -31,6 +31,7 @@ __all__ = [
     "require_league_admin",
     "require_login",
     "require_note_admin",
+    "require_season_admin",
     "require_world_access",
     "server_settings_of",
     "settings_of",
@@ -133,6 +134,11 @@ def require_league_admin(request: Request) -> None:
     _check_admin(request, "只有管理者能開始循環賽")
 
 
+def require_season_admin(request: Request) -> None:
+    """季末重置（5F-5，代決 5F5-6）：規則同 :func:`require_admin`；真的執行另外要輸入目前季 ID。"""
+    _check_admin(request, "只有管理者能季末重置")
+
+
 def account_view(store: AccountStore, record: AccountRecord) -> AccountView:
     return AccountView(
         account_id=record.account_id,
@@ -140,4 +146,5 @@ def account_view(store: AccountStore, record: AccountRecord) -> AccountView:
         characters=len(store.season_characters(record)),  # 當季的角色（5D-R2）
         max_characters=store.max_characters,
         can_create=len(store.season_characters(record)) < store.max_characters,
+        admin=record.admin,
     )
