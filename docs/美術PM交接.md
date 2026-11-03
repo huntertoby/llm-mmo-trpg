@@ -132,6 +132,7 @@
 | `townTiles.js`、`town-tiles.html` | 主城、霧渡鎮的城鎮圖庫與酒館、鐵匠鋪、導師殿室內，疊 HUD A（`town-tiles.png`、`城鎮與室內圖庫.md`；11-04 樣張） |
 | `worldmap.js`、`worldmap.html` | 大世界圖（漂浮界域、灰色未解鎖）與雲嶺區域圖（戰爭迷霧三態）（`worldmap.png`、`大世界圖與區域圖.md`；11-04 樣張） |
 | `portraits.js`、`portraits.html` | NPC 頭像 24 位（雲嶺 9、荒原 6、傭兵 9）＋好感度表情（`portraits.png`、`NPC頭像.md`；11-04 樣張） |
+| `events.js`、`events.html` | 事件插圖 10 種（雲嶺背景＋荒原換背景）（`events.png`、`事件插圖.md`；11-04 樣張） |
 | `anim.js`、`anim.html` | 動畫樣張：骨架紙娃娃走路四方向、上樓、受擊、三種技能、同片段不同順序（`anim.gif`、`anim-strip.png`、`動畫方案.md`；11-04 示意，不代決） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
@@ -217,3 +218,5 @@
 | 47 | NPC 頭像的畫法 | 紙娃娃正面頭部放大＋頭像專用配件；圓角框依區域配色（`NPC頭像.md`） | 另畫半身立繪 |
 | 48 | NPC 的外觀 | 照身分和個性提案（24 位，表在 `portraits.js`）；資料放 NPC 檔的 `portrait` 欄位 | 由玩法 PM 另寫外觀描述 |
 | 49 | 好感度表情 | 五級：敵意、冷淡、普通、友善、信賴 | 三級 |
+| 50 | 事件插圖的畫風 | 和實地地圖同一套畫法（格子地面、紙娃娃、地物），7×3 格小場景（`事件插圖.md`） | 另畫一套插畫風格 |
+| 51 | 事件插圖的區域 | 背景依區域換，事件內容不變；資料用事件的 `art` 欄位 | 每區每事件各畫一張 |
