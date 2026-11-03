@@ -47,6 +47,7 @@ __all__ = [
     "ReactionUnless",
     "ReactionWhen",
     "Reap",
+    "RoundTrigger",
     "ShareDamageSpec",
     "StatusDef",
     "StatusTable",
@@ -62,6 +63,7 @@ __all__ = [
     "SummonPlatform",
     "SummonPulse",
     "SummonSnare",
+    "TagDownTrigger",
     "TerrainDef",
     "TerrainTable",
     "TotemSpec",
@@ -766,8 +768,9 @@ class WardSpec(ContentModel):
     kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
     """同門標籤在單位卡、狀態說明上的中文名（Phase 5F-2b，例：``mist_lock_core`` →「霧鎖真人」）；
     省略時照舊顯示標籤 ID。只能和 ``kin_tag`` 一起寫。"""
-    range: int = Field(default=3, ge=1, le=12)
-    taken_permille: int = Field(ge=100, le=999)
+    range: int = Field(default=3, ge=1, le=24)
+    taken_permille: int = Field(ge=0, le=999)
+    """受到的骰值傷害倍率（‰）；0＝持有者在場時完全不受骰值傷害（Phase 5F-3 源晶柱）。"""
 
     @model_validator(mode="after")
     def _kin_name_needs_tag(self) -> WardSpec:
@@ -1324,14 +1327,46 @@ class OpeningStatus(ContentModel):
 
 
 class HpBelowTrigger(ContentModel):
-    """Boss 階段的觸發（Phase 5F-2）：HP ≤ 最大 HP × ``permille``‰ 時進入。之後的觸發種類
-    （第 N 輪起、某標籤的單位全倒）以新的 ``kind`` 加在 :data:`PhaseTrigger` 聯集裡。"""
+    """Boss 階段的觸發（Phase 5F-2）：HP ≤ 最大 HP × ``permille``‰ 時進入。"""
 
     kind: Literal["hp_below"]
     permille: int = Field(ge=1, le=999)
 
+    @property
+    def condition_zh(self) -> str:
+        return f"HP {self.permille // 10}% 以下"
 
-type PhaseTrigger = Annotated[HpBelowTrigger, Field(discriminator="kind")]
+
+class TagDownTrigger(ContentModel):
+    """Boss 階段的觸發（Phase 5F-3，賽季 Boss 的解謎）：同陣營、帶 ``tag`` 標籤的單位已倒下
+    ``count`` 名以上時進入（例：3 根源晶柱都被打碎）。``tag_name_zh`` 是標籤在畫面上的中文名
+    （省略時顯示標籤 ID）。"""
+
+    kind: Literal["tag_down"]
+    tag: str = Field(pattern=ID_PATTERN)
+    count: int = Field(ge=1, le=8)
+    tag_name_zh: str | None = Field(default=None, min_length=1)
+
+    @property
+    def condition_zh(self) -> str:
+        return f"「{self.tag_name_zh or self.tag}」倒下 {self.count} 名"
+
+
+class RoundTrigger(ContentModel):
+    """Boss 階段的觸發（Phase 5F-3）：第 ``round`` 輪起進入（例：第 15 輪起傷害加倍，防止拖延）。"""
+
+    kind: Literal["round_at"]
+    round: int = Field(ge=2, le=99)
+
+    @property
+    def condition_zh(self) -> str:
+        return f"第 {self.round} 輪起"
+
+
+type PhaseTrigger = Annotated[
+    HpBelowTrigger | TagDownTrigger | RoundTrigger, Field(discriminator="kind")
+]
+"""Boss 階段的觸發種類（依 ``kind`` 區分；新種類加在這裡，不動舊資料）。"""
 
 
 class PhaseTile(ContentModel):
@@ -1414,6 +1449,8 @@ def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
     for phase in phases[1:]:
         if phase.trigger is None:
             problems.append(f"階段 {phase.id} 缺少 trigger（只有第 1 項可以省略）")
+            continue
+        if not isinstance(phase.trigger, HpBelowTrigger):  # 5F-3：其他種類不排序
             continue
         if phase.trigger.permille >= last:
             problems.append(f"階段 {phase.id} 的 HP 門檻必須比前一個階段低")

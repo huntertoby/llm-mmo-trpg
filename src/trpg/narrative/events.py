@@ -1094,7 +1094,7 @@ def _oath_broken(e: OathBroken, v: _View) -> str:
 @_handles(BossPhaseChanged)
 def _boss_phase_changed(e: BossPhaseChanged, v: _View) -> str:
     who = v.name[e.unit_id]
-    line = f"◆ {who} 進入第 {e.phase} 階段「{e.name_zh}」（HP {e.permille // 10}% 以下）"
+    line = f"◆ {who} 進入第 {e.phase} 階段「{e.name_zh}」（{e.condition_zh}）"
     return line if e.text_zh is None else f"{line}：{e.text_zh}"
 
 

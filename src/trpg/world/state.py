@@ -31,6 +31,8 @@ from trpg.world.clock import DayPhase
 __all__ = [
     "CHAR_FORMAT",
     "WORLD_FORMAT",
+    "BossAttempt",
+    "BossClear",
     "BountyClaim",
     "CharacterState",
     "ClearedLocation",
@@ -125,6 +127,9 @@ class EncounterResult(_Model):
     """遇敵當下該區的建議等級加成（Phase 5F-1，世界事件失敗 +1；敵人等級與經驗照加成後）。"""
     bounty: str | None = Field(default=None, pattern=ID_PATTERN)
     """遇敵當下這個地點貼出、還沒被搶的懸賞（Phase 5F-1；陣容照懸賞）。"""
+    season_boss: str | None = Field(default=None, pattern=ID_PATTERN)
+    """賽季 Boss 的挑戰（Phase 5F-3；Boss ID）：陣容、地圖、等級照 ``season_boss`` 資料，戰後照
+    賽季 Boss 的規則回寫。"""
 
 
 class EventTrigger(_Model):
@@ -566,6 +571,26 @@ class BountyClaim(_Model):
     at: int = Field(ge=0)
 
 
+class BossAttempt(_Model):
+    """某個帳號在某個刷新日挑戰賽季 Boss 的次數（Phase 5F-3；#100 算帳號）。"""
+
+    day: int
+    actor: str = Field(min_length=1)
+    """帳號 ID（沒有帳號時＝角色 ID，同 Q15）。"""
+    count: int = Field(ge=1)
+
+
+class BossClear(_Model):
+    """一次打倒賽季 Boss（Phase 5F-3；依日誌順序）。第一筆就是本季首殺（#101）。"""
+
+    character_id: str = Field(pattern=ID_PATTERN)
+    name: str
+    """當下的角色名（顯示用）。"""
+    at: int = Field(ge=0)
+    score: int = Field(ge=0)
+    rounds: int = Field(ge=0)
+
+
 class DailyGoalProgress(_Model):
     """角色今天的今日目標進度（Phase 5F-1，#99；跨日歸零）。"""
 
@@ -620,6 +645,21 @@ class WorldState(_Model):
     """懸賞被搶下的紀錄（依日期、懸賞排序；每天每張最多一筆）。"""
     level_bonus: dict[str, int] = Field(default_factory=dict)
     """區域 → 建議等級加成（世界事件失敗，9.6.7 #15；依鍵排序）。"""
+
+    # --- 5F-3 賽季 Boss（邏輯在 trpg.world.season_boss） ---
+    seal_keys: int = Field(default=0, ge=0)
+    """全服累積的封印鑰匙（19.6.2）。"""
+    seal_full_at: int | None = Field(default=None, ge=0)
+    """封印鑰匙集滿（解鎖旗標第一次出現）的 UTC 秒；``None``＝還沒集滿。"""
+    boss_attempts: tuple[BossAttempt, ...] = ()
+    """今天各帳號挑戰賽季 Boss 的次數（依帳號排序；換日後的第一次挑戰清掉舊的）。"""
+    boss_clears: tuple[BossClear, ...] = ()
+    """這一季打倒賽季 Boss 的紀錄（依日誌順序；第一筆＝首殺）。"""
+
+    def boss_attempts_of(self, day: int, actor: str) -> int:
+        """``actor`` 在刷新日 ``day`` 已挑戰的次數。"""
+        found = next((a for a in self.boss_attempts if a.day == day and a.actor == actor), None)
+        return 0 if found is None else found.count
 
     # --- 5F-4 影子循環賽（邏輯在 trpg.world.league） ---
     league_entries: tuple[LeagueEntry, ...] = ()
@@ -918,6 +958,25 @@ class CharacterState(_Model):
     news_seen_at: int | None = None
     """「你不在的時候」摘要看到哪個時刻為止（UTC 秒；``news_seen`` 動作寫入，5F-1b）。新角色＝建立
     當下；``None``＝舊存檔（從開賽算起）。"""
+
+    # --- 5F-3 封印鑰匙、區域 Boss 的保底掉落 ---
+    seal_key_sources: tuple[str, ...] = ()
+    """已拿過封印鑰匙的來源（排序、不重複；個人鑰匙數＝長度，19.6.2）。"""
+    boss_drop_days: dict[str, int] = Field(default_factory=dict)
+    """區域 Boss（單位 ID）→ 最後一次拿保底掉落的刷新日（每角色每刷新日一次，代決 5F3-15；
+    依鍵排序）。"""
+
+    @field_validator("seal_key_sources")
+    @classmethod
+    def _sorted_key_sources(cls, sources: tuple[str, ...]) -> tuple[str, ...]:
+        if list(sources) != sorted(set(sources)):
+            raise ValueError("seal_key_sources 必須排序且不重複")
+        return sources
+
+    @field_validator("boss_drop_days")
+    @classmethod
+    def _sorted_drop_days(cls, days: dict[str, int]) -> dict[str, int]:
+        return dict(sorted(days.items()))
 
     @field_validator("gear_mods")
     @classmethod

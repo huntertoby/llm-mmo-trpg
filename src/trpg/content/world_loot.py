@@ -94,6 +94,15 @@ class MercenaryGearRules(ContentModel):
         return tuple(s for s in SLOTS if s in self.slots)
 
 
+class BossLoot(ContentModel):
+    """區域 Boss 的保底掉落（Phase 5F-3；20.2「區域 Boss 必掉 1 件史詩」、19.2.3、18.2.3）：每角色每
+    刷新日第一次打倒時，這名 Boss 的材料換成 ``material``、裝備換成 ``gear_rarity``
+    （代決 5F3-15）。"""
+
+    material: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    gear_rarity: Rarity = "epic"
+
+
 class RegionLoot(ContentModel):
     """一個區域的掉落內容。"""
 
@@ -118,6 +127,8 @@ class LootRules(ContentModel):
     families: dict[str, str] = Field(default_factory=dict)
     """各區共用的敵人 → 家族材料（5D-2b：盜賊各區都掉焦鐵）；區域的 ``families`` 優先。"""
     regions: dict[str, RegionLoot] = Field(default_factory=dict)
+    bosses: dict[str, BossLoot] = Field(default_factory=dict)
+    """區域 Boss（單位範本 ID）→ 保底掉落（Phase 5F-3）。"""
 
     @model_validator(mode="after")
     def _check(self) -> LootRules:
@@ -180,6 +191,10 @@ def loot_problems(
 
     for row in rules.generic_by_level:
         material(row.item, "generic_by_level")
+    for unit, boss in sorted(rules.bosses.items()):  # 5F-3
+        material(boss.material, f"bosses.{unit}")
+    known = set(rules.bosses) if units is None else set(units)
+    problems += [f"bosses：未知的敵人 {u}" for u in sorted(rules.bosses) if u not in known]
     for unit, item in sorted(rules.families.items()):
         if units is not None and unit not in units:
             problems.append(f"families：未知的敵人 {unit}")

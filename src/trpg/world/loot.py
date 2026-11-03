@@ -46,6 +46,7 @@ from trpg.world.state import CharacterState, LootSummary, PendingLoot
 __all__ = [
     "LootRoll",
     "add_loot",
+    "boss_bonus_units",
     "choose_loot",
     "loot_rules",
     "roll_loot",
@@ -168,11 +169,14 @@ def _roll_gear(
     region: str,
     level: int,
     elite: bool,
+    forced: Rarity | None = None,
 ) -> tuple[ItemDef, ...]:
     gear = rules.gear
     if elite:
         epic = rng.randint(0, 999) < gear.elite_epic_permille
         rarity: Rarity = "epic" if epic else _weighted(rng, gear.battle_weights)
+        if forced is not None:  # 區域 Boss 的保底（5F-3）：亂數照抽，稀有度換掉
+            rarity = forced
     elif rng.randint(0, 999) < gear.battle_permille:
         rarity = _weighted(rng, gear.battle_weights)
     else:
@@ -205,8 +209,12 @@ def roll_loot(
     events: Sequence[EventBase],
     seed: int,
     level: int,
+    boss_bonus: frozenset[str] = frozenset(),
 ) -> LootRoll:
-    """打贏一場掉的東西（見模組說明）；沒有掉落規則時為空。``level`` 是地點建議等級（敵人等級）。"""
+    """打贏一場掉的東西（見模組說明）；沒有掉落規則時為空。``level`` 是地點建議等級（敵人等級）。
+
+    ``boss_bonus``（Phase 5F-3）：這場拿保底掉落的區域 Boss（單位 ID）——材料換成 Boss 材料、
+    裝備換成保底稀有度；亂數照常消耗（其他掉落和沒有保底時一樣）。"""
     rules = loot_rules(library)
     if rules is None:
         return LootRoll()
@@ -216,9 +224,13 @@ def roll_loot(
         elite = _is_elite(library, member)
         if elite or rng.randint(0, 999) < rules.material_permille:
             materials.append(_material_of(rules, lineup.region, member, level, elite=elite))
-    elites = sum(1 for m in lineup.members if _is_elite(library, m))
+            if member.unit in boss_bonus:
+                materials[-1] = rules.bosses[member.unit].material
+    elite_members = [m for m in lineup.members if _is_elite(library, m)]
+    elites = len(elite_members)
     gear: list[ItemDef] = []
     for n in range(max(1, elites)):  # 每名精英 1 件（20.2、5D-2b）；沒有精英時照一般掉落抽 1 次
+        boss = elite_members[n].unit if elites and elite_members[n].unit in boss_bonus else None
         gear += _roll_gear(
             library,
             rules,
@@ -227,8 +239,23 @@ def roll_loot(
             region=lineup.region,
             level=level,
             elite=elites > 0,
+            forced=None if boss is None else rules.bosses[boss].gear_rarity,
         )
     return LootRoll(materials=tuple(materials), gear=tuple(gear))
+
+
+def boss_bonus_units(
+    library: ContentLibrary, char: CharacterState, lineup: EncounterLineup, today: int
+) -> frozenset[str]:
+    """這場能拿保底掉落的區域 Boss：陣容裡列在 ``bosses``、角色這個刷新日還沒拿過的（5F-3）。"""
+    rules = loot_rules(library)
+    if rules is None:
+        return frozenset()
+    return frozenset(
+        m.unit
+        for m in lineup.members
+        if m.unit in rules.bosses and char.boss_drop_days.get(m.unit) != today
+    )
 
 
 # ---------------------------------------------------------------------------

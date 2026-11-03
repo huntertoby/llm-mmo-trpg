@@ -940,7 +940,8 @@ export interface paths {
         };
         /**
          * Get Board
-         * @description 城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點。
+         * @description 城鎮公告板（5F-1）：賽季第幾天、今日目標、懸賞板、世界事件全服進度、已清空的地點；
+         *     5F-3 加賽季 Boss（封印、鑰匙、帳號今天剩幾次、首殺、評分榜）。
          */
         get: operations["get_board_api_world_characters__character_id__board_get"];
         put?: never;
@@ -1732,6 +1733,32 @@ export interface components {
             };
         };
         /**
+         * BoardBossEntryView
+         * @description 評分榜的一名（Phase 5F-3；#87）。
+         */
+        BoardBossEntryView: {
+            /** Rank */
+            rank: number;
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+            /** Rounds */
+            rounds: number;
+            /** Survivors */
+            survivors: number;
+            /** Allies */
+            allies: number;
+            /** No Down */
+            no_down: boolean;
+            /** Location Zh */
+            location_zh: string;
+            /** Mine */
+            mine: boolean;
+            /** At */
+            at: number;
+        };
+        /**
          * BoardBountyView
          * @description 一張今天的懸賞（18.7.4；先搶先贏）。
          */
@@ -1787,6 +1814,56 @@ export interface components {
             day: number;
             /** Name Zh */
             name_zh: string;
+        };
+        /**
+         * BoardSeasonBossView
+         * @description 賽季 Boss 區塊（Phase 5F-3；09 9.7、#87、#100、#101）。
+         */
+        BoardSeasonBossView: {
+            /** Boss */
+            boss: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sealed" | "announced" | "open" | "closed";
+            /** Status Zh */
+            status_zh: string;
+            /** Note Zh */
+            note_zh?: string | null;
+            /** Announce At */
+            announce_at: number;
+            /** Unlock At */
+            unlock_at: number;
+            /** Close At */
+            close_at: number;
+            /** World Keys */
+            world_keys: number;
+            /** Keys Target */
+            keys_target?: number | null;
+            /** My Keys */
+            my_keys: number;
+            /** Keys Required */
+            keys_required: number;
+            /** Attempts Left */
+            attempts_left: number;
+            /** Daily Attempts */
+            daily_attempts: number;
+            /** Can Challenge */
+            can_challenge: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+            /** First Kill Zh */
+            first_kill_zh?: string | null;
+            /** Title Zh */
+            title_zh: string;
+            /**
+             * Board
+             * @default []
+             */
+            board: components["schemas"]["BoardBossEntryView"][];
         };
         /**
          * BoardWorldEventView
@@ -1867,6 +1944,8 @@ export interface components {
             next_name_zh?: string | null;
             /** Next Permille */
             next_permille?: number | null;
+            /** Next Condition Zh */
+            next_condition_zh?: string | null;
         };
         /**
          * BudgetLine
@@ -6360,6 +6439,19 @@ export interface components {
              * @default []
              */
             level_bonus_zh: string[];
+            season_boss?: components["schemas"]["BoardSeasonBossView"] | null;
+        };
+        /**
+         * SeasonBossAction
+         * @description 挑戰賽季 Boss（Phase 5F-3；09 9.7、#87、#100）：在城鎮出發，扣這個帳號今天的 1 次挑戰，
+         *     產生 Boss 的遭遇（種子由伺服器的賽季種子衍生）；之後照一般遭遇開戰或撤退（撤退不退次數）。
+         */
+        SeasonBossAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "season_boss";
         };
         /**
          * SeasonInfoView
@@ -8208,7 +8300,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];

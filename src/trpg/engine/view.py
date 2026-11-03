@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.content.battle import DollLook, ReactionRule, SummonMode
+from trpg.content.battle import DollLook, HpBelowTrigger, ReactionRule, SummonMode
 from trpg.content.equipment import (
     AFFIX_CATEGORY_NUMBER,
     AFFIX_CATEGORY_ZH,
@@ -286,6 +286,9 @@ class BossPhaseView(_ViewModel):
     name_zh: str
     next_name_zh: str | None = None
     next_permille: int | None = None
+    """下一個階段的 HP 門檻（‰；不是 HP 觸發時為 ``None``）。"""
+    next_condition_zh: str | None = None
+    """下一個階段的觸發條件中文（Phase 5F-3，例「「源晶柱」倒下 3 名」）。"""
 
 
 class ChargeView(_ViewModel):
@@ -995,9 +998,12 @@ def _boss_phase_view(unit: UnitState) -> BossPhaseView | None:
         total=len(unit.phases),
         name_zh=current.name_zh,
         next_name_zh=None if following is None else following.name_zh,
-        next_permille=None
+        next_permille=following.trigger.permille
+        if following is not None and isinstance(following.trigger, HpBelowTrigger)
+        else None,
+        next_condition_zh=None
         if following is None or following.trigger is None
-        else following.trigger.permille,
+        else following.trigger.condition_zh,
     )
 
 

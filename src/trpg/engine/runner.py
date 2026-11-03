@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/109"
-"""目前的戰鬥紀錄版本（``/109``，Phase 5F-2：Boss 階段）。
+LOG_FORMAT = "trpg-battle-log/110"
+"""目前的戰鬥紀錄版本（``/110``，Phase 5F-3：Boss 階段的新觸發種類）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

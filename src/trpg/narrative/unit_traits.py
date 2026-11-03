@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from trpg.content.battle import StatusDef, UnitTemplate
+from trpg.content.battle import HpBelowTrigger, StatusDef, UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.world_enemies import apply_affix
 from trpg.narrative.status_info import formation_rules
@@ -76,12 +76,19 @@ def trait_lines_for(
 
 
 def phase_line(template: UnitTemplate) -> str:
-    """Boss 階段的特性句：「階段：劍陣 → HP 60%「鎖霧」→ 30%「歸一」」（Phase 5F-2）。"""
+    """Boss 階段的特性句：「階段：劍陣 → HP 60%「鎖霧」→ 30%「歸一」」（Phase 5F-2）；其他觸發
+    種類寫條件（5F-3：「三柱 → 「源晶柱」倒下 3 名「碎界脈動」→ HP 50%「核心過載」」）。"""
     parts = [template.phases[0].name_zh]
-    for index, phase in enumerate(template.phases[1:]):
-        assert phase.trigger is not None
-        hp = "HP " if index == 0 else ""
-        parts.append(f"{hp}{phase.trigger.permille // 10}%「{phase.name_zh}」")
+    hp_said = False
+    for phase in template.phases[1:]:
+        trigger = phase.trigger
+        assert trigger is not None
+        if isinstance(trigger, HpBelowTrigger):
+            hp = "" if hp_said else "HP "
+            hp_said = True
+            parts.append(f"{hp}{trigger.permille // 10}%「{phase.name_zh}」")
+        else:
+            parts.append(f"{trigger.condition_zh}「{phase.name_zh}」")
     return "階段：" + " → ".join(parts)
 
 

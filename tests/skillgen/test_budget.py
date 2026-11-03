@@ -333,6 +333,10 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "array_ward": None,  # 5A-M2b：護陣（陣眼石靈），只由範本開場掛上
         "summit_array_ward": None,  # 5F-2：雲頂觀護陣，只由 Boss 範本與階段掛上
         "mist_return": None,  # 5F-2：霧鎖真人階段回血，只由 Boss 階段掛上
+        "rift_resonance": None,  # 5F-3：源晶共鳴（護陣 ×0），只由源晶柱開場掛上
+        "crystal_surge": None,  # 5F-3：晶能湧動，只由源晶柱的階段掛上
+        "crystal_surge_2": None,
+        "rift_collapse": None,  # 5F-3：界崩，只由碎晶之主的階段掛上
         "heart_link": None,  # 5A-M2：連心（分傷），只由詞綴開場掛上
         "oath_bonus_easy": None,  # 5C-3：誓約之力，只由誓約開戰時掛上
         "oath_bonus_medium": None,

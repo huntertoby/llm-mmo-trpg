@@ -1,0 +1,28 @@
+# 裂界門的雷柱（Phase 5F-3；19.7 第 1 階段的三根源晶柱之一；規則同霧柱 rift_pillar_mist）。數值是初值。
+id: rift_pillar_thunder
+name_zh: 雷之源晶柱
+attributes: {str: 10, dex: 6, con: 10, int: 10, wis: 14, wil: 10}
+max_hp: 60
+speed: 0
+armor_bonus: 3
+weapon: fist
+ai_profile: archer
+resist: {}
+element_mods: {}
+tags: [immovable, rift_pillar]
+stamina: 0
+skills: [skill_rift_pulse_thunder]
+reactions: []
+opening_statuses:
+  - {status: rift_resonance}
+phases:
+  - {id: whole, name_zh: 共鳴}
+  - id: surge
+    name_zh: 晶能湧動
+    trigger: {kind: tag_down, tag: rift_pillar, count: 1, tag_name_zh: 源晶柱}
+    add_statuses: [{status: crystal_surge}]
+  - id: surge_2
+    name_zh: 晶能狂湧
+    trigger: {kind: tag_down, tag: rift_pillar, count: 2, tag_name_zh: 源晶柱}
+    remove_statuses: [crystal_surge]
+    add_statuses: [{status: crystal_surge_2}]

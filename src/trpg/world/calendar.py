@@ -24,6 +24,7 @@ __all__ = [
     "day_of",
     "day_start",
     "local_date",
+    "local_time_zh",
     "next_refresh",
     "season_day",
     "season_start_at",
@@ -68,6 +69,13 @@ def next_refresh(library: ContentLibrary, now: int) -> int:
 def local_date(day: int) -> dt.date:
     """刷新日 ``day`` 對應的當地日期。"""
     return _EPOCH + dt.timedelta(days=day)
+
+
+def local_time_zh(library: ContentLibrary, at: int) -> str:
+    """UTC 秒 → 當地時間「11 月 10 日 06:00」（時區照日曆；Phase 5F-3 賽季 Boss 的解鎖時間）。"""
+    offset = calendar_of(library).utc_offset_minutes * 60
+    local = dt.datetime.fromtimestamp(at + offset, tz=dt.UTC)
+    return f"{local.month} 月 {local.day} 日 {local.hour:02d}:{local.minute:02d}"
 
 
 def season_start_at(library: ContentLibrary, date: dt.date) -> int:

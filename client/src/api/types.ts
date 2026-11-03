@@ -278,7 +278,9 @@ export type WorldAction =
   | Schemas["SalvageAction"]
   // 5F-4：影子循環賽的報名與取消
   | (Omit<Schemas["LeagueEnterAction"], "ai"> & { ai?: string | null })
-  | Schemas["LeagueWithdrawAction"];
+  | Schemas["LeagueWithdrawAction"]
+  // 5F-3：挑戰賽季 Boss（扣帳號今天的 1 次，之後照一般遭遇開戰）
+  | Schemas["SeasonBossAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -304,6 +306,9 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
+export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
+export type BoardBossEntryView = Schemas["BoardBossEntryView"];
 /** 「你不在的時候」摘要（5F-1b）：上次看過之後的世界事件成敗、懸賞歸屬、新開放的區域。 */
 export type AbsenceView = Schemas["AbsenceView"];
 export type AbsenceItemView = Schemas["AbsenceItemView"];

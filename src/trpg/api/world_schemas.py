@@ -80,6 +80,7 @@ from trpg.world.economy_actions import (
     UseItemAction,
 )
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
+from trpg.world.season_events import SeasonBossAction
 
 __all__ = [
     "CreateWorldCharacterRequest",
@@ -145,7 +146,8 @@ type WorldActionRequest = Annotated[
     | ImbueAction
     | SalvageAction
     | LeagueEnterAction  # 5F-4
-    | LeagueWithdrawAction,
+    | LeagueWithdrawAction
+    | SeasonBossAction,  # 5F-3
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
