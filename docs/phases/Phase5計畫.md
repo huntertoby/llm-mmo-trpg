@@ -4479,6 +4479,87 @@ world_events:
 
 不做：舊季循環賽的網頁重播頁、LLM 傳記（7.11）。
 
-## 42. 之後各段規格
+## 42. 5A-ART 詳細規格：敵人外觀移植（ART1～ART4）
+
+> 給實作 agent。動 `client/src/render/`（新 `inkCreature.ts`、`inkDoll.ts`、`inkGear.ts`／`inkArmor.ts`／`inkWeapons.ts`、`appearance.ts`、`unitSprite.ts`、`artTextures.ts`、`BattleRenderer.ts`）、`client/src/battle/drawModel.ts`、`src/trpg/content/battle.py`（`DollLook` 擴充、新 `CreatureLook`）、`src/trpg/content/world_enemies.py`（變體外觀、詞綴外觀）、`src/trpg/content/summons.py`／`library.py`（召喚物 `creature`）、`content/units/`、`content/world/enemies.yaml`、`content/summon_looks.yaml`、`tests/content/`、前端測試夾具與 OpenAPI。**不改引擎**（`src/trpg/engine/` 一行不動）。
+> 依據：第 1 節 5A-ART1～ART4 列；`docs/art/敵人外觀.md`（全文，第 3 節與「第 4 段補充」為主規格）、`docs/art/sample/enemyArt.js`／`enemies.html`／`storyDoll.js`、`docs/art/enemies.png`；`docs/美術PM交接.md` 的重要視覺決定（外光只代表頭目）。美術 PM 的代決（`美術PM交接.md` 第 6 節）未經使用者確認，照代決先做；改名、改配色只動資料。完成報告：`Phase5A-ART報告.md`。
+
+### 42.1 目標
+
+異形敵人（野獸、熔岩獸、源晶造物、傀儡、石靈、召喚物）用新的 C 畫風異形畫法（身形 × 材質 × 元素 × 大小 × 特徵）；精英有金環＋金菱形＋詞綴小特效、頭目有外光＋金環；修士用紙娃娃新部件；所有大世界敵人寫好外觀資料。不認得的值一律退回、不出錯，資料和前端誰先上線都可以。
+
+### 42.2 決策影響盤點（既有功能）
+
+| 既有功能 | 影響 | 處理 |
+|---|---|---|
+| 戰鬥視圖 `UnitView`（引擎 `trpg.engine.view`） | 要帶出異形外觀、詞綴 | **不改引擎**：外觀經既有的 `UnitView.doll_look`（型別是內容層的 `DollLook`）帶出；`DollLook` 新增 `creature`、`affixes` 等選填欄位，引擎照原樣複製（`lifecycle.py` 的 `doll=template.doll`） |
+| 規則包雜湊、戰鬥紀錄 | `DollLook` 多了有預設值的欄位 | 依 `戰鬥紀錄格式變更.md` 1.2：不升 `LOG_FORMAT`；舊紀錄的規則包雜湊會不符（照現行策略被拒絕）。新錄的紀錄照常重播（交件前跑 swamp 種子 7） |
+| 範本 YAML 的 `doll` | 異形寫在 `doll.creature`（不是範本頂層 `creature`） | `敵人外觀.md` 第 3 節寫「單位範本可帶 `creature`」；為了不改引擎，放在 `doll` 底下，`doll.skin` 改成選填（預設 `#f1c9a5`）。寫進報告待 PM 確認 |
+| 精英詞綴 `apply_affix` | 精英 ID 是 `<範本>_<詞綴>`，前端看不出詞綴 | `apply_affix` 把詞綴的外觀 id（`EliteAffixDef.look`，省略＝詞綴 ID）加進 `doll.affixes`；範本沒有 `doll` 時不加（前端仍依 `elite` 標籤畫金環） |
+| 元素變體 `apply_variant` | 變體沿用 base 的外觀，雷符師等配色不同 | `EnemyVariantDef` 新增選填 `doll`：有就整個換掉，沒有沿用 base（`theme` 不變，仍是純顯示標記） |
+| 召喚物外觀 `summon_looks.yaml` | 召喚物也要能用異形畫法 | 表的一列可帶 `creature`；載入時寫進召喚物範本的 `doll.creature`（範本本身有 `doll` 時不覆寫）。前端有 `doll_look.creature` 時優先用異形畫法，否則照舊走 `summon_look` |
+| 紙娃娃（主角、盜賊、隊友、傭兵、影子） | 新部件只在資料有寫時才畫 | 舊資料不變；`DollLook` 新欄位全部選填。主角、裝備外觀（`dollGear`）不受影響 |
+| 頭頂狀態列 | 3U-2b 起狀態列在腳邊 HP 條上方，不在頭頂 | 不需要依 `top × size` 避開；異形的大貼圖只改畫布，不改狀態列位置 |
+| 前端測試夾具 `unit_dolls.json`、OpenAPI、`schema.d.ts` | `DollLook` 欄位變了 | 重產（`scripts/export_openapi.py`、`gen:api`、夾具匯出腳本） |
+| 浮動卡（開發PM交接 6.5.1） | 本段不新增彈出 UI | 不適用；排版煙霧檢查 `__layoutSmoke.scan()` 照跑 |
+| 盜賊三套配色（`enemy-dolls.html`） | 同一批盜賊範本在 roguelite、雲嶺、荒原共用 | 本段不換（要區域配色得有區域範本或依區域換色的機制）；列入待 PM 決定 |
+
+### 42.3 資料格式（`trpg.content.battle`）
+
+```yaml
+# 異形
+doll: {rarity: legendary, creature: {body: wisp, material: crystal, element: fire, size: huge, traits: [core], status_traits: {molten_shell: [crust]}}}
+# 精英（套詞綴後自動加）
+doll: {..., affixes: [hardshell]}
+# 修士（新部件）
+doll: {skin: '#d9a47a', hair: bun, hair_color: '#2a2a30', main_kind: whisk,
+       gear: {body: {kind: robe, material: cloth, color: '#4f8a6a', trim: '#dfe4e2', apron: '#e8dcc0'}, back: {kind: gourd, material: wood}}}
+```
+
+- `CreatureLook`：`body`、`variant`、`material`、`element`、`size`（ID 格式字串，**值不檢查**，前端不認得就退回）、`tint`（`#rrggbb`）、`traits`（ID 清單，最多 12）、`status_traits`（狀態 ID → 特徵清單）。
+- `DollLook` 新增：`creature`、`affixes`（精英詞綴的外觀 id）、`hair` 加 `bun`、`bun_band`、`beard`、`build`（`stout`／`tall`）、`main_kind`（主手造型覆寫：`whisk` 拂塵、`talisman` 符紙、`puppet_cross` 傀儡線）、`main_tassel`（劍穗色）；`gear` 欄位加 `neck`、`back`、`waist`（只給敵人範本的外觀格，不是裝備格）；`DollGear` 加 `form`、`trim`、`apron`。`skin` 改選填。
+- `EliteAffixDef.look`、`EnemyVariantDef.doll`、`summon_looks.yaml` 的 `creature`：見 42.2。
+
+### 42.4 前端
+
+1. **ART1 異形畫法**（`inkCreature.ts`）：移植 `enemyArt.js` 的 14 種身形（含 `flyer` 的 `bird`／`bat`、`crawler` 的 `beetle`／`spider`）、6 種材質（色票、裂縫、切面、刻符、木紋、背上小物）、特徵（含 `crust`）、大小（`tiny` 0.62～`huge` 1.6）。不認得：body → `ooze`、material → `fur`、element → 無、size → 1、trait → 略過。畫布 96×96、腳底在下方 12px；朝西鏡像，正面背面沿用側面。`status_traits`：單位身上有該狀態時才畫那些特徵（灰燼之心的熔殼，第 2 階段狀態移除就消失）。全部用 `inkStyle.ts` 的確定性墨線，禁止 `Math.random()`。
+2. **ART2 精英與頭目記號**：`elite` 標籤 → 陣營環外加金環（墨線 2.2px＋`#ffbf3a` 1.2px）＋環前方金菱形、小人 ×1.15；頭目（`rarity`）→ 身體外光（同 `renderFigureCanvas`）＋金環。詞綴特效照 `敵人外觀.md` 1.2：異形畫在異形貼圖裡；人形另疊一張詞綴貼圖。`mirror` 錯開分身 35%、`mist_hidden` 本體 75%、`linked` 由 `BattleRenderer` 畫到相鄰同陣營單位的青色虛線。詞綴 id 同時認得內容的詞綴 ID（`regenerating`、`mist_veiled`、`heart_linked`、`hard_shelled`）與美術 id。
+3. **ART3 修士新部件**：照 `storyDoll.js` 移植髮髻、赤膊、念珠、圍裙、背物（藥葫蘆、木偶箱）、腰掛黃符、白紗面罩、白羽披肩、劍穗、拂塵／符紙／傀儡線（11 項）；不認得的 kind 不畫。
+4. 外觀優先順序：形態 ＞ `doll_look.creature`（含召喚物）＞ 召喚物 `summon_look` ＞ 紙娃娃。
+
+### 42.5 ART4 內容資料
+
+- 異形：照 `敵人外觀.md` 第 3 節「第 4 段補充」的單位 ID 對照表（荒原、碎晶之主、源晶柱、晶傀儡、熔晶魅、殼縫餘燼蜥＝餘燼蜥同款）與第 2 節（雲嶺野獸、霧魅、碎晶傀儡、陣眼石靈）。頭目寫 `rarity: legendary`。
+- 修士：照 `enemies.html` 的 `MONKS`（色票：青灰 `#8a9aa0`、青 `#5f8f8a`、月白 `#dfe4e2`、墨灰 `#3c4248`、朱紅 `#c0392b`、竹青 `#4f8a6a`）；三個修士變體（雷符師、冰鶴使、水煉丹師）寫變體 `doll`；荒原的雷殼甲蟲、焦石背熊寫變體 `doll`（換 `element`）。
+- 召喚物：餘燼幼蜥 `{body: lizard, material: magma, size: tiny}`。
+- 詞綴：`enemies.yaml` 的六個詞綴寫 `look`（`regen`、`mist_hidden`、`linked`、`berserk`、`blazing`、`hardshell`）。
+
+### 42.6 測試
+
+- `tests/content/test_enemy_looks.py`：對照表每個單位的 `creature` 值；schema（不認得的值照樣載入、格式錯誤擋下）；`apply_affix` 加詞綴外觀、沒有 `doll` 時不加；變體 `doll` 覆寫；召喚物 `creature` 寫進範本。
+- vitest：每種 body × material × size 畫得出來、不認得的值不丟錯（全組合自測）；`status_traits` 有狀態才畫殼、移除後消失（貼圖鍵與繪製呼叫都看）；精英金環／菱形與 ×1.15、頭目外光只在有 `rarity` 時；召喚物有 `creature` 時優先；修士新部件畫得出來、不認得不畫。
+
+### 42.7 驗收
+
+- 交件前：ruff check、ruff format --check、mypy、lint-imports、`tests/content`、`tests/api`、`tests/narrative`、vitest、build、swamp 種子 7 重播。
+- 瀏覽器（8260 埠，800×600 與 1600×900）：雲嶺一般遭遇、荒原遭遇、灰燼之心第 1→2 階段殼消失、碎晶之主、霧鎖真人；對照 `docs/art/enemies.png`；`__layoutSmoke.scan()` 回空清單。
+
+### 42.8 不做的事
+
+- 頭目專屬畫法（灰燼之心「嵌在甲蟲殼裡」、碎晶之主「無數碎片的人形」，美術 PM 之後另畫）；盜賊區域配色；敵人種族外觀（`fromDollLook` 接 `race.look`，等有種族敵人）；異形倒地姿勢（倒地照舊去色＋半透明）。
+
+### 42.9 代決（實作者照最保守的預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| ART-1 | 異形資料放哪 | `doll.creature`（不改引擎）；`敵人外觀.md` 寫的是範本頂層 `creature` |
+| ART-2 | 精英詞綴怎麼帶到前端 | `apply_affix` 寫 `doll.affixes`（外觀 id 由 `EliteAffixDef.look` 決定） |
+| ART-3 | 青霧執事 | 本身是精英、帶「再生的」同款技能（`skill_steady_breath`），照樣張畫 `regen` |
+| ART-4 | 灰燼犬 `ash_hound` | 對照表說「目前沒有單位」，但 5F-5a 已有；照第 2 節寫 `hound`＋`magma` |
+| ART-5 | 霧中劍客 `sect_mist_swordsman`（不在美術名單） | 月白袍＋青邊、長劍（同劍陣弟子但沒有劍穗） |
+| ART-6 | 霧鎖真人的雙手 | 主手拂塵（`main_kind: whisk`）、副手長劍（副手格加認 `sword`） |
+| ART-7 | 道童杖頭綠光 | 杖頭光色沿用現有畫法（沒有新增欄位） |
+
+## 43. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

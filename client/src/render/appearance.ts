@@ -18,11 +18,17 @@ export interface GearItem {
   hilt?: string;
   /** 形制（同一種 `kind` 的不同畫法，例如杖的 `scepter` 權杖、`totem` 圖騰杖）；不認得時畫預設形制。 */
   form?: string;
+  /** 圍裙色（Phase 5A-ART3；袍子前面一片，煉丹師）。 */
+  apron?: string;
+  /** 劍穗色（Phase 5A-ART3；劍陣弟子）。 */
+  tassel?: string;
 }
 
 export interface Look {
   skin: string;
-  hair?: "short" | "long" | "none";
+  hair?: "short" | "long" | "none" | "bun";
+  /** 髮髻的髮帶色（Phase 5A-ART3；預設朱紅）。 */
+  bunBand?: string;
   hairColor?: string;
   pants?: string;
   trim?: string;
@@ -51,7 +57,8 @@ export interface Look {
   spines?: boolean;
 }
 
-export type GearSlot = "head" | "body" | "hands" | "feet" | "cloak" | "main_hand" | "off_hand";
+/** `neck`／`back`／`waist`（念珠、背物、腰掛，Phase 5A-ART3）只給敵人範本用的外觀格，不是裝備格。 */
+export type GearSlot = "head" | "body" | "hands" | "feet" | "cloak" | "main_hand" | "off_hand" | "neck" | "back" | "waist";
 
 export type Gear = Partial<Record<GearSlot, GearItem>>;
 
@@ -65,13 +72,17 @@ export interface DollSpec {
 
 /** 每個欄位認得的 `kind`；不在清單內的該欄位不畫。 */
 export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
-  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm"],
-  body: ["shirt", "leather", "mail", "plate", "robe", "ribs", "coat"],
+  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm", "veil"],
+  body: ["shirt", "leather", "mail", "plate", "robe", "ribs", "coat", "bare"],
   hands: ["gloves", "gauntlets", "bracers"],
   feet: ["boots", "greaves", "shoes", "iron_boots"],
   cloak: ["cape"],
-  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip"],
-  off_hand: ["shield_round", "shield_kite", "tome", "orb"],
+  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip", "whisk", "talisman", "puppet_cross"],
+  // 副手的 sword、dagger 只來自範本外觀（霧鎖真人：主手拂塵、副手長劍）；成對武器另由武器外觀決定
+  off_hand: ["shield_round", "shield_kite", "tome", "orb", "sword", "dagger"],
+  neck: ["beads"],
+  back: ["gourd", "puppet_box"],
+  waist: ["talismans"],
 };
 
 export const RARITY_GLOW: Readonly<Record<string, string>> = { epic: "#b06cff", legendary: "#ffbf3a" };
@@ -120,25 +131,47 @@ export interface Appearance extends DollSpec {
   mainStyle?: Partial<GearItem>;
 }
 
-const GEAR_SLOTS: readonly GearSlot[] = ["head", "body", "hands", "feet", "cloak", "off_hand"];
+const GEAR_SLOTS: readonly GearSlot[] = ["head", "body", "hands", "feet", "cloak", "off_hand", "neck", "back", "waist"];
+
+interface DollGearLook {
+  kind: string;
+  material: string;
+  color?: string | null;
+  form?: string | null;
+  trim?: string | null;
+  apron?: string | null;
+}
 
 /** 後端的單位外觀 → 內部外觀；欄位值是可選的（`null` 與缺漏同義）。 */
 function fromDollLook(d: DollLook): Appearance {
-  const look: Look = { skin: d.skin };
+  const look: Look = { skin: d.skin ?? SKIN[0] };
   if (d.hair != null) look.hair = d.hair;
   if (d.hair_color != null) look.hairColor = d.hair_color;
   if (d.pants != null) look.pants = d.pants;
   if (d.trim != null) look.trim = d.trim;
   if (d.eyes != null) look.eyes = d.eyes;
   if (d.skull) look.skull = true;
+  if (d.bun_band != null) look.bunBand = d.bun_band;
+  if (d.beard === true) look.beard = true;
+  if (d.build != null) look.build = d.build;
   const gear: Gear = {};
   for (const slot of GEAR_SLOTS) {
-    const g = d.gear?.[slot];
-    if (g !== undefined) gear[slot] = { kind: g.kind, material: g.material, ...(g.color != null ? { color: g.color } : {}) };
+    const g = (d.gear as Partial<Record<GearSlot, DollGearLook>> | undefined)?.[slot];
+    if (g === undefined) continue;
+    gear[slot] = {
+      kind: g.kind,
+      material: g.material,
+      ...(g.color != null ? { color: g.color } : {}),
+      ...(g.form != null ? { form: g.form } : {}),
+      ...(g.trim != null ? { trim: g.trim } : {}),
+      ...(g.apron != null ? { apron: g.apron } : {}),
+    };
   }
   const mainStyle: Partial<GearItem> = {};
   if (d.main_material != null) mainStyle.material = d.main_material;
   if (d.main_color != null) mainStyle.color = d.main_color;
+  if (d.main_kind != null) mainStyle.kind = d.main_kind; // 5A-ART3：拂塵、符紙、傀儡線
+  if (d.main_tassel != null) mainStyle.tassel = d.main_tassel;
   return { look, gear, ...(d.rarity != null ? { rarity: d.rarity } : {}), ...(Object.keys(mainStyle).length > 0 ? { mainStyle } : {}) };
 }
 
@@ -197,7 +230,7 @@ export function resolveDoll(input: DollInput): DollSpec {
     ...app.mainStyle,
   };
   const gear: Gear = {};
-  for (const slot of ["head", "body", "hands", "feet", "cloak", "off_hand"] as const) {
+  for (const slot of ["head", "body", "hands", "feet", "cloak", "off_hand", "neck", "back", "waist"] as const) {
     const item = known(slot, app.gear[slot]);
     if (item !== undefined) gear[slot] = item;
   }

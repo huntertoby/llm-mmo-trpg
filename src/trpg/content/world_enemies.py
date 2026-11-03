@@ -16,7 +16,14 @@ from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
-from trpg.content.battle import ID_PATTERN, OpeningStatus, ReactionRule, UnitTemplate, WeaponDef
+from trpg.content.battle import (
+    ID_PATTERN,
+    DollLook,
+    OpeningStatus,
+    ReactionRule,
+    UnitTemplate,
+    WeaponDef,
+)
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import SkillDef, held_gear, skill_slot_problems, weapon_problem
@@ -60,6 +67,9 @@ class EnemyVariantDef(ContentModel):
     """換的武器；``None``＝沿用 base 的武器。"""
     skill_swaps: dict[str, str] = Field(default_factory=dict)
     """舊技能 → 新技能（鍵必須在 base 的 ``skills`` 裡）。"""
+    doll: DollLook | None = None
+    """變體自己的外觀（Phase 5A-ART4；雷符師換墨灰袍、雷殼甲蟲換元素）；``None``＝沿用 base。
+    純顯示資料。"""
 
     @field_validator("skill_swaps")
     @classmethod
@@ -98,6 +108,9 @@ class EliteAffixDef(ContentModel):
     weapon_classes: tuple[WeaponClass, ...] = ()
     """限定的武器大類；空＝不限。"""
     description_zh: str = ""
+    look: str | None = Field(default=None, pattern=ID_PATTERN)
+    """精英詞綴的外觀 id（Phase 5A-ART2，``docs/art/敵人外觀.md`` 1.2 的特效：``regen``、
+    ``mist_hidden``…）；``None``＝用詞綴 ID。前端不認得時只畫精英金環。"""
 
     @field_validator("add_skills")
     @classmethod
@@ -170,6 +183,7 @@ def apply_variant(base: UnitTemplate, variant: EnemyVariantDef) -> UnitTemplate:
             "weapon": variant.weapon or base.weapon,
             "skills": skills,
             "reactions": reactions,
+            "doll": variant.doll if variant.doll is not None else base.doll,
         }
     )
 
@@ -181,8 +195,16 @@ def apply_affix(
     HP × ``hp_permille``（捨去，至少 1）、加技能、反應規則與開場狀態。不檢查能不能套（見
     :meth:`EnemyCatalog.affix_problem`）。
 
-    本身已是精英的範本（Phase 5B-4c：資料指定的懸賞詞綴）HP 不再乘（代決 5B4c-3）。"""
+    本身已是精英的範本（Phase 5B-4c：資料指定的懸賞詞綴）HP 不再乘（代決 5B4c-3）。
+
+    Phase 5A-ART2：範本有外觀（``doll``）時，把詞綴的外觀 id 加進 ``doll.affixes``（純顯示；
+    沒有外觀的範本不加，前端依 ``elite`` 標籤只畫金環）。"""
     reactions = template.reactions
+    doll = template.doll
+    if doll is not None:
+        look = affix.look or affix.id
+        if look not in doll.affixes:
+            doll = doll.model_copy(update={"affixes": (*doll.affixes, look)})
     already_elite = ELITE_TAG in template.tags
     if affix.add_reactions:
         base_rules = default_rules if reactions is None else reactions
@@ -200,6 +222,7 @@ def apply_affix(
             "reactions": reactions,
             "opening_statuses": (*template.opening_statuses, *affix.add_opening_statuses),
             "tags": tuple(sorted({*template.tags, ELITE_TAG})),
+            "doll": doll,
         }
     )
 

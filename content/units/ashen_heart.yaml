@@ -1,6 +1,6 @@
 # 灰燼荒原區域 Boss（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.3、09 9.6.8 #86）：灰燼之心，熔心坑（Boss 地圖 molten_heart_pit）。
 # 一塊會呼吸的源晶核心殘片，嵌在熔岩甲蟲堆成的殼裡；不移動。主線第 2 章結尾、等級 9；隊伍主角＋2（可帶影子，#87）。
-# 數值是初值（模擬見 docs/phases/Phase5F-5a報告.md）；外觀（doll）是美術的事，這裡不寫。
+# 數值是初值（模擬見 docs/phases/Phase5F-5a報告.md）；外觀（doll）見檔尾（5A-ART4）。
 # 階段（引擎資料化，trpg.engine.boss_phases）：
 #   1 殼（100～60%）：開場狀態「熔殼」（受到的傷害 −40%；被冰打到就碎，元素沒有水，代決 5F5a-6）；「熔岩噴發」延遲段，下回合在身邊一圈造火地。
 #   2 呼吸（≤ 60%）：殼裂開（移除熔殼）；「熔心吸氣」把 2 格內的人拉近並小火傷、「熔心吐息」身邊第 2 圈小火傷＋燃燒（需要治療或護盾的時刻）；召喚 2 隻餘燼蜥。
@@ -45,3 +45,5 @@ phases:
       - {at: [8, 5], surface: fire}
       - {at: [5, 2], surface: fire}
       - {at: [5, 8], surface: fire}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {rarity: legendary, creature: {body: wisp, material: crystal, element: fire, size: huge, traits: [core], status_traits: {molten_shell: [crust]}}}
