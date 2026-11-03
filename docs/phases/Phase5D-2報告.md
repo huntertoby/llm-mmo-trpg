@@ -50,6 +50,12 @@
 7. **脫下裝備**、分解（20.1「只能分解或用掉」）不在本段（分解在 5D-3）。
 8. 盜賊、山豹、石背熊、多數修士 18.2.4 沒列材料 → 掉通用料；要不要給盜賊專屬材料。
 
-## 5. 檢查
+## 5. 檢查（最後一次合併 main〔含 5B-4e〕之後）
 
-（見第 6 節，交件前填入。）
+- `ruff check .`、`ruff format --check .`、`mypy`（1102 檔）、`lint-imports`（9 契約）通過。
+- `tests/world tests/api tests/content`（`-n 8`）：2886 通過。
+- vitest 130 檔 1233 通過；`npm run build`（含 `tsc --noEmit`）通過。
+- swamp 種子 7 重播：88 個動作、313 個事件，最終狀態一致。
+- OpenAPI 重產（`scripts/export_openapi.py` → `pnpm gen:api`）；合併 main 後再產一次沒有差異。
+- 沒做瀏覽器實測（規格 27.7 只列自動檢查；前端改動是一行掉落與背包列的「裝上」按鈕，vitest 有靜態輸出測試）。
+- 合併 main 時 `tests/api/test_world_economy_api.py` 衝突（main 改了價格與金幣數字）：取 main 的數字，保留本段「忽略撿到的材料、裝備」的寫法。
