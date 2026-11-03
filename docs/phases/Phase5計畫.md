@@ -164,6 +164,7 @@
 | 5F-4 | 影子循環賽（9.7）：報名（每帳號 1 角色、第 13 天截止）、拉到等級上限、3 張地圖 × 交換先後手 × 多種子、勝場統計、每場可重播 | 5C-2 | 1.5 h | 可與 5F-3 平行 |
 | 5F-4b | 5F-4 收尾（玩法 PM 2026-11-03 代決）：先試「開場 HP ×2＋第 1 輪雙方不能造成傷害（只能移動、上增益、佈陣）」，目標平均 6 輪以上、先後手勝率各 40～60%；不達標再試拉開站位，最後才用先手少 1 AP（寫腳本出摘要表，不手動反覆試）；同分照 6.8 BAL-12a：己方剩餘 HP 比例合計 → 總輪數少者勝 → 平分獎金；最終排名（名次、名字、build 名）寫進編年史（紀念類），快照照清；第 14 天 6 點換日若還沒有人首殺賽季 Boss 就自動開跑，管理者手動留著備用；報名時可免費重新配點（#32），不配照自動；重播結束面板改中性「某某 勝」。實作細節保守代決：開跑後規則改了就整個賽程重跑（不跨 ruleset 重播）；場次列表分頁 | 5F-4 | 1 h | 否 |
 | 5F-ART1 | 霧鎖千山大十字圖示（美術 PM，`docs/art/大十字圖示.md`，分支 `claude/art-pm-8f4e6d` 753c517d，連 4df27344 熔核一起併）：arm ≥ 2 的十字 `grid()` 畫 5×5（cs 11、gap 2、總寬 63）、亮 9 格、中心星形 0.7 倍；segments 帶 arm 到 motif／grid()、shapeTile id 加 arm、不合法值當 1。**併做霧影外觀**（`docs/art/霧影外觀.md`，bc168013）：人形新款式 `mist_shade`（召喚者紙娃娃、月白 #dfe4e2、不透明度 0.55、不發光、腳底往上 14 單位漸隱、不畫影子、不帶本體金環金菱形詞綴粒子），`summon_mist_shade` 召喚外觀寫 `variant: mist_shade`；玩家殘影不變。待併 commit：4df27344、753c517d、bc168013 | 5F-2b、5F-1b | 0.5 h | 可平行 |
+| 5F-3b | 5F-3 收尾（玩法 PM 2026-11-03 代決）：技能 `enemy_only` 標記，生成器／候選／閃現／工坊都排除（霧鎖千山與 5F-3 的 6 招敵人技能都標上；夾具恢復成不含它們）；碎晶之主用 380／60，目標整體 60～70%、10～15 輪、**每個 build 至少 40%**：先查 striker 20%、trapper 40% 輸在哪個階段、哪個機制，再對那個機制調 Boss（#87：調 Boss 不調 build），原因寫報告；解鎖對齊：封印集滿後「最早第 8 天」且「公告滿 24 小時」之後的第一個 6 點；「碎晶的終結者」做成帳號層級紀念稱號（季末保留、評分榜照顯示） | 5F-3 | 1.5 h | 否 |
 | 5F-5 | 季末重置（9.7、#91：數值類全清、紀念類保留）與灰燼荒原內容接入（Q9，內容到位後）。**分類代決（玩法 PM 2026-11-03，改 `server/season_policy.py`）**：配方表 recipe／hidden／base／steps／listed 清掉，首位發現者紀錄（誰、配方名、哪一季）保留；`elite_kills`、`finished_skeletons` 清掉，但季末先寫成編年史文字紀錄（例「第一季：擊倒北坡狼王、解開霜音的謎」）並保留；名字與外觀保留、下季建角色可沿用，等級／技能／裝備清；地點留言清掉（首殺足跡已在首殺紀錄與編年史保留）。荒原內容一併接：餘燼集鐵匠爐叔與附魔台（8.26.1 每鎮成對）、20.4 兩個隱藏配方提示、餘燼集商店 | 5F-3 | 1.5 h | 否 |
 
 > 合計 25 段，約 33 小時 agent 工時。
@@ -4281,7 +4282,24 @@ world_events:
 - 灰燼荒原地點、灰燼之心、主線第 2～3 章、事件 #2 的資料（5F-5）；季末重置流程（5F-5）；影子循環賽（5F-4）。
 - 首殺獎金發放（現實獎勵，使用者處理）；稱號系統（只記在評分榜）；Boss 立繪、柱子外觀與新美術。
 
+## 38. 5F-4b 詳細規格：影子循環賽收尾（本段開工時由實作者補上，依玩法 PM 2026-11-03 代決）
 
-## 38. 之後各段規格
+> 依據：本檔第 1 節 5F-4b 列、`Phase5F-4報告.md` 待 PM 決定 1～8、09 9.6.10（5F-4 代決初值）。完成報告：`Phase5F-4b報告.md`。
+
+| 項目 | 規則 | 位置 |
+|---|---|---|
+| 平衡 | 開場最大 HP ×2（`league.hp_permille: 2000`）＋雙方開場掛 `league_truce`（休戰：不受、也不造成任何傷害，含召喚物；`expires: round_end`，第 1 輪結束時移除）。只套在循環賽（`trpg.world.league.league_unit`）。候選表用 `scripts/league_balance.py` 量（每組 ≥ 40 場） | `content/world/season.yaml`、`content/statuses.yaml`、`StatusDef.truce`、`expires: round_end`（`engine/turns.py`、`effects/handlers.py`） |
+| 同分 | 勝場多 → 所有場次己方剩餘 HP 比例（‰）合計多 → 總輪數少；三項都同＝同名次、平分獎金 | `server/league.py` `standings` |
+| 編年史 | 全部跑完時寫 `<世界>/chronicle/league.json`（名次、名字、build 名〔武器・種族〕＋同分比較數字）；紀念類；凍結的報名照樣數值類 | `server/chronicle.py`、`season_policy.py` |
+| 自動開跑 | 第 `signup_close_day + 1` 天刷新後、這一季沒有 `season_boss` 首殺紀錄時，在世界動作與看循環賽畫面時自動開跑（被動換日）；管理者 `POST /api/world/league/run` 留著 | `api/world.py` `auto_start_league` |
+| 重新配點 | `league_enter.allocation`：拉到上限後全部可配的點（已分配＋未分配＋升級多出的）總和必須剛好；`None`＝自動配點。不改角色 | `world/league.py`、`league_actions.py`、`LeagueEntry.allocation`；前端重用 `AttributeAllocator` |
+| 重播結束面板 | 「某某 勝」／「和局」（`LeagueReplayResponse.outcome_zh` → `EndPanel` 的 `heading`） | `api/league_view.py`、`client/src/ui/EndPanel.tsx` |
+| 規則改了 | 賽程記規則鍵（`LOG_FORMAT`＋規則包雜湊＋循環賽規則雜湊）；不同＝「規則已變、不能重播」、不接續；再開跑＝舊賽程與紀錄搬 `league/archive/`、同一份報名整個重跑 | `server/league.py` |
+| 分頁 | `GET …/league?page=&page_size=`（預設 20、最多 100；自己的場次在前） | `api/routes/world.py`、`LeaguePanel.tsx` |
+
+存檔：新欄位都有預設值，不升版；`LOG_FORMAT` 不變（新的 `StatusDef` 欄位有預設值、舊內容結算不變，照 `戰鬥紀錄格式變更.md` 1.2；規則包雜湊變了，5F-4 的舊循環賽紀錄由規則鍵標示不能重播）。
+
+
+## 39. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

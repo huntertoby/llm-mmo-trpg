@@ -24,11 +24,12 @@ from trpg.content.skills import SkillDef
 from trpg.content.world_season import LeagueRules
 from trpg.engine.ai.commanded import CommandedAI
 from trpg.engine.ai.utility import UtilityAI
+from trpg.engine.gear.core import build_gear, geared_template
 from trpg.engine.runner import BattleRun, run_battle
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup, with_phase_assets
 from trpg.engine.state import BattleState
 from trpg.roguelite.offers import at_run_tier
-from trpg.roguelite.start import default_allocation, primary_attribute
+from trpg.roguelite.start import allocation_problems, default_allocation, primary_attribute
 from trpg.shared.rng import fnv1a64
 from trpg.shared.types import Attribute, Team
 from trpg.world.calendar import season_day
@@ -47,12 +48,17 @@ from trpg.world.state import CharacterState, LeagueEntry, ShadowSnapshot, WorldS
 __all__ = [
     "LeagueMatchSpec",
     "LeagueSpawn",
+    "allocation_problem",
     "enter_league",
     "entry_spawn",
+    "league_auto_allocation",
+    "league_base_attributes",
+    "league_point_pool",
     "league_rules",
     "league_schedule",
     "league_spawns",
     "league_step",
+    "league_unit",
     "leveled_snapshot",
     "match_loser",
     "match_seed",
@@ -63,6 +69,8 @@ __all__ = [
     "signup_problem",
     "withdraw_league",
 ]
+
+PERMILLE = 1000
 
 # ---------------------------------------------------------------------------
 # 報名
@@ -127,12 +135,20 @@ def enter_league(
     taken = next((e for e in world.league_entries if e.character_id == char.character_id), None)
     if taken is not None and taken.account != actor:
         raise WorldActionError("這個角色已經由別的帳號報名")
+    snapshot = shadow_snapshot(char, now)
+    allocation = None
+    if action.allocation is not None:
+        bad = allocation_problem(library, snapshot, action.allocation)
+        if bad is not None:
+            raise WorldActionError(f"循環賽的配點不合法：{bad}")
+        allocation = {a: action.allocation[a] for a in Attribute if action.allocation.get(a)}
     entry = LeagueEntry(
         account=actor,
         character_id=char.character_id,
         name=char.hero.name_zh,
-        snapshot=shadow_snapshot(char, now),
+        snapshot=snapshot,
         ai=action.ai,
+        allocation=allocation,
         entered_at=now if old is None else old.entered_at,
     )
     kept = [e for e in world.league_entries if e.account != actor]
@@ -192,8 +208,54 @@ def _skill_def(library: ContentLibrary, snapshot: ShadowSnapshot, skill_id: str)
     return found
 
 
-def leveled_snapshot(library: ContentLibrary, snapshot: ShadowSnapshot) -> ShadowSnapshot:
-    """拉到等級上限的快照（見模組說明；代決 5F4-2、5F4-3）。已在上限時只重配技能（相同時原樣）。"""
+def _new_points(library: ContentLibrary, snapshot: ShadowSnapshot) -> int:
+    """拉到上限時新增的屬性點（升到上限多出的＋快照未分配的）。"""
+    level = max(rules_of(library).hero_growth.level_cap, snapshot.level)
+    per_level = library.roguelite.attribute_points_per_level
+    return snapshot.attribute_points + per_level * (level - snapshot.level)
+
+
+def league_point_pool(library: ContentLibrary, snapshot: ShadowSnapshot) -> int:
+    """（5F-4b，#32）報名時可以重新分配的屬性點：已分配的＋未分配的＋升到上限多出的。"""
+    return sum(snapshot.attribute_spent.values()) + _new_points(library, snapshot)
+
+
+def league_base_attributes(snapshot: ShadowSnapshot) -> dict[Attribute, int]:
+    """重新分配前的基礎屬性（快照的屬性扣掉已分配的點）。"""
+    hero = snapshot.hero
+    return {a: hero.attributes.get(a, 0) - snapshot.attribute_spent.get(a, 0) for a in Attribute}
+
+
+def league_auto_allocation(
+    library: ContentLibrary, snapshot: ShadowSnapshot
+) -> dict[Attribute, int]:
+    """不自己配時的配點（相對 :func:`league_base_attributes`）：已分配的不動＋新增的點照開局自動
+    配點補到主屬性（代決 5F4-2）。"""
+    points = _new_points(library, snapshot)
+    hero = snapshot.hero
+    weapon = library.weapons[hero.weapon]
+    equipped = [_skill_def(library, snapshot, s) for s in hero.skills]
+    main = primary_attribute(equipped, weapon.scaling_attr)
+    added: Mapping[Attribute, int] = default_allocation(main, weapon, points) if points > 0 else {}
+    total = {a: snapshot.attribute_spent.get(a, 0) + added.get(a, 0) for a in Attribute}
+    return {a: v for a, v in total.items() if v}
+
+
+def allocation_problem(
+    library: ContentLibrary, snapshot: ShadowSnapshot, allocation: Mapping[Attribute, int]
+) -> str | None:
+    """報名的重新配點不合法的理由（中文）；合法時 ``None``。"""
+    problems = allocation_problems(allocation, league_point_pool(library, snapshot))
+    return "；".join(problems) if problems else None
+
+
+def leveled_snapshot(
+    library: ContentLibrary,
+    snapshot: ShadowSnapshot,
+    allocation: Mapping[Attribute, int] | None = None,
+) -> ShadowSnapshot:
+    """拉到等級上限的快照（見模組說明；代決 5F4-2、5F4-3）。已在上限時只重配技能（相同時原樣）。
+    ``allocation``（5F-4b，#32）：報名時的重新配點（全部可配的點）；``None``＝自動配點。"""
     cap = rules_of(library).hero_growth.level_cap
     level = max(cap, snapshot.level)
     tier = hero_tier(library, level)
@@ -206,20 +268,9 @@ def leveled_snapshot(library: ContentLibrary, snapshot: ShadowSnapshot) -> Shado
         rename[skill_id] = skill.id
         if library.skills.get(skill.id) != skill:
             defs[skill.id] = skill
-    # 新增的屬性點照開局自動配點補到主屬性（已分配的不動）
-    points = snapshot.attribute_points + library.roguelite.attribute_points_per_level * (
-        level - snapshot.level
-    )
-    weapon = library.weapons[hero.weapon]
-    equipped = [_skill_def(library, snapshot, s) for s in hero.skills]
-    main = primary_attribute(equipped, weapon.scaling_attr)
-    allocation: Mapping[Attribute, int] = (
-        default_allocation(main, weapon, points) if points > 0 else {}
-    )
-    attributes = {a: hero.attributes.get(a, 0) + allocation.get(a, 0) for a in Attribute}
-    spent = dict(snapshot.attribute_spent)
-    for attr, value in allocation.items():
-        spent[attr] = spent.get(attr, 0) + value
+    spent = league_auto_allocation(library, snapshot) if allocation is None else dict(allocation)
+    base = league_base_attributes(snapshot)
+    attributes = {a: base[a] + spent.get(a, 0) for a in Attribute}
     update: dict[str, object] = {
         "attributes": attributes,
         "skills": tuple(rename[s] for s in hero.skills),
@@ -313,7 +364,7 @@ type LeagueSpawn = tuple[UnitSpawn, tuple[SkillDef, ...]]
 def entry_spawn(library: ContentLibrary, entry: LeagueEntry) -> LeagueSpawn:
     """參賽者拉到等級上限後的出場設定（:func:`leveled_snapshot` ＋ 影子的 :func:`shadow_spawn`；
     AI 打法＝報名的打法，沒有＝快照的預設）。"""
-    leveled = leveled_snapshot(library, entry.snapshot)
+    leveled = leveled_snapshot(library, entry.snapshot, entry.allocation)
     return shadow_spawn(library, leveled, leveled.level, entry.ai)
 
 
@@ -345,13 +396,33 @@ def match_setup(
         update={
             "ruleset": library.ruleset.with_skills(extra[k] for k in sorted(extra)),
             "units": (
-                ally.model_copy(update={"team": Team.ALLY}),
-                enemy.model_copy(update={"team": Team.ENEMY}),
+                league_unit(library, rules, ally, Team.ALLY, first=True),
+                league_unit(library, rules, enemy, Team.ENEMY, first=False),
             ),
             "first_team": Team.ALLY,
         }
     )
     return with_phase_assets(library, setup)
+
+
+def league_unit(
+    library: ContentLibrary, rules: LeagueRules, spawn: UnitSpawn, team: Team, *, first: bool
+) -> UnitSpawn:
+    """循環賽的出場單位（5F-4b，只套在循環賽）：陣營、開場最大 HP 倍率（``hp_permille``；裝備與
+    體質算完之後的最大 HP 乘倍率，無條件捨去）、開場狀態（雙方的 ``opening_statuses``＋先手的
+    ``first_opening_statuses``，接在單位原有的開場狀態後面）。"""
+    update: dict[str, object] = {"team": team}
+    if rules.hp_permille != PERMILLE:
+        ruleset = library.ruleset
+        gear = build_gear(spawn.equipment, ruleset.equipment)
+        full = ruleset.core.template_max_hp(geared_template(spawn.template, gear, ruleset))
+        bonus = full * (rules.hp_permille - PERMILLE) // PERMILLE
+        template = spawn.template
+        update["template"] = template.model_copy(update={"max_hp": template.max_hp + bonus})
+    statuses = (*rules.opening_statuses, *(rules.first_opening_statuses if first else ()))
+    if statuses:
+        update["opening_statuses"] = (*spawn.opening_statuses, *statuses)
+    return spawn.model_copy(update=update)
 
 
 def play_match(library: ContentLibrary, setup: BattleSetup, seed: int) -> BattleRun:

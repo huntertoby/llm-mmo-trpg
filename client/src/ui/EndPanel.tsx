@@ -9,24 +9,27 @@ interface Props {
   onRestart(): void;
   /** 主按鈕文字；省略為「再來一場」。 */
   restartLabel?: string;
+  /** 取代「勝利！／敗北……」的中性勝負文字（循環賽重播「某某 勝」，5F-4b）；省略照我方視角。 */
+  heading?: string;
 }
 
-export function outcomeText(response: BattleResponse): string {
+export function outcomeText(response: BattleResponse, title?: string): string {
   if (response.awaiting === "stalled") return "戰鬥中止（自動推進超過上限）";
   const o = response.outcome;
-  if (o === null) return "戰鬥結束";
+  if (o === null) return title ?? "戰鬥結束";
   let head = "平手";
   if (o.winner === "ally") head = "勝利！";
   else if (o.winner === "enemy") head = "敗北……";
+  if (title !== undefined) head = title;
   const reason = o.end_reason === null ? "" : `（${END_REASONS[o.end_reason] ?? o.end_reason}）`;
   return `${head}${reason}・第 ${o.round} 輪`;
 }
 
-export function EndPanel({ response, onRestart, restartLabel = "再來一場" }: Props) {
+export function EndPanel({ response, onRestart, restartLabel = "再來一場", heading }: Props) {
   const detail = endDetail(response.outcome?.end_reason ?? null);
   return (
     <div className="panel end-panel">
-      <div className="end-title">{outcomeText(response)}</div>
+      <div className="end-title">{outcomeText(response, heading)}</div>
       {detail !== null && <div className="end-detail">{detail}</div>}
       <div className="end-buttons">
         <button type="button" className="primary" onClick={onRestart}>

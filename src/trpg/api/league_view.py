@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from trpg.api.league_schemas import (
+    LeagueAllocationView,
     LeagueEntryView,
     LeagueMatchView,
     LeagueStandingView,
@@ -17,16 +18,38 @@ from trpg.api.league_schemas import (
 )
 from trpg.api.world_party_view import ai_choice_views, ai_zh, shadow_role_zh
 from trpg.content.library import ContentLibrary
-from trpg.server.league import LeagueMatch, LeagueRecord, LeagueStanding, standings
+from trpg.content.world_season import LeagueRules
+from trpg.server.league import STALE_ZH, LeagueMatch, LeagueRecord, LeagueStanding, standings
 from trpg.world.actions import WorldEvent
 from trpg.world.calendar import season_day
 from trpg.world.common import rules_of
-from trpg.world.league import league_rules, matches_per_pair, signup_problem
+from trpg.world.league import (
+    league_auto_allocation,
+    league_base_attributes,
+    league_point_pool,
+    league_rules,
+    matches_per_pair,
+    signup_problem,
+)
 from trpg.world.league_actions import LeagueEnteredEvent, LeagueWithdrawnEvent
 from trpg.world.narration import location_name_for
+from trpg.world.shadows import shadow_snapshot
 from trpg.world.state import CharacterState, LeagueEntry, WorldState
 
-__all__ = ["league_event_line", "league_view", "match_title"]
+PERMILLE = 1000
+
+__all__ = [
+    "PAGE_SIZE",
+    "league_event_line",
+    "league_view",
+    "match_outcome_zh",
+    "match_title",
+    "result_zh",
+]
+
+PAGE_SIZE = 20
+"""場次列表每頁幾場（5F-4b）。"""
+STALE_NOTE_ZH = f"{STALE_ZH}：這份賽程是用舊規則跑的，管理者重新開跑時會用同一份報名整個重跑。"
 
 _STATUS_ZH: dict[LeagueStatus, str] = {
     "none": "這一季沒有影子循環賽",
@@ -104,19 +127,31 @@ def _standing_rows(
                 draws=0 if standing is None else standing.draws,
                 played=0 if standing is None else standing.played,
                 mine=acc == account,
+                hp_permille_total=0 if standing is None else standing.hp_permille_total,
+                rounds_total=0 if standing is None else standing.rounds_total,
+                tied=False if standing is None else standing.tied,
             )
         )
     return tuple(rows)
 
 
-def _result_zh(match: LeagueMatch, names: dict[str, str]) -> str:
+def result_zh(match: LeagueMatch, names: dict[str, str]) -> str:
+    """一場的結果文字（中性，5F-4b）：「某某 勝（N 輪）」「和局（N 輪）」。"""
     if match.status == "pending":
         return "尚未進行"
     if match.status == "error":
         return f"出錯：{match.error or '未知的錯誤'}"
     if match.winner is None:
         return f"和局（{match.rounds} 輪）"
-    return f"{names.get(match.winner, match.winner)}勝（{match.rounds} 輪）"
+    return f"{names.get(match.winner, match.winner)} 勝（{match.rounds} 輪）"
+
+
+def match_outcome_zh(record: LeagueRecord, match: LeagueMatch) -> str:
+    """重播結束面板的中性勝負文字（5F-4b）：「某某 勝」或「和局」（不從先手視角寫勝利／敗北）。"""
+    if match.winner is None:
+        return "和局"
+    names = {e.account: e.name for e in record.entries}
+    return f"{names.get(match.winner, match.winner)} 勝"
 
 
 def match_title(library: ContentLibrary, record: LeagueRecord, match: LeagueMatch) -> str:
@@ -129,8 +164,8 @@ def match_title(library: ContentLibrary, record: LeagueRecord, match: LeagueMatc
 
 
 def _match_rows(
-    library: ContentLibrary, record: LeagueRecord, account: str
-) -> tuple[LeagueMatchView, ...]:
+    library: ContentLibrary, record: LeagueRecord, account: str, *, stale: bool
+) -> list[LeagueMatchView]:
     names = {e.account: e.name for e in record.entries}
     rows = [
         LeagueMatchView(
@@ -140,14 +175,60 @@ def _match_rows(
             map_zh=_map_name(library, m.map),
             seed_index=m.seed_index,
             status=m.status,
-            result_zh=_result_zh(m, names),
+            result_zh=result_zh(m, names),
             mine=account in (m.a, m.b),
-            replayable=m.status == "done",
+            replayable=m.status == "done" and not stale,
+            replay_problem_zh=STALE_ZH if stale and m.status == "done" else None,
         )
         for m in record.matches
     ]
     rows.sort(key=lambda r: (not r.mine, r.id))
-    return tuple(rows)
+    return rows
+
+
+def _page(
+    rows: Sequence[LeagueMatchView], page: int, size: int
+) -> tuple[tuple[LeagueMatchView, ...], int, int]:
+    """（這一頁的場次, 第幾頁〔超過範圍時夾到最後一頁〕, 共幾頁）。"""
+    pages = max(1, -(-len(rows) // size))
+    current = min(max(1, page), pages)
+    start = (current - 1) * size
+    return tuple(rows[start : start + size]), current, pages
+
+
+def _allocation(
+    library: ContentLibrary, char: CharacterState, now: int
+) -> LeagueAllocationView | None:
+    """這個角色報名時可以重新配點的資料（以目前的 build 算，報名時存的就是這份快照）。"""
+    try:
+        snap = shadow_snapshot(char, now)
+        return LeagueAllocationView(
+            base={a.value: v for a, v in league_base_attributes(snap).items()},
+            points=league_point_pool(library, snap),
+            auto={a.value: v for a, v in league_auto_allocation(library, snap).items()},
+        )
+    except (KeyError, ValueError):  # 舊存檔的武器或技能不在內容庫：不給配點畫面
+        return None
+
+
+def _rules_zh(library: ContentLibrary, rules: LeagueRules | None, cap: int) -> str:
+    """一行規則說明（開場 HP 倍率、開場狀態照內容寫，5F-4b）。"""
+    extra: list[str] = []
+    if rules is not None and rules.hp_permille != PERMILLE:
+        extra.append(f"開場 HP ×{rules.hp_permille / PERMILLE:g}")
+    statuses = () if rules is None else (*rules.opening_statuses, *rules.first_opening_statuses)
+    both = () if rules is None else rules.opening_statuses
+    for status_id in dict.fromkeys(statuses):
+        found = library.ruleset.status_def(status_id)  # 載入時已檢查存在
+        who = "" if status_id in both else "先手"
+        extra.append(f"{who}開場「{found.name_zh}」：{found.description_zh}")
+    head = f"全員拉到 {cap} 級（報名時可以免費重新配點）、1 對 1、雙方都由 AI 操作。"
+    middle = "".join(f"{line}。" if not line.endswith("。") else line for line in extra)
+    tail = (
+        "每對組合在每張地圖用多個種子、交換先後手各打一場；勝場多的人排前面，同勝場比剩餘 HP "
+        "比例合計、再比總輪數（少的勝），都一樣就同名次。"
+    )
+    return head + middle + tail
 
 
 def _champion(record: LeagueRecord, table: Sequence[LeagueStanding]) -> str | None:
@@ -155,7 +236,8 @@ def _champion(record: LeagueRecord, table: Sequence[LeagueStanding]) -> str | No
         return None
     names = {e.account: e.name for e in record.entries}
     top = [names[r.account] for r in table if r.rank == 1]
-    return f"冠軍：{'、'.join(top)}"
+    tie = "（同分，平分獎金）" if len(top) > 1 else ""
+    return f"冠軍：{'、'.join(top)}{tie}"
 
 
 def league_view(
@@ -167,8 +249,12 @@ def league_view(
     *,
     account: str,
     running: bool = False,
+    stale: bool = False,
+    page: int = 1,
+    page_size: int = PAGE_SIZE,
 ) -> LeagueView:
-    """``GET …/league`` 的畫面；``account`` 是看的人的帳號（沒有帳號＝角色 ID）。"""
+    """``GET …/league`` 的畫面；``account`` 是看的人的帳號（沒有帳號＝角色 ID）。``stale``：賽程是用
+    舊規則跑的（5F-4b）。``page``／``page_size``：場次列表分頁。"""
     rules = league_rules(library)
     status = _status(library, world, record, now, running=running)
     mine = next((e for e in world.league_entries if e.account == account), None)
@@ -183,8 +269,15 @@ def league_view(
             ai=mine.ai,
             ai_zh=ai_zh(library, mine.ai, _default_ai(mine)),
             this_character=mine.character_id == char.character_id,
+            allocation=(
+                None
+                if mine.allocation is None
+                else {a.value: v for a, v in mine.allocation.items()}
+            ),
         )
     cap = rules_of(library).hero_growth.level_cap
+    rows = [] if record is None else _match_rows(library, record, account, stale=stale)
+    shown, current, pages = _page(rows, page, page_size)
     return LeagueView(
         status=status,
         status_zh=_STATUS_ZH[status],
@@ -192,10 +285,7 @@ def league_view(
         signup_close_day=0 if rules is None else rules.signup_close_day,
         maps_zh=() if rules is None else tuple(_map_name(library, m) for m in rules.maps),
         per_pair=0 if rules is None else matches_per_pair(rules),
-        rules_zh=(
-            f"全員拉到 {cap} 級、1 對 1、雙方都由 AI 操作；每對組合在每張地圖用多個種子、"
-            "交換先後手各打一場，勝場多的人排前面。"
-        ),
+        rules_zh=_rules_zh(library, rules, cap),
         entry=entry,
         can_enter=status == "signup" and problem is None,
         enter_problem_zh=problem if status in ("signup", "closed") else None,
@@ -205,10 +295,16 @@ def league_view(
         ai_choices=ai_choice_views(library),
         entrants=len(entries),
         standings=_standing_rows(library, char, entries, table, account),
-        matches=() if record is None else _match_rows(library, record, account),
+        matches=shown,
         done=0 if record is None else record.done,
         total=0 if record is None else len(record.matches),
         champion_zh=None if record is None or table is None else _champion(record, table),
+        page=current,
+        pages=pages,
+        page_size=page_size,
+        allocation=_allocation(library, char, now) if status == "signup" else None,
+        stale_zh=STALE_NOTE_ZH if record is not None and stale else None,
+        reruns=0 if record is None else record.reruns,
     )
 
 

@@ -245,6 +245,13 @@ class LeagueRules(ContentModel):
     """到輪數上限＝和局。"""
     batch_size: int = Field(default=10, ge=1)
     """背景每批幾場（批與批之間讓出執行緒）。"""
+    hp_permille: int = Field(default=1000, ge=1000, le=5000)
+    """（5F-4b）開場最大 HP 倍率（‰；2000＝×2）：只套在循環賽，HP 每場滿。"""
+    opening_statuses: tuple[str, ...] = ()
+    """（5F-4b）雙方開場就掛上的狀態（``statuses.yaml``；例：``league_truce``＝第 1 輪不能造成
+    傷害）。"""
+    first_opening_statuses: tuple[str, ...] = ()
+    """（5F-4b）只有先手那位開場掛上的狀態（例：先手少 1 AP）。"""
 
     @model_validator(mode="after")
     def _maps(self) -> LeagueRules:
@@ -497,14 +504,22 @@ def season_problems(
     battle_maps: Mapping[str, str] | None = None,
     units: Collection[str] = (),
     maps: Mapping[str, MapDef] | None = None,
+    status_ids: Collection[str] | None = None,
 ) -> list[str]:
     """跨檔案檢查（繁體中文、排序；空＝通過）。``region_ids`` 是區域表的區域（世界事件的建議等級
     加成可以指向還沒有地點圖的區域，例如灰燼荒原）。``battle_maps`` 是戰鬥地圖 ID → 地圖類型
     （循環賽的地圖檢查，5F-4；``None``＝不檢查）。``units``／``maps``（Phase 5F-3）：賽季 Boss 的
-    陣容與 Boss 地圖、封印鑰匙來源的單位。"""
+    陣容與 Boss 地圖、封印鑰匙來源的單位。``status_ids`` 是狀態 ID（循環賽的開場狀態，5F-4b；
+    ``None``＝不檢查）。"""
     problems: list[str] = _boss_problems(season, units=units, maps=maps, catalog=catalog)
     if season.league is not None and battle_maps is not None:
         problems += _league_problems(season.league, battle_maps)
+    if season.league is not None and status_ids is not None:
+        problems += [
+            f"循環賽的開場狀態 {s} 不在 statuses.yaml"
+            for s in (*season.league.opening_statuses, *season.league.first_opening_statuses)
+            if s not in status_ids
+        ]
     rules = season.daily_goals
     for goal_def in () if rules is None else rules.goals:
         problems += _goal_problems(

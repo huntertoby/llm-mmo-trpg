@@ -70,6 +70,7 @@ from trpg.engine.rules.statuses import (
     shield_amount,
     stance_status_ids,
     summon_damage_dealt_permille,
+    under_truce,
 )
 from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
@@ -107,13 +108,27 @@ def _take_conduct(state: BattleState, unit: UnitState, effect: DamageEffect) -> 
 def _skipped_damage(
     ctx: Ctx, unit: UnitState | None, effect: DamageEffect
 ) -> list[EventBase] | None:
-    """不結算的傷害：目標不在或已倒下（沒有事件）；本輪已受過擴散（只發 ``conduct_blocked``，
-    BAL-13d）。要結算時回傳 ``None``。"""
-    if unit is None or not unit.alive:
+    """不結算的傷害：目標不在或已倒下（沒有事件）；休戰（目標、來源或來源的召喚者帶 ``truce``，
+    Phase 5F-4b，沒有事件）；本輪已受過擴散（只發 ``conduct_blocked``，BAL-13d）。要結算時回傳
+    ``None``。"""
+    if unit is None or not unit.alive or _truce_blocks(ctx, unit, effect):
         return []
     if not _take_conduct(ctx.state, unit, effect):
         return [ctx.emit(ConductBlocked, unit_id=unit.id, source_id=effect.source_id)]
     return None
+
+
+def _truce_blocks(ctx: Ctx, unit: UnitState, effect: DamageEffect) -> bool:
+    """休戰（Phase 5F-4b）：目標、傷害來源或來源的召喚者帶 ``truce`` 狀態時不結算。"""
+    if under_truce(ctx.rules, unit):
+        return True
+    source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
+    if source is None:
+        return False
+    if under_truce(ctx.rules, source):
+        return True
+    owner = None if source.owner_id is None else ctx.state.units.get(source.owner_id)
+    return owner is not None and under_truce(ctx.rules, owner)
 
 
 @register_effect("damage")

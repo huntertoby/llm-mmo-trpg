@@ -116,3 +116,6 @@ league:
   seeds: 2          # 每對組合 × 每張地圖的種子數；每個種子交換先後手各打 1 場
   max_rounds: 30    # 到輪數上限＝和局（同大世界戰鬥）
   batch_size: 10    # 背景每批幾場
+  # 5F-4b 平衡（玩法 PM 2026-11-03 代決；scripts/league_balance.py 200 場：平均 6.4 輪、先手 44%／後手 54%）
+  hp_permille: 2000                 # 開場最大 HP ×2（只套在循環賽）
+  opening_statuses: [league_truce]  # 第 1 輪雙方都不能造成傷害（只能移動、上增益、佈陣）

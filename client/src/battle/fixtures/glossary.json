@@ -2645,6 +2645,22 @@
     "自己造成的攻擊傷害 ×90%",
     "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×110%"
    ]
+  },
+  {
+   "id": "league_truce",
+   "name_zh": "開場休戰",
+   "description_zh": "循環賽第 1 輪：不會受到、也不會造成任何傷害（召喚物也一樣），只能移動、上增益、佈陣。第 1 輪結束時移除。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
   }
  ],
  "stacks": [

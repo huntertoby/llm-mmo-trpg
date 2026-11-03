@@ -37,7 +37,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Request, Response
+from fastapi import APIRouter, Body, Depends, Query, Request, Response
 
 from trpg.api.absence_view import AbsenceView, absence_summary
 from trpg.api.auth import (
@@ -49,7 +49,7 @@ from trpg.api.auth import (
     viewer,
 )
 from trpg.api.league_schemas import LeagueReplayResponse, LeagueRunView, LeagueView
-from trpg.api.league_view import league_view, match_title
+from trpg.api.league_view import PAGE_SIZE, league_view, match_outcome_zh, match_title
 from trpg.api.notes_schemas import LocationBoard, NoteRequest, location_board
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import allocation_preview, flash_preview
@@ -80,7 +80,7 @@ from trpg.api.world_story_schemas import (
     WorldLlmView,
 )
 from trpg.engine.runner import log_replay_problem
-from trpg.server.league import LeagueError
+from trpg.server.league import STALE_ZH, LeagueError
 from trpg.world.actions import SwearOathAction
 from trpg.world.errors import WorldActionError
 
@@ -269,9 +269,18 @@ def get_absence(character_id: str, request: Request) -> AbsenceView:
 
 
 @router.get("/characters/{character_id}/league")
-def get_league(character_id: str, request: Request) -> LeagueView:
-    """影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次與進度。"""
+def get_league(
+    character_id: str,
+    request: Request,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = PAGE_SIZE,
+) -> LeagueView:
+    """影子循環賽（5F-4）：報名狀態、排行榜（隱藏地點用提示語）、場次（分頁，5F-4b）與進度。
+    第 14 天換日後、還沒有人首殺賽季 Boss 時，第一次看到這裡就自動開跑（5F-4b）。"""
     store = world_of(request)
+    with store.lock:
+        store.character(character_id)
+        store.auto_start_league(store.clock())
     with store.lock:
         char = store.character(character_id)
         now = store.clock()
@@ -285,6 +294,9 @@ def get_league(character_id: str, request: Request) -> LeagueView:
             now,
             account=store.account_of(character_id),
             running=store.league_runner.running,
+            stale=record is not None and store.league.stale(record),
+            page=page,
+            page_size=page_size,
         )
 
 
@@ -299,6 +311,8 @@ def post_league_replay(character_id: str, match_id: str, request: Request) -> Le
         match = None if record is None else record.match(match_id)
         log = store.league.log(match_id)
     assert record is not None and match is not None  # log() 已檢查
+    if store.league.stale(record):  # 5F-4b：不跨 ruleset 重播
+        raise LeagueError(f"這一場不能重播：{STALE_ZH}（管理者重新開跑會整個重跑）")
     problem = log_replay_problem(log)
     if problem is not None:
         raise LeagueError(f"這一場不能重播：{problem}")
@@ -307,7 +321,10 @@ def post_league_replay(character_id: str, match_id: str, request: Request) -> Le
         verified = battle.state == log.final_state
         out = battle_response(battle, battle.history())
     return LeagueReplayResponse(
-        title_zh=match_title(store.library, record, match), battle=out, verified=verified
+        title_zh=match_title(store.library, record, match),
+        battle=out,
+        verified=verified,
+        outcome_zh=match_outcome_zh(record, match),
     )
 
 
