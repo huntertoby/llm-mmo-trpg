@@ -42,6 +42,7 @@ __all__ = [
     "TravelFn",
     "field_grid",
     "field_map",
+    "hidden_door",
     "outdoor_map",
     "placed",
     "stale_field",

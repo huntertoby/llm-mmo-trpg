@@ -30,6 +30,7 @@ from trpg.api.world_economy_view import (
     shop_view,
     wallet_view,
 )
+from trpg.api.world_field_view import field_line, field_view
 from trpg.api.world_growth_view import (
     growth_event_line,
     growth_view,
@@ -460,6 +461,7 @@ _LINES = (
     season_event_line,  # 5F-1
     season_boss_event_line,  # 5F-3
     league_event_line,  # 5F-4
+    field_line,  # 6B-2
 )
 
 
@@ -547,6 +549,7 @@ def world_view(
         inventory=_inventory(library, char, in_battle=in_battle),
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
+        field=field_view(library, char),
     )
 
 

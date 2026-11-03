@@ -26,6 +26,7 @@ from trpg.api.world_economy_schemas import (
     ShopView,
     WalletView,
 )
+from trpg.api.world_field_schemas import FieldView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -79,6 +80,7 @@ from trpg.world.economy_actions import (
     SellAction,
     UseItemAction,
 )
+from trpg.world.field_actions import UseTeleportStoneAction, WalkAction
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
 from trpg.world.season_events import SeasonBossAction
 
@@ -147,7 +149,9 @@ type WorldActionRequest = Annotated[
     | SalvageAction
     | LeagueEnterAction  # 5F-4
     | LeagueWithdrawAction
-    | SeasonBossAction,  # 5F-3
+    | SeasonBossAction  # 5F-3
+    | WalkAction  # 6B-2
+    | UseTeleportStoneAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -447,6 +451,9 @@ class WorldView(_ApiModel):
     """角色所在地點的店（5D-1；沒有店為 ``None``）。"""
     crafting: CraftingView | None = None
     """角色所在地點的鐵匠與附魔台（5D-3；沒有設施為 ``None``）。"""
+    field: FieldView | None = None
+    """目前的實地地圖與自己的位置（Phase 6B-2；所在地點沒有實地地圖＝``None``，照舊用
+    ``travel``）。"""
 
 
 class WorldBattleResponse(_ApiModel):

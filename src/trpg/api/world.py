@@ -68,8 +68,8 @@ from trpg.world.save import (
     dumps_log,
     dumps_world,
     loads_char,
-    loads_log,
     loads_world,
+    read_log,
     write_atomic,
 )
 from trpg.world.season import FIRST_SEASON_ID
@@ -159,6 +159,8 @@ class WorldStore:
         self._world: WorldState | None = None
         self._chars: dict[str, CharacterState] = {}
         self._entries: list[WorldLogEntry] | None = None
+        self._stale_through: int | None = None
+        """日誌裡舊規則的紀錄到哪一筆（6B-2：``trpg-wlog/1`` 的舊日誌規則已變、不能重播）。"""
         self._battles: dict[str, BattleSession] = {}
         self.first_kills = FirstKillRegistry(library, root)
         """全服首殺紀錄（5E-3）。"""
@@ -234,7 +236,9 @@ class WorldStore:
             if self._entries is None:
                 path = self._log_path()
                 text = path.read_text(encoding="utf-8") if path.is_file() else ""
-                self._entries = list(loads_log(text)) if text.strip() else []
+                log = read_log(text) if text.strip() else None
+                self._entries = [] if log is None else list(log.entries)
+                self._stale_through = None if log is None else log.stale_through
             return self._entries
 
     def character_ids(self) -> list[str]:
@@ -418,7 +422,8 @@ class WorldStore:
         entry = WorldLogEntry(
             seq=seq, now=now, character_id=char.character_id, action=action, actor=actor
         )
-        write_atomic(self._log_path(), dumps_log([*entries, entry]))
+        log_text = dumps_log([*entries, entry], stale_through=self._stale_through)
+        write_atomic(self._log_path(), log_text)
         entries.append(entry)
         self._save_char(result.char)
         self._record_first_kills(result.char, result.events, seq, now, result.world.season_id)
@@ -626,6 +631,7 @@ class WorldStore:
         self._world = None
         self._chars = {}
         self._entries = None
+        self._stale_through = None
         self._battles = {}
         self.league.forget()
 
