@@ -76,7 +76,7 @@ def test_content_check_success(
     assert "內容檢查通過" in out
     assert "elements.yaml：9 種元素" in out
     # 實地地圖的進度、警告與待補（Phase 6B-1；都不影響通過）
-    progress = r"實地地圖：雲嶺 d+／18、灰燼荒原 d+／18、主城 d／1（另有室內圖 d+ 張）"
+    progress = r"實地地圖：雲嶺 \d+／18、灰燼荒原 \d+／18、主城 \d／1（另有室內圖 \d+ 張）"
     assert re.search(progress, out)
     # 雲嶺、荒原都畫完後沒有待補；有待補時才印「實地地圖待補（…」
     assert "world/fields/cloud_ridge/mist_ferry.yaml：霧渡鎮（24×18）" in out
