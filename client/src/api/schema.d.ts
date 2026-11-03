@@ -1890,6 +1890,161 @@ export interface components {
             pos: components["schemas"]["XY"];
         };
         /**
+         * CraftAction
+         * @description 在鐵匠打造（8.13、8.20）：給配方的各欄，或只給 ``code``（世界記得的配方碼）。
+         */
+        CraftAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "craft";
+            /** Station */
+            station: string;
+            /** Code */
+            code?: string | null;
+            slot_type?: components["schemas"]["SlotType"] | null;
+            /** Rarity */
+            rarity?: ("rare" | "epic") | null;
+            /** Affix */
+            affix?: string | null;
+            /** Grade */
+            grade?: string | null;
+            /**
+             * Materials
+             * @default []
+             */
+            materials: string[];
+            /** Item Level */
+            item_level?: number | null;
+        };
+        /**
+         * CraftGearView
+         * @description 背包或穿戴中的一件裝備。
+         */
+        CraftGearView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Worn */
+            worn: boolean;
+            /** Description Zh */
+            description_zh: string;
+            /** Code */
+            code?: string | null;
+            /**
+             * Enhance
+             * @default 0
+             */
+            enhance: number;
+            /**
+             * Can Enhance
+             * @default false
+             */
+            can_enhance: boolean;
+            /** Enhance Zh */
+            enhance_zh?: string | null;
+            /**
+             * Can Salvage
+             * @default false
+             */
+            can_salvage: boolean;
+            /** Salvage Zh */
+            salvage_zh?: string | null;
+            /** Reroll Zh */
+            reroll_zh?: string | null;
+            /** Imbue Zh */
+            imbue_zh?: string | null;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: components["schemas"]["GearAffixView"][];
+        };
+        /**
+         * CraftMaterialView
+         * @description 背包裡能打造的材料。
+         */
+        CraftMaterialView: {
+            /** Item */
+            item: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Count */
+            count: number;
+            /** Grade */
+            grade: boolean;
+            /** Level Cap */
+            level_cap?: number | null;
+            /** Leaning Zh */
+            leaning_zh?: string | null;
+            /** Resonance Zh */
+            resonance_zh?: string | null;
+        };
+        /** CraftOptionView */
+        CraftOptionView: {
+            /** Id */
+            id: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /** CraftRarityView */
+        CraftRarityView: {
+            /** Rarity */
+            rarity: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Cost Zh */
+            cost_zh: string;
+        };
+        /**
+         * CraftSlotView
+         * @description 一個能打造的部位與能指定的 build 詞條。
+         */
+        CraftSlotView: {
+            /** Slot Type */
+            slot_type: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Grade Amount */
+            grade_amount: number;
+            /** Affixes */
+            affixes: components["schemas"]["CraftOptionView"][];
+        };
+        /**
+         * CraftingView
+         * @description 角色所在地點的鐵匠與附魔台（沒有設施時 ``WorldView.crafting`` 是 ``None``）。
+         */
+        CraftingView: {
+            /** Stations */
+            stations: components["schemas"]["StationView"][];
+            /** Smithy */
+            smithy: string | null;
+            /** Enchanter */
+            enchanter: string | null;
+            /** Can Use */
+            can_use: boolean;
+            /** Problem Zh */
+            problem_zh: string | null;
+            /** Slots */
+            slots: components["schemas"]["CraftSlotView"][];
+            /** Rarities */
+            rarities: components["schemas"]["CraftRarityView"][];
+            /** Materials */
+            materials: components["schemas"]["CraftMaterialView"][];
+            /** Flavor Max */
+            flavor_max: number;
+            /** Recipes */
+            recipes: components["schemas"]["RecipeView"][];
+            /** Gear */
+            gear: components["schemas"]["CraftGearView"][];
+            /** Essence */
+            essence: number;
+            /** Note Zh */
+            note_zh: string;
+        };
+        /**
          * CreateBattleRequest
          * @description 建立戰鬥。``ally_builds`` 省略時與 ``trpg battle --ally-build <hero_build>`` 相同，以標準
          *     隊友補齊到 3 人；給了（可以是空串列）就只用 ``hero_build`` ＋ 這些 build。
@@ -2313,6 +2468,21 @@ export interface components {
              * @enum {string}
              */
             type: "end_turn";
+        };
+        /**
+         * EnhanceAction
+         * @description 在鐵匠強化一件裝備（背包或穿戴中；+1，最多 +3，8.14）。
+         */
+        EnhanceAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "enhance";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
         };
         /**
          * EquipAction
@@ -2922,6 +3092,20 @@ export interface components {
             affix: string;
             /** Value */
             value?: number | null;
+        };
+        /** GearAffixView */
+        GearAffixView: {
+            /** Index */
+            index: number;
+            /** Text Zh */
+            text_zh: string;
+            /** Can Change */
+            can_change: boolean;
+            /**
+             * Choices
+             * @default []
+             */
+            choices: components["schemas"]["CraftOptionView"][];
         };
         /**
          * GearCandidateOut
@@ -3743,6 +3927,25 @@ export interface components {
             reason: string;
         };
         /**
+         * ImbueAction
+         * @description 在附魔台花精華把一條詞條指定成 ``affix``（8.20「完全沒有隨機」）。
+         */
+        ImbueAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "imbue";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
+            /** Index */
+            index: number;
+            /** Affix */
+            affix: string;
+        };
+        /**
          * InfuseOptionsOut
          * @description 灌注一隻召喚物時的技能選單（Phase 3-33d）：``problem`` 是召喚物這邊（本輪已灌注、已有待
          *     施放、暈眩……）或 AP 的問題（有問題時所有技能都不能灌注）；``skills`` 依裝備順序。
@@ -3942,6 +4145,11 @@ export interface components {
              * @default []
              */
             equipped_zh: string[];
+            /**
+             * Resonance Zh
+             * @default []
+             */
+            resonance_zh: string[];
         };
         JsonValue: unknown;
         /**
@@ -5111,6 +5319,26 @@ export interface components {
             gear_source_zh: string;
         };
         /**
+         * RecipeView
+         * @description 世界記得的一份配方（M6）。
+         */
+        RecipeView: {
+            /** Code */
+            code: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Discoverer Name */
+            discoverer_name: string;
+            /** Mine */
+            mine: boolean;
+            /** Can Craft */
+            can_craft: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /**
          * ReflashSlotOut
          * @description 可以重閃的一欄（3W-R2：前端不自己推規則）。
          */
@@ -5147,6 +5375,23 @@ export interface components {
              * @enum {string}
              */
             type: "reload";
+        };
+        /**
+         * RerollAction
+         * @description 在附魔台重骰一條詞條（8.20：由「指紋＋位置＋n」決定；越骰越貴）。
+         */
+        RerollAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "reroll";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
+            /** Index */
+            index: number;
         };
         /**
          * RespecAction
@@ -5342,6 +5587,21 @@ export interface components {
             name_zh: string;
             /** Remaining */
             remaining: number;
+        };
+        /**
+         * SalvageAction
+         * @description 在鐵匠分解背包裡的一件裝備，得到精華（8.14）。
+         */
+        SalvageAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "salvage";
+            /** Station */
+            station: string;
+            /** Item */
+            item: string;
         };
         /** SaveOut */
         SaveOut: {
@@ -6104,6 +6364,17 @@ export interface components {
             hp: number;
             /** Mana */
             mana: number;
+        };
+        /** StationView */
+        StationView: {
+            /** Station */
+            station: string;
+            /** Kind */
+            kind: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Npc Name Zh */
+            npc_name_zh?: string | null;
         };
         /** StatusChanceOut */
         StatusChanceOut: {
@@ -7192,7 +7463,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -7401,6 +7672,7 @@ export interface components {
             wallet?: components["schemas"]["WalletView"] | null;
             inventory?: components["schemas"]["InventoryView"] | null;
             shop?: components["schemas"]["ShopView"] | null;
+            crafting?: components["schemas"]["CraftingView"] | null;
         };
         XY: [
             number,

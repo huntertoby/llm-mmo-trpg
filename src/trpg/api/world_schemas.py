@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from trpg.api.run_schemas import HeroOut, PendingFlashOut
 from trpg.api.schemas import BattleResponse
+from trpg.api.world_crafting_schemas import CraftingView
 from trpg.api.world_economy_schemas import InventoryView, ShopView, WalletView
 from trpg.api.world_party_schemas import MyShadowView, PartyView
 from trpg.api.world_story_schemas import (
@@ -56,6 +57,13 @@ from trpg.world.actions import (
     TavernAction,
     TeleportAction,
     TravelAction,
+)
+from trpg.world.crafting_actions import (
+    CraftAction,
+    EnhanceAction,
+    ImbueAction,
+    RerollAction,
+    SalvageAction,
 )
 from trpg.world.economy_actions import (
     BuyAction,
@@ -120,7 +128,12 @@ type WorldActionRequest = Annotated[
     | SellAction
     | PouchAction
     | UseItemAction
-    | EquipAction,  # 5D-2
+    | EquipAction  # 5D-2
+    | CraftAction  # 5D-3
+    | EnhanceAction
+    | RerollAction
+    | ImbueAction
+    | SalvageAction,
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -412,6 +425,8 @@ class WorldView(_ApiModel):
     """背包與腰包（5D-1）。"""
     shop: ShopView | None = None
     """角色所在地點的店（5D-1；沒有店為 ``None``）。"""
+    crafting: CraftingView | None = None
+    """角色所在地點的鐵匠與附魔台（5D-3；沒有設施為 ``None``）。"""
 
 
 class WorldBattleResponse(_ApiModel):
