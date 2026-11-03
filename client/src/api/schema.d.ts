@@ -6297,6 +6297,8 @@ export interface components {
             certain: boolean;
             /** Move Cost */
             move_cost: number;
+            /** Slip Runs */
+            slip_runs: components["schemas"]["SlipRunOut"][];
         };
         /**
          * PathPreviewRequest
@@ -8019,6 +8021,26 @@ export interface components {
             /** Change */
             change: string;
             icon: components["schemas"]["SkillIcon"];
+        };
+        /**
+         * SlipRunOut
+         * @description 路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌，放在第一格旁。
+         */
+        SlipRunOut: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            start_pos: components["schemas"]["XY"];
+            end_pos: components["schemas"]["XY"];
+            /** Tiles */
+            tiles: number;
+            /** Chance Permille */
+            chance_permille: number;
+            /** Fail Stops */
+            fail_stops: components["schemas"]["XY"][];
+            /** Status Id */
+            status_id: string | null;
         };
         /** @enum {string} */
         Slot: "main_hand" | "off_hand" | "head" | "body" | "hands" | "feet" | "neck" | "ring_1" | "ring_2";
