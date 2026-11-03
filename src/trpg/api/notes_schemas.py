@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.api.announce import location_name
 from trpg.api.notes import NOTE_MAX_LEN, LocationNote, footprints
 from trpg.api.world import WorldStore
+from trpg.content.world_narration import mask_text
+from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState
 
 __all__ = ["FootprintView", "LocationBoard", "NoteRequest", "NoteView", "location_board"]
@@ -71,10 +73,14 @@ def _note_view(note: LocationNote, character_id: str, *, admin: bool) -> NoteVie
 def location_board(
     store: WorldStore, char: CharacterState, *, admin: bool = False
 ) -> LocationBoard:
-    """角色現在所在地點的留言與足跡（呼叫者持有世界的寫入鎖）。``admin``＝登入的是管理者。"""
+    """角色現在所在地點的留言與足跡（呼叫者持有世界的寫入鎖）。``admin``＝登入的是管理者。
+
+    地點名與足跡文字先套 :func:`~trpg.world.narration.story_masks`：這個角色還沒發現的隱藏地點用
+    提示語（5C-3e，同 5B-5）；留言是玩家文字，照原樣顯示。"""
     region, location = char.region, char.location
     world_map = store.library.world_maps.get(region)
     places = world_map.location_by_id() if world_map is not None else {}
+    masks = story_masks(store.library, char)
     names = {cid: store.character(cid).hero.name_zh for cid in store.character_ids()}
     steps = footprints(
         store.entries(),
@@ -88,7 +94,7 @@ def location_board(
     return LocationBoard(
         region=region,
         location=location,
-        location_name_zh=location_name(store.library, region, location),
+        location_name_zh=mask_text(location_name(store.library, region, location), masks),
         notes=[
             _note_view(n, char.character_id, admin=admin) for n in store.notes.at(region, location)
         ],
@@ -97,10 +103,11 @@ def location_board(
                 kind=f.kind,
                 name=f.name,
                 at=f.at,
-                text_zh=(
+                text_zh=mask_text(
                     f"{f.name} 在這裡首殺了精英「{f.target_name_zh}」"
                     if f.kind == "first_kill"
-                    else f"{f.name} 來過這裡"
+                    else f"{f.name} 來過這裡",
+                    masks,
                 ),
             )
             for f in steps
