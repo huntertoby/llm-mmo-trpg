@@ -20,9 +20,9 @@ from trpg.content.equipment import ItemDef, affix_text
 from trpg.content.item_budget import RARITY_ZH
 from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPE_ZH, SLOT_ZH, SLOTS
-from trpg.roguelite.gear import current_item
 from trpg.content.world_economy import ITEM_KINDS, WorldItemDef
 from trpg.content.world_quests import AFFINITY_RANKS, AffinityRank
+from trpg.roguelite.gear import current_item
 from trpg.world.actions import WorldEvent
 from trpg.world.affinity import affinity_rules, rank_at_least, rank_of
 from trpg.world.economy import (
