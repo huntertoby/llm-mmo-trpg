@@ -1,0 +1,71 @@
+# 黑曜谷實地地圖（6D-2；玩法 PM 草稿第 14 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 隱藏秘境 16×14，建議 8 級：黑曜石峽谷，反光又寒冷，寒燼蜥的巢。
+# 唯一的出口在東南，回焦油坑西北岩壁的窄縫（arrive: obsidian_valley_crack，那一側是 hidden_until: reveal 的門）。
+# 窄縫進來是寬 3 的長廊，往西是谷底（高 0），谷底北邊寬 3 的窄通道上到上層岩棚（高 1）。
+# 黑曜岩柱用石柱；冰面：岩棚西邊的冰窟（ice_hole）上架薄冰（thin_ice），是死路的小池，不在通路上；
+#   谷底與岩棚各有冰表面（寒燼蜥死後留冰面，19.2）。水源：谷底的融冰水（水表面 2 格，區域題目「怕水」）。
+# 黑曜片礦脈只是裝飾（照 5F5a-25 沒有採集機制），不放物件。
+# 敵人：谷底駐守 obsidian_frost、上層岩棚駐守 obsidian_mix（懸賞期間換成 frost_king_band 是遭遇的事）。
+# 事件點：無（骨架 8 的黑曜片事件在鐵爐村）。
+id: obsidian_valley
+name_zh: 黑曜谷
+region: ashen_waste
+location: obsidian_valley
+size: [16, 14]
+heights: |
+  0000000000000000
+  0111111111111100
+  0111111111111100
+  0111111111111100
+  0111111111111100
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+terrain: |
+  ################
+  #.............##
+  #.ooo.........##
+  #.ooo.........##
+  #.............##
+  ######...#######
+  ######...#######
+  ######...#######
+  #.........######
+  #.........######
+  #...............
+  #...............
+  #...............
+  ################
+legend:
+  ".": stone
+  "#": wall
+  "o": ice_hole
+objects:
+  - {at: [3, 2], kind: thin_ice}   # 冰窟上的薄冰
+  - {at: [3, 3], kind: thin_ice}
+  - {at: [4, 9], kind: stone_pillar}   # 黑曜岩柱
+  - {at: [5, 12], kind: stone_pillar}
+  - {at: [9, 2], kind: stone_pillar}
+  - {at: [12, 3], kind: stone_pillar}
+  - {at: [12, 12], kind: stone_pillar}
+surfaces:
+  - {at: [7, 10], surface: ice}   # 谷底的冰面
+  - {at: [8, 10], surface: ice}
+  - {at: [7, 11], surface: ice}
+  - {at: [10, 2], surface: ice}   # 岩棚的冰面
+  - {at: [11, 2], surface: ice}
+  - {at: [2, 11], surface: water}   # 融冰水
+  - {at: [3, 11], surface: water}
+entry: [13, 11]
+exits:
+  - {id: to_tar_pits, at: [[15, 11], [15, 12]], to: tar_pits, arrive: obsidian_valley_crack}   # 東南：窄縫，回焦油坑
+spawns:
+  - {at: [4, 10], group: obsidian_frost}   # 谷底
+  - {at: [11, 3], group: obsidian_mix}   # 上層岩棚（高 1）

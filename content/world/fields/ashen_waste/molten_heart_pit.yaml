@@ -1,0 +1,43 @@
+# 熔心坑前廳實地地圖（6D-2；玩法 PM 草稿第 18 張）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# Boss 前廳 12×8：火山口邊緣的石台。兩道熔岩裂縫只是裝飾的岩漿光，沒有可走的岩漿格（用牆格代替）。
+# 西邊的岩坡回到廢墟要塞（照 18.3，Boss 地點只從相連的地點走進去，不可有傳送石）。
+# 坑口在東側，記成情境物件 pit_gate：走進去就進入 Boss 戰，照 21.4 不切 12×12，
+#   直接用 Boss 地圖 molten_heart_pit（20.6；陣容 ashen_heart_court）。
+#   Boss 地圖的冷卻井照舊是預放的水表面（草稿待確認 7），等 cooling_well 物件做好、排段時再換成 4 口冷卻井。
+# 熔岩封住的通道（pit_lava_seal）照草稿第 17 張記在廢墟要塞那一側。
+# 前廳沒有敵人、不能紮營（沒有營火，#114）、沒有事件點。高度：石台 0、坑口前的台階 1。
+id: molten_heart_pit
+name_zh: 熔心坑
+region: ashen_waste
+location: molten_heart_pit
+size: [12, 8]
+heights: |
+  000000000000
+  000000000000
+  000000000110
+  000000000110
+  000000000110
+  000000000110
+  000000000000
+  000000000000
+terrain: |
+  ############
+  #...#......#
+  #...#......#
+  ...........#
+  ...........#
+  #......#...#
+  #......#...#
+  ############
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [3, 5], kind: rubble}   # 火山口邊的碎石
+  - {at: [8, 1], kind: rubble}
+entry: [2, 4]
+exits:
+  - {id: to_ruined_fortress, at: [[0, 3], [0, 4]], to: ruined_fortress, arrive: to_molten_heart_pit}   # 西：岩坡，回廢墟要塞
+situation_objects:
+  - {at: [10, 3], id: pit_gate}   # 坑口（走進去＝Boss 戰）

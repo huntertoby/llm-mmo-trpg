@@ -1,0 +1,111 @@
+# 灰井村實地地圖（6D-2；玩法 PM 草稿第 10 張；三村落之一）。
+# 格式說明見 cloud_ridge/mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 村落 24×18，建議 7 級，營火：圍著一口灰井的村子，常年缺水，敵人中等。
+# 唯一的出口在南邊，回灰泥沼。村口是南面土牆的缺口 [11, 14]～[12, 14]。
+# 守點戰（21.9 第 20 條；草稿待確認 2、3）：守點目標是灰井，記成情境物件 ash_well [12, 10]；
+#   駐守 village_raid_mid 放在村口外 [12, 15]，離灰井曼哈頓 5 格。
+# 土牆用 earth_wall 物件；屋子只畫外牆。水源：水缸（水表面 2 格）。灰井本身是乾的，不放水。
+# 事件點：無（骨架 2 運水隊的目的地是這裡，但事件在灰泥沼和哨站觸發）。
+id: ash_well_village
+name_zh: 灰井村
+region: ashen_waste
+location: ash_well_village
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,###,,,,,,,
+  ,,,,,,,,,,,,,,###,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,##,,,,,##,,,,,,,
+  ,,,,,,,,##.....##,,,,,,,
+  ,,,,,,,,##.....##,,,,,,,
+  ,,,,,,,,,,.....,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+legend:
+  ",": dirt
+  ".": stone
+  "#": wall
+objects:
+  - {at: [7, 4], kind: earth_wall}   # 村子的土牆（南面缺口是村口）
+  - {at: [8, 4], kind: earth_wall}
+  - {at: [9, 4], kind: earth_wall}
+  - {at: [10, 4], kind: earth_wall}
+  - {at: [11, 4], kind: earth_wall}
+  - {at: [12, 4], kind: earth_wall}
+  - {at: [13, 4], kind: earth_wall}
+  - {at: [14, 4], kind: earth_wall}
+  - {at: [15, 4], kind: earth_wall}
+  - {at: [16, 4], kind: earth_wall}
+  - {at: [17, 4], kind: earth_wall}
+  - {at: [7, 14], kind: earth_wall}
+  - {at: [8, 14], kind: earth_wall}
+  - {at: [9, 14], kind: earth_wall}
+  - {at: [10, 14], kind: earth_wall}
+  - {at: [13, 14], kind: earth_wall}
+  - {at: [14, 14], kind: earth_wall}
+  - {at: [15, 14], kind: earth_wall}
+  - {at: [16, 14], kind: earth_wall}
+  - {at: [17, 14], kind: earth_wall}
+  - {at: [7, 5], kind: earth_wall}
+  - {at: [7, 6], kind: earth_wall}
+  - {at: [7, 7], kind: earth_wall}
+  - {at: [7, 8], kind: earth_wall}
+  - {at: [7, 9], kind: earth_wall}
+  - {at: [7, 10], kind: earth_wall}
+  - {at: [7, 11], kind: earth_wall}
+  - {at: [7, 12], kind: earth_wall}
+  - {at: [7, 13], kind: earth_wall}
+  - {at: [17, 5], kind: earth_wall}
+  - {at: [17, 6], kind: earth_wall}
+  - {at: [17, 7], kind: earth_wall}
+  - {at: [17, 8], kind: earth_wall}
+  - {at: [17, 9], kind: earth_wall}
+  - {at: [17, 10], kind: earth_wall}
+  - {at: [17, 11], kind: earth_wall}
+  - {at: [17, 12], kind: earth_wall}
+  - {at: [17, 13], kind: earth_wall}
+  - {at: [3, 3], kind: dead_tree}   # 枯樹
+  - {at: [20, 4], kind: dead_tree}
+  - {at: [21, 10], kind: dead_tree}
+  - {at: [19, 15], kind: rubble}   # 坍掉的土牆
+  - {at: [4, 11], kind: rubble}
+surfaces:
+  - {at: [9, 6], surface: water}   # 水缸
+  - {at: [10, 6], surface: water}
+entry: [9, 16]
+exits:
+  - {id: to_ash_mire, at: [[11, 17], [12, 17]], to: ash_mire, arrive: to_ash_well_village}   # 南：往灰泥沼
+spawns:
+  - {at: [12, 15], group: village_raid_mid}   # 村口外（離灰井 5 格）
+campfires:
+  - {at: [11, 7], id: campfire_ash_well_village}   # 灰井北的空地
+situation_objects:
+  - {at: [12, 10], id: ash_well}   # 守點目標：灰井
