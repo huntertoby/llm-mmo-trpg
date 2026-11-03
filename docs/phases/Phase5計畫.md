@@ -4024,6 +4024,156 @@ world_events:              # 19.9（門檻依上線人數，Q14）
 - 灰燼荒原內容（地點、懸賞 19.8、世界事件 #2 的村落）；世界事件 #3 的資料。
 - 懸賞首殺的封印鑰匙、LLM 預產公告文字（5E-4）。
 
-## 36. 之後各段規格
+## 36. 5F-3 詳細規格：賽季 Boss 規則（封印、只准傭兵、每日次數、首殺、評分榜、源晶柱）＋區域 Boss 掉落與重複挑戰
+
+> 給實作 agent。主要動 `src/trpg/engine/`（`boss_phases.py` 新觸發種類、`events.py`、`runner.py`）、`src/trpg/content/`（`battle.py` 觸發聯集與 `WardSpec`、`world_season.py` 加 `season_boss`／`seal_keys`、`world_loot.py` 加 `bosses`、`library.py` 載入檢查）、`src/trpg/world/`（新 `season_boss.py`；`state.py`、`actions.py`、`season_events.py`、`season_board.py`、`battle.py`、`loot.py`、`step.py` 小改）、`src/trpg/server/`（新 `season_boss_board.py`〔評分榜與首殺戰鬥紀錄〕；`first_kills.py`、`announce.py`、`season_policy.py`）、`src/trpg/api/`（`world.py` 記首殺與評分榜、`season_view.py`／`season_schemas.py` 公告板加賽季 Boss、`routes/world.py`）、`src/trpg/narrative/`（階段轉換的紀錄文字、單位卡）、`content/`（碎晶之主、三根源晶柱、晶傀儡、新技能與狀態、Boss 地圖 `rift_gate`；`world/season.yaml`、`world/loot.yaml`、`world/announcements.yaml`）、`client/`（公告板的賽季 Boss 區塊、挑戰按鈕）、`client/openapi.json`、`docs/phases/戰鬥紀錄格式變更.md`、`scripts/season_boss_sim.py`（新）。另一個 agent 在做 5F-4（影子循環賽），撞到以 main 為準。
+> 依據：本檔第 1 節 5F-3 列；09 9.7（第 8～10 天封印鑰匙集滿即解鎖、最早第 8 天、第 10 天強制、解鎖前 24 小時公告；Boss 挑戰每日 3 次算帳號、種子由伺服器給）、9.6.8（#86 賽季 Boss＝階段＋解謎；#87 只准系統傭兵、通關評分榜看輪數／全隊存活／有沒有人倒下、只給榮譽稱號、現金只給首殺）、9.6.9（#98 賽季 Boss 失敗只扣每日次數；#100 算帳號）、9.6.10（#101 首殺認定＝伺服器日誌裡第一個打倒的帳號、可重播查證）；19 19.6.2（封印鑰匙：全服累積、個人至少 1 把才能進裂界門）、19.7（碎晶之主）、19.9（#3 封印共鳴）；20 20.2（區域 Boss 必掉 1 件史詩）、20.6（碎晶之主的 Boss 地圖）；18 18.2.3（霧鎖真人掉雲頂霧晶）；5C-3f（給別人看的地點名套隱藏地點提示語）；`Phase5F-2報告.md` 待 PM 決定 6（區域 Boss 的入場、重複挑戰、掉落）。
+
+### 36.1 目標
+
+① **源晶柱解謎資料化**：Boss 階段多兩種觸發——「某標籤的同陣營單位倒下 N 名」（`tag_down`）與「第 N 輪起」（`round_at`）；護陣 `ward` 的倍率可以是 0（持有者在場時同門完全不受骰值傷害）。三根柱子＝三個帶護陣的單位，柱子全倒觸發本體下一階段——新內容只寫資料。② 用它做出 **碎晶之主**（19.7）、三根源晶柱、晶傀儡與獨立 Boss 地圖「裂界門」（荒原地點圖留給 5F-5，挑戰從城鎮進入）。③ **封印**：封印鑰匙（個人＋全服）、世界事件 #3「封印共鳴」、解鎖時間（集滿 → 最早第 8 天且至少 24 小時後；第 10 天強制）、解鎖前 24 小時公告（公告板與 6 點的今日公告）。④ **挑戰**：新世界動作 `season_boss`——只准傭兵、每帳號每天 3 次（在世界狀態裡依日誌序號算，可重播）、種子由伺服器的賽季種子衍生；失敗只扣次數。⑤ **首殺**：世界日誌裡第一個打倒的帳號；記進首殺紀錄（`kind: season_boss`），同時存那一場的完整戰鬥紀錄，`trpg battle replay` 可驗證。⑥ **通關評分榜**：每個角色最好的一次（輪數、存活、有沒有人倒下）；稱號「碎晶的終結者」。⑦ **區域 Boss 掉落與重複挑戰**（5F-2 補）：區域 Boss 必掉史詩與 Boss 材料（每角色每個刷新日第一次打倒），同一天之後照一般精英；不限次數重複挑戰；第一次打倒給封印鑰匙。
+
+### 36.2 決策影響盤點（既有功能）
+
+| 既有功能 | 位置 | 受影響？ | 處理 |
+|---|---|---|---|
+| **5F-2 Boss 階段**：`PhaseTrigger` 只有 `hp_below`；`check_phases` 要求門檻嚴格遞減；`boss_phase_changed.permille` 必填 | `content/battle.py`、`engine/boss_phases.py`、`engine/events.py`、`narrative/`、`engine/view.py`、`client` | **是** | 觸發聯集加 `tag_down`（`tag`、`count`）與 `round_at`（`round`）；遞減檢查只看 `hp_below` 之間；事件 `permille` 改選填（非 HP 觸發為 `None`）並加 `trigger`、`tag`、`count`、`round`；戰鬥紀錄文字與單位卡「下一階段」依種類；檢查時機不變（結算收尾＋換手後）。霧鎖真人資料不變、結算逐位元相同。`LOG_FORMAT` `/109` → `/110`（事件欄位變了） |
+| **5F-2 護陣** `taken_permille` 下限 100 | `content/battle.py` `WardSpec` | **是** | 下限改 0（源晶柱：本體不受骰值傷害）；既有資料不變 |
+| **5F-2 Boss 地點**（雲頂觀的戰鬥＝Boss 戰、`boss` 不在 `clear_kinds`） | `world/battle.py`、`rules.yaml` | **是（規則）** | 重複挑戰照現狀不限次數、不寫已清空；加保底掉落與鑰匙（見下） |
+| **5F-1 日曆、賽季第幾天、時間點** | `world/calendar.py`、`season.yaml` milestones | **是（只讀）** | 解鎖時間用刷新日的 UTC 秒；`boss_earliest`／`boss_forced` 兩個時間點有寫時要和 `season_boss.unlock` 一致（載入檢查） |
+| **5F-1 世界事件** | `season_board.py`、`season.yaml` | **是** | 加 #3「封印共鳴」（第 7～10 天，新目標種類 `seal_key`：全服累積的封印鑰匙，事件開始時進度＝目前全服鑰匙數）；成功旗標 `seal_resonance_full`。`WorldEventEffect` 加 `seal_keys`（全服鑰匙 +N，給 19.9 #2 的「封印鑰匙 +5」，資料等 5F-5） |
+| **5F-1 今日公告**（6 點） | `server/announce.py`、`announcements.yaml` | **是** | 今日公告加 `$season_boss`（封印中、何時解鎖、已解鎖、已結束）；新模板 `season_boss_first_kill`；首殺 Bot 貼文照 `kind` 選模板 |
+| **5F-1 公告板** | `api/season_view.py`、`client/src/world/BoardPanel.tsx` | **是** | 加賽季 Boss 區塊：封印狀態與鑰匙進度、解鎖時間、自己的鑰匙、帳號今日剩餘次數、能不能挑戰（原因）、首殺、評分榜 |
+| **首殺紀錄**（5E-3／5D-R2：精英首殺、按賽季算、`kind` 已留 `season_boss`） | `server/first_kills.py` | **是** | 記 `season_boss`：世界事件 `season_boss_cleared` 的 `first: true`（世界狀態決定，重播一致）；`FirstKill` 加 `account_id`、`battle_log`（選填）；那一場的 `BattleLog` 存到 `<世界資料夾>/season_boss/<season_id>-first-kill.json`。精英首殺照舊 |
+| **帳號**（#100 Boss 每日 3 次算帳號；世界日誌 `actor`） | `world/step.py`、`api/world.py` | **是** | 次數存在 `WorldState.boss_attempts`（刷新日、`actor`、次數）；`actor` 沒有帳號時＝角色 ID（同 Q15）。帳號檔不動 |
+| **傭兵**（5C-1／5C-2：`season_boss_problem` 只擋影子；劇情夥伴自動入隊） | `world/party.py`、`world/battle.py` | **是** | 挑戰時檢查：有影子 → 擋（既有句子）；劇情夥伴不擋、但賽季 Boss 戰不出場（只准傭兵，#87）；傭兵照現狀 0～2 名 |
+| **遇敵與開戰**（`EncounterResult`、`prepare_battle`、撤退） | `world/state.py`、`world/battle.py`、`town.retreat` | **是** | `EncounterResult.season_boss`（Boss ID，預設 `None`）；陣容照 `season_boss.units`、地圖不換皮、敵人等級＝`season_boss.level`、天氣晴；撤退照舊可用但次數不退 |
+| **戰後回寫**（經驗、金錢、掉落、疲憊、回小鎮、已清空、影子戰報、夥伴好感） | `world/battle.py` | **是** | 賽季 Boss 戰：勝負都不給經驗、金錢、掉落（19.7 不掉裝備）；HP／法力／耐力照開戰前（失敗只扣次數，#98）；不疲憊、不回小鎮；腰包用掉的道具照扣、技能用法統計照記 |
+| **掉落**（20.2 區域 Boss 必掉史詩，5D-2 留給 5F） | `world/loot.py`、`world/loot.yaml` | **是** | `loot.yaml` 加 `bosses`（單位 → Boss 材料、保底稀有度）；每角色每刷新日第一次打倒：Boss 材料 1 份＋那名 Boss 的裝備改成史詩（亂數照常消耗）；同一天之後照一般精英 |
+| **季末分類表**（5D-R2） | `server/season_policy.py` | **是** | 新欄位與新模型全部分類（36.8） |
+| 世界存檔版號、世界日誌重播 | `state`、`replay` | 否 | 新欄位都有預設值，`trpg-world/1`、`trpg-char/1`、`trpg-wlog/1` 不升版；世界日誌照舊可重播 |
+| roguelite、技能生成、影子循環賽 | — | 否 | 不動；新技能只給敵人（不進手寫池、生成器） |
+
+### 36.3 引擎：源晶柱解謎的通用資料
+
+- `TagDownTrigger(kind: tag_down, tag, count ≥ 1, tag_name_zh?)`、`RoundTrigger(kind: round_at, round ≥ 2)` 加進 `PhaseTrigger`；`check_phases`：`hp_below` 之間門檻嚴格遞減，其他種類不排序。
+- `_reached`：`tag_down`＝同陣營、帶 `tag`、已倒下的單位數 ≥ `count`；`round_at`＝`state.round ≥ round`。不取亂數。
+- `WardSpec.taken_permille` 範圍 0～999；多個護陣相乘（任一為 0 → 0）。
+- 事件 `boss_phase_changed`：加 `trigger`（`hp_below`／`tag_down`／`round_at`），`permille: int | None`、`tag`、`tag_name_zh`、`count`、`round`（只在對應種類）。
+- 戰鬥紀錄：`tag_down`「◆ 碎晶之主進入第 2 階段「碎界脈動」（「源晶柱」倒下 3 名）：…」；`round_at`「（第 15 輪起）」。
+
+### 36.4 內容：碎晶之主與裂界門（數值初值）
+
+| 單位 | 檔案 | 要點 |
+|---|---|---|
+| 碎晶之主 | `content/units/rift_shard_lord.yaml` | `boss`、`elite`、`rift_core`；階段：① 三柱（開場）② 碎界脈動（`tag_down rift_pillar 3`：換技能「碎界脈動」〔全場小傷〕＋「晶蝕」〔單體持續傷害，可淨化〕、召喚晶傀儡 ×2）③ 核心過載（HP ≤ 50%：蓄力強招「界碎」〔十字每臂 2 格大傷＋擊退〕＋「瞬步」換位）④ 界崩（`round_at 15`：造成的傷害 ×2） |
+| 霧柱／雷柱／火柱 | `content/units/rift_pillar_{mist,thunder,fire}.yaml` | 不移動（速度 0、`immovable`）、`rift_pillar`；開場狀態「源晶共鳴」（護陣：12 格內 `rift_core` 受到的骰值傷害 ×0）；蓄力脈衝（每 2 回合，霧：周圍 2 格致盲；雷：十字雷擊；火：3×3 火傷＋燃燒）；倒 1 根、2 根時留下的柱子換上「晶能湧動」一、二（造成的傷害 ×1.25、×1.5） |
+| 晶傀儡 | `content/units/rift_crystal_golem.yaml` | 近戰小怪（第 2 階段召喚） |
+| 裂界門 | `content/maps/rift_gate.yaml` | 13×13、圓形浮台（半徑約 6）、外圈虛空（`chasm`，致命）；三根柱子在北、西南、東南，柱間幾格斷裂（虛空）；本體在中央；我方在南側；地圖類型 `boss`、勝利條件 `eliminate`＋`leader_retreat`（本體倒下其餘一起碎） |
+
+- 技能（新，只給敵人）：`skill_rift_pulse_mist`、`skill_rift_pulse_thunder`、`skill_rift_pulse_fire`（延遲段、預告）、`skill_rift_tremor`（碎界脈動）、`skill_shard_erosion`（晶蝕）、`skill_rift_shatter`（界碎，延遲段十字臂長 2）；換位用既有 `skill_blink`。狀態（新）：`rift_resonance`（護陣 ×0）、`crystal_surge`、`crystal_surge_2`、`shard_erosion`、`rift_collapse`。
+- 原文做不到的地方（代決 5F3-13）：晶蝕不能疊層（引擎狀態只有 `refresh`）、擊殺晶傀儡不移除晶蝕；晶傀儡只在進第 2 階段時召喚一次；「每回合結束全場傷害」用本體的全場技能（AI 選用）；「每回合結束移動到另一側」用瞬步交給 AI；界崩只在第 3 階段之後才觸發（階段依序進入）。
+
+### 36.5 內容：`content/world/season.yaml` 加兩節＋一個世界事件
+
+```yaml
+seal_keys:                      # 19.6.2：個人每個來源第一次達成各 1 把；全服鑰匙＝所有角色拿到的總數＋世界事件給的
+  required: 1                   # 個人至少 1 把才能挑戰
+  sources:
+    - {id: summit_boss, kind: elite_first_kill, unit: sect_mist_lock_master, name_zh: 打倒雲頂觀的霧鎖真人}
+    - {id: bounty, kind: bounty_claimed, name_zh: 搶下懸賞}     # 每張懸賞第一次搶下各 1 把（來源 ID＝bounty:<懸賞>）
+season_boss:
+  id: rift_shard_lord
+  name_zh: 碎晶之主
+  battle_map: rift_gate
+  units: [rift_shard_lord, rift_pillar_mist, rift_pillar_thunder, rift_pillar_fire]
+  level: 10                     # 依滿等設計（9.7 等級上限 10）
+  unlock: {earliest_day: 8, forced_day: 10, close_day: 13, announce_hours: 24, flag: seal_resonance_full}
+  daily_attempts: 3
+  entry_kinds: [town]
+  title_zh: 碎晶的終結者
+  score: {base: 1000, per_round: 20, per_survivor: 100, no_down: 200}
+world_events:
+  - id: seal_resonance          # 19.9 #3
+    days: [7, 10]
+    goal: {kind: seal_key, count: 12}
+    base_players: 8
+    on_success: {flags: [seal_resonance_full]}
+    on_failure: {}              # 第 10 天強制解鎖
+```
+
+- 載入檢查：Boss 範本與單位存在、≤ 4 名、地圖是 `boss` 類型；`earliest_day ≤ forced_day ≤ close_day ≤ days`；時間點 `boss_earliest`／`boss_forced` 一致；`seal_keys.sources` 的單位存在；`unlock.flag` 是某個世界事件 `on_success` 的旗標。
+
+### 36.6 規則（`trpg.world.season_boss`，純函式；都在 `world_step` 裡、依日誌序號）
+
+- **鑰匙**（動作之後，懸賞搶先之後、世界事件進度之前）：這一步有精英首殺 `elite:<unit>`（符合 `elite_first_kill`）或 `bounty_claimed`，且角色的 `seal_key_sources` 還沒有該來源 ID → 加進去、`WorldState.seal_keys + 1`、事件 `seal_key_gained`（`source`、`keys`〔個人〕、`world_keys`）。世界事件效果 `seal_keys: N` 加全服。
+- **解鎖時間** `unlock_at`：`forced_at`＝第 `forced_day` 天的刷新時刻；`WorldState.seal_full_at`（旗標第一次出現的時間：換日中成功＝該刷新日的刷新時刻、動作中成功＝`now`）不是 `None` 時取 `min(forced_at, max(earliest_at, seal_full_at + announce_hours × 3600))`。`announce_at = unlock_at − announce_hours × 3600`；`close_at`＝第 `close_day + 1` 天的刷新時刻。
+- **狀態**：`now < announce_at` 封印中（`sealed`）；`announce_at ≤ now < unlock_at` 已公告（`announced`）；`unlock_at ≤ now < close_at` 開放（`open`）；之後 `closed`。
+- **挑戰**（動作 `season_boss`）：要開放、所在地點種類在 `entry_kinds`、沒有遭遇／事件／閃現／三選一／戰利品待決、沒有影子、個人鑰匙 ≥ `required`、帳號今天次數 < `daily_attempts`。成立：`STREAM_BATTLE` 抽一次 `next_u32` 當戰鬥種子（賽季種子衍生；客戶端給不了）、`boss_attempts` +1、`pending_encounter`（`season_boss`、地點＝目前地點、Boss 地圖、等級、天氣 `clear`）、事件 `season_boss_challenged`（第幾次、剩幾次）。
+- **戰鬥**：同一般遭遇的開戰端點與 `fight`；我方＝主角＋傭兵（不帶劇情夥伴）；回寫照 36.2。打贏：`WorldState.boss_clears` 加一筆（`actor`、`character_id`、名字、`at`、分數）；事件 `season_boss_cleared`（`first`＝這一季之前沒有任何一筆、`score`、`rounds`、`survivors`、`allies`、`no_down`、`title_zh`）；打輸：`season_boss_failed`（`attempts_left`）。
+- **分數**：`max(0, base − per_round × 輪數) + per_survivor × 存活的我方人數 + (no_down，若我方沒有人倒下過)`；我方＝主角＋傭兵（不含召喚物）；「倒下過」看 `unit_downed`。
+- **次數**：`boss_attempts` 只留今天（換日後的第一次挑戰清掉舊的）。
+
+### 36.7 伺服器、API、前端
+
+- `trpg.server.season_boss_board`：`<世界資料夾>/season_boss_board.json`（`trpg-bossboard/1`，紀念類）；`WorldStore._apply` 在事件有 `season_boss_cleared` 時記一筆（每角色每季留最好的一次：分數高 → 輪數少 → 序號小）；`first: true` 那一筆另外用開戰前的角色＋步驟重算那場戰鬥（`prepare_battle`＋`replay`）存 `BattleLog`，並記 `FirstKill(kind="season_boss")`。寫入失敗只記 log（同首殺）。
+- 公告板 `SeasonBoardView.season_boss`：`status`／`status_zh`、`unlock_at`、`announce_at`、`world_keys`／`target`（封印共鳴的進度）、`my_keys`／`required`、`attempts_left`／`daily_attempts`、`can_challenge`／`problem_zh`、`first_kill_zh`、`board`（前 10 名：名次、名字、分數、輪數、存活、沒人倒下、挑戰地點〔看的人還沒發現的隱藏地點用提示語，5C-3f〕、時間）。`GET …/board` 用看的人的帳號算剩餘次數。
+- 前端：`BoardPanel` 加「賽季 Boss」區塊（既有面板、進度條、列表樣式），開放時顯示「挑戰」按鈕（送 `season_boss` 動作，之後是既有的遭遇與開戰畫面）；挑戰、首殺等世界事件句子照既有事件列顯示。
+- OpenAPI 重產。
+
+### 36.8 季末分類（`season_policy.py`）
+
+| 欄位 | 分類 |
+|---|---|
+| `WorldState.seal_keys`、`seal_full_at`、`boss_attempts`、`boss_clears` | 數值類（世界狀態） |
+| `CharacterState.seal_key_sources`、`boss_drop_days` | 數值類（角色） |
+| `FirstKill.account_id`、`battle_log` | 紀念類 |
+| 評分榜 `BossBoardEntry` 全部欄位 | 紀念類（#91「排行榜與 Boss 擊殺紀錄」；新模型加進表） |
+
+### 36.9 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/engine/test_boss_phases.py`（加） | `tag_down`、`round_at` 觸發；護陣 ×0；碎晶之主整場重播一致 |
+| `tests/content/` | 新觸發的 schema；`season_boss`／`seal_keys` 載入檢查；裂界門地圖；`loot.yaml` `bosses` |
+| `tests/world/test_season_boss.py`（新） | 鑰匙來源、封印共鳴進度、解鎖時間（集滿第 5 天 → 第 8 天；第 9 天下午 → 24 小時後；沒集滿 → 第 10 天）、公告時間、挑戰的每個擋法、每帳號 3 次（同帳號兩角色共用）、換日重置、撤退不退次數、種子來自賽季種子、夥伴不出場、失敗只扣次數、分數、首殺只有第一筆、世界日誌重播一致 |
+| `tests/world/test_boss_loot.py`（新） | 區域 Boss 每日第一次必掉史詩＋雲頂霧晶、同一天第二次照精英、隔天又保底 |
+| `tests/server/` | 評分榜排序與每角色留最好、首殺戰鬥紀錄存檔並可重播、分類表 |
+| `tests/api/` | 公告板的賽季 Boss 區塊、隱藏地點提示語、挑戰動作 |
+| 前端 vitest | 賽季 Boss 區塊的顯示資料 |
+| 小模擬（`scripts/season_boss_sim.py`） | 10 級主角（數種 build）＋2 名預設傭兵，共 40 場：勝率、平均輪數、到各階段的比例 |
+
+### 36.10 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5F3-1 | 碎晶之主在哪裡打 | 獨立 Boss 地圖「裂界門」，從城鎮挑戰（荒原地點圖 5F-5） |
+| 5F3-2 | 次數什麼時候扣 | 按下挑戰就扣；撤退不退（防止刷種子） |
+| 5F3-3 | 種子 | 角色的 `battle` 串流（賽季種子衍生，伺服器保管） |
+| 5F3-4 | 失敗 | 只扣次數：HP、法力、耐力照開戰前，不疲憊、不回小鎮 |
+| 5F3-5 | 打贏的獎勵 | 不給經驗、金錢、掉落；稱號記在評分榜；首殺獎金是現實獎勵，只記首殺 |
+| 5F3-6 | 劇情夥伴 | 不擋挑戰，但不出場 |
+| 5F3-7 | 封印共鳴的進度 | 全服累積數（事件開始時帶入之前的鑰匙）；門檻 12（初值），照上線人數調整 |
+| 5F3-8 | 鑰匙來源 | 霧鎖真人第一次打倒、每張懸賞第一次搶下（荒原第 2 章結局、事件 #2 等 5F-5） |
+| 5F3-9 | 集滿後的解鎖時間 | 最早第 8 天，且至少集滿後 24 小時；第 10 天強制 |
+| 5F3-10 | 開放到哪天 | 第 13 天結束（9.7「解鎖～第 13 天」；第 14 天是季末） |
+| 5F3-11 | 分數 | 1000 − 20 × 輪數 ＋ 100 × 存活人數 ＋ 200（沒人倒下）；只算主角與傭兵 |
+| 5F3-12 | 評分榜留哪一次 | 每角色每季最好的一次 |
+| 5F3-13 | 晶蝕疊層、晶傀儡週期召喚、回合結束全場傷害、本體換邊 | 用現有機制近似（36.4）；要原樣需新引擎欄位，待 PM |
+| 5F3-14 | 界崩（第 15 輪） | 第 3 階段之後才會觸發（階段依序） |
+| 5F3-15 | 區域 Boss 重複挑戰 | 不限次數、不寫已清空；保底掉落（史詩＋Boss 材料）每角色每刷新日第一次 |
+| 5F3-16 | 戰鬥紀錄版號 | `/110` |
+
+### 36.11 驗收
+
+`ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`；`tests/engine`、`tests/content`、`tests/world`、`tests/api`、`tests/server`、`tests/test_architecture.py`（`-n 8`）；`tests/skillgen` 的 slow `test_budget`、`test_refactor_3wr2`；`tests/sim/test_push_check.py`；新增技能、狀態、地圖時重產 CLI 快照並說明原因；`npx vitest run`、`npm run build`；swamp 種子 7 重播與首殺重播；OpenAPI 重產。不跑全量 matrix／completion。
+
+### 36.12 不做的事
+
+- 灰燼荒原地點、灰燼之心、主線第 2～3 章、事件 #2 的資料（5F-5）；季末重置流程（5F-5）；影子循環賽（5F-4）。
+- 首殺獎金發放（現實獎勵，使用者處理）；稱號系統（只記在評分榜）；Boss 立繪、柱子外觀與新美術。
+
+
+## 37. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）
