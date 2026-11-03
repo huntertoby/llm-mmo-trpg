@@ -15,6 +15,7 @@ from trpg.api.account_config import AccountSettings
 from trpg.api.account_schemas import AccountView
 from trpg.api.accounts import AccountDisabledError, AccountRecord, AccountStore, AuthError
 from trpg.api.login_limit import LoginLimiter
+from trpg.api.server_config import ServerSettings
 from trpg.api.world import WorldCharacterNotFoundError
 from trpg.shared.errors import TrpgError
 
@@ -27,6 +28,7 @@ __all__ = [
     "optional_account",
     "require_admin",
     "require_world_access",
+    "server_settings_of",
     "settings_of",
     "viewer",
 ]
@@ -45,6 +47,12 @@ def accounts_of(request: Request) -> AccountStore:
 def settings_of(request: Request) -> AccountSettings:
     settings = request.app.state.account_settings
     assert isinstance(settings, AccountSettings)
+    return settings
+
+
+def server_settings_of(request: Request) -> ServerSettings:
+    settings = request.app.state.server_settings
+    assert isinstance(settings, ServerSettings)
     return settings
 
 

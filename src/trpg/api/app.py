@@ -26,10 +26,12 @@ from trpg.api.accounts import (
 )
 from trpg.api.auth import AdminRequiredError
 from trpg.api.gear import GearRequestError
+from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
 from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
+from trpg.api.server_config import ServerSettings, load_server_settings
 from trpg.api.sessions import (
     AutoAdvanceLimitError,
     BattleNotFoundError,
@@ -102,6 +104,7 @@ def create_app(
     save_dir: Path | None = None,
     llm: LlmProvider | None = None,
     accounts: AccountSettings | None = None,
+    server: ServerSettings | None = None,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
     （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
@@ -113,6 +116,9 @@ def create_app(
     把那一輪當作關閉）；測試傳 :class:`~trpg.api.llm_source.MockLlmProvider`。
     ``accounts`` 是帳號與登入的設定（5E-1；省略時讀 ``config/server.toml`` 的 ``[accounts]``，
     開發模式預設開）。帳號存在 ``accounts.dir``，空字串時 ``<save_dir>/accounts``。
+    ``server`` 是網路與健康檢查的設定（5E-3；省略時讀 ``config/server.toml`` 的 ``[network]``、
+    ``[llm_health]``）：``trusted_proxies`` 決定登入限制讀不讀轉發標頭，``llm_health_interval_s`` 是
+    本機模型的 ping 間隔（啟動時 ping 一次；0＝只在啟動時）。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
     所以 ``/api/*`` 優先）。
     """
@@ -125,7 +131,15 @@ def create_app(
     app.state.runs = RunStore(lib, app.state.store, saves, llm=provider)
     app.state.world = WorldStore(lib, app.state.store, saves / "world")  # 大世界（5A-5）
     app.router.on_shutdown.append(app.state.world.offers.shutdown)  # PERF-3 背景執行緒
-    app.state.world_llm = WorldLlm(provider)  # 大世界自己的 LLM 開關（5B-5）
+    network = server if server is not None else load_server_settings()
+    app.state.server_settings = network  # 網路與健康檢查（5E-3）
+    health = LlmHealth(provider, interval_s=network.llm_health_interval_s)
+    world_llm = WorldLlm(provider, health)  # 大世界自己的 LLM 開關（5B-5）
+    health.active = lambda: world_llm.enabled
+    app.state.world_llm = world_llm
+    app.state.llm_health = health
+    app.router.on_startup.append(health.start)  # 啟動時與定期 ping（5E-3）
+    app.router.on_shutdown.append(health.stop)
     settings = accounts if accounts is not None else load_account_settings()
     app.state.account_settings = settings  # 帳號與登入（5E-1）
     app.state.accounts = AccountStore(
