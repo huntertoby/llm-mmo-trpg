@@ -318,6 +318,16 @@ def _cloud_summit_with_stone(raw: Raw) -> None:
     )
 
 
+
+def _cloud_summit_with_campfire(raw: Raw) -> None:
+    raw["cloud_summit"] = _open_map(
+        "cloud_summit",
+        "cloud_summit",
+        size=(12, 8),
+        exits=[_exit("to_crystal_rift", (0, 4), "crystal_rift", "to_cloud_summit")],
+        campfires=[{"id": "fire_summit", "at": [2, 2]}],
+    )
+
 _REPORT_ERROR_CASES: list[tuple[str, Mutate, str]] = [
     # 一條連線＝一對出口
     ("missing_pair", _drop_exit("mist_ferry", "to_ferry_steps"), "缺少往 ferry_steps 的出口"),
@@ -453,6 +463,7 @@ _REPORT_ERROR_CASES: list[tuple[str, Mutate, str]] = [
         "區域 ashen_waste 沒有地點 nowhere",
     ),
     ("boss_with_teleport_stone", _cloud_summit_with_stone, "不可有傳送石"),
+    ("boss_with_campfire", _cloud_summit_with_campfire, "不可放營火點"),  # 21.10 第 24 條
 ]
 
 

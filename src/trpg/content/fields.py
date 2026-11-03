@@ -963,5 +963,8 @@ def _map_stone_checks(ctx: _Ctx, field: FieldMapDef) -> None:
         ctx.errors.append(
             f"實地地圖 {field.id}：Boss 地點 {loc.id} 只能從相連的地點走進去，不可有傳送石"
         )
+    if loc.kind == "boss" and field.campfires:
+        # 21.10 第 24 條：打贏 Boss 不寫「已清空」，Boss 地點（含前廳）的營火點永遠用不到
+        ctx.errors.append(f"實地地圖 {field.id}：Boss 地點 {loc.id} 不可放營火點")
     if loc.kind == "town" and count != 1:
         ctx.warnings.append(f"實地地圖 {field.id}：城鎮應有 1 個傳送石，目前 {count} 個")
