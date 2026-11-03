@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.equipment import ItemDef
 from trpg.content.skills import SkillDef
+from trpg.content.slots import SlotType
 from trpg.content.world_oaths import OathDifficulty
 from trpg.roguelite.state import PendingFlash, SkillOffer
 from trpg.shared.rng import MASK64
@@ -34,8 +35,10 @@ __all__ = [
     "ClearedLocation",
     "CompanionAffinity",
     "CompanionBench",
+    "CraftRecipe",
     "EncounterResult",
     "EventTrigger",
+    "GearMod",
     "LastBattle",
     "LocationRef",
     "LootSummary",
@@ -44,6 +47,7 @@ __all__ = [
     "PendingOffer",
     "PerceptionMark",
     "QuestState",
+    "RecipeRecord",
     "ShadowRecord",
     "ShadowReport",
     "ShadowSnapshot",
@@ -281,6 +285,59 @@ def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
     return threads
 
 
+class CraftRecipe(_Model):
+    """打造的配方（Phase 5D-3，08 8.20）：部位＋物品等級＋稀有度＋指定的 build 詞條＋材料組合。
+
+    ``weapon_class`` 只有武器（主角武器的大類）；``affix`` 是 ``None``＝隱藏配方（獨特詞條由配方
+    決定）；``grade`` 是 1 種通用料；``materials`` 是特色材料（排序、不重複）。"""
+
+    slot_type: SlotType
+    weapon_class: Literal["melee", "ranged", "focus"] | None = None
+    rarity: Literal["rare", "epic"]
+    item_level: int = Field(ge=1, le=99)
+    affix: str | None = Field(default=None, pattern=ID_PATTERN)
+    grade: str = Field(pattern=ID_PATTERN)
+    materials: tuple[str, ...] = ()
+
+    @field_validator("materials")
+    @classmethod
+    def _sorted_materials(cls, ids: tuple[str, ...]) -> tuple[str, ...]:
+        if list(ids) != sorted(set(ids)):
+            raise ValueError("materials 必須排序且不重複")
+        return ids
+
+
+class GearMod(_Model):
+    """一件裝備被打造、強化、重骰、指定的紀錄（Phase 5D-3，8.20）。
+
+    ``fingerprint``：打造品是配方指紋；掉落品是第一次改動時物品 JSON 的 SHA-256（沒有配方碼）。
+    ``rerolls``：依序重骰過的詞條位置（第 n 次重骰某位置的亂數由「指紋＋位置＋n」決定）。"""
+
+    fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    recipe: str | None = Field(default=None, pattern=r"^[0-9a-f]{10}$")
+    enhance: int = Field(default=0, ge=0, le=10)
+    rerolls: tuple[int, ...] = ()
+    imbues: int = Field(default=0, ge=0)
+
+    @property
+    def changes(self) -> int:
+        """重骰與指定合計幾次（費用越改越貴，8.14）。"""
+        return len(self.rerolls) + self.imbues
+
+
+class RecipeRecord(_Model):
+    """世界記得的配方（Phase 5D-3，M6）：配方碼、配方、第一次打出的名稱與首位發現者。"""
+
+    code: str = Field(pattern=r"^[0-9a-f]{10}$")
+    recipe: CraftRecipe
+    name_zh: str
+    discoverer: str = Field(pattern=ID_PATTERN)
+    discoverer_name: str
+    discovered_at: int = Field(ge=0)
+    hidden: str | None = Field(default=None, pattern=ID_PATTERN)
+    """隱藏配方的 ID（M7）；一般配方為 ``None``。"""
+
+
 class ShopPurchase(_Model):
     """本週在某家店買過的限量商品個數（Phase 5D-1；8.26.1 區域特產每週限量）。"""
 
@@ -383,6 +440,19 @@ class WorldState(_Model):
     """限時的世界旗標（依旗標排序、不重複；Phase 5B-4c 世界級線頭的到期結局，例：之後 2 天）。"""
     shadows: tuple[ShadowRecord, ...] = ()
     """每個角色的影子（依主人 ID 排序、每人一筆；Phase 5C-2）。"""
+    recipes: tuple[RecipeRecord, ...] = ()
+    """打造過的配方與首位發現者（依配方碼排序、不重複；Phase 5D-3，M6）。"""
+
+    @field_validator("recipes")
+    @classmethod
+    def _recipes_sorted(cls, recipes: tuple[RecipeRecord, ...]) -> tuple[RecipeRecord, ...]:
+        codes = [r.code for r in recipes]
+        if codes != sorted(set(codes)):
+            raise ValueError("recipes 必須依配方碼排序且不重複")
+        return recipes
+
+    def recipe_of(self, code: str) -> RecipeRecord | None:
+        return next((r for r in self.recipes if r.code == code), None)
 
     @field_validator("shadows")
     @classmethod
@@ -596,6 +666,17 @@ class CharacterState(_Model):
     """背包裡的裝備（依取得順序；每件佔背包 1 格，8.17）。"""
     equipment: dict[str, ItemDef] = Field(default_factory=dict)
     """穿戴中的裝備（欄位 → 物品；空＝主角範本的裝備，同 ``RunState.equipment``）。"""
+
+    # --- 5D-3 鐵匠與附魔台（邏輯在 trpg.world.crafting） ---
+    gear_mods: dict[str, GearMod] = Field(default_factory=dict)
+    """打造、強化、重骰、指定過的裝備（物品 ID → 紀錄；依 ID 排序）。"""
+    crafts: int = Field(default=0, ge=0)
+    """打造過幾件（打造品 ID 的流水號，同配方打兩件不撞 ID）。"""
+
+    @field_validator("gear_mods")
+    @classmethod
+    def _sorted_gear_mods(cls, mods: dict[str, GearMod]) -> dict[str, GearMod]:
+        return dict(sorted(mods.items()))
 
     @field_validator("bag", "pouch")
     @classmethod

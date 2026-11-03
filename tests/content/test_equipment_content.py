@@ -91,6 +91,9 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_trig_thorns_burn",
         "affix_trig_summon_blast",
         "affix_trig_summon_mend",
+        "affix_unique_thunder_mist",  # 5D-3 獨特詞條（20.3）
+        "affix_unique_steam_guard",
+        "affix_unique_frostfire",
     ),
     "charge": ("affix_charge_static", "affix_charge_fury"),
     "cost": ("affix_cost_glass", "affix_cost_blood", "affix_cost_swift"),
@@ -118,10 +121,10 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_66_affixes_in_11_categories() -> None:
-    """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66。"""
+def test_whitelist_has_all_69_affixes_in_11_categories() -> None:
+    """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66；5D-3 加 3 條獨特詞條 → 69。"""
     affixes = library().affixes
-    assert len(affixes) == 66
+    assert len(affixes) == 69
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

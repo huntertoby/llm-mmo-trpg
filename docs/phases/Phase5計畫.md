@@ -3369,6 +3369,100 @@ announce_channel_id = ""   # 公告頻道 ID（5E-3 才用；這一段只檢查�
 
 - 真實 Discord 連線與 slash 指令註冊；公告（5E-3，這一段只讀設定）；Tunnel；朋友名單；帳號刪除；管理者的 Bot 指令。
 
-## 30. 之後各段規格
+## 30. 5D-3 詳細規格：鐵匠與附魔台
+
+> 給實作 agent。只動 `content/world/crafting.yaml`（新）、`content/world/resonance.yaml`（新）、`content/world/items.yaml`（精華、荒原 3 種材料）、`content/world/npcs/cloud_ridge.yaml`（鐵匠人設卡）、`content/affixes.yaml`（3 條獨特詞條）、`content/item_gen.yaml`（`unique_affixes`）、`src/trpg/content/`（`world_crafting.py` 新；`item_gen.py` 加選填參數與重骰函式、`item_budget.py` 一個欄位、`library.py` 一個欄位一行呼叫）、`src/trpg/world/`（`crafting.py`、`crafting_actions.py`、`resonance.py` 新；`state.py`、`step.py`、`actions.py`、`gear.py`、`economy.py`、`battle.py` 小改）、`src/trpg/api/`（`world_crafting_view.py`、`world_crafting_schemas.py` 新；`world_schemas.py`、`world_presenter.py`、`world_economy_view.py` 小改）、`client/`（小鎮的「鐵匠」面板、背包的共鳴一行、API 型別）、`client/openapi.json`、`tests/`。另一個 agent（5E-1）同時在做帳號與角色：不碰帳號、角色清單、`trpg.api` 的帳號路由。不改 `trpg.engine`、`trpg.roguelite`、`trpg.skillgen`、戰鬥紀錄格式（`LOG_FORMAT` 不變）、`trpg-char/1`／`trpg-world/1`／`trpg-wlog/1` 版號（新欄位都有預設值，同 5D-1、5D-2）。
+> 依據：**`docs/design/20-第一季商店與裝備內容.md`（優先）** 20.3（獨特裝備：驚雷霧袍、蒸汽護腕、冰火雙生戒的部位與效果；強度不超過同物品等級史詩）、20.4（3 個隱藏配方與提示；提示只說意象；第一次打出的人成為首位發現者）、20.1（材料不能賣，只能分解或用掉）；08 8.13（打造＝指定部位＋1 條關鍵字詞條；材料用量依部位預算比例調整）、8.14（精華＝分解裝備，用來重骰、指定詞條；重骰同一件越骰越貴；強化 +1～+3）、8.15（金幣：打造手續費、重骰與強化；任務幣：高階打造）、8.9（共鳴：`resonance_tags`＝關鍵字，2 件小共鳴，效果用技能原語）、8.20（配方＝部位＋物品等級＋稀有度＋指定詞條＋材料組合；配方指紋 SHA-256；重骰由「指紋＋位置＋n」決定；配方碼分享、朋友用自己的材料打；掉落裝備沒有配方碼；名稱綁定配方第一次打造）、8.26.1（鐵匠：打造、強化；附魔台：重骰、精華指定；只給裝備）、8.26.2（打造的物品等級＝玩家等級，不超過材料階上限 粗 3／精 7／上 10）、8.26.3 M2（其餘詞條的傾向由材料決定）、M3（第一季 2 件門檻）、M4、M6（沒人試過的組合只看得到大致傾向；首位發現者名字掛在配方上）、M7；18 18.2.4（雲嶺材料與驚雷霧袍）、18.4 骨架 4（「雷雨夜的霧最濃」已是酒館傳聞）；19 19.2.4（熔岩核、寒燼、熔心晶）；09 9.6.1（鐵匠、附魔台見 08）；本檔 26（背包、金幣、任務幣）、27（材料、`gear`、`equipment`、`equip`、回收）。
+
+### 30.1 目標
+
+霧渡鎮有鐵匠（打造、強化、分解）與附魔台（重骰、精華指定）。打造：指定部位、稀有度（稀有或史詩）、1 條 build 詞條（關鍵字詞條）與材料（1 種通用料決定物品等級上限＋0～3 種特色材料決定其餘詞條的傾向）；同一份配方一定打出同一件裝備，配方碼可以分享，世界記下每份配方的首位發現者。3 個隱藏配方打出獨特裝備。穿著 2 件帶相同關鍵字的裝備觸發小共鳴。全部是世界動作（寫進日誌、可重播）；LLM 不碰數值與物品。
+
+### 30.2 內容（`content/world/`；schema `src/trpg/content/world_crafting.py`，`ContentModel`、錯誤訊息繁中並指出 ID）
+
+1. **`crafting.yaml`**（`CraftingRules`；沒有檔案＝鐵匠與附魔台關閉 `None`）：
+   - `stations`：`{id, kind: smithy | enchanter, name_zh, region, location, npc?}`。霧渡鎮：`smithy_mist_ferry`（石師傅）、`enchanter_mist_ferry`（渡口附魔台，沒有 NPC）。
+   - `craft`：`rarities`（只能是 `rare`、`epic`：稀有起才有 build 詞條，item_gen 的 `required`）→ `{gold_per_level, quest_coins}`；`grade_amount`（部位 → 通用料個數，依 8.22 部位比例）；`flavor_max: 3`；`leaning_weight`（傾向詞條的權重倍數）；`grade_cap`（粗 3、精 7、上 10）。
+   - `materials`：特色材料 → `{leanings: [詞條 ID…], resonance: 關鍵字 | null}`（M2；說明文字照 items.yaml 的傾向）。
+   - `hidden`：隱藏配方 `{id, name_zh, slot_type, materials: [2～3 種], affix: 獨特詞條, rarity: epic}`（20.4）。
+   - `enhance`：`max_level: 3`、`step_permille`（每級基礎加成 ‰：武器傷害、其他防禦，沿用 `base_bonus_permille`）、`gold_per_level`（× 物品等級 × 目標強化等級）；材料＝物品等級對應的通用料（≤3 粗、≤7 精、其餘上）× 目標強化等級。
+   - `reroll`：`essence`、`gold_base`、`gold_step`（費用＝base＋step × 這件已重骰／指定的次數）；`imbue`：同上（較貴）。
+   - `salvage`：稀有度 → 精華個數。
+   檢查：區域與地點在地點圖、`npc` 在人設卡且在同一地點；材料都是 `kind: material`、通用料有 `grade`、特色材料沒有；`leanings`、`affix` 是存在的詞條；`resonance` 是關鍵字；隱藏配方的材料是特色材料、組合不重複、獨特詞條能掛在該部位。
+2. **`resonance.yaml`**（`ResonanceRules`；沒有檔案＝沒有共鳴）：`pieces: 2`（M3；4 件留到正式季）、`resonances: [{keyword, name_zh, affixes: [{affix, value}]}]`：共鳴時依序挑第一條「能掛在帶該關鍵字的某件穿戴物品上、那件沒有同 ID、條數未滿」的詞條（效果都是現成詞條＝現成原語，8.9）。
+3. **`items.yaml`**：`item_essence`（精華，`kind: material`，分解裝備取得）；`item_lava_core`（熔岩核）、`item_frost_ember`（寒燼，稀有）、`item_molten_heart`（熔心晶，稀有）：19.2.4 的荒原材料，本段只定義（荒原掉落在荒原內容段）。
+4. **`affixes.yaml`**：3 條獨特詞條（20.3；觸發類，現成原語）：`affix_unique_thunder_mist`（身體；受到近戰傷害時，自己腳下產生 1 回合煙霧，每輪 1 次）、`affix_unique_steam_guard`（手；受到傷害時自己腳下產生 1 回合煙霧，每輪 1 次——引擎沒有「火焰傷害」的觸發篩選，代決 5D3-9）、`affix_unique_frostfire`（戒指；施加燃燒時也讓目標緩速 1 回合，每回合 1 次）。`item_gen.yaml` 加 `unique_affixes`：這些詞條不進一般產生器（掉落、傭兵、重骰都不會出現）。
+5. **`npcs/cloud_ridge.yaml`**：加「石師傅」（霧渡鎮鐵匠；18、20 沒寫鐵匠是誰，最小人設卡，代決 5D3-1）。
+
+### 30.3 狀態（全部有預設值；格式字串不變）
+
+- `CharacterState.gear_mods: dict[str, GearMod] = {}`：被打造、強化、重骰、指定過的裝備（物品 ID → `{fingerprint, recipe: 配方碼 | None, enhance: 0～3, rerolls: 依序的位置, imbues: 次數}`；依 ID 排序）。
+- `CharacterState.crafts: int = 0`：打造過幾件（打造品的 ID `item_craft_{配方碼}_{n}`，避免同配方打兩件撞 ID）。
+- `WorldState.recipes: tuple[RecipeRecord, ...] = ()`：世界記得的配方（依配方碼排序、不重複）：`{code, recipe, name_zh, discoverer, discoverer_name, discovered_at, hidden}`（M6）。
+
+### 30.4 規則（`trpg.world.crafting`；動作加進 `WorldAction`；不合法拋 `WorldActionError`、狀態不變）
+
+- **地點**：在該設施的地點（城鎮）、沒有遭遇。`craft`、`enhance`、`salvage` 在鐵匠；`reroll`、`imbue` 在附魔台。
+- **配方**（`CraftRecipe`，8.20）：`slot_type`、`weapon_class`（只有武器：主角武器的大類）、`rarity`、`item_level`、`affix`（build 詞條；隱藏配方為 `None`）、`grade`（1 種通用料）、`materials`（0～3 種特色材料，排序、不重複）。**指紋**＝正規化 JSON（鍵排序）的 SHA-256；**配方碼**＝指紋前 10 碼（顯示大寫）。
+- **`craft`**（`station`、`slot_type`、`rarity`、`affix`、`grade`、`materials`、`item_level?`；或只給 `code`）：
+  - 物品等級＝`item_level` 或預設 min(角色等級, `grade_cap[grade]`, 掉落的 `max_item_level`)；不得超過（8.26.2）。用配方碼打造時，配方的物品等級 > 角色等級就不能打（8.20「配方要求的等級不足時不能打」），主手的武器大類要和主角相同。
+  - build 詞條必須在該部位的 `required_picks` 候選裡（主手、副手、飾品＝技能強化〔關鍵字〕詞條；身體、頭、手、腳＝條件數值或防守型觸發，08 8.21.6；代決 5D3-3），且能掛在這個部位與這把武器。
+  - **隱藏配方**（M7）：部位與特色材料組合完全符合 → 稀有度改為配方的（史詩）、build 詞條換成獨特詞條（玩家選的詞條不用，配方的 `affix` 記 `None`）、名稱固定（20.3）。
+  - 費用：通用料 `grade_amount[部位]` 個＋每種特色材料 1 個；金幣 `gold_per_level × 物品等級`；史詩另加任務幣（8.15「高階打造」）。不夠就不能打。
+  - 產生：`generate_item(..., forced=build 詞條, leanings=材料傾向)`，亂數＝`Rng(指紋前 8 位元組)`（8.20：同配方同結果；不耗角色亂數）。產生失敗（預算放不下 build 詞條）就不能打、不扣東西。名稱：稀有度＋底材名（LLM 命名在之後），隱藏配方用固定名稱；配方第一次被打造時名稱記進世界、之後沿用（8.20）。
+  - 物品的 `tags` 加上特色材料的共鳴關鍵字（`resonance_<關鍵字>`，M3「同區同族的裝備自然帶相同關鍵字」）。
+  - 打好的裝備放進背包（放不下＝不能打）。世界沒有這個配方碼 → 記下首位發現者（角色 ID 與名字，M6）並在事件標 `discovered`。
+- **`enhance`**（`station`、`item`：背包或穿戴中的裝備）：強化等級 +1（上限 3，8.14）；`base_bonus_permille` +`step_permille`；扣金幣與通用料。沒有物品等級的（初始裝備）不能強化。
+- **`reroll`**（`station`、`item`、`index`）：把第 `index` 條換成另一條：候選＝同稀有度可用類別（第 1 條是 build 詞條時只從 build 候選裡挑）、能掛在這件、和其他條相容（同產生器規則）、不是原本那條、不是獨特詞條、放得進「部位詞條預算 − 其他條的點數」；數值取放得進的最大值。亂數＝`指紋:{index}:{n}`（n＝這個位置已重骰的次數，8.20）。費用：精華＋金幣，越骰越貴。獨特詞條不能重骰。
+- **`imbue`**（`station`、`item`、`index`、`affix`）：同 `reroll` 的候選，指定其中一條（8.20「完全沒有隨機」）；費用較高。
+- **`salvage`**（`station`、`item`：背包裡的裝備）：拿掉那件，得到 `salvage[稀有度]` 個精華（8.14）。穿戴中的不能分解。
+- **共鳴**（`trpg.world.resonance`，M3）：物品的共鳴關鍵字＝技能強化詞條的關鍵字＋`resonance_<關鍵字>` 標籤。主角開戰時，穿戴中帶同一關鍵字的裝備 ≥ `pieces` 件 → 加上那個共鳴的詞條（掛在第一件合適的物品上，見 30.2 第 2 點）；只算主角（代決 5D3-8）。
+- **指紋**：掉落的裝備第一次被強化／重骰時，指紋＝物品 JSON 的 SHA-256（掉落品沒有配方碼，8.20）。
+- **出售**：賣掉的裝備一併刪掉 `gear_mods`。
+
+### 30.5 API 與前端
+
+- `WorldActionRequest` 加 `craft`、`enhance`、`reroll`、`imbue`、`salvage`。`WorldView.crafting: CraftingView | None`（在設施的地點時）：設施、部位與 build 詞條的選項、稀有度費用、背包裡的材料（傾向說明、共鳴關鍵字）、已知配方（世界的配方表：碼、名稱、首位發現者、能不能打與原因）、可強化／重骰／指定／分解的裝備（每條詞條的文字與指定候選、費用、不能的原因）。`InventoryView.resonance_zh`（目前觸發的共鳴）。
+- 事件句子：打造（含「你是這份配方的首位發現者」）、強化、重骰、指定、分解。
+- 前端：小鎮服務列加「鐵匠」切換，面板內：打造表單（部位、稀有度、詞條、通用料、特色材料、費用與傾向）、配方碼打造、強化／分解、附魔台的重骰與指定；停用原因用共用 `<Hint>`。背包加共鳴一行。完整畫面在 5D-4。
+- OpenAPI 照既有方式重產。
+
+### 30.6 測試
+
+| 檔案 | 內容 |
+|---|---|
+| `tests/content/test_world_crafting.py` | 載入雲嶺；壞資料逐條（設施地點、材料不是材料、通用料沒有階、未知詞條、隱藏配方重複、獨特詞條掛不上）；沒有檔案＝`None`；獨特詞條不在一般產生器 |
+| `tests/world/test_crafting.py` | 打造：同配方同物品（兩個角色）、物品等級上限、build 詞條在第 1 條、傾向（多個配方統計）、費用與不夠時不變、配方碼打造、首位發現者只記第一次、等級不足不能用碼；隱藏配方 3 個；強化、重骰（確定性、越骰越貴、預算內）、指定、分解；地點檢查 |
+| `tests/world/test_resonance.py` | 2 件同關鍵字 → 開戰裝備多一條共鳴詞條；1 件沒有；掛不上就不加 |
+| `tests/api/test_world_crafting_api.py` | 小鎮看得到鐵匠 → 打造 → 背包 → 強化 → 附魔台重骰 → 分解 |
+| vitest | 鐵匠面板靜態輸出、停用原因 |
+
+### 30.7 驗收
+
+- `ruff check .`、`ruff format --check .`、`mypy`、`lint-imports`。
+- `tests/world`、`tests/api`、`tests/content`（`-n 8`）；vitest 與 build；swamp 種子 7 重播。
+
+### 30.8 不做的事
+
+- LLM 命名、外觀綁定配方（之後的段）；品質（正式季）；4 件共鳴；把詞條搬到別件；重骰序列併進配方碼（代決 5D3-6）；稱號；荒原的設施、掉落與提示（荒原內容段）；完整鐵匠畫面（5D-4）。
+
+### 30.9 代決（開發 PM 定，最保守預設；寫進完成報告）
+
+| # | 事項 | 代決 |
+|---|---|---|
+| 5D3-1 | 鐵匠是誰、在哪 | 18、20 沒寫：霧渡鎮加最小人設卡「石師傅」；附魔台是同鎮的設施（沒有 NPC）。9.6.1 的主城還沒做 |
+| 5D3-2 | 打造的稀有度 | 稀有或史詩（稀有起才有 build 詞條）；史詩要任務幣（8.15 高階打造） |
+| 5D3-3 | 「1 條關鍵字詞條」在身體、頭、手、腳 | 現成的技能強化詞條都掛不上防具，照 item_gen 的 build 詞條規則改用條件數值／防守型觸發 |
+| 5D3-4 | 材料組合與用量 | 1 種通用料（決定物品等級上限，用量依部位）＋0～3 種特色材料各 1 個；費用初值見 `crafting.yaml` |
+| 5D3-5 | 傾向（M2） | 特色材料的傾向詞條在抽詞條時權重 ×`leaning_weight`（不是限制） |
+| 5D3-6 | 重骰後的裝備能不能用配方碼復刻 | 配方碼只含基礎配方；重骰序列記在日誌與 `gear_mods`（可重播），併進配方碼留給 PM |
+| 5D3-7 | 隱藏配方的觸發條件 | 部位相同＋特色材料組合完全相同；玩家選的 build 詞條換成獨特詞條；稀有度固定史詩 |
+| 5D3-8 | 共鳴 | 只算主角；物品的關鍵字＝技能強化詞條＋特色材料的共鳴標籤；效果是現成詞條（不另算預算） |
+| 5D3-9 | 獨特效果的近似 | 「自身周圍」＝自己腳下 1 格（觸發效果的形狀只有自己）；蒸汽護腕「被火攻擊時」引擎沒有元素篩選，先用「受到傷害時」 |
+| 5D3-10 | 強化的效果 | 每級基礎加成 +2%（武器傷害、其他防禦；沿用 `base_bonus_permille`），不算進物品預算 |
+| 5D3-11 | 亂數 | 打造、重骰用配方指紋衍生的亂數（8.20 要求同配方同結果、誰打都一樣），不用角色的串流 |
+| 5D3-12 | 首位發現者 | 世界快照記角色 ID 與名字；只有名字，不給稱號、不給獎勵 |
+
+## 31. 之後各段規格
 
 （5B-5 驗收後補上之後各段。）

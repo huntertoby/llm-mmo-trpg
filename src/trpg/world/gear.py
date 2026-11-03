@@ -30,6 +30,7 @@ from trpg.shared.rng import Rng, fnv1a64
 from trpg.world.economy_actions import EquipAction, ItemEquippedEvent
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import as_run, at_service
+from trpg.world.resonance import apply_resonance
 from trpg.world.state import CharacterState
 
 __all__ = [
@@ -69,10 +70,16 @@ def worn_gear(library: ContentLibrary, char: CharacterState) -> dict[str, ItemDe
 
 
 def hero_loadout(library: ContentLibrary, char: CharacterState) -> Loadout:
-    """主角開戰用的裝備快照：``equipment`` 非空就用它，否則範本的裝備。"""
+    """主角開戰用的裝備快照：``equipment`` 非空就用它，否則範本的裝備；再加上 2 件共鳴的詞條
+    （Phase 5D-3，:mod:`trpg.world.resonance`）。"""
     if char.equipment:
-        return item_loadout(library, char.equipment)
-    return library.loadout_of(char.hero)
+        loadout = item_loadout(library, char.equipment)
+    else:
+        loadout = library.loadout_of(char.hero)
+    weapon = library.weapons.get(char.hero.weapon)
+    if weapon is None:
+        return loadout
+    return apply_resonance(library, loadout, weapon)[0]
 
 
 # ---------------------------------------------------------------------------

@@ -24,8 +24,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from typing import Literal
 
@@ -57,7 +57,14 @@ from trpg.content.slots import SLOT_TYPE_OF, SlotType
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute
 
-__all__ = ["ItemGenError", "generate_item", "roll_rarity"]
+__all__ = [
+    "ItemGenError",
+    "affix_choices",
+    "generate_item",
+    "pick_affix",
+    "replace_affix",
+    "roll_rarity",
+]
 
 type WeaponClass = Literal["melee", "ranged", "focus"]
 _PERMILLE = 1000
@@ -287,20 +294,40 @@ class _Context:
     """build 詞條的候選（稀有起；沒有時為空）。"""
     reserve: Fraction
     """替後面每一條預留的點數：一般候選裡最便宜的一條（至少每條最低點數）。"""
+    leanings: Mapping[str, int] = field(default_factory=dict)
+    """傾向的詞條 → 權重倍數（Phase 5D-3 打造的材料傾向 M2）；空＝原本的均勻抽法。"""
+
+
+def _fits(library: ContentLibrary, base: _Base, forced: str | None = None) -> list[AffixDef]:
+    """能掛在底材上的詞條（依 id；不含傳說限定、不含獨特詞條——除非是指定的那條）。"""
+    rules = _rules(library)
+    probe = _probe(base)
+    return [
+        a
+        for _, a in sorted(library.affixes.items())
+        if not a.legendary_only
+        and (a.id not in rules.unique_affixes or a.id == forced)
+        and not affix_slot_problems(probe, a, base.weapon, library.weapons)
+    ]
 
 
 def _context(
-    library: ContentLibrary, base: _Base, rule: RarityRule, keywords: Sequence[str] = ()
+    library: ContentLibrary,
+    base: _Base,
+    rule: RarityRule,
+    keywords: Sequence[str] = (),
+    *,
+    forced: str | None = None,
+    leanings: Mapping[str, int] | None = None,
 ) -> _Context:
     rules = _rules(library)
-    probe = _probe(base)
-    fits = [
-        a
-        for _, a in sorted(library.affixes.items())
-        if not a.legendary_only and not affix_slot_problems(probe, a, base.weapon, library.weapons)
-    ]
+    fits = _fits(library, base, forced)
     pick = rules.required_picks.get(base.slot_type) if rule.required else None
     required = tuple(a for a in fits if pick is not None and pick.allows(a))
+    if forced is not None:  # 打造指定的 build 詞條（5D-3）
+        required = tuple(a for a in fits if a.id == forced)
+        if not required:
+            raise ItemGenError(f"指定的詞條 {forced} 不能掛在{base.name_zh}上")
     if keywords:  # 詞條偏向該區關鍵字（Phase 5D-2，20.2）：有符合的技能強化詞條就只從裡面挑
         wanted = set(keywords)
         leaning = tuple(a for a in required if isinstance(a, KeywordAffix) and a.keyword in wanted)
@@ -308,7 +335,14 @@ def _context(
     pool = tuple(a for a in fits if a.category in rule.categories)
     costs = [_min_points(rules, a) for a in pool]
     reserve = max(Fraction(rules.min_affix_points), min(costs, default=Fraction(0)))
-    return _Context(rules=rules, base=base, pool=pool, required=required, reserve=reserve)
+    return _Context(
+        rules=rules,
+        base=base,
+        pool=pool,
+        required=required,
+        reserve=reserve,
+        leanings=dict(leanings or {}),
+    )
 
 
 def _min_points(rules: ItemGenRules, affix: AffixDef) -> Fraction:
@@ -394,11 +428,21 @@ def _random_chooser(
         families: dict[str, list[tuple[AffixDef, int | None, Fraction]]] = {}
         for option in options:
             families.setdefault(_family(option[0]), []).append(option)
-        family = families[rng.choice(sorted(families))]
+        if not ctx.leanings:
+            family = families[rng.choice(sorted(families))]
+        else:  # 材料傾向（M2）：有傾向成員的族權重 × 倍數，抽中後只從傾向成員裡挑
+            weighted = [(k, _lean(ctx, [o[0] for o in families[k]])) for k in sorted(families)]
+            family = families[_weighted(rng, weighted)]
+            leaning = [o for o in family if o[0].id in ctx.leanings]
+            family = leaning or family
         member = _choose_member(ctx, rng, [o[0] for o in family])
         return next(o for o in family if o[0] is member)
 
     return choose
+
+
+def _lean(ctx: _Context, members: Sequence[AffixDef]) -> int:
+    return max((ctx.leanings.get(a.id, 1) for a in members), default=1)
 
 
 def _greedy(
@@ -414,7 +458,7 @@ def _enough(ctx: _Context, picks: Sequence[_Pick], budget: int) -> bool:
 
 
 def _roll_affixes(
-    ctx: _Context, rng: Rng, rule: RarityRule, budget: int, *, common: bool
+    ctx: _Context, rng: Rng, rule: RarityRule, budget: int, *, common: bool, forced: bool = False
 ) -> tuple[list[_Pick], int]:
     """詞條與（普通物品的）基礎加成（‰）。"""
     rules = ctx.rules
@@ -428,7 +472,8 @@ def _roll_affixes(
             if bonus is not None:
                 return [], bonus
     # 後備：每步挑點數最高；build 詞條放進去就到不了 70% 時（小部位），改成不強制 build 詞條
-    for fallback in (ctx, replace(ctx, required=())):
+    fallbacks = (ctx,) if forced else (ctx, replace(ctx, required=()))
+    for fallback in fallbacks:
         for count in range(rule.max_affixes, 0, -1):
             picks = _fill(fallback, count, _greedy, budget)
             if picks and _enough(fallback, picks, budget):
@@ -488,13 +533,19 @@ def generate_item(
     *,
     weapon_class: WeaponClass | None = None,
     keywords: Sequence[str] = (),
+    forced: str | None = None,
+    leanings: Mapping[str, int] | None = None,
 ) -> ItemDef:
     """產生一件物品（確定性：相同 ``rng`` 狀態與參數必得相同物品）。
 
     ``slot`` 可以是欄位（``main_hand``、``ring_1``……）或物品種類（``weapon``、``ring``……）；
     ``weapon_class`` 只對主手有效（主手只出同大類的武器，07 7.1）。傳說從現有傳說物品挑，沒有同部位
     的就降為史詩。``keywords``（Phase 5D-2 掉落的區域偏向、傭兵的 build 關鍵字）：稀有起的 build
-    詞條有關鍵字符合的技能強化詞條時只從裡面挑；空＝原本的行為（逐位元相同）。"""
+    詞條有關鍵字符合的技能強化詞條時只從裡面挑；空＝原本的行為（逐位元相同）。
+
+    Phase 5D-3 打造：``forced`` 是第 1 條（build 詞條）指定的詞條 ID（放不下就拋
+    :class:`ItemGenError`；可以是獨特詞條）；``leanings``（詞條 → 權重倍數）是材料傾向（M2）。
+    兩者都不給時行為不變。"""
     if item_level < 1:
         raise ItemGenError(f"物品等級至少 1（收到 {item_level}）")
     slot_type = _slot_type(slot)
@@ -506,9 +557,13 @@ def generate_item(
     rules = _rules(library)
     rule = rules.rarity(rarity)
     base = _base(library, rng, slot_type, weapon_class)
-    ctx = _context(library, base, rule, keywords)
+    ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     budget = affix_budget(rules, item_level, slot_type)
-    picks, bonus = _roll_affixes(ctx, rng, rule, budget, common=rarity == "common")
+    picks, bonus = _roll_affixes(
+        ctx, rng, rule, budget, common=rarity == "common", forced=forced is not None
+    )
+    if forced is not None and (not picks or picks[0].affix.id != forced):
+        raise ItemGenError(f"詞條預算放不下指定的詞條 {forced}（{base.name_zh}）")
     item = ItemDef(
         id=f"item_gen_{slot_type}_{rng.randint(0, 0xFFFFFFFF):08x}",
         name_zh=f"{RARITY_ZH[rarity]}{base.name_zh}",
@@ -533,3 +588,88 @@ def generate_item(
     if problems:
         raise ItemGenError("；".join(problems))
     return item
+
+
+# ---------------------------------------------------------------------------
+# 重骰與指定（Phase 5D-3 附魔台，08 8.20、8.26.1）
+# ---------------------------------------------------------------------------
+
+
+def _base_of(library: ContentLibrary, item: ItemDef) -> _Base:
+    return _Base(
+        slot_type=item.slot_type,
+        name_zh=item.name_zh,
+        weapon=None if item.weapon is None else library.weapons.get(item.weapon),
+        offhand=item.offhand_def,
+        paired=item.paired,
+        tags=item.tags,
+    )
+
+
+def affix_choices(
+    library: ContentLibrary, item: ItemDef, index: int
+) -> list[tuple[AffixDef, int | None]]:
+    """第 ``index`` 條詞條可以換成的詞條與數值（依 id）。
+
+    候選：同稀有度可用類別（第 1 條是 build 詞條時只從 build 候選裡挑）、能掛在這件、和其他條相容、
+    不是原本那條、不是獨特詞條、放得進「部位詞條預算 − 其他條的點數」；數值取放得進的最大值。
+    沒有物品等級、稀有度或詞條規則的物品沒有候選；那一條是獨特詞條時也沒有（不能重骰）。"""
+    rules = _rules(library)
+    if item.item_level is None or item.rarity is None or item.rarity not in rules.rarities:
+        return []
+    if not 0 <= index < len(item.affixes):
+        return []
+    current = item.affixes[index].affix
+    if current in rules.unique_affixes:
+        return []
+    rule = rules.rarity(item.rarity)
+    fits = _fits(library, _base_of(library, item))
+    pick = rules.required_picks.get(item.slot_type) if rule.required else None
+    current_def = library.affixes.get(current)
+    if index == 0 and pick is not None and current_def is not None and pick.allows(current_def):
+        source = [a for a in fits if pick.allows(a)]
+    else:
+        source = [a for a in fits if a.category in rule.categories]
+    others: list[_Pick] = []
+    for i, roll in enumerate(item.affixes):
+        other = library.affixes.get(roll.affix)
+        if i != index and other is not None:
+            others.append(_Pick(other, roll.value, affix_points(rules, other, roll.value)))
+    budget = affix_budget(rules, item.item_level, item.slot_type)
+    allowance = Fraction(budget) - sum((o.points for o in others), Fraction(0))
+    found: list[tuple[AffixDef, int | None]] = []
+    for affix in source:
+        if affix.id == current or not _compatible(affix, others):
+            continue
+        best = _best_value(rules, affix, allowance)
+        if best is not None:
+            found.append((affix, best[0]))
+    return found
+
+
+def pick_affix(
+    library: ContentLibrary, item: ItemDef, options: Sequence[tuple[AffixDef, int | None]], rng: Rng
+) -> tuple[AffixDef, int | None]:
+    """從 :func:`affix_choices` 的候選抽一條（同產生器：同一族算一個候選，抽中再選成員）。"""
+    if not options:
+        raise ItemGenError(f"{item.name_zh} 的這條詞條沒有可以換的")
+    families: dict[str, list[tuple[AffixDef, int | None]]] = {}
+    for option in options:
+        families.setdefault(_family(option[0]), []).append(option)
+    family = families[rng.choice(sorted(families))]
+    ctx = _Context(
+        rules=_rules(library),
+        base=_base_of(library, item),
+        pool=(),
+        required=(),
+        reserve=Fraction(0),
+    )
+    member = _choose_member(ctx, rng, [o[0] for o in family])
+    return next(o for o in family if o[0] is member)
+
+
+def replace_affix(item: ItemDef, index: int, affix: AffixDef, value: int | None) -> ItemDef:
+    """把第 ``index`` 條換成 ``affix``（數值 ``value``）。"""
+    rolls = list(item.affixes)
+    rolls[index] = AffixRoll(affix=affix.id, value=value)
+    return item.model_copy(update={"affixes": tuple(rolls)})

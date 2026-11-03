@@ -60,6 +60,7 @@ from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
+from trpg.world.crafting import CRAFTING_ACTIONS, apply_crafting
 from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
 from trpg.world.economy_actions import EquipAction
 from trpg.world.endings import expire_threads
@@ -224,6 +225,9 @@ def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
     if isinstance(action, EquipAction):  # 5D-2 換裝備
         char, equipped = apply_equip(library, char, action)
         return StepResult(world=world, char=char, events=equipped)
+    if isinstance(action, CRAFTING_ACTIONS):  # 5D-3 鐵匠與附魔台
+        world, char, crafted = apply_crafting(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=crafted)
     return _service(library, world, char, action)
 
 

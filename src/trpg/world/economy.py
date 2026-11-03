@@ -372,7 +372,10 @@ def _sell_gear(
         raise WorldActionError(f"{piece.name_zh}不能賣（初始裝備與傳說不收）")
     rest = list(char.gear)
     rest.remove(piece)
-    char = char.model_copy(update={"gold": char.gold + price, "gear": tuple(rest)})
+    mods = {k: v for k, v in char.gear_mods.items() if k != piece.id}  # 5D-3 的改動紀錄一併刪掉
+    char = char.model_copy(
+        update={"gold": char.gold + price, "gear": tuple(rest), "gear_mods": mods}
+    )
     event = ItemSoldEvent(
         shop=shop.id,
         item=piece.id,
