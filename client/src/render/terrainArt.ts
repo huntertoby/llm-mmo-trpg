@@ -7,9 +7,11 @@ import { PAL } from "./artPalette";
 import { numToHex, rgba, shade } from "./color";
 import { flame, roundRect, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
+import { ARCANE_TERRAIN } from "./arcaneTerrain";
 import { ASHEN_TERRAIN } from "./ashenTerrain";
 import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
 import { crystalTerrain } from "./crystalTerrain";
+import { FROST_TERRAIN } from "./frostTerrain";
 import { pickThemed, themeKey, waterTintOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
@@ -298,11 +300,13 @@ export const TERRAIN_DRAW: Readonly<Record<string, TerrainDrawer>> = {
   ice_hole: drawIceHole,
 };
 
-/** 各區的地形畫法（區域 ID → 地形 ID → 畫法）；預設區不在表內。雲嶺（3-37b）、灰燼荒原與晶冠點綴（5A-ART6）已加入。 */
+/** 各區的地形畫法（區域 ID → 地形 ID → 畫法）；預設區不在表內。雲嶺（3-37b）、灰燼荒原與晶冠點綴（5A-ART6）、魔導樞市與霜潮海境（5A-ART7）已加入。 */
 export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {
   cloud_ridge: CLOUD_TERRAIN,
   ashen_waste: ASHEN_TERRAIN,
   crystal_crown: crystalTerrain({ stone: drawStone, chasm: drawChasm }),
+  arcane_hub: ARCANE_TERRAIN,
+  frost_tide: FROST_TERRAIN,
 };
 
 /** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）。 */

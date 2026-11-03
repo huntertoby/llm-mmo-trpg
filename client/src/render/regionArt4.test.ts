@@ -103,9 +103,9 @@ describe("預設畫法不受新表影響（region 空字串）", () => {
     expect(digest(lines)).toBe(DEFAULT_DIGEST);
   });
 
-  it("新表只有兩區兩個 ID，region 空字串查不到", () => {
-    expect(Object.keys(REGION_TERRAIN_DRAW).sort()).toEqual(["ashen_waste", "cloud_ridge", "crystal_crown"]);
-    expect(Object.keys(REGION_OBJECT_DRAW).sort()).toEqual(["ashen_waste", "cloud_ridge", "crystal_crown"]);
+  it("區域表只有五區（5A-ART7 加入樞市、霜潮），region 空字串查不到", () => {
+    expect(Object.keys(REGION_TERRAIN_DRAW).sort()).toEqual(["arcane_hub", "ashen_waste", "cloud_ridge", "crystal_crown", "frost_tide"]);
+    expect(Object.keys(REGION_OBJECT_DRAW).sort()).toEqual(["arcane_hub", "ashen_waste", "cloud_ridge", "crystal_crown", "frost_tide"]);
     for (const terrain of TERRAINS) expect(tileCalls({ terrain, region: "" })).toEqual(tileCalls({ terrain }));
   });
 
