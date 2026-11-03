@@ -1,0 +1,170 @@
+# 冬湖實地地圖（6C-4；玩法 PM 草稿第 12 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 營地 24×18，建議 4 級，營火：結冰的高山湖。冰面會滑，湖心有冰洞（致命）。
+# 南邊往獵戶小屋（對到獵戶小屋北邊的獵道）；北邊往北坡獵場（獵道高 1）。
+# 湖面用石地加冰面表面（踩上去會滑，#121 的路徑提示用得到）；冰洞 2 個用 ice_hole 地形。
+# 沿湖岸有路，不必走冰面也到得了北邊（冰洞不擋唯一通路）。
+# 獵人帳篷用矮牆，營火在帳篷旁；熊洞在東北角，岩壁圍起來、洞口朝南。
+# 敵人：東岸駐守 lake_hunters；湖心偏北駐守 lake_bears（三方：修士對石背熊；
+# 石背熊 4 級以上才出現由遭遇表決定，6C-1 接）。
+# 事件點：熊洞口（bear_den）、帳篷（fox_traveler）。
+id: winter_lake
+name_zh: 冬湖
+region: cloud_ridge
+location: winter_lake
+size: [24, 18]
+heights: |
+  111111111111111111111111
+  111111111111111111111111
+  111111111111111111111111
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  ##########,,,,##########
+  #,,,,,,,,,,,,,,,,,######
+  #,,,,,,,,,,,,,,,,,#,,,##
+  #"""",,,,,,,,,,,,,##,###
+  #"""",,,,,,,,,,,,,,,,,,#
+  #"""",............,""""#
+  #"""",............,""""#
+  #"""",...oo.......,""""#
+  #"""",...oo.......,""""#
+  #"""",............,""""#
+  #"""",........o...,""""#
+  #"""",........o...,""""#
+  #"""",............,""""#
+  #"""",,,,,,,,,,,,,,""""#
+  #"""",,,,,,,,,,,,,,""""#
+  #,,,,,,,,,,,,,,,,,,,,,,#
+  #,,,,,,,,,,,,,,,,,,,,,,#
+  ##########,,,,##########
+legend:
+  ".": stone
+  '"': grass
+  ",": dirt
+  "#": wall
+  "o": ice_hole
+objects:
+  - {at: [3, 7], kind: low_wall}   # 獵人帳篷
+  - {at: [4, 7], kind: low_wall}
+  - {at: [2, 12], kind: dead_tree}   # 岸邊的枯松
+  - {at: [21, 6], kind: dead_tree}
+  - {at: [16, 15], kind: fallen_log}
+  - {at: [20, 10], kind: crate}   # 獵人的雪橇箱
+  - {at: [9, 15], kind: grass}
+surfaces:
+  - {at: [6, 5], surface: ice}
+  - {at: [7, 5], surface: ice}
+  - {at: [8, 5], surface: ice}
+  - {at: [9, 5], surface: ice}
+  - {at: [10, 5], surface: ice}
+  - {at: [11, 5], surface: ice}
+  - {at: [12, 5], surface: ice}
+  - {at: [13, 5], surface: ice}
+  - {at: [14, 5], surface: ice}
+  - {at: [15, 5], surface: ice}
+  - {at: [16, 5], surface: ice}
+  - {at: [17, 5], surface: ice}
+  - {at: [6, 6], surface: ice}
+  - {at: [7, 6], surface: ice}
+  - {at: [8, 6], surface: ice}
+  - {at: [9, 6], surface: ice}
+  - {at: [10, 6], surface: ice}
+  - {at: [11, 6], surface: ice}
+  - {at: [12, 6], surface: ice}
+  - {at: [13, 6], surface: ice}
+  - {at: [14, 6], surface: ice}
+  - {at: [15, 6], surface: ice}
+  - {at: [16, 6], surface: ice}
+  - {at: [17, 6], surface: ice}
+  - {at: [6, 7], surface: ice}
+  - {at: [7, 7], surface: ice}
+  - {at: [8, 7], surface: ice}
+  - {at: [11, 7], surface: ice}
+  - {at: [12, 7], surface: ice}
+  - {at: [13, 7], surface: ice}
+  - {at: [14, 7], surface: ice}
+  - {at: [15, 7], surface: ice}
+  - {at: [16, 7], surface: ice}
+  - {at: [17, 7], surface: ice}
+  - {at: [6, 8], surface: ice}
+  - {at: [7, 8], surface: ice}
+  - {at: [8, 8], surface: ice}
+  - {at: [11, 8], surface: ice}
+  - {at: [12, 8], surface: ice}
+  - {at: [13, 8], surface: ice}
+  - {at: [14, 8], surface: ice}
+  - {at: [15, 8], surface: ice}
+  - {at: [16, 8], surface: ice}
+  - {at: [17, 8], surface: ice}
+  - {at: [6, 9], surface: ice}
+  - {at: [7, 9], surface: ice}
+  - {at: [8, 9], surface: ice}
+  - {at: [9, 9], surface: ice}
+  - {at: [10, 9], surface: ice}
+  - {at: [11, 9], surface: ice}
+  - {at: [12, 9], surface: ice}
+  - {at: [13, 9], surface: ice}
+  - {at: [14, 9], surface: ice}
+  - {at: [15, 9], surface: ice}
+  - {at: [16, 9], surface: ice}
+  - {at: [17, 9], surface: ice}
+  - {at: [6, 10], surface: ice}
+  - {at: [7, 10], surface: ice}
+  - {at: [8, 10], surface: ice}
+  - {at: [9, 10], surface: ice}
+  - {at: [10, 10], surface: ice}
+  - {at: [11, 10], surface: ice}
+  - {at: [12, 10], surface: ice}
+  - {at: [13, 10], surface: ice}
+  - {at: [15, 10], surface: ice}
+  - {at: [16, 10], surface: ice}
+  - {at: [17, 10], surface: ice}
+  - {at: [6, 11], surface: ice}
+  - {at: [7, 11], surface: ice}
+  - {at: [8, 11], surface: ice}
+  - {at: [9, 11], surface: ice}
+  - {at: [10, 11], surface: ice}
+  - {at: [11, 11], surface: ice}
+  - {at: [12, 11], surface: ice}
+  - {at: [13, 11], surface: ice}
+  - {at: [15, 11], surface: ice}
+  - {at: [16, 11], surface: ice}
+  - {at: [17, 11], surface: ice}
+  - {at: [6, 12], surface: ice}
+  - {at: [7, 12], surface: ice}
+  - {at: [8, 12], surface: ice}
+  - {at: [9, 12], surface: ice}
+  - {at: [10, 12], surface: ice}
+  - {at: [11, 12], surface: ice}
+  - {at: [12, 12], surface: ice}
+  - {at: [13, 12], surface: ice}
+  - {at: [14, 12], surface: ice}
+  - {at: [15, 12], surface: ice}
+  - {at: [16, 12], surface: ice}
+  - {at: [17, 12], surface: ice}
+entry: [11, 15]
+exits:
+  - {id: to_hunter_hut, at: [[11, 17], [12, 17]], to: hunter_hut, arrive: to_winter_lake}   # 南：往獵戶小屋的獵道
+  - {id: to_north_slope, at: [[11, 0], [12, 0]], to: north_slope, arrive: to_winter_lake}   # 北：往北坡的獵道
+spawns:
+  - {at: [20, 12], group: lake_hunters}   # 東岸
+  - {at: [13, 6], group: lake_bears}   # 湖心偏北（三方）
+campfires:
+  - {at: [3, 9], id: campfire_winter_lake}   # 帳篷旁的營火
+event_spots:
+  - {at: [20, 4], id: bear_den}   # 熊洞口
+  - {at: [3, 8], id: fox_traveler}   # 帳篷

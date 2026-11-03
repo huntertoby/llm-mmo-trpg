@@ -1,0 +1,43 @@
+# 雲頂觀前廳實地地圖（6C-4；玩法 PM 草稿第 17 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# Boss 前廳 12×8：觀門外的石坪、兩座石燈（石柱）、觀門。
+# 西南的山門回到源晶裂痕（照 18.3，雲頂觀只從源晶裂痕進入；Boss 地點不可有傳送石）。
+# 觀門在北牆正中，記成情境物件 summit_gate：走進觀門就進入 Boss 戰，
+# 照 21.4 不切 12×12，直接用 Boss 地圖 cloud_summit（20.6；陣容 mist_lock_court，5F-2）。
+# 觀門不是門（門只通往室內圖或隱藏地點），接法留給 6C-1／6C-5。
+# 前廳沒有敵人（spawns 空）、不能紮營（沒有營火，#114）、沒有事件點（Boss 地點不設事件）。
+# 高度：石坪 0、觀門前的台階 1。
+id: cloud_summit
+name_zh: 雲頂觀
+region: cloud_ridge
+location: cloud_summit
+size: [12, 8]
+heights: |
+  000000000000
+  011111111110
+  011111111110
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+terrain: |
+  ############
+  #..........#
+  #..........#
+  #..........#
+  #..........#
+  #..........#
+  #..........#
+  #...########
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [3, 2], kind: stone_pillar}   # 石燈
+  - {at: [8, 2], kind: stone_pillar}
+entry: [3, 5]
+exits:
+  - {id: to_crystal_rift, at: [[2, 7], [3, 7]], to: crystal_rift, arrive: to_cloud_summit}   # 西南：前廳的山門
+situation_objects:
+  - {at: [6, 1], id: summit_gate}   # 觀門（走進去＝Boss 戰）
