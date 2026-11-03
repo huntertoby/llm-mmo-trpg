@@ -459,7 +459,7 @@ PM 看完結論，決定哪些排進下一份規格（或獨立一個小的整�
   7. **最大高度不超出視窗／可見區域，超出時卡片內捲動**；捲動不關閉。卡片要 portal 到 body，避免被捲動容器裁掉。
   8. **鍵盤與觸控**：取得焦點時顯示、Tab 可進入卡片；觸控以點擊開關。
 - 只要改到前端的段，派工 prompt 與驗收都要求：**瀏覽器實測「從觸發元素滑進卡片 → 在卡片內捲到底 → 釘住 → 關閉」**（1600×900 與 800×600），結果寫進報告；PM 驗收時抽查一處。
-- 自動檢查（待排入下一個前端段）：vitest 或 `tests/test_architecture.py` 加 grep 規則，`client/src` 中除共用元件外不得出現新的 `position: fixed`／`absolute` 彈出層或 `title=` 屬性（白名單列出例外）。
+- 自動檢查（已在 `client/src/ui/floatCardRule.test.ts`；5D-R1 補上直接改 DOM 的 `style.position`）：`client/src` 中除共用元件外不得出現新的 `position: fixed`／`absolute` 彈出層或 `title=` 屬性（白名單列出例外）。
 
 ### 6.6 注意事項（踩過的坑）
 
