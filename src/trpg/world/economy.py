@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any, Final
 
 from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
@@ -50,6 +51,7 @@ from trpg.world.state import CharacterState, CompanionAffinity, ShopPurchase, Wo
 
 __all__ = [
     "ECONOMY_ACTIONS",
+    "ECONOMY_HANDLERS",
     "after_step",
     "apply_economy",
     "battle_gold",
@@ -246,14 +248,8 @@ def apply_economy(
     action: BuyAction | SellAction | PouchAction | UseItemAction,
     now: int,
 ) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
-    """經濟的世界動作（不動世界快照）。"""
-    if isinstance(action, BuyAction):
-        return _buy(library, world, char, action, now)
-    if isinstance(action, SellAction):
-        return _sell(library, char, action)
-    if isinstance(action, PouchAction):
-        return _pouch(library, char, action)
-    return _use(library, char, action)
+    """經濟的世界動作（不動世界快照；依 :data:`ECONOMY_HANDLERS` 分派）。"""
+    return ECONOMY_HANDLERS[type(action)](library, world, char, action, now)
 
 
 def _buy(
@@ -420,6 +416,19 @@ def _use(
         raise WorldActionError(f"沒有{item.name_zh}")
     char = char.model_copy(update={**update, "hp": hp, "mana": mana})
     return char, (ItemUsedEvent(item=item.id, hp=hp, mana=mana),)
+
+
+type EconomyHandler = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int],
+    tuple[CharacterState, tuple[WorldEvent, ...]],
+]
+ECONOMY_HANDLERS: Final[Mapping[type, EconomyHandler]] = {
+    BuyAction: _buy,
+    SellAction: lambda library, _world, char, action, _now: _sell(library, char, action),
+    PouchAction: lambda library, _world, char, action, _now: _pouch(library, char, action),
+    UseItemAction: lambda library, _world, char, action, _now: _use(library, char, action),
+}
+"""經濟動作種類 → 處理 ``(library, world, char, action, now) → (char, events)``（5D-R1）。"""
 
 
 # ---------------------------------------------------------------------------

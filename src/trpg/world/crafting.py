@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import Any, Final
 
 from trpg.content.equipment import AffixDef, ItemDef
 from trpg.content.item_gen import (
@@ -56,6 +58,7 @@ from trpg.world.state import (
 
 __all__ = [
     "CRAFTING_ACTIONS",
+    "CRAFTING_HANDLERS",
     "RESONANCE_TAG",
     "CraftPlan",
     "apply_crafting",
@@ -666,13 +669,35 @@ def apply_crafting(
     action: CraftAction | EnhanceAction | RerollAction | ImbueAction | SalvageAction,
     now: int,
 ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
-    """鐵匠與附魔台的動作（見模組說明）；不合法拋 :class:`WorldActionError`（狀態不變）。"""
-    if isinstance(action, CraftAction):
-        return _craft(library, world, char, action, now)
-    if isinstance(action, EnhanceAction):
-        char, events = _enhance(library, char, action)
-    elif isinstance(action, SalvageAction):
-        char, events = _salvage(library, char, action)
-    else:
-        return _change(library, world, char, action, now)
-    return world, char, events
+    """鐵匠與附魔台的動作（見模組說明；依 :data:`CRAFTING_HANDLERS` 分派）；不合法拋
+    :class:`WorldActionError`（狀態不變）。"""
+    return CRAFTING_HANDLERS[type(action)](library, world, char, action, now)
+
+
+def _keeps_world(
+    fn: Callable[
+        [ContentLibrary, CharacterState, Any], tuple[CharacterState, tuple[WorldEvent, ...]]
+    ],
+) -> CraftingHandler:
+    def run(
+        library: ContentLibrary, world: WorldState, char: CharacterState, action: Any, _now: int
+    ) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+        char, events = fn(library, char, action)
+        return world, char, events
+
+    return run
+
+
+type CraftingHandler = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int],
+    tuple[WorldState, CharacterState, tuple[WorldEvent, ...]],
+]
+CRAFTING_HANDLERS: Final[Mapping[type, CraftingHandler]] = {
+    CraftAction: _craft,
+    EnhanceAction: _keeps_world(_enhance),
+    RerollAction: _change,
+    ImbueAction: _change,
+    SalvageAction: _keeps_world(_salvage),
+}
+"""鐵匠與附魔台的動作種類 → 處理 ``(library, world, char, action, now) → (world, char, events)``
+（5D-R1）。"""

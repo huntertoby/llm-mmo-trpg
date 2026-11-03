@@ -21,7 +21,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, Final
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
@@ -60,8 +62,8 @@ from trpg.world.common import max_hp, max_mana
 from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
-from trpg.world.crafting import CRAFTING_ACTIONS, apply_crafting
-from trpg.world.economy import ECONOMY_ACTIONS, after_step, apply_economy
+from trpg.world.crafting import CRAFTING_HANDLERS
+from trpg.world.economy import ECONOMY_HANDLERS, after_step
 from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
@@ -86,6 +88,7 @@ from trpg.world.state import (
 from trpg.world.town import loadout, rest, retreat, teleport, with_visited_town
 
 __all__ = [
+    "HANDLERS",
     "NO_CAMP_KINDS",
     "StepResult",
     "camp_problem",
@@ -194,101 +197,100 @@ def world_step(
     return StepResult(world=world, char=char, events=(*events, *extra, *saved, *paid))
 
 
-def _dispatch(  # noqa: PLR0911 — 動作分派（每類動作一個出口）
+type _Handler = Callable[[ContentLibrary, WorldState, CharacterState, Any, int], StepResult]
+"""一類世界動作的處理：``(library, world, char, action, now) → StepResult``。"""
+type _CharFn = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int],
+    tuple[CharacterState, tuple[WorldEvent, ...]],
+]
+type _WorldFn = Callable[
+    [ContentLibrary, WorldState, CharacterState, Any, int],
+    tuple[WorldState, CharacterState, tuple[WorldEvent, ...]],
+]
+
+
+def _keeps_world(fn: _CharFn) -> _Handler:
+    """只改角色的動作（世界快照不變）。"""
+
+    def run(
+        library: ContentLibrary, world: WorldState, char: CharacterState, action: Any, now: int
+    ) -> StepResult:
+        char, events = fn(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
+
+    return run
+
+
+def _changes_world(fn: _WorldFn) -> _Handler:
+    """可能改世界快照的動作。"""
+
+    def run(
+        library: ContentLibrary, world: WorldState, char: CharacterState, action: Any, now: int
+    ) -> StepResult:
+        world, char, events = fn(library, world, char, action, now)
+        return StepResult(world=world, char=char, events=events)
+
+    return run
+
+
+def _fight(
+    library: ContentLibrary, world: WorldState, char: CharacterState, action: FightAction, now: int
+) -> tuple[WorldState, CharacterState, tuple[WorldEvent, ...]]:
+    if char.pending_encounter is None:
+        raise WorldActionError("目前沒有遭遇")
+    return fight(library, world, char, action, now)
+
+
+def _handlers() -> dict[type, _Handler]:
+    table: dict[type, _Handler] = dict.fromkeys(GROWTH_ACTIONS, _keeps_world(apply_growth))
+    table |= {
+        TravelAction: _travel,
+        CampAction: lambda lib, world, char, _action, now: _camp(lib, world, char, now),
+        FightAction: _changes_world(_fight),
+        # 事件的情境判定（5B-2）與說書人敘述（5B-3，:mod:`trpg.world.narration`）
+        SituationAction: _changes_world(resolve_situation),
+        NarrateAction: _keeps_world(apply_narration),
+        # 任務與聊天（5B-4，:mod:`trpg.world.quests`、:mod:`trpg.world.social`）
+        AcceptQuestAction: _keeps_world(accept_quest),
+        OfferPickAction: _keeps_world(
+            lambda lib, _w, char, action, _n: take_offer(lib, char, action)
+        ),
+        TalkAction: _keeps_world(talk),
+        TavernAction: _keeps_world(lambda lib, world, char, _a, now: tavern(lib, world, char, now)),
+        EventSolveAction: _changes_world(solve_event),
+        # 5D-2 換裝備；5D-2b 背包滿了：戰後結算選要丟哪件
+        EquipAction: _keeps_world(lambda lib, _w, char, action, _n: apply_equip(lib, char, action)),
+        LootChooseAction: _keeps_world(
+            lambda lib, _w, char, action, _n: choose_loot(lib, char, action)
+        ),
+        # 撤退與城鎮服務（5A-4，:mod:`trpg.world.town`）；雇用與影子 AI（5C-1、5C-2）
+        RetreatAction: _keeps_world(lambda lib, _w, char, _a, _n: retreat(lib, char)),
+        RestAction: _keeps_world(lambda lib, _w, char, _a, _n: rest(lib, char)),
+        LoadoutAction: _keeps_world(lambda lib, _w, char, action, _n: loadout(lib, char, action)),
+        TeleportAction: _keeps_world(lambda lib, _w, char, action, _n: teleport(lib, char, action)),
+        HireAction: _keeps_world(
+            lambda lib, world, char, action, _n: hire(lib, world, char, action)
+        ),
+        ShadowAiAction: _keeps_world(
+            lambda lib, _w, char, action, _n: set_shadow_ai(lib, char, action)
+        ),
+    }
+    table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
+    table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3
+    return table
+
+
+def _dispatch(
     library: ContentLibrary,
     world: WorldState,
     char: CharacterState,
     action: WorldAction,
     now: int,
 ) -> StepResult:
-    if isinstance(action, GROWTH_ACTIONS):
-        char, events = apply_growth(library, world, char, action, now)
-        return StepResult(world=world, char=char, events=events)
-    if isinstance(action, TravelAction):
-        return _travel(library, world, char, action, now)
-    if isinstance(action, CampAction):
-        return _camp(library, world, char, now)
-    if isinstance(action, FightAction):
-        if char.pending_encounter is None:
-            raise WorldActionError("目前沒有遭遇")
-        world, char, events = fight(library, world, char, action, now)
-        return StepResult(world=world, char=char, events=events)
-    if isinstance(action, SituationAction | NarrateAction):
-        return _story(library, world, char, action, now)
-    if isinstance(action, AcceptQuestAction | OfferPickAction | TalkAction | TavernAction):
-        return _social(library, world, char, action, now)
-    if isinstance(action, EventSolveAction):
-        world, char, events = solve_event(library, world, char, action, now)
-        return StepResult(world=world, char=char, events=events)
-    if isinstance(action, ECONOMY_ACTIONS):  # 5D-1 買、賣、腰包、用道具
-        char, events = apply_economy(library, world, char, action, now)
-        return StepResult(world=world, char=char, events=events)
-    if isinstance(action, EquipAction):  # 5D-2 換裝備
-        char, equipped = apply_equip(library, char, action)
-        return StepResult(world=world, char=char, events=equipped)
-    if isinstance(action, LootChooseAction):  # 5D-2b 背包滿了：戰後結算選要丟哪件
-        char, chosen = choose_loot(library, char, action)
-        return StepResult(world=world, char=char, events=chosen)
-    if isinstance(action, CRAFTING_ACTIONS):  # 5D-3 鐵匠與附魔台
-        world, char, crafted = apply_crafting(library, world, char, action, now)
-        return StepResult(world=world, char=char, events=crafted)
-    return _service(library, world, char, action)
-
-
-def _social(
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    action: AcceptQuestAction | OfferPickAction | TalkAction | TavernAction,
-    now: int,
-) -> StepResult:
-    """任務與聊天（5B-4，:mod:`trpg.world.quests`、:mod:`trpg.world.social`）：不動世界快照。"""
-    events: tuple[WorldEvent, ...]
-    if isinstance(action, AcceptQuestAction):
-        char, events = accept_quest(library, world, char, action, now)
-    elif isinstance(action, OfferPickAction):
-        char, events = take_offer(library, char, action)
-    elif isinstance(action, TalkAction):
-        char, events = talk(library, world, char, action, now)
-    else:
-        char, events = tavern(library, world, char, now)
-    return StepResult(world=world, char=char, events=events)
-
-
-def _story(
-    library: ContentLibrary,
-    world: WorldState,
-    char: CharacterState,
-    action: SituationAction | NarrateAction,
-    now: int,
-) -> StepResult:
-    """事件的情境判定（5B-2）與說書人敘述（5B-3，:mod:`trpg.world.narration`）。"""
-    if isinstance(action, SituationAction):
-        world, char, events = resolve_situation(library, world, char, action, now)
-    else:
-        char, events = apply_narration(library, world, char, action, now)
-    return StepResult(world=world, char=char, events=events)
-
-
-def _service(
-    library: ContentLibrary, world: WorldState, char: CharacterState, action: WorldAction
-) -> StepResult:
-    """撤退與城鎮服務（5A-4，:mod:`trpg.world.town`）：不動世界快照。"""
-    if isinstance(action, RetreatAction):
-        char, events = retreat(library, char)
-    elif isinstance(action, RestAction):
-        char, events = rest(library, char)
-    elif isinstance(action, LoadoutAction):
-        char, events = loadout(library, char, action)
-    elif isinstance(action, TeleportAction):
-        char, events = teleport(library, char, action)
-    elif isinstance(action, HireAction):
-        char, events = hire(library, world, char, action)  # 5C-1、5C-2（影子）
-    elif isinstance(action, ShadowAiAction):
-        char, events = set_shadow_ai(library, char, action)  # 5C-2
-    else:
+    handler = HANDLERS.get(type(action))
+    if handler is None:
         raise WorldActionError(f"未知的世界動作：{action!r}")  # pragma: no cover
-    return StepResult(world=world, char=char, events=events)
+    return handler(library, world, char, action, now)
 
 
 # ---------------------------------------------------------------------------
@@ -468,3 +470,8 @@ def _camp(library: ContentLibrary, world: WorldState, char: CharacterState, now:
         location=char.location, supplies_left=char.supplies, hp=char.hp, mana=char.mana
     )
     return StepResult(world=world, char=char, events=(event,))
+
+
+HANDLERS: Final = _handlers()
+"""世界動作種類 → 處理（5D-R1 取代 ``isinstance`` 串）；每種世界動作恰好一個（測試檢查）。
+放在模組最後，處理函式都定義好了才建表。"""
