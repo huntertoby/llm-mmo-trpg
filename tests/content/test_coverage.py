@@ -25,6 +25,8 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
         "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "array_ward": "只由陣眼石靈範本的 opening_statuses 開場掛上（5A-M2b），沒有技能施加",
+        "summit_array_ward": "只由雲頂觀陣眼石靈範本的 opening_statuses 開場掛上（5F-2），沒有技能施加",
+        "mist_return": "只由霧鎖真人第 3 階段的 add_statuses 掛上（5F-2），沒有技能施加",
         "oath_bonus_easy": "只由誓約在開戰時掛上（5C-3，trpg.engine.oaths），沒有技能施加",
         "oath_bonus_medium": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
         "oath_bonus_hard": "只由誓約在開戰時掛上（5C-3），沒有技能施加",
@@ -248,6 +250,8 @@ def _equipped() -> set[str]:
     lib = library()
     ids = {s for b in lib.builds.builds for s in b.hero.skills}
     ids |= {s for unit in lib.units.values() for s in unit.skills}
+    # 5F-2：Boss 階段換上的技能組也算被裝備
+    ids |= {s for unit in lib.units.values() for p in unit.phases for s in p.skills or ()}
     ids |= _POOL_ONLY
     ids |= _SEEDS_54C
     ids |= {s for s in lib.skills if s.startswith(_BAL19_PREFIXES)}

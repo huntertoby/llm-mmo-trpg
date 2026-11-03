@@ -390,4 +390,5 @@ def make_unit(
         gear=gear,
         doll=template.doll,
         race=template.race,
+        phases=template.phases,
     )

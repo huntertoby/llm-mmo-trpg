@@ -864,9 +864,20 @@ def load_library(  # noqa: PLR0915
     maps = _load_dir(root / "maps", MapDef, files)
     terrain_map = terrain.by_id()
     weather_map = weather.by_id()
+    _check_unit_phases(  # Boss 階段（Phase 5F-2）
+        root,
+        units,
+        weapons=weapon_map,
+        skills=skills,
+        ruleset=ruleset,
+        ai_profiles=ai_profiles,
+        weather=weather_map,
+        gear=gear,
+    )
     for map_id, map_def in maps.items():
         problems = check_map(map_def, terrain_map, core, objects.by_id())
         problems += _map_reference_problems(map_def, units, weather_map)
+        problems += _map_phase_tile_problems(map_def, units)
         if problems:
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
@@ -2018,6 +2029,96 @@ def unit_skill_problems(
         if problem is not None:
             problems.append(f"skills：{problem}")
     problems += [f"skills：{p}" for p in skill_slot_problems(equipped, core.skill_slots)]
+    return problems
+
+
+def unit_phase_problems(
+    template: UnitTemplate,
+    *,
+    units: Mapping[str, UnitTemplate],
+    weapons: Mapping[str, WeaponDef],
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    ai_profiles: AiProfileTable,
+    weather: Mapping[str, WeatherDef],
+    offhand: OffhandDef | None = None,
+) -> list[str]:
+    """範本 ``phases``（Phase 5F-2）引用的技能（存在、符合武器、欄位上限）、行為模式、狀態、天氣、
+    召喚範本與地形都存在（繁體中文，空串列為通過）。"""
+    problems: list[str] = []
+    status_ids = set(ruleset.statuses.by_id())
+    profiles = ai_profiles.by_id()
+    terrain_ids = set(ruleset.terrain.by_id())
+    weapon = weapons.get(template.weapon)
+    for phase in template.phases:
+        where = f"階段 {phase.id}"
+        if phase.skills is not None and weapon is not None:
+            staged = template.model_copy(update={"skills": phase.skills})
+            problems += [
+                f"{where}：{p}"
+                for p in unit_skill_problems(staged, weapon, skills, ruleset.core, offhand)
+            ]
+        if phase.ai_profile is not None and phase.ai_profile not in profiles:
+            problems.append(f"{where}：未知的行為模式 {phase.ai_profile}")
+        wanted = [*phase.remove_statuses, *(o.status for o in phase.add_statuses)]
+        problems += [f"{where}：未知的狀態 {s}" for s in wanted if s not in status_ids]
+        if phase.weather is not None and phase.weather not in weather:
+            problems.append(f"{where}：未知的天氣 {phase.weather}")
+        for spawn in phase.spawns:
+            found = units.get(spawn.template)
+            if found is None or found.summon:
+                problems.append(f"{where}：召喚的單位範本不存在或是召喚物 {spawn.template}")
+            elif found.phases:
+                problems.append(f"{where}：召喚的單位範本不能也有 phases（{spawn.template}）")
+        problems += [
+            f"{where}：未知的地形 {t.terrain}"
+            for t in phase.tiles
+            if t.terrain is not None and t.terrain not in terrain_ids
+        ]
+    return problems
+
+
+def _check_unit_phases(
+    root: Path,
+    units: dict[str, UnitTemplate],
+    *,
+    weapons: dict[str, WeaponDef],
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    ai_profiles: AiProfileTable,
+    weather: dict[str, WeatherDef],
+    gear: _GearCatalog,
+) -> None:
+    """每個範本的 ``phases`` 都通過 :func:`unit_phase_problems`。"""
+    for template_id, template in units.items():
+        problems = unit_phase_problems(
+            template,
+            units=units,
+            weapons=weapons,
+            skills=skills,
+            ruleset=ruleset,
+            ai_profiles=ai_profiles,
+            weather=weather,
+            offhand=gear.offhand_of(template),
+        )
+        if problems:
+            raise ContentError(root / "units" / f"{template_id}.yaml", "；".join(problems))
+
+
+def _map_phase_tile_problems(map_def: MapDef, units: Mapping[str, UnitTemplate]) -> list[str]:
+    """地圖預設陣容裡 Boss 階段的 ``tiles``／``spawns.at`` 在地圖內（Phase 5F-2）。"""
+    if map_def.encounter is None:
+        return []
+    problems: list[str] = []
+    for template_id in sorted(set(map_def.encounter.enemies)):
+        template = units.get(template_id)
+        for phase in () if template is None else template.phases:
+            cells = [t.at for t in phase.tiles] + [s.at for s in phase.spawns if s.at is not None]
+            problems += [
+                f"{template_id} 階段 {phase.id} 的 {list(xy)} 在地圖外"
+                for xy in cells
+                if not (0 <= xy[0] < map_def.width and 0 <= xy[1] < map_def.height)
+            ]
     return problems
 
 

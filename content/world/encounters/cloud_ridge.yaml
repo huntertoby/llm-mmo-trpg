@@ -43,6 +43,8 @@ groups:
   - {id: crane_nest, name_zh: 雷羽鷹巢, units: [sect_crane_archer, sect_crane_archer], third: [thunder_hawk, thunder_hawk, thunder_hawk]}  # 5B-4c 三方
   - {id: crane_cliff_bear, name_zh: 崖上石背熊, units: [thunder_hawk, thunder_hawk], third: [stoneback_bear]}  # 5B-4c 三方：沒有修士，鷹巢被熊闖入（代決 5B4c-11）
   - {id: summit_patrol, name_zh: 雲頂巡邏, units: [sect_array_disciple, sect_array_disciple, sect_talisman_caster, sect_alchemist]}
+  # 雲頂觀 Boss 戰（5F-2；18.2.3：霧鎖真人在陣眼石靈後方，兩名劍陣弟子守門；Boss 地圖 cloud_summit 的站位依這個順序）
+  - {id: mist_lock_court, name_zh: 霧鎖真人, units: [sect_mist_lock_master, sect_array_disciple, sect_array_disciple, sect_summit_array_stone]}
   # 線頭到期結局的變化陣容（5B-4b；18.4「線頭到期例」、18.7.4 疤面＝盜賊隊長精英，連心的，帶霧狼）
   # 精英由地點的 variants 指定（資料指定詞綴，5B-4c；已是精英的範本 HP 不再乘）
   - {id: scarface_risen, name_zh: 坐大的疤面, units: [bandit, mist_wolf, mist_wolf]}
@@ -88,7 +90,7 @@ locations:
   - location: crane_cliff
     groups: [{group: crane_nest}, {group: crane_cliff_bear}]
   - location: cloud_summit
-    groups: [{group: summit_patrol}]   # 一般遇敵；Boss 戰本身是 5F-2
+    groups: [{group: mist_lock_court}]   # Boss 地點的戰鬥＝Boss 戰（5F-2，代決 5F2-13）；summit_patrol 保留不用
 
 # 世界旗標有效時的遭遇加人（5B-4c；18.4 補充：「霧魅從裂痕湧出」到期 → 之後 2 天雲嶺夜晚營地的遭遇多 1 名霧魅，全服）。
 # 加在一般抽到的陣容敵方最後（混精英之後；滿 4 名不加；遭遇變化不加）。

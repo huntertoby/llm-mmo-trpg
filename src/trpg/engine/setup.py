@@ -32,7 +32,9 @@ __all__ = [
     "build_setup",
     "deploy_allies",
     "deployment_tiles",
+    "phase_spawn_ids",
     "starting_source",
+    "with_phase_assets",
 ]
 
 
@@ -101,6 +103,9 @@ class BattleSetup(BaseModel):
     後面（行動順序整場固定）；``None`` ＝ 照先攻。"""
     oath: OathSetup | None = None
     """帶著誓約開戰的單位與判定（Phase 5C-3，:mod:`trpg.engine.oaths`）；``None``＝沒有誓約。"""
+    phase_weathers: dict[str, WeatherDef] = Field(default_factory=dict)
+    """Boss 階段（Phase 5F-2）會換成的天氣定義，以天氣 ID 為鍵（由 :func:`with_phase_assets`
+    填入）。"""
 
     @property
     def effective_objective(self) -> Objective:
@@ -145,7 +150,7 @@ def build_setup(
                     weapon=library.weapon_of(template),
                     equipment=library.loadout_of(template),
                 )
-    return BattleSetup(
+    setup = BattleSetup(
         map=map_def,
         ruleset=library.ruleset,
         units=tuple(spawns),
@@ -153,6 +158,40 @@ def build_setup(
         weather=library.weather_def(weather or map_def.weather),
         objective=objective,
         spawn_templates=dict(sorted(templates.items())),
+    )
+    return with_phase_assets(library, setup)
+
+
+def phase_spawn_ids(units: Sequence[UnitSpawn]) -> list[str]:
+    """參戰單位的 Boss 階段會召喚的範本 ID（排序、不重複；Phase 5F-2）。"""
+    return sorted({s.template for u in units for phase in u.template.phases for s in phase.spawns})
+
+
+def with_phase_assets(library: ContentLibrary, setup: BattleSetup) -> BattleSetup:
+    """把參戰單位的 Boss 階段（Phase 5F-2）會用到的召喚範本與天氣定義加進設定（已經有的範本不覆寫，
+    讓呼叫端先放成長過的版本）；沒有階段時原樣回傳。"""
+    templates = dict(setup.spawn_templates)
+    for template_id in phase_spawn_ids(setup.units):
+        if template_id in templates:
+            continue
+        template = library.unit(template_id)
+        templates[template_id] = SpawnTemplate(
+            template=template,
+            weapon=library.weapon_of(template),
+            equipment=library.loadout_of(template),
+        )
+    weathers = dict(setup.phase_weathers)
+    for unit in setup.units:
+        for phase in unit.template.phases:
+            if phase.weather is not None and phase.weather not in weathers:
+                weathers[phase.weather] = library.weather_def(phase.weather)
+    if templates == setup.spawn_templates and weathers == setup.phase_weathers:
+        return setup
+    return setup.model_copy(
+        update={
+            "spawn_templates": dict(sorted(templates.items())),
+            "phase_weathers": dict(sorted(weathers.items())),
+        }
     )
 
 
