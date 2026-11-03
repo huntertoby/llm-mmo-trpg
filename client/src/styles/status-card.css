@@ -194,6 +194,11 @@
   content: "▾ ";
 }
 
+.unit-details .unit-stats th {
+  white-space: nowrap;
+  vertical-align: top;
+}
+
 /* 窄螢幕：三條與圖示排成一列 */
 
 .hud.hud-compact {
@@ -228,6 +233,11 @@
 
 .unit-card .unit-title {
   flex-wrap: wrap;
+}
+
+/* 浮動卡右上角有格子資訊卡的圖釘（3-40b）：小卡的圖釘讓開它 */
+.unit-float .unit-card .unit-title {
+  padding-right: 14px;
 }
 
 .affix-badge {

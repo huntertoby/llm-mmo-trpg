@@ -137,7 +137,7 @@ describe("說明卡：名稱、現值、一句說明（用現有文字）", () =
     expect(ap?.hint).toBe("AP 3\n剩餘行動點數（自己的回合已含上回合保留的 AP）");
     expect(move?.hint).toContain("移動 3\n剩餘移動點數");
     expect(move?.hint).toContain(actionCardText("move") ?? "?");
-    expect(sourceChip(hero).hint).toContain("源力 1/3：傳說技能的代價");
+    expect(sourceChip(hero).hint).toBe("源力 1/3\n傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）");
   });
   it("武器：名稱＋武器特性", () => {
     expect(unitChips(elite).find((c) => c.key === "weapon")?.hint).toBe("武器 鬼頭刀\n斬擊\n雙手");

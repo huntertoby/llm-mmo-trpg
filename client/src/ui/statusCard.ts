@@ -105,7 +105,7 @@ export function sourceChip(unit: UnitView): StatChip {
     label: "",
     pips: sourcePips(unit.source, unit.source_max),
     dim: unit.source <= 0,
-    hint: `源力 ${unit.source}/${unit.source_max}：傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）`,
+    hint: lines(`源力 ${unit.source}/${unit.source_max}`, "傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）"),
   };
 }
 
