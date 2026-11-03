@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>實地地圖標記</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1160px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 16px 0 6px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; } canvas { display: block; }
+  .row { display: flex; gap: 16px; }
+</style>
+</head>
+<body>
+<h1>實地地圖標記（取代格子裡的「足／碑／火／！」文字方塊）</h1>
+<p class="note">美術 PM，2026-11-04。給 6C-5 的地圖標記換畫法。事件「！」、營火、朋友腳印、留言石碑、情境物件的提示、敵人視野、潛行。原則和戰鬥 D 版一樣：不畫格子框，用東西自己的形狀；文字只出現在滑過的說明卡。C 手繪墨線，全部程式繪製。</p>
+<h2>1. 單個標記<small>48 格；左到右：事件「！」、營火（點著／今天紮過）、朋友腳印、留言石碑（有未讀）、情境物件提示、敵群頭上的眼睛（看著／潛行時半閉）</small></h2>
+<canvas id="c1"></canvas>
+<div class="row">
+  <div><h2>2. 平常走在野外<small>敵人視野＝淡紅併塊、虛線外緣；腳印越舊越淡</small></h2><canvas id="c2"></canvas></div>
+  <div><h2>3. 潛行中<small>四周暗角、主角半透明、視野縮半而且更淡、敵群的眼睛半閉</small></h2><canvas id="c3"></canvas></div>
+</div>
+<h2>4. 改前（6C-5 截圖的畫法）與改後<small>格子框＋字 → 東西自己的形狀；視野的格角黑點拿掉，改成敵群頭上一個眼睛</small></h2>
+<canvas id="c4"></canvas>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script src="mapMarks.js"></script>
+<script>
+  const M = MapMarks, T = M.T, TAU = Math.PI * 2, E = Explore;
+  const [HERO] = E.PARTY;
+  const BANDIT = [{ skin: E.SKIN[2], hair: "short", hairColor: "#1a1a1a" }, { body: { kind: "leather", material: "leather", color: "#7a6a4a" }, head: { kind: "wide_hat", material: "wood", color: "#a08a5a" }, main_hand: { kind: "axe", material: "iron" } }];
+  function cv(id, w, h) { const c = document.getElementById(id); c.width = w * 2; c.height = h * 2; c.style.width = w + "px"; c.style.height = h + "px"; const x = c.getContext("2d"); x.scale(2, 2); return x; }
+  function ground(ctx, cols, rows, ox = 0, oy = 0) {
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const s = M.seed(`${x + ox},${y + oy}`), path = (y + oy === 3);
+      ctx.fillStyle = path ? (s % 2 ? "#b89a6a" : "#b0926a") : (s % 3 === 0 ? "#6a9a4e" : s % 3 === 1 ? "#64944a" : "#6e9e52");
+      ctx.fillRect(x * T, y * T, T, T);
+      ctx.strokeStyle = path ? "rgba(120,90,50,0.5)" : "rgba(60,110,40,0.75)"; ctx.lineWidth = 1.3;
+      for (let k = 0; k < 3; k++) { const px = x * T + 8 + ((s >> (k * 4)) % 32), py = y * T + 12 + ((s >> (k * 5 + 2)) % 26); ctx.beginPath(); if (path) { ctx.arc(px, py, 1.6, 0, TAU); ctx.fillStyle = "rgba(120,90,50,0.5)"; ctx.fill(); } else { ctx.moveTo(px - 3, py - 4); ctx.lineTo(px, py); ctx.lineTo(px + 3, py - 4); ctx.stroke(); } }
+    }
+  }
+  function doll(ctx, unit, facing, gx, gy, alpha = 1) { ctx.save(); ctx.globalAlpha = alpha; PaperDoll.stamp(ctx, { look: unit[0], gear: unit[1] }, facing, gx * T + T / 2, gy * T + T * 0.82, 0.78, { dpr: 3 }); ctx.restore(); }
+  function ring(ctx, gx, gy, color) { ctx.save(); ctx.fillStyle = color + "55"; ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(gx * T + T / 2, gy * T + T * 0.82, 15, 6, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  function crate(ctx, gx, gy) { const x = gx * T + 9, y = gy * T + 10; ctx.fillStyle = "#a07040"; ctx.fillRect(x, y, 30, 28); ctx.strokeStyle = "#3a2410"; ctx.lineWidth = 1.4; ctx.strokeRect(x, y, 30, 28); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30, y + 28); ctx.stroke(); }
+  function card(ctx, x, y, title, line) { ctx.save(); ctx.fillStyle = "rgba(30,26,22,0.96)"; ctx.strokeStyle = "#c8a868"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.roundRect(x, y, 178, 44, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#f2e6c8"; ctx.font = "bold 12.5px 'Microsoft JhengHei'"; ctx.fillText(title, x + 10, y + 17); ctx.fillStyle = "#d8ccb8"; ctx.font = "11.5px 'Microsoft JhengHei'"; ctx.fillText(line, x + 10, y + 35); ctx.restore(); }
+
+  // 1. 單個標記
+  let ctx = cv("c1", 1120, 92);
+  const cells1 = [["事件「！」", (c) => M.eventMark(c, 0, 0, 400)], ["營火", (c) => M.campfire(c, 0, 0, 0, true)], ["今天紮過", (c) => M.campfire(c, 0, 0, 0, false)], ["朋友腳印", (c) => M.footprints(c, [[-0.4, 0.3], [0.6, 0.3], [1.1, -0.2]])], ["留言石碑", (c) => M.stele(c, 0, 0, 2)], ["物件提示", (c) => { crate(c, 0, 0); M.objectHint(c, 0, 0, 300); }], ["眼睛：看著", (c) => M.watchEye(c, T / 2, T / 2, false)], ["眼睛：潛行", (c) => M.watchEye(c, T / 2, T / 2, true)]];
+  cells1.forEach(([zh, fn], i) => { const x = 10 + i * 138; ctx.save(); ctx.translate(x, 6); ctx.beginPath(); ctx.rect(0, 0, 72, 64); ctx.clip(); ctx.translate(12, 12); ctx.fillStyle = "#6a9a4e"; ctx.fillRect(-12, -12, 72, 64); fn(ctx); ctx.restore(); ctx.fillStyle = "#f2e6c8"; ctx.font = "12.5px 'Microsoft JhengHei'"; ctx.fillText(zh, x, 86); });
+
+  // 2. 野外
+  const COLS = 11, ROWS = 7, SIGHT = [[6, 1], [7, 1], [8, 1], [6, 2], [7, 2], [8, 2], [9, 2], [7, 3], [8, 3], [9, 3], [8, 4]];
+  const SIGHT_HALF = [[7, 2], [8, 2], [8, 3]];
+  function field(ctx, sneaking) {
+    ground(ctx, COLS, ROWS);
+    M.sightBlob(ctx, sneaking ? SIGHT_HALF : SIGHT, sneaking);
+    M.footprints(ctx, [[0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [4, 4], [4, 5]]);
+    M.campfire(ctx, 1, 5, 0, true);
+    M.stele(ctx, 0, 1, 1);
+    crate(ctx, 3, 1); M.objectHint(ctx, 3, 1, 300);
+    M.eventMark(ctx, 6, 5, 400);
+    ring(ctx, 8, 2, "#e0483a"); doll(ctx, BANDIT, "west", 8, 2);
+    M.watchEye(ctx, 8 * T + T / 2, 2 * T - 10, sneaking);
+    if (sneaking) M.sneakVignette(ctx, COLS * T, ROWS * T);
+    ring(ctx, 3, 2, "#5aa0ff"); doll(ctx, HERO, "east", 3, 2, sneaking ? 0.55 : 1);
+  }
+  ctx = cv("c2", COLS * T, ROWS * T); field(ctx, false);
+  card(ctx, 4 * T + 30, 6 * T - 2, "朋友的腳印・阿博", "三天前走過這裡");
+  ctx = cv("c3", COLS * T, ROWS * T); field(ctx, true);
+  ctx.save(); ctx.fillStyle = "rgba(30,26,22,0.9)"; ctx.strokeStyle = "#a898ff"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.roundRect(COLS * T / 2 - 46, 6, 92, 24, 12); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#e8e0ff"; ctx.font = "bold 12.5px 'Microsoft JhengHei'"; ctx.textAlign = "center"; ctx.fillText("潛行中・6 步", COLS * T / 2, 23); ctx.restore();
+
+  // 4. 改前／改後
+  ctx = cv("c4", 1120, 4 * T + 16);
+  function before(ctx) {
+    ground(ctx, 5, 4, 20, 0);
+    ctx.save(); for (const [x, y] of [[2, 0], [3, 0], [2, 1], [3, 1], [4, 1], [3, 2]]) { ctx.fillStyle = "rgba(224,74,58,0.18)"; ctx.fillRect(x * T + 2, y * T + 2, T - 4, T - 4); ctx.strokeStyle = "#e04a3a"; ctx.lineWidth = 1.5; ctx.strokeRect(x * T + 2, y * T + 2, T - 4, T - 4); ctx.fillStyle = "#2a2420"; ctx.beginPath(); ctx.arc(x * T + T - 8, y * T + 8, 6, 0, TAU); ctx.fill(); } ctx.restore();
+    for (const [x, y, ch, col] of [[0, 0, "足", "#c8a868"], [1, 0, "足", "#c8a868"], [0, 2, "火", "#ff8a3a"], [1, 2, "碑", "#8ab0ff"], [0, 3, "!", "#ffd23a"]]) { ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.strokeRect(x * T + 4, y * T + 4, T - 8, T - 8); ctx.fillStyle = "rgba(20,16,12,0.7)"; ctx.fillRect(x * T + T - 18, y * T + 6, 12, 14); ctx.fillStyle = col; ctx.font = "bold 10px 'Microsoft JhengHei'"; ctx.fillText(ch, x * T + T - 17, y * T + 17); }
+  }
+  function after(ctx) {
+    ground(ctx, 5, 4, 20, 0);
+    M.sightBlob(ctx, [[2, 0], [3, 0], [2, 1], [3, 1], [4, 1], [3, 2]]);
+    M.footprints(ctx, [[0, 0], [1, 0], [1, 1]]);
+    M.campfire(ctx, 0, 2, 0, true); M.stele(ctx, 1, 2, 0); M.eventMark(ctx, 0, 3, 400);
+    ring(ctx, 3, 1, "#e0483a"); doll(ctx, BANDIT, "west", 3, 1); M.watchEye(ctx, 3 * T + T / 2, T - 10, false);
+  }
+  ctx.save(); ctx.translate(10, 8); before(ctx); ctx.restore();
+  ctx.save(); ctx.translate(10 + 5 * T + 80, 8); after(ctx); ctx.restore();
+  ctx.fillStyle = "#f2d898"; ctx.font = "bold 28px 'Microsoft JhengHei'"; ctx.fillText("→", 10 + 5 * T + 26, 8 + 2 * T + 8);
+  ctx.fillStyle = "#d8ccb8"; ctx.font = "13px 'Microsoft JhengHei'";
+  [["改前：格子框＋一個字；視野每格一個紅框＋格角黑點", 0], ["改後：營火、石碑、腳印、「！」用自己的形狀；", 1], ["視野併成一塊、虛線外緣；誰在看＝敵群頭上的眼睛", 2], ["文字只在滑過的說明卡（例：「朋友的腳印・阿博」）", 3]].forEach(([s, i]) => ctx.fillText(s, 10 + 10 * T + 120, 30 + i * 26));
+</script>
+</body>
+</html>
