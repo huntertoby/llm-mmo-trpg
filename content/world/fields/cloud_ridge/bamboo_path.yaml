@@ -1,0 +1,100 @@
+# 竹林小徑實地地圖（6C-3；玩法 PM 草稿第 3 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 路徑圖 20×12，建議 1～2 級：濃密竹林中間一條彎小路。南邊接渡口石階，西邊獵人踩出的小徑往
+# 獵戶小屋，東邊過小溪上的石橋往雨中梯田。
+# - 竹叢：擋視線、可以點燃，用 dead_tree（枯樹：擋視線、可燃、可推倒）；其中兩叢靠路邊的是
+#   「倒下的竹堆，可以推倒」。草叢（grass）是可燃的隱蔽處。
+# - 中央小溪：水表面（雷擊會擴散），石橋那兩列沒有水。
+# 敵人：竹林深處（東北的土坡）駐守 mist_wolf_pack（新手任務 2 的固定戰）；小路上巡邏
+# bandit_wolf_handler。事件點：小溪邊（wounded_peddler）、小路（lantern_patrol，夜晚）。
+id: bamboo_path
+name_zh: 竹林小徑
+region: cloud_ridge
+location: bamboo_path
+layout: path
+size: [20, 12]
+heights: |
+  00000000000000111111
+  00000000000000111111
+  00000000000000111111
+  00000000000000111111
+  00000000000000111111
+  00000000000000000000
+  00000000000000000000
+  00000000000000000000
+  00000000000000000000
+  00000000000000000000
+  00000000000000000000
+  00000000000000000000
+terrain: |
+  """"""""""""""""""""
+  """"""""""""""""""""
+  """"""""""""""""""""
+  """"""""""""""""""""
+  ,,,,,,,,,,,"""""""""
+  ,,,,,,,,,,,"""""""""
+  """"""""",,,..,,,,,,
+  """"""""",,,..,,,,,,
+  """"""""",,"""""""""
+  """"""""",,"""""""""
+  """"""""",,"""""""""
+  """"""""",,"""""""""
+legend:
+  ".": stone
+  '"': grass
+  ",": dirt
+objects:
+  - {at: [1, 1], kind: dead_tree}   # 竹叢
+  - {at: [3, 2], kind: dead_tree}
+  - {at: [5, 1], kind: dead_tree}
+  - {at: [7, 2], kind: dead_tree}
+  - {at: [2, 7], kind: dead_tree}
+  - {at: [4, 9], kind: dead_tree}
+  - {at: [1, 10], kind: dead_tree}
+  - {at: [6, 8], kind: dead_tree}
+  - {at: [7, 10], kind: dead_tree}
+  - {at: [15, 9], kind: dead_tree}
+  - {at: [17, 10], kind: dead_tree}
+  - {at: [18, 9], kind: dead_tree}
+  - {at: [19, 1], kind: dead_tree}
+  - {at: [14, 4], kind: dead_tree}
+  - {at: [3, 0], kind: dead_tree}
+  - {at: [11, 3], kind: dead_tree}   # 倒下的竹堆（可推倒）
+  - {at: [15, 8], kind: dead_tree}   # 倒下的竹堆（可推倒）
+  - {at: [3, 6], kind: grass}
+  - {at: [4, 6], kind: grass}
+  - {at: [16, 5], kind: grass}
+  - {at: [17, 5], kind: grass}
+  - {at: [6, 3], kind: grass}
+surfaces:
+  - {at: [12, 0], surface: water}
+  - {at: [13, 0], surface: water}
+  - {at: [12, 1], surface: water}
+  - {at: [13, 1], surface: water}
+  - {at: [12, 2], surface: water}
+  - {at: [13, 2], surface: water}
+  - {at: [12, 3], surface: water}
+  - {at: [13, 3], surface: water}
+  - {at: [12, 4], surface: water}
+  - {at: [13, 4], surface: water}
+  - {at: [12, 5], surface: water}
+  - {at: [13, 5], surface: water}
+  - {at: [12, 8], surface: water}
+  - {at: [13, 8], surface: water}
+  - {at: [12, 9], surface: water}
+  - {at: [13, 9], surface: water}
+  - {at: [12, 10], surface: water}
+  - {at: [13, 10], surface: water}
+  - {at: [12, 11], surface: water}
+  - {at: [13, 11], surface: water}
+entry: [10, 9]
+exits:
+  - {id: to_ferry_steps, at: [[9, 11], [10, 11]], to: ferry_steps, arrive: to_bamboo_path}   # 南：往渡口石階
+  - {id: to_hunter_hut, at: [[0, 4], [0, 5]], to: hunter_hut, arrive: to_bamboo_path}   # 西：獵人踩出的小徑
+  - {id: to_rain_terraces, at: [[19, 6], [19, 7]], to: rain_terraces, arrive: to_bamboo_path}   # 東：竹林盡頭的石橋
+spawns:
+  - {at: [16, 2], group: mist_wolf_pack}   # 竹林深處（新手任務 2 的固定戰）
+  - {at: [9, 9], group: bandit_wolf_handler, patrol: [[9, 9], [9, 5], [2, 5]]}   # 小路上巡邏
+event_spots:
+  - {at: [11, 9], id: wounded_peddler}   # 小溪邊
+  - {at: [5, 4], id: lantern_patrol}   # 小路（夜晚）

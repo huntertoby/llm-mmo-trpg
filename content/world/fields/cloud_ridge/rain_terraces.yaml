@@ -1,0 +1,192 @@
+# 雨中梯田實地地圖（6C-3；玩法 PM 草稿第 4 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 營地 24×18，建議 2 級，傳送石：層層梯田常年下雨。4 層梯田（北高南低，高度 3／2／1／0），每層
+# 最上面一列是 1 格寬的田埂（石地），中間一條往上的石階；水田是水表面；稻草人用枯樹（可推倒）。
+# 出口：西 → 竹林小徑、北 → 青霧觀山門（往上的石階）、西北 → 古松祭壇（山坡小路）、
+# 東南 → 斷崖幫寨（峽谷口）。傳送石在中層（高度 2）的土地廟旁。
+# 敵人：上層駐守 terrace_clash（三方：盜賊對修士，新手任務 3 的固定戰；草稿待確認 6：兩群互相
+# 對峙、不會自己打起來，碰到就照陣容的 third 開三方戰，所以只放一個駐守點）；田埂巡邏 sect_patrol。
+# 事件點：土地廟旁（lost_acolyte）、峽谷口（gang_toll）。
+id: rain_terraces
+name_zh: 雨中梯田
+region: cloud_ridge
+location: rain_terraces
+size: [24, 18]
+heights: |
+  333333333333333333333333
+  333333333333333333333333
+  333333333333333333333333
+  333333333333333333333333
+  222222222222222222222222
+  222222222222222222222222
+  222222222222222222222222
+  222222222222222222222222
+  111111111111111111111111
+  111111111111111111111111
+  111111111111111111111111
+  111111111111111111111111
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+terrain: |
+  ........................
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ...............##.......
+  ,,,,,,,,,,,..,,##,,,,,,,
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ........................
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ,,,,,,,,,,,..,,,,,,,,,,,
+  ,,,,,,,,,,,..,,,,,,,####
+  ....................####
+  ,,,,,,,,,,,..,,,,,,,####
+  ,,,,,,,,,,,..,,,,,......
+  ,,,,,,,,,,,..,,,,,......
+  ,,,,,,,,,,,..,,,,,,,####
+  ,,,,,,,,,,,..,,,,,,,####
+legend:
+  ".": stone
+  ",": dirt
+  "#": wall
+objects:
+  - {at: [5, 3], kind: dead_tree}   # 稻草人
+  - {at: [17, 10], kind: dead_tree}   # 稻草人
+  - {at: [6, 15], kind: dead_tree}   # 稻草人
+  - {at: [14, 7], kind: stone_pillar}   # 土地廟的香柱
+  - {at: [1, 6], kind: grass}
+  - {at: [22, 6], kind: grass}
+  - {at: [21, 2], kind: low_wall}   # 上層的矮牆
+  - {at: [22, 9], kind: crate}
+surfaces:
+  - {at: [2, 1], surface: water}
+  - {at: [3, 1], surface: water}
+  - {at: [4, 1], surface: water}
+  - {at: [5, 1], surface: water}
+  - {at: [6, 1], surface: water}
+  - {at: [7, 1], surface: water}
+  - {at: [8, 1], surface: water}
+  - {at: [9, 1], surface: water}
+  - {at: [2, 2], surface: water}
+  - {at: [3, 2], surface: water}
+  - {at: [4, 2], surface: water}
+  - {at: [5, 2], surface: water}
+  - {at: [6, 2], surface: water}
+  - {at: [7, 2], surface: water}
+  - {at: [8, 2], surface: water}
+  - {at: [9, 2], surface: water}
+  - {at: [14, 1], surface: water}
+  - {at: [15, 1], surface: water}
+  - {at: [16, 1], surface: water}
+  - {at: [17, 1], surface: water}
+  - {at: [18, 1], surface: water}
+  - {at: [19, 1], surface: water}
+  - {at: [20, 1], surface: water}
+  - {at: [21, 1], surface: water}
+  - {at: [14, 2], surface: water}
+  - {at: [15, 2], surface: water}
+  - {at: [16, 2], surface: water}
+  - {at: [17, 2], surface: water}
+  - {at: [18, 2], surface: water}
+  - {at: [19, 2], surface: water}
+  - {at: [20, 2], surface: water}
+  - {at: [21, 2], surface: water}
+  - {at: [2, 5], surface: water}
+  - {at: [3, 5], surface: water}
+  - {at: [4, 5], surface: water}
+  - {at: [5, 5], surface: water}
+  - {at: [6, 5], surface: water}
+  - {at: [7, 5], surface: water}
+  - {at: [8, 5], surface: water}
+  - {at: [9, 5], surface: water}
+  - {at: [2, 6], surface: water}
+  - {at: [3, 6], surface: water}
+  - {at: [4, 6], surface: water}
+  - {at: [5, 6], surface: water}
+  - {at: [6, 6], surface: water}
+  - {at: [7, 6], surface: water}
+  - {at: [8, 6], surface: water}
+  - {at: [9, 6], surface: water}
+  - {at: [18, 5], surface: water}
+  - {at: [19, 5], surface: water}
+  - {at: [20, 5], surface: water}
+  - {at: [21, 5], surface: water}
+  - {at: [18, 6], surface: water}
+  - {at: [19, 6], surface: water}
+  - {at: [20, 6], surface: water}
+  - {at: [21, 6], surface: water}
+  - {at: [2, 9], surface: water}
+  - {at: [3, 9], surface: water}
+  - {at: [4, 9], surface: water}
+  - {at: [5, 9], surface: water}
+  - {at: [6, 9], surface: water}
+  - {at: [7, 9], surface: water}
+  - {at: [8, 9], surface: water}
+  - {at: [9, 9], surface: water}
+  - {at: [2, 10], surface: water}
+  - {at: [3, 10], surface: water}
+  - {at: [4, 10], surface: water}
+  - {at: [5, 10], surface: water}
+  - {at: [6, 10], surface: water}
+  - {at: [7, 10], surface: water}
+  - {at: [8, 10], surface: water}
+  - {at: [9, 10], surface: water}
+  - {at: [14, 9], surface: water}
+  - {at: [15, 9], surface: water}
+  - {at: [16, 9], surface: water}
+  - {at: [17, 9], surface: water}
+  - {at: [18, 9], surface: water}
+  - {at: [19, 9], surface: water}
+  - {at: [14, 10], surface: water}
+  - {at: [15, 10], surface: water}
+  - {at: [16, 10], surface: water}
+  - {at: [17, 10], surface: water}
+  - {at: [18, 10], surface: water}
+  - {at: [19, 10], surface: water}
+  - {at: [2, 13], surface: water}
+  - {at: [3, 13], surface: water}
+  - {at: [4, 13], surface: water}
+  - {at: [5, 13], surface: water}
+  - {at: [6, 13], surface: water}
+  - {at: [7, 13], surface: water}
+  - {at: [8, 13], surface: water}
+  - {at: [9, 13], surface: water}
+  - {at: [2, 14], surface: water}
+  - {at: [3, 14], surface: water}
+  - {at: [4, 14], surface: water}
+  - {at: [5, 14], surface: water}
+  - {at: [6, 14], surface: water}
+  - {at: [7, 14], surface: water}
+  - {at: [8, 14], surface: water}
+  - {at: [9, 14], surface: water}
+  - {at: [14, 13], surface: water}
+  - {at: [15, 13], surface: water}
+  - {at: [16, 13], surface: water}
+  - {at: [17, 13], surface: water}
+  - {at: [18, 13], surface: water}
+  - {at: [19, 13], surface: water}
+  - {at: [14, 14], surface: water}
+  - {at: [15, 14], surface: water}
+  - {at: [16, 14], surface: water}
+  - {at: [17, 14], surface: water}
+  - {at: [18, 14], surface: water}
+  - {at: [19, 14], surface: water}
+entry: [12, 13]
+exits:
+  - {id: to_bamboo_path, at: [[0, 9], [0, 10]], to: bamboo_path, arrive: to_rain_terraces}   # 西：往竹林小徑
+  - {id: to_mist_temple_gate, at: [[11, 0], [12, 0]], to: mist_temple_gate, arrive: to_rain_terraces}   # 北：往上的石階
+  - {id: to_old_pine_altar, at: [[0, 1], [0, 2]], to: old_pine_altar, arrive: to_rain_terraces}   # 西北：山坡小路
+  - {id: to_cliff_gang_fort, at: [[23, 14], [23, 15]], to: cliff_gang_fort, arrive: to_rain_terraces}   # 東南：峽谷口
+teleport_stones:
+  - {id: stone_rain_terraces, at: [17, 6]}
+spawns:
+  - {at: [16, 2], group: terrace_clash}   # 上層（三方，新手任務 3 的固定戰）
+  - {at: [2, 8], group: sect_patrol, patrol: [[2, 8], [21, 8]]}   # 田埂巡邏
+event_spots:
+  - {at: [15, 6], id: lost_acolyte}   # 土地廟旁
+  - {at: [19, 14], id: gang_toll}   # 峽谷口

@@ -1,7 +1,8 @@
 """實地地圖（Phase 6B-1）：``world/fields/`` 的格式、單檔驗證與跨檔案驗證。
 
 表格測試的底稿是內容庫裡的兩張草稿（霧渡鎮、渡口石階）加上兩張室內圖；需要隱藏地點、渡口、Boss
-的情形另外用 :func:`_open_map` 拼一張空地圖。
+的情形另外用 :func:`_open_map` 拼一張空地圖。6C-3 起內容庫有更多雲嶺地圖，這裡的表格測試只取這四張
+（:data:`_BASE`），各張地圖的內容另見 ``test_cloud_fields.py``。
 """
 
 from __future__ import annotations
@@ -33,9 +34,15 @@ def library() -> ContentLibrary:
     return load_library()
 
 
+_BASE = ("ferry_steps", "mist_ferry", "mist_ferry_smithy", "mist_ferry_tavern")
+"""表格測試的底稿：6B-1 的兩張草稿與兩張室內圖。"""
+
+
 def _raw(library: ContentLibrary) -> Raw:
     return {
-        k: v.model_dump(mode="json", exclude_defaults=True) for k, v in library.field_maps.items()
+        k: v.model_dump(mode="json", exclude_defaults=True)
+        for k, v in library.field_maps.items()
+        if k in _BASE
     }
 
 
@@ -146,12 +153,7 @@ def _exit_of(raw: Raw, map_id: str, exit_id: str) -> dict[str, Any]:
 
 def test_the_library_loads_the_two_drafts_and_their_interiors(library: ContentLibrary) -> None:
     fields = library.field_maps
-    assert sorted(fields) == [
-        "ferry_steps",
-        "mist_ferry",
-        "mist_ferry_smithy",
-        "mist_ferry_tavern",
-    ]
+    assert set(_BASE) <= set(fields)
     town = fields["mist_ferry"]
     assert town.size == (24, 18)
     assert {e.to for e in town.exits} == {"ferry_steps", "hunter_hut", "ashen_ferry"}
@@ -172,12 +174,12 @@ def test_the_drafts_pass_and_list_the_unpaired_ends_as_pending(library: ContentL
     assert "to_bamboo_path" in pending and "to_hunter_hut" in pending
     assert "to_ashen_ferry" in pending
     assert "to_ferry_steps" not in pending  # 霧渡鎮－渡口石階兩邊都畫了，已經配對
-    assert library.field_pending == report.pending
-    assert any("傳送石 1 個" in w for w in library.field_warnings)
+    assert any("傳送石 1 個" in w for w in report.warnings)
 
 
 def test_progress_counts_outdoor_maps_per_region(library: ContentLibrary) -> None:
-    progress = field_progress(library.world_maps, library.field_maps)
+    fields = {k: library.field_maps[k] for k in _BASE}
+    progress = field_progress(library.world_maps, fields)
     assert [(p.region, p.done, p.total) for p in progress] == [
         ("cloud_ridge", 2, 18),
         ("ashen_waste", 0, 18),
@@ -189,7 +191,7 @@ def test_field_maps_reuse_the_battle_map_grid_rules(library: ContentLibrary) -> 
     steps = library.field_maps["ferry_steps"]
     terrain = library.ruleset.terrain.by_id()
     assert {tid for row in steps.grid() for _, tid in row} <= set(terrain)
-    assert {h for row in steps.grid() for h, _ in row} == {0, 1, 2, 3}
+    assert {h for row in steps.grid() for h, _ in row} == {0, 1, 2}  # 三段石階（6C-3）
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +205,7 @@ def _town(library: ContentLibrary) -> dict[str, Any]:
 
 _SINGLE_FILE_CASES: list[tuple[str, Callable[[dict[str, Any]], None], str]] = [
     ("size_mismatch", lambda d: d.update(size=[24, 17]), "terrain 應有 17 行"),
-    ("row_too_short", lambda d: d.update(terrain=d["terrain"].replace(".", "", 1)), "第 0 行"),
+    ("row_too_short", lambda d: d.update(terrain=d["terrain"].replace(".", "", 1)), "第 5 行"),
     ("exit_not_on_edge", lambda d: d["exits"][0].update(at=[[11, 5]]), "不在地圖邊緣"),
     ("exit_out_of_bounds", lambda d: d["exits"][0].update(at=[[30, 0]]), "超出地圖範圍"),
     (
@@ -297,7 +299,11 @@ def _drop_map(raw: Raw, map_id: str) -> None:
 
 
 def _block_stairs(raw: Raw) -> None:
-    raw["ferry_steps"]["objects"] += [{"at": [10, y], "kind": "crate"} for y in range(6, 10)]
+    """在渡口石階的第一段石階（x=6）上擺滿木箱，石階頂就走不到了。"""
+    rows = FieldMapDef.model_validate(raw["ferry_steps"]).terrain_rows()
+    raw["ferry_steps"]["objects"] += [
+        {"at": [6, y], "kind": "crate"} for y, row in enumerate(rows) if row[6] not in "#="
+    ]
 
 
 def _cloud_summit_with_stone(raw: Raw) -> None:
