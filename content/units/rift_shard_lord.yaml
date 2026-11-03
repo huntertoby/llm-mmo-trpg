@@ -1,6 +1,6 @@
 # 第一季賽季 Boss「碎晶之主」（Phase 5F-3；docs/design/19-灰燼荒原與賽季主線.md 19.7、09 9.6.8 #86、#87）。
 # 裂界門（Boss 地圖 rift_gate）；依「主角＋2 名系統傭兵」、滿等（10 級）設計。HP 380、柱子 60；三柱階段的「灌注源晶」（造成傷害 ×0.75，界崩維持第 15 輪）是 5F-3b 的調整（玩法 PM 代決），模擬見 docs/phases/Phase5F-3b報告.md。
-# 外觀（doll）是美術的事，這裡不寫。
+# 外觀（doll）見檔尾（5A-ART4）。
 # 階段（引擎資料化，trpg.engine.boss_phases）：
 #   1 三柱（解謎）：三根源晶柱的「源晶共鳴」讓本體不受骰值傷害，柱子全倒才進下一階段（tag_down）。
 #   2 碎界脈動：身邊小傷的「碎界脈動」（需要治療的時刻）、單體持續傷害「晶蝕」（需要淨化的時刻）；召喚 2 個晶傀儡。
@@ -42,3 +42,5 @@ phases:
     trigger: {kind: round_at, round: 15}
     text_zh: 浮台的邊緣開始崩落，碎晶之主的每一擊都帶著整個界域的重量。
     add_statuses: [{status: rift_collapse}]
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {rarity: legendary, creature: {body: golem, material: crystal, size: huge, traits: [core]}}

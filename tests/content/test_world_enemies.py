@@ -63,7 +63,7 @@ def test_cloud_ridge_units_loaded(library: ContentLibrary) -> None:
     for unit_id in CLOUD_RIDGE_UNITS:
         template = library.units[unit_id]
         assert not template.summon
-        assert template.doll is None  # 外觀是 5A-ART 的事
+        assert template.doll is not None  # 外觀：5A-ART4（tests/content/test_enemy_looks.py）
     sect = [u for u in CLOUD_RIDGE_UNITS if u.startswith("sect_")]
     assert all("sect" in library.units[u].tags for u in sect)
     assert library.units["sect_steward"].tags.count("elite") == 1

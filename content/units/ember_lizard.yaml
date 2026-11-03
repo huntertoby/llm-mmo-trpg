@@ -1,6 +1,6 @@
 # 灰燼荒原敵人（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.1，#118 玩法 PM 代決、待使用者確認）。
 # 熔岩獸群的共通題目：怕水（元素沒有水，用冰傷害 + 近似；水由地圖的水表面與冷卻井發揮，代決 5F5a-7）、火焰抗性（「站在火上回血」引擎沒有，用火抗近似，代決 5F5a-7）、
-# 死後留火（開場狀態「熔核爆裂」）。數值是初值（未經模擬）；外觀（doll）是美術的事，這裡不寫。
+# 死後留火（開場狀態「熔核爆裂」）。數值是初值（未經模擬）；外觀（doll）見檔尾（5A-ART4）。
 # 餘燼蜥：近戰（群）、啃咬點燃。
 id: ember_lizard
 name_zh: 餘燼蜥
@@ -16,3 +16,5 @@ tags: [beast, lava_beast]
 skills: [skill_ember_bite]
 opening_statuses:
   - {status: molten_burst}
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: lizard, material: magma, size: small}}

@@ -6825,6 +6825,105 @@
         "title": "CreateWorldCharacterRequest",
         "description": "建立大世界角色（07 7.6 創角）。選項沿用 ``GET /api/runs/start-options``。"
       },
+      "CreatureLook": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Body"
+          },
+          "variant": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant"
+          },
+          "material": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "tint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint"
+          },
+          "traits": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Traits",
+            "default": []
+          },
+          "status_traits": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]*$": {
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object",
+            "title": "Status Traits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "CreatureLook",
+        "description": "異形敵人的外觀（Phase 5A-ART1，``docs/art/敵人外觀.md`` 1.1；純顯示資料）。\n\n身形 × 材質 × 元素 × 大小 × 特徵。值只檢查格式、**不檢查是否認得**：前端不認得時退回\n（身形 → 軟泥、材質 → 毛皮、元素 → 無、大小 → 1、特徵 → 略過），讓 LLM 產生的新值也畫得出來。\n``status_traits``：單位身上有該狀態時才多畫的特徵（灰燼之心有「熔殼」時畫甲蟲殼堆）。"
+      },
       "DamageOut": {
         "properties": {
           "minimum": {
@@ -7173,6 +7272,42 @@
               }
             ],
             "title": "Color"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "trim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim"
+          },
+          "apron": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apron"
           }
         },
         "additionalProperties": false,
@@ -7182,14 +7317,15 @@
           "material"
         ],
         "title": "DollGear",
-        "description": "範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。"
+        "description": "範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。\n\nPhase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、\n``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。"
       },
       "DollLook": {
         "properties": {
           "skin": {
             "type": "string",
             "pattern": "^#[0-9a-fA-F]{6}$",
-            "title": "Skin"
+            "title": "Skin",
+            "default": "#f1c9a5"
           },
           "hair": {
             "anyOf": [
@@ -7198,7 +7334,8 @@
                 "enum": [
                   "short",
                   "long",
-                  "none"
+                  "none",
+                  "bun"
                 ]
               },
               {
@@ -7271,7 +7408,10 @@
                 "hands",
                 "feet",
                 "cloak",
-                "off_hand"
+                "off_hand",
+                "neck",
+                "back",
+                "waist"
               ]
             },
             "type": "object",
@@ -7315,15 +7455,98 @@
               }
             ],
             "title": "Rarity"
+          },
+          "main_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Kind"
+          },
+          "main_tassel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Tassel"
+          },
+          "bun_band": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bun Band"
+          },
+          "beard": {
+            "type": "boolean",
+            "title": "Beard",
+            "default": false
+          },
+          "build": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "stout",
+                  "tall"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build"
+          },
+          "creature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CreatureLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "affixes": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Affixes",
+            "default": []
+          },
+          "traits": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Traits",
+            "default": []
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "skin"
-        ],
         "title": "DollLook",
-        "description": "單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。\n\n頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的\n``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，\n前端依陣營退回預設外觀。"
+        "description": "單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。\n\n頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的\n``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，\n前端依陣營退回預設外觀。\n\nPhase 5A-ART：``creature`` 有值時前端改用異形畫法（不畫紙娃娃；``rarity`` 仍是頭目外光）；\n``affixes`` 是精英詞綴的外觀 id（套詞綴時由 :func:`trpg.content.world_enemies.apply_affix`\n加上）；``main_kind`` 覆寫主手造型（拂塵、符紙、傀儡線）、``main_tassel`` 劍穗色、\n``bun_band`` 髮髻的髮帶色、``beard`` 鬍子、``build`` 體型。都經 ``UnitView.doll_look`` 給前端\n（不改引擎）。"
       },
       "DraftOptions": {
         "properties": {

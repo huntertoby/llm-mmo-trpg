@@ -1,5 +1,5 @@
 # 雲嶺區域 Boss（Phase 5F-2；docs/design/18-雲嶺內容.md 18.2.3、09 9.6.8 #86）：霧鎖真人（青霧觀觀主），雲頂觀（Boss 地圖 cloud_summit）。
-# 數值是初值（HP 5F-2b 起 90 → 120，玩法 PM 2026-11-03 代決；模擬見 docs/phases/Phase5F-2b報告.md）；外觀（doll）是美術的事，這裡不寫。
+# 數值是初值（HP 5F-2b 起 90 → 120，玩法 PM 2026-11-03 代決；模擬見 docs/phases/Phase5F-2b報告.md）；外觀（doll）見檔尾（5A-ART4）。
 # 階段（引擎資料化，trpg.engine.boss_phases）：
 #   1 劍陣（100～60%）：在陣眼石靈後方施法；陣眼的「鎖霧大陣」讓真人受到的傷害 −50%，打碎陣眼才解除。
 #   2 鎖霧（≤ 60%）：全場濃霧（遠程 4 格外劣勢）；霧遁換位、蓄力強招「霧鎖千山」（十字每臂 2 格、定身 1 回合，提前一輪預告）；召喚 2 名霧行者。
@@ -43,3 +43,5 @@ phases:
     remove_statuses: [concealed]
     add_statuses: [{status: mist_return}]
     weather: clear
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {skin: '#f1c9a5', hair: long, hair_color: '#f0f0f0', beard: true, rarity: legendary, main_kind: whisk, traits: [mist], gear: {body: {kind: robe, material: cloth, color: '#dfe4e2', trim: '#e8bb48'}, cloak: {kind: cape, material: cloth, color: '#5f8f8a'}, off_hand: {kind: sword, material: steel}}}

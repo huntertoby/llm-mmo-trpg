@@ -28,3 +28,5 @@ phases:
     trigger: {kind: tag_down, tag: rift_pillar, count: 2, tag_name_zh: 源晶柱}
     remove_statuses: [crystal_surge]
     add_statuses: [{status: crystal_surge_2}]
+# 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
+doll: {creature: {body: pylon, material: crystal, element: wind}}
