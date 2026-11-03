@@ -1,27 +1,35 @@
-"""灰燼荒原的小模擬（Phase 5F-5a；``docs/phases/Phase5計畫.md`` 39.5）。
+"""灰燼荒原的小模擬（Phase 5F-5a；5F-5b 加候選內容、敵人高 2 級與赤焰主角）。
 
 走大世界的真實路徑（``prepare_battle``）：我方＝主角＋2 名系統傭兵（輸出與控制主角帶預設的鐵壁、
 回春；守護與輔助主角帶赤焰、回春／穿雲），主角是數種 build 的底稿照大世界敵我同一套成長規則拉到
 地點的建議等級；雙方都由效用 AI 操作；``max_rounds`` 照世界規則（30，超過算敗）。
 
 - ``general``：荒原一般遭遇。依序輪流挑營地與村落（每個地點照遭遇表抽陣容、照地點的戰鬥地圖；
-  村落是守點戰），主角等級＝地點建議等級。
-- ``boss``：熔心坑灰燼之心（9 級、Boss 地圖 ``molten_heart_pit``），護甲不調整（沒有旗標與線頭）。
+  村落是守點戰），主角等級＝地點建議等級；``--enemy-plus 0,2`` 另量敵人高 2 級（07 7.8；走世界事件
+  失敗的建議等級加成同一條路，主角等級不變）。
+- ``boss``：熔心坑灰燼之心（9 級、Boss 地圖 ``molten_heart_pit``），護甲不調整（沒有旗標與線頭）；
+  ``--fire`` 另量赤焰（``build_fire``）當主角。
+
+候選內容（``--variant``）：複製一份 ``content/`` 到暫存資料夾、套 :data:`VARIANTS` 的字串替換
+再載入，所以引擎與世界的程式完全照正式路徑；``+`` 可以串起多個候選（例 ``dice_up+fire50``）。
 
 用法::
 
     uv run python scripts/ashen_waste_sim.py [--runs 40] [--only general|boss]
-    uv run python scripts/ashen_waste_sim.py --only boss --boss-hp 200,240   # 候選 HP（1 級）
+    uv run python scripts/ashen_waste_sim.py --only boss --fire --variant now,dice_up,dice_up+fire50
+    uv run python scripts/ashen_waste_sim.py --only general --enemy-plus 0,2
 
-只輸出摘要表（勝率、平均輪數、敗場；Boss 另列到第 2／3 階段的比例、敗場剩餘 HP）；數值建議寫進報告由
-PM 決定（CLAUDE.md 第 11 條）。
+只輸出摘要表（勝率、平均輪數、敗場；Boss 另列到第 2／3 階段的比例、敗場剩餘 HP），最後一張 Markdown
+總表；數值建議寫進報告由 PM 決定（CLAUDE.md 第 11 條）。
 """
 
 from __future__ import annotations
 
 import argparse
 import dataclasses
+import shutil
 import sys
+import tempfile
 from collections import Counter
 from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
@@ -75,6 +83,47 @@ GENERAL_LOCATIONS = (
 )
 """一般遭遇輪流挑的地點（營地、村落與遺跡；不含精英巢穴、隱藏地點與 Boss）。"""
 
+Edit = tuple[str, str, str]
+"""(content 下的相對路徑、舊字串、新字串)；舊字串在檔案裡必須剛好出現一次。"""
+VARIANTS: dict[str, tuple[Edit, ...]] = {
+    "now": (),
+    # --- 5F-5b 灰燼之心：HP 160 不動、只調傷害 ---
+    "int16": (("units/ashen_heart.yaml", "int: 14,", "int: 16,"),),
+    "dice_up": (
+        ("skills/skill_lava_spout.yaml", "dice: 1d6, element: fire}", "dice: 1d10, element: fire}"),
+        ("skills/skill_heart_inhale.yaml", "dice: 1d10,", "dice: 2d8,"),
+        ("skills/skill_heart_exhale.yaml", "dice: 1d6,", "dice: 1d10,"),
+        ("skills/skill_heart_meltdown.yaml", "dice: 3d8,", "dice: 3d10,"),
+    ),
+    "dice_up2": (
+        ("skills/skill_lava_spout.yaml", "dice: 1d6, element: fire}", "dice: 2d8, element: fire}"),
+        ("skills/skill_heart_inhale.yaml", "dice: 1d10,", "dice: 2d10,"),
+        ("skills/skill_heart_exhale.yaml", "dice: 1d6,", "dice: 2d6,"),
+        ("skills/skill_heart_exhale.yaml", "duration: 1}", "duration: 2}"),
+        ("skills/skill_heart_meltdown.yaml", "dice: 3d8,", "dice: 4d10,"),
+    ),
+    "fire50": (("units/ashen_heart.yaml", "fire: -750,", "fire: -500,"),),
+    # --- 5F-5b 荒原一般遭遇：熔核（熔岩獸群的開場狀態，只有荒原的範本有）加攻擊傷害倍率 ---
+    **{
+        f"burst{p}": (
+            (
+                "statuses.yaml",
+                "on_death_surface: {surface: fire, radius: 0, duration: 2}",
+                f"on_death_surface: {{surface: fire, radius: 0, duration: 2}}\n"
+                f"    damage_dealt_permille: {p}",
+            ),
+            (
+                "statuses.yaml",
+                "on_death_surface: {surface: ice, radius: 0, duration: 2}",
+                f"on_death_surface: {{surface: ice, radius: 0, duration: 2}}\n"
+                f"    damage_dealt_permille: {p}",
+            ),
+        )
+        for p in (1150, 1250, 1350, 1500, 1750, 2000, 2250, 2500)
+    },
+}
+"""候選內容（``--variant``）。"""
+
 
 @dataclass(frozen=True)
 class Outcome:
@@ -86,8 +135,31 @@ class Outcome:
     phases: int = 0
 
 
-def make_char(library: ContentLibrary, build_id: str, location: str, seed: int) -> CharacterState:
-    """地點建議等級的主角（照敵我同一套成長）＋預設傭兵，身上有那個地點的遭遇。"""
+Job = tuple[str, str, str, int, int | None, str | None, int]
+"""(標籤、build、地點、種子、Boss HP 候選、內容資料夾、敵人高幾級)。"""
+
+
+def variant_root(name: str, base: Path) -> Path | None:
+    """候選 ``name`` 的內容資料夾（暫存複本）；``now``＝原內容，回傳 ``None``。"""
+    edits = [e for part in name.split("+") for e in VARIANTS[part]]
+    if not edits:
+        return None
+    root = Path(tempfile.mkdtemp(prefix="ashen_")) / "content"
+    shutil.copytree(base, root)
+    for rel, old, new in edits:
+        path = root / rel
+        text = path.read_text(encoding="utf-8")
+        if text.count(old) != 1:
+            raise SystemExit(f"候選 {name}：{rel} 找不到唯一的「{old}」")
+        path.write_text(text.replace(old, new), encoding="utf-8")
+    return root
+
+
+def make_char(
+    library: ContentLibrary, build_id: str, location: str, seed: int, enemy_plus: int = 0
+) -> CharacterState:
+    """地點建議等級的主角（照敵我同一套成長）＋預設傭兵，身上有那個地點的遭遇；敵人高
+    ``enemy_plus`` 級。"""
     place = library.world_maps[REGION].location_by_id()[location]
     assert place.level_min is not None
     level = place.level_min
@@ -107,6 +179,7 @@ def make_char(library: ContentLibrary, build_id: str, location: str, seed: int) 
         day_phase="day",
         at=NOON,
         objective=objective,
+        level_bonus=enemy_plus,
     )
     char = char.model_copy(
         update={
@@ -121,19 +194,26 @@ def make_char(library: ContentLibrary, build_id: str, location: str, seed: int) 
     return char.model_copy(update={"hp": max_hp(library, char)})
 
 
-def _library(boss_hp: int | None) -> ContentLibrary:
-    library = load_library()
-    if boss_hp is None:
-        return library
-    units = dict(library.units)
-    units[BOSS] = units[BOSS].model_copy(update={"max_hp": boss_hp})
-    return dataclasses.replace(library, units=units)
+_LIBS: dict[tuple[str | None, int | None], ContentLibrary] = {}
 
 
-def _run(args: tuple[str, str, str, int, int | None]) -> Outcome:
-    label, build_id, location, seed, boss_hp = args
-    library = _library(boss_hp)
-    prepared = prepare_battle(library, make_char(library, build_id, location, seed))
+def _library(boss_hp: int | None, root: str | None) -> ContentLibrary:
+    """每個工作程序快取一份（候選內容資料夾、Boss HP）的內容庫。"""
+    key = (root, boss_hp)
+    if key not in _LIBS:
+        library = load_library(None if root is None else Path(root))
+        if boss_hp is not None:
+            units = dict(library.units)
+            units[BOSS] = units[BOSS].model_copy(update={"max_hp": boss_hp})
+            library = dataclasses.replace(library, units=units)
+        _LIBS[key] = library
+    return _LIBS[key]
+
+
+def _run(args: Job) -> Outcome:
+    label, build_id, location, seed, boss_hp, root, enemy_plus = args
+    library = _library(boss_hp, root)
+    prepared = prepare_battle(library, make_char(library, build_id, location, seed, enemy_plus))
     run = run_battle(prepared.setup, prepared.seed, UtilityAI(library.ai_profiles))
     won = run.state.winner is Team.ALLY
     boss = next((u for u in run.state.units.values() if u.template_id == BOSS), None)
@@ -185,34 +265,73 @@ def summarize(title: str, outcomes: Sequence[Outcome], *, boss: bool) -> str:
     return "\n".join(lines)
 
 
+def table_row(kind: str, variant: str, who: str, outcomes: Sequence[Outcome]) -> str:
+    """總表的一列：勝率、平均輪數、勝場平均輪數。"""
+    n = len(outcomes)
+    wins = sum(o.won for o in outcomes)
+    won_rounds = [o.rounds for o in outcomes if o.won]
+    avg_won = f"{sum(won_rounds) / len(won_rounds):.1f}" if won_rounds else "—"
+    avg = sum(o.rounds for o in outcomes) / n
+    return (
+        f"| {kind} | {variant} | {who} | {wins * 100 // n}%（{wins}/{n}） | {avg:.1f} | {avg_won} |"
+    )
+
+
+def build_jobs(
+    args: argparse.Namespace, roots: dict[str, Path | None]
+) -> dict[tuple[str, str, str], list[Job]]:
+    """(場景、候選、隊伍) → 這組要跑的場次。"""
+    jobs: dict[tuple[str, str, str], list[Job]] = {}
+    for name, root in roots.items():
+        where = None if root is None else str(root)
+        if args.only in (None, "general"):
+            for plus in (int(v) for v in args.enemy_plus.split(",")):
+                jobs["一般遭遇", name, f"敵人 +{plus} 級"] = [
+                    (loc, BUILDS[i % len(BUILDS)], loc, 1000 + i, None, where, plus)
+                    for i in range(args.runs)
+                    for loc in (GENERAL_LOCATIONS[i % len(GENERAL_LOCATIONS)],)
+                ]
+        if args.only in (None, "boss"):
+            given: list[int | None] = [int(v) for v in args.boss_hp.split(",") if v]
+            for hp in given or [None]:
+                label = name if hp is None else f"{name}，HP {hp}"
+                jobs["灰燼之心", label, "8 種 build"] = [
+                    (BOSS_LOCATION, BUILDS[i % len(BUILDS)], BOSS_LOCATION, 2000 + i, hp, where, 0)
+                    for i in range(args.runs)
+                ]
+                if args.fire:
+                    jobs["灰燼之心", label, "赤焰主角"] = [
+                        (BOSS_LOCATION, "build_fire", BOSS_LOCATION, 3000 + i, hp, where, 0)
+                        for i in range(args.runs)
+                    ]
+    return jobs
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
     parser.add_argument("--runs", type=int, default=40)
     parser.add_argument("--only", choices=("general", "boss"), default=None)
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--boss-hp", default="", help="候選的灰燼之心 HP（逗號分隔；空＝現值）")
+    parser.add_argument("--variant", default="now", help="候選內容（逗號分隔；見 VARIANTS）")
+    parser.add_argument("--fire", action="store_true", help="灰燼之心另量赤焰（build_fire）當主角")
+    parser.add_argument("--enemy-plus", default="0", help="一般遭遇敵人高幾級（逗號分隔，例 0,2）")
     args = parser.parse_args(argv)
-    jobs: dict[str, list[tuple[str, str, str, int, int | None]]] = {}
-    if args.only in (None, "general"):
-        jobs["荒原一般遭遇"] = [
-            (loc, BUILDS[i % len(BUILDS)], loc, 1000 + i, None)
-            for i in range(args.runs)
-            for loc in (GENERAL_LOCATIONS[i % len(GENERAL_LOCATIONS)],)
-        ]
-    if args.only in (None, "boss"):
-        given: list[int | None] = [int(v) for v in args.boss_hp.split(",") if v]
-        candidates = given or [None]
-        for hp in candidates:
-            label = "現值" if hp is None else f"HP {hp}"
-            jobs[f"灰燼之心（熔心坑，9 級；{label}）"] = [
-                (BOSS_LOCATION, BUILDS[i % len(BUILDS)], BOSS_LOCATION, 2000 + i, hp)
-                for i in range(args.runs)
-            ]
-    with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        for title, batch in jobs.items():
-            outcomes = list(pool.map(_run, batch))
-            print(summarize(title, outcomes, boss=title.startswith("灰燼之心")))
-            print()
+    base = Path(__file__).resolve().parents[1] / "content"
+    roots = {name: variant_root(name, base) for name in args.variant.split(",")}
+    table = ["| 場景 | 候選 | 隊伍 | 勝率 | 平均輪數 | 勝場平均輪數 |", "|---|---|---|---|---|---|"]
+    try:
+        with ProcessPoolExecutor(max_workers=args.workers) as pool:
+            for (kind, variant, who), batch in build_jobs(args, roots).items():
+                outcomes = list(pool.map(_run, batch))
+                print(summarize(f"{kind}（{variant}；{who}）", outcomes, boss=kind == "灰燼之心"))
+                print()
+                table.append(table_row(kind, variant, who, outcomes))
+    finally:
+        for root in roots.values():
+            if root is not None:
+                shutil.rmtree(root.parent, ignore_errors=True)
+    print("\n".join(table))
     return 0
 
 
