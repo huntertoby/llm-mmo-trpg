@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>大世界圖與區域圖</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1160px; }
+  h1 { font-size: 21px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 14px 0 6px; } h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; }
+</style>
+</head>
+<body>
+<h1>大世界圖與雲嶺區域圖（插畫樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。依 #120 第 21.1 節：大世界圖把五區畫成漂浮的界域、主城在中央浮島，已開放的區是彩色、沒解鎖的是灰色剪影加解鎖條件；區域圖是一張插畫，地點照 <code>content/world/maps/cloud_ridge.yaml</code> 的位置，畫出戰爭迷霧三種狀態。兩張都只能看，站在傳送石上或城鎮裡才能點傳送。全部程式繪製。</p>
+<h2>1. 大世界圖（按 M）<small>雲嶺、灰燼荒原已開放（彩色、有航線）；晶冠、樞市、霜潮是灰色剪影＋「之後的賽季」</small></h2>
+<canvas id="world"></canvas>
+<h2>2. 雲嶺區域圖<small>樣張進度：去過 6 個地點；相鄰的 4 個是「？？？」；更遠的被霧蓋住；隱藏的丹爐洞、鶴歸崖不顯示</small></h2>
+<canvas id="region"></canvas>
+<script src="worldmap.js"></script>
+<script>
+  for (const [id, fn, W, H] of [["world", WorldMap.drawWorld, 1100, 640], ["region", WorldMap.drawRegion, 1100, 700]]) {
+    const c = document.getElementById(id); c.width = W * 2; c.height = H * 2; c.style.width = W + "px"; c.style.height = H + "px";
+    const ctx = c.getContext("2d"); ctx.scale(2, 2); fn(ctx, W, H);
+  }
+</script>
+</body>
+</html>

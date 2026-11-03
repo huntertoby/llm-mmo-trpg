@@ -64,7 +64,9 @@ window.Hud = (() => {
     const cw = (w - 6) / 20, ch = (h - 6) / 12, ox = x + 3, oy = y + 3;
     const fill = (gx, gy, gw, gh, col) => { c.fillStyle = col; c.fillRect(ox + gx * cw, oy + gy * ch, gw * cw, gh * ch); };
     fill(0, 0, 20, 12, "#5a7a5e");
-    if (scene === "town") {
+    if (scene === "interior") { fill(0, 0, 20, 12, "#1b1714"); fill(5, 2, 10, 8, "#8a6a44"); fill(5, 2, 10, 2, "#5a4030"); dot(c, ox + 9.5 * cw, oy + 8.5 * ch, 3, "#5aa0ff"); dot(c, ox + 7.5 * cw, oy + 4.5 * ch, 2.2, "#ffd23a"); }
+    else if (scene === "capital") { fill(0, 0, 20, 12, "#c8bca0"); fill(7, 4, 6, 5, "#e8dcc0"); fill(0, 0, 20, 3, "#8a9ab8"); for (const [gx, gy] of [[10, 6.5], [4, 4], [16, 4]]) dot(c, ox + gx * cw, oy + gy * ch, 2.2, "#ffd23a"); dot(c, ox + 10 * cw, oy + 9 * ch, 3, "#5aa0ff"); }
+    else if (scene === "town") {
       fill(2, 4, 16, 5, "#b89a62"); fill(3, 5, 14, 3, "#7d8c84"); fill(7, 0, 2, 4, "#b89a62"); fill(17, 5, 3, 2, "#b89a62");
       fill(2, 1, 4, 3, "#3c4a48"); fill(10, 1, 3, 3, "#3c4a48"); fill(13, 1, 5, 3, "#3c4a48"); fill(0, 10, 20, 2, "#3f7aa8"); fill(9, 9, 2, 3, "#b89a62");
       for (const [gx, gy] of [[5, 4], [12, 4], [17, 4], [10, 9]]) dot(c, ox + (gx + 0.5) * cw, oy + (gy + 0.5) * ch, 2.2, "#ffd23a");

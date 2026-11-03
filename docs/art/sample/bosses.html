@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>頭目專屬造型</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1300px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 16px 0 6px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  figure { margin: 0; text-align: center; }
+  figcaption { font-size: 12px; color: #d8ccb8; margin-top: 3px; line-height: 1.4; }
+  canvas { display: block; border-radius: 6px; border: 1px solid #000; }
+</style>
+</head>
+<body>
+<h1>頭目專屬造型：灰燼之心、碎晶之主（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。取代 5A-ART4 的通用示意（代決 #8）。C 手繪墨線畫法；每塊殼片、每片浮晶都是有掛點的部件，能接上骨架動畫。熔殼由狀態 <code>molten_shell</code> 決定（<code>status_traits</code>），狀態移除時殼片依名稱雜湊往外飛、落地（確定性）。全部程式繪製。</p>
+
+<h2>1. 灰燼之心（熔心坑，區域頭目）<small>會呼吸的源晶核心殘片，嵌在熔岩甲蟲堆成的殼裡；不移動</small></h2>
+<div class="row" id="ah"></div>
+<h2>2. 碎晶之主（裂界門，賽季頭目）<small>浮在浮台上的源晶君主：晶冠、胸口核心、浮空的手晶、下半身拖著碎晶</small></h2>
+<div class="row" id="sl"></div>
+<h2>3. 動起來（循環）<small>左：灰燼之心 殼→噴發→殼脫落→呼吸、吸氣→熔毀；右：碎晶之主 三柱灌注→碎界脈動→施法→過載瞬步→界崩</small></h2>
+<div class="row"><canvas id="live-ah" width="420" height="300"></canvas><canvas id="live-sl" width="420" height="300"></canvas></div>
+<h2>4. 和原本的通用畫法對照<small>左兩張：原本（晶靈 huge＋熔岩殼／傀儡 huge）；右兩張：專屬造型</small></h2>
+<div class="row" id="cmp"></div>
+<script src="storyDoll.js"></script>
+<script src="enemyArt.js"></script>
+<script src="bossArt.js"></script>
+<script>
+  const B = BossArt, W = 240, H = 230;
+  function bg(ctx, w, h, kind) {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    if (kind === "ah") { g.addColorStop(0, "#2a1e18"); g.addColorStop(1, "#4a3a30"); } else { g.addColorStop(0, "#1a1830"); g.addColorStop(1, "#2a2a44"); }
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    if (kind === "ah") { ctx.fillStyle = "rgba(255,106,26,0.25)"; ctx.fillRect(0, h - 30, w, 30); }
+    else { ctx.fillStyle = "#3a3858"; ctx.beginPath(); ctx.ellipse(w / 2, h - 30, w * 0.42, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#8a7aff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+  }
+  function card(parent, label, kind, draw, scale = 2.2) {
+    const f = document.createElement("figure"), c = document.createElement("canvas");
+    c.width = W * 2; c.height = H * 2; c.style.width = W + "px"; c.style.height = H + "px";
+    const ctx = c.getContext("2d"); ctx.scale(2, 2); bg(ctx, W, H, kind);
+    ctx.save(); ctx.translate(W / 2, H - 30); ctx.scale(scale, scale); draw(ctx); ctx.restore();
+    f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = label; f.appendChild(cap); parent.appendChild(f);
+  }
+  const AH = document.getElementById("ah");
+  card(AH, "第 1 階段・殼<br>熔殼在（傷害 −40%），殼縫隨呼吸透光", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }));
+  card(AH, "第 1 階段・熔岩噴發<br>殼頂噴出熔岩柱（延遲段的預告）", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300, spout: 0.9 }));
+  card(AH, "進入第 2 階段・殼裂開<br>熔殼移除：殼片往外飛（雜湊決定方向）", "ah", (c) => B.drawAshenHeart(c, { phase: 2, shell: 0, breakT: 0.45, t: 600 }));
+  card(AH, "第 2 階段・呼吸、吸氣<br>核心露出，一明一暗；吸氣時火星往內收", "ah", (c) => B.drawAshenHeart(c, { phase: 2, shell: 0, breakT: 1, t: 900, inhale: 0.9 }));
+  card(AH, "第 3 階段・熔毀<br>核心龜裂發白、熔岩滴落、坑底發紅", "ah", (c) => B.drawAshenHeart(c, { phase: 3, shell: 0, breakT: 1, t: 1200 }));
+  const SL = document.getElementById("sl");
+  card(SL, "第 1 階段・三柱<br>三道灌注光束打進核心", "sl", (c) => B.drawShardLord(c, { phase: 1, t: 400 }), 1.9);
+  card(SL, "第 2 階段・碎界脈動<br>碎晶繞身旋轉", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.9);
+  card(SL, "第 2 階段・施法（晶蝕）<br>手晶往前伸，手心裂界光", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900, cast: 1 }), 1.9);
+  card(SL, "第 3 階段・核心過載<br>核心裂開發白、瞬步殘影", "sl", (c) => B.drawShardLord(c, { phase: 3, t: 1300, blink: 1 }), 1.9);
+  card(SL, "第 4 階段・界崩<br>碎晶散開、整體偏紫紅", "sl", (c) => B.drawShardLord(c, { phase: 4, t: 1600 }), 1.9);
+  const CMP = document.getElementById("cmp");
+  card(CMP, "原本：灰燼之心（晶靈 huge＋熔岩殼）", "ah", (c) => EnemyArt.stamp(c, { body: "wisp", material: "crystal", element: "fire", size: "huge", traits: ["core", "crust"] }, 0, 0, 1.2), 1);
+  card(CMP, "原本：碎晶之主（傀儡 huge）", "sl", (c) => EnemyArt.stamp(c, { body: "golem", material: "crystal", size: "huge", traits: ["core"] }, 0, 0, 1.2), 1);
+  card(CMP, "專屬：灰燼之心", "ah", (c) => B.drawAshenHeart(c, { phase: 1, shell: 1, t: 300 }));
+  card(CMP, "專屬：碎晶之主", "sl", (c) => B.drawShardLord(c, { phase: 2, t: 900 }), 1.9);
+
+  // 動起來：依時間切換階段（實戰中是由引擎的階段事件與狀態觸發）
+  function ahState(ms) {
+    const t = ms % 9000;
+    if (t < 2000) return { phase: 1, shell: 1, t: ms };
+    if (t < 3000) return { phase: 1, shell: 1, t: ms, spout: Math.sin((t - 2000) / 1000 * Math.PI) };
+    if (t < 4200) return { phase: 2, shell: 0, breakT: (t - 3000) / 1200, t: ms };
+    if (t < 6500) return { phase: 2, shell: 0, breakT: 1, t: ms, inhale: t > 5000 ? Math.sin((t - 5000) / 1500 * Math.PI) : 0 };
+    return { phase: 3, shell: 0, breakT: 1, t: ms };
+  }
+  function slState(ms) {
+    const t = ms % 9000;
+    if (t < 2200) return { phase: 1, t: ms };
+    if (t < 4000) return { phase: 2, t: ms };
+    if (t < 5200) return { phase: 2, t: ms, cast: Math.sin((t - 4000) / 1200 * Math.PI) };
+    if (t < 7000) return { phase: 3, t: ms, blink: t < 5800 ? 1 - (t - 5200) / 600 : 0 };
+    return { phase: 4, t: ms };
+  }
+  const fixed = new URLSearchParams(location.search).get("t");
+  function live(id, kind, stateFn, scale) {
+    const c = document.getElementById(id), ctx = c.getContext("2d");
+    return (ms) => { ctx.setTransform(1, 0, 0, 1, 0, 0); bg(ctx, 420, 300, kind); ctx.save(); ctx.translate(210, 262); ctx.scale(scale, scale); kind === "ah" ? B.drawAshenHeart(ctx, stateFn(ms)) : B.drawShardLord(ctx, stateFn(ms)); ctx.restore(); };
+  }
+  const a = live("live-ah", "ah", ahState, 2.8), b = live("live-sl", "sl", slState, 2.5);
+  let t0 = performance.now();
+  function frame(now) { const ms = fixed !== null ? +fixed : now - t0; a(ms); b(ms); if (fixed === null) requestAnimationFrame(frame); }
+  requestAnimationFrame(frame);
+</script>
+</body>
+</html>

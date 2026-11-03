@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>魔導劍補驗收</title>
+<style>body{margin:0;padding:12px;background:#1b1714;color:#eadfcc;font-family:"Microsoft JhengHei",sans-serif}h2{font-size:15px;margin:12px 0 6px}.row{display:flex;gap:8px;flex-wrap:wrap}.cell{text-align:center;font-size:12px}canvas{display:block;border-radius:4px}</style></head>
+<body>
+<h2>魔導劍補驗收（client 正式畫法；美術 PM 驗收用，透過 vite.artpm-check 開）</h2>
+<div id="root"></div>
+<script type="module">
+  import { resolveDollT } from "/src/render/testDolls.ts";
+  import { DOLL_FOOT_Y, DOLL_H, DOLL_W, drawFigurePose } from "/src/render/paperdoll.ts";
+  const root = document.getElementById("root");
+  function cell(row, equipment, facing, label, scale) {
+    const spec = resolveDollT({ team: "ally", summon: false, template: "hero_fighter", weaponId: "", equipment });
+    const c = document.createElement("canvas"); c.width = DOLL_W * scale; c.height = DOLL_H * scale;
+    const ctx = c.getContext("2d"); ctx.fillStyle = "#4e6a4e"; ctx.fillRect(0, 0, c.width, c.height); ctx.scale(scale, scale); ctx.translate(DOLL_W / 2, DOLL_FOOT_Y); drawFigurePose(ctx, spec, facing, false);
+    const d = document.createElement("div"); d.className = "cell"; d.appendChild(c); const t = document.createElement("div"); t.textContent = label; d.appendChild(t); row.appendChild(d);
+  }
+  const A = { slot: "main_hand", appearance: { kind: "sword", form: "arcane", material: "steel" } };
+  const AF = { slot: "main_hand", appearance: { kind: "sword", form: "arcane", material: "steel", element: "fire" } };
+  const AI = { slot: "main_hand", appearance: { kind: "sword", form: "arcane", material: "steel", element: "ice" } };
+  const S = { slot: "main_hand", appearance: { kind: "sword", material: "steel" } };
+  const TOME = { slot: "off_hand", appearance: { kind: "tome", form: "book" } };
+  const ORB = { slot: "off_hand", appearance: { kind: "orb", form: "ball" } };
+  const sets = [["魔導劍", [A]], ["魔導劍＋法書", [A, TOME]], ["魔導劍＋法器珠", [A, ORB]], ["魔導劍（火）", [AF]], ["魔導劍（冰）", [AI]], ["一般單手劍", [S]]];
+  for (const [title, eq] of sets) {
+    const h = document.createElement("h2"); h.textContent = title; root.appendChild(h);
+    const row = document.createElement("div"); row.className = "row"; root.appendChild(row);
+    for (const f of ["south", "north", "east", "west"]) cell(row, eq, f, f, 2);
+  }
+  const h = document.createElement("h2"); h.textContent = "戰場大小（約 1 倍）：魔導劍 vs 一般單手劍，四方向"; root.appendChild(h);
+  const row = document.createElement("div"); row.className = "row"; root.appendChild(row);
+  for (const f of ["south", "north", "east", "west"]) { cell(row, [A], f, "魔導 " + f, 1); cell(row, [S], f, "一般 " + f, 1); }
+</script>
+</body></html>

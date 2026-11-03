@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>灰燼荒原實地圖庫</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1714; color: #eadfcc; font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; width: 1260px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .note { color: #b8ab96; font-size: 13px; margin: 0 0 10px; line-height: 1.6; }
+  h2 { font-size: 16px; margin: 14px 0 6px; }
+  h2 small { color: #b8ab96; font-weight: normal; font-size: 12px; margin-left: 6px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  figure { margin: 0; text-align: center; }
+  figcaption { font-size: 11.5px; color: #d8ccb8; margin-top: 3px; line-height: 1.35; max-width: 230px; }
+  figcaption b { color: #9a8e7c; font-weight: normal; display: block; font-size: 10.5px; }
+  canvas { display: block; border-radius: 4px; border: 1px solid #000; }
+</style>
+</head>
+<body>
+<h1>灰燼荒原實地地圖：地磚與地物圖庫（樣張，等使用者看過再定）</h1>
+<p class="note">美術 PM，2026-11-04。給 6D 的 18 張荒原實地地圖用。7 種地形與 9 種物件的荒原外觀在 5A-ART6 已做好，這裡補實地地圖才需要的：自動接邊、建築、村落、地物、氛圍。每格 52 單位、放大 1.5 倍；灰字是建議的 ID 與功能（照戰鬥規則）。全部程式繪製。</p>
+<div id="root"></div>
+<h2>示範：赤沙村（20×12）<small>世界事件「熔岩潰堤」要守的村落：北邊熔岩河、紅沙地、廢鐵屋、鍛爐、冷卻井、帳篷、瞭望塔、枯木林、硫磺噴口、焦油、黑曜石柱、飄灰；右下角是迷霧</small></h2>
+<canvas id="demo"></canvas>
+<script src="storyDoll.js"></script>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script src="enemyArt.js"></script>
+<script src="explore.js"></script>
+<script src="regions4.js"></script>
+<script src="cloudTiles.js"></script>
+<script src="ashenTiles.js"></script>
+<script>
+  const E = Explore, CT = CloudTiles, AT = AshenTiles, T = 52, S = 1.5;
+  function cv(w, h) { const c = document.createElement("canvas"); c.width = w * S * 2; c.height = h * S * 2; c.style.width = w * S + "px"; c.style.height = h * S + "px"; const ctx = c.getContext("2d"); ctx.scale(S * 2, S * 2); return [c, ctx]; }
+  function section(title, items) {
+    const h = document.createElement("h2"); h.innerHTML = title; document.getElementById("root").appendChild(h);
+    const row = document.createElement("div"); row.className = "row"; document.getElementById("root").appendChild(row);
+    for (const [w, hh, draw, name, id] of items) { const [c, ctx] = cv(w * T, hh * T); draw(ctx); const f = document.createElement("figure"); f.appendChild(c); const cap = document.createElement("figcaption"); cap.innerHTML = `${name}<b>${id}</b>`; f.appendChild(cap); row.appendChild(f); }
+  }
+  const scorch = (c, w, h) => { for (let gy = 0; gy < h; gy++) for (let gx = 0; gx < w; gx++) AT.tile(c, "stone", gx * T, gy * T, gx, gy); };
+  section("1. 地面與自動接邊<small>熔岩岸會依相鄰格自動畫；其他是新的地面外觀</small>", [
+    [2, 2, (c) => { AT.lavaRiver(c, 0, 0, 0, 0); AT.lavaRiver(c, T, 0, 1, 0); AT.lavaShore(c, 0, T, 0, 1, ["n"]); AT.lavaShore(c, T, T, 1, 1, ["n", "e"]); }, "熔岩岸（焦土鄰接岩漿：結殼黑邊＋熱光）", "自動：stone 鄰接 lava"],
+    [2, 1, (c) => { AT.lavaRiver(c, 0, 0, 0, 0); AT.lavaRiver(c, T, 0, 1, 0); }, "熔岩河（流動亮紋）", "lava（5A-ART6 已有，加流動）"],
+    [2, 1, (c) => { AT.tar(c, 0, 0, 0, 0); AT.tar(c, T, 0, 1, 0); }, "焦油坑", "油表面（oil）的荒原外觀"],
+    [2, 1, (c) => { AT.redSand(c, 0, 0, 0, 0); AT.redSand(c, T, 0, 1, 0); }, "紅沙（赤沙村一帶）", "look floor=red_sand（同 dirt）"],
+    [2, 1, (c) => { AT.obsidian(c, 0, 0, 0, 0); AT.obsidian(c, T, 0, 1, 0); }, "黑曜石地（黑曜谷）", "look floor=obsidian（同 stone）"],
+    [2, 2, (c) => { scorch(c, 2, 1); AT.cliff(c, 0, 0, 2); AT.cliff(c, T, 0, 2); AT.tile(c, "dirt", 0, 1.25 * T, 0, 2); AT.tile(c, "dirt", T, 1.25 * T, 1, 2); }, "焦黑岩壁立面（高台）", "高度差 ≥2：走不上去"],
+  ]);
+  section("2. 自然<small>枯木林、硫磺噴口、黑曜石柱、飄灰</small>", [
+    [2, 2, (c) => { scorch(c, 2, 2); AT.deadGrove(c, 0, 0, 2, 2); }, "枯木林（擋視線、可燃、不可推倒）", "新物件 dead_grove（同 bamboo_grove）"],
+    [1, 1, (c) => { scorch(c, 1, 1); AT.vent(c, 0, 0, 600); }, "硫磺噴口（裝飾；可當煙霧來源）", "decor: vent"],
+    [1, 1, (c) => { AT.obsidian(c, 0, 0, 0, 0); AT.obsidianSpike(c, 0, 0); }, "黑曜石柱（擋路、擋視線）", "stone_pillar 的黑曜谷外觀"],
+    [2, 1, (c) => { scorch(c, 2, 1); AT.ashFall(c, 0, 0, 2, 1, 800); }, "飄灰（裝飾層，不擋視線）", "decor: ash_fall"],
+  ]);
+  section("3. 建築（多格）<small>廢鐵屋、鍛爐屋、帳篷、瞭望塔、熔心坑前廳的拱門、要塞殘牆</small>", [
+    [3, 2, (c) => { for (let gx = 0; gx < 3; gx++) for (let gy = 0; gy < 2; gy++) AT.redSand(c, gx * T, gy * T, gx, gy); AT.scrapHouse(c, 0, -T, 3, 3, { door: 1.5, sign: "coin" }); }, "廢鐵屋（3×3；布簾門＝入口格）", "buildings: scrap_house＋doors"],
+    [3, 2, (c) => { for (let gx = 0; gx < 3; gx++) for (let gy = 0; gy < 2; gy++) AT.redSand(c, gx * T, gy * T, gx, gy); AT.scrapHouse(c, 0, -T, 3, 3, { door: 1, chimney: true, sign: "anvil" }); }, "鍛爐屋（有煙囪火光；鐵爐村、餘燼集鐵匠）", "buildings: forge_house"],
+    [1, 1, (c) => { scorch(c, 1, 1); AT.tent(c, 0, 0); }, "帳篷（營地）", "新物件 tent（同 crate）"],
+    [1, 2, (c) => { scorch(c, 1, 2); AT.watchtower(c, 0, T); }, "瞭望塔（舊鐵哨站；高、擋視線）", "新物件 watchtower（同 stone_pillar）"],
+    [2, 2, (c) => { for (let gx = 0; gx < 2; gx++) for (let gy = 0; gy < 2; gy++) AT.obsidian(c, gx * T, gy * T, gx, gy); AT.obsidianArch(c, 0, 0); }, "熔心坑前廳的拱門（2×2，中間可走）", "buildings: obsidian_arch"],
+    [2, 1, (c) => { scorch(c, 2, 1); AT.ruinWall(c, 0, 0); AT.ruinWall(c, T, 0); }, "要塞殘牆（廢墟要塞；高）", "wall 的廢墟外觀 look wall=ruin"],
+  ]);
+  section("4. 地物<small>冷卻井、鍛爐、攤位、角魔古祭壇、運輸車，以及共用的營火、寶箱、傳送石</small>", [
+    [1, 1, (c) => { scorch(c, 1, 1); AT.coolingWell(c, 0, 0); }, "冷卻井（熔心坑、冷卻井地點）", "新物件 cooling_well（打破造水，玩法 PM 決定）"],
+    [1, 1, (c) => { scorch(c, 1, 1); AT.forge(c, 0, 0); }, "鍛爐", "facilities: smithy"],
+    [2, 1, (c) => { scorch(c, 2, 1); AT.scrapStall(c, 0, 0); AT.scrapStall(c, T, 0, "#4a6a8a"); }, "攤位（餘燼集市集）", "facilities: shop（同 crate 的功能）"],
+    [1, 1, (c) => { scorch(c, 1, 1); AT.hornAltar(c, 0, 0); }, "角魔古祭壇", "situation_objects: horn_altar"],
+    [1, 1, (c) => { scorch(c, 1, 1); AT.cart(c, 0, 0); }, "運輸車（斷崖幫運輸道）", "新物件 cart（同 crate）"],
+    [1, 1, (c) => { scorch(c, 1, 1); E.campfire(c, 0, 0); }, "營火", "campfires"],
+    [1, 1, (c) => { scorch(c, 1, 1); E.chest(c, 0, 0); }, "寶箱", "event_spots: chest"],
+    [1, 1, (c) => { scorch(c, 1, 1); E.waypoint(c, 0, 0); }, "傳送石", "teleport_stones"],
+  ]);
+
+  // ---------------- 示範：赤沙村 ----------------
+  const W = 20, H = 12;
+  const G = [
+    "vvvvvvvvvvvvvvvvvvvv",
+    "LLLLLLLLLLLLLLLLLLLL",
+    "ssssssssssssssssssss",
+    "ssrrrrrrrrrrrrrrrsss",
+    "ssrrrrrrrrrrrrrrrsss",
+    "ssrrrrrrrrrrrrrrrsss",
+    "ssrrrrrrrrrrrrrrrsss",
+    "sssrrrrrrrrrrrrsssss",
+    "sssssssssrrsssssssss",
+    "ssssssssssssssssssss",
+    "ssssssssssssssTTssss",
+    "ssssssssssssssTTssss",
+  ];
+  const c = document.getElementById("demo"); c.width = W * T * 1.2 * 2; c.height = H * T * 1.2 * 2; c.style.width = W * T * 1.2 + "px"; c.style.height = H * T * 1.2 + "px";
+  const d = c.getContext("2d"); d.scale(2.4, 2.4);
+  for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++) {
+    const ch = G[gy][gx], x = gx * T, y = gy * T;
+    if (ch === "v") AT.lavaRiver(d, x, y, gx, gy, 0); else if (ch === "L") AT.lavaShore(d, x, y, gx, gy, ["n"]);
+    else if (ch === "r") AT.redSand(d, x, y, gx, gy); else if (ch === "T") AT.tar(d, x, y, gx, gy);
+    else AT.tile(d, "stone", x, y, gx, gy);
+  }
+  const items = [
+    [2, () => AT.scrapHouse(d, 2 * T, 2 * T, 3, 3, { door: 1.5, sign: "coin" })],
+    [2, () => AT.scrapHouse(d, 8 * T, 2 * T, 3, 3, { door: 1, chimney: true, sign: "anvil" })],
+    [2, () => AT.scrapHouse(d, 13 * T, 2 * T, 3, 3, { door: 1.5 })],
+    [5, () => AT.watchtower(d, 18 * T, 5 * T)], [6, () => AT.coolingWell(d, 6 * T, 6 * T)], [6, () => AT.forge(d, 11 * T, 6 * T)],
+    [7, () => AT.tent(d, 16 * T, 7 * T)], [7, () => AT.cart(d, 13 * T, 7 * T)], [8, () => AT.deadGrove(d, 0, 8 * T, 3, 3)],
+    [9, () => AT.vent(d, 12 * T, 9 * T, 500)], [10, () => AT.obsidianSpike(d, 18 * T, 10 * T)], [8, () => E.campfire(d, 8, 8)],
+    [3, () => AT.obj(d, "oil_barrel", 7 * T, 5 * T)], [4, () => AT.obj(d, "crate", 12 * T, 5 * T)], [9, () => AT.obj(d, "low_wall", 5 * T, 9 * T)], [9, () => AT.obj(d, "low_wall", 6 * T, 9 * T)],
+    [6, () => E.waypoint(d, 4, 6)],
+  ];
+  items.sort((a, b) => a[0] - b[0]).forEach(([, f]) => f());
+  E.person(d, 9, 7, ...E.PARTY[0], "north", "#5aa0ff");
+  AT.ashFall(d, 0, 0, W, H, 400);
+  for (let gy = 8; gy < H; gy++) for (let gx = 15; gx < W; gx++) CT.fogCell(d, gx * T, gy * T, gx >= 17 ? 0 : 1, gx, gy);
+</script>
+</body>
+</html>
