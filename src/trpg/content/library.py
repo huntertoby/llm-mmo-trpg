@@ -623,6 +623,12 @@ class ContentLibrary:
     """技能照角色階級重配的快取（:func:`trpg.skillgen.skill_tier.retier`，3W-R1）：掛在內容庫上、隨它
     回收；鍵是「技能內容的 SHA-256 ＋ 階級」。不是建構參數，``dataclasses.replace`` 換內容後是新的空
     快取；不參與相等比較。"""
+    mercenary_gear_cache: dict[tuple[str, int], dict[str, ItemDef]] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    """傭兵系統裝備的快取（:func:`trpg.world.gear.mercenary_equipment`，5D-R1）：掛在內容庫上、隨它
+    回收；鍵是「傭兵 ID ＋ 物品等級」，滿了就清空（上限在 ``trpg.world.gear``）。同 ``retier_cache``
+    不是建構參數、不參與相等比較。"""
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
         """單位範本的裝備快照（``equipment`` 解析成內嵌定義的 :class:`Loadout`；沒有裝備時

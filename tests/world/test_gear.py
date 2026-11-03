@@ -79,6 +79,48 @@ def test_main_hand_same_class(library: ContentLibrary, make_char: MakeChar) -> N
     assert [g.id for g in char.gear] == [f"base_{make_char().hero.weapon}"]  # 原本的武器收進背包
 
 
+def _weapon(library: ContentLibrary, weapon_class: str, *, two_handed: bool) -> ItemDef:
+    for s in range(3000):
+        item = generate_item(library, Rng(s), "weapon", "common", 2, weapon_class=weapon_class)  # type: ignore[arg-type]
+        found = library.weapons.get(item.weapon or "")
+        if found is not None and found.two_handed == two_handed and not found.paired:
+            return item
+    raise AssertionError(weapon_class)
+
+
+def test_two_handed_needs_room_for_the_offhand(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """5D-R1：已穿副手時換雙手武器，換下主手＋副手兩件、換上一件，背包要多 1 格；滿了就拒絕。"""
+    weapon_class = library.weapons[make_char().hero.weapon].weapon_class
+    one_handed = _weapon(library, weapon_class, two_handed=False)
+    two_handed = _weapon(library, weapon_class, two_handed=True)
+    shield = next(
+        i
+        for s in range(300)
+        if (i := generate_item(library, Rng(s), "offhand", "common", 2)).slot_type == "offhand"
+    )
+    worn = _act(library, make_char(gear=(one_handed,)), EquipAction(item=one_handed.id))
+    worn = _act(library, worn.model_copy(update={"gear": (shield,)}), EquipAction(item=shield.id))
+    assert worn.equipment["off_hand"] == shield
+    rules = library.world_economy.rules
+    assert rules is not None
+    # 粗料一格 20 個：29 格粗料＋1 件雙手武器＝30 格滿
+    full = worn.model_copy(
+        update={"gear": (two_handed,), "bag": {"item_coarse_material": 20 * (rules.bag_slots - 1)}}
+    )
+    with pytest.raises(WorldActionError, match="背包放不下"):
+        world_step(library, make_world(), full, EquipAction(item=two_handed.id), NOON)
+    # 騰出 1 格就換得上：副手與原本的主手都收進背包，``removed`` 依放進的順序
+    roomy = full.model_copy(update={"bag": {"item_coarse_material": 20 * (rules.bag_slots - 2)}})
+    result = world_step(library, make_world(), roomy, EquipAction(item=two_handed.id), NOON)
+    assert "off_hand" not in result.char.equipment
+    assert result.char.equipment["main_hand"] == two_handed
+    assert result.char.gear == (shield, one_handed)
+    event = next(e for e in result.events if isinstance(e, ItemEquippedEvent))
+    assert event.removed == (shield.name_zh, one_handed.name_zh)
+
+
 def test_battle_uses_worn_gear(library: ContentLibrary, make_char: MakeChar) -> None:
     body = _item(library, "body")
     char = _act(library, make_char(gear=(body,)), EquipAction(item=body.id))

@@ -26,7 +26,6 @@ from trpg.roguelite.gear import current_item
 from trpg.world.actions import WorldEvent
 from trpg.world.affinity import affinity_rules, rank_at_least, rank_of
 from trpg.world.economy import (
-    bag_slots_used,
     buy_problem,
     economy_rules,
     gear_price,
@@ -48,6 +47,7 @@ from trpg.world.economy_actions import (
     PouchUsedEvent,
 )
 from trpg.world.gear import equip_problem, gear_run, worn_gear
+from trpg.world.inventory import slots_over, slots_used
 from trpg.world.state import CharacterState, LastBattle, WorldState
 
 __all__ = [
@@ -182,7 +182,7 @@ def inventory_view(
     gear = tuple(_gear_item(library, g, gear_problem) for g in char.gear)
     return InventoryView(
         bag=(*_views(library, char.bag), *gear),
-        slots_used=bag_slots_used(library, char.bag) + len(char.gear),
+        slots_used=slots_used(library, char.bag, len(char.gear)),
         slots_max=rules.bag_slots,
         pouch=_views(library, char.pouch),
         pouch_count=sum(char.pouch.values()),
@@ -405,7 +405,7 @@ def pending_loot_view(library: ContentLibrary, char: CharacterState) -> PendingL
     bag = dict(char.bag)
     for item, count in loot.materials.items():
         bag[item] = bag.get(item, 0) + count
-    over = max(0, bag_slots_used(library, bag) + len(char.gear) + len(loot.gear) - rules.bag_slots)
+    over = slots_over(library, bag, len(char.gear) + len(loot.gear))
     rows = (
         *_views(library, loot.materials),
         *(_gear_item(library, g, "還沒收進背包") for g in loot.gear),

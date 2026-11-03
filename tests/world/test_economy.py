@@ -15,7 +15,6 @@ from trpg.world.actions import (
 )
 from trpg.world.economy import (
     after_step,
-    bag_slots_used,
     battle_gold,
     weekly_left,
     weekly_limit,
@@ -32,6 +31,7 @@ from trpg.world.economy_actions import (
     UseItemAction,
 )
 from trpg.world.errors import WorldActionError
+from trpg.world.inventory import slots_used
 from trpg.world.shadows import shadow_snapshot, with_shadow
 from trpg.world.state import CharacterState, LocationRef, ShadowRecord
 from trpg.world.step import max_hp, max_mana, world_step
@@ -93,7 +93,7 @@ def test_bag_full(library: ContentLibrary, make_char: MakeChar) -> None:
     # 粗料一格 20 個：29 格滿＋1 格剩 0 → 再買一顆藥要第 31 格
     full = {"item_coarse_material": 20 * 30}
     char = _rich(make_char, bag=full)
-    assert bag_slots_used(library, char.bag) == 30
+    assert slots_used(library, char.bag) == 30
     with pytest.raises(WorldActionError, match="背包放不下"):
         _act(library, char, BuyAction(shop=SHOP, item=PILL))
 

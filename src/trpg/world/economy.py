@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 
 from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
@@ -44,6 +44,7 @@ from trpg.world.economy_actions import (
 )
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import at_service
+from trpg.world.inventory import add_items, check_room, remove_gear, remove_items, room_problem
 from trpg.world.social import week_of
 from trpg.world.state import CharacterState, CompanionAffinity, ShopPurchase, WorldState
 
@@ -51,7 +52,6 @@ __all__ = [
     "ECONOMY_ACTIONS",
     "after_step",
     "apply_economy",
-    "bag_slots_used",
     "battle_gold",
     "buy_problem",
     "economy_rules",
@@ -93,38 +93,6 @@ def item_def(library: ContentLibrary, item: str) -> WorldItemDef:
     if found is None:
         raise WorldActionError(f"沒有物品 {item}")
     return found
-
-
-def _stack(rules: EconomyRules, library: ContentLibrary, item: str) -> int:
-    found = library.world_economy.items.get(item)
-    return 1 if found is None else rules.stack_max[found.kind]
-
-
-def bag_slots_used(library: ContentLibrary, bag: Mapping[str, int]) -> int:
-    """背包用掉的格數：每種物品 ceil(個數 ÷ 疊數)（代決 5D1-2）。"""
-    rules = economy_rules(library)
-    if rules is None:
-        return len(bag)
-    return sum(-(-count // _stack(rules, library, item)) for item, count in bag.items())
-
-
-def _with(counts: Mapping[str, int], item: str, delta: int) -> dict[str, int]:
-    updated = dict(counts)
-    value = updated.get(item, 0) + delta
-    if value < 0:
-        raise WorldActionError(f"{item} 不夠")
-    if value == 0:
-        updated.pop(item, None)
-    else:
-        updated[item] = value
-    return dict(sorted(updated.items()))
-
-
-def _check_bag(library: ContentLibrary, bag: Mapping[str, int], gear: int = 0) -> None:
-    slots = _rules(library).bag_slots
-    used = bag_slots_used(library, bag) + gear  # 背包裡的裝備每件 1 格（5D-2）
-    if used > slots:
-        raise WorldActionError(f"背包放不下（需要 {used} 格，只有 {slots} 格）")
 
 
 def shop_location(library: ContentLibrary, region: str, shop: ShopDef) -> str | None:
@@ -261,10 +229,9 @@ def _room_problem(
         if char.supplies + item.supplies * count > cap:
             return f"補給最多 {cap}（現在 {char.supplies}）"
         return None
-    used = bag_slots_used(library, _with(char.bag, item.id, count)) + len(char.gear)
-    if used > _rules(library).bag_slots:
-        return "背包放不下"
-    return None
+    if room_problem(library, add_items(char.bag, {item.id: count}), len(char.gear)) is None:
+        return None
+    return "背包放不下"
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +273,7 @@ def _buy(
     if found.kind == "supply":  # 20.1：補給直接加在角色上（代決 5D1-7）
         update["supplies"] = char.supplies + found.supplies * action.count
     else:
-        update["bag"] = _with(char.bag, action.item, action.count)
+        update["bag"] = add_items(char.bag, {action.item: action.count})
     if shop.weekly_of(action.item) is not None:
         week = week_of(library, world, now)
         bought = _bought_this_week(char, shop.id, action.item, week) + action.count
@@ -348,7 +315,10 @@ def _sell(
         raise WorldActionError(f"{found.name_zh}不能賣（{ITEM_KINDS[found.kind]}不收）")
     gained = rules.sell_price(found.price) * action.count
     char = char.model_copy(
-        update={"gold": char.gold + gained, "bag": _with(char.bag, action.item, -action.count)}
+        update={
+            "gold": char.gold + gained,
+            "bag": remove_items(char.bag, {action.item: action.count}),
+        }
     )
     event = ItemSoldEvent(
         shop=shop.id, item=action.item, count=action.count, gold_gained=gained, gold=char.gold
@@ -370,12 +340,8 @@ def _sell_gear(
     price = gear_price(library, piece)
     if price is None:
         raise WorldActionError(f"{piece.name_zh}不能賣（初始裝備與傳說不收）")
-    rest = list(char.gear)
-    rest.remove(piece)
-    mods = {k: v for k, v in char.gear_mods.items() if k != piece.id}  # 5D-3 的改動紀錄一併刪掉
-    char = char.model_copy(
-        update={"gold": char.gold + price, "gear": tuple(rest), "gear_mods": mods}
-    )
+    char = remove_gear(char, [piece.id])  # 5D-3 的改動紀錄一併刪掉
+    char = char.model_copy(update={"gold": char.gold + price})
     event = ItemSoldEvent(
         shop=shop.id,
         item=piece.id,
@@ -416,14 +382,14 @@ def _pouch(
         raise WorldActionError(f"腰包最多 {rules.pouch_slots} 個（要放 {total} 個）")
     bag = dict(char.bag)
     for item, count in char.pouch.items():  # 舊腰包先放回背包
-        bag = _with(bag, item, count)
+        bag = add_items(bag, {item: count})
     for item, count in wanted.items():
         if bag.get(item, 0) < count:
             raise WorldActionError(
                 f"{item_def(library, item).name_zh}不夠（有 {bag.get(item, 0)} 個）"
             )
-        bag = _with(bag, item, -count)
-    _check_bag(library, bag, len(char.gear))
+        bag = remove_items(bag, {item: count})
+    check_room(library, bag, len(char.gear))
     char = char.model_copy(update={"bag": bag, "pouch": wanted})
     return char, (PouchChangedEvent(pouch=wanted),)
 
@@ -447,9 +413,9 @@ def _use(
     if hp == char.hp and mana == char.mana:
         raise WorldActionError(f"現在用{item.name_zh}沒有效果（已經是滿的）")
     if char.bag.get(item.id, 0) > 0:
-        update: dict[str, object] = {"bag": _with(char.bag, item.id, -1)}
+        update: dict[str, object] = {"bag": remove_items(char.bag, {item.id: 1})}
     elif char.pouch.get(item.id, 0) > 0:
-        update = {"pouch": _with(char.pouch, item.id, -1)}
+        update = {"pouch": remove_items(char.pouch, {item.id: 1})}
     else:
         raise WorldActionError(f"沒有{item.name_zh}")
     char = char.model_copy(update={**update, "hp": hp, "mana": mana})
@@ -491,7 +457,7 @@ def spend_pouch(
             continue
         spent = min(n, pouch[item.id])
         used[item.id] = spent
-        pouch = _with(pouch, item.id, -spent)
+        pouch = remove_items(pouch, {item.id: spent})
     if not used:
         return char, []
     char = char.model_copy(update={"pouch": pouch})

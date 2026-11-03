@@ -62,6 +62,7 @@ __all__ = [
     "affix_choices",
     "downscale_item",
     "generate_item",
+    "generate_item_retrying",
     "pick_affix",
     "replace_affix",
     "roll_rarity",
@@ -589,6 +590,42 @@ def generate_item(
     if problems:
         raise ItemGenError("；".join(problems))
     return item
+
+
+def generate_item_retrying(
+    library: ContentLibrary,
+    rng: Rng,
+    slot: str,
+    rarity: Rarity,
+    item_level: int,
+    *,
+    weapon_class: WeaponClass | None = None,
+    keywords: Sequence[str] = (),
+    forced: str | None = None,
+    leanings: Mapping[str, int] | None = None,
+    problems: list[str] | None = None,
+) -> ItemDef | None:
+    """:func:`generate_item` 失敗就重試（Phase 5D-R1，打造、掉落、傭兵裝備共用）：第 n 次用
+    ``rng.fork(f"try/{n}")``，最多 ``offer_attempts`` 次（沒有產生器規則時 1 次）；都失敗為
+    ``None``。``problems`` 給了的話，每次失敗的原因依序加進去。"""
+    attempts = 1 if library.item_gen is None else library.item_gen.offer_attempts
+    for attempt in range(attempts):
+        try:
+            return generate_item(
+                library,
+                rng.fork(f"try/{attempt}"),
+                slot,
+                rarity,
+                item_level,
+                weapon_class=weapon_class,
+                keywords=keywords,
+                forced=forced,
+                leanings=leanings,
+            )
+        except ItemGenError as exc:
+            if problems is not None:
+                problems.append(str(exc))
+    return None
 
 
 # ---------------------------------------------------------------------------
