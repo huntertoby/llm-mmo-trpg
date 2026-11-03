@@ -20,6 +20,8 @@ import {
   waiveLabel,
   sortQuests,
   stepMark,
+  insertCite,
+  narratorResting,
   toggleCite,
 } from "./story";
 
@@ -60,6 +62,25 @@ describe("引用線索", () => {
     const full = ["a", "b", "c", "d"];
     expect(full.length).toBe(CITE_MAX);
     expect(toggleCite(full, "e")).toEqual(full);
+  });
+
+  it("引用時把關鍵詞插進回答（已有、沒有、太長都不動）", () => {
+    expect(insertCite("", "補給")).toBe("補給");
+    expect(insertCite("我想交換 ", "補給")).toBe("我想交換，補給");
+    expect(insertCite("拿補給換", "補給")).toBe("拿補給換");
+    expect(insertCite("繞路", null)).toBe("繞路");
+    const long = "字".repeat(PLAYER_TEXT_MAX - 1);
+    expect(insertCite(long, "補給")).toBe(long);
+  });
+});
+
+describe("說書人休息中", () => {
+  it("開關開著、模型不可用才顯示", () => {
+    expect(narratorResting(null)).toBe(false);
+    expect(narratorResting({ enabled: true, model_available: false })).toBe(true);
+    expect(narratorResting({ enabled: true, model_available: true })).toBe(false);
+    expect(narratorResting({ enabled: true, model_available: null })).toBe(false);
+    expect(narratorResting({ enabled: false, model_available: false })).toBe(false);
   });
 });
 

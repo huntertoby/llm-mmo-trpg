@@ -33,6 +33,8 @@ if TYPE_CHECKING:  # 只給型別檢查用（world_events 會匯入本模組）
     from trpg.content.world_events import EventSkeletonTable
 
 __all__ = [
+    "ALIAS_MAX_CHARS",
+    "ALIAS_MIN_CHARS",
     "CARE_ITEMS",
     "DC_SHIFT_LIMIT",
     "MAX_CARE_CLAIMS",
@@ -40,6 +42,7 @@ __all__ = [
     "PLAYER_TEXT_LIMIT",
     "SITUATION_RULES_FILE",
     "WORLD_SITUATIONS_DIR",
+    "AliasesZh",
     "CareClaim",
     "CareItem",
     "CheckRules",
@@ -79,6 +82,9 @@ MAX_CARE_CLAIMS: Final = 4
 PLAYER_TEXT_LIMIT: Final = 500
 """玩家回答的長度上限（字；同 ``trpg.llm.prompts.escape.PLAYER_TEXT_MAX_CHARS``）。"""
 FACT_MAX_CHARS: Final = 80
+ALIAS_MIN_CHARS: Final = 2
+"""用心清單關鍵詞別名的最短長度（5C-3d 代決：單字太容易被順口帶到，至少 2 字）。"""
+ALIAS_MAX_CHARS: Final = 20
 
 _MIN_ATTRIBUTES = 2
 _MAX_ATTRIBUTES = 3
@@ -97,6 +103,10 @@ PenaltyKind = Literal["supplies", "debuff", "hurt", "reinforce"]
 """懲罰種類（9.6.4：輕的是失去補給、下一場戰鬥帶 debuff，最重到受傷或敵人增援）。"""
 
 _Id = Annotated[str, Field(pattern=ID_PATTERN)]
+AliasesZh = tuple[
+    Annotated[str, Field(min_length=ALIAS_MIN_CHARS, max_length=ALIAS_MAX_CHARS)], ...
+]
+"""用心清單的關鍵詞別名（Phase 5C-3d）：玩家原文含其中任一個（完全字串包含）就算提到這筆事實。"""
 
 
 def _duplicates(values: Iterable[str]) -> list[str]:
@@ -168,6 +178,8 @@ class SituationRules(ContentModel):
     dangers: tuple[DangerDef, ...]
     exchange_supplies: int = Field(ge=1)
     """用心清單 ③ 拿補給當交換條件時花掉的量。"""
+    exchange_aliases_zh: AliasesZh = ()
+    """用心清單 ③ 的關鍵詞別名（事實名稱「補給」之外；5C-3d）。"""
 
     @model_validator(mode="after")
     def _check(self) -> SituationRules:
@@ -261,6 +273,8 @@ class WeaknessDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     text_zh: str = Field(min_length=1)
     methods: tuple[_Id, ...] = Field(min_length=1)
+    aliases_zh: AliasesZh = ()
+    """玩家原文提到 ``text_zh`` 或其中任一個別名，才可能算「針對弱點」（5C-3d）。"""
 
 
 class SituationTemplateDef(ContentModel):

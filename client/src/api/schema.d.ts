@@ -979,6 +979,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Own Note
+         * @description 作者刪自己的留言（5E-3b）：只能刪這個角色留的；別人的或不存在都 404。
+         */
+        delete: operations["delete_own_note_api_world_characters__character_id__notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/notes/{note_id}": {
         parameters: {
             query?: never;
@@ -1914,6 +1934,8 @@ export interface components {
             item_zh: string;
             /** Text Zh */
             text_zh: string;
+            /** Insert Zh */
+            insert_zh?: string | null;
         };
         /**
          * CollisionOut
@@ -4430,6 +4452,11 @@ export interface components {
              * @default 50
              */
             max_len: number;
+            /**
+             * Admin
+             * @default false
+             */
+            admin: boolean;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -4621,6 +4648,11 @@ export interface components {
             at: number;
             /** Mine */
             mine: boolean;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
         };
         /** NpcHereView */
         NpcHereView: {
@@ -9533,6 +9565,38 @@ export interface operations {
                 "application/json": components["schemas"]["NoteRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationBoard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_own_note_api_world_characters__character_id__notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

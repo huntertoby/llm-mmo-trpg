@@ -137,6 +137,9 @@ class CiteFactView(_ApiModel):
     item: Literal["clue", "npc_bond", "exchange"]
     item_zh: str
     text_zh: str
+    insert_zh: str | None = None
+    """點選引用時插進回答的文字（5C-3d：引擎要在原文找到這筆的關鍵詞才算；這段文字一定找得到）。
+    ``None``＝關鍵詞都含還沒發現的地點名，不插（玩家要自己寫）。"""
 
 
 class SituationView(_ApiModel):

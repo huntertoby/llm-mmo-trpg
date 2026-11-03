@@ -15,6 +15,7 @@
 
 - 5E-3（``docs/phases/Phase5計畫.md`` 31.7）：``GET／POST …/notes``（角色所在地點的留言與足跡、
   留一則；#105）、``DELETE /api/world/notes/{note_id}``（管理者刪留言）。
+- 5E-3b：``DELETE …/characters/{id}/notes/{note_id}``（作者刪自己的留言）；留言板回 ``admin``。
 
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
   依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
@@ -237,12 +238,18 @@ def post_world_llm(body: WorldLlmRequest, request: Request) -> WorldLlmView:
         return world_llm_of(request).set(body.enabled)
 
 
+def _is_admin(request: Request) -> bool:
+    """登入的是管理者（開發模式沒帶 token 不算：畫面只在管理者登入時給每則刪除鍵）。"""
+    account = viewer(request)
+    return account is not None and account.admin
+
+
 @router.get("/characters/{character_id}/notes")
 def get_notes(character_id: str, request: Request) -> LocationBoard:
     """角色現在所在地點的留言（最新 20 則）與其他角色的足跡（5E-3，#105）。"""
     store = world_of(request)
     with store.lock:
-        return location_board(store, store.character(character_id))
+        return location_board(store, store.character(character_id), admin=_is_admin(request))
 
 
 @router.post("/characters/{character_id}/notes")
@@ -252,7 +259,17 @@ def post_note(character_id: str, body: NoteRequest, request: Request) -> Locatio
     with store.lock:
         char = store.character(character_id)
         store.notes.add(char, body.text, store.clock())
-        return location_board(store, char)
+        return location_board(store, char, admin=_is_admin(request))
+
+
+@router.delete("/characters/{character_id}/notes/{note_id}")
+def delete_own_note(character_id: str, note_id: str, request: Request) -> LocationBoard:
+    """作者刪自己的留言（5E-3b）：只能刪這個角色留的；別人的或不存在都 404。"""
+    store = world_of(request)
+    with store.lock:
+        char = store.character(character_id)
+        store.notes.delete(note_id, author=character_id)
+        return location_board(store, char, admin=_is_admin(request))
 
 
 @router.delete("/notes/{note_id}", status_code=204, dependencies=[Depends(require_note_admin)])

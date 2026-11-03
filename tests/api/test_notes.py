@@ -215,6 +215,41 @@ def test_delete_needs_admin(calm: ContentLibrary, tmp_path: Path) -> None:
         assert client.get(f"/api/world/characters/{cid}/notes", headers=other).status_code == 404
 
 
+def test_author_deletes_own_note(calm: ContentLibrary, tmp_path: Path) -> None:
+    """5E-3b：作者可以刪自己的留言；別人的（含別的帳號）一律 404。"""
+    with _make(calm, tmp_path / "saves", dev_mode=False) as client:
+        user = _login(client, "player1")
+        other = _login(client, "player2")
+        cid = _create(client, headers=user)
+        oid = _create(client, "阿雲", headers=other)
+        board = _note(client, cid, "我的", headers=user).json()
+        mine = board["notes"][0]
+        assert mine["mine"] is True and mine["can_delete"] is True and board["admin"] is False
+        theirs = client.get(f"/api/world/characters/{oid}/notes", headers=other).json()
+        assert theirs["notes"][0]["can_delete"] is False
+        url = f"/api/world/characters/{oid}/notes/{mine['note_id']}"
+        assert client.delete(url, headers=other).status_code == 404  # 不是作者
+        url = f"/api/world/characters/{cid}/notes/{mine['note_id']}"
+        assert client.delete(url, headers=other).status_code == 404  # 別人的角色
+        done = client.delete(url, headers=user)
+        assert done.status_code == 200 and done.json()["notes"] == []
+        assert client.delete(url, headers=user).status_code == 404
+
+
+def test_admin_board_marks_every_note_deletable(calm: ContentLibrary, tmp_path: Path) -> None:
+    """5E-3b：管理者登入時每則留言都有刪除鍵（can_delete）。"""
+    with _make(calm, tmp_path / "saves", dev_mode=False) as client:
+        user = _login(client, "player1")
+        root = _login(client, "root1", admin=True)
+        cid = _create(client, headers=user)
+        rid = _create(client, "管理", headers=root)
+        _note(client, cid, "給管理者看", headers=user)
+        board = client.get(f"/api/world/characters/{rid}/notes", headers=root).json()
+        assert board["admin"] is True
+        assert [n["can_delete"] for n in board["notes"]] == [True]
+        assert board["notes"][0]["mine"] is False
+
+
 def test_dev_mode_without_token_can_delete(dev: TestClient) -> None:
     cid = _create(dev)
     note_id = _note(dev, cid, "開發模式").json()["notes"][0]["note_id"]

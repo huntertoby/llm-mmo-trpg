@@ -62,7 +62,12 @@ from trpg.world.common import here, world_map_of
 from trpg.world.growth import as_run, at_service, skill_seed, world_library
 from trpg.world.narration import region_npcs, region_skeletons, story_masks
 from trpg.world.quests import condition_holds, quest_table
-from trpg.world.situations import opportunity_available, situation_facts, situation_rules
+from trpg.world.situations import (
+    opportunity_available,
+    situation_fact_keywords,
+    situation_facts,
+    situation_rules,
+)
 from trpg.world.state import CharacterState, ThreadState, WorldState
 from trpg.world.threads import active_threads
 
@@ -297,16 +302,23 @@ def _facts(
     now: int,
     masks: Mapping[str, str],
 ) -> tuple[CiteFactView, ...]:
+    keywords = situation_fact_keywords(library, world, char, template, now)
     return tuple(
         CiteFactView(
             fact=f.fact,
             item=f.item,
             item_zh=CARE_ZH[f.item],
             text_zh=mask_text(f.text_zh, masks),
+            insert_zh=_insert_text(keywords.get(f.fact, ()), masks),
         )
         for f in situation_facts(library, world, char, template, now)
         if f.item in _CITABLE
     )
+
+
+def _insert_text(keywords: Sequence[str], masks: Mapping[str, str]) -> str | None:
+    """點選引用時插進回答的文字（5C-3d）：第一個沒被遮住的關鍵詞（引擎比對一定過）；都被遮住＝``None``。"""
+    return next((k for k in keywords if mask_text(k, masks) == k), None)
 
 
 def _situation_view(

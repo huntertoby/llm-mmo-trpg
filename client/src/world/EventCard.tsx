@@ -5,7 +5,7 @@
 import { useState } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { canSubmitAnswer, checkFormula, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
+import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, solutionClick, solutionHint, solutionLabel, toggleCite, waiveLabel } from "./story";
 
 function StoryBlock({ story, testId }: { story: WorldStory; testId: string }) {
   const [more, setMore] = useState(false);
@@ -107,13 +107,17 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         <div className="world-cites" data-testid="world-cites">
           <div className="small">你持有的線索與往來（點一下引用，再點取消）：</div>
           {facts.map((f) => (
-            <Hint key={f.fact} text={`${f.item_zh}：引用後由遊戲核對，核對得到才 +1（最多 +2）`}>
+            <Hint key={f.fact} text={`${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +2）`}>
               <button
                 type="button"
                 className={`world-cite${cited.includes(f.fact) ? " on" : ""}`}
                 aria-pressed={cited.includes(f.fact)}
                 disabled={busy}
-                onClick={() => setCited((cur) => toggleCite(cur, f.fact))}
+                onClick={() => {
+                  const next = toggleCite(cited, f.fact);
+                  if (next.includes(f.fact) && !cited.includes(f.fact)) setText((cur) => insertCite(cur, f.insert_zh));
+                  setCited(next);
+                }}
                 data-testid="world-cite"
               >
                 〔{f.item_zh}〕{f.text_zh}

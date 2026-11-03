@@ -1,9 +1,9 @@
 // 地點留言與足跡（Phase 5E-3；09 9.6.10 #105）：所在地點的留言（最新 20 則）、其他角色的足跡、留一則（50 字）。
-// 不過濾、不檢舉、不封鎖；刪除由管理者用 `scripts/location_notes.py`。留言是純資料，後端不送進 LLM。
+// 不過濾、不檢舉、不封鎖；作者可刪自己的、管理者登入時每則都有刪除鍵（5E-3b）。留言是純資料，後端不送進 LLM。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { LocationBoard } from "../api/types";
-import { NOTE_MAX, noteProblem, noteTime, remainingLabel } from "./notes";
+import type { LocationBoard, NoteView } from "../api/types";
+import { NOTE_MAX, noteDeleteLabel, noteProblem, noteTime, remainingLabel } from "./notes";
 
 interface Props {
   characterId: string;
@@ -29,6 +29,23 @@ export function NotesPanel({ characterId, location, busy }: Props) {
       alive = false;
     };
   }, [characterId, location]);
+
+  async function remove(note: NoteView) {
+    setSending(true);
+    setError(null);
+    try {
+      if (note.mine) {
+        setBoard(await api.deleteOwnWorldNote(characterId, note.note_id));
+      } else {
+        await api.adminDeleteWorldNote(note.note_id);
+        setBoard(await api.worldNotes(characterId));
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setSending(false);
+    }
+  }
 
   const max = board?.max_len ?? NOTE_MAX;
   const problem = noteProblem(text, max);
@@ -62,6 +79,18 @@ export function NotesPanel({ characterId, location, busy }: Props) {
                 <li key={n.note_id}>
                   <b>{n.name}</b>
                   <span className="muted small">　{noteTime(n.at)}</span>
+                  {n.can_delete === true && (
+                    <button
+                      type="button"
+                      className="world-note-delete small"
+                      data-testid="world-note-delete"
+                      aria-label={noteDeleteLabel(n.mine)}
+                      disabled={busy || sending}
+                      onClick={() => void remove(n)}
+                    >
+                      刪除
+                    </button>
+                  )}
                   <div>{n.text}</div>
                 </li>
               ))}

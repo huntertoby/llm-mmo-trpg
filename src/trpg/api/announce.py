@@ -73,7 +73,7 @@ TEMPLATE_VARS: Final[Mapping[str, frozenset[str]]] = {
     "events_none": frozenset(),
     "event_line": frozenset({"name", "progress", "target"}),
     "public_url_line": frozenset({"public_url"}),
-    "first_kill": frozenset({"name", "target", "location", "region"}),
+    "first_kill": frozenset({"name", "target"}),
 }
 """每個模板可用的變數（用到別的 → 載入錯誤）。"""
 
@@ -250,17 +250,10 @@ def location_name(library: ContentLibrary, region: str, location: str) -> str:
 def render_first_kill(
     templates: AnnouncementTemplates, kill: FirstKill, library: ContentLibrary | None = None
 ) -> str:
-    region = region_name(library, kill.region) if library is not None else kill.region
-    location = (
-        location_name(library, kill.region, kill.location) if library is not None else kill.location
-    )
-    return _sub(
-        templates.first_kill,
-        name=safe_text(kill.name),
-        target=kill.target_name_zh,
-        location=location,
-        region=region,
-    )
+    """首殺公告只說「誰打倒了什麼」，不說地點（5E-3b，玩法 PM 代決、9.6.10）：模板只認
+    ``$name``、``$target``，寫了 ``$location``／``$region`` 會載入錯誤。``library`` 留著相容。"""
+    del library
+    return _sub(templates.first_kill, name=safe_text(kill.name), target=kill.target_name_zh)
 
 
 def default_bot_state_path(save_dir: Path | None = None) -> Path:

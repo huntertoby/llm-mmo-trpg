@@ -16,6 +16,11 @@ export function remainingLabel(text: string, max: number = NOTE_MAX): string {
   return left >= 0 ? `還可以打 ${left} 字` : `超過 ${-left} 字`;
 }
 
+/** 刪除鍵的說明：自己的留言，或管理者刪別人的（5E-3b）。 */
+export function noteDeleteLabel(mine: boolean): string {
+  return mine ? "刪除我的留言" : "刪除這則留言（管理者）";
+}
+
 /** UTC 秒 → 台北時間「11/03 06:05」。 */
 export function noteTime(at: number): string {
   const d = new Date((at + 8 * 3600) * 1000);
