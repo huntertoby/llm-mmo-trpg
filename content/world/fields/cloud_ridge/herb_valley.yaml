@@ -1,0 +1,126 @@
+# 藥師谷實地地圖（6C-4；玩法 PM 草稿第 10 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 遺跡 24×18，建議 4 級，營火：谷底藥田和廢棄的藥廬，東側有一口冒毒霧的泉。
+# 西南的棧道往斷崖幫寨（高 1）；西北上坡往雲海吊橋（高 1～2）；
+# 隱藏：谷底東側毒泉後方的岩壁是丹爐洞的洞口（門 elixir_cave_mouth，hidden_until: reveal）。
+# 「走到洞口 3 格內做感知判定、持有任務線索也會顯示」是 reveal 的事（地點圖的 reveal: [situation]），
+# 地圖只畫洞口的位置。
+# 毒泉用毒霧表面；藥田用草叢物件（易燃）；藥廬殘牆用矮牆（掩體），營火在藥廬裡。
+# 崖上的靈芝：北側崖壁下的事件點 cliff_lingzhi（攀爬點）。
+# 敵人：藥田駐守 valley_keepers；谷口巡邏 valley_beasts。
+# 事件點：崖下（cliff_lingzhi）、毒泉邊（poison_spring）、藥廬（gang_deserter）。
+id: herb_valley
+name_zh: 藥師谷
+region: cloud_ridge
+location: herb_valley
+size: [24, 18]
+heights: |
+  000000000000000000000000
+  222110000000000000000000
+  222110000000000000000000
+  222110000000000000000000
+  222110000000000000000000
+  222110000000000000000000
+  222110000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  111111000000000000000000
+  111111000000000000000000
+  111111000000000000000000
+  111111000000000000000000
+  111111000000000000000000
+terrain: |
+  ########################
+  #..,,,##################
+  ...,,,,,,,,,,,,,,,,,,,##
+  ...,,,,,,,,,,,,,,,,,,,##
+  ...,,,,,,,,,,,,,,,,,,,##
+  ...,,,,,,,,,,,,,,,,,,,##
+  ...,,,,,,,,,,,,,,,,,,,##
+  ,,,,,,,,,,,,,,,,,,,,,,##
+  ,,,,,,,,,,,,,,,,,,,,,,,#
+  ,,,,,,,,,,,,,,,,,,,,,,,#
+  ,,,,,,,,,,,,,,,,,,,,,,,#
+  ,,,,,,,,,,,,,,,,,,,,,,##
+  ,,,,,,,,,,,,,,,,,,,,,,##
+  ##....,,,,,,,,,,,,,,,,##
+  ##....,,,,,,,,,,,,,,,,##
+  ##....,,,,,,,,,,,,,,,,##
+  ##....,,,,,,,,,,,,,,,,##
+  ##....,,,,,,,,,,,,,,,,,#
+legend:
+  ".": stone
+  ",": dirt
+  "#": wall
+objects:
+  - {at: [5, 3], kind: low_wall}   # 藥廬殘牆
+  - {at: [5, 8], kind: low_wall}
+  - {at: [6, 3], kind: low_wall}
+  - {at: [6, 8], kind: low_wall}
+  - {at: [7, 8], kind: low_wall}
+  - {at: [9, 3], kind: low_wall}
+  - {at: [9, 8], kind: low_wall}
+  - {at: [10, 3], kind: low_wall}
+  - {at: [10, 8], kind: low_wall}
+  - {at: [5, 4], kind: low_wall}
+  - {at: [10, 4], kind: low_wall}
+  - {at: [5, 5], kind: low_wall}
+  - {at: [10, 6], kind: low_wall}
+  - {at: [5, 7], kind: low_wall}
+  - {at: [10, 7], kind: low_wall}
+  - {at: [9, 11], kind: grass}   # 藥田
+  - {at: [11, 11], kind: grass}
+  - {at: [13, 11], kind: grass}
+  - {at: [10, 12], kind: grass}
+  - {at: [12, 12], kind: grass}
+  - {at: [14, 12], kind: grass}
+  - {at: [9, 13], kind: grass}
+  - {at: [11, 13], kind: grass}
+  - {at: [13, 13], kind: grass}
+  - {at: [10, 14], kind: grass}
+  - {at: [12, 14], kind: grass}
+  - {at: [14, 14], kind: grass}
+  - {at: [16, 4], kind: dead_tree}   # 谷底的老樹
+  - {at: [19, 15], kind: dead_tree}
+  - {at: [13, 5], kind: fallen_log}
+  - {at: [16, 13], kind: crate}   # 廢棄的藥箱
+surfaces:
+  - {at: [17, 7], surface: poison}
+  - {at: [18, 7], surface: poison}
+  - {at: [19, 7], surface: poison}
+  - {at: [20, 7], surface: poison}
+  - {at: [17, 8], surface: poison}
+  - {at: [18, 8], surface: poison}
+  - {at: [19, 8], surface: poison}
+  - {at: [20, 8], surface: poison}
+  - {at: [17, 9], surface: poison}
+  - {at: [18, 9], surface: poison}
+  - {at: [19, 9], surface: poison}
+  - {at: [20, 9], surface: poison}
+  - {at: [17, 10], surface: poison}
+  - {at: [18, 10], surface: poison}
+  - {at: [19, 10], surface: poison}
+  - {at: [20, 10], surface: poison}
+  - {at: [17, 11], surface: poison}
+  - {at: [18, 11], surface: poison}
+  - {at: [19, 11], surface: poison}
+  - {at: [20, 11], surface: poison}
+entry: [7, 12]
+exits:
+  - {id: to_cliff_gang_fort, at: [[3, 17], [4, 17]], to: cliff_gang_fort, arrive: to_herb_valley}   # 西南：棧道
+  - {id: to_cloud_sea_bridge, at: [[0, 3], [0, 4]], to: cloud_sea_bridge, arrive: to_herb_valley}   # 西北：上坡
+doors:
+  - {id: elixir_cave_mouth, at: [22, 9], to: elixir_cave, hidden_until: reveal}   # 東側毒泉後方的岩壁（藤蔓遮住的洞口）
+spawns:
+  - {at: [12, 12], group: valley_keepers}   # 藥田
+  - {at: [6, 15], group: valley_beasts, patrol: [[6, 15], [18, 15]]}   # 谷口巡邏
+campfires:
+  - {at: [7, 5], id: campfire_herb_valley}   # 藥廬裡的營火
+event_spots:
+  - {at: [14, 2], id: cliff_lingzhi}   # 崖下
+  - {at: [16, 9], id: poison_spring}   # 毒泉邊
+  - {at: [8, 6], id: gang_deserter}   # 藥廬

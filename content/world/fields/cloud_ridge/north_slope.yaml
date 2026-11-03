@@ -1,0 +1,78 @@
+# 北坡獵場實地地圖（6C-4；玩法 PM 草稿第 13 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 精英巢穴 16×14（草稿待確認 2：照表 16×14），建議 4～5 級：高原草甸，狼王的地盤，草叢很深。
+# 南邊往冬湖；東邊山脊小路往源晶裂痕；
+# 隱藏：北側崖壁的一道裂縫是鶴歸崖的入口（門 crane_cliff_crack，hidden_until: reveal）。
+# 「感知判定、持有線頭『狐火在霧裡指路』、朋友的足跡，任一都能顯示」是 reveal 的事
+# （地點圖的 reveal），地圖只畫裂縫的位置；狐火是畫面的事，地圖不另放物件。
+# 高度：南邊 0、草甸 1、岩堆 1～2。深草叢用草叢物件（隱蔽、易燃）；狼窩用倒木圍起來。
+# 敵人：狼窩駐守 north_slope_pack（加狼王；懸賞期間每天第一場是懸賞陣容，6C-1 接）。
+# 事件點：山脊小路（possessed_hunter、fox_traveler）。
+id: north_slope
+name_zh: 北坡獵場
+region: cloud_ridge
+location: north_slope
+size: [16, 14]
+heights: |
+  0000000000000000
+  1111111111111111
+  1111111111111111
+  1111111111111111
+  1111111111111111
+  1111111111111111
+  1111111111111111
+  1111111111111111
+  1111111111111111
+  0000000000111000
+  0000000000121000
+  0000000000111000
+  0000000000000000
+  0000000000000000
+terrain: |
+  ################
+  ####"""""#######
+  """"""""""""""""
+  """"""""""""""""
+  """"""""""",,,,,
+  """"""""""",,,,,
+  """"""""""",,,,,
+  """"""""""""""""
+  """"""""""""""""
+  """"""""""..."""
+  """"""""""..."""
+  """"""""""..."""
+  """"""""""""""""
+  ######,,,,######
+legend:
+  ".": stone
+  '"': grass
+  ",": dirt
+  "#": wall
+objects:
+  - {at: [2, 3], kind: fallen_log}   # 狼窩的倒木
+  - {at: [6, 3], kind: fallen_log}
+  - {at: [1, 6], kind: dead_tree}
+  - {at: [5, 7], kind: grass}   # 深草叢
+  - {at: [6, 7], kind: grass}
+  - {at: [7, 8], kind: grass}
+  - {at: [8, 6], kind: grass}
+  - {at: [9, 7], kind: grass}
+  - {at: [3, 10], kind: grass}
+  - {at: [4, 11], kind: grass}
+  - {at: [13, 8], kind: grass}
+  - {at: [14, 10], kind: grass}
+  - {at: [7, 10], kind: grass}
+  - {at: [2, 8], kind: grass}
+  - {at: [13, 2], kind: dead_tree}
+  - {at: [14, 12], kind: dead_tree}
+entry: [7, 11]
+exits:
+  - {id: to_winter_lake, at: [[7, 13], [8, 13]], to: winter_lake, arrive: to_north_slope}   # 南：往冬湖
+  - {id: to_crystal_rift, at: [[15, 4], [15, 5]], to: crystal_rift, arrive: to_north_slope}   # 東：山脊小路
+doors:
+  - {id: crane_cliff_crack, at: [6, 1], to: crane_cliff, hidden_until: reveal}   # 北側崖壁的裂縫（霧遮住）
+spawns:
+  - {at: [4, 4], group: north_slope_pack}   # 狼窩（加狼王）
+event_spots:
+  - {at: [13, 5], id: possessed_hunter}   # 山脊小路
+  - {at: [12, 4], id: fox_traveler}   # 山脊小路

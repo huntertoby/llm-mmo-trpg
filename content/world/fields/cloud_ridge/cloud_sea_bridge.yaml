@@ -1,0 +1,94 @@
+# 雲海吊橋實地地圖（6C-4；玩法 PM 草稿第 9 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 營地 24×18（草稿待確認 1：照草稿用 24×18、4 個出口），建議 3～4 級，傳送石：
+# 一座長吊橋跨過雲海深淵，兩岸是岩台；修士在橋上巡邏。
+# 西邊南岸往古松祭壇、南邊南岸山道往青霧觀山門、東南的東岸下坡往藥師谷、北岸石階往劍冢。
+# 高度：南岸 0（西側岩台 1）、北岸 1、北岸岩台 2（雲鶴使站在高處）。
+# 吊橋寬 2 格（x 9～10），整段是木橋物件，兩側是深淵（致命）；中段可以斬斷繩索。
+# 致命地形不擋唯一通路：東側崖邊有一條 2 格寬的石徑繞過深淵，吊橋斷了照樣過得去。
+# 傳送石在南岸。敵人：北橋頭駐守 sword_array；橋上巡邏 bridge_patrol。
+# 事件點：北岸岩台（crane_envoy）。
+id: cloud_sea_bridge
+name_zh: 雲海吊橋
+region: cloud_ridge
+location: cloud_sea_bridge
+size: [24, 18]
+heights: |
+  111111111111111111111111
+  112222211111111111111111
+  112222211111111111111111
+  112222211111111111111111
+  111111111111111111111111
+  111111111111111111111111
+  000000000000000000001100
+  000000000000000000001100
+  000000000000000000001100
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  000000000000000000000000
+  001111000000000000000000
+  001111000000000000000000
+  001111000000000000000000
+  000000000000000000000000
+terrain: |
+  ##########....##########
+  ,,.....,,,,,,,,,,,,,,,##
+  ,,.....,,,,,,,,,,,,,,,##
+  ,,.....,,,,,,,,,,,,,,,##
+  ,,,,,,,,,,,,,,,,,,,,,,##
+  ,,,,,,,,,,,,,,,,,,,,,,##
+  ====================..##
+  ====================..##
+  ====================..##
+  ====================..##
+  ====================..##
+  ====================..##
+  ,,,,,,,,,,,,,,,,,,,,,,##
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+  ,,....,,,,,,,,,,,,,,,,,,
+  ,,....,,,,,,,,,,,,,,,,,,
+  ,,....,,,,,,,,,,,,,,,,,,
+  ,,,,,,,,,,,,,,,,,,,,,,,,
+legend:
+  ".": stone
+  ",": dirt
+  "#": wall
+  "=": chasm
+objects:
+  - {at: [9, 6], kind: wooden_bridge}
+  - {at: [10, 6], kind: wooden_bridge}
+  - {at: [9, 7], kind: wooden_bridge}
+  - {at: [10, 7], kind: wooden_bridge}
+  - {at: [9, 8], kind: wooden_bridge}   # 吊橋（中段可斬斷繩索）
+  - {at: [10, 8], kind: wooden_bridge}
+  - {at: [9, 9], kind: wooden_bridge}
+  - {at: [10, 9], kind: wooden_bridge}
+  - {at: [9, 10], kind: wooden_bridge}
+  - {at: [10, 10], kind: wooden_bridge}
+  - {at: [9, 11], kind: wooden_bridge}
+  - {at: [10, 11], kind: wooden_bridge}
+  - {at: [8, 5], kind: stone_pillar}   # 北橋頭的繩樁
+  - {at: [11, 5], kind: stone_pillar}
+  - {at: [8, 12], kind: stone_pillar}   # 南橋頭的繩樁
+  - {at: [11, 12], kind: stone_pillar}
+  - {at: [15, 3], kind: dead_tree}   # 崖松
+  - {at: [18, 2], kind: dead_tree}
+  - {at: [16, 15], kind: low_wall}   # 南岸的石欄
+  - {at: [4, 4], kind: grass}
+  - {at: [19, 15], kind: grass}
+  - {at: [6, 13], kind: crate}   # 修士的補給箱
+entry: [12, 15]
+exits:
+  - {id: to_old_pine_altar, at: [[0, 13], [0, 14]], to: old_pine_altar, arrive: to_cloud_sea_bridge}   # 西：西岸（南岸西端）
+  - {id: to_mist_temple_gate, at: [[11, 17], [12, 17]], to: mist_temple_gate, arrive: to_cloud_sea_bridge}   # 南：南岸山道
+  - {id: to_herb_valley, at: [[23, 14], [23, 15]], to: herb_valley, arrive: to_cloud_sea_bridge}   # 東南：東岸下坡
+  - {id: to_sword_tomb, at: [[11, 0], [12, 0]], to: sword_tomb, arrive: to_cloud_sea_bridge}   # 北：北岸石階
+teleport_stones:
+  - {id: stone_cloud_sea_bridge, at: [15, 14]}
+spawns:
+  - {at: [10, 3], group: sword_array}   # 北橋頭
+  - {at: [9, 13], group: bridge_patrol, patrol: [[9, 13], [9, 4]]}   # 橋上巡邏（南橋頭到北橋頭）
+event_spots:
+  - {at: [4, 2], id: crane_envoy}   # 北岸岩台

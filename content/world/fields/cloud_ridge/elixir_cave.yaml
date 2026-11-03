@@ -1,0 +1,82 @@
+# 丹爐洞實地地圖（6C-4；玩法 PM 草稿第 11 張）。
+# 格式說明見 mist_ferry.yaml 開頭；方向：x 越大越東、y 越小越北（照地點圖的 pos，玩法 PM 草稿）。
+# 隱藏秘境 16×14，建議 5 級：山腹裡的煉丹洞，中央是巨大的丹爐，熱氣與毒霧交錯。
+# 唯一的出口在西邊洞口，回到藥師谷的隱藏洞口（arrive: elixir_cave_mouth，那一側是門）。
+# 高度全平 0。洞口長廊寬 4、往兩側水房的通道寬 3（狹窄長廊感）。
+# 中央丹爐用油桶（可以打翻、會燒），丹爐旁一小片毒霧表面；兩側水房是水表面（furnace_tide 用得到）。
+# 隱藏任務「丹爐之謎」（20.3 丹爐殘蓋）的地點。
+# 敵人：丹爐前駐守 furnace_steward（精英青霧執事）；南水房駐守 furnace_tide。
+# 事件點：丹爐（runaway_furnace）。
+id: elixir_cave
+name_zh: 丹爐洞
+region: cloud_ridge
+location: elixir_cave
+size: [16, 14]
+heights: |
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+  0000000000000000
+terrain: |
+  ################
+  ###########....#
+  ##########.....#
+  #####..........#
+  #####..........#
+  ...........#####
+  ...........#####
+  ...........#####
+  ...........#####
+  #####..........#
+  #####..........#
+  ##########.....#
+  ###########....#
+  ################
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [8, 6], kind: oil_barrel}   # 中央丹爐（可以打翻造毒霧或造火）
+  - {at: [6, 4], kind: stone_pillar}   # 丹爐室的石柱
+  - {at: [6, 9], kind: stone_pillar}
+  - {at: [9, 10], kind: crate}   # 藥材箱
+  - {at: [3, 8], kind: rubble}
+surfaces:
+  - {at: [12, 1], surface: water}
+  - {at: [13, 1], surface: water}
+  - {at: [14, 1], surface: water}
+  - {at: [12, 2], surface: water}
+  - {at: [13, 2], surface: water}
+  - {at: [14, 2], surface: water}
+  - {at: [12, 3], surface: water}
+  - {at: [13, 3], surface: water}
+  - {at: [14, 3], surface: water}
+  - {at: [12, 10], surface: water}
+  - {at: [13, 10], surface: water}
+  - {at: [14, 10], surface: water}
+  - {at: [12, 11], surface: water}
+  - {at: [13, 11], surface: water}
+  - {at: [14, 11], surface: water}
+  - {at: [12, 12], surface: water}
+  - {at: [13, 12], surface: water}
+  - {at: [14, 12], surface: water}
+  - {at: [9, 4], surface: poison}
+  - {at: [10, 4], surface: poison}
+entry: [2, 6]
+exits:
+  - {id: to_herb_valley, at: [[0, 6], [0, 7]], to: herb_valley, arrive: elixir_cave_mouth}   # 西：洞口
+spawns:
+  - {at: [7, 6], group: furnace_steward}   # 丹爐前
+  - {at: [12, 11], group: furnace_tide}   # 南水房
+event_spots:
+  - {at: [8, 7], id: runaway_furnace}   # 丹爐
