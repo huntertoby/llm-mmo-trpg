@@ -10,6 +10,7 @@ import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon }
 import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
 import { drawInkWeaponMore } from "./inkWeapons";
 import { drawBackSpines, drawBeastEarsBeforeHat, drawEarsAfterHat, drawEarsUnder, drawEye, drawInkHorns, drawInkTail, coverOf, drawRaceFace, drawRidge, drawSideEarBeforeHat, hatAdjust, type EarCtx } from "./inkRace";
+import { pz, type InkPose } from "./inkPose";
 import { dot, ellPts, ink, INK, MAT, shadow, stroke, type Pt, type View, withShadeDir } from "./inkStyle";
 import { drawApron, drawBackItem, drawBareBody, drawBeads, drawBunBack, drawBunHair, drawMantle, drawSectHeld, drawVeil, drawWaist } from "./inkSect";
 
@@ -30,7 +31,42 @@ interface Ctxt {
   spec: DollSpec;
   hooks: InkHooks;
   skin: string;
+  /** 6M-1 姿勢；`null` ＝ 沒設姿勢，畫法與指令流和加鉤子之前完全相同。 */
+  pose: InkPose | null;
 }
+
+/** 骨架關節（虛擬像素）：髖（前傾的軸）、側面肩（主手）、側面主手肘；遠側（另一隻手）的肩、肘。 */
+const HIP: Pt = [0, -15];
+const SHOULDER_S: Pt = [0, -31.6];
+const ELBOW_S: Pt = [1.9, -28];
+const SHOULDER_SF: Pt = [0.6, -32.2];
+const ELBOW_SF: Pt = [3.2, -29.4];
+
+/** 繞 (x,y) 轉 a（畫布旋轉，順時針為正）；a 為 0 時不加任何指令。 */
+function rotAt(ctx: Ctx, x: number, y: number, a: number): void {
+  if (a === 0) return;
+  ctx.translate(x, y);
+  ctx.rotate(a);
+  ctx.translate(-x, -y);
+}
+
+/** 有姿勢時把 `fn` 包在 save／restore 裡、先套 `apply`；沒姿勢時直接畫（不多任何指令）。 */
+function joint(t: Ctxt, apply: (ctx: Ctx, p: InkPose) => void, fn: () => void): void {
+  if (t.pose === null) {
+    fn();
+    return;
+  }
+  t.ctx.save();
+  apply(t.ctx, t.pose);
+  fn();
+  t.ctx.restore();
+}
+
+/** 正面、背面手臂上下擺（`armL`＝主手側、`armR`＝副手側）。 */
+const swing = (k: "armL" | "armR") => (ctx: Ctx, p: InkPose): void => {
+  const dy = pz(p, k);
+  if (dy !== 0) ctx.translate(0, dy);
+};
 
 const colorOf = (h: InkHooks, it: GearItem | undefined, fallback: string): string => (it === undefined ? fallback : h.colors(it)[0]);
 
@@ -45,6 +81,10 @@ function drawLegs(t: Ctxt, view: View): void {
   const sabaton = gear.feet?.kind === "iron_boots" && gear.feet.form === "sabaton";
   const toeF = sabaton ? 7 : 5.6;
   const toeS = sabaton ? 9.8 : 7.4;
+  if (t.pose !== null) {
+    drawLegsPosed(t, view, { pants, boot, by, toeF, toeS, heavy });
+    return;
+  }
   if (view !== "side") {
     for (const sx of [-1, 1]) {
       ink(ctx, `leg-${sx}`, [[sx * 0.8, -15], [sx * 4.6, -15], [sx * 4.4, -6], [sx * 1, -6]], pants);
@@ -58,6 +98,52 @@ function drawLegs(t: Ctxt, view: View): void {
   ink(ctx, "leg-near", [[-0.6, -15], [3.2, -15], [3.8, -6], [0.6, -6]], pants);
   ink(ctx, "boot-near", [[0.4, by], [4, by], [toeS, -0.8], [0.4, -0.4]], boot);
   drawFootDetail(ctx, gear.feet, view, hooks.colors, heavy);
+}
+
+interface LegLook {
+  pants: string;
+  boot: string;
+  by: number;
+  toeF: number;
+  toeS: number;
+  heavy: boolean;
+}
+
+/** 有姿勢的腿（6M-1）：正面、背面抬腳（大腿抬 45%、靴再抬 55%）；側面髖、膝兩個關節，並抵銷上半身的前傾，腳才留在地上。部件形狀照沒姿勢的畫法。 */
+function drawLegsPosed(t: Ctxt, view: View, L: LegLook): void {
+  const { ctx, spec, hooks, pose } = t;
+  const feet = spec.gear.feet;
+  if (view !== "side") {
+    for (const sx of [-1, 1]) {
+      const up = pz(pose, sx < 0 ? "liftL" : "liftR");
+      ctx.save();
+      if (up !== 0) ctx.translate(0, -up * 0.45);
+      ink(ctx, `leg-${sx}`, [[sx * 0.8, -15], [sx * 4.6, -15], [sx * 4.4, -6], [sx * 1, -6]], L.pants);
+      drawFootDetail(ctx, feet, view, hooks.colors, L.heavy, { sx, part: "upper" });
+      if (up !== 0) ctx.translate(0, -up * 0.55);
+      ink(ctx, `boot-${sx}`, [[sx * 0.6, L.by], [sx * 4.8, L.by], [sx * L.toeF, -0.8], [sx * 0.4, -0.4]], L.boot);
+      drawFootDetail(ctx, feet, view, hooks.colors, L.heavy, { sx, part: "lower" });
+      ctx.restore();
+    }
+    return;
+  }
+  ctx.save();
+  rotAt(ctx, HIP[0], HIP[1], -pz(pose, "lean"));
+  ctx.save();
+  rotAt(ctx, -1.2, -15, -pz(pose, "hipF"));
+  ink(ctx, "leg-far", [[-3, -15], [0.6, -15], [-0.6, -6], [-3.8, -6]], darken(L.pants, 0.25));
+  rotAt(ctx, -2.2, -6.5, pz(pose, "kneeF"));
+  ink(ctx, "boot-far", [[-4.2, L.by], [-0.4, L.by], [1, -0.6], [-4.4, -0.4]], darken(L.boot, 0.25));
+  ctx.restore();
+  ctx.save();
+  rotAt(ctx, 1.3, -15, -pz(pose, "hipN"));
+  ink(ctx, "leg-near", [[-0.6, -15], [3.2, -15], [3.8, -6], [0.6, -6]], L.pants);
+  drawFootDetail(ctx, feet, view, hooks.colors, L.heavy, { sx: 1, part: "upper" });
+  rotAt(ctx, 2.2, -6.5, pz(pose, "kneeN"));
+  ink(ctx, "boot-near", [[0.4, L.by], [4, L.by], [L.toeS, -0.8], [0.4, -0.4]], L.boot);
+  drawFootDetail(ctx, feet, view, hooks.colors, L.heavy, { sx: 1, part: "lower" });
+  ctx.restore();
+  ctx.restore();
 }
 
 // ============================== 身體 ==============================
@@ -335,17 +421,26 @@ function drawFront(t: Ctxt): void {
   drawBackSpines(t.ctx, spec.look, "front"); // 只露出肩頭的尖端
   drawBody(t, "front");
   drawSectExtras(t, "front");
-  drawArmFront(t, 1);
-  if (off !== undefined) {
-    const mirror = !heldNotMirrored(off);
-    drawHeld(t, off, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: true, mirror, far: false, side: false });
-  }
-  if (off === undefined || !isShield(off)) drawHand(t, 9, -23.2, "hand-r", -0.32);
+  joint(t, swing("armR"), () => {
+    drawArmFront(t, 1);
+    if (off !== undefined) {
+      const mirror = !heldNotMirrored(off);
+      drawHeld(t, off, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: true, mirror, far: false, side: false });
+    }
+    if (off === undefined || !isShield(off)) drawHand(t, 9, -23.2, "hand-r", -0.32);
+  });
   drawHead(t, "front");
   drawHeadgear(t, "front");
-  drawArmFront(t, -1);
-  if (gear.main_hand !== undefined) drawHeld(t, gear.main_hand, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false });
-  drawHand(t, -9, -23.2, "hand-l", 0.32);
+  joint(t, swing("armL"), () => {
+    drawArmFront(t, -1);
+    if (gear.main_hand !== undefined) drawMain(t, HAND_FRONT[0] - spread, HAND_FRONT[1], () => drawHeld(t, gear.main_hand!, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: true, mirror: false, far: false, side: false }));
+    drawHand(t, -9, -23.2, "hand-l", 0.32);
+  });
+}
+
+/** 主手武器：有姿勢且給了 `wpn` 時繞手 (x,y) 轉 `wpn`（6M-1 是相對現有握法的增量）。 */
+function drawMain(t: Ctxt, x: number, y: number, fn: () => void): void {
+  joint(t, (ctx, p) => rotAt(ctx, x, y, pz(p, "wpn")), fn);
 }
 
 /** 背面（朝北）：左右對調（主手在畫面右）、看不到臉；披風、尾巴蓋在身上，武器在身體後面。 */
@@ -362,14 +457,27 @@ function drawBack(t: Ctxt): void {
     fn();
     ctx.restore();
   };
-  if (gear.main_hand !== undefined) screen(() => drawHeld(t, gear.main_hand!, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }));
-  if (off !== undefined && !isShield(off)) screen(() => drawHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false }));
+  const main = gear.main_hand;
+  if (main !== undefined) joint(t, swing("armL"), () => screen(() => drawMain(t, -HAND_FRONT[0] + spread, HAND_FRONT[1], () => drawHeld(t, main, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }))));
+  if (off !== undefined && !isShield(off)) joint(t, swing("armR"), () => screen(() => drawHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false })));
   drawLegs(t, "back");
   drawBody(t, "back");
-  drawArmFront(t, -1);
-  drawArmFront(t, 1);
-  drawHand(t, -9, -23.2, "hand-bl", 0.32);
-  drawHand(t, 9, -23.2, "hand-br", -0.32);
+  if (t.pose === null) {
+    drawArmFront(t, -1);
+    drawArmFront(t, 1);
+    drawHand(t, -9, -23.2, "hand-bl", 0.32);
+    drawHand(t, 9, -23.2, "hand-br", -0.32);
+  } else {
+    // 有姿勢：兩隻手各自跟著上下擺（局部 -x ＝ 畫面右 ＝ 主手側）
+    joint(t, swing("armL"), () => {
+      drawArmFront(t, -1);
+      drawHand(t, -9, -23.2, "hand-bl", 0.32);
+    });
+    joint(t, swing("armR"), () => {
+      drawArmFront(t, 1);
+      drawHand(t, 9, -23.2, "hand-br", -0.32);
+    });
+  }
   drawCloak(t, "back");
   drawBackItem(ctx, gear.back, "back", true);
   drawBackSpines(ctx, spec.look, "back"); // 背刺畫在披風之上（當作披風開了口）
@@ -387,15 +495,8 @@ function drawSide(t: Ctxt): void {
   drawInkTail(ctx, spec.look, "side");
   drawHairBack(t, "side");
   drawBackItem(ctx, gear.back, "side", false);
-  // 成對武器的副手在遠側手，畫在身體後面，比近側手往前上錯開約 3px
-  if (off !== undefined && !heldNotMirrored(off)) {
-    drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
-    dot(ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
-  }
-  // 書、法球（非武器、非盾的副手物品）也畫在身體後面（美術 PM：照 storyDoll.js）；盾留在身體前面
-  if (off !== undefined && !isShield(off) && heldNotMirrored(off)) {
-    drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
-  }
+  if (t.pose === null) drawSideFarHeld(t, off);
+  else drawSideFarArm(t, off);
   drawLegs(t, "side");
   drawBackSpines(ctx, spec.look, "side");
   drawBody(t, "side");
@@ -403,9 +504,59 @@ function drawSide(t: Ctxt): void {
   if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) drawInkKiteSide(ctx, off, t.hooks.colors);
   drawHead(t, "side");
   drawHeadgear(t, "side");
-  ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));
-  if (gear.main_hand !== undefined) drawHeld(t, gear.main_hand, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true });
-  drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
+  const main = gear.main_hand;
+  const held = (): void => {
+    if (main !== undefined) drawMain(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], () => drawHeld(t, main, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], { front: true, mirror: false, far: false, side: true }));
+    drawHand(t, HAND_SIDE_NEAR[0], HAND_SIDE_NEAR[1], "hand-s", -0.54);
+  };
+  if (t.pose === null) {
+    ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));
+    held();
+    return;
+  }
+  // 有姿勢：主手拆成上臂（繞肩 `arm`）與前臂（繞手肘 `elbow`），武器與手跟著前臂
+  const pose = t.pose;
+  ctx.save();
+  rotAt(ctx, SHOULDER_S[0], SHOULDER_S[1], pz(pose, "arm"));
+  ink(ctx, "arm-s-up", ARM_S_UPPER, armColor(t));
+  rotAt(ctx, ELBOW_S[0], ELBOW_S[1], pz(pose, "elbow"));
+  ink(ctx, "arm-s-fore", ARM_S_FORE, armColor(t));
+  held();
+  ctx.restore();
+}
+
+// 側面主手的上臂、前臂（6M-1）：合起來就是沒姿勢時的 arm-s（肩 (0,-31.6) → 手 (4.6,-24)），在手肘 (1.9,-28) 分段、略重疊
+const ARM_S_UPPER: Pt[] = [[-1.4, -31.5], [1.4, -31.8], [3.4, -27.8], [0.6, -27]];
+const ARM_S_FORE: Pt[] = [[0.4, -28.6], [3.2, -29.2], [5, -25], [2.6, -23.6]];
+// 側面另一隻手（遠側）：肩 (0.6,-32.2) → 手肘 (3.2,-29.4) → 手 HAND_SIDE_FAR (5.6,-27)，比主手往前上錯開，顏色較暗
+const ARM_SF_UPPER: Pt[] = [[-0.6, -32.2], [1.8, -32.8], [4.2, -29.8], [2, -28.6]];
+const ARM_SF_FORE: Pt[] = [[2, -30.2], [4.4, -30.4], [6.4, -27.8], [4.6, -26.2]];
+
+/** 沒姿勢：遠側手持物（成對武器的副手、書、法球）畫在身體後面，和加鉤子之前一樣。 */
+function drawSideFarHeld(t: Ctxt, off: GearItem | undefined): void {
+  // 成對武器的副手在遠側手，畫在身體後面，比近側手往前上錯開約 3px
+  if (off !== undefined && !heldNotMirrored(off)) {
+    drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
+    dot(t.ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
+  }
+  // 書、法球（非武器、非盾的副手物品）也畫在身體後面（美術 PM：照 storyDoll.js）；盾留在身體前面
+  if (off !== undefined && !isShield(off) && heldNotMirrored(off)) {
+    drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
+  }
+}
+
+/** 有姿勢：側面另一隻手（遠側，畫在身體後面）＝ 上臂繞肩 `armF`、前臂繞手肘 `elbowF`；遠側手持物跟著手走，手一律畫出來（較暗）。 */
+function drawSideFarArm(t: Ctxt, off: GearItem | undefined): void {
+  const { ctx, pose } = t;
+  const c = darken(armColor(t), 0.25);
+  ctx.save();
+  rotAt(ctx, SHOULDER_SF[0], SHOULDER_SF[1], pz(pose, "armF"));
+  ink(ctx, "arm-sf-up", ARM_SF_UPPER, c);
+  rotAt(ctx, ELBOW_SF[0], ELBOW_SF[1], pz(pose, "elbowF"));
+  ink(ctx, "arm-sf-fore", ARM_SF_FORE, c);
+  if (off !== undefined && !isShield(off)) drawHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
+  dot(ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
+  ctx.restore();
 }
 
 export const DOLL_HEAD_TOP = 53; // 頭頂（不含角、帽）離腳底約 53
@@ -423,14 +574,22 @@ export function buildRowRise(look: Look): number {
   return sy > 1 ? Math.round(DOLL_HEAD_TOP * (sy - 1) * 10) / 10 : 0;
 }
 
-/** 畫一個 C 畫風小人（腳底中心在 (0,0)）。facing 的鏡像（西）由呼叫端處理；`ground` ＝ false 時不畫地面影子（倒地）。 */
-export function drawInkFigure(ctx: Ctx, spec: DollSpec, view: View, hooks: InkHooks, ground = true): void {
-  const t: Ctxt = { ctx, spec, hooks, skin: spec.look.skin ?? SKIN_FALLBACK };
+/**
+ * 畫一個 C 畫風小人（腳底中心在 (0,0)）。facing 的鏡像（西）由呼叫端處理；`ground` ＝ false 時不畫地面影子（倒地）。
+ * `pose`（6M-1）：骨架姿勢（見 inkPose.ts）；不給或 `null` 時畫出來和加鉤子之前逐像素相同。影子不跟著起伏。
+ */
+export function drawInkFigure(ctx: Ctx, spec: DollSpec, view: View, hooks: InkHooks, ground = true, pose: InkPose | null = null): void {
+  const t: Ctxt = { ctx, spec, hooks, skin: spec.look.skin ?? SKIN_FALLBACK, pose };
   withShadeDir(ctx, view === "front" ? 1 : -1, () => {
     ctx.save();
     const [sx, sy] = buildScale(spec.look);
     if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
     if (ground) shadow(ctx);
+    if (pose !== null) {
+      const bob = pz(pose, "bob");
+      if (bob !== 0) ctx.translate(0, bob);
+      if (view === "side") rotAt(ctx, HIP[0], HIP[1], pz(pose, "lean"));
+    }
     if (view === "front") drawFront(t);
     else if (view === "back") drawBack(t);
     else drawSide(t);
