@@ -15,6 +15,7 @@ from trpg.api import world as world_module
 from trpg.api.app import create_app
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
+from trpg.world import save as save_module
 from trpg.world.layout import LOG_FILE
 from trpg.world.save import (
     content_digest,
@@ -78,9 +79,29 @@ def test_content_digest_is_deterministic(
     assert content_digest(calm) == content_digest(calm)
     assert content_digest(calm) != content_digest(field_library)
     key = log_rules_key(calm)
-    battle_format, ruleset, digest = key.split("|")
+    battle_format, version, ruleset, digest = key.split("|")
     assert battle_format.startswith("trpg-battle-log/")
+    assert version == f"w{save_module.WORLD_RULES_VERSION}"  # 6D-R1
     assert len(ruleset) == 64 and digest == content_digest(calm)[:16]
+
+
+def test_world_rules_version_bump_marks_stale(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """世界規則程式版號加一（6D-R1，內容沒變）：舊紀錄到最後一筆都標成規則已變、不能重播。"""
+    cid = _create(client)
+    _walk(client, cid, (12, 9))
+    _walk(client, cid, (13, 9))
+    before = _store(client).rules_key()
+    monkeypatch.setattr(save_module, "WORLD_RULES_VERSION", save_module.WORLD_RULES_VERSION + 1)
+    world_module._RULES_KEYS.clear()  # 規則鍵依內容庫快取；版號是程式常數，真實情況要重啟
+    store = _store(client)
+    store._forget()  # 同伺服器重啟
+    assert store.rules_key() != before
+    _walk(client, cid, (12, 9))
+    log = read_log(_log_path(client).read_text(encoding="utf-8"))
+    assert log.stale_through == 2 and log.rules_key == store.rules_key()
+    world_module._RULES_KEYS.clear()
 
 
 def test_header_records_rules_key(client: TestClient) -> None:
@@ -183,6 +204,16 @@ def test_torn_last_line_is_dropped(client: TestClient) -> None:
     _walk(client, cid, (13, 9))
     log = read_log(path.read_text(encoding="utf-8"))
     assert [e.seq for e in log.entries] == [1, 2]
+
+
+def test_read_log_drops_a_torn_last_line() -> None:
+    """殘行處理在 ``read_log`` 裡（6D-R1，所有讀者共用）：最後一行沒有換行結尾就略過。"""
+    whole = dumps_log([])
+    assert not read_log(whole).torn
+    torn = read_log(whole + '{"seq": 1, "no')
+    assert torn.torn and torn.entries == () and torn.header == whole.strip()
+    empty = read_log('{"format": "trpg-w')
+    assert empty.torn and empty.entries == () and empty.header == ""
 
 
 # -- 足跡索引、留言快取 -------------------------------------------------------

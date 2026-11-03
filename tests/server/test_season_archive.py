@@ -207,3 +207,13 @@ def test_script_verifies_from_the_archive(
     assert script.main([*base, "--match", season.match_ids[1]], out=out, err=err) == 0
     assert script.main([*base, "--match", "nope"], out=out, err=err) == script.EXIT_ERROR
     assert "找不到" in err.getvalue()
+
+
+def test_first_kill_check_skips_a_torn_last_line(played: Played, tmp_path: Path) -> None:
+    """世界日誌最後一行寫到一半（沒有換行結尾）：查證照常、不拋例外（6D-R1）。"""
+    season = _copy(played, tmp_path)
+    with (season.world_dir / "log.jsonl").open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write('{"seq": 2, "now": 1, "chara')
+    kill = verify_first_kill(season.save_dir, season.world_dir, "s1", BOSS)
+    assert kill.source == "world" and kill.ok, kill.problems
+    assert "世界日誌序號 1 是 勇者c0 的動作" in kill.passed

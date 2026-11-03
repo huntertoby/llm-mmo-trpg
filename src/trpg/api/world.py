@@ -159,15 +159,6 @@ def _places(char: CharacterState) -> tuple[Place, ...]:
     return tuple(sorted(places))
 
 
-def _complete_lines(text: str) -> tuple[str, bool]:
-    """日誌最後一行沒有換行＝append 寫到一半中斷：丟掉那一行（那個動作的角色存檔也還沒寫）。回傳
-    （完整的部分, 有沒有丟掉東西）。"""
-    if not text or text.endswith("\n"):
-        return text, False
-    cut = text.rfind("\n") + 1
-    return text[:cut], True
-
-
 class WorldStore:
     """大世界的角色與世界（記憶體快取＋本機 JSON 存檔）。"""
 
@@ -294,15 +285,14 @@ class WorldStore:
             if self._entries is None:
                 path = self._log_path()
                 text = path.read_text(encoding="utf-8") if path.is_file() else ""
-                text, torn = _complete_lines(text)
-                if torn:
+                log = read_log(text) if text.strip() else None  # 殘行由 read_log 略過（6D-R1）
+                if log is not None and log.torn:
                     _LOG.warning("世界日誌最後一行不完整（寫到一半中斷），已略過")
-                log = read_log(text) if text.strip() else None
                 self._entries = [] if log is None else list(log.entries)
                 self._stale_through = None if log is None else log.stale_through
                 if log is not None and log.rules_key != self.rules_key() and log.entries:
                     self._stale_through = log.entries[-1].seq
-                self._log_header = None if log is None or torn else log.header
+                self._log_header = None if log is None or log.torn else log.header
             return self._entries
 
     def _write_log(self, entry: WorldLogEntry) -> None:

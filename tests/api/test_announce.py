@@ -257,3 +257,17 @@ def test_daily_text_has_season_boss_line(library: ContentLibrary, tmp_path: Path
     day9 = DAY0_6AM + 6 * REAL_DAY_SECONDS  # DAY0_6AM 是賽季第 3 天的刷新時刻
     text9 = AnnouncementSource(tmp_path, library=library).daily_text(day9)
     assert text9 is not None and "即將解鎖" in text9
+
+
+def test_daily_digest_skips_a_torn_last_line(tmp_path: Path) -> None:
+    """日誌最後一行寫到一半（沒有換行結尾）：公告照算、不拋例外（6D-R1：由 read_log 統一略過）。"""
+    yesterday = DAY0_6AM - 3600
+    _world(tmp_path, entries=[_entry(1, yesterday, "c1"), _entry(2, yesterday + 1, "c2")])
+    path = tmp_path / "log.jsonl"
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write('{"seq": 3, "now": 1, "charac')
+    digest = daily_digest(tmp_path, DAY0_6AM + 60)
+    assert digest is not None and digest.active_yesterday == 2
+    path.write_text('{"format": "trpg-wl', encoding="utf-8")  # 連標頭都沒寫完
+    digest = daily_digest(tmp_path, DAY0_6AM + 60)
+    assert digest is not None and digest.active_yesterday == 0
