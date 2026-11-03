@@ -2718,12 +2718,12 @@
   {
    "id": "hard_shell",
    "name_zh": "硬殼",
-   "description_zh": "硬殼還沒被敲裂：受到的骰值傷害大幅降低。",
+   "description_zh": "硬殼還沒被敲裂：受到的骰值傷害大幅降低。不能被淨化、驅散或奪取。",
    "tags": [
     "beneficial"
    ],
    "status_look": {
-    "polarity": "buff",
+    "polarity": "neutral",
     "control_group": null,
     "dot_element": null,
     "skip_turn": false,

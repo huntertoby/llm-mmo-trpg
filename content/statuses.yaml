@@ -1383,9 +1383,9 @@ statuses:
     removed_by_element: [ice]
   # 5F-5a：精英詞綴「硬殼的」（19.2.1：前 2 次受擊傷害減半）。引擎沒有「受擊次數」，用開場 2 回合受到的傷害減半近似（代決 5F5a-7）。
   - id: hard_shell
-    polarity: buff
+    polarity: neutral
     name_zh: 硬殼
-    description_zh: 硬殼還沒被敲裂：受到的骰值傷害大幅降低。
+    description_zh: 硬殼還沒被敲裂：受到的骰值傷害大幅降低。不能被淨化、驅散或奪取。
     duration: 2
     expires: turn_end
     stacking: refresh
