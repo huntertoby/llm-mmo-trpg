@@ -1,0 +1,688 @@
+{
+ "affixes": [
+  "regenerating",
+  "mist_veiled",
+  "heart_linked",
+  "berserk"
+ ],
+ "camp_elite_permille": 100,
+ "groups": [
+  {
+   "id": "bandit_raiders",
+   "name_zh": "搶渡船的盜賊",
+   "third": [],
+   "units": [
+    "bandit",
+    "bandit",
+    "bandit_archer"
+   ]
+  },
+  {
+   "id": "bandit_shield_line",
+   "name_zh": "盜賊盾陣",
+   "third": [],
+   "units": [
+    "bandit",
+    "bandit",
+    "bandit_shieldbearer"
+   ]
+  },
+  {
+   "id": "mist_wolf_pack",
+   "name_zh": "霧狼群",
+   "third": [],
+   "units": [
+    "mist_wolf",
+    "mist_wolf",
+    "mist_wolf"
+   ]
+  },
+  {
+   "id": "bandit_wolf_handler",
+   "name_zh": "帶著霧狼的盜賊",
+   "third": [],
+   "units": [
+    "bandit",
+    "mist_wolf",
+    "mist_wolf"
+   ]
+  },
+  {
+   "id": "sect_patrol",
+   "name_zh": "修士巡邏",
+   "third": [],
+   "units": [
+    "sect_acolyte",
+    "sect_acolyte",
+    "sect_swordsman",
+    "sect_alchemist"
+   ]
+  },
+  {
+   "id": "terrace_clash",
+   "name_zh": "梯田上的衝突",
+   "third": [
+    "sect_swordsman",
+    "sect_acolyte"
+   ],
+   "units": [
+    "bandit",
+    "bandit"
+   ]
+  },
+  {
+   "id": "temple_gate_guard",
+   "name_zh": "山門守衛",
+   "third": [],
+   "units": [
+    "sect_acolyte",
+    "sect_swordsman",
+    "sect_swordsman"
+   ]
+  },
+  {
+   "id": "hunter_beasts",
+   "name_zh": "下山的野獸",
+   "third": [],
+   "units": [
+    "mist_wolf",
+    "mist_wolf",
+    "mountain_leopard"
+   ]
+  },
+  {
+   "id": "cliff_gang_core",
+   "name_zh": "斷崖幫主力",
+   "third": [],
+   "units": [
+    "bandit",
+    "bandit_shieldbearer",
+    "bandit_archer",
+    "bandit_captain"
+   ]
+  },
+  {
+   "id": "cliff_gang_hounds",
+   "name_zh": "斷崖幫與獵犬",
+   "third": [],
+   "units": [
+    "bandit",
+    "bandit",
+    "bandit_archer",
+    "mist_wolf"
+   ]
+  },
+  {
+   "id": "altar_wardens",
+   "name_zh": "祭壇護法",
+   "third": [],
+   "units": [
+    "sect_warrior_monk",
+    "sect_talisman_caster",
+    "sect_mist_walker"
+   ]
+  },
+  {
+   "id": "sword_array",
+   "name_zh": "劍陣",
+   "third": [],
+   "units": [
+    "sect_array_disciple",
+    "sect_array_disciple",
+    "sect_array_disciple",
+    "sect_array_stone"
+   ]
+  },
+  {
+   "id": "bridge_patrol",
+   "name_zh": "吊橋巡邏",
+   "third": [],
+   "units": [
+    "sect_swordsman",
+    "sect_crane_archer",
+    "sect_acolyte"
+   ]
+  },
+  {
+   "id": "valley_keepers",
+   "name_zh": "藥谷守人",
+   "third": [],
+   "units": [
+    "sect_alchemist",
+    "sect_warrior_monk",
+    "sect_puppeteer"
+   ]
+  },
+  {
+   "id": "valley_beasts",
+   "name_zh": "藥谷野獸",
+   "third": [],
+   "units": [
+    "mountain_leopard",
+    "mountain_leopard",
+    "stoneback_bear"
+   ]
+  },
+  {
+   "id": "furnace_steward",
+   "name_zh": "丹爐執事",
+   "third": [],
+   "units": [
+    "sect_steward",
+    "sect_swordsman",
+    "sect_warrior_monk",
+    "sect_acolyte"
+   ]
+  },
+  {
+   "id": "furnace_tide",
+   "name_zh": "丹爐水房",
+   "third": [],
+   "units": [
+    "water_alchemist",
+    "sect_swordsman",
+    "sect_swordsman",
+    "sect_mist_walker"
+   ]
+  },
+  {
+   "id": "north_slope_pack",
+   "name_zh": "狼王的狼群",
+   "third": [],
+   "units": [
+    "mist_wolf",
+    "mist_wolf",
+    "mist_wolf"
+   ]
+  },
+  {
+   "id": "lake_hunters",
+   "name_zh": "冬湖獵手",
+   "third": [],
+   "units": [
+    "frost_crane_archer",
+    "stoneback_bear",
+    "mist_wolf"
+   ]
+  },
+  {
+   "id": "lake_bears",
+   "name_zh": "冬湖石背熊",
+   "third": [
+    "stoneback_bear",
+    "mist_wolf"
+   ],
+   "units": [
+    "frost_crane_archer",
+    "frost_crane_archer"
+   ]
+  },
+  {
+   "id": "tomb_array",
+   "name_zh": "劍冢劍陣",
+   "third": [],
+   "units": [
+    "sect_array_disciple",
+    "sect_array_disciple",
+    "sect_array_disciple",
+    "sect_mist_walker"
+   ]
+  },
+  {
+   "id": "tomb_swordsmen",
+   "name_zh": "霧中劍客",
+   "third": [],
+   "units": [
+    "sect_swordsman",
+    "sect_mist_walker",
+    "thunder_talisman_caster",
+    "sect_crane_archer"
+   ]
+  },
+  {
+   "id": "mist_swordsman_band",
+   "name_zh": "霧中劍客一行",
+   "third": [],
+   "units": [
+    "sect_mist_walker",
+    "sect_crane_archer"
+   ]
+  },
+  {
+   "id": "rift_wraiths",
+   "name_zh": "裂痕異物",
+   "third": [
+    "sect_swordsman",
+    "sect_acolyte"
+   ],
+   "units": [
+    "mist_wraith",
+    "mist_wraith",
+    "shard_golem"
+   ]
+  },
+  {
+   "id": "rift_scavengers",
+   "name_zh": "搶碎片的盜賊",
+   "third": [
+    "sect_swordsman",
+    "sect_acolyte"
+   ],
+   "units": [
+    "bandit",
+    "bandit_archer",
+    "mist_wraith",
+    "shard_golem"
+   ]
+  },
+  {
+   "id": "crane_nest",
+   "name_zh": "雷羽鷹巢",
+   "third": [
+    "thunder_hawk",
+    "thunder_hawk",
+    "thunder_hawk"
+   ],
+   "units": [
+    "sect_crane_archer",
+    "sect_crane_archer"
+   ]
+  },
+  {
+   "id": "crane_cliff_bear",
+   "name_zh": "崖上石背熊",
+   "third": [
+    "stoneback_bear"
+   ],
+   "units": [
+    "thunder_hawk",
+    "thunder_hawk"
+   ]
+  },
+  {
+   "id": "summit_patrol",
+   "name_zh": "雲頂巡邏",
+   "third": [],
+   "units": [
+    "sect_array_disciple",
+    "sect_array_disciple",
+    "sect_talisman_caster",
+    "sect_alchemist"
+   ]
+  },
+  {
+   "id": "mist_lock_court",
+   "name_zh": "霧鎖真人",
+   "third": [],
+   "units": [
+    "sect_mist_lock_master",
+    "sect_array_disciple",
+    "sect_array_disciple",
+    "sect_summit_array_stone"
+   ]
+  },
+  {
+   "id": "scarface_risen",
+   "name_zh": "坐大的疤面",
+   "third": [],
+   "units": [
+    "bandit",
+    "mist_wolf",
+    "mist_wolf"
+   ]
+  },
+  {
+   "id": "temple_traitor",
+   "name_zh": "叛徒戰",
+   "third": [],
+   "units": [
+    "bandit",
+    "bandit",
+    "sect_swordsman"
+   ]
+  }
+ ],
+ "locations": [
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "bandit_raiders",
+     "weight": 1
+    },
+    {
+     "group": "bandit_shield_line",
+     "weight": 1
+    }
+   ],
+   "location": "ferry_steps",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "mist_wolf_pack",
+     "weight": 1
+    },
+    {
+     "group": "bandit_wolf_handler",
+     "weight": 1
+    }
+   ],
+   "location": "bamboo_path",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "sect_patrol",
+     "weight": 1
+    },
+    {
+     "group": "terrace_clash",
+     "weight": 1
+    }
+   ],
+   "location": "rain_terraces",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "temple_gate_guard",
+     "weight": 1
+    }
+   ],
+   "location": "mist_temple_gate",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": [
+    {
+     "elite": {
+      "affix": "mist_veiled",
+      "unit": "sect_steward"
+     },
+     "flag": "temple_traitor_strikes",
+     "group": "temple_traitor"
+    }
+   ]
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "hunter_beasts",
+     "weight": 1
+    }
+   ],
+   "location": "hunter_hut",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [
+    "gang_fort_secret_door"
+   ],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "cliff_gang_core",
+     "weight": 1
+    },
+    {
+     "group": "cliff_gang_hounds",
+     "weight": 1
+    }
+   ],
+   "location": "cliff_gang_fort",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": [
+    {
+     "elite": {
+      "affix": "heart_linked",
+      "unit": "bandit_captain"
+     },
+     "flag": "scarface_rises",
+     "group": "scarface_risen"
+    }
+   ]
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "altar_wardens",
+     "weight": 1
+    }
+   ],
+   "location": "old_pine_altar",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "sword_array",
+     "weight": 1
+    },
+    {
+     "group": "bridge_patrol",
+     "weight": 1
+    }
+   ],
+   "location": "cloud_sea_bridge",
+   "objective": null,
+   "ranged_cap": 1,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "valley_keepers",
+     "weight": 1
+    },
+    {
+     "group": "valley_beasts",
+     "weight": 1
+    }
+   ],
+   "location": "herb_valley",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "furnace_steward",
+     "weight": 1
+    },
+    {
+     "group": "furnace_tide",
+     "weight": 1
+    }
+   ],
+   "location": "elixir_cave",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": {
+    "affix": "berserk",
+    "unit": "mist_wolf"
+   },
+   "groups": [
+    {
+     "group": "north_slope_pack",
+     "weight": 1
+    }
+   ],
+   "location": "north_slope",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "lake_hunters",
+     "weight": 1
+    },
+    {
+     "group": "lake_bears",
+     "weight": 1
+    }
+   ],
+   "location": "winter_lake",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [
+    {
+     "min_level": 4,
+     "otherwise": "mist_wolf",
+     "unit": "stoneback_bear"
+    }
+   ],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "tomb_array",
+     "weight": 1
+    },
+    {
+     "group": "tomb_swordsmen",
+     "weight": 1
+    }
+   ],
+   "location": "sword_tomb",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "rift_wraiths",
+     "weight": 1
+    },
+    {
+     "group": "rift_scavengers",
+     "weight": 1
+    }
+   ],
+   "location": "crystal_rift",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "crane_nest",
+     "weight": 1
+    },
+    {
+     "group": "crane_cliff_bear",
+     "weight": 1
+    }
+   ],
+   "location": "crane_cliff",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  },
+  {
+   "ally_first_threads": [],
+   "armor_mods": null,
+   "elite": null,
+   "groups": [
+    {
+     "group": "mist_lock_court",
+     "weight": 1
+    }
+   ],
+   "location": "cloud_summit",
+   "objective": null,
+   "ranged_cap": null,
+   "unit_min_levels": [],
+   "variants": []
+  }
+ ],
+ "ranged_cap": 2,
+ "region": "cloud_ridge",
+ "surges": [
+  {
+   "day_phase": "night",
+   "flag": "wraiths_surge",
+   "kinds": [
+    "camp"
+   ],
+   "unit": "mist_wraith"
+  }
+ ]
+}

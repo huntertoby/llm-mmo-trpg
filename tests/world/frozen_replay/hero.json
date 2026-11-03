@@ -1,0 +1,60 @@
+{
+ "ai_profile": "support",
+ "armor_bonus": 1,
+ "attributes": {
+  "con": 10,
+  "dex": 12,
+  "int": 12,
+  "str": 8,
+  "wil": 12,
+  "wis": 16
+ },
+ "default_mode": "follow",
+ "detonate": null,
+ "doll": null,
+ "element_mods": {},
+ "equipment": {},
+ "hit_rules": [],
+ "id": "build_support",
+ "inert": false,
+ "innate": null,
+ "level": 1,
+ "look": null,
+ "max_hp": 40,
+ "max_mana": null,
+ "name_zh": "輔助英雄",
+ "opening_statuses": [],
+ "phases": [],
+ "platform": null,
+ "pulse": null,
+ "race": null,
+ "reactions": null,
+ "resist": {
+  "elemental": 150,
+  "nature": 0,
+  "physical": 0,
+  "spirit": 0
+ },
+ "role": null,
+ "scaled_resources": true,
+ "skills": [
+  "skill_war_hymn",
+  "skill_tailwind",
+  "skill_frost_shackle",
+  "skill_reflex_ward",
+  "skill_steady_breath",
+  "skill_rallying_cry",
+  "skill_mirror_cast",
+  "skill_life_drain"
+ ],
+ "snare": null,
+ "speed": 5,
+ "stamina": null,
+ "summon": false,
+ "tags": [
+  "hero",
+  "sim"
+ ],
+ "totem": null,
+ "weapon": "frost_staff"
+}
