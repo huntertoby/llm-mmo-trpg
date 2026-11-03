@@ -10,12 +10,12 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.auth import AdminRequiredError
+from trpg.api.auth import AdminRequiredError, require_login
 from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
@@ -159,10 +159,15 @@ def create_app(
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)
-    app.include_router(battles.router)
-    app.include_router(runs.router)
-    app.include_router(workshop.router)
-    app.include_router(gear.router)
+    # 5D-R2（保守代決，待使用者確認）：開發模式關時一輪、戰鬥、工坊、裝備測試要登入；開發用端點與
+    # 存檔列表、讀檔不掛（開發模式開照舊）。
+    login = [Depends(require_login)]
+    app.include_router(battles.router, dependencies=login)
+    if settings.dev_mode:
+        app.include_router(runs.dev_router)  # 在 runs.router 之前：/saves 不能被 /{run_id} 吃掉
+    app.include_router(runs.router, dependencies=login)
+    app.include_router(workshop.router, dependencies=login)
+    app.include_router(gear.router, dependencies=login)
     app.include_router(world.router)
     app.include_router(auth.router)
     if static_dir is not None:
