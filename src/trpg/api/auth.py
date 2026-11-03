@@ -147,4 +147,5 @@ def account_view(store: AccountStore, record: AccountRecord) -> AccountView:
         max_characters=store.max_characters,
         can_create=len(store.season_characters(record)) < store.max_characters,
         admin=record.admin,
+        titles=[f"{t.name_zh}（{t.season_id}）" for t in record.titles],
     )

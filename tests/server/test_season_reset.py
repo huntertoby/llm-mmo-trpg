@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 from trpg.content.battle import DollLook
 from trpg.content.library import ContentLibrary, load_library
-from trpg.server.accounts import AccountRecord, AccountStore
+from trpg.server.accounts import AccountRecord, AccountStore, AccountTitle
 from trpg.server.chronicle import (
     ChronicleHero,
     LeagueChronicle,
@@ -148,6 +148,15 @@ def _world(library: ContentLibrary, chars: tuple[CharacterState, ...]) -> WorldS
     )
 
 
+SLAYER = AccountTitle(
+    id="season_boss:rift_shard_lord",
+    name_zh="碎晶的終結者",
+    season_id="s1",
+    character_id="c1",
+    at=NOON,
+)
+
+
 def _fake_season(library: ContentLibrary, root: Path) -> Season:
     save_dir = root / "saves"
     world_dir = save_dir / "world"
@@ -161,6 +170,7 @@ def _fake_season(library: ContentLibrary, root: Path) -> Season:
     )
     accounts.attach_character(alice.account_id, "c1")
     accounts.attach_character(bob.account_id, "c2")
+    accounts.grant_title(alice.account_id, SLAYER)  # 5F-3b 帳號紀念稱號
     world = _world(library, chars)
     write_atomic(world_dir / "world.json", dumps_world(world))
     for char in chars:
@@ -399,6 +409,14 @@ def _check_accounts(season: Season) -> None:
     assert records[season.account_ids[0]].characters == ("c1",)
 
 
+def _check_title(season: Season) -> None:
+    """帳號的紀念稱號（5F-3b「碎晶的終結者」）季末保留。"""
+    _check_unchanged(season)
+    records = {a.account_id: a for a in AccountStore(season.save_dir / "accounts").all()}
+    assert records[season.account_ids[0]].titles == (SLAYER,)
+    assert records[season.account_ids[1]].titles == ()
+
+
 CHECKS: Mapping[type[BaseModel], Callable[[Season], None]] = {
     CharacterState: _check_character,
     WorldState: _check_world,
@@ -406,6 +424,7 @@ CHECKS: Mapping[type[BaseModel], Callable[[Season], None]] = {
     FirstKill: _check_unchanged,
     BossBoardEntry: _check_unchanged,
     AccountRecord: _check_accounts,
+    AccountTitle: _check_title,
     LocationNote: _check_note,
     LeagueRecord: _check_league,
     LeagueMatch: _check_match,

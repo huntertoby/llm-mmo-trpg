@@ -3,6 +3,7 @@
 id: skill_heart_exhale
 schema_version: 1
 name_zh: 熔心吐息
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare

@@ -39,7 +39,7 @@ from trpg.content.library import ContentLibrary
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.start import new_keyword_run, with_origin, with_race
 from trpg.roguelite.state import RunState
-from trpg.server.accounts import AccountStore
+from trpg.server.accounts import AccountStore, AccountTitle
 from trpg.server.chronicle import ChronicleHero, SeasonChronicleEntry, SeasonChronicleStore
 from trpg.server.first_kills import FirstKill, FirstKillRegistry
 from trpg.server.league import LeagueError, LeagueRunner, LeagueStore, start_problem
@@ -135,6 +135,9 @@ class WorldStore:
         self.actor_of: Callable[[str], str | None] | None = None
         """角色 ID → 帳號 ID（世界事件門檻的上線人數，Q15）；``None`` 或回 ``None``＝用角色 ID。
         :func:`~trpg.api.app.create_app` 接上帳號的 ``owner_of``。"""
+        self.grant_title: Callable[[str, AccountTitle], object] | None = None
+        """帳號 ID ＋紀念稱號 → 記到帳號檔（5F-3b「碎晶的終結者」）；``None``＝不記。
+        :func:`~trpg.api.app.create_app` 接上帳號的 ``grant_title``（帳號檔鎖，5D-R2）。"""
         self.library = library
         self.offers = OfferPrefetcher(library, enabled=prefetch)
         """三選一的背景預先計算與快取（PERF-3）。"""
@@ -459,6 +462,15 @@ class WorldStore:
                 self._record_boss_first_kill(
                     before, after, action, cleared, account=account, seq=seq, now=now
                 )
+            if account is not None and self.grant_title is not None:
+                title = AccountTitle(
+                    id=f"season_boss:{cleared.boss}",
+                    name_zh=cleared.title_zh,
+                    season_id=season,
+                    character_id=after.character_id,
+                    at=now,
+                )
+                self.grant_title(account, title)
         except Exception:
             _LOG.exception("賽季 Boss 紀錄寫入失敗（seq=%d，角色 %s）", seq, after.character_id)
 

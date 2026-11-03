@@ -3067,6 +3067,13 @@
             "type": "boolean",
             "title": "Admin",
             "default": false
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles"
           }
         },
         "type": "object",

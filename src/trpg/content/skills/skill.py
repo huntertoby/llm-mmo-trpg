@@ -193,6 +193,11 @@ class SkillDef(ContentModel):
     它）÷ 1000。每閃一次 +40‰、完整技能 +120‰（``flash_templates.yaml``）；省略＝沒有加成。只影響
     預算驗證與重調，不影響結算（結算只看技能本身的數值）。"""
 
+    enemy_only: bool = Field(default=False, exclude_if=lambda v: not v)
+    """只給敵人（Phase 5F-3b，玩法 PM 2026-11-03 代決）：為真時不進任何玩家技能池——生成器、候選、
+    閃現、工坊與 LLM 提議的可選清單都經 :func:`trpg.content.player_pool.player_skills` 排除；敵人
+    範本照常可以裝備、施放。不影響結算；``False`` 時不輸出，既有技能的序列化與雜湊不變。"""
+
     stance_upkeep: int = Field(default=0, ge=0, le=2)
     """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
     這麼多點（武器技扣耐力、法術技扣法力，每點數量見 ``forms.yaml``）；付不起就自動解除姿態。

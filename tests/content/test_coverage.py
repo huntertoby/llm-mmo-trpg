@@ -31,6 +31,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "crystal_surge": "只由源晶柱的階段 add_statuses 掛上（5F-3），沒有技能施加",
         "crystal_surge_2": "只由源晶柱的階段 add_statuses 掛上（5F-3），沒有技能施加",
         "rift_collapse": "只由碎晶之主第 4 階段的 add_statuses 掛上（5F-3），沒有技能施加",
+        "rift_channel": "只由碎晶之主的 opening_statuses 開場掛上、第 2 階段移除（5F-3b）",
         "molten_burst": "只由熔岩獸群範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
         "frost_ember_burst": "只由寒燼蜥範本的 opening_statuses 開場掛上（5F-5a），沒有技能施加",
         "heart_ember_burst": "只由殼縫餘燼蜥的 opening_statuses 開場掛上（5F-5b），沒有技能施加",

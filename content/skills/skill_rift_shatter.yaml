@@ -3,6 +3,7 @@
 id: skill_rift_shatter
 schema_version: 1
 name_zh: 界碎
+enemy_only: true
 tier: 2
 rank: 2
 rarity: rare

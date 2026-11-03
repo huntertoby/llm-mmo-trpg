@@ -1,11 +1,11 @@
 # 第一季賽季 Boss「碎晶之主」（Phase 5F-3；docs/design/19-灰燼荒原與賽季主線.md 19.7、09 9.6.8 #86、#87）。
-# 裂界門（Boss 地圖 rift_gate）；依「主角＋2 名系統傭兵」、滿等（10 級）設計。數值是初值（HP 380、柱子 60），模擬見 docs/phases/Phase5F-3報告.md。
+# 裂界門（Boss 地圖 rift_gate）；依「主角＋2 名系統傭兵」、滿等（10 級）設計。HP 380、柱子 60；三柱階段的「灌注源晶」（造成傷害 ×0.7）與界崩第 18 輪是 5F-3b 的調整，模擬見 docs/phases/Phase5F-3b報告.md。
 # 外觀（doll）是美術的事，這裡不寫。
 # 階段（引擎資料化，trpg.engine.boss_phases）：
 #   1 三柱（解謎）：三根源晶柱的「源晶共鳴」讓本體不受骰值傷害，柱子全倒才進下一階段（tag_down）。
 #   2 碎界脈動：身邊小傷的「碎界脈動」（需要治療的時刻）、單體持續傷害「晶蝕」（需要淨化的時刻）；召喚 2 個晶傀儡。
 #   3 核心過載（HP ≤ 50%）：蓄力強招「界碎」（十字每臂 2 格大傷＋擊退）、瞬步換邊。
-#   4 界崩（第 15 輪起）：造成的傷害加倍（防止拖延）。階段依序進入，所以要先到第 3 階段（代決 5F3-14）。
+#   4 界崩（第 18 輪起；5F-3b 由 15 延後，陷阱流等慢隊伍多數在 15～18 輪被加倍傷害打垮）：造成的傷害加倍（防止拖延）。階段依序進入，所以要先到第 3 階段（代決 5F3-14）。
 # 原文做不到的地方用現有機制近似（代決 5F3-13）：晶蝕不能疊層、晶傀儡只召喚一次、「每回合結束全場傷害」與「每回合換邊」交給 AI。
 id: rift_shard_lord
 name_zh: 碎晶之主
@@ -20,6 +20,8 @@ element_mods: {}
 tags: [boss, elite, rift_core, immovable]
 skills: [skill_cluster_bolt]
 reactions: []
+opening_statuses:
+  - {status: rift_channel}
 phases:
   - {id: three_pillars, name_zh: 三柱}
   - id: rift_pulse
@@ -27,6 +29,7 @@ phases:
     trigger: {kind: tag_down, tag: rift_pillar, count: 3, tag_name_zh: 源晶柱}
     text_zh: 最後一根源晶柱碎裂，浮台跟著一陣陣脈動——碎晶之主身上的光不再被擋住了。
     skills: [skill_rift_tremor, skill_shard_erosion, skill_cluster_bolt]
+    remove_statuses: [rift_channel]
     spawns: [{template: rift_crystal_golem, count: 2}]
   - id: core_overload
     name_zh: 核心過載
@@ -36,6 +39,6 @@ phases:
     ai_profile: cunning
   - id: rift_collapse
     name_zh: 界崩
-    trigger: {kind: round_at, round: 15}
+    trigger: {kind: round_at, round: 18}
     text_zh: 浮台的邊緣開始崩落，碎晶之主的每一擊都帶著整個界域的重量。
     add_statuses: [{status: rift_collapse}]

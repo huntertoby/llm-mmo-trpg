@@ -12,6 +12,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.llm.client import LLMClient
 from trpg.llm.flash_propose import (
     FlashProposalRecord,
@@ -53,7 +54,7 @@ def pick_skills(library: ContentLibrary, count: int) -> list[str]:
     """評估用的技能：1 階、主動、沒有接續段與陷阱的手寫技能（依 ID 排序取前 ``count`` 個）。"""
     found = [
         s.id
-        for s in sorted(library.skills.values(), key=lambda s: s.id)
+        for s in player_skills(library).values()
         if s.kind == "active" and s.tier == 1 and s.followup is None and s.trap is None
     ]
     return found[:count]

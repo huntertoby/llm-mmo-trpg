@@ -3,6 +3,7 @@
 id: skill_magma_breach
 schema_version: 1
 name_zh: 熔流潰堤
+enemy_only: true
 tier: 2
 rank: 2
 rarity: rare

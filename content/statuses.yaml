@@ -190,6 +190,15 @@ statuses:
     expires: never
     stacking: refresh
     ward: {kin_tag: rift_core, kin_name_zh: 碎晶之主, range: 24, taken_permille: 0}
+  # 5F-3b：三柱階段的碎晶之主把力量灌進柱子（開場掛上，柱子全倒進第 2 階段時移除）：造成的傷害降低。
+  # 對準「柱子打得慢的隊伍在三柱階段被本體慢慢磨死」（陷阱流的主要敗因，見 docs/phases/Phase5F-3b報告.md）。
+  - id: rift_channel
+    polarity: neutral
+    name_zh: 灌注源晶
+    description_zh: 碎晶之主把力量灌進三根源晶柱：造成的傷害降低；柱子全部碎裂時解除。不能被淨化、驅散或奪取。
+    expires: never
+    stacking: refresh
+    damage_dealt_permille: 700
   # 5F-3：19.7「打碎順序自由，留下的柱子脈衝變強」：倒 1 根、倒 2 根時留下的柱子換上（柱子的階段，tag_down）。
   - id: crystal_surge
     polarity: neutral
@@ -205,7 +214,7 @@ statuses:
     expires: never
     stacking: refresh
     damage_dealt_permille: 1500
-  # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖）。
+  # 5F-3：碎晶之主第 4 階段「界崩」（19.7：第 15 輪起每輪全場傷害加倍，防止無限拖；5F-3b 延到第 18 輪，見 Phase5F-3b報告）。
   - id: rift_collapse
     polarity: neutral
     name_zh: 界崩

@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skills import SHAPE_TO_VALUES, SkillDef
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
@@ -141,7 +142,7 @@ def _valid(library: ContentLibrary, memo: dict[str, Any], data: dict[str, Any]) 
 
 def _tags(library: ContentLibrary) -> list[str]:
     """手寫技能用過的機制標籤（修正規則 ``skill_tags`` 的候選）。"""
-    found = {t for s in library.skills.values() for t in s.tags}
+    found = {t for s in player_skills(library).values() for t in s.tags}
     return sorted(found - {"legendary", "modifier", "passive", "spell", "melee"})
 
 

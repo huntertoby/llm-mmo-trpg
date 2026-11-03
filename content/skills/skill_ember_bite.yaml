@@ -4,6 +4,7 @@
 id: skill_ember_bite
 schema_version: 1
 name_zh: 餘燼啃咬
+enemy_only: true
 tier: 1
 rank: 1
 rarity: rare
