@@ -115,6 +115,10 @@ export function usePlayback(
         case "move":
           await rendererRef.current?.animate([op.anim], skip);
           break;
+        case "walk":
+          // 一格一格走（6A-4d）：特殊地表的停頓與效果在畫布裡播
+          await rendererRef.current?.animateWalk(op.walk, skip);
+          break;
         case "vfx":
           // 技能特效：蓄力與飛行物先播，等到命中才更新畫面與浮動數字（略過時不播）
           if (skip()) break;

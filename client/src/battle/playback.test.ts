@@ -6,6 +6,7 @@ import {
   devAnimFactor,
   FEEDBACK_MS,
   frameOps,
+  motionMs,
   PLAY_SPEEDS,
   playbackPlan,
   remainingLines,
@@ -36,11 +37,11 @@ describe("playbackPlan", () => {
 
   it("orders each frame mark, moves, view, log, pause", () => {
     const plan = playbackPlan(response, hero, "normal");
-    const withMoves = plan.frames.find((f) => f.moves.length > 0 && f.lines.length > 0 && f.pauseMs > 0)!;
+    const withMoves = plan.frames.find((f) => f.motions.length > 0 && f.lines.length > 0 && f.pauseMs > 0)!;
     const kinds = frameOps(withMoves).map((o) => o.op);
     const firstView = kinds.indexOf("view");
     expect(kinds[0]).toBe("mark");
-    expect(kinds.slice(1, firstView).every((k) => k === "move")).toBe(true);
+    expect(kinds.slice(1, firstView).every((k) => k === "move" || k === "walk")).toBe(true);
     expect(kinds.slice(firstView)).toEqual(["view", "log", "pause"]);
   });
 
@@ -62,7 +63,7 @@ describe("playbackPlan", () => {
     const normal = playbackPlan(response, hero, "normal");
     const skip = playbackPlan(response, hero, "skip");
     expect(skip.frames).toHaveLength(1);
-    expect(skip.frames[0]!.moves).toEqual([]);
+    expect(skip.frames[0]!.motions).toEqual([]);
     expect(skip.frames[0]!.view).toEqual(response.view);
     expect(skip.frames[0]!.lines.map((l) => l.seq).sort()).toEqual(
       remainingLines(normal, 0).map((l) => l.seq).sort(),
@@ -97,8 +98,8 @@ describe("playbackPlan", () => {
 
   it("shortens move animations by speed (fast about half, skip none)", () => {
     const moves = (speed: PlaySpeed) =>
-      playbackPlan(response, hero, speed).frames.flatMap((f) => f.moves);
-    const total = (speed: PlaySpeed) => moves(speed).reduce((a, m) => a + m.durationMs, 0);
+      playbackPlan(response, hero, speed).frames.flatMap((f) => f.motions);
+    const total = (speed: PlaySpeed) => moves(speed).reduce((a, m) => a + motionMs(m), 0);
     expect(total("normal")).toBeGreaterThan(0);
     expect(Math.abs(total("fast") - total("normal") / 2)).toBeLessThanOrEqual(moves("normal").length / 2);
     expect(total("skip")).toBe(0);
@@ -108,7 +109,7 @@ describe("playbackPlan", () => {
     expect(PLAY_SPEEDS).toEqual(["crawl", "slow", "normal", "fast", "skip"]);
     const frames = (speed: PlaySpeed) => playbackPlan(response, hero, speed).frames;
     const sum = (speed: PlaySpeed, pick: (f: Frame) => number) => frames(speed).reduce((a, f) => a + pick(f), 0);
-    const moveMs = (f: Frame) => f.moves.reduce((a, m) => a + m.durationMs, 0);
+    const moveMs = (f: Frame) => f.motions.reduce((a, m) => a + motionMs(m), 0);
     expect(sum("normal", moveMs)).toBeGreaterThan(0);
     expect(Math.abs(sum("slow", moveMs) - 2 * sum("normal", moveMs))).toBeLessThanOrEqual(frames("normal").length);
     expect(sum("normal", (f) => f.pauseMs)).toBeGreaterThan(0);

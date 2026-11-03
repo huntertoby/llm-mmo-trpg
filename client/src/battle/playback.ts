@@ -2,13 +2,14 @@
 // 每一步的順序固定為：標示行動中的單位 → 該步的移動動畫 → 技能特效（蓄力與飛行，等到命中）→
 // 畫該步的 `view` → 地形升降動畫（3-19）→ 地圖回饋 → 加入該步的紀錄 → 停頓。
 // 最後一定以 `res.view` 為準（播放只是過場）。
-import type { BattleResponse, BattleView } from "../api/types";
-import { movePlan, type MoveAnim } from "./animation";
+import type { BattleResponse, BattleView, StepOut } from "../api/types";
+import { moveAnimOf, type MoveAnim } from "./animation";
 import { heightShifts, LIFT_MS, type HeightShift } from "./elevation";
 import { feedbackFor, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
+import { ENEMY_WALK_RATE, stepMotions, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -54,7 +55,8 @@ export const HERO_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { crawl: 150 *
 export interface Frame {
   /** 行動中的單位；開場那一步為 `null`。 */
   actorId: string | null;
-  moves: MoveAnim[];
+  /** 依事件順序的移動：走路是逐格的時間軸（6A-4d），其他位移（推、衝鋒、傳送…）照舊一段一段。 */
+  motions: Motion<MoveAnim>[];
   /** 地圖上的回饋項目（略過時為空）。 */
   feedback: FeedbackItem[];
   /** 回饋項目顯示的時間（毫秒，已依速度縮放）。 */
@@ -81,6 +83,7 @@ export interface PlaybackPlan {
 export type PlayOp =
   | { op: "mark"; unitId: string | null }
   | { op: "move"; anim: MoveAnim }
+  | { op: "walk"; walk: WalkAnim }
   | { op: "vfx"; vfx: StepVfx; impactMs: number }
   | { op: "view"; view: BattleView }
   | { op: "lift"; shifts: HeightShift[]; durationMs: number }
@@ -107,29 +110,53 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
     const frames: Frame[] =
       res.steps.length === 0
         ? []
-        : [{ actorId: null, moves: [], feedback: [], feedbackMs: 0, vfx: null, vfxImpactMs: 0, lifts: [], liftMs: 0, view: res.view, lines, pauseMs: 0 }];
+        : [{ actorId: null, motions: [], feedback: [], feedbackMs: 0, vfx: null, vfxImpactMs: 0, lifts: [], liftMs: 0, view: res.view, lines, pauseMs: 0 }];
     return { initialView: res.initial_view, frames, finalView: res.view };
   }
-  const frames = res.steps.map<Frame>((step) => ({
-    actorId: step.actor_id,
-    moves: movePlan([step], SPEED_SCALE[speed]),
-    feedback: feedbackFor(step.events, step.view),
-    feedbackMs: Math.round(FEEDBACK_MS * SPEED_SCALE[speed]),
-    vfx: stepVfx(step.events, step.view, cards, SPEED_SCALE[speed]),
-    vfxImpactMs: Math.round(VFX_TIMING.impact * SPEED_SCALE[speed]),
-    lifts: heightShifts(step.events),
-    liftMs: Math.round(LIFT_MS * SPEED_SCALE[speed]),
-    view: step.view,
-    lines: logLines([step], unitNames(step.view)),
-    pauseMs: pauseFor(step.step?.type, step.actor_id, heroId, speed),
-  }));
+  const scale = SPEED_SCALE[speed];
+  const feedbackMs = Math.round(FEEDBACK_MS * scale);
+  const frames = res.steps.map<Frame>((step, i) => {
+    const before = i === 0 ? res.initial_view : (res.steps[i - 1] as StepOut).view;
+    const walkRate = walkRateOf(step, before, heroId);
+    const opts = { scale, walkRate, before, after: step.view, feedbackMs };
+    const { motions, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
+    return {
+      actorId: step.actor_id,
+      motions,
+      // 停頓時已在那一格跳過的數字與狀態，一步結束時不再跳一次
+      feedback: feedbackFor(
+        step.events.filter((_, k) => !consumed.has(k)),
+        step.view,
+      ),
+      feedbackMs,
+      vfx: stepVfx(step.events, step.view, cards, scale),
+      vfxImpactMs: Math.round(VFX_TIMING.impact * scale),
+      lifts: heightShifts(step.events),
+      liftMs: Math.round(LIFT_MS * scale),
+      view: step.view,
+      lines: logLines([step], unitNames(step.view)),
+      pauseMs: pauseFor(step.step?.type, step.actor_id, heroId, speed),
+    };
+  });
   return { initialView: res.initial_view, frames, finalView: res.view };
+}
+
+/**
+ * 走路的快轉倍率：敵方（和主角不同陣營）回合 2 倍速（戰鬥D版樣張第 4 節）；主角、友軍照常。
+ * 只縮短走路，地表的停頓保留。
+ */
+export function walkRateOf(step: StepOut, before: BattleView, heroId: string): number {
+  if (step.actor_id === null) return 1;
+  const team = (id: string) => (step.view.units.find((u) => u.id === id) ?? before.units.find((u) => u.id === id))?.team;
+  const heroTeam = team(heroId) ?? "ally";
+  const actorTeam = team(step.actor_id);
+  return actorTeam !== undefined && actorTeam !== heroTeam ? ENEMY_WALK_RATE : 1;
 }
 
 /** 一格畫面要依序做的事。 */
 export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
-  for (const anim of frame.moves) ops.push({ op: "move", anim });
+  for (const m of frame.motions) ops.push(m.kind === "walk" ? { op: "walk", walk: m.walk } : { op: "move", anim: m.anim });
   if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs });
   ops.push({ op: "view", view: frame.view });
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
@@ -137,6 +164,11 @@ export function frameOps(frame: Frame): PlayOp[] {
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
   if (frame.pauseMs > 0) ops.push({ op: "pause", ms: frame.pauseMs });
   return ops;
+}
+
+/** 一個移動的總時間（毫秒）：走路 ＝ 逐格加停頓；其他位移 ＝ 該段時間。 */
+export function motionMs(m: Motion<MoveAnim>): number {
+  return m.kind === "walk" ? walkDurationMs(m.walk) : m.anim.durationMs;
 }
 
 /** 從第 `from` 格開始的所有紀錄（中途按「略過」時一次補上）。 */
