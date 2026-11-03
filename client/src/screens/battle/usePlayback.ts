@@ -76,6 +76,8 @@ export function usePlayback(
   const wakeRef = useRef<(() => void) | null>(null);
   const startedRef = useRef(false);
   const rendererRef = useRef<BattleRenderer | null>(null);
+  // 這個回合跑過（衝刺）的單位：之後的步行用跑步片段（6M-3）；跨回應保留，由事件更新
+  const runningRef = useRef(new Set<string>());
 
   useEffect(() => {
     speedRef.current = speed;
@@ -150,7 +152,7 @@ export function usePlayback(
       skipRef.current = false;
       setPlaying(true);
       try {
-        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current);
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);

@@ -193,6 +193,8 @@ export function drawInkWeapon(ctx: Ctx, it: GearItem, key: string, x: number, y:
       drawStaff(ctx, it, key, wood);
       break;
     default:
+      // 6M-3（6M-2 驗收）：側面的弓身朝前、弓弦朝自己（現有輪廓弓身往 -x 彎，側面左右翻過來）
+      if (o.side) ctx.scale(-1, 1);
       drawBow(ctx, key, it.color ?? wood, o.pull ?? 0, metal);
       break;
   }

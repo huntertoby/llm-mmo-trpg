@@ -118,3 +118,39 @@ export function applyCreaturePose(ctx: Ctx, p: CreaturePose): void {
   const a = clamp(cp(p, "alpha"));
   if (a !== 1) ctx.globalAlpha = (typeof ctx.globalAlpha === "number" ? ctx.globalAlpha : 1) * a;
 }
+
+const POSE_FIELDS: ReadonlyArray<keyof CreaturePose> = ["dx", "dy", "sx", "sy", "rot", "alpha", "flash"];
+const q2 = (v: number): number => Number((Math.round(v / 0.02) * 0.02 + 0).toFixed(2));
+
+/** 量化異形姿勢（每個欄位到 0.02；6M-3 貼圖快取用）。 */
+export function quantizeCreaturePose(p: CreaturePose): CreaturePose {
+  const out: CreaturePose = {};
+  for (const k of POSE_FIELDS) if (p[k] !== undefined) out[k] = q2(cp(p, k));
+  return out;
+}
+
+/** 異形姿勢的快取鍵（固定欄位順序、量化到 0.02；預設值不寫）。 */
+export function creaturePoseKey(p: CreaturePose): string {
+  const out: string[] = [];
+  for (const k of POSE_FIELDS) {
+    const v = q2(cp(p, k));
+    const def = k === "sx" || k === "sy" || k === "alpha" ? 1 : 0;
+    if (v !== def) out.push(`${k}${v}`);
+  }
+  return out.join(",");
+}
+
+/**
+ * 受擊白閃（6M-3，6M-2 驗收第 3 點）：只閃角色的剪影，不能整格變白。照樣張 `filter: brightness(0) invert(1) opacity(f)`：
+ * 把（不含地上影子的）身體像素變成白色、不透明度乘 `flash`（0～1），再疊回角色上。剪影外（透明）的像素維持透明。
+ * `data` 是 RGBA（ImageData.data），原地修改。
+ */
+export function whiteSilhouette(data: Uint8ClampedArray, flash: number): void {
+  const f = clamp(flash);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 255;
+    data[i + 1] = 255;
+    data[i + 2] = 255;
+    data[i + 3] = Math.round(data[i + 3]! * f);
+  }
+}

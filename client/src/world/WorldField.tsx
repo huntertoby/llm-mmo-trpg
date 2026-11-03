@@ -1,6 +1,6 @@
 // 可走動的實地地圖畫面（Phase 6B-3；docs/phases/Phase6計畫.md 第 5 節）：用戰鬥的 `BattleRenderer` 畫 `WorldView.field`，
 // 點格子走過去（前端 BFS，超過 30 格分段送）、方向鍵／WASD 一次一格（排隊，同時只有一個請求在路上）、
-// 小人逐格平移（每格約 0.12 秒）、換地圖淡出淡入。走到設施或 NPC 旁邊按 E 或點它就開原本的面板；
+// 小人逐格走（每格約 0.12 秒；6M-3 起播走路片段、照高低差走上去或跳上去，NPC 與敵群走一格也播）、換地圖淡出淡入。走到設施或 NPC 旁邊按 E 或點它就開原本的面板；
 // 站在傳送石上顯示「傳送」按鈕。位置一律以伺服器回來的 `walk` 結果為準，失敗時顯示錯誤、位置不動。
 // 6B-6：HUD 版面時格子照戰鬥的預設大小，鏡頭跟著主角（`camera.ts`）；畫布在可視區裡平移，逐格走時鏡頭用同樣的時間平滑跟上。
 // 點擊換算沿用 `BattleCanvas` 的 `getBoundingClientRect()`（平移後的實際位置），所以鏡頭位移自動算進去。
@@ -11,6 +11,7 @@ import type { BattleRenderer } from "../render/BattleRenderer";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
 import { FieldHeads } from "./FieldHeads";
+import { peopleSteps } from "./peopleWalk";
 import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
 import {
   chunkPath,
@@ -213,6 +214,10 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
         setFocus({ pos: step.to, ms: step.durationMs });
         await rendererRef.current?.animate([step], () => !alive.current);
       }
+      if (!alive.current) return false;
+      // NPC、敵群走了一格的（6M-3）：套用新畫面前一起播走路片段（差更多格的照舊直接換位置）
+      const others = peopleSteps(cur, after);
+      if (others.length > 0) await Promise.all(others.map((m) => rendererRef.current?.animate([m], () => !alive.current)));
       if (!alive.current) return false;
       const changed = after === null || after.map_id !== cur.map_id;
       if (changed) {

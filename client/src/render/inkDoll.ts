@@ -20,7 +20,7 @@ import { drawApron, drawBackItem, drawBareBody, drawBeads, drawBunBack, drawBunH
 export interface InkHooks {
   colors: (it: GearItem) => readonly [string, string];
   /** 測試用（6M-2）：每畫一件武器就回報握把（手）與作用端在畫布座標的位置。正式畫面不給。 */
-  probe?: (slot: "main" | "off", hand: Pt, tip: Pt) => void;
+  probe?: (slot: "main" | "off", hand: Pt, tip: Pt, edge?: Pt) => void;
 }
 
 const SKIN_FALLBACK = "#eab48a";
@@ -371,7 +371,7 @@ function drawHeld(
   const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
   const hp = t.hooks.probe;
   const pose = main ?? {};
-  const p: WeaponPoseOpt = hp === undefined ? pose : { ...pose, probe: (hand, tip) => hp(main !== undefined ? "main" : "off", hand, tip) };
+  const p: WeaponPoseOpt = hp === undefined ? pose : { ...pose, probe: (hand, tip, edge) => hp(main !== undefined ? "main" : "off", hand, tip, edge) };
   if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors, p)) return;
   const held = { mirror: k.mirror, side: o.side, far: o.far, back: !o.front, ...p };
   if (drawSectHeld(t.ctx, it, k.key, x, y, held)) return; // 5A-ART3：拂塵、符紙、傀儡線

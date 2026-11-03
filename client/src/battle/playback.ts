@@ -9,7 +9,8 @@ import { feedbackFor, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
-import { ENEMY_WALK_RATE, stepMotions, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
+import { asEvent } from "../api/types";
+import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -103,9 +104,13 @@ function stepVfx(events: readonly Record<string, unknown>[], view: BattleView, c
   return isEmptyVfx(vfx) ? null : scaleVfx(vfx, scale);
 }
 
-/** `cards`：技能 ID → 技能卡（推導技能特效的形狀用；缺的技能以影響的格子推斷）。 */
-export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpeed, cards: VfxCards = {}): PlaybackPlan {
+/**
+ * `cards`：技能 ID → 技能卡（推導技能特效的形狀用；缺的技能以影響的格子推斷）。
+ * `running`（6M-3）：這個回合跑過的單位（呼叫端跨回應保留同一個集合，這裡依事件原地更新；跑過的人走路用跑步片段）。
+ */
+export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpeed, cards: VfxCards = {}, running: Set<string> = new Set()): PlaybackPlan {
   if (speed === "skip" || res.steps.length === 0) {
+    for (const step of res.steps) for (const raw of step.events) trackRunning(running, asEvent(raw));
     const lines = logLines(res.steps, unitNames(res.view));
     const frames: Frame[] =
       res.steps.length === 0
@@ -118,7 +123,7 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
   const frames = res.steps.map<Frame>((step, i) => {
     const before = i === 0 ? res.initial_view : (res.steps[i - 1] as StepOut).view;
     const walkRate = walkRateOf(step, before, heroId);
-    const opts = { scale, walkRate, before, after: step.view, feedbackMs };
+    const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
     const { motions, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
     return {
       actorId: step.actor_id,

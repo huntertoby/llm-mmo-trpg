@@ -11,7 +11,7 @@ import { drawInkOffhand } from "./inkOffhand";
 import type { InkPose } from "./inkPose";
 import { drawSectHeld } from "./inkSect";
 import type { Pt, View } from "./inkStyle";
-import { holdOf, weaponFrame, weaponTip, type HoldView, type WeaponPoseOpt } from "./inkWeaponFrame";
+import { holdOf, weaponEdge, weaponFrame, weaponStrikePoint, weaponTip, type HoldView, type WeaponPoseOpt } from "./inkWeaponFrame";
 import { drawInkWeaponMore } from "./inkWeapons";
 import { itemColors } from "./paperdoll";
 import { resolveDollT } from "./testDolls";
@@ -134,11 +134,12 @@ interface Probe {
   slot: "main" | "off";
   hand: Pt;
   tip: Pt;
+  edge?: Pt | undefined;
 }
 function probeFigure(spec: DollSpec, view: View, west: boolean, pose: InkPose | null): Probe[] {
   const { ctx } = tracker();
   const out: Probe[] = [];
-  const hooks: InkHooks = { colors: itemColors, probe: (slot, hand, tip) => out.push({ slot, hand, tip }) };
+  const hooks: InkHooks = { colors: itemColors, probe: (slot, hand, tip, edge) => out.push({ slot, hand, tip, edge }) };
   if (west) ctx.scale(-1, 1);
   drawInkFigure(ctx, spec, view, hooks, true, pose);
   return out;
@@ -151,18 +152,19 @@ const pick = (ps: Probe[], slot: "main" | "off", what = ""): Probe => {
 };
 
 /** 單獨畫一件手持物（側面、沒鏡像），回傳輪廓頂點與回報的手、作用端。 */
-function drawAlone(it: GearItem, o: HoldView & WeaponPoseOpt & { mirror: boolean; far: boolean }): { pts: Pt[]; segs: Array<[Pt, Pt]>; hand: Pt; tip: Pt } {
+function drawAlone(it: GearItem, o: HoldView & WeaponPoseOpt & { mirror: boolean; far: boolean }): { pts: Pt[]; segs: Array<[Pt, Pt]>; hand: Pt; tip: Pt; edge: Pt | undefined } {
   const { ctx, pts, segs } = tracker();
   let hand: Pt = [NaN, NaN];
   let tip: Pt = [NaN, NaN];
-  const opt = { ...o, probe: (h: Pt, t: Pt) => ((hand = h), (tip = t)) };
+  let edge: Pt | undefined;
+  const opt = { ...o, probe: (h: Pt, t: Pt, e?: Pt) => ((hand = h), (tip = t), (edge = e)) };
   const drawn =
     drawSectHeld(ctx, it, "t", 0, 0, opt) ||
     drawInkOffhand(ctx, it, 0, 0, o.side, itemColors, opt) ||
     drawInkWeapon(ctx, it, "t", 0, 0, opt, itemColors) ||
     drawInkWeaponMore(ctx, it, "t", 0, 0, opt, itemColors);
   expect(drawn, label(it)).toBe(true);
-  return { pts, segs, hand, tip };
+  return { pts, segs, hand, tip, edge };
 }
 const dist = (a: Pt, b: Pt): number => Math.hypot(a[0] - b[0], a[1] - b[1]);
 /** 點到線段的距離。 */
@@ -226,8 +228,8 @@ describe("6M-2：武器統一座標（握把在原點、作用端朝 -y）", () 
     for (const it of ALL) {
       for (const pose of [null, {}]) {
         const p = pick(probeFigure(specOf(it), "side", false, pose), slotOf(it));
-        // 傀儡線往下垂、弓的箭朝後（現有外觀，報告待決）以外，作用端都在手的前方或正上方
-        if (it.kind === "puppet_cross" || it.kind === "bow") continue;
+        // 傀儡線往下垂以外，作用端都在手的前方或正上方（6M-3：弓改成弓身朝前，不再是例外）
+        if (it.kind === "puppet_cross") continue;
         if (p.tip[0] - p.hand[0] < -0.5) rows.push(`${label(it)} ${pose === null ? "null" : "REST"} ${(p.tip[0] - p.hand[0]).toFixed(2)}`);
       }
     }
@@ -280,5 +282,57 @@ describe("6M-2：武器統一座標（握把在原點、作用端朝 -y）", () 
     expect(maxY(b.pts) - maxY(a.pts)).toBeGreaterThan(5);
     expect(Math.min(...b.pts.map((p) => p[1]))).toBeLessThan(-10.9);
     expect(b.pts.length).toBeGreaterThan(a.pts.length);
+  });
+
+  it("6M-3：側面的弓身朝前、弓弦朝自己（站好時箭的方向朝面向方向；正面、背面不變）", () => {
+    const bow = W("bow");
+    expect(weaponTip(bow, { side: true })).toEqual([6, 0]);
+    expect(weaponTip(bow, { side: false })).toEqual([-6, 0]);
+    for (const west of [false, true]) {
+      for (const pose of [null, {}]) {
+        const p = pick(probeFigure(specOf(bow), "side", west, pose), "main");
+        expect((p.tip[0] - p.hand[0]) * (west ? -1 : 1), `${west ? "西" : "東"} ${pose === null ? "null" : "REST"}`).toBeCloseTo(6, 6);
+      }
+    }
+    // 沒鏡像、沒姿勢的側面：弓身彎到握把前面，弓弦在後面（朝自己）
+    const { pts } = drawAlone(bow, { mirror: false, side: true, far: false });
+    expect(Math.max(...pts.map((q) => q[0]))).toBeGreaterThan(5.5);
+    expect(Math.min(...pts.map((q) => q[0]))).toBeLessThan(-1.5);
+  });
+});
+
+describe("6M-3：斧、戟、鐮的刃點（揮砍弧光與受擊點從刃的中心畫）", () => {
+  const BLADED = [W("axe"), W("spear", "halberd"), W("scythe")];
+  it("只有斧、戟、鐮有刃點，其他武器的受擊點＝作用端", () => {
+    for (const it of ALL) {
+      const has = it.kind === "axe" || it.kind === "scythe" || (it.kind === "spear" && it.form === "halberd");
+      expect(weaponEdge(it) !== undefined, label(it)).toBe(has);
+      if (!has) expect(weaponStrikePoint(it, { side: true }), label(it)).toEqual(weaponTip(it, { side: true }));
+    }
+    for (const it of BLADED) expect(weaponStrikePoint(it, { side: true }), label(it)).toEqual(weaponEdge(it));
+  });
+
+  it("刃點落在刃的輪廓上，在柄的側邊（離柄 > 5）、比柄頂端近握把", () => {
+    for (const it of BLADED) {
+      for (const side of [true, false]) {
+        const { pts, segs, hand, tip, edge } = drawAlone(it, { mirror: false, side, far: false, wpn: 0 });
+        expect(edge, label(it)).toBeDefined();
+        const e = edge!;
+        expect(nearest(e, pts, segs), `${label(it)} 刃點離輪廓`).toBeLessThan(1.5);
+        // 統一座標（wpn 0）下柄沿著 x ＝ 0 往上：刃點在柄的側邊
+        if (side) expect(Math.abs(e[0] - hand[0]), label(it)).toBeGreaterThan(5);
+        expect(dist(e, hand), label(it)).toBeLessThan(dist(tip, hand));
+      }
+    }
+  });
+
+  it("朝東、朝西出招的瞬間，刃點也在手的前方", () => {
+    for (const it of BLADED) {
+      for (const west of [false, true]) {
+        const p = pick(probeFigure(specOf(it), "side", west, hitPose(it)), "main");
+        expect(p.edge, label(it)).toBeDefined();
+        expect((p.edge![0] - p.hand[0]) * (west ? -1 : 1), `${label(it)} ${west ? "西" : "東"}`).toBeGreaterThan(1);
+      }
+    }
   });
 });

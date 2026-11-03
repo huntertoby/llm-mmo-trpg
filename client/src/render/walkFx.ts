@@ -106,6 +106,17 @@ function oilSplash(c: Pt, now: number, ms: number): Effect {
   });
 }
 
+/** 跳躍落地的揚塵（6M-3，照樣張 heightRow）：腳底左右五團沙色小圓，往外散開、淡掉。 */
+export function landingDust(c: Pt, now: number, ms: number): Effect {
+  return fx(now, ms, (g, t) => {
+    const a = 1 - t;
+    for (let k = -2; k <= 2; k += 1) {
+      const spread = 1 + 0.6 * t;
+      g.circle(c.x + k * 6 * spread, c.y + 2 - 2 * t * (k === 0 ? 0.5 : 1), 3 * (1 + 0.3 * t)).fill({ color: 0xc8b890, alpha: 0.8 * a });
+    }
+  });
+}
+
 /** 一個地表效果在腳底 `c` 的動畫（`ms` 已依播放速度縮放）。 */
 export function beatEffects(kind: BeatKind, c: Pt, now: number, ms: number): Effect[] {
   switch (kind) {

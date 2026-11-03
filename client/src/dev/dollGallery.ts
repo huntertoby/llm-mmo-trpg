@@ -8,7 +8,7 @@ import raceLooks from "../render/fixtures/raceLooks.json";
 import type { DollEquipment } from "../render/dollGear";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W, drawFigurePose } from "../render/paperdoll";
 import { REST_POSE, type InkPose } from "../render/inkPose";
-import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, bodyTop, drawCreature, resolveCreature } from "../render/inkCreature";
+import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, bodyTop, drawCreature, renderCreatureCanvas, resolveCreature } from "../render/inkCreature";
 import { CREATURE_CLIP_IDS, CREATURE_CLIPS, creaturePoseAt, type CreaturePose } from "../render/creaturePose";
 
 const SCALE = 3;
@@ -346,7 +346,7 @@ section("⑭ 6M-2・成對武器出招（主手 wpn、副手預設握法）", at
 const BOW_SPEC = withGear({ main_hand: W("bow"), off_hand: undefined });
 section("⑭ 6M-2・弓弦 pull（0、3、6；側面、正面、背面）", (["east", "south", "north"] as const).flatMap((f) => [0, 3, 6].map((p) => posedCell(BOW_SPEC, f, `${f}・pull ${p}`, { pull: p }))));
 
-// ⑮ Phase 6M-2：異形 4 個通用片段（走、撲、受擊、倒下），每個片段等分抽 6 格；白閃（flash）正式由戰場疊，這裡用半透明白示意
+// ⑮ Phase 6M-2：異形 4 個通用片段（走、撲、受擊、倒下），每個片段等分抽 6 格；白閃（flash）只閃剪影（6M-3）
 function creatureCell(body: string, label: string, pose: CreaturePose | null): HTMLElement {
   const box = document.createElement("div");
   box.className = "cell";
@@ -361,14 +361,16 @@ function creatureCell(body: string, label: string, pose: CreaturePose | null): H
   if (ctx !== null) {
     ctx.fillStyle = "#2b2f38";
     ctx.fillRect(0, 0, c.width, c.height);
-    ctx.scale(k, k);
-    ctx.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
     const material = body === "golem" ? "stone" : body === "wisp" ? "magma" : "fur";
-    drawCreature(ctx, resolveCreature({ look: { body, material } }), pose);
-    const flash = pose?.flash ?? 0;
-    if (flash > 0) {
-      ctx.fillStyle = `rgba(255,255,255,${(flash * 0.35).toFixed(3)})`;
-      ctx.fillRect(-CREATURE_W / 2, -CREATURE_FOOT_Y, CREATURE_W, CREATURE_H);
+    const r = resolveCreature({ look: { body, material } });
+    if ((pose?.flash ?? 0) > 0) {
+      // 6M-3：白閃只閃剪影（renderCreatureCanvas 疊白色剪影），不再整格蓋白
+      const img = renderCreatureCanvas(r, "east", k, pose);
+      if (img !== null) ctx.drawImage(img, 0, 0);
+    } else {
+      ctx.scale(k, k);
+      ctx.translate(CREATURE_W / 2, CREATURE_FOOT_Y);
+      drawCreature(ctx, r, pose);
     }
   }
   const t = document.createElement("div");
@@ -387,3 +389,12 @@ for (const id of CREATURE_CLIP_IDS) {
   );
   section(`⑮ 6M-2・異形片段 ${id}（${clip.dur} 毫秒${clip.loop ? "，循環" : ""}）`, [creatureCell(CREATURE_DEMO[0]!, "沒設姿勢", null), ...cells]);
 }
+
+// ⑯ Phase 6M-3：弓的朝向（6M-2 驗收：弓身朝前、弓弦朝自己）。四朝向沒設姿勢＋側面站好、拉弦、射出（截前後對照用）
+const ARCHER = withGear({ main_hand: W("bow"), off_hand: undefined, cloak: { kind: "cape", color: "#2f6a4a" } });
+section("⑯ 6M-3・弓（四朝向沒設姿勢；側面站好、拉弦、射出）", [
+  ...FACINGS.map((f) => figureOf(ARCHER, f, `${f}・沒設姿勢`)),
+  posedCell(ARCHER, "east", "east・站好", REST_POSE),
+  posedCell(ARCHER, "east", "east・拉弦", { arm: -1.3, wpn: 2.87, pull: 6, lean: -0.05 }),
+  posedCell(ARCHER, "west", "west・射出", { arm: -1.3, wpn: 2.87 }),
+]);
