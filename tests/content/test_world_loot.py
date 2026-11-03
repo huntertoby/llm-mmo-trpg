@@ -1,4 +1,4 @@
-"""掉落規則（Phase 5D-2；``docs/phases/Phase5計畫.md`` 27.2）：雲嶺的材料與 ``loot.yaml`` 的檢查。"""
+"""掉落規則（Phase 5D-2；``docs/phases/Phase5計畫.md`` 27.2）：雲嶺材料與 ``loot.yaml`` 的檢查。"""
 
 from __future__ import annotations
 

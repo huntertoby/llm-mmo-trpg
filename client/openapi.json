@@ -3060,6 +3060,27 @@
               }
             ],
             "title": "Battle Zh"
+          },
+          "gear": {
+            "type": "boolean",
+            "title": "Gear",
+            "default": false
+          },
+          "can_equip": {
+            "type": "boolean",
+            "title": "Can Equip",
+            "default": false
+          },
+          "equip_problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equip Problem Zh"
           }
         },
         "additionalProperties": false,
@@ -5601,6 +5622,38 @@
         ],
         "title": "EndTurn",
         "description": "結束回合。"
+      },
+      "EquipAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "equip",
+            "title": "Kind",
+            "default": "equip"
+          },
+          "item": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Item"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Slot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item"
+        ],
+        "title": "EquipAction",
+        "description": "把背包裡的一件裝備換上（Phase 5D-2；城鎮或營火，同換技能）；換下的放回背包。"
       },
       "EquipChoice": {
         "properties": {
@@ -9364,6 +9417,14 @@
             },
             "type": "array",
             "title": "Consumables",
+            "default": []
+          },
+          "equipped_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Equipped Zh",
             "default": []
           }
         },
@@ -14234,6 +14295,20 @@
         "title": "SkillVariantCard",
         "description": "技能卡上的一個戰場變奏型態（Phase 3-25b，6.24）：型態名、條件與替換內容的中文說明、\n型態自己的圖示（技能列在這個型態生效時換成它）。"
       },
+      "Slot": {
+        "type": "string",
+        "enum": [
+          "main_hand",
+          "off_hand",
+          "head",
+          "body",
+          "hands",
+          "feet",
+          "neck",
+          "ring_1",
+          "ring_2"
+        ]
+      },
       "SlotType": {
         "type": "string",
         "enum": [
@@ -17338,6 +17413,9 @@
           },
           {
             "$ref": "#/components/schemas/UseItemAction"
+          },
+          {
+            "$ref": "#/components/schemas/EquipAction"
           }
         ],
         "discriminator": {
@@ -17348,6 +17426,7 @@
             "buy": "#/components/schemas/BuyAction",
             "camp": "#/components/schemas/CampAction",
             "dissolve": "#/components/schemas/DissolveAction",
+            "equip": "#/components/schemas/EquipAction",
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
@@ -17855,6 +17934,17 @@
               }
             ],
             "title": "Last Battle Zh"
+          },
+          "last_loot_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Loot Zh"
           },
           "event": {
             "anyOf": [
