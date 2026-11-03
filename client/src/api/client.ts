@@ -1,6 +1,7 @@
 // fetch 包裝：所有請求走相對路徑 /api（開發時由 Vite proxy 轉到 127.0.0.1:8000）。
 // 5E-1：登入後每個請求帶 `Authorization: Bearer <token>`；收到 401 時清掉 token 並發出 AUTH_EXPIRED_EVENT。
 import { AUTH_EXPIRED_EVENT, authHeaders, needsLogin, readToken, writeToken } from "../auth/auth";
+import { hydrateField } from "../world/fieldTiles";
 import type {
   AuthStatus,
   LoginResponse,
@@ -60,6 +61,7 @@ import type {
   SeasonResetRequest,
   SeasonResetReport,
   WorldView,
+  FieldTilesView,
 } from "./types";
 
 export class ApiError extends Error {
@@ -116,6 +118,15 @@ async function request<T>(method: string, path: string, body?: unknown, quiet = 
   }
   if (!res.ok) throw new ApiError(res.status, detailText(res.status, data));
   return data as T;
+}
+
+/** 實地地圖的靜態地形（6C-R3；`fieldTiles.ts` 依雜湊快取）。 */
+const fetchFieldTiles = (mapId: string, hash: string) =>
+  request<FieldTilesView>("GET", `/world/fields/${encodeURIComponent(mapId)}?h=${encodeURIComponent(hash)}`);
+
+/** 回傳世界畫面的請求：`field` 沒帶地形時補上（6C-R3）。 */
+async function worldRequest(method: string, path: string, body?: unknown): Promise<WorldView> {
+  return hydrateField(await request<WorldView>(method, path, body), fetchFieldTiles);
 }
 
 export const api = {
@@ -204,12 +215,14 @@ export const api = {
   login: (username: string, password: string) => request<LoginResponse>("POST", "/auth/login", { username, password }),
   logout: () => request<null>("POST", "/auth/logout"),
   worldCharacters: () => request<WorldCharacterSummary[]>("GET", "/world/characters"),
-  createWorldCharacter: (body: CreateWorldCharacterRequest) => request<WorldView>("POST", "/world/characters", body),
-  world: (characterId: string) => request<WorldView>("GET", `/world/characters/${encodeURIComponent(characterId)}`),
+  createWorldCharacter: (body: CreateWorldCharacterRequest) => worldRequest("POST", "/world/characters", body),
+  world: (characterId: string) => worldRequest("GET", `/world/characters/${encodeURIComponent(characterId)}`),
   worldAct: (characterId: string, action: WorldAction) =>
-    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
+    worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
   worldBattle: (characterId: string) =>
-    request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`),
+    request<WorldBattleResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/battle`).then(
+      async (r) => ({ ...r, world: await hydrateField(r.world, fetchFieldTiles) }),
+    ),
   /** 大世界的閃現與配點預覽（5A-7；同一輪的預覽，不扣點）。 */
   worldFlashPreview: (characterId: string, skill: string, slot: number | null) =>
     request<FlashPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/flash-preview`, { skill, slot }),
@@ -217,11 +230,11 @@ export const api = {
     request<AllocationPreview>("POST", `/world/characters/${encodeURIComponent(characterId)}/allocation-preview`, { attributes }),
   /** 大世界事件（5B-5）：打開情境判定、送出回答（第一次送出即定案；文字是純資料，後端包進 <player_input>）、和 NPC 聊天。 */
   worldSituation: (characterId: string, template: string) =>
-    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/situation`, { template }),
+    worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/situation`, { template }),
   worldAnswer: (characterId: string, template: string, text: string, cite: string[]) =>
-    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/situation/answer`, { template, text, cite }),
+    worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/situation/answer`, { template, text, cite }),
   worldChat: (characterId: string, npc: string, text: string) =>
-    request<WorldView>("POST", `/world/characters/${encodeURIComponent(characterId)}/chat`, { npc, text }),
+    worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/chat`, { npc, text }),
   /** 大世界自己的 LLM 開關（預設跟著伺服器設定；`null` 回到預設）。 */
   worldLlm: () => request<WorldLlmView>("GET", "/world/llm"),
   setWorldLlm: (enabled: boolean | null) => request<WorldLlmView>("POST", "/world/llm", { enabled }),

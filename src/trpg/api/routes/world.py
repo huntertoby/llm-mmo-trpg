@@ -81,7 +81,9 @@ from trpg.api.season_schemas import SeasonBoardView
 from trpg.api.season_view import season_board
 from trpg.api.sessions import InvalidRequestError
 from trpg.api.state import world_llm_of, world_of
-from trpg.api.world import WorldOutcome, WorldStore
+from trpg.api.world import WorldCharacterNotFoundError, WorldOutcome, WorldStore
+from trpg.api.world_field_schemas import FieldTilesView
+from trpg.api.world_field_view import field_tiles
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
 from trpg.api.world_presenter import character_summary, event_lines, world_view
 from trpg.api.world_schemas import (
@@ -131,7 +133,26 @@ def _view(store: WorldStore, outcome: WorldOutcome, region: str) -> WorldView:
         titles=store.titles_of_character,
         social=store.field_social(outcome.char.character_id),  # 6C-5 足跡與留言石碑
         prepare=store.prepared_battle,  # 6C-R3：遭遇面板的 prepare_battle 快取
+        inline_tiles=False,  # 6C-R3：靜態地形改由 GET /api/world/fields/{map_id} 取
     )
+
+
+@router.get("/fields/{map_id}")
+def get_field_tiles(
+    map_id: str,
+    request: Request,
+    response: Response,
+    h: Annotated[str | None, Query(max_length=64)] = None,
+) -> FieldTilesView:
+    """實地地圖的靜態地形（6C-R3）：只看內容。``h`` 等於目前的雜湊時允許瀏覽器快取（內容一樣
+    就一樣）；不同或省略照樣回傳目前的地形（前端以回傳的 ``hash`` 為準）。"""
+    store = world_of(request)
+    found = field_tiles(store.library, map_id)
+    if found is None:
+        raise WorldCharacterNotFoundError(f"找不到實地地圖 {map_id}")
+    if h == found.hash:
+        response.headers["Cache-Control"] = "private, max-age=86400, immutable"
+    return found
 
 
 @router.get("/characters")

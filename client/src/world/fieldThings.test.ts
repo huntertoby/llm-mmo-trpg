@@ -26,6 +26,8 @@ function field(over: Partial<FieldView> = {}): FieldView {
     width: 6,
     height: 5,
     tiles,
+    tiles_hash: "",
+    open_cells: [],
     objects: [],
     exits: [],
     doors: [{ id: "d", x: 1, y: 2, to: "x", to_name_zh: "酒館" }],

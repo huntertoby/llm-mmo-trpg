@@ -780,6 +780,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/fields/{map_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Field Tiles
+         * @description 實地地圖的靜態地形（6C-R3）：只看內容。``h`` 等於目前的雜湊時允許瀏覽器快取（內容一樣
+         *     就一樣）；不同或省略照樣回傳目前的地形（前端以回傳的 ``hash`` 為準）。
+         */
+        get: operations["get_field_tiles_api_world_fields__map_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters": {
         parameters: {
             query?: never;
@@ -3607,6 +3628,7 @@ export interface components {
                 number,
                 number
             ][];
+            look?: components["schemas"]["FieldHeroView"] | null;
         };
         /**
          * FieldEventMarkView
@@ -3958,6 +3980,23 @@ export interface components {
              */
             walkable: boolean;
         };
+        /**
+         * FieldTilesView
+         * @description 一張實地地圖的靜態地形（6C-R3；``GET /api/world/fields/{map_id}``）：只看內容，前端依
+         *     ``hash`` 快取。
+         */
+        FieldTilesView: {
+            /** Map Id */
+            map_id: string;
+            /** Hash */
+            hash: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Tiles */
+            tiles: components["schemas"]["FieldTileView"][];
+        };
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
         /** FieldView */
@@ -3976,8 +4015,24 @@ export interface components {
             width: number;
             /** Height */
             height: number;
-            /** Tiles */
+            /**
+             * Tiles
+             * @default []
+             */
             tiles: components["schemas"]["FieldTileView"][];
+            /**
+             * Tiles Hash
+             * @default
+             */
+            tiles_hash: string;
+            /**
+             * Open Cells
+             * @default []
+             */
+            open_cells: [
+                number,
+                number
+            ][];
             /** Objects */
             objects: components["schemas"]["FieldObjectView"][];
             /** Exits */
@@ -11114,6 +11169,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GearCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_field_tiles_api_world_fields__map_id__get: {
+        parameters: {
+            query?: {
+                h?: string | null;
+            };
+            header?: never;
+            path: {
+                map_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldTilesView"];
                 };
             };
             /** @description Validation Error */

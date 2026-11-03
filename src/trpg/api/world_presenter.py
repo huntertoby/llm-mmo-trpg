@@ -559,11 +559,14 @@ def world_view(
     titles: TitlesOf = no_titles,
     social: FieldSocial | None = None,
     prepare: PrepareBattle | None = None,
+    inline_tiles: bool = True,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
     的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）；``social`` 是
-    其他角色的足跡與地點留言數（6C-5；省略＝不畫）。"""
+    其他角色的足跡與地點留言數（6C-5；省略＝不畫）。``prepare`` 是遭遇面板用的 ``prepare_battle``
+    （6C-R3 伺服器傳快取版）；``inline_tiles`` 為假時實地地圖不帶地形（6C-R3，前端依雜湊另外
+    取）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     return WorldView(
@@ -600,7 +603,9 @@ def world_view(
         inventory=_inventory(library, char, in_battle=in_battle),
         shop=shop_view(library, world, char, now, in_battle=in_battle),
         crafting=crafting_view(library, world, char, in_battle=in_battle),
-        field=field_view(library, char, world=world, now=now, social=social),
+        field=field_view(
+            library, char, world=world, now=now, social=social, inline_tiles=inline_tiles
+        ),
         atlas=atlas_view(
             library,
             world,
