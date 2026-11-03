@@ -22,6 +22,7 @@ import { ModePanel } from "../ui/ActionPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { HoverFloat } from "../ui/HoverFloat";
 import { NoticeBanner } from "../ui/NoticeBanner";
+import { PinnedUnitDock } from "../ui/PinnedUnitDock";
 import { phaseNotices } from "../battle/bossPhase";
 import { ResizeHandle } from "../ui/ResizeHandle";
 import { SidePanel } from "../ui/SidePanel";
@@ -359,18 +360,15 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         )}
         {/* 放在召喚物面板之後：CSS 用 `.summon-panel ~ .unit-pin-dock` 讓開右上角 */}
         {dockUnit !== null && (
-          <div className="unit-pin-dock" aria-label="釘選的單位">
-            <UnitInfo
-              unit={dockUnit}
-              names={data.names}
-              heroId={heroId}
-              skills={data.skillNames}
-              cards={cards}
-              view={shown}
-              pinned
-              onTogglePin={() => setPinnedUnit(null)}
-            />
-          </div>
+          <PinnedUnitDock
+            unit={dockUnit}
+            names={data.names}
+            heroId={heroId}
+            skills={data.skillNames}
+            cards={cards}
+            view={shown}
+            onTogglePin={() => setPinnedUnit(null)}
+          />
         )}
       </div>
       <SidePanel
