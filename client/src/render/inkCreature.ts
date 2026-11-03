@@ -796,7 +796,10 @@ function applyFlash(target: HTMLCanvasElement, dpr: number, flash: number, draw:
   const img = b.getImageData(0, 0, body.width, body.height);
   whiteSilhouette(img.data, flash);
   b.putImageData(img, 0, 0);
+  t.save();
+  t.setTransform(1, 0, 0, 1, 0, 0); // 目標畫布已經縮放、平移到腳底：以像素疊回去
   t.drawImage(body, 0, 0);
+  t.restore();
 }
 
 /**

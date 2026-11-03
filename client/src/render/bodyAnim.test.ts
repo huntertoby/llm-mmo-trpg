@@ -6,7 +6,7 @@ import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "./artTextures";
 import { creaturePoseAt, creaturePoseKey, quantizeCreaturePose, whiteSilhouette } from "./creaturePose";
-import { drawCreature, resolveCreature } from "./inkCreature";
+import { drawCreature, renderCreatureCanvas, resolveCreature } from "./inkCreature";
 import type { InkPose } from "./inkPose";
 import { poseKey, PRONE_POSE, proneBody } from "./motionClips";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, FEET, isProne, Pulses } from "./unitSprite";
@@ -102,6 +102,47 @@ describe("6M-3：異形受擊白閃只閃剪影（不能整格變白）", () => 
     expect(late.flash ?? 0).toBe(0);
     expect(creaturePoseKey(start)).toContain("flash");
     expect(creaturePoseKey({})).toBe("");
+  });
+
+  it("renderCreatureCanvas：白色剪影以像素對齊疊回貼圖（先重設變換，不跟著腳底平移、縮放）；沒有白閃時不多畫", () => {
+    const log: string[] = [];
+    const canvases: Array<{ id: number }> = [];
+    const fakeCanvas = () => {
+      const c = { id: canvases.length, width: 0, height: 0, getContext: () => ctx2d(c.id) };
+      canvases.push(c);
+      return c;
+    };
+    const ctx2d = (id: number) =>
+      new Proxy({} as Record<string, unknown>, {
+        get(t, p: string) {
+          if (p in t) return t[p];
+          if (p === "getImageData") return () => ({ data: new Uint8ClampedArray(16) });
+          return (...a: unknown[]) => void log.push(`${id}.${p}(${a.map((x) => (typeof x === "object" && x !== null && "id" in x ? `#${(x as { id: number }).id}` : String(x))).join(",")})`);
+        },
+        set(t, p: string, v) {
+          t[p] = v;
+          return true;
+        },
+      });
+    const g = globalThis as { document?: unknown };
+    const saved = g.document;
+    g.document = { createElement: fakeCanvas };
+    try {
+      const r = resolveCreature({ look: { body: "hound", material: "fur" } });
+      renderCreatureCanvas(r, "east", 2, { flash: 0.85 });
+      const reset = log.indexOf("0.setTransform(1,0,0,1,0,0)");
+      const draw = log.indexOf("0.drawImage(#1,0,0)");
+      expect(reset).toBeGreaterThanOrEqual(0);
+      expect(draw).toBeGreaterThan(reset);
+      expect(log).toContain("1.putImageData([object Object],0,0)");
+      log.length = 0;
+      canvases.length = 0;
+      renderCreatureCanvas(r, "east", 2, null);
+      expect(canvases).toHaveLength(1);
+      expect(log.some((l) => l.includes("drawImage"))).toBe(false);
+    } finally {
+      g.document = saved;
+    }
   });
 });
 
