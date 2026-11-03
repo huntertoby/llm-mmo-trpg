@@ -259,6 +259,7 @@
 | — | 5F-R1：世界事件也不能引用 enemy_only 狀態，需要時另做狀態 | 06 6.35 | 待確認 |
 | — | #120 開發細節（Phase 6）：渡口是短路徑圖；進入一張地圖＝一步，走格子不花東西；巡邏固定路線、前方扇形 4 格、不追擊；背後接觸我方先手、被看到敵方先手；城鎮室內不算一步；潛行到下一張地圖、視野減半；戰後回接觸點、撤退回入口。另更正雲嶺 18 張、共 36 張（原誤寫 21／39） | 21 21.3、21.10 | 待確認 |
 | — | 美術 #32～35（雲嶺實地圖庫）規則面：decor 純裝飾不參與判定；淺水＝水表面、深水＝chasm 換外觀（致命，1～2 級地圖不放在推得到的地方）；buildings 展開成 wall 地形／石柱／可走格；新 ID bamboo_grove（擋路、擋視線、可燃、可破壞、不可推倒）為新功能，boulder、stone_lantern＝low_wall、fence＝crate、地面 path_stones＝grass 地形，都是完全複製、不改規則 | 21、`docs/art/雲嶺實地圖庫.md` | 待確認 |
+| — | 美術 #36（荒原新 ID）：dead_grove＝bamboo_grove、tent／cart＝crate、watchtower＝stone_pillar，完全複製；cooling_well＝新物件（breakable、blocks_move、HP 15、不可推、不可燃，打破時用現有 spill 造水，範圍是十字 5 格，近似 20.6 的 3×3） | 20 20.6 | 待確認 |
 
 ## 4. 還沒處理完的事
 
