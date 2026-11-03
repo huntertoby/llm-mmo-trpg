@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Final
 
 from trpg.api.first_kills import FirstKillRegistry
+from trpg.api.notes import LocationNoteStore
 from trpg.api.offer_prefetch import OfferPrefetcher
 from trpg.api.sessions import BattleSession, SessionStore, StepRecord
 from trpg.content.library import ContentLibrary
@@ -121,6 +122,8 @@ class WorldStore:
         self._battles: dict[str, BattleSession] = {}
         self.first_kills = FirstKillRegistry(library, root)
         """全服首殺紀錄（5E-3）。"""
+        self.notes = LocationNoteStore(root)
+        """地點留言（5E-3，#105；不進日誌）。"""
 
     # -- 路徑 -----------------------------------------------------------------
 

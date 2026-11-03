@@ -13,6 +13,9 @@
   第一次送出即定案）、``…/chat``（和 NPC 自由聊天）；``GET／POST /api/world/llm``（大世界的
   LLM 開關）。
 
+- 5E-3（``docs/phases/Phase5計畫.md`` 30.7）：``GET／POST …/notes``（角色所在地點的留言與足跡、
+  留一則；#105）、``DELETE /api/world/notes/{note_id}``（管理者刪留言）。
+
 - 5E-1（``docs/phases/Phase5計畫.md`` 28.6）：全部端點經 :func:`~trpg.api.auth.require_world_access`
   依帳號存取（開發模式關時要登入；別人的角色 404）；角色列表只列自己的、建立角色先檢查上限再
   歸到帳號。
@@ -25,9 +28,16 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request, Response
 
-from trpg.api.auth import accounts_of, require_admin, require_world_access, viewer
+from trpg.api.auth import (
+    accounts_of,
+    require_admin,
+    require_note_admin,
+    require_world_access,
+    viewer,
+)
+from trpg.api.notes_schemas import LocationBoard, NoteRequest, location_board
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import allocation_preview, flash_preview
 from trpg.api.run_schemas import (
@@ -225,3 +235,30 @@ def post_world_llm(body: WorldLlmRequest, request: Request) -> WorldLlmView:
     store = world_of(request)
     with store.lock:
         return world_llm_of(request).set(body.enabled)
+
+
+@router.get("/characters/{character_id}/notes")
+def get_notes(character_id: str, request: Request) -> LocationBoard:
+    """角色現在所在地點的留言（最新 20 則）與其他角色的足跡（5E-3，#105）。"""
+    store = world_of(request)
+    with store.lock:
+        return location_board(store, store.character(character_id))
+
+
+@router.post("/characters/{character_id}/notes")
+def post_note(character_id: str, body: NoteRequest, request: Request) -> LocationBoard:
+    """在角色現在所在的地點留一則（1～50 字、不能換行；不進世界日誌、不送進 LLM）。"""
+    store = world_of(request)
+    with store.lock:
+        char = store.character(character_id)
+        store.notes.add(char, body.text, store.clock())
+        return location_board(store, char)
+
+
+@router.delete("/notes/{note_id}", status_code=204, dependencies=[Depends(require_note_admin)])
+def delete_note(note_id: str, request: Request) -> Response:
+    """刪一則留言（管理者；#105「使用者手動刪」）。"""
+    store = world_of(request)
+    with store.lock:
+        store.notes.delete(note_id)
+    return Response(status_code=204)

@@ -29,6 +29,7 @@ from trpg.api.gear import GearRequestError
 from trpg.api.llm_health import LlmHealth
 from trpg.api.llm_source import LlmProvider, LocalLlmProvider
 from trpg.api.login_limit import LoginLimiter, LoginRateLimitError
+from trpg.api.notes import NoteError, NoteNotFoundError
 from trpg.api.routes import auth, battles, content, gear, runs, workshop, world
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.server_config import ServerSettings, load_server_settings
@@ -80,6 +81,8 @@ ERROR_STATUS: dict[type[Exception], int] = {
     AccountError: 422,
     LoginRateLimitError: 429,
     AdminRequiredError: 403,
+    NoteNotFoundError: 404,
+    NoteError: 422,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
