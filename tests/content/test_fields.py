@@ -318,7 +318,6 @@ def _cloud_summit_with_stone(raw: Raw) -> None:
     )
 
 
-
 def _cloud_summit_with_campfire(raw: Raw) -> None:
     raw["cloud_summit"] = _open_map(
         "cloud_summit",
@@ -327,6 +326,7 @@ def _cloud_summit_with_campfire(raw: Raw) -> None:
         exits=[_exit("to_crystal_rift", (0, 4), "crystal_rift", "to_cloud_summit")],
         campfires=[{"id": "fire_summit", "at": [2, 2]}],
     )
+
 
 _REPORT_ERROR_CASES: list[tuple[str, Mutate, str]] = [
     # 一條連線＝一對出口
