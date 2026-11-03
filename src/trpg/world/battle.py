@@ -97,9 +97,11 @@ from trpg.world.state import (
     LootSummary,
     WorldState,
 )
+from trpg.world.threads import active_threads
 
 __all__ = [
     "PreparedBattle",
+    "armored",
     "auto_steps",
     "battle_objective",
     "battle_xp",
@@ -339,6 +341,37 @@ def _hero_spawn(
     )
 
 
+def armored(
+    library: ContentLibrary,
+    char: CharacterState,
+    encounter: EncounterResult,
+    templates: Sequence[UnitTemplate],
+) -> tuple[UnitTemplate, ...]:
+    """遭遇表地點的護甲調整（Phase 5F-5a，``armor_mods``；灰燼之心）：陣容中該單位的護甲加上符合的
+    總和（世界旗標看遇敵當下、線頭看遇敵時刻 ``at`` 還有效的個人線頭、劇情旗標看角色），結果不低於
+    0。賽季 Boss、沒有遭遇表或沒寫時原樣。不耗亂數。"""
+    if encounter.season_boss is not None:
+        return tuple(templates)
+    table = library.world_encounters.get(encounter.region)
+    entry = None if table is None else table.location_by_id().get(encounter.location)
+    mods = None if entry is None else entry.armor_mods
+    if mods is None:
+        return tuple(templates)
+    delta = mods.total(
+        world_flags=encounter.world_flags,
+        story_flags=char.story_flags,
+        threads={t.thread for t in active_threads(char.threads, encounter.at)},
+    )
+    if delta == 0:
+        return tuple(templates)
+    return tuple(
+        t.model_copy(update={"armor_bonus": max(0, t.armor_bonus + delta)})
+        if t.id == mods.unit
+        else t
+        for t in templates
+    )
+
+
 def season_boss_lineup(library: ContentLibrary, encounter: EncounterResult) -> EncounterLineup:
     """賽季 Boss 的陣容（Phase 5F-3）：``season_boss.units`` 依序（第一個是本體）。"""
     boss = boss_def(library)
@@ -381,7 +414,7 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     extra: dict[str, SkillDef] = {}
     # 第三方（5B-M3 三方混戰）照同一等級成長，排在敵方之後
     sides = (
-        (Team.ENEMY, lineup_templates(library, lineup)),
+        (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, lineup))),
         (Team.THIRD, lineup_templates(library, lineup, third=True)),
     )
     for team, templates in sides:

@@ -248,7 +248,7 @@ def _battle_matches(library: ContentLibrary, goal: GoalSpec, battle: BattleStart
         place = world_map_of(library, battle.region).location_by_id().get(battle.location)
         if place is None or place.kind not in goal.location_kinds:
             return False
-    return True
+    return not goal.locations or battle.location in goal.locations
 
 
 def _quest_matches(library: ContentLibrary, goal: GoalSpec, event: QuestStepDoneEvent) -> bool:

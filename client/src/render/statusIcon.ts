@@ -379,6 +379,31 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[1, -8], [6, 0], [1, 8]]);
     line(c, [[0, -6], [2, -1], [-2, 2], [0, 6]]);
   },
+  // 熔核爆裂（Phase 5F-5a，熔岩獸倒下時留下火）：碎片＋火苗，只用既有筆畫
+  molten_burst: (c) => {
+    star(c, -5, -4, 3.5);
+    star(c, 5, -4, 3.5);
+    flame(c, 0, 4, 7);
+  },
+  // 寒燼爆裂（Phase 5F-5a，寒燼蜥倒下時留下冰面）：碎片＋雪花的三條線
+  frost_ember_burst: (c) => {
+    star(c, -5, -5, 3.5);
+    star(c, 5, -5, 3.5);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI;
+      line(c, [[Math.cos(a) * -5, 4 + Math.sin(a) * -5], [Math.cos(a) * 5, 4 + Math.sin(a) * 5]]);
+    }
+  },
+  // 熔殼（Phase 5F-5a，灰燼之心第 1 階段：受到的傷害降低、被冰打碎）：圓殼裡一團火
+  molten_shell: (c) => {
+    circle(c, 0, 0, 8.5);
+    flame(c, 0, 2, 7);
+  },
+  // 硬殼（Phase 5F-5a，詞綴硬殼的：開場 2 回合傷害減半）：兩層弧形外殼
+  hard_shell: (c) => {
+    line(c, [[-8, 4], [-5, -4], [0, -7], [5, -4], [8, 4]]);
+    line(c, [[-5, 6], [-3, 0], [0, -2], [3, 0], [5, 6]]);
+  },
   // 連心（Phase 5A-M2，把傷害分給相鄰同伴）：兩個圓以一條線相連
   heart_link: (c) => {
     circle(c, -5, 0, 4);

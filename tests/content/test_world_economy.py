@@ -20,7 +20,7 @@ from trpg.content.world_economy import (
 )
 from trpg.shared.errors import ContentError
 
-REGIONS = {"cloud_ridge"}
+REGIONS = {"cloud_ridge", "ashen_waste"}  # 5F-5a：荒原材料標了區域
 NPCS = {"cloud_ridge": {"shopkeeper_liu"}}
 
 

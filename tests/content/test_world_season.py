@@ -44,7 +44,15 @@ def test_first_season_loaded(library: ContentLibrary, season: SeasonContent) -> 
     assert season.days == 14  # 09 9.7
     assert season.schedule[0].days == (1, 3)
     assert season.phase_on(8) is not None and season.phase_on(8).id == "act3"  # type: ignore[union-attr]
-    assert {b.id for b in season.bounties} == {"north_wolf_king", "mist_swordsman", "scarface"}
+    assert {b.id for b in season.bounties} == {
+        "north_wolf_king",
+        "mist_swordsman",
+        "scarface",
+        # 5F-5a：灰燼荒原（19.8）
+        "furnace_overseer",
+        "molten_lord",
+        "frost_ember_king",
+    }
     assert season.daily_goals is not None and season.daily_goals.count == 3
     event = season.event_by_id()["mist_tide"]
     assert event.goal.weather == ("fog",) and event.goal.count == 30
@@ -121,7 +129,7 @@ def test_season_boss_loaded(season: SeasonContent) -> None:
     assert boss.daily_attempts == 3 and boss.unlock.announce_hours == 24
     assert boss.score.score(rounds=10, survivors=3, no_down=True) == 1000 - 200 + 300 + 200
     assert boss.score.score(rounds=99, survivors=0, no_down=False) == 0
-    assert [s.id for s in season.seal_keys.sources] == ["summit_boss", "bounty"]
+    assert [s.id for s in season.seal_keys.sources] == ["summit_boss", "heart_pit_boss", "bounty"]
     assert season.event_by_id()["seal_resonance"].goal.kind == "seal_key"
 
 
@@ -132,7 +140,7 @@ def test_season_boss_loaded(season: SeasonContent) -> None:
         (lambda d: d["season_boss"]["unlock"].update(close_day=15), "超過賽季天數"),
         (lambda d: d["season_boss"]["unlock"].update(flag="nope"), "不是任何世界事件"),
         (lambda d: d["milestones"][2].update(day=9), "boss_earliest"),
-        (lambda d: d["seal_keys"]["sources"][1].update(unit="bandit"), "只有 elite_first_kill"),
+        (lambda d: d["seal_keys"]["sources"][-1].update(unit="bandit"), "只有 elite_first_kill"),
         (lambda d: d["season_boss"].update(units=[]), "at least 1"),
     ],
 )

@@ -2661,6 +2661,79 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "molten_burst",
+   "name_zh": "熔核爆裂",
+   "description_zh": "倒下時體內的熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "frost_ember_burst",
+   "name_zh": "寒燼爆裂",
+   "description_zh": "倒下時體內冷卻的灰燼爆開，在原地留下一片維持 2 回合的冰面。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "molten_shell",
+   "name_zh": "熔殼",
+   "description_zh": "熔岩甲蟲堆成的外殼：受到的傷害大幅降低。被冰打到時外殼冷卻碎裂。不能被淨化、驅散或奪取。",
+   "tags": [],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [
+     "ice"
+    ],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×60%",
+    "受到冰霜傷害時立即解除"
+   ]
+  },
+  {
+   "id": "hard_shell",
+   "name_zh": "硬殼",
+   "description_zh": "硬殼還沒被敲裂：受到的骰值傷害大幅降低。不能被淨化、驅散或奪取。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×50%"
+   ]
   }
  ],
  "stacks": [

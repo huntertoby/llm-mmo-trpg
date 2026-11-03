@@ -1,0 +1,26 @@
+# 熔岩獸群的「啃咬點燃」（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.1 餘燼蜥、19.2.2 熔晶魅「碰到就點燃」、
+# 詞綴「熾熱的」）。手寫被動「餘燼烙印」不放在單位身上（tests/content/test_skill_triggers_content.py），所以另做一招近戰點燃。
+# 只給敵人用；數值為初值，未經模擬。
+id: skill_ember_bite
+schema_version: 1
+name_zh: 餘燼啃咬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  - {type: apply_status, status: burning, duration: 3}
+condition: null
+cost: {stamina: 10, cooldown: 1}
+tags: [fire, melee]
+narrative:
+  concept: 一口咬下去，背上的裂縫噴出火星，傷口跟著燒了起來
+  cast_flavor: 牠張開發紅的嘴，熱氣撲面而來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
