@@ -126,13 +126,13 @@
   overflow: hidden;
 }
 
-.world-event-art-icon {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  transform: translate(-50%, -50%);
-  opacity: 0.85;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+/* 6C-ART2：程式畫的事件插圖（364×156）照卡寬等比縮放；圖片還沒畫好（沒有 DOM）時是深色底。 */
+.world-event-art.drawn {
+  height: auto;
+  aspect-ratio: 364 / 156;
+  border-radius: 12px;
+  background-color: #1e1a16;
+  background-size: 100% 100%;
 }
 
 .world-event-art-title {

@@ -16,6 +16,7 @@ region: cloud_ridge
 skeletons:
   - id: wounded_peddler
     number: 1
+    art: villager
     who_zh: 受傷的行商
     want_zh: 回霧渡鎮
     obstacle_zh: 霧狼群
@@ -30,6 +31,7 @@ skeletons:
       - {id: wolves_driven_down, text_zh: 狼群是被趕下山的, aliases_zh: [趕下山]}
   - id: lost_acolyte
     number: 2
+    art: villager
     who_zh: 迷路的道童
     want_zh: 回青霧觀
     obstacle_zh: 霧太濃
@@ -43,6 +45,7 @@ skeletons:
       - {id: temple_quarrel, text_zh: 道童提到觀裡在吵架, npc: acolyte_xiaolian, aliases_zh: [吵架]}
   - id: gang_toll
     number: 3
+    art: ambush
     who_zh: 斷崖幫哨兵
     want_zh: 收過路費
     obstacle_zh: 你
@@ -62,6 +65,7 @@ skeletons:
         on_expire_flag: scarface_rises
   - id: pine_elder_go
     number: 4
+    art: villager
     who_zh: 古松下的老人
     want_zh: 有人陪他下一盤棋
     obstacle_zh: 他說話打啞謎
@@ -74,6 +78,7 @@ skeletons:
       - {id: storm_night_fog, text_zh: 雷雨夜的霧最濃（隱藏配方提示）, aliases_zh: [雷雨夜]}
   - id: cliff_lingzhi
     number: 5
+    art: chest
     who_zh: 煉丹師
     want_zh: 採到崖上的靈芝
     obstacle_zh: 峭壁
@@ -86,6 +91,7 @@ skeletons:
       - {id: alchemist_owes_you, text_zh: 煉丹師欠你人情, aliases_zh: [煉丹師]}
   - id: monks_dispute
     number: 6
+    art: villager
     who_zh: 兩名修士
     want_zh: 爭論要不要把源晶交給官府
     obstacle_zh: 彼此
@@ -104,6 +110,7 @@ skeletons:
         on_expire_flag: temple_traitor_strikes
   - id: gang_deserter
     number: 7
+    art: ambush
     who_zh: 盜賊逃兵
     want_zh: 脫離斷崖幫
     obstacle_zh: 追兵
@@ -117,6 +124,7 @@ skeletons:
       - {id: gang_fort_secret_door, text_zh: 斷崖幫寨的暗門（隱藏入口）, aliases_zh: [暗門]}
   - id: possessed_hunter
     number: 8
+    art: anomaly
     who_zh: 被霧魅附身的獵人
     want_zh: 被救回來
     obstacle_zh: 霧魅
@@ -136,6 +144,7 @@ skeletons:
         on_expire_seconds: 172800       # 2 天（現實時間，同線頭到期）
   - id: broken_ferry
     number: 9
+    art: villager
     who_zh: 渡船夫
     want_zh: 修好被砸的渡船
     obstacle_zh: 缺材料
@@ -149,6 +158,7 @@ skeletons:
       - {id: ferryman_daughter, text_zh: 渡船夫的女兒在觀裡, aliases_zh: [渡船夫的女兒, 船夫的女兒]}
   - id: bear_den
     number: 10
+    art: ambush
     who_zh: 石背熊母子
     want_zh: 守住巢穴
     obstacle_zh: 你闖入
@@ -163,6 +173,7 @@ skeletons:
       - {id: shards_under_den, text_zh: 熊巢下有源晶碎片, aliases_zh: [熊巢下, 熊巢]}
   - id: crane_envoy
     number: 11
+    art: villager
     who_zh: 雲鶴使
     want_zh: 確認你不是盜賊
     obstacle_zh: 他在高處瞄準你
@@ -175,6 +186,7 @@ skeletons:
       - {id: temple_pass, text_zh: 青霧觀的通行令, aliases_zh: [通行令]}
   - id: storm_altar
     number: 12
+    art: altar
     who_zh: 雷雨中的古松祭壇
     want_zh: （異象）
     obstacle_zh: 雷擊
@@ -191,6 +203,7 @@ skeletons:
       - {kind: situation, attributes: [con], note_zh: 硬撐}
   - id: tomb_sword
     number: 13
+    art: stele
     who_zh: 劍冢的殘劍
     want_zh: 被拔出
     obstacle_zh: 劍陣殘留
@@ -203,6 +216,7 @@ skeletons:
       - {id: swordsman_seeks_blade, text_zh: 霧中劍客在找這把劍, aliases_zh: [霧中劍客, 劍客]}
   - id: shard_convoy
     number: 14
+    art: caravan
     who_zh: 盜賊押送隊
     want_zh: 把源晶碎片運出山
     obstacle_zh: 你
@@ -221,6 +235,7 @@ skeletons:
         on_expire_flag: ashen_heart_hardened   # 5B-4c：永久世界旗標；灰燼之心與荒原骨架 13 在 5F 接上
   - id: poison_spring
     number: 15
+    art: trap
     who_zh: 藥師谷的毒泉
     want_zh: （遺跡）
     obstacle_zh: 毒霧
@@ -232,6 +247,7 @@ skeletons:
       - {kind: situation, attributes: [int], note_zh: 配解藥}
   - id: tavern_storyteller
     number: 16
+    art: camp
     who_zh: 酒館的說書人
     want_zh: 有人講一段新故事
     obstacle_zh: ""
@@ -243,6 +259,7 @@ skeletons:
       - {id: tavern_rumor, text_zh: 隨機傳聞（機遇或隱藏地點）}
   - id: lantern_patrol
     number: 17
+    art: ambush
     who_zh: 夜裡的燈籠隊
     want_zh: 找失蹤的鎮民
     obstacle_zh: 霧與霧行者
@@ -257,6 +274,7 @@ skeletons:
       - {id: missing_went_to_rift, text_zh: 失蹤的人都去過裂痕, aliases_zh: [失蹤]}
   - id: fox_traveler
     number: 18
+    art: caravan
     who_zh: 狐族旅人
     want_zh: 換一點補給
     obstacle_zh: 她不信任人類
@@ -272,6 +290,7 @@ skeletons:
         hints_location: crane_cliff
   - id: ayue_request
     number: 19
+    art: ambush
     who_zh: 阿岳
     want_zh: 一起打一頭山豹
     obstacle_zh: 山豹躲在草叢
@@ -287,6 +306,7 @@ skeletons:
       - {id: ayue_father_relic, text_zh: 阿岳提起父親的遺物, npc: hunter_ayue, aliases_zh: [父親的遺物, 遺物]}
   - id: runaway_furnace
     number: 20
+    art: trap
     who_zh: 失控的丹爐
     want_zh: （遺跡）
     obstacle_zh: 毒霧爆發
@@ -297,6 +317,7 @@ skeletons:
       - {kind: situation, attributes: [int], note_zh: 學識（關火）}
   - id: frost_chime_riddle
     number: 21
+    art: stele
     who_zh: 白狐霜音
     want_zh: 有人答出她的謎
     obstacle_zh: 她只用問句說話
@@ -312,6 +333,7 @@ skeletons:
   # 18.7.7 信賴後的祕密事件（5B-4b）：渡婆婆到信賴、說出祕密時解鎖；事件結果才給線頭（#85）
   - id: granny_past
     number: 22
+    art: villager
     who_zh: 渡婆婆
     want_zh: 有人替她了結斷崖幫的舊帳
     obstacle_zh: 她不肯明說

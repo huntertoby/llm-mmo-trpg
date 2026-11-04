@@ -1,6 +1,6 @@
 // 事件卡（Phase 5B-5；09 9.6.7 #6、#7、9.6.4）：旁白、解法按鈕、情境判定的輸入與結果。
 // 6C-7 去文字化（21.7、docs/art/HUD版面.md 5.7）：
-// - 上方一張插圖（`art_url`；插圖還沒有時畫場景色塊＋圖示），地名一行；
+// - 上方一張插圖（`art_url`；沒有時畫事件插圖，6C-ART2 `render/eventArt.ts`），地名一行；
 // - 說書人敘事改成對話框（頭像＋一段字），一次一段，按一下下一段，「多講一點」維持；
 // - 選項前面加圖示（戰鬥、說服、潛行、調查……），文字只留一行，原本的整句收進說明卡；
 // - 情境判定：DC 用骰子圖示＋數字、屬性用圖示，方法與加值來源收進說明；引用的事實收進「線索」圖示；
@@ -12,6 +12,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
+import { eventArtBg, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
 import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, solutionLine, SOLUTION_ICON_ZH, type Outcome } from "./narration";
@@ -38,38 +39,27 @@ export function StoryBlock({ story, testId = "world-story" }: { story: WorldStor
   );
 }
 
-/** 插圖還沒有時的場景色塊（依骨架 ID 固定挑一組，確定性）。 */
-const SCENES: readonly (readonly [string, string])[] = [
-  ["#3a5a4a", "#1e2e28"],
-  ["#5a4a3a", "#2a2018"],
-  ["#3a4a6a", "#1a2030"],
-  ["#6a3a2a", "#2a1810"],
-  ["#4a3a5a", "#201828"],
-];
-
-/** 字串的 FNV-1a 32 位雜湊（挑場景色用；不依賴內建 hash）。 */
-export function sceneIndex(id: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < id.length; i += 1) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h % SCENES.length;
-}
-
+/**
+ * 上方插圖（6C-ART2）：`art_url` 有值時仍優先用圖片；否則畫事件插圖（場景照 `art`，沒寫照第一個不是放棄的
+ * 選項的圖示挑；背景依區域），離屏畫好的圖片網址依（場景、背景）快取。
+ */
 function EventArt({ event }: { event: WorldEventView }) {
-  const lead = event.solutions.find((s) => s.kind !== "abandon") ?? event.solutions[0];
-  const icon = lead !== undefined ? solutionIcon(lead) : "investigate";
-  const [top, bottom] = SCENES[sceneIndex(event.skeleton)]!;
-  const art = event.art_url ?? null;
-  const style: CSSProperties = art !== null ? { backgroundImage: `url(${art})` } : { background: `linear-gradient(180deg, ${top}, ${bottom})` };
+  const url = event.art_url ?? null;
+  const scene = eventArtScene(event);
+  const bg = eventArtBg(event.region);
+  const drawn = url === null ? eventArtUrl(scene, bg) : null;
+  const src = url ?? drawn;
+  const style: CSSProperties = src !== null ? { backgroundImage: `url(${src})` } : {};
   return (
-    <div className="world-event-art" style={style} data-testid="world-event-art" data-art={art !== null ? "image" : "scene"}>
-      {art === null && (
-        <span className="world-event-art-icon" aria-hidden="true">
-          <SolutionGlyph icon={icon} size={44} />
-        </span>
-      )}
+    <div
+      className={`world-event-art${url === null ? " drawn" : ""}`}
+      style={style}
+      data-testid="world-event-art"
+      data-art={url !== null ? "image" : "scene"}
+      data-scene={url === null ? scene : undefined}
+      data-bg={url === null ? bg : undefined}
+      title={url === null ? SCENES[scene].zh : undefined}
+    >
       <div className="world-event-art-title">
         <Hint text={`${event.actor_zh}：${event.motive_zh}`}>
           <b tabIndex={0}>{event.location_name_zh}</b>

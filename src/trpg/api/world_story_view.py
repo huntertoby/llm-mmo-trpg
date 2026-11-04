@@ -398,6 +398,8 @@ def event_view(
             if situation is not None
             else None
         ),
+        art=skeleton.art,  # 6C-ART2：只畫
+        region=char.region,
     )
 
 

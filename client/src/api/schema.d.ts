@@ -3560,6 +3560,10 @@ export interface components {
             situation?: components["schemas"]["SituationView"] | null;
             /** Art Url */
             art_url?: string | null;
+            /** Art */
+            art?: string | null;
+            /** Region */
+            region?: string | null;
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
