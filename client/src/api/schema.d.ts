@@ -3582,6 +3582,8 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+            /** Sign */
+            sign?: ("jar" | "anvil" | "scroll") | null;
         };
         /** FieldDoorView */
         FieldDoorView: {

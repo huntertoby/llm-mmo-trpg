@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from tests.world.helpers import hero
-from trpg.api.world_field_view import field_view
+from trpg.api.world_field_view import _buildings, field_view
 from trpg.content.library import ContentLibrary, load_library
 from trpg.world.state import FieldPos
 from trpg.world.step import new_character
@@ -36,3 +36,36 @@ def test_buildings_and_looks_in_view(real_library: ContentLibrary) -> None:
         (o.at[0], o.at[1], o.kind, o.look) for o in tavern.objects
     ]
     assert {o.look for o in room.objects} == {"bar", "table"}
+
+
+def test_building_signs_follow_interior(real_library: ContentLibrary) -> None:
+    """招牌照門通往的室內設施（6D-ART2；開發 PM 補充 2）：沒有門＝沒有招牌。"""
+    lib = real_library
+    char = new_character(lib, "alice", hero(lib), region="cloud_ridge")
+    view = field_view(lib, char)
+    assert view is not None and view.map_id == "mist_ferry"
+    assert [b.sign for b in view.buildings] == ["jar", "anvil", None, None]
+
+    def signs(map_id: str) -> list[tuple[str, str | None]]:
+        return [(b.kind, b.sign) for b in _buildings(lib, lib.field_maps[map_id])]
+
+    assert signs("mist_ferry") == [
+        ("tavern", "jar"),
+        ("smithy", "anvil"),
+        ("hall", None),
+        ("house", None),
+    ]
+    assert signs("ember_market") == [
+        ("scrap_house", "jar"),
+        ("forge_house", "anvil"),
+        ("scrap_house", None),
+        ("scrap_house", None),
+    ]
+    assert signs("capital") == [
+        ("mentor_hall", "scroll"),
+        ("stone_hall", "jar"),
+        ("stone_hall", "anvil"),
+        ("tent", None),
+        ("tent", None),
+        ("fountain", None),
+    ]

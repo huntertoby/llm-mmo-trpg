@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Final
+from typing import Final, Literal
 
 from trpg.api.world_field_people import ALERT_ZH, friends_here, look_of, npc_marks
 from trpg.api.world_field_schemas import (
@@ -30,7 +30,7 @@ from trpg.api.world_field_schemas import (
     FieldView,
 )
 from trpg.api.world_field_things import FieldSocial, things_update
-from trpg.content.fields import FieldMapDef
+from trpg.content.fields import FieldBuilding, FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import WorldEvent
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
@@ -199,6 +199,46 @@ def _doors(
             FieldDoorView(id=door.id, x=door.at[0], y=door.at[1], to=door.to, to_name_zh=name)
         )
     return tuple(out)
+
+
+_SIGN_ORDER: Final[tuple[tuple[frozenset[str], Literal["jar", "anvil", "scroll"]], ...]] = (
+    (frozenset({"mentor"}), "scroll"),
+    (frozenset({"smithy", "enchanter"}), "anvil"),
+    (frozenset({"tavern"}), "jar"),
+)
+"""室內設施 → 招牌圖示；先比對的優先（同前端 ``roomKindOf``：導師 ＞ 鐵匠或附魔 ＞ 酒館）。"""
+
+
+def _building_sign(
+    library: ContentLibrary, found: FieldMapDef, building: FieldBuilding
+) -> Literal["jar", "anvil", "scroll"] | None:
+    """建築範圍內的門（依座標排序的第一扇有室內的）通往的室內設施 → 招牌（6D-ART2；只畫）。"""
+    cells = set(building.cells())
+    for door in sorted(found.doors, key=lambda d: (d.at[1], d.at[0])):
+        if door.at not in cells:
+            continue
+        inner = field_map(library, door.to)
+        if inner is None:
+            continue
+        kinds = {f.id for f in inner.facilities}
+        for need, sign in _SIGN_ORDER:
+            if kinds & need:
+                return sign
+    return None
+
+
+def _buildings(library: ContentLibrary, found: FieldMapDef) -> tuple[FieldBuildingView, ...]:
+    return tuple(
+        FieldBuildingView(
+            kind=b.kind,
+            x=b.at[0],
+            y=b.at[1],
+            width=b.size[0],
+            height=b.size[1],
+            sign=_building_sign(library, found, b),
+        )
+        for b in found.buildings
+    )
 
 
 def _hero(library: ContentLibrary, char: CharacterState) -> FieldHeroView:
@@ -377,10 +417,7 @@ def field_view(
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
         friends=friends_here(library, world, char, found, grid),
-        buildings=tuple(
-            FieldBuildingView(kind=b.kind, x=b.at[0], y=b.at[1], width=b.size[0], height=b.size[1])
-            for b in found.buildings
-        ),
+        buildings=_buildings(library, found),
     )
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5

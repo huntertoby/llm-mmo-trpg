@@ -199,14 +199,36 @@ BUILDING_KINDS: tuple[str, ...] = (
     "house",
     "scrap_house",
     "forge_house",
+    "stone_hall",
+    "mentor_hall",
+    "tent",
+    "fountain",
 )
-"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的種類是
-6D-ART2 的事；不認得的 ``kind`` 前端退回 ``house``（``content check`` 列為警告）。"""
+"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的
+``stone_hall``、``mentor_hall``、``tent``、``fountain`` 是 6D-ART2（需求第 2 節）；不認得的 ``kind``
+前端退回 ``house``（``content check`` 列為警告）。"""
+
+WATER_BUILDINGS: frozenset[str] = frozenset({"fountain"})
+"""可以蓋在水表面上的建築外觀（6D-ART2：許願池的噴水池）：範圍內每一格是牆、門或水表面。"""
 
 type ObjectLook = Literal[
-    "barrel", "table", "bar", "counter", "anvil", "forge", "candle", "crystal_statue", "shelf"
+    "barrel",
+    "table",
+    "bar",
+    "counter",
+    "anvil",
+    "forge",
+    "candle",
+    "crystal_statue",
+    "shelf",
+    "crystal_lamp",
+    "stele",
+    "sky_bridge",
 ]
-"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。"""
+"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。
+``crystal_lamp``（源晶燈）、
+``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的浮橋）是
+6D-ART2。"""
 
 OBJECT_LOOKS: tuple[str, ...] = (
     "barrel",
@@ -218,13 +240,17 @@ OBJECT_LOOKS: tuple[str, ...] = (
     "candle",
     "crystal_statue",
     "shelf",
+    "crystal_lamp",
+    "stele",
+    "sky_bridge",
 )
 
 
 class FieldBuilding(ContentModel):
     """建築外觀（6B-ART1；只畫）：疊在既有的牆格上，牆照舊寫在 ``terrain``，規則完全不變。
 
-    ``at`` 是左上角、``size`` 是寬高（格）；範圍內每一格都要是 ``wall`` 地形或門的格子，
+    ``at`` 是左上角、``size`` 是寬高（格）；範圍內每一格都要是 ``wall`` 地形或門的格子
+    （``fountain`` 也可以是水表面），
     不可蓋到出口（不採用代決 #34 的「載入時展開成牆」）。"""
 
     kind: str = Field(pattern=ID_PATTERN)
@@ -597,6 +623,7 @@ class FieldMapDef(ContentModel):
         terrain = [[t for _h, t in row] for row in self.grid()]
         doors = {d.at for d in self.doors}
         exits = {c for e in self.exits for c in e.at}
+        water = {s.at for s in self.surfaces if s.surface == "water"}
         owner: dict[XY, int] = {}
         out: list[str] = []
         for i, b in enumerate(self.buildings):
@@ -606,10 +633,11 @@ class FieldMapDef(ContentModel):
                 out.append(f"{name} 超出地圖範圍")
                 continue
             out += [f"{name} 蓋到出口的 {list(c)}" for c in cells if c in exits]
+            allowed = doors | (water if b.kind in WATER_BUILDINGS else set())
             out += [
                 f"{name} 的 {list(c)} 不是牆也不是門"
                 for c in cells
-                if c not in exits and c not in doors and terrain[c[1]][c[0]] != "wall"
+                if c not in exits and c not in allowed and terrain[c[1]][c[0]] != "wall"
             ]
             for c in cells:
                 if c in owner:
