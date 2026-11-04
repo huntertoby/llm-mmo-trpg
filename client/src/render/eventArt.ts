@@ -22,6 +22,7 @@ import {
   glow,
   ground,
   hornAltar,
+  BADGE_ICON_INK,
   ICON,
   type IconId,
   mistWisp,
@@ -347,7 +348,7 @@ export function drawEventArt(ctx: Ctx, scene: EventArtId, bg: EventArtBg): void 
   ctx.strokeStyle = "#c8a868";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  ICON[s.icon](ctx, 21, 20, 13);
+  ICON[s.icon](ctx, 21, 20, 13, BADGE_ICON_INK);
   ctx.fillStyle = "#f2e6c8";
   ctx.textBaseline = "middle";
   ctx.fillText(s.zh, 32, 21);

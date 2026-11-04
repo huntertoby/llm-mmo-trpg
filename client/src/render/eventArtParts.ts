@@ -201,10 +201,14 @@ export function ashObj(ctx: Ctx, kind: "dead_tree" | "grass" | "crate", x: numbe
 // ---------------- 圖示（小牌、泡泡共用；explore.js 的 ICON＋hud.js 的 notes、warn） ----------------
 
 export type IconId = "coin" | "sword" | "bang" | "ask" | "rest" | "portal" | "scroll" | "notes" | "warn";
-type IconDraw = (ctx: Ctx, x: number, y: number, s: number) => void;
+/** 第 5 個參數 `ink`：黑色圖示（驚嘆號、問號）改用的顏色；彩色圖示不理它。 */
+type IconDraw = (ctx: Ctx, x: number, y: number, s: number, ink?: string) => void;
 
-const bang: IconDraw = (ctx, x, y, s) => {
-  ctx.fillStyle = OUT;
+/** 事件插圖小牌（深底）上黑色圖示改用的淺色（6C-ART3 順手項）。 */
+export const BADGE_ICON_INK = "#f2e6c8";
+
+const bang: IconDraw = (ctx, x, y, s, ink = OUT) => {
+  ctx.fillStyle = ink;
   ctx.fillRect(x - s * 0.12, y - s * 0.5, s * 0.24, s * 0.65);
   ctx.fillRect(x - s * 0.12, y + s * 0.3, s * 0.24, s * 0.22);
 };
@@ -238,15 +242,15 @@ export const ICON: Readonly<Record<IconId, IconDraw>> = {
     ctx.stroke();
   },
   bang,
-  ask(ctx, x, y, s) {
-    ctx.strokeStyle = OUT;
+  ask(ctx, x, y, s, ink = OUT) {
+    ctx.strokeStyle = ink;
     ctx.lineWidth = s * 0.22;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.arc(x, y - s * 0.18, s * 0.28, Math.PI * 1.05, Math.PI * 0.45);
     ctx.lineTo(x, y + s * 0.18);
     ctx.stroke();
-    dot(ctx, x, y + s * 0.45, s * 0.12, OUT);
+    dot(ctx, x, y + s * 0.45, s * 0.12, ink);
   },
   rest(ctx, x, y, s) {
     ctx.fillStyle = "#ff8a2a";

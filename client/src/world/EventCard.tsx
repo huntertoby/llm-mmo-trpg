@@ -119,7 +119,7 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
                   data-kind={s.kind}
                   data-icon={icon}
                 >
-                  <SolutionGlyph icon={icon} />
+                  <SolutionGlyph icon={icon} size={24} />
                   <span className="world-solution-line">{solutionLine(s)}</span>
                   {s.kind === "parley" && s.cost_supplies > 0 && <span className="world-solution-cost small">−{s.cost_supplies} 補給</span>}
                 </button>
@@ -169,7 +169,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   return (
     <div className="world-situation" data-testid="world-situation">
       <div className="world-situation-head">
-        <SolutionGlyph icon={icon} />
+        <SolutionGlyph icon={icon} size={24} />
         <b className="world-situation-note">{situation.note_zh}</b>
         <Hint text={`基準難度 ${situation.base_dc}（引用的線索、種族會調整）`}>
           <span className="world-dc" tabIndex={0} data-testid="world-dc" data-dc={situation.base_dc}>

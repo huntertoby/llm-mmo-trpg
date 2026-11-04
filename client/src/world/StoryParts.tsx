@@ -1,12 +1,13 @@
 // 說書人文字與擲骰的元件（Phase 6C-7；21.7、docs/art/HUD版面.md 5.7）：
 // - `NarratorSubtitle`：畫面上方一行字幕，幾秒後淡出；點「多講一點」看完整旁白（展開時不淡出）；
 // - `StoryDialog`：對話框（頭像＋一段字），一次一段，按一下播下一段；最後一段有「多講一點」就接上補充；
-// - `DiceRoll`：兩顆 d20 的動畫，結束時標出用的那一顆，結果用顏色表示。
+// - `DiceRoll`：兩顆 d20 的動畫（6C-ART3 墨線版，翻滾時不寫字），結束時標出用的那一顆，結果用顏色表示（自然 20 金、自然 1 灰）。
 // 「（模板文字）」改成角落的小圖示（說明卡寫原本的字）。
 import { useEffect, useState } from "react";
 import type { NpcPortrait, WorldStory } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { canMore, dialogMore, dialogNext, dialogStart, diceFrame, DICE_MS, DICE_TICK_MS, hasNext, OUTCOME_COLOR, subtitleHasMore, subtitleLine, subtitlePhase, SUBTITLE_FADE_MS, SUBTITLE_MS, type Outcome } from "./narration";
+import { usedDieColor } from "../render/storyIconArt";
 import { D20, MiscGlyph, Portrait } from "./StoryIcons";
 import "./story.css";
 
@@ -112,6 +113,9 @@ export function StoryDialog({ story, speaker, portrait, region, testId = "world-
   );
 }
 
+/** 擲骰動畫的骰子大小（需求：64px；翻滾時不寫字，停下才寫點數）。 */
+const DIE_PX = 64;
+
 interface DiceProps {
   dice: readonly number[];
   roll: number;
@@ -140,7 +144,7 @@ export function DiceRoll({ dice, roll, outcome, elapsed }: DiceProps) {
         const used = frame.used === i;
         return (
           <span key={i} className={`world-die${used ? " used" : frame.done ? " unused" : ""}`} data-testid="world-die" data-face={f} style={used ? { filter: `drop-shadow(0 0 4px ${color})` } : undefined}>
-            <D20 size={42} value={f} color={used ? color : "#f2e6c8"} />
+            <D20 size={DIE_PX} value={frame.done ? f : undefined} color={used ? usedDieColor(f, color) : undefined} />
           </span>
         );
       })}
