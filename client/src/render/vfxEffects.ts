@@ -3,7 +3,8 @@
 // 的效果迴圈銷毀。座標一律是模型像素；格子中心由呼叫端的 `at` 給（3-19 起含高度抬高，預設 `tileCenter`）。
 import { Container, Graphics } from "pixi.js";
 import type { Pos } from "../api/types";
-import { chebyshev, type VfxBlast, type VfxCast, type VfxHit, type VfxWarp } from "../battle/vfx";
+import { chebyshev, type VfxBlast, type VfxCast, type VfxHit, type VfxShake, type VfxWarp } from "../battle/vfx";
+import { shakeOffset } from "../battle/impact";
 import { jitter, particleAt, type ElementVfx, type ParticleKind } from "../battle/vfxPalette";
 import { paletteOf } from "./statusVfx";
 import { TILE_SIZE, tileCenter } from "../battle/geometry";
@@ -27,6 +28,8 @@ export interface Effect {
   update(t: number): void;
   end?(): void;
   motion?: MotionTag;
+  /** 6H-1：`real` ＝ 照實際時間走（傷害數字：停頓、最後一擊放慢時照常速）；省略 ＝ 照效果時鐘。 */
+  clock?: "real";
 }
 
 type Pt = { x: number; y: number };
@@ -471,9 +474,12 @@ export function blastEffect(blast: VfxBlast, now: number, impactMs: number, at: 
   return burstEffect(blast.pos, paletteOf(blast.element), now + blast.atMs, impactMs, 1.3, 1.2, at);
 }
 
-/** 畫面震動：振幅隨時間遞減；`apply` 設定場景位移，結束時歸零。 */
-export function shakeEffect(level: 1 | 2, startMs: number, durationMs: number, apply: (x: number, y: number) => void): Effect {
-  const amp = level === 2 ? 7 : 3;
+/**
+ * 畫面震動：振幅 `px`（畫面像素）隨時間遞減；`apply` 設定場景位移，結束時歸零。
+ * 6H-1 起只剩升地形的輕震（1 px）用它；命中的微震用 `impactShakeEffect`。
+ */
+export function shakeEffect(px: number, startMs: number, durationMs: number, apply: (x: number, y: number) => void): Effect {
+  const amp = px;
   return {
     node: new Container(),
     startMs,
@@ -482,6 +488,28 @@ export function shakeEffect(level: 1 | 2, startMs: number, durationMs: number, a
     update: (t) => {
       const a = amp * (1 - t);
       apply(a * Math.sin(t * 47), a * Math.cos(t * 39));
+    },
+    end: () => apply(0, 0),
+  };
+}
+
+/**
+ * 命中的鏡頭微震（6H-1；只有重擊、爆炸、Boss 大招，`battle/impact.ts`）：一步一個效果，涵蓋這一步所有的震，
+ * 每一刻取幅度最大的那個（不疊加）；`now` 是效果時鐘上這一步的原點。沒有震時 `null`。
+ */
+export function impactShakeEffect(shakes: readonly VfxShake[], now: number, apply: (x: number, y: number) => void): Effect | null {
+  if (shakes.length === 0) return null;
+  const start = Math.min(...shakes.map((s) => s.atMs));
+  const end = Math.max(...shakes.map((s) => s.atMs + s.ms));
+  const span = Math.max(1, end - start);
+  return {
+    node: new Container(),
+    startMs: now + start,
+    endMs: now + start + span,
+    motion: "shake",
+    update: (t) => {
+      const o = shakeOffset(shakes, start + t * span);
+      apply(o.x, o.y);
     },
     end: () => apply(0, 0),
   };

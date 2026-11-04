@@ -45,9 +45,15 @@ function plainCast(c: VfxCast): VfxCast {
   return rest;
 }
 
-/** 特效描述照減少動態處理：沒有停頓、技能變體的特效層照基本樣子。`reduced` 為假時原樣回傳。 */
+/**
+ * 特效描述照減少動態處理：沒有停頓、沒有最後一擊放慢（6H-1）、技能變體的特效層照基本樣子。
+ * 微震 `shakes` 留著：震動效果本身標了 `shake` 不播，繪製器改用它的 `targets` 畫加長的白閃（6H-1）。`reduced` 為假時原樣回傳。
+ */
 export function reduceVfx(vfx: StepVfx, reduced: boolean): StepVfx {
   if (!reduced) return vfx;
-  const { stops: _stops, ...rest } = vfx;
+  const { stops: _stops, slow: _slow, ...rest } = vfx;
   return { ...rest, casts: vfx.casts.map(plainCast) };
 }
+
+/** 減少動態時，重擊、爆炸的目標身上的白閃比平常（受擊片段約 130 ms）多 40 ms（正常速度；6H-1）。 */
+export const REDUCED_FLASH_MS = 130 + 40;

@@ -4,7 +4,10 @@ import { App } from "./App";
 import { waitForFonts } from "./render/fontLoad";
 import { installLayoutSmoke } from "./dev/layoutSmoke";
 import { installAudio } from "./audio";
+import { installMotionPrefs } from "./ui/motionPrefs";
 import "./styles/index.css";
+
+installMotionPrefs(document); // 6H-1：遊戲內「減少動態」的有效值寫到 <html data-reduced-motion>（CSS 用）
 
 installLayoutSmoke(window); // 排版煙霧檢查（Phase 3-47）：window.__layoutSmoke，docs/開發PM交接.md 6.2 第 5 點
 installAudio(window, document); // AU-1：第一次點擊或按鍵才解鎖音訊、Shift＋M 全部靜音、背景分頁靜音

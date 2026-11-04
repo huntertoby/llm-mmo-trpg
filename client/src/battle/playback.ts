@@ -12,6 +12,7 @@ import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards }
 import { asEvent } from "../api/types";
 import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type WeaponOf } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
+import { withImpact } from "./impact";
 import { victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type Victory } from "./specials";
 import type { AttackFamily } from "../render/attackVariants";
 import type { WeaponClass } from "../render/skillClips";
@@ -133,11 +134,12 @@ export type ViewAttackOf = (unitId: string, before: BattleView) => AttackFamily 
  * 技能串接（6N-1）：特效對齊出招的命中點、施放者的身體片段、位移照卡上的順序分到出招前後。
  * 沒給 `weaponOf`（舊呼叫端、測試）或這一步不是技能時，照舊只有特效。
  */
-function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined): StepSkill {
+function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: number, motions: Motion<MoveAnim>[], viewWeapon: ViewWeaponOf | undefined, viewAttack: ViewAttackOf | undefined, heroId = ""): StepSkill {
   const raw = vfxFor(step.events, step.view, cards);
   if (isEmptyVfx(raw)) return { vfx: null, motions };
   // 6N-5：特殊結果與停頓照排好的命中點（未縮放），再一起縮放
-  const special = (v: StepVfx) => withSpecials(v, step.events, before, step.view);
+  // 6H-1：停頓分級、微震、最後一擊放慢（同樣未縮放）
+  const special = (v: StepVfx) => withImpact(withSpecials(v, step.events, before, step.view), step.events, before, step.view, heroId);
   const weaponOf: WeaponOf | undefined = viewWeapon === undefined ? undefined : (id) => viewWeapon(id, before);
   const attackOf: AttackOf | undefined = viewAttack === undefined ? undefined : (id) => viewAttack(id, before);
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf);
@@ -179,7 +181,7 @@ export function playbackPlan(
     const walkRate = walkRateOf(step, before, heroId);
     const opts = { scale, walkRate, before, after: step.view, feedbackMs, running };
     const { motions: moved, consumed } = stepMotions(step.events, opts, (e) => moveAnimOf(e, scale));
-    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf);
+    const sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId);
     const won = victoryOf(step.events, step.view, heroId);
     return {
       ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),

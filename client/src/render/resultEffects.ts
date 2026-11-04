@@ -19,7 +19,7 @@ import { creatureResult, reactFrame, resultFrame, RESULT_MS, riseRing, victoryPo
 import { bodyEffect, poseDoll, setBody, setCreatureBody, type ReactHost } from "./reactEffects";
 import { downedLook } from "./unitLook";
 import { BODY_LABEL, bodyNodes, creatureOf, dollPx, FEET, hasSkeleton } from "./unitSprite";
-import { shakeEffect, type Effect } from "./vfxEffects";
+import type { Effect } from "./vfxEffects";
 
 const T = TILE_SIZE;
 
@@ -253,7 +253,7 @@ export interface SpecialOpts {
   /** 命中後爆發的時間（已縮放；`impactMs / VFX_TIMING.impact` ＝ 播放速度的倍率）。 */
   impactMs: number;
   scale: number;
-  /** 版面設定的畫面震動。 */
+  /** 版面設定的畫面震動（6H-1 起擊殺不另外震，這裡用不到；微震由繪製器的 `impactShakeEffect` 處理）。 */
   shake: boolean;
   /** 震動時移動舞台。 */
   apply: (x: number, y: number) => void;
@@ -265,7 +265,7 @@ function oneSpecial(host: ResultHost, s: VfxSpecial, o: SpecialOpts, vfx: StepVf
     case "crit":
       return [screenFlashEffect(host, at, Math.max(60, Math.round(140 * o.scale)))];
     case "kill":
-      return o.shake ? [shakeEffect(2, at, o.impactMs * 0.55, o.apply)] : [];
+      return []; // 6H-1：擊殺不另外震（微震只在重擊、爆炸、Boss 大招；停頓照 6N-5）
     case "block": {
       const out: Effect[] = s.unitId === null ? [] : [bigSparkEffect(host, s.unitId, at, Math.max(160, Math.round(340 * o.scale)))];
       const recoil = s.attackerId === undefined ? null : recoilEffect(host, s.attackerId, at, o.scale);
