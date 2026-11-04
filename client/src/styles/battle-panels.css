@@ -106,7 +106,8 @@
   z-index: 40;
   width: min(480px, calc(100vw - 32px));
   max-height: calc(100vh - 70px); /* 800×600 這類小視窗：內容超出時在 .ui-popup-body 裡捲動 */
-  padding: 12px 16px;
+  /* 6F-8：下內距 12 → 16px。RT-3b 拿掉沒超出時的下緣漸隱後，「拒絕」離框底只剩 20px，壓到右下飾件（22px）2px */
+  padding: 12px 16px 16px;
   /* UI-E2：外觀（深藍底、金框、四角飾件）與框內捲動來自共用彈窗元件 .ui-popup／.ui-popup-dialog */
 }
 

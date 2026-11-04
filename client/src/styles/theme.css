@@ -173,8 +173,9 @@
   margin-bottom: -56px;
   pointer-events: none;
   opacity: 0;
-  /* 6F-8（RT-3b 檢查第 2 節 4：被切的那一行，下半部的字還看得出來）：實色段 60% → 70%（約 39px），只剩下面約 17px 漸到透明 */
-  background: linear-gradient(0deg, rgb(30 34 54 / 0%), var(--ui-navy) 30%, var(--ui-navy));
+  /* 6F-8（RT-3b 檢查第 2 節 4：被切的那一行，下半部的字還看得出來）：實色段 60% → 70%（上面約 39px），
+     下面約 17px 先在前一半降到 70% 不透明、後一半才漸到透明（只剩最下面約 8px 看得出字） */
+  background: linear-gradient(0deg, rgb(30 34 54 / 0%), rgb(30 34 54 / 70%) 15%, var(--ui-navy) 30%, var(--ui-navy));
 }
 
 .ui-popup-hud > .ui-popup-body[data-scrolled="1"]::before,

@@ -124,6 +124,12 @@ describe("第 2 項：反應詢問的說明句改成 text-wrap: balance（「標
     expect(ruleOf("styles/base.css", ".decision-card p")).not.toMatch(/pretty/);
     for (const sel of [".op-hint", ".part-tip-text", ".skill-hint"]) expect(ruleOf("styles/base.css", sel), sel).toMatch(/text-wrap: pretty/);
   });
+  it("下內距 16px：「拒絕」離框底 ≥ 22px，不壓右下飾件（RT-3b 拿掉漸隱後只剩 20px）", () => {
+    const pad = /padding: 12px 16px (\d+)px/.exec(ruleOf("styles/battle-panels.css", ".decision-card"))?.[1];
+    expect(Number(pad)).toBeGreaterThanOrEqual(16);
+    // 框線 2 ＋ 下內距 ＋ 按鈕列和框底之間 4（實測 RT-3b：12 → 離框底 20）
+    expect(2 + Number(pad) + 4 + 2).toBeGreaterThanOrEqual(22);
+  });
 });
 
 describe("第 3 項：捲到最下面時，下緣漸隱高度 0", () => {
@@ -167,9 +173,12 @@ describe("第 4 項：上緣漸隱實色段 70%", () => {
     for (const sel of [".ui-popup-hud > .ui-popup-body::before", ".ui-popup-dialog > .ui-popup-body::before", ".world-hud-center > .world-event > .ui-popup-body::before"]) {
       const r = ruleOf("styles/theme.css", sel);
       expect(r, sel).toContain("height: 56px");
-      expect(r, sel).toMatch(/linear-gradient\(0deg, rgb\(30 34 54 \/ 0%\), var\(--ui-navy\) 30%, var\(--ui-navy\)\)/);
+      // 由下往上：0% 透明 → 15%（離上緣約 48px）70% 不透明 → 30%（約 39px）起實色
+      expect(r, sel).toMatch(/linear-gradient\(0deg, rgb\(30 34 54 \/ 0%\), rgb\(30 34 54 \/ 70%\) 15%, var\(--ui-navy\) 30%, var\(--ui-navy\)\)/);
     }
     expect(Math.round(56 * 0.7)).toBe(39);
+    // 被切的那一行（頂端在捲動區上緣之外）最多一個行高（事件卡、設定面板 ≤ 30px）：整行落在 39px 實色裡
+    expect(30).toBeLessThan(56 * 0.7);
   });
 });
 
