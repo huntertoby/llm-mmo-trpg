@@ -32,11 +32,16 @@ export interface MarkSpec {
 
 const specs = new WeakMap<Container, MarkSpec>();
 const texts = new WeakMap<Container, Text[]>();
+const relayouts = new WeakMap<Container, (k: number) => void>();
 
-/** 登記一個要保持最小尺寸的標記節點（`texts` 是裡面的文字，放大時要跟著提高解析度才不會糊）。 */
-export function registerMark(node: Container, spec: MarkSpec, inner: Text[] = []): void {
+/**
+ * 登記一個要保持最小尺寸的標記節點（`texts` 是裡面的文字，放大時要跟著提高解析度才不會糊）。
+ * `relayout`（6F-10）：倍率改變後重新排位置（召喚物的狀態列和回合數徽章）。
+ */
+export function registerMark(node: Container, spec: MarkSpec, inner: Text[] = [], relayout?: (k: number) => void): void {
   specs.set(node, spec);
   texts.set(node, inner);
+  if (relayout !== undefined) relayouts.set(node, relayout);
 }
 
 /** 登記過的基準（測試用）。 */
@@ -56,6 +61,7 @@ export function applyMarkScale(node: Container, boardScale: number, resolution: 
   for (const t of texts.get(node) ?? []) {
     if (!t.destroyed) t.resolution = Math.max(1, resolution * k);
   }
+  relayouts.get(node)?.(k);
   return k;
 }
 
