@@ -78,9 +78,10 @@ weapons:
     two_handed: true
     lob: 1
   # 弓手護衛專用弓（BAL-9c 原型專用）：bow 的複本，骰面降一階（1d8 → 1d6），只有 bandit_archer_guard 使用。
-  # 6F-1：改名「護衛弓」，建角清單不再出現兩個同名的「弓」。
+  # 6F-1：改名「護衛弓」並標成敵人專用（開局選單不列出），建角清單不再出現兩個同名的「弓」。
   - id: bow_guard
     name_zh: 護衛弓
+    enemy_only: true
     look: {kind: bow, material: wood}
     weapon_class: ranged
     range: 8

@@ -356,6 +356,9 @@ class WeaponDef(ContentModel):
     backstab_dice: int = Field(default=0, ge=0, le=2)
     summon_only: bool = False
     """召喚物專用的武器（Phase 3-33e1）：不列入開局可選的武器，也不給玩家裝備。"""
+    enemy_only: bool = False
+    """敵人專用的武器（6F-1，例 ``bow_guard``）：開局畫面（``/api/runs/start-options``）不列出。
+    只影響選單；隨機開局與掉落照舊（不改種子 → 結果的對應）。"""
     look: WeaponLook | None = None
     """預設外觀（Phase 3E-2e）：紙娃娃主手與武器小圖示的造型；經 glossary API 給前端。"""
 
