@@ -6,8 +6,8 @@
   canvas{display:block;border-radius:6px}
 </style></head>
 <body>
-<h1>建立角色（第 2 版樣張）：種族、出身、武器、關鍵字都用遊戲裡的畫法</h1>
-<p class="note">美術 PM，2026-11-04。使用者看第 1 版：「太簡陋了吧」。種族小圖改用 C 墨線紙娃娃的頭像（看得到尖耳、狐耳、鱗角、鬍子、獠牙、義眼、鰭耳）；選中的種族在右上展開名字、簡介、種族技、環境被動、判定加值；左邊大預覽跟著切換。出身用五區紋章與區域色；武器用遊戲的武器圖示；關鍵字用小圖示。全部程式繪製；種族簡介、判定加值、出身描述照玩法 PM 定稿（#115）。左邊預覽背後是所選出身區的淡景。</p>
+<h1>建立角色（第 2 版樣張）：只選名字、種族、出身（武器與關鍵字到主城靶場選，#134）</h1>
+<p class="note">美術 PM，2026-11-04。使用者看第 1 版：「太簡陋了吧」。種族小圖改用 C 墨線紙娃娃的頭像（看得到尖耳、狐耳、鱗角、鬍子、獠牙、義眼、鰭耳）；選中的種族在右上展開名字、簡介、種族技、環境被動、判定加值；左邊大預覽跟著切換。出身用五區紋章與區域色。全部程式繪製；種族簡介、判定加值、出身描述照玩法 PM 定稿（#115）。左邊預覽背後是所選出身區的淡景。</p>
 <div id="a"></div>
 <script src="raceArt.js"></script>
 <script src="paperdoll.js"></script>
@@ -64,9 +64,9 @@ function kwIcon(x,cx,cy,k){const C={冰凍:"#8ad8ff",燃燒:"#ff8a3a",帶電:"#f
     形態:()=>{x.beginPath();x.moveTo(-6,3);x.quadraticCurveTo(-3,-6,0,0);x.quadraticCurveTo(3,6,6,-3);x.stroke();}})[k]();
   x.restore();}
 function chip(x,X,Y,W,H,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,W,H,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();if(sel){glow(x,X+W/2,Y+H/2,W*0.6,"rgba(232,187,72,0.15)");}}
-const W=1300,H=980;const [c,x]=cv(W,H);sky(x,W,H);
+const W=1300,H=660;const [c,x]=cv(W,H);sky(x,W,H);
 // 左：預覽
-frame(x,20,20,330,940);
+frame(x,20,20,330,620);
 // 預覽背景：所選出身區的淡景（區域插畫 B 彩繪的全貌，RegionArt.draw 的 full 模式），框內上半部，往下漸淡到深藍
 {const rg=document.createElement("canvas");RegionArt.draw(rg,"painted",{full:true,region:"cloud_ridge"});
  x.save();x.beginPath();x.roundRect(24,24,322,620,6);x.clip();x.globalAlpha=0.62;
@@ -76,31 +76,12 @@ frame(x,20,20,330,940);
  x.fillStyle="rgba(16,18,30,0.75)";x.beginPath();x.roundRect(220,34,116,22,11);x.fill();x.strokeStyle=RC.雲嶺[0];x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`11px ${FONT}`;x.fillText("出身：雲嶺的景",232,49);}
 x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText("預覽",40,48);
 glow(x,185,420,170,"rgba(106,168,74,0.35)");x.fillStyle="rgba(0,0,0,0.3)";x.beginPath();x.ellipse(185,520,70,14,0,0,TAU);x.fill();
-StoryDoll.stamp(x,{look:R.fox.look,gear:{body:{kind:"leather",color:"#6a5040"},feet:{kind:"boots",material:"leather"},main_hand:{kind:"bow",material:"wood"}}},"front",185,520,4.6,false);
-x.fillStyle=CREAM;x.font=`bold 20px ${SERIF}`;x.textAlign="center";x.fillText("霜月",185,570);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("狐族・雲嶺出身・弓",185,592);x.textAlign="left";
+StoryDoll.stamp(x,{look:R.fox.look,gear:{body:{kind:"leather",color:"#6a5040"},feet:{kind:"boots",material:"leather"}}},"front",185,520,4.6,false);
+x.fillStyle=CREAM;x.font=`bold 20px ${SERIF}`;x.textAlign="center";x.fillText("霜月",185,570);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("狐族・雲嶺出身",185,592);x.textAlign="left";
 x.fillStyle="#262a3a";x.beginPath();x.roundRect(110,610,40,30,6);x.fill();x.beginPath();x.roundRect(220,610,40,30,6);x.fill();x.fillStyle=CREAM;x.font=`14px ${FONT}`;x.fillText("◀",123,631);x.fillText("▶",233,631);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("轉身",172,630);
 // 起始技能卡（示意）
-x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("起始技能",40,680);
-[["冰錐",{element:"ice",shape:"single",range:5,skeleton:"strike",rarity:"common"},"AP 2・法力 5・4d6 冰霜"],["趁勢補刀",{element:"physical",shape:"single",range:1,skeleton:"strike",rarity:"common"},"AP 2・耐力 8・×1.9 物理"]].forEach(([n,spec,d],i)=>{const Y=692+i*66;x.fillStyle=NAVY2;x.beginPath();x.roundRect(40,Y,290,56,8);x.fill();x.strokeStyle="#4a5a8a";x.stroke();
-  const ic=document.createElement("canvas");SkillIcon.draw(ic,spec,44);x.drawImage(ic,46,Y+6,44,44);x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(n,98,Y+26);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText(d,98,Y+44);});
-// 屬性（#133：建角不點，自動配好；之後霧渡鎮導師教配點）：放在左欄起始技能下方，只顯示
-{const { ink, stroke, ellPts } = StoryDoll.H;
-const ATTR = [
-    ["str", "力量", "#e07a4a", (c) => { ink(c, "arm", [[10, 34], [14, 22], [20, 14], [28, 12], [32, 18], [28, 22], [24, 22], [22, 30], [30, 30], [38, 34], [36, 40], [12, 40]], "#e8b890", { w: 0.9 }); stroke(c, "arm-m", [[20, 22], [26, 26]], 0.8, "#8a5a3a"); }],
-    ["dex", "敏捷", "#6ac0a0", (c) => { c.save(); c.translate(24, 24); c.rotate(-0.7); ink(c, "fe", [[0, -18], [7, -8], [6, 8], [0, 16], [-6, 8], [-7, -8]], "#c8f0e0", { w: 0.8 }); stroke(c, "fe-q", [[0, -16], [0, 20]], 0.8, "#2b1e16"); c.restore(); stroke(c, "wind", [[8, 34], [16, 32]], 1, "#6ac0a0"); stroke(c, "wind2", [[10, 40], [20, 38]], 1, "#6ac0a0"); }],
-    ["con", "體質", "#d04a5a", (c) => { ink(c, "heart", [[24, 40], [10, 26], [10, 16], [17, 11], [24, 16], [31, 11], [38, 16], [38, 26]], "#e04a5a", { w: 0.9 }); c.fillStyle = "rgba(255,255,255,0.4)"; c.beginPath(); c.ellipse(16, 18, 3, 4, -0.4, 0, TAU); c.fill(); }],
-    ["int", "智力", "#7a8aff", (c) => { ink(c, "book", [[9, 14], [24, 18], [39, 14], [39, 38], [24, 42], [9, 38]], "#f2e6c8", { w: 0.9 }); stroke(c, "spine", [[24, 18], [24, 42]], 0.9, "#2b1e16"); c.save(); c.shadowColor = "#a898ff"; c.shadowBlur = 6; ink(c, "star", [[24, 4], [26, 10], [32, 10], [27, 13], [29, 19], [24, 15], [19, 19], [21, 13], [16, 10], [22, 10]], "#c8bcff", { shade: false, w: 0.5 }); c.restore(); }],
-    ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
-    ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
-  ];
- const VAL={str:12,dex:10,con:10,int:12,wis:10,wil:10}; // 推薦配法：冰錐（智力）、趁勢補刀（力量）不同 → 各 2 點
- x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("屬性（自動配好）",40,840);
- ATTR.forEach(([id,zh,col,fn],i)=>{const X=40+(i%3)*98,Y=852+Math.floor(i/3)*40;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,92,34,6);x.fill();x.strokeStyle="#3a4060";x.lineWidth=1;x.stroke();
-   x.save();x.translate(X+5,Y+5);x.beginPath();x.arc(12,12,12,0,TAU);x.fillStyle="#2a241e";x.fill();x.lineWidth=1.5;x.strokeStyle=col;x.stroke();x.beginPath();x.arc(12,12,11,0,TAU);x.clip();x.scale(24/48,24/48);fn(x);x.restore();
-   x.fillStyle="#c8bca8";x.font=`11.5px ${FONT}`;x.fillText(zh,X+34,Y+22);x.fillStyle=VAL[id]>10?"#8ad8ff":CREAM;x.font=`bold 15px ${SERIF}`;x.fillText(String(VAL[id]),X+66,Y+23);});
- x.fillStyle="#b8ab96";x.font=`11.5px ${FONT}`;x.fillText("之後導師會教你自己配",40,948);}
 // 右：步驟
-frame(x,370,20,910,940);
+frame(x,370,20,910,620);
 const sec=(n,t,y)=>{x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText(n+"　"+t,392,y);x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(392,y+7);x.lineTo(1258,y+7);x.stroke();};
 sec("1","名字",50);x.fillStyle=NAVY2;x.beginPath();x.roundRect(392,60,260,30,6);x.fill();x.strokeStyle="#3a4060";x.stroke();x.fillStyle=CREAM;x.font=`13px ${FONT}`;x.fillText("霜月",402,80);
 sec("2","種族",116);
@@ -117,21 +98,7 @@ RACES.forEach(([id,zh,realm],i)=>{const X=392+(i%5)*120,Y=126+Math.floor(i/5)*12
 sec("3","出身",412);
 const ORIG=[["晶冠城邦","晶冠","白石與晶光的城邦"],["雲嶺","雲嶺","雲海上的山城與竹林"],["魔導樞市","樞市","黃銅與晶能的工坊街"],["灰燼荒原","灰燼","焦土上的拾荒聚落"],["霜潮海境","霜潮","浮冰與珊瑚的港灣"]];
 ORIG.forEach(([n,realm,d],i)=>{const X=392+i*174,Y=422,sel=realm==="雲嶺";chip(x,X,Y,166,72,sel,RC[realm][0]);emblem(x,X+30,Y+36,22,realm);x.fillStyle=CREAM;x.font=`bold 13.5px ${FONT}`;x.fillText(n,X+60,Y+32);x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText(d,X+60,Y+52);});
-x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("出身決定預設外觀、開場劇情與 NPC 態度，不影響戰鬥。（所有人都在主城醒來，#125）",392,512);
-sec("4","武器",542);
-const WEP=[["單手劍",{kind:"sword"}],["雙手劍",{kind:"greatsword"}],["魔導劍",{kind:"sword",material:"crystal"}],["斧",{kind:"axe"}],["錘",{kind:"hammer"}],["匕首",{kind:"dagger"}],["雙匕首",{kind:"dual_dagger"}],
-  ["矛",{kind:"spear"}],["鐮刀",{kind:"scythe"}],["鞭",{kind:"whip"}],["拳套",{kind:"fist"}],["弓",{kind:"bow"}],["弩",{kind:"crossbow"}],["手槍",{kind:"pistol"}],
-  ["火槍",{kind:"longgun"}],["霰彈槍",{kind:"shotgun"}],["火焰法杖",{kind:"staff",keywords:["ignite"]}],["冰霜法杖",{kind:"staff",keywords:["freeze"]}],["雷電法杖",{kind:"staff",keywords:["shock"]}],["權杖",{kind:"staff",form:"scepter",material:"gold"}],["圖騰杖",{kind:"staff",form:"totem",material:"bone"}]];
-WEP.forEach(([n,it],i)=>{const X=392+(i%7)*124,Y=552+Math.floor(i/7)*64,sel=n==="弓";chip(x,X,Y,116,56,sel);
-  x.save();x.translate(X+6,Y+6);x.scale(44/64,44/64);GearArt.draw(x,it,false);x.restore();
-  if(n==="魔導劍"){ // 魔導劍（#46，form: arcane）：劍身中線一道藍紫源晶槽＋三個符文刻點、黃銅護手（照 arcane-blade.html）
-    const a=[X+6+44*0.36,Y+6+44*0.62],b=[X+6+44*0.74,Y+6+44*0.24];x.save();x.shadowColor="#9a86ff";x.shadowBlur=6;x.strokeStyle="#b8a8ff";x.lineWidth=1.6;x.beginPath();x.moveTo(...a);x.lineTo(...b);x.stroke();x.restore();
-    for(let k=1;k<=3;k++){const t=k/4;x.fillStyle="#f2eaff";x.beginPath();x.arc(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,1.1,0,TAU);x.fill();}
-    x.fillStyle="#c8903a";x.beginPath();x.arc(X+6+44*0.3,Y+6+44*0.68,3.2,0,TAU);x.fill();x.fillStyle="#9a86ff";x.beginPath();x.arc(X+6+44*0.3,Y+6+44*0.68,1.4,0,TAU);x.fill();}
-x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;x.fillText(n,X+56,Y+33);});
-sec("5","兩個關鍵字（已選 2）",770);
-const KW=["冰凍","燃燒","帶電","潮濕","中毒","倒地","撞擊","標記","高處","隱蔽","召喚物","形態"];
-KW.forEach((k,i)=>{const X=392+(i%6)*144,Y=780+Math.floor(i/6)*46,sel=k==="冰凍"||k==="倒地";chip(x,X,Y,136,38,sel);kwIcon(x,X+20,Y+19,k);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(k,X+40,Y+24);});
-x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(960,896,298,46,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.font=`bold 15px ${FONT}`;x.textAlign="center";x.fillText("建立並在主城醒來",1109,925);x.textAlign="left";
+x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("出身決定預設外觀、開場劇情與 NPC 態度，不影響戰鬥。（所有人都在主城醒來，#125）",392,512);x.fillStyle="#b8ab96";x.font=`12px ${FONT}`;x.fillText("武器和兩個關鍵字，到主城的工坊靶場試用後再選（#134）。屬性之後由導師教你配（#133）。",392,538);
+x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(960,560,298,46,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.font=`bold 15px ${FONT}`;x.textAlign="center";x.fillText("建立並在主城醒來",1109,589);x.textAlign="left";
 document.getElementById("a").appendChild(c);
 </script></body></html>
