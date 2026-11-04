@@ -1,0 +1,197 @@
+/* UI-E2（docs/art/全遊戲一致性巡檢.md #4）：HUD 與彈窗的顏色收成同一組變數，底色統一成「碎界中樞」的深藍＋金框。
+   RT-1（docs/art/區域主題移植需求.md 第 1 節）：區域點綴（--rt-*）由 client/src/ui/regionTheme.ts 依目前區域寫在 <html> 上，
+   這裡只放 hub 的預設值；四角飾件是 --rt-corners（背景圖層），疊在 .rt-frame 的 ::after（不接滑鼠、不佔版面）。
+   只換點綴：版面、字型、按鈕不變。首頁與建角（UI-E1）不套這些 class。 */
+:root {
+  --ui-navy: #1e2236;
+  --ui-navy-deep: #161a2a;
+  --ui-panel: rgb(30 34 54 / 88%);
+  --ui-panel-solid: rgb(30 34 54 / 97%);
+  --ui-panel-soft: rgb(30 34 54 / 66%);
+  --ui-well: #0c0e16;
+  --ui-gold: #c8a868;
+  --ui-gold-hi: #e8bb48;
+  --ui-gold-soft: rgb(200 168 104 / 35%);
+  --ui-text: #f0e6cc;
+  --ui-danger: #d04a3a;
+  /* 區域點綴（hub） */
+  --rt-accent: #a898ff;
+  --rt-ring: #a898ff;
+  --rt-ink: #22305a;
+  --rt-seal: #7a5ad0;
+  --rt-plaque-top: #2a2a5a;
+  --rt-plaque-bottom: #1a1a3a;
+}
+
+/* ---- 四角飾件：畫在外框底色之上、內容之下（isolation 讓 z-index: -1 留在框裡），字不會被飾件蓋住 ---- */
+.rt-frame {
+  isolation: isolate;
+}
+
+.rt-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--rt-corners, none);
+}
+
+/* 換區域時淡入 0.3 秒（a／b 交替，才會重播）；減少動態時直接換 */
+@keyframes rt-in-a {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rt-in-b {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+:root[data-rt-swap="a"] .rt-frame::after {
+  animation: rt-in-a 0.3s ease-out;
+}
+
+:root[data-rt-swap="b"] .rt-frame::after {
+  animation: rt-in-b 0.3s ease-out;
+}
+
+:root[data-reduced-motion="true"] .rt-frame::after {
+  animation: none;
+}
+
+/* ---- 標題牌（地名）：材質是區域的兩色漸層，內框一道區域色細線；字型、大小不變 ---- */
+.rt-plaque {
+  background: linear-gradient(180deg, var(--rt-plaque-top), var(--rt-plaque-bottom));
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0%), inset 0 0 0 3px color-mix(in srgb, var(--rt-accent) 60%, transparent);
+}
+
+/* ---- 共用彈窗元件（PopupFrame）：深藍底、金框、單層；危險類只在上緣加紅帶 ---- */
+.ui-popup {
+  box-sizing: border-box;
+  background: var(--ui-panel-solid);
+  border: 2px solid var(--ui-gold);
+  border-radius: 10px;
+  color: var(--ui-text);
+  box-shadow: 0 4px 24px rgb(0 0 0 / 55%);
+}
+
+.ui-popup-inline {
+  position: relative;
+  padding: 10px 12px;
+}
+
+/* 位置由外框決定、內容在 .ui-popup-body 裡捲（飾件不跟著捲） */
+.ui-popup-hud,
+.ui-popup-dialog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-popup-hud > .ui-popup-body,
+.ui-popup-dialog > .ui-popup-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ui-popup.danger {
+  padding-top: 0;
+}
+
+.ui-popup-band {
+  display: flex;
+  align-items: center;
+  height: 6px;
+  margin: 0 -12px 8px;
+  border-radius: 8px 8px 0 0;
+  background: var(--ui-danger);
+}
+
+.ui-popup-band > span {
+  margin-left: 14px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  color: #fff;
+  background: var(--ui-danger);
+  border: 1px solid var(--ui-gold);
+  border-radius: 8px;
+  transform: translateY(5px);
+}
+
+/* NPC 面板、背包、技能：彈窗裡不再套第二層框，改用細分隔線分區（巡檢 #6、#12） */
+.ui-popup .panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.ui-popup .panel + .panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ui-gold-soft);
+}
+
+/* 強調色：滑過、選取的細光（金色主框不變） */
+.ui-popup button:focus-visible,
+.hero-card button:focus-visible {
+  outline: 2px solid var(--rt-accent);
+  outline-offset: 1px;
+}
+
+/* ---- 主角卡（HeroCard）：探索與戰鬥同一張；頭像在左、三條在右 ---- */
+.hero-card {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--ui-panel);
+  border: 1.5px solid var(--ui-gold);
+  border-radius: 10px;
+}
+
+.hero-card-face {
+  line-height: 0;
+}
+
+.hero-card-name {
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.hero-card-bars {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 設定面板：分區標題＋小圖示，區與區之間細分隔線 ---- */
+.settings-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-head-icon {
+  flex: none;
+}
+
+.settings-section + .settings-section {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ui-gold-soft);
+}

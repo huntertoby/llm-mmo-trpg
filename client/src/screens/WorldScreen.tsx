@@ -83,6 +83,7 @@ import { BattleScreen } from "./BattleScreen";
 import { battleSummary } from "../world/battleSummary";
 import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
+import { useRegionTheme, worldRegion } from "../ui/regionTheme";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -148,6 +149,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
+  useRegionTheme(view !== null ? worldRegion(view) : null); // RT-1：實地地圖的區域（主城與室內是 capital；沒有＝hub）
   /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
    * 先在本機記一下（`closed`），等伺服器回來的紀錄蓋過去，不會因為送出中又跳一次。 */
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());

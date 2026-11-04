@@ -105,14 +105,9 @@
   transform: translateX(-50%);
   z-index: 40;
   width: min(480px, calc(100vw - 32px));
-  max-height: calc(100vh - 70px); /* 800×600 這類小視窗：內容超出時卡片內捲動 */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: var(--panel);
-  border: 2px solid #ff4fd8;
-  border-radius: 6px;
+  max-height: calc(100vh - 70px); /* 800×600 這類小視窗：內容超出時在 .ui-popup-body 裡捲動 */
   padding: 12px 16px;
-  box-shadow: 0 4px 24px rgb(0 0 0 / 60%);
+  /* UI-E2：外觀（深藍底、金框、四角飾件）與框內捲動來自共用彈窗元件 .ui-popup／.ui-popup-dialog */
 }
 
 .decision-card p {

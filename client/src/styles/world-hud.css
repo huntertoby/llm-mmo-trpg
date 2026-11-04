@@ -1,14 +1,15 @@
 /* 網遊式 HUD 版面 A（Phase 6B-5；docs/art/HUD移植需求.md 第 2 節）：只在大世界有實地地圖時用。
-   面板半透明深底 rgba(24,20,16,0.84)＋金邊 #c8a868；HP #e04a3a、法力 #4a8ae0、經驗 #e8bb48。
+   面板半透明深藍底（UI-E2：theme.css 的 --ui-panel）＋金邊 #c8a868；HP #e04a3a、法力 #4a8ae0、耐力 #c8a030、經驗 #e8bb48。
    位置由 hudLayout() 以 inline style 給（以 1040×624 為基準等比縮放），這裡只管外觀。
    疊放（6.5.1，都在舞台內、低於 Hint 的 900）：畫布 0 < 說明列 6 < 背景遮罩 8 < HUD 10 < 中上方卡 12 < 面板 14。 */
 :root {
-  --hud-panel: rgba(24, 20, 16, 0.84);
-  --hud-gold: #c8a868;
+  --hud-panel: var(--ui-panel);
+  --hud-gold: var(--ui-gold);
   --hud-hp: #e04a3a;
   --hud-mana: #4a8ae0;
+  --hud-stamina: #c8a030;
   --hud-xp: #e8bb48;
-  --hud-text: #f0e6cc;
+  --hud-text: var(--ui-text);
 }
 
 .world-screen.hud-mode {
@@ -21,7 +22,7 @@
   width: 100%;
   overflow: hidden;
   border-radius: 8px;
-  background: #14171a;
+  background: var(--ui-navy-deep);
 }
 
 .world-field.hud {
@@ -57,7 +58,7 @@
   min-height: 0;
   padding: 2px 10px;
   border-radius: 6px;
-  background: rgba(24, 20, 16, 0.66);
+  background: var(--ui-panel-soft);
   justify-content: center;
   text-align: center;
 }
@@ -163,23 +164,39 @@
   border-radius: 4px;
 }
 
-.world-hud-bars {
+/* UI-E2：主角卡外框與頭像來自共用的 HeroCard（theme.css .hero-card）；這裡只排大世界卡（250×74）裡的位置 */
+.hero-card-world .hero-card-main {
   position: absolute;
   left: 78px;
-  top: 8px;
+  top: 5px;
   width: 164px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+}
+
+.hero-card-world .hero-card-bars {
+  gap: 2px;
+}
+
+.world-hud-hero > .world-hud-chips {
+  position: absolute;
+  left: 78px;
+  bottom: 4px;
+}
+
+.world-hud-hero .world-hud-chip {
+  height: 18px;
 }
 
 .world-hud-bar {
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #1a1410;
+  background: var(--ui-well);
   border: 1px solid rgba(0, 0, 0, 0.6);
   border-radius: 4px;
+}
+
+.world-hud-bar.stamina > .fill {
+  background: var(--hud-stamina);
 }
 
 .world-hud-bar > .fill {
@@ -201,9 +218,11 @@
 .world-hud-bar > .text {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 10.5px;
-  line-height: 13px;
-  text-align: center;
+  line-height: 1;
   color: #fff;
   font-weight: 700;
   text-shadow: 0 1px 1px #000;
@@ -282,7 +301,7 @@
 
 .world-hud-btn.active {
   border-color: #ffd04a;
-  box-shadow: 0 0 0 2px rgba(255, 208, 74, 0.45);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rt-accent) 55%, transparent);
 }
 
 .world-hud-btn > .key {
@@ -371,6 +390,7 @@
 }
 
 .world-hud-minimap {
+  position: relative;
   width: 170px;
   height: 104px;
   box-sizing: border-box;
@@ -463,6 +483,7 @@
 
 /* ---- 任務追蹤 ---- */
 .world-hud-tracker {
+  position: relative;
   width: 170px;
   max-height: 150px;
   box-sizing: border-box;
@@ -566,7 +587,8 @@
   height: 56px;
   padding: 0 10px;
   box-sizing: border-box;
-  background: rgba(24, 20, 16, 0.6);
+  position: relative;
+  background: var(--ui-panel-soft);
   border-radius: 12px;
 }
 
@@ -630,14 +652,13 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(720px, calc(100% - 24px));
-  overflow: auto;
   z-index: 14;
   pointer-events: auto;
-  box-sizing: border-box;
+}
+
+/* UI-E2：外框（深藍底、金框、四角飾件）來自共用彈窗元件 .ui-popup，內容在 .ui-popup-body 裡捲 */
+.world-hud-panel > .ui-popup-body {
   padding: 10px 12px;
-  background: rgba(24, 20, 16, 0.93);
-  border: 2px solid var(--hud-gold);
-  border-radius: 10px;
 }
 
 .world-hud-panel-close {
@@ -650,7 +671,7 @@
   padding: 0;
   font-size: 18px;
   line-height: 24px;
-  background: rgba(24, 20, 16, 0.9);
+  background: var(--ui-panel-solid);
   border: 1px solid var(--hud-gold);
   border-radius: 6px;
   color: var(--hud-text);
@@ -673,7 +694,7 @@
 .world-hud-btn:hover,
 .world-hud-btn:focus-visible {
   border-color: #f2d898;
-  box-shadow: 0 0 10px rgba(255, 220, 140, 0.6);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rt-accent) 70%, transparent);
 }
 
 .world-hud-btn[data-state="open"] {
@@ -719,7 +740,7 @@
   display: grid;
   place-items: center;
   border-radius: 4px;
-  background: #2a241e;
+  background: var(--ui-navy);
   border: 1px solid #8a7a5a;
   font: bold 12px Consolas, monospace;
   color: #f2e6c8;
@@ -748,8 +769,8 @@
 
 .part-tip-box:has(.hud-bar-card) .float-card-body {
   padding: 8px 10px;
-  background: rgba(30, 26, 22, 0.97);
-  border: 1.5px solid #c8a868;
+  background: var(--ui-panel-solid);
+  border: 1.5px solid var(--ui-gold);
   border-radius: 10px;
   overflow: hidden;
 }

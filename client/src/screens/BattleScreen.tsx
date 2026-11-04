@@ -53,6 +53,7 @@ import { useSelection } from "./battle/useSelection";
 import { useSelectionCommands } from "./battle/useSelectionCommands";
 import { useTileInteraction } from "./battle/useTileInteraction";
 import { ZoomControls } from "./battle/ZoomControls";
+import { useRegionTheme } from "../ui/regionTheme";
 
 interface Props {
   initial: BattleResponse;
@@ -89,6 +90,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const { response, shown, busy } = pb;
   useBattleAmbience(shown); // AU-3：戰場的環境音（區域、天氣、岩漿；優先於大世界）
   useBurnLoop(shown); // AU-3：有人在燃燒時全場一條劈啪循環
+  useRegionTheme(shown.region); // RT-1：戰鬥是開戰地點的區域（沒有＝hub）
   const data = useBattleData(battleId, heroId, response, shown, pb.acting, busy);
   const { view, hero, cards, copying } = data;
   cardsRef.current = cards;

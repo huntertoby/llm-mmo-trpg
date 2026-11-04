@@ -2,7 +2,7 @@
 // 功能列與快捷鍵、單一浮動面板的開關、時間天氣換算、限制提示、任務追蹤、隊友卡、浮動提示、小地圖、
 // 四角版面（以 1040×624 為基準等比縮放）、出口附近的半透明判定與排版煙霧檢查。
 // 只用在大世界的城鎮與野外（有實地地圖 `WorldView.field` 時）；戰鬥與 roguelite 不用。
-import type { FieldView, WorldView } from "../api/types";
+import type { FieldView, NpcPortrait, WorldView } from "../api/types";
 import { TOAST_FADE_MS, TOAST_MAX, TOAST_TTL_MS } from "../battle/logToasts";
 import { TILE_SIZE } from "../battle/geometry";
 import { stagePixels, topReserve } from "../battle/elevation";
@@ -305,6 +305,10 @@ export interface MateCard {
   level: number;
   /** 血量比例（0～1）。伺服器沒有隊友的 HP（每場開戰都是滿的），所以一律 1。 */
   hp: number;
+  /** 頭像（傭兵名冊裡的外觀；影子、同伴沒有＝通用剪影；UI-E2）。 */
+  portrait: NpcPortrait | null;
+  /** 頭像框色用的出身區（傭兵的 origin；沒有＝`merc` 金框）。 */
+  origin: string;
 }
 
 /** 隊友卡（主角以外，最多 2 人）。 */
@@ -313,7 +317,10 @@ export function mateCards(view: WorldView): MateCard[] {
   return members
     .filter((m, i) => !(i === 0 && m.mercenary == null && m.shadow == null && m.companion == null))
     .slice(0, 2)
-    .map((m) => ({ name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1 }));
+    .map((m) => {
+      const merc = m.mercenary != null ? (view.party?.mercenaries ?? []).find((x) => x.id === m.mercenary) : undefined;
+      return { name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1, portrait: merc?.portrait ?? null, origin: merc?.origin ?? "merc" };
+    });
 }
 
 /** 條的比例（0～1；最大值為 0 時為 0）。 */

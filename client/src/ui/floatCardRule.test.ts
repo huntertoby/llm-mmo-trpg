@@ -33,6 +33,7 @@ const TITLE_PROP_OK = new Set(["DialogFrame"]);
  */
 const NON_HOVER_POPUPS: Record<string, string> = {
   "ui/DialogFrame.tsx": "反應詢問／複製／灌注等對話框的外框（`role=dialog`，互動式，不是說明卡）",
+  "ui/PopupFrame.tsx": "UI-E2 共用彈窗元件（大世界面板、遇敵卡、事件卡、詢問視窗的外框；`role` 由呼叫端傳入，點擊開關，不是說明卡）",
   "ui/BattleTopBar.tsx": "頂端列的設定／圖例面板（點按鈕開關的面板 `role=dialog`；已改用 `usePopupMenu`，見下方檢查）",
   "world/WorldHud.tsx": "大世界 HUD 功能列的浮動面板（6B-5：點圖示或快捷鍵開關、同時一個、Esc 關閉；不是說明卡）",
   "world/RegionMap.tsx": "區域圖（6C-6：M 或地圖鈕開關的全畫面面板，Esc 關閉；不是說明卡）",
@@ -110,10 +111,41 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(styles).toMatch(/\.popup-menu\s*\{[^{}]*overflow-y:\s*auto/);
   });
 
-  it(".decision-card 有最大高度並可捲動（小視窗不被切掉）", () => {
+  it(".decision-card 有最大高度並可捲動（小視窗不被切掉；UI-E2 起在共用彈窗的 .ui-popup-body 裡捲）", () => {
     const m = styles.match(/^\.decision-card\s*\{([^{}]*)\}/m);
     expect(m?.[1]).toMatch(/max-height:/);
-    expect(m?.[1]).toMatch(/overflow-y:\s*auto/);
+    const body = styles.match(/\.ui-popup-dialog > \.ui-popup-body\s*\{([^{}]*)\}/);
+    expect(body?.[1]).toMatch(/overflow-y:\s*auto/);
+    expect(body?.[1]).toMatch(/min-height:\s*0/);
+    const frame = styles.match(/\.ui-popup-dialog\s*\{([^{}]*)\}/);
+    expect(frame?.[1]).toMatch(/display:\s*flex/);
+    expect(frame?.[1]).toMatch(/overflow:\s*hidden/);
+  });
+
+  it("UI-E2：彈窗外框一律用共用彈窗元件 PopupFrame（大世界面板、遇敵卡、事件卡、詢問視窗）", () => {
+    const uses: Record<string, RegExp> = {
+      "world/WorldHud.tsx": /<PopupFrame[\s\S]*?className="world-hud-panel"/,
+      "world/WorldPanel.tsx": /<PopupFrame[\s\S]*?tone="danger"[\s\S]*?className="world-encounter"/,
+      "world/EventCard.tsx": /<PopupFrame[\s\S]*?className="world-event"/,
+      "ui/DialogFrame.tsx": /<PopupFrame[\s\S]*?className="decision-card"/,
+    };
+    for (const [path, re] of Object.entries(uses)) {
+      const text = files.find(([p]) => p === path)?.[1] ?? "";
+      expect(text, path).toMatch(re);
+    }
+    // 舊的自製外框不再出現
+    for (const [path, old] of [
+      ["world/WorldHud.tsx", /<div\s+className="world-hud-panel"/],
+      ["world/WorldPanel.tsx", /className="panel world-encounter"/],
+      ["world/EventCard.tsx", /className="panel world-event"/],
+      ["ui/DialogFrame.tsx", /<div className={`decision-card/],
+    ] as const) {
+      expect(files.find(([p]) => p === path)?.[1] ?? "", path).not.toMatch(old);
+    }
+    // 共用元件本身不做 fixed／absolute 內聯定位、不用 portal（位置規則只是 top／寬高）
+    const frame = files.find(([p]) => p === "ui/PopupFrame.tsx")?.[1] ?? "";
+    expect(frame).toMatch(/export function PopupFrame/);
+    expect(frame).not.toMatch(/createPortal|position:/);
   });
 
   it("`role=dialog` 的面板都在白名單（點擊開關的對話框／面板，不是說明卡）", () => {

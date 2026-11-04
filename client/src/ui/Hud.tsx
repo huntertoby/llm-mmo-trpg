@@ -15,6 +15,7 @@ import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
+import { HeroCard } from "./HeroCard";
 import { passiveLine, raceHudText } from "../battle/race";
 import { activeStacks, barData, heroChips, surfaceAt } from "./statusCard";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
@@ -100,19 +101,17 @@ export function Hud({ view, hero, cards, compact = false }: Props) {
       <HudBadges view={view} hero={hero} cards={cards} />
     </div>
   );
+  // UI-E2（巡檢 #5）：和大世界同一張主角卡（`HeroCard`：頭像＋三條＋區域四角飾件）；資料不變
   if (compact) {
     return (
-      <div className="panel hud hud-compact" aria-label="主角狀態">
-        <div className="hud-bars">{bars}</div>
+      <HeroCard where="battle" compact className="panel hud hud-compact" bars={<div className="hud-bars">{bars}</div>}>
         {icons}
-      </div>
+      </HeroCard>
     );
   }
   const details = heroDetails(view, hero);
   return (
-    <div className="panel hud" aria-label="主角狀態">
-      <div className="hud-title">{hero.name_zh}</div>
-      <div className="hud-bars">{bars}</div>
+    <HeroCard where="battle" className="panel hud" name={<span className="hud-title">{hero.name_zh}</span>} bars={<div className="hud-bars">{bars}</div>}>
       {icons}
       {details.length > 0 && (
         <details className="hud-details">
@@ -120,7 +119,7 @@ export function Hud({ view, hero, cards, compact = false }: Props) {
           {details}
         </details>
       )}
-    </div>
+    </HeroCard>
   );
 }
 
