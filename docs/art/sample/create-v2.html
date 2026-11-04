@@ -7,7 +7,7 @@
 </style></head>
 <body>
 <h1>建立角色（第 2 版樣張）：種族、出身、武器、關鍵字都用遊戲裡的畫法</h1>
-<p class="note">美術 PM，2026-11-04。使用者看第 1 版：「太簡陋了吧」。種族小圖改用 C 墨線紙娃娃的頭像（看得到尖耳、狐耳、鱗角、鬍子、獠牙、義眼、鰭耳）；選中的種族在右上展開名字、簡介、種族技、環境被動、判定加值；左邊大預覽跟著切換。出身用五區紋章與區域色；武器用遊戲的武器圖示；關鍵字用小圖示。全部程式繪製；簡介文字是美術 PM 暫擬，正式文案由玩法 PM 定。</p>
+<p class="note">美術 PM，2026-11-04。使用者看第 1 版：「太簡陋了吧」。種族小圖改用 C 墨線紙娃娃的頭像（看得到尖耳、狐耳、鱗角、鬍子、獠牙、義眼、鰭耳）；選中的種族在右上展開名字、簡介、種族技、環境被動、判定加值；左邊大預覽跟著切換。出身用五區紋章與區域色；武器用遊戲的武器圖示；關鍵字用小圖示。全部程式繪製；種族簡介、判定加值、出身描述照玩法 PM 定稿（#115）。左邊預覽背後是所選出身區的淡景。</p>
 <div id="a"></div>
 <script src="raceArt.js"></script>
 <script src="paperdoll.js"></script>
@@ -66,7 +66,15 @@ function kwIcon(x,cx,cy,k){const C={冰凍:"#8ad8ff",燃燒:"#ff8a3a",帶電:"#f
 function chip(x,X,Y,W,H,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,W,H,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();if(sel){glow(x,X+W/2,Y+H/2,W*0.6,"rgba(232,187,72,0.15)");}}
 const W=1300,H=980;const [c,x]=cv(W,H);sky(x,W,H);
 // 左：預覽
-frame(x,20,20,330,940);x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText("預覽",40,48);
+frame(x,20,20,330,940);
+// 預覽背景：所選出身區的淡景（區域插畫 B 彩繪的全貌，RegionArt.draw 的 full 模式），框內上半部，往下漸淡到深藍
+{const rg=document.createElement("canvas");RegionArt.draw(rg,"painted",{full:true,region:"cloud_ridge"});
+ x.save();x.beginPath();x.roundRect(24,24,322,620,6);x.clip();x.globalAlpha=0.62;
+ const sw=rg.width*0.42,sh=sw*620/322;x.drawImage(rg,rg.width*0.08,rg.height*0.12,sw,Math.min(sh,rg.height*0.86),24,24,322,620);x.globalAlpha=1;
+ const fade=x.createLinearGradient(0,300,0,644);fade.addColorStop(0,"rgba(30,34,54,0)");fade.addColorStop(1,"rgba(30,34,54,1)");x.fillStyle=fade;x.fillRect(24,300,322,344);
+ const top=x.createLinearGradient(0,24,0,90);top.addColorStop(0,"rgba(30,34,54,0.85)");top.addColorStop(1,"rgba(30,34,54,0)");x.fillStyle=top;x.fillRect(24,24,322,66);x.restore();
+ x.fillStyle="rgba(16,18,30,0.75)";x.beginPath();x.roundRect(220,34,116,22,11);x.fill();x.strokeStyle=RC.雲嶺[0];x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`11px ${FONT}`;x.fillText("出身：雲嶺的景",232,49);}
+x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText("預覽",40,48);
 glow(x,185,420,170,"rgba(106,168,74,0.35)");x.fillStyle="rgba(0,0,0,0.3)";x.beginPath();x.ellipse(185,520,70,14,0,0,TAU);x.fill();
 StoryDoll.stamp(x,{look:R.fox.look,gear:{body:{kind:"leather",color:"#6a5040"},feet:{kind:"boots",material:"leather"},main_hand:{kind:"bow",material:"wood"}}},"front",185,520,4.6,false);
 x.fillStyle=CREAM;x.font=`bold 20px ${SERIF}`;x.textAlign="center";x.fillText("霜月",185,570);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("狐族・雲嶺出身・弓",185,592);x.textAlign="left";
@@ -85,11 +93,11 @@ RACES.forEach(([id,zh,realm],i)=>{const X=392+(i%5)*120,Y=126+Math.floor(i/5)*12
 // 選中種族的說明
 {const X=1000,Y=126,Wd=258,Hd=248;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,Wd,Hd,8);x.fill();x.strokeStyle=RC.雲嶺[0];x.lineWidth=1.6;x.stroke();
  x.fillStyle=CREAM;x.font=`bold 18px ${SERIF}`;x.fillText("狐族",X+14,Y+30);x.fillStyle=RC.雲嶺[0];x.font=`11px ${FONT}`;x.fillText("雲嶺",X+62,Y+30);
- x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;["霧裡長大的狐耳一族，耳朵聽得見","別人聽不見的腳步聲。"].forEach((t,i)=>x.fillText(t,X+14,Y+54+i*17));
+ x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;["狐耳狐尾的一族，聽得見別人聽不見","的腳步聲，也最會說話。"].forEach((t,i)=>x.fillText(t,X+14,Y+54+i*17));
  const row=(lab,t1,t2,y,col)=>{x.fillStyle=col;x.font=`bold 11.5px ${FONT}`;x.fillText(lab,X+14,Y+y);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(t1,X+14,Y+y+18);x.fillStyle="#b8ab96";x.font=`11px ${FONT}`;x.fillText(t2,X+14,Y+y+34);};
  row("種族技（每場 1 次）","狐火誘餌","2 格內放誘餌，敵人下一次單體攻擊打它",100,GOLD2);
  row("環境被動","靈覺","看得見 2 格內的敵方陷阱與隱蔽單位",156,GOLD2);
- x.fillStyle="#8ad8ff";x.font=`bold 11.5px ${FONT}`;x.fillText("判定加值",X+14,Y+212);x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(X+14,Y+220,150,22,11);x.fill();x.strokeStyle="#8ad8ff";x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${FONT}`;x.fillText("說服、欺騙 +1",X+26,Y+236);}
+ x.fillStyle="#8ad8ff";x.font=`bold 11.5px ${FONT}`;x.fillText("判定加值",X+14,Y+212);x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(X+14,Y+220,110,22,11);x.fill();x.strokeStyle="#8ad8ff";x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${FONT}`;x.fillText("交涉 +1",X+44,Y+236);x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText("情境判定用這類方法時 +1",X+132,Y+236);}
 sec("3","出身",412);
 const ORIG=[["晶冠城邦","晶冠","白石與晶光的城邦"],["雲嶺","雲嶺","雲海上的山城與竹林"],["魔導樞市","樞市","黃銅與晶能的工坊街"],["灰燼荒原","灰燼","焦土上的拾荒聚落"],["霜潮海境","霜潮","浮冰與珊瑚的港灣"]];
 ORIG.forEach(([n,realm,d],i)=>{const X=392+i*174,Y=422,sel=realm==="雲嶺";chip(x,X,Y,166,72,sel,RC[realm][0]);emblem(x,X+30,Y+36,22,realm);x.fillStyle=CREAM;x.font=`bold 13.5px ${FONT}`;x.fillText(n,X+60,Y+32);x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText(d,X+60,Y+52);});
