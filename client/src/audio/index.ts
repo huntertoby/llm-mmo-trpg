@@ -27,10 +27,14 @@ export function isMuteShortcut(e: { code?: string; key: string; shiftKey: boolea
   return e.code === "KeyM" || e.key === "M" || e.key === "m";
 }
 
+/** 不算打字的 input（滑桿、勾選框、按鈕）：焦點在上面時 Shift＋M 照常有效。 */
+const NON_TEXT_INPUTS: readonly string[] = ["range", "checkbox", "radio", "button", "submit", "reset", "color", "file"];
+
 function typingInto(target: EventTarget | null): boolean {
   if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+  if (tag === "INPUT") return !NON_TEXT_INPUTS.includes((target as HTMLInputElement).type);
+  return tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
 }
 
 interface ListenTarget {
