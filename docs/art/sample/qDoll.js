@@ -165,7 +165,7 @@ window.QDoll = (() => {
     fill(ctx, c, () => { ctx.moveTo(-W / 2, -3); ctx.lineTo(-W / 2, -L); ctx.lineTo(0, -L - 3); ctx.lineTo(W / 2, -L); ctx.lineTo(W / 2, -3); ctx.closePath(); });
     if (it?.form === "arcane") {
       const glow = "#9a86ff";
-      ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 4; ctx.fillStyle = glow; ctx.fillRect(-0.55, -L + 1, 1.1, L - 5); ctx.restore();
+      ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 4 + 8 * pz("glow"); ctx.fillStyle = glow; ctx.fillRect(-0.55, -L + 1, 1.1, L - 5); ctx.restore();
       ctx.fillStyle = "#e8e2ff"; for (const ry of [-6.5, -10, -13.5]) ctx.fillRect(-1.1, ry, 2.2, 0.8);
       fill(ctx, "#b08a4a", () => { for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU, r = i % 2 ? 3.2 : 4.3; ctx.lineTo(Math.cos(a) * r, -3 + Math.sin(a) * r * 0.55); } ctx.closePath(); });
       fill(ctx, glow, () => ctx.arc(0, -3, 1.2, 0, TAU));
@@ -223,8 +223,9 @@ window.QDoll = (() => {
     whip: { len: 18, hold: { side: 0.75, front: -0.25 }, draw: (c, it) => {
       fill(c, "#4a3020", () => c.roundRect(-1.1, -5, 2.2, 6.5, 0.8));
       c.strokeStyle = it?.color ?? "#5e3b1f"; c.lineWidth = 1.4; c.lineCap = "round";
-      c.beginPath(); c.moveTo(0, -5); c.bezierCurveTo(4, -9, -4, -13, 1, -18); c.stroke();
-      c.lineWidth = 0.8; c.beginPath(); c.moveTo(1, -18); c.quadraticCurveTo(3.5, -20, 2.2, -21.5); c.stroke();
+      const w = Math.sin(pz("lash") * TAU) * 2.5; // 待機：鞭梢甩動
+      c.beginPath(); c.moveTo(0, -5); c.bezierCurveTo(4 + w, -9, -4 - w, -13, 1 + w, -18); c.stroke();
+      c.lineWidth = 0.8; c.beginPath(); c.moveTo(1 + w, -18); c.quadraticCurveTo(3.5 + 1.6 * w, -20, 2.2 + 2 * w, -21.5); c.stroke();
     } },
     gauntlet: { len: 4, hold: { side: 1.0, front: 0 }, draw: (c, it) => {
       const [k, d] = wc(it, "steel");
@@ -235,16 +236,18 @@ window.QDoll = (() => {
     staff: { len: 32, hold: { side: 0, front: 0 }, draw: (c, it) => {
       const orb = ({ fire: "#ff6a1a", water: "#4aa8ff", ice: "#8fe3ff", lightning: "#fff36b", poison: "#7ddc3a", wind: "#7fe0c0", earth: "#b0814a", holy: "#ffd75e", shadow: "#9a6ad8" })[it?.element] ?? "#c8bcff"; // 同 paperdoll 的 ELEMENT_TINT
       fill(c, "#6a4420", () => c.rect(-1.1, -30, 2.2, 39)); // 杖身到 +9，下手握在 +6
-      c.save(); c.globalAlpha = 0.35; fill(c, orb, () => c.arc(0, -32, 6.5, 0, TAU)); c.restore();
+      const g = pz("glow"); // 待機的光脈動（idleWeapons.js）：0～1
+      c.save(); c.globalAlpha = 0.35 + 0.35 * g; fill(c, orb, () => c.arc(0, -32, 6.5 + 2 * g, 0, TAU)); c.restore();
       fill(c, orb, () => c.arc(0, -32, 3.6, 0, TAU));
       fill(c, "rgba(255,255,255,0.8)", () => c.arc(-1.2, -33.2, 1.1, 0, TAU));
     } },
     orb: { len: 6, hold: { side: 0.6, front: 0 }, draw: (c, it) => {
       const orb = it?.color ?? "#a898ff";
       // 法球托在掌心：球心 −3.4，球底貼著手
-      c.save(); c.globalAlpha = 0.35; fill(c, orb, () => c.arc(0, -3.4, 6, 0, TAU)); c.restore();
-      fill(c, orb, () => c.arc(0, -3.4, 3.6, 0, TAU));
-      fill(c, "rgba(255,255,255,0.8)", () => c.arc(-1.2, -4.6, 1.1, 0, TAU));
+      const g = pz("glow"), oy = -3.4 + pz("orbY"); // 待機：法球在掌上浮沉（orbY）、光脈動（glow）
+      c.save(); c.globalAlpha = 0.35 + 0.35 * g; fill(c, orb, () => c.arc(0, oy, 6 + 2 * g, 0, TAU)); c.restore();
+      fill(c, orb, () => c.arc(0, oy, 3.6, 0, TAU));
+      fill(c, "rgba(255,255,255,0.8)", () => c.arc(-1.2, oy - 1.2, 1.1, 0, TAU));
     } },
     // 弓：弓把在原點（持弓手包住它），弓臂往 ±x 彎、弓背朝 −y（＝箭的方向），弦在 +y；側面 hold π/2 讓箭朝前；正面 −π/2 弓背朝外
     // 第 3 版前弧心在 (0,9)，弓把其實在 y −4，手離弓身 4 單位（使用者：「弓左邊這隻手沒抓著弓身」）；改成弧心 (0,13)、弓把在原點
@@ -407,12 +410,14 @@ window.QDoll = (() => {
   // ---------- 盾：正面舊版原樣＋一圈鋼邊（和同色披風分得開）／側面（新：近乎側看的窄盾，在胸前）／背面（新：看到盾的背面＝木板＋皮帶） ----------
   const RIM = "#c3ccd6";
   function shieldFront(ctx, it, x) {
+    ctx.save(); ctx.translate(0, -pz("shieldUp")); // 待機：舉盾
     PD.drawWeapon(ctx, it, x, true);
     if (it.kind === "shield_round") { ctx.strokeStyle = RIM; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(x, -13.5, 7.1, 0, TAU); ctx.stroke(); }
+    ctx.restore();
   }
   function shieldSide(ctx, it) {
     const [c, d] = colors(it), tower = it.kind === "shield_kite" && it.form === "tower";
-    ctx.save(); ctx.translate(8.6, -13.5); // 拿在遠側手、舉在胸前：比身體前緣（x 5.4）再往前，近側手臂只蓋到盾的後緣
+    ctx.save(); ctx.translate(8.6, -13.5 - pz("shieldUp")); // 拿在遠側手、舉在胸前：比身體前緣（x 5.4）再往前，近側手臂只蓋到盾的後緣
     if (it.kind === "shield_round") {
       fill(ctx, d, () => ctx.ellipse(0, 0, 2.9, 7.5, 0, 0, TAU));
       fill(ctx, c, () => ctx.ellipse(0.6, 0, 2.1, 6.2, 0, 0, TAU));
@@ -486,8 +491,10 @@ window.QDoll = (() => {
       const a = pz("arm"), eA = Math.min(0, a * 0.35);
       sideW = POSE && typeof POSE.wpn === "number" ? POSE.wpn : holdOf(gear.main_hand, "side");
       let done = false;
+      const h0 = fk(4.5, 0, eA), h = [4.5 + rot(a, [h0[0] - 4.5, h0[1] + 20])[0], -20 + rot(a, [h0[0] - 4.5, h0[1] + 20])[1]];
+      // 姿勢鍵 behind（待機的雙手劍扛肩）：武器畫在身體與頭的後面，近側手臂照常畫在前面
+      if (pz("behind")) { mainWeapon(ctx, gear.main_hand, h, a + eA + sideW, "side"); mark("weapon"); }
       if (two) {
-        const h0 = fk(4.5, 0, eA), h = [4.5 + rot(a, [h0[0] - 4.5, h0[1] + 20])[0], -20 + rot(a, [h0[0] - 4.5, h0[1] + 20])[1]];
         const o = rot(a + eA + sideW, twoOff(two)), t = [h[0] + o[0], h[1] + o[1]], k = ik(3, t, -1);
         if (k.ok) { arm(ctx, unit, 3, k.sA, k.eA, side, rec("off")); if (POSE && POSE.hands) POSE.hands.offTwo = true; done = true; }
       }
@@ -531,7 +538,7 @@ window.QDoll = (() => {
     } else if (S) {
       const a = pz("arm"), rm = rec("main");
       ctx.save(); rotAt(ctx, 4.5, -20, a);
-      arm(ctx, unit, 4.5, 0, Math.min(0, a * 0.35), side, (hand, c) => { mainWeapon(ctx, gear.main_hand, hand, sideW, "side"); if (rm) rm(hand, c); });
+      arm(ctx, unit, 4.5, 0, Math.min(0, a * 0.35), side, (hand, c) => { if (!pz("behind")) mainWeapon(ctx, gear.main_hand, hand, sideW, "side"); if (rm) rm(hand, c); });
       ctx.restore();
     }
     ctx.restore();
