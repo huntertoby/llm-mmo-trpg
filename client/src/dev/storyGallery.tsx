@@ -1,7 +1,8 @@
 // 開發用：6C-7 的字幕、事件卡、情境判定擲骰與 NPC 頭像（開 `client/story-gallery.html`，pnpm dev 後 /story-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖。畫面用正式元件與樣式，資料是固定的假資料；NPC 外觀直接讀 `content/world/npcs/*.yaml`。
 // `#subtitle`：上方字幕＋NPC 頭像（96／48／28）與地圖紙娃娃對照；`#event`：事件卡（插圖、對話框、選項圖示、情境判定）；
-// `#roll`（也可用 `?mode=roll`）：判定結果（兩顆骰的動畫＋顏色；`?t=` 指定動畫已經過的毫秒，不給＝照計時器播）。
+// `#roll`（也可用 `?mode=roll`）：判定結果（兩顆骰的動畫＋顏色；`?t=` 指定動畫已經過的毫秒，不給＝照計時器播）；
+// `#icons`：6C-ART3 墨線圖示總表（選項 8、其他 5、六屬性、d20；64／24／18，對照 docs/art/sample/story-icons.html）。
 import { createRoot } from "react-dom/client";
 import { parse } from "yaml";
 import type { Glossary, NpcPortrait, WorldEventView, WorldSituationResult } from "../api/types";
@@ -13,7 +14,9 @@ import { EventCard, SituationResultCard } from "../world/EventCard";
 import { RankFace } from "../world/FieldHeads";
 import { npcFieldLook } from "../world/npcLook";
 import { NarratorSubtitle } from "../world/StoryParts";
-import { Portrait } from "../world/StoryIcons";
+import { AttrIcon, D20, MiscGlyph, Portrait, SolutionGlyph, type MiscIcon } from "../world/StoryIcons";
+import { D20_COLOR } from "../render/storyIconArt";
+import { SOLUTION_ICON_ZH, type AttrKey, type SolutionIcon } from "../world/narration";
 import cloudYaml from "../../../content/world/npcs/cloud_ridge.yaml?raw";
 import ashenYaml from "../../../content/world/npcs/ashen_waste.yaml?raw";
 import "../styles/index.css";
@@ -170,5 +173,45 @@ function RollScene() {
   );
 }
 
+const ICON_SIZES = [64, 24, 18] as const;
+const SOLS: readonly SolutionIcon[] = ["combat", "persuade", "sneak", "investigate", "force", "chance", "leave", "trade"];
+const MISCS: readonly [MiscIcon, string][] = [["clue", "線索"], ["model_off", "模型關閉"], ["narrator", "說書人"], ["info", "說明"], ["thread", "事件線"]];
+const ATTRS: readonly [AttrKey, string][] = [["str", "力量"], ["dex", "敏捷"], ["con", "體質"], ["int", "智力"], ["wis", "感知"], ["wil", "意志"]];
+
+function IconCell({ label, children }: { label: string; children: (size: number) => React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 118 }}>
+      <span style={{ display: "flex", gap: 6, alignItems: "center" }}>{ICON_SIZES.map((s) => <span key={s}>{children(s)}</span>)}</span>
+      <span className="small">{label}</span>
+    </div>
+  );
+}
+
+function IconsScene() {
+  const row: React.CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" };
+  return (
+    <Stage>
+      <div className="panel" style={{ position: "absolute", left: 16, right: 16, top: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="section-title">選項（64／24／18）</div>
+        <div style={row}>{SOLS.map((i) => <IconCell key={i} label={SOLUTION_ICON_ZH[i]}>{(s) => <SolutionGlyph icon={i} size={s} />}</IconCell>)}</div>
+        <div className="section-title">其他</div>
+        <div style={row}>{MISCS.map(([i, zh]) => <IconCell key={i} label={zh}>{(s) => <MiscGlyph icon={i} size={s} />}</IconCell>)}</div>
+        <div className="section-title">六屬性</div>
+        <div style={row}>{ATTRS.map(([a, zh]) => <IconCell key={a} label={zh}>{(s) => <AttrIcon attr={a} size={s} />}</IconCell>)}</div>
+        <div className="section-title">d20（64 寫點數；28 以下不寫字，DC 寫在旁邊）</div>
+        <div style={{ ...row, gap: 18 }}>
+          <IconCell label="一般">{(s) => <D20 size={s} value={15} />}</IconCell>
+          <IconCell label="大成功（金）">{(s) => <D20 size={s} value={20} color={D20_COLOR.crit} />}</IconCell>
+          <IconCell label="大失敗（灰）">{(s) => <D20 size={s} value={1} color={D20_COLOR.fumble} />}</IconCell>
+          <span className="world-dc" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <D20 size={24} />
+            <b>13</b>
+          </span>
+        </div>
+      </div>
+    </Stage>
+  );
+}
+
 const root = document.getElementById("root");
-if (root !== null) createRoot(root).render(MODE === "event" ? <EventScene /> : MODE === "roll" ? <RollScene /> : <SubtitleScene />);
+if (root !== null) createRoot(root).render(MODE === "event" ? <EventScene /> : MODE === "roll" ? <RollScene /> : MODE === "icons" ? <IconsScene /> : <SubtitleScene />);
