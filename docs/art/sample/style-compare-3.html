@@ -27,7 +27,7 @@
 
 <h2>3. 四方向（5 套裝備）與種族、配件</h2>
 <div class="pair"><div class="col"><h3><b>原版</b>：正面、「側面」（只是正面橫向壓 0.9）、背面</h3><canvas id="d1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b>：正面、真側面（朝東／朝西）、背面；劍盾披風、鳶盾、弓、法杖＋書、大劍＋紅披風</h3><canvas id="d2"></canvas></div></div>
-<div class="pair"><div class="col"><h3><b>原版</b> 10 族（raceArt 當時就是配 Q 版畫的）</h3><canvas id="r1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b> 10 族</h3><canvas id="r2"></canvas></div></div>
+<div class="pair"><div class="col"><h3><b>原版</b> 10 族（raceArt 當時就是配 Q 版畫的）</h3><canvas id="r1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b> 10 族（龍裔 11-04 晚重做：往後掃的龍角、粗龍尾、豎瞳）</h3><canvas id="r2"></canvas></div></div>
 
 <h2>4. 頭像 64／32px：從 Q 版的頭延伸（不是 C 的頭）</h2>
 <div class="pair"><div class="col"><h3><b>原版</b>的頭放大（當時沒有頭像系統）</h3><canvas id="p1"></canvas></div><div class="col"><h3><b>Q 版頭像</b>：同一顆頭＋現行的框、底、配件位置</h3><canvas id="p2"></canvas></div></div>
@@ -79,7 +79,8 @@ function dirs(x,useQ){const K=1.45,RH=1.85*T;floor(x,10,LOADS.length*1.85+0.2);
     L.forEach(([v,w,t],i)=>{const cx=(1.6+i*2.3)*T;if(useQ)Q.stamp(x,u,v,cx,fy,K,w);else PD.stamp(x,u,v,cx,fy,K,{dpr:3});if(j===0){x.fillStyle="#f2e6c8";x.textAlign="center";x.fillText(t,cx,12);x.textAlign="left";}});});}
 dirs(cv("d1",10*T,LOADS.length*1.85*T+10),false);dirs(cv("d2",10*T,LOADS.length*1.85*T+10),true);
 const RACES=[["人類",R.human.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["精靈",R.elf.look,{body:{kind:"robe",color:"#f2ece0",trim:"#8ab0ff"}}],["狐族",R.fox.look,{body:{kind:"leather",color:"#6a5040"},main_hand:{kind:"bow",material:"wood"}}],["龍裔",R.dragonkin.look,{body:{kind:"mail",color:"#8a6a3a"}}],["矮人",R.dwarf.look,{body:{kind:"mail",color:"#b08a4a"},main_hand:{kind:"hammer",material:"iron"}}],["義體人",R.cyborg.look,{body:{kind:"coat",color:"#4a5058"}}],["獸人",R.orc.look,{body:{kind:"leather",color:"#6a4a3a"},main_hand:{kind:"axe",material:"iron"}}],["角魔",R.fiend.look,{body:{kind:"robe",color:"#3a2420",trim:"#ff6a1a"},main_hand:{kind:"staff",material:"wood"}}],["鱗族",R.scalefolk.look,{body:{kind:"leather",color:"#3a6a6a"}}],["海民",R.seafolk.look,{body:{kind:"leather",color:"#c8b08a"}}]];
-function races(x,useQ){const K=1.4;floor(x,10,2.2);RACES.forEach(([t,look,gear],i)=>{const cx=(0.5+i)*T;if(useQ)Q.stamp(x,{look,gear},"front",cx,1.7*T,K,false);else PD.stamp(x,{look,gear},"south",cx,1.7*T,K,{dpr:3});x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,2.2*T-8);x.textAlign="left";});}
+const OLD_DRAGON={skin:"#d8a878",hair:"short",hairColor:"#3a2418",horns:"small",hornColor:"#e8d8b8",pattern:"scales",tail:"scaled",tailColor:"#a8784a"}; // 左欄原版保留舊龍裔（11-04 晚重做前）
+function races(x,useQ){const K=1.4;floor(x,10,2.2);RACES.forEach(([t,look0,gear],i)=>{const look=!useQ&&t==="龍裔"?OLD_DRAGON:look0;const cx=(0.5+i)*T;if(useQ)Q.stamp(x,{look,gear},"front",cx,1.7*T,K,false);else PD.stamp(x,{look,gear},"south",cx,1.7*T,K,{dpr:3});x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,2.2*T-8);x.textAlign="left";});}
 races(cv("r1",10*T,2.2*T),false);races(cv("r2",10*T,2.2*T),true);
 // 4. 頭像：Q 版的頭，框與底照 portraits.js
 const REG={crystal_crown:["#8ab0ff","#22284a","#7a8ac8"],cloud_ridge:["#6aa84a","#2f4a3a","#8ab890"],arcane_hub:["#4ad0c8","#1e2a2a","#6a9a90"],ashen_waste:["#ff6a1a","#3a2418","#b07050"]};

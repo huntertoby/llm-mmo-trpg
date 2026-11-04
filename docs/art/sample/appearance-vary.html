@@ -106,7 +106,8 @@ function vary(race,key,fixed={}){const r=rng(seedOf(key)),R0=RaceArt.RACES[race]
   const beardP=fem?[null]:race==="dwarf"?["full","full","short","goatee","mustache"]:beards;
   const lk={...R0,skin:pick(r,U.skin),face:pick(r,fem?[["oval"],["heart"],["round"]]:OPT.face)[0],eyeStyle:pick(r,fem?[["big"],["dot"],["smile"],["square"]]:OPT.eyeStyle)[0],hair:R0.hair?pick(r,hairP):undefined,hairColor:pick(r,U.hairC),beardStyle:pick(r,beardP),frame:pick(r,fem?[null,"slim"]:[null,"broad"]),lashes:fem&&r()<0.8,eyes:R0.eyes??pick(r,EYEC.slice(0,4))};
   if(race==="scalefolk")delete lk.hair;if(lk.hair==="none")lk.beardStyle=lk.beardStyle;if(!lk.beardStyle)delete lk.beardStyle;if(!lk.frame)delete lk.frame;
-  if(lk.tail==="fox")lk.tailColor=lk.hairColor;return {...lk,...fixed};}
+  if(lk.tail==="fox")lk.tailColor=lk.hairColor;if(race==="dragonkin")lk.scaleColor=pick(r,["#a8784a","#9a3a2a","#c89a3a","#4a4450"]); // 龍裔鱗色：銅、赤、金、黑曜
+  return {...lk,...fixed};}
 const RKEYS=["human","elf","fox","dragonkin","dwarf","cyborg","orc","fiend","scalefolk","seafolk"];
 const OUTFIT=[{body:{kind:"shirt",color:"#6a6a7a"}},{body:{kind:"leather",color:"#6a5040"}},{body:{kind:"robe",color:"#5a3fa0"}},{body:{kind:"coat",color:"#4a5058"}},{body:{kind:"mail",color:"#8a6a3a"}}];
 function races(){const x=cv("races",1240,5*112+8);floor(x,24,12);RKEYS.forEach((rk,i)=>{const col=i%2,row=Math.floor(i/2),x0=col*620,y0=row*112;label(x,RaceArt.RACES[rk].zh,x0+40,y0+60,"#e8bb48",13);

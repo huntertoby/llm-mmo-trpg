@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>龍裔重做比較</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:18px 0 6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55}
+  canvas{display:block;border-radius:6px;background:#2a2e40}
+</style></head>
+<body>
+<h1>龍裔重做：和狐族、鱗族、角魔並排</h1>
+<p class="note">美術 PM，2026-11-04 晚。使用者原話：「喔但是這龍人太像貓人了」。舊版用了深色小三角角（正面像獸耳）和細長的鱗尾（像貓尾）。新版：象牙色龍角兩對、往後掃（正面看是從太陽穴往外後方掃，不往上豎；側面從額頭掃過頭頂）；臉頰與額頭龍鱗；豎瞳；粗龍尾（根部寬、末端尖、背棘、腹面淺色）。鱗色走銅、紅、金、黑曜，和鱗族的藍綠分開。全部程式繪製（<code>raceArt.js</code>）。</p>
+<h2>1. 四族 × 正面、側面（朝東）、背面（放大約 3 倍）</h2>
+<canvas id="big"></canvas>
+<h2>2. 剪影（全黑）：四族的輪廓要一眼分得開</h2>
+<canvas id="sil"></canvas>
+<h2>3. 實際大小：戰場 52px 與頭像 32px</h2>
+<canvas id="real"></canvas>
+<h2>4. 龍裔鱗色 4 種（和鱗族並排）</h2>
+<canvas id="col"></canvas>
+<h2>5. 舊版 → 新版</h2>
+<canvas id="old"></canvas>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script>
+<script>
+const Q=QDoll,R=RaceArt.RACES,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",T=52;
+function cv(id,w,h){const c=document.getElementById(id);c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return x;}
+const label=(x,t,cx,y,c="#f2e6c8",s=12)=>{x.fillStyle=c;x.font=`${s}px ${FONT}`;x.textAlign="center";x.fillText(t,cx,y);x.textAlign="left";};
+const GEAR={body:{kind:"leather",color:"#6a5040"},feet:{kind:"boots",material:"leather"}};
+const L=[["狐族",R.fox.look],["龍裔（新）",R.dragonkin.look],["鱗族",R.scalefolk.look],["角魔",R.fiend.look]];
+const V=[["front",false,"正面"],["side",false,"朝東"],["back",false,"背面"]];
+// 1
+{const x=cv("big",1240,2*210);L.forEach(([zh,look],i)=>{const col=i%2,row=Math.floor(i/2),x0=col*620,y0=row*210;x.fillStyle=(i%3)?"#262a3a":"#2e3346";x.fillRect(x0,y0,620,210);label(x,zh,x0+40,y0+22,"#e8bb48",14);
+  V.forEach(([v,w,t],j)=>{const cx=x0+150+j*170,fy=y0+186;Q.stamp(x,{look,gear:GEAR},v,cx,fy,3.2,w);label(x,t,cx,fy+18,"#c8bca8",11);});});}
+// 2 剪影
+{const x=cv("sil",1240,190);x.fillStyle="#d8d4cc";x.fillRect(0,0,1240,190);L.forEach(([zh,look],i)=>{V.forEach(([v,w],j)=>{const c=document.createElement("canvas");c.width=200;c.height=200;const o=c.getContext("2d");Q.stamp(o,{look,gear:GEAR},v,100,180,2.6,w);o.globalCompositeOperation="source-in";o.fillStyle="#16121a";o.fillRect(0,0,200,200);x.drawImage(c,15+i*305+j*95-50+20,0,100,100*1.6);});label(x,zh,15+i*305+120,186,"#16121a",13);});}
+// 3 實際大小
+{const x=cv("real",1240,120);x.fillStyle="#3a4a3a";x.fillRect(0,0,1240,120);L.forEach(([zh,look],i)=>{const x0=20+i*300;V.forEach(([v,w],j)=>Q.stamp(x,{look,gear:GEAR},v,x0+30+j*58,96,0.95,w));
+  // 32px 頭像
+  const s=32,k=s/26,X=x0+200,Y=40;x.save();x.translate(X,Y);x.beginPath();x.roundRect(0,0,s,s,4);x.save();x.clip();x.fillStyle="#2a3550";x.fillRect(0,0,s,s);Q.stamp(x,{look,gear:GEAR},"front",s/2,s*0.5+29*k,k,false,{dpr:3});x.restore();x.lineWidth=2;x.strokeStyle="#8ab0ff";x.beginPath();x.roundRect(0,0,s,s,4);x.stroke();x.restore();
+  label(x,zh,x0+110,114,"#f2e6c8",11);});}
+// 4 鱗色
+{const x=cv("col",1240,170);const C=[["銅","#a8784a"],["赤","#9a3a2a"],["金","#c89a3a"],["黑曜","#4a4450"]];C.forEach(([zh,c],i)=>{const look={...R.dragonkin.look,scaleColor:c,hairColor:i===1?"#5a1a14":i===3?"#d8d4cc":R.dragonkin.look.hairColor};Q.stamp(x,{look,gear:GEAR},"front",80+i*150,150,2.4,false);label(x,`龍裔・${zh}`,80+i*150,166,"#c8bca8",11);});
+  [["鱗族・青","#78b4aa"],["鱗族・藍","#6a9ac0"]].forEach(([zh,c],i)=>{Q.stamp(x,{look:{...R.scalefolk.look,skin:c},gear:GEAR},"front",780+i*150,150,2.4,false);label(x,zh,780+i*150,166,"#c8bca8",11);});}
+// 5 舊版
+{const x=cv("old",1240,170);const OLD={skin:"#d8a878",hair:"short",hairColor:"#3a2418",horns:"small",hornColor:"#e8d8b8",pattern:"scales",tail:"scaled",tailColor:"#a8784a"};
+  [["舊版（像貓人）",OLD],["新版",R.dragonkin.look]].forEach(([zh,look],g)=>{V.forEach(([v,w],j)=>Q.stamp(x,{look,gear:GEAR},v,80+g*620+j*170,150,2.4,w));label(x,zh,80+g*620+170,166,g?"#e8bb48":"#ff9a8a",12);});}
+</script></body></html>

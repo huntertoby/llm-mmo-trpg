@@ -528,7 +528,7 @@ window.QDoll = (() => {
     if (R) R.ears(ctx, look, F ? "front" : "side", side, gear.head, "under");
     if (R) R.hat(ctx, look, gear.head, (it) => PD_headgear(ctx, it, B ? "back" : "front")); else PD_headgear(ctx, gear.head, B ? "back" : "front");
     if (R) R.ears(ctx, look, F ? "front" : "side", side, gear.head, "over");
-    if (R) R.horns(ctx, look, F ? "front" : "side", side);
+    if (R) R.horns(ctx, look, F ? "front" : B ? "back" : "side", side);
     ctx.restore();
     if (F && key) {
       // 正面關鍵姿勢：武器掛在主手手掌，副手臂、主手臂蓋在武器上（手握住握把）
