@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, with_rolls
@@ -77,11 +77,16 @@ def _assert_matches_walk(state: BattleState, p: PathPreview) -> None:
     stop = actual.state.units[p.unit_id].xy
     if p.certain:
         assert stop == p.stop == p.worst_stop
+        assert p.stops == (stop,)
         for step in p.steps:
             assert all(e.certain for e in step.events)
             assert _bare(step.events) == _bare(walked.by_step.get(step.index, []))
         return
-    assert stop in (p.stop, p.worst_stop)
+    assert p.stops[0] == p.stop and p.worst_stop in p.stops
+    assert stop in p.stops, (stop, p.stops)
+    if len(p.stops) <= 2:  # 只有兩種停點時兩個欄位就涵蓋（6E-2b）
+        assert stop in (p.stop, p.worst_stop)
+    assert p.stop_certain is (len(p.stops) == 1)
     for step in p.steps:
         if step.reach != "certain":
             continue
@@ -360,6 +365,10 @@ _DIRS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
 
 @settings(max_examples=40, deadline=None)
+# 6E-2b 回歸：冰面最後一格有陷阱，最多後果被定身不滑，實走「陷阱抵抗成功＋冰面失敗」滑到冰外
+@example(surfaces=[(2, 1, "ice")], moves=[(1, 0), (1, 0), (0, 1)], seed=0, trap=True)
+# 6E-2b：冰在陷阱前，「過了冰＋陷阱定身」停在陷阱格（三種停點）
+@example(surfaces=[(1, 0, "ice")], moves=[(1, 0), (1, 0), (0, 1), (0, 1)], seed=0, trap=True)
 @given(
     surfaces=st.lists(
         st.tuples(st.integers(0, 5), st.integers(0, 2), st.sampled_from(_SURFACES)), max_size=6
@@ -456,3 +465,44 @@ def test_ice_runs_split_on_plain_ground_and_keep_the_trap_after() -> None:
     assert q.slip_runs[0].fail_stop == (3, 0)
     plain = preview_path(_battle(), U1, path=_pos(((0, 0), (1, 0), (2, 0))))
     assert plain.slip_runs == ()
+
+
+# ---------------------------------------------------------------------------
+# 冰面檢定 × 其他分歧點（6E-2b）：所有實走停點都在 ``stops`` 裡
+# ---------------------------------------------------------------------------
+
+
+def _ice_trap_state(ice: Sequence[XY], seed: int) -> BattleState:
+    m = make_map("000000\n000000\n000000", surfaces=[(x, y, "ice") for x, y in ice], enemy=[(5, 2)])
+    spawns = [spawn(Team.ALLY, (0, 0), "hero_fighter"), spawn(Team.ENEMY, (5, 2), "bandit")]
+    return _enemy_trap(give_turn(make_state(m, spawns, seed=seed), U1), (2, 1), revealed=True)
+
+
+@pytest.mark.parametrize(
+    ("ice", "path", "stops", "worst_stop"),
+    [
+        # 陷阱在冰的最後一格：最多後果被定身不滑；「抵抗成功＋冰面失敗」滑到冰外 (2, 2)
+        (((2, 1),), ((0, 0), (1, 0), (2, 0), (2, 1)), ((2, 1), (2, 2)), (2, 2)),
+        # 冰在陷阱前：全過、冰面失敗（最多後果）、「過了冰＋陷阱定身」三種停點
+        (((1, 0),), ((0, 0), (1, 0), (2, 0), (2, 1), (2, 2)), ((2, 2), (2, 0), (2, 1)), (2, 0)),
+        # 兩段冰中間有陷阱：第二段冰失敗（撞地圖邊緣，倒在 (2, 2)）也要算進去
+        (
+            ((1, 0), (2, 2)),
+            ((0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (3, 2)),
+            ((3, 2), (2, 0), (2, 1), (2, 2)),
+            (2, 0),
+        ),
+    ],
+    ids=["trap_on_last_ice", "ice_then_trap", "ice_trap_ice"],
+)
+def test_ice_branches_cover_every_walked_stop(
+    ice: tuple[XY, ...], path: tuple[XY, ...], stops: tuple[XY, ...], worst_stop: XY
+) -> None:
+    p = preview_path(_ice_trap_state(ice, 0), U1, path=_pos(path))
+    assert set(p.stops) == set(stops) and p.worst_stop == worst_stop
+    assert not p.stop_certain
+    walked = {
+        resolve(_ice_trap_state(ice, seed), Move(unit_id=U1, path=_pos(path))).state.units[U1].xy
+        for seed in range(120)
+    }
+    assert walked == set(p.stops)
