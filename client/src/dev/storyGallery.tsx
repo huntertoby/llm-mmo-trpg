@@ -119,9 +119,10 @@ function Doll({ card }: { card: Card }) {
   return <img src={canvas?.toDataURL() ?? ""} width={48} height={66} alt="" />;
 }
 
-function Stage({ children }: { children: React.ReactNode }) {
+/** 6F-7：`fill` ＝ 鋪滿整個視窗（遇敵卡、反應詢問要照實際視窗寬拍 800／1600；以前固定 1040×720）。 */
+function Stage({ children, fill = false }: { children: React.ReactNode; fill?: boolean }) {
   return (
-    <div style={{ position: "relative", width: 1040, height: 720, overflow: "hidden", background: "radial-gradient(ellipse at 50% 60%, #3e5446, #1c2620 70%)", fontFamily: "sans-serif" }}>
+    <div style={{ position: "relative", width: fill ? "100vw" : 1040, height: fill ? "100vh" : 720, overflow: "hidden", background: "radial-gradient(ellipse at 50% 60%, #3e5446, #1c2620 70%)", fontFamily: "sans-serif" }}>
       <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "52px 52px" }} />
       {children}
     </div>
@@ -201,7 +202,7 @@ const ENCOUNTER_VIEW = {
 function EncounterScene() {
   useRegionTheme("cloud_ridge");
   return (
-    <Stage>
+    <Stage fill>
       <div className="world-hud-center" style={CENTER}>
         <EncounterPanel view={ENCOUNTER_VIEW} busy={false} onAct={() => undefined} onBattle={() => undefined} />
       </div>
@@ -219,7 +220,7 @@ const PENDING = { kind: "reaction", unit_id: "hero", reaction: "block", trigger_
 
 function ReactionScene() {
   return (
-    <Stage>
+    <Stage fill>
       <DecisionDialog pending={PENDING} rule={null} names={NAMES} eventText="1 霧狼 撲向 A 霜月。" enabled onDecide={() => undefined} />
     </Stage>
   );

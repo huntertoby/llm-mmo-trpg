@@ -9,6 +9,8 @@ export type HudBarKey = "I" | "K" | "G" | "J" | "Y" | "N" | "R" | "M";
 type Pt = readonly [number, number];
 
 const INK = "#2b1e16";
+/** 潛行圖示的淺色圓底（6F-7）。 */
+export const SNEAK_MOON = "#d4dbef";
 const TAU = Math.PI * 2;
 
 function seedOf(s: string): number {
@@ -193,6 +195,8 @@ const ICONS: Record<HudBarKey, { zh: string; draw: Draw }> = {
     zh: "潛行",
     draw: (c) => (
       <>
+        {/* 6F-7（美術 PM 驗收小修 5）：深色兜帽放在深色按鈕底上看不見，墊一個淺色的月光圓底（停用、整條變淡時也看得出形狀） */}
+        <circle className="sneak-moon" cx={24} cy={22} r={19} fill={SNEAK_MOON} stroke="#8a94b8" strokeWidth={1} />
         <Ink clip={c} k="sneak-hood" pts={[[14, 22], [18, 10], [30, 8], [38, 18], [36, 30], [24, 26]]} color="#3a3a44" opt={{ w: 0.9 }} />
         <Ink clip={c} k="sneak-face" pts={[[22, 18], [32, 16], [33, 24], [24, 25]]} color="#1a1a20" opt={{ shade: false, w: 0.5 }} />
         <Dot x={26} y={20} r={1.1} color="#c8f0ff" />

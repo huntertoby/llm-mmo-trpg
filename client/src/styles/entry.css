@@ -431,6 +431,20 @@
   background: var(--ui-gold-hi);
 }
 
+/* 6F-7（美術 PM 驗收小修 6）：連線畫在節點圓的下層、只連到圓的邊緣——
+   連線從上一個節點的中心畫到這一個節點的中心（每步等高時 −50%～+50%），節點圓不透明、疊在連線上面，
+   所以看得到的只有兩個圓之間那一段，不會穿過圓 */
+.run-route-step + .run-route-step::before {
+  top: -50%;
+  height: 100%;
+  z-index: 0;
+}
+
+.run-route-node {
+  position: relative;
+  z-index: 1;
+}
+
 .run-route-node {
   flex: none;
   display: grid;
@@ -720,6 +734,17 @@
 
 .entry-skin button.entry-continue:disabled .entry-continue-sub {
   color: #8a8a9a;
+}
+
+/* 6F-7（美術 PM 驗收小修 7）：停用的「繼續」字太淡（base.css 的停用 0.45 再加灰字）。不透明度提到 0.7，字改亮一點的灰，
+   看得出停用、也讀得到「還沒有角色」 */
+.entry-skin button.entry-continue:disabled {
+  opacity: 0.7;
+  color: #b4b4c6;
+}
+
+.entry-skin button.entry-continue:disabled .entry-continue-sub {
+  color: #b4b4c6;
 }
 
 .entry-skin button.entry-menu-btn {
