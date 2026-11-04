@@ -12,6 +12,8 @@
   --ui-gold: #c8a868;
   --ui-gold-hi: #e8bb48;
   --ui-gold-soft: rgb(200 168 104 / 35%);
+  /* UI-E1b：框內的細框線（事件卡的說書人框、輸入框）：亮金 45%，在深藍底上看得出是金色 */
+  --ui-gold-faint: rgb(232 187 72 / 45%);
   --ui-text: #f0e6cc;
   --ui-danger: #d04a3a;
   /* 區域點綴（hub） */
@@ -123,22 +125,43 @@
   overscroll-behavior: contain;
 }
 
+/* UI-E1b（docs/art/UI-E1檢查.md E，飾件不能壓到內容）：紅帶不再貼齊左右邊，改成在上緣、讓出四角飾件
+   （飾件佔外框 2＋2＋18＝22px），所以紅帶改成絕對定位、左右各從 22px 起；內容從紅帶與「！」下方開始（上內距 20px）。
+   遇敵等 inline 危險框的左右內距 12 → 20px（美術 PM 要求加 6px；加 6 時第一個字離外緣 20px，仍壓到 22px 的飾件 2px，所以加 8） */
+/* UI-E1b（docs/art/UI-E1檢查.md 第 3 節 5）：捲動區下緣加漸隱遮罩，捲到一半時不露出被切半的那行字。
+   遮罩是捲動內容最後面的一塊 sticky 色塊：內容超出時黏在捲動區底部蓋住最下面 16px（由透明漸到框的底色），
+   捲到底時回到內容後面的空白處，最後一行照常看得清楚；內容沒有超出時也只是內容後面多 16px 空白。 */
+.ui-popup-hud > .ui-popup-body::after,
+.ui-popup-dialog > .ui-popup-body::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  display: block;
+  clear: both;
+  height: 16px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy));
+}
+
 .ui-popup.danger {
-  padding-top: 0;
+  padding-top: 20px;
+}
+
+.ui-popup-inline.danger {
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .ui-popup-band {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  right: 22px;
   display: flex;
   align-items: center;
   height: 6px;
-  margin: 0 -12px 8px;
-  border-radius: 8px 8px 0 0;
+  border-radius: 0 0 4px 4px;
   background: var(--ui-danger);
-}
-
-/* 戰鬥詢問視窗的內距是 12px 16px：紅帶要貼齊左右邊（UI-E1 追加 1：反應詢問走危險類） */
-.decision-card .ui-popup-band {
-  margin: 0 -16px 8px;
 }
 
 /* UI-E1 追加 7：詢問視窗的捲動區下緣讓出飾件（外框內距 12px＋6px） */
@@ -147,7 +170,7 @@
 }
 
 .ui-popup-band > span {
-  margin-left: 14px;
+  margin-left: 18px;
   padding: 0 6px;
   font-size: 11px;
   font-weight: 700;
@@ -219,4 +242,13 @@
   margin-top: 8px;
   padding-top: 6px;
   border-top: 1px solid var(--ui-gold-soft);
+}
+
+/* ---- UI-E1b：武器小圖示在深藍底上看不見（docs/art/UI-E1檢查.md B）：墊一個淺色底圓（畫法不變，只加底） ---- */
+.weapon-icon {
+  flex: none;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #f6eed8, #d6c7a2);
+  box-shadow: 0 0 0 1px var(--ui-gold);
 }

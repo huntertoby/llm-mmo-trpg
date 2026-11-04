@@ -793,6 +793,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           onClosePanel={closeHud}
           onResetHints={resetHints}
           mapOpen={regionOpen}
+          onCloseMap={() => setRegionOpen(false)}
           center={
             hasCenter ? (
               <>

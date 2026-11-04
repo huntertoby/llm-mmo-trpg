@@ -158,11 +158,11 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
         </h1>
         <div className="run-header-buttons">
           {view.screen !== "ended" && (
-            <button type="button" disabled={busy} onClick={() => void saveFromMenu()}>
+            <button type="button" className="entry-btn entry-head-btn" disabled={busy} onClick={() => void saveFromMenu()}>
               存檔
             </button>
           )}
-          <button type="button" onClick={onHome}>
+          <button type="button" className="entry-btn entry-head-btn" onClick={onHome}>
             回首頁
           </button>
         </div>

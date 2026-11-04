@@ -226,6 +226,8 @@ export const api = {
   login: (username: string, password: string) => request<LoginResponse>("POST", "/auth/login", { username, password }),
   logout: () => request<null>("POST", "/auth/logout"),
   worldCharacters: () => request<WorldCharacterSummary[]>("GET", "/world/characters"),
+  /** 首頁「繼續」用的背景讀取（UI-E1b）：同一個端點，收到 401 不導到登入畫面。 */
+  worldCharactersQuiet: () => request<WorldCharacterSummary[]>("GET", "/world/characters", undefined, true),
   createWorldCharacter: (body: CreateWorldCharacterRequest) => worldRequest("POST", "/world/characters", body),
   world: (characterId: string) => worldRequest("GET", `/world/characters/${encodeURIComponent(characterId)}`),
   worldAct: (characterId: string, action: WorldAction) =>

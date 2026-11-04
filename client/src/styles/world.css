@@ -381,7 +381,7 @@
   font: inherit;
   background: var(--ui-navy-deep); /* UI-E1 追加 5：輸入框改深藍系，和事件卡外框統一 */
   color: inherit;
-  border: 1px solid #3a4060;
+  border: 1px solid var(--ui-gold-faint); /* UI-E1b：框線改低不透明度的金色 */
   border-radius: 4px;
   padding: 4px 6px;
 }

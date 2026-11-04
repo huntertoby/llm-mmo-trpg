@@ -105,7 +105,10 @@
   pointer-events: none;
 }
 
-/* ---- 主角卡 ---- */
+/* ---- 主角卡 ----
+   UI-E1b（飾件不能壓到內容，docs/art/UI-E1檢查.md D）：四角飾件佔外框 3.5～21.5px（邊框 1.5＋離內緣 2＋邊長 18）。
+   頭像（直徑 62 的圓）往右移到 left 18，圓才碰不到左上、左下的飾件；右側三條改窄（86～228），讓出右上的飾件；
+   階級鈕移到 left 22（原本 2，壓在左下飾件上），等級徽章、補給靈感跟著右移。 */
 .world-hud-hero {
   position: relative;
   width: 250px;
@@ -118,15 +121,15 @@
 
 .world-hud-face {
   position: absolute;
-  left: 7px;
-  top: 5px;
+  left: 18px;
+  top: 6px;
   display: block;
   line-height: 0;
 }
 
 .world-hud-lv {
   position: absolute;
-  left: 44px;
+  left: 50px;
   top: 56px;
   padding: 0 5px;
   font-size: 10px;
@@ -140,8 +143,8 @@
 
 .world-hud-rank {
   position: absolute;
-  left: 2px;
-  top: 52px;
+  left: 23px;
+  top: 50px;
   width: 22px;
   height: 22px;
   padding: 0;
@@ -154,7 +157,7 @@
 
 .world-hud-fatigue {
   position: absolute;
-  left: 58px;
+  left: 64px;
   top: 2px;
   padding: 0 3px;
   font-size: 10px;
@@ -167,9 +170,9 @@
 /* UI-E2：主角卡外框與頭像來自共用的 HeroCard（theme.css .hero-card）；這裡只排大世界卡（250×74）裡的位置 */
 .hero-card-world .hero-card-main {
   position: absolute;
-  left: 78px;
+  left: 86px;
   top: 5px;
-  width: 164px;
+  width: 141px;
 }
 
 .hero-card-world .hero-card-bars {
@@ -178,7 +181,7 @@
 
 .world-hud-hero > .world-hud-chips {
   position: absolute;
-  left: 78px;
+  left: 86px;
   bottom: 4px;
 }
 

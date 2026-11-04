@@ -643,8 +643,11 @@ export interface Scratch {
   image: CanvasImageSource;
 }
 
-/** 一座浮島的本體（不含字牌、傳送鈕、自己；那些在 `islandMarks`）。 */
-export function islandBody(ctx: Ctx, is: AtlasArtIsland, scratch: () => Scratch | null): void {
+/**
+ * 一座浮島的本體（不含字牌、傳送鈕、自己；那些在 `islandMarks`）。
+ * `badge`：未開放的島畫不畫鎖頭徽章（UI-E1b：入口畫面的背景 `bare` 不畫，否則會被標題牌和選單切成一半）。
+ */
+export function islandBody(ctx: Ctx, is: AtlasArtIsland, scratch: () => Scratch | null, badge = true): void {
   const g = is.geo;
   if (is.status === "open") {
     ctx.save();
@@ -668,7 +671,7 @@ export function islandBody(ctx: Ctx, is: AtlasArtIsland, scratch: () => Scratch 
   }
   ctx.restore();
   lockedHaze(ctx, g);
-  medallion(ctx, g.x, g.y - 2);
+  if (badge) medallion(ctx, g.x, g.y - 2);
 }
 
 /** 浮島本體的範圍（邏輯座標；離屏快取用，含晶塔、火山煙、瀑布、纏雲）。 */

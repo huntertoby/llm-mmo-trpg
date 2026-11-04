@@ -2,7 +2,7 @@
 // 左上主角卡、隊友卡、影子鈕；右上地名條（限制警告）、小地圖、時間天氣、錢；右側任務追蹤；底部功能列；左下浮動提示。
 // 面板內容由 WorldScreen 傳進來（沿用現有元件），這裡只負責位置、圖示、說明卡（`Hint`）與單一面板的外框。
 // 每一塊的位置由 `hudLayout()` 算（以 1040×624 為基準等比縮放），出口附近的塊變半透明（`fadedBlocks`）。
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
 import { MotionSettingsSection } from "../ui/MotionSettingsSection";
@@ -28,6 +28,7 @@ import {
   mateCards,
   minimapModel,
   popupBox,
+  popupsToClose,
   ratio,
   restrictions,
   TRACKER_EMPTY,
@@ -281,7 +282,7 @@ function IconButton({
  * 齒輪鈕＋設定面板（AU-2；美術 PM 驗收 AU-1 的意見）：目前只有「聲音」一區，和戰鬥「版面」面板裡的聲音區是同一個元件、
  * 同一份設定（`audio` 引擎、localStorage）。點擊式面板：Esc、點外面關閉、同時一張（`usePopupMenu`，6.5.1）。
  */
-function SettingsTool({ menu }: { menu: ReturnType<typeof usePopupMenu> }) {
+function SettingsTool({ menu, onToggle }: { menu: ReturnType<typeof usePopupMenu>; onToggle(): void }) {
   return (
     <div className="world-hud-settings" ref={menu.rootRef}>
       <Hint text={menu.open ? null : "設定（聲音、減少動態、提示）"}>
@@ -289,7 +290,7 @@ function SettingsTool({ menu }: { menu: ReturnType<typeof usePopupMenu> }) {
           type="button"
           className={`world-hud-btn${menu.open ? " active" : ""}`}
           style={{ width: 30, height: 30 }}
-          onClick={menu.toggle}
+          onClick={onToggle}
           aria-label="設定（聲音、減少動態、提示）"
           aria-expanded={menu.open}
           aria-haspopup="dialog"
@@ -388,11 +389,27 @@ export interface WorldHudProps {
   center?: ReactNode;
   /** 設定裡的「重新顯示提示」（6F-4，6F-2b）；省略＝不顯示這一區。 */
   onResetHints?(): void;
+  /** 關掉區域圖／大世界圖（UI-E1b：開設定時關地圖，同時只開一個彈窗）。 */
+  onCloseMap?(): void;
 }
 
 export function WorldHud(props: WorldHudProps) {
   const { view, layout, faded } = props;
   const settings = usePopupMenu();
+  // UI-E1b：同一時間只開一個彈窗。開設定時關掉面板與地圖；面板或地圖打開時（點圖示、快捷鍵）關掉設定。
+  const open = { settings: settings.open, panel: props.panel != null, map: props.mapOpen === true };
+  const closeOf = { settings: () => settings.setOpen(false), panel: props.onClosePanel, map: () => props.onCloseMap?.() };
+  const toggleSettings = () => {
+    if (!settings.open) for (const p of popupsToClose("settings", open, props.panelLocked === true)) closeOf[p]();
+    settings.toggle();
+  };
+  const prevOpen = useRef({ panel: props.openPanel, map: props.mapOpen === true });
+  useEffect(() => {
+    const before = prevOpen.current;
+    prevOpen.current = { panel: props.openPanel, map: props.mapOpen === true };
+    const opened = (props.openPanel !== null && props.openPanel !== before.panel) || (props.mapOpen === true && !before.map);
+    if (opened && settings.open) settings.setOpen(false);
+  }, [props.openPanel, props.mapOpen, settings]);
   const field = view.field;
   const limits = restrictions(view);
   const part = dayPart(view.clock);
@@ -448,7 +465,7 @@ export function WorldHud(props: WorldHudProps) {
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
           <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
-          <SettingsTool menu={settings} />
+          <SettingsTool menu={settings} onToggle={toggleSettings} />
         </div>
       </Block>
       <Block id="wallet" layout={layout} faded={faded} label="錢">
