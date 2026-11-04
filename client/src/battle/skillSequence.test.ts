@@ -231,7 +231,7 @@ describe("skill timeline", () => {
     expect(post(b)).toEqual(["fist_clench", "air_write"]);
   });
 
-  it("still clips (refund, stacks) take no time and play with the clip before them", () => {
+  it("still clips (refund, stacks) take no time and show up at the hit point (6N-4)", () => {
     const plain = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", "heal"]) })!;
     const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", "refund_ap", "add_stack", "heal", "consume_stack"]) })!;
     const end = (x: typeof tl) => Math.max(...x.rows.map((r) => r.startMs + r.ms));
@@ -239,14 +239,14 @@ describe("skill timeline", () => {
     const strike = tl.rows.find((r) => r.strike)!;
     const refund = tl.rows.find((r) => r.clip === "rewind_still")!;
     const stack = tl.rows.filter((r) => r.clip === "stack_still");
-    const heal = tl.rows.find((r) => r.clip === "palm_heal" && !r.recover)!;
+    const hit = tl.vfx.hits[0]!.atMs;
     expect(refund.still).toBe(true);
     expect(refund.icon).toBe("ap");
-    expect(refund.startMs).toBe(strike.startMs);
-    expect(stack.map((r) => [r.icon, r.startMs])).toEqual([
-      ["+1", strike.startMs],
-      ["-1", heal.startMs],
-    ]);
+    // 對齊命中點（美術 PM 6N-3 驗收第 3 點）：不在前一個片段一開始就出現
+    expect(refund.startMs).toBeCloseTo(hit, 6);
+    expect(refund.startMs).toBeGreaterThan(strike.startMs);
+    expect(stack.map((r) => r.icon)).toEqual(["+1", "-1"]);
+    for (const r of stack) expect(r.startMs).toBeCloseTo(hit, 6);
     // 收勢接在最後一個有身體動作的片段後面
     expect(tl.rows[tl.rows.length - 1]!.clip).toBe("palm_heal");
   });

@@ -7,10 +7,12 @@
 import { Container, Sprite, type Texture } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import { TILE_SIZE } from "../battle/geometry";
-import { STILL_FRAME, hasAnimatedStatic, staticRemainder, statusAnimKinds, statusFrame, type Particle, type StatusAnimKind, type StatusFrame } from "./statusAnim";
+import { DOLL_HEAD_TOP } from "./inkDoll";
+import { DOLL_SCALE } from "./paperdoll";
+import { BODY_H, STILL_FRAME, hasAnimatedStatic, staticRemainder, statusAnimKinds, statusFrame, type Particle, type StatusAnimKind, type StatusFrame } from "./statusAnim";
 import { particleTexture } from "./statusAnimArt";
 import { bodyEffects } from "./statusIcon";
-import { BODY_FX_LABEL, BODY_LABEL, bodyNodes, effectTextureOf, FEET, FX_OVER_LABEL, isProne } from "./unitSprite";
+import { BODY_FX_LABEL, BODY_LABEL, bodyNodes, effectTextureOf, FEET, FX_OVER_LABEL, isProne, unitTopY } from "./unitSprite";
 
 const T = TILE_SIZE;
 const K = T / 52;
@@ -36,6 +38,17 @@ interface Entry {
 /** 腳底的 y 是 `FEET`；粒子座標（虛擬 52）換成小人容器裡的座標。 */
 export function particlePlace(p: Particle): { x: number; y: number } {
   return { x: p.x * K, y: FEET + p.y * K };
+}
+
+/** 標準人形（沒有精英、外觀大小 1）畫出來的頭頂離腳底多高（虛擬像素）。 */
+const HUMAN_TOP = DOLL_HEAD_TOP * DOLL_SCALE;
+
+/**
+ * 頭頂粒子（煙、泡泡、暈眩的星星）的高度（虛擬像素；6N-4 順手，美術 PM 6N-9 驗收第 4 點）：照單位實際畫出來的頂端
+ * （`unitTopY`，同 6C-8b 的眼睛），和標準人形差多少就移多少，所以標準人形不變、大體型異形不再偏低、矮的異形不浮在空中。
+ */
+export function particleTop(u: UnitDraw): number {
+  return BODY_H + (FEET - unitTopY(u)) / K - HUMAN_TOP;
 }
 
 export class StatusAnimator {
@@ -106,7 +119,7 @@ export class StatusAnimator {
       // 走路轉彎會重建小人（6A-4d）：換了容器就重新掛上
       if (e === undefined || e.sprite !== sprite) e = this.attach(id, sprite, draw);
       if (e.kinds.length === 0) continue;
-      const f = statusFrame(e.kinds, id, this.clock);
+      const f = statusFrame(e.kinds, id, this.clock, particleTop(draw));
       shown += this.paint(e, f.particles);
       if (!held(id)) this.body(sprite, f, isProne(draw));
     }

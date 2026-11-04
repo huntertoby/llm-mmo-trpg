@@ -5,7 +5,8 @@
 // `#lower`：6N-3 下半的原語片段（`?group=world` 召喚、地表、地形、物件、符文；`?group=rules` 形態、防護、給予、退還、層數、規則類，含兩組多原語）；
 // `#order`：樣張第 5 區的三組（砍＋跳、跳＋砍、衝刺＋砍）照卡上的順序播（走 playbackPlan → frameOps，同正式播放）；
 // `#moves`：位移類原語（衝刺、跳躍、傳送、瞬步、交換）與被推、被拉；
-// `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數。
+// `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數（`?react=1`：6N-4 目標輪流受擊、格擋、閃避）；
+// `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -159,8 +160,12 @@ function castOnce(r: BattleRenderer, v: BattleView, caster: string, target: Pos,
   const origins = r.playSkill(scaleRows(tl.rows, SCALE));
   r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), false, origins);
   const end = Math.max(...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms), vfx.leadMs);
+  lastLead = vfx.leadMs;
   return end + Math.round(VFX_TIMING.impact * SCALE);
 }
+
+/** 上一次 `castOnce` 的命中點（毫秒；正式播放在這一刻以結果重畫）。 */
+let lastLead = 0;
 
 async function openers(): Promise<void> {
   const facing = WEST ? "west" : "east";
@@ -441,6 +446,16 @@ async function perf(): Promise<void> {
       const cards = { sk: card("single", i % 2 === 0 ? 1 : 4, ["damage", ...lower]) };
       const t = v.units.find((u) => u.id === `t_${i}`)!.pos;
       const target = i % 2 === 0 ? { x: t.x - 3, y: t.y } : t;
+      if (params.get("react") === "1") {
+        // 6N-4：目標輪流閃避、格擋、重擊（受擊者的身體片段、殘影、火花）
+        const caster = `u_0${i}`;
+        const tgt = `t_${i}`;
+        const k = n % 3;
+        const more: Record<string, unknown>[] = [{ seq: 2, round: 1, type: "attack_rolled", attacker_id: caster, target_id: tgt, hit: k !== 0, skill_id: "sk" }];
+        if (k !== 0) more.push({ seq: 3, round: 1, type: "damage_dealt", target_id: tgt, source_id: caster, element: "fire", amount: 8, hp_before: 20, hp_after: 12, block_permille: k === 1 ? 500 : 1000 });
+        await wait(castOnce(r, v, caster, target, cards, more, false) + 100);
+        continue;
+      }
       await wait(castOnce(r, v, `u_0${i}`, target, cards) + 100);
     }
   };
@@ -489,5 +504,90 @@ async function moves(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf };
+/**
+ * 6N-4 受擊與結果：每列「劍士 → 目標」，事件照正式規則的欄位（`attack_rolled` 的 `hit`、`damage_dealt` 的扣血與
+ * `block_permille`、`unit_downed`），走 vfxFor → skillTimeline → playSkill／playVfx，命中後照正式播放重畫成結果
+ * （倒下的人變成倒地圖示）。名稱、目標外觀、事件。
+ */
+type ReactCase = { name: string; look?: Partial<UnitView>; hit: boolean; lost?: number; block?: number; down?: boolean };
+const REACTS: readonly ReactCase[] = [
+  { name: "受擊", hit: true, lost: 3 },
+  { name: "重擊（≥25%）", hit: true, lost: 12 },
+  { name: "閃避（hit: false）", hit: false },
+  { name: "格擋・盾", hit: true, lost: 3, block: 500, look: { equipment: [{ slot: "off_hand", appearance: { kind: "round_shield", material: "wood" } }] } as unknown as Partial<UnitView> },
+  { name: "格擋・橫劍", hit: true, lost: 3, block: 500 },
+  { name: "格擋・手臂", hit: true, lost: 3, block: 500, look: { template_id: "hero_fighter", doll_look: { main_kind: "talisman" } } as unknown as Partial<UnitView> },
+  { name: "倒下", hit: true, lost: 20, down: true },
+  { name: "倒下（可復活）", hit: true, lost: 20, down: true, look: { revivable: true } as Partial<UnitView> },
+  { name: "異形受擊", hit: true, lost: 3, look: { doll_look: { creature: { body: "hound", material: "fur" } } } as unknown as Partial<UnitView> },
+  { name: "異形閃避（輕版）", hit: false, look: { doll_look: { creature: { body: "hound", material: "fur" } } } as unknown as Partial<UnitView> },
+  { name: "異形倒下", hit: true, lost: 20, down: true, look: { doll_look: { creature: { body: "golem", material: "stone" } } } as unknown as Partial<UnitView> },
+];
+
+async function reacts(): Promise<void> {
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  REACTS.forEach((c, i) => {
+    const col = i % 3;
+    const y = Math.floor(i / 3) * 2;
+    const x = col * 4;
+    units.push(hero(`u_${String(i).padStart(2, "0")}`, x, y, "one_handed_sword", "east"));
+    units.push(unit(`t_${i}`, "enemy", x + 1, y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "對手", facing: "west", hp: 20, max_hp: 20, ...(c.look ?? {}) }));
+    tags.push([c.name, { x, y: y + 1 }]);
+  });
+  // 陷阱、滑倒（走路途中；animateWalk 的停頓）：最後一排
+  const walkY = Math.ceil(REACTS.length / 3) * 2;
+  units.push(hero("w_trap", 0, walkY, "one_handed_sword", "east"));
+  units.push(hero("w_slip", 6, walkY, "one_handed_sword", "east"));
+  tags.push(["陷阱夾住", { x: 0, y: walkY + 1 }], ["冰面滑倒（踉蹌→滑行→倒地）", { x: 6, y: walkY + 1 }]);
+  const v = battle(units, 12, walkY + 2);
+  const after = {
+    ...v,
+    units: v.units.map((u) => {
+      const i = Number(u.id.slice(2));
+      const c = u.id.startsWith("t_") ? REACTS[i] : undefined;
+      return c?.down === true ? { ...u, hp: 0, downed: true, revivable: (c.look as { revivable?: boolean } | undefined)?.revivable === true } : u;
+    }),
+  } as BattleView;
+  const r = await show(v);
+  labels(tags);
+  caption("6N-4・受擊與結果：受擊、重擊、閃避、格擋（盾／劍／手臂）、倒下（接倒地圖示）、異形；陷阱夾住、冰面滑倒");
+  started(r);
+  const cards = { sk: card("single", 1, ["damage"]) };
+  for (;;) {
+    if (frozen) return;
+    r.draw(buildDrawModel(v, HERO));
+    let longest = 0;
+    let lead = 0;
+    REACTS.forEach((c, i) => {
+      const caster = `u_${String(i).padStart(2, "0")}`;
+      const tgt = `t_${i}`;
+      const pos = v.units.find((u) => u.id === tgt)!.pos;
+      const more: Record<string, unknown>[] = [{ seq: 2, round: 1, type: "attack_rolled", attacker_id: caster, target_id: tgt, hit: c.hit, skill_id: "sk" }];
+      if (c.hit) more.push({ seq: 3, round: 1, type: "damage_dealt", target_id: tgt, source_id: caster, element: "physical", amount: c.lost, hp_before: 20, hp_after: 20 - (c.lost ?? 0), block_permille: c.block ?? 1000 });
+      if (c.down === true) more.push({ seq: 4, round: 1, type: "unit_downed", unit_id: tgt });
+      longest = Math.max(longest, castOnce(r, v, caster, pos, cards, more, false));
+      lead = Math.max(lead, lastLead);
+    });
+    // 正式播放：命中那一刻以結果重畫（倒下的人變成倒地圖示；倒下片段接在上面播完）
+    await wait(lead);
+    if (!frozen) r.draw(buildDrawModel(after, HERO));
+    void walkBeats(r); // 重畫之後才走（重畫會把小人放回格子）
+    await wait(longest + 900);
+    window.__skillDone = true;
+  }
+}
+
+/** 陷阱、冰面滑倒（6A-4d／6E-2 的停頓，6N-4 加上夾住的身體反應）：照 animateWalk 的時間軸。 */
+async function walkBeats(r: BattleRenderer): Promise<void> {
+  const leg = (y: number, x0: number, x1: number) => ({ kind: "leg" as const, from: { x: x0, y }, to: { x: x1, y }, facing: "east" as const, durationMs: 120 * SCALE });
+  const beat = (kind: "trap" | "stumble" | "slip", x: number, y: number, hold: number, fx: number) => ({ kind: "beat" as const, beat: kind, pos: { x, y }, holdMs: hold * SCALE, fxMs: fx * SCALE, feedback: [], feedbackMs: 0 });
+  const y = Math.ceil(REACTS.length / 3) * 2;
+  await Promise.all([
+    r.animateWalk({ unitId: "w_trap", pieces: [leg(y, 0, 1), leg(y, 1, 2), beat("trap", 2, y, 400, 600)] }, () => frozen),
+    r.animateWalk({ unitId: "w_slip", pieces: [leg(y, 6, 7), beat("stumble", 7, y, 220, 450), { kind: "skid", from: { x: 7, y }, to: { x: 8, y }, facing: "east", durationMs: 70 * SCALE }, { kind: "skid", from: { x: 8, y }, to: { x: 9, y }, facing: "east", durationMs: 70 * SCALE }, beat("slip", 9, y, 450, 600)] }, () => frozen),
+  ]);
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts };
 void (MODES[MODE] ?? openers)();

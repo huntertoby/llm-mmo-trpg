@@ -57,7 +57,7 @@ export class ArtTextures {
   private inFrame = false;
 
   constructor(cap: number = TEXTURE_CAP) {
-    this.cache = new TextureLru<Texture>(cap);
+    this.cache = new TextureLru<Texture>(cap, true); // 6N-4：淘汰的貼圖延到重畫場景後才銷毀
   }
   /** 螢幕縮放（devicePixelRatio × 場景縮放）；`null` ＝ 未設定，小人貼圖用預設解析度。 */
   private screenScale: number | null = null;
@@ -80,13 +80,40 @@ export class ArtTextures {
   beginFrame(): void {
     this.used = new Set<string>();
     this.cache.unpinAll();
+    // 小人正在用的貼圖不放開：重畫中途還在播的片段（倒下、閃避殘影）下一幀才換貼圖，先放開會被 endFrame 銷毀
     this.inFrame = true;
   }
 
-  /** 銷毀本輪沒用到的貼圖。 */
+  /** 銷毀本輪沒用到的貼圖（小人正在用的不銷毀）。 */
   endFrame(): void {
     this.inFrame = false;
-    for (const key of this.cache.keys()) if (!this.used.has(key)) this.cache.drop(key);
+    for (const key of this.cache.keys()) if (!this.used.has(key) && !this.cache.isHeld(key)) this.cache.drop(key);
+    this.cache.flushEvicted(); // 舊的小人已經拆掉，淘汰的貼圖可以銷毀了
+  }
+
+  /**
+   * 6N-4（美術 PM 6N-3 驗收第 4 點）：`owner`（單位 ID）目前畫在畫面上的貼圖，釘住直到它換成別張。
+   * 動畫、待機每次換小人的貼圖時呼叫；不是這個快取的貼圖（或 `null`）時放開。
+   */
+  holdFor(owner: string, tex: Texture | null): void {
+    const key = tex === null ? undefined : this.keyOf.get(tex);
+    if (key === undefined) this.cache.release(owner);
+    else this.cache.hold(owner, key);
+  }
+
+  /** 這一張貼圖現在是不是被某個小人釘住（測試用）。 */
+  isHeld(tex: Texture): boolean {
+    const key = this.keyOf.get(tex);
+    return key !== undefined && this.cache.isHeld(key);
+  }
+
+  private readonly keyOf = new WeakMap<Texture, string>();
+
+  private store(key: string, tex: Texture): void {
+    this.keyOf.set(tex, key);
+    this.cache.set(key, tex);
+    // 很久沒重畫（城鎮裡一直播待機）時，延後銷毀的貼圖累積到上限的一半就先銷毀：它們都不是任何小人正在用的
+    if (this.cache.pendingDestroy > this.cache.cap / 2) this.cache.flushEvicted();
   }
 
   private touch(key: string): void {
@@ -99,7 +126,7 @@ export class ArtTextures {
     const hit = this.cache.get(key);
     if (hit !== undefined) return hit;
     const tex = paint(draw);
-    if (tex !== null) this.cache.set(key, tex);
+    if (tex !== null) this.store(key, tex);
     return tex;
   }
 
@@ -111,7 +138,7 @@ export class ArtTextures {
     const canvas = make();
     if (canvas === null) return null;
     const tex = Texture.from(canvas);
-    this.cache.set(key, tex);
+    this.store(key, tex);
     return tex;
   }
 
@@ -143,6 +170,14 @@ export class ArtTextures {
     const w = quantizeFlash(flash); // 受擊白閃（6M-4）：量化到 0.05；沒有白閃時鍵和畫法都不變
     const key = `f|${res}|${dollKey(spec, facing, downed)}${pose === null ? "" : `|p:${poseKey(pose)}`}${w > 0 ? `|w:${w}` : ""}`;
     return this.canvas(key, () => renderFigureCanvas(spec, facing, downed, res, true, pose, w));
+  }
+
+  /** 不含地上影子的紙娃娃（6N-4 倒下片段側倒時用；和 HP 歸零的倒地圖示一樣沒有影子）。 */
+  figureBare(spec: DollSpec, facing: Facing, pose: InkPose | null, flash = 0): Texture | null {
+    const res = this.figureRes(HUMAN_DISPLAY);
+    const w = quantizeFlash(flash);
+    const key = `fb|${res}|${dollKey(spec, facing, false)}${pose === null ? "" : `|p:${poseKey(pose)}`}${w > 0 ? `|w:${w}` : ""}`;
+    return this.canvas(key, () => renderFigureCanvas(spec, facing, false, res, false, pose, w));
   }
 
   /** 召喚物貼圖（Phase 3-33h1；鍵 ＝ 外觀＋朝向，殘影另加召喚者外觀）；人形傳入 `humanoid` 紙娃娃規格。 */

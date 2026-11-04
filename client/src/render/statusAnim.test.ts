@@ -5,7 +5,7 @@ import type { UnitDraw } from "../battle/drawModel";
 import { idleFrame } from "./idleClips";
 import { idleFrameFor, idles } from "./idleMotion";
 import { ANIM, arcAt, BODY_H, hasAnimatedStatic, isFrozenLook, LEG_KEYS, lockLegs, POISON_TINT, staticRemainder, statusAnimKinds, statusFrame, STATUS_ANIM_KINDS, type StatusAnimKind } from "./statusAnim";
-import { StatusAnimator } from "./statusAnimLayer";
+import { particleTop, StatusAnimator } from "./statusAnimLayer";
 import { bodyEffects } from "./statusIcon";
 import { BODY_LABEL } from "./unitSprite";
 
@@ -230,5 +230,31 @@ describe("驅動（StatusAnimator）", () => {
     b.reset(new Set());
     b.tick(16, new Map([[ID, unitSprite().c]]), new Map([[ID, { id: ID, downed: true, statusIds: ["burning"] } as unknown as UnitDraw]]), () => false);
     expect(b.stats().units).toBe(0);
+  });
+});
+
+describe("6N-4 順手：頭頂粒子照單位實際畫出來的高度（美術 PM 6N-9 驗收第 4 點）", () => {
+  const unit = (over: Partial<UnitDraw>): UnitDraw =>
+    ({
+      id: "u1", x: 0, y: 0, marker: "A", template: "t", name: "n", team: "enemy", fill: 0, hpRatio: 1, shieldRatio: 0,
+      active: false, hero: false, downed: false, summon: false, totem: false, remaining: null, revivable: false, bomb: null,
+      facing: "west", weaponId: "fangs", weaponClass: "melee", ...over,
+    }) as UnitDraw;
+  const look = (creature: Record<string, unknown> | null): UnitDraw["dollLook"] =>
+    ({ skin: "#f1c9a5", skull: false, gear: {}, beard: false, affixes: [], traits: [], ...(creature === null ? {} : { creature: { traits: [], ...creature } }) }) as UnitDraw["dollLook"];
+
+  it("標準人形不變（＝ BODY_H）；大體型異形更高、矮的異形更低", () => {
+    expect(particleTop(unit({}))).toBeCloseTo(BODY_H, 6);
+    const golemL = particleTop(unit({ dollLook: look({ body: "golem", size: "large" }) }));
+    const ooze = particleTop(unit({ dollLook: look({ body: "ooze", size: "medium" }) }));
+    expect(golemL).toBeGreaterThan(BODY_H + 5);
+    expect(ooze).toBeLessThan(BODY_H);
+  });
+
+  it("星星、泡泡、煙跟著 top 一起移，其他粒子不動；沒給 top ＝ BODY_H", () => {
+    const ys = (k: StatusAnimKind, top: number) => statusFrame([k], ID, 300, top).particles.map((p) => p.y);
+    for (const k of ["stunned", "poison"] as const) ys(k, BODY_H).forEach((y, i) => expect(ys(k, BODY_H + 20)[i]!).toBeCloseTo(y - 20, 6));
+    expect(statusFrame(["wet"], ID, 300, BODY_H + 20)).toEqual(statusFrame(["wet"], ID, 300));
+    expect(statusFrame(["stunned"], ID, 300)).toEqual(statusFrame(["stunned"], ID, 300, BODY_H));
   });
 });

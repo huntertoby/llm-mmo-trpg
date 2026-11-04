@@ -227,9 +227,10 @@ describe("事件插圖小牌：黑色圖示改淺色，彩色不動", () => {
 });
 
 describe("6Q-1：64px d20 的點數描邊", () => {
-  it("先描一圈 #fff8e8（字外約字高 0.2 倍），再寫深色字；平常、綠骰、紅骰、金骰、灰骰都一樣", () => {
+  it("先描一圈 #fff8e8（線寬 3.5、字外 1.75；6N-4 改細），再寫深色字；平常、綠骰、紅骰、金骰、灰骰都一樣", () => {
     expect(D20_HALO).toBe("#fff8e8");
-    expect(D20_HALO_W).toBeCloseTo(D20_FONT_PX * 0.2, 9);
+    expect(D20_HALO_W * 2).toBe(3.5);
+    expect(D20_HALO_W).toBeLessThan(D20_FONT_PX * 0.2);
     for (const color of [undefined, OUTCOME_COLOR.success, OUTCOME_COLOR.failure, OUTCOME_COLOR.partial, D20_COLOR.crit, D20_COLOR.fumble]) {
       const calls = record({ kind: "d20", value: 17, color }, 64);
       const stroke = calls.findIndex((c) => c.startsWith("strokeText(17,"));

@@ -25,6 +25,7 @@ import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulse
 import type { CreaturePose } from "./creaturePose";
 import type { InkPose } from "./inkPose";
 import { proneBody } from "./motionClips";
+import { downedCreaturePose } from "./reactClips";
 
 const T = TILE_SIZE;
 
@@ -288,8 +289,25 @@ export function bodyTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame): Te
   const spec = specOfUnit(u);
   if (formArtOfUnit(u, spec) !== null) return null;
   const cr = creatureOf(u);
-  if (cr !== null) return art.creature(cr, creatureSide(u), frame.creature ?? null);
+  if (cr !== null) return art.creature(cr, creatureSide(u), frame.creature ?? (u.downed ? downedCreaturePose() : null));
   return art.figure(spec, u.facing, u.downed, frame.pose ?? (isProne(u) ? proneBody(1, u.facing).pose : null), frame.flash ?? 0);
+}
+
+/**
+ * 倒下片段（6N-4）用的站姿紙娃娃：不管 `downed` 都畫站著的人（姿勢、白閃照 `frame`），`bare` 不含地上影子（側倒時用，
+ * 和倒地圖示一樣沒有影子）。沒有骨架（異形、形態、召喚物）回傳 `null`。
+ */
+export function uprightTexture(art: ArtTextures, u: UnitDraw, frame: BodyFrame, bare: boolean): Texture | null {
+  if (summonLookOf(u) !== null || creatureOf(u) !== null) return null;
+  const spec = specOfUnit(u);
+  if (formArtOfUnit(u, spec) !== null) return null;
+  const pose = frame.pose ?? null;
+  return bare ? art.figureBare(spec, u.facing, pose, frame.flash ?? 0) : art.figure(spec, u.facing, false, pose, frame.flash ?? 0);
+}
+
+/** 紙娃娃 1 虛擬像素 ＝ 幾個模型像素（含精英、外觀大小；和 `dollNode` 的縮放相同）。 */
+export function dollPx(u: UnitDraw): number {
+  return (T / 52) * DOLL_SCALE * humanoidEliteScale(u) * humanoidLookScale(u);
 }
 
 /**
@@ -357,7 +375,8 @@ function dollNode(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number,
   if (formSprite !== null) return formSprite;
   const cr = creatureOf(u);
   if (cr !== null) {
-    const tex = art.creature(cr, creatureSide(u));
+    // 6N-4：倒下的異形停在倒下片段的最後一格（塌扁、往後倒），倒下動畫播完不會跳回站著
+    const tex = art.creature(cr, creatureSide(u), u.downed ? downedCreaturePose() : null);
     if (tex !== null) {
       const sprite = new Sprite(tex);
       const k = (T / 52) * DOLL_SCALE * creatureFieldScale(u);
