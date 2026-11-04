@@ -15238,9 +15238,15 @@
             "default": false
           },
           "tusks": {
-            "type": "boolean",
-            "title": "Tusks",
-            "default": false
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tusks"
           },
           "build": {
             "anyOf": [

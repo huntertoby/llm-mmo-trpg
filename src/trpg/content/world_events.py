@@ -321,8 +321,8 @@ class NpcPortraitLook(ContentModel):
     hair_color: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
     bun_band: str | None = Field(default=None, pattern=_PORTRAIT_HEX)
     beard: bool = False
-    tusks: bool = False
-    """獠牙（獸人；RT-4 鏽牙，同種族外觀的 ``tusks``）。"""
+    tusks: bool | None = None
+    """獠牙（獸人；RT-4 鏽牙，同種族外觀的 ``tusks``）。``None``＝沒有（選填，舊資料不用補）。"""
     build: Literal["stout", "tall"] | None = None
     ears: str | None = Field(default=None, pattern=ID_PATTERN)
     horns: str | None = Field(default=None, pattern=ID_PATTERN)

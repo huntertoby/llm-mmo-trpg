@@ -5,6 +5,8 @@ import { useState } from "react";
 import type { WorldAction, WorldAiChoice, WorldMyShadow, WorldPartyView } from "../api/types";
 import { AccountTitles } from "../ui/AccountTitles";
 import { Hint } from "../ui/Hint";
+import { PORTRAIT_SIZES } from "../render/portrait";
+import { Portrait } from "./StoryIcons";
 import { groupByRole, hireAction, hireLabel, hireLimit, hiredIds, hiredShadows, sameParty, toggleMercenary } from "./party";
 
 export function PartyPanel({ party }: { party: WorldPartyView }) {
@@ -145,6 +147,10 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
                         onChange={() => setChosen((cur) => toggleMercenary(cur, m.id, limit, shadows.length))}
                         data-testid={`world-hire-${m.id}`}
                       />
+                      {/* RT-4（#131）：頭像框用出身區的區域色；沒有出身＝傭兵金 */}
+                      <span className="world-hire-portrait" style={{ display: "inline-block", verticalAlign: "middle", margin: "0 6px" }}>
+                        <Portrait portrait={m.portrait} region={m.origin ?? "merc"} size={PORTRAIT_SIZES.line} label={m.name_zh} />
+                      </span>
                       <Hint text={m.theme_zh}>
                         <span className="world-hire-name">{m.name_zh}</span>
                       </Hint>

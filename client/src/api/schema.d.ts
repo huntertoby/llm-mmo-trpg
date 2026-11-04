@@ -6284,11 +6284,8 @@ export interface components {
              * @default false
              */
             beard: boolean;
-            /**
-             * Tusks
-             * @default false
-             */
-            tusks: boolean;
+            /** Tusks */
+            tusks?: boolean | null;
             /** Build */
             build?: ("stout" | "tall") | null;
             /** Ears */

@@ -1,6 +1,6 @@
 // NPC 頭像（Phase 6C-7；移植自 docs/art/sample/portraits.js，需求 docs/art/NPC頭像.md 第 1、4 節）：
 // 用遊戲的 C 畫風紙娃娃正面頭部放大，加上只畫在頭像上的小配件（斗笠、布帽、頭巾、護目鏡、刀疤……）與圓角框。
-// 框色依區域（雲嶺綠、荒原橘、傭兵金），底色同色系漸層。白狐霜音另外畫一張狐臉。
+// 框色依區域（雲嶺綠、荒原橘；RT-4 加晶冠藍紫、樞市青、霜潮海藍；沒有區域＝傭兵金），底色同色系漸層。白狐霜音另外畫一張狐臉。
 // 沒有頭像資料時畫通用剪影。確定性：沒有亂數，同一位每次畫都一樣；離屏畫好依（鍵、大小）快取成圖片網址。
 import type { NpcPortrait } from "../api/types";
 import { resolveDoll } from "./appearance";
@@ -13,6 +13,10 @@ import { isFox, portraitDollLook, portraitRaceLook } from "../world/npcLook";
 export const PORTRAIT_REGION: Readonly<Record<string, readonly [string, string, string]>> = {
   cloud_ridge: ["#6aa84a", "#2f4a3a", "#8ab890"],
   ashen_waste: ["#ff6a1a", "#3a2418", "#b07050"],
+  // RT-4（#131）：傭兵出身的另外三區（docs/art/sample/merc-portraits.html；框色＝RT-1 的 portrait_ring）
+  crystal_crown: ["#8ab0ff", "#22284a", "#7a8ac8"],
+  arcane_hub: ["#4ad0c8", "#1e2a2a", "#6a9a90"],
+  frost_tide: ["#6ac0e8", "#1a3040", "#7ab0c8"],
   merc: ["#c8a868", "#2a2a3a", "#8a8aa8"],
 };
 const REGION_FALLBACK = PORTRAIT_REGION["merc"]!;
@@ -33,6 +37,19 @@ function pdot(ctx: Ctx, x: number, y: number, r: number, c: string): void {
   ctx.arc(x, y, r, 0, TAU);
   ctx.fill();
 }
+
+/** `coral` 的三顆珊瑚珠（x、y、顏色）。 */
+const CORAL_BEADS: readonly (readonly [number, number, string])[] = [
+  [-7, -50, "#e88a7a"],
+  [-4.6, -51.6, "#f2a090"],
+  [-2.4, -51, "#e88a7a"],
+];
+
+/** 頭像專用配件的名稱（`drawExtra` 認得的；其他值略過）。 */
+export const PORTRAIT_EXTRAS = [
+  "wide_hat", "cap", "headband", "bandana", "goggles", "goggles_up", "scar", "mustache", "wrinkles", "fur_collar",
+  "earring", "soot", "rune", "ember_eye", "mist", "apron_cross", "crest", "circlet", "cyber_eye", "coral",
+] as const;
 
 /** 頭像專用配件（正面、紙娃娃座標：頭中心約在 (0, −42)，半徑約 9）。不認得的略過。 */
 function drawExtra(ctx: Ctx, key: string): void {
@@ -117,6 +134,29 @@ function drawExtra(ctx: Ctx, key: string): void {
     case "apron_cross":
       stroke(ctx, "p-cross-v", [[0, -31], [0, -26]], 1.6, "#c83a2a");
       stroke(ctx, "p-cross-h", [[-2.5, -28.5], [2.5, -28.5]], 1.6, "#c83a2a");
+      break;
+    // RT-4 的四種新配件（照 docs/art/sample/merc-portraits.html 的 more()）
+    case "crest": // 晶冠盾衛：頭盔頂的藍紫冠飾
+      ink(ctx, "p-crest", [[-1.5, -60], [1.5, -60], [1, -52], [-1, -52]], "#5a7ad0", { shade: false, w: 0.5 });
+      break;
+    case "circlet": // 晶冠祝禱師：金色額環加一顆發光紫晶
+      stroke(ctx, "p-circ", [[-9, -48], [0, -50.5], [9, -48]], 1.1, "#e8bb48");
+      ctx.save();
+      ctx.shadowColor = "#a898ff";
+      ctx.shadowBlur = 5;
+      ink(ctx, "p-gem", [[0, -53], [1.8, -50.5], [0, -48.5], [-1.8, -50.5]], "#a898ff", { shade: false, w: 0.4 });
+      ctx.restore();
+      break;
+    case "cyber_eye": // 晶能義體人：右眼青光加耳側的線路
+      ctx.save();
+      ctx.shadowColor = "#4ad0c8";
+      ctx.shadowBlur = 6;
+      pdot(ctx, 3.4, -41.2, 1.4, "#7af0e8");
+      ctx.restore();
+      stroke(ctx, "p-cyb", [[6, -44], [8.6, -42], [8.6, -38]], 0.7, "#4ad0c8");
+      break;
+    case "coral": // 霜潮海民：髮上三顆珊瑚珠
+      for (const [x, y, c] of CORAL_BEADS) pdot(ctx, x, y, 1.3, c);
       break;
     default:
       break;
