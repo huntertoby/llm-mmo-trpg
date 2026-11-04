@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { WorldView } from "../api/types";
 import { TRACKER_EMPTY, trackHint, trackedQuests } from "./hud";
-import { lessonKey, openingKey, readLessonSeen, readOpeningSeen, shouldShowOpening, writeLessonSeen, writeOpeningSeen } from "./OpeningDialog";
+import { attributeNoteText, shouldShowOpening } from "./OpeningDialog";
 
 const guide = {
   text_zh: "到霧渡鎮找渡婆婆",
@@ -52,28 +52,19 @@ describe("tracker", () => {
   });
 });
 
-describe("flash lesson (#132)", () => {
-  it("each lesson kind shows once per character; skipping also counts", () => {
-    const data = new Map<string, string>();
-    const store = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) };
-    expect(readLessonSeen("flash", "c1", store)).toBe(false);
-    writeLessonSeen("flash", "c1", store);
-    expect(data.get(lessonKey("flash", "c1"))).toBe("1");
-    expect(readLessonSeen("flash", "c1", store)).toBe(true);
-    expect(readLessonSeen("reflash", "c1", store)).toBe(false); // 3 級改教重閃：另一種，照樣跳一次
-    expect(readLessonSeen("flash", "c2", store)).toBe(false);
+describe("allocate lesson (#133)", () => {
+  it("attribute note: first line lists your skills that use it, when any", () => {
+    const affects = [{ attr: "int" as const, lines_zh: ["火球", "電爆"] }];
+    expect(attributeNoteText("int", "火、雷、冰、大地法術", affects)).toBe("你的技能：火球、電爆\n火、雷、冰、大地法術");
+    expect(attributeNoteText("str", "力量武器的普攻", affects)).toBe("力量武器的普攻");
   });
 });
 
 describe("opening dialog", () => {
-  it("shows once per character", () => {
-    const data = new Map<string, string>();
-    const store = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) };
-    expect(shouldShowOpening(guide, readOpeningSeen("c1", store))).toBe(true);
-    writeOpeningSeen("c1", store);
-    expect(data.get(openingKey("c1"))).toBe("1");
-    expect(shouldShowOpening(guide, readOpeningSeen("c1", store))).toBe(false);
-    expect(shouldShowOpening(guide, readOpeningSeen("c2", store))).toBe(true);
+  it("shows once per character (6F-2b: the seen mark is on the character)", () => {
+    expect(shouldShowOpening(guide, new Set())).toBe(true);
+    expect(shouldShowOpening(guide, new Set(["opening"]))).toBe(false);
+    expect(shouldShowOpening(guide, new Set(["lesson:flash"]))).toBe(true);
     expect(shouldShowOpening({ ...guide, opening: [] }, false)).toBe(false);
     expect(shouldShowOpening(null, false)).toBe(false);
   });

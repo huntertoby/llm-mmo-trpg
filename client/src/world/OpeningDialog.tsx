@@ -1,81 +1,44 @@
 // 開局在主城的開場（Phase 6F-2；09 9.6.9 #125）：新角色在主城醒來時跳一則，說書人一句、守印人一句，下面接任務提示
-// 「到霧渡鎮找渡婆婆」。文字由伺服器的 `WorldView.guide.opening` 給（模型關閉時的模板文字）；看過就記在本機，不再跳。
+// 「到霧渡鎮找渡婆婆」。文字由伺服器的 `WorldView.guide.opening` 給（模型關閉時的模板文字）。
+// 6F-4（6F-2b）：看過了改記在角色身上（`WorldView.hints.seen` 的 `opening`；關掉時送 `hint_seen`），不用本機儲存。
 // 沿用詢問視窗外框（DialogFrame，浮動卡規則 6.5.1 的共用元件，不另做彈出層）。
-import type { WorldGuide, WorldLesson } from "../api/types";
+import type { AttributeAffects, WorldGuide, WorldLesson, WorldLevelUp } from "../api/types";
 import { DialogFrame } from "../ui/DialogFrame";
+import { Hint } from "../ui/Hint";
+import { ATTR_ZH } from "./narration";
+import { OPENING_SEEN } from "./battleHints";
 
-type Store = Pick<Storage, "getItem" | "setItem">;
-
-export function openingKey(characterId: string): string {
-  return `trpg.world.openingSeen.${characterId}`;
+/** 這個角色現在要不要跳開場：伺服器有給開場、角色的提示紀錄裡還沒有 `opening`。 */
+export function shouldShowOpening(guide: WorldGuide | null | undefined, seen: ReadonlySet<string> | boolean): guide is WorldGuide {
+  const done = typeof seen === "boolean" ? seen : seen.has(OPENING_SEEN);
+  return guide != null && (guide.opening ?? []).length > 0 && !done;
 }
 
-function storage(): Store | null {
-  try {
-    return typeof localStorage === "undefined" ? null : localStorage;
-  } catch {
-    return null;
-  }
-}
+// ---------------- 閃現教學（6F-2，#132）與配點教學（6F-4，#133） ----------------
+// 新手第 1 步完成升到 2 級、回到霧渡鎮：導師堂的葛蘭先教配點（`allocate`），教完或略過之後才接第一次閃現
+// （`flash`：說書人一句、葛蘭一句，引導打開成長面板閃現一招在渡口用過的技能）；升到 3 級、閃過之後改教重閃。
+// 伺服器只在還沒看過時給（看過記在角色的 `hints.seen`：`lesson:<種類>`）；可以略過。
 
-export function readOpeningSeen(characterId: string, store: Store | null = storage()): boolean {
-  try {
-    return store?.getItem(openingKey(characterId)) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function writeOpeningSeen(characterId: string, store: Store | null = storage()): void {
-  try {
-    store?.setItem(openingKey(characterId), "1");
-  } catch {
-    // 私密視窗或封鎖網站資料：只是不記住
-  }
-}
-
-/** 這個角色現在要不要跳開場：伺服器有給開場、本機還沒看過。 */
-export function shouldShowOpening(guide: WorldGuide | null | undefined, seen: boolean): guide is WorldGuide {
-  return guide != null && (guide.opening ?? []).length > 0 && !seen;
-}
-
-// ---------------- 閃現教學（6F-2，#132） ----------------
-// 新手第 1 步完成、回到城鎮時：說書人一句、導師一句，引導打開成長面板閃現一招在渡口用過的技能；升到 3 級、閃過之後
-// 改教重閃。每種每個角色只跳一次（本機）；可以略過，之後在城鎮或營火隨時能閃。
-
-export function lessonKey(kind: WorldLesson["kind"], characterId: string): string {
-  return `trpg.world.lessonSeen.${kind}.${characterId}`;
-}
-
-export function readLessonSeen(kind: WorldLesson["kind"], characterId: string, store: Store | null = storage()): boolean {
-  try {
-    return store?.getItem(lessonKey(kind, characterId)) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function writeLessonSeen(kind: WorldLesson["kind"], characterId: string, store: Store | null = storage()): void {
-  try {
-    store?.setItem(lessonKey(kind, characterId), "1");
-  } catch {
-    // 私密視窗或封鎖網站資料：只是不記住
-  }
-}
-
-const LESSON_TITLE: Record<WorldLesson["kind"], string> = { flash: "靈光一閃", reflash: "重閃" };
+const LESSON_TITLE: Record<WorldLesson["kind"], string> = { allocate: "配點", flash: "靈光一閃", reflash: "重閃" };
 
 interface LessonProps {
   lesson: WorldLesson;
+  /** 上一段教學結束時導師說的話（配點教完接閃現時：「好。接下來看看你剛才用過的那一招。」）。 */
+  lead?: { speaker_zh: string; text_zh: string } | null;
   onOpen(): void;
   onSkip(): void;
 }
 
-export function LessonDialog({ lesson, onOpen, onSkip }: LessonProps) {
+export function LessonDialog({ lesson, lead, onOpen, onSkip }: LessonProps) {
   const skills = lesson.skills_zh ?? [];
   return (
     <DialogFrame label="閃現教學" title={LESSON_TITLE[lesson.kind]}>
       <div className="world-opening" data-testid="world-lesson" data-kind={lesson.kind}>
+        {lead != null && (
+          <p className="world-opening-line" data-testid="world-lesson-lead">
+            <b>{lead.speaker_zh}</b>：{lead.text_zh}
+          </p>
+        )}
         {lesson.lines.map((line, i) => (
           <p key={i} className="world-opening-line">
             <b>{line.speaker_zh}</b>：{line.text_zh}
@@ -99,6 +62,98 @@ export function LessonDialog({ lesson, onOpen, onSkip }: LessonProps) {
         </button>
         <button type="button" onClick={onSkip} data-testid="world-lesson-skip">
           略過
+        </button>
+      </div>
+    </DialogFrame>
+  );
+}
+
+const ATTR_ORDER = ["str", "dex", "con", "int", "wis", "wil"] as const;
+
+/** 推薦配法的範例（07 7.2）：兩招看智力和力量時，開局各 2 點，升級的 2 點給比較低的、一樣高給第 1 招。 */
+export const ALLOCATE_EXAMPLE_ZH =
+  "例：兩招看智力和力量 → 開局 4 點各給 2 點（智力 12、力量 12）；升級的 2 點給比較低的那個，一樣高就給第 1 招的 → 智力 14、力量 12。";
+
+/** 配點教學一個屬性滑過時的說明：第 1 行「你的技能：…」（沒有吃這個屬性的招就不顯示），第 2 行白話說明。 */
+export function attributeNoteText(attr: string, note: string, affects: readonly AttributeAffects[]): string {
+  const lines = affects.find((a) => a.attr === attr)?.lines_zh ?? [];
+  return lines.length > 0 ? `你的技能：${lines.join("、")}\n${note}` : note;
+}
+
+interface AllocateProps {
+  lesson: WorldLesson;
+  affects: readonly AttributeAffects[];
+  busy?: boolean;
+  /** 按「推薦配法」：照 `lesson.recommended` 配好。 */
+  onRecommended(): void;
+  /** 按「自己配」：打開成長面板。 */
+  onSelf(): void;
+  /** 按「之後再說」。 */
+  onSkip(): void;
+}
+
+/** 葛蘭的配點教學（#133，玩法 PM 配點教學修改稿第 6 節）：共 6 點、一鍵推薦、城鎮營火免費重配、可以略過。 */
+export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommended, onSelf, onSkip }: AllocateProps) {
+  const notes = new Map((lesson.notes ?? []).map((n) => [n.attr as string, n.text_zh]));
+  return (
+    <DialogFrame label="配點教學" title={LESSON_TITLE.allocate}>
+      <div className="world-opening" data-testid="world-lesson" data-kind="allocate">
+        {lesson.lines.map((line, i) => (
+          <p key={i} className="world-opening-line">
+            <b>{line.speaker_zh}</b>：{line.text_zh}
+          </p>
+        ))}
+        <p className="world-opening-quest small" data-testid="world-allocate-total">
+          開局的 4 點已經照推薦配好，加上這次升級的 {lesson.points ?? 0} 點，共 {4 + (lesson.points ?? 0)} 點。
+          {lesson.recommended_zh !== "" && lesson.recommended_zh != null && (
+            <>
+              {" "}
+              推薦配法：<b data-testid="world-allocate-recommended">{lesson.recommended_zh}</b>
+            </>
+          )}
+        </p>
+        <p className="muted small">{ALLOCATE_EXAMPLE_ZH}</p>
+        <p className="muted small">配錯了也沒關係：在城鎮或營火都能免費重配。</p>
+        <div className="world-allocate-attrs" data-testid="world-allocate-attrs">
+          {ATTR_ORDER.filter((a) => notes.has(a)).map((a) => (
+            <Hint key={a} text={attributeNoteText(a, notes.get(a) ?? "", affects)}>
+              <span className="world-allocate-attr" tabIndex={0} data-attr={a}>
+                {ATTR_ZH[a]}
+              </span>
+            </Hint>
+          ))}
+        </div>
+      </div>
+      <div className="modal-buttons">
+        <button type="button" className="primary" disabled={busy} onClick={onRecommended} data-testid="world-allocate-recommend">
+          ✦ 推薦配法
+        </button>
+        <button type="button" disabled={busy} onClick={onSelf} data-testid="world-allocate-self">
+          自己配（成長面板 G）
+        </button>
+        <button type="button" disabled={busy} onClick={onSkip} data-testid="world-lesson-skip">
+          之後再說
+        </button>
+      </div>
+    </DialogFrame>
+  );
+}
+
+interface LevelUpProps {
+  levelUp: WorldLevelUp;
+  onClose(): void;
+}
+
+/** 升級畫面（6F-4 C2）：「升到 2 級：屬性點 +2、靈感 +1。回霧渡鎮找導師堂的葛蘭，學怎麼配點。」 */
+export function LevelUpDialog({ levelUp, onClose }: LevelUpProps) {
+  return (
+    <DialogFrame label="升級" title={`升到 ${levelUp.level} 級`}>
+      <div className="world-opening" data-testid="world-level-up" data-level={levelUp.level}>
+        <p className="world-opening-line">{levelUp.text_zh}</p>
+      </div>
+      <div className="modal-buttons">
+        <button type="button" className="primary" onClick={onClose} data-testid="world-level-up-close">
+          知道了
         </button>
       </div>
     </DialogFrame>

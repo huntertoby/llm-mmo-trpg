@@ -1,7 +1,7 @@
 // 戰鬥短提示（6F-2，#99）：觸發條件、每種只出一次、全部關掉。
 import { describe, expect, it } from "vitest";
 import type { BattleHint, BattleView } from "../api/types";
-import { hintFires, nextHint, readHintsOff, readSeen, seenKey, writeHintsOff, writeSeen } from "./battleHints";
+import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, hintFires, hintSeenAction, hintsOf, lessonSeenId, nextHint } from "./battleHints";
 
 const HERO = "u_hero";
 
@@ -33,16 +33,6 @@ function view(o: Opts = {}): BattleView {
     tiles,
     traps: Array.from({ length: o.traps ?? 0 }, () => ({})),
   } as unknown as BattleView;
-}
-
-class MemStore {
-  data = new Map<string, string>();
-  getItem(k: string) {
-    return this.data.get(k) ?? null;
-  }
-  setItem(k: string, v: string) {
-    this.data.set(k, v);
-  }
 }
 
 describe("hint triggers follow the battle state", () => {
@@ -89,16 +79,15 @@ describe("one hint at a time, each once per character", () => {
     expect(nextHint(hints, view(), HERO, [], new Set(["move_attack"]), false)).toBeNull();
     expect(nextHint(hints, view(), HERO, [], new Set(), true)).toBeNull();
   });
-  it("seen ids and the off switch are stored per browser; seen ids are per character", () => {
-    const store = new MemStore();
-    writeSeen("c1", new Set(["b", "a"]), store);
-    expect(store.getItem(seenKey("c1"))).toBe('["a","b"]');
-    expect([...readSeen("c1", store)].sort()).toEqual(["a", "b"]);
-    expect(readSeen("c2", store).size).toBe(0);
-    expect(readHintsOff(store)).toBe(false);
-    writeHintsOff(true, store);
-    expect(readHintsOff(store)).toBe(true);
-    store.setItem(seenKey("c3"), "not json");
-    expect(readSeen("c3", store).size).toBe(0);
+  it("6F-2b: seen ids and the off switch come from the character (server), not the browser", () => {
+    expect(hintsOf(undefined)).toEqual({ seen: new Set(), off: false });
+    const { seen, off } = hintsOf({ seen: ["lesson:flash", "move_attack"], off: true });
+    expect([...seen].sort()).toEqual(["lesson:flash", "move_attack"]);
+    expect(off).toBe(true);
+    expect(hintSeenAction(["move_attack"])).toEqual({ kind: "hint_seen", ids: ["move_attack"] });
+    expect(hintSeenAction([], 2)).toEqual({ kind: "hint_seen", ids: [], level: 2 });
+    expect(lessonSeenId("allocate")).toBe("lesson:allocate");
+    expect(HINTS_OFF_ACTION).toEqual({ kind: "hints_off", off: true });
+    expect(HINTS_RESET_ACTION).toEqual({ kind: "hints_reset" });
   });
 });

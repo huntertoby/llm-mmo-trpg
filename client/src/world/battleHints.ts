@@ -1,59 +1,31 @@
 // 戰鬥短提示（Phase 6F-2；09 9.6.9 #99「戰鬥中出現短提示，可以關掉」；玩法 PM 筆記 U1）。
 // 伺服器在大世界戰鬥的 `WorldView.battle_hints` 給這場可能出現的提示（新手任務這一步的 `teach` ＋通用的四種）；
-// 這裡照戰況判斷哪一則現在該出現。每種提示每個角色只出一次（記在本機 localStorage，鍵含角色 ID）；
-// 「不再顯示提示」也記在本機。提示只影響畫面，不改戰鬥結果。
-import type { BattleHint, BattleView, UnitView } from "../api/types";
+// 這裡照戰況判斷哪一則現在該出現。每種提示每個角色只出一次、「不再顯示提示」——6F-4（6F-2b）起都記在角色身上
+// （伺服器的 `WorldView.hints`；出現時送 `hint_seen`、關掉送 `hints_off`，設定裡的「重新顯示提示」送
+// `hints_reset`）。開場、教學、升級畫面看過了也記在同一份紀錄。提示只影響畫面，不改戰鬥結果。
+import type { BattleHint, BattleView, UnitView, WorldAction, WorldHints } from "../api/types";
 
-type Store = Pick<Storage, "getItem" | "setItem">;
-
-/** 全部關掉（本機）。 */
-export const HINTS_OFF_KEY = "trpg.battleHints.off";
-/** 某個角色看過的提示 ID（本機；JSON 陣列）。 */
-export function seenKey(characterId: string): string {
-  return `trpg.battleHints.seen.${characterId}`;
+/** `hints.seen` 裡「開場看過了」的 ID（6F-4）。 */
+export const OPENING_SEEN = "opening";
+/** `hints.seen` 裡教學看過了的 ID（`lesson:allocate`、`lesson:flash`、`lesson:reflash`）。 */
+export function lessonSeenId(kind: string): string {
+  return `lesson:${kind}`;
 }
 
-function storage(): Store | null {
-  try {
-    return typeof localStorage === "undefined" ? null : localStorage;
-  } catch {
-    return null;
-  }
+/** 伺服器記的提示紀錄（沒有＝全部沒看過、沒關）。 */
+export function hintsOf(hints: WorldHints | null | undefined): { seen: ReadonlySet<string>; off: boolean } {
+  return { seen: new Set(hints?.seen ?? []), off: hints?.off ?? false };
 }
 
-export function readHintsOff(store: Store | null = storage()): boolean {
-  try {
-    return store?.getItem(HINTS_OFF_KEY) === "1";
-  } catch {
-    return false;
-  }
+/** 記下出過的提示、看過的開場與教學（`ids`），或看過的升級畫面（`level`）。 */
+export function hintSeenAction(ids: readonly string[], level?: number): WorldAction {
+  return level === undefined ? { kind: "hint_seen", ids: [...ids] } : { kind: "hint_seen", ids: [...ids], level };
 }
 
-export function writeHintsOff(on: boolean, store: Store | null = storage()): void {
-  try {
-    store?.setItem(HINTS_OFF_KEY, on ? "1" : "0");
-  } catch {
-    // 私密視窗或封鎖網站資料：只是不記住
-  }
-}
-
-export function readSeen(characterId: string, store: Store | null = storage()): Set<string> {
-  try {
-    const raw = store?.getItem(seenKey(characterId));
-    const parsed: unknown = raw == null ? [] : JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []);
-  } catch {
-    return new Set();
-  }
-}
-
-export function writeSeen(characterId: string, seen: ReadonlySet<string>, store: Store | null = storage()): void {
-  try {
-    store?.setItem(seenKey(characterId), JSON.stringify([...seen].sort()));
-  } catch {
-    // 同上
-  }
-}
+/** 「不再顯示提示」。 */
+export const HINTS_OFF_ACTION: WorldAction = { kind: "hints_off", off: true };
+/** 設定裡的「重新顯示提示」：清掉出過的提示、教學紀錄與「不再顯示」。 */
+export const HINTS_RESET_ACTION: WorldAction = { kind: "hints_reset" };
 
 /** 事件（`StepOut.events` 的元素）裡提示會看的欄位。 */
 export interface HintEvent {

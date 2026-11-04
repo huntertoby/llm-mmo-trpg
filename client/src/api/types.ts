@@ -235,6 +235,9 @@ export type BattleHint = Schemas["BattleHintView"];
 export type WorldGuide = Schemas["GuideView"];
 /** 閃現教學（6F-2，#132）。 */
 export type WorldLesson = Schemas["LessonView"];
+/** 升級畫面（6F-4 C2）與提示紀錄（6F-4：記在角色身上）。 */
+export type WorldLevelUp = Schemas["LevelUpView"];
+export type WorldHints = Schemas["HintsStateView"];
 /** 實地地圖（Phase 6B-2／6B-3）。 */
 export type FieldView = Schemas["FieldView"];
 /** 實地地圖的靜態地形（6C-R3；依 `hash` 快取）。 */
@@ -278,6 +281,10 @@ export type WorldAction =
   | (Omit<Schemas["HireAction"], "shadows" | "ai"> & { shadows?: string[]; ai?: Record<string, string> })
   | (Omit<Schemas["ShadowAiAction"], "profile"> & { profile?: string | null })
   | Schemas["NewsSeenAction"]
+  // 6F-4：提示與教學的紀錄（記在角色身上；戰鬥中也能送）
+  | (Omit<Schemas["HintSeenAction"], "ids" | "level"> & { ids?: string[]; level?: number | null })
+  | (Omit<Schemas["HintsOffAction"], "off"> & { off?: boolean })
+  | Schemas["HintsResetAction"]
   // 5D-1：商店買賣、整理腰包、野外用道具（`count` 省略＝1）
   | (Omit<Schemas["BuyAction"], "count"> & { count?: number })
   | (Omit<Schemas["SellAction"], "count"> & { count?: number })
