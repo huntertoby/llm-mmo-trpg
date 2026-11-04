@@ -144,7 +144,7 @@ def test_world_start_uses_recommended(library: ContentLibrary) -> None:
 def test_second_starter_prefers_using_the_first_keyword(library: ContentLibrary) -> None:
     """有「利用第 1 個關鍵字」的招時優先給它（雷法杖：潮濕 → 涉水雷擊利用潮濕）。6F-4b 起火焰法杖
     點燃＋帶電也有：組合器自動生成的利用者白板（例：趁燃雷擊）。6F-4c 起巨劍倒地＋撞擊也有：手寫池的
-    「利用倒地的撞擊招」（踢滾、拖地摔）。"""
+    「利用倒地的撞擊招」（踢翻、拖地摔）。"""
     linked = 0
     for seed in range(6):
         first = starting_skill(library, "lightning_staff", "wet", seed)
