@@ -103,7 +103,7 @@ export function modeBarHint(mode: ActionMode, card?: Pick<SkillCard, "stats">): 
   if (units > 0) picks.push(`點選紅框目標（${units} 個）`);
   if (t.tiles.size > 0) {
     const what = card?.stats.radius != null && card.stats.radius > 0 ? "範圍中心" : "目標格";
-    picks.push(`${units > 0 ? "或點" : "點選"}格子當${what}（${t.tiles.size} 格）`);
+    picks.push(`${units > 0 ? "或點" : "點選"}紅框格子當${what}（${t.tiles.size} 格）`);
   }
   if (t.directions.size > 0) picks.push(`${picks.length > 0 ? "或" : ""}選擇方向（主角旁的箭頭格或左側方向鈕）`);
   if (t.self !== null) picks.push("也可以按左側的「施放於自身」");

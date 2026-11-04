@@ -122,9 +122,9 @@ describe("6F-9 第 3 項：選了技能後，技能列上方換成該技能自�
   it("依目標種類與射程、半徑產生", () => {
     expect(modeBarHint(mode("skill", "斬擊", { units: units(2) }), card({ range: 1 }))).toBe("「斬擊」（射程 1）：點選紅框目標（2 個）；右鍵或 Esc 取消選取。");
     expect(modeBarHint(mode("skill", "火焰爆", { tiles: tiles(12) }), card({ range: 4, radius: 1 }))).toBe(
-      "「火焰爆」（射程 4・半徑 1）：點選格子當範圍中心（12 格）；右鍵或 Esc 取消選取。",
+      "「火焰爆」（射程 4・半徑 1）：點選紅框格子當範圍中心（12 格）；右鍵或 Esc 取消選取。",
     );
-    expect(modeBarHint(mode("skill", "捕獸夾", { tiles: tiles(6) }), card({ range: 3 }))).toBe("「捕獸夾」（射程 3）：點選格子當目標格（6 格）；右鍵或 Esc 取消選取。");
+    expect(modeBarHint(mode("skill", "捕獸夾", { tiles: tiles(6) }), card({ range: 3 }))).toBe("「捕獸夾」（射程 3）：點選紅框格子當目標格（6 格）；右鍵或 Esc 取消選取。");
     expect(modeBarHint(mode("skill", "射擊", { units: units(1) }), card({ range_weapon: true }))).toContain("（武器射程）");
     expect(modeBarHint(mode("skill", "戰吼", { self: A }), card({}))).toBe("「戰吼」對自身施放：按左側的「施放」；右鍵或 Esc 取消選取。");
     const dir = modeBarHint(mode("skill", "橫掃", { directions: new Map([["n", A]]) }), card({}));
@@ -162,6 +162,11 @@ describe("6F-9 第 4 項：選取面板的說明句", () => {
     const html = renderToStaticMarkup(createElement("div", null, keepWords("點選格子上的目標（紅框 3 個）。Esc／右鍵取消。")));
     expect(html).toContain('<span class="keep-word">Esc／右鍵</span>取消。');
     expect(html).not.toMatch(/<span class="keep-word">Esc<\/span>／/);
+  });
+
+  it("「紅框」也不拆（balance 之後 1600 寬曾拆成「紅」「框」）", () => {
+    expect(splitKeepWords("點選格子上的目標（紅框 19 個）。")).toEqual(["點選格子上的目標（", "紅框", " ", "19 個", "）。"]);
+    expect(splitKeepWords("移動（25 格），冷卻 2 回合")).toEqual(["移動（", "25 格", "），冷卻 ", "2 回合", ""]);
   });
 
   it("選取面板的說明句用 balance；其他說明句照舊 pretty", () => {
