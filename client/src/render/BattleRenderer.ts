@@ -72,7 +72,11 @@ import {
 import { cameraNudge, facingOf, type Gait, type WalkAnim, type WalkBeat } from "../battle/walkAnim";
 import { DUST_FROM, gaitPose, humanHit, knockOffset, legFrame, proneBody, skidBody, stumbleTilt, tilePhase } from "./motionClips";
 import { beatEffects, landingDust } from "./walkFx";
-import { FEET } from "./unitSprite";
+import { FEET, gripOf } from "./unitSprite";
+import type { SkillRow } from "../battle/skillSequence";
+import { anchorPoint, clipDef, clipFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
+import { cueEffect } from "./skillFx";
+import { weaponFrame } from "./inkWeaponFrame";
 import type { Facing } from "../api/types";
 
 export interface DirectionMark {
@@ -1049,6 +1053,11 @@ export class BattleRenderer {
       toRow(sprite)(1);
       return;
     }
+    const clipped = this.clipMove(m, sprite, skip, toRow);
+    if (clipped !== null) {
+      await clipped;
+      return;
+    }
     const gait: Gait | null = m.mode === "walk" ? "walk" : m.mode === "dash" ? "run" : null;
     if (gait !== null && m.style === "slide") {
       const facing = facingOf(m.from, m.to, this.unitDrawOf.get(m.unitId)?.facing ?? "south");
@@ -1061,6 +1070,189 @@ export class BattleRenderer {
     this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
     toRow(sprite)(0);
     await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style, toRow(sprite));
+  }
+
+  /**
+   * 位移途中的身體片段（6N-2）：衝刺前傾、肩撞、跳躍（只抬小人）、傳送、瞬步、交換、被推（後仰）、被拉（前傾）。
+   * 只有紙娃娃人形才換姿勢；沒有片段或沒有骨架回傳 `null`（照舊平移）。
+   */
+  private clipMove(m: MoveAnim, start: Container, skip: () => boolean, toRow: (s: Container) => (t: number) => void): Promise<void> | null {
+    const draw = this.unitDrawOf.get(m.unitId);
+    const clip = m.clip;
+    if (clip === undefined || draw === undefined || !hasSkeleton(draw)) return null;
+    return (async () => {
+      let sprite = start;
+      const target = m.clip === "pushed" || m.clip === "pulled";
+      if (!target && m.style === "slide") {
+        const facing = facingOf(m.from, m.to, draw.facing);
+        if (facing !== draw.facing) sprite = this.turn(m.unitId, sprite, facing);
+      }
+      const now = this.effectClock;
+      const feet = () => ({ x: sprite.x, y: sprite.y + FEET });
+      const fxs = (clipDef(clip).fx ?? []).map((c) =>
+        cueEffect(c.kind, feet, "default", now + m.durationMs * c.from, now + m.durationMs * c.to, c.where === "link" ? { from: this.center(m.to), to: () => this.center(m.from) } : undefined),
+      );
+      if (m.style === "fade") fxs.push(...warpEffects(warpPlan(m), now, (p) => this.center(p)));
+      this.launch(fxs);
+      const frame = (t: number) => this.poseClip(m.unitId, sprite, clipFrame(clip, t));
+      frame(0);
+      toRow(sprite)(0);
+      if (m.style === "slide") {
+        const a = this.center(m.from);
+        const b = this.center(m.to);
+        await this.during(m.durationMs, skip, (t) => {
+          const p = lerpPos(a, b, t);
+          sprite.position.set(p.x, p.y);
+          toRow(sprite)(t);
+          frame(t);
+        });
+        sprite.position.set(b.x, b.y);
+        toRow(sprite)(1);
+      } else {
+        await this.tween(sprite, this.center(m.from), this.center(m.to), m.durationMs, skip, m.style, toRow(sprite));
+      }
+      this.restBody(m.unitId, sprite);
+    })();
+  }
+
+  /** 一格片段畫面套到小人：骨架姿勢、離地高度、往面向方向的位移（南北向只走一半，有透視）。 */
+  private poseClip(unitId: string, sprite: Container, f: ClipFrame): void {
+    const draw = this.unitDrawOf.get(unitId);
+    if (draw === undefined || sprite.destroyed) return;
+    this.poseBody(unitId, sprite, { pose: f.pose }, f.air * DOLL_PX);
+    const off = knockOffset(draw.facing, -f.forward * DOLL_PX);
+    for (const node of bodyNodes(sprite)) {
+      node.x = off.x;
+      node.y += off.y;
+    }
+  }
+
+  /** 施放者的武器種類（起手對照表的列；6N-1）。沒有骨架的單位當空手。 */
+  weaponClassOf(unitId: string): WeaponClass {
+    const u = this.unitDrawOf.get(unitId);
+    const g = u === undefined ? null : gripOf(u);
+    return g === null ? "bare" : weaponClassOf(g.main, g.off);
+  }
+
+  /** 按住空白鍵暫時加速（6N-1）：畫布上所有動畫（片段、特效、走路、待機）的時間一起快 `rate` 倍。 */
+  setBoost(rate: number): void {
+    if (this.ready) this.app.ticker.speed = rate > 0 ? rate : 1;
+  }
+
+  /** 片段起點在畫面上的位置（紙娃娃座標 → 模型像素；作用端照武器的長度）。 */
+  private anchorWorld(unitId: string, f: ClipFrame, anchor: Anchor): { x: number; y: number } | null {
+    const sprite = this.unitSprites.get(unitId);
+    const draw = this.unitDrawOf.get(unitId);
+    if (sprite === undefined || sprite.destroyed || draw === undefined) return null;
+    const grip = gripOf(draw);
+    const main = grip?.main;
+    const len = anchor === "tip" && main !== undefined ? (weaponFrame(main, { side: draw.facing === "east" || draw.facing === "west" })?.len ?? 0) : 0;
+    const a = anchorPoint(f.pose, anchor, draw.facing, len);
+    const off = knockOffset(draw.facing, -f.forward);
+    return { x: sprite.x + (a.x + off.x) * DOLL_PX, y: sprite.y + FEET + (a.y + off.y - f.air) * DOLL_PX };
+  }
+
+  /**
+   * 技能的身體片段（6N-1／6N-2；`battle/skillSequence.ts` 的時間軸，時間已依速度縮放、和 `playVfx` 同一個原點）：
+   * 施放者先轉向目標，再照時間軸播起手、加力、出招、出招後的原語、收勢；被撞倒的人倒下。異形只有出招播「撲」，
+   * 形態、召喚物不動。回傳每一段出招在命中那一刻的作用端位置（特效從那裡發出）。
+   */
+  playSkill(rows: readonly SkillRow[]): Map<number, { x: number; y: number }> {
+    const origins = new Map<number, { x: number; y: number }>();
+    if (!this.ready || rows.length === 0) return origins;
+    const now = this.effectClock;
+    const turned = new Set<string>();
+    for (const r of rows) {
+      if (turned.has(r.unitId) || r.clip === "knocked_down" || r.target === null) continue;
+      turned.add(r.unitId);
+      const draw = this.unitDrawOf.get(r.unitId);
+      const sprite = this.unitSprites.get(r.unitId);
+      if (draw === undefined || sprite === undefined || (draw.x === r.target.x && draw.y === r.target.y)) continue;
+      const facing = facingOf({ x: draw.x, y: draw.y }, r.target, draw.facing);
+      if (facing !== draw.facing) this.turn(r.unitId, sprite, facing);
+    }
+    const effects: Effect[] = [];
+    for (const r of rows) {
+      effects.push(this.rowEffect(r, now));
+      if (!r.recover) effects.push(...this.rowCues(r, now));
+      if (r.strike && r.hitMs !== null) {
+        const def = clipDef(r.clip);
+        const o = this.anchorWorld(r.unitId, clipFrame(r.clip, def.hitAt ?? 0.5), def.anchor);
+        if (o !== null) origins.set(r.cast, o);
+      }
+    }
+    this.launch(effects);
+    return origins;
+  }
+
+  private rowFrame(r: SkillRow, t: number): ClipFrame {
+    return r.recover ? recoverFrame(r.clip, t) : clipFrame(r.clip, t);
+  }
+
+  private rowEffect(r: SkillRow, now: number): Effect {
+    let held = false;
+    const current = () => {
+      const s = this.unitSprites.get(r.unitId);
+      return s === undefined || s.destroyed ? null : s;
+    };
+    return {
+      node: new Container(),
+      startMs: now + r.startMs,
+      endMs: now + r.startMs + r.ms,
+      update: (t) => {
+        const s = current();
+        const draw = this.unitDrawOf.get(r.unitId);
+        if (s === null || draw === undefined) return;
+        if (!held) {
+          held = true;
+          this.idle.hold(r.unitId, s);
+        }
+        if (r.clip === "knocked_down") {
+          if (creatureOf(draw) !== null) {
+            this.poseBody(r.unitId, s, { creature: quantizeCreaturePose(CREATURE_CLIPS.fall.pose(t)) });
+            return;
+          }
+          const lie = proneBody(t, draw.facing);
+          for (const node of bodyNodes(s)) {
+            node.position.set(lie.x, FEET + lie.y);
+            node.rotation = lie.rotation;
+          }
+          if (hasSkeleton(draw) || isProne(draw)) this.poseBody(r.unitId, s, { pose: lie.pose });
+          for (const node of bodyNodes(s)) node.position.set(lie.x, FEET + lie.y);
+          return;
+        }
+        if (hasSkeleton(draw)) this.poseClip(r.unitId, s, this.rowFrame(r, t));
+        else if (r.strike && creatureOf(draw) !== null) this.poseBody(r.unitId, s, { creature: quantizeCreaturePose(CREATURE_CLIPS.pounce.pose(t)) });
+      },
+      end: () => {
+        const s = current();
+        if (r.clip === "knocked_down") this.markProne(r.unitId);
+        if (s !== null) this.restBody(r.unitId, s);
+        if (held) this.idle.release(r.unitId);
+        held = false;
+      },
+    };
+  }
+
+  /** 片段的特效提示（武器發光、符陣、光點、連線…）。 */
+  private rowCues(r: SkillRow, now: number): Effect[] {
+    const def = clipDef(r.clip);
+    const cues: readonly FxCue[] = def.fx ?? [];
+    if (cues.length === 0) return [];
+    const rowT = () => Math.max(0, Math.min(1, (this.effectClock - now - r.startMs) / r.ms));
+    const anchor = () => this.anchorWorld(r.unitId, this.rowFrame(r, rowT()), def.anchor) ?? this.feetOf(r.unitId);
+    const tc = r.target === null ? null : this.center(r.target);
+    const target = (dy: number) => () => (tc === null ? this.feetOf(r.unitId) : { x: tc.x, y: tc.y + dy });
+    return cues.map((c) => {
+      const pos = c.where === "anchor" ? anchor : c.where === "feet" ? () => this.feetOf(r.unitId) : c.where === "targetFeet" ? target(FEET) : c.where === "targetHead" ? target(-T * 0.75) : target(-T * 0.05);
+      const link = c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: () => ({ x: this.feetOf(r.unitId).x, y: this.feetOf(r.unitId).y - T * 0.35 }) } : undefined;
+      return cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link);
+    });
+  }
+
+  private feetOf(unitId: string): { x: number; y: number } {
+    const s = this.unitSprites.get(unitId);
+    return s === undefined || s.destroyed ? { x: 0, y: 0 } : { x: s.x, y: s.y + FEET };
   }
 
   // ---- 待機、進出門（6M-4）----------------------------------------------------
@@ -1610,13 +1802,19 @@ export class BattleRenderer {
    * 播放一步的技能特效（Phase 3-12）：蓄力、飛行物或光束、命中爆發、受擊閃白與震動。不等待結束；
    * 描述內的時間已依播放速度縮放，`impactMs` 是命中後爆發的時間。`shake` 為假時不震動（版面設定）。
    */
-  playVfx(vfx: StepVfx, impactMs: number, shake: boolean): void {
+  playVfx(vfx: StepVfx, impactMs: number, shake: boolean, origins: ReadonlyMap<number, { x: number; y: number }> = new Map()): void {
     if (!this.ready || impactMs <= 0) return;
     const now = this.effectClock;
     const effects: Effect[] = [];
     const auraHits = vfx.casts.some((c) => c.kind === "aura");
     const at = (p: Pos) => this.center(p);
-    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, at));
+    vfx.casts.forEach((cast, i) => {
+      // 6N-1：飛行物、光束、扇形從出招那一刻的作用端（杖頭、劍尖、槍口、弓弦）發出，不從格子中心
+      const o = origins.get(i);
+      const from = o !== undefined && (cast.kind === "projectile" || cast.kind === "beam" || cast.kind === "cone") ? o : null;
+      const atCast = from === null ? at : (p: Pos) => (p.x === cast.from.x && p.y === cast.from.y ? from : at(p));
+      effects.push(...castEffects(cast, now, impactMs, atCast));
+    });
     for (const hit of vfx.hits) {
       // 異形（6M-3）：受擊只閃角色的剪影（不畫整片白圓），身體往後彈一下
       // 有骨架的人形（6M-4，美術 PM 檢查）：同樣只閃剪影、往後彈；形態、召喚物、倒地的人（6C-8）疊白色剪影閃白、不畫白圓

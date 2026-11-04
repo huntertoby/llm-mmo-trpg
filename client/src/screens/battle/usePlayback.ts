@@ -17,6 +17,8 @@ import { needsLogRestore } from "../../run/flow";
 import { loadSpeed, saveSpeed } from "../../ui/SpeedControl";
 
 const BANNER_MS = 1000;
+/** 按住空白鍵時的暫時加速倍率（6N-1）。 */
+export const HOLD_BOOST = 2;
 
 export function errorText(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -88,19 +90,62 @@ export function usePlayback(
     saveShake(shake);
   }, [shake]);
 
+  // 按住空白鍵暫時 2 倍速（6N-1）：畫布動畫由 ticker 加速，等待的時間照剩下的部分重算
+  const boostRef = useRef(1);
+  const retimeRef = useRef<(() => void) | null>(null);
   const sleep = useCallback(
     (ms: number) =>
       new Promise<void>((resolve) => {
-        const timer = window.setTimeout(done, ms);
+        let left = ms;
+        let rate = boostRef.current;
+        let since = performance.now();
+        let timer = window.setTimeout(done, left / rate);
         function done() {
           window.clearTimeout(timer);
           wakeRef.current = null;
+          retimeRef.current = null;
           resolve();
         }
+        retimeRef.current = () => {
+          const now = performance.now();
+          left -= (now - since) * rate;
+          since = now;
+          rate = boostRef.current;
+          window.clearTimeout(timer);
+          timer = window.setTimeout(done, Math.max(0, left / rate));
+        };
         wakeRef.current = done;
       }),
     [],
   );
+
+  useEffect(() => {
+    const setBoost = (rate: number) => {
+      if (boostRef.current === rate) return;
+      boostRef.current = rate;
+      rendererRef.current?.setBoost(rate);
+      retimeRef.current?.();
+    };
+    const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
+    const down = (e: KeyboardEvent) => {
+      if (e.key !== " " || typing(e.target)) return;
+      e.preventDefault();
+      setBoost(HOLD_BOOST);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === " ") setBoost(1);
+    };
+    const reset = () => setBoost(1);
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", reset);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", reset);
+      reset();
+    };
+  }, []);
 
   const skipNow = useCallback(() => {
     skipRef.current = true;
@@ -124,7 +169,11 @@ export function usePlayback(
         case "vfx":
           // 技能特效：蓄力與飛行物先播，等到命中才更新畫面與浮動數字（略過時不播）
           if (skip()) break;
-          rendererRef.current?.playVfx(op.vfx, op.impactMs, shakeRef.current);
+          {
+            // 6N-1：先播身體片段（起手 → 原語），特效從出招那一刻的作用端發出
+            const origins = op.skill === undefined ? undefined : rendererRef.current?.playSkill(op.skill);
+            rendererRef.current?.playVfx(op.vfx, op.impactMs, shakeRef.current, origins);
+          }
           if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs);
           break;
         case "view":
@@ -152,7 +201,8 @@ export function usePlayback(
       skipRef.current = false;
       setPlaying(true);
       try {
-        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current);
+        const weaponOf = (id: string) => rendererRef.current?.weaponClassOf(id) ?? "bare";
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current, runningRef.current, weaponOf);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);

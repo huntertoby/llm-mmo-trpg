@@ -1,4 +1,5 @@
 // 事件播放計畫（純函式）：`steps` → 依序的移動動畫。其他事件先不做動畫；播放完以 `view` 為準。
+import type { PrimitiveClipId } from "../render/skillClips";
 import { asEvent, isUnitMoved, type MoveMode, type Pos, type StepOut, type UnitMovedEvent } from "../api/types";
 
 export interface MoveAnim {
@@ -10,6 +11,8 @@ export interface MoveAnim {
   durationMs: number;
   /** `slide` 滑動到新格；`fade` 原地淡出、在新格淡入（傳送、交換）。 */
   style: MoveStyle;
+  /** 位移途中的身體片段（6N-2：衝刺、跳躍、傳送、被推、被拉…；`render/skillClips.ts`）；沒有＝照舊。 */
+  clip?: PrimitiveClipId;
 }
 
 export type MoveStyle = "slide" | "fade";
