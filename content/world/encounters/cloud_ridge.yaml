@@ -21,6 +21,9 @@ groups:
   - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf, mist_wolf]}
   - {id: sect_patrol, name_zh: 修士巡邏, units: [sect_acolyte, sect_acolyte, sect_swordsman, sect_alchemist]}
+  # 6F-4c（新手第 3 步一路走過去：主角倒下 ≤ 40%、打贏固定戰 ≥ 8/10；scripts/f4c_terrace_sweep.py 掃描）：雨中梯田田埂巡邏
+  # 專用的陣容，比 sect_patrol 少 1 名修士劍客（sect_patrol 照舊，地點遭遇表與其他地方仍用它）
+  - {id: terrace_patrol, name_zh: 梯田巡邏, units: [sect_acolyte, sect_acolyte, sect_alchemist]}
   - {id: terrace_clash, name_zh: 梯田上的衝突, units: [bandit, bandit], third: [sect_swordsman, sect_acolyte]}
   - {id: temple_gate_guard, name_zh: 山門守衛, units: [sect_acolyte, sect_swordsman, sect_swordsman]}
   - {id: hunter_beasts, name_zh: 下山的野獸, units: [mist_wolf, mist_wolf, mountain_leopard]}
@@ -60,7 +63,7 @@ locations:
   - location: bamboo_path
     groups: [{group: mist_wolf_pack}, {group: bandit_wolf_handler}]
   - location: rain_terraces
-    groups: [{group: sect_patrol}, {group: terrace_clash}]
+    groups: [{group: terrace_patrol}, {group: terrace_clash}]   # 6F-4c：田埂巡邏改用梯田專用陣容（sect_patrol 本身不動）
   - location: mist_temple_gate
     groups: [{group: temple_gate_guard}]
     variants:  # 「觀內有人私通盜賊」到期 → 主線第 1 章的叛徒戰（打贏那一場結束）

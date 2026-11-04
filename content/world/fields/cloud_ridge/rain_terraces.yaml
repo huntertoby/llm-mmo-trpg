@@ -5,7 +5,7 @@
 # 出口：西 → 竹林小徑、北 → 青霧觀山門（往上的石階）、西北 → 古松祭壇（山坡小路）、
 # 東南 → 斷崖幫寨（峽谷口）。傳送石在中層（高度 2）的土地廟旁。
 # 敵人：上層駐守 terrace_clash（三方：盜賊對修士，新手任務 3 的固定戰；草稿待確認 6：兩群互相
-# 對峙、不會自己打起來，碰到就照陣容的 third 開三方戰，所以只放一個駐守點）；田埂巡邏 sect_patrol。
+# 對峙、不會自己打起來，碰到就照陣容的 third 開三方戰，所以只放一個駐守點）；田埂巡邏 terrace_patrol（6F-4c）。
 # 事件點：土地廟旁（lost_acolyte）、峽谷口（gang_toll）。
 id: rain_terraces
 name_zh: 雨中梯田
@@ -186,7 +186,7 @@ teleport_stones:
   - {id: stone_rain_terraces, at: [17, 6]}
 spawns:
   - {at: [16, 2], group: terrace_clash, personal: true, until_quest: starter_ferry, until_step: terrace_clash}   # 上層（三方，新手任務 3 的固定戰；個人的駐守；那一步完成後不再出現，6C-5b）
-  - {at: [2, 8], group: sect_patrol, patrol: [[2, 8], [21, 8]]}   # 田埂巡邏
+  - {at: [2, 8], group: terrace_patrol, patrol: [[2, 8], [21, 8]]}   # 田埂巡邏（6F-4c：梯田專用陣容）
 event_spots:
   - {at: [15, 6], id: lost_acolyte}   # 土地廟旁
   - {at: [19, 14], id: gang_toll}   # 峽谷口

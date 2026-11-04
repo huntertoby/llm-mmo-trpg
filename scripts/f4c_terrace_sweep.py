@@ -11,7 +11,9 @@
 - 固定戰勝：打贏 ``terrace_clash`` 的比例（目標 ≥ 8/10）；
 - 巡邏戰：碰到巡邏的場數、輸給巡邏的場數。
 
-    uv run python scripts/f4c_terrace_sweep.py [每種開局的場數＝5]
+    uv run python scripts/f4c_terrace_sweep.py [每種開局的場數＝5] [--current]
+
+``--current``：只量目前的內容（不換陣容），驗證選定的陣容。
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from __future__ import annotations
 import dataclasses
 import sys
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,7 +38,8 @@ from trpg.world.field import field_map, placed
 from trpg.world.field_enemies import field_enemies
 
 FIELD = "rain_terraces"
-PATROL = "sect_patrol"
+PATROLS = ("sect_patrol", "terrace_patrol")
+"""梯田田埂巡邏駐守點的陣容（6F-4c 前是 ``sect_patrol``，之後是 ``terrace_patrol``）。"""
 SWEEP = "terrace_patrol_sweep"
 CANDIDATES: dict[str, tuple[str, ...]] = {
     "原本 4 名（2 雜兵＋劍客＋補師）": (
@@ -70,7 +74,7 @@ def _variant(library: ContentLibrary, units: tuple[str, ...]) -> ContentLibrary:
     fields = dict(library.field_maps)
     found = fields[FIELD]
     spawns = tuple(
-        s.model_copy(update={"group": SWEEP}) if s.group == PATROL and s.patrol else s
+        s.model_copy(update={"group": SWEEP}) if s.group in PATROLS and s.patrol else s
         for s in found.spawns
     )
     fields[FIELD] = found.model_copy(update={"spawns": spawns})
@@ -114,9 +118,11 @@ def _step3(store: WorldStore, cid: str, tally: Step3) -> None:
     tally.down += down
 
 
-def _run(library: ContentLibrary, runs: int) -> Step3:
+def _run(library: ContentLibrary, runs: int, per: dict[str, Step3] | None = None) -> Step3:
+    """所有開局合計；給了 ``per`` 就另外記每種開局的。"""
     tally = Step3()
-    for weapon, keywords in sim.STARTS.values():
+    for name, (weapon, keywords) in sim.STARTS.items():
+        own = Step3()
         for i in range(runs):
             with tempfile.TemporaryDirectory() as tmp:
                 store = create_app(library, save_dir=Path(tmp)).state.world
@@ -126,8 +132,20 @@ def _run(library: ContentLibrary, runs: int) -> Step3:
                 scratch = sim.Tally()
                 if not all(sim._play(store, cid, m, g, scratch) for m, g in sim.FIGHTS[:2]):
                     continue
-                _step3(store, cid, tally)
+                _step3(store, cid, own)
+        for key in ("reached", "down", "won_fixed", "patrol_fights", "patrol_losses"):
+            setattr(tally, key, getattr(tally, key) + getattr(own, key))
+        if per is not None:
+            per[name] = own
     return tally
+
+
+def _sum(items: Iterable[Step3]) -> Step3:
+    total = Step3()
+    for t in items:
+        for key in ("reached", "down", "won_fixed", "patrol_fights", "patrol_losses"):
+            setattr(total, key, getattr(total, key) + getattr(t, key))
+    return total
 
 
 def _pct(n: int, d: int) -> str:
@@ -135,12 +153,23 @@ def _pct(n: int, d: int) -> str:
 
 
 def main() -> None:
-    runs = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+    numbers = [a for a in sys.argv[1:] if a.isdigit()]
+    runs = int(numbers[0]) if numbers else 5
     base = load_library()
     api_world.spawn_region = lambda _library: START_REGION  # type: ignore[assignment]  # 跳過主城
     print(f"每種開局 {runs} 個角色（4 種開局）；分母＝打到第 3 步的角色數")
     print("| 梯田巡邏陣容 | 倒下（≤40%） | 固定戰勝（≥80%） | 巡邏戰 | 輸給巡邏 |")
     print("|---|---|---|---|---|")
+    only_current = "--current" in sys.argv
+    if only_current:  # 只量目前內容（不換陣容）
+        per: dict[str, Step3] = {}
+        _run(base, runs, per)
+        for name, t in [*per.items(), ("合計", _sum(per.values()))]:
+            print(
+                f"| {name} | {_pct(t.down, t.reached)} | {_pct(t.won_fixed, t.reached)} "
+                f"| {t.patrol_fights} | {t.patrol_losses} |"
+            )
+        return
     for name, units in CANDIDATES.items():
         t = _run(_variant(base, units), runs)
         print(
