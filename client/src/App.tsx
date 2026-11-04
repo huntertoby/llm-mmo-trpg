@@ -1,10 +1,11 @@
-// 畫面切換：開始畫面、戰鬥畫面、技能工坊、roguelite 一輪、大世界（測試，5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
+// 畫面切換：首頁（正式入口只有「開始」，6F-1）、開發選單（`?dev=1`：單場戰鬥、技能工坊、roguelite 一輪）、大世界（5A-5）。啟動時先讀名詞對照表，再嘗試回到上次進行中的一輪。
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api/client";
 import type { BattleResponse, RunResponse } from "./api/types";
 import { setGlossary } from "./battle/glossary";
 import { BattleScreen } from "./screens/BattleScreen";
 import { StartScreen } from "./screens/StartScreen";
+import { HomeScreen } from "./screens/HomeScreen";
 import { WorkshopScreen } from "./screens/WorkshopScreen";
 import { isNotFoundStatus, readCurrentRun, resumeRun, writeCurrentRun } from "./run/flow";
 import { isDevMode } from "./run/startFlow";
@@ -152,6 +153,10 @@ export function App() {
     }
     if (screen === "workshop") {
       return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
+    }
+    // 6F-1：正式入口只有「開始」→ 建立角色；開發選單（單場戰鬥、一輪、工坊）只在 `?dev=1`
+    if (!isDevMode(window.location.search)) {
+      return <HomeScreen onStart={() => setScreen("world")} notice={notice} onCloseNotice={() => setNotice(null)} />;
     }
     return (
       <StartScreen
