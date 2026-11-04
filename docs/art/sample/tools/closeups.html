@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>3 倍特寫產生器</title>
+<style>body{margin:0;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}</style></head>
+<body>
+<!-- 美術 PM 第 7 版（2026-11-04 深夜）：交件流程要「每格一張 3 倍特寫」。和樣張頁用同一份畫法、同一組姿勢，只是放大 3 倍、每格各畫在自己的畫布上。
+     用法：無頭 Chrome --dump-dom 開 closeups.html?set=key|parts|idle，再用 tools/closeups_save.py 把每張 data URL 存成 docs/art/closeup/<set>/NN_名稱.png -->
+<div id="out"></div><div id="secs" style="display:none"></div>
+<script src="../current.js"></script><script src="../raceArt.js"></script><script src="../paperdoll.js"></script><script src="../fx.js"></script><script src="../realms.js"></script>
+<script src="../qDoll.js"></script><script src="../storyDoll.js"></script><script src="../anim.js"></script><script src="../idleWeapons.js"></script>
+<script>
+const Q=QDoll,TPL=PaperDoll.TEMPLATES,IT=PaperDoll.ITEMS,U=(k)=>Anim.unit(k),Z=3,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
+const SET=new URLSearchParams(location.search).get("set")||"key",CELLS=[];
+// cell：[檔名, 標題, unit, view, west, pose|null, gs, 頁面上的 K, 寬, 高, 腳的 y, 人在格子裡的 x]
+const cell=(file,title,u,v,w,p,gs,K,W,H,fy,cx)=>CELLS.push({file,title,u,v,w,p,gs,K,W,H,fy,cx:cx??W/2});
+const VZ=[["front",false,"正面","front"],["back",false,"背面","back"],["side",false,"朝東","east"],["side",true,"朝西","west"]];
+if(SET==="key"){
+  // 關鍵姿勢 10 列 × 4 方向（同 key-poses.html：K 3.4、格 240×196）
+  const ROWS=[["劍類：雙手劍・拄劍","gs-plant",U("greatsword"),"plant"],["劍類：雙手劍・扛肩","gs-shoulder",U("greatsword"),"shoulder"],["長柄：長槍","spear",U("spear")],["長柄：鐮","scythe",U("scythe")],["弓","bow",U("bow")],["弩與槍：弩","crossbow",U("crossbow")],["弩與槍：火槍","gun",U("gun")],["法杖（單手）","staff",U("staff")],["單手加副手：劍盾","sword-shield",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}}],["單手加副手：杖＋書","staff-book",TPL.hero_mage]];
+  ROWS.forEach(([zh,f,u,gs],r)=>VZ.forEach(([v,w,t,e])=>cell(`r${String(r+1).padStart(2,"0")}_${f}_${e}`,`${zh}・${t}`,u,v,w,null,gs||"plant",3.4,240,224,202)));
+  // 弓 6 格（K 3.4、格 200×230）
+  [["待機",{nock:1},"idle"],["待機・抬一下",{nock:1,arm:-0.3,dw:-0.2},"idle-lift"],["拉弓 1/3",{bowAim:0.4,pull:1},"draw1"],["拉弓 2/3",{bowAim:0.8,pull:2.5},"draw2"],["拉滿",{bowAim:1,pull:4},"full"],["放箭",{bowAim:1,pull:0},"release"]].forEach(([t,p,f],i)=>cell(`b${i+1}_bow_${f}`,`弓・${t}（朝東）`,U("bow"),"side",false,{...Anim.REST,...p,wpn:undefined},null,3.4,200,230,200));
+  // 出招命中格（K 2.9、格 248×235，人在左邊）
+  const AK=["sword","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],AZ={...Anim.WEAPON_ZH,greatsword:"雙手劍"};
+  AK.forEach((k,i)=>{const QATK=["greatsword","spear","scythe","gun","crossbow"].includes(k);const P=k==="bow"?{...Anim.REST,bowAim:1,pull:4,wpn:undefined}:QATK?{...Anim.REST,atk:1,wpn:undefined,lean:0.12,hipN:0.4,hipF:-0.3}:Anim.CLIP[(Anim.ATTACK[k]??Anim.ATTACK.sword)[1]].pose(1);
+    cell(`a${String(i+1).padStart(2,"0")}_${k}`,`出招・${AZ[k]}（朝東）`,U(k),"side",false,{...P,wpn:P.wpn===null?undefined:P.wpn},null,2.9,248,235,205,70);});
+  // 雙手出招起訖（K 2.9）
+  [["greatsword",0,"雙手劍・蓄力（扛到肩上）","gs-windup"],["greatsword",0.5,"雙手劍・舉到臉前上方","gs-raise"],["greatsword",1,"雙手劍・命中","gs-hit"],["spear",0,"長槍・收","spear-ready"],["spear",1,"長槍・刺出","spear-thrust"],["scythe",0,"鐮・舉起","scythe-raise"],["scythe",1,"鐮・收割","scythe-reap"],["gun",0,"火槍・持槍","gun-ready"],["gun",1,"火槍・瞄準","gun-aim"]]
+    .forEach(([k,t,zh,f],i)=>cell(`g${i+1}_${f}`,`${zh}（朝東）`,U(k),"side",false,{...Anim.REST,atk:t,wpn:undefined},null,2.9,248,225,200,70));
+  // 待機開頭與中段（K 2.9）
+  const IK=["sword","sword_shield","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],IZ={...AZ,sword_shield:"劍盾"};
+  IK.forEach((k,i)=>{const u=k==="sword_shield"?{look:U("sword").look,gear:{...U("sword").gear,off_hand:IT.round_shield}}:U(k);
+    [[0,"開頭","start"],[0.5,"中段","mid"]].forEach(([t,zh,f])=>{const p=IdleWeapons.IDLE[k].pose(t);cell(`i${String(i+1).padStart(2,"0")}_${k}_${f}`,`待機・${IZ[k]}・${zh}（朝東）`,u,"side",false,{...Anim.REST,...p,wpn:p.wpn},null,2.9,190,262,238,60);});});
+}
+if(SET==="parts"){
+  // 部件 × 四方向：每一列一張（四格並排），同 parts-4dir.html
+  const BASE={skin:"#f1c9a5",hair:"short",hairColor:"#6a3d1e"},SHIRT={body:{kind:"shirt",color:"#4f7fbf"},feet:{kind:"boots",material:"leather"}};
+  let sec=0;
+  window.section=(title,rows,K=3.2)=>{sec++;rows.forEach(([zh,u],i)=>{const W=(1240/2-80)/4,RH=Math.round(56*K);CELLS.push({file:`s${String(sec).padStart(2,"0")}_${String(i+1).padStart(2,"0")}`,title:`${title.split(" ")[0]} ${zh}`,u,row:true,K,W,H:RH,fy:RH-16});});};
+  const HAIRS=[["短髮","short"],["長髮","long"],["齊肩","bob"],["馬尾","ponytail"],["雙馬尾","twin"],["刺蝟","spiky"],["髮髻","bun"],["光頭","none"]];
+  section("1. 髮型",HAIRS.map(([zh,h])=>[zh,{look:{...BASE,hair:h,hairColor:h==="long"?"#c8c0b0":BASE.hairColor},gear:SHIRT}]),3.2);
+  const HATS=[["兜帽","hood",{color:"#3f6a32"}],["頭盔","helmet",{material:"steel"}],["角盔","horned_helm",{material:"iron"}],["巫師帽","wizard_hat",{color:"#5a3fa0"}],["便帽","cap",{color:"#6a4a2e"}],["頭巾","bandana",{color:"#b33a3a"}],["頭冠","circlet",{material:"gold"}],["寬帽","wide_hat",{color:"#8a6a3a"}],["面紗","veil",{color:"#d8d0c0"}],["護目鏡","goggles",{}],["王冠","crown",{material:"gold"}],["全罩盔","greathelm",{material:"steel"}]];
+  section("2. 頭飾",HATS.map(([zh,k,m])=>[zh,{look:{...BASE,hair:k==="hood"?"long":"short"},gear:{...SHIRT,head:{slot:"head",kind:k,...m}}}]),3.2);
+  const s=document.createElement("script");s.src="../parts-extra.js";s.onload=()=>render();document.body.appendChild(s);
+} else render();
+function render(){
+  const out=document.getElementById("out");
+  CELLS.forEach((c,n)=>{
+    const views=c.row?VZ:[[c.v,c.w,""]],W=(c.row?c.W*4+40:c.W)*Z,H=c.H*Z+28,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+    x.fillStyle="#2a2e40";x.fillRect(0,0,W,H);x.fillStyle="#e8bb48";x.font=`26px ${FONT}`;x.fillText(c.title,12,32);
+    views.forEach(([v,w,t],j)=>{const cx=(c.row?20+c.W*j+c.W/2:c.cx)*Z,fy=c.fy*Z;x.beginPath();x.ellipse(cx,fy,38*Z*c.K/3.4,7*Z,0,0,Math.PI*2);x.fillStyle="rgba(0,0,0,0.25)";x.fill();
+      Q.setGreatsword(c.gs||"plant");if(c.p)Q.setPose(c.p);Q.stamp(x,c.u,v,cx,fy,c.K*Z,w);Q.setPose(null);Q.setGreatsword("plant");
+      if(t){x.fillStyle="#b8ab96";x.font=`22px ${FONT}`;x.textAlign="center";x.fillText(t,cx,H-8);x.textAlign="left";}});
+    const pre=document.createElement("pre");pre.dataset.file=c.file;pre.textContent=cv.toDataURL("image/png");out.appendChild(pre);
+  });
+  const done=document.createElement("p");done.id="done";done.textContent=String(CELLS.length);out.appendChild(done);
+}
+</script></body></html>

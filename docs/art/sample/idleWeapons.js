@@ -16,7 +16,8 @@ window.IdleWeapons = (() => {
     sword_shield: { ms: 2400, zh: "劍盾：舉盾微晃", pose: (u) => ({ ...breath(u), shieldUp: 1.6 * (0.5 - 0.5 * C(u)), wpn: 0.75 + 0.05 * S(u), lean: -0.03 * (0.5 - 0.5 * C(u)) }) },
     saber: { ms: 2400, zh: "刀：刀尖畫小圈", pose: (u) => ({ ...breath(u), wpn: 0.75 + 0.16 * S(u), arm: 0.08 * C(u) }) },
     arcane_blade: { ms: 2400, zh: "魔導劍：劍槽符文光脈動", pose: (u) => ({ ...breath(u), wpn: 0.75 + 0.05 * S(u), glow: 0.5 - 0.5 * C(u) }) },
-    paired: { ms: 2400, zh: "成對武器：匕首在手上翻一圈", pose: (u) => ({ ...breath(u), wpn: 0.75 + TAU * ease(Math.min(1, Math.max(0, (u - 0.3) / 0.3))), arm: -0.2 * bump(u, 0.25, 0.65) }) },
+    // 成對武器（第 7 版）：一手一把；手腕往前轉、刃尖往前下壓再收回（刃一直朝前，不翻向自己；審查：「一把刃朝身體內側，另一把浮在胸前」）
+    paired: { ms: 2400, zh: "成對武器：一手一把，手腕轉一下匕首", pose: (u) => ({ ...breath(u), idle: 1, wpn: 0.75 + 0.45 * bump(u, 0.3, 0.65), arm: -0.15 * bump(u, 0.25, 0.65) }) },
     spear: { ms: 2400, zh: "長槍：槍尖往前點兩下", pose: (u) => { const k = bump(u, 0.15, 0.3) + bump(u, 0.35, 0.5); return { ...breath(u), dw: 0.1 * k, arm: -0.04 * k }; } },
     scythe: { ms: 2400, zh: "鐮：刃緩慢前後擺", pose: (u) => ({ ...breath(u), dw: 0.08 * S(u), lean: 0.03 * S(u) }) },
     whip: { ms: 1200, zh: "鞭：鞭梢甩動", pose: (u) => ({ ...breath(u), lash: u, arm: 0.06 * S(u) }) },
