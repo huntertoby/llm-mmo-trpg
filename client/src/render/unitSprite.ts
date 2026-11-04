@@ -1,7 +1,7 @@
 // 單位在地圖上的畫法（從 `BattleRenderer` 抽出，Phase 3-18b）：
 // 底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 倒地徽章 → 狀態徽章 → 血條。
 // 倒地（docs/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
-import { ColorMatrixFilter, Container, Graphics, Sprite, Texture } from "pixi.js";
+import { ColorMatrixFilter, Container, Graphics, Sprite, Texture, type Text } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
@@ -16,6 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
+import { MIN_STATUS_GLYPH_PX, registerMark, STATUS_ROW_LABEL } from "./minMark";
 import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { CREATURE_FOOT_Y, CREATURE_H, CREATURE_W, ELITE_SCALE, HUGE_FIELD_SCALE, bodyTop, drawHumanoidFx, knownAffixes, resolveCreature, type ResolvedCreature } from "./inkCreature";
@@ -650,9 +651,13 @@ function statusRow(u: UnitDraw): Container | null {
   const badgeLeft = u.summon ? summonBadgeOffset(u, T).x - SUMMON_BADGE_RADIUS : null;
   const { shift, pitch } = rowPlacement(shown.length, badgeLeft);
   const row = new Container();
-  row.position.set(shift, statusRowY(creatureOf(u), creatureFieldScale(u)));
+  row.label = STATUS_ROW_LABEL;
+  // 6F-9：地圖縮小時整排反向放大（`minMark.ts`）；以圖示下緣為基準往上長，和 HP 條的空隙不變
+  row.pivot.set(0, ROW_ICON_FEET / 2);
+  row.position.set(shift, statusRowY(creatureOf(u), creatureFieldScale(u)) + ROW_ICON_FEET / 2);
   let x = -((shown.length - 1) * pitch) / 2;
   let lastX = x;
+  const inner: Text[] = [];
   for (const id of shown) {
     lastX = x;
     const tex = rowIconTexture(id);
@@ -674,7 +679,9 @@ function statusRow(u: UnitDraw): Container | null {
     more.anchor.set(0.5);
     more.position.set(cx, cy + 0.5);
     row.addChild(more);
+    inner.push(more);
   }
+  registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner);
   return row;
 }
 

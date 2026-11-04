@@ -118,3 +118,9 @@ button.selected {
 .skill-hint {
   text-wrap: pretty;
 }
+
+/* 6F-9（6F-8 檢查第 3 節：選取面板第二行以「／右鍵取消。」開頭）：選取面板的說明句各行等長；
+   「Esc／右鍵」另外包成不換行的一小段（ui/keepWords.tsx） */
+.mode-help .op-hint {
+  text-wrap: balance;
+}

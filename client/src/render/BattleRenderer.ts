@@ -47,6 +47,7 @@ import { LIFT_SHAKE_PX, type SlowSpan } from "../battle/impact";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
+import { applyMarkScale, HEIGHT_BADGE_LABEL, MIN_HEIGHT_BADGE_FONT_PX, registerMark, statusRowOf } from "./minMark";
 import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, flashTexture, hasSkeleton, isLinked, isProne, overlayFlashKind, HUMAN_TOP_Y, placeCreatureBody, PRONE, Pulses, unitTopY, type BodyFrame } from "./unitSprite";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
@@ -139,6 +140,8 @@ export interface Highlights {
 }
 
 const T = TILE_SIZE;
+/** 高度標記「▲N」的數字字級（世界座標；6F-9 起畫面上至少 `MIN_HEIGHT_BADGE_FONT_PX`）。 */
+export const HEIGHT_BADGE_FONT = 10;
 /** 紙娃娃的虛擬像素 → 格子像素（52px 格縮放 0.92）。 */
 const DOLL_PX = (T / 52) * DOLL_SCALE;
 /** 可燃小火苗平時的透明度（3-38）。 */
@@ -306,6 +309,8 @@ export class BattleRenderer {
   onBroken: (() => void) | null = null;
   /** 畫面上的縮放比例（1 ＝ 每格 TILE_SIZE 個 CSS 像素）。 */
   private scale = 1;
+  /** 這一輪畫的高度標記（6F-9：縮放改變時重設最小尺寸）。 */
+  private heightBadges: Container[] = [];
 
   constructor() {
     liveRenderers += 1;
@@ -446,6 +451,19 @@ export class BattleRenderer {
     const style = this.app.canvas.style;
     style.width = `${shown.width}px`;
     style.height = `${shown.height}px`;
+    this.scaleMarks();
+  }
+
+  /** 6F-9：一個標記節點依目前縮放保持最小尺寸（`minMark.ts`；沒登記過的節點不動）。 */
+  private scaleMark(node: Container | null): void {
+    if (node === null || node.destroyed) return;
+    applyMarkScale(node, this.scale, (window.devicePixelRatio || 1) * this.scale);
+  }
+
+  /** 6F-9：縮放改變時，現有的高度標記與腳邊狀態列一起重設（場景不必重畫）。 */
+  private scaleMarks(): void {
+    for (const n of this.heightBadges) this.scaleMark(n);
+    for (const s of this.unitSprites.values()) if (!s.destroyed) this.scaleMark(statusRowOf(s));
   }
 
   /** 格子的高度（地圖外 0）。 */
@@ -484,6 +502,7 @@ export class BattleRenderer {
     this.art.beginFrame();
     this.ambient.begin(model);
     this.flameMarks = [];
+    this.heightBadges = [];
     for (const t of model.tiles) this.tileSprite(model, t);
     this.motion.drawSurfaces(model, this.surfaceHost);
     this.scenery.draw(this.sceneryHost(), model, model.scenery);
@@ -549,6 +568,7 @@ export class BattleRenderer {
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
     const sprite = buildUnitSprite(this.art, this.pulses, u);
+    this.scaleMark(statusRowOf(sprite)); // 6F-9
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
@@ -769,9 +789,14 @@ export class BattleRenderer {
       const g = new Graphics();
       g.roundRect(3, 3, 19, 13, 4).fill({ color: 0x1e1812, alpha: 0.7 });
       g.poly([6, 13, 9.5, 6, 13, 13]).fill(0xfff3c4);
-      const num = label(text, 10, 0xfff3c4, true);
+      const num = label(text, HEIGHT_BADGE_FONT, 0xfff3c4, true);
       num.position.set(14, 4);
       node.addChild(g, num);
+      // 6F-9：數字在畫面上至少 10px（地圖縮小時以格子左上角為基準反向放大）
+      node.label = HEIGHT_BADGE_LABEL;
+      registerMark(node, { base: HEIGHT_BADGE_FONT, min: MIN_HEIGHT_BADGE_FONT_PX }, [num]);
+      this.heightBadges.push(node);
+      this.scaleMark(node);
       this.rows.row(t.y).badges.addChild(node);
       this.place(node, t, t.x * T, t.y * T);
     }
@@ -1877,6 +1902,7 @@ export class BattleRenderer {
     if (draw === undefined || old.destroyed) return old;
     const next = { ...draw, facing };
     const fresh = buildUnitSprite(this.art, this.pulses, next);
+    this.scaleMark(statusRowOf(fresh)); // 6F-9
     this.holdBody(unitId, fresh); // 6R-F：兩次重畫之間新畫的朝向也要釘住，不然會被淘汰銷毀
     fresh.position.copyFrom(old.position);
     const parent = old.parent;
