@@ -606,7 +606,7 @@ export class BattleRenderer {
   /** 區域的裝飾薄霧（3-37b；雲嶺）：每格一團淡淡的霧白，霧天加濃。只是裝飾，不影響視線規則。 */
   private drawMist(model: DrawModel): void {
     const mist = mistLevel(model.region, model.weather ?? "");
-    if (mist === null) return;
+    if (mist === null || model.scenery?.interior != null) return; // 6B-ART1：室內不飄區域的裝飾薄霧
     for (const t of model.tiles) {
       const sprite = this.fxSprite(`mist|${mist.level}|${t.x}|${t.y}`, (ctx) => drawMistTile(ctx, t.x, t.y, mist.alpha));
       if (sprite === null) continue;
