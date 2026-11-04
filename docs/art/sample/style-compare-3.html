@@ -7,10 +7,17 @@
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .col h3{font-size:13px;margin:0 0 4px;color:#c8bca8;font-weight:normal}.col h3 b{color:#f2e6c8}
   canvas{display:block;border-radius:6px;background:#1e2030}
+  #st{background:#1e2030;border-radius:6px;padding:8px 10px;margin:8px 0 4px;font-size:12px}
+  #st .sum{font-size:14px;margin-bottom:6px}#st .sum b.ok{color:#7ad07a}#st .sum b.ng{color:#ff6a5a}
+  #st table{border-collapse:collapse;width:100%}#st td,#st th{padding:2px 6px;text-align:center;border-bottom:1px solid #2c2f44}#st th{color:#c8bca8;font-weight:normal}
+  #st td.y{color:#7ad07a}#st td.n{color:#ff6a5a;font-weight:bold}#st td.k{text-align:left;color:#f2e6c8}
 </style></head>
 <body>
 <h1>原版 Q 版（使用者喜歡的那張）vs Q 版造型＋現行骨架</h1>
 <p class="note">美術 PM，2026-11-04 晚。左欄是 10-29 以前的 <code>paperdoll.js</code> 原封不動（大圓頭、矮胖、粗輪廓、方形眼、腮紅），就是狀態圖示畫廊那張的畫法；右欄是 <code>qDoll.js</code>：<b>同一套 Q 版造型與比例</b>（頭 r 8.5、身高 46、身體 15 寬、腿 4×8），拆成關節掛上現行 6M／6N 骨架，補上舊版沒有的真側面、手肘、另一隻手、武器握把。姿勢資料和 C 同一份。全部程式繪製。</p>
+
+<div id="st"></div>
+<p class="note">第 2 版（11-04 晚）修正使用者指出的：側面披風改成從肩膀垂到背後（在身體後面）；盾加一圈鋼邊，側面改畫在胸前、背面畫盾的背面（木板＋皮帶），不再和同色披風糊成一片；武器全部改成「握把在手、作用端朝 −y」再依方向轉（6M-2 規則），側面劍尖朝前、背面武器在畫面右手（主手）且從肩後露出。上表是 13 種武器 × 4 方向的自測，<b>全部通過才交</b>。</p>
 
 <h2>1. 使用者喜歡的原版畫廊（原封不動重拍）vs 新做（同角色、同狀態、靜止姿勢）</h2>
 <div class="pair"><div class="col"><h3><b>原版</b> paperdoll.js（當時沒有關節，只有正面）</h3><canvas id="g1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b> qDoll.js（靜止時應該和左邊一模一樣）</h3><canvas id="g2"></canvas></div></div>
@@ -18,12 +25,17 @@
 <h2>2. 動起來：揮砍命中、施法詠唱、走路、受擊（側面，1.8 倍）</h2>
 <div class="pair"><div class="col"><h3><b>原版</b>：沒有關節，當時只能整隻傾斜＋弧光</h3><canvas id="a1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b>：同 6M／6N 姿勢</h3><canvas id="a2"></canvas></div></div>
 
-<h2>3. 四方向與種族、配件（Q 版語言補齊 10 族特徵）</h2>
-<div class="pair"><div class="col"><h3><b>原版</b>：正面、「側面」（只是正面橫向壓 0.9）、背面</h3><canvas id="d1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b>：正面、真側面（朝東／朝西）、背面</h3><canvas id="d2"></canvas></div></div>
+<h2>3. 四方向（5 套裝備）與種族、配件</h2>
+<div class="pair"><div class="col"><h3><b>原版</b>：正面、「側面」（只是正面橫向壓 0.9）、背面</h3><canvas id="d1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b>：正面、真側面（朝東／朝西）、背面；劍盾披風、鳶盾、弓、法杖＋書、大劍＋紅披風</h3><canvas id="d2"></canvas></div></div>
 <div class="pair"><div class="col"><h3><b>原版</b> 10 族（raceArt 當時就是配 Q 版畫的）</h3><canvas id="r1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b> 10 族</h3><canvas id="r2"></canvas></div></div>
 
 <h2>4. 頭像 64／32px：從 Q 版的頭延伸（不是 C 的頭）</h2>
 <div class="pair"><div class="col"><h3><b>原版</b>的頭放大（當時沒有頭像系統）</h3><canvas id="p1"></canvas></div><div class="col"><h3><b>Q 版頭像</b>：同一顆頭＋現行的框、底、配件位置</h3><canvas id="p2"></canvas></div></div>
+
+<h2>5. 盾、披風、武器在四方向的特寫（Q 版）</h2>
+<p class="note">上排放大 3 倍：劍盾＋藍披風（盾和披風同是藍色，靠鋼邊與位置分開）、鳶盾、大劍＋紅披風。下排 13 種武器 × 5 格：正面、朝東靜止、朝西靜止、背面、朝東出招（攻擊片段命中那一格）；每格下方的勾是自測結果。</p>
+<canvas id="c1"></canvas>
+<canvas id="c2" style="margin-top:10px"></canvas>
 
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
 <script src="qDoll.js"></script>
@@ -57,10 +69,12 @@ function anim(x,useQ){const K=1.8,FY=2.6*T;floor(x,10,3);const hero=TPL.hero_fig
   x.fillStyle="#f2e6c8";x.font=`12px ${FONT}`;["揮砍・命中","施法・詠唱","走路","受擊"].forEach((t,i)=>x.fillText(t,[0.6,3.1,5.5,7.9][i]*T,3*T-8));}
 anim(cv("a1",10*T,3*T),false);anim(cv("a2",10*T,3*T),true);
 // 3. 四方向、10 族
-function dirs(x,useQ){const K=1.8;floor(x,10,2.6);const u=TPL.hero_fighter;
-  const L=useQ?[["front",false,"正面"],["side",false,"側面（朝東）"],["side",true,"側面（朝西）"],["back",false,"背面"]]:[["south",0,"正面"],["east",0,"「側面」朝東"],["west",0,"「側面」朝西"],["north",0,"背面"]];
-  L.forEach(([v,w,t],i)=>{const cx=(1.2+i*2.4)*T;if(useQ)Q.stamp(x,u,v,cx,2.2*T,K,w);else PD.stamp(x,u,v,cx,2.2*T,K,{dpr:3});x.fillStyle="#f2e6c8";x.font=`12px ${FONT}`;x.textAlign="center";x.fillText(t,cx,2.6*T-8);x.textAlign="left";});}
-dirs(cv("d1",10*T,2.6*T),false);dirs(cv("d2",10*T,2.6*T),true);
+const LOADS=[["劍盾＋披風","hero_fighter"],["鳶盾","bandit_shieldbearer"],["弓","hero_archer"],["法杖＋書","hero_mage"],["大劍＋披風","bandit_boss"]];
+function dirs(x,useQ){const K=1.45,RH=1.85*T;floor(x,10,LOADS.length*1.85+0.2);
+  const L=useQ?[["front",false,"正面"],["side",false,"朝東"],["side",true,"朝西"],["back",false,"背面"]]:[["south",0,"正面"],["east",0,"「朝東」"],["west",0,"「朝西」"],["north",0,"背面"]];
+  LOADS.forEach(([zh,tpl],j)=>{const u=TPL[tpl],fy=(j+1)*RH-6;x.fillStyle="#e8bb48";x.font=`11px ${FONT}`;x.fillText(zh,4,j*RH+14);
+    L.forEach(([v,w,t],i)=>{const cx=(1.6+i*2.3)*T;if(useQ)Q.stamp(x,u,v,cx,fy,K,w);else PD.stamp(x,u,v,cx,fy,K,{dpr:3});if(j===0){x.fillStyle="#f2e6c8";x.textAlign="center";x.fillText(t,cx,12);x.textAlign="left";}});});}
+dirs(cv("d1",10*T,LOADS.length*1.85*T+10),false);dirs(cv("d2",10*T,LOADS.length*1.85*T+10),true);
 const RACES=[["人類",R.human.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["精靈",R.elf.look,{body:{kind:"robe",color:"#f2ece0",trim:"#8ab0ff"}}],["狐族",R.fox.look,{body:{kind:"leather",color:"#6a5040"},main_hand:{kind:"bow",material:"wood"}}],["龍裔",R.dragonkin.look,{body:{kind:"mail",color:"#8a6a3a"}}],["矮人",R.dwarf.look,{body:{kind:"mail",color:"#b08a4a"},main_hand:{kind:"hammer",material:"iron"}}],["義體人",R.cyborg.look,{body:{kind:"coat",color:"#4a5058"}}],["獸人",R.orc.look,{body:{kind:"leather",color:"#6a4a3a"},main_hand:{kind:"axe",material:"iron"}}],["角魔",R.fiend.look,{body:{kind:"robe",color:"#3a2420",trim:"#ff6a1a"},main_hand:{kind:"staff",material:"wood"}}],["鱗族",R.scalefolk.look,{body:{kind:"leather",color:"#3a6a6a"}}],["海民",R.seafolk.look,{body:{kind:"leather",color:"#c8b08a"}}]];
 function races(x,useQ){const K=1.4;floor(x,10,2.2);RACES.forEach(([t,look,gear],i)=>{const cx=(0.5+i)*T;if(useQ)Q.stamp(x,{look,gear},"front",cx,1.7*T,K,false);else PD.stamp(x,{look,gear},"south",cx,1.7*T,K,{dpr:3});x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,2.2*T-8);x.textAlign="left";});}
 races(cv("r1",10*T,2.2*T),false);races(cv("r2",10*T,2.2*T),true);
@@ -74,4 +88,22 @@ function portrait(x,X,Y,size,[zh,reg,look,gear],useQ){const [frame,bgD,bgL]=REG[
   x.restore();x.lineWidth=Math.max(2,size*0.04);x.strokeStyle=frame;x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.stroke();x.lineWidth=1;x.strokeStyle="#1c1712";x.stroke();x.restore();}
 function portraits(x,useQ){HEADS.forEach((h,i)=>{const X=6+i*68,Y=6;portrait(x,X,Y,64,h,useQ);portrait(x,X+16,Y+70,32,h,useQ);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(h[0],X+32,Y+118);x.textAlign="left";});}
 portraits(cv("p1",9*68+6,130),false);portraits(cv("p2",9*68+6,130),true);
+// 自測（頁首）
+const ST=Q.selfTest();{const n=ST.reduce((a,r)=>a+Object.values(r.ok).filter(Boolean).length,0),N=ST.length*6,all=n===N;
+  const C=[["east","朝東出招"],["west","朝西出招"],["eastRest","朝東靜止"],["westRest","朝西靜止"],["south","正面"],["north","背面"]];
+  const cell=(r,k)=>{const ok=r.ok[k],v=r[k];const t=isNaN(v)?"沒畫／切掉":k==="south"||k==="north"?(ok?"露出":"被蓋"):((v>=0?"前 ":"後 ")+Math.abs(v).toFixed(1));return `<td class="${ok?"y":"n"}">${ok?"✔":"✘"} ${t}</td>`;};
+  document.getElementById("st").innerHTML=`<div class="sum">武器朝向自測（13 種 × 4 方向，靜止與出招共 ${N} 項）：<b class="${all?"ok":"ng"}">${n}／${N} 通過${all?"":"，未通過不交"}</b>　規則：握把在手、作用端在手的前方（側面），正面背面作用端露在身體外</div><table><tr><th></th>${C.map(c=>`<th>${c[1]}</th>`).join("")}</tr>${ST.map(r=>`<tr><td class="k">${r.zh}</td>${C.map(c=>cell(r,c[0])).join("")}</tr>`).join("")}</table>`;
+  window.__selftest=`${n}/${N}`;}
+// 5. 特寫
+function closeup(x){const K=3,CW=152;floor(x,24,4);const U=[["劍盾＋藍披風","hero_fighter"],["鳶盾","bandit_shieldbearer"],["大劍＋紅披風","bandit_boss"]],V=[["front",false,"正面"],["side",false,"東"],["side",true,"西"],["back",false,"背面"]];
+  let i=0;U.forEach(([zh,tpl])=>{V.forEach(([v,w,t])=>{const cx=76+i*94+Math.floor(i/4)*24;Q.stamp(x,TPL[tpl],v,cx,182,K,w);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,200);x.textAlign="left";i++;});
+    x.fillStyle="#e8bb48";x.font=`12px ${FONT}`;x.fillText(zh,76+(i-4)*94+Math.floor((i-4)/4)*24-40,16);});}
+closeup(cv("c1",1240,206));
+function grid(x){const K=1.3,CW=92,RH=96,ROWS=[["front",false,null,"正面","south"],["side",false,null,"東・靜止","eastRest"],["side",true,null,"西・靜止","westRest"],["back",false,null,"背面","north"],["side",false,"atk","東・出招","east"]];
+  floor(x,24,10);x.font=`11px ${FONT}`;
+  ST.forEach((r,i)=>{const cx=70+i*CW,u=Anim.unit(r.kind);x.fillStyle="#e8bb48";x.textAlign="center";x.fillText(r.zh,cx,14);
+    ROWS.forEach(([v,w,p,t,k],j)=>{const fy=24+(j+1)*RH-22;if(p)pose(Anim.CLIP[Anim.ATTACK[r.kind][1]].pose(1));Q.stamp(x,u,v,cx,fy,K,w);pose(null);
+      x.fillStyle=r.ok[k]?"#7ad07a":"#ff6a5a";x.fillText(r.ok[k]?"✔":"✘",cx,fy+14);});x.textAlign="left";});
+  ROWS.forEach(([,,,t],j)=>{x.fillStyle="#c8bca8";x.fillText(t,4,24+(j+1)*RH-50);});}
+grid(cv("c2",1240,24+5*96+4));
 </script></body></html>
