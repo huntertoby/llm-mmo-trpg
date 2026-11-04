@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>原版 Q 版 vs Q 版＋現行骨架</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:16px 0 6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.5}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .col h3{font-size:13px;margin:0 0 4px;color:#c8bca8;font-weight:normal}.col h3 b{color:#f2e6c8}
+  canvas{display:block;border-radius:6px;background:#1e2030}
+</style></head>
+<body>
+<h1>原版 Q 版（使用者喜歡的那張）vs Q 版造型＋現行骨架</h1>
+<p class="note">美術 PM，2026-11-04 晚。左欄是 10-29 以前的 <code>paperdoll.js</code> 原封不動（大圓頭、矮胖、粗輪廓、方形眼、腮紅），就是狀態圖示畫廊那張的畫法；右欄是 <code>qDoll.js</code>：<b>同一套 Q 版造型與比例</b>（頭 r 8.5、身高 46、身體 15 寬、腿 4×8），拆成關節掛上現行 6M／6N 骨架，補上舊版沒有的真側面、手肘、另一隻手、武器握把。姿勢資料和 C 同一份。全部程式繪製。</p>
+
+<h2>1. 使用者喜歡的原版畫廊（原封不動重拍）vs 新做（同角色、同狀態、靜止姿勢）</h2>
+<div class="pair"><div class="col"><h3><b>原版</b> paperdoll.js（當時沒有關節，只有正面）</h3><canvas id="g1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b> qDoll.js（靜止時應該和左邊一模一樣）</h3><canvas id="g2"></canvas></div></div>
+
+<h2>2. 動起來：揮砍命中、施法詠唱、走路、受擊（側面，1.8 倍）</h2>
+<div class="pair"><div class="col"><h3><b>原版</b>：沒有關節，當時只能整隻傾斜＋弧光</h3><canvas id="a1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b>：同 6M／6N 姿勢</h3><canvas id="a2"></canvas></div></div>
+
+<h2>3. 四方向與種族、配件（Q 版語言補齊 10 族特徵）</h2>
+<div class="pair"><div class="col"><h3><b>原版</b>：正面、「側面」（只是正面橫向壓 0.9）、背面</h3><canvas id="d1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b>：正面、真側面（朝東／朝西）、背面</h3><canvas id="d2"></canvas></div></div>
+<div class="pair"><div class="col"><h3><b>原版</b> 10 族（raceArt 當時就是配 Q 版畫的）</h3><canvas id="r1"></canvas></div><div class="col"><h3><b>Q 版＋骨架</b> 10 族</h3><canvas id="r2"></canvas></div></div>
+
+<h2>4. 頭像 64／32px：從 Q 版的頭延伸（不是 C 的頭）</h2>
+<div class="pair"><div class="col"><h3><b>原版</b>的頭放大（當時沒有頭像系統）</h3><canvas id="p1"></canvas></div><div class="col"><h3><b>Q 版頭像</b>：同一顆頭＋現行的框、底、配件位置</h3><canvas id="p2"></canvas></div></div>
+
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script>
+<script src="storyDoll.js"></script><script src="anim.js"></script>
+<script>
+const T=52,TAU=Math.PI*2,PD=PaperDoll,Q=QDoll,R=RaceArt.RACES,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif";
+function cv(id,w,h){const c=document.getElementById(id);c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return x;}
+function floor(x,W,H){for(let gy=0;gy<H;gy++)for(let gx=0;gx<W;gx++)Realms.REALMS[1].floor(x,gx*T,gy*T,gx,gy);}
+function pose(P){Q.setPose(P?{...P,wpn:P.wpn===null?undefined:P.wpn}:null);}
+const TPL=PD.TEMPLATES;
+// 1. 畫廊：照 status-icons.html 的 cases 與 unitTile
+const CASES=[["沒有狀態","hero_fighter","player",[]],["1 個：中毒","bandit","enemy",["poison"]],["3 個","bandit","enemy",["slow","weaken","marked"]],["5 個 → 2＋「+3」","bandit_shieldbearer","enemy",["burning","stun","vulnerable","hasted","marked"]],["暈眩","bandit","enemy",["stun"]],["冰凍","hero_mage","player",["frozen"]],["護盾＋加速","hero_fighter","player",["shielded","hasted"]],["定身＋流血","hero_archer","player",["root","bleed"]],["燃燒＋中毒","bandit_archer","enemy",["burning","poison"]]];
+function gallery(x,useQ){const S=1.3;x.save();x.scale(S,S);floor(x,CASES.length,1.3);
+  CASES.forEach(([label,tpl,team,st],i)=>{const u=TPL[tpl],cx=i*T+T/2,feet=T*0.82+14,col=FX.TEAM[team];
+    x.beginPath();x.ellipse(cx,feet-2,T*0.34,T*0.12,0,0,TAU);x.fillStyle=col+"55";x.fill();x.lineWidth=2;x.strokeStyle=col;x.stroke();
+    FX.bodyUnder(x,st,cx,feet);x.save();x.globalAlpha=st.includes("concealed")?0.55:1;
+    if(useQ)Q.stamp(x,u,"front",cx,feet,0.78,false);else PD.stamp(x,u,"south",cx,feet,0.78,{dpr:4});
+    x.restore();FX.bodyOver(x,st,cx,feet,0.4);
+    const w=T*0.62,y=14+T/2+T*0.36;x.fillStyle="rgba(0,0,0,0.7)";x.fillRect(cx-w/2-1,y-1,w+2,7);x.fillStyle=team==="player"?"#5fd07a":"#e05050";x.fillRect(cx-w/2,y,w*0.7,5);
+    FX.statusRow(x,st,cx,14+1,14);});x.restore();}
+gallery(cv("g1",CASES.length*T*1.3,T*1.3*1.3),false);gallery(cv("g2",CASES.length*T*1.3,T*1.3*1.3),true);
+// 2. 動畫
+function anim(x,useQ){const K=1.8,FY=2.6*T;floor(x,10,3);const hero=TPL.hero_fighter,mage=TPL.hero_mage,foe=TPL.bandit;
+  const put=(u,view,cx,cy,west,P,tilt)=>{if(useQ){pose(P);Q.stamp(x,u,view,cx,cy,K,west);pose(null);}else{x.save();x.translate(cx,cy);x.rotate(tilt||0);PD.stamp(x,u,west?"west":"east",0,0,K,{dpr:3});x.restore();}};
+  put(hero,"side",1.2*T,FY,false,Anim.CLIP.slash.pose(0.72),0.22);x.strokeStyle="rgba(255,255,255,0.85)";x.lineWidth=5;x.beginPath();x.arc(1.2*T+18,FY-34,38,-1.6,0.5);x.stroke();
+  x.save();x.translate(3.7*T,FY);x.scale(1,0.4);x.strokeStyle="#c8a0ff";x.lineWidth=2.5;x.beginPath();x.arc(0,0,44,0,TAU);x.stroke();x.beginPath();x.arc(0,0,30,0,TAU);x.stroke();x.restore();
+  put(mage,"side",3.7*T,FY-2,false,Anim.CLIP.channel.pose(0.9),-0.1);
+  put(hero,"side",6.1*T,FY,false,Anim.walkPose(1.1),0);
+  put(foe,"side",8.5*T,FY,true,Anim.CLIP.hit.pose(0.3),-0.18);
+  x.fillStyle="#ff5a5a";x.strokeStyle="#2b1e16";x.lineWidth=4;x.font=`bold 26px ${FONT}`;x.strokeText("−12",8.1*T,0.9*T);x.fillText("−12",8.1*T,0.9*T);
+  x.fillStyle="#f2e6c8";x.font=`12px ${FONT}`;["揮砍・命中","施法・詠唱","走路","受擊"].forEach((t,i)=>x.fillText(t,[0.6,3.1,5.5,7.9][i]*T,3*T-8));}
+anim(cv("a1",10*T,3*T),false);anim(cv("a2",10*T,3*T),true);
+// 3. 四方向、10 族
+function dirs(x,useQ){const K=1.8;floor(x,10,2.6);const u=TPL.hero_fighter;
+  const L=useQ?[["front",false,"正面"],["side",false,"側面（朝東）"],["side",true,"側面（朝西）"],["back",false,"背面"]]:[["south",0,"正面"],["east",0,"「側面」朝東"],["west",0,"「側面」朝西"],["north",0,"背面"]];
+  L.forEach(([v,w,t],i)=>{const cx=(1.2+i*2.4)*T;if(useQ)Q.stamp(x,u,v,cx,2.2*T,K,w);else PD.stamp(x,u,v,cx,2.2*T,K,{dpr:3});x.fillStyle="#f2e6c8";x.font=`12px ${FONT}`;x.textAlign="center";x.fillText(t,cx,2.6*T-8);x.textAlign="left";});}
+dirs(cv("d1",10*T,2.6*T),false);dirs(cv("d2",10*T,2.6*T),true);
+const RACES=[["人類",R.human.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["精靈",R.elf.look,{body:{kind:"robe",color:"#f2ece0",trim:"#8ab0ff"}}],["狐族",R.fox.look,{body:{kind:"leather",color:"#6a5040"},main_hand:{kind:"bow",material:"wood"}}],["龍裔",R.dragonkin.look,{body:{kind:"mail",color:"#8a6a3a"}}],["矮人",R.dwarf.look,{body:{kind:"mail",color:"#b08a4a"},main_hand:{kind:"hammer",material:"iron"}}],["義體人",R.cyborg.look,{body:{kind:"coat",color:"#4a5058"}}],["獸人",R.orc.look,{body:{kind:"leather",color:"#6a4a3a"},main_hand:{kind:"axe",material:"iron"}}],["角魔",R.fiend.look,{body:{kind:"robe",color:"#3a2420",trim:"#ff6a1a"},main_hand:{kind:"staff",material:"wood"}}],["鱗族",R.scalefolk.look,{body:{kind:"leather",color:"#3a6a6a"}}],["海民",R.seafolk.look,{body:{kind:"leather",color:"#c8b08a"}}]];
+function races(x,useQ){const K=1.4;floor(x,10,2.2);RACES.forEach(([t,look,gear],i)=>{const cx=(0.5+i)*T;if(useQ)Q.stamp(x,{look,gear},"front",cx,1.7*T,K,false);else PD.stamp(x,{look,gear},"south",cx,1.7*T,K,{dpr:3});x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,2.2*T-8);x.textAlign="left";});}
+races(cv("r1",10*T,2.2*T),false);races(cv("r2",10*T,2.2*T),true);
+// 4. 頭像：Q 版的頭，框與底照 portraits.js
+const REG={crystal_crown:["#8ab0ff","#22284a","#7a8ac8"],cloud_ridge:["#6aa84a","#2f4a3a","#8ab890"],arcane_hub:["#4ad0c8","#1e2a2a","#6a9a90"],ashen_waste:["#ff6a1a","#3a2418","#b07050"]};
+const HEADS=[["人類","crystal_crown",R.human.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["精靈","crystal_crown",R.elf.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["狐族","cloud_ridge",R.fox.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["矮人","arcane_hub",R.dwarf.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["獸人","ashen_waste",R.orc.look,{body:{kind:"shirt",color:"#6a6a7a"}}],["賽倫","crystal_crown",{skin:"#f1c9a5",hair:"short",hairColor:"#c8a868"},{body:{kind:"plate",color:"#d8dde6",trim:"#8ab0ff"},head:{kind:"helmet",material:"steel"}}],["青鋒","cloud_ridge",{skin:"#f1c9a5",hair:"long",hairColor:"#1a1a1a"},{body:{kind:"leather",color:"#2f5a5a"},head:{kind:"bandana",color:"#a83a2a"}}],["鉚釘","arcane_hub",{...R.dwarf.look,hairColor:"#6a3a1a"},{body:{kind:"mail",color:"#b08a4a"},head:{kind:"goggles"}}],["瑪菈","ashen_waste",{...R.fiend.look,hairColor:"#2a1418"},{body:{kind:"robe",color:"#3a2420",trim:"#ff6a1a"}}]];
+function portrait(x,X,Y,size,[zh,reg,look,gear],useQ){const [frame,bgD,bgL]=REG[reg];x.save();x.translate(X,Y);x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.save();x.clip();
+  const g=x.createLinearGradient(0,0,0,size);g.addColorStop(0,bgL);g.addColorStop(1,bgD);x.fillStyle=g;x.fillRect(0,0,size,size);
+  const k=size/26;const cx=size/2,cy=size*0.5+29*k;// 頭中心（y −29）放在框中央偏上
+  if(useQ)Q.stamp(x,{look,gear},"front",cx,cy,k,false,{dpr:3});else PD.stamp(x,{look,gear},"south",cx,cy,k,{dpr:3});
+  x.restore();x.lineWidth=Math.max(2,size*0.04);x.strokeStyle=frame;x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.stroke();x.lineWidth=1;x.strokeStyle="#1c1712";x.stroke();x.restore();}
+function portraits(x,useQ){HEADS.forEach((h,i)=>{const X=6+i*68,Y=6;portrait(x,X,Y,64,h,useQ);portrait(x,X+16,Y+70,32,h,useQ);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(h[0],X+32,Y+118);x.textAlign="left";});}
+portraits(cv("p1",9*68+6,130),false);portraits(cv("p2",9*68+6,130),true);
+</script></body></html>
