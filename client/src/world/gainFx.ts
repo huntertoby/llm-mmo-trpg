@@ -3,6 +3,7 @@
 // - 拿到物品：背包＋腰包＋身上裝備的數量（依物品 ID 加總）變多 → 物品圖示飛進背包圖示。
 //   放進腰包、穿上、脫下只是換位置，總數不變，不算拿到；賣掉、用掉是變少，也不播。
 import type { WorldInventory, WorldView } from "../api/types";
+import type { GearLook } from "../render/gearIcon";
 
 export interface Gain {
   item: string;
@@ -35,6 +36,24 @@ export function gainedItems(prev: WorldInventory | null | undefined, next: World
     if (more > 0) out.push({ item, name: t.name, gear: t.gear, count: more });
   }
   return out.slice(0, MAX_FLY);
+}
+
+/** 飛行圖示要畫什麼（6Q-1）：裝備用 `gearIcon` 的實際圖示（外觀從同一份背包找）；其他物品維持通用圖示。 */
+export type GainIconChoice = { kind: "gear"; look: GearLook; slot: string | null } | { kind: "generic"; gear: boolean };
+
+/**
+ * 找裝備的外觀：先看身上穿的（`equipment`），再看背包的裝備卡（`gear_cards`），依物品 ID 比對。
+ * 不是裝備、或兩邊都找不到（舊畫面、資料不齊）時退回通用圖示。
+ */
+export function gainIconOf(inv: WorldInventory | null | undefined, gain: Pick<Gain, "item" | "gear">): GainIconChoice {
+  if (!gain.gear || inv == null) return { kind: "generic", gear: gain.gear };
+  for (const s of inv.equipment ?? []) {
+    if (s.item != null && s.item.id === gain.item && s.item.appearance != null) return { kind: "gear", look: s.item.appearance, slot: s.slot };
+  }
+  for (const c of inv.gear_cards ?? []) {
+    if (c.item.id === gain.item && c.item.appearance != null) return { kind: "gear", look: c.item.appearance, slot: c.slot };
+  }
+  return { kind: "generic", gear: true };
 }
 
 /** 升級了：同一個角色、等級變高（換角色、第一次載入不算）。回傳新的等級，沒升級＝`null`。 */

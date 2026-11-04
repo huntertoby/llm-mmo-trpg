@@ -8,7 +8,8 @@ import { heightAt, tileLift, topReserve, type HeightGrid } from "../battle/eleva
 import { TILE_SIZE } from "../battle/geometry";
 import "../ui/uiMotion.css";
 import { prefersReducedMotion } from "./frameLoop";
-import { FLY_MS, FLY_STAGGER_MS, flyAt, gainedItems, levelUp, PILLAR_MS, type Gain } from "./gainFx";
+import { GearIcon } from "../ui/GearIcon";
+import { FLY_MS, FLY_STAGGER_MS, flyAt, gainedItems, gainIconOf, levelUp, PILLAR_MS, type Gain, type GainIconChoice } from "./gainFx";
 
 /** 主角腳底在畫布上的位置（CSS 像素，含縮放與抬高）。 */
 export function feetAnchor(grid: HeightGrid, p: Pos, scale: number): { left: number; top: number } {
@@ -67,9 +68,20 @@ export function GainIcon({ gear }: { gear: boolean }) {
   );
 }
 
+/** 飛行的圖示（6Q-1）：裝備畫 `GearIcon` 的實際圖示（和通用圖示同樣的深色圓底金邊），其他用 `GainIcon`。 */
+export function GainFlyIcon({ choice }: { choice: GainIconChoice }) {
+  if (choice.kind === "generic") return <GainIcon gear={choice.gear} />;
+  return (
+    <span className="gain-gear">
+      <GearIcon look={choice.look} slot={choice.slot ?? undefined} size={32} />
+    </span>
+  );
+}
+
 interface Flight {
   key: string;
   gain: Gain;
+  icon: GainIconChoice;
   delay: number;
 }
 
@@ -113,7 +125,7 @@ function FlyingIcon({ flight, onDone }: { flight: Flight; onDone(key: string): v
   }, [flight, onDone]);
   return (
     <div ref={ref} className={`item-fly${still ? " still" : ""}`} data-testid="item-fly" data-item={flight.gain.item} aria-hidden="true">
-      <GainIcon gear={flight.gain.gear} />
+      <GainFlyIcon choice={flight.icon} />
     </div>
   );
 }
@@ -131,7 +143,8 @@ export function ItemFly({ view }: { view: WorldView }) {
     if (gains.length === 0) return;
     const start = serial.current;
     serial.current += gains.length;
-    setFlights((f) => [...f, ...gains.map((g, i) => ({ key: `${start + i}:${g.item}`, gain: g, delay: i * FLY_STAGGER_MS }))]);
+    const now = view.inventory ?? null;
+    setFlights((f) => [...f, ...gains.map((g, i) => ({ key: `${start + i}:${g.item}`, gain: g, icon: gainIconOf(now, g), delay: i * FLY_STAGGER_MS }))]);
   }, [view]);
   const done = useRef((key: string) => setFlights((f) => f.filter((x) => x.key !== key))).current;
   return (

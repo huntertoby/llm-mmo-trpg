@@ -134,7 +134,7 @@ function floats(): void {
 }
 
 const inv = (n: number): WorldInventory =>
-  ({ bag: [{ item: "herb", name_zh: "草藥", count: n, gear: false }, ...(n > 1 ? [{ item: "blade", name_zh: "短刀", count: 1, gear: true }] : [])], pouch: [], equipment: [] }) as unknown as WorldInventory;
+  ({ bag: [{ item: "herb", name_zh: "草藥", count: n, gear: false }, ...(n > 1 ? [{ item: "blade", name_zh: "短刀", count: 1, gear: true }] : [])], pouch: [], equipment: [], gear_cards: n > 1 ? [{ item: { id: "blade", name_zh: "短刀", appearance: { kind: "dagger", material: "steel" } }, slot: "main_hand", slot_zh: "主手" }] : [] }) as unknown as WorldInventory;
 
 const fakeView = (level: number, hp: number, items: number): WorldView =>
   ({
