@@ -6,6 +6,7 @@ import { DIRECTIONS } from "../battle/glossary";
 import { compositePickedTag, secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
 import { objectStyle } from "../battle/glossary";
+import { pickCountText, tileCount } from "../battle/pickCount";
 import {
   DIRECTION_ARROWS,
   DIRECTION_ORDER,
@@ -169,13 +170,13 @@ export function modeHintKind(mode: ActionMode): OpHintKind {
 }
 
 /** 一般選目標模式的提示文字（攀跳與守護有自己的說法）。 */
-function modeHint(mode: ActionMode, pickable: number): string {
+export function modeHint(mode: ActionMode): string {
   const t = mode.targets;
-  if (mode.kind === "vault") return `點選紫色格子（攀＝爬上高台，跳＝跳過缺口；共 ${pickable} 個）。Esc／右鍵取消。`;
+  if (mode.kind === "vault") return `點選紫色格子（攀＝爬上高台，跳＝跳過缺口；共 ${tileCount(t.tiles.size)}）。Esc／右鍵取消。`;
   if (mode.kind === "defend" && t.self !== null)
     return `點自己守護自己，或點相鄰的隊友（紅框）改由你替他承受單體攻擊。Esc／右鍵取消。`;
   if (isSelfOnly(t)) return "對自身施放。";
-  return `點選格子上的目標（紅框 ${pickable} 個${t.directions.size > 0 ? "，或選擇方向" : ""}）。Esc／右鍵取消。`;
+  return `點選格子上的目標（紅框 ${pickCountText(t.units.size + t.objects.size, t.tiles.size)}${t.directions.size > 0 ? "，或選擇方向" : ""}）。Esc／右鍵取消。`;
 }
 
 function ModeHelp(props: HelpProps) {
@@ -184,8 +185,7 @@ function ModeHelp(props: HelpProps) {
   if (mode.targets.composite !== null) return <CompositeHelp {...props} />;
   if (isHurlMode(mode)) return <HurlHelp {...props} />;
   const t = mode.targets;
-  const pickable = t.units.size + t.objects.size + t.tiles.size;
-  const hint = modeHint(mode, pickable);
+  const hint = modeHint(mode);
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>

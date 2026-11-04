@@ -75,6 +75,6 @@ describe("兩段選取的「已選定○○」留在「?」旁", () => {
     expect(hurlPromptText("木箱", 3, 2)).toContain(hurlPickedTag("木箱"));
     const first = { pos: { x: 3, y: 4 } } as Parameters<typeof compositePickedTag>[0];
     expect(compositePickedTag(first)).toBe("已選定落點 (3, 4)");
-    expect(compositePrompt(first, 2)).toContain("已選定落點 (3, 4)");
+    expect(compositePrompt(first, "2 格")).toContain("已選定落點 (3, 4)");
   });
 });

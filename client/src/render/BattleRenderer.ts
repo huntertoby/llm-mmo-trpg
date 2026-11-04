@@ -54,7 +54,7 @@ import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, 
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_RISE_MAX } from "./uiAnim";
-import { FloatStack, groupRise, stackedY } from "./floatStack";
+import { clampFloatCenter, FloatStack, groupRise, stackedY, type FloatBounds } from "./floatStack";
 import { EFFECT_LAYER_ORDER, effectLayerOf, type EffectLayer } from "./effectLayer";
 import { clipHighlights, mapClipRect } from "./mapClip";
 import { isSubmerged, SUBMERGED_ALPHA, SUBMERGED_TINT, waterline, WATERLINE_ALPHA, WATERLINE_COLOR } from "./submerged";
@@ -2316,7 +2316,10 @@ export class BattleRenderer {
     const natural = floatBaseY(c.y, this.floatTopY(item.pos), l.restH, 0);
     const limit = -this.worldBaseY + l.restH / 2 + FLOAT_RISE_MAX;
     const baseY = stackedY(natural, at.offset, limit, at.top);
-    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), l.restW / 2), baseY);
+    const x0 = c.x + (isStatus ? T * 0.12 : 0);
+    // 6F-10：每一幀照當下的大小（彈一下時比停住時大）把整個字夾在戰場裡，四個邊都一樣（`clampFloatCenter`）
+    const put = (y: number, scale: number) => this.placeFloat(node, t, x0, y, scale);
+    put(baseY, (big ? BIG_REST : 1) * fit);
     node.alpha = 0;
     const rise = (p: number) => (this.reduced ? 0 : groupRise(p, delayFrac, at.riseMax));
     if (!isStatus) {
@@ -2328,8 +2331,7 @@ export class BattleRenderer {
           // 6N-10：彈一下再淡出（暴擊放大）；減少動態時直接顯示
           const f = floatFrame(p, big, this.reduced);
           node.alpha = f.alpha;
-          node.position.y = baseY - rise(p);
-          node.scale.set(f.scale * fit);
+          put(baseY - rise(p), f.scale * fit);
         },
       }];
     }
@@ -2359,8 +2361,7 @@ export class BattleRenderer {
         update: (p) => {
           const f = floatFrame(p, big, this.reduced);
           node.alpha = f.alpha;
-          node.position.y = baseY - rise(p);
-          node.scale.set(f.scale * fit);
+          put(baseY - rise(p), f.scale * fit);
         },
       },
     ];
@@ -2370,6 +2371,22 @@ export class BattleRenderer {
   private floatTopY(p: Pos): number {
     const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
     return u === undefined ? HUMAN_TOP_Y : unitTopY(u);
+  }
+
+  /**
+   * 浮動字的畫布可見範圍（世界座標，扣掉鏡頭偏移）：左右是地圖兩緣，上面是畫布上緣（含頭頂預留），下面是地圖下緣。
+   */
+  private floatBounds(): FloatBounds {
+    const w = (this.model?.width ?? 0) * T;
+    const h = (this.model?.height ?? 0) * T;
+    return { left: -this.cam.x, top: -this.worldBaseY - this.cam.y, right: w - this.cam.x, bottom: h - this.cam.y };
+  }
+
+  /** 6F-10：把浮動字放在 (x, y)、縮放 `scale`，整個字（含黑邊）往內推到戰場裡（`clampFloatCenter`）。 */
+  private placeFloat(node: Container, t: Text, x: number, y: number, scale: number): void {
+    node.scale.set(scale);
+    const p = clampFloatCenter(x, y, (t.width * scale) / 2, (t.height * scale) / 2, this.floatBounds());
+    node.position.set(p.x, p.y);
   }
 
   /** 浮動文字的水平位置往內推，不超出地圖左右邊緣（UI-T1：邊緣格的「跑步 移動＋N」被切掉）。 */

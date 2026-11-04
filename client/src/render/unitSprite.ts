@@ -496,12 +496,14 @@ function summonBadge(u: UnitDraw): Container {
   // 右下角小徽章（血條上方，不擋漂浮靈的上緣）：圖騰標「圖」，其他標剩餘輪數；撞到炸彈徽章時往左 16px
   const c = new Container();
   const badgeText = u.totem ? "圖" : String(u.remaining ?? "");
+  // 6F-10：圓心放在節點原點、節點放到徽章位置，狀態列放大時可以整個搬（`summonRowLayout`）
   const at = summonBadgeOffset(u, T);
-  const badge = new Graphics().circle(at.x, at.y, SUMMON_BADGE_RADIUS).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
+  const badge = new Graphics().circle(0, 0, SUMMON_BADGE_RADIUS).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
   const badgeLabel = label(badgeText, SUMMON_BADGE_FONT, HIGHLIGHT.summon, true);
   badgeLabel.anchor.set(0.5);
-  badgeLabel.position.set(at.x, at.y);
   c.addChild(badge, badgeLabel);
+  c.label = SUMMON_BADGE_LABEL;
+  c.position.set(at.x, at.y);
   return c;
 }
 
@@ -641,8 +643,54 @@ export function rowPlacement(n: number, badgeLeft: number | null): { shift: numb
   return { shift: rowShiftForMarker(n, pitch), pitch };
 }
 
+/** 召喚物回合數徽章節點的標籤（6F-10）。 */
+export const SUMMON_BADGE_LABEL = "summon-badge";
+/** 狀態列左右不超出格子：格子左右緣（相對格子中心）往內 1px。 */
+export const ROW_EDGE = T / 2 - 1;
+/** 「+N」小圓（含白邊）比第 2 個圖示右緣多出去的寬度、比圖示上緣多出去的高度。 */
+export const ROW_MORE_OUT = 3;
+/** 狀態列和回合數徽章之間至少留的空隙（含徽章的外框線）。 */
+export const ROW_BADGE_GAP = 2;
+
+/** 召喚物的狀態列與回合數徽章的排法（6F-10）：`shift` 整排的 x、`pitch` 圖示間距、`badge` 徽章圓心。 */
+export interface SummonRowLayout {
+  shift: number;
+  pitch: number;
+  badge: { x: number; y: number };
+}
+
+/**
+ * 召喚物的狀態列（`n` 個圖示、`extra` 是否有「+N」、整排放大 `k` 倍、下緣在 `bottom`）與回合數徽章（預設圓心 `at`）的排法
+ * （6F-10，美術 PM 6F-9 檢查第 2 節第 4 點：狀態列放大後和徽章不能重疊、不能超出格子）：
+ * 1. 徽章不動，狀態列夾在左限（有字母標記時它的右緣＋1，否則格子左緣）和徽章左緣−`ROW_BADGE_GAP` 之間：放得下照原間距，
+ *    放不下先縮間距（最小 `ROW_MIN_PITCH`）；
+ * 2. 還是放不下（地圖縮很小、或炸彈把徽章往左推）時，徽章搬到狀態列上方（同一個 x，下緣離狀態列上緣 `ROW_BADGE_GAP`），
+ *    狀態列改夾在左限和格子右緣之間。
+ * 整排盡量置中（原點 0），超出才往內推。
+ */
+export function summonRowLayout(n: number, k: number, at: { x: number; y: number }, bottom: number, extra: boolean, hasMarker: boolean): SummonRowLayout {
+  const left = hasMarker ? MARKER_RIGHT + 1 : -ROW_EDGE;
+  const half = ROW_ICON_FEET / 2;
+  const out = extra ? ROW_MORE_OUT : 0;
+  const width = (p: number) => k * ((n - 1) * p + ROW_ICON_FEET + out);
+  const fit = (right: number): { shift: number; pitch: number } | null => {
+    const room = right - left;
+    let pitch = ROW_ICON_FEET + 1;
+    if (width(pitch) > room && n > 1) pitch = Math.max(ROW_MIN_PITCH, (room / k - ROW_ICON_FEET - out) / (n - 1));
+    if (width(pitch) > room + 1e-9) return null;
+    const l = k * (((n - 1) * pitch) / 2 + half);
+    const r = k * (((n - 1) * pitch) / 2 + half + out);
+    return { shift: Math.min(Math.max(0, left + l), right - r), pitch };
+  };
+  const beside = fit(at.x - SUMMON_BADGE_RADIUS - ROW_BADGE_GAP);
+  if (beside !== null) return { ...beside, badge: { ...at } };
+  const top = bottom - k * (ROW_ICON_FEET + out);
+  const above = fit(ROW_EDGE) ?? { shift: 0, pitch: ROW_MIN_PITCH };
+  return { ...above, badge: { x: at.x, y: Math.min(at.y, top - ROW_BADGE_GAP - SUMMON_BADGE_RADIUS) } };
+}
+
 /** 腳邊狀態列（HP 條正上方，畫在小人之上）：最多 2 個圖示，超過時第 2 個右上角疊「+N」；倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
-function statusRow(u: UnitDraw): Container | null {
+function statusRow(u: UnitDraw, badge: Container | null): Container | null {
   if (u.downed) return null;
   const ids = sortStatuses((u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING));
   const shown = ids.slice(0, ROW_MAX_ICONS);
@@ -650,14 +698,16 @@ function statusRow(u: UnitDraw): Container | null {
   const extra = ids.length - shown.length;
   const badgeLeft = u.summon ? summonBadgeOffset(u, T).x - SUMMON_BADGE_RADIUS : null;
   const { shift, pitch } = rowPlacement(shown.length, badgeLeft);
+  const bottom = statusRowY(creatureOf(u), creatureFieldScale(u)) + ROW_ICON_FEET / 2;
   const row = new Container();
   row.label = STATUS_ROW_LABEL;
   // 6F-9：地圖縮小時整排反向放大（`minMark.ts`）；以圖示下緣為基準往上長，和 HP 條的空隙不變
   row.pivot.set(0, ROW_ICON_FEET / 2);
-  row.position.set(shift, statusRowY(creatureOf(u), creatureFieldScale(u)) + ROW_ICON_FEET / 2);
+  row.position.set(shift, bottom);
   let x = -((shown.length - 1) * pitch) / 2;
   let lastX = x;
   const inner: Text[] = [];
+  const icons: Array<Sprite | null> = [];
   for (const id of shown) {
     lastX = x;
     const tex = rowIconTexture(id);
@@ -668,20 +718,37 @@ function statusRow(u: UnitDraw): Container | null {
       icon.height = ROW_ICON_FEET;
       icon.position.set(x, 0);
       row.addChild(icon);
-    }
+      icons.push(icon);
+    } else icons.push(null);
     x += pitch;
   }
+  // 「+N」以小圓圓心為原點，間距改變時整個搬
+  let more: Container | null = null;
   if (extra > 0) {
-    const cx = lastX + ROW_ICON_FEET / 2 - 2;
-    const cy = -ROW_ICON_FEET / 2 + 2;
-    row.addChild(new Graphics().circle(cx, cy, 4.5).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
-    const more = label(`+${extra}`, 7, 0xffffff, true);
-    more.anchor.set(0.5);
-    more.position.set(cx, cy + 0.5);
+    more = new Container();
+    more.addChild(new Graphics().circle(0, 0, 4.5).fill({ color: 0x0c0c10, alpha: 0.95 }).stroke({ width: 1, color: 0xffffff }));
+    const moreText = label(`+${extra}`, 7, 0xffffff, true);
+    moreText.anchor.set(0.5);
+    moreText.position.set(0, 0.5);
+    more.addChild(moreText);
+    more.position.set(lastX + ROW_ICON_FEET / 2 - 2, -ROW_ICON_FEET / 2 + 2);
     row.addChild(more);
-    inner.push(more);
+    inner.push(moreText);
   }
-  registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner);
+  // 6F-10：召喚物的狀態列放大後重新排（和回合數徽章不重疊、不超出格子；`summonRowLayout`）
+  const relayout =
+    u.summon && badge !== null
+      ? (k: number) => {
+          const lay = summonRowLayout(shown.length, k, summonBadgeOffset(u, T), bottom, extra > 0, u.marker !== "");
+          row.position.x = lay.shift;
+          const x0 = -((shown.length - 1) * lay.pitch) / 2;
+          icons.forEach((icon, i) => icon?.position.set(x0 + i * lay.pitch, 0));
+          more?.position.set(x0 + (shown.length - 1) * lay.pitch + ROW_ICON_FEET / 2 - 2, -ROW_ICON_FEET / 2 + 2);
+          badge.position.set(lay.badge.x, lay.badge.y);
+        }
+      : undefined;
+  registerMark(row, { base: ROW_ICON_FEET - 2, min: MIN_STATUS_GLYPH_PX }, inner, relayout);
+  relayout?.(1);
   return row;
 }
 
@@ -726,7 +793,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     const over = effectSprite("over", effects, feet);
     if (over !== null) c.addChild(over);
   }
-  if (u.summon) c.addChild(summonBadge(u));
+  const turns = u.summon ? summonBadge(u) : null;
+  if (turns !== null) c.addChild(turns);
   if (u.marker !== "") {
     // 沒有代號（戰場不顯示字母，6M-4 併入美術 PM 檢查）時不畫黑色小圓：陣營看腳下的圓盤，字母只在滑過與行動順序列出現
     const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
@@ -744,7 +812,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   const infused = infusedBadge(u);
   if (infused !== null) c.addChild(infusedMark(infused));
   if (u.noBar !== true) c.addChild(hpBar(u));
-  const row = statusRow(u);
+  const row = statusRow(u, turns);
   if (row !== null) c.addChild(row);
   return c;
 }

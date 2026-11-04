@@ -1,5 +1,6 @@
 // 底部技能列的分組與版面偏好（Phase 3-8；純函式＋ localStorage 包裝）。
 import type { SkillCard } from "../api/types";
+import { pickCountText, splitCompositeKeys, tileCount, unitCount } from "./pickCount";
 import { isSelfOnly, type ActionMode, type PairKind, type SkillButton, type SkillCards } from "./targeting";
 
 type SkillCardStats = SkillCard["stats"];
@@ -71,6 +72,13 @@ const PAIR_PARTS: Record<PairKind, [string, string]> = {
   composite: ["位移的落點或目標", "第 2 段的目標"],
 };
 
+/** 兩段選取第 1 段的可選數量（6F-10）：複合技能的落點算「格」、目標算「個」；其他（物件、人）都是「個」。 */
+function firstPickCount(t: ActionMode["targets"]): string {
+  if (t.pairKind !== "composite") return unitCount(t.hurls.size);
+  const n = splitCompositeKeys(t.hurls.keys());
+  return pickCountText(n.units, n.tiles);
+}
+
 /** 技能的射程與範圍（卡片 `stats`）：「射程 4・半徑 1」；都沒有時空字串。 */
 export function reachText(stats: Pick<SkillCardStats, "range" | "range_weapon" | "radius"> | undefined): string {
   if (stats === undefined) return "";
@@ -89,21 +97,21 @@ export function modeBarHint(mode: ActionMode, card?: Pick<SkillCard, "stats">): 
   const t = mode.targets;
   const reach = reachText(card?.stats);
   const head = `「${mode.label}」${reach === "" ? "" : `（${reach}）`}`;
-  if (mode.kind === "vault") return `${head}：點選紫色格子，攀上高台或跳過缺口（${t.tiles.size} 個）；${CANCEL_PICK}`;
+  if (mode.kind === "vault") return `${head}：點選紫色格子，攀上高台或跳過缺口（${tileCount(t.tiles.size)}）；${CANCEL_PICK}`;
   if (mode.kind === "shove_aside") return `${head}：在左側選擇把物件撥向哪一邊；${CANCEL_PICK}`;
   if (mode.kind === "defend" && t.self !== null)
     return `${head}：點自己守護自己，或點相鄰的隊友（紅框 ${t.units.size} 個）替他承受單體攻擊；${CANCEL_PICK}`;
   if (t.hurls.size > 0) {
     const [first, second] = PAIR_PARTS[t.pairKind ?? "hurl"];
-    return `${head}分兩段：先點${first}（紅框 ${t.hurls.size} 個），再點${second}；${CANCEL_PICK}`;
+    return `${head}分兩段：先點${first}（紅框 ${firstPickCount(t)}），再點${second}；${CANCEL_PICK}`;
   }
   if (isSelfOnly(t)) return `${head}對自身施放：按左側的「施放」；${CANCEL_PICK}`;
   const picks: string[] = [];
   const units = t.units.size + t.objects.size;
-  if (units > 0) picks.push(`點選紅框目標（${units} 個）`);
+  if (units > 0) picks.push(`點選紅框目標（${unitCount(units)}）`);
   if (t.tiles.size > 0) {
     const what = card?.stats.radius != null && card.stats.radius > 0 ? "範圍中心" : "目標格";
-    picks.push(`${units > 0 ? "或點" : "點選"}紅框格子當${what}（${t.tiles.size} 格）`);
+    picks.push(`${units > 0 ? "或點" : "點選"}紅框格子當${what}（${tileCount(t.tiles.size)}）`);
   }
   if (t.directions.size > 0) picks.push(`${picks.length > 0 ? "或" : ""}選擇方向（主角旁的箭頭格或左側方向鈕）`);
   if (t.self !== null) picks.push("也可以按左側的「施放於自身」");
