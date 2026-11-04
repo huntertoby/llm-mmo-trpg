@@ -467,15 +467,15 @@ sfx:
       - {chord: [880, 1108.73, 1318.5, 1760], stagger: 0.05, dur: 0.6, env: [0.002, 0.5], gain: -12, delay: 0.55}
       - {noise: band, freq: [1000, 5000], q: 1.5, dur: 0.8, env: [0.5, 0.25], gain: -22}
 
-  # ---------------------------------------------------------------- 狀態上身（AU-3 決定是否循環）
+  # ---------------------------------------------------------------- 狀態上身（燃燒是全場一條的循環，其他是上身那一下）
   status_burn:
     zh: 燃燒
     cat: status
     gain: 6
-    use: 燃燒上身（劈啪；全場只放一條）
+    use: 有人在燃燒時的劈啪循環（AU-3：全場只放一條；3 秒接成無縫循環）
     layers:
-      - {crackle: 25, freq: 2200, dur: 1.2, env: [0.05, 1.1], gain: -10}
-      - {noise: band, color: pink, freq: 500, q: 0.6, dur: 1.2, env: [0.1, 1.0], gain: -18}
+      - {crackle: 25, freq: 2200, dur: 3, gain: -10}
+      - {noise: band, color: pink, freq: 500, q: 0.6, dur: 3, env: [0.1, 1, 2.9], gain: -18}
   status_freeze:
     zh: 冰凍
     cat: status
@@ -649,3 +649,60 @@ sfx:
       - {noise: low, color: brown, freq: [1500, 150], dur: 2.5, env: [0.01, 2.2], gain: -4}
       - {crackle: 15, freq: 900, dur: 0.4, gain: -10}
       - {tone: sine, freq: [60, 35], dur: 1.5, env: [0.02, 1.3], gain: -6}
+
+  # ---------------------------------------------------------------- 循環的環境音（2.3 標 ○；AU-3）
+  # 底聲（風、熱風、雨、火）每筆 6 秒，前端接成無縫循環（最後 0.5 秒交叉淡化到開頭）；鐘、打鐵是每隔一段時間一聲的點綴。
+  amb_wind:
+    zh: 風（雲嶺）
+    cat: ambient
+    use: 雲嶺、霜潮室外的風（濾波雜訊加慢速起伏，循環）
+    track: ambient
+    layers:
+      - {noise: low, color: brown, freq: 520, dur: 6, env: [0.5, 1, 5.5], gain: -12}
+      - {noise: band, color: pink, freq: [380, 650], q: 0.8, dur: 6, env: [2.6, 3.2], gain: -11}
+      - {noise: band, color: pink, freq: [950, 560], q: 2, dur: 4, env: [1.5, 2.5], gain: -22, delay: 1.5}
+  amb_wind_hot:
+    zh: 熱風（荒原）
+    cat: ambient
+    use: 灰燼荒原室外的熱風（低沉、粗，循環）
+    track: ambient
+    layers:
+      - {noise: low, color: brown, freq: 340, dur: 6, env: [0.5, 1, 5.5], gain: -9}
+      - {noise: band, color: pink, freq: [240, 460], q: 0.7, dur: 6, env: [3, 3], gain: -12}
+  amb_rain:
+    zh: 雨
+    cat: ambient
+    use: 雨天室外（雜訊加雨點，循環；雷聲另外是點綴 amb_thunder）
+    track: ambient
+    layers:
+      - {noise: band, freq: 3200, q: 0.5, dur: 6, env: [0.3, 1, 5.7], gain: -20}
+      - {noise: low, color: pink, freq: 900, dur: 6, env: [0.3, 1, 5.7], gain: -15}
+      - {crackle: 40, freq: 2600, q: 2, click: 0.008, dur: 6, gain: -18}
+      - {crackle: 8, freq: 1200, q: 1, click: 0.02, dur: 6, gain: -16}
+  amb_fire:
+    zh: 爐火／營火
+    cat: ambient
+    use: 室內爐火、荒原的火（劈啪加低頻，循環）
+    track: ambient
+    layers:
+      - {noise: low, color: brown, freq: 300, dur: 6, env: [0.5, 1, 5.5], gain: -14}
+      - {crackle: 10, freq: 1800, dur: 6, gain: -12}
+      - {crackle: 4, freq: 900, click: 0.03, dur: 6, gain: -12}
+  amb_bell:
+    zh: 遠處鐘聲（主城）
+    cat: ambient
+    use: 主城室外，每隔一段時間兩聲（FM 鐘）
+    track: ambient
+    layers:
+      - {fm: bell, freq: 392, ratio: 1.4, index: [2, 0.2], dur: 3.5, env: [0.003, 3.2], gain: -14}
+      - {fm: bell, freq: 329.63, ratio: 1.4, index: [2, 0.2], dur: 3.5, env: [0.003, 3.2], gain: -16, delay: 1.1}
+  amb_forge:
+    zh: 打鐵聲（鐵匠鋪）
+    cat: ambient
+    use: 鐵匠鋪裡（街上有鐵匠鋪時遠一點）；金屬鏘＋悶響（衝擊點綴；減少刺耳音效開啟時不出聲）
+    track: ambient
+    harsh: true
+    layers:
+      - {fm: metal, freq: 1250, ratio: 1.73, index: [5, 0.5], dur: 0.4, env: [0.001, 0.35], gain: -13}
+      - {tone: sine, freq: [180, 90], dur: 0.15, env: [0.001, 0.12], gain: -14}
+      - {fm: metal, freq: 1250, ratio: 1.73, index: [4, 0.5], dur: 0.35, env: [0.001, 0.3], gain: -18, delay: 0.55}

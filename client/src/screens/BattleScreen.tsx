@@ -41,6 +41,7 @@ import { BattleDialogs } from "./battle/BattleDialogs";
 import { battleTools } from "./battle/battleTools";
 import { useBattleActions } from "./battle/useBattleActions";
 import { useBattleData } from "./battle/useBattleData";
+import { useBattleAmbience, useBurnLoop } from "../audio/scene";
 import { useBattleKeys } from "./battle/useBattleKeys";
 import { useBoardViewport } from "./battle/useBoardViewport";
 import { useHighlights } from "./battle/useHighlights";
@@ -83,6 +84,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   const resetSelectionRef = useRef<() => void>(() => undefined);
   const pb = usePlayback(initial, cardsRef, resetSelectionRef);
   const { response, shown, busy } = pb;
+  useBattleAmbience(shown); // AU-3：戰場的環境音（區域、天氣、岩漿；優先於大世界）
+  useBurnLoop(shown); // AU-3：有人在燃燒時全場一條劈啪循環
   const data = useBattleData(battleId, heroId, response, shown, pb.acting, busy);
   const { view, hero, cards, copying } = data;
   cardsRef.current = cards;

@@ -3,6 +3,7 @@
 // 等待伺服器（說書人／LLM）超過一下子時，每隔一段時間放很輕的墨痕筆刷聲。
 import { useEffect, useRef } from "react";
 import type { WorldView } from "../api/types";
+import { useWorldAmbience } from "../audio/scene";
 import { uiSound, type UiSound } from "../audio/uiSounds";
 import { gainedItems, levelUp } from "./gainFx";
 
@@ -33,6 +34,8 @@ export function worldSoundFor(prev: WorldView | null, next: WorldView): UiSound 
 }
 
 export function useWorldSounds(view: WorldView | null): void {
+  // AU-3：環境音（區域、室內、天氣；戰鬥畫面的環境音優先）。掛在這裡，WorldScreen 不用改
+  useWorldAmbience(view);
   const prev = useRef<WorldView | null>(null);
   useEffect(() => {
     if (view === null) return;
