@@ -26,11 +26,11 @@ const KINDS=["sword","sword_shield","saber","arcane_blade","paired","spear","scy
 const ZH={sword:"劍",sword_shield:"劍盾",saber:"刀",arcane_blade:"魔導劍",paired:"成對武器",spear:"長槍",scythe:"鐮",whip:"鞭",gauntlet:"拳套",staff:"法杖",orb:"法球",bow:"弓",crossbow:"弩",gun:"火槍",greatsword:"雙手劍"};
 function unitOf(k){if(k==="sword_shield"){const u=Anim.unit("sword");return {look:u.look,gear:{...u.gear,off_hand:PaperDoll.ITEMS.round_shield}};}return Anim.unit(k);}
 function put(x,k,id,cx,fy,K,ms,opt={}){const f=IW.frame(k,id,ms,{reduce:REDUCE,...opt});Q.setPose({...Anim.REST,...f.pose,wpn:f.pose.wpn});Q.stamp(x,unitOf(k),"side",cx,fy,K,false);Q.setPose(null);return f;}
-const G=cv("grid",1240,3*170),S=cv("strip",1240,KINDS.length*58+10),M=cv("team",1240,150);
-function drawGrid(ms){G.clearRect(0,0,1240,520);floor(G,24,10);KINDS.forEach((k,i)=>{const col=i%5,row=Math.floor(i/5),cx=90+col*240,fy=row*170+140;put(G,k,`demo:${k}`,cx,fy,2.4,ms);
+const G=cv("grid",1240,3*200),S=cv("strip",1240,KINDS.length*72+10),M=cv("team",1240,150);
+function drawGrid(ms){G.clearRect(0,0,1240,600);floor(G,24,12);KINDS.forEach((k,i)=>{const col=i%5,row=Math.floor(i/5),cx=90+col*240,fy=row*200+178; /* 第 7 版：列高 200，長槍、法杖的頭不伸進上一列 */put(G,k,`demo:${k}`,cx,fy,2.4,ms);
   G.fillStyle="#e8bb48";G.font=`13px ${FONT}`;G.textAlign="left";G.fillText(ZH[k],cx+62,fy-96);G.fillStyle="#c8bca8";G.font=`11px ${FONT}`;const t=IW.IDLE[k].zh.split("：")[1];for(let q=0;q*12<t.length;q++)G.fillText(t.slice(q*12,q*12+12),cx+62,fy-78+q*14);G.fillText(`${IW.IDLE[k].ms/1000} 秒一循環`,cx+62,fy-78+Math.ceil(t.length/12)*14);});
   if(REDUCE){G.fillStyle="#ff6a5a";G.font=`14px ${FONT}`;G.fillText("減少動態：全部站好",1000,20);}}
-function drawStrip(){floor(S,24,KINDS.length+3);KINDS.forEach((k,i)=>{const y=i*58+52;S.fillStyle="#e8bb48";S.font=`12px ${FONT}`;S.textAlign="left";S.fillText(ZH[k],8,y-22);
+function drawStrip(){floor(S,24,Math.ceil(KINDS.length*72/52)+1);KINDS.forEach((k,i)=>{const y=i*72+66;S.fillStyle="#e8bb48";S.font=`12px ${FONT}`;S.textAlign="left";S.fillText(ZH[k],8,y-22);
   for(let j=0;j<8;j++){const ms=(j/8)*IW.IDLE[k].ms,f=IW.IDLE[k].pose(j/8);Q.setPose({...Anim.REST,...f});Q.stamp(S,unitOf(k),"side",110+j*140,y,1.15,false);Q.setPose(null);S.fillStyle="#8a8070";S.font=`10px ${FONT}`;S.fillText(`${j+1}`,110+j*140+26,y-4);}});}
 function drawTeam(ms){M.clearRect(0,0,1240,150);floor(M,24,3);for(let i=0;i<5;i++){const id=`battle-7:hero_${i+1}`,f=put(M,"sword_shield",id,120+i*220,128,2,ms);M.fillStyle="#c8bca8";M.font=`11px ${FONT}`;M.textAlign="left";M.fillText(`${id}　相位 ${IW.phaseOf(id).toFixed(2)}`,120+i*220-40,16);}}
 drawStrip();

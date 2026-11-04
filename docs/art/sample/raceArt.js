@@ -93,16 +93,20 @@ window.RaceArt = (() => {
     const draw = TAIL[look.tail === "fox" && look.beastEars && TAIL[look.beastEars] ? look.beastEars : look.tail];
     if (!draw) return;
     ctx.save();
-    // 側面：尾巴朝身後；正面：從右腰露出；背面：往右下垂
-    const dir = side === 1 ? -1 : side === -1 ? 1 : 1;
+    // 側面：尾巴朝身後；正面：從角色左腰（畫面右）露出；背面：同一側＝角色左邊，在畫面左（第 7 版；審查：「正面和背面都在畫面右側」是照抄）
+    const dir = side === 1 ? -1 : side === -1 ? 1 : view === "back" ? -1 : 1;
     ctx.scale(dir, 1);
     if (view === "back") ctx.translate(0, 2);
     draw(ctx, look, view);
+    // 背面：尾巴根部在背上看得到，補一個圓的尾根，不留直線切口（第 7 版）
+    const kind = look.tail === "fox" && look.beastEars && TAIL[look.beastEars] ? look.beastEars : look.tail;
+    const root = { fox: [-11, 2.3, look.tailColor ?? look.hairColor ?? "#d8762a"], dragon: [-12.5, 4.6, look.scaleColor ?? "#a8784a"], wolf: [-11.5, 2.6, look.tailColor ?? look.hairColor ?? "#7a7a84"], scaled: [-11.5, 2.6, look.tailColor ?? dark(look.skin, 0.15)] }[kind];
+    if (view === "back" && root) fill(ctx, root[2], () => ctx.ellipse(0.4, root[0], root[1] * 0.9, root[1], 0, 0, TAU));
     ctx.restore();
   }
 
   // ---- 臉：紋路、鬍子、獠牙（背面不畫）----
-  function face(ctx, look, view, side) {
+  function face(ctx, look, view, side, west = false) {
     if (view === "back") return;
     const ex = side * 2.6;
     if (look.pattern === "scales") {
@@ -113,22 +117,31 @@ window.RaceArt = (() => {
       ctx.beginPath(); ctx.moveTo(ex - 1.5, -35); ctx.lineTo(ex, -33); ctx.lineTo(ex + 1.5, -35); ctx.stroke();
     } else if (look.pattern === "circuit") {
       // 晶能義體人：半邊臉的金屬片＋晶能線＋發光義眼
+      // 金屬片在角色的左半邊臉（正面在畫面右）。側面：朝西時左臉在近側→看得到；朝東時左臉在遠側→看不到（第 7 版；審查：「朝東時義體在近側」）
       const s = side === -1 ? -1 : 1;
+      if (view !== "side" || west) {
       fill(ctx, "#9aa4b0", () => { ctx.arc(0, -29, 8.5, s > 0 ? -Math.PI / 2 : Math.PI / 2, s > 0 ? Math.PI / 2 : Math.PI * 1.5); ctx.closePath(); });
       ctx.save(); ctx.strokeStyle = "#4ae0d0"; ctx.lineWidth = 0.9; ctx.shadowColor = "#4ae0d0"; ctx.shadowBlur = 2;
       ctx.beginPath(); ctx.moveTo(s * 1, -36); ctx.lineTo(s * 4, -33); ctx.lineTo(s * 4, -25); ctx.lineTo(s * 7, -23); ctx.stroke();
       fill(ctx, "#4ae0d0", () => ctx.arc(ex + s * 2.9, -28.5, 1.5, 0, TAU));
       ctx.restore();
+      }
     }
     if (look.pattern === "dragonscale") {
       const c = look.scaleColor ?? "#a8784a";
       fill(ctx, c, () => { for (const [x, y] of [[-7, -27], [-6, -24.5], [-4.5, -22.5], [7, -27], [6, -24.5], [4.5, -22.5], [-7.5, -30], [7.5, -30]]) { ctx.moveTo(ex + x + 1.5, y); ctx.arc(ex + x, y, 1.5, 0, Math.PI); } });
     }
     if (look.pattern === "dragonQ") {
-      // Q 版龍鱗（11-04 晚）：少量就好，每邊臉頰 2 片小鱗、額頭 1 片菱形鱗（舊的 dragonscale 一邊 4 片加鼻樑鱗脊，放大看像虎斑）
       const c = look.scaleColor ?? "#a8784a";
-      fill(ctx, c, () => { for (const [x, y] of [[-6.6, -26.2], [-5.4, -24.1], [6.6, -26.2], [5.4, -24.1]]) { if (side && Math.sign(x) === -side) continue; ctx.moveTo(ex + x + 1.1, y); ctx.arc(ex + x, y, 1.1, 0, Math.PI); } });
-      fill(ctx, c, () => { ctx.moveTo(ex, -36.4); ctx.lineTo(ex + 1.3, -35); ctx.lineTo(ex, -33.6); ctx.lineTo(ex - 1.3, -35); ctx.closePath(); });
+      // 第 7 版（審查：「金色豎瞳加臉頰短線仍然像貓；側臉的鱗片戳出輪廓」）：拿掉臉頰的半圓鱗（看起來像貓鬍鬚）和豎瞳；
+      //   改成太陽穴兩片菱形鱗（接在龍角根部）＋額頭一片，眼睛是一般方眼、琥珀色；全部在頭的輪廓裡面
+      const dia = (x, y, r) => { ctx.moveTo(x, y - r * 1.25); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r * 1.25); ctx.lineTo(x - r, y); ctx.closePath(); };
+      const pts = view === "side" ? [[2.2, -31.8, 1.1], [0.6, -34.4, 1.0]] : [[-6, -31.4, 1.1], [-4.7, -34.2, 1.0], [6, -31.4, 1.1], [4.7, -34.2, 1.0]];
+      fill(ctx, c, () => { for (const [x, y, r] of pts) dia(x, y, r); });
+      fill(ctx, c, () => dia(view === "side" ? 5.2 : 0, -35.6, 1.1));
+      // 眉骨：眼睛上方一道深色短線（龍的眉棱），和貓的圓眼分開
+      ctx.strokeStyle = dark(look.skin, 0.4); ctx.lineWidth = 0.9; ctx.lineCap = "round";
+      for (const [x, ok] of [[ex + 2.9, side === 0 || side === 1], [ex - 2.9, side === 0 || side === -1]]) if (ok) { const o = x > ex ? 1 : -1; ctx.beginPath(); ctx.moveTo(x - o * 1.4, -31.6); ctx.lineTo(x + o * 1.3, -31); ctx.stroke(); }
     }
     if (look.ridge) {
       const c = look.scaleColor ?? "#a8784a";
@@ -142,7 +155,7 @@ window.RaceArt = (() => {
       }
       ctx.restore();
     }
-    if (look.tusks) for (const s of [-1, 1]) fill(ctx, "#f4ecd8", () => { ctx.moveTo(ex + s * 2.5, -24); ctx.lineTo(ex + s * 3.4, -27); ctx.lineTo(ex + s * 4, -24); ctx.closePath(); });
+    if (look.tusks) for (const s of view === "side" ? [1] : [-1, 1]) fill(ctx, "#f4ecd8", () => { ctx.moveTo(ex + s * 2.5, -24); ctx.lineTo(ex + s * 3.4, -27); ctx.lineTo(ex + s * 4, -24); ctx.closePath(); });
     if (look.beard) {
       const c = look.hairColor ?? "#8a4a22";
       fill(ctx, c, () => { ctx.moveTo(ex - 7, -27); ctx.quadraticCurveTo(ex - 7, -18, ex, -16); ctx.quadraticCurveTo(ex + 7, -18, ex + 7, -27); ctx.quadraticCurveTo(ex, -23, ex - 7, -27); });
@@ -228,6 +241,14 @@ window.RaceArt = (() => {
         for (const [x0, y0, x1, y1] of [[8.4, -39.4, 8.8, -36.4], [11.8, -39.9, 11.6, -37.4]]) { ctx.beginPath(); ctx.moveTo(s * x0, y0); ctx.lineTo(s * x1, y1); ctx.stroke(); }
         continue;
       }
+      if (view === "side") {
+        // 側面（第 7 版；審查：「角魔側面兩隻角照正面左右攤開」）：近側一支從頭頂往上、往後捲；遠側那支在後面、顏色深一點，只露出角尖
+        if (s > 0) continue;
+        const big = kind !== "small", horn = (dx, dy) => { ctx.moveTo(3.2 + dx, -36.2 + dy); if (big) { ctx.quadraticCurveTo(5.5 + dx, -47 + dy, -6.5 + dx, -47.5 + dy); ctx.quadraticCurveTo(0.8 + dx, -44 + dy, -0.6 + dx, -37.4 + dy); } else { ctx.quadraticCurveTo(4.6 + dx, -42 + dy, 0.5 + dx, -44 + dy); ctx.quadraticCurveTo(2 + dx, -40.5 + dy, 0 + dx, -37 + dy); } ctx.closePath(); };
+        fill(ctx, dark(c, 0.25), () => horn(-3.2, 0.8));
+        fill(ctx, c, () => horn(0, 0));
+        continue;
+      }
       if (kind === "small") fill(ctx, c, () => { ctx.moveTo(s * 3.5, -36); ctx.quadraticCurveTo(s * 6, -42, s * 9.5, -43); ctx.quadraticCurveTo(s * 7, -39, s * 6.5, -35.5); ctx.closePath(); });
       else fill(ctx, c, () => { ctx.moveTo(s * 5, -35); ctx.quadraticCurveTo(s * 14, -38, s * 12, -47); ctx.quadraticCurveTo(s * 10.5, -41, s * 7.5, -38.5); ctx.quadraticCurveTo(s * 7, -36, s * 7, -33); ctx.closePath(); });
     }
@@ -238,8 +259,8 @@ window.RaceArt = (() => {
     human: { zh: "人類", realm: "晶冠", look: { skin: "#f1c9a5", hair: "short", hairColor: "#6a3d1e" } },
     elf: { zh: "精靈", realm: "晶冠", look: { skin: "#f6e0cc", hair: "long", hairColor: "#e8e0c8", ears: "pointed", build: "tall" } },
     fox: { zh: "狐族", realm: "雲嶺", look: { skin: "#f1d0b0", hair: "short", hairColor: "#d8762a", ears: "beast", tail: "fox" } },
-    // 龍裔（11-04 晚重做）：往後掃的象牙色龍角兩對、臉頰與額頭龍鱗、豎瞳、粗龍尾；鱗色走銅、紅、金、黑曜（和鱗族的藍綠分開）
-    dragonkin: { zh: "龍裔", realm: "雲嶺", look: { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#efe6cc", pattern: "dragonQ", scaleColor: "#a8784a", tail: "dragon", slitEyes: true } },
+    // 龍裔（11-04 晚重做、第 7 版改臉）：往後掃的象牙色龍角兩對、太陽穴與額頭菱形鱗、琥珀色方眼＋眉骨、粗龍尾；鱗色走銅、紅、金、黑曜（和鱗族的藍綠分開）
+    dragonkin: { zh: "龍裔", realm: "雲嶺", look: { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#efe6cc", pattern: "dragonQ", scaleColor: "#a8784a", tail: "dragon", eyes: "#9a4a12" } }, // 第 7 版：拿掉豎瞳（像貓），琥珀色方眼＋眉骨
     dwarf: { zh: "矮人", realm: "樞市", look: { skin: "#e8b890", hair: "short", hairColor: "#a8481e", beard: true, build: "stout" } },
     cyborg: { zh: "晶能義體人", realm: "樞市", look: { skin: "#e6c4a4", hair: "short", hairColor: "#2a2a34", pattern: "circuit" } },
     orc: { zh: "獸人", realm: "灰燼", look: { skin: "#86a060", hair: "short", hairColor: "#1e1a14", tusks: true, build: "tall" } },

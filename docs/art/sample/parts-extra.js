@@ -16,7 +16,7 @@
     ["板甲（肩甲、胸口高光）＋紋章", { look: BASE, gear: SH({ body: { kind: "plate", material: "steel", crest: "#a32a2a" } }) }],
     ["長袍（前襟）", { look: { ...BASE, trim: "#e8bb48" }, gear: SH({ body: { kind: "robe", color: "#5a3fa0" } }) }],
     ["外套（領口、扣子）", { look: BASE, gear: SH({ body: { kind: "coat", color: "#4a5058" } }) }],
-  ], 3.0, "帶扣、紋章、領口、扣子、前襟只在正面；側面轉到身體前緣只露一點；背面不畫。");
+  ], 3.0, "帶扣、紋章、領口、扣子、前襟只在正面；側面在身體前緣，手垂著時被近側手臂擋住（舉起手才露出），不往側面挪；背面不畫。皮甲斜背帶：右肩到左腰，背面斜向和正面相反。");
   section("6. 護甲與手腳：肩甲、護腕、手套、鐵手套、靴、脛甲", [
     ["護腕＋皮靴", { look: BASE, gear: SH({ hands: { kind: "bracers", material: "leather" } }) }],
     ["手套", { look: BASE, gear: SH({ hands: IT.gloves }) }],
@@ -32,16 +32,16 @@
   section("9. 腰掛：劍鞘（左腰）、腰包（右腰）", [
     ["劍鞘", { look: BASE, gear: SH({ waist: { kind: "scabbard", material: "leather" } }) }],
     ["腰包", { look: BASE, gear: SH({ waist: { kind: "pouch", material: "leather" } }) }],
-  ], 3.0, "劍鞘掛左腰：正面在畫面右、背面在畫面左；朝東左腰在遠側，劍鞘被身體和腿擋住，只露鞘尾；朝西左腰在近側，整把鞘露在外面。腰包掛右腰，左右相反。");
+  ], 3.0, "劍鞘掛左腰：正面在畫面右、背面在畫面左；朝東左腰在遠側，鞘口被身體擋住，鞘尖往後下從身後露出；朝西左腰在近側，整把鞘露在外面、鞘尖往後下。正面、背面鞘尖斜往外下。腰包掛右腰，左右相反。");
   section("10. 頸飾：項鍊、念珠", [["項鍊", { look: BASE, gear: SH({ neck: { kind: "necklace", material: "gold" } }) }], ["念珠", { look: BASE, gear: SH({ neck: { kind: "beads", color: "#8a5a32" } }) }]], 3.0,
-    "正面墜子在胸口；側面墜子在胸前前緣；背面只看到頸後一小段。");
+    "正面墜子在胸口；側面看到從頸後斜到胸前的鍊子，墜子在胸前前緣、手垂著時被近側手臂擋住；背面只看到頸後一小段。");
   section("11. 副手物品：圓盾、鳶盾、聖盾、塔盾、書", [
     ["圓盾", { look: BASE, gear: SH({ main_hand: IT.sword, off_hand: IT.round_shield }) }],
     ["鳶盾", { look: BASE, gear: SH({ main_hand: IT.sword, off_hand: IT.kite_shield }) }],
     ["聖盾", { look: BASE, gear: SH({ main_hand: IT.sword, off_hand: IT.holy_shield }) }],
     ["塔盾", { look: BASE, gear: SH({ main_hand: IT.sword, off_hand: { slot: "off_hand", kind: "shield_kite", form: "tower", material: "wood", color: "#6a4a2e" } }) }],
     ["書", { look: BASE, gear: SH({ main_hand: IT.fire_staff, off_hand: IT.tome }) }],
-  ], 2.6, "左手拿：正面在畫面右；背面盾背（木板＋皮帶）在畫面左、蓋住手臂，書只露一角；朝東左手在遠側，盾舉在胸前；朝西左手在近側，盾、書在前面。主手武器朝西時在遠側。");
+  ], 2.6, "左手拿：正面在畫面右；背面盾背（木板＋皮帶）在畫面左、蓋住手臂，書只露一角；朝東左手在遠側，盾舉在胸前；朝西左手在近側，盾、書在前面。主手的劍：正面在畫面左身側、背面在畫面右身側（手看得到），朝西時在遠側。");
   section("12. 鬍子、睫毛", [
     ["大鬍子", { look: { ...BASE, beardStyle: "full" }, gear: SH() }], ["山羊鬍", { look: { ...BASE, beardStyle: "goatee" }, gear: SH() }],
     ["八字鬍", { look: { ...BASE, beardStyle: "mustache" }, gear: SH() }], ["睫毛＋大眼", { look: { ...BASE, lashes: true, eyeStyle: "big", hair: "long" }, gear: SH() }],
