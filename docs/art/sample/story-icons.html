@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>事件卡墨線圖示</title>
+<style>body{margin:0;padding:14px 18px;background:#1b1714;color:#eadfcc;font-family:"Microsoft JhengHei",sans-serif;width:1000px}h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px}canvas{display:block}</style></head>
+<body>
+<h1>事件卡與情境判定的墨線圖示（取代 6C-7 的 SVG 簡圖）</h1>
+<p class="note">美術 PM，2026-11-04。C 手繪墨線（storyDoll.js 的 ink、stroke），每個畫在 48×48。選項 8 種＋d20 骰＋其他 4 種；六屬性照 attr-icons.html。全部程式繪製。</p>
+<canvas id="c"></canvas>
+<script src="storyDoll.js"></script>
+<script>
+  const { ink, stroke, ellPts } = StoryDoll.H, TAU = Math.PI * 2, K = "#2b1e16";
+  const glowOn = (c, col, b) => { c.shadowColor = col; c.shadowBlur = b; };
+  const dot = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
+  const SOL = [
+    ["combat", "戰鬥", "#d0503a", (c) => {
+      for (const [s, k] of [[1, "a"], [-1, "b"]]) {
+        c.save(); c.translate(24, 24); c.scale(s, 1); c.rotate(-0.78);
+        ink(c, "bl" + k, [[-3, -20], [0, -23], [3, -20], [3, 8], [-3, 8]], "#dfe6ee", { w: 0.8, sharp: true });
+        ink(c, "gd" + k, [[-9, 8], [9, 8], [9, 12], [-9, 12]], "#c8903a", { w: 0.7, shade: false });
+        ink(c, "hd" + k, [[-2, 12], [2, 12], [2, 20], [-2, 20]], "#6a4028", { w: 0.6, shade: false });
+        c.restore();
+      }
+    }],
+    ["persuade", "說服", "#e8bb48", (c) => {
+      ink(c, "bub", [[6, 10], [42, 10], [42, 32], [22, 32], [12, 40], [14, 32], [6, 32]], "#f2e6c8", { w: 0.9 });
+      ink(c, "hrt", [[24, 29], [16, 21], [16, 16], [20, 13], [24, 16], [28, 13], [32, 16], [32, 21]], "#e05a6a", { w: 0.6, shade: false });
+    }],
+    ["sneak", "潛行", "#8a7ab8", (c) => {
+      ink(c, "hood", [[24, 4], [38, 14], [42, 40], [6, 40], [10, 14]], "#4a3e62", { w: 0.9 });
+      ink(c, "face", [[24, 16], [33, 22], [33, 34], [15, 34], [15, 22]], "#1c1712", { w: 0.5, shade: false });
+      c.save(); glowOn(c, "#c8b8ff", 6); dot(c, 20, 26, 1.8, "#e8e0ff"); dot(c, 28, 26, 1.8, "#e8e0ff"); c.restore();
+    }],
+    ["investigate", "調查", "#4ab0d0", (c) => {
+      ink(c, "hdl", [[29, 31], [33, 27], [44, 38], [40, 42]], "#6a4028", { w: 0.8, shade: false });
+      ink(c, "ring", ellPts(20, 20, 13, 13, 18), "#c8903a", { w: 0.9, shade: false });
+      ink(c, "lens", ellPts(20, 20, 9.5, 9.5, 16), "#bfe4f2", { w: 0.5, shade: false });
+      c.fillStyle = "rgba(255,255,255,0.7)"; c.beginPath(); c.ellipse(16, 16, 3, 4.5, -0.6, 0, TAU); c.fill();
+    }],
+    ["force", "硬闖", "#e07a4a", (c) => {
+      for (const [a, b] of [[[6, 8], [12, 14]], [[24, 3], [24, 10]], [[42, 8], [36, 14]]]) stroke(c, "imp" + a[0], [a, b], 1.4, "#ffcf6a");
+      ink(c, "fist", [[10, 20], [38, 20], [40, 30], [36, 42], [14, 42], [10, 34]], "#e8b890", { w: 0.9 });
+      for (const x of [17, 24, 31]) stroke(c, "kn" + x, [[x, 20], [x, 28]], 0.8, "#8a5a3a");
+      ink(c, "thumb", [[12, 30], [26, 30], [26, 34], [12, 35]], "#f0c8a0", { w: 0.6, shade: false });
+    }],
+    ["chance", "機遇", "#6aa84a", (c) => {
+      stroke(c, "stem", [[24, 26], [28, 36], [34, 42]], 1.2, "#3a6a2a");
+      for (const [i, [dx, dy]] of [[0, -1], [1, 0], [0, 1], [-1, 0]].entries()) {
+        const cx = 24 + dx * 8, cy = 22 + dy * 8;
+        ink(c, "lf" + i, ellPts(cx, cy, 7, 7, 14), "#7ac85a", { w: 0.7 });
+      }
+      c.save(); glowOn(c, "#fff4a0", 8); ink(c, "sp", [[40, 4], [42, 9], [47, 11], [42, 13], [40, 18], [38, 13], [33, 11], [38, 9]], "#fff4c0", { w: 0.4, shade: false }); c.restore();
+    }],
+    ["leave", "離開", "#9a8e7c", (c) => {
+      ink(c, "door", [[8, 6], [26, 6], [26, 42], [8, 42]], "#5a3e28", { w: 0.9 });
+      ink(c, "open", [[8, 6], [18, 10], [18, 44], [8, 42]], "#8a5a3a", { w: 0.7 });
+      dot(c, 16, 26, 1.6, "#e8bb48");
+      ink(c, "arr", [[24, 21], [34, 21], [34, 15], [44, 24], [34, 33], [34, 27], [24, 27]], "#f2e6c8", { w: 0.8, shade: false });
+    }],
+    ["trade", "交易", "#e8bb48", (c) => {
+      ink(c, "bag", [[16, 12], [32, 12], [28, 18], [40, 30], [38, 42], [10, 42], [8, 30], [20, 18]], "#b08a5a", { w: 0.9 });
+      stroke(c, "tie", [[18, 17], [30, 17]], 1.2, "#6a4028");
+      for (const [x, y] of [[30, 38], [37, 34]]) { ink(c, "cn" + x, ellPts(x, y, 6, 6, 14), "#ffd23a", { w: 0.7, shade: false }); stroke(c, "cm" + x, [[x, y - 3], [x, y + 3]], 0.8, "#a8781a"); }
+    }],
+  ];
+  const MISC = [
+    ["clue", "線索", "#e8bb48", (c) => {
+      ink(c, "note", [[8, 8], [36, 6], [40, 40], [12, 42]], "#f2e6c8", { w: 0.9 });
+      for (const y of [16, 22, 28]) stroke(c, "ln" + y, [[14, y], [32, y - 1]], 0.7, "#9a8a70");
+      c.save(); glowOn(c, "#ffd23a", 8); ink(c, "spot", ellPts(30, 34, 5, 5, 12), "#ffd23a", { w: 0.5, shade: false }); c.restore();
+    }],
+    ["model_off", "模型關閉", "#9a8e7c", (c) => {
+      ink(c, "base", [[12, 36], [36, 36], [40, 44], [8, 44]], "#6a4028", { w: 0.8, shade: false });
+      ink(c, "ball", ellPts(24, 22, 14, 14, 18), "#7a8098", { w: 0.9 });
+      stroke(c, "crk", [[18, 12], [23, 19], [20, 24], [26, 31]], 1, K);
+      c.fillStyle = "rgba(255,255,255,0.35)"; c.beginPath(); c.ellipse(18, 16, 3, 5, -0.6, 0, TAU); c.fill();
+    }],
+    ["narrator", "說書人", "#a898ff", (c) => {
+      ink(c, "book", [[6, 26], [24, 30], [42, 26], [42, 42], [24, 46], [6, 42]], "#f2e6c8", { w: 0.8 });
+      stroke(c, "sp", [[24, 30], [24, 46]], 0.8, K);
+      c.save(); c.translate(26, 20); c.rotate(0.6);
+      ink(c, "qf", [[0, -18], [6, -10], [4, 6], [0, 12], [-4, 6], [-6, -10]], "#c8bcff", { w: 0.7 });
+      stroke(c, "qs", [[0, -14], [0, 16]], 0.8, K); c.restore();
+    }],
+    ["info", "說明", "#4ab0d0", (c) => {
+      ink(c, "disc", ellPts(24, 24, 17, 17, 18), "#bfe4f2", { w: 0.9 });
+      dot(c, 24, 15, 2.8, K);
+      ink(c, "stem", [[21, 21], [27, 21], [27, 35], [21, 35]], K, { w: 0.5, shade: false });
+    }],
+  ];
+  function d20(c, n, col = "#f2e6c8") {
+    const P = (a, r) => [24 + Math.cos(a) * r, 24 + Math.sin(a) * r];
+    const hex = [0, 1, 2, 3, 4, 5].map((i) => P(-Math.PI / 2 + i * TAU / 6, 21));
+    ink(c, "hex", hex, col, { w: 0.9, sharp: true });
+    const tri = [P(-Math.PI / 2, 12), P(Math.PI / 6, 12), P(5 * Math.PI / 6, 12)];
+    ink(c, "tri", tri, "#fff8e8", { w: 0.6, sharp: true, shade: false });
+    for (let i = 0; i < 6; i++) stroke(c, "e" + i, [hex[i], tri[[0, 0, 1, 1, 2, 2][i]]], 0.6, K);
+    if (n !== undefined) { c.fillStyle = K; c.font = "bold 14px Georgia, serif"; c.textAlign = "center"; c.fillText(String(n), 24, 29); c.textAlign = "left"; }
+  }
+  const c = document.getElementById("c"), W = 980, H = 470; c.width = W * 2; c.height = H * 2; c.style.width = W + "px"; c.style.height = H + "px";
+  const ctx = c.getContext("2d"); ctx.scale(2, 2);
+  function chip(x, y, s, col, fn, ring = true) {
+    ctx.save(); ctx.translate(x, y);
+    if (ring) { ctx.beginPath(); ctx.arc(s / 2, s / 2, s / 2, 0, TAU); ctx.fillStyle = "#2a241e"; ctx.fill(); ctx.lineWidth = Math.max(1.2, s * 0.06); ctx.strokeStyle = col; ctx.stroke(); ctx.beginPath(); ctx.arc(s / 2, s / 2, s / 2 - 1, 0, TAU); ctx.clip(); }
+    ctx.scale(s / 48, s / 48); fn(ctx); ctx.restore();
+  }
+  const label = (t, x, y, col = "#f2e6c8", f = "bold 13px 'Microsoft JhengHei'") => { ctx.fillStyle = col; ctx.font = f; ctx.fillText(t, x, y); };
+  label("1. 選項圖示（8 種）：上排 64、旁邊 24 與 18", 0, 16, "#b8ab96", "13px 'Microsoft JhengHei'");
+  SOL.forEach(([id, zh, col, fn], i) => {
+    const x = (i % 4) * 245, y = 28 + Math.floor(i / 4) * 92;
+    chip(x, y, 64, col, fn); chip(x + 72, y + 8, 24, col, fn); chip(x + 102, y + 11, 18, col, fn);
+    label(zh, x + 72, y + 54); label(id, x + 72, y + 70, "#8a7e6c", "11px monospace");
+  });
+  label("2. 選項按鈕的實際樣子（事件卡）", 0, 230, "#b8ab96", "13px 'Microsoft JhengHei'");
+  [["investigate", "wis", 12], ["persuade", "wil", 14], ["force", "str", 16]].forEach(([s, attr, dc], i) => {
+    const [, , col, fn] = SOL.find((r) => r[0] === s), x = i * 245, y = 240;
+    ctx.fillStyle = "#26201b"; ctx.beginPath(); ctx.roundRect(x, y, 230, 40, 8); ctx.fill(); ctx.strokeStyle = "#4a4038"; ctx.lineWidth = 1; ctx.stroke();
+    chip(x + 8, y + 8, 24, col, fn);
+    ctx.fillStyle = "#c8bca8"; ctx.font = "12px 'Microsoft JhengHei'"; ctx.fillText({ str: "力量", wil: "意志", wis: "感知" }[attr], x + 40, y + 25);
+    chip(x + 150, y + 8, 24, "#000", (cc) => d20(cc), false);
+    ctx.fillStyle = "#e8bb48"; ctx.font = "bold 13px Georgia"; ctx.fillText("DC " + dc, x + 180, y + 25);
+  });
+  label("3. d20：64 寫點數；28 以下不寫字", 0, 316, "#b8ab96", "13px 'Microsoft JhengHei'");
+  chip(0, 326, 64, "#000", (cc) => d20(cc, 15), false); chip(72, 344, 28, "#000", (cc) => d20(cc), false); chip(104, 348, 20, "#000", (cc) => d20(cc), false);
+  chip(140, 326, 64, "#000", (cc) => d20(cc, 20, "#ffe08a"), false); label("大成功（金）", 140, 404, "#c8bca8", "12px 'Microsoft JhengHei'");
+  chip(230, 326, 64, "#000", (cc) => d20(cc, 1, "#c8c0b8"), false); label("大失敗（灰）", 230, 404, "#c8bca8", "12px 'Microsoft JhengHei'");
+  label("4. 其他：64、24、18", 330, 316, "#b8ab96", "13px 'Microsoft JhengHei'");
+  MISC.forEach(([id, zh, col, fn], i) => {
+    const x = 330 + i * 165, y = 326;
+    chip(x, y, 64, col, fn); chip(x + 72, y + 8, 24, col, fn); chip(x + 102, y + 11, 18, col, fn);
+    label(zh, x + 72, y + 54); label(id, x + 72, y + 70, "#8a7e6c", "11px monospace");
+  });
+  label("六屬性圖示照 attr-icons.html（已定）；NPC 頭像照 portraits.js（已移植）。", 0, 450, "#9a8e7c", "12px 'Microsoft JhengHei'");
+</script></body></html>
