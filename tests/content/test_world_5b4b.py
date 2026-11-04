@@ -82,10 +82,14 @@ def test_quest_content_5b4b(library: ContentLibrary) -> None:
     table = library.world_quests.quests["cloud_ridge"]
     assert table.region_keywords == ("wet", "charged", "concealed")
     quests = table.quest_by_id()
-    for step in quests["starter_ferry"].steps:
+    # 07 7.6：第 1 步 1／1／1（#130，6F-4），第 2、3 步 1／0／2；C2：各步補到 2、3、4 級
+    for step, mix, level in zip(
+        quests["starter_ferry"].steps, [(1, 1, 1), (1, 0, 2), (1, 0, 2)], [2, 3, 4], strict=True
+    ):
         offer = step.reward.offer
         assert offer is not None and offer.mix is not None
-        assert offer.mix.as_tuple() == (1, 0, 2) and offer.min_passive == 1
+        assert offer.mix.as_tuple() == mix and offer.min_passive == 1
+        assert step.reward.level_to == level
         assert step.npcs == ("granny_du",)
     mentor = quests["mentor_qingya_trial"]
     assert mentor.kind == "chain" and len(mentor.steps) == 3

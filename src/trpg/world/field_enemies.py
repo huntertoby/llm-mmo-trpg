@@ -26,6 +26,9 @@
   :func:`~trpg.world.solutions.make_encounter`）。順序：你走一格 → 檢查 → 敵人走一格 → 再檢查；踩上
   出口或門的那一格只檢查一次（人已經離開）。先手（21.10 第 4 條）：被看到＝敵方先手；在視野外、站在
   敵人背後（往前 < 0）＝我方先手；其他（站在側面）照現行先攻。
+- **新手保護**（#128，21.10 第 10 條；6F-4）：新手任務鏈的固定戰（``until_quest`` 指到
+  ``kind: starter`` 的任務）被敵人先看到時改成「沒有先手」（隔 3 格）；從背後碰到照樣我方先手
+  （:func:`newcomer_guarded`）。同一張圖上的其他巡邏、駐守照一般規則。
 - **戰後**（21.10 第 7 條）：打贏就站在接觸點（走路停在那一格）；撤退回到進這張地圖時站的格子；
   全滅照現行回小鎮。
 
@@ -79,6 +82,7 @@ __all__ = [
     "enemy_lineup",
     "field_enemies",
     "lineup_seed",
+    "newcomer_guarded",
     "personal_left",
     "shared_clear",
     "sight_cells",
@@ -530,6 +534,16 @@ def contact_of(enemy: FieldEnemy, cell: XY) -> tuple[bool, First]:
     return True, None
 
 
+def newcomer_guarded(library: ContentLibrary, region: str, spawn: FieldSpawn) -> bool:
+    """新手保護（#128，21.10 第 10 條；6F-4）：這一隊是新手任務鏈（``kind: starter``）的固定戰
+    （``until_quest`` 指到新手任務）。被敵人先看到時改成「沒有先手」（隔 3 格，#124）；從背後碰到
+    照樣我方先手。同一張圖上的其他巡邏、駐守照一般規則。"""
+    if spawn.until_quest is None:
+        return False
+    quest = library.world_quests.quest(region, spawn.until_quest)
+    return quest is not None and quest.kind == "starter"
+
+
 def _target(library: ContentLibrary, char: CharacterState) -> LocationDef | None:
     place = world_map_of(library, char.region).location_by_id().get(char.location)
     return None if place is None or place.level_max is None else place
@@ -661,6 +675,8 @@ def _start(
     target = _target(ctx.library, char)
     if target is None:  # _watch 已排除（沒有建議等級的地點沒有敵人）
         return char, ()
+    if first == "enemy" and newcomer_guarded(ctx.library, char.region, enemy.spawn):
+        first = None  # 新手保護（#128，21.10 第 10 條）：新手任務的固定戰不會被敵方先手
     result, char = make_encounter(ctx.library, ctx.world, char, target, ctx.now)
     contact = _contact_model(ctx.world, (watch.map.id, watch.visit), enemy, at=at, first=first)
     if came_from != at:

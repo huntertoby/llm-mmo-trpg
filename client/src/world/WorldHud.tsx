@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
 import { MotionSettingsSection } from "../ui/MotionSettingsSection";
+import { HintsSettingsSection } from "./HintsSettingsSection";
 import { Hint } from "../ui/Hint";
 import { usePopupMenu } from "../ui/usePopupMenu";
 import { DelayTrail, FlipNumber } from "../ui/MotionBits";
@@ -255,7 +256,7 @@ function IconButton({
  * 齒輪鈕＋設定面板（AU-2；美術 PM 驗收 AU-1 的意見）：目前只有「聲音」一區，和戰鬥「版面」面板裡的聲音區是同一個元件、
  * 同一份設定（`audio` 引擎、localStorage）。點擊式面板：Esc、點外面關閉、同時一張（`usePopupMenu`，6.5.1）。
  */
-function SettingsTool() {
+function SettingsTool({ onResetHints }: { onResetHints?: () => void }) {
   const menu = usePopupMenu();
   return (
     <div className="world-hud-settings" ref={menu.rootRef}>
@@ -277,6 +278,7 @@ function SettingsTool() {
         <div className="top-popup popup-menu world-settings-popup" role="dialog" aria-label="設定" data-testid="world-settings">
           <AudioSettingsPanel />
           <MotionSettingsSection />
+          {onResetHints !== undefined && <HintsSettingsSection onReset={onResetHints} />}
         </div>
       )}
     </div>
@@ -341,6 +343,8 @@ export interface WorldHudProps {
   onClosePanel(): void;
   /** 中上方：遇敵、事件卡（不是面板，處理完才消失）。 */
   center?: ReactNode;
+  /** 設定裡的「重新顯示提示」（6F-4，6F-2b）；省略＝不顯示這一區。 */
+  onResetHints?(): void;
 }
 
 export function WorldHud(props: WorldHudProps) {
@@ -400,7 +404,7 @@ export function WorldHud(props: WorldHudProps) {
           <Chip icon={part.icon} value={part.char} item="time" hint={`時間 ${view.clock.time_zh}（${view.clock.day_phase_zh}）`} />
           <Chip icon={weather.icon} value={weather.char} item="weather" hint={`天氣：${view.clock.weather_zh}`} />
           <IconButton icon={{ bar: "M" }} size={30} hint={`地圖（M）：${props.mapOpen === true ? "再按一次切換（區域圖 → 大世界圖 → 關閉）" : "看地點、任務標記與傳送石；再按一次看大世界圖"}`} item="map" keyLabel="M" active={props.mapOpen === true} onClick={props.onMap} />
-          <SettingsTool />
+          <SettingsTool onResetHints={props.onResetHints} />
         </div>
       </Block>
       <Block id="wallet" layout={layout} faded={faded} label="錢">

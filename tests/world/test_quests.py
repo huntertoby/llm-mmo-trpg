@@ -10,6 +10,8 @@ from tests.world.helpers import NOON, PARTY, make_encounter, make_world
 from tests.world.test_situations import act, at_event, sure, thread
 from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
+from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.validate import validate_skill
 from trpg.world.actions import (
     AcceptQuestAction,
     BattleEndedEvent,
@@ -141,8 +143,10 @@ def test_starter_steps_give_xp_insight_and_offer(
     char, events = advance_quests(library, world, char, _won("ferry_steps"), NOON)
     done = [e for e in events if isinstance(e, QuestStepDoneEvent)]
     assert [(e.step, e.index) for e in done] == [("ferry_bandits", 1)]
-    assert done[0].xp == _share(library, "quest_chain_step", 1) == 300  # 任務鏈一步 3 份
-    assert char.xp == 300
+    # 6F-4 C2：第 1 步完成補到剛好 2 級（level_to: 2；比任務鏈一步 3 份＝300 多）
+    to_two = rules_of(library).hero_growth.level_thresholds[0]
+    assert done[0].xp == to_two > _share(library, "quest_chain_step", 1) == 300
+    assert char.xp == to_two and char.level == 2
     assert char.insight >= 1
     assert any(
         isinstance(e, InsightGainedEvent) and e.source == "quest:starter_ferry" for e in events
@@ -413,15 +417,34 @@ def test_no_quests_no_extra_events(library: ContentLibrary, make_char: MakeChar)
 REGION_KEYWORDS = ("wet", "charged", "concealed")
 
 
-def test_starter_offer_is_one_deepen_two_new_with_passive(
+def test_starter_first_offer_is_deepen_bridge_new_with_passive(
     library: ContentLibrary, make_char: MakeChar
 ) -> None:
+    """#130（6F-4）：新手第 1 步的三選一＝加深 1、橋接 1、新方向 1；橋接能湊到時帶兩個起始關鍵字，
+    每張候選都是組合器實際做出、通過驗證的技能（可行解，6E-W 的做法）。"""
+    pairs = 0
     for name in ("alice", "bob", "carol", "dave"):
         char = _with_quest(make_char(name, location="ferry_steps"), "starter_ferry")
         char, _ = advance_quests(library, make_world(), char, _won("ferry_steps"), NOON)
         offer = char.pending_offers[0].offer
-        assert [t.kind for t in offer.tags] == ["deepen", "new", "new"], name
+        assert [t.kind for t in offer.tags] == ["deepen", "bridge", "new"], name
         assert any(s.kind == "passive" for s in offer.candidates), name
+        for skill in offer.candidates:
+            assert validate_skill(skill, library) == [], (name, skill.id)
+        bridge = offer.tags[1]
+        if len(bridge.keywords) == 2:
+            pairs += 1
+            made = derive_keywords(offer.candidates[1], library.keywords, exclusive_only=True)
+            assert set(bridge.keywords) <= set(made.all()), name
+    assert pairs >= 1
+
+
+def test_starter_later_steps_keep_one_deepen_two_new(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    char = _with_quest(make_char("alice", location="bamboo_path"), "starter_ferry", steps_done=1)
+    char, _ = advance_quests(library, make_world(), char, _won("bamboo_path"), NOON)
+    assert [t.kind for t in char.pending_offers[0].offer.tags] == ["deepen", "new", "new"]
 
 
 def test_chain_offer_new_direction_prefers_region_keywords(

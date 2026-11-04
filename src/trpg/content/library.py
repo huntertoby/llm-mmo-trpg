@@ -1192,7 +1192,15 @@ def _load_world(
         "world_crafting": world_crafting,
         "world_resonance": load_world_resonance(root, files, affixes=affixes, keywords=keyword_ids),
         "world_season": world_season,
-        "world_newcomer": _load_newcomer(root, world_maps, world_quests, files),
+        "world_newcomer": _load_newcomer(
+            root,
+            world_maps,
+            world_quests,
+            files,
+            npcs={
+                r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()
+            },
+        ),
     }
 
 
@@ -1201,9 +1209,12 @@ def _load_newcomer(
     world_maps: Mapping[str, LocationMapDef],
     quests: WorldQuestContent,
     files: list[tuple[Path, ContentModel]],
+    *,
+    npcs: Mapping[str, Mapping[str, str]] = {},
 ) -> NewcomerContent | None:
     """``world/newcomer.yaml``（6F-2）：新手區要有地點圖；戰鬥短提示的 ID 和任務各步的 ``teach``
-    不能撞（畫面用 ID 記「出過了」）。"""
+    不能撞（畫面用 ID 記「出過了」）；6F-4：``mentor_npc`` 要是新手區的人設卡（``npcs``＝區域 →
+    NPC → 地點）。"""
     loaded = load_newcomer(root)
     if loaded is None:
         return None
@@ -1211,6 +1222,13 @@ def _load_newcomer(
     problems: list[str] = []
     if newcomer.start_region not in world_maps:
         problems.append(f"start_region {newcomer.start_region} 沒有地點圖")
+    region_npcs = npcs.get(newcomer.start_region)
+    if (  # 新手區沒有人設卡檔（只裝了部分內容）時不檢查
+        newcomer.mentor_npc is not None
+        and region_npcs is not None
+        and newcomer.mentor_npc not in region_npcs
+    ):
+        problems.append(f"mentor_npc {newcomer.mentor_npc} 不在 {newcomer.start_region} 的人設卡裡")
     seen = {h.id: "battle_hints" for h in newcomer.battle_hints}
     for region, table in sorted(quests.quests.items()):
         for quest in table.quests:

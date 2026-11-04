@@ -768,3 +768,18 @@
   margin: 8px 0 0;
   color: #ffe0a0;
 }
+
+/* 6F-4：葛蘭的配點教學（#133）：六個屬性，滑過看白話說明 */
+.world-allocate-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.world-allocate-attr {
+  padding: 2px 8px;
+  border: 1px solid #6a6450;
+  border-radius: 4px;
+  cursor: help;
+}

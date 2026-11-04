@@ -69,7 +69,7 @@ def test_newcomer_content(calm: ContentLibrary) -> None:
     assert newcomer.start_region == START
     assert [line.speaker_zh for line in newcomer.opening] == ["說書人", "守印人"]
     assert "霧渡鎮" in newcomer.guide_capital_zh and "渡婆婆" in newcomer.guide_capital_zh
-    assert WORLD_RULES_VERSION == 8
+    assert WORLD_RULES_VERSION >= 8  # 6F-4 升到 9（新手保護 #128）
 
 
 def test_new_character_spawns_in_capital_plaza(calm: ContentLibrary) -> None:

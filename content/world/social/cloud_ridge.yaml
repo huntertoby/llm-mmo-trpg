@@ -36,6 +36,9 @@ talk:
   - {id: smith_shi_rumor, npc: smith_shi, rank: neutral, kind: rumor, text_zh: 他只丟下一句「嗯，好料湊一起，我也沒見過」，就低頭繼續打鐵}
   # 信賴才說祕密（18.5「劍陣弟子落單時最弱」）；只是資訊，不給線頭、不改戰鬥數值
   - {id: smith_shi_secret, npc: smith_shi, rank: trusted, kind: secret, text_zh: 他年輕時替青霧觀打過劍陣用的劍，悶聲說了句「劍陣弟子，落單最弱」}
+  # 葛蘭（導師堂駐堂導師；18.5，#133；6F-4 實作者暫定文字，待玩法 PM 確認）。白話、短句
+  - {id: gran_rumor, npc: gran, rank: neutral, kind: rumor, text_zh: 他說新來的人最常犯的錯是背對懸崖站，「來，我示範，先看腳下」}
+  - {id: gran_secret, npc: gran, rank: trusted, kind: secret, text_zh: 他年輕時跟晶冠遠征隊進過源晶裂痕，隊友沒能出來，從那以後他再也不肯進山}
 
 # 事件結果 → 好感度（開發 PM 定初值，代決 5B4-3）。看事件的結果（event_resolved：情境判定、交涉、戰鬥解法；5B-4b）。
 event_affinity:

@@ -193,7 +193,8 @@ def test_field_maps_reuse_the_battle_map_grid_rules(library: ContentLibrary) -> 
     steps = library.field_maps["ferry_steps"]
     terrain = library.ruleset.terrain.by_id()
     assert {tid for row in steps.grid() for _, tid in row} <= set(terrain)
-    assert {h for row in steps.grid() for h, _ in row} == {0, 1, 2}  # 三段石階（6C-3）
+    # 6C-3 原本三段石階 0／1／2；6F-4 C1「弓手不站高處」改成平台和石階底同高，只有石階頂高 1
+    assert {h for row in steps.grid() for h, _ in row} == {0, 1}
 
 
 # ---------------------------------------------------------------------------

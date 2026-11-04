@@ -48,7 +48,9 @@ from trpg.api.world_growth_view import (
 from trpg.api.world_newcomer_view import (
     battle_hints,
     guide_view,
+    hints_view,
     lesson_view,
+    level_up_view,
     with_advice,
     with_routes,
 )
@@ -646,7 +648,9 @@ def world_view(
         ),
         guide=guide_view(library, char),  # 6F-2（#125、U2）
         battle_hints=battle_hints(library, char) if in_battle else (),  # 6F-2（#99、U1）
-        lesson=None if in_battle else lesson_view(library, char),  # 6F-2（#132）
+        lesson=None if in_battle else lesson_view(library, char),  # 6F-2（#132）、6F-4（#133）
+        level_up=None if in_battle else level_up_view(library, char),  # 6F-4（C2）
+        hints=hints_view(char),  # 6F-4（6F-2b）
     )
 
 

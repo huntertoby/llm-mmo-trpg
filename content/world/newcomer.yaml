@@ -6,20 +6,41 @@
 # - guide_*：任務追蹤器與開場卡的指引句（玩法 PM 筆記 U2；guide_capital_how_zh、guide_town_zh 是 6F-2 實作者暫定）。
 # - main_advice_zh：新手任務鏈完成前，主線標的建議（筆記 U4）。
 # - battle_hints：任何大世界戰鬥都可能出現的短提示（冰面、陷阱、致命地形、被推撞；筆記 U1「另加」的四種，
-#   文字是 6F-2 實作者暫定，待玩法 PM 確認）。新手任務各步的提示寫在 quests/<region>.yaml 的 teach。
+#   6F-2b 玩法 PM 定稿四句；其餘兩句仍是 6F-2 實作者暫定）。新手任務各步的提示寫在 quests/<region>.yaml 的 teach。
 #   trigger 的意思見 schema 的 BATTLE_HINT_TRIGGERS。提示只影響畫面，不改戰鬥結果。
 # - flash_lesson／reflash_lesson（#132）：新手第 1 步完成後回到城鎮，引導第一次閃現（用第 1 步原本給的 1 點靈感，
 #   不另給點）；升到 reflash_level 級、閃過之後導師改教重閃。可以略過；之後在城鎮或營火隨時能閃。
-#   flash_lesson 兩句是 #132 的原話；reflash_lesson 是 6F-2 實作者暫定，待玩法 PM 確認。
+#   flash_lesson 兩句是 #132 的原話；reflash_lesson 照 6F-2b 玩法 PM 回覆定稿。
+# - 6F-4（#133、C2）：mentor_npc＝霧渡鎮導師堂的駐堂導師葛蘭（npcs/cloud_ridge.yaml）；allocate_lesson 是葛蘭的配點教學
+#   （玩法 PM 配點教學修改稿第 6 節的台詞），排在第一次閃現之前、可以略過；level_up_zh／level_up_mentor_zh 是升級畫面；
+#   attribute_notes 是配點教學裡滑過屬性時的白話說明。
+# - 6F-2b（玩法 PM 回覆）：guide_capital_how_zh、ice_surface、lethal_terrain、reflash_lesson 四句定稿。
 start_region: cloud_ridge
+mentor_npc: gran
+allocate_lesson:
+  - speaker_zh: 葛蘭
+    text_zh: 升級了？身上多了兩點力氣。來，我示範怎麼分。
+  - speaker_zh: 葛蘭
+    text_zh: 不知道怎麼配就按「推薦配法」。配錯了也沒關係，在城鎮或營火都能免費重來。
+allocate_done_zh: 好。接下來看看你剛才用過的那一招。
+allocate_skip_zh: 隨時回來找我。
+level_up_zh: 升到 {level} 級：屬性點 +{points}、靈感 +{insight}。
+level_up_mentor_zh: 回霧渡鎮找導師堂的葛蘭，學怎麼配點。
+attribute_notes:
+  str: 力量武器的普攻與武器技；推擊、破壞物件；耐力上限；14 起撞擊傷害多 1、受到的少 1
+  dex: 敏捷武器的普攻與武器技；防禦、先攻；耐力上限；比較不會在冰面滑倒
+  con: 最大 HP；錘與拳套；耐力上限；抵抗暈眩、冰凍、中毒、流血
+  int: 火、雷、冰、大地法術；法力上限；14 起你產生的表面多 1 回合
+  wis: 治療、護盾、標記法術；權杖與鞭；法力上限；14 起看得見更遠的陷阱與隱蔽單位
+  wil: 召喚、詛咒、暗影法術；法器珠、圖騰杖、鐮刀；法力上限；14 起控制抵抗 +1
 flash_lesson:
   - speaker_zh: 說書人
     text_zh: 剛才那一招還在你手裡發燙。
-  - speaker_zh: 導師
+  - speaker_zh: 葛蘭
     text_zh: 讓剛用過的招靈光一閃。
 reflash_lesson:
-  - speaker_zh: 導師
-    text_zh: 閃過的變化不滿意，可以重閃其中一次，換成別的變化（照樣花靈感）。
+  - speaker_zh: 葛蘭
+    text_zh: 閃過的變化不滿意，可以重閃其中一次換成別的變化：要花靈感，但不用先上場
 reflash_level: 3
 opening:
   - speaker_zh: 說書人
@@ -27,13 +48,13 @@ opening:
   - speaker_zh: 守印人
     text_zh: 新來的？雲嶺那邊缺人手。站上傳送陣，去霧渡鎮找渡婆婆。
 guide_capital_zh: 到霧渡鎮找渡婆婆
-guide_capital_how_zh: 站上中央廣場的傳送陣，或按 M 打開地圖傳送到雲嶺
+guide_capital_how_zh: 走到中央廣場的傳送陣，或按 M 選雲嶺的霧渡鎮
 guide_town_zh: 找頭上有「！」的渡婆婆說話
 main_advice_zh: 建議先完成{quest}
 battle_hints:
   - id: ice_surface
     trigger: ice_present
-    text_zh: 冰面很滑：走上去要過敏捷判定，失敗會摔倒並滑出去
+    text_zh: 冰面很滑：踏上第一格要過敏捷判定，失敗會一路滑出去再倒地
   - id: trap_tile
     trigger: trap_present
     text_zh: 格子上有陷阱：踩到就會觸發，能繞就繞

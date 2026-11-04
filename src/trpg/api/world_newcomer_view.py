@@ -6,9 +6,14 @@
   新手任務鏈完成前，主線加「建議先完成霧渡新手路」（U4，:func:`with_advice` 給可以接的任務用）。
 - :func:`battle_hints`：這場戰鬥可能出現的短提示（#99）：進行中任務的目前這一步在這裡打贏時的
   ``teach``，加上 ``newcomer.yaml`` 的通用提示。觸發由畫面判斷；只影響畫面。
-- :func:`lesson_view`：閃現教學（#132）。新手任務第 1 步完成、在城鎮、還沒閃現過、有靈感點、有戰鬥中
+- :func:`lesson_view`：教學。6F-4（#133）：升到 2 級、回到導師葛蘭所在的城鎮、還有沒分配的屬性點＝
+  **先教配點**（``allocate``：葛蘭兩句、推薦配法、六個屬性的說明；看過或略過記成
+  ``lesson:allocate``）；
+  之後才接 6F-2 的閃現教學（#132）：新手任務第 1 步完成、在城鎮、還沒閃現過、有靈感點、有戰鬥中
   用過的招＝第一次閃現的引導（說書人＋導師）；升到 ``reflash_level`` 級、閃現過＝改教重閃。閃現本身
-  照 06 6.34.3 的規則由成長面板做（不另給點）；畫面只跳一次、可以略過。
+  照 06 6.34.3 的規則由成長面板做（不另給點）；每種只跳一次（記在角色的 ``hints_seen``）、可以略過。
+- :func:`level_up_view`：升級畫面（6F-4 C2）：等級比看過的高就出，文字照 ``newcomer.yaml``。
+- :func:`hints_view`：出過的提示與「不再顯示」（6F-2b：記在角色身上）。
 
 只讀內容與角色狀態，不改任何東西；清單依內容順序或 ID 排序（守則 2）。
 """
@@ -18,19 +23,56 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from trpg.api.world_growth_view import skill_names
-from trpg.api.world_schemas import BattleHintView, GuideView, LessonView, OpeningLineView
+from trpg.api.world_schemas import (
+    AttributeNoteView,
+    BattleHintView,
+    GuideView,
+    HintsStateView,
+    LessonView,
+    LevelUpView,
+    OpeningLineView,
+)
 from trpg.api.world_story_schemas import QuestHereView, QuestLogView
 from trpg.content.fields import FieldExit, FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
 from trpg.content.world_map import LocationMapDef
 from trpg.content.world_newcomer import BattleHint, NewcomerContent, OpeningLine
 from trpg.content.world_quests import AnyOf, AtLocation, QuestCondition, QuestDef, WinBattle
+from trpg.roguelite.start import recommended_level_up
+from trpg.shared.types import Attribute
 from trpg.world.atlas import free_first_teleport
-from trpg.world.common import here
+from trpg.world.common import here, rules_of
 from trpg.world.quests import has_flashed, quest_table
 from trpg.world.state import CharacterState
 
-__all__ = ["battle_hints", "guide_view", "lesson_view", "with_advice", "with_routes"]
+__all__ = [
+    "LESSON_SEEN_PREFIX",
+    "OPENING_SEEN",
+    "battle_hints",
+    "guide_view",
+    "hints_view",
+    "lesson_seen",
+    "lesson_view",
+    "level_up_view",
+    "with_advice",
+    "with_routes",
+]
+
+OPENING_SEEN = "opening"
+"""``hints_seen`` 裡「開場看過了」的 ID（6F-2b）。"""
+LESSON_SEEN_PREFIX = "lesson:"
+"""``hints_seen`` 裡教學看過了的 ID 前綴（``lesson:allocate``、``lesson:flash``、
+``lesson:reflash``）。"""
+
+
+def lesson_seen(char: CharacterState, kind: str) -> bool:
+    return f"{LESSON_SEEN_PREFIX}{kind}" in char.hints_seen
+
+
+def hints_view(char: CharacterState) -> HintsStateView:
+    """出過的提示與「不再顯示」（6F-2b：記在角色身上）。"""
+    return HintsStateView(seen=char.hints_seen, off=char.hints_off)
 
 
 # ---------------------------------------------------------------------------
@@ -282,13 +324,92 @@ def _flash_lesson(
     return LessonView(kind="flash", lines=_lines(newcomer.flash_lesson), skills_zh=tuple(used))
 
 
+def _skill_defs(library: ContentLibrary, char: CharacterState) -> dict[str, SkillDef]:
+    found = {k: s for k, s in library.skills.items()}
+    for skill in (*char.flash_bases, *char.generated_skills):
+        found[skill.id] = skill
+    return found
+
+
+def _mentor_town(library: ContentLibrary, newcomer: NewcomerContent) -> tuple[str, str] | None:
+    """駐堂導師所在的（區域, 地點）；沒有設定＝``None``（任何城鎮都教）。"""
+    if newcomer.mentor_npc is None:
+        return None
+    table = library.world_event_content.npcs.get(newcomer.start_region)
+    card = None if table is None else table.npc_by_id().get(newcomer.mentor_npc)
+    return None if card is None else (newcomer.start_region, card.location)
+
+
+def _allocate_lesson(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
+) -> LessonView | None:
+    """配點教學（#133）：升到 2 級、在導師所在的城鎮、還有沒分配的屬性點、還沒上過。"""
+    if not newcomer.allocate_lesson or lesson_seen(char, "allocate"):
+        return None
+    if char.level < 2 or char.attribute_points <= 0:  # noqa: PLR2004 - 2 級＝第一次升級
+        return None
+    town = _mentor_town(library, newcomer)
+    if town is not None and (char.region, char.location) != town:
+        return None
+    defs = _skill_defs(library, char)
+    starters = [defs[s] for s in char.hero.skills[:2] if s in defs]  # 起始兩招（07 7.2）
+    weapon = library.weapons.get(char.hero.weapon)
+    recommended = recommended_level_up(
+        starters, weapon, char.hero.attributes, char.attribute_points
+    )
+    return LessonView(
+        kind="allocate",
+        lines=_lines(newcomer.allocate_lesson),
+        points=char.attribute_points,
+        recommended=recommended,
+        recommended_zh="、".join(f"{a.display_name} +{n}" for a, n in recommended.items()),
+        done_zh=newcomer.allocate_done_zh or None,
+        skip_zh=newcomer.allocate_skip_zh or None,
+        notes=tuple(
+            AttributeNoteView(attr=a, text_zh=newcomer.attribute_notes[a])
+            for a in Attribute
+            if a in newcomer.attribute_notes
+        ),
+    )
+
+
 def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | None:
-    """閃現過＝重閃教學（到 ``reflash_level`` 級才有）；沒閃過＝第一次閃現的引導（等級不限：3 級還沒
-    閃過的人照樣先教閃現）。"""
+    """配點教學優先（#133，6F-4）；之後閃現過＝重閃教學（到 ``reflash_level`` 級才有）；沒閃過＝
+    第一次閃現的引導（等級不限：3 級還沒閃過的人照樣先教閃現）。看過的種類（``hints_seen`` 的
+    ``lesson:<種類>``）不再出。"""
     newcomer = library.world_newcomer
     if newcomer is None or char.pending_flash is not None or here(library, char).kind != "town":
         return None
+    allocate = _allocate_lesson(library, newcomer, char)
+    if allocate is not None:
+        return allocate
     names = skill_names(library, char)
-    if has_flashed(char):
-        return _reflash_lesson(newcomer, char, names)
-    return _flash_lesson(library, newcomer, char, names)
+    lesson = (
+        _reflash_lesson(newcomer, char, names)
+        if has_flashed(char)
+        else _flash_lesson(library, newcomer, char, names)
+    )
+    if lesson is None or lesson_seen(char, lesson.kind):
+        return None
+    return lesson
+
+
+# ---------------------------------------------------------------------------
+# 升級畫面（6F-4 C2）
+# ---------------------------------------------------------------------------
+
+
+def level_up_view(library: ContentLibrary, char: CharacterState) -> LevelUpView | None:
+    """等級比看過的（``level_seen``）高就出：「升到 N 級：屬性點 +2、靈感 +2。」還沒上過配點教學時
+    接「回霧渡鎮找導師堂的葛蘭，學怎麼配點。」"""
+    newcomer = library.world_newcomer
+    if newcomer is None or not newcomer.level_up_zh or char.level <= char.level_seen:
+        return None
+    text = newcomer.level_up_zh.format(
+        level=char.level,
+        points=library.roguelite.attribute_points_per_level,
+        insight=rules_of(library).hero_growth.insight_per_level,
+    )
+    if newcomer.allocate_lesson and not lesson_seen(char, "allocate"):
+        text += newcomer.level_up_mentor_zh
+    return LevelUpView(level=char.level, text_zh=text)

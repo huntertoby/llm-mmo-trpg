@@ -373,6 +373,10 @@ class StepReward(ContentModel):
     """經驗來源（``world/rules.yaml`` 的 ``xp.shares_permille`` 鍵）；``None``＝不給經驗。"""
     xp_level: int = Field(default=1, ge=1, le=_MAX_LEVEL)
     """份數換算用的地點建議等級（1 份＝100×(1＋10%×(等級−1))，5A-SIM2）。"""
+    level_to: int | None = Field(default=None, ge=2, le=_MAX_LEVEL)
+    """完成這一步時 **補到剛好** 這個等級（6F-4 C2：新手鏈第 1 步完成升到 2 級、第 2、3 步各升 1
+    級）：給的經驗＝這一級的門檻 − 目前累計經驗（已經到了就不給）；和 ``xp_source`` 同時寫時取
+    兩者較多的。``None``＝只照 ``xp_source``。"""
     insight: int = Field(default=0, ge=0)
     """靈感點（06 6.34.2「任務鏈段落」）。"""
     offer: SkillOfferReward | None = None

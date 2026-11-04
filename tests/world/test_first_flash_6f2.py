@@ -87,7 +87,7 @@ def test_lesson_flash_then_reflash(library: ContentLibrary, make_char: MakeChar)
     at3 = flashed.model_copy(update={"level": 3})
     re = lesson_view(library, at3)
     assert re is not None and re.kind == "reflash"
-    assert re.lines and re.lines[0].speaker_zh == "導師"
+    assert re.lines and re.lines[0].speaker_zh == "葛蘭"  # 6F-4：駐堂導師葛蘭兼任重閃（#133）
 
 
 def _play(

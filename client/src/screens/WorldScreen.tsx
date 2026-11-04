@@ -66,15 +66,8 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
-import {
-  LessonDialog,
-  OpeningDialog,
-  readLessonSeen,
-  readOpeningSeen,
-  shouldShowOpening,
-  writeLessonSeen,
-  writeOpeningSeen,
-} from "../world/OpeningDialog";
+import { AllocateLessonDialog, LessonDialog, LevelUpDialog, OpeningDialog, shouldShowOpening } from "../world/OpeningDialog";
+import { HINTS_OFF_ACTION, HINTS_RESET_ACTION, OPENING_SEEN, hintSeenAction, hintsOf, lessonSeenId } from "../world/battleHints";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { LeaguePanel } from "../world/LeaguePanel";
@@ -155,18 +148,54 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
-  /** 開局在主城的開場看過了沒（6F-2；本機，每個角色一次）。 */
-  const [openingSeen, setOpeningSeen] = useState<boolean>(true);
-  useEffect(() => setOpeningSeen(charId === null ? true : readOpeningSeen(charId)), [charId]);
-  /** 這次畫面裡關掉的閃現教學（6F-2，#132；本機另記一次，換畫面不再跳）。 */
-  const [lessonClosed, setLessonClosed] = useState<string | null>(null);
+  /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
+   * 先在本機記一下（`closed`），等伺服器回來的紀錄蓋過去，不會因為送出中又跳一次。 */
+  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => setClosed(new Set()), [charId]);
+  const hintState = hintsOf(view?.hints);
+  const seenIds = new Set([...hintState.seen, ...closed]);
+  function markSeen(ids: string[], level?: number) {
+    setClosed((prev) => new Set([...prev, ...ids, ...(level === undefined ? [] : [`level:${level}`])]));
+    act(hintSeenAction(ids, level));
+  }
   const lesson = view?.lesson ?? null;
-  const showLesson = lesson !== null && charId !== null && lessonClosed !== `${lesson.kind}.${charId}` && !readLessonSeen(lesson.kind, charId);
+  const showLesson = lesson !== null && charId !== null && !seenIds.has(lessonSeenId(lesson.kind));
+  /** 配點教完接閃現時，葛蘭先說的那句（#133：「好。接下來看看你剛才用過的那一招。」）。 */
+  const [lessonLead, setLessonLead] = useState<{ speaker_zh: string; text_zh: string } | null>(null);
   function closeLesson(open: boolean) {
     if (lesson === null || charId === null) return;
-    writeLessonSeen(lesson.kind, charId);
-    setLessonClosed(`${lesson.kind}.${charId}`);
+    markSeen([lessonSeenId(lesson.kind)]);
+    setLessonLead(null);
     if (open) hudButton("growth");
+  }
+  /** 配點教學（#133）：推薦配法＝送 `allocate`；自己配＝打開成長面板；之後再說＝葛蘭說「隨時回來找我。」。 */
+  function closeAllocate(how: "recommended" | "self" | "skip") {
+    if (lesson === null || charId === null) return;
+    const speaker = lesson.lines[0]?.speaker_zh ?? "導師";
+    const said = how === "skip" ? lesson.skip_zh : lesson.done_zh;
+    if (said != null && said !== "") setLessonLead({ speaker_zh: speaker, text_zh: said });
+    if (how === "recommended" && Object.keys(lesson.recommended ?? {}).length > 0) {
+      setClosed((prev) => new Set([...prev, lessonSeenId("allocate")]));
+      void run(async () => {
+        await api.worldAct(charId, { kind: "allocate", attributes: lesson.recommended ?? {} });
+        show(await api.worldAct(charId, hintSeenAction([lessonSeenId("allocate")])));
+      });
+      return;
+    }
+    markSeen([lessonSeenId("allocate")]);
+    if (how === "self") hudButton("growth");
+  }
+  const levelUp = view?.level_up ?? null;
+  const showLevelUp = levelUp !== null && !closed.has(`level:${levelUp.level}`);
+  /** 設定裡的「重新顯示提示」（6F-2b）。 */
+  function resetHints() {
+    setClosed(new Set());
+    act(HINTS_RESET_ACTION);
+  }
+  /** 戰鬥中出現的提示、「不再顯示提示」：只記紀錄，不更新畫面（戰後同步時一起回來）。 */
+  function noteInBattle(action: WorldAction) {
+    if (charId === null) return;
+    void api.worldAct(charId, action).catch(() => undefined);
   }
   useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
   useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
@@ -754,6 +783,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           panel={shown === null ? null : hudPanelContent(v)}
           panelLocked={panelLocked}
           onClosePanel={closeHud}
+          onResetHints={resetHints}
           mapOpen={regionOpen}
           center={
             hasCenter ? (
@@ -806,7 +836,18 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         placeName={replay !== null ? null : worldPlaceName(view)}
         onEnded={onBattleEnded}
         endSummary={replay !== null || ended === null ? undefined : ended.view === null ? null : battleSummary(ended.view)}
-        hints={replay !== null || charId === null ? undefined : { characterId: charId, hints: view?.battle_hints ?? [] }}
+        hints={
+          replay !== null || charId === null
+            ? undefined
+            : {
+                characterId: charId,
+                hints: view?.battle_hints ?? [],
+                seen: [...seenIds],
+                off: hintState.off,
+                onSeen: (id) => noteInBattle(hintSeenAction([id])),
+                onOff: () => noteInBattle(HINTS_OFF_ACTION),
+              }
+        }
       />
     );
   }
@@ -856,17 +897,22 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
-      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, openingSeen) && (
-        <OpeningDialog
-          guide={view.guide}
-          onClose={() => {
-            if (charId !== null) writeOpeningSeen(charId);
-            setOpeningSeen(true);
-          }}
+      {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) && <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
+        <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
+      )}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind === "allocate" && (
+        <AllocateLessonDialog
+          lesson={lesson}
+          affects={view.hero.attribute_affects ?? []}
+          busy={busy}
+          onRecommended={() => closeAllocate("recommended")}
+          onSelf={() => closeAllocate("self")}
+          onSkip={() => closeAllocate("skip")}
         />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, openingSeen) && showLesson && lesson !== null && (
-        <LessonDialog lesson={lesson} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && (
+        <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (

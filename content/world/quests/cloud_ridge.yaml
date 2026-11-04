@@ -1,6 +1,6 @@
 # 雲嶺任務（Phase 5B-4；docs/phases/Phase5計畫.md 16.3；5B-4b 19.2、19.5、19.7、19.8）。schema：src/trpg/content/world_quests.py。
 # 來源：docs/design/18-雲嶺內容.md 18.7（新手鏈、主線第 1 章、區域任務鏈、導師任務鏈 18.7.5；#111 玩法 PM 代決、待使用者確認）；
-# 07 7.6（新手鏈 3 招白板、至少 1 招被動、加深／橋接／新方向 1／0／2；主線劇情技能＝完整技能；區域鏈中段與結尾白板
+# 07 7.6（新手鏈 3 招白板、至少 1 招被動、加深／橋接／新方向 第 1 步 1／1／1（#130）、第 2、3 步 1／0／2；主線劇情技能＝完整技能；區域鏈中段與結尾白板
 # 三選一、偏向該區的關鍵字）；經驗份數照 5A-SIM2（任務鏈一步 3 份、主線一步 5 份、隱藏地點 2 份）。
 # 開發 PM 自定（代決 5B4-5～5B4-14、5B4b-1～12）：所有 ID、步驟拆法、條件、xp_level、靈感、每步有關的 NPC（npcs）；
 # 主線第 4 步「三方混戰」：源晶裂痕的遭遇陣容都是三方（5B-M3，encounters/cloud_ridge.yaml 的 third）；隱藏任務 2 個用 18 已有的內容組成。
@@ -24,11 +24,14 @@ quests:
         # 6F-2 戰鬥短提示（#99 每場教一件事；文字照玩法 PM 筆記 U1）
         teach:
           - {id: move_attack, trigger: battle_start, text_zh: 點藍格移動，點紅框攻擊；每回合有 AP}
+        # 6F-4（#130）：第 1 步三選一改成 加深 1、橋接 1、新方向 1（橋接帶兩個起始關鍵字；找不到照 6.27.4 放寬）；
+        # C2：完成時補到剛好 2 級（level_to），升級畫面提示回霧渡鎮找葛蘭學配點（#133）
         reward:
           xp_source: quest_chain_step
           xp_level: 1
+          level_to: 2
           insight: 1
-          offer: {kind: whiteboard, mix: {deepen: 1, bridge: 0, new: 2}, min_passive: 1}
+          offer: {kind: whiteboard, mix: {deepen: 1, bridge: 1, new: 1}, min_passive: 1}
       - id: bamboo_wolves
         text_zh: 竹林小徑：突破雨裡包圍的霧狼
         when: [{kind: win_battle, location: bamboo_path}]
@@ -39,6 +42,7 @@ quests:
         reward:
           xp_source: quest_chain_step
           xp_level: 1
+          level_to: 3   # 6F-4 C2：第 2 步升到 3 級
           insight: 1
           offer: {kind: whiteboard, mix: {deepen: 1, bridge: 0, new: 2}, min_passive: 1}
       - id: terrace_clash
@@ -50,6 +54,7 @@ quests:
         reward:
           xp_source: quest_chain_step
           xp_level: 2
+          level_to: 4   # 6F-4 C2：第 3 步升到 4 級（18.7.1「等級 1～4」）
           insight: 1
           offer: {kind: whiteboard, mix: {deepen: 1, bridge: 0, new: 2}, min_passive: 1}
 

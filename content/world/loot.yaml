@@ -34,9 +34,11 @@ families:
   bandit: item_scorched_iron
   bandit_archer: item_scorched_iron
   bandit_archer_guard: item_scorched_iron
+  bandit_archer_rookie: item_scorched_iron   # 6F-4 新手第 1 場專用
   bandit_boss: item_scorched_iron
   bandit_captain: item_scorched_iron
   bandit_guard: item_scorched_iron
+  bandit_rookie: item_scorched_iron   # 6F-4 新手第 1 場專用
   bandit_shieldbearer: item_scorched_iron
   bandit_shieldbearer_guard: item_scorched_iron
   bandit_warlord: item_scorched_iron

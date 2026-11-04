@@ -3,7 +3,7 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/6``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 角色 | ``trpg-char/7``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
 | 世界動作日誌 | ``trpg-wlog/7``（JSON Lines：第一行 ``{"format": "trpg-wlog/7"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
@@ -115,7 +115,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 8  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1；8＝6F-2
+WORLD_RULES_VERSION: Final = 9  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～d；7＝6F-1；8＝6F-2；9＝6F-4
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -135,6 +135,13 @@ WORLD_RULES_VERSION: Final = 8  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～
   （:func:`trpg.world.atlas.free_first_teleport`）；新角色改由 API 建在主城（``new_character`` 本身
   不變）。任務條件多一種狀態型的 ``flashed``（閃現過至少一招，#132：導師任務鏈「觀摩」新手時的
   閃現也算）。CHAR_FORMAT、wlog 格式不變（沒有新欄位）。
+- 9（6F-4）：#128 新手保護——新手任務鏈（``kind: starter``）的固定戰被敵人先看到時改成「沒有先手」
+  （開打距離 3 格，:func:`trpg.world.field_enemies.newcomer_guarded`；同樣的走路日誌開出不同的
+  戰場）；
+  任務獎勵多 ``level_to``（補到剛好那一級的經驗，C2：同樣完成一步給的經驗不同）；三個只記畫面紀錄的
+  動作（``hint_seen``、``hints_off``、``hints_reset``；戰鬥中、待選閃現或三選一時也能做）。
+  角色格式升成 ``trpg-char/7``（提示紀錄 ``hints_seen``、``hints_off`` 與 ``level_seen``；``/6``
+  以前照讀，舊角色的 ``level_seen`` 補成目前等級）。wlog 格式不變（6C-R3 起靠規則鍵標舊日誌）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
