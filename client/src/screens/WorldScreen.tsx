@@ -513,13 +513,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       setBattle(res.battle);
     });
 
-  /** 開發用（6F-3，`?dev=1`）：Boss 戰直接開打（`&boss=地點`、`&bosslv=等級` 可換；預設雲頂觀、6 級）。 */
+  /** 開發用（6F-3，`?dev=1`）：Boss 戰直接開打（`&boss=地點`、`&bosslv=等級` 可換；預設雲頂觀、6 級；
+   * `&bossai=charge|last`＝先讓 AI 代打到 Boss 蓄力中／剩最後一名敵人，再交給畫面，截圖用）。 */
   const devBoss = () =>
     void run(async () => {
       if (charId === null) return;
       const q = new URLSearchParams(window.location.search);
       const lv = Number(q.get("bosslv") ?? "6");
-      const res = await api.worldDevBoss(charId, q.get("boss") ?? "cloud_summit", Number.isFinite(lv) ? lv : undefined);
+      const res = await api.worldDevBoss(charId, q.get("boss") ?? "cloud_summit", Number.isFinite(lv) ? lv : undefined, q.get("bossai") ?? undefined);
       setReplay([`${res.title_zh}（不回寫世界）`]);
       setReplayOutcome(undefined);
       setDevFight(true);

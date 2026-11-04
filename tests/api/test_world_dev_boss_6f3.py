@@ -95,3 +95,20 @@ def test_dev_boss_rejects_towns(dev: TestClient, monkeypatch: pytest.MonkeyPatch
         params={"location": "mist_ferry", "region": "cloud_ridge"},
     )
     assert reply.status_code in (409, 422), reply.text
+
+
+def test_dev_boss_rehearses_to_the_boss_charge(
+    dev: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``ai_until=charge``：AI 代打到 Boss 蓄力中、輪到主角（截圖 Boss 大招用）；還是不碰世界。"""
+    monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
+    cid = _create(dev)["character"]["character_id"]
+    reply = dev.post(
+        f"/api/world/characters/{cid}/dev-boss", params={"level": 8, "ai_until": "charge"}
+    )
+    assert reply.status_code == 200, reply.text
+    battle = reply.json()["battle"]
+    assert battle["awaiting"] == "action"
+    boss = next(u for u in battle["view"]["units"] if "霧鎖真人" in u["name_zh"])
+    assert "charging" in [s.get("status_id") for s in boss["statuses"]]
+    assert dev.get(f"/api/world/characters/{cid}").json()["encounter"] is None

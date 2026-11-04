@@ -11362,6 +11362,7 @@ export interface operations {
                 location?: string;
                 region?: string | null;
                 level?: number | null;
+                ai_until?: ("charge" | "last") | null;
             };
             header?: never;
             path: {

@@ -48,7 +48,7 @@
 from __future__ import annotations
 
 import os
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
 
@@ -269,16 +269,20 @@ def post_battle(character_id: str, request: Request) -> WorldBattleResponse:
 def post_dev_boss(
     character_id: str,
     request: Request,
+    *,
     location: str = "cloud_summit",
     region: str | None = None,
     level: int | None = None,
+    ai_until: Literal["charge", "last"] | None = None,
 ) -> WorldDevBattleResponse:
     """開發用（6F-3）：``location`` 的 Boss 戰（或任何有戰鬥的地點）直接開打，給實戰截圖用；不寫
     日誌、不回寫世界，主線限制照舊。另外要 ``TRPG_DEV_ROUTES=1``（否則 404）。"""
     if os.environ.get(DEV_ROUTES_ENV) != "1":
         raise HTTPException(status_code=404, detail="Not Found")
     store = world_of(request)
-    dev = dev_boss_battle(store, character_id, location=location, region=region, level=level)
+    dev = dev_boss_battle(
+        store, character_id, location=location, region=region, level=level, ai_until=ai_until
+    )
     dev.battle.owner = owner_id(request)  # 6S-1：只給開的人
     with dev.battle.lock:
         out = battle_response(dev.battle, dev.records)

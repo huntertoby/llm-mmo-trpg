@@ -271,10 +271,10 @@ export const api = {
     request<LeagueView>("GET", `/world/characters/${encodeURIComponent(characterId)}/league?page=${page}`),
   /** 某一場循環賽的重播（從開場播到結束；既有戰鬥畫面）。 */
   /** 開發用（6F-3；`?dev=1`，伺服器另要 `TRPG_DEV_ROUTES=1`）：Boss 戰直接開打，不回寫世界。 */
-  worldDevBoss: (characterId: string, location = "cloud_summit", level?: number) =>
+  worldDevBoss: (characterId: string, location = "cloud_summit", level?: number, aiUntil?: string) =>
     request<WorldDevBattleResponse>(
       "POST",
-      `/world/characters/${encodeURIComponent(characterId)}/dev-boss?location=${encodeURIComponent(location)}${level === undefined ? "" : `&level=${level}`}`,
+      `/world/characters/${encodeURIComponent(characterId)}/dev-boss?location=${encodeURIComponent(location)}${level === undefined ? "" : `&level=${level}`}${aiUntil === undefined ? "" : `&ai_until=${encodeURIComponent(aiUntil)}`}`,
     ),
   worldLeagueReplay: (characterId: string, matchId: string) =>
     request<LeagueReplayResponse>(

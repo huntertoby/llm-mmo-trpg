@@ -1933,6 +1933,26 @@
               ],
               "title": "Level"
             }
+          },
+          {
+            "name": "ai_until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "charge",
+                    "last"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ai Until"
+            }
           }
         ],
         "responses": {
