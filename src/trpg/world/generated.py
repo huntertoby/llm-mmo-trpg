@@ -47,6 +47,7 @@ __all__ = [
     "StoryGenRequest",
     "Supplier",
     "flash_key",
+    "flash_pregen_key",
     "input_key",
     "recorded",
     "supply",
@@ -199,13 +200,12 @@ def input_key(prefix: str, data: Any) -> str:
     return f"{prefix}:{digest}"
 
 
-def flash_key(character_id: str, request: FlashRequest) -> str:
-    """閃現請求的鍵：角色＋種子標籤欄位＋出題的完整輸入。"""
-    data = {
+def _flash_data(character_id: str, request: FlashRequest) -> dict[str, Any]:
+    """閃現請求的輸入（不含用法統計；:func:`flash_key` 另外加上）。"""
+    return {
         "char": character_id,
         "base": request.base.model_dump(mode="json"),
         "state": request.state.model_dump(mode="json"),
-        "usage": request.usage.model_dump(mode="json"),
         "seed": request.seed,
         "slot": request.slot,
         "category": request.category,
@@ -215,5 +215,20 @@ def flash_key(character_id: str, request: FlashRequest) -> str:
         "region": request.region,
         "weapon": request.weapon_zh,
     }
-    tag = f"flash/{request.state.base_id}/{request.nth}/{request.reflashes}/{request.category}"
-    return input_key(tag, data)
+
+
+def _flash_tag(request: FlashRequest) -> str:
+    return f"{request.state.base_id}/{request.nth}/{request.reflashes}/{request.category}"
+
+
+def flash_key(character_id: str, request: FlashRequest) -> str:
+    """閃現請求的鍵（日誌紀錄的鍵，重播依它查）：角色＋種子標籤欄位＋出題的完整輸入（含用法統計）。"""
+    data = {**_flash_data(character_id, request), "usage": request.usage.model_dump(mode="json")}
+    return input_key(f"flash/{_flash_tag(request)}", data)
+
+
+def flash_pregen_key(character_id: str, request: FlashRequest) -> str:
+    """預先生成暫存區的閃現鍵（6L-2c，玩法 PM 決定）：同 :func:`flash_key` 但**不含用法統計**——
+    每打完一場用法統計都會變，放進鍵就會一直重做。統計只在開始生成時讀一次（那次請求的輸入）；
+    玩家按下時用這把鍵找，給出去時鍵改成按下那一刻的 :func:`flash_key`（日誌照舊依它重播）。"""
+    return input_key(f"flash-pregen/{_flash_tag(request)}", _flash_data(character_id, request))

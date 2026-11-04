@@ -14,6 +14,9 @@
 - **單一佇列**：一條背景執行緒依序做，同一時間只有一個 LLM 請求。暫存區全服最多
   :data:`QUEUE_LIMIT` 筆，超過時丟掉最舊、還沒開始的。
 - **只放記憶體**：結果不寫日誌也不寫存檔；預測換了（角色狀態變了）就丟掉這個角色沒用到的。
+- **閃現的暫存鍵不含用法統計**（6L-2c，玩法 PM 決定）：每打完一場統計都會變，放進鍵就會一直重做。
+  統計只在開始生成時讀一次（那次請求的輸入）；同一招同一次出題只有一筆，已經在生成或做好的不重開。
+  玩家按下時給出去的那一筆，鍵改成按下那一刻的請求鍵，引擎照樣驗證，日誌記下的就是這一份。
 - **玩家真的打開時**（引擎向供應者要，:meth:`WorldPregen.supplier`）：好了就給；還沒好就等，**最多
   10 秒**（:data:`WAIT_SECONDS`，從第一次等待算起；劇情技能最多 2 秒，:data:`STORY_WAIT_SECONDS`，
   6L-2b），超過就回 ``None``（引擎改給組合器、模板或內容版）。給出去的那一筆從暫存區拿掉；
@@ -56,6 +59,7 @@ from trpg.world.generated import (
     StoryGen,
     StoryGenRequest,
     Supplier,
+    flash_pregen_key,
 )
 from trpg.world.growth import (
     as_run,
@@ -341,6 +345,14 @@ def predicted_requests(
 # ---------------------------------------------------------------------------
 
 
+def _slot(request: GenRequest) -> str:
+    """暫存區的鍵（6L-2c）：閃現不含用法統計（:func:`~trpg.world.generated.flash_pregen_key`），
+    同一招同一次出題只會有一筆——打完一場統計變了也不重開；其他入口就是請求的鍵。"""
+    if isinstance(request, FlashGenRequest):
+        return flash_pregen_key(request.character_id, request.request)
+    return request.key
+
+
 @dataclass(slots=True)
 class _Entry:
     request: GenRequest
@@ -404,12 +416,12 @@ class WorldPregen:
             _LOG.exception("預先生成的預測失敗（%s）", cid)
             return
         view = world_library(library)
-        wanted = {r.key for r in requests}
+        wanted = {_slot(r) for r in requests}
         with self._lock:
             for key in [k for k in self._entries if k[0] == cid and k[1] not in wanted]:
                 self._entries.pop(key).future.cancel()
             for request in requests:
-                if (cid, request.key) not in self._entries:
+                if (cid, _slot(request)) not in self._entries:
                     self._submit(view, request)
             self._trim()
 
@@ -431,7 +443,7 @@ class WorldPregen:
         future = self._pool.submit(self._run, view, request)
         self._order += 1
         entry = _Entry(request, self._target(request), future, order=self._order)
-        self._entries[(request.character_id, request.key)] = entry
+        self._entries[(request.character_id, _slot(request))] = entry
         return entry
 
     def _trim(self) -> None:
@@ -491,7 +503,7 @@ class WorldPregen:
         def supply(request: GenRequest) -> FlashGen | StoryGen | OfferGen | None:
             if self._closed or not self.enabled():
                 return None
-            key = (request.character_id, request.key)
+            key = (request.character_id, _slot(request))
             with self._lock:
                 entry = self._entries.get(key)
                 if entry is None:
@@ -500,6 +512,10 @@ class WorldPregen:
             with self._lock:
                 if self._entries.get(key) is entry:
                     del self._entries[key]
+            if isinstance(result, FlashGen) and result.key != request.key:
+                # 6L-2c：暫存區的鍵不含用法統計；給出去時改成按下那一刻的鍵（引擎比對鍵、日誌依它
+                # 重播）。內容是開始生成時那份統計做的，引擎照樣逐一驗證、套不上的用模板補。
+                result = result.model_copy(update={"key": request.key})
             return result
 
         return supply
@@ -520,7 +536,7 @@ class WorldPregen:
         with self._lock:
             entry: _Entry | None = None
             if request is not None:
-                entry = self._entries.get((character_id, request.key))
+                entry = self._entries.get((character_id, _slot(request)))
                 if entry is None and library is not None:
                     entry = self._submit(world_library(library), request)
             else:
