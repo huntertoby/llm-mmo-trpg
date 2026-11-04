@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { NpcPortrait, WorldStory } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { useDuck } from "../audio/useAudio";
+import { uiSound } from "../audio/uiSounds";
 import { canMore, dialogMore, dialogNext, dialogStart, diceFrame, DICE_MS, DICE_TICK_MS, hasNext, OUTCOME_COLOR, subtitleHasMore, subtitleLine, subtitlePhase, SUBTITLE_FADE_MS, SUBTITLE_MS, type Outcome } from "./narration";
 import { usedDieColor } from "../render/storyIconArt";
 import { D20, MiscGlyph, Portrait } from "./StoryIcons";
@@ -44,6 +45,9 @@ export function NarratorSubtitle({ story, testId = "world-subtitle", elapsed }: 
   }, [elapsed, expanded]);
   const phase = subtitlePhase(elapsed ?? timePassed, expanded);
   useDuck(phase !== "gone"); // AU-1：字幕在畫面上時壓低音樂與環境
+  useEffect(() => {
+    uiSound("ui_narrator"); // AU-2：字幕出現（像翻開一頁插畫書）
+  }, [story]);
   if (phase === "gone") return null;
   const more = subtitleHasMore(story);
   return (
@@ -140,6 +144,13 @@ export function DiceRoll({ dice, roll, outcome, elapsed }: DiceProps) {
     return () => window.clearInterval(timer);
   }, [elapsed]);
   const frame = diceFrame(dice, roll, elapsed ?? t);
+  // AU-2：骰子翻滾、停下（成功與勉強＝成功聲，失敗＝失敗聲）
+  useEffect(() => {
+    uiSound("ui_dice_roll");
+  }, []);
+  useEffect(() => {
+    if (frame.done) uiSound(outcome === "failure" ? "ui_dice_fail" : "ui_dice_success");
+  }, [frame.done, outcome]);
   const color = OUTCOME_COLOR[outcome];
   return (
     <div className={`world-dice${frame.done ? " done" : " rolling"}`} data-testid="world-dice" data-done={frame.done ? "1" : "0"} data-outcome={outcome}>

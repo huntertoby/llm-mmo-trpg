@@ -438,6 +438,18 @@
   gap: 4px;
 }
 
+/* 齒輪鈕的設定面板（AU-2）：位置、捲動來自 `.popup-menu`、`.top-popup`（貼齊齒輪鈕下方、靠右） */
+.world-hud-settings {
+  position: relative;
+  display: flex;
+}
+
+.world-settings-popup {
+  padding: 2px 12px 10px;
+  text-align: left;
+  pointer-events: auto;
+}
+
 .world-hud-wallet .world-hud-chip {
   flex: 1;
   height: 24px;

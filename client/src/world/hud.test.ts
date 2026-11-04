@@ -160,7 +160,6 @@ function props(v: WorldView, layout: HudLayout, over: Partial<WorldHudProps> = {
     onTracker: () => undefined,
     onButton: () => undefined,
     onMap: () => undefined,
-    onSettings: () => undefined,
     onPlace: () => undefined,
     openPanel: null,
     panel: null,

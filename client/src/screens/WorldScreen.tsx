@@ -73,6 +73,7 @@ import { NotesPanel } from "../world/NotesPanel";
 import { NpcPanel } from "../world/NpcPanel";
 import { FriendCard, HudHirePanel, HudNpcPanel } from "../world/FieldPanels";
 import { QuestLog, WorldOfferPending } from "../world/QuestLog";
+import { useInkWaitSound, useWorldSounds } from "../world/useWorldSounds";
 import { appendChat, dialogByNpc, dialogEntries, narratorResting, type ChatEntry } from "../world/story";
 import { readWorldChar, writeWorldChar } from "../world/mapView";
 import { BattleScreen } from "./BattleScreen";
@@ -136,6 +137,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
+  useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
+  useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
   /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
   const lastMap = useRef<string | null | undefined>(undefined);
   const [banner, setBanner] = useState<{ name: string; n: number } | null>(null);
@@ -676,7 +679,6 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           }}
           onButton={hudButton}
           onMap={() => hudKeys.current.map()}
-          onSettings={() => pushToast([`設定：${NOT_OPEN_ZH}`], false)}
           onPlace={() => setHudPanel((cur) => togglePanel(cur, "place"))}
           openPanel={shown}
           panel={shown === null ? null : hudPanelContent(v)}
