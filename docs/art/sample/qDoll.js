@@ -896,7 +896,7 @@ window.QDoll = (() => {
       if (!SP.late && !SP.nearLate) sideArm(SP.near, false);
       if (SP.layer === "head") sideWeapon();
       if (W && SP.bowHand && SP.far.front) sideArm(SP.far, "hand"); /* 第 11 版：朝西拉弦手在遠側，弦和箭桿畫好後再補畫手（審查：「朝西的弦和箭桿壓在拉弦手上」） */
-      if (W && SP.bowHand && SP.far.front) { const N = SP.near, nh = fk(N.sx, N.sA, N.eA, N.len ?? null); ctx.save(); ctx.beginPath(); ctx.rect(-80, -120, 160, 200); ctx.arc(nh[0], nh[1], 3, 0, TAU); ctx.clip("evenodd"); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); } /* 第 12 版：朝西近側左臂再畫一次、在拉弦手和弦上面（手附近不畫，弓把仍蓋在左手上；審查：「拉弦手蓋到近側左前臂下緣」） */
+      if (W && SP.bowHand && SP.far.front) { const N = SP.near, nh = fk(N.sx, N.sA, N.eA, N.len ?? null); ctx.save(); ctx.beginPath(); ctx.rect(-80, -120, 160, 200); ctx.arc(nh[0], nh[1], 3, 0, TAU); ctx.clip("evenodd"); ctx.beginPath(); ctx.rect(-80, -120, 80 + nh[0] - 1.6, 200); ctx.clip(); arm(ctx, unit, N.sx, N.sA, N.eA, side, null, false, N.len ?? null); ctx.restore(); } /* 第 12 版：朝西近側左臂再畫一次、在拉弦手和弦上面（手附近不畫，弓把仍蓋在左手上；審查：「拉弦手蓋到近側左前臂下緣」） */
     } else if (S) {
       if (SP.layer === "head") sideWeapon();
       if (SP.far.front && SP.layer !== "front" && !SP.far.shield) sideArm(SP.far, true);
