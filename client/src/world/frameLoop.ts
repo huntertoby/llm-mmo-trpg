@@ -1,5 +1,6 @@
 // 畫布動畫的逐格迴圈（Phase 6F-ART1b：大世界圖浮島漂浮）。
 // 只在面板打開（元件掛著）、畫布有尺寸、使用者沒有開 prefers-reduced-motion 時跑；停的時候取消 requestAnimationFrame。
+import { reducedMotion, subscribeMotion } from "../ui/motionPrefs";
 
 export interface FrameClock {
   request(cb: (t: number) => void): number;
@@ -31,20 +32,11 @@ export function startFrameLoop(draw: (t: number) => void, clock: FrameClock): ()
 /** 要不要跑動畫：畫法要求動畫、沒有減少動態、畫布有尺寸。 */
 export const shouldAnimate = (animated: boolean, reducedMotion: boolean, pw: number, ph: number): boolean => animated && !reducedMotion && pw > 0 && ph > 0;
 
-const REDUCE_QUERY = "(prefers-reduced-motion: reduce)";
+// 6H-1：減少動態改看遊戲內的開關（跟系統／開／關，`ui/motionPrefs.ts`）的有效值；舊的呼叫點照舊從這裡匯入。
+/** 是否減少動態（遊戲內設定 ＋ 系統 `prefers-reduced-motion` 的有效值）。 */
+export const prefersReducedMotion = (): boolean => reducedMotion();
 
-function reduceQuery(): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
-  return window.matchMedia(REDUCE_QUERY);
-}
-
-/** 使用者是否要求減少動態（查不到＝否）。 */
-export const prefersReducedMotion = (): boolean => reduceQuery()?.matches ?? false;
-
-/** 訂閱減少動態設定的變化。 */
+/** 訂閱減少動態有效值的變化（遊戲內設定或系統設定）。 */
 export function subscribeReducedMotion(cb: () => void): () => void {
-  const q = reduceQuery();
-  if (q === null) return () => undefined;
-  q.addEventListener("change", cb);
-  return () => q.removeEventListener("change", cb);
+  return subscribeMotion(cb);
 }

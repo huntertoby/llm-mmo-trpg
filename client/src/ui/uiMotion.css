@@ -185,22 +185,41 @@
   }
 }
 
+/* 6H-1：遊戲內「減少動態」開關寫在 <html data-reduced-motion>；JS 還沒寫屬性前照系統設定 */
+:root[data-reduced-motion="true"] .delay-trail {
+  transition: none;
+}
+
+:root[data-reduced-motion="true"] .flip-num.flip {
+  animation: none;
+}
+
+:root[data-reduced-motion="true"] .level-pillar .beam,
+:root[data-reduced-motion="true"] .level-pillar .ring,
+:root[data-reduced-motion="true"] .level-pillar .lv {
+  animation: none;
+}
+
+:root[data-reduced-motion="true"] .level-pillar .ring {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .delay-trail {
+  :root:not([data-reduced-motion]) .delay-trail {
     transition: none;
   }
 
-  .flip-num.flip {
+  :root:not([data-reduced-motion]) .flip-num.flip {
     animation: none;
   }
 
-  .level-pillar .beam,
-  .level-pillar .ring,
-  .level-pillar .lv {
+  :root:not([data-reduced-motion]) .level-pillar .beam,
+  :root:not([data-reduced-motion]) .level-pillar .ring,
+  :root:not([data-reduced-motion]) .level-pillar .lv {
     animation: none;
   }
 
-  .level-pillar .ring {
+  :root:not([data-reduced-motion]) .level-pillar .ring {
     display: none;
   }
 }

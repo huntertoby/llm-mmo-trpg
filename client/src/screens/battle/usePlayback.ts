@@ -11,7 +11,8 @@ import { frameOps, playbackPlan, remainingLines, type PlayOp, type PlaySpeed } f
 import type { LogLine } from "../../battle/log";
 import { logLines } from "../../battle/log";
 import { unitNames } from "../../battle/units";
-import { stopHoldMs } from "../../battle/specials";
+import { hitHoldMs, slowTailMs } from "../../battle/impact";
+import { prefersReducedMotion } from "../../world/frameLoop";
 import { attackFamilyInView, weaponClassInView } from "../../battle/viewGrip";
 import { loadShake, saveShake } from "../../battle/vfxPrefs";
 import type { BattleRenderer } from "../../render/BattleRenderer";
@@ -74,6 +75,8 @@ export function usePlayback(
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
   const [shake, setShake] = useState<boolean>(loadShake);
   const shakeRef = useRef(shake);
+  /** 6H-1：最後一擊放慢在命中點之後的實際時間（勝利片段等它播完）。 */
+  const tailRef = useRef(0);
   const busyRef = useRef(true);
   const speedRef = useRef(speed);
   const skipRef = useRef(false);
@@ -177,11 +180,19 @@ export function usePlayback(
             rendererRef.current?.playVfx(op.vfx, op.impactMs, shakeRef.current, origins);
           }
           // 6N-5：命中時的停頓（暴擊、擊殺、格擋）讓畫布時間停住，畫面等停頓結束才以結果重畫
-          if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs + stopHoldMs(op.vfx));
+          // 6H-1：停頓照扣血比例分級；最後一擊放慢時多等命中點以前放慢的部分（減少動態時都沒有）
+          {
+            const reduced = prefersReducedMotion();
+            tailRef.current = reduced ? 0 : slowTailMs(op.vfx);
+            if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs + hitHoldMs(op.vfx, reduced));
+          }
           break;
         case "victory":
           // 6N-5：我方勝利：全隊舉手或收刀、浮出「勝利」，播完才顯示結束面板
           if (skip()) break;
+          // 6H-1：最後一擊放慢的後半段（倒下片段）播完才接勝利
+          if (tailRef.current > 0) await sleep(tailRef.current);
+          tailRef.current = 0;
           rendererRef.current?.playVictory(op.victory);
           await sleep(op.victory.ms);
           break;

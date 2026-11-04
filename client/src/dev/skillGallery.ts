@@ -18,6 +18,7 @@ import { setGlossary } from "../battle/glossary";
 import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE } from "../battle/playback";
 import { feedbackFor } from "../battle/feedback";
 import { stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
+import { hitHoldMs, withImpact } from "../battle/impact";
 import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
 import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
@@ -690,10 +691,10 @@ async function results(): Promise<void> {
       const raw = vfxFor(events, after, cards);
       const tl = skillTimeline(events, after, cards, raw, (id) => r.weaponClassOf(id));
       if (tl === null) return;
-      const vfx = scaleVfx(withSpecials(tl.vfx, events, before, after), SCALE);
+      const vfx = scaleVfx(withImpact(withSpecials(tl.vfx, events, before, after), events, before, after, HERO), SCALE); // 6H-1：停頓分級、微震、最後一擊放慢
       const origins = r.playSkill(scaleRows(tl.rows, SCALE));
       r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), true, origins);
-      const hold = stopHoldMs(vfx);
+      const hold = hitHoldMs(vfx, false);
       lead = Math.max(lead, vfx.leadMs + hold);
       leadFx = Math.max(leadFx, vfx.leadMs);
       longest = Math.max(longest, ...scaleRows(tl.rows, SCALE).map((x) => x.startMs + x.ms + hold), vfx.leadMs + hold);

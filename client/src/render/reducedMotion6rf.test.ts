@@ -85,7 +85,7 @@ describe("reduced motion: every kind of animation is dropped or jumps to its res
     expect(tags(k.down!)).toEqual(["body"]);
     expect(tags(k.rise!)).toEqual(["fx", "body"]); // 綠光 ＋ 站起來
     expect(tags(k.crit!)).toEqual(["flash"]); // 全畫面閃白
-    expect(tags(k.kill!)).toEqual(["shake"]);
+    expect(tags(k.kill!)).toEqual([]); // 6H-1：擊殺不另外震（停頓照舊）
     expect(tags(k.blockSpecial!)).toEqual(["fx", "body"]); // 大火花 ＋ 攻擊者被彈開
     expect(tags(k.dodgeSpecial!)).toEqual(["fx"]); // 第二層殘影
     expect(tags(k.boss!)).toEqual(["dim"]); // 四周變暗
