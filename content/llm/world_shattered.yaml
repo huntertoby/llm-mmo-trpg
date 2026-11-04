@@ -3,6 +3,9 @@ id: shattered
 name_zh: 碎界
 summary_zh: 源晶核心崩裂，世界碎成漂浮的界域；各界域保留不同的文明風格，技能的力量來自源晶的頻率。
 tone_zh: 語氣沉穩、帶一點殘破的詩意；用字精簡具體，不使用網路用語、現代梗或英文詞彙。
+# 寫文字的提示詞（命名、閃現）在 tone_zh 後面接 text_style_zh（6L-1 C1）。技能提議只出結構、不寫文字，不接：
+# 實測接上後 12B 自由測試退回 6.7% → 12.5～14.2%，拿掉後 5.8%（docs/phases/Phase6L-1報告.md）。
+text_style_zh: 依所在界域的風格；沒有指定時用中性奇幻；不用武俠、仙俠、文言詞（施主、在下、老夫、某某訣），除非界域風格要求。
 realms:
   - name_zh: 晶冠城邦
     style_zh: 奇幻
@@ -66,3 +69,32 @@ naming:
     name_prefix_len: 2
     name_max: 1
     text_max: 1
+  # 古風詞（6L-1 C1、C5，#126；schema：ArchaicRules）：區域風格沒有 archaic: true 時，名稱與兩段敘事都不可用
+  # terms、名稱不可用 suffixes 結尾（「某某訣」）；always 任何區域的名稱都不可用。評估（scripts/eval_style.py）用同一份清單。
+  archaic:
+    terms: [施主, 在下, 老夫, 貧道, 本座, 晚輩, 道友, 江湖, 武林, 神功, 心法, 真氣, 內力, 丹田, 輕功, 經脈, 吐納, 周天, 修為, 仙, 道長, 真人, 乾坤, 太極, 八卦, 九轉, 罡]
+    suffixes: [訣]
+    always: [施主]
+# 技能名稱與描述的區域風格（#126，06 6.34.7；schema：SkillStyle）：照「取得地點的區域」，區域 ID 照 regions.yaml
+# 或地點圖（主城 capital）。沒有區域（創角、許願池、測試原型）用 neutral_style_zh。只影響名稱與描述。
+neutral_style_zh: 中性奇幻：清楚、具體，不用武俠、仙俠、文言詞
+skill_styles:
+  - region: capital
+    name_zh: 主城
+    style_zh: 中性奇幻城邦：清楚、略帶莊重，不用武俠、仙俠、文言詞
+  - region: cloud_ridge
+    name_zh: 雲嶺
+    style_zh: 東方山城：山、霧、竹、石、雲、鶴的意象，可以帶東方味；用白話，不用「施主」
+    archaic: true
+  - region: ashen_waste
+    name_zh: 灰燼荒原
+    style_zh: 災變、粗獷：灰燼、焦土、熔岩、廢鐵；短而有力，不用武俠、仙俠、文言詞
+  - region: crystal_crown
+    name_zh: 晶冠城邦
+    style_zh: 奇幻：晶光、白石、金飾、騎士與法術；典雅清楚
+  - region: arcane_hub
+    name_zh: 魔導樞市
+    style_zh: 魔導科技：黃銅、齒輪、晶能、符文；有機械感
+  - region: frost_tide
+    name_zh: 霜潮海境
+    style_zh: 海境：潮汐、浮冰、珊瑚、船與風；航海的口吻

@@ -560,11 +560,13 @@ def name_offer(
     taken: set[str],
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
     before: SkillDef | None = None,
+    region: str | None = None,
+    weapon: str | None = None,
 ) -> tuple[FlashOffer, tuple[FlashNameRecord, ...]]:
     """大變化與轉型的選項請 4-L7 命名步驟取名與寫敘事（只換文字，失敗用「{前綴}・{原名}」）。
     小變化不改名。命名關閉時不要呼叫這個函式——選項的名稱本來就是「{前綴}・{原名}」。
     ``before``（4-L11，:func:`~trpg.skillgen.flash_offer.skill_before`）給了就要求名稱或敘事提到
-    變化加上的效果。"""
+    變化加上的效果。``region``／``weapon``（6L-1，#126）：原技能取得地點的區域與持有者的武器。"""
     options = []
     names: list[FlashNameRecord] = []
     for option in offer.options:
@@ -573,7 +575,14 @@ def name_offer(
             continue
         used = client if isinstance(client, LLMClient) else client(option.skill, seed)
         result = name_skill(
-            used, library, option.skill, taken=taken, max_attempts=max_attempts, before=before
+            used,
+            library,
+            option.skill,
+            taken=taken,
+            max_attempts=max_attempts,
+            before=before,
+            region=region,
+            weapon=weapon,
         )
         taken.add(result.text.name_zh)
         named = (

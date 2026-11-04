@@ -50,6 +50,7 @@ class OfferJob:
     min_passive: int = 0
     tier_bonus: int = 0
     pinned_keyword: str | None = None
+    region: str | None = None
 
     def key(self, view: ContentLibrary) -> str | None:
         return offer_key(
@@ -61,6 +62,7 @@ class OfferJob:
             min_passive=self.min_passive,
             tier_bonus=self.tier_bonus,
             pinned_keyword=self.pinned_keyword,
+            region=self.region,
         )
 
     def make(self, view: ContentLibrary) -> SkillOffer:
@@ -73,6 +75,7 @@ class OfferJob:
             min_passive=self.min_passive,
             tier_bonus=self.tier_bonus,
             pinned_keyword=self.pinned_keyword,
+            region=self.region,
         )
 
 
@@ -106,6 +109,7 @@ def _opportunity_jobs(
                 region_keywords=() if keyword is None else (keyword,),
                 tier_bonus=opportunity_tier_bonus(library, world, char, trigger.skeleton),
                 pinned_keyword=keyword,
+                region=trigger.region,
             )
         )
     return jobs
@@ -133,6 +137,7 @@ def _quest_jobs(library: ContentLibrary, world: WorldState, char: CharacterState
                     region_keywords=offer_bias(library, char.region, quest, offer),
                     mix=None if offer.mix is None else offer.mix.as_tuple(),
                     min_passive=offer.min_passive,
+                    region=char.region,
                 )
             )
     return jobs

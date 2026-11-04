@@ -86,6 +86,8 @@ class TopicRequest:
     reaction_permille: int = 0
     """出反應技題目的機率（‰；Phase 4-L8b，``roguelite.yaml`` 的 ``llm_reaction_permille``）。
     0 ＝ 一律出主動技能題（與 4-L8 之前相同）。"""
+    region: str | None = None
+    """技能取得地點的區域（#126）：只進 prompt（``ProposalRequest.region``）。"""
 
 
 def composable_keywords(library: ContentLibrary, keywords: Sequence[str]) -> bool:
@@ -231,6 +233,7 @@ def _make_topic_of_kind(
             menu_seed=menu_seed,
             theme=theme,
             weapon_class=topic.weapon_class,
+            region=topic.region,
         )
         try:
             legal = legal_core_primitives(library, request)

@@ -74,7 +74,7 @@ function inventory(over: Partial<WorldInventory> = {}): WorldInventory {
     pouch_problem_zh: null,
     consumables: [POTION],
     equipped_zh: [],
-    resonance_zh: ["霧隱共鳴（隱蔽 2 件）：敏捷 +2"],
+    resonance_zh: ["潛影共鳴（隱蔽 2 件）：敏捷 +2"],
     equipment: [
       { slot: "main_hand", slot_zh: "主手", item: info({ id: "w", name_zh: "法杖", slot_type: "weapon" }) },
       { slot: "ring_1", slot_zh: "戒指 1", item: null },
@@ -136,7 +136,7 @@ describe("WorldBagScreen", () => {
     expect(html).toContain("改戴戒指 2");
     expect(html).toContain("其他物品");
     expect(html).toContain('data-testid="world-use-item_hp_potion_small"');
-    expect(html).toContain("霧隱共鳴");
+    expect(html).toContain("潛影共鳴");
     expect(html).not.toContain("title=");
   });
 

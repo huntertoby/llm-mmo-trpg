@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -31,7 +32,7 @@ from trpg.content.battle import (
     WeaponDef,
     WeaponTable,
 )
-from trpg.content.composer_rules import ComposerRules
+from trpg.content.composer_rules import ComposerRules, WhiteboardRules
 from trpg.content.dev_starters import DevStarterTable
 from trpg.content.environment import (
     AiProfileTable,
@@ -172,6 +173,7 @@ __all__ = [
     "gear_reference_problems",
     "load_library",
     "player_template_enemy_only_problems",
+    "skill_name_problems",
     "skill_reference_problems",
     "unit_skill_problems",
 ]
@@ -762,6 +764,28 @@ class ContentLibrary:
             raise KeyError(f"未知的天氣：{weather_id}（可用：{known}）") from None
 
 
+def skill_name_problems(skills: Mapping[str, SkillDef], whiteboard: WhiteboardRules) -> list[str]:
+    """顯示名相同、技能內容不同（6L-1，玩法 PM）：手寫技能（``skills/``）不可同名；白板配方的武器版
+    名稱（``weapon_name_zh``）不可和手寫技能同名。配方之間的同名由
+    :func:`~trpg.content.composer_rules.whiteboard_name_problems` 檢查。"""
+    by_name: dict[str, list[SkillDef]] = {}
+    for skill_id in sorted(skills):
+        by_name.setdefault(skills[skill_id].name_zh, []).append(skills[skill_id])
+    problems: list[str] = []
+    for name, group in sorted(by_name.items()):
+        bodies = {
+            json.dumps(s.model_dump(mode="json", exclude={"id"}), sort_keys=True) for s in group
+        }
+        if len(group) > 1 and len(bodies) > 1:
+            problems.append(f"技能同名但內容不同：{name}（{'、'.join(s.id for s in group)}）")
+    for recipe in (*whiteboard.active, *whiteboard.passive, *whiteboard.reaction):
+        if recipe.weapon_name_zh is not None and recipe.weapon_name_zh in by_name:
+            problems.append(
+                f"白板配方 {recipe.id} 的 weapon_name_zh 和手寫技能同名：{recipe.weapon_name_zh}"
+            )
+    return problems
+
+
 def _load_dir[M: ContentModel](
     directory: Path, model: type[M], files: list[tuple[Path, ContentModel]]
 ) -> dict[str, M]:
@@ -1120,6 +1144,7 @@ def _load_world(
         enemy_only_ids={s.id for s in statuses.statuses if s.enemy_only},  # 06 6.35（5F-R2）
         keyword_ids=keyword_ids,
         race_ids=None if races is None else races.by_id(),
+        tone_regions={*hub_maps, *(() if regions is None else (r.id for r in regions.regions))},
     )
     world_quests = load_world_quest_content(
         root,
@@ -1316,6 +1341,9 @@ def load_library(
         root, t, files, ruleset=ruleset, units=units, maps=maps, races=races, affixes=affixes
     )
     extras = _load_run_extras(root, t, load, maps=maps, units=units)
+    name_problems = skill_name_problems(t.skills, t.composer.whiteboard)  # 6L-1：其他檢查之後
+    if name_problems:
+        raise ContentError(root / "skills", "；".join(name_problems))
     return ContentLibrary(
         root=root,
         elements=t.elements,

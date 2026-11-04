@@ -171,6 +171,9 @@ class CandidateRequest:
     region_keywords: tuple[str, ...] = ()
     """區域偏向（Phase 5B-4b，07 7.6「區域任務鏈偏向該區的關鍵字」）：「新方向」挑關鍵字時，玩家
     還沒有的區域關鍵字排在前面（:func:`region_first`）。空 ＝ 不偏向（原型 roguelite）。"""
+    region: str | None = None
+    """技能取得地點的區域（#126，06 6.34.7）：只進 LLM 題目的 prompt（名稱與描述照該區風格），
+    不影響候選與數值。``None``＝中性（創角、許願池、測試原型）。"""
     mix: tuple[int, int, int] = (1, 1, 1)
     """白板三選一的組成（加深、橋接、新方向各幾張；Phase 5B-4b，07 7.6 新手鏈 1／0／2）。只有白板版
     產生器（:mod:`trpg.skillgen.whiteboard_candidates`）看；預設 1／1／1 ＝ 原行為。"""
@@ -344,6 +347,7 @@ class _Search:
                 theme_permille=self.rules.llm_theme_permille,
                 reaction_permille=self.rules.llm_reaction_permille,
                 weapon_class=self.request.weapon_class,
+                region=self.request.region,
             ),
         )
         if made is None:

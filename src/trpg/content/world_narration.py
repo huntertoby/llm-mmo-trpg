@@ -242,7 +242,7 @@ class StoryTemplates(ContentModel):
     """``content/world/narration.yaml``：降級文字與各區語氣。"""
 
     tones: dict[str, str] = Field(default_factory=dict)
-    """區域 → 說書語氣（09 9.6.10 #107；給 LLM 的系統指令）。"""
+    """區域 → 說書語氣（09 9.6.10 #107、#127；給 LLM 的系統指令）。"""
     event_text: str = Field(min_length=1)
     event_more: str = Field(min_length=1)
     event_more_no_obstacle: str = Field(min_length=1)
@@ -305,9 +305,10 @@ def fill_template(text: str, values: Mapping[str, str], *, limit: int) -> str:
 
 
 def load_story_templates(path: Path, *, regions: Collection[str]) -> StoryTemplates:
-    """讀 ``narration.yaml``；``tones`` 的區域必須有地點圖。"""
+    """讀 ``narration.yaml``；``tones`` 的區域必須在 ``regions`` 內（地點圖、主城或
+    ``regions.yaml`` 的區）。"""
     templates = load_content_file(path, StoryTemplates)
     unknown = sorted(set(templates.tones) - set(regions))
     if unknown:
-        raise ContentError(path, f"tones 的區域沒有地點圖：{'、'.join(unknown)}")
+        raise ContentError(path, f"tones 的區域不存在：{'、'.join(unknown)}")
     return templates

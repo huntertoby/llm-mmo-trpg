@@ -1,9 +1,9 @@
-# 蓄力強招（Phase 5A-M1，docs/design/18-雲嶺內容.md 18.2.1 青霧執事「九轉回天」；05 5.7 強招預告；數值為初值，未經模擬）：
+# 蓄力強招（Phase 5A-M1，docs/design/18-雲嶺內容.md 18.2.1 青霧執事「復甦之環」；05 5.7 強招預告；數值為初值，未經模擬）：
 # 整回合（3 AP）運丹蓄力、身上護一層小盾，地圖預告範圍；下回合開始時以自己為中心 3×3 內的友方大量回血。
 # 倒下、暈眩、冰凍時取消（6.23 #5 延遲段）。
 id: skill_nine_turns_revival
 schema_version: 1
-name_zh: 九轉回天
+name_zh: 復甦之環
 tier: 2
 rank: 2
 rarity: rare
@@ -27,6 +27,6 @@ condition: null
 cost: {mana: 12, cooldown: 4}
 tags: [holy, spell, heal, aura]
 narrative:
-  concept: 運轉丹田九周天，把一爐丹氣化作回天之力
-  cast_flavor: 你雙掌合抱、丹氣在掌心迴旋，周圍的霧氣都被吸了進去
+  concept: 把積蓄的藥力凝成一圈光環，化作讓同伴復甦的力量
+  cast_flavor: 你雙手合攏，藥力在掌心迴旋，周圍的霧氣都被吸了進去
 provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

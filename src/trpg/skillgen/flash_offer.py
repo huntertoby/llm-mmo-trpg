@@ -108,6 +108,11 @@ class FlashRequest:
     current: SkillDef | None = None
     """存檔裡已推出的這招（目前的定義，卡片上的數字；3W-R1）。已存的歷程在目前的內容重推不了時
     （:class:`FlashHistoryError`）當起點與強度下限的退路；``None`` ＝ 沒有退路（照舊）。"""
+    region: str | None = None
+    """原技能取得地點的區域（#126：閃現的變化名照原技能的界域）；只進 LLM prompt。
+    ``None``＝中性。"""
+    weapon_zh: str | None = None
+    """持有者手上的武器名稱（6L-1：命名照武器寫）；只進 LLM prompt。"""
 
     @property
     def role_tier(self) -> int:

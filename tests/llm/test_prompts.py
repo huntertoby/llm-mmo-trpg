@@ -149,6 +149,12 @@ SNAPSHOTS = {
     "skill-proposal/6": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
     # 6S-2c：系統指令不變；budget_note_zh 的附帶效果例子改成中性（不暗示固定加傷害）
     "skill-proposal/7": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
+    # 6L-1：全域語氣改中性奇幻（C1）；系統指令說明 <request> 的 style（#126），題目區加 style
+    "skill-proposal/8": "e4cd446d03491af23e92c5769aca17321267598704434bd5394dc87be4d6ecf5",
+    # 6L-1：style 說明移到選填欄位之後、加「不要因為它多填欄位」；中性時題目區不帶 style
+    "skill-proposal/9": "7cd34a92fde16048fdd4b713648a4064b4600d292f4c5b021866f9fa48696e38",
+    # 6L-1：技能提議不接 text_style_zh（只出結構；接上後 12B 退回率上升）
+    "skill-proposal/10": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

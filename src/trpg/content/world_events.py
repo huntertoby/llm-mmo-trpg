@@ -593,9 +593,13 @@ def load_world_event_content(
     enemy_only_ids: Collection[str] = (),
     keyword_ids: Collection[str] | None = None,
     race_ids: Collection[str] | None = None,
+    tone_regions: Collection[str] = (),
 ) -> WorldEventContent:
     """載入 ``world/events/``、``world/npcs/``、``world/event_rules.yaml``，以及情境模板與規則
     （``world/situations/``、``world/situation_rules.yaml``；5B-2）。不存在＝空／``None``。
+
+    ``tone_regions``：地點圖以外也可以寫說書語氣的區域（主城、``regions.yaml`` 還沒有地點圖的區；
+    6L-1 C4）。
 
     跨檔案有問題丟 :class:`~trpg.shared.errors.ContentError`（指出檔案）；載入的檔案加進 ``files``。
     """
@@ -652,7 +656,7 @@ def load_world_event_content(
     story_path = root / STORY_TEMPLATES_FILE
     story: StoryTemplates | None = None
     if story_path.is_file():
-        story = load_story_templates(story_path, regions=world_maps.keys())
+        story = load_story_templates(story_path, regions={*world_maps, *tone_regions})
         files.append((story_path, story))
     return WorldEventContent(
         events=event_tables,

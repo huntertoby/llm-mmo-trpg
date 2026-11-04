@@ -488,6 +488,7 @@ def _offer(
         region_keywords=offer_bias(library, char.region, quest, offer),
         mix=None if offer.mix is None else offer.mix.as_tuple(),
         min_passive=offer.min_passive,
+        region=char.region,  # 6L-1（#126）：取得地點的區域
     )
     return store_offer(char, quest.id, step.id, made)
 

@@ -328,7 +328,7 @@ def test_pairs_outside_the_conversion_table_are_refused() -> None:
 
 
 def test_skills_whose_effects_need_the_original_shape_are_not_converted() -> None:
-    """效果原語限定形狀（衝鋒必須是單體）時不轉：猛虎衝撞維持單體。"""
+    """效果原語限定形狀（衝鋒必須是單體）時不轉：衝鋒撞擊維持單體。"""
     dash = library().skills["skill_tiger_charge"]
     to_line = modifier("skill_t_mod_a", rule({"shape_to": "line"}))
     m = make_map(FLAT7, ally=[HERO], enemy=[(6, 3)])

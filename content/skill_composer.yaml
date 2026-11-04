@@ -252,36 +252,36 @@ whiteboard:
   # 附帶（和位移的小補強同一種例外：傷害＋號令狀態兩個效果），帶召喚物關鍵字（skill_keywords.yaml）
   command_statuses: [commanding]
   active:
-    - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
-    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 火焰爆, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
-    - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
-    - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
-    - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}
+    - {id: fire_bolt, keyword: ignite, skeleton: strike, effect: {type: damage, element: fire}, name_zh: 火球, weapon_name_zh: 火球擊, concept_zh: 一團火焰直直砸向目標, flavor_zh: 火球拖著尾焰撞上目標，炸出一圈熱浪}
+    - {id: fire_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [cross, square3], name_zh: 火焰爆, weapon_name_zh: 火焰爆擊, concept_zh: 在一小片區域引爆火焰, flavor_zh: 火舌向四面舔開，把範圍內的一切都燎了一遍}
+    - {id: kindle, keyword: ignite, skeleton: control, effect: {type: apply_status, status: burning}, theme: fire, shapes: [cross, square3], name_zh: 點燃, weapon_name_zh: 點燃斬, concept_zh: 讓目標身上燒起來, flavor_zh: 一點火星落在衣角，轉眼就燒成一片}
+    - {id: lightning_bolt, keyword: charged, skeleton: strike, effect: {type: damage, element: lightning}, name_zh: 雷擊, weapon_name_zh: 雷擊斬, concept_zh: 一道電光劈向目標, flavor_zh: 空氣劈啪作響，電弧在目標身上炸開}
+    - {id: spark_burst, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [cross, square3], name_zh: 電爆, weapon_name_zh: 電爆擊, concept_zh: 在一小片區域釋放電流, flavor_zh: 靜電在指尖積滿，向四周同時放開}
     - {id: frost_shard, keyword: frozen, skeleton: strike, effect: {type: damage, element: ice}, name_zh: 冰錐, weapon_name_zh: 冰錐刺, concept_zh: 一根冰錐射向目標, flavor_zh: 寒氣在掌心凝成尖錐，貼著空氣飛出去}
-    - {id: frost_patch, keyword: frozen, skeleton: control, effect: {type: create_surface, surface: ice}, theme: ice, shapes: [cross, square3], name_zh: 凝冰, concept_zh: 讓地面結出一層冰, flavor_zh: 霜花沿著地面蔓延，眨眼間凍成滑溜溜的冰面}
-    - {id: venom, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cross, square3], name_zh: 淬毒, concept_zh: 讓目標中毒, flavor_zh: 一絲綠光滲進傷口，毒性開始在血管裡蔓延}
-    - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
-    - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
-    - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
+    - {id: frost_patch, keyword: frozen, skeleton: control, effect: {type: create_surface, surface: ice}, theme: ice, shapes: [cross, square3], name_zh: 凝冰, weapon_name_zh: 凝冰斬, concept_zh: 讓地面結出一層冰, flavor_zh: 霜花沿著地面蔓延，眨眼間凍成滑溜溜的冰面}
+    - {id: venom, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cross, square3], name_zh: 淬毒, weapon_name_zh: 淬毒刺, concept_zh: 讓目標中毒, flavor_zh: 一絲綠光滲進傷口，毒性開始在血管裡蔓延}
+    - {id: toxic_pool, keyword: poisoned, skeleton: control, effect: {type: create_surface, surface: poison}, theme: poison, shapes: [cross, square3], name_zh: 毒沼, weapon_name_zh: 毒沼擊, concept_zh: 讓地面泛出毒液, flavor_zh: 腳下的泥土冒出泡沫，散發著刺鼻的氣味}
+    - {id: mark_target, keyword: marked, skeleton: control, effect: {type: apply_status, status: marked}, shapes: [single, cross, square3], name_zh: 烙印, weapon_name_zh: 烙印擊, concept_zh: 在目標身上留下一道印記, flavor_zh: 一道淡淡的光紋印在目標身上，怎麼躲都藏不住}
+    - {id: shadow_bolt, keyword: concealed, skeleton: strike, effect: {type: damage, element: shadow}, name_zh: 暗影彈, weapon_name_zh: 暗影彈射, concept_zh: 一團暗影撲向目標, flavor_zh: 影子從腳邊竄起，無聲無息地咬上目標}
     # 3W-9：升降地形影響 4～6 格要角色 2 階、7 格以上 3 階（6.34.9 #58），十字（5 格）的隆地 1 階不能出；改成只升一格（AP 1：單一效果的點數固定，
     # AP 2 湊不到預算下限）。2、3 階由升階重算補「落石」傷害（數值照預算）。
     - {id: raise_ground, keyword: high_ground, skeleton: control, effect: {type: raise_terrain, amount: 1}, theme: earth, shapes: [ground_tile], categories: [spell], skill: {ap_cost: 1}, name_zh: 隆地, concept_zh: 讓一格地面升高, flavor_zh: 地面隆隆震動，一塊小平台緩緩頂了起來}
     # --- 3W-4b｜潮濕、倒地、撞擊的例外（06 6.34.1）：利用者＝條件傷害（條件傷害本身算一個核心效果）；製造者＝弱傷害＋製造該關鍵字 ---
     - {id: soak_strike, keyword: wet, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_on_surface, surface: water}, name_zh: 順水重擊, concept_zh: 對站在水裡的目標打出更重的一擊, flavor_zh: 腳下的積水讓目標站不穩，這一擊落得格外沉}
-    - {id: water_bolt, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [cross, square3], name_zh: 水彈, concept_zh: 一發水彈砸開，地上積起一灘水, flavor_zh: 水球炸開，濺濕了一片地面}
+    - {id: water_bolt, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [cross, square3], name_zh: 水彈, weapon_name_zh: 水彈射, concept_zh: 一發水彈砸開，地上積起一灘水, flavor_zh: 水球炸開，濺濕了一片地面}
     - {id: ground_finisher, keyword: prone, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_has_status, status: prone}, name_zh: 趁勢補刀, concept_zh: 對倒在地上的目標補上重重一擊, flavor_zh: 目標還沒爬起來，這一擊已經落了下去}
     - {id: trip_strike, keyword: prone, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: knock_prone}, name_zh: 絆擊, concept_zh: 輕輕一擊，順勢把目標絆倒, flavor_zh: 腳下一勾，目標重心全失}
     - {id: collision_slam, keyword: collision, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: target_collided}, name_zh: 乘勢重擊, concept_zh: 對剛撞過牆的目標補上重擊, flavor_zh: 目標還暈著，這一擊結結實實地砸在他身上}
     - {id: shoulder_charge, keyword: collision, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: push, distance: 1}, name_zh: 頂撞, concept_zh: 一記頂撞，把目標撞開一格, flavor_zh: 肩膀狠狠撞上去，目標被撞得向後踉蹌}
     # --- BAL-19f（#110，06 6.27.4）：直線、錐形、環形、連鎖（單一效果；連鎖 3 階，照 6.34.9；連鎖形狀本身算帶電，所以只配雷電）。
     # 點數固定的狀態配方（毒霧）在高階湊不到預算下限，用 max_tier 只在做得出來的階級出 ---
-    - {id: flame_lance, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [line], name_zh: 炎流, concept_zh: 一道火焰沿著直線噴出去, flavor_zh: 火舌貼著地面竄出，一路燒到盡頭}
-    - {id: thunder_lance, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [line], name_zh: 雷槍, concept_zh: 一道雷光沿著直線貫穿過去, flavor_zh: 電光拉成一條直線，劈啪聲一路響到底}
-    - {id: frost_breath, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, shapes: [cone], name_zh: 寒息, concept_zh: 朝前方吐出一片扇形的寒氣, flavor_zh: 你呼出一口白霧，霜花沿著扇面迅速擴散}
-    - {id: venom_mist, max_tier: 1, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cone], name_zh: 毒霧, concept_zh: 朝前方噴出一片扇形的毒霧，讓吸進去的人中毒, flavor_zh: 綠色的霧氣翻滾著向前湧去}
+    - {id: flame_lance, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, shapes: [line], name_zh: 炎流, weapon_name_zh: 炎流斬, concept_zh: 一道火焰沿著直線噴出去, flavor_zh: 火舌貼著地面竄出，一路燒到盡頭}
+    - {id: thunder_lance, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [line], name_zh: 雷槍, weapon_name_zh: 雷槍刺, concept_zh: 一道雷光沿著直線貫穿過去, flavor_zh: 電光拉成一條直線，劈啪聲一路響到底}
+    - {id: frost_breath, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, shapes: [cone], name_zh: 寒息, weapon_name_zh: 寒息斬, concept_zh: 朝前方吐出一片扇形的寒氣, flavor_zh: 你呼出一口白霧，霜花沿著扇面迅速擴散}
+    - {id: venom_mist, max_tier: 1, keyword: poisoned, skeleton: control, effect: {type: apply_status, status: poison}, theme: poison, shapes: [cone], name_zh: 毒霧, weapon_name_zh: 毒霧斬, concept_zh: 朝前方噴出一片扇形的毒霧，讓吸進去的人中毒, flavor_zh: 綠色的霧氣翻滾著向前湧去}
     - {id: whirl_slash, keyword: generic, skeleton: area, effect: {type: damage, element: physical}, shapes: [ring], categories: [weapon], name_zh: 迴旋斬, concept_zh: 原地轉身一圈，掃過周圍一圈的敵人, flavor_zh: 你旋身一轉，兵刃劃出一個完整的圓}
-    - {id: shadow_ring, keyword: concealed, skeleton: area, effect: {type: damage, element: shadow}, shapes: [ring], name_zh: 暗影環, concept_zh: 腳下的影子向外擴散成一圈，咬向周圍的敵人, flavor_zh: 影子從你腳邊漾開，像一圈黑色的水紋}
-    - {id: chain_lightning, min_tier: 3, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [chain], name_zh: 連鎖閃電, concept_zh: 一道閃電打中目標後跳向附近的敵人, flavor_zh: 電光在敵人之間來回跳躍，一個接一個地亮起}
+    - {id: shadow_ring, keyword: concealed, skeleton: area, effect: {type: damage, element: shadow}, shapes: [ring], name_zh: 暗影環, weapon_name_zh: 暗影環斬, concept_zh: 腳下的影子向外擴散成一圈，咬向周圍的敵人, flavor_zh: 影子從你腳邊漾開，像一圈黑色的水紋}
+    - {id: chain_lightning, min_tier: 3, keyword: charged, skeleton: area, effect: {type: damage, element: lightning}, shapes: [chain], name_zh: 連鎖閃電, weapon_name_zh: 連鎖閃電擊, concept_zh: 一道閃電打中目標後跳向附近的敵人, flavor_zh: 電光在敵人之間來回跳躍，一個接一個地亮起}
     # --- BAL-19f 追加（玩法 PM 2026-11-02，#69 三選一只出白板）：號令型武器技——一次武器攻擊，並讓你的召喚物到你下回合開始前造成的傷害提高；本身不召喚、吃武器屬性 ---
     - {id: command_strike, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: melee}, name_zh: 號令突擊, concept_zh: 揮出一擊並高聲號令，你的召喚物跟著發狠, flavor_zh: 你一擊得手，回頭一聲令下，身後的召喚物齊齊撲上}
     - {id: command_shot, starter: false, keyword: summon, skeleton: strike, effect: {type: damage, element: physical}, rider: {type: apply_status, status: commanding, affects: self}, categories: [weapon], skill: {weapon_req: ranged}, name_zh: 號令箭, concept_zh: 射出一箭為召喚物指明目標，牠們下手更狠, flavor_zh: 鳴箭破空，召喚物順著箭聲撲向獵物}
