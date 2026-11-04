@@ -4,7 +4,8 @@
 // 這裡先估寬度，放不下時：
 //   1. 每段換成縮寫（「AP 2」→「AP2」、「法力 5」→「法5」、「冷卻 2 回合」→「冷2」……）；
 //   2. 還放不下，從後面拿掉不是 AP、冷卻的段，最後一段加「…」。
-// 「・」只放在段與段之間（接在前一段後面），所以整行永遠不會以「・」結尾；AP 與冷卻一定留著。
+// 「・」只放在段與段之間；RT-3b（美術 PM 6F-7 檢查必修 1：行尾不能留「・」）起「・」接在**下一段的開頭**，
+// 換行點在「・」之前，所以每一行都不會以「・」結尾（新的一行可以以「・」開頭）；AP 與冷卻一定留著。
 // 完整的代價照舊在滑過的技能卡上。
 
 /** 估寬用的字寬（em）：中日韓字與全形符號 1、空白 0.3、其他半形 0.6（偏寬估，寧可早一點縮寫）。 */
@@ -58,12 +59,12 @@ export function keepsCost(part: string): boolean {
   return /^AP ?\d/.test(part) || /^冷卻? ?\d/.test(part);
 }
 
-/** 照畫面的換行方式（每段不拆、「・」接在前一段後面、段與段之間換行）排的行數。`sep` 傳空字串時量已經接好「・」的 `costPieces`。 */
+/** 照畫面的換行方式（每段不拆、「・」接在下一段的開頭、段與段之間換行）排的行數。`sep` 傳空字串時量已經接好「・」的 `costPieces`。 */
 export function costLines(parts: readonly string[], lineEm = COST_LINE_EM, sep = COST_SEP): number {
   let lines = parts.length > 0 ? 1 : 0;
   let used = 0;
   parts.forEach((p, i) => {
-    const w = textEm(p) + (i < parts.length - 1 ? textEm(sep) : 0);
+    const w = textEm(p) + (i > 0 ? textEm(sep) : 0);
     if (used > 0 && used + w > lineEm) {
       lines += 1;
       used = 0;
@@ -98,7 +99,71 @@ export function fitCost(parts: readonly string[], maxLines: number, lineEm = COS
   return { parts: kept, more: kept.length < short.length };
 }
 
-/** 畫面上每段的字（「・」接在前一段後面；有拿掉的段時最後一段加「…」）。 */
+/** 畫面上每段的字（RT-3b：「・」接在下一段的開頭；有拿掉的段時最後一段加「…」）。 */
 export function costPieces(fit: FittedCost): string[] {
-  return fit.parts.map((p, i) => (i < fit.parts.length - 1 ? `${p}${COST_SEP}` : fit.more ? `${p}${COST_MORE}` : p));
+  const last = fit.parts.length - 1;
+  return fit.parts.map((p, i) => `${i > 0 ? COST_SEP : ""}${p}${i === last && fit.more ? COST_MORE : ""}`);
+}
+
+// ---------------------------------------------------------------- 技能名的斷行（RT-3b，6F-7 檢查必修 1）
+
+/** 很長的名字（xlong，11px）每行可用的寬（em）：124px ÷ 11px ≈ 11.3，留一點餘裕。 */
+export const NAME_LINE_EM = 10.8;
+/** 兩行還放不下時縮到的字級（px）與每行寬（em，124px ÷ 10px ≈ 12.4，留餘裕）。 */
+export const NAME_TIGHT_PX = 10;
+export const NAME_TIGHT_LINE_EM = 11.9;
+/** 適合斷行的字（斷在它後面）：「的」「之」「與」「和」「・」、空白。 */
+const NAME_BREAK_AFTER = new Set(["的", "之", "與", "和", "・", " ", "·"]);
+/** 每一行至少幾個字（最後一行不能只剩一個字）。 */
+export const NAME_MIN_LINE = 2;
+
+export interface NameLines {
+  lines: string[];
+  /** 兩行放不下：縮小字級（`NAME_TIGHT_PX`）。 */
+  tight: boolean;
+  /** 縮小後還放不下：第二行結尾加「…」（完整名字在技能卡上）。 */
+  cut: boolean;
+}
+
+/** 名字拆成兩行：每行都放得下、每行至少兩個字；斷在「的」「之」這類字後面優先，其次是兩行平均。找不到回 null。 */
+function splitTwo(chars: readonly string[], lineEm: number): string[] | null {
+  const n = chars.length;
+  let best: { k: number; score: number } | null = null;
+  for (let k = NAME_MIN_LINE; k <= n - NAME_MIN_LINE; k++) {
+    const a = chars.slice(0, k).join("");
+    const b = chars.slice(k).join("");
+    if (textEm(a) > lineEm || textEm(b) > lineEm) continue;
+    const natural = NAME_BREAK_AFTER.has(chars[k - 1] ?? "") ? 3 : 0;
+    const score = Math.abs(k - n / 2) - natural;
+    if (best === null || score < best.score) best = { k, score };
+  }
+  return best === null ? null : [chars.slice(0, best.k).join("").trimEnd(), chars.slice(best.k).join("").trimStart()];
+}
+
+/** 很長的名字怎麼排：一行放得下就一行；否則兩行（斷點見 `splitTwo`）；還放不下就縮字級，再不行第二行加「…」。 */
+export function skillNameLines(name: string): NameLines {
+  const chars = [...name];
+  if (textEm(name) <= NAME_LINE_EM) return { lines: [name], tight: false, cut: false };
+  const two = splitTwo(chars, NAME_LINE_EM);
+  if (two !== null) return { lines: two, tight: false, cut: false };
+  const tight = splitTwo(chars, NAME_TIGHT_LINE_EM);
+  if (tight !== null) return { lines: tight, tight: true, cut: false };
+  // 縮小後還放不下：第一行盡量放滿（附近有斷點就斷在斷點），第二行放到加上「…」剛好放得下
+  let k = 0;
+  let used = 0;
+  while (k < chars.length && used + textEm(chars[k]!) <= NAME_TIGHT_LINE_EM) used += textEm(chars[k++]!);
+  for (let j = k; j > k - 3 && j > NAME_MIN_LINE; j--) {
+    if (NAME_BREAK_AFTER.has(chars[j - 1] ?? "")) {
+      k = j;
+      break;
+    }
+  }
+  const out: string[] = [];
+  let w = textEm(COST_MORE);
+  for (const ch of chars.slice(k)) {
+    if (w + textEm(ch) > NAME_TIGHT_LINE_EM) break;
+    out.push(ch);
+    w += textEm(ch);
+  }
+  return { lines: [chars.slice(0, k).join(""), `${out.join("")}${COST_MORE}`], tight: true, cut: true };
 }

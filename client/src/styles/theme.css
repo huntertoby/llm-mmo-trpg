@@ -145,6 +145,14 @@
   background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
 }
 
+/* RT-3b（6F-7 檢查小修：反應詢問框底多出約 30px 空白）：內容沒有超出時（PopupFrame 量了標 data-overflow="0"）
+   不需要漸隱，色塊高度 0（保留 clear，浮動的關閉鈕照舊撐得住） */
+.ui-popup-hud > .ui-popup-body:not([data-overflow="1"])::after,
+.ui-popup-dialog > .ui-popup-body:not([data-overflow="1"])::after,
+.world-hud-center > .world-event > .ui-popup-body:not([data-overflow="1"])::after {
+  height: 0;
+}
+
 /* RT-3（UI-E1b 待決 10）：上緣也加漸隱。捲動內容最前面一塊 sticky 色塊（負的下邊距，不佔版面）；
    還沒捲時看不見（不蓋第一行），捲下去後（PopupFrame 在捲動區標 data-scrolled="1"）黏在捲動區頂端，蓋住被切半的那行字。
    RT-3b（RT-3檢查 必修 3：被切的那一行和勾選框都要完全淡掉）：32px → 56px，上面 60%（約 34px）是實色底色，

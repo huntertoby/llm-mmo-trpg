@@ -63,6 +63,13 @@ export function clampAxis(view: number, content: number, center: number, lo = 0,
   const safe = view - lo - hi;
   if (!(safe > 0)) return clampAxis(view, content, center); // HUD 比畫面還大（極小視窗）：不扣
   if (content <= safe) return -(lo + (safe - content) / 2);
+  // RT-3b（6F-7 檢查小修：窄視窗的室內地圖，出口「出」格子蓋在工具列上）：比安全區大、但扣掉 `hi`（下方工具列）
+  // 還放得下時，整張貼齊 `hi` 那一邊（例如房間下緣貼在工具列上方，往上對齊），不再跟著主角捲到工具列底下。
+  // 這時 `lo` 那一邊（左上主角卡）會蓋到地圖的一角：主角卡只在左邊，蓋到的是邊角而不是出口。
+  if (hi > 0 && content <= view - hi) {
+    const y = content - view + hi;
+    return y === 0 ? 0 : y;
+  }
   const x = Math.max(-lo, Math.min(content - view + hi, center - lo - safe / 2));
   return x === 0 ? 0 : x; // 不回 −0
 

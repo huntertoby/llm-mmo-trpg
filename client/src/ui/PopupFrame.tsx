@@ -5,7 +5,7 @@
 // - `dialog`：戰鬥詢問視窗（3-8 的 `decision-card`）：水平置中、靠上或靠下，框內捲；
 // - `inline`：疊在別的容器裡（中上方的遇敵卡、事件卡），位置由容器決定。
 // 四角飾件畫在外框的 `::after`（`.rt-frame`），內容捲在 `.ui-popup-body` 裡，所以捲動時飾件不跟著跑。
-import type { CSSProperties, ReactNode, Ref, UIEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref, type RefObject, type UIEvent } from "react";
 
 /** 6F-3 `popupBox()` 的結果（CSS 像素，相對 HUD 舞台）。 */
 export interface PopupBoxLike {
@@ -35,6 +35,40 @@ function markScrolled(e: UIEvent<HTMLDivElement>): void {
   if (el.dataset.scrolled !== flag) el.dataset.scrolled = flag;
 }
 
+/** 下緣漸隱的高度（CSS `.ui-popup-body::after`）。 */
+export const BOTTOM_FADE_PX = 32;
+
+/**
+ * RT-3b（6F-7 檢查小修：ue1b_09_reaction_1600 框底多出約 30px 空白）：內容有超出捲動區時才放下緣漸隱
+ *（漸隱是內容最後面的一塊 sticky 色塊，沒有超出時它只是 32px 的空白）。量的時候扣掉漸隱自己佔的高度，才不會來回跳。
+ */
+export function overflowFlag(scrollHeight: number, clientHeight: number, fadeShown: boolean): "1" | "0" {
+  return scrollHeight - (fadeShown ? BOTTOM_FADE_PX : 0) > clientHeight + 1 ? "1" : "0";
+}
+
+function markOverflow(el: HTMLElement): void {
+  const flag = overflowFlag(el.scrollHeight, el.clientHeight, el.dataset.overflow === "1");
+  if (el.dataset.overflow !== flag) el.dataset.overflow = flag;
+}
+
+/** 伺服器端（測試的 renderToStaticMarkup）沒有版面：用 useEffect，避免 useLayoutEffect 的警告。 */
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/** 每次重繪、捲動區大小改變時重量一次有沒有超出。 */
+function useOverflowFlag(ref: RefObject<HTMLDivElement | null>): void {
+  useIsoLayoutEffect(() => {
+    if (ref.current !== null) markOverflow(ref.current);
+  });
+  useEffect(() => {
+    const el = ref.current;
+    if (el === null || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => markOverflow(el));
+    ro.observe(el);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    return () => ro.disconnect();
+  }, [ref]);
+}
+
 interface Props {
   placement: PopupPlacement;
   tone?: PopupTone;
@@ -53,6 +87,8 @@ interface Props {
 }
 
 export function PopupFrame({ placement, tone = "normal", className, role, label, testId, data, head, frameRef, children }: Props) {
+  const body = useRef<HTMLDivElement | null>(null);
+  useOverflowFlag(body);
   const attrs = Object.fromEntries(Object.entries(data ?? {}).map(([k, v]) => [`data-${k}`, v]));
   const cls = ["ui-popup", "rt-frame", `ui-popup-${placement.kind}`, tone === "danger" ? "danger" : "", placement.kind === "dialog" && placement.low ? "low" : "", className ?? ""]
     .filter((c) => c !== "")
@@ -65,7 +101,7 @@ export function PopupFrame({ placement, tone = "normal", className, role, label,
         </div>
       )}
       {head}
-      <div className="ui-popup-body" onScroll={markScrolled}>
+      <div ref={body} className="ui-popup-body" onScroll={markScrolled}>
         {children}
       </div>
     </div>

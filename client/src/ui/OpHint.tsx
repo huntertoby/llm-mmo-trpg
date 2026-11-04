@@ -3,6 +3,7 @@
 // 「一次」＝進入一次選取（`token` 換了才算新的一次，例如換了技能）；同一次選取中途不會從句子變成「?」。
 import { useEffect, useRef } from "react";
 import { bumpOpHint, showOpHint, type OpHintKind } from "../battle/opHints";
+import { keepWords } from "./keepWords";
 import { PartTip } from "./PartTip";
 
 interface Props {
@@ -34,7 +35,7 @@ export function useOpHintFull(kind: OpHintKind, token: string): boolean {
 
 /** 完整句子或「?」；收起時兩段選取的狀態（「已選定○○」）留在「?」旁當小標籤（6A-4c）。 */
 export function OpHintView({ full, label, text, tag = null }: { full: boolean; label: string; text: string; tag?: string | null }) {
-  if (full) return <div className="small muted op-hint">{text}</div>;
+  if (full) return <div className="small muted op-hint">{keepWords(text)}</div>;
   return (
     <div className="small muted op-hint collapsed">
       <PartTip cat="操作說明" label={label} tip={text}>

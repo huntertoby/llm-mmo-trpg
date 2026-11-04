@@ -11,6 +11,10 @@ type Pt = readonly [number, number];
 const INK = "#2b1e16";
 /** 潛行圖示的淺色圓底（6F-7）。 */
 export const SNEAK_MOON = "#d4dbef";
+/** RT-3b：所有工具列圖示的淺色圓底（和 6F-7 的潛行月光同色）、細框與半徑（48 格畫布，圓在 8～40 之內）。 */
+export const HUD_BACKING = SNEAK_MOON;
+export const HUD_BACKING_EDGE = "#8a94b8";
+export const HUD_BACKING_R = 15.5;
 const TAU = Math.PI * 2;
 
 function seedOf(s: string): number {
@@ -195,9 +199,7 @@ const ICONS: Record<HudBarKey, { zh: string; draw: Draw }> = {
     zh: "潛行",
     draw: (c) => (
       <>
-        {/* 6F-7（美術 PM 驗收小修 5）：深色兜帽放在深色按鈕底上看不見，墊一個淺色的月光圓底（停用、整條變淡時也看得出形狀） */}
-        {/* 圓底不超出原本圖形的範圍（x 8～40、y 8～40），功能列外框右上的飾件量測照舊讓得開 */}
-        <circle className="sneak-moon" cx={25} cy={21} r={13} fill={SNEAK_MOON} stroke="#8a94b8" strokeWidth={1} />
+        {/* 6F-7：深色兜帽墊淺色的月光圓底；RT-3b 起所有圖示都墊同一個圓底（`HudBarIcon` 的 `hud-bar-backing`） */}
         <Ink clip={c} k="sneak-hood" pts={[[14, 22], [18, 10], [30, 8], [38, 18], [36, 30], [24, 26]]} color="#3a3a44" opt={{ w: 0.9 }} />
         <Ink clip={c} k="sneak-face" pts={[[22, 18], [32, 16], [33, 24], [24, 25]]} color="#1a1a20" opt={{ shade: false, w: 0.5 }} />
         <Dot x={26} y={20} r={1.1} color="#c8f0ff" />
@@ -234,6 +236,10 @@ export function HudBarIcon({ k, size = 25 }: { k: HudBarKey; size?: number }) {
   const clip = `hudbar${useId().replace(/:/g, "")}`;
   return (
     <svg className="hud-icon hud-bar-icon" viewBox="0 0 48 48" width={size} height={size} aria-hidden="true" data-bar-icon={k}>
+      {/* RT-3b（美術 PM 回覆 6F-7 小修 5：所有工具列圖示一律墊淺色圓底）：深色的 Y 影子、R 兜帽放在深色按鈕底上看不見，
+          每個圖示最下層都墊同一個淺色圓底（停用、整條變淡時也看得出形狀）。圓底不超出原本圖形的範圍（x 8～40、y 8～40），
+          功能列外框右上的飾件量測照舊讓得開。 */}
+      <circle className={`hud-bar-backing${k === "R" ? " sneak-moon" : ""}`} cx={24} cy={24} r={HUD_BACKING_R} fill={HUD_BACKING} stroke={HUD_BACKING_EDGE} strokeWidth={1} />
       {ICONS[k].draw(clip)}
     </svg>
   );
