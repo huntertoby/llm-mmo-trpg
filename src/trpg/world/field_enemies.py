@@ -603,6 +603,7 @@ def _contact_model(
         first=first,
         retreat_to=visit.arrived,
         enemy_at=enemy.xy,
+        enemy_facing=enemy.facing,
     )
 
 
