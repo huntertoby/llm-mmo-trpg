@@ -26,7 +26,7 @@
 <h2>1. 可以選的部位（人類示範；每一格只改一項，其他是預設）</h2>
 <canvas id="cat"></canvas>
 
-<h2>2. 「男／女」是快速組合，不是限制：按一下套一組預設，每一項還是可以自己改</h2>
+<h2>2. 「粗獷／柔和」是快速組合，不是性別：按一下套一組預設，每一項還是可以自己改（使用者決定不設性別）</h2>
 <canvas id="sex"></canvas>
 
 <h2>3. 同一個種族，5 個不同的人（種族特徵固定，其他照種族可選範圍隨機）</h2>
@@ -34,11 +34,11 @@
 <canvas id="races"></canvas>
 
 <h2>4. 建角頁怎麼選（可以點）<span class="tag">名字 → 種族 → <b>外觀</b> → 出身</span></h2>
-<p class="note">選完種族卡後多一步「外觀」：左邊是現在的大紙娃娃預覽（可轉正面、側面、背面），右邊一排一排點選；「隨機」在種族範圍裡抽一組；「男／女」套快速組合。種族換掉時，新種族沒有的選項改回該族預設（例：換成鱗族，髮型改回無）。</p>
+<p class="note">選完種族卡後多一步「外觀」：左邊是現在的大紙娃娃預覽（可轉正面、側面、背面），右邊一排一排點選；「隨機」在種族範圍裡抽一組；「粗獷／柔和」套快速組合。種族換掉時，新種族沒有的選項改回該族預設（例：換成鱗族，髮型改回無）。</p>
 <div class="create"><div class="left"><canvas id="big"></canvas><div class="nm">艾琳</div><div class="rc" id="rc">人類</div><div class="dirs" id="dirs"></div></div><div id="panel"></div></div>
 
 <h2>5. NPC 與敵人也用同一套參數：同一個「山賊」範本，依單位 id 做出差異</h2>
-<p class="note">敵人、傭兵、主城路人沒有指定外觀時，用單位 id 雜湊（同 6M 的 <code>seedOf</code>，FNV-1a）在種族範圍裡挑，同一個單位每次都長一樣，重播也一樣；範本有寫的欄位（例：頭目的鬍子）照範本，不被覆蓋。只在前端畫面，不進引擎。</p>
+<p class="note">一般敵人與主城路人沒有指定外觀時，用單位 id 雜湊（同 6M 的 <code>seedOf</code>，FNV-1a）在種族範圍裡挑，同一個單位每次都長一樣，重播也一樣；範本有寫的欄位照範本，不被覆蓋。<b>具名 NPC（24 位）、頭目、9 名傭兵外觀固定，不隨機</b>（玩法 PM）。只在前端畫面，不進引擎。</p>
 <canvas id="foes"></canvas>
 
 <h2>6. 頭像 64／32px：臉型、眼睛、髮型、鬍子都跟著變</h2>
@@ -76,9 +76,9 @@ function catalog(){const rows=[["face",4],["eyeStyle",4],["hair",8],["beardStyle
   label(x,"眼色＋睫毛",745,y0+20,"#e8bb48",13);EYEC.forEach((c,i)=>{Q.stamp(x,{look:{...HUMAN,eyes:c,lashes:i%2===1,eyeStyle:"big"},gear:SHIRT},"front",720+i*84,y0+RH+12,2.4,false);});}
 catalog();
 
-// ---- 男／女快速組合 ----
+// ---- 粗獷／柔和快速組合（不設性別） ----
 const PRESET={male:{frame:"broad",hair:"short",beardStyle:"short",lashes:false,eyeStyle:"square"},female:{frame:"slim",hair:"ponytail",lashes:true,beardStyle:null,eyeStyle:"big"},none:{}};
-function sex(){const x=cv("sex",1240,150);floor(x,24,3);const L=[["不選（預設）","none"],["男","male"],["女","female"]];const V=[["front",false,"正面"],["side",false,"側面"],["back",false,"背面"]];
+function sex(){const x=cv("sex",1240,150);floor(x,24,3);const L=[["種族預設","none"],["粗獷","male"],["柔和","female"]];const V=[["front",false,"正面"],["side",false,"側面"],["back",false,"背面"]];
   L.forEach(([zh,k],g)=>{const look={...HUMAN,...PRESET[k]};label(x,zh,20+g*410+30,16,"#e8bb48",13);V.forEach(([v,w,t],j)=>{const cx=60+g*410+j*110;Q.stamp(x,{look,gear:SHIRT},v,cx,128,2.1,w);label(x,t,cx,144);});});}
 sex();
 
@@ -88,7 +88,7 @@ const RULE={
   elf:{skin:["#f6e0cc","#efd2b8","#e0c0a8","#c8a890"],hair:["long","bob","ponytail","twin","bun","short"],hairC:["#e8e0c8","#d8a848","#9a9aa8","#3a5a3a","#2a1c14"],beard:[null]},
   fox:{skin:["#f1d0b0","#e8c098","#d8a878"],hair:["short","long","bob","ponytail","twin","spiky"],hairC:["#d8762a","#e8e0c8","#2a1c14","#9a9aa8","#c27a2c"],beard:[null]},
   dragonkin:{skin:["#d8a878","#c8946a","#b07a52"],hair:["short","long","spiky","ponytail"],hairC:["#3a2418","#2a1c14","#8a2a1a","#e8e0c8"],beard:[null,"short","goatee"]},
-  dwarf:{skin:["#e8b890","#d9a47a","#a8724c"],hair:["short","none","bun","ponytail","spiky"],hairC:["#a8481e","#2a1c14","#9a9aa8","#d8a848","#e8e0c8"],beard:["full","short","goatee","mustache"]},
+  dwarf:{skin:["#e8b890","#d9a47a","#a8724c"],hair:["short","none","bun","ponytail","spiky"],hairC:["#a8481e","#2a1c14","#9a9aa8","#d8a848","#e8e0c8"],beard:"all"}, // 玩法 PM：預設大鬍子、可選無
   cyborg:{skin:["#e6c4a4","#d9a47a","#a8724c","#7a4e32"],hair:"all",hairC:["#2a2a34","#9a9aa8","#3a5aa8","#b33a3a","#e8e0c8"],beard:[null,"short","goatee"]},
   orc:{skin:["#86a060","#6f8f50","#9aaa70","#7a9a8a"],hair:["short","none","spiky","ponytail","long"],hairC:["#1e1a14","#3a2418","#9a9aa8"],beard:[null,"short","goatee","full"]},
   fiend:{skin:["#b07a7a","#9a6a8a","#c08a7a","#8a5a6a"],hair:"all",hairC:["#1e1418","#e8e0c8","#b33a3a","#5a2a6a"],beard:[null,"goatee"]},
@@ -100,13 +100,14 @@ function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math
 const pick=(r,arr)=>arr[Math.floor(r()*arr.length)];
 /** 種族範圍內抽一組外觀（同一個 key 永遠得到同一組）。fixed：範本已指定的欄位，不覆蓋。 */
 function vary(race,key,fixed={}){const r=rng(seedOf(key)),R0=RaceArt.RACES[race].look,U=RULE[race];const hairs=U.hair==="all"?OPT.hair.map(o=>o[0]):U.hair,beards=U.beard==="all"?OPT.beardStyle.map(o=>o[0]):U.beard;
-  // 先軟性抽「男／女」，再照它挑髮型、鬍子、睫毛、體型（不會抽出睫毛配大鬍子這種組合；矮人的鬍子是種族特徵，照留）
+  // 先軟性抽「粗獷／柔和」（不存性別），再照它挑髮型、鬍子、睫毛、體型（不會抽出睫毛配大鬍子這種組合；矮人的鬍子是種族特徵，照留）
   const fem=r()<0.5,pref=(list,want)=>{const f=list.filter(v=>want.includes(v));return f.length?f:list;};
   const hairP=fem?pref(hairs,["long","bob","ponytail","twin","bun"]):pref(hairs,["short","spiky","none","ponytail","long"]);
-  const beardP=race==="dwarf"?beards:fem?[null]:beards;
+  const beardP=fem?[null]:race==="dwarf"?["full","full","short","goatee","mustache"]:beards;
   const lk={...R0,skin:pick(r,U.skin),face:pick(r,fem?[["oval"],["heart"],["round"]]:OPT.face)[0],eyeStyle:pick(r,fem?[["big"],["dot"],["smile"],["square"]]:OPT.eyeStyle)[0],hair:R0.hair?pick(r,hairP):undefined,hairColor:pick(r,U.hairC),beardStyle:pick(r,beardP),frame:pick(r,fem?[null,"slim"]:[null,"broad"]),lashes:fem&&r()<0.8,eyes:R0.eyes??pick(r,EYEC.slice(0,4))};
   if(race==="scalefolk")delete lk.hair;if(lk.hair==="none")lk.beardStyle=lk.beardStyle;if(!lk.beardStyle)delete lk.beardStyle;if(!lk.frame)delete lk.frame;
-  if(lk.tail==="fox")lk.tailColor=lk.hairColor;return {...lk,...fixed};}
+  if(lk.tail==="fox")lk.tailColor=lk.hairColor;if(race==="dragonkin")lk.scaleColor=pick(r,["#a8784a","#9a3a2a","#c89a3a","#4a4450"]); // 龍裔鱗色：銅、赤、金、黑曜
+  return {...lk,...fixed};}
 const RKEYS=["human","elf","fox","dragonkin","dwarf","cyborg","orc","fiend","scalefolk","seafolk"];
 const OUTFIT=[{body:{kind:"shirt",color:"#6a6a7a"}},{body:{kind:"leather",color:"#6a5040"}},{body:{kind:"robe",color:"#5a3fa0"}},{body:{kind:"coat",color:"#4a5058"}},{body:{kind:"mail",color:"#8a6a3a"}}];
 function races(){const x=cv("races",1240,5*112+8);floor(x,24,12);RKEYS.forEach((rk,i)=>{const col=i%2,row=Math.floor(i/2),x0=col*620,y0=row*112;label(x,RaceArt.RACES[rk].zh,x0+40,y0+60,"#e8bb48",13);
@@ -129,14 +130,14 @@ function render(){drawBig();const P=document.getElementById("panel");P.innerHTML
     row.appendChild(ch);P.appendChild(row);}
   const sw=(k,list,zh)=>{const row=document.createElement("div");row.className="row";row.innerHTML=`<div class="k">${zh}</div>`;const ch=document.createElement("div");ch.className="chips";list.forEach(c=>{const d=document.createElement("div");d.className="sw"+(SEL.look[k]===c?" on":"");d.style.background=c;d.onclick=()=>{SEL.look={...SEL.look,[k]:c};if(SEL.look.tail==="fox"&&k==="hairColor")SEL.look.tailColor=c;render();};ch.appendChild(d);});row.appendChild(ch);P.appendChild(row);};
   sw("skin",RULE[SEL.race].skin,"膚色");if(SEL.race!=="scalefolk")sw("hairColor",RULE[SEL.race].hairC,"髮色");sw("eyes",EYEC,"眼色");
-  const b=document.createElement("div");b.className="btns";for(const [t,f] of [["男",()=>preset("male")],["女",()=>preset("female")],["隨機",()=>{SEL.look=vary(SEL.race,"roll:"+Math.random());render();}],["回到種族預設",()=>{SEL.look={...RaceArt.RACES[SEL.race].look};render();}]]){const e=document.createElement("button");e.textContent=t;e.onclick=f;b.appendChild(e);}
+  const b=document.createElement("div");b.className="btns";for(const [t,f] of [["粗獷",()=>preset("male")],["柔和",()=>preset("female")],["隨機",()=>{SEL.look=vary(SEL.race,"roll:"+Math.random());render();}],["種族預設",()=>{SEL.look={...RaceArt.RACES[SEL.race].look};render();}]]){const e=document.createElement("button");e.textContent=t;e.onclick=f;b.appendChild(e);}
   const lb=document.createElement("label");lb.style.cssText="font-size:13px;color:#c8bca8;margin-left:8px;align-self:center";lb.innerHTML=`<input type="checkbox" ${SEL.look.lashes?"checked":""}> 睫毛`;lb.querySelector("input").onchange=(e)=>{SEL.look={...SEL.look,lashes:e.target.checked};render();};b.appendChild(lb);P.appendChild(b);}
-function preset(k){const p={...PRESET[k]};const U=RULE[SEL.race];if(U.beard!=="all"&&!U.beard.includes(p.beardStyle??null))delete p.beardStyle;if(SEL.race==="dwarf"&&k==="female")p.beardStyle=SEL.look.beardStyle;if(SEL.race==="scalefolk")delete p.hair;else if(U.hair!=="all"&&p.hair&&!U.hair.includes(p.hair))delete p.hair;SEL.look={...SEL.look,...p};if(!SEL.look.beardStyle)delete SEL.look.beardStyle;render();}
+function preset(k){const p={...PRESET[k]};const U=RULE[SEL.race];if(U.beard!=="all"&&!U.beard.includes(p.beardStyle??null))delete p.beardStyle;if(SEL.race==="scalefolk")delete p.hair;else if(U.hair!=="all"&&p.hair&&!U.hair.includes(p.hair))delete p.hair;SEL.look={...SEL.look,...p};if(!SEL.look.beardStyle)delete SEL.look.beardStyle;render();}
 function setRace(k){const keep=SEL.look,U=RULE[k],base={...RaceArt.RACES[k].look};
   // 換種族：新種族沒有的選項改回該族預設；臉型、眼睛、睫毛、體型各族都有，保留
   const lk={...base,face:keep.face,eyeStyle:keep.eyeStyle,lashes:keep.lashes,frame:keep.frame};
   if(k!=="scalefolk"&&keep.hair&&(U.hair==="all"||U.hair.includes(keep.hair)))lk.hair=keep.hair;if(U.hairC.includes(keep.hairColor))lk.hairColor=keep.hairColor;if(U.skin.includes(keep.skin))lk.skin=keep.skin;
-  const bs=keep.beardStyle??null;if(U.beard==="all"||U.beard.includes(bs))lk.beardStyle=bs??undefined;if(k==="dwarf"&&!lk.beardStyle)lk.beardStyle="full";
+  const bs=keep.beardStyle??null;if(U.beard==="all"||U.beard.includes(bs))lk.beardStyle=bs??undefined;if(k==="dwarf"&&keep.beardStyle===undefined)lk.beardStyle="full";
   if(lk.tail==="fox")lk.tailColor=lk.hairColor;SEL={...SEL,race:k,look:lk};render();}
 {const D=document.getElementById("dirs");for(const [k,t] of [["front","正面"],["side","朝東"],["west","朝西"],["back","背面"]]){const b=document.createElement("button");b.textContent=t;b.onclick=()=>{SEL.dir=k;[...D.children].forEach(e=>e.classList.toggle("on",e===b));drawBig();};if(k==="front")b.classList.add("on");D.appendChild(b);}}
 SEL.look={...SEL.look,face:"heart",eyeStyle:"big",lashes:true,hair:"ponytail",hairColor:"#c27a2c",frame:"slim"};render();
@@ -146,8 +147,8 @@ function foes(){const x=cv("foes",1240,2*120+10);floor(x,24,6);const B=PaperDoll
   label(x,"山賊 ×8（範本相同，id 不同）",120,16,"#e8bb48",13);
   for(let i=0;i<8;i++){const rk=["human","human","orc","human","dwarf","human","fox","human"][i];const look=vary(rk,`battle-7:bandit_${i}`);Q.stamp(x,{look,gear:B.gear},"front",60+i*82,112,1.65,false);label(x,`bandit_${i}`,60+i*82,118+8,"#8a8070",10);}
   label(x,"同一隻山賊在每個方向、每場重播都長一樣",920,16,"#e8bb48",13);const one=vary("human","battle-7:bandit_3");[["front",false],["side",false],["side",true],["back",false]].forEach(([v,w],j)=>Q.stamp(x,{look:one,gear:B.gear},v,760+j*84,112,1.65,w));
-  label(x,"範本有寫的欄位照範本：頭目的大鬍子、髮型、髮色固定，只變臉型、眼睛、膚色、體型（示範時拿掉頭盔）",420,140,"#e8bb48",13);
-  for(let i=0;i<6;i++){const look=vary("human",`boss:${i}`,{beardStyle:"full",hair:"short",hairColor:"#1c1410"});const gear={...BOSS.gear};delete gear.head;Q.stamp(x,{look,gear},"front",160+i*120,236,1.65,false);}}
+  label(x,"頭目、具名 NPC、傭兵：外觀固定，每場、每個 id 都一樣（不隨機）",420,140,"#e8bb48",13);
+  for(let i=0;i<6;i++){Q.stamp(x,{look:BOSS.look,gear:BOSS.gear},"front",160+i*120,236,1.65,false);label(x,`battle-${i+1}`,160+i*120,248,"#8a8070",10);}}
 foes();
 
 // ---- 頭像 ----

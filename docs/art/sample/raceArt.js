@@ -33,10 +33,27 @@ window.RaceArt = (() => {
 
   // ---- 尾巴：正面、側面畫在身體後面（從腰側露出）；背面畫在披風之上 ----
   const TAIL = {
+    // 龍尾（11-04 晚加粗）：根部寬 9、往末端收尖，背上一排背棘、腹面淺色一道；不是細長的貓尾
     dragon: (ctx, look) => {
       const c = look.scaleColor ?? "#a8784a";
-      fill(ctx, c, () => { ctx.moveTo(0, -15); ctx.quadraticCurveTo(12, -13, 17, -2); ctx.lineTo(20, 1); ctx.lineTo(15, 0); ctx.quadraticCurveTo(9, -6, 0, -8); ctx.closePath(); });
-      for (const t of [0.3, 0.55, 0.78]) fill(ctx, mix(c, "#ffffff", 0.3), () => { const x = 17 * t, y = -14 + 12 * t; ctx.moveTo(x - 1.5, y); ctx.lineTo(x + 0.5, y - 3.5); ctx.lineTo(x + 1.8, y + 0.5); ctx.closePath(); });
+      for (const t of [0.22, 0.42, 0.62, 0.8]) fill(ctx, mix(c, "#ffffff", 0.3), () => { const x = 19 * t, y = -16.5 + 15 * t; ctx.moveTo(x - 2, y + 1); ctx.lineTo(x + 0.4, y - 4.2); ctx.lineTo(x + 2.2, y + 1.2); ctx.closePath(); });
+      fill(ctx, c, () => { ctx.moveTo(0, -17); ctx.quadraticCurveTo(13, -15.5, 18.5, -3); ctx.lineTo(23, 1.5); ctx.lineTo(16.5, 0.6); ctx.quadraticCurveTo(9, -4.5, 0, -8); ctx.closePath(); });
+      fill(ctx, mix(c, "#f4e6c8", 0.45), () => { ctx.moveTo(0, -10); ctx.quadraticCurveTo(8.5, -7, 15.5, -0.6); ctx.lineTo(16.5, 0.6); ctx.quadraticCurveTo(9, -4.5, 0, -8); ctx.closePath(); });
+    },
+    // 獸耳族的尾巴：貓（細長往上彎）、狼（粗、往下垂）、兔（小圓球）；狐照舊（蓬、末端白）
+    cat: (ctx, look) => {
+      const c = look.tailColor ?? look.hairColor ?? "#5a3a22";
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, -12); ctx.bezierCurveTo(9, -11, 12, -17, 10, -24); ctx.stroke();
+      fill(ctx, c, () => ctx.arc(10, -24.2, 1.3, 0, TAU));
+    },
+    wolf: (ctx, look) => {
+      const c = look.tailColor ?? look.hairColor ?? "#7a7a84";
+      fill(ctx, c, () => { ctx.moveTo(0, -14); ctx.quadraticCurveTo(9, -14, 11, -6); ctx.quadraticCurveTo(12, 0, 8.5, 2); ctx.quadraticCurveTo(7, -5, 0, -9); ctx.closePath(); });
+      fill(ctx, mix(c, "#000000", 0.3), () => { ctx.moveTo(11.3, -2.5); ctx.quadraticCurveTo(12, 0.5, 8.5, 2); ctx.quadraticCurveTo(9.5, -0.5, 11.3, -2.5); ctx.closePath(); });
+    },
+    rabbit: (ctx, look, view) => {
+      // 兔尾是小圓球：背面在正中，側面在後腰邊緣露出，正面被身體擋住
+      fill(ctx, look.tailColor ?? mix(look.hairColor ?? "#e8e0c8", "#ffffff", 0.5), () => ctx.arc(view === "back" ? 0 : 6, -10.5, 2.4, 0, TAU));
     },
     fox: (ctx, look) => {
       const c = look.tailColor ?? look.hairColor ?? "#d8762a";
@@ -73,14 +90,14 @@ window.RaceArt = (() => {
   function tail(ctx, look, view, side) {
     wings(ctx, look, view);
     spines(ctx, look);
-    const draw = TAIL[look.tail];
+    const draw = TAIL[look.tail === "fox" && look.beastEars && TAIL[look.beastEars] ? look.beastEars : look.tail];
     if (!draw) return;
     ctx.save();
     // 側面：尾巴朝身後；正面：從右腰露出；背面：往右下垂
     const dir = side === 1 ? -1 : side === -1 ? 1 : 1;
     ctx.scale(dir, 1);
     if (view === "back") ctx.translate(0, 2);
-    draw(ctx, look);
+    draw(ctx, look, view);
     ctx.restore();
   }
 
@@ -106,6 +123,12 @@ window.RaceArt = (() => {
     if (look.pattern === "dragonscale") {
       const c = look.scaleColor ?? "#a8784a";
       fill(ctx, c, () => { for (const [x, y] of [[-7, -27], [-6, -24.5], [-4.5, -22.5], [7, -27], [6, -24.5], [4.5, -22.5], [-7.5, -30], [7.5, -30]]) { ctx.moveTo(ex + x + 1.5, y); ctx.arc(ex + x, y, 1.5, 0, Math.PI); } });
+    }
+    if (look.pattern === "dragonQ") {
+      // Q 版龍鱗（11-04 晚）：少量就好，每邊臉頰 2 片小鱗、額頭 1 片菱形鱗（舊的 dragonscale 一邊 4 片加鼻樑鱗脊，放大看像虎斑）
+      const c = look.scaleColor ?? "#a8784a";
+      fill(ctx, c, () => { for (const [x, y] of [[-6.6, -26.2], [-5.4, -24.1], [6.6, -26.2], [5.4, -24.1]]) { if (side && Math.sign(x) === -side) continue; ctx.moveTo(ex + x + 1.1, y); ctx.arc(ex + x, y, 1.1, 0, Math.PI); } });
+      fill(ctx, c, () => { ctx.moveTo(ex, -36.4); ctx.lineTo(ex + 1.3, -35); ctx.lineTo(ex, -33.6); ctx.lineTo(ex - 1.3, -35); ctx.closePath(); });
     }
     if (look.ridge) {
       const c = look.scaleColor ?? "#a8784a";
@@ -138,10 +161,19 @@ window.RaceArt = (() => {
       for (const [x, y] of [[14, -35], [14.6, -31], [13, -27.5]]) { ctx.beginPath(); ctx.moveTo(s * 8, -29.5); ctx.lineTo(s * x, y); ctx.stroke(); }
     }
   }
-  function beastEar(ctx, look, s, color) {
-    const c = color ?? look.earColor ?? look.hairColor ?? "#d8762a";
-    fill(ctx, c, () => { ctx.moveTo(s * 2.5, -36); ctx.lineTo(s * 6.5, -45); ctx.lineTo(s * 8.5, -34); ctx.closePath(); });
-    if (!color) fill(ctx, "#f2c8b0", () => { ctx.moveTo(s * 4, -36); ctx.lineTo(s * 6.3, -42); ctx.lineTo(s * 7.3, -35.5); ctx.closePath(); });
+  // 獸耳族（原狐族，#138）的四種耳朵：狐（大而尖）、貓（小三角、圓頭）、狼（直立、窄、外緣深色）、兔（長、直立）；花色跟著髮色
+  //   view：front／back 兩耳左右對稱；side（朝東）兩耳一前一後疊在頭頂，靠後的那隻稍低（不是正面照抄）
+  function beastEar(ctx, look, s, color, view = "front") {
+    const c = color ?? look.earColor ?? look.hairColor ?? "#d8762a", kind = look.beastEars ?? "fox", inner = "#f2c8b0";
+    const sd = view === "side", back = view === "back";
+    // 側面：s=−1 是後耳（往後 3、低 1），s=+1 是前耳；正面、背面照 s 左右
+    const X = (x) => (sd ? (s > 0 ? x - 4.5 : x - 8.6) : s * x), dy = sd && s < 0 ? 1 : 0;
+    const tri = (pts, col) => fill(ctx, col, () => { pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), y + dy) : ctx.moveTo(X(x), y + dy))); ctx.closePath(); });
+    const showInner = !color && !back && !(sd && s < 0); // 背面、側面的後耳看不到內側
+    if (kind === "cat") { tri([[2.8, -35.5], [5.4, -41.6], [8.4, -34.2]], c); if (showInner) tri([[4, -35.6], [5.4, -39.6], [7.1, -35]], inner); return; }
+    if (kind === "wolf") { tri([[3.4, -36], [5.6, -46], [8, -34.6]], c); fill(ctx, mix(c, "#000000", 0.3), () => { ctx.moveTo(X(5.6), -46 + dy); ctx.lineTo(X(8), -34.6 + dy); ctx.lineTo(X(7.1), -36.5 + dy); ctx.closePath(); }); if (showInner) tri([[4.5, -36.2], [5.6, -43], [6.9, -35.6]], inner); return; }
+    if (kind === "rabbit") { fill(ctx, c, () => ctx.ellipse(X(4.2), -43 + dy, 2.2, 7.6, sd ? -0.25 : s * 0.12, 0, TAU)); if (showInner) fill(ctx, inner, () => ctx.ellipse(X(4.2), -42.4 + dy, 1.1, 5.6, sd ? -0.25 : s * 0.12, 0, TAU)); return; }
+    tri([[2.5, -36], [6.5, -45], [8.5, -34]], c); if (showInner) tri([[4, -36], [6.3, -42], [7.3, -35.5]], inner);
   }
   function ears(ctx, look, view, side, head, phase) {
     const kind = look.ears;
@@ -156,7 +188,7 @@ window.RaceArt = (() => {
     if (kind === "beast") {
       if (cov.hood) { for (const s of [-1, 1]) beastEar(ctx, look, s * 0.9, head.color ?? "#5a4a3a"); return; } // 有耳朵的兜帽
       if (cov.top && !["cap", "bandana"].includes(head?.kind)) return; // 頭盔、寬帽、巫師帽：藏起來
-      for (const s of [-1, 1]) beastEar(ctx, look, s);
+      for (const s of [-1, 1]) beastEar(ctx, look, s, undefined, view === "side" && side ? "side" : view);
     }
   }
 
@@ -180,8 +212,20 @@ window.RaceArt = (() => {
     const c = look.hornColor ?? "#efe6cc";
     for (const s of [-1, 1]) {
       if (kind === "dragon") {
-        fill(ctx, c, () => { ctx.moveTo(s * 3.5, -36); ctx.quadraticCurveTo(s * 9, -44, s * 17, -45); ctx.quadraticCurveTo(s * 11, -41, s * 8.5, -35); ctx.closePath(); });
-        fill(ctx, c, () => { ctx.moveTo(s * 6.5, -34); ctx.quadraticCurveTo(s * 11, -37, s * 14, -36); ctx.quadraticCurveTo(s * 10, -34, s * 8, -32); ctx.closePath(); });
+        // 龍角（11-04 晚重做，使用者：「這龍人太像貓人了」）：象牙色、兩對往後掃。正面看是從太陽穴往外、往後掃的粗角（不往上豎，和獸耳、角魔的上捲大角分開）；
+        // 側面從額頭往後掃過頭頂。角上兩道深色環紋。
+        if (view === "side") {
+          if (s > 0) continue; // 側面兩支疊在一起，只畫一次
+          fill(ctx, c, () => { ctx.moveTo(3.8, -35.2); ctx.quadraticCurveTo(-3, -43.5, -13, -40.5); ctx.quadraticCurveTo(-5, -39.2, 0.2, -33.2); ctx.closePath(); });
+          fill(ctx, c, () => { ctx.moveTo(-1.5, -32.5); ctx.quadraticCurveTo(-6.5, -35.5, -11, -33); ctx.quadraticCurveTo(-6.5, -32.6, -2.5, -30.3); ctx.closePath(); });
+          ctx.strokeStyle = dark(c, 0.28); ctx.lineWidth = 0.7;
+          for (const [x0, y0, x1, y1] of [[-2.5, -40.2, -1.2, -37.4], [-7, -41.3, -6.2, -39]]) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
+          continue;
+        }
+        fill(ctx, c, () => { ctx.moveTo(s * 4, -36); ctx.quadraticCurveTo(s * 10, -41.5, s * 15.5, -38.5); ctx.quadraticCurveTo(s * 10.5, -37.5, s * 7.6, -33.4); ctx.closePath(); });
+        fill(ctx, c, () => { ctx.moveTo(s * 7.4, -31.6); ctx.quadraticCurveTo(s * 11.2, -33.6, s * 13.6, -30.6); ctx.quadraticCurveTo(s * 10.6, -30.6, s * 8.2, -29.4); ctx.closePath(); });
+        ctx.strokeStyle = dark(c, 0.28); ctx.lineWidth = 0.7;
+        for (const [x0, y0, x1, y1] of [[8.4, -39.4, 8.8, -36.4], [11.8, -39.9, 11.6, -37.4]]) { ctx.beginPath(); ctx.moveTo(s * x0, y0); ctx.lineTo(s * x1, y1); ctx.stroke(); }
         continue;
       }
       if (kind === "small") fill(ctx, c, () => { ctx.moveTo(s * 3.5, -36); ctx.quadraticCurveTo(s * 6, -42, s * 9.5, -43); ctx.quadraticCurveTo(s * 7, -39, s * 6.5, -35.5); ctx.closePath(); });
@@ -194,7 +238,8 @@ window.RaceArt = (() => {
     human: { zh: "人類", realm: "晶冠", look: { skin: "#f1c9a5", hair: "short", hairColor: "#6a3d1e" } },
     elf: { zh: "精靈", realm: "晶冠", look: { skin: "#f6e0cc", hair: "long", hairColor: "#e8e0c8", ears: "pointed", build: "tall" } },
     fox: { zh: "狐族", realm: "雲嶺", look: { skin: "#f1d0b0", hair: "short", hairColor: "#d8762a", ears: "beast", tail: "fox" } },
-    dragonkin: { zh: "龍裔", realm: "雲嶺", look: { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "small", hornColor: "#e8d8b8", pattern: "scales", tail: "scaled", tailColor: "#a8784a" } },
+    // 龍裔（11-04 晚重做）：往後掃的象牙色龍角兩對、臉頰與額頭龍鱗、豎瞳、粗龍尾；鱗色走銅、紅、金、黑曜（和鱗族的藍綠分開）
+    dragonkin: { zh: "龍裔", realm: "雲嶺", look: { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#efe6cc", pattern: "dragonQ", scaleColor: "#a8784a", tail: "dragon", slitEyes: true } },
     dwarf: { zh: "矮人", realm: "樞市", look: { skin: "#e8b890", hair: "short", hairColor: "#a8481e", beard: true, build: "stout" } },
     cyborg: { zh: "晶能義體人", realm: "樞市", look: { skin: "#e6c4a4", hair: "short", hairColor: "#2a2a34", pattern: "circuit" } },
     orc: { zh: "獸人", realm: "灰燼", look: { skin: "#86a060", hair: "short", hairColor: "#1e1a14", tusks: true, build: "tall" } },
