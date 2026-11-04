@@ -439,6 +439,8 @@ export async function runScreens(title: string): Promise<string> {
   const rows: CheckResult[] = [];
   // 首頁與技能工坊
   rows.push(...stageRows("首頁", doc, win, false));
+  // UI-E1：角色列表與建角（大世界入口；開發模式從「進入大世界（測試）」進）
+  rows.push(...(await entryPickStages(doc, win, "進入大世界（測試）")));
   buttonOf(doc, "進入技能工坊")?.click();
   await sleep(600);
   rows.push(...stageRows("工坊・技能", doc, win, false));
@@ -453,6 +455,38 @@ export async function runScreens(title: string): Promise<string> {
   rows.push(...(await postBattleStages(doc, win)));
   const viewport = `${win.innerWidth}×${win.innerHeight}`;
   const { text } = formatTable(`${title}（視窗 ${viewport}）`, rows);
+  return text;
+}
+
+/** UI-E1：角色列表與建角（種族卡、出身卡、武器）；看完按「返回首頁」回到首頁。`enter`＝首頁上進去的按鈕字。 */
+async function entryPickStages(doc: Document, win: Window, enter: string): Promise<CheckResult[]> {
+  const rows: CheckResult[] = [];
+  buttonOf(doc, enter)?.click();
+  const ok = await waitFor(doc, '[data-testid="world-chars"]');
+  if (!ok) return [result("entry-pick", "角色列表與建角：畫面打開", false, "找不到 [data-testid=world-chars]（大世界入口要登入？）")];
+  for (let i = 0; i < 30 && doc.querySelector('[data-testid="start-races"]') === null; i++) await sleep(200);
+  rows.push(...stageRows("角色列表與建角", doc, win, false));
+  await hoverFirst(doc, '[data-testid^="race-"]', 0);
+  rows.push(...stageRows("建角・種族卡", doc, win, true));
+  await unhover(doc, '[data-testid^="race-"]', 0);
+  buttonOf(doc, "返回首頁")?.click();
+  await sleep(800);
+  return rows;
+}
+
+/**
+ * UI-E1：正式入口（不用 `?dev=1`）：首頁（只有「開始」）→ 角色列表與建角。只量排版，不建角色。
+ * 從首頁開始（先 `localStorage.clear()` 並重新載入）。
+ */
+export async function runEntry(title: string): Promise<string> {
+  const doc = document;
+  const win = window;
+  const rows: CheckResult[] = [...stageRows("首頁（正式）", doc, win, false)];
+  const menu = doc.querySelector('[data-testid="home-menu"]');
+  const buttons = menu === null ? [] : [...menu.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim());
+  rows.push(result("entry-home-only-start", "首頁（正式）：選單只有「開始」", buttons.length === 1 && buttons[0] === "開始", buttons.join("、") || "找不到選單"));
+  rows.push(...(await entryPickStages(doc, win, "開始")));
+  const { text } = formatTable(`${title}（視窗 ${win.innerWidth}×${win.innerHeight}）`, rows);
   return text;
 }
 
@@ -586,10 +620,10 @@ async function fillStartPartial(doc: Document, rows: CheckResult[], win: Window)
 
 declare global {
   interface Window {
-    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; runPostBattle: typeof runPostBattle; enterDevScreen: typeof enterDevScreen; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
+    __layoutSmoke?: { runCase: typeof runCase; runScreens: typeof runScreens; runEntry: typeof runEntry; runPostBattle: typeof runPostBattle; enterDevScreen: typeof enterDevScreen; scan: () => string[]; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
   }
 }
 
 export function installLayoutSmoke(win: Window): void {
-  win.__layoutSmoke = { runCase, runScreens, runPostBattle, enterDevScreen, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
+  win.__layoutSmoke = { runCase, runScreens, runEntry, runPostBattle, enterDevScreen, scan: () => scanTextIssues(win.document, win), startBattle, evaluate, formatTable };
 }

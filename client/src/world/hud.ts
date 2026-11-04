@@ -668,6 +668,18 @@ export function popupBox(layout: HudLayout, want: number): PopupBox {
   return { top, maxHeight, maxWidth };
 }
 
+/** 大世界詢問視窗（開場、配點教學、升級、你不在的時候）想要的寬度。 */
+export const DIALOG_W = 480;
+
+/**
+ * 大世界詢問視窗的位置（UI-E1 追加 2）：同 `popupBox` 的避開四角規則，換成視窗座標（詢問視窗是 position: fixed，
+ * `stageTop`＝HUD 舞台上緣在視窗裡的位置）。寬度上限同 `.decision-card`（480）。
+ */
+export function dialogBox(layout: HudLayout, stageTop: number, want = DIALOG_W): PopupBox {
+  const b = popupBox(layout, want);
+  return { top: stageTop + b.top, maxHeight: b.maxHeight, maxWidth: b.maxWidth };
+}
+
 // ---------------- 排版煙霧檢查 ----------------
 
 export interface HudSnapshot {

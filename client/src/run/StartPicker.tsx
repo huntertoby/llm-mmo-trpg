@@ -6,6 +6,7 @@ import type { AttributeAffects, AttributeSuggestion, DevPack, RouteHint, SkillCa
 import { SkillCardView } from "../ui/SkillCardView";
 import { canStart, keepAvailable, keywordAvailable, startBody, toggleKeyword, type StartChoiceBody } from "./startFlow";
 import { Hint } from "../ui/Hint";
+import { WeaponIcon } from "../ui/WeaponIcon";
 
 const CLASS_LABELS: Record<string, string> = { melee: "近戰", ranged: "遠程", focus: "法器" };
 
@@ -151,6 +152,7 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
               disabled={disabled}
               onClick={() => picker.setWeapon(w.id)}
             >
+              <WeaponIcon weaponId={w.id} weaponClass={w.weapon_class} size={20} />
               {w.name_zh}
               <span className="muted small">　{CLASS_LABELS[w.weapon_class] ?? w.weapon_class}</span>
             </button>

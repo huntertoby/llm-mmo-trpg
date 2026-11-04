@@ -20,6 +20,7 @@ import type {
   WorldView,
 } from "../api/types";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { DialogHudBox } from "../ui/DialogFrame";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { WorldCharacterPicker } from "../world/WorldCharacterPicker";
 import { WorldMap } from "../world/WorldMap";
@@ -35,6 +36,7 @@ import { PavilionPanel, SteleMenu } from "../world/CapitalPanels";
 import { HudNotesPanel, HudShadowPanel, HudSkillsPanel } from "../world/HudPanels";
 import {
   addToasts,
+  dialogBox,
   fadedBlocks,
   HUD_BUTTONS,
   hudKey,
@@ -744,11 +746,15 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
+  function layoutOf(v: WorldView) {
+    const folded = trackerFolded || (narrow && !narrowOpen);
+    return { folded, layout: hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded }) };
+  }
+
   function renderHud(v: WorldView) {
     const field = v.field;
     if (field == null) return null;
-    const folded = trackerFolded || (narrow && !narrowOpen);
-    const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
+    const { folded, layout } = layoutOf(v);
     const insets = hudInsets(layout, stage); // 6F-3：鏡頭避開 HUD
     const cam = fieldCam ?? followCamera(stage, field, field.me, FIELD_SCALE, insets);
     const faded = fadedBlocks(layout, exitViewRects(field, cam, stage));
@@ -898,6 +904,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
         </div>
       </header>
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      {/* UI-E1 追加 2：有 HUD 時，詢問視窗照 6F-3 避開四角 HUD（上緣在主角卡下方、下緣停在功能列上方） */}
+      <DialogHudBox.Provider value={view !== null && view.field != null && hudMode ? dialogBox(layoutOf(view).layout, stage.top) : null}>
       {view !== null && shouldShowAbsence(absence) && <AbsenceDialog view={absence} busy={busy} onClose={closeAbsence} />}
       {view !== null && !shouldShowAbsence(absence) && shouldShowOpening(view.guide, seenIds) && <OpeningDialog guide={view.guide} onClose={() => markSeen([OPENING_SEEN])} />}
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
@@ -916,6 +924,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
+      </DialogHudBox.Provider>
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (
         <div key={banner.n} className="world-place-banner" role="status" data-testid="world-place-banner">

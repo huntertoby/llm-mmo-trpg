@@ -247,8 +247,9 @@ export function InventoryPanel({
           ))}
         </ul>
       )}
-      <div className="section-title small">
-        腰包<span className="muted">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
+      {/* UI-E1 追加 8：字級與間距同「其他物品」（section-title、數字前一個全形空格、數字小字） */}
+      <div className="section-title" data-testid="world-pouch-title">
+        腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
       </div>
       {inventory.pouch.length === 0 ? (
         <div className="muted small">沒帶東西。</div>

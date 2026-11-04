@@ -1,0 +1,466 @@
+/* UI-E1 入口畫面換皮（docs/art/home-v2.png、entry-screens.png；docs/art/全遊戲一致性巡檢.md 第 4 節）：
+   首頁、開發選單、角色列表與建角、開新一輪、一輪路線圖共用同一套浮島天空背景（EntryBackdrop）、
+   深藍金框（共用彈窗元件 PopupFrame 的 inline＋RT-1 四角飾件）、按鈕與字型。顏色一律接 theme.css 的 --ui-* 變數。
+   只換外觀：版面的內容與流程照舊。全部選擇器都限定在 .entry-skin 底下，不影響大世界與戰鬥。 */
+
+/* ---- 外殼與背景 ---- */
+.entry-skin {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+  color: var(--ui-text);
+}
+
+.entry-skin.start-screen {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.entry-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: clip; /* 不用 hidden：hidden 會變成捲動容器，裡面的 sticky 就黏不住視窗 */
+  pointer-events: none;
+}
+
+.entry-backdrop-sticky {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+}
+
+.entry-backdrop-layer,
+.entry-backdrop-veil {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.entry-backdrop-layer {
+  display: block;
+  object-fit: cover;
+}
+
+/* 首頁只在選單後面淡淡壓暗；其他頁整片壓暗一點，框裡的字比較好讀 */
+.entry-backdrop-veil {
+  background: radial-gradient(ellipse 40% 45% at 82% 64%, rgb(14 18 40 / 45%), rgb(14 18 40 / 0%));
+}
+
+.entry-skin:not(.entry-home) .entry-backdrop-veil {
+  background: rgb(10 12 30 / 38%);
+}
+
+.entry-page {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 22px 16px 40px;
+}
+
+.entry-dev .entry-page {
+  max-width: 560px;
+}
+
+.entry-skin .start-run {
+  margin-bottom: 0;
+}
+
+.run-new .entry-page {
+  max-width: 880px;
+}
+
+.run-shell .entry-page {
+  max-width: none;
+  padding: 0;
+}
+
+/* ---- 框：入口畫面上舊的 .panel 也換成同一套深藍金框（彈窗裡的 .panel 照 UI-E2 不畫第二層框） ---- */
+.entry-skin .panel {
+  position: relative;
+  isolation: isolate;
+  background: var(--ui-panel-solid);
+  border: 2px solid var(--ui-gold);
+  border-radius: 10px;
+  color: var(--ui-text);
+  box-shadow: 0 4px 24px rgb(0 0 0 / 45%);
+}
+
+.entry-skin .panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--rt-corners, none);
+}
+
+.entry-skin .ui-popup .panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.entry-skin .ui-popup .panel::after {
+  content: none;
+}
+
+.entry-panel > .ui-popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-skin .ui-popup-inline {
+  padding: 12px 16px;
+}
+
+.entry-skin .section-title {
+  color: var(--ui-gold-hi);
+}
+
+.entry-skin .muted {
+  color: #b8ab96;
+}
+
+/* ---- 標題牌：照大世界字牌（深藍底、金色雙框、襯線字） ---- */
+.entry-plaque {
+  align-self: center;
+  min-width: min(460px, 100%);
+  max-width: 100%;
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 4px var(--ui-navy),
+    inset 0 0 0 5px var(--ui-gold-soft),
+    0 4px 24px rgb(0 0 0 / 50%);
+}
+
+.entry-skin .ui-popup-inline.entry-plaque {
+  padding: 10px 40px;
+}
+
+.entry-plaque-title {
+  margin: 0;
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #f2e6c8;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 50%);
+}
+
+.entry-plaque.big .entry-plaque-title {
+  font-size: 38px;
+  line-height: 1.25;
+}
+
+.entry-plaque-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #d8ccb6;
+}
+
+.entry-plaque.big .entry-plaque-sub {
+  font-size: 14px;
+}
+
+/* ---- 按鈕、輸入框 ---- */
+.entry-skin button,
+.entry-skin .button {
+  background: linear-gradient(180deg, #2c3046, #20243a);
+  border: 1px solid #4a5070;
+  border-radius: 7px;
+  color: var(--ui-text);
+}
+
+.entry-skin button:hover:not(:disabled),
+.entry-skin .button:hover {
+  background: linear-gradient(180deg, #363b56, #282d46);
+  border-color: var(--ui-gold);
+}
+
+.entry-skin button.primary {
+  background: linear-gradient(180deg, #4a6ae0, #2e48b0);
+  border-color: #ffe08a;
+  color: #fff;
+}
+
+.entry-skin button.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5878ea, #3654c0);
+}
+
+/* 選項卡（種族、出身、武器、關鍵字）選中：深藍底＋金框（不是主按鈕的亮藍） */
+.entry-skin button.selected {
+  background: linear-gradient(180deg, #2f4078, #22305a);
+  border-color: var(--ui-gold-hi);
+  box-shadow: inset 0 0 0 1px var(--ui-gold-hi);
+  color: #fff;
+}
+
+.entry-skin input,
+.entry-skin select {
+  background: var(--ui-navy-deep);
+  border: 1px solid #3a4060;
+  border-radius: 6px;
+  color: var(--ui-text);
+}
+
+.entry-skin input:focus-visible,
+.entry-skin select:focus-visible,
+.entry-skin button:focus-visible {
+  outline: 2px solid var(--rt-accent);
+  outline-offset: 1px;
+}
+
+.entry-skin .run-weapon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+/* ---- 首頁（home-v2）：標題牌在中上方，選單在右側不擋島；窄視窗時選單置中 ---- */
+.entry-home .entry-page {
+  min-height: 100vh;
+  max-width: none;
+  padding: 46px 5vw 28px;
+}
+
+.entry-menu {
+  align-self: flex-end;
+  width: min(340px, 100%);
+  margin-top: auto;
+  margin-bottom: 10vh;
+}
+
+.entry-menu > .ui-popup-body {
+  gap: 10px;
+  padding: 6px 4px 2px;
+}
+
+.entry-skin button.entry-main {
+  min-height: 58px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.entry-menu-note {
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+  color: #b8ab96;
+}
+
+@media (max-width: 899px) {
+  .entry-menu {
+    align-self: center;
+  }
+}
+
+/* ---- 角色列表 ---- */
+.world-account-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.entry-char-row {
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.entry-char-row + .entry-char-row {
+  border-top: 1px solid var(--ui-gold-soft);
+}
+
+.entry-char-face {
+  flex: none;
+  line-height: 0;
+}
+
+.entry-char-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---- 建角：左邊預覽、右邊編號步驟 ---- */
+.entry-create {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.entry-skin .ui-popup-inline.entry-preview {
+  position: sticky;
+  top: 12px;
+}
+
+.entry-preview-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 300px;
+  border: 1px dashed var(--ui-gold-soft);
+  border-radius: 8px;
+  background: radial-gradient(ellipse 60% 50% at 50% 62%, rgb(168 152 255 / 24%), rgb(168 152 255 / 0%));
+}
+
+.entry-preview-name {
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  color: #f2e6c8;
+}
+
+.entry-preview-detail {
+  text-align: center;
+  color: #c8bca8;
+}
+
+/* 步驟列：每個步驟標題前面自動編號（1 名字 → 2 種族 → 3 出身 → 4 武器 → 5 關鍵字），下面一道金色細線 */
+.entry-steps .ui-popup-body {
+  counter-reset: entry-step;
+}
+
+.entry-steps .ui-popup-body > .section-title,
+.entry-steps .ui-popup-body > form > .section-title {
+  margin: 8px 0 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgb(200 168 104 / 30%);
+}
+
+.entry-steps .ui-popup-body > .section-title::before,
+.entry-steps .ui-popup-body > form > .section-title::before {
+  counter-increment: entry-step;
+  content: counter(entry-step) "　";
+}
+
+.entry-steps .ui-popup-body > .section-title:first-child,
+.entry-steps .ui-popup-body > form > .section-title:first-child {
+  margin-top: 0;
+}
+
+.entry-name input {
+  width: min(280px, 100%);
+}
+
+.entry-note {
+  line-height: 1.6;
+}
+
+.entry-actions {
+  justify-content: flex-end;
+}
+
+.entry-skin button.entry-create-go {
+  min-width: min(260px, 100%);
+  min-height: 42px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.entry-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (max-width: 899px) {
+  .entry-create {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .entry-skin .ui-popup-inline.entry-preview {
+    position: relative;
+    top: auto;
+  }
+
+  .entry-preview-slot {
+    height: 140px;
+  }
+}
+
+/* ---- 一輪路線圖：節點加連線（直排），Boss 用頭目紋章 ---- */
+.run-route {
+  list-style: none;
+  margin: 4px 0 0;
+  padding-left: 0;
+}
+
+.run-route-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 3px 0;
+}
+
+.run-route-step + .run-route-step::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: -9px;
+  width: 2px;
+  height: 16px;
+  background: var(--ui-gold-soft);
+}
+
+.run-route-step.done + .run-route-step::before {
+  background: var(--ui-gold);
+}
+
+.run-route-node {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  box-sizing: border-box;
+  border: 2px solid #4a5070;
+  border-radius: 50%;
+  background: var(--ui-navy-deep);
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.run-route-step.done .run-route-node {
+  border-color: var(--ui-gold);
+  background: #3a3420;
+  color: var(--ui-gold-hi);
+}
+
+.run-route-step.current .run-route-node {
+  border-color: var(--ui-gold-hi);
+  background: #2e48b0;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgb(232 187 72 / 30%);
+}
+
+.run-route-step.boss .run-route-node {
+  border-color: var(--ui-danger);
+  background: #2a1620;
+}
+
+.run-route-text {
+  min-width: 0;
+}
+
+.run-route-crest {
+  display: block;
+}

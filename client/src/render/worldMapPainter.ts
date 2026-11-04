@@ -95,6 +95,8 @@ export interface AtlasPaintOptions {
   t?: number | null;
   /** 字型版本（字牌的字形跟字型有關）。 */
   epoch?: number;
+  /** 只貼浮島本體與前景（不貼字牌、傳送鈕、標題、圖例、外框）：入口畫面的背景（UI-E1）用。 */
+  bare?: boolean;
 }
 
 export class AtlasPainter {
@@ -240,6 +242,7 @@ export class AtlasPainter {
     const blit = (s: Sprite): void => ctx.drawImage(asImage(s.surface), s.x * sx, (s.y + floatOffset(s.region, t)) * sy);
     layers.bodies.forEach(blit);
     ctx.drawImage(asImage(layers.front), 0, 0);
+    if (opts.bare === true) return;
     layers.marks.forEach(blit);
     ctx.drawImage(asImage(layers.chrome), 0, 0);
   }

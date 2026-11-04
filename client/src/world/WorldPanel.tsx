@@ -52,7 +52,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   const field = battlefieldLine(e); // 6C-2：就地開打或退回模板的原因
   return (
     <PopupFrame placement={{ kind: "inline" }} tone="danger" className="world-encounter" testId="world-encounter" role="region" label="遇敵">
-      <div className="section-title">遇敵！{e.location_name_zh}</div>
+      <div className="section-title">遇敵：{e.location_name_zh}</div>
       <div className="small">
         敵人等級 {e.enemy_level}・戰場 {e.map_name_zh}・{weatherPhaseText(e.weather_zh, e.day_phase_zh)}
       </div>

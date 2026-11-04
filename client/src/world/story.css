@@ -66,8 +66,8 @@
   align-items: flex-start;
   margin: 6px 0;
   padding: 6px;
-  background: rgba(18, 16, 22, 0.75);
-  border: 1px solid rgba(243, 234, 210, 0.22);
+  background: var(--ui-navy-deep); /* UI-E1 追加 5：說書人框改深藍系，和事件卡外框統一 */
+  border: 1px solid var(--ui-gold-soft);
   border-radius: 6px;
 }
 

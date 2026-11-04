@@ -31,7 +31,7 @@ export function HeroCard({ where, name, face, bars, children, compact = false, c
   const portrait = <HudPortrait size={HERO_FACE[where]} ring={theme.portrait_ring} />;
   const cls = ["hero-card", "rt-frame", `hero-card-${where}`, compact ? "compact" : "", className ?? ""].filter((c) => c !== "").join(" ");
   return (
-    <div className={cls} data-hero-card={where} data-ring={theme.portrait_ring} aria-label={label}>
+    <div className={cls} data-hero-card={where} data-ring={theme.portrait_ring} data-rt-compact={where === "battle" ? "true" : undefined} aria-label={label}>
       {!compact && <div className="hero-card-face">{face !== undefined ? face(portrait) : portrait}</div>}
       <div className="hero-card-main">
         {name != null && !compact && <div className="hero-card-name">{name}</div>}

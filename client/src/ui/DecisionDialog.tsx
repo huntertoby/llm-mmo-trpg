@@ -26,7 +26,7 @@ export function DecisionDialog({ pending, rule, names, eventText, enabled, onDec
   const description = rule?.description_zh ?? glossaryEntry("reactions", pending.reaction)?.description_zh ?? null;
   const trigger = pending.trigger_unit_id == null ? null : names.label(pending.trigger_unit_id);
   return (
-    <DialogFrame label="反應詢問" title={`反應詢問：${reaction}`} startLow={startLow}>
+    <DialogFrame label="反應詢問" title={`反應詢問：${reaction}`} startLow={startLow} tone="danger">
       {eventText !== null && <p className="small muted">{eventText}</p>}
       <p>
         {names.label(pending.unit_id)} 可以使用「{reaction}」
