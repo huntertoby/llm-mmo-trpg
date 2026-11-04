@@ -16,6 +16,7 @@ from trpg.engine.effects.models import MoveUnitEffect
 from trpg.engine.events import CheckRolled, StatusApplied, TrapTriggered, UnitMoved, UnitSlid
 from trpg.engine.path_preview import preview_path
 from trpg.engine.state import TrapState
+from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Pos, Surface, Team, UnitId
 
 U1 = UnitId("unit_0001")
@@ -258,16 +259,21 @@ def test_slide_over_a_trap_triggers_and_stops_there() -> None:
             revealed_to=(Team.ALLY,),
         )
     ]
-    state = with_rolls(base, [(20, 1), (8, 1), (20, 1)])
-    result = resolve(state, Move(unit_id=U1, path=_pos(((0, 0), (1, 0)))))
+    move = Move(unit_id=U1, path=_pos(((0, 0), (1, 0))))
+    # 種子 0：滑倒、捕獸夾定身 → 停在陷阱格
+    rooted = base.clone()
+    rooted.rng_state = Rng(0).get_state()
+    result = resolve(rooted, move)
     assert any(isinstance(e, TrapTriggered) for e in result.events)
     (slid,) = [e for e in result.events if isinstance(e, UnitSlid)]
     hero = result.state.units[U1]
-    if hero.has_status("root"):
-        assert hero.xy == (2, 0) and slid.stop_reason == "interrupted"
-    else:  # 抵抗成功：照常滑到冰面外
-        assert hero.xy == (4, 0)
-    assert hero.has_status("prone")
+    assert hero.has_status("root") and hero.has_status("prone")
+    assert hero.xy == (2, 0) and slid.stop_reason == "interrupted"
+    # 抵抗成功：陷阱照樣觸發，照常滑到冰面外
+    resisted = resolve(with_rolls(base, [(20, 1), (8, 1), (20, 20)]), move)
+    assert any(isinstance(e, TrapTriggered) for e in resisted.events)
+    if not resisted.state.units[U1].has_status("root"):
+        assert resisted.state.units[U1].xy == (4, 0)
 
 
 def test_pushed_onto_ice_checks_but_does_not_slide() -> None:
