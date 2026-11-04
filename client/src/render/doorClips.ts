@@ -74,3 +74,17 @@ export function arriveFrame(kind: TransitKind, facing: Facing, u: number): Trans
   const pose = k >= 1 ? null : quantizePose(gaitPose(quantizePhase(tilePhase(1, k)), "walk"));
   return { scale: 1, alpha: easeOut(clamp(k * 2)), dx: -s.x * (1 - k) + 0, dy: -s.y * (1 - k) + 0, rise: 0, pose }; // +0：不要 -0
 }
+
+// ---------------- 建築的門板（Phase 6B-ART1，6A-4g 驗收時答應的「門打開 0.2 秒」）----------------
+// 進門：門板往內轉開，和小人的離開片段（`LEAVE_MS`）同時開始；出門：抵達時門是開著的，和抵達片段同時關回去。
+
+/** 門打開／關上的時間（毫秒）。 */
+export const DOOR_OPEN_MS = 200;
+
+export type DoorMotion = "open" | "close";
+
+/** 門板某一刻轉開的程度（0 關～1 開；`u` 0～1）：開＝先快後慢，關＝先慢後快（最後碰上門框）。 */
+export function doorOpenness(motion: DoorMotion, u: number): number {
+  const k = clamp(u);
+  return motion === "open" ? easeOut(k) : 1 - easeIn(k);
+}

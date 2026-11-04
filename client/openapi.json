@@ -8846,6 +8846,41 @@
           "west"
         ]
       },
+      "FieldBuildingView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "FieldBuildingView",
+        "description": "只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。"
+      },
       "FieldDoorView": {
         "properties": {
           "id": {
@@ -9409,6 +9444,17 @@
           "y": {
             "type": "integer",
             "title": "Y"
+          },
+          "look": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Look"
           }
         },
         "additionalProperties": false,
@@ -10091,6 +10137,14 @@
                 "type": "null"
               }
             ]
+          },
+          "buildings": {
+            "items": {
+              "$ref": "#/components/schemas/FieldBuildingView"
+            },
+            "type": "array",
+            "title": "Buildings",
+            "default": []
           }
         },
         "additionalProperties": false,

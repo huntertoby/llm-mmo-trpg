@@ -30,12 +30,12 @@ legend:
   ".": stone
   "#": wall
 objects:
-  - {at: [1, 1], kind: crate}          # 魔導書書架
-  - {at: [2, 1], kind: crate}
-  - {at: [3, 1], kind: crate}
-  - {at: [6, 1], kind: low_wall}       # 講壇
-  - {at: [1, 5], kind: stone_pillar}   # 源晶燈
-  - {at: [8, 5], kind: stone_pillar}
+  - {at: [1, 1], kind: crate, look: shelf}          # 魔導書書架
+  - {at: [2, 1], kind: crate, look: shelf}
+  - {at: [3, 1], kind: crate, look: shelf}
+  - {at: [6, 1], kind: low_wall, look: counter}       # 講壇
+  - {at: [1, 5], kind: stone_pillar, look: candle}   # 源晶燈
+  - {at: [8, 5], kind: stone_pillar, look: candle}
 entry: [5, 6]
 exits:
   - {id: to_capital, at: [[4, 7], [5, 7]], to: capital, arrive: mentor_hall_door}

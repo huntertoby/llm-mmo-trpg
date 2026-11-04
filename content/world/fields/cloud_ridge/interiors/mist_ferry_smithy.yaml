@@ -27,9 +27,9 @@ legend:
   ".": stone
   "#": wall
 objects:
-  - {at: [4, 2], kind: crate}         # 鐵砧
+  - {at: [4, 2], kind: crate, look: anvil}         # 鐵砧
   - {at: [7, 2], kind: stone_pillar}  # 附魔台
-  - {at: [1, 5], kind: crate}
+  - {at: [1, 5], kind: crate, look: shelf}
 entry: [5, 6]
 exits:
   - {id: to_mist_ferry, at: [[4, 7], [5, 7]], to: mist_ferry, arrive: smithy_door}

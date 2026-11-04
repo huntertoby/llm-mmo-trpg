@@ -68,6 +68,11 @@ objects:
   - {at: [21, 10], kind: rubble}
   - {at: [20, 16], kind: crate}   # 棚屋後的貨
   - {at: [21, 16], kind: crate}
+buildings:   # 6B-ART1：只畫的建築外觀，疊在既有的牆格上（牆照舊寫在 terrain，規則不變）
+  - {kind: scrap_house, at: [1, 2], size: [6, 4]}   # 西北酒館（門 [3, 5]）
+  - {kind: forge_house, at: [17, 2], size: [6, 4]}   # 東北爐叔鐵鋪（門 [19, 5]）
+  - {kind: scrap_house, at: [6, 13], size: [3, 3]}   # 西南的廢鐵棚屋
+  - {kind: scrap_house, at: [16, 12], size: [5, 3]}   # 東南的棚屋（屋後有貨）
 surfaces:
   - {at: [14, 10], surface: water}   # 中央的大水缸
   - {at: [15, 10], surface: water}

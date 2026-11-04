@@ -13,6 +13,7 @@ from typing import Final
 
 from trpg.api.world_field_people import ALERT_ZH, friends_here, look_of, npc_marks
 from trpg.api.world_field_schemas import (
+    FieldBuildingView,
     FieldDoorView,
     FieldEnemyUnitView,
     FieldEnemyView,
@@ -341,7 +342,9 @@ def field_view(
         tiles_hash=static.hash,
         open_cells=_open_cells(found, char, grid),
         objects=tuple(
-            FieldObjectView(id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1])
+            FieldObjectView(
+                id=f"o{o.at[0]}_{o.at[1]}", kind=o.kind, x=o.at[0], y=o.at[1], look=o.look
+            )
             for o in found.objects
         ),
         exits=tuple(
@@ -374,6 +377,10 @@ def field_view(
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
         friends=friends_here(library, world, char, found, grid),
+        buildings=tuple(
+            FieldBuildingView(kind=b.kind, x=b.at[0], y=b.at[1], width=b.size[0], height=b.size[1])
+            for b in found.buildings
+        ),
     )
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5

@@ -29,11 +29,11 @@ legend:
   ".": stone
   "#": wall
 objects:
-  - {at: [5, 2], kind: crate}      # 櫃檯
-  - {at: [6, 2], kind: crate}
-  - {at: [7, 2], kind: crate}
-  - {at: [2, 4], kind: low_wall}   # 老兵的桌子
-  - {at: [7, 5], kind: crate}      # 酒桶
+  - {at: [5, 2], kind: crate, look: bar}      # 櫃檯
+  - {at: [6, 2], kind: crate, look: bar}
+  - {at: [7, 2], kind: crate, look: bar}
+  - {at: [2, 4], kind: low_wall, look: table}   # 老兵的桌子
+  - {at: [7, 5], kind: crate, look: barrel}      # 酒桶
 entry: [4, 6]
 exits:
   - {id: to_ember_market, at: [[4, 7], [5, 7]], to: ember_market, arrive: tavern_door}
