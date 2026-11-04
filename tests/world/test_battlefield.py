@@ -41,7 +41,7 @@ from trpg.world.common import rules_of
 from trpg.world.encounters import roll_lineup
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, loads_char, read_log
-from trpg.world.state import CharacterState, EncounterResult, FieldContact, FieldPos
+from trpg.world.state import CharacterState, EncounterResult, Facing, FieldContact, FieldPos
 from trpg.world.step import world_step
 
 type XY = tuple[int, int]
@@ -242,11 +242,14 @@ def test_blocked_retreat_takes_nearest_fitting_cell(
     assert battle.start_zones[Team.ALLY][0] == (12 - info.x, 16 - info.y)
 
 
-def _corridor(length: int) -> FieldMapDef:
-    """第 15 列的一條走廊：敵方 (20, 15) 往東 3 格、往西 ``length`` 格，其他都是牆。"""
+def _corridor(length: int, east: int = 3, north: int = 0) -> FieldMapDef:
+    """第 15 列的一條走廊：敵方 (20, 15) 往東 ``east`` 格、往西 ``length`` 格；``north``＝從
+    (20, 14) 往北的岔路格數。其他都是牆。"""
     rows = [list("#" * 30) for _ in range(30)]
-    for x in range(20 - length, 24):
+    for x in range(20 - length, 21 + east):
         rows[15][x] = "."
+    for y in range(15 - north, 15):
+        rows[y][20] = "."
     return _open(rows=["".join(r) for r in rows])
 
 
@@ -302,6 +305,162 @@ def test_zone_grows_with_unit_count(field_library: ContentLibrary, template: Map
     battle = _cut(field_library, _open(), template, (15, 15), (18, 15), counts=counts)
     assert len(battle.start_zones[Team.ALLY]) == 5
     assert len(battle.start_zones[Team.ENEMY]) == 6
+    assert len(battle.start_zones[Team.THIRD]) == 2  # 6E-3b：第三方另畫起始區
+
+
+def test_two_sided_battle_has_no_third_zone(
+    field_library: ContentLibrary, template: MapDef
+) -> None:
+    battle = _cut(field_library, _open(), template, (15, 15), (18, 15))
+    assert Team.THIRD not in battle.start_zones  # 沒有第三方：照舊兩方
+
+
+# ---------------------------------------------------------------------------
+# 6E-3b：三方混戰的第三方、主角不擺在背後半邊
+# ---------------------------------------------------------------------------
+
+THIRD_COUNTS = UnitCounts(allies=3, enemies=3, third=2)
+
+
+@pytest.mark.parametrize("first", [Team.ALLY, None])
+def test_third_party_keeps_two_cells_from_allies(
+    field_library: ContentLibrary, template: MapDef, first: Team | None
+) -> None:
+    """空曠地圖：第三方排在敵方附近（離敵方起始區最近, y, x），離我方起始區每一格至少隔 2 格。"""
+    found = cut_battlefield(
+        field_library,
+        _open(),
+        ally_at=(15, 15),
+        enemy_at=(16, 15),
+        counts=THIRD_COUNTS,
+        first=first,
+        template=template,
+        came_from=(14, 15),
+    )
+    assert not isinstance(found, str), found
+    battle, _ = found
+    allies, enemies = battle.start_zones[Team.ALLY], battle.start_zones[Team.ENEMY]
+    third = battle.start_zones[Team.THIRD]
+    assert len(third) == 2 and not set(third) & (set(allies) | set(enemies))
+    assert min(_dist(c, a) for c in third for a in allies) >= 3
+    assert all(min(_dist(c, e) for e in enemies) == 1 for c in third)  # 貼著敵方
+    terrain = field_library.ruleset.terrain.by_id()
+    objects = field_library.ruleset.objects.by_id()
+    assert check_map(battle, terrain, field_library.ruleset.core, objects) == []
+
+
+# (往西幾格, 往東幾格, 第三方人數, 隔幾格＝None 退回模板, 第三方的實地格子)
+THIRD_FALLBACK_CASES = [
+    (6, 3, 1, 3, [(19, 15)]),  # 隔 3 格：第三方只剩敵我中間 (19, 15)（離我方 (16, 15) 隔 2 格）
+    # 東邊多 2 格：隔 3、2 格時切出來的 12×12 包不到 (24, 15) → 隔 1 格（同距離照 y、x 前後各一）
+    (6, 5, 2, 1, [(24, 15), (14, 15)]),
+    (7, 3, 2, 1, [(14, 15), (13, 15)]),  # 隔 3、2 都排不出第三方 → 隔 1 格（第三方照隔 1）
+    (6, 3, 2, None, None),  # 都排不出 → 退回模板
+]
+
+
+@pytest.mark.parametrize(("length", "east", "third", "gap", "cells"), THIRD_FALLBACK_CASES)
+def test_third_party_fallback_order(  # noqa: PLR0917 - pytest 參數化
+    field_library: ContentLibrary,
+    template: MapDef,
+    length: int,
+    east: int,
+    third: int,
+    gap: int | None,
+    cells: list[XY] | None,
+) -> None:
+    """第三方排不出來時照「地形放不下」的順序：規定的距離 → 另一個 → 隔 1 格 → 退回模板。"""
+    found = cut_battlefield(
+        field_library,
+        _corridor(length, east),
+        ally_at=(19, 15),
+        enemy_at=(20, 15),
+        counts=UnitCounts(allies=3, enemies=3, third=third),
+        first=None,
+        template=template,
+        came_from=(18, 15),
+    )
+    if gap is None:
+        assert found == "zones"
+        return
+    assert not isinstance(found, str), found
+    battle, info = found
+    assert info.gap == gap
+    assert list(battle.start_zones[Team.THIRD]) == [
+        (x - info.x, y - info.y) for x, y in cells or []
+    ]
+
+
+# (面向, 先手, 主角的實地格子)；接觸點 (15, 15)、從西邊 (14, 15) 走來、敵方帶頭的 (16, 15)
+FACING_CASES: list[tuple[Facing | None, Team | None, XY]] = [
+    ("w", Team.ENEMY, (12, 15)),  # 面向主角：往回退的格子在前方
+    ("n", None, (12, 15)),  # 主角在正側面（往前＝0）：可以
+    ("s", None, (12, 15)),
+    (None, Team.ALLY, (13, 15)),  # 舊資料沒有朝向：不限
+    # 背對主角（我方先手）：退到的 (13, 15) 在背後半邊 → 隔 2 格、不在背後、最靠近接觸點的格子
+    # （距離都是 4，照 y、x）
+    ("e", Team.ALLY, (16, 12)),
+    ("e", None, (16, 11)),  # 沒有先手：隔 3 格同理
+]
+
+
+@pytest.mark.parametrize(("facing", "first", "hero"), FACING_CASES)
+def test_hero_not_placed_behind_leader(
+    field_library: ContentLibrary,
+    template: MapDef,
+    facing: Facing | None,
+    first: Team | None,
+    hero: XY,
+) -> None:
+    """21.10 第 26 條細節：主角不能擺在敵方帶頭單位朝向的背後半邊（第 10 條：往前 < 0）。"""
+    battle, info = _placed(
+        field_library,
+        _open(),
+        template,
+        ally_at=(15, 15),
+        enemy_at=(16, 15),
+        first=first,
+        came_from=(14, 15),
+        enemy_facing=facing,
+    )
+    assert battle.start_zones[Team.ALLY][0] == (hero[0] - info.x, hero[1] - info.y)
+    assert _dist(hero, (16, 15)) == info.gap + 1
+
+
+@pytest.mark.parametrize(
+    ("north", "first", "gap", "hero"),
+    [
+        # 沒有岔路：往西全在背後；隔 3、2 格往東放不下 → 隔 1 格，主角擺到敵方前方 (22, 15)
+        # （照字面「符合距離、最靠近接觸點」，見 6E-3 報告待決 2）
+        (0, None, 1, (22, 15)),
+        (3, None, 2, (20, 12)),  # 隔 3 格只剩背後 → 隔 2 格的正側面岔路 (20, 12)
+        (5, None, 3, (20, 11)),  # 岔路夠長：照規定隔 3 格
+    ],
+)
+def test_all_fitting_cells_behind_tries_next_gap(  # noqa: PLR0917 - pytest 參數化
+    field_library: ContentLibrary,
+    template: MapDef,
+    north: int,
+    first: Team | None,
+    gap: int,
+    hero: XY,
+) -> None:
+    """走廊裡敵方面向東、主角從西邊來：符合距離的格子全在背後時照順序試下一個距離。"""
+    found = cut_battlefield(
+        field_library,
+        _corridor(6, 3, north),
+        ally_at=(19, 15),
+        enemy_at=(20, 15),
+        counts=COUNTS,
+        first=first,
+        template=template,
+        came_from=(18, 15),
+        enemy_facing="e",
+    )
+    assert not isinstance(found, str), found
+    battle, info = found
+    assert info.gap == gap
+    assert battle.start_zones[Team.ALLY][0] == (hero[0] - info.x, hero[1] - info.y)
 
 
 # ---------------------------------------------------------------------------
@@ -453,11 +612,14 @@ def test_prepare_battle_uses_the_cut(guard_lib: ContentLibrary) -> None:
     assert live.pending_encounter is not None and live.pending_encounter.contact is not None
     assert live.pending_encounter.contact.came_from == (4, 6)  # 從西邊走過來
     assert prepared.field_cut.gap == 2  # 從背後碰到（我方先手）：隔 2 格
-    assert battle.start_zones[Team.ALLY][0] == (3, 6)  # 主角從接觸點 (5, 6) 往回退 2 格
+    assert live.pending_encounter.contact.enemy_facing == "e"
+    # 往回退 2 格的 (3, 6) 在駐守（面向東）的背後半邊（6E-3b）：改挑隔 2 格、不在背後、最靠近
+    # 接觸點 (5, 6) 的格子（距離都是 4，照 y、x）
+    assert battle.start_zones[Team.ALLY][0] == (6, 3)
     assert battle.start_zones[Team.ENEMY][0] == (6, 6)  # 駐守站在原地
     opening = begin_battle(prepared.setup, prepared.seed)
     hero = next(u for u in opening.state.units.values() if u.team is Team.ALLY)
-    assert (hero.pos.x, hero.pos.y) == (3, 6)
+    assert (hero.pos.x, hero.pos.y) == (6, 3)
     assert prepare_battle(guard_lib, live) == prepared  # 確定性
 
 
@@ -547,13 +709,34 @@ def _contacts(library: ContentLibrary) -> list[tuple[FieldMapDef, int, XY, XY]]:
 
 
 CONTENT_FALLBACKS: list[tuple[str, int, XY, XY, str, str]] = []
-"""正式內容裡退回模板的接觸點（6E-3 開打距離之後重新驗證；寫在 6E-3 報告）。"""
+"""正式內容裡退回模板的接觸點（6E-3 開打距離之後重新驗證；寫在 6E-3 報告；6E-3b 仍是 0 個）。"""
+
+CONTENT_THIRD_CUTS = 56
+"""其中三方混戰的次數（第三方起始區都離我方至少隔 2 格，6E-3b）。"""
+
+CONTENT_OTHER_GAP: list[tuple[str, int, XY, XY, str, int]] = [
+    # 丹爐洞第 2 隊：敵方面向南、主角在西側；隔 3 格不在北半邊的格子都放不下 → 隔 2 格（6E-3b）
+    ("elixir_cave", 1, (12, 11), (11, 11), "none", 2),
+]
+"""正式內容裡沒用規定距離的接觸點（第三方隔 2 格、主角不擺背後之後，照順序改試下一個距離）。"""
 
 
 @pytest.fixture(scope="module")
 def content_library() -> ContentLibrary:
     """完整的正式內容（不換凍結的測試地圖）。"""
     return load_library()
+
+
+_FACING_OF: dict[XY, Facing] = {(0, -1): "n", (1, 0): "e", (0, 1): "s", (-1, 0): "w"}
+
+
+def _contact_facing(enemy: XY, ally: XY, first: Team | None) -> Facing:
+    """接觸時敵方帶頭的朝向（照先手的定義）：我方先手＝背對主角（主角在背後）；沒有先手＝主角在正
+    側面（朝向轉 90°）。"""
+    away = (enemy[0] - ally[0], enemy[1] - ally[1])
+    if first is Team.ALLY:
+        return _FACING_OF[away]
+    return _FACING_OF[(-away[1], away[0])]
 
 
 def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
@@ -564,6 +747,8 @@ def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
     covered: set[tuple[str, int]] = set()
     fallbacks: list[tuple[str, int, XY, XY, str, str]] = []
     gaps: dict[tuple[str, int | None], int] = {}
+    odd: list[tuple[str, int, XY, XY, str, int]] = []
+    third = 0
     for (field, index, enemy, ally), first in (
         (c, f) for c in _contacts(library) for f in (Team.ALLY, None)
     ):
@@ -588,6 +773,7 @@ def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
                 retreat_to=FieldPos(map=field.id, x=field.entry[0], y=field.entry[1]),
                 came_from=(2 * ally[0] - enemy[0], 2 * ally[1] - enemy[1]),
                 enemy_at=enemy,
+                enemy_facing=_contact_facing(enemy, ally, first),
             ),
         )
         lineup = roll_lineup(library, encounter)
@@ -602,6 +788,13 @@ def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
         assert found.cut is not None and found.cut.gap is not None
         key = (side, found.cut.gap)
         gaps[key] = gaps.get(key, 0) + 1
+        if found.cut.gap != (2 if first is Team.ALLY else 3):
+            odd.append((field.id, index, enemy, ally, side, found.cut.gap))
+        if lineup.third:
+            third += 1
+            zone = found.map.start_zones[Team.THIRD]
+            near = min(_dist(c, a) for c in zone for a in found.map.start_zones[Team.ALLY])
+            assert len(zone) == len(lineup.third) and near >= 3  # 第三方離我方至少隔 2 格
     spawns = {
         (f.id, i)
         for f in library.field_maps.values()
@@ -609,5 +802,8 @@ def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
         for i in range(len(f.spawns))
     }
     assert covered == spawns
-    assert set(gaps) == {("ally", 2), ("none", 3)}  # 6E-3 驗收：267 個接觸點全部照規定距離
+    # 6E-3b 驗收：267 個接觸點 × 兩種先手；主角不擺在背後半邊後只有 1 個改用另一個距離
+    assert gaps == {("ally", 2): 267, ("none", 3): 266, ("none", 2): 1}
+    assert odd == CONTENT_OTHER_GAP
+    assert third == CONTENT_THIRD_CUTS
     assert fallbacks == CONTENT_FALLBACKS

@@ -184,6 +184,9 @@ class FieldContact(_Model):
     came_from: tuple[int, int] | None = None
     """走到接觸點的前一格（6E-3：就地開打時主角沿走來的方向往回退，21.10 第 26 條）；6E-3 以前的
     資料沒有，改在符合距離的格子裡挑最靠近接觸點的。"""
+    enemy_facing: Facing | None = None
+    """接觸時這一隊帶頭的朝向（6E-3b：主角不能擺在它的背後半邊，21.10 第 10、26 條）；6E-3b 以前的
+    資料沒有，不限方向。"""
     enemy_at: tuple[int, int] | None = None
     """接觸時這一隊站的格子（Phase 6C-2：就地切 12×12 戰場用）；6C-2 以前的資料沒有，開戰時改用
     地點原本的戰鬥地圖模板。"""
