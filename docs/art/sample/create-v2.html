@@ -93,7 +93,7 @@ const ATTR = [
     ["wis", "感知", "#4ab0d0", (c) => { ink(c, "eye", [[6, 24], [16, 15], [24, 13], [32, 15], [42, 24], [32, 33], [24, 35], [16, 33]], "#f2f0e8", { w: 0.9 }); ink(c, "iris", ellPts(24, 24, 7, 7, 14), "#4ab0d0", { shade: false, w: 0.7 }); c.fillStyle = "#1c1712"; c.beginPath(); c.arc(24, 24, 3, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(22, 22, 1.4, 0, TAU); c.fill(); }],
     ["wil", "意志", "#e8bb48", (c) => { c.save(); c.shadowColor = "#ffd23a"; c.shadowBlur = 8; ink(c, "flame", [[24, 6], [32, 18], [34, 30], [28, 40], [20, 40], [14, 30], [16, 18], [20, 22]], "#ffb030", { shade: false, w: 0.9 }); ink(c, "flame-in", [[24, 20], [28, 30], [24, 37], [20, 30]], "#fff4c0", { shade: false, w: 0.5 }); c.restore(); }],
   ];
- const VAL={str:10,dex:12,con:10,int:12,wis:10,wil:10};
+ const VAL={str:12,dex:10,con:10,int:12,wis:10,wil:10}; // 推薦配法：冰錐（智力）、趁勢補刀（力量）不同 → 各 2 點
  x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("屬性（自動配好）",40,840);
  ATTR.forEach(([id,zh,col,fn],i)=>{const X=40+(i%3)*98,Y=852+Math.floor(i/3)*40;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,92,34,6);x.fill();x.strokeStyle="#3a4060";x.lineWidth=1;x.stroke();
    x.save();x.translate(X+5,Y+5);x.beginPath();x.arc(12,12,12,0,TAU);x.fillStyle="#2a241e";x.fill();x.lineWidth=1.5;x.strokeStyle=col;x.stroke();x.beginPath();x.arc(12,12,11,0,TAU);x.clip();x.scale(24/48,24/48);fn(x);x.restore();
