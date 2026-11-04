@@ -1,7 +1,7 @@
 // NPC 的外觀（Phase 6C-7；`docs/art/NPC頭像.md` 第 4 節第 5 項）：地圖上的紙娃娃直接用頭像的 `portrait.look`、`portrait.gear`，
 // 地圖上和對話框裡才會是同一個人；不另開外觀欄位。只畫在頭像上的配件（`extras`）照表換成頭部裝備或不畫；
 // `gear.head` 已經有值的以它為準。白狐霜音（`fox`）不用紙娃娃，用異形「犬」的骨架、白色。純函式，可用 vitest 檢查。
-import type { DollLook, FieldView, NpcPortrait } from "../api/types";
+import type { DollLook, FieldFigure, FieldView, NpcPortrait } from "../api/types";
 
 type FieldLook = NonNullable<FieldView["hero"]>;
 type DollGearOut = NonNullable<DollLook["gear"]>[string];
@@ -95,5 +95,27 @@ export function npcFieldLook(n: { id: string; look?: FieldLook | null; portrait?
     weapon_class: "melee",
     race_look: portraitRaceLook(p) as FieldLook["race_look"],
     equipment: [],
+  };
+}
+
+/** 站在情境物件上的人在渲染器裡的單位 ID（6V-1；和 NPC 的 `npc_` 分開，免得同名撞在一起）。 */
+export const figureUnitId = (id: string): string => `figure_${id}`;
+
+/**
+ * 站在情境物件上的人（Phase 6V-1）：主城功能型 NPC（守印人、守池人、工坊師傅、書記）的地圖紙娃娃。
+ * 外觀照 `figure.portrait` 換算（同 NPC 的 6C-7 規則）；`figure.held` 是主手拿的東西（晶杖、錘子），
+ * 用裝備外觀的主手格畫（武器 id 照舊是空手，只畫）。
+ */
+export function figureFieldLook(id: string, figure: FieldFigure): FieldLook {
+  const held = figure.held;
+  // 裝備外觀只認染料 ID，不認色碼：`held` 只用造型與材質（材質不在那個造型的清單內時退回預設）
+  const equipment = held == null ? [] : [{ slot: "main_hand", appearance: { kind: held.kind, ...(held.material != null ? { material: held.material } : {}) } }];
+  return {
+    template_id: figureUnitId(id),
+    doll_look: portraitDollLook(figure.portrait, true),
+    weapon_id: "unarmed",
+    weapon_class: "melee",
+    race_look: portraitRaceLook(figure.portrait) as FieldLook["race_look"],
+    equipment: equipment as FieldLook["equipment"],
   };
 }
