@@ -14,10 +14,11 @@ import pytest
 from pydantic import ValidationError
 
 from tests.world.helpers import NOON, hero, make_world, with_rules
-from trpg.api.world_field_view import field_view
+from trpg.api.world_field_schemas import FieldView
+from trpg.api.world_field_view import _walk_max_steps, field_view
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.content.world_rules import WALK_PATH_FORMAT_MAX
+from trpg.content.world_rules import WALK_PATH_FORMAT_MAX, FieldRules
 from trpg.world.actions import (
     EncounterCheckEvent,
     RetreatAction,
@@ -262,6 +263,13 @@ def test_walk_limit_follows_rules(calm_field: ContentLibrary) -> None:
     assert view is not None and view.walk_max_steps == 45
     base = field_view(calm_field, char)
     assert base is not None and base.walk_max_steps == 30
+
+
+def test_walk_limit_default_has_one_source(calm_field: ContentLibrary) -> None:
+    """6R-P：沒有世界規則時的預設值與 ``FieldView`` 的預設值都取 ``FieldRules()``。"""
+    default = FieldRules().walk_max_steps
+    assert FieldView.model_fields["walk_max_steps"].default == default
+    assert _walk_max_steps(dataclasses.replace(calm_field, world_rules=None)) == default
 
 
 def test_walk_request_format_cap(calm_field: ContentLibrary) -> None:
