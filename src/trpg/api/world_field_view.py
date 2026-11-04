@@ -32,6 +32,7 @@ from trpg.api.world_field_schemas import (
 from trpg.api.world_field_things import FieldSocial, things_update
 from trpg.content.fields import FieldBuilding, FieldMapDef
 from trpg.content.library import ContentLibrary
+from trpg.content.world_rules import FieldRules
 from trpg.world.actions import WorldEvent
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import (
@@ -210,12 +211,13 @@ _SIGN_ORDER: Final[tuple[tuple[frozenset[str], Literal["jar", "anvil", "scroll"]
 
 
 def _building_sign(
-    library: ContentLibrary, found: FieldMapDef, building: FieldBuilding
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef, building: FieldBuilding
 ) -> Literal["jar", "anvil", "scroll"] | None:
-    """建築範圍內的門（依座標排序的第一扇有室內的）通往的室內設施 → 招牌（6D-ART2；只畫）。"""
+    """建築範圍內的門（依座標排序的第一扇有室內的）通往的室內設施 → 招牌（6D-ART2；只畫）。
+    還沒發現的隱藏門不算（同 :func:`_doors`，6R-P：招牌不可洩漏隱藏門）。"""
     cells = set(building.cells())
     for door in sorted(found.doors, key=lambda d: (d.at[1], d.at[0])):
-        if door.at not in cells:
+        if door.at not in cells or hidden_door(char, found, door):
             continue
         inner = field_map(library, door.to)
         if inner is None:
@@ -227,7 +229,9 @@ def _building_sign(
     return None
 
 
-def _buildings(library: ContentLibrary, found: FieldMapDef) -> tuple[FieldBuildingView, ...]:
+def _buildings(
+    library: ContentLibrary, char: CharacterState, found: FieldMapDef
+) -> tuple[FieldBuildingView, ...]:
     return tuple(
         FieldBuildingView(
             kind=b.kind,
@@ -235,7 +239,7 @@ def _buildings(library: ContentLibrary, found: FieldMapDef) -> tuple[FieldBuildi
             y=b.at[1],
             width=b.size[0],
             height=b.size[1],
-            sign=_building_sign(library, found, b),
+            sign=_building_sign(library, char, found, b),
         )
         for b in found.buildings
     )
@@ -417,7 +421,7 @@ def field_view(
         stone_targets=_stone_targets(library, char, found, (pos.x, pos.y)),
         enemies=_enemies(library, world, char, now),
         friends=friends_here(library, world, char, found, grid),
-        buildings=_buildings(library, found),
+        buildings=_buildings(library, char, found),
     )
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5
@@ -425,8 +429,7 @@ def field_view(
 
 
 def _walk_max_steps(library: ContentLibrary) -> int:
-    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；沒有世界規則時用預設值）。"""
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；沒有世界規則時用 :class:`FieldRules`
+    的預設值）。"""
     rules = library.world_rules
-    if rules is None:
-        return int(FieldView.model_fields["walk_max_steps"].default)
-    return rules.field.walk_max_steps
+    return (FieldRules() if rules is None else rules.field).walk_max_steps

@@ -6702,6 +6702,8 @@ export interface components {
             steps: components["schemas"]["PathStepOut"][];
             stop: components["schemas"]["XY"];
             worst_stop: components["schemas"]["XY"];
+            /** Stops */
+            stops: components["schemas"]["XY"][];
             /** Stop Certain */
             stop_certain: boolean;
             /** Certain */

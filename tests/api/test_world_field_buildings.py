@@ -7,7 +7,7 @@ import pytest
 from tests.world.helpers import hero
 from trpg.api.world_field_view import _buildings, field_view
 from trpg.content.library import ContentLibrary, load_library
-from trpg.world.state import FieldPos
+from trpg.world.state import FieldPos, LocationRef
 from trpg.world.step import new_character
 
 
@@ -47,7 +47,7 @@ def test_building_signs_follow_interior(real_library: ContentLibrary) -> None:
     assert [b.sign for b in view.buildings] == ["jar", "anvil", None, None]
 
     def signs(map_id: str) -> list[tuple[str, str | None]]:
-        return [(b.kind, b.sign) for b in _buildings(lib, lib.field_maps[map_id])]
+        return [(b.kind, b.sign) for b in _buildings(lib, char, lib.field_maps[map_id])]
 
     assert signs("mist_ferry") == [
         ("tavern", "jar"),
@@ -69,3 +69,20 @@ def test_building_signs_follow_interior(real_library: ContentLibrary) -> None:
         ("tent", None),
         ("fountain", None),
     ]
+
+
+def test_building_sign_skips_undiscovered_reveal_doors(real_library: ContentLibrary) -> None:
+    """6R-P：還沒發現的隱藏門不給招牌（同 ``_doors`` 不顯示它）；發現後才有。"""
+    lib = real_library
+    char = new_character(lib, "alice", hero(lib), region="cloud_ridge")
+    found = lib.field_maps["mist_ferry"]
+    doors = tuple(
+        d.model_copy(update={"hidden_until": "reveal"}) if d.id == "tavern_door" else d
+        for d in found.doors
+    )
+    hidden = found.model_copy(update={"doors": doors})
+    assert [b.sign for b in _buildings(lib, char, hidden)] == [None, "anvil", None, None]
+    seen = char.model_copy(
+        update={"revealed": (LocationRef(region="cloud_ridge", location="mist_ferry_tavern"),)}
+    )
+    assert [b.sign for b in _buildings(lib, seen, hidden)] == ["jar", "anvil", None, None]

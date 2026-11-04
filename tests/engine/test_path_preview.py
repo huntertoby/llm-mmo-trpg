@@ -20,7 +20,7 @@ from trpg.engine import BattleState, Move, resolve
 from trpg.engine.battle import simulate_preview, simulate_slide_branch
 from trpg.engine.context import Ctx, SlideOverride
 from trpg.engine.events import CheckRolled, DamageDealt, StatusApplied, TrapTriggered
-from trpg.engine.path_preview import PathEvent, PathPreview, _key, _trace, preview_path
+from trpg.engine.path_preview import PathEvent, PathPreview, _key, _merge_all, _trace, preview_path
 from trpg.engine.state import TrapState, state_to_json
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Attribute, Pos, Surface, Team, UnitId
@@ -628,3 +628,62 @@ def test_slide_override_only_forces_slide_checks() -> None:
     assert len(checks) == 1 and checks[0].success
     assert passed_max.state.units[U1].xy == (2, 1)  # 過了冰、被陷阱定身
     assert high.state.units[U1].xy != passed_max.state.units[U1].xy
+
+
+# ---------------------------------------------------------------------------
+# 事件合併（6R-P：_merge／_fold／_paired／_widen 合成一個 fold）
+# ---------------------------------------------------------------------------
+
+
+def _hit(amount: int, source: str = "e1") -> PathEvent:
+    return PathEvent(
+        "damage", True, other_id=source, amount_min=amount, amount_max=amount, detail="trap"
+    )
+
+
+type _Range = tuple[int | None, int | None, bool]
+
+_MERGE_CASES: list[tuple[str, list[list[PathEvent]], list[_Range]]] = [
+    ("same_damage", [[_hit(5)], [_hit(5)]], [(5, 5, True)]),
+    ("low_less_than_high", [[_hit(4)], [_hit(9)]], [(4, 9, True)]),
+    ("low_more_than_high", [[_hit(9)], [_hit(4)]], [(4, 9, True)]),
+    ("only_in_high", [[], [_hit(7)]], [(None, 7, False)]),
+    ("only_in_low", [[_hit(3)], []], [(3, 3, False)]),
+    ("extra_branch_lower", [[_hit(4)], [_hit(9)], [_hit(2)]], [(2, 9, True)]),
+    ("extra_branch_higher", [[_hit(4)], [_hit(9)], [_hit(12)]], [(4, 12, True)]),
+    ("extra_branch_missing", [[_hit(4)], [_hit(9)], []], [(4, 9, False)]),
+    # 只在最多後果出現（沒有最小值）、之後的分支也有：最小值取那個分支的
+    ("high_only_then_extra", [[], [_hit(9)], [_hit(6)]], [(6, 9, False)]),
+    (
+        "only_in_extra",
+        [[_hit(4)], [_hit(9)], [_hit(4), _hit(8, "e2")]],
+        [(4, 9, True), (None, 8, False)],
+    ),
+    (
+        "two_sources",
+        [[_hit(4), _hit(1, "e2")], [_hit(9), _hit(3, "e2")]],
+        [(4, 9, True), (1, 3, True)],
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("sims", "expected"), [c[1:] for c in _MERGE_CASES], ids=[c[0] for c in _MERGE_CASES]
+)
+def test_merge_gives_the_damage_range_of_every_branch(
+    sims: list[list[PathEvent]], expected: list[_Range]
+) -> None:
+    """同一格各分支的傷害：上下限取所有分支的聯集，缺了的分支讓事件變「可能」。"""
+    merged = _merge_all(sims)
+    assert [(e.amount_min, e.amount_max, e.certain) for e in merged] == expected
+
+
+def test_merge_keeps_non_damage_events_and_stopped_reasons() -> None:
+    root = PathEvent("status", True, status_id="root")
+    low = [PathEvent("stopped", True, detail="prone"), root]
+    high = [PathEvent("stopped", True, detail="downed"), root]
+    merged = _merge_all([low, high])
+    assert [(e.kind, e.certain, e.detail) for e in merged] == [
+        ("stopped", False, "prone"),
+        ("status", True, None),
+    ]

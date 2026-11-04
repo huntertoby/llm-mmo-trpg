@@ -29,17 +29,17 @@
 ``situation_objects`` 表示，不用 ``npcs``。抵達方式與安全區規則是 6D-5 的事，這裡只檢查地圖。
 
 驗證分兩層：單檔（:class:`FieldMapDef` 的 validator：網格、座標、出口在邊緣、ID 不重複）與跨檔案
-（:func:`field_map_report`：地點與連線、出口配對、地形與物件 ID、走得到、尺寸、傳送石、NPC）。
-還沒畫的地圖不算錯：對面還沒畫的出口列為「待補」。
+（:func:`field_map_report`：地點與連線、出口配對、地形與物件 ID、走得到、尺寸、傳送石、NPC、
+出口 gate 的任務與步驟）。還沒畫的地圖不算錯：對面還沒畫的出口列為「待補」。
 
 確定性：所有清單依 ID 或座標排序，不依賴 ``set``／``dict`` 的迭代順序（守則 2）。
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import Field, model_validator
 
@@ -225,25 +225,12 @@ type ObjectLook = Literal[
     "stele",
     "sky_bridge",
 ]
-"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。
-``crystal_lamp``（源晶燈）、
-``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的浮橋）是
-6D-ART2。"""
+"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。``crystal_lamp``
+（源晶燈）、``stele``（橋頭石碑；紋章照同一格情境物件的 ``stele_region``）、``sky_bridge``（主城的
+浮橋）是 6D-ART2。"""
 
-OBJECT_LOOKS: tuple[str, ...] = (
-    "barrel",
-    "table",
-    "bar",
-    "counter",
-    "anvil",
-    "forge",
-    "candle",
-    "crystal_statue",
-    "shelf",
-    "crystal_lamp",
-    "stele",
-    "sky_bridge",
-)
+OBJECT_LOOKS: tuple[str, ...] = get_args(ObjectLook.__value__)
+""":data:`ObjectLook` 的值（由型別取出，不另寫一份；6R-P）。"""
 
 
 class FieldBuilding(ContentModel):
@@ -696,10 +683,17 @@ def field_map_problems(
     objects: dict[str, ObjectDef],
     core: CoreRules,
     npcs: Mapping[str, Mapping[str, str]] | None = None,
+    quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> list[str]:
     """:func:`field_map_report` 的錯誤清單（空＝通過）。"""
     report = field_map_report(
-        fields, world_maps=world_maps, terrain=terrain, objects=objects, core=core, npcs=npcs
+        fields,
+        world_maps=world_maps,
+        terrain=terrain,
+        objects=objects,
+        core=core,
+        npcs=npcs,
+        quest_steps=quest_steps,
     )
     return list(report.errors)
 
@@ -712,11 +706,15 @@ def field_map_report(
     objects: dict[str, ObjectDef],
     core: CoreRules,
     npcs: Mapping[str, Mapping[str, str]] | None = None,
+    quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> FieldMapReport:
     """實地地圖的跨檔案檢查（Phase 6 計畫 2.3）。
 
     ``fields`` 的鍵是地圖 ID；``npcs`` 是「區域 → NPC ID → 人設卡的地點」（``None``＝不檢查 NPC；
-    沒有該區的鍵＝那一區不檢查）。
+    沒有該區的鍵＝那一區不檢查）。``quest_steps`` 是「區域 → 任務 ID → 步驟 ID（依序）」
+    （``world_quests``；``None``＝不檢查出口 gate）：出口的 ``gate.quest`` 必須是地圖 **同區** 的
+    任務（:func:`trpg.world.field.exit_open` 用地圖的區域找任務）、``gate.step`` 必須是它的步驟；
+    沒有該區的鍵＝那一區沒有任務，有 gate 就是錯誤。
     """
     ctx = _Ctx(world_maps, {}, {}, [], [], [])
     for map_id in sorted(fields):
@@ -726,6 +724,8 @@ def field_map_report(
         _tile_problems(ctx, field, terrain, objects, core)
         if npcs is not None:
             _npc_problems(ctx, field, npcs)
+        if quest_steps is not None:
+            _gate_problems(ctx, field, quest_steps.get(field.region, {}))
     for key in sorted(ctx.outdoor):
         if key[0] == CAPITAL_REGION:
             _capital_links(ctx, ctx.outdoor[key])
@@ -873,6 +873,20 @@ def _reach_problems(
         if f.at not in reach and not any(c in reach for c in _neighbors(f.at))
     ]
     return out
+
+
+def _gate_problems(ctx: _Ctx, field: FieldMapDef, quests: Mapping[str, Sequence[str]]) -> None:
+    """出口 gate 的任務與步驟要存在（6R-P）：寫錯的話出口永遠打不開（只剩 ``open_flag``）。"""
+    for exit_ in field.exits:
+        gate = exit_.gate
+        if gate is None:
+            continue
+        prefix = f"實地地圖 {field.id}：出口 {exit_.id} 的 gate"
+        steps = quests.get(gate.quest)
+        if steps is None:
+            ctx.errors.append(f"{prefix}.quest {gate.quest} 不是 {field.region} 的任務")
+        elif gate.step not in steps:
+            ctx.errors.append(f"{prefix}.step {gate.step} 不是任務 {gate.quest} 的步驟")
 
 
 def _npc_problems(ctx: _Ctx, field: FieldMapDef, npcs: Mapping[str, Mapping[str, str]]) -> None:

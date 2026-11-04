@@ -1163,6 +1163,10 @@ def _load_world(
         files,
         world_maps=world_maps,
         npcs={r: {n.id: n.location for n in e.npcs} for r, e in world_event_content.npcs.items()},
+        quest_steps={
+            r: {q.id: tuple(s.id for s in q.steps) for q in table.quests}
+            for r, table in world_quests.quests.items()
+        },
     )
     return {
         "field_maps": fields,
@@ -1552,6 +1556,7 @@ def _load_world_fields(
     *,
     world_maps: Mapping[str, LocationMapDef],
     npcs: Mapping[str, Mapping[str, str]],
+    quest_steps: Mapping[str, Mapping[str, Sequence[str]]],
 ) -> tuple[dict[str, FieldMapDef], FieldMapReport]:
     """載入 ``world/fields/``（資料夾不存在＝空）並做跨檔案檢查；錯誤丟 :class:`ContentError`。
 
@@ -1582,6 +1587,7 @@ def _load_world_fields(
         objects=t.objects.by_id(),
         core=t.core,
         npcs=npcs,
+        quest_steps=quest_steps,
     )
     if report.errors:
         raise ContentError(directory, "；".join(report.errors))

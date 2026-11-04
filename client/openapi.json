@@ -16327,6 +16327,13 @@
           "worst_stop": {
             "$ref": "#/components/schemas/XY"
           },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Stops"
+          },
           "stop_certain": {
             "type": "boolean",
             "title": "Stop Certain"
@@ -16358,6 +16365,7 @@
           "steps",
           "stop",
           "worst_stop",
+          "stops",
           "stop_certain",
           "certain",
           "move_cost",
