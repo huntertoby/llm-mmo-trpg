@@ -36,6 +36,7 @@ function field(over: Partial<FieldView> = {}): FieldView {
     facilities: [],
     me: { x: 2, y: 2, facing: "s" },
     max_climb: 1,
+    walk_max_steps: 30,
     stone_targets: [],
     enemies: [],
     friends: [],

@@ -343,7 +343,7 @@ def _walk_path(
     下一格是關著的出口就停在前一格，那一格不算走過；沒擋住＝``None``）。"""
     limit = rules_of(library).field.walk_max_steps
     if len(action.path) > limit:
-        raise WorldActionError(f"一次最多走 {limit} 格")
+        raise WorldActionError(f"一次最多走 {limit} 格（這次送了 {len(action.path)} 格；請分段送）")
     pos = char.field
     if pos is None:
         raise WorldActionError("這裡還沒有實地地圖，請用 travel 移動")
