@@ -43,17 +43,20 @@ function narrCard(x,X,Y,W,lines){x.fillStyle="rgba(30,34,54,0.95)";x.beginPath()
 const HERO=E.PARTY[0];
 function plazaArea(c,w,h){for(let gy=0;gy<h;gy++)for(let gx=0;gx<w;gx++)TT.plaza(c,gx,gy);}
 function cloudEdge(c,y0){const r=RegionArt.rng(7);for(let i=0;i<30;i++){const cx=i*38+r()*20,cy=y0+r()*30;const g=c.createRadialGradient(cx,cy-6,4,cx,cy,36);g.addColorStop(0,"rgba(255,255,255,0.95)");g.addColorStop(1,"rgba(214,222,238,0.85)");c.fillStyle=g;c.beginPath();c.ellipse(cx,cy,40,20,0,0,TAU);c.fill();}}
-function brokenBridge(c,x0,y0,dx,dy,len){ // 斷在雲上的木板浮橋（只畫外觀）
-  for(let i=0;i<len;i++){const px=x0+dx*i*T*0.5,py=y0+dy*i*T*0.5;if(i>=len-2&&i%2===1)continue;const w=dx?T*0.46:T*0.9,h=dx?T*0.9:T*0.46;
-    c.fillStyle=i%2?"#a07040":"#8a5a30";c.fillRect(px-w/2,py-h/2,w,h);c.strokeStyle="#4a2e18";c.lineWidth=1.2;c.strokeRect(px-w/2,py-h/2,w,h);}
-  const ex=x0+dx*(len-1)*T*0.5,ey=y0+dy*(len-1)*T*0.5;c.strokeStyle="#6a4a2a";c.lineWidth=2;c.beginPath();c.moveTo(ex-(dy?T*0.45:0),ey-(dx?T*0.45:0));c.quadraticCurveTo(ex+dx*20,ey+dy*20+26,ex+dx*14,ey+dy*14+40);c.stroke();}
+function brokenBridge(c,x0,y0,dx,dy,len){ // 斷在雲上的木板浮橋（只畫外觀）：木板、兩側繩索與繩柱、斷口垂繩
+  const px=(i)=>x0+dx*i*T*0.5, py=(i)=>y0+dy*i*T*0.5, nx=dy?1:0, ny=dx?1:0; // 法線方向（橋寬）
+  for(let i=0;i<len;i++){if(i>=len-2&&i%2===1)continue;const w=dx?T*0.46:T*0.9,h=dx?T*0.9:T*0.46;c.fillStyle=i%2?"#a07040":"#8a5a30";c.fillRect(px(i)-w/2,py(i)-h/2,w,h);c.strokeStyle="#4a2e18";c.lineWidth=1.2;c.strokeRect(px(i)-w/2,py(i)-h/2,w,h);}
+  for(const s of [-1,1]){const off=s*T*0.42;c.strokeStyle="#6a4a2a";c.lineWidth=2.2;c.beginPath();c.moveTo(px(0)+nx*off,py(0)+ny*off);c.lineTo(px(len-1)+nx*off,py(len-1)+ny*off);c.stroke();
+    for(let i=0;i<len;i+=2){c.fillStyle="#5a3e28";c.fillRect(px(i)+nx*off-3,py(i)+ny*off-3,6,6);}}
+  const ex=px(len-1),ey=py(len-1);for(const s of [-1,1]){const off=s*T*0.42;c.strokeStyle="#6a4a2a";c.lineWidth=2;c.beginPath();c.moveTo(ex+nx*off,ey+ny*off);c.quadraticCurveTo(ex+nx*off+dx*18,ey+ny*off+dy*18+22,ex+nx*off+dx*10,ey+ny*off+dy*10+40);c.stroke();}}
 const panels=[];
 // ① 醒來
 panels.push([()=>{const [c,x]=panel(c=>{plazaArea(c,20,12);
     ["crystal_crown","cloud_ridge","arcane_hub","ashen_waste","frost_tide"].forEach((r,k)=>TT.banner(c,[3,6,13,16,9.5][k]*T,[3,1.6,1.6,3,0.6][k]*T,r));
     TT.portalPlaza(c,8.5,3.2);glow(c,10*T,4.8*T,170,"rgba(168,152,255,0.55)");
     // 主角在光圈裡半坐起（紙娃娃側躺後抬起上身）
-    c.save();c.translate(10*T,6*T);c.rotate(-1.05);StoryDoll.stamp(c,{look:HERO[0],gear:HERO[1]},"front",0,0,2.4,false);c.restore();
+    c.fillStyle="rgba(0,0,0,0.28)";c.beginPath();c.ellipse(10*T+14,6.05*T,62,16,0,0,TAU);c.fill();
+    c.save();c.translate(10*T-36,6*T-6);c.rotate(1.5);StoryDoll.stamp(c,{look:HERO[0],gear:HERO[1]},"side",0,0,2.4,false);c.restore();
     const v=c.createRadialGradient(10*T,4*T,180,10*T,4*T,640);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(10,12,30,0.65)");c.fillStyle=v;c.fillRect(0,0,20*T,12*T);});
   plaqueLoc(x,14,12,"樞島・中央廣場");narrCard(x,14,PH-128,PW-28,["傳送陣的光暗了下去。你在樞島中央醒來，晶柱還在低鳴。","五座浮橋斷在雲上，各自指向一個界域。"]);
   x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(PW-132,PH-54,112,32,7);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.6;x.stroke();x.fillStyle="#fff";x.font=`bold 13px ${FONT}`;x.fillText("站起來",PW-97,PH-33);border(x);return c;},
