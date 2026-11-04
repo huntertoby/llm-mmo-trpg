@@ -1,7 +1,7 @@
 /* UI-E2（docs/art/全遊戲一致性巡檢.md #4）：HUD 與彈窗的顏色收成同一組變數，底色統一成「碎界中樞」的深藍＋金框。
    RT-1（docs/art/區域主題移植需求.md 第 1 節）：區域點綴（--rt-*）由 client/src/ui/regionTheme.ts 依目前區域寫在 <html> 上，
    這裡只放 hub 的預設值；四角飾件是 --rt-corners（背景圖層），疊在 .rt-frame 的 ::after（不接滑鼠、不佔版面）。
-   只換點綴：版面、字型、按鈕不變。首頁與建角（UI-E1）不套這些 class。 */
+   只換點綴：版面、字型、按鈕不變。入口畫面（UI-E1）另外在 entry.css 套同一組變數。 */
 :root {
   --ui-navy: #1e2236;
   --ui-navy-deep: #161a2a;
