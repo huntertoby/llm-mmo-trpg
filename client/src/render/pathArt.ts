@@ -179,6 +179,21 @@ export function drawPathMarks(g: Pen, draw: PathDraw, geo: TileGeo): void {
     g.stroke({ width: 2, color: 0xffffff, alpha: 0.75 });
   }
   for (const p of draw.bangs) drawBang(g, geo.center(p));
+  for (const s of draw.slipStops) drawSlipStop(g, geo.center(s.pos));
+}
+
+const SLIP_STOP_R = 9;
+
+/** 冰面滑倒的停點 ◆（#123，6E-2）：格子中心的藍色菱形（白邊）。 */
+function drawSlipStop(g: Pen, c: Pt): void {
+  const r = SLIP_STOP_R;
+  g.moveTo(c.x, c.y - r);
+  g.lineTo(c.x + r, c.y);
+  g.lineTo(c.x, c.y + r);
+  g.lineTo(c.x - r, c.y);
+  g.closePath();
+  g.fill({ color: 0x1e78d0, alpha: 0.95 });
+  g.stroke({ width: 2, color: 0xffffff, alpha: 0.95 });
 }
 
 const BANG_R = 10;

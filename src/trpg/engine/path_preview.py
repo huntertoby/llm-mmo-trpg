@@ -18,10 +18,12 @@
   之後的格子標「到不了」（``unreachable``），``reason`` 為完整路徑不合法的原因。
 - 隱藏陷阱：與一般預覽相同，先以 :func:`trpg.engine.traps.strip_hidden_traps` 移除移動者陣營
   看不見的陷阱——預覽不洩漏看不見的陷阱，所以踩到未發現的陷阱時實走會與預覽不同。
-- 規則沒有「冰上滑行多格」：冰面是進入時的敏捷檢定，失敗倒地並停下（倒在友軍的格子上時滑回最近
-  的空格，見 ``battle._slide_back_if_stacked``）；預覽回報檢定的失敗機率與失敗時的停點。
-- 連續的冰面（6A-4f）：:attr:`PathPreview.slip_runs` 把路徑上連續有滑倒檢定的格子合成一段，給整段
-  「至少滑倒一次」的精確機率（各格不滑倒的機率連乘；同樣不擲骰）與失敗時可能的停點。
+- 冰面滑倒並滑行（#123，Phase 6E-2）：自己走進一段連續冰面的第一格擲一次敏捷檢定，失敗沿走進來
+  的方向滑到冰面外的第一格（最多 3 格）、停下倒地（:mod:`trpg.engine.ice_slide`）。
+  :attr:`PathPreview.slip_runs` 每段一筆：段的範圍、第一格的滑倒機率（精確計算，不擲骰），與失敗時
+  的 **單一停點與滑行路徑**——用同一套引擎另跑一次「只有這段的檢定失敗、其餘照最少後果」的模擬
+  （:func:`trpg.engine.battle.simulate_slide_failure`），所以停點與實走一致（含撞牆、撞單位、
+  高度差、致命地形前停下、滑過陷阱；倒在友軍格時滑回空格，見 ``battle._slide_back_if_stacked``）。
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ from fractions import Fraction
 from typing import Literal
 
 from trpg.engine.actions import Move
-from trpg.engine.battle import acting_unit, plan_move, simulate_preview
+from trpg.engine.battle import acting_unit, plan_move, simulate_preview, simulate_slide_failure
 from trpg.engine.events import (
     CheckRolled,
     DamageDealt,
@@ -47,11 +49,14 @@ from trpg.engine.events import (
     UnitEscaped,
     UnitFell,
     UnitMoved,
+    UnitSlid,
     UnitStoodUp,
 )
+from trpg.engine.ice_slide import slide_check_def
 from trpg.engine.ids import PRONE
 from trpg.engine.results import ResolveResult
-from trpg.engine.rules.movement import find_path
+from trpg.engine.rules.movement import find_path, is_flying
+from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import strip_hidden_traps
@@ -140,20 +145,29 @@ class PathStep:
 
 @dataclass(frozen=True, slots=True)
 class SlipRun:
-    """路徑上連續有滑倒檢定（冰面）的一段（6A-4f）：畫面合成一張小牌。"""
+    """路徑上一段連續的冰面（6A-4f；#123 起只在第一格檢定一次）：畫面合成一張小牌。"""
 
     start: int
-    """第一格在路徑中的位置（``PathStep.index``）。"""
+    """第一格（擲檢定的那一格）在路徑中的位置（``PathStep.index``）。"""
     end: int
-    """最後一格在路徑中的位置（含）。"""
+    """這段冰在路徑上的最後一格（含；只算合法前段）。"""
     chance: Fraction
-    """走過整段「至少滑倒一次」的機率：``1 − Π(1 − 各格失敗機率)``（精確計算，不擲骰）。
-    只算這段的檢定：在這段之前或段內被其他事件（藉機攻擊、陷阱）打斷的情況不另外計入。"""
-    fail_stops: tuple[XY, ...]
-    """在段內滑倒時可能的停點（依路徑順序、不重複）：滑倒的那一格；倒在其他單位的格子上時滑回
-    走過的最近空格（與 ``battle._slide_back_if_stacked`` 相同）。"""
+    """第一格的滑倒機率（精確計算，不擲骰）。這段之前被其他事件打斷的情況不另外計入。"""
+    fail_stop: XY
+    """滑倒時的停點（滑行後倒地的格子；倒在友軍格上時為滑回的空格）。"""
+    slide_path: tuple[XY, ...]
+    """滑倒時的滑行路徑：含起點（滑倒的那一格）與滑行的停點；只有起點＝一格都沒滑。"""
+    stop_reason: str
+    """滑行停下的原因（``unit_slid.stop_reason``：``off_ice``、``wall``、``unit``……；不會滑倒的段
+    為 ``immune``）。"""
     status_id: str | None
-    """失敗得到的狀態（冰面為 ``prone``）。"""
+    """失敗得到的狀態（冰面為 ``prone``；不會滑倒的段為 ``None``）。"""
+    immune: bool = False
+    """移動者不會在這種表面滑倒（矮人、鱗族；05 5.10「冰 N 格・不會滑倒」）：不擲、不滑。"""
+    stop_trap: bool = False
+    """失敗的停點上有移動者看得見的敵方陷阱（小牌加「（滑到陷阱）」）。"""
+    stop_surface: Surface | None = None
+    """失敗的停點上的表面（冰與無表面以外，例如火、毒）。"""
 
     @property
     def tiles(self) -> int:
@@ -247,7 +261,7 @@ def preview_path(
         worst_stop=high_trace.stop,
         certain=low is high,
         move_cost=cost,
-        slip_runs=_slip_runs(seen, unit_id, requested, steps),
+        slip_runs=_slip_runs(seen, Move(unit_id=unit_id, path=path[:legal]), steps),
     )
 
 
@@ -458,53 +472,86 @@ def _slip_check(step: PathStep) -> PathEvent | None:
     return next((e for e in step.events if e.kind == "slip_check" and e.chance is not None), None)
 
 
-def _slip_runs(
-    state: BattleState, unit_id: UnitId, path: tuple[XY, ...], steps: tuple[PathStep, ...]
-) -> tuple[SlipRun, ...]:
-    """把連續有滑倒檢定的格子合成段（走不到的格子沒有事件，自然不算在內）。"""
+def _run_start(state: BattleState, path: tuple[Pos, ...], index: int) -> bool:
+    """第 ``index`` 格是不是一段冰的第一格（會滑行的表面，前一格不是同一種表面）。"""
+    if index == 0:
+        return False
+    here, before = (path[index].x, path[index].y), (path[index - 1].x, path[index - 1].y)
+    if slide_check_def(state, here) is None:
+        return False
+    return state.tile(*before).surface is not state.tile(*here).surface
+
+
+def _slip_runs(state: BattleState, move: Move, steps: tuple[PathStep, ...]) -> tuple[SlipRun, ...]:
+    """每段冰一筆：擲滑行檢定的段（最少後果的模擬裡依序出現）另跑一次失敗的模擬取停點；不會滑倒的
+    單位（矮人、鱗族）走得到的段標 ``immune``。走不到的格子不算在內。"""
     runs: list[SlipRun] = []
-    current: list[tuple[PathStep, PathEvent]] = []
+    unit = state.units[move.unit_id]
+    immune = not is_flying(unit) and any(
+        slip_immune(state.ruleset, unit, s.surface) for s in steps if s.surface is Surface.ICE
+    )
+    nth = 0
     for step in steps:
+        if step.index >= len(move.path) or not _run_start(state, move.path, step.index):
+            continue
         check = _slip_check(step)
         if check is not None:
-            current.append((step, check))
-            continue
-        if current:
-            runs.append(_slip_run(state, unit_id, path, current))
-            current = []
-    if current:
-        runs.append(_slip_run(state, unit_id, path, current))
+            runs.append(_slip_run(state, move, steps, start=step.index, nth=nth, check=check))
+            nth += 1
+        elif immune and step.reach in ("certain", "possible"):
+            runs.append(_immune_run(steps, len(move.path), step.index))
     return tuple(runs)
+
+
+def _run_end(steps: tuple[PathStep, ...], legal: int, start: int) -> int:
+    end = start
+    while end + 1 < legal and steps[end + 1].surface is steps[start].surface:
+        end += 1
+    return end
+
+
+def _immune_run(steps: tuple[PathStep, ...], legal: int, start: int) -> SlipRun:
+    pos = steps[start].pos
+    return SlipRun(
+        start=start,
+        end=_run_end(steps, legal, start),
+        chance=Fraction(0),
+        fail_stop=pos,
+        slide_path=(pos,),
+        stop_reason="immune",
+        status_id=None,
+        immune=True,
+    )
 
 
 def _slip_run(
     state: BattleState,
-    unit_id: UnitId,
-    path: tuple[XY, ...],
-    run: list[tuple[PathStep, PathEvent]],
+    move: Move,
+    steps: tuple[PathStep, ...],
+    *,
+    start: int,
+    nth: int,
+    check: PathEvent,
 ) -> SlipRun:
-    """一段的合計：不滑倒的機率連乘，失敗時的停點依序列出。"""
-    survive = Fraction(1)
-    stops: list[XY] = []
-    for step, check in run:
-        assert check.chance is not None
-        survive *= 1 - check.chance
-        stop = _fail_stop(state, unit_id, path, step.index)
-        if stop not in stops:
-            stops.append(stop)
-    return SlipRun(
-        start=run[0][0].index,
-        end=run[-1][0].index,
-        chance=1 - survive,
-        fail_stops=tuple(stops),
-        status_id=run[0][1].status_id,
+    """第 ``nth`` 次滑行檢定（在第 ``start`` 格）的段：另跑一次只有這次失敗的模擬取停點與路徑；
+    停點上有看得見的敵方陷阱或冰以外的表面時一併標出（小牌寫「滑到陷阱」）。"""
+    failed = simulate_slide_failure(state, move, nth)
+    slid = next(
+        (e for e in failed.events if isinstance(e, UnitSlid) and e.unit_id == move.unit_id), None
     )
-
-
-def _fail_stop(state: BattleState, unit_id: UnitId, path: tuple[XY, ...], index: int) -> XY:
-    """在第 ``index`` 格滑倒時的停點：那一格；有其他單位時滑回走過的最近空格。"""
-    occupied = {u.xy for u in state.units.values() if u.alive and u.id != unit_id}
-    for back in reversed(path[: index + 1]):
-        if back not in occupied:
-            return back
-    return path[index]
+    path = tuple((p.x, p.y) for p in slid.path) if slid is not None else (steps[start].pos,)
+    stop = failed.state.units[move.unit_id].xy
+    unit = state.units[move.unit_id]
+    surface = state.tile(*stop).surface
+    assert check.chance is not None
+    return SlipRun(
+        start=start,
+        end=_run_end(steps, len(move.path), start),
+        chance=check.chance,
+        fail_stop=stop,
+        slide_path=path,
+        stop_reason=slid.stop_reason if slid is not None else "interrupted",
+        status_id=check.status_id,
+        stop_trap=any(t.xy == stop and t.team is not unit.team for t in state.traps),
+        stop_surface=None if surface in (Surface.NONE, Surface.ICE) else surface,
+    )

@@ -84,7 +84,7 @@ def test_path_preview_rejects_bad_requests(client: TestClient) -> None:
 
 
 def test_path_preview_merges_consecutive_ice(client: TestClient) -> None:
-    """6A-4f：連續冰面合成一段，機率與引擎的精確值一致（‰ 四捨五入），不改變戰鬥。"""
+    """6A-4f／#123：連續冰面合成一段（只在第一格檢定），機率與停點與引擎一致，不改變戰鬥。"""
     battle = _create(client)
     session = store_of(client).get(battle["battle_id"])
     state = session.state
@@ -105,6 +105,11 @@ def test_path_preview_merges_consecutive_ice(client: TestClient) -> None:
     assert (run["start"], run["end"], run["tiles"]) == (1, 2, 2)
     assert run["start_pos"] == [path[1].x, path[1].y]
     assert run["end_pos"] == [path[2].x, path[2].y]
-    assert run["status_id"] == "prone" and run["fail_stops"]
     expected = preview_path(state, hero_id, path=tuple(path)).slip_runs[0]
+    assert run["status_id"] == "prone"
     assert run["chance_permille"] == permille(expected.chance)
+    # #123：失敗時的單一停點與滑行路徑（含起點）
+    assert run["fail_stop"] == list(expected.fail_stop)
+    assert run["slide_path"] == [list(xy) for xy in expected.slide_path]
+    assert run["slide_path"][0] == [path[1].x, path[1].y]
+    assert run["stop_reason"] == expected.stop_reason

@@ -17,6 +17,7 @@ from hypothesis import strategies as st
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, with_rolls
 from trpg.engine import BattleState, Move, resolve
+from trpg.engine.events import CheckRolled
 from trpg.engine.path_preview import PathEvent, PathPreview, _key, _trace, preview_path
 from trpg.engine.state import TrapState, state_to_json
 from trpg.shared.errors import IllegalActionError
@@ -123,12 +124,19 @@ def _ice_checks(p: PathPreview) -> None:
     assert any(e.kind == "status" and e.status_id == "prone" and not e.certain for e in ice.events)
     stopped = next(e for e in ice.events if e.kind == "stopped")
     assert not stopped.certain and stopped.detail == "prone"
-    assert [s.reach for s in p.steps] == ["certain", "certain", "certain", "possible"]
+    assert [s.reach for s in p.steps] == ["certain", "certain", "certain", "possible", "possible"]
+    slid = [e for e in ice.events if e.kind == "displaced"]  # 失敗時滑到冰面外的第一格（#123）
+    assert [(e.pos, e.detail, e.certain) for e in slid] == [((3, 0), "slide", False)]
+    (run,) = p.slip_runs
+    assert (run.start, run.end, run.fail_stop, run.stop_reason) == (2, 2, (3, 0), "off_ice")
+    assert run.slide_path == ((2, 0), (3, 0))
 
 
 def _ice_ally_checks(p: PathPreview) -> None:
     displaced = [e for e in p.steps[1].events if e.kind == "displaced"]
     assert displaced and displaced[0].pos == (0, 0) and not displaced[0].certain
+    (run,) = p.slip_runs
+    assert (run.fail_stop, run.slide_path, run.stop_reason) == ((0, 0), ((1, 0),), "wall")
 
 
 def _wall_checks(p: PathPreview) -> None:
@@ -189,18 +197,21 @@ CASES: tuple[Case, ...] = (
     Case(
         "ice_slip_or_pass",
         lambda: _battle(surfaces=[(2, 0, "ice")]),
-        ((0, 0), (1, 0), (2, 0), (3, 0)),
+        ((0, 0), (1, 0), (2, 0), (3, 0), (4, 0)),
         False,
+        (4, 0),
         (3, 0),
-        (2, 0),
         check=_ice_checks,
     ),
     Case(
+        # 第一格冰上有友軍、下一格是牆（一格都沒滑）：倒在友軍格上，滑回最近的空格
         "ice_under_ally_slides_back",
-        lambda: _battle(surfaces=[(1, 0, "ice")], ally=[(0, 0), (1, 0)]),
-        ((0, 0), (1, 0), (2, 0)),
+        lambda: _battle(
+            "000000\n000000", "..#...\n......", surfaces=[(1, 0, "ice")], ally=[(0, 0), (1, 0)]
+        ),
+        ((0, 0), (1, 0), (1, 1)),
         False,
-        (2, 0),
+        (1, 1),
         (0, 0),
         check=_ice_ally_checks,
     ),
@@ -381,32 +392,35 @@ def test_preview_never_changes_state_and_matches_when_certain(
 
 
 # ---------------------------------------------------------------------------
-# 連續冰面（6A-4f）：整段的滑倒機率與停點＝窮舉實走
+# 連續冰面（6A-4f；#123 起整段只在第一格檢定一次）：滑倒機率與停點＝窮舉實走
 # ---------------------------------------------------------------------------
 
 
-def _exhaust_two_checks(state: BattleState, path: tuple[XY, ...]) -> tuple[Fraction, set[XY]]:
-    """窮舉兩次 d20 檢定的實走：至少滑倒一次的機率、滑倒時的停點。"""
+def _exhaust_check(state: BattleState, path: tuple[XY, ...]) -> tuple[Fraction, set[XY], int]:
+    """窮舉 d20 的實走：滑倒的機率、滑倒時的停點、最多擲了幾次檢定。"""
     falls = 0
     stops: set[XY] = set()
-    for first in range(1, 21):
-        for second in range(1, 21):
-            rolled = with_rolls(state, [(20, first), (20, second)])
-            actual = resolve(rolled, Move(unit_id=U1, path=_pos(path)))
-            hero = actual.state.units[U1]
-            if hero.has_status("prone"):
-                falls += 1
-                stops.add(hero.xy)
-    return Fraction(falls, 400), stops
+    checks = 0
+    for roll in range(1, 21):
+        actual = resolve(with_rolls(state, [(20, roll)]), Move(unit_id=U1, path=_pos(path)))
+        checks = max(checks, sum(isinstance(e, CheckRolled) for e in actual.events))
+        hero = actual.state.units[U1]
+        if hero.has_status("prone"):
+            falls += 1
+            stops.add(hero.xy)
+    return Fraction(falls, 20), stops, checks
 
 
 @pytest.mark.parametrize(
-    ("ally", "expected_stops"),
-    [(((0, 0),), ((1, 0), (2, 0))), (((0, 0), (2, 0)), ((1, 0),))],
+    ("ally", "expected_stop", "expected_slide", "reason"),
+    [
+        (((0, 0),), (3, 0), ((1, 0), (2, 0), (3, 0)), "off_ice"),
+        (((0, 0), (2, 0)), (1, 0), ((1, 0),), "unit"),
+    ],
     ids=["two_ice", "two_ice_ally_on_second"],
 )
-def test_ice_run_chance_and_stops_match_the_walk(
-    ally: tuple[XY, ...], expected_stops: tuple[XY, ...]
+def test_ice_run_chance_and_stop_match_the_walk(
+    ally: tuple[XY, ...], expected_stop: XY, expected_slide: tuple[XY, ...], reason: str
 ) -> None:
     state = _battle(surfaces=[(1, 0, "ice"), (2, 0, "ice")], ally=ally)
     path = ((0, 0), (1, 0), (2, 0), (3, 0))
@@ -416,22 +430,29 @@ def test_ice_run_chance_and_stops_match_the_walk(
     assert len(p.slip_runs) == 1
     run = p.slip_runs[0]
     assert (run.start, run.end, run.tiles, run.status_id) == (1, 2, 2, "prone")
-    assert run.fail_stops == expected_stops
-    chance, stops = _exhaust_two_checks(state, path)
-    assert run.chance == chance
-    assert set(run.fail_stops) == stops
-    single = [next(e for e in p.steps[i].events if e.kind == "slip_check").chance for i in (1, 2)]
-    assert single[0] is not None and single[1] is not None
-    assert run.chance == 1 - (1 - single[0]) * (1 - single[1])
+    assert (run.fail_stop, run.slide_path, run.stop_reason) == (
+        expected_stop,
+        expected_slide,
+        reason,
+    )
+    chance, stops, checks = _exhaust_check(state, path)
+    assert checks == 1  # 同一段冰只擲一次
+    assert run.chance == chance and stops == {run.fail_stop}
+    assert [e.kind for e in p.steps[2].events].count("slip_check") == 0
 
 
 def test_ice_runs_split_on_plain_ground_and_keep_the_trap_after() -> None:
     split = _battle("000000\n000000", surfaces=[(1, 0, "ice"), (3, 0, "ice")])
     p = preview_path(split, U1, path=_pos(((0, 0), (1, 0), (2, 0), (3, 0), (4, 0))))
     assert [(r.start, r.end, r.tiles) for r in p.slip_runs] == [(1, 1, 1), (3, 3, 1)]
+    assert [(r.fail_stop, r.stop_reason) for r in p.slip_runs] == [((2, 0), "off_ice")] * 1 + [
+        ((4, 0), "off_ice")
+    ]
     trap = _enemy_trap(_battle(surfaces=[(1, 0, "ice"), (2, 0, "ice")]), (3, 0), revealed=True)
     q = preview_path(trap, U1, path=_pos(((0, 0), (1, 0), (2, 0), (3, 0))))
     assert [(r.start, r.end) for r in q.slip_runs] == [(1, 2)]
     assert q.steps[3].trap and q.steps[3].reach == "possible"
+    # 滑到冰面外的陷阱格：停點是陷阱格（陷阱的抵抗在預覽取有利，停下原因是滑出冰面）
+    assert q.slip_runs[0].fail_stop == (3, 0)
     plain = preview_path(_battle(), U1, path=_pos(((0, 0), (1, 0), (2, 0))))
     assert plain.slip_runs == ()

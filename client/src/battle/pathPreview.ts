@@ -4,7 +4,7 @@
 import type { components } from "../api/schema";
 import type { BattleView, MoveAction, Pos } from "../api/types";
 import { posKey } from "./geometry";
-import { reactionName, statusName } from "./glossary";
+import { reactionName, statusName, surfaceName } from "./glossary";
 
 type Schemas = components["schemas"];
 export type PathPreview = Schemas["PathPreviewOut"];
@@ -76,11 +76,13 @@ export interface PathDraw {
   tags: PathTag[];
   /** 實際會停下的格子（被陷阱定住、被打斷）：紅色驚嘆號泡泡。冰面滑倒不放。 */
   bangs: Pos[];
+  /** 冰面滑倒時的停點（#123，6E-2）：畫 ◆；`slide` 是滑行路徑（含起點）。 */
+  slipStops: Array<{ pos: Pos; slide: Pos[] }>;
   /** 原定的終點走不到：虛線框＋淡影，標「到不了」。 */
   missEnd: Pos | null;
 }
 
-export const EMPTY_PATH_DRAW: PathDraw = { segments: [], dots: [], frames: [], tags: [], bangs: [], missEnd: null };
+export const EMPTY_PATH_DRAW: PathDraw = { segments: [], dots: [], frames: [], tags: [], bangs: [], slipStops: [], missEnd: null };
 
 const toPos = (xy: readonly number[]): Pos => ({ x: xy[0] as number, y: xy[1] as number });
 
@@ -160,10 +162,27 @@ interface Part {
   text: string;
 }
 
-/** 連續冰面一段的小牌文字（6A-4f）：有百分比就不加「（可能）」。 */
+/** 連續冰面一段的小牌文字（6A-4f；#123 只在第一格擲一次，失敗沿方向滑到停點 ◆ 倒地）：有百分比就不加「（可能）」。
+ * 一格都沒滑（下一格就擋住）時寫「失敗就地倒地」。 */
 export function slipRunText(run: SlipRun): string {
+  if (run.immune) return `冰 ${run.tiles} 格・不會滑倒`;
   const pct = Math.round(run.chance_permille / 10);
-  return run.tiles > 1 ? `冰 ${run.tiles} 格・滑倒 ${pct}%・失敗停在那格` : `滑倒 ${pct}%・失敗停在這格`;
+  const fail = run.slide_path.length > 1 ? "失敗滑到 ◆ 倒地" : "失敗就地倒地";
+  return `冰 ${run.tiles} 格・滑倒 ${pct}%・${fail}${slipLanding(run)}`;
+}
+
+/** 停點上有陷阱或表面時的附註（05 5.10）：「（滑到陷阱）」「（滑到火焰）」。 */
+function slipLanding(run: SlipRun): string {
+  if (run.stop_trap) return "（滑到陷阱）";
+  if (run.stop_surface !== null) return `（滑到${surfaceName(run.stop_surface)}）`;
+  return "";
+}
+
+/** 每段冰面滑倒時的停點 ◆（停在別處的才畫；就地倒地時停點就是小牌那格；不會滑倒的段不畫）。 */
+export function slipStops(pv: PathPreview): Array<{ pos: Pos; slide: Pos[] }> {
+  return pv.slip_runs
+    .filter((r) => !r.immune && !(r.fail_stop[0] === r.start_pos[0] && r.fail_stop[1] === r.start_pos[1]))
+    .map((r) => ({ pos: toPos(r.fail_stop), slide: r.slide_path.map(toPos) }));
 }
 
 /** 一格的事件 → 小牌的各段（依序：滑倒、陷阱、點燃、其他狀態、潮濕、反應、墜落、致命、其餘傷害）。
@@ -179,8 +198,9 @@ function stepParts(step: PathStep, run: SlipRun | undefined, iced: boolean): Par
   };
   if (run !== undefined) parts.push({ icon: "ice", text: slipRunText(run) });
   for (const e of take((x) => x.kind === "slip_check")) {
-    take((x) => x.kind === "status" && x.status_id === e.status_id); // 滑倒的倒地已經寫在「失敗停在那格」
+    take((x) => x.kind === "status" && x.status_id === e.status_id); // 滑倒的倒地已經寫在「失敗滑到 ◆ 倒地」
   }
+  take((x) => x.kind === "displaced" && x.detail === "slide"); // 滑行的每一格由 ◆ 表示
   const trapMaybe = (certain: boolean): string => (iced ? "" : maybe(certain));
   for (const trap of take((x) => x.kind === "trap")) {
     const dmg = damageText(take((x) => x.kind === "damage" && x.other_id === trap.other_id));
@@ -269,6 +289,7 @@ export function pathDraw(pv: PathPreview | null): PathDraw {
       return tag === null ? [] : [tag];
     }),
     bangs: stopBangs(pv),
+    slipStops: slipStops(pv),
     missEnd: missedEnd(pv),
   };
 }
