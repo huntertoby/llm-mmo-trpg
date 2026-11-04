@@ -57,7 +57,7 @@ from trpg.engine.basics import (
     vault_destinations,
     vault_plan,
 )
-from trpg.engine.context import Ctx, GambleBranch, PreviewMode, SlideOverride
+from trpg.engine.context import CheckOverride, CheckPoint, Ctx, GambleBranch, PreviewMode
 from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.delayed import start_directed_charge
 from trpg.engine.effects import execute
@@ -174,8 +174,8 @@ __all__ = [
     "resume",
     "run_problem",
     "shove_problem",
+    "simulate_branch",
     "simulate_preview",
-    "simulate_slide_branch",
     "start_battle",
 ]
 
@@ -1242,14 +1242,22 @@ def simulate_preview(
     return low, resolve_with(base, action, preview="max", gamble=gamble)
 
 
-def simulate_slide_branch(
-    base: BattleState, action: Move, override: SlideOverride, preview: PreviewMode = "min"
-) -> ResolveResult:
-    """內部 API（#123 路徑預覽；Phase 6P-1）：``preview`` 模擬，但冰面滑行檢定照 ``override``
-    指定（例如第 k 次失敗、之前的通過）；其餘骰子與檢定照 ``preview``。"""
-    ctx = Ctx(base.clone(), preview=preview, slide_override=override)
+def simulate_branch(
+    base: BattleState,
+    action: Action,
+    preview: PreviewMode = "min",
+    *,
+    override: CheckOverride | None = None,
+    gamble: GambleBranch | None = None,
+) -> tuple[ResolveResult, tuple[CheckPoint, ...], bool]:
+    """內部 API（分支推演，:mod:`trpg.engine.branching`；Phase 7 前置）：``preview`` 模擬，但檢定照
+    ``override`` 指定（例如第 k 次最差、之前的最好）；其餘骰子與檢定照 ``preview``。
+
+    回傳 ``(結果, 擲過的檢定, 是否經過分歧點)``；不修改 ``base``、不消耗它的亂數。"""
+    ctx = Ctx(base.clone(), preview=preview, gamble=gamble, check_override=override)
     ACTION_HANDLERS[action.type](ctx, ctx.state.units[action.unit_id], action)
-    return finish_resolution(ctx)
+    result = finish_resolution(ctx)
+    return result, tuple(ctx.check_log), ctx.preview_branched()
 
 
 def resolve(state: BattleState, action: Action) -> ResolveResult:
