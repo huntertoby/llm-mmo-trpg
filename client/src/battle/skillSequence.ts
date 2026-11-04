@@ -7,6 +7,7 @@
 // - 一招（第一段，不含連鎖與反擊）從起手到命中最長 1.8 秒：超過時等比壓縮起手與加力，命中點之後不壓。
 // - 位移類原語（衝刺、跳躍、傳送…）的身體姿勢在位移動畫上播（`moveClips`）；照卡上的順序決定在出招前或出招後。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
+import { battleVariantKey, pickVariant, variantIndex, type ArcSpec, type AttackFamily } from "../render/attackVariants";
 import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMode, type ClipId, type Opener, type PrimitiveClipId, type WeaponClass } from "../render/skillClips";
 import type { MoveAnim } from "./animation";
 import { samePos } from "./geometry";
@@ -159,9 +160,35 @@ export interface SkillSegment {
   charged: boolean;
   /** 這一段被撞倒（倒地狀態）的單位。 */
   felled: string[];
+  /** 近身普攻挑到的攻擊變體（6N-6）；技能、遠程、沒有變體表的武器為 `null`。 */
+  variant: VariantPick | null;
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
+/** 施放者的變體表列（6N-6，`attackVariants.attackFamilyOf`）；沒有變體表為 `null`。 */
+export type AttackOf = (unitId: string) => AttackFamily | null;
+
+/** 挑到的變體：哪一列、第幾個、蓄力與出招片段、弧光。 */
+export interface VariantPick {
+  family: AttackFamily;
+  index: number;
+  id: string;
+  windup: ClipId;
+  strike: ClipId;
+  arc: ArcSpec;
+}
+
+/** 沒給 `attackOf` 時由起手對照表的列推（劍、刀、斧錘都當「劍」；魔導劍、成對、槍、鐮、鞭各自一列）。 */
+const CLASS_FAMILY: Readonly<Partial<Record<WeaponClass, AttackFamily>>> = { blade: "sword", arcane: "arcane", pair: "pair", spear: "spear", scythe: "scythe", whip: "whip" };
+
+/** 普攻挑變體：鍵 ＝「戰鬥鍵:attack_rolled 的 seq:施放者:attack_<列>」（需求第 0 節第 3 點）。 */
+export function variantFor(family: AttackFamily, battleKey: string, seq: number, casterId: string): VariantPick {
+  const key = battleVariantKey(battleKey, seq, casterId, family);
+  const v = pickVariant(family, key);
+  return { family, index: variantIndex(family, key), id: v.id, windup: v.windup, strike: v.strike, arc: v.arc };
+}
+
+const seqOf = (e: EventBase): number => (typeof e.seq === "number" ? e.seq : 0);
 
 function posOf(v: unknown): Pos | null {
   return typeof v === "object" && v !== null && "x" in v && "y" in v ? (v as Pos) : null;
@@ -173,6 +200,8 @@ interface RawSeg {
   segment: SegmentIndex;
   basic: boolean;
   followup: boolean;
+  /** 開這一段的事件的 `seq`（挑變體用）。 */
+  seq: number;
   from: Pos;
   target: Pos | null;
   tiles: Pos[];
@@ -198,12 +227,12 @@ function splitSegments(events: readonly Record<string, unknown>[], view: BattleV
         const caster = String(e.unit_id);
         const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
         const tiles = Array.isArray(e.tiles) ? e.tiles.map(posOf).filter((p): p is Pos => p !== null) : [];
-        if (from !== null) seg = { casterId: caster, skillId: String(e.skill_id), segment: e.type === "skill_followup" ? 1 : 0, basic: false, followup: e.type === "skill_followup", from, target: null, tiles, events: [] };
+        if (from !== null) seg = { casterId: caster, skillId: String(e.skill_id), segment: e.type === "skill_followup" ? 1 : 0, basic: false, followup: e.type === "skill_followup", seq: seqOf(e), from, target: null, tiles, events: [] };
       } else {
         const caster = String(e.attacker_id);
         const from = at(caster);
         const target = at(e.target_id);
-        if (from !== null && target !== null) seg = { casterId: caster, skillId: null, segment: 0, basic: true, followup: false, from, target, tiles: [target], events: [] };
+        if (from !== null && target !== null) seg = { casterId: caster, skillId: null, segment: 0, basic: true, followup: false, seq: seqOf(e), from, target, tiles: [target], events: [] };
       }
       if (seg !== null) {
         out.push(seg);
@@ -243,13 +272,15 @@ function rangeOf(card: SkillCard | undefined, seg: RawSeg, to: Pos): number {
   return typeof r === "number" ? r : chebyshev(seg.from, to);
 }
 
-function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weaponOf: WeaponOf): SkillSegment {
+function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weaponOf: WeaponOf, attackOf: AttackOf | undefined): SkillSegment {
   const card = raw.skillId === null ? undefined : cards[raw.skillId];
   const shape: ShapeId = raw.basic ? "single" : (shapeIdOf(card, raw.segment) ?? inferShape(raw.from, raw.tiles));
   const mode = raw.basic ? (chebyshev(raw.from, to) > 1 ? "ranged" : "melee") : castMode(shape, rangeOf(card, raw, to));
   const weapon = weaponOf(raw.casterId);
   const timing = card?.timing ?? null;
   const felled = raw.events.filter((e) => e.type === "status_applied" && e.status_id === "prone").map((e) => String(e.target_id));
+  // 6N-6：近身普攻照變體表挑（技能的變體是 6N-8）
+  const family = raw.basic && mode === "melee" ? (attackOf === undefined ? (CLASS_FAMILY[weapon] ?? null) : attackOf(raw.casterId)) : null;
   return {
     casterId: raw.casterId,
     skillId: raw.skillId,
@@ -264,6 +295,7 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     opener: openerFor(weapon, mode),
     charged: timing === "delayed" || timing === "activation" || (card?.activation_id ?? null) !== null,
     felled: [...new Set(felled)].sort(),
+    variant: family === null ? null : variantFor(family, view.map_id ?? "", raw.seq, raw.casterId),
   };
 }
 
@@ -316,7 +348,8 @@ interface PostClip {
 
 function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number }>; strike: ClipId; post: PostClip[] } {
   const pre: Array<{ clip: ClipId; ms: number }> = [];
-  if (withWindup && seg.opener.windup !== null) pre.push({ clip: seg.opener.windup, ms: clipDef(seg.opener.windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze });
+  const windup = seg.variant?.windup ?? seg.opener.windup;
+  if (withWindup && windup !== null) pre.push({ clip: windup, ms: clipDef(windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze });
   const post: PostClip[] = [];
   for (const p of seg.primitives) {
     const play = primitivePlay(p, seg.polarity);
@@ -326,7 +359,7 @@ function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pr
     if (play.role === "pre") pre.push({ clip: play.clip, ms: clipDef(play.clip).ms * squeeze });
     else if (prev === undefined || prev.clip !== play.clip || prev.icon !== icon) post.push({ clip: play.clip, icon });
   }
-  return { pre, strike: seg.opener.strike, post };
+  return { pre, strike: seg.variant?.strike ?? seg.opener.strike, post };
 }
 
 function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid {
@@ -413,10 +446,10 @@ function retime(vfx: StepVfx, shift: readonly number[], felled: ReadonlySet<stri
  * 一步的技能時間軸（時間是正常速度；`scaleTimeline` 再乘播放速度）。沒有技能或一般攻擊、或段落和特效對不起來時回傳 `null`
  * （照舊只播特效）。`vfx` 是這一步原本的特效（`vfxFor`，未縮放）；`weaponOf` 給施放者的武器種類。
  */
-export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf): SkillTimeline | null {
+export function skillTimeline(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, vfx: StepVfx, weaponOf: WeaponOf, attackOf?: AttackOf): SkillTimeline | null {
   const raws = splitSegments(events, view);
   if (raws.length === 0 || raws.length !== vfx.casts.length) return null;
-  const segs = raws.map((r, i) => describe(r, vfx.casts[i]!.to, view, cards, weaponOf));
+  const segs = raws.map((r, i) => describe(r, vfx.casts[i]!.to, view, cards, weaponOf, attackOf));
   let laid = lay(segs, vfx, 1);
   const impact0 = vfx.casts[0]!.impactMs + (laid.shift[0] ?? 0);
   if (impact0 > SKILL_CAP_MS) {
@@ -424,7 +457,13 @@ export function skillTimeline(events: readonly Record<string, unknown>[], view: 
     const squeezable = plan.pre.reduce((s, p) => s + p.ms, 0);
     if (squeezable > 0) laid = lay(segs, vfx, Math.max(MIN_SQUEEZE, 1 - (impact0 - SKILL_CAP_MS) / squeezable));
   }
-  return { rows: laid.rows, vfx: retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segments: segs };
+  return { rows: laid.rows, vfx: withArcs(retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segs), segments: segs };
+}
+
+/** 6N-6：挑到變體的那一段，弧光照變體的方向畫（`VfxCast.arc`；其餘照舊由上往下）。 */
+function withArcs(vfx: StepVfx, segs: readonly SkillSegment[]): StepVfx {
+  if (segs.every((s) => s.variant === null)) return vfx;
+  return { ...vfx, casts: vfx.casts.map((c, i) => { const p = segs[i]?.variant ?? null; return p === null ? c : { ...c, arc: p.arc }; }) };
 }
 
 /** 依播放速度縮放時間軸（特效另用 `scaleVfx`）。 */

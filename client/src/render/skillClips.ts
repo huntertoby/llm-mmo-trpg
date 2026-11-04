@@ -10,6 +10,7 @@ import type { Facing } from "../api/types";
 import type { GearItem } from "./appearance";
 import { mixPose, pz, type InkPose } from "./inkPose";
 import { easeInOut, quantizePose } from "./motionClips";
+import { VARIANT_CLIPS, type VariantClipId } from "./attackVariants";
 
 // ---- 武器種類與施放方式 -------------------------------------------------------
 
@@ -319,11 +320,12 @@ export const PRIMITIVE_CLIPS = {
 } as const satisfies Record<string, ClipDef>;
 
 export type PrimitiveClipId = keyof typeof PRIMITIVE_CLIPS;
-export type ClipId = OpenerClipId | PrimitiveClipId;
+/** 片段 ID：起手、原語，以及 6N-6 的攻擊變體（`attackVariants.ts`）。 */
+export type ClipId = OpenerClipId | PrimitiveClipId | VariantClipId;
 
-/** 片段定義（起手或原語）。 */
+/** 片段定義（起手、原語或攻擊變體）。 */
 export function clipDef(id: ClipId): ClipDef {
-  return ((OPENER_CLIPS as Record<string, ClipDef>)[id] ?? (PRIMITIVE_CLIPS as Record<string, ClipDef>)[id]) as ClipDef;
+  return ((OPENER_CLIPS as Record<string, ClipDef>)[id] ?? (PRIMITIVE_CLIPS as Record<string, ClipDef>)[id] ?? (VARIANT_CLIPS as Record<string, ClipDef>)[id]) as ClipDef;
 }
 
 /** 原語在播放中的角色：`strike` ＝ 起手的出招；`pre` 出招前；`post` 出招後；`move` 位移途中（BattleRenderer.moveOne）。 */

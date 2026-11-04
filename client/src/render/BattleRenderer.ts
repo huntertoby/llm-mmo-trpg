@@ -89,6 +89,7 @@ import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
 import { anchorPoint, clipDef, clipFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
+import { attackFamilyOf, type AttackFamily } from "./attackVariants";
 import { cueEffect } from "./skillFx";
 import { weaponFrame } from "./inkWeaponFrame";
 import type { Facing } from "../api/types";
@@ -1178,6 +1179,13 @@ export class BattleRenderer {
     const u = this.unitDrawOf.get(unitId);
     const g = u === undefined ? null : gripOf(u);
     return g === null ? "bare" : weaponClassOf(g.main, g.off);
+  }
+
+  /** 施放者普攻的變體表列（6N-6）；沒有骨架（異形、形態、召喚物）或不是近戰武器為 `null`（異形出招照舊播通用的「撲」）。 */
+  attackFamilyOf(unitId: string): AttackFamily | null {
+    const u = this.unitDrawOf.get(unitId);
+    const g = u === undefined ? null : gripOf(u);
+    return g === null ? null : attackFamilyOf(g.main, g.off);
   }
 
   /** 按住空白鍵暫時加速（6N-1）：畫布上所有動畫（片段、特效、走路、待機）的時間一起快 `rate` 倍。 */

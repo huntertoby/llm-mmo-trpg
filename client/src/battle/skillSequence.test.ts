@@ -134,7 +134,12 @@ describe("skill timeline", () => {
   it("basic melee: windup → slash → recover, hit lands on the slash hitAt", () => {
     const ev = [attack(FOE), dmg(FOE, "physical")];
     const tl = timeline(ev, v, {})!;
-    expect(tl.rows.map((r) => r.clip)).toEqual(["windup", "slash", "slash"]);
+    // 6N-6：普攻挑變體（劍的 5 種之一）；沒有變體時才是原本的 windup → slash
+    const pick = tl.segments[0]!.variant!;
+    expect(pick.family).toBe("sword");
+    expect(tl.rows.map((r) => r.clip)).toEqual([pick.windup, pick.strike, pick.strike]);
+    const plain = skillTimeline(ev, v, {}, vfxFor(ev, v, {}), weapon("blade"), () => null)!;
+    expect(plain.rows.map((r) => r.clip)).toEqual(["windup", "slash", "slash"]);
     expect(tl.rows[2]!.recover).toBe(true);
     const strike = tl.rows.find((r) => r.strike)!;
     expect(tl.vfx.hits[0]!.atMs).toBeCloseTo(strike.hitMs!, 6);

@@ -5,6 +5,7 @@
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
 import { areaCenter } from "./feedback";
 import { samePos } from "./geometry";
+import type { ArcSpec } from "../render/attackVariants";
 import { dodgeSide } from "../render/reactClips";
 import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
 
@@ -98,6 +99,8 @@ export interface VfxCast {
   startMs: number;
   /** 命中（爆發開始）的時間。 */
   impactMs: number;
+  /** 近身弧光的形狀與方向（6N-6：普攻挑到的變體，`skillTimeline` 填）；沒有＝由上往下（原本的弧）。 */
+  arc?: ArcSpec;
 }
 
 export interface VfxHit {

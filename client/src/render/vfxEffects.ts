@@ -7,6 +7,7 @@ import { chebyshev, type VfxBlast, type VfxCast, type VfxHit, type VfxWarp } fro
 import { jitter, particleAt, type ElementVfx, type ParticleKind } from "../battle/vfxPalette";
 import { paletteOf } from "./statusVfx";
 import { TILE_SIZE, tileCenter } from "../battle/geometry";
+import { arcMirror, arcStrokes, type ArcSpec } from "./attackVariants";
 
 const T = TILE_SIZE;
 
@@ -225,6 +226,7 @@ function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number,
   const radius = T * 0.42 * cast.intensity;
   const sweep = Math.PI * 0.9;
   const from = dir - sweep / 2;
+  if (cast.arc !== undefined) return variantSlash(g, cast, cast.arc, pal, start, end, a, b, radius);
   return effect(g, start, end, (t) => {
     const grow = Math.min(1, t * 2);
     const fade = t < 0.5 ? 1 : 1 - (t - 0.5) / 0.5;
@@ -239,6 +241,33 @@ function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number,
     g.moveTo(cx + Math.cos(a0) * radius, cy + Math.sin(a0) * radius)
       .arc(cx, cy, radius, a0, a1)
       .stroke({ width: cast.crit ? 3.5 : 2.5, color: cast.crit ? 0xfff6c8 : 0xffffff, alpha: fade });
+  });
+}
+
+/**
+ * 6N-6：普攻變體的弧光（由下往上、橫掃、突刺、交叉、迴旋）。形狀與方向照 `attackVariants.arcStrokes`（本地座標朝東，
+ * 往西打左右鏡像），中心和半徑同原本的弧；暴擊同樣加粗、變金色。
+ */
+function variantSlash(g: Graphics, cast: VfxCast, spec: ArcSpec, pal: ElementVfx, start: number, end: number, a: Pt, b: Pt, radius: number): Effect {
+  const dir = Math.atan2(b.y - a.y, b.x - a.x);
+  const mirror = arcMirror(b.x - a.x, b.y - a.y);
+  const cx = b.x - Math.cos(dir) * T * 0.15;
+  const cy = b.y - Math.sin(dir) * T * 0.15;
+  const toScreen = (p: readonly [number, number]): Pt => ({ x: cx + p[0] * radius * mirror, y: cy + p[1] * radius });
+  return effect(g, start, end, (t) => {
+    const grow = Math.min(1, t * 2);
+    const fade = t < 0.5 ? 1 : 1 - (t - 0.5) / 0.5;
+    const strokes = arcStrokes(spec, grow).map((s) => s.map(toScreen));
+    const layers: ReadonlyArray<[number, number, number]> = [
+      [(cast.crit ? 9 : 7) * cast.intensity, cast.crit ? CRIT_GOLD : pal.primary, (cast.crit ? 0.75 : 0.55) * fade],
+      [cast.crit ? 3.5 : 2.5, cast.crit ? 0xfff6c8 : 0xffffff, fade],
+    ];
+    for (const [width, color, alpha] of layers) {
+      for (const s of strokes) {
+        s.forEach((p, i) => (i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y)));
+        g.stroke({ width, color, alpha });
+      }
+    }
   });
 }
 
