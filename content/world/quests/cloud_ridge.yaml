@@ -140,8 +140,9 @@ quests:
     start: [{kind: flag, flag: mentor_qingya}]
     steps:
       - id: observe_flash
-        text_zh: 觀摩：在營火或城鎮完成一次閃現
-        when: [{kind: growth, ops: [flash]}]
+        text_zh: 觀摩：在營火或城鎮完成一次閃現（新手時的第一次閃現也算）
+        # 6F-2（#132）：這次閃現，或之前閃過（新手時的第一次閃現也算）
+        when: [{kind: any_of, conditions: [{kind: growth, ops: [flash]}, {kind: flashed}]}]
         npcs: [daoist_qingya]
         reward: {insight: 1}
       - id: learn_from_mist

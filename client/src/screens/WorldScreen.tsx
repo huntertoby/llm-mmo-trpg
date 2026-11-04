@@ -65,7 +65,15 @@ import { WorldShopScreen } from "../world/ShopScreen";
 import { WorldSmithyScreen } from "../world/SmithyPanel";
 import { EventCard, SituationResultCard } from "../world/EventCard";
 import { AbsenceDialog } from "../world/AbsenceDialog";
-import { OpeningDialog, readOpeningSeen, shouldShowOpening, writeOpeningSeen } from "../world/OpeningDialog";
+import {
+  LessonDialog,
+  OpeningDialog,
+  readLessonSeen,
+  readOpeningSeen,
+  shouldShowOpening,
+  writeLessonSeen,
+  writeOpeningSeen,
+} from "../world/OpeningDialog";
 import { newsSeenAction, shouldShowAbsence } from "../world/absence";
 import { BoardPanel } from "../world/BoardPanel";
 import { LeaguePanel } from "../world/LeaguePanel";
@@ -147,6 +155,16 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   /** 開局在主城的開場看過了沒（6F-2；本機，每個角色一次）。 */
   const [openingSeen, setOpeningSeen] = useState<boolean>(true);
   useEffect(() => setOpeningSeen(charId === null ? true : readOpeningSeen(charId)), [charId]);
+  /** 這次畫面裡關掉的閃現教學（6F-2，#132；本機另記一次，換畫面不再跳）。 */
+  const [lessonClosed, setLessonClosed] = useState<string | null>(null);
+  const lesson = view?.lesson ?? null;
+  const showLesson = lesson !== null && charId !== null && lessonClosed !== `${lesson.kind}.${charId}` && !readLessonSeen(lesson.kind, charId);
+  function closeLesson(open: boolean) {
+    if (lesson === null || charId === null) return;
+    writeLessonSeen(lesson.kind, charId);
+    setLessonClosed(`${lesson.kind}.${charId}`);
+    if (open) hudButton("growth");
+  }
   useWorldSounds(view); // AU-2：升級、任務、拿到物品、金幣的介面音
   useInkWaitSound(busy); // AU-2：等伺服器（說書人）時很輕的墨痕筆刷聲
   /** 上一個畫面的實地地圖 ID（`undefined`＝這個角色第一次載入；6B-3 換地圖跳地名用）。 */
@@ -822,6 +840,9 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             setOpeningSeen(true);
           }}
         />
+      )}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, openingSeen) && showLesson && lesson !== null && (
+        <LessonDialog lesson={lesson} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (

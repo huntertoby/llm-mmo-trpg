@@ -100,6 +100,11 @@ class NewcomerContent(ContentModel):
     """新手任務鏈完成前，主線的建議：``{quest}``＝新手任務名。"""
     battle_hints: tuple[BattleHint, ...] = ()
     """任何大世界戰鬥都可能出現的提示（新手任務各步另有 ``teach``）。"""
+    flash_lesson: tuple[OpeningLine, ...] = ()
+    """第一次閃現的引導（#132）：新手任務第 1 步完成、回到城鎮、還沒閃現過時（說書人＋導師）。"""
+    reflash_lesson: tuple[OpeningLine, ...] = ()
+    """升到 ``reflash_level`` 級、閃現過之後，導師改教重閃（#132）。"""
+    reflash_level: int = Field(default=3, ge=2)
 
     @model_validator(mode="after")
     def _check(self) -> NewcomerContent:

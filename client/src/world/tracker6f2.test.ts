@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { WorldView } from "../api/types";
 import { TRACKER_EMPTY, trackHint, trackedQuests } from "./hud";
-import { openingKey, readOpeningSeen, shouldShowOpening, writeOpeningSeen } from "./OpeningDialog";
+import { lessonKey, openingKey, readLessonSeen, readOpeningSeen, shouldShowOpening, writeLessonSeen, writeOpeningSeen } from "./OpeningDialog";
 
 const guide = {
   text_zh: "到霧渡鎮找渡婆婆",
@@ -49,6 +49,19 @@ describe("tracker", () => {
   it("empty tracker text points at the「！」", () => {
     expect(TRACKER_EMPTY).toBe("找頭上有「！」的人說話");
     expect(trackedQuests(view({}))).toEqual([]);
+  });
+});
+
+describe("flash lesson (#132)", () => {
+  it("each lesson kind shows once per character; skipping also counts", () => {
+    const data = new Map<string, string>();
+    const store = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) };
+    expect(readLessonSeen("flash", "c1", store)).toBe(false);
+    writeLessonSeen("flash", "c1", store);
+    expect(data.get(lessonKey("flash", "c1"))).toBe("1");
+    expect(readLessonSeen("flash", "c1", store)).toBe(true);
+    expect(readLessonSeen("reflash", "c1", store)).toBe(false); // 3 級改教重閃：另一種，照樣跳一次
+    expect(readLessonSeen("flash", "c2", store)).toBe(false);
   });
 });
 

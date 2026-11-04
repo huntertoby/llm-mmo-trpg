@@ -14360,6 +14360,41 @@
         "title": "LegacyHeroView",
         "description": "可以沿用的上季角色。"
       },
+      "LessonView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "flash",
+              "reflash"
+            ],
+            "title": "Kind"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningLineView"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "skills_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "lines"
+        ],
+        "title": "LessonView",
+        "description": "閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色\n每種只跳一次、可以略過。"
+      },
       "LevelUpChoice": {
         "properties": {
           "kind": {
@@ -24914,6 +24949,16 @@
             "type": "array",
             "title": "Battle Hints",
             "default": []
+          },
+          "lesson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

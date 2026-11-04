@@ -48,6 +48,7 @@ __all__ = [
     "AnyOf",
     "AtLocation",
     "EventAffinity",
+    "Flashed",
     "GrowthDone",
     "GrowthOp",
     "HasFlag",
@@ -268,6 +269,12 @@ class GrowthDone(ContentModel):
     ops: tuple[GrowthOp, ...] = Field(min_length=1)
 
 
+class Flashed(ContentModel):
+    """狀態：角色閃現過至少一招（6F-2，#132：導師任務鏈「觀摩」——新手第一次的閃現也算）。"""
+
+    kind: Literal["flashed"] = "flashed"
+
+
 type LeafCondition = Annotated[
     AtLocation
     | HoldThread
@@ -277,7 +284,8 @@ type LeafCondition = Annotated[
     | SituationDone
     | Talked
     | HasFlag
-    | GrowthDone,
+    | GrowthDone
+    | Flashed,
     Field(discriminator="kind"),
 ]
 
@@ -302,6 +310,7 @@ type QuestCondition = Annotated[
     | Talked
     | HasFlag
     | GrowthDone
+    | Flashed
     | AnyOf,
     Field(discriminator="kind"),
 ]

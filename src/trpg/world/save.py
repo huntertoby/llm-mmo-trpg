@@ -133,7 +133,8 @@ WORLD_RULES_VERSION: Final = 8  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～
 - 8（6F-2）：#125 開局在主城——在主城、還沒到過新手區（``world/newcomer.yaml`` 的
   ``start_region``）小鎮的角色，傳送（``teleport``、``use_teleport_stone``）可以直接去那一區的小鎮
   （:func:`trpg.world.atlas.free_first_teleport`）；新角色改由 API 建在主城（``new_character`` 本身
-  不變）。CHAR_FORMAT、wlog 格式不變（沒有新欄位）。
+  不變）。任務條件多一種狀態型的 ``flashed``（閃現過至少一招，#132：導師任務鏈「觀摩」新手時的
+  閃現也算）。CHAR_FORMAT、wlog 格式不變（沒有新欄位）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

@@ -6,6 +6,9 @@
   新手任務鏈完成前，主線加「建議先完成霧渡新手路」（U4，:func:`with_advice` 給可以接的任務用）。
 - :func:`battle_hints`：這場戰鬥可能出現的短提示（#99）：進行中任務的目前這一步在這裡打贏時的
   ``teach``，加上 ``newcomer.yaml`` 的通用提示。觸發由畫面判斷；只影響畫面。
+- :func:`lesson_view`：閃現教學（#132）。新手任務第 1 步完成、在城鎮、還沒閃現過、有靈感點、有戰鬥中
+  用過的招＝第一次閃現的引導（說書人＋導師）；升到 ``reflash_level`` 級、閃現過＝改教重閃。閃現本身
+  照 06 6.34.3 的規則由成長面板做（不另給點）；畫面只跳一次、可以略過。
 
 只讀內容與角色狀態，不改任何東西；清單依內容順序或 ID 排序（守則 2）。
 """
@@ -14,18 +17,20 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from trpg.api.world_schemas import BattleHintView, GuideView, OpeningLineView
+from trpg.api.world_growth_view import skill_names
+from trpg.api.world_schemas import BattleHintView, GuideView, LessonView, OpeningLineView
 from trpg.api.world_story_schemas import QuestHereView, QuestLogView
 from trpg.content.fields import FieldExit, FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.content.world_map import LocationMapDef
-from trpg.content.world_newcomer import BattleHint
+from trpg.content.world_newcomer import BattleHint, NewcomerContent, OpeningLine
 from trpg.content.world_quests import AnyOf, AtLocation, QuestCondition, QuestDef, WinBattle
 from trpg.world.atlas import free_first_teleport
-from trpg.world.quests import quest_table
+from trpg.world.common import here
+from trpg.world.quests import has_flashed, quest_table
 from trpg.world.state import CharacterState
 
-__all__ = ["battle_hints", "guide_view", "with_advice", "with_routes"]
+__all__ = ["battle_hints", "guide_view", "lesson_view", "with_advice", "with_routes"]
 
 
 # ---------------------------------------------------------------------------
@@ -230,3 +235,60 @@ def battle_hints(library: ContentLibrary, char: CharacterState) -> tuple[BattleH
     if newcomer is not None:
         hints.extend(newcomer.battle_hints)
     return tuple(_hint_view(library, h) for h in hints)
+
+
+# ---------------------------------------------------------------------------
+# 閃現教學（#132）
+# ---------------------------------------------------------------------------
+
+
+def _lines(lines: Iterable[OpeningLine]) -> tuple[OpeningLineView, ...]:
+    return tuple(
+        OpeningLineView(speaker_zh=line.speaker_zh, text_zh=line.text_zh) for line in lines
+    )
+
+
+def _starter_step_done(library: ContentLibrary, char: CharacterState, region: str) -> bool:
+    return any(
+        (state := char.quest_state(q.id)) is not None and (state.done or state.steps_done >= 1)
+        for q in _starters(library, region)
+    )
+
+
+def _reflash_lesson(
+    newcomer: NewcomerContent, char: CharacterState, names: dict[str, str]
+) -> LessonView | None:
+    if char.level < newcomer.reflash_level or not newcomer.reflash_lesson:
+        return None
+    flashed = sorted(names.get(k, k) for k, s in char.flash.items() if s.records)
+    return LessonView(
+        kind="reflash", lines=_lines(newcomer.reflash_lesson), skills_zh=tuple(flashed)
+    )
+
+
+def _flash_lesson(
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState, names: dict[str, str]
+) -> LessonView | None:
+    ready = newcomer.flash_lesson and char.insight >= 1
+    if not ready or not _starter_step_done(library, char, newcomer.start_region):
+        return None
+    used = sorted(
+        names.get(k, k)
+        for k, s in char.flash.items()
+        if s.used and not s.records and not s.complete
+    )
+    if not used:
+        return None
+    return LessonView(kind="flash", lines=_lines(newcomer.flash_lesson), skills_zh=tuple(used))
+
+
+def lesson_view(library: ContentLibrary, char: CharacterState) -> LessonView | None:
+    """閃現過＝重閃教學（到 ``reflash_level`` 級才有）；沒閃過＝第一次閃現的引導（等級不限：3 級還沒
+    閃過的人照樣先教閃現）。"""
+    newcomer = library.world_newcomer
+    if newcomer is None or char.pending_flash is not None or here(library, char).kind != "town":
+        return None
+    names = skill_names(library, char)
+    if has_flashed(char):
+        return _reflash_lesson(newcomer, char, names)
+    return _flash_lesson(library, newcomer, char, names)

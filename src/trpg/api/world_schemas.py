@@ -504,6 +504,16 @@ class GuideView(_ApiModel):
     """在主城、還沒到過新手區時的開場（說書人＋守印人）；其他時候空。"""
 
 
+class LessonView(_ApiModel):
+    """閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色
+    每種只跳一次、可以略過。"""
+
+    kind: Literal["flash", "reflash"]
+    lines: tuple[OpeningLineView, ...]
+    skills_zh: tuple[str, ...] = ()
+    """建議的招（``flash``：戰鬥中用過、還沒閃過的；``reflash``：閃過的）。"""
+
+
 class BattleHintView(_ApiModel):
     """戰鬥短提示（6F-2，#99）：畫面照 ``trigger`` 判斷戰況，每種每個角色只出一次、可以關。"""
 
@@ -581,6 +591,8 @@ class WorldView(_ApiModel):
     """新手指引（6F-2）：還沒到過新手區，或到了還沒接新手任務時有；其他時候 ``None``。"""
     battle_hints: tuple[BattleHintView, ...] = ()
     """戰鬥中（``battle_id`` 有值）這場可能出現的短提示（6F-2，#99）；其他時候空。"""
+    lesson: LessonView | None = None
+    """閃現教學（6F-2，#132）；條件不符時 ``None``。"""
 
 
 class WorldBattleResponse(_ApiModel):

@@ -5931,6 +5931,25 @@ export interface components {
             text_zh: string;
         };
         /**
+         * LessonView
+         * @description 閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色
+         *     每種只跳一次、可以略過。
+         */
+        LessonView: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flash" | "reflash";
+            /** Lines */
+            lines: components["schemas"]["OpeningLineView"][];
+            /**
+             * Skills Zh
+             * @default []
+             */
+            skills_zh: string[];
+        };
+        /**
          * LevelUpChoice
          * @description 升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
          *     欄位滿時 ``replace`` 指定要換掉的技能 ID。
@@ -10055,6 +10074,7 @@ export interface components {
              * @default []
              */
             battle_hints: components["schemas"]["BattleHintView"][];
+            lesson?: components["schemas"]["LessonView"] | null;
         };
         XY: [
             number,

@@ -8,7 +8,19 @@
 # - battle_hints：任何大世界戰鬥都可能出現的短提示（冰面、陷阱、致命地形、被推撞；筆記 U1「另加」的四種，
 #   文字是 6F-2 實作者暫定，待玩法 PM 確認）。新手任務各步的提示寫在 quests/<region>.yaml 的 teach。
 #   trigger 的意思見 schema 的 BATTLE_HINT_TRIGGERS。提示只影響畫面，不改戰鬥結果。
+# - flash_lesson／reflash_lesson（#132）：新手第 1 步完成後回到城鎮，引導第一次閃現（用第 1 步原本給的 1 點靈感，
+#   不另給點）；升到 reflash_level 級、閃過之後導師改教重閃。可以略過；之後在城鎮或營火隨時能閃。
+#   flash_lesson 兩句是 #132 的原話；reflash_lesson 是 6F-2 實作者暫定，待玩法 PM 確認。
 start_region: cloud_ridge
+flash_lesson:
+  - speaker_zh: 說書人
+    text_zh: 剛才那一招還在你手裡發燙。
+  - speaker_zh: 導師
+    text_zh: 讓剛用過的招靈光一閃。
+reflash_lesson:
+  - speaker_zh: 導師
+    text_zh: 閃過的變化不滿意，可以重閃其中一次，換成別的變化（照樣花靈感）。
+reflash_level: 3
 opening:
   - speaker_zh: 說書人
     text_zh: 傳送陣的光暗了下去。你在樞島中央醒來，晶柱還在低鳴。五座浮橋斷在雲上，各自指向一個界域。
