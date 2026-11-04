@@ -180,7 +180,7 @@ describe("事件卡（取代 6C-7 的場景色塊）", () => {
     const out = card(event({ art: "caravan", region: "ashen_waste" }));
     expect(out).toContain('data-scene="caravan"');
     expect(out).toContain('data-bg="ashen"');
-    expect(out).toContain('title="商隊"');
+    expect(out).toContain('aria-label="商隊"');
   });
 
   it("art_url 有值時仍優先用圖片", () => {

@@ -58,7 +58,8 @@ function EventArt({ event }: { event: WorldEventView }) {
       data-art={url !== null ? "image" : "scene"}
       data-scene={url === null ? scene : undefined}
       data-bg={url === null ? bg : undefined}
-      title={url === null ? SCENES[scene].zh : undefined}
+      role="img"
+      aria-label={url === null ? SCENES[scene].zh : undefined}
     >
       <div className="world-event-art-title">
         <Hint text={`${event.actor_zh}：${event.motive_zh}`}>
