@@ -125,7 +125,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 13  # 各版見下方說明（10＝6F-4b；11＝6L-2；12＝6F-4c；13＝6F-4d）
+WORLD_RULES_VERSION: Final = 14  # 各版見下方說明（11＝6L-2；12＝6F-4c；13＝6F-4d；14＝6F-4e）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -174,6 +174,12 @@ WORLD_RULES_VERSION: Final = 13  # 各版見下方說明（10＝6F-4b；11＝6L-
   的條件只認第 1 招實際施加的狀態或表面（刪掉傷害元素的對應，:mod:`trpg.skillgen.exploit_match`）；
   起始第 1 招不挑「只利用、不製造」的招（:mod:`trpg.roguelite.start`）。同一份日誌在 12 的程式給出
   不同的起始技能與三選一。踢滾改名、梯田固定戰改陣容是內容，內容 digest 本來就會變。
+- 14（6F-4e）：起始第 1 招優先挑實際施加該關鍵字狀態或表面的招
+  （:func:`trpg.skillgen.exploit_match.applies_keyword`，:mod:`trpg.roguelite.start`；例：點燃池
+  挑點燃、火焰彈、燃燒爆，不挑只有傷害的火球）；白板檢查接受 ``whiteboard.status_rider_keywords``
+  （點燃、冰凍）的「傷害＋施加狀態或表面」（:mod:`trpg.skillgen.whiteboard_check`）。同一份日誌在
+  13 的程式給出不同的起始技能與三選一（候選池多了新配方）。新配方本身是內容，內容 digest 本來
+  就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
