@@ -125,7 +125,7 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 14  # 各版見下方說明（11＝6L-2；12＝6F-4c；13＝6F-4d；14＝6F-4e）
+WORLD_RULES_VERSION: Final = 15  # 各版見下方說明（12＝6F-4c；13＝6F-4d；14＝6F-4e；15＝6F-4f）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -180,6 +180,11 @@ WORLD_RULES_VERSION: Final = 14  # 各版見下方說明（11＝6L-2；12＝6F-4
   （點燃、冰凍）的「傷害＋施加狀態或表面」（:mod:`trpg.skillgen.whiteboard_check`）。同一份日誌在
   13 的程式給出不同的起始技能與三選一（候選池多了新配方）。新配方本身是內容，內容 digest 本來
   就會變。
+- 15（6F-4f）：起始第 1 招先在「照寫法就施加該關鍵字狀態或表面」的配方之間平均挑一個
+  （``fork("recipe")``，:func:`trpg.skillgen.exploit_match.recipe_applies_keyword`、
+  :func:`trpg.skillgen.whiteboard.starter_recipes`，:mod:`trpg.roguelite.start`），再擲種子；
+  潮濕、倒地、標記各補 1 招施加型白板（激流、掀地、點名），火焰彈改名引火彈。同一份日誌在 14 的
+  程式給出不同的起始技能。新配方與改名是內容，內容 digest 本來就會變。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
