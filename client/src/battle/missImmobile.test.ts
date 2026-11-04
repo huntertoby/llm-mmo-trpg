@@ -2,11 +2,12 @@
 import { describe, expect, it } from "vitest";
 import type { BattleView } from "../api/types";
 import { BIG_MAX_CELLS, BIG_RATIO, BIG_REST, floatFit, floatFontSize, floatFrame, FLOAT_FONT } from "../render/uiAnim";
-import { feedbackFor, IMMOBILE_STATUSES, immobileIn, WORD_DODGE, WORD_MISS, type FloatItem } from "./feedback";
+import { feedbackFor, immobileIn, isImmobileStatus, WORD_DODGE, WORD_MISS, type FloatItem } from "./feedback";
 import { logLines } from "./log";
 import { unitNames } from "./units";
-import { withSpecials, newSpecialMemo } from "./specials";
+import { withSpecials } from "./specials";
 import { vfxFor } from "./vfx";
+import glossaryAll from "./fixtures/glossary.json";
 
 const HERO = "u_hero";
 const FOE = "u_foe";
@@ -25,8 +26,11 @@ const miss = [{ seq: 4, round: 1, type: "attack_rolled", attacker_id: HERO, targ
 const words = (v: BattleView) => feedbackFor(miss, v).filter((i): i is FloatItem => i.kind === "float").map((f) => f.text);
 
 describe("a miss on a target that cannot move", () => {
-  it("the immobile statuses are frozen, stun, prone and root", () => {
-    expect([...IMMOBILE_STATUSES].sort()).toEqual(["frozen", "prone", "root", "stun"]);
+  it("the immobile statuses come from the status data (skip_turn / prevents_move) plus the prone posture (6R-F)", () => {
+    const ids = (glossaryAll.statuses as { id: string }[]).map((s) => s.id).filter(isImmobileStatus).sort();
+    expect(ids).toEqual(["frozen", "prone", "root", "stun"]);
+    expect(isImmobileStatus("slow")).toBe(false);
+    expect(isImmobileStatus("no_such_status")).toBe(false);
     expect(immobileIn(view(["stun"]))(FOE)).toBe(true);
     expect(immobileIn(view(["slow", "burning"]))(FOE)).toBe(false);
     expect(immobileIn(view(["stun"]))(HERO)).toBe(false);
@@ -43,7 +47,7 @@ describe("a miss on a target that cannot move", () => {
       expect(words(v)).toEqual([WORD_MISS]);
       const vfx = vfxFor(miss, v, {});
       expect(vfx.reactions ?? []).toEqual([]);
-      const special = withSpecials(vfx, miss, v, v, newSpecialMemo());
+      const special = withSpecials(vfx, miss, v, v);
       expect((special.specials ?? []).filter((x) => x.kind === "dodge")).toEqual([]);
     });
   }
