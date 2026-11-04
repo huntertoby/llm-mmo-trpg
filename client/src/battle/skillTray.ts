@@ -1,6 +1,8 @@
 // 底部技能列的分組與版面偏好（Phase 3-8；純函式＋ localStorage 包裝）。
 import type { SkillCard } from "../api/types";
-import type { SkillButton, SkillCards } from "./targeting";
+import { isSelfOnly, type ActionMode, type PairKind, type SkillButton, type SkillCards } from "./targeting";
+
+type SkillCardStats = SkillCard["stats"];
 
 /** 以小圖示放在技能列最右側的種類：被動、反應、姿態、修正（不佔大格）。 */
 export const MINOR_KINDS: readonly string[] = ["passive", "reaction", "stance", "modifier"];
@@ -46,12 +48,66 @@ export function actionHintText(state: {
   attackCount: number;
   /** 只剩「結束回合」，但還有可以切換模式的召喚物（3-32b）。 */
   summonIdle?: boolean;
+  /** 6F-9：選取中的技能或模式自己的提示（`modeBarHint`）；沒有選取時省略或 `null`。 */
+  picked?: string | null;
 }): string {
   if (state.ended) return "戰鬥結束。";
   if (state.copying) return "請為複製的技能或複合技能的第二段選擇目標（點高亮格子或左上角的方向鈕），或按 Esc 放棄。";
   if (!state.canAct) return "等待中……";
+  if (state.picked != null) return state.picked;
   if (state.summonIdle === true) return "行動點數用完了，但還能調整召喚物的模式（0 AP）；準備好後按「結束回合」。";
   return `點選藍色格子移動（${state.moveCount} 格），點選紅框敵人攻擊（${state.attackCount} 個）；右鍵或 Esc 取消選取。`;
+}
+
+/** 技能列上方提示裡「取消選取」的說法（選了技能或其他模式時）。 */
+const CANCEL_PICK = "右鍵或 Esc 取消選取。";
+
+/** 兩段選取第 1 段、第 2 段要點的東西（`PairKind`）。 */
+const PAIR_PARTS: Record<PairKind, [string, string]> = {
+  hurl: ["要投擲的物件或人", "落點"],
+  teleport: ["要傳送的人", "落點"],
+  swap: ["第一個人", "要互換的另一個人"],
+  shadowstep: ["目標", "落點"],
+  composite: ["位移的落點或目標", "第 2 段的目標"],
+};
+
+/** 技能的射程與範圍（卡片 `stats`）：「射程 4・半徑 1」；都沒有時空字串。 */
+export function reachText(stats: Pick<SkillCardStats, "range" | "range_weapon" | "radius"> | undefined): string {
+  if (stats === undefined) return "";
+  const parts: string[] = [];
+  if (stats.range_weapon) parts.push("武器射程");
+  else if (stats.range !== null) parts.push(`射程 ${stats.range}`);
+  if (stats.radius != null && stats.radius > 0) parts.push(`半徑 ${stats.radius}`);
+  return parts.join("・");
+}
+
+/**
+ * 6F-9（美術 PM 6F-8 檢查第 3 節：選了技能後，技能列上方還寫「點選藍色格子移動…」）：選取中的技能或模式自己的提示。
+ * 依目標的種類（自身、單體、格子、方向、兩段選取）與卡片上的射程、半徑產生，最後一律說怎麼取消。
+ */
+export function modeBarHint(mode: ActionMode, card?: Pick<SkillCard, "stats">): string {
+  const t = mode.targets;
+  const reach = reachText(card?.stats);
+  const head = `「${mode.label}」${reach === "" ? "" : `（${reach}）`}`;
+  if (mode.kind === "vault") return `${head}：點選紫色格子，攀上高台或跳過缺口（${t.tiles.size} 個）；${CANCEL_PICK}`;
+  if (mode.kind === "shove_aside") return `${head}：在左側選擇把物件撥向哪一邊；${CANCEL_PICK}`;
+  if (mode.kind === "defend" && t.self !== null)
+    return `${head}：點自己守護自己，或點相鄰的隊友（紅框 ${t.units.size} 個）替他承受單體攻擊；${CANCEL_PICK}`;
+  if (t.hurls.size > 0) {
+    const [first, second] = PAIR_PARTS[t.pairKind ?? "hurl"];
+    return `${head}分兩段：先點${first}（紅框 ${t.hurls.size} 個），再點${second}；${CANCEL_PICK}`;
+  }
+  if (isSelfOnly(t)) return `${head}對自身施放：按左側的「施放」；${CANCEL_PICK}`;
+  const picks: string[] = [];
+  const units = t.units.size + t.objects.size;
+  if (units > 0) picks.push(`點選紅框目標（${units} 個）`);
+  if (t.tiles.size > 0) {
+    const what = card?.stats.radius != null && card.stats.radius > 0 ? "範圍中心" : "目標格";
+    picks.push(`${units > 0 ? "或點" : "點選"}格子當${what}（${t.tiles.size} 格）`);
+  }
+  if (t.directions.size > 0) picks.push(`${picks.length > 0 ? "或" : ""}選擇方向（主角旁的箭頭格或左側方向鈕）`);
+  if (t.self !== null) picks.push("也可以按左側的「施放於自身」");
+  return `${head}：${picks.join("，")}；${CANCEL_PICK}`;
 }
 
 /**
@@ -61,7 +117,7 @@ export function actionHintText(state: {
 export function actionHintKind(state: Parameters<typeof actionHintText>[0]): "move" | "copy" | null {
   if (state.ended) return null;
   if (state.copying) return "copy";
-  if (!state.canAct || state.summonIdle === true) return null;
+  if (!state.canAct || state.picked != null || state.summonIdle === true) return null; // 6F-9：選取中的提示每次都完整顯示
   return "move";
 }
 
