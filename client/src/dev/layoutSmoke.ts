@@ -546,8 +546,14 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
 /** 6F-8：選取第一個可用技能（左欄出現選取面板）時再量一次地圖有沒有被蓋，量完按 Esc 取消。 */
 async function mapClearWhileSelecting(doc: Document): Promise<CheckResult> {
   const label = "選取技能時：地圖格不被 HUD 蓋到（6F-8）";
-  const btn = [...doc.querySelectorAll<HTMLButtonElement>(".battle-bottom .skill-bar .skill-button")].find((b) => !b.disabled);
-  if (btn === undefined) return result("map-clear-select", label, false, "沒有可選的技能");
+  const pick = () => [...doc.querySelectorAll<HTMLButtonElement>(".battle-bottom .skill-bar .skill-button")].find((b) => !b.disabled);
+  // 開場可能先輪到敵人、隊友（`?anim=0.1` 時動畫很慢）：每秒按一次播放列的「跳到結尾」，最多等 2 分鐘輪到主角
+  for (let i = 0; i < 480 && pick() === undefined; i++) {
+    if (i % 4 === 0) buttonOf(doc, "跳到結尾")?.click();
+    await sleep(250);
+  }
+  const btn = pick();
+  if (btn === undefined) return result("map-clear-select", label, false, "等了 2 分鐘還沒有可選的技能");
   btn.click();
   await sleep(600);
   const { canvas, blocks } = collectMapCover(doc);
