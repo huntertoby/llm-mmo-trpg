@@ -145,7 +145,7 @@ def test_prompt_is_versioned_and_data_is_escaped() -> None:
     assert "<b>" not in user and "&lt;b&gt;" in user
     assert "不要填任何數值" in messages[0]["content"]
     record = flash_prompt_record(messages)
-    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/2"
+    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/3"
     assert len(record["system_hash"]) == 12
 
 

@@ -101,6 +101,9 @@ class ProposalRequest:
     theme: str | None = None
     """主題詞 ID（``content/llm/world_*.yaml`` 的 ``themes``；Phase 4-L6，例如 ``nature`` 自然）。
     只進 prompt 的題目區塊，不影響子集。"""
+    region: str | None = None
+    """技能取得地點的區域 ID（#126，06 6.34.7）：名稱與描述照該區風格。``None``＝中性（創角、
+    許願池、測試原型）。由呼叫端依世界狀態傳入；只進 prompt，不影響子集與數值。"""
 
     def __post_init__(self) -> None:
         if self.tier < 1:

@@ -140,6 +140,7 @@ def flash_request(
         held_keywords=keyword_distribution(others, library),
         tier=character_tier(library, run.level),
         current=skill_defs(library, run, [skill_id])[0],  # 歷程重推不了時的退路（3W-R1）
+        weapon_zh=library.weapons[run.hero.weapon].name_zh,  # 6L-1：命名照武器寫（測試原型＝中性）
     )
 
 

@@ -98,6 +98,8 @@ def _request_payload(
         "keywords": [{"id": k, "name_zh": names[k]} for k in request.keywords],
         "budget_note_zh": BUDGET_NOTE_ZH,
     }
+    if world is not None:  # 6L-1（#126）：取得地點的區域與風格；None＝中性
+        payload["style"] = world.style_payload(request.region)
     if request.keywords:  # 6S-2：keyword.required 是升級候選第二大退回原因
         payload["keyword_note_zh"] = KEYWORD_NOTE_ZH
     if request.skeleton is not None:

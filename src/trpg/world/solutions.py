@@ -204,6 +204,7 @@ def _opportunity(  # noqa: PLR0917 — 一個解法的完整結算
         region_keywords=() if keyword is None else (keyword,),
         tier_bonus=bonus,
         pinned_keyword=keyword,  # 5B-4d：三張都帶觸發情境的關鍵字（07 7.6）
+        region=trigger.region,  # 6L-1（#126）：取得地點的區域
     )
     solved = EventSolvedEvent(
         skeleton=trigger.skeleton,

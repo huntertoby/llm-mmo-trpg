@@ -35,7 +35,7 @@ from trpg.content.skill_scaling import SkillScalingRules
 from trpg.content.skill_triggers import SkillTriggerTable
 from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable
 from trpg.content.stacks import StackTable
-from trpg.content.world import WorldStyle
+from trpg.content.world import StyleEvalRules, WorldStyle
 
 __all__ = ["KNOWN_CONTENT_FILES", "ContentFile", "load_all_content"]
 
@@ -81,6 +81,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("roguelite.yaml", RunRules),
     ContentFile("llm/world_shattered.yaml", WorldStyle),
     ContentFile("llm/effect_words.yaml", EffectWords),
+    ContentFile("llm/style_eval.yaml", StyleEvalRules),
     ContentFile("audio/sfx.yaml", SfxTable),
 )
 """單一資料檔。資料夾（``units/``、``maps/``、``skills/``）與跨檔案檢查由

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, replace
 from typing import Any, Literal
 
@@ -49,12 +49,14 @@ __all__ = [
     "NamingOutcome",
     "NamingText",
     "apply_naming",
+    "check_archaic",
     "check_consistency",
     "check_naming",
     "fallback_naming",
     "name_skill",
     "skill_summary",
     "template_text",
+    "weapon_text",
 ]
 
 DEFAULT_NAMING_ATTEMPTS = 3
@@ -120,10 +122,15 @@ def _check_text(label: str, text: str, limit: int, rules: NamingRules) -> list[N
 
 
 def check_naming(
-    text: NamingText, rules: NamingRules, taken: Collection[str] = ()
+    text: NamingText,
+    rules: NamingRules,
+    taken: Collection[str] = (),
+    *,
+    archaic_ok: bool = False,
 ) -> list[NameCheck]:
     """檢查命名文字：長度、空字串、字元集、禁字、簡體字（``concept``／``cast_flavor``，4-L10a）、
-    重名（``taken`` 為已使用的技能名稱）、世界觀詞用量（4-L11，``rules.world_terms``）。"""
+    重名（``taken`` 為已使用的技能名稱）、世界觀詞用量（4-L11，``rules.world_terms``）、古風詞
+    （6L-1，:func:`check_archaic`；``archaic_ok``＝取得地點的區域風格允許古風詞）。"""
     errors = _check_text("name_zh", text.name_zh, rules.name_max_chars, rules)
     errors += _check_text("concept", text.concept, rules.concept_max_chars, rules)
     errors += _check_text("cast_flavor", text.cast_flavor, rules.flavor_max_chars, rules)
@@ -134,7 +141,34 @@ def check_naming(
         {"concept": text.concept, "cast_flavor": text.cast_flavor},
         rules.world_terms,
     )
+    errors += check_archaic(text, rules, archaic_ok=archaic_ok)
     return errors
+
+
+def check_archaic(text: NamingText, rules: NamingRules, *, archaic_ok: bool) -> list[NameCheck]:
+    """古風詞（6L-1 C1、C5，#126）：名稱一律不可用 ``archaic.always``（「施主」）；區域風格不允許
+    古風詞時（中性、主城、荒原……），名稱與兩段敘事都不可用 ``archaic.terms``，名稱也不可用
+    ``archaic.suffixes`` 結尾（「某某訣」）。"""
+    archaic = rules.archaic
+    out: list[NameCheck] = []
+    if any(t in text.name_zh for t in archaic.always if t):
+        out.append(NameCheck("name_zh.archaic", "name_zh 不可以用「施主」這類稱呼。"))
+    if archaic_ok:
+        return out
+    fields = {"name_zh": text.name_zh, "concept": text.concept, "cast_flavor": text.cast_flavor}
+    for label, body in fields.items():
+        hits = [t for t in archaic.terms if t and t in body]
+        if label == "name_zh":
+            hits += [f"…{s}" for s in archaic.suffixes if s and body.endswith(s)]
+        if hits and not (label == "name_zh" and out):
+            out.append(
+                NameCheck(
+                    f"{label}.archaic",
+                    f"{label} 用了武俠、仙俠或文言詞（{'、'.join(hits)}）；"
+                    "這個區域的風格不用這些詞，請改用中性的說法。",
+                )
+            )
+    return out
 
 
 CONSISTENCY_SUFFIXES = (".effect_mismatch", ".missing_added", ".world_terms", ".world_prefix")
@@ -164,10 +198,14 @@ def skill_summary(
     taken: Collection[str] = (),
     theme: str | None = None,
     added: Collection[str] = (),
+    style: Mapping[str, str] | None = None,
+    weapon: str | None = None,
 ) -> dict[str, Any]:
     """給命名 prompt 的技能結構描述：全是中文名稱，沒有任何數值或代號。``effect_summary`` 是
     效果的精簡摘要（4-L11，:func:`effect_phrases`）；``added`` 是閃現變化加上的效果鍵，有的話列成
-    ``added_effects``。"""
+    ``added_effects``。``style``（6L-1，#126）是取得地點的區域與風格
+    （:meth:`~trpg.content.world.WorldStyle.style_payload`）；``weapon`` 是持有者手上的武器名稱
+    （省略時照技能的武器需求，:func:`weapon_text`）。"""
     primitives = list(dict.fromkeys(plain_name(e.type, library) for e in skill.effects))
     keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
     summary: dict[str, Any] = {
@@ -180,7 +218,10 @@ def skill_summary(
         "shape": plain_name(skill.shape.type, library),
         "keywords": [plain_name(k, library) for k in keywords],
         "taken_names": sorted(taken)[:60],
+        "weapon": weapon_text(skill, weapon),
     }
+    if style is not None:
+        summary["style"] = dict(style)
     elements = sorted(e.display_name for e in skill_elements(skill))
     if elements:
         summary["element"] = elements
@@ -189,6 +230,17 @@ def skill_summary(
     if added:
         summary["added_effects"] = _added_names(library, added)
     return summary
+
+
+_WEAPON_NEED = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器", "any": "任何武器"}
+
+
+def weapon_text(skill: SkillDef, held: str | None = None) -> str:
+    """命名 prompt 的武器欄（6L-1，12B 對照：匕首角色被寫成「拳頭」）：手上的武器（``held``，例
+    「匕首」）＋這招怎麼出：武器技用武器出招、法術不靠武器。沒有 ``held`` 時用技能的武器需求。"""
+    what = held or _WEAPON_NEED.get(skill.weapon_req, skill.weapon_req)
+    how = "武器技，用這把武器出招" if skill.category == "weapon" else "法術，不靠武器出招"
+    return f"{what}（{how}）"
 
 
 def _added_names(library: ContentLibrary, added: Collection[str]) -> list[str]:
@@ -251,6 +303,8 @@ def name_skill(
     world: WorldStyle | None = None,
     before: SkillDef | None = None,
     words: EffectWords | None = None,
+    region: str | None = None,
+    weapon: str | None = None,
 ) -> NamingOutcome:
     """請 LLM 為 ``skill`` 命名與寫敘事（最多 ``max_attempts`` 次），失敗時用組合式名稱。
 
@@ -258,13 +312,25 @@ def name_skill(
     ``LLMTimeout``／``LLMBadResponse`` 算一次嘗試。不改技能本身（見 :func:`apply_naming`）。
 
     4-L11：另外檢查敘事與效果一致（:func:`check_consistency`）；``before`` 是閃現變化前的技能，
-    給了就要求文字提到變化加上的效果。``words`` 省略時讀 ``content/llm/effect_words.yaml``。"""
+    給了就要求文字提到變化加上的效果。``words`` 省略時讀 ``content/llm/effect_words.yaml``。
+
+    6L-1（#126）：``region`` 是技能取得地點的區域（``None``＝中性：創角、許願池、測試原型），名稱與
+    敘事照該區風格，區域不允許古風詞時另檢查古風詞；``weapon`` 是持有者手上的武器名稱。"""
     style = world if world is not None else load_world_style()
     vocab = words if words is not None else load_effect_words()
     used = set(taken) | {s.name_zh for s in library.skills.values()}
     facts = skill_facts(library, skill)
     added: frozenset[str] = frozenset() if before is None else facts - skill_facts(library, before)
-    summary = skill_summary(library, skill, taken=set(taken), theme=theme, added=added)
+    summary = skill_summary(
+        library,
+        skill,
+        taken=set(taken),
+        theme=theme,
+        added=added,
+        style=style.style_payload(region),
+        weapon=weapon,
+    )
+    archaic_ok = style.archaic_ok(region)
     retries = 0
     codes: list[str] = []
     previous: str | None = None
@@ -291,7 +357,7 @@ def name_skill(
             )
             reason = parsed
             continue
-        errors = check_naming(parsed, style.naming, used)
+        errors = check_naming(parsed, style.naming, used, archaic_ok=archaic_ok)
         errors += check_consistency(parsed, facts, vocab, added)
         if not errors:
             return NamingOutcome(

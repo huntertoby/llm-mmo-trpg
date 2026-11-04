@@ -5,6 +5,7 @@
     uv run python scripts/eval_llm_skills.py                          # Mock（不需網路與金鑰）
     uv run python scripts/eval_llm_skills.py --real --out-dir docs/phases/4-L9
     uv run python scripts/eval_llm_skills.py --real --suites forced --forced-per 3
+    uv run python scripts/eval_llm_skills.py --real --suites region --region 12   # 6L-1 分區
 
 輸出 Markdown（各組摘要、錯誤代碼表、強制測試每個原語的通過情形、自由測試的選中率與隨機組合器對照、
 主題一致性抽樣）與 CSV（每題一列，不含 prompt）。平行請求數預設 8（本機模型的 ``MAX_SEQS``）。
@@ -21,6 +22,7 @@ from pathlib import Path
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skills import SkillDef
+from trpg.content.world import load_style_eval, load_world_style
 from trpg.llm import load_llm_config
 from trpg.llm.candidate_source import mock_client_for, mock_naming_client
 from trpg.llm.skill_eval import (
@@ -38,12 +40,16 @@ from trpg.llm.skill_eval import (
     free_items,
     free_table,
     real_client_factory,
+    region_items,
     run_items,
     suite_summary,
     upgrade_items,
 )
+from trpg.llm.style_eval import NameRow, report_lines, style_report
 
 SUITES = ("upgrade", "forced", "free")
+ALL_SUITES = (*SUITES, "region")
+"""``region``（6L-1 C9 分區）要用 ``--suites`` 指定，預設不跑。"""
 THEME_SAMPLES = 10
 
 
@@ -100,7 +106,22 @@ def _items(library: ContentLibrary, args: argparse.Namespace, suite: str) -> lis
         return upgrade_items(library, args.upgrade, seed=args.seed)
     if suite == "forced":
         return forced_items(library, per=args.forced_per, seed=args.seed)
+    if suite == "region":
+        regions = load_style_eval().eval_regions
+        return region_items(library, args.region, regions, seed=args.seed)
     return free_items(library, args.free, seed=args.seed)
+
+
+def _region_lines(results: Sequence[ItemResult]) -> list[str]:
+    """分區（6L-1 C9）：名稱類的兩項驗收（對白的「施主」由 ``scripts/eval_style.py`` 另外看）。"""
+    names = [NameRow(r.item.request.region, r.name, r.name_source) for r in results if r.ok]
+    report = style_report(names, [], load_style_eval(), load_world_style().naming.archaic)
+    lines = report_lines(report)
+    lines += ["", "| 區域 | 名稱 | 概念 |", "|---|---|---|"]
+    lines += [
+        f"| {r.item.request.region} | {r.name} | {r.concept} |" for r in results if r.name_source
+    ]
+    return lines
 
 
 def _section(
@@ -112,11 +133,14 @@ def _section(
     args: argparse.Namespace,
     alert: int,
 ) -> list[str]:
-    title = {"upgrade": "升級候選", "forced": "強制測試", "free": "自由測試"}[suite]
+    titles = {"upgrade": "升級候選", "forced": "強制測試", "free": "自由測試", "region": "分區"}
+    title = titles[suite]
     lines = [f"## {title}", "", f"- 牆鐘時間 {wall:.0f} 秒（平行 {args.workers}）"]
     lines += suite_summary(results, alert_permille=alert)
     if suite == "upgrade":
         lines += ["", "### 主題一致性抽樣", "", *_theme_lines(library, results)]
+    if suite == "region":
+        lines += ["", "### 風格驗收（6L-1 C9）", "", *_region_lines(results)]
     if suite == "forced":
         low = _low_forced(results)
         lines += ["", "### 每個核心原語", "", *forced_table(library, results), ""]
@@ -135,7 +159,10 @@ def _section(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else "")
     parser.add_argument("--real", action="store_true", help="用 config/llm.toml 的本機模型")
-    parser.add_argument("--suites", default=",".join(SUITES), help="逗號分隔：upgrade,forced,free")
+    parser.add_argument(
+        "--suites", default=",".join(SUITES), help="逗號分隔：upgrade,forced,free,region"
+    )
+    parser.add_argument("--region", type=int, default=12, help="分區每區題數（預設 12）")
     parser.add_argument("--upgrade", type=int, default=50, help="升級候選題數（預設 50）")
     parser.add_argument("--forced-per", type=int, default=3, help="強制測試每個原語題數（預設 3）")
     parser.add_argument("--free", type=int, default=300, help="自由測試題數（預設 300）")
@@ -162,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
         "",
     ]
     every: list[ItemResult] = []
-    for suite in [s for s in args.suites.split(",") if s in SUITES]:
+    for suite in [s for s in args.suites.split(",") if s in ALL_SUITES]:
         items = _items(library, args, suite)
         start = time.perf_counter()
         results = run_items(
@@ -171,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
             clients,
             max_attempts=config.max_retries,
             workers=args.workers,
-            naming=naming if suite == "upgrade" else None,
+            naming=naming if suite in ("upgrade", "region") else None,
             progress=_progress(suite, args.quiet),
         )
         wall = time.perf_counter() - start

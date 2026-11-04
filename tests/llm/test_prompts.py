@@ -149,6 +149,8 @@ SNAPSHOTS = {
     "skill-proposal/6": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
     # 6S-2c：系統指令不變；budget_note_zh 的附帶效果例子改成中性（不暗示固定加傷害）
     "skill-proposal/7": "bd1a47b1ca5b020049113b820fe58b2610416a9488a018fcef58449624cd2c85",
+    # 6L-1：全域語氣改中性奇幻（C1）；系統指令說明 <request> 的 style（#126），題目區加 style
+    "skill-proposal/8": "e4cd446d03491af23e92c5769aca17321267598704434bd5394dc87be4d6ecf5",
 }
 
 

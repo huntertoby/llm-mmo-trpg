@@ -124,6 +124,8 @@ def evaluate_flash(
                     seed=run_seed,
                     taken=taken,
                     before=skill_before(library, request),
+                    region=request.region,
+                    weapon=request.weapon_zh,
                 )
                 stats.add_names(o.skill for o in named.options if o.variation.source != "minor")
     return result

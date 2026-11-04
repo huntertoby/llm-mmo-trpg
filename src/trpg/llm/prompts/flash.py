@@ -30,7 +30,7 @@ __all__ = [
 ]
 
 # 改動任何閃現提議 prompt 文字、區塊格式時必須同步改版本號（快照測試會檢查）。
-FLASH_PROMPT_VERSION = "flash-variation/2"
+FLASH_PROMPT_VERSION = "flash-variation/3"
 
 NOTE_MAX_CHARS = 40
 
@@ -46,6 +46,8 @@ FLASH_TASK = """你是「{world_name}」世界的技能設計助手。
 - note_zh：一句話說明為什麼這個變化適合這招，最多 {note_max} 個字，全形中文，不可有英文或代號。
   note_zh 只寫變化後這招真的有的效果，並寫出這個變化加上的效果（例如加了燃燒就要提到燃燒）；
   不要提到這招沒有的控制、元素或召喚物；世界觀詞（例如源晶、頻率、碎界）最多一個。
+  note_zh 照 <request> 的 style（這招原本取得地點的區域與風格）寫；沒有要求時用中性奇幻，
+  不用武俠、仙俠、文言詞。
 - 盡量讓變化涵蓋不同類別，並參考 <usage>（這招實戰的用法統計）與 <held_keywords>
   （玩家其他技能常用的關鍵字）挑選最貼合這個玩家的變化。
 - 一個變化只能是一個模板；不要提議 <already> 已經提議過的變化。
@@ -163,6 +165,7 @@ def build_flash_messages(
         "reflash": request.slot is not None,
         "category": request.category,
         "count": count,
+        "style": style.style_payload(request.region),  # 6L-1（#126）
     }
     blocks = [
         _block("request", _json(header)),
