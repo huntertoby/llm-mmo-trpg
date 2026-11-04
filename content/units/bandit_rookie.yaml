@@ -3,7 +3,7 @@
 id: bandit_rookie
 name_zh: 盜賊
 attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
-max_hp: 23   # 6F-4 C1：bandit 的 29 × 0.8（模擬摘要見 docs/phases/Phase6F-4報告.md）
+max_hp: 17   # 6F-4 C1：bandit 的 29 × 0.6（×0.8 時 A、B 勝率 90%；模擬摘要見 docs/phases/Phase6F-4報告.md）
 speed: 5
 armor_bonus: 2
 weapon: dagger

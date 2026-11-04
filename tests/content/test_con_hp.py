@@ -15,6 +15,8 @@ OLD_HP = {
     "bandit_guard": 35,
     "bandit_archer": 31,  # BAL-4b（26→31）
     "bandit_archer_guard": 31,
+    "bandit_rookie": 23,  # 6F-4 C1 新手第 1 場（17 ＋ 體質 12 的 6）
+    "bandit_archer_rookie": 19,  # 6F-4 C1
     "bandit_boss": 80,
     "bandit_captain": 57,  # BAL-6 新增（45 加體質 14 的 12 點）
     "bandit_shieldbearer": 36,  # BAL-4b（20→24）

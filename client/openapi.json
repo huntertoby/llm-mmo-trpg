@@ -3963,6 +3963,25 @@
         "title": "AttributeAffectsOut",
         "description": "一個屬性影響的東西（Phase 3H-3）：武器的普攻、縮放這個屬性的技能名；由程式依技能\n與武器的縮放屬性產生。"
       },
+      "AttributeNoteView": {
+        "properties": {
+          "attr": {
+            "$ref": "#/components/schemas/Attribute"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attr",
+          "text_zh"
+        ],
+        "title": "AttributeNoteView",
+        "description": "配點教學裡一個屬性的說明（#133；滑過時顯示，第 1 行「你的技能：…」由畫面從\n``hero.attribute_affects`` 帶入）。"
+      },
       "AttributePerkOut": {
         "properties": {
           "attr": {
@@ -12829,6 +12848,94 @@
         "title": "HeroStatusView",
         "description": "開場掛在主角身上的狀態（5A-6／5A-6b：不擲抵抗、最多 2 回合）。"
       },
+      "HintSeenAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hint_seen",
+            "title": "Kind",
+            "default": "hint_seen"
+          },
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ids",
+            "default": []
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintSeenAction",
+        "description": "出過提示、看過教學或升級畫面（Phase 6F-4，6F-2b：記在角色身上）。``ids``：戰鬥短提示 ID、\n``opening``、``lesson:<種類>``；``level``：看過的升級畫面（只往上、不超過目前等級）。戰鬥中也能做\n（只記紀錄，不改任何規則）。"
+      },
+      "HintsOffAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hints_off",
+            "title": "Kind",
+            "default": "hints_off"
+          },
+          "off": {
+            "type": "boolean",
+            "title": "Off",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintsOffAction",
+        "description": "「不再顯示提示」（6F-4）：``off`` 為真時戰鬥短提示全部不出；假＝再顯示。戰鬥中也能做。"
+      },
+      "HintsResetAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hints_reset",
+            "title": "Kind",
+            "default": "hints_reset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintsResetAction",
+        "description": "設定裡的「重新顯示提示」（6F-4）：清掉出過的提示、教學紀錄與「不再顯示」。"
+      },
+      "HintsStateView": {
+        "properties": {
+          "seen": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Seen",
+            "default": []
+          },
+          "off": {
+            "type": "boolean",
+            "title": "Off",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HintsStateView",
+        "description": "提示與教學的紀錄（6F-4，6F-2b：記在角色身上）。"
+      },
       "HireAction": {
         "properties": {
           "kind": {
@@ -14424,6 +14531,7 @@
           "kind": {
             "type": "string",
             "enum": [
+              "allocate",
               "flash",
               "reflash"
             ],
@@ -14443,6 +14551,56 @@
             "type": "array",
             "title": "Skills Zh",
             "default": []
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points",
+            "default": 0
+          },
+          "recommended": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Recommended"
+          },
+          "recommended_zh": {
+            "type": "string",
+            "title": "Recommended Zh",
+            "default": ""
+          },
+          "done_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done Zh"
+          },
+          "skip_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Zh"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeNoteView"
+            },
+            "type": "array",
+            "title": "Notes",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -14452,7 +14610,7 @@
           "lines"
         ],
         "title": "LessonView",
-        "description": "閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色\n每種只跳一次、可以略過。"
+        "description": "教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次\n閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：\n``lesson:<種類>``）、可以略過。"
       },
       "LevelUpChoice": {
         "properties": {
@@ -14499,6 +14657,26 @@
         "type": "object",
         "title": "LevelUpChoice",
         "description": "升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；\n欄位滿時 ``replace`` 指定要換掉的技能 ID。"
+      },
+      "LevelUpView": {
+        "properties": {
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "level",
+          "text_zh"
+        ],
+        "title": "LevelUpView",
+        "description": "升級畫面（6F-4 C2）：等級比 ``level_seen`` 高時出；看過用 ``hint_seen`` 的 ``level`` 記。"
       },
       "LlmStatsOut": {
         "properties": {
@@ -24202,6 +24380,15 @@
             "$ref": "#/components/schemas/NewsSeenAction"
           },
           {
+            "$ref": "#/components/schemas/HintSeenAction"
+          },
+          {
+            "$ref": "#/components/schemas/HintsOffAction"
+          },
+          {
+            "$ref": "#/components/schemas/HintsResetAction"
+          },
+          {
             "$ref": "#/components/schemas/BuyAction"
           },
           {
@@ -24270,6 +24457,9 @@
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
+            "hint_seen": "#/components/schemas/HintSeenAction",
+            "hints_off": "#/components/schemas/HintsOffAction",
+            "hints_reset": "#/components/schemas/HintsResetAction",
             "hire": "#/components/schemas/HireAction",
             "imbue": "#/components/schemas/ImbueAction",
             "inherit": "#/components/schemas/InheritAction",
@@ -25070,6 +25260,19 @@
                 "type": "null"
               }
             ]
+          },
+          "level_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LevelUpView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hints": {
+            "$ref": "#/components/schemas/HintsStateView"
           }
         },
         "additionalProperties": false,

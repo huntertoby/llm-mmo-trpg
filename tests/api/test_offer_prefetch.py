@@ -84,7 +84,8 @@ def test_quest_step_offer_predicted(library: ContentLibrary) -> None:
     char = char.model_copy(update={"quests": (QuestState(quest="starter_ferry", started_at=NOON),)})
     jobs = predicted_offers(library, make_world(), char)
     assert jobs
-    assert {(j.reason, j.mix, j.min_passive) for j in jobs} == {("level_up", (1, 0, 2), 1)}
+    # 6F-4（#130）：第 1 步＝加深、橋接、新方向各 1
+    assert {(j.reason, j.mix, j.min_passive) for j in jobs} == {("level_up", (1, 1, 1), 1)}
 
 
 def test_store_prefetches_and_serves(

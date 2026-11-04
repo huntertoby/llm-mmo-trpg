@@ -25,7 +25,7 @@ from trpg.content.fields import (
 from trpg.content.library import ContentLibrary, load_library
 
 RULE_HASHES = {
-    "mist_ferry": "a61d852dabbe372c",
+    "mist_ferry": "dc9b3f21a5ba0d70",  # 6F-4：導師堂門口加葛蘭（npcs）
     "ember_market": "09394be96fcc38a9",
     "mist_ferry_tavern": "ebd0fe8e191b16d6",
     "mist_ferry_smithy": "cc3547241585eae6",

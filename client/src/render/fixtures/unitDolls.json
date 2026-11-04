@@ -108,6 +108,30 @@
   "affixes": [],
   "traits": []
  },
+ "bandit_archer_rookie": {
+  "skin": "#d9a47a",
+  "hair": "short",
+  "hair_color": "#3a2a1c",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "hood",
+    "material": "cloth",
+    "color": "#6a4a2e"
+   }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
  "bandit_boss": {
   "skin": "#a8724c",
   "hair": "short",
@@ -166,6 +190,30 @@
   "traits": []
  },
  "bandit_guard": {
+  "skin": "#a8724c",
+  "hair": "short",
+  "hair_color": "#2a1c14",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "bandana",
+    "material": "cloth",
+    "color": "#b33a3a"
+   }
+  },
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "bandit_rookie": {
   "skin": "#a8724c",
   "hair": "short",
   "hair_color": "#2a1c14",

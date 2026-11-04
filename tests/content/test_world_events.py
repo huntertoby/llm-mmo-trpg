@@ -80,7 +80,7 @@ def test_cloud_ridge_events_loaded(events: EventSkeletonTable) -> None:
 
 
 def test_cloud_ridge_npcs_loaded(npcs: NpcCardTable) -> None:
-    assert len(npcs.npcs) == 9  # 5D-3 加鐵匠石師傅
+    assert len(npcs.npcs) == 10  # 5D-3 加鐵匠石師傅；6F-4 加導師堂的葛蘭（#133）
     by_id = npcs.npc_by_id()
     assert by_id["granny_du"].location == "mist_ferry"
     assert by_id["mistlock_master"].location == "cloud_summit"

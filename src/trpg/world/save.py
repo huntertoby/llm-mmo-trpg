@@ -3,7 +3,7 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/3``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/6``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 角色 | ``trpg-char/7``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
 | 世界動作日誌 | ``trpg-wlog/7``（JSON Lines：第一行 ``{"format": "trpg-wlog/7"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
@@ -130,15 +130,18 @@ WORLD_RULES_VERSION: Final = 9  # 2＝6D-R2；3＝6E-1／6E-3；4～6＝6E-3b～
 - 6（6E-3d）：第三方擺在敵方那一側。
 - 7（6F-1）：全滅回鎮時法力也回滿（原本照戰後）；新手鏈被動保底把新方向換成「還沒有的關鍵字」的
   被動時不再標成退回（三選一的 ``fallback`` 旗標會進角色狀態）。
-- 9（6F-4）：#128 新手保護——新手任務鏈的固定戰被敵人先看到時改成「沒有先手」（開打距離跟著變，
-  :func:`trpg.world.field_enemies.newcomer_guarded`）；任務獎勵多 ``level_to``（補到剛好那一級的
-  經驗，C2）；三個只記畫面紀錄的動作（``hint_seen``、``hints_off``、``hints_reset``，戰鬥中也能做）。
-  角色格式升成 ``trpg-char/7``（提示紀錄、``level_seen``；``/6`` 以前照讀）。
 - 8（6F-2）：#125 開局在主城——在主城、還沒到過新手區（``world/newcomer.yaml`` 的
   ``start_region``）小鎮的角色，傳送（``teleport``、``use_teleport_stone``）可以直接去那一區的小鎮
   （:func:`trpg.world.atlas.free_first_teleport`）；新角色改由 API 建在主城（``new_character`` 本身
   不變）。任務條件多一種狀態型的 ``flashed``（閃現過至少一招，#132：導師任務鏈「觀摩」新手時的
   閃現也算）。CHAR_FORMAT、wlog 格式不變（沒有新欄位）。
+- 9（6F-4）：#128 新手保護——新手任務鏈（``kind: starter``）的固定戰被敵人先看到時改成「沒有先手」
+  （開打距離 3 格，:func:`trpg.world.field_enemies.newcomer_guarded`；同樣的走路日誌開出不同的
+  戰場）；
+  任務獎勵多 ``level_to``（補到剛好那一級的經驗，C2：同樣完成一步給的經驗不同）；三個只記畫面紀錄的
+  動作（``hint_seen``、``hints_off``、``hints_reset``；戰鬥中、待選閃現或三選一時也能做）。
+  角色格式升成 ``trpg-char/7``（提示紀錄 ``hints_seen``、``hints_off`` 與 ``level_seen``；``/6``
+  以前照讀，舊角色的 ``level_seen`` 補成目前等級）。wlog 格式不變（6C-R3 起靠規則鍵標舊日誌）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

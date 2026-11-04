@@ -36,10 +36,10 @@ attribute_notes:
 flash_lesson:
   - speaker_zh: 說書人
     text_zh: 剛才那一招還在你手裡發燙。
-  - speaker_zh: 導師
+  - speaker_zh: 葛蘭
     text_zh: 讓剛用過的招靈光一閃。
 reflash_lesson:
-  - speaker_zh: 導師
+  - speaker_zh: 葛蘭
     text_zh: 閃過的變化不滿意，可以重閃其中一次換成別的變化：要花靈感，但不用先上場
 reflash_level: 3
 opening:

@@ -19,7 +19,7 @@ quests:
     steps:
       - id: ferry_bandits
         text_zh: 渡口石階：趕走搶渡船的盜賊
-        when: [{kind: win_battle, location: ferry_steps, group: bandit_raiders}]   # 6F-4：只有固定戰算（巡邏不算；21.10 第 9、10 條「固定戰」）
+        when: [{kind: win_battle, location: ferry_steps}]
         npcs: [granny_du]
         # 6F-2 戰鬥短提示（#99 每場教一件事；文字照玩法 PM 筆記 U1）
         teach:
@@ -34,7 +34,7 @@ quests:
           offer: {kind: whiteboard, mix: {deepen: 1, bridge: 1, new: 1}, min_passive: 1}
       - id: bamboo_wolves
         text_zh: 竹林小徑：突破雨裡包圍的霧狼
-        when: [{kind: win_battle, location: bamboo_path, group: mist_wolf_pack}]   # 6F-4：只有固定戰算
+        when: [{kind: win_battle, location: bamboo_path}]
         npcs: [granny_du]
         teach:
           - {id: water_lightning, trigger: enemy_on_water, text_zh: 敵人站在水上，雷電會擴散}
@@ -47,7 +47,7 @@ quests:
           offer: {kind: whiteboard, mix: {deepen: 1, bridge: 0, new: 2}, min_passive: 1}
       - id: terrace_clash
         text_zh: 雨中梯田：平息盜賊和修士的衝突
-        when: [{kind: win_battle, location: rain_terraces, group: terrace_clash}]   # 6F-4：只有固定戰算
+        when: [{kind: win_battle, location: rain_terraces}]
         npcs: [granny_du]
         teach:
           - {id: reaction_auto, trigger: reaction, text_zh: 反應技能在敵人行動時自動觸發}

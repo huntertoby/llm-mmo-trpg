@@ -1677,6 +1677,16 @@ export interface components {
             lines_zh: string[];
         };
         /**
+         * AttributeNoteView
+         * @description 配點教學裡一個屬性的說明（#133；滑過時顯示，第 1 行「你的技能：…」由畫面從
+         *     ``hero.attribute_affects`` 帶入）。
+         */
+        AttributeNoteView: {
+            attr: components["schemas"]["Attribute"];
+            /** Text Zh */
+            text_zh: string;
+        };
+        /**
          * AttributePerkOut
          * @description 屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。
          */
@@ -5273,6 +5283,69 @@ export interface components {
             rounds: number | null;
         };
         /**
+         * HintSeenAction
+         * @description 出過提示、看過教學或升級畫面（Phase 6F-4，6F-2b：記在角色身上）。``ids``：戰鬥短提示 ID、
+         *     ``opening``、``lesson:<種類>``；``level``：看過的升級畫面（只往上、不超過目前等級）。戰鬥中也能做
+         *     （只記紀錄，不改任何規則）。
+         */
+        HintSeenAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hint_seen";
+            /**
+             * Ids
+             * @default []
+             */
+            ids: string[];
+            /** Level */
+            level?: number | null;
+        };
+        /**
+         * HintsOffAction
+         * @description 「不再顯示提示」（6F-4）：``off`` 為真時戰鬥短提示全部不出；假＝再顯示。戰鬥中也能做。
+         */
+        HintsOffAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hints_off";
+            /**
+             * Off
+             * @default true
+             */
+            off: boolean;
+        };
+        /**
+         * HintsResetAction
+         * @description 設定裡的「重新顯示提示」（6F-4）：清掉出過的提示、教學紀錄與「不再顯示」。
+         */
+        HintsResetAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hints_reset";
+        };
+        /**
+         * HintsStateView
+         * @description 提示與教學的紀錄（6F-4，6F-2b：記在角色身上）。
+         */
+        HintsStateView: {
+            /**
+             * Seen
+             * @default []
+             */
+            seen: string[];
+            /**
+             * Off
+             * @default false
+             */
+            off: boolean;
+        };
+        /**
          * HireAction
          * @description 在城鎮雇用系統傭兵（Phase 5C-1；09 9.6.9 #97：免費、出城前選好、野外不能換）：整組換成
          *     ``mercenaries``（依出場順序；空＝不帶傭兵）。
@@ -5951,15 +6024,16 @@ export interface components {
         };
         /**
          * LessonView
-         * @description 閃現教學（6F-2，#132）：``flash``＝第一次閃現、``reflash``＝升到 3 級後改教重閃。畫面每個角色
-         *     每種只跳一次、可以略過。
+         * @description 教學（6F-2，#132；6F-4，#133）：``allocate``＝升到 2 級後葛蘭先教配點、``flash``＝第一次
+         *     閃現、``reflash``＝升到 3 級後改教重閃。每種每個角色只跳一次（看過記在角色的 ``hints_seen``：
+         *     ``lesson:<種類>``）、可以略過。
          */
         LessonView: {
             /**
              * Kind
              * @enum {string}
              */
-            kind: "flash" | "reflash";
+            kind: "allocate" | "flash" | "reflash";
             /** Lines */
             lines: components["schemas"]["OpeningLineView"][];
             /**
@@ -5967,6 +6041,29 @@ export interface components {
              * @default []
              */
             skills_zh: string[];
+            /**
+             * Points
+             * @default 0
+             */
+            points: number;
+            /** Recommended */
+            recommended?: {
+                [key: string]: number;
+            };
+            /**
+             * Recommended Zh
+             * @default
+             */
+            recommended_zh: string;
+            /** Done Zh */
+            done_zh?: string | null;
+            /** Skip Zh */
+            skip_zh?: string | null;
+            /**
+             * Notes
+             * @default []
+             */
+            notes: components["schemas"]["AttributeNoteView"][];
         };
         /**
          * LevelUpChoice
@@ -5987,6 +6084,16 @@ export interface components {
             pick?: number | null;
             /** Replace */
             replace?: string | null;
+        };
+        /**
+         * LevelUpView
+         * @description 升級畫面（6F-4 C2）：等級比 ``level_seen`` 高時出；看過用 ``hint_seen`` 的 ``level`` 記。
+         */
+        LevelUpView: {
+            /** Level */
+            level: number;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * LlmStatsOut
@@ -9864,7 +9971,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -10121,6 +10228,8 @@ export interface components {
              */
             battle_hints: components["schemas"]["BattleHintView"][];
             lesson?: components["schemas"]["LessonView"] | null;
+            level_up?: components["schemas"]["LevelUpView"] | null;
+            hints?: components["schemas"]["HintsStateView"];
         };
         XY: [
             number,

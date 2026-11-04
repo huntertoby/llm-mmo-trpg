@@ -1222,8 +1222,11 @@ def _load_newcomer(
     problems: list[str] = []
     if newcomer.start_region not in world_maps:
         problems.append(f"start_region {newcomer.start_region} 沒有地點圖")
-    if newcomer.mentor_npc is not None and newcomer.mentor_npc not in npcs.get(
-        newcomer.start_region, {}
+    region_npcs = npcs.get(newcomer.start_region)
+    if (  # 新手區沒有人設卡檔（只裝了部分內容）時不檢查
+        newcomer.mentor_npc is not None
+        and region_npcs is not None
+        and newcomer.mentor_npc not in region_npcs
     ):
         problems.append(f"mentor_npc {newcomer.mentor_npc} 不在 {newcomer.start_region} 的人設卡裡")
     seen = {h.id: "battle_hints" for h in newcomer.battle_hints}

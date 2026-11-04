@@ -20,7 +20,9 @@ def _old_spawn() -> Iterator[None]:
     """6F-2（#125）起新角色出生在主城；6F-2 以前寫的世界 API 測試都假設建角後站在雲嶺小鎮，照舊
     讓它們在 :data:`~trpg.api.world.START_REGION` 出生（比照 ``library`` 拿掉實地地圖的做法；
     session 範圍，模組範圍的 fixture 建的角色也算）。測開局本身的測試標
-    ``@pytest.mark.capital_spawn``（:func:`_capital_spawn` 換回正式的 ``spawn_region``）。"""
+    ``@pytest.mark.capital_spawn``（:func:`_capital_spawn` 換回正式的 ``spawn_region``）。
+
+    注意（6F-2b）：這是 **測試捷徑**；正式開局照 #125 在主城出生，不要把這裡的雲嶺出生當成規則。"""
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr("trpg.api.world.spawn_region", lambda _library: START_REGION)
         yield
