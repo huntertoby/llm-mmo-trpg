@@ -47,7 +47,7 @@ export function castMode(shape: ShapeId, range: number): CastMode {
 export function eventPrimitive(e: EventBase): string | null {
   switch (e.type) {
     case "damage_dealt":
-      return "damage";
+      return e.cause === "backlash" && e.target_id === e.source_id ? "self_damage_of_hit" : "damage";
     case "healed":
       return "heal";
     case "shield_gained":
@@ -61,7 +61,7 @@ export function eventPrimitive(e: EventBase): string | null {
     case "unit_charged":
       return "charge_through";
     case "status_removed":
-      return e.reason === "cleansed" ? "cleanse" : e.reason === "dispelled" ? "dispel" : e.reason === "stolen" ? "steal_buff" : null;
+      return STATUS_REMOVED[String(e.reason)] ?? null;
     case "status_applied":
       return e.status_id === "time_bomb" ? "delayed_damage" : e.status_id === "prone" ? "knock_prone" : "apply_status";
     case "unit_moved":
@@ -82,7 +82,60 @@ export function eventPrimitive(e: EventBase): string | null {
           return null;
       }
     default:
-      return null;
+      return lowerHalfPrimitive(e);
+  }
+}
+
+const STATUS_REMOVED: Readonly<Partial<Record<string, string>>> = { cleansed: "cleanse", dispelled: "dispel", stolen: "steal_buff", consumed: "consume_status", revealed: "reveal" };
+
+/** 一對一的事件 → 原語（6N-3 下半）。 */
+const EVENT_PRIMITIVE: Readonly<Partial<Record<string, string>>> = {
+  unit_summoned: "summon",
+  zone_created: "zone",
+  surface_blown: "blow_surface",
+  object_created: "create_obstacle",
+  object_toppled: "topple",
+  wall_toppled: "topple",
+  object_hurled: "hurl_object",
+  trap_placed: "place_trap",
+  rune_inscribed: "inscribe",
+  form_entered: "enter_form",
+  form_left: "leave_form",
+  attack_intercepted: "intercept",
+  damage_redirected: "redirect_damage",
+  death_cheated: "cheat_death",
+  trap_revealed: "reveal",
+  skill_copied: "copy_skill",
+  skill_granted: "grant_skill",
+  ap_granted: "grant_ap",
+  reactions_granted: "extra_reaction",
+  ap_refunded: "refund_ap",
+  gamble_rolled: "gamble",
+  rule_change_triggered: "rule_change",
+};
+
+/**
+ * 6N-3 下半的事件 → 原語。`skill_cooldown_changed` 不對（使用技能時本來就會設冷卻，分不出退還、重置；卡上有部件時照卡）。
+ */
+function lowerHalfPrimitive(e: EventBase): string | null {
+  switch (e.type) {
+    case "summon_expired":
+      return e.reason === "sacrificed" ? "sacrifice_summon" : null;
+    case "surface_changed":
+      if (e.cause === "clear") return "clear_surface";
+      return e.cause === "effect" && e.after !== "none" ? "create_surface" : null;
+    case "terrain_changed": {
+      const d = Number(e.height_after) - Number(e.height_before);
+      return d > 0 ? "raise_terrain" : d < 0 ? "lower_terrain" : null;
+    }
+    case "object_destroyed":
+      return e.cause === "effect" ? "destroy_object" : null;
+    case "rune_removed":
+      return e.reason === "detonated" ? "detonate_runes" : null;
+    case "stacks_changed":
+      return e.reason === "gained" ? "add_stack" : e.reason === "consumed" ? "consume_stack" : null;
+    default:
+      return EVENT_PRIMITIVE[e.type] ?? null;
   }
 }
 
@@ -133,7 +186,11 @@ function splitSegments(events: readonly Record<string, unknown>[], view: BattleV
   let cur: RawSeg | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
-    if (e.type === "rune_removed" && e.reason === "detonated") continue;
+    if (e.type === "rune_removed" && e.reason === "detonated") {
+      // 符文引爆不開新段（和 vfx.ts 相同），但留在這一段的事件裡（推出 `detonate_runes`）
+      cur?.events.push(e);
+      continue;
+    }
     const opens = e.type === "skill_used" || e.type === "skill_followup" || (e.type === "attack_rolled" && (cur === null || cur.casterId !== String(e.attacker_id) || cur.basic));
     if (opens) {
       let seg: RawSeg | null = null;
@@ -217,6 +274,10 @@ export interface SkillRow {
   clip: ClipId;
   /** 收勢：從這個片段最後的姿勢回到站好（`clip` 仍填該片段）。 */
   recover: boolean;
+  /** 沒有身體動作的片段（退還、層數類；6N-3）：不套姿勢、只播特效，和前一個片段同時開始。 */
+  still: boolean;
+  /** 共用片段的分辨圖示（`PrimitivePlay.icon`）。 */
+  icon: string | null;
   startMs: number;
   ms: number;
   /** 命中點（相對這一步；沒有＝不命中）。 */
@@ -248,15 +309,22 @@ function alignOffset(c: StepVfx["casts"][number]): number {
   return c.kind === "projectile" || c.kind === "beam" || c.kind === "cone" ? c.chargeMs : c.impactMs - c.startMs;
 }
 
-function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number }>; strike: ClipId; post: PrimitiveClipId[] } {
+interface PostClip {
+  clip: PrimitiveClipId;
+  icon: string | null;
+}
+
+function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number }>; strike: ClipId; post: PostClip[] } {
   const pre: Array<{ clip: ClipId; ms: number }> = [];
   if (withWindup && seg.opener.windup !== null) pre.push({ clip: seg.opener.windup, ms: clipDef(seg.opener.windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze });
-  const post: PrimitiveClipId[] = [];
+  const post: PostClip[] = [];
   for (const p of seg.primitives) {
     const play = primitivePlay(p, seg.polarity);
     if (play === null || play.clip === null || play.role === "move") continue;
+    const icon = play.icon ?? null;
+    const prev = post[post.length - 1];
     if (play.role === "pre") pre.push({ clip: play.clip, ms: clipDef(play.clip).ms * squeeze });
-    else if (post[post.length - 1] !== play.clip) post.push(play.clip);
+    else if (prev === undefined || prev.clip !== play.clip || prev.icon !== icon) post.push({ clip: play.clip, icon });
   }
   return { pre, strike: seg.opener.strike, post };
 }
@@ -289,11 +357,11 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
       body = free;
     }
     // 施放者一次只播一個片段：截掉前一段在這之後的收尾
-    for (const r of rows) if (r.unitId === seg.casterId && !r.strike && r.startMs + r.ms > body) r.ms = Math.max(0, body - r.startMs);
+    for (const r of rows) if (r.unitId === seg.casterId && !r.strike && !r.still && r.startMs + r.ms > body) r.ms = Math.max(0, body - r.startMs);
     const s = start - cast.startMs;
     shift.push(s);
     prevShift = s;
-    const base = { unitId: seg.casterId, recover: false, cast: i, target: cast.to, element: cast.element };
+    const base = { unitId: seg.casterId, recover: false, still: false, icon: null, cast: i, target: cast.to, element: cast.element };
     let t = body;
     for (const p of plan.pre) {
       rows.push({ ...base, clip: p.clip, startMs: t, ms: p.ms, hitMs: null, anchor: clipDef(p.clip).anchor, strike: false });
@@ -303,17 +371,24 @@ function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid
     t += strike.ms;
     busy.set(seg.casterId, t);
     let last: ClipId = plan.strike;
+    let lastStart = t - strike.ms;
     for (const c of plan.post) {
-      const d = clipDef(c);
-      rows.push({ ...base, clip: c, startMs: t, ms: d.ms, hitMs: d.hitAt === undefined ? null : t + d.ms * d.hitAt, anchor: d.anchor, strike: false });
+      const d = clipDef(c.clip);
+      if (d.still === true) {
+        // 沒有身體動作：不佔時間，和前一個片段同時播（只有特效）
+        rows.push({ ...base, clip: c.clip, still: true, icon: c.icon, startMs: lastStart, ms: d.ms, hitMs: null, anchor: d.anchor, strike: false });
+        continue;
+      }
+      rows.push({ ...base, clip: c.clip, icon: c.icon, startMs: t, ms: d.ms, hitMs: d.hitAt === undefined ? null : t + d.ms * d.hitAt, anchor: d.anchor, strike: false });
+      lastStart = t;
       t += d.ms;
-      last = c;
+      last = c.clip;
     }
     rows.push({ ...base, clip: last, recover: true, startMs: t, ms: RECOVER_MS, hitMs: null, anchor: clipDef(last).anchor, strike: false });
     const impact = cast.impactMs + s;
     for (const id of seg.felled) {
       const d = clipDef("knocked_down");
-      rows.push({ unitId: id, clip: "knocked_down", recover: false, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });
+      rows.push({ unitId: id, clip: "knocked_down", recover: false, still: false, icon: null, startMs: impact, ms: d.ms, hitMs: impact, anchor: d.anchor, cast: i, strike: false, target: null, element: cast.element });
     }
   }
   return { rows: rows.filter((r) => r.ms > 0), shift };

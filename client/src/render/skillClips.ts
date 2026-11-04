@@ -2,7 +2,7 @@
 // 全部是資料＋純函式：片段 ＝ 幾個關鍵姿勢（時間 0～1 → 姿勢，段間緩入緩出），加上命中點 `hitAt`、特效起點 `anchor`、
 // 往前的位移 `move`、離地高度 `air` 與特效提示 `fx`。不用 Math.random()、不讀時鐘；同一個時間永遠得到同一個姿勢。
 // - 起手對照表 `OPENER_TABLE`：武器種類（13 列）× 施放方式（4 欄）→ 起手片段＋出招片段（方案 2.3 (1-1)）；
-// - 原語片段 `PRIMITIVE_CLIPS`：6N-2 的上半原語（方案 2.3 (1) 的表）；沒有片段的原語回傳 `null`，播放時退回「起手＋現有特效」；
+// - 原語片段 `PRIMITIVE_CLIPS`：方案 2.3 (1) 的表，6N-2 上半＋6N-3 下半（`skill_primitives.yaml` 每個原語都有）；之後新增而沒有片段的原語回傳 `null`，播放時退回「起手＋現有特效」；
 // - 目標片段：被推、被拉、被撞倒（6N-4 會沿用）。
 // 角度、座標照 inkPose.ts：側面朝東，畫布旋轉順時針為正；`arm` 負＝往前上抬（−π/2 水平往前）；
 // 武器絕對角度 ＝ arm ＋ elbow ＋ wpn，0 ＝ 作用端朝上、π/2 朝前（inkWeaponFrame.ts 的統一座標）。
@@ -56,8 +56,48 @@ export function weaponClassOf(main: GearItem | undefined, off: GearItem | undefi
 export type Anchor = "tip" | "hand" | "offhand" | "feet" | "chest" | "head";
 
 /** 片段附帶的特效提示（BattleRenderer 照它畫；位置：`anchor` 片段的起點、`feet` 施放者腳下、`target` 目標身上、`targetFeet`、`targetHead`、`link` 目標→施放者）。 */
-export type FxKind = "glow" | "sigil" | "circle" | "muzzle" | "ring" | "ringUp" | "motesUp" | "motesDown" | "motesIn" | "shards" | "link" | "mark" | "pillar" | "wind" | "smoke" | "quake";
-export type FxWhere = "anchor" | "feet" | "target" | "targetFeet" | "targetHead" | "link";
+export type FxKind =
+  | "glow"
+  | "sigil"
+  | "circle"
+  | "muzzle"
+  | "ring"
+  | "ringUp"
+  | "motesUp"
+  | "motesDown"
+  | "motesIn"
+  | "shards"
+  | "link"
+  | "mark"
+  | "pillar"
+  | "wind"
+  | "smoke"
+  | "quake"
+  // 6N-3
+  | "spread"
+  | "shrink"
+  | "gust"
+  | "zoneRing"
+  | "rise"
+  | "dust"
+  | "arc"
+  | "trap"
+  | "runeFall"
+  | "burst"
+  | "formIn"
+  | "formOut"
+  | "guard"
+  | "goldFlash"
+  | "scan"
+  | "orbFly"
+  | "iconFly"
+  | "rewind"
+  | "stack"
+  | "coin"
+  | "snap"
+  | "wound";
+/** `head` 施放者頭頂；`link` 目標 → 施放者；`linkOut` 施放者 → 目標（6N-3）。 */
+export type FxWhere = "anchor" | "feet" | "head" | "target" | "targetFeet" | "targetHead" | "link" | "linkOut";
 export interface FxCue {
   kind: FxKind;
   where: FxWhere;
@@ -81,7 +121,7 @@ export interface ClipDef {
   move?: readonly (readonly [number, number])[];
   /** 離地高度（虛擬像素，sin 拋物線的頂點）。 */
   air?: number;
-  /** 沒有身體動作（不佔時間，和前一個片段同時播；6N-3 的規則類原語用）。 */
+  /** 沒有身體動作（不佔時間，和前一個片段同時播；6N-3 的退還、層數類原語）：姿勢不套到小人身上，只播特效。 */
   still?: boolean;
   fx?: readonly FxCue[];
 }
@@ -205,7 +245,7 @@ export function openerFor(weapon: WeaponClass, mode: CastMode): Opener {
   return OPENER_TABLE[weapon]?.[mode] ?? OPENER_TABLE.bare[mode];
 }
 
-// ---- 原語片段（6N-2 上半） ------------------------------------------------------
+// ---- 原語片段（6N-2 上半、6N-3 下半） ------------------------------------------
 
 /**
  * 施放者身上的原語片段（方案 2.3 (1) 的表）。`damage` 的片段就是起手決定的出招（不另外佔時間）；
@@ -235,6 +275,43 @@ export const PRIMITIVE_CLIPS = {
   warp_pose: { ms: 260, anchor: "chest", keys: [[0, {}], [0.5, { armF: -1.0, arm: -0.5, bob: -0.6 }], [1, {}]] },
   smoke_step: { ms: 200, anchor: "chest", keys: [[0, { lean: 0.3, kneeN: 0.6, kneeF: 0.6, bob: 2 }], [1, { lean: 0.2, kneeN: 0.4, kneeF: 0.4, bob: 1 }]], fx: [fx("smoke", "feet", 0, 1)] },
   swap_pose: { ms: 260, anchor: "chest", keys: [[0, {}], [0.5, { armF: -0.9, arm: -0.4 }], [1, {}]], fx: [fx("link", "link", 0, 1)] },
+  // ---- 6N-3 下半 ----
+  // 召喚
+  summon_press: { ms: 380, anchor: "hand", keys: [[0, {}], [0.4, { arm: -2.4, armF: -2.4, bob: -0.6 }], [0.75, { arm: -0.6, elbow: -0.2, armF: -0.6, elbowF: -0.2, lean: 0.15, kneeN: 0.5, kneeF: 0.5, bob: 1.6 }], [1, { arm: -0.6, elbow: -0.2, armF: -0.6, elbowF: -0.2, lean: 0.12, kneeN: 0.5, kneeF: 0.5, bob: 1.4 }]], fx: [fx("circle", "targetFeet", 0.4, 1), fx("motesUp", "targetFeet", 0.6, 1)] },
+  sacrifice_grip: { ms: 340, anchor: "offhand", keys: [[0, {}], [0.35, { armF: -1.6, elbowF: 0, lean: 0.08 }], [0.6, { armF: -1.55, elbowF: -0.9, lean: 0.04 }], [1, { armF: -1.2, elbowF: -1.2, lean: -0.06 }]], fx: [fx("orbFly", "link", 0.4, 1)] },
+  // 地表、地形
+  scatter: { ms: 300, anchor: "offhand", keys: [[0, { armF: 0.3, elbowF: -0.8 }], [0.3, { armF: -0.4, elbowF: -1.4, lean: -0.05 }], [0.65, { armF: -1.9, elbowF: 0, lean: 0.12 }], [1, { armF: -1.7, elbowF: 0, lean: 0.1 }]], fx: [fx("spread", "targetFeet", 0.5, 1)] },
+  zone_stamp: { ms: 320, anchor: "tip", keys: [[0, {}], [0.35, { arm: -1.6, wpn: 1.6, bob: -1 }], [0.55, { arm: -0.5, wpn: 0.4, bob: 0.8, lean: 0.08 }], [1, { arm: -0.5, wpn: 0.4, bob: 0.3 }]], fx: [fx("zoneRing", "targetFeet", 0.5, 1)] },
+  blow_sleeve: { ms: 320, anchor: "offhand", keys: [[0, {}], [0.3, { armF: -2.2, elbowF: -0.5, lean: -0.08 }], [0.7, { armF: -1.0, elbowF: 0, lean: 0.18, hipN: 0.3 }], [1, { armF: -0.9, elbowF: 0, lean: 0.12, hipN: 0.3 }]], fx: [fx("gust", "target", 0.35, 1)] },
+  press_clear: { ms: 300, anchor: "offhand", keys: [[0, {}], [0.4, { armF: -1.9, elbowF: -0.4 }], [1, { armF: -0.9, elbowF: 0, lean: 0.12, bob: 0.8 }]], fx: [fx("shrink", "targetFeet", 0.4, 1)] },
+  raise_both: { ms: 340, anchor: "hand", keys: [[0, { arm: -0.3, armF: -0.3, bob: 0.6 }], [0.6, { arm: -2.8, elbow: 0, armF: -2.8, elbowF: 0, bob: -1 }], [1, { arm: -2.9, elbow: 0, armF: -2.9, elbowF: 0, bob: -1.2 }]], fx: [fx("rise", "target", 0.45, 1)] },
+  // 升降地形：動作不同；特效共用現有的升降補間（vfx 的 terrain_changed），所以片段本身不帶特效
+  stomp_raise: { ms: 320, anchor: "feet", keys: [[0, {}], [0.45, { hipN: 1.1, kneeN: 1.4, liftL: 5, bob: -1.4, arm: -1.6, armF: -1.6 }], [0.62, { hipN: 0.1, kneeN: 0.3, liftL: 0, bob: 1.8, arm: -0.4, armF: -0.4, kneeF: 0.5 }], [1, { bob: 0.4 }]] },
+  press_lower: { ms: 340, anchor: "hand", keys: [[0, {}], [0.35, { arm: -2.0, armF: -2.0 }], [0.8, { arm: -0.5, elbow: 0, armF: -0.5, elbowF: 0, kneeN: 0.9, kneeF: 0.9, bob: 3, lean: 0.2 }], [1, { arm: -0.5, elbow: 0, armF: -0.5, elbowF: 0, kneeN: 0.9, kneeF: 0.9, bob: 3, lean: 0.2 }]] },
+  // 物件、符文
+  shoulder_ram: { ms: 300, anchor: "chest", keys: [[0, { lean: -0.1 }], [0.4, { lean: 0.5, hipN: 0.7, hipF: -0.5, arm: 0.3, elbow: -1.4, kneeF: 0.6 }], [1, { lean: 0.3, hipN: 0.4, hipF: -0.3, arm: 0.2, elbow: -1.2 }]], move: [[0, 0], [0.4, 7], [1, 4]], fx: [fx("dust", "targetFeet", 0.4, 1)] },
+  lift_throw: { ms: 440, anchor: "hand", keys: [[0, { kneeN: 0.6, kneeF: 0.6, bob: 2 }], [0.4, { arm: -2.9, elbow: -0.3, armF: -2.9, elbowF: -0.3, bob: -0.8, lean: -0.15 }], [0.7, { arm: -1.4, elbow: 0, armF: -1.4, elbowF: 0, lean: 0.2, hipN: 0.4 }], [1, { arm: -1.2, armF: -1.2, lean: 0.15, hipN: 0.4 }]], fx: [fx("arc", "linkOut", 0.6, 1)] },
+  crouch_place: { ms: 380, anchor: "hand", keys: [[0, {}], [0.5, { kneeN: 1.6, hipN: 1.0, kneeF: 1.2, bob: 5, lean: 0.25, arm: -0.4, elbow: -0.3 }], [1, { kneeN: 1.6, hipN: 1.0, kneeF: 1.2, bob: 5, lean: 0.25, arm: -0.4, elbow: -0.3 }]], fx: [fx("trap", "targetFeet", 0.5, 1)] },
+  air_write: { ms: 420, anchor: "offhand", keys: [[0, {}], [0.25, { armF: -2.0, elbowF: -0.2 }], [0.5, { armF: -1.4, elbowF: -0.4 }], [0.75, { armF: -1.9, elbowF: -0.1 }], [1, { armF: -1.5, elbowF: -0.3 }]], fx: [fx("sigil", "anchor", 0.1, 0.8), fx("runeFall", "targetFeet", 0.6, 1)] },
+  fist_clench: { ms: 280, anchor: "offhand", keys: [[0, {}], [0.4, { armF: -1.6, elbowF: 0, lean: 0.05 }], [0.6, { armF: -1.7, elbowF: -0.5, bob: 0.5 }], [1, { armF: -1.5, elbowF: -0.6 }]], fx: [fx("burst", "target", 0.55, 1)] },
+  smash_down: { ms: 320, anchor: "tip", keys: [[0, {}], [0.4, { arm: -2.6, wpn: 1.8, lean: -0.1 }], [0.7, { arm: -0.4, wpn: 2.2, lean: 0.25, hipN: 0.4, bob: 1 }], [1, { arm: -0.4, wpn: 2.2, lean: 0.2, hipN: 0.4, bob: 0.8 }]], fx: [fx("shards", "target", 0.65, 1)] },
+  // 形態
+  form_gather: { ms: 400, anchor: "chest", keys: [[0, {}], [0.5, { arm: -2.4, armF: -2.4, bob: -0.8 }], [1, { arm: -0.6, elbow: -1.6, armF: -0.6, elbowF: -1.6, bob: 0.6 }]], fx: [fx("formIn", "feet", 0, 0.95)] },
+  form_release: { ms: 380, anchor: "chest", keys: [[0, { arm: -0.6, elbow: -1.6, armF: -0.6, elbowF: -1.6, bob: 0.6 }], [0.5, { arm: -2.4, elbow: 0, armF: -2.4, elbowF: 0, bob: -0.8 }], [1, {}]], fx: [fx("formOut", "feet", 0.3, 1)] },
+  // 防護與其他
+  side_guard: { ms: 320, anchor: "chest", keys: [[0, {}], [0.45, { lean: 0.15, hipN: 0.6, hipF: -0.4, arm: -1.3, elbow: -1.1, armF: -1.6, elbowF: 0 }], [1, { lean: 0.1, hipN: 0.5, hipF: -0.35, arm: -1.2, elbow: -1.0, armF: -1.5, elbowF: 0 }]], move: [[0, 0], [0.45, 5], [1, 5]], fx: [fx("guard", "link", 0.35, 1)] },
+  rally_up: { ms: 460, anchor: "chest", keys: [[0, { kneeN: 1.4, kneeF: 0.8, bob: 5, lean: 0.35, arm: 0.4, armF: 0.4 }], [0.45, { kneeN: 1.6, kneeF: 1.0, bob: 5.5, lean: 0.4, armF: -0.6, elbowF: -0.2 }], [1, { arm: -0.3 }]], fx: [fx("goldFlash", "feet", 0.5, 1)] },
+  shade_look: { ms: 380, anchor: "head", keys: [[0, {}], [0.4, { armF: -2.6, elbowF: -2.0, lean: -0.06 }], [1, { armF: -2.6, elbowF: -2.0, lean: -0.06, bob: -0.3 }]], fx: [fx("scan", "feet", 0.3, 1)] },
+  snatch: { ms: 320, anchor: "hand", keys: [[0, {}], [0.35, { arm: -1.6, elbow: 0, lean: 0.12 }], [1, { arm: -0.5, elbow: -1.7, lean: -0.08 }]], fx: [fx("iconFly", "link", 0.35, 1)] },
+  // 給予（共用：靠飛過去的圖示分辨）
+  shoulder_tap: { ms: 320, anchor: "offhand", keys: [[0, {}], [0.45, { armF: -1.7, elbowF: -0.1, lean: 0.1 }], [0.7, { armF: -1.5, elbowF: -0.3, lean: 0.1 }], [1, { armF: -1.6, elbowF: -0.1, lean: 0.08 }]], fx: [fx("iconFly", "linkOut", 0.4, 1)] },
+  // 退還、層數（共用；沒有身體動作）
+  rewind_still: { ms: 420, anchor: "head", still: true, keys: [[0, {}], [1, {}]], fx: [fx("rewind", "head", 0, 1)] },
+  stack_still: { ms: 360, anchor: "head", still: true, keys: [[0, {}], [1, {}]], fx: [fx("stack", "head", 0, 1)] },
+  // 規則類
+  coin_flip: { ms: 420, anchor: "offhand", keys: [[0, {}], [0.3, { armF: -1.0, elbowF: -1.4 }], [0.45, { armF: -1.6, elbowF: -0.6, bob: -0.3 }], [1, { armF: -1.0, elbowF: -1.4 }]], fx: [fx("coin", "head", 0.4, 1)] },
+  finger_snap: { ms: 300, anchor: "offhand", keys: [[0, {}], [0.5, { armF: -2.0, elbowF: -1.0 }], [0.6, { armF: -2.1, elbowF: -1.1, bob: 0.4 }], [1, { armF: -1.9, elbowF: -1.0 }]], fx: [fx("snap", "head", 0.5, 1)] },
+  clutch_wound: { ms: 340, anchor: "chest", keys: [[0, {}], [0.4, { armF: -0.7, elbowF: -1.9, lean: 0.2, kneeN: 0.4, bob: 1 }], [1, { armF: -0.7, elbowF: -1.9, lean: 0.15, kneeN: 0.3, bob: 0.6 }]], fx: [fx("wound", "anchor", 0.3, 0.9)] },
   // 目標片段（6N-4 會沿用）
   pushed: { ms: 200, anchor: "chest", keys: [[0, { lean: -0.3, hipN: -0.3, hipF: 0.35, kneeN: 0.2, arm: 0.5, armF: 0.6 }], [1, { lean: -0.25, hipN: -0.25, hipF: 0.3, kneeN: 0.15, arm: 0.4, armF: 0.5 }]] },
   pulled: { ms: 200, anchor: "chest", keys: [[0, { lean: 0.3, hipN: 0.35, hipF: -0.4, kneeF: 0.3, arm: -0.8, armF: -0.9 }], [1, { lean: 0.25, hipN: 0.3, hipF: -0.35, kneeF: 0.25, arm: -0.7, armF: -0.8 }]] },
@@ -256,11 +333,13 @@ export interface PrimitivePlay {
   role: PrimitiveRole;
   /** 施放者的片段；`strike` 為 `null`（用起手的出招）。 */
   clip: PrimitiveClipId | null;
+  /** 共用片段用來分辨的小圖示（給予：`skill`／`ap`／`reaction`；退還：`ap`／`cooldown`／`reset`；層數：`+1`／`-1`）。 */
+  icon?: string;
 }
 
 /**
- * 上半原語 → 片段（方案 2.3 (1)）。`apply_status` 分增益、減益兩種（由事件的目標陣營判斷）。
- * 只有 `swap`／`swap_any` 共用（表上標明）。不在表上的原語 → `null`（退回起手＋現有特效）。
+ * 原語 → 片段（方案 2.3 (1)）。`apply_status` 分增益、減益兩種（由事件的目標陣營判斷）。
+ * 共用只有表上標明的幾組：`swap`／`swap_any`；`intercept`／`redirect_damage`；`grant_skill`／`grant_ap`／`extra_reaction`（靠 `icon` 分辨）；`refund_*`／`reset_cooldown`；`add_stack`／`consume_*`。升降地形動作不同、特效共用現有的升降補間。不在表上的原語 → `null`。
  */
 export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   damage: { role: "strike", clip: null },
@@ -287,6 +366,41 @@ export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   pull: { role: "post", clip: "yank" },
   knock_prone: { role: "post", clip: "sweep_low" },
   shockwave: { role: "post", clip: "stomp" },
+  // 6N-3 下半
+  summon: { role: "post", clip: "summon_press" },
+  sacrifice_summon: { role: "post", clip: "sacrifice_grip" },
+  create_surface: { role: "post", clip: "scatter" },
+  zone: { role: "post", clip: "zone_stamp" },
+  blow_surface: { role: "post", clip: "blow_sleeve" },
+  clear_surface: { role: "post", clip: "press_clear" },
+  create_obstacle: { role: "post", clip: "raise_both" },
+  raise_terrain: { role: "post", clip: "stomp_raise" },
+  lower_terrain: { role: "post", clip: "press_lower" },
+  topple: { role: "post", clip: "shoulder_ram" },
+  hurl_object: { role: "post", clip: "lift_throw" },
+  place_trap: { role: "post", clip: "crouch_place" },
+  inscribe: { role: "post", clip: "air_write" },
+  detonate_runes: { role: "post", clip: "fist_clench" },
+  destroy_object: { role: "post", clip: "smash_down" },
+  enter_form: { role: "post", clip: "form_gather" },
+  leave_form: { role: "post", clip: "form_release" },
+  intercept: { role: "post", clip: "side_guard" },
+  redirect_damage: { role: "post", clip: "side_guard" },
+  cheat_death: { role: "post", clip: "rally_up" },
+  reveal: { role: "post", clip: "shade_look" },
+  copy_skill: { role: "post", clip: "snatch" },
+  grant_skill: { role: "post", clip: "shoulder_tap", icon: "skill" },
+  grant_ap: { role: "post", clip: "shoulder_tap", icon: "ap" },
+  extra_reaction: { role: "post", clip: "shoulder_tap", icon: "reaction" },
+  refund_ap: { role: "post", clip: "rewind_still", icon: "ap" },
+  refund_cooldown: { role: "post", clip: "rewind_still", icon: "cooldown" },
+  reset_cooldown: { role: "post", clip: "rewind_still", icon: "reset" },
+  add_stack: { role: "post", clip: "stack_still", icon: "+1" },
+  consume_stack: { role: "post", clip: "stack_still", icon: "-1" },
+  consume_status: { role: "post", clip: "stack_still", icon: "-1" },
+  gamble: { role: "post", clip: "coin_flip" },
+  rule_change: { role: "post", clip: "finger_snap" },
+  self_damage_of_hit: { role: "post", clip: "clutch_wound" },
 };
 
 /** 原語（`apply_status` 要帶增益／減益）→ 播法；沒有片段的原語回傳 `null`。 */

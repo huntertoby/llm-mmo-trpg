@@ -20,8 +20,8 @@ import {
   type WeaponClass,
 } from "./skillClips";
 
-/** 6N-3 才做的原語（需求第二批第 3 節的「下」）；新原語加進 skill_primitives.yaml 而沒有片段時，要加到這裡並寫進報告。 */
-const LATER: readonly string[] = [
+/** 6N-3 做的下半原語（需求第二批第 3 節的「下」；6N-1 報告第 4 節的 34 個）。 */
+const LOWER_HALF: readonly string[] = [
   "add_stack",
   "blow_surface",
   "cheat_death",
@@ -162,25 +162,71 @@ describe("fx anchor from the pose", () => {
   });
 });
 
-describe("primitive clips (6N-2 first half)", () => {
-  it("every primitive in skill_primitives.yaml has a clip or is listed for 6N-3", () => {
+describe("primitive clips (6N-2 first half, 6N-3 second half)", () => {
+  it("every primitive in skill_primitives.yaml has a clip (6N-3: none left)", () => {
     const ids = primitiveIds();
-    expect(ids.length).toBeGreaterThan(40);
+    expect(ids.length).toBeGreaterThan(50);
     const missing = ids.filter((id) => primitivePlay(id) === null && primitivePlay(id, "buff") === null);
-    expect(missing).toEqual([...LATER].sort());
+    expect(missing).toEqual([]);
+    for (const id of LOWER_HALF) {
+      const play = primitivePlay(id);
+      expect(play?.clip, id).not.toBeNull();
+      expect(play?.role, id).toBe("post");
+      const def = clipDef(play!.clip!);
+      expect(def.ms, id).toBeGreaterThanOrEqual(200);
+      expect(def.ms, id).toBeLessThanOrEqual(520);
+      expect(def.keys.length, id).toBeGreaterThanOrEqual(2);
+    }
   });
 
-  it("only swap / swap_any share a clip", () => {
+  it("only the groups marked shared in the table share a clip", () => {
     const by = new Map<string, string[]>();
     for (const [p, play] of Object.entries(PRIMITIVE_PLAYS)) if (play.clip !== null) by.set(play.clip, [...(by.get(play.clip) ?? []), p]);
-    const shared = [...by.values()].filter((ps) => ps.length > 1);
-    expect(shared).toEqual([["swap", "swap_any"]]);
+    const shared = [...by.values()].filter((ps) => ps.length > 1).map((ps) => [...ps].sort());
+    expect(shared.sort()).toEqual(
+      [
+        ["swap", "swap_any"],
+        ["intercept", "redirect_damage"],
+        ["extra_reaction", "grant_ap", "grant_skill"],
+        ["refund_ap", "refund_cooldown", "reset_cooldown"],
+        ["add_stack", "consume_stack", "consume_status"],
+      ]
+        .map((g) => [...g].sort())
+        .sort(),
+    );
+  });
+
+  it("shared clips tell members apart with an icon; raise / lower terrain have their own clips", () => {
+    expect(new Set(["grant_skill", "grant_ap", "extra_reaction"].map((p) => primitivePlay(p)?.icon)).size).toBe(3);
+    expect(new Set(["refund_ap", "refund_cooldown", "reset_cooldown"].map((p) => primitivePlay(p)?.icon)).size).toBe(3);
+    expect(primitivePlay("add_stack")?.icon).toBe("+1");
+    expect(primitivePlay("consume_stack")?.icon).toBe("-1");
+    expect(primitivePlay("raise_terrain")?.clip).not.toBe(primitivePlay("lower_terrain")?.clip);
+    // 升降地形特效共用現有的升降補間：片段本身不帶特效
+    expect(clipDef(primitivePlay("raise_terrain")!.clip!).fx).toBeUndefined();
+    expect(clipDef(primitivePlay("lower_terrain")!.clip!).fx).toBeUndefined();
+  });
+
+  it("only refund / stack clips are still (no body motion)", () => {
+    const still = Object.entries(PRIMITIVE_PLAYS)
+      .filter(([, p]) => p.clip !== null && clipDef(p.clip).still === true)
+      .map(([id]) => id)
+      .sort();
+    expect(still).toEqual(["add_stack", "consume_stack", "consume_status", "refund_ap", "refund_cooldown", "reset_cooldown"]);
+  });
+
+  it("lower-half clips are deterministic and recover to the rest pose", () => {
+    for (const id of LOWER_HALF) {
+      const clip = primitivePlay(id)!.clip!;
+      for (const t of [0, 0.3, 0.77, 1]) expect(clipFrame(clip, t), `${id} ${t}`).toEqual(clipFrame(clip, t));
+      for (const v of Object.values(recoverFrame(clip, 1).pose)) expect(Math.abs(v as number), id).toBeLessThan(1e-9);
+    }
   });
 
   it("apply_status has a buff and a debuff clip", () => {
     expect(primitivePlay("apply_status", "buff")?.clip).toBe("raise_hand");
     expect(primitivePlay("apply_status", "debuff")?.clip).toBe("point_at");
-    expect(primitivePlay("summon")).toBeNull();
+    expect(primitivePlay("made_up_primitive")).toBeNull();
   });
 
   it("damage uses the opener strike; damage_multiplier powers up before it", () => {

@@ -1173,7 +1173,7 @@ export class BattleRenderer {
     }
     const effects: Effect[] = [];
     for (const r of rows) {
-      effects.push(this.rowEffect(r, now));
+      if (!r.still) effects.push(this.rowEffect(r, now));
       if (!r.recover) effects.push(...this.rowCues(r, now));
       if (r.strike && r.hitMs !== null) {
         const def = clipDef(r.clip);
@@ -1243,10 +1243,16 @@ export class BattleRenderer {
     const anchor = () => this.anchorWorld(r.unitId, this.rowFrame(r, rowT()), def.anchor) ?? this.feetOf(r.unitId);
     const tc = r.target === null ? null : this.center(r.target);
     const target = (dy: number) => () => (tc === null ? this.feetOf(r.unitId) : { x: tc.x, y: tc.y + dy });
+    const head = () => {
+      const f = this.feetOf(r.unitId);
+      return { x: f.x, y: f.y - T * 0.95 };
+    };
+    const chest = () => ({ x: this.feetOf(r.unitId).x, y: this.feetOf(r.unitId).y - T * 0.35 });
     return cues.map((c) => {
-      const pos = c.where === "anchor" ? anchor : c.where === "feet" ? () => this.feetOf(r.unitId) : c.where === "targetFeet" ? target(FEET) : c.where === "targetHead" ? target(-T * 0.75) : target(-T * 0.05);
-      const link = c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: () => ({ x: this.feetOf(r.unitId).x, y: this.feetOf(r.unitId).y - T * 0.35 }) } : undefined;
-      return cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link);
+      const pos = c.where === "anchor" ? anchor : c.where === "feet" ? () => this.feetOf(r.unitId) : c.where === "head" ? head : c.where === "targetFeet" ? target(FEET) : c.where === "targetHead" ? target(-T * 0.75) : target(-T * 0.05);
+      const link =
+        c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: chest } : c.where === "linkOut" ? { from: chest(), to: () => (tc === null ? chest() : { x: tc.x, y: tc.y - T * 0.05 }) } : undefined;
+      return cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link, r.icon);
     });
   }
 

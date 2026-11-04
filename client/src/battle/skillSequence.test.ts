@@ -70,6 +70,56 @@ describe("event → primitive", () => {
     expect(e("turn_started")).toBeNull();
   });
 
+  it("maps the lower-half events (6N-3)", () => {
+    const e = (type: string, more: Record<string, unknown> = {}) => eventPrimitive({ seq: 1, round: 1, type, ...more } as never);
+    expect(e("unit_summoned")).toBe("summon");
+    expect(e("summon_expired", { reason: "sacrificed" })).toBe("sacrifice_summon");
+    expect(e("summon_expired", { reason: "expired" })).toBeNull();
+    expect(e("surface_changed", { cause: "effect", after: "fire" })).toBe("create_surface");
+    expect(e("surface_changed", { cause: "clear", after: "none" })).toBe("clear_surface");
+    expect(e("surface_changed", { cause: "expired", after: "none" })).toBeNull();
+    expect(e("surface_blown")).toBe("blow_surface");
+    expect(e("zone_created")).toBe("zone");
+    expect(e("object_created")).toBe("create_obstacle");
+    expect(e("terrain_changed", { height_before: 0, height_after: 1 })).toBe("raise_terrain");
+    expect(e("terrain_changed", { height_before: 1, height_after: 0 })).toBe("lower_terrain");
+    expect(e("object_toppled")).toBe("topple");
+    expect(e("object_hurled")).toBe("hurl_object");
+    expect(e("trap_placed")).toBe("place_trap");
+    expect(e("rune_inscribed")).toBe("inscribe");
+    expect(e("rune_removed", { reason: "detonated" })).toBe("detonate_runes");
+    expect(e("object_destroyed", { cause: "effect" })).toBe("destroy_object");
+    expect(e("object_destroyed", { cause: "burned" })).toBeNull();
+    expect(e("form_entered")).toBe("enter_form");
+    expect(e("form_left")).toBe("leave_form");
+    expect(e("attack_intercepted")).toBe("intercept");
+    expect(e("damage_redirected")).toBe("redirect_damage");
+    expect(e("death_cheated")).toBe("cheat_death");
+    expect(e("trap_revealed")).toBe("reveal");
+    expect(e("status_removed", { reason: "revealed" })).toBe("reveal");
+    expect(e("status_removed", { reason: "consumed" })).toBe("consume_status");
+    expect(e("skill_copied")).toBe("copy_skill");
+    expect(e("skill_granted")).toBe("grant_skill");
+    expect(e("ap_granted")).toBe("grant_ap");
+    expect(e("reactions_granted")).toBe("extra_reaction");
+    expect(e("ap_refunded")).toBe("refund_ap");
+    expect(e("skill_cooldown_changed")).toBeNull();
+    expect(e("stacks_changed", { reason: "gained" })).toBe("add_stack");
+    expect(e("stacks_changed", { reason: "consumed" })).toBe("consume_stack");
+    expect(e("gamble_rolled")).toBe("gamble");
+    expect(e("rule_change_triggered")).toBe("rule_change");
+    expect(e("damage_dealt", { cause: "backlash", target_id: HERO, source_id: HERO })).toBe("self_damage_of_hit");
+    expect(e("damage_dealt", { cause: "attack", target_id: FOE, source_id: HERO })).toBe("damage");
+  });
+
+  it("rune detonation stays in its segment and is inferred without card parts", () => {
+    const v = view({ [HERO]: [at(2, 2), "ally"], [FOE]: [at(3, 2), "enemy"] });
+    const ev = [used([at(3, 2)]), { seq: 2, round: 1, type: "rune_removed", reason: "detonated", pos: at(3, 2) }];
+    const tl = timeline(ev, v, {})!;
+    expect(tl.segments[0]!.primitives).toEqual(["detonate_runes"]);
+    expect(tl.rows.map((r) => r.clip)).toContain("fist_clench");
+  });
+
   it("card order wins; events only fill in when the card has no parts", () => {
     const c = card("single", 1, ["leap", "damage"]);
     expect(primitivesOf(c, 0, [], false)).toEqual(["leap", "damage"]);
@@ -161,8 +211,59 @@ describe("skill timeline", () => {
   });
 
   it("primitives without a clip fall back to opener + existing vfx", () => {
-    const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["summon", "zone", "made_up_primitive"]) })!;
+    const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["made_up_primitive", "another_new_one"]) })!;
     expect(tl.rows.map((r) => r.clip)).toEqual(["windup", "slash", "slash"]);
+  });
+
+  it("lower half: summon + zone + inscribe play after the strike in card order", () => {
+    const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", "summon", "zone", "inscribe"]) })!;
+    expect(tl.rows.map((r) => r.clip)).toEqual(["windup", "slash", "summon_press", "zone_stamp", "air_write", "air_write"]);
+    // 片段接續、不重疊
+    const body = tl.rows.filter((r) => !r.recover);
+    for (let i = 1; i < body.length; i++) expect(body[i]!.startMs).toBeCloseTo(body[i - 1]!.startMs + body[i - 1]!.ms, 6);
+  });
+
+  it("card order flips the clip order (inscribe → detonate vs. detonate → inscribe)", () => {
+    const a = timeline([used([at(3, 2)])], v, { sk: card("single", 1, ["inscribe", "detonate_runes"]) })!;
+    const b = timeline([used([at(3, 2)])], v, { sk: card("single", 1, ["detonate_runes", "inscribe"]) })!;
+    const post = (tl: typeof a) => tl.rows.filter((r) => !r.recover && !r.strike && r.clip !== "windup").map((r) => r.clip);
+    expect(post(a)).toEqual(["air_write", "fist_clench"]);
+    expect(post(b)).toEqual(["fist_clench", "air_write"]);
+  });
+
+  it("still clips (refund, stacks) take no time and play with the clip before them", () => {
+    const plain = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", "heal"]) })!;
+    const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", "refund_ap", "add_stack", "heal", "consume_stack"]) })!;
+    const end = (x: typeof tl) => Math.max(...x.rows.map((r) => r.startMs + r.ms));
+    expect(end(tl)).toBeCloseTo(end(plain), 6);
+    const strike = tl.rows.find((r) => r.strike)!;
+    const refund = tl.rows.find((r) => r.clip === "rewind_still")!;
+    const stack = tl.rows.filter((r) => r.clip === "stack_still");
+    const heal = tl.rows.find((r) => r.clip === "palm_heal" && !r.recover)!;
+    expect(refund.still).toBe(true);
+    expect(refund.icon).toBe("ap");
+    expect(refund.startMs).toBe(strike.startMs);
+    expect(stack.map((r) => [r.icon, r.startMs])).toEqual([
+      ["+1", strike.startMs],
+      ["-1", heal.startMs],
+    ]);
+    // 收勢接在最後一個有身體動作的片段後面
+    expect(tl.rows[tl.rows.length - 1]!.clip).toBe("palm_heal");
+  });
+
+  it("shared clips keep their icon and adjacent different icons do not merge", () => {
+    const tl = timeline([used([at(3, 2)])], v, { sk: card("single", 1, ["grant_skill", "grant_ap"]) })!;
+    expect(tl.rows.filter((r) => r.clip === "shoulder_tap" && !r.recover).map((r) => r.icon)).toEqual(["skill", "ap"]);
+  });
+
+  it("every lower-half primitive builds a timeline; the strike stays within 1.8 s", () => {
+    for (const p of ["summon", "sacrifice_summon", "create_surface", "zone", "blow_surface", "clear_surface", "create_obstacle", "raise_terrain", "lower_terrain", "topple", "hurl_object", "place_trap", "inscribe", "detonate_runes", "destroy_object", "enter_form", "leave_form", "intercept", "redirect_damage", "cheat_death", "reveal", "copy_skill", "grant_skill", "grant_ap", "extra_reaction", "refund_ap", "refund_cooldown", "reset_cooldown", "add_stack", "consume_stack", "consume_status", "gamble", "rule_change", "self_damage_of_hit"]) {
+      const tl = timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", p]) })!;
+      expect(tl, p).not.toBeNull();
+      expect(tl.rows.length, p).toBeGreaterThanOrEqual(3);
+      expect(tl.rows.find((r) => r.strike)!.hitMs!, p).toBeLessThanOrEqual(SKILL_CAP_MS);
+      expect(timeline([used([at(3, 2)]), dmg(FOE)], v, { sk: card("single", 1, ["damage", p]) }), p).toEqual(tl);
+    }
   });
 
   it("knock_prone / shockwave targets fall at the hit", () => {
