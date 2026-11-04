@@ -138,6 +138,10 @@
 | 6N-6 | 動畫延伸⑥（2.5、2.7、2.8）：狀態動作；NPC 小動作、旗子、草；骰子、升級、拿到物品的介面動畫 | 6N-5 | 1.5 h | `client/` |
 | 6P-1 | 收尾小項①（6A-4f 待決 1、6E-2b 待決 2）：路徑預覽算出冰後陷阱的傷害範圍（多一次模擬）；`_SlidePassCtx` 改成 Ctx／ice_slide 的正式預覽參數 | — | 1 h | `engine/path_preview.py`、`engine/ice_slide.py`、`tests/engine/` |
 | 6P-2 | 收尾小項②（6D-R2 待決 4、6C-R2 待決 4）：`world/battlefield.py`、`field.py` 剩下的 `world_maps.get` 改走 `location_map`；`walk_max_steps` 改由 `rules.yaml` 決定（拿掉程式的 `WALK_PATH_CAP=30`，OpenAPI 重產） | — | 0.5 h | `world/`、`api/` |
+| 6B-ART1 | 美術：霧渡鎮、餘燼集的建築與門，加 7 間室內（`docs/art/Phase6剩餘美術移植需求.md`，ec30b58c；使用者「寫收尾報告並把美術段排完」）。只換外觀、不改規則、不動任何地圖格子；新增只畫的選填欄位 `buildings`（疊在既有牆格上）、物件 `look`；不採用代決 #34 的「載入時展開成牆」；含門打開 0.2 秒動畫 | — | 1.5 h | `client/src/render` 地形物件與建築、`content/world/fields/` 外觀欄位、`content/fields.py` schema |
+| 6D-ART2 | 美術：主城建築與街景（同上文件） | 6B-ART1 | 0.75 h | 同上 |
+| 6C-ART2 | 美術：事件插圖 10 種，取代場景色塊；事件骨架加只畫的選填欄位 `art` | — | 1 h | `client/` 事件卡、`content/world/events/` |
+| 6C-ART3 | 美術：事件卡墨線圖示（`story-icons.png`；即 6C-7 報告第 11 項） | 6C-ART2 | 0.5 h | `client/` |
 | 6D-R | Phase 6 審查（reviewer）加整理，跑全量檢查 | 6D 全部 | 1.5 h | 否 |
 
 > 開發段合計 33 段（含 6S-1、6S-2、6A-4a～e、6M-1～4），約 47 小時 agent 工時；動畫其他批次（技能片段串接、受擊、變體、技能變體，約 10 段，`動畫方案.md` 第 4 節）之後另排；美術段由美術 PM 另排，約 5～7 段。21.8 的粗估是 20～22 段加美術 5～7 段。
