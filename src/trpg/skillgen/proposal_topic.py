@@ -30,6 +30,7 @@ from trpg.skillgen.proposal_subset import (
     select_subset,
 )
 from trpg.skillgen.proposal_topup import keywords_reachable
+from trpg.skillgen.proposal_witness import has_witness
 
 __all__ = [
     "TOPIC_RARITIES",
@@ -166,6 +167,9 @@ def make_topic(
 
 CORE_RETRIES = 4
 """指定的核心原語讓題目關鍵字帶不到時（Phase 6S-2），最多再抽幾次別的核心；都不行就不指定核心。"""
+WITNESS_SEED = 0
+"""可行解檢查（6E-W）送給結構補強的種子：固定值，不消耗出題的亂數串流（通過檢查的題目與 6E-W
+之前抽出的完全相同）。"""
 
 
 def _with_reachable_core(
@@ -174,9 +178,12 @@ def _with_reachable_core(
     legal: Sequence[str],
     uses: Mapping[str, int],
     rng: Rng,
+    *,
+    ctx: ProposalContext,
 ) -> ProposalRequest | None:
-    """依權重抽核心原語（第一次用 ``core`` 串流，與 6S-2 之前相同）；指定後得不出子集、或選單帶不到
-    題目關鍵字（:func:`~trpg.skillgen.proposal_topup.keywords_reachable`）就去掉它再抽，最多
+    """依權重抽核心原語（第一次用 ``core`` 串流，與 6S-2 之前相同）；指定後得不出子集、選單帶不到
+    題目關鍵字（:func:`~trpg.skillgen.proposal_topup.keywords_reachable`），或找不到任何一份通過
+    完整驗證的寫法（6E-W，:func:`~trpg.skillgen.proposal_witness.has_witness`）就去掉它再抽，最多
     :data:`CORE_RETRIES` 次。沒有可用的核心回傳 ``None``（題目不指定核心）。"""
     remaining = list(legal)
     for attempt in range(CORE_RETRIES + 1):
@@ -189,7 +196,9 @@ def _with_reachable_core(
             subset = select_subset(library, with_core)
         except SubsetError:
             return None  # 與 6S-2 之前相同：得不出子集就不指定核心
-        if keywords_reachable(library, subset, core=core):
+        if keywords_reachable(library, subset, core=core) and has_witness(
+            library, with_core, ctx, seed=WITNESS_SEED
+        ):
             return with_core
         remaining.remove(core)
     return None
@@ -219,7 +228,6 @@ def _make_topic_of_kind(
             continue
         if not keywords_reachable(library, base):
             continue  # 6S-2：這個稀有度的選單帶不到題目關鍵字
-        request = _with_reachable_core(library, request, legal, topic.uses, rng) or request
         ctx = ProposalContext(
             topic.tier,
             rarity,
@@ -227,5 +235,10 @@ def _make_topic_of_kind(
             held=topic.held,
             weapon_class=topic.weapon_class,
         )
-        return request, ctx, rng.next_u32()
+        found = _with_reachable_core(library, request, legal, topic.uses, rng, ctx=ctx)
+        if found is None:
+            if not has_witness(library, request, ctx, seed=WITNESS_SEED):
+                continue  # 6E-W：不指定核心也找不到合法寫法，換下一個稀有度
+            found = request
+        return found, ctx, rng.next_u32()
     return None
