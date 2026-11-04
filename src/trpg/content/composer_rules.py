@@ -593,6 +593,10 @@ class WhiteboardRules(ContentModel):
     """沒有關鍵字的基礎白板（通用池，#55）配方使用的關鍵字代號。"""
     exception_keywords: tuple[str, ...] = ("wet", "prone", "collision")
     """單一效果追不上預算下限的關鍵字（6.34.1）：利用者用條件傷害、製造者允許「弱傷害＋製造」。"""
+    status_rider_keywords: tuple[str, ...] = ()
+    """6F-4e（#129「第 1 招就該真的點燃」）：這些關鍵字的製造者白板可以是「傷害＋施加該關鍵字的狀態
+    或造它的表面」（例：火焰彈＝火焰傷害＋燃燒）。只放寬結構（兩個效果），不放寬預算，也不允許
+    條件（和 ``exception_keywords`` 不同）。"""
     summon_ap_cost: int = Field(default=1, ge=1, le=3)
     """召喚白板的 AP（召喚物的點數固定，AP 2 湊不到預算下限）。"""
     summon_cooldown_max: int = Field(default=4, ge=0)

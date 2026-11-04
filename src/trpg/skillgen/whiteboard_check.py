@@ -14,6 +14,9 @@
 - **利用者白板**（6F-4b，#129；06 6.34.1、6.27.3）：任何關鍵字都可以用「條件傷害」——唯一的核心效果是
   傷害，條件是 ``whiteboard.exploit.conditions`` 的一種（對某狀態或表面的目標）。條件利用的關鍵字
   另外算：去掉條件後最多一個關鍵字，條件最多再帶一個（例：趁燃雷擊＝製造帶電、利用點燃）。預算照舊。
+- **傷害＋施加狀態**（6F-4e，#129「第 1 招就該真的點燃」）：``whiteboard.status_rider_keywords`` 的
+  關鍵字（點燃、冰凍），製造者可以是「傷害＋對敵人施加該關鍵字的狀態或造它的表面」（例：火焰彈）。
+  只放寬結構，預算照舊，不允許條件。
 """
 
 from __future__ import annotations
@@ -39,6 +42,8 @@ SKILL_KINDS = frozenset({"active", "passive", "reaction", "stance", "modifier"})
 _PERMILLE = 1000
 _SUMMON = "summon"
 _PAIR = 2
+_STATUS_RIDERS = frozenset({"apply_status", "create_surface"})
+_FRIENDLY = frozenset({"self", "allies"})
 
 
 def whiteboard_keywords_of(skill: SkillDef, library: ContentLibrary) -> tuple[str, ...]:
@@ -135,6 +140,13 @@ def _rider_ok(
         types == ["damage", "apply_status"]
         and second.status in rules.command_statuses
         and second.affects == "self"
+    ):
+        return True
+    if (
+        set(keywords) & set(rules.status_rider_keywords)
+        and types[0] == "damage"
+        and types[1] in _STATUS_RIDERS
+        and second.affects not in _FRIENDLY
     ):
         return True
     maker = bool(set(keywords) & set(rules.exception_keywords))
