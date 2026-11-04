@@ -71,31 +71,88 @@ window.QDoll = (() => {
     return hand;
   }
   // ---------- 頭：舊版 drawHead 原樣，加 bob／lean ----------
+  // ---------- 可選外觀（11-04 晚，外觀變化方案 `docs/art/外觀變化方案.md`）：全部選填，不填＝舊版原樣 ----------
+  //   face: round（預設）| oval 蛋臉 | square 方臉 | heart 尖下巴      eyeStyle: square（預設）| dot 圓點 | smile 笑眼 | big 大眼
+  //   lashes: 睫毛   hair: short | long | bun | none（舊）＋ ponytail 馬尾 | twin 雙馬尾 | spiky 刺蝟 | bob 齊肩
+  //   beardStyle: full 大鬍子（＝舊 beard）| short 短鬍渣 | goatee 山羊鬍 | mustache 八字鬍      frame: slim 纖細 | broad 壯碩（疊在種族 build 上）
+  // 頭心一律在 (0,−29)、半寬約 8.5，所以種族的耳、角、紋路、頭盔照舊對得上。
+  function headShape(ctx, look) {
+    switch (look.face) {
+      case "oval": ctx.ellipse(0, -29, 7.7, 9, 0, 0, TAU); break;
+      case "square": ctx.roundRect(-8.3, -37.3, 16.6, 16.4, 4.6); break;
+      case "heart": ctx.moveTo(0, -20.3); ctx.quadraticCurveTo(-8.7, -23.5, -8.6, -30); ctx.arc(0, -30, 8.6, Math.PI, 0); ctx.quadraticCurveTo(8.7, -23.5, 0, -20.3); ctx.closePath(); break;
+      default: ctx.arc(0, -29, 8.5, 0, TAU);
+    }
+  }
+  function eyes(ctx, look, side, ex) {
+    const col = look.eyes ?? "#1d1a22", st = look.eyeStyle ?? "square", xs = [];
+    if (side === 0 || side === 1) xs.push(ex + 2.9);
+    if (side === 0 || side === -1) xs.push(ex - 2.9);
+    for (const x of xs) {
+      if (st === "dot") fill(ctx, col, () => ctx.ellipse(x, -28.6, 1.15, 1.45, 0, 0, TAU));
+      else if (st === "smile") { ctx.strokeStyle = col; ctx.lineWidth = 1.05; ctx.lineCap = "round"; ctx.beginPath(); ctx.arc(x, -27.7, 1.5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+      else if (st === "big") { fill(ctx, col, () => ctx.roundRect(x - 1.3, -30.8, 2.6, 4, 1.2)); fill(ctx, "#ffffff", () => ctx.arc(x - 0.45, -29.7, 0.6, 0, TAU)); }
+      else { ctx.fillStyle = col; ctx.fillRect(x - 0.9, -30, 1.8, 3); }
+      if (look.lashes) { const o = x > ex ? 1 : -1; ctx.strokeStyle = col; ctx.lineWidth = 0.65; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(x + o * 0.8, -30.3 - (st === "big" ? 0.6 : 0)); ctx.lineTo(x + o * 2, -31.3 - (st === "big" ? 0.6 : 0)); ctx.stroke(); }
+    }
+  }
+  function beard(ctx, look, side) {
+    const st = look.beardStyle; if (!st || st === "full") return;
+    const c = look.hairColor ?? "#5a3a22", ex = side * 2.6;
+    if (st === "short") { ctx.save(); ctx.globalAlpha = 0.45; fill(ctx, c, () => { ctx.moveTo(ex - 6.9, -26); ctx.quadraticCurveTo(ex - 6, -20.6, ex, -20.4); ctx.quadraticCurveTo(ex + 6, -20.6, ex + 6.9, -26); ctx.quadraticCurveTo(ex, -23.4, ex - 6.9, -26); }); ctx.restore(); }
+    if (st === "goatee") { fill(ctx, c, () => { ctx.moveTo(ex - 1.8, -23.6); ctx.lineTo(ex + 1.8, -23.6); ctx.lineTo(ex, -19.2); ctx.closePath(); }); fill(ctx, c, () => ctx.rect(ex - 1.8, -25.2, 3.6, 0.9)); }
+    if (st === "mustache") for (const s2 of [-1, 1]) fill(ctx, c, () => { ctx.moveTo(ex, -25.6); ctx.quadraticCurveTo(ex + s2 * 2.8, -26.6, ex + s2 * 3.9, -24.1); ctx.quadraticCurveTo(ex + s2 * 2, -24.9, ex, -24.7); ctx.closePath(); });
+  }
+  // 頭後面的頭髮（馬尾、雙馬尾）：正面、側面畫在臉之前（被頭擋住一部分）
+  function hairBehind(ctx, look, view, headgear) {
+    if (!look.hair || look.skull || view === "back" || headgear?.kind === "hood") return;
+    const c = look.hairColor ?? "#5a3a22", band = look.bunBand ?? "#d23c3c";
+    if (look.hair === "twin") for (const s2 of view === "side" ? [-1] : [-1, 1]) {
+      const x = view === "side" ? -6.5 : s2 * 9.6;
+      fill(ctx, c, () => { ctx.moveTo(x - 1.6, -32); ctx.quadraticCurveTo(x + s2 * 3.4, -26, x + s2 * 1.6, -17.5); ctx.quadraticCurveTo(x - s2 * 0.6, -21, x - s2 * 2, -27); ctx.closePath(); });
+      fill(ctx, band, () => ctx.arc(x, -30.6, 1.3, 0, TAU));
+    }
+    if (look.hair === "ponytail") {
+      if (view === "side") { fill(ctx, c, () => { ctx.moveTo(-6, -34); ctx.quadraticCurveTo(-13.5, -32, -12, -20.5); ctx.quadraticCurveTo(-10, -26, -7, -28.5); ctx.closePath(); }); fill(ctx, band, () => ctx.arc(-7.4, -32.4, 1.3, 0, TAU)); }
+      else fill(ctx, c, () => { ctx.moveTo(6.5, -35); ctx.quadraticCurveTo(12.5, -31, 10.5, -21); ctx.quadraticCurveTo(9.5, -27, 6, -30); ctx.closePath(); });
+    }
+  }
+  // ---------- 頭：舊版 drawHead 原樣，加 bob／lean ----------
   function head(ctx, look, view, side, gear) {
-    const F = view === "front";
     const skin = look.skin;
-    fill(ctx, skin, () => { ctx.beginPath(); ctx.arc(0, -29, 8.5, 0, TAU); });
+    hairBehind(ctx, look, view, gear.head);
+    fill(ctx, skin, () => headShape(ctx, look));
     if (view === "back") { PD_hair(ctx, look, "back", gear.head); return; }
     const ex = side * 3.2;
-    ctx.fillStyle = look.eyes ?? "#1d1a22";
-    if (side === 0 || side === 1) ctx.fillRect(ex + 2, -30, 1.8, 3);
-    if (side === 0 || side === -1) ctx.fillRect(ex - 3.8, -30, 1.8, 3);
+    eyes(ctx, look, side, ex);
     ctx.fillStyle = "rgba(220,90,90,0.35)";
     if (side !== 1) ctx.fillRect(ex - 5, -26.5, 2, 1.2);
     if (side !== -1) ctx.fillRect(ex + 3, -26.5, 2, 1.2);
-    // 表情：種族部件（raceArt）畫在臉上
-    if (window.RaceArt) window.RaceArt.face(ctx, look, view, side);
+    // 表情：種族部件（raceArt）畫在臉上；鬍子樣式不是 full 時，種族的大鬍子換成選的樣式
+    const L = look.beardStyle ? { ...look, beard: look.beardStyle === "full" } : look;
+    if (window.RaceArt) window.RaceArt.face(ctx, L, view, side);
+    beard(ctx, look, side);
     PD_hair(ctx, look, side ? "side" : "front", gear.head);
   }
   function PD_hair(ctx, look, view, headgear) {
-    // 直接重用舊版 drawHair（透過 PaperDoll 內部的 drawFigure 不方便，這裡照抄）
+    // 舊版 drawHair 照抄，加新髮型
     if (!look.hair || look.skull) return;
-    const c = look.hairColor ?? "#5a3a22";
+    const c = look.hairColor ?? "#5a3a22", band = look.bunBand ?? "#d23c3c";
     const covered = headgear && ["helmet", "hood", "wizard_hat", "horned_helm", "greathelm", "cap"].includes(headgear.kind);
-    if (view === "back") { fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -29, 8.8, 0, TAU); }); if (look.hair === "long") fill(ctx, c, () => rr(ctx, -7, -29, 14, 10, 3)); return; }
+    if (view === "back") {
+      fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -29, 8.8, 0, TAU); });
+      if (look.hair === "long") fill(ctx, c, () => rr(ctx, -7, -29, 14, 10, 3));
+      if (look.hair === "bob") fill(ctx, c, () => rr(ctx, -8.8, -30, 17.6, 8.5, 3.5));
+      if (look.hair === "ponytail" && headgear?.kind !== "hood") { fill(ctx, c, () => rr(ctx, -2, -32, 4, 13, 2)); fill(ctx, band, () => rr(ctx, -2.3, -32, 4.6, 1.6, 0.8)); }
+      if (look.hair === "twin" && headgear?.kind !== "hood") for (const s2 of [-1, 1]) { fill(ctx, c, () => { ctx.moveTo(s2 * 8, -32); ctx.quadraticCurveTo(s2 * 13, -26, s2 * 11, -17.5); ctx.quadraticCurveTo(s2 * 9.5, -22, s2 * 6.5, -28); ctx.closePath(); }); fill(ctx, band, () => ctx.arc(s2 * 8.6, -30.8, 1.3, 0, TAU)); }
+      if (look.hair === "spiky" && !covered) fill(ctx, c, () => { for (let i = 0; i < 7; i++) { const a = Math.PI * (1.05 + i * 0.15); ctx.moveTo(Math.cos(a - 0.08) * 8.4, -29 + Math.sin(a - 0.08) * 8.4); ctx.lineTo(Math.cos(a) * 11.6, -29 + Math.sin(a) * 11.6); ctx.lineTo(Math.cos(a + 0.08) * 8.4, -29 + Math.sin(a + 0.08) * 8.4); } });
+      return;
+    }
     if (!covered) fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -29.5, 8.8, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(4, -33, 0, -32.5); ctx.quadraticCurveTo(-5, -32, -8.8, -29); ctx.closePath(); });
     if (!covered && view === "side") fill(ctx, c, () => { ctx.beginPath(); ctx.arc(-1.5, -29.5, 8.8, Math.PI * 0.95, Math.PI * 1.6); ctx.lineTo(-6, -22); ctx.lineTo(-9.5, -24); ctx.closePath(); });
     if (look.hair === "long") { fill(ctx, c, () => rr(ctx, -9.5, -31, 3, 11, 1.5)); fill(ctx, c, () => rr(ctx, 6.5, -31, 3, 11, 1.5)); }
+    if (look.hair === "bob") { if (view === "side") fill(ctx, c, () => rr(ctx, -9.6, -31, 4.2, 8.6, 2)); else { fill(ctx, c, () => rr(ctx, -9.6, -31.5, 3.4, 8.8, 1.7)); fill(ctx, c, () => rr(ctx, 6.2, -31.5, 3.4, 8.8, 1.7)); } }
+    if (look.hair === "spiky" && !covered) fill(ctx, c, () => { for (let i = 0; i < 7; i++) { const a = Math.PI * (1.05 + i * 0.15); ctx.moveTo(Math.cos(a - 0.09) * 8.6, -29.5 + Math.sin(a - 0.09) * 8.6); ctx.lineTo(Math.cos(a) * 11.8, -29.5 + Math.sin(a) * 11.8); ctx.lineTo(Math.cos(a + 0.09) * 8.6, -29.5 + Math.sin(a + 0.09) * 8.6); } });
     if (look.hair === "bun") fill(ctx, look.bunBand ?? c, () => { ctx.beginPath(); ctx.arc(0, -37, 3, 0, TAU); });
   }
 
@@ -359,6 +416,7 @@ window.QDoll = (() => {
     const mark = (n) => { if (POSE && POSE.layers) POSE.layers.push(n); }; // 自測用：記下圖層順序
     ctx.save();
     if (R) R.build(ctx, look);
+    if (look.frame === "slim") ctx.scale(0.92, 1.02); else if (look.frame === "broad") ctx.scale(1.08, 0.98); // 可選體型，疊在種族 build 上
     ctx.translate(0, pz("bob"));
     if (S) rotAt(ctx, 0, -9, pz("lean"));
     // 影子已由呼叫端畫
