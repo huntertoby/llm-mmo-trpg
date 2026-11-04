@@ -12,6 +12,7 @@ import { BattleCanvas } from "../ui/BattleCanvas";
 import { cameraTransform, frameCamera, followCamera, type Camera, type TileRect } from "./camera";
 import { FieldHeads } from "./FieldHeads";
 import { openRegionsOf } from "./fieldScenery";
+import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { frozenFriends, headMarks, npcBubbles, type HeadMark } from "./fieldPeople";
@@ -367,6 +368,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud }: Props)
               rendererRef={rendererRef}
             />
             <FieldHeads marks={marks} grid={model} scale={scale} onPick={pick} />
+            <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
           </div>
         </CameraBox>
       </div>

@@ -5,7 +5,9 @@
 // - 時鐘是 ticker 累加的毫秒（只影響畫面）；`enabled = false` 時一律站好（截圖、測試用）。
 import type { Container, Sprite } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
+import type { AmbientScene } from "./ambientModel";
 import { idleFrame, type IdleFrame } from "./idleClips";
+import { npcIdleFrame } from "./npcFidgets";
 import { isFrozenLook, isRootedLook, lockLegs } from "./statusAnim";
 import type { InkPose } from "./inkPose";
 import { bodyNodes, hasSkeleton, isProne } from "./unitSprite";
@@ -27,6 +29,10 @@ export function idleFrameFor(u: UnitDraw, ms: number): IdleFrame {
 export class IdleMotion {
   clock = 0;
   enabled = true;
+  /** 系統設定減少動態（6N-10）：呼吸、小動作都不跑，一律站好。 */
+  reduced = false;
+  /** 實地地圖的場景（6N-10）：有身分的 NPC 改用 `npcFidgets` 的 3～4 種小動作（挑法用場景鍵）；`null` ＝ 照 6M-4。 */
+  scene: AmbientScene | null = null;
   private readonly busy = new Map<string, number>();
   /** 目前畫上去的小動作（單位 ID → 姿勢鍵；"" ＝ 站好）。 */
   private readonly shown = new Map<string, string>();
@@ -55,6 +61,16 @@ export class IdleMotion {
     return this.busy.has(unitId);
   }
 
+  /** 這個人現在的待機畫面：有身分的 NPC 照 `npcFidgets`，其他照 6M-4；定身時再鎖住腳（6N-9）。 */
+  private frameOf(u: UnitDraw): IdleFrame {
+    const id = u.id;
+    const scene = this.scene;
+    const role = scene !== null && Object.hasOwn(scene.roles, id) ? scene.roles[id] : undefined;
+    const f = scene !== null && role !== undefined ? npcIdleFrame(scene.key, id, role, this.clock) : idleFrame(id, this.clock);
+    if (f.pose === null || !isRootedLook(u.statusIds ?? [])) return f;
+    return { ...f, pose: lockLegs(f.pose), key: `${f.key}|rooted` };
+  }
+
   private restore(sprite: Container): void {
     for (const node of bodyNodes(sprite)) {
       const base = this.baseY.get(node);
@@ -78,8 +94,8 @@ export class IdleMotion {
       if (sprite.destroyed || this.busy.has(id)) continue;
       const draw = draws.get(id);
       if (draw === undefined) continue;
-      const on = this.enabled && idles(draw);
-      const f = on ? idleFrameFor(draw, this.clock) : { scaleY: 1, pose: null, key: "" };
+      const on = this.enabled && !this.reduced && idles(draw);
+      const f = on ? this.frameOf(draw) : { scaleY: 1, pose: null, key: "" };
       for (const node of bodyNodes(sprite)) {
         let base = this.baseY.get(node);
         if (base === undefined) {

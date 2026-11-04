@@ -6,6 +6,7 @@ import type { SkillCard, StatusView } from "../api/types";
 import { statusIconTile, surfaceTile } from "../render/skillIcon";
 import { ChipGlyph, EffectGlyph } from "./SkillCardGlyphs";
 import { Hint } from "./Hint";
+import { DelayTrail } from "./MotionBits";
 import { PartTip } from "./PartTip";
 import { TileCanvas } from "./SkillIconView";
 import { StackTip } from "./StackTip";
@@ -19,6 +20,7 @@ export function StatBar({ bar }: { bar: BarData }) {
   return (
     <Hint text={bar.hint}>
       <div className={`stat-bar ${bar.kind}`} data-testid="stat-bar" role="img" aria-label={bar.text}>
+        {bar.kind === "hp" && <DelayTrail ratio={fill} />}
         <i className="stat-bar-fill" style={{ width: `${fill * 100}%` }} />
         {bar.shield > 0 && <i className="stat-bar-shield" style={{ left: `${shieldLeft * 100}%`, width: `${shieldWidth * 100}%` }} />}
         <span className="stat-bar-text">{bar.text}</span>
