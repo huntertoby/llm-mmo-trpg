@@ -111,8 +111,10 @@ function started(r: BattleRenderer): void {
   const clock = () => (r as unknown as { effectClock: number }).effectClock;
   const t0 = clock();
   const check = () => {
-    if (clock() - t0 >= freeze) r.setBoost(1e-6);
-    else requestAnimationFrame(check);
+    if (clock() - t0 >= freeze) {
+      r.setBoost(1e-6);
+      frozen = true; // 停格後不再放下一輪（不然新的一輪會從頭蓋掉停住的姿勢）
+    } else requestAnimationFrame(check);
   };
   requestAnimationFrame(check);
 }
@@ -136,8 +138,12 @@ function labels(items: ReadonlyArray<[string, Pos]>): void {
 
 const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
+/** `?freeze=` 停格後為真：不再放新的一輪、不重畫場景。 */
+let frozen = false;
+
 /** 一個施放者放一次（直接走串接器＋繪製器）；回傳這一招的長度。 */
 function castOnce(r: BattleRenderer, v: BattleView, caster: string, target: Pos, cards: VfxCards, more: Record<string, unknown>[] = [], hurt = true): number {
+  if (frozen) return 0;
   const from = v.units.find((u) => u.id === caster)!.pos;
   const tiles = cards["sk"]?.icon?.segments[0]?.shape_id === "self" ? [from] : [target];
   const tgt = v.units.find((u) => u.pos.x === target.x && u.pos.y === target.y && u.id !== caster);
@@ -237,7 +243,7 @@ async function prims(): Promise<void> {
       longest = Math.max(longest, castOnce(r, v, caster, pos, { sk: card("single", 1, effects) }, more, effects.includes("damage")));
     });
     await wait(longest + 600);
-    r.draw(buildDrawModel(v, HERO)); // 倒地的木樁站回來
+    if (!frozen) r.draw(buildDrawModel(v, HERO)); // 倒地的木樁站回來
     window.__skillDone = true;
   }
 }
@@ -385,6 +391,9 @@ async function order(): Promise<void> {
   }
 }
 
+/** `#perf?lower=1` 輪流接在砍後面的下半原語（6N-3）。 */
+const LOWER_MIX: readonly string[] = PRIMS_LOWER.world!.concat(PRIMS_LOWER.rules!).flatMap(([, effects]) => effects.filter((e) => e !== "damage"));
+
 async function perf(): Promise<void> {
   const ids = ["one_handed_sword", "fire_staff", "bow", "longgun", "spear", "arcane_blade", "whip", "fist"];
   const units: UnitView[] = [];
@@ -396,7 +405,7 @@ async function perf(): Promise<void> {
   });
   const v = battle(units, 12, 12);
   const r = await show(v);
-  caption("6N-1・12×12 戰場 FPS（靜止 3 秒 vs. 8 人輪流放技能 6 秒）");
+  caption("6N-1／6N-3・12×12 戰場 FPS（靜止 3 秒 vs. 8 人輪流放技能；`?secs=` 秒數、`?lower=1` 接下半原語）");
   const out = document.createElement("div");
   out.id = "perf";
   document.body.appendChild(out);
@@ -421,18 +430,26 @@ async function perf(): Promise<void> {
   const idle = await count(3000);
   const t0 = r.textureCount();
   let on = true;
+  let peak = t0;
+  const watch = window.setInterval(() => (peak = Math.max(peak, r.textureCount())), 100);
   const loop = async (i: number) => {
-    const cards = { sk: card("single", i % 2 === 0 ? 1 : 4, ["damage"]) };
+    let n = i;
     while (on) {
+      // `?lower=1`（6N-3）：每次換一個下半原語接在砍後面（召喚、刻符、層數…），姿勢種類更多
+      const lower = params.get("lower") === "1" ? [LOWER_MIX[n % LOWER_MIX.length]!] : [];
+      n += 1;
+      const cards = { sk: card("single", i % 2 === 0 ? 1 : 4, ["damage", ...lower]) };
       const t = v.units.find((u) => u.id === `t_${i}`)!.pos;
       const target = i % 2 === 0 ? { x: t.x - 3, y: t.y } : t;
       await wait(castOnce(r, v, `u_0${i}`, target, cards) + 100);
     }
   };
   ids.forEach((_, i) => void wait(i * 150).then(() => loop(i)));
-  const casting = await count(6000);
+  const secs = Number(params.get("secs") ?? "6") || 6; // `?secs=` 放技能的秒數（6N-3 量 LRU 上限用）
+  const casting = await count(secs * 1000);
   on = false;
-  out.textContent = JSON.stringify({ grid: "12x12", cell: CELL, dpr: window.devicePixelRatio, idle, casting8: casting, textures: { before: t0, after: r.textureCount() } });
+  window.clearInterval(watch);
+  out.textContent = JSON.stringify({ grid: "12x12", cell: CELL, dpr: window.devicePixelRatio, secs, lower: params.get("lower") === "1", idle, casting8: casting, textures: { before: t0, after: r.textureCount(), peak } });
   window.__skillDone = true;
 }
 
@@ -467,7 +484,7 @@ async function moves(): Promise<void> {
       }),
     );
     await wait(600);
-    r.draw(buildDrawModel(v, HERO));
+    if (!frozen) r.draw(buildDrawModel(v, HERO));
     window.__skillDone = true;
   }
 }
