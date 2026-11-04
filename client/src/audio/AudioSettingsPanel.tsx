@@ -1,5 +1,5 @@
 // 設定面板的「聲音」區（AU-1）：主、音效、音樂、環境四條滑桿＋各自靜音；全部靜音（Shift＋M）、減少刺耳音效、背景分頁靜音。
-// 放在戰鬥「版面」面板裡（目前唯一的設定面板）；設定由 `audio` 引擎存 localStorage。
+// 放在戰鬥「版面」面板與大世界的齒輪面板（AU-2），兩邊共用同一份設定（`audio` 引擎存 localStorage）。
 import { audio, type AudioEngine } from "./index";
 import type { AudioSettings } from "./settings";
 import type { Track } from "./types";
@@ -43,7 +43,7 @@ export function AudioSettingsPanel({ engine = audio }: { engine?: AudioEngine })
       })}
       <label className="layout-check">
         <input type="checkbox" checked={s.reduceHarsh} onChange={(e) => engine.setSettings({ reduceHarsh: e.target.checked })} data-testid="audio-reduce-harsh" />
-        <span>減少刺耳音效（拿掉尖音與轟鳴、最大音量降低）</span>
+        <span>減少刺耳音效（音效去掉尖音與轟鳴、音量降低；環境不放雷聲、爆炸；音樂不變）</span>
       </label>
       <label className="layout-check">
         <input type="checkbox" checked={s.muteInBackground} onChange={(e) => engine.setSettings({ muteInBackground: e.target.checked })} data-testid="audio-mute-background" />
