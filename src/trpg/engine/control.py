@@ -145,11 +145,7 @@ def status_effect(
         return effect
     core = ctx.core
     modifier = _modifier(state, attack_value, plan)
-    if ctx.preview is None:
-        natural = ctx.rng.d20()
-    else:
-        ctx.mark_branch()
-        natural = 20 if ctx.preview == "max" else 1
+    natural = ctx.opposed_d20("status_save", f"status:{plan.status_id}", target.id)
     total = natural + modifier + core.proficiency
     applied = is_hit(natural, total, core.hit_target)
     ctx.emit(

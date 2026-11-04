@@ -17,8 +17,8 @@ from hypothesis import strategies as st
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, with_rolls
 from trpg.engine import BattleState, Move, resolve
-from trpg.engine.battle import simulate_preview, simulate_slide_branch
-from trpg.engine.context import Ctx, SlideOverride
+from trpg.engine.battle import simulate_branch, simulate_preview
+from trpg.engine.context import CheckKind, CheckOverride, CheckRule, Ctx
 from trpg.engine.events import CheckRolled, DamageDealt, StatusApplied, TrapTriggered
 from trpg.engine.path_preview import PathEvent, PathPreview, _key, _merge_all, _trace, preview_path
 from trpg.engine.state import TrapState, state_to_json
@@ -582,26 +582,30 @@ def test_trap_after_ice_damage_range_matches_the_walk(
 
 
 # ---------------------------------------------------------------------------
-# 冰面檢定覆寫（SlideOverride，Phase 6P-1）：純預覽參數，正式結算不受影響
+# 冰面檢定覆寫（Phase 6P-1 的 SlideOverride，Phase 7 前置泛化成 CheckOverride）：純預覽參數，
+# 正式結算不受影響
 # ---------------------------------------------------------------------------
 
+_SLIDE: tuple[CheckKind, ...] = ("slide",)
 
-def test_slide_override_outcomes() -> None:
-    assert [SlideOverride.fail_at(2).outcome(i) for i in range(4)] == [True, True, False, None]
-    assert [SlideOverride.fail_at(0, rest=True).outcome(i) for i in range(3)] == [
-        False,
-        True,
-        True,
+
+def test_check_rule_outcomes() -> None:
+    worst_at = CheckOverride.worst_at
+    assert [worst_at(2).rules[0].outcome(i) for i in range(4)] == ["best", "best", "worst", None]
+    assert [worst_at(0, rest="best").rules[0].outcome(i) for i in range(3)] == [
+        "worst",
+        "best",
+        "best",
     ]
-    assert SlideOverride(rest=True).outcome(5) is True
-    assert SlideOverride().outcome(0) is None
+    assert CheckRule(rest="best").outcome(5) == "best"
+    assert CheckRule().outcome(0) is None
 
 
-def test_slide_override_is_preview_only() -> None:
+def test_check_override_is_preview_only() -> None:
     state = _ice_trap_state(((1, 0),), 0)
-    with pytest.raises(ValueError, match="slide_override"):
-        Ctx(state.clone(), slide_override=SlideOverride(rest=True))
-    assert Ctx(state.clone()).slide_override is None
+    with pytest.raises(ValueError, match="check_override"):
+        Ctx(state.clone(), check_override=CheckOverride.of(_SLIDE, rest="best"))
+    assert Ctx(state.clone()).check_override is None
 
 
 def test_formal_resolve_ignores_previews() -> None:
@@ -621,9 +625,10 @@ def test_slide_override_only_forces_slide_checks() -> None:
     state = _ice_trap_state(((1, 0),), 0)
     move = Move(unit_id=U1, path=_pos(((0, 0), (1, 0), (2, 0), (2, 1), (2, 2))))
     low, high = simulate_preview(state, move)
-    passed_min = simulate_slide_branch(state, move, SlideOverride(rest=True))
+    all_pass = CheckOverride.of(_SLIDE, rest="best")
+    passed_min = simulate_branch(state, move, override=all_pass)[0]
     assert repr(passed_min.events) == repr(low.events)
-    passed_max = simulate_slide_branch(state, move, SlideOverride(rest=True), "max")
+    passed_max = simulate_branch(state, move, "max", override=all_pass)[0]
     checks = [e for e in passed_max.events if isinstance(e, CheckRolled) and e.slide]
     assert len(checks) == 1 and checks[0].success
     assert passed_max.state.units[U1].xy == (2, 1)  # 過了冰、被陷阱定身

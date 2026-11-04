@@ -799,7 +799,7 @@ def enter_surface(ctx: Ctx, unit: UnitState, *, own_move: bool = False) -> list[
     if check is not None and own_move and check.slide_max > 0:
         return events
     if check is not None and not slip_immune(ctx.rules, unit, surface):  # 矮人、鱗族不滑倒（3R-2）
-        roll = ctx.check_d20()
+        roll = ctx.check_d20("surface", f"surface:{surface.value}", unit.id)
         modifier = ability_modifier(ctx, effective_attribute(ctx.rules, unit, check.attr))
         total = roll + modifier
         events.append(

@@ -40,13 +40,10 @@ def contest(
         attack_value, max(1, effective_attribute(rules, target, attr))
     )
     proficiency = rules.core.proficiency
-    if ctx.preview is None:
-        natural = ctx.rng.d20()
-    elif primary:
+    if ctx.preview is not None and primary:
         natural = 20
     else:
-        ctx.mark_branch()
-        natural = 20 if ctx.preview == "max" else 1
+        natural = ctx.opposed_d20("contest", f"contest:{kind}", target.id)
     total = natural + modifier + proficiency - resist_bonus
     success = is_hit(natural, total, rules.core.hit_target)
     ctx.emit(
