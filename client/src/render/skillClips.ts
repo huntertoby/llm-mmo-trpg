@@ -135,7 +135,7 @@ export const OPENER_CLIPS = {
   sigil_cast: { ms: 380, anchor: "tip", hitAt: 0.3, keys: [[0, { arm: -1.25, wpn: 2.82, lean: -0.04 }], [0.3, { arm: -1.4, wpn: 2.82, lean: 0.08 }], [1, { arm: -1.25, wpn: 2.82, lean: 0.08 }]], fx: [fx("sigil", "anchor", 0, 0.5)] },
   tip_point: { ms: 260, anchor: "tip", keys: [[0, REST], [1, { arm: -1.2, wpn: 2.77, lean: -0.06 }]] },
   tip_shot: { ms: 220, anchor: "tip", hitAt: 0.5, keys: [[0, { arm: -1.2, wpn: 2.77, lean: -0.06 }], [0.5, { arm: -1.45, wpn: 2.95, lean: 0.12, hipN: 0.3 }], [1, { arm: -1.4, wpn: 2.9, lean: 0.1, hipN: 0.3 }]], move: [[0, 0], [0.5, 3], [1, 3]] },
-  scythe_flick: { ms: 240, anchor: "tip", hitAt: 0.55, keys: [[0, { arm: -1.2, wpn: -0.4, lean: -0.12, hipN: 0.2 }], [0.55, { arm: -1.3, wpn: -1.6, lean: 0.12, hipN: 0.4 }], [1, { arm: -1.3, wpn: -2.0, lean: 0.12, hipN: 0.4 }]] },
+  scythe_flick: { ms: 240, anchor: "tip", hitAt: 0.55, keys: [[0, { arm: -1.2, wpn: -0.4, lean: -0.12, hipN: 0.2 }], [0.55, { arm: -1.3, wpn: -3.3, lean: 0.12, hipN: 0.4 }], [1, { arm: -1.3, wpn: -3.5, lean: 0.12, hipN: 0.4 }]] },
   fist_shot: { ms: 200, anchor: "hand", hitAt: 0.55, keys: [[0, FIST_IN], [0.55, { arm: -1.57, elbow: 0, lean: 0.15, hipN: 0.35 }], [1, { arm: -1.55, lean: 0.12, hipN: 0.35 }]] },
   channel: { ms: 520, anchor: "tip", keys: [[0, REST], [0.6, { arm: -2.5, wpn: 2.7, lean: -0.06, bob: -1.2 }], [1, { arm: -2.5, wpn: 2.7, lean: -0.06, bob: -0.4 }]], fx: [fx("circle", "feet", 0.1, 1)] },
   cast: { ms: 420, anchor: "tip", hitAt: 0.3, keys: [[0, { arm: -2.5, wpn: 2.7, lean: -0.06 }], [0.3, { arm: -1.2, wpn: 2.4, lean: 0.12 }], [1, { arm: -1.2, wpn: 2.4, lean: 0.12 }]], fx: [fx("circle", "feet", 0, 0.4)] },

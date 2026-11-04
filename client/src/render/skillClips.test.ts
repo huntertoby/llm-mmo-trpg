@@ -137,7 +137,7 @@ describe("clip timeline", () => {
 
 describe("fx anchor from the pose", () => {
   const LEN = 20;
-  const ranged: Array<[WeaponClass, CastMode]> = (["blade", "arcane", "spear", "staff", "bow", "crossbow", "gun", "whip"] as WeaponClass[]).map((w) => [w, "ranged"]);
+  const ranged: Array<[WeaponClass, CastMode]> = WEAPON_CLASSES.map((w) => [w, "ranged"]);
   it.each(ranged)("%s %s: the tip at release is in front of the body (east / west)", (w, m) => {
     const strike = OPENER_TABLE[w][m].strike;
     const def = clipDef(strike);
