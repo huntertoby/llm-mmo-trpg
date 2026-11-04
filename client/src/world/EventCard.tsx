@@ -9,7 +9,7 @@
 // 說明一律用共用 `Hint`（6.5.1）。規則全在後端：可用的解法、可引用的事實、判定明細都照 `WorldView`。
 // 情境判定「第一次送出即定案」：送出後後端清掉事件，回來的是 `situation_result`；送出中整張停用。
 // 玩家文字是純資料欄位，後端把它包進 LLM 的 <player_input>（前端不自己包，代決 5B5-5）。
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/types";
 import { eventArtBg, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
@@ -171,6 +171,8 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
   const [cluesOpen, setCluesOpen] = useState(false);
   /** RT-3：按了「擲骰」（等說書人判定時畫沙漏；送出失敗、還留在這張卡上＝失敗狀態加重試）。 */
   const [sent, setSent] = useState(false);
+  /** RT-3b：沙漏出現、失敗出現重試鈕時，連「擲骰」這一列一起捲進事件卡的可視範圍。 */
+  const actions = useRef<HTMLDivElement | null>(null);
   const submit = () => {
     setSent(true);
     onAnswer(situation.template, text, cited);
@@ -206,7 +208,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
       {situation.story != null && <StoryDialog key={situation.story.text_zh} story={situation.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-situation-story" />}
       {sent && (
         <div className="world-situation-wait">
-          <WaitScene scene="judge" requestId={`judge:${situation.template}`} region={event.region ?? null} status={busy ? "wait" : "fail"} onRetry={submit} testId="world-judge-wait" />
+          <WaitScene scene="judge" requestId={`judge:${situation.template}`} region={event.region ?? null} status={busy ? "wait" : "fail"} onRetry={submit} revealUntil={actions} testId="world-judge-wait" />
         </div>
       )}
       {facts.length > 0 && cluesOpen && (
@@ -243,7 +245,7 @@ function SituationForm({ event, busy, onAnswer }: Pick<EventProps, "event" | "bu
         placeholder="你打算怎麼做？（文字不換強度，只決定用哪個屬性與方法）"
         data-testid="world-answer"
       />
-      <div className="run-actions">
+      <div className="run-actions" ref={actions}>
         <span className="muted small">{lengthLabel(text)}</span>
         <Hint text="送出後就定案，不能重來">
           <button type="button" className="primary" disabled={!canSubmitAnswer(text, busy)} onClick={submit} data-testid="world-answer-submit">

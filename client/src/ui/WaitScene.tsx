@@ -5,12 +5,15 @@
 // - 完成：技能生成卡面淡入 0.3 秒、回顧闔書、判定停住、聊天直接換成文字（由呼叫端拿掉元件）；
 // - 失敗：停住、變灰，句子換成「說書人停下了筆，再試一次？」，有 `onRetry` 時加重試鈕；
 // - 等待聲：還在等時照場合放（`audio/waitSounds.ts`，0.7 秒規則；NPC 聊天不出聲）。
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+// RT-3b：出現時、失敗時把自己（加上 `revealUntil`，例如「擲骰」那一列）捲進最近的捲動區（`scrollReveal.ts`），
+// 重試鈕不會被切在畫面外；NPC 聊天的「完成」＝泡泡拿掉、直接顯示回覆文字（`doneText`）。
+import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { useWaitSound, WAIT_SOUND_DELAY_MS } from "../audio/waitSounds";
 import { devAnimFactor } from "../battle/playback";
 import { drawWait, waitPalette, WAIT_DONE_MS, WAIT_SIZE, type WaitStatus } from "../render/waitArt";
 import { reducedMotion, subscribeMotion } from "./motionPrefs";
 import { regionThemeFor, useCurrentTheme } from "./regionTheme";
+import { revealInScroller } from "./scrollReveal";
 import { WAIT_NARRATION, waitLine, waitSeed, type WaitSceneId } from "./waitNarration";
 import "./waitScene.css";
 
@@ -45,10 +48,21 @@ interface Props {
   reduced?: boolean;
   /** 開發頁：固定句子的時間（毫秒）。 */
   lineElapsed?: number;
+  /** NPC 聊天完成時直接顯示的回覆（泡泡拿掉）；正式畫面由呼叫端換成對話紀錄，開發頁用這個。 */
+  doneText?: string;
+  /** 出現、失敗時捲進可視範圍（預設開；開發頁關掉）。 */
+  reveal?: boolean;
+  /** 捲動時一起帶進可視範圍的元素（例如判定的「擲骰」那一列）。 */
+  revealUntil?: RefObject<HTMLElement | null>;
   testId?: string;
 }
 
-export function WaitScene({ scene, requestId, name, region, status = "wait", tint, onRetry, soundDelayMs = WAIT_SOUND_DELAY_MS, frozenT, frozenDoneT, reduced, lineElapsed, testId = "wait-scene" }: Props) {
+/** NPC 聊天完成＝泡泡消失、直接是文字（RT-3b 必修 5）。 */
+export function npcDoneShowsText(scene: WaitSceneId, status: WaitStatus): boolean {
+  return scene === "npc" && status === "done";
+}
+
+export function WaitScene({ scene, requestId, name, region, status = "wait", tint, onRetry, soundDelayMs = WAIT_SOUND_DELAY_MS, frozenT, frozenDoneT, reduced, lineElapsed, doneText, reveal = true, revealUntil, testId = "wait-scene" }: Props) {
   const prefReduced = useReducedMotion();
   const still = reduced ?? prefReduced;
   const current = useCurrentTheme();
@@ -62,6 +76,17 @@ export function WaitScene({ scene, requestId, name, region, status = "wait", tin
   const stopT = useRef<number | null>(null);
   const stopAt = useRef<number>(0);
   const [elapsed, setElapsed] = useState(0);
+  const root = useRef<HTMLDivElement | null>(null);
+  const textOnly = npcDoneShowsText(scene, status);
+
+  // 出現時、狀態改變（失敗＝多了重試鈕）時捲進可視範圍；等版面排好（下一格）再量
+  useEffect(() => {
+    if (!reveal || status === "done") return undefined;
+    const raf = window.requestAnimationFrame(() => {
+      if (root.current !== null) revealInScroller(root.current, revealUntil?.current ?? null);
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [reveal, status, revealUntil]);
 
   useWaitSound(scene, status === "wait" && frozenT === undefined, soundDelayMs);
 
@@ -75,6 +100,7 @@ export function WaitScene({ scene, requestId, name, region, status = "wait", tin
   // 畫布：rAF 迴圈（減少動態、固定時間時只畫一次）
   useEffect(() => {
     const el = canvas.current;
+    if (textOnly) return undefined;
     const ctx = el?.getContext("2d") ?? null;
     if (el === null || ctx === null) return undefined;
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
@@ -104,12 +130,20 @@ export function WaitScene({ scene, requestId, name, region, status = "wait", tin
     return () => window.cancelAnimationFrame(raf);
     // palette 由這幾個值決定；物件每次重算，不放進依賴
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scene, seed, status, still, frozenT, frozenDoneT, theme.id, tint, size.w, size.h]);
+  }, [scene, seed, status, still, frozenT, frozenDoneT, theme.id, tint, size.w, size.h, textOnly]);
 
   const line = waitLine(scene, lineElapsed ?? elapsed, requestId, { name, failed: status === "fail" });
   const done = status === "done";
+  if (textOnly)
+    return (
+      <div ref={root} className={`wait-scene wait-${scene} wait-done-text`} data-testid={testId} data-scene={scene} data-status={status} data-region={theme.id} role="status" aria-live="polite">
+        <span className="wait-reply" data-testid={`${testId}-reply`}>
+          {doneText ?? ""}
+        </span>
+      </div>
+    );
   return (
-    <div className={`wait-scene wait-${scene}${still ? " still" : ""}`} data-testid={testId} data-scene={scene} data-status={status} data-region={theme.id} role="status" aria-live="polite">
+    <div ref={root} className={`wait-scene wait-${scene}${still ? " still" : ""}`} data-testid={testId} data-scene={scene} data-status={status} data-region={theme.id} role="status" aria-live="polite">
       <canvas ref={canvas} className="wait-canvas" style={{ width: size.w, height: size.h }} aria-hidden="true" data-testid={`${testId}-canvas`} />
       {!done && (
         <div className="wait-text">

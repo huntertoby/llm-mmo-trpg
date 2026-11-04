@@ -69,6 +69,8 @@ function Cell({ scene, region }: { scene: WaitSceneId; region: string }) {
           frozenDoneT={frozenT !== undefined && status === "done" ? 300 : undefined}
           lineElapsed={lineElapsed}
           onRetry={() => undefined}
+          doneText="葛蘭：河上這幾天霧很重，渡口的船都不太敢開。"
+          reveal={false}
           testId={`wait-${scene}-${region}`}
         />
       </div>

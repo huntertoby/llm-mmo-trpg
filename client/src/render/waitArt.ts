@@ -282,24 +282,99 @@ export function skillGlyph(index: number): P[] {
   }
 }
 
+// ---------------------------------------------------------------- 封蠟（RT-3b 小修：不規則的蠟緣＋壓印紋）
+
+/** 蠟緣的點數。 */
+export const SEAL_EDGE_POINTS = 18;
+
+/**
+ * 蠟緣每一點的半徑倍率（0.8～1.08）：固定的雜湊（`fmix32(點的序號＋常數)`），每次都一樣，不用 Math.random。
+ * 有兩處比較大的鼓起（蠟溢出去的地方），其餘小小起伏。
+ */
+export const SEAL_EDGE: readonly number[] = Array.from({ length: SEAL_EDGE_POINTS }, (_, i) => {
+  const h = fmix32(0x5ea1 + i * 0x9e37) / 0xffffffff;
+  const bulge = i === 4 || i === 11 ? 0.1 : 0;
+  return 0.84 + h * 0.14 + bulge - (i % 3 === 0 ? 0.04 : 0);
+});
+
+/** 蠟緣的點（以 (x, y) 為中心、半徑 r；確定性）。 */
+export function sealOutline(x: number, y: number, r: number): P[] {
+  return SEAL_EDGE.map((m, i) => {
+    const a = (i / SEAL_EDGE_POINTS) * TAU + 0.2;
+    return [x + Math.cos(a) * r * m, y + Math.sin(a) * r * m] as P;
+  });
+}
+
+/** 平滑的封閉曲線（相鄰兩點的中點用二次曲線接起來，蠟緣才會圓潤不尖）。 */
+function smoothClosed(ctx: Ctx, pts: readonly P[]): void {
+  const n = pts.length;
+  const mid = (a: P, b: P): P => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  ctx.beginPath();
+  const m0 = mid(pts[n - 1]!, pts[0]!);
+  ctx.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) {
+    const p = pts[i]!;
+    const m = mid(p, pts[(i + 1) % n]!);
+    ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]);
+  }
+  ctx.closePath();
+}
+
 function seal(ctx: Ctx, x: number, y: number, r: number, pal: WaitPalette, alpha: number): void {
   if (alpha <= 0) return;
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = pal.seal;
-  ctx.beginPath();
-  for (let i = 0; i <= 12; i++) {
-    const a = (i / 12) * TAU;
-    const rr = r * (i % 2 === 0 ? 1 : 0.9);
-    if (i === 0) ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-    else ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-  }
-  ctx.closePath();
+  // 蠟緣：不規則的一攤蠟（往右下偏一點的陰影，讓它像凸起的）
+  const edge = sealOutline(x, y, r * 1.08);
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  smoothClosed(
+    ctx,
+    edge.map((p) => [p[0] + 0.6, p[1] + 0.8] as P),
+  );
   ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,0.35)";
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.arc(x, y, r * 0.55, 0, TAU);
+  ctx.fillStyle = pal.seal;
+  smoothClosed(ctx, edge);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.3)";
+  ctx.lineWidth = 0.6;
   ctx.stroke();
+  // 壓下去的圓餅：內圈比外緣暗一點，左上一道亮邊（壓印的斜面）
+  const inner = r * 0.62;
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.arc(x, y, inner, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.arc(x, y, inner, Math.PI * 0.95, Math.PI * 1.65);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  ctx.beginPath();
+  ctx.arc(x, y, inner, Math.PI * 1.95, Math.PI * 2.65);
+  ctx.stroke();
+  // 壓印紋：中間一顆星芒（四道長、四道短）加一圈小點
+  ctx.strokeStyle = "rgba(0,0,0,0.42)";
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU;
+    const len = inner * (i % 2 === 0 ? 0.62 : 0.34);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+  }
+  ctx.stroke();
+  ctx.fillStyle = "rgba(0,0,0,0.38)";
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU + TAU / 16;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * inner * 0.8, y + Math.sin(a) * inner * 0.8, Math.max(0.35, r * 0.05), 0, TAU);
+    ctx.fill();
+  }
+  // 蠟面的高光（左上一小塊）
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(x - r * 0.45, y - r * 0.5, r * 0.22, r * 0.12, -0.6, 0, TAU);
+  ctx.fill();
   ctx.globalAlpha = 1;
 }
 
@@ -391,6 +466,28 @@ function drawSkill(ctx: Ctx, f: WaitFrame): void {
 
 // ---------------------------------------------------------------- 事件判定
 
+/** 判定的羊皮紙小卡（畫布座標）；沙漏以 (40, 40) 為中心。 */
+export const JUDGE_PARCH = { x: 4, y: 2, w: 72, h: 76 } as const;
+/** 沙漏外框（木框）的半寬、半高（未旋轉；木框 ±20、上下 ±34，加 1px 線寬餘裕）。 */
+export const HOURGLASS_HALF = { w: 21, h: 35 } as const;
+/** 翻轉時沙漏離羊皮紙邊至少留多少（CSS 像素）。 */
+const HOURGLASS_INSET = 1;
+
+/** 沙漏轉到 `angle`、縮放 `k` 時，外框的半寬、半高（軸對齊的外接框）。 */
+export function hourglassExtent(angle: number, k = 1): { w: number; h: number } {
+  const c = Math.abs(Math.cos(angle));
+  const s = Math.abs(Math.sin(angle));
+  return { w: k * (HOURGLASS_HALF.w * c + HOURGLASS_HALF.h * s), h: k * (HOURGLASS_HALF.w * s + HOURGLASS_HALF.h * c) };
+}
+
+/** 翻轉到 `angle` 時要縮多少，外接框才收在羊皮紙裡（直立時是 1）。 */
+export function hourglassFlipScale(angle: number): number {
+  const e = hourglassExtent(angle);
+  const maxW = JUDGE_PARCH.w / 2 - HOURGLASS_INSET;
+  const maxH = JUDGE_PARCH.h / 2 - HOURGLASS_INSET;
+  return Math.min(1, maxW / e.w, maxH / e.h);
+}
+
 /** 沙漏玻璃在高度 y（-30～30，0 是頸部）的半寬。 */
 const bulbW = (y: number): number => 2 + 14 * (Math.abs(y) / 30);
 
@@ -403,7 +500,7 @@ function drawJudge(ctx: Ctx, f: WaitFrame): void {
   // 羊皮紙底（墨線在深藍底上看不見；同一張紙，沙漏放在上面）
   ctx.fillStyle = pal.parch;
   ctx.beginPath();
-  ctx.roundRect(4, 2, 72, 76, 10);
+  ctx.roundRect(JUDGE_PARCH.x, JUDGE_PARCH.y, JUDGE_PARCH.w, JUDGE_PARCH.h, 10);
   ctx.fill();
   ctx.strokeStyle = pal.parchEdge;
   ctx.globalAlpha = 0.55;
@@ -413,8 +510,14 @@ function drawJudge(ctx: Ctx, f: WaitFrame): void {
   ctx.save();
   ctx.translate(40, 40);
   // 翻轉時：上一輪的沙都在下面，整個沙漏轉半圈（轉完＝沙都在上面，和不轉、沙在上面的畫面一樣），之後不再旋轉、沙往下流
+  // RT-3b：轉到斜的時候木框對角會超出羊皮紙約 2px，翻轉中跟著角度縮小，整個沙漏收在紙裡（`hourglassFlipScale`）
   const flipping = flip < 1 && !f.reduced;
-  if (flipping) ctx.rotate(Math.PI * ease(flip));
+  if (flipping) {
+    const angle = Math.PI * ease(flip);
+    ctx.rotate(angle);
+    const k = hourglassFlipScale(angle);
+    ctx.scale(k, k);
+  }
   const top = flipping ? 0 : 1 - flow;
   const bottom = flipping ? 1 : flow;
   // 上下木框

@@ -305,9 +305,9 @@ describe("等待聲（AU-2 檢查待決 3）", () => {
 describe("捲動區上下緣漸隱（UI-E1b 待決 10；美術 PM：下緣加深加高）", () => {
   const styles = Object.fromEntries(readStyleFiles().map(([p, t]) => [p, stripCssComments(t)]));
   const theme = styles["styles/theme.css"] ?? "";
-  it("上緣：sticky、不佔版面、沒捲時不顯示，捲下去才蓋住切半的字", () => {
-    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body::before \{[^}]*position: sticky;[^}]*top: 0;[^}]*height: 32px;[^}]*margin-bottom: -32px;[^}]*opacity: 0;/);
-    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body\[data-scrolled="1"\]::before \{\s*opacity: 1;/);
+  it("上緣：sticky、不佔版面、沒捲時不顯示，捲下去才蓋住切半的字（RT-3b：加高到 56px、上 60% 實色）", () => {
+    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body::before,[^{]*\{[^}]*position: sticky;[^}]*top: 0;[^}]*height: 56px;[^}]*margin-bottom: -56px;[^}]*opacity: 0;[^}]*var\(--ui-navy\) 40%/);
+    expect(theme).toMatch(/\.ui-popup-dialog > \.ui-popup-body\[data-scrolled="1"\]::before,[^{]*\{\s*opacity: 1;/);
     expect(scrolledFlag(0)).toBe("0");
     expect(scrolledFlag(1)).toBe("1");
   });

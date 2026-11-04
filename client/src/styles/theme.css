@@ -146,24 +146,59 @@
 }
 
 /* RT-3（UI-E1b 待決 10）：上緣也加漸隱。捲動內容最前面一塊 sticky 色塊（負的下邊距，不佔版面）；
-   還沒捲時看不見（不蓋第一行），捲下去後（PopupFrame 在捲動區標 data-scrolled="1"）黏在捲動區頂端，蓋住被切半的那行字。 */
+   還沒捲時看不見（不蓋第一行），捲下去後（PopupFrame 在捲動區標 data-scrolled="1"）黏在捲動區頂端，蓋住被切半的那行字。
+   RT-3b（RT-3檢查 必修 3：被切的那一行和勾選框都要完全淡掉）：32px → 56px，上面 60%（約 34px）是實色底色，
+   下面 40% 才漸到透明；z-index 提高，勾選框、單選鈕這類原生控制項也蓋得住。 */
 .ui-popup-hud > .ui-popup-body::before,
-.ui-popup-dialog > .ui-popup-body::before {
+.ui-popup-dialog > .ui-popup-body::before,
+.world-hud-center > .world-event > .ui-popup-body::before {
   content: "";
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 5;
   display: block;
-  height: 32px;
-  margin-bottom: -32px;
+  height: 56px;
+  margin-bottom: -56px;
   pointer-events: none;
   opacity: 0;
-  background: linear-gradient(0deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
+  background: linear-gradient(0deg, rgb(30 34 54 / 0%), var(--ui-navy) 40%, var(--ui-navy));
 }
 
 .ui-popup-hud > .ui-popup-body[data-scrolled="1"]::before,
-.ui-popup-dialog > .ui-popup-body[data-scrolled="1"]::before {
+.ui-popup-dialog > .ui-popup-body[data-scrolled="1"]::before,
+.world-hud-center > .world-event > .ui-popup-body[data-scrolled="1"]::before {
   opacity: 1;
+}
+
+/* RT-3b（RT-3檢查 必修 1）：中上方的事件卡（判定的沙漏會把卡撐高）——外框整張留在欄裡（四角飾件都在），
+   內容在 .ui-popup-body 裡捲；欄（.world-hud-center，有 max-height）是直的 flex，卡片可以縮、不再被欄切平。
+   下緣同一塊 sticky 漸隱（32px，後 55% 實色）。 */
+.world-hud-center > .world-event.ui-popup-inline {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 12px;
+}
+
+.world-hud-center > .world-event > .ui-popup-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.world-hud-center > .world-event > .ui-popup-body::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: block;
+  clear: both;
+  height: 32px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-navy) 45%, var(--ui-navy));
 }
 
 .ui-popup.danger {
