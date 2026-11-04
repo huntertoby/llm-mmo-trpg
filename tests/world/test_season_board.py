@@ -82,8 +82,11 @@ def _bounty_lineup(bounty: str = "north_wolf_king") -> EncounterLineup:
     return EncounterLineup(
         region="cloud_ridge",
         location="north_slope",
-        group="north_slope_pack",
-        members=(LineupMember(unit="mist_wolf", affix="berserk"), LineupMember(unit="mist_wolf")),
+        group="north_wolf_king_pack",
+        members=(
+            LineupMember(unit="mist_wolf", affix="berserk"),
+            *(LineupMember(unit="mist_wolf") for _ in range(3)),
+        ),
         bounty=bounty,
     )
 
@@ -279,6 +282,28 @@ def test_first_bounty_encounter_per_day(library: ContentLibrary, make_char: Make
     before = next(t for t in range(NOON, NOON + DAY, 60) if day_of(library, t) != refresh) - 60
     assert make_encounter(library, world, char, place, before)[0].bounty is None
     assert make_encounter(library, world, char, place, before + 60)[0].bounty == "north_wolf_king"
+
+
+def test_north_slope_bounty_and_daily_lineups(library: ContentLibrary, make_char: MakeChar) -> None:
+    """6E-3d：懸賞期間每天第一場＝north_wolf_king_pack（狼王＋3 狼）；之後的日常駐守＝
+    north_slope_pack（狼王＋2 狼，6E-3c）。"""
+    king = LineupMember(unit="mist_wolf", affix="berserk")
+    wolf = LineupMember(unit="mist_wolf")
+    world = make_world()
+    char = make_char(location="north_slope")
+    place = library.world_maps["cloud_ridge"].location_by_id()["north_slope"]
+    first, _ = make_encounter(library, world, char, place, NOON)
+    bounty = roll_lineup(library, first)
+    assert bounty.bounty == "north_wolf_king"
+    assert bounty.group == "north_wolf_king_pack"
+    assert bounty.members == (king, wolf, wolf, wolf)
+    fight = _battle(lineup=bounty, location="north_slope", won=False)
+    world, char, _ = after_season_step(library, world, char, fight, now=NOON, actor="a")
+    second, _ = make_encounter(library, world, char, place, NOON + 600)
+    daily = roll_lineup(library, second)
+    assert daily.bounty is None
+    assert daily.group == "north_slope_pack"
+    assert daily.members == (king, wolf, wolf)
 
 
 # ---------------------------------------------------------------------------
