@@ -390,11 +390,12 @@ window.StoryDollSkin = (() => {
     const eyes = F ? [-3.2, 3.2] : [4.4];
     for (const x of eyes) {
       if (look.slitEyes) { dot(ctx, x, -41, 1.3, 1.5, "#e8b830"); dot(ctx, x, -41, 0.35, 1.3, INK); }
+      else if (SKIN === "flat") { ctx.fillStyle = look.eyes ?? "#1d1a22"; ctx.fillRect(x - 0.9 * EYE, -42.5 - 0.5 * EYE, 1.8 * EYE, 3 * EYE); }
       else dot(ctx, x, -41, 0.9 * EYE, 1.3 * EYE, look.eyes ?? INK);
     }
-    ctx.fillStyle = "rgba(220,90,80,0.32)";
-    for (const x of F ? [-5.4, 5.4] : [3.2]) { ctx.beginPath(); ctx.ellipse(x, -38.6, 1.6, 0.9, 0, 0, TAU); ctx.fill(); }
-    if (!look.beard) stroke(ctx, `mouth-${view}`, F ? [[-1, -37.4], [0, -36.8], [1, -37.4]] : [[6.4, -37], [7.4, -36.6]], 0.5);
+    ctx.fillStyle = SKIN === "flat" ? "rgba(220,90,90,0.35)" : "rgba(220,90,80,0.32)";
+    for (const x of F ? [-5.4, 5.4] : [3.2]) { if (SKIN === "flat") ctx.fillRect(x - 1, -39.2, 2, 1.2); else { ctx.beginPath(); ctx.ellipse(x, -38.6, 1.6, 0.9, 0, 0, TAU); ctx.fill(); } }
+    if (!look.beard && SKIN !== "flat") stroke(ctx, `mouth-${view}`, F ? [[-1, -37.4], [0, -36.8], [1, -37.4]] : [[6.4, -37], [7.4, -36.6]], 0.5);
     const pc = look.scaleColor ?? look.markColor ?? dark(look.skin ?? "#eab48a", 0.25);
     if (look.pattern === "scales" || look.pattern === "dragonscale") {
       const at = F ? [[-6.6, -43.6], [-7.4, -41], [6.6, -43.6], [7.4, -41], [0, -48]] : [[1.6, -44], [0.4, -41.4], [2.6, -47.6]];
@@ -543,7 +544,7 @@ window.StoryDollSkin = (() => {
     else offhand(ctx, gear.off_hand, view, false);
     ctx.save(); if (HEADK !== 1) { ctx.translate(0, -42); ctx.scale(HEADK, HEADK); ctx.translate(0, 42); }
     if (!cover.side) ears(ctx, look, view, "under");
-    ink(ctx, `head-${view}`, F ? ellPts(0, -42, 9.2, 8.6) : HEAD_SIDE, look.skin ?? "#eab48a", { w: 1 });
+    ink(ctx, `head-${view}`, F ? ellPts(0, -42, SKIN === "flat" ? 9 : 9.2, SKIN === "flat" ? 9 : 8.6) : HEAD_SIDE, look.skin ?? "#eab48a", { w: 1 });
     if (!F) ink(ctx, "ear-s", ellPts(-2.6, -40, 1.4, 1.9, 10), look.skin ?? "#eab48a", { shade: false, w: 0.6 });
     face(ctx, look, view);
     hair(ctx, look, view, cover);
