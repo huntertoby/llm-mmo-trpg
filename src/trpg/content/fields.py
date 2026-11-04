@@ -60,13 +60,16 @@ from trpg.content.schemas import ContentModel
 from trpg.content.world_map import LocationDef, LocationMapDef
 
 __all__ = [
+    "BUILDING_KINDS",
     "CAPITAL_LOCATION",
     "CAPITAL_NAME_ZH",
     "CAPITAL_REGION",
     "FACILITY_KINDS",
     "LAYOUT_SIZES",
+    "OBJECT_LOOKS",
     "ExitGate",
     "FacilityKind",
+    "FieldBuilding",
     "FieldDoor",
     "FieldExit",
     "FieldFacility",
@@ -74,8 +77,10 @@ __all__ = [
     "FieldMapDef",
     "FieldMapReport",
     "FieldNpc",
+    "FieldObjectPlacement",
     "FieldSpawn",
     "FieldSpot",
+    "ObjectLook",
     "RegionProgress",
     "TeleportStone",
     "field_map_problems",
@@ -185,6 +190,64 @@ class FieldDoor(ContentModel):
     """室內圖 ID，或相鄰隱藏地點的地點 ID。"""
     hidden_until: Literal["reveal"] | None = None
     """``reveal``＝平時被遮住，發現隱藏地點後才出現（21.6）；通往隱藏地點的門必填。"""
+
+
+BUILDING_KINDS: tuple[str, ...] = (
+    "tavern",
+    "smithy",
+    "hall",
+    "house",
+    "scrap_house",
+    "forge_house",
+)
+"""``buildings`` 認得的外觀（6B-ART1；``docs/art/Phase6剩餘美術移植需求.md`` 1.1）。主城的種類是
+6D-ART2 的事；不認得的 ``kind`` 前端退回 ``house``（``content check`` 列為警告）。"""
+
+type ObjectLook = Literal[
+    "barrel", "table", "bar", "counter", "anvil", "forge", "candle", "crystal_statue", "shelf"
+]
+"""物件的家具外觀（6B-ART1，需求 1.3）：只換畫法，規則照原本的 ``kind``。"""
+
+OBJECT_LOOKS: tuple[str, ...] = (
+    "barrel",
+    "table",
+    "bar",
+    "counter",
+    "anvil",
+    "forge",
+    "candle",
+    "crystal_statue",
+    "shelf",
+)
+
+
+class FieldBuilding(ContentModel):
+    """建築外觀（6B-ART1；只畫）：疊在既有的牆格上，牆照舊寫在 ``terrain``，規則完全不變。
+
+    ``at`` 是左上角、``size`` 是寬高（格）；範圍內每一格都要是 ``wall`` 地形或門的格子，
+    不可蓋到出口（不採用代決 #34 的「載入時展開成牆」）。"""
+
+    kind: str = Field(pattern=ID_PATTERN)
+    at: XY
+    size: tuple[int, int]
+
+    @model_validator(mode="after")
+    def _size_positive(self) -> FieldBuilding:
+        if self.size[0] < 1 or self.size[1] < 1:
+            raise ValueError(f"建築 {self.kind} 的 size 必須至少 1×1，收到 {list(self.size)}")
+        return self
+
+    def cells(self) -> list[XY]:
+        """範圍內的格子（逐列、由左到右）。"""
+        x0, y0 = self.at
+        w, h = self.size
+        return [(x, y) for y in range(y0, y0 + h) for x in range(x0, x0 + w)]
+
+
+class FieldObjectPlacement(MapObjectPlacement):
+    """實地地圖上的物件；``look`` 是只畫的家具外觀（6B-ART1），省略＝照 ``kind`` 的畫法。"""
+
+    look: ObjectLook | None = None
 
 
 class TeleportStone(ContentModel):
@@ -311,7 +374,7 @@ class FieldMapDef(ContentModel):
     heights: str
     terrain: str
     legend: dict[str, str]
-    objects: tuple[MapObjectPlacement, ...] = ()
+    objects: tuple[FieldObjectPlacement, ...] = ()
     surfaces: tuple[MapSurfacePlacement, ...] = ()
     entry: XY
     """預設入口格：舊存檔、傳送、全滅回城都放這裡。"""
@@ -324,6 +387,8 @@ class FieldMapDef(ContentModel):
     campfires: tuple[FieldSpot, ...] = ()
     event_spots: tuple[FieldSpot, ...] = ()
     situation_objects: tuple[FieldSpot, ...] = ()
+    buildings: tuple[FieldBuilding, ...] = ()
+    """建築外觀（6B-ART1；只畫，見 :class:`FieldBuilding`）。"""
 
     # ---- 網格（與 MapDef 相同） ----
 
@@ -414,6 +479,7 @@ class FieldMapDef(ContentModel):
         if not problems:
             problems += self._edge_problems()
             problems += self._overlap_problems()
+            problems += self._building_problems()
         if problems:
             raise ValueError(f"實地地圖 {self.id}：{'；'.join(problems)}")
         return self
@@ -524,6 +590,34 @@ class FieldMapDef(ContentModel):
             out += [f"{what} 的 {list(c)} 重複（每格最多一個）" for c in dup]
         return out
 
+    def _building_problems(self) -> list[str]:
+        """建築（只畫）只能疊在牆格或門格上，不可超出地圖、蓋到出口或彼此重疊（6B-ART1）。"""
+        if not self.buildings:
+            return []
+        terrain = [[t for _h, t in row] for row in self.grid()]
+        doors = {d.at for d in self.doors}
+        exits = {c for e in self.exits for c in e.at}
+        owner: dict[XY, int] = {}
+        out: list[str] = []
+        for i, b in enumerate(self.buildings):
+            name = f"建築 {b.kind} {list(b.at)}"
+            cells = b.cells()
+            if any(not self.in_bounds(*c) for c in cells):
+                out.append(f"{name} 超出地圖範圍")
+                continue
+            out += [f"{name} 蓋到出口的 {list(c)}" for c in cells if c in exits]
+            out += [
+                f"{name} 的 {list(c)} 不是牆也不是門"
+                for c in cells
+                if c not in exits and c not in doors and terrain[c[1]][c[0]] != "wall"
+            ]
+            for c in cells:
+                if c in owner:
+                    out.append(f"{name} 與第 {owner[c] + 1} 棟建築在 {list(c)} 重疊")
+                    break
+                owner[c] = i
+        return out
+
 
 # ---------------------------------------------------------------------------
 # 跨檔案檢查
@@ -615,6 +709,7 @@ def field_map_report(
         if fields[map_id].is_capital:
             _safe_zone_problems(ctx, fields[map_id])
     _size_warnings(ctx, fields)
+    _building_warnings(ctx, fields)
     _stone_checks(ctx)
     return FieldMapReport(
         errors=tuple(sorted(ctx.errors)),
@@ -968,6 +1063,14 @@ def _interior_links(ctx: _Ctx, field: FieldMapDef) -> None:
 
 
 # ---- 數值類：尺寸、傳送石 ----
+
+
+def _building_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:
+    """不認得的建築外觀（前端退回 ``house``；6B-ART1）。"""
+    for map_id in sorted(fields):
+        for b in fields[map_id].buildings:
+            if b.kind not in BUILDING_KINDS:
+                ctx.warnings.append(f"實地地圖 {map_id}：建築外觀 {b.kind} 不認得（畫成 house）")
 
 
 def _size_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:

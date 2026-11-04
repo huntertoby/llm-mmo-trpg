@@ -3563,6 +3563,22 @@ export interface components {
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
+        /**
+         * FieldBuildingView
+         * @description 只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。
+         */
+        FieldBuildingView: {
+            /** Kind */
+            kind: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+        };
         /** FieldDoorView */
         FieldDoorView: {
             /** Id */
@@ -3798,6 +3814,8 @@ export interface components {
             x: number;
             /** Y */
             y: number;
+            /** Look */
+            look?: string | null;
         };
         /** FieldPositionView */
         FieldPositionView: {
@@ -4106,6 +4124,11 @@ export interface components {
              */
             footprints: components["schemas"]["FieldFootprintView"][];
             note_stone?: components["schemas"]["FieldNoteStoneView"] | null;
+            /**
+             * Buildings
+             * @default []
+             */
+            buildings: components["schemas"]["FieldBuildingView"][];
         };
         /**
          * FlashAction

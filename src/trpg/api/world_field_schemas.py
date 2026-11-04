@@ -17,6 +17,7 @@ from trpg.content.world_events import NpcPortrait
 from trpg.engine.view import AppearanceView
 
 __all__ = [
+    "FieldBuildingView",
     "FieldDoorView",
     "FieldEnemyUnitView",
     "FieldEnemyView",
@@ -78,6 +79,21 @@ class FieldObjectView(_ApiModel):
     kind: str
     x: int
     y: int
+    look: str | None = None
+    """只畫的家具外觀（6B-ART1：``barrel``、``bar``…）；規則照 ``kind``，沒有＝照 ``kind`` 畫。"""
+
+
+class FieldBuildingView(_ApiModel):
+    """只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。"""
+
+    kind: str
+    """``tavern``、``smithy``、``hall``、``house``、``scrap_house``、``forge_house``；前端不認得的畫成
+    ``house``。"""
+    x: int
+    y: int
+    """左上角。"""
+    width: int
+    height: int
 
 
 class FieldExitView(_ApiModel):
@@ -320,6 +336,8 @@ class FieldView(_ApiModel):
     """朋友的腳印（6C-5；室外圖，最多 3 位朋友）。"""
     note_stone: FieldNoteStoneView | None = None
     """留言石碑（6C-5；這個地點有留言時）。"""
+    buildings: tuple[FieldBuildingView, ...] = ()
+    """建築外觀（6B-ART1；只畫，依內容順序）。"""
 
 
 FieldNpcView.model_rebuild()
