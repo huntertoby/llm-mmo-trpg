@@ -19,7 +19,7 @@ import {
   viewToTile,
   visibleTiles,
 } from "./camera";
-import { fadedBlocks, HUD_BLOCKS, hudLayout, type Rect } from "./hud";
+import { fadedBlocks, HUD_BLOCKS, hudInsets, hudLayout, type Rect } from "./hud";
 
 const T = TILE_SIZE;
 
@@ -340,5 +340,54 @@ describe("排版煙霧（1040×624、800×600）", () => {
         if (mapName === "霧渡鎮") for (const id of HUD_BLOCKS) expect(overlaps(hero, layout.blocks[id]), id).toBe(false);
       });
     }
+  }
+});
+
+describe("6F-3：鏡頭避開 HUD（巡檢 bug 3）", () => {
+  const inside = (r: Rect, safe: Rect) =>
+    r.left >= safe.left - 0.5 && r.top >= safe.top - 0.5 && r.left + r.width <= safe.left + safe.width + 0.5 && r.top + r.height <= safe.top + safe.height + 0.5;
+
+  it("clampAxis：內容比安全區小在安全區置中；否則邊緣最多捲到安全區的邊", () => {
+    expect(clampAxis(600, 300, 0, 100, 50)).toBe(-(100 + (450 - 300) / 2));
+    // 內容 1000，主角在最下面（中心 990）：邊緣停在安全區下緣（可以捲過內容−可視區）
+    expect(clampAxis(600, 1000, 990, 80, 70)).toBe(1000 - 600 + 70);
+    expect(clampAxis(600, 1000, 10, 80, 70)).toBe(-80);
+    // 不扣 HUD 時同 6B-6
+    expect(clampAxis(600, 1000, 990)).toBe(400);
+    expect(clampAxis(600, 300, 0)).toBe(-150);
+  });
+
+  for (const [w, h] of [
+    [1600, 900],
+    [1040, 624],
+    [800, 600],
+  ] as const) {
+    it(`${w}×${h}：主角在任何一格都在安全區內，走到出口旁邊時出口也在`, () => {
+      const layout = hudLayout(w, h, { mates: 2, narrow: w < 900, collapsed: false });
+      const ins = hudInsets(layout, { width: w, height: h });
+      const safe: Rect = { left: ins.left, top: ins.top, width: w - ins.left - ins.right, height: h - ins.top - ins.bottom };
+      for (const id of ["hero", "bar", "minimap", "tracker"] as const) {
+        const b = layout.blocks[id];
+        expect(b.left + b.width <= safe.left || b.left >= safe.left + safe.width || b.top + b.height <= safe.top || b.top >= safe.top + safe.height).toBe(true);
+      }
+      for (const [mw, mh] of [
+        [24, 18],
+        [20, 12],
+        [32, 24],
+        [10, 8],
+      ] as const) {
+        for (let y = 0; y < mh; y += 1) {
+          for (let x = 0; x < mw; x += 1) {
+            const field = flat(mw, mh, {
+              me: { x, y },
+              exits: [{ id: "e", cells: [[mw - 1, y]], to: "t", to_name_zh: "外面" }],
+            } as Partial<FieldView>);
+            const cam = followCamera({ width: w, height: h }, field, { x, y }, FIELD_SCALE, ins);
+            expect(inside(tileViewRect(field, { x, y }, cam), safe)).toBe(true);
+            if (x >= mw - 2) expect(inside(tileViewRect(field, { x: mw - 1, y }, cam), safe)).toBe(true);
+          }
+        }
+      }
+    });
   }
 });

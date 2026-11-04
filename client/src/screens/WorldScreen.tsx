@@ -42,6 +42,7 @@ import {
   isNarrow,
   liveHudToasts,
   mateCards,
+  hudInsets,
   nextHudToastChange,
   NOT_OPEN_ZH,
   panelAvailable,
@@ -57,7 +58,7 @@ import {
 } from "../world/hud";
 import { useHudStage } from "../world/useHudStage";
 import { FieldObjectCard } from "../world/FieldThings";
-import { exitViewRects, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
+import { exitViewRects, FIELD_SCALE, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
 import { WorldBagScreen } from "../world/BagScreen";
@@ -700,7 +701,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     if (field == null) return null;
     const folded = trackerFolded || (narrow && !narrowOpen);
     const layout = hudLayout(stage.width, stage.height, { mates: mateCards(v).length, narrow, collapsed: folded });
-    const cam = fieldCam ?? followCamera(stage, field, field.me);
+    const insets = hudInsets(layout, stage); // 6F-3：鏡頭避開 HUD
+    const cam = fieldCam ?? followCamera(stage, field, field.me, FIELD_SCALE, insets);
     const faded = fadedBlocks(layout, exitViewRects(field, cam, stage));
     const hasCenter = v.encounter !== null || result !== null || v.event != null;
     const style = { height: stage.height, "--hud-s": layout.scale } as CSSProperties;
@@ -712,7 +714,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           send={sendField}
           commit={show}
           onInteract={interact}
-          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), onCamera: onFieldCamera }}
+          hud={{ width: stage.width, height: stage.height, frame: battleFrame(v), insets, onCamera: onFieldCamera }}
         />
         <WorldHud
           view={v}
