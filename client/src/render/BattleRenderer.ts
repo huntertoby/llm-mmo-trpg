@@ -1136,7 +1136,9 @@ export class BattleRenderer {
         if (facing !== draw.facing) sprite = this.turn(m.unitId, sprite, facing);
       }
       const now = this.effectClock;
-      const feet = () => ({ x: sprite.x, y: sprite.y + FEET });
+      // 重畫場景時小人可能已被銷毀：特效停在最後的位置（6N-8 dev 頁重畫時遇到）
+      let lastFeet = { x: sprite.x, y: sprite.y + FEET };
+      const feet = () => (sprite.destroyed ? lastFeet : (lastFeet = { x: sprite.x, y: sprite.y + FEET }));
       const fxs = (clipDef(clip).fx ?? []).map((c) =>
         cueEffect(c.kind, feet, "default", now + m.durationMs * c.from, now + m.durationMs * c.to, c.where === "link" ? { from: this.center(m.to), to: () => this.center(m.from) } : undefined),
       );
@@ -1161,6 +1163,7 @@ export class BattleRenderer {
         const route = m.route;
         const corners = route === "zigzag" ? [...ZIGZAG_CORNERS] : [];
         await this.during(m.durationMs, skip, (t) => {
+          if (sprite.destroyed) return;
           const p = lerpPos(a, b, t);
           const off = route === undefined ? 0 : routeOffset(route, t) * T;
           sprite.position.set(p.x + normal.x * off, p.y + normal.y * off);
@@ -1171,6 +1174,7 @@ export class BattleRenderer {
             this.launch([this.afterimage(m.unitId, sprite, this.effectClock, m.durationMs * 0.8)]);
           }
         });
+        if (sprite.destroyed) return;
         sprite.position.set(b.x, b.y);
         toRow(sprite)(1);
       } else {
