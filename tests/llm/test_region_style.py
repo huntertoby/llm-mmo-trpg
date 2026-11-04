@@ -190,3 +190,33 @@ def test_style_report_passes_and_fails() -> None:
     text = "\n".join(report_lines(report))
     assert "焚天訣" in text and "scarface" in text
     assert archaic_hits("焚天訣", archaic) == ["…訣"]
+
+
+def test_style_report_checks_text_fields_in_neutral_regions() -> None:
+    """6L-2 定稿（6L-1 待決 5）：中性區的古風詞檢查也看 concept、cast_flavor；雲嶺照舊可以用。"""
+    rules, archaic = load_style_eval(), RULES.archaic
+    rows = [
+        NameRow("capital", "晨光之盾", concept="運起真氣護住全身。"),
+        NameRow("ashen_waste", "焦土重擊", cast_flavor="老夫一錘砸下。"),
+        NameRow("cloud_ridge", "鶴影護雲", concept="氣沉丹田，雲氣護身。"),
+    ]
+    report = style_report(rows, [], rules, archaic)
+    assert not report.archaic_ok
+    assert {(r, n) for r, n, _ in report.neutral_archaic} == {
+        ("capital", "晨光之盾"),
+        ("ashen_waste", "焦土重擊"),
+    }
+    # 結尾規則（「某某訣」）只看名稱
+    assert style_report([NameRow("capital", "晨光", concept="一道口訣")], [], rules, archaic).passed
+
+
+def test_archaic_list_finalized() -> None:
+    """6L-2 定稿：清單 27 個（含「仙」「罡」）；「施主」任何區的名稱都不行；「訣」只有雲嶺可以。"""
+    assert len(RULES.archaic.terms) == 27
+    assert {"仙", "罡", "施主"} <= set(RULES.archaic.terms)
+    assert RULES.archaic.always == ("施主",)
+    assert RULES.archaic.suffixes == ("訣",)
+    assert "name_zh.archaic" in _codes(_text("施主之盾"), archaic_ok=True)
+    assert "name_zh.archaic" not in _codes(_text("風雷訣"), archaic_ok=True)
+    assert "name_zh.archaic" in _codes(_text("風雷訣"))
+    assert "cast_flavor.archaic" in _codes(_text("餘燼之箭", flavor="老夫出手。"))
