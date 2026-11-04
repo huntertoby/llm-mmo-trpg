@@ -54,6 +54,7 @@ import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_RISE_MAX } from "./uiAnim";
 import { FloatStack, groupRise, stackedY } from "./floatStack";
+import { clipHighlights, mapClipRect } from "./mapClip";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { devAnimFactor } from "../battle/playback";
 
@@ -246,6 +247,9 @@ export class BattleRenderer {
   private bobClock = 0;
   private readonly hover = new Container();
   private readonly effects = new Container();
+  /** 6F-6：地上的特效（範圍每格的爆發、光柱、扇形、目標格上的片段特效），用 `groundMask` 裁在地圖內。 */
+  private readonly groundFx = new Container();
+  private readonly groundMask = new Graphics();
   private effectList: Effect[] = [];
   /** 每一格還在播的浮動字（6F-6：新的一組接在舊的上面）。 */
   private readonly floatStack = new FloatStack();
@@ -318,7 +322,9 @@ export class BattleRenderer {
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
     stage.addChild(this.world);
-    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.effects);
+    // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
+    this.groundFx.mask = this.groundMask;
+    this.world.addChild(this.rows.root, this.marks, this.ambient.root, this.silhouettes, this.hover, this.groundMask, this.groundFx, this.effects);
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
@@ -421,6 +427,8 @@ export class BattleRenderer {
   private applySize(model: DrawModel): void {
     const size = stagePixels(model);
     this.worldBaseY = topReserve(model);
+    const clip = mapClipRect(model); // 6F-6：地上特效的裁切矩形
+    this.groundMask.clear().rect(clip.x, clip.y, clip.width, clip.height).fill({ color: 0xffffff });
     this.world.y = this.worldBaseY + this.cam.y;
     const resolution = (window.devicePixelRatio || 1) * this.scale;
     this.art.setScreenScale(resolution);
@@ -847,8 +855,9 @@ export class BattleRenderer {
     };
   }
 
-  setHighlights(h: Highlights): void {
+  setHighlights(all: Highlights): void {
     if (!this.ready) return;
+    const h = this.model === null ? all : clipHighlights(this.model, all); // 6F-6：範圍預覽不畫到地圖外
     clearLayer(this.marks);
     clearLayer(this.hover);
     const pen = this.markPen();
@@ -1415,7 +1424,9 @@ export class BattleRenderer {
       const link =
         c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: chest } : c.where === "linkOut" ? { from: chest(), to: () => (tc === null ? chest() : { x: tc.x, y: tc.y - T * 0.05 }) } : undefined;
       const e = cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link, r.icon);
-      return { ...e, motion: "fx" as const }; // 6R-F：減少動態時不畫
+      // 6R-F：減少動態時不畫；6F-6：落在目標格上的（光柱、地上的法陣…）裁在地圖內
+      const ground = c.where === "target" || c.where === "targetFeet";
+      return { ...e, motion: "fx" as const, ...(ground ? { clip: "map" as const } : {}) };
     });
   }
 
@@ -2103,7 +2114,7 @@ export class BattleRenderer {
   private launch(effects: readonly Effect[]): void {
     for (const e of reduceEffects(effects, this.reduced)) {
       // 6R-F：減少動態時閃白、震動、變暗、弧光殘影火花不播，身體片段直接跳到結果
-      this.effects.addChild(e.node);
+      (e.clip === "map" ? this.groundFx : this.effects).addChild(e.node);
       this.effectList.push(e);
     }
     this.ensureEffectTick();

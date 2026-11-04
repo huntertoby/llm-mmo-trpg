@@ -7,7 +7,10 @@ import { downedLook } from "../render/unitLook";
 import { buildDrawModel, showsRevivable } from "./drawModel";
 import { feedbackFor, immobilityOf, WORD_DODGE, WORD_MISS, type FloatItem } from "./feedback";
 import { smallView, unit } from "./testFixtures";
-import { vfxFor } from "./vfx";
+import { vfxFor, type VfxCast } from "./vfx";
+import { clipHighlights, mapClipRect } from "../render/mapClip";
+import { castEffects } from "../render/vfxEffects";
+import { tileLift } from "./elevation";
 
 /** 兩個字（中心 y、高度）的外框不重疊。 */
 const apart = (a: { y: number; h: number }, b: { y: number; h: number }) => Math.abs(a.y - b.y) >= (a.h + b.h) / 2;
@@ -142,5 +145,66 @@ describe("6F-6 the revive heart only on our own downed units", () => {
     const flipped = smallView({ units: [unit("h", "enemy", 0, 0), unit("a", "enemy", 1, 0, { downed: true, revivable: true }), unit("b", "ally", 2, 0, { downed: true, revivable: true })] });
     expect(showsRevivable(flipped, flipped.units[1]!, "h")).toBe(true);
     expect(showsRevivable(flipped, flipped.units[2]!, "h")).toBe(false);
+  });
+});
+
+describe("6F-6 area previews and ground effects stay inside the map", () => {
+  const grid = { width: 4, height: 3 };
+  const P = (x: number, y: number) => ({ x, y });
+
+  it("tiles outside the map are not highlighted (moves, targets, area, range, directions, telegraph)", () => {
+    const h = clipHighlights(grid, {
+      moves: [P(0, 0), P(-1, 0)],
+      attacks: [P(3, 2), P(4, 2)],
+      preview: [P(0, -1), P(1, 0), P(2, 3)],
+      picked: [P(9, 9)],
+      directions: [{ pos: P(0, -1), arrow: "↑" }],
+      telegraph: [{ pos: P(1, 1) }, { pos: P(1, 5) }],
+      range: [P(-1, -1), P(2, 2)],
+      focus: null,
+    });
+    expect(h.moves).toEqual([P(0, 0)]);
+    expect(h.attacks).toEqual([P(3, 2)]);
+    expect(h.preview).toEqual([P(1, 0)]);
+    expect(h.picked).toEqual([]);
+    expect(h.directions).toEqual([]);
+    expect(h.telegraph).toEqual([{ pos: P(1, 1) }]);
+    expect(h.range).toEqual([P(2, 2)]);
+    expect(h.focus).toBeNull();
+  });
+
+  it("the clip rect is the map: flat from y 0; a raised tile in the first row lifts the top edge", () => {
+    expect(mapClipRect({ width: 4, height: 3, tiles: [] })).toEqual({ x: 0, y: 0, width: 4 * 48, height: 3 * 48 });
+    const tiles = Array.from({ length: 12 }, (_, i) => ({ height: i === 2 ? 2 : i === 5 ? 9 : 0 }));
+    const r = mapClipRect({ width: 4, height: 3, tiles });
+    expect(r.y).toBe(-tileLift(2)); // 只看第一排；第二排更高的格子不把上緣往上推
+    expect(r.y + r.height).toBe(3 * 48);
+  });
+
+  const cast = (kind: VfxCast["kind"], element = "holy"): VfxCast => ({
+    kind,
+    element,
+    from: P(0, 3),
+    to: P(0, 0),
+    tiles: [P(0, 0), P(1, 0), P(0, 1)],
+    path: [P(0, 3), P(0, 0)],
+    ranged: true,
+    intensity: 1,
+    crit: false,
+    charge: true,
+    legendary: false,
+    chargeMs: 100,
+    startMs: 0,
+    impactMs: 200,
+  });
+
+  it("area bursts (with the holy column) and cones are ground effects; charge, projectile and slash are not", () => {
+    const area = castEffects(cast("area"), 0, 100);
+    expect(area.filter((e) => e.clip === "map").length).toBe(3); // 每格一個爆發
+    expect(area.filter((e) => e.clip !== "map").length).toBe(3 + 1); // 每格的格子閃光（在格內）＋蓄力
+    expect(castEffects(cast("cone"), 0, 100).filter((e) => e.clip === "map").length).toBe(1 + 3);
+    const proj = castEffects(cast("projectile"), 0, 100);
+    expect(proj.map((e) => e.clip ?? "none")).toEqual(["none", "none", "map"]); // 蓄力、飛行物不裁；落點的爆發裁
+    expect(castEffects({ ...cast("slash"), tiles: [P(0, 0)] }, 0, 100)[1]?.clip).toBeUndefined();
   });
 });
