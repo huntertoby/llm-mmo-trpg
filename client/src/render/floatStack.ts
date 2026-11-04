@@ -77,3 +77,31 @@ export function groupRise(p: number, delayFrac: number, riseMax: number): number
   const g = delayFrac + q * (1 - delayFrac);
   return Math.min(1, g * 1.5) * riseMax;
 }
+
+// ---- 6F-10：浮動字不超出戰場（美術 PM 6F-9 檢查第 2 節第 2 點：「撞擊！」被戰場左緣切掉） ----
+
+/** 畫布上看得到的範圍（世界座標）：左、上、右、下。 */
+export interface FloatBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/** 字的外框（含黑邊）離戰場邊緣至少幾 px。 */
+export const FLOAT_EDGE_PAD = 2;
+
+function clampAxis(c: number, half: number, lo: number, hi: number, pad: number): number {
+  if (!(hi > lo)) return c;
+  // 字比戰場還寬／高時放在正中間（兩邊一樣多，不會只切一邊）
+  if (half * 2 + pad * 2 >= hi - lo) return (lo + hi) / 2;
+  return Math.min(Math.max(c, lo + half + pad), hi - half - pad);
+}
+
+/**
+ * 浮動字中心的位置，往內推到整個字（`halfW`、`halfH` ＝ 這一幀的半寬、半高，含彈一下的放大與黑邊）都在 `b` 裡，
+ * 四個邊都一樣；靠邊的單位頭上的字往內推，其他的不動。每一幀照當下的大小算（彈一下時比停住時大）。
+ */
+export function clampFloatCenter(x: number, y: number, halfW: number, halfH: number, b: FloatBounds, pad = FLOAT_EDGE_PAD): { x: number; y: number } {
+  return { x: clampAxis(x, halfW, b.left, b.right, pad), y: clampAxis(y, halfH, b.top, b.bottom, pad) };
+}
