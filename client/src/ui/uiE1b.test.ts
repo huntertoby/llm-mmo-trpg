@@ -231,7 +231,8 @@ describe("3. 飾件不能壓到內容（通用規則，不分框的大小）", (
     expect(smoke).toMatch(/function stageRows[\s\S]*?cornerRow\(stage, scanCornerIssues\(doc, win\), doc\)/);
     expect(smoke).toMatch(/export async function runCase[\s\S]*?cornerRow\("戰鬥", scanCornerIssues\(document, window\), document\)/);
     expect(smoke).toContain("corners: () => scanCornerIssues(win.document, win)");
-    expect(smoke).toMatch(/querySelectorAll\("\.rt-frame"\)/);
+    expect(smoke).toContain('const CORNER_FRAMES = ".rt-frame, .entry-skin .panel";');
+    expect(smoke).toContain("doc.querySelectorAll(CORNER_FRAMES)");
   });
 });
 

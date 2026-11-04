@@ -277,6 +277,9 @@ function overlapIssues(doc: Document, win: Window): string[] {
   return out;
 }
 
+/** 畫四角飾件的框。 */
+const CORNER_FRAMES = ".rt-frame, .entry-skin .panel";
+
 /** 會被飾件壓到就算出事的內容（文字另外用 Range 量）：按鈕、輸入框、圖示、資源條。 */
 const CORNER_CONTENT = "button, input, select, textarea, canvas, img, svg, .world-hud-bar, progress, meter";
 
@@ -337,8 +340,10 @@ function cornerItems(frame: Element, win: Window): CornerItem[] {
 export function scanCornerIssues(doc: Document, win: Window): string[] {
   const out: string[] = [];
   const px = (v: string): number => Number.parseFloat(v) || 0;
-  for (const frame of doc.querySelectorAll(".rt-frame")) {
-    if (!isShown(frame, win)) continue;
+  // 入口畫面上的舊 .panel 也畫四角飾件（entry.css 的 .entry-skin .panel::after；彈窗裡的 .panel 不畫）
+  for (const frame of doc.querySelectorAll(CORNER_FRAMES)) {
+    const after = win.getComputedStyle(frame, "::after");
+    if (!isShown(frame, win) || after.content === "none" || after.backgroundImage === "none") continue; // 沒畫飾件的框不量
     const cs = win.getComputedStyle(frame);
     const rect = frame.getBoundingClientRect();
     // HUD 整塊用 transform 縮放（--hud-s）：飾件跟著縮放，邊框、邊長、內距都乘同一個倍數
@@ -502,7 +507,7 @@ async function unhover(doc: Document, selector: string, index = 0): Promise<void
 
 /** 飾件不壓內容的一列（UI-E1b）。 */
 function cornerRow(stage: string, corners: readonly string[], doc: Document): CheckResult {
-  const frames = doc.querySelectorAll(".rt-frame").length;
+  const frames = doc.querySelectorAll(CORNER_FRAMES).length;
   return result(`${stage}/corners`, `${stage}：四角飾件沒有壓到內容`, corners.length === 0, corners.length === 0 ? `${frames} 個框` : corners.join("；"));
 }
 
