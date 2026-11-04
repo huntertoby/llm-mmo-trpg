@@ -138,7 +138,8 @@ class PathEvent:
     surface: Surface | None = None
     pos: XY | None = None
     amount_min: int | None = None
-    """傷害的最小值；只在最多後果的模擬出現（例如藉機攻擊命中才會受傷）時為 ``None``。"""
+    """傷害的最小值；只在最少後果以外的一個分支出現（例如藉機攻擊命中才會受傷）時為 ``None``
+    （之後的分支也有時取那個分支的值，6R-P）。"""
     amount_max: int | None = None
     chance: Fraction | None = None
     """``slip_check`` 的失敗機率（精確計算，不擲骰）。"""
@@ -255,7 +256,18 @@ def preview_path(
             for i in range(len(requested))
         )
         return PathPreview(
-            unit_id, requested, 0, False, reason, steps, unit.xy, unit.xy, True, 0, (), (unit.xy,)
+            unit_id=unit_id,
+            path=requested,
+            legal_length=0,
+            reachable=False,
+            reason=reason,
+            steps=steps,
+            stop=unit.xy,
+            worst_stop=unit.xy,
+            certain=True,
+            move_cost=0,
+            slip_runs=(),
+            stops=(unit.xy,),
         )
     move = Move(unit_id=unit_id, path=path[:legal])
     low, high = simulate_preview(seen, move)
@@ -556,7 +568,14 @@ def _step(
 ) -> PathStep:
     xy = path[index]
     surface = state.tile(*xy).surface if state.in_bounds(*xy) else Surface.NONE
-    return PathStep(xy, index, surface, xy in traps, outcome[0], outcome[1])
+    return PathStep(
+        pos=xy,
+        index=index,
+        surface=surface,
+        trap=xy in traps,
+        reach=outcome[0],
+        events=outcome[1],
+    )
 
 
 # ---------------------------------------------------------------------------
