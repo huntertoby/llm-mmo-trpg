@@ -178,9 +178,24 @@ export function drawLavaBase(ctx: Ctx, s: TileArtSpec, salt: number, tone = 1): 
     ctx.bezierCurveTo(x0 - 6, y0 - 5, x0 + 2, y0 + 5, x0 + 12, y0 - 2);
     ctx.stroke();
   }
-  // 岩殼塊：2～3 片固定的（漂移的另一層另畫）
+  // 岩殼塊：2～3 片固定的小板塊（漂移的另一層另畫），再 2 道黑色裂紋線
   const crusts = 2 + Math.floor(r() * 2);
-  for (let i = 0; i < crusts; i++) crustPlate(ctx, 8 + r() * (T - 16), 8 + r() * (T - 16), 5 + r() * 5, r, rgba(LAVA.crust, 0.85), rgba(LAVA.crustEdge, 0.9));
+  for (let i = 0; i < crusts; i++) crustPlate(ctx, 8 + r() * (T - 16), 8 + r() * (T - 16), 4 + r() * 4, r, rgba(LAVA.crust, 0.8), rgba(LAVA.crustEdge, 0.85));
+  ctx.strokeStyle = rgba(LAVA.crustEdge, 0.7);
+  ctx.lineWidth = 1.3;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 2; i++) {
+    let px = r() * T;
+    let py = r() * T;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    for (let k = 0; k < 3; k++) {
+      px += (r() - 0.5) * 16;
+      py += (r() - 0.5) * 16;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
   if (s.lip.n) cooledRim(ctx, r, "n");
   if (s.lip.s) cooledRim(ctx, r, "s");
   if (s.lip.w) cooledRim(ctx, r, "w");

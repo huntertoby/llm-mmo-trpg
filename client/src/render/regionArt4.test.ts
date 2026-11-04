@@ -310,4 +310,4 @@ describe("6Q-1：主城石板的金色嵌線", () => {
 
 // 6A-4a：拿掉格線、表面改併塊畫法，預設輸出跟著變（刻意更新）
 // 6V-2：預設的雲海（chasm）、熔岩（lava）與水面換了畫法，雜湊更新（之前 1837b83c）。
-const DEFAULT_DIGEST = "264f43a6";
+const DEFAULT_DIGEST = "6aa45e1d";
