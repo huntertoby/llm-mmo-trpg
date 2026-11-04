@@ -1,6 +1,6 @@
 // 大世界的介面音（AU-2；docs/art/音效與音樂方案.md 2.2）：只看前後兩次伺服器畫面的差，不改任何東西。
 // 一次更新只放一聲（優先：升級 → 任務完成 → 任務更新 → 拿到物品 → 金幣）；換角色時不出聲。
-// 等待伺服器（說書人／LLM）超過一下子時，每隔一段時間放很輕的墨痕筆刷聲。
+// 等待聲（RT-3 起）改由等待動畫 `ui/WaitScene.tsx` 依場合放（`audio/waitSounds.ts`），這裡不再管。
 import { useEffect, useRef } from "react";
 import type { WorldView } from "../api/types";
 import { useWorldAmbience } from "../audio/scene";
@@ -45,21 +45,3 @@ export function useWorldSounds(view: WorldView | null): void {
   }, [view]);
 }
 
-/** 等待超過這麼久才開始放墨痕聲（毫秒；一般動作很快就回來，不出聲）。 */
-export const INK_WAIT_DELAY_MS = 700;
-export const INK_WAIT_EVERY_MS = 1600;
-
-export function useInkWaitSound(busy: boolean): void {
-  useEffect(() => {
-    if (!busy) return undefined;
-    let every: number | undefined;
-    const first = window.setTimeout(() => {
-      uiSound("ui_ink_wait");
-      every = window.setInterval(() => uiSound("ui_ink_wait"), INK_WAIT_EVERY_MS);
-    }, INK_WAIT_DELAY_MS);
-    return () => {
-      window.clearTimeout(first);
-      if (every !== undefined) window.clearInterval(every);
-    };
-  }, [busy]);
-}

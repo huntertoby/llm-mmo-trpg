@@ -23,7 +23,7 @@ const none: ElLike = { tagName: "DIV", textContent: "", getAttribute: () => null
 
 describe("介面音清單（2.2）", () => {
   it("20 個介面音都在參數表裡", () => {
-    expect(UI_SOUNDS).toHaveLength(20);
+    expect(UI_SOUNDS).toHaveLength(22);
     for (const id of UI_SOUNDS) expect(SFX_TABLE.defs[id]?.cat, id).toBe("ui");
   });
 });

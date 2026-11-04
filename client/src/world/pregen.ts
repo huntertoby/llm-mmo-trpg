@@ -19,3 +19,8 @@ export function pregenWaitBody(action: WorldAction): PregenWaitRequest | null {
 export function pregenWaitText(body: PregenWaitRequest): string {
   return body.kind === "flash" ? "說書人正在構思這招的變化……" : "說書人正在構思這份機遇……";
 }
+
+/** 等待動畫（RT-3 技能生成）的請求編號：同一個請求每次挑到同一句、同一個圖樣。 */
+export function pregenRequestId(body: PregenWaitRequest): string {
+  return body.kind === "flash" ? `flash:${body.skill ?? ""}:${body.slot ?? ""}:${body.category ?? ""}` : `opportunity:${body.solution ?? ""}`;
+}

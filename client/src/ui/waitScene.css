@@ -1,0 +1,102 @@
+/* 等待動畫（RT-3）：C 羽毛筆羊皮紙。技能生成、事件判定、多講一點：圖在上（或左）、句子在下；NPC 聊天：泡泡＋一行小字。 */
+.wait-scene {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ui-text, #e8e4d8);
+}
+
+.wait-canvas {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.wait-scene.wait-skill {
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.wait-scene.wait-judge,
+.wait-scene.wait-retell {
+  flex-direction: row;
+}
+
+.wait-scene.wait-npc {
+  gap: 6px;
+  font-size: 12px;
+}
+
+.wait-text {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wait-line {
+  display: block;
+  font-family: "Noto Serif TC", serif;
+  line-height: 1.5;
+  animation: wait-line-in 0.4s ease-out;
+}
+
+.wait-line.long {
+  color: var(--ui-gold, #e8bb48);
+}
+
+.wait-scene[data-status="fail"] .wait-line {
+  color: #b8b4ac;
+}
+
+.wait-scene.wait-npc .wait-line {
+  color: var(--ui-text-dim, #b8b2a2);
+}
+
+@keyframes wait-line-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* 減少動態：句子照常換，但不淡入淡出（等待動畫.md 第 4 節） */
+.wait-scene.still .wait-line {
+  animation: none;
+}
+
+:root[data-reduced-motion="true"] .wait-line {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduced-motion="false"]) .wait-line {
+    animation: none;
+  }
+}
+
+/* 技能生成的等待彈窗：動畫置中 */
+.pregen-wait-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 事件判定：說書人對話框右邊 */
+.world-situation-wait {
+  display: flex;
+  justify-content: flex-end;
+  margin: 6px 0;
+}
+
+/* NPC 聊天：對話紀錄最後一列 */
+.world-chat-log li.waiting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

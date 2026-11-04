@@ -24,9 +24,9 @@ def _table(**layer: Any) -> dict[str, Any]:
 def test_the_table_loads() -> None:
     table = load_content_file(SFX_FILE, SfxTable)
     ui = [i for i, d in table.sfx.items() if d.cat == "ui"]
-    assert len(ui) == 20
+    assert len(ui) == 22
     assert len(table.sfx) >= 70
-    assert "介面音 20 個" in table.summary()
+    assert "介面音 22 個" in table.summary()
 
 
 def test_every_block_is_used() -> None:
