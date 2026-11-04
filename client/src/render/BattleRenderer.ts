@@ -51,7 +51,7 @@ import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
-import { floatFrame } from "./uiAnim";
+import { BIG_REST, floatFit, floatFontSize, floatFrame } from "./uiAnim";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { devAnimFactor } from "../battle/playback";
 
@@ -2037,12 +2037,14 @@ export class BattleRenderer {
     const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
     const big = item.kind === "float" && item.big;
     const node = new Container();
-    const t = label(text, big ? 30 : 20, color, true);
+    const t = label(text, floatFontSize(big), color, true);
     t.anchor.set(0.5);
     t.style.stroke = { color: 0x000000, width: 4 };
     node.addChild(t);
+    // 6N-6：放大字（暴擊）停住時 ＝ 一般字 1.3 倍，整串不超過格寬 1.8 倍
+    const fit = floatFit(t.width, T, big);
     const baseY = c.y - T * 0.3 - item.slot * 22;
-    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), t.width / 2), baseY);
+    node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), (t.width * fit * (big ? BIG_REST : 1)) / 2), baseY);
     node.alpha = 0;
     if (isStatus) {
       // 狀態：格子先閃一圈光環
@@ -2058,7 +2060,7 @@ export class BattleRenderer {
         const f = floatFrame(p, big, this.reduced);
         node.alpha = f.alpha;
         node.position.y = baseY - f.rise;
-        node.scale.set(f.scale);
+        node.scale.set(f.scale * fit);
       },
     };
   }

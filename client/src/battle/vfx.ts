@@ -3,7 +3,7 @@
 // 卡片缺少或形狀不認得時，改由 `skill_used.tiles` 的幾何推斷，再不行用通用預設。
 // 畫布（`render/BattleRenderer.ts` 的 `playVfx`）只負責照描述畫出來；時間在 `playback.ts` 依播放速度縮放。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
-import { areaCenter } from "./feedback";
+import { areaCenter, immobileIn } from "./feedback";
 import { samePos } from "./geometry";
 import type { ArcSpec } from "../render/attackVariants";
 import { dodgeSide } from "../render/reactClips";
@@ -206,7 +206,7 @@ function addReact(list: RawReact[], r: RawReact): void {
 }
 
 /** 事件 → 受擊者的反應（只讀事件欄位）。不是反應事件、或找不到人時 `null`。 */
-export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number, battleKey = ""): RawReact | null {
+export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (id: string) => number, battleKey = "", immobile: (id: unknown) => boolean = () => false): RawReact | null {
   const seq = typeof e.seq === "number" ? e.seq : 0;
   if (e.type === "damage_dealt") {
     const id = typeof e.target_id === "string" ? e.target_id : null;
@@ -219,7 +219,8 @@ export function reactOf(e: EventBase, at: (id: unknown) => Pos | null, maxHp: (i
     const heavy = max > 0 && lost * 1000 >= max * HEAVY_HIT_PERMILLE;
     return { unitId: id, pos, kind: block ? "block" : heavy ? "heavy" : "hit", seq };
   }
-  if (e.type === "attack_rolled" && e.hit === false) {
+  // 6N-6：目標不能動（冰凍、暈眩、倒地、定身）時沒打中不播閃避片段
+  if (e.type === "attack_rolled" && e.hit === false && !immobile(e.target_id)) {
     const id = typeof e.target_id === "string" ? e.target_id : null;
     const pos = at(e.target_id);
     return id === null || pos === null ? null : { unitId: id, pos, kind: "dodge", seq, side: dodgeSide(battleKey, seq, id) };
@@ -516,6 +517,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
   const hpMax = new Map(view.units.map((u) => [u.id, u.max_hp]));
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
   const maxHp = (id: string) => hpMax.get(id) ?? 0;
+  const immobile = immobileIn(view);
   const segments: Segment[] = [];
   const loose: VfxHit[] = [];
   const looseReacts: RawReact[] = [];
@@ -524,7 +526,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
   for (const raw of events) {
     const e = asEvent(raw);
     // 戰鬥鍵：戰鬥畫面資料裡同一場戰鬥不變的地圖 ID（沒有戰鬥 ID；見 6N-4 報告）
-    const react = reactOf(e, at, maxHp, view.map_id ?? "");
+    const react = reactOf(e, at, maxHp, view.map_id ?? "", immobile);
     if (e.type === "rune_removed" && e.reason === "detonated") {
       const pos = posOf(e.pos);
       if (pos !== null) blasts.push({ pos, element: typeof e.element === "string" ? e.element : DEFAULT_VFX_KEY, atMs: 0 });
