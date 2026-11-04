@@ -142,6 +142,11 @@ function tent(ctx: Ctx, s: BuildingSpec): void {
   const foot = H * U - 6;
   const peak = Math.max(10, H * U - (s.h + 0.6) * U);
   const cx = W / 2;
+  // 帳篷底下踩平的地面：蓋住整個範圍（底下的牆格不露出來）
+  const ground = roofRows(s) * U;
+  box(ctx, 0, ground, W, H * U - ground, "#a88a5e", "rgba(60,40,20,0.6)", 1.2, 4);
+  ctx.fillStyle = "rgba(255,240,200,0.12)";
+  for (let x = 10; x < W - 6; x += 16) ctx.fillRect(x, ground + 4, 6, H * U - ground - 8);
   shadow(ctx, cx + 6, foot, W / 2 - 2, 8, 0.35);
   ctx.beginPath();
   ctx.moveTo(6, foot);

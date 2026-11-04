@@ -83,11 +83,17 @@ export class SceneryLayer {
    */
   private drawPlaza(host: SceneryHost, model: DrawModel, plaza: PlazaScene): void {
     const half = (PORTAL_TILES - 1) / 2;
-    const top = Math.max(0, plaza.y - half);
-    const ring = this.sprite(host, `portal|${plaza.open.join(".")}`, PORTAL_TILES, PORTAL_TILES, (ctx) => drawPortalRing(ctx, plaza.open));
-    if (ring !== null) {
-      host.rows.row(top).deco.addChild(ring);
-      host.place(ring, { x: plaza.x, y: top }, (plaza.x - half) * T, (plaza.y - half) * T);
+    // 光圈切成一列一條，各放進自己那一排的裝飾層（地形逐排畫，整張放在最上排會被下面幾排的地形蓋住）
+    for (let k = 0; k < PORTAL_TILES; k++) {
+      const row = plaza.y - half + k;
+      if (row < 0 || row >= model.height) continue;
+      const strip = this.sprite(host, `portal|${plaza.open.join(".")}|${k}`, PORTAL_TILES, 1, (ctx) => {
+        ctx.translate(0, -k * ART_T);
+        drawPortalRing(ctx, plaza.open);
+      });
+      if (strip === null) continue;
+      host.rows.row(row).deco.addChild(strip);
+      host.place(strip, { x: plaza.x, y: row }, (plaza.x - half) * T, row * T);
     }
     const at = { x: plaza.x, y: plaza.y };
     const pillar = this.sprite(host, "portal_pillar", 1, 2, (ctx) => drawPortalPillar(ctx));
