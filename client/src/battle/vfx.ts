@@ -6,6 +6,7 @@ import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } fr
 import { areaCenter, immobileIn } from "./feedback";
 import { samePos } from "./geometry";
 import type { ArcSpec } from "../render/attackVariants";
+import type { FxLook } from "../render/skillVariants";
 import { dodgeSide, reactVariant } from "../render/reactClips";
 import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
 
@@ -101,6 +102,8 @@ export interface VfxCast {
   impactMs: number;
   /** 近身弧光的形狀與方向（6N-6：普攻挑到的變體，`skillTimeline` 填）；沒有＝由上往下（原本的弧）。 */
   arc?: ArcSpec;
+  /** 技能變體的特效層（6N-8：飛行物軌跡、爆發形狀、粒子分布，`skillTimeline` 填）；沒有＝原本的直線、圓形閃光、均勻粒子。 */
+  look?: FxLook;
 }
 
 export interface VfxHit {

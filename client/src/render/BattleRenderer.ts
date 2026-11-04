@@ -88,7 +88,8 @@ import { DUST_FROM, gaitPose, HUMAN_HIT_MS, humanHit, knockOffset, legFrame, pro
 import { beatEffects, landingDust } from "./walkFx";
 import { FEET, gripOf } from "./unitSprite";
 import type { SkillRow } from "../battle/skillSequence";
-import { anchorPoint, clipDef, clipFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
+import { anchorPoint, clipDef, clipFrame, clipHitFrame, recoverFrame, weaponClassOf, type Anchor, type ClipFrame, type FxCue, type WeaponClass } from "./skillClips";
+import { leapShape, routeOffset, ZIGZAG_CORNERS } from "./skillVariants";
 import { attackFamilyOf, type AttackFamily } from "./attackVariants";
 import { cueEffect } from "./skillFx";
 import { weaponFrame } from "./inkWeaponFrame";
@@ -1135,24 +1136,45 @@ export class BattleRenderer {
         if (facing !== draw.facing) sprite = this.turn(m.unitId, sprite, facing);
       }
       const now = this.effectClock;
-      const feet = () => ({ x: sprite.x, y: sprite.y + FEET });
+      // 重畫場景時小人可能已被銷毀：特效停在最後的位置（6N-8 dev 頁重畫時遇到）
+      let lastFeet = { x: sprite.x, y: sprite.y + FEET };
+      const feet = () => (sprite.destroyed ? lastFeet : (lastFeet = { x: sprite.x, y: sprite.y + FEET }));
       const fxs = (clipDef(clip).fx ?? []).map((c) =>
         cueEffect(c.kind, feet, "default", now + m.durationMs * c.from, now + m.durationMs * c.to, c.where === "link" ? { from: this.center(m.to), to: () => this.center(m.from) } : undefined),
       );
       if (m.style === "fade") fxs.push(...warpEffects(warpPlan(m), now, (p) => this.center(p)));
       this.launch(fxs);
-      const frame = (t: number) => this.poseClip(m.unitId, sprite, clipFrame(clip, t));
+      // 6N-8：跳躍的弧度（低弧＝原本、高弧、空翻）只改離地高度與身體的旋轉
+      const frame = (t: number) => {
+        const f = clipFrame(clip, t);
+        if (m.hop === undefined) return this.poseClip(m.unitId, sprite, f);
+        const hop = leapShape(m.hop, t);
+        this.poseClip(m.unitId, sprite, { ...f, air: f.air * hop.airScale });
+        if (hop.spin !== 0) this.spinBody(sprite, hop.spin * (draw.facing === "west" ? -1 : 1));
+      };
       frame(0);
       toRow(sprite)(0);
       if (m.style === "slide") {
         const a = this.center(m.from);
         const b = this.center(m.to);
+        // 6N-8：衝刺的路線（直線、略彎、Z 字殘影）：往旁邊偏移，兩頭為 0，終點照舊是目標格
+        const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        const normal = { x: -(b.y - a.y) / len, y: (b.x - a.x) / len };
+        const route = m.route;
+        const corners = route === "zigzag" ? [...ZIGZAG_CORNERS] : [];
         await this.during(m.durationMs, skip, (t) => {
+          if (sprite.destroyed) return;
           const p = lerpPos(a, b, t);
-          sprite.position.set(p.x, p.y);
+          const off = route === undefined ? 0 : routeOffset(route, t) * T;
+          sprite.position.set(p.x + normal.x * off, p.y + normal.y * off);
           toRow(sprite)(t);
           frame(t);
+          while (corners.length > 0 && t >= corners[0]!) {
+            corners.shift();
+            this.launch([this.afterimage(m.unitId, sprite, this.effectClock, m.durationMs * 0.8)]);
+          }
         });
+        if (sprite.destroyed) return;
         sprite.position.set(b.x, b.y);
         toRow(sprite)(1);
       } else {
@@ -1172,6 +1194,43 @@ export class BattleRenderer {
       node.x = off.x;
       node.y += off.y;
     }
+  }
+
+  /** 6N-8 空翻：小人以腰（腳底往上 16 個虛擬像素）為軸轉 `angle`（順時針為正）；`restBody` 會轉回來。 */
+  private spinBody(sprite: Container, angle: number): void {
+    const h = 16 * DOLL_PX;
+    for (const node of bodyNodes(sprite)) {
+      node.rotation = angle;
+      node.x += -h * Math.sin(angle);
+      node.y += h * Math.cos(angle) - h;
+    }
+  }
+
+  /** 6N-8 Z 字衝刺的殘影：在當下的位置留一張同樣的小人（偏藍、半透明），淡掉（只在效果圖層）。 */
+  private afterimage(unitId: string, sprite: Container, now: number, ms: number): Effect {
+    const node = new Container();
+    const body = bodyNodes(sprite).find((n) => n.label === BODY_LABEL);
+    const key = `afterimage:${unitId}:${Math.round(now)}`;
+    if (body !== undefined) {
+      const ghost = new Sprite(body.texture);
+      this.art.holdFor(key, body.texture); // 殘影用的貼圖釘住（重畫場景時不被銷毀）
+      ghost.anchor.copyFrom(body.anchor);
+      ghost.scale.copyFrom(body.scale);
+      ghost.tint = 0xcfe6ff;
+      ghost.position.set(sprite.x + body.x, sprite.y + body.y);
+      node.addChild(ghost);
+    }
+    return {
+      node,
+      startMs: now,
+      endMs: now + Math.max(1, ms),
+      update: (t) => {
+        node.alpha = 0.55 * (1 - t);
+      },
+      end: () => {
+        this.art.holdFor(key, null);
+      },
+    };
   }
 
   /** 施放者的武器種類（起手對照表的列；6N-1）。沒有骨架的單位當空手。 */
@@ -1231,7 +1290,7 @@ export class BattleRenderer {
       if (!r.recover) effects.push(...this.rowCues(r, now));
       if (r.strike && r.hitMs !== null) {
         const def = clipDef(r.clip);
-        const o = this.anchorWorld(r.unitId, clipFrame(r.clip, def.hitAt ?? 0.5), def.anchor);
+        const o = this.anchorWorld(r.unitId, clipHitFrame(r.clip), def.anchor);
         if (o !== null) origins.set(r.cast, o);
       }
     }
@@ -2043,25 +2102,43 @@ export class BattleRenderer {
     node.addChild(t);
     // 6N-6：放大字（暴擊）停住時 ＝ 一般字 1.3 倍，整串不超過格寬 1.8 倍
     const fit = floatFit(t.width, T, big);
-    // 6N-7：浮動字從單位頭頂往上冒（`unitTopY`，同 6N-4／6C-8b）；狀態字（＋狀態、帶光環）照舊
-    const baseY = isStatus ? c.y - T * 0.3 - item.slot * 22 : floatBaseY(c.y, this.floatTopY(item.pos), t.height * fit * (big ? BIG_REST : 1), item.slot, -this.worldBaseY);
+    // 6N-7：浮動字從單位頭頂往上冒（`unitTopY`，同 6N-4／6C-8b）；6N-8：狀態字（＋狀態）也一樣，光環另外畫
+    const baseY = floatBaseY(c.y, this.floatTopY(item.pos), t.height * fit * (big ? BIG_REST : 1), item.slot, -this.worldBaseY);
     node.position.set(this.clampFloatX(c.x + (isStatus ? T * 0.12 : 0), (t.width * fit * (big ? BIG_REST : 1)) / 2), baseY);
     node.alpha = 0;
-    if (isStatus) {
-      // 狀態：格子先閃一圈光環
-      const ring = new Graphics().circle(0, T * 0.3, T * 0.4).stroke({ width: 3, color: STATUS_COLOR });
-      node.addChildAt(ring, 0);
+    if (!isStatus) {
+      return {
+        node,
+        startMs: now + delay,
+        endMs: now + durationMs,
+        update: (p) => {
+          // 6N-10：彈一下再淡出（暴擊放大）；減少動態時直接顯示
+          const f = floatFrame(p, big, this.reduced);
+          node.alpha = f.alpha;
+          node.position.y = baseY - f.rise;
+          node.scale.set(f.scale * fit);
+        },
+      };
     }
+    // 狀態：格子先閃一圈光環（6N-8 拆成自己的節點，位置、動態照 6N-7 以前：中心在格中心、跟著字的節奏往上飄一點）
+    const ringY = c.y - T * 0.3 - item.slot * 22;
+    const ring = new Graphics().circle(0, T * 0.3, T * 0.4).stroke({ width: 3, color: STATUS_COLOR });
+    ring.position.set(this.clampFloatX(c.x + T * 0.12, (t.width * fit) / 2), ringY);
+    ring.alpha = 0;
+    const both = new Container();
+    both.addChild(ring, node);
     return {
-      node,
+      node: both,
       startMs: now + delay,
       endMs: now + durationMs,
       update: (p) => {
-        // 6N-10：彈一下再淡出（暴擊放大）；減少動態時直接顯示
         const f = floatFrame(p, big, this.reduced);
         node.alpha = f.alpha;
         node.position.y = baseY - f.rise;
         node.scale.set(f.scale * fit);
+        ring.alpha = f.alpha;
+        ring.position.y = ringY - f.rise;
+        ring.scale.set(f.scale * fit);
       },
     };
   }

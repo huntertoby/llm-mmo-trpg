@@ -1,5 +1,6 @@
 // 事件播放計畫（純函式）：`steps` → 依序的移動動畫。其他事件先不做動畫；播放完以 `view` 為準。
 import type { PrimitiveClipId } from "../render/skillClips";
+import type { DashRoute, LeapArc } from "../render/skillVariants";
 import { asEvent, isUnitMoved, type MoveMode, type Pos, type StepOut, type UnitMovedEvent } from "../api/types";
 
 export interface MoveAnim {
@@ -13,6 +14,10 @@ export interface MoveAnim {
   style: MoveStyle;
   /** 位移途中的身體片段（6N-2：衝刺、跳躍、傳送、被推、被拉…；`render/skillClips.ts`）；沒有＝照舊。 */
   clip?: PrimitiveClipId;
+  /** 技能變體（6N-8）：衝刺的路線（`dash_lean`）；沒有＝直線。起訖格不變。 */
+  route?: DashRoute;
+  /** 技能變體（6N-8）：跳躍的弧度（`leap_air`）；沒有＝原本的低弧。起訖格不變。 */
+  hop?: LeapArc;
 }
 
 export type MoveStyle = "slide" | "fade";

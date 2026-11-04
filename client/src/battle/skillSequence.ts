@@ -8,7 +8,9 @@
 // - 位移類原語（衝刺、跳躍、傳送…）的身體姿勢在位移動畫上播（`moveClips`）；照卡上的順序決定在出招前或出招後。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
 import { battleVariantKey, familyApplies, pickVariant, variantIndex, type ArcSpec, type AttackFamily } from "../render/attackVariants";
-import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMode, type ClipId, type Opener, type PrimitiveClipId, type WeaponClass } from "../render/skillClips";
+import { CAST_MODES, clipDef, openerFor, primitivePlay, type Anchor, type CastMode, type ClipId, type Opener, type WeaponClass } from "../render/skillClips";
+import { DASH_ROUTES, fxLookOf, LEAP_ARCS, openerClip, openerSetOf, pickSkillVariant, primitiveClip, skillVariantKey, type SkillVariantPick } from "../render/skillVariants";
+import { healStyleOf } from "../render/skillVariantPoses";
 import type { MoveAnim } from "./animation";
 import { samePos } from "./geometry";
 import { chebyshev, inferShape, shapeIdOf, type SegmentIndex, type ShapeId, type StepVfx, type VfxCards } from "./vfx";
@@ -162,6 +164,8 @@ export interface SkillSegment {
   felled: string[];
   /** 近身普攻挑到的攻擊變體（6N-6）；技能、遠程、沒有變體表的武器為 `null`。 */
   variant: VariantPick | null;
+  /** 技能變體（6N-8：起手、原語、特效三層）；挑了攻擊變體的普攻為 `null`。 */
+  skillVariant: SkillVariantPick | null;
 }
 
 export type WeaponOf = (unitId: string) => WeaponClass;
@@ -295,6 +299,10 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
   // 6N-6：近身普攻照變體表挑；6N-7：遠程的列（弓、弩、火槍）只在遠程普攻挑（技能的變體是 6N-8）
   const row = raw.basic ? (attackOf === undefined ? (CLASS_FAMILY[weapon] ?? null) : attackOf(raw.casterId)) : null;
   const family = row !== null && familyApplies(row, mode) ? row : null;
+  const opener = openerFor(weapon, mode);
+  // 6N-8：技能（與法器的遠程普攻）照「戰鬥鍵:seq:施放者:skill:技能 ID」挑三層的變體；挑了攻擊變體的普攻不另挑
+  const set = openerSetOf(weapon, mode, raw.basic, opener.windup !== null);
+  const skillVariant = family !== null || (raw.basic && set === null) ? null : pickSkillVariant(skillVariantKey(view.map_id ?? "", raw.seq, raw.casterId, raw.skillId), set);
   return {
     casterId: raw.casterId,
     skillId: raw.skillId,
@@ -306,10 +314,11 @@ function describe(raw: RawSeg, to: Pos, view: BattleView, cards: VfxCards, weapo
     polarity: polarityOf(raw, view),
     mode,
     weapon,
-    opener: openerFor(weapon, mode),
+    opener,
     charged: timing === "delayed" || timing === "activation" || (card?.activation_id ?? null) !== null,
     felled: [...new Set(felled)].sort(),
     variant: family === null ? null : variantFor(family, view.map_id ?? "", raw.seq, raw.casterId),
+    skillVariant,
   };
 }
 
@@ -356,13 +365,15 @@ function alignOffset(c: StepVfx["casts"][number]): number {
 }
 
 interface PostClip {
-  clip: PrimitiveClipId;
+  clip: ClipId;
   icon: string | null;
 }
 
 function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pre: Array<{ clip: ClipId; ms: number }>; strike: ClipId; post: PostClip[] } {
   const pre: Array<{ clip: ClipId; ms: number }> = [];
-  const windup = seg.variant?.windup ?? seg.opener.windup;
+  const sv = seg.skillVariant;
+  // 6N-8：起手層的衍生片段和原本一樣長、命中點一樣（只有這一段有播蓄力時，出招才接衍生的第一格）
+  const windup = seg.variant?.windup ?? (seg.opener.windup === null ? null : openerClip(seg.opener.windup, sv));
   if (withWindup && windup !== null) pre.push({ clip: windup, ms: clipDef(windup).ms * (seg.charged ? CHARGED_WINDUP : 1) * squeeze });
   const post: PostClip[] = [];
   for (const p of seg.primitives) {
@@ -373,7 +384,10 @@ function bodyPlan(seg: SkillSegment, withWindup: boolean, squeeze: number): { pr
     if (play.role === "pre") pre.push({ clip: play.clip, ms: clipDef(play.clip).ms * squeeze });
     else if (prev === undefined || prev.clip !== play.clip || prev.icon !== icon) post.push({ clip: play.clip, icon });
   }
-  return { pre, strike: seg.variant?.strike ?? seg.opener.strike, post };
+  const strike = seg.variant?.strike ?? (withWindup ? openerClip(seg.opener.strike, sv) : seg.opener.strike);
+  // 原語層：召喚法陣、治療增益只換特效（片段長度照原本）
+  const heal = (c: ClipId) => healStyleOf(clipDef(c));
+  return { pre, strike, post: post.map((c) => ({ ...c, clip: primitiveClip(c.clip, sv, heal) })) };
 }
 
 function lay(segs: readonly SkillSegment[], vfx: StepVfx, squeeze: number): Laid {
@@ -474,10 +488,22 @@ export function skillTimeline(events: readonly Record<string, unknown>[], view: 
   return { rows: laid.rows, vfx: withArcs(retime(vfx, laid.shift, new Set(segs.flatMap((s) => s.felled))), segs), segments: segs };
 }
 
-/** 6N-6：挑到變體的那一段，弧光照變體的方向畫（`VfxCast.arc`；其餘照舊由上往下）。 */
+/**
+ * 6N-6：挑到變體的那一段，弧光照變體的方向畫（`VfxCast.arc`；其餘照舊由上往下）。
+ * 6N-8：技能的每一段帶特效層的變體（`VfxCast.look`：飛行物軌跡、爆發形狀、粒子分布）；元素、格子、時間不動。
+ * 法器的普攻只換起手（6N-7 待決 1 的保守做法），不帶特效層。
+ */
 function withArcs(vfx: StepVfx, segs: readonly SkillSegment[]): StepVfx {
-  if (segs.every((s) => s.variant?.arc == null)) return vfx;
-  return { ...vfx, casts: vfx.casts.map((c, i) => { const arc = segs[i]?.variant?.arc ?? null; return arc === null ? c : { ...c, arc }; }) };
+  if (segs.every((s) => s.variant?.arc == null && (s.basic || s.skillVariant === null))) return vfx;
+  return {
+    ...vfx,
+    casts: vfx.casts.map((c, i) => {
+      const s = segs[i];
+      const arc = s?.variant?.arc ?? null;
+      const sv = s === undefined || s.basic ? null : s.skillVariant;
+      return { ...c, ...(arc === null ? {} : { arc }), ...(sv === null ? {} : { look: fxLookOf(sv) }) };
+    }),
+  };
 }
 
 /** 依播放速度縮放時間軸（特效另用 `scaleVfx`）。 */
@@ -513,7 +539,7 @@ export function placeMotions(motions: readonly Motion<MoveAnim>[], segs: readonl
     if (a.unitId === caster) {
       const prim = a.mode === "dash" && prims.includes("charge_through") ? "charge_through" : a.mode === "swap" && prims.includes("swap_any") ? "swap_any" : MODE_PRIMITIVE[a.mode];
       const play = prim === undefined ? null : primitivePlay(prim);
-      const anim = play?.clip == null ? a : { ...a, clip: play.clip };
+      const anim = play?.clip == null ? a : withRoute({ ...a, clip: play.clip }, seg.skillVariant);
       const idx = prim === undefined ? -1 : prims.indexOf(prim);
       const after = strikeAt >= 0 && idx > strikeAt;
       if (a.mode === "swap") swapAfter = after;
@@ -537,6 +563,14 @@ export function placeMotions(motions: readonly Motion<MoveAnim>[], segs: readonl
     out.before.push(m);
   }
   return out;
+}
+
+/** 6N-8 原語層：施放者自己的衝刺（`dash_lean`）帶路線、跳躍（`leap_air`）帶弧度；起訖格、長度不變。 */
+function withRoute(a: MoveAnim, sv: SkillVariantPick | null | undefined): MoveAnim {
+  if (sv == null) return a;
+  if (a.clip === "dash_lean") return { ...a, route: DASH_ROUTES[sv.dash]!.id };
+  if (a.clip === "leap_air") return { ...a, hop: LEAP_ARCS[sv.leap]!.id };
+  return a;
 }
 
 /** 施放者在出招後才位移時，特效從位移前的格子發出（`vfx.ts` 以這一步結束的位置為準）。 */

@@ -8,7 +8,8 @@
 // `#perf`：12×12 戰場 8 人輪流放技能 6 秒，和靜止 3 秒比 FPS、記下貼圖數（`?react=1`：6N-4 目標輪流受擊、格擋、閃避）；
 // `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒；
 // `#variants`：6N-6 近戰＋6N-7 遠程、拳套空手的攻擊變體，受擊、閃避的變體（每種的全部變體＋連續 8 次挑到的變體；`?crit=1` 暴擊）；
-// `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利。
+// `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利；
+// `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -24,6 +25,7 @@ import { BattleRenderer } from "../render/BattleRenderer";
 import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, RANGED_FAMILIES, type AttackFamily } from "../render/attackVariants";
 import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips";
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
+import { BURST_SHAPES, CAST_OPENERS, CHARGE_POSES, DASH_ROUTES, HEAL_STYLES, LEAP_ARCS, OPENER_SETS, pickSkillVariant, skillVariantKey, SPREADS, STAFF_CHANTS, SUMMON_CIRCLES, TRAILS, type DashRoute, type LeapArc, type OpenerSet } from "../render/skillVariants";
 import { moveAnimOf } from "../battle/animation";
 
 setGlossary(glossary as unknown as Glossary);
@@ -877,5 +879,207 @@ async function variants(): Promise<void> {
   }
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants };
+// ---- 6N-8 技能變體（#skillvar） ------------------------------------------------------
+
+type Pick = ReturnType<typeof pickSkillVariant>;
+type PickWant = Partial<Record<"opener" | "dash" | "leap" | "summon" | "heal" | "trail" | "burst" | "spread", number>>;
+
+/** 讓正式的挑法（`pickSkillVariant`，鍵 ＝ skill_gallery:seq:施放者:skill:技能 ID）挑到想要的組合的 seq。 */
+function skillSeqFor(caster: string, skill: string, set: OpenerSet | null, want: PickWant): number {
+  for (let seq = 1; seq < 40000; seq += 2) {
+    const p = pickSkillVariant(skillVariantKey("skill_gallery", seq, caster, skill), set);
+    if (Object.entries(want).every(([k, i]) => (k === "opener" ? p.opener?.index === i : p[k as keyof PickWant] === i))) return seq;
+  }
+  return 1;
+}
+
+/** 挑到的變體寫成一行（起手／軌跡／爆發／粒子；有原語時加上原語）。 */
+function pickText(p: Pick, prims: readonly ("dash" | "leap" | "summon" | "heal")[] = []): string {
+  const o = p.opener === null ? "起手照舊" : OPENER_SETS[p.opener.set][p.opener.index]!.zh;
+  const names = { dash: DASH_ROUTES, leap: LEAP_ARCS, summon: SUMMON_CIRCLES, heal: HEAL_STYLES } as const;
+  const more = prims.map((k) => names[k][p[k]]!.zh);
+  return [o, ...more, TRAILS[p.trail]!.zh, BURST_SHAPES[p.burst]!.zh, SPREADS[p.spread]!.zh].join("／");
+}
+
+/** 一個施放者在 `seq` 放一次（skill_used 的 seq；傷害 seq＋1），直接走串接器＋繪製器；回傳這一招的長度。 */
+function castSeq(r: BattleRenderer, v: BattleView, caster: string, target: Pos, cards: VfxCards, seq: number, hurt = true): number {
+  if (frozen) return 0;
+  const from = v.units.find((u) => u.id === caster)!.pos;
+  const sk = Object.keys(cards)[0]!;
+  const tiles = cards[sk]?.icon?.segments[0]?.shape_id === "self" ? [from] : [target];
+  const tgt = v.units.find((u) => u.pos.x === target.x && u.pos.y === target.y && u.id !== caster);
+  const events: Record<string, unknown>[] = [
+    { seq, round: 1, type: "skill_used", unit_id: caster, skill_id: sk, tiles },
+    ...(tgt === undefined || !hurt ? [] : [{ seq: seq + 1, round: 1, type: "damage_dealt", target_id: tgt.id, source_id: caster, element: "fire", amount: 5 }]),
+  ];
+  const raw = vfxFor(events, v, cards);
+  const tl = skillTimeline(events, v, cards, raw, (id) => r.weaponClassOf(id));
+  if (tl === null) return 0;
+  const vfx = scaleVfx(tl.vfx, SCALE);
+  const rows = scaleRows(tl.rows, SCALE);
+  const origins = r.playSkill(rows);
+  r.playVfx(vfx, Math.round(VFX_TIMING.impact * SCALE), false, origins);
+  return Math.max(...rows.map((x) => x.startMs + x.ms), vfx.leadMs) + Math.round(VFX_TIMING.impact * SCALE);
+}
+
+/** 場景上的小字（每個場景自己的框）。 */
+function tagsIn(box: HTMLElement, items: ReadonlyArray<[string, Pos]>): HTMLElement[] {
+  box.style.position = "relative";
+  return items.map(([text, p]) => {
+    const d = document.createElement("div");
+    d.textContent = text;
+    d.style.cssText = `position:absolute;left:${p.x * CELL + 2}px;top:${p.y * CELL + 1}px;font:11px sans-serif;color:#ffe9a8;text-shadow:0 0 2px #000;pointer-events:none;white-space:nowrap`;
+    box.appendChild(d);
+    return d;
+  });
+}
+
+function heading(text: string): void {
+  const h = document.createElement("h2");
+  h.textContent = text;
+  document.body.appendChild(h);
+}
+
+const fireCard = (id: string, shape: string, range: number, effects: string[]): VfxCards => ({ [id]: { ...card(shape, range, effects), id, element: "fire" } as unknown as SkillCard });
+
+/** 一格「施放者 → 目標」的設定：哪一組起手、想要的變體、施放者武器、卡片、目標的距離、位移（衝刺、跳躍）。 */
+interface VarCell {
+  tag: string;
+  weapon: string;
+  set: OpenerSet | null;
+  want: PickWant;
+  cards: VfxCards;
+  reach: number;
+  prims?: readonly ("dash" | "leap" | "summon" | "heal")[];
+  move?: { mode: "dash" | "leap"; clip: PrimitiveClipId; route?: DashRoute; hop?: LeapArc };
+  hurt?: boolean;
+}
+
+/** 一排變體（一個場景裡的一列）。 */
+function varRow(label: string, cells: VarCell[]): { label: string; cells: VarCell[] } {
+  return { label, cells };
+}
+
+/**
+ * `#skillvar`：6N-8 技能變體（方案 2.11）。上面一個大場景 ＝ 三層各自的全部變體（每格固定一個，照正式的挑法找 seq；
+ * 其他層固定第一個）；接著「同一個火球放 3 次」（樣張第 10 區的三組：舉杖／微弧／放射、身前畫陣／直線／圓環、頓地捲火／螺旋／星形），
+ * 最後「同一招放 5 次」（同一個施放者、seq 1、3、5、7、9，照雜湊挑）。顏色（火）、範圍（目標格）每一次都一樣。
+ */
+async function skillVariants(): Promise<void> {
+  const ball = fireCard("fireball", "single", 5, ["damage"]);
+  const rows = [
+    varRow("詠唱", STAFF_CHANTS.map((c, k) => ({ tag: c.zh, weapon: "fire_staff", set: "chant_s", want: { opener: k, trail: 1, burst: 0, spread: 0 }, cards: ball, reach: 2 }))),
+    varRow("施法起手", [
+      ...CAST_OPENERS.map((c, k): VarCell => ({ tag: c.zh, weapon: "one_handed_sword", set: "cast", want: { opener: k, trail: 1, burst: 0, spread: 0 }, cards: ball, reach: 2 })),
+      ...CHARGE_POSES.map((c, k): VarCell => ({ tag: k === 0 ? `蓄力・${c.zh}` : c.zh, weapon: "one_handed_sword", set: "charge", want: { opener: k, burst: 0, spread: 0 }, cards: fireCard("cleave", "single", 1, ["damage"]), reach: 1 })),
+    ]),
+    varRow("召喚法陣", [
+      ...SUMMON_CIRCLES.map((c, k): VarCell => ({ tag: c.zh, weapon: "one_handed_sword", set: "cast", want: { opener: 0, summon: k }, cards: fireCard("summon", "ground_tile", 3, ["summon"]), reach: 2, prims: ["summon"], hurt: false })),
+      ...HEAL_STYLES.map((c, k): VarCell => ({ tag: k === 0 ? `治療增益・${c.zh}` : c.zh, weapon: "one_handed_sword", set: "cast", want: { opener: 0, heal: k }, cards: fireCard("mend", "self", 0, ["heal"]), reach: 1, prims: ["heal"], hurt: false })),
+    ]),
+    varRow("衝刺", DASH_ROUTES.map((c): VarCell => ({ tag: c.zh, weapon: "one_handed_sword", set: null, want: {}, cards: {}, reach: 3, move: { mode: "dash", clip: "dash_lean", route: c.id } }))),
+    varRow("跳躍", LEAP_ARCS.map((c): VarCell => ({ tag: c.zh, weapon: "one_handed_sword", set: null, want: {}, cards: {}, reach: 2, move: { mode: "leap", clip: "leap_air", hop: c.id } }))),
+    varRow("軌跡", TRAILS.map((c, k): VarCell => ({ tag: c.zh, weapon: "fire_staff", set: "chant_s", want: { opener: 0, trail: k, burst: 0, spread: 0 }, cards: ball, reach: 4 }))),
+    varRow("爆發", BURST_SHAPES.map((c, k): VarCell => ({ tag: c.zh, weapon: "fire_staff", set: "chant_s", want: { opener: 0, trail: 1, burst: k, spread: 0 }, cards: ball, reach: 4 }))),
+    varRow("粒子", SPREADS.map((c, k): VarCell => ({ tag: c.zh, weapon: "fire_staff", set: "chant_s", want: { opener: 0, trail: 1, burst: 0, spread: k }, cards: ball, reach: 4 }))),
+  ];
+  const W = 16;
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  const runs: Array<{ caster: string; target: Pos; cell: VarCell; seq: number }> = [];
+  rows.forEach((row, ri) => {
+    const y = ri * 2;
+    let x = 0;
+    row.cells.forEach((cell, k) => {
+      const at0 = x;
+      const id = `sv_${ri}_${k}`;
+      const sk = Object.keys(cell.cards)[0] ?? "none";
+      units.push(hero(id, x, y, cell.weapon, "east"));
+      const target = { x: x + cell.reach, y };
+      if (cell.hurt !== false && cell.move === undefined) units.push(unit(`svt_${ri}_${k}`, "enemy", target.x, y, { template_id: "t", name_zh: "木樁", facing: "west", hp: 40, max_hp: 40 }));
+      const seq = cell.move === undefined ? skillSeqFor(id, sk, cell.set, cell.want) : 1;
+      tags.push([`${k === 0 ? `${row.label}・` : ""}${cell.tag}`, { x: at0, y: y + 1 }]);
+      runs.push({ caster: id, target, cell, seq });
+      x += cell.reach + 1;
+    });
+  });
+  heading("6N-8・技能變體（方案 2.11）：三層各自的全部變體（每格固定一個，照正式挑法找 seq；其他層固定第一個）。顏色照元素（火）、範圍照技能形狀，不會變");
+  const v = battle(units, W, rows.length * 2);
+  const r = await show(v);
+  const box = document.querySelectorAll(".scene")[0] as HTMLElement;
+  tagsIn(box, tags);
+
+  // 同一個火球放 3 次（樣張第 10 區）
+  heading("同一個火球放 3 次（同一個施放者 u_00、同一張卡 fireball，只有 seq 不同）：樣張第 10 區的三組");
+  const sameCaster = "u_00";
+  const sample = [0, 1, 2].map((k) => skillSeqFor(sameCaster, "fireball", "chant_s", { opener: k, trail: k, burst: k }));
+  const triple: Array<{ r: BattleRenderer; v: BattleView; seq: number }> = [];
+  for (const seq of sample) {
+    const sv = battle([hero(sameCaster, 0, 0, "fire_staff", "east"), unit("u_t", "enemy", 4, 0, { template_id: "t", name_zh: "木樁", facing: "west", hp: 40, max_hp: 40 })], 6, 1);
+    const sr = await show(sv);
+    const p = pickSkillVariant(skillVariantKey("skill_gallery", seq, sameCaster, "fireball"), "chant_s");
+    tagsIn(document.querySelectorAll(".scene")[document.querySelectorAll(".scene").length - 1] as HTMLElement, [[`seq ${seq}：${pickText(p)}`, { x: 0, y: 0 }]]);
+    triple.push({ r: sr, v: sv, seq });
+  }
+
+  // 同一招放 5 次（照雜湊挑，不找 seq）
+  heading("同一招放 5 次（u_00 的 fireball，seq 1、3、5、7、9 照雜湊挑）：顏色、範圍、落點、命中時間都一樣，姿勢和軌跡會變");
+  const five: Array<{ r: BattleRenderer; v: BattleView; seq: number }> = [];
+  for (const seq of [1, 3, 5, 7, 9]) {
+    const sv = battle([hero(sameCaster, 0, 0, "fire_staff", "east"), unit("u_t", "enemy", 4, 0, { template_id: "t", name_zh: "木樁", facing: "west", hp: 40, max_hp: 40 })], 6, 1);
+    const sr = await show(sv);
+    const p = pickSkillVariant(skillVariantKey("skill_gallery", seq, sameCaster, "fireball"), "chant_s");
+    tagsIn(document.querySelectorAll(".scene")[document.querySelectorAll(".scene").length - 1] as HTMLElement, [[`第 ${(seq + 1) / 2} 次（seq ${seq}）：${pickText(p)}`, { x: 0, y: 0 }]]);
+    five.push({ r: sr, v: sv, seq });
+  }
+  const list = document.createElement("pre");
+  list.id = "picks";
+  list.textContent = [
+    ...runs.filter((x) => x.cell.move === undefined).map((x) => `${x.cell.tag}：seq ${x.seq} → ${pickText(pickSkillVariant(skillVariantKey("skill_gallery", x.seq, x.caster, Object.keys(x.cell.cards)[0]!), x.cell.set), x.cell.prims)}`),
+    ...[...triple, ...five].map((x) => `u_00 fireball seq ${x.seq} → ${pickText(pickSkillVariant(skillVariantKey("skill_gallery", x.seq, sameCaster, "fireball"), "chant_s"))}`),
+  ].join("\n");
+  list.style.cssText = "font:12px monospace;white-space:pre;margin-top:8px";
+  document.body.appendChild(list);
+
+  const all = [r, ...triple.map((x) => x.r), ...five.map((x) => x.r)];
+  freezeAll(all);
+  for (;;) {
+    if (frozen) return;
+    r.draw(buildDrawModel(v, HERO));
+    for (const x of [...triple, ...five]) x.r.draw(buildDrawModel(x.v, HERO));
+    let longest = 0;
+    const moving: Promise<void>[] = [];
+    for (const run of runs) {
+      if (run.cell.move !== undefined) {
+        const m = run.cell.move;
+        const from = v.units.find((u) => u.id === run.caster)!.pos;
+        const base = moveAnimOf({ seq: 1, round: 1, type: "unit_moved", unit_id: run.caster, from_pos: from, to_pos: run.target, mode: m.mode } as never, SCALE * 3);
+        moving.push(r.animate([{ ...base, clip: m.clip, ...(m.route === undefined ? {} : { route: m.route }), ...(m.hop === undefined ? {} : { hop: m.hop }) }], () => false));
+        continue;
+      }
+      longest = Math.max(longest, castSeq(r, v, run.caster, run.target, run.cell.cards, run.seq, run.cell.hurt !== false));
+    }
+    for (const x of [...triple, ...five]) longest = Math.max(longest, castSeq(x.r, x.v, sameCaster, { x: 4, y: 0 }, ball, x.seq));
+    // 位移播完、特效也播完才重畫（重畫會換掉小人）
+    await Promise.all([wait(longest + 600), ...moving.map((p) => p.then(() => wait(600)))]);
+    window.__skillDone = true;
+  }
+}
+
+/** `?freeze=毫秒`：第一輪開始後那麼久，所有場景一起停格（截圖用）。 */
+function freezeAll(rs: readonly BattleRenderer[]): void {
+  window.__skillStart = performance.now();
+  const freeze = Number(params.get("freeze") ?? "");
+  if (!Number.isFinite(freeze) || freeze <= 0) return;
+  const t0 = fxClock(rs[0]!);
+  const check = () => {
+    if (fxClock(rs[0]!) - t0 >= freeze) {
+      for (const x of rs) x.setBoost(1e-6);
+      frozen = true;
+    } else requestAnimationFrame(check);
+  };
+  requestAnimationFrame(check);
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants };
 void (MODES[MODE] ?? openers)();
