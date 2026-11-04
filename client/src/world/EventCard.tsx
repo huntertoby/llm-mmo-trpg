@@ -15,6 +15,10 @@ import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/ty
 import { eventArtBg, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
+import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
+
+/** 事件卡疊在 HUD 中上方的欄裡（位置由欄決定；UI-E2 共用彈窗外觀）。 */
+const INLINE: PopupPlacement = { kind: "inline" };
 import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, solutionLine, SOLUTION_ICON_ZH, type Outcome } from "./narration";
 import { DiceRoll, NarratorSubtitle, StoryDialog } from "./StoryParts";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
@@ -94,7 +98,7 @@ interface EventProps {
 export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps) {
   const situation = event.situation ?? null;
   return (
-    <div className="panel world-event" data-testid="world-event" role="region" aria-label={`事件：${event.location_name_zh}`}>
+    <PopupFrame placement={INLINE} className="world-event" testId="world-event" role="region" label={`事件：${event.location_name_zh}`}>
       <EventArt event={event} />
       {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
       <div className="world-event-solutions">
@@ -136,7 +140,7 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
         })}
       </div>
       {situation !== null && <SituationForm key={situation.template} event={event} busy={busy} onAnswer={onAnswer} />}
-    </div>
+    </PopupFrame>
   );
 }
 

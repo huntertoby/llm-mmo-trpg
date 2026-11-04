@@ -13,6 +13,7 @@ import { useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
+import { PopupFrame } from "../ui/PopupFrame";
 import { battlefieldLine } from "./battlefield";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
@@ -50,7 +51,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   if (e === null) return null;
   const field = battlefieldLine(e); // 6C-2：就地開打或退回模板的原因
   return (
-    <div className="panel world-encounter" data-testid="world-encounter" role="region" aria-label="遇敵">
+    <PopupFrame placement={{ kind: "inline" }} tone="danger" className="world-encounter" testId="world-encounter" role="region" label="遇敵">
       <div className="section-title">遇敵！{e.location_name_zh}</div>
       <div className="small">
         敵人等級 {e.enemy_level}・戰場 {e.map_name_zh}・{weatherPhaseText(e.weather_zh, e.day_phase_zh)}
@@ -91,7 +92,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           </Hint>
         )}
       </div>
-    </div>
+    </PopupFrame>
   );
 }
 

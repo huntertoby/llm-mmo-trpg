@@ -1,12 +1,12 @@
 /* 戰鬥版 HUD 版面 A（Phase 6A-4e；docs/art/戰鬥D版樣張.md 第 5 節、HUD移植需求.md 的外觀）：
    戰場用滿整個畫面，HUD 疊在四周——左上主角卡（下面接選取面板）、上方中央行動順序、右上戰況與工具鈕（下面接
    環境預告、召喚物、釘選小卡）、底部技能列與回合操作、左下紀錄浮動提示（在底部列上方）。
-   面板是半透明深底 rgba(24,20,16,0.84) 加金邊 #c8a868。只套在 `.battle-screen.hud-a`，不影響其他畫面。
+   面板是半透明深藍底（UI-E2：theme.css 的 --ui-panel）加金邊 #c8a868。只套在 `.battle-screen.hud-a`，不影響其他畫面。
    `--hud-bottom` 是量到的底部列高度（`battle/hudLayout.ts`）。放在 battle-layout／battle-panels／status-card／log-dock 之後，蓋過舊版的位置。 */
 
 .battle-screen.hud-a {
-  --hud-bg: rgb(24 20 16 / 84%);
-  --hud-gold: #c8a868;
+  --hud-bg: var(--ui-panel);
+  --hud-gold: var(--ui-gold);
   --hud-gap: 8px;
   /* 上方行動順序列佔的高度（6C-8 起地圖鋪到最上面、行動順序列疊在地圖上；只剩提示浮層用它讓開） */
   --hud-top: 52px;
@@ -110,11 +110,37 @@
 .battle-screen.hud-a .bhud-hero > .hud {
   margin: 0;
   padding: 6px 10px;
-  max-height: 40vh;
+}
+
+/* UI-E2（巡檢 #5）：和大世界同一張主角卡（HeroCard）：頭像在左、名字與三條在右，圖示列與詳細排在下面整列。
+   外框不捲（四角飾件才不會跟著跑），「詳細」打開時在自己的區塊裡捲。 */
+.battle-screen.hud-a .bhud-hero > .hero-card-battle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: center;
+}
+
+.battle-screen.hud-a .hero-card-battle > .hero-card-face,
+.battle-screen.hud-a .hero-card-battle > .hero-card-main {
+  grid-row: 1;
+}
+
+.battle-screen.hud-a .hero-card-battle > :not(.hero-card-face, .hero-card-main) {
+  grid-column: 1 / -1;
+}
+
+.battle-screen.hud-a .hero-card-battle.compact > .hero-card-main {
+  grid-column: 1 / -1;
+}
+
+.battle-screen.hud-a .hero-card-battle .hud-details[open] {
+  max-height: 30vh;
   overflow-y: auto;
 }
 
 .battle-screen.hud-a .bhud-hero .hud-title {
+  display: block;
   margin-bottom: 3px;
   font-size: 13px;
   color: #f0e6d0;
