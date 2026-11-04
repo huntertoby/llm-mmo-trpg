@@ -233,8 +233,9 @@ def test_shifted_low_dc_is_info_only() -> None:
     assert "sk_e" not in quiet  # quiet（check.py）只印警告
 
 
-def test_gate_counts_unlock_only_and_follows(library: ContentLibrary) -> None:
-    """6Q-B 口徑 3：unlock_only、follows 算門檻；時段、天氣、once 不算。"""
+def test_gate_counts_only_unlock_only(library: ContentLibrary) -> None:
+    """6Q-B 口徑 3（後更正）：只有 unlock_only 算門檻；follows 在引擎裡不擋骨架出現，和時段、天氣、
+    once 一樣不算。"""
     skeletons = library.world_event_content.events["cloud_ridge"].skeleton_by_id()
     plain = skeletons["wounded_peddler"].model_copy(
         update={
@@ -247,12 +248,16 @@ def test_gate_counts_unlock_only_and_follows(library: ContentLibrary) -> None:
     )
     assert not skeleton_gated(plain)
     assert skeleton_gated(plain.model_copy(update={"unlock_only": True}))
-    assert skeleton_gated(plain.model_copy(update={"follows": ("peddler_owes_you",)}))
-    for update in ({"day_phase": "night"}, {"weather": ("fog",)}, {"once": True}):
+    for update in (
+        {"follows": ("peddler_owes_you",)},
+        {"day_phase": "night"},
+        {"weather": ("fog",)},
+        {"once": True},
+    ):
         assert not skeleton_gated(plain.model_copy(update=update))
     gated = inputs_from_library(library).gated_skeletons
-    followers = {s.id for s in skeletons.values() if s.follows}
-    assert followers and followers <= gated["cloud_ridge"]
+    unlock = {s.id for s in skeletons.values() if s.unlock_only}
+    assert gated["cloud_ridge"] == unlock
 
 
 def test_town_location_uses_region_level_min(library: ContentLibrary) -> None:

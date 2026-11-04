@@ -190,11 +190,12 @@ def best_case(
 
 
 def skeleton_gated(skeleton: EventSkeletonDef) -> bool:
-    """骨架有前置門檻：``unlock_only``（解鎖才出現）或 ``follows``（要先有線頭）。
+    """骨架有前置門檻：只有 ``unlock_only``（解鎖才出現）算。
 
-    時段（``day_phase``）、天氣（``weather``）、``once`` 不算門檻（玩法 PM，Phase 6Q-B）。
+    ``follows`` 在引擎裡不擋骨架出現、只是優先接線頭，所以不算；時段（``day_phase``）、天氣
+    （``weather``）、``once`` 也不算（玩法 PM，Phase 6Q-B 後更正）。
     """
-    return skeleton.unlock_only or bool(skeleton.follows)
+    return skeleton.unlock_only
 
 
 def _eligible(rules: SituationRules, template: SituationTemplateDef, method: str) -> bool:
