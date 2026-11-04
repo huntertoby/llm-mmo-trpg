@@ -9,25 +9,27 @@
 // `#react`：6N-4 受擊與結果（受擊、重擊、閃避、格擋三種、倒下、異形）＋陷阱夾住、冰面滑倒；
 // `#variants`：6N-6 近戰＋6N-7 遠程、拳套空手的攻擊變體，受擊、閃避的變體（每種的全部變體＋連續 8 次挑到的變體；`?crit=1` 暴擊）；
 // `#result`：6N-5 特殊結果（暴擊、擊殺、格擋成功、閃避成功、Boss 大招；停頓）＋復活、勝利；
-// `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）。
+// `#skillvar`：6N-8 技能變體（三層各自的全部變體、同一個火球放 3 次、同一招放 5 次）；
+// `#impact`：6H-1b 一招的時間軸（起手、出招、命中、停頓起點、微震、音效點；效果時鐘與實際 ms），停頓起點和命中點要同一刻。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
-import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE } from "../battle/playback";
+import { FEEDBACK_MS, frameOps, playbackPlan, SPEED_SCALE, type Frame } from "../battle/playback";
 import { feedbackFor } from "../battle/feedback";
 import { stopHoldMs, victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials } from "../battle/specials";
 import { hitHoldMs, withImpact } from "../battle/impact";
 import { scaleRows, skillTimeline, variantFor } from "../battle/skillSequence";
 import { tile, unit } from "../battle/testFixtures";
-import { scaleVfx, vfxFor, VFX_TIMING, type VfxCards } from "../battle/vfx";
+import { scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "../battle/vfx";
 import { BattleRenderer } from "../render/BattleRenderer";
 import { ATTACK_FAMILIES, ATTACK_VARIANTS, FAMILY_ZH, RANGED_FAMILIES, type AttackFamily } from "../render/attackVariants";
 import { DODGE_VARIANTS, HIT_VARIANTS, reactVariant } from "../render/reactClips";
 import { CAST_MODES, type CastMode, type PrimitiveClipId } from "../render/skillClips";
 import { BURST_SHAPES, CAST_OPENERS, CHARGE_POSES, DASH_ROUTES, HEAL_STYLES, LEAP_ARCS, OPENER_SETS, pickSkillVariant, skillVariantKey, SPREADS, STAFF_CHANTS, SUMMON_CIRCLES, TRAILS, type DashRoute, type LeapArc, type OpenerSet } from "../render/skillVariants";
 import { moveAnimOf } from "../battle/animation";
+import { cueRealMs, type SfxCue } from "../audio/battleSfx";
 
 setGlossary(glossary as unknown as Glossary);
 
@@ -1081,5 +1083,172 @@ function freezeAll(rs: readonly BattleRenderer[]): void {
   requestAnimationFrame(check);
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants };
+// ---- 6H-1b：一招的時間軸（停頓起點、微震、音效點要和命中點對齊） ------------------------------
+
+type ImpactCase = {
+  name: string;
+  weaponId: string;
+  /** 施放者與目標的格子（同一列）。 */
+  from: Pos;
+  to: Pos;
+  card: SkillCard;
+  /** 扣掉目標最大 HP 20 的幾點（60% → 第 3 級停頓；5% → 不停）。 */
+  lost: number;
+};
+const IMPACT_CASES: readonly ImpactCase[] = [
+  { name: "劍・近身重擊（扣 60%：停 100 ms、微震 2 px）", weaponId: "one_handed_sword", from: { x: 1, y: 0 }, to: { x: 2, y: 0 }, card: card("single", 1, ["damage"]), lost: 12 },
+  { name: "法杖・蓄力遠射 9 格（超過 1.8 秒，起手被壓縮；扣 30%：停 70 ms）", weaponId: "fire_staff", from: { x: 0, y: 2 }, to: { x: 9, y: 2 }, card: card("single", 9, ["damage_multiplier", "damage"], { timing: "delayed" }), lost: 6 },
+  { name: "劍・輕擊（扣 5%：不停頓、不震）", weaponId: "one_handed_sword", from: { x: 1, y: 4 }, to: { x: 2, y: 4 }, card: card("single", 1, ["damage"]), lost: 1 },
+];
+
+type TimelineRow = { label: string; fxMs: number; realMs: number; note: string; kind: "windup" | "strike" | "hit" | "stop" | "shake" | "sfx" | "ref" };
+const ROW_COLOR: Readonly<Record<TimelineRow["kind"], string>> = { windup: "#9fb3c8", strike: "#d8dbe0", hit: "#ffffff", stop: "#e8bb48", shake: "#f07c7c", sfx: "#7cd8f2", ref: "#8a5a5a" };
+
+/** 一招的時間軸列（效果時鐘 ms 與實際 ms；`cueRealMs` 把停頓、放慢換成實際時間，和聲音排程同一套）。 */
+function timelineRows(frame: Frame, casterId: string, rawImpactMs: number | null): TimelineRow[] {
+  const vfx = frame.vfx as StepVfx;
+  const real = (ms: number) => Math.round(cueRealMs(ms, vfx, false));
+  const rows: TimelineRow[] = [];
+  const mine = (frame.skill ?? []).filter((r) => r.unitId === casterId && r.cast === 0);
+  const windup = mine.find((r) => !r.strike && !r.recover && !r.still);
+  const strike = mine.find((r) => r.strike);
+  const hitAt = vfx.hits[0]?.atMs ?? vfx.leadMs;
+  if (windup !== undefined) rows.push({ label: "起手開始", fxMs: windup.startMs, realMs: real(windup.startMs), note: `${windup.clip}，${Math.round(windup.ms)} ms`, kind: "windup" });
+  if (strike !== undefined) rows.push({ label: "出招開始", fxMs: strike.startMs, realMs: real(strike.startMs), note: strike.clip, kind: "strike" });
+  if (strike?.hitMs != null && Math.abs(strike.hitMs - hitAt) > 0.5) rows.push({ label: "放出（出招的 hitAt）", fxMs: strike.hitMs, realMs: real(strike.hitMs), note: "飛行物離手", kind: "strike" });
+  rows.push({ label: "命中（受擊反應）", fxMs: hitAt, realMs: real(hitAt), note: `扣血 ${vfx.impacts?.[0]?.lost ?? 0}‰`, kind: "hit" });
+  if (rawImpactMs !== null && Math.abs(rawImpactMs - hitAt) > 0.5) rows.push({ label: "修正前的停頓起點（6H-1）", fxMs: rawImpactMs, realMs: rawImpactMs, note: `比命中早 ${Math.round(hitAt - rawImpactMs)} ms`, kind: "ref" });
+  for (const s of vfx.stops ?? []) rows.push({ label: "停頓起點", fxMs: s.atMs, realMs: real(s.atMs), note: `${s.ms} ms；和命中差 ${Math.round(s.atMs - hitAt)} ms`, kind: "stop" });
+  if ((vfx.stops ?? []).length === 0) rows.push({ label: "停頓", fxMs: hitAt, realMs: real(hitAt), note: "無（未滿 10%）", kind: "stop" });
+  for (const s of vfx.shakes ?? []) rows.push({ label: `微震（${s.kind}）`, fxMs: s.atMs, realMs: real(s.atMs), note: `${s.px} px／${s.ms} ms；和命中差 ${Math.round(s.atMs - hitAt)} ms`, kind: "shake" });
+  if ((vfx.shakes ?? []).length === 0) rows.push({ label: "微震", fxMs: hitAt, realMs: real(hitAt), note: "無", kind: "shake" });
+  for (const c of frame.sfx ?? []) rows.push({ label: `音效 ${c.id}`, fxMs: c.atMs, realMs: real(c.atMs), note: c.id.startsWith("hit_") || c.id.startsWith("elem_") ? `命中聲；和命中差 ${Math.round(c.atMs - hitAt)} ms` : "", kind: "sfx" });
+  return rows;
+}
+
+/** 時間軸的 SVG（橫軸是實際 ms）＋表格。 */
+function timelineBox(name: string, rows: readonly TimelineRow[], stops: readonly { atMs: number; ms: number }[], vfx: StepVfx): HTMLElement {
+  const box = document.createElement("div");
+  box.style.cssText = "margin:10px 0 16px;max-width:980px";
+  const h = document.createElement("h2");
+  h.textContent = name;
+  box.appendChild(h);
+  const W = 960;
+  const L = 40;
+  const total = Math.max(400, ...rows.map((r) => r.realMs)) + 200;
+  const x = (ms: number) => L + (ms / total) * (W - L - 20);
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("width", String(W));
+  svg.setAttribute("height", "172");
+  svg.style.cssText = "display:block;background:#101217;border-radius:6px";
+  const el = (tag: string, attrs: Record<string, string | number>, text?: string) => {
+    const e = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+    if (text !== undefined) e.textContent = text;
+    svg.appendChild(e);
+    return e;
+  };
+  for (let t = 0; t <= total; t += 200) {
+    el("line", { x1: x(t), x2: x(t), y1: 8, y2: 142, stroke: "#2a2e36" });
+    el("text", { x: x(t) + 2, y: 158, fill: "#8a8f99", "font-size": 10 }, `${t} ms`);
+  }
+  // 停頓：實際時間上從停頓起點起的一段（效果時鐘停住）
+  for (const s of stops) el("rect", { x: x(Math.round(cueRealMs(s.atMs, vfx, false))), y: 8, width: Math.max(2, x(s.ms) - x(0)), height: 134, fill: "#e8bb4855" });
+  for (const s of vfx.shakes ?? []) {
+    const r0 = Math.round(cueRealMs(s.atMs, vfx, false));
+    el("rect", { x: x(r0), y: 132, width: Math.max(2, x(s.ms) - x(0)), height: 10, fill: "#f07c7c88" });
+  }
+  rows.forEach((r, i) => {
+    const color = ROW_COLOR[r.kind];
+    const y1 = r.kind === "hit" ? 8 : 14 + (i % 9) * 2;
+    el("line", { x1: x(r.realMs), x2: x(r.realMs), y1, y2: 142, stroke: color, "stroke-width": r.kind === "hit" ? 2 : 1, "stroke-dasharray": r.kind === "ref" ? "3 3" : "" });
+    el("text", { x: x(r.realMs) + 3, y: 20 + (i % 9) * 14, fill: color, "font-size": 11 }, `${r.label} ${r.realMs}`);
+  });
+  box.appendChild(svg);
+  const table = document.createElement("table");
+  table.style.cssText = "border-collapse:collapse;margin-top:6px;font:12px monospace";
+  const tr = (cells: string[], color: string, head = false) => {
+    const row = document.createElement("tr");
+    for (const c of cells) {
+      const td = document.createElement(head ? "th" : "td");
+      td.textContent = c;
+      td.style.cssText = `padding:2px 10px;border-bottom:1px solid #2a2e36;text-align:left;color:${color}`;
+      row.appendChild(td);
+    }
+    table.appendChild(row);
+  };
+  tr(["項目", "效果時鐘 ms", "實際 ms", "備註"], "#8a8f99", true);
+  for (const r of rows) tr([r.label, String(Math.round(r.fxMs)), String(r.realMs), r.note], ROW_COLOR[r.kind]);
+  box.appendChild(table);
+  return box;
+}
+
+/**
+ * 6H-1b：三招並排（近身重擊、被壓縮的蓄力遠射、輕擊），走正式的 `playbackPlan`（vfxFor → skillTimeline → withSpecials → withImpact，含音效），
+ * 下方列出每一招的時間軸：起手、出招、命中、停頓起點、微震、音效點（效果時鐘與實際 ms）。停頓起點、微震、命中聲都要和命中點同一刻。
+ */
+async function impactTimeline(): Promise<void> {
+  const units: UnitView[] = [];
+  const tags: Array<[string, Pos]> = [];
+  IMPACT_CASES.forEach((c, i) => {
+    units.push(hero(`u_${String(i).padStart(2, "0")}`, c.from.x, c.from.y, c.weaponId, "east"));
+    units.push(unit(`t_${i}`, "enemy", c.to.x, c.to.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "對手", facing: "west", hp: 20, max_hp: 20 }));
+    tags.push([c.name, { x: c.from.x, y: c.from.y + 1 }]);
+  });
+  const before = battle(units, 12, 6);
+  const after = { ...before, units: before.units.map((u) => (u.id.startsWith("t_") ? { ...u, hp: 20 - IMPACT_CASES[Number(u.id.slice(2))]!.lost } : u)) } as BattleView;
+  const r = await show(before);
+  labels(tags);
+  caption("6H-1b・一招的時間軸：停頓起點、微震、命中聲和畫面的命中點同一刻（起手被壓縮時也一樣）");
+  started(r);
+  const weaponOf = (id: string) => r.weaponClassOf(id);
+  type Prepared = { c: ImpactCase; frame: Frame; events: Record<string, unknown>[]; rawImpactMs: number | null };
+  const prepared: Prepared[] = IMPACT_CASES.map((c, i) => {
+    const caster = `u_${String(i).padStart(2, "0")}`;
+    const tgt = `t_${i}`;
+    const events: Record<string, unknown>[] = [
+      { seq: 1, round: 1, type: "skill_used", unit_id: caster, skill_id: `sk_${i}`, tiles: [c.to] },
+      { seq: 2, round: 1, type: "attack_rolled", attacker_id: caster, target_id: tgt, hit: true, skill_id: `sk_${i}` },
+      { seq: 3, round: 1, type: "damage_dealt", target_id: tgt, source_id: caster, element: "physical", amount: c.lost, hp_before: 20, hp_after: 20 - c.lost, crit: false, block_permille: 1000 },
+    ];
+    const cards = { [`sk_${i}`]: { ...c.card, id: `sk_${i}` } } as VfxCards;
+    const step = { actor_id: caster, events, view: after, step: { type: "use_skill" } } as unknown as StepOut;
+    const plan = playbackPlan({ steps: [step], initial_view: before, view: after } as unknown as BattleResponse, HERO, "normal", cards, new Set(), weaponOf, () => null);
+    const frame = plan.frames[0] as Frame;
+    const rawImpactMs = vfxFor(events, after, cards).impacts?.[0]?.atMs ?? null;
+    return { c, frame, events, rawImpactMs };
+  });
+  const list = document.createElement("div");
+  document.body.appendChild(list);
+  for (const p of prepared) {
+    const vfx = p.frame.vfx as StepVfx;
+    const rows = timelineRows(p.frame, p.frame.actorId ?? "", p.rawImpactMs);
+    list.appendChild(timelineBox(p.c.name, rows, vfx.stops ?? [], vfx));
+  }
+  (window as unknown as { __impactRows: Array<{ name: string; rows: TimelineRow[]; sfx: SfxCue[] }> }).__impactRows = prepared.map((p) => ({ name: p.c.name, rows: timelineRows(p.frame, p.frame.actorId ?? "", p.rawImpactMs), sfx: p.frame.sfx ?? [] }));
+  for (;;) {
+    if (frozen) return;
+    r.draw(buildDrawModel(before, HERO));
+    const start = fxClock(r);
+    let leadFx = 0;
+    let longest = 0;
+    for (const p of prepared) {
+      const vfx = p.frame.vfx as StepVfx;
+      const origins = p.frame.skill === undefined ? undefined : r.playSkill(p.frame.skill);
+      r.playVfx(vfx, p.frame.vfxImpactMs, true, origins);
+      const hold = hitHoldMs(vfx, false);
+      leadFx = Math.max(leadFx, vfx.leadMs);
+      longest = Math.max(longest, ...(p.frame.skill ?? []).map((x) => x.startMs + x.ms + hold), vfx.leadMs + hold);
+    }
+    await waitFx(r, start + leadFx);
+    if (frozen) return;
+    r.draw(buildDrawModel(after, HERO));
+    r.playFeedback(feedbackFor(prepared.flatMap((p) => p.events), after), Math.round(FEEDBACK_MS * SCALE));
+    await wait(longest - leadFx + Math.round(VFX_TIMING.impact * SCALE) + 900);
+    window.__skillDone = true;
+  }
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline };
 void (MODES[MODE] ?? openers)();
