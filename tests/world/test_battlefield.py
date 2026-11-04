@@ -344,39 +344,53 @@ def test_third_party_keeps_two_cells_from_allies(
     assert len(third) == 2 and not set(third) & (set(allies) | set(enemies))
     assert min(_dist(c, a) for c in third for a in allies) >= 3
     assert all(min(_dist(c, e) for e in enemies) == 1 for c in third)  # 貼著敵方
+    assert _third_on_enemy_side(battle)
     terrain = field_library.ruleset.terrain.by_id()
     objects = field_library.ruleset.objects.by_id()
     assert check_map(battle, terrain, field_library.ruleset.core, objects) == []
 
 
-# (往西幾格, 往東幾格, 第三方人數, 隔幾格＝None 退回模板, 第三方的實地格子)
+# (往西幾格, 往東幾格, 往北的岔路格數, 第三方人數, 隔幾格＝None 退回模板, 第三方的實地格子)
 THIRD_FALLBACK_CASES = [
-    (6, 3, 1, 3, [(19, 15)]),  # 隔 3 格：第三方只剩敵我中間 (19, 15)（離我方 (16, 15) 隔 2 格）
-    # 隔 3、2 格排不出第三方 → 雙方隔 1 格（我方 (18～16, 15)），第三方仍離我方隔 2 格（6E-3c）：
-    # 東邊的 (24, 15) 與西邊的 (13, 15)
-    (8, 5, 2, 1, [(24, 15), (13, 15)]),
-    # 6E-3b 在隔 1 格時第三方照 1 排得出 (14, 15)；6E-3c 永遠隔 2 格 → 排不出 → 退回模板
-    (6, 5, 2, None, None),
-    (7, 3, 2, None, None),
-    (6, 3, 2, None, None),  # 都排不出 → 退回模板
+    (6, 3, 0, 1, 3, [(19, 15)]),  # 隔 3 格：第三方只剩敵我中間 (19, 15)（離我方 (16, 15) 隔 2 格）
+    (6, 3, 3, 2, 3, [(20, 12), (19, 15)]),  # 敵方背後的北邊岔路
+    # 隔 3、2 格排不出第三方 → 雙方隔 1 格（我方 (18～16, 15)），第三方仍離我方隔 2 格（6E-3c）、
+    # 在敵方那一側 (24, 15)（6E-3d）
+    (5, 4, 0, 1, 1, [(24, 15)]),
+    # 隔 3 格時敵方那側只剩北邊一格 → 隔 2 格：北邊 (20, 12) 與東邊 (22, 15)
+    (5, 3, 3, 2, 2, [(20, 12), (22, 15)]),
+    # 6E-3c 在隔 1 格排出 (24, 15)、(13, 15)；(13, 15) 在我方背後（離主角比離敵方帶頭的近）→ 6E-3d
+    # 排不出 → 退回模板
+    (8, 5, 0, 2, None, None),
+    (6, 5, 0, 2, None, None),
+    (7, 3, 0, 2, None, None),
+    (6, 3, 0, 2, None, None),  # 都排不出 → 退回模板
 ]
 
 
-@pytest.mark.parametrize(("length", "east", "third", "gap", "cells"), THIRD_FALLBACK_CASES)
+def _third_on_enemy_side(battle: MapDef) -> bool:
+    """第三方起始區每一格離敵方帶頭的（敵方起始區第一格）都比離主角（我方第一格）近（6E-3d）。"""
+    hero, leader = battle.start_zones[Team.ALLY][0], battle.start_zones[Team.ENEMY][0]
+    return all(_dist(c, leader) < _dist(c, hero) for c in battle.start_zones[Team.THIRD])
+
+
+@pytest.mark.parametrize(("length", "east", "north", "third", "gap", "cells"), THIRD_FALLBACK_CASES)
 def test_third_party_fallback_order(  # noqa: PLR0917 - pytest 參數化
     field_library: ContentLibrary,
     template: MapDef,
     length: int,
     east: int,
+    north: int,
     third: int,
     gap: int | None,
     cells: list[XY] | None,
 ) -> None:
     """第三方排不出來時照「地形放不下」的順序：規定的距離 → 另一個 → 隔 1 格 → 退回模板；
-    雙方退到隔 1 格時第三方也照樣離我方至少隔 2 格（6E-3c）。"""
+    雙方退到隔 1 格時第三方也照樣離我方至少隔 2 格（6E-3c）；第三方離敵方帶頭的比離主角近
+    （6E-3d）。"""
     found = cut_battlefield(
         field_library,
-        _corridor(length, east),
+        _corridor(length, east, north),
         ally_at=(19, 15),
         enemy_at=(20, 15),
         counts=UnitCounts(allies=3, enemies=3, third=third),
@@ -393,6 +407,7 @@ def test_third_party_fallback_order(  # noqa: PLR0917 - pytest 參數化
     zone = battle.start_zones[Team.THIRD]
     assert list(zone) == [(x - info.x, y - info.y) for x, y in cells or []]
     assert min(_dist(c, a) for c in zone for a in battle.start_zones[Team.ALLY]) >= 3
+    assert _third_on_enemy_side(battle)
 
 
 def _pocket(west: int) -> FieldMapDef:
@@ -806,6 +821,7 @@ def test_every_content_spawn_cuts(content_library: ContentLibrary) -> None:
             zone = found.map.start_zones[Team.THIRD]
             near = min(_dist(c, a) for c in zone for a in found.map.start_zones[Team.ALLY])
             assert len(zone) == len(lineup.third) and near >= 3  # 第三方離我方至少隔 2 格
+            assert _third_on_enemy_side(found.map)  # 第三方在敵方那一側（6E-3d）
     spawns = {
         (f.id, i)
         for f in library.field_maps.values()

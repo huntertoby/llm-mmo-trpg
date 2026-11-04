@@ -17,8 +17,9 @@
   那一方先挑（沒有先手照敵方先挑）。
 - **第三方**（6E-3b，21.10 第 26 條細節）：三方混戰時世界層另畫第三方起始區（不靠引擎自動排）：
   走得到、不在雙方起始區、離我方起始區每一格**永遠**至少隔 ``field.gap_third``（2）格（6E-3c：
-  雙方退到隔 1 格時也一樣）的格子，照引擎原本的排法（離敵方起始區最近, y, x）取單位數那麼多格；
-  排不出來＝這個距離放不下，照順序試下一個。
+  雙方退到隔 1 格時也一樣）、離敵方帶頭的比離主角近（6E-3d：不排到我方後面；曼哈頓距離，相等也
+  不行）的格子，照引擎原本的排法（離敵方起始區最近, y, x）取單位數那麼多格；排不出來＝這個距離
+  放不下，照順序試下一個。
 - **主角的方向**（6E-3c，21.10 第 26 條細節）：主角不能被擺到敵方帶頭單位的另一側——候選格離
   接觸點的距離不能比離敵方帶頭的遠（曼哈頓距離，相等可以）。往回退到的格子在另一側就改挑符合
   距離、在這一側、最靠近接觸點的格子；全在另一側＝這個距離放不下，照順序試下一個。隊友照起始區
@@ -151,15 +152,27 @@ def _window_data(
 
 
 def _third_zone(
-    cells: set[XY], taken: tuple[list[XY], list[XY]], count: int, reach: int
+    cells: set[XY],
+    taken: tuple[list[XY], list[XY]],
+    anchors: tuple[XY, XY],
+    need: tuple[int, int],
 ) -> list[XY] | None:
     """第三方起始區（6E-3b）：``cells``（從敵方起點走得到的格子）裡不在雙方起始區、離我方每一格
-    至少 ``reach``（曼哈頓距離）的格子，照引擎自動排的順序（離敵方起始區最近, y, x）取 ``count``
-    格；不夠＝``None``。"""
+    至少 ``reach``（曼哈頓距離）、離敵方帶頭的比離主角近（6E-3d；``anchors``＝（主角, 敵方帶頭的））
+    的格子，照引擎自動排的順序（離敵方起始區最近, y, x）取 ``count`` 格；不夠＝``None``。
+    ``need``＝（``count``, ``reach``）。"""
     ally, enemy = taken
+    hero, leader = anchors
+    count, reach = need
     used = set(ally) | set(enemy)
+
+    def ok(c: XY) -> bool:
+        if c in used or _manhattan(c, leader) >= _manhattan(c, hero):
+            return False
+        return all(_manhattan(c, a) >= reach for a in ally)
+
     found = sorted(
-        (c for c in cells if c not in used and all(_manhattan(c, a) >= reach for a in ally)),
+        (c for c in cells if ok(c)),
         key=lambda c: (min(_manhattan(c, e) for e in enemy), c[1], c[0]),
     )
     return found[:count] if len(found) >= count else None
@@ -202,7 +215,7 @@ def _zones(
     zones = {"ally": [list(c) for c in ally], "enemy": [list(c) for c in enemy]}
     if counts.third:
         third_reach = field_rules.gap_third + 1  # 6E-3c：永遠至少隔 gap_third 格
-        third = _third_zone(enemy_cells, (ally, enemy), counts.third, third_reach)
+        third = _third_zone(enemy_cells, (ally, enemy), anchors, (counts.third, third_reach))
         if third is None:
             return None
         zones["third"] = [list(c) for c in third]
