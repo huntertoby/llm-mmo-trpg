@@ -16,7 +16,7 @@ camp_elite_permille: 100
 affixes: [regenerating, mist_veiled, heart_linked, berserk]
 
 groups:
-  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit, bandit]}  # 6E-3b：少一名弓手（就地開打隔 2～3 格後新手戰勝率低於 75%）
+  - {id: bandit_raiders, name_zh: 搶渡船的盜賊, units: [bandit, bandit, bandit_archer]}  # 6E-3c：加回弓手（撤回 6E-3b 的減人）
   - {id: bandit_shield_line, name_zh: 盜賊盾陣, units: [bandit, bandit, bandit_shieldbearer]}
   - {id: mist_wolf_pack, name_zh: 霧狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
   - {id: bandit_wolf_handler, name_zh: 帶著霧狼的盜賊, units: [bandit, mist_wolf, mist_wolf]}
@@ -33,7 +33,7 @@ groups:
   - {id: valley_beasts, name_zh: 藥谷野獸, units: [mountain_leopard, mountain_leopard, stoneback_bear]}
   - {id: furnace_steward, name_zh: 丹爐執事, units: [sect_steward, sect_swordsman, sect_warrior_monk, sect_acolyte]}
   - {id: furnace_tide, name_zh: 丹爐水房, units: [water_alchemist, sect_swordsman, sect_swordsman, sect_mist_walker]}
-  - {id: north_slope_pack, name_zh: 狼王的狼群, units: [mist_wolf, mist_wolf, mist_wolf]}
+  - {id: north_slope_pack, name_zh: 狼王的狼群, units: [mist_wolf, mist_wolf]}  # 6E-3c：少一隻霧狼（就地開打後北坡我方先手勝率低於 75%）
   - {id: lake_hunters, name_zh: 冬湖獵手, units: [frost_crane_archer, stoneback_bear, mist_wolf]}
   - {id: lake_bears, name_zh: 冬湖石背熊, units: [frost_crane_archer, frost_crane_archer], third: [stoneback_bear, mist_wolf]}  # 5B-4c 三方：野獸和修士互打
   - {id: tomb_array, name_zh: 劍冢劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_disciple, sect_mist_walker]}

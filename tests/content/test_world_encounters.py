@@ -152,7 +152,8 @@ def test_fixed_elite_must_fit(table: EncounterTable) -> None:
     data = _data(table)
     north = next(loc for loc in data["locations"] if loc["location"] == "north_slope")
     group = north["groups"][0]["group"]
-    next(g for g in data["groups"] if g["id"] == group)["units"].append("mist_wolf")
+    # 6E-3c：北坡狼群剩兩隻，補兩隻才超過（固定精英＋4 隻）
+    next(g for g in data["groups"] if g["id"] == group)["units"].extend(["mist_wolf", "mist_wolf"])
     with pytest.raises(ValidationError, match="超過 4 名"):
         EncounterTable.model_validate(data)
 
