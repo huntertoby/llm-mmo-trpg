@@ -48,6 +48,10 @@ import { IdleMotion } from "./idleMotion";
 import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { floatFrame } from "./uiAnim";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
+import { devAnimFactor } from "../battle/playback";
+
+/** 環境動態跟著開發用的 `?anim=0.1` 放慢（6N-10，逐格驗收用；正式畫面 ＝ 1）。 */
+const AMBIENT_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.location.search);
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
 import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
@@ -277,7 +281,7 @@ export class BattleRenderer {
     ticker.add(this.safeRender, this, UPDATE_PRIORITY.LOW);
     ticker.add((t) => this.guard(() => this.pulses.tick(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.tickIdle(t.deltaMS)));
-    ticker.add((t) => this.guard(() => this.ambient.tick(t.deltaMS)));
+    ticker.add((t) => this.guard(() => this.ambient.tick(t.deltaMS / AMBIENT_SLOW)));
     ticker.add((t) => this.guard(() => this.tickBobs(t.deltaMS)));
     this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
