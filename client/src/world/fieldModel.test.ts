@@ -73,6 +73,7 @@ function town(over: Partial<FieldView> = {}): FieldView {
     footprints: [],
     buildings: [],
     chasm_style: "default",
+    decor: [],
     ...over,
   };
 }

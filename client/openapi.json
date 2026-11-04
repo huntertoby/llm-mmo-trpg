@@ -7641,6 +7641,23 @@
         ],
         "title": "DecisionRequest"
       },
+      "DecorKind": {
+        "type": "string",
+        "enum": [
+          "flower_bed",
+          "stall_cloth",
+          "clothesline",
+          "crate_stack",
+          "radial_paving"
+        ]
+      },
+      "DecorLayer": {
+        "type": "string",
+        "enum": [
+          "ground",
+          "standing"
+        ]
+      },
       "Defend": {
         "properties": {
           "unit_id": {
@@ -9071,6 +9088,66 @@
         "title": "FieldBuildingView",
         "description": "只畫的建築外觀（6B-ART1）：疊在既有的牆格上，不影響走路、視線與戰鬥。"
       },
+      "FieldDecorView": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/DecorKind"
+          },
+          "layer": {
+            "$ref": "#/components/schemas/DecorLayer"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "center_x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center X"
+          },
+          "center_y": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "layer",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "FieldDecorView",
+        "description": "只畫的裝飾（6V-4b；地圖檔 ``look.decor``）：不佔格、不擋路，不影響走路、視線與戰鬥。"
+      },
       "FieldDoorView": {
         "properties": {
           "id": {
@@ -10397,6 +10474,14 @@
           "chasm_style": {
             "$ref": "#/components/schemas/ChasmStyle",
             "default": "default"
+          },
+          "decor": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDecorView"
+            },
+            "type": "array",
+            "title": "Decor",
+            "default": []
           }
         },
         "additionalProperties": false,

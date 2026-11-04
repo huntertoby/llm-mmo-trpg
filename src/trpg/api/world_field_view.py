@@ -14,6 +14,7 @@ from typing import Final, Literal
 from trpg.api.world_field_people import ALERT_ZH, friends_here, look_of, npc_marks
 from trpg.api.world_field_schemas import (
     FieldBuildingView,
+    FieldDecorView,
     FieldDoorView,
     FieldEnemyUnitView,
     FieldEnemyView,
@@ -426,9 +427,27 @@ def field_view(
         friends=friends_here(library, world, char, found, grid),
         buildings=_buildings(library, char, found),
         chasm_style=found.look.chasm_style,
+        decor=_decor(found),
     )
     return view.model_copy(
         update=things_update(library, world, char, grid, now=now, social=social)  # 6C-5
+    )
+
+
+def _decor(found: FieldMapDef) -> tuple[FieldDecorView, ...]:
+    """地圖檔 ``look.decor`` 的只畫裝飾（6V-4b）；圖層照內容的種類表。"""
+    return tuple(
+        FieldDecorView(
+            kind=d.kind,
+            layer=d.layer,
+            x=d.at[0],
+            y=d.at[1],
+            width=d.footprint[0],
+            height=d.footprint[1],
+            center_x=None if d.center is None else d.center[0],
+            center_y=None if d.center is None else d.center[1],
+        )
+        for d in found.look.decor
     )
 
 

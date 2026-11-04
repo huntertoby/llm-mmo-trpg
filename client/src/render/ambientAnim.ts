@@ -146,8 +146,8 @@ export function enchantRingGlow(seed: string, ms: number): number {
 export const SPRAY_MS = 1400;
 /** 每一道水弧的水珠數；水弧有左右兩道，加中央往上的一道短水柱（3 顆）。 */
 export const SPRAY_DROPS = 7;
-/** 水弧往上拱的高度（畫布單位）。 */
-export const SPRAY_RISE = 10;
+/** 水弧往上拱的高度（畫布單位；6V-4b：10 → 14，加 40%，美術 PM 6V-3／6V-4 檢查待決 7）。 */
+export const SPRAY_RISE = 14;
 
 export interface SprayDrop {
   /** 相對噴口的位置（畫布單位：x 往東、y 往下）。 */

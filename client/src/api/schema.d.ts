@@ -3095,6 +3095,10 @@ export interface components {
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
+        /** @enum {string} */
+        DecorKind: "flower_bed" | "stall_cloth" | "clothesline" | "crate_stack" | "radial_paving";
+        /** @enum {string} */
+        DecorLayer: "ground" | "standing";
         /**
          * Defend
          * @description 守護（Phase 3-21a，玩法 #24；內部 ID 仍為 ``defend``）：防禦值 +25%，到自己的下回合開始。
@@ -3637,6 +3641,26 @@ export interface components {
             height: number;
             /** Sign */
             sign?: ("jar" | "anvil" | "scroll") | null;
+        };
+        /**
+         * FieldDecorView
+         * @description 只畫的裝飾（6V-4b；地圖檔 ``look.decor``）：不佔格、不擋路，不影響走路、視線與戰鬥。
+         */
+        FieldDecorView: {
+            kind: components["schemas"]["DecorKind"];
+            layer: components["schemas"]["DecorLayer"];
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Center X */
+            center_x?: number | null;
+            /** Center Y */
+            center_y?: number | null;
         };
         /** FieldDoorView */
         FieldDoorView: {
@@ -4216,6 +4240,11 @@ export interface components {
             buildings: components["schemas"]["FieldBuildingView"][];
             /** @default default */
             chasm_style: components["schemas"]["ChasmStyle"];
+            /**
+             * Decor
+             * @default []
+             */
+            decor: components["schemas"]["FieldDecorView"][];
         };
         /** @enum {string} */
         FigureFacing: "n" | "e" | "s" | "w";

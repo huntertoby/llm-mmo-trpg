@@ -5,7 +5,7 @@ import type { FieldView } from "../api/types";
 import { buildingKind, doorStyleOf, signFromView, type BuildingKind, type BuildingSpec } from "../render/townArt";
 import { isFurnitureLook, roomKindOf, roomPalette, wallDecor, wallHangings, type FurnitureLook, type FurnitureSpec } from "../render/interiorArt";
 import type { BridgeSide } from "../render/capitalArt";
-import { DECOR_LAYOUTS, type PavingScene, type PlazaDecor } from "../render/plazaDecor";
+import { DECOR_DRAW, type FieldDecorView, type PavingScene, type PlazaDecor, type PlazaDecorKind } from "../render/plazaDecor";
 import { EMPTY_SCENERY, type BuildingScene, type DoorScene, type FieldScenery, type InteriorScene, type PlazaScene } from "../render/sceneryModel";
 
 const key = (x: number, y: number): string => `${x},${y}`;
@@ -139,34 +139,34 @@ function occupiedCells(field: FieldView): Set<string> {
   return out;
 }
 
+const isItemKind = (k: FieldDecorView["kind"]): k is PlazaDecorKind => k !== "radial_paving" && k in DECOR_DRAW;
+
 /**
- * 這張圖的裝飾（6V-4）：版面照 `DECOR_LAYOUTS`（地圖 ID），每一件佔的格子都要是空的地面才畫；
- * 不空（內容改了、有人站上去的格子）就整件不畫。依 (y, x) 排序。
+ * 這張圖的裝飾（6V-4；6V-4b 起版面照地圖檔 `look.decor`＝`FieldView.decor`）：每一件佔的格子都要是空的地面才畫；
+ * 不空（內容改了、有人站上去的格子）就整件不畫；前端不認得的種類不畫。圖層照資料（站立／地面）。依 (y, x) 排序。
  */
 export function plazaDecorOf(field: FieldView): PlazaDecor[] {
-  const layout = DECOR_LAYOUTS[field.map_id];
-  if (layout === undefined || field.interior) return [];
+  const items = (field.decor ?? []).flatMap((d): PlazaDecor[] => (isItemKind(d.kind) ? [{ kind: d.kind, x: d.x, y: d.y, w: d.width, layer: d.layer }] : []));
+  if (items.length === 0) return [];
   const ground = new Map(field.tiles.map((t) => [key(t.x, t.y), t.terrain]));
   const taken = occupiedCells(field);
   const free = (x: number, y: number) => DECOR_GROUND.has(ground.get(key(x, y)) ?? "") && !taken.has(key(x, y));
-  return layout.filter((d) => Array.from({ length: d.w }, (_, i) => d.x + i).every((x) => free(x, d.y))).sort((a, b) => a.y - b.y || a.x - b.x);
+  return items.filter((d) => Array.from({ length: d.w }, (_, i) => d.x + i).every((x) => free(x, d.y))).sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
-/** 中央廣場的放射狀鋪法（6V-4）：四盞源晶燈（`crystal_lamp`）圍起來的範圍、圓心在傳送石；範圍內的石地都鋪。 */
-function pavingOf(field: FieldView, stone: { x: number; y: number }): PavingScene | null {
-  const lamps = field.objects.filter((o) => o.look === "crystal_lamp");
-  if (lamps.length < 2) return null;
-  const xs = lamps.map((o) => o.x);
-  const ys = lamps.map((o) => o.y);
-  const x0 = Math.min(...xs);
-  const y0 = Math.min(...ys);
-  const w = Math.max(...xs) - x0 + 1;
-  const h = Math.max(...ys) - y0 + 1;
+/**
+ * 放射狀鋪法（6V-4；6V-4b 起範圍與圓心照地圖檔的 `radial_paving`）：範圍內的石地都鋪，圓心畫在那一格的中心。
+ * 有好幾件時取第一件（依內容順序）；沒有＝`null`。
+ */
+export function pavingOf(field: FieldView): PavingScene | null {
+  const d = (field.decor ?? []).find((x) => x.kind === "radial_paving");
+  if (d === undefined || d.center_x == null || d.center_y == null) return null;
+  const { x: x0, y: y0, width: w, height: h } = d;
   const cells = field.tiles
     .filter((t) => t.terrain === "stone" && t.x >= x0 && t.x < x0 + w && t.y >= y0 && t.y < y0 + h)
     .sort((a, b) => a.y - b.y || a.x - b.x)
     .map((t) => key(t.x, t.y));
-  return cells.length === 0 ? null : { x0, y0, w, h, cx: stone.x + 0.5, cy: stone.y + 0.5, cells };
+  return cells.length === 0 ? null : { x0, y0, w, h, cx: d.center_x + 0.5, cy: d.center_y + 0.5, cells };
 }
 
 /** 主城（`region: capital`、室外）的中央傳送陣：第一顆傳送石（依座標排序）；`open` 照大世界圖已開放的區。 */
@@ -174,12 +174,7 @@ function plazaOf(field: FieldView, openRegions: readonly string[]): PlazaScene |
   if (field.region !== "capital" || field.interior) return null;
   const stone = [...field.stones].sort((a, b) => a.y - b.y || a.x - b.x)[0];
   if (stone === undefined) return null;
-  const scene: PlazaScene = { x: stone.x, y: stone.y, open: [...new Set(openRegions)].sort() };
-  const paving = pavingOf(field, stone);
-  if (paving !== null) scene.paving = paving;
-  const decor = plazaDecorOf(field);
-  if (decor.length > 0) scene.decor = decor;
-  return scene;
+  return { x: stone.x, y: stone.y, open: [...new Set(openRegions)].sort() };
 }
 
 /**
@@ -191,8 +186,14 @@ export function fieldScenery(field: FieldView, openRegions: readonly string[] = 
   const furniture = furnitureOf(field);
   const interior = field.interior ? interiorOf(field) : null;
   const plaza = plazaOf(field, openRegions);
-  if (buildings.length === 0 && interior === null && Object.keys(furniture).length === 0 && plaza === null) return EMPTY_SCENERY;
-  return plaza === null ? { buildings, doors, interior, furniture } : { buildings, doors, interior, furniture, plaza };
+  const paving = pavingOf(field);
+  const decor = plazaDecorOf(field);
+  if (buildings.length === 0 && interior === null && Object.keys(furniture).length === 0 && plaza === null && paving === null && decor.length === 0) return EMPTY_SCENERY;
+  const out: FieldScenery = { buildings, doors, interior, furniture };
+  if (plaza !== null) out.plaza = plaza;
+  if (paving !== null) out.paving = paving;
+  if (decor.length > 0) out.decor = decor;
+  return out;
 }
 
 /** 大世界圖已開放的區（依區域 ID 排序）；沒有大世界圖＝空（傳送陣全灰）。 */

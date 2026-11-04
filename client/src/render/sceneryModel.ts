@@ -30,10 +30,6 @@ export interface PlazaScene {
   x: number;
   y: number;
   open: readonly string[];
-  /** 中央廣場的放射狀鋪法（6V-4；四盞源晶燈圍起來的範圍）；沒有＝省略。 */
-  paving?: PavingScene | null;
-  /** 只畫的裝飾（6V-4：花壇、攤布、晾衣繩、堆箱；已檢查過格子空著）。 */
-  decor?: readonly PlazaDecor[];
 }
 
 export interface InteriorScene {
@@ -55,6 +51,10 @@ export interface FieldScenery {
   furniture: Readonly<Record<string, FurnitureSpec>>;
   /** 主城的中央傳送陣與五面區旗；其他地圖沒有（省略或 `null`）。 */
   plaza?: PlazaScene | null;
+  /** 放射狀鋪法（6V-4；6V-4b 起照地圖檔 `look.decor` 的 `radial_paving`）；沒有＝省略。 */
+  paving?: PavingScene | null;
+  /** 只畫的裝飾（6V-4b：地圖檔 `look.decor`；花壇、攤布、晾衣繩、堆箱；已檢查過格子空著，依 (y, x) 排序）。 */
+  decor?: readonly PlazaDecor[];
 }
 
 export const EMPTY_SCENERY: FieldScenery = { buildings: [], doors: [], interior: null, furniture: {} };

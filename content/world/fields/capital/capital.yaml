@@ -130,6 +130,28 @@ buildings:   # 6D-ART2：只畫的建築外觀，疊在既有的牆格上（牆�
   - {kind: tent, at: [12, 19], size: [2, 2]}         # 南：傭兵營的帳篷
   - {kind: tent, at: [18, 19], size: [2, 2]}
   - {kind: fountain, at: [4, 3], size: [2, 2]}       # 西北：許願池（蓋在水表面上）
+look:   # 6V-4b：只畫的外觀（規則雜湊排除整個 look；不佔格、不擋路，格子被佔的那件整件不畫）
+  decor:
+    # 中央廣場的放射狀鋪法：四盞源晶燈圍起來的範圍，圓心在傳送石 [15, 11]
+    - {kind: radial_paving, at: [11, 9], size: [10, 6], center: [15, 11]}
+    # 花壇：中央廣場南北兩緣、源晶燈內側各一，加導師殿門前兩側
+    - {kind: flower_bed, at: [12, 9]}
+    - {kind: flower_bed, at: [19, 9]}
+    - {kind: flower_bed, at: [12, 14]}
+    - {kind: flower_bed, at: [19, 14]}
+    - {kind: flower_bed, at: [13, 5]}
+    - {kind: flower_bed, at: [17, 5]}
+    # 攤布：廣場西側（酒館與廣場之間）兩攤、東南一攤
+    - {kind: stall_cloth, at: [7, 14]}
+    - {kind: stall_cloth, at: [9, 15]}
+    - {kind: stall_cloth, at: [22, 15]}
+    # 晾衣繩（3 格寬）：酒館屋後（西北，許願池南邊的空地）
+    - {kind: clothesline, at: [2, 7]}
+    # 堆箱：鐵匠鋪兩側、傭兵營帳篷旁
+    - {kind: crate_stack, at: [24, 9]}
+    - {kind: crate_stack, at: [29, 13]}
+    - {kind: crate_stack, at: [11, 21]}
+    - {kind: crate_stack, at: [20, 21]}
 surfaces:
   - {at: [4, 3], surface: water}   # 許願池
   - {at: [5, 3], surface: water}

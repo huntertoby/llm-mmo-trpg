@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import DollLook
-from trpg.content.fields import ChasmStyle, FieldFigure, ObjectPanel
+from trpg.content.fields import ChasmStyle, DecorKind, DecorLayer, FieldFigure, ObjectPanel
 from trpg.content.races import RaceLook
 from trpg.content.world_events import NpcPortrait
 from trpg.content.world_rules import FieldRules
@@ -82,6 +82,22 @@ class FieldObjectView(_ApiModel):
     y: int
     look: str | None = None
     """只畫的家具外觀（6B-ART1：``barrel``、``bar``…）；規則照 ``kind``，沒有＝照 ``kind`` 畫。"""
+
+
+class FieldDecorView(_ApiModel):
+    """只畫的裝飾（6V-4b；地圖檔 ``look.decor``）：不佔格、不擋路，不影響走路、視線與戰鬥。"""
+
+    kind: DecorKind
+    layer: DecorLayer
+    """``ground``＝畫在人物下面；``standing``＝和人物一起照 y 排序（內容的種類表）。"""
+    x: int
+    y: int
+    """左上格。"""
+    width: int
+    height: int
+    center_x: int | None = None
+    center_y: int | None = None
+    """放射狀鋪法的圓心那一格（其他種類＝``None``）。"""
 
 
 class FieldBuildingView(_ApiModel):
@@ -354,6 +370,8 @@ class FieldView(_ApiModel):
     """建築外觀（6B-ART1；只畫，依內容順序）。"""
     chasm_style: ChasmStyle = "default"
     """深淵的畫法（6V-2b；地圖檔 ``look.chasm_style``，只畫，規則照舊）。"""
+    decor: tuple[FieldDecorView, ...] = ()
+    """只畫的裝飾（6V-4b；地圖檔 ``look.decor``，依內容順序）。"""
 
 
 FieldNpcView.model_rebuild()

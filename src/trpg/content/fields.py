@@ -245,10 +245,95 @@ CHASM_STYLES: tuple[str, ...] = get_args(ChasmStyle.__value__)
 """:data:`ChasmStyle` 的值（由型別取出）。"""
 
 
+type DecorKind = Literal["flower_bed", "stall_cloth", "clothesline", "crate_stack", "radial_paving"]
+"""只畫的地面裝飾種類（6V-4b，``docs/art/6V-3與6V-4檢查.md`` 2 第 3、4 點）：花壇、攤布、晾衣繩、
+堆箱、放射狀鋪法。"""
+
+DECOR_KINDS: tuple[str, ...] = get_args(DecorKind.__value__)
+""":data:`DecorKind` 的值（由型別取出）。"""
+
+type DecorLayer = Literal["ground", "standing"]
+"""裝飾畫在哪一層：``ground``＝地面（畫在人物下面）；``standing``＝站著的（和人物一起照 y 排序：
+人站在它後面〔北邊〕時被擋住，站在前面時蓋住它）。"""
+
+DECOR_LAYERS: Mapping[str, DecorLayer] = {
+    "flower_bed": "ground",
+    "stall_cloth": "ground",
+    "clothesline": "standing",
+    "crate_stack": "standing",
+    "radial_paving": "ground",
+}
+"""每種裝飾的圖層（站立／地面）。"""
+
+DECOR_FIXED_SIZE: Mapping[str, XY] = {
+    "flower_bed": (1, 1),
+    "stall_cloth": (1, 1),
+    "clothesline": (3, 1),
+    "crate_stack": (1, 1),
+}
+"""固定尺寸的裝飾（寬、高，格）；``size`` 省略＝這個尺寸，填了必須相同。``radial_paving`` 不在這裡
+（範圍必填）。"""
+
+
+class FieldDecor(ContentModel):
+    """一件只畫的裝飾（6V-4b）：不佔格、不擋路、不進規則（放在地圖的 ``look.decor``，規則雜湊
+    排除整個 ``look``）。
+
+    - ``at``：左上格；``size``：寬高（格）。固定尺寸的種類可省略 ``size``
+      （見 :data:`DECOR_FIXED_SIZE`）。
+    - ``radial_paving``（放射狀鋪法）：``size`` 是鋪的範圍，``center`` 是圓心那一格
+      （畫在格子中心），
+      都必填，``center`` 要在範圍內。其他種類不可填 ``center``。
+
+    前端每次照地圖檢查格子是不是空的地面，被佔的那件整件不畫。"""
+
+    kind: DecorKind
+    at: XY
+    size: XY | None = None
+    center: XY | None = None
+
+    @model_validator(mode="after")
+    def _shape(self) -> FieldDecor:
+        if self.kind == "radial_paving":
+            if self.size is None or self.center is None:
+                raise ValueError("radial_paving 必須填 size（範圍）與 center（圓心）")
+            w, h = self.size
+            if w < 1 or h < 1:
+                raise ValueError(f"radial_paving 的 size 必須至少 1×1，收到 {list(self.size)}")
+            cx, cy = self.center
+            x0, y0 = self.at
+            if not (x0 <= cx < x0 + w and y0 <= cy < y0 + h):
+                raise ValueError(f"radial_paving 的 center {list(self.center)} 不在範圍內")
+            return self
+        if self.center is not None:
+            raise ValueError(f"{self.kind} 不可填 center（只有 radial_paving 可以）")
+        fixed = DECOR_FIXED_SIZE[self.kind]
+        if self.size is not None and self.size != fixed:
+            raise ValueError(f"{self.kind} 的 size 固定是 {list(fixed)}，收到 {list(self.size)}")
+        return self
+
+    @property
+    def footprint(self) -> XY:
+        """寬、高（格）。"""
+        return self.size if self.size is not None else DECOR_FIXED_SIZE[self.kind]
+
+    @property
+    def layer(self) -> DecorLayer:
+        return DECOR_LAYERS[self.kind]
+
+    def cells(self) -> list[XY]:
+        """範圍內的格子（逐列、由左到右）。"""
+        x0, y0 = self.at
+        w, h = self.footprint
+        return [(x, y) for y in range(y0, y0 + h) for x in range(x0, x0 + w)]
+
+
 class FieldLook(ContentModel):
     """實地地圖只影響畫法的外觀欄位（6V-2b）；不進規則（規則雜湊排除整個 ``look``）。"""
 
     chasm_style: ChasmStyle = "default"
+    decor: tuple[FieldDecor, ...] = ()
+    """只畫的裝飾（6V-4b，見 :class:`FieldDecor`）；依內容順序。"""
 
 
 class FieldBuilding(ContentModel):
@@ -538,6 +623,7 @@ class FieldMapDef(ContentModel):
         problems += self._id_problems()
         problems += self._panel_problems()
         problems += self._bounds_problems()
+        problems += self._decor_problems()
         if not problems:
             problems += self._edge_problems()
             problems += self._overlap_problems()
@@ -622,6 +708,24 @@ class FieldMapDef(ContentModel):
         ):
             placed += [(f"{name} {s.id}", s.at) for s in spots]
         return placed
+
+    def _decor_problems(self) -> list[str]:
+        """裝飾（``look.decor``，6V-4b）整件要在地圖內；除了鋪法以外，兩件裝飾不可疊在同一格。"""
+        out: list[str] = []
+        seen: dict[XY, str] = {}
+        for d in self.look.decor:
+            cells = d.cells()
+            if not all(self.in_bounds(*c) for c in cells):
+                out.append(f"裝飾 {d.kind} {list(d.at)} 超出地圖範圍")
+                continue
+            if d.kind == "radial_paving":
+                continue
+            for c in cells:
+                if c in seen:
+                    out.append(f"裝飾 {d.kind} {list(d.at)} 和 {seen[c]} 疊在 {list(c)}")
+                    break
+                seen[c] = f"{d.kind} {list(d.at)}"
+        return out
 
     def _bounds_problems(self) -> list[str]:
         return [
