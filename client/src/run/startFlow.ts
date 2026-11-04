@@ -48,7 +48,7 @@ export function offerTagHint(tag: OfferTag): string {
   }
   if (tag.kind === "bridge") return "找不到同時接上兩個已持有關鍵字的技能：從持有的接到新的關鍵字";
   if (tag.kind === "deepen") return "還沒有可加深的關鍵字：改給新的方向";
-  return "所有關鍵字都有了：改給持有最少的";
+  return "還沒有的關鍵字找不到技能：改給持有最少的";
 }
 
 /** 開發者模式：網址帶 `?dev=1`（或 `dev=true`）才顯示開發者起始包選單。 */
