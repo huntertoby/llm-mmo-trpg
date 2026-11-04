@@ -5,7 +5,8 @@
 // - 時鐘是 ticker 累加的毫秒（只影響畫面）；`enabled = false` 時一律站好（截圖、測試用）。
 import type { Container, Sprite } from "pixi.js";
 import type { UnitDraw } from "../battle/drawModel";
-import { idleFrame } from "./idleClips";
+import { idleFrame, type IdleFrame } from "./idleClips";
+import { isFrozenLook, isRootedLook, lockLegs } from "./statusAnim";
 import type { InkPose } from "./inkPose";
 import { bodyNodes, hasSkeleton, isProne } from "./unitSprite";
 
@@ -13,7 +14,14 @@ import { bodyNodes, hasSkeleton, isProne } from "./unitSprite";
 export const NO_IDLE_STATUS = "frozen";
 
 export function idles(u: UnitDraw): boolean {
-  return !u.downed && !isProne(u) && u.statusIds?.includes(NO_IDLE_STATUS) !== true;
+  return !u.downed && !isProne(u) && !isFrozenLook(u.statusIds ?? []);
+}
+
+/** 定身（6N-9）：小動作只動上半身，腳不動。 */
+export function idleFrameFor(u: UnitDraw, ms: number): IdleFrame {
+  const f = idleFrame(u.id, ms);
+  if (f.pose === null || !isRootedLook(u.statusIds ?? [])) return f;
+  return { ...f, pose: lockLegs(f.pose), key: `${f.key}|rooted` };
 }
 
 export class IdleMotion {
@@ -71,7 +79,7 @@ export class IdleMotion {
       const draw = draws.get(id);
       if (draw === undefined) continue;
       const on = this.enabled && idles(draw);
-      const f = on ? idleFrame(id, this.clock) : { scaleY: 1, pose: null, key: "" };
+      const f = on ? idleFrameFor(draw, this.clock) : { scaleY: 1, pose: null, key: "" };
       for (const node of bodyNodes(sprite)) {
         let base = this.baseY.get(node);
         if (base === undefined) {

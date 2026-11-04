@@ -46,8 +46,10 @@ import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "./mapMarks";
 import { IdleMotion } from "./idleMotion";
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
+import { MotionAnims } from "./motionAnims";
 import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
+import type { SurfaceHost } from "./surfaceAnimLayer";
 import { DOLL_SCALE } from "./paperdoll";
 import type { InkPose } from "./inkPose";
 import { CREATURE_CLIPS, quantizeCreaturePose } from "./creaturePose";
@@ -227,6 +229,8 @@ export class BattleRenderer {
   private readonly idle = new IdleMotion();
   /** 實地地圖只畫的外觀：建築、門、室內外框、家具（6B-ART1）。 */
   private readonly scenery = new SceneryLayer();
+  /** 狀態動作與地表動畫（6N-9）。 */
+  readonly motion = new MotionAnims();
   private readonly drawWaiters: Array<() => void> = [];
   private ready = false;
   private destroyed = false;
@@ -268,6 +272,8 @@ export class BattleRenderer {
     ticker.add((t) => this.guard(() => this.pulses.tick(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.tickIdle(t.deltaMS)));
     ticker.add((t) => this.guard(() => this.tickBobs(t.deltaMS)));
+    ticker.add((t) => this.guard(() => this.motion.tick(t.deltaMS, this.unitSprites, this.unitDrawOf, (id) => this.idle.isHeld(id))));
+    this.motion.start();
     this.app.canvas.addEventListener("webglcontextlost", this.onContextLost);
     this.app.canvas.addEventListener("webglcontextrestored", this.onContextRestored);
     stage.eventMode = "none";
@@ -284,6 +290,7 @@ export class BattleRenderer {
     this.clearLostTimer();
     for (const e of this.effectList) e.end?.();
     this.effectList = [];
+    this.motion.stop();
     if (this.ready && this.camTick !== null) this.app.ticker?.remove(this.camTick);
     this.camTick = null;
     if (this.ready) {
@@ -397,6 +404,7 @@ export class BattleRenderer {
     this.art.beginFrame();
     this.flameMarks = [];
     for (const t of model.tiles) this.tileSprite(model, t);
+    this.motion.drawSurfaces(model, this.surfaceHost);
     this.scenery.draw(this.sceneryHost(), model, model.scenery);
     for (const a of model.auras) {
       const aura = new Graphics().rect(2, 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
@@ -418,6 +426,7 @@ export class BattleRenderer {
     for (const trap of model.traps) this.drawTrap(trap);
     this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
+    this.motion.drawUnits(model);
     this.drawVeils(model);
     this.drawMist(model);
     this.art.endFrame();
@@ -1271,6 +1280,14 @@ export class BattleRenderer {
       if (tex !== null && node.texture !== tex) node.texture = tex;
     }
   }
+
+  /** 地表動畫畫在哪裡（6N-9）：每一排的地形層、表面裝飾層，跟著格子抬高；舊的樣子用同一套地形貼圖。 */
+  private readonly surfaceHost: SurfaceHost = {
+    ground: (y) => this.rows.row(y).ground,
+    deco: (y) => this.rows.row(y).deco,
+    place: (node, t) => this.rows.place(node, t, t.x * T, t.y * T, tileLift(t.height)),
+    oldTile: (from, t) => this.art.tile(tileArtSpec(from, t)),
+  };
 
   /** 開關待機（截圖、量測用；關掉時下一幀全員站好）。 */
   setIdle(on: boolean): void {
