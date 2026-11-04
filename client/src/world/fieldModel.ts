@@ -92,13 +92,13 @@ export function portalCells(field: FieldView): Set<string> {
 }
 
 export type PortalHit =
-  | { kind: "exit"; to: string; name: string }
+  | { kind: "exit"; to: string; name: string; blocked: string | null }
   | { kind: "door"; to: string; name: string }
   | { kind: "stone"; id: string };
 
 export function portalAt(field: FieldView, p: Pos): PortalHit | null {
   const exit = field.exits.find((e) => e.cells.some(([x, y]) => x === p.x && y === p.y));
-  if (exit !== undefined) return { kind: "exit", to: exit.to, name: exit.to_name_zh };
+  if (exit !== undefined) return { kind: "exit", to: exit.to, name: exit.to_name_zh, blocked: exit.blocked_zh ?? null };
   const door = field.doors.find((d) => d.x === p.x && d.y === p.y);
   if (door !== undefined) return { kind: "door", to: door.to, name: door.to_name_zh };
   const stone = field.stones.find((s) => s.x === p.x && s.y === p.y);
@@ -595,7 +595,7 @@ export function fieldHighlights(field: FieldView, hover: Pos | null): Highlights
 export function hoverText(field: FieldView, p: Pos | null): string | null {
   if (p === null) return null;
   const portal = portalAt(field, p);
-  if (portal?.kind === "exit") return `往 ${portal.name}`;
+  if (portal?.kind === "exit") return portal.blocked !== null ? `往 ${portal.name}（${portal.blocked}）` : `往 ${portal.name}`;
   if (portal?.kind === "door") return portal.name;
   if (portal?.kind === "stone") return "傳送石";
   const enemy = enemyAt(field, p);

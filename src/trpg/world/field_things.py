@@ -35,7 +35,7 @@ from trpg.world.clock import day_phase
 from trpg.world.common import rules_of, world_map_of
 from trpg.world.errors import WorldActionError
 from trpg.world.events import event_candidates
-from trpg.world.field import FieldCtx, field_map, hidden_door, outdoor_map, placed
+from trpg.world.field import FieldCtx, exit_open, field_map, hidden_door, outdoor_map, placed
 from trpg.world.field_actions import (
     EventMarkedEvent,
     FieldObjectUsedEvent,
@@ -334,9 +334,21 @@ def object_status(ctx: FieldCtx, char: CharacterState, spot: FieldSpot) -> Objec
         problem = _event_problem(ctx, char, spot)
     elif spot.use == "encounter" and char.pending_encounter is not None:
         problem = "還有沒處理的遭遇"
-    return ObjectStatus(
-        spot=spot, shown=shown, use=spot.use, note_zh=spot.note_zh, problem_zh=problem
-    )
+    note = _gate_note(ctx, char, spot)
+    return ObjectStatus(spot=spot, shown=shown, use=spot.use, note_zh=note, problem_zh=problem)
+
+
+def _gate_note(ctx: FieldCtx, char: CharacterState, spot: FieldSpot) -> str:
+    """說明卡的文字：擋路的情境物件（出口的 ``gate.spot``，#122 霧牆）依角色自己的主線進度換文字
+    （關著＝原文＋「霧太濃，還過不去」與任務提示；開著＝``open_zh``）；其他照 ``note_zh``。"""
+    found = ctx.map
+    exit_ = next((e for e in found.exits if e.gate is not None and e.gate.spot == spot.id), None)
+    if exit_ is None or exit_.gate is None:
+        return spot.note_zh
+    if exit_open(ctx.library, char, found, exit_):
+        return exit_.gate.open_zh or spot.note_zh
+    notice = exit_.gate.notice_zh() + "。"
+    return f"{spot.note_zh}{notice}" if spot.note_zh else notice
 
 
 def _object_trigger(

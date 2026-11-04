@@ -61,6 +61,7 @@ from trpg.world.economy_actions import (
 from trpg.world.encounters import EncounterLineup
 from trpg.world.field_actions import (
     EventMarkedEvent,
+    ExitBlockedEvent,
     FieldEnteredEvent,
     FieldObjectUsedEvent,
     SneakAction,
@@ -1130,6 +1131,7 @@ type WorldEvent = Annotated[
     | TeleportStoneUsedEvent
     | SneakStartedEvent  # 6C-5
     | EventMarkedEvent
-    | FieldObjectUsedEvent,
+    | FieldObjectUsedEvent
+    | ExitBlockedEvent,  # 6E-1
     Field(discriminator="kind"),
 ]

@@ -33,8 +33,17 @@ from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import WorldEvent
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
-from trpg.world.field import FieldGrid, field_grid, field_map, hidden_cells, hidden_door, placed
+from trpg.world.field import (
+    FieldGrid,
+    exit_open,
+    field_grid,
+    field_map,
+    hidden_cells,
+    hidden_door,
+    placed,
+)
 from trpg.world.field_actions import (
+    ExitBlockedEvent,
     FieldEnteredEvent,
     TeleportStoneUnlockedEvent,
     TeleportStoneUsedEvent,
@@ -60,6 +69,8 @@ def field_line(library: ContentLibrary, _region: str, event: WorldEvent) -> str 
         if inner is not None and inner.is_interior:
             return f"走進{_map_name(library, inner)}。"
         return None
+    if isinstance(event, ExitBlockedEvent):  # 6E-1（#122）：霧牆擋住
+        return event.text_zh
     if isinstance(event, TeleportStoneUnlockedEvent):
         return "傳送石亮了起來，之後可以從別的傳送石傳過來。"
     if isinstance(event, TeleportStoneUsedEvent):
@@ -339,6 +350,11 @@ def field_view(
                 cells=e.at,
                 to=e.to,
                 to_name_zh=_place_name(library, e.region or found.region, e.to),
+                blocked_zh=(
+                    None
+                    if e.gate is None or exit_open(library, char, found, e)
+                    else e.gate.notice_zh()
+                ),
             )
             for e in found.exits
         ),
