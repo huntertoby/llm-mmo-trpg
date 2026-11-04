@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>建角第 2 版</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#101218;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1340px}
+  h1{font-size:19px;margin:0 0 4px}.note{color:#b8ab96;font-size:13px;margin:0 0 10px;line-height:1.5}
+  canvas{display:block;border-radius:6px}
+</style></head>
+<body>
+<h1>建立角色（第 2 版樣張）：種族、出身、武器、關鍵字都用遊戲裡的畫法</h1>
+<p class="note">美術 PM，2026-11-04。使用者看第 1 版：「太簡陋了吧」。種族小圖改用 C 墨線紙娃娃的頭像（看得到尖耳、狐耳、鱗角、鬍子、獠牙、義眼、鰭耳）；選中的種族在右上展開名字、簡介、種族技、環境被動、判定加值；左邊大預覽跟著切換。出身用五區紋章與區域色；武器用遊戲的武器圖示；關鍵字用小圖示。全部程式繪製；簡介文字是美術 PM 暫擬，正式文案由玩法 PM 定。</p>
+<div id="a"></div>
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script src="storyDoll.js"></script>
+<script src="portraits.js"></script>
+<script src="gearArt.js"></script>
+<script>
+const TAU=Math.PI*2,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",SERIF="'Noto Serif TC','PMingLiU',serif";
+const NAVY="#1e2236",NAVY2="#161a2a",GOLD="#c8a868",GOLD2="#e8bb48",CREAM="#f2e6c8",VIO="#a898ff";
+const RC={晶冠:["#8ab0ff","#22284a","#7a8ac8"],雲嶺:["#6aa84a","#2f4a3a","#8ab890"],樞市:["#4ad0c8","#1e2a2a","#6a9a90"],灰燼:["#ff6a1a","#3a2418","#b07050"],霜潮:["#6ac0e8","#1a3040","#7ab0c8"]};
+Object.entries(RC).forEach(([k,v])=>{Portraits.REGION["r_"+k]=v;});
+const R=RaceArt.RACES;
+const RACES=[["human","人類","晶冠"],["elf","精靈","晶冠"],["fox","狐族","雲嶺"],["dragonkin","龍裔","雲嶺"],["dwarf","矮人","樞市"],["cyborg","晶能義體人","樞市"],["orc","獸人","灰燼"],["fiend","角魔","灰燼"],["scalefolk","鱗族","霜潮"],["seafolk","海民","霜潮"]];
+const EXTRA={cyborg:["cyber_eye"],seafolk:["coral"],dwarf:[]};
+const SEL="fox";
+function cv(w,h){const c=document.createElement("canvas");c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return[c,x];}
+function glow(x,cx,cy,r,col,a=1){const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,col);g.addColorStop(1,"rgba(0,0,0,0)");x.save();x.globalAlpha=a;x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,TAU);x.fill();x.restore();}
+function fil(x,X,Y,sx,sy){x.save();x.translate(X,Y);x.scale(sx,sy);x.strokeStyle=GOLD2;x.lineWidth=1.5;x.beginPath();x.moveTo(0,16);x.quadraticCurveTo(0,0,16,0);x.stroke();x.fillStyle=VIO;x.beginPath();x.moveTo(7,2);x.lineTo(10,7);x.lineTo(7,12);x.lineTo(4,7);x.closePath();x.fill();x.restore();}
+function frame(x,X,Y,W,H){x.save();x.globalAlpha=0.95;x.fillStyle=NAVY;x.beginPath();x.roundRect(X,Y,W,H,8);x.fill();x.restore();x.strokeStyle=GOLD;x.lineWidth=1.5;x.beginPath();x.roundRect(X,Y,W,H,8);x.stroke();fil(x,X+2,Y+2,1,1);fil(x,X+W-2,Y+2,-1,1);fil(x,X+2,Y+H-2,1,-1);fil(x,X+W-2,Y+H-2,-1,-1);}
+function sky(x,W,H){const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"#2a3468");g.addColorStop(1,"#5a6a9a");x.fillStyle=g;x.fillRect(0,0,W,H);glow(x,140,80,300,"rgba(255,240,200,0.25)");for(let i=0;i<24;i++){x.fillStyle="rgba(255,255,255,0.18)";x.beginPath();x.ellipse(i*60,H-20+(i%3)*8,70,20,0,0,TAU);x.fill();}}
+function more(ctx,key){if(key==="cyber_eye"){ctx.save();ctx.shadowColor="#4ad0c8";ctx.shadowBlur=6;ctx.fillStyle="#7af0e8";ctx.beginPath();ctx.arc(3.4,-41.2,1.4,0,TAU);ctx.fill();ctx.restore();}
+  if(key==="coral"){for(const [a,b,c] of [[-7,-50,"#e88a7a"],[-4.6,-51.6,"#f2a090"],[-2.4,-51,"#e88a7a"]]){ctx.fillStyle=c;ctx.beginPath();ctx.arc(a,b,1.3,0,TAU);ctx.fill();}}}
+function head(x,X,Y,size,id,realm){const look=R[id].look;Portraits.portrait(x,X,Y,size,[id,"","","r_"+realm,look,{body:{kind:"shirt",color:"#6a6a7a"}},[]]);
+  const ex=EXTRA[id]||[];if(ex.length){x.save();x.translate(X,Y);x.beginPath();x.roundRect(0,0,size,size,size*0.14);x.clip();const k=size/34;x.translate(size/2,size*0.47+42*k);x.scale(k,k);ex.forEach(e=>more(x,e));x.restore();}}
+// 出身紋章
+function emblem(x,cx,cy,r,realm){const col=RC[realm][0];x.save();x.translate(cx,cy);
+  x.fillStyle=RC[realm][1];x.beginPath();x.moveTo(0,-r);x.lineTo(r*0.85,-r*0.55);x.lineTo(r*0.85,r*0.35);x.lineTo(0,r);x.lineTo(-r*0.85,r*0.35);x.lineTo(-r*0.85,-r*0.55);x.closePath();x.fill();x.strokeStyle=GOLD;x.lineWidth=1.4;x.stroke();
+  x.fillStyle=col;x.strokeStyle=col;x.lineWidth=1.6;const s=r*0.5;
+  if(realm==="晶冠"){x.beginPath();x.moveTo(-s,s*0.4);x.lineTo(-s,-s*0.3);x.lineTo(-s*0.5,s*0.05);x.lineTo(0,-s*0.7);x.lineTo(s*0.5,s*0.05);x.lineTo(s,-s*0.3);x.lineTo(s,s*0.4);x.closePath();x.fill();x.fillStyle="#f2eaff";x.beginPath();x.moveTo(0,-s*0.2);x.lineTo(s*0.2,s*0.1);x.lineTo(0,s*0.35);x.lineTo(-s*0.2,s*0.1);x.fill();}
+  if(realm==="雲嶺"){x.beginPath();x.moveTo(-s,s*0.5);x.lineTo(-s*0.2,-s*0.6);x.lineTo(s*0.3,s*0.1);x.lineTo(s*0.6,-s*0.2);x.lineTo(s,s*0.5);x.closePath();x.fill();x.fillStyle="#f2f0e8";x.beginPath();x.arc(-s*0.4,s*0.45,s*0.3,Math.PI,TAU);x.arc(s*0.1,s*0.45,s*0.38,Math.PI,TAU);x.fill();}
+  if(realm==="樞市"){x.beginPath();for(let i=0;i<16;i++){const a=i/16*TAU,rr=i%2?s*0.65:s*0.85;x.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}x.closePath();x.fill();x.fillStyle=RC[realm][1];x.beginPath();x.arc(0,0,s*0.35,0,TAU);x.fill();x.fillStyle="#ffb030";x.beginPath();x.arc(0,0,s*0.15,0,TAU);x.fill();}
+  if(realm==="灰燼"){x.beginPath();x.moveTo(0,-s*0.9);x.quadraticCurveTo(s*0.8,-s*0.1,s*0.4,s*0.6);x.quadraticCurveTo(0,s*0.9,-s*0.4,s*0.6);x.quadraticCurveTo(-s*0.8,-s*0.1,0,-s*0.9);x.fill();x.fillStyle="#ffe08a";x.beginPath();x.moveTo(0,-s*0.2);x.quadraticCurveTo(s*0.3,s*0.2,0,s*0.55);x.quadraticCurveTo(-s*0.3,s*0.2,0,-s*0.2);x.fill();}
+  if(realm==="霜潮"){x.beginPath();x.moveTo(-s,s*0.1);x.quadraticCurveTo(-s*0.5,-s*0.6,0,s*0.1);x.quadraticCurveTo(s*0.5,-s*0.6,s,s*0.1);x.stroke();x.beginPath();x.moveTo(-s,s*0.55);x.quadraticCurveTo(-s*0.5,-s*0.15,0,s*0.55);x.quadraticCurveTo(s*0.5,-s*0.15,s,s*0.55);x.stroke();x.fillStyle="#e88a7a";x.beginPath();x.arc(0,-s*0.55,s*0.2,0,TAU);x.fill();}
+  x.restore();}
+// 關鍵字小圖示
+function kwIcon(x,cx,cy,k){const C={冰凍:"#8ad8ff",燃燒:"#ff8a3a",帶電:"#ffe05a",潮濕:"#4a9ae8",中毒:"#7ac83a",倒地:"#c8a868",撞擊:"#d0d0d8",標記:"#e05a5a",高處:"#a8c8a8",隱蔽:"#8a7ab8",召喚物:"#a898ff",形態:"#e8bb48"}[k];
+  x.save();x.translate(cx,cy);x.fillStyle=NAVY2;x.beginPath();x.arc(0,0,11,0,TAU);x.fill();x.strokeStyle=C;x.lineWidth=1.6;x.stroke();x.fillStyle=C;x.strokeStyle=C;x.lineWidth=1.5;
+  ({冰凍:()=>{for(let i=0;i<3;i++){x.save();x.rotate(i*Math.PI/3);x.beginPath();x.moveTo(0,-6);x.lineTo(0,6);x.stroke();x.restore();}},
+    燃燒:()=>{x.beginPath();x.moveTo(0,-7);x.quadraticCurveTo(6,0,3,6);x.quadraticCurveTo(0,8,-3,6);x.quadraticCurveTo(-6,0,0,-7);x.fill();},
+    帶電:()=>{x.beginPath();x.moveTo(2,-7);x.lineTo(-3,1);x.lineTo(1,1);x.lineTo(-2,7);x.lineTo(4,-1);x.lineTo(0,-1);x.closePath();x.fill();},
+    潮濕:()=>{x.beginPath();x.moveTo(0,-7);x.quadraticCurveTo(6,2,0,6);x.quadraticCurveTo(-6,2,0,-7);x.fill();},
+    中毒:()=>{[[-2,2,3],[3,-1,2.2],[0,-5,1.6]].forEach(([a,b,r])=>{x.beginPath();x.arc(a,b,r,0,TAU);x.fill();});},
+    倒地:()=>{x.beginPath();x.moveTo(-6,4);x.lineTo(6,4);x.stroke();x.beginPath();x.arc(-3,0,2.4,0,TAU);x.fill();x.fillRect(-1,-1,7,3);},
+    撞擊:()=>{for(let i=0;i<6;i++){const a=i/6*TAU;x.beginPath();x.moveTo(Math.cos(a)*2,Math.sin(a)*2);x.lineTo(Math.cos(a)*7,Math.sin(a)*7);x.stroke();}},
+    標記:()=>{x.beginPath();x.arc(0,0,5.5,0,TAU);x.stroke();x.beginPath();x.arc(0,0,1.8,0,TAU);x.fill();},
+    高處:()=>{x.beginPath();x.moveTo(-6,5);x.lineTo(0,-6);x.lineTo(6,5);x.closePath();x.fill();},
+    隱蔽:()=>{x.beginPath();x.ellipse(0,0,7,4,0,0,TAU);x.stroke();x.beginPath();x.moveTo(-6,5);x.lineTo(6,-5);x.stroke();},
+    召喚物:()=>{x.beginPath();x.arc(0,0,6,0,TAU);x.stroke();x.beginPath();x.moveTo(0,-4);x.lineTo(3.5,2);x.lineTo(-3.5,2);x.closePath();x.fill();},
+    形態:()=>{x.beginPath();x.moveTo(-6,3);x.quadraticCurveTo(-3,-6,0,0);x.quadraticCurveTo(3,6,6,-3);x.stroke();}})[k]();
+  x.restore();}
+function chip(x,X,Y,W,H,sel,col=GOLD2){x.fillStyle=sel?"#2a3a6a":"#262a3a";x.beginPath();x.roundRect(X,Y,W,H,8);x.fill();x.strokeStyle=sel?col:"#3a4060";x.lineWidth=sel?2:1;x.stroke();if(sel){glow(x,X+W/2,Y+H/2,W*0.6,"rgba(232,187,72,0.15)");}}
+const W=1300,H=980;const [c,x]=cv(W,H);sky(x,W,H);
+// 左：預覽
+frame(x,20,20,330,940);x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText("預覽",40,48);
+glow(x,185,420,170,"rgba(106,168,74,0.35)");x.fillStyle="rgba(0,0,0,0.3)";x.beginPath();x.ellipse(185,520,70,14,0,0,TAU);x.fill();
+StoryDoll.stamp(x,{look:R.fox.look,gear:{body:{kind:"leather",color:"#6a5040"},feet:{kind:"boots",material:"leather"},main_hand:{kind:"bow",material:"wood"}}},"front",185,520,4.6,false);
+x.fillStyle=CREAM;x.font=`bold 20px ${SERIF}`;x.textAlign="center";x.fillText("霜月",185,570);x.fillStyle="#c8bca8";x.font=`12.5px ${FONT}`;x.fillText("狐族・雲嶺出身・弓",185,592);x.textAlign="left";
+x.fillStyle="#262a3a";x.beginPath();x.roundRect(110,610,40,30,6);x.fill();x.beginPath();x.roundRect(220,610,40,30,6);x.fill();x.fillStyle=CREAM;x.font=`14px ${FONT}`;x.fillText("◀",123,631);x.fillText("▶",233,631);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("轉身",172,630);
+// 起始技能卡（示意）
+x.fillStyle=GOLD2;x.font=`bold 12px ${FONT}`;x.fillText("起始技能",40,680);
+[["冰錐","#5aa8e8"],["趁勢補刀","#c8c8d0"]].forEach(([n,col],i)=>{const Y=692+i*66;x.fillStyle=NAVY2;x.beginPath();x.roundRect(40,Y,290,56,8);x.fill();x.strokeStyle="#4a5a8a";x.stroke();x.fillStyle=col;x.beginPath();x.roundRect(48,Y+8,40,40,6);x.fill();x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.fillText(n,98,Y+26);x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("沿用遊戲的技能卡",98,Y+44);});
+// 右：步驟
+frame(x,370,20,910,940);
+const sec=(n,t,y)=>{x.fillStyle=GOLD2;x.font=`bold 14px ${FONT}`;x.fillText(n+"　"+t,392,y);x.strokeStyle="rgba(200,168,104,0.3)";x.beginPath();x.moveTo(392,y+7);x.lineTo(1258,y+7);x.stroke();};
+sec("1","名字",50);x.fillStyle=NAVY2;x.beginPath();x.roundRect(392,60,260,30,6);x.fill();x.strokeStyle="#3a4060";x.stroke();x.fillStyle=CREAM;x.font=`13px ${FONT}`;x.fillText("霜月",402,80);
+sec("2","種族",116);
+RACES.forEach(([id,zh,realm],i)=>{const X=392+(i%5)*120,Y=126+Math.floor(i/5)*128,sel=id===SEL;chip(x,X,Y,112,120,sel,RC[realm][0]);head(x,X+16,Y+8,80,id,realm);
+  x.fillStyle=CREAM;x.font=`bold 13px ${FONT}`;x.textAlign="center";x.fillText(zh,X+56,Y+104);x.fillStyle=RC[realm][0];x.font=`10.5px ${FONT}`;x.fillText(realm,X+56,Y+116);x.textAlign="left";});
+// 選中種族的說明
+{const X=1000,Y=126,Wd=258,Hd=248;x.fillStyle=NAVY2;x.beginPath();x.roundRect(X,Y,Wd,Hd,8);x.fill();x.strokeStyle=RC.雲嶺[0];x.lineWidth=1.6;x.stroke();
+ x.fillStyle=CREAM;x.font=`bold 18px ${SERIF}`;x.fillText("狐族",X+14,Y+30);x.fillStyle=RC.雲嶺[0];x.font=`11px ${FONT}`;x.fillText("雲嶺",X+62,Y+30);
+ x.fillStyle="#c8bca8";x.font=`12px ${FONT}`;["霧裡長大的狐耳一族，耳朵聽得見","別人聽不見的腳步聲。"].forEach((t,i)=>x.fillText(t,X+14,Y+54+i*17));
+ const row=(lab,t1,t2,y,col)=>{x.fillStyle=col;x.font=`bold 11.5px ${FONT}`;x.fillText(lab,X+14,Y+y);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(t1,X+14,Y+y+18);x.fillStyle="#b8ab96";x.font=`11px ${FONT}`;x.fillText(t2,X+14,Y+y+34);};
+ row("種族技（每場 1 次）","狐火誘餌","2 格內放誘餌，敵人下一次單體攻擊打它",100,GOLD2);
+ row("環境被動","靈覺","看得見 2 格內的敵方陷阱與隱蔽單位",156,GOLD2);
+ x.fillStyle="#8ad8ff";x.font=`bold 11.5px ${FONT}`;x.fillText("判定加值",X+14,Y+212);x.fillStyle="#2a3a6a";x.beginPath();x.roundRect(X+14,Y+220,150,22,11);x.fill();x.strokeStyle="#8ad8ff";x.lineWidth=1;x.stroke();x.fillStyle=CREAM;x.font=`bold 12px ${FONT}`;x.fillText("說服、欺騙 +1",X+26,Y+236);}
+sec("3","出身",412);
+const ORIG=[["晶冠城邦","晶冠","白石與晶光的城邦"],["雲嶺","雲嶺","雲海上的山城與竹林"],["魔導樞市","樞市","黃銅與晶能的工坊街"],["灰燼荒原","灰燼","焦土上的拾荒聚落"],["霜潮海境","霜潮","浮冰與珊瑚的港灣"]];
+ORIG.forEach(([n,realm,d],i)=>{const X=392+i*174,Y=422,sel=realm==="雲嶺";chip(x,X,Y,166,72,sel,RC[realm][0]);emblem(x,X+30,Y+36,22,realm);x.fillStyle=CREAM;x.font=`bold 13.5px ${FONT}`;x.fillText(n,X+60,Y+32);x.fillStyle="#9a8e7c";x.font=`10.5px ${FONT}`;x.fillText(d,X+60,Y+52);});
+x.fillStyle="#9a8e7c";x.font=`11px ${FONT}`;x.fillText("出身決定預設外觀、開場劇情與 NPC 態度，不影響戰鬥。（所有人都在主城醒來，#125）",392,512);
+sec("4","武器",542);
+const WEP=[["單手劍",{kind:"sword"}],["雙手劍",{kind:"greatsword"}],["魔導劍",{kind:"sword",material:"crystal"}],["斧",{kind:"axe"}],["錘",{kind:"hammer"}],["匕首",{kind:"dagger"}],["雙匕首",{kind:"dual_dagger"}],
+  ["矛",{kind:"spear"}],["鐮刀",{kind:"scythe"}],["鞭",{kind:"whip"}],["拳套",{kind:"fist"}],["弓",{kind:"bow"}],["弩",{kind:"crossbow"}],["手槍",{kind:"pistol"}],
+  ["火槍",{kind:"longgun"}],["霰彈槍",{kind:"shotgun"}],["火焰法杖",{kind:"staff",keywords:["ignite"]}],["冰霜法杖",{kind:"staff",keywords:["freeze"]}],["雷電法杖",{kind:"staff",keywords:["shock"]}],["權杖",{kind:"staff",form:"scepter",material:"gold"}],["圖騰杖",{kind:"staff",form:"totem",material:"bone"}]];
+WEP.forEach(([n,it],i)=>{const X=392+(i%7)*124,Y=552+Math.floor(i/7)*64,sel=n==="弓";chip(x,X,Y,116,56,sel);
+  x.save();x.translate(X+6,Y+6);x.scale(44/64,44/64);GearArt.draw(x,it,false);x.restore();x.fillStyle=CREAM;x.font=`12.5px ${FONT}`;x.fillText(n,X+56,Y+33);});
+sec("5","兩個關鍵字（已選 2）",770);
+const KW=["冰凍","燃燒","帶電","潮濕","中毒","倒地","撞擊","標記","高處","隱蔽","召喚物","形態"];
+KW.forEach((k,i)=>{const X=392+(i%6)*144,Y=780+Math.floor(i/6)*46,sel=k==="冰凍"||k==="倒地";chip(x,X,Y,136,38,sel);kwIcon(x,X+20,Y+19,k);x.fillStyle=CREAM;x.font=`bold 12.5px ${FONT}`;x.fillText(k,X+40,Y+24);});
+x.fillStyle="#3a5ad0";x.beginPath();x.roundRect(960,896,298,46,8);x.fill();x.strokeStyle="#ffe08a";x.lineWidth=1.8;x.stroke();x.fillStyle="#fff";x.font=`bold 15px ${FONT}`;x.textAlign="center";x.fillText("建立並在主城醒來",1109,925);x.textAlign="left";
+document.getElementById("a").appendChild(c);
+</script></body></html>
