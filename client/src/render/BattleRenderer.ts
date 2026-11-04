@@ -55,6 +55,7 @@ import { AmbientLayer, type AmbientHost } from "./ambientLayer";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_RISE_MAX } from "./uiAnim";
 import { FloatStack, groupRise, stackedY } from "./floatStack";
 import { clipHighlights, mapClipRect } from "./mapClip";
+import { isSubmerged, SUBMERGED_ALPHA, SUBMERGED_TINT, waterline, WATERLINE_ALPHA, WATERLINE_COLOR } from "./submerged";
 import { prefersReducedMotion, subscribeReducedMotion } from "../world/frameLoop";
 import { devAnimFactor } from "../battle/playback";
 
@@ -63,7 +64,7 @@ const AMBIENT_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.l
 import { arriveFrame, doorOpenness, leaveFrame, type DoorMotion, type TransitFrame, type TransitKind } from "./doorClips";
 import { MotionAnims } from "./motionAnims";
 import { drawLethalCorners, LETHAL_TINT_ALPHA, lethalCornersOf, lethalTintCells } from "./lethalMarks";
-import { SceneryLayer, type SceneryHost } from "./sceneryLayer";
+import { objectLayerOf, SceneryLayer, type SceneryHost } from "./sceneryLayer";
 import { roofCovers } from "./sceneryModel";
 import type { SurfaceHost } from "./surfaceAnimLayer";
 import { DOLL_SCALE } from "./paperdoll";
@@ -493,8 +494,8 @@ export class BattleRenderer {
     const kinds = objectKinds(model);
     for (const o of model.objects) {
       const look = this.scenery.objectNode(this.sceneryHost(), o); // 6B-ART1：家具外觀取代物件畫法（規則不變）
-      const node = look?.node ?? this.objectSprite(o, kinds, { region: model.region, look: model.look });
-      this.rows.row(o.y).objects.addChild(node);
+      const node = look?.node ?? this.objectSprite(o, kinds, { region: model.region, look: model.look }, isSubmerged(model, o));
+      objectLayerOf(this.rows, o).addChild(node); // 6F-6：家具照所在排 y 排序（同 6V-4b 站著的裝飾）
       this.place(node, o, o.x * T, o.y * T + (look?.dy ?? 0));
       if (look === null) this.ambient.object(node, o); // 6N-10：草叢、竹叢依風向擺
     }
@@ -799,13 +800,31 @@ export class BattleRenderer {
     for (const n of this.flameMarks) if (!n.destroyed) n.alpha = alpha;
   }
 
-  private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>, theme: ArtTheme): Container {
+  private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>, theme: ArtTheme, submerged = false): Container {
     const c = new Container();
     const g = new Graphics();
     const known = hasObjectArt(o.kind);
     const texture = this.art.object(objectArtSpec(o, kinds, theme));
     const hasSprite = texture !== null;
-    if (hasSprite) {
+    if (hasSprite && submerged) {
+      // 6F-6：半沉在深水裡（灰渡口的舊渡船）：水線以上照常，水線以下半透明、蓋水色，再畫一條水線
+      const line = waterline(T);
+      const part = (y0: number, y1: number, alpha: number, tint: number) => {
+        const s = new Sprite(texture);
+        s.width = T;
+        s.height = T;
+        s.alpha = alpha;
+        s.tint = tint;
+        const m = new Graphics().rect(0, y0, T, y1 - y0).fill({ color: 0xffffff });
+        s.mask = m;
+        c.addChild(m, s);
+      };
+      part(0, line.y, 1, 0xffffff);
+      part(line.y, T, SUBMERGED_ALPHA, SUBMERGED_TINT);
+      const w = new Graphics().moveTo(line.x0, line.y).lineTo(line.x1, line.y).stroke({ width: 1.5, color: WATERLINE_COLOR, alpha: WATERLINE_ALPHA });
+      for (const r of line.ripples) w.arc(r.x, line.y + 1, r.r, Math.PI * 1.1, Math.PI * 1.9).stroke({ width: 1, color: WATERLINE_COLOR, alpha: WATERLINE_ALPHA * 0.7 });
+      c.addChild(w);
+    } else if (hasSprite) {
       const node = new Sprite(texture);
       node.width = T;
       node.height = T;
