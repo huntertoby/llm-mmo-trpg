@@ -37,13 +37,8 @@
 <canvas id="c1"></canvas>
 <canvas id="c2" style="margin-top:10px"></canvas>
 
-<h2>6. 雙手劍正面三種姿勢（給使用者選）</h2>
-<p class="note">使用者：「雙手劍把自己手砍了」「雙手劍 垂直 劍尖指地也可以但可能長度或高度不構」。三種都用同一套條件擺：兩手握在劍柄、刃不穿過手臂、劍不經過臉。<b>拄劍</b>：Q 版身高 46，原長的劍尖會插進地面 9 單位，所以劍身縮短 5，劍尖落在腳前。<b>扛肩</b>：劍身從右肩往後扛，整把劍畫在身體和頭的後面（頭蓋在它上面，所以是從頸後扛過去，不是穿過頭），背面時從肩上露出。<b>立在身前（劍尖朝上）不可行</b>：把角度從 −1.5 到 0.5 rad 全掃過，只有雙手舉到肩高、斜 50° 時刃不碰手臂，但護手會頂到下巴；右邊紅字那格是硬畫出來的樣子，說明為什麼不行。側面都是單手握、劍斜向前上（照 6M-2）。</p>
-<canvas id="g7"></canvas>
-
-<h2>7. 雙手武器怎麼握（概念示範）</h2>
-<p class="note">使用者：「雙手武器 如弓等 有沒有概念演示圖 不然正面像一把弓懸浮」。規則：弓、弩、火槍、長槍、鐮、法杖、雙手劍是雙手武器，正面背面兩隻手都握在武器上（手臂用肩→肘→手兩節反解到握點）；副手已經拿著盾或書時改回單手（例：法師的法杖＋書）。背面時手在身體前方，被身體擋住，只看到武器從兩側伸出。側面使用者覺得還好：Q 版手臂短，遠側手搆得到才握，搆不到就由近側手單手握（側看遠側手本來就被武器和身體擋住）。正面的黃圈＝主手握點、青圈＝副手握點（只在示範圖上畫）；武器擺的位置由程式在「兩手搆得到、武器不經過臉、作用端露在身體外」的範圍裡挑最靠近腰前的。</p>
-<canvas id="t1"></canvas>
+<h2>6. 雙手武器：關鍵姿勢（另見 <code>key-poses.html</code>／<code>key-poses.png</code>）</h2>
+<p class="note">第 5 版（11-04 晚，使用者：「我不懂ㄟ有這麼難嗎」）：武器掛在主手手掌上，副手再去握第二個握點；6 類 × 正、背、側的姿勢逐一手調後寫死，不再自動擺位。雙手劍正面照使用者說的「劍尖指地」：雙手疊握劍柄在胸前、劍垂直往下、劍尖點在兩腳之間。舊的「雙手劍三種姿勢」與自動擺位示範已刪掉。</p>
 
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
 <script src="qDoll.js"></script>
@@ -97,15 +92,15 @@ function portrait(x,X,Y,size,[zh,reg,look,gear],useQ){const [frame,bgD,bgL]=REG[
 function portraits(x,useQ){HEADS.forEach((h,i)=>{const X=6+i*68,Y=6;portrait(x,X,Y,64,h,useQ);portrait(x,X+16,Y+70,32,h,useQ);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(h[0],X+32,Y+118);x.textAlign="left";});}
 portraits(cv("p1",9*68+6,130),false);portraits(cv("p2",9*68+6,130),true);
 // 自測（頁首）
-const ST=Q.selfTest();{const CL=ST.cloak,TW=ST.two,HD=ST.hands,GR=ST.grip,CR=ST.cross;
-  const n1=ST.reduce((a,r)=>a+Object.values(r.ok).filter(Boolean).length,0),n2=CL.reduce((a,c)=>a+(c.order?1:0)+(c.pixels?1:0),0),n3=TW.reduce((a,r)=>a+(r.south?1:0)+(r.north?1:0),0),n4=HD.filter(h=>h.ok).length,n5=GR.reduce((a,r)=>a+(r.south.ok?1:0)+(r.north.ok?1:0)+(r.east.ok?1:0),0),n6=CR.filter(c=>c.ok).length;
-  const N1=ST.length*6,N2=CL.length*2,N3=TW.length*2,N4=HD.length,N5=GR.length*3,N6=CR.length,n=n1+n2+n3+n4+n5+n6,N=N1+N2+N3+N4+N5+N6,all=n===N;
+const ST=Q.selfTest();{const CL=ST.cloak,TW=ST.two,HD=ST.hands,GR=ST.grip,CR=ST.cross,OA=ST.offArm;
+  const n1=ST.reduce((a,r)=>a+Object.values(r.ok).filter(Boolean).length,0),n2=CL.reduce((a,c)=>a+(c.order?1:0)+(c.pixels?1:0),0),n3=TW.reduce((a,r)=>a+(r.south?1:0)+(r.north?1:0),0),n4=HD.filter(h=>h.ok).length,n5=GR.reduce((a,r)=>a+(r.south.ok?1:0)+(r.north.ok?1:0)+(r.east.ok?1:0),0),n6=CR.filter(c=>c.ok).length,n7=OA.filter(c=>c.ok).length;
+  const N1=ST.length*6,N2=CL.length*2,N3=TW.length*2,N4=HD.length,N5=GR.length*3,N6=CR.length,N7=OA.length,n=n1+n2+n3+n4+n5+n6+n7,N=N1+N2+N3+N4+N5+N6+N7,all=n===N;
   const C=[["east","朝東出招"],["west","朝西出招"],["eastRest","朝東靜止"],["westRest","朝西靜止"],["south","正面"],["north","背面"]];
   const cell=(r,k)=>{const ok=r.ok[k],v=r[k];const t=isNaN(v)?"沒畫／切掉":k==="north"&&r.northSmall?(ok?"跟手一起被擋":"露出"):k==="south"||k==="north"?(ok?"露出":"被蓋"):((v>=0?"前 ":"後 ")+Math.abs(v).toFixed(1));return `<td class="${ok?"y":"n"}">${ok?"✔":"✘"} ${t}</td>`;};
   const yn=(ok,t)=>`<td class="${ok?"y":"n"}">${ok?"✔":"✘"} ${t}</td>`;
-  document.getElementById("st").innerHTML=`<div class="sum">自測：<b class="${all?"ok":"ng"}">${n}／${N} 通過${all?"":"，未通過不交"}</b>　（武器朝向 ${n1}／${N1}・背面披風在最上層 ${n2}／${N2}・雙手武器兩手都在握把上 ${n3}／${N3}・背面手被擋住 ${n4}／${N4}・手在握把上（像素）${n5}／${N5}・刃不被手臂蓋住（像素）${n6}／${N6}）</div>`
+  document.getElementById("st").innerHTML=`<div class="sum">自測：<b class="${all?"ok":"ng"}">${n}／${N} 通過${all?"":"，未通過不交"}</b>　（武器朝向 ${n1}／${N1}・背面披風在最上層 ${n2}／${N2}・雙手武器兩手都在握把上 ${n3}／${N3}・背面手被擋住 ${n4}／${N4}・手在握把上（像素）${n5}／${N5}・刃不被手臂蓋住（像素）${n6}／${N6}・背面副手手臂被物品擋住（像素）${n7}／${N7}）<br><b style="color:#ffb0a8">自測只當輔助：交件看的是放大 3 倍的特寫（key-poses.png）與逐張「我看到」紀錄。</b></div>`
    +`<table><tr><th style="text-align:left">武器朝向</th>${C.map(c=>`<th>${c[1]}</th>`).join("")}</tr>${ST.map(r=>`<tr><td class="k">${r.zh}</td>${C.map(c=>cell(r,c[0])).join("")}</tr>`).join("")}</table>`
-   +`<table style="margin-top:6px"><tr><th style="text-align:left">手在握把上（像素）</th><th>正面</th><th>背面</th><th>朝東靜止</th></tr>${GR.map(r=>`<tr><td class="k">${r.zh}</td>${yn(r.south.ok,r.south.t)}${yn(r.north.ok,r.north.t)}${yn(r.east.ok,r.east.t)}</tr>`).join("")}<tr><td colspan=4 style="color:#c8bca8;text-align:left">做法：把武器單獨畫一次（同一個變換），手心 ±1 單位內要有武器的像素。第 3 版的弓手離弓把 4 單位，這項會抓到。</td></tr></table>`   +`<table style="margin-top:6px"><tr><th style="text-align:left">刃不被手臂蓋住（像素，正面）</th><th>只畫刃，和整隻比，刃的像素被別的顏色蓋掉 ≤ 3%</th></tr>${CR.map(c=>`<tr><td class="k">${c.zh}</td>${yn(c.ok,c.t)}</tr>`).join("")}</table>`   +`<table style="margin-top:6px"><tr><th style="text-align:left">雙手武器</th><th style="text-align:left">握法</th><th>正面兩手在握把上</th><th>背面兩手在握把上</th><th>側面（只列出，不計分）</th></tr>${TW.map(r=>`<tr><td class="k">${r.zh}</td><td class="k" style="color:#c8bca8">${r.how}</td>${yn(r.south,"兩手都握住")}${yn(r.north,"兩手都握住")}<td style="color:#c8bca8">${r.east?"兩手都握住":"遠側手搆不到，單手握（側看被武器擋住）"}</td></tr>`).join("")}</table>`
+   +`<table style="margin-top:6px"><tr><th style="text-align:left">手在握把上（像素）</th><th>正面</th><th>背面</th><th>朝東靜止</th></tr>${GR.map(r=>`<tr><td class="k">${r.zh}</td>${yn(r.south.ok,r.south.t)}${yn(r.north.ok,r.north.t)}${yn(r.east.ok,r.east.t)}</tr>`).join("")}<tr><td colspan=4 style="color:#c8bca8;text-align:left">做法：把武器單獨畫一次（同一個變換），手心 ±1 單位內要有武器的像素。第 3 版的弓手離弓把 4 單位，這項會抓到。</td></tr></table>`   +`<table style="margin-top:6px"><tr><th style="text-align:left">刃不被手臂蓋住（像素，正面）</th><th>只畫刃，和整隻比，刃的像素被別的顏色蓋掉 ≤ 3%</th></tr>${CR.map(c=>`<tr><td class="k">${c.zh}</td>${yn(c.ok,c.t)}</tr>`).join("")}</table>`   +`<table style="margin-top:6px"><tr><th style="text-align:left">背面副手手臂（像素）</th><th>副手手臂塗成洋紅，整隻畫完後還看得到的面積 ≤ 2 單位²（拿盾：整隻手臂；拿書：手肘以下）</th></tr>${OA.map(c=>`<tr><td class="k">${c.zh}</td>${yn(c.ok,c.t)}</tr>`).join("")}<tr><td colspan=2 style="color:#c8bca8;text-align:left">舊的「背面手被擋住」只查手心，沒查整隻手臂，所以沒抓到「手又在副武器前面了」：使用者看到的是盾、書上方露出的袖子。</td></tr></table>`   +`<table style="margin-top:6px"><tr><th style="text-align:left">雙手武器</th><th style="text-align:left">握法</th><th>正面兩手在握把上</th><th>背面兩手在握把上</th><th>側面（只列出，不計分）</th></tr>${TW.map(r=>`<tr><td class="k">${r.zh}</td><td class="k" style="color:#c8bca8">${r.how}</td>${yn(r.south,"兩手都握住")}${yn(r.north,"兩手都握住")}<td style="color:#c8bca8">${r.east?"兩手都握住":"遠側手搆不到，單手握（側看被武器擋住）"}</td></tr>`).join("")}</table>`
    +`<table style="margin-top:6px"><tr><th style="text-align:left">背面的手</th><th>手心與周圍 4 點都不是手的顏色（被身體擋住，最多露邊）</th></tr>${HD.map(h=>`<tr><td class="k">${h.zh}</td>${yn(h.ok,h.ok?"看不到":h.seen.join("、"))}</tr>`).join("")}</table>`
    +`<table style="margin-top:6px"><tr><th style="text-align:left">背面披風在最上層</th><th>圖層順序：武器、手臂、盾、身體在披風下，頭在披風上</th><th>像素：肩甲、主手、盾和披風重疊處是披風色</th></tr>${CL.map(c=>`<tr><td class="k">${c.zh}</td>${yn(c.order,c.layers)}${yn(c.pixels,c.pixels?"全是披風色":c.bad.join("、"))}</tr>`).join("")}</table>`;
   window.__selftest=`${n}/${N}`;}
@@ -120,23 +115,6 @@ function grid(x){const K=1.3,CW=92,RH=96,ROWS=[["front",false,null,"正面","sou
       x.fillStyle=r.ok[k]?"#7ad07a":"#ff6a5a";x.fillText(r.ok[k]?"✔":"✘",cx,fy+14);});x.textAlign="left";});
   ROWS.forEach(([,,,t],j)=>{x.fillStyle="#c8bca8";x.fillText(t,4,24+(j+1)*RH-50);});}
 grid(cv("c2",1240,24+5*96+4));
-// 6. 雙手武器示範
-function twoDemo(x){const K=2.2,TW=["bow","crossbow","gun","spear","scythe","staff","greatsword"],ZH={bow:"弓",crossbow:"弩",gun:"火槍",spear:"長槍",scythe:"鐮",staff:"法杖",greatsword:"雙手劍"},V=[["front",false,"正面"],["back",false,"背面"],["side",false,"東・靜止"],["side","atk","東・出招"]];
-  floor(x,24,8);const RH=150;
-  TW.forEach((k,i)=>{const col=i%4,row=Math.floor(i/4),x0=10+col*308,y0=row*RH*1+6,u=Anim.unit(k);x.fillStyle="#e8bb48";x.font=`12px ${FONT}`;x.fillText(`${ZH[k]}：${Q.TWO[k].zh}`,x0,y0+12);
-    V.forEach(([v,w,t],j)=>{const cx=x0+36+j*72,fy=y0+RH-22;if(w==="atk"&&(Anim.ATTACK[k]??Anim.ATTACK.sword))pose(Anim.CLIP[(Anim.ATTACK[k]??Anim.ATTACK.sword)[1]].pose(1));
-      // 握點標記：用自測的 probe 取主手、副手握點
-      let G=null;Q.setPose({...(w==="atk"&&(Anim.ATTACK[k]??Anim.ATTACK.sword)?Anim.CLIP[(Anim.ATTACK[k]??Anim.ATTACK.sword)[1]].pose(1):Anim.REST),wpn:w==="atk"&&(Anim.ATTACK[k]??Anim.ATTACK.sword)?Anim.CLIP[(Anim.ATTACK[k]??Anim.ATTACK.sword)[1]].pose(1).wpn:undefined,probe:(kk,h,tp,vv,o)=>{G={h,o};}});
-      Q.stamp(x,u,v,cx,fy,K,false);Q.setPose(null);
-      x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,fy+16);x.textAlign="left";
-      if(G&&v==="front"){const P=Q.twoPlace(k);for(const [pt,c] of [[P.main,"#ffd23a"],[P.off,"#5ae0f0"]]){x.beginPath();x.arc(cx+pt[0]*K,fy+pt[1]*K,7,0,Math.PI*2);x.lineWidth=1.2;x.strokeStyle=c;x.stroke();}}});});}
-twoDemo(cv("t1",1240,2*150+12));
-// 6. 雙手劍三種姿勢
-function gsDemo(x){const K=2.6,V=[["front",false,"正面"],["back",false,"背面"],["side",false,"朝東"]],L=[["plant","拄劍（劍身短 5）"],["shoulder","扛肩"],["upright","立在身前（不可行）"]],u=Anim.unit("greatsword");floor(x,24,5);
-  L.forEach(([v,zh],g)=>{Q.setGreatsword(v);const x0=10+g*412,bad=Q.GSV[v].unchecked;x.fillStyle=bad?"#ff6a5a":"#e8bb48";x.font=`13px ${FONT}`;x.textAlign="left";x.fillText(zh,x0,18);
-    if(bad){x.fillStyle="#ffb0a8";x.font=`11px ${FONT}`;x.fillText("劍尖朝上：刃一定經過臉，或要舉高到護手頂下巴",x0,34);}
-    V.forEach(([vw,w,t],j)=>{const cx=x0+70+j*130;Q.stamp(x,{...u},vw,cx,214,K,w);x.fillStyle="#f2e6c8";x.font=`11px ${FONT}`;x.textAlign="center";x.fillText(t,cx,232);x.textAlign="left";});
-    if(bad){x.strokeStyle="#ff6a5a";x.lineWidth=2;x.strokeRect(x0+4,40,396,200);}});
-  Q.setGreatsword("plant");}
-gsDemo(cv("g7",1240,244));
+
+
 </script></body></html>

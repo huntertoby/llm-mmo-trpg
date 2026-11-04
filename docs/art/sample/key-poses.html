@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>Q 版關鍵姿勢</title>
+<style>
+  body{margin:0;padding:14px 18px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;width:1280px}
+  h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;color:#e8bb48;margin:18px 0 6px}
+  .note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55}
+  canvas{display:block;border-radius:6px;background:#2a2e40}
+</style></head>
+<body>
+<h1>Q 版關鍵姿勢：6 類 × 正面、背面、側面</h1>
+<p class="note">美術 PM，2026-11-04 晚。使用者原話：「我不懂ㄟ有這麼難嗎」。改成武器掛在手上：武器的位置與角度由主手手掌決定，副手再去握第二個握點。每一類、每個方向的姿勢是先定好兩手的位置、手調後寫死（<code>qDoll.js</code> 的 <code>KEY</code>），不在執行時自動解。人物放大到戰場的約 3 倍；底色換成素色，方便看手和武器。</p>
+<canvas id="k"></canvas>
+<h2>弓：待機與拉弓（側面朝東）</h2>
+<p class="note">待機：持弓手垂在身側，弓直立、弓口朝前下，弦放鬆。拉弓：持弓手往前伸到肩高、弓直立，拉弦手把弦拉到下巴旁，箭水平朝前。</p>
+<canvas id="b"></canvas>
+<h2>出招關鍵格（側面朝東，攻擊片段命中那一格）</h2>
+<p class="note">弓改用上面的拉弓姿勢（拉滿那格）；其他照 6M／6N 的攻擊片段。出招時伸得遠，副手搆不到就放開、改單手。</p>
+<canvas id="a"></canvas>
+<h2>待機關鍵格（側面朝東，循環開頭與中段各一格；動態見 idle-weapons.gif）</h2>
+<canvas id="i"></canvas>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script>
+const Q=QDoll,FONT="'Noto Sans TC','Microsoft JhengHei',sans-serif",TPL=PaperDoll.TEMPLATES,IT=PaperDoll.ITEMS;
+function cv(id,w,h){const c=document.getElementById(id);c.width=w*2;c.height=h*2;c.style.width=w+"px";c.style.height=h+"px";const x=c.getContext("2d");x.scale(2,2);return x;}
+const U=(k)=>Anim.unit(k);
+const ROWS=[["劍類：雙手劍",U("greatsword"),"greatsword"],["長柄：長槍",U("spear"),"polearm"],["長柄：鐮",U("scythe"),"polearm"],["弓",U("bow"),"bow"],["弩與槍：弩",U("crossbow"),"gun"],["弩與槍：火槍",U("gun"),"gun"],["法杖（單手）",U("staff"),"staff"],["單手加副手：劍盾",{look:TPL.hero_fighter.look,gear:{...TPL.hero_fighter.gear,cloak:undefined}},null],["單手加副手：杖＋書",TPL.hero_mage,null]];
+const V=[["front",false,"正面"],["back",false,"背面"],["side",false,"朝東"],["side",true,"朝西"]];
+const K=3.4,RH=196,x=cv("k",1240,ROWS.length*RH+8);
+ROWS.forEach(([zh,u,c],r)=>{const y0=r*RH;x.fillStyle=r%2?"#262a3a":"#2e3346";x.fillRect(0,y0,1240,RH);x.fillStyle="#e8bb48";x.font=`14px ${FONT}`;x.textAlign="left";x.fillText(zh,12,y0+22);
+  if(c){x.fillStyle="#b8ab96";x.font=`11px ${FONT}`;const t=Q.KEY[c].zh;x.fillText(t.slice(0,18),12,y0+42);x.fillText(t.slice(18,36),12,y0+58);x.fillText(t.slice(36),12,y0+74);}
+  V.forEach(([v,w,t],j)=>{const cx=330+j*240,fy=y0+RH-22;x.beginPath();x.ellipse(cx,fy,40,8,0,0,Math.PI*2);x.fillStyle="rgba(0,0,0,0.25)";x.fill();Q.stamp(x,u,v,cx,fy,K,w);if(r===0){x.fillStyle="#f2e6c8";x.font=`12px ${FONT}`;x.textAlign="center";x.fillText(t,cx,14);x.textAlign="left";}});});
+// 弓的待機與拉弓
+const B=cv("b",1240,230),bow=U("bow"),FR=[["待機",{}],["待機・抬一下",{arm:-0.25}],["拉弓 1/3",{bowAim:0.4,pull:1}],["拉弓 2/3",{bowAim:0.8,pull:2.5}],["拉滿",{bowAim:1,pull:4}],["放箭",{bowAim:1,pull:0}]];
+FR.forEach(([t,p],i)=>{const cx=110+i*200,fy=200;B.beginPath();B.ellipse(cx,fy,40,8,0,0,Math.PI*2);B.fillStyle="rgba(0,0,0,0.25)";B.fill();Q.setPose({...Anim.REST,...p,wpn:undefined});Q.stamp(B,bow,"side",cx,fy,K,false);Q.setPose(null);B.fillStyle="#f2e6c8";B.font=`12px ${FONT}`;B.textAlign="center";B.fillText(t,cx,222);});
+// 出招關鍵格
+const AK=["sword","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],AZ={...Anim.WEAPON_ZH,greatsword:"雙手劍"};
+const A=cv("a",1240,2*230);AK.forEach((k,i)=>{const col=i%7,row=Math.floor(i/7),cx=90+col*172,fy=row*230+200;A.beginPath();A.ellipse(cx,fy,40,8,0,0,Math.PI*2);A.fillStyle="rgba(0,0,0,0.25)";A.fill();
+  const P=k==="bow"?{...Anim.REST,bowAim:1,pull:4,wpn:undefined}:Anim.CLIP[(Anim.ATTACK[k]??Anim.ATTACK.sword)[1]].pose(1);Q.setPose({...P,wpn:P.wpn===null?undefined:P.wpn});Q.stamp(A,U(k),"side",cx,fy,2.9,false);Q.setPose(null);
+  A.fillStyle="#f2e6c8";A.font=`12px ${FONT}`;A.textAlign="center";A.fillText(AZ[k],cx,fy+20);});
+// 待機關鍵格
+const IK=["sword","sword_shield","saber","arcane_blade","paired","spear","scythe","whip","gauntlet","staff","orb","bow","crossbow","gun","greatsword"],IZ={...AZ,sword_shield:"劍盾"};
+const I=cv("i",1240,3*230);IK.forEach((k,i)=>{const col=i%5,row=Math.floor(i/5),x0=20+col*246,fy=row*230+200;const u=k==="sword_shield"?{look:U("sword").look,gear:{...U("sword").gear,off_hand:IT.round_shield}}:U(k);
+  [0,0.5].forEach((t,j)=>{const cx=x0+60+j*120;I.beginPath();I.ellipse(cx,fy,36,7,0,0,Math.PI*2);I.fillStyle="rgba(0,0,0,0.25)";I.fill();const p=IdleWeapons.IDLE[k].pose(t);Q.setPose({...Anim.REST,...p,wpn:p.wpn});Q.stamp(I,u,"side",cx,fy,2.9,false);Q.setPose(null);I.fillStyle="#c8bca8";I.font=`11px ${FONT}`;I.textAlign="center";I.fillText(t?"中段":"開頭",cx,fy+16);});
+  I.fillStyle="#e8bb48";I.font=`12px ${FONT}`;I.textAlign="left";I.fillText(IZ[k],x0,fy-176);});
+</script></body></html>
