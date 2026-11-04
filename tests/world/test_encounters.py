@@ -72,7 +72,7 @@ def test_north_slope_has_the_wolf_king(library: ContentLibrary) -> None:
     for seed in range(20):
         lineup = roll_lineup(library, _encounter("north_slope", seed))
         assert lineup.members[0] == LineupMember(unit="mist_wolf", affix="berserk")
-        assert len(lineup.members) == 4
+        assert len(lineup.members) == 3  # 狼王＋兩隻霧狼（6E-3c 少一隻）
         assert sum(m.affix is not None for m in lineup.members) == 1
         templates = lineup_templates(library, lineup)
         assert templates[0].name_zh == "狂暴的霧狼"
