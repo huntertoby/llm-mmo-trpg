@@ -43,7 +43,7 @@ describe("the paused second part", () => {
   });
 
   it("explains what to do", () => {
-    expect(followupPromptText("撤步斬", 3)).toContain("共 3 個可選");
+    expect(followupPromptText("撤步斬", 3)).toContain("共 3 個選項");
     expect(followupPromptText("撤步斬", 0)).toContain("放棄第二段");
   });
 });

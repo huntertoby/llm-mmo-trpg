@@ -38,7 +38,7 @@ export function followupMode(pending: Pending, options: readonly FollowupOption[
 
 export function followupPromptText(skillName: string, optionCount: number): string {
   if (optionCount === 0) return `「${skillName}」的第二段目前沒有合法的選取，請放棄第二段。`;
-  return `「${skillName}」的第一段已結算：在戰場上點選高亮的目標或格子（共 ${optionCount} 個可選）施展第二段，或放棄第二段。`;
+  return `「${skillName}」的第一段已結算：在戰場上點選高亮的目標或格子（共 ${optionCount} 個選項）施展第二段，或放棄第二段。`;
 }
 
 /** 決定請求裡的第二段選取（取消時 `null`）。 */
