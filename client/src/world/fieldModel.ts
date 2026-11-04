@@ -4,14 +4,14 @@
 // Phase 6C-1：看得見的敵人畫成敵方紙娃娃，視野（前方扇形 4 格）畫淡紅；開不開打由伺服器判定。
 // Phase 6C-5：地圖上的東西——事件「！」、營火、情境物件、朋友的腳印、留言石碑（標記與滑過說明；
 // 碰到「！」開卡、站營火紮營、點物件開卡都由伺服器判定）。
-import type { BattleView, Facing, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
+import type { BattleView, Facing, FieldFigure, FieldView, ObjectView, Pos, Surface, TileView, UnitView } from "../api/types";
 import { buildDrawModel, type DrawModel } from "../battle/drawModel";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Highlights } from "../render/BattleRenderer";
 import type { TelegraphMark } from "../battle/telegraph";
 import { footprintAlpha, sightStyle, type MapThing, type WatchEye } from "../render/mapMarks";
 import { fieldAmbient } from "./fieldAmbient";
-import { npcFieldLook } from "./npcLook";
+import { figureFieldLook, figureUnitId, npcFieldLook } from "./npcLook";
 import { buildingDoorCells, fieldScenery } from "./fieldScenery";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
@@ -362,6 +362,17 @@ function npcUnit(n: FieldNpc): UnitView {
   return withLook(base, npcFieldLook(n), npcUnitId(n.id));
 }
 
+/** 有 `figure` 的情境物件（6V-1：主城功能型 NPC 站在原本的格子上，只畫）。 */
+export function figureObjects(field: FieldView): Array<FieldSituationObject & { figure: FieldFigure }> {
+  return (field.situation_objects ?? []).filter((o): o is FieldSituationObject & { figure: FieldFigure } => o.figure != null);
+}
+
+/** 情境物件上的人 → 我方紙娃娃（6V-1；朝向照內容的 `figure.facing`，不畫血條）。 */
+function figureUnit(o: FieldSituationObject & { figure: FieldFigure }): UnitView {
+  const base = { ...unitBase(figureUnitId(o.id), o.x, o.y), name_zh: o.name_zh, facing: FACING[o.figure.facing ?? "s"] } as UnitView;
+  return withLook(base, figureFieldLook(o.id, o.figure), figureUnitId(o.id));
+}
+
 /** 朋友 → 我方紙娃娃（存影子時的外觀）。 */
 function friendUnit(f: FieldFriend): UnitView {
   const base = { ...unitBase(friendUnitId(f.owner), f.x, f.y), name_zh: `${f.name_zh}的影子`, facing: FACING[f.facing ?? "s"] } as UnitView;
@@ -424,7 +435,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
     object_id: null,
   }));
   const objects: ObjectView[] = field.objects.map((o) => ({ id: o.id, kind: o.kind, pos: { x: o.x, y: o.y }, hp: null, max_hp: null, burning: null }));
-  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...(field.friends ?? []).map(friendUnit)];
+  const npcs: UnitView[] = [...field.npcs.map(npcUnit), ...figureObjects(field).map(figureUnit), ...(field.friends ?? []).map(friendUnit)];
   return {
     team: "ally",
     map_id: field.map_id,
@@ -456,7 +467,7 @@ export function fieldBattleView(field: FieldView, heroName = "你"): BattleView 
 
 /** 不畫血條的單位（NPC 與朋友；6B-4）。 */
 export function barlessIds(field: FieldView): Set<string> {
-  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
+  return new Set([...field.npcs.map((n) => npcUnitId(n.id)), ...figureObjects(field).map((o) => figureUnitId(o.id)), ...(field.friends ?? []).map((f) => friendUnitId(f.owner))]);
 }
 
 /** `field` → `DrawModel`：出口用戰鬥的出口格標記（淡綠框加「出」）；主角、NPC、朋友帶種族外觀；NPC 與朋友不畫血條。 */
@@ -467,6 +478,7 @@ export function fieldDrawModel(field: FieldView, heroName = "你", openRegions: 
     const look = npcFieldLook(n);
     if (look != null) races.set(npcUnitId(n.id), look.race_look ?? null);
   }
+  for (const o of figureObjects(field)) races.set(figureUnitId(o.id), figureFieldLook(o.id, o.figure).race_look ?? null);
   for (const f of field.friends ?? []) races.set(friendUnitId(f.owner), f.look.race_look ?? null);
   for (const e of field.enemies ?? []) if (e.look != null) races.set(enemyUnitId(e), e.look.race_look ?? null);
   const barless = barlessIds(field);

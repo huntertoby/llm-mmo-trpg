@@ -3715,6 +3715,20 @@ export interface components {
             y: number;
         };
         /**
+         * FieldFigure
+         * @description 站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
+         *     工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
+         *     互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。
+         */
+        FieldFigure: {
+            portrait: components["schemas"]["NpcPortrait"];
+            held?: components["schemas"]["NpcPortraitGear"] | null;
+            /** @default town */
+            work: components["schemas"]["FigureWork"];
+            /** @default s */
+            facing: components["schemas"]["FigureFacing"];
+        };
+        /**
          * FieldFootprintView
          * @description 朋友走過的腳印（6C-5；21.6、21.9 第 14 條）：其他角色去過這個地點時，沿兩個出入口之間的一條
          *     路畫幾個腳印（位置依地圖與角色 ID 的雜湊決定，不是真的走過的路）。
@@ -3885,6 +3899,7 @@ export interface components {
             panel?: components["schemas"]["ObjectPanel"] | null;
             /** Stele Region */
             stele_region?: string | null;
+            figure?: components["schemas"]["FieldFigure"] | null;
         };
         /**
          * FieldSpec
@@ -4161,6 +4176,10 @@ export interface components {
              */
             buildings: components["schemas"]["FieldBuildingView"][];
         };
+        /** @enum {string} */
+        FigureFacing: "n" | "e" | "s" | "w";
+        /** @enum {string} */
+        FigureWork: "smith" | "keeper" | "town";
         /**
          * FlashAction
          * @description 閃現或重閃出題（06 6.34.3；城鎮與營火；5A-6）。欄位同 roguelite ``FlashChoice``：``slot``

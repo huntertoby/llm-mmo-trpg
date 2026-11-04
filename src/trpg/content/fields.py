@@ -57,6 +57,7 @@ from trpg.content.maps import (
 )
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
+from trpg.content.world_events import NpcPortrait, NpcPortraitGear
 from trpg.content.world_map import LocationDef, LocationMapDef
 
 __all__ = [
@@ -318,6 +319,27 @@ type ObjectPanel = Literal["board", "league", "pavilion", "skills"]
 循環賽、``pavilion``＝整備亭、``skills``＝技能（魔導書）。"""
 
 
+type FigureWork = Literal["smith", "keeper", "town"]
+"""站在物件上的人的待機小動作（同前端 6N-10 的 NPC 身分）：``smith``＝打鐵、``keeper``＝擦櫃檯、
+``town``＝一般。"""
+
+type FigureFacing = Literal["n", "e", "s", "w"]
+
+
+class FieldFigure(ContentModel):
+    """站在情境物件上的人（6V-1，``docs/art/偷懶自查.md`` G7）：主城的功能型 NPC（守印人、守池人、
+    工坊師傅、書記）沒有人設卡、不放 ``npcs``，只在原本的格子上畫一個紙娃娃。純顯示：不影響規則、
+    互動與通行（點了照舊開物件的 ``panel`` 或說明卡）。"""
+
+    portrait: NpcPortrait
+    """頭像與地圖紙娃娃的外觀（寫法同 NPC 人設卡的 ``portrait``，6C-7）。"""
+    held: NpcPortraitGear | None = None
+    """主手拿的東西（只畫在地圖紙娃娃上；``kind`` 用紙娃娃主手的造型，例：``staff``、
+    ``hammer``）。"""
+    work: FigureWork = "town"
+    facing: FigureFacing = "s"
+
+
 class FieldSpot(ContentModel):
     """營火點、事件點、情境物件（6C-5）。
 
@@ -345,6 +367,8 @@ class FieldSpot(ContentModel):
     stele_region: str | None = Field(default=None, pattern=ID_PATTERN)
     """橋頭石碑對應的區域（``regions.yaml`` 的 ID）：點了開那一區的傳送選單（6D-5；6D-R2 改成資料，
     原本靠 ``stele_`` 前綴）。只有主城的情境物件可填，``use`` 必須是 ``note``。"""
+    figure: FieldFigure | None = None
+    """站在這格的人的外觀（6V-1，只畫）；只有情境物件可填。"""
 
     @model_validator(mode="after")
     def _panel_or_stele(self) -> FieldSpot:
@@ -498,12 +522,19 @@ class FieldMapDef(ContentModel):
         return self
 
     def _panel_problems(self) -> list[str]:
-        """``panel``／``stele_region`` 只有主城的情境物件可填（6D-R2）。"""
+        """``panel``／``stele_region`` 只有主城的情境物件可填（6D-R2）；``figure`` 只有情境物件
+        可填（6V-1）。"""
         out = [
             f"{name} {s.id} 不可填 panel／stele_region（只有情境物件可以）"
             for name, spots in (("campfires", self.campfires), ("event_spots", self.event_spots))
             for s in spots
             if s.panel is not None or s.stele_region is not None
+        ]
+        out += [
+            f"{name} {s.id} 不可填 figure（只有情境物件可以）"
+            for name, spots in (("campfires", self.campfires), ("event_spots", self.event_spots))
+            for s in spots
+            if s.figure is not None
         ]
         if not self.is_capital:
             out += [
