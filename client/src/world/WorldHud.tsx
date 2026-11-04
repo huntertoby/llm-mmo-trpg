@@ -5,6 +5,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { WorldView } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { DelayTrail, FlipNumber } from "../ui/MotionBits";
+import { ItemFly } from "./GainEffects";
 import type { TileRect } from "./camera";
 import { HudBarIcon, hudBarName, type HudBarKey } from "./HudBarIcons";
 import { HudIcon, HudPortrait, type HudIconName } from "./HudIcons";
@@ -93,7 +95,8 @@ function Block({
 
 function Bar({ value, tone, text, height, item }: { value: number; tone: "hp" | "mana" | "xp"; text?: string; height: number; item: string }) {
   return (
-    <div className={`world-hud-bar ${tone}`} style={{ height }} data-hud={item}>
+    <div className={`world-hud-bar ${tone}${tone === "hp" ? " has-trail" : ""}`} style={{ height }} data-hud={item}>
+      {tone === "hp" && <DelayTrail ratio={value} />}
       <div className="fill" style={{ width: `${Math.round(value * 1000) / 10}%` }} />
       {text !== undefined && <span className="text">{text}</span>}
     </div>
@@ -123,7 +126,7 @@ function HeroCard({ view, onGrowth }: { view: WorldView; onGrowth(): void }) {
       </Hint>
       <Hint text={`等級 Lv ${c.level}`}>
         <span className="world-hud-lv" data-hud="lv" tabIndex={0}>
-          Lv {c.level}
+          Lv <FlipNumber value={c.level} />
         </span>
       </Hint>
       <Hint text={`角色階級 ${c.skill_tier ?? 1}（點了打開成長面板）`}>
@@ -306,6 +309,7 @@ export function WorldHud(props: WorldHudProps) {
   const s = layout.scale;
   return (
     <div className="world-hud" data-testid="world-hud" data-narrow={layout.narrow ? "1" : "0"}>
+      <ItemFly view={view} />
       {props.panel != null && (
         <div className="world-hud-backdrop" data-testid="world-hud-backdrop" onClick={props.panelLocked === true ? undefined : props.onClosePanel} />
       )}
