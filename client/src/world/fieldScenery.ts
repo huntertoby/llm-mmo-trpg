@@ -3,7 +3,7 @@
 // 純函式、確定性；不改任何規則（走路、視線、戰鬥照伺服器的地形與物件）。
 import type { FieldView } from "../api/types";
 import { buildingKind, doorStyleOf, signFromView, type BuildingKind, type BuildingSpec } from "../render/townArt";
-import { isFurnitureLook, roomKindOf, roomPalette, wallDecor, type FurnitureLook, type FurnitureSpec } from "../render/interiorArt";
+import { isFurnitureLook, roomKindOf, roomPalette, wallDecor, wallHangings, type FurnitureLook, type FurnitureSpec } from "../render/interiorArt";
 import type { BridgeSide } from "../render/capitalArt";
 import { EMPTY_SCENERY, type BuildingScene, type DoorScene, type FieldScenery, type InteriorScene, type PlazaScene } from "../render/sceneryModel";
 
@@ -116,7 +116,8 @@ function interiorOf(field: FieldView): InteriorScene {
   const rugW = Math.min(4, Math.max(0, field.width - 4));
   const rug = kind === "mentor" && rugW > 0 && field.height >= 5 ? { x: Math.floor((field.width - rugW) / 2), y: 2, w: rugW, h: field.height - 3 } : null;
   const exits = field.exits.flatMap((e) => e.cells.map(([x, y]) => ({ x, y }))).sort((a, b) => a.y - b.y || a.x - b.x);
-  return { palette, decor: wallDecor(kind, field.width, blocked), rug, exits };
+  const decor = wallDecor(kind, field.width, blocked);
+  return { palette, decor, hangings: wallHangings(kind, field.width, blocked, decor), rug, exits };
 }
 
 /** 主城（`region: capital`、室外）的中央傳送陣：第一顆傳送石（依座標排序）；`open` 照大世界圖已開放的區。 */

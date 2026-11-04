@@ -207,41 +207,115 @@ function tent(ctx: Ctx, s: BuildingSpec): void {
   ctx.stroke();
 }
 
-/** 許願池的噴水池（townTiles.js 的 fountain）：圓形石邊、池水、中央石柱與兩道水弧。蓋在水表面上（只畫）。 */
-function fountain(ctx: Ctx, s: BuildingSpec): void {
+/** 許願池的幾何（畫布座標，6V-4）：池心、外緣半徑（透視橢圓）、石緣厚度、中央噴口。 */
+export interface FountainGeom {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  /** 石緣寬（俯視）與前緣的高（立面）。 */
+  rim: number;
+  lip: number;
+  /** 中央噴口（水從這裡噴出）。 */
+  spoutX: number;
+  spoutY: number;
+}
+
+export function fountainGeom(s: BuildingSpec): FountainGeom {
   const H = s.h + roofRows(s);
   const W = s.w * U;
   const cx = W / 2;
-  const cy = H * U - (s.h * U) / 2 + 6;
-  const rx = W / 2 - 12;
-  const ry = Math.min((s.h * U) / 2 - 6, rx * 0.6);
-  shadow(ctx, cx + 4, cy + ry * 0.6, rx, ry * 0.42, 0.3);
+  const rx = Math.min(W, s.h * U) / 2 - 6;
+  const ry = rx * 0.62;
+  const cy = H * U - ry - 12;
+  return { cx, cy, rx, ry, rim: 8, lip: 8, spoutX: cx, spoutY: cy - 30 };
+}
+
+/** 石緣的石塊數（沿圓周切開，接縫是放射狀的短線）。 */
+export const FOUNTAIN_STONES = 14;
+
+/**
+ * 許願池（6V-4，Fable 審查第 2 節 C）：圓形石緣水池（透視成橢圓）＋前緣立面、石塊接縫、池水、
+ * 中央兩層石座與金色噴口。噴水由環境動態層畫（`ambientAnim.fountainSpray`；減少動態時停在第 0 毫秒），
+ * 這裡只畫一圈落水的漣漪。蓋在水表面上（只畫）。
+ */
+function fountain(ctx: Ctx, s: BuildingSpec): void {
+  const g = fountainGeom(s);
+  const { cx, cy, rx, ry, rim, lip } = g;
+  shadow(ctx, cx + 4, cy + ry + lip - 2, rx, ry * 0.35, 0.3);
+  // 前緣立面（下半圈往下延伸 lip）
   ctx.beginPath();
-  ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU);
-  ctx.fillStyle = K.stoneD;
+  ctx.ellipse(cx, cy + lip, rx, ry, 0, 0, Math.PI);
+  ctx.lineTo(cx - rx, cy);
+  ctx.ellipse(cx, cy, rx, ry, 0, Math.PI, 0, true);
+  ctx.closePath();
+  ctx.fillStyle = "#a89a7c";
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.strokeStyle = OUT;
   ctx.stroke();
+  // 石緣頂面
   ctx.beginPath();
-  ctx.ellipse(cx, cy, rx - 7, ry - 6, 0, 0, TAU);
-  ctx.fillStyle = K.water;
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU);
+  ctx.fillStyle = K.stone;
   ctx.fill();
-  ctx.strokeStyle = "rgba(220,240,255,0.55)";
+  ctx.stroke();
+  // 池水
+  const irx = rx - rim;
+  const iry = ry - rim * 0.62;
+  const water = ctx.createLinearGradient(0, cy - iry, 0, cy + iry);
+  water.addColorStop(0, "#2f74b8");
+  water.addColorStop(1, "#5ab0e8");
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, irx, iry, 0, 0, TAU);
+  ctx.fillStyle = water;
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = OUT;
+  ctx.stroke();
+  // 石塊接縫：頂面放射狀短線、立面直線
+  ctx.strokeStyle = "rgba(90,78,56,0.7)";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.ellipse(cx - 6, cy + 4, rx * 0.45, ry * 0.3, 0, 0.2, Math.PI - 0.2);
+  for (let k = 0; k < FOUNTAIN_STONES; k++) {
+    const a = (k + 0.5) * (TAU / FOUNTAIN_STONES);
+    const ox = Math.cos(a);
+    const oy = Math.sin(a);
+    ctx.moveTo(cx + ox * irx, cy + oy * iry);
+    ctx.lineTo(cx + ox * rx, cy + oy * ry);
+    if (oy > 0.05) {
+      ctx.moveTo(cx + ox * rx, cy + oy * ry);
+      ctx.lineTo(cx + ox * rx, cy + oy * ry + lip);
+    }
+  }
   ctx.stroke();
-  box(ctx, cx - 5, cy - 26, 10, 26, K.stone, OUT, 1.6, 2);
-  dot(ctx, cx, cy - 27, 4, K.gold);
-  ctx.strokeStyle = "rgba(220,240,255,0.85)";
-  ctx.lineWidth = 1.5;
-  for (const sgn of [-1, 1]) {
+  ctx.fillStyle = "rgba(255,255,255,0.3)"; // 頂面左上的受光
+  ctx.beginPath();
+  ctx.ellipse(cx - rx * 0.35, cy - ry * 0.78, rx * 0.3, 1.6, -0.15, 0, TAU);
+  ctx.fill();
+  // 落水的漣漪（靜態兩圈）
+  ctx.strokeStyle = "rgba(220,240,255,0.55)";
+  ctx.lineWidth = 1.1;
+  for (const k of [0.42, 0.7]) {
     ctx.beginPath();
-    ctx.moveTo(cx, cy - 26);
-    ctx.quadraticCurveTo(cx + sgn * 16, cy - 34, cx + sgn * 22, cy - 4);
+    ctx.ellipse(cx, cy + 2, irx * k, iry * k, 0, 0, TAU);
     ctx.stroke();
   }
+  // 中央石座（下座＋上層小水盤）與噴口
+  box(ctx, cx - 6, cy - 22, 12, 24, K.stone, OUT, 1.6, 2);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - 22, 13, 4.5, 0, 0, TAU);
+  ctx.fillStyle = K.stoneD;
+  ctx.fill();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = OUT;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - 23, 9.5, 3, 0, 0, TAU);
+  ctx.fillStyle = "#5ab0e8";
+  ctx.fill();
+  box(ctx, cx - 2.5, g.spoutY + 2, 5, cy - 24 - g.spoutY, K.stone, OUT, 1.2, 1);
+  dot(ctx, g.spoutX, g.spoutY + 1, 3.4, K.gold);
 }
 
 // ---------------- 中央傳送陣與區旗 ----------------

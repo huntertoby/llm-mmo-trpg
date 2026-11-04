@@ -162,7 +162,8 @@ export class SceneryLayer {
       host.rows.row(y).deco.addChild(node);
       host.place(node, { x, y }, x * T, y * T);
     }
-    const wall = this.sprite(host, backWallKey(model.width, p, room.decor), model.width, BACK_WALL_ROWS, (ctx) => drawBackWall(ctx, model.width, p, room.decor));
+    const hangings = room.hangings ?? [];
+    const wall = this.sprite(host, backWallKey(model.width, p, room.decor, hangings), model.width, BACK_WALL_ROWS, (ctx) => drawBackWall(ctx, model.width, p, room.decor, hangings));
     if (wall !== null) {
       const row = Math.min(1, model.height - 1);
       host.rows.row(row).deco.addChild(wall);

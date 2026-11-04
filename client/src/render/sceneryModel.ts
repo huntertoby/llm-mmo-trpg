@@ -2,7 +2,7 @@
 // 放進場景在 sceneryLayer.ts。全部只換外觀：不影響走路、視線與戰鬥（規則照伺服器的地形與物件）。
 import type { Pos } from "../api/types";
 import { roofRows, type BuildingSpec, type DoorStyle } from "./townArt";
-import type { FurnitureSpec, RoomPalette, RugCell, WallDecor } from "./interiorArt";
+import type { FurnitureSpec, RoomPalette, RugCell, WallDecor, WallHanging } from "./interiorArt";
 
 export interface BuildingScene {
   spec: BuildingSpec;
@@ -34,6 +34,8 @@ export interface PlazaScene {
 export interface InteriorScene {
   palette: RoomPalette;
   decor: WallDecor[];
+  /** 後牆上半段的掛件（6V-3：工具、掛燈、小窗；沒有＝空）。 */
+  hangings?: WallHanging[];
   /** 紅地毯（導師殿）：左上與寬高（格）；沒有＝`null`。 */
   rug: { x: number; y: number; w: number; h: number } | null;
   /** 出口格（下牆中間）。 */

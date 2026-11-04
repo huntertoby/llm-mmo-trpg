@@ -9,13 +9,15 @@ import { Container, Sprite, type Texture } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { DrawModel, ObjectDraw } from "../battle/drawModel";
 import { TILE_SIZE } from "../battle/geometry";
-import { flagFrame, flagWave, flickerAt, FLAG_FRAMES, mistAt, mistCount, ripplesAt, swayAt } from "./ambientAnim";
+import { enchantRingAngle, enchantRingGlow, flagFrame, flagWave, flickerAt, FLAG_FRAMES, fountainSpray, mistAt, mistCount, ripplesAt, swayAt } from "./ambientAnim";
 import { windOf, windStrength, type Wind } from "./ambientModel";
 import type { ArtTextures } from "./artTextures";
 import type { Ctx } from "./artDraw";
 import { mistLevel } from "./regionArt";
 import type { RowStack } from "./rowLayers";
 import { BUILDING_ART_T, lanternCenters, roofRows, type BuildingSpec } from "./townArt";
+import { fountainGeom } from "./capitalArt";
+import { drawEnchantRunes, ENCHANT_RING } from "./interiorArt";
 
 /**
  * 酒館燈籠光暈的場景座標（6Q-1，純函式）：`townArt.lanternCenters` 是建築畫布裡的位置；
@@ -30,6 +32,22 @@ export function lanternLights(b: { x: number; y: number; spec: BuildingSpec }, l
 
 const T = TILE_SIZE;
 const RES = 2;
+
+/**
+ * 許願池噴口與落點的場景座標（6V-4，純函式）：`capitalArt.fountainGeom` 是建築畫布裡的位置；建築照 `sceneryLayer`
+ * 放在 `(b.x, b.y - 屋頂列數)` 格、跟著最下一列的抬高 `lift`（px）。`reach`、`drop` 換成場景像素。
+ */
+export function fountainSpout(b: { x: number; y: number; spec: BuildingSpec }, lift: number, k = T / BUILDING_ART_T): { x: number; y: number; reach: number; drop: number; scale: number } {
+  const g = fountainGeom(b.spec);
+  const ox = b.x * T;
+  const oy = (b.y - roofRows(b.spec)) * T + lift;
+  return { x: ox + g.spoutX * k, y: oy + g.spoutY * k, reach: (g.rx - g.rim) * 0.6 * k, drop: (g.cy - g.spoutY) * k, scale: k };
+}
+
+/** 附魔台符文環的中心（場景座標）：家具畫布的所在格頂就是 `cell.y` 那一格的頂，`ENCHANT_RING.cy` 是相對它往下。 */
+export function enchantRingCenter(cell: Pos, lift: number, k = T / BUILDING_ART_T): { x: number; y: number; rx: number; ry: number } {
+  return { x: cell.x * T + (BUILDING_ART_T / 2) * k, y: cell.y * T + lift + ENCHANT_RING.cy * k, rx: ENCHANT_RING.rx * k, ry: ENCHANT_RING.ry * k };
+}
 
 /** 畫一張離屏 canvas（`w`×`h` 個格子像素，RES 倍解析度）；沒有 DOM 時 `null`。 */
 function paint(w: number, h: number, draw: (ctx: Ctx) => void): HTMLCanvasElement | null {
@@ -48,6 +66,8 @@ const GLOW = 64;
 const FLAME_W = 16;
 const FLAME_H = 22;
 const RIPPLE = 40;
+const RUNE_TEX = 56;
+const DROP = 8;
 const WISP_W = 150;
 const WISP_H = 64;
 export const FLAG_W = 34;
@@ -80,6 +100,19 @@ function drawFlame(ctx: Ctx): void {
   ctx.closePath();
   ctx.fillStyle = "rgba(255,214,70,0.95)";
   ctx.fill();
+}
+
+function drawDrop(ctx: Ctx): void {
+  const g = ctx.createRadialGradient(DROP / 2 - 1, DROP / 2 - 1, 0.5, DROP / 2, DROP / 2, DROP / 2);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.6, "rgba(200,232,255,0.9)");
+  g.addColorStop(1, "rgba(160,210,250,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, DROP, DROP);
+}
+
+function drawRuneRing(ctx: Ctx): void {
+  drawEnchantRunes(ctx, RUNE_TEX / 2, RUNE_TEX / 2, RUNE_TEX / 2 - 4);
 }
 
 function drawRipple(ctx: Ctx): void {
@@ -172,6 +205,22 @@ interface FireNode {
   small: boolean;
 }
 
+interface RingNode {
+  seed: string;
+  sprite: Sprite;
+}
+
+interface SprayNode {
+  seed: string;
+  x: number;
+  y: number;
+  reach: number;
+  drop: number;
+  /** 水珠畫好時的縮放（每幀乘上水珠自己的大小）。 */
+  base: number;
+  drops: Sprite[];
+}
+
 interface FlagNode {
   seed: string;
   sprite: Sprite;
@@ -194,6 +243,8 @@ export class AmbientLayer {
   private flagTex: Texture[] = [];
   private ripples: Array<{ seed: string; rings: Sprite[] }> = [];
   private wisps: Array<{ i: number; sprite: Sprite; boost: number }> = [];
+  private rings: RingNode[] = [];
+  private sprays: SprayNode[] = [];
 
   /** 重畫場景前（物件放進去之前）：清掉上一輪的節點，記下風向。 */
   begin(model: DrawModel): void {
@@ -204,6 +255,8 @@ export class AmbientLayer {
     this.flagTex = [];
     this.ripples = [];
     this.wisps = [];
+    this.rings = [];
+    this.sprays = [];
     this.key = model.ambient?.key ?? `${model.region}:${model.width}x${model.height}`;
     this.wind = windOf(this.key);
     this.strength = windStrength(this.key, model.weather ?? "");
@@ -229,6 +282,8 @@ export class AmbientLayer {
     if (glowTex === null) return; // 沒有 DOM（單元測試）
     for (const f of model.ambient?.fires ?? []) this.addFire(host, glowTex, flameTex, f);
     this.drawLights(host, model, glowTex);
+    this.drawEnchantRings(host, model);
+    this.drawSprays(host, model);
     this.drawFlags(host, model);
     const rippleTex = art.canvas("amb|ripple", () => paint(RIPPLE, RIPPLE, drawRipple));
     if (rippleTex !== null) for (const t of model.tiles) if (t.terrain === "ice_hole") this.addRipple(host, rippleTex, t);
@@ -301,6 +356,56 @@ export class AmbientLayer {
     }
   }
 
+  /** 附魔台的符文環（6V-3）：從正上方看的符文圈壓扁成透視（外層 Container 縮 y），裡面的 Sprite 慢慢轉。 */
+  private drawEnchantRings(host: AmbientHost, model: DrawModel): void {
+    const furniture = model.scenery?.furniture ?? {};
+    const cells = Object.entries(furniture)
+      .filter(([, spec]) => spec.look === "enchant")
+      .map(([cell]) => cell)
+      .sort();
+    if (cells.length === 0) return;
+    const tex = host.art.canvas("amb|runes", () => paint(RUNE_TEX, RUNE_TEX, drawRuneRing));
+    if (tex === null) return;
+    for (const cell of cells) {
+      const [x, y] = cell.split(",").map(Number) as [number, number];
+      const lift = host.origin({ x, y }).y - y * T;
+      const c = enchantRingCenter({ x, y }, lift);
+      const holder = new Container();
+      holder.position.set(c.x, c.y);
+      holder.scale.set(1, c.ry / c.rx);
+      const sprite = new Sprite(tex);
+      sprite.anchor.set(0.5);
+      sprite.width = c.rx * 2;
+      sprite.height = c.rx * 2;
+      sprite.blendMode = "add";
+      holder.addChild(sprite);
+      this.root.addChild(holder);
+      this.rings.push({ seed: `${this.key}:enchant:${cell}`, sprite });
+    }
+  }
+
+  /** 許願池的噴水（6V-4）：左右兩道水弧＋中央短水柱，每顆水珠一個小 Sprite。 */
+  private drawSprays(host: AmbientHost, model: DrawModel): void {
+    const pools = (model.scenery?.buildings ?? []).filter((b) => b.spec.kind === "fountain");
+    if (pools.length === 0) return;
+    const tex = host.art.canvas("amb|drop", () => paint(DROP, DROP, drawDrop));
+    if (tex === null) return;
+    for (const b of pools) {
+      const bottom = b.y + b.spec.h - 1;
+      const sp = fountainSpout(b, host.origin({ x: b.x, y: bottom }).y - bottom * T);
+      const seed = `${this.key}:spray:${b.x},${b.y}`;
+      const drops = fountainSpray(seed, 0, sp.reach, sp.drop).map(() => {
+        const s = new Sprite(tex);
+        s.anchor.set(0.5);
+        s.width = DROP * sp.scale;
+        s.height = DROP * sp.scale;
+        this.root.addChild(s);
+        return s;
+      });
+      this.sprays.push({ seed, x: sp.x, y: sp.y, reach: sp.reach, drop: sp.drop, base: drops[0]?.scale.x ?? 1, drops });
+    }
+  }
+
   /** 酒館門面右端一面酒旗（旗桿在建築最下一列的右緣）。 */
   private drawFlags(host: AmbientHost, model: DrawModel): void {
     const taverns = (model.scenery?.buildings ?? []).filter((b) => b.spec.kind === "tavern");
@@ -370,6 +475,20 @@ export class AmbientLayer {
         s.alpha = q.alpha;
       });
     }
+    for (const r of this.rings) {
+      if (r.sprite.destroyed) continue;
+      r.sprite.rotation = enchantRingAngle(r.seed, ms);
+      r.sprite.alpha = enchantRingGlow(r.seed, ms);
+    }
+    for (const sp of this.sprays) {
+      fountainSpray(sp.seed, ms, sp.reach, sp.drop).forEach((d, i) => {
+        const s = sp.drops[i];
+        if (s === undefined || s.destroyed) return;
+        s.position.set(sp.x + d.x, sp.y + d.y);
+        s.alpha = d.alpha;
+        s.scale.set(sp.base * d.scale);
+      });
+    }
     for (const w of this.wisps) {
       if (w.sprite.destroyed) continue;
       const m = mistAt(this.key, w.i, ms, this.wind, this.width, this.height);
@@ -379,7 +498,15 @@ export class AmbientLayer {
   }
 
   /** 目前有幾個會動的節點（測試、量測用）。 */
-  get counts(): { fires: number; grass: number; flags: number; ripples: number; wisps: number } {
-    return { fires: this.fires.length, grass: this.grass.length, flags: this.flags.length, ripples: this.ripples.length, wisps: this.wisps.length };
+  get counts(): { fires: number; grass: number; flags: number; ripples: number; wisps: number; rings: number; sprays: number } {
+    return {
+      fires: this.fires.length,
+      grass: this.grass.length,
+      flags: this.flags.length,
+      ripples: this.ripples.length,
+      wisps: this.wisps.length,
+      rings: this.rings.length,
+      sprays: this.sprays.length,
+    };
   }
 }
