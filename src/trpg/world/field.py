@@ -493,7 +493,7 @@ def _cross_region(
     library, world = ctx.library, ctx.world
     exit_, index = at
     region = exit_.region
-    target_map = None if region is None else library.world_maps.get(region)
+    target_map = None if region is None else library.location_map(region)
     target = None if target_map is None else target_map.location_by_id().get(exit_.to)
     if region is None or target_map is None or target is None or cross is None:
         raise WorldActionError("跨區的出口還沒開放，請用傳送")

@@ -308,7 +308,7 @@ def _teleports(library: ContentLibrary, char: CharacterState, loc: LocationDef) 
         targets = [loc.gate_to]
     else:
         return []
-    return [r for r in targets if r in library.world_maps or r == CAPITAL_REGION]
+    return [r for r in targets if library.location_map(r) is not None or r == CAPITAL_REGION]
 
 
 def _camp_problem(char: CharacterState, problem: str | None, *, in_battle: bool) -> str | None:

@@ -67,7 +67,9 @@ def atlas_view(
         maps = tuple(
             region_map(s.region)
             for s in states
-            if s.status == "open" and s.region != char.region and s.region in library.world_maps
+            if s.status == "open"
+            and s.region != char.region
+            and library.location_map(s.region) is not None
         )
     return AtlasView(
         regions=regions, capital=capital, can_teleport=can, teleport_problem_zh=problem, maps=maps
