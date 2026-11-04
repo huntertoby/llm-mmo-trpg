@@ -1,6 +1,6 @@
 // 排版煙霧檢查的純函式（Phase 3-47）：用假的量測結果確認「好的版面全 PASS、每種壞法各自 FAIL」。
 import { describe, expect, it } from "vitest";
-import { alphaOf, evaluate, formatTable, type LayoutSnapshot } from "./layoutSmoke";
+import { alphaOf, evaluate, formatTable, mapCoverIssues, type LayoutSnapshot } from "./layoutSmoke";
 
 const bx = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
 
@@ -25,6 +25,11 @@ const good = (): LayoutSnapshot => ({
     skills: bx(480, 746, 1334, 892),
     turn: bx(1342, 740, 1592, 894),
     log: bx(8, 690, 38, 720),
+  },
+  // 6F-8 讓開安全區後 1600×900 的實測：地圖 508～1120、上緣 68
+  mapCover: {
+    canvas: bx(508, 68, 1120, 716),
+    blocks: { hero: bx(8, 8, 260, 130), order: bx(695, 8, 933, 52), corner: bx(1368, 8, 1592, 105), telegraph: bx(1368, 111, 1592, 179), log: bx(8, 618, 260, 716), zoom: bx(1400, 688, 1592, 716), mode: null },
   },
 });
 
@@ -90,6 +95,28 @@ describe("排版煙霧檢查 evaluate", () => {
   it("量不到元件時 FAIL，不當作通過", () => {
     const s: LayoutSnapshot = { ...good(), endTurn: null, tileCard: null, moreMenu: null };
     expect(failedIds(s)).toEqual(["end-turn-wide", "tile-hint", "more-menu"]);
+  });
+
+  it("6F-8：地圖被 HUD 蓋到 → FAIL（RT-3b 時 800 寬的實測：戰況框、行動順序列都蓋到地圖）", () => {
+    const rt3b: LayoutSnapshot = {
+      ...good(),
+      mapCover: { canvas: bx(340, 8, 707, 397), blocks: { hero: bx(8, 8, 238, 156), order: bx(291, 8, 529, 52), corner: bx(582, 8, 792, 105), log: bx(8, 299, 238, 397), zoom: bx(606, 369, 792, 397) } },
+    };
+    expect(failedIds(rt3b)).toEqual(["map-clear"]);
+    const row = evaluate(rt3b).find((r) => r.id === "map-clear");
+    expect(row?.detail).toMatch(/order 189×44；corner 125×97；zoom 101×28/);
+    // 6F-8 讓開後的 800 寬實測：都在外面
+    const f8: LayoutSnapshot = {
+      ...good(),
+      mapCover: { canvas: bx(255, 68, 565, 397), blocks: { hero: bx(8, 8, 238, 156), order: bx(291, 8, 529, 52), corner: bx(582, 8, 792, 105), log: bx(8, 299, 238, 397), zoom: bx(606, 369, 792, 397), mode: bx(8, 162, 238, 280) } },
+    };
+    expect(failedIds(f8)).toEqual([]);
+    expect(failedIds({ ...good(), mapCover: { canvas: null, blocks: {} } })).toEqual(["map-clear"]);
+  });
+
+  it("6F-8：只差 1px（邊框、子像素）不算蓋到", () => {
+    expect(mapCoverIssues(bx(100, 60, 400, 400), { order: bx(150, 8, 300, 61), corner: bx(399, 8, 600, 100) })).toEqual([]);
+    expect(mapCoverIssues(bx(100, 60, 400, 400), { order: bx(150, 8, 300, 63) })).toEqual(["order 150×3"]);
   });
 });
 

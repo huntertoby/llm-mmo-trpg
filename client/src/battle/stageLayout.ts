@@ -37,18 +37,35 @@ export function fitScale(
   return Math.max(min, Math.min(max, s));
 }
 
-/** 戰鬥 HUD 左右兩欄的寬（同 battle-hud.css 的 `--hud-left-w`／`--hud-right-w`；視窗 < 900px 時收窄）與間距 `--hud-gap`。 */
-export const HUD_COLUMNS = { left: 252, right: 224, narrowLeft: 230, narrowRight: 210, narrowBelow: 900, gap: 8 } as const;
+/**
+ * 戰鬥 HUD 左右兩欄的寬（同 battle-hud.css 的 `--hud-left-w`／`--hud-right-w`；視窗 < 900px 時收窄）、間距 `--hud-gap`，
+ * 以及上方行動順序列的下緣 `--hud-top`（間距 8 ＋ 順序列高 44）。
+ */
+export const HUD_COLUMNS = { left: 252, right: 224, narrowLeft: 230, narrowRight: 210, narrowBelow: 900, gap: 8, top: 52 } as const;
+
+/** 自動填滿時地圖要讓開的左、右、上寬度（CSS 像素）。 */
+export interface HudInsets {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+}
 
 /**
- * 6F-7（美術 PM：800 寬時主角卡與選取說明框蓋住地圖第一欄）：自動填滿時地圖要讓開的左右寬度——
- * 左上主角卡＋選取面板、右上戰況框各自的欄寬加兩邊間距。手動縮放時不讓（照舊可以捲到 HUD 底下）。
+ * 自動填滿時地圖要讓開的安全區。6F-7 起讓左欄；6F-8（美術 PM：「地圖不能被蓋」，800 寬時右上戰況框蓋到約 3 欄 × 2 列、
+ * 行動順序列蓋到第一列上半）再讓右欄與上方：
+ * - 左：主角卡＋選取面板＋戰鬥紀錄那一欄，加兩邊間距；
+ * - 右：戰況框、環境預告、召喚物、釘選小卡、縮放鈕那一欄，加兩邊間距；
+ * - 上：行動順序列的下緣，再加一個間距。
+ * 地圖在剩下的長方形裡等比縮放、置中，所以整張畫布都不會在 HUD 底下。手動縮放時不讓（照舊可以捲到 HUD 底下）。
  */
-export function hudSideInsets(viewportWidth: number): { left: number; right: number } {
+export function hudSideInsets(viewportWidth: number): HudInsets {
   const c = HUD_COLUMNS;
   const narrow = viewportWidth < c.narrowBelow;
-  // RT-3b（美術 PM 回覆 6F-7 待決 1）：只讓左欄（主角卡與選取說明框都在左邊），右上戰況框照舊疊在地圖上
-  return { left: (narrow ? c.narrowLeft : c.left) + 2 * c.gap, right: 0 };
+  return {
+    left: (narrow ? c.narrowLeft : c.left) + 2 * c.gap,
+    right: (narrow ? c.narrowRight : c.right) + 2 * c.gap,
+    top: c.top + c.gap,
+  };
 }
 
 /** 縮放後的畫布在畫面上的大小（含上方預留；整數像素，向下取整避免超出可用空間）。 */

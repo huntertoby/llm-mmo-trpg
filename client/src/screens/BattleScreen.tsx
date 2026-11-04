@@ -264,7 +264,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         <div
           className={`board-scroll${board.panning ? " panning" : ""}`}
           ref={board.scrollRef}
-          style={board.insets.left + board.insets.right > 0 ? { paddingLeft: board.insets.left, paddingRight: board.insets.right } : undefined}
+          style={board.insets.left + board.insets.right + board.insets.top > 0 ? { paddingLeft: board.insets.left, paddingRight: board.insets.right, paddingTop: board.insets.top } : undefined}
           {...board.panHandlers}
         >
           <BattleCanvas
