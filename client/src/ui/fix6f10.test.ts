@@ -11,7 +11,7 @@ import { clampFloatCenter, FLOAT_EDGE_PAD, type FloatBounds } from "../render/fl
 import { applyMarkScale, minMarkScale, MIN_STATUS_GLYPH_PX, registerMark } from "../render/minMark";
 import { RowStack } from "../render/rowLayers";
 import { SUMMON_BADGE_RADIUS, summonBadgeOffset } from "../render/unitLook";
-import { ROW_EDGE, ROW_ICON_FEET, ROW_MAX_ICONS, ROW_MORE_OUT, ROW_Y_FEET, summonRowLayout } from "../render/unitSprite";
+import { ROW_BADGE_GAP, ROW_EDGE, ROW_ICON_FEET, ROW_MAX_ICONS, ROW_MORE_OUT, ROW_Y_FEET, summonRowLayout } from "../render/unitSprite";
 import { readSources, stripTsComments } from "../test/sourceScan";
 import { modeHint } from "./ActionPanel";
 
@@ -140,6 +140,7 @@ describe("6F-10 第 3 項：指格子一律「格」，指單位照舊「個」"
 describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、不超出格子", () => {
   const bottom = ROW_Y_FEET + ROW_ICON_FEET / 2;
   type Box = { l: number; r: number; t: number; b: number };
+  const R = SUMMON_BADGE_RADIUS + ROW_BADGE_GAP - 0.5; // 徽章（含外框線 0.5）外再留 1.5px 才算不重疊
   function boxes(n: number, k: number, bomb: boolean, extra: boolean): { row: Box; badge: Box } {
     const at = summonBadgeOffset({ bomb: bomb ? 2 : null }, T);
     const lay = summonRowLayout(n, k, at, bottom, extra, false);
@@ -147,7 +148,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
     const out = extra ? ROW_MORE_OUT : 0;
     return {
       row: { l: lay.shift - k * half, r: lay.shift + k * (half + out), t: bottom - k * (ROW_ICON_FEET + out), b: bottom },
-      badge: { l: lay.badge.x - SUMMON_BADGE_RADIUS, r: lay.badge.x + SUMMON_BADGE_RADIUS, t: lay.badge.y - SUMMON_BADGE_RADIUS, b: lay.badge.y + SUMMON_BADGE_RADIUS },
+      badge: { l: lay.badge.x - R, r: lay.badge.x + R, t: lay.badge.y - R, b: lay.badge.y + R },
     };
   }
   const overlap = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
@@ -164,7 +165,7 @@ describe("6F-10 第 4 項：召喚物的狀態列與回合數徽章不重疊、�
             expect(overlap(row, badge), tag).toBe(false);
             expect(row.l, tag).toBeGreaterThanOrEqual(-ROW_EDGE - 1e-9);
             expect(row.r, tag).toBeLessThanOrEqual(ROW_EDGE + 1e-9);
-            expect(badge.r, tag).toBeLessThanOrEqual(T / 2 + 1);
+            expect(badge.r - R + SUMMON_BADGE_RADIUS, tag).toBeLessThanOrEqual(T / 2 + 1); // 徽章本身（原本就貼著格子右緣）
           }
   });
 

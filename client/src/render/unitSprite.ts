@@ -647,8 +647,10 @@ export function rowPlacement(n: number, badgeLeft: number | null): { shift: numb
 export const SUMMON_BADGE_LABEL = "summon-badge";
 /** 狀態列左右不超出格子：格子左右緣（相對格子中心）往內 1px。 */
 export const ROW_EDGE = T / 2 - 1;
-/** 「+N」小圓比第 2 個圖示右緣多出去的寬度、比圖示上緣多出去的高度。 */
-export const ROW_MORE_OUT = 2.5;
+/** 「+N」小圓（含白邊）比第 2 個圖示右緣多出去的寬度、比圖示上緣多出去的高度。 */
+export const ROW_MORE_OUT = 3;
+/** 狀態列和回合數徽章之間至少留的空隙（含徽章的外框線）。 */
+export const ROW_BADGE_GAP = 2;
 
 /** 召喚物的狀態列與回合數徽章的排法（6F-10）：`shift` 整排的 x、`pitch` 圖示間距、`badge` 徽章圓心。 */
 export interface SummonRowLayout {
@@ -660,9 +662,9 @@ export interface SummonRowLayout {
 /**
  * 召喚物的狀態列（`n` 個圖示、`extra` 是否有「+N」、整排放大 `k` 倍、下緣在 `bottom`）與回合數徽章（預設圓心 `at`）的排法
  * （6F-10，美術 PM 6F-9 檢查第 2 節第 4 點：狀態列放大後和徽章不能重疊、不能超出格子）：
- * 1. 徽章不動，狀態列夾在左限（有字母標記時它的右緣＋1，否則格子左緣）和徽章左緣−1 之間：放得下照原間距，
+ * 1. 徽章不動，狀態列夾在左限（有字母標記時它的右緣＋1，否則格子左緣）和徽章左緣−`ROW_BADGE_GAP` 之間：放得下照原間距，
  *    放不下先縮間距（最小 `ROW_MIN_PITCH`）；
- * 2. 還是放不下（地圖縮很小、或炸彈把徽章往左推）時，徽章搬到狀態列上方（同一個 x，下緣離狀態列上緣 1px），
+ * 2. 還是放不下（地圖縮很小、或炸彈把徽章往左推）時，徽章搬到狀態列上方（同一個 x，下緣離狀態列上緣 `ROW_BADGE_GAP`），
  *    狀態列改夾在左限和格子右緣之間。
  * 整排盡量置中（原點 0），超出才往內推。
  */
@@ -680,11 +682,11 @@ export function summonRowLayout(n: number, k: number, at: { x: number; y: number
     const r = k * (((n - 1) * pitch) / 2 + half + out);
     return { shift: Math.min(Math.max(0, left + l), right - r), pitch };
   };
-  const beside = fit(at.x - SUMMON_BADGE_RADIUS - 1);
+  const beside = fit(at.x - SUMMON_BADGE_RADIUS - ROW_BADGE_GAP);
   if (beside !== null) return { ...beside, badge: { ...at } };
   const top = bottom - k * (ROW_ICON_FEET + out);
   const above = fit(ROW_EDGE) ?? { shift: 0, pitch: ROW_MIN_PITCH };
-  return { ...above, badge: { x: at.x, y: Math.min(at.y, top - 1 - SUMMON_BADGE_RADIUS) } };
+  return { ...above, badge: { x: at.x, y: Math.min(at.y, top - ROW_BADGE_GAP - SUMMON_BADGE_RADIUS) } };
 }
 
 /** 腳邊狀態列（HP 條正上方，畫在小人之上）：最多 2 個圖示，超過時第 2 個右上角疊「+N」；倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
